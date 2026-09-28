@@ -116,6 +116,15 @@
     if (G.Render && G.Render.cam.zoom > 1.1) FX.floater(x, y, G.BDEF[b.type].name + '!', '#fff1c4', 2.2);
     FX.dust(x, y, 8);
   };
+  FX.blessing = function (x, y) {
+    for (let k = 0; k < 50; k++) {
+      const a = R(0, 6.28), sp = R(0.4, 2.2);
+      FX.spawn({ x, y, z: R(10, 40), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: R(10, 60), g: 30, drag: 1.2, life: R(1.2, 2.4), s0: R(2, 3.2), s1: 0.4, c: G.pick(['#ffe08a', '#fff3c8', '#ffd05a', '#ffffff']), k: 8, layer: 1 });
+    }
+    FX.ring(x, y, 0.3, 4, 1.4, 'rgba(255,230,150,0.9)', 2.4, true);
+    FX.pillar = { x, y, t: 1.6, max: 1.6, c: '255,225,140' };
+    FX.floater(x, y, 'Preces atendidas!', '#ffe7a0', 2.6);
+  };
   FX.collapse = function (x, y, b) {
     const size = Math.max(b.w, b.h);
     for (let k = 0; k < 14 * size; k++) FX.spawn({ x: x + R(-0.5, 0.5) * size, y: y + R(-0.5, 0.5) * size, z: R(2, 14), vx: R(-1, 1), vy: R(-1, 1), vz: R(30, 90), g: 280, bounce: 0.25, life: R(1, 2), s0: 1.6, c: G.pick(['#6e5a48', '#4a3a2e', '#8a8a86']), k: 6, vr: R(-6, 6) });

@@ -22,7 +22,7 @@
     canvas = cv; ctx = cv.getContext('2d');
     lightC = document.createElement('canvas'); lctx = lightC.getContext('2d');
     R.resize();
-    window.addEventListener('resize', R.resize);
+    window.addEventListener('resize', () => { R.needResize = true; });
   };
   R.quality = 1; // adaptive: lowered automatically when frames get slow
   R.resize = function () {
@@ -41,8 +41,9 @@
     perfAcc += rdt; perfN++; perfT += rdt;
     if (perfT < 3) return;
     const avg = perfAcc / perfN; perfAcc = 0; perfN = 0; perfT = 0;
-    if (avg > 0.03 && R.quality > 0.6) { R.quality = Math.max(0.6, R.quality - 0.15); R.resize(); }
-    else if (avg < 0.0135 && R.quality < 1) { R.quality = Math.min(1, R.quality + 0.1); R.resize(); }
+    // applied at the start of the next frame, so a resized (cleared) canvas is never presented
+    if (avg > 0.03 && R.quality > 0.6) { R.quality = Math.max(0.6, R.quality - 0.15); R.needResize = true; }
+    else if (avg < 0.0135 && R.quality < 1) { R.quality = Math.min(1, R.quality + 0.1); R.needResize = true; }
   };
 
   // ------------------------------ coordinates ------------------------------
@@ -425,6 +426,7 @@
   const now = () => performance.now();
   R.frame = function (dt) {
     const S = G.S; if (!S) return;
+    if (R.needResize) { R.needResize = false; R.resize(); }
     let t0 = now();
     R.time += dt;
     const t = R.time;
@@ -700,6 +702,12 @@
     };
     if (R.hover && R.hover !== sel) ring(R.hover, 'rgba(255,255,255,0.75)', 1);
     if (sel) ring(sel, `rgba(255,214,110,${0.75 + 0.25 * Math.sin(t * 5)})`, 1.6);
+    // an open prayer glows above the village
+    if (S.prayer) {
+      const p = S.prayer; const set = S.settlements.get(p.set);
+      if (set) { const pos = proj(set.cx, set.cy, W.groundH(set.cx, set.cy)); emisGlow.push(pos[0], pos[1] - 46 - Math.sin(t * 2) * 3, 16, 'gold', 0.55 + 0.25 * Math.sin(t * 3)); overlays.push({ prayerIcon: true }, pos[0], pos[1] - 46 - Math.sin(t * 2) * 3); }
+      if (p.kind === 'fire' || p.kind === 'protect') { groundEllipse(p.x, p.y, 1.2); ctx.strokeStyle = `rgba(255,214,110,${0.5 + 0.3 * Math.sin(t * 4)})`; ctx.lineWidth = 1.2; ctx.setLineDash([3, 4]); ctx.stroke(); ctx.setLineDash([]); }
+    }
     // meteor shadows
     for (const m of S.meteors) {
       const k = G.clamp(m.t / m.delay, 0, 1);
@@ -1196,6 +1204,7 @@
     const is = G.clamp(1.5 / zoom, 0.7, 1.4);
     for (let k = 0; k < overlays.length; k += 3) {
       const o = overlays[k], sx = overlays[k + 1], sy = overlays[k + 2];
+      if (o.prayerIcon) { G.Art.draw(ctx, G.Art.icon('awe'), sx, sy + 6, is * 1.5); continue; }
       if (o.type && G.BDEF[o.type]) { // construction progress bar
         const w = 18;
         ctx.fillStyle = 'rgba(20,20,25,0.65)'; ctx.fillRect(sx - w / 2 - 1, sy - 1, w + 2, 4);

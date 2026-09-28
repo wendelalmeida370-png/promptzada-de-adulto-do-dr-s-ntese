@@ -72,6 +72,11 @@
     $('#btn-chron').onclick = () => { G.Audio.play('click'); $('#chronicle').classList.toggle('collapsed'); };
     $('#chron-toggle').onclick = () => { G.Audio.play('click'); $('#chronicle').classList.toggle('collapsed'); };
     $('#btn-stats').onclick = () => { G.Audio.play('click'); UI.openStats(); };
+    $('#prayer').onclick = () => {
+      const p = G.S && G.S.prayer; if (!p) return;
+      G.Audio.play('click'); G.Render.cam.follow = 0; G.Render.panTo(p.x, p.y);
+      UI.setPower(G.Events.PRAYER[p.kind].powers[0]);
+    };
     $('#btn-menu').onclick = () => { G.Audio.play('click'); UI.openPause(); };
     $('#btn-sound').onclick = () => { G.Audio.play('click'); UI.openSound(); };
     $('#chron-list').addEventListener('click', e => {
@@ -165,6 +170,15 @@
     const pe = $('#perception'); pe.innerHTML = `Eles te veem como <b class="pc-${pk}">${pt}</b>`;
     drawDial();
     document.querySelectorAll('.pw').forEach(b => { const p = G.Powers.byId(b.dataset.power); b.classList.toggle('poor', S.faith < p.cost); });
+    const pr = $('#prayer');
+    if (S.prayer) {
+      const P = G.Events.PRAYER[S.prayer.kind]; const set = S.settlements.get(S.prayer.set);
+      const pw = G.Powers.byId(P.powers[0]);
+      const html = `<i class="ci gold">${ICON.eye}</i><span>${P.ask}${set ? ' em <b>' + esc(set.name) + '</b>' : ''} — use <b>${P.powers.map(k => G.Powers.byId(k).name).join(' ou ')}</b></span><span class="pr-bar"><span style="width:${Math.max(0, S.prayer.t / S.prayer.max * 100)}%"></span></span>`;
+      if (pr.dataset.k !== S.prayer.kind + S.prayer.set) { pr.dataset.k = S.prayer.kind + S.prayer.set; pr.innerHTML = html; pr.classList.remove('hidden'); }
+      else pr.querySelector('.pr-bar span').style.width = Math.max(0, S.prayer.t / S.prayer.max * 100) + '%';
+      document.querySelectorAll('.pw').forEach(b => b.classList.toggle('asked', P.powers.includes(b.dataset.power)));
+    } else if (!pr.classList.contains('hidden')) { pr.classList.add('hidden'); pr.dataset.k = ''; document.querySelectorAll('.pw').forEach(b => b.classList.remove('asked')); }
     const w = S.weather;
     const wl = $('#weather'); const txt = w.storm > 0 ? 'Tempestade' : w.drought > 0 ? 'Seca' : S.clouds.some(c => c.kind === 'natural') ? 'Chuvisco' : '';
     wl.textContent = txt; wl.classList.toggle('hidden', !txt);

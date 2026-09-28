@@ -59,6 +59,13 @@ kbd { font-family: inherit; font-size: 0.78em; font-weight: 800; background: rgb
 #power-hint { font-size: 13px; background: rgba(20, 16, 10, 0.75); border: 1px solid rgba(245, 200, 107, .3); padding: 5px 14px; border-radius: 20px; animation: fadeUp .25s ease; }
 #power-hint b { color: var(--gold-2); }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } }
+#prayer { display: flex; align-items: center; gap: 8px; font-size: 13px; background: linear-gradient(180deg, rgba(70, 52, 18, .88), rgba(40, 30, 12, .88)); border: 1px solid rgba(245, 200, 107, .6); color: #fff1cf; padding: 6px 14px 6px 10px; border-radius: 20px; box-shadow: 0 0 22px rgba(245, 200, 107, .35); animation: prayGlow 2s ease-in-out infinite; position: relative; overflow: hidden; }
+#prayer b { color: var(--gold-2); }
+#prayer .ci { flex: none; }
+#prayer .pr-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(0, 0, 0, .3); }
+#prayer .pr-bar span { display: block; height: 100%; background: var(--gold); transition: width .5s linear; }
+@keyframes prayGlow { 50% { box-shadow: 0 0 34px rgba(245, 200, 107, .6); } }
+.pw.asked { box-shadow: 0 0 0 2px rgba(245, 200, 107, .8), 0 0 16px rgba(245, 200, 107, .6); animation: pulse 1.4s infinite; }
 #powerbar { display: flex; gap: 6px; padding: 7px; border-radius: 18px; }
 .pw { position: relative; width: 58px; height: 62px; border-radius: 13px; border: 1px solid rgba(255, 255, 255, 0.08); background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px 0 4px; transition: transform .12s, background .15s, box-shadow .15s, filter .2s; }
 .pw .pic { width: 26px; height: 26px; transition: transform .15s; }

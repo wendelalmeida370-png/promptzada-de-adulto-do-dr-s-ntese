@@ -55,6 +55,7 @@
     S.faith -= p.cost; S.stats.faithSpent += p.cost;
     S.stats.powers[id] = (S.stats.powers[id] || 0) + 1;
     P[id](x, y);
+    G.Events && G.Events.onPower(id, x, y);
     return true;
   };
 

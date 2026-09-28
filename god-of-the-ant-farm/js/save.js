@@ -40,7 +40,7 @@
       settlements: [...S.settlements.values()],
       stock: S.stock, faith: r(S.faith, 2), stats: S.stats, history: S.history, milestones: S.milestones,
       weather: S.weather, clouds: S.clouds, zones: S.zones, boats: S.boats, awareness: S.awareness, era: S.era,
-      pendingDiscovery: S.pendingDiscovery || null, popHist: S.popHist || [], start: S.start,
+      pendingDiscovery: S.pendingDiscovery || null, prayer: S.prayer || null, prayerCD: S.prayerCD || 0, popHist: S.popHist || [], start: S.start,
       cam: { x: r(G.Render.cam.x, 1), y: r(G.Render.cam.y, 1), zoom: r(G.Render.cam.zoom, 2) },
     };
     return JSON.stringify(out);
@@ -86,7 +86,7 @@
     for (const s of o.settlements) S.settlements.set(s.id, s);
     S.stock = o.stock; S.faith = o.faith; S.stats = Object.assign(S.stats, o.stats); S.history = o.history; S.milestones = o.milestones;
     S.weather = Object.assign(S.weather, o.weather); S.clouds = o.clouds || []; S.zones = o.zones || []; S.boats = o.boats || [];
-    S.awareness = o.awareness; S.era = o.era; S.pendingDiscovery = o.pendingDiscovery; S.popHist = o.popHist || []; S.start = o.start;
+    S.awareness = o.awareness; S.era = o.era; S.pendingDiscovery = o.pendingDiscovery; S.prayer = o.prayer || null; S.prayerCD = o.prayerCD || 0; S.popHist = o.popHist || []; S.start = o.start;
     Sv.computeDistances();
     G.Nature.rebuildFire();
     G.Render.buildTerrain(); G.Render.initSky();

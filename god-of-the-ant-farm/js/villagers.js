@@ -325,6 +325,7 @@
       opt((v.traits.includes('Sociável') ? 0.3 : 0.15) * (eve ? 2.3 : 1) * (elder ? 1.8 : 1) * G.R() * 1.6, 0, 'social');
       if (canCourt(v)) opt((v.traits.includes('Romântico') ? 0.95 : 0.72) * (0.55 + G.R() * 0.8), 0.5, 'court');
       if (v.devotion + v.fear * 0.7 > 28 || (S.awareness && v.traits.includes('Devoto'))) opt((0.1 + (v.devotion + v.fear * 0.8) / 320) * G.R() * 1.6, 0.5, 'pray');
+      if (S.prayer && S.prayer.set === v.set) opt(0.3 + G.R() * 0.35, 0.6, 'pray');
       if (v.traits.includes('Curioso') && !elder) opt(0.22 * G.R(), 0, 'explore');
       opt(0.14 * G.R(), 0, 'visit');
       if (eve || elder) opt(0.3 * G.R() * (elder ? 2 : 1), 0, 'rest');

@@ -17,12 +17,94 @@
       S.emptyT = (S.emptyT || 0) + dt;
       if (S.emptyT > G.DAY_LEN * 1.5 && !S.boats.length) { S.emptyT = 0; immigrants(true); }
     } else S.emptyT = 0;
+    updatePrayers(dt);
     if (w.nextEvent <= 0) {
       w.nextEvent = G.rr(2.3, 4.6);
       if (S.day < 4) return;
       trigger();
     }
     updateBoats(dt);
+  };
+
+  // ---------------- prayers: the people ask their god for help ----------------
+  const PRAYER = {
+    rain: { txt: 'chuva', powers: ['rain'], ask: 'Eles rezam por chuva' },
+    fire: { txt: 'chuva para apagar o fogo', powers: ['rain'], ask: 'Eles imploram por chuva sobre o fogo' },
+    heal: { txt: 'cura', powers: ['heal'], ask: 'Eles rezam pelos doentes' },
+    harvest: { txt: 'fartura', powers: ['growth', 'fertility'], ask: 'Eles rezam por comida' },
+    protect: { txt: 'proteção contra os lobos', powers: ['lightning', 'meteor'], ask: 'Eles rezam por proteção' },
+  };
+  E.PRAYER = PRAYER;
+  let tPray = 0;
+  function hostileNear(set, r) {
+    let best = null, bd = r * r;
+    for (const a of G.S.animals.values()) if (a.kind === 'wolf' && !a.dead) { const d = G.dist2(a.x, a.y, set.cx, set.cy); if (d < bd) { bd = d; best = a; } }
+    return best;
+  }
+  function updatePrayers(dt) {
+    const S = G.S;
+    if (S.prayer) {
+      const p = S.prayer; p.t -= dt;
+      const set = S.settlements.get(p.set);
+      // the need went away on its own
+      let solved = !set;
+      if (set && p.kind === 'protect') solved = !hostileNear(set, 16);
+      if (set && p.kind === 'fire') solved = !(G.Vg.alarms.get(set.id) || []).length && G.Nature.fireSet.size === 0;
+      if (set && p.kind === 'rain') solved = S.weather.drought <= 0;
+      if (set && p.kind === 'heal') { let sick = 0; for (const v of S.villagers.values()) if (v.set === set.id && v.sick > 0) sick++; solved = sick === 0; }
+      if (solved && p.age > 5) { S.prayer = null; S.prayerCD = G.DAY_LEN * 0.4; return; }
+      p.age = (p.age || 0) + dt;
+      if (p.t <= 0) {
+        for (const v of S.villagers.values()) if (v.set === p.set) v.devotion = Math.max(0, v.devotion - 5);
+        G.Village.log(`As preces de ${set ? set.name : 'um povo'} por ${PRAYER[p.kind].txt} ficaram sem resposta.`, 'eye', p.x, p.y);
+        S.prayer = null; S.prayerCD = G.DAY_LEN * 0.6;
+      }
+      return;
+    }
+    S.prayerCD = (S.prayerCD || 0) - dt;
+    tPray -= dt;
+    if (S.prayerCD > 0 || tPray > 0 || S.day < 2) return;
+    tPray = 2;
+    for (const set of S.settlements.values()) {
+      const pop = G.Village.pop(set.id); if (pop < 5) continue;
+      let kind = null, x = set.cx, y = set.cy, r = 12;
+      const al = G.Vg.alarms.get(set.id);
+      const wolf = hostileNear(set, 12);
+      let sick = 0; for (const v of S.villagers.values()) if (v.set === set.id && v.sick > 0) sick++;
+      if (al && al.length >= 3) { kind = 'fire'; const i = al[0]; x = (i % N) + 0.5; y = ((i / N) | 0) + 0.5; r = 8; }
+      else if (wolf) { kind = 'protect'; x = wolf.x; y = wolf.y; r = 14; }
+      else if (sick >= 2) kind = 'heal';
+      else if (S.weather.drought > G.DAY_LEN * 0.3) kind = 'rain';
+      else if (S.stock.food < S.villagers.size * 0.7 && S.villagers.size > 8) kind = 'harvest';
+      if (!kind) continue;
+      S.prayer = { kind, set: set.id, x, y, r, t: kind === 'fire' ? G.DAY_LEN * 0.5 : G.DAY_LEN * 1.2, max: kind === 'fire' ? G.DAY_LEN * 0.5 : G.DAY_LEN * 1.2, age: 0 };
+      G.UI && G.UI.notice(`${PRAYER[kind].ask} em ${set.name}.`, 'eye');
+      G.Audio && G.Audio.play('power', 0.6);
+      return;
+    }
+  }
+  E.onPower = function (id, x, y) {
+    const S = G.S; const p = S.prayer; if (!p) return;
+    if (!PRAYER[p.kind].powers.includes(id)) return;
+    if (p.kind === 'protect') {
+      let hit = false; for (const a of S.animals.values()) if (a.kind === 'wolf' && G.dist(a.x, a.y, x, y) < (id === 'meteor' ? 4 : 2)) hit = true;
+      if (!hit) return;
+    } else {
+      const set = S.settlements.get(p.set);
+      const d = Math.min(G.dist(x, y, p.x, p.y), set ? G.dist(x, y, set.cx, set.cy) : 99);
+      if (d > p.r) return;
+    }
+    const set = S.settlements.get(p.set);
+    for (const v of S.villagers.values()) {
+      v.devotion = Math.min(100, v.devotion + (v.set === p.set ? 16 : 6));
+      if (v.set === p.set && !v.inside && !v.sleeping) G.Vg.emote(v, 'awe', 3);
+    }
+    S.faith = Math.min(999, S.faith + 15);
+    G.FX && G.FX.blessing(p.x, p.y);
+    G.Audio && G.Audio.play('milestone');
+    G.Village.log(`As preces de ${set ? set.name : 'um povo'} por ${PRAYER[p.kind].txt} foram atendidas. Eles cantam o seu nome.`, 'eye', p.x, p.y);
+    G.UI && G.UI.toast('Preces atendidas', 'A devoção deles cresce.', 'eye');
+    S.prayer = null; S.prayerCD = G.DAY_LEN * 0.8;
   };
 
   function trigger() {
