@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>God of the Ant Farm</title>
+  <meta name="description" content="Um pequeno ecossistema vivo numa ilha. Observe, ajude — ou lembre-os de quem é o deus deles.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- ================= HUD ================= -->
+  <div id="hud" class="hidden">
+    <div id="topbar">
+      <div class="tb-group" id="res">
+        <div class="res" id="res-pop" title="População"><i id="ic-pop" class="ri pop"></i><b id="v-pop">0</b></div>
+        <div class="res" id="res-food" title="Comida"><i id="ic-food" class="ri food"></i><b id="v-food">0</b><small id="c-food"></small></div>
+        <div class="res" id="res-wood" title="Madeira"><i id="ic-wood" class="ri wood"></i><b id="v-wood">0</b><small id="c-wood"></small></div>
+        <div class="res" id="res-stone" title="Pedra"><i id="ic-stone" class="ri stone"></i><b id="v-stone">0</b><small id="c-stone"></small></div>
+        <div class="res faith" id="res-faith" title="Fé — usada para lançar poderes"><i id="ic-faith" class="ri faith"></i><b id="v-faith">0</b><small id="r-faith"></small></div>
+      </div>
+      <div class="tb-group" id="clock">
+        <canvas id="dial" width="72" height="72"></canvas>
+        <div class="clock-txt"><div id="day">Dia 1</div><div id="era">Acampamento</div></div>
+        <span id="weather" class="hidden"></span>
+      </div>
+      <div class="tb-group" id="speed">
+        <button data-speed="0" id="btn-pause" title="Pausar (Espaço)"></button>
+        <button data-speed="1" class="on" title="Velocidade normal">1x</button>
+        <button data-speed="2" title="Rápido">2x</button>
+        <button data-speed="4" title="Muito rápido">4x</button>
+      </div>
+      <div class="tb-group" id="tb-btns">
+        <button id="btn-chron" title="Crônica (H)"></button>
+        <button id="btn-stats" title="Estatísticas"></button>
+        <button id="btn-sound" title="Som"></button>
+        <button id="btn-menu" title="Menu (Esc)"></button>
+      </div>
+    </div>
+    <div id="paused-badge" class="hidden">PAUSADO</div>
+
+    <div id="inspector" class="panel hidden"></div>
+
+    <div id="chronicle" class="panel">
+      <div class="ch-head"><span>Crônica <em id="chron-count">0</em></span><button id="chron-toggle" title="Recolher">−</button></div>
+      <div id="chron-list"></div>
+    </div>
+
+    <div id="bottom">
+      <div id="power-hint" class="hidden"></div>
+      <div id="perception"></div>
+      <div id="powerbar" class="panel"></div>
+    </div>
+
+    <div id="notices"></div>
+    <div id="toast" class="hidden"></div>
+  </div>
+  <div id="tooltip" class="hidden"></div>
+
+  <!-- ================= INTRO ================= -->
+  <div id="intro" class="hidden">
+    <p>They do not need your commands.</p>
+    <p>They only need a world to live in.</p>
+    <p class="big">Whether you become their guardian or their catastrophe is up to you.</p>
+    <div class="skip">clique para pular</div>
+  </div>
+
+  <!-- ================= MAIN MENU ================= -->
+  <div id="menu">
+    <div class="menu-inner">
+      <div class="crest"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="11" fill="currentColor"/><g stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M32 6v9M32 49v9M6 32h9M49 32h9M13.6 13.6l6.4 6.4M44 44l6.4 6.4M13.6 50.4l6.4-6.4M44 20l6.4-6.4"/></g></svg></div>
+      <h1>GOD OF THE<br><span>ANT FARM</span></h1>
+      <p class="subtitle">Watch them live. Help them prosper. Or remind them who their god is.</p>
+      <div class="menu-btns">
+        <button id="btn-new" class="primary">NEW WORLD</button>
+        <button id="btn-continue">CONTINUE<small id="continue-info"></small></button>
+        <button id="btn-howto">HOW TO PLAY</button>
+      </div>
+      <p class="foot">Uma ilha gerada proceduralmente · tudo salvo automaticamente no seu navegador</p>
+    </div>
+  </div>
+
+  <!-- ================= MODAL ================= -->
+  <div id="modal-bg" class="hidden"><div id="modal" class="panel"></div></div>
+
+  <script src="js/util.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/nature.js"></script>
+  <script src="js/village.js"></script>
+  <script src="js/villagers.js"></script>
+  <script src="js/animals.js"></script>
+  <script src="js/powers.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/fx.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/save.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+'use strict';
+// ============================================================
+//  Main: game loop, simulation stepping, input, camera,
+//  menu, intro, new world / continue, autosave
+// ============================================================
+(function (G) {
+  const N = G.N, W = G.W;
+  const M = G.Main = { mode: 'menu', modalOpen: false, lastSpeed: 1 };
+  const I = G.Input = { power: null, held: null, keys: {}, mouse: { x: 0, y: 0, down: false, btn: -1, sx: 0, sy: 0, lx: 0, ly: 0, dragged: false, onCanvas: false }, hoverT: 0 };
+  G.speed = 1;
+  const $ = s => document.querySelector(s);
+  let canvas;
+
+  // ------------------------------ world setup ------------------------------
+  function setupWorld(seed) {
+    G.FX.list.length = 0; G.FX.floaters.length = 0; G.FX.bolts.length = 0; G.FX.rings.length = 0; G.FX.glows.length = 0;
+    G.genWorld(seed);
+    const S = G.S; const [sx, sy] = S.start;
+    const set = G.Village.addSettlement(G.SETTLEMENT_NAMES[0], sx, sy);
+    const cf = G.Village.addBuilding('campfire', Math.floor(sx), Math.floor(sy), set.id, true);
+    set.campfire = cf.id; set.lit = true;
+    const make = o => {
+      let x = sx, y = sy;
+      for (let k = 0; k < 10; k++) { const a = G.rr(0, 6.28), r = G.rr(1.3, 2.4); x = sx + Math.cos(a) * r; y = sy + Math.sin(a) * r; if (W.walkableXY(x, y)) break; }
+      return G.Vg.create(Object.assign({ x, y, set: set.id }, o));
+    };
+    const pair = (a, b) => { a.partner = b.id; b.partner = a.id; };
+    const mara = make({ name: 'Mara', g: 'f', age: 38 }), oren = make({ name: 'Oren', g: 'm', age: 41 }); pair(mara, oren);
+    const lina = make({ name: 'Lina', g: 'f', age: 19, mother: mara.id, father: oren.id }); mara.kids.push(lina.id); oren.kids.push(lina.id);
+    make({ name: 'Taren', g: 'm', age: 22 });
+    const f2 = make({ g: 'f', age: 26 }), m2 = make({ g: 'm', age: 28 }); pair(f2, m2);
+    const kid = make({ age: 5, mother: f2.id, father: m2.id }); f2.kids.push(kid.id); m2.kids.push(kid.id);
+    const f3 = make({ g: 'f', age: 23 }), m3 = make({ g: 'm', age: 24 }); pair(f3, m3);
+    make({ g: 'f', age: 20 }); make({ g: 'm', age: 31 });
+    S.stats.couples = 3;
+    G.Animals.populate();
+    G.Village.forceUpdate();
+    G.Render.buildTerrain(); G.Render.initSky();
+    S.popHist = [];
+    S.stats.maxPop = S.villagers.size;
+    G.Village.log('Onze almas despertaram ao redor de uma fogueira.', 'campfire', sx, sy);
+    return S;
+  }
+
+  // ------------------------------ modes ------------------------------
+  M.toMenu = function () {
+    M.mode = 'menu';
+    G.UI.showHUD(false); G.UI.select(null); G.UI.setPower(null); G.UI.closeModal();
+    setupWorld((Math.random() * 1e9) | 0);
+    const S = G.S;
+    G.Render.centerOn(S.start[0], S.start[1], 1.35);
+    M.menuBase = [G.Render.cam.x, G.Render.cam.y];
+    G.speed = 1;
+    $('#menu').classList.remove('hidden', 'fade');
+    $('#intro').classList.add('hidden');
+    refreshMenu();
+  };
+  function refreshMenu() {
+    const info = G.Save.info();
+    const b = $('#btn-continue');
+    b.disabled = !info;
+    $('#continue-info').textContent = info ? `Dia ${info.day} · ${info.pop} ${info.pop === 1 ? 'habitante' : 'habitantes'} · ${G.ERAS[info.era] || ''}` : 'Nenhum mundo salvo';
+  }
+  M.newGame = function () {
+    G.Audio.init();
+    G.UI.closeModal(); G.UI.select(null); G.UI.setPower(null);
+    setupWorld((Date.now() ^ (Math.random() * 1e9)) >>> 0);
+    const S = G.S;
+    $('#menu').classList.add('fade');
+    setTimeout(() => $('#menu').classList.add('hidden'), 900);
+    G.UI.showHUD(false);
+    M.mode = 'intro'; M.introT = 0;
+    G.UI.setSpeed(1);
+    // camera: from the whole island to the campfire
+    G.Render.centerOn(N / 2, N / 2, 0.62);
+    M.introFrom = [G.Render.cam.x, G.Render.cam.y];
+    const [fx, fy] = G.Render.proj(S.start[0], S.start[1], W.groundH(S.start[0], S.start[1]));
+    M.introTo = [fx, fy - 10];
+    const intro = $('#intro'); intro.classList.remove('hidden');
+    intro.querySelectorAll('p').forEach(p => p.classList.remove('show'));
+    G.Save.save(true);
+  };
+  function endIntro() {
+    if (M.mode !== 'intro') return;
+    M.mode = 'game';
+    const intro = $('#intro');
+    intro.querySelectorAll('p').forEach(p => p.classList.remove('show'));
+    setTimeout(() => intro.classList.add('hidden'), 700);
+    G.Render.cam.x = M.introTo[0]; G.Render.cam.y = M.introTo[1]; G.Render.cam.zoom = G.Render.cam.tz = 2.0;
+    G.UI.showHUD(true);
+    setTimeout(() => G.UI.notice('Dica: selecione um poder na barra de baixo (ou teclas 1–8) e clique no mapa.', 'eye'), 1500);
+  }
+  function updateIntro(dt) {
+    M.introT += dt;
+    const t = M.introT;
+    const k = G.easeInOut(G.clamp((t - 0.3) / 8.5, 0, 1));
+    const cam = G.Render.cam;
+    cam.zoom = cam.tz = G.lerp(0.62, 2.0, k);
+    cam.x = G.lerp(M.introFrom[0], M.introTo[0], k); cam.y = G.lerp(M.introFrom[1], M.introTo[1], k);
+    const ps = document.querySelectorAll('#intro p');
+    ps[0].classList.toggle('show', t > 0.8 && t < 6.4);
+    ps[1].classList.toggle('show', t > 2.6 && t < 6.4);
+    ps[2].classList.toggle('show', t > 7.4 && t < 11.8);
+    if (t > 12.6) endIntro();
+  }
+  M.continueGame = function () {
+    G.Audio.init();
+    G.UI.select(null); G.UI.setPower(null);
+    G.FX.list.length = 0; G.FX.floaters.length = 0;
+    if (!G.Save.load()) { G.UI.toast('Não foi possível carregar', 'O save parece corrompido ou inexistente.', 'skull'); return; }
+    $('#menu').classList.add('fade');
+    setTimeout(() => $('#menu').classList.add('hidden'), 700);
+    $('#intro').classList.add('hidden');
+    M.mode = 'game';
+    G.UI.setSpeed(1);
+    G.UI.showHUD(true);
+    G.UI.notice(`Bem-vindo de volta. Dia ${G.S.day}, ${G.S.villagers.size} habitantes.`, 'eye');
+  };
+
+  // ------------------------------ simulation ------------------------------
+  function step(dt) {
+    const S = G.S;
+    S.clock += dt;
+    S.time += dt / G.DAY_LEN;
+    if (S.time >= 1) {
+      S.time -= 1; S.day++;
+      (S.popHist = S.popHist || []).push(S.villagers.size); if (S.popHist.length > 500) S.popHist.shift();
+      G.Village.onNewDay();
+    }
+    G.Nature.update(dt);
+    G.Village.update(dt);
+    G.Vg.updateAll(dt);
+    G.Animals.updateAll(dt);
+    G.Powers.update(dt);
+    G.Events.update(dt);
+  }
+  function simulate(dt) {
+    if (dt <= 0) return;
+    const steps = Math.ceil(dt / 0.05);
+    const h = dt / steps;
+    for (let k = 0; k < steps; k++) step(h);
+  }
+  G.debug = {
+    run(seconds) { const t0 = performance.now(); let s = 0; while (s < seconds) { step(0.05); s += 0.05; } return performance.now() - t0; },
+    step,
+  };
+
+  // ------------------------------ picking ------------------------------
+  const BH = { campfire: 12, hut: 26, house: 28, storehouse: 34, farm: 6, well: 22, workshop: 40, temple: 46, monument: 72, cemetery: 10, ruin: 8 };
+  function pick(px, py, mobileOnly) {
+    const S = G.S; const R = G.Render; const cam = R.cam;
+    let best = null, bd = 1e9;
+    const rad = Math.max(11, 8 * cam.zoom);
+    const test = (e, lift) => {
+      const [wx, wy] = R.proj(e.x, e.y, W.groundH(e.x, e.y));
+      const [sx, sy] = R.worldPxToScreen(wx, wy - (e.z || 0));
+      const d = Math.hypot(px - sx, py - (sy - lift * cam.zoom));
+      if (d < rad && d < bd) { bd = d; best = e; }
+    };
+    for (const v of S.villagers.values()) { if (v.inside || v.held || (v.age < 2 && v.carried)) continue; test(v, v.age < 16 ? 4 : 6); }
+    for (const a of S.animals.values()) { if (a.held) continue; test(a, 3); }
+    if (best || mobileOnly) return best;
+    let bb = null, bdep = -1e9;
+    for (const b of S.buildings.values()) {
+      const [cx, cy] = G.Village.center(b); const base = W.maxH(b.x, b.y, b.w, b.h);
+      const [wx, wy] = R.proj(cx, cy, base);
+      const [sx, sy] = R.worldPxToScreen(wx, wy);
+      const hw = (b.w + b.h) * 8 * cam.zoom, top = (BH[b.type] || 20) * cam.zoom, bot = (b.w + b.h) * 4 * cam.zoom;
+      if (px > sx - hw && px < sx + hw && py > sy - top - bot * 0.6 && py < sy + bot) {
+        // favour the diamond footprint for flat things
+        const dep = b.x + b.y + b.w + b.h;
+        if (dep > bdep) { bdep = dep; bb = b; }
+      }
+    }
+    return bb;
+  }
+  M.pick = pick;
+
+  // ------------------------------ divine hand ------------------------------
+  function grab(e, px, py) {
+    if (e.inside || e.dead) return;
+    e.held = true; e.air = false;
+    if (!e.kind) { G.Vg.endTask(e); e.fear = Math.min(100, e.fear + 22); G.Vg.emote(e, 'fear', 4); e.path = null; }
+    else { e.state = 'idle'; e.moving = false; }
+    I.held = { e, sx: px, sy: py, hist: [[performance.now(), px, py]] };
+    G.Audio.play('grab');
+    G.S.stats.powers.hand = (G.S.stats.powers.hand || 0) + 1;
+    G.Powers.witness(e.x, e.y, 10, 0, 5);
+    if (G.UI.selected !== e) G.UI.select(e);
+  }
+  function release() {
+    const h = I.held; I.held = null; if (!h) return;
+    const e = h.e; e.held = false;
+    const R = G.Render; const zoom = R.cam.zoom;
+    const now = performance.now();
+    let old = h.hist[0]; for (const p of h.hist) if (now - p[0] < 110) { old = p; break; }
+    const dts = Math.max(0.03, (now - old[0]) / 1000);
+    const svx = (h.sx - old[1]) / dts / zoom, svy = (h.sy - old[2]) / dts / zoom; // world px/s
+    const Z = 40;
+    const [tx, ty] = R.screenToTile(h.sx, h.sy + (8 + Z) * zoom);
+    e.x = G.clamp(tx, 0.5, N - 0.5); e.y = G.clamp(ty, 0.5, N - 0.5);
+    e.z = Z; e.air = true;
+    const hx = svx, hy = svy * 0.5;
+    let vx = (hx / 16 + hy / 8) / 2, vy = (hy / 8 - hx / 16) / 2;
+    const sp = Math.hypot(vx, vy); if (sp > 9) { vx *= 9 / sp; vy *= 9 / sp; }
+    e.vx = vx; e.vy = vy; e.vz = G.clamp(-svy * 0.7, 0, 520) + 30;
+    if (Math.hypot(svx, svy) > 500) { G.Powers.witness(e.x, e.y, 10, -2, 10); G.Audio.play('power'); }
+  }
+
+  // ------------------------------ input ------------------------------
+  function setupInput() {
+    canvas = $('#game');
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+    canvas.addEventListener('mousedown', e => {
+      G.Audio.init();
+      if (M.mode === 'intro') { endIntro(); return; }
+      if (M.mode !== 'game') return;
+      const m = I.mouse;
+      m.down = true; m.btn = e.button; m.sx = m.lx = e.clientX; m.sy = m.ly = e.clientY; m.dragged = false;
+      if (e.button === 0 && I.power === 'hand') { const ent = pick(e.clientX, e.clientY, true); if (ent) grab(ent, e.clientX, e.clientY); }
+    });
+    window.addEventListener('mousemove', e => {
+      const m = I.mouse; m.x = e.clientX; m.y = e.clientY; m.onCanvas = e.target === canvas;
+      if (I.held) { I.held.sx = e.clientX; I.held.sy = e.clientY; I.held.hist.unshift([performance.now(), e.clientX, e.clientY]); if (I.held.hist.length > 12) I.held.hist.pop(); }
+      else if (m.down) {
+        if (!m.dragged && Math.hypot(e.clientX - m.sx, e.clientY - m.sy) > 5) m.dragged = true;
+        if (m.dragged) { const cam = G.Render.cam; cam.x -= (e.clientX - m.lx) / cam.zoom; cam.y -= (e.clientY - m.ly) / cam.zoom; cam.follow = 0; cam.target = null; }
+      }
+      m.lx = e.clientX; m.ly = e.clientY;
+    });
+    window.addEventListener('mouseup', e => {
+      const m = I.mouse; if (!m.down) return;
+      m.down = false;
+      if (I.held) { release(); return; }
+      if (M.mode !== 'game' || m.dragged) return;
+      click(e.clientX, e.clientY, e.button);
+    });
+    canvas.addEventListener('dblclick', e => {
+      if (M.mode !== 'game' || I.power) return;
+      const ent = pick(e.clientX, e.clientY, true);
+      if (ent) { G.UI.select(ent); G.Render.cam.follow = ent.id; }
+    });
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      if (M.mode !== 'game') return;
+      const cam = G.Render.cam;
+      cam.tz = G.clamp(cam.tz * Math.exp(-e.deltaY * 0.0016), 0.55, 3.6);
+      cam.anchor = [e.clientX, e.clientY];
+    }, { passive: false });
+    window.addEventListener('keydown', e => {
+      if (M.mode === 'intro') { endIntro(); return; }
+      if (M.mode !== 'game') return;
+      const k = e.key;
+      I.keys[k.toLowerCase()] = true;
+      if (M.modalOpen) { if (k === 'Escape') G.UI.closeModal(); return; }
+      if (k >= '1' && k <= '8') { const p = G.POWERS[+k - 1]; G.UI.setPower(I.power === p.id ? null : p.id); }
+      else if (k === ' ') { e.preventDefault(); if (G.speed === 0) G.UI.setSpeed(M.lastSpeed || 1); else { M.lastSpeed = G.speed; G.UI.setSpeed(0); } }
+      else if (k === 'Escape') { if (I.held) release(); else if (I.power) G.UI.setPower(null); else if (G.UI.selected) G.UI.select(null); else G.UI.openPause(); }
+      else if (k === 'f' || k === 'F') { const s = G.UI.selected; if (s && s.x !== undefined && !s.type && !s.dead) G.Render.cam.follow = G.Render.cam.follow === s.id ? 0 : s.id; }
+      else if (k === 'h' || k === 'H') $('#chronicle').classList.toggle('collapsed');
+      else if (k === 't' || k === 'T') { const s = G.UI.selected; if (s && !s.type && !s.kind) G.UI.openTree(s.id); }
+      else if (k === '+' || k === '=') { const sp = [0, 1, 2, 4]; G.UI.setSpeed(sp[Math.min(3, sp.indexOf(G.speed) + 1)]); }
+      else if (k === '-' || k === '_') { const sp = [0, 1, 2, 4]; G.UI.setSpeed(sp[Math.max(0, sp.indexOf(G.speed) - 1)]); }
+    });
+    window.addEventListener('keyup', e => { I.keys[e.key.toLowerCase()] = false; });
+    window.addEventListener('blur', () => { I.keys = {}; });
+    // touch
+    let tStart = null, pinch = null;
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault(); G.Audio.init();
+      if (M.mode === 'intro') { endIntro(); return; }
+      if (M.mode !== 'game') return;
+      if (e.touches.length === 2) {
+        const [a, b] = e.touches; pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), z: G.Render.cam.tz }; tStart = null; return;
+      }
+      const t = e.touches[0]; tStart = { x: t.clientX, y: t.clientY, lx: t.clientX, ly: t.clientY, moved: false };
+      if (I.power === 'hand') { const ent = pick(t.clientX, t.clientY, true); if (ent) grab(ent, t.clientX, t.clientY); }
+    }, { passive: false });
+    canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+      if (pinch && e.touches.length === 2) {
+        const [a, b] = e.touches; const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        G.Render.cam.tz = G.clamp(pinch.z * d / pinch.d, 0.55, 3.6); G.Render.cam.anchor = [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2]; return;
+      }
+      const t = e.touches[0]; if (!tStart) return;
+      if (I.held) { I.held.sx = t.clientX; I.held.sy = t.clientY; I.held.hist.unshift([performance.now(), t.clientX, t.clientY]); if (I.held.hist.length > 12) I.held.hist.pop(); return; }
+      if (Math.hypot(t.clientX - tStart.x, t.clientY - tStart.y) > 8) tStart.moved = true;
+      if (tStart.moved) { const cam = G.Render.cam; cam.x -= (t.clientX - tStart.lx) / cam.zoom; cam.y -= (t.clientY - tStart.ly) / cam.zoom; cam.follow = 0; }
+      tStart.lx = t.clientX; tStart.ly = t.clientY;
+    }, { passive: false });
+    canvas.addEventListener('touchend', e => {
+      e.preventDefault();
+      if (I.held) { release(); tStart = null; return; }
+      if (pinch && e.touches.length < 2) { pinch = null; return; }
+      if (tStart && !tStart.moved && M.mode === 'game') click(tStart.x, tStart.y, 0);
+      tStart = null;
+    }, { passive: false });
+    // menu buttons
+    $('#btn-new').onclick = () => { G.Audio.init(); G.Audio.play('click'); if (G.Save.has()) G.UI.confirm('Começar um novo mundo? O mundo salvo será substituído.', () => M.newGame()); else M.newGame(); };
+    $('#btn-continue').onclick = () => { G.Audio.init(); G.Audio.play('click'); M.continueGame(); };
+    $('#btn-howto').onclick = () => { G.Audio.init(); G.Audio.play('click'); G.UI.openHelp(); };
+    $('#intro').addEventListener('click', () => endIntro());
+    document.addEventListener('visibilitychange', () => { if (document.hidden && M.mode === 'game') G.Save.save(true); });
+    window.addEventListener('pagehide', () => { if (M.mode === 'game') G.Save.save(true); });
+  }
+  function click(px, py, btn) {
+    const R = G.Render;
+    if (btn === 2) { if (I.power) G.UI.setPower(null); else G.UI.select(null); return; }
+    if (btn !== 0) return;
+    if (I.power && I.power !== 'hand') {
+      const [x, y] = R.screenToTile(px, py);
+      if (G.Powers.cast(I.power, x, y)) { G.UI.update(1, true); if (G.S.faith < G.Powers.byId(I.power).cost) G.UI.setPower(null); }
+      else G.UI.notice(G.S.faith < G.Powers.byId(I.power).cost ? 'Fé insuficiente para este poder.' : 'Não é possível usar isso aí.', 'eye');
+      return;
+    }
+    if (I.power === 'hand') return;
+    const ent = pick(px, py);
+    G.UI.select(ent);
+  }
+
+  // ------------------------------ loop ------------------------------
+  let lastT = performance.now(), saveT = 0, hoverT = 0;
+  function loop(now) {
+    const rdt = Math.min(0.1, Math.max(0, (now - lastT) / 1000)); lastT = now;
+    if (G.S) {
+      const cam = G.Render.cam;
+      let sp = G.speed;
+      if (M.mode === 'menu') {
+        sp = 1;
+        const t = now / 1000;
+        cam.x = M.menuBase[0] + Math.sin(t * 0.06) * 170; cam.y = M.menuBase[1] + Math.cos(t * 0.045) * 70;
+      } else if (M.mode === 'intro') { sp = 1; updateIntro(rdt); }
+      if (M.modalOpen && M.mode === 'game') sp = 0;
+      const dt = rdt * sp;
+      simulate(dt);
+      // keyboard panning
+      if (M.mode === 'game' && !M.modalOpen) {
+        const k = I.keys; const v = 520 * rdt / cam.zoom;
+        let dx = 0, dy = 0;
+        if (k.w || k.arrowup) dy -= v; if (k.s || k.arrowdown) dy += v; if (k.a || k.arrowleft) dx -= v; if (k.d || k.arrowright) dx += v;
+        if (dx || dy) { cam.x += dx; cam.y += dy; cam.follow = 0; cam.target = null; }
+      }
+      G.Render.update(rdt, dt);
+      G.FX.update(dt > 0 ? dt : 0);
+      // hover & preview
+      hoverT -= rdt;
+      if (M.mode === 'game' && hoverT <= 0 && !I.mouse.down) {
+        hoverT = 0.05;
+        const m = I.mouse;
+        if (m.onCanvas) {
+          if (I.power && I.power !== 'hand') { const [x, y] = G.Render.screenToTile(m.x, m.y); G.Render.preview = { power: I.power, x, y }; G.Render.hover = null; }
+          else { G.Render.preview = null; G.Render.hover = pick(m.x, m.y, I.power === 'hand'); }
+          canvas.style.cursor = I.held ? 'grabbing' : I.power === 'hand' ? (G.Render.hover ? 'grab' : 'default') : I.power ? 'crosshair' : (G.Render.hover ? 'pointer' : 'default');
+        } else { G.Render.hover = null; G.Render.preview = null; }
+      }
+      G.Render.frame(rdt);
+      G.Render.perfSample(rdt);
+      G.Audio.update(rdt);
+      if (M.mode === 'game') {
+        G.UI.update(rdt);
+        saveT += rdt; if (saveT > 45) { saveT = 0; G.Save.save(true); }
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('load', () => {
+    G.Render.init($('#game'));
+    G.UI.init();
+    setupInput();
+    M.toMenu();
+    requestAnimationFrame(loop);
+    // fonts can load late; redraw texts
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { });
+  });
+})(window.G);
