@@ -348,6 +348,57 @@
           }
         });
       }
+      case 'quartel': {
+        const [w, h, ax, ay] = spriteDims(2, 2, 40);
+        return Art.sprite(key, w, h, ax, ay, (c, m) => {
+          box(c, -0.92, -0.92, 0.92, 0.92, 0, 1.5, '#8a8276', '#6c655b', '#a39a8c');
+          const x0 = -0.82, x1 = 0.3, y0 = -0.82, y1 = 0.72, H = 13;
+          box(c, x0 - 0.04, y0 - 0.04, x1 + 0.04, y1 + 0.04, 1.5, 3.5, '#7c7468', '#645d53', '#958d80');
+          walls(c, x0, y0, x1, y1, 3.5, H, '#8a5a36', '#6a4428');
+          c.strokeStyle = 'rgba(40,24,12,0.45)'; c.lineWidth = 0.45;
+          for (let z = 5.5; z < H; z += 2) { let a = P(x0, y1, z), b = P(x1, y1, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); a = P(x1, y1, z); b = P(x1, y0, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+          onL(c, y1, -0.3, 0.0, 3.5, 10.5, '#3a2414');
+          onR(c, x1, -0.55, -0.35, 8, 11, '#2b323c', m, 1);
+          onR(c, x1, 0.05, 0.25, 8, 11, '#2b323c', m, 1);
+          gableX(c, x0, y0, x1, y1, H, H + 11, 0.1, '#7a3a2a', '#5e2c20', '#9a6a44', '#3e1c14');
+          // spear rack
+          box(c, 0.52, -0.72, 0.62, 0.62, 5, 6.2, '#6e4a2c', '#553820', '#7a5634');
+          for (const py of [-0.6, -0.36, -0.12, 0.12, 0.36, 0.56]) {
+            const a = P(0.6, py, 1.5), b = P(0.6, py, 17);
+            c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke();
+            c.fillStyle = '#c4c8d0'; c.beginPath(); c.moveTo(b[0] - 0.9, b[1]); c.lineTo(b[0], b[1] - 2.8); c.lineTo(b[0] + 0.9, b[1]); c.fill();
+          }
+          // training dummy
+          const d = P(0.62, 0.86, 1.5);
+          c.strokeStyle = '#6e4a2c'; c.lineWidth = 1; c.beginPath(); c.moveTo(d[0], d[1]); c.lineTo(d[0], d[1] - 11); c.moveTo(d[0] - 3.2, d[1] - 7.5); c.lineTo(d[0] + 3.2, d[1] - 7.5); c.stroke();
+          c.fillStyle = '#d8c090'; c.beginPath(); c.ellipse(d[0], d[1] - 8, 2, 3, 0, 0, TAU); c.fill();
+          c.beginPath(); c.arc(d[0], d[1] - 12.4, 1.7, 0, TAU); c.fill();
+          m.fires.push(P(-0.2, 0.9, 3));
+        });
+      }
+      case 'torre': {
+        const [w, h, ax, ay] = spriteDims(1, 1, 54);
+        return Art.sprite(key, w, h, ax, ay, (c, m) => {
+          box(c, -0.42, -0.42, 0.42, 0.42, 0, 3, '#8e8578', '#6f675c', '#a0988c');
+          const legs = [[-0.32, -0.32], [0.32, -0.32], [0.32, 0.32], [-0.32, 0.32]];
+          const ln = (a, b, w, col) => { c.strokeStyle = col; c.lineWidth = w; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); };
+          for (const [lx, ly] of legs) ln(P(lx, ly, 3), P(lx * 0.78, ly * 0.78, 31), 1.6, '#6e4a2c');
+          for (const [a0, b0] of [[legs[3], legs[2]], [legs[2], legs[1]]]) {
+            ln(P(a0[0], a0[1], 5), P(b0[0] * 0.84, b0[1] * 0.84, 20), 0.6, '#5a3a20');
+            ln(P(b0[0], b0[1], 5), P(a0[0] * 0.84, a0[1] * 0.84, 20), 0.6, '#5a3a20');
+            ln(P(a0[0] * 0.86, a0[1] * 0.86, 18), P(b0[0] * 0.8, b0[1] * 0.8, 30), 0.6, '#5a3a20');
+          }
+          box(c, -0.4, -0.4, 0.4, 0.4, 30, 32.5, '#8a6038', '#6a4628', '#a07448');
+          walls(c, -0.4, -0.4, 0.4, 0.4, 32.5, 36, 'rgba(128,86,48,0.95)', 'rgba(98,64,36,0.95)');
+          c.strokeStyle = 'rgba(40,24,12,0.5)'; c.lineWidth = 0.4;
+          for (let k = -0.3; k <= 0.3; k += 0.15) { let a = P(k, 0.4, 32.5), b = P(k, 0.4, 36); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); a = P(0.4, k, 32.5); b = P(0.4, k, 36); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+          for (const [lx, ly] of [[0.36, 0.36], [0.36, -0.36], [-0.36, 0.36]]) ln(P(lx, ly, 36), P(lx, ly, 41), 0.8, '#5a3a20');
+          const tp = P(0, 0, 52);
+          poly(c, [P(-0.5, 0.5, 40), P(0.5, 0.5, 40), tp], '#7a3a2a', '#3e1c14', 0.4);
+          poly(c, [P(0.5, 0.5, 40), P(0.5, -0.5, 40), tp], '#5e2c20', '#3e1c14', 0.4);
+          m.fires.push(P(0.2, 0.25, 36.5));
+        });
+      }
       case 'well': {
         const [w, h, ax, ay] = spriteDims(1, 1, 24);
         return Art.sprite(key, w, h, ax, ay, (c) => {
@@ -456,7 +507,8 @@
     const S = G.S;
     const age = v.age;
     const sc = age < 2 ? 0.45 : age < 16 ? 0.55 + (age / 16) * 0.42 : 1;
-    const cloth = age < 16 ? v.kidCloth : (CLOTH[v.role] || '#c9763a');
+    const warrior = v.role === 'guerreiro' && age >= 16 && !v.captive;
+    const cloth = v.captive ? '#8b8478' : age < 16 ? v.kidCloth : warrior ? (v._fc || '#8a3a2a') : (CLOTH[v.role] || '#c9763a');
     const act = v.act, at = v.actT;
     if (lod) { // far away: simple dots
       c.fillStyle = cloth; c.fillRect(x - 1.6 * sc, y - 7 * sc, 3.2 * sc, 5 * sc);
@@ -508,7 +560,10 @@
     c.closePath(); c.fill();
     c.fillStyle = 'rgba(0,0,0,0.18)'; c.fillRect(0.6, -8.8, 1.4, 5.3);
     if (robe) { c.fillStyle = '#e8b64a'; c.fillRect(-2, -6.2, 4.2, 0.7); }
-    c.fillStyle = 'rgba(60,40,20,0.7)'; if (!robe) c.fillRect(-2, -4.6, 4.1, 0.6);
+    if (v.captive) { c.fillStyle = 'rgba(60,40,20,0.7)'; c.fillRect(-2, -4.6, 4.1, 0.6); }
+    else if (!robe) { c.fillStyle = warrior ? '#3a2a1a' : (v._fc || 'rgba(60,40,20,0.7)'); c.fillRect(-2.05, -4.9, 4.2, 0.95); }
+    else if (v._fc) { c.fillStyle = v._fc; c.fillRect(-2.1, -7.4, 4.3, 0.7); }
+    if (warrior) { c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(-2, -8.8, 4, 1.1); }
     // arms & tools
     c.strokeStyle = v.skin; c.lineWidth = 1;
     const sh = [-0.2, -8]; // shoulder
@@ -535,10 +590,27 @@
       case 'beat': tool(-2.4 + Math.abs(Math.sin(at * 9)) * 2, 3, () => { c.strokeStyle = '#5a4a2a'; c.lineWidth = 0.9; line(c, 0, 0, 0, 5); c.fillStyle = '#4a7a3a'; c.beginPath(); c.ellipse(0, 5.4, 1.6, 1, 0, 0, TAU); c.fill(); }); break;
       case 'eat': line(c, 0, -8, 1.8, -8.6); c.fillStyle = '#c86a3a'; c.beginPath(); c.arc(2, -9, 0.9, 0, TAU); c.fill(); break;
       case 'talk': { const g = Math.sin(at * 5) * 1; line(c, 0, -8, 2.4, -6 + g); line(c, -0.5, -8, -1.2, -4.4); break; }
+      case 'bound': { line(c, 0, -8, 1.6, -5.4); line(c, -0.4, -8, 1.2, -5.2); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.55; c.beginPath(); c.arc(1.4, -5.3, 0.8, 0, TAU); c.stroke(); line(c, 1.6, -4.6, 3.2 + Math.sin(t * 3 + v.id) * 0.6, -1.5); break; }
       default: {
         const sw2 = moving ? Math.sin(ph) * 1.1 : 0;
         if (v.carry && v.carry.k !== 'water') { line(c, 0, -8, 1.5, -10.2); line(c, -0.5, -8, -1.2, -10); }
         else { line(c, 0.3, -8, 0.3 + sw2, -4.4); line(c, -0.3, -8, -0.3 - sw2, -4.4); }
+        if (v.captive && age >= 5) { c.strokeStyle = v.skin; line(c, 0, -8, 1.4, -5.6); line(c, -0.4, -8, 1, -5.4); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.5; c.beginPath(); c.arc(1.2, -5.4, 0.75, 0, TAU); c.stroke(); }
+        if (warrior && !v.carry) {
+          c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.65; line(c, 1.7, -14, 1.7, -0.5);
+          c.fillStyle = '#c4c8d0'; c.beginPath(); c.moveTo(1.05, -14); c.lineTo(1.7, -16.3); c.lineTo(2.35, -14); c.fill();
+          c.fillStyle = v._fc || '#8a3a2a'; c.beginPath(); c.ellipse(-1.9, -6.4, 1.7, 2.3, 0, 0, TAU); c.fill();
+          c.strokeStyle = 'rgba(40,30,20,0.8)'; c.lineWidth = 0.4; c.stroke();
+          c.fillStyle = '#d8d0b8'; c.beginPath(); c.arc(-1.9, -6.4, 0.55, 0, TAU); c.fill();
+        }
+        if (v.task && ((v.task.type === 'band' && v.task.flag) || v.task.type === 'envoy')) {
+          const white = v.task.type === 'envoy';
+          c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.6; line(c, -1.6, -3, -1.6, -19);
+          const fl = Math.sin(t * 6 + v.id) * 0.8;
+          c.fillStyle = white ? '#f4f0e4' : (v._fc || '#c83a2a');
+          c.beginPath(); c.moveTo(-1.6, -19); c.quadraticCurveTo(-4, -18.6 + fl, -6.6, -18.6 + fl * 1.3); c.lineTo(-6.6, -15 + fl * 1.3); c.quadraticCurveTo(-4, -15 + fl, -1.6, -15.4); c.closePath(); c.fill();
+          if (!white) { c.fillStyle = 'rgba(255,245,220,0.85)'; c.beginPath(); c.arc(-4.1, -16.9 + fl, 0.9, 0, TAU); c.fill(); }
+        }
         if (v.role === 'cacador' && age >= 16 && !v.carry) { c.strokeStyle = '#8a6a44'; c.lineWidth = 0.6; line(c, 1.6, -13, 1.6, -1); c.fillStyle = '#b8bcc4'; c.beginPath(); c.moveTo(0.9, -13); c.lineTo(1.6, -15.2); c.lineTo(2.3, -13); c.fill(); }
         if (v.role === 'anciao') { c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; line(c, 2.2, -6, 2.6, 0); }
         if (v.carry && v.carry.k === 'water') { c.fillStyle = '#7a5a3a'; c.fillRect(0.4 + sw2, -4.8, 2.2, 2.2); c.fillStyle = '#6ab8e8'; c.fillRect(0.6 + sw2, -4.8, 1.8, 0.6); }
@@ -560,13 +632,19 @@
     if (v.g === 'f' && age >= 5) { c.beginPath(); c.moveTo(-2.1, hy - 0.4); c.quadraticCurveTo(-2.9, hy + 2.6, -1.4, hy + 3.4); c.lineTo(-0.9, hy + 0.2); c.fill(); }
     c.fillStyle = '#2a1c14'; c.fillRect(0.9, hy - 0.2, 0.55, 0.65);
     if (v.g === 'm' && age >= 25 && v.id % 3 === 0) { c.fillStyle = hair; c.beginPath(); c.arc(0.4, hy + 1.2, 1.5, 0.1, Math.PI - 0.3); c.fill(); }
-    // role hats
-    if (age >= 16) {
+    // role hats (rulers wear a crown instead)
+    if (v._ruler && age >= 10) {
+      c.fillStyle = '#f2c14e';
+      c.beginPath(); c.moveTo(-2.3, hy - 1.6); c.lineTo(-2.6, hy - 4.6); c.lineTo(-1.2, hy - 3.1); c.lineTo(0, hy - 5.4); c.lineTo(1.2, hy - 3.1); c.lineTo(2.6, hy - 4.6); c.lineTo(2.3, hy - 1.6); c.closePath(); c.fill();
+      c.fillStyle = '#b8862a'; c.fillRect(-2.3, hy - 2.3, 4.6, 0.8);
+      c.fillStyle = '#e8453c'; c.fillRect(-0.45, hy - 3.4, 0.9, 0.9);
+    } else if (age >= 16) {
       if (v.role === 'agricultor') { c.fillStyle = '#e8cf7a'; c.beginPath(); c.ellipse(0, hy - 1.4, 3.6, 0.9, 0, 0, TAU); c.fill(); c.beginPath(); c.arc(0, hy - 1.5, 1.7, Math.PI, TAU); c.fill(); c.fillStyle = '#b8903a'; c.fillRect(-1.6, hy - 1.8, 3.2, 0.4); }
       else if (v.role === 'construtor') { c.fillStyle = '#e8903a'; c.beginPath(); c.arc(0, hy - 1, 2.2, Math.PI, TAU); c.fill(); c.fillRect(0, hy - 1.2, 3, 0.6); }
       else if (v.role === 'mineiro') { c.fillStyle = '#5a5e68'; c.beginPath(); c.arc(0, hy - 1, 2.2, Math.PI, TAU); c.fill(); c.fillStyle = '#ffe28a'; c.fillRect(1.4, hy - 2.2, 0.8, 0.8); }
       else if (v.role === 'sacerdote') { c.fillStyle = '#f2ecdc'; c.beginPath(); c.arc(-0.3, hy - 0.3, 2.5, Math.PI * 0.9, Math.PI * 2.1); c.fill(); }
       else if (v.role === 'cacador') { c.fillStyle = '#5a3a22'; c.beginPath(); c.arc(0, hy - 1, 2.1, Math.PI, TAU); c.fill(); c.strokeStyle = '#d84a3a'; c.lineWidth = 0.5; line(c, -1.2, hy - 2.6, -2.8, hy - 4.6); }
+      else if (warrior) { c.fillStyle = '#8a8e96'; c.beginPath(); c.arc(0, hy - 0.8, 2.35, Math.PI, TAU); c.fill(); c.fillRect(-2.35, hy - 0.9, 4.7, 0.7); c.fillStyle = v._fc || '#c83a2a'; c.fillRect(-0.4, hy - 4.2, 0.8, 1.6); }
     }
     // baby on the back
     if (v.babyOn) { c.fillStyle = '#f4efe3'; c.beginPath(); c.ellipse(-2.6, -8, 1.5, 2, 0.3, 0, TAU); c.fill(); c.fillStyle = v.babyOn.skin; c.beginPath(); c.arc(-2.7, -9.8, 1.1, 0, TAU); c.fill(); }

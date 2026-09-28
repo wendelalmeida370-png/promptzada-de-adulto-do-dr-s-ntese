@@ -2,7 +2,7 @@
 
 > *Watch them live. Help them prosper. Or remind them who their god is.*
 
-Um jogo de simulação divina que roda direto no navegador. Uma pequena ilha procedural, um punhado de habitantes autônomos e você: uma entidade que observa e interfere.
+Um jogo de simulação divina que roda direto no navegador. Ilhas, continentes e arquipélagos procedurais, povos autônomos que crescem, viram reinos, negociam, se casam, racham, guerreiam, escravizam e se libertam — e você: uma entidade que observa e interfere.
 
 ## Como jogar
 
@@ -10,7 +10,9 @@ Um jogo de simulação divina que roda direto no navegador. Uma pequena ilha pro
 
 > Se preferir servir por HTTP: `npx serve .` ou `python3 -m http.server` dentro desta pasta.
 
-O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fechar a aba). Use **CONTINUE** no menu para voltar ao seu mundo.
+Em **NEW WORLD** você escolhe o **mapa** (Ilha, Continente, Arquipélago ou Istmo), o **tamanho** (64, 80 ou 96), quantos **povos** despertam (1 a 4) e o **temperamento** deles (pacíficos, imprevisíveis ou belicosos).
+
+O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fechar a aba). Use **CONTINUE** no menu para voltar ao seu mundo. Saves da versão anterior (um só povo) são convertidos automaticamente.
 
 ## Controles
 
@@ -20,7 +22,10 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Zoom | roda do mouse · pinça no touch |
 | Ver detalhes | clique num habitante, animal ou construção |
 | Seguir alguém | duplo clique no habitante · `F` |
-| Poderes | barra inferior ou teclas `1`–`8`, depois clique no mapa |
+| Poderes | barra inferior ou teclas `1`–`6` da aba atual, depois clique no mapa |
+| Trocar aba de poderes | `Tab` (Dádivas · Ira · Destino) |
+| Painel dos reinos | `R` · ou clique no chip do povo no topo |
+| Mostrar/ocultar fronteiras | `B` |
 | Cancelar poder | botão direito · `Esc` |
 | Pausar | `Espaço` |
 | Velocidade | botões 1x / 2x / 4x · `+` / `-` |
@@ -40,20 +45,41 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 - **Dia e noite** com janelas acesas, tochas, fogueiras e braseiros.
 - **Eventos com moderação**: tempestades, secas, lobos, febre, estações de fertilidade, descobertas, viajantes chegando de barco.
 
+## Povos, reinos e guerras
+
+- **Vários povos** começam em cantos distantes do mapa, cada um com cor, bandeira, estoque, território (fronteiras desenhadas no chão) e era próprios. Quando se encontram, a história começa.
+- **Líderes com personalidade**: cada governante tem agressividade, crueldade, devoção e ambição. Títulos e numerais dinásticos (*Rainha Mara II*), epítetos conquistados em vida (*o Conquistador*, *a Pia*, *o Sanguinário*, *a Libertadora*, *o Breve*…) e uma coroa na cabeça.
+- **Governos que mudam**: Tribo → Chefia → Reino; Teocracia sob líderes devotos; **Tirania** sob líderes cruéis ou usurpadores; **Conselho** depois de uma revolução; **Povo Livre** fundado por ex-cativos.
+- **Lealdade e rachas**: cada vila tem lealdade (distância da capital, fome, guerra, tirania, conquista recente, orgulho local). Vilas infelizes declaram **independência** e viram povos novos. Na morte de um rei, um nobre ambicioso pode recusar o herdeiro: **guerra de sucessão**.
+- **Golpes e revoluções**: ambiciosos conspiram e tentam matar o governante; tiranos executam em praça pública (todos assistem, o medo cresce); o povo pode se levantar e derrubar o tirano.
+- **Diplomacia visível**: primeiro contato, emissários que caminham até a capital vizinha com presentes, propostas de paz ou de aliança (e às vezes são executados), caravanas de comércio, casamentos entre povos e **casamentos reais**, tréguas, tributos e **vassalagem**. Aliados entram nas guerras uns dos outros.
+- **Guerra**: guerreiros com escudo na cor do povo, quartéis, torres de vigia com arqueiros. Exércitos se reúnem, marcham com porta-estandarte e atacam para **saquear**, **fazer cativos**, **conquistar** vilas ou — sob líderes cruéis — **massacrar** e incendiar. Defensores lutam, crianças e idosos se escondem em casa. Batalhas viram relatos na crônica; heróis ganham fama.
+- **Cativos**: levados amarrados, fazem trabalho forçado (inclusive nas obras do tirano), dormem no **cercado**, rezam por liberdade, fogem à noite, são recapturados, se revoltam — e às vezes fundam um povo livre. Líderes clementes os aceitam como membros com o tempo; conselhos abolem o cativeiro.
+- **Queda de povos**: capitais são tomadas, povos inteiros deixam de existir; os últimos sobreviventes se juntam a vizinhos ou se rendem.
+
 ## Poderes divinos
 
-| | Poder | Custo | Efeito |
-|---|---|---|---|
-| 1 | Chuva | 10 | Rega, apaga incêndios, encerra secas |
-| 2 | Crescimento | 14 | Árvores, frutos e trigo crescem na hora |
-| 3 | Cura | 12 | Cura feridos e doentes |
-| 4 | Fertilidade | 30 | Dois dias de colheitas e nascimentos abundantes |
-| 5 | Raio | 18 | Mata, fere, incendeia |
-| 6 | Meteoro | 70 | Sombra crescente, pânico, impacto, onda de choque, cratera — e pedra de presente |
-| 7 | Matilha | 22 | Invoca lobos famintos |
-| 8 | Mão Divina | grátis | Pegue alguém, solte ou arremesse (assusta) |
+Os poderes ficam em três abas (`Tab` troca):
 
-**Preces**: em momentos difíceis (seca, incêndio, doença, fome, lobos) a vila reza pedindo algo específico. Um aviso dourado aparece sobre a barra de poderes — clique nele para ir até lá com o poder certo selecionado. Atender faz a devoção disparar; ignorar custa devoção.
+| Aba | Poder | Custo | Efeito |
+|---|---|---|---|
+| Dádivas | Chuva | 10 | Rega, apaga incêndios, encerra secas |
+| Dádivas | Crescimento | 14 | Árvores, frutos e trigo crescem na hora |
+| Dádivas | Cura | 12 | Cura feridos e doentes |
+| Dádivas | Fertilidade | 30 | Dois dias de colheitas e nascimentos abundantes |
+| Dádivas | Mão Divina | grátis | Pegue alguém, solte ou arremesse (assusta) |
+| Ira | Raio | 18 | Mata, fere, incendeia — tiranos também sangram |
+| Ira | Meteoro | 70 | Sombra crescente, pânico, impacto, onda de choque, cratera — e pedra de presente |
+| Ira | Matilha | 22 | Invoca lobos famintos |
+| Ira | Terremoto | 55 | Construções racham e desabam, árvores tombam, pedras brotam |
+| Ira | Praga | 32 | Uma doença muito contagiosa nasce no ponto escolhido |
+| Destino | Ungir | 45 | Quem você tocar passa a governar seu povo; um cativo ungido lidera a fuga dos outros |
+| Destino | Libertação | 30 | Quebra as correntes dos cativos e salva condenados da execução |
+| Destino | Fúria | 35 | Força redobrada na área — e o povo atingido parte para a guerra |
+| Destino | Discórdia | 40 | A lealdade de uma vila despenca e os vizinhos passam a se odiar |
+| Destino | Paz Divina | 80 | Encerra todas as guerras; ninguém declara guerra por dois dias e meio |
+
+**Preces**: em momentos difíceis (seca, incêndio, doença, fome, lobos, invasores, cativeiro, tirania) a vila reza pedindo algo específico. Um aviso dourado aparece sobre a barra de poderes — clique nele para ir até lá com o poder certo selecionado. Atender faz a devoção disparar; ignorar custa devoção.
 
 **Fé** é o recurso dos poderes. Ela nasce da **devoção** (quando você ajuda) e do **medo** (quando você castiga). Medo também rende fé, mas deixa o povo lento e menos fértil — e quem perde parentes para a sua fúria perde a devoção. O painel inferior mostra como eles te enxergam: *Um mistério*, *Protetor*, *Deus amado*, *Deus temido*, *Tirano divino*…
 
@@ -63,9 +89,12 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 index.html        HUD, menus e ordem dos scripts
 css/style.css     interface
 js/util.js        RNG, ruído, heap, nomes
-js/world.js       estado, geração da ilha, pathfinding A*
+js/world.js       estado, geração dos mapas (ilha, continente, arquipélago, istmo), pathfinding A*
 js/nature.js      árvores, arbustos, rochas, fogo, clima, nuvens
 js/village.js     construções, planejador, empregos, moradia, crônica, marcos, fé
+js/factions.js    povos: cores, bandeiras, estoques, território e fronteiras
+js/politics.js    líderes, dinastias, governos, lealdade, rachas, golpes, tirania, diplomacia
+js/war.js         exércitos, combate, saques, conquista, massacres, torres, cativos, revoltas
 js/villagers.js   IA dos habitantes (necessidades, decisões, tarefas)
 js/animals.js     presas e predadores
 js/powers.js      poderes divinos e percepção

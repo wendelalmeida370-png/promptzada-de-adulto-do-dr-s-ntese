@@ -4,11 +4,12 @@
 //  depth-sorted entities, day/night lighting, weather, effects
 // ============================================================
 (function (G) {
-  const N = G.N, T = G.T, W = G.W;
+  let N = G.N; const T = G.T, W = G.W;
   const R = G.Render = {};
   const HS = 4; R.HS = HS;
   const RS = 2;                 // terrain cache resolution
-  const C = 16, NC = N / C;     // chunks
+  const C = 16; let NC = N / C;     // chunks
+  G.mapHooks.push(n => { N = n; NC = n / C; });
   const TAU = Math.PI * 2;
   R.cam = { x: 0, y: 256, zoom: 1.6, tz: 1.6, shake: 0, follow: 0, anchor: null };
   let canvas, ctx, lightC, lctx, VW = 0, VH = 0, dpr = 1;
@@ -422,6 +423,8 @@
   R.viewRect = viewRect;
 
   R.dbg = {};
+  R.showBorders = true;
+  const rulerIds = new Set();
   const PROF = R.prof = { on: false, t: {}, mark(k, t0) { if (this.on) this.t[k] = (this.t[k] || 0) + performance.now() - t0; } };
   const now = () => performance.now();
   R.frame = function (dt) {
@@ -518,7 +521,9 @@
       if (p[0] < view[0] - 60 || p[0] > view[2] + 60 || p[1] < view[1] - 30 || p[1] > view[3] + 90) continue;
       pushD(b.x + b.w - 0.5 + b.y + b.h - 0.5 + 0.2, 4, b, p[0], p[1]);
     }
-    for (const v of S.villagers.values()) v.babyOn = null;
+    const setHex = new Map(); for (const s of S.settlements.values()) setHex.set(s.id, G.Fac.hex(s.fac));
+    rulerIds.clear(); for (const f of G.Fac.all()) if (f.leader) rulerIds.add(f.leader);
+    for (const v of S.villagers.values()) { v.babyOn = null; v._fc = v.captive ? null : (setHex.get(v.set) || null); v._ruler = rulerIds.has(v.id); }
     for (const v of S.villagers.values()) if (v.age < 2 && v.carried) { const c = S.villagers.get(v.carrier); if (c) c.babyOn = v; }
     for (const v of S.villagers.values()) {
       if (v.inside || v.held || (v.age < 2 && v.carried)) continue;
@@ -683,6 +688,13 @@
       groundEllipse(zn.x, zn.y, zn.r); ctx.strokeStyle = `rgba(255,170,210,${a * 0.6})`; ctx.lineWidth = 1.4; ctx.setLineDash([4, 5]); ctx.lineDashOffset = -t * 8; ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = `rgba(255,190,220,${a * 0.1})`; ctx.fill();
     }
+    // kingdoms: borders, war alarms, pens and executions
+    if (R.showBorders && G.Fac.borders.length && G.Fac.all().length > 1) drawBorders();
+    for (const s of S.settlements.values()) if (s.alarmT > 0) {
+      groundEllipse(s.cx, s.cy, (s.radius || 8) * 0.85); ctx.strokeStyle = `rgba(255,70,50,${Math.min(1, s.alarmT / 4) * (0.35 + 0.25 * Math.sin(t * 6))})`;
+      ctx.lineWidth = 1.6; ctx.setLineDash([6, 5]); ctx.lineDashOffset = t * 12; ctx.stroke(); ctx.setLineDash([]);
+    }
+    for (const f of G.Fac.all()) if (f.exec) { groundEllipse(f.exec.x + 1.2, f.exec.y + 0.7, 0.9); ctx.fillStyle = `rgba(120,10,20,${0.25 + 0.1 * Math.sin(t * 4)})`; ctx.fill(); }
     // farms, construction ground, cemetery ground, campfire seats
     for (const b of S.buildings.values()) {
       const [cx, cy] = G.Village.center(b);
@@ -691,6 +703,8 @@
       else if (!b.built) { ctx.fillStyle = 'rgba(120,90,60,0.35)'; diamond(b.x + 0.05, b.y + 0.05, b.x + b.w - 0.05, b.y + b.h - 0.05); ctx.fill(); }
       else if (b.type === 'cemetery') { ctx.fillStyle = 'rgba(60,90,50,0.25)'; diamond(b.x + 0.1, b.y + 0.1, b.x + b.w - 0.1, b.y + b.h - 0.1); ctx.fill(); }
       else if (b.type === 'monument' || b.type === 'temple') { ctx.fillStyle = 'rgba(200,190,170,0.35)'; diamond(b.x - 0.3, b.y - 0.3, b.x + b.w + 0.3, b.y + b.h + 0.3); ctx.fill(); }
+      else if (b.type === 'cercado') { ctx.fillStyle = 'rgba(110,86,60,0.45)'; diamond(b.x + 0.05, b.y + 0.05, b.x + b.w - 0.05, b.y + b.h - 0.05); ctx.fill(); penStakes(b, penBack(b), 1); }
+      else if (b.type === 'quartel') { ctx.fillStyle = 'rgba(150,130,100,0.35)'; diamond(b.x - 0.2, b.y - 0.2, b.x + b.w + 0.2, b.y + b.h + 0.2); ctx.fill(); }
     }
     // selection & hover rings
     const sel = G.UI && G.UI.selected;
@@ -716,6 +730,28 @@
       groundEllipse(m.x, m.y, m.r);
       ctx.strokeStyle = `rgba(255,80,40,${0.4 + 0.4 * Math.sin(t * 12)})`; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]); ctx.lineDashOffset = t * 20; ctx.stroke(); ctx.setLineDash([]);
     }
+  }
+  let borderCache = { ver: -1, n: 0, paths: [] };
+  function drawBorders() {
+    const F = G.Fac;
+    if (borderCache.ver !== F.bordersVer || borderCache.n !== N) {
+      borderCache = { ver: F.bordersVer, n: N, paths: [] };
+      for (const b of F.borders) {
+        const p = new Path2D(), pc = new Path2D(); const s = b.s;
+        for (let k = 0; k < s.length; k += 5) {
+          const a = proj(s[k], s[k + 1], W.hAt(s[k], s[k + 1]) + 0.12), c = proj(s[k + 2], s[k + 3], W.hAt(s[k + 2], s[k + 3]) + 0.12);
+          const path = s[k + 4] ? pc : p; path.moveTo(a[0], a[1]); path.lineTo(c[0], c[1]);
+        }
+        borderCache.paths.push({ p, pc, rgb: G.hex2rgb(F.hex(b.fid)) });
+      }
+    }
+    ctx.save(); ctx.lineCap = 'round';
+    for (const b of borderCache.paths) {
+      ctx.strokeStyle = G.rgb(b.rgb, 0.18); ctx.lineWidth = 3.4; ctx.stroke(b.p); ctx.stroke(b.pc);
+      ctx.strokeStyle = G.rgb(b.rgb, 0.75); ctx.lineWidth = 0.9; ctx.setLineDash([3, 2.5]); ctx.stroke(b.p);
+      ctx.setLineDash([]); ctx.strokeStyle = G.rgb(b.rgb, 0.95); ctx.lineWidth = 1.2; ctx.stroke(b.pc);
+    }
+    ctx.restore();
   }
   function drawFarm(b, t) {
     const S = G.S;
@@ -809,6 +845,7 @@
         if (v.age >= 2) {
           const baby = v.babyOn;
           G.Art.villager(ctx, v, sx, sy, t, R.cam.zoom < 0.95);
+          if (v._ruler && !v.inside) { const sc = v.age < 16 ? 0.55 + (v.age / 16) * 0.42 : 1; emisGlow.push(sx, sy - 15 * sc, 6, 'gold', 0.3 + 0.1 * Math.sin(t * 3)); }
         } else { // baby lying (no carrier)
           ctx.fillStyle = '#f4efe3'; ctx.beginPath(); ctx.ellipse(sx, sy - 1, 2.2, 1.2, 0, 0, TAU); ctx.fill();
           ctx.fillStyle = v.skin; ctx.beginPath(); ctx.arc(sx - 1.8, sy - 1.6, 1, 0, TAU); ctx.fill();
@@ -827,6 +864,42 @@
     }
   }
 
+  function drawCrown(x, y, t) {
+    ctx.fillStyle = '#f2c14e';
+    ctx.beginPath(); ctx.moveTo(x - 2.4, y); ctx.lineTo(x - 2.6, y - 2.6); ctx.lineTo(x - 1.2, y - 1.3); ctx.lineTo(x, y - 3.2); ctx.lineTo(x + 1.2, y - 1.3); ctx.lineTo(x + 2.6, y - 2.6); ctx.lineTo(x + 2.4, y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#b8862a'; ctx.fillRect(x - 2.4, y - 0.7, 4.8, 0.7);
+    ctx.fillStyle = '#e8453c'; ctx.fillRect(x - 0.4, y - 1.6, 0.8, 0.8);
+    emisGlow.push(x, y - 1.5, 5, 'gold', 0.35 + 0.1 * Math.sin(t * 3));
+  }
+  function drawBanner(x, y, hex, t, h) {
+    h = h || 24;
+    ctx.strokeStyle = '#5a3c22'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - h); ctx.stroke();
+    ctx.fillStyle = '#d8b25a'; ctx.beginPath(); ctx.arc(x, y - h - 0.6, 0.9, 0, TAU); ctx.fill();
+    const w = Math.sin(t * 3 + x * 0.05);
+    ctx.fillStyle = hex;
+    ctx.beginPath(); ctx.moveTo(x, y - h + 0.5);
+    ctx.bezierCurveTo(x + 3, y - h - 0.6 + w, x + 6, y - h + 1.2 - w, x + 10, y - h + 0.3 + w * 0.8);
+    ctx.lineTo(x + 10, y - h + 6.3 + w * 0.8);
+    ctx.bezierCurveTo(x + 6, y - h + 7.2 - w, x + 3, y - h + 5.4 + w, x, y - h + 6.5);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.fillRect(x, y - h + 4.2, 10, 0.8);
+    ctx.fillStyle = 'rgba(255,248,225,0.92)'; ctx.beginPath(); ctx.arc(x + 5, y - h + 3.2 + w * 0.3, 1.25, 0, TAU); ctx.fill();
+  }
+  R.drawBanner = drawBanner;
+  function penStakes(b, edges, frac) {
+    ctx.fillStyle = '#7a5634';
+    const n = Math.max(1, Math.round(b.w * 5));
+    let drawn = 0; const total = edges.length * n;
+    for (const [x0, y0, x1, y1] of edges) for (let k = 0; k <= n; k++) {
+      if (drawn++ > total * frac) return;
+      const px = x0 + (x1 - x0) * k / n, py = y0 + (y1 - y0) * k / n;
+      const p = proj(px, py, W.hAt(px, py));
+      ctx.fillRect(p[0] - 0.7, p[1] - 7, 1.4, 7);
+      ctx.beginPath(); ctx.moveTo(p[0] - 0.7, p[1] - 7); ctx.lineTo(p[0], p[1] - 8.6); ctx.lineTo(p[0] + 0.7, p[1] - 7); ctx.fill();
+    }
+  }
+  const penBack = b => [[b.x + 0.05, b.y + b.h - 0.05, b.x + 0.05, b.y + 0.05], [b.x + 0.05, b.y + 0.05, b.x + b.w - 0.05, b.y + 0.05]];
+  const penFront = b => [[b.x + b.w - 0.05, b.y + 0.05, b.x + b.w - 0.05, b.y + b.h - 0.05], [b.x + 0.05, b.y + b.h - 0.05, b.x + b.w - 0.05, b.y + b.h - 0.05]];
   function drawBuilding(b, sx, sy, t, nightF) {
     const S = G.S; const Art = G.Art;
     const def = G.BDEF[b.type];
@@ -846,6 +919,7 @@
     if (b.type === 'campfire') { drawCampfire(b, sx, sy, t, nightF); return; }
     if (b.type === 'cemetery') { drawCemetery(b, sx, sy, t); return; }
     if (b.type === 'ruin') { drawRuin(b, sx, sy, t); return; }
+    if (b.type === 'cercado') { if (b.built) penStakes(b, penFront(b), 1); else { penStakes(b, penFront(b), b.progress); overlays.push(b, sx, sy - 14); } return; }
     if (!b.built) { drawSite(b, sx, sy, t); if (burning) emisFire.push(sx, sy - 8, 1); return; }
     const spr = Art.building(b.type, b.v);
     if (!spr) return;
@@ -862,12 +936,16 @@
     if (b.type === 'temple') { for (const f of spr.fires) { emisFire.push(sx + f[0], sy + f[1], 0.45); light(sx + f[0], sy + f[1], 40, 'warm', 0.8); } for (const g of spr.glow) emisGlow.push(sx + g[0], sy + g[1], 8, 'gold', 0.4 + nightF * 0.5); }
     if (b.type === 'monument') { for (const g of spr.glow) emisGlow.push(sx + g[0], sy + g[1], 10, 'gold', 0.5 + nightF * 0.6 + 0.15 * Math.sin(t * 2)); light(sx, sy - 60, 80, 'gold', 0.7 * nightF + 0.1); }
     if (b.type === 'workshop') { for (const g of spr.glow) emisGlow.push(sx + g[0], sy + g[1], 6, 'fire', 0.6 + 0.3 * Math.sin(t * 9)); light(sx + 10, sy - 4, 28, 'warm', 0.5 * nightF + 0.1); }
+    if (b.type === 'torre' || b.type === 'quartel') for (const f of spr.fires) { emisFire.push(sx + f[0], sy + f[1], 0.35); light(sx + f[0], sy + f[1], 34, 'warm', 0.7); }
+    if (b.type === 'quartel') { const f = G.Fac.ofSet(b.set); if (f) drawBanner(sx - 22, sy - 16, G.Fac.hex(f.id), t, 22); }
+    if (b.type === 'torre') { const f = G.Fac.ofSet(b.set); if (f) drawBanner(sx + 1, sy - 50, G.Fac.hex(f.id), t, 10); }
     if (burning) emisFire.push(sx, sy - 14, 1.2);
   }
   function hasResidents(b) { for (const v of G.S.villagers.values()) if (v.home === b.id) return true; return false; }
   function drawPiles(b, sx, sy) {
-    const S = G.S; const cap = G.Village.cap();
-    const wood = Math.ceil(Math.min(1, S.stock.wood / cap) * 8), stone = Math.ceil(Math.min(1, S.stock.stone / cap) * 6), food = Math.ceil(Math.min(1, S.stock.food / cap) * 6);
+    const fac = G.Fac.ofSet(b.set); if (!fac) return;
+    const cap = G.Village.cap(fac.id); const st = fac.stock;
+    const wood = Math.ceil(Math.min(1, st.wood / cap) * 8), stone = Math.ceil(Math.min(1, st.stone / cap) * 6), food = Math.ceil(Math.min(1, st.food / cap) * 6);
     const at = (dx, dy) => [sx + (dx - dy) * 16, sy + (dx + dy) * 8];
     for (let k = 0; k < wood; k++) { const [px, py] = at(1.05, -0.6 + (k % 4) * 0.2); ctx.fillStyle = '#8f6238'; ctx.fillRect(px - 4, py - 2 - Math.floor(k / 4) * 1.6, 7, 1.5); ctx.fillStyle = '#d6b27a'; ctx.fillRect(px + 3, py - 2 - Math.floor(k / 4) * 1.6, 0.8, 1.5); }
     for (let k = 0; k < stone; k++) { const [px, py] = at(-0.6 + (k % 3) * 0.25, 1.05); ctx.fillStyle = k % 2 ? '#a9a49a' : '#8a857c'; ctx.beginPath(); ctx.ellipse(px, py - 1.5 - Math.floor(k / 3) * 1.8, 2.2, 1.4, 0, 0, TAU); ctx.fill(); }
@@ -882,6 +960,7 @@
     ctx.fillStyle = '#2a2220'; ctx.beginPath(); ctx.ellipse(sx, sy, 4.5, 2.2, 0, 0, TAU); ctx.fill();
     ctx.strokeStyle = '#5a3a22'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(sx - 4, sy + 1); ctx.lineTo(sx + 3, sy - 2); ctx.moveTo(sx - 3, sy - 2); ctx.lineTo(sx + 4, sy + 1); ctx.stroke();
     if (!b.built) return;
+    const fac = G.Fac.ofSet(b.set); if (fac) drawBanner(sx + 9, sy + 2, G.Fac.hex(fac.id), t, 24);
     emisFire.push(sx, sy - 3, 0.9 + 0.1 * Math.sin(t * 7));
     light(sx, sy - 4, 70 + Math.sin(t * 9) * 4 + Math.sin(t * 13) * 3, 'warm', 0.65 + nightF * 0.45);
   }
@@ -994,6 +1073,8 @@
         case 8: { ctx.fillStyle = p.c; ctx.beginPath(); ctx.moveTo(sx, sy - s); ctx.lineTo(sx + s * 0.28, sy - s * 0.28); ctx.lineTo(sx + s, sy); ctx.lineTo(sx + s * 0.28, sy + s * 0.28); ctx.lineTo(sx, sy + s); ctx.lineTo(sx - s * 0.28, sy + s * 0.28); ctx.lineTo(sx - s, sy); ctx.lineTo(sx - s * 0.28, sy - s * 0.28); ctx.closePath(); ctx.fill(); break; }
         case 9: ctx.fillStyle = p.c; ctx.save(); ctx.translate(sx, sy); ctx.rotate(p.rot); ctx.beginPath(); ctx.ellipse(0, 0, s, s * 0.55, 0, 0, TAU); ctx.fill(); ctx.restore(); break;
         case 10: { ctx.fillStyle = p.c; const fl = Math.abs(Math.sin(R.time * 18 + k)); ctx.fillRect(sx - s * fl, sy - s * 0.5, s * fl, s); ctx.fillRect(sx, sy - s * 0.5, s * fl, s); break; }
+        case 12: { const svx = (p.vx - p.vy) * 16, svy = (p.vx + p.vy) * 8 - p.vz; const l = Math.hypot(svx, svy) || 1; ctx.strokeStyle = p.c; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx - svx / l * 6, sy - svy / l * 6); ctx.stroke(); ctx.fillStyle = '#e8e2d0'; ctx.fillRect(sx - svx / l * 6 - 0.6, sy - svy / l * 6 - 0.6, 1.2, 1.2); break; }
+        case 13: { const fl = Math.sin(R.time * 14 + k) * 2; ctx.strokeStyle = p.c; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(sx - 3, sy - fl); ctx.lineTo(sx, sy); ctx.lineTo(sx + 3, sy - fl); ctx.stroke(); break; }
         case 11: { ctx.fillStyle = p.c; ctx.save(); ctx.translate(sx, sy); ctx.rotate(p.vz < 0 ? 0.6 : -0.6); ctx.beginPath(); ctx.ellipse(0, 0, 2.2, 0.9, 0, 0, TAU); ctx.fill(); ctx.restore(); if (p.life < 0.05) G.FX.splash(p.x, p.y, 0.2); break; }
       }
     }

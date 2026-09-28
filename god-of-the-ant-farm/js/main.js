@@ -4,7 +4,8 @@
 //  menu, intro, new world / continue, autosave
 // ============================================================
 (function (G) {
-  const N = G.N, W = G.W;
+  let N = G.N; const W = G.W;
+  G.mapHooks.push(n => { N = n; });
   const M = G.Main = { mode: 'menu', modalOpen: false, lastSpeed: 1 };
   const I = G.Input = { power: null, held: null, keys: {}, mouse: { x: 0, y: 0, down: false, btn: -1, sx: 0, sy: 0, lx: 0, ly: 0, dragged: false, onCanvas: false }, hoverT: 0 };
   G.speed = 1;
@@ -12,41 +13,59 @@
   let canvas;
 
   // ------------------------------ world setup ------------------------------
-  function setupWorld(seed) {
-    G.FX.list.length = 0; G.FX.floaters.length = 0; G.FX.bolts.length = 0; G.FX.rings.length = 0; G.FX.glows.length = 0;
-    G.genWorld(seed);
-    const S = G.S; const [sx, sy] = S.start;
-    const set = G.Village.addSettlement(G.SETTLEMENT_NAMES[0], sx, sy);
+  function spawnPeople(sx, sy, k) {
+    const S = G.S;
+    const fac = G.Fac.create({ ci: [0, 1, 2, 3][k] });
+    const set = G.Village.addSettlement(G.Village.newSettlementName(), sx, sy, fac.id);
+    fac.capital = set.id;
     const cf = G.Village.addBuilding('campfire', Math.floor(sx), Math.floor(sy), set.id, true);
     set.campfire = cf.id; set.lit = true;
     const make = o => {
       let x = sx, y = sy;
-      for (let k = 0; k < 10; k++) { const a = G.rr(0, 6.28), r = G.rr(1.3, 2.4); x = sx + Math.cos(a) * r; y = sy + Math.sin(a) * r; if (W.walkableXY(x, y)) break; }
+      for (let t = 0; t < 10; t++) { const a = G.rr(0, 6.28), r = G.rr(1.3, 2.4); x = sx + Math.cos(a) * r; y = sy + Math.sin(a) * r; if (W.walkableXY(x, y)) break; }
       return G.Vg.create(Object.assign({ x, y, set: set.id }, o));
     };
     const pair = (a, b) => { a.partner = b.id; b.partner = a.id; };
-    const mara = make({ name: 'Mara', g: 'f', age: 38 }), oren = make({ name: 'Oren', g: 'm', age: 41 }); pair(mara, oren);
-    const lina = make({ name: 'Lina', g: 'f', age: 19, mother: mara.id, father: oren.id }); mara.kids.push(lina.id); oren.kids.push(lina.id);
-    make({ name: 'Taren', g: 'm', age: 22 });
+    const first = k === 0;
+    const mara = make({ name: first ? 'Mara' : undefined, g: 'f', age: 38 }), oren = make({ name: first ? 'Oren' : undefined, g: 'm', age: 41 }); pair(mara, oren);
+    const lina = make({ name: first ? 'Lina' : undefined, g: 'f', age: 19, mother: mara.id, father: oren.id }); mara.kids.push(lina.id); oren.kids.push(lina.id);
+    make({ name: first ? 'Taren' : undefined, g: 'm', age: 22 });
     const f2 = make({ g: 'f', age: 26 }), m2 = make({ g: 'm', age: 28 }); pair(f2, m2);
     const kid = make({ age: 5, mother: f2.id, father: m2.id }); f2.kids.push(kid.id); m2.kids.push(kid.id);
     const f3 = make({ g: 'f', age: 23 }), m3 = make({ g: 'm', age: 24 }); pair(f3, m3);
     make({ g: 'f', age: 20 }); make({ g: 'm', age: 31 });
-    S.stats.couples = 3;
+    S.stats.couples += 3;
+    return fac;
+  }
+  function setupWorld(seed, opts) {
+    opts = Object.assign({ type: 'ilha', size: 64, tribes: 1, temper: 'normal' }, opts || {});
+    G.FX.list.length = 0; G.FX.floaters.length = 0; G.FX.bolts.length = 0; G.FX.rings.length = 0; G.FX.glows.length = 0;
+    G.setMapSize(opts.size);
+    G.genWorld(seed, opts);
+    const S = G.S;
+    S.temper = opts.temper || 'normal';
+    G.War.reset();
+    const facs = S.starts.map(([x, y], k) => spawnPeople(x, y, k));
     G.Animals.populate();
     G.Village.forceUpdate();
+    G.Politics && G.Politics.init();
+    G.Fac.updateTerritory();
     G.Render.buildTerrain(); G.Render.initSky();
     S.popHist = [];
     S.stats.maxPop = S.villagers.size;
-    G.Village.log('Onze almas despertaram ao redor de uma fogueira.', 'campfire', sx, sy);
+    if (facs.length > 1) {
+      for (const f of facs) { const c = G.Fac.capitalOf(f.id); const l = G.Politics.ruler(f); G.Village.log(`${f.name}${l ? ', guiad' + G.Fac.oa(f) + ' por ' + l.name + ',' : ''} acendeu sua fogueira em ${c.name}.`, 'campfire', c.cx, c.cy); }
+      G.Village.log(`${facs.length} povos despertaram em cantos distantes ${S.mapType === 'arquipelago' ? 'do arquipélago' : S.mapType === 'continente' ? 'do continente' : S.mapType === 'istmo' ? 'das duas terras' : 'da ilha'}. Nenhum sabe dos outros.`, 'eye');
+    } else G.Village.log('Onze almas despertaram ao redor de uma fogueira.', 'campfire', S.start[0], S.start[1]);
     return S;
   }
+  M.lastOpts = (() => { const d = { type: 'ilha', size: 80, tribes: 3, temper: 'normal' }; try { return Object.assign(d, JSON.parse(localStorage.getItem('gotaf-setup') || 'null') || {}); } catch (e) { return d; } })();
 
   // ------------------------------ modes ------------------------------
   M.toMenu = function () {
     M.mode = 'menu';
     G.UI.showHUD(false); G.UI.select(null); G.UI.setPower(null); G.UI.closeModal();
-    setupWorld((Math.random() * 1e9) | 0);
+    setupWorld((Math.random() * 1e9) | 0, { type: 'ilha', size: 64, tribes: 2 });
     const S = G.S;
     G.Render.centerOn(S.start[0], S.start[1], 1.35);
     M.menuBase = [G.Render.cam.x, G.Render.cam.y];
@@ -61,10 +80,13 @@
     b.disabled = !info;
     $('#continue-info').textContent = info ? `Dia ${info.day} · ${info.pop} ${info.pop === 1 ? 'habitante' : 'habitantes'} · ${G.ERAS[info.era] || ''}` : 'Nenhum mundo salvo';
   }
-  M.newGame = function () {
+  M.newGame = function (opts) {
     G.Audio.init();
+    opts = opts || M.lastOpts;
+    M.lastOpts = opts; try { localStorage.setItem('gotaf-setup', JSON.stringify(opts)); } catch (e) { }
     G.UI.closeModal(); G.UI.select(null); G.UI.setPower(null);
-    setupWorld((Date.now() ^ (Math.random() * 1e9)) >>> 0);
+    setupWorld((Date.now() ^ (Math.random() * 1e9)) >>> 0, opts);
+    G.UI.viewFac = G.Fac.all()[0].id;
     const S = G.S;
     $('#menu').classList.add('fade');
     setTimeout(() => $('#menu').classList.add('hidden'), 900);
@@ -72,7 +94,7 @@
     M.mode = 'intro'; M.introT = 0;
     G.UI.setSpeed(1);
     // camera: from the whole island to the campfire
-    G.Render.centerOn(N / 2, N / 2, 0.62);
+    G.Render.centerOn(N / 2, N / 2, 0.62 * 64 / N);
     M.introFrom = [G.Render.cam.x, G.Render.cam.y];
     const [fx, fy] = G.Render.proj(S.start[0], S.start[1], W.groundH(S.start[0], S.start[1]));
     M.introTo = [fx, fy - 10];
@@ -88,14 +110,14 @@
     setTimeout(() => intro.classList.add('hidden'), 700);
     G.Render.cam.x = M.introTo[0]; G.Render.cam.y = M.introTo[1]; G.Render.cam.zoom = G.Render.cam.tz = 2.0;
     G.UI.showHUD(true);
-    setTimeout(() => G.UI.notice('Dica: selecione um poder na barra de baixo (ou teclas 1–8) e clique no mapa.', 'eye'), 1500);
+    setTimeout(() => G.UI.notice(G.Fac.all().length > 1 ? 'Dica: escolha um poder (teclas 1–5, Tab troca a aba) e clique no mapa. R abre o painel dos Reinos.' : 'Dica: escolha um poder na barra de baixo (teclas 1–5, Tab troca a aba) e clique no mapa.', 'eye'), 1500);
   }
   function updateIntro(dt) {
     M.introT += dt;
     const t = M.introT;
     const k = G.easeInOut(G.clamp((t - 0.3) / 8.5, 0, 1));
     const cam = G.Render.cam;
-    cam.zoom = cam.tz = G.lerp(0.62, 2.0, k);
+    cam.zoom = cam.tz = G.lerp(0.62 * 64 / N, 2.0, k);
     cam.x = G.lerp(M.introFrom[0], M.introTo[0], k); cam.y = G.lerp(M.introFrom[1], M.introTo[1], k);
     const ps = document.querySelectorAll('#intro p');
     ps[0].classList.toggle('show', t > 0.8 && t < 6.4);
@@ -114,6 +136,7 @@
     M.mode = 'game';
     G.UI.setSpeed(1);
     G.UI.showHUD(true);
+    G.UI.viewFac = (G.Fac.all().sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id))[0] || {}).id || 0;
     G.UI.notice(`Bem-vindo de volta. Dia ${G.S.day}, ${G.S.villagers.size} habitantes.`, 'eye');
   };
 
@@ -146,7 +169,7 @@
   };
 
   // ------------------------------ picking ------------------------------
-  const BH = { campfire: 12, hut: 26, house: 28, storehouse: 34, farm: 6, well: 22, workshop: 40, temple: 46, monument: 72, cemetery: 10, ruin: 8 };
+  const BH = { campfire: 12, hut: 26, house: 28, storehouse: 34, farm: 6, well: 22, workshop: 40, temple: 46, monument: 72, cemetery: 10, ruin: 8, quartel: 38, torre: 46, cercado: 10 };
   function pick(px, py, mobileOnly) {
     const S = G.S; const R = G.Render; const cam = R.cam;
     let best = null, bd = 1e9;
@@ -254,7 +277,10 @@
       const k = e.key;
       I.keys[k.toLowerCase()] = true;
       if (M.modalOpen) { if (k === 'Escape') G.UI.closeModal(); return; }
-      if (k >= '1' && k <= '8') { const p = G.POWERS[+k - 1]; G.UI.setPower(I.power === p.id ? null : p.id); }
+      if (k >= '1' && k <= '9') { const p = G.UI.tabPowers()[+k - 1]; if (p) G.UI.setPower(I.power === p.id ? null : p.id); }
+      else if (k === 'Tab') { e.preventDefault(); G.UI.nextTab(e.shiftKey ? -1 : 1); }
+      else if (k === 'r' || k === 'R') G.UI.openRealms();
+      else if (k === 'b' || k === 'B') { G.Render.showBorders = !G.Render.showBorders; G.UI.notice(G.Render.showBorders ? 'Fronteiras visíveis.' : 'Fronteiras ocultas.', 'eye'); }
       else if (k === ' ') { e.preventDefault(); if (G.speed === 0) G.UI.setSpeed(M.lastSpeed || 1); else { M.lastSpeed = G.speed; G.UI.setSpeed(0); } }
       else if (k === 'Escape') { if (I.held) release(); else if (I.power) G.UI.setPower(null); else if (G.UI.selected) G.UI.select(null); else G.UI.openPause(); }
       else if (k === 'f' || k === 'F') { const s = G.UI.selected; if (s && s.x !== undefined && !s.type && !s.dead) G.Render.cam.follow = G.Render.cam.follow === s.id ? 0 : s.id; }
@@ -297,7 +323,7 @@
       tStart = null;
     }, { passive: false });
     // menu buttons
-    $('#btn-new').onclick = () => { G.Audio.init(); G.Audio.play('click'); if (G.Save.has()) G.UI.confirm('Começar um novo mundo? O mundo salvo será substituído.', () => M.newGame()); else M.newGame(); };
+    $('#btn-new').onclick = () => { G.Audio.init(); G.Audio.play('click'); G.UI.openSetup(); };
     $('#btn-continue').onclick = () => { G.Audio.init(); G.Audio.play('click'); M.continueGame(); };
     $('#btn-howto').onclick = () => { G.Audio.init(); G.Audio.play('click'); G.UI.openHelp(); };
     $('#intro').addEventListener('click', () => endIntro());
@@ -311,7 +337,7 @@
     if (I.power && I.power !== 'hand') {
       const [x, y] = R.screenToTile(px, py);
       if (G.Powers.cast(I.power, x, y)) { G.UI.update(1, true); G.Render.shake(0.05); if (G.S.faith < G.Powers.byId(I.power).cost) G.UI.setPower(null); }
-      else G.UI.notice(G.S.faith < G.Powers.byId(I.power).cost ? 'Fé insuficiente para este poder.' : 'Não é possível usar isso aí.', 'eye');
+      else G.UI.notice(G.S.faith < G.Powers.byId(I.power).cost ? 'Fé insuficiente para este poder.' : (G.Powers.why || 'Não é possível usar isso aí.'), 'eye');
       return;
     }
     if (I.power === 'hand') return;

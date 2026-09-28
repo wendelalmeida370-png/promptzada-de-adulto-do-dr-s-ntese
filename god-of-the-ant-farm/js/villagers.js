@@ -3,7 +3,8 @@
 //  Villagers: data, needs, utility-AI decisions, task machines
 // ============================================================
 (function (G) {
-  const N = G.N, T = G.T, W = G.W;
+  let N = G.N; const T = G.T, W = G.W;
+  G.mapHooks.push(n => { N = n; });
   const Vg = G.Vg = {};
   const SKIN = ['#f3cfae', '#e6b48f', '#cf9669', '#a8744c', '#7d5236', '#5e3c26'];
   const HAIR = ['#2b1d14', '#4a3020', '#6e4a2c', '#a8793a', '#d6b26a', '#8c3a1d', '#151515', '#5a2f1c'];
@@ -64,11 +65,14 @@
   const isAdult = v => v.age >= 16 && v.age < 62;
   function workMul(v) {
     let m = v.work * (v.sick > 0 ? 0.5 : 1) * (v.mourn > 0 ? 0.85 : 1) * (v.fear > 70 ? 0.85 : 1);
-    if (Vg.hasWorkshop) m *= 1.15;
+    const fid = G.Fac.idOfV(v);
+    if (Vg.workshopFac.has(fid)) m *= 1.15;
+    if (v.captive) m *= 0.8;
+    else { const f = G.Fac.get(fid); if (f && f.gov === 'tirania') m *= 1.08; }
     return m;
   }
-  Vg.goto = function (v, x, y, adj) {
-    const p = W.findPath(v.x, v.y, x, y, adj);
+  Vg.goto = function (v, x, y, adj, maxNodes) {
+    const p = W.findPath(v.x, v.y, x, y, adj, maxNodes);
     if (!p) { v.path = null; return false; }
     v.path = p; v.pi = 0; return true;
   };
@@ -124,9 +128,9 @@
   }
   Vg.door = V_door;
 
-  Vg.damage = function (v, amt, cause, byGod) {
+  Vg.damage = function (v, amt, cause, byGod, by) {
     if (!G.S.villagers.has(v.id)) return;
-    v.hp -= amt; v.lastCause = cause; v.lastGod = !!byGod; v.hurt = 0.3;
+    v.hp -= amt; v.lastCause = cause; v.lastGod = !!byGod; v.hurt = 0.3; v.lastBy = by || 0;
     if (v.hp <= 0) G.Village.kill(v, cause, byGod);
   };
 
@@ -169,7 +173,9 @@
     if (v.age >= 2) v.energy = G.clamp(v.energy + (awake ? -dt * (100 / 80) * (v.age >= 62 ? 1.12 : 1) * (v.task && v.task.type === 'flee' ? 1.6 : 1) : dt * (100 / 22)), 0, 100);
     if (v.hurt > 0) v.hurt -= dt;
     // babies are fed from the common stock
-    if (v.age < 2 && v.hunger > 60 && S.stock.food >= 1) { S.stock.food -= 0.5; v.hunger -= 50; }
+    if (v.age < 2 && v.hunger > 60) { const st = G.Fac.stockV(v); if (st.food >= 1) { st.food -= 0.5; v.hunger -= 50; } }
+    // on campaign, on a mission or under siege there is no time for a meal: they eat provisions
+    if (v.hunger > 80 && v.task && (FIELD[v.task.type] || v.task.type === 'escorted') && (!v.captive || v.task.type === 'escorted') && v.age >= 2) { const st = G.Fac.stockV(v); if (st.food >= 1) { st.food -= 1; v.hunger = Math.max(0, v.hunger - 50); } }
     if (v.hunger >= 100) { v.hp -= 0.45 * dt; v.lastCause = 'hunger'; v.lastGod = false; if (G.R() < dt * 0.3) emote(v, 'food'); }
     if (v.immune > 0) v.immune -= dt;
     if (v.sick > 0) {
@@ -192,6 +198,7 @@
     if (v.hp <= 0) G.Village.kill(v, v.lastCause, v.lastGod);
   }
 
+  const FIELD = { band: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1 };
   // ------------------------------ emergencies ------------------------------
   Vg.alarms = new Map(); // settlement id -> [tile indices]
   Vg.fireFighters = new Map();
@@ -200,7 +207,7 @@
     const S = G.S;
     const t = v.task;
     if (t && t.type === 'flee' && t.age < 3.5) return;
-    if (t && t.type === 'swim') return;
+    if (t && (t.type === 'swim' || t.type === 'condemned' || t.type === 'escorted')) return;
     const child = v.age < 16;
     // meteors
     for (const m of S.meteors) {
@@ -213,13 +220,14 @@
       const d = G.dist(v.x, v.y, p.x, p.y);
       if (d < p.r && !(t && (t.type === 'fire' || t.type === 'fight'))) { if (v.inside) Vg.endTask(v); fleeFrom(v, p.x, p.y, p.r + 3 - d, p.why || 'panic'); emote(v, 'fear', 2.5); return; }
     }
+    if (G.War.emergency(v, H)) return;
     if (v.inside || v.sleeping && !t) return;
     // predators
     for (const a of S.animals.values()) {
       if (a.dead || !(a.kind === 'wolf' || (a.kind === 'boar' && a.angry > 0))) continue;
       const d2 = G.dist2(v.x, v.y, a.x, a.y);
       if (d2 > 30) continue;
-      if (t && (t.type === 'fight') && t.id) return;
+      if (t && ((t.type === 'fight' && t.id) || t.type === 'combat' || t.type === 'band')) return;
       const brave = !child && v.age < 62 && v.hp > 45 && (v.role === 'cacador' || v.courage > 0.62);
       if (brave) {
         let fighters = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'fight' && o.task.id === a.id) fighters++;
@@ -278,7 +286,7 @@
   function courtTarget(v) {
     const S = G.S; let best = null, bd = 1e9;
     for (const o of S.villagers.values()) {
-      if (o === v || o.g === v.g || o.partner || o.set !== v.set || o.age < 17 || o.age > 55 || o.mourn > 0 || o.sleeping || o.inside) continue;
+      if (o === v || o.g === v.g || o.partner || o.set !== v.set || o.age < 17 || o.age > 55 || o.mourn > 0 || o.sleeping || o.inside || !o.captive !== !v.captive) continue;
       if (Math.abs(o.age - v.age) > 16 || relatedClose(v, o)) continue;
       if (o.task && o.task.pri > 1) continue;
       const d = G.dist2(v.x, v.y, o.x, o.y); if (d < bd && d < 400) { bd = d; best = o; }
@@ -289,7 +297,7 @@
   function socialTarget(v) {
     const S = G.S; let best = null, bd = 1e9;
     for (const o of S.villagers.values()) {
-      if (o === v || o.age < 10 || o.set !== v.set || o.sleeping || o.inside || o.held || o.air) continue;
+      if (o === v || o.age < 10 || o.set !== v.set || o.sleeping || o.inside || o.held || o.air || !o.captive !== !v.captive) continue;
       if (o.task && o.task.pri >= 1) continue;
       const d = G.dist2(v.x, v.y, o.x, o.y); if (d < bd && d < 144) { bd = d; best = o; }
     }
@@ -304,11 +312,12 @@
   function decide(v) {
     const S = G.S; const cur = v.task;
     if (cur && cur.pri >= 3) return;
+    if (v.captive) return G.War.captiveDecide(v, H);
     if (v.age < 16) return childDecide(v);
     const night = G.isNight(), eve = G.isEvening();
     let best = null, bs = -1, bp = 0;
     const opt = (score, pri, kind) => { if (score > bs) { bs = score; best = kind; bp = pri; } };
-    if (v.hunger > 50) opt((v.hunger - 40) / 60 * 1.3, v.hunger > 85 ? 2.5 : 1.2, 'eat');
+    if (v.hunger > 50) opt((v.hunger - 40) / 60 * 1.3 + (v.hunger > 88 ? 1 : 0), v.hunger > 85 ? 2.5 : 1.2, 'eat');
     if (night) opt(0.95 + (100 - v.energy) / 250, 1.5, 'sleep');
     else if (v.energy < 22) opt(0.6 + (22 - v.energy) / 30, v.energy < 8 ? 2.5 : 1.2, 'sleep');
     const elder = v.age >= 62;
@@ -360,6 +369,7 @@
   function wander(v, r) {
     const set = G.S.settlements.get(v.set);
     const cx = set ? set.cx : v.x, cy = set ? set.cy : v.y;
+    if (set && G.dist(v.x, v.y, cx, cy) > 16 && (!v.task || v.task.type !== 'migrate')) { setTask(v, { type: 'migrate', pri: 1.5, kind: 'migrate' }); return; }
     const base = G.dist(v.x, v.y, cx, cy) > 10 ? [cx, cy] : [v.x, v.y];
     const p = W.randomNear(base[0], base[1], r || 4);
     setTask(v, { type: 'wander', pri: 0, kind: 'wander' });
@@ -389,7 +399,7 @@
     if (v.carry && v.carry.k === 'food') { // eat what you carry
       v.carry.n -= 1; v.hunger = Math.max(0, v.hunger - 55); if (v.carry.n <= 0) v.carry = null; emote(v, 'food', 1.5); return setTask(v, { type: 'idle', pri: 0, wait: 1 });
     }
-    if (S.stock.food >= 1) return setTask(v, { type: 'eat', pri: v.hunger > 85 ? 2.5 : 1.2 });
+    if (G.Fac.stockV(v).food >= 1) return setTask(v, { type: 'eat', pri: v.hunger > 85 ? 2.5 : 1.2 });
     const b = nearestBush(v, 20); if (b) return setTask(v, { type: 'forage', id: b.id, pri: 1.4 });
     emote(v, 'food', 2);
     return null;
@@ -504,7 +514,8 @@
     const S = G.S; let best = null, bd = 1e9;
     for (const b of S.buildings.values()) {
       if (b.built || b.set !== v.set || b.type === 'ruin') continue;
-      const needMat = (b.need.wood - b.incoming.wood > 0 && S.stock.wood >= 1) || (b.need.stone - b.incoming.stone > 0 && S.stock.stone >= 1);
+      const st = G.Fac.stockOfSet(b.set);
+      const needMat = (b.need.wood - b.incoming.wood > 0 && st.wood >= 1) || (b.need.stone - b.incoming.stone > 0 && st.stone >= 1);
       const canWork = b.progress < allowedProgress(b) - 0.001;
       const carryFits = v.carry && b.need[v.carry.k] > 0;
       if (!needMat && !canWork && !carryFits) continue;
@@ -550,15 +561,27 @@
   }
   function preyCount() { let n = 0; for (const a of G.S.animals.values()) if (!a.dead && a.kind !== 'wolf') n++; return n; }
   function workTask(v) {
-    const S = G.S; const st = S.stock; const capS = G.Village.cap();
+    const S = G.S; const fac = G.Fac.ofV(v); if (!fac) return null;
+    const st = fac.stock; const capS = G.Village.cap(fac.id);
     if (v.carry && v.carry.k !== 'water') {
       if (v.role === 'construtor') { const t = buildTask(v); if (t) return t; }
       return deliverTask(v);
     }
-    const tg = G.Village.targets || { food: 60, wood: 60, stone: 30 };
+    const tg = fac.targets || { food: 60, wood: 60, stone: 30 };
     const need = k => st[k] < Math.min(capS - 1, tg[k]);
     let t = null;
+    if (v.captive) {
+      // forced labour: whatever the masters need most
+      t = (G.R() < 0.35 && buildTask(v)) || (need('stone') && mineTask(v)) || (need('wood') && chopTask(v)) || farmTask(v) || (need('food') && gatherTask(v)) || chopTask(v);
+      return t || setTask(v, { type: 'rest', pri: 0.2 });
+    }
     switch (v.role) {
+      case 'guerreiro': {
+        const r = G.R();
+        const hungry = st.food < G.Fac.pop(fac.id) * 1.5;
+        t = (need('food') && r < (hungry ? 0.8 : 0.25) && ((preyCount() > 6 && huntTask(v)) || gatherTask(v) || fishTask(v))) || (r < 0.6 ? setTask(v, { type: 'drill', pri: 1 }) : setTask(v, { type: 'patrol', pri: 1 }));
+        break;
+      }
       case 'lenhador': t = (need('wood') && chopTask(v)) || (need('food') && gatherTask(v)); break;
       case 'coletor': t = need('food') ? (gatherTask(v) || (G.R() < 0.7 ? fishTask(v) : (preyCount() > 8 && huntTask(v, 14))) || fishTask(v)) : (need('wood') && chopTask(v)); break;
       case 'agricultor': t = farmTask(v) || (need('food') && gatherTask(v)); break;
@@ -577,7 +600,7 @@
   function runTask(v, dt) {
     const S = G.S; const t = v.task;
     t.age += dt;
-    if (t.age > 70 && t.type !== 'sleep' && t.type !== 'migrate' && t.type !== 'swim' && t.type !== 'pray') return end(v);
+    if (t.age > 70 && !LONG[t.type]) return end(v);
     v.actT += dt;
     switch (t.type) {
       case 'idle': v.act = ''; t.wait = (t.wait || 1.5) - dt; if (t.wait <= 0) end(v); break;
@@ -593,7 +616,7 @@
           if (!Vg.goto(v, fx, fy, true)) return end(v);
           t.st = 1;
         } else if (move(v, dt)) {
-          const add = G.Village.addStock(v.carry.k, v.carry.n);
+          const add = G.Village.addStock(v.carry.k, v.carry.n, G.Fac.idOfV(v));
           v.st[v.carry.k] = (v.st[v.carry.k] || 0) + v.carry.n;
           if (add > 0) G.FX && G.FX.deposit(v.x, v.y, v.carry.k, add);
           v.carry = null; end(v);
@@ -756,9 +779,10 @@
           v.act = 'eat';
           if (v.actT > 1.6) {
             const units = v.hunger > 80 ? 2 : 1;
-            const got = Math.min(units, Math.floor(S.stock.food));
+            const stk = G.Fac.stockV(v);
+            const got = Math.min(units, Math.floor(stk.food));
             if (got <= 0) { emote(v, 'food', 2); const nt = eatTask(v); if (!nt) end(v); return; }
-            S.stock.food -= got; v.hunger = Math.max(0, v.hunger - 58 * got);
+            stk.food -= got; v.hunger = Math.max(0, v.hunger - 58 * got);
             end(v);
           }
         }
@@ -886,7 +910,16 @@
       }
       case 'migrate': {
         const set = S.settlements.get(v.set); if (!set) return end(v);
-        if (t.st === 0) { if (!Vg.goto(v, set.cx + G.rr(-1.5, 1.5), set.cy + G.rr(-1.5, 1.5), true)) { t.st = 9; return end(v); } t.st = 1; }
+        if (t.st === 0) {
+          if (!Vg.goto(v, set.cx + G.rr(-1.5, 1.5), set.cy + G.rr(-1.5, 1.5), true, N * N)) {
+            // no way there: settle with the nearest village of the same people instead
+            let best = null, bd = 1e9;
+            for (const o of S.settlements.values()) if (o.fac === set.fac && o !== set) { const d = G.dist2(v.x, v.y, o.cx, o.cy); if (d < bd) { bd = d; best = o; } }
+            if (best && !v.captive) { v.set = best.id; v.home = 0; }
+            t.st = 9; return end(v);
+          }
+          t.st = 1;
+        }
         else if (move(v, dt)) end(v);
         break;
       }
@@ -939,9 +972,10 @@
         if (G.R() < dt * 2) G.FX && G.FX.splash(v.x, v.y, 0.25);
         break;
       }
-      default: end(v);
+      default: if (!G.War.run(v, t, dt, H)) end(v);
     }
   }
+  const LONG = { sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1 };
 
   function runBuild(v, t, dt) {
     const S = G.S;
@@ -960,7 +994,8 @@
         return deliverTask(v);
       }
       if (v.carry) return deliverTask(v);
-      const mat = ['wood', 'stone'].find(k => b.need[k] - b.incoming[k] > 0 && S.stock[k] >= 1);
+      const stk = G.Fac.stockOfSet(b.set);
+      const mat = ['wood', 'stone'].find(k => b.need[k] - b.incoming[k] > 0 && stk[k] >= 1);
       if (mat) {
         const d = G.Village.nearestDropoff(v.x, v.y, v.set); if (!d) return end(v);
         const [dx, dy] = G.Village.frontTile(d);
@@ -972,9 +1007,10 @@
     }
     if (t.st === 1) {
       if (!move(v, dt)) return;
-      const n = Math.min(cap(v), Math.ceil(b.need[t.mat] - b.incoming[t.mat]), Math.floor(S.stock[t.mat]));
+      const stk = G.Fac.stockOfSet(b.set);
+      const n = Math.min(cap(v), Math.ceil(b.need[t.mat] - b.incoming[t.mat]), Math.floor(stk[t.mat]));
       if (n <= 0) { t.st = 0; return; }
-      S.stock[t.mat] -= n; v.carry = { k: t.mat, n }; b.incoming[t.mat] += n; t.counted = true;
+      stk[t.mat] -= n; v.carry = { k: t.mat, n }; b.incoming[t.mat] += n; t.counted = true;
       if (!Vg.goto(v, fx, fy, true)) { t.st = 0; return; }
       t.st = 2; return;
     }
@@ -985,7 +1021,7 @@
         b.incoming[k] = Math.max(0, b.incoming[k] - n);
         const used = Math.min(n, b.need[k]); b.need[k] -= used;
         v.carry = null; t.counted = false;
-        if (n - used > 0) G.Village.addStock(k, n - used);
+        if (n - used > 0) G.Village.addStock(k, n - used, G.Village.facOfSet(b.set));
         G.FX && G.FX.chips((b.x + b.w / 2), (b.y + b.h / 2), k === 'wood' ? '#a67c4e' : '#9a9a9a');
       }
       t.st = b.progress < allowedProgress(b) - 0.001 ? 4 : 0;
@@ -1010,6 +1046,11 @@
     const S = G.S;
     const night = G.isNight();
     if (t.st === 0) {
+      const pen = v.captive && G.War.penOf(v.set);
+      if (pen) {
+        const a = G.R() * 6.28, r = G.rr(0.2, 0.7);
+        if (Vg.goto(v, pen.x + 1 + Math.cos(a) * r, pen.y + 1 + Math.sin(a) * r, false)) { t.st = 1; t.home = 0; return; }
+      }
       const home = S.buildings.get(v.home);
       if (home && home.built && home.type !== 'ruin') {
         const [fx, fy] = G.Village.frontTile(home);
@@ -1046,8 +1087,12 @@
     if (S.day - v.lastBirth < 1.5) return;
     const kids = v.kids.length; if (kids >= 6) return;
     const pop = S.villagers.size;
-    const foodOk = S.stock.food > pop * 0.6 || S.stock.food > 25;
-    let chance = 0.55 * (foodOk ? 1 : 0.25) * (v.home ? 1 : 0.6) * (v.fear > 60 ? 0.5 : 1) * (kids >= 4 ? 0.6 : 1) * G.clamp(1 - (pop - 70) / 100, 0.06, 1);
+    const fpop = G.Fac.pop(G.Fac.idOfV(v)); const fst = G.Fac.stockV(v);
+    const foodOk = fst.food > fpop * 0.9 || fst.food > 60;
+    // the land feeds a limited number of people: bigger maps hold more
+    const capPop = 70 * (N / 64) * (N / 64);
+    const crowd = G.Village.pop(v.set) > 48 ? 0.5 : 1;
+    let chance = 0.55 * (foodOk ? 1 : 0.2) * crowd * (v.home ? 1 : 0.6) * (v.fear > 60 ? 0.5 : 1) * (kids >= 4 ? 0.6 : 1) * G.clamp(1 - (pop - capPop) / (capPop * 1.4), 0.06, 1);
     chance *= G.Nature.zoneMul(v.x, v.y, 'fertility');
     if (S.weather.fertility > 0) chance *= 2;
     if (G.R() < chance) { v.preg = G.DAY_LEN * 0.55; }
@@ -1162,14 +1207,15 @@
   // ------------------------------ per-frame update ------------------------------
   let tAlarm = 0, tPush = 0;
   Vg.nightWatch = new Map();
+  Vg.workshopFac = new Set();
   Vg.updateAll = function (dt) {
     const S = G.S;
     tAlarm -= dt; tPush -= dt;
     if (tAlarm <= 0) {
       tAlarm = 1;
       Vg.alarms.clear(); Vg.fireFighters.clear();
-      Vg.hasWorkshop = false;
-      for (const b of S.buildings.values()) if (b.type === 'workshop' && b.built) Vg.hasWorkshop = true;
+      Vg.workshopFac.clear();
+      for (const b of S.buildings.values()) if (b.type === 'workshop' && b.built) Vg.workshopFac.add(G.Village.facOfSet(b.set));
       if (G.Nature.fireSet.size) {
         for (const i of G.Nature.fireSet) {
           if (S.fire[i] < 0.08) continue;
@@ -1192,7 +1238,7 @@
         if (v.sick <= 0) continue;
         for (const o of S.villagers.values()) {
           if (o.sick > 0 || o === v || o.immune > 0) continue;
-          if (G.dist2(v.x, v.y, o.x, o.y) < 1.5 && G.R() < 0.012 * (Vg.hasWell(o.set) ? 0.4 : 1) * (o.traits.includes('Resistente') ? 0.4 : 1)) { o.sick = G.DAY_LEN * G.rr(0.4, 0.8); }
+          if (G.dist2(v.x, v.y, o.x, o.y) < (S.plague ? 4 : 1.5) && G.R() < (S.plague ? 0.05 : 0.012) * (Vg.hasWell(o.set) ? 0.4 : 1) * (o.traits.includes('Resistente') ? 0.4 : 1)) { o.sick = G.DAY_LEN * G.rr(0.4, 0.8); }
         }
       }
     }
@@ -1225,6 +1271,10 @@
   };
   Vg.hasWell = function (setId) { for (const b of G.S.buildings.values()) if (b.type === 'well' && b.built && b.set === setId) return true; return false; };
 
+  // helpers shared with the war & politics modules
+  const H = Vg.H = { setTask, end, move, goto: (v, x, y, adj, max) => Vg.goto(v, x, y, adj, max), arrived, flee: fleeFrom, eatTask, workTask, childDecide };
+  Vg.setTask = setTask;
+
   // ------------------------------ descriptions ------------------------------
   const MAT = { wood: 'madeira', food: 'comida', stone: 'pedra', water: 'água' };
   const ANIMAL = { rabbit: 'um coelho', deer: 'um cervo', boar: 'um javali', wolf: 'um lobo' };
@@ -1234,6 +1284,7 @@
     if (v.air) return 'Voando pelos ares!';
     if (v.age < 2) { const c = S.villagers.get(v.carrier); return c ? (v.sleeping ? 'Dormindo' : `No colo de ${c.name}`) : 'Chorando sozinho'; }
     if (!t) return v.sleeping ? 'Dormindo' : 'Pensando no que fazer';
+    const wt = G.War.taskText(v, t); if (wt) return wt;
     const bname = id => { const b = S.buildings.get(id); return b ? G.Village.buildName(b) : 'construção'; };
     const pname = id => { const o = S.villagers.get(id); return o ? o.name : 'alguém'; };
     switch (t.type) {
@@ -1248,7 +1299,7 @@
       case 'fish': return t.st < 2 ? 'Indo pescar' : 'Pescando';
       case 'hunt': { const a = S.animals.get(t.id); return a && a.dead ? 'Recolhendo a caça' : `Caçando ${a ? ANIMAL[a.kind] : 'um animal'}`; }
       case 'fight': { const a = S.animals.get(t.id); return `Lutando contra ${a ? ANIMAL[a.kind] : 'uma fera'}!`; }
-      case 'patrol': return t.torch ? 'Vigiando a vila durante a noite' : 'Patrulhando os arredores';
+      case 'patrol': return t.torch ? 'Vigiando a vila durante a noite' : v.role === 'guerreiro' ? 'Montando guarda' : 'Patrulhando os arredores';
       case 'farm': return t.harvest ? 'Colhendo trigo' : 'Plantando trigo';
       case 'build': {
         const n = bname(t.id);
@@ -1259,13 +1310,13 @@
       }
       case 'eat': return t.st < 2 ? 'Indo comer' : 'Comendo';
       case 'sleep': return v.sleeping ? (v.inside ? 'Dormindo em casa' : 'Dormindo ao relento') : 'Indo dormir';
-      case 'flee': return t.why === 'meteor' ? 'Fugindo do céu em chamas!' : t.why === 'fire' ? 'Fugindo do incêndio!' : t.why === 'wolf' ? 'Fugindo de uma fera!' : 'Correndo em pânico!';
+      case 'flee': return t.why === 'meteor' ? 'Fugindo do céu em chamas!' : t.why === 'fire' ? 'Fugindo do incêndio!' : t.why === 'wolf' ? 'Fugindo de uma fera!' : t.why === 'war' ? 'Fugindo dos invasores!' : 'Correndo em pânico!';
       case 'fire': return t.st === 2 ? 'Enchendo o balde' : t.beat ? 'Abafando as chamas' : 'Combatendo o incêndio!';
       case 'social': return `Conversando com ${pname(t.id)}`;
       case 'talk': return t.court ? `Flertando com ${pname(t.id)}` : `Conversando com ${pname(t.id)}`;
       case 'court': return `Cortejando ${pname(t.id)}`;
       case 'visit': { const o = S.villagers.get(t.id); if (!o) return 'Visitando a família'; const rel = o.id === v.mother ? 'a mãe' : o.id === v.father ? 'o pai' : o.id === v.partner ? (o.g === 'f' ? 'a parceira' : 'o parceiro') : (o.g === 'f' ? 'a filha' : 'o filho'); return `Visitando ${rel}, ${o.name}`; }
-      case 'pray': return t.priest ? 'Conduzindo orações' : 'Rezando para você';
+      case 'pray': return t.priest ? 'Conduzindo orações' : v.captive ? 'Rezando por liberdade' : 'Rezando para você';
       case 'explore': return 'Explorando a ilha';
       case 'rest': return t.stories ? 'Contando histórias junto à fogueira' : 'Descansando junto à fogueira';
       case 'play': return 'Brincando';

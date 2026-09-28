@@ -3,7 +3,8 @@
 //  Animals: rabbits, deer, boars (prey) and wolves (predators)
 // ============================================================
 (function (G) {
-  const N = G.N, T = G.T, W = G.W;
+  let N = G.N; const T = G.T, W = G.W;
+  G.mapHooks.push(n => { N = n; });
   const A = G.Animals = {};
   const DEF = {
     rabbit: { hp: 10, sp: 1.1, run: 3.0, meat: 3, fear: 3.5, name: 'Coelho' },

@@ -3,7 +3,8 @@
 //  Nature: trees, bushes, rocks, fire, weather, ground state
 // ============================================================
 (function (G) {
-  const N = G.N, T = G.T, W = G.W;
+  let N = G.N; const T = G.T, W = G.W;
+  G.mapHooks.push(n => { N = n; });
   const Nat = G.Nature = {};
   const MAX_TREES = 1100;
 

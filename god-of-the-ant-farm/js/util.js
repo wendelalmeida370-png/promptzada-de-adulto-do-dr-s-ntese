@@ -115,7 +115,13 @@ window.G = window.G || {};
     'Anselmo', 'Bento', 'Caetano', 'Dario', 'Elias', 'Fábio', 'Gael', 'Heitor', 'Ícaro', 'Jonas', 'Lauro', 'Mateus', 'Nestor',
     'Olavo', 'Paulo', 'Rodrigo', 'Samuel', 'Tiago', 'Valter', 'Aurélio', 'Bruno', 'Cássio', 'Diogo', 'Emílio', 'Félix'];
   G.SETTLEMENT_NAMES = ['Primeira Chama', 'Vale do Orvalho', 'Pedra Rasa', 'Nova Aurora', 'Porto Sereno', 'Bosque Alto',
-    'Ribeira Clara', 'Colina Dourada', 'Recanto do Vento', 'Campo das Luzes'];
+    'Ribeira Clara', 'Colina Dourada', 'Recanto do Vento', 'Campo das Luzes', 'Pouso Verde', 'Serra Fria', 'Água Mansa', 'Lagoa Funda',
+    'Rocha Negra', 'Monte Sereno', 'Várzea Grande', 'Três Pinheiros', 'Olho d\'Água', 'Beira-Mar', 'Campina Alta', 'Toca da Raposa',
+    'Encosta do Sol', 'Porto das Brumas', 'Vau das Garças', 'Cerro Partido', 'Fonte Velha', 'Pedra Branca', 'Vila das Cinzas', 'Clareira Funda'];
+
+  // map size can change between worlds: modules register a hook to refresh their cached N
+  G.mapHooks = [];
+  G.setMapSize = function (n) { G.N = n; for (const h of G.mapHooks) h(n); };
 
   G.fmt = n => (n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(Math.floor(n)));
   G.cap = s => s.charAt(0).toUpperCase() + s.slice(1);

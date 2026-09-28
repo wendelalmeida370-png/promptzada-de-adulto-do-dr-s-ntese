@@ -4,7 +4,8 @@
 //  travellers by boat… used with moderation.
 // ============================================================
 (function (G) {
-  const N = G.N, T = G.T, W = G.W;
+  let N = G.N; const T = G.T, W = G.W;
+  G.mapHooks.push(n => { N = n; });
   const E = G.Events = {};
 
   E.update = function (dt) {
@@ -33,6 +34,9 @@
     heal: { txt: 'cura', powers: ['heal'], ask: 'Eles rezam pelos doentes' },
     harvest: { txt: 'fartura', powers: ['growth', 'fertility'], ask: 'Eles rezam por comida' },
     protect: { txt: 'proteção contra os lobos', powers: ['lightning', 'meteor'], ask: 'Eles rezam por proteção' },
+    war: { txt: 'proteção contra os invasores', powers: ['lightning', 'meteor', 'wolves', 'quake', 'peace'], ask: 'Eles rezam contra os invasores' },
+    free: { txt: 'liberdade', powers: ['liberate'], ask: 'Os cativos rezam por liberdade' },
+    tyrant: { txt: 'se livrar do tirano', powers: ['lightning', 'anoint'], ask: 'Eles rezam em segredo contra o tirano' },
   };
   E.PRAYER = PRAYER;
   let tPray = 0;
@@ -41,6 +45,17 @@
     for (const a of G.S.animals.values()) if (a.kind === 'wolf' && !a.dead) { const d = G.dist2(a.x, a.y, set.cx, set.cy); if (d < bd) { bd = d; best = a; } }
     return best;
   }
+  function invaderNear(set, r) {
+    const S = G.S; let best = null, bd = r * r;
+    for (const v of S.villagers.values()) {
+      if (v.captive || !v.task || (v.task.type !== 'band' && v.task.type !== 'combat')) continue;
+      if (!G.Fac.atWar(set.fac, G.Fac.idOfV(v))) continue;
+      const d = G.dist2(v.x, v.y, set.cx, set.cy); if (d < bd) { bd = d; best = v; }
+    }
+    return best;
+  }
+  const captivesIn = set => { let n = 0; for (const v of G.S.villagers.values()) if (v.captive && v.set === set.id) n++; return n; };
+  const tyrantOf = set => { const f = G.Fac.get(set.fac); return f && f.gov === 'tirania' && (f.terror > 15 || set.loyalty < 35) ? G.Politics.ruler(f) : null; };
   function updatePrayers(dt) {
     const S = G.S;
     if (S.prayer) {
@@ -52,6 +67,9 @@
       if (set && p.kind === 'fire') solved = !(G.Vg.alarms.get(set.id) || []).length && G.Nature.fireSet.size === 0;
       if (set && p.kind === 'rain') solved = S.weather.drought <= 0;
       if (set && p.kind === 'heal') { let sick = 0; for (const v of S.villagers.values()) if (v.set === set.id && v.sick > 0) sick++; solved = sick === 0; }
+      if (set && p.kind === 'war') solved = !invaderNear(set, (set.radius || 8) + 6);
+      if (set && p.kind === 'free') solved = captivesIn(set) === 0;
+      if (set && p.kind === 'tyrant') solved = !tyrantOf(set);
       if (solved && p.age > 5) { S.prayer = null; S.prayerCD = G.DAY_LEN * 0.4; return; }
       p.age = (p.age || 0) + dt;
       if (p.t <= 0) {
@@ -71,11 +89,15 @@
       const al = G.Vg.alarms.get(set.id);
       const wolf = hostileNear(set, 12);
       let sick = 0; for (const v of S.villagers.values()) if (v.set === set.id && v.sick > 0) sick++;
+      const inv = invaderNear(set, (set.radius || 8) + 4);
       if (al && al.length >= 3) { kind = 'fire'; const i = al[0]; x = (i % N) + 0.5; y = ((i / N) | 0) + 0.5; r = 8; }
+      else if (inv) { kind = 'war'; x = inv.x; y = inv.y; r = 12; }
       else if (wolf) { kind = 'protect'; x = wolf.x; y = wolf.y; r = 14; }
       else if (sick >= 2) kind = 'heal';
+      else if (captivesIn(set) >= 3 && G.R() < 0.5) kind = 'free';
+      else if (tyrantOf(set) && G.R() < 0.4) kind = 'tyrant';
       else if (S.weather.drought > G.DAY_LEN * 0.3) kind = 'rain';
-      else if (S.stock.food < S.villagers.size * 0.7 && S.villagers.size > 8) kind = 'harvest';
+      else { const fst = G.Fac.stockOfSet(set.id), fp = G.Fac.pop(set.fac); if (fst.food < fp * 0.7 && fp > 8) kind = 'harvest'; }
       if (!kind) continue;
       S.prayer = { kind, set: set.id, x, y, r, t: kind === 'fire' ? G.DAY_LEN * 0.5 : G.DAY_LEN * 1.2, max: kind === 'fire' ? G.DAY_LEN * 0.5 : G.DAY_LEN * 1.2, age: 0 };
       G.UI && G.UI.notice(`${PRAYER[kind].ask} em ${set.name}.`, 'eye');
@@ -83,12 +105,23 @@
       return;
     }
   }
-  E.onPower = function (id, x, y) {
+  E.onPower = function (id, x, y, forced) {
     const S = G.S; const p = S.prayer; if (!p) return;
     if (!PRAYER[p.kind].powers.includes(id)) return;
-    if (p.kind === 'protect') {
+    if (forced) { /* answered by an outcome, not a place */ }
+    else if (p.kind === 'protect') {
       let hit = false; for (const a of S.animals.values()) if (a.kind === 'wolf' && G.dist(a.x, a.y, x, y) < (id === 'meteor' ? 4 : 2)) hit = true;
       if (!hit) return;
+    } else if (p.kind === 'war') {
+      const set = S.settlements.get(p.set); if (!set) return;
+      if (id !== 'peace') {
+        let hit = false;
+        for (const v of S.villagers.values()) if (!v.captive && v.task && (v.task.type === 'band' || v.task.type === 'combat') && G.Fac.atWar(set.fac, G.Fac.idOfV(v)) && G.dist(v.x, v.y, x, y) < (id === 'meteor' || id === 'quake' ? 5 : 3)) { hit = true; break; }
+        if (!hit) return;
+      }
+    } else if (p.kind === 'tyrant') {
+      const set = S.settlements.get(p.set); if (!set || id !== 'anoint') return;
+      const v = G.Powers.targetAt(x, y, 1.3); if (!v || G.Fac.idOfV(v) !== set.fac) return;
     } else {
       const set = S.settlements.get(p.set);
       const d = Math.min(G.dist(x, y, p.x, p.y), set ? G.dist(x, y, set.cx, set.cy) : 99);
@@ -107,6 +140,12 @@
     S.prayer = null; S.prayerCD = G.DAY_LEN * 0.8;
   };
 
+  // the god struck down a tyrant: prayers against him are answered
+  E.onTyrantFall = function (f) {
+    const S = G.S; const p = S.prayer; if (!p || p.kind !== 'tyrant') return;
+    const set = S.settlements.get(p.set); if (!set || set.fac !== f.id) return;
+    E.onPower('anoint', -99, -99, true);
+  };
   function trigger() {
     const S = G.S; const pop = S.villagers.size; const w = S.weather;
     const opts = [];
@@ -253,7 +292,9 @@
     const S = G.S;
     let set = G.Village.nearestSettlement(b.lx, b.ly);
     if (!set) {
-      set = G.Village.addSettlement(G.SETTLEMENT_NAMES[0], b.lx, b.ly);
+      const fac = G.Fac.create({ name: 'Os Viajantes' });
+      set = G.Village.addSettlement(G.Village.newSettlementName(), b.lx, b.ly, fac.id);
+      fac.capital = set.id;
       const n = W.nearestLand(b.lx - (b.tx - b.lx) * 6, b.ly - (b.ty - b.ly) * 6, 8) || [b.lx, b.ly];
       set.cx = n[0]; set.cy = n[1];
     } else if (b.empty && G.Village.pop(set.id) === 0) {

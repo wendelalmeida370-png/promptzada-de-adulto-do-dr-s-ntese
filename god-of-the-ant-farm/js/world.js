@@ -3,8 +3,8 @@
 //  World: state, procedural island, terrain queries, pathfinding
 // ============================================================
 (function (G) {
-  const N = G.N = 64;
-  const V = N + 1;
+  let N = G.N = 64;
+  let V = N + 1;
   const SEA = G.SEA = 2.0;
   const T = G.T = { DEEP: 0, SEA: 1, RIVER: 2, SAND: 3, GRASS: 4, MEADOW: 5, ROCKY: 6 };
   G.DAY_LEN = 100;           // seconds of game time per day (1 day == 1 year of life)
@@ -12,7 +12,7 @@
 
   G.newState = function (seed) {
     return {
-      v: 3, seed, N,
+      v: 4, seed, N, mapType: 'ilha',
       day: 1, time: 0.1, clock: 0,
       H: new Float32Array(V * V),
       type: new Uint8Array(N * N),
@@ -30,8 +30,7 @@
       nextId: 1,
       trees: new Map(), rocks: new Map(), bushes: new Map(), buildings: new Map(),
       villagers: new Map(), dead: new Map(), animals: new Map(), graves: new Map(),
-      settlements: new Map(),
-      stock: { food: 36, wood: 14, stone: 0 },
+      settlements: new Map(), factions: new Map(),
       faith: 60,
       stats: {
         maxPop: 0, births: 0, deaths: 0, godKills: 0, foodProduced: 0, woodProduced: 0, stoneProduced: 0,
@@ -122,38 +121,112 @@
   };
 
   // ------------------------------------------------------------
-  // Procedural island
+  // Procedural worlds: island, continent, archipelago, isthmus
   // ------------------------------------------------------------
-  G.genWorld = function (seed) {
+  G.MAP_TYPES = {
+    ilha: { name: 'Ilha', desc: 'Uma ilha única, com rio e lago. Clássico.' },
+    continente: { name: 'Continente', desc: 'Uma grande massa de terra com montanhas. Espaço para muitos reinos.' },
+    arquipelago: { name: 'Arquipélago', desc: 'Várias ilhas ligadas por vaus rasos. Fronteiras naturais e pontos de passagem.' },
+    istmo: { name: 'Istmo', desc: 'Duas terras unidas por uma faixa estreita. Uma fronteira feita para a guerra.' },
+  };
+  function landShapeFn(type, rng, n1) {
+    const angNoise = (a, s) => G.fbm(n1, Math.cos(a) * 1.4 + s, Math.sin(a) * 1.4 + 7.7 + s, 3);
+    if (type === 'continente') {
+      const ox = (rng() - 0.5) * 0.06, oy = (rng() - 0.5) * 0.06;
+      return (u, w) => {
+        u -= ox; w -= oy;
+        const d = Math.pow(Math.pow(Math.abs(u), 3) + Math.pow(Math.abs(w), 3), 1 / 3);
+        const a = Math.atan2(w, u);
+        const sh = Math.min(0.95, 0.86 + 0.2 * angNoise(a, 3.1));
+        return 1 - G.smooth(sh * 0.62, sh * 0.99, d);
+      };
+    }
+    if (type === 'arquipelago') {
+      const K = 4 + Math.floor(rng() * 2) + (G._genTribes >= 3 ? 1 : 0);
+      const isl = [];
+      let guard = 0;
+      while (isl.length < K && guard++ < 400) {
+        const a = rng() * 6.283, r = Math.sqrt(rng()) * 0.62;
+        const c = [Math.cos(a) * r, Math.sin(a) * r];
+        if (isl.some(o => Math.hypot(o[0] - c[0], o[1] - c[1]) < 0.5)) continue;
+        isl.push([c[0], c[1], 0.26 + rng() * 0.12, rng() * 10]);
+      }
+      return (u, w) => {
+        let best = 0;
+        for (const [ix, iy, r, s] of isl) {
+          const du = u - ix, dw = w - iy; const d = Math.hypot(du, dw); if (d > r * 1.2) continue;
+          const sh = 0.85 + 0.25 * angNoise(Math.atan2(dw, du), s);
+          best = Math.max(best, 1 - G.smooth(r * sh * 0.4, r * sh, d));
+        }
+        return best;
+      };
+    }
+    if (type === 'istmo') {
+      const tilt = (rng() - 0.5) * 0.3;
+      const A = [-0.5, tilt], B = [0.5, -tilt];
+      return (u, w) => {
+        let best = 0;
+        for (const [cx, cy, s] of [[A[0], A[1], 1.3], [B[0], B[1], 5.7]]) {
+          const du = u - cx, dw = w - cy; const d = Math.hypot(du, dw);
+          const sh = 0.85 + 0.22 * angNoise(Math.atan2(dw, du), s);
+          best = Math.max(best, 1 - G.smooth(0.46 * sh * 0.45, 0.46 * sh, d));
+        }
+        // the narrow land bridge
+        const t = G.clamp(((u - A[0]) * (B[0] - A[0]) + (w - A[1]) * (B[1] - A[1])) / ((B[0] - A[0]) ** 2 + (B[1] - A[1]) ** 2), 0, 1);
+        const px = A[0] + (B[0] - A[0]) * t, py = A[1] + (B[1] - A[1]) * t;
+        const wob = G.fbm(n1, t * 4 + 30, 2.2, 2) * 0.05;
+        const dc = Math.hypot(u - px, w - py + wob);
+        return Math.max(best, 1 - G.smooth(0.03, 0.075, dc));
+      };
+    }
+    // ilha
+    const ox = (rng() - 0.5) * 0.1, oy = (rng() - 0.5) * 0.1;
+    return (u, w) => {
+      u -= ox; w -= oy;
+      const d = Math.hypot(u, w); const a = Math.atan2(w, u);
+      const sh = Math.min(0.93, 0.83 + 0.24 * angNoise(a, 3.1));
+      return 1 - G.smooth(sh * 0.5, sh * 0.97, d);
+    };
+  }
+
+  G.genWorld = function (seed, opts) {
+    opts = opts || {};
+    const mapType = G.MAP_TYPES[opts.type] ? opts.type : 'ilha';
+    const tribes = G.clamp(opts.tribes || 1, 1, 4);
+    G._genTribes = tribes;
     const S = G.newState(seed);
+    S.mapType = mapType; S.N = N;
     G.S = S;
     const rng = G.mulberry32(seed);
     const n1 = G.makeNoise(seed), n2 = G.makeNoise(seed + 101), n3 = G.makeNoise(seed + 202), n4 = G.makeNoise(seed + 303);
     const H = S.H;
-    const cx = N / 2 + (rng() - 0.5) * 3, cy = N / 2 + (rng() - 0.5) * 3;
+    const shape = landShapeFn(mapType, rng, n1);
+    const cx = N / 2, cy = N / 2;
     const hillOffX = rng() * 100, hillOffY = rng() * 100;
+    const hillAmp = mapType === 'continente' ? 9.5 : 8.5;
     for (let vy = 0; vy < V; vy++) for (let vx = 0; vx < V; vx++) {
-      const dx = (vx - cx) / (N / 2), dy = (vy - cy) / (N / 2);
-      const d = Math.hypot(dx, dy);
-      const a = Math.atan2(dy, dx);
-      const shape = Math.min(0.93, 0.83 + 0.24 * G.fbm(n1, Math.cos(a) * 1.4 + 3.1, Math.sin(a) * 1.4 + 7.7, 3));
-      const island = 1 - G.smooth(shape * 0.5, shape * 0.97, d);
+      const u = (vx - cx) / (N / 2), w = (vy - cy) / (N / 2);
+      const island = shape(u, w);
       const detail = G.fbm(n2, vx * 0.085, vy * 0.085, 4);
       const hills = Math.max(0, G.fbm(n3, vx * 0.05 + hillOffX, vy * 0.05 + hillOffY, 3) + 0.05);
-      let h = island * (2.95 + detail * 1.25 + hills * 8.5) + (1 - island) * 0.3;
+      let h = island * (2.95 + detail * 1.25 + hills * hillAmp) + (1 - island) * 0.3;
       const edge = Math.min(vx, vy, N - vx, N - vy);
       if (edge < 5) h = Math.min(h, 0.6 + edge * 0.15);
       H[vy * V + vx] = h;
     }
 
     // ---- river + lake (carved valley at sea level) ----
-    if (rng() < 0.8) {
+    const rivers = mapType === 'arquipelago' ? 0 : mapType === 'ilha' ? (rng() < 0.8 ? 1 : 0) : (N >= 80 ? 2 : 1);
+    for (let rv = 0; rv < rivers; rv++) {
+      // start on high-ish land
+      let sx0 = cx, sy0 = cy, tries = 0;
+      do { sx0 = cx + (rng() - 0.5) * N * 0.5; sy0 = cy + (rng() - 0.5) * N * 0.5; tries++; } while (tries < 40 && H[Math.round(sy0) * V + Math.round(sx0)] < SEA + 2);
       const ang = rng() * Math.PI * 2;
-      let px = cx - Math.cos(ang) * N * 0.1, py = cy - Math.sin(ang) * N * 0.1;
+      let px = sx0, py = sy0;
       const pts = [[px, py]];
       let dir = ang;
-      for (let k = 0; k < 200; k++) {
-        dir += (n4(k * 0.15, 3.3) * 0.9);
+      for (let k = 0; k < 400; k++) {
+        dir += (n4(k * 0.15, 3.3 + rv * 7) * 0.9);
         dir = ang + G.clamp(dir - ang, -0.9, 0.9);
         px += Math.cos(dir) * 0.5; py += Math.sin(dir) * 0.5;
         pts.push([px, py]);
@@ -162,7 +235,9 @@
         if (hv < SEA - 0.6 && k > 10) { for (let e = 0; e < 4; e++) { px += Math.cos(dir) * 0.5; py += Math.sin(dir) * 0.5; pts.push([px, py]); } break; }
       }
       const lx = pts[0][0], ly = pts[0][1];
-      for (let vy = 0; vy < V; vy++) for (let vx = 0; vx < V; vx++) {
+      const minX = Math.max(0, Math.floor(Math.min(...pts.map(p => p[0])) - 6)), maxX = Math.min(N, Math.ceil(Math.max(...pts.map(p => p[0])) + 6));
+      const minY = Math.max(0, Math.floor(Math.min(...pts.map(p => p[1])) - 6)), maxY = Math.min(N, Math.ceil(Math.max(...pts.map(p => p[1])) + 6));
+      for (let vy = minY; vy <= maxY; vy++) for (let vx = minX; vx <= maxX; vx++) {
         let dm = 1e9;
         for (let k = 0; k < pts.length; k += 1) { const d2 = G.dist2(vx, vy, pts[k][0], pts[k][1]); if (d2 < dm) dm = d2; }
         dm = Math.sqrt(dm);
@@ -179,57 +254,84 @@
     // ---- classify tiles ----
     const type = S.type;
     const water = new Uint8Array(N * N);
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const i = y * N + x;
-      water[i] = W.tileH(i) < SEA ? 1 : 0;
-    }
-    // ocean flood fill from border
+    for (let i = 0; i < N * N; i++) water[i] = W.tileH(i) < SEA ? 1 : 0;
+    const NB4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
     const ocean = new Uint8Array(N * N);
     const q = [];
-    for (let k = 0; k < N; k++) { q.push(k, (N - 1) * N + k, k * N, k * N + N - 1); }
+    for (let k = 0; k < N; k++) q.push(k, (N - 1) * N + k, k * N, k * N + N - 1);
     for (const i of q) ocean[i] = 1;
     while (q.length) {
       const i = q.pop(); const x = i % N, y = (i / N) | 0;
-      const nb = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-      for (const [dx, dy] of nb) {
-        const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue;
-        const j = ny * N + nx; if (!ocean[j] && water[j]) { ocean[j] = 1; q.push(j); }
-      }
+      for (const [dx, dy] of NB4) { const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (!ocean[j] && water[j]) { ocean[j] = 1; q.push(j); } }
     }
-    // inland water bodies: keep if size >= 4, else fill
     const comp = new Int32Array(N * N).fill(-1);
     for (let i = 0; i < N * N; i++) {
       if (water[i] && !ocean[i] && comp[i] < 0) {
         const list = [i]; comp[i] = i; const st = [i];
         while (st.length) {
           const a = st.pop(); const x = a % N, y = (a / N) | 0;
-          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue;
-            const j = ny * N + nx; if (water[j] && !ocean[j] && comp[j] < 0) { comp[j] = i; list.push(j); st.push(j); }
-          }
+          for (const [dx, dy] of NB4) { const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (water[j] && !ocean[j] && comp[j] < 0) { comp[j] = i; list.push(j); st.push(j); } }
         }
         if (list.length < 4) for (const j of list) water[j] = 0;
       }
     }
+    for (let i = 0; i < N * N; i++) type[i] = ocean[i] ? T.SEA : water[i] ? T.RIVER : T.GRASS;
+
+    // ---- land components (islands); join them with shallow fords ----
+    const landComp = new Int32Array(N * N).fill(-1);
+    const compSize = [];
     for (let i = 0; i < N * N; i++) {
-      if (ocean[i]) type[i] = T.SEA;
-      else if (water[i]) type[i] = T.RIVER;
-      else type[i] = T.GRASS;
+      if (type[i] >= T.RIVER && landComp[i] < 0) {
+        const id = compSize.length; let size = 0; const st = [i]; landComp[i] = id;
+        while (st.length) {
+          const a = st.pop(); size++; const x = a % N, y = (a / N) | 0;
+          for (const [dx, dy] of NB4) { const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (type[j] >= T.RIVER && landComp[j] < 0) { landComp[j] = id; st.push(j); } }
+        }
+        compSize.push(size);
+      }
+    }
+    S.fords = 0;
+    if (compSize.length > 1) {
+      let main = 0; for (let k = 1; k < compSize.length; k++) if (compSize[k] > compSize[main]) main = k;
+      const joined = new Set([main]);
+      const big = compSize.map((s, k) => k).filter(k => compSize[k] >= 24);
+      for (let loop = 0; loop < 10 && big.some(k => !joined.has(k)); loop++) {
+        // multi-source BFS through the sea from every joined island
+        const prev = new Int32Array(N * N).fill(-2);
+        const bq = [];
+        for (let i = 0; i < N * N; i++) if (landComp[i] >= 0 && joined.has(landComp[i])) { prev[i] = -1; bq.push(i); }
+        let hit = -1;
+        for (let h = 0; h < bq.length && hit < 0; h++) {
+          const a = bq[h]; const x = a % N, y = (a / N) | 0;
+          for (const [dx, dy] of NB4) {
+            const nx = x + dx, ny = y + dy; if (nx < 3 || ny < 3 || nx >= N - 3 || ny >= N - 3) continue;
+            const j = ny * N + nx; if (prev[j] !== -2) continue;
+            prev[j] = a;
+            if (landComp[j] >= 0 && !joined.has(landComp[j]) && compSize[landComp[j]] >= 24) { hit = j; break; }
+            if (type[j] <= T.SEA) bq.push(j);
+          }
+        }
+        if (hit < 0) break;
+        joined.add(landComp[hit]);
+        for (let c = prev[hit]; c >= 0 && prev[c] !== -1; c = prev[c]) {
+          if (type[c] <= T.SEA) { type[c] = T.RIVER; S.fords++; }
+          const x = c % N, y = (c / N) | 0;
+          const side = (x + y) % 2 ? W.idx(x + 1, y) : W.idx(x, y + 1);
+          if (W.inb(x + 1, y + 1) && type[side] <= T.SEA) type[side] = T.RIVER;
+        }
+      }
     }
     // keep only the biggest walkable landmass
     const land = new Int32Array(N * N).fill(-1);
-    let bestC = -1, bestSize = 0; const sizes = {};
+    let bestC = -1, bestSize = 0;
     for (let i = 0; i < N * N; i++) {
       if (type[i] >= T.RIVER && land[i] < 0) {
         let size = 0; const st = [i]; land[i] = i;
         while (st.length) {
           const a = st.pop(); size++; const x = a % N, y = (a / N) | 0;
-          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue;
-            const j = ny * N + nx; if (type[j] >= T.RIVER && land[j] < 0) { land[j] = i; st.push(j); }
-          }
+          for (const [dx, dy] of NB4) { const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (type[j] >= T.RIVER && land[j] < 0) { land[j] = i; st.push(j); } }
         }
-        sizes[i] = size; if (size > bestSize) { bestSize = size; bestC = i; }
+        if (size > bestSize) { bestSize = size; bestC = i; }
       }
     }
     for (let i = 0; i < N * N; i++) if (type[i] >= T.RIVER && land[i] !== bestC) type[i] = T.SEA;
@@ -247,30 +349,20 @@
       else H[i] = Math.max(H[i], SEA + 0.06);
     }
 
-    // distance to ocean (BFS)
-    const dOcean = new Int32Array(N * N).fill(999);
-    const bq = [];
-    for (let i = 0; i < N * N; i++) if (type[i] <= T.SEA) { dOcean[i] = 0; bq.push(i); }
-    for (let h = 0; h < bq.length; h++) {
-      const a = bq[h]; const x = a % N, y = (a / N) | 0;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue;
-        const j = ny * N + nx; if (dOcean[j] > dOcean[a] + 1) { dOcean[j] = dOcean[a] + 1; bq.push(j); }
+    const bfsFrom = (test) => {
+      const d = new Int32Array(N * N).fill(999); const bq = [];
+      for (let i = 0; i < N * N; i++) if (test(i)) { d[i] = 0; bq.push(i); }
+      for (let h = 0; h < bq.length; h++) {
+        const a = bq[h]; const x = a % N, y = (a / N) | 0;
+        for (const [dx, dy] of NB4) { const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (d[j] > d[a] + 1) { d[j] = d[a] + 1; bq.push(j); } }
       }
-    }
+      return d;
+    };
+    const dOcean = bfsFrom(i => type[i] <= T.SEA);
     G.dOcean = dOcean;
-    const dRiver = new Int32Array(N * N).fill(999);
-    const rq = [];
-    for (let i = 0; i < N * N; i++) if (type[i] === T.RIVER) { dRiver[i] = 0; rq.push(i); }
-    for (let h = 0; h < rq.length; h++) {
-      const a = rq[h]; const x = a % N, y = (a / N) | 0;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue;
-        const j = ny * N + nx; if (dRiver[j] > dRiver[a] + 1) { dRiver[j] = dRiver[a] + 1; rq.push(j); }
-      }
-    }
+    const dRiver = bfsFrom(i => type[i] === T.RIVER);
 
-    // the highest ~10% of the island becomes rocky highland (stone source)
+    // the highest ~10% of the land becomes rocky highland (stone source)
     const landH = [];
     for (let i = 0; i < N * N; i++) if (type[i] === T.GRASS) landH.push(W.tileH(i));
     landH.sort((a, b) => a - b);
@@ -279,7 +371,6 @@
       const i = y * N + x;
       const th = W.tileH(i);
       if (type[i] === T.SEA) {
-        // deep vs shallow
         let nearLand = false;
         for (let dy = -2; dy <= 2 && !nearLand; dy++) for (let dx = -2; dx <= 2; dx++) {
           const nx = x + dx, ny = y + dy; if (W.inb(nx, ny) && type[ny * N + nx] >= T.RIVER) { nearLand = true; break; }
@@ -298,47 +389,65 @@
       if (type[i] === T.ROCKY) S.fert[i] *= 0.4;
     }
 
-    // ---- choose start location ----
-    let best = null, bestScore = -1e9;
+    // ---- choose start locations (far apart when there are several peoples) ----
     const forest = (x, y) => G.fbm(n1, x * 0.09 + 50, y * 0.09 + 50, 3);
+    const cands = [];
     for (let y = 8; y < N - 8; y++) for (let x = 8; x < N - 8; x++) {
       const i = y * N + x;
       if (type[i] !== T.GRASS && type[i] !== T.MEADOW) continue;
-      if (dOcean[i] < 6) continue;
+      if (dOcean[i] < 5) continue;
       if (dRiver[i] < 2) continue;
-      if (W.slope(x - 2, y - 2, 5, 5) > 1.4) continue;
-      let sc = -G.dist(x, y, cx, cy) * 0.35;
+      const sl = W.slope(x - 2, y - 2, 5, 5); if (sl > 1.4) continue;
+      let s = -G.dist(x, y, cx, cy) * (tribes > 1 ? 0.05 : 0.35);
       let forestNear = 0, landNear = 0;
-      for (let dy = -9; dy <= 9; dy += 1) for (let dx = -9; dx <= 9; dx += 1) {
+      for (let dy = -9; dy <= 9; dy += 2) for (let dx = -9; dx <= 9; dx += 2) {
         const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue;
         const d = Math.hypot(dx, dy); if (d > 9) continue;
         const j = ny * N + nx;
         if (type[j] >= T.SAND) landNear++;
         if (d > 3.5 && forest(nx, ny) > 0.08 && type[j] >= T.GRASS) forestNear++;
       }
-      sc += Math.min(forestNear, 40) * 0.12 + landNear * 0.04;
-      if (dRiver[i] < 8) sc += 2.5;
-      sc += S.fert[i] * 2;
-      sc -= W.slope(x - 2, y - 2, 5, 5) * 2;
-      if (sc > bestScore) { bestScore = sc; best = [x, y]; }
+      s += Math.min(forestNear, 12) * 0.4 + landNear * 0.13;
+      if (dRiver[i] < 8) s += 2.5;
+      s += S.fert[i] * 2 - sl * 2;
+      cands.push([x, y, s, landComp[i]]);
     }
-    if (!best) {
-      for (let r = 0; r < N && !best; r++) {
-        for (let k = 0; k < 64; k++) {
-          const a = k / 64 * Math.PI * 2; const x = Math.round(cx + Math.cos(a) * r), y = Math.round(cy + Math.sin(a) * r);
-          if (W.inb(x, y) && type[y * N + x] >= T.SAND) { best = [x, y]; break; }
-        }
+    cands.sort((a, b) => b[2] - a[2]);
+    const starts = [];
+    let minD = tribes === 1 ? 0 : N * (tribes === 2 ? 0.5 : tribes === 3 ? 0.4 : 0.34);
+    while (starts.length < tribes && minD >= 6) {
+      for (const c of cands) {
+        if (starts.length >= tribes) break;
+        if (starts.some(s => G.dist(s[0], s[1], c[0], c[1]) < minD)) continue;
+        if (mapType === 'arquipelago' && starts.some(s => s[3] === c[3]) && minD > N * 0.2) continue;
+        starts.push(c);
+      }
+      minD *= 0.8;
+    }
+    // small islands: accept rougher spots, as far as possible from the other peoples
+    while (starts.length && starts.length < tribes) {
+      let best = null, bd = 0;
+      for (let y = 4; y < N - 4; y++) for (let x = 4; x < N - 4; x++) {
+        const i = y * N + x;
+        if ((type[i] !== T.GRASS && type[i] !== T.MEADOW) || dOcean[i] < 2) continue;
+        let md = 1e9; for (const s of starts) md = Math.min(md, G.dist(s[0], s[1], x, y));
+        if (md > bd) { bd = md; best = [x, y, 0, landComp[i]]; }
+      }
+      if (!best || bd < 5) break;
+      starts.push(best);
+    }
+    if (!starts.length) {
+      for (let r = 0; r < N && !starts.length; r++) for (let k = 0; k < 64; k++) {
+        const a = k / 64 * Math.PI * 2; const x = Math.round(cx + Math.cos(a) * r), y = Math.round(cy + Math.sin(a) * r);
+        if (W.inb(x, y) && type[y * N + x] >= T.SAND) { starts.push([x, y, 0, 0]); break; }
       }
     }
-    const [sx, sy] = best;
 
     // ---- vegetation & rocks ----
     for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) {
       const i = y * N + x; const t = type[i];
-      if (t < T.SAND) continue;
-      if (t === T.RIVER) continue;
-      const dStart = G.dist(x + 0.5, y + 0.5, sx + 0.5, sy + 0.5);
-      if (dStart < 3.2) continue;
+      if (t < T.SAND || t === T.RIVER) continue;
+      if (starts.some(s => G.dist(x + 0.5, y + 0.5, s[0] + 0.5, s[1] + 0.5) < 3.2)) continue;
       const fd = forest(x, y);
       const th = W.tileH(i);
       if (t === T.SAND) {
@@ -361,33 +470,39 @@
         G.Nature.addRock(x + 0.5, y + 0.5, 20 + Math.floor(rng() * 14));
       }
     }
-    // guarantee a few resources close to camp
-    const ensure = (count, radius, fn, test) => {
-      let have = 0;
-      for (let y = sy - radius; y <= sy + radius; y++) for (let x = sx - radius; x <= sx + radius; x++) {
-        if (!W.inb(x, y)) continue; if (test(y * N + x)) have++;
-      }
-      let guard = 0;
-      while (have < count && guard++ < 400) {
-        const a = rng() * Math.PI * 2, d = 3.5 + rng() * (radius - 3.5);
-        const x = Math.floor(sx + Math.cos(a) * d), y = Math.floor(sy + Math.sin(a) * d);
-        if (!W.inb(x, y)) continue; const i = y * N + x;
-        if (type[i] < T.GRASS || S.treeAt[i] || S.objAt[i]) continue;
-        fn(x, y); have++;
-      }
-    };
-    ensure(5, 8, (x, y) => G.Nature.addBush(x + 0.5, y + 0.5), i => { const b = S.objAt[i]; return b && S.bushes.has(b); });
-    ensure(5, 13, (x, y) => G.Nature.addRock(x + 0.5, y + 0.5, 40), i => { const b = S.objAt[i]; return b && S.rocks.has(b); });
-    ensure(18, 9, (x, y) => G.Nature.addTree(x + 0.5, y + 0.5, 'oak', 0.8 + rng() * 0.2), i => S.treeAt[i] > 0);
+    // guarantee a few resources close to every camp
+    for (const [sx, sy] of starts) {
+      const ensure = (count, radius, fn, test) => {
+        let have = 0;
+        for (let y = sy - radius; y <= sy + radius; y++) for (let x = sx - radius; x <= sx + radius; x++) {
+          if (!W.inb(x, y)) continue; if (test(y * N + x)) have++;
+        }
+        let guard = 0;
+        while (have < count && guard++ < 400) {
+          const a = rng() * Math.PI * 2, d = 3.5 + rng() * (radius - 3.5);
+          const x = Math.floor(sx + Math.cos(a) * d), y = Math.floor(sy + Math.sin(a) * d);
+          if (!W.inb(x, y)) continue; const i = y * N + x;
+          if (type[i] < T.GRASS || S.treeAt[i] || S.objAt[i]) continue;
+          fn(x, y); have++;
+        }
+      };
+      ensure(5, 8, (x, y) => G.Nature.addBush(x + 0.5, y + 0.5), i => { const b = S.objAt[i]; return b && S.bushes.has(b); });
+      ensure(5, 13, (x, y) => G.Nature.addRock(x + 0.5, y + 0.5, 40), i => { const b = S.objAt[i]; return b && S.rocks.has(b); });
+      ensure(18, 9, (x, y) => G.Nature.addTree(x + 0.5, y + 0.5, 'oak', 0.8 + rng() * 0.2), i => S.treeAt[i] > 0);
+    }
 
-    S.start = [sx + 0.5, sy + 0.5];
+    S.starts = starts.map(s => [s[0] + 0.5, s[1] + 0.5]);
+    S.start = S.starts[0];
     return S;
   };
 
   // ------------------------------------------------------------
   // Pathfinding (A* on the tile grid, 8-way, with string pulling)
   // ------------------------------------------------------------
-  const gS = new Float32Array(N * N), came = new Int32Array(N * N), seen = new Uint32Array(N * N), closed = new Uint32Array(N * N);
+  let gS, came, seen, closed;
+  function allocPath() { gS = new Float32Array(N * N); came = new Int32Array(N * N); seen = new Uint32Array(N * N); closed = new Uint32Array(N * N); }
+  allocPath();
+  G.mapHooks.push(n => { N = n; V = n + 1; allocPath(); });
   let gen = 1;
   const heap = new G.Heap();
   const DX = [1, -1, 0, 0, 1, 1, -1, -1], DY = [0, 0, 1, -1, 1, -1, 1, -1];

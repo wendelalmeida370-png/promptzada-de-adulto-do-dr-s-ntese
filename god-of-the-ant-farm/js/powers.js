@@ -3,18 +3,28 @@
 //  Divine powers & how the people perceive them
 // ============================================================
 (function (G) {
-  const N = G.N, T = G.T, W = G.W;
+  let N = G.N; const T = G.T, W = G.W;
+  G.mapHooks.push(n => { N = n; });
   const P = G.Powers = {};
+  G.POWER_TABS = [{ id: 'dadivas', name: 'Dádivas' }, { id: 'ira', name: 'Ira' }, { id: 'destino', name: 'Destino' }];
   G.POWERS = [
-    { id: 'rain', name: 'Chuva', key: '1', cost: 10, r: 4.5, good: true, desc: 'Uma nuvem carregada sobre a área. Rega plantações, apaga incêndios e alivia secas.' },
-    { id: 'growth', name: 'Crescimento', key: '2', cost: 14, r: 3.5, good: true, desc: 'A vegetação brota e cresce em segundos: árvores, arbustos e plantações.' },
-    { id: 'heal', name: 'Cura', key: '3', cost: 12, r: 3, good: true, desc: 'Cura ferimentos e doenças de todos na área. Quem é curado nunca esquece.' },
-    { id: 'fertility', name: 'Fertilidade', key: '4', cost: 30, r: 6, good: true, desc: 'Por dois dias a terra floresce: colheitas rápidas, frutos abundantes, mais nascimentos.' },
-    { id: 'lightning', name: 'Raio', key: '5', cost: 18, r: 1.2, good: false, desc: 'Um raio atinge o ponto escolhido. Mata, fere e pode iniciar incêndios.' },
-    { id: 'meteor', name: 'Meteoro', key: '6', cost: 70, r: 3.4, good: false, desc: 'Após alguns segundos, uma rocha em chamas cai do céu. Devastação total — e pedra de presente.' },
-    { id: 'wolves', name: 'Matilha', key: '7', cost: 22, r: 1.5, good: false, desc: 'Invoca uma matilha de lobos famintos no local.' },
-    { id: 'hand', name: 'Mão Divina', key: '8', cost: 0, r: 0.8, good: null, desc: 'Agarre um habitante ou animal e solte — ou arremesse — onde quiser. Grátis, mas assusta.' },
+    { id: 'rain', tab: 'dadivas', name: 'Chuva', cost: 10, r: 4.5, good: true, desc: 'Uma nuvem carregada sobre a área. Rega plantações, apaga incêndios e alivia secas.' },
+    { id: 'growth', tab: 'dadivas', name: 'Crescimento', cost: 14, r: 3.5, good: true, desc: 'A vegetação brota e cresce em segundos: árvores, arbustos e plantações.' },
+    { id: 'heal', tab: 'dadivas', name: 'Cura', cost: 12, r: 3, good: true, desc: 'Cura ferimentos e doenças de todos na área. Quem é curado nunca esquece.' },
+    { id: 'fertility', tab: 'dadivas', name: 'Fertilidade', cost: 30, r: 6, good: true, desc: 'Por dois dias a terra floresce: colheitas rápidas, frutos abundantes, mais nascimentos.' },
+    { id: 'hand', tab: 'dadivas', name: 'Mão Divina', cost: 0, r: 0.8, good: null, desc: 'Agarre um habitante ou animal e solte — ou arremesse — onde quiser. Grátis, mas assusta.' },
+    { id: 'lightning', tab: 'ira', name: 'Raio', cost: 18, r: 1.2, good: false, desc: 'Um raio atinge o ponto escolhido. Mata, fere e pode iniciar incêndios. Tiranos também sangram.' },
+    { id: 'meteor', tab: 'ira', name: 'Meteoro', cost: 70, r: 3.4, good: false, desc: 'Após alguns segundos, uma rocha em chamas cai do céu. Devastação total — e pedra de presente.' },
+    { id: 'wolves', tab: 'ira', name: 'Matilha', cost: 22, r: 1.5, good: false, desc: 'Invoca uma matilha de lobos famintos no local.' },
+    { id: 'quake', tab: 'ira', name: 'Terremoto', cost: 55, r: 5.5, good: false, desc: 'A terra treme: construções racham e desabam, árvores tombam, pedras brotam do chão.' },
+    { id: 'plague', tab: 'ira', name: 'Praga', cost: 32, r: 4, good: false, desc: 'Uma doença cruel nasce no ponto escolhido e se espalha muito mais rápido que qualquer febre.' },
+    { id: 'anoint', tab: 'destino', name: 'Ungir', cost: 45, r: 1.2, good: null, desc: 'Toque um habitante: ele passa a governar seu povo. Um governante ungido ganha legitimidade total. Um cativo ungido lidera a fuga dos outros.' },
+    { id: 'liberate', tab: 'destino', name: 'Libertação', cost: 30, r: 5, good: true, desc: 'As correntes se partem: cativos na área ficam livres e condenados escapam da execução.' },
+    { id: 'fury', tab: 'destino', name: 'Fúria', cost: 35, r: 5, good: false, desc: 'Enche os corações de ira: quem estiver na área luta com força redobrada — e seu povo parte para a guerra.' },
+    { id: 'discord', tab: 'destino', name: 'Discórdia', cost: 40, r: 6, good: false, desc: 'Semeia desconfiança numa vila: a lealdade despenca e vizinhos passam a se odiar. Rachas e golpes ficam prováveis.' },
+    { id: 'peace', tab: 'destino', name: 'Paz Divina', cost: 80, r: 0, good: true, desc: 'Todas as guerras param. Exércitos voltam para casa e ninguém declara guerra por dois dias e meio.' },
   ];
+  G.POWERS.forEach(p => { p.key = String(G.POWERS.filter(q => q.tab === p.tab).indexOf(p) + 1); });
   P.byId = id => G.POWERS.find(p => p.id === id);
 
   // ---------------- perception ----------------
@@ -42,11 +52,19 @@
   };
 
   // ---------------- casting ----------------
+  P.why = '';
+  function targetAt(x, y, r) { let best = null, bd = r * r; for (const v of G.S.villagers.values()) { if (v.inside || v.held || v.age < 14) continue; const d = G.dist2(v.x, v.y, x, y); if (d < bd) { bd = d; best = v; } } return best; }
+  P.targetAt = targetAt;
   P.canCast = (id, x, y) => {
-    const p = P.byId(id); if (!p) return false;
-    if (G.S.faith < p.cost) return false;
+    const S = G.S; const p = P.byId(id); P.why = ''; if (!p) return false;
+    if (S.faith < p.cost) return false;
     if (!W.inb(x, y)) return false;
-    if (id === 'wolves') { const i = W.idx(x, y); return G.S.type[i] >= T.SAND && G.S.type[i] !== T.RIVER && !W.blocked(i); }
+    if (id === 'wolves') { const i = W.idx(x, y); return S.type[i] >= T.SAND && S.type[i] !== T.RIVER && !W.blocked(i); }
+    if (id === 'anoint') { if (!targetAt(x, y, 1.3)) { P.why = 'Clique bem em cima de um adulto para ungi-lo.'; return false; } }
+    if (id === 'liberate') { let n = 0; for (const v of S.villagers.values()) if ((v.captive || (v.task && v.task.type === 'condemned')) && G.dist(v.x, v.y, x, y) < p.r) n++; if (!n) { P.why = 'Não há cativos nem condenados aqui.'; return false; } }
+    if (id === 'discord') { let ok = false; for (const s of S.settlements.values()) if (G.dist(x, y, s.cx, s.cy) < 14) ok = true; if (!ok) { P.why = 'A discórdia precisa de uma vila por perto.'; return false; } }
+    if (id === 'peace') { let war = false; for (const f of G.Fac.all()) if (G.Fac.enemiesOf(f.id).length) war = true; if (!war) { P.why = 'Não há nenhuma guerra para encerrar.'; return false; } }
+    if (id === 'fury') { let n = 0; for (const v of S.villagers.values()) if (!v.captive && v.age >= 16 && G.dist(v.x, v.y, x, y) < p.r) n++; if (!n) { P.why = 'Não há ninguém aqui para enfurecer.'; return false; } }
     return true;
   };
   P.cast = function (id, x, y) {
@@ -264,8 +282,112 @@
     G.Village.log('Uma matilha surgiu do nada, uivando para o céu.', 'wolf', x, y);
   };
 
+  // ---------------- earth & sickness ----------------
+  P.quake = function (x, y) {
+    const S = G.S; const r = 5.5;
+    G.Render && G.Render.shake(1.6);
+    G.Audio && G.Audio.play('quake');
+    let hurt = 0, dead = 0, fell = 0;
+    for (const v of [...S.villagers.values()]) {
+      const d = G.dist(v.x, v.y, x, y); if (d > r + 2) continue;
+      v.fear = Math.min(100, v.fear + 30 * (1 - d / (r + 2)) + 10);
+      if (v.inside) { const b = S.buildings.get(v.inside); if (b && G.R() < 0.5) { G.Vg.endTask(v); G.Vg.damage(v, G.rr(10, 40), 'quake', true); } }
+      else if (d < r && G.R() < 0.45) { G.Vg.damage(v, G.rr(4, 22), 'quake', true); hurt++; }
+      if (!S.villagers.has(v.id)) { dead++; continue; }
+      if (!v.held && !v.air && G.R() < 0.6) G.Vg.fleeFrom(v, x, y, 7, 'panic');
+    }
+    const hit = new Set();
+    for (let ty = Math.floor(y - r); ty <= y + r; ty++) for (let tx = Math.floor(x - r); tx <= x + r; tx++) {
+      if (!W.inb(tx, ty)) continue;
+      const d = G.dist(tx + 0.5, ty + 0.5, x, y); if (d > r) continue;
+      const i = ty * N + tx;
+      const bid = S.occ[i];
+      if (bid && !hit.has(bid)) { hit.add(bid); const b = S.buildings.get(bid); if (b && b.hp > 0 && b.type !== 'cemetery') { G.Village.damageBuilding(b, (1 - d / r) * 130 + 35, 'quake'); if (!S.buildings.has(bid) || b.type === 'ruin') fell++; } }
+      const tid = S.treeAt[i];
+      if (tid) { const t = S.trees.get(tid); if (t && t.stage === 'grow' && t.size > 0.5 && G.R() < 0.3 * (1 - d / r) + 0.08) G.Nature.fellTree(t, G.R() < 0.5 ? 1 : -1); }
+      if (W.isLand(i) && S.type[i] !== T.RIVER && G.R() < 0.18 * (1 - d / r)) { S.scar[i] = Math.max(S.scar[i], G.DAY_LEN * 3); G.Nature.markDirty(i); }
+      if (G.R() < 0.07) G.FX && G.FX.dust(tx + 0.5, ty + 0.5, 3);
+    }
+    for (let k = 0; k < 3; k++) { const a = G.R() * 6.28, dd = G.rr(1, r); const rx = Math.floor(x + Math.cos(a) * dd) + 0.5, ry = Math.floor(y + Math.sin(a) * dd) + 0.5; const i = W.idx(rx, ry); if (W.inb(rx, ry) && W.isLand(i) && !S.occ[i] && !S.objAt[i] && !S.treeAt[i] && S.type[i] !== T.RIVER) G.Nature.addRock(rx, ry, 18); }
+    G.FX && G.FX.ring(x, y, 0.5, r + 1, 1.2, 'rgba(160,120,80,0.7)', 3);
+    G.FX && G.FX.ring(x, y, 0.3, r * 0.6, 0.9, 'rgba(120,90,60,0.6)', 2);
+    (S.panic = S.panic || []).push({ x, y, r: r + 3, t: 4, why: 'panic' });
+    P.witness(x, y, 16, -4, 26);
+    const where = G.Village.nearSettlementName(x, y);
+    const parts = []; if (fell) parts.push(`${fell} ${fell > 1 ? 'construções ruíram' : 'construção ruiu'}`); if (dead) parts.push(`${dead} ${dead > 1 ? 'morreram' : 'morreu'}`);
+    G.Village.log(`A terra tremeu${where ? ' em ' + where : ''}${parts.length ? ': ' + parts.join(', ') : ''}.`, 'stone', x, y);
+  };
+  P.plague = function (x, y) {
+    const S = G.S; const r = 4; let n = 0;
+    for (const v of S.villagers.values()) {
+      if (G.dist(v.x, v.y, x, y) > r) continue;
+      v.sick = G.DAY_LEN * G.rr(0.5, 0.95); v.immune = 0; n++;
+      v.fear = Math.min(100, v.fear + 14);
+    }
+    S.plague = { x, y, t: G.DAY_LEN * 1.2 };
+    G.FX && G.FX.plague(x, y, r);
+    G.Audio && G.Audio.play('plague');
+    P.witness(x, y, 12, -3, 16);
+    G.Village.log(`Uma praga se abateu${G.Village.nearSettlementName(x, y) ? ' sobre ' + G.Village.nearSettlementName(x, y) : ''}${n ? ': ' + n + ' adoeceram de uma vez' : ''}.`, 'sick', x, y);
+  };
+
+  // ---------------- destiny ----------------
+  P.anoint = function (x, y) {
+    const v = targetAt(x, y, 1.3); if (!v) return;
+    G.FX && G.FX.anoint(v.x, v.y);
+    G.Audio && G.Audio.play('milestone');
+    G.Politics.anoint(v);
+    P.witness(v.x, v.y, 12, 9, 5);
+  };
+  P.liberate = function (x, y) {
+    const n = G.War.liberateAround(x, y, 5, 'divina');
+    G.FX && G.FX.ring(x, y, 0.3, 5.5, 1.1, 'rgba(255,230,160,0.9)', 2.5, true);
+    G.FX && G.FX.blessing(x, y);
+    G.Audio && G.Audio.play('heal');
+    P.witness(x, y, 12, 12, 2);
+    if (n) G.Village.log(`As correntes se partiram por vontade divina: ${n} ${n > 1 ? 'pessoas foram libertadas' : 'pessoa foi libertada'}.`, 'free', x, y);
+  };
+  P.fury = function (x, y) {
+    const S = G.S; const r = 5; const facs = new Map();
+    for (const v of S.villagers.values()) {
+      if (v.captive || v.age < 16 || G.dist(v.x, v.y, x, y) > r) continue;
+      v.fury = 45; v.courage = Math.max(v.courage, 0.9); v.fear = 0; G.Vg.emote(v, 'angry', 3);
+      const f = G.Fac.idOfV(v); facs.set(f, (facs.get(f) || 0) + 1);
+    }
+    for (const v of S.villagers.values()) if (v.captive && G.dist(v.x, v.y, x, y) < r) { v.fury = 45; G.Vg.emote(v, 'angry', 3); }
+    G.FX && G.FX.fury(x, y, r);
+    G.Audio && G.Audio.play('horn');
+    for (const [fid, n] of facs) {
+      if (n < 2) continue;
+      const f = G.Fac.get(fid); if (!f || !f.alive) continue;
+      if (!G.Fac.enemiesOf(fid).length) {
+        let target = null, lo = 1e9;
+        for (const o of G.Fac.all()) { if (o.id === fid) continue; const rr = G.Fac.rel(fid, o.id); if (!rr || !rr.met) continue; if (rr.op < lo) { lo = rr.op; target = o; } }
+        if (target && lo < 40) G.Politics.declareWar(f, target, 'divina');
+      }
+      G.War.launchNow(f, { fury: true });
+    }
+    P.witness(x, y, 12, -2, 12);
+    G.Village.log('Uma fúria divina incendiou os corações.', 'war', x, y);
+  };
+  P.discord = function (x, y) {
+    G.FX && G.FX.discord(x, y);
+    G.Audio && G.Audio.play('plague');
+    G.Politics.discord(x, y);
+    P.witness(x, y, 12, -2, 10);
+  };
+  P.peace = function (x, y) {
+    const S = G.S;
+    G.Politics.divinePeace();
+    for (const s of S.settlements.values()) G.FX && G.FX.doves(s.cx, s.cy);
+    G.FX && (G.FX.flash = 0.6); G.FX && (G.FX.flashColor = '255,250,225');
+    G.Audio && G.Audio.play('heal');
+    for (const v of S.villagers.values()) { v.fear = Math.max(0, v.fear - 20); v.devotion = Math.min(100, v.devotion + 6); }
+  };
+
   P.update = function (dt) {
     const S = G.S;
+    if (S.plague) { S.plague.t -= dt; if (S.plague.t <= 0) S.plague = null; }
     for (let k = S.meteors.length - 1; k >= 0; k--) {
       const m = S.meteors[k]; m.t += dt;
       if (m.t >= m.delay) { S.meteors.splice(k, 1); P.meteorImpact(m); }

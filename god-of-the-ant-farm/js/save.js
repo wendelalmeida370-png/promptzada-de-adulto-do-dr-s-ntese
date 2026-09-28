@@ -3,7 +3,8 @@
 //  Save / Load (localStorage)
 // ============================================================
 (function (G) {
-  const N = G.N, T = G.T, W = G.W;
+  let N = G.N; const T = G.T, W = G.W;
+  G.mapHooks.push(n => { N = n; });
   const KEY = 'gotaf-save-v1';
   const Sv = G.Save = {};
   const r = (v, d) => { const m = Math.pow(10, d || 0); return Math.round(v * m) / m; };
@@ -17,7 +18,8 @@
     const S = G.S;
     const vill = [...S.villagers.values()].map(v => {
       const o = Object.assign({}, v);
-      delete o.path; delete o.task; delete o.emo; delete o.babyOn; delete o.torch;
+      delete o.path; delete o.task; delete o.emo; delete o.babyOn; delete o.torch; delete o._fc;
+      o.coup = 0; o.rebel = 0; o.revolt = 0;
       o.pi = 0; o.moving = false; o.held = false;
       if (o.air) { o.air = false; o.z = 0; o.vz = 0; o.vx = 0; o.vy = 0; }
       if (o.inside) { const b = S.buildings.get(o.inside); if (b) { const d = G.Vg.door(b); o.x = d[0]; o.y = d[1]; } o.inside = 0; o.sleeping = false; }
@@ -38,7 +40,9 @@
       dead: [...S.dead.values()],
       animals: [...S.animals.values()].map(a => ({ id: a.id, kind: a.kind, x: r(a.x, 2), y: r(a.y, 2), hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: a.meat, rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0 })),
       settlements: [...S.settlements.values()],
-      stock: S.stock, faith: r(S.faith, 2), stats: S.stats, history: S.history, milestones: S.milestones,
+      N: S.N || N, mapType: S.mapType, temper: S.temper || 'normal', divinePeace: S.divinePeace || 0,
+      factions: [...S.factions.values()].map(f => { const o = Object.assign({}, f); o.rel = {}; for (const k in f.rel) if (+k > f.id) o.rel[k] = Object.assign({}, f.rel[k], { envoy: 0 }); o.targets = null; o.coup = null; o.rev = null; o.revolt = null; o.exec = null; return o; }), usedNames: S.usedNames || [], starts: S.starts,
+      faith: r(S.faith, 2), stats: S.stats, history: S.history, milestones: S.milestones,
       weather: S.weather, clouds: S.clouds, zones: S.zones, boats: S.boats, awareness: S.awareness, era: S.era,
       pendingDiscovery: S.pendingDiscovery || null, prayer: S.prayer || null, prayerCD: S.prayerCD || 0, popHist: S.popHist || [], start: S.start,
       cam: { x: r(G.Render.cam.x, 1), y: r(G.Render.cam.y, 1), zoom: r(G.Render.cam.zoom, 2) },
@@ -63,7 +67,9 @@
     try { Sv.apply(o); return true; } catch (e) { console.error('corrupt save', e); return false; }
   };
   Sv.apply = function (o) {
+    G.setMapSize(o.N || 64);
     const S = G.newState(o.seed);
+    S.N = o.N || 64; S.mapType = o.mapType || 'ilha'; S.usedNames = o.usedNames || []; S.starts = o.starts || [o.start]; S.temper = o.temper || 'normal'; S.divinePeace = o.divinePeace || 0;
     G.S = S;
     S.day = o.day; S.time = o.time; S.clock = o.clock; S.nextId = o.nextId;
     S.H.set(o.H); S.type.set(o.type); S.fert.set(o.fert); S.wear.set(o.wear); S.burnt.set(o.burnt); S.scar.set(o.scar);
@@ -84,7 +90,16 @@
       const x = G.Animals.spawn(a.kind, a.x, a.y, a); S.animals.delete(x.id); x.id = a.id; S.animals.set(a.id, x);
     }
     for (const s of o.settlements) S.settlements.set(s.id, s);
-    S.stock = o.stock; S.faith = o.faith; S.stats = Object.assign(S.stats, o.stats); S.history = o.history; S.milestones = o.milestones;
+    if (o.factions && o.factions.length) {
+      for (const f of o.factions) S.factions.set(f.id, f);
+      // relations are shared objects between both peoples: relink them
+      for (const f of S.factions.values()) for (const k in f.rel) { const g = S.factions.get(+k); if (g) g.rel[f.id] = f.rel[k]; }
+    } else {
+      // save from before kingdoms existed: everyone belongs to one people
+      const f = G.Fac.create({ stock: o.stock, ci: 0 });
+      for (const s of S.settlements.values()) { s.fac = f.id; if (!f.capital) f.capital = s.id; s.loyalty = 60; s.emptyT = 0; }
+    }
+    S.faith = o.faith; S.stats = Object.assign(S.stats, o.stats); S.history = o.history; S.milestones = o.milestones;
     S.weather = Object.assign(S.weather, o.weather); S.clouds = o.clouds || []; S.zones = o.zones || []; S.boats = o.boats || [];
     S.awareness = o.awareness; S.era = o.era; S.pendingDiscovery = o.pendingDiscovery; S.prayer = o.prayer || null; S.prayerCD = o.prayerCD || 0; S.popHist = o.popHist || []; S.start = o.start;
     Sv.computeDistances();
@@ -92,6 +107,8 @@
     G.Render.buildTerrain(); G.Render.initSky();
     if (o.cam) { G.Render.cam.x = o.cam.x; G.Render.cam.y = o.cam.y; G.Render.cam.zoom = G.Render.cam.tz = o.cam.zoom; }
     G.Village.forceUpdate();
+    G.Politics && G.Politics.afterLoad && G.Politics.afterLoad();
+    G.Fac.updateTerritory();
   };
   Sv.computeDistances = function () {
     const S = G.S; const d = new Int32Array(N * N).fill(999); const q = [];
