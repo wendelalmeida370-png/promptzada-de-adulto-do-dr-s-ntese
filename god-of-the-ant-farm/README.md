@@ -53,6 +53,8 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | 7 | Matilha | 22 | Invoca lobos famintos |
 | 8 | Mão Divina | grátis | Pegue alguém, solte ou arremesse (assusta) |
 
+**Preces**: em momentos difíceis (seca, incêndio, doença, fome, lobos) a vila reza pedindo algo específico. Um aviso dourado aparece sobre a barra de poderes — clique nele para ir até lá com o poder certo selecionado. Atender faz a devoção disparar; ignorar custa devoção.
+
 **Fé** é o recurso dos poderes. Ela nasce da **devoção** (quando você ajuda) e do **medo** (quando você castiga). Medo também rende fé, mas deixa o povo lento e menos fértil — e quem perde parentes para a sua fúria perde a devoção. O painel inferior mostra como eles te enxergam: *Um mistério*, *Protetor*, *Deus amado*, *Deus temido*, *Tirano divino*…
 
 ## Estrutura do código

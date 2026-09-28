@@ -407,6 +407,7 @@
         <li><b>5 Raio</b> · <b>6 Meteoro</b> · <b>7 Matilha</b> — destruição, medo… e às vezes pedra</li>
         <li><b>8 Mão Divina</b> — pegue alguém, solte ou arremesse</li></ul>
       <h4>Fé</h4><p>Poderes custam <b>fé</b>. A fé nasce da <b>devoção</b> (quando você ajuda) e do <b>medo</b> (quando você castiga). Medo também rende fé, mas deixa o povo lento, triste e menos fértil — e quem perde parentes para a sua fúria perde a devoção. Templos e sacerdotes geram fé constante.</p>
+      <h4>Preces</h4><p>Em momentos difíceis — seca, incêndio, doença, fome, lobos — a vila <b>reza pedindo algo específico</b>. Um aviso dourado aparece acima da barra de poderes: clique nele para ir até lá. Atender as preces faz a devoção disparar; ignorá-las tem um preço.</p>
       <h4>A vila evolui sozinha</h4><p>Fogueira → cabanas → armazém → fazendas → oficina e casas de pedra → templo → monumento. Com gente o bastante, grupos partem para fundar novos assentamentos.</p>
       <h4>Dicas</h4><ul><li>Clique nos eventos da <b>Crônica</b> para ir até onde aconteceram.</li><li>Na seca, a chuva vale ouro. Num incêndio, também.</li><li>Tudo é salvo automaticamente no navegador.</li></ul>
       </div><div class="mbtns"><button class="primary" data-m="close">Entendi</button></div>`, 'wide');

@@ -248,6 +248,7 @@
       cam.anchor = [e.clientX, e.clientY];
     }, { passive: false });
     window.addEventListener('keydown', e => {
+      if (M.modalOpen && e.key === 'Escape') { G.UI.closeModal(); return; }
       if (M.mode === 'intro') { endIntro(); return; }
       if (M.mode !== 'game') return;
       const k = e.key;
