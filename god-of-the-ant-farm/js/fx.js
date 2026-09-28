@@ -27,7 +27,8 @@
     FX.list.push(p);
     return p;
   };
-  FX.update = function (dt) {
+  FX.update = function (dt, rdt) {
+    if (rdt === undefined) rdt = dt;
     const L = FX.list;
     let w = 0;
     for (let i = 0; i < L.length; i++) {
@@ -41,11 +42,12 @@
       L[w++] = p;
     }
     L.length = w;
-    for (let i = FX.floaters.length - 1; i >= 0; i--) { const f = FX.floaters[i]; f.life -= dt; f.z += dt * 14; if (f.life <= 0) FX.floaters.splice(i, 1); }
-    for (let i = FX.bolts.length - 1; i >= 0; i--) { FX.bolts[i].life -= dt; if (FX.bolts[i].life <= 0) FX.bolts.splice(i, 1); }
-    for (let i = FX.rings.length - 1; i >= 0; i--) { const r = FX.rings[i]; r.life -= dt; if (r.life <= 0) FX.rings.splice(i, 1); }
-    for (let i = FX.glows.length - 1; i >= 0; i--) { const g = FX.glows[i]; g.life -= dt; if (g.life <= 0) FX.glows.splice(i, 1); }
-    if (FX.flash > 0) FX.flash = Math.max(0, FX.flash - dt * 2.2);
+    // feedback effects always animate in real time (even while paused)
+    for (let i = FX.floaters.length - 1; i >= 0; i--) { const f = FX.floaters[i]; f.life -= rdt; f.z += rdt * 14; if (f.life <= 0) FX.floaters.splice(i, 1); }
+    for (let i = FX.bolts.length - 1; i >= 0; i--) { FX.bolts[i].life -= rdt; if (FX.bolts[i].life <= 0) FX.bolts.splice(i, 1); }
+    for (let i = FX.rings.length - 1; i >= 0; i--) { const r = FX.rings[i]; r.life -= rdt; if (r.life <= 0) FX.rings.splice(i, 1); }
+    for (let i = FX.glows.length - 1; i >= 0; i--) { const g = FX.glows[i]; g.life -= rdt; if (g.life <= 0) FX.glows.splice(i, 1); }
+    if (FX.flash > 0) FX.flash = Math.max(0, FX.flash - rdt * 2.2);
   };
   FX.floater = function (x, y, text, color, life) {
     if (FX.floaters.length > 40) FX.floaters.shift();

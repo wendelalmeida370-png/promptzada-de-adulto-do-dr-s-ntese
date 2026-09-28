@@ -297,7 +297,7 @@
   }
   function relativeTarget(v) {
     const S = G.S; const ids = [v.mother, v.father, v.partner, ...v.kids];
-    const list = ids.map(id => S.villagers.get(id)).filter(o => o && o.set === v.set && !o.inside && !o.sleeping && !o.air && !o.held);
+    const list = ids.map(id => S.villagers.get(id)).filter(o => o && o.age >= 2 && o.set === v.set && !o.inside && !o.sleeping && !o.air && !o.held);
     return list.length ? G.pick(list) : null;
   }
 
@@ -320,6 +320,7 @@
     if (v.fear > 60) wU *= 0.8;
     if (eve) wU *= 0.7;
     opt(wU, watch ? 1.6 : 1, watch ? 'watch' : 'work');
+    if (S.weather.storm > 0 && !night && S.weather.rain > 0.3) { const h = S.buildings.get(v.home); if (h && h.built && h.type !== 'ruin') opt(0.8 + G.R() * 0.3, 1.05, 'shelter'); }
     if (!night) {
       opt((v.traits.includes('Sociável') ? 0.3 : 0.15) * (eve ? 2.3 : 1) * (elder ? 1.8 : 1) * G.R() * 1.6, 0, 'social');
       if (canCourt(v)) opt((v.traits.includes('Romântico') ? 0.95 : 0.72) * (0.55 + G.R() * 0.8), 0.5, 'court');
@@ -350,6 +351,7 @@
       case 'explore': t = exploreTask(v); break;
       case 'visit': { const o = relativeTarget(v); if (o) t = setTask(v, { type: 'visit', id: o.id, pri: 0.3 }); break; }
       case 'rest': t = setTask(v, { type: 'rest', pri: 0.2 }); break;
+      case 'shelter': t = setTask(v, { type: 'shelter', pri: 1.05 }); emote(v, 'fear', 1.5); break;
     }
     if (!t) { if (!v.task) wander(v, 4); }
     else t.kind = kind;
@@ -371,6 +373,7 @@
     if (night) { if (!cur || cur.type !== 'sleep') setTask(v, { type: 'sleep', pri: 1.5, kind: 'sleep' }); return; }
     if (v.hunger > 60 && (!cur || cur.pri < 1.2)) { const t = eatTask(v); if (t) { t.kind = 'eat'; return; } }
     if (v.energy < 15 && (!cur || cur.pri < 1.2)) { setTask(v, { type: 'sleep', pri: 1.2, kind: 'sleep' }); return; }
+    if (S.weather.storm > 0 && S.weather.rain > 0.3 && (!cur || cur.pri < 1.05)) { const h = S.buildings.get(v.home); if (h && h.built) { setTask(v, { type: 'shelter', pri: 1.05, kind: 'shelter' }); return; } }
     if (cur && cur.type !== 'wander') return;
     const m = S.villagers.get(v.mother);
     const r = G.R();
@@ -886,6 +889,14 @@
         else if (move(v, dt)) end(v);
         break;
       }
+      case 'shelter': {
+        const h = S.buildings.get(v.home);
+        if (!h || !h.built || h.type === 'ruin') return end(v);
+        if (t.st === 0) { const [fx, fy] = G.Village.frontTile(h); if (!Vg.goto(v, fx, fy, true)) return end(v); t.st = 1; }
+        else if (t.st === 1) { if (move(v, dt, 1.25)) { t.st = 2; v.inside = h.id; } }
+        else if (S.weather.storm <= 0 || S.weather.rain < 0.2 || t.age > 45) end(v);
+        break;
+      }
       case 'funeral': {
         const b = S.buildings.get(t.id); if (!b || b.type !== 'cemetery') return end(v);
         if (t.st === 0) { const [fx, fy] = G.Village.frontTile(b); if (!Vg.goto(v, fx + G.rr(-0.6, 0.6), fy + G.rr(-0.6, 0.6), true)) return end(v); t.st = 1; }
@@ -1132,6 +1143,7 @@
   // ------------------------------ babies ------------------------------
   function babyUpdate(v, dt) {
     const S = G.S;
+    v.task = null;
     let c = S.villagers.get(v.carrier);
     if (!c || c.set !== v.set || c.age < 14) {
       c = S.villagers.get(v.mother) || S.villagers.get(v.father);
@@ -1260,6 +1272,7 @@
       case 'migrate': { const s = S.settlements.get(v.set); return `Migrando para ${s ? s.name : 'novas terras'}`; }
       case 'swim': return 'Nadando desesperadamente até a margem!';
       case 'funeral': return 'De luto, visitando um túmulo';
+      case 'shelter': return v.inside ? 'Abrigado da tempestade' : 'Correndo para casa, fugindo da tempestade';
       case 'celebrate': return 'Celebrando com a vila!';
     }
     return '…';

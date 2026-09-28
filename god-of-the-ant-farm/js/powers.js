@@ -170,7 +170,7 @@
     x = G.clamp(x, 1, N - 1); y = G.clamp(y, 1, N - 1);
     P.strike(x, y, false);
     const S = G.S; const i = W.idx(x, y);
-    if (S.fire[i] > 0 && !S._stormFireLogged) { S._stormFireLogged = S.day; G.Village.log('Um raio da tempestade iniciou um incêndio.', 'fire', x, y); }
+    if (S.fire[i] > 0 && S._stormFireLogged !== S.day) { S._stormFireLogged = S.day; G.Village.log('Um raio da tempestade iniciou um incêndio.', 'fire', x, y); }
   };
 
   P.meteor = function (x, y) {

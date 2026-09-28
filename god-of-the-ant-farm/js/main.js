@@ -309,13 +309,14 @@
     if (btn !== 0) return;
     if (I.power && I.power !== 'hand') {
       const [x, y] = R.screenToTile(px, py);
-      if (G.Powers.cast(I.power, x, y)) { G.UI.update(1, true); if (G.S.faith < G.Powers.byId(I.power).cost) G.UI.setPower(null); }
+      if (G.Powers.cast(I.power, x, y)) { G.UI.update(1, true); G.Render.shake(0.05); if (G.S.faith < G.Powers.byId(I.power).cost) G.UI.setPower(null); }
       else G.UI.notice(G.S.faith < G.Powers.byId(I.power).cost ? 'Fé insuficiente para este poder.' : 'Não é possível usar isso aí.', 'eye');
       return;
     }
     if (I.power === 'hand') return;
     const ent = pick(px, py);
     G.UI.select(ent);
+    if (!ent) { const [x, y] = R.screenToTile(px, py); if (W.inb(x, y)) G.FX.ring(x, y, 0.05, 0.45, 0.45, 'rgba(255,255,255,0.8)', 1.2); }
   }
 
   // ------------------------------ loop ------------------------------
@@ -341,7 +342,7 @@
         if (dx || dy) { cam.x += dx; cam.y += dy; cam.follow = 0; cam.target = null; }
       }
       G.Render.update(rdt, dt);
-      G.FX.update(dt > 0 ? dt : 0);
+      G.FX.update(dt > 0 ? dt : 0, rdt);
       // hover & preview
       hoverT -= rdt;
       if (M.mode === 'game' && hoverT <= 0 && !I.mouse.down) {

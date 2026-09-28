@@ -81,7 +81,7 @@
     if (a.kind === 'wolf') {
       const S = G.S;
       S.wolvesKilled = (S.wolvesKilled || 0) + 1;
-      if (by && by.name) G.Village.log(`${by.name} matou um lobo.`, 'wolf', a.x, a.y);
+      if (by && by.name && S._wolfLogDay !== S.day) { S._wolfLogDay = S.day; G.Village.log(`${by.name} matou um lobo defendendo a vila.`, 'wolf', a.x, a.y); }
     }
   };
 
