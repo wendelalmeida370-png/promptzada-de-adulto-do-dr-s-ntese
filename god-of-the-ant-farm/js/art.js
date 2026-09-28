@@ -20,9 +20,22 @@
     s = { c, w, h, ax, ay, win: meta.win, fires: meta.fires, glow: meta.glow };
     cache.set(key, s); return s;
   };
+  // mipmaps: sprites are painted at 3x; zoomed out, a half or quarter copy is drawn instead
+  Art.px = 1; // screen pixels per world unit, set by the renderer every frame
+  function mip(s, lv) {
+    const src = lv === 2 ? s.c : (s.m2 || mip(s, 2));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.ceil(src.width / 2)); c.height = Math.max(1, Math.ceil(src.height / 2));
+    const x = c.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+    x.drawImage(src, 0, 0, c.width, c.height);
+    if (lv === 2) s.m2 = c; else s.m4 = c;
+    return c;
+  }
   Art.draw = function (ctx, s, x, y, sc) {
     sc = sc || 1;
-    ctx.drawImage(s.c, x - s.ax * sc, y - s.ay * sc, s.w * sc, s.h * sc);
+    const k = Art.px * sc;
+    const img = k >= 1.3 || s.c.width < 12 ? s.c : k >= 0.62 ? (s.m2 || mip(s, 2)) : (s.m4 || mip(s, 4));
+    ctx.drawImage(img, x - s.ax * sc, y - s.ay * sc, s.w * sc, s.h * sc);
   };
   Art.clear = () => cache.clear();
 

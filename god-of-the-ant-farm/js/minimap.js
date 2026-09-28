@@ -52,10 +52,13 @@
     const b = document.getElementById('btn-map'); if (b) b.classList.toggle('on', !!shown);
   }
 
-  // layout: the map diamond fitted into the widget
+  // layout: the land (not the whole ocean) fitted into the widget; iso: x->(s,s/2), y->(-s,s/2)
+  let bounds = null;
   function fit() {
-    const s = Math.min((W_CSS - 8) / (2 * N), (H_CSS - 8) / N) * dpr; // px per tile step (iso: x->(s,s/2), y->(-s,s/2))
-    const ox = cv.width / 2, oy = (cv.height - N * s) / 2;
+    const b = bounds || [-N, N, 0, 2 * N]; // u = x - y, v = x + y
+    const du = Math.max(8, b[1] - b[0]), dv = Math.max(8, b[3] - b[2]);
+    const s = Math.min((W_CSS - 10) / du, (H_CSS - 10) / (dv / 2)) * dpr;
+    const ox = cv.width / 2 - (b[0] + b[1]) / 2 * s, oy = cv.height / 2 - (b[2] + b[3]) / 4 * s;
     return { s, ox, oy };
   }
   // minimap css px -> world px (the renderer's projected space)
@@ -68,8 +71,10 @@
     const S = G.S; if (!S) return;
     if (img.width !== N) { img.width = N; img.height = N; pix = ictx.createImageData(N, N); }
     const d = pix.data; const terr = G.Fac.terrFac; const B = G.Biome; const road = S.road;
+    let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9;
     for (let i = 0; i < N * N; i++) {
       const t = S.type[i]; let c;
+      if (t >= T.RIVER) { const x = i % N, y = (i / N) | 0; const u = x - y, v = x + y; if (u < u0) u0 = u; if (u > u1) u1 = u; if (v < v0) v0 = v; if (v > v1) v1 = v; }
       if (t <= T.RIVER) c = WATER[t];
       else {
         c = B ? B.groundColor(i, t, BASE[t] || BASE[4]) : (BASE[t] || BASE[4]);
@@ -90,6 +95,8 @@
       const o = i * 4; d[o] = r; d[o + 1] = g; d[o + 2] = b; d[o + 3] = 255;
     }
     ictx.putImageData(pix, 0, 0);
+    const m = Math.max(4, N * 0.04);
+    bounds = u1 > u0 ? [u0 - m, u1 + m + 1, v0 - m, v1 + m + 2] : null;
   }
   const hexCache = {};
   function hexRGB(h) { return hexCache[h] || (hexCache[h] = [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]); }

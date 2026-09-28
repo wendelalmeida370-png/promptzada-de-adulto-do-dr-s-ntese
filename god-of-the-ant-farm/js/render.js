@@ -642,7 +642,7 @@
     const vis = (x, y, h) => { const p = proj(x, y, h); return (p[0] > view[0] && p[0] < view[2] && p[1] > view[1] && p[1] < view[3]) ? p : null; };
     for (const tr of S.trees.values()) { const p = vis(tr.x, tr.y, W.groundH(tr.x, tr.y)); if (p) pushD(tr.x + tr.y, 1, tr, p[0], p[1]); }
     for (const r of S.rocks.values()) { const p = vis(r.x, r.y, W.groundH(r.x, r.y)); if (p) pushD(r.x + r.y, 2, r, p[0], p[1]); }
-    farLod = R.cam.zoom < 0.5; // whole-continent view: skip what would be a pixel or two
+    farLod = R.cam.zoom < 0.56; // whole-continent view: skip what would be a pixel or two
     if (!farLod) for (const b of S.bushes.values()) { const p = vis(b.x, b.y, W.groundH(b.x, b.y)); if (p) pushD(b.x + b.y, 3, b, p[0], p[1]); }
     for (const b of S.buildings.values()) {
       if (b.type === 'farm') continue;
@@ -681,6 +681,8 @@
     }
     for (const b of S.boats) { const p = vis(b.x, b.y, G.SEA); if (p) pushD(b.x + b.y, 7, b, p[0], p[1]); }
     const list = drawList.slice(0, drawN).sort((a, b) => a.d - b.d);
+    G.Art.px = R.cam.zoom * dpr;
+    if (nightF > 0.15) { homesLit.clear(); for (const v of S.villagers.values()) if (v.home) homesLit.add(v.home); }
     // shadows first
     ctx.fillStyle = 'rgba(20,30,20,0.2)';
     ctx.beginPath();
@@ -691,7 +693,7 @@
     }
     ctx.fill();
     PROF.mark('collect+shadows', t0); t0 = now();
-    if (!R.dbg.noEnt) for (const e of list) drawEntity(e, t, nightF);
+    if (!R.dbg.noEnt) { if (PROF.on) for (const e of list) { const t1 = now(); drawEntity(e, t, nightF); PROF.mark('e' + e.t, t1); } else for (const e of list) drawEntity(e, t, nightF); }
     G.Siege && G.Siege.drawMissiles(ctx, proj);
     G.Powers.drawWorld && G.Powers.drawWorld(ctx, proj, t);
     G.Animals.drawAir && G.Animals.drawAir(ctx, proj, t, view, R.cam.zoom);
@@ -1140,7 +1142,8 @@
     if (b.type === 'torre') { const f = G.Fac.ofSet(b.set); if (f) drawBanner(sx + 1, sy - 50, G.Fac.hex(f.id), t, 10); }
     if (burning) emisFire.push(sx, sy - 14, 1.2);
   }
-  function hasResidents(b) { for (const v of G.S.villagers.values()) if (v.home === b.id) return true; return false; }
+  const homesLit = new Set(); // homes with someone living in them (rebuilt each night frame)
+  function hasResidents(b) { return homesLit.has(b.id); }
   function drawPiles(b, sx, sy) {
     const fac = G.Fac.ofSet(b.set); if (!fac) return;
     const cap = G.Village.cap(fac.id); const st = fac.stock;

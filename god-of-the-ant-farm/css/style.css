@@ -444,5 +444,5 @@ body.casting canvas#game { cursor: crosshair; }
   .st-civopts { grid-template-columns: repeat(3, 1fr); } .st-civ { flex-direction: row; justify-content: center; gap: 4px; padding: 5px 3px; } .st-civ i { width: 16px; height: 16px; }
   #realm-map { width: 100%; height: auto; }
   #notices { max-width: 70vw; bottom: 110px; }
-  #minimap { top: 124px; transform: scale(.78); transform-origin: top right; }
+  #minimap { top: 178px; transform: scale(.78); transform-origin: top right; }
 }

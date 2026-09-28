@@ -511,10 +511,41 @@
     best.crops[bk].c = v.id;
     return setTask(v, { type: 'farm', id: best.id, k: bk, harvest, pri: 1 });
   }
+  // reach a building from its front, or from any free side (a coast, a wall, a crowded block)
+  function gotoB(v, b, jit) {
+    const S = G.S; const [fx, fy] = G.Village.frontTile(b);
+    const j = jit || 0;
+    if (Vg.goto(v, fx + (j ? G.rr(-j, j) : 0), fy + (j ? G.rr(-j, j) : 0), true)) return true;
+    if (b.unreachT && S.clock - b.unreachT < 8) return false; // failed a moment ago: don't flood the pathfinder
+    const ring = [];
+    for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) {
+      if (y >= b.y && y < b.y + b.h && x >= b.x && x < b.x + b.w) continue;
+      if (!W.inb(x, y) || !W.walkable(y * N + x)) continue;
+      ring.push([x + 0.5, y + 0.5, G.dist2(v.x, v.y, x + 0.5, y + 0.5)]);
+    }
+    ring.sort((a, c) => a[2] - c[2]);
+    for (let k = 0; k < Math.min(3, ring.length); k++) if (Vg.goto(v, ring[k][0], ring[k][1], false)) { b.unreach = 0; return true; }
+    b.unreach = (b.unreach || 0) + 1; b.unreachT = S.clock;
+    return false;
+  }
+  Vg.gotoB = gotoB;
+  // a site nobody can reach (walled in, cut off by the sea) is given up and its materials go back to the store
+  function abandonSite(b) {
+    const def = G.BDEF[b.type]; const fid = G.Village.facOfSet(b.set);
+    if (b.upgradeFrom) {
+      const od = G.BDEF[b.upgradeFrom]; if (!od || od.w !== b.w || od.h !== b.h) return;
+      b.type = b.upgradeFrom; b.upgradeFrom = null; b.built = true; b.progress = 1; b.need = { wood: 0, stone: 0 }; b.incoming = { wood: 0, stone: 0 }; b.unreach = 0;
+    } else {
+      for (const k of ['wood', 'stone']) { const got = Math.max(0, (def.cost[k] || 0) - b.need[k]); if (got > 0) G.Village.addStock(k, got, fid); }
+      G.Village.removeBuilding(b);
+    }
+    for (const o of G.S.villagers.values()) if (o.task && o.task.type === 'build' && o.task.id === b.id) end(o);
+  }
   function buildTask(v) {
     const S = G.S; let best = null, bd = 1e9;
     for (const b of S.buildings.values()) {
       if (b.built || b.set !== v.set || b.type === 'ruin') continue;
+      if (b.unreach) { if (b.unreach >= 6) { abandonSite(b); continue; } if (S.clock - b.unreachT < 30) continue; }
       const st = G.Fac.stockOfSet(b.set);
       const needMat = (b.need.wood - b.incoming.wood > 0 && st.wood >= 1) || (b.need.stone - b.incoming.stone > 0 && st.stone >= 1);
       const canWork = b.progress < allowedProgress(b) - 0.001;
@@ -990,13 +1021,12 @@
     const b = S.buildings.get(t.id);
     if (!b || b.built || b.type === 'ruin') return end(v);
     const def = G.BDEF[b.type];
-    const [fx, fy] = G.Village.frontTile(b);
     if (t.st === 0) {
       if (v.carry && (v.carry.k === 'wood' || v.carry.k === 'stone')) {
         if (b.need[v.carry.k] > 0) {
           t.mat = v.carry.k;
           if (!t.counted) { b.incoming[t.mat] += v.carry.n; t.counted = true; }
-          if (!Vg.goto(v, fx, fy, true)) return end(v);
+          if (!gotoB(v, b)) { b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - v.carry.n); t.counted = false; end(v); return deliverTask(v); }
           t.st = 2; return;
         }
         return deliverTask(v);
@@ -1010,7 +1040,7 @@
         if (!Vg.goto(v, dx, dy, true)) return end(v);
         t.mat = mat; t.st = 1; return;
       }
-      if (b.progress < allowedProgress(b) - 0.001) { if (!Vg.goto(v, fx + G.rr(-0.3, 0.3), fy + G.rr(-0.3, 0.3), true)) return end(v); t.st = 3; return; }
+      if (b.progress < allowedProgress(b) - 0.001) { if (!gotoB(v, b, 0.3)) return end(v); t.st = 3; return; }
       return end(v);
     }
     if (t.st === 1) {
@@ -1019,7 +1049,7 @@
       const n = Math.min(cap(v), Math.ceil(b.need[t.mat] - b.incoming[t.mat]), Math.floor(stk[t.mat]));
       if (n <= 0) { t.st = 0; return; }
       stk[t.mat] -= n; v.carry = { k: t.mat, n }; b.incoming[t.mat] += n; t.counted = true;
-      if (!Vg.goto(v, fx, fy, true)) { t.st = 0; return; }
+      if (!gotoB(v, b)) { b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - n); t.counted = false; end(v); return deliverTask(v); }
       t.st = 2; return;
     }
     if (t.st === 2) {
