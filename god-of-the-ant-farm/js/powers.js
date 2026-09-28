@@ -103,7 +103,7 @@
     for (const v of S.villagers.values()) {
       if (G.dist(v.x, v.y, x, y) > r) continue;
       const needed = v.hp < 95 || v.sick > 0 || v.hunger > 70;
-      v.hp = 100; v.sick = 0; v.hunger = Math.min(v.hunger, 30); v.energy = Math.max(v.energy, 70);
+      v.hp = 100; if (v.sick > 0) v.immune = G.DAY_LEN * 3; v.sick = 0; v.hunger = Math.min(v.hunger, 30); v.energy = Math.max(v.energy, 70);
       if (needed) { v.devotion = Math.min(100, v.devotion + 14); healed++; }
       G.FX && G.FX.healOne(v.x, v.y);
     }

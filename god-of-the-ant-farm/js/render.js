@@ -255,7 +255,7 @@
   R.rebuildShore = buildShore;
 
   // ------------------------------ ambient light ------------------------------
-  const AMB = [[0, [238, 176, 170]], [0.05, [255, 228, 212]], [0.12, [255, 255, 255]], [0.56, [255, 252, 244]], [0.64, [255, 206, 160]], [0.7, [200, 148, 170]], [0.755, [104, 112, 170]], [0.965, [98, 108, 166]], [1.0, [238, 176, 170]]];
+  const AMB = [[0, [225, 186, 176]], [0.05, [255, 226, 206]], [0.12, [255, 255, 255]], [0.56, [255, 252, 244]], [0.63, [255, 216, 172]], [0.69, [232, 172, 140]], [0.725, [150, 138, 172]], [0.765, [104, 114, 172]], [0.965, [100, 110, 168]], [1.0, [225, 186, 176]]];
   function ambient() {
     const S = G.S; const t = S.time;
     let c = AMB[0][1];
@@ -1049,9 +1049,9 @@
     lctx.fillStyle = G.rgb(amb); lctx.fillRect(0, 0, lightC.width, lightC.height);
     lctx.globalCompositeOperation = 'lighter';
     setWorld(lctx, 0.5);
-    const strength = G.clamp(nightF * 1.2, 0, 1);
+    const strength = G.clamp((nightF - 0.25) * 1.6, 0, 1);
     for (let k = 0; k < lights.length; k += 5) {
-      const a = lights[k + 4] * (0.25 + strength * 0.75); if (a <= 0.01) continue;
+      const a = lights[k + 4] * strength; if (a <= 0.01) continue;
       const r = lights[k + 2];
       lctx.globalAlpha = Math.min(1, a);
       lctx.drawImage(G.Art.glow(lights[k + 3]), lights[k] - r, lights[k + 1] - r, r * 2, r * 2);
@@ -1059,7 +1059,7 @@
     // fires light the night
     for (let k = 0; k < emisFire.length; k += 3) {
       const r = 26 + emisFire[k + 2] * 30;
-      lctx.globalAlpha = Math.min(1, 0.5 + emisFire[k + 2] * 0.4);
+      lctx.globalAlpha = Math.min(1, (0.5 + emisFire[k + 2] * 0.4) * (0.3 + strength * 0.7));
       lctx.drawImage(G.Art.glow('fire'), emisFire[k] - r, emisFire[k + 1] - r, r * 2, r * 2);
     }
     for (const gl of G.FX.glows) {

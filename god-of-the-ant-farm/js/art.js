@@ -400,7 +400,7 @@
   };
 
   // ------------------------------ glow sprites ------------------------------
-  const GLOW_COL = { warm: [255, 176, 96], fire: [255, 140, 60], gold: [255, 214, 120], cool: [170, 200, 255], green: [150, 255, 150], pink: [255, 150, 200], red: [255, 90, 40], white: [255, 255, 255], purple: [190, 120, 255] };
+  const GLOW_COL = { warm: [255, 150, 72], fire: [255, 140, 60], gold: [255, 214, 120], cool: [170, 200, 255], green: [150, 255, 150], pink: [255, 150, 200], red: [255, 90, 40], white: [255, 255, 255], purple: [190, 120, 255] };
   const glowCache = {};
   Art.glow = function (col) {
     if (glowCache[col]) return glowCache[col];

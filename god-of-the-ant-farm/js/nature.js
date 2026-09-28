@@ -122,7 +122,7 @@
           const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue;
           const j = ny * N + nx; if (S.fire[j] > 0) continue;
           const fu = Nat.fuel(j); if (!fu) continue;
-          const base = fu === 'tree' ? 0.34 : fu === 'building' ? 0.22 : fu === 'bush' ? 0.3 : fu === 'crop' ? 0.2 : 0.07;
+          const base = fu === 'tree' ? 0.24 : fu === 'building' ? 0.2 : fu === 'bush' ? 0.24 : fu === 'crop' ? 0.18 : 0.045;
           const wind = 1 + ((dx * wx + dy * wy) / Math.hypot(dx, dy)) * wth.windS * 1.6;
           const diag = (dx && dy) ? 0.6 : 1;
           const p = f * base * dry * wind * diag * (1 - S.wet[j]) * dt;

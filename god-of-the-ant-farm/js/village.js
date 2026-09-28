@@ -338,9 +338,10 @@
     if (c.farm === 0 && (S.day >= 4 || pop >= 13)) want.push('farm');
     else if (c.farm > 0 && c.farm * 11 < pop && !c.siteTypes.farm && S.stock.food < pop * 8) want.push('farm');
     if (!c.well && (c.hut + c.house) >= 3) want.push('well');
-    if (isMain && !c.workshop && c.storehouse && pop >= 18) want.push('workshop');
-    if (isMain && !c.temple && workshop && pop >= 26) want.push('temple');
-    if (isMain && !c.monument && c.temple && globalHas('temple') && pop >= 42) want.push('monument');
+    const allPop = S.villagers.size;
+    if (isMain && !c.workshop && c.storehouse && allPop >= 18) want.push('workshop');
+    if (isMain && !c.temple && workshop && allPop >= 26) want.push('temple');
+    if (isMain && !c.monument && c.temple && globalHas('temple') && allPop >= 45 && pop >= 16) want.push('monument');
     if (c.storehouse && !c.siteTypes.storehouse && (st.wood > cap * 0.9 || st.food > cap * 0.9 || st.stone > cap * 0.9) && c.storehouse < 1 + Math.floor(pop / 30)) want.push('storehouse');
     // upgrade an old hut into a stone house
     if (workshop && c.hut > 0 && !c.siteTypes.house && st.stone >= 10 && st.wood >= 14 && want.length === 0) {

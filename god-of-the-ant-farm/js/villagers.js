@@ -171,8 +171,10 @@
     // babies are fed from the common stock
     if (v.age < 2 && v.hunger > 60 && S.stock.food >= 1) { S.stock.food -= 0.5; v.hunger -= 50; }
     if (v.hunger >= 100) { v.hp -= 0.45 * dt; v.lastCause = 'hunger'; v.lastGod = false; if (G.R() < dt * 0.3) emote(v, 'food'); }
+    if (v.immune > 0) v.immune -= dt;
     if (v.sick > 0) {
-      v.sick -= dt; v.hp -= 0.12 * dt * (v.age < 6 || v.age > 60 ? 1.8 : 1); v.lastCause = 'sick'; v.lastGod = false;
+      v.sick -= dt; v.hp -= 0.08 * dt * (v.age < 6 || v.age > 60 ? 1.7 : 1); v.lastCause = 'sick'; v.lastGod = false;
+      if (v.sick <= 0) v.immune = G.DAY_LEN * 3;
       if (G.R() < dt * 0.08) emote(v, 'sick');
     }
     const i = W.idx(v.x, v.y);
@@ -1033,7 +1035,7 @@
     const kids = v.kids.length; if (kids >= 6) return;
     const pop = S.villagers.size;
     const foodOk = S.stock.food > pop * 0.6 || S.stock.food > 25;
-    let chance = 0.55 * (foodOk ? 1 : 0.25) * (v.home ? 1 : 0.6) * (v.fear > 60 ? 0.5 : 1) * (kids >= 4 ? 0.6 : 1) * G.clamp(1 - (pop - 70) / 110, 0.12, 1);
+    let chance = 0.55 * (foodOk ? 1 : 0.25) * (v.home ? 1 : 0.6) * (v.fear > 60 ? 0.5 : 1) * (kids >= 4 ? 0.6 : 1) * G.clamp(1 - (pop - 70) / 100, 0.06, 1);
     chance *= G.Nature.zoneMul(v.x, v.y, 'fertility');
     if (S.weather.fertility > 0) chance *= 2;
     if (G.R() < chance) { v.preg = G.DAY_LEN * 0.55; }
@@ -1176,8 +1178,8 @@
       for (const v of S.villagers.values()) {
         if (v.sick <= 0) continue;
         for (const o of S.villagers.values()) {
-          if (o.sick > 0 || o === v) continue;
-          if (G.dist2(v.x, v.y, o.x, o.y) < 1.5 && G.R() < 0.03 * (Vg.hasWell(o.set) ? 0.4 : 1) * (o.traits.includes('Resistente') ? 0.4 : 1)) { o.sick = G.DAY_LEN * G.rr(0.5, 1); }
+          if (o.sick > 0 || o === v || o.immune > 0) continue;
+          if (G.dist2(v.x, v.y, o.x, o.y) < 1.5 && G.R() < 0.012 * (Vg.hasWell(o.set) ? 0.4 : 1) * (o.traits.includes('Resistente') ? 0.4 : 1)) { o.sick = G.DAY_LEN * G.rr(0.4, 0.8); }
         }
       }
     }

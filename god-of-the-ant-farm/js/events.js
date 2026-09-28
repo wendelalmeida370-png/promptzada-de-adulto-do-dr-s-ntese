@@ -19,7 +19,7 @@
     } else S.emptyT = 0;
     if (w.nextEvent <= 0) {
       w.nextEvent = G.rr(2.3, 4.6);
-      if (S.day < 3) return;
+      if (S.day < 4) return;
       trigger();
     }
     updateBoats(dt);
@@ -30,8 +30,8 @@
     const opts = [];
     if (w.storm <= 0 && w.drought <= 0) opts.push(['storm', 1]);
     if (w.drought <= 0 && w.storm <= 0 && S.day > 6) opts.push(['drought', 0.6]);
-    if (pop >= 12) opts.push(['wolves', 0.8]);
-    if (pop >= 15) opts.push(['sickness', 0.5]);
+    if (pop >= 12 && S.day >= 8) opts.push(['wolves', 0.8]);
+    if (pop >= 15 && S.day >= 6) opts.push(['sickness', 0.5]);
     opts.push(['fertility', 0.45]);
     opts.push(['discovery', 0.7]);
     let free = 0; for (const b of S.buildings.values()) if (b.built && G.BDEF[b.type].housing) free += G.BDEF[b.type].housing; free -= pop;
