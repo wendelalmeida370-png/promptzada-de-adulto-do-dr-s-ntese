@@ -88,6 +88,31 @@ kbd { font-family: inherit; font-size: 0.78em; font-weight: 800; background: rgb
 .pw[data-power="forest"] .pic { color: #7fd06a; } .pw[data-power="volcano"] .pic { color: #ff8a5a; }
 .pw[data-power="shoal"] .pic, .pw[data-power="wind"] .pic { color: #a8dcf0; } .pw[data-power="seastorm"] .pic { color: #9fb4d8; } .pw[data-power="tsunami"] .pic { color: #6ab8e8; } .pw[data-power="kraken"] .pic { color: #b07ad0; }
 .pw[data-power="inspire"] .pic, .pw[data-power="vision"] .pic { color: #bcd8ff; } .pw[data-power="sign"] .pic { color: #fff0c0; } .pw[data-power="divwall"] .pic { color: #e8dcc4; }
+.book { max-width: 760px; }
+.bk-title { display: flex; align-items: center; gap: 10px; } .bk-title svg { width: 26px; height: 26px; color: var(--gold); flex: 0 0 auto; }
+.bk-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.bk-tabs button { border: 1px solid transparent; background: none; color: var(--muted); font-weight: 800; font-size: 12.5px; padding: 5px 11px; border-radius: 9px; }
+.bk-tabs button:hover { color: var(--text); background: rgba(255, 255, 255, .06); }
+.bk-tabs button.on { color: #2a1d0a; background: linear-gradient(180deg, #f7d07c, #e3a94a); }
+.bk-tabs em { font-style: normal; font-size: 10.5px; opacity: .75; }
+.bk-page { max-height: min(62vh, 560px); overflow-y: auto; padding-right: 6px; font-family: Georgia, 'Times New Roman', serif; }
+.bk-page p { font-size: 14.5px; line-height: 1.6; color: #eadfc8; margin: 0 0 9px; }
+.bk-page h4 { font-family: Cinzel, serif; color: var(--gold-2); margin: 16px 0 8px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+.bk-myth p.drop::first-letter { font-family: Cinzel, serif; font-size: 2.6em; float: left; line-height: .9; margin: 4px 8px 0 0; color: var(--gold); }
+.bk-ch, .bk-leg, .bk-pp { border: 1px solid rgba(255, 255, 255, .08); background: rgba(255, 240, 210, .035); border-radius: 12px; padding: 11px 14px; margin-bottom: 10px; }
+.bk-ch.draft { border-style: dashed; opacity: .85; }
+.bk-cht { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+.bk-cht b { font-family: Cinzel, serif; color: var(--gold-2); font-size: 14px; } .bk-cht span { font-size: 11.5px; color: var(--muted); white-space: nowrap; font-family: Nunito, sans-serif; }
+.bk-page p.voice { font-style: italic; color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+.bk-anc { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-left: 3px solid rgba(245, 200, 107, .4); background: rgba(255, 255, 255, .03); border-radius: 0 10px 10px 0; margin-bottom: 8px; }
+.bk-anc span { font-size: 14px; color: #eadfc8; font-style: italic; } .bk-anc em { font-size: 11.5px; color: var(--muted); font-family: Nunito, sans-serif; font-style: normal; }
+.bk-anc.cumprida { border-left-color: var(--gold); } .bk-anc.cumprida em { color: var(--gold); } .bk-anc.falhou { opacity: .6; }
+.bk-ph { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; font-family: Nunito, sans-serif; }
+.bk-ph b { font-size: 15px; color: var(--gold-2); } .bk-ph .civ { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); } .bk-ph .civ svg { width: 14px; height: 14px; }
+.bk-ph .yr { margin-left: auto; font-size: 11.5px; color: var(--muted); }
+.bk-page p.facts { font-family: Nunito, sans-serif; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; } .bk-page p.facts b { color: var(--text); }
+.bk-page p.end { font-family: Nunito, sans-serif; font-size: 12.5px; color: #e89a8a; margin: 4px 0 0; }
+.bk-pp.gone { opacity: .72; }
 .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
 .choices button { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, .1); background: rgba(255, 255, 255, .05); transition: all .15s; }
 .choices button:hover { border-color: var(--gold); background: rgba(245, 200, 107, .12); transform: translateY(-1px); }

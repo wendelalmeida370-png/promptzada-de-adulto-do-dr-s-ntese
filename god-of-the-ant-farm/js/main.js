@@ -162,6 +162,7 @@
     G.Vg.updateAll(dt);
     G.Animals.updateAll(dt);
     G.Powers.update(dt);
+    G.Lore && G.Lore.update(dt);
     G.Events.update(dt);
   }
   function simulate(dt) {
@@ -288,6 +289,7 @@
       if (k >= '1' && k <= '9') { const p = G.UI.tabPowers()[+k - 1]; if (p) G.UI.setPower(I.power === p.id ? null : p.id); }
       else if (k === 'Tab') { e.preventDefault(); G.UI.nextTab(e.shiftKey ? -1 : 1); }
       else if (k === 'r' || k === 'R') G.UI.openRealms();
+      else if (k === 'l' || k === 'L') G.Lore.openBook();
       else if (k === 'b' || k === 'B') { G.Render.showBorders = !G.Render.showBorders; G.UI.notice(G.Render.showBorders ? 'Fronteiras visíveis.' : 'Fronteiras ocultas.', 'eye'); }
       else if (k === ' ') { e.preventDefault(); if (G.speed === 0) G.UI.setSpeed(M.lastSpeed || 1); else { M.lastSpeed = G.speed; G.UI.setSpeed(0); } }
       else if (k === 'Escape') { if (I.held) release(); else if (I.power) G.UI.setPower(null); else if (G.UI.selected) G.UI.select(null); else G.UI.openPause(); }

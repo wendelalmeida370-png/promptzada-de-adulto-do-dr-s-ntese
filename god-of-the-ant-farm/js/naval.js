@@ -316,7 +316,6 @@
         if (G.dist(s.x, s.y, set.cx, set.cy) < (set.radius || 8) + 8) {
           G.Politics.meet(a, b);
           log(`${G.cap(shipName(s))} de ${a.name} avistou ${set.name}, terra de ${b.name}.`, 'ship', set.cx, set.cy);
-          G.Lore && G.Lore.note('contact', { a: a.id, b: b.id, sea: true });
         }
       }
     }

@@ -585,6 +585,7 @@
       if (kr.life <= 0 || kr.idle > 22 || kr.eaten >= 4) {
         kr.st = 'dive'; kr.t = 0;
         log(`${kr.name} voltou às profundezas${kr.eaten ? ', levando ' + kr.eaten + (kr.eaten > 1 ? ' navios' : ' navio') : ''}.`, 'naval', kr.x, kr.y);
+        G.Lore && G.Lore.note('krakenGone', { name: kr.name, eaten: kr.eaten });
         continue;
       }
       // warships fight back

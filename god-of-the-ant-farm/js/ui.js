@@ -137,7 +137,7 @@
   UI.init = function () {
     $('#ic-pop').innerHTML = ICON.pop; $('#ic-food').innerHTML = ICON.food; $('#ic-wood').innerHTML = ICON.wood; $('#ic-stone').innerHTML = ICON.stone; $('#ic-faith').innerHTML = ICON.faith;
     $('#btn-pause').innerHTML = ICON.pause;
-    $('#btn-chron').innerHTML = ICON.scroll; $('#btn-stats').innerHTML = ICON.stats; $('#btn-menu').innerHTML = ICON.menu; $('#btn-realms').innerHTML = ICON.crown;
+    $('#btn-chron').innerHTML = ICON.scroll; $('#btn-stats').innerHTML = ICON.stats; $('#btn-menu').innerHTML = ICON.menu; $('#btn-realms').innerHTML = ICON.crown; $('#btn-lore').innerHTML = ICON.book;
     $('#btn-sound').innerHTML = G.Audio.sfxOn || G.Audio.musicOn ? ICON.sound : ICON.mute;
     // powers
     const bar = $('#powerbar');
@@ -152,6 +152,7 @@
     $('#chron-toggle').onclick = () => { G.Audio.play('click'); $('#chronicle').classList.toggle('collapsed'); };
     $('#btn-stats').onclick = () => { G.Audio.play('click'); UI.openStats(); };
     $('#btn-realms').onclick = () => { G.Audio.play('click'); UI.openRealms(); };
+    $('#btn-lore').onclick = () => { G.Audio.play('click'); G.Lore.openBook(); };
     $('#fac-chip').onclick = () => { G.Audio.play('click'); UI.openRealms(); };
     $('#prayer').onclick = () => {
       const p = G.S && G.S.prayer; if (!p) return;
@@ -202,6 +203,7 @@
       else if (m === 'leader') { const p = G.person(+b.dataset.id); if (p) { UI.closeModal(); UI.select(p); if (!p.dead) { G.Render.cam.follow = 0; G.Render.panTo(p.x, p.y); } } }
       else if (m === 'mainmenu') { G.Save.save(true); UI.closeModal(); G.Main.toMenu(); }
       else if (m === 'help') UI.openHelp();
+      else if (m === 'lore') G.Lore.openBook(b.dataset.tab);
       else if (m === 'sfx') { G.Audio.setSfx(!G.Audio.sfxOn); UI.openSound(); }
       else if (m === 'music') { G.Audio.init(); G.Audio.setMusic(!G.Audio.musicOn); UI.openSound(); }
       else if (m === 'amb') { G.Audio.setAmb(!G.Audio.ambOn); UI.openSound(); }
@@ -553,7 +555,7 @@
   UI.openPause = function () {
     UI.openModal(`<h2>Pausa divina</h2><p class="muted">O mundo é salvo automaticamente.</p>
       <div class="mlist"><button class="primary" data-m="resume">Continuar</button><button data-m="save">${ICON.save} Salvar agora</button><button data-m="load">Carregar último save</button><button data-m="new">Novo mundo</button><button data-m="help">Como jogar</button><button data-m="mainmenu">Menu principal</button></div>
-      <div class="keys"><span><kbd>Espaço</kbd> pausar</span><span><kbd>1</kbd>–<kbd>8</kbd> poderes</span><span><kbd>Tab</kbd> aba de poderes</span><span><kbd>R</kbd> reinos</span><span><kbd>WASD</kbd> mover</span><span><kbd>F</kbd> seguir</span><span><kbd>H</kbd> crônica</span><span><kbd>+</kbd>/<kbd>−</kbd> velocidade</span></div>`, 'small');
+      <div class="keys"><span><kbd>Espaço</kbd> pausar</span><span><kbd>1</kbd>–<kbd>8</kbd> poderes</span><span><kbd>Tab</kbd> aba de poderes</span><span><kbd>R</kbd> reinos</span><span><kbd>L</kbd> livro do mundo</span><span><kbd>WASD</kbd> mover</span><span><kbd>F</kbd> seguir</span><span><kbd>H</kbd> crônica</span><span><kbd>+</kbd>/<kbd>−</kbd> velocidade</span></div>`, 'small');
   };
   UI.openSound = function () {
     const A = G.Audio;
