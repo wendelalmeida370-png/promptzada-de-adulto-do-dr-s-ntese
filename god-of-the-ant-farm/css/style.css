@@ -113,6 +113,9 @@ kbd { font-family: inherit; font-size: 0.78em; font-weight: 800; background: rgb
 .bk-page p.facts { font-family: Nunito, sans-serif; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; } .bk-page p.facts b { color: var(--text); }
 .bk-page p.end { font-family: Nunito, sans-serif; font-size: 12.5px; color: #e89a8a; margin: 4px 0 0; }
 .bk-pp.gone { opacity: .72; }
+.rm-civ { display: inline-flex; align-items: center; gap: 3px; } .rm-civ svg { width: 13px; height: 13px; vertical-align: -2px; }
+.rm-tech { display: flex; gap: 6px; align-items: flex-start; font-size: 11.5px; color: var(--muted); margin: 6px 0 2px; line-height: 1.4; } .rm-tech svg { width: 14px; height: 14px; flex: 0 0 auto; margin-top: 1px; color: #9cc4f0; } .rm-tech em { font-style: normal; color: #9cc4f0; }
+.rm-sets small { color: var(--muted); font-size: 10.5px; }
 .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
 .choices button { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, .1); background: rgba(255, 255, 255, .05); transition: all .15s; }
 .choices button:hover { border-color: var(--gold); background: rgba(245, 200, 107, .12); transform: translateY(-1px); }

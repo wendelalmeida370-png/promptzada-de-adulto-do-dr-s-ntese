@@ -461,7 +461,9 @@
     const following = G.Render.cam.follow === v.id;
     const P = G.Politics; const fac = G.Fac.ofV(v); const ruler = fac && fac.leader === v.id;
     if (v.captive) { const from = G.Fac.get(v.captive.from); status.unshift(`<span class="st red">Cativ${f ? 'a' : 'o'}${from ? ' — de ' + esc(from.name) : ''}</span>`); }
-    if (v.hero) status.push(`<span class="st gold">Herói${f ? 'na' : ''} · ${v.kills} vitórias</span>`);
+    if (v.chosen) status.push(`<span class="st gold">${v.g === 'f' ? 'Escolhida' : 'Escolhido'} dos céus · ${v.kills || 0} vitórias</span>`);
+    else if (v.hero) status.push(`<span class="st gold">Herói${f ? 'na' : ''} · ${v.kills} vitórias</span>`);
+    if (v.prophet) status.push(`<span class="st gold">${v.g === 'f' ? 'Profetisa' : 'Profeta'}</span>`);
     else if (v.kills) status.push(`<span class="st grey">${v.kills} ${v.kills > 1 ? 'inimigos derrubados' : 'inimigo derrubado'}</span>`);
     if (v.fury > 0) status.push('<span class="st red">Em fúria</span>');
     if (v.coup) status.push('<span class="st red">Conspirador' + (f ? 'a' : '') + '</span>');
@@ -571,22 +573,25 @@
       <div class="help">
       <p class="lead">Você é o deus de uma pequena ilha. Os habitantes vivem por conta própria: coletam, constroem, se apaixonam, têm filhos, envelhecem e morrem. <b>Você não dá ordens</b> — você interfere.</p>
       <h4>Câmera</h4><ul><li><b>Arrastar</b> com o mouse (ou botão direito) move o mapa · <b>WASD</b>/setas também</li><li><b>Roda do mouse</b> dá zoom · <b>clique</b> num habitante ou construção para ver detalhes · <b>duplo clique</b> segue alguém</li></ul>
-      <h4>Poderes divinos</h4><ul>
-        <li><b>Chuva</b> — rega plantações, apaga incêndios, encerra secas</li>
-        <li><b>Crescimento</b> — árvores, frutos e plantações crescem na hora</li>
-        <li><b>Cura</b> — cura feridos e doentes</li>
-        <li><b>Fertilidade</b> — dois dias de colheitas e nascimentos abundantes</li>
-        <li><b>Raio</b> · <b>Meteoro</b> · <b>Matilha</b> · <b>Terremoto</b> · <b>Praga</b> — destruição, medo… e às vezes pedra</li>
-        <li><b>Mão Divina</b> — pegue alguém, solte ou arremesse</li></ul>
+      <h4>Poderes divinos — seis abas (<kbd>Tab</kbd> troca, <kbd>1</kbd>–<kbd>8</kbd> escolhe)</h4><ul>
+        <li><b>Dádivas</b> — Chuva, Crescimento, Cura, Fertilidade, <b>Era de Ouro</b> (três dias de prosperidade para um povo) e a <b>Mão Divina</b></li>
+        <li><b>Ira</b> — Raio, Meteoro, Matilha, Terremoto, Praga e <b>Maldição</b> (colheitas murcham, filhos não vêm, a lealdade apodrece)</li>
+        <li><b>Terra</b> — <b>Erguer</b> ilhas ou pontes de terra entre povos isolados, <b>Afundar</b> o chão (e engolir cidades), <b>Floresta Sagrada</b>, <b>Veio de Pedra</b> e o <b>Vulcão</b>: lava, bombas de fogo, cinzas férteis — e às vezes ele desperta de novo</li>
+        <li><b>Mar</b> — <b>Cardume</b>, <b>Ventos Favoráveis</b> para os navios, <b>Tempestade</b> no mar, <b>Maremoto</b> que varre a costa e o <b>Kraken</b>, que caça navios até ser morto ou voltar às profundezas</li>
+        <li><b>Palavra</b> — <b>Profecia</b> sobre uma cidade (se ela se cumprir, a fé explode), <b>Mandamento</b> (uma lei divina que muda o jeito de viver de um povo), <b>Inspiração</b> (revele a tecnologia que quiser), <b>Sinal nos Céus</b> (cometa, eclipse, aurora, chuva de estrelas — cada povo interpreta a seu modo) e <b>Visão</b> (crie um profeta)</li>
+        <li><b>Destino</b> — Ungir, <b>Herói</b> (um campeão escolhido que luta como dez), Libertação, Fúria, Discórdia, <b>Muralha Divina</b> e Paz Divina</li></ul>
       <h4>Fé</h4><p>Poderes custam <b>fé</b>. A fé nasce da <b>devoção</b> (quando você ajuda) e do <b>medo</b> (quando você castiga). Medo também rende fé, mas deixa o povo lento, triste e menos fértil — e quem perde parentes para a sua fúria perde a devoção. Templos e sacerdotes geram fé constante.</p>
       <h4>Preces</h4><p>Em momentos difíceis — seca, incêndio, doença, fome, lobos — a vila <b>reza pedindo algo específico</b>. Um aviso dourado aparece acima da barra de poderes: clique nele para ir até lá. Atender as preces faz a devoção disparar; ignorá-las tem um preço.</p>
-      <h4>A vila evolui sozinha</h4><p>Fogueira → cabanas → armazém → fazendas → oficina e casas de pedra → templo → monumento. Com gente o bastante, grupos partem para fundar novos assentamentos.</p>
+      <h4>Civilizações</h4><p>Cada povo pode ser <b>Grego</b> (pesquisa e colônias), <b>Nórdico</b> (mar, saques, berserkers), <b>Egípcio</b> (rio, fé, pirâmides), <b>Asteca</b> (guerras floridas, sacrifícios, Templo Mayor) ou <b>Romano</b> (estradas, aquedutos, legiões) — ou um povo clássico sem nome. Cada um tem arquitetura, nomes, governos, unidades, tecnologias e traços próprios.</p>
+      <h4>Cidades que crescem</h4><p>Acampamento → aldeia → vila → cidade → metrópole. Casas viram sobrados e ínsulas, surgem praças, mercados, celeiros, bibliotecas, teatros, termas, palácios, portos e uma <b>maravilha</b>. Ruas são calçadas, estradas ligam cidades, <b>carroças</b> levam bens pelas rotas internas e de comércio, e <b>aquedutos</b> trazem água dos rios.</p>
+      <h4>O mar</h4><p>Com Navegação vêm portos, barcos de pesca, exploradores que descobrem outros povos, navios mercantes, frotas de guerra, invasões pelo mar e colônias em outras ilhas.</p>
       <h4>Povos, reinos e guerras</h4><p>No <b>Novo mundo</b> você escolhe o mapa (ilha, continente, arquipélago, istmo), o tamanho e quantos povos despertam. Cada povo tem cor, bandeira, estoque, território e um <b>líder</b> com personalidade própria (belicoso, cruel, devoto, ambicioso…). Governos mudam: tribo → chefia → reino, ou teocracia, tirania, conselho.</p>
       <ul><li>Quando se encontram, os povos trocam emissários, fazem comércio, casamentos e alianças — ou declaram <b>guerra</b>: exércitos marcham, saqueiam, fazem <b>cativos</b>, conquistam vilas e, sob líderes cruéis, <b>massacram</b>.</li>
       <li>Vilas distantes e infelizes podem <b>rachar</b> e virar povos novos. Ambiciosos tramam <b>golpes</b>; tiranos executam em praça pública; o povo pode se levantar numa <b>revolução</b>.</li>
       <li>Cativos trabalham à força, tentam fugir, se revoltam — e às vezes fundam um povo livre.</li>
-      <li>Abra o painel <b>Reinos</b> (<kbd>R</kbd> ou o chip do povo no topo) para ver líderes, relações, exércitos e o mapa político. <kbd>B</kbd> mostra as fronteiras.</li></ul>
-      <h4>Poderes do destino</h4><ul><li><b>Ungir</b> coloca alguém no trono · <b>Libertação</b> parte correntes · <b>Fúria</b> incendeia corações · <b>Discórdia</b> semeia rachas · <b>Paz Divina</b> encerra todas as guerras · <b>Terremoto</b> e <b>Praga</b> castigam. Troque de aba com <kbd>Tab</kbd>.</li></ul>
+      <li>Arqueiros, tropas de elite, <b>muralhas</b> com portões que se fecham, <b>aríetes</b> e <b>catapultas</b> em cercos.</li>
+      <li>Abra o painel <b>Reinos</b> (<kbd>R</kbd> ou o chip do povo no topo) para ver líderes, relações, exércitos, saberes e o mapa político. <kbd>B</kbd> mostra as fronteiras.</li></ul>
+      <h4>O Livro do Mundo</h4><p>Cada mundo nasce com nome, mito da criação, lendas de origem de cada povo e <b>duas profecias antigas</b>. Depois o livro se escreve sozinho: um capítulo a cada sete anos, lendas de heróis, profetas, monstros, vulcões e cidades afogadas. Abra com <kbd>L</kbd> ou pelo ícone do livro.</p>
       <h4>Dicas</h4><ul><li>Clique nos eventos da <b>Crônica</b> para ir até onde aconteceram.</li><li>Na seca, a chuva vale ouro. Num incêndio, também.</li><li>Tudo é salvo automaticamente no navegador.</li></ul>
       </div><div class="mbtns"><button class="primary" data-m="close">Entendi</button></div>`, 'wide');
   };
@@ -719,8 +724,14 @@
     if (f.exec) status.push('<span class="st red">Execução</span>');
     if (f.weariness > 60) status.push('<span class="st grey">Cansado da guerra</span>');
     if (f.stock.food < pop * 0.5) status.push('<span class="st red">Fome</span>');
+    if (f.golden > 0) status.push(`<span class="st gold">Era de Ouro · ${Math.ceil(f.golden / G.DAY_LEN)}d</span>`);
+    if (f.curse > 0) status.push(`<span class="st red">Amaldiçoado · ${Math.ceil(f.curse / G.DAY_LEN)}d</span>`);
+    if (f.law && G.Powers.LAWS && G.Powers.LAWS[f.law]) status.push(`<span class="st gold" title="Mandamento divino">“${esc(G.Powers.LAWS[f.law].name)}”</span>`);
+    const known = f.tech ? Object.keys(f.tech.known) : [];
+    const cur = f.tech && f.tech.cur ? `${G.TECH[f.tech.cur].name} ${Math.min(99, Math.floor(f.tech.pts / G.Civ.techCost(f, f.tech.cur) * 100))}%` : '';
+    const ships = S.ships.filter(s => s.fac === f.id); const warships = ships.filter(s => s.kind === 'guerra').length;
     return `<div class="realm ${f.id === UI.viewFac ? 'on' : ''}" style="--fc:${G.Fac.hex(f.id)}">
-      <div class="rm-head">${UI.flag(f.id, 'big')}<div class="rm-title"><h3>${esc(f.name)}</h3><div class="sub">${P.govName(f)} · ${G.ERAS[f.era] || ''}${f.parent && G.Fac.get(f.parent) ? ' · rompeu com ' + esc(G.Fac.get(f.parent).name) : ''}</div></div>
+      <div class="rm-head">${UI.flag(f.id, 'big')}<div class="rm-title"><h3>${esc(f.name)}</h3><div class="sub">${f.civ && G.CIVS[f.civ] ? `<span class="rm-civ">${UI.civIcon(f.civ)}${G.CIVS[f.civ].name}</span> · ` : ''}${P.govName(f)} · ${G.ERAS[f.era] || ''}${f.parent && G.Fac.get(f.parent) ? ' · rompeu com ' + esc(G.Fac.get(f.parent).name) : ''}</div></div>
       <button class="rm-go" data-m="realm-go" data-id="${f.id}" title="Ir até a capital">${ICON.eye}</button></div>
       <div class="rm-ruler">${ICON.crown}${ruler ? `<a data-m="leader" data-id="${ruler.id}">${esc(P.styled(f, ruler))}</a>` : '<span class="muted">sem líder</span>'}</div>
       ${ruler ? `<div class="rm-pers">${Math.floor(ruler.age)} anos${words.length ? ' · ' + words.join(', ') : ''} · legitimidade ${Math.round(f.legit)}%</div>` : ''}
@@ -732,10 +743,12 @@
         <span title="Comida">${ICON.food}<b>${Math.floor(f.stock.food)}</b></span>
         <span title="Madeira">${ICON.wood}<b>${Math.floor(f.stock.wood)}</b></span>
         <span title="Pedra">${ICON.stone}<b>${Math.floor(f.stock.stone)}</b></span>
+        ${ships.length ? `<span title="Navios (${warships} de guerra)">${ICON.ship}<b>${ships.length}</b></span>` : ''}
       </div>
+      ${f.tech ? `<div class="rm-tech">${ICON.tech}<span>${known.length ? known.map(t => G.TECH[t].name).join(' · ') : 'Nenhum saber ainda'}${cur ? ` <em>pesquisando ${esc(cur)}</em>` : ''}</span></div>` : ''}
       ${bar('Estabilidade', stab, stab < 35 ? 'hp' : 'energy', stab + '%')}
       ${status.length ? `<div class="status">${status.join('')}</div>` : ''}
-      <div class="rm-sets">${sets.map(s => `<span class="${s === cap ? 'cap' : ''}" title="Lealdade ${Math.round(s.loyalty)}%">${s === cap ? ICON.crown : ''}${esc(s.name)} <em class="${s.loyalty < 30 ? 'neg' : ''}">${Math.round(s.loyalty)}%</em></span>`).join('')}</div>
+      <div class="rm-sets">${sets.map(s => `<span class="${s === cap ? 'cap' : ''}" title="Lealdade ${Math.round(s.loyalty)}%">${s === cap ? ICON.crown : ''}${esc(s.name)} <small>${G.City.tierName(s).toLowerCase()}</small> <em class="${s.loyalty < 30 ? 'neg' : ''}">${Math.round(s.loyalty)}%</em></span>`).join('')}</div>
       ${others.length ? `<div class="rm-rels">${others.map(o => relChip(f, o)).join('')}</div>` : ''}
       <div class="rm-foot">${f.st.kills || f.st.deaths ? `${f.st.kills} mortes causadas · ${f.st.deaths} baixas` : G.Fac.enemiesOf(f.id).length ? 'Em guerra, ainda sem batalhas' : 'Nunca lutou uma batalha'}${f.st.conquests ? ' · ' + f.st.conquests + (f.st.conquests > 1 ? ' conquistas' : ' conquista') : ''}${f.st.massacres ? ' · ' + f.st.massacres + (f.st.massacres > 1 ? ' massacres' : ' massacre') : ''}${f.st.captives ? ' · ' + f.st.captives + ' capturados' : ''}${f.st.executions ? ' · ' + f.st.executions + (f.st.executions > 1 ? ' execuções' : ' execução') : ''}</div>
       ${past.length ? `<div class="rm-hist">${past.map(r => `<span>${esc(r.title || '')} ${esc(r.name)}${r.ord > 1 ? ' ' + ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][r.ord] : ''}${r.ep ? ', ' + esc(r.ep) : ''} <em>dia ${r.from}–${r.to !== undefined ? r.to : '?'}${END_TXT[r.end] ? ' · ' + END_TXT[r.end] : ''}</em></span>`).join('')}</div>` : ''}
