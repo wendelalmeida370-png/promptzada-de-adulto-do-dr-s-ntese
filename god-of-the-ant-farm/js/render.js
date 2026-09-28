@@ -179,6 +179,7 @@
         c.fillStyle = 'rgba(255,245,210,0.13)';
         for (let k = 0; k < 3; k++) { const u = G.hash(i * 5 + k), v = G.hash(i * 11 + k); const p = proj(x + u, y + v, hh); c.fillRect(p[0], p[1], 1.4, 0.7); }
       }
+      if (S.road[i]) drawBridge(c, x, y, i);
       return;
     }
     const h00 = H[y * V + x], h10 = H[y * V + x + 1], h11 = H[(y + 1) * V + x + 1], h01 = H[(y + 1) * V + x];
@@ -190,6 +191,7 @@
     const f = G.rgb(col);
     c.fillStyle = f; c.strokeStyle = f; c.lineWidth = 0.7;
     c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.lineTo(d[0], d[1]); c.lineTo(e[0], e[1]); c.closePath(); c.fill(); c.stroke();
+    if (S.road[i] && S.burnt[i] <= 0 && S.scar[i] <= 0) { drawRoad(c, x, y, i, S.road[i], light); return; }
     // details
     const lv = G.pathLevel(S.wear[i]);
     const burnt = S.burnt[i] > 0 || S.scar[i] > 0;
@@ -241,6 +243,53 @@
       c.fillStyle = 'rgba(120,95,65,0.35)';
       for (let k = 0; k < 3; k++) { const p = pt(0.2 + G.hash(i * 53 + k) * 0.6, 0.2 + G.hash(i * 59 + k) * 0.6); c.fillRect(p[0], p[1], 1, 0.6); }
     }
+  }
+  // ------------------------------ streets, highways, bridges ------------------------------
+  const ROADCOL = [null, [184, 164, 128], [190, 182, 164], [146, 142, 134]];
+  function drawRoad(c, x, y, i, rd, light) {
+    const S = G.S;
+    const pt = (u, v, lift) => { const px = x + u, py = y + v; return proj(px, py, W.hAt(px, py) + (lift || 0)); };
+    const quad = (u0, v0, u1, v1, col) => { const p0 = pt(u0, v0, 0.02), p1 = pt(u1, v0, 0.02), p2 = pt(u1, v1, 0.02), p3 = pt(u0, v1, 0.02); c.fillStyle = col; c.beginPath(); c.moveTo(p0[0], p0[1]); c.lineTo(p1[0], p1[1]); c.lineTo(p2[0], p2[1]); c.lineTo(p3[0], p3[1]); c.closePath(); c.fill(); };
+    const base = ROADCOL[rd].map(v => v * light);
+    quad(0, 0, 1, 1, G.rgb(base));
+    if (rd === 1) { // packed gravel
+      c.fillStyle = G.rgb(base.map(v => v * 0.8));
+      for (let k = 0; k < 7; k++) { const p = pt(0.1 + G.hash(i * 7 + k) * 0.8, 0.1 + G.hash(i * 13 + k) * 0.8); c.fillRect(p[0], p[1], 0.9, 0.5); }
+      return;
+    }
+    // stones: a grid of pavers, each a slightly different shade
+    const n = rd === 3 ? 3 : 4, g = 0.06;
+    for (let a = 0; a < n; a++) for (let b = 0; b < n; b++) {
+      const off = rd === 2 && b % 2 ? 0.5 / n : 0;
+      const u0 = a / n + off, v0 = b / n;
+      if (u0 >= 1) continue;
+      const sh = 0.86 + G.hash(i * 31 + a * 7 + b) * 0.2;
+      quad(u0 + g / n, v0 + g / n, Math.min(1, u0 + 1 / n) - g / n, v0 + 1 / n - g / n, G.rgb(base.map(v => Math.min(255, v * sh * 1.04))));
+    }
+    if (rd === 3) { // highway kerbs where the road meets grass
+      c.strokeStyle = G.rgb([200 * light, 196 * light, 186 * light]); c.lineWidth = 0.7;
+      for (const [dx, dy, u0, v0, u1, v1] of [[1, 0, 1, 0, 1, 1], [-1, 0, 0, 0, 0, 1], [0, 1, 0, 1, 1, 1], [0, -1, 0, 0, 1, 0]]) {
+        const nx = x + dx, ny = y + dy; if (W.inb(nx, ny) && S.road[ny * N + nx]) continue;
+        const p0 = pt(u0, v0, 0.05), p1 = pt(u1, v1, 0.05); c.beginPath(); c.moveTo(p0[0], p0[1]); c.lineTo(p1[0], p1[1]); c.stroke();
+      }
+    }
+  }
+  function drawBridge(c, x, y, i) {
+    const S = G.S; const hh = G.SEA + 0.45;
+    const alongX = (W.inb(x - 1, y) && S.road[y * N + x - 1]) || (W.inb(x + 1, y) && S.road[y * N + x + 1]) || (W.inb(x - 1, y) && S.type[y * N + x - 1] >= T.SAND && W.inb(x + 1, y) && S.type[y * N + x + 1] >= T.SAND);
+    const p = (u, v, z) => proj(x + u, y + v, hh + (z || 0));
+    const deck = (col, z) => { const a = p(0, 0, z), b = p(1, 0, z), d = p(1, 1, z), e = p(0, 1, z); c.fillStyle = col; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.lineTo(d[0], d[1]); c.lineTo(e[0], e[1]); c.closePath(); c.fill(); };
+    // shadow on the water, the deck and its parapets
+    c.fillStyle = 'rgba(20,50,70,0.35)'; { const a = proj(x + 0.1, y + 0.3, G.SEA), b = proj(x + 1.1, y + 0.3, G.SEA), d = proj(x + 1.1, y + 1.2, G.SEA), e = proj(x + 0.1, y + 1.2, G.SEA); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.lineTo(d[0], d[1]); c.lineTo(e[0], e[1]); c.fill(); }
+    deck('#9a8c78', 0);
+    c.strokeStyle = 'rgba(60,50,40,0.35)'; c.lineWidth = 0.4;
+    for (let k = 1; k < 5; k++) { const f = k / 5; const a = alongX ? p(f, 0) : p(0, f), b = alongX ? p(f, 1) : p(1, f); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+    c.strokeStyle = '#c8bca6'; c.lineWidth = 1.1;
+    const rails = alongX ? [[0, 0.04, 1, 0.04], [0, 0.96, 1, 0.96]] : [[0.04, 0, 0.04, 1], [0.96, 0, 0.96, 1]];
+    for (const [u0, v0, u1, v1] of rails) { const a = p(u0, v0, 1.1), b = p(u1, v1, 1.1); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+    // arch under the front edge
+    c.fillStyle = '#7e725f'; const f0 = alongX ? p(0, 1, 0) : p(1, 0, 0), f1 = p(1, 1, 0);
+    c.beginPath(); c.moveTo(f0[0], f0[1]); c.lineTo(f1[0], f1[1]); c.lineTo(f1[0], f1[1] + 2.2); c.quadraticCurveTo((f0[0] + f1[0]) / 2, (f0[1] + f1[1]) / 2 - 0.5, f0[0], f0[1] + 2.2); c.closePath(); c.fill();
   }
   function buildShore() {
     const S = G.S; shore = []; shoreRiver = [];
@@ -338,6 +387,9 @@
     if (gdt > 0) spawnAmbient(Math.min(gdt, 0.1));
   };
 
+  const SMOKE = { house: 1, workshop: 1, sobrado: 1, insula: 1, banhos: 1, hut: 1 };
+  const APRON = { monument: 1, temple: 1, palacio: 1, maravilha: 1, teatro: 1, biblioteca: 1, mercado: 1, banhos: 1 };
+  const FIRELIT = { temple: 1, torre: 1, quartel: 1, maravilha: 1, praca: 1, palacio: 1 };
   function spawnAmbient(dt) {
     const S = G.S; const cam = R.cam; const t = R.time;
     const view = viewRect(80);
@@ -362,14 +414,15 @@
       if (b.type === 'campfire') {
         if (G.R() < dt * 1.3) G.FX.spawn({ x: cx + G.rr(-0.1, 0.1), y: cy + G.rr(-0.1, 0.1), z: 10, vz: G.rr(12, 22), vx: wx * 0.6, vy: wy * 0.6, life: G.rr(2, 3.5), s0: 3, s1: 9, c: 'rgba(150,150,150,0.3)', k: 2 });
         if (G.R() < dt * 2.2) G.FX.spawn({ x: cx, y: cy, z: 5, vz: G.rr(20, 45), vx: G.rr(-0.3, 0.3), vy: G.rr(-0.3, 0.3), life: G.rr(0.6, 1.4), s0: 0.9, s1: 0.2, c: '#ffc060', k: 4, layer: 1 });
-      } else if ((b.type === 'house' || b.type === 'workshop') && (b.type === 'workshop' || G.R() < 0.5 + night)) {
-        const spr = G.Art.building(b.type, b.v);
-        if (spr && spr.fires.length && G.R() < dt * (b.type === 'workshop' ? 1.2 : 0.55 + night * 0.5)) {
+      } else if (SMOKE[b.type] && (b.type === 'workshop' || b.type === 'banhos' || G.R() < 0.5 + night)) {
+        const spr = G.Art.building(b.type, b.v, b.style, b.wd);
+        const steam = b.type === 'banhos';
+        if (spr && spr.fires.length && G.R() < dt * (b.type === 'workshop' ? 1.2 : steam ? 1.4 : 0.55 + night * 0.5)) {
           const h = W.groundH(cx, cy);
-          const f = spr.fires[0];
+          const f = G.pick(spr.fires);
           // convert sprite-local px to world tile offset
           const ox = f[0] / 32, oz = -f[1];
-          G.FX.spawn({ x: cx + ox, y: cy - ox, h, z: oz, vz: G.rr(10, 18), vx: wx * 0.5, vy: wy * 0.5, life: G.rr(2.5, 4), s0: 2.2, s1: 7, c: 'rgba(200,200,205,0.35)', k: 2 });
+          G.FX.spawn({ x: cx + ox, y: cy - ox, h, z: oz, vz: G.rr(10, 18), vx: wx * 0.5, vy: wy * 0.5, life: G.rr(2.5, 4), s0: 2.2, s1: steam ? 9 : 7, c: steam ? 'rgba(240,245,250,0.45)' : 'rgba(200,200,205,0.35)', k: 2 });
           if (b.type === 'workshop' && G.R() < 0.3) G.FX.spawn({ x: cx + ox, y: cy - ox, h, z: oz, vz: G.rr(25, 45), vx: G.rr(-0.3, 0.3), vy: G.rr(-0.3, 0.3), life: 0.8, s0: 0.8, s1: 0.1, c: '#ffb040', k: 4, layer: 1 });
         }
       }
@@ -518,12 +571,19 @@
       const [cx, cy] = G.Village.center(b);
       const base = W.maxH(b.x, b.y, b.w, b.h);
       const p = proj(cx, cy, base);
-      if (p[0] < view[0] - 60 || p[0] > view[2] + 60 || p[1] < view[1] - 30 || p[1] > view[3] + 90) continue;
-      pushD(b.x + b.w - 0.5 + b.y + b.h - 0.5 + 0.2, 4, b, p[0], p[1]);
+      if (p[0] < view[0] - 60 || p[0] > view[2] + 60 || p[1] < view[1] - 30 || p[1] > view[3] + 140) continue;
+      pushD(b.type === 'praca' ? b.x + b.y + 0.4 : b.x + b.w - 0.5 + b.y + b.h - 0.5 + 0.2, 4, b, p[0], p[1]);
     }
-    const setHex = new Map(); for (const s of S.settlements.values()) setHex.set(s.id, G.Fac.hex(s.fac));
+    // aqueduct arches, carts on the roads
+    for (const a of S.aqueducts) for (let k = 0; k < a.built; k++) {
+      const [x, y, d] = a.tiles[k]; const i = y * N + x;
+      if (S.occ[i]) { const ob = S.buildings.get(S.occ[i]); if (ob && ob.blocks) continue; }
+      const p = vis(x + 0.5, y + 0.5, W.groundH(x + 0.5, y + 0.5)); if (p) pushD(x + y + 1.05, 8, { d, st: a.style || (a.style = (G.Fac.get(a.fac) || {}).civ || 'classico') }, p[0], p[1]);
+    }
+    for (const c of S.carts) { const p = vis(c.x, c.y, W.groundH(c.x, c.y)); if (p) pushD(c.x + c.y + 0.03, 9, c, p[0], p[1]); }
+    const setHex = new Map(), setCiv = new Map(); for (const s of S.settlements.values()) { setHex.set(s.id, G.Fac.hex(s.fac)); const f = G.Fac.get(s.fac); setCiv.set(s.id, f ? f.civ : null); }
     rulerIds.clear(); for (const f of G.Fac.all()) if (f.leader) rulerIds.add(f.leader);
-    for (const v of S.villagers.values()) { v.babyOn = null; v._fc = v.captive ? null : (setHex.get(v.set) || null); v._ruler = rulerIds.has(v.id); }
+    for (const v of S.villagers.values()) { v.babyOn = null; v._fc = v.captive ? null : (setHex.get(v.set) || null); v._ruler = rulerIds.has(v.id); v._civ = v.captive ? v.civ : (setCiv.get(v.set) || v.civ || null); }
     for (const v of S.villagers.values()) if (v.age < 2 && v.carried) { const c = S.villagers.get(v.carrier); if (c) c.babyOn = v; }
     for (const v of S.villagers.values()) {
       if (v.inside || v.held || (v.age < 2 && v.carried)) continue;
@@ -702,7 +762,15 @@
       if (b.type === 'farm') drawFarm(b, t);
       else if (!b.built) { ctx.fillStyle = 'rgba(120,90,60,0.35)'; diamond(b.x + 0.05, b.y + 0.05, b.x + b.w - 0.05, b.y + b.h - 0.05); ctx.fill(); }
       else if (b.type === 'cemetery') { ctx.fillStyle = 'rgba(60,90,50,0.25)'; diamond(b.x + 0.1, b.y + 0.1, b.x + b.w - 0.1, b.y + b.h - 0.1); ctx.fill(); }
-      else if (b.type === 'monument' || b.type === 'temple') { ctx.fillStyle = 'rgba(200,190,170,0.35)'; diamond(b.x - 0.3, b.y - 0.3, b.x + b.w + 0.3, b.y + b.h + 0.3); ctx.fill(); }
+      else if (b.type === 'praca') {
+        ctx.fillStyle = G.Arch.plazaColor(b.style); diamond(b.x + 0.02, b.y + 0.02, b.x + b.w - 0.02, b.y + b.h - 0.02, 0.04); ctx.fill();
+        if (b.style !== 'nordico') {
+          ctx.strokeStyle = 'rgba(90,80,65,0.28)'; ctx.lineWidth = 0.4; ctx.beginPath();
+          for (let k = 1; k < 8; k++) { const f = k / 8 * b.w; let a = proj(b.x + f, b.y, W.hAt(b.x + f, b.y) + 0.04), c2 = proj(b.x + f, b.y + b.h, W.hAt(b.x + f, b.y + b.h) + 0.04); ctx.moveTo(a[0], a[1]); ctx.lineTo(c2[0], c2[1]); a = proj(b.x, b.y + f, W.hAt(b.x, b.y + f) + 0.04); c2 = proj(b.x + b.w, b.y + f, W.hAt(b.x + b.w, b.y + f) + 0.04); ctx.moveTo(a[0], a[1]); ctx.lineTo(c2[0], c2[1]); }
+          ctx.stroke();
+        }
+      }
+      else if (APRON[b.type]) { ctx.fillStyle = 'rgba(200,190,170,0.35)'; diamond(b.x - 0.3, b.y - 0.3, b.x + b.w + 0.3, b.y + b.h + 0.3); ctx.fill(); }
       else if (b.type === 'cercado') { ctx.fillStyle = 'rgba(110,86,60,0.45)'; diamond(b.x + 0.05, b.y + 0.05, b.x + b.w - 0.05, b.y + b.h - 0.05); ctx.fill(); penStakes(b, penBack(b), 1); }
       else if (b.type === 'quartel') { ctx.fillStyle = 'rgba(150,130,100,0.35)'; diamond(b.x - 0.2, b.y - 0.2, b.x + b.w + 0.2, b.y + b.h + 0.2); ctx.fill(); }
     }
@@ -861,6 +929,17 @@
         break;
       }
       case 7: G.Art.boat(ctx, o, sx, sy, t); break;
+      case 8: G.Art.draw(ctx, G.Arch.arch(o.d, o.st), sx, sy, 1); break;
+      case 9: {
+        const g = o.back ? o.ret : o.goods;
+        const spr = G.Arch.cart(o.civ, !!g, g ? g.k : 'food');
+        const bob = Math.abs(Math.sin(t * 7 + o.id)) * 0.4;
+        ctx.fillStyle = 'rgba(20,30,20,0.2)'; ctx.beginPath(); ctx.ellipse(sx - 2, sy, 9, 2.6, 0, 0, TAU); ctx.fill();
+        ctx.save(); ctx.translate(sx, sy - bob); ctx.scale(o.face || 1, 1); G.Art.draw(ctx, spr, 0, 0, 0.8); ctx.restore();
+        if (nightF > 0.45) { const lx = sx + (o.face || 1) * 9, ly = sy - 9; light(lx, ly, 26, 'warm', 0.55 * nightF); emisTorch.push(lx, ly); }
+        break;
+      }
+      case 10: G.Naval && G.Naval.drawShip(ctx, o, sx, sy, t, nightF, light, emisTorch); break;
     }
   }
 
@@ -921,22 +1000,22 @@
     if (b.type === 'ruin') { drawRuin(b, sx, sy, t); return; }
     if (b.type === 'cercado') { if (b.built) penStakes(b, penFront(b), 1); else { penStakes(b, penFront(b), b.progress); overlays.push(b, sx, sy - 14); } return; }
     if (!b.built) { drawSite(b, sx, sy, t); if (burning) emisFire.push(sx, sy - 8, 1); return; }
-    const spr = Art.building(b.type, b.v);
+    const spr = Art.building(b.type, b.v, b.style, b.wd);
     if (!spr) return;
     // storehouse piles
-    if (b.type === 'storehouse') drawPiles(b, sx, sy);
+    if (b.type === 'storehouse' && !b.style) drawPiles(b, sx, sy);
     Art.draw(ctx, spr, sx, sy, 1);
     if (b.hp < b.maxHp * 0.6) { ctx.fillStyle = 'rgba(30,20,15,0.25)'; ctx.beginPath(); ctx.ellipse(sx, sy - 8, 10 * b.w, 6 * b.h, 0, 0, TAU); ctx.fill(); }
     // night windows & fires
-    const occupied = G.Village && (b.type !== 'hut' && b.type !== 'house' ? true : hasResidents(b));
+    const occupied = G.Village && (!def.housing ? true : hasResidents(b));
     if (nightF > 0.15 && occupied && spr.win.length) {
       emisWin.push(spr, sx, sy, nightF * (0.85 + 0.15 * Math.sin(t * 3 + b.id)));
       light(sx, sy - 8, 30 + b.w * 12, 'warm', 0.55 * nightF);
     }
-    if (b.type === 'temple') { for (const f of spr.fires) { emisFire.push(sx + f[0], sy + f[1], 0.45); light(sx + f[0], sy + f[1], 40, 'warm', 0.8); } for (const g of spr.glow) emisGlow.push(sx + g[0], sy + g[1], 8, 'gold', 0.4 + nightF * 0.5); }
-    if (b.type === 'monument') { for (const g of spr.glow) emisGlow.push(sx + g[0], sy + g[1], 10, 'gold', 0.5 + nightF * 0.6 + 0.15 * Math.sin(t * 2)); light(sx, sy - 60, 80, 'gold', 0.7 * nightF + 0.1); }
-    if (b.type === 'workshop') { for (const g of spr.glow) emisGlow.push(sx + g[0], sy + g[1], 6, 'fire', 0.6 + 0.3 * Math.sin(t * 9)); light(sx + 10, sy - 4, 28, 'warm', 0.5 * nightF + 0.1); }
-    if (b.type === 'torre' || b.type === 'quartel') for (const f of spr.fires) { emisFire.push(sx + f[0], sy + f[1], 0.35); light(sx + f[0], sy + f[1], 34, 'warm', 0.7); }
+    if (b.type === 'temple' || b.type === 'maravilha' || b.type === 'palacio') { for (const f of spr.fires) { emisFire.push(sx + f[0], sy + f[1], 0.45); light(sx + f[0], sy + f[1], 40, 'warm', 0.8); } for (const g of spr.glow) emisGlow.push(sx + g[0], sy + g[1], b.type === 'maravilha' ? 14 : 8, 'gold', 0.4 + nightF * 0.5 + (b.type === 'maravilha' ? 0.15 * Math.sin(t * 2) : 0)); if (b.type === 'maravilha') light(sx, sy - 50, 110, 'gold', 0.6 * nightF + 0.1); }
+    else if (b.type === 'workshop') { for (const g of spr.glow) emisGlow.push(sx + g[0], sy + g[1], 6, 'fire', 0.6 + 0.3 * Math.sin(t * 9)); light(sx + 10, sy - 4, 28, 'warm', 0.5 * nightF + 0.1); }
+    else if (FIRELIT[b.type]) for (const f of spr.fires) { emisFire.push(sx + f[0], sy + f[1], 0.35); light(sx + f[0], sy + f[1], 34, 'warm', 0.7); }
+    if (b.type === 'monument' || b.type === 'praca' || b.type === 'biblioteca') { for (const g of spr.glow) emisGlow.push(sx + g[0], sy + g[1], 10, 'gold', 0.5 + nightF * 0.6 + 0.15 * Math.sin(t * 2)); if (b.type === 'monument') light(sx, sy - 60, 80, 'gold', 0.7 * nightF + 0.1); }
     if (b.type === 'quartel') { const f = G.Fac.ofSet(b.set); if (f) drawBanner(sx - 22, sy - 16, G.Fac.hex(f.id), t, 22); }
     if (b.type === 'torre') { const f = G.Fac.ofSet(b.set); if (f) drawBanner(sx + 1, sy - 50, G.Fac.hex(f.id), t, 10); }
     if (burning) emisFire.push(sx, sy - 14, 1.2);
@@ -998,10 +1077,13 @@
     const p = b.progress;
     const hx = b.w / 2 - 0.1, hy = b.h / 2 - 0.1;
     const P = (dx, dy, z) => [sx + (dx - dy) * 16, sy + (dx + dy) * 8 - z];
-    const wallH = b.type === 'hut' ? 7 : b.type === 'temple' ? 22 : b.type === 'monument' ? 30 : b.type === 'farm' ? 0 : 12;
+    const wallH = b.type === 'hut' ? 7 : b.type === 'temple' ? 22 : b.type === 'monument' ? 30 : b.type === 'farm' ? 0 : b.type === 'maravilha' ? 34 : b.type === 'insula' ? 24 : b.type === 'sobrado' ? 18 : def.w >= 3 ? 20 : 12;
     if (b.type === 'farm') return;
-    if (b.upgradeFrom === 'hut' && p < 0.35) {
-      G.Art.draw(ctx, G.Art.building('hut', b.v), sx, sy, 1);
+    if (b.upgradeFrom && p < 0.35) {
+      const old = G.Art.building(b.upgradeFrom, b.v, b.style); if (old) G.Art.draw(ctx, old, sx, sy, 1);
+      // scaffolding goes up around the old house
+      ctx.strokeStyle = '#8a6a44'; ctx.lineWidth = 0.8;
+      for (const [dx, dy] of [[-0.45, 0.45], [0.45, 0.45], [0.45, -0.45]]) { const a = P(dx, dy, 0), c2 = P(dx, dy, wallH + 8); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(c2[0], c2[1]); ctx.stroke(); }
     } else {
       // foundation stones along the edges
       ctx.fillStyle = '#9a958c';
@@ -1025,7 +1107,7 @@
         ctx.stroke();
         if (p > 0.85) {
           ctx.globalAlpha = (p - 0.85) / 0.15;
-          const spr = G.Art.building(b.type, b.v); if (spr) G.Art.draw(ctx, spr, sx, sy, 1);
+          const spr = G.Art.building(b.type, b.v, b.style, b.wd); if (spr) G.Art.draw(ctx, spr, sx, sy, 1);
           ctx.globalAlpha = 1;
         }
       }
@@ -1280,9 +1362,40 @@
   }
 
   // ------------------------------ overlays ------------------------------
+  R.showLabels = true;
+  function drawCityLabels(view) {
+    const S = G.S; const zoom = R.cam.zoom;
+    if (!R.showLabels || !G.Main || G.Main.mode !== 'game') return;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (const s of S.settlements.values()) {
+      const tier = s.tier || 0;
+      const p = proj(s.cx, s.cy, W.groundH(s.cx, s.cy));
+      const y = p[1] - (46 + tier * 9);
+      if (p[0] < view[0] - 80 || p[0] > view[2] + 80 || y < view[1] - 40 || y > view[3] + 40) continue;
+      const f = G.Fac.get(s.fac); const hex = f ? G.Fac.hex(f.id) : '#cccccc';
+      const fs = (10.5 + tier * 1.3) / zoom, ss = 8 / zoom;
+      ctx.font = `700 ${fs}px Cinzel, Georgia, serif`;
+      const tw = ctx.measureText(s.name).width;
+      const sub = G.City.TIERS[tier] + (f && G.Fac.capitalOf(f.id) === s ? ' · capital' : '');
+      ctx.font = `600 ${ss}px Nunito, sans-serif`;
+      const sw = ctx.measureText(sub).width;
+      const w = Math.max(tw, sw) + 18 / zoom, h = fs + ss + 8 / zoom;
+      const a = zoom > 2.6 ? 0.5 : 0.85;
+      ctx.globalAlpha = a;
+      ctx.fillStyle = 'rgba(22,18,14,0.62)';
+      const r = 6 / zoom, x0 = p[0] - w / 2, y0 = y - h / 2;
+      ctx.beginPath(); ctx.moveTo(x0 + r, y0); ctx.arcTo(x0 + w, y0, x0 + w, y0 + h, r); ctx.arcTo(x0 + w, y0 + h, x0, y0 + h, r); ctx.arcTo(x0, y0 + h, x0, y0, r); ctx.arcTo(x0, y0, x0 + w, y0, r); ctx.fill();
+      ctx.fillStyle = hex; ctx.fillRect(x0, y0 + h - 2.2 / zoom, w, 2.2 / zoom);
+      ctx.beginPath(); ctx.moveTo(p[0] - 3 / zoom, y0 + h); ctx.lineTo(p[0] + 3 / zoom, y0 + h); ctx.lineTo(p[0], y0 + h + 4 / zoom); ctx.fill();
+      ctx.fillStyle = tier >= 3 ? '#ffe4a0' : '#fff4dc'; ctx.font = `700 ${fs}px Cinzel, Georgia, serif`; ctx.fillText(s.name, p[0], y0 + 3 / zoom + fs / 2);
+      ctx.fillStyle = 'rgba(240,225,200,0.75)'; ctx.font = `600 ${ss}px Nunito, sans-serif`; ctx.fillText(sub, p[0], y0 + 4 / zoom + fs + ss / 2);
+    }
+    ctx.globalAlpha = 1; ctx.textBaseline = 'alphabetic';
+  }
   function drawOverlays(t, view) {
     const S = G.S; const zoom = R.cam.zoom;
     const is = G.clamp(1.5 / zoom, 0.7, 1.4);
+    drawCityLabels(view);
     for (let k = 0; k < overlays.length; k += 3) {
       const o = overlays[k], sx = overlays[k + 1], sy = overlays[k + 2];
       if (o.prayerIcon) { G.Art.draw(ctx, G.Art.icon('awe'), sx, sy + 6, is * 1.5); continue; }

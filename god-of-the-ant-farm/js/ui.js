@@ -59,7 +59,31 @@
     discord: svg('<path d="M12 21s-8.5-5-8.5-11.2A4.8 4.8 0 0 1 12 7a4.8 4.8 0 0 1 8.5 2.8C20.5 16 12 21 12 21z" fill="currentColor"/><path d="M12 7l-1.5 4 3 2-2 3.5 1 2.5" stroke="#1a1410" stroke-width="1.8" fill="none" stroke-linejoin="round"/>'),
     peace: svg('<path d="M3 13c3 0 5-1 7-4 1-1.6 2.6-3 5-3 1.4 0 2.4.6 3 1.4L21 7l-2 2c0 5-4 9-10 9-2 0-4-.6-5-1.5L7 15c-2 0-3.2-.8-4-2z" fill="currentColor"/><path d="M8 13.5c2 .5 4-.5 5.5-2.5" stroke="#1a1410" stroke-width="1.2" fill="none" opacity=".45"/>'),
     grave: svg('<path d="M6 21v-10a6 6 0 0 1 12 0v10z" fill="currentColor"/><path d="M12 9v6M9.5 11.5h5" stroke="#1a1410" stroke-width="1.6"/>'),
+    tech: svg('<path d="M2.5 5c3.2-1.2 6.4-1 9.5 1 3.1-2 6.3-2.2 9.5-1v14c-3.2-1.2-6.4-1-9.5 1-3.1-2-6.3-2.2-9.5-1z" fill="currentColor"/><path d="M12 6v14M5 9c1.6-.4 3.2-.3 4.6.3M5 12.5c1.6-.4 3.2-.3 4.6.3M14.4 9.3c1.4-.6 3-.7 4.6-.3M14.4 12.8c1.4-.6 3-.7 4.6-.3" stroke="#1a1410" stroke-width="1.2" fill="none"/>'),
+    book: svg('<path d="M5 3h12.5a1.5 1.5 0 0 1 1.5 1.5V21H6.5A2.5 2.5 0 0 1 4 18.5V4a1 1 0 0 1 1-1z" fill="currentColor"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H19" stroke="#1a1410" stroke-width="1.4" fill="none"/><path d="M9 7h6M9 10h4" stroke="#1a1410" stroke-width="1.4"/>'),
+    city: svg('<path d="M2 21V11l4-3 4 3v10zM10 21V6l5-3.2L20 6v15zM20 21v-7h2.5v7z" fill="currentColor"/><path d="M4.5 14h3M4.5 17.5h3M13 9h4M13 12.5h4M13 16h4" stroke="#1a1410" stroke-width="1.4"/>'),
+    ship: svg('<path d="M1.5 14h21l-3.5 5H5z" fill="currentColor"/><path d="M12 2v11" stroke="currentColor" stroke-width="1.8"/><path d="M12.8 3c3.6 1.2 5.4 3.4 5.4 5.4 0 1.6-.8 2.8-1.8 3.6h-3.6z" fill="currentColor"/><path d="M6 19.5l-1.6 2.5M10 19.5l-1.2 2.5M14 19.5l-.8 2.5M18 19.5l-.4 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>'),
+    cart: svg('<path d="M2.5 7.5h14l-1 7.5h-12z" fill="currentColor"/><circle cx="6.5" cy="18" r="2.8" fill="currentColor"/><circle cx="13.5" cy="18" r="2.8" fill="currentColor"/><circle cx="6.5" cy="18" r="1" fill="#1a1410"/><circle cx="13.5" cy="18" r="1" fill="#1a1410"/><path d="M16.5 11h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'),
+    wall: svg('<path d="M2 21V8.5h3.2v2.2h2.4V8.5h3.2v2.2h2.4V8.5h3.2v2.2h2.4V8.5H22V21z" fill="currentColor"/><path d="M9.5 21v-4.5a2.5 2.5 0 0 1 5 0V21z" fill="#1a1410"/><path d="M2 14.5h7M15 14.5h7" stroke="#1a1410" stroke-width="1" opacity=".4"/>'),
+    road: svg('<path d="M9 2.5L4 21.5M15 2.5l5 19" ' + ST + '/><path d="M12 4v3M12 10v3.5M12 17v3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'),
+    aqueduct: svg('<path d="M1.5 5h21v3h-21z" fill="currentColor"/><path d="M1.5 8v13h3v-6a2.5 2.5 0 0 1 5 0v6h5v-6a2.5 2.5 0 0 1 5 0v6h2.5V8z" fill="currentColor" opacity=".85"/><path d="M3 6.5h18" stroke="#3ab7d8" stroke-width="1.4"/>'),
+    wonder: svg('<path d="M12 3l10 18H2z" fill="currentColor"/><path d="M12 3l2.6 18M7 12h10M4.8 16.5h14.4" stroke="#1a1410" stroke-width="1.1" opacity=".45"/>'),
+    wave: svg('<path d="M2 15c3-4 5-4 8 0s5 4 8 0 4-2 4-2v6c-2 1.6-4 1.6-4 1.6-3 0-5-3.6-8-3.6s-5 3.6-8 3.6z" fill="currentColor"/><path d="M2 9c3-4 5-4 8 0s5 4 8 0 4-2 4-2" ' + ST + '/>'),
+    mountain: svg('<path d="M1.5 20.5L9 7l4 6.5 2.6-3.5 6.9 10.5z" fill="currentColor"/><path d="M9 7l-2 3.6 2 -1 1.8 1.4z" fill="#fff" opacity=".7"/>'),
+    word: svg('<path d="M4 3.5h16a1.5 1.5 0 0 1 1.5 1.5v10a1.5 1.5 0 0 1-1.5 1.5H10l-5.5 4.5v-4.5H4A1.5 1.5 0 0 1 2.5 15V5A1.5 1.5 0 0 1 4 3.5z" fill="currentColor"/><path d="M7 8h10M7 11.5h6" stroke="#1a1410" stroke-width="1.5" stroke-linecap="round"/>'),
+    ram: svg('<rect x="2" y="9" width="16" height="4.5" rx="1.5" fill="currentColor"/><path d="M18 8h3.5v6.5H18z" fill="currentColor"/><circle cx="6" cy="18" r="2.5" fill="currentColor"/><circle cx="14" cy="18" r="2.5" fill="currentColor"/><path d="M4 9l3-5h6l3 5" ' + ST + '/>'),
+    bow: svg('<path d="M6 3c8 3 11 8 9 18" ' + ST + '/><path d="M6 3l9 18" stroke="currentColor" stroke-width="1.2"/><path d="M3 13h14.5M15 10.5l3 2.5-3 2.5" ' + ST + '/>'),
+    sacrifice: svg('<path d="M4 21h16l-2-5H6z" fill="currentColor"/><path d="M6.5 15.5h11l-1.5-4h-8z" fill="currentColor" opacity=".85"/><path d="M12 2.5c-2.6 3-3.4 5-1.6 7.4.6-1.4 1.6-1.8 1.6-1.8s1 .4 1.6 1.8c1.8-2.4 1-4.4-1.6-7.4z" fill="#e85a3a"/>'),
   };
+  // civilization emblems
+  const CIVICON = {
+    grego: '<path d="M12 2.5L21.5 7.5h-19z" fill="currentColor"/><rect x="3" y="8.5" width="18" height="1.8" fill="currentColor"/><path d="M6 11.5v7M10 11.5v7M14 11.5v7M18 11.5v7" stroke="currentColor" stroke-width="2.3"/><rect x="2.5" y="19" width="19" height="2.5" fill="currentColor"/>',
+    nordico: '<path d="M1.5 13.5h17.8c1.6 0 2.6-1.2 2.6-2.8V5l-2.4 1.4L18 4.2v7.1H3z" fill="currentColor"/><path d="M1.8 13.5c1 3.6 3.6 5.2 6.2 5.2h8.6c2.2 0 3.8-1.5 4.4-5.2z" fill="currentColor"/><circle cx="6" cy="15.6" r="1.4" fill="#1a1410" opacity=".55"/><circle cx="10" cy="15.6" r="1.4" fill="#1a1410" opacity=".55"/><circle cx="14" cy="15.6" r="1.4" fill="#1a1410" opacity=".55"/><path d="M10 2.5v10" stroke="currentColor" stroke-width="1.7"/><path d="M10.7 3h6.3v6.8h-6.3z" fill="currentColor" opacity=".7"/>',
+    egipcio: '<ellipse cx="12" cy="6.6" rx="3.6" ry="4.2" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M12 10.8V22M5.5 12.8h13" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"/>',
+    asteca: '<path d="M9.2 2.5h5.6v3.3H9.2zM7 6.5h10v3.6H7zM5 10.8h14v3.6H5zM3 15.1h18v3.6H3zM1.5 19.4h21v2.3h-21z" fill="currentColor"/><path d="M11 7v14.7h2V7z" fill="#1a1410" opacity=".45"/>',
+    romano: '<path d="M12 21c-5-1.3-8.2-5.2-8.2-10.3 0-2.3.6-4.3 1.8-6.2M12 21c5-1.3 8.2-5.2 8.2-10.3 0-2.3-.6-4.3-1.8-6.2" stroke="currentColor" stroke-width="1.6" fill="none"/><g fill="currentColor"><ellipse cx="4.3" cy="7.6" rx="1.1" ry="2.3" transform="rotate(-25 4.3 7.6)"/><ellipse cx="3.9" cy="12" rx="1.1" ry="2.3" transform="rotate(-5 3.9 12)"/><ellipse cx="5.4" cy="16.2" rx="1.1" ry="2.3" transform="rotate(25 5.4 16.2)"/><ellipse cx="8.4" cy="19.2" rx="1.1" ry="2.3" transform="rotate(55 8.4 19.2)"/><ellipse cx="19.7" cy="7.6" rx="1.1" ry="2.3" transform="rotate(25 19.7 7.6)"/><ellipse cx="20.1" cy="12" rx="1.1" ry="2.3" transform="rotate(5 20.1 12)"/><ellipse cx="18.6" cy="16.2" rx="1.1" ry="2.3" transform="rotate(-25 18.6 16.2)"/><ellipse cx="15.6" cy="19.2" rx="1.1" ry="2.3" transform="rotate(-55 15.6 19.2)"/></g><path d="M9.5 8.5h5M12 8.5v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  };
+  UI.civIcon = id => svg(CIVICON[id] || '<circle cx="12" cy="12" r="5" fill="currentColor"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke="currentColor" stroke-width="2"/>');
   const LOGICON = {
     hut: ['hammer', 'gold'], house: ['hammer', 'gold'], storehouse: ['hammer', 'gold'], farm: ['food', 'gold'], well: ['hammer', 'gold'], workshop: ['hammer', 'gold'],
     temple: ['faith', 'gold'], monument: ['star', 'gold'], campfire: ['flame', 'orange'], fire: ['flame', 'red'], bolt: ['lightning', 'blue'], meteor: ['meteor', 'red'],
@@ -67,6 +91,9 @@
     war: ['sword', 'red'], peace: ['dove', 'blue'], ally: ['shield', 'blue'], crown: ['crown', 'gold'], chain: ['chain', 'grey'], split: ['split', 'orange'], massacre: ['skullx', 'red'], trade: ['scale', 'gold'], tyrant: ['crown', 'red'], free: ['chain', 'gold'], envoy: ['scroll', 'gold'],
     eye: ['eye', 'gold'], rain: ['rain', 'blue'], storm: ['cloud', 'blue'], sun: ['sun', 'orange'], wolf: ['wolves', 'brown'], deer: ['wolves', 'green'], sick: ['heal', 'green'],
     heal: ['heal', 'green'], food: ['leaf', 'green'], stone: ['stone', 'grey'], boat: ['boat', 'blue'], flower: ['fertility', 'pink'], info: ['leaf', 'green'],
+    tech: ['tech', 'blue'], city: ['city', 'gold'], ship: ['ship', 'blue'], naval: ['ship', 'red'], cart: ['cart', 'gold'], wall: ['wall', 'grey'], road: ['road', 'gold'],
+    aqueduct: ['aqueduct', 'blue'], wonder: ['wonder', 'gold'], siege: ['ram', 'red'], sacrifice: ['sacrifice', 'red'], lore: ['book', 'gold'], prophecy: ['word', 'gold'],
+    mountain: ['mountain', 'brown'], wave: ['wave', 'blue'],
   };
   const SYMP = {
     sol: '<circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
@@ -130,6 +157,7 @@
     $('#modal').addEventListener('click', e => {
       const c = e.target.closest('[data-tree]'); if (c) { G.Audio.play('click'); UI.openTree(+c.dataset.tree); return; }
       const so = e.target.closest('[data-so]'); if (so) { G.Audio.play('click'); const o = UI._setup.opts; o[so.dataset.so] = isNaN(+so.dataset.v) ? so.dataset.v : +so.dataset.v; UI.openSetup(UI._setup.fromGame, true); return; }
+      const cv = e.target.closest('[data-civ]'); if (cv) { G.Audio.play('click'); const o = UI._setup.opts; const k = +cv.dataset.civ; o.civs = (o.civs || []).slice(); while (o.civs.length <= k) o.civs.push(null); o.civs[k] = cv.dataset.v === 'rand' ? null : cv.dataset.v; UI._setup.focus = k; UI.openSetup(UI._setup.fromGame, true); return; }
       const b = e.target.closest('[data-m]'); if (!b) return;
       G.Audio.play('click');
       const m = b.dataset.m;
@@ -417,7 +445,7 @@
       ${status.length ? `<div class="status">${status.join('')}</div>` : ''}
       <div class="family">${fam.map(x => `<div>${x}</div>`).join('') || '<div class="muted">Sem laços familiares ainda.</div>'}</div>
       <div class="doing">Atualmente: <b>${esc(G.Vg.taskText(v))}</b></div>
-      <div class="meta">${set ? esc(set.name) : ''}${home ? ' · mora numa ' + (home.type === 'hut' ? 'cabana' : 'casa') : ''}${feats.length ? '<br>Contribuiu com ' + feats.join(', ') : ''}</div>
+      <div class="meta">${set ? esc(set.name) : ''}${home ? (() => { const hn = G.Village.buildName(home).toLowerCase(); return ' · mora n' + (G.gen(hn) === 'a' ? 'uma ' : 'um ') + esc(hn); })() : ''}${feats.length ? '<br>Contribuiu com ' + feats.join(', ') : ''}</div>
       <div class="btns"><button data-act="follow" class="${following ? 'on' : ''}">${ICON.eye} ${following ? 'Seguindo' : 'Seguir'}</button><button data-act="tree">${ICON.tree} Família</button></div>`;
   }
   function buildingHTML(b) {
@@ -426,7 +454,7 @@
     const set = S.settlements.get(b.set);
     let body = '';
     let title = G.Village.buildName(b);
-    if (b.type === 'ruin') { title = 'Ruínas'; body = `<div class="doing">Restos de ${G.BDEF[b.origType] ? G.BDEF[b.origType].name.toLowerCase() : 'uma construção'}. O mato vai tomar conta.</div>`; }
+    if (b.type === 'ruin') { title = 'Ruínas'; const on = G.BDEF[b.origType] ? G.Village.nameOf(b.origType, b) : null; body = `<div class="doing">Restos d${on ? G.gen(on) + ' ' + esc(on.toLowerCase()) : 'e uma construção'}. O mato vai tomar conta.</div>`; }
     else if (!b.built) {
       const al = G.Vg.allowedProgress(b);
       const miss = [];
@@ -445,8 +473,10 @@
         const st = [0, 0, 0, 0]; for (const c of b.crops) st[c.s]++;
         body += `<div class="doing">${st[3]} prontos para colher · ${st[1] + st[2]} crescendo · ${st[0]} por plantar</div>`;
       }
-      if (b.type === 'storehouse' || b.type === 'campfire') body += `<div class="doing">Capacidade de estoque: <b>${G.Village.cap(G.Village.facOfSet(b.set))}</b> de cada recurso.</div>`;
+      if (b.type === 'storehouse' || b.type === 'campfire' || b.type === 'celeiro') body += `<div class="doing">Capacidade de estoque: <b>${G.Village.cap(G.Village.facOfSet(b.set))}</b> de cada recurso.</div>`;
       if (b.type === 'temple') body += `<div class="doing">Gera fé continuamente. Os sacerdotes rezam aqui.</div>`;
+      if (b.type === 'aqueduto') { const a = S.aqueducts.find(q => q.b === b.id); body += `<div class="doing">${a ? (a.done ? 'Água corrente: colheitas +20%, mais gente cabe na cidade.' : `Arcos erguidos: <b>${a.built}/${a.tiles.length}</b> (consome pedra).`) : set && set.aqua ? 'Cisterna cheia.' : ''}</div>`; }
+      if (b.type === 'mercado' || b.type === 'praca') { const rs = S.routes.filter(r => r.ok && (r.a === b.set || r.b === b.set)); if (rs.length) body += `<div class="doing">${rs.length} ${rs.length > 1 ? 'rotas' : 'rota'} de carroças passando por aqui.</div>`; }
       if (b.type === 'cemetery') {
         const gs = b.graves.map(id => S.dead.get(id)).filter(Boolean);
         body += `<div class="graves">${gs.map(p => `<a data-pid="${p.id}" class="dead">${esc(p.name)} <span>${Math.floor(p.age)} anos · dia ${p.died}</span></a>`).join('') || '<span class="muted">Ninguém ainda.</span>'}</div>`;
@@ -455,7 +485,7 @@
     const bf = set ? G.Fac.get(set.fac) : null;
     if (b.type === 'cercado' && b.built) { const n = [...S.villagers.values()].filter(v => v.captive && v.set === b.set).length; body += `<div class="doing">${n ? n + (n > 1 ? ' cativos vivem' : ' cativo vive') + ' nesta vila.' : 'Vazio, por enquanto.'}</div>`; }
     if (b.type === 'quartel' && b.built && bf) body += `<div class="doing">${G.War.warriorsOf(bf.id)} guerreiros em ${esc(bf.name)}.</div>`;
-    return `<div class="insp-head"><div class="insp-title"><h3>${esc(title)}</h3><div class="sub">${set ? esc(set.name) : ''}${!b.built && b.type !== 'ruin' ? ' · em construção' : ''}</div></div><button class="x" data-act="close">${ICON.close}</button></div>${bf ? `<div class="fline">${UI.flag(bf.id, 'mini')}${esc(bf.name)}${set && G.Fac.capitalOf(bf.id) === set ? ' · capital' : ''}${set ? ' · lealdade ' + Math.round(set.loyalty) + '%' : ''}</div>` : ''}${body}`;
+    return `<div class="insp-head"><div class="insp-title"><h3>${esc(title)}</h3><div class="sub">${set ? esc(set.name) + ' · ' + G.City.tierName(set).toLowerCase() : ''}${!b.built && b.type !== 'ruin' ? ' · em construção' : ''}${b.style && G.CIVS[b.style] ? ' · arquitetura ' + G.CIVS[b.style].adj : ''}</div></div><button class="x" data-act="close">${ICON.close}</button></div>${bf ? `<div class="fline">${UI.flag(bf.id, 'mini')}${esc(bf.name)}${set && G.Fac.capitalOf(bf.id) === set ? ' · capital' : ''}${set ? ' · lealdade ' + Math.round(set.loyalty) + '%' : ''}</div>` : ''}${body}`;
   }
 
   // ------------------------------ modals ------------------------------
@@ -583,6 +613,14 @@
     const maps = Object.entries(G.MAP_TYPES).map(([id, m]) => `<button class="st-map ${o.type === id ? 'on' : ''}" data-so="type" data-v="${id}"><span class="st-pic">${svg(MAPSVG[id] || MAPSVG.ilha, '0 0 54 44')}</span><b>${m.name}</b><span>${m.desc}</span></button>`).join('');
     const tip = o.tribes === 1 ? 'Um único povo. Com o tempo, suas próprias vilas podem se rebelar e virar novos reinos.'
       : `${o.tribes} povos começam em cantos distantes, sem saber uns dos outros. Quando se encontrarem, virão comércio, alianças, guerras — e talvez correntes.`;
+    // civilization per people
+    o.civs = (o.civs || []).slice(0, 4);
+    const focus = Math.min(UI._setup.focus || 0, o.tribes - 1);
+    const civChip = (k, id) => { const c = G.CIVS[id]; const on = (o.civs[k] || 'rand') === id; return `<button class="st-civ ${on ? 'on' : ''}" data-civ="${k}" data-v="${id}" title="${c ? esc(c.blurb) : 'Sorteada ao criar o mundo'}"><i>${id === 'rand' ? ICON.star : UI.civIcon(id)}</i><b>${c ? c.name : 'Aleatória'}</b></button>`; };
+    const rows = o.classic ? '' : Array.from({ length: o.tribes }, (_, k) => `<div class="st-civrow ${k === focus ? 'focus' : ''}"><span class="st-civn">${o.tribes > 1 ? 'Povo ' + (k + 1) : 'Seu povo'}</span><div class="st-civopts">${['rand'].concat(G.Civ.IDS).map(id => civChip(k, id)).join('')}</div></div>`).join('');
+    const fc = G.CIVS[o.civs[focus]];
+    const civTip = o.classic ? 'Tribos sem nome, como no começo de tudo: sem culturas históricas, sem traços especiais.'
+      : fc ? `<b>${fc.name}.</b> ${esc(fc.blurb)}` : 'Aleatória: cada povo sorteia uma civilização diferente — gregos, nórdicos, egípcios, astecas ou romanos.';
     UI.openModal(`<h2>Novo mundo</h2>
       <div class="setup">
         <div class="st-label">Mapa</div><div class="st-maps">${maps}</div>
@@ -590,6 +628,10 @@
           <div><div class="st-label">Tamanho</div><div class="st-row">${opt('size', 64, 'Pequeno')}${opt('size', 80, 'Médio')}${opt('size', 96, 'Grande')}</div></div>
           <div><div class="st-label">Povos</div><div class="st-row">${[1, 2, 3, 4].map(n => opt('tribes', n, String(n))).join('')}</div></div>
         </div>
+        <div class="st-label">Civilizações</div>
+        <div class="st-row">${opt('classic', 0, 'Históricas', 'cada povo com sua cultura')}${opt('classic', 1, 'Tribos sem nome', 'o modo clássico')}</div>
+        <div class="st-civs">${rows}</div>
+        <p class="st-hint civ">${civTip}</p>
         <div class="st-label">Temperamento dos povos</div>
         <div class="st-row">${opt('temper', 'pacifico', 'Pacíficos', 'guerras raras e tardias')}${opt('temper', 'normal', 'Imprevisíveis', 'depende de quem governa')}${opt('temper', 'belicoso', 'Belicosos', 'sangue cedo e muitas vezes')}</div>
         <p class="st-hint">${tip}</p>

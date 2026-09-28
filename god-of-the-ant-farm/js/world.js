@@ -46,6 +46,10 @@
       awareness: 0,      // has the tribe noticed the god yet?
       era: 0,
       cam: null,
+      road: new Uint8Array(N * N),   // 1 dirt path, 2 paved street, 3 stone highway
+      wall: new Uint8Array(N * N),   // 1 wall, 2 gate
+      wallFac: new Int32Array(N * N),
+      carts: [], ships: [], aqueducts: [], routes: [], lore: null,
     };
   };
 
@@ -69,7 +73,8 @@
   W.isOcean = i => G.S.type[i] <= T.SEA;
   W.isLand = i => G.S.type[i] >= T.SAND;
   W.blocked = i => { const b = G.S.occ[i]; if (!b) return false; const B = G.S.buildings.get(b); return !!(B && B.blocks); };
-  W.walkable = i => { const t = G.S.type[i]; return (t >= T.RIVER) && !W.blocked(i); };
+  // walls block, open gates (2) and aqueduct arches (3) let people through, shut gates (4) don't
+  W.walkable = i => { const S = G.S; const t = S.type[i]; if (t < T.RIVER || W.blocked(i)) return false; const w = S.wall[i]; return !w || w === 2 || w === 3; };
   W.walkableXY = (x, y) => W.inb(x, y) && W.walkable(W.idx(x, y));
   W.buildable = i => { const t = G.S.type[i]; return t >= T.SAND && !G.S.occ[i] && !G.S.objAt[i] && G.S.fire[i] < 0.05; };
   W.slope = (x, y, w, h) => {
@@ -508,6 +513,8 @@
   const DX = [1, -1, 0, 0, 1, 1, -1, -1], DY = [0, 0, 1, -1, 1, -1, 1, -1];
   W.cost = function (i) {
     const S = G.S; const t = S.type[i];
+    const rd = S.road[i];
+    if (rd) return (rd >= 3 ? 0.5 : 0.58) + (S.fire[i] > 0.02 ? 30 : 0); // streets, highways and bridges
     let c = t === T.RIVER ? 3.2 : t === T.SAND ? 1.08 : t === T.ROCKY ? 1.25 : 1;
     const w = S.wear[i]; if (w > 8) c *= 1 - 0.38 * Math.min(1, w / G.WEAR_MAX);
     if (S.fire[i] > 0.02) c += 30;

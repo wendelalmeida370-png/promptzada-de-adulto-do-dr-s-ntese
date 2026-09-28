@@ -113,7 +113,7 @@
       FX.spawn({ x, y, z: R(8, 20), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: R(20, 70), g: 60, drag: 1.5, life: R(0.8, 1.6), s0: 2.2, s1: 0.4, c: G.pick(['#ffe08a', '#fff3c8', '#ffd05a']), k: 8, layer: 1 });
     }
     FX.ring(x, y, 0.2, size * 1.4, 0.9, 'rgba(255,230,150,0.9)', 2, true);
-    if (G.Render && G.Render.cam.zoom > 1.1) FX.floater(x, y, G.BDEF[b.type].name + '!', '#fff1c4', 2.2);
+    if (G.Render && G.Render.cam.zoom > 1.1) FX.floater(x, y, G.Village.buildName(b) + '!', '#fff1c4', 2.2);
     FX.dust(x, y, 8);
   };
   FX.blessing = function (x, y) {

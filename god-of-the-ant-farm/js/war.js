@@ -64,6 +64,10 @@
     const pe = G.Politics.leaderPe(f); const r = G.Fac.rel(f.id, enemy.id);
     let defenders = 0; for (const v of G.S.villagers.values()) if (v.set === set.id && adultFree(v)) defenders++;
     if (pe.cru > 0.72 && ((r && r.grudge > 35) || f.gov === 'tirania') && G.R() < 0.6) return 'massacre';
+    // each culture has its way of war
+    if (G.Civ.t(f.id, 'capture') > 1.5 && G.R() < 0.55) return 'captura';
+    if (G.Civ.t(f.id, 'raid') > 1.2 && G.R() < 0.45) return 'saque';
+    if (G.Civ.t(f.id, 'assimilate') > 1.5 && n >= defenders * 1.1 && G.Fac.settlementsOf(f.id).length < 7 && G.R() < 0.55) return 'conquista';
     if (n >= defenders * 1.3 && pe.amb > 0.45 && G.Fac.settlementsOf(f.id).length < 5 && G.R() < 0.7) return 'conquista';
     if (pe.cru > 0.45 && f.gov !== 'conselho' && f.gov !== 'livre' && G.R() < 0.55) return 'captura';
     if (f.stock.food < G.Fac.pop(f.id) * 0.8) return 'saque';
@@ -233,7 +237,9 @@
       if (v.set !== set.id) continue;
       if (v.captive) { if (v.captive.from === f.id) { v.captive = null; v.role = null; freed++; } continue; }
       if (pe.cru > 0.8 && v.age >= 16 && v.g === 'm' && G.R() < 0.6) { G.FX && G.FX.blood(v.x, v.y); G.Vg.damage(v, 999, 'massacre', false, killer ? killer.id : 0); killed++; continue; }
-      if (pe.cru > 0.5 || f.gov === 'tirania') { Wr.enslave(v, old.id, set.id); enslaved++; }
+      // Romans make citizens of the vanquished; others make slaves
+      const assim = G.Civ.t(f.id, 'assimilate') > 1.5;
+      if ((pe.cru > (assim ? 0.75 : 0.5) || f.gov === 'tirania') && !(assim && G.R() < 0.6)) { Wr.enslave(v, old.id, set.id); enslaved++; }
     }
     const garrison = b.members.slice(0, Math.ceil(b.members.length * 0.4));
     for (const id of garrison) { const v = S.villagers.get(id); if (v) { v.set = set.id; v.home = 0; } }
@@ -325,10 +331,11 @@
     const S = G.S;
     const site = Wr.freeSite(vs[0].x, vs[0].y);
     if (!site) { for (const v of vs) { v.captive = null; v.role = null; } return null; }
-    const nf = G.Fac.create({ freed: true, stock: { food: Math.max(40, vs.length * 10), wood: 16, stone: 0 } });
+    const orig = G.Fac.get(vs[0].captive ? vs[0].captive.from : 0) || G.Fac.ofV(vs[0]);
+    const nf = G.Fac.create({ freed: true, civ: orig ? orig.civ : null, stock: { food: Math.max(40, vs.length * 10), wood: 16, stone: 0 } });
     G.Politics.setupFaction(nf);
     nf.name = G.Politics.nameFor(null, 'livre');
-    const set = G.Village.addSettlement(G.Village.newSettlementName(), site[0], site[1], nf.id);
+    const set = G.Village.addSettlement(G.Village.newSettlementName(nf.id), site[0], site[1], nf.id);
     nf.capital = set.id; nf.gov = 'livre';
     for (const v of vs) { v.captive = null; v.role = null; v.home = 0; v.set = set.id; G.Vg.endTask(v); G.Vg.setTask(v, { type: 'migrate', pri: 1.6, kind: 'migrate' }); v.devotion = Math.min(100, v.devotion + (how === 'divina' || how === 'ungido' ? 35 : 10)); }
     const lead = leader && vs.includes(leader) ? leader : vs.slice().sort((a, b) => b.courage - a.courage)[0];
@@ -386,7 +393,8 @@
       const f = G.Fac.ofV(v); if (!f) continue;
       const pe = G.Politics.leaderPe(f);
       const days = S.day - v.captive.day;
-      if (days >= 5 && pe.cru < 0.55 && f.gov !== 'tirania' && G.R() < 0.035 * dt / 5) {
+      const assim = G.Civ.t(f.id, 'assimilate');
+      if (days >= 5 / assim && pe.cru < 0.55 + (assim > 1.5 ? 0.15 : 0) && f.gov !== 'tirania' && G.R() < 0.035 * assim * dt / 5) {
         v.captive = null; v.role = null;
         if (G.R() < 0.4 || G.UI.selected === v) log(`Depois de ${Math.round(days)} anos de cativeiro, ${v.name} foi aceit${oa(v)} como parte de ${f.name}.`, 'free', v.x, v.y);
         continue;
@@ -453,6 +461,14 @@
     if (v.hero) d *= 1.25;
     if (o.role === 'guerreiro' && Wr.armory.has(fo)) d *= 0.8;
     if (v.captive) d *= 0.85;
+    else {
+      // culture and metallurgy: Norse fury, Roman discipline, bronze and iron
+      d *= G.Civ.t(fv, 'war');
+      if (G.Civ.has(fv, 'bronze')) d *= 1.1;
+      if (G.Civ.has(fv, 'ferro')) d *= 1.1;
+    }
+    if (v.elite) d *= v.elite === 'berserker' ? 1.6 : 1.3;
+    if (o.role === 'guerreiro' && !o.captive) { d *= G.Civ.t(fo, 'armor'); if (o.elite === 'falange' || o.elite === 'legiao') d *= 0.75; }
     return d * G.rr(0.8, 1.2);
   };
   Wr.hitChance = (v, o) => 0.72 + (v.role === 'guerreiro' ? 0.08 : 0) - (o.role === 'guerreiro' ? 0.08 : 0) + (v.fury > 0 ? 0.1 : 0);
@@ -465,7 +481,9 @@
   };
   Wr.strike = function (v, o, t, b) {
     const S = G.S;
-    const capMode = !o.captive && ((b && b.goal === 'captura' && (o.age < 16 || o.hp < 50)) || t.capMode);
+    // flower war: Aztec warriors wound to take prisoners rather than kill
+    const flower = b && b.goal !== 'massacre' && G.Civ.t(b.fac, 'capture') > 1.5;
+    const capMode = !o.captive && ((b && (b.goal === 'captura' || flower) && (o.age < 16 || o.hp < (flower ? 60 : 50))) || t.capMode);
     if (G.R() > Wr.hitChance(v, o)) { G.Audio && G.Audio.at(o.x, o.y, 'swish'); return; }
     const dmg = Wr.damage(v, o);
     if (capMode && b && o.hp - dmg < 28) { Wr.capture(o, v, b); t.foe = 0; t.gotCaptive = o.id; return; }

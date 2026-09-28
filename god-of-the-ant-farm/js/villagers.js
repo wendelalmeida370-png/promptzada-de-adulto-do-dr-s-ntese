@@ -14,11 +14,9 @@
   G.TRAIT_F = { Corajoso: 'Corajosa', Medroso: 'Medrosa', Trabalhador: 'Trabalhadora', Preguiçoso: 'Preguiçosa', Curioso: 'Curiosa', Devoto: 'Devota', Cético: 'Cética', Romântico: 'Romântica', Glutão: 'Glutona' };
   G.traitName = (v, t) => (v.g === 'f' && G.TRAIT_F[t]) ? G.TRAIT_F[t] : t;
 
-  function uniqueName(g) {
-    const pool = g === 'f' ? G.NAMES_F : G.NAMES_M;
+  function uniqueName(g, civ) {
     const used = new Set(); for (const v of G.S.villagers.values()) used.add(v.name);
-    for (let k = 0; k < 12; k++) { const n = G.pick(pool); if (!used.has(n)) return n; }
-    return G.pick(pool);
+    return G.Civ.personName(civ, g, used);
   }
   function rollTraits(parents) {
     const tr = [];
@@ -38,9 +36,10 @@
     const m = o.mother ? G.person(o.mother) : null, f = o.father ? G.person(o.father) : null;
     const g = o.g || (G.R() < 0.5 ? 'f' : 'm');
     const traits = o.traits || rollTraits([m, f]);
-    let courage = G.clamp(0.45 + (G.R() - 0.5) * 0.5 + (traits.includes('Corajoso') ? 0.35 : 0) - (traits.includes('Medroso') ? 0.35 : 0), 0, 1);
+    const home = S.settlements.get(o.set); const civId = o.civ || (home ? G.Civ.idOfFac(home.fac) : null); const civ = G.CIVS[civId];
+    let courage = G.clamp(0.45 + (G.R() - 0.5) * 0.5 + (traits.includes('Corajoso') ? 0.35 : 0) - (traits.includes('Medroso') ? 0.35 : 0) + (civ && civ.traits.courage || 0), 0, 1);
     const v = {
-      id: S.nextId++, name: o.name || uniqueName(g), g, age: o.age, born: S.day - o.age,
+      id: S.nextId++, name: o.name || uniqueName(g, civId), g, age: o.age, born: S.day - o.age, civ: civId || null,
       hp: 100, hunger: G.rr(5, 35), energy: G.rr(65, 100),
       role: null, x: o.x, y: o.y, z: 0, vx: 0, vy: 0, vz: 0, air: false, held: false,
       path: null, pi: 0, task: null, act: '', actT: 0, carry: null,
@@ -50,8 +49,8 @@
       emo: null, face: G.R() < 0.5 ? 1 : -1, walkPh: G.R() * 10, moving: false,
       think: G.R(), scan: G.R() * 0.3, sleeping: false, inside: 0, hurt: 0,
       speed: G.rr(1.25, 1.5), work: traits.includes('Trabalhador') ? 1.25 : traits.includes('Preguiçoso') ? 0.8 : 1,
-      skin: m && f ? (G.R() < 0.5 ? m.skin : f.skin) : (o.skin || G.pick(SKIN)),
-      hair: m && f ? (G.R() < 0.5 ? m.hair : f.hair) : G.pick(HAIR),
+      skin: m && f ? (G.R() < 0.5 ? m.skin : f.skin) : (o.skin || G.pick(civ ? civ.skin : SKIN)),
+      hair: m && f ? (G.R() < 0.5 ? m.hair : f.hair) : G.pick(civ ? civ.hair : HAIR),
       kidCloth: G.pick(KID_CLOTH), st: { wood: 0, food: 0, stone: 0, built: 0 }, lastCause: 'unknown', lastGod: false,
     };
     if (!v.skin) v.skin = G.pick(SKIN); if (!v.hair) v.hair = G.pick(HAIR);
@@ -142,7 +141,7 @@
     const dx = p[0] - v.x, dy = p[1] - v.y; const d = Math.hypot(dx, dy);
     const i = W.idx(v.x, v.y);
     const ty = S.type[i];
-    const sp = v.speed * (mul || 1) * (ty === T.RIVER ? 0.5 : 1) * (S.wear[i] > 28 ? 1.15 : 1) * (v.sick > 0 ? 0.75 : 1)
+    const sp = v.speed * (mul || 1) * (ty === T.RIVER ? (S.road[i] ? 1 : 0.5) : 1) * (S.road[i] ? (S.road[i] >= 3 ? 1.4 : 1.3) : S.wear[i] > 28 ? 1.15 : 1) * (v.sick > 0 ? 0.75 : 1)
       * (v.age < 8 ? 0.8 : v.age >= 62 ? 0.72 : 1) * (v.carry && v.carry.n >= 4 ? 0.9 : 1);
     const step = sp * dt;
     if (d <= step || d < 0.001) { v.x = p[0]; v.y = p[1]; v.pi++; }
@@ -551,6 +550,8 @@
   function leisureTask(v) {
     const S = G.S; const r = G.R();
     let t = null;
+    // city life: the market, the plaza, the baths, the theatre
+    if (G.City && G.R() < 0.4) { t = G.City.leisureTask(v, H); if (t) { t.leisure = true; return t; } }
     if (r < 0.3) { const o = socialTarget(v); if (o) t = setTask(v, { type: 'social', id: o.id, pri: 0.3 }); }
     else if (r < 0.5 && (v.devotion > 15 || S.awareness)) t = setTask(v, { type: 'pray', pri: 0.4 });
     else if (r < 0.65) { const o = relativeTarget(v); if (o) t = setTask(v, { type: 'visit', id: o.id, pri: 0.3 }); }
@@ -585,7 +586,7 @@
       case 'lenhador': t = (need('wood') && chopTask(v)) || (need('food') && gatherTask(v)); break;
       case 'coletor': t = need('food') ? (gatherTask(v) || (G.R() < 0.7 ? fishTask(v) : (preyCount() > 8 && huntTask(v, 14))) || fishTask(v)) : (need('wood') && chopTask(v)); break;
       case 'agricultor': t = farmTask(v) || (need('food') && gatherTask(v)); break;
-      case 'construtor': t = buildTask(v) || (need('wood') && chopTask(v)) || (need('stone') && mineTask(v)); break;
+      case 'construtor': t = buildTask(v) || (G.City && G.City.paveTask(v, H)) || (need('wood') && chopTask(v)) || (need('stone') && mineTask(v)); break;
       case 'mineiro': t = (need('stone') && mineTask(v)) || (need('wood') && chopTask(v)); break;
       case 'cacador': t = ((need('food') || G.R() < 0.2) && preyCount() > 6 && huntTask(v)) || setTask(v, { type: 'patrol', pri: 1 }); break;
       case 'sacerdote': t = setTask(v, { type: 'pray', pri: 1, priest: true }); break;
@@ -697,7 +698,7 @@
         else {
           v.act = 'fish'; v.face = (t.wx - t.wy) >= 0 ? 1 : -1;
           if (v.actT > t.dur) {
-            if (G.R() < 0.8) { v.carry = { k: 'food', n: Math.min(cap(v), G.ri(1, 3)) }; emote(v, 'fish', 1.8); G.FX && G.FX.splash(t.x + t.wx * 0.8, t.y + t.wy * 0.8, 0.5); deliverTask(v); }
+            if (G.R() < 0.8 * Math.min(1.2, G.Civ.tV(v, 'fish'))) { v.carry = { k: 'food', n: Math.min(cap(v), Math.round(G.ri(1, 3) * G.Civ.tV(v, 'fish'))) }; emote(v, 'fish', 1.8); G.FX && G.FX.splash(t.x + t.wx * 0.8, t.y + t.wy * 0.8, 0.5); deliverTask(v); }
             else { v.actT = 0; t.dur = G.rr(4, 7); }
           }
         }
@@ -710,7 +711,7 @@
           if (t.type === 'fight') { emote(v, 'happy', 2); return end(v); }
           // collect the meat
           if (G.dist(v.x, v.y, a.x, a.y) > 0.8) { if (!t.carc) { if (!Vg.goto(v, a.x, a.y, false)) return end(v); t.carc = true; } move(v, dt); }
-          else { v.carry = { k: 'food', n: Math.min(8, a.meat) }; G.Animals.remove(a); emote(v, 'food', 1.5); deliverTask(v); }
+          else { v.carry = { k: 'food', n: Math.min(Math.round(8 * G.Civ.tV(v, 'hunt')), Math.round(a.meat * G.Civ.tV(v, 'hunt'))) }; G.Animals.remove(a); emote(v, 'food', 1.5); deliverTask(v); }
           break;
         }
         if (t.type === 'fight' && v.hp < 30) { fleeFrom(v, a.x, a.y, 7, 'wolf'); return; }
@@ -757,7 +758,11 @@
           if (v.actT > 1.5 / workMul(v)) {
             c.c = 0;
             if (t.harvest) {
-              const y = 3 + (S.fert[W.idx(px, py)] > 0.7 ? 1 : 0);
+              // Egyptian river floods, Aztec maize... each people farms differently
+              let yf = (3 + (S.fert[W.idx(px, py)] > 0.7 ? 1 : 0)) * G.Civ.tV(v, 'farm');
+              if (G.Civ.tV(v, 'riverFarm') > 1 && G.Civ.nearRiver(px, py, 5)) yf *= G.Civ.tV(v, 'riverFarm');
+              if (b.aqua) yf *= 1.2;
+              const y = Math.floor(yf) + (G.R() < yf % 1 ? 1 : 0);
               c.s = 0; c.g = 0;
               if (v.carry && v.carry.k === 'food') v.carry.n += y; else v.carry = { k: 'food', n: y };
               G.FX && G.FX.chips(px, py, '#e8c24a');
@@ -972,10 +977,10 @@
         if (G.R() < dt * 2) G.FX && G.FX.splash(v.x, v.y, 0.25);
         break;
       }
-      default: if (!G.War.run(v, t, dt, H)) end(v);
+      default: if (!G.War.run(v, t, dt, H) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H))) end(v);
     }
   }
-  const LONG = { sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1 };
+  const LONG = { sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1 };
 
   function runBuild(v, t, dt) {
     const S = G.S;
@@ -1035,7 +1040,7 @@
       v.face = (cx - cy) - (v.x - v.y) > 0 ? 1 : -1;
       if (b.progress < allowed) {
         v.act = 'build';
-        b.progress = Math.min(allowed, b.progress + dt * workMul(v) / Math.max(1, def.work));
+        b.progress = Math.min(allowed, b.progress + dt * workMul(v) * G.Civ.tV(v, 'build') / Math.max(1, def.work));
         if (v.actT > 0.5) { v.actT = 0; G.Audio && G.Audio.at(cx, cy, 'hammer'); G.FX && G.FX.dust(cx + G.rr(-0.5, 0.5), cy + G.rr(-0.5, 0.5)); }
         if (b.progress >= 1) { G.Village.completeBuilding(b); v.st.built++; emote(v, 'happy', 2.5); return end(v); }
       } else { t.st = 0; v.act = ''; }
@@ -1090,9 +1095,9 @@
     const fpop = G.Fac.pop(G.Fac.idOfV(v)); const fst = G.Fac.stockV(v);
     const foodOk = fst.food > fpop * 0.9 || fst.food > 60;
     // the land feeds a limited number of people: bigger maps hold more
-    const capPop = 70 * (N / 64) * (N / 64);
-    const crowd = G.Village.pop(v.set) > 48 ? 0.5 : 1;
-    let chance = 0.55 * (foodOk ? 1 : 0.2) * crowd * (v.home ? 1 : 0.6) * (v.fear > 60 ? 0.5 : 1) * (kids >= 4 ? 0.6 : 1) * G.clamp(1 - (pop - capPop) / (capPop * 1.4), 0.06, 1);
+    const capPop = 90 * (N / 64) * (N / 64);
+    const crowd = G.Village.pop(v.set) > (G.City ? G.City.crowdCap(v.set) : 48) ? 0.5 : 1;
+    let chance = 0.55 * G.Civ.tV(v, 'growth') * (foodOk ? 1 : 0.2) * crowd * (v.home ? 1 : 0.6) * (v.fear > 60 ? 0.5 : 1) * (kids >= 4 ? 0.6 : 1) * G.clamp(1 - (pop - capPop) / (capPop * 1.4), 0.06, 1);
     chance *= G.Nature.zoneMul(v.x, v.y, 'fertility');
     if (S.weather.fertility > 0) chance *= 2;
     if (G.R() < chance) { v.preg = G.DAY_LEN * 0.55; }
@@ -1284,7 +1289,7 @@
     if (v.air) return 'Voando pelos ares!';
     if (v.age < 2) { const c = S.villagers.get(v.carrier); return c ? (v.sleeping ? 'Dormindo' : `No colo de ${c.name}`) : 'Chorando sozinho'; }
     if (!t) return v.sleeping ? 'Dormindo' : 'Pensando no que fazer';
-    const wt = G.War.taskText(v, t); if (wt) return wt;
+    const wt = G.War.taskText(v, t) || (G.City && G.City.taskText(v, t)) || (G.Naval && G.Naval.taskText(v, t)); if (wt) return wt;
     const bname = id => { const b = S.buildings.get(id); return b ? G.Village.buildName(b) : 'construção'; };
     const pname = id => { const o = S.villagers.get(id); return o ? o.name : 'alguém'; };
     switch (t.type) {

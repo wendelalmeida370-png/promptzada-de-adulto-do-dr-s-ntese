@@ -13,10 +13,10 @@
   let canvas;
 
   // ------------------------------ world setup ------------------------------
-  function spawnPeople(sx, sy, k) {
+  function spawnPeople(sx, sy, k, civ) {
     const S = G.S;
-    const fac = G.Fac.create({ ci: [0, 1, 2, 3][k] });
-    const set = G.Village.addSettlement(G.Village.newSettlementName(), sx, sy, fac.id);
+    const fac = G.Fac.create(civ ? { civ } : { ci: [0, 1, 2, 3][k] });
+    const set = G.Village.addSettlement(G.Village.newSettlementName(fac.id), sx, sy, fac.id);
     fac.capital = set.id;
     const cf = G.Village.addBuilding('campfire', Math.floor(sx), Math.floor(sy), set.id, true);
     set.campfire = cf.id; set.lit = true;
@@ -26,7 +26,7 @@
       return G.Vg.create(Object.assign({ x, y, set: set.id }, o));
     };
     const pair = (a, b) => { a.partner = b.id; b.partner = a.id; };
-    const first = k === 0;
+    const first = k === 0 && !civ;
     const mara = make({ name: first ? 'Mara' : undefined, g: 'f', age: 38 }), oren = make({ name: first ? 'Oren' : undefined, g: 'm', age: 41 }); pair(mara, oren);
     const lina = make({ name: first ? 'Lina' : undefined, g: 'f', age: 19, mother: mara.id, father: oren.id }); mara.kids.push(lina.id); oren.kids.push(lina.id);
     make({ name: first ? 'Taren' : undefined, g: 'm', age: 22 });
@@ -45,11 +45,16 @@
     const S = G.S;
     S.temper = opts.temper || 'normal';
     G.War.reset();
-    const facs = S.starts.map(([x, y], k) => spawnPeople(x, y, k));
+    G.City && G.City.reset();
+    G.Naval && G.Naval.reset();
+    // 'classico' keeps the original nameless tribes; otherwise each people gets a civilization
+    const civs = opts.classic ? S.starts.map(() => null) : G.Civ.assign(opts.civs, S.starts.length);
+    const facs = S.starts.map(([x, y], k) => spawnPeople(x, y, k, civs[k]));
     G.Animals.populate();
     G.Village.forceUpdate();
     G.Politics && G.Politics.init();
     G.Fac.updateTerritory();
+    G.Lore && G.Lore.genesis(opts);
     G.Render.buildTerrain(); G.Render.initSky();
     S.popHist = [];
     S.stats.maxPop = S.villagers.size;
@@ -59,7 +64,7 @@
     } else G.Village.log('Onze almas despertaram ao redor de uma fogueira.', 'campfire', S.start[0], S.start[1]);
     return S;
   }
-  M.lastOpts = (() => { const d = { type: 'ilha', size: 80, tribes: 3, temper: 'normal' }; try { return Object.assign(d, JSON.parse(localStorage.getItem('gotaf-setup') || 'null') || {}); } catch (e) { return d; } })();
+  M.lastOpts = (() => { const d = { type: 'ilha', size: 80, tribes: 3, temper: 'normal', classic: 0, civs: [] }; try { return Object.assign(d, JSON.parse(localStorage.getItem('gotaf-setup') || 'null') || {}); } catch (e) { return d; } })();
 
   // ------------------------------ modes ------------------------------
   M.toMenu = function () {

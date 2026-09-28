@@ -47,6 +47,8 @@
       pendingDiscovery: S.pendingDiscovery || null, prayer: S.prayer || null, prayerCD: S.prayerCD || 0, popHist: S.popHist || [], start: S.start,
       cam: { x: r(G.Render.cam.x, 1), y: r(G.Render.cam.y, 1), zoom: r(G.Render.cam.zoom, 2) },
     };
+    // cities, fleets, lore... each module saves its own state
+    for (const h of G.saveHooks || []) h.save(out, r, arr);
     return JSON.stringify(out);
   };
   Sv.save = function (silent) {
@@ -106,6 +108,8 @@
     G.Nature.rebuildFire();
     G.Render.buildTerrain(); G.Render.initSky();
     if (o.cam) { G.Render.cam.x = o.cam.x; G.Render.cam.y = o.cam.y; G.Render.cam.zoom = G.Render.cam.tz = o.cam.zoom; }
+    for (const f of S.factions.values()) { if (f.civ === undefined) f.civ = null; G.Civ.initTech(f); }
+    for (const h of G.saveHooks || []) h.load(o);
     G.Village.forceUpdate();
     G.Politics && G.Politics.afterLoad && G.Politics.afterLoad();
     G.Fac.updateTerritory();

@@ -79,8 +79,10 @@
   function spriteDims(fw, fh, maxZ) {
     const pad = 8;
     const w = (fw + fh) * 16 + pad * 2, h = (fw + fh) * 8 + maxZ + pad * 2;
-    return [w, h, w / 2, (fw + fh) * 4 + pad];
+    // the anchor sits at the footprint centre, with room above for the full height
+    return [w, h, w / 2, (fw + fh) * 4 + maxZ + pad];
   }
+  Art.spriteDims = spriteDims;
 
   // ------------------------------ trees ------------------------------
   const OAK = [['#4e8f3a', '#37692c', '#79b653'], ['#5b9d3e', '#3f7630', '#8fc75c'], ['#7c9b3a', '#5c7a2b', '#abc35b']];
@@ -203,7 +205,8 @@
 
   // ------------------------------ buildings ------------------------------
   const ROOFS = [['#b85a3c', '#94452d', '#7a3826'], ['#9a6a3a', '#7f5530', '#6a4526'], ['#6c6f86', '#56596e', '#46485a']];
-  Art.building = function (type, v) {
+  Art.building = function (type, v, style, extra) {
+    if (G.Arch) { const s = G.Arch.building(type, v, style || 'classico', extra); if (s) return s; }
     const key = 'b-' + type + v;
     switch (type) {
       case 'hut': {
@@ -596,13 +599,7 @@
         if (v.carry && v.carry.k !== 'water') { line(c, 0, -8, 1.5, -10.2); line(c, -0.5, -8, -1.2, -10); }
         else { line(c, 0.3, -8, 0.3 + sw2, -4.4); line(c, -0.3, -8, -0.3 - sw2, -4.4); }
         if (v.captive && age >= 5) { c.strokeStyle = v.skin; line(c, 0, -8, 1.4, -5.6); line(c, -0.4, -8, 1, -5.4); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.5; c.beginPath(); c.arc(1.2, -5.4, 0.75, 0, TAU); c.stroke(); }
-        if (warrior && !v.carry) {
-          c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.65; line(c, 1.7, -14, 1.7, -0.5);
-          c.fillStyle = '#c4c8d0'; c.beginPath(); c.moveTo(1.05, -14); c.lineTo(1.7, -16.3); c.lineTo(2.35, -14); c.fill();
-          c.fillStyle = v._fc || '#8a3a2a'; c.beginPath(); c.ellipse(-1.9, -6.4, 1.7, 2.3, 0, 0, TAU); c.fill();
-          c.strokeStyle = 'rgba(40,30,20,0.8)'; c.lineWidth = 0.4; c.stroke();
-          c.fillStyle = '#d8d0b8'; c.beginPath(); c.arc(-1.9, -6.4, 0.55, 0, TAU); c.fill();
-        }
+        if ((warrior || (v.role === 'arqueiro' && age >= 16 && !v.captive)) && !v.carry) G.Arch.arms(c, v);
         if (v.task && ((v.task.type === 'band' && v.task.flag) || v.task.type === 'envoy')) {
           const white = v.task.type === 'envoy';
           c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.6; line(c, -1.6, -3, -1.6, -19);
@@ -633,7 +630,8 @@
     c.fillStyle = '#2a1c14'; c.fillRect(0.9, hy - 0.2, 0.55, 0.65);
     if (v.g === 'm' && age >= 25 && v.id % 3 === 0) { c.fillStyle = hair; c.beginPath(); c.arc(0.4, hy + 1.2, 1.5, 0.1, Math.PI - 0.3); c.fill(); }
     // role hats (rulers wear a crown instead)
-    if (v._ruler && age >= 10) {
+    if (v._ruler && age >= 10 && G.Arch.crown(c, v, hy)) { /* the headgear of the culture */ }
+    else if (v._ruler && age >= 10) {
       c.fillStyle = '#f2c14e';
       c.beginPath(); c.moveTo(-2.3, hy - 1.6); c.lineTo(-2.6, hy - 4.6); c.lineTo(-1.2, hy - 3.1); c.lineTo(0, hy - 5.4); c.lineTo(1.2, hy - 3.1); c.lineTo(2.6, hy - 4.6); c.lineTo(2.3, hy - 1.6); c.closePath(); c.fill();
       c.fillStyle = '#b8862a'; c.fillRect(-2.3, hy - 2.3, 4.6, 0.8);
@@ -644,6 +642,7 @@
       else if (v.role === 'mineiro') { c.fillStyle = '#5a5e68'; c.beginPath(); c.arc(0, hy - 1, 2.2, Math.PI, TAU); c.fill(); c.fillStyle = '#ffe28a'; c.fillRect(1.4, hy - 2.2, 0.8, 0.8); }
       else if (v.role === 'sacerdote') { c.fillStyle = '#f2ecdc'; c.beginPath(); c.arc(-0.3, hy - 0.3, 2.5, Math.PI * 0.9, Math.PI * 2.1); c.fill(); }
       else if (v.role === 'cacador') { c.fillStyle = '#5a3a22'; c.beginPath(); c.arc(0, hy - 1, 2.1, Math.PI, TAU); c.fill(); c.strokeStyle = '#d84a3a'; c.lineWidth = 0.5; line(c, -1.2, hy - 2.6, -2.8, hy - 4.6); }
+      else if ((warrior || v.role === 'arqueiro') && G.Arch.helmet(c, v, hy)) { /* culture's helmet */ }
       else if (warrior) { c.fillStyle = '#8a8e96'; c.beginPath(); c.arc(0, hy - 0.8, 2.35, Math.PI, TAU); c.fill(); c.fillRect(-2.35, hy - 0.9, 4.7, 0.7); c.fillStyle = v._fc || '#c83a2a'; c.fillRect(-0.4, hy - 4.2, 0.8, 1.6); }
     }
     // baby on the back

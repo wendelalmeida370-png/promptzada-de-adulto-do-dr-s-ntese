@@ -43,8 +43,10 @@
   const EPI_RANK = { breve: 0, velho: 1, fundador: 2, justo: 3, sabio: 3, construtor: 3, pacifico: 3, pio: 4, grande: 4, bravo: 4, rebelde: 5, usurpador: 5, ungido: 6, correntes: 6, cruel: 6, libertador: 7, conquistador: 8, sanguinario: 9 };
   const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV'];
   P.epithet = v => (v && v.ep && EPI[v.ep] ? EPI[v.ep][v.g === 'f' ? 1 : 0] : '');
-  P.govName = f => (P.GOV[f.gov] || P.GOV.tribo).name;
-  P.title = (f, v) => (P.GOV[f.gov] || P.GOV.tribo).title[v && v.g === 'f' ? 1 : 0];
+  P.GOV.imperio = { name: 'Império', title: ['Imperador', 'Imperatriz'] };
+  P.GOV_DESC.imperio = 'Muitas cidades sob uma só coroa. Poder, prestígio — e cobiça.';
+  P.govName = f => G.Civ.govName(f) || (P.GOV[f.gov] || P.GOV.tribo).name;
+  P.title = (f, v) => G.Civ.govTitle(f, v) || (P.GOV[f.gov] || P.GOV.tribo).title[v && v.g === 'f' ? 1 : 0];
   P.regnal = v => v.name + (v.ord > 1 ? ' ' + (ROMAN[v.ord] || v.ord) : '');
   P.fullName = v => P.regnal(v) + (v.ep ? ', ' + P.epithet(v) : '');
   P.styled = (f, v) => (v ? P.title(f, v) + ' ' + P.fullName(v) : 'ninguém');
@@ -59,7 +61,8 @@
     const h = k => G.hash(v.id * 7919 + k * 104729 + 17);
     const tr = v.traits || [];
     const bias = G.S.temper === 'belicoso' ? 0.18 : G.S.temper === 'pacifico' ? -0.22 : 0;
-    let agg = 0.1 + h(1) * 0.75 + bias, cru = h(2) * 0.75 + bias * 0.5, pie = 0.1 + h(3) * 0.75, amb = 0.1 + h(4) * 0.8;
+    const cb = (G.CIVS[v.civ] && G.CIVS[v.civ].persona) || { agg: 0, cru: 0, pie: 0, amb: 0 };
+    let agg = 0.1 + h(1) * 0.75 + bias + cb.agg, cru = h(2) * 0.75 + bias * 0.5 + cb.cru, pie = 0.1 + h(3) * 0.75 + cb.pie, amb = 0.1 + h(4) * 0.8 + cb.amb;
     if (tr.includes('Corajoso')) agg += 0.2;
     if (tr.includes('Medroso')) agg -= 0.25;
     if (tr.includes('Devoto')) pie += 0.3;
@@ -91,7 +94,10 @@
     return Math.min(v.age, 58) * 0.5 + v.courage * 14 + pe.amb * 10 + (v.kills || 0) * 2 + (v.hero ? 12 : 0) + (v.st ? v.st.built * 0.5 : 0)
       + (f.gov === 'teocracia' && (v.role === 'sacerdote' || v.traits.includes('Devoto')) ? 15 : 0) + G.R() * 6;
   }
-  const DYNASTIC = { chefia: 1, reino: 1, tirania: 1 };
+  const DYNASTIC_GOV = { chefia: 1, reino: 1, tirania: 1, imperio: 1 };
+  // a republic elects its consuls; everyone else passes the crown within the family
+  const dyn = f => !!DYNASTIC_GOV[f.gov] && !(f.gov === 'reino' && f.civ === 'romano');
+  P.dynastic = dyn;
   P.heirOf = function (f, old) {
     const S = G.S; if (!old) return null;
     const ok = v => v && !v.captive && v.age >= 16 && G.Fac.idOfV(v) === f.id;
@@ -104,7 +110,7 @@
   P.pickLeader = function (f, exclude) {
     const S = G.S;
     const old = G.person(f.leader) || G.person(exclude);
-    if (DYNASTIC[f.gov]) { const h = P.heirOf(f, old); if (h && h.id !== exclude) return h; }
+    if (dyn(f)) { const h = P.heirOf(f, old); if (h && h.id !== exclude) return h; }
     let best = null, bs = -1e9;
     for (const v of adultsOf(f.id)) { if (v.id === exclude) continue; const s = prestige(v, f); if (s > bs) { bs = s; best = v; } }
     if (!best) for (const v of S.villagers.values()) if (!v.captive && v.age >= 12 && G.Fac.idOfV(v) === f.id && v.id !== exclude) { best = v; break; }
@@ -184,11 +190,12 @@
   // ------------------------------ government ------------------------------
   P.baseGov = function (f) {
     const pop = G.Fac.pop(f.id), sets = G.Fac.settlementsOf(f.id).length;
+    if (((sets >= 3 && pop >= 70) || ((f.st.conquests || 0) >= 2 && pop >= 50)) && f.era >= 4) return 'imperio';
     if ((f.era >= 4 && pop >= 30) || (sets >= 2 && pop >= 36)) return 'reino';
     if (f.era >= 2 && pop >= 16) return 'chefia';
     return 'tribo';
   };
-  const RANK = { tribo: 0, chefia: 1, reino: 2 };
+  const RANK = { tribo: 0, chefia: 1, reino: 2, imperio: 3 };
   P.checkGov = function (f, crowning, how) {
     const v = P.ruler(f); const pe = P.persona(v);
     let g = f.gov || 'tribo';
@@ -211,9 +218,17 @@
     switch (f.gov) {
       case 'chefia': log(`${f.name} deixou de ser uma simples tribo: agora é uma chefia${v ? ', e ' + st + ' governa' : ''}.`, 'crown', x, y); break;
       case 'reino':
-        log(`${f.name} tornou-se um reino. ${st ? st + ' foi coroad' + oa(v) + '.' : ''}`, 'crown', x, y);
-        G.Village.milestone('kingdom', 'Nasce um reino', `${f.name} tem agora uma coroa.`, 'crown');
-        if (G.Fac.all().length > 1) G.UI && G.UI.toast('Um reino', `${f.name} coroou ${v ? P.regnal(v) : 'seu primeiro rei'}.`, 'crown');
+        if (f.civ === 'romano') log(`${f.name} expulsou os reis e fundou a República. ${st ? st + ' governa, eleit' + oa(v) + ' pelo povo.' : ''}`, 'crown', x, y);
+        else log(`${f.name} tornou-se ${f.civ === 'asteca' ? 'um senhorio' : 'um reino'}. ${st ? st + ' foi coroad' + oa(v) + '.' : ''}`, 'crown', x, y);
+        G.Village.milestone('kingdom', f.civ === 'romano' ? 'Nasce uma república' : 'Nasce um reino', `${f.name} agora é ${P.govName(f)}.`, 'crown');
+        if (G.Fac.all().length > 1) G.UI && G.UI.toast(P.govName(f), `${f.name}: ${v ? P.styled(f, v) : 'um novo governo'}.`, 'crown');
+        G.Lore && G.Lore.note('gov', { fac: f.id, gov: 'reino' });
+        break;
+      case 'imperio':
+        log(f.civ === 'romano' ? `A República caiu: nasce o Império de ${f.name}. ${st} é ${v && v.g === 'f' ? 'a primeira' : 'o primeiro'} a usar a coroa de louros.` : `${f.name} tornou-se ${P.govName(f)}. ${st} reina sobre muitas cidades.`, 'crown', x, y);
+        G.Village.milestone('empire', 'Nasce um império', `${f.name} agora é ${P.govName(f)}.`, 'crown');
+        G.UI && G.UI.toast(P.govName(f), `${f.name} se ergue como império.`, 'crown');
+        G.Lore && G.Lore.note('gov', { fac: f.id, gov: 'imperio' });
         break;
       case 'teocracia': log(`${f.name} tornou-se uma teocracia: ${st} governa em seu nome.`, 'faith', x, y); break;
       case 'tirania':
@@ -237,21 +252,26 @@
     const hungry = f.stock.food < pop * 0.5;
     const war = G.Fac.enemiesOf(f.id).length > 0;
     let sum = 0, n = 0;
+    // Greek poleis crave independence; Roman roads and law bind provinces
+    const dl = G.Civ.t(f.id, 'distLoyal'), assim = G.Civ.t(f.id, 'assimilate');
     for (const s of G.Fac.settlementsOf(f.id)) {
-      let t = 68;
+      let t = 68 + G.Civ.t(f.id, 'loyalty', 0) + (G.Civ.has(f.id, 'filosofia') ? 4 : 0);
       if (s === cap) t += 20;
       else {
-        t -= Math.min(26, Math.max(0, G.dist(s.cx, s.cy, cap.cx, cap.cy) - 12) * 0.9);
+        let far = Math.min(26, Math.max(0, G.dist(s.cx, s.cy, cap.cx, cap.cy) - 12) * 0.9);
         // big realms breed local pride: old, distant villages want their own way
-        t -= Math.min(16, Math.max(0, pop - 50) * 0.15);
-        t -= Math.min(14, Math.max(0, S.day - s.founded - 6) * 0.35);
+        far += Math.min(16, Math.max(0, pop - 50) * 0.15);
+        far += Math.min(14, Math.max(0, S.day - s.founded - 6) * 0.35);
+        if (G.City && G.City.linked(s)) far *= 0.6;
+        t -= far * dl;
       }
+      if (G.City) t += G.City.loyaltyBonus(s);
       if (hungry) t -= 18;
       t -= f.weariness * 0.3;
       if (f.gov === 'tirania') t -= 16 + pe.cru * 12; else t -= pe.cru * 8;
       if (f.gov === 'conselho' || f.gov === 'livre') t += 6;
-      if (s.conq) t -= Math.max(0, 40 - (S.day - s.conq) * 5);
-      if (s.origFac && s.origFac !== s.fac) t -= 10;
+      if (s.conq) t -= Math.max(0, 40 - (S.day - s.conq) * 5 * assim);
+      if (s.origFac && s.origFac !== s.fac) t -= 10 / assim;
       t += (f.legit - 60) * 0.25;
       if (s.discord > 0) { t -= 60; s.discord -= dt; }
       if (s.blessed > 0) { t += 25; s.blessed -= dt; }
@@ -302,7 +322,7 @@
       if (v && v.captive) log(`${P.styled(f, v)} foi capturad${oa(v)}! ${f.name} precisa de um novo líder.`, 'chain', v.x, v.y);
       P.endReign(f, why);
       const h = P.pickLeader(f, old ? old.id : 0);
-      P.crown(f, h, DYNASTIC[f.gov] && isKin(h, old) ? 'heranca' : 'escolha');
+      P.crown(f, h, dyn(f) && isKin(h, old) ? 'heranca' : 'escolha');
     } else {
       const h = P.pickLeader(f);
       if (h) P.crown(f, h, 'escolha');
@@ -353,7 +373,7 @@
       } else log(`${P.styled(f, v)} ${dt}${cause === 'old' ? ' aos ' + Math.floor(v.age) + ' anos' : ''}.`, cause === 'old' ? 'grave' : 'crown', v.x, v.y);
       P.endReign(f, cause === 'execution' ? 'executado' : cause === 'war' || cause === 'arrow' ? 'batalha' : 'morte');
       const h = P.pickLeader(f, v.id);
-      P.crown(f, h, DYNASTIC[f.gov] && isKin(h, v) ? 'heranca' : 'escolha');
+      P.crown(f, h, dyn(f) && isKin(h, v) ? 'heranca' : 'escolha');
     }
     // conspirators and rebel leaders
     if (v.coup) { const f = G.Fac.get(v.coup); if (f && f.coup && f.coup.by === v.id) { log(`A conspiração de ${v.name} contra ${P.styled(f, P.ruler(f))} terminou com sua morte.`, 'crown', v.x, v.y); for (const o of S.villagers.values()) if (o.coup === f.id) o.coup = 0; f.coup = null; } }
@@ -527,23 +547,33 @@
       if (G.R() < 0.04 + 0.18 * (24 - s.loyalty) / 24) { P.secede(s); return; }
     }
   }
-  P.nameFor = function (s, kind, lead) {
+  const SPLIT_NAMES = {
+    grego: (s, l) => ['Pólis de ' + s, 'Liga de ' + s, 'Pólis Livre de ' + s],
+    nordico: (s, l) => ['Jarlado de ' + s, 'Clã de ' + s, l ? 'Casa de ' + l : 'Clã de ' + s],
+    egipcio: (s, l) => ['Reino de ' + s, l ? 'Casa de ' + l : 'Nomo de ' + s, 'Nomo de ' + s],
+    asteca: (s, l) => ['Altepetl de ' + s, 'Senhorio de ' + s, l ? 'Casa de ' + l : 'Calpulli de ' + s],
+    romano: (s, l) => ['República de ' + s, l ? 'Gens de ' + l : 'Colônia de ' + s, 'Colônia de ' + s],
+  };
+  P.nameFor = function (s, kind, lead, civ) {
     const used = new Set([...G.S.factions.values()].map(f => f.name));
-    const opts = kind === 'livre'
+    let opts = kind === 'livre'
       ? ['Povo Liberto', 'Irmandade Livre', 'Clã das Correntes Partidas', s ? 'Povo Livre de ' + s.name : 'Gente Sem Correntes']
       : [s ? 'Povo de ' + s.name : 'Povo Novo', lead ? 'Casa de ' + lead.name : 'Clã Novo', s ? 'Clã de ' + s.name : 'Clã Novo', s ? s.name + ' Livre' : 'Povo Livre'];
-    const start = Math.floor(G.R() * opts.length);
+    const civOpts = kind !== 'livre' && civ && SPLIT_NAMES[civ] && s;
+    if (civOpts) opts = SPLIT_NAMES[civ](s.name, lead && lead.name).concat(opts);
+    const start = Math.floor(G.R() * (civOpts ? 3 : opts.length));
     for (let k = 0; k < opts.length; k++) { const n = opts[(start + k) % opts.length]; if (!used.has(n)) return n; }
     return opts[0] + ' ' + (G.S.nextId % 100);
   };
   P.secede = function (s, claimant, succession) {
     const S = G.S; const old = G.Fac.get(s.fac); if (!old) return null;
     const oldRuler = P.ruler(old);
-    const nf = G.Fac.create({ parent: old.id, stock: { food: 0, wood: 0, stone: 0 } });
+    const nf = G.Fac.create({ parent: old.id, civ: old.civ, stock: { food: 0, wood: 0, stone: 0 } });
+    if (old.tech) for (const k in old.tech.known) nf.tech.known[k] = old.tech.known[k];
     P.setupFaction(nf);
     let lead = claimant || null, bs = -1e9;
     if (!lead) for (const v of S.villagers.values()) if (v.set === s.id && !v.captive && v.age >= 18 && v.id !== old.leader) { const sc = prestige(v, nf) + P.persona(v).amb * 10; if (sc > bs) { bs = sc; lead = v; } }
-    nf.name = P.nameFor(s, 'secessao', lead);
+    nf.name = P.nameFor(s, 'secessao', lead, old.civ);
     const share = freePopOfSet(s.id) / Math.max(1, G.Fac.pop(old.id));
     for (const k of ['food', 'wood', 'stone']) { const n = Math.floor(old.stock[k] * share); old.stock[k] -= n; nf.stock[k] += n; }
     s.fac = nf.id; nf.capital = s.id; s.loyalty = 75; s.conq = 0; s.origFac = 0;
@@ -859,7 +889,9 @@
     const S = G.S; const a = G.Fac.get(t.from), b = G.Fac.get(t.to); if (!a || !b || !b.alive) return false;
     const r = G.Fac.rel(a.id, b.id); if (!r || r.st === 'guerra') return false;
     if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, b.id); v.carry = null; }
-    const m = Math.min(Math.floor(t.n * 1.1), Math.floor(b.stock[t.want] * 0.35));
+    // merchant peoples and coinage get better deals
+    const deal = 1.1 * G.Civ.t(a.id, 'trade') * (G.Civ.has(a.id, 'moeda') ? 1.2 : 1);
+    const m = Math.min(Math.floor(t.n * deal), Math.floor(b.stock[t.want] * 0.35));
     if (m > 0) { b.stock[t.want] -= m; v.carry = { k: t.want, n: m }; }
     r.op = Math.min(100, r.op + 5); r.friend = Math.min(100, r.friend + 4); r.trade = (r.trade || 0) + 1;
     const MAT = { food: 'comida', wood: 'madeira', stone: 'pedra' };

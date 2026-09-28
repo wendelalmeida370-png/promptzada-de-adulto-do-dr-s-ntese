@@ -17,7 +17,7 @@
   F.PEOPLE_NAMES = ['Povo da Chama', 'Clã do Rio', 'Tribo do Vento', 'Clã da Pedra', 'Casa dos Pinheiros', 'Povo do Vale',
     'Clã das Marés', 'Irmandade da Aurora', 'Clã do Lobo', 'Povo do Sol', 'Gente da Névoa', 'Tribo do Trovão'];
   // grammatical gender of a people's name ("a Tribo", "o Clã")
-  F.oa = f => (f && /^(Tribo|Casa|Irmandade|Gente)/.test(f.name) ? 'a' : 'o');
+  F.oa = f => (f && /^(Tribo|Casa|Irmandade|Gente|Pólis|Liga|Gens|República)/.test(f.name) ? 'a' : 'o');
 
   F.get = id => G.S.factions.get(id);
   F.all = () => [...G.S.factions.values()].filter(f => f.alive);
@@ -37,18 +37,20 @@
     const S = G.S;
     const used = new Set([...S.factions.values()].filter(f => f.alive).map(f => f.ci));
     let ci = o.ci;
+    if (ci === undefined && o.civ) ci = G.Civ.pickColor(o.civ);
     if (ci === undefined) { ci = 0; while (used.has(ci) && ci < F.COLORS.length - 1) ci++; }
     const usedSym = new Set([...S.factions.values()].map(f => f.sym));
     let sym = o.sym; if (sym === undefined) { sym = Math.floor(G.R() * F.SYMBOLS.length); for (let k = 0; k < F.SYMBOLS.length && usedSym.has(sym); k++) sym = (sym + 1) % F.SYMBOLS.length; }
     const usedNames = new Set([...S.factions.values()].map(f => f.name));
     const f = {
-      id: S.nextId++, name: o.name || F.PEOPLE_NAMES.find(n => !usedNames.has(n)) || ('Povo ' + (S.factions.size + 1)),
+      id: S.nextId++, name: o.name || (o.civ && G.Civ.peopleName(o.civ)) || F.PEOPLE_NAMES.find(n => !usedNames.has(n)) || ('Povo ' + (S.factions.size + 1)), civ: o.civ || null,
       ci, sym, stock: Object.assign({ food: 36, wood: 14, stone: 0 }, o.stock || {}),
       leader: 0, gov: 'tribo', capital: o.capital || 0, founded: S.day, parent: o.parent || 0, alive: true,
       rel: {}, st: { kills: 0, deaths: 0, conquests: 0, captives: 0, massacres: 0, battles: 0, lost: 0 },
       rulers: [], era: 0, targets: null, weariness: 0, freed: !!o.freed,
     };
     S.factions.set(f.id, f);
+    G.Civ.initTech(f);
     return f;
   };
   // relation record between two factions (symmetric storage)
@@ -122,5 +124,7 @@
     if (tTerr <= 0) { tTerr = 3; F.updateTerritory(); }
     G.Politics && G.Politics.update(dt);
     G.War && G.War.update(dt);
+    G.Civ.update(dt);
+    G.City && G.City.update(dt);
   };
 })(window.G);

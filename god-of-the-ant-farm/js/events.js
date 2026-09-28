@@ -292,8 +292,9 @@
     const S = G.S;
     let set = G.Village.nearestSettlement(b.lx, b.ly);
     if (!set) {
-      const fac = G.Fac.create({ name: 'Os Viajantes' });
-      set = G.Village.addSettlement(G.Village.newSettlementName(), b.lx, b.ly, fac.id);
+      const fac = G.Fac.create({ civ: G.pick(G.Civ.IDS) });
+      set = G.Village.addSettlement(G.Village.newSettlementName(fac.id), b.lx, b.ly, fac.id);
+      G.Politics.setupFaction(fac);
       fac.capital = set.id;
       const n = W.nearestLand(b.lx - (b.tx - b.lx) * 6, b.ly - (b.ty - b.ly) * 6, 8) || [b.lx, b.ly];
       set.cx = n[0]; set.cy = n[1];

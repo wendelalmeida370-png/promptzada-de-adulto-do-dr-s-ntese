@@ -77,6 +77,7 @@
       id: S.nextId++, type, x, y, w: def.w, h: def.h, built: !!built, progress: built ? 1 : 0,
       need: Object.assign({ wood: 0, stone: 0 }, built ? {} : def.cost), incoming: { wood: 0, stone: 0 },
       hp: def.hp, maxHp: def.hp, set: setId, blocks: def.blocks, v: Math.floor(G.R() * 3), born: S.day, burnHp: 0,
+      style: G.Civ.idOfFac(V.facOfSet(setId)) || null, // architecture of the people who built it
     };
     if (type === 'farm') b.crops = Array.from({ length: 9 }, () => ({ s: 0, g: 0, c: 0 }));
     if (type === 'cemetery') b.graves = [];
@@ -97,7 +98,8 @@
     for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const i = ty * N + tx; if (S.occ[i] === b.id) S.occ[i] = 0; }
   };
   V.totalCost = def => (def.cost.wood || 0) + (def.cost.stone || 0);
-  V.buildName = b => (b.type === 'house' && b.upgradeFrom && !b.built ? 'Casa (reforma)' : G.BDEF[b.type].name);
+  V.nameOf = (type, b) => G.Civ.bname(type, b ? b.style : null);
+  V.buildName = b => (b.upgradeFrom && !b.built ? V.nameOf(b.type, b) + ' (obra)' : V.nameOf(b.type === 'ruin' ? (b.origType || 'ruin') : b.type, b));
 
   V.completeBuilding = function (b) {
     const S = G.S; b.built = true; b.progress = 1; b.need.wood = 0; b.need.stone = 0; b.upgradeFrom = null;
@@ -106,7 +108,7 @@
     G.FX && G.FX.complete(cx, cy, b);
     G.Audio && G.Audio.at(cx, cy, 'built', true);
     const set = S.settlements.get(b.set);
-    const nm = G.BDEF[b.type].name;
+    const nm = V.buildName(b);
     const firsts = {
       hut: ['firstHut', 'A primeira cabana foi construída.', 'Primeiro abrigo', 'Eles não dormem mais ao relento.'],
       storehouse: ['firstStore', 'O primeiro armazém foi construído.', 'Armazém', 'Agora conseguem guardar muito mais.'],
@@ -121,8 +123,9 @@
     if (f && !S.milestones[f[0]]) {
       V.log(f[1], b.type, cx, cy);
       V.milestone(f[0], f[2], f[3], b.type);
-    } else if (b.type !== 'campfire' && b.type !== 'cemetery' && (b.type !== 'hut' && b.type !== 'house' && b.type !== 'farm')) {
-      V.log(`${set ? set.name + ': ' : ''}${nm} construído.`, b.type, cx, cy);
+    } else if (G.City && G.City.onComplete(b, set)) { /* the city tells its own story */ }
+    else if (b.type !== 'campfire' && b.type !== 'cemetery' && !G.BDEF[b.type].housing && b.type !== 'farm') {
+      V.log(`${set ? set.name + ': ' : ''}${nm} construíd${G.gen(nm)}.`, b.type, cx, cy);
     }
     if (b.type === 'campfire' && set && S.settlements.size > 1 && !set.lit) {
       set.lit = true; V.log(`A fogueira de ${set.name} foi acesa.`, 'campfire', cx, cy);
@@ -154,15 +157,16 @@
     }
     G.FX && G.FX.collapse(cx, cy, b);
     G.Audio && G.Audio.at(cx, cy, 'collapse', true);
+    G.City && G.City.onDestroyed(b);
     if (b.origType !== 'hut' || G.R() < 0.6)
-      V.log(`${nm}${set ? ' de ' + set.name : ''} foi destruíd${nm === 'Armazém' || nm === 'Poço' || nm === 'Templo' || nm === 'Monumento' ? 'o' : 'a'}${cause === 'fire' ? ' pelo fogo' : cause === 'meteor' ? ' por um meteoro' : cause === 'lightning' ? ' por um raio' : cause === 'quake' ? ' pelo terremoto' : ''}.`, cause === 'quake' ? 'stone' : 'fire', cx, cy);
+      V.log(`${nm}${set ? ' de ' + set.name : ''} foi destruíd${G.gen(nm)}${cause === 'fire' ? ' pelo fogo' : cause === 'meteor' ? ' por um meteoro' : cause === 'lightning' ? ' por um raio' : cause === 'quake' ? ' pelo terremoto' : cause === 'siege' ? ' pelas máquinas de cerco' : cause === 'wave' ? ' pelo maremoto' : cause === 'lava' ? ' pela lava' : ''}.`, cause === 'quake' ? 'stone' : 'fire', cx, cy);
   };
 
   // ------------------------------ stock (each people has its own) ------------------------------
   V.facOfSet = setId => { const s = G.S.settlements.get(setId); return s ? s.fac : 0; };
   V.cap = function (fid) {
     let c = 80;
-    for (const b of G.S.buildings.values()) if (b.type === 'storehouse' && b.built && V.facOfSet(b.set) === fid) c += G.BDEF.storehouse.storage;
+    for (const b of G.S.buildings.values()) if (b.built && G.BDEF[b.type].storage && V.facOfSet(b.set) === fid) c += G.BDEF[b.type].storage;
     return c;
   };
   V.addStock = function (k, n, fid) {
@@ -207,7 +211,9 @@
   };
   V.pop = setId => { let n = 0; for (const v of G.S.villagers.values()) if (setId === undefined || v.set === setId) n++; return n; };
   V.mainSettlement = () => { let best = null, bp = -1; for (const s of G.S.settlements.values()) { const p = V.pop(s.id); if (p > bp) { bp = p; best = s; } } return best; };
-  V.newSettlementName = function () {
+  V.newSettlementName = function (fid) {
+    const civ = fid ? G.Civ.idOfFac(fid) : null;
+    if (civ) return G.Civ.cityName(civ);
     const used = new Set([...G.S.settlements.values()].map(s => s.name).concat(G.S.usedNames || []));
     const n = G.SETTLEMENT_NAMES.find(n => !used.has(n)) || ('Assentamento ' + (G.S.nextId % 1000));
     (G.S.usedNames = G.S.usedNames || []).push(n);
@@ -252,10 +258,11 @@
   // ------------------------------ site placement ------------------------------
   V.findSite = function (set, type) {
     const S = G.S; const def = G.BDEF[type];
+    if (type === 'doca' && G.City) return G.City.dockSite(set);
     const pop = V.pop(set.id);
-    const R = Math.min(17, Math.round(6 + Math.sqrt(pop + 1) * 1.5));
+    const R = Math.min(17 + (def.w >= 3 ? 2 : 0), Math.round(6 + Math.sqrt(pop + 1) * 1.5 + (def.w >= 3 ? 2 : 0)));
     const counts = {}; for (const b of S.buildings.values()) if (b.set === set.id) counts[b.type] = (counts[b.type] || 0) + 1;
-    const homes = (counts.hut || 0) + (counts.house || 0);
+    const homes = (counts.hut || 0) + (counts.house || 0) + (counts.sobrado || 0) + (counts.insula || 0);
     let best = null, bestSc = -1e9;
     const cxi = Math.floor(set.cx), cyi = Math.floor(set.cy);
     for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
@@ -267,7 +274,7 @@
       let ok = true, trees = 0, fert = 0;
       for (let ty = y; ty < y + def.h && ok; ty++) for (let tx = x; tx < x + def.w; tx++) {
         const i = ty * N + tx; const t = S.type[i];
-        if (t < T.SAND || S.occ[i] || S.objAt[i] || S.fire[i] > 0 || S.scar[i] > G.DAY_LEN * 2) { ok = false; break; }
+        if (t < T.SAND || S.occ[i] || S.objAt[i] || S.fire[i] > 0 || S.scar[i] > G.DAY_LEN * 2 || S.wall[i] || S.road[i] >= 2) { ok = false; break; }
         if ((type === 'farm' || type === 'cercado') && (t === T.SAND || t === T.ROCKY)) { ok = false; break; }
         if (S.treeAt[i]) trees++;
         fert += S.fert[i];
@@ -285,7 +292,8 @@
       const sl = W.slope(x, y, def.w, def.h);
       if (sl > (type === 'farm' ? 1.6 : 1.15)) continue;
       let ideal = 3;
-      if (type === 'hut' || type === 'house') ideal = 2.6 + homes * 0.33;
+      if (def.housing) ideal = 2.6 + homes * (type === 'insula' || type === 'sobrado' ? 0.28 : 0.33);
+      else if (G.City && G.City.IDEAL[type]) ideal = G.City.IDEAL[type];
       else if (type === 'storehouse') ideal = 3.5 + (counts.storehouse || 0) * 3;
       else if (type === 'farm') ideal = 7 + (counts.farm || 0) * 1.6;
       else if (type === 'well') ideal = 3;
@@ -341,23 +349,24 @@
     const isMain = G.Fac.capitalOf(fac.id) === set;
     const facHas = type => G.Fac.has(fac.id, type);
     if (!c.campfire) { const b = V.startProject(set, 'campfire'); if (b) { set.campfire = b.id; } return; }
-    const maxSites = Math.min(4, 1 + Math.floor(pop / 11));
+    const maxSites = Math.min(4 + Math.max(0, (set.tier || 0) - 2), 1 + Math.floor(pop / 11));
     if (c.sites >= maxSites) return;
     const st = fac.stock; const cap = V.cap(fac.id);
     const workshop = facHas('workshop');
-    const homeType = workshop && st.stone >= 6 ? 'house' : 'hut';
-    const pendingHousing = (c.siteTypes.hut || 0) * 4 + (c.siteTypes.house || 0) * 6;
+    const homeType = G.City ? G.City.homeType(set, fac, workshop, st) : (workshop && st.stone >= 6 ? 'house' : 'hut');
+    let pendingHousing = 0; for (const k in c.siteTypes) pendingHousing += (G.BDEF[k].housing || 0) * c.siteTypes[k];
     const want = [];
     if ((hi.homeless > 0 || hi.cap - pop < 2) && hi.cap + pendingHousing < pop + 3) want.push(homeType);
     if (!c.storehouse && (pop >= 10 || S.day >= 3) && !c.siteTypes.storehouse) want.push('storehouse');
     if (c.farm === 0 && (S.day >= 4 || pop >= 13)) want.push('farm');
     else if (c.farm > 0 && c.farm * 11 < pop && !c.siteTypes.farm && st.food < pop * 8) want.push('farm');
-    if (!c.well && (c.hut + c.house) >= 3) want.push('well');
+    if (!c.well && (c.hut + c.house + (c.sobrado || 0)) >= 3) want.push('well');
     const allPop = G.Fac.pop(fac.id);
     if (isMain && !c.workshop && !workshop && c.storehouse && allPop >= 18) want.push('workshop');
     if (isMain && !c.temple && workshop && !facHas('temple') && allPop >= 26) want.push('temple');
     if (isMain && !c.monument && c.temple && facHas('temple') && allPop >= 45 && pop >= 16) want.push('monument');
     G.Politics && G.Politics.planExtra && G.Politics.planExtra(set, fac, c, want, pop);
+    G.City && G.City.plan(set, fac, c, want, pop);
     if (c.storehouse && !c.siteTypes.storehouse && (st.wood > cap * 0.9 || st.food > cap * 0.9 || st.stone > cap * 0.9) && c.storehouse < 1 + Math.floor(pop / 30)) want.push('storehouse');
     // upgrade an old hut into a stone house
     if (workshop && c.hut > 0 && !c.siteTypes.house && st.stone >= 10 && st.wood >= 14 && want.length === 0) {
@@ -370,10 +379,12 @@
         return;
       }
     }
+    // stone houses grow a second floor, then become apartment blocks
+    if (G.City && want.length === 0 && G.City.upgradeHomes(set, fac, c, st)) return;
     // proactive housing for growing families
     if (!want.length && hi.cap + pendingHousing < pop + 5 && c.sites === 0) want.push(homeType);
     for (const type of want) {
-      if (c.siteTypes[type] && type !== 'hut' && type !== 'house') continue;
+      if (c.siteTypes[type] && !G.BDEF[type].housing) continue;
       const def = G.BDEF[type];
       // don't open too many sites when materials are scarce
       if (c.sites > 0 && (st.wood < (def.cost.wood || 0) * 0.3 && (def.cost.wood || 0) > 0)) continue;
@@ -531,9 +542,13 @@
     const maxSets = N >= 96 ? 9 : N >= 80 ? 7 : 5;
     if (S.settlements.size >= maxSets) return;
     for (const set of [...S.settlements.values()]) {
-      if (G.Fac.settlementsOf(set.fac).length >= 4) continue;
+      // Romans and Norse spread further; capitals keep growing into cities instead of always splitting
+      const ex = G.Civ.t(set.fac, 'expansion');
+      if (G.Fac.settlementsOf(set.fac).length >= (ex > 1.1 ? 5 : 4)) continue;
       const pop = V.pop(set.id);
-      if (!(pop >= 34 || (pop >= 24 && set.fails >= 6))) continue;
+      const cap = G.Fac.capitalOf(set.fac) === set;
+      const need = Math.round((cap ? 44 : 34) / ex);
+      if (!(pop >= need || (pop >= Math.round(26 / ex) && set.fails >= 6))) continue;
       if (S.day - set.founded < 8) continue;
       if (G.R() > 0.5) continue;
       // find location
@@ -555,7 +570,7 @@
         if (sc > bs) { bs = sc; best = [x + 0.5, y + 0.5]; }
       }
       if (!best || !W.findPath(set.cx, set.cy, best[0], best[1], true, N * N)) { set.fails = 0; continue; }
-      const name = V.newSettlementName();
+      const name = V.newSettlementName(set.fac);
       const ns = V.addSettlement(name, best[0], best[1], set.fac);
       // pick migrants: young couples with kids first, then singles
       const members = [...S.villagers.values()].filter(v => v.set === set.id);
@@ -683,8 +698,10 @@
   V.faithRate = 0;
   function updateFaith(dt) {
     const S = G.S; let r = S.villagers.size ? 0.12 : 0;
-    for (const v of S.villagers.values()) r += 0.003 + v.devotion * 0.002 + v.fear * 0.0013;
-    for (const b of S.buildings.values()) if (b.built) { if (b.type === 'temple') r += 0.2; if (b.type === 'monument') r += 0.4; }
+    // pious peoples (Egyptians, Aztecs) pray more
+    const fm = {}; for (const f of S.factions.values()) if (f.alive) fm[f.id] = G.Civ.t(f.id, 'faith');
+    for (const v of S.villagers.values()) { const s = S.settlements.get(v.set); r += (0.003 + v.devotion * 0.002 + v.fear * 0.0013) * ((s && fm[s.fac]) || 1); }
+    for (const b of S.buildings.values()) if (b.built) { const s = S.settlements.get(b.set); const m = (s && fm[s.fac]) || 1; if (b.type === 'temple') r += 0.2 * m; else if (b.type === 'monument') r += 0.4 * m; else if (b.type === 'maravilha') r += 1.2 * m; }
     V.faithRate = r;
     S.faith = Math.min(999, S.faith + r * dt);
   }
