@@ -2,7 +2,7 @@
 
 > *Watch them live. Help them prosper. Or remind them who their god is.*
 
-Um jogo de simulação divina que roda direto no navegador. Ilhas, continentes, arquipélagos e mares abertos procedurais; povos autônomos — gregos, nórdicos, egípcios, astecas e romanos — que crescem de acampamento a metrópole, navegam, negociam, se casam, racham, guerreiam, cercam cidades, escravizam e se libertam. Cada mundo escreve a própria lenda. E você: uma entidade que observa e interfere.
+Um jogo de simulação divina que roda direto no navegador. Ilhas, continentes, arquipélagos e mares abertos procedurais — com tundra, taiga, florestas, pântanos, selvas, savanas e desertos, e mais de 40 espécies de animais presas numa cadeia alimentar de verdade; povos autônomos — gregos, nórdicos, egípcios, astecas e romanos — que crescem de acampamento a megalópole, navegam, negociam, se casam, racham, guerreiam, cercam cidades, escravizam e se libertam. Cada mundo escreve a própria lenda. E você: uma entidade que observa e interfere.
 
 ## Como jogar
 
@@ -10,9 +10,9 @@ Um jogo de simulação divina que roda direto no navegador. Ilhas, continentes, 
 
 > Se preferir servir por HTTP: `npx serve .` ou `python3 -m http.server` dentro desta pasta.
 
-Em **NEW WORLD** você escolhe o **mapa** (Ilha, Continente, Arquipélago, Istmo ou Mar Aberto), o **tamanho** (64, 80 ou 96), quantos **povos** despertam (1 a 4), a **civilização** de cada um (ou sorteio, ou povos clássicos sem nome) e o **temperamento** deles (pacíficos, imprevisíveis ou belicosos).
+Em **NEW WORLD** você escolhe o **mapa** (Ilha, Continente, Arquipélago, Istmo ou Mar Aberto), o **tamanho** (Pequeno 64, Médio 80, Grande 96, **Enorme 128, Colossal 160 ou Titânico 192**), o **clima** (variado, frio, temperado, tropical ou árido), quantos **povos** despertam (1 a 4 — até 6 nos mapas enormes), a **civilização** de cada um (ou sorteio, ou povos clássicos sem nome) e o **temperamento** deles (pacíficos, imprevisíveis ou belicosos).
 
-O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fechar a aba). Use **CONTINUE** no menu para voltar ao seu mundo. Saves da versão anterior (um só povo) são convertidos automaticamente.
+O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fechar a aba) — os mapas grandes são compactados para caber. Use **CONTINUE** no menu para voltar ao seu mundo. Saves da versão anterior (um só povo) são convertidos automaticamente.
 
 ## Controles
 
@@ -23,7 +23,8 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Ver detalhes | clique num habitante, animal ou construção |
 | Seguir alguém | duplo clique no habitante · `F` |
 | Poderes | barra inferior ou teclas `1`–`8` da aba atual, depois clique no mapa |
-| Trocar aba de poderes | `Tab` (Dádivas · Ira · Terra · Mar · Palavra · Destino) |
+| Trocar aba de poderes | `Tab` (Dádivas · Ira · Terra · Mar · Natureza · Palavra · Destino) |
+| Minimapa | `M` · ou o ícone do mapa no topo (clique/arraste nele para voar até lá) |
 | O Livro do Mundo | `L` · ou o ícone do livro no topo |
 | Painel dos reinos | `R` · ou clique no chip do povo no topo |
 | Mostrar/ocultar fronteiras | `B` |
@@ -41,10 +42,35 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 - **Trilhas emergentes**: os caminhos mais usados viram estradas de terra.
 - **Famílias**: casais se formam, bebês nascem, crianças brincam e crescem, idosos morrem. Cemitérios, luto, funerais e árvore genealógica.
 - **Progressão orgânica**: Acampamento → Aldeia → Povoado → Comunidade Agrícola → Vila Artesã → Vila Sagrada → Vila Desenvolvida → Pequena Civilização. Com gente suficiente, grupos partem para fundar novos assentamentos.
-- **Natureza viva**: florestas que se espalham e regeneram, coelhos, cervos, javalis e lobos, peixes pulando, pássaros, vaga-lumes, nuvens, chuvas, tempestades, secas.
+- **Natureza viva**: florestas que se espalham e regeneram, peixes pulando, vaga-lumes, nuvens, chuvas, tempestades, secas (veja *Biomas* e *Animais* abaixo).
 - **Fogo de verdade**: se espalha com o vento, queima árvores, plantações e casas; moradores formam brigadas com baldes do poço; a chuva apaga.
 - **Dia e noite** com janelas acesas, tochas, fogueiras e braseiros.
 - **Eventos com moderação**: tempestades, secas, lobos, febre, estações de fertilidade, descobertas, viajantes chegando de barco.
+
+## Biomas e clima
+
+O clima nasce da latitude (neve ao norte, trópicos ao sul), da altitude, da umidade, dos rios e do mar. Cada mundo mistura **sete biomas**, cada um com chão, árvores, fertilidade, custo de caminhada, risco de fogo e bichos próprios:
+
+| Bioma | Árvores | Terra | Animais típicos |
+|---|---|---|---|
+| **Tundra gelada** | pinheiros nevados | quase nada cresce | renas, bois-almiscarados, lebres e raposas-do-ártico, ursos-polares, focas, pinguins |
+| **Taiga** | pinheiros e bétulas | pobre | renas, cervos, lobos, ursos, corvos |
+| **Floresta temperada** | carvalhos, bétulas, pinheiros | boa | coelhos, cervos, javalis, raposas, lobos, ursos, águias |
+| **Pântano** | salgueiros | fértil, mas lento de atravessar | rãs, capivaras, garças, flamingos, jiboias, crocodilos |
+| **Floresta tropical** | árvores gigantes e palmeiras | muito fértil | macacos, antas, capivaras, araras, jiboias, onças |
+| **Savana** | acácias e baobás | média; o capim pega fogo fácil | zebras, gazelas, girafas, elefantes, hipopótamos, hienas, leões, abutres |
+| **Deserto** | cactos e palmeiras de oásis | quase estéril | camelos, gazelas, lagartos, fenecos, víboras |
+
+Os povos preferem começar onde se sentem em casa (nórdicos no frio, egípcios junto ao deserto e ao rio, astecas na selva).
+
+## Animais e cadeias alimentares
+
+- **40 espécies** na terra, no mar (golfinhos, focas, baleias, tubarões, orcas, tartarugas) e no céu (gaivotas, águias, abutres, corvos, araras, garças, flamingos).
+- **Plantas → herbívoros → predadores → predadores de topo.** O capim cresce em cada pedaço de chão e é pastado; herbívoros comem capim, folhas e frutos; predadores caçam herbívoros; urso, leão, onça, crocodilo, tubarão, orca e águia estão no topo. Carniceiros (hienas, abutres, corvos) limpam as carcaças, e a carniça aduba o chão de novo.
+- Cada espécie tem **habitat**, **fome**, **idade**, **filhotes** e um **limite** que a terra aguenta. Se os lobos somem, os cervos explodem — e depois passam fome. Espécies extintas podem voltar, aos poucos, vindas de terras distantes.
+- Predadores perseguem, emboscam (onças, jiboias e crocodilos ficam de tocaia), e os mais ousados atacam gente sozinha — um bicho que mata duas pessoas ganha nome e vira lenda.
+- Os caçadores caçam o que existe por perto; os pescadores disputam os cardumes com as focas e as garças.
+- Clique num animal para ver o que ele come, quem o caça, onde vive e quantas vítimas fez. O **Bestiário** (no Livro do Mundo) mostra a teia alimentar inteira com as populações reais e sua história.
 
 ## Civilizações
 
@@ -62,7 +88,8 @@ Cada povo pode ser de uma civilização histórica — ou um povo clássico, sem
 
 ## Cidades que crescem
 
-- **Acampamento → Aldeia → Vila → Cidade → Metrópole**, com placas de nome sobre cada cidade.
+- **Acampamento → Aldeia → Vila → Cidade → Metrópole → Megalópole**, com placas de nome sobre cada cidade.
+- Nos mapas **Enorme, Colossal e Titânico** as cidades não ficam presas: uma capital pode passar de centenas de habitantes, com **quarteirões** de casas de pátio (quatro sobrados em volta de um pátio), várias praças, mercados, termas e teatros, e ruas que se espalham por dezenas de quadras. Em testes, um mundo 160×160 pacífico chegou a 1.000 habitantes e à primeira megalópole por volta do ano 100.
 - Casas evoluem para **sobrados** e **ínsulas**; surgem **praça**, **mercado**, **celeiro**, **biblioteca**, **teatro**, **termas**, **palácio**, **porto** e uma **maravilha** — tudo desenhado no estilo de cada civilização.
 - **Ruas** de cascalho e depois calçadas crescem do centro para fora; **estradas** e **pontes** ligam as cidades.
 - **Carroças** levam bens pelas **rotas internas** e pelas **rotas de comércio** entre povos amigos.
@@ -89,7 +116,7 @@ Cada povo pode ser de uma civilização histórica — ou um povo clássico, sem
 
 ## Poderes divinos
 
-Os poderes ficam em seis abas (`Tab` troca). Poderes marcados com ✦ abrem uma escolha antes de agir.
+Os poderes ficam em sete abas (`Tab` troca). Poderes marcados com ✦ abrem uma escolha antes de agir.
 
 | Aba | Poder | Custo | Efeito |
 |---|---|---|---|
@@ -115,6 +142,13 @@ Os poderes ficam em seis abas (`Tab` troca). Poderes marcados com ✦ abrem uma 
 | Mar | Tempestade | 45 | Ondas, raios e navios quebrados |
 | Mar | Maremoto | 90 | Uma onda gigante corre até a costa mais próxima e varre tudo |
 | Mar | Kraken | 70 | O monstro caça navios até ser morto pelas frotas ou voltar ao fundo |
+| Natureza | Chamar Animais ✦ | 16 | Um bando da espécie que você escolher, dentre as que vivem ali |
+| Natureza | Primavera Sagrada | 24 | Capim alto, arbustos carregados, flores — e os animais da área dão cria na hora |
+| Natureza | Grande Migração ✦ | 30 | Os rebanhos de uma espécie atravessam o mapa até o ponto escolhido; os predadores vão atrás |
+| Natureza | Domar Fera | 35 | Um predador vira guardião da cidade mais próxima: ataca feras e inimigos, usa coleira na cor do povo |
+| Natureza | Mudar o Clima ✦ | 50 | Neve eterna, taiga, bosque, pântano, selva, savana ou deserto: o chão, as árvores e os animais mudam junto |
+| Natureza | Gafanhotos | 38 | Uma nuvem voa até as plantações mais próximas e devora colheitas, capim e frutos |
+| Natureza | Fera Lendária | 85 | Um predador gigante típico daquela terra desperta, com nome e epíteto, para caçar gente |
 | Palavra | Profecia ✦ | 35 | Anuncie a queda, a grandeza, a morte do governante, a guerra ou a paz de uma cidade; se acontecer, a fé explode |
 | Palavra | Mandamento ✦ | 50 | Uma lei divina para um povo: *Não matarás*, *Crescei e multiplicai-vos*, *Trabalharás*, *Honrarás teu deus*, *Buscarás o saber*, *Guerra santa* |
 | Palavra | Inspiração ✦ | 60 | Revele a tecnologia que quiser a um povo |
@@ -137,7 +171,8 @@ Os poderes ficam em seis abas (`Tab` troca). Poderes marcados com ✦ abrem uma 
 Cada mundo nasce com **nome**, **mito da criação**, **lendas de origem** de cada povo (com seu deus e seu símbolo) e **duas profecias antigas** — que se cumprem quando o mundo, ou você, as faz acontecer. Depois o livro se escreve sozinho:
 
 - **Crônicas**: um capítulo a cada sete anos, com título e tom escolhidos pelo que dominou o período (*O Tempo das Espadas*, *A Era das Velas*, *Os Anos de Cinza*…), contado pelos cronistas do maior povo, com os fatos reais: guerras, conquistas, rachas, cidades, descobertas, nascimentos, mortes e intervenções divinas.
-- **Lendas**: heróis e profetas (com o fim de cada um), vulcões e seus mortos, o Kraken, cidades afogadas, ilhas que subiram do mar, maravilhas, eras de ouro, profecias cumpridas.
+- **Lendas**: heróis e profetas (com o fim de cada um), vulcões e seus mortos, o Kraken, feras devoradoras de gente e feras lendárias, guardiões domados, invernos sem fim e desertos que surgiram, pragas de gafanhotos, cidades afogadas, ilhas que subiram do mar, maravilhas, megalópoles, eras de ouro, profecias cumpridas.
+- **Bestiário**: todas as espécies do mundo em níveis da cadeia alimentar, com população, tendência, nascimentos, mortes por causa (fome, velhice, caçadores, cada predador) e extinções. Clique numa espécie para destacar o que ela come e quem a caça.
 - **Povos** e **Profecias**: a história de cada povo e o destino de cada palavra dita.
 
 ## Estrutura do código
@@ -148,6 +183,7 @@ css/style.css     interface
 js/util.js        RNG, ruído, heap, nomes
 js/civs.js        civilizações: nomes, traços, governos, unidades, tecnologias
 js/world.js       estado, geração dos mapas (ilha, continente, arquipélago, istmo), pathfinding A*
+js/biomes.js      clima, biomas, árvores e chão de cada bioma
 js/nature.js      árvores, arbustos, rochas, fogo, clima, nuvens
 js/village.js     construções, planejador, empregos, moradia, crônica, marcos, fé
 js/factions.js    povos: cores, bandeiras, estoques, território e fronteiras
@@ -157,15 +193,18 @@ js/city.js        níveis de cidade, novos edifícios, ruas, estradas, rotas, ca
 js/naval.js       portos, pesca, exploração, comércio marítimo, frotas, invasões, colônias
 js/siege.js       arqueiros, tropas de elite, muralhas, portões, aríetes, catapultas, sacrifícios
 js/villagers.js   IA dos habitantes (necessidades, decisões, tarefas)
-js/animals.js     presas e predadores
+js/animals.js     40 espécies, habitats, capim, cadeias alimentares, caça, filhotes, migrações, guardiões
 js/powers.js      poderes divinos e percepção
 js/miracles.js    Terra, Mar, Palavra, eras de ouro, maldições, heróis, muralhas divinas
-js/lore.js        gênese, profecias antigas, crônicas, lendas e o Livro do Mundo
+js/wild.js        aba Natureza: chamar animais, primavera, migração, domar, clima, gafanhotos, feras lendárias
+js/lore.js        gênese, profecias antigas, crônicas, lendas, bestiário e o Livro do Mundo
 js/events.js      eventos e viajantes de barco
 js/fx.js          partículas e efeitos
 js/art.js         arte procedural (sprites e vetores)
+js/fauna-art.js   o desenho de cada espécie
 js/arch.js        arquitetura de cada civilização
-js/render.js      renderizador isométrico, iluminação, clima
+js/render.js      renderizador isométrico (terreno em blocos com nível de detalhe), iluminação, clima
+js/minimap.js     minimapa com fronteiras e cidades
 js/audio.js       áudio sintetizado com WebAudio (efeitos, ambiente, música)
 js/save.js        salvar / carregar
 js/ui.js          interface

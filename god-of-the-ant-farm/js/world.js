@@ -234,7 +234,7 @@
   G.genWorld = function (seed, opts) {
     opts = opts || {};
     const mapType = G.MAP_TYPES[opts.type] ? opts.type : 'ilha';
-    const tribes = G.clamp(opts.tribes || 1, 1, 4);
+    const tribes = G.clamp(opts.tribes || 1, 1, N >= 128 ? 6 : 4);
     G._genTribes = tribes;
     const S = G.newState(seed);
     S.mapType = mapType; S.N = N;
@@ -258,7 +258,7 @@
     }
 
     // ---- river + lake (carved valley at sea level) ----
-    const rivers = mapType === 'arquipelago' || mapType === 'mar' ? 0 : mapType === 'ilha' ? (rng() < 0.8 ? 1 : 0) : (N >= 80 ? 2 : 1);
+    const rivers = (mapType === 'arquipelago' || mapType === 'mar' ? 0 : mapType === 'ilha' ? (rng() < 0.8 ? 1 : 0) : (N >= 80 ? 2 : 1)) + (N >= 160 ? 2 : N >= 128 ? 1 : 0);
     for (let rv = 0; rv < rivers; rv++) {
       // start on high-ish land
       let sx0 = cx, sy0 = cy, tries = 0;
@@ -463,7 +463,7 @@
     }
     cands.sort((a, b) => b[2] - a[2]);
     const starts = [];
-    let minD = tribes === 1 ? 0 : N * (tribes === 2 ? 0.5 : tribes === 3 ? 0.4 : 0.34);
+    let minD = tribes === 1 ? 0 : N * (tribes === 2 ? 0.5 : tribes === 3 ? 0.4 : tribes === 4 ? 0.34 : tribes === 5 ? 0.3 : 0.27);
     while (starts.length < tribes && minD >= 6) {
       for (const c of cands) {
         if (starts.length >= tribes) break;

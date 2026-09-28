@@ -120,6 +120,7 @@
     habCount = null;
   }
   A.invalidate = () => { habVer = -1; };
+  A.invalidateHab = () => { habCount = null; scaleKey = null; };
   const seaTemp = i => { const S = G.S; return S.temp ? S.temp[i] / 255 : 0.5; };
   const seaOK = (sp, i) => { const t = seaTemp(i); return sp.sea === 'cold' ? t < 0.36 : sp.sea === 'warm' ? t > 0.55 : sp.sea === 'mild' ? t > 0.22 : true; };
   // can this species live on this tile?
@@ -192,6 +193,7 @@
       // every field up front: one object shape keeps the hot loops fast
       lt: G.R() * 0.5, lifeMul: G.rr(0.8, 1.2), eating: 0, bite: 0, howl: 0, ph: G.R() * 6, leap: 0, spout: 0, flap: 0, ang: 0, perchZ: 0,
       swim: false, onPerson: false, named: null, kills: 0, shoal: 0, seek: false, sink: false, cause: null, raid: false, cd: 0, lod: 0, hx: x, hy: y,
+      tamed: 0, guardSet: 0, gt: false, gscan: 0, legend: false, big: 1, epithet: null, mig: false,
     }, extra || {});
     if (a.hx === undefined) { a.hx = a.x; a.hy = a.y; }
     S.animals.set(a.id, a);
@@ -199,11 +201,12 @@
   };
   A.remove = a => G.S.animals.delete(a.id);
   A.sp = a => SP[a.kind] || SP.rabbit;
-  A.huntable = a => { const sp = SP[a.kind]; return !!(sp && sp.hunt && !a.held && !a.air && !(sp.cls === 'water') && !(a.swim)); };
+  A.huntable = a => { const sp = SP[a.kind]; return !!(sp && sp.hunt && !a.held && !a.air && !(sp.cls === 'water') && !(a.swim) && !a.tamed && !a.legend); };
   // is this animal a danger to people right now?
   A.threat = function (a) {
     if (a.dead) return false; const sp = SP[a.kind]; if (!sp) return false;
-    if (a.summoned || a.raid) return true;
+    if (a.tamed) return false; // a city's guardian beast
+    if (a.summoned || a.raid || a.legend) return true;
     if (a.angry > 0) return true;
     const tg = a.target && G.S.villagers.get(a.target);
     return !!(tg && (a.state === 'chase' || a.state === 'lunge'));
@@ -388,11 +391,12 @@
       }
       a.angry = 0; a.state = 'idle';
     }
+    if (a.tamed && guardAI(a, dt)) return;
     a.scan -= dt;
     const hungry = a.hunger > (sp.diet === 'carn' || sp.diet === 'scav' ? 0.42 : 0.3);
     if (a.scan <= 0) {
       a.scan = 0.45 + G.R() * 0.3;
-      if (a.state !== 'chase' && a.state !== 'eat') {
+      if (a.state !== 'chase' && a.state !== 'eat' && !a.tamed && !a.legend) {
         const th = fearCheck(a);
         if (th && a.state !== 'lunge') {
           const p = fleeTarget(a, th.x, th.y, a.kind === 'rabbit' || a.kind === 'hare' || a.kind === 'frog' || a.kind === 'lizard' ? 4 : 6);
@@ -410,11 +414,11 @@
           let p = L && !L.dead && L.state === 'chase' && L.target ? S.animals.get(L.target) : null;
           if (!p || p.dead) p = findPrey(a, sp.ambush ? 6 : 10);
           if (p) { a.target = p.id; a.state = sp.ambush && G.dist(a.x, a.y, p.x, p.y) > 1.5 ? 'lunge' : 'chase'; a.t = sp.ambush ? 9 : 9; a.carc = false; }
-          else if (sp.bold > 0 && a.hunger > 0.7) {
-            // hungry and bold: a lone person looks like prey
+          else if ((sp.bold > 0 && a.hunger > 0.7 && !a.tamed) || (a.legend && a.hunger > 0.35)) {
+            // hungry and bold: a lone person looks like prey (a legend fears no crowd)
             const night = G.isNight();
-            const v = nearestVillager(a, a.kind === 'croc' ? 2.6 : 6, v => v.age >= 0 && crowdAt(v.x, v.y, 3) <= 1 && (a.kind !== 'croc' || S.type[W.idx(v.x, v.y)] <= T.RIVER || (dWater[W.idx(v.x, v.y)] <= 1)));
-            if (v && G.R() < sp.bold * (night ? 1.6 : 0.8)) { a.target = v.id; a.state = 'chase'; a.t = 8; a.carc = false; a.onPerson = true; }
+            const v = nearestVillager(a, a.legend ? 10 : a.kind === 'croc' ? 2.6 : 6, v => v.age >= 0 && (a.legend || crowdAt(v.x, v.y, 3) <= 1) && (a.legend || a.kind !== 'croc' || S.type[W.idx(v.x, v.y)] <= T.RIVER || (dWater[W.idx(v.x, v.y)] <= 1)));
+            if (v && G.R() < (a.legend ? 0.7 : sp.bold * (night ? 1.6 : 0.8))) { a.target = v.id; a.state = 'chase'; a.t = a.legend ? 14 : 8; a.carc = false; a.onPerson = true; }
           }
         }
       }
@@ -454,6 +458,12 @@
     // idle: eat, follow the herd, or roam the habitat
     a.moving = false;
     if (a.t > 0) return;
+    // migrants, guardians and legends keep to the place the god gave them
+    if (a.mig || a.tamed || a.legend) {
+      const dh = G.dist(a.x, a.y, a.hx, a.hy);
+      if (a.mig && dh < 3) a.mig = false;
+      else if (dh > (a.mig ? 2.5 : a.tamed ? 5 : 9)) { const h = homeward(a, a.mig ? 7 : 5); if (h) { a.tx = h[0]; a.ty = h[1]; a.state = 'wander'; a.seek = a.mig; return; } }
+    }
     if (hungry && (sp.diet === 'herb' || sp.diet === 'browse' || (sp.diet === 'omni' && a.hunger < 0.6))) {
       if (graze(a, dt)) { a.state = 'graze'; a.t = G.rr(3, 7); return; }
       if (sp.diet === 'omni') { const b = nearBush(a); if (b) { b.berries = Math.max(0, b.berries - 1); a.hunger = Math.max(0, a.hunger - 0.3); a.t = 3; return; } }
@@ -470,6 +480,35 @@
   }
   function nearBush(a) { const S = G.S; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = a.x + dx, y = a.y + dy; if (!W.inb(x, y)) continue; const o = S.objAt[W.idx(x, y)]; const b = o && S.bushes.get(o); if (b && b.berries > 0) return b; } return null; }
 
+  // a tamed beast guards its city: it runs down hostile beasts and enemy soldiers near home
+  function guardAI(a, dt) {
+    const S = G.S; const sp = SP[a.kind];
+    if (a.gt && a.state !== 'chase') a.gt = false;
+    if (a.gt) {
+      const tg = S.animals.get(a.target) || S.villagers.get(a.target);
+      if (!tg || tg.dead || tg.inside || tg.held || tg.air || G.dist(a.hx, a.hy, tg.x, tg.y) > 15) { a.state = 'idle'; a.target = 0; a.gt = false; a.t = 1; return true; }
+      if (G.dist(a.x, a.y, tg.x, tg.y) < 0.6 + sp.size * 0.3) { bite(a, tg, dt); return true; }
+      a.tx = tg.x; a.ty = tg.y; moveTo(a, dt, sp.run); return true;
+    }
+    a.gscan -= dt; if (a.gscan > 0) return false;
+    a.gscan = 0.7;
+    const f = G.Fac.get(a.tamed); if (!f || f.alive === false) { a.tamed = 0; return false; }
+    let best = null, bd = 144;
+    each(grid, a.hx, a.hy, 10, p => {
+      if (p === a || p.dead || p.tamed || p.held || p.air) return; const q = SP[p.kind]; if (!q || q.cls === 'water' || q.cls === 'air') return;
+      if (!A.threat(p) && !(p.onPerson && p.state === 'chase')) return;
+      const d = G.dist2(a.x, a.y, p.x, p.y); if (d < bd) { bd = d; best = p; }
+    });
+    if (!best) {
+      const foes = G.Fac.enemiesOf(a.tamed);
+      if (foes.length) {
+        const ids = new Set(foes.map(o => o.id));
+        each(vgrid, a.hx, a.hy, 10, v => { if (v.inside || v.held || v.captive || v.age < 14 || v.aboard) return; if (!ids.has(G.Fac.idOfV(v))) return; const d = G.dist2(a.x, a.y, v.x, v.y); if (d < bd) { bd = d; best = v; } });
+      }
+    }
+    if (best) { a.target = best.id; a.state = 'chase'; a.gt = true; a.carc = false; a.onPerson = false; a.t = 10; return true; }
+    return false;
+  }
   function bite(a, tg, dt) {
     const sp = SP[a.kind];
     a.moving = false; a.face = (tg.x - tg.y) - (a.x - a.y) > 0 ? 1 : -1;
@@ -477,7 +516,7 @@
     if (a.cd > 0) return;
     a.cd = 1.1; a.bite = 0.25;
     G.Audio && G.Audio.at(a.x, a.y, 'bite');
-    const dmg = 6 + sp.hp * 0.12 + (sp.apex ? 6 : 0);
+    const dmg = (6 + sp.hp * 0.12 + (sp.apex ? 6 : 0)) * (a.legend ? 2.2 : a.tamed ? 1.4 : 1);
     if (tg.kind) { // another animal
       A.damage(tg, dmg * (a.grown), a);
       if (tg.dead) { a.state = 'eat'; a.target = tg.id; a.t = 20; a.carc = true; a.onPerson = false; }
@@ -788,7 +827,8 @@
       return false;
     }
     a.age += dayF; if (a.grown < 1) a.grown = Math.min(1, a.grown + dayF / Math.max(0.5, sp.life * 0.12));
-    a.hunger += dayF * (sp.diet === 'carn' ? (sp.apex ? 0.42 : 0.55) : sp.diet === 'scav' ? 0.5 : sp.diet === 'filter' || sp.diet === 'insect' ? 0.35 : 0.8) * (a.summoned || a.raid ? 0 : 1);
+    a.hunger += dayF * (sp.diet === 'carn' ? (sp.apex ? 0.42 : 0.55) : sp.diet === 'scav' ? 0.5 : sp.diet === 'filter' || sp.diet === 'insect' ? 0.35 : 0.8) * (a.summoned || a.raid ? 0 : a.legend ? 0.6 : 1);
+    if (a.tamed) a.hunger = Math.max(0, a.hunger - dayF * 1.6); // its people feed it
     if (a.hunger >= 1) { a.hunger = 1; a.hp -= dt * sp.hp / (DAY() * 1.1); if (a.hp <= 0) { A.kill(a, null, 'hunger'); return false; } }
     else if (a.hp < a.maxHp && a.hunger < 0.5) a.hp = Math.min(a.maxHp, a.hp + dt * 0.5);
     const i = W.idx(a.x, a.y); const t = S.type[i];
@@ -808,7 +848,7 @@
   function breed(dt) {
     const S = G.S; const count = A.counts();
     for (const a of [...S.animals.values()]) {
-      if (a.dead || a.summoned || a.raid || a.grown < 1 || a.held || a.air) continue;
+      if (a.dead || a.summoned || a.raid || a.grown < 1 || a.held || a.air || a.tamed || a.legend) continue;
       const sp = SP[a.kind]; if (!sp) continue;
       if (a.hunger > (A.predator(a.kind) ? 0.65 : 0.45)) continue;
       const cap = A.capacity(a.kind); const n = count[a.kind] || 0;

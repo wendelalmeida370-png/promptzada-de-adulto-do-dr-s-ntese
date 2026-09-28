@@ -116,7 +116,7 @@
     intro.querySelectorAll('p').forEach(p => p.classList.remove('show'));
     setTimeout(() => intro.classList.add('hidden'), 700);
     G.Render.cam.x = M.introTo[0]; G.Render.cam.y = M.introTo[1]; G.Render.cam.zoom = G.Render.cam.tz = 2.0;
-    G.UI.showHUD(true);
+    G.UI.showHUD(true); G.Minimap.reset();
     setTimeout(() => G.UI.notice(G.Fac.all().length > 1 ? 'Dica: escolha um poder (teclas 1–8, Tab troca a aba) e clique no mapa. R abre o painel dos Reinos.' : 'Dica: escolha um poder na barra de baixo (teclas 1–8, Tab troca a aba) e clique no mapa.', 'eye'), 1500);
   }
   function updateIntro(dt) {
@@ -142,7 +142,7 @@
     $('#intro').classList.add('hidden');
     M.mode = 'game';
     G.UI.setSpeed(1);
-    G.UI.showHUD(true);
+    G.UI.showHUD(true); G.Minimap.reset();
     G.UI.viewFac = (G.Fac.all().sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id))[0] || {}).id || 0;
     G.UI.notice(`Bem-vindo de volta. Dia ${G.S.day}, ${G.S.villagers.size} habitantes.`, 'eye');
   };
@@ -177,7 +177,7 @@
   };
 
   // ------------------------------ picking ------------------------------
-  const BH = { campfire: 12, hut: 26, house: 28, storehouse: 34, farm: 6, well: 22, workshop: 40, temple: 46, monument: 72, cemetery: 10, ruin: 8, quartel: 38, torre: 46, cercado: 10 };
+  const BH = { quarteirao: 70, sobrado: 44, insula: 56, campfire: 12, hut: 26, house: 28, storehouse: 34, farm: 6, well: 22, workshop: 40, temple: 46, monument: 72, cemetery: 10, ruin: 8, quartel: 38, torre: 46, cercado: 10 };
   function pick(px, py, mobileOnly) {
     const S = G.S; const R = G.Render; const cam = R.cam;
     let best = null, bd = 1e9;
@@ -276,7 +276,7 @@
       e.preventDefault();
       if (M.mode !== 'game') return;
       const cam = G.Render.cam;
-      cam.tz = G.clamp(cam.tz * Math.exp(-e.deltaY * 0.0016), 0.55, 3.6);
+      cam.tz = G.clamp(cam.tz * Math.exp(-e.deltaY * 0.0016), G.Render.minZoom(), 3.6);
       cam.anchor = [e.clientX, e.clientY];
     }, { passive: false });
     window.addEventListener('keydown', e => {
@@ -290,6 +290,7 @@
       else if (k === 'Tab') { e.preventDefault(); G.UI.nextTab(e.shiftKey ? -1 : 1); }
       else if (k === 'r' || k === 'R') G.UI.openRealms();
       else if (k === 'l' || k === 'L') G.Lore.openBook();
+      else if (k === 'm' || k === 'M') G.Minimap.toggle();
       else if (k === 'b' || k === 'B') { G.Render.showBorders = !G.Render.showBorders; G.UI.notice(G.Render.showBorders ? 'Fronteiras visíveis.' : 'Fronteiras ocultas.', 'eye'); }
       else if (k === ' ') { e.preventDefault(); if (G.speed === 0) G.UI.setSpeed(M.lastSpeed || 1); else { M.lastSpeed = G.speed; G.UI.setSpeed(0); } }
       else if (k === 'Escape') { if (I.held) release(); else if (I.power) G.UI.setPower(null); else if (G.UI.selected) G.UI.select(null); else G.UI.openPause(); }
@@ -317,7 +318,7 @@
       e.preventDefault();
       if (pinch && e.touches.length === 2) {
         const [a, b] = e.touches; const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-        G.Render.cam.tz = G.clamp(pinch.z * d / pinch.d, 0.55, 3.6); G.Render.cam.anchor = [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2]; return;
+        G.Render.cam.tz = G.clamp(pinch.z * d / pinch.d, G.Render.minZoom(), 3.6); G.Render.cam.anchor = [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2]; return;
       }
       const t = e.touches[0]; if (!tStart) return;
       if (I.held) { I.held.sx = t.clientX; I.held.sy = t.clientY; I.held.hist.unshift([performance.now(), t.clientX, t.clientY]); if (I.held.hist.length > 12) I.held.hist.pop(); return; }
@@ -396,6 +397,7 @@
       G.Audio.update(rdt);
       if (M.mode === 'game') {
         G.UI.update(rdt);
+        G.Minimap.update(rdt);
         saveT += rdt; if (saveT > 45) { saveT = 0; G.Save.save(true); }
       }
     }
@@ -405,6 +407,7 @@
   window.addEventListener('load', () => {
     G.Render.init($('#game'));
     G.UI.init();
+    G.Minimap.init();
     setupInput();
     M.toMenu();
     requestAnimationFrame(loop);

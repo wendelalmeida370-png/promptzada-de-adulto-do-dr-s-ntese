@@ -9,6 +9,21 @@
   const Sv = G.Save = {};
   const r = (v, d) => { const m = Math.pow(10, d || 0); return Math.round(v * m) / m; };
   const arr = (a, d) => Array.from(a, v => r(v, d));
+  // compact encodings for the per-tile arrays (big maps would not fit in localStorage otherwise)
+  // z: zero runs -> negative counts (arrays of values >= 0, mostly zero)
+  const zr = (a, m) => { const o = []; let z = 0; for (let k = 0; k < a.length; k++) { const v = Math.round(a[k] * m); if (v <= 0) { z++; continue; } if (z) { o.push(-z); z = 0; } o.push(v); } if (z) o.push(-z); return { z: o, m }; };
+  // e: plain run-length pairs (tile types)
+  const rl = a => { const o = []; let v = a[0], n = 0; for (let k = 0; k < a.length; k++) { if (a[k] === v) n++; else { o.push(v, n); v = a[k]; n = 1; } } o.push(v, n); return { e: o }; };
+  // d: fixed-point deltas (smooth heights)
+  const dl = (a, m) => { const o = new Array(a.length); let p = 0; for (let k = 0; k < a.length; k++) { const v = Math.round(a[k] * m); o[k] = v - p; p = v; } return { d: o, m }; };
+  function setArr(into, o) {
+    if (!o) return;
+    if (Array.isArray(o)) { into.set(o); return; }
+    if (o.z) { let p = 0; const m = o.m || 1; for (const v of o.z) { if (v < 0) { into.fill(0, p, p - v); p -= v; } else into[p++] = v / m; } }
+    else if (o.e) { let p = 0; for (let k = 0; k < o.e.length; k += 2) { into.fill(o.e[k], p, p + o.e[k + 1]); p += o.e[k + 1]; } }
+    else if (o.d) { let v = 0; const m = o.m || 1; for (let k = 0; k < o.d.length; k++) { v += o.d[k]; into[k] = v / m; } }
+  }
+  Sv.setArr = setArr;
 
   Sv.has = function () { try { return !!localStorage.getItem(KEY); } catch (e) { return false; } };
   Sv.info = function () {
@@ -29,8 +44,8 @@
     });
     const out = {
       v: S.v, seed: S.seed, day: S.day, time: r(S.time, 4), clock: r(S.clock, 1), savedAt: Date.now(),
-      H: arr(S.H, 2), type: Array.from(S.type), fert: arr(S.fert, 2), wear: arr(S.wear, 0), burnt: arr(S.burnt, 0), scar: arr(S.scar, 0),
-      wet: arr(S.wet, 2), fire: arr(S.fire, 2), fireT: arr(S.fireT, 0), bloom: arr(S.bloom, 0),
+      H: dl(S.H, 100), type: rl(S.type), fert: zr(S.fert, 100), wear: zr(S.wear, 1), burnt: zr(S.burnt, 1), scar: zr(S.scar, 1),
+      wet: zr(S.wet, 100), fire: zr(S.fire, 100), fireT: zr(S.fireT, 1), bloom: zr(S.bloom, 1),
       nextId: S.nextId,
       trees: [...S.trees.values()].map(t => [t.id, r(t.x, 2), r(t.y, 2), t.kind, r(t.size, 2), r(t.maxSize, 2), t.stage === 'fall' ? 'log' : t.stage, t.wood, t.v, r(t.t, 0), t.fallDir, t.burntLog ? 1 : 0, r(t.chop, 1)]),
       rocks: [...S.rocks.values()].map(o => [o.id, r(o.x, 2), r(o.y, 2), o.stone, o.max, o.v, o.meteor ? 1 : 0]),
@@ -38,7 +53,7 @@
       buildings: [...S.buildings.values()].map(b => { const o = Object.assign({}, b); delete o.res; if (o.crops) o.crops = o.crops.map(c => ({ s: c.s, g: r(c.g, 3), c: 0 })); o.incoming = { wood: 0, stone: 0 }; return o; }),
       villagers: vill,
       dead: [...S.dead.values()],
-      animals: [...S.animals.values()].map(a => ({ id: a.id, kind: a.kind, x: r(a.x, 2), y: r(a.y, 2), z: r(a.z || 0, 0), age: r(a.age || 0, 2), grown: r(a.grown === undefined ? 1 : a.grown, 2), hunger: r(a.hunger || 0, 2), named: a.named, kills: a.kills, sink: a.sink, hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: r(a.meat, 1), rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0 })),
+      animals: [...S.animals.values()].map(a => ({ id: a.id, kind: a.kind, x: r(a.x, 2), y: r(a.y, 2), z: r(a.z || 0, 0), age: r(a.age || 0, 2), grown: r(a.grown === undefined ? 1 : a.grown, 2), hunger: r(a.hunger || 0, 2), named: a.named, kills: a.kills, sink: a.sink, hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: r(a.meat, 1), rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0, hx: r(a.hx, 1), hy: r(a.hy, 1), lifeMul: r(a.lifeMul || 1, 2), tamed: a.tamed || 0, guardSet: a.guardSet || 0, legend: a.legend || false, big: a.big || 1, epithet: a.epithet || null, mig: a.mig || false })),
       settlements: [...S.settlements.values()],
       N: S.N || N, mapType: S.mapType, temper: S.temper || 'normal', divinePeace: S.divinePeace || 0,
       factions: [...S.factions.values()].map(f => { const o = Object.assign({}, f); o.rel = {}; for (const k in f.rel) if (+k > f.id) o.rel[k] = Object.assign({}, f.rel[k], { envoy: 0 }); o.targets = null; o.coup = null; o.rev = null; o.revolt = null; o.exec = null; return o; }), usedNames: S.usedNames || [], starts: S.starts,
@@ -74,8 +89,8 @@
     S.N = o.N || 64; S.mapType = o.mapType || 'ilha'; S.usedNames = o.usedNames || []; S.starts = o.starts || [o.start]; S.temper = o.temper || 'normal'; S.divinePeace = o.divinePeace || 0;
     G.S = S;
     S.day = o.day; S.time = o.time; S.clock = o.clock; S.nextId = o.nextId;
-    S.H.set(o.H); S.type.set(o.type); S.fert.set(o.fert); S.wear.set(o.wear); S.burnt.set(o.burnt); S.scar.set(o.scar);
-    S.wet.set(o.wet); S.fire.set(o.fire); S.fireT.set(o.fireT); S.bloom.set(o.bloom || []);
+    setArr(S.H, o.H); setArr(S.type, o.type); setArr(S.fert, o.fert); setArr(S.wear, o.wear); setArr(S.burnt, o.burnt); setArr(S.scar, o.scar);
+    setArr(S.wet, o.wet); setArr(S.fire, o.fire); setArr(S.fireT, o.fireT); setArr(S.bloom, o.bloom);
     for (const a of o.trees) {
       const t = { id: a[0], x: a[1], y: a[2], kind: a[3], size: a[4], maxSize: a[5], stage: a[6], wood: a[7], v: a[8], t: a[9], fallDir: a[10], burntLog: !!a[11], chop: a[12] || 0, claim: 0, ph: Math.random() * 6.28, fallT: 1 };
       S.trees.set(t.id, t); S.treeAt[W.idx(t.x, t.y)] = t.id;

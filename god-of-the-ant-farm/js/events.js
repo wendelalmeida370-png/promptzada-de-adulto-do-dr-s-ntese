@@ -32,9 +32,9 @@
     rain: { txt: 'chuva', powers: ['rain'], ask: 'Eles rezam por chuva' },
     fire: { txt: 'chuva para apagar o fogo', powers: ['rain'], ask: 'Eles imploram por chuva sobre o fogo' },
     heal: { txt: 'cura', powers: ['heal'], ask: 'Eles rezam pelos doentes' },
-    harvest: { txt: 'fartura', powers: ['growth', 'fertility', 'golden', 'shoal', 'forest'], ask: 'Eles rezam por comida' },
-    protect: { txt: 'proteção contra os lobos', powers: ['lightning', 'meteor'], ask: 'Eles rezam por proteção' },
-    war: { txt: 'proteção contra os invasores', powers: ['lightning', 'meteor', 'wolves', 'quake', 'peace', 'divwall', 'hero'], ask: 'Eles rezam contra os invasores' },
+    harvest: { txt: 'fartura', powers: ['growth', 'fertility', 'golden', 'shoal', 'forest', 'spring', 'summon', 'migrate'], ask: 'Eles rezam por comida' },
+    protect: { txt: 'proteção contra as feras', powers: ['lightning', 'meteor', 'tame'], ask: 'Eles rezam por proteção' },
+    war: { txt: 'proteção contra os invasores', powers: ['lightning', 'meteor', 'wolves', 'quake', 'peace', 'divwall', 'hero', 'beast', 'locusts'], ask: 'Eles rezam contra os invasores' },
     free: { txt: 'liberdade', powers: ['liberate'], ask: 'Os cativos rezam por liberdade' },
     tyrant: { txt: 'se livrar do tirano', powers: ['lightning', 'anoint'], ask: 'Eles rezam em segredo contra o tirano' },
   };

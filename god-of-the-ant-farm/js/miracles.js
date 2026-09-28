@@ -138,7 +138,7 @@
     if (id === 'prophecy') {
       const s = setAt(x, y, 12); if (!s) return [];
       const f = G.Fac.get(s.fac); const war = f && G.Fac.enemiesOf(f.id).length > 0; const ruler = f && G.Politics.ruler(f);
-      return Object.keys(PROPH).filter(k => (k !== 'morte' || ruler) && (k !== 'sangue' || !war) && (k !== 'paz' || war) && (k !== 'grandeza' || (s.tier || 0) < 4))
+      return Object.keys(PROPH).filter(k => (k !== 'morte' || ruler) && (k !== 'sangue' || !war) && (k !== 'paz' || war) && (k !== 'grandeza' || (s.tier || 0) < 5))
         .map(k => ({ k, name: PROPH[k].name, desc: PROPH[k].desc }));
     }
     return [];
@@ -629,7 +629,7 @@
     const S = G.S; const m = M(); const s = setAt(x, y, 12); if (!s || !PROPH[kind]) return;
     const f = G.Fac.get(s.fac); const ruler = f && G.Politics.ruler(f);
     const days = PROPH[kind].days;
-    const nextTier = G.City.TIERS[Math.min(4, (s.tier || 0) + 1)];
+    const nextTier = G.City.TIERS[Math.min(5, (s.tier || 0) + 1)];
     const TXT = {
       queda: `“${s.name} cairá antes do ${days}º amanhecer.”`,
       grandeza: `“${s.name} será ${G.gen(nextTier) === 'a' ? 'uma' : 'um'} ${nextTier.toLowerCase()} antes do ${days}º amanhecer.”`,

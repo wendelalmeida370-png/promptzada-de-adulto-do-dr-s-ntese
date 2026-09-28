@@ -263,9 +263,9 @@
     const S = G.S; const def = G.BDEF[type];
     if (type === 'doca' && G.City) return G.City.dockSite(set);
     const pop = V.pop(set.id);
-    const R = Math.min(17 + (def.w >= 3 ? 2 : 0), Math.round(6 + Math.sqrt(pop + 1) * 1.5 + (def.w >= 3 ? 2 : 0)));
+    const R = Math.min(17 + (set.tier || 0) * 3 + (def.w >= 3 ? 2 : 0), Math.round(6 + Math.sqrt(pop + 1) * 1.5 + (def.w >= 3 ? 2 : 0)));
     const counts = {}; for (const b of S.buildings.values()) if (b.set === set.id) counts[b.type] = (counts[b.type] || 0) + 1;
-    const homes = (counts.hut || 0) + (counts.house || 0) + (counts.sobrado || 0) + (counts.insula || 0);
+    const homes = (counts.hut || 0) + (counts.house || 0) + (counts.sobrado || 0) + (counts.insula || 0) + (counts.quarteirao || 0);
     let best = null, bestSc = -1e9;
     const cxi = Math.floor(set.cx), cyi = Math.floor(set.cy);
     for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
@@ -352,7 +352,7 @@
     const isMain = G.Fac.capitalOf(fac.id) === set;
     const facHas = type => G.Fac.has(fac.id, type);
     if (!c.campfire) { const b = V.startProject(set, 'campfire'); if (b) { set.campfire = b.id; } return; }
-    const maxSites = Math.min(4 + Math.max(0, (set.tier || 0) - 2), 1 + Math.floor(pop / 11));
+    const maxSites = Math.min(4 + Math.max(0, (set.tier || 0) - 2) * 2, 1 + Math.floor(pop / 11));
     if (c.sites >= maxSites) return;
     const st = fac.stock; const cap = V.cap(fac.id);
     const workshop = facHas('workshop');
@@ -542,15 +542,17 @@
   // ------------------------------ expansion ------------------------------
   function checkExpansion() {
     const S = G.S;
-    const maxSets = N >= 96 ? 9 : N >= 80 ? 7 : 5;
+    const maxSets = N >= 192 ? 24 : N >= 160 ? 19 : N >= 128 ? 14 : N >= 96 ? 9 : N >= 80 ? 7 : 5;
     if (S.settlements.size >= maxSets) return;
     for (const set of [...S.settlements.values()]) {
       // Romans and Norse spread further; capitals keep growing into cities instead of always splitting
       const ex = G.Civ.t(set.fac, 'expansion');
-      if (G.Fac.settlementsOf(set.fac).length >= (ex > 1.1 ? 5 : 4)) continue;
+      if (G.Fac.settlementsOf(set.fac).length >= (ex > 1.1 ? 5 : 4) + (N >= 128 ? Math.floor(N / 48) : 0)) continue;
       const pop = V.pop(set.id);
       const cap = G.Fac.capitalOf(set.fac) === set;
-      const need = Math.round((cap ? 44 : 34) / ex);
+      // real cities keep their people and grow up and out instead of sending settlers away
+      const crowd = G.City ? G.City.crowdCap(set.id) : 48;
+      const need = Math.round(Math.max((cap ? 44 : 34) / ex, (set.tier || 0) >= 3 ? crowd * 0.9 : 0));
       if (!(pop >= need || (pop >= Math.round(26 / ex) && set.fails >= 6))) continue;
       if (S.day - set.founded < 8) continue;
       if (G.R() > 0.5) continue;
@@ -777,6 +779,7 @@
         }
         s.emptyT = 0;
         plan(s);
+        if (V.pop(s.id) >= 100) plan(s); // big cities run several building projects at once
       }
     }
   };

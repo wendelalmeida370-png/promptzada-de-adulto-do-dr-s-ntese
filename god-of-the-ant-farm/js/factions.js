@@ -74,7 +74,7 @@
     for (const s of S.settlements.values()) {
       const pop = G.Village.pop(s.id);
       let nb = 0; for (const b of S.buildings.values()) if (b.set === s.id && b.built) nb++;
-      const R = Math.min(18, 6 + Math.sqrt(pop) * 1.3 + nb * 0.15);
+      const R = Math.min(18 + (s.tier || 0) * 3, 6 + Math.sqrt(pop) * 1.3 + nb * 0.15);
       s.radius = R;
       const x0 = Math.floor(s.cx - R), x1 = Math.ceil(s.cx + R), y0 = Math.floor(s.cy - R), y1 = Math.ceil(s.cy + R);
       for (let y = Math.max(0, y0); y <= Math.min(N - 1, y1); y++) for (let x = Math.max(0, x0); x <= Math.min(N - 1, x1); x++) {

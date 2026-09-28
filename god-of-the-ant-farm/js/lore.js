@@ -122,7 +122,7 @@
     const S = G.S; const st = S.stats;
     return { from: S.day, b0: st.births || 0, d0: st.deaths || 0, k0: st.godKills || 0, p0: Object.assign({}, st.powers || {}), pop0: S.villagers.size, ic: {}, notes: [] };
   }
-  const MAJOR = { tech: 1, gov: 1, city: 1, wonder: 1, aqueduct: 1, route: 1, contact: 1, colony: 1, wall: 1, sacrifice: 1, raise: 1, sink: 1, forest: 1, volcano: 1, volcanoSleep: 1, volcanoWake: 1, tsunami: 1, kraken: 1, krakenSlain: 1, krakenGone: 1, prophecy: 1, prophecyDone: 1, prophecyFail: 1, law: 1, sign: 1, vision: 1, golden: 1, goldenEnd: 1, curse: 1, hero: 1, divwall: 1, sin: 1, war: 1, peace: 1, conquer: 1, massacre: 1, split: 1, extinct: 1, crown: 1, meteor: 1, beast: 1, extinctSpecies: 1 };
+  const MAJOR = { tech: 1, gov: 1, city: 1, wonder: 1, aqueduct: 1, route: 1, contact: 1, colony: 1, wall: 1, sacrifice: 1, raise: 1, sink: 1, forest: 1, volcano: 1, volcanoSleep: 1, volcanoWake: 1, tsunami: 1, kraken: 1, krakenSlain: 1, krakenGone: 1, prophecy: 1, prophecyDone: 1, prophecyFail: 1, law: 1, sign: 1, vision: 1, golden: 1, goldenEnd: 1, curse: 1, hero: 1, divwall: 1, sin: 1, war: 1, peace: 1, conquer: 1, massacre: 1, split: 1, extinct: 1, crown: 1, meteor: 1, beast: 1, extinctSpecies: 1, tamed: 1, legendBeast: 1, climate: 1, migration: 1, locusts: 1 };
 
   // ------------------------------ legends ------------------------------
   function legend(key, title, text, o) {
@@ -169,9 +169,14 @@
       case 'sacrifice': if (!lore().legends.some(q => q.kind === 'sangue' && q.fac === d.fac)) legend('sacrifice:' + d.fac, `O Primeiro Sacrifício ${deF(d.fac)}`, `No ano ${S.day}, ${d.name || 'um cativo'} subiu os degraus do templo e não desceu. ${G.cap(chron)} dizem que o sol precisava.`, { kind: 'sangue', fac: d.fac }); break;
       case 'prophecyDone': legend('prophecy:' + d.id, `A Profecia de ${d.setName}`, `No ano ${d.day} uma voz do céu disse a ${d.setName}: ${d.text} No ano ${S.day}, aconteceu.`, { kind: 'profecia' }); break;
       case 'beast': { const sp = G.Animals.DEF[d.kind]; legend('beast:' + d.name, `${d.name}, ${sp.g === 'f' ? 'a Devoradora' : 'o Devorador'}`, `No ano ${S.day}, ${sp.nameA}${d.where ? ' dos arredores de ' + d.where : ''} provou carne humana e gostou. Deram-lhe um nome, como se dá aos reis: ${d.name}.`, { kind: 'fera' }); break; }
+      case 'legendBeast': { const sp = G.Animals.DEF[d.kind]; legend('beast:' + d.name, `${d.name}, ${d.title}`, `No ano ${S.day}, a terra${d.where ? ' perto de ' + d.where : ''} tremeu e dela saiu ${sp.nameA} do tamanho de uma casa. Os caçadores lhe deram um nome antes de fugir: ${d.name}.`, { kind: 'fera' }); break; }
+      case 'tamed': { const sp = G.Animals.DEF[d.kind]; legend('tamed:' + d.name, `${d.name}, ${sp.g === 'f' ? 'a Guardiã' : 'o Guardião'} de ${d.setName}`, `No ano ${S.day}, ${sp.nameA} selvagem entrou em ${d.setName} e ninguém fugiu: os céus a tinham domado. Desde então, ${d.name} dorme na porta da cidade e ataca quem vem com más intenções.`.replace('a tinham', sp.g === 'f' ? 'a tinham' : 'o tinham'), { kind: 'fera', fac: d.fac }); break; }
+      case 'climate': { const TT = ['A Primavera Devolvida', 'O Inverno Sem Fim', 'Os Pinheiros Escuros', 'As Águas Paradas', 'A Selva de Uma Noite', 'O Capim Dourado', 'O Ano em que a Terra Secou']; const TX = ['os bosques voltaram, verdes e mansos', 'a neve caiu e nunca mais derreteu', 'pinheiros escuros cobriram a terra', 'o chão virou lama e as águas não baixaram mais', 'árvores gigantes brotaram numa só noite', 'o capim ficou dourado e as acácias se abriram', 'a chuva parou para sempre e a areia tomou tudo']; legend('climate:' + S.day + ':' + d.b, TT[d.b] + (d.where ? ` de ${d.where}` : ''), `No ano ${S.day}${d.where ? ', perto de ' + d.where : ''}, ${TX[d.b]}. Os velhos juram que foi castigo; os jovens, que foi presente.`, { kind: 'terra' }); break; }
+      case 'locusts': if (d.ate >= 8) legend('locusts:' + S.day, `A Praga dos Gafanhotos`, `No ano ${S.day} o céu escureceu ao meio-dia e zumbiu${d.where ? ' sobre ' + d.where : ''}. Quando a nuvem passou, ${d.ate} canteiros estavam nus. Naquele inverno, comeu-se casca de árvore.`, { kind: 'peste' }); break;
       case 'beastDied': append('beast:' + d.name, d.by ? `Foi abatid${G.Animals.DEF[d.kind].g === 'f' ? 'a' : 'o'} por ${d.by} no ano ${S.day}. Penduraram a pele na praça.` : `Morreu no ano ${S.day}, e ninguém sabe onde estão seus ossos.`); break;
       case 'law': { const p = lore().peoples[d.fac]; if (p) p.law = `Desde o ano ${S.day}, segue o mandamento “${d.name}”.`; break; }
-      case 'city': if (d.tier >= 4) legend('metropole:' + d.set, `${d.name}, a Grande`, `No ano ${S.day}, ${d.name} tornou-se uma metrópole — a primeira ${deF(d.fac)} tão grande que ninguém conhecia todas as suas ruas.`, { kind: 'cidade' }); break;
+      case 'city': if (d.tier >= 5) legend('mega:' + d.set, `${d.name}, a Infinita`, `No ano ${S.day}, ${d.name} já não cabia em si: bairros e mais bairros de prédios altos, mercados que nunca fechavam, gente de todos os povos. Os viajantes a chamavam de ${d.name}, a Infinita.`, { kind: 'cidade' });
+        if (d.tier === 4) legend('metropole:' + d.set, `${d.name}, a Grande`, `No ano ${S.day}, ${d.name} tornou-se uma metrópole — a primeira ${deF(d.fac)} tão grande que ninguém conhecia todas as suas ruas.`, { kind: 'cidade' }); break;
     }
   };
 
@@ -261,6 +266,11 @@
     const sins = N.filter(n => n.k === 'sin'); if (sins.length) out.push(`${fn(sins[0].fac)} quebrou o mandamento sagrado.`);
     const prDone = N.filter(n => n.k === 'prophecyDone'); if (prDone.length) out.push(`${prDone.length > 1 ? prDone.length + ' profecias se cumpriram' : 'Cumpriu-se a profecia sobre ' + prDone[0].setName}.`);
     const gone = N.filter(n => n.k === 'extinctSpecies'); if (gone.length) out.push(`${gone.map(n => G.cap(G.Animals.plural(G.Animals.DEF[n.kind], 2).replace(/^2 /, ''))).join(', ')} ${gone.length > 1 ? 'sumiram' : 'sumiram'} do mundo.`);
+    const legs = N.filter(n => n.k === 'legendBeast'); if (legs.length) out.push(`${legs.map(n => n.name + ', ' + n.title).join(' e ')} ${legs.length > 1 ? 'despertaram' : 'despertou'} para caçar gente.`);
+    const tames = N.filter(n => n.k === 'tamed'); if (tames.length) out.push(tames.map(n => `${n.name} passou a guardar ${n.setName}`).join('; ') + '.');
+    const clim = N.filter(n => n.k === 'climate'); if (clim.length) out.push(`O clima mudou${clim.length > 1 ? ' ' + clim.length + ' vezes' : ''} pela vontade dos céus${clim[0].where ? ', a começar perto de ' + clim[0].where : ''}.`);
+    const migs = N.filter(n => n.k === 'migration'); if (migs.length) out.push(migs.slice(0, 2).map(n => `${G.Animals.plural(G.Animals.DEF[n.kind], n.n)} atravessaram a terra${n.where ? ' até ' + n.where : ''}`).join('; ') + '.');
+    const loc = N.filter(n => n.k === 'locusts' && n.ate); if (loc.length) out.push(`Gafanhotos devoraram ${loc.reduce((q, n) => q + n.ate, 0)} canteiros de plantação.`);
     const beasts = N.filter(n => n.k === 'beast'); if (beasts.length) out.push(`${beasts.map(n => n.name).join(' e ')} ${beasts.length > 1 ? 'aterrorizaram' : 'aterrorizou'} os caminhos.`);
     const heroes = N.filter(n => n.k === 'hero'); if (heroes.length) out.push(`${heroes.map(n => n.name).join(' e ')} ${heroes.length > 1 ? 'foram escolhidos' : 'foi escolhid' + (heroes[0].g === 'f' ? 'a' : 'o')} pelos céus.`);
     const signs = N.filter(n => n.k === 'sign'); if (signs.length) out.push(`${signs.length > 1 ? 'Sinais' : 'Um sinal'} no céu — ${signs.map(n => ({ cometa: 'um cometa', eclipse: 'um eclipse', aurora: 'uma aurora', estrelas: 'uma chuva de estrelas' })[n.kind]).join(', ')} — mudou o humor dos povos.`);
@@ -308,7 +318,70 @@
 
   // ------------------------------ the book ------------------------------
   L.tab = 'genese';
-  const TABS = [['genese', 'Gênese'], ['cronicas', 'Crônicas'], ['lendas', 'Lendas'], ['povos', 'Povos'], ['profecias', 'Profecias']];
+  const TABS = [['genese', 'Gênese'], ['cronicas', 'Crônicas'], ['lendas', 'Lendas'], ['povos', 'Povos'], ['bestiario', 'Bestiário'], ['profecias', 'Profecias']];
+
+  // ------------------------------ the bestiary: the living food web, in numbers ------------------------------
+  L.bestSel = null;
+  const EATS = { herb: 'capim e ervas', browse: 'folhas, frutos e brotos', insect: 'insetos', fish: 'peixes', filter: 'plâncton e algas', carn: '', omni: 'frutos, raízes', scav: 'carniça' };
+  const CAUSE = { hunger: 'fome', old: 'velhice', fire: 'fogo', gente: 'caçadores', stranded: 'encalhe', other: 'outras causas', hunt: 'caçadores', lava: 'lava', wave: 'maremoto', god: 'os céus' };
+  const spCol = d => (d.col && d.col[0]) || (d.q && d.q.col) || (d.b && d.b.col) || { dolphin: '#6a8aa8', shark: '#7a8a96', orca: '#1e2228', whale: '#4a5a6e', turtle: '#6a8a4a', seal: '#8a8a86', penguin: '#2a2a30', elephant: '#8a8a8e', giraffe: '#e0a84a', wolf: '#8a8a90', boar: '#6a4a36', croc: '#5a6a3a', frog: '#6aa84a' }[d.id] || '#b8a890';
+  function spark(vals, w, h, cap) {
+    if (vals.length < 2) return '';
+    const mx = Math.max(1, cap || 0, ...vals);
+    const pts = vals.map((v, k) => `${(k / (vals.length - 1) * w).toFixed(1)},${(h - 1 - v / mx * (h - 2)).toFixed(1)}`).join(' ');
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${cap ? `<line x1="0" x2="${w}" y1="${(h - 1 - cap / mx * (h - 2)).toFixed(1)}" y2="${(h - 1 - cap / mx * (h - 2)).toFixed(1)}" class="cap"/>` : ''}<polyline points="${pts}"/></svg>`;
+  }
+  function bestiary() {
+    const S = G.S; const A = G.Animals; const D = A.DEF; const eco = S.eco || { deaths: {}, born: {} };
+    const cnt = A.counts(); const hist = eco.hist || [];
+    const series = k => hist.map(h => h.c[k] || 0).concat([cnt[k] || 0]);
+    const live = A.ids.filter(k => A.capacity(k) > 0 || cnt[k] || (eco.gone && eco.gone[k]));
+    const absent = A.ids.length - live.length;
+    const sel = L.bestSel && D[L.bestSel] ? L.bestSel : null;
+    const preyOf = sel ? new Set(D[sel].prey || []) : null, predOf = sel ? new Set(A.eatenBy[sel] || []) : null;
+    let tot = 0; for (const k in cnt) tot += cnt[k];
+    const born = Object.values(eco.born || {}).reduce((a, b) => a + b, 0), died = Object.values(eco.deaths || {}).reduce((a, b) => a + b, 0);
+    const gone = Object.keys(eco.gone || {}).filter(k => eco.gone[k] && !cnt[k]);
+    const chip = k => {
+      const d = D[k]; const n = cnt[k] || 0;
+      const rel = sel ? (k === sel ? 'me' : preyOf.has(k) ? 'prey' : predOf.has(k) ? 'pred' : 'dim') : '';
+      return `<button class="be-sp ${rel}${n ? '' : ' none'}" data-m="best" data-k="${k}" title="${esc(A.dietName(k))}"><i style="background:${spCol(d)}"></i><b>${esc(d.name)}</b><em>${n}</em>${spark(series(k).slice(-16), 30, 12)}</button>`;
+    };
+    // producers: the plants and the sea
+    let vegT = 0, vegC = 0; if (S.veg) for (let i = 0; i < S.veg.length; i += 3) { const c = A.vegCap(i); if (c > 0) { vegT += S.veg[i]; vegC += c; } }
+    const fishN = (S.fish || []).reduce((a, f) => a + (f.n || 0), 0);
+    const prodSel = sel && ['herb', 'browse', 'filter', 'insect', 'fish'].includes(D[sel].diet);
+    const prod = `<span class="be-sp prod${prodSel && D[sel].diet !== 'fish' ? ' prey' : sel ? ' dim' : ''}"><i style="background:#7ab04a"></i><b>Capim e ervas</b><em>${vegC ? Math.round(vegT / vegC * 100) : 0}%</em></span>`
+      + `<span class="be-sp prod${sel && D[sel].diet === 'browse' ? ' prey' : sel ? ' dim' : ''}"><i style="background:#3e7a3a"></i><b>Árvores e frutos</b><em>${S.trees.size}</em></span>`
+      + `<span class="be-sp prod${sel && (D[sel].diet === 'fish' || D[sel].diet === 'filter') ? ' prey' : sel ? ' dim' : ''}"><i style="background:#4a8ab8"></i><b>Cardumes</b><em>${fishN}</em></span>`;
+    const LV = [[3, 'Predadores de topo', 'ninguém os caça'], [2, 'Predadores', 'comem outros animais, peixes ou carniça'], [1, 'Herbívoros e filtradores', 'comem plantas, frutos, insetos ou plâncton'], [0, 'Produtores', 'o que alimenta todo o resto']];
+    let web = '';
+    for (const [lv, name, sub] of LV) {
+      const ks = lv ? live.filter(k => A.level(k) === lv).sort((a, b) => (cnt[b] || 0) - (cnt[a] || 0)) : null;
+      web += `<div class="be-lv"><div class="be-lvn">${name}<small>${sub}</small></div><div class="be-row">${lv ? ks.map(chip).join('') || '<span class="muted">nenhum</span>' : prod}</div></div>`;
+    }
+    let det = '';
+    if (sel) {
+      const d = D[sel]; const n = cnt[sel] || 0; const cap = A.capacity(sel);
+      const where = d.cls === 'water' ? ({ cold: 'mares frios', warm: 'mares quentes', mild: 'mares temperados e quentes', any: 'todos os mares' }[d.sea] || 'o mar') + (d.deep ? ', longe da costa' : '')
+        : (d.hab || []).map(b => G.BIOMES[b].name.toLowerCase()).join(', ') + (d.near === 'water' ? ' — sempre perto da água' : d.near === 'sea' ? ' — na beira do mar' : d.coast ? ' — no litoral' : '');
+      const eats = d.prey ? d.prey.map(q => D[q].name.toLowerCase()).join(', ') + (EATS[d.diet] ? ', ' + EATS[d.diet] : '') : EATS[d.diet];
+      const by = (A.eatenBy[sel] || []).map(q => D[q].name.toLowerCase()).join(', ');
+      const cz = (eco.cause && eco.cause[sel]) || {}; const czs = Object.entries(cz).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([c, v]) => `${D[c] ? D[c].name.toLowerCase() : CAUSE[c] || c} ${v}`).join(' · ');
+      const famous = [...S.animals.values()].filter(a => a.kind === sel && !a.dead && a.named).map(a => `${a.named}${a.epithet ? ', ' + a.epithet : a.tamed ? ' (guardi' + (d.g === 'f' ? 'ã' : 'ão') + ')' : ''}`);
+      det = `<div class="be-det"><div class="be-dh"><i style="background:${spCol(d)}"></i><b>${esc(d.name)}</b><span>${esc(A.dietName(sel))}${d.apex ? ' · predador de topo' : ''}</span></div>
+        <div class="be-chart">${spark(series(sel), 260, 54, cap)}<div><b>${n}</b> vivos · o mundo comporta ~${cap}<br>${eco.born[sel] || 0} nascimentos · ${eco.deaths[sel] || 0} mortes</div></div>
+        <p class="facts">Vive em: <b>${esc(where || '—')}</b></p>
+        <p class="facts">Come: <b>${esc(eats || '—')}</b></p>
+        <p class="facts">${by ? 'Caçad' + (d.g === 'f' ? 'a' : 'o') + ' por: <b>' + esc(by) + '</b>' : 'Ninguém o caça.'}${d.hunt ? ' · os caçadores o perseguem' : ''}${d.bold ? ' · <span class="warn">ataca gente</span>' : ''}</p>
+        ${czs ? `<p class="facts">Mortes: ${esc(czs)}</p>` : ''}
+        ${famous.length ? `<p class="facts">Célebres: <b>${esc(famous.join('; '))}</b></p>` : ''}
+        ${eco.gone && eco.gone[sel] && !n ? `<p class="end">Extinto no ano ${eco.gone[sel]}.</p>` : ''}</div>`;
+    }
+    return `<div class="be-sum"><div><b>${tot}</b><span>animais vivos</span></div><div><b>${live.filter(k => cnt[k]).length}</b><span>espécies</span></div><div><b>${born}</b><span>nascimentos</span></div><div><b>${died}</b><span>mortes</span></div><div><b>${gone.length}</b><span>extintas</span></div></div>
+      <p class="muted be-hint">${sel ? 'Verde: o que come. Vermelho: quem o caça. Clique de novo para limpar.' : 'Clique numa espécie para ver sua cadeia alimentar: de quem ela se alimenta e quem a caça.'}${absent ? ` ${absent} espécies não encontram lar neste mundo.` : ''}</p>
+      <div class="be-web">${web}</div>${det}${gone.length ? `<p class="facts be-gone">Extintas: ${gone.map(k => esc(D[k].name)).join(', ')}</p>` : ''}`;
+  }
   L.openBook = function (tab) {
     const S = G.S; if (!S) return; const lo = lore(); if (!lo.world) L.genesis({});
     if (tab) L.tab = tab;
@@ -344,6 +417,8 @@
           ${f && f.st ? `<p class="facts">${f.st.battles || 0} batalhas · ${f.st.conquests || 0} conquistas · ${f.st.kills || 0} inimigos mortos${f.st.massacres ? ' · ' + f.st.massacres + ' massacres' : ''}${f.goldenN ? ' · ' + f.goldenN + (f.goldenN > 1 ? ' eras de ouro' : ' era de ouro') : ''}</p>` : ''}
           ${p.end ? `<p class="end">${esc(p.end)}</p>` : ''}</div>`;
       }).join('');
+    } else if (L.tab === 'bestiario') {
+      body = bestiary();
     } else if (L.tab === 'profecias') {
       const pr = (S.mir && S.mir.prophecies) || [];
       const ST = { aberta: 'aguardando', cumprida: 'cumpriu-se', falhou: 'falhou' };

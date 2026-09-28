@@ -1098,7 +1098,7 @@
     const fpop = G.Fac.pop(G.Fac.idOfV(v)); const fst = G.Fac.stockV(v);
     const foodOk = fst.food > fpop * 0.9 || fst.food > 60;
     // the land feeds a limited number of people: bigger maps hold more
-    const capPop = 90 * (N / 64) * (N / 64);
+    const capPop = 90 * (N / 64) * (N / 64) * (N >= 128 ? 1.4 : 1);
     const crowd = G.Village.pop(v.set) > (G.City ? G.City.crowdCap(v.set) : 48) ? 0.5 : 1;
     let chance = 0.55 * G.Civ.tV(v, 'growth') * (foodOk ? 1 : 0.2) * crowd * (v.home ? 1 : 0.6) * (v.fear > 60 ? 0.5 : 1) * (kids >= 4 ? 0.6 : 1) * G.clamp(1 - (pop - capPop) / (capPop * 1.4), 0.06, 1);
     chance *= G.Nature.zoneMul(v.x, v.y, 'fertility');

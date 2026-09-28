@@ -96,7 +96,8 @@
   R.buildTerrain = function () {
     const S = G.S;
     computeDLand();
-    chunks = [];
+    for (const ch of chunks) { if (ch.canvas) ch.canvas.width = ch.canvas.height = 0; if (ch.lo) ch.lo.width = ch.lo.height = 0; }
+    chunks = []; hiLive = 0; bigMap = N >= 128;
     for (let cy = 0; cy < NC; cy++) for (let cx = 0; cx < NC; cx++) chunks.push(makeChunk(cx, cy));
     buildShore();
     sparkles = [];
@@ -115,36 +116,54 @@
     hmax += 1.5; hmin = Math.min(hmin, G.SEA) - 0.5;
     const sx = (x0 - (y0 + C)) * 16 - 4, ex = (x0 + C - y0) * 16 + 4;
     const sy = (x0 + y0) * 8 - hmax * HS - 6, ey = (x0 + y0 + 2 * C) * 8 - hmin * HS + 4;
-    return { cx, cy, x0, y0, sx, sy, w: ex - sx, h: ey - sy, canvas: null, ctx: null, empty, dirty: true };
+    return { cx, cy, x0, y0, sx, sy, w: ex - sx, h: ey - sy, canvas: null, ctx: null, lo: null, lctx: null, empty, dirty: true, dirtyLo: true, seen: -1 };
   }
-  function renderChunk(ch) {
-    if (ch.empty) { ch.dirty = false; return; }
-    if (!ch.canvas) {
-      ch.canvas = document.createElement('canvas');
-      ch.canvas.width = Math.ceil(ch.w * RS); ch.canvas.height = Math.ceil(ch.h * RS);
-      ch.ctx = ch.canvas.getContext('2d');
+  // Big maps keep a low-resolution copy of every chunk (cheap, used when zoomed out) and
+  // only a bounded set of full-resolution canvases near the camera (LRU), so memory stays flat.
+  const LRS = 1, HI_CAP = 60;
+  let bigMap = false, hiLive = 0, frameNo = 0, visCount = 0;
+  function chunkCanvas(ch, lo) {
+    const rs = lo ? LRS : RS;
+    const cv = document.createElement('canvas');
+    cv.width = Math.ceil(ch.w * rs); cv.height = Math.ceil(ch.h * rs);
+    return cv;
+  }
+  function renderChunk(ch, lo) {
+    if (ch.empty) { ch.dirty = false; ch.dirtyLo = false; return; }
+    const rs = lo ? LRS : RS;
+    let cv = lo ? ch.lo : ch.canvas;
+    if (!cv) {
+      cv = chunkCanvas(ch, lo);
+      if (lo) { ch.lo = cv; ch.lctx = cv.getContext('2d'); } else { ch.canvas = cv; ch.ctx = cv.getContext('2d'); hiLive++; }
     }
-    const c = ch.ctx;
-    c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, ch.canvas.width, ch.canvas.height);
-    c.setTransform(RS, 0, 0, RS, -ch.sx * RS, -ch.sy * RS);
+    const c = lo ? ch.lctx : ch.ctx;
+    c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height);
+    c.setTransform(rs, 0, 0, rs, -ch.sx * rs, -ch.sy * rs);
     c.lineJoin = 'round';
     for (let y = ch.y0; y < ch.y0 + C; y++) for (let x = ch.x0; x < ch.x0 + C; x++) drawTile(c, x, y);
-    ch.dirty = false;
+    if (lo) ch.dirtyLo = false; else ch.dirty = false;
   }
+  function dropHi(ch) { if (ch.canvas) { ch.canvas.width = ch.canvas.height = 0; ch.canvas = null; ch.ctx = null; hiLive--; } ch.dirty = true; }
+  function evictHi() {
+    if (!bigMap || hiLive <= HI_CAP) return;
+    const live = chunks.filter(ch => ch.canvas && ch.seen < frameNo).sort((a, b) => a.seen - b.seen);
+    for (let k = 0; k < live.length && hiLive > HI_CAP; k++) dropHi(live[k]);
+  }
+  R.chunkStats = () => ({ hi: hiLive, lo: chunks.filter(c => c.lo).length, n: chunks.filter(c => !c.empty).length, vis: visCount, big: bigMap });
   const chunkOf = (x, y) => chunks[Math.floor(y / C) * NC + Math.floor(x / C)];
   function redrawTile(x, y) {
     if (!W.inb(x, y)) return;
-    const ch = chunkOf(x, y); if (!ch || !ch.canvas || ch.dirty) return;
-    const c = ch.ctx; c.setTransform(RS, 0, 0, RS, -ch.sx * RS, -ch.sy * RS);
-    drawTile(c, x, y);
+    const ch = chunkOf(x, y); if (!ch) return;
+    if (ch.canvas && !ch.dirty) { const c = ch.ctx; c.setTransform(RS, 0, 0, RS, -ch.sx * RS, -ch.sy * RS); drawTile(c, x, y); }
+    if (ch.lo && !ch.dirtyLo) { const c = ch.lctx; c.setTransform(LRS, 0, 0, LRS, -ch.sx * LRS, -ch.sy * LRS); drawTile(c, x, y); }
   }
   R.invalidateTerrain = function (x, y, r) {
     for (const ch of chunks) {
       const cx = ch.x0 + C / 2, cy = ch.y0 + C / 2;
       if (Math.abs(cx - x) < C / 2 + r + 1 && Math.abs(cy - y) < C / 2 + r + 1) {
         const nc = makeChunk(ch.cx, ch.cy); // recompute bounds (heights changed)
-        if (nc.w !== ch.w || nc.h !== ch.h || nc.sx !== ch.sx || nc.sy !== ch.sy) { ch.canvas = null; ch.sx = nc.sx; ch.sy = nc.sy; ch.w = nc.w; ch.h = nc.h; }
-        ch.empty = nc.empty; ch.dirty = true;
+        if (nc.w !== ch.w || nc.h !== ch.h || nc.sx !== ch.sx || nc.sy !== ch.sy) { dropHi(ch); ch.lo = null; ch.lctx = null; ch.sx = nc.sx; ch.sy = nc.sy; ch.w = nc.w; ch.h = nc.h; }
+        ch.empty = nc.empty; ch.dirty = true; ch.dirtyLo = true;
       }
     }
   };
@@ -428,7 +447,7 @@
     if (gdt > 0) spawnAmbient(Math.min(gdt, 0.1));
   };
 
-  const SMOKE = { house: 1, workshop: 1, sobrado: 1, insula: 1, banhos: 1, hut: 1 };
+  const SMOKE = { house: 1, workshop: 1, sobrado: 1, insula: 1, quarteirao: 1, banhos: 1, hut: 1 };
   const APRON = { monument: 1, temple: 1, palacio: 1, maravilha: 1, teatro: 1, biblioteca: 1, mercado: 1, banhos: 1 };
   const FIRELIT = { temple: 1, torre: 1, quartel: 1, maravilha: 1, praca: 1, palacio: 1 };
   function spawnAmbient(dt) {
@@ -515,6 +534,8 @@
     return [cam.x - hw - margin, cam.y - hh - margin, cam.x + hw + margin, cam.y + hh + margin + 40];
   }
   R.viewRect = viewRect;
+  // the bigger the world, the further the god may pull back to see it whole
+  R.minZoom = () => N >= 160 ? 0.3 : N >= 128 ? 0.38 : 0.55;
 
   R.dbg = {};
   R.showBorders = true;
@@ -528,9 +549,23 @@
     R.time += dt;
     const t = R.time;
     const cam = R.cam;
-    // process dirty tiles/chunks (bounded work per frame)
-    let budget = 2;
-    for (const ch of chunks) if (ch.dirty && budget > 0) { renderChunk(ch); budget--; }
+    // process dirty tiles/chunks (bounded work per frame; big maps: visible chunks first)
+    frameNo++;
+    const zPx = cam.zoom * dpr, wantHi = !bigMap || (zPx > LRS * 1.05 && visCount <= HI_CAP);
+    let nVis = 0;
+    if (!bigMap) { let budget = 2; for (const ch of chunks) if (ch.dirty && budget > 0) { renderChunk(ch, false); budget--; } }
+    else {
+      const vr = viewRect(40), tb = now();
+      for (const ch of chunks) {
+        if (ch.empty) continue;
+        const vis = !(ch.sx > vr[2] || ch.sx + ch.w < vr[0] || ch.sy > vr[3] || ch.sy + ch.h < vr[1]);
+        if (vis) { ch.seen = frameNo; nVis++; }
+        if (now() - tb > 7) continue;
+        if (vis && wantHi && ch.dirty) renderChunk(ch, false);
+        else if (ch.dirtyLo && (vis || now() - tb < 3)) renderChunk(ch, true);
+      }
+      visCount = nVis; evictHi();
+    }
     if (G.Nature.dirty.size) {
       let n = 0;
       for (const i of G.Nature.dirty) {
@@ -586,9 +621,10 @@
     PROF.mark('bg+base', t0); t0 = now();
     // terrain chunks
     if (!R.dbg.noChunks) for (const ch of chunks) {
-      if (!ch.canvas || ch.empty) continue;
+      if (ch.empty) continue;
       if (ch.sx > view[2] || ch.sx + ch.w < view[0] || ch.sy > view[3] || ch.sy + ch.h < view[1]) continue;
-      ctx.drawImage(ch.canvas, ch.sx, ch.sy, ch.w, ch.h);
+      const cv = (wantHi && ch.canvas && !ch.dirty) || !ch.lo ? ch.canvas : ch.lo;
+      if (cv) ctx.drawImage(cv, ch.sx, ch.sy, ch.w, ch.h);
     }
     PROF.mark('chunks', t0); t0 = now();
     if (!R.dbg.noWater) { drawWater(t, view); G.Naval && G.Naval.drawWater(ctx, proj, t, view); }
@@ -606,7 +642,8 @@
     const vis = (x, y, h) => { const p = proj(x, y, h); return (p[0] > view[0] && p[0] < view[2] && p[1] > view[1] && p[1] < view[3]) ? p : null; };
     for (const tr of S.trees.values()) { const p = vis(tr.x, tr.y, W.groundH(tr.x, tr.y)); if (p) pushD(tr.x + tr.y, 1, tr, p[0], p[1]); }
     for (const r of S.rocks.values()) { const p = vis(r.x, r.y, W.groundH(r.x, r.y)); if (p) pushD(r.x + r.y, 2, r, p[0], p[1]); }
-    for (const b of S.bushes.values()) { const p = vis(b.x, b.y, W.groundH(b.x, b.y)); if (p) pushD(b.x + b.y, 3, b, p[0], p[1]); }
+    farLod = R.cam.zoom < 0.5; // whole-continent view: skip what would be a pixel or two
+    if (!farLod) for (const b of S.bushes.values()) { const p = vis(b.x, b.y, W.groundH(b.x, b.y)); if (p) pushD(b.x + b.y, 3, b, p[0], p[1]); }
     for (const b of S.buildings.values()) {
       if (b.type === 'farm') continue;
       const [cx, cy] = G.Village.center(b);
@@ -647,7 +684,7 @@
     // shadows first
     ctx.fillStyle = 'rgba(20,30,20,0.2)';
     ctx.beginPath();
-    for (const e of list) {
+    if (!farLod) for (const e of list) {
       const o = e.o;
       if (e.t === 1) { if (o.stage === 'grow' && o.size > 0.3) { const s = o.size; ctx.moveTo(e.sx + 3 + 11 * s, e.sy + 1); ctx.ellipse(e.sx + 3, e.sy + 1, 11 * s, 5 * s, 0, 0, TAU); } }
       else if (e.t === 5 || e.t === 6) { ctx.moveTo(e.sx + 3.2, e.sy + (o.z || 0)); ctx.ellipse(e.sx, e.sy + (o.z || 0), 3.2, 1.4, 0, 0, TAU); }
@@ -931,6 +968,7 @@
   }
 
   // ------------------------------ entities ------------------------------
+  let farLod = false;
   function drawEntity(e, t, nightF) {
     const o = e.o; const sx = e.sx, sy = e.sy;
     const S = G.S; const Art = G.Art;
@@ -938,8 +976,9 @@
       case 1: { // tree
         const burning = S.fire[W.idx(o.x, o.y)] > 0.2;
         if (o.stage === 'grow') {
-          if (o.size < 0.32) { Art.draw(ctx, Art.sapling(), sx, sy, 0.6 + o.size); break; }
+          if (o.size < 0.32) { if (!farLod) Art.draw(ctx, Art.sapling(), sx, sy, 0.6 + o.size); break; }
           const s = o.size;
+          if (farLod && o.kind !== 'palm') { Art.draw(ctx, Art.canopy(o.kind, o.v), sx, sy, s); if (burning) emisFire.push(sx, sy - 12 * s, S.fire[W.idx(o.x, o.y)] * 1.4); break; }
           const wind = S.weather.windS;
           const sway = Math.sin(t * (1.3 + wind) + o.ph) * (0.6 + wind * 2.2) * s + Math.sin(t * 3.1 + o.ph * 2) * wind * 0.8;
           if (o.kind === 'palm') {
@@ -996,7 +1035,13 @@
         break;
       }
       case 6: {
-        G.Art.animal(ctx, o, sx, sy, t, R.cam.zoom < 0.7);
+        if (o.tamed && !o.dead) { // the guardian's collar: a ring in its people's colour
+          ctx.strokeStyle = G.Fac.hex(o.tamed); ctx.lineWidth = 1.4; ctx.globalAlpha = 0.85;
+          ctx.beginPath(); ctx.ellipse(sx, sy, 6 * (o.big || 1), 2.6 * (o.big || 1), 0, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
+        }
+        if (o.big > 1) { ctx.save(); ctx.translate(sx, sy); ctx.scale(o.big, o.big); G.Art.animal(ctx, o, 0, 0, t, false); ctx.restore(); }
+        else G.Art.animal(ctx, o, sx, sy, t, R.cam.zoom < 0.7);
+        if (o.legend && !o.dead) emisGlow.push(sx + o.face * 4 * o.big, sy - 6 * o.big, 4, 'red', 0.5 + 0.2 * Math.sin(t * 3 + o.id));
         if (o.kind === 'wolf' && !o.dead && nightF > 0.4) emisGlow.push(sx + o.face * 5.4, sy - 5.7, 2.5, o.summoned ? 'red' : 'gold', 0.9);
         if (R.hover === o || (G.UI && G.UI.selected === o)) overlays.push(o, sx, sy);
         break;
@@ -1152,7 +1197,7 @@
     const p = b.progress;
     const hx = b.w / 2 - 0.1, hy = b.h / 2 - 0.1;
     const P = (dx, dy, z) => [sx + (dx - dy) * 16, sy + (dx + dy) * 8 - z];
-    const wallH = b.type === 'hut' ? 7 : b.type === 'temple' ? 22 : b.type === 'monument' ? 30 : b.type === 'farm' ? 0 : b.type === 'maravilha' ? 34 : b.type === 'insula' ? 24 : b.type === 'sobrado' ? 18 : def.w >= 3 ? 20 : 12;
+    const wallH = b.type === 'hut' ? 7 : b.type === 'temple' ? 22 : b.type === 'monument' ? 30 : b.type === 'farm' ? 0 : b.type === 'maravilha' ? 34 : b.type === 'quarteirao' ? 30 : b.type === 'insula' ? 24 : b.type === 'sobrado' ? 18 : def.w >= 3 ? 20 : 12;
     if (b.type === 'farm') return;
     if (b.upgradeFrom && p < 0.35) {
       const old = G.Art.building(b.upgradeFrom, b.v, b.style); if (old) G.Art.draw(ctx, old, sx, sy, 1);

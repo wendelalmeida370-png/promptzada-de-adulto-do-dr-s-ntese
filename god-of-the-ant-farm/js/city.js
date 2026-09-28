@@ -24,6 +24,7 @@
     doca: { name: 'Doca', w: 2, h: 2, cost: { wood: 40 }, work: 34, blocks: true, dropoff: true, hp: 180 },
     aqueduto: { name: 'Aqueduto', w: 1, h: 1, cost: { wood: 10, stone: 55 }, work: 55, blocks: true, hp: 300 },
     maravilha: { name: 'Maravilha', w: 3, h: 3, cost: { wood: 60, stone: 240 }, work: 300, blocks: true, hp: 900, civic: 1 },
+    quarteirao: { name: 'Quarteirão', w: 2, h: 2, cost: { wood: 40, stone: 80 }, work: 95, housing: 40, blocks: true, hp: 380 },
   });
   Object.assign(G.BDESC, {
     sobrado: 'Casa de dois andares, de pedra. Abriga várias famílias. Exige Alvenaria.',
@@ -38,10 +39,11 @@
     doca: 'Porto com cais e estaleiro. Barcos de pesca, navios mercantes e de guerra.',
     aqueduto: 'Caixa d\'água ligada por arcos a um rio. Água corrente: colheitas melhores, mais gente, menos doenças.',
     maravilha: 'Uma obra que desafia o tempo. Fé, orgulho e lealdade em todo o reino.',
+    quarteirao: 'Um bloco inteiro de prédios altos em volta de um pátio. É assim que as metrópoles viram megalópoles. Exige Engenharia.',
   });
-  Ci.TIERS = ['Acampamento', 'Aldeia', 'Vila', 'Cidade', 'Metrópole'];
-  const CROWD = [30, 40, 52, 72, 96];
-  const STREETS = [0, 0, 26, 64, 120];
+  Ci.TIERS = ['Acampamento', 'Aldeia', 'Vila', 'Cidade', 'Metrópole', 'Megalópole'];
+  const CROWD = [30, 42, 60, 100, 170, 320];
+  const STREETS = [0, 0, 26, 64, 120, 200];
   Ci.IDEAL = { praca: 2.2, mercado: 3.6, celeiro: 6.5, biblioteca: 4.5, teatro: 6.5, banhos: 5, palacio: 4.2, aqueduto: 4, maravilha: 7.5, doca: 8 };
   const LOY = { praca: 3, teatro: 5, banhos: 3, palacio: 6, temple: 2, mercado: 1, biblioteca: 1 };
 
@@ -63,13 +65,14 @@
   }
   Ci.tierOf = function (set, c, pop) {
     c = c || {};
-    const homes = (c.hut || 0) + (c.house || 0) + (c.sobrado || 0) + (c.insula || 0);
-    const stoneH = (c.house || 0) + (c.sobrado || 0) + (c.insula || 0), tall = (c.sobrado || 0) + (c.insula || 0);
+    const homes = (c.hut || 0) + (c.house || 0) + (c.sobrado || 0) + (c.insula || 0) + (c.quarteirao || 0);
+    const stoneH = (c.house || 0) + (c.sobrado || 0) + (c.insula || 0) + (c.quarteirao || 0), tall = (c.sobrado || 0) + (c.insula || 0) + (c.quarteirao || 0) * 2;
     let t = 0;
     if (pop >= 6 && homes >= 2) t = 1;
     if (t >= 1 && pop >= 16 && homes >= 4 && c.storehouse && c.farm) t = 2;
     if (t >= 2 && pop >= 30 && (c.praca || c.mercado) && stoneH >= 5 && (c.temple || c.celeiro || c.biblioteca || (c.mercado && c.praca))) t = 3;
     if (t >= 3 && pop >= 50 && tall >= 5 && (c.palacio || c.maravilha || c.teatro) && (c.aqueduto || c.banhos || c.biblioteca) && (set.streets || 0) >= 18) t = 4;
+    if (t >= 4 && pop >= 140 && (c.quarteirao || 0) >= 3 && (c.palacio || c.maravilha) && c.teatro && c.mercado && (c.aqueduto || c.banhos) && (set.streets || 0) >= 50) t = 5;
     return t;
   };
   Ci.tierName = s => Ci.TIERS[(s && s.tier) || 0];
@@ -90,13 +93,20 @@
       const t = Ci.tierOf(s, c, pop);
       if (s.tier === undefined) { s.tier = t; s.best = t; continue; }
       if (t > s.tier) {
-        s.tierLow = 0; const from = s.tier; s.tier = t;
-        // only a real first-time growth is news; recovering after a bad spell is quiet
-        if (t > (s.best || 0)) { s.best = t; tierUp(s, t, from); }
+        // only a real first-time growth is news; recovering after a bad spell is quiet — and must hold a while
+        const recovering = t <= (s.best || 0);
+        s.tierHigh = (s.tierHigh || 0) + 1;
+        if (!recovering || s.tierHigh >= 20) {
+          s.tierLow = 0; s.tierHigh = 0; const from = s.tier; s.tier = t;
+          if (t > (s.best || 0)) { s.best = t; tierUp(s, t, from); }
+        }
       } else if (t < s.tier) {
-        s.tierLow = (s.tierLow || 0) + 1;
-        if (s.tierLow >= 36) { s.tier = t; s.tierLow = 0; if (t < (s.best || 0) - 0) { s.best = t; log(`${s.name} decaiu: voltou a ser ${t === 1 || t === 2 ? 'uma ' : 'um '}${Ci.TIERS[t].toLowerCase()}.`, 'city', s.cx, s.cy); } }
-      } else s.tierLow = 0;
+        s.tierLow = (s.tierLow || 0) + 1; s.tierHigh = 0;
+        if (s.tierLow >= 36) {
+          s.tier = t; s.tierLow = 0;
+          if (S.day - (s.decayDay === undefined ? -99 : s.decayDay) >= 8) { s.decayDay = S.day; log(`${s.name} decaiu: voltou a ser ${t === 0 ? 'um ' : 'uma '}${Ci.TIERS[t].toLowerCase()}.`, 'city', s.cx, s.cy); }
+        }
+      } else { s.tierLow = 0; s.tierHigh = 0; }
       // aqueduct water reaches the fields
       if (s.aqua) for (const b of S.buildings.values()) if (b.set === s.id && b.type === 'farm') b.aqua = true;
     }
@@ -109,11 +119,12 @@
       `${s.name} deixou de ser um acampamento: agora é uma aldeia.`,
       `${s.name} cresceu e virou uma vila: ruas de terra batida, ofícios, vizinhos.`,
       `${s.name} tornou-se uma cidade — praça, casas de pedra, comércio e gente de toda parte.`,
-      `${s.name} é agora uma metrópole, o coração pulsante de ${f.name}.`];
+      `${s.name} é agora uma metrópole, o coração pulsante de ${f.name}.`,
+      `${s.name} virou uma megalópole: um mar de telhados, ruas que não acabam e gente de todos os cantos do mundo.`];
     log(TXT[t], 'city', s.cx, s.cy);
     if (t >= 3) {
-      G.UI && G.UI.toast(t === 4 ? 'Metrópole' : 'Nasce uma cidade', `${s.name} · ${f.name}`, 'city');
-      G.Village.milestone(t === 4 ? 'firstMetro' : 'firstCity', t === 4 ? 'Primeira metrópole' : 'Primeira cidade', `${s.name} (${f.name}).`, 'city');
+      G.UI && G.UI.toast(t === 5 ? 'Megalópole' : t === 4 ? 'Metrópole' : 'Nasce uma cidade', `${s.name} · ${f.name}`, 'city');
+      G.Village.milestone(t === 5 ? 'firstMega' : t === 4 ? 'firstMetro' : 'firstCity', t === 5 ? 'Primeira megalópole' : t === 4 ? 'Primeira metrópole' : 'Primeira cidade', `${s.name} (${f.name}).`, 'city');
     }
     if (t >= 2) {
       // the whole town comes out to celebrate
@@ -122,7 +133,7 @@
     }
     G.Lore && G.Lore.note('city', { set: s.id, name: s.name, tier: t, fac: f.id });
   }
-  Ci.crowdCap = function (setId) { const s = G.S.settlements.get(setId); if (!s) return 48; return CROWD[s.tier || 0] + (s.aqua ? 12 : 0); };
+  Ci.crowdCap = function (setId) { const s = G.S.settlements.get(setId); if (!s) return 48; const c = CROWD[s.tier || 0]; return c + (s.aqua ? Math.max(12, c * 0.15) : 0); };
   Ci.loyaltyBonus = function (s) {
     const c = s._c || {}; let n = 0;
     for (const k in LOY) if (c[k]) n += LOY[k];
@@ -140,6 +151,7 @@
   const has = (fac, k) => G.Civ.has(fac.id, k);
   Ci.homeType = function (set, fac, workshop, st) {
     const t = set.tier || 0;
+    if (t >= 4 && has(fac, 'engenharia') && st.stone >= 80 && st.wood >= 40 && G.R() < 0.6) return 'quarteirao';
     if (t >= 3 && has(fac, 'engenharia') && st.stone >= 40 && st.wood >= 22 && G.R() < 0.5) return 'insula';
     if (t >= 2 && has(fac, 'alvenaria') && st.stone >= 22 && st.wood >= 16) return 'sobrado';
     return workshop && st.stone >= 6 ? 'house' : 'hut';
@@ -166,7 +178,8 @@
     const t = set.tier || 0; if (t < 2) return;
     const st = fac.stock;
     const isCap = G.Fac.capitalOf(fac.id) === set;
-    const need = k => !c[k] && !c.siteTypes[k];
+    // big cities want a second (third...) square, market, bath-house
+    const need = k => !c.siteTypes[k] && (c[k] || 0) < 1 + (k === 'praca' ? Math.floor(pop / 110) : k === 'mercado' ? Math.floor(pop / 140) : k === 'banhos' ? Math.floor(pop / 180) : k === 'teatro' ? Math.floor(pop / 260) : k === 'celeiro' ? Math.floor(pop / 150) : 0);
     if (need('celeiro') && (c.farm || 0) >= 2 && pop >= 18) want.push('celeiro');
     if (need('doca') && has(fac, 'navegacao') && pop >= 12 && Ci.coastal(set)) want.push('doca');
     if (need('aqueduto') && t >= 3 && has(fac, 'engenharia') && st.stone >= 40 && Ci.waterSource(set)) want.push('aqueduto');

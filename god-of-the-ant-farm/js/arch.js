@@ -342,6 +342,32 @@
     else m.fires.push(P(0, 0, zr));
   }
 
+  // ------------------------------ city blocks ------------------------------
+  // four tall houses around a paved courtyard, each drawn with the townhouse kit, shifted to its corner
+  function offMeta(m, ox, oy) {
+    const d = P(ox, oy, 0); const sh = q => [q[0] + d[0], q[1] + d[1]];
+    return { win: { push: poly => m.win.push(poly.map(sh)) }, fires: { push: q => m.fires.push(sh(q)) }, glow: { push: q => m.glow.push(sh(q)) } };
+  }
+  function quarteirao(c, m, p, st, v) {
+    // courtyard paving and a tree or fountain in the middle
+    poly(c, [P(-0.95, -0.95, 0.4), P(0.95, -0.95, 0.4), P(0.95, 0.95, 0.4), P(-0.95, 0.95, 0.4)], A.plazaColor(st), shade(A.plazaColor(st), 0.8));
+    const base = st === 'romano' ? 4 : st === 'nordico' ? 2 : st === 'egipcio' ? 3 : st === 'asteca' ? 3 : st === 'grego' ? 3 : 3;
+    const quads = [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]];
+    for (let k = 0; k < 4; k++) {
+      const [ox, oy] = quads[k];
+      const floors = Math.max(2, base + ((v + k) % 3) - (k === 3 ? 1 : 0));
+      if (k === 3) { // the front corner stays open: a courtyard with a fountain or a tree
+        const q = P(0.55, 0.55, 0.4);
+        if (st === 'nordico' || st === 'asteca' || st === 'egipcio') { c.fillStyle = '#4e8a3a'; c.beginPath(); c.arc(q[0], q[1] - 7, 5, 0, TAU); c.fill(); c.fillStyle = '#6aa84a'; c.beginPath(); c.arc(q[0] - 1.5, q[1] - 8.5, 2.6, 0, TAU); c.fill(); ln(c, q, [q[0], q[1] - 3], '#6a4a2a', 1.2); }
+        else { box(c, 0.4, 0.4, 0.7, 0.7, 0.4, 1.8, p.col ? p.col[0] : '#d8d0c0', p.col ? p.col[1] : '#b8b0a0', '#6ab4d8'); ln(c, P(0.55, 0.55, 1.8), P(0.55, 0.55, 4.5), '#dfe8ee', 0.8); }
+        continue;
+      }
+      c.save(); const d = P(ox, oy, 0); c.translate(d[0], d[1]);
+      townhouse(c, offMeta(m, ox, oy), p, st, (v + k) % 3, floors);
+      c.restore();
+    }
+  }
+
   // ------------------------------ generic halls ------------------------------
   function hall(c, m, p, st, o) {
     const { x0, y0, x1, y1, H } = o;
@@ -874,8 +900,8 @@
   }
 
   // ------------------------------ dispatch ------------------------------
-  const MAXZ = { hut: 30, house: 40, sobrado: 52, insula: 64, temple: 64, monument: 72, storehouse: 44, workshop: 46, quartel: 44, torre: 54, praca: 44, mercado: 38, celeiro: 44, biblioteca: 44, teatro: 56, banhos: 50, palacio: 72, doca: 36, aqueduto: 36, maravilha: 100 };
-  const NEW = { sobrado: 1, insula: 1, praca: 1, mercado: 1, celeiro: 1, biblioteca: 1, teatro: 1, banhos: 1, palacio: 1, doca: 1, aqueduto: 1, maravilha: 1 };
+  const MAXZ = { quarteirao: 84, hut: 30, house: 40, sobrado: 52, insula: 64, temple: 64, monument: 72, storehouse: 44, workshop: 46, quartel: 44, torre: 54, praca: 44, mercado: 38, celeiro: 44, biblioteca: 44, teatro: 56, banhos: 50, palacio: 72, doca: 36, aqueduto: 36, maravilha: 100 };
+  const NEW = { quarteirao: 1, sobrado: 1, insula: 1, praca: 1, mercado: 1, celeiro: 1, biblioteca: 1, teatro: 1, banhos: 1, palacio: 1, doca: 1, aqueduto: 1, maravilha: 1 };
   A.building = function (type, v, style, extra) {
     const st = PAL[style] ? style : 'classico';
     if (st === 'classico' && !NEW[type]) return null; // the original drawings
@@ -892,6 +918,7 @@
         case 'house': townhouse(c, m, p, st, v || 0, 1); break;
         case 'sobrado': townhouse(c, m, p, st, v || 0, 2); break;
         case 'insula': townhouse(c, m, p, st, v || 0, st === 'romano' ? 4 : 3); break;
+        case 'quarteirao': quarteirao(c, m, p, st, v || 0); break;
         case 'temple': temple(c, m, p, st); break;
         case 'monument': monument(c, m, p, st); break;
         case 'storehouse': storehouse(c, m, p, st); break;

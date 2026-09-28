@@ -60,6 +60,14 @@
     peace: svg('<path d="M3 13c3 0 5-1 7-4 1-1.6 2.6-3 5-3 1.4 0 2.4.6 3 1.4L21 7l-2 2c0 5-4 9-10 9-2 0-4-.6-5-1.5L7 15c-2 0-3.2-.8-4-2z" fill="currentColor"/><path d="M8 13.5c2 .5 4-.5 5.5-2.5" stroke="#1a1410" stroke-width="1.2" fill="none" opacity=".45"/>'),
     grave: svg('<path d="M6 21v-10a6 6 0 0 1 12 0v10z" fill="currentColor"/><path d="M12 9v6M9.5 11.5h5" stroke="#1a1410" stroke-width="1.6"/>'),
     tech: svg('<path d="M2.5 5c3.2-1.2 6.4-1 9.5 1 3.1-2 6.3-2.2 9.5-1v14c-3.2-1.2-6.4-1-9.5 1-3.1-2-6.3-2.2-9.5-1z" fill="currentColor"/><path d="M12 6v14M5 9c1.6-.4 3.2-.3 4.6.3M5 12.5c1.6-.4 3.2-.3 4.6.3M14.4 9.3c1.4-.6 3-.7 4.6-.3M14.4 12.8c1.4-.6 3-.7 4.6-.3" stroke="#1a1410" stroke-width="1.2" fill="none"/>'),
+    map: svg('<path d="M3 6.5l5.5-2.5 7 2.5 5.5-2.5v13.5l-5.5 2.5-7-2.5L3 20z" fill="currentColor" opacity=".35"/><path d="M3 6.5l5.5-2.5 7 2.5 5.5-2.5v13.5l-5.5 2.5-7-2.5L3 20zM8.5 4v13.5M15.5 6.5V20" ' + ST + '/>'),
+    summon: svg('<path d="M7 3.5c0 2 1 3 2.5 3.5M5 5.5c1 .8 2.4 1.3 3.8 1.2M17 3.5c0 2-1 3-2.5 3.5M19 5.5c-1 .8-2.4 1.3-3.8 1.2" ' + ST + '/><path d="M8.5 9c0-1.4 1.6-2.4 3.5-2.4s3.5 1 3.5 2.4l-.6 5.6c-.3 2.4-1.5 4.4-2.9 4.4s-2.6-2-2.9-4.4z" fill="currentColor"/><circle cx="10.4" cy="11.2" r=".9" fill="#1a1410"/><circle cx="13.6" cy="11.2" r=".9" fill="#1a1410"/><path d="M4 16l1 1.6L6.6 18 5 19l-.6 1.6L3.4 19 2 18l1.6-.4zM20 13l.7 1.1 1.3.4-1.3.5-.7 1.1-.6-1.1-1.3-.5 1.3-.4z" fill="currentColor"/>'),
+    spring: svg('<path d="M12 22v-9" ' + ST + '/><path d="M12 17c-3 0-5-2-5.5-4.5 3 0 5 1.5 5.5 4.5zM12 15c2.5 0 4.5-1.6 5-4 -2.6 0-4.6 1.4-5 4z" fill="currentColor" opacity=".6"/><circle cx="12" cy="7" r="2.2" fill="currentColor"/><circle cx="12" cy="3.4" r="2" fill="currentColor"/><circle cx="15.4" cy="6" r="2" fill="currentColor"/><circle cx="8.6" cy="6" r="2" fill="currentColor"/><circle cx="14.2" cy="9.6" r="2" fill="currentColor"/><circle cx="9.8" cy="9.6" r="2" fill="currentColor"/><circle cx="12" cy="7" r="1.4" fill="#f2c23a"/>'),
+    migrate: svg('<path d="M3 7l4 5-4 5M9 7l4 5-4 5M15 7l4 5-4 5" ' + ST + '/><circle cx="21" cy="12" r="1.3" fill="currentColor"/>'),
+    tame: svg('<ellipse cx="12" cy="15.4" rx="4.2" ry="3.6" fill="currentColor"/><ellipse cx="6.2" cy="10.6" rx="1.9" ry="2.5" fill="currentColor"/><ellipse cx="17.8" cy="10.6" rx="1.9" ry="2.5" fill="currentColor"/><ellipse cx="9.4" cy="6.6" rx="1.9" ry="2.5" fill="currentColor"/><ellipse cx="14.6" cy="6.6" rx="1.9" ry="2.5" fill="currentColor"/><path d="M3 20.5c3 1.6 15 1.6 18 0" stroke="#f2c23a" stroke-width="2" fill="none" stroke-linecap="round"/>'),
+    climate: svg('<path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/><path d="M12 5v14" ' + ST + '/><path d="M16 8v8M13.6 9.4l4.8 5.2M18.4 9.4l-4.8 5.2" stroke="#bfe0ff" stroke-width="1.6" stroke-linecap="round" fill="none"/><path d="M5 12h-2.5M6 8L4.2 6.2M6 16l-1.8 1.8" stroke="#f2c23a" stroke-width="1.6" stroke-linecap="round" fill="none"/>'),
+    locusts: svg('<ellipse cx="12" cy="13" rx="2.2" ry="5.5" fill="currentColor"/><circle cx="12" cy="6.3" r="2" fill="currentColor"/><path d="M11 5l-2.5-3M13 5l2.5-3" ' + ST + '/><path d="M10 11c-4-2-7-1-8 1 2 1.4 5 1.4 8 0zM14 11c4-2 7-1 8 1-2 1.4-5 1.4-8 0z" fill="currentColor" opacity=".55"/><path d="M10 15.5l-3 4M14 15.5l3 4M10.2 13l-3.4 1M13.8 13l3.4 1" ' + ST + '/>'),
+    beast: svg('<path d="M5 3c2 4 2.5 9 1 15M10.5 2.5c1.6 4.4 1.8 10.4.3 17M16 3c1.8 4.2 2 9.6.6 15.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"/><path d="M3.5 21c5.5-1.5 11.5-1.5 17 0" stroke="#e8562a" stroke-width="1.8" stroke-linecap="round" fill="none"/>'),
     book: svg('<path d="M5 3h12.5a1.5 1.5 0 0 1 1.5 1.5V21H6.5A2.5 2.5 0 0 1 4 18.5V4a1 1 0 0 1 1-1z" fill="currentColor"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H19" stroke="#1a1410" stroke-width="1.4" fill="none"/><path d="M9 7h6M9 10h4" stroke="#1a1410" stroke-width="1.4"/>'),
     city: svg('<path d="M2 21V11l4-3 4 3v10zM10 21V6l5-3.2L20 6v15zM20 21v-7h2.5v7z" fill="currentColor"/><path d="M4.5 14h3M4.5 17.5h3M13 9h4M13 12.5h4M13 16h4" stroke="#1a1410" stroke-width="1.4"/>'),
     ship: svg('<path d="M1.5 14h21l-3.5 5H5z" fill="currentColor"/><path d="M12 2v11" stroke="currentColor" stroke-width="1.8"/><path d="M12.8 3c3.6 1.2 5.4 3.4 5.4 5.4 0 1.6-.8 2.8-1.8 3.6h-3.6z" fill="currentColor"/><path d="M6 19.5l-1.6 2.5M10 19.5l-1.2 2.5M14 19.5l-.8 2.5M18 19.5l-.4 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>'),
@@ -128,6 +136,8 @@
     coroa: '<path d="M3 18l1.5-10 4.5 4 3-7 3 7 4.5-4L21 18z" fill="currentColor"/><rect x="3" y="19" width="18" height="2" fill="currentColor"/>',
   };
   UI.symbolSVG = k => svg(SYMP[G.Fac.SYMBOLS[(k | 0) % G.Fac.SYMBOLS.length]] || SYMP.sol);
+  // 'a, b ou c' — long lists end with 'ou outro'
+  UI.orList = l => { const L = l.length > 4 ? l.slice(0, 3).concat(['outro dom']) : l; return L.length < 2 ? L.join('') : L.slice(0, -1).join(', ') + ' ou ' + L[L.length - 1]; };
   UI.flag = (fid, cls) => { const f = G.Fac.get(fid); return f ? `<span class="fc-flag ${cls || ''}" style="--fc:${G.Fac.hex(fid)}">${UI.symbolSVG(f.sym)}</span>` : ''; };
   UI.selected = null;
   UI.viewFac = 0;
@@ -153,6 +163,7 @@
     $('#btn-stats').onclick = () => { G.Audio.play('click'); UI.openStats(); };
     $('#btn-realms').onclick = () => { G.Audio.play('click'); UI.openRealms(); };
     $('#btn-lore').onclick = () => { G.Audio.play('click'); G.Lore.openBook(); };
+    $('#btn-map').innerHTML = ICON.map; $('#btn-map').onclick = () => { G.Audio.play('click'); G.Minimap.toggle(); };
     $('#fac-chip').onclick = () => { G.Audio.play('click'); UI.openRealms(); };
     $('#prayer').onclick = () => {
       const p = G.S && G.S.prayer; if (!p) return;
@@ -204,6 +215,7 @@
       else if (m === 'mainmenu') { G.Save.save(true); UI.closeModal(); G.Main.toMenu(); }
       else if (m === 'help') UI.openHelp();
       else if (m === 'lore') G.Lore.openBook(b.dataset.tab);
+      else if (m === 'best') { G.Lore.bestSel = G.Lore.bestSel === b.dataset.k ? null : b.dataset.k; G.Lore.openBook('bestiario'); }
       else if (m === 'sfx') { G.Audio.setSfx(!G.Audio.sfxOn); UI.openSound(); }
       else if (m === 'music') { G.Audio.init(); G.Audio.setMusic(!G.Audio.musicOn); UI.openSound(); }
       else if (m === 'amb') { G.Audio.setAmb(!G.Audio.ambOn); UI.openSound(); }
@@ -302,7 +314,7 @@
     if (S.prayer) {
       const P = G.Events.PRAYER[S.prayer.kind]; const set = S.settlements.get(S.prayer.set);
       const pw = G.Powers.byId(P.powers[0]);
-      const html = `<i class="ci gold">${ICON.eye}</i><span>${P.ask}${set ? ' em <b>' + esc(set.name) + '</b>' : ''} — use <b>${P.powers.map(k => G.Powers.byId(k).name).join(' ou ')}</b></span><span class="pr-bar"><span style="width:${Math.max(0, S.prayer.t / S.prayer.max * 100)}%"></span></span>`;
+      const html = `<i class="ci gold">${ICON.eye}</i><span>${P.ask}${set ? ' em <b>' + esc(set.name) + '</b>' : ''} — use <b>${UI.orList(P.powers.map(k => G.Powers.byId(k).name))}</b></span><span class="pr-bar"><span style="width:${Math.max(0, S.prayer.t / S.prayer.max * 100)}%"></span></span>`;
       if (pr.dataset.k !== S.prayer.kind + S.prayer.set) { pr.dataset.k = S.prayer.kind + S.prayer.set; pr.innerHTML = html; pr.classList.remove('hidden'); }
       else pr.querySelector('.pr-bar span').style.width = Math.max(0, S.prayer.t / S.prayer.max * 100) + '%';
       document.querySelectorAll('.pw').forEach(b => b.classList.toggle('asked', P.powers.includes(b.dataset.power)));
@@ -419,8 +431,9 @@
       const by = (A.eatenBy[o.kind] || []).map(k => A.DEF[k].name.toLowerCase());
       const role = d.apex ? 'Predador de topo' : A.predator(o.kind) ? (d.diet === 'scav' ? 'Carniceiro' : 'Predador') : 'Presa';
       const hab = d.cls === 'water' ? ({ cold: 'mares frios', warm: 'mares quentes', mild: 'mares temperados e quentes', any: 'todos os mares' })[d.sea] : (d.hab || []).map(b => G.BIOMES[b].name.toLowerCase()).join(', ');
-      html = `<div class="insp-head"><div class="insp-title"><h3>${o.named ? esc(o.named) + ', ' + d.name.toLowerCase() : d.name}${o.summoned ? ' (invocado)' : ''}</h3><div class="sub">${role} · ${A.dietName(o.kind)}${o.grown < 1 ? ' · filhote' : ''} · ${Math.floor(o.age || 0)} ${Math.floor(o.age || 0) === 1 ? 'ano' : 'anos'}</div></div><button class="x" data-act="close">${ICON.close}</button></div>
-        ${o.dead ? '' : bar('Vida', o.hp / o.maxHp * 100, 'hp') + bar('Fome', (o.hunger || 0) * 100, 'hunger')}<div class="doing">Atualmente: <b>${st}</b></div>
+      html = `<div class="insp-head"><div class="insp-title"><h3>${o.named ? esc(o.named) + ', ' + (o.epithet ? esc(o.epithet) : d.name.toLowerCase()) : d.name}${o.summoned ? ' (invocado)' : ''}</h3><div class="sub">${o.legend ? 'Fera lendária · ' : ''}${role} · ${A.dietName(o.kind)}${o.grown < 1 ? ' · filhote' : ''} · ${Math.floor(o.age || 0)} ${Math.floor(o.age || 0) === 1 ? 'ano' : 'anos'}</div></div><button class="x" data-act="close">${ICON.close}</button></div>
+        ${o.dead ? '' : bar('Vida', o.hp / o.maxHp * 100, 'hp') + bar('Fome', (o.hunger || 0) * 100, 'hunger')}<div class="doing">Atualmente: <b>${o.tamed && o.gt && o.state === 'chase' ? 'Defendendo a cidade de ' + esc(tgName || 'um inimigo') + '!' : o.mig && o.state === 'wander' ? 'Migrando' : st}</b></div>
+        ${o.tamed ? `<div class="doing">${UI.flag(o.tamed, 'mini')} Guardi${d.g === 'f' ? 'ã' : 'ão'} de <b>${esc((S.settlements.get(o.guardSet) || {}).name || (G.Fac.get(o.tamed) || {}).name || '?')}</b> — domad${d.g === 'f' ? 'a' : 'o'} pelos céus</div>` : ''}
         <div class="food-chain"><div><span>Come</span>${menu.map(esc).join(', ') || '—'}</div><div><span>Caçado por</span>${by.length ? by.map(esc).join(', ') : 'ninguém — além das pessoas'}</div><div><span>Vive em</span>${esc(hab || '—')}</div>${o.kills ? `<div><span>Vítimas</span>${o.kills} pessoas</div>` : ''}</div>`;
     } else {
       const p = o.dead ? o : S.villagers.get(o.id);
@@ -581,18 +594,21 @@
     UI.openModal(`<h2>Como jogar</h2>
       <div class="help">
       <p class="lead">Você é o deus de uma pequena ilha. Os habitantes vivem por conta própria: coletam, constroem, se apaixonam, têm filhos, envelhecem e morrem. <b>Você não dá ordens</b> — você interfere.</p>
-      <h4>Câmera</h4><ul><li><b>Arrastar</b> com o mouse (ou botão direito) move o mapa · <b>WASD</b>/setas também</li><li><b>Roda do mouse</b> dá zoom · <b>clique</b> num habitante ou construção para ver detalhes · <b>duplo clique</b> segue alguém</li></ul>
-      <h4>Poderes divinos — seis abas (<kbd>Tab</kbd> troca, <kbd>1</kbd>–<kbd>8</kbd> escolhe)</h4><ul>
+      <h4>Câmera</h4><ul><li><b>Arrastar</b> com o mouse (ou botão direito) move o mapa · <b>WASD</b>/setas também</li><li><b>Roda do mouse</b> dá zoom · <b>clique</b> num habitante, animal ou construção para ver detalhes · <b>duplo clique</b> segue alguém</li><li><b>Minimapa</b> (<kbd>M</kbd> ou o ícone do mapa): o mundo inteiro num canto, com fronteiras e cidades — clique ou arraste nele para voar até lá</li></ul>
+      <h4>Poderes divinos — sete abas (<kbd>Tab</kbd> troca, <kbd>1</kbd>–<kbd>8</kbd> escolhe)</h4><ul>
         <li><b>Dádivas</b> — Chuva, Crescimento, Cura, Fertilidade, <b>Era de Ouro</b> (três dias de prosperidade para um povo) e a <b>Mão Divina</b></li>
         <li><b>Ira</b> — Raio, Meteoro, Matilha, Terremoto, Praga e <b>Maldição</b> (colheitas murcham, filhos não vêm, a lealdade apodrece)</li>
         <li><b>Terra</b> — <b>Erguer</b> ilhas ou pontes de terra entre povos isolados, <b>Afundar</b> o chão (e engolir cidades), <b>Floresta Sagrada</b>, <b>Veio de Pedra</b> e o <b>Vulcão</b>: lava, bombas de fogo, cinzas férteis — e às vezes ele desperta de novo</li>
         <li><b>Mar</b> — <b>Cardume</b>, <b>Ventos Favoráveis</b> para os navios, <b>Tempestade</b> no mar, <b>Maremoto</b> que varre a costa e o <b>Kraken</b>, que caça navios até ser morto ou voltar às profundezas</li>
+        <li><b>Natureza</b> — <b>Chamar Animais</b> (a espécie que você escolher, dentre as que vivem ali), <b>Primavera Sagrada</b> (capim alto, frutos e filhotes), <b>Grande Migração</b> (rebanhos atravessam o mapa — e os predadores vão atrás), <b>Domar Fera</b> (um predador vira guardião de uma cidade), <b>Mudar o Clima</b> (neve eterna, selva, pântano, deserto…), <b>Gafanhotos</b> e a <b>Fera Lendária</b>, um monstro gigante que caça gente</li>
         <li><b>Palavra</b> — <b>Profecia</b> sobre uma cidade (se ela se cumprir, a fé explode), <b>Mandamento</b> (uma lei divina que muda o jeito de viver de um povo), <b>Inspiração</b> (revele a tecnologia que quiser), <b>Sinal nos Céus</b> (cometa, eclipse, aurora, chuva de estrelas — cada povo interpreta a seu modo) e <b>Visão</b> (crie um profeta)</li>
         <li><b>Destino</b> — Ungir, <b>Herói</b> (um campeão escolhido que luta como dez), Libertação, Fúria, Discórdia, <b>Muralha Divina</b> e Paz Divina</li></ul>
+      <h4>Biomas e clima</h4><p>O mundo tem <b>tundra gelada, taiga, floresta temperada, pântano, floresta tropical, savana e deserto</b>: neve ao norte, trópicos ao sul, pântanos nas terras baixas e úmidas, desertos onde a chuva não chega. Cada bioma tem suas árvores, seu chão, sua fertilidade, a velocidade de quem anda por ele — e seus animais. No <b>Novo mundo</b> dá para escolher o clima.</p>
+      <h4>Animais e cadeias alimentares</h4><p>Mais de 40 espécies na terra, no mar e no céu. O <b>capim</b> cresce e é pastado; <b>herbívoros</b> comem plantas, <b>predadores</b> caçam herbívoros, <b>predadores de topo</b> (urso, leão, onça, crocodilo, orca, tubarão, águia) não têm quem os cace; <b>carniceiros</b> limpam as carcaças e a carniça volta a adubar a terra. Cada espécie tem habitat, fome, idade, filhotes e um limite que a terra aguenta — se os predadores somem, as presas explodem e depois passam fome. Clique num animal para ver o que ele come e quem o caça. O <b>Bestiário</b>, no Livro do Mundo, mostra a teia inteira com as populações de verdade.</p>
       <h4>Fé</h4><p>Poderes custam <b>fé</b>. A fé nasce da <b>devoção</b> (quando você ajuda) e do <b>medo</b> (quando você castiga). Medo também rende fé, mas deixa o povo lento, triste e menos fértil — e quem perde parentes para a sua fúria perde a devoção. Templos e sacerdotes geram fé constante.</p>
       <h4>Preces</h4><p>Em momentos difíceis — seca, incêndio, doença, fome, lobos — a vila <b>reza pedindo algo específico</b>. Um aviso dourado aparece acima da barra de poderes: clique nele para ir até lá. Atender as preces faz a devoção disparar; ignorá-las tem um preço.</p>
       <h4>Civilizações</h4><p>Cada povo pode ser <b>Grego</b> (pesquisa e colônias), <b>Nórdico</b> (mar, saques, berserkers), <b>Egípcio</b> (rio, fé, pirâmides), <b>Asteca</b> (guerras floridas, sacrifícios, Templo Mayor) ou <b>Romano</b> (estradas, aquedutos, legiões) — ou um povo clássico sem nome. Cada um tem arquitetura, nomes, governos, unidades, tecnologias e traços próprios.</p>
-      <h4>Cidades que crescem</h4><p>Acampamento → aldeia → vila → cidade → metrópole. Casas viram sobrados e ínsulas, surgem praças, mercados, celeiros, bibliotecas, teatros, termas, palácios, portos e uma <b>maravilha</b>. Ruas são calçadas, estradas ligam cidades, <b>carroças</b> levam bens pelas rotas internas e de comércio, e <b>aquedutos</b> trazem água dos rios.</p>
+      <h4>Cidades que crescem</h4><p>Acampamento → aldeia → vila → cidade → metrópole → <b>megalópole</b>. Nos mapas <b>Enorme, Colossal e Titânico</b> (128, 160 e 192) há espaço para cidades de centenas de habitantes, com quarteirões inteiros de prédios. Casas viram sobrados e ínsulas, surgem praças, mercados, celeiros, bibliotecas, teatros, termas, palácios, portos e uma <b>maravilha</b>. Ruas são calçadas, estradas ligam cidades, <b>carroças</b> levam bens pelas rotas internas e de comércio, e <b>aquedutos</b> trazem água dos rios.</p>
       <h4>O mar</h4><p>Com Navegação vêm portos, barcos de pesca, exploradores que descobrem outros povos, navios mercantes, frotas de guerra, invasões pelo mar e colônias em outras ilhas.</p>
       <h4>Povos, reinos e guerras</h4><p>No <b>Novo mundo</b> você escolhe o mapa (ilha, continente, arquipélago, istmo), o tamanho e quantos povos despertam. Cada povo tem cor, bandeira, estoque, território e um <b>líder</b> com personalidade própria (belicoso, cruel, devoto, ambicioso…). Governos mudam: tribo → chefia → reino, ou teocracia, tirania, conselho.</p>
       <ul><li>Quando se encontram, os povos trocam emissários, fazem comércio, casamentos e alianças — ou declaram <b>guerra</b>: exércitos marcham, saqueiam, fazem <b>cativos</b>, conquistam vilas e, sob líderes cruéis, <b>massacram</b>.</li>
@@ -673,15 +689,26 @@
     arquipelago: '<path d="M8 17c1-5 8-7 12-4 3 3 1 8-3 9-5 1-10-1-9-5zM30 12c2-4 9-4 11 0 2 5-3 8-7 7-3-1-5-4-4-7zM18 33c1-5 9-6 12-2 3 4-1 9-6 8-4 0-7-2-6-6zM40 29c2-3 8-2 8 2s-5 6-8 4c-1-1-1-4 0-6z" fill="currentColor"/><path d="M19 22l5 8M34 19l6 9" stroke="#8ec8e8" stroke-width="1.4" stroke-dasharray="2 2" fill="none"/>',
     istmo: '<path d="M4 20c0-8 8-13 15-11 5 2 6 6 9 7 3 1 5-5 11-5 7 0 12 6 11 13-1 7-8 11-15 9-4-1-5-5-8-5s-5 5-11 5C9 33 4 28 4 20z" fill="currentColor"/>',
   };
+  UI.SIZES = [
+    [64, 'Pequeno', 'Uma ilha íntima: tudo cabe na tela, as vilas logo se esbarram.'],
+    [80, 'Médio', 'O tamanho clássico: espaço para dois ou três reinos crescerem.'],
+    [96, 'Grande', 'Terras largas, vários climas, viagens longas entre os povos.'],
+    [128, 'Enorme', 'Continentes de verdade: cidades podem virar metrópoles, e cabem até 6 povos.'],
+    [160, 'Colossal', 'Um mundo vasto, com espaço para megalópoles de centenas de almas e muitos reinos.'],
+    [192, 'Titânico', 'O maior de todos: megacidades, impérios e ecossistemas inteiros. Exige um computador mais forte.'],
+  ];
   UI.openSetup = function (fromGame, keep) {
     if (!keep || !UI._setup) UI._setup = { fromGame: !!fromGame, opts: Object.assign({}, G.Main.lastOpts) };
     const o = UI._setup.opts; if (!o.clima) o.clima = 'variado';
+    if (!UI.SIZES.some(z => z[0] === o.size)) o.size = 80;
+    const maxT = o.size >= 128 ? 6 : 4; o.tribes = G.clamp(o.tribes || 1, 1, maxT);
+    const sizeTip = (UI.SIZES.find(z => z[0] === o.size) || UI.SIZES[1])[2];
     const opt = (k, v, label, sub) => `<button class="st-opt ${o[k] === v ? 'on' : ''}" data-so="${k}" data-v="${v}"><b>${label}</b>${sub ? '<span>' + sub + '</span>' : ''}</button>`;
     const maps = Object.entries(G.MAP_TYPES).map(([id, m]) => `<button class="st-map ${o.type === id ? 'on' : ''}" data-so="type" data-v="${id}"><span class="st-pic">${svg(MAPSVG[id] || MAPSVG.ilha, '0 0 54 44')}</span><b>${m.name}</b><span>${m.desc}</span></button>`).join('');
     const tip = o.tribes === 1 ? 'Um único povo. Com o tempo, suas próprias vilas podem se rebelar e virar novos reinos.'
       : `${o.tribes} povos começam em cantos distantes, sem saber uns dos outros. Quando se encontrarem, virão comércio, alianças, guerras — e talvez correntes.`;
     // civilization per people
-    o.civs = (o.civs || []).slice(0, 4);
+    o.civs = (o.civs || []).slice(0, 6);
     const focus = Math.min(UI._setup.focus || 0, o.tribes - 1);
     const civChip = (k, id) => { const c = G.CIVS[id]; const on = (o.civs[k] || 'rand') === id; return `<button class="st-civ ${on ? 'on' : ''}" data-civ="${k}" data-v="${id}" title="${c ? esc(c.blurb) : 'Sorteada ao criar o mundo'}"><i>${id === 'rand' ? ICON.star : UI.civIcon(id)}</i><b>${c ? c.name : 'Aleatória'}</b></button>`; };
     const rows = o.classic ? '' : Array.from({ length: o.tribes }, (_, k) => `<div class="st-civrow ${k === focus ? 'focus' : ''}"><span class="st-civn">${o.tribes > 1 ? 'Povo ' + (k + 1) : 'Seu povo'}</span><div class="st-civopts">${['rand'].concat(G.Civ.IDS).map(id => civChip(k, id)).join('')}</div></div>`).join('');
@@ -692,8 +719,9 @@
       <div class="setup">
         <div class="st-label">Mapa</div><div class="st-maps">${maps}</div>
         <div class="st-grid">
-          <div><div class="st-label">Tamanho</div><div class="st-row">${opt('size', 64, 'Pequeno')}${opt('size', 80, 'Médio')}${opt('size', 96, 'Grande')}</div></div>
-          <div><div class="st-label">Povos</div><div class="st-row">${[1, 2, 3, 4].map(n => opt('tribes', n, String(n))).join('')}</div></div>
+          <div class="st-wide"><div class="st-label">Tamanho</div><div class="st-row st-sizes">${UI.SIZES.map(([n, l]) => opt('size', n, l, n + '×' + n)).join('')}</div>
+            <p class="st-hint">${sizeTip}</p></div>
+          <div class="st-wide"><div class="st-label">Povos</div><div class="st-row">${Array.from({ length: maxT }, (_, k) => opt('tribes', k + 1, String(k + 1))).join('')}</div></div>
         </div>
         <div class="st-label">Clima</div>
         <div class="st-row st-clima">${Object.entries(G.Biome.CLIMAS).map(([k, c]) => opt('clima', k, c.name)).join('')}</div>
