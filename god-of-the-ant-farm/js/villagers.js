@@ -142,7 +142,7 @@
     const i = W.idx(v.x, v.y);
     const ty = S.type[i];
     const sp = v.speed * (mul || 1) * (ty === T.RIVER ? (S.road[i] ? 1 : 0.5) : 1) * (S.road[i] ? (S.road[i] >= 3 ? 1.4 : 1.3) : S.wear[i] > 28 ? 1.15 : 1) * (v.sick > 0 ? 0.75 : 1)
-      * (v.age < 8 ? 0.8 : v.age >= 62 ? 0.72 : 1) * (v.carry && v.carry.n >= 4 ? 0.9 : 1);
+      * (v.age < 8 ? 0.8 : v.age >= 62 ? 0.72 : 1) * (v.carry && v.carry.n >= 4 ? 0.9 : 1) * (v.elite === 'carro' ? 1.45 : 1);
     const step = sp * dt;
     if (d <= step || d < 0.001) { v.x = p[0]; v.y = p[1]; v.pi++; }
     else { v.x += dx / d * step; v.y += dy / d * step; }
@@ -197,7 +197,7 @@
     if (v.hp <= 0) G.Village.kill(v, v.lastCause, v.lastGod);
   }
 
-  const FIELD = { band: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1 };
+  const FIELD = { band: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1, aboard: 1, embark: 1, boardBack: 1, pave: 1 };
   // ------------------------------ emergencies ------------------------------
   Vg.alarms = new Map(); // settlement id -> [tile indices]
   Vg.fireFighters = new Map();
@@ -413,6 +413,7 @@
         const x = x0 + dx, y = y0 + dy; if (x < 0 || y < 0 || x >= N || y >= N) continue;
         const o = test(y * N + x); if (!o) continue;
         if (set && G.dist2(o.x, o.y, set.cx, set.cy) > 28 * 28) continue;
+        if (!W.sameLand(v.x, v.y, o.x, o.y)) continue;
         const d = G.dist2(v.x, v.y, o.x, o.y); if (d < bd) { bd = d; best = o; }
       }
       if (best) return best;
@@ -484,6 +485,7 @@
       if (a.dead || a.kind === 'wolf' || a.air || a.held) continue;
       if (a.claim && a.claim !== v.id && S.villagers.has(a.claim)) continue;
       if (set && G.dist2(a.x, a.y, set.cx, set.cy) > (maxD || 24) * (maxD || 24)) continue;
+      if (!W.sameLand(v.x, v.y, a.x, a.y)) continue;
       const d = G.dist2(v.x, v.y, a.x, a.y); if (d < bd) { bd = d; best = a; }
     }
     if (!best) return null;
@@ -1251,7 +1253,7 @@
       tPush = 1;
       // unstick villagers standing inside blocking footprints
       for (const v of S.villagers.values()) {
-        if (v.inside || v.air || v.held || v.age < 2) continue;
+        if (v.inside || v.air || v.held || v.age < 2 || v.aboard) continue;
         const i = W.idx(v.x, v.y);
         if (!W.walkable(i) && S.type[i] !== T.SEA && S.type[i] !== T.DEEP) {
           const n = W.nearestLand(v.x, v.y, 5); if (n) { v.x = n[0]; v.y = n[1]; v.path = null; if (v.task) v.task.st = 0; }
@@ -1261,6 +1263,11 @@
     for (const v of [...S.villagers.values()]) {
       if (v.held) continue;
       if (v.air) { G.airUpdate(v, dt, imp => land(v, imp)); continue; }
+      // at sea: only the body's needs go on (provisions come from the stores)
+      if (v.aboard) {
+        if (!G.Naval || !G.Naval.aboard(v.aboard)) { v.aboard = 0; v.task = null; const p = W.nearestLand(v.x, v.y, 8); if (p) { v.x = p[0]; v.y = p[1]; } }
+        else { if (!v.task || v.task.type !== 'aboard') v.task = { type: 'aboard', ship: v.aboard, pri: 9, st: 0, age: 0 }; needs(v, dt); v.moving = false; if (v.emo) { v.emo.t -= dt; if (v.emo.t <= 0) v.emo = null; } continue; }
+      }
       needs(v, dt);
       if (!S.villagers.has(v.id)) continue;
       if (v.age < 2) { babyUpdate(v, dt); if (v.emo) { v.emo.t -= dt; if (v.emo.t <= 0) v.emo = null; } continue; }

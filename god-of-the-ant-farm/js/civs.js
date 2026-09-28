@@ -153,12 +153,7 @@
     const c = G.CIVS[civ];
     return (c && c.bnames[type]) || (G.BDEF[type] ? G.BDEF[type].name : type);
   };
-  C.unitName = function (v) {
-    const c = C.ofV(v); const k = v.g === 'f' ? 1 : 0;
-    if (v.role === 'guerreiro') { if (v.chariot) return 'Auriga de Carro'; if (v.berserk) return 'Berserker'; return c ? c.units.guerreiro[k] : null; }
-    if (v.role === 'arqueiro') return c ? c.units.arqueiro[k] : null;
-    return null;
-  };
+  C.unitName = v => (G.Siege ? G.Siege.unitName(v) : null);
 
   // ------------------------------ names ------------------------------
   C.personName = function (civ, g, used) {

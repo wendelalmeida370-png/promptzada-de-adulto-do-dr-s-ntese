@@ -46,7 +46,10 @@
     sacerdote: ['Sacerdote', 'Sacerdotisa'], anciao: ['Ancião', 'Anciã'], crianca: ['Criança', 'Criança'], bebe: ['Bebê', 'Bebê'],
     guerreiro: ['Guerreiro', 'Guerreira'], cativo: ['Cativo', 'Cativa'],
   };
-  G.roleName = v => { const r = G.ROLE[v.captive ? 'cativo' : v.role] || G.ROLE.coletor; return r[v.g === 'f' ? 1 : 0]; };
+  G.roleName = v => {
+    if (!v.captive && v.role === 'guerreiro' && G.Siege) { const u = G.Siege.unitName(v); if (u) return u; }
+    const r = G.ROLE[v.captive ? 'cativo' : v.role] || G.ROLE.coletor; return r[v.g === 'f' ? 1 : 0];
+  };
   G.ERAS = ['Acampamento', 'Aldeia', 'Povoado', 'Comunidade Agrícola', 'Vila Artesã', 'Vila Sagrada', 'Vila Desenvolvida', 'Pequena Civilização'];
 
   // ------------------------------ time ------------------------------
@@ -569,7 +572,12 @@
         const sc = Math.min(trees, 20) * 0.3 + land * 0.12 + S.fert[i] * 3 - sl * 2 - Math.abs(md - 20) * 0.1 + G.R();
         if (sc > bs) { bs = sc; best = [x + 0.5, y + 0.5]; }
       }
-      if (!best || !W.findPath(set.cx, set.cy, best[0], best[1], true, N * N)) { set.fails = 0; continue; }
+      // seafaring peoples (and anyone boxed in on an island) sail off to found colonies
+      const fac = G.Fac.get(set.fac);
+      const seaChance = (G.Civ.t(set.fac, 'colonize') - 1) * 0.6;
+      const reachable = best && W.findPath(set.cx, set.cy, best[0], best[1], true, N * N);
+      if ((!reachable || G.R() < seaChance) && G.Naval && fac && G.Naval.colonize(set, fac)) { set.fails = 0; return; }
+      if (!reachable) { set.fails = 0; continue; }
       const name = V.newSettlementName(set.fac);
       const ns = V.addSettlement(name, best[0], best[1], set.fac);
       // pick migrants: young couples with kids first, then singles
@@ -614,8 +622,9 @@
     mother.lastBirth = S.day;
     const fn = father ? father.name : null;
     let txt;
-    if (twins === 2) txt = `${mother.name}${fn ? ' e ' + fn : ''} tiveram gêmeos: ${names[0][0]} e ${names[1][0]}.`;
-    else txt = `${mother.name}${fn ? ' e ' + fn : ''} tiveram ${names[0][1] === 'f' ? 'uma filha' : 'um filho'}, ${names[0][0]}.`;
+    const had = fn ? ' e ' + fn + ' tiveram' : ' teve';
+    if (twins === 2) txt = `${mother.name}${had} gêmeos: ${names[0][0]} e ${names[1][0]}.`;
+    else txt = `${mother.name}${had} ${names[0][1] === 'f' ? 'uma filha' : 'um filho'}, ${names[0][0]}.`;
     V.log(txt, 'baby', mother.x, mother.y);
     G.Audio && G.Audio.at(mother.x, mother.y, 'birth', true);
     if (!S.milestones.firstBirth) V.milestone('firstBirth', 'Primeiro nascimento', 'Uma nova geração começa na ilha.', 'baby');
@@ -638,6 +647,7 @@
     massacre: (v) => `foi massacrad${v.g === 'f' ? 'a' : 'o'} aos ${Math.floor(v.age)} anos`,
     execution: (v) => `foi executad${v.g === 'f' ? 'a' : 'o'} aos ${Math.floor(v.age)} anos`,
     coup: (v) => `foi assassinad${v.g === 'f' ? 'a' : 'o'} aos ${Math.floor(v.age)} anos`,
+    sacrifice: (v) => `foi sacrificad${v.g === 'f' ? 'a' : 'o'} aos deuses aos ${Math.floor(v.age)} anos`,
     unknown: (v) => `morreu aos ${Math.floor(v.age)} anos`,
   };
   V.kill = function (v, cause, byGod) {
@@ -653,7 +663,7 @@
       fac: G.Fac.idOfV(v), captive: !!v.captive, ord: v.ord, ep: v.ep, reigned: v.reigned, kills: v.kills, hero: v.hero, by: v.lastBy || 0,
     };
     S.dead.set(v.id, rec);
-    const violent = cause === 'war' || cause === 'arrow' || cause === 'massacre' || cause === 'execution' || cause === 'coup';
+    const violent = cause === 'war' || cause === 'arrow' || cause === 'massacre' || cause === 'execution' || cause === 'coup' || cause === 'sacrifice';
     if (violent) G.War.noteDeath(v, cause);
     const wasRuler = G.Fac.all().some(f => f.leader === v.id);
     const p = S.villagers.get(v.partner);

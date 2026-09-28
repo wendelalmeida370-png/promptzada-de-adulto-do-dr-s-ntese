@@ -377,6 +377,7 @@
     const S = G.S;
     let html = '';
     if (o.type && G.BDEF[o.type]) html = buildingHTML(o);
+    else if (o.kind && o.dock !== undefined && G.Naval && G.Naval.SHIP[o.kind]) html = shipHTML(o);
     else if (o.kind) {
       if (!S.animals.has(o.id)) { UI.select(null); return; }
       const d = G.Animals.DEF[o.kind];
@@ -447,6 +448,21 @@
       <div class="doing">Atualmente: <b>${esc(G.Vg.taskText(v))}</b></div>
       <div class="meta">${set ? esc(set.name) : ''}${home ? (() => { const hn = G.Village.buildName(home).toLowerCase(); return ' · mora n' + (G.gen(hn) === 'a' ? 'uma ' : 'um ') + esc(hn); })() : ''}${feats.length ? '<br>Contribuiu com ' + feats.join(', ') : ''}</div>
       <div class="btns"><button data-act="follow" class="${following ? 'on' : ''}">${ICON.eye} ${following ? 'Seguindo' : 'Seguir'}</button><button data-act="tree">${ICON.tree} Família</button></div>`;
+  }
+  function shipHTML(s) {
+    const S = G.S; if (!S.ships.includes(s)) { UI.select(null); return ''; }
+    const f = G.Fac.get(s.fac); const nm = G.Naval.shipName(s);
+    const KIND = { pesca: 'Barco de pesca', explorador: 'Barco explorador', mercante: 'Navio mercante', guerra: 'Navio de guerra', transporte: 'Navio de transporte' };
+    const ST = { idle: 'Atracado no porto', out: 'Rumo ao pesqueiro', fish: 'Pescando', back: 'Voltando ao porto', go: 'Navegando para o porto estrangeiro', back2: 'Voltando ao porto', patrol: 'Patrulhando a costa', hunt: 'Caçando navios inimigos!', repair: 'Voltando para reparos', embark: 'Esperando a tripulação embarcar', sail: s.purpose === 'colony' ? 'Levando colonos a uma nova terra' : 'Navegando para a batalha', land: 'Desembarcando', wait: 'Esperando os guerreiros na praia', return: 'Voltando para casa' };
+    const aboard = s.crew ? s.crew.filter(id => { const v = S.villagers.get(id); return v && v.aboard === s.id; }) : [];
+    const cargo = s.goods || s.ret || (s.cargo ? { k: 'food', n: s.cargo } : null);
+    const MAT = { food: 'comida', wood: 'madeira', stone: 'pedra' };
+    return `<div class="insp-head"><div class="insp-title"><h3>${esc(G.cap(nm.replace(/^(um|uma) /, '')))}</h3><div class="sub">${KIND[s.kind] || ''}</div></div><button class="x" data-act="close">${ICON.close}</button></div>
+      ${f ? `<div class="fline">${UI.flag(f.id, 'mini')}${esc(f.name)}</div>` : ''}
+      ${bar('Casco', s.hp / s.maxHp * 100, 'hp')}
+      <div class="doing">Atualmente: <b>${ST[s.st] || 'Navegando'}</b></div>
+      ${aboard.length ? `<div class="family"><div>A bordo (${aboard.length}):</div><div>${aboard.slice(0, 12).map(id => plink(id)).join(', ')}</div></div>` : ''}
+      ${cargo ? `<div class="doing">Carga: <b>${cargo.n} de ${MAT[cargo.k]}</b></div>` : ''}`;
   }
   function buildingHTML(b) {
     const S = G.S; const def = G.BDEF[b.type];
@@ -603,6 +619,7 @@
   const MAPSVG = {
     ilha: '<path d="M14 30c-6-6-3-16 6-19 7-3 16-2 21 3 6 6 4 15-2 20-6 5-18 3-25-4z" fill="currentColor"/><path d="M24 18c3 4 5 9 11 12" stroke="#3a7ab8" stroke-width="1.6" fill="none"/>',
     continente: '<path d="M6 34c-2-9 1-20 10-25 9-4 22-5 30 1 7 6 9 15 5 23-4 8-15 10-26 9-9-1-17-1-19-8z" fill="currentColor"/><path d="M20 20l4-6 4 6M32 26l3-5 3 5" stroke="#6a5a4a" stroke-width="1.4" fill="none"/>',
+    mar: '<path d="M6 12c1-4 6-5 9-3 2 2 1 6-2 7-4 1-8-1-7-4zM36 8c2-3 8-3 9 1 1 4-3 6-6 5-3 0-4-3-3-6zM20 30c1-4 8-5 10-2 3 3 0 7-4 7-4 1-7-2-6-5zM42 32c1-2 5-2 6 1 0 3-3 4-5 3-1-1-2-2-1-4z" fill="currentColor"/><path d="M13 18c5 3 9 7 9 10M30 12c4 2 7 6 10 17" stroke="#8ec8e8" stroke-width="1.2" stroke-dasharray="1.5 2.5" fill="none"/><path d="M24 20l2-4 2 4z" fill="#f4ecd8"/>',
     arquipelago: '<path d="M8 17c1-5 8-7 12-4 3 3 1 8-3 9-5 1-10-1-9-5zM30 12c2-4 9-4 11 0 2 5-3 8-7 7-3-1-5-4-4-7zM18 33c1-5 9-6 12-2 3 4-1 9-6 8-4 0-7-2-6-6zM40 29c2-3 8-2 8 2s-5 6-8 4c-1-1-1-4 0-6z" fill="currentColor"/><path d="M19 22l5 8M34 19l6 9" stroke="#8ec8e8" stroke-width="1.4" stroke-dasharray="2 2" fill="none"/>',
     istmo: '<path d="M4 20c0-8 8-13 15-11 5 2 6 6 9 7 3 1 5-5 11-5 7 0 12 6 11 13-1 7-8 11-15 9-4-1-5-5-8-5s-5 5-11 5C9 33 4 28 4 20z" fill="currentColor"/>',
   };

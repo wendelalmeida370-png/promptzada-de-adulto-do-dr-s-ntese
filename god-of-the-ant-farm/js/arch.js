@@ -943,7 +943,14 @@
   // weapons and shields carried by warriors (drawn in the villager's local space)
   A.arms = function (c, v) {
     const civ = v._civ, fc = v._fc || '#8a3a2a';
-    if (v.role === 'arqueiro') {
+    if (v.elite === 'carro') { // war chariot: box, wheel and horse
+      c.fillStyle = '#8a5a34'; c.fillRect(-3.4, -5.4, 5.2, 3.2); c.fillStyle = '#e8c24a'; c.fillRect(-3.4, -5.4, 5.2, 0.7);
+      c.fillStyle = '#4a3020'; c.beginPath(); c.arc(-1, -1.8, 2.1, 0, TAU); c.fill(); c.fillStyle = '#c8a060'; c.beginPath(); c.arc(-1, -1.8, 0.6, 0, TAU); c.fill();
+      c.fillStyle = '#6a4a30'; c.beginPath(); c.ellipse(6.5, -5.2, 3.2, 1.9, 0, 0, TAU); c.fill(); c.fillRect(8.4, -8, 1.8, 3); c.beginPath(); c.ellipse(10.2, -8.2, 1.5, 1, 0.3, 0, TAU); c.fill();
+      c.strokeStyle = '#4a3020'; c.lineWidth = 0.7; for (const x of [4.4, 5.6, 7.6, 8.6]) l2(c, x, -3.8, x + 0.3, -0.2);
+      l2(c, 1.8, -4, 4, -5);
+    }
+    if (v.arm === 'arco') {
       c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.7; c.beginPath(); c.arc(2.6, -8, 4.6, -1.25, 1.25); c.stroke();
       c.strokeStyle = 'rgba(240,235,220,0.8)'; c.lineWidth = 0.3; l2(c, 2.6 + Math.cos(-1.25) * 4.6, -8 + Math.sin(-1.25) * 4.6, 2.6 + Math.cos(1.25) * 4.6, -8 + Math.sin(1.25) * 4.6);
       c.fillStyle = '#7a5230'; c.fillRect(-2.9, -10.5, 1.2, 4.5); c.fillStyle = '#e8e0c8'; c.fillRect(-2.8, -11.5, 0.3, 1.2); c.fillRect(-2.3, -11.7, 0.3, 1.2);

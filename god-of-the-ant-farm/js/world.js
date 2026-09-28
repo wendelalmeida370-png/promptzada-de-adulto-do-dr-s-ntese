@@ -49,7 +49,7 @@
       road: new Uint8Array(N * N),   // 1 dirt path, 2 paved street, 3 stone highway
       wall: new Uint8Array(N * N),   // 1 wall, 2 gate
       wallFac: new Int32Array(N * N),
-      carts: [], ships: [], aqueducts: [], routes: [], lore: null,
+      carts: [], ships: [], aqueducts: [], routes: [], fish: [], seaRoutes: [], walls: [], wallHp: {}, missiles: [], lore: null,
     };
   };
 
@@ -76,6 +76,30 @@
   // walls block, open gates (2) and aqueduct arches (3) let people through, shut gates (4) don't
   W.walkable = i => { const S = G.S; const t = S.type[i]; if (t < T.RIVER || W.blocked(i)) return false; const w = S.wall[i]; return !w || w === 2 || w === 3; };
   W.walkableXY = (x, y) => W.inb(x, y) && W.walkable(W.idx(x, y));
+  // landmass labels: who can walk to whom (4-connected land, rivers included)
+  let landIds = null, landKey = null, landVer = -1;
+  W.invalidateLand = () => { landIds = null; };
+  W.landIds = function () {
+    const S = G.S;
+    if (landIds && landKey === S && landVer === (S.typeVer || 0) && landIds.length === N * N) return landIds;
+    landIds = new Int32Array(N * N).fill(-1); landKey = S; landVer = S.typeVer || 0;
+    let id = 0;
+    for (let i = 0; i < N * N; i++) {
+      if (landIds[i] >= 0 || S.type[i] < T.RIVER) continue;
+      const st = [i]; landIds[i] = id;
+      while (st.length) {
+        const a = st.pop(); const x = a % N, y = (a / N) | 0;
+        if (x > 0 && landIds[a - 1] < 0 && S.type[a - 1] >= T.RIVER) { landIds[a - 1] = id; st.push(a - 1); }
+        if (x < N - 1 && landIds[a + 1] < 0 && S.type[a + 1] >= T.RIVER) { landIds[a + 1] = id; st.push(a + 1); }
+        if (y > 0 && landIds[a - N] < 0 && S.type[a - N] >= T.RIVER) { landIds[a - N] = id; st.push(a - N); }
+        if (y < N - 1 && landIds[a + N] < 0 && S.type[a + N] >= T.RIVER) { landIds[a + N] = id; st.push(a + N); }
+      }
+      id++;
+    }
+    return landIds;
+  };
+  W.landAt = (x, y) => W.inb(x, y) ? W.landIds()[W.idx(x, y)] : -1;
+  W.sameLand = (ax, ay, bx, by) => { const L = W.landIds(); const a = L[W.idx(ax, ay)], b = L[W.idx(bx, by)]; return a < 0 || b < 0 || a === b; };
   W.buildable = i => { const t = G.S.type[i]; return t >= T.SAND && !G.S.occ[i] && !G.S.objAt[i] && G.S.fire[i] < 0.05; };
   W.slope = (x, y, w, h) => {
     let mn = 1e9, mx = -1e9;
@@ -133,6 +157,7 @@
     continente: { name: 'Continente', desc: 'Uma grande massa de terra com montanhas. Espaço para muitos reinos.' },
     arquipelago: { name: 'Arquipélago', desc: 'Várias ilhas ligadas por vaus rasos. Fronteiras naturais e pontos de passagem.' },
     istmo: { name: 'Istmo', desc: 'Duas terras unidas por uma faixa estreita. Uma fronteira feita para a guerra.' },
+    mar: { name: 'Mar Aberto', desc: 'Ilhas separadas pelo mar. Sem navios, nenhum povo encontra o outro.' },
   };
   function landShapeFn(type, rng, n1) {
     const angNoise = (a, s) => G.fbm(n1, Math.cos(a) * 1.4 + s, Math.sin(a) * 1.4 + 7.7 + s, 3);
@@ -146,15 +171,26 @@
         return 1 - G.smooth(sh * 0.62, sh * 0.99, d);
       };
     }
-    if (type === 'arquipelago') {
-      const K = 4 + Math.floor(rng() * 2) + (G._genTribes >= 3 ? 1 : 0);
+    if (type === 'arquipelago' || type === 'mar') {
+      const sea = type === 'mar';
       const isl = [];
-      let guard = 0;
-      while (isl.length < K && guard++ < 400) {
-        const a = rng() * 6.283, r = Math.sqrt(rng()) * 0.62;
-        const c = [Math.cos(a) * r, Math.sin(a) * r];
-        if (isl.some(o => Math.hypot(o[0] - c[0], o[1] - c[1]) < 0.5)) continue;
-        isl.push([c[0], c[1], 0.26 + rng() * 0.12, rng() * 10]);
+      if (sea) {
+        // one home island per people around a ring, and a small free island in the middle
+        const homes = Math.max(2, G._genTribes);
+        const a0 = rng() * 6.283;
+        const ring = homes <= 2 ? 0.5 : homes === 3 ? 0.55 : 0.58;
+        const rr = homes <= 2 ? 0.56 : homes === 3 ? 0.54 : 0.46;
+        for (let k = 0; k < homes; k++) { const a = a0 + k * 6.283 / homes + (rng() - 0.5) * 0.3; const d = ring * (0.95 + rng() * 0.1); isl.push([Math.cos(a) * d, Math.sin(a) * d, rr * (0.93 + rng() * 0.14), rng() * 10]); }
+        isl.push([(rng() - 0.5) * 0.06, (rng() - 0.5) * 0.06, homes <= 2 ? 0.16 : homes === 3 ? 0.19 : 0.22, rng() * 10]);
+      } else {
+        const K = 4 + Math.floor(rng() * 2) + (G._genTribes >= 3 ? 1 : 0);
+        let guard = 0;
+        while (isl.length < K && guard++ < 400) {
+          const a = rng() * 6.283, r = Math.sqrt(rng()) * 0.62;
+          const c = [Math.cos(a) * r, Math.sin(a) * r];
+          if (isl.some(o => Math.hypot(o[0] - c[0], o[1] - c[1]) < 0.5)) continue;
+          isl.push([c[0], c[1], 0.26 + rng() * 0.12, rng() * 10]);
+        }
       }
       return (u, w) => {
         let best = 0;
@@ -221,7 +257,7 @@
     }
 
     // ---- river + lake (carved valley at sea level) ----
-    const rivers = mapType === 'arquipelago' ? 0 : mapType === 'ilha' ? (rng() < 0.8 ? 1 : 0) : (N >= 80 ? 2 : 1);
+    const rivers = mapType === 'arquipelago' || mapType === 'mar' ? 0 : mapType === 'ilha' ? (rng() < 0.8 ? 1 : 0) : (N >= 80 ? 2 : 1);
     for (let rv = 0; rv < rivers; rv++) {
       // start on high-ish land
       let sx0 = cx, sy0 = cy, tries = 0;
@@ -296,7 +332,7 @@
       }
     }
     S.fords = 0;
-    if (compSize.length > 1) {
+    if (compSize.length > 1 && mapType !== 'mar') {
       let main = 0; for (let k = 1; k < compSize.length; k++) if (compSize[k] > compSize[main]) main = k;
       const joined = new Set([main]);
       const big = compSize.map((s, k) => k).filter(k => compSize[k] >= 24);
@@ -339,7 +375,9 @@
         if (size > bestSize) { bestSize = size; bestC = i; }
       }
     }
-    for (let i = 0; i < N * N; i++) if (type[i] >= T.RIVER && land[i] !== bestC) type[i] = T.SEA;
+    // (open sea: every sizeable island stays; the peoples will need ships to meet)
+    const sizes = {}; if (mapType === 'mar') for (let i = 0; i < N * N; i++) if (land[i] >= 0) sizes[land[i]] = (sizes[land[i]] || 0) + 1;
+    for (let i = 0; i < N * N; i++) if (type[i] >= T.RIVER && (mapType === 'mar' ? sizes[land[i]] < 60 : land[i] !== bestC)) type[i] = T.SEA;
 
     // ---- normalise vertices so water meets land exactly at sea level ----
     for (let vy = 0; vy < V; vy++) for (let vx = 0; vx < V; vx++) {
@@ -424,7 +462,7 @@
       for (const c of cands) {
         if (starts.length >= tribes) break;
         if (starts.some(s => G.dist(s[0], s[1], c[0], c[1]) < minD)) continue;
-        if (mapType === 'arquipelago' && starts.some(s => s[3] === c[3]) && minD > N * 0.2) continue;
+        if (((mapType === 'arquipelago' && minD > N * 0.2) || mapType === 'mar') && starts.some(s => s[3] === c[3])) continue;
         starts.push(c);
       }
       minD *= 0.8;
@@ -464,8 +502,9 @@
         else if (rng() < 0.12) G.Nature.addTree(x + 0.5 + (rng() - 0.5) * 0.4, y + 0.5 + (rng() - 0.5) * 0.4, 'pine', 0.7 + rng() * 0.35);
         continue;
       }
-      const dense = fd > 0.07;
-      if ((dense && rng() < 0.58) || rng() < 0.035) {
+      // small islands keep more of their woods
+      const dense = fd > (mapType === 'mar' ? -0.02 : 0.07);
+      if ((dense && rng() < 0.58) || rng() < (mapType === 'mar' ? 0.08 : 0.035)) {
         const pine = th > SEA + 2.6 ? rng() < 0.8 : rng() < 0.3;
         const size = rng() < 0.15 ? 0.3 + rng() * 0.3 : 0.75 + rng() * 0.3;
         G.Nature.addTree(x + 0.5 + (rng() - 0.5) * 0.45, y + 0.5 + (rng() - 0.5) * 0.45, pine ? 'pine' : 'oak', size);
@@ -526,6 +565,13 @@
     const s = W.idx(sx, sy), t = W.idx(tx, ty);
     const tX = t % N, tY = (t / N) | 0;
     if (!adj && !W.walkable(t)) adj = true;
+    // different islands: no walking there (fail fast instead of flooding the map)
+    const L = W.landIds(), ls = L[s];
+    if (ls >= 0) {
+      let ok = L[t] === ls;
+      if (!ok && adj) for (let k = 0; k < 8 && !ok; k++) { const nx = tX + DX[k], ny = tY + DY[k]; if (nx >= 0 && ny >= 0 && nx < N && ny < N && L[ny * N + nx] === ls) ok = true; }
+      if (!ok) return null;
+    }
     if (s === t && !adj) return [[tx, ty]];
     gen++; heap.clear();
     gS[s] = 0; seen[s] = gen; came[s] = -1;

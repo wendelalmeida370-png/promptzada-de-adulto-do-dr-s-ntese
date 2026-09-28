@@ -955,7 +955,7 @@
     for (let i = 0; i < fs.length; i++) for (let j = i + 1; j < fs.length; j++) {
       const a = fs[i], b = fs[j]; const r = G.Fac.rel(a.id, b.id); if (!r || r.met) continue;
       let met = (G.Fac.touch[key(a.id, b.id)] || 0) > 0;
-      if (!met) for (const s of G.Fac.settlementsOf(a.id)) for (const o of G.Fac.settlementsOf(b.id)) if (G.dist(s.cx, s.cy, o.cx, o.cy) < (s.radius || 8) + (o.radius || 8) + 8) met = true;
+      if (!met) for (const s of G.Fac.settlementsOf(a.id)) for (const o of G.Fac.settlementsOf(b.id)) { const d = G.dist(s.cx, s.cy, o.cx, o.cy); if (d < (s.radius || 8) + (o.radius || 8) + (G.W.sameLand(s.cx, s.cy, o.cx, o.cy) ? 8 : -4)) met = true; }
       if (!met && G.Fac.terrFac) for (const v of S.villagers.values()) {
         const fv = G.Fac.idOfV(v); if (fv !== a.id && fv !== b.id) continue;
         const o = G.Fac.ownerAt(v.x | 0, v.y | 0); if (o && o !== fv && (o === a.id || o === b.id)) { met = true; break; }

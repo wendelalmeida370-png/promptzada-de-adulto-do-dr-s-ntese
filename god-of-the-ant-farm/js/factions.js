@@ -124,7 +124,9 @@
     if (tTerr <= 0) { tTerr = 3; F.updateTerritory(); }
     G.Politics && G.Politics.update(dt);
     G.War && G.War.update(dt);
+    G.Siege && G.Siege.update(dt);
     G.Civ.update(dt);
     G.City && G.City.update(dt);
+    G.Naval && G.Naval.update(dt);
   };
 })(window.G);

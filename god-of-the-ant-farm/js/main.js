@@ -47,6 +47,7 @@
     G.War.reset();
     G.City && G.City.reset();
     G.Naval && G.Naval.reset();
+    G.Siege && G.Siege.reset();
     // 'classico' keeps the original nameless tribes; otherwise each people gets a civilization
     const civs = opts.classic ? S.starts.map(() => null) : G.Civ.assign(opts.civs, S.starts.length);
     const facs = S.starts.map(([x, y], k) => spawnPeople(x, y, k, civs[k]));
@@ -60,7 +61,7 @@
     S.stats.maxPop = S.villagers.size;
     if (facs.length > 1) {
       for (const f of facs) { const c = G.Fac.capitalOf(f.id); const l = G.Politics.ruler(f); G.Village.log(`${f.name}${l ? ', guiad' + G.Fac.oa(f) + ' por ' + l.name + ',' : ''} acendeu sua fogueira em ${c.name}.`, 'campfire', c.cx, c.cy); }
-      G.Village.log(`${facs.length} povos despertaram em cantos distantes ${S.mapType === 'arquipelago' ? 'do arquipélago' : S.mapType === 'continente' ? 'do continente' : S.mapType === 'istmo' ? 'das duas terras' : 'da ilha'}. Nenhum sabe dos outros.`, 'eye');
+      G.Village.log(`${facs.length} povos despertaram em cantos distantes ${S.mapType === 'arquipelago' ? 'do arquipélago' : S.mapType === 'mar' ? 'de ilhas separadas pelo mar' : S.mapType === 'continente' ? 'do continente' : S.mapType === 'istmo' ? 'das duas terras' : 'da ilha'}. Nenhum sabe dos outros.`, 'eye');
     } else G.Village.log('Onze almas despertaram ao redor de uma fogueira.', 'campfire', S.start[0], S.start[1]);
     return S;
   }
@@ -185,7 +186,8 @@
       const d = Math.hypot(px - sx, py - (sy - lift * cam.zoom));
       if (d < rad && d < bd) { bd = d; best = e; }
     };
-    for (const v of S.villagers.values()) { if (v.inside || v.held || (v.age < 2 && v.carried)) continue; test(v, v.age < 16 ? 4 : 6); }
+    for (const v of S.villagers.values()) { if (v.inside || v.held || v.aboard || (v.age < 2 && v.carried)) continue; test(v, v.age < 16 ? 4 : 6); }
+    for (const s of S.ships) test(s, 8);
     for (const a of S.animals.values()) { if (a.held) continue; test(a, 3); }
     if (best || mobileOnly) return best;
     let bb = null, bdep = -1e9;

@@ -365,7 +365,7 @@
     const cam = R.cam;
     // follow selected
     if (cam.follow) {
-      const v = G.S.villagers.get(cam.follow) || G.S.animals.get(cam.follow);
+      const v = G.S.villagers.get(cam.follow) || G.S.animals.get(cam.follow) || G.S.ships.find(o => o.id === cam.follow);
       if (v) { const [sx, sy] = proj(v.x, v.y, W.groundH(v.x, v.y)); cam.x += (sx - cam.x) * Math.min(1, dt * 4); cam.y += (sy - 8 - cam.y) * Math.min(1, dt * 4); }
       else cam.follow = 0;
     } else if (cam.target) {
@@ -550,7 +550,7 @@
       ctx.drawImage(ch.canvas, ch.sx, ch.sy, ch.w, ch.h);
     }
     PROF.mark('chunks', t0); t0 = now();
-    if (!R.dbg.noWater) drawWater(t, view);
+    if (!R.dbg.noWater) { drawWater(t, view); G.Naval && G.Naval.drawWater(ctx, proj, t, view); }
     PROF.mark('water', t0); t0 = now();
     if (S.weather.drought > 0) {
       ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(255,225,170,0.5)';
@@ -581,12 +581,19 @@
       const p = vis(x + 0.5, y + 0.5, W.groundH(x + 0.5, y + 0.5)); if (p) pushD(x + y + 1.05, 8, { d, st: a.style || (a.style = (G.Fac.get(a.fac) || {}).civ || 'classico') }, p[0], p[1]);
     }
     for (const c of S.carts) { const p = vis(c.x, c.y, W.groundH(c.x, c.y)); if (p) pushD(c.x + c.y + 0.03, 9, c, p[0], p[1]); }
+    for (const s of S.ships) { const p = vis(s.x, s.y, G.SEA); if (p) pushD(s.x + s.y + 0.3, 10, s, p[0], p[1]); }
+    // city walls, gates and siege engines
+    for (const w of S.walls) for (let k = 0; k < w.built; k++) {
+      const i = w.tiles[k]; const wv = S.wall[i]; if (wv !== 1 && wv !== 2 && wv !== 4) continue;
+      const x = i % N, y = (i / N) | 0; const p = vis(x + 0.5, y + 0.5, W.groundH(x + 0.5, y + 0.5)); if (p) pushD(x + y + 1.0, 11, { i, w }, p[0], p[1]);
+    }
+    for (const b of G.War.bands.values()) if (b.engines) for (const e of b.engines) { const p = vis(e.x, e.y, W.groundH(e.x, e.y)); if (p) pushD(e.x + e.y + 0.05, 12, e, p[0], p[1]); }
     const setHex = new Map(), setCiv = new Map(); for (const s of S.settlements.values()) { setHex.set(s.id, G.Fac.hex(s.fac)); const f = G.Fac.get(s.fac); setCiv.set(s.id, f ? f.civ : null); }
     rulerIds.clear(); for (const f of G.Fac.all()) if (f.leader) rulerIds.add(f.leader);
     for (const v of S.villagers.values()) { v.babyOn = null; v._fc = v.captive ? null : (setHex.get(v.set) || null); v._ruler = rulerIds.has(v.id); v._civ = v.captive ? v.civ : (setCiv.get(v.set) || v.civ || null); }
     for (const v of S.villagers.values()) if (v.age < 2 && v.carried) { const c = S.villagers.get(v.carrier); if (c) c.babyOn = v; }
     for (const v of S.villagers.values()) {
-      if (v.inside || v.held || (v.age < 2 && v.carried)) continue;
+      if (v.inside || v.held || v.aboard || (v.age < 2 && v.carried)) continue;
       const p = vis(v.x, v.y, W.groundH(v.x, v.y)); if (p) pushD(v.x + v.y + 0.05, 5, v, p[0], p[1] - (v.z || 0));
     }
     for (const a of S.animals.values()) { if (a.held) continue; const p = vis(a.x, a.y, W.groundH(a.x, a.y)); if (p) pushD(a.x + a.y + 0.04, 6, a, p[0], p[1] - (a.z || 0)); }
@@ -603,6 +610,7 @@
     ctx.fill();
     PROF.mark('collect+shadows', t0); t0 = now();
     if (!R.dbg.noEnt) for (const e of list) drawEntity(e, t, nightF);
+    G.Siege && G.Siege.drawMissiles(ctx, proj);
     PROF.mark('entities', t0); t0 = now();
     // ---------- world particles, clouds ----------
     drawParticles(0, view);
@@ -940,6 +948,8 @@
         break;
       }
       case 10: G.Naval && G.Naval.drawShip(ctx, o, sx, sy, t, nightF, light, emisTorch); break;
+      case 11: { const wv = S.wall[o.i]; const hp = S.wallHp[o.i] || 0; G.Art.draw(ctx, G.Siege.wallSprite(G.Siege.wallDir(o.i), o.w.style, o.w.mat, wv !== 1, wv === 4, hp < (o.w.mat === 'pedra' ? 90 : 35)), sx, sy, 1); if (wv === 4 && nightF > 0.3) { light(sx, sy - 14, 22, 'warm', 0.5 * nightF); emisTorch.push(sx + 6, sy - 16); } break; }
+      case 12: G.Siege.drawEngine(ctx, o, sx, sy, t); break;
     }
   }
 

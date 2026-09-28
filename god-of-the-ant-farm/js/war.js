@@ -78,7 +78,10 @@
     const S = G.S; opts = opts || {};
     let best = null, bd = 1e9, from = null;
     for (const s of G.Fac.settlementsOf(enemy.id)) for (const o of G.Fac.settlementsOf(f.id)) { const d = G.dist(s.cx, s.cy, o.cx, o.cy); if (d < bd) { bd = d; best = s; from = o; } }
-    if (!best || !from || !reachable(from, best)) return null;
+    // across the water (or by choice, for sea raiders) the war goes by ship
+    const byLand = best && from && reachable(from, best);
+    if (G.Naval && (!byLand || (G.Civ.t(f.id, 'raid') > 1.2 && G.R() < 0.35)) && G.Naval.canSail(f)) { const sh = G.Naval.launchRaid(f, enemy, opts); if (sh || !byLand) return sh ? { id: 0, ship: sh.id, naval: true } : null; }
+    if (!best || !from || !byLand) return null;
     const cands = [];
     for (const v of S.villagers.values()) {
       if (v.captive || v.age < 16 || v.age >= 58 || v.hp < 55 || v.preg > 0 || v.held || v.air) continue;
@@ -114,10 +117,30 @@
     f.attackCD = G.rr(120, 200) * (1.2 - pe.agg * 0.5);
     return b;
   };
+  Wr.makeBand = function (f, enemy, set, members, goal, o) {
+    o = o || {};
+    const b = {
+      id: nextBand++, fac: f.id, enemy: enemy.id, set: set.id, from: o.from || set.id, goal, st: o.landed ? 'ataque' : 'reunir', t: 0, life: 0,
+      members: members.map(v => v.id), start: members.length, kills: 0, lost: 0, captives: 0, loot: { food: 0, wood: 0, stone: 0 }, burned: 0, quiet: 0,
+      rx: set.cx, ry: set.cy, tx: set.cx, ty: set.cy, fury: !!o.fury, ship: o.ship || 0, reached: !!o.landed,
+    };
+    Wr.bands.set(b.id, b);
+    members.forEach((v, k) => { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'band', band: b.id, pri: 3.2, kind: 'band', flag: k === 0 }); });
+    return b;
+  };
   Wr.disband = function (b, silent) {
     const S = G.S; if (!Wr.bands.has(b.id)) return;
     Wr.bands.delete(b.id);
-    for (const id of b.members) { const v = S.villagers.get(id); if (v && v.task && v.task.type === 'band' && v.task.band === b.id) { if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, fid(v)); v.carry = null; } G.Vg.endTask(v); } }
+    G.Siege && G.Siege.onDisband(b);
+    const ship = b.ship && G.Naval && G.Naval.aboard(b.ship);
+    for (const id of b.members) {
+      const v = S.villagers.get(id);
+      if (v && v.task && v.task.type === 'band' && v.task.band === b.id) {
+        // raiders who came by sea walk back to their ship
+        if (ship && ship.st === 'wait') { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'boardBack', ship: ship.id, pri: 3.1, kind: 'boardBack' }); continue; }
+        if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, fid(v)); v.carry = null; } G.Vg.endTask(v);
+      }
+    }
     const f = G.Fac.get(b.fac), en = G.Fac.get(b.enemy), set = S.settlements.get(b.set);
     if (f) f.attackCD = Math.max(f.attackCD || 0, G.rr(110, 190));
     if (silent || !b.reached || !f) return;
@@ -164,7 +187,7 @@
         for (const id of b.members) { const v = S.villagers.get(id); if (G.dist(v.x, v.y, set.cx, set.cy) < (set.radius || 8) * 0.95 + 1) { arrived = true; break; } }
         if (arrived || b.t > 150) {
           b.st = 'ataque'; b.t = 0; b.reached = true;
-          set.alarmT = 30;
+          set.alarmT = 30; set.attacked = (set.attacked || 0) + 1;
           const vf = G.UI && G.UI.viewFac;
           if (vf === b.enemy || vf === b.fac) G.UI.notice(`${set.name} está sendo atacada por ${f.name}!`, 'war');
           G.Audio && G.Audio.at(set.cx, set.cy, 'horn', true);
@@ -182,9 +205,10 @@
           defenders++;
         }
         let fightingUs = false; for (const id of b.members) { const v = S.villagers.get(id); if (v.task.foe) { fightingUs = true; break; } }
-        if (defenders <= Math.floor(alive / 6) && !fightingUs) b.quiet += dt; else b.quiet = Math.max(0, b.quiet - dt * 2);
+        G.Siege && G.Siege.bandSiege(b, set, dt);
+        if (defenders <= Math.floor(alive / 6) && !fightingUs && !b.siege) b.quiet += dt; else b.quiet = Math.max(0, b.quiet - dt * 2);
         set.alarmT = Math.max(set.alarmT || 0, 5);
-        if (alive < b.start * 0.4 || (defenders > alive * 2.2 && b.t > 10)) {
+        if (alive < b.start * 0.4 || (defenders > alive * 2.2 && b.t > (b.siege ? 60 : 10))) {
           b.st = 'retorno'; b.t = 0; b.retreat = true;
           log(`${f.name} recuou de ${set.name}.`, 'war', set.cx, set.cy);
           en.st.battles++;
@@ -198,7 +222,7 @@
         }
         let done = true; for (const id of b.members) { const v = S.villagers.get(id); if (!v.carry && !v.task.gotCaptive) { done = false; break; } }
         const stock = en.stock.food + en.stock.wood + en.stock.stone;
-        if ((b.quiet > 5 && (done || stock < 3)) || b.t > 95 || (b.goal === 'conquista' && b.t > 100)) { b.st = 'retorno'; b.t = 0; }
+        if ((b.quiet > 5 && (done || stock < 3)) || b.t > (b.siege ? 170 : 95) || (b.goal === 'conquista' && b.t > (b.siege ? 180 : 100))) { b.st = 'retorno'; b.t = 0; }
         break;
       }
       case 'retorno':
@@ -467,7 +491,9 @@
       if (G.Civ.has(fv, 'bronze')) d *= 1.1;
       if (G.Civ.has(fv, 'ferro')) d *= 1.1;
     }
-    if (v.elite) d *= v.elite === 'berserker' ? 1.6 : 1.3;
+    if (v.elite) d *= v.elite === 'berserker' ? 1.6 : v.elite === 'carro' ? 1.4 : 1.3;
+    if (v.arm === 'arco') d *= 0.65;
+    if (o.elite === 'berserker') d *= 1.15;
     if (o.role === 'guerreiro' && !o.captive) { d *= G.Civ.t(fo, 'armor'); if (o.elite === 'falange' || o.elite === 'legiao') d *= 0.75; }
     return d * G.rr(0.8, 1.2);
   };
@@ -526,6 +552,16 @@
       return;
     }
     const d = G.dist(v.x, v.y, o.x, o.y);
+    // archers keep their distance and loose arrows
+    if (v.arm === 'arco' && !v.captive && d > 1.1 && d < 5.2) {
+      v.path = null; v.moving = false; v.act = 'shoot';
+      v.face = (o.x - o.y) - (v.x - v.y) > 0 ? 1 : -1;
+      t.cd = (t.cd === undefined ? G.rr(0, 0.5) : t.cd) - dt;
+      if (t.cd > 0) return;
+      t.cd = G.rr(1.3, 1.7); v.actT = 0;
+      G.Siege.shoot(v, o, t, b);
+      return;
+    }
     if (d > 0.85) {
       t.rt = (t.rt || 0) - dt;
       if (t.rt <= 0 || H.arrived(v)) {
@@ -628,6 +664,7 @@
       case 'marcha': goPoint(v, t, b.tx, b.ty, 2.5, dt, H, 1.05); break;
       case 'ataque': if (set) attackActions(v, t, b, set, dt, H); break;
       case 'retorno': {
+        if (b.ship && G.Naval && G.Naval.bandReturn(v, b, t, dt, H)) break;
         let home = S.settlements.get(v.set);
         if (!home || home.fac !== b.fac) home = G.Fac.capitalOf(b.fac);
         if (!home) return H.end(v);
@@ -641,6 +678,8 @@
   }
   function attackActions(v, t, b, set, dt, H) {
     const S = G.S; const en = G.Fac.get(b.enemy);
+    // walls first: batter the gate until it gives
+    if (b.siege && G.Siege && G.Siege.siegeActions(v, t, b, dt, H)) return;
     // take captives
     if (b.goal === 'captura' && !t.gotCaptive) {
       let prey = null, bd = 1e9;
@@ -705,7 +744,7 @@
     if (o.captive && !t.recapture && !t.any) return H.end(v);
     if (!t.any && !hostile(fid(v), fid(o))) return H.end(v);
     if (t.recapture && (!o.captive || !o.task || o.task.type !== 'escape')) return H.end(v);
-    if (!t.any && v.hp < (v.role === 'guerreiro' ? 18 : 30)) { H.flee(v, o.x, o.y, 8, 'war'); return; }
+    if (!t.any && v.elite !== 'berserker' && v.hp < (v.role === 'guerreiro' ? 18 : 30)) { H.flee(v, o.x, o.y, 8, 'war'); return; }
     if (t.skirmish && (v.hp < 55 || o.hp < 55)) return H.end(v);
     if (t.recapture) {
       if (G.dist(v.x, v.y, o.x, o.y) < 0.9) { Wr.recapture(o, v); return; }
@@ -732,6 +771,8 @@
   }
   function runEscorted(v, t, dt, H) {
     const S = G.S; const c = S.villagers.get(t.by);
+    // the captor boards a ship: the captive goes aboard too
+    if (c && c.aboard) { const sh = G.Naval && G.Naval.aboard(c.aboard); if (sh && G.dist(v.x, v.y, c.x, c.y) < 5) { G.Vg.endTask(v); v.aboard = sh.id; v.task = { type: 'aboard', ship: sh.id, pri: 9, st: 0, age: 0 }; sh.crew.push(v.id); } else H.end(v); return; }
     if (!c) { const dest = destFor(v); if (dest) { log(`Com a morte de seu captor, ${v.name} conseguiu fugir.`, 'free', v.x, v.y); Wr.freeCaptive(v, dest); } else H.end(v); return; }
     if (!c.task || !(c.task.type === 'band' || c.task.type === 'combat' || c.task.type === 'escort')) return H.end(v);
     v.act = 'bound';
