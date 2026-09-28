@@ -221,9 +221,9 @@
     }
     if (G.War.emergency(v, H)) return;
     if (v.inside || v.sleeping && !t) return;
-    // predators
-    for (const a of S.animals.values()) {
-      if (a.dead || !(a.kind === 'wolf' || (a.kind === 'boar' && a.angry > 0))) continue;
+    // predators (only the ones that mean harm right now)
+    const beasts = []; G.Animals.near(v.x, v.y, 6, a => { if (G.Animals.threat(a)) beasts.push(a); });
+    for (const a of beasts) {
       const d2 = G.dist2(v.x, v.y, a.x, a.y);
       if (d2 > 30) continue;
       if (t && ((t.type === 'fight' && t.id) || t.type === 'combat' || t.type === 'band')) return;
@@ -482,7 +482,7 @@
     const S = G.S; const set = S.settlements.get(v.set);
     let best = null, bd = 1e9;
     for (const a of S.animals.values()) {
-      if (a.dead || a.kind === 'wolf' || a.air || a.held) continue;
+      if (a.dead || !G.Animals.huntable(a)) continue;
       if (a.claim && a.claim !== v.id && S.villagers.has(a.claim)) continue;
       if (set && G.dist2(a.x, a.y, set.cx, set.cy) > (maxD || 24) * (maxD || 24)) continue;
       if (!W.sameLand(v.x, v.y, a.x, a.y)) continue;
@@ -562,7 +562,8 @@
     if (t) t.leisure = true;
     return t;
   }
-  function preyCount() { let n = 0; for (const a of G.S.animals.values()) if (!a.dead && a.kind !== 'wolf') n++; return n; }
+  let preyN = 0, preyT = -1;
+  function preyCount() { const S = G.S; if (preyT !== S.clock) { preyT = S.clock; preyN = 0; for (const a of S.animals.values()) if (!a.dead && G.Animals.huntable(a)) preyN++; } return preyN; }
   function workTask(v) {
     const S = G.S; const fac = G.Fac.ofV(v); if (!fac) return null;
     const st = fac.stock; const capS = G.Village.cap(fac.id);
@@ -713,7 +714,7 @@
           if (t.type === 'fight') { emote(v, 'happy', 2); return end(v); }
           // collect the meat
           if (G.dist(v.x, v.y, a.x, a.y) > 0.8) { if (!t.carc) { if (!Vg.goto(v, a.x, a.y, false)) return end(v); t.carc = true; } move(v, dt); }
-          else { v.carry = { k: 'food', n: Math.min(Math.round(8 * G.Civ.tV(v, 'hunt')), Math.round(a.meat * G.Civ.tV(v, 'hunt'))) }; G.Animals.remove(a); emote(v, 'food', 1.5); deliverTask(v); }
+          else { const take = Math.min(8, Math.max(1, a.meat)); v.carry = { k: 'food', n: Math.max(1, Math.round(take * G.Civ.tV(v, 'hunt'))) }; a.meat -= take; if (a.meat <= 0.5) G.Animals.remove(a); else a.claim = 0; emote(v, 'food', 1.5); deliverTask(v); }
           break;
         }
         if (t.type === 'fight' && v.hp < 30) { fleeFrom(v, a.x, a.y, 7, 'wolf'); return; }
@@ -1289,7 +1290,7 @@
 
   // ------------------------------ descriptions ------------------------------
   const MAT = { wood: 'madeira', food: 'comida', stone: 'pedra', water: 'água' };
-  const ANIMAL = { rabbit: 'um coelho', deer: 'um cervo', boar: 'um javali', wolf: 'um lobo' };
+  const ANIMAL = new Proxy({}, { get: (o, k) => (G.Animals.DEF[k] ? G.Animals.DEF[k].nameA : 'um animal') });
   Vg.taskText = function (v) {
     const S = G.S; const t = v.task;
     if (v.held) return 'Nas mãos de deus!';

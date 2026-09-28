@@ -420,7 +420,7 @@
     const cap = V.cap(fac.id); const st = fac.stock;
     let farmsBuilt = 0; for (const b of S.buildings.values()) if (b.set === set.id && b.type === 'farm' && b.built) farmsBuilt++;
     let templeBuilt = false; for (const b of S.buildings.values()) if (b.set === set.id && (b.type === 'temple') && b.built) templeBuilt = true;
-    let threats = 0; for (const a of S.animals.values()) if (a.kind === 'wolf' && a.hp > 0 && G.dist(a.x, a.y, set.cx, set.cy) < 20) threats++;
+    let threats = 0; for (const a of S.animals.values()) if (!a.dead && (G.Animals.threat(a) || (G.Animals.DEF[a.kind] && G.Animals.DEF[a.kind].bold > 0.3)) && G.dist(a.x, a.y, set.cx, set.cy) < 20) threats++;
     const want = { lenhador: 0, coletor: 0, agricultor: 0, construtor: 0, mineiro: 0, cacador: 0, sacerdote: 0, guerreiro: 0 };
     want.sacerdote = templeBuilt ? (pop >= 45 ? 2 : 1) : 0;
     want.guerreiro = G.War.warriorWant(set, fac, A);
@@ -649,6 +649,7 @@
     coup: (v) => `foi assassinad${v.g === 'f' ? 'a' : 'o'} aos ${Math.floor(v.age)} anos`,
     sacrifice: (v) => `foi sacrificad${v.g === 'f' ? 'a' : 'o'} aos deuses aos ${Math.floor(v.age)} anos`,
     lava: (v) => `foi engolid${v.g === 'f' ? 'a' : 'o'} pela lava aos ${Math.floor(v.age)} anos`,
+    beast: (v) => `foi devorad${v.g === 'f' ? 'a' : 'o'} por ${v.lastBeast && G.Animals.DEF[v.lastBeast] ? G.Animals.DEF[v.lastBeast].nameA : 'uma fera'} aos ${Math.floor(v.age)} anos`,
     wave: (v) => `foi levad${v.g === 'f' ? 'a' : 'o'} pelo maremoto aos ${Math.floor(v.age)} anos`,
     kraken: (v) => `foi arrastad${v.g === 'f' ? 'a' : 'o'} para as profundezas pelo Kraken aos ${Math.floor(v.age)} anos`,
     unknown: (v) => `morreu aos ${Math.floor(v.age)} anos`,

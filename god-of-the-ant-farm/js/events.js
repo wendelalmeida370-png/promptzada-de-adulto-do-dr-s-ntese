@@ -42,7 +42,7 @@
   let tPray = 0;
   function hostileNear(set, r) {
     let best = null, bd = r * r;
-    for (const a of G.S.animals.values()) if (a.kind === 'wolf' && !a.dead) { const d = G.dist2(a.x, a.y, set.cx, set.cy); if (d < bd) { bd = d; best = a; } }
+    for (const a of G.S.animals.values()) if (G.Animals.threat(a) && (a.raid || a.summoned || a.onPerson || a.angry > 0)) { const d = G.dist2(a.x, a.y, set.cx, set.cy); if (d < bd) { bd = d; best = a; } }
     return best;
   }
   function invaderNear(set, r) {
@@ -110,7 +110,7 @@
     if (!PRAYER[p.kind].powers.includes(id)) return;
     if (forced) { /* answered by an outcome, not a place */ }
     else if (p.kind === 'protect') {
-      let hit = false; for (const a of S.animals.values()) if (a.kind === 'wolf' && G.dist(a.x, a.y, x, y) < (id === 'meteor' ? 4 : 2)) hit = true;
+      let hit = false; for (const a of S.animals.values()) if (G.Animals.predator(a.kind) && G.dist(a.x, a.y, x, y) < (id === 'meteor' ? 4 : 2)) hit = true;
       if (!hit) return;
     } else if (p.kind === 'war') {
       const set = S.settlements.get(p.set); if (!set) return;
@@ -232,10 +232,14 @@
     if (v) G.Vg.emote(v, 'happy', 3);
   }
   E.herd = function () {
-    const sp = G.Animals.wildSpot(14); if (!sp) return;
-    const L = G.Animals.spawn('deer', sp[0], sp[1]);
-    for (let k = 0; k < 3; k++) G.Animals.spawn('deer', sp[0] + G.rr(-1, 1), sp[1] + G.rr(-1, 1), { leader: L.id });
-    G.Village.log('Uma manada de cervos chegou à ilha.', 'deer', sp[0], sp[1]);
+    // a herd of grazers from beyond the map, of a kind that can live here
+    const A = G.Animals; const ks = A.ids.filter(k => { const d = A.DEF[k]; return (d.diet === 'herb' || d.diet === 'browse') && d.cls === 'land' && d.herd[1] >= 3 && A.capacity(k) >= 3; });
+    if (!ks.length) return;
+    const k = G.pick(ks); const d = A.DEF[k];
+    const sp = A.wildSpot(14, d); if (!sp) return;
+    const n = G.ri(Math.max(3, d.herd[0]), d.herd[1] + 1);
+    A.spawnGroup(k, sp[0], sp[1], n);
+    G.Village.log(`Uma manada de ${A.plural(d, n).replace(/^\d+ /, '')} chegou ${G.Biome && G.S.biome ? G.Biome.toAt(sp[0], sp[1]) : 'à ilha'}.`, 'deer', sp[0], sp[1]);
   };
 
   // ---------------- travellers by boat ----------------

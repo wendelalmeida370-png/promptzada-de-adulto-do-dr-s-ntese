@@ -122,7 +122,7 @@
     const S = G.S; const st = S.stats;
     return { from: S.day, b0: st.births || 0, d0: st.deaths || 0, k0: st.godKills || 0, p0: Object.assign({}, st.powers || {}), pop0: S.villagers.size, ic: {}, notes: [] };
   }
-  const MAJOR = { tech: 1, gov: 1, city: 1, wonder: 1, aqueduct: 1, route: 1, contact: 1, colony: 1, wall: 1, sacrifice: 1, raise: 1, sink: 1, forest: 1, volcano: 1, volcanoSleep: 1, volcanoWake: 1, tsunami: 1, kraken: 1, krakenSlain: 1, krakenGone: 1, prophecy: 1, prophecyDone: 1, prophecyFail: 1, law: 1, sign: 1, vision: 1, golden: 1, goldenEnd: 1, curse: 1, hero: 1, divwall: 1, sin: 1, war: 1, peace: 1, conquer: 1, massacre: 1, split: 1, extinct: 1, crown: 1, meteor: 1 };
+  const MAJOR = { tech: 1, gov: 1, city: 1, wonder: 1, aqueduct: 1, route: 1, contact: 1, colony: 1, wall: 1, sacrifice: 1, raise: 1, sink: 1, forest: 1, volcano: 1, volcanoSleep: 1, volcanoWake: 1, tsunami: 1, kraken: 1, krakenSlain: 1, krakenGone: 1, prophecy: 1, prophecyDone: 1, prophecyFail: 1, law: 1, sign: 1, vision: 1, golden: 1, goldenEnd: 1, curse: 1, hero: 1, divwall: 1, sin: 1, war: 1, peace: 1, conquer: 1, massacre: 1, split: 1, extinct: 1, crown: 1, meteor: 1, beast: 1, extinctSpecies: 1 };
 
   // ------------------------------ legends ------------------------------
   function legend(key, title, text, o) {
@@ -168,6 +168,8 @@
       case 'divwall': legend('divwall:' + d.set, `As Muralhas de Uma Noite`, `${d.name} dormiu desprotegida e acordou cercada de pedra. Ninguém carregou as rochas; ninguém ousa derrubá-las.`, { kind: 'milagre' }); break;
       case 'sacrifice': if (!lore().legends.some(q => q.kind === 'sangue' && q.fac === d.fac)) legend('sacrifice:' + d.fac, `O Primeiro Sacrifício ${deF(d.fac)}`, `No ano ${S.day}, ${d.name || 'um cativo'} subiu os degraus do templo e não desceu. ${G.cap(chron)} dizem que o sol precisava.`, { kind: 'sangue', fac: d.fac }); break;
       case 'prophecyDone': legend('prophecy:' + d.id, `A Profecia de ${d.setName}`, `No ano ${d.day} uma voz do céu disse a ${d.setName}: ${d.text} No ano ${S.day}, aconteceu.`, { kind: 'profecia' }); break;
+      case 'beast': { const sp = G.Animals.DEF[d.kind]; legend('beast:' + d.name, `${d.name}, ${sp.g === 'f' ? 'a Devoradora' : 'o Devorador'}`, `No ano ${S.day}, ${sp.nameA}${d.where ? ' dos arredores de ' + d.where : ''} provou carne humana e gostou. Deram-lhe um nome, como se dá aos reis: ${d.name}.`, { kind: 'fera' }); break; }
+      case 'beastDied': append('beast:' + d.name, d.by ? `Foi abatid${G.Animals.DEF[d.kind].g === 'f' ? 'a' : 'o'} por ${d.by} no ano ${S.day}. Penduraram a pele na praça.` : `Morreu no ano ${S.day}, e ninguém sabe onde estão seus ossos.`); break;
       case 'law': { const p = lore().peoples[d.fac]; if (p) p.law = `Desde o ano ${S.day}, segue o mandamento “${d.name}”.`; break; }
       case 'city': if (d.tier >= 4) legend('metropole:' + d.set, `${d.name}, a Grande`, `No ano ${S.day}, ${d.name} tornou-se uma metrópole — a primeira ${deF(d.fac)} tão grande que ninguém conhecia todas as suas ruas.`, { kind: 'cidade' }); break;
     }
@@ -258,6 +260,8 @@
     const laws = N.filter(n => n.k === 'law'); if (laws.length) out.push(laws.map(n => `${fn(n.fac)} recebeu a lei “${n.name}”`).join('; ') + '.');
     const sins = N.filter(n => n.k === 'sin'); if (sins.length) out.push(`${fn(sins[0].fac)} quebrou o mandamento sagrado.`);
     const prDone = N.filter(n => n.k === 'prophecyDone'); if (prDone.length) out.push(`${prDone.length > 1 ? prDone.length + ' profecias se cumpriram' : 'Cumpriu-se a profecia sobre ' + prDone[0].setName}.`);
+    const gone = N.filter(n => n.k === 'extinctSpecies'); if (gone.length) out.push(`${gone.map(n => G.cap(G.Animals.plural(G.Animals.DEF[n.kind], 2).replace(/^2 /, ''))).join(', ')} ${gone.length > 1 ? 'sumiram' : 'sumiram'} do mundo.`);
+    const beasts = N.filter(n => n.k === 'beast'); if (beasts.length) out.push(`${beasts.map(n => n.name).join(' e ')} ${beasts.length > 1 ? 'aterrorizaram' : 'aterrorizou'} os caminhos.`);
     const heroes = N.filter(n => n.k === 'hero'); if (heroes.length) out.push(`${heroes.map(n => n.name).join(' e ')} ${heroes.length > 1 ? 'foram escolhidos' : 'foi escolhid' + (heroes[0].g === 'f' ? 'a' : 'o')} pelos céus.`);
     const signs = N.filter(n => n.k === 'sign'); if (signs.length) out.push(`${signs.length > 1 ? 'Sinais' : 'Um sinal'} no céu — ${signs.map(n => ({ cometa: 'um cometa', eclipse: 'um eclipse', aurora: 'uma aurora', estrelas: 'uma chuva de estrelas' })[n.kind]).join(', ')} — mudou o humor dos povos.`);
     if (!out.length && lo.chapters.length === 0) out.push(G.Fac.all().length > 1 ? `Os povos de ${lo.world} acenderam suas fogueiras, cortaram as primeiras árvores e ergueram as primeiras cabanas.` : 'O povo acendeu sua fogueira, cortou as primeiras árvores e ergueu as primeiras cabanas.');

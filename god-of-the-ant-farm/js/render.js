@@ -637,7 +637,11 @@
       if (v.inside || v.held || v.aboard || (v.age < 2 && v.carried)) continue;
       const p = vis(v.x, v.y, W.groundH(v.x, v.y)); if (p) pushD(v.x + v.y + 0.05, 5, v, p[0], p[1] - (v.z || 0));
     }
-    for (const a of S.animals.values()) { if (a.held) continue; const p = vis(a.x, a.y, W.groundH(a.x, a.y)); if (p) pushD(a.x + a.y + 0.04, 6, a, p[0], p[1] - (a.z || 0)); }
+    for (const a of S.animals.values()) {
+      if (a.held) continue; const sd = G.Animals.DEF[a.kind]; if (!sd) continue;
+      if (sd.cls === 'air' && a.z > 4) continue; // flying birds get their own pass above everything
+      const p = vis(a.x, a.y, W.groundH(a.x, a.y)); if (p) pushD(a.x + a.y + 0.04, 6, a, p[0], p[1] - (sd.cls === 'water' ? 0 : (a.z || 0)));
+    }
     for (const b of S.boats) { const p = vis(b.x, b.y, G.SEA); if (p) pushD(b.x + b.y, 7, b, p[0], p[1]); }
     const list = drawList.slice(0, drawN).sort((a, b) => a.d - b.d);
     // shadows first
@@ -653,6 +657,7 @@
     if (!R.dbg.noEnt) for (const e of list) drawEntity(e, t, nightF);
     G.Siege && G.Siege.drawMissiles(ctx, proj);
     G.Powers.drawWorld && G.Powers.drawWorld(ctx, proj, t);
+    G.Animals.drawAir && G.Animals.drawAir(ctx, proj, t, view, R.cam.zoom);
     PROF.mark('entities', t0); t0 = now();
     // ---------- world particles, clouds ----------
     drawParticles(0, view);
@@ -991,7 +996,7 @@
         break;
       }
       case 6: {
-        G.Art.animal(ctx, o, sx, sy, t);
+        G.Art.animal(ctx, o, sx, sy, t, R.cam.zoom < 0.7);
         if (o.kind === 'wolf' && !o.dead && nightF > 0.4) emisGlow.push(sx + o.face * 5.4, sy - 5.7, 2.5, o.summoned ? 'red' : 'gold', 0.9);
         if (R.hover === o || (G.UI && G.UI.selected === o)) overlays.push(o, sx, sy);
         break;

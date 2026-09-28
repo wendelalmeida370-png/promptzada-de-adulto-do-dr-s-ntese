@@ -13,13 +13,13 @@
   const ID = B.ID = { TEMP: 0, NEVE: 1, TAIGA: 2, PANTANO: 3, SELVA: 4, SAVANA: 5, DESERTO: 6 };
   // trees: [kind, weight]; dens: chance inside a forest patch; sparse: chance outside; patch: forest-noise threshold
   G.BIOMES = [
-    { id: 'temperado', name: 'Floresta Temperada', adj: 'temperada', fert: 1, cost: 1, speed: 1, trees: [['oak', 5], ['pine', 2], ['birch', 2]], dens: 0.58, sparse: 0.035, patch: 0.07, bush: 0.07, fire: 1, grow: 1 },
-    { id: 'neve', name: 'Tundra Gelada', adj: 'gelada', fert: 0.3, cost: 1.15, speed: 0.8, trees: [['snowpine', 1]], dens: 0.22, sparse: 0.02, patch: 0.1, bush: 0.012, fire: 0, grow: 0.45 },
-    { id: 'taiga', name: 'Taiga', adj: 'boreal', fert: 0.62, cost: 1.05, speed: 0.9, trees: [['pine', 3], ['snowpine', 2], ['birch', 1]], dens: 0.62, sparse: 0.05, patch: 0.02, bush: 0.035, fire: 0.8, grow: 0.75 },
-    { id: 'pantano', name: 'Pântano', adj: 'pantanosa', fert: 0.9, cost: 1.4, speed: 0.68, trees: [['willow', 1]], dens: 0.32, sparse: 0.09, patch: 0.0, bush: 0.08, fire: 0.15, grow: 1.1 },
-    { id: 'selva', name: 'Floresta Tropical', adj: 'tropical', fert: 1.22, cost: 1.12, speed: 0.85, trees: [['jungle', 5], ['palm', 1]], dens: 0.82, sparse: 0.16, patch: -0.06, bush: 0.1, fire: 0.45, grow: 1.4 },
-    { id: 'savana', name: 'Savana', adj: 'da savana', fert: 0.78, cost: 1, speed: 1, trees: [['acacia', 5], ['baobab', 1]], dens: 0.13, sparse: 0.025, patch: 0.12, bush: 0.035, fire: 1.5, grow: 0.8 },
-    { id: 'deserto', name: 'Deserto', adj: 'do deserto', fert: 0.22, cost: 1.08, speed: 0.9, trees: [['cactus', 4], ['palm', 1]], dens: 0.05, sparse: 0.012, patch: 0.15, bush: 0.006, fire: 0, grow: 0.5 },
+    { id: 'temperado', to: 'à floresta temperada', name: 'Floresta Temperada', adj: 'temperada', fert: 1, cost: 1, speed: 1, trees: [['oak', 5], ['pine', 2], ['birch', 2]], dens: 0.58, sparse: 0.035, patch: 0.07, bush: 0.07, fire: 1, grow: 1 },
+    { id: 'neve', to: 'à tundra gelada', name: 'Tundra Gelada', adj: 'gelada', fert: 0.3, cost: 1.15, speed: 0.8, trees: [['snowpine', 1]], dens: 0.22, sparse: 0.02, patch: 0.1, bush: 0.012, fire: 0, grow: 0.45 },
+    { id: 'taiga', to: 'à taiga', name: 'Taiga', adj: 'boreal', fert: 0.62, cost: 1.05, speed: 0.9, trees: [['pine', 3], ['snowpine', 2], ['birch', 1]], dens: 0.62, sparse: 0.05, patch: 0.02, bush: 0.035, fire: 0.8, grow: 0.75 },
+    { id: 'pantano', to: 'ao pântano', name: 'Pântano', adj: 'pantanosa', fert: 0.9, cost: 1.4, speed: 0.68, trees: [['willow', 1]], dens: 0.32, sparse: 0.09, patch: 0.0, bush: 0.08, fire: 0.15, grow: 1.1 },
+    { id: 'selva', to: 'à floresta tropical', name: 'Floresta Tropical', adj: 'tropical', fert: 1.22, cost: 1.12, speed: 0.85, trees: [['jungle', 5], ['palm', 1]], dens: 0.82, sparse: 0.16, patch: -0.06, bush: 0.1, fire: 0.45, grow: 1.4 },
+    { id: 'savana', to: 'à savana', name: 'Savana', adj: 'da savana', fert: 0.78, cost: 1, speed: 1, trees: [['acacia', 5], ['baobab', 1]], dens: 0.13, sparse: 0.025, patch: 0.12, bush: 0.035, fire: 1.5, grow: 0.8 },
+    { id: 'deserto', to: 'ao deserto', name: 'Deserto', adj: 'do deserto', fert: 0.22, cost: 1.08, speed: 0.9, trees: [['cactus', 4], ['palm', 1]], dens: 0.05, sparse: 0.012, patch: 0.15, bush: 0.006, fire: 0, grow: 0.5 },
   ];
   B.CLIMAS = {
     variado: { name: 'Variado', desc: 'Neve ao norte, trópicos ao sul — mapas pequenos pegam uma faixa sorteada.' },
@@ -176,6 +176,7 @@
     return best ? best.map(k => civs[k]) : civs;
   };
   B.nameAt = (x, y) => G.BIOMES[B.at(x, y)].name;
+  B.toAt = (x, y) => (W.inb(x, y) && G.S.type[W.idx(x, y)] <= T.SEA ? 'ao mar' : G.BIOMES[B.at(x, y)].to);
 
   // ------------------------------ save ------------------------------
   const rle = a => { const o = []; let v = a[0], n = 0; for (let k = 0; k < a.length; k++) { if (a[k] === v) n++; else { o.push(v, n); v = a[k]; n = 1; } } o.push(v, n); return o; };

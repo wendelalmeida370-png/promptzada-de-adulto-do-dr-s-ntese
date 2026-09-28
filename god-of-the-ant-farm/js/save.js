@@ -38,7 +38,7 @@
       buildings: [...S.buildings.values()].map(b => { const o = Object.assign({}, b); delete o.res; if (o.crops) o.crops = o.crops.map(c => ({ s: c.s, g: r(c.g, 3), c: 0 })); o.incoming = { wood: 0, stone: 0 }; return o; }),
       villagers: vill,
       dead: [...S.dead.values()],
-      animals: [...S.animals.values()].map(a => ({ id: a.id, kind: a.kind, x: r(a.x, 2), y: r(a.y, 2), hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: a.meat, rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0 })),
+      animals: [...S.animals.values()].map(a => ({ id: a.id, kind: a.kind, x: r(a.x, 2), y: r(a.y, 2), z: r(a.z || 0, 0), age: r(a.age || 0, 2), grown: r(a.grown === undefined ? 1 : a.grown, 2), hunger: r(a.hunger || 0, 2), named: a.named, kills: a.kills, sink: a.sink, hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: r(a.meat, 1), rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0 })),
       settlements: [...S.settlements.values()],
       N: S.N || N, mapType: S.mapType, temper: S.temper || 'normal', divinePeace: S.divinePeace || 0,
       factions: [...S.factions.values()].map(f => { const o = Object.assign({}, f); o.rel = {}; for (const k in f.rel) if (+k > f.id) o.rel[k] = Object.assign({}, f.rel[k], { envoy: 0 }); o.targets = null; o.coup = null; o.rev = null; o.revolt = null; o.exec = null; return o; }), usedNames: S.usedNames || [], starts: S.starts,

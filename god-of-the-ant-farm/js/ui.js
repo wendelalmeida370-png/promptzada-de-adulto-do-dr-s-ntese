@@ -409,10 +409,19 @@
     else if (o.kind && o.dock !== undefined && G.Naval && G.Naval.SHIP[o.kind]) html = shipHTML(o);
     else if (o.kind) {
       if (!S.animals.has(o.id)) { UI.select(null); return; }
-      const d = G.Animals.DEF[o.kind];
-      const st = o.dead ? 'Morto' : o.state === 'flee' ? 'Fugindo' : o.state === 'chase' ? 'Caçando!' : o.state === 'eat' ? 'Comendo' : o.state === 'leave' ? 'Indo embora' : o.state === 'charge' ? 'Atacando!' : o.state === 'wander' ? 'Vagando' : 'Pastando';
-      html = `<div class="insp-head"><div class="insp-title"><h3>${d.name}${o.summoned ? ' (invocado)' : ''}</h3><div class="sub">${o.kind === 'wolf' ? 'Predador' : 'Animal selvagem · fonte de alimento'}</div></div><button class="x" data-act="close">${ICON.close}</button></div>
-        ${bar('Vida', o.hp / o.maxHp * 100, 'hp')}<div class="doing">Atualmente: <b>${st}</b></div>`;
+      const A = G.Animals; const d = A.DEF[o.kind];
+      const tg = o.target && (S.animals.get(o.target) || S.villagers.get(o.target));
+      const tgName = tg ? (tg.kind ? A.DEF[tg.kind].nameA : tg.name) : '';
+      const st = o.dead ? (o.meat > 0 ? 'Carcaça — alimento para carniceiros' : 'Só ossos') : o.state === 'flee' ? 'Fugindo' : o.state === 'lunge' ? 'De tocaia, esperando a presa' : o.state === 'chase' ? (o.carc ? 'Indo até uma carcaça' : 'Caçando ' + (tgName || 'uma presa') + '!') : o.state === 'eat' ? 'Comendo' : o.state === 'leave' ? 'Indo embora' : o.state === 'graze' ? (d.diet === 'browse' ? 'Comendo folhas e frutos' : 'Pastando') : o.state === 'fish' || o.state === 'fishdive' ? 'Pescando' : o.state === 'circle' ? 'Circulando sobre uma carcaça' : o.state === 'dive' ? 'Mergulhando sobre ' + (tgName || 'uma presa') : o.state === 'perch' ? 'Pousado' : o.state === 'fly' ? 'Voando' : o.state === 'wade' ? 'Andando na água rasa' : o.angry > 0 ? 'Furioso!' : o.state === 'wander' ? 'Vagando' : 'Descansando';
+      const eats = (d.prey || []).map(k => A.DEF[k].name.toLowerCase());
+      const food = d.diet === 'herb' ? 'capim' : d.diet === 'browse' ? 'folhas e frutos' : d.diet === 'insect' ? 'insetos' : d.diet === 'fish' ? 'peixes' : d.diet === 'filter' ? 'plâncton' : d.diet === 'scav' ? 'carniça' : d.diet === 'omni' ? 'frutos e raízes' : '';
+      const menu = [food].concat(eats).filter(Boolean);
+      const by = (A.eatenBy[o.kind] || []).map(k => A.DEF[k].name.toLowerCase());
+      const role = d.apex ? 'Predador de topo' : A.predator(o.kind) ? (d.diet === 'scav' ? 'Carniceiro' : 'Predador') : 'Presa';
+      const hab = d.cls === 'water' ? ({ cold: 'mares frios', warm: 'mares quentes', mild: 'mares temperados e quentes', any: 'todos os mares' })[d.sea] : (d.hab || []).map(b => G.BIOMES[b].name.toLowerCase()).join(', ');
+      html = `<div class="insp-head"><div class="insp-title"><h3>${o.named ? esc(o.named) + ', ' + d.name.toLowerCase() : d.name}${o.summoned ? ' (invocado)' : ''}</h3><div class="sub">${role} · ${A.dietName(o.kind)}${o.grown < 1 ? ' · filhote' : ''} · ${Math.floor(o.age || 0)} ${Math.floor(o.age || 0) === 1 ? 'ano' : 'anos'}</div></div><button class="x" data-act="close">${ICON.close}</button></div>
+        ${o.dead ? '' : bar('Vida', o.hp / o.maxHp * 100, 'hp') + bar('Fome', (o.hunger || 0) * 100, 'hunger')}<div class="doing">Atualmente: <b>${st}</b></div>
+        <div class="food-chain"><div><span>Come</span>${menu.map(esc).join(', ') || '—'}</div><div><span>Caçado por</span>${by.length ? by.map(esc).join(', ') : 'ninguém — além das pessoas'}</div><div><span>Vive em</span>${esc(hab || '—')}</div>${o.kills ? `<div><span>Vítimas</span>${o.kills} pessoas</div>` : ''}</div>`;
     } else {
       const p = o.dead ? o : S.villagers.get(o.id);
       if (!p) { const d = S.dead.get(o.id); if (d) { UI.selected = d; return renderInspector(true); } UI.select(null); return; }
