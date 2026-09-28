@@ -139,7 +139,8 @@
       const tid = S.treeAt[i];
       if (tid) { const tr = S.trees.get(tid); if (tr) { if (tr.stage === 'grow') tr.size = tr.maxSize; else if (tr.stage === 'stump' || tr.stage === 'burnt') { tr.stage = 'grow'; tr.size = 0.6; tr.chop = 0; } } }
       else if (!S.occ[i] && !S.objAt[i] && S.wear[i] < 20 && (t === T.GRASS || t === T.MEADOW || t === T.ROCKY) && G.R() < 0.32) {
-        const tr = G.Nature.addTree(tx + 0.5 + G.rr(-0.2, 0.2), ty + 0.5 + G.rr(-0.2, 0.2), G.R() < 0.65 ? 'oak' : 'pine', 0.15); if (tr) tr.grow = 1;
+        let kind = G.Biome.pickTree(G.Biome.of(i)); if (!G.Biome.canGrow(kind, i)) kind = t === T.ROCKY ? 'pine' : 'oak';
+        const tr = G.Nature.addTree(tx + 0.5 + G.rr(-0.2, 0.2), ty + 0.5 + G.rr(-0.2, 0.2), kind, 0.15); if (tr) tr.grow = 1;
         if (tr) tr.size = 0.55 + G.R() * 0.3;
       } else if (!S.occ[i] && !S.objAt[i] && !S.treeAt[i] && t === T.SAND && G.dOcean && G.dOcean[i] <= 2 && G.R() < 0.2) {
         const tr = G.Nature.addTree(tx + 0.5, ty + 0.5, 'palm', 0.8);

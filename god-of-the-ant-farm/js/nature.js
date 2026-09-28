@@ -6,7 +6,16 @@
   let N = G.N; const T = G.T, W = G.W;
   G.mapHooks.push(n => { N = n; });
   const Nat = G.Nature = {};
-  const MAX_TREES = 1100;
+  // how much wild the land can hold grows with the land itself
+  let landN = 0, landKey = null;
+  Nat.landTiles = function () {
+    const S = G.S; if (landKey === S && landN) return landN;
+    landKey = S; landN = 0; for (let i = 0; i < S.type.length; i++) if (S.type[i] >= T.SAND) landN++;
+    return landN;
+  };
+  const maxTrees = () => Math.max(1100, Math.round(Nat.landTiles() * 0.42));
+  const wildTarget = () => Math.max(380, Math.round(Nat.landTiles() * 0.14));
+  const WOOD = { palm: 3, pine: 5, snowpine: 4, oak: 6, birch: 5, jungle: 8, acacia: 3, baobab: 7, cactus: 1, willow: 4 };
 
   Nat.id = () => G.S.nextId++;
   Nat.dirty = new Set(); // tiles whose look changed (for terrain cache)
@@ -17,7 +26,7 @@
     const S = G.S; const i = W.idx(x, y);
     if (S.treeAt[i] || S.objAt[i] || S.occ[i]) return null;
     const t = {
-      id: Nat.id(), x, y, kind, size: size, maxSize: kind === 'palm' ? 1 : 0.85 + G.R() * 0.3,
+      id: Nat.id(), x, y, kind, size: size, maxSize: kind === 'palm' || kind === 'cactus' ? 1 : kind === 'jungle' || kind === 'baobab' ? 1 + G.R() * 0.25 : 0.85 + G.R() * 0.3,
       stage: 'grow', wood: 0, chop: 0, claim: 0, v: Math.floor(G.R() * 3), ph: G.R() * 6.28, fallT: 0, fallDir: 1, t: 0,
     };
     if (t.size > t.maxSize) t.maxSize = t.size;
@@ -28,8 +37,8 @@
     const S = G.S; S.trees.delete(t.id);
     const i = W.idx(t.x, t.y); if (S.treeAt[i] === t.id) S.treeAt[i] = 0;
   };
-  Nat.treeWood = t => Math.max(1, Math.round((t.kind === 'palm' ? 3 : t.kind === 'pine' ? 5 : 6) * t.size));
-  Nat.isChoppable = t => (t.stage === 'grow' && t.size >= 0.6) || t.stage === 'log' || t.stage === 'burnt';
+  Nat.treeWood = t => Math.max(1, Math.round((WOOD[t.kind] || 5) * t.size));
+  Nat.isChoppable = t => t.kind !== 'cactus' && ((t.stage === 'grow' && t.size >= 0.6) || t.stage === 'log' || t.stage === 'burnt');
   Nat.fellTree = function (t, dir) {
     const wasBurnt = t.stage === 'burnt';
     t.wood = wasBurnt ? 2 : Nat.treeWood(t);
@@ -71,7 +80,7 @@
     const bid = S.occ[i]; if (bid) { const b = S.buildings.get(bid); if (b && b.hp > 0 && b.type !== 'campfire' && b.type !== 'well' && b.type !== 'ruin' && b.type !== 'monument') return b.type === 'farm' ? 'crop' : 'building'; }
     const oid = S.objAt[i]; if (oid && S.bushes.has(oid)) return 'bush';
     const ty = S.type[i];
-    if ((ty === T.GRASS || ty === T.MEADOW) && S.burnt[i] <= 0 && S.scar[i] <= 0) return 'grass';
+    if ((ty === T.GRASS || ty === T.MEADOW) && S.burnt[i] <= 0 && S.scar[i] <= 0 && G.Biome.grassFire(i) > 0) return 'grass';
     return null;
   };
   Nat.ignite = function (i, f) {
@@ -123,7 +132,7 @@
           const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue;
           const j = ny * N + nx; if (S.fire[j] > 0) continue;
           const fu = Nat.fuel(j); if (!fu) continue;
-          const base = fu === 'tree' ? 0.24 : fu === 'building' ? 0.2 : fu === 'bush' ? 0.24 : fu === 'crop' ? 0.18 : 0.045;
+          const base = (fu === 'tree' ? 0.24 : fu === 'building' ? 0.2 : fu === 'bush' ? 0.24 : fu === 'crop' ? 0.18 : 0.045) * (fu === 'building' || fu === 'crop' ? 1 : Math.max(0.1, G.Biome.grassFire(j)));
           const wind = 1 + ((dx * wx + dy * wy) / Math.hypot(dx, dy)) * wth.windS * 1.6;
           const diag = (dx && dy) ? 0.6 : 1;
           const p = f * base * dry * wind * diag * (1 - S.wet[j]) * dt;
@@ -230,19 +239,19 @@
       }
     }
     // trees
-    let nTrees = S.trees.size;
+    let nTrees = S.trees.size; const MAX = maxTrees();
     for (const t of S.trees.values()) {
       if (t.stage === 'grow') {
         if (t.size < t.maxSize) {
           const i = W.idx(t.x, t.y);
-          const rate = (0.22 + S.fert[i] * 0.2) * (drought ? 0.35 : 1) * (1 + S.wet[i]) * Nat.zoneMul(t.x, t.y, 'growth');
+          const rate = (0.22 + S.fert[i] * 0.2) * (drought ? 0.35 : 1) * (1 + S.wet[i]) * Nat.zoneMul(t.x, t.y, 'growth') * G.Biome.def(i).grow;
           t.size = Math.min(t.maxSize, t.size + rate * dayF);
-        } else if (nTrees < MAX_TREES && G.R() < dayF * (t.kind === 'palm' ? 0.03 : 0.07) * (drought ? 0.2 : 1)) {
+        } else if (nTrees < MAX && G.R() < dayF * (t.kind === 'palm' ? 0.03 : t.kind === 'cactus' ? 0.015 : 0.07) * (drought ? 0.2 : 1) * G.Biome.def(W.idx(t.x, t.y)).grow) {
           const a = G.R() * 6.28, d = G.rr(1, 2.4);
           const nx = t.x + Math.cos(a) * d, ny = t.y + Math.sin(a) * d;
           if (W.inb(nx, ny)) {
-            const j = W.idx(nx, ny); const ty = S.type[j];
-            const ok = t.kind === 'palm' ? ty === T.SAND : (ty === T.GRASS || ty === T.MEADOW || ty === T.ROCKY);
+            const j = W.idx(nx, ny);
+            const ok = G.Biome.canGrow(t.kind, j);
             if (ok && S.wear[j] < 10 && !nearBuilding(nx, ny) && S.burnt[j] <= 0 && S.scar[j] <= 0) {
               if (Nat.addTree(Math.floor(nx) + 0.5 + G.rr(-0.2, 0.2), Math.floor(ny) + 0.5 + G.rr(-0.2, 0.2), t.kind, 0.12)) nTrees++;
             }
@@ -259,8 +268,9 @@
       }
     }
     // the wild slowly reclaims empty land
-    if (nTrees < 380 && !drought) {
-      const want = dayF * (380 - nTrees) * 0.18;
+    const WILD = wildTarget();
+    if (nTrees < WILD && !drought) {
+      const want = dayF * (WILD - nTrees) * 0.18;
       let n = Math.floor(want) + (G.R() < want % 1 ? 1 : 0);
       const trees = n ? [...S.trees.values()] : null;
       while (n-- > 0) {
@@ -269,9 +279,10 @@
         else { x = G.rr(2, N - 2); y = G.rr(2, N - 2); }
         if (!W.inb(x, y)) continue;
         const j = W.idx(x, y); const ty = S.type[j];
-        if ((ty === T.GRASS || ty === T.MEADOW) && S.wear[j] < 10 && !nearBuilding(x, y) && S.burnt[j] <= 0 && S.scar[j] <= 0 && !S.objAt[j]) {
+        const kind = G.Biome.pickTree(G.Biome.of(j));
+        if ((ty === T.GRASS || ty === T.MEADOW || ty === T.SAND) && G.Biome.canGrow(kind, j) && G.R() < Math.max(0.15, G.Biome.def(j).dens) && S.wear[j] < 10 && !nearBuilding(x, y) && S.burnt[j] <= 0 && S.scar[j] <= 0 && !S.objAt[j]) {
           let farFromHome = true; for (const s of S.settlements.values()) if (G.dist2(x, y, s.cx, s.cy) < 36) { farFromHome = false; break; }
-          if (farFromHome && Nat.addTree(Math.floor(x) + 0.5 + G.rr(-0.2, 0.2), Math.floor(y) + 0.5 + G.rr(-0.2, 0.2), G.R() < 0.35 ? 'pine' : 'oak', 0.12)) nTrees++;
+          if (farFromHome && Nat.addTree(Math.floor(x) + 0.5 + G.rr(-0.2, 0.2), Math.floor(y) + 0.5 + G.rr(-0.2, 0.2), kind, 0.12)) nTrees++;
         }
       }
     }

@@ -212,6 +212,8 @@
         S.type[i] = near || W.tileH(i) > SEA - 0.9 ? T.SEA : T.DEEP;
       }
     }
+    // new land takes the climate of its place
+    if (S.temp && S.biome) for (const i of changed) if (S.type[i] >= T.SAND) G.Biome.refresh(i);
     // whatever stood on drowned ground
     const hitB = new Set(); let lost = 0;
     for (const i of doomed) {
@@ -292,9 +294,10 @@
       const i = ty * N + tx; const t = S.type[i];
       if (t < T.SAND || S.occ[i] || S.objAt[i] || S.treeAt[i] || S.road[i] || S.wall[i] || S.wear[i] > 30) { if (S.treeAt[i]) { const tr = S.trees.get(S.treeAt[i]); if (tr && tr.stage === 'grow') tr.size = tr.maxSize; } continue; }
       S.bloom[i] = Math.max(S.bloom[i], DAY() * 0.8); G.Nature.markDirty(i);
-      if (t === T.SAND) { if (G.R() < 0.25) { G.Nature.addTree(tx + 0.5, ty + 0.5, 'palm', 0.85); n++; } continue; }
+      if (t === T.SAND) { if (G.R() < 0.25) { G.Nature.addTree(tx + 0.5, ty + 0.5, G.Biome.of(i) === G.Biome.ID.DESERTO && G.R() < 0.5 ? 'cactus' : 'palm', 0.85); n++; } continue; }
       if (G.R() < (t === T.ROCKY ? 0.35 : 0.62) * (1 - d / r * 0.3)) {
-        const tr = G.Nature.addTree(tx + 0.5 + G.rr(-0.2, 0.2), ty + 0.5 + G.rr(-0.2, 0.2), t === T.ROCKY || G.R() < 0.4 ? 'pine' : 'oak', 0.9 + G.R() * 0.3);
+        let kind = G.Biome.pickTree(G.Biome.of(i)); if (!G.Biome.canGrow(kind, i)) kind = t === T.ROCKY || G.R() < 0.4 ? 'pine' : 'oak';
+        const tr = G.Nature.addTree(tx + 0.5 + G.rr(-0.2, 0.2), ty + 0.5 + G.rr(-0.2, 0.2), kind, 0.9 + G.R() * 0.3);
         if (tr) { tr.size = 0.7 + G.R() * 0.3; n++; }
       } else if (G.R() < 0.22) G.Nature.addBush(tx + 0.5, ty + 0.5);
     }

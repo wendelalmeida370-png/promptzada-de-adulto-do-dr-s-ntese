@@ -50,7 +50,7 @@
     G.Siege && G.Siege.reset();
     G.Powers.resetMiracles && G.Powers.resetMiracles();
     // 'classico' keeps the original nameless tribes; otherwise each people gets a civilization
-    const civs = opts.classic ? S.starts.map(() => null) : G.Civ.assign(opts.civs, S.starts.length);
+    const civs = opts.classic ? S.starts.map(() => null) : G.Biome.matchCivs(G.Civ.assign(opts.civs, S.starts.length), S.starts);
     const facs = S.starts.map(([x, y], k) => spawnPeople(x, y, k, civs[k]));
     G.Animals.populate();
     G.Village.forceUpdate();
@@ -66,7 +66,7 @@
     } else G.Village.log('Onze almas despertaram ao redor de uma fogueira.', 'campfire', S.start[0], S.start[1]);
     return S;
   }
-  M.lastOpts = (() => { const d = { type: 'ilha', size: 80, tribes: 3, temper: 'normal', classic: 0, civs: [] }; try { return Object.assign(d, JSON.parse(localStorage.getItem('gotaf-setup') || 'null') || {}); } catch (e) { return d; } })();
+  M.lastOpts = (() => { const d = { type: 'ilha', size: 80, tribes: 3, temper: 'normal', classic: 0, civs: [], clima: 'variado' }; try { return Object.assign(d, JSON.parse(localStorage.getItem('gotaf-setup') || 'null') || {}); } catch (e) { return d; } })();
 
   // ------------------------------ modes ------------------------------
   M.toMenu = function () {

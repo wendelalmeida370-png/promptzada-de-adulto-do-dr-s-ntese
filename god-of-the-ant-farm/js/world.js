@@ -50,6 +50,7 @@
       wall: new Uint8Array(N * N),   // 1 wall, 2 gate
       wallFac: new Int32Array(N * N),
       carts: [], ships: [], aqueducts: [], routes: [], fish: [], seaRoutes: [], walls: [], wallHp: {}, missiles: [], lore: null,
+      biome: new Uint8Array(N * N), temp: null, moist: null, clima: 'variado',
     };
   };
 
@@ -431,6 +432,10 @@
       if (type[i] === T.SAND) S.fert[i] *= 0.3;
       if (type[i] === T.ROCKY) S.fert[i] *= 0.4;
     }
+    // ---- climate & biomes: snow, taiga, woods, swamp, jungle, savanna, desert ----
+    S.clima = opts.clima || 'variado';
+    G.Biome.assign(S);
+    const BI = G.Biome.ID;
 
     // ---- choose start locations (far apart when there are several peoples) ----
     const forest = (x, y) => G.fbm(n1, x * 0.09 + 50, y * 0.09 + 50, 3);
@@ -452,6 +457,7 @@
       }
       s += Math.min(forestNear, 12) * 0.4 + landNear * 0.13;
       if (dRiver[i] < 8) s += 2.5;
+      const bm = S.biome[i]; s += bm === BI.NEVE ? -5 : bm === BI.PANTANO ? -2.5 : bm === BI.TAIGA ? -0.6 : bm === BI.SELVA ? -0.4 : 0;
       s += S.fert[i] * 2 - sl * 2;
       cands.push([x, y, s, landComp[i]]);
     }
@@ -486,29 +492,36 @@
       }
     }
 
-    // ---- vegetation & rocks ----
+    // ---- vegetation & rocks, by biome ----
     for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) {
       const i = y * N + x; const t = type[i];
       if (t < T.SAND || t === T.RIVER) continue;
       if (starts.some(s => G.dist(x + 0.5, y + 0.5, s[0] + 0.5, s[1] + 0.5) < 3.2)) continue;
+      const bm = S.biome[i]; const BD = G.BIOMES[bm];
       const fd = forest(x, y);
       const th = W.tileH(i);
+      const jit = () => (rng() - 0.5) * 0.4;
       if (t === T.SAND) {
-        if (dOcean[i] <= 2 && rng() < 0.07) G.Nature.addTree(x + 0.5 + (rng() - 0.5) * 0.4, y + 0.5 + (rng() - 0.5) * 0.4, 'palm', 0.8 + rng() * 0.3);
+        if (bm === BI.DESERTO) {
+          if (dRiver[i] <= 2 && rng() < 0.25) G.Nature.addTree(x + 0.5 + jit(), y + 0.5 + jit(), 'palm', 0.8 + rng() * 0.3);
+          else if (rng() < (fd > BD.patch ? BD.dens : BD.sparse)) G.Nature.addTree(x + 0.5 + jit(), y + 0.5 + jit(), 'cactus', 0.7 + rng() * 0.4);
+          else if (rng() < 0.006) G.Nature.addRock(x + 0.5, y + 0.5, 20 + Math.floor(rng() * 14));
+        } else if (dOcean[i] <= 2 && S.temp[i] > 90 && rng() < (bm === BI.SELVA ? 0.18 : 0.07)) G.Nature.addTree(x + 0.5 + jit(), y + 0.5 + jit(), 'palm', 0.8 + rng() * 0.3);
         continue;
       }
       if (t === T.ROCKY) {
         if (rng() < 0.2) G.Nature.addRock(x + 0.5, y + 0.5, 30 + Math.floor(rng() * 30));
-        else if (rng() < 0.12) G.Nature.addTree(x + 0.5 + (rng() - 0.5) * 0.4, y + 0.5 + (rng() - 0.5) * 0.4, 'pine', 0.7 + rng() * 0.35);
+        else if (rng() < 0.12 && bm !== BI.DESERTO) G.Nature.addTree(x + 0.5 + jit(), y + 0.5 + jit(), S.temp[i] < 80 ? 'snowpine' : 'pine', 0.7 + rng() * 0.35);
         continue;
       }
       // small islands keep more of their woods
-      const dense = fd > (mapType === 'mar' ? -0.02 : 0.07);
-      if ((dense && rng() < 0.58) || rng() < (mapType === 'mar' ? 0.08 : 0.035)) {
-        const pine = th > SEA + 2.6 ? rng() < 0.8 : rng() < 0.3;
+      const dense = fd > BD.patch + (mapType === 'mar' ? -0.09 : 0);
+      if ((dense && rng() < BD.dens) || rng() < BD.sparse * (mapType === 'mar' ? 2 : 1)) {
+        let kind = G.Biome.pickTree(bm, rng);
+        if (bm === BI.TEMP && th > SEA + 2.6 && rng() < 0.7) kind = 'pine';
         const size = rng() < 0.15 ? 0.3 + rng() * 0.3 : 0.75 + rng() * 0.3;
-        G.Nature.addTree(x + 0.5 + (rng() - 0.5) * 0.45, y + 0.5 + (rng() - 0.5) * 0.45, pine ? 'pine' : 'oak', size);
-      } else if ((fd > -0.08 && fd < 0.1 && rng() < 0.07) || (t === T.MEADOW && rng() < 0.03)) {
+        G.Nature.addTree(x + 0.5 + (rng() - 0.5) * 0.45, y + 0.5 + (rng() - 0.5) * 0.45, kind, size);
+      } else if ((fd > -0.08 && fd < 0.1 && rng() < BD.bush) || (t === T.MEADOW && rng() < 0.03)) {
         G.Nature.addBush(x + 0.5, y + 0.5);
       } else if (rng() < 0.01) {
         G.Nature.addRock(x + 0.5, y + 0.5, 20 + Math.floor(rng() * 14));
@@ -526,13 +539,13 @@
           const a = rng() * Math.PI * 2, d = 3.5 + rng() * (radius - 3.5);
           const x = Math.floor(sx + Math.cos(a) * d), y = Math.floor(sy + Math.sin(a) * d);
           if (!W.inb(x, y)) continue; const i = y * N + x;
-          if (type[i] < T.GRASS || S.treeAt[i] || S.objAt[i]) continue;
+          if (type[i] < T.SAND || type[i] === T.RIVER || S.treeAt[i] || S.objAt[i]) continue;
           fn(x, y); have++;
         }
       };
       ensure(5, 8, (x, y) => G.Nature.addBush(x + 0.5, y + 0.5), i => { const b = S.objAt[i]; return b && S.bushes.has(b); });
       ensure(5, 13, (x, y) => G.Nature.addRock(x + 0.5, y + 0.5, 40), i => { const b = S.objAt[i]; return b && S.rocks.has(b); });
-      ensure(18, 9, (x, y) => G.Nature.addTree(x + 0.5, y + 0.5, 'oak', 0.8 + rng() * 0.2), i => S.treeAt[i] > 0);
+      ensure(18, 9, (x, y) => { const i = y * N + x; const b = S.biome[i]; const k = G.Biome.pickTree(b === BI.DESERTO || b === BI.NEVE ? BI.TAIGA : b, rng); G.Nature.addTree(x + 0.5, y + 0.5, b === BI.DESERTO ? 'palm' : b === BI.NEVE ? 'snowpine' : k === 'cactus' ? 'palm' : k, 0.8 + rng() * 0.2); }, i => S.treeAt[i] > 0);
     }
 
     S.starts = starts.map(s => [s[0] + 0.5, s[1] + 0.5]);
@@ -555,6 +568,7 @@
     const rd = S.road[i];
     if (rd) return (rd >= 3 ? 0.5 : 0.58) + (S.fire[i] > 0.02 ? 30 : 0); // streets, highways and bridges
     let c = t === T.RIVER ? 3.2 : t === T.SAND ? 1.08 : t === T.ROCKY ? 1.25 : 1;
+    if (S.biome) c *= G.BIOMES[S.biome[i]].cost;
     const w = S.wear[i]; if (w > 8) c *= 1 - 0.38 * Math.min(1, w / G.WEAR_MAX);
     if (S.fire[i] > 0.02) c += 30;
     return c;

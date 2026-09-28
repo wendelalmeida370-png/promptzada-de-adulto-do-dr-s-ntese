@@ -87,13 +87,18 @@
   // ------------------------------ trees ------------------------------
   const OAK = [['#4e8f3a', '#37692c', '#79b653'], ['#5b9d3e', '#3f7630', '#8fc75c'], ['#7c9b3a', '#5c7a2b', '#abc35b']];
   const PINE = [['#2f6e4a', '#224f36', '#4d9063'], ['#2c6a52', '#1f4d3c', '#4a8a6e'], ['#3a7445', '#2a5733', '#5b9660']];
+  const NOTRUNK = { palm: 1, acacia: 1, baobab: 1, cactus: 1 };
   Art.trunk = function (kind, v) {
-    return Art.sprite('trunk' + kind + v, 12, 16, 6, 14, (c) => {
-      if (kind === 'palm') return;
-      const h = kind === 'pine' ? 6 : 10;
-      c.fillStyle = '#6e4a2b'; c.beginPath(); c.moveTo(-1.8, 0); c.lineTo(-1.2, -h); c.lineTo(1.2, -h); c.lineTo(1.8, 0); c.closePath(); c.fill();
-      c.fillStyle = '#4f341e'; c.beginPath(); c.moveTo(0.3, 0); c.lineTo(0.3, -h); c.lineTo(1.2, -h); c.lineTo(1.8, 0); c.closePath(); c.fill();
-      c.fillStyle = '#5a3c22'; c.beginPath(); c.ellipse(0, 0, 2.3, 0.9, 0, 0, TAU); c.fill();
+    return Art.sprite('trunk' + kind + v, 12, 20, 6, 18, (c) => {
+      if (NOTRUNK[kind]) return;
+      const h = kind === 'pine' || kind === 'snowpine' ? 6 : kind === 'jungle' ? 16 : kind === 'willow' ? 8 : kind === 'birch' ? 12 : 10;
+      const w = kind === 'jungle' ? 2.2 : kind === 'birch' ? 1.4 : 1.8;
+      const [c1, c2, c3] = kind === 'birch' ? ['#e8e2d4', '#c8c0b0', '#9a9284'] : kind === 'jungle' ? ['#7a6448', '#58462e', '#4a3a26'] : kind === 'willow' ? ['#5a4630', '#3e3020', '#3a2c1c'] : ['#6e4a2b', '#4f341e', '#5a3c22'];
+      c.fillStyle = c1; c.beginPath(); c.moveTo(-w, 0); c.lineTo(-w * 0.66, -h); c.lineTo(w * 0.66, -h); c.lineTo(w, 0); c.closePath(); c.fill();
+      c.fillStyle = c2; c.beginPath(); c.moveTo(0.3, 0); c.lineTo(0.3, -h); c.lineTo(w * 0.66, -h); c.lineTo(w, 0); c.closePath(); c.fill();
+      if (kind === 'birch') { c.fillStyle = '#2e2a26'; for (let k = 0; k < 5; k++) c.fillRect(-1.2 + (k % 2) * 0.9, -2 - k * 2.2, 1.1, 0.5); }
+      if (kind === 'jungle') { c.strokeStyle = '#4c7a2c'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(-1.5, -2); c.quadraticCurveTo(1.5, -7, -1, -12); c.moveTo(1.2, -4); c.quadraticCurveTo(-0.8, -9, 1.4, -15); c.stroke(); c.fillStyle = c3; c.beginPath(); c.moveTo(-w - 1.6, 0.4); c.lineTo(-w * 0.6, -3.5); c.lineTo(-w * 0.2, 0.4); c.fill(); c.beginPath(); c.moveTo(w + 1.6, 0.4); c.lineTo(w * 0.6, -3.5); c.lineTo(w * 0.2, 0.4); c.fill(); }
+      c.fillStyle = c3; c.beginPath(); c.ellipse(0, 0, w + 0.5, 0.9, 0, 0, TAU); c.fill();
     });
   };
   Art.canopy = function (kind, v) {
@@ -117,6 +122,71 @@
         c.fillStyle = light; c.beginPath(); c.moveTo(-w * 0.8, by - 0.5); c.lineTo(0, ty + 0.5); c.lineTo(-w * 0.3, by); c.fill();
       }
       c.fillStyle = 'rgba(255,255,255,0.14)'; c.beginPath(); c.moveTo(-1, -30); c.lineTo(0, -32); c.lineTo(1, -30); c.fill();
+    });
+    if (kind === 'snowpine') return Art.sprite('can-snowpine' + v, 26, 36, 13, 38, (c) => {
+      const [base, dark] = [['#2e5e48', '#1f4234'], ['#2a5a4e', '#1c3e36'], ['#35644a', '#244634']][v];
+      for (let i = 0; i < 4; i++) {
+        const by = -3 - i * 6, w = 10.5 - i * 2.2, ty = by - 11;
+        c.fillStyle = dark; c.beginPath(); c.moveTo(-w, by + 1); c.lineTo(0, ty); c.lineTo(w, by + 1); c.quadraticCurveTo(0, by + 3.5, -w, by + 1); c.fill();
+        c.fillStyle = base; c.beginPath(); c.moveTo(-w, by); c.lineTo(0, ty); c.lineTo(w * 0.15, by + 2.2); c.quadraticCurveTo(-w * 0.5, by + 2, -w, by); c.fill();
+        // snow resting on each tier
+        c.fillStyle = '#f4f8fc'; c.beginPath(); c.moveTo(-w * 0.95, by - 0.2); c.quadraticCurveTo(-w * 0.5, by - 3.2, 0, ty + 1.2); c.quadraticCurveTo(w * 0.45, by - 3.6, w * 0.9, by - 0.4); c.quadraticCurveTo(w * 0.3, by - 1.8, 0, by - 1.2); c.quadraticCurveTo(-w * 0.4, by - 1.2, -w * 0.95, by - 0.2); c.fill();
+        c.fillStyle = 'rgba(170,195,230,0.6)'; c.beginPath(); c.moveTo(w * 0.1, by - 1.6); c.quadraticCurveTo(w * 0.5, by - 3, w * 0.9, by - 0.4); c.quadraticCurveTo(w * 0.4, by - 1.4, w * 0.1, by - 1.6); c.fill();
+      }
+    });
+    if (kind === 'birch') return Art.sprite('can-birch' + v, 24, 32, 12, 34, (c) => {
+      const [base, dark, light] = [['#8cc05a', '#679a3e', '#b4dc7a'], ['#9cc85a', '#76a23e', '#c4e27e'], ['#d0b44a', '#a88e30', '#e8d070']][v];
+      const r = G.mulberry32(91 + v * 7);
+      const blobs = [[-3, -15, 4.2], [3, -16, 4.4], [0, -22, 4.8], [-2, -27, 3.6], [2.5, -26, 3.4], [0, -12, 3.8]];
+      c.fillStyle = dark; for (const [x, y, rr] of blobs) { c.beginPath(); c.arc(x + 0.7, y + 1, rr, 0, TAU); c.fill(); }
+      c.fillStyle = base; for (const [x, y, rr] of blobs) { c.beginPath(); c.arc(x, y, rr * 0.92, 0, TAU); c.fill(); }
+      c.fillStyle = light; for (let k = 0; k < 16; k++) { c.beginPath(); c.arc((r() - 0.5) * 11, -12 - r() * 17, 0.9, 0, TAU); c.fill(); }
+    });
+    if (kind === 'jungle') return Art.sprite('can-jungle' + v, 40, 40, 20, 42, (c) => {
+      const [base, dark, light] = [['#2f8a3a', '#1e6228', '#4fae4a'], ['#3a9440', '#246a2c', '#5cbc52'], ['#28803e', '#18582a', '#44a452']][v];
+      const r = G.mulberry32(51 + v * 11);
+      const blobs = [[-9, -18, 7], [9, -18, 7], [0, -24, 8.5], [-5, -29, 6], [6, -29, 6], [0, -17, 7]];
+      c.fillStyle = dark; for (const [x, y, rr] of blobs) { c.beginPath(); c.ellipse(x + 1, y + 1.5, rr * 1.15, rr * 0.8, 0, 0, TAU); c.fill(); }
+      c.fillStyle = base; for (const [x, y, rr] of blobs) { c.beginPath(); c.ellipse(x, y, rr * 1.08, rr * 0.74, 0, 0, TAU); c.fill(); }
+      // broad leaves spilling over the edge
+      c.fillStyle = light; for (let k = 0; k < 12; k++) { const a = r() * 6.28; const x = Math.cos(a) * 14, y = -22 + Math.sin(a) * 8; c.beginPath(); c.ellipse(x, y, 2.6, 1, a, 0, TAU); c.fill(); }
+      c.strokeStyle = '#3c7a2c'; c.lineWidth = 0.7; for (let k = 0; k < 5; k++) { const x = -10 + k * 5; c.beginPath(); c.moveTo(x, -16); c.quadraticCurveTo(x + 1, -11, x - 0.5, -7 - r() * 4); c.stroke(); }
+      if (v === 1) { c.fillStyle = '#ff6a3a'; c.beginPath(); c.arc(6, -26, 1.1, 0, TAU); c.arc(-7, -21, 1, 0, TAU); c.fill(); }
+    });
+    if (kind === 'acacia') return Art.sprite('can-acacia' + v, 36, 28, 18, 26, (c) => {
+      c.strokeStyle = '#5e4630'; c.lineCap = 'round';
+      c.lineWidth = 1.8; c.beginPath(); c.moveTo(0, 0); c.lineTo(0.5, -8); c.stroke();
+      c.lineWidth = 1.2; c.beginPath(); c.moveTo(0.5, -8); c.lineTo(-6, -15); c.moveTo(0.5, -8); c.lineTo(5, -14); c.moveTo(0.5, -9); c.lineTo(1, -16); c.stroke();
+      const [base, dark, light] = [['#7a9a3a', '#5a7a28', '#9aba50'], ['#869e40', '#667e2c', '#a8c05a'], ['#8a9234', '#6a7226', '#aab04a']][v];
+      c.fillStyle = dark; c.beginPath(); c.ellipse(0, -16.2, 15, 3.4, 0, 0, TAU); c.fill();
+      c.fillStyle = base; c.beginPath(); c.ellipse(-0.5, -17.2, 14, 2.9, 0, 0, TAU); c.fill();
+      c.fillStyle = light; c.beginPath(); c.ellipse(-3, -18.3, 8, 1.4, 0, 0, TAU); c.fill();
+    });
+    if (kind === 'baobab') return Art.sprite('can-baobab' + v, 30, 36, 15, 34, (c) => {
+      c.fillStyle = '#9a8068'; c.beginPath(); c.moveTo(-5, 0); c.quadraticCurveTo(-7.5, -9, -3, -18); c.lineTo(3, -18); c.quadraticCurveTo(7.5, -9, 5, 0); c.closePath(); c.fill();
+      c.fillStyle = '#7e6652'; c.beginPath(); c.moveTo(0.5, 0); c.lineTo(0.8, -18); c.lineTo(3, -18); c.quadraticCurveTo(7.5, -9, 5, 0); c.closePath(); c.fill();
+      c.strokeStyle = '#7e6652'; c.lineWidth = 1.3; c.lineCap = 'round';
+      for (const [x1, y1] of [[-9, -24], [-4, -26], [2, -27], [8, -24], [11, -21], [-11, -20]]) { c.beginPath(); c.moveTo(0, -17); c.quadraticCurveTo(x1 * 0.4, -21, x1, y1); c.stroke(); }
+      c.fillStyle = ['#6a8a36', '#7a8e3a', '#5e7e30'][v]; for (const [x1, y1] of [[-9, -24], [-4, -26], [2, -27], [8, -24], [11, -21], [-11, -20]]) { c.beginPath(); c.ellipse(x1, y1 - 1, 3, 1.6, 0, 0, TAU); c.fill(); }
+    });
+    if (kind === 'cactus') return Art.sprite('can-cactus' + v, 18, 26, 9, 25, (c) => {
+      const g = ['#4a8a4a', '#548e44', '#428048'][v], d = '#356a36';
+      const col = (x, y0, y1, w) => { c.fillStyle = g; c.beginPath(); c.moveTo(x - w, y0); c.lineTo(x - w, y1 + w); c.arc(x, y1 + w, w, Math.PI, 0); c.lineTo(x + w, y0); c.closePath(); c.fill(); c.fillStyle = d; c.fillRect(x + w * 0.2, y1 + w, w * 0.8, y0 - y1 - w); };
+      col(0, 0, -17, 2.2);
+      if (v !== 2) { col(-4.4, -6, -12, 1.4); c.fillStyle = g; c.fillRect(-4.4, -7.4, 4.4, 2.2); }
+      if (v !== 1) { col(4.2, -8, -14, 1.3); c.fillStyle = g; c.fillRect(0, -9.2, 4.2, 2); }
+      c.fillStyle = 'rgba(255,255,255,0.5)'; for (let k = 0; k < 6; k++) c.fillRect(-1.4 + (k % 2) * 1.6, -3 - k * 2.4, 0.4, 0.4);
+      if (v === 0) { c.fillStyle = '#ff5a8a'; c.beginPath(); c.arc(0, -19.2, 1, 0, TAU); c.fill(); }
+    });
+    if (kind === 'willow') return Art.sprite('can-willow' + v, 34, 30, 17, 32, (c) => {
+      const [base, dark, light] = [['#6a8a42', '#4c6a30', '#8aa858'], ['#72904a', '#526e34', '#94b060'], ['#62823e', '#46642c', '#80a052']][v];
+      c.fillStyle = dark; c.beginPath(); c.ellipse(0.8, -16, 13, 8, 0, 0, TAU); c.fill();
+      c.fillStyle = base; c.beginPath(); c.ellipse(0, -17, 12.5, 7.5, 0, 0, TAU); c.fill();
+      c.fillStyle = light; c.beginPath(); c.ellipse(-3, -20, 6, 3, 0, 0, TAU); c.fill();
+      // hanging curtains of leaves
+      c.strokeStyle = base; c.lineWidth = 1; c.lineCap = 'round';
+      for (let k = 0; k < 11; k++) { const x = -11 + k * 2.2; const top = -17 + Math.abs(x) * 0.35; c.beginPath(); c.moveTo(x, top); c.quadraticCurveTo(x + 0.5, top + 6, x + 0.2, -4 - (k % 3)); c.stroke(); }
+      c.strokeStyle = dark; c.lineWidth = 0.6; for (let k = 0; k < 6; k++) { const x = -9 + k * 3.6; c.beginPath(); c.moveTo(x, -14); c.quadraticCurveTo(x - 0.4, -9, x + 0.3, -5); c.stroke(); }
     });
     // palm: fronds anchored at trunk top
     return Art.sprite('can-palm' + v, 34, 22, 17, 12, (c) => {

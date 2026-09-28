@@ -157,10 +157,13 @@
     else if (t === T.ROCKY) c = COL.rocky.slice();
     else if (t === T.MEADOW) c = COL.meadow.slice();
     else c = COL.grass.slice();
-    if (t === T.GRASS || t === T.MEADOW) {
+    const bio = S.temp && S.biome ? S.biome[i] : -1;
+    if (bio >= 0) c = G.Biome.groundColor(i, t, c).slice();
+    if ((t === T.GRASS || t === T.MEADOW) && bio !== 1) {
       const f = S.fert[i];
-      c = G.lerpColor(c, [96, 150, 70], G.clamp((th - G.SEA) / 8, 0, 1) * 0.5);
-      c = G.lerpColor(c, [150, 180, 88], (1 - f) * 0.25);
+      c = G.lerpColor(c, bio >= 0 ? [c[0] * 0.8, c[1] * 0.86, c[2] * 0.8] : [96, 150, 70], G.clamp((th - G.SEA) / 8, 0, 1) * 0.5);
+      if (bio < 0 || bio === 0) c = G.lerpColor(c, [150, 180, 88], (1 - f) * 0.25);
+      if (t === T.MEADOW && bio >= 0) c = G.lerpColor(c, [c[0] * 1.08, c[1] * 1.1, c[2] * 0.95], 0.6);
     }
     c[0] += hv * 12; c[1] += hv * 14; c[2] += hv * 8;
     const lv = G.pathLevel(S.wear[i]);
@@ -214,7 +217,32 @@
       }
       return;
     }
-    if (t === T.GRASS || t === T.MEADOW) {
+    const sty = S.temp && S.biome ? G.Biome.style(i) : 'grass';
+    if ((t === T.GRASS || t === T.MEADOW) && sty !== 'grass' && sty !== 'taiga') {
+      if (sty === 'snow') {
+        // wind-carved snow: soft blue shadows and glints
+        c.fillStyle = 'rgba(150,175,215,0.35)';
+        for (let k = 0; k < 2; k++) { const p = pt(0.15 + G.hash(i * 17 + k) * 0.7, 0.15 + G.hash(i * 23 + k) * 0.7); c.beginPath(); c.ellipse(p[0], p[1], 2.4, 0.7, 0, 0, TAU); c.fill(); }
+        c.fillStyle = 'rgba(255,255,255,0.9)';
+        for (let k = 0; k < 3; k++) { const p = pt(0.1 + G.hash(i * 41 + k) * 0.8, 0.1 + G.hash(i * 43 + k) * 0.8); c.fillRect(p[0], p[1], 0.7, 0.7); }
+        if (G.hash(i * 7) < 0.12) { c.strokeStyle = 'rgba(110,120,90,0.7)'; c.lineWidth = 0.5; const p = pt(0.5, 0.5); c.beginPath(); c.moveTo(p[0], p[1]); c.lineTo(p[0] - 0.8, p[1] - 1.8); c.moveTo(p[0], p[1]); c.lineTo(p[0] + 0.7, p[1] - 1.6); c.stroke(); }
+      } else if (sty === 'swamp') {
+        // puddles of dark water and reeds
+        if (G.hash(i * 5) < 0.55) { const p = pt(0.3 + G.hash(i * 9) * 0.4, 0.3 + G.hash(i * 11) * 0.4); c.fillStyle = 'rgba(46,78,74,0.75)'; c.beginPath(); c.ellipse(p[0], p[1], 3.2 + G.hash(i) * 2, 1.4 + G.hash(i * 2) * 0.8, 0, 0, TAU); c.fill(); c.fillStyle = 'rgba(160,200,190,0.25)'; c.beginPath(); c.ellipse(p[0] - 0.8, p[1] - 0.3, 1.2, 0.4, 0, 0, TAU); c.fill(); }
+        c.strokeStyle = 'rgba(70,90,40,0.9)'; c.lineWidth = 0.6;
+        for (let k = 0; k < 4; k++) { const p = pt(0.1 + G.hash(i * 17 + k) * 0.8, 0.1 + G.hash(i * 29 + k) * 0.8); c.beginPath(); c.moveTo(p[0], p[1]); c.lineTo(p[0] + 0.3, p[1] - 3.2); c.moveTo(p[0] + 0.8, p[1]); c.lineTo(p[0] + 1.3, p[1] - 2.6); c.stroke(); if (G.hash(i * 31 + k) < 0.3) { c.fillStyle = '#6a4a2a'; c.fillRect(p[0] + 0.1, p[1] - 3.8, 0.7, 1.4); } }
+      } else if (sty === 'savanna') {
+        c.strokeStyle = 'rgba(150,120,50,0.7)'; c.lineWidth = 0.55;
+        for (let k = 0; k < 5; k++) { const p = pt(0.1 + G.hash(i * 17 + k) * 0.8, 0.1 + G.hash(i * 23 + k) * 0.8); c.beginPath(); c.moveTo(p[0], p[1]); c.quadraticCurveTo(p[0] - 0.3, p[1] - 2, p[0] + 0.6, p[1] - 3.4); c.moveTo(p[0] + 0.5, p[1]); c.quadraticCurveTo(p[0] + 0.8, p[1] - 1.6, p[0] + 1.6, p[1] - 2.6); c.stroke(); }
+      } else if (sty === 'jungle') {
+        for (let k = 0; k < 4; k++) {
+          const p = pt(0.12 + G.hash(i * 17 + k) * 0.76, 0.12 + G.hash(i * 23 + k) * 0.76);
+          c.fillStyle = G.hash(i * 37 + k) < 0.5 ? 'rgba(30,90,30,0.75)' : 'rgba(90,170,60,0.7)';
+          c.beginPath(); c.ellipse(p[0] - 1, p[1] - 1, 1.6, 0.6, -0.6, 0, TAU); c.ellipse(p[0] + 1, p[1] - 1.1, 1.6, 0.6, 0.6, 0, TAU); c.fill();
+        }
+        if (S.bloom[i] > 0 || G.hash(i * 61) < 0.08) { const p = pt(0.5, 0.4); c.fillStyle = G.hash(i) < 0.5 ? '#ff5a8a' : '#ffb13a'; c.beginPath(); c.arc(p[0], p[1] - 1, 0.9, 0, TAU); c.fill(); }
+      }
+    } else if (t === T.GRASS || t === T.MEADOW) {
       if (lv < 2) {
         const n = lv ? 2 : 4;
         for (let k = 0; k < n; k++) {
@@ -232,6 +260,11 @@
         c.fillStyle = FC[Math.floor(G.hash(i * 47 + k) * FC.length)];
         c.beginPath(); c.arc(p[0], p[1] - 0.8, 0.75, 0, TAU); c.fill();
       }
+    } else if (t === T.SAND && sty === 'dune') {
+      // wind ripples on the dunes
+      c.strokeStyle = 'rgba(190,150,90,0.55)'; c.lineWidth = 0.5;
+      for (let k = 0; k < 3; k++) { const v = 0.2 + k * 0.28 + (G.hash(i * 3 + k) - 0.5) * 0.08; const p0 = pt(0.05, v), p1 = pt(0.5, v - 0.08), p2 = pt(0.95, v + 0.02); c.beginPath(); c.moveTo(p0[0], p0[1]); c.quadraticCurveTo(p1[0], p1[1] - 0.8, p2[0], p2[1]); c.stroke(); }
+      if (G.hash(i * 91) < 0.05) { const p = pt(0.5, 0.5); c.fillStyle = '#e8dcc4'; c.fillRect(p[0] - 1, p[1] - 0.5, 2, 0.8); }
     } else if (t === T.SAND) {
       c.fillStyle = 'rgba(160,130,80,0.35)';
       for (let k = 0; k < 5; k++) { const p = pt(0.1 + G.hash(i * 3 + k) * 0.8, 0.1 + G.hash(i * 7 + k) * 0.8); c.fillRect(p[0], p[1], 0.8, 0.5); }
@@ -638,7 +671,21 @@
     PROF.mark('overlays', t0); t0 = now();
     // ---------- screen space ----------
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    if (S.weather.rain > 0.05) {
+    // what climate is the camera looking at? snow falls instead of rain in the cold
+    const ctile = R.screenToTile(VW / 2, VH / 2); const ci = W.inb(ctile[0], ctile[1]) ? W.idx(ctile[0], ctile[1]) : -1;
+    const coldView = ci >= 0 && S.biome && S.temp && S.temp[ci] < 72;
+    if (coldView) {
+      const dens = Math.max(S.weather.rain, S.temp[ci] < 45 ? 0.35 : 0.12);
+      const wxs = Math.cos(S.weather.windA) * S.weather.windS * 30;
+      ctx.fillStyle = 'rgba(245,250,255,0.85)';
+      const n = Math.floor(140 * dens);
+      for (let k = 0; k < n; k++) {
+        const sp = 30 + G.hash(k) * 40, sz = (1 + G.hash(k * 5) * 1.6) * dpr;
+        const x = ((G.hash(k * 13) * canvas.width + t * wxs * dpr + Math.sin(t * 1.3 + k) * 12 * dpr) % canvas.width + canvas.width) % canvas.width;
+        const y = (G.hash(k * 7 + 3) * canvas.height + t * sp * dpr) % canvas.height;
+        ctx.fillRect(x, y, sz, sz);
+      }
+    } else if (S.weather.rain > 0.05) {
       ctx.strokeStyle = `rgba(200,220,245,${0.35 * S.weather.rain})`; ctx.lineWidth = 1 * dpr;
       ctx.beginPath();
       const wxs = Math.cos(S.weather.windA) * S.weather.windS * 12;

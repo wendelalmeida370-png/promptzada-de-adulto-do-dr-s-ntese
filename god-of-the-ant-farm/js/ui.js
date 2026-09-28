@@ -666,7 +666,7 @@
   };
   UI.openSetup = function (fromGame, keep) {
     if (!keep || !UI._setup) UI._setup = { fromGame: !!fromGame, opts: Object.assign({}, G.Main.lastOpts) };
-    const o = UI._setup.opts;
+    const o = UI._setup.opts; if (!o.clima) o.clima = 'variado';
     const opt = (k, v, label, sub) => `<button class="st-opt ${o[k] === v ? 'on' : ''}" data-so="${k}" data-v="${v}"><b>${label}</b>${sub ? '<span>' + sub + '</span>' : ''}</button>`;
     const maps = Object.entries(G.MAP_TYPES).map(([id, m]) => `<button class="st-map ${o.type === id ? 'on' : ''}" data-so="type" data-v="${id}"><span class="st-pic">${svg(MAPSVG[id] || MAPSVG.ilha, '0 0 54 44')}</span><b>${m.name}</b><span>${m.desc}</span></button>`).join('');
     const tip = o.tribes === 1 ? 'Um único povo. Com o tempo, suas próprias vilas podem se rebelar e virar novos reinos.'
@@ -686,6 +686,9 @@
           <div><div class="st-label">Tamanho</div><div class="st-row">${opt('size', 64, 'Pequeno')}${opt('size', 80, 'Médio')}${opt('size', 96, 'Grande')}</div></div>
           <div><div class="st-label">Povos</div><div class="st-row">${[1, 2, 3, 4].map(n => opt('tribes', n, String(n))).join('')}</div></div>
         </div>
+        <div class="st-label">Clima</div>
+        <div class="st-row st-clima">${Object.entries(G.Biome.CLIMAS).map(([k, c]) => opt('clima', k, c.name)).join('')}</div>
+        <p class="st-hint">${esc((G.Biome.CLIMAS[o.clima || 'variado'] || G.Biome.CLIMAS.variado).desc)}</p>
         <div class="st-label">Civilizações</div>
         <div class="st-row">${opt('classic', 0, 'Históricas', 'cada povo com sua cultura')}${opt('classic', 1, 'Tribos sem nome', 'o modo clássico')}</div>
         <div class="st-civs">${rows}</div>
