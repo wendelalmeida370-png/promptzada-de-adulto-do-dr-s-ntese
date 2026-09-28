@@ -39,8 +39,9 @@
     breve: ['o Breve', 'a Breve'], velho: ['o Velho', 'a Velha'], ungido: ['o Ungido', 'a Ungida'], bravo: ['o Bravo', 'a Brava'],
     rebelde: ['o Rebelde', 'a Rebelde'], correntes: ['o das Correntes', 'a das Correntes'], justo: ['o Justo', 'a Justa'],
     construtor: ['o Construtor', 'a Construtora'], sabio: ['o Sábio', 'a Sábia'],
+    escolhido: ['o Escolhido', 'a Escolhida'], profeta: ['o Profeta', 'a Profetisa'],
   };
-  const EPI_RANK = { breve: 0, velho: 1, fundador: 2, justo: 3, sabio: 3, construtor: 3, pacifico: 3, pio: 4, grande: 4, bravo: 4, rebelde: 5, usurpador: 5, ungido: 6, correntes: 6, cruel: 6, libertador: 7, conquistador: 8, sanguinario: 9 };
+  const EPI_RANK = { breve: 0, velho: 1, fundador: 2, justo: 3, sabio: 3, construtor: 3, pacifico: 3, pio: 4, grande: 4, bravo: 4, rebelde: 5, usurpador: 5, ungido: 6, correntes: 6, profeta: 5, escolhido: 7, cruel: 6, libertador: 7, conquistador: 8, sanguinario: 9 };
   const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV'];
   P.epithet = v => (v && v.ep && EPI[v.ep] ? EPI[v.ep][v.g === 'f' ? 1 : 0] : '');
   P.GOV.imperio = { name: 'Império', title: ['Imperador', 'Imperatriz'] };
@@ -74,7 +75,7 @@
     v.pe = { agg: c(agg), cru: c(cru), pie: c(pie), amb: c(amb) };
     return v.pe;
   };
-  P.leaderPe = f => P.persona(P.ruler(f));
+  P.leaderPe = f => (G.Powers && G.Powers.lawPe ? G.Powers.lawPe(f, P.persona(P.ruler(f))) : P.persona(P.ruler(f)));
   P.personaWords = function (v) {
     const p = P.persona(v); const f = v.g === 'f'; const w = [];
     if (p.agg > 0.66) w.push(f ? 'belicosa' : 'belicoso'); else if (p.agg < 0.3) w.push(f ? 'pacífica' : 'pacífico');

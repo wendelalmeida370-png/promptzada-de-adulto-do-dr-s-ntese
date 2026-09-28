@@ -132,7 +132,11 @@
   // mechanical trait of a people (1 when neutral)
   C.t = function (fid, k, def) {
     const c = C.ofFac(fid); const d = def === undefined ? 1 : def;
-    return c && c.traits[k] !== undefined ? c.traits[k] : d;
+    const base = c && c.traits[k] !== undefined ? c.traits[k] : d;
+    // divine laws, golden ages and curses bend a people's nature
+    const f = G.Fac && G.Fac.get(fid);
+    if (f && (f.law || f.golden > 0 || f.curse > 0) && G.Powers && G.Powers.traitMod) return base * G.Powers.traitMod(f, k);
+    return base;
   };
   C.tV = (v, k, def) => { const s = G.S.settlements.get(v.set); return C.t(s ? s.fac : 0, k, def); };
   C.nearRiver = function (x, y, r) {
@@ -142,7 +146,7 @@
     return false;
   };
   // grammatical gender of a building name: 'a' (a Praça, a Ágora) or 'o' (o Fórum, o Coliseu)
-  const FEM = new Set(['pirâmide', 'acrópole', 'torre', 'pedra', 'muralha', 'ínsula', 'domus', 'casa', 'ágora', 'sauna', 'estátua', 'coluna', 'feira', 'academia', 'biblioteca', 'chinampa', 'arena', 'praça', 'fogueira', 'cabana', 'oficina', 'fazenda', 'doca', 'ponte', 'estrada', 'rua', 'termas', 'barca', 'galera', 'trirreme', 'nau', 'canoa', 'pedra rúnica', 'caixa', 'cisterna', 'fortaleza', 'maravilha', 'sede', 'hegemonia']);
+  const FEM = new Set(['pirâmide', 'acrópole', 'torre', 'pedra', 'muralha', 'ínsula', 'domus', 'casa', 'ágora', 'sauna', 'estátua', 'coluna', 'feira', 'academia', 'biblioteca', 'chinampa', 'arena', 'praça', 'fogueira', 'cabana', 'oficina', 'fazenda', 'doca', 'ponte', 'estrada', 'rua', 'termas', 'barca', 'galera', 'trirreme', 'nau', 'canoa', 'pedra rúnica', 'caixa', 'cisterna', 'fortaleza', 'maravilha', 'sede', 'hegemonia', 'cidade', 'metrópole', 'aldeia', 'vila']);
   G.gen = function (name) {
     let w = String(name).toLowerCase().split(' ');
     if (w[0] === 'grande' && w[1]) w = w.slice(1);

@@ -162,7 +162,7 @@
     G.Audio && G.Audio.at(cx, cy, 'collapse', true);
     G.City && G.City.onDestroyed(b);
     if (b.origType !== 'hut' || G.R() < 0.6)
-      V.log(`${nm}${set ? ' de ' + set.name : ''} foi destruíd${G.gen(nm)}${cause === 'fire' ? ' pelo fogo' : cause === 'meteor' ? ' por um meteoro' : cause === 'lightning' ? ' por um raio' : cause === 'quake' ? ' pelo terremoto' : cause === 'siege' ? ' pelas máquinas de cerco' : cause === 'wave' ? ' pelo maremoto' : cause === 'lava' ? ' pela lava' : ''}.`, cause === 'quake' ? 'stone' : 'fire', cx, cy);
+      V.log(`${nm}${set ? ' de ' + set.name : ''} foi destruíd${G.gen(nm)}${cause === 'fire' ? ' pelo fogo' : cause === 'meteor' ? ' por um meteoro' : cause === 'lightning' ? ' por um raio' : cause === 'quake' ? ' pelo terremoto' : cause === 'siege' ? ' pelas máquinas de cerco' : cause === 'wave' ? ' pelo maremoto' : cause === 'lava' ? ' pela lava' : cause === 'sea' ? ' pelo mar' : ''}.`, cause === 'quake' ? 'stone' : 'fire', cx, cy);
   };
 
   // ------------------------------ stock (each people has its own) ------------------------------
@@ -648,6 +648,9 @@
     execution: (v) => `foi executad${v.g === 'f' ? 'a' : 'o'} aos ${Math.floor(v.age)} anos`,
     coup: (v) => `foi assassinad${v.g === 'f' ? 'a' : 'o'} aos ${Math.floor(v.age)} anos`,
     sacrifice: (v) => `foi sacrificad${v.g === 'f' ? 'a' : 'o'} aos deuses aos ${Math.floor(v.age)} anos`,
+    lava: (v) => `foi engolid${v.g === 'f' ? 'a' : 'o'} pela lava aos ${Math.floor(v.age)} anos`,
+    wave: (v) => `foi levad${v.g === 'f' ? 'a' : 'o'} pelo maremoto aos ${Math.floor(v.age)} anos`,
+    kraken: (v) => `foi arrastad${v.g === 'f' ? 'a' : 'o'} para as profundezas pelo Kraken aos ${Math.floor(v.age)} anos`,
     unknown: (v) => `morreu aos ${Math.floor(v.age)} anos`,
   };
   V.kill = function (v, cause, byGod) {

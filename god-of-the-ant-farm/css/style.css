@@ -83,6 +83,17 @@ kbd { font-family: inherit; font-size: 0.78em; font-weight: 800; background: rgb
 .pw.good[data-power="liberate"] .pic { color: #ffe08a; } .pw.good[data-power="peace"] .pic { color: #f4f4ff; }
 .pw.bad[data-power="plague"] .pic { color: #b8dc6a; } .pw.bad[data-power="quake"] .pic { color: #d8b48a; } .pw.bad[data-power="discord"] .pic { color: #c89aff; } .pw.bad[data-power="fury"] .pic { color: #ff7a5a; }
 .pw.neutral[data-power="anoint"] .pic { color: var(--gold-2); }
+.pw[data-power="golden"] .pic, .pw[data-power="hero"] .pic, .pw[data-power="prophecy"] .pic, .pw[data-power="commandment"] .pic { color: var(--gold-2); }
+.pw[data-power="curse"] .pic { color: #b58ad8; } .pw[data-power="raise"] .pic, .pw[data-power="vein"] .pic { color: #d8b48a; } .pw[data-power="sink"] .pic { color: #7ab8e8; }
+.pw[data-power="forest"] .pic { color: #7fd06a; } .pw[data-power="volcano"] .pic { color: #ff8a5a; }
+.pw[data-power="shoal"] .pic, .pw[data-power="wind"] .pic { color: #a8dcf0; } .pw[data-power="seastorm"] .pic { color: #9fb4d8; } .pw[data-power="tsunami"] .pic { color: #6ab8e8; } .pw[data-power="kraken"] .pic { color: #b07ad0; }
+.pw[data-power="inspire"] .pic, .pw[data-power="vision"] .pic { color: #bcd8ff; } .pw[data-power="sign"] .pic { color: #fff0c0; } .pw[data-power="divwall"] .pic { color: #e8dcc4; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.choices button { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, .1); background: rgba(255, 255, 255, .05); transition: all .15s; }
+.choices button:hover { border-color: var(--gold); background: rgba(245, 200, 107, .12); transform: translateY(-1px); }
+.choices button b { font-size: 13.5px; color: var(--gold-2); } .choices button span { font-size: 11.5px; color: var(--muted); line-height: 1.35; }
+.choose h2 { display: flex; align-items: center; gap: 8px; } .choose h2 svg { width: 24px; height: 24px; color: var(--gold); }
+.choose .mbtns { align-items: center; } .choose .mbtns .cost { margin-right: auto; display: flex; align-items: center; gap: 4px; color: var(--gold); font-weight: 800; font-size: 12.5px; } .choose .mbtns .cost svg { width: 15px; height: 15px; }
 #powertabs { display: flex; gap: 4px; align-items: center; margin-bottom: -2px; }
 #powertabs button { border: 1px solid var(--line); background: rgba(22, 20, 28, .72); color: var(--muted); font-weight: 800; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; padding: 4px 12px; border-radius: 10px 10px 4px 4px; transition: all .15s; backdrop-filter: blur(6px); }
 #powertabs button:hover { color: var(--text); background: rgba(40, 36, 48, .85); }
@@ -357,7 +368,9 @@ body.casting canvas#game { cursor: crosshair; }
   #chronicle { display: none; }
   #powerbar { gap: 3px; padding: 5px; }
   .pw { width: 38px; height: 46px; } .pw .key { display: none; }
-  #powertabs button { padding: 3px 8px; font-size: 10px; } #powertabs .pt-hint { display: none; }
+  #powertabs button { padding: 3px 6px; font-size: 9.5px; letter-spacing: .02em; } #powertabs .pt-hint { display: none; }
+  #powertabs, #powerbar { max-width: calc(100vw - 12px); overflow-x: auto; scrollbar-width: none; }
+  .choices { grid-template-columns: 1fr; }
   #fac-chip { max-width: 44vw; } .fc-gov, .fc-more { display: none; }
   .st-maps { grid-template-columns: repeat(2, 1fr); } .st-grid { grid-template-columns: 1fr; } .st-map span:not(.st-pic) { display: none; } .st-map .st-pic { width: 46px; height: 34px; }
   .st-civrow { flex-direction: column; align-items: stretch; gap: 3px; padding: 2px 0; } .st-civn { flex: none; }

@@ -63,7 +63,7 @@
   Wr.chooseGoal = function (f, enemy, set, n) {
     const pe = G.Politics.leaderPe(f); const r = G.Fac.rel(f.id, enemy.id);
     let defenders = 0; for (const v of G.S.villagers.values()) if (v.set === set.id && adultFree(v)) defenders++;
-    if (pe.cru > 0.72 && ((r && r.grudge > 35) || f.gov === 'tirania') && G.R() < 0.6) return 'massacre';
+    if (f.law !== 'paz' && pe.cru > 0.72 && ((r && r.grudge > 35) || f.gov === 'tirania') && G.R() < 0.6) return 'massacre';
     // each culture has its way of war
     if (G.Civ.t(f.id, 'capture') > 1.5 && G.R() < 0.55) return 'captura';
     if (G.Civ.t(f.id, 'raid') > 1.2 && G.R() < 0.45) return 'saque';
@@ -483,6 +483,8 @@
     if (Wr.smith.has(fv) && !v.captive) d *= 1.1;
     if (v.fury > 0) d *= 1.7;
     if (v.hero) d *= 1.25;
+    if (v.chosen) d *= 1.8;
+    if (o.chosen) d *= 0.45;
     if (o.role === 'guerreiro' && Wr.armory.has(fo)) d *= 0.8;
     if (v.captive) d *= 0.85;
     else {
@@ -744,7 +746,7 @@
     if (o.captive && !t.recapture && !t.any) return H.end(v);
     if (!t.any && !hostile(fid(v), fid(o))) return H.end(v);
     if (t.recapture && (!o.captive || !o.task || o.task.type !== 'escape')) return H.end(v);
-    if (!t.any && v.elite !== 'berserker' && v.hp < (v.role === 'guerreiro' ? 18 : 30)) { H.flee(v, o.x, o.y, 8, 'war'); return; }
+    if (!t.any && v.elite !== 'berserker' && !v.chosen && v.hp < (v.role === 'guerreiro' ? 18 : 30)) { H.flee(v, o.x, o.y, 8, 'war'); return; }
     if (t.skirmish && (v.hp < 55 || o.hp < 55)) return H.end(v);
     if (t.recapture) {
       if (G.dist(v.x, v.y, o.x, o.y) < 0.9) { Wr.recapture(o, v); return; }

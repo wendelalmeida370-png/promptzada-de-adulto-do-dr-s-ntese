@@ -32,9 +32,9 @@
     rain: { txt: 'chuva', powers: ['rain'], ask: 'Eles rezam por chuva' },
     fire: { txt: 'chuva para apagar o fogo', powers: ['rain'], ask: 'Eles imploram por chuva sobre o fogo' },
     heal: { txt: 'cura', powers: ['heal'], ask: 'Eles rezam pelos doentes' },
-    harvest: { txt: 'fartura', powers: ['growth', 'fertility'], ask: 'Eles rezam por comida' },
+    harvest: { txt: 'fartura', powers: ['growth', 'fertility', 'golden', 'shoal', 'forest'], ask: 'Eles rezam por comida' },
     protect: { txt: 'proteção contra os lobos', powers: ['lightning', 'meteor'], ask: 'Eles rezam por proteção' },
-    war: { txt: 'proteção contra os invasores', powers: ['lightning', 'meteor', 'wolves', 'quake', 'peace'], ask: 'Eles rezam contra os invasores' },
+    war: { txt: 'proteção contra os invasores', powers: ['lightning', 'meteor', 'wolves', 'quake', 'peace', 'divwall', 'hero'], ask: 'Eles rezam contra os invasores' },
     free: { txt: 'liberdade', powers: ['liberate'], ask: 'Os cativos rezam por liberdade' },
     tyrant: { txt: 'se livrar do tirano', powers: ['lightning', 'anoint'], ask: 'Eles rezam em segredo contra o tirano' },
   };
@@ -114,7 +114,8 @@
       if (!hit) return;
     } else if (p.kind === 'war') {
       const set = S.settlements.get(p.set); if (!set) return;
-      if (id !== 'peace') {
+      if (id === 'divwall' || id === 'hero') { if (id === 'divwall' && G.dist(x, y, set.cx, set.cy) > 12) return; if (id === 'hero') { const v = G.Powers.targetAt(x, y, 1.3); if (!v || G.Fac.idOfV(v) !== set.fac) return; } }
+      else if (id !== 'peace') {
         let hit = false;
         for (const v of S.villagers.values()) if (!v.captive && v.task && (v.task.type === 'band' || v.task.type === 'combat') && G.Fac.atWar(set.fac, G.Fac.idOfV(v)) && G.dist(v.x, v.y, x, y) < (id === 'meteor' || id === 'quake' ? 5 : 3)) { hit = true; break; }
         if (!hit) return;

@@ -74,6 +74,26 @@
     ram: svg('<rect x="2" y="9" width="16" height="4.5" rx="1.5" fill="currentColor"/><path d="M18 8h3.5v6.5H18z" fill="currentColor"/><circle cx="6" cy="18" r="2.5" fill="currentColor"/><circle cx="14" cy="18" r="2.5" fill="currentColor"/><path d="M4 9l3-5h6l3 5" ' + ST + '/>'),
     bow: svg('<path d="M6 3c8 3 11 8 9 18" ' + ST + '/><path d="M6 3l9 18" stroke="currentColor" stroke-width="1.2"/><path d="M3 13h14.5M15 10.5l3 2.5-3 2.5" ' + ST + '/>'),
     sacrifice: svg('<path d="M4 21h16l-2-5H6z" fill="currentColor"/><path d="M6.5 15.5h11l-1.5-4h-8z" fill="currentColor" opacity=".85"/><path d="M12 2.5c-2.6 3-3.4 5-1.6 7.4.6-1.4 1.6-1.8 1.6-1.8s1 .4 1.6 1.8c1.8-2.4 1-4.4-1.6-7.4z" fill="#e85a3a"/>'),
+    // miracles: dádivas, ira, terra, mar, palavra, destino
+    golden: svg('<circle cx="12" cy="12" r="5.2" fill="currentColor"/><path d="M12 1.8v3.4M12 18.8v3.4M1.8 12h3.4M18.8 12h3.4M4.8 4.8l2.4 2.4M16.8 16.8l2.4 2.4M4.8 19.2l2.4-2.4M16.8 7.2l2.4-2.4" ' + ST + '/><path d="M9.3 12.6l1.8 1.8 3.8-4.2" stroke="#1a1410" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'),
+    curse: svg('<circle cx="12" cy="10" r="7.5" fill="currentColor"/><path d="M8.2 9.2l2.4 1.4M15.8 9.2l-2.4 1.4M9 14.6c1.8-1.4 4.2-1.4 6 0" stroke="#1a1410" stroke-width="1.7" fill="none" stroke-linecap="round"/><path d="M6.5 17.5L4 22M12 18v4M17.5 17.5L20 22" ' + ST + '/>'),
+    raise: svg('<path d="M1.5 20.5c2.5-1.2 4.5-1.2 7 0s4.5 1.2 7 0 4.5-1.2 7 0" ' + ST + '/><path d="M4 17l4.5-7 3 3.5 2.5-3 5.5 6.5z" fill="currentColor"/><path d="M12 8V2.5M9.5 5L12 2.5 14.5 5" ' + ST + '/>'),
+    sink: svg('<path d="M1.5 12.5c2.5-1.2 4.5-1.2 7 0s4.5 1.2 7 0 4.5-1.2 7 0" ' + ST + '/><path d="M5 21l3-5 2.5 2 2.5-3.5 4 6.5z" fill="currentColor" opacity=".7"/><path d="M12 2.5V9M9.5 6.5L12 9l2.5-2.5" ' + ST + '/>'),
+    forest: svg('<path d="M7 2.5l4.5 7H9l3.5 5.5h-11L5 9.5H2.5z" fill="currentColor"/><path d="M16.5 5l4.5 7h-2.5l3 5h-10l3-5H12z" fill="currentColor" opacity=".8"/><path d="M7 15v6.5M16.5 17v4.5" ' + ST + '/>'),
+    vein: svg('<path d="M2.5 19l3.5-9 6-4.5 6.5 3 3 10.5z" fill="currentColor"/><path d="M8 10.5l3 3.5-1 4M12 5.5l1.5 5 4 2.5" stroke="#1a1410" stroke-width="1.5" fill="none" stroke-linejoin="round"/><path d="M11 14l2.5 1" stroke="#fff" stroke-width="1.2" opacity=".6"/>'),
+    volcano: svg('<path d="M1.5 21.5l6.5-11h8l6.5 11z" fill="currentColor"/><path d="M8 10.5l2 2.5 2-2 2 2 2-2.5" stroke="#e8562a" stroke-width="1.8" fill="none"/><path d="M12 8.5c-.6-2 .4-3.2 1.4-4.2M9.5 8c-1-1.5-1-3 0-4.5M14.5 8.5c1-1 2.5-1.3 3.5-.8" stroke="#e8562a" stroke-width="1.6" fill="none" stroke-linecap="round"/>'),
+    shoal: svg('<path d="M3 9c2.4-2.6 6-2.6 8.5 0-2.5 2.6-6.1 2.6-8.5 0zM11.5 9l2.5-2v4z" fill="currentColor"/><path d="M9 16.5c2.4-2.6 6-2.6 8.5 0-2.5 2.6-6.1 2.6-8.5 0zM17.5 16.5l2.5-2v4z" fill="currentColor" opacity=".8"/><circle cx="5.3" cy="8.6" r=".8" fill="#1a1410"/><circle cx="11.3" cy="16.1" r=".8" fill="#1a1410"/>'),
+    wind: svg('<path d="M2.5 8.5h11a3 3 0 1 0-3-3M2.5 12.5h16a3 3 0 1 1-3 3M2.5 16.5h7" ' + ST + '/>'),
+    seastorm: svg('<path d="M6.5 11a4 4 0 0 1 .4-8A5.5 5.5 0 0 1 17.6 3.8a3.6 3.6 0 0 1-.4 7.2z" fill="currentColor"/><path d="M12.5 11.5l-2.5 4h3l-2 4" stroke="#ffd24a" stroke-width="1.8" fill="none" stroke-linejoin="round"/><path d="M1.5 20c2-1.4 3.6-1.4 5.6 0M16.5 20c2-1.4 3.6-1.4 5.6 0" ' + ST + '/>'),
+    tsunami: svg('<path d="M2 21.5c0-9 5-15.5 13-15.5 3.5 0 6 1.8 7 4.2-2.8-1.6-6.4-.6-7.2 2.3-.8 2.8 1.2 5 4.2 5-2 2.6-6 4-9.5 4H2z" fill="currentColor"/><path d="M15 6c-2.6.6-4.6 2.6-5.4 5.6" stroke="#1a1410" stroke-width="1.2" fill="none" opacity=".45"/>'),
+    kraken: svg('<path d="M12 2.5c-3.8 0-6.5 3-6.5 7 0 2 .7 3.5 1.8 4.5h9.4c1.1-1 1.8-2.5 1.8-4.5 0-4-2.7-7-6.5-7z" fill="currentColor"/><circle cx="9.5" cy="10" r="1.3" fill="#1a1410"/><circle cx="14.5" cy="10" r="1.3" fill="#1a1410"/><path d="M7.5 14c-1 3-3.5 4-5 3.5M10 14.5c-.4 3-1.4 5.5-3 6.5M14 14.5c.4 3 1.4 5.5 3 6.5M16.5 14c1 3 3.5 4 5 3.5" ' + ST + '/>'),
+    prophecy: svg('<path d="M12 2.5l1.8 4.5 4.7.4-3.6 3 1.1 4.6L12 12.5l-4 2.5 1.1-4.6-3.6-3 4.7-.4z" fill="currentColor"/><path d="M3.5 21.5c2.5-3.5 5.3-5 8.5-5s6 1.5 8.5 5" ' + ST + '/>'),
+    commandment: svg('<path d="M3 21V7.5A4.5 4.5 0 0 1 12 7.5V21zM12 21V7.5a4.5 4.5 0 0 1 9 0V21z" fill="currentColor"/><path d="M5.5 10h4M5.5 13h4M5.5 16h4M14.5 10h4M14.5 13h4M14.5 16h4" stroke="#1a1410" stroke-width="1.3"/>'),
+    inspire: svg('<path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.6.5.9 1.2.9 2V17h5.8v-.7c0-.8.3-1.5.9-2A6.5 6.5 0 0 0 12 2.5z" fill="currentColor"/><path d="M9.3 19.3h5.4M10.2 21.5h3.6" ' + ST + '/><path d="M12 6.5v5M10 9.5l2 2 2-2" stroke="#1a1410" stroke-width="1.4" fill="none"/>'),
+    sign: svg('<circle cx="16.5" cy="7.5" r="3.4" fill="currentColor"/><path d="M13.8 9.5L3 20.5M15 10.8L7 21M12.2 8.2L2.5 15.5" ' + ST + ' opacity=".75"/><path d="M5 4l.6 1.6 1.6.6-1.6.6L5 8.4l-.6-1.6-1.6-.6 1.6-.6z" fill="currentColor"/>'),
+    vision: svg('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="currentColor"/><circle cx="12" cy="12" r="3.6" fill="#1a1410"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><path d="M12 1.5v2M4.5 4l1.2 1.6M19.5 4l-1.2 1.6" ' + ST + '/>'),
+    hero: svg('<path d="M12 2.5l8 3v6c0 5-3.5 8.6-8 10-4.5-1.4-8-5-8-10v-6z" fill="currentColor"/><path d="M12 6.5l1.4 3 3.2.3-2.4 2.1.7 3.2-2.9-1.7-2.9 1.7.7-3.2-2.4-2.1 3.2-.3z" fill="#1a1410"/>'),
+    divwall: svg('<path d="M2 21V10h3v2h2.5v-2h3v2H13v-2h3v2h2.5v-2H22v11z" fill="currentColor"/><path d="M12 1.5l1 2.3 2.4.2-1.8 1.6.6 2.4L12 6.7 9.8 8l.6-2.4-1.8-1.6 2.4-.2z" fill="currentColor"/><path d="M9.5 21v-3.5a2.5 2.5 0 0 1 5 0V21z" fill="#1a1410"/>'),
   };
   // civilization emblems
   const CIVICON = {
@@ -158,6 +178,13 @@
       const c = e.target.closest('[data-tree]'); if (c) { G.Audio.play('click'); UI.openTree(+c.dataset.tree); return; }
       const so = e.target.closest('[data-so]'); if (so) { G.Audio.play('click'); const o = UI._setup.opts; o[so.dataset.so] = isNaN(+so.dataset.v) ? so.dataset.v : +so.dataset.v; UI.openSetup(UI._setup.fromGame, true); return; }
       const cv = e.target.closest('[data-civ]'); if (cv) { G.Audio.play('click'); const o = UI._setup.opts; const k = +cv.dataset.civ; o.civs = (o.civs || []).slice(); while (o.civs.length <= k) o.civs.push(null); o.civs[k] = cv.dataset.v === 'rand' ? null : cv.dataset.v; UI._setup.focus = k; UI.openSetup(UI._setup.fromGame, true); return; }
+      const ch = e.target.closest('[data-choice]');
+      if (ch) {
+        G.Audio.play('click'); const c = UI._choice; UI.closeModal(); if (!c) return;
+        if (G.Powers.castChoice(c.id, c.x, c.y, ch.dataset.choice)) { UI.update(1, true); if (G.S.faith < G.Powers.byId(c.id).cost) UI.setPower(null); }
+        else UI.notice(G.S.faith < G.Powers.byId(c.id).cost ? 'Fé insuficiente para este poder.' : (G.Powers.why || 'Não é possível usar isso aí.'), 'eye');
+        return;
+      }
       const b = e.target.closest('[data-m]'); if (!b) return;
       G.Audio.play('click');
       const m = b.dataset.m;
@@ -512,6 +539,13 @@
     G.Main.modalOpen = true;
   };
   UI.closeModal = function () { $('#modal-bg').classList.add('hidden'); G.Main.modalOpen = false; };
+  // some miracles ask the god to choose: the law, the secret, the sign, the prophecy
+  UI.choosePower = function (p, x, y, opts) {
+    UI._choice = { id: p.id, x, y };
+    UI.openModal(`<h2>${ICON[p.id] || ''}${esc(p.name)}</h2><p class="muted">${esc(G.Powers.optionsTitle(p.id, x, y))}</p>
+      <div class="choices">${opts.map(o => `<button data-choice="${esc(o.k)}"><b>${esc(o.name)}</b><span>${esc(o.desc)}</span></button>`).join('')}</div>
+      <div class="mbtns"><span class="cost">${ICON.faith}${p.cost} de fé</span><button data-m="close">Cancelar</button></div>`, 'choose');
+  };
   UI.confirm = function (text, yes) {
     UI._confirm = yes;
     UI.openModal(`<h2>Tem certeza?</h2><p>${esc(text)}</p><div class="mbtns"><button data-m="close">Cancelar</button><button class="primary" data-m="yes">Confirmar</button></div>`, 'small');
@@ -519,7 +553,7 @@
   UI.openPause = function () {
     UI.openModal(`<h2>Pausa divina</h2><p class="muted">O mundo é salvo automaticamente.</p>
       <div class="mlist"><button class="primary" data-m="resume">Continuar</button><button data-m="save">${ICON.save} Salvar agora</button><button data-m="load">Carregar último save</button><button data-m="new">Novo mundo</button><button data-m="help">Como jogar</button><button data-m="mainmenu">Menu principal</button></div>
-      <div class="keys"><span><kbd>Espaço</kbd> pausar</span><span><kbd>1</kbd>–<kbd>6</kbd> poderes</span><span><kbd>Tab</kbd> aba de poderes</span><span><kbd>R</kbd> reinos</span><span><kbd>WASD</kbd> mover</span><span><kbd>F</kbd> seguir</span><span><kbd>H</kbd> crônica</span><span><kbd>+</kbd>/<kbd>−</kbd> velocidade</span></div>`, 'small');
+      <div class="keys"><span><kbd>Espaço</kbd> pausar</span><span><kbd>1</kbd>–<kbd>8</kbd> poderes</span><span><kbd>Tab</kbd> aba de poderes</span><span><kbd>R</kbd> reinos</span><span><kbd>WASD</kbd> mover</span><span><kbd>F</kbd> seguir</span><span><kbd>H</kbd> crônica</span><span><kbd>+</kbd>/<kbd>−</kbd> velocidade</span></div>`, 'small');
   };
   UI.openSound = function () {
     const A = G.Audio;

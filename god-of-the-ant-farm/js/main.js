@@ -48,6 +48,7 @@
     G.City && G.City.reset();
     G.Naval && G.Naval.reset();
     G.Siege && G.Siege.reset();
+    G.Powers.resetMiracles && G.Powers.resetMiracles();
     // 'classico' keeps the original nameless tribes; otherwise each people gets a civilization
     const civs = opts.classic ? S.starts.map(() => null) : G.Civ.assign(opts.civs, S.starts.length);
     const facs = S.starts.map(([x, y], k) => spawnPeople(x, y, k, civs[k]));
@@ -116,7 +117,7 @@
     setTimeout(() => intro.classList.add('hidden'), 700);
     G.Render.cam.x = M.introTo[0]; G.Render.cam.y = M.introTo[1]; G.Render.cam.zoom = G.Render.cam.tz = 2.0;
     G.UI.showHUD(true);
-    setTimeout(() => G.UI.notice(G.Fac.all().length > 1 ? 'Dica: escolha um poder (teclas 1–5, Tab troca a aba) e clique no mapa. R abre o painel dos Reinos.' : 'Dica: escolha um poder na barra de baixo (teclas 1–5, Tab troca a aba) e clique no mapa.', 'eye'), 1500);
+    setTimeout(() => G.UI.notice(G.Fac.all().length > 1 ? 'Dica: escolha um poder (teclas 1–8, Tab troca a aba) e clique no mapa. R abre o painel dos Reinos.' : 'Dica: escolha um poder na barra de baixo (teclas 1–8, Tab troca a aba) e clique no mapa.', 'eye'), 1500);
   }
   function updateIntro(dt) {
     M.introT += dt;

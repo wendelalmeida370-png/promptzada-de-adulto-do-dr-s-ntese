@@ -75,9 +75,13 @@
   };
   const WATER = [[108, 205, 210], [80, 176, 200], [58, 146, 186], [44, 118, 166], [38, 104, 152]];
   R.DEEP = 'rgb(38,104,152)';
-  R.buildTerrain = function () {
+  R.reshape = function (x, y, r) {
+    computeDLand(); buildShore();
+    sparkles = sparkles.filter(s => G.S.type[W.idx(s[0], s[1])] <= T.RIVER);
+    R.invalidateTerrain(x, y, r);
+  };
+  function computeDLand() {
     const S = G.S;
-    // distance from land (over water)
     dLand = new Int32Array(N * N).fill(99);
     const q = [];
     for (let i = 0; i < N * N; i++) if (S.type[i] >= T.RIVER) { dLand[i] = 0; q.push(i); }
@@ -88,6 +92,10 @@
         const j = ny * N + nx; if (dLand[j] > dLand[a] + 1) { dLand[j] = dLand[a] + 1; q.push(j); }
       }
     }
+  }
+  R.buildTerrain = function () {
+    const S = G.S;
+    computeDLand();
     chunks = [];
     for (let cy = 0; cy < NC; cy++) for (let cx = 0; cx < NC; cx++) chunks.push(makeChunk(cx, cy));
     buildShore();
@@ -611,6 +619,7 @@
     PROF.mark('collect+shadows', t0); t0 = now();
     if (!R.dbg.noEnt) for (const e of list) drawEntity(e, t, nightF);
     G.Siege && G.Siege.drawMissiles(ctx, proj);
+    G.Powers.drawWorld && G.Powers.drawWorld(ctx, proj, t);
     PROF.mark('entities', t0); t0 = now();
     // ---------- world particles, clouds ----------
     drawParticles(0, view);
@@ -641,6 +650,7 @@
       }
       ctx.stroke();
     }
+    G.Powers.drawSky && G.Powers.drawSky(ctx, canvas.width, canvas.height, t, dpr);
     if (G.FX.flash > 0) {
       ctx.fillStyle = `rgba(${G.FX.flashColor},${Math.min(1, G.FX.flash) * 0.85})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -749,6 +759,8 @@
       ctx.drawImage(G.Art.puff(), p[0] - c.r * 26, p[1] - c.r * 13, c.r * 52, c.r * 26);
     }
     ctx.globalAlpha = 1;
+    // lava fields
+    G.Powers.drawGround && G.Powers.drawGround(ctx, proj, t);
     // zones
     for (const zn of S.zones) {
       if (zn.kind !== 'fertility') continue;
@@ -922,6 +934,7 @@
           const baby = v.babyOn;
           G.Art.villager(ctx, v, sx, sy, t, R.cam.zoom < 0.95);
           if (v._ruler && !v.inside) { const sc = v.age < 16 ? 0.55 + (v.age / 16) * 0.42 : 1; emisGlow.push(sx, sy - 15 * sc, 6, 'gold', 0.3 + 0.1 * Math.sin(t * 3)); }
+          if ((v.chosen || v.prophet) && !v.inside) emisGlow.push(sx, sy - 8, v.chosen ? 11 : 9, v.chosen ? 'gold' : 'cool', 0.28 + 0.12 * Math.sin(t * 2.5 + v.id));
         } else { // baby lying (no carrier)
           ctx.fillStyle = '#f4efe3'; ctx.beginPath(); ctx.ellipse(sx, sy - 1, 2.2, 1.2, 0, 0, TAU); ctx.fill();
           ctx.fillStyle = v.skin; ctx.beginPath(); ctx.arc(sx - 1.8, sy - 1.6, 1, 0, TAU); ctx.fill();
@@ -1274,6 +1287,8 @@
       for (const w of spr.win) { ctx.beginPath(); ctx.moveTo(sx + w[0][0], sy + w[0][1]); for (let q = 1; q < w.length; q++) ctx.lineTo(sx + w[q][0], sy + w[q][1]); ctx.closePath(); ctx.fill(); }
     }
     ctx.globalCompositeOperation = 'lighter';
+    G.Powers.drawGlow && G.Powers.drawGlow(ctx, proj, t, nightF);
+    ctx.globalAlpha = 1;
     // fires (flame shapes)
     for (let k = 0; k < emisFire.length; k += 3) {
       const sx = emisFire[k], sy = emisFire[k + 1], f = emisFire[k + 2];

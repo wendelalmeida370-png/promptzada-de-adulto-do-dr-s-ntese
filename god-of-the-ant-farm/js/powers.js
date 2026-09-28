@@ -6,22 +6,41 @@
   let N = G.N; const T = G.T, W = G.W;
   G.mapHooks.push(n => { N = n; });
   const P = G.Powers = {};
-  G.POWER_TABS = [{ id: 'dadivas', name: 'Dádivas' }, { id: 'ira', name: 'Ira' }, { id: 'destino', name: 'Destino' }];
+  G.POWER_TABS = [{ id: 'dadivas', name: 'Dádivas' }, { id: 'ira', name: 'Ira' }, { id: 'terra', name: 'Terra' }, { id: 'mar', name: 'Mar' }, { id: 'palavra', name: 'Palavra' }, { id: 'destino', name: 'Destino' }];
   G.POWERS = [
     { id: 'rain', tab: 'dadivas', name: 'Chuva', cost: 10, r: 4.5, good: true, desc: 'Uma nuvem carregada sobre a área. Rega plantações, apaga incêndios e alivia secas.' },
     { id: 'growth', tab: 'dadivas', name: 'Crescimento', cost: 14, r: 3.5, good: true, desc: 'A vegetação brota e cresce em segundos: árvores, arbustos e plantações.' },
     { id: 'heal', tab: 'dadivas', name: 'Cura', cost: 12, r: 3, good: true, desc: 'Cura ferimentos e doenças de todos na área. Quem é curado nunca esquece.' },
     { id: 'fertility', tab: 'dadivas', name: 'Fertilidade', cost: 30, r: 6, good: true, desc: 'Por dois dias a terra floresce: colheitas rápidas, frutos abundantes, mais nascimentos.' },
+    { id: 'golden', tab: 'dadivas', name: 'Era de Ouro', cost: 110, r: 0, good: true, target: 'fac', desc: 'Toque as terras de um povo: por três dias tudo prospera — colheitas, obras, comércio, pesquisa e lealdade. Os cronistas nunca esquecem uma era de ouro.' },
     { id: 'hand', tab: 'dadivas', name: 'Mão Divina', cost: 0, r: 0.8, good: null, desc: 'Agarre um habitante ou animal e solte — ou arremesse — onde quiser. Grátis, mas assusta.' },
     { id: 'lightning', tab: 'ira', name: 'Raio', cost: 18, r: 1.2, good: false, desc: 'Um raio atinge o ponto escolhido. Mata, fere e pode iniciar incêndios. Tiranos também sangram.' },
     { id: 'meteor', tab: 'ira', name: 'Meteoro', cost: 70, r: 3.4, good: false, desc: 'Após alguns segundos, uma rocha em chamas cai do céu. Devastação total — e pedra de presente.' },
     { id: 'wolves', tab: 'ira', name: 'Matilha', cost: 22, r: 1.5, good: false, desc: 'Invoca uma matilha de lobos famintos no local.' },
     { id: 'quake', tab: 'ira', name: 'Terremoto', cost: 55, r: 5.5, good: false, desc: 'A terra treme: construções racham e desabam, árvores tombam, pedras brotam do chão.' },
     { id: 'plague', tab: 'ira', name: 'Praga', cost: 32, r: 4, good: false, desc: 'Uma doença cruel nasce no ponto escolhido e se espalha muito mais rápido que qualquer febre.' },
+    { id: 'curse', tab: 'ira', name: 'Maldição', cost: 45, r: 0, good: false, target: 'fac', desc: 'Toque as terras de um povo: por dois dias as colheitas murcham, os filhos não vêm, a pesca some e a lealdade apodrece.' },
+    { id: 'raise', tab: 'terra', name: 'Erguer Terra', cost: 40, r: 2.6, good: null, desc: 'A terra sobe do fundo do mar: crie ilhas, pontes de terra entre povos isolados — ou colinas onde já há chão.' },
+    { id: 'sink', tab: 'terra', name: 'Afundar Terra', cost: 60, r: 2.6, good: false, desc: 'O chão afunda e o mar invade. Separe continentes, abra canais — ou engula uma cidade inteira.' },
+    { id: 'forest', tab: 'terra', name: 'Floresta Sagrada', cost: 24, r: 4, good: true, desc: 'Uma floresta densa brota do nada, cheia de frutos e caça. Madeira para gerações.' },
+    { id: 'vein', tab: 'terra', name: 'Veio de Pedra', cost: 28, r: 2.2, good: true, desc: 'A terra se abre e revela pedra boa para construir. O chão fica rochoso.' },
+    { id: 'volcano', tab: 'terra', name: 'Vulcão', cost: 120, r: 3, good: false, desc: 'Uma montanha nasce e explode em fogo: bombas de lava, rios incandescentes e cinzas. Depois, a terra mais fértil do mundo.' },
+    { id: 'shoal', tab: 'mar', name: 'Cardume', cost: 8, r: 2, good: true, water: true, desc: 'Um cardume enorme surge no mar. Pescadores e barcos correm para lá.' },
+    { id: 'wind', tab: 'mar', name: 'Ventos Favoráveis', cost: 20, r: 9, good: true, desc: 'Os navios na área ganham ventos a favor por dois dias: viagens, comércio e ataques muito mais rápidos.' },
+    { id: 'seastorm', tab: 'mar', name: 'Tempestade', cost: 45, r: 6, good: false, water: true, desc: 'Uma tempestade furiosa sobre o mar: ondas, raios e navios quebrados.' },
+    { id: 'tsunami', tab: 'mar', name: 'Maremoto', cost: 90, r: 7, good: false, water: true, desc: 'Toque o mar: uma onda gigante corre até a costa mais próxima e varre tudo o que encontra.' },
+    { id: 'kraken', tab: 'mar', name: 'Kraken', cost: 70, r: 1.5, good: false, water: true, desc: 'Desperta o monstro das profundezas. Ele caça navios por um tempo — e vira lenda.' },
+    { id: 'prophecy', tab: 'palavra', name: 'Profecia', cost: 35, r: 0, good: null, target: 'set', choose: true, desc: 'Fale a um povo sobre o futuro de uma de suas cidades. Se a profecia se cumprir — por obra do mundo ou sua —, a fé deles explode.' },
+    { id: 'commandment', tab: 'palavra', name: 'Mandamento', cost: 50, r: 0, good: null, target: 'fac', choose: true, desc: 'Dê uma lei divina a um povo. Ela molda o modo como vivem, trabalham e guerreiam — até que você dite outra.' },
+    { id: 'inspire', tab: 'palavra', name: 'Inspiração', cost: 60, r: 0, good: true, target: 'fac', choose: true, desc: 'Envie um sonho a um povo e revele o segredo que você escolher: a roda, o bronze, a escrita, a navegação…' },
+    { id: 'sign', tab: 'palavra', name: 'Sinal nos Céus', cost: 30, r: 0, good: null, choose: true, desc: 'Um cometa, um eclipse ou uma aurora. Todos os povos veem — e cada um interpreta à sua maneira.' },
+    { id: 'vision', tab: 'palavra', name: 'Visão', cost: 25, r: 1.2, good: true, desc: 'Toque um adulto: ele tem uma visão e se torna profeta. Onde prega, a fé cresce — e às vezes revela povos distantes.' },
     { id: 'anoint', tab: 'destino', name: 'Ungir', cost: 45, r: 1.2, good: null, desc: 'Toque um habitante: ele passa a governar seu povo. Um governante ungido ganha legitimidade total. Um cativo ungido lidera a fuga dos outros.' },
+    { id: 'hero', tab: 'destino', name: 'Herói', cost: 55, r: 1.2, good: null, desc: 'Toque um adulto: ele se torna o campeão escolhido pelos deuses. Luta como dez, nunca foge — e seu nome vira lenda.' },
     { id: 'liberate', tab: 'destino', name: 'Libertação', cost: 30, r: 5, good: true, desc: 'As correntes se partem: cativos na área ficam livres e condenados escapam da execução.' },
     { id: 'fury', tab: 'destino', name: 'Fúria', cost: 35, r: 5, good: false, desc: 'Enche os corações de ira: quem estiver na área luta com força redobrada — e seu povo parte para a guerra.' },
     { id: 'discord', tab: 'destino', name: 'Discórdia', cost: 40, r: 6, good: false, desc: 'Semeia desconfiança numa vila: a lealdade despenca e vizinhos passam a se odiar. Rachas e golpes ficam prováveis.' },
+    { id: 'divwall', tab: 'destino', name: 'Muralha Divina', cost: 65, r: 0, good: true, target: 'set', desc: 'Toque uma cidade: muralhas de pedra erguem-se do chão ao redor dela numa só noite.' },
     { id: 'peace', tab: 'destino', name: 'Paz Divina', cost: 80, r: 0, good: true, desc: 'Todas as guerras param. Exércitos voltam para casa e ninguém declara guerra por dois dias e meio.' },
   ];
   G.POWERS.forEach(p => { p.key = String(G.POWERS.filter(q => q.tab === p.tab).indexOf(p) + 1); });
@@ -65,14 +84,31 @@
     if (id === 'discord') { let ok = false; for (const s of S.settlements.values()) if (G.dist(x, y, s.cx, s.cy) < 14) ok = true; if (!ok) { P.why = 'A discórdia precisa de uma vila por perto.'; return false; } }
     if (id === 'peace') { let war = false; for (const f of G.Fac.all()) if (G.Fac.enemiesOf(f.id).length) war = true; if (!war) { P.why = 'Não há nenhuma guerra para encerrar.'; return false; } }
     if (id === 'fury') { let n = 0; for (const v of S.villagers.values()) if (!v.captive && v.age >= 16 && G.dist(v.x, v.y, x, y) < p.r) n++; if (!n) { P.why = 'Não há ninguém aqui para enfurecer.'; return false; } }
+    // the newer miracles (terra, mar, palavra...) check their own targets
+    if (P.check && !P.check(p, x, y)) return false;
     return true;
   };
+  function pay(p) { const S = G.S; S.faith -= p.cost; S.stats.faithSpent += p.cost; S.stats.powers[p.id] = (S.stats.powers[p.id] || 0) + 1; }
   P.cast = function (id, x, y) {
-    const S = G.S; const p = P.byId(id);
+    const p = P.byId(id);
     if (!P.canCast(id, x, y)) { G.Audio && G.Audio.play('deny'); return false; }
-    S.faith -= p.cost; S.stats.faithSpent += p.cost;
-    S.stats.powers[id] = (S.stats.powers[id] || 0) + 1;
+    // some words need choosing: the god picks the law, the secret, the sign...
+    if (p.choose && G.UI && G.UI.choosePower) {
+      const opts = P.options(id, x, y);
+      if (!opts || !opts.length) { P.why = P.why || 'Não há nada a escolher aqui.'; G.Audio && G.Audio.play('deny'); return false; }
+      G.UI.choosePower(p, x, y, opts);
+      return true;
+    }
+    pay(p);
     P[id](x, y);
+    G.Events && G.Events.onPower(id, x, y);
+    return true;
+  };
+  P.castChoice = function (id, x, y, key) {
+    const p = P.byId(id);
+    if (!P.canCast(id, x, y)) { G.Audio && G.Audio.play('deny'); return false; }
+    pay(p);
+    P[id](x, y, key);
     G.Events && G.Events.onPower(id, x, y);
     return true;
   };
@@ -394,5 +430,6 @@
     }
     if (S.panic) for (let k = S.panic.length - 1; k >= 0; k--) { S.panic[k].t -= dt; if (S.panic[k].t <= 0) S.panic.splice(k, 1); }
     if (S.fireGod && G.Nature.fireSet.size === 0) S.fireGod = false;
+    P.updateMiracles && P.updateMiracles(dt);
   };
 })(window.G);

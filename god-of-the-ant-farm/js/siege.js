@@ -320,7 +320,7 @@
   function considerSacrifice() {
     const S = G.S;
     for (const f of G.Fac.all()) {
-      if (!G.Civ.t(f.id, 'sacrifice', 0) || f.sac) continue;
+      if (!G.Civ.t(f.id, 'sacrifice', 0) || f.sac || f.law === 'paz') continue;
       let temple = null; for (const b of S.buildings.values()) if ((b.type === 'temple' || b.type === 'maravilha') && b.built && G.Village.facOfSet(b.set) === f.id) { temple = b; if (b.type === 'maravilha') break; }
       if (!temple) continue;
       const caps = [...S.villagers.values()].filter(v => v.captive && v.age >= 14 && fid(v) === f.id && (!v.task || (v.task.type !== 'escorted' && v.task.type !== 'escape' && v.task.type !== 'aboard')));
