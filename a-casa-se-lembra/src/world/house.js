@@ -540,6 +540,7 @@ function buildBanheiro(world, F) {
   wall(world, g, 'z', 6.6, 7.7, 9.9, MATS.bathWall, MATS.white);
   const wf = group(g, 6.12, 1.6, 9.9); P.windowFrame(wf, 0.55, 0.5, { louver: true });
   world.zone('banheiro', 4.2, 6.6, 7.7, 9.9);
+  world.zone('thr_banheiro', 4.66, 5.36, 7.74, 8.1);
   new Door(world, g, { id: 'porta_banheiro', name: 'porta do banheiro', hx: 4.65, hz: 7.7, rot: 0, swing: -1, width: 0.72 });
   // pia + espelho
   const sk = group(g, 4.45, 0, 8.45, Math.PI / 2); P.sinkUnit(sk);
@@ -602,6 +603,7 @@ function buildRoxo(world, F) {
   const wf = group(g, 5.25, 0.9, 3.4); P.windowFrame(wf, 1.3, 1.3);
   const cu = group(g, 5.25, 0, 3.52); P.curtains(cu, 1.7, 2.3, MATS.curtainBeige, 0.15);
   world.zone('roxo', 4.2, 7.3, 3.4, 6.7);
+  world.zone('thr_roxo', 5.01, 5.81, 6.3, 6.66);
   new Door(world, g, { id: 'porta_roxo', name: 'porta do quarto', hx: 5.0, hz: 6.7, rot: 0, swing: 1, width: 0.82 });
   // cama com manta azul de tricô
   const bd = group(g, 4.74, 0, 4.45); P.bed(bd, 0.95, 1.95, MATS.sheetLilac, MATS.knit);

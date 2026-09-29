@@ -203,7 +203,8 @@ export class Game {
     this.input.lock();
     setTimeout(() => { if (!this.input.locked && this.state === 'playing' && !this.ui.paused) this.ui.clickToPlay(true); }, 350);
   }
-  _onLock(locked) {
+  _onLock(locked, free) {
+    if (free) this.ui.toast('Modo alternativo: mova o mouse para olhar (o navegador não permitiu travar o cursor).', 5);
     if (locked) { this.ui.clickToPlay(false); audio.resume(); return; }
     if (this.state === 'playing' && !this.ui.overlay && !this.ui.paused && !this._endingNow) this.pause();
   }
@@ -523,8 +524,15 @@ export class Game {
     const b = this.body;
     const P = this.player.pos;
     b.visible = this.state === 'playing' && !this.player.hidden;
-    b.position.set(P.x, P.y + (this.player.eyeH < 1.0 ? -0.5 : 0), P.z);
-    b.rotation.y = this.player.yaw + Math.PI;
+    // o reflexo começa a se atrasar conforme a casa muda
+    this._poseHist = this._poseHist || [];
+    this._poseHist.push({ t: this.time, x: P.x, y: P.y + (this.player.eyeH < 1.0 ? -0.5 : 0), z: P.z, yaw: this.player.yaw });
+    while (this._poseHist.length > 90) this._poseHist.shift();
+    const lag = (this.flags.act || 1) >= 3 ? 0.7 : (this.flags.act || 1) === 2 ? 0.25 : 0;
+    let pose = this._poseHist[this._poseHist.length - 1];
+    if (lag > 0) for (let i = this._poseHist.length - 1; i >= 0; i--) { if (this.time - this._poseHist[i].t >= lag) { pose = this._poseHist[i]; break; } }
+    b.position.set(pose.x, pose.y, pose.z);
+    b.rotation.y = pose.yaw + Math.PI;
     const bu = b.userData;
     const sw = this.player.moving ? Math.sin(this.player.bob * 1.5) * 0.5 : 0;
     bu.lL.rotation.x = sw; bu.lR.rotation.x = -sw; bu.aL.rotation.x = -sw * 0.6;

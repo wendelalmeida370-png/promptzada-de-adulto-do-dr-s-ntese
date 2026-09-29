@@ -27,6 +27,15 @@ export class Input {
     });
     window.addEventListener('keyup', (e) => { this.down.delete(e.code); });
     window.addEventListener('blur', () => { this.down.clear(); this.lmb = this.rmb = false; });
+    this.free = false; // modo alternativo: navegador não deixou travar o mouse
+    this.lastGesture = -1e9;
+    this.lockFails = 0;
+    window.addEventListener('mousedown', () => { this.lastGesture = performance.now(); }, true);
+    document.addEventListener('pointerlockerror', () => {
+      // só desiste da trava se ela falhar logo depois de cliques de verdade (ex.: iframe sem permissão)
+      if (performance.now() - this.lastGesture < 1000) this.lockFails++;
+      if (!this.free && this.lockFails >= 2) { this.free = true; this.locked = true; if (this.onLockChange) this.onLockChange(true, true); }
+    });
     document.addEventListener('mousemove', (e) => {
       if (!this.locked) return;
       // alguns navegadores geram picos enormes ao travar o mouse
@@ -56,13 +65,14 @@ export class Input {
   _emit(e) { for (const fn of this.listeners) fn(e); }
 
   lock() {
+    if (this.free) { this.locked = true; return; }
     if (this.locked) return;
     try {
       const p = this.canvas.requestPointerLock({ unadjustedMovement: false });
       if (p && p.catch) p.catch(() => {});
     } catch (e) { /* ignorado */ }
   }
-  unlock() { if (document.pointerLockElement) document.exitPointerLock(); }
+  unlock() { if (this.free) { this.locked = false; return; } if (document.pointerLockElement) document.exitPointerLock(); }
 
   key(code) { return this.down.has(code); }
   hit(code) { return this.pressed.has(code); }

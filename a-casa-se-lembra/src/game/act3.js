@@ -249,7 +249,7 @@ export const act3 = {
   ruptureHints() {
     const F = this.F;
     if (F.paintingMode !== 'upside') return ['O quadro colorido fica na sala, perto da porta de entrada.', 'Lembra do reflexo da TV no começo? Ele mostrava como a casa queria o quadro.', 'Vá até o quadro e escolha "Pendurar de cabeça pra baixo".'];
-    if (!F.nameWritten) return [F.valveFixed ? 'Espelho só embaça com vapor.' : 'O registro do chuveiro sumiu. Procure num lugar com água: a área de serviço.', 'Encaixe o registro no chuveiro e abra a água quente. Espere o espelho embaçar.', 'Depois de embaçado, interaja com o espelho do banheiro e escreva o seu nome.'];
+    if (!F.nameWritten) return [F.valveFixed ? 'Espelho só embaça com vapor.' : 'O registro do chuveiro sumiu. Procure num lugar com água: a área de serviço.', (F.swapSeen ? 'As portas do banheiro e do seu quarto trocaram: para chegar no banheiro, entre pela porta do quarto roxo. ' : '') + 'Encaixe o registro no chuveiro e abra a água quente. Espere o espelho embaçar.', 'Depois de embaçado, interaja com o espelho do banheiro e escreva o seu nome.'];
     if (!F.keysHung) return ['O porta-chaves "Família" está vazio. A casa quer a família de volta nele.', `Você precisa de três chaves: a da mãe${this.has('chaves_mae') ? ' (tem)' : ''}, a do pai${this.has('chave_pai') ? ' (tem)' : ' (o chapéu dele ficou no chão do quarto)'} e a chave velha${this.has('chave_velha') ? ' (tem)' : ''}.`, 'Com as três chaves, interaja com o porta-chaves na entrada.'];
     return ['Vá para a sala.'];
   },

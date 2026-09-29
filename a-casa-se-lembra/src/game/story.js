@@ -310,6 +310,7 @@ export class Story {
     const zones = g.world.zonesAt(p.x, p.z);
     this.zones = zones;
     const prev = this._prevZones || [];
+    this._enterPrev = prev;
     for (const z of zones) if (!prev.includes(z)) this.onEnter(z);
     this._prevZones = zones;
     // escada impossível: passagem entre o apartamento e a memória da casa
@@ -892,6 +893,7 @@ export class Story {
       await s.wait(0.6);
       F.corridorLong = true;
       F.oldKeyShown = true;
+      F.clownLooked = true;
       const pp = g.player.pos.clone(), yaw = g.player.yaw;
       g.rebuildWorld();
       this.setupLights();
@@ -1064,6 +1066,49 @@ export class Story {
     g.tv.set('cctv');
   }
 
+  enter_cozinha() {
+    const F = this.F;
+    if (F.act === 1 && F.checkedMom && !F.wrongVoice) {
+      F.wrongVoice = true;
+      this.after(2.5, () => {
+        this.voice('Rafa? Vem cá um pouquinho...', { tts: 'mae', vol: 0.35 });
+        audio.play('whisper', { pos: [2.0, 1.4, -1.2], v: 0.6 });
+        this.g.ui.say('Mãe (?)', '*(baixinho, lá da varanda)* {rafa}? Vem cá um pouquinho...', 3);
+        this.after(3.6, () => this.say0('{rafa}', '*A mãe tá trancada no quarto. Como a voz dela veio da varanda?*'));
+      });
+    }
+  }
+  enter_varanda() {
+    const F = this.F;
+    if (F.wrongVoice && !F.wrongVoiceSeen && F.act === 1) {
+      F.wrongVoiceSeen = true;
+      this.after(0.8, () => this.say0('{rafa}', '*Ninguém. Só os lençóis. E o campo lá embaixo com as luzes acesas.*'));
+    }
+  }
+  // Ato 3: a casa troca as portas do banheiro e do quarto roxo (só para você)
+  swapCheck(z) {
+    const F = this.F, g = this.g;
+    if (F.act < 3 || this.phase === 'a3_climax') return;
+    if (!(this._enterPrev || []).includes('corredor')) return;
+    const p = g.player.pos;
+    let to = null;
+    if (z === 'thr_banheiro' && p.z > 7.72) to = { x: 5.41 + (p.x - 5.01), z: 6.7 - (p.z - 7.7) - 0.05, yaw: g.player.yaw + Math.PI, door: 'porta_roxo' };
+    if (z === 'thr_roxo' && p.z < 6.68) to = { x: 5.01 + (p.x - 5.41), z: 7.7 + (6.7 - p.z) + 0.05, yaw: g.player.yaw + Math.PI, door: 'porta_banheiro' };
+    if (!to) return;
+    const d = g.world.doors.get(to.door); if (d) d.set(1);
+    g.player.pos.set(to.x, 0, to.z);
+    g.player.yaw = to.yaw;
+    g.player.apply();
+    this.warp = 1.3;
+    audio.play('wrong', { v: 0.7 });
+    if (!F.swapSeen) {
+      F.swapSeen = true;
+      this.after(0.8, () => this.say0('{rafa}', z === 'thr_banheiro' ? '*Eu entrei no banheiro... e saí no MEU quarto?*' : '*Eu entrei no meu quarto... e caí no banheiro?*'));
+      this.after(4.2, () => this.say0('{rafa}', '*As portas trocaram. A casa tá embaralhando o que eu lembro.*'));
+    }
+  }
+  enter_thr_banheiro() { this.swapCheck('thr_banheiro'); }
+  enter_thr_roxo() { this.swapCheck('thr_roxo'); }
   enter_corredor() {
     if (this.phase === 'a2' && this.F.power && !this.F.hunt1Done) this.hunt1();
   }
