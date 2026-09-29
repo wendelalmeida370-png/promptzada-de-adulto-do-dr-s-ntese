@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A Casa Se Lembra</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app"></div>
+
+<!-- ======================= HUD ======================= -->
+<div id="hud" class="hidden">
+  <div id="crosshair"></div>
+  <div id="objective"><div class="obj-label">OBJETIVO</div><div id="objective-text"></div></div>
+  <div id="prompt"></div>
+  <div id="subtitle"></div>
+  <div id="notify"></div>
+  <div id="toast"></div>
+  <div id="battery"><span class="bat-icon"><span id="bat-fill"></span></span><span id="bat-text">100%</span></div>
+  <div id="radio" class="hidden"><div class="radio-label">RÁDIO 87.9</div><div class="radio-bar"><div id="radio-fill"></div></div></div>
+  <div id="breath" class="hidden"><div class="breath-label">RESPIRAÇÃO</div><div class="breath-bar"><div id="breath-fill"></div></div></div>
+  <div id="stamina"><div id="stamina-fill"></div></div>
+  <div id="hint-box" class="hidden"></div>
+  <div id="hide-overlay" class="hidden"></div>
+  <div id="viewfinder" class="hidden">
+    <div class="vf-corner tl"></div><div class="vf-corner tr"></div><div class="vf-corner bl"></div><div class="vf-corner br"></div>
+    <div class="vf-top"><span class="vf-rec"><i></i>REC</span><span id="vf-mode">CÂMERA</span><span id="vf-signal">Sem serviço</span></div>
+    <div class="vf-bottom"><span id="vf-time">00:00:00</span><span id="vf-sim"></span><span id="vf-bat">100%</span></div>
+    <div id="vf-center"></div>
+    <div id="vf-tag"></div>
+    <div id="vf-help">Q: trocar modo &nbsp;·&nbsp; clique: foto</div>
+    <div id="vf-progress" class="hidden"><div id="vf-progress-fill"></div><span>GRAVANDO</span></div>
+  </div>
+</div>
+
+<div id="fade"></div>
+<div id="flash"></div>
+
+<!-- ======================= CELULAR ======================= -->
+<div id="phone" class="overlay hidden">
+  <div class="phone-body">
+    <div class="phone-status"><span id="ph-time">03:07</span><span id="ph-signal">Sem serviço</span><span id="ph-bat">100%</span></div>
+    <div id="phone-screen"></div>
+    <div class="phone-nav"><button id="ph-back">◀ Voltar</button><button id="ph-home">●</button><button id="ph-close">Fechar (TAB)</button></div>
+  </div>
+</div>
+
+<!-- ======================= INVENTÁRIO ======================= -->
+<div id="inventory" class="overlay hidden">
+  <div class="panel inv-panel">
+    <h2>MOCHILA</h2>
+    <div id="inv-grid"></div>
+    <div id="inv-detail"><div id="inv-icon"></div><div><h3 id="inv-name"></h3><p id="inv-desc"></p></div></div>
+    <div class="panel-foot">I ou ESC para fechar</div>
+  </div>
+</div>
+
+<!-- ======================= DIÁRIO ======================= -->
+<div id="journal" class="overlay hidden">
+  <div class="panel journal-panel">
+    <div class="tabs" id="journal-tabs"></div>
+    <div id="journal-body"></div>
+    <div class="panel-foot">J ou ESC para fechar</div>
+  </div>
+</div>
+
+<!-- ======================= NOTA ======================= -->
+<div id="note" class="overlay hidden">
+  <div class="paper"><div id="note-title"></div><div id="note-body"></div><div class="panel-foot">clique, E ou ESC para fechar</div></div>
+</div>
+
+<!-- ======================= ESCOLHA ======================= -->
+<div id="choice" class="overlay hidden">
+  <div class="choice-box"><div id="choice-title"></div><div id="choice-options"></div></div>
+</div>
+
+<!-- ======================= TECLADO/CÓDIGO ======================= -->
+<div id="keypad" class="overlay hidden">
+  <div class="panel keypad-panel">
+    <div id="keypad-title"></div>
+    <div id="keypad-hint"></div>
+    <input id="keypad-input" autocomplete="off" spellcheck="false">
+    <div id="keypad-wheels"></div>
+    <div class="keypad-buttons"><button id="keypad-ok">Confirmar</button><button id="keypad-cancel">Cancelar</button></div>
+    <div id="keypad-msg"></div>
+  </div>
+</div>
+
+<!-- ======================= MENUS ======================= -->
+<div id="menu" class="screen">
+  <canvas id="menu-bg"></canvas>
+  <div class="menu-inner">
+    <div class="title-wrap"><h1 id="game-title" data-text="A CASA SE LEMBRA">A CASA SE LEMBRA</h1><div class="subtitle-line">um jogo de terror para <span id="menu-player-name">Rafaela</span></div></div>
+    <div class="menu-buttons" id="main-buttons">
+      <button data-act="continue" id="btn-continue">Continuar</button>
+      <button data-act="new">Novo jogo</button>
+      <button data-act="names">Personalizar nomes</button>
+      <button data-act="options">Opções</button>
+      <button data-act="controls">Controles</button>
+      <button data-act="credits">Créditos</button>
+    </div>
+    <div class="menu-foot">Use fones de ouvido. Jogue no escuro, se tiver coragem.</div>
+  </div>
+</div>
+
+<div id="pause" class="screen hidden">
+  <div class="menu-inner">
+    <h2 class="pause-title">PAUSADO</h2>
+    <div class="menu-buttons">
+      <button data-act="resume">Voltar ao jogo</button>
+      <button data-act="hint">Pedir dica</button>
+      <button data-act="options">Opções</button>
+      <button data-act="controls">Controles</button>
+      <button data-act="lastcp">Voltar ao último ponto salvo</button>
+      <button data-act="quit">Menu principal (progresso salvo)</button>
+    </div>
+  </div>
+</div>
+
+<div id="sub-panel" class="screen hidden">
+  <div class="panel sub-inner">
+    <div id="sub-content"></div>
+    <div class="menu-buttons"><button id="sub-back">Voltar</button></div>
+  </div>
+</div>
+
+<div id="ending" class="screen hidden"><div id="ending-inner"></div></div>
+
+<div id="clickplay" class="hidden"><div>Clique para continuar</div></div>
+<div id="loading" class="screen"><div class="loading-text">carregando a casa<span class="dots">...</span></div></div>
+<div id="err" class="hidden"></div>
+
+<script src="dist/game.js"></script>
+</body>
+</html>

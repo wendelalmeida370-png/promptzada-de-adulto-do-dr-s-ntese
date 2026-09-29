@@ -1,0 +1,4 @@
+node_modules/
+tests/shots/
+tests/snapshots.json
+tests/systems-result.txt
