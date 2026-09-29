@@ -143,6 +143,7 @@ export class Phone {
     const detail = hits.length ? hits[0].detail : null;
     this.pendingPhoto = { caption: T(caption), detail: detail ? T(detail) : null, time: g.clockText() };
     for (const h of hits) if (h.onPhoto) h.onPhoto();
+    if (g.pale && g.pale.model.visible) g.pale.onFlash();
     g.noise(g.player.pos.x, g.player.pos.z, 2);
   }
 

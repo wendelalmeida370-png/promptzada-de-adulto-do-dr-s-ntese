@@ -10,7 +10,10 @@ import { EYE } from './player.js';
 import { ITEMS } from './items.js';
 import { act2, wireDresser } from './act2.js';
 import { act3 } from './act3.js';
+import { antesStory } from './antes_story.js';
+import { finale } from './finale.js';
 import { OBJ } from './objectives.js';
+import { AX, AZ, ANTES_DX, ANTES_DZ, handprint } from '../world/antes.js';
 
 export const ABORT = Symbol('abort');
 
@@ -127,7 +130,7 @@ export class Story {
     return clamp(s, 40, 99);
   }
   familyCount() { const F = this.F; return ['juliaFound', 'momFound', 'dadFound', 'pedroFound'].filter((k) => F[k]).length; }
-  fixCount() { const F = this.F; return (F.paintingMode === 'floor' || F.fixedQuadro ? 1 : 0) + ['d_bike', 'd_fotos', 'd_lencol', 'd_cadeira', 'd_toalha'].filter((k) => F[k]).length; }
+  fixCount(F = this.F) { return (F.paintingMode === 'floor' || F.fixedQuadro ? 1 : 0) + ['d_bike', 'd_fotos', 'd_lencol', 'd_cadeira', 'd_toalha'].filter((k) => F[k]).length; }
 
   // ------------------------------------------------------------ ciclo de vida
   start() {
@@ -196,7 +199,7 @@ export class Story {
       ['sala', 'corredor1'].forEach((id) => { const f = g.fixture(id); if (f) f.intensity *= 0.6; });
       const v = g.fixture('varanda'); if (v) { v.color.set(0xd05040); v.intensity = 2.2; }
     }
-    ['extra', 'porao1', 'porao2', 'porao_escada', 'lamppost'].forEach((id) => on(id));
+    ['extra', 'porao1', 'porao2', 'porao_escada', 'lamppost', 'antes_lamp', 'antes_vit', 'antes_moon'].forEach((id) => on(id));
     g.flags.fanSpeed = F.act === 1 ? 5 : F.power ? 3 : 0;
   }
 
@@ -235,7 +238,16 @@ export class Story {
     const g = this.g, w = g.world, F = this.F;
     wireDresser(this);
     // hall do prédio: escuro e fechado
-    w.addTo('sala', (grp) => { box(grp, 1.2, 2.3, 0.3, basic('#000000'), 0.97, 1.15, 8.45, { cast: false }); w.collider(0.4, 1.6, 8.3, 8.6); });
+    w.addTo('sala', (grp) => { box(grp, 1.2, 2.3, 0.3, basic('#000000'), 0.97, 1.15, 8.45, { cast: false }); w.name('hall_col', w.collider(0.4, 1.6, 8.3, 8.6)); });
+    // ato 3: marcas de mão pálidas levam do registro do chuveiro até a porta de entrada
+    w.addTo('sala', (grp) => {
+      const hp = group(grp, 0, 0, 0);
+      [[6.54, 1.36, 9.0, 'x-', 0.2], [4.26, 1.28, 8.25, 'x+', -0.3], [6.0, 1.22, 7.64, 'z-', 0.4], [4.55, 1.36, 6.76, 'z+', -0.2], [4.14, 1.3, 6.2, 'x-', 0.25], [2.55, 1.18, 7.94, 'z-', -0.35], [1.55, 1.38, 7.94, 'z-', 0.15], [0.06, 1.1, 7.35, 'x+', 0.5]]
+        .forEach(([x, y, z, f, r], i) => handprint(hp, x, y, z, f, { seed: 11 + i, rot: r, size: 0.26 }));
+      vis(hp, 'ec');
+      hp.visible = F.act >= 3;
+      w.name('handprints_house', hp);
+    });
     // porta que não existe: some no vídeo (o vídeo mostra parede)
     if (F.corridorLong) {
       const d = w.doors.get('porta_extra');
@@ -280,6 +292,9 @@ export class Story {
     const bm = w.get('bath_mirror'); if (bm) bm.fog = F.showerOn || F.nameWritten ? 0.75 : 0;
     const d = w.doors.get('porta_extra'); if (d && F.extraUnlocked && F.act >= 2) d.locked = false;
     const egg = w.get('egg_watch'); if (egg) egg.visible = !this.has('relogio_ovo');
+    const hc = w.get('hall_col'); if (hc) hc.enabled = !F.antesOpen;
+    const hp = w.get('handprints_house'); if (hp) hp.visible = F.act >= 3 && !F.roomGiven;
+    if (F.antesMirrorOpen && this.antesMirrorEcho) this.antesMirrorEcho();
   }
   drawMirrorName(text) {
     const mw = this.g.world.get('mirror_writing');
@@ -316,6 +331,12 @@ export class Story {
     // escada impossível: passagem entre o apartamento e a memória da casa
     if (F.stairsOpen && p.x > 11.1 && p.x < 13.3 && p.z > 9.7 && p.z < 10.6) { g.player.pos.x += 100; this.onEnter('descida'); }
     else if (p.x > 111.1 && p.x < 113.3 && p.z < 9.4 && p.z > 7.7) { g.player.pos.x -= 100; this.onEnter('subida'); }
+    // porta de antes: a porta de entrada leva ao apartamento de antes (e o vestíbulo escuro traz de volta)
+    if (F.antesOpen && !g.player.hidden) {
+      const fd = g.world.doors.get('porta_entrada');
+      if (p.x > 0.5 && p.x < 1.45 && p.z > 8.1 && p.z < 8.9 && fd && fd.open > 0.5) { p.x += ANTES_DX; p.z += ANTES_DZ; g.player.apply(); this.onEnter('antes_in'); }
+      else if (p.x > AX && p.x < AX + 6 && p.z < AZ - 0.15 && p.z > AZ - 1.2) { p.x -= ANTES_DX; p.z -= ANTES_DZ; g.player.apply(); this.onEnter('antes_out'); }
+    }
     this.customPrompt = null;
     const fn = this['update_' + this.phase];
     if (fn) fn.call(this, dt);
@@ -327,6 +348,7 @@ export class Story {
 
   updateAct(dt) {
     const g = this.g, F = this.F;
+    if (F.antesBuilt && this.update_antes) this.update_antes(dt);
     // gatos: o Bento sibila para o Inquilino quando ele está perto
     const b = g.cats.bento;
     if (g.entity.model.visible && b.enabled) {
@@ -384,7 +406,7 @@ export class Story {
       net: F.act === 3 ? 'A lua está vermelha. Enorme. Lá embaixo, no campo iluminado, alguém está parado bem no meio do gramado, olhando pra cá.' : 'A tela de proteção por causa dos gatos. Lá embaixo, o campo de futebol está com os refletores acesos às três da manhã. O placar diz: CASA 0 x 0 VISITANTE.',
       drying_rack: 'O varal com os lençóis. Estão úmidos e frios.',
       washer: 'A máquina de lavar. Lá dentro, só roupa molhada.',
-      tank: a >= 3 && !F.hasRegistro ? undefined : 'O tanque. Pinga uma gota a cada tanto.',
+      tank: 'O tanque. Pinga uma gota a cada tanto.',
       toilet: 'O vaso com a tampa amarelada. A descarga faz barulho a noite toda.',
       bath_picture: 'O quadrinho pendurado no azulejo. Uma paisagem desbotada. Nunca ninguém soube quem pendurou.',
       kitchen_stool: 'O banquinho alto da cozinha.',
@@ -449,8 +471,19 @@ export class Story {
     if (ph.mode === 'video' && F.showSim) data.sim = `${Math.round(this.sim())}% igual`;
     if (ph.mode === 'video') {
       for (const d of this.diffs()) { if (this.lookingAt(d.pos, 0.28, 7)) { data.tag = d.label; break; } }
+      if (g.player.pos.x > 150) data.tag = 'ESTE LUGAR NÃO ESTÁ NO VÍDEO';
     } else {
       for (const t of this.presenceTargets()) { if (this.lookingAt(t.pos, 0.3, 8)) { data.tag = t.label; data.tagEcho = true; break; } }
+      // a plaquinha raspada: a câmera lê o nome
+      if (F.antesBuilt && g.player.pos.x > 150 && this.lookingAt([AX + 3.85, 1.45, AZ + 0.07], 0.22, 3.6)) {
+        data.tag = 'AQUI MORA: CUSTÓDIO'; data.tagEcho = true;
+        if (!F.paleName) {
+          F.paleName = true;
+          audio.play('chime', { notes: [57, 60, 64], v: 0.35 });
+          this.after(0.6, () => this.say0('{rafa}', '*A câmera leu o que o olho não lê. "Aqui mora: Custódio."*', 3.2));
+          this.note('antes_nome', 'O nome raspado', 'Na plaquinha da porta do apartamento de antes, só a câmera consegue ler:\n\n"Aqui mora: Custódio."', { show: false, where: 'apartamento de antes' });
+        }
+      }
     }
     if (this.recordProgress !== undefined) { data.progress = this.recordProgress; data.help = 'MANTENHA ELE NO CENTRO'; }
     if (!ph.apps.video) data.help = 'clique: foto';
@@ -474,6 +507,9 @@ export class Story {
       { pos: [g.clown.model.position.x, 1.7, g.clown.model.position.z], cond: () => g.clown.model.visible, caption: 'O palhaço.', detail: 'Na foto, ele está sorrindo. Ao vivo, não.' },
       { pos: [g.entity.pos.x, 1.9, g.entity.pos.z], cond: () => g.entity.model.visible, caption: 'ELE.', detail: 'A foto saiu tremida. Mas dá pra ver que ele não tem rosto: tem um chiado no lugar.' },
       { pos: [-0.55, 1.0, 5.2], cond: () => !!g.echoes.get('mae_route'), caption: 'A mãe, repetindo alguma coisa na cozinha.' },
+      { pos: [AX + 3.85, 1.45, AZ + 0.07], cond: () => g.phone.mode === 'camera' && g.player.pos.x > 150, caption: 'A plaquinha, pela câmera: "Aqui mora: Custódio".' },
+      { pos: [g.pale.pos.x, 1.7, g.pale.pos.z], cond: () => g.pale.model.visible, caption: 'O Morador de Antes.', detail: 'Na foto, as mãos dele estão viradas pra câmera. Os dois olhos abertos.' },
+      { pos: [AX + 3.0, 1.2, AZ + 6.6], cond: () => g.player.pos.x > 150 && !g.pale.model.visible, caption: 'Alguém sentado embaixo de um lençol, na cabeceira da mesa.' },
     ];
     for (const e of g.echoes.list.values()) if (e.opts.caption) T0.push({ pos: [e.f.position.x, 1.2, e.f.position.z], cond: () => true, caption: e.opts.caption });
     const out = [];
@@ -785,9 +821,13 @@ export class Story {
   prompt_porta_meninos() { return undefined; }
   prompt_bed_meninos() { return this.F.act === 1 ? 'Olhar' : undefined; }
   do_bed_meninos() { if (this.F.act !== 1) return false; this.say0('', 'O {pedro} dorme de boca aberta, enrolado no lençol rosa. Ronca baixinho.'); }
-  prompt_bed_roxo() { return this.F.act === 1 ? (this.g.player.crouching ? 'Olhar embaixo da cama' : 'Olhar a {julia}') : undefined; }
+  prompt_bed_roxo() {
+    if (this.phase === 'ss' && !this.F.ssJulia) return 'Acordar a {julia}';
+    return this.F.act === 1 ? (this.g.player.crouching ? 'Olhar embaixo da cama' : 'Olhar a {julia}') : undefined;
+  }
   do_bed_roxo() {
     const F = this.F;
+    if (this.phase === 'ss' && !F.ssJulia) return this.ssWakeJulia();
     if (F.act !== 1) return false;
     if (this.g.player.crouching) { this.g.cats.lili.hiss(); this.say0('{rafa}', '*A {lili} tá lá no fundo, com os olhos arregalados. Ela não quer sair. Ela tá olhando... pra porta.*'); F.sawLiliA1 = true; return; }
     this.voice('Rafa... apaga a luz...', { tts: 'julia', vol: 0.4 });
@@ -1001,7 +1041,7 @@ export class Story {
     cc.lookAt(P.x, 1.0, P.z);
     const e = g.entity;
     const back = new THREE.Vector3(Math.sin(g.player.yaw), 0, Math.cos(g.player.yaw)).multiplyScalar(1.5);
-    e.show(P.x + back.x, P.z + back.z, g.player.yaw, 'c');
+    e.show(P.x + back.x, P.z + back.z, g.player.yaw, 'c'); // de frente para as costas dela
     g.tv.set('cctv');
     this.cctvOverlay('CÂMERA 2 · SALA · AO VIVO');
     audio.play('swell', { dur: 5, v: 0.5 });
@@ -1025,7 +1065,7 @@ export class Story {
     const fwd = new THREE.Vector3(-Math.sin(g.player.yaw), 0, -Math.cos(g.player.yaw));
     await g.player.turnTo(g.player.yaw + Math.PI, 0.05, 0.25);
     const f2 = new THREE.Vector3(-Math.sin(g.player.yaw), 0, -Math.cos(g.player.yaw));
-    e.show(pp.x + f2.x * 0.55, pp.z + f2.z * 0.55, g.player.yaw, 'ecv');
+    e.show(pp.x + f2.x * 0.55, pp.z + f2.z * 0.55, g.player.yaw + Math.PI, 'ecv');
     e.model.position.y = -0.75;
     void fwd;
     if (settings.scare > 0) {
@@ -1114,4 +1154,4 @@ export class Story {
   }
 }
 
-Object.assign(Story.prototype, act2, act3);
+Object.assign(Story.prototype, act2, act3, antesStory, finale);

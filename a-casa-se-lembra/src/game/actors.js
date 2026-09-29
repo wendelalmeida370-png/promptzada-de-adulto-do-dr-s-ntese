@@ -5,6 +5,16 @@ import { vis } from '../world/layers.js';
 import { audio } from '../core/audio.js';
 import { angleDiff, rand, clamp } from '../core/util.js';
 
+// restaura materiais depois de um fade (senão o ator some numa segunda partida)
+function resetOpacity(model) {
+  model.traverse((o) => {
+    if (!o.material || Array.isArray(o.material)) return;
+    if (o.userData.baseOpacity === undefined) { o.userData.baseOpacity = o.material.opacity; o.userData.baseTransparent = o.material.transparent; o.userData.baseMat = o.material; }
+    if (o.material !== o.userData.baseMat) o.material = o.userData.baseMat;
+    o.material.opacity = o.userData.baseOpacity; o.material.transparent = o.userData.baseTransparent;
+  });
+}
+
 // ------------------------------------------------------------------ gatos
 export class Cat {
   constructor(game, kind) {
@@ -98,6 +108,7 @@ export class Clown {
     this.t = 0;
   }
   show(x, z, yaw = 0, spec = 'ec', track = true) {
+    resetOpacity(this.model);
     vis(this.model, spec);
     this.model.position.set(x, this.game.world.heightAt(x, z), z);
     this.model.rotation.y = yaw;
@@ -241,8 +252,11 @@ export class Esquecido {
     this.t = 0;
     this.speakT = 3;
     this.pushed = null;
+    resetOpacity(this.model);
   }
-  spawn(x, z) { this.pos.set(x, 0, z); this.model.position.copy(this.pos); this.model.visible = true; this.active = true; this.calm = false; }
+  spawn(x, z) {
+    resetOpacity(this.model);
+    this.pos.set(x, 0, z); this.model.position.copy(this.pos); this.model.visible = true; this.active = true; this.calm = false; }
   hide() { this.model.visible = false; this.active = false; }
   update(dt) {
     if (!this.active) return;

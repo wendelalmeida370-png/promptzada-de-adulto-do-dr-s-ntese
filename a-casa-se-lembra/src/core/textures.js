@@ -475,6 +475,7 @@ export function birthdayPhoto(variant = 0) {
     ctx.strokeStyle = '#d11'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, 104, 11, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
     ctx.fillStyle = '#111';
     if (variant === 1) { ctx.fillRect(cx - 9, 90, 5, 3); ctx.fillRect(cx + 1, 90, 5, 3); }
+    else if (variant === 2) { ctx.beginPath(); ctx.arc(cx - 7, 91, 3, 0, Math.PI * 2); ctx.fill(); ctx.fillRect(cx + 3, 91, 9, 2); }
     else { ctx.beginPath(); ctx.arc(cx - 7, 91, 3, 0, Math.PI * 2); ctx.arc(cx + 7, 91, 3, 0, Math.PI * 2); ctx.fill(); }
     ctx.fillStyle = '#243f8f'; ctx.fillRect(cx - 22, 122, 44, 60);
     ctx.fillStyle = '#f5f1e8'; ctx.beginPath(); ctx.arc(cx, 145, 11, 0, Math.PI * 2); ctx.fill();
@@ -597,6 +598,219 @@ export class EntityFaceTexture {
     ctx.stroke();
     this.texture.needsUpdate = true;
   }
+}
+
+// ------------------------------------------------------------------ o Morador de Antes
+// mapa normal a partir de um canvas de altura (tons de cinza), com borda que se repete
+function normalFromHeight(hc, strength = 2) {
+  const w = hc.width, hh = hc.height;
+  const src = hc.getContext('2d').getImageData(0, 0, w, hh).data;
+  const out = canvas(w, hh), octx = out.getContext('2d');
+  const img = octx.createImageData(w, hh); const d = img.data;
+  const H = (x, y) => src[(((y + hh) % hh) * w + ((x + w) % w)) * 4] / 255;
+  for (let y = 0; y < hh; y++) {
+    for (let x = 0; x < w; x++) {
+      const dx = (H(x + 1, y) - H(x - 1, y)) * strength;
+      const dy = (H(x, y + 1) - H(x, y - 1)) * strength;
+      const l = Math.hypot(dx, dy, 1);
+      const i = (y * w + x) * 4;
+      d[i] = (-dx / l * 0.5 + 0.5) * 255; d[i + 1] = (dy / l * 0.5 + 0.5) * 255; d[i + 2] = (1 / l * 0.5 + 0.5) * 255; d[i + 3] = 255;
+    }
+  }
+  octx.putImageData(img, 0, 0);
+  return tex(out, 1, { linear: true });
+}
+
+// pele pálida, rosada e acinzentada, com veias finas (sem listras: nada de "múmia")
+export function paleSkin() {
+  return cached('paleSkin2', () => {
+    const S = 512;
+    const c = canvas(S, S), ctx = c.getContext('2d');
+    const rnd = mulberry32(303);
+    ctx.fillStyle = '#efe1d8'; ctx.fillRect(0, 0, S, S);
+    blotches(ctx, S, S, rnd, 120, 'rgba(222,150,150,A)', 12, 70, 0.1);
+    blotches(ctx, S, S, rnd, 60, 'rgba(168,164,184,A)', 30, 110, 0.08);
+    blotches(ctx, S, S, rnd, 50, 'rgba(255,248,242,A)', 20, 80, 0.14);
+    blotches(ctx, S, S, rnd, 26, 'rgba(190,120,110,A)', 6, 22, 0.14);
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 40; i++) {
+      let x = rnd() * S, y = rnd() * S, a = rnd() * Math.PI * 2;
+      ctx.strokeStyle = `rgba(${96 + rnd() * 30},${112 + rnd() * 30},${170 + rnd() * 40},${0.08 + rnd() * 0.12})`;
+      ctx.lineWidth = 0.7 + rnd() * 1.3;
+      ctx.beginPath(); ctx.moveTo(x, y);
+      const n = 6 + Math.floor(rnd() * 16);
+      for (let k = 0; k < n; k++) { a += (rnd() - 0.5) * 1.0; x += Math.cos(a) * 8; y += Math.sin(a) * 8; ctx.lineTo(x, y); }
+      ctx.stroke();
+    }
+    // rugas curtas, em direções variadas
+    for (let i = 0; i < 70; i++) {
+      const x = rnd() * S, y = rnd() * S, a = rnd() * Math.PI, l = 8 + rnd() * 26;
+      ctx.strokeStyle = `rgba(140,86,82,${0.05 + rnd() * 0.07})`; ctx.lineWidth = 0.8 + rnd();
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + Math.cos(a) * l * 0.5 + (rnd() - 0.5) * 6, y + Math.sin(a) * l * 0.5 + (rnd() - 0.5) * 6, x + Math.cos(a) * l, y + Math.sin(a) * l); ctx.stroke();
+    }
+    speckle(ctx, S, S, rnd, 7000, '#8a5a54', 1, 2, 0.05);
+    speckle(ctx, S, S, rnd, 4000, '#fff', 1, 2, 0.05);
+    return tex(c, 1);
+  });
+}
+export function paleSkinNormal() {
+  return cached('paleSkinN2', () => {
+    const S = 256;
+    const c = canvas(S, S), ctx = c.getContext('2d');
+    const rnd = mulberry32(404);
+    ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, S, S);
+    blotches(ctx, S, S, rnd, 160, 'rgba(255,255,255,A)', 3, 16, 0.22);
+    blotches(ctx, S, S, rnd, 160, 'rgba(0,0,0,A)', 3, 16, 0.22);
+    for (let i = 0; i < 90; i++) {
+      const x = rnd() * S, y = rnd() * S, a = rnd() * Math.PI, l = 6 + rnd() * 18;
+      ctx.strokeStyle = `rgba(0,0,0,${0.2 + rnd() * 0.25})`; ctx.lineWidth = 1 + rnd();
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); ctx.stroke();
+    }
+    speckle(ctx, S, S, rnd, 9000, '#000', 1, 2, 0.3);
+    speckle(ctx, S, S, rnd, 7000, '#fff', 1, 2, 0.25);
+    return normalFromHeight(c, 1.6);
+  });
+}
+// olho: a íris fica numa faixa no topo da textura (vira um disco em volta do polo da esfera)
+export function paleEye() {
+  return cached('paleEye', () => {
+    const W = 256, Hh = 256;
+    const c = canvas(W, Hh), ctx = c.getContext('2d');
+    const rnd = mulberry32(88);
+    ctx.fillStyle = '#e8dbbf'; ctx.fillRect(0, 0, W, Hh);
+    const g = ctx.createLinearGradient(0, 0, 0, Hh);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.3, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(130,40,40,0.55)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, Hh);
+    for (let i = 0; i < 46; i++) {
+      let x = rnd() * W, y = Hh * (0.5 + rnd() * 0.5);
+      ctx.strokeStyle = `rgba(170,26,26,${0.25 + rnd() * 0.45})`; ctx.lineWidth = 0.6 + rnd() * 1.4;
+      ctx.beginPath(); ctx.moveTo(x, y);
+      for (let k = 0; k < 12; k++) { x += (rnd() - 0.5) * 8; y -= 5 + rnd() * 8; ctx.lineTo(x, y); if (y < Hh * 0.2) break; }
+      ctx.stroke();
+    }
+    const pupil = Hh * 0.05, iris = Hh * 0.17;
+    const gi = ctx.createLinearGradient(0, 0, 0, iris);
+    gi.addColorStop(0, '#030101'); gi.addColorStop(pupil / iris, '#050202'); gi.addColorStop(pupil / iris + 0.03, '#5a160c');
+    gi.addColorStop(0.72, '#8a3418'); gi.addColorStop(0.9, '#3a0c08'); gi.addColorStop(1, '#240604');
+    ctx.fillStyle = gi; ctx.fillRect(0, 0, W, iris);
+    for (let i = 0; i < 110; i++) {
+      const x = rnd() * W;
+      ctx.strokeStyle = `rgba(${170 + rnd() * 70},${80 + rnd() * 50},30,${0.12 + rnd() * 0.25})`; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, pupil + 2); ctx.lineTo(x + (rnd() - 0.5) * 3, iris - 2); ctx.stroke();
+    }
+    return tex(c, 1, { clamp: true });
+  });
+}
+// lençol de móvel guardado
+export function dustSheet() {
+  return cached('dustSheet', () => {
+    const S = 256;
+    const c = canvas(S, S), ctx = c.getContext('2d');
+    const rnd = mulberry32(61);
+    ctx.fillStyle = '#d6d0c3'; ctx.fillRect(0, 0, S, S);
+    for (let y = 0; y < S; y += 2) { ctx.fillStyle = `rgba(0,0,0,${0.02 + rnd() * 0.025})`; ctx.fillRect(0, y, S, 1); }
+    for (let x = 0; x < S; x += 2) { ctx.fillStyle = `rgba(255,255,255,${0.02 + rnd() * 0.03})`; ctx.fillRect(x, 0, 1, S); }
+    blotches(ctx, S, S, rnd, 18, 'rgba(126,104,70,A)', 10, 50, 0.12);
+    blotches(ctx, S, S, rnd, 26, 'rgba(90,90,90,A)', 20, 70, 0.09);
+    speckle(ctx, S, S, rnd, 1600, '#5a5040', 1, 2, 0.08);
+    return tex(c, 0.9);
+  });
+}
+// papel de parede de antigamente: amarelado, listrado, com florzinhas e umidade
+export function oldWallpaper() {
+  return cached('oldWallpaper', () => {
+    const S = 512;
+    const c = canvas(S, S), ctx = c.getContext('2d');
+    const rnd = mulberry32(19);
+    ctx.fillStyle = '#b3a07a'; ctx.fillRect(0, 0, S, S);
+    for (let x = 0; x < S; x += 64) { ctx.fillStyle = 'rgba(112,84,56,0.2)'; ctx.fillRect(x + 26, 0, 12, S); ctx.fillStyle = 'rgba(255,240,210,0.12)'; ctx.fillRect(x + 4, 0, 6, S); }
+    for (let y = 16; y < S; y += 48) {
+      for (let x = 0; x < S; x += 64) {
+        const cx = x + ((y / 48) % 2 ? 48 : 16), cy = y;
+        ctx.fillStyle = 'rgba(140,58,50,0.26)';
+        for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * 5, cy + Math.sin(a) * 5, 3.5, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = 'rgba(200,170,90,0.4)'; ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    for (let i = 0; i < 7; i++) {
+      const x = rnd() * S, y0 = rnd() * S * 0.4;
+      const g = ctx.createLinearGradient(0, y0, 0, y0 + 180 + rnd() * 220);
+      g.addColorStop(0, 'rgba(80,58,28,0.28)'); g.addColorStop(1, 'rgba(80,58,28,0)');
+      ctx.fillStyle = g; ctx.fillRect(x - 8 - rnd() * 10, y0, 14 + rnd() * 20, 420);
+    }
+    blotches(ctx, S, S, rnd, 24, 'rgba(60,44,24,A)', 20, 90, 0.13);
+    speckle(ctx, S, S, rnd, 4000, '#3a2a18', 1, 2, 0.06);
+    return tex(c, 1.4);
+  });
+}
+export function oldRug() {
+  return cached('oldRug', () => {
+    const W = 512, Hh = 320;
+    const c = canvas(W, Hh), ctx = c.getContext('2d');
+    const rnd = mulberry32(27);
+    ctx.fillStyle = '#5e2020'; ctx.fillRect(0, 0, W, Hh);
+    ctx.strokeStyle = '#a07a3a'; ctx.lineWidth = 10; ctx.strokeRect(18, 18, W - 36, Hh - 36);
+    ctx.strokeStyle = '#2a1414'; ctx.lineWidth = 16; ctx.strokeRect(40, 40, W - 80, Hh - 80);
+    ctx.fillStyle = '#8a5a2a';
+    ctx.beginPath(); ctx.ellipse(W / 2, Hh / 2, 90, 60, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2a3a52'; ctx.beginPath(); ctx.ellipse(W / 2, Hh / 2, 50, 32, 0, 0, Math.PI * 2); ctx.fill();
+    for (let i = 0; i < 40; i++) { ctx.fillStyle = `rgba(160,120,60,${0.2 + rnd() * 0.2})`; ctx.fillRect(60 + rnd() * (W - 120), 60 + rnd() * (Hh - 120), 6, 6); }
+    blotches(ctx, W, Hh, rnd, 30, 'rgba(0,0,0,A)', 20, 80, 0.2);
+    blotches(ctx, W, Hh, rnd, 20, 'rgba(200,190,170,A)', 20, 60, 0.12);
+    speckle(ctx, W, Hh, rnd, 5000, '#000', 1, 2, 0.12);
+    return tex(c, 1, { clamp: true });
+  });
+}
+// marca de mão comprida, de pó claro, com um furinho no meio da palma
+export function handprint(seed = 1) {
+  return cached('handprint' + seed, () => {
+    const c = canvas(128, 176), ctx = c.getContext('2d');
+    const rnd = mulberry32(seed);
+    ctx.fillStyle = 'rgba(238,232,222,0.9)';
+    ctx.beginPath(); ctx.ellipse(64, 126, 25, 30, 0, 0, Math.PI * 2); ctx.fill();
+    const fingers = [[-21, -0.3, 66], [-7, -0.09, 80], [8, 0.07, 84], [22, 0.26, 72]];
+    for (const [dx, a, len] of fingers) { ctx.save(); ctx.translate(64 + dx, 104); ctx.rotate(a + (rnd() - 0.5) * 0.1); ctx.beginPath(); ctx.ellipse(0, -len / 2, 5.5, len / 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+    ctx.save(); ctx.translate(36, 132); ctx.rotate(-1.05); ctx.beginPath(); ctx.ellipse(0, -18, 6.5, 20, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    ctx.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 1400; i++) { ctx.fillStyle = `rgba(0,0,0,${rnd() * 0.85})`; ctx.fillRect(rnd() * 128, rnd() * 176, 2, 2); }
+    ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.beginPath(); ctx.arc(64, 124, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    return tex(c, 1, { clamp: true });
+  });
+}
+// plaquinha "Aqui mora:" (o nome só aparece para a câmera)
+export function nameplate(showName) {
+  return cached('nameplate' + showName, () => {
+    const c = canvas(256, 128), ctx = c.getContext('2d');
+    const rnd = mulberry32(showName ? 5 : 6);
+    const g = ctx.createLinearGradient(0, 0, 256, 128); g.addColorStop(0, '#6a4526'); g.addColorStop(1, '#4a2e18');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 256, 128);
+    ctx.strokeStyle = '#2a1a0c'; ctx.lineWidth = 6; ctx.strokeRect(6, 6, 244, 116);
+    ctx.fillStyle = '#e8d8b0'; ctx.font = 'italic 24px Georgia'; ctx.textAlign = 'center'; ctx.fillText('Aqui mora:', 128, 46);
+    if (showName) { ctx.font = 'bold 38px Georgia'; ctx.fillText('Custódio', 128, 96); }
+    else { ctx.fillStyle = 'rgba(214,184,132,0.55)'; for (let i = 0; i < 46; i++) ctx.fillRect(58 + rnd() * 140, 70 + rnd() * 30, 8 + rnd() * 22, 2); }
+    speckle(ctx, 256, 128, rnd, 700, '#000', 1, 2, 0.12);
+    return tex(c, 1, { clamp: true });
+  });
+}
+export function oldCalendar() {
+  return cached('oldCalendar', () => {
+    const c = canvas(256, 320), ctx = c.getContext('2d');
+    const rnd = mulberry32(71);
+    ctx.fillStyle = '#e6dcc2'; ctx.fillRect(0, 0, 256, 320);
+    ctx.fillStyle = '#8a2a20'; ctx.fillRect(0, 0, 256, 54);
+    ctx.fillStyle = '#f2e8d0'; ctx.font = 'bold 26px Georgia'; ctx.textAlign = 'center'; ctx.fillText('SETEMBRO', 128, 36);
+    ctx.fillStyle = '#7a5a3a'; ctx.font = 'bold 12px Georgia';
+    ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].forEach((d, k) => ctx.fillText(d, 22 + k * 35, 72));
+    ctx.fillStyle = '#3a2a1a'; ctx.font = '13px Georgia';
+    for (let r = 0; r < 5; r++) for (let k = 0; k < 7; k++) { const n = r * 7 + k + 1; if (n > 30) continue; ctx.fillText(String(n), 22 + k * 35, 100 + r * 42); }
+    ctx.strokeStyle = 'rgba(190,20,20,0.85)'; ctx.lineWidth = 3;
+    for (let r = 0; r < 4; r++) { ctx.beginPath(); ctx.ellipse(22 + 6 * 35, 96 + r * 42, 16, 13, 0, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(190,20,20,0.9)'; ctx.font = 'italic 17px "Comic Sans MS", cursive'; ctx.fillText('eles vêm', 128, 304);
+    blotches(ctx, 256, 320, rnd, 14, 'rgba(120,90,40,A)', 10, 50, 0.15);
+    speckle(ctx, 256, 320, rnd, 1500, '#3a2a18', 1, 2, 0.08);
+    return tex(c, 1, { clamp: true });
+  });
 }
 
 export function shade(hex, amt) {

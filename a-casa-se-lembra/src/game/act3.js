@@ -5,6 +5,7 @@ import { names, settings, T } from '../core/settings.js';
 import { norm, clamp, angleDiff } from '../core/util.js';
 import { buildBasement, BX, BY } from '../world/basement.js';
 import { vis } from '../world/layers.js';
+import { AZ } from '../world/antes.js';
 
 const CARDS_A = [
   'OI, {RAFA}.',
@@ -59,7 +60,10 @@ export const act3 = {
   enter_descida() {
     const F = this.F, g = this.g;
     if (this._partyLoop) { this._partyLoop.stop(1); this._partyLoop = null; }
-    if (!F.descended) { F.descended = true; this.phase = 'a3_basement'; g.stopAmbience(); audio.music('memory'); }
+    if (!F.descended) {
+      F.descended = true; this.phase = 'a3_basement'; g.stopAmbience(); audio.music('memory');
+      this.after(2.2, () => this.say0('{rafa}', '*Marcas de mão na parede da escada. Compridas demais. Brancas, como pó.*', 3.4));
+    }
     else if (F.act >= 3) audio.music('memory');
   },
   enter_subida() {
@@ -233,6 +237,16 @@ export const act3 = {
     g.cats.bento.setVisible(false);
     if (F.liliFollow) { g.cats.lili.setVisible(true); g.cats.lili.place(g.player.pos.x + 0.5, g.player.pos.z - 0.4, 0); g.cats.lili.mode = 'follow'; }
     this.objective('ruptures');
+    if (F.antesBuilt && g.player.pos.x > 150) {
+      // voltou dentro do apartamento de antes
+      g.startAmbience('antes');
+      this.antesAudio(true);
+      this.antesSetupPale();
+      if (F.antesTook && !F.antesCalm) this.objective('antes_vitrola');
+      else if (!F.antesTook) this.objective('antes');
+      const d = g.world.doors.get('porta_antes'); if (d && g.player.pos.z > AZ + 0.9) d.set(0);
+      if (F.liliFollow) g.cats.lili.setVisible(false);
+    } else this.antesAudio(false);
     this.startEndlessHunt(9);
   },
   huntStrength() { const s = this.F.simAtReveal || this.sim(); return clamp(0.85 + (s - 75) / 60, 0.85, 1.15) + this.ruptureCount() * 0.03; },
@@ -249,7 +263,8 @@ export const act3 = {
   ruptureHints() {
     const F = this.F;
     if (F.paintingMode !== 'upside') return ['O quadro colorido fica na sala, perto da porta de entrada.', 'Lembra do reflexo da TV no começo? Ele mostrava como a casa queria o quadro.', 'Vá até o quadro e escolha "Pendurar de cabeça pra baixo".'];
-    if (!F.nameWritten) return [F.valveFixed ? 'Espelho só embaça com vapor.' : 'O registro do chuveiro sumiu. Procure num lugar com água: a área de serviço.', (F.swapSeen ? 'As portas do banheiro e do seu quarto trocaram: para chegar no banheiro, entre pela porta do quarto roxo. ' : '') + 'Encaixe o registro no chuveiro e abra a água quente. Espere o espelho embaçar.', 'Depois de embaçado, interaja com o espelho do banheiro e escreva o seu nome.'];
+    if (!F.nameWritten && !this.has('registro') && !F.valveFixed) return ['O registro do chuveiro sumiu. No azulejo do banheiro ficou uma marca de mão pálida, de dedos compridos. Siga as marcas.', 'As marcas atravessam a casa até a porta de entrada. Do outro lado dela, toca uma valsa. Abra a porta.', 'O registro está na mesa do apartamento de antes, perto de quem dorme na cabeceira. Se ele acordar: quando as mãos subirem, fique parada; religue a vitrola (fundo, à direita).'];
+    if (!F.nameWritten) return [F.valveFixed ? 'Espelho só embaça com vapor.' : 'Você já tem o registro. Encaixe no chuveiro do banheiro.', (F.swapSeen ? 'As portas do banheiro e do seu quarto trocaram: para chegar no banheiro, entre pela porta do quarto roxo. ' : '') + 'Encaixe o registro no chuveiro e abra a água quente. Espere o espelho embaçar.', 'Depois de embaçado, interaja com o espelho do banheiro e escreva o seu nome.'];
     if (!F.keysHung) return ['O porta-chaves "Família" está vazio. A casa quer a família de volta nele.', `Você precisa de três chaves: a da mãe${this.has('chaves_mae') ? ' (tem)' : ''}, a do pai${this.has('chave_pai') ? ' (tem)' : ' (o chapéu dele ficou no chão do quarto)'} e a chave velha${this.has('chave_velha') ? ' (tem)' : ''}.`, 'Com as três chaves, interaja com o porta-chaves na entrada.'];
     return ['Vá para a sala.'];
   },
@@ -295,7 +310,18 @@ export const act3 = {
     const F = this.F, g = this.g;
     if (F.act < 3) { this.say0('', 'O registro do chuveiro. Emperra se girar demais.'); return; }
     if (!F.valveFixed) {
-      if (!this.has('registro')) { this.say0('{rafa}', '*Alguém arrancou a manopla do registro. Sem ela não abre.*'); return; }
+      if (!this.has('registro')) {
+        if (!F.sawHandprint) {
+          F.sawHandprint = true;
+          this.run(async (s) => {
+            await s.say('{rafa}', '*Alguém arrancou a manopla do registro. Sem ela não abre.*', { dur: 3 });
+            await s.say('{rafa}', '*E no azulejo... uma marca de mão. Branca, como pó. Os dedos são compridos demais.*', { dur: 3.8 });
+            await s.say('{rafa}', '*Tem outra ali. E outra. Indo pra sala.*', { dur: 2.6 });
+            if (this.g.player.pos.x < 150 && this.objId === 'ruptures') this.objective('ruptures');
+          });
+        } else this.say0('{rafa}', '*Sem a manopla não abre. As marcas de mão vão até a porta de entrada.*');
+        return;
+      }
       this.take('registro'); F.valveFixed = true; g.applyWorld(); audio.play('unlock', { pos: [6.5, 1.2, 9.3] }); return;
     }
     if (!F.showerOn) {
@@ -394,14 +420,14 @@ export const act3 = {
     await g.player.lookAt(new THREE.Vector3(0.2, 1.4, 2.8), 1.2);
     await s.wait(1.5);
     // sai da TV
-    e.show(0.3, 2.8, Math.PI / 2, 'ecv');
+    e.show(0.3, 2.8, -Math.PI / 2, 'ecv');
     e.model.scale.setScalar(0.25);
     e.model.position.y = 1.0;
     g.tv.set('static');
     for (let i = 0; i <= 30; i++) {
       const k = i / 30;
       e.model.scale.setScalar(0.25 + 0.75 * k);
-      e.place(0.3 + 1.0 * k, 2.8, Math.PI / 2);
+      e.place(0.3 + 1.0 * k, 2.8, -Math.PI / 2);
       e.model.position.y = 1.0 * (1 - k);
       await s.wait(0.08);
     }
@@ -417,12 +443,15 @@ export const act3 = {
     await s.say('O Inquilino', 'Eu só quero uma casa, {rafaela}.', { tts: 'inq', kind: 'enemy', dur: 3 });
     await s.say('O Inquilino', 'Todo mundo quer uma casa.', { tts: 'inq', kind: 'enemy', dur: 2.6 });
     await s.say('O Inquilino', 'Me dá um cômodo. Um só. Um que ninguém vá lembrar. E eu devolvo eles pra você. Agora.', { tts: 'inq', kind: 'enemy', dur: 5 });
-    const ch = await g.ui.choice('O Inquilino estende a mão comprida. Atrás dele, o palhaço balança a cabeça devagar: não.', ['Dar um cômodo pra ele.', 'Não. Essa casa é nossa.']);
+    const opts = ['Dar um cômodo pra ele.', 'Não. Essa casa é nossa.'];
+    if (F.paleName) opts.push('Gritar o nome que a casa esqueceu: "SEU CUSTÓDIO!"');
+    const ch = await g.ui.choice('O Inquilino estende a mão comprida. Atrás dele, o palhaço balança a cabeça devagar: não.', opts);
     g.resumePointer(true);
     if (ch === 0) { growl.stop(1); return this.endingInquilino(s); }
+    if (ch === 2) { growl.stop(1.5); return this.endingAchados(s); }
     // luta: gravar
     audio.play('scream', { pos: e.pos, v: 1.1, dur: 1.6 });
-    for (let i = 0; i < 6; i++) { e.place(1.3 + i * 0.12, 2.8, Math.PI / 2); await s.wait(0.05); }
+    for (let i = 0; i < 6; i++) { e.place(1.3 + i * 0.12, 2.8, -Math.PI / 2); await s.wait(0.05); }
     c.show(e.pos.x + 0.3, e.pos.z + 0.25, -Math.PI / 2, 'ec', true);
     c.honk(1.4);
     await s.say('', '*O palhaço agarra ele por trás!*', { dur: 2 });
@@ -436,7 +465,7 @@ export const act3 = {
       await s.wait(0.05);
       t += 0.05;
       const x = 1.55 + Math.sin(t * 1.1) * 0.35, z = 2.8 + Math.sin(t * 1.7) * 0.9;
-      e.place(x, z, Math.PI / 2 + Math.sin(t * 3) * 0.4);
+      e.place(x, z, -Math.PI / 2 + Math.sin(t * 3) * 0.4);
       c.model.position.set(x + 0.3, 0, z + 0.2);
       growl.setPos(e.pos);
       const on = g.phone.raised && this.lookingAt([x, 2.0, z], 0.24, 8);
@@ -478,7 +507,7 @@ export const act3 = {
     await s.say('{rafa}', '*Ele tá... dentro do meu celular. Dentro do vídeo.*', { dur: 3 });
     const ch2 = await g.ui.choice('casa.mp4 agora só tem uma coisa gravada: ele.', ['Apagar casa.mp4', 'Guardar o vídeo']);
     g.resumePointer(true);
-    if (ch2 === 1) return this.endingEpilogue(s, 'copia');
+    if (ch2 === 1) { c.hide(); return this.endingKeepVideo(s); }
     // apagar
     this.toast('Excluindo casa.mp4...', 2);
     audio.play('phone_glitch');
@@ -514,94 +543,5 @@ export const act3 = {
       c.hide();
     }
     return this.endingEpilogue(s, 'casa');
-  },
-
-  // ------------------------------------------------------------ finais
-  async endingInquilino(s) {
-    const g = this.g;
-    audio.speak(T('Obrigado, {rafaela}.'), { pitch: 0.1, rate: 0.6 });
-    await s.say('O Inquilino', 'Obrigado, {rafaela}.', { dur: 2.6, kind: 'enemy' });
-    g.ui.flash(1, 3, '#fff');
-    await g.ui.fade(1, 2);
-    g.entity.hide(); g.clown.hide();
-    this.finish('inquilino');
-  },
-  async endingEpilogue(s, kind) {
-    const g = this.g, F = this.F;
-    await g.ui.fade(1, 2);
-    g.clown.hide();
-    g.entity.hide();
-    g.stopAmbience();
-    audio.music('end');
-    // amanhecer
-    F.act = 1;
-    g.clockMin = 6 * 60;
-    for (const f of g.world.fixtures) f.on = false;
-    const v = g.fixture('varanda'); if (v) { v.on = true; v.color.set(0xffb070); v.intensity = 9; v.dist = 12; }
-    g.fixture('sala') && (g.fixture('sala').on = true);
-    this.tint = [1.12, 1.0, 0.9];
-    g.player.teleport(2.6, 6.6, Math.PI, 0);
-    g.echoes.clear();
-    g.cats.bento.setVisible(true); g.cats.bento.place(3.4, 3.0, 0);
-    if (F.liliFollow) { g.cats.lili.setVisible(true); g.cats.lili.place(2.9, 6.9, Math.PI); g.cats.lili.mode = 'idle'; }
-    this.cut(true, { look: true });
-    await g.ui.fade(0, 3);
-    g.ui.toast('06:00', 3);
-    await s.say('{rafa}', '*Amanheceu. A geladeira voltou a zumbir. O {bento} tá pedindo ração.*', { dur: 3.6 });
-    await s.wait(1.5);
-    audio.play('intercom', { pos: [0.07, 1.45, 7.65], dur: 1.3 });
-    await s.wait(1.6);
-    audio.play('intercom', { pos: [0.07, 1.45, 7.65], dur: 1.3 });
-    await s.say('{rafa}', '*O interfone. De novo.*', { dur: 2.2 });
-    await g.player.lookAt(new THREE.Vector3(0.07, 1.45, 7.65), 1.2);
-    audio.play('switch');
-    await s.say('Interfone', 'rafinha? abre aí, esqueci a chave kkkk', { tts: 'wendel', dur: 3.2 });
-    const c = await g.ui.choice('A voz é do {wendel}. Parece o {wendel}.', ['Abrir', 'Qual o nome dos gatos?']);
-    g.resumePointer(true);
-    if (c === 1) {
-      await s.say('Interfone', '{bento} e {lili}, né?? tá doida? kkkkk abre logo que eu tô morrendo de fome', { tts: 'wendel', dur: 4 });
-      await s.say('{rafa}', '*...é ele.*', { dur: 2 });
-    }
-    audio.play('intercom', { dur: 0.6 });
-    await s.wait(1.2);
-    await g.ui.fade(1, 2.5);
-    this.finish(kind);
-  },
-  finish(kind) {
-    const g = this.g, F = this.F;
-    g._endingNow = true;
-    this.cut(false);
-    g.state = 'ending';
-    g.input.unlock();
-    audio.stopAllLoops(1);
-    audio.music('end');
-    try { localStorage.removeItem('casa-se-lembra/save/v1'); } catch (e) { /* ok */ }
-    const mins = Math.max(1, Math.round(g.time / 60));
-    const lines = [];
-    if (kind === 'inquilino') {
-      lines.push('06:00. A sua mãe te acorda no sofá. Todo mundo em casa. O {bento} miando pela ração.');
-      lines.push('Ninguém lembra de nada. Ninguém lembra de uma porta roxa no corredor.');
-      lines.push('— Que quarto roxo, {rafa}? Você sempre dormiu na sala.');
-      lines.push('À noite, alguém muito alto se mexe no quarto que ninguém lembra.\nEle é um ótimo inquilino. Nunca faz barulho.');
-    } else {
-      lines.push('A sua família acordou cada um na sua cama, dizendo que teve o mesmo sonho: uma festa, uma sala amarela, um palhaço com um relógio no peito.');
-      lines.push(kind === 'copia'
-        ? 'Mas casa.mp4 continua no seu celular. Toda noite, às 3:33, o arquivo fica um pouquinho maior.\n\n[notificação] casa.mp4 — 101% igual.'
-        : F.clownSaved ? 'Na foto da festa de 5 anos, o palhaço agora está olhando pra você. E sorrindo.' : 'Na foto da festa de 5 anos, o palhaço está de olhos fechados. Como quem dorme depois de um dia muito longo.');
-    }
-    lines.push(F.liliFollow ? 'A {lili} dormiu em cima do seu pé a manhã inteira.' : 'A {lili} ficou três dias sem sair de dentro do rack.');
-    lines.push(F.invited ? 'Na porta da frente ficaram arranhões fundos, do lado de dentro. Ninguém soube explicar.' : 'A porta da frente nunca foi aberta naquela noite. Você não convidou ninguém.');
-    const fx = this.fixCount();
-    lines.push(fx <= 1 ? 'Você só consertou o que te mandaram consertar. Desconfiou cedo. A casa gostou disso.' : fx >= 5 ? 'Você consertou quase tudo o que a casa tinha mudado pra te proteger. Ela te perdoou mesmo assim.' : `Você consertou ${fx} coisas que a casa tinha mudado pra te proteger.`);
-    if (F.secretVasco) lines.push('A camisa preta com a faixa ficou pendurada na cadeira. Pra dar sorte.');
-    if (F.secretChrono) lines.push('Às vezes, quando a casa fica em silêncio, dá pra ouvir um tique-taque que não vem de relógio nenhum.');
-    const title = kind === 'inquilino' ? 'FINAL: O INQUILINO' : kind === 'copia' ? 'FINAL: CÓPIA DE SEGURANÇA' : F.clownSaved ? 'FINAL: A CASA SE LEMBRA (e o palhaço também)' : 'FINAL: A CASA SE LEMBRA';
-    const found = ['Vasco', 'Chrono', 'Bloodborne'].filter((k) => (k === 'Vasco' ? F.secretVasco : k === 'Chrono' ? F.secretChrono : F.dadFound)).length;
-    const html = `<div class="end-tag">${title}</div><h1>A CASA SE LEMBRA</h1>` +
-      lines.map((l) => `<p>${T(l).replace(/\n/g, '<br>')}</p>`).join('') +
-      `<p class="end-tag">tempo de jogo: ${mins} min · vezes que a casa esqueceu: ${g.deaths} · segredos: ${found}/3</p>` +
-      `<p style="margin-top:30px">${T('Para {rafaela}.')}<br>${T('Com carinho, {wendel}.')}</p>` +
-      (kind !== 'casa' ? '<p class="end-tag">(existe outro final)</p>' : '');
-    g.ui.ending(html, () => { g._endingNow = false; g.quitToMenu(); });
   },
 };

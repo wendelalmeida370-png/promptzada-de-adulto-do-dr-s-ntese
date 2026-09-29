@@ -514,7 +514,13 @@ function buildCorredor(world, F, lay) {
   const g = world.begin('corredor');
   const E = lay.corridorEnd;
   room(world, g, 4.2, E, 6.7, 7.7, MATS.woodFloor, 'wood', 'corredor');
-  wall(world, g, 'x', 6.7, 4.2, 7.3, MATS.purple, MATS.white, [{ a: 5.0, b: 5.82 }]);
+  wall(world, g, 'x', 6.7, 4.2, 7.3, MATS.purple, MATS.white, F.roomGiven ? [] : [{ a: 5.0, b: 5.82 }]);
+  if (F.roomGiven) {
+    // o quarto que ninguém lembra: só parede lisa no lugar da porta
+    const sw = group(g, 5.41, 1.05, 6.77);
+    box(sw, 0.82, 2.0, 0.02, new THREE.MeshBasicMaterial({ visible: false }), 0, 0, 0, { cast: false });
+    world.interact(sw, { id: 'sealed_wall', kind: 'examine', prompt: () => 'Parede' });
+  }
   wall(world, g, 'x', 6.7, 7.3, 10.4, MATS.white, MATS.white, [{ a: 8.3, b: 9.12 }]);
   wall(world, g, 'x', 6.7, 10.4, E, MATS.white, MATS.white);
   const extraOps = F.corridorLong ? [{ a: 11.8, b: 12.62 }] : [];
@@ -604,7 +610,7 @@ function buildRoxo(world, F) {
   const cu = group(g, 5.25, 0, 3.52); P.curtains(cu, 1.7, 2.3, MATS.curtainBeige, 0.15);
   world.zone('roxo', 4.2, 7.3, 3.4, 6.7);
   world.zone('thr_roxo', 5.01, 5.81, 6.3, 6.66);
-  new Door(world, g, { id: 'porta_roxo', name: 'porta do quarto', hx: 5.0, hz: 6.7, rot: 0, swing: 1, width: 0.82 });
+  if (!F.roomGiven) new Door(world, g, { id: 'porta_roxo', name: 'porta do quarto', hx: 5.0, hz: 6.7, rot: 0, swing: 1, width: 0.82 });
   // cama com manta azul de tricô
   const bd = group(g, 4.74, 0, 4.45); P.bed(bd, 0.95, 1.95, MATS.sheetLilac, MATS.knit);
   world.collider(4.2, 5.24, 3.45, 5.45, { los: false });
@@ -687,8 +693,10 @@ function buildRoxo(world, F) {
   world.interact(sk, { id: 'skates', kind: 'examine', prompt: () => 'Patins' });
   const lamp = lampAt(world, g, 5.75, 5.0, { id: 'roxo', room: 'roxo', intensity: 5, dist: 6, color: 0xfff0e6 });
   void lamp;
-  world.nav('r0', 5.41, 6.45, 'roxo'); world.nav('r1', 5.8, 5.6, 'roxo'); world.nav('r2', 5.8, 4.5, 'roxo');
-  world.link('r0', 'c1', 'porta_roxo'); world.link('r0', 'r1'); world.link('r1', 'r2');
+  if (!F.roomGiven) {
+    world.nav('r0', 5.41, 6.45, 'roxo'); world.nav('r1', 5.8, 5.6, 'roxo'); world.nav('r2', 5.8, 4.5, 'roxo');
+    world.link('r0', 'c1', 'porta_roxo'); world.link('r0', 'r1'); world.link('r1', 'r2');
+  }
   world.end();
 }
 
@@ -873,6 +881,7 @@ function buildOutside(world, F) {
   const city = new THREE.Mesh(new THREE.CylinderGeometry(70, 70, 60, 48, 1, true), cityMat);
   city.position.set(4, -8, 4);
   g.add(city);
+  world.name('city_sky', city);
   // chão distante
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshBasicMaterial({ color: 0x050605, fog: false }));
   ground.rotation.x = -Math.PI / 2; ground.position.set(4, -22, 4); g.add(ground);
@@ -895,9 +904,16 @@ function buildOutside(world, F) {
   world.name('field', field);
   // alguém parado no meio do campo (visível só às vezes)
   const figure = group(field, 0, 0, 0);
-  const fm = new THREE.MeshBasicMaterial({ color: 0x000000, fog: false });
-  const fb = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 1.8, 6), fm); fb.position.y = 0.9; figure.add(fb);
-  const fh = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), fm); fh.position.y = 2.0; figure.add(fh);
+  const fm = new THREE.MeshBasicMaterial({ color: 0xcdb8ac, fog: false });
+  const fb = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.26, 1.5, 6), fm); fb.position.y = 1.35; fb.rotation.x = 0.2; figure.add(fb);
+  for (const sx of [-1, 1]) {
+    const lg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.05, 1.1, 5), fm); lg.position.set(sx * 0.14, 0.55, 0); lg.rotation.z = sx * 0.08; figure.add(lg);
+    const ar = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 1.2, 5), fm); ar.position.set(sx * 0.36, 2.35, 0.25); ar.rotation.z = -sx * 0.35; ar.rotation.x = -0.3; figure.add(ar);
+    const hd2 = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 5), fm); hd2.scale.set(1, 1.5, 0.4); hd2.position.set(sx * 0.55, 2.95, 0.42); figure.add(hd2);
+  }
+  const fh = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), fm); fh.scale.set(0.9, 1.25, 1); fh.position.y = 2.35; figure.add(fh);
+  figure.rotation.y = Math.PI * 0.85;
+  figure.scale.setScalar(1.3);
   figure.visible = false;
   world.name('field_figure', figure);
   // lua
@@ -984,7 +1000,7 @@ export function applyHouse(world, F) {
   // gelo
   const ice = get('ice_block'); if (ice) ice.visible = !!F.iceVisible && !F.hasIce && !F.hasMomKeys;
   // registro do chuveiro
-  const reg = get('registro'); if (reg) reg.visible = act >= 3 && !F.hasRegistro && !F.valveFixed;
+  const reg = get('registro'); if (reg) reg.visible = false; // agora ele está na mesa do apartamento de antes
   const sv = get('shower_valve'); if (sv) { const show = act < 3 || F.valveFixed; sv.regHandle.visible = show; }
   // chapéu
   const hw = get('hat_wall'); if (hw) hw.visible = act === 1 || F.dadFound;
@@ -993,7 +1009,7 @@ export function applyHouse(world, F) {
   const sdc = get('stairs_dark_col'); if (sdc) sdc.enabled = !F.stairsOpen;
   // lua vermelha no ato 3
   const moon = get('moon'); if (moon) moon.material.map = TX.moonTex(act >= 3);
-  const ff = get('field_figure'); if (ff) ff.visible = !!F.fieldFigure;
+  const ff = get('field_figure'); if (ff) ff.visible = act >= 3 && !F.antesDone;
   // portas
   const d = world.doors;
   if (d.get('porta_pais')) d.get('porta_pais').locked = act === 1 ? true : false;

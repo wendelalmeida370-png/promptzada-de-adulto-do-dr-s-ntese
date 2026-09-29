@@ -82,11 +82,36 @@ export const OBJ = {
     text: (s) => `Deixar a casa DIFERENTE do vídeo (${s.ruptureCount()}/3).`,
     status: (s) => [
       (s.F.paintingMode === 'upside' ? '☑' : '☐') + ' O quadro de cabeça pra baixo (sala)',
-      (s.F.nameWritten ? '☑' : '☐') + ' O seu nome no espelho (banheiro)',
+      (s.F.nameWritten ? '☑' : '☐') + ' O seu nome no espelho (banheiro)' + (!s.F.nameWritten && !s.has('registro') && !s.F.valveFixed ? ' — falta o registro do chuveiro' : ''),
       (s.F.keysHung ? '☑' : '☐') + ' A família no porta-chaves (entrada)',
       'Ele está na casa. Use o rádio (R), ouça a buzina, esconda-se.',
     ],
     hints: (s) => s.ruptureHints(),
+  },
+  antes: {
+    text: 'O apartamento de antes. Pegar o registro do chuveiro na mesa — sem acordar quem dorme na cabeceira.',
+    hints: ['O registro está num pratinho perto da cabeceira da mesa, junto das coisas perdidas.', 'Tudo aqui se mexe com a música da vitrola. Repare onde ela fica: no fundo, à direita.', 'Pegue o registro (E). Se ele acordar: quando as mãos subirem, fique parada; depois religue a vitrola.'],
+  },
+  antes_vitrola: {
+    text: 'Ele acordou quando a música parou. Religar a vitrola (fundo, à direita).\nMãos pra cima: fique PARADA. Correr faz o chão tremer.',
+    status: () => ['Mãos pra baixo: ele tateia, cego. Pode andar (agachada é mais seguro).', 'Mãos pra cima: os olhos abrem. Só enxerga o que se mexe.', 'Lençóis e a toalha da mesa escondem. Se ele apalpar: segure ESPAÇO.'],
+    hints: ['A vitrola fica encostada na parede da direita, no fundo da sala, perto do abajur de pé.', 'Ande quando as mãos dele estiverem abaixadas. Quando ouvir o estalo molhado e as mãos subirem, pare de andar até elas descerem.', 'Contorne a mesa pelo lado direito, agachada (C), e aperte E na vitrola: "Colocar a agulha no disco".'],
+  },
+  bad_room: {
+    text: 'Ir para o seu quarto.',
+    hints: ['O corredor fica depois da parede cinza.', 'O seu quarto era a primeira porta à esquerda do corredor.', 'Chegue perto de onde era a porta roxa e interaja com a parede.'],
+  },
+  hn_undo: {
+    text: 'Desfazer o momento: usar o relógio-ovo no notebook do {wendel}.',
+    hints: ['O notebook está na escrivaninha preta.', 'Chegue perto da tela.', 'Olhe para o notebook e aperte E.'],
+  },
+  ss_wake: {
+    text: 'Não obedecer mais o número sem sinal. Acordar a {julia} (quarto roxo).',
+    hints: ['A {julia} está dormindo na cama do quarto roxo.', 'O quarto roxo é a primeira porta do corredor.', 'Olhe para a cama e aperte E.'],
+  },
+  ss_vigil: {
+    text: 'Ficar na sala com a {julia} até amanhecer.\nNão atender. Não abrir. Não responder.',
+    hints: ['Nada do que chamar lá de fora é da família.', 'Se alguém pedir pra entrar, pergunte o que só a família sabe — ou fique quieta.', 'Não atenda o interfone e não abra a porta.'],
   },
   climax: {
     text: 'Enfrentar o Inquilino na sala.',

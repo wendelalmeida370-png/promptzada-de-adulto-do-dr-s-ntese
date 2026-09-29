@@ -10,7 +10,7 @@ export const ITEMS = {
   chaves_mae: { name: 'Chaveiro da mãe', desc: 'O chaveiro de coração da {mae}. Chaves reserva de todos os quartos, e uma pequenininha que parece de gaveta.' },
   foto_festa: { name: 'Foto: festa de 5 anos', desc: 'Você, pequena, de cabelo cacheado, e o palhaço contratado pra festa. Atrás, a letra da mãe:\n"Tique-Taque, o palhaço que para o tempo. A {rafa} não largou dele a festa inteira."' },
   chave_pai: { name: 'Chave do pai', desc: 'Estava dentro do chapéu de palha. O chaveiro tem um pedacinho de fita escrito "CASA".' },
-  registro: { name: 'Registro do chuveiro', desc: 'A manopla vermelha do registro do chuveiro. Alguém tirou do lugar.' },
+  registro: { name: 'Registro do chuveiro', desc: 'A manopla vermelha do registro do chuveiro. Estava num pratinho, na mesa do apartamento de antes — junto de tudo o que a família já perdeu.' },
   relogio_ovo: { name: 'Relógio-ovo', desc: 'Um relógio em forma de ovo. Não tem ponteiros, só um botão.\nNa base, gravado bem pequeno: "PARA DESFAZER UM MOMENTO".' },
   powerbank: { name: 'Bateria portátil', desc: 'Uma bateria portátil carregada. Use (clique) para recarregar o celular em 60%.' },
 };

@@ -641,6 +641,254 @@ export class AudioEngine {
   }
   _musicbox_note(d, t, o) { this._bell(d, t, o.f, o.dur || 1.8, o.v || 0.12); }
 
+  // ---------------------------------------------------------------- o Morador de Antes
+  _breathy(d, t, dur, f, peak, rising) {
+    const n = this._src(this.pinkBuf);
+    const bp = this._filter('bandpass', f, 1.2);
+    bp.frequency.setValueAtTime(f * (rising ? 0.8 : 1.1), t);
+    bp.frequency.linearRampToValueAtTime(f * (rising ? 1.18 : 0.78), t + dur);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + dur * 0.35); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    const am = this._osc('sawtooth', rising ? 38 : 27); const ag = this.ctx.createGain(); ag.gain.value = peak * 0.55; am.connect(ag).connect(g.gain);
+    n.connect(bp).connect(g).connect(d);
+    n.start(t, rand(0, 2)); n.stop(t + dur + 0.05); am.start(t); am.stop(t + dur + 0.05);
+  }
+  _pale_step(d, t, o) {
+    const v = o.v || 1;
+    this._noiseBurst(d, t, 0.06, { f: rand(700, 1100), q: 1.2, peak: 0.45 * v });
+    this._tone(d, t, 'sine', rand(58, 74), 0.12, 0.5 * v);
+    this._noiseBurst(d, t + 0.03, 0.09, { type: 'lowpass', f: 380, peak: 0.35 * v });
+    if (Math.random() < 0.3) this._creak(d, t + 0.05, { dur: rand(0.3, 0.6), v: 0.3 * v });
+  }
+  _pale_click(d, t, o) {
+    const v = o.v || 1;
+    for (let i = 0; i < 2; i++) {
+      const tt = t + i * 0.07;
+      this._noiseBurst(d, tt, 0.018, { f: rand(2500, 4000), q: 6, peak: 0.5 * v });
+      const a = this._osc('sine', 1100); a.frequency.setValueAtTime(1100, tt); a.frequency.exponentialRampToValueAtTime(260, tt + 0.05);
+      const g = this.ctx.createGain(); this._env(g, tt, 0.002, 0.25 * v, 0.06); a.connect(g).connect(d); a.start(tt); a.stop(tt + 0.09);
+      this._noiseBurst(d, tt + 0.01, 0.1, { f: 1400, q: 2, peak: 0.18 * v });
+    }
+  }
+  _pale_lids(d, t, o) {
+    const v = o.v || 1;
+    this._noiseBurst(d, t, 0.05, { f: 900, q: 1.5, peak: 0.3 * v });
+    this._noiseBurst(d, t + 0.06, 0.04, { f: 1300, q: 2, peak: 0.2 * v });
+  }
+  _pale_inhale(d, t, o) {
+    const v = o.v || 1, dur = o.dur || 1.0;
+    const n = this._src(this.noiseBuf);
+    const bp = this._filter('bandpass', 800, 3);
+    bp.frequency.setValueAtTime(700, t); bp.frequency.exponentialRampToValueAtTime(2700, t + dur);
+    const g = this.ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.35 * v, t + dur * 0.8); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    n.connect(bp).connect(g).connect(d); n.start(t, rand(0, 2)); n.stop(t + dur + 0.05);
+    const w = this._osc('sine', 1600); w.frequency.setValueAtTime(1500, t); w.frequency.linearRampToValueAtTime(2100, t + dur);
+    const wg = this.ctx.createGain(); wg.gain.setValueAtTime(0.0001, t); wg.gain.linearRampToValueAtTime(0.025 * v, t + dur * 0.7); wg.gain.linearRampToValueAtTime(0.0001, t + dur);
+    w.connect(wg).connect(d); w.start(t); w.stop(t + dur + 0.05);
+  }
+  _pale_shriek(d, t, o) {
+    const v = o.v || 1, dur = o.dur || 1.3;
+    const ws = this.ctx.createWaveShaper(); ws.curve = this.distCurve;
+    const f1 = this._filter('bandpass', 1100, 5), f2 = this._filter('bandpass', 2400, 7), f3 = this._filter('bandpass', 3600, 9);
+    const g = this.ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.5 * v, t + 0.04); g.gain.setValueAtTime(0.45 * v, t + dur * 0.5); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    [f1, f2, f3].forEach((f) => { ws.connect(f); f.connect(g); });
+    g.connect(d);
+    [310, 331, 467].forEach((f) => {
+      const a = this._osc('sawtooth', f);
+      a.frequency.setValueAtTime(f * 0.8, t); a.frequency.exponentialRampToValueAtTime(f * 1.45, t + 0.25); a.frequency.exponentialRampToValueAtTime(f * 0.7, t + dur);
+      const vib = this._osc('sine', 17); const vg = this.ctx.createGain(); vg.gain.value = f * 0.04; vib.connect(vg).connect(a.frequency);
+      a.connect(ws); a.start(t); a.stop(t + dur + 0.05); vib.start(t); vib.stop(t + dur + 0.05);
+    });
+    this._noiseBurst(d, t, dur * 0.8, { f: 2600, q: 0.8, peak: 0.25 * v, a: 0.03 });
+  }
+  _pale_teeth(d, t, o) {
+    const v = o.v || 1;
+    const n = 9 + Math.floor(rand(0, 7));
+    for (let i = 0; i < n; i++) this._noiseBurst(d, t + i * rand(0.055, 0.08), 0.012, { f: rand(3000, 4500), q: 7, peak: 0.35 * v });
+  }
+  _sheet_rustle(d, t, o) {
+    const v = o.v || 1, dur = o.dur || 0.9;
+    const n = this._src(this.noiseBuf);
+    const bp = this._filter('bandpass', 2200, 0.7);
+    const g = this.ctx.createGain(); g.gain.setValueAtTime(0, t);
+    for (let i = 0; i < 9; i++) g.gain.linearRampToValueAtTime(rand(0.04, 0.22) * v, t + (i / 9) * dur);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    n.connect(bp).connect(g).connect(d); n.start(t, rand(0, 2)); n.stop(t + dur + 0.05);
+  }
+  _squelch(d, t, o) {
+    const v = o.v || 1;
+    this._noiseBurst(d, t, 0.14, { type: 'lowpass', f: 700, peak: 0.6 * v });
+    for (let i = 0; i < 3; i++) {
+      const tt = t + i * 0.05;
+      const a = this._osc('sine', 500); a.frequency.setValueAtTime(rand(420, 620), tt); a.frequency.exponentialRampToValueAtTime(140, tt + 0.07);
+      const g = this.ctx.createGain(); this._env(g, tt, 0.003, 0.3 * v, 0.08); a.connect(g).connect(d); a.start(tt); a.stop(tt + 0.1);
+    }
+  }
+  _plop(d, t, o) {
+    const v = o.v || 1;
+    const a = this._osc('sine', 700); a.frequency.setValueAtTime(700, t); a.frequency.exponentialRampToValueAtTime(160, t + 0.09);
+    const g = this.ctx.createGain(); this._env(g, t, 0.002, 0.3 * v, 0.1); a.connect(g).connect(d); a.start(t); a.stop(t + 0.14);
+    this._noiseBurst(d, t + 0.02, 0.12, { f: 3000, q: 1, peak: 0.08 * v });
+  }
+  _needle_scratch(d, t, o) {
+    const v = o.v || 1;
+    const n = this._src(this.noiseBuf);
+    const bp = this._filter('bandpass', 3000, 2);
+    bp.frequency.setValueAtTime(3200, t); bp.frequency.exponentialRampToValueAtTime(380, t + 0.45);
+    const g = this.ctx.createGain(); this._env(g, t, 0.01, 0.55 * v, 0.5);
+    n.connect(bp).connect(g).connect(d); n.start(t, rand(0, 2)); n.stop(t + 0.6);
+    const a = this._osc('sawtooth', 600); a.frequency.setValueAtTime(700, t); a.frequency.exponentialRampToValueAtTime(90, t + 0.4);
+    const lp = this._filter('lowpass', 1500, 2); const g2 = this.ctx.createGain(); this._env(g2, t, 0.01, 0.12 * v, 0.4);
+    a.connect(lp).connect(g2).connect(d); a.start(t); a.stop(t + 0.5);
+  }
+  _needle_drop(d, t, o) {
+    const v = o.v || 1;
+    this._noiseBurst(d, t, 0.05, { type: 'lowpass', f: 600, peak: 0.5 * v });
+    for (let i = 0; i < 8; i++) this._noiseBurst(d, t + 0.05 + rand(0, 0.6), 0.008, { f: rand(1500, 5000), q: 2, peak: 0.25 * v });
+  }
+  _chair_scrape(d, t, o) {
+    const v = o.v || 1, dur = o.dur || 0.7;
+    const n = this._src(this.noiseBuf);
+    const bp = this._filter('bandpass', 900, 6);
+    bp.frequency.setValueAtTime(700, t); bp.frequency.linearRampToValueAtTime(1300, t + dur);
+    const g = this.ctx.createGain(); g.gain.setValueAtTime(0, t);
+    for (let i = 0; i < 10; i++) g.gain.linearRampToValueAtTime(rand(0.1, 0.4) * v, t + (i / 10) * dur);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    n.connect(bp).connect(g).connect(d); n.start(t, rand(0, 2)); n.stop(t + dur + 0.05);
+  }
+  _drag(d, t, o) {
+    const v = o.v || 1, dur = o.dur || 2.4;
+    const n = this._src(this.noiseBuf);
+    const bp = this._filter('bandpass', 2600, 4);
+    const g = this.ctx.createGain(); g.gain.setValueAtTime(0, t);
+    for (let i = 0; i < 24; i++) g.gain.linearRampToValueAtTime(rand(0.02, 0.45) * v, t + (i / 24) * dur);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    n.connect(bp).connect(g).connect(d); n.start(t, rand(0, 2)); n.stop(t + dur + 0.05);
+    this._noiseBurst(d, t, dur, { type: 'lowpass', f: 250, peak: 0.25 * v, a: 0.2 });
+  }
+  _keys(d, t, o) {
+    const v = o.v || 1;
+    for (let i = 0; i < 7; i++) this._tone(d, t + rand(0, 0.25), 'sine', rand(3200, 6800), rand(0.1, 0.3), 0.05 * v);
+    this._noiseBurst(d, t, 0.2, { type: 'highpass', f: 4000, peak: 0.2 * v });
+  }
+  _rewind(d, t, o) {
+    const v = o.v || 1, dur = o.dur || 1.6;
+    const a = this._osc('sawtooth', 200); a.frequency.setValueAtTime(120, t); a.frequency.exponentialRampToValueAtTime(2400, t + dur);
+    const bp = this._filter('bandpass', 1200, 1); const g = this.ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.12 * v, t + 0.2); g.gain.setValueAtTime(0.12 * v, t + dur - 0.1); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    a.connect(bp).connect(g).connect(d); a.start(t); a.stop(t + dur + 0.05);
+    for (let i = 0; i < 20; i++) this._noiseBurst(d, t + (i / 20) * dur, 0.03, { f: 1500 + i * 120, q: 3, peak: 0.1 * v });
+  }
+  _pianoNote(d, t, f, dur, v) {
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.006); g.gain.exponentialRampToValueAtTime(v * 0.35, t + 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 1.6 + 0.3);
+    const det = Math.sin(t * Math.PI) * 9; // "wow" de disco velho
+    [[1, 'sine', 0.6], [2, 'triangle', 0.18], [3, 'sine', 0.07], [4.01, 'sine', 0.03]].forEach(([m, type, a]) => {
+      const o = this._osc(type, f * m); o.detune.value = det;
+      const og = this.ctx.createGain(); og.gain.value = a;
+      o.connect(og).connect(g); o.start(t); o.stop(t + dur * 1.6 + 0.35);
+    });
+    g.connect(d);
+  }
+  // valsa original da vitrola (lá menor, 3/4), com chiado de disco
+  _loop_waltz(d, nodes, o) {
+    const lp = this._filter('lowpass', 2800, 0.8), hp = this._filter('highpass', 180, 0.7);
+    const bus = this.ctx.createGain(); bus.gain.value = 0.9;
+    bus.connect(lp).connect(hp).connect(d);
+    const hiss = this._src(this.noiseBuf, true); const hf = this._filter('bandpass', 4200, 0.6); const hg = this.ctx.createGain(); hg.gain.value = 0.02;
+    hiss.connect(hf).connect(hg).connect(d); hiss.start(); nodes.push(hiss);
+    const mel = [[76, 1], [81, 1], [84, 1], [83, 2], [81, 1], [80, 1], [81, 1], [83, 1], [76, 3], [77, 1], [81, 1], [86, 1], [84, 2], [83, 1], [81, 1], [79, 1], [77, 1], [76, 3],
+      [72, 1], [76, 1], [81, 1], [79, 2], [77, 1], [76, 1], [74, 1], [72, 1], [71, 3], [69, 1], [72, 1], [76, 1], [74, 1], [72, 1], [71, 1], [69, 2], [68, 1], [69, 3]];
+    const chords = [[45, [57, 60, 64]], [40, [56, 59, 64]], [40, [56, 59, 62]], [45, [57, 60, 64]], [50, [62, 65, 69]], [45, [57, 60, 64]], [50, [62, 65, 69]], [40, [56, 59, 64]],
+      [45, [57, 60, 64]], [48, [60, 64, 67]], [41, [53, 57, 60]], [40, [56, 59, 64]], [45, [57, 60, 64]], [50, [62, 65, 69]], [40, [56, 59, 62]], [45, [57, 60, 64]]];
+    const beat = 60 / 92;
+    let alive = true;
+    let next = this.now + 0.1;
+    let mi = 0;
+    const bar = (bi) => {
+      if (!alive) return;
+      const t0 = next;
+      const [root, ch] = chords[bi % chords.length];
+      this._pianoNote(bus, t0, midi(root), beat * 1.2, 0.2);
+      for (const b of [1, 2]) ch.forEach((n) => this._pianoNote(bus, t0 + b * beat, midi(n), beat * 0.6, 0.06));
+      // melodia: consome 3 tempos
+      let acc = 0;
+      while (acc < 3 - 1e-6) {
+        const [n, len] = mel[mi % mel.length];
+        this._pianoNote(bus, t0 + acc * beat + rand(0, 0.012), midi(n), beat * len, 0.13);
+        acc += len; mi++;
+      }
+      // estalos do disco
+      for (let i = 0; i < 4; i++) if (Math.random() < 0.6) this._noiseBurst(d, t0 + rand(0, beat * 3), 0.006, { f: rand(1500, 6000), q: 1.5, peak: rand(0.05, 0.2) });
+      next += beat * 3;
+      setTimeout(() => bar(bi + 1), Math.max(10, (next - this.now - 0.25) * 1000));
+    };
+    bar(0);
+    nodes.push({ stop: () => { alive = false; } });
+  }
+  _loop_pale_breath(d, nodes) {
+    let alive = true, rate = 1;
+    const cycle = () => {
+      if (!alive) return;
+      const t = this.now + 0.02;
+      const dur = 3.2 / rate;
+      this._breathy(d, t, dur * 0.38, 1300, 0.2, true);
+      this._breathy(d, t + dur * 0.45, dur * 0.45, 640, 0.26, false);
+      for (let i = 0; i < 5; i++) this._noiseBurst(d, t + dur * 0.45 + rand(0, dur * 0.4), 0.012, { f: rand(900, 2500), q: 5, peak: 0.07 });
+      setTimeout(cycle, dur * 1000);
+    };
+    cycle();
+    nodes.push({ stop: () => { alive = false; } });
+    return { rate: (v) => { rate = clamp(v, 0.5, 3); } };
+  }
+  _loop_birds(d, nodes) {
+    let alive = true;
+    const chirp = () => {
+      if (!alive) return;
+      const t = this.now + 0.02;
+      const n = 2 + Math.floor(rand(0, 5));
+      const f0 = rand(2600, 4200);
+      for (let i = 0; i < n; i++) {
+        const tt = t + i * rand(0.07, 0.13);
+        const a = this._osc('sine', f0); a.frequency.setValueAtTime(f0 * rand(0.9, 1.1), tt); a.frequency.exponentialRampToValueAtTime(f0 * rand(1.2, 1.6), tt + 0.05);
+        const g = this.ctx.createGain(); this._env(g, tt, 0.005, 0.05, 0.06); a.connect(g).connect(d); a.start(tt); a.stop(tt + 0.1);
+      }
+      setTimeout(chirp, rand(500, 2600));
+    };
+    chirp();
+    nodes.push({ stop: () => { alive = false; } });
+  }
+  // alguém cantarolando baixinho na cozinha (a melodia da caixinha)
+  _loop_hum(d, nodes) {
+    let alive = true;
+    const mel = [69, 72, 76, 74, 72, 71, 69, 64, 69, 68, 71, 76];
+    let i = 0;
+    const note = () => {
+      if (!alive) return;
+      const t = this.now + 0.02;
+      const f = midi(mel[i % mel.length] - 12);
+      const len = (i % 6 === 5 ? 1.4 : 0.55) * rand(0.95, 1.08);
+      const o = this._osc('triangle', f);
+      const vib = this._osc('sine', 5.2); const vg = this.ctx.createGain(); vg.gain.value = f * 0.012; vib.connect(vg).connect(o.frequency);
+      const lp = this._filter('lowpass', 900, 1.5);
+      const g = this.ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.09, t + 0.08); g.gain.setValueAtTime(0.08, t + len * 0.8); g.gain.linearRampToValueAtTime(0.0001, t + len);
+      o.connect(lp).connect(g).connect(d); o.start(t); o.stop(t + len + 0.05); vib.start(t); vib.stop(t + len + 0.05);
+      i++;
+      setTimeout(note, (len + (i % 12 === 0 ? 2.5 : 0.04)) * 1000);
+    };
+    note();
+    nodes.push({ stop: () => { alive = false; } });
+  }
+  _loop_typing(d, nodes) {
+    let alive = true;
+    const key = () => {
+      if (!alive) return;
+      this._noiseBurst(d, this.now + 0.01, 0.01, { f: rand(2500, 4000), q: 3, peak: 0.2 });
+      setTimeout(key, Math.random() < 0.15 ? rand(300, 700) : rand(70, 160));
+    };
+    key();
+    nodes.push({ stop: () => { alive = false; } });
+  }
+
   // melodia original da caixinha de música (lá menor, 3/4, levemente "gasta")
   musicBox(pos, vol = 1, speed = 1) {
     if (!this.ready) return 0;

@@ -9,6 +9,8 @@ import { wall, H } from './house.js';
 import { Door } from './doors.js';
 import { T } from '../core/settings.js';
 import { mulberry32 } from '../core/util.js';
+import { handprint } from './antes.js';
+import { vis } from './layers.js';
 
 export const BX = 100;
 export const BY = -2.9;
@@ -52,6 +54,11 @@ export function buildBasement(world, F) {
   slab(g, BX + 11.1, BX + 13.3, 7.7, 12.2, oldWall, 1.3);
   world.floor(BX + 11.1, BX + 13.3, 8.3, 12.25, 'stairs', basementHeight, 'porao_escada');
   world.zone('porao_escada', BX + 11.1, BX + 13.3, 7.7, 12.2);
+  // marcas de mão compridas nas paredes da escada: alguém sobe e desce por aqui, tateando
+  const hps = group(g, 0, 0, 0);
+  [[11.16, 9.0, 'x+', 0.3], [13.24, 9.7, 'x-', -0.2], [11.16, 10.5, 'x+', -0.4], [13.24, 11.2, 'x-', 0.35], [11.16, 11.9, 'x+', 0.1]]
+    .forEach(([x, z, f, r], i) => handprint(hps, BX + x, basementHeight(BX + x, z) + 1.25 + (i % 2) * 0.2, z, f, { seed: 40 + i, rot: r, size: 0.27, opacity: 0.6 }));
+  vis(hps, 'ec');
   world.zone('porao_topo', BX + 11.1, BX + 13.3, 7.7, 9.35);
 
   // ---------------- a sala de antigamente (paredes amarelas)

@@ -10,13 +10,15 @@ import { World } from '../world/world.js';
 import { L, vis } from '../world/layers.js';
 import { buildHouse, applyHouse } from '../world/house.js';
 import { buildBasement } from '../world/basement.js';
+import { buildAntes, applyAntes } from '../world/antes.js';
 import { setMirrorOcclusion } from '../world/mirror.js';
 import { Player } from './player.js';
 import { Phone, Inventory } from './phone.js';
 import { UI } from './ui.js';
 import { Entity } from './entity.js';
 import { Cat, Clown, Echoes, Esquecido } from './actors.js';
-import { buildRafaela } from './characters.js';
+import { Pale } from './pale.js';
+import { buildRafaela, buildPale } from './characters.js';
 import { Story } from './story.js';
 
 const SAVE_KEY = 'casa-se-lembra/save/v1';
@@ -72,6 +74,7 @@ export class Game {
     this.clown = new Clown(this);
     this.echoes = new Echoes(this);
     this.esquecido = new Esquecido(this);
+    this.pale = new Pale(this);
     this.cats = { bento: new Cat(this, 'bento'), lili: new Cat(this, 'lili') };
     this.body = buildRafaela();
     vis(this.body, 'mc');
@@ -146,10 +149,12 @@ export class Game {
     for (const id of [...this.world.sections.keys()]) this.world.remove(id);
     this.layout = buildHouse(this.world, this.flags);
     if (this.flags.basementBuilt) buildBasement(this.world, this.flags);
+    if (this.flags.antesBuilt) buildAntes(this.world, this.flags);
     applyHouse(this.world, this.flags);
+    applyAntes(this.world, this.flags);
     this.story.afterBuild && this.story.afterBuild();
   }
-  applyWorld() { applyHouse(this.world, this.flags); if (this.story.afterApply) this.story.afterApply(); }
+  applyWorld() { applyHouse(this.world, this.flags); applyAntes(this.world, this.flags); if (this.story.afterApply) this.story.afterApply(); }
 
   // ------------------------------------------------------------ fluxo
   hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
@@ -228,6 +233,7 @@ export class Game {
     this.entity.hide();
     this.clown.hide();
     this.esquecido.hide();
+    this.pale.hide();
     this.tv.set('off');
     this.cctvOn = false;
     this.rebuildWorld();
@@ -242,8 +248,9 @@ export class Game {
       clock: this.clockMin, time: this.time, deaths: this.deaths, story: this.story.save(),
     };
   }
-  checkpoint(id, silent = false) {
+  checkpoint(id, silent = false, at = null) {
     this.checkpointData = this.snapshot(id);
+    if (at) this.checkpointData.player = { x: at.x, z: at.z, yaw: at.yaw === undefined ? this.player.yaw : at.yaw };
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.checkpointData)); }
     catch (e) {
       this.checkpointData.phone.gallery = [];
@@ -265,7 +272,9 @@ export class Game {
     this.entity.hide();
     this.clown.hide();
     this.esquecido.hide();
+    this.pale.hide();
     this.echoes.clear();
+    this.ui.sheetPress(0);
     this.flags = JSON.parse(JSON.stringify(d.flags));
     this.inventory = new Inventory();
     d.inv.forEach((i) => this.inventory.add(i));
@@ -323,6 +332,71 @@ export class Game {
     const deaths = this.deaths;
     this.ui.say('', '*A casa esquece o que aconteceu. Você não.*', 2.6);
     await this.wait(1.6, true);
+    this._dying = false;
+    this.loadCheckpoint();
+    this.deaths = deaths;
+    if (this.checkpointData) this.checkpointData.deaths = deaths;
+  }
+
+  // pego pelo Morador de Antes: a mão com o olho vem direto no seu rosto
+  async caughtByPale(fromHide) {
+    if (this._dying) return;
+    this._dying = true;
+    this.cutscene = true;
+    const lvl = settings.scare;
+    const p = this.pale;
+    if (this.player.hidden) this.player.exitHide();
+    this.ui.sheetPress(0);
+    const cam = this.camera;
+    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion); fwd.y = 0; fwd.normalize();
+    // ele, bem na frente, curvado
+    p.state = 'static';
+    p.place(cam.position.x + fwd.x * 1.05, cam.position.z + fwd.z * 1.05, Math.atan2(fwd.x, fwd.z));
+    p.setPose('lunge', true);
+    p.setEyes(true, 1); p.eyes = 1;
+    p.model.visible = true;
+    vis(p.model, 'ecv');
+    // a mão (cópia) grudada na câmera
+    const hand = this._paleHand || (this._paleHand = (() => {
+      const m = buildPale().userData.hands[1];
+      const h = m.hand;
+      h.parent && h.parent.remove(h);
+      h.scale.set(-2.2, 2.2, 2.2);
+      m.eye.upper.rotation.x = 1.35; m.eye.lower.rotation.x = -1.35;
+      m.fingers.forEach((f, fi) => { if (!f.thumb) f.base.rotation.z = (fi - 1.5) * 0.12; f.segs.forEach((sg) => { sg.rotation.x = 0.12; }); });
+      h.traverse((o) => { o.layers.enableAll(); o.castShadow = false; o.frustumCulled = false; });
+      return h;
+    })());
+    cam.add(hand);
+    hand.visible = true;
+    hand.rotation.set(Math.PI + 0.15, 0, 0.1); // dedos pra cima, palma (e o olho) pra você
+    const from = new THREE.Vector3(0.35, -1.0, -0.8), to = new THREE.Vector3(0.0, -0.15, -0.31);
+    // luz de preenchimento: a mão e o rosto dele aparecem mesmo no escuro
+    this.flashL.position.copy(cam.position).addScaledVector(fwd, 0.05);
+    this.flashL.position.y += 0.1;
+    this.flashL.intensity = 5; this.flashL.distance = 3.5; this.flashT = 1.6;
+    hand.position.copy(from);
+    audio.play('pale_shriek', { v: 1.1 });
+    if (lvl > 0) {
+      audio.play('stinger', { v: lvl === 2 ? 1 : 0.5 });
+      this.player.shake(lvl === 2 ? 1.1 : 0.45);
+      this.post.uniforms.glitch.value = 0.6;
+      this.ui.flash(lvl === 2 ? 0.55 : 0.25, 0.25, '#fff');
+    } else audio.play('boom', { v: 0.6 });
+    const steps = lvl === 0 ? 6 : 9;
+    for (let i = 1; i <= steps; i++) { hand.position.lerpVectors(from, to, 1 - Math.pow(1 - i / steps, 3)); await this.wait(0.022, true); }
+    audio.play('pale_click', { v: 1.2 });
+    audio.speak('você não é ela', { pitch: 0.25, rate: 0.6, vol: 0.9 });
+    this.ui.say('O Morador de Antes', '...você não é ela.', 1.6, 'enemy');
+    await this.wait(lvl === 2 ? 1.1 : 0.7, true);
+    await this.ui.fade(1, 0.15);
+    cam.remove(hand);
+    this.post.uniforms.glitch.value = 0;
+    p.hide();
+    this.deaths++;
+    const deaths = this.deaths;
+    this.ui.say('', '*Você virou uma coisa perdida. Mas a casa te acha de novo.*', 2.8);
+    await this.wait(1.8, true);
     this._dying = false;
     this.loadCheckpoint();
     this.deaths = deaths;
@@ -481,6 +555,7 @@ export class Game {
     this.phone.update(dt);
     for (const fn of this.world.updaters) fn(dt);
     this.entity.update(dt);
+    this.pale.update(dt);
     this.clown.update(dt);
     this.echoes.update(dt);
     this.esquecido.update(dt);
@@ -495,7 +570,8 @@ export class Game {
     // rádio
     const prox = this.entity.proximity();
     if (this.phone.radioOn && this.phone.radioLoop) { const lv = Math.min(1, prox * 1.3 + (this.story.radioExtra || 0)); this.phone.radioLoop.set('level', lv); this.ui.radio(lv); }
-    this.fear += (prox - this.fear) * Math.min(1, dt * 2);
+    const fearProx = Math.max(prox, this.pale.proximity());
+    this.fear += (fearProx - this.fear) * Math.min(1, dt * 2);
     if (this.heart) this.heart.set('rate', 1 + this.fear * 1.8);
     // respiração presa
     this.ui.breath(this.player.breath, !!this.player.hidden && (this.fear > 0.35 || this.player.breath < 1));
@@ -584,6 +660,14 @@ export class Game {
   startAmbience(kind = 'house') {
     this.stopAmbience();
     const add = (l) => { if (l) this.ambience.push(l); return l; };
+    if (kind === 'antes') {
+      // o apartamento de antes: quarto abafado, o relógio de pé embaixo do lençol, o prédio muito longe
+      add(audio.loop('roomtone', { bus: 'amb', vol: 0.6 }));
+      add(audio.loop('clock', { bus: 'amb', pos: [205.72, 1.6, 0.3], vol: 0.9, ref: 1, rolloff: 1.2 }));
+      add(audio.loop('drone', { bus: 'amb', vol: 0.3, base: 38.9, cut: 200, dark: true }));
+      this.heart = add(audio.loop('heart', { bus: 'sfx', vol: 0.0 }));
+      return;
+    }
     add(audio.loop('roomtone', { bus: 'amb', vol: 0.5 }));
     add(audio.loop('city', { bus: 'amb', pos: [2.1, 1.2, -1.6], vol: 0.8, ref: 2, rolloff: 0.8 }));
     add(audio.loop('fridge', { bus: 'amb', pos: [-0.55, 0.8, 4.4], vol: 0.8, ref: 0.8, rolloff: 1.6 }));

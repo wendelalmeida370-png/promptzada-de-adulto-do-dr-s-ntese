@@ -309,6 +309,7 @@ export const act2 = {
       this.radioExtra = 0.5;
       await s.say('RÁDIO', '...kssshh... atenção, moradores... o visitante foi visto... usando a voz de familiares...', { dur: 4.4, kind: 'house', tts: 'tv' });
       await s.say('RÁDIO', '...não respondam mensagens... recebidas sem sinal... repetindo: sem sinal...', { dur: 4.2, kind: 'house' });
+      await s.say('RÁDIO', '...e se o antigo morador acordar... kssshh... fiquem parados... ele só enxerga... quem se mexe...', { dur: 4.8, kind: 'house' });
       await s.say('RÁDIO', '...não deixem a casa... kssshh... igual...', { dur: 3.2, kind: 'house' });
       this.radioExtra = 0;
       this.F.heardRadio = true;
@@ -560,9 +561,22 @@ export const act2 = {
       audio.play('chime', { v: 0.6 });
       this.toast(`Pai: encontrado (${this.familyCount()}/4) · casa.mp4: ${Math.round(this.sim())}% igual`, 3.5);
       this.rule('musica', 'A música da caixinha acalma quem esqueceu.');
-      this.cut(false);
-      await s.wait(2.5);
+      await s.wait(1.5);
+      // no espelho (a memória da casa): alguém muito alto, de mãos pra cima, atrás de você
+      const Px = g.layout.P, pale = g.pale;
+      await g.player.lookAt(new THREE.Vector3(Px + 1.8, 1.35, 5.51), 1.0);
       await s.say('{rafa}', '*Tem alguma coisa escrita no espelho... só no reflexo. Em vermelho.*', { dur: 3.2 });
+      pale.show(Px + 1.15, 8.85, 0, 'look', 'm');
+      pale.state = 'static';
+      pale.setEyes(true, 1); pale.eyes = 1;
+      audio.play('pale_click', { pos: [Px + 1.15, 2.0, 8.85], v: 0.5 });
+      audio.play('pale_inhale', { pos: [Px + 1.15, 2.0, 8.85], v: 0.5, delay: 0.2 });
+      await s.wait(2.4);
+      pale.setPose('stand', false, 2); pale.eyesTarget = 0;
+      await s.say('{rafa}', '*...e atrás de mim, no reflexo, alguém muito alto. Com as mãos levantadas, viradas pra mim.*', { dur: 3.8 });
+      pale.hide();
+      await s.say('{rafa}', '*Sumiu. Não tem ninguém atrás de mim. Não tem. Não tem.*', { dur: 3 });
+      this.cut(false);
       this.msg('Ignore o espelho. É ele tentando te confundir.');
       this.objective('family');
       g.checkpoint('a2_pai');
@@ -579,9 +593,10 @@ export const act2 = {
 
   // ------------------------------------------------------------ PEDRO: notebook
   prompt_porta_meninos() { if (this.F.act === 2 && !this.F.hasMomKeys) return 'Porta trancada'; return undefined; },
-  prompt_laptop() { const F = this.F; if (!F.laptopUnlocked) return 'Ligar o notebook do {wendel}'; if (F.act === 2 && !F.webcamDone) return 'Mexer no notebook'; return 'Notebook'; },
+  prompt_laptop() { if (this.phase === 'hn') return this.prompt_hn_laptop(); const F = this.F; if (!F.laptopUnlocked) return 'Ligar o notebook do {wendel}'; if (F.act === 2 && !F.webcamDone) return 'Mexer no notebook'; return 'Notebook'; },
   do_laptop() {
     const F = this.F, g = this.g;
+    if (this.phase === 'hn') { this.do_hn_laptop(); return true; }
     if (!F.laptopUnlocked) {
       this.run(async (s) => {
         let tries = 0;
@@ -643,7 +658,7 @@ export const act2 = {
       await s.say('{rafa}', '*Abriu a câmera sozinha. "AO VIVO".*', { dur: 2.6 });
       await s.say('{rafa}', '*...o {pedro} tá sentado na cama. Atrás de mim. Só na tela.*', { dur: 3.2 });
       const e = g.entity;
-      e.show(8.71, 6.55, Math.PI, 'c');
+      e.show(8.71, 6.55, 0, 'c');
       audio.play('swell', { dur: 3, v: 0.4 });
       await s.wait(2.0);
       await s.say('{rafa}', '*E tem mais alguém. Na porta.*', { dur: 2.4 });
@@ -653,7 +668,7 @@ export const act2 = {
         await s.wait(0.1); tt += 0.1;
         const p = g.player.pos;
         const k = Math.min(1, tt / 8);
-        e.place(8.71 + (p.x + 0.4 - 8.71) * k * 0.8, 6.55 + (p.z - 6.55) * k * 0.8, Math.atan2(-(p.x - 8.71), -(p.z - 6.55)) + Math.PI);
+        e.place(8.71 + (p.x + 0.4 - 8.71) * k * 0.8, 6.55 + (p.z - 6.55) * k * 0.8, Math.atan2(-(p.x - 8.71), -(p.z - 6.55)));
         if (Math.abs(angleDiff(y0, g.player.yaw)) > 1.6) { turned = true; break; }
       }
       if (turned) {
@@ -705,7 +720,7 @@ export const act2 = {
     this.run(async (s) => {
       const e = g.entity;
       e.state = 'static';
-      e.place(12.21, 7.25, Math.PI);
+      e.place(12.21, 7.25, Math.PI); // de frente para a porta que não existe
       audio.play('scream', { pos: e.pos, v: 0.9, dur: 2 });
       for (let i = 0; i < 6; i++) { audio.play('crack', { pos: [12.2, 1.2, 7.6] }); audio.play('knock', { pos: [12.2, 1.2, 7.65], n: 1, v: 1 }); await s.wait(0.5); }
       await s.say('{rafa}', '*Ele parou. Ele não consegue passar dessa porta.*', { dur: 3 });

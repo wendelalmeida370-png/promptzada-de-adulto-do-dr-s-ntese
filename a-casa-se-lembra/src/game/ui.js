@@ -4,6 +4,7 @@ import { settings, names, saveSettings, saveNames, T, DEFAULT_NAMES } from '../c
 import { audio } from '../core/audio.js';
 import { ITEMS } from './items.js';
 import { drawIcon } from '../core/textures.js';
+import { ENDINGS, KIND_LABEL, seenEndings, endingsCount, anyEnding } from './endings.js';
 
 export class UI {
   constructor(game) {
@@ -94,6 +95,16 @@ export class UI {
     const o = el('hide-overlay');
     o.className = kind ? kind : '';
     if (!kind) o.classList.add('hidden');
+    this.sheetPress(0);
+  }
+  // debaixo do lençol: a sombra de uma mão comprida apertando o pano na sua frente
+  sheetPress(v) {
+    const hnd = el('sheet-hand');
+    if (!hnd) return;
+    const k = Math.max(0, Math.min(1, v || 0));
+    hnd.style.opacity = String(k * 0.85);
+    hnd.style.transform = `translate(-50%, -50%) scale(${0.55 + k * 0.75}) rotate(${-8 + k * 10}deg)`;
+    el('hide-overlay').classList.toggle('pressed', k > 0.05);
   }
   hint(level, text) {
     const b = el('hint-box');
@@ -380,6 +391,12 @@ export class UI {
         if (m.day && m.day !== lastDay) { scr.appendChild(h('div', { class: 'msg-time' }, m.day)); lastDay = m.day; }
         scr.appendChild(h('div', { class: 'msg ' + (m.out ? 'out' : 'in') + (m.glitch ? ' glitchy' : '') }, T(m.text), h('div', { style: 'font-size:9px;color:#888;text-align:right;margin-top:2px' }, m.time || '')));
       });
+      const reps = g.story.replyOptions ? g.story.replyOptions(t.id) : null;
+      if (reps && reps.length) {
+        const box = h('div', { class: 'reply-box' }, h('div', { class: 'reply-label' }, 'Responder:'));
+        reps.forEach((o) => box.appendChild(h('button', { class: 'reply-chip', onclick: () => { audio.play('ui'); g.story.onReply(t.id, o.id); this.renderPhone('chat', t.id); } }, T(o.text))));
+        scr.appendChild(box);
+      }
       setTimeout(() => { scr.scrollTop = scr.scrollHeight; }, 10);
       el('ph-back').onclick = () => this.renderPhone('msgs');
     } else if (view === 'video') {
@@ -420,6 +437,7 @@ export class UI {
       if (a === 'controls') this.openControls();
       if (a === 'credits') this.openCredits();
       if (a === 'names') this.openNames();
+      if (a === 'endings') this.openEndings();
     });
     el('pause').addEventListener('click', (e) => {
       const b = e.target.closest('button'); if (!b) return;
@@ -458,6 +476,8 @@ export class UI {
     el('pause').classList.add('hidden');
     el('btn-continue').disabled = !this.game.hasSave();
     el('menu-player-name').textContent = names.rafaela;
+    const n = endingsCount();
+    el('btn-endings').textContent = n ? `Finais (${n}/5)` : 'Finais';
     this.showHud(false);
   }
   hideMenu() { this.menuOpen = false; el('menu').classList.add('hidden'); }
@@ -545,6 +565,26 @@ export class UI {
     });
   }
 
+  openEndings() {
+    const seen = seenEndings();
+    const any = anyEnding();
+    this.openSub('<h2>FINAIS</h2>', (c) => {
+      c.appendChild(h('p', { class: 'opt-note', style: 'text-align:center' }, `Um final bom, um final ruim e três finais secretos. Descobertos: ${endingsCount()}/5.`));
+      const grid = h('div', { class: 'end-grid' });
+      ENDINGS.forEach((e) => {
+        const got = seen[e.id];
+        const secretHidden = !got && e.kind === 'secreto' && !any;
+        grid.appendChild(h('div', { class: 'end-card ' + e.kind + (got ? ' got' : ' locked') },
+          h('div', { class: 'end-card-kind' }, KIND_LABEL[e.kind]),
+          h('div', { class: 'end-card-title' }, got ? e.title : '???'),
+          h('div', { class: 'end-card-text' }, got ? T(e.blurb) : secretHidden ? 'Termine a história uma vez para receber uma pista.' : 'Pista: ' + T(e.hint)),
+          got ? h('div', { class: 'end-card-meta' }, `visto ${got.count || 1}x · ${got.mins || '?'} min`) : null));
+      });
+      c.appendChild(grid);
+      c.appendChild(h('p', { class: 'opt-note' }, 'Os finais descobertos ficam salvos só neste navegador. Alguns segredos só aparecem para quem já passou uma noite na casa.'));
+    });
+  }
+
   openCredits() {
     this.openSub('', (c) => {
       c.appendChild(h('div', { class: 'credits' },
@@ -553,7 +593,8 @@ export class UI {
         h('p', {}, 'A casa: ela mesma, a partir de dois vídeos gravados pela família. Planta, móveis e cores reinterpretados à mão.'),
         h('p', {}, T('Elenco: {rafaela} · {wendel} · {julia} · {pedro} · {mae} · {pai} · {bento} e {lili} · Tique-Taque · O Inquilino')),
         h('p', {}, 'Direção, roteiro, programação, sons e música: criados com Claude (IA da Anthropic), com three.js. Todos os sons e imagens são gerados por código.'),
-        h('p', { style: 'color:#9b958a' }, 'Três segredos estão escondidos pela casa: um é preto e branco, um toca uma música para quem esqueceu, e um guarda um momento que pode ser desfeito.'),
+        h('p', {}, 'O Morador de Antes é uma homenagem, criada do zero e com outra história, ao Homem Pálido de "O Labirinto do Fauno" (Guillermo del Toro).'),
+        h('p', { style: 'color:#9b958a' }, 'Três segredos estão escondidos pela casa: um é preto e branco, um toca uma música para quem esqueceu, e um guarda um momento que pode ser desfeito. E a noite tem cinco finais.'),
       ));
     });
   }
@@ -562,10 +603,12 @@ export class UI {
     this.showHud(false);
     const e = el('ending');
     e.classList.remove('hidden');
+    e.scrollTop = 0;
     const inner = el('ending-inner');
     inner.innerHTML = html;
     const b = h('button', { onclick: () => { e.classList.add('hidden'); onBack(); } }, 'Voltar ao menu');
-    inner.appendChild(h('div', {}, b));
+    const f = h('button', { onclick: () => { e.classList.add('hidden'); onBack(); setTimeout(() => this.openEndings(), 50); } }, 'Ver os finais');
+    inner.appendChild(h('div', { class: 'end-buttons' }, f, b));
   }
 
   loading(v) { el('loading').classList.toggle('hidden', !v); }
