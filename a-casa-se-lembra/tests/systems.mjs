@@ -56,7 +56,9 @@ await T.step(0.3);
 await G(() => { window.__casa.input.lclick = true; });
 await T.step(0.1);
 await G(() => { window.__casa.input.lclick = false; window.__casa.input.rmb = false; });
-await page.waitForTimeout(1500);
+// a foto é capturada logo depois do próximo quadro desenhado (pode demorar com a CPU ocupada)
+for (let i = 0; i < 40 && !(await G(() => window.__casa.phone.gallery.length)); i++) await page.waitForTimeout(250);
+await T.step(0.2); // abaixa o celular
 const gal = await G(() => window.__casa.phone.gallery.map((p) => ({ cap: p.caption, img: p.img ? p.img.length : 0 })));
 check('foto vai para a galeria com imagem', gal.length >= 1 && gal[0].img > 1000, JSON.stringify(gal[0]));
 

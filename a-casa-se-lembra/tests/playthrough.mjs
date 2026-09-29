@@ -273,6 +273,8 @@ await G(() => { const g = window.__casa; g.player.teleport(112.2, 9.3); });
 await T.step(0.4);
 await until('ato 3', () => window.__casa.flags.act === 3, 10);
 await log('ATO 3: de volta lá em cima');
+// a caçada sem fim do ato 3 é testada em systems/antes; aqui ela não pega (modo história) para o percurso ser determinístico
+await G(() => { window.__casa.settings.storyMode = true; });
 await G(() => { const g = window.__casa; g.player.teleport(12.2, 8.0); });
 await T.step(1);
 await shot('20_act3_corridor');
@@ -285,8 +287,32 @@ r = await lookUse(15.0, 7.0, 14.9, 0.05, 6.2, 'hat_floor');
 await until('chave do pai', () => window.__casa.inventory.has('chave_pai'), 5);
 r = await lookUse(1.75, 7.2, 1.75, 1.45, 7.93, 'keyholder');
 await until('chaves penduradas', () => window.__casa.flags.keysHung, 5);
-// ruptura 2: registro -> chuveiro -> espelho
-r = await lookUse(-1.75, 9.2, -1.75, 0.92, 9.85, 'registro');
+// ruptura 2: a manopla do registro sumiu -> marcas de mão -> porta de entrada -> apartamento de antes
+r = await lookUse(5.9, 9.3, 6.55, 1.2, 9.3, 'shower_valve');
+await until('marcas de mão', () => window.__casa.flags.sawHandprint, 5);
+await until('fala das marcas', () => !document.getElementById('subtitle').classList.contains('show'), 20);
+await T.step(1);
+r = await lookUse(0.97, 7.2, 0.97, 1.1, 8.0, 'porta_entrada');
+await T.step(1.5);
+await G(() => { window.__casa.player.teleport(0.97, 7.9, Math.PI, 0); });
+for (let i = 0; i < 12; i++) { await G(() => { window.__casa.player.pos.z += 0.03; }); await T.step(0.05); }
+await until('apartamento de antes', () => window.__casa.player.pos.x > 150 && window.__casa.story.objId === 'antes', 10);
+await T.step(1);
+await shot('21a_antes');
+await G(() => { window.__casa.player.teleport(203.6, 5.1); });
+await T.step(0.3);
+r = await lookUse(203.75, 5.15, 203.3, 0.83, 5.55, 'registro_antes');
+await G(() => { window.__casa.pale.nextLook = 99; });
+await until('o Morador acordou', () => window.__casa.story.objId === 'antes_vitrola' && !window.__casa.cutscene, 60);
+await shot('21b_pale_awake');
+// (as regras dele são testadas em tests/antes.mjs; aqui ele fica longe da vitrola)
+await G(() => { const p = window.__casa.pale; p.place(201.5, 2.0, 0); p.path = []; p.nextLook = 99; });
+r = await lookUse(204.9, 7.9, 205.67, 0.84, 7.9, 'vitrola');
+await until('ele voltou a dormir', () => window.__casa.flags.antesDone, 60);
+await log('apartamento de antes: registro pego, valsa de volta');
+await G(() => { const g = window.__casa; g.world.doors.get('porta_antes').set(1); g.player.teleport(203.0, 0.3, 0, 0); });
+for (let i = 0; i < 16; i++) { await G(() => { window.__casa.player.pos.z -= 0.04; }); await T.step(0.05); }
+await until('de volta na sala', () => window.__casa.player.pos.x < 20, 5);
 await until('registro', () => window.__casa.inventory.has('registro'), 5);
 r = await lookUse(5.9, 9.3, 6.55, 1.2, 9.3, 'shower_valve');
 r = await lookUse(5.9, 9.3, 6.55, 1.2, 9.3, 'shower_valve');
@@ -306,7 +332,10 @@ await until('entidade saiu da TV', () => window.__casa.ui.overlay === 'choice', 
 await shot('22_climax');
 if (ENDING === 'inquilino') {
   await choose(0);
-  await until('tela de final', () => !document.getElementById('ending').classList.contains('hidden'), 60);
+  await until('manhã do final ruim', () => window.__casa.story.objId === 'bad_room' && !window.__casa.cutscene, 60);
+  await shot('24_bad_morning');
+  r = await lookUse(5.41, 7.4, 5.41, 1.2, 6.72, 'sealed_wall');
+  await until('tela de final', () => !document.getElementById('ending').classList.contains('hidden'), 90);
 } else {
   await choose(1);
   await until('gravar', () => window.__casa.story.recordProgress !== undefined, 30);
@@ -327,6 +356,8 @@ if (ENDING === 'inquilino') {
 }
 await T.shot('pt_25_ending', 600);
 const endText = await G(() => document.getElementById('ending-inner').innerText);
+const wantTitle = ENDING === 'inquilino' ? 'O INQUILINO' : 'A CASA SE LEMBRA';
+if (!endText.includes(wantTitle) || !/finais descobertos: [1-5]\/5/.test(endText)) await fail('tela de final inesperada:\n' + endText);
 const snaps = await G(() => window.__snaps);
 (await import('fs')).writeFileSync(new URL('./snapshots.json', import.meta.url), JSON.stringify(snaps));
 console.log('checkpoints gravados:', snaps.map((x) => x.id).join(', '));

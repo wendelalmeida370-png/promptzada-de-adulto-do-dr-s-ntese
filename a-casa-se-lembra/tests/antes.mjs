@@ -15,8 +15,8 @@ const until = async (desc, fn, maxSec = 30, arg) => {
   return false;
 };
 await G((s) => { localStorage.setItem('casa-se-lembra/save/v1', JSON.stringify(s)); }, snap);
-await page.reload();
-await page.waitForFunction(() => !!window.__casa, null, { timeout: 30000 });
+await page.reload({ timeout: 120000 });
+await page.waitForFunction(() => !!window.__casa, null, { timeout: 120000 });
 await G(() => { const g = window.__casa; g.testMode = true; g.ui.fast = true; g.input.locked = true; });
 await page.click('#btn-continue');
 await G(() => { const g = window.__casa; g.input.locked = true; g.flags.noDrain = true; });

@@ -271,7 +271,8 @@ export class Story {
       x.fillStyle = 'rgba(190,20,30,0.9)'; x.font = 'bold 58px "Comic Sans MS", cursive'; x.textAlign = 'center';
       x.fillText('NÃO', 128, 170); x.fillText('DEIXA', 128, 250); x.fillText('IGUAL', 128, 330);
       const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-      const m = plane(grp, 0.9, 1.8, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }), g.layout.P + 1.8, 1.1, 5.525, { uv: false });
+      // o espelho enxerga o verso do plano: DoubleSide (no reflexo o texto fica na ordem certa)
+      const m = plane(grp, 0.9, 1.8, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide }), g.layout.P + 1.8, 1.1, 5.525, { uv: false });
       vis(m, 'm');
       m.visible = false;
       w.name('wardrobe_writing', m);

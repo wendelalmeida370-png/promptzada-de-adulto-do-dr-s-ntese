@@ -614,7 +614,7 @@ function buildRoxo(world, F) {
   // cama com manta azul de tricô
   const bd = group(g, 4.74, 0, 4.45); P.bed(bd, 0.95, 1.95, MATS.sheetLilac, MATS.knit);
   world.collider(4.2, 5.24, 3.45, 5.45, { los: false });
-  world.interact(bd, { id: 'bed_roxo', kind: 'hide', prompt: () => 'Esconder-se embaixo da cama' });
+  const bedRoxo = world.interact(bd, { id: 'bed_roxo', kind: 'hide', prompt: () => 'Esconder-se embaixo da cama' });
   world.hide({ id: 'bed_roxo', kind: 'bed', cam: { x: 4.74, y: 0.2, z: 4.5, yaw: -Math.PI / 2, pitch: 0.02 }, exit: { x: 5.6, z: 4.6 } });
   // "Júlia" dormindo (ato 1) / pilha de roupas (ato 2)
   const sleeper = group(g, 4.74, 0.66, 4.2);
@@ -622,6 +622,7 @@ function buildRoxo(world, F) {
   const hair = group(sleeper, 0, 0.06, -0.62);
   for (let i = 0; i < 9; i++) sphere(hair, 0.07, std('#140c07', { roughness: 1 }), Math.cos(i) * 0.08, Math.sin(i * 1.3) * 0.04, Math.sin(i) * 0.06, { seg: 8, seg2: 6 });
   world.name('julia_sleeper', { g: sleeper, body, hair });
+  sleeper.traverse((o) => { if (o.isMesh) bedRoxo.meshes.push(o); }); // mirar na Júlia = mirar na cama
   const pile = group(g, 4.74, 0.62, 4.3);
   const pc = ['#222', '#e2e0da', '#6a1d2a', '#2b3a67'];
   for (let i = 0; i < 7; i++) { const b = box(pile, 0.3, 0.06, 0.25, std(pc[i % 4], { roughness: 1 }), (i % 3 - 1) * 0.12, 0.03 + (i % 2) * 0.05, (i - 3) * 0.08); b.rotation.y = i; }
@@ -741,12 +742,13 @@ function buildMeninos(world, F) {
   // cama com lençol rosa
   const bd = group(g, 9.9, 0, 4.45); P.bed(bd, 0.95, 1.95, MATS.sheetPink, null);
   world.collider(9.4, 10.4, 3.45, 5.45, { los: false });
-  world.interact(bd, { id: 'bed_meninos', kind: 'hide', prompt: () => 'Esconder-se embaixo da cama' });
+  const bedMeninos = world.interact(bd, { id: 'bed_meninos', kind: 'hide', prompt: () => 'Esconder-se embaixo da cama' });
   world.hide({ id: 'bed_meninos', kind: 'bed', cam: { x: 9.9, y: 0.2, z: 4.5, yaw: Math.PI / 2, pitch: 0.02 }, exit: { x: 9.0, z: 4.6 } });
   const sleeper = group(g, 9.9, 0.66, 4.3);
   sphere(sleeper, 0.3, MATS.sheetWhite, 0, 0, 0.1, { sx: 0.9, sy: 0.5, sz: 2.1 });
   sphere(sleeper, 0.11, std('#1a0f08', { roughness: 1 }), 0, 0.05, -0.6);
   world.name('pedro_sleeper', sleeper);
+  sleeper.traverse((o) => { if (o.isMesh) bedMeninos.meshes.push(o); });
   // guarda-roupa cinza e madeira (esconderijo)
   const wr = group(g, 9.85, 0, 6.38, Math.PI); P.wardrobeBody(wr, 1.05, 2.1, 0.58, std('#5d6066', { roughness: 0.6 }));
   world.collider(9.32, 10.38, 6.08, 6.67);
@@ -777,12 +779,13 @@ function buildPais(world, F, lay) {
   // cama de casal
   const bd = group(g, Px + 2.58, 0, 7.2, -Math.PI / 2); P.bed(bd, 1.6, 2.0, MATS.sheetWhite, texMat(TX.fabric('#8a7f74', { seed: 9 }), { roughness: 1 }));
   world.collider(Px + 1.55, Px + 3.6, 6.35, 8.05, { los: false });
-  world.interact(bd, { id: 'bed_pais', kind: 'hide', prompt: () => 'Esconder-se embaixo da cama' });
+  const bedPais = world.interact(bd, { id: 'bed_pais', kind: 'hide', prompt: () => 'Esconder-se embaixo da cama' });
   world.hide({ id: 'bed_pais', kind: 'bed', cam: { x: Px + 2.6, y: 0.2, z: 7.2, yaw: Math.PI / 2 + 0.3, pitch: 0.02 }, exit: { x: Px + 1.0, z: 7.2 } });
   const sleepers = group(g, Px + 2.7, 0.66, 7.2);
   sphere(sleepers, 0.3, texMat(TX.fabric('#8a7f74', { seed: 9 })), 0, 0, -0.35, { sx: 2.0, sy: 0.5, sz: 0.9 });
   sphere(sleepers, 0.3, texMat(TX.fabric('#8a7f74', { seed: 9 })), 0, 0, 0.38, { sx: 2.0, sy: 0.5, sz: 0.9 });
   world.name('parents_sleepers', sleepers);
+  sleepers.traverse((o) => { if (o.isMesh) bedPais.meshes.push(o); });
   // guarda-roupa de madeira com porta espelhada
   const wr = group(g, Px + 1.8, 0, 5.2); P.wardrobeBody(wr, 3.0, 2.2, 0.6, MATS.rustic);
   world.collider(Px + 0.3, Px + 3.3, 4.9, 5.52);

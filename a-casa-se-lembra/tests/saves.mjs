@@ -8,19 +8,25 @@ let bad = 0;
 for (const snap of snaps) {
   T.errors.length = 0;
   await page.evaluate((s) => { localStorage.setItem('casa-se-lembra/save/v1', JSON.stringify(s)); }, snap);
-  await page.reload();
-  await page.waitForFunction(() => !!window.__casa, null, { timeout: 30000 });
+  await page.reload({ timeout: 120000 });
+  await page.waitForFunction(() => !!window.__casa, null, { timeout: 120000 });
   await page.evaluate(() => { const g = window.__casa; g.testMode = true; g.ui.fast = true; g.input.locked = true; });
   const enabled = await page.evaluate(() => !document.getElementById('btn-continue').disabled);
   await page.click('#btn-continue');
   await page.evaluate(() => { window.__casa.input.locked = true; });
   for (let i = 0; i < 8; i++) { await T.step(0.5); await page.waitForTimeout(30); }
   const st = await T.state();
-  const extra = await page.evaluate(() => { const g = window.__casa; return { lili: g.cats.lili.enabled ? g.cats.lili.mode : 'off', clown: g.clown.model.visible, fix: g.world.fixtures.filter((f) => f.on).length, tv: g.tv.mode, sections: [...g.world.sections.keys()].length }; });
-  const ok = enabled && st.phase === snap.story.phase && T.errors.length === 0;
+  const extra = await page.evaluate(() => { const g = window.__casa; return { lili: g.cats.lili.enabled ? g.cats.lili.mode : 'off', clown: g.clown.model.visible, fix: g.world.fixtures.filter((f) => f.on).length, tv: g.tv.mode, sections: [...g.world.sections.keys()].length, pale: g.pale.state, hat: !!(g.world.get('hat_floor') && g.world.get('hat_floor').visible) }; });
+  let ok = enabled && st.phase === snap.story.phase && T.errors.length === 0;
+  // o apartamento de antes: o Morador tem que voltar no estado certo
+  if (snap.id === 'a3_antes') ok = ok && st.pos[0] > 150 && extra.pale === 'sleep';
+  if (snap.id === 'a3_antes_awake') ok = ok && st.pos[0] > 150 && extra.pale === 'grope' && st.obj === 'antes_vitrola';
+  if (snap.id === 'a3_antes_done') ok = ok && extra.pale === 'sleep';
+  // o chapéu do pai (pista do ato 3) tem que aparecer depois de carregar
+  if (/^a3_(up|antes|r1|r2)/.test(snap.id) && snap.flags.dadFound && !snap.flags.hasDadKey) ok = ok && extra.hat;
   if (!ok) bad++;
   console.log(`${ok ? 'OK ' : 'ERR'} ${snap.id.padEnd(15)} fase=${st.phase} obj=${st.obj} ato=${st.act} ent=${st.ent} pos=${st.pos} ${JSON.stringify(extra)}` + (T.errors.length ? '\n   ' + T.errors.join('\n   ') : ''));
-  if (['a2_start', 'a3_up', 'a3_climax', 'a3_basement'].includes(snap.id)) await T.shot('save_' + snap.id, 500);
+  if (['a2_start', 'a3_up', 'a3_climax', 'a3_basement', 'a3_antes_awake'].includes(snap.id)) await T.shot('save_' + snap.id, 500);
 }
 console.log(bad ? `${bad} checkpoint(s) com problema` : 'todos os checkpoints retomam sem erro');
 await T.close();

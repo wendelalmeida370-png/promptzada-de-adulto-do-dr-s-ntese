@@ -246,15 +246,20 @@ export const act3 = {
       else if (!F.antesTook) this.objective('antes');
       const d = g.world.doors.get('porta_antes'); if (d && g.player.pos.z > AZ + 0.9) d.set(0);
       if (F.liliFollow) g.cats.lili.setVisible(false);
-    } else this.antesAudio(false);
-    this.startEndlessHunt(9);
+      this._huntPaused = true;
+    } else {
+      this.antesAudio(false);
+      this.startEndlessHunt(9);
+    }
   },
   huntStrength() { const s = this.F.simAtReveal || this.sim(); return clamp(0.85 + (s - 75) / 60, 0.85, 1.15) + this.ruptureCount() * 0.03; },
   startEndlessHunt(delay) {
     const g = this.g;
     this.after(delay, () => {
-      if (this.phase !== 'a3') return;
-      const nodes = [...g.world.navNodes.keys()].filter((id) => !/^(x|pb)/.test(id));
+      if (this.phase !== 'a3' || g.entity.hunt) return;
+      // no apartamento de antes quem caça é o Morador; o Inquilino volta quando você sair de lá
+      if (g.player.pos.x > 150) { this._huntPaused = true; return; }
+      const nodes = [...g.world.navNodes.keys()].filter((id) => !/^(x|pb|a_)/.test(id));
       g.entity.startHunt({ from: 'pp1', endless: true, strength: this.huntStrength(), patrol: nodes, exit: 'pp1' });
       this.huntId = 4;
     });
@@ -270,6 +275,7 @@ export const act3 = {
   },
   update_a3(dt) {
     const g = this.g, F = this.F, e = g.entity;
+    if (this.hnEggNudge) this.hnEggNudge(dt);
     // buzina de aviso
     this._honkCd = (this._honkCd || 0) - dt;
     const prox = e.proximity();
@@ -516,7 +522,8 @@ export const act3 = {
     audio.play('chime', { notes: [57, 64, 69, 73, 76, 81], v: 0.7 });
     for (const f of g.world.fixtures) if (['sala', 'entrada'].includes(f.id)) f.on = true;
     await s.wait(1.2);
-    c.show(2.0, 3.2, -Math.PI / 2, 'ec', true);
+    // o palhaço aparece de frente pra você (ele olha pra +z), segurando o cartão
+    { const pp = g.player.pos, cx = 2.0, cz = 3.2; c.show(cx, cz, Math.atan2(pp.x - cx, pp.z - cz), 'ec', true); }
     c.showCard(T('OBRIGADO POR LEMBRAR DE MIM, {RAFA}.').toUpperCase());
     g.ui.say('Tique-Taque', T('OBRIGADO POR LEMBRAR DE MIM, {RAFA}.').toUpperCase(), 3.5, 'house');
     await s.wait(3.5);

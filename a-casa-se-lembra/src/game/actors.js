@@ -128,6 +128,7 @@ export class Clown {
     const tex = cardTexture(text);
     this.model.userData.cardMesh.material = new THREE.MeshBasicMaterial({ map: tex });
     this.model.userData.aR.rotation.x = -1.2;
+    c.rotation.x = 1.2; // o braço levanta, o cartão fica em pé, de frente (senão aparece deitado, de quina)
     c.visible = true;
   }
   update(dt) {

@@ -27,6 +27,7 @@ const POOL = 6;
 export class Game {
   constructor() {
     const app = document.getElementById('app');
+    this.settings = settings; // (acesso para os testes automáticos)
     this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: false });
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -153,6 +154,8 @@ export class Game {
     applyHouse(this.world, this.flags);
     applyAntes(this.world, this.flags);
     this.story.afterBuild && this.story.afterBuild();
+    // os objetos criados em afterBuild (escritas nos espelhos, chapéu do pai...) nascem escondidos
+    if (this.story.afterApply) this.story.afterApply();
   }
   applyWorld() { applyHouse(this.world, this.flags); applyAntes(this.world, this.flags); if (this.story.afterApply) this.story.afterApply(); }
 

@@ -189,6 +189,12 @@ export const finale = {
     audio.speak('Ninguém lembra desse nome.', { pitch: 0.1, rate: 0.7 });
     await s.say('O Inquilino', 'Ninguém lembra desse nome.', { dur: 2.8, kind: 'enemy' });
     await s.say('{rafa}', '*Eu lembro.*', { dur: 1.8 });
+    // o palhaço dá um passo pro lado, como quem abre caminho (e sai da frente da porta)
+    {
+      const c0 = c.model.position.clone(), c1 = new THREE.Vector3(3.3, 0, 5.0);
+      for (let i = 1; i <= 24; i++) { const k = i / 24; c.model.position.set(c0.x + (c1.x - c0.x) * k, 0, c0.z + (c1.z - c0.z) * k); await s.wait(0.05); }
+      c.model.rotation.y = Math.atan2(0.97 - c1.x, 7.9 - c1.z); // o palhaço olha pra frente (+z): vira pra porta
+    }
     audio.play('keys', { pos: [1.75, 1.45, 7.9], v: 1 });
     await s.wait(1.0);
     const fd = g.world.doors.get('porta_entrada');
@@ -219,6 +225,8 @@ export const finale = {
     }
     pale.scriptWalk = false;
     pale.yaw = Math.atan2(-(e.pos.x - pale.pos.x), -(e.pos.z - pale.pos.z));
+    // enquadra os dois: o Inquilino no centro, o Morador entrando pela esquerda
+    g.player.lookAt(new THREE.Vector3(e.pos.x + (pale.pos.x - e.pos.x) * 0.3, 1.5, e.pos.z + (pale.pos.z - e.pos.z) * 0.3), 0.8);
     e.place(e.pos.x, e.pos.z, Math.atan2(-(pale.pos.x - e.pos.x), -(pale.pos.z - e.pos.z)));
     audio.play('pale_click', { pos: pale.handPos(), v: 1.2 });
     pale.setPose('look', false, 3);
@@ -240,8 +248,9 @@ export const finale = {
     pale.setPose('grab', false, 6);
     this.glitch = 0;
     await s.wait(0.8);
-    // arrasta ele até a porta de antes
+    // arrasta ele até a porta de antes (a câmera acompanha)
     audio.play('drag', { pos: [e.pos.x, 0.2, e.pos.z], v: 1, dur: 3.2 });
+    g.player.lookAt(new THREE.Vector3(1.0, 1.3, 7.2), 3.0);
     const p0 = pale.pos.clone(), e0 = e.pos.clone(), dst = new THREE.Vector3(0.97, 0, 8.45);
     for (let i = 0; i <= 64; i++) {
       const k = i / 64, kk = k * k;
@@ -268,7 +277,12 @@ export const finale = {
     audio.play('power_up', { vol: 0.6 });
     for (const f of g.world.fixtures) if (['sala', 'entrada'].includes(f.id)) { f.on = true; f.flicker = 0.8; }
     await s.wait(1.2);
-    c.show(2.1, 3.4, -Math.PI / 2, 'ec', true);
+    // o palhaço aparece na frente de onde você está olhando, de frente pra você
+    {
+      const pp = g.player.pos, fw = new THREE.Vector3(-Math.sin(g.player.yaw), 0, -Math.cos(g.player.yaw));
+      const cx = pp.x + fw.x * 1.7, cz = pp.z + fw.z * 1.7;
+      c.show(cx, cz, Math.atan2(pp.x - cx, pp.z - cz), 'ec', true);
+    }
     const card = T('AGORA A CASA LEMBRA DE TODO MUNDO, {RAFA}.').toUpperCase();
     c.showCard(card);
     g.ui.say('Tique-Taque', card, 3.5, 'house');
@@ -318,6 +332,16 @@ export const finale = {
       await this.hnYesterday(s);
     });
     return true;
+  },
+  // pista na primeira partida: no ato 3, o relógio-ovo acelera no bolso (uma vez só)
+  hnEggNudge(dt) {
+    const F = this.F, g = this.g;
+    if (F.hnEggHint || !this.has('relogio_ovo') || g.cutscene || g.player.pos.x > 50) return;
+    this._hnNudgeT = (this._hnNudgeT || 0) + dt;
+    if (this._hnNudgeT < 75) return;
+    F.hnEggHint = true;
+    for (let i = 0; i < 6; i++) audio.play('clock', { tock: i % 2 === 1, vol: 0.45, delay: i * 0.22 });
+    this.after(1.6, () => this.say0('{rafa}', '*O relógio-ovo tá batendo rápido no meu bolso. Igual quando eu passei perto daquele balde, lá embaixo.*', 4.4));
   },
   enter_a3_horanenhuma() {
     const F = this.F;
@@ -472,8 +496,9 @@ export const finale = {
     const sky = g.world.get('city_sky'); if (sky && this._nightSky) sky.material = this._nightSky;
     if (this._hemi !== undefined) g.hemi.intensity = this._hemi;
     this.tint = null; this.exposure = 1;
-    // a noite que não aconteceu
-    g.flags = { act: 1, hnNight: true };
+    // a noite que não aconteceu: o vídeo nunca saiu, então a casa não precisou mudar nada pra te esconder
+    // (fica igualzinha ao vídeo: o quadro no chão, a bicicleta, as fotos e o lençol no lugar de ontem)
+    g.flags = { act: 1, hnNight: true, paintingMode: 'floor', d_bike: true, d_fotos: true, d_lencol: true };
     g.rebuildWorld();
     this.setupLights();
     this.setupActors();

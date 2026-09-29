@@ -78,7 +78,7 @@ export class Entity {
     this.setLayers(opts.spec || 'ecv');
     this.model.visible = true;
     this.state = 'patrol';
-    this.hunt = { dur: opts.duration || 45, exit: opts.exit || opts.from, patrol: opts.patrol || [...w.navNodes.keys()], onEnd: opts.onEnd || null, endless: !!opts.endless, leaving: false };
+    this.hunt = { dur: opts.duration || 45, exit: opts.exit || opts.from, patrol: (opts.patrol || this.houseNodes()).filter((id) => !id.startsWith('a_')), onEnd: opts.onEnd || null, endless: !!opts.endless, leaving: false };
     this.huntT = 0;
     this.path = [];
     this.lastSeen = null;
@@ -98,11 +98,14 @@ export class Entity {
     this.goTo(this.hunt.exit);
   }
 
+  // nós de navegação da casa (os do apartamento de antes, "a_*", são só do Morador de Antes)
+  houseNodes() { return [...this.game.world.navNodes.keys()].filter((id) => !id.startsWith('a_')); }
+
   // escolhe um ponto longe do esconderijo para ir
   giveUp() {
     const w = this.game.world, p = this.game.player.pos;
     let best = null, bd = 0;
-    const list = this.hunt ? this.hunt.patrol : [...w.navNodes.keys()];
+    const list = this.hunt ? this.hunt.patrol : this.houseNodes();
     for (const id of list) { const n = w.navNodes.get(id); if (!n) continue; const d = Math.hypot(n.x - p.x, n.z - p.z); if (d > bd) { bd = d; best = id; } }
     if (best) this.goTo(best);
   }
@@ -229,7 +232,7 @@ export class Entity {
       }
     } else if (this.state === 'patrol') {
       speed = 1.2 * this.strength;
-      if (!this.path.length) { const n = pick(hunt ? hunt.patrol : [...w.navNodes.keys()]); this.goTo(n); }
+      if (!this.path.length) { const n = pick(hunt ? hunt.patrol : this.houseNodes()); this.goTo(n); }
     } else if (this.state === 'leave') {
       speed = 1.5;
       if (!this.path.length) { this.hide(); if (hunt && hunt.onEnd) hunt.onEnd(); return; }
@@ -313,8 +316,11 @@ export class Entity {
     if (settings.storyMode) {
       audio.play('scream', { pos: this.pos, v: 0.8 });
       g.ui.flash(0.4, 0.5, '#300');
+      const hunt = this.hunt;
       this.hide();
-      if (this.hunt && this.hunt.onEnd) this.hunt.onEnd();
+      if (hunt && hunt.onEnd) hunt.onEnd();
+      // a caçada sem fim do ato 3 volta depois de um tempo (a ameaça continua, só não pega)
+      else if (hunt && hunt.endless && g.story.startEndlessHunt) g.story.startEndlessHunt(20);
       return;
     }
     const cb = this.onCatch;

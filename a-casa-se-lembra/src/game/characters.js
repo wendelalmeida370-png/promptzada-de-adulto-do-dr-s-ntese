@@ -104,7 +104,7 @@ export function buildClown() {
   cyl(hat, 0.08, 0.09, 0.12, std('#111'), 0, 0.06, 0, { seg: 16 });
   // cartões (para o porão)
   const card = group(aR, 0, -0.72, 0.1);
-  const cardMesh = box(card, 0.34, 0.22, 0.01, white, 0, 0, 0, { cast: false });
+  const cardMesh = box(card, 0.34, 0.22, 0.01, white, 0, 0, 0, { cast: false, uv: false }); // UV 0..1: o texto inteiro no cartão
   card.visible = false;
   root.userData = { head, aL, aR, card, cardMesh };
   return root;
@@ -171,12 +171,27 @@ export function buildEntity() {
 // Homenagem feita do zero ao Homem Pálido: alto, pele sobrando como lençol de móvel guardado,
 // nenhum olho no rosto — os olhos moram nas palmas das mãos.
 let paleMats = null;
+// "exposição" própria da pele dele: luz direta muito forte (a lanterna colada nele) é comprimida
+// antes de multiplicar pela cor, então de perto ele fica claro mas as dobras e manchas continuam aparecendo
+const PALE_SOFT_LIGHT = `
+  {
+    vec3 albP = max(diffuseColor.rgb * RECIPROCAL_PI, vec3(0.002));
+    float eP = dot(reflectedLight.directDiffuse / albP, vec3(0.3333));
+    float kP = eP > 0.001 ? 2.6 * (1.0 - exp(-eP / 2.6)) / eP : 1.0;
+    reflectedLight.directDiffuse *= kP;
+    reflectedLight.directSpecular *= kP;
+  }
+  #include <aomap_fragment>`;
+function softLight(m) {
+  m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <aomap_fragment>', PALE_SOFT_LIGHT); };
+  m.customProgramCacheKey = () => 'pale-soft-light';
+  return m;
+}
 export function paleMaterials() {
   if (paleMats) return paleMats;
-  // cor um pouco abaixo do branco: de perto, com a lanterna, a pele não "estoura" e as dobras continuam aparecendo
-  const skin = new THREE.MeshStandardMaterial({ color: 0xcdb9b1, map: TX.paleSkin(), normalMap: TX.paleSkinNormal(), normalScale: new THREE.Vector2(0.45, 0.45), roughness: 0.62, metalness: 0, emissive: new THREE.Color(0x120a09) });
-  const flap = skin.clone(); flap.side = THREE.DoubleSide;
-  const skinV = skin.clone(); skinV.vertexColors = true;
+  const skin = softLight(new THREE.MeshStandardMaterial({ color: 0xe0cdc4, map: TX.paleSkin(), normalMap: TX.paleSkinNormal(), normalScale: new THREE.Vector2(0.45, 0.45), roughness: 0.62, metalness: 0, emissive: new THREE.Color(0x120a09) }));
+  const flap = softLight(skin.clone()); flap.side = THREE.DoubleSide;
+  const skinV = softLight(skin.clone()); skinV.vertexColors = true;
   const eye = new THREE.MeshStandardMaterial({ map: TX.paleEye(), roughness: 0.12, metalness: 0, emissive: new THREE.Color(0xffffff), emissiveMap: TX.paleEye(), emissiveIntensity: 0.24 });
   paleMats = { skin, skinV, flap, eye, nail: std('#2b1f1c', { roughness: 0.35 }), mouth: basic('#140404'), crease: basic('#6a3a36'), tooth: std('#d6cab0', { roughness: 0.4 }) };
   return paleMats;

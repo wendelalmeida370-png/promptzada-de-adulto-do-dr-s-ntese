@@ -219,7 +219,7 @@ export const act2 = {
     F.armClownScare = false;
     const p = g.player.pos;
     const fwd = new THREE.Vector3(-Math.sin(g.player.yaw), 0, -Math.cos(g.player.yaw));
-    g.clown.show(p.x + fwd.x * 0.95, p.z + fwd.z * 0.95, g.player.yaw + Math.PI, 'ec');
+    g.clown.show(p.x + fwd.x * 0.95, p.z + fwd.z * 0.95, g.player.yaw, 'ec'); // o palhaço olha pra frente (+z): de cara pra você
     const lvl = settings.scare;
     g.clown.honk(lvl === 2 ? 1.3 : 0.7);
     if (lvl > 0) { audio.play('stinger_small', { v: lvl === 2 ? 1 : 0.5 }); g.player.shake(lvl === 2 ? 0.7 : 0.3); g.ui.flash(lvl === 2 ? 0.35 : 0.15, 0.3); }

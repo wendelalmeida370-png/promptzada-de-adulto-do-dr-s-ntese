@@ -61,6 +61,8 @@ export const antesStory = {
   // ------------------------------------------------------------ entrar e sair
   enter_antes_in() {
     const F = this.F, g = this.g;
+    // o Inquilino não entra na memória de outra pessoa: a caçada dele pausa aqui dentro
+    if (g.entity.hunt && g.entity.hunt.endless) { g.entity.hide(); this._huntPaused = true; }
     this.antesAudio(true);
     g.startAmbience('antes');
     this.antesSetupPale();
@@ -77,7 +79,8 @@ export const antesStory = {
       F.antesLeftOnce = true;
       this.after(1.0, () => this.say0('{rafa}', '*O registro. Agora o chuveiro.*'));
     }
-    this.objective(F.act >= 3 ? 'ruptures' : this.objId, true);
+    if (this.phase === 'a3') this.objective('ruptures', true);
+    if (this._huntPaused && this.phase === 'a3') { this._huntPaused = false; this.startEndlessHunt(12); }
   },
   async antesFirst(s) {
     const g = this.g;
