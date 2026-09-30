@@ -391,6 +391,7 @@
   function childDecide(v) {
     const S = G.S; const cur = v.task;
     if (v.age < 2) return;
+    if (cur && cur.pri >= 3) return;
     const night = G.isNight();
     if (night) { if (!cur || cur.type !== 'sleep') setTask(v, { type: 'sleep', pri: 1.5, kind: 'sleep' }); return; }
     if (v.hunger > 60 && (!cur || cur.pri < 1.2)) { const t = eatTask(v); if (t) { t.kind = 'eat'; return; } }
@@ -410,7 +411,7 @@
     if (v.carry && v.carry.k === 'food') { // eat what you carry
       v.carry.n -= 1; v.hunger = Math.max(0, v.hunger - 55); if (v.carry.n <= 0) v.carry = null; emote(v, 'food', 1.5); return setTask(v, { type: 'idle', pri: 0, wait: 1 });
     }
-    if (G.Fac.stockV(v).food >= 1) return setTask(v, { type: 'eat', pri: v.hunger > 85 ? 2.5 : 1.2 });
+    if (((G.Army && G.Army.larder(v)) || G.Fac.stockV(v)).food >= 1) return setTask(v, { type: 'eat', pri: v.hunger > 85 ? 2.5 : 1.2 });
     const b = nearestBush(v, 20); if (b) return setTask(v, { type: 'forage', id: b.id, pri: 1.4 });
     emote(v, 'food', 2);
     return null;
@@ -837,7 +838,7 @@
           v.act = 'eat';
           if (v.actT > 1.6) {
             const units = v.hunger > 80 ? 2 : 1;
-            const stk = G.Fac.stockV(v);
+            const stk = (G.Army && G.Army.larder(v)) || G.Fac.stockV(v);
             const got = Math.min(units, Math.floor(stk.food));
             if (got <= 0) { emote(v, 'food', 2); const nt = eatTask(v); if (!nt) end(v); return; }
             stk.food -= got; v.hunger = Math.max(0, v.hunger - 58 * got);
@@ -1309,7 +1310,7 @@
       tPush = 1;
       // unstick villagers standing inside blocking footprints
       for (const v of S.villagers.values()) {
-        if (v.inside || v.air || v.held || v.age < 2 || v.aboard) continue;
+        if (v.inside || v.air || v.held || v.age < 2 || v.aboard || (v.task && v.task.perch)) continue;
         const i = W.idx(v.x, v.y);
         if (!W.walkable(i) && S.type[i] !== T.SEA && S.type[i] !== T.DEEP) {
           const n = W.nearestLand(v.x, v.y, 5); if (n) { v.x = n[0]; v.y = n[1]; v.path = null; if (v.task) v.task.st = 0; }
@@ -1326,6 +1327,8 @@
       }
       needs(v, dt);
       if (!S.villagers.has(v.id)) continue;
+      // nobody stays up in the air once the ladder or the pyramid steps are behind them
+      if (v.z && !v.air && !(v.task && (v.task.perch || v.task.ladder || v.task.type === 'fest'))) v.z = 0;
       if (v.age < 2) { babyUpdate(v, dt); if (v.emo) { v.emo.t -= dt; if (v.emo.t <= 0) v.emo = null; } continue; }
       v.scan -= dt;
       if (v.scan <= 0) { v.scan = 0.3 + G.R() * 0.15; emergency(v); }
@@ -1352,7 +1355,7 @@
     if (v.air) return 'Voando pelos ares!';
     if (v.age < 2) { const c = S.villagers.get(v.carrier); return c ? (v.sleeping ? 'Dormindo' : `No colo de ${c.name}`) : 'Chorando sozinho'; }
     if (!t) return v.sleeping ? 'Dormindo' : 'Pensando no que fazer';
-    const wt = G.War.taskText(v, t) || (G.City && G.City.taskText(v, t)) || (G.Naval && G.Naval.taskText(v, t)) || (G.Eco && G.Eco.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || (G.Fest && G.Fest.taskText(v, t)); if (wt) return wt;
+    const wt = (G.Army && G.Army.taskText(v, t)) || G.War.taskText(v, t) || (G.City && G.City.taskText(v, t)) || (G.Naval && G.Naval.taskText(v, t)) || (G.Eco && G.Eco.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || (G.Fest && G.Fest.taskText(v, t)); if (wt) return wt;
     const bname = id => { const b = S.buildings.get(id); return b ? G.Village.buildName(b) : 'construção'; };
     const pname = id => { const o = S.villagers.get(id); return o ? o.name : 'alguém'; };
     switch (t.type) {

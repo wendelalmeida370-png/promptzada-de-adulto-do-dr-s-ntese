@@ -36,6 +36,7 @@
     flame: svg('<path d="M12 22c-4.2 0-7-2.8-7-6.6 0-3.6 2.6-5.4 3.4-9.4 2 1.2 3.2 3 3.4 5.4 1-1 1.6-2.4 1.6-4.4 3 2.2 5.6 5 5.6 8.6 0 3.8-2.8 6.4-7 6.4z" fill="currentColor"/>'),
     heart: svg('<path d="M12 21s-8.5-5-8.5-11.2A4.8 4.8 0 0 1 12 7a4.8 4.8 0 0 1 8.5 2.8C20.5 16 12 21 12 21z" fill="currentColor"/>'),
     cross: svg('<path d="M10 3h4v5h5v4h-5v9h-4v-9H5V8h5z" fill="currentColor"/>'),
+    fest: svg('<path d="M12 2.5c-2 2.6-2.6 4.4-1.3 6.4.5-1.1 1.3-1.5 1.3-1.5s.8.4 1.3 1.5c1.3-2 .7-3.8-1.3-6.4z" fill="#f2a23a"/><path d="M10.4 10h3.2l-.6 11.5h-2z" fill="currentColor"/><circle cx="5" cy="6" r="1.3" fill="#e85a7a"/><circle cx="19" cy="5" r="1.2" fill="#6ab8e8"/><circle cx="18" cy="12" r="1.1" fill="#8ad04a"/><circle cx="5.5" cy="13" r="1.1" fill="#f2c14e"/>'),
     star: svg('<path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.2 1.3-6.6-4.9-4.6 6.6-.8z" fill="currentColor"/>'),
     cloud: svg('<path d="M7 18.5a4.6 4.6 0 0 1 .3-9.2A6 6 0 0 1 18.7 10a4.3 4.3 0 0 1-.5 8.5z" fill="currentColor"/>'),
     sun: svg('<circle cx="12" cy="12" r="4.6" fill="currentColor"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" ' + ST + '/>'),
@@ -122,6 +123,9 @@
     tech: ['tech', 'blue'], city: ['city', 'gold'], ship: ['ship', 'blue'], naval: ['ship', 'red'], cart: ['cart', 'gold'], wall: ['wall', 'grey'], road: ['road', 'gold'],
     aqueduct: ['aqueduct', 'blue'], wonder: ['wonder', 'gold'], siege: ['ram', 'red'], sacrifice: ['sacrifice', 'red'], lore: ['book', 'gold'], prophecy: ['word', 'gold'],
     mountain: ['mountain', 'brown'], wave: ['wave', 'blue'],
+    fest: ['fest', 'gold'], coin: ['scale', 'gold'], theft: ['chain', 'red'], army: ['sword', 'red'], battle: ['sword', 'red'], general: ['crown', 'red'], plague: ['heal', 'red'],
+    curral: ['wolves', 'green'], estabulo: ['wolves', 'green'], acougue: ['hammer', 'gold'], tecelagem: ['hammer', 'gold'], mina: ['stone', 'grey'], forja: ['hammer', 'gold'], ourives: ['hammer', 'gold'],
+    olaria: ['hammer', 'gold'], feira: ['scale', 'gold'], taverna: ['hammer', 'gold'], administracao: ['scroll', 'gold'], coletoria: ['scale', 'gold'], mercado_negro: ['chain', 'grey'], estatua: ['star', 'gold'],
   };
   const SYMP = {
     sol: '<circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
@@ -459,7 +463,7 @@
     if (kids.length) fam.push(`${kids.length > 1 ? 'Filhos' : (G.person(v.kids[0]) && G.person(v.kids[0]).g === 'f' ? 'Filha' : 'Filho')}: ${kids.join(', ')}`);
     const traits = (v.traits || []).map(t => `<span class="trait">${G.traitName(v, t)}</span>`).join('');
     if (v.dead) {
-      const cause = { old: 'Velhice', hunger: 'Fome', wolf: 'Atacad' + (f ? 'a' : 'o') + ' por lobos', boar: 'Atacad' + (f ? 'a' : 'o') + ' por um javali', fire: 'Incêndio', lightning: 'Raio', meteor: 'Meteoro', sick: 'Doença', fall: 'Queda', drown: 'Afogamento', war: 'Morte em combate', arrow: 'Flecha', massacre: 'Massacre', execution: 'Execução', coup: 'Assassinato', quake: 'Terremoto' }[v.cause] || 'Desconhecida';
+      const cause = { old: 'Velhice', hunger: 'Fome', wolf: 'Atacad' + (f ? 'a' : 'o') + ' por lobos', boar: 'Atacad' + (f ? 'a' : 'o') + ' por um javali', fire: 'Incêndio', lightning: 'Raio', meteor: 'Meteoro', sick: 'Doença', fall: 'Queda', drown: 'Afogamento', war: 'Morte em combate', arrow: 'Flecha', massacre: 'Massacre', execution: 'Execução', coup: 'Assassinato', quake: 'Terremoto', sacrifice: 'Sacrifício aos deuses', plague: 'Peste', oil: 'Óleo fervente', arrow: 'Flecha' }[v.cause] || 'Desconhecida';
       const df = G.Fac.get(v.fac); const killer = v.by ? G.person(v.by) : null;
       const deadName = v.reigned ? esc(G.Politics.fullName(v)) : esc(v.name) + (v.ep ? ', ' + esc(G.Politics.epithet(v)) : '');
       return `<div class="insp-head"><div class="portrait dead"></div><div class="insp-title"><h3>${deadName} †</h3><div class="sub">Viveu ${age} anos · Dia ${Math.max(1, Math.round(v.born))} – Dia ${v.died}</div><div class="traits">${traits}</div></div><button class="x" data-act="close">${ICON.close}</button></div>

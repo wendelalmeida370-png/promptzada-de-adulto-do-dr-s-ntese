@@ -625,6 +625,7 @@
     pts[0] = [sx, sy];
     return smoothPath(pts);
   };
+  W.losClear = (ax, ay, bx, by) => losClear(ax, ay, bx, by);
   function losClear(ax, ay, bx, by) {
     const d = Math.hypot(bx - ax, by - ay); const steps = Math.ceil(d / 0.3);
     const ta = W.idx(ax, ay), tb = W.idx(bx, by);

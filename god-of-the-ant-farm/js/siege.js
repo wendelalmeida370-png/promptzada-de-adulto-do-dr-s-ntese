@@ -63,6 +63,7 @@
     if (o.elite === 'falange' || o.elite === 'legiao') hit -= 0.2;
     if (G.R() > hit) return;
     let dmg = 9 * G.Civ.t(fid(v), 'war') * (G.Civ.has(fid(v), 'ferro') ? 1.15 : 1) * G.rr(0.8, 1.2);
+    if (G.Army) dmg *= G.Army.dmgMul(v, o, true);
     o.hurt = 0.3;
     G.Vg.damage(o, dmg, 'arrow', false, v.id);
     if (!S.villagers.has(o.id)) {
@@ -180,7 +181,7 @@
     const S = G.S;
     for (const w of S.walls) {
       const s = S.settlements.get(w.set);
-      const shut = !!s && (s.alarmT || 0) > 0 && s.fac === w.fac;
+      const shut = !!s && (s.alarmT || 0) > 0 && s.fac === w.fac && !(w.forced > S.clock);
       for (const i of w.gates) {
         if (S.wall[i] !== 2 && S.wall[i] !== 4) continue;
         const want = shut ? 4 : 2;
@@ -251,16 +252,59 @@
         b.engines = [];
         if (f.stock.wood >= 25) { f.stock.wood -= 20; b.engines.push({ id: S.nextId++, kind: 'ariete', x: lead.x, y: lead.y, cd: 2, hp: 90, band: b.id, fac: f.id, civ: f.civ }); }
         if (f.stock.wood >= 30 && f.stock.stone >= 10 && f.civ !== 'nordico' && f.civ !== 'asteca') { f.stock.wood -= 25; f.stock.stone -= 10; b.engines.push({ id: S.nextId++, kind: 'catapulta', x: lead.x, y: lead.y, cd: 4, hp: 70, band: b.id, fac: f.id, civ: f.civ }); }
-        if (b.engines.length) log(`${f.name} ergueu ${b.engines.map(e => e.kind === 'ariete' ? 'um aríete' : 'uma catapulta').join(' e ')} diante de ${set.name}.`, 'siege', lead.x, lead.y);
+        // a great host settling for a long siege raises a siege tower too
+        if (b.army && b.army.strat === 'cerco' && f.stock.wood >= 40 && (f.civ === 'romano' || f.civ === 'grego' || f.civ === 'egipcio' || f.civ === 'classico')) { f.stock.wood -= 35; b.engines.push({ id: S.nextId++, kind: 'torre', x: lead.x, y: lead.y, cd: 3, hp: 140, band: b.id, fac: f.id, civ: f.civ }); }
+        if (b.engines.length) log(`${f.name} ergueu ${b.engines.map(e => e.kind === 'ariete' ? 'um aríete' : e.kind === 'torre' ? 'uma torre de cerco' : 'uma catapulta').join(', ')} diante de ${set.name}.`, 'siege', lead.x, lead.y);
       }
     }
   };
   // a soldier's part in the siege: hack at the gate
+  // the wall tile next to a gate or siege point where a ladder can go
+  function ladderTile(w, sg) {
+    const S = G.S; let best = -1, bd = 1e9;
+    for (const i of w.tiles) { if (S.wall[i] !== 1) continue; const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5; const d = G.dist(x, y, sg.x, sg.y); if (d > 1.5 && d < 5 && d < bd) { bd = d; best = i; } }
+    return best;
+  }
+  // both sides of a wall tile: where to stand outside, where to land inside
+  function sides(i, set) {
+    const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
+    let out = null, inn = null, bo = -1e9, bi = 1e9;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const px = x + dx, py = y + dy; if (!W.walkableXY(px, py)) continue; const d = G.dist(px, py, set.cx, set.cy); if (d > bo) { bo = d; out = [px, py]; } if (d < bi) { bi = d; inn = [px, py]; } }
+    return out && inn && out !== inn ? [out, inn] : null;
+  }
   Sg.siegeActions = function (v, t, b, dt, H) {
     const sg = b.siege; if (!sg) return false;
     const S = G.S;
     if (!S.wall[sg.i]) { b.siege = null; return false; }
     if (v.arm === 'arco') return false; // archers keep shooting at whoever shows up
+    const set = S.settlements.get(b.set);
+    const w = set && Sg.wallOf(set.id);
+    // one in four carries a ladder to the wall beside the gate
+    if (w && b.army && v.id % 4 === 0 && !t.overWall) {
+      if (t.ladder === undefined) { const i = ladderTile(w, sg); const sd = i >= 0 && sides(i, set); t.ladder = sd ? { i, out: sd[0], inn: sd[1], t: 0 } : null; }
+      const L = t.ladder;
+      if (L && S.wall[L.i] === 1) {
+        if (G.dist(v.x, v.y, L.out[0], L.out[1]) > 0.35) { if (!t.lp || H.arrived(v)) { t.lp = true; if (!H.goto(v, L.out[0], L.out[1], false, 4000)) { t.ladder = null; return false; } } H.move(v, dt, 1); v.act = ''; return true; }
+        v.path = null; v.moving = false; v.act = 'climb'; L.t += dt; v.z = Math.min(12, L.t * 2.2);
+        v.face = (L.inn[0] - L.inn[1]) - (v.x - v.y) > 0 ? 1 : -1;
+        // defenders push the ladders off the wall
+        if (G.R() < dt * 0.12) { v.z = 0; L.t = 0; G.Vg.damage(v, G.rr(18, 34), 'fall', false, 0); G.Vg.emote(v, 'fear', 1.5); G.FX && G.FX.dust(v.x, v.y, 2); return true; }
+        if (L.t > 6) { v.x = L.inn[0]; v.y = L.inn[1]; v.z = 0; t.overWall = true; t.dest = null; v.path = null; if (!b.laddered) { b.laddered = true; log(`Com escadas, soldados de ${G.Fac.get(b.fac).name} escalaram os muros de ${set.name}!`, 'siege', v.x, v.y); } }
+        return true;
+      }
+    }
+    // inside the walls: open the gate for the others
+    if (t.overWall && w) {
+      let gate = -1, gd = 1e9; for (const i of w.gates) if (S.wall[i] === 4) { const d = G.dist(v.x, v.y, (i % N) + 0.5, ((i / N) | 0) + 0.5); if (d < gd) { gd = d; gate = i; } }
+      if (gate >= 0) {
+        const gx = (gate % N) + 0.5, gy = ((gate / N) | 0) + 0.5; const sd = sides(gate, set); const inn = sd ? sd[1] : [gx, gy];
+        if (G.dist(v.x, v.y, inn[0], inn[1]) > 0.5) { if (!t.gp || H.arrived(v)) { t.gp = true; if (!H.goto(v, inn[0], inn[1], false, 3000)) { t.overWall = false; return false; } } H.move(v, dt, 1.2); v.act = 'run'; return true; }
+        v.act = 'build'; t.gateT = (t.gateT || 0) + dt;
+        if (t.gateT > 3) { S.wall[gate] = 2; w.forced = S.clock + 60; log(`Soldados de ${G.Fac.get(b.fac).name} abriram por dentro o portão de ${set.name}!`, 'siege', gx, gy); b.siege = null; }
+        return true;
+      }
+      return false;
+    }
     const d = G.dist(v.x, v.y, sg.x, sg.y);
     if (d > 1.25) {
       t.sgr = (t.sgr || 0) - dt;
@@ -284,6 +328,16 @@
       for (const e of b.engines) {
         e.cd -= dt;
         const tgt = b.siege;
+        if (e.kind === 'torre') {
+          // the siege tower rolls to a stretch of wall; when its bridge drops, the wall is theirs
+          const w = set && Sg.wallOf(set.id); if (!w) continue;
+          if (e.wi === undefined || S.wall[e.wi] !== 1) { e.wi = -1; let bd = 1e9; for (const i of w.tiles) { if (S.wall[i] !== 1) continue; const d = G.dist(e.x, e.y, (i % N) + 0.5, ((i / N) | 0) + 0.5); if (d < bd) { bd = d; e.wi = i; } } e.dock = 0; }
+          if (e.wi < 0) continue;
+          const wx = (e.wi % N) + 0.5, wy = ((e.wi / N) | 0) + 0.5; const d = G.dist(e.x, e.y, wx, wy);
+          if (d > 1.05) { const sp = 0.35 * dt; e.x += (wx - e.x) / d * sp; e.y += (wy - e.y) / d * sp; e.face = (wx - wy) - (e.x - e.y) > 0 ? 1 : -1; e.moving = true; }
+          else { e.moving = false; e.dock = (e.dock || 0) + dt; e.bridge = Math.min(1, e.dock / 3); if (e.dock > 7) { if (Sg.damageWall(e.wi, 999, b.fac) && !b.towerLog) { b.towerLog = true; log(`A torre de cerco de ${G.Fac.get(b.fac).name} baixou a ponte sobre os muros de ${set.name}: os soldados passam por cima!`, 'siege', wx, wy); } e.wi = undefined; } }
+          continue;
+        }
         if (e.kind === 'ariete') {
           if (!tgt) continue;
           const d = G.dist(e.x, e.y, tgt.x, tgt.y);
@@ -303,12 +357,58 @@
       }
     }
   }
+  // boiling oil poured from the gates on whoever is hacking at them
+  function oilTick(dt) {
+    const S = G.S;
+    for (const w of S.walls) {
+      if (!w.shut) continue;
+      const f = G.Fac.get(w.fac); if (!f || f.stock.food < 2) continue;
+      w.oilCd = (w.oilCd || 0) - dt; if (w.oilCd > 0) continue; w.oilCd = 3.2;
+      for (const i of w.gates) {
+        if (S.wall[i] !== 4) continue;
+        const gx = (i % N) + 0.5, gy = ((i / N) | 0) + 0.5;
+        let hit = 0;
+        for (const o of G.War.fighters) { if (o.captive || !G.Fac.atWar(w.fac, fid(o)) || G.dist2(o.x, o.y, gx, gy) > 2.3) continue; hit++; o.hurt = 0.4; G.Vg.damage(o, G.rr(14, 24), 'oil', false, 0); G.Vg.emote(o, 'fire', 1.2); }
+        if (G.War.bands) for (const b of G.War.bands.values()) if (b.engines) for (const e of b.engines) if (e.kind === 'ariete' && G.dist(e.x, e.y, gx, gy) < 1.6) { e.hp -= 12; hit++; if (e.hp <= 0) { b.engines.splice(b.engines.indexOf(e), 1); log(`O aríete diante de ${(S.settlements.get(w.set) || {}).name} pegou fogo com o óleo e desabou.`, 'siege', gx, gy); break; } }
+        if (!hit) continue;
+        f.stock.food -= 1;
+        for (let q = 0; q < 14; q++) G.FX && G.FX.spawn({ x: gx + G.rr(-0.4, 0.4), y: gy + G.rr(-0.4, 0.4), z: 22, vz: G.rr(-20, -6), vx: G.rr(-0.5, 0.5), vy: G.rr(-0.5, 0.5), g: 30, life: G.rr(0.5, 0.9), s0: 1.4, s1: 0.4, c: q % 3 ? '#e8a23a' : '#c86a1a', k: 4, layer: 1 });
+        G.FX && G.FX.smokePuff && G.FX.smokePuff(gx, gy);
+        if (!w.oilDay || S.day - w.oilDay > 0.5) { w.oilDay = S.day; const s = S.settlements.get(w.set); log(`Do alto do portão de ${s ? s.name : 'a cidade'}, os defensores despejam óleo fervente sobre os sitiantes!`, 'siege', gx, gy); }
+      }
+    }
+  }
+  // sappers dig under a long siege until a stretch of wall falls in
+  function sappersTick(dt) {
+    const S = G.S;
+    for (const b of G.War.bands.values()) {
+      if (!b.army || !b.army.siege || b.army.phase !== 'cerco') continue;
+      const sg = b.army.siege; sg.dig = (sg.dig || 0) + dt;
+      if (sg.dig < 70 || sg.mined) continue;
+      const set = S.settlements.get(b.set); const w = set && Sg.wallOf(set.id); if (!w) continue;
+      const cands = w.tiles.filter(i => S.wall[i] === 1); if (!cands.length) continue;
+      sg.mined = true;
+      const i = G.pick(cands); Sg.damageWall(i, 999, b.fac);
+      const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
+      G.FX && G.FX.dust(x, y, 10); G.Render && G.Render.shake(0.05);
+      log(`Os sapadores de ${G.Fac.get(b.fac).name} cavaram um túnel sob os muros de ${set.name} e atearam fogo às escoras: um trecho da muralha desabou!`, 'siege', x, y);
+    }
+  }
   function missilesTick(dt) {
     const S = G.S;
     for (let k = S.missiles.length - 1; k >= 0; k--) {
       const m = S.missiles[k]; m.t += dt;
       if (m.t < m.dur) continue;
       S.missiles.splice(k, 1);
+      if (m.corpse) {
+        // a corpse over the walls: the plague begins where it lands
+        let n = 0;
+        for (const v of S.villagers.values()) if (G.dist2(v.x, v.y, m.x1, m.y1) < 9 && !(v.sick > 0) && !(v.immune > 0)) { v.sick = G.DAY_LEN * G.rr(0.5, 0.9); n++; }
+        for (let q = 0; q < 16; q++) G.FX && G.FX.spawn({ x: m.x1 + G.rr(-1, 1), y: m.y1 + G.rr(-1, 1), z: 4, vz: G.rr(3, 9), vx: G.rr(-0.3, 0.3), vy: G.rr(-0.3, 0.3), life: G.rr(2, 3.5), s0: 2, s1: 7, c: 'rgba(120,150,70,0.35)', k: 2 });
+        const s = G.Village.nearSettlementName(m.x1, m.y1);
+        if (n) log(`${n} ${n > 1 ? 'pessoas adoeceram' : 'pessoa adoeceu'} perto de onde o cadáver caiu${s ? ' em ' + s : ''}.`, 'plague', m.x1, m.y1);
+        continue;
+      }
       G.FX && G.FX.dust(m.x1, m.y1, 6); G.Audio && G.Audio.at(m.x1, m.y1, 'meteor');
       if (m.wall >= 0 && S.wall[m.wall]) Sg.damageWall(m.wall, 40, m.fac);
       const bd = m.b && S.buildings.get(m.b); if (bd) G.Village.damageBuilding(bd, 28, 'siege');
@@ -372,7 +472,7 @@
     if (tWall <= 0) { tWall = 20; considerWalls(); }
     if (tGate <= 0) { const d = 0.5 - tGate; tGate = 0.5; gatesTick(); wallArchers(d); }
     buildWalls(dt);
-    enginesTick(dt); missilesTick(dt);
+    enginesTick(dt); missilesTick(dt); oilTick(dt); sappersTick(dt);
     if (tSac <= 0) { tSac = 25; considerSacrifice(); }
     sacrificeTick(dt);
   };
@@ -438,6 +538,14 @@
       ctx.fillStyle = '#6e4a2c'; ctx.fillRect(-8, -9, 15, 6);
       ctx.fillStyle = '#8a6a44'; ctx.beginPath(); ctx.moveTo(-9, -9); ctx.lineTo(0, -15); ctx.lineTo(8, -9); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#5a4a3a'; ctx.fillRect(-6 + push, -6.5, 17, 2.2); ctx.fillStyle = '#9aa0a8'; ctx.beginPath(); ctx.arc(11 + push, -5.4, 1.8, 0, TAU); ctx.fill();
+    } else if (e.kind === 'torre') {
+      ctx.fillStyle = '#4a3020'; for (const x of [-6, 6]) { ctx.beginPath(); ctx.arc(x, -2, 2.4, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = '#6e4a2c'; ctx.beginPath(); ctx.moveTo(-8, -3); ctx.lineTo(8, -3); ctx.lineTo(6, -36); ctx.lineTo(-6, -36); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#5a3a22'; ctx.beginPath(); ctx.moveTo(1, -3); ctx.lineTo(8, -3); ctx.lineTo(6, -36); ctx.lineTo(1, -36); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#3a2616'; ctx.lineWidth = 0.6; for (let y = -8; y > -36; y -= 5) { ctx.beginPath(); ctx.moveTo(-7.4 + (-y) * 0.05, y); ctx.lineTo(7.4 - (-y) * 0.05, y); ctx.stroke(); }
+      ctx.fillStyle = '#8a6a44'; ctx.fillRect(-6.5, -39, 13, 3);
+      ctx.fillStyle = '#9a8a6a'; for (const x of [-5, -1, 3]) ctx.fillRect(x, -42, 2, 3);
+      const br = e.bridge || 0; ctx.save(); ctx.translate(6, -34); ctx.rotate(-1.5 + br * 1.5); ctx.fillStyle = '#7a5a3a'; ctx.fillRect(0, -1, 9, 2); ctx.restore();
     } else {
       const arm = e.fire > 0 ? -1.3 + (0.5 - e.fire) * 4 : -0.3;
       ctx.fillStyle = '#4a3020'; for (const x of [-5, 5]) { ctx.beginPath(); ctx.arc(x, -1.8, 2, 0, TAU); ctx.fill(); }
@@ -452,7 +560,8 @@
     for (const m of S.missiles) {
       const f = m.t / m.dur; const x = m.x0 + (m.x1 - m.x0) * f, y = m.y0 + (m.y1 - m.y0) * f;
       const p = proj(x, y, W.groundH(x, y)); const z = Math.sin(f * Math.PI) * 60;
-      ctx.fillStyle = '#6a645a'; ctx.beginPath(); ctx.arc(p[0], p[1] - z - 4, 2.2, 0, TAU); ctx.fill();
+      if (m.corpse) { ctx.save(); ctx.translate(p[0], p[1] - z - 4); ctx.rotate(m.t * 6); ctx.fillStyle = '#8a7a6a'; ctx.fillRect(-3, -1, 6, 2); ctx.fillStyle = '#6a5a4a'; ctx.beginPath(); ctx.arc(3.4, 0, 1.3, 0, TAU); ctx.fill(); ctx.strokeStyle = '#6a5a4a'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(-3, -0.5); ctx.lineTo(-5, -2); ctx.moveTo(-3, 0.5); ctx.lineTo(-5, 2); ctx.stroke(); ctx.restore(); }
+      else { ctx.fillStyle = '#6a645a'; ctx.beginPath(); ctx.arc(p[0], p[1] - z - 4, 2.2, 0, TAU); ctx.fill(); }
       ctx.fillStyle = 'rgba(20,20,20,0.2)'; ctx.beginPath(); ctx.ellipse(p[0], p[1], 2.5, 1, 0, 0, TAU); ctx.fill();
     }
   };

@@ -613,7 +613,9 @@
     const S = G.S;
     const age = v.age;
     const sc = age < 2 ? 0.45 : age < 16 ? 0.55 + (age / 16) * 0.42 : 1;
-    const warrior = v.role === 'guerreiro' && age >= 16 && !v.captive;
+    const levy = !!(v.unit && v.task && v.task.type === 'band' && age >= 16 && !v.captive);
+    const warrior = (v.role === 'guerreiro' && age >= 16 && !v.captive) || levy;
+    const mounted = v.unit === 'cavalaria' && !v.elite && levy && act !== 'sit';
     const cloth = v.captive ? '#8b8478' : age < 16 ? v.kidCloth : warrior ? (v._fc || '#8a3a2a') : (CLOTH[v.role] || '#c9763a');
     const act = v.act, at = v.actT;
     if (lod) { // far away: simple dots
@@ -644,9 +646,24 @@
     const dancing = act === 'dance';
     const bob = moving ? Math.abs(Math.sin(ph)) * 0.6 : dancing ? Math.abs(Math.sin(at * 7 + v.id)) * 1.6 : 0;
     const hurt = v.hurt > 0;
+    // a horse under the rider
+    if (mounted) {
+      const lg = moving ? Math.sin(ph * 0.8) * 1.4 : 0;
+      c.strokeStyle = '#5a3a22'; c.lineWidth = 1.1;
+      line(c, -3.2, -4.6, -3.2 + lg, 0); line(c, -2.2, -4.6, -2.2 - lg, 0); line(c, 2.6, -4.6, 2.6 - lg, 0); line(c, 3.6, -4.6, 3.6 + lg, 0);
+      c.fillStyle = v.id % 3 === 0 ? '#3a2a20' : v.id % 3 === 1 ? '#8a5a34' : '#c8b8a0';
+      c.beginPath(); c.ellipse(0.2, -6, 4.8, 2.2, 0, 0, TAU); c.fill();
+      c.beginPath(); c.moveTo(3.4, -7); c.lineTo(5.6, -11); c.lineTo(7, -10.4); c.lineTo(4.8, -6); c.fill();
+      c.beginPath(); c.ellipse(7, -10.8, 1.9, 1.05, 0.4, 0, TAU); c.fill();
+      c.fillStyle = '#2a1a10'; c.beginPath(); c.moveTo(3.8, -8); c.lineTo(5.4, -11.6); c.lineTo(4.2, -11); c.fill();
+      c.strokeStyle = '#2a1a10'; c.lineWidth = 1; line(c, -4.6, -6.4, -6, -3.6);
+      c.fillStyle = v._fc || '#8a3a2a'; c.fillRect(-2, -8.4, 4, 1.4);
+      c.translate(0, -5.2);
+    }
     // legs
     c.strokeStyle = '#3b2b20'; c.lineWidth = 1.15;
-    if (act === 'sit' || act === 'pottery') { line(c, -0.8, -3.4, 2.4, -3.2); line(c, 2.4, -3.2, 2.6, -0.2); line(c, 0.6, -3.4, 3.4, -3); line(c, 3.4, -3, 3.6, 0); if (act === 'pottery') { c.fillStyle = '#6a4a30'; c.fillRect(-2.2, -1.6, 3.2, 1.6); } }
+    if (mounted) { line(c, -0.5, -3.8, 1.4, -1.8); line(c, 1.4, -1.8, 1.2, 0.2); }
+    else if (act === 'sit' || act === 'pottery') { line(c, -0.8, -3.4, 2.4, -3.2); line(c, 2.4, -3.2, 2.6, -0.2); line(c, 0.6, -3.4, 3.4, -3); line(c, 3.4, -3, 3.6, 0); if (act === 'pottery') { c.fillStyle = '#6a4a30'; c.fillRect(-2.2, -1.6, 3.2, 1.6); } }
     else if (act === 'milk') { line(c, -0.8, -2, 1.6, -1.6); line(c, 1.6, -1.6, 1.2, 0); line(c, 0.8, -2, 2.6, -1.2); line(c, 2.6, -1.2, 2.8, 0); c.fillStyle = '#6a4a30'; c.fillRect(-1.6, -1.4, 2.4, 1.4); }
     else {
       const run = act === 'run' ? 1.8 : 1.35;
@@ -717,6 +734,8 @@
       case 'serve': line(c, 0, -8, 2.6, -8.4); line(c, -0.4, -8, 2.2, -8.2); c.fillStyle = '#8a6a44'; c.fillRect(1.4, -8.9, 3.6, 0.5); c.fillStyle = '#c8a860'; c.fillRect(2, -10.2, 0.9, 1.3); c.fillRect(3.4, -10.2, 0.9, 1.3); break;
       case 'drink': line(c, 0, -8, 1.8, -10.4); c.fillStyle = '#a07040'; c.fillRect(1.4, -11.4, 1.2, 1.6); line(c, -0.4, -8, -0.6, -4.6); break;
       case 'write': { line(c, -0.4, -8, 1.6, -6.4); c.fillStyle = '#e8dcc0'; c.fillRect(1.2, -7.4, 2.6, 1.8); c.fillStyle = 'rgba(60,40,20,0.5)'; c.fillRect(1.5, -6.9, 1.8, 0.25); c.fillRect(1.5, -6.3, 1.4, 0.25); const s2 = Math.sin(at * 10) * 0.5; line(c, 0, -8, 2.4 + s2, -7.2); break; }
+      case 'act': { const g = Math.sin(at * 3 + v.id) * 1.6; line(c, 0, -8, 2.6, -10.5 + g); line(c, -0.4, -8, -2.4, -9.5 - g); break; }
+      case 'climb': { const s2 = Math.sin(at * 6) * 1.4; c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; const g0 = (v.z || 0) / sc; line(c, 1.4, g0, 2.4, -15); line(c, 3.4, g0, 4.4, -15); for (let yy = g0 - 1.5; yy > -15; yy -= 2.2) { const f = (g0 - yy) / (g0 + 15); line(c, 1.4 + f, yy, 3.4 + f, yy); } c.strokeStyle = v.skin; c.lineWidth = 1; line(c, 0, -8, 2.2, -11 + s2); line(c, -0.4, -8, 2, -10.4 - s2); break; }
       case 'knock': line(c, 0, -8, 2.5, -9 + Math.abs(Math.sin(at * 9)) * 0.9); line(c, -0.4, -8, -0.4, -4.4); break;
       case 'sneak': line(c, 0, -8, 1.6, -5.4); line(c, -0.4, -8, 1.2, -5); break;
       case 'guard': line(c, 0.3, -8, 0.4, -4.4); line(c, -0.3, -8, -0.4, -4.4); if (warrior) G.Arch.arms(c, v); break;
@@ -727,7 +746,13 @@
         if (v.carry && v.carry.k !== 'water') { line(c, 0, -8, 1.5, -10.2); line(c, -0.5, -8, -1.2, -10); }
         else { line(c, 0.3, -8, 0.3 + sw2, -4.4); line(c, -0.3, -8, -0.3 - sw2, -4.4); }
         if (v.captive && age >= 5) { c.strokeStyle = v.skin; line(c, 0, -8, 1.4, -5.6); line(c, -0.4, -8, 1, -5.4); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.5; c.beginPath(); c.arc(1.2, -5.4, 0.75, 0, TAU); c.stroke(); }
-        if ((warrior || (v.role === 'arqueiro' && age >= 16 && !v.captive)) && !v.carry) G.Arch.arms(c, v);
+        if (levy && v.role !== 'guerreiro' && !v.carry) {
+          // the levy: what the forge gave them — or a club
+          if (v.unit === 'milicia') { c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.9; line(c, 1.6, -4.5, 2.6, -12.5); c.fillStyle = '#5a3a22'; c.beginPath(); c.ellipse(2.7, -12.8, 1, 1.5, 0.2, 0, TAU); c.fill(); }
+          else if (v.unit === 'espadachim') { c.fillStyle = v._fc || '#8a3a2a'; c.beginPath(); c.ellipse(-2, -6.6, 2.2, 2.9, 0, 0, TAU); c.fill(); c.strokeStyle = '#6a5a4a'; c.lineWidth = 0.4; c.stroke(); c.strokeStyle = '#c4c8d0'; c.lineWidth = 0.8; line(c, 1.8, -6.5, 3.4, -11.6); c.strokeStyle = '#6a4a2a'; line(c, 1.4, -6.2, 2.6, -6.8); }
+          else G.Arch.arms(c, v);
+        } else if ((warrior || (v.role === 'arqueiro' && age >= 16 && !v.captive)) && !v.carry) G.Arch.arms(c, v);
+        if (levy && v.task.general) G.Army && G.Army.drawStandard && G.Army.drawStandard(c, v, t);
         if (v.task && ((v.task.type === 'band' && v.task.flag) || v.task.type === 'envoy')) {
           const white = v.task.type === 'envoy';
           c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.6; line(c, -1.6, -3, -1.6, -19);
@@ -759,6 +784,8 @@
     if (v.g === 'f' && age >= 5) { c.beginPath(); c.moveTo(-2.1, hy - 0.4); c.quadraticCurveTo(-2.9, hy + 2.6, -1.4, hy + 3.4); c.lineTo(-0.9, hy + 0.2); c.fill(); }
     c.fillStyle = '#2a1c14'; c.fillRect(0.9, hy - 0.2, 0.55, 0.65);
     if (v.g === 'm' && age >= 25 && v.id % 3 === 0) { c.fillStyle = hair; c.beginPath(); c.arc(0.4, hy + 1.2, 1.5, 0.1, Math.PI - 0.3); c.fill(); }
+    // the theatre mask
+    if (act === 'act') { c.fillStyle = v.id % 2 ? '#f4efe3' : '#e8b83a'; c.beginPath(); c.ellipse(0.9, hy, 2, 2.5, 0, 0, TAU); c.fill(); c.fillStyle = '#2a1c14'; c.fillRect(0.3, hy - 0.9, 0.6, 0.5); c.fillRect(1.5, hy - 0.9, 0.6, 0.5); c.strokeStyle = '#2a1c14'; c.lineWidth = 0.4; c.beginPath(); if (v.id % 2) c.arc(1.2, hy + 1.4, 0.8, Math.PI + 0.3, TAU - 0.3); else c.arc(1.2, hy + 0.6, 0.8, 0.3, Math.PI - 0.3); c.stroke(); }
     // role hats (rulers wear a crown instead)
     if (v._ruler && age >= 10 && G.Arch.crown(c, v, hy)) { /* the headgear of the culture */ }
     else if (v._ruler && age >= 10) {

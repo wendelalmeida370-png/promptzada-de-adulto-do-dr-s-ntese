@@ -47,6 +47,7 @@
     guerreiro: ['Guerreiro', 'Guerreira'], cativo: ['Cativo', 'Cativa'],
   };
   G.roleName = v => {
+    if (!v.captive && G.Army) { const t = G.Army.title(v); if (t) return t; }
     if (!v.captive && v.role === 'guerreiro' && G.Siege) { const u = G.Siege.unitName(v); if (u) return u; }
     const r = G.ROLE[v.captive ? 'cativo' : v.role] || G.ROLE.coletor; return r[v.g === 'f' ? 1 : 0];
   };

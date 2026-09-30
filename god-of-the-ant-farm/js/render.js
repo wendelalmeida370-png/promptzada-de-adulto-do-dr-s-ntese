@@ -1138,7 +1138,7 @@
     if (b.hp < b.maxHp * 0.6) { ctx.fillStyle = 'rgba(30,20,15,0.25)'; ctx.beginPath(); ctx.ellipse(sx, sy - 8, 10 * b.w, 6 * b.h, 0, 0, TAU); ctx.fill(); }
     // night windows & fires
     const occupied = G.Village && (!def.housing ? true : hasResidents(b));
-    if (nightF > 0.15 && occupied && spr.win.length) {
+    if (nightF > 0.15 && occupied && spr.win.length && !(G.Fest && G.Fest.darkB(b))) {
       emisWin.push(spr, sx, sy, nightF * (0.85 + 0.15 * Math.sin(t * 3 + b.id)));
       light(sx, sy - 8, 30 + b.w * 12, 'warm', 0.55 * nightF);
     }
@@ -1173,6 +1173,7 @@
     ctx.strokeStyle = '#5a3a22'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(sx - 4, sy + 1); ctx.lineTo(sx + 3, sy - 2); ctx.moveTo(sx - 3, sy - 2); ctx.lineTo(sx + 4, sy + 1); ctx.stroke();
     if (!b.built) return;
     const fac = G.Fac.ofSet(b.set); if (fac) drawBanner(sx + 9, sy + 2, G.Fac.hex(fac.id), t, 24);
+    if (G.Fest && G.Fest.dark(b.set)) return; // the New Fire: every flame in the city is out
     emisFire.push(sx, sy - 3, 0.9 + 0.1 * Math.sin(t * 7));
     light(sx, sy - 4, 70 + Math.sin(t * 9) * 4 + Math.sin(t * 13) * 3, 'warm', 0.65 + nightF * 0.45);
   }

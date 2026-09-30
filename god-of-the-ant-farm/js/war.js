@@ -76,6 +76,8 @@
   };
   Wr.launch = function (f, enemy, opts) {
     const S = G.S; opts = opts || {};
+    // the sacred truce of the Games: no Greek marches while they are held
+    if (f.truce > S.clock || (enemy.truce > S.clock && f.civ === 'grego')) return null;
     let best = null, bd = 1e9, from = null;
     for (const s of G.Fac.settlementsOf(enemy.id)) for (const o of G.Fac.settlementsOf(f.id)) { const d = G.dist(s.cx, s.cy, o.cx, o.cy); if (d < bd) { bd = d; best = s; from = o; } }
     // across the water (or by choice, for sea raiders) the war goes by ship
@@ -87,21 +89,22 @@
       if (v.captive || v.age < 16 || v.age >= 58 || v.hp < 55 || v.preg > 0 || v.held || v.air) continue;
       if (fid(v) !== f.id || v.id === f.leader && !opts.all) continue;
       if (v.task && (v.task.type === 'band' || v.task.type === 'combat' || busyDiplomat(v) || v.task.pri >= 4)) continue;
-      if (G.dist(v.x, v.y, from.cx, from.cy) > 32) continue;
+      if (G.dist(v.x, v.y, from.cx, from.cy) > (G.Army ? 60 : 32)) continue; // a host is levied from the whole region
       const w = v.role === 'guerreiro' ? 3 : (v.role === 'cacador' ? 1.5 : 0) + v.courage + (v.fury > 0 ? 3 : 0);
       cands.push([w, v]);
     }
     cands.sort((a, b) => b[0] - a[0]);
     const pe = G.Politics.leaderPe(f);
     const warriors = cands.filter(c => c[1].role === 'guerreiro').length;
-    let size = Math.max(warriors, Math.round(cands.length * (0.22 + pe.agg * 0.25)), Math.min(4, cands.length));
-    if (opts.size) size = opts.size;
-    size = Math.min(size, 18, cands.length);
-    if (size < 3) return null;
     let defenders = 0; for (const v of S.villagers.values()) if (v.set === best.id && adultFree(v)) defenders++;
+    let size;
+    if (G.Army) size = G.Army.size(f, cands, best, opts, pe, defenders);
+    else { size = Math.max(warriors, Math.round(cands.length * (0.22 + pe.agg * 0.25)), Math.min(4, cands.length)); if (opts.size) size = opts.size; size = Math.min(size, 18, cands.length); }
+    if (size < 3) return null;
     // only fools attack a much larger village (unless a god is pushing them)
     if (!opts.fury && size < defenders * (0.55 - pe.agg * 0.2)) return null;
     const members = cands.slice(0, size).map(c => c[1]);
+    if (opts.target) { const tg = S.settlements.get(opts.target); if (tg && tg.fac === enemy.id) best = tg; }
     const goal = opts.goal || Wr.chooseGoal(f, enemy, best, members.length);
     const ang = Math.atan2(best.cy - from.cy, best.cx - from.cx);
     const rally = spotNear(from.cx + Math.cos(ang) * 3, from.cy + Math.sin(ang) * 3, 2) || [from.cx, from.cy];
@@ -115,6 +118,8 @@
     Wr.bands.set(b.id, b);
     members.forEach((v, k) => { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'band', band: b.id, pri: 3.2, kind: 'band', flag: k === 0 }); });
     f.attackCD = G.rr(120, 200) * (1.2 - pe.agg * 0.5);
+    // a real host: companies, officers, formations and a plan
+    if (G.Army && members.length >= 8) G.Army.organize(b, members, f, enemy, best, from, opts);
     return b;
   };
   Wr.makeBand = function (f, enemy, set, members, goal, o) {
@@ -132,6 +137,7 @@
     const S = G.S; if (!Wr.bands.has(b.id)) return;
     Wr.bands.delete(b.id);
     G.Siege && G.Siege.onDisband(b);
+    G.Army && G.Army.onDisband(b);
     const ship = b.ship && G.Naval && G.Naval.aboard(b.ship);
     for (const id of b.members) {
       const v = S.villagers.get(id);
@@ -168,6 +174,9 @@
     const f = G.Fac.get(b.fac), en = G.Fac.get(b.enemy), set = S.settlements.get(b.set);
     const alive = b.members.length;
     if (!f || !f.alive || !alive) { Wr.disband(b); return; }
+    // hosts follow their general's plan; the old ways take over for plunder and the road home
+    if (b.army && b.life < 420 && G.Army.bandTick(b, dt, set, f, en)) return;
+    if (b.goal === 'defesa') { if (b.life > 300 || !set || set.fac !== b.fac) Wr.disband(b, true); return; }
     if (b.st !== 'retorno' && (!en || !en.alive || !hostile(b.fac, b.enemy) || !set || set.fac !== b.enemy)) { b.st = 'retorno'; b.t = 0; }
     if (b.life > 260) { Wr.disband(b); return; }
     const lead = S.villagers.get(b.members[0]);
@@ -497,6 +506,9 @@
     if (v.arm === 'arco') d *= 0.65;
     if (o.elite === 'berserker') d *= 1.15;
     if (o.role === 'guerreiro' && !o.captive) { d *= G.Civ.t(fo, 'armor'); if (o.elite === 'falange' || o.elite === 'legiao') d *= 0.75; }
+    // levies with a weapon from the forge hit harder than with a club
+    if (v._armed && v.role !== 'guerreiro') d *= 1.35;
+    if (G.Army) d *= G.Army.dmgMul(v, o, false);
     return d * G.rr(0.8, 1.2);
   };
   Wr.hitChance = (v, o) => 0.72 + (v.role === 'guerreiro' ? 0.08 : 0) - (o.role === 'guerreiro' ? 0.08 : 0) + (v.fury > 0 ? 0.1 : 0);
@@ -564,6 +576,13 @@
       G.Siege.shoot(v, o, t, b);
       return;
     }
+    if (d > 0.85 && d < 5 && W.losClear(v.x, v.y, o.x, o.y)) {
+      // close and in the open: no need to plan a path
+      const sp = v.speed * 1.2 * dt; const k = Math.min(1, sp / d);
+      v.x += (o.x - v.x) * k; v.y += (o.y - v.y) * k; v.path = null; v.moving = true; v.walkPh += sp * 8.5; v.act = '';
+      v.face = (o.x - o.y) - (v.x - v.y) > 0 ? 1 : -1;
+      return;
+    }
     if (d > 0.85) {
       t.rt = (t.rt || 0) - dt;
       if (t.rt <= 0 || H.arrived(v)) {
@@ -580,6 +599,7 @@
     t.cd = G.rr(0.8, 1.1); v.actT = 0;
     Wr.strike(v, o, t, b);
   }
+  Wr.fightStep = fightStep;
   const badFoe = (t, o) => t.bad && t.bad[o.id] > Wr.clock;
   const unreachableSpot = o => (o.task && o.task.type === 'swim') || !W.walkableXY(o.x, o.y);
   function pickFoe(v, b) {
@@ -654,6 +674,8 @@
   function runBand(v, t, dt, H) {
     const S = G.S; const b = Wr.bands.get(t.band);
     if (!b) return H.end(v);
+    if (b.army && G.Army.runSoldier(v, t, b, dt, H)) return;
+    if (b.goal === 'defesa') { t.foe = pickFoe(v, b); const fo = t.foe && S.villagers.get(t.foe); if (fo) return fightStep(v, t, fo, dt, H, b); return; }
     t.scan = (t.scan || 0) - dt;
     if (t.scan <= 0) { t.scan = 0.35 + G.R() * 0.2; if (b.st !== 'reunir') t.foe = pickFoe(v, b); }
     let foe = t.foe ? S.villagers.get(t.foe) : null;
@@ -932,6 +954,7 @@
     const killer = v.lastBy ? S.villagers.get(v.lastBy) : null; const kf = killer ? fid(killer) : 0;
     if (kf && kf !== f0) { const r = G.Fac.rel(kf, f0); if (r) r.grudge = Math.min(100, r.grudge + 2); }
     for (const b of Wr.bands.values()) if (b.fac === f0 && b.members.includes(v.id)) b.lost++;
+    G.Army && G.Army.onDeath(v, killer);
     if (cause === 'execution' || cause === 'coup') return;
     let bt = Wr.battles.find(x => G.dist(x.x, x.y, v.x, v.y) < 14 && Wr.clock - x.last < 25);
     if (!bt) { bt = { x: v.x, y: v.y, last: 0, dead: {}, names: [] }; Wr.battles.push(bt); }
@@ -981,7 +1004,7 @@
     for (const f of G.Fac.all()) {
       const enemies = G.Fac.enemiesOf(f.id); if (!enemies.length) continue;
       if (S.divinePeace > 0) continue;
-      let busy = false; for (const b of Wr.bands.values()) if (b.fac === f.id) { busy = true; break; }
+      let busy = false; for (const b of Wr.bands.values()) if (b.fac === f.id && b.goal !== 'defesa') { busy = true; break; }
       if (busy || f.attackCD > 0) continue;
       if (f.weariness > 85 && G.R() < 0.7) continue;
       const en = enemies.sort((a, b) => { const ca = G.Fac.capitalOf(a.id), cb = G.Fac.capitalOf(b.id), cf = G.Fac.capitalOf(f.id); return (ca && cf ? G.dist(ca.cx, ca.cy, cf.cx, cf.cy) : 999) - (cb && cf ? G.dist(cb.cx, cb.cy, cf.cx, cf.cy) : 999); })[0];

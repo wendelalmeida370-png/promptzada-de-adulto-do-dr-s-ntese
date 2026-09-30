@@ -166,7 +166,7 @@
     let drowned = 0;
     for (const id of s.crew) { const v = S.villagers.get(id); if (v && v.aboard === s.id) { v.aboard = 0; G.Village.kill(v, 'drown', why === 'god'); drowned++; } }
     const nm = shipName(s);
-    if (s.kind !== 'pesca' || G.R() < 0.4) log(`${G.cap(nm)} de ${f ? f.name : 'um povo'} afundou${by ? ', atacad' + G.gen(nm) + ' por ' + (G.Fac.get(by.fac) || {}).name : why === 'storm' ? ' na tempestade' : why === 'god' ? ' pela fúria do mar' : ''}${drowned ? ` — ${drowned} ${drowned > 1 ? 'afogados' : 'afogado'}` : ''}.`, 'naval', s.x, s.y);
+    if (s.kind !== 'pesca' || G.R() < 0.4) log(`${G.cap(nm)} de ${f ? f.name : 'um povo'} afundou${by ? ', atacad' + G.gen(nm) + ' por ' + (G.Fac.get(by.fac) || {}).name : why === 'storm' ? ' na tempestade' : why === 'fire' ? ' em chamas' : why === 'god' ? ' pela fúria do mar' : ''}${drowned ? ` — ${drowned} ${drowned > 1 ? 'afogados' : 'afogado'}` : ''}.`, 'naval', s.x, s.y);
     G.FX && G.FX.splash(s.x, s.y, 1.4);
     for (let k = 0; k < 8; k++) G.FX && G.FX.spawn({ x: s.x + G.rr(-0.5, 0.5), y: s.y + G.rr(-0.5, 0.5), h: G.SEA, z: G.rr(2, 8), vz: G.rr(10, 30), vx: G.rr(-0.6, 0.6), vy: G.rr(-0.6, 0.6), g: 60, life: G.rr(1, 2), s0: 1.6, s1: 1, c: '#6e4a2c', k: 0 });
     G.Audio && G.Audio.at(s.x, s.y, 'collapse', true);
@@ -202,7 +202,7 @@
     s.t += dt;
     if (s.st !== 'back' && s.st !== 'idle' && threat(s, 6)) { if (sailTo(s, h.moor[0], h.moor[1])) s.st = 'back'; }
     switch (s.st) {
-      case 'idle': if (s.t > 5 && !G.isNight()) { const sp = fishingSpot(s); if (sp && sailTo(s, sp[0], sp[1])) { s.st = 'out'; s.shoal = sp[2] ? sp[2].id : 0; } s.t = 0; } break;
+      case 'idle': if (s.t > 5 && !G.isNight() && !Nv.blockaded(G.S.buildings.get(s.dock))) { const sp = fishingSpot(s); if (sp && sailTo(s, sp[0], sp[1])) { s.st = 'out'; s.shoal = sp[2] ? sp[2].id : 0; } s.t = 0; } break;
       case 'out': if (moveShip(s, dt)) { s.st = 'fish'; s.t = 0; s.dur = G.rr(16, 26); } break;
       case 'fish': {
         if (G.R() < dt * 0.4) G.FX && G.FX.splash(s.x + G.rr(-0.4, 0.4), s.y + G.rr(-0.4, 0.4), 0.3);
@@ -268,11 +268,29 @@
     const tg = s.target && S.ships.find(o => o.id === s.target);
     if (tg) {
       const d = G.dist(s.x, s.y, tg.x, tg.y);
+      s.ramCd = (s.ramCd || 0) - dt;
+      const hull = HULL[s.civ] || HULL.classico;
+      // the bronze ram: row hard, straight at the enemy's side
+      if (hull.ram && d < 3.2 && s.ramCd <= 0 && tg.kind !== 'pesca') {
+        const sp = Nv.SHIP[s.kind].sp * 1.6 * dt; const k = Math.min(1, sp / Math.max(0.01, d));
+        const nx = s.x + (tg.x - s.x) * k, ny = s.y + (tg.y - s.y) * k;
+        if (W.inb(nx, ny) && water(W.idx(nx, ny))) { s.x = nx; s.y = ny; s.moving = true; s.path = null; }
+        s.face = (tg.x - tg.y) - (s.x - s.y) > 0 ? 1 : -1;
+        if (d < 0.95) { s.ramCd = 7; ram(s, tg); }
+        s.st = 'hunt'; return;
+      }
+      // boarding: hooks and the corvus bridge, and the enemy ship changes hands
+      if (d < 1.3 && tg.hp < tg.maxHp * 0.45 && BOARD[s.civ] && tg.kind !== 'pesca' && s.cd <= 0) { s.cd = 2; if (board2(s, tg)) { s.target = 0; return; } }
       if (d > 2.4) { if (!s.path || s.pi >= s.path.length || (s.rt = (s.rt || 0) - dt) <= 0) { s.rt = 1.5; const w = nearestWater(tg.x, tg.y, 1) || [tg.x, tg.y]; sailTo(s, w[0], w[1]); } moveShip(s, dt); }
       else { s.moving = false; s.face = (tg.x - tg.y) - (s.x - s.y) > 0 ? 1 : -1; if (s.cd <= 0) { s.cd = 1.3; fire(s, tg); } }
       s.st = 'hunt'; return;
     }
-    if (s.st === 'hunt') { s.st = 'idle'; s.t = 0; s.path = null; }
+    if (s.st === 'hunt') { s.st = s.post ? 'blockade' : 'idle'; s.t = 0; s.path = null; }
+    if (s.st === 'blockade') {
+      const f = G.Fac.get(s.fac); if (!f || !f.fleet || !f.fleet.blockade || !s.post) { s.post = null; s.st = 'idle'; return; }
+      if (!s.path || s.pi >= s.path.length) { if (G.dist(s.x, s.y, s.post[0], s.post[1]) > 1) sailTo(s, s.post[0], s.post[1]); }
+      moveShip(s, dt); return;
+    }
     // escort the people's own transports, otherwise patrol the home waters
     if (s.st === 'idle' && s.t > 3) {
       const tr = S.ships.find(o => o.fac === s.fac && o.kind === 'transporte' && (o.st === 'sail' || o.st === 'wait'));
@@ -283,6 +301,89 @@
       s.t = 0;
     } else if (s.st === 'patrol') { if (moveShip(s, dt)) { s.st = 'idle'; s.t = 0; } }
   }
+
+  // ------------------------------ naval tactics ------------------------------
+  const BOARD = { romano: 'o corvo, a ponte de abordagem', nordico: 'ganchos e machados', grego: 'fuzileiros', egipcio: 'ganchos', asteca: null, classico: 'ganchos' };
+  function ram(s, o) {
+    const S = G.S;
+    const dmg = G.rr(34, 52) * (G.Civ.has(s.fac, 'bronze') ? 1.15 : 1);
+    o.hp -= dmg; o.hurt = 0.5; s.hp -= dmg * 0.15;
+    for (let k = 0; k < 10; k++) G.FX && G.FX.spawn({ x: o.x + G.rr(-0.4, 0.4), y: o.y + G.rr(-0.4, 0.4), h: G.SEA, z: G.rr(2, 5), vz: G.rr(15, 35), vx: G.rr(-0.6, 0.6), vy: G.rr(-0.6, 0.6), g: 60, life: G.rr(0.8, 1.4), s0: 1.2, s1: 0.8, c: '#6e4a2c', k: 0 });
+    G.FX && G.FX.splash(o.x, o.y, 1); G.Audio && G.Audio.at(o.x, o.y, 'collapse');
+    const a = G.Fac.get(s.fac), b = G.Fac.get(o.fac);
+    if (a && b && (!a._ramLog || S.day - a._ramLog > 1)) { a._ramLog = S.day; log(`${G.cap(shipName(s))} de ${a.name} abalroou ${shipName(o)} de ${b.name} com o esporão de bronze!`, 'naval', o.x, o.y); }
+    if (o.hp <= 0) Nv.sink(o, s);
+  }
+  function board2(s, o) {
+    const S = G.S; const a = G.Fac.get(s.fac), b = G.Fac.get(o.fac); if (!a || !b) return false;
+    // the side with more fighting spirit takes the deck
+    const win = G.R() < 0.55 + (G.Civ.t(s.fac, 'war') - G.Civ.t(o.fac, 'war')) * 0.4 + (s.civ === 'romano' ? 0.1 : 0) + (s.civ === 'nordico' ? 0.08 : 0);
+    if (!win) { s.hp -= 18; o.hp -= 8; return false; }
+    for (const id of o.crew || []) { const v = S.villagers.get(id); if (v && v.aboard === o.id) { v.aboard = 0; G.Village.kill(v, 'war', false); } }
+    o.crew = []; o.fac = s.fac; o.civ = s.civ; o.dock = s.dock; o.st = 'idle'; o.path = null; o.target = 0; o.hp = Math.max(o.hp, o.maxHp * 0.3); o.burn = 0;
+    if (o.kind === 'transporte') o.kind = 'guerra';
+    a.st.prizes = (a.st.prizes || 0) + 1;
+    log(`Abordagem! Com ${BOARD[s.civ]}, marinheiros de ${a.name} tomaram ${shipName(o)} de ${b.name}.`, 'naval', o.x, o.y);
+    return true;
+  }
+  // the admiral and the fleet: gathered when a war is fought at sea
+  const ADM = { grego: 'navarco', romano: 'prefeito da frota', egipcio: 'comandante da frota do rei', asteca: 'senhor das canoas', nordico: 'jarl do mar', classico: 'almirante' };
+  function fleetCouncil() {
+    const S = G.S;
+    for (const f of G.Fac.all()) {
+      const war = Nv.shipsOf(f.id, 'guerra'); const enemies = G.Fac.enemiesOf(f.id);
+      if (war.length < 2 || !enemies.length) { f.fleet = null; continue; }
+      if (!f.fleet) {
+        const cand = [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === f.id && !v.captive && v.age >= 25 && v.age < 60).sort((a, b) => (b.kills || 0) + b.courage - (a.kills || 0) - a.courage)[0];
+        f.fleet = { adm: cand ? cand.name : null, since: S.day, tactic: null };
+        if (cand) log(`${f.name} reúne uma frota de ${war.length} navios de guerra sob o ${ADM[f.civ || 'classico']} ${cand.name}.`, 'naval', war[0].x, war[0].y);
+      }
+      // the plan at sea: blockade their ports when our ships outnumber theirs, fire ships when they outnumber ours
+      const their = enemies.reduce((n, e) => n + Nv.shipsOf(e.id, 'guerra').length, 0);
+      const fl = f.fleet;
+      if ((war.length > their || (war.length === their && G.Politics.leaderPe(f).agg > 0.35)) && !fl.blockade) {
+        const en = enemies.find(e => Nv.docksOf(e.id).length);
+        const dock = en && Nv.docksOf(en.id).sort((a, b) => G.Village.pop(b.set) - G.Village.pop(a.set))[0];
+        const di = dock && Nv.dockInfo(dock);
+        if (di && di.moor) {
+          fl.blockade = { dock: dock.id, fac: en.id, x: di.moor[0], y: di.moor[1] }; fl.tactic = 'bloqueio';
+          const set = S.settlements.get(dock.set);
+          if (!(f._blockLog && f._blockLog[dock.id] > S.day - 2)) { (f._blockLog = f._blockLog || {})[dock.id] = S.day; log(`A frota de ${f.name} bloqueia o porto de ${set ? set.name : en.name}: nenhum barco de pesca ou mercante sai nem entra.`, 'naval', di.moor[0], di.moor[1]); }
+          war.slice(0, Math.max(1, Math.ceil(war.length * 0.6))).forEach((sh, k) => { const a = k / 3 * TAU; const p = nearestWater(di.moor[0] + Math.cos(a) * 3.5, di.moor[1] + Math.sin(a) * 3.5, 2); if (p) { sh.post = p; sh.st = 'blockade'; sailTo(sh, p[0], p[1]); } });
+        }
+      }
+      if (fl.blockade) {
+        const d = S.buildings.get(fl.blockade.dock);
+        if (!d || !G.Fac.atWar(f.id, fl.blockade.fac) || !war.some(sh => sh.st === 'blockade')) { fl.blockade = null; fl.tactic = null; }
+        else d.blockT = S.clock + 6;
+      }
+      // fire ships: an old boat full of pitch and brushwood, set alight and sent at the enemy line
+      if (their >= war.length + 1 && f.stock.wood > 30 && !(fl.fireCd > S.clock)) {
+        const enemyShips = S.ships.filter(o => o.kind === 'guerra' && G.Fac.atWar(f.id, o.fac));
+        const boat = Nv.shipsOf(f.id, 'pesca').find(b => enemyShips.some(o => G.dist(o.x, o.y, b.x, b.y) < 14));
+        if (boat) {
+          const tgt = enemyShips.sort((a, b) => G.dist(a.x, a.y, boat.x, boat.y) - G.dist(b.x, b.y, boat.x, boat.y))[0];
+          boat.fireship = tgt.id; boat.st = 'fireship'; f.stock.wood -= 10; fl.fireCd = S.clock + 60; fl.tactic = 'brulote';
+          log(`Desesperada no mar, ${f.name} acende um brulote — um barco em chamas lançado contra a frota inimiga.`, 'naval', boat.x, boat.y);
+        }
+      }
+    }
+  }
+  function runFireship(s, dt) {
+    const S = G.S; const tg = S.ships.find(o => o.id === s.fireship);
+    if (!tg) { Nv.sink(s, null, 'fire'); return; }
+    if (G.R() < dt * 8) G.FX && G.FX.spawn({ x: s.x + G.rr(-0.3, 0.3), y: s.y + G.rr(-0.3, 0.3), h: G.SEA, z: G.rr(2, 6), vz: G.rr(12, 25), life: G.rr(0.6, 1.2), s0: 1.6, s1: 0.4, c: G.R() < 0.5 ? '#ffb040' : '#ff6a20', k: 4, layer: 1 });
+    const d = G.dist(s.x, s.y, tg.x, tg.y);
+    if (d < 1) {
+      for (const o of S.ships) if (o !== s && G.Fac.atWar(s.fac, o.fac) && G.dist(o.x, o.y, s.x, s.y) < 1.8) { o.hp -= 30; o.burn = 10; o.hurt = 0.5; }
+      G.FX && G.FX.ring(s.x, s.y, 0.2, 2, 1, 'rgba(255,150,50,0.9)', 2, true);
+      removeShip(s); return;
+    }
+    const sp = 2.1 * dt; const nx = s.x + (tg.x - s.x) / d * sp, ny = s.y + (tg.y - s.y) / d * sp;
+    if (W.inb(nx, ny) && water(W.idx(nx, ny))) { s.x = nx; s.y = ny; s.moving = true; s.face = (tg.x - tg.y) - (s.x - s.y) > 0 ? 1 : -1; }
+    else { if (!s.path || s.pi >= s.path.length) sailTo(s, tg.x, tg.y); moveShip(s, dt); }
+  }
+  Nv.blockaded = function (dock) { return dock && dock.blockT > G.S.clock; };
 
   // ------------------------------ exploration & contact ------------------------------
   function runExplorer(s, dt) {
@@ -598,7 +699,7 @@
       const pop = G.Fac.pop(f.id);
       // fishing boats
       const fishers = Nv.shipsOf(f.id, 'pesca').length;
-      if (fishers < Math.min(docks.length * 2, 1 + Math.floor(pop / 25)) && f.stock.wood > 30) { const d = G.pick(docks); if (Nv.dockInfo(d).moor) spawn('pesca', f, d); }
+      if (fishers < Math.min(docks.length * 2, 1 + Math.floor(pop / 25)) && f.stock.wood > 30) { const d = G.pick(docks); if (Nv.dockInfo(d).moor && !Nv.blockaded(d)) spawn('pesca', f, d); }
       // explorers look for peoples we have not met yet
       const unmet = G.Fac.all().some(o => o.id !== f.id && G.Fac.rel(f.id, o.id) && !G.Fac.rel(f.id, o.id).met);
       if (unmet && !Nv.shipsOf(f.id, 'explorador').length && G.R() < 0.25) { const d = G.pick(docks); const di = Nv.dockInfo(d); if (di.moor && Nv.openSea(di.moor[0], di.moor[1])) { const s = spawn('explorador', f, d); if (s && !f._explored) { f._explored = 1; const st = S.settlements.get(d.set); log(`Um barco de ${f.name} parte de ${st ? st.name : 'seu porto'} para explorar o horizonte.`, 'ship', s.x, s.y); } } }
@@ -614,6 +715,7 @@
         r.t = G.rr(50, 80);
         if (S.ships.filter(s => s.route === r.id).length >= 2) continue;
         const mine = docks.find(d => d.id === r.a || d.id === r.b);
+        if (Nv.blockaded(S.buildings.get(r.a)) || Nv.blockaded(S.buildings.get(r.b))) continue;
         const give = RES.slice().sort((x, y) => f.stock[y] - f.stock[x])[0];
         const n = Math.min(16, Math.floor(f.stock[give] * 0.08)); if (n < 4) continue;
         const s = spawn('mercante', f, mine, { route: r.id }); if (!s) continue;
@@ -626,7 +728,7 @@
   Nv.update = function (dt) {
     const S = G.S;
     tFleet -= dt; tShoal -= dt; tRoute -= dt; tScan -= dt;
-    if (tFleet <= 0) { tFleet = 4; manageFleets(); }
+    if (tFleet <= 0) { tFleet = 4; manageFleets(); fleetCouncil(); }
     if (tShoal <= 0) { tShoal = 30; updateShoals(30); }
     if (tRoute <= 0) { tRoute = 20; updateSeaRoutes(); }
     if (tScan <= 0) { tScan = 1; scanContacts(); }
@@ -636,6 +738,8 @@
       // storms can sink small boats
       if (S.weather.storm > 0 && (s.kind === 'pesca' || s.kind === 'explorador') && s.st !== 'idle' && G.R() < dt * 0.002) { Nv.sink(s, null, 'storm'); continue; }
       if (s.dead) { removeShip(s); continue; }
+      if (s.burn > 0) { s.burn -= dt; s.hp -= dt * 4; if (G.R() < dt * 6) G.FX && G.FX.spawn({ x: s.x + G.rr(-0.4, 0.4), y: s.y + G.rr(-0.4, 0.4), h: G.SEA, z: G.rr(3, 8), vz: G.rr(10, 22), life: G.rr(0.6, 1.1), s0: 1.4, s1: 0.3, c: '#ff8a30', k: 4, layer: 1 }); if (s.hp <= 0) { Nv.sink(s, null, 'fire'); continue; } }
+      if (s.st === 'fireship') { runFireship(s, dt); continue; }
       switch (s.kind) {
         case 'pesca': runFishing(s, dt); break;
         case 'explorador': runExplorer(s, dt); break;
