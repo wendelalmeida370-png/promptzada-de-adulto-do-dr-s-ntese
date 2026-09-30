@@ -356,6 +356,18 @@ export class Story {
       const d = Math.hypot(g.entity.pos.x - b.pos.x, g.entity.pos.z - b.pos.z);
       if (d < 6 && b.mode !== 'stare') { b.mode = 'stare'; b.stareAt = g.entity.pos; b.hiss(); }
     } else if (b.mode === 'stare' && !this._bentoStareFixed) b.mode = 'idle';
+    // carinho nos gatos (olhando pra eles de pertinho)
+    if (!this.customPrompt && !g.hover && !g.cutscene && !g.player.hidden && !g.phone.raised && g.state === 'playing') {
+      for (const cat of [g.cats.bento, g.cats.lili]) {
+        if (!cat.canPet()) continue;
+        const hp = cat.headWorld();
+        if (Math.hypot(hp.x - g.player.pos.x, hp.z - g.player.pos.z) > 1.7) continue;
+        if (!this.lookingAt([hp.x, hp.y - 0.06, hp.z], 0.45, 2.3)) continue;
+        this.customPrompt = T(cat.kind === 'bento' ? 'Fazer carinho no {bento}' : 'Fazer carinho na {lili}');
+        this._customAction = () => this.petCat(cat);
+        break;
+      }
+    }
     // sons da casa (silêncios e estalos)
     this._creakT = (this._creakT || rand(20, 40)) - dt;
     if (this._creakT < 0 && g.state === 'playing' && !g.cutscene) {
@@ -371,6 +383,16 @@ export class Story {
     if (F.act === 1 && Math.random() < dt / 90) audio.play('car', { pos: [2, -5, -30], bus: 'amb' });
   }
 
+  petCat(cat) {
+    const F = this.F, g = this.g;
+    cat.pet();
+    g.fear = Math.max(0, (g.fear || 0) - 0.35);
+    const k = 'petted_' + cat.kind;
+    if (F[k]) return;
+    F[k] = true;
+    if (cat.kind === 'bento') this.say0('{rafa}', F.act >= 2 ? '*O {bento} empurra a cabeça na minha mão. Pelo menos ele continua igualzinho.*' : '*O {bento} empurra a cabeça na minha mão e ronrona igual motor velho.*');
+    else this.say0('{rafa}', F.act >= 2 ? '*A {lili} fecha os olhos devagar. Gato só faz isso com quem confia.*' : '*A {lili} fecha os olhos devagar. É o jeito dela de dizer que tá tudo bem.*');
+  }
   onEnter(z) {
     const fn = this['enter_' + z];
     if (fn) fn.call(this);

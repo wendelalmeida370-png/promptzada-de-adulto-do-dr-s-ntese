@@ -468,35 +468,96 @@ function catTexture(kind) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
 }
+// olho de gato: íris com pupila em fenda
+function catEyeTexture(kind) {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+  const x = c.getContext('2d');
+  const [a, b] = kind === 'bento' ? ['#dfe86a', '#6f8a1a'] : ['#f2c65a', '#a3651c'];
+  const gr = x.createRadialGradient(32, 32, 4, 32, 32, 31);
+  gr.addColorStop(0, a); gr.addColorStop(0.75, b); gr.addColorStop(1, '#2a220c');
+  x.fillStyle = gr; x.beginPath(); x.arc(32, 32, 31, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#060504'; x.beginPath(); x.ellipse(32, 32, 5.5, 25, 0, 0, Math.PI * 2); x.fill();
+  x.fillStyle = 'rgba(255,255,255,0.85)'; x.beginPath(); x.arc(40, 21, 4, 0, Math.PI * 2); x.fill();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+let catShineTex = null;
+function shineTexture() {
+  if (catShineTex) return catShineTex;
+  const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+  const x = c.getContext('2d');
+  const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+  catShineTex = new THREE.CanvasTexture(c);
+  return catShineTex;
+}
+
+// Gato com esqueleto simples: o corpo gira em volta do quadril (sentar), pescoço/cabeça,
+// quatro patas, rabo em segmentos, olhos que piscam e brilham na lanterna. Olha pra +z.
 export function buildCat(kind) {
   const root = new THREE.Group();
   const fur = new THREE.MeshStandardMaterial({ map: catTexture(kind), roughness: 1 });
-  const body = sphere(root, 0.12, fur, 0, 0.19, 0, { sx: 0.9, sy: 0.85, sz: 1.9 });
-  void body;
-  const head = group(root, 0, 0.3, 0.22);
-  sphere(head, 0.085, fur, 0, 0, 0, { sx: 1.05, sy: 0.95, sz: 0.95 });
+  const pink = std('#e49aa3', { roughness: 0.6 });
+  const nose = std(kind === 'bento' ? '#3a2a2a' : '#d98a92', { roughness: 0.5 });
+  // corpo (pivô no quadril)
+  const hips = group(root, 0, 0.165, -0.1);
+  const body = group(hips, 0, 0, 0);
+  sphere(body, 0.1, fur, 0, 0, -0.01, { sx: 0.95, sy: 0.92, sz: 1.15 });
+  sphere(body, 0.094, fur, 0, 0.012, 0.14, { sx: 0.9, sy: 0.96, sz: 1.3 });
+  sphere(body, 0.08, fur, 0, -0.028, 0.07, { sx: 0.96, sy: 0.82, sz: 1.6 });
+  // pescoço e cabeça
+  const neck = group(hips, 0, 0.065, 0.25);
+  sphere(neck, 0.052, fur, 0, 0, -0.01, { sx: 1, sy: 1.1, sz: 1.1 });
+  const head = group(neck, 0, 0.05, 0.035);
+  sphere(head, 0.07, fur, 0, 0, 0, { sx: 1.14, sy: 0.96, sz: 1.0 });
+  sphere(head, 0.033, fur, 0, -0.024, 0.052, { sx: 1.3, sy: 0.82, sz: 0.95 });
+  sphere(head, 0.0085, nose, 0, -0.01, 0.083, { seg: 8, seg2: 5, sx: 1.2, sy: 0.8, sz: 1 });
+  sphere(head, 0.012, pink, 0, -0.043, 0.06, { seg: 6, seg2: 4, sx: 1.4, sy: 0.6, sz: 1, cast: false });
+  const ears = [], eyes = [], shines = [];
+  const eyeTex = catEyeTexture(kind);
+  const eyeMat = new THREE.MeshBasicMaterial({ map: eyeTex });
+  const ballMat = new THREE.MeshBasicMaterial({ color: 0x0b0906 });
+  const shineMat = new THREE.SpriteMaterial({ map: shineTexture(), color: kind === 'bento' ? 0xd6ff72 : 0xffd27a, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 });
   for (const sx of [-1, 1]) {
-    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.032, 0.07, 4), fur);
-    ear.position.set(sx * 0.045, 0.08, -0.01); ear.rotation.z = -sx * 0.25; head.add(ear);
-    const eye = sphere(head, 0.014, new THREE.MeshBasicMaterial({ color: kind === 'bento' ? 0xc8e04a : 0xe0b84a }), sx * 0.032, 0.015, 0.075, { seg: 8, seg2: 6, cast: false });
-    void eye;
+    const ear = group(head, sx * 0.04, 0.052, -0.008);
+    ear.rotation.z = -sx * 0.3;
+    const outer = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.064, 4), fur); outer.position.y = 0.026; outer.rotation.y = Math.PI / 4; outer.castShadow = true; ear.add(outer);
+    const inner = new THREE.Mesh(new THREE.ConeGeometry(0.019, 0.046, 3), pink); inner.position.set(0, 0.02, 0.012); ear.add(inner);
+    ears.push(ear);
+    const eg = group(head, sx * 0.03, 0.012, 0.055);
+    eg.rotation.y = sx * 0.28;
+    sphere(eg, 0.014, ballMat, 0, 0, 0, { seg: 10, seg2: 8, cast: false });
+    const iris = new THREE.Mesh(new THREE.CircleGeometry(0.0128, 16), eyeMat); iris.position.z = 0.0105; eg.add(iris);
+    eyes.push(eg);
+    const sh = new THREE.Sprite(shineMat.clone()); sh.position.set(sx * 0.031, 0.013, 0.074); sh.scale.setScalar(0.1); sh.renderOrder = 5;
+    head.add(sh); shines.push(sh);
   }
-  sphere(head, 0.012, std('#e59aa3'), 0, -0.012, 0.085, { seg: 6, seg2: 4 });
-  const legs = [];
-  for (const [x, z] of [[-0.06, 0.13], [0.06, 0.13], [-0.06, -0.13], [0.06, -0.13]]) {
-    const l = group(root, x, 0.14, z);
-    cyl(l, 0.022, 0.02, 0.14, fur, 0, -0.07, 0, { seg: 6 });
-    legs.push(l);
-  }
+  // bigodes
+  const wg = new THREE.BufferGeometry();
+  const wv = [];
+  for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) { const y = -0.026 + i * 0.006; wv.push(sx * 0.03, y, 0.064, sx * 0.1, y + (i - 1) * 0.014, 0.05 + i * 0.006); }
+  wg.setAttribute('position', new THREE.Float32BufferAttribute(wv, 3));
+  head.add(new THREE.LineSegments(wg, new THREE.LineBasicMaterial({ color: 0xdedad2, transparent: true, opacity: 0.38 })));
+  // patas
+  const leg = (x, y, z, hind) => {
+    const g = group(hips, x, y, z);
+    if (hind) sphere(g, 0.045, fur, 0, -0.01, 0.0, { sx: 0.62, sy: 1.05, sz: 1.15 });
+    cyl(g, hind ? 0.019 : 0.017, 0.014, 0.12, fur, 0, -0.07, hind ? -0.012 : 0, { seg: 7 });
+    sphere(g, 0.02, fur, 0, -0.132, hind ? 0.004 : 0.012, { sx: 1.0, sy: 0.6, sz: 1.35, seg: 8, seg2: 6 });
+    return g;
+  };
+  const legs = { fl: leg(-0.046, -0.03, 0.2, false), fr: leg(0.046, -0.03, 0.2, false), hl: leg(-0.052, -0.02, -0.035, true), hr: leg(0.052, -0.02, -0.035, true) };
+  // rabo
   const tail = [];
-  let parent = group(root, 0, 0.22, -0.2);
-  for (let i = 0; i < 6; i++) {
-    const seg = group(parent, 0, 0, -0.045);
-    sphere(seg, 0.022 - i * 0.002, fur, 0, 0, 0, { seg: 6, seg2: 4 });
+  let parent = group(hips, 0, 0.035, -0.12);
+  for (let i = 0; i < 9; i++) {
+    const seg = group(parent, 0, 0, i === 0 ? 0 : -0.034);
+    sphere(seg, 0.021 - i * 0.0011, fur, 0, 0, -0.017, { seg: 7, seg2: 5, sx: 1, sy: 1, sz: 1.35 });
     tail.push(seg);
     parent = seg;
   }
-  root.userData = { head, legs, tail };
+  root.userData = { hips, body, neck, head, ears, eyes, shines, legs, tail };
   return root;
 }
 

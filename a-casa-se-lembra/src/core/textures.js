@@ -124,40 +124,62 @@ export function floorTile(base = '#d8ccb4', opts = {}) {
 
 // piso laminado de madeira (sala, corredor e quartos)
 export function woodFloor(opts = {}) {
-  return cached('wfloor' + JSON.stringify(opts), () => {
-    const c = canvas(512, 512), ctx = c.getContext('2d');
+  return cached('wfloor2' + JSON.stringify(opts), () => {
+    // tábuas estreitas (~24 cm), emendas desencontradas, veio fino e variação suave de tom entre tábuas
+    const S = 1024, c = canvas(S, S), ctx = c.getContext('2d');
     const rnd = mulberry32(opts.seed || 5);
-    const planks = 4;
-    const ph = 512 / planks;
-    const tones = opts.tones || ['#7a4a2c', '#8a5634', '#6d4128', '#94603a', '#7f4f30'];
+    const planks = 10;
+    const ph = S / planks;
+    const base = opts.tones ? opts.tones[0] : '#7d4d2f';
+    const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+    const [br, bg, bb] = hex(base);
+    const shade = (k) => `rgb(${Math.round(br * k)},${Math.round(bg * k)},${Math.round(bb * k)})`;
     for (let r = 0; r < planks; r++) {
-      let x = -rnd() * 300;
-      while (x < 512) {
-        const len = 260 + rnd() * 260;
-        ctx.fillStyle = tones[Math.floor(rnd() * tones.length)];
-        ctx.fillRect(x, r * ph, len, ph);
-        for (let k = 0; k < 16; k++) {
-          ctx.strokeStyle = `rgba(40,20,10,${0.08 + rnd() * 0.12})`;
-          ctx.lineWidth = 1 + rnd() * 1.5;
-          const yy = r * ph + rnd() * ph;
+      let x = -rnd() * S * 0.6;
+      while (x < S) {
+        const len = S * (0.45 + rnd() * 0.5);
+        const k = 0.9 + rnd() * 0.2;
+        const y0 = r * ph;
+        // tom da tábua com um degradê leve no comprimento
+        const g = ctx.createLinearGradient(x, 0, x + len, 0);
+        g.addColorStop(0, shade(k * (0.97 + rnd() * 0.05))); g.addColorStop(0.5, shade(k)); g.addColorStop(1, shade(k * (0.95 + rnd() * 0.06)));
+        ctx.fillStyle = g; ctx.fillRect(x, y0, len, ph);
+        // veio: linhas finas quase paralelas, com ondulação
+        const lines = 22 + Math.floor(rnd() * 10);
+        for (let i = 0; i < lines; i++) {
+          const yy = y0 + 2 + rnd() * (ph - 4);
+          const dark = rnd() < 0.7;
+          ctx.strokeStyle = dark ? `rgba(35,18,8,${0.05 + rnd() * 0.1})` : `rgba(255,220,180,${0.03 + rnd() * 0.05})`;
+          ctx.lineWidth = 0.6 + rnd() * 1.4;
+          const w1 = (rnd() - 0.5) * 5, w2 = (rnd() - 0.5) * 5;
           ctx.beginPath(); ctx.moveTo(x, yy);
-          ctx.bezierCurveTo(x + len * 0.3, yy + (rnd() - 0.5) * 8, x + len * 0.6, yy + (rnd() - 0.5) * 8, x + len, yy + (rnd() - 0.5) * 6);
+          ctx.bezierCurveTo(x + len * 0.33, yy + w1, x + len * 0.66, yy + w2, x + len, yy + (rnd() - 0.5) * 3);
           ctx.stroke();
         }
-        if (rnd() < 0.3) {
-          ctx.fillStyle = 'rgba(40,20,10,0.25)';
-          ctx.beginPath(); ctx.ellipse(x + rnd() * len, r * ph + rnd() * ph, 8 + rnd() * 8, 3 + rnd() * 3, 0, 0, Math.PI * 2); ctx.fill();
+        // nó de vez em quando
+        if (rnd() < 0.18) {
+          const kx = x + rnd() * len, ky = y0 + ph * (0.3 + rnd() * 0.4);
+          ctx.fillStyle = 'rgba(40,20,10,0.28)';
+          ctx.beginPath(); ctx.ellipse(kx, ky, 7 + rnd() * 8, 2.5 + rnd() * 2.5, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(40,20,10,0.12)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.ellipse(kx, ky, 16 + rnd() * 10, 5 + rnd() * 3, 0, 0, Math.PI * 2); ctx.stroke();
         }
-        ctx.fillStyle = 'rgba(20,10,5,0.55)';
-        ctx.fillRect(x, r * ph, 2, ph);
+        // emenda da ponta
+        ctx.fillStyle = 'rgba(20,10,5,0.5)'; ctx.fillRect(x, y0, 2, ph);
+        ctx.fillStyle = 'rgba(255,225,190,0.08)'; ctx.fillRect(x + 2, y0, 1, ph);
         x += len;
       }
-      ctx.fillStyle = 'rgba(20,10,5,0.6)';
-      ctx.fillRect(0, r * ph, 512, 2);
+      // chanfro entre tábuas: linha escura + fio de luz
+      ctx.fillStyle = 'rgba(18,9,4,0.55)'; ctx.fillRect(0, r * ph, S, 2);
+      ctx.fillStyle = 'rgba(255,225,190,0.07)'; ctx.fillRect(0, r * ph + 2, S, 1);
     }
-    const g = ctx.createLinearGradient(0, 0, 512, 512);
-    g.addColorStop(0, 'rgba(255,220,180,0.06)'); g.addColorStop(1, 'rgba(0,0,0,0.06)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 512, 512);
+    // desgaste leve e irregular
+    for (let i = 0; i < 60; i++) {
+      const gx = rnd() * S, gy = rnd() * S, gr = 30 + rnd() * 90;
+      const sg = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr);
+      sg.addColorStop(0, `rgba(${rnd() < 0.5 ? '0,0,0' : '255,230,200'},0.035)`); sg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = sg; ctx.fillRect(gx - gr, gy - gr, gr * 2, gr * 2);
+    }
     return tex(c, opts.size || 2.4);
   });
 }

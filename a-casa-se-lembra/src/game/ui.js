@@ -16,14 +16,17 @@ export class UI {
     this.menuOpen = true;
     this.cb = {};
     this._wire();
-    this._menuBg();
+    this._menuOsd();
   }
 
   // ------------------------------------------------------------ HUD
   setObjective(text) {
     const o = el('objective');
     if (!text) { o.classList.remove('show'); return; }
-    el('objective-text').textContent = T(text);
+    const txt = T(text);
+    if (txt !== this._objLast && this.game.state === 'playing') audio.play('scribble');
+    this._objLast = txt;
+    el('objective-text').textContent = txt;
     o.classList.remove('show');
     void o.offsetWidth;
     o.classList.add('show');
@@ -115,6 +118,7 @@ export class UI {
   }
   viewfinder(mode, data = {}) {
     const v = el('viewfinder');
+    el('hud').classList.toggle('phone-up', !!mode);
     if (!mode) { v.classList.add('hidden'); return; }
     v.classList.remove('hidden');
     v.classList.toggle('video', mode === 'video');
@@ -147,7 +151,12 @@ export class UI {
     f.style.transition = `opacity ${dur}s`;
     f.style.opacity = '0';
   }
-  clickToPlay(v) { el('clickplay').classList.toggle('hidden', !v); }
+  clickToPlay(v, fails = 0) {
+    el('clickplay').classList.toggle('hidden', !v);
+    if (!v) return;
+    el('cp-sub').textContent = fails ? 'o navegador soltou o mouse · clique de novo para voltar' : 'o mouse volta a controlar a câmera';
+    el('cp-free').classList.toggle('hidden', fails < 2);
+  }
 
   // ------------------------------------------------------------ overlays que pausam
   get paused() { return !!this.overlay || !el('pause').classList.contains('hidden') || !el('sub-panel').classList.contains('hidden') || this.menuOpen; }
@@ -453,6 +462,7 @@ export class UI {
     el('sub-back').addEventListener('click', () => { audio.play('ui_back'); this.closeSub(); });
     el('note').addEventListener('click', () => { if (this.overlay === 'note') this.closeOverlay(); });
     el('clickplay').addEventListener('click', () => this.game.resumePointer(true));
+    el('cp-free').addEventListener('click', (e) => { e.stopPropagation(); audio.play('ui'); this.game.setMouseFree(true); });
     this.game.input.onKey((e) => this._key(e));
   }
   _key(e) {
@@ -472,6 +482,8 @@ export class UI {
 
   showMenu() {
     this.menuOpen = true;
+    if (this.game.menuScene) this.game.menuScene(true);
+    this.fade(0, 2.5); // a sala aparece devagar atrás do menu
     el('menu').classList.remove('hidden');
     el('pause').classList.add('hidden');
     el('btn-continue').disabled = !this.game.hasSave();
@@ -480,7 +492,7 @@ export class UI {
     el('btn-endings').textContent = n ? `Finais (${n}/5)` : 'Finais';
     this.showHud(false);
   }
-  hideMenu() { this.menuOpen = false; el('menu').classList.add('hidden'); }
+  hideMenu() { this.menuOpen = false; el('menu').classList.add('hidden'); if (this.game.menuScene) this.game.menuScene(false); }
   showPause(v) { el('pause').classList.toggle('hidden', !v); }
 
   openSub(html, build) {
@@ -521,9 +533,13 @@ export class UI {
       c.appendChild(row('Vozes sintetizadas (navegador)', select('tts', [[true, 'Ligadas'], [false, 'Só legendas']])));
       c.appendChild(h('div', { class: 'opt-note' }, 'CONTROLE E CÂMERA'));
       c.appendChild(row('Sensibilidade do mouse', ...slider('sensitivity', 0.2, 3, 0.05, (v) => v.toFixed(2))));
+      c.appendChild(row('Mouse', select('mouseMode', [['lock', 'Travado na tela (recomendado)'], ['free', 'Sem travar (se o navegador não deixar)']])));
       c.appendChild(row('Inverter eixo Y', select('invertY', [[false, 'Não'], [true, 'Sim']])));
       c.appendChild(row('Campo de visão', ...slider('fov', 60, 95, 1, (v) => Math.round(v) + '°')));
       c.appendChild(row('Tremor de câmera', ...slider('shake', 0, 1, 0.05)));
+      c.appendChild(h('div', { class: 'opt-note' }, 'IMAGEM E LEGENDAS'));
+      c.appendChild(row('Brilho', ...slider('brightness', 0.6, 1.6, 0.05)));
+      c.appendChild(row('Tamanho das legendas', select('subSize', [['normal', 'Normal'], ['grande', 'Grande']])));
       c.appendChild(h('div', { class: 'opt-note' }, 'SUSTOS E ACESSIBILIDADE'));
       c.appendChild(row('Jump scares', select('scare', [[2, 'Completos'], [1, 'Suaves'], [0, 'Desligados']])));
       c.appendChild(row('Flashes e luzes piscando', select('flashes', [[true, 'Normais'], [false, 'Reduzidos']])));
@@ -536,7 +552,7 @@ export class UI {
   openControls() {
     const rows = [
       ['W A S D / setas', 'andar'], ['Mouse', 'olhar'], ['Shift', 'correr (faz barulho)'], ['C (alterna) / Ctrl (segura)', 'agachar'],
-      ['E ou clique', 'interagir / examinar / esconder-se'], ['F', 'lanterna do celular'], ['Botão direito (segure)', 'levantar o celular: câmera'],
+      ['E ou clique', 'interagir / examinar / esconder-se'], ['E (olhando para um gato, de pertinho)', 'fazer carinho'], ['F', 'lanterna do celular'], ['Botão direito (segure)', 'levantar o celular: câmera'],
       ['Q ou rodinha (com o celular levantado)', 'trocar modo: CÂMERA ↔ VÍDEO (casa.mp4)'], ['Clique (com o celular levantado)', 'tirar foto'],
       ['R', 'rádio (depois de achar o fone)'], ['TAB', 'celular (mensagens, vídeo, galeria)'], ['I', 'mochila (itens)'], ['J', 'diário (objetivo, notas, fotos, regras, planta)'],
       ['H', 'dica (fica mais clara aos poucos)'], ['Espaço (escondida)', 'prender a respiração'], ['ESC', 'pausar'],
@@ -546,6 +562,7 @@ export class UI {
       rows.forEach(([k, v]) => t.appendChild(h('tr', {}, h('td', {}, k), h('td', {}, v))));
       c.appendChild(t);
       c.appendChild(h('p', { class: 'opt-note' }, 'Dica: jogue com fones de ouvido. Muitos sons vêm de outros cômodos — e alguns vêm do cômodo errado.'));
+      c.appendChild(h('p', { class: 'opt-note' }, 'Se a setinha do mouse aparecer, é só clicar na tela para voltar. Se o navegador não deixar travar o mouse, use Opções → Mouse → Sem travar.'));
     });
   }
 
@@ -613,42 +630,16 @@ export class UI {
 
   loading(v) { el('loading').classList.toggle('hidden', !v); }
 
-  // ------------------------------------------------------------ fundo do menu
-  _menuBg() {
-    const c = el('menu-bg');
-    const ctx = c.getContext('2d');
-    let t = 0;
-    const draw = () => {
-      if (!this.menuOpen) { requestAnimationFrame(draw); return; }
-      const w = (c.width = Math.floor(innerWidth / 2)), hh = (c.height = Math.floor(innerHeight / 2));
-      t += 1 / 60;
-      ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, w, hh);
-      // corredor em perspectiva
-      const cx = w / 2, cy = hh * 0.55;
-      const vw = w * 0.06, vh = hh * 0.2;
-      ctx.strokeStyle = 'rgba(200,190,170,0.18)'; ctx.lineWidth = 1;
-      const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
-      for (const [sx, sy] of corners) { ctx.beginPath(); ctx.moveTo(cx + sx * vw, cy + sy * vh); ctx.lineTo(cx + sx * w * 0.7, cy + sy * hh * 0.9); ctx.stroke(); }
-      for (let k = 1; k < 6; k++) {
-        const f = Math.pow(k / 6, 1.6);
-        const ww = vw + (w * 0.7 - vw) * f, hh2 = vh + (hh * 0.9 - vh) * f;
-        ctx.strokeStyle = `rgba(200,190,170,${0.05 + f * 0.1})`;
-        ctx.strokeRect(cx - ww, cy - hh2, ww * 2, hh2 * 2);
-      }
-      // porta no fim
-      ctx.fillStyle = 'rgba(80,40,25,0.8)'; ctx.fillRect(cx - vw * 0.6, cy - vh * 0.9, vw * 1.2, vh * 1.9);
-      // figura que às vezes aparece
-      const ph = (Math.sin(t * 0.3) + 1) / 2;
-      if (ph > 0.8) { ctx.fillStyle = `rgba(0,0,0,${(ph - 0.8) * 5})`; ctx.fillRect(cx - vw * 0.22, cy - vh * 0.75, vw * 0.44, vh * 1.7); ctx.beginPath(); ctx.arc(cx, cy - vh * 0.85, vw * 0.2, 0, Math.PI * 2); ctx.fill(); }
-      // ruído VHS
-      const img = ctx.getImageData(0, 0, w, hh);
-      const d = img.data;
-      for (let i = 0; i < d.length; i += 4) { const n = (Math.random() - 0.5) * 40; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
-      ctx.putImageData(img, 0, 0);
-      const band = (t * 60) % hh;
-      ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fillRect(0, band, w, 6);
-      requestAnimationFrame(draw);
-    };
-    draw();
+  // ------------------------------------------------------------ relógio do menu (como tela de filmadora)
+  _menuOsd() {
+    const tc = el('menu-tc');
+    if (!tc) return;
+    let t = 3 * 3600 + 7 * 60;
+    setInterval(() => {
+      if (!this.menuOpen) return;
+      t += 1;
+      const hh = String(Math.floor(t / 3600) % 24).padStart(2, '0'), mm = String(Math.floor(t / 60) % 60).padStart(2, '0'), ss = String(t % 60).padStart(2, '0');
+      tc.textContent = `${hh}:${mm}:${ss}`;
+    }, 1000);
   }
 }

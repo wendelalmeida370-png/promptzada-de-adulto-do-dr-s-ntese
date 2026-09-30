@@ -106,6 +106,12 @@ export class Player {
       const s = 0.0022 * settings.sensitivity * (g.phone.raised ? 0.7 : 1);
       this.yaw -= inp.mdx * s;
       this.pitch -= inp.mdy * s * (settings.invertY ? -1 : 1);
+      // mouse sem travar: o cursor bate na borda da tela, então perto da borda a câmera continua virando
+      if (inp.free) {
+        const edge = (v) => Math.sign(v) * clamp((Math.abs(v) - 0.82) / 0.16, 0, 1);
+        this.yaw -= edge(inp.cx) * 2.2 * settings.sensitivity * dt;
+        this.pitch -= edge(inp.cy) * 1.1 * settings.sensitivity * dt * (settings.invertY ? -1 : 1);
+      }
       const lim = this.hidden ? (this.hidden.kind === 'bed' ? 0.35 : 0.5) : 1.45;
       this.pitch = clamp(this.pitch, -lim, lim);
       if (this.hidden) {
@@ -135,9 +141,12 @@ export class Player {
       if (inp.key('KeyD') || inp.key('ArrowRight')) fx += 1;
       if (inp.hit('KeyC')) this.crouch = !this.crouch;
       const crouching = this.crouch || inp.key('ControlLeft') || inp.key('ControlRight');
+      if (crouching !== !!this.crouching) audio.play('cloth', { v: 0.8 });
       const wantRun = (inp.key('ShiftLeft') || inp.key('ShiftRight')) && !crouching && !g.phone.raised && (fx || fz);
+      const wasRunning = this.running;
       if (wantRun && this.stamina > 0.02) { this.running = true; this.stamina = Math.max(0, this.stamina - dt / 5.5); }
       else { this.running = false; this.stamina = Math.min(1, this.stamina + dt / (fx || fz ? 7 : 4)); }
+      if (this.running && !wasRunning) audio.play('cloth', { v: 0.6, dur: 0.2 });
       const speed = (this.running ? 3.5 : crouching ? 0.95 : g.phone.raised ? 1.25 : 1.9) * this.speedMul;
       const len = Math.hypot(fx, fz) || 1;
       const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
@@ -169,6 +178,17 @@ export class Player {
     } else {
       this.vel.set(0, 0);
     }
+    // fôlego: depois de correr, dá pra ouvir a respiração (e ela vai acalmando)
+    const tired = 1 - this.stamina;
+    if (!this.hidden && tired > 0.35 && (this.running || this.stamina < 0.62)) {
+      this.pantT = (this.pantT || 0) - dt;
+      if (this.pantT <= 0) {
+        this.pantIn = !this.pantIn;
+        const v = clamp((tired - 0.3) * 1.3, 0.12, 0.75);
+        audio.play('breath', { v, dur: this.pantIn ? 0.4 : 0.5, out: !this.pantIn });
+        this.pantT = this.pantIn ? 0.44 : (this.running ? 0.32 : 0.35 + this.stamina * 0.7);
+      }
+    }
     const targetY = world.heightAt(this.pos.x, this.pos.z);
     this.pos.y = this.hidden ? 0 : lerp(this.pos.y, targetY, 1 - Math.exp(-dt * 14));
     this.moving = moving;
@@ -184,9 +204,17 @@ export class Player {
     const bx = this.moving ? Math.cos(this.bob) * bobAmt * 0.6 : 0;
     const t = this.trauma * this.trauma;
     const sx = t * 0.05 * Math.sin(this.shakeT * 37.1), sy = t * 0.05 * Math.sin(this.shakeT * 41.7 + 1), sr = t * 0.04 * Math.sin(this.shakeT * 29.3 + 2);
+    // inclina um pouquinho ao andar de lado; parada, a respiração mexe a câmera quase nada
+    const lateral = this.vel.x * Math.cos(this.yaw) - this.vel.y * Math.sin(this.yaw);
+    this.roll = lerp(this.roll || 0, -lateral * 0.011 * settings.shake, 0.12);
+    const idle = this.moving || this.hidden ? 0 : settings.shake;
+    const ip = Math.sin(this.shakeT * 1.15) * 0.0035 * idle, iy = Math.sin(this.shakeT * 0.61) * 0.0022 * idle;
     c.position.set(this.pos.x + bx * Math.cos(this.yaw), this.pos.y + this.eyeH + by + sy, this.pos.z - bx * Math.sin(this.yaw));
     c.rotation.order = 'YXZ';
-    c.rotation.set(this.pitch + sy * 0.5, this.yaw + sx, sr);
+    c.rotation.set(this.pitch + sy * 0.5 + ip, this.yaw + sx + iy, sr + this.roll);
+    // correndo, o campo de visão abre um pouco
+    const fov = settings.fov + (this.running ? 4 : 0);
+    if (Math.abs(c.fov - fov) > 0.05) { c.fov = lerp(c.fov, fov, 0.08); c.updateProjectionMatrix(); }
     c.updateMatrixWorld();
   }
 }

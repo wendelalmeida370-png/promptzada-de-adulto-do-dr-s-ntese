@@ -16,6 +16,9 @@ export const DEFAULT_SETTINGS = {
   tts: true, // vozes sintetizadas pelo navegador
   quality: 'auto', // auto | low | high
   storyMode: false, // perseguições não te pegam
+  mouseMode: 'lock', // lock = cursor travado (normal) · free = sem travar (quando o navegador não deixa)
+  brightness: 1.0, // brilho da imagem (monitores escuros)
+  subSize: 'normal', // tamanho das legendas: normal | grande
 };
 
 export const DEFAULT_NAMES = {

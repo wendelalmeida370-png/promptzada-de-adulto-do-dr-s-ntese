@@ -14,13 +14,17 @@ você está agora. Só que tem umas coisas diferentes nele.
 ## Como abrir
 
 1. Abra o arquivo **`index.html`** com dois cliques, em um navegador atualizado (Chrome, Edge ou Firefox) no computador.
-   Não precisa de internet, de servidor nem de instalar nada: o jogo já vai compilado em `dist/game.js`.
+   Não precisa de servidor nem de instalar nada: o jogo já vai compilado em `dist/game.js`. Com internet,
+   ele baixa as fontes das letras do Google Fonts; sem internet, funciona igual, com as fontes do sistema.
 2. Clique em **Novo jogo** (ou em **Continuar**, se já tiver começado).
 3. Clique na tela para "prender" o mouse. `ESC` pausa e solta o mouse.
 
 Se preferir servir por HTTP (opcional): dentro desta pasta, `npm run serve` e abra `http://localhost:5173`.
-Se o navegador não deixar prender o mouse (por exemplo dentro de algum visualizador), o jogo passa sozinho
-para um modo alternativo em que você olha em volta só movendo o mouse sobre a tela, sem travar o cursor.
+
+**Se a setinha do mouse aparecer no meio do jogo**, o jogo pausa e mostra "clique para continuar": um clique
+prende o mouse de novo, com a sensibilidade normal. Se o navegador se recusar a prender o mouse (alguns
+visualizadores fazem isso), aparece o botão **Jogar sem travar o mouse**: nesse modo você olha em volta
+levando o mouse até as bordas da tela. Dá para escolher o modo em **Opções → Mouse**.
 
 ## Controles
 
@@ -31,6 +35,7 @@ para um modo alternativo em que você olha em volta só movendo o mouse sobre a 
 | `Shift` | correr (faz barulho) |
 | `C` (alterna) / `Ctrl` (segura) | agachar |
 | `E` ou clique | interagir, examinar, esconder-se |
+| `E` (olhando para um gato, de pertinho) | fazer carinho |
 | `F` | lanterna do celular |
 | Botão direito (segure) | levantar o celular: câmera |
 | `Q` ou rodinha (com o celular levantado) | trocar entre CÂMERA e VÍDEO (casa.mp4) |
@@ -60,6 +65,9 @@ para um modo alternativo em que você olha em volta só movendo o mouse sobre a 
   móveis cobertos com lençóis, uma vitrola tocando valsa e alguém sentado na cabeceira da mesa, embaixo do lençol.
   Ele tem regras próprias, como uma brincadeira de criança (e o diário anota cada uma quando você aprende).
 - **Cinco finais:** um bom, um ruim e três secretos. O menu tem uma galeria de finais com pistas para os que faltam.
+- **O Bento e a Lili são gatos de verdade (quase):** andam pela casa sozinhos, cheiram as coisas, sentam,
+  deitam, se lambem, vão comer, se esfregam na sua perna, miam, ronronam quando você faz carinho (`E`),
+  seguem você de vez em quando e têm olhos que brilham na lanterna. Carinho no gato acalma o medo.
 - **Três easter eggs** escondidos pela casa, para quem explora.
 - Sustos preparados (alguns barulhentos, outros completamente em silêncio), som posicional com paredes abafando,
   ruído elétrico, passos, estalos da casa, vozes sintetizadas opcionais. **Todo som, música e imagem é gerado por código**:
@@ -71,7 +79,8 @@ para um modo alternativo em que você olha em volta só movendo o mouse sobre a 
 No menu **Opções** (salvas no navegador):
 
 - volume geral, efeitos/ambiente, música e vozes; vozes sintetizadas ligadas ou só legendas;
-- sensibilidade do mouse, inverter eixo Y, campo de visão, intensidade do tremor de câmera;
+- sensibilidade do mouse, **mouse travado ou sem travar**, inverter eixo Y, campo de visão, intensidade do tremor de câmera;
+- **brilho** da imagem (para monitores escuros) e **tamanho das legendas** (normal ou grande);
 - **jump scares: completos, suaves ou desligados**; flashes e luzes piscando normais ou reduzidos;
 - **modo história** (as perseguições não te pegam);
 - qualidade gráfica (automática, alta ou leve para PCs mais fracos).
@@ -119,8 +128,13 @@ nela, mas não é uma reconstrução exata:
 
 - JavaScript + [three.js](https://threejs.org/) (3D estilizado em primeira pessoa), empacotado com esbuild
   num único `dist/game.js` para abrir direto do disco (`file://`).
-- Pós-processamento próprio (grão, vinheta, VHS, glitch), espelhos que mostram a "memória da casa",
-  câmera de segurança e webcam renderizadas em tempo real, sons 3D sintetizados com WebAudio.
+- Pós-processamento próprio: oclusão de ambiente (SAO), bloom nas lâmpadas e telas, tone mapping ACES,
+  grão, vinheta que pulsa com o coração quando o medo sobe, VHS e glitch. A lanterna do celular tem
+  "lente" (anel e manchas do refletor) e a poeira do ar só aparece dentro do facho.
+- Espelhos que mostram a "memória da casa", câmera de segurança e webcam renderizadas em tempo real,
+  e o menu principal é a própria sala, ao vivo, de madrugada.
+- Sons 3D sintetizados com WebAudio: passos com calcanhar, ponta e rangido do piso, roupa ao agachar,
+  respiração ofegante depois de correr, miados, trinados e ronronar dos gatos.
 - Código em `src/`: `core/` (áudio, texturas, entrada, opções), `world/` (a casa, portas, espelhos, apartamento de antes),
   `game/` (jogo, roteiro dos atos, finais, personagens, IA).
 - Para mexer no código: `npm install` e depois `npm run build` (ou `npm run watch`).
@@ -138,10 +152,12 @@ node tests/endings.mjs       # os cinco finais e a galeria de finais
 node tests/saves.mjs         # "Continuar" a partir de cada checkpoint
 node tests/systems.mjs       # movimento, colisão, fotos, dicas, menus, opções, nomes, sons, captura
 node tests/swap.mjs          # as portas trocadas do ato 3
+node tests/cats.mjs          # a rotina dos gatos, carinho, ronronar, fuga e "seguir"
 ```
 
-`ENDING=inquilino node tests/playthrough.mjs` joga até o final ruim. `tests/scenes.mjs` e `tests/pale_scenes.mjs`
-tiram fotos de cenas para revisão visual (ficam em `tests/shots/`).
+`ENDING=inquilino node tests/playthrough.mjs` joga até o final ruim. `tests/scenes.mjs`, `tests/pale_scenes.mjs`
+e `node tests/look.mjs <prefixo>` tiram fotos de cenas para revisão visual (ficam em `tests/shots/`).
+As fontes do Google usadas no HUD ficam em cache local em `tests/.cache/` durante os testes (fora do git).
 
 ## Créditos e homenagens
 

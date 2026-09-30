@@ -242,10 +242,26 @@ export class AudioEngine {
       this._tone(d, t, 'sine', rand(70, 90), 0.1, 0.5 * v);
       this._noiseBurst(d, t + 0.03, 0.18, { f: rand(700, 1100), q: 12, peak: 0.08 * v });
     } else {
-      this._noiseBurst(d, t, 0.07, { type: 'lowpass', f: rand(500, 800), peak: 0.5 * v });
-      this._tone(d, t, 'sine', rand(80, 100), 0.07, 0.35 * v);
-      if (Math.random() < 0.12) this._noiseBurst(d, t + 0.05, 0.25, { f: rand(900, 1400), q: 18, peak: 0.05 });
+      // calcanhar + ponta do pé, um arrastar de meia e, às vezes, o taco rangendo
+      this._noiseBurst(d, t, 0.07, { type: 'lowpass', f: rand(500, 800), peak: 0.45 * v });
+      this._tone(d, t, 'sine', rand(78, 98), 0.07, 0.32 * v);
+      const toe = t + rand(0.045, 0.07);
+      this._noiseBurst(d, toe, 0.05, { type: 'lowpass', f: rand(900, 1300), peak: 0.22 * v });
+      this._noiseBurst(d, t + 0.02, 0.09, { f: rand(2600, 3600), q: 0.9, peak: 0.035 * v });
+      if (Math.random() < (o.soft ? 0.05 : 0.11)) this._creak(d, t + 0.05, { dur: rand(0.25, 0.45), v: rand(0.05, 0.1) });
     }
+  }
+  // roupa roçando (agachar, começar a correr)
+  _cloth(d, t, o) {
+    const dur = o.dur || rand(0.22, 0.34);
+    const n = this._src(this.pinkBuf);
+    const bp = this._filter('bandpass', rand(1800, 2800), 0.7);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime((o.v || 1) * 0.12, t + dur * 0.25);
+    g.gain.linearRampToValueAtTime((o.v || 1) * 0.06, t + dur * 0.6);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    n.connect(bp).connect(g).connect(d); n.start(t, rand(0, 2)); n.stop(t + dur + 0.05);
   }
 
   _creak(d, t, o) {
@@ -357,6 +373,22 @@ export class AudioEngine {
     g.gain.linearRampToValueAtTime(0, t + 0.35);
     n.connect(bp).connect(g).connect(d); n.start(t, rand(0, 2)); n.stop(t + 0.4);
   }
+  _scribble(d, t) {
+    // lápis riscando o diário (objetivo novo): traços curtos de ruído agudo
+    const n = this._src(this.noiseBuf);
+    const bp = this._filter('bandpass', 4200, 1.4);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    let k = t;
+    for (let i = 0; i < 5; i++) {
+      const len = rand(0.05, 0.11);
+      g.gain.linearRampToValueAtTime(rand(0.035, 0.07), k + 0.012);
+      g.gain.linearRampToValueAtTime(rand(0.01, 0.025), k + len * 0.7);
+      g.gain.linearRampToValueAtTime(0.0001, k + len);
+      k += len + rand(0.02, 0.07);
+    }
+    n.connect(bp).connect(g).connect(d); n.start(t, rand(0, 2)); n.stop(k + 0.05);
+  }
   _ui(d, t) { this._tone(d, t, 'sine', 880, 0.05, 0.04); }
   _ui_back(d, t) { this._tone(d, t, 'sine', 520, 0.06, 0.04); }
   _phone_vibrate(d, t, o) {
@@ -424,6 +456,25 @@ export class AudioEngine {
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     osc.connect(f1).connect(g); osc.connect(f2).connect(g); g.connect(d);
     osc.start(t); osc.stop(t + dur + 0.05); vib.start(t); vib.stop(t + dur + 0.05);
+  }
+  // "brrrp": o cumprimento do gato (um trinado que sobe)
+  _trill(d, t, o) {
+    const dur = rand(0.28, 0.4);
+    const p = o.pitch || 1;
+    const osc = this._osc('triangle', 400 * p);
+    osc.frequency.setValueAtTime(360 * p, t);
+    osc.frequency.linearRampToValueAtTime(780 * p, t + dur * 0.7);
+    osc.frequency.linearRampToValueAtTime(690 * p, t + dur);
+    const am = this._osc('square', rand(28, 36)); const amg = this.ctx.createGain(); amg.gain.value = 0.45;
+    const trem = this.ctx.createGain(); trem.gain.value = 0.55; am.connect(amg).connect(trem.gain);
+    const bp = this._filter('bandpass', 1300, 1.6);
+    const env = this.ctx.createGain();
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.linearRampToValueAtTime(0.32 * (o.v || 1), t + 0.035);
+    env.gain.linearRampToValueAtTime(0.22 * (o.v || 1), t + dur * 0.8);
+    env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(trem).connect(bp).connect(env).connect(d);
+    osc.start(t); osc.stop(t + dur + 0.05); am.start(t); am.stop(t + dur + 0.05);
   }
   _hiss(d, t) {
     const n = this._noiseBurst(d, t, 1.0, { type: 'highpass', f: 2500, peak: 0.45, a: 0.05 });
@@ -839,6 +890,23 @@ export class AudioEngine {
     cycle();
     nodes.push({ stop: () => { alive = false; } });
     return { rate: (v) => { rate = clamp(v, 0.5, 3); } };
+  }
+  // ronronar: ruído grave pulsando ~26 vezes por segundo, mais forte na expiração
+  _loop_purr(d, nodes) {
+    const n = this._src(this.brownBuf, true);
+    const lp = this._filter('lowpass', 480, 0.8);
+    const body = this.ctx.createGain(); body.gain.value = 0.55;
+    const pulse = this._osc('sawtooth', rand(24, 28)); const pg = this.ctx.createGain(); pg.gain.value = 0.5;
+    pulse.connect(pg).connect(body.gain);
+    const breath = this.ctx.createGain(); breath.gain.value = 0.62;
+    const lfo = this._osc('sine', rand(0.38, 0.46)); const lg = this.ctx.createGain(); lg.gain.value = 0.34;
+    lfo.connect(lg).connect(breath.gain);
+    const tone = this._osc('sine', 50); const tg = this.ctx.createGain(); tg.gain.value = 0.12;
+    tone.connect(tg).connect(body);
+    n.connect(lp).connect(body);
+    body.connect(breath).connect(d);
+    n.start(); pulse.start(); lfo.start(); tone.start();
+    nodes.push(n, pulse, lfo, tone);
   }
   _loop_birds(d, nodes) {
     let alive = true;

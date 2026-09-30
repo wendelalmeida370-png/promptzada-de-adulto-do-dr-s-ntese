@@ -22,7 +22,10 @@ await page.click('button[data-act="options"]');
 await page.waitForTimeout(200);
 const sliders = await page.$$('#sub-content input[type=range]');
 check('opções têm sliders', sliders.length >= 7, String(sliders.length));
-await page.selectOption('#sub-content select >> nth=2', '1'); // jump scares suaves
+await page.evaluate(() => { // jump scares suaves (acha o seletor pela opção, não pela posição)
+  const sel = [...document.querySelectorAll('#sub-content select')].find((x) => [...x.options].some((o) => o.textContent === 'Suaves'));
+  sel.value = '1'; sel.dispatchEvent(new Event('change'));
+});
 await page.click('#sub-back');
 check('opção de sustos salva', await G(() => JSON.parse(localStorage.getItem('casa-se-lembra/settings/v1')).scare === 1));
 await page.click('button[data-act="controls"]'); await page.waitForTimeout(100); await page.click('#sub-back');

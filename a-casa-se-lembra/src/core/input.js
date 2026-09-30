@@ -27,16 +27,18 @@ export class Input {
     });
     window.addEventListener('keyup', (e) => { this.down.delete(e.code); });
     window.addEventListener('blur', () => { this.down.clear(); this.lmb = this.rmb = false; });
-    this.free = false; // modo alternativo: navegador não deixou travar o mouse
-    this.lastGesture = -1e9;
+    // modo sem travar o cursor: só quando a pessoa escolhe (opção "Mouse" ou botão da tela de clique).
+    // Antes ele ligava sozinho depois de duas recusas do navegador (ex.: voltar menos de 1 s depois do ESC)
+    // e ficava ligado pra sempre, com a câmera "desregulada".
+    this.free = false;
+    this.pending = false; // pedido de trava em andamento
     this.lockFails = 0;
-    window.addEventListener('mousedown', () => { this.lastGesture = performance.now(); }, true);
-    document.addEventListener('pointerlockerror', () => {
-      // só desiste da trava se ela falhar logo depois de cliques de verdade (ex.: iframe sem permissão)
-      if (performance.now() - this.lastGesture < 1000) this.lockFails++;
-      if (!this.free && this.lockFails >= 2) { this.free = true; this.locked = true; if (this.onLockChange) this.onLockChange(true, true); }
-    });
+    this.onLockFail = null;
+    this.cx = 0; this.cy = 0; // posição do cursor (-1..1), usada no modo sem travar
+    document.addEventListener('pointerlockerror', () => { if (this.pending) this._failed(); });
     document.addEventListener('mousemove', (e) => {
+      this.cx = (e.clientX / Math.max(1, innerWidth)) * 2 - 1;
+      this.cy = (e.clientY / Math.max(1, innerHeight)) * 2 - 1;
       if (!this.locked) return;
       // alguns navegadores geram picos enormes ao travar o mouse
       if (Math.abs(e.movementX) > 400 || Math.abs(e.movementY) > 400) return;
@@ -55,10 +57,26 @@ export class Input {
     document.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('wheel', (e) => { if (this.locked) this.wheel += Math.sign(e.deltaY); }, { passive: true });
     document.addEventListener('pointerlockchange', () => {
+      if (this.free) return;
+      this.pending = false;
       this.locked = document.pointerLockElement === this.canvas;
+      if (this.locked) this.lockFails = 0;
       if (!this.locked) { this.lmb = this.rmb = false; this.down.clear(); }
       if (this.onLockChange) this.onLockChange(this.locked);
     });
+  }
+  _failed() {
+    if (this.free) return;
+    this.pending = false;
+    this.lockFails++;
+    if (this.onLockFail) this.onLockFail(this.lockFails);
+  }
+  setFree(v) {
+    if (this.free === !!v) return;
+    this.free = !!v;
+    if (this.free && document.pointerLockElement) document.exitPointerLock();
+    this.locked = false;
+    this.pending = false;
   }
 
   onKey(fn) { this.listeners.push(fn); }
@@ -66,13 +84,20 @@ export class Input {
 
   lock() {
     if (this.free) { this.locked = true; return; }
-    if (this.locked) return;
+    if (this.locked || this.pending) return;
+    if (!this.canvas.requestPointerLock) { this._failed(); return; }
+    this.pending = true;
     try {
-      const p = this.canvas.requestPointerLock({ unadjustedMovement: false });
-      if (p && p.catch) p.catch(() => {});
-    } catch (e) { /* ignorado */ }
+      const p = this.canvas.requestPointerLock();
+      // no Chrome a recusa chega pela promessa e pelo evento pointerlockerror; _failed ignora a repetida
+      if (p && p.catch) p.catch(() => { if (this.pending) this._failed(); });
+    } catch (e) { this._failed(); }
   }
-  unlock() { if (this.free) { this.locked = false; return; } if (document.pointerLockElement) document.exitPointerLock(); }
+  unlock() {
+    if (this.free) { this.locked = false; return; }
+    this.pending = false;
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
 
   key(code) { return this.down.has(code); }
   hit(code) { return this.pressed.has(code); }

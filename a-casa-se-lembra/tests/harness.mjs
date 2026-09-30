@@ -1,15 +1,34 @@
 // Utilitários de teste automatizado (Playwright + Chromium headless).
 import { createRequire } from 'module';
 import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
+import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 const require = createRequire(import.meta.url);
 let pw; try { pw = require('playwright'); } catch (e) { pw = require('/opt/node22/lib/node_modules/playwright'); }
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const OUT = process.env.SHOTS || path.join(__dirname, 'shots');
 
+// fontes do Google: baixadas uma vez com o curl (que confia no proxy) e servidas do cache local
+const FONT_CACHE = path.join(__dirname, '.cache');
+const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
+async function fontRoute(route) {
+  const url = route.request().url();
+  const css = url.includes('fonts.googleapis.com');
+  const f = path.join(FONT_CACHE, crypto.createHash('md5').update(url).digest('hex'));
+  let body = '';
+  try {
+    if (!fs.existsSync(f)) { fs.mkdirSync(FONT_CACHE, { recursive: true }); execFileSync('curl', ['-sS', '-f', '-A', UA, url, '-o', f], { timeout: 30000 }); }
+    body = fs.readFileSync(f);
+  } catch (e) { body = ''; }
+  await route.fulfill({ status: 200, contentType: css ? 'text/css; charset=utf-8' : 'font/woff2', body, headers: { 'access-control-allow-origin': '*' } });
+}
+
 export async function open(opts = {}) {
   const browser = await pw.chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
   const page = await browser.newPage({ viewport: { width: opts.w || 1280, height: opts.h || 720 } });
+  await page.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, fontRoute);
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); else if (m.text().startsWith('[dbg]')) console.log('   ' + m.text()); });
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message + '\n' + (e.stack || '').split('\n').slice(0, 6).join('\n')));

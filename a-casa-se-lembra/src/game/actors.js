@@ -16,6 +16,22 @@ function resetOpacity(model) {
 }
 
 // ------------------------------------------------------------------ gatos
+// O roteiro manda no "modo" (idle | goto | follow | stare | hide | eat). Dentro do idle e do follow
+// o gato tem uma rotina própria: senta, deita, se lambe, passeia, vem se esfregar na sua perna,
+// foge de correria, ronrona quando ganha carinho. Os olhos brilham na luz da lanterna.
+const CAT_POSES = {
+  // t0/tn: inclinação do rabo (base / cada gomo; positivo = pra cima), curl: enrola pro lado
+  stand: { hipY: 0.165, pitch: 0, fl: 0, hl: 0, neck: 0, loaf: 0, t0: -0.4, tn: 0.08, curl: 0 },
+  happy: { hipY: 0.168, pitch: -0.02, fl: 0.02, hl: 0, neck: -0.08, loaf: 0, t0: 1.25, tn: 0.02, curl: 0 },
+  sit: { hipY: 0.092, pitch: -0.66, fl: 0.66, hl: -0.74, neck: 0.52, loaf: 0, t0: 0.32, tn: 0.06, curl: 0.3 },
+  loaf: { hipY: 0.1, pitch: 0.02, fl: 1.42, hl: -1.42, neck: 0.1, loaf: 1, t0: -0.5, tn: 0.07, curl: 0.3 },
+  crouch: { hipY: 0.128, pitch: 0.16, fl: -0.14, hl: 0.3, neck: 0.62, loaf: 0, t0: -0.25, tn: 0.05, curl: 0.1 },
+  low: { hipY: 0.12, pitch: 0.05, fl: -0.05, hl: 0.25, neck: 0.1, loaf: 0, t0: -0.55, tn: 0.03, curl: 0 },
+};
+const CAT_KEYS = Object.keys(CAT_POSES.stand);
+const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
+const smooth = (a, b, x) => { const k = clamp((x - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); };
+
 export class Cat {
   constructor(game, kind) {
     this.game = game;
@@ -23,22 +39,40 @@ export class Cat {
     this.model = buildCat(kind);
     vis(this.model, 'evmc');
     game.scene.add(this.model);
+    this.u = this.model.userData;
     this.pos = new THREE.Vector3();
+    this.home = new THREE.Vector3();
     this.yaw = 0;
-    this.target = null;
-    this.mode = 'idle'; // idle | goto | follow | stare | hide | eat
+    this.mode = 'idle';
+    this.act = 'sit'; this.actT = rand(2, 5);
+    this.cur = { ...CAT_POSES.sit };
     this.t = 0;
-    this.meowT = rand(8, 20);
     this.walkPhase = 0;
+    this.speedNow = 0;
+    this.meowT = rand(12, 25);
+    this.blinkT = rand(2, 5); this.blink = 0;
+    this.earT = rand(1, 4); this.earTw = 0;
     this.stareAt = null;
     this.enabled = true;
     this.speed = 1.2;
     this.path = [];
-    this.purr = null;
     this.onArrive = null;
+    this.target = null;
+    this.stuckT = 0;
+    this.purr = null; this.purrWant = 0;
+    this.shine = 0;
+    this.eatT = 0;
+    this.rubA = 0;
+    this.stillT = 0;
+    this.lastApproach = -99;
+    this._lastMode = 'idle';
   }
-  place(x, z, yaw = 0) { this.pos.set(x, 0, z); this.yaw = yaw; this.model.position.copy(this.pos); this.model.rotation.y = yaw; }
-  setVisible(v) { this.model.visible = v; this.enabled = v; }
+  place(x, z, yaw = 0) {
+    this.pos.set(x, 0, z); this.yaw = yaw; this.home.set(x, 0, z);
+    this.target = null; this.path = []; this.act = 'sit'; this.actT = rand(2, 5);
+    this.model.position.copy(this.pos); this.model.rotation.y = yaw;
+  }
+  setVisible(v) { this.model.visible = v; this.enabled = v; if (!v) this._purr(0, true); }
   goTo(x, z, cb) {
     const w = this.game.world;
     const a = w.nearestNode(this.pos.x, this.pos.z), b = w.nearestNode(x, z);
@@ -48,51 +82,304 @@ export class Cat {
     this.mode = 'goto';
     this.onArrive = cb || null;
   }
-  meow(v = 1) { audio.play('meow', { pos: [this.pos.x, 0.3, this.pos.z], v, pitch: this.kind === 'lili' ? 640 : 520 }); }
-  hiss() { audio.play('hiss', { pos: [this.pos.x, 0.3, this.pos.z] }); }
-  update(dt) {
-    if (!this.enabled) return;
-    const u = this.model.userData;
-    this.t += dt;
-    let moving = false;
-    if (this.mode === 'goto' || this.mode === 'follow') {
-      let tgt = null;
-      if (this.mode === 'follow') {
-        const p = this.game.player.pos;
-        const d = Math.hypot(p.x - this.pos.x, p.z - this.pos.z);
-        if (d > 1.4) {
-          if (this.game.world.losBlocked(this.pos.x, this.pos.z, p.x, p.z)) {
-            if (!this.path.length || this.t > 1.5) { this.t = 0; const a = this.game.world.nearestNode(this.pos.x, this.pos.z), b = this.game.world.nearestNode(p.x, p.z); const pp = a && b ? this.game.world.path(a.id, b.id) : null; this.path = pp ? pp.map((n) => ({ x: n.x, z: n.z })) : []; }
-            tgt = this.path[0] || null;
-          } else { tgt = { x: p.x, z: p.z }; this.path = []; }
-        }
-      } else tgt = this.path[0];
-      if (tgt) {
-        const dx = tgt.x - this.pos.x, dz = tgt.z - this.pos.z;
-        const d = Math.hypot(dx, dz);
-        if (d < 0.15) { this.path.shift(); if (this.mode === 'goto' && !this.path.length) { this.mode = 'idle'; if (this.onArrive) { const f = this.onArrive; this.onArrive = null; f(); } } }
-        else {
-          const sp = this.mode === 'follow' ? 1.9 : this.speed;
-          this.pos.x += (dx / d) * sp * dt; this.pos.z += (dz / d) * sp * dt;
-          this.yaw += angleDiff(this.yaw, Math.atan2(dx, dz)) * Math.min(1, dt * 8);
-          moving = true;
-        }
+  headWorld(out = new THREE.Vector3()) { this.u.head.getWorldPosition(out); return out; }
+  meow(v = 1, o = {}) { audio.play('meow', { pos: this.headWorld(), v, pitch: (this.kind === 'lili' ? 640 : 520) * (o.p || 1), dur: o.dur }); }
+  trill(v = 0.8) { audio.play('trill', { pos: this.headWorld(), v, pitch: this.kind === 'lili' ? 1.18 : 1 }); }
+  hiss() { audio.play('hiss', { pos: [this.pos.x, 0.3, this.pos.z] }); this.act = 'wary'; this.actT = 3; }
+  canPet() {
+    const g = this.game;
+    return this.enabled && this.model.visible && ['idle', 'follow', 'eat'].includes(this.mode) && this.act !== 'flee' && !(g.entity.hunt && g.entity.model.visible);
+  }
+  pet() {
+    if (this.mode === 'eat') this.mode = 'idle';
+    this.act = 'petted'; this.actT = 3.8; this.target = null;
+    this.trill(0.9);
+    this.blinkT = 0.6;
+  }
+
+  // ------------------------------------------------------------ movimento
+  _free(x, z) {
+    _v1.set(x, 0, z);
+    this.game.world.resolve(_v1, 0.14);
+    return Math.hypot(_v1.x - x, _v1.z - z) < 0.02;
+  }
+  _pickNear(cx, cz, rMin, rMax, sameRoom = true) {
+    const w = this.game.world;
+    const room = w.roomAt(this.home.x, this.home.z);
+    for (let i = 0; i < 12; i++) {
+      const a = rand(0, Math.PI * 2), r = rand(rMin, rMax);
+      const x = cx + Math.sin(a) * r, z = cz + Math.cos(a) * r;
+      if (sameRoom && room && w.roomAt(x, z) !== room) continue;
+      if (Math.hypot(x - this.pos.x, z - this.pos.z) < 0.5) continue;
+      if (!this._free(x, z) || w.losBlocked(this.pos.x, this.pos.z, x, z)) continue;
+      return { x, z };
+    }
+    return null;
+  }
+  _step(tx, tz, speed, dt) {
+    const dx = tx - this.pos.x, dz = tz - this.pos.z, d = Math.hypot(dx, dz);
+    if (d < 0.05) { this.speedNow = 0; return d; }
+    const st = Math.min(d, speed * dt);
+    const ox = this.pos.x, oz = this.pos.z;
+    this.pos.x += (dx / d) * st; this.pos.z += (dz / d) * st;
+    this.game.world.resolve(this.pos, 0.13);
+    const moved = Math.hypot(this.pos.x - ox, this.pos.z - oz);
+    this.stuckT = moved < st * 0.35 ? this.stuckT + dt : 0;
+    this.yaw += angleDiff(this.yaw, Math.atan2(dx, dz)) * Math.min(1, dt * 7);
+    this.walkPhase += moved * (speed > 1.3 ? 15 : 21);
+    this.speedNow = moved / Math.max(dt, 1e-4);
+    return d;
+  }
+  _faceTo(x, z, dt, rate = 3) { this.yaw += angleDiff(this.yaw, Math.atan2(x - this.pos.x, z - this.pos.z)) * Math.min(1, dt * rate); }
+
+  // ------------------------------------------------------------ rotina
+  _nextAct(dP) {
+    const g = this.game, P = g.player.pos, w = g.world;
+    const canApproach = dP < 3.6 && dP > 0.8 && !g.cutscene && !g.player.hidden && Math.abs(P.x - this.pos.x) < 40 && !w.losBlocked(this.pos.x, this.pos.z, P.x, P.z) && this.t - this.lastApproach > 22;
+    if (canApproach && Math.random() < 0.5) { this.act = 'approach'; this.actT = 8; this.lastApproach = this.t; if (Math.random() < 0.7) this.trill(0.6); return; }
+    const r = Math.random();
+    if (r < 0.36) { const p = this._pickNear(this.home.x, this.home.z, 0.6, 2.4); if (p) { this.target = p; this.act = 'wander'; this.actT = 10; return; } }
+    if (r < 0.62) { this.act = 'sit'; this.actT = rand(4, 9); return; }
+    if (r < 0.8) { this.act = 'groom'; this.actT = rand(3, 6); return; }
+    this.act = 'loaf'; this.actT = rand(10, 24);
+  }
+  _life(dt, dP, scary) {
+    const g = this.game, P = g.player.pos, pl = g.player;
+    const near = Math.abs(P.x - this.pos.x) < 40;
+    let pose = 'sit', look = near && dP < 4.5, purr = 0;
+    this.actT -= dt;
+    // correria perto: sai de perto (e fica desconfiado)
+    if (near && pl.running && pl.moving && dP < 2.1 && this.act !== 'flee' && this.act !== 'petted') {
+      const ax = this.pos.x - P.x, az = this.pos.z - P.z, al = Math.hypot(ax, az) || 1;
+      this.target = this._pickNear(this.pos.x + (ax / al) * 1.6, this.pos.z + (az / al) * 1.6, 0, 0.6, false) || null;
+      this.act = 'flee'; this.actT = 2.4;
+    }
+    if (scary && this.act !== 'flee') { this.act = 'alert'; this.actT = 1; }
+    switch (this.act) {
+      case 'wander': {
+        pose = 'stand'; look = false;
+        if (!this.target || this._step(this.target.x, this.target.z, 0.55, dt) < 0.08 || this.stuckT > 0.8) { this.target = null; this.act = 'sit'; this.actT = rand(2, 5); }
+        break;
+      }
+      case 'approach': {
+        pose = 'happy'; look = true;
+        const ax = this.pos.x - P.x, az = this.pos.z - P.z, al = Math.hypot(ax, az) || 1;
+        const tx = P.x + (ax / al) * 0.42, tz = P.z + (az / al) * 0.42;
+        const d = this._step(tx, tz, 0.95, dt);
+        if (d < 0.1 || dP < 0.55) { this.act = 'rub'; this.actT = rand(4, 6.5); this.rubA = Math.atan2(ax, az); }
+        else if (dP > 5 || this.stuckT > 1 || this.actT <= 0) { this.act = 'sit'; this.actT = rand(3, 6); }
+        break;
+      }
+      case 'rub': {
+        pose = 'happy'; purr = 0.7; look = false;
+        if (dP > 1.2) { this.act = this.actT > 1.5 ? 'approach' : 'sit'; break; }
+        this.rubA += dt * 0.85;
+        const tx = P.x + Math.sin(this.rubA) * 0.38, tz = P.z + Math.cos(this.rubA) * 0.38;
+        this._step(tx, tz, 0.42, dt);
+        if (this.meowT > 4) this.meowT = rand(1.5, 4);
+        if (this.actT <= 0) { this.act = 'sit'; this.actT = rand(5, 9); }
+        break;
+      }
+      case 'petted': {
+        pose = 'sit'; purr = 1; look = true;
+        this._faceTo(P.x, P.z, dt, 2.5);
+        if (this.actT <= 0) { this.act = 'sit'; this.actT = rand(4, 8); }
+        break;
+      }
+      case 'flee': {
+        pose = 'low'; look = false;
+        if (!this.target || this._step(this.target.x, this.target.z, 2.1, dt) < 0.1 || this.stuckT > 0.5 || this.actT <= 0) { this.target = null; this.act = 'wary'; this.actT = rand(3, 5); }
+        break;
+      }
+      case 'wary': case 'alert': {
+        pose = this.act === 'alert' ? 'low' : 'sit'; look = near && dP < 6;
+        if (this.actT <= 0 && !scary) { this.act = 'sit'; this.actT = rand(2, 4); }
+        break;
+      }
+      case 'groom': pose = 'sit'; look = false; if (this.actT <= 0) this._nextAct(dP); break;
+      case 'loaf': pose = 'loaf'; look = dP < 2.5; purr = dP < 1.4 ? 0.35 : 0; if (this.actT <= 0) this._nextAct(dP); break;
+      default: {
+        pose = 'sit';
+        // sentado há muito tempo com você do lado: vira de frente pra você
+        if (look && dP < 2.5) this._faceTo(P.x, P.z, dt, 0.8);
+        if (this.actT <= 0) this._nextAct(dP);
       }
     }
-    if (this.mode === 'stare' && this.stareAt) {
-      const dx = this.stareAt.x - this.pos.x, dz = this.stareAt.z - this.pos.z;
-      this.yaw += angleDiff(this.yaw, Math.atan2(dx, dz)) * Math.min(1, dt * 5);
+    return { pose, look, purr };
+  }
+
+  // ------------------------------------------------------------ atualização
+  update(dt) {
+    if (!this.enabled) return;
+    const g = this.game, u = this.u, P = g.player.pos;
+    this.t += dt;
+    this.speedNow = 0;
+    if (this._lastMode !== this.mode) { if (this.mode === 'idle') { this.home.copy(this.pos); this.act = 'sit'; this.actT = rand(1, 3); } if (this.mode === 'eat') this.eatT = 0; this._lastMode = this.mode; }
+    const dP = Math.hypot(P.x - this.pos.x, P.z - this.pos.z);
+    const scary = !!(g.entity.hunt && g.entity.model.visible);
+    let pose = 'stand', look = false, purr = 0, lookAt = null, earsBack = 0;
+    if (this.mode === 'goto') {
+      const tgt = this.path[0];
+      if (tgt) {
+        if (this._step(tgt.x, tgt.z, this.speed, dt) < 0.15) {
+          this.path.shift();
+          if (!this.path.length) { this.mode = 'idle'; this.home.copy(this.pos); if (this.onArrive) { const f = this.onArrive; this.onArrive = null; f(); } }
+        }
+      } else this.mode = 'idle';
+      pose = 'stand';
+    } else if (this.mode === 'follow') {
+      const w = g.world;
+      if (dP > 1.3 && Math.abs(P.x - this.pos.x) < 40) {
+        let tgt = null;
+        if (w.losBlocked(this.pos.x, this.pos.z, P.x, P.z)) {
+          if (!this.path.length || (this._pathT = (this._pathT || 0) + dt) > 1.5) { this._pathT = 0; const a = w.nearestNode(this.pos.x, this.pos.z), b = w.nearestNode(P.x, P.z); const pp = a && b ? w.path(a.id, b.id) : null; this.path = pp ? pp.map((n) => ({ x: n.x, z: n.z })) : []; }
+          tgt = this.path[0] || null;
+          if (tgt && Math.hypot(tgt.x - this.pos.x, tgt.z - this.pos.z) < 0.2) this.path.shift();
+        } else { tgt = { x: P.x, z: P.z }; this.path = []; }
+        if (tgt) this._step(tgt.x, tgt.z, dP > 3.5 ? 2.1 : 1.25, dt);
+        pose = 'stand'; this.stillT = 0;
+        if (this.act === 'rub' || this.act === 'petted') this.act = 'sit';
+      } else {
+        // perto de você: senta, olha, e às vezes vem se esfregar
+        this.stillT = g.player.moving ? 0 : this.stillT + dt;
+        if (this.act === 'petted') { pose = 'sit'; purr = 1; look = true; this._faceTo(P.x, P.z, dt, 2.5); this.actT -= dt; if (this.actT <= 0) this.act = 'sit'; }
+        else if (this.act === 'rub') {
+          pose = 'happy'; purr = 0.6; this.rubA += dt * 0.85;
+          this._step(P.x + Math.sin(this.rubA) * 0.38, P.z + Math.cos(this.rubA) * 0.38, 0.42, dt);
+          this.actT -= dt; if (this.actT <= 0) { this.act = 'sit'; this.stillT = -8; }
+        } else {
+          pose = 'sit'; look = true; this._faceTo(P.x, P.z, dt, 1.2);
+          if (this.stillT > 4 && !scary && !g.cutscene) { this.act = 'rub'; this.actT = rand(4, 6); this.rubA = Math.atan2(this.pos.x - P.x, this.pos.z - P.z); if (Math.random() < 0.6) this.trill(0.6); }
+        }
+      }
+    } else if (this.mode === 'stare') {
+      pose = 'low'; earsBack = 1;
+      if (this.stareAt) { this._faceTo(this.stareAt.x, this.stareAt.z, dt, 5); lookAt = this.stareAt; }
+    } else if (this.mode === 'hide') {
+      pose = 'loaf'; earsBack = 0.7; look = dP < 3;
+    } else if (this.mode === 'eat') {
+      pose = 'crouch';
+      this.eatT += dt;
+      if (this.eatT > 38) { this.mode = 'idle'; this._lastMode = 'idle'; this.home.copy(this.pos); this.act = 'groom'; this.actT = rand(4, 7); }
+    } else {
+      ({ pose, look, purr } = this._life(dt, dP, scary));
+      if (this.act === 'alert' || this.act === 'wary' || this.act === 'flee') earsBack = this.act === 'wary' ? 0.4 : 0.9;
+      if (this.act === 'alert' && g.entity.model.visible) lookAt = g.entity.pos;
     }
-    // animação
-    this.walkPhase += dt * (moving ? 10 : 0);
-    u.legs.forEach((l, i) => { l.rotation.x = moving ? Math.sin(this.walkPhase + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * 0.5 : 0; });
-    const tailUp = this.mode === 'stare' ? 1 : 0.3;
-    u.tail.forEach((s, i) => { s.rotation.x = -tailUp * 0.35 + Math.sin(this.t * 2 + i * 0.6) * 0.15; s.rotation.y = Math.sin(this.t * 1.3 + i) * 0.12; });
-    u.head.rotation.y = this.mode === 'stare' ? 0 : Math.sin(this.t * 0.7) * 0.3;
-    this.model.position.set(this.pos.x, this.mode === 'eat' ? -0.03 : 0, this.pos.z);
-    this.model.rotation.y = this.yaw;
+    this._animate(dt, pose, look ? P : lookAt, earsBack);
+    this._purr(purr * (dP < 3.5 ? 1 : 0));
+    this._eyeShine(dt);
+    // miados
     this.meowT -= dt;
-    if (this.meowT < 0 && this.mode !== 'hide') { this.meowT = rand(14, 35); if (Math.random() < 0.6) this.meow(0.6); }
+    if (this.meowT < 0) {
+      this.meowT = rand(18, 42);
+      const quiet = this.mode === 'hide' || this.mode === 'stare' || scary || this.act === 'loaf' || this.act === 'alert';
+      if (!quiet && dP < 12 && Math.random() < 0.55) {
+        if (this.act === 'rub' || this.act === 'approach' || this.act === 'petted') { if (Math.random() < 0.5) this.trill(0.7); else this.meow(0.6, { p: rand(1.05, 1.25), dur: rand(0.3, 0.5) }); }
+        else this.meow(0.5, { p: rand(0.9, 1.12) });
+      }
+    }
+  }
+
+  _animate(dt, poseName, lookAt, earsBack) {
+    const u = this.u, c = this.cur, tgt = CAT_POSES[poseName] || CAT_POSES.stand;
+    const k = 1 - Math.exp(-dt * 5);
+    for (const key of CAT_KEYS) c[key] += (tgt[key] - c[key]) * k;
+    const t = this.t;
+    const walking = this.speedNow > 0.05;
+    const fast = this.speedNow > 1.3;
+    const breath = Math.sin(t * (this.act === 'loaf' ? 1.6 : 2.6));
+    // corpo
+    u.hips.position.y = c.hipY + (walking ? Math.abs(Math.sin(this.walkPhase)) * (fast ? 0.012 : 0.006) : 0);
+    u.hips.rotation.x = c.pitch;
+    u.body.scale.set(1 + breath * 0.012, 1 + breath * 0.02, 1);
+    // patas (pares diagonais)
+    const sw = walking ? Math.sin(this.walkPhase) * (fast ? 0.75 : 0.48) : 0;
+    const shrink = 1 - c.loaf * 0.3;
+    const L = u.legs;
+    L.fl.rotation.x = c.fl + sw; L.hr.rotation.x = c.hl + sw * 0.9;
+    L.fr.rotation.x = c.fl - sw; L.hl.rotation.x = c.hl - sw * 0.9;
+    for (const l of [L.fl, L.fr, L.hl, L.hr]) l.scale.y = shrink;
+    // lambendo a pata
+    const grooming = this.act === 'groom' && this.mode === 'idle';
+    if (grooming) { L.fr.rotation.x = c.fl - 1.25 + Math.sin(t * 6) * 0.12; }
+    // cabeça e pescoço
+    let hy = Math.sin(t * 0.45) * 0.25, hx = 0, hz = Math.sin(t * 0.3) * 0.05;
+    if (lookAt) {
+      const hp = this.headWorld(_v2);
+      const ang = Math.atan2(lookAt.x - this.pos.x, lookAt.z - this.pos.z) - this.yaw;
+      hy = clamp(angleDiff(0, ang), -1.25, 1.25);
+      const dist = Math.hypot(lookAt.x - hp.x, lookAt.z - hp.z);
+      const ly = (lookAt.y !== undefined ? lookAt.y : 0) + (lookAt === this.game.player.pos ? this.game.player.eyeH : 1.4);
+      hx = -clamp(Math.atan2(ly - hp.y, Math.max(0.3, dist)), -0.2, 0.75);
+    }
+    if (grooming) { hy = 0.35; hx = 0.55 + Math.sin(t * 6) * 0.1; hz = 0.3; }
+    if (this.mode === 'eat') { hy = 0; hx = 0.35 + Math.abs(Math.sin(t * 5)) * 0.12; }
+    if (this.act === 'petted') { hx = -0.25 + Math.sin(t * 2.2) * 0.08; hz = Math.sin(t * 1.7) * 0.18; }
+    if (this.act === 'loaf' && !lookAt) { hx = 0.15; }
+    const hk = 1 - Math.exp(-dt * 6);
+    u.neck.rotation.x += (c.neck - u.neck.rotation.x) * hk;
+    u.head.rotation.y += (hy - u.head.rotation.y) * hk;
+    u.head.rotation.x += (hx - u.head.rotation.x) * hk;
+    u.head.rotation.z += (hz - u.head.rotation.z) * hk;
+    // orelhas
+    this.earT -= dt;
+    if (this.earT < 0) { this.earT = rand(1.5, 5); this.earTw = 1; }
+    this.earTw = Math.max(0, this.earTw - dt * 5);
+    u.ears.forEach((e, i) => {
+      const s = i === 0 ? -1 : 1;
+      e.rotation.z = -s * (0.3 + earsBack * 0.55) + (i === 0 ? this.earTw * 0.35 : 0);
+      e.rotation.x = -earsBack * 0.5;
+    });
+    // piscar (e olhos fechados quando dorme de pãozinho longe de você)
+    this.blinkT -= dt;
+    if (this.blinkT < 0) { this.blinkT = this.act === 'petted' ? rand(0.8, 1.6) : rand(2.5, 6); this.blink = 1; }
+    this.blink = Math.max(0, this.blink - dt * (this.act === 'petted' ? 2.2 : 7));
+    const sleepy = this.act === 'loaf' && !lookAt ? 0.85 : this.act === 'petted' ? 0.35 : 0;
+    const open = clamp(1 - Math.max(this.blink, sleepy), 0.08, 1);
+    u.eyes.forEach((e) => { e.scale.y = open; });
+    this.eyesOpen = open;
+    // rabo
+    const happy = poseName === 'happy';
+    const swish = (this.mode === 'stare' || this.act === 'alert') ? 0.28 : happy ? 0.1 : walking ? 0.12 : 0.2;
+    const speedT = (this.mode === 'stare' || this.act === 'alert') ? 5 : 1.4;
+    u.tail.forEach((sg, i) => {
+      sg.rotation.x = i === 0 ? c.t0 : c.tn + (happy && i > 5 ? 0.3 : 0); // na felicidade, a pontinha faz gancho
+      sg.rotation.y = c.curl + Math.sin(t * speedT + i * 0.55) * swish * (0.3 + i * 0.1);
+    });
+    // posição
+    this.model.position.set(this.pos.x, this.game.world.heightAt(this.pos.x, this.pos.z), this.pos.z);
+    this.model.rotation.y = this.yaw;
+  }
+
+  // brilho dos olhos: só quando a lanterna bate de frente
+  _eyeShine(dt) {
+    const g = this.game, ph = g.phone;
+    let want = 0;
+    if (ph.flashlight && ph.battery > 0 && this.model.visible) {
+      const cam = g.camera;
+      const hp = this.headWorld(_v1);
+      _v2.copy(hp).sub(cam.position);
+      const d = _v2.length();
+      if (d > 0.2 && d < 9) {
+        _v2.divideScalar(d);
+        const fwd = _v1.set(0, 0, -1).applyQuaternion(cam.quaternion);
+        const inBeam = smooth(0.87, 0.97, fwd.dot(_v2));
+        this.u.head.getWorldQuaternion(_q);
+        const hf = _v1.set(0, 0, 1).applyQuaternion(_q);
+        const facing = smooth(0.2, 0.75, -hf.dot(_v2));
+        want = inBeam * facing * clamp(1.25 - d / 7, 0, 1) * (this.eyesOpen || 1);
+      }
+    }
+    this.shine += (want - this.shine) * Math.min(1, dt * 14);
+    for (const s of this.u.shines) s.material.opacity = this.shine * 0.95;
+  }
+
+  _purr(v, now = false) {
+    if (v > 0.05 && this.enabled) {
+      if (!this.purr) this.purr = audio.loop('purr', { pos: this.headWorld(), vol: 0, ref: 0.5, rolloff: 2.4 });
+      if (this.purr) { this.purr.setVol(v * 0.85, 0.5); this.purr.setPos(this.headWorld(_v1)); }
+    } else if (this.purr) { this.purr.stop(now ? 0.1 : 1.0); this.purr = null; }
   }
 }
 

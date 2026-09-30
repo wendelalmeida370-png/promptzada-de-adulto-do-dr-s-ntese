@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>A Casa Se Lembra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Caveat:wght@500&family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=VT323&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -89,9 +92,10 @@
 
 <!-- ======================= MENUS ======================= -->
 <div id="menu" class="screen">
-  <canvas id="menu-bg"></canvas>
+  <div class="menu-shade"></div>
+  <div class="menu-osd" aria-hidden="true"><span class="osd-play">&#9654; casa.mp4</span><span id="menu-tc">03:07:00</span></div>
   <div class="menu-inner">
-    <div class="title-wrap"><h1 id="game-title" data-text="A CASA SE LEMBRA">A CASA SE LEMBRA</h1><div class="subtitle-line">um jogo de terror para <span id="menu-player-name">Rafaela</span></div></div>
+    <div class="title-wrap"><h1 id="game-title" data-text="A CASA&#10;SE LEMBRA">A CASA<br>SE LEMBRA</h1><div class="subtitle-line">um jogo de terror para <span id="menu-player-name">Rafaela</span></div></div>
     <div class="menu-buttons" id="main-buttons">
       <button data-act="continue" id="btn-continue">Continuar</button>
       <button data-act="new">Novo jogo</button>
@@ -128,7 +132,13 @@
 
 <div id="ending" class="screen hidden"><div id="ending-inner"></div></div>
 
-<div id="clickplay" class="hidden"><div>Clique para continuar</div></div>
+<div id="clickplay" class="hidden">
+  <div class="cp-box">
+    <div class="cp-main">CLIQUE PARA CONTINUAR</div>
+    <div class="cp-sub" id="cp-sub">o mouse volta a controlar a câmera</div>
+    <button id="cp-free" class="hidden">O mouse não trava? Jogar com o mouse sem travar</button>
+  </div>
+</div>
 <div id="loading" class="screen"><div class="loading-text">carregando a casa<span class="dots">...</span></div></div>
 <div id="err" class="hidden"></div>
 

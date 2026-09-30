@@ -29,6 +29,7 @@ export class Phone {
     s.shadow.bias = -0.0008;
     s.shadow.normalBias = 0.02;
     s.layers.enableAll();
+    s.map = flashlightCookie(); // a "lente" da lanterna: centro quente, anel do refletor e bordas suaves
     this.spot = s;
     this.spotTarget = new THREE.Object3D();
     s.target = this.spotTarget;
@@ -169,6 +170,36 @@ export class Phone {
     if (this.gallery.length > 40) this.gallery.pop();
     this.game.ui.toast('Foto salva na galeria.', 1.4);
   }
+}
+
+// textura projetada pela lanterna do celular (multiplica a cor da luz)
+function flashlightCookie() {
+  const N = 256, c = document.createElement('canvas'); c.width = c.height = N;
+  const x = c.getContext('2d');
+  x.fillStyle = '#000'; x.fillRect(0, 0, N, N);
+  const h = N / 2;
+  const g = x.createRadialGradient(h, h, 0, h, h, h);
+  g.addColorStop(0.0, 'rgb(255,255,255)');
+  g.addColorStop(0.14, 'rgb(250,248,242)');
+  g.addColorStop(0.26, 'rgb(196,193,186)');
+  g.addColorStop(0.33, 'rgb(222,219,212)');
+  g.addColorStop(0.42, 'rgb(150,147,142)');
+  g.addColorStop(0.6, 'rgb(88,86,83)');
+  g.addColorStop(0.82, 'rgb(34,33,32)');
+  g.addColorStop(1.0, 'rgb(0,0,0)');
+  x.fillStyle = g; x.fillRect(0, 0, N, N);
+  // imperfeições da lente: manchas e poeira bem suaves
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 26; i++) {
+    const r = 6 + rnd() * 26, a = rnd() * Math.PI * 2, d = rnd() * h * 0.62;
+    const gx = h + Math.cos(a) * d, gy = h + Math.sin(a) * d;
+    const sg = x.createRadialGradient(gx, gy, 0, gx, gy, r);
+    sg.addColorStop(0, `rgba(0,0,0,${0.05 + rnd() * 0.07})`); sg.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = sg; x.fillRect(gx - r, gy - r, r * 2, r * 2);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.NoColorSpace;
+  return t;
 }
 
 export class Inventory {

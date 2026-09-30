@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { Input } from '../core/input.js';
 import { audio } from '../core/audio.js';
 import { Post } from '../core/post.js';
-import { settings, T } from '../core/settings.js';
+import { settings, saveSettings, T } from '../core/settings.js';
 import { setMaxAniso } from '../core/textures.js';
 import { clamp, lerp, rand } from '../core/util.js';
 import { World } from '../world/world.js';
@@ -12,6 +12,7 @@ import { buildHouse, applyHouse } from '../world/house.js';
 import { buildBasement } from '../world/basement.js';
 import { buildAntes, applyAntes } from '../world/antes.js';
 import { setMirrorOcclusion } from '../world/mirror.js';
+import { Dust } from '../world/dust.js';
 import { Player } from './player.js';
 import { Phone, Inventory } from './phone.js';
 import { UI } from './ui.js';
@@ -58,8 +59,11 @@ export class Game {
     this.flashT = 0;
 
     this.post = new Post(this.renderer);
+    this.dust = new Dust(this.scene);
     this.input = new Input(this.renderer.domElement);
     this.input.onLockChange = (locked) => this._onLock(locked);
+    this.input.onLockFail = (n) => this._onLockFail(n);
+    this.input.setFree(settings.mouseMode === 'free');
     this.world = new World(this.scene);
     this.world.game = this;
     this.flags = {};
@@ -130,6 +134,11 @@ export class Game {
 
   // ------------------------------------------------------------ configuração
   applySettings() {
+    this.input.setFree(settings.mouseMode === 'free');
+    // efeitos de tela mais pesados (oclusão de ambiente e brilho) ficam de fora na qualidade "Leve"
+    this.post.ao = settings.quality !== 'low';
+    this.post.bloom = settings.quality !== 'low';
+    document.body.classList.toggle('subs-large', settings.subSize === 'grande');
     this.camera.fov = settings.fov;
     this.camera.updateProjectionMatrix();
     this.resize();
@@ -209,12 +218,30 @@ export class Game {
     if (this.state !== 'playing') return;
     if (this.ui.paused && !force) return;
     this.input.lock();
-    setTimeout(() => { if (!this.input.locked && this.state === 'playing' && !this.ui.paused) this.ui.clickToPlay(true); }, 350);
+    setTimeout(() => { if (!this.input.locked && !this.input.pending && this.state === 'playing' && !this.ui.paused) this.ui.clickToPlay(true, this.input.lockFails); }, 350);
   }
-  _onLock(locked, free) {
-    if (free) this.ui.toast('Modo alternativo: mova o mouse para olhar (o navegador não permitiu travar o cursor).', 5);
-    if (locked) { this.ui.clickToPlay(false); audio.resume(); return; }
+  _onLock(locked) {
+    if (locked) {
+      // travou enquanto uma tela (nota, escolha, celular, pausa) já estava aberta: solta de novo o cursor
+      if (this.state !== 'playing' || this.ui.paused) { this.input.unlock(); return; }
+      this.ui.clickToPlay(false);
+      audio.resume();
+      return;
+    }
     if (this.state === 'playing' && !this.ui.overlay && !this.ui.paused && !this._endingNow) this.pause();
+  }
+  // o navegador recusou travar o mouse (ex.: menos de 1 s depois do ESC): um clique resolve
+  _onLockFail(n) {
+    if (this.state !== 'playing' || this.ui.paused) return;
+    this.ui.clickToPlay(true, n);
+  }
+  setMouseFree(v) {
+    settings.mouseMode = v ? 'free' : 'lock';
+    saveSettings();
+    this.input.setFree(v);
+    this.ui.clickToPlay(false);
+    if (this.state === 'playing' && !this.ui.paused) this.resumePointer(true);
+    if (v) this.ui.toast('Mouse sem travar: mova o mouse para olhar.\nEncoste o cursor na borda da tela para continuar virando.', 5);
   }
 
   resetState() {
@@ -510,7 +537,8 @@ export class Game {
       f.fl = fl;
       const visible = f.room === room || !this.world.losBlocked(eye.x, eye.z, f.x, f.z);
       f.seen = (f.seen || 0) + ((visible ? 1 : 0) - (f.seen || 0)) * Math.min(1, dt * 5);
-      if (f.bulb) f.bulb.color.setRGB(0.15 + 0.85 * f.level * fl, 0.13 + 0.82 * f.level * fl, 0.12 + 0.75 * f.level * fl);
+      // lâmpada acesa passa do branco: o pós-processamento faz o brilho em volta
+      if (f.bulb) f.bulb.color.setRGB(0.15 + 2.3 * f.level * fl, 0.13 + 2.05 * f.level * fl, 0.12 + 1.7 * f.level * fl);
     }
     const cand = fx.filter((f) => f.level * f.intensity > 0.01 && f.seen > 0.02)
       .map((f) => ({ f, s: Math.hypot(f.x - P.x, f.z - P.z) - (f.room === room ? 3 : 0) - (f.priority || 0) }))
@@ -532,6 +560,47 @@ export class Game {
   get lightMul() { return this._lightMul === undefined ? 1 : this._lightMul; }
   set lightMul(v) { this._lightMul = v; }
 
+  // ------------------------------------------------------------ cena do menu: a sala de madrugada
+  // a câmera anda devagar atrás do sofá, a TV chia, o Bento dorme na luz da TV;
+  // de vez em quando, lá na porta de entrada, tem alguém em pé.
+  menuScene(on) {
+    this._menu = on ? { t: 0, cyc: 0, fig: false } : null;
+    if (!on) return;
+    for (const f of this.world.fixtures) { f.on = false; f.flicker = 0; }
+    const v = this.fixture('varanda'); if (v) { v.on = true; v.color.set(0x6f86b8); v.intensity = 1.8; v.dist = 9; }
+    this.phone.spot.intensity = 0; this.phone.glow.intensity = 0;
+    this.entity.hide(); this.pale.hide(); this.clown.hide(); this.esquecido.hide(); this.echoes.clear();
+    this.cats.lili.setVisible(false);
+    const b = this.cats.bento; b.setVisible(true); b.mode = 'idle'; b.place(1.25, 3.55, 1.9); b.act = 'loaf'; b.actT = 1e9;
+    this.tv.set('static');
+    this.player.eyeH = 1.5;
+    this.menuTick(0);
+  }
+  menuTick(dt) {
+    const m = this._menu;
+    if (!m) { this.player.apply(); return; }
+    m.t += dt;
+    const s = 0.5 - 0.5 * Math.cos(m.t * (2 * Math.PI / 70));
+    const e = s * s * (3 - 2 * s);
+    if (m.last !== undefined && m.last > 0.5 && s <= 0.5) m.cyc++;
+    m.last = s;
+    const px = 3.95 - 0.3 * e + Math.sin(m.t * 0.23) * 0.03, pz = 2.55 + 2.0 * e;
+    const tx = 0.3 + 0.75 * e, ty = 1.2 + Math.sin(m.t * 0.17) * 0.03, tz = 2.7 + 4.7 * e;
+    const pl = this.player;
+    pl.pos.set(px, 0, pz);
+    const ey = pl.eyeH;
+    pl.yaw = Math.atan2(-(tx - px), -(tz - pz));
+    pl.pitch = Math.atan2(ty - ey, Math.hypot(tx - px, tz - pz));
+    pl.apply();
+    // a figura na porta de entrada (um ciclo sim, um não)
+    const wantFig = e > 0.82 && m.cyc % 2 === 1;
+    if (wantFig && !m.fig) { m.fig = true; this.entity.show(0.97, 7.45, Math.atan2(-(px - 0.97), -(pz - 7.45)), 'e'); }
+    if (!wantFig && m.fig) { m.fig = false; this.entity.hide(); }
+    const b = this.cats.bento; b.act = 'loaf'; b.actT = 1e9; b.update(dt);
+    this.updateLights(dt);
+    this.tv.update(dt);
+  }
+
   // ------------------------------------------------------------ loop
   loop(now) {
     requestAnimationFrame((t) => this.loop(t));
@@ -540,7 +609,7 @@ export class Game {
     dt = clamp(dt, 0, 0.05);
     const paused = this.ui.paused || this.state !== 'playing';
     if (!paused && !this.testMode) this.update(dt);
-    else if (this.state === 'menu') { this.time += dt; this.player.yaw += dt * 0.02; this.player.apply(); }
+    else if (this.state === 'menu') { this.time += dt; this.menuTick(dt); }
     this.render(dt, paused);
     this.input.endFrame();
   }
@@ -643,8 +712,12 @@ export class Game {
     u.tint.value.setRGB(tint[0], tint[1], tint[2]);
     u.warp.value = Math.max(0, (this.story.warp || 0));
     if (!this._dying) u.glitch.value = Math.max(this.story.glitch || 0, this.fear > 0.7 ? (this.fear - 0.7) * 0.6 : 0);
-    u.exposure.value = this.story.exposure || 1.0;
+    u.exposure.value = (this.story.exposure || 1.0) * (settings.brightness || 1);
+    // coração disparado: a borda da tela pulsa junto
+    const fp = clamp((this.fear - 0.35) * 1.7, 0, 1);
+    u.pulse.value = this.state === 'playing' ? fp * (0.35 + 0.65 * Math.pow(Math.max(0, Math.sin(this.time * (4.2 + this.fear * 4))), 8)) : 0;
     this.player.cam.updateMatrixWorld();
+    this.dust.update(dt, cam, this.phone, this.renderer.getPixelRatio() * Math.max(0.6, innerHeight / 720));
 
     // CCTV da TV
     if (this.cctvOn) {
@@ -693,6 +766,7 @@ class TVScreen {
     this.tex = new THREE.CanvasTexture(this.c);
     this.tex.colorSpace = THREE.SRGBColorSpace;
     this.mat = new THREE.MeshBasicMaterial({ map: this.tex, toneMapped: false });
+    this.mat.color.setScalar(1.55); // tela de TV passa do branco: brilha em volta (bloom)
     this.mode = 'off';
     this.drawFn = null;
     this.t = 0;
