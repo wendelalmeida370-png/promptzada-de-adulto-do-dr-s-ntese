@@ -232,7 +232,7 @@
   UI.showHUD = function (on) { $('#hud').classList.toggle('hidden', !on); if (on) { rebuildChronicle(); UI.update(1, true); } };
 
   UI.setSpeed = function (s) {
-    G.speed = s;
+    G.speed = s; G.Main.realSpeed = s;
     document.querySelectorAll('#speed button').forEach(b => b.classList.toggle('on', +b.dataset.speed === s));
     $('#paused-badge').classList.toggle('hidden', s !== 0);
   };
@@ -286,6 +286,9 @@
     if (tUpd > 0 && !force) return;
     tUpd = 0.2;
     const S = G.S;
+    // at 8x/16x: show the speed the machine is really keeping up, when it falls short
+    const rs = G.Main.realSpeed || G.speed; const lag = G.speed >= 8 && rs < G.speed * 0.85;
+    const sr = $('#speed-real'); if (sr) { sr.classList.toggle('hidden', !lag); if (lag) sr.textContent = '≈' + Math.max(1, Math.round(rs)) + 'x'; }
     let vf = G.Fac.get(UI.viewFac);
     if (!vf || !vf.alive) { vf = G.Fac.all().sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id))[0]; UI.viewFac = vf ? vf.id : 0; }
     const nf = G.Fac.all().length;

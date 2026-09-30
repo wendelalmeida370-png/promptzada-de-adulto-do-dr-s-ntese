@@ -165,11 +165,16 @@
     G.Lore && G.Lore.update(dt);
     G.Events.update(dt);
   }
-  function simulate(dt) {
-    if (dt <= 0) return;
-    const steps = Math.ceil(dt / 0.05);
+  // at high speed the steps get a little longer and the frame has a time budget:
+  // if the world is too big for the machine, the game runs as fast as it can instead of freezing
+  function simulate(dt, budget) {
+    if (dt <= 0) return 0;
+    const base = G.speed >= 16 ? 0.1 : G.speed >= 8 ? 0.075 : 0.05;
+    const steps = Math.ceil(dt / base);
     const h = dt / steps;
-    for (let k = 0; k < steps; k++) step(h);
+    const t0 = performance.now(); let done = 0;
+    for (let k = 0; k < steps; k++) { step(h); done += h; if (budget && performance.now() - t0 > budget) break; }
+    return done;
   }
   G.debug = {
     run(seconds) { const t0 = performance.now(); let s = 0; while (s < seconds) { step(0.05); s += 0.05; } return performance.now() - t0; },
@@ -297,8 +302,8 @@
       else if (k === 'f' || k === 'F') { const s = G.UI.selected; if (s && s.x !== undefined && !s.type && !s.dead) G.Render.cam.follow = G.Render.cam.follow === s.id ? 0 : s.id; }
       else if (k === 'h' || k === 'H') $('#chronicle').classList.toggle('collapsed');
       else if (k === 't' || k === 'T') { const s = G.UI.selected; if (s && !s.type && !s.kind) G.UI.openTree(s.id); }
-      else if (k === '+' || k === '=') { const sp = [0, 1, 2, 4]; G.UI.setSpeed(sp[Math.min(3, sp.indexOf(G.speed) + 1)]); }
-      else if (k === '-' || k === '_') { const sp = [0, 1, 2, 4]; G.UI.setSpeed(sp[Math.max(0, sp.indexOf(G.speed) - 1)]); }
+      else if (k === '+' || k === '=') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.min(sp.length - 1, sp.indexOf(G.speed) + 1)]); }
+      else if (k === '-' || k === '_') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.max(0, sp.indexOf(G.speed) - 1)]); }
     });
     window.addEventListener('keyup', e => { I.keys[e.key.toLowerCase()] = false; });
     window.addEventListener('blur', () => { I.keys = {}; });
@@ -370,8 +375,10 @@
         cam.x = M.menuBase[0] + Math.sin(t * 0.06) * 170; cam.y = M.menuBase[1] + Math.cos(t * 0.045) * 70;
       } else if (M.mode === 'intro') { sp = 1; updateIntro(rdt); }
       if (M.modalOpen && M.mode === 'game') sp = 0;
-      const dt = rdt * sp;
-      simulate(dt);
+      const want = rdt * sp;
+      // the simulation may use most of the frame at 8x and 16x, never all of it
+      const dt = simulate(want, sp >= 8 ? 38 : sp > 2 ? 60 : 0);
+      if (sp >= 8 && rdt > 0) { M.realSpeed = (M.realSpeed || sp) * 0.95 + (dt / rdt) * 0.05; } else M.realSpeed = sp;
       // keyboard panning
       if (M.mode === 'game' && !M.modalOpen) {
         const k = I.keys; const v = 520 * rdt / cam.zoom;

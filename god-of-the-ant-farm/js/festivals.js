@@ -136,12 +136,14 @@
   // ------------------------------ starting ------------------------------
   function start(set, key, opt) {
     const S = G.S; const d = FE.DEF[key]; const f = G.Fac.get(set.fac); if (!f) return null;
-    const fe = { id: nextId++, key, set: set.id, fac: f.id, t: 0, len: d.dur * DAY() * 1.8, stage: -1, parts: [], roles: {}, trail: [], props: {}, lit: new Set(), dark: false, fx: [], note: {} };
+    const fe = { id: nextId++, key, set: set.id, fac: f.id, t: 0, len: d.dur * DAY() * 1.15, stage: -1, parts: [], roles: {}, trail: [], props: {}, lit: new Set(), dark: false, fx: [], note: {} };
     fe.grand = !!(opt && opt.grand);
     // captives only take part where the rite needs them: guests, the chained, the victims
     const pop = people(set, { captives: true });
     if (pop.filter(v => !v.captive).length < 6) return null;
-    const cap = Math.min(pop.length, set.tier >= 3 ? 110 : 70);
+    // not the whole town: the neighbours of the square, the devout, children, elders and whoever is off duty
+    const free0 = pop.filter(v => !v.captive).length;
+    const cap = Math.min(60, Math.max(8, Math.round(free0 * (d.sacred ? 0.42 : 0.32))));
     const crowd = pop.filter(v => !v.captive).sort(() => G.R() - 0.5);
     const adults = crowd.filter(v => v.age >= 16 && v.age < 60);
     const priest = crowd.find(v => v.role === 'sacerdote' && v.age >= 16) || crowd.find(v => v.age >= 40) || adults[0];
@@ -151,8 +153,12 @@
     const setup = SETUP[key]; if (!setup) return null;
     const ok = setup(fe, { set, f, d, pop, crowd, adults, priest, ruler, take, S0, cap });
     if (!ok) { for (const id of fe.parts) { const v = S.villagers.get(id); if (v && v.task && v.task.type === 'fest') G.Vg.endTask(v); } return null; }
-    // the rest of the city: the crowd
-    for (const v of take(crowd, cap - fe.parts.length)) enlist(fe, v, 'crowd');
+    // the rest: those living closest to the festival, and those with no shift to keep
+    const venue = fe.C || fe.A || [set.cx, set.cy];
+    const ON_SHIFT = { agricultor: 1, construtor: 1, mineiro: 1, lenhador: 1, pastor: 1, cavalarico: 1, ferreiro: 1, tecelao: 1, oleiro: 1, mercador: 1, feirante: 1, guerreiro: 1, cobrador: 1 };
+    const score = v => { const h = S.buildings.get(v.home); const hx = h ? h.x : v.x, hy = h ? h.y : v.y; return G.dist(hx, hy, venue[0], venue[1]) + (ON_SHIFT[v.role] ? 7 : 0) - (v.age < 16 || v.age >= 60 ? 3 : 0) - v.devotion / 25 + G.R() * 2; };
+    const rest = crowd.filter(v => !fe.parts.includes(v.id)).map(v => [score(v), v]).sort((a, b) => a[0] - b[0]).map(e => e[1]);
+    for (const v of take(rest, cap - fe.parts.length)) enlist(fe, v, 'crowd');
     live.set(fe.id, fe);
     set.festDone = set.festDone || {}; set.festDone[key] = S.day;
     f.st.festivals = (f.st.festivals || 0) + 1;
@@ -415,9 +421,9 @@
     if (TRAVEL[s]) {
       fe.arrT = (fe.arrT || 0) - dt;
       if (fe.arrT <= 0) { fe.arrT = 1; let n = 0, ok = 0; for (const id of fe.parts) { const v = S.villagers.get(id); if (!v || !v.task || v.task.type !== 'fest') continue; const k = fe.slotOf.get(id); const sl = fe.slots[k % Math.max(1, fe.slots.length)]; n++; if (!sl || G.dist(v.x, v.y, sl[0], sl[1]) < 1.2) ok++; } fe.arrived = n ? ok / n : 1; }
-      if (done && (fe.arrived || 0) < 0.6 && fe.stT < fe.sdur * 2.5) done = false;
+      if (done && (fe.arrived || 0) < 0.6 && fe.stT < fe.sdur * 1.6) done = false;
     }
-    const ready = !TRAVEL[s] || (fe.arrived || 0) >= 0.5 || fe.stT > fe.sdur * 1.5;
+    const ready = !TRAVEL[s] || (fe.arrived || 0) >= 0.5 || fe.stT > fe.sdur * 1.2;
     if ((s === 'march' || s === 'return') && fe.leaderAt !== fe.stage && fe.stT < fe.sdur * 2) done = false;
     // the rites happen at their moment
     if ((s === 'rite' || s === 'blot') && !fe.riteDone && fe.stT > fe.sdur * 0.55 && ready) rite(fe);
@@ -671,19 +677,37 @@
       // a victory at war becomes a triumph in Rome
       const nc = f.st.conquests || 0; const pc = lastConq.get(f.id); lastConq.set(f.id, nc);
       if (pc !== undefined && nc > pc && f.civ === 'romano') f.pendingTriumph = S.day;
-      const done = set.festDone || {};
-      for (const key of FE.of(f.civ)) {
-        const d = FE.DEF[key];
-        if (done[key] === S.day) continue;
-        if (d.trigger === 'victory') { if (!(f.pendingTriumph >= S.day - 1) || G.Fac.capitalOf(f.id) !== set) continue; if (S.time < d.at || S.time > d.at + 0.4) continue; f.pendingTriumph = -1; start(set, key); break; }
-        if (d.every > 1 && ((S.day + (d.off || 0)) % d.every) !== 0) continue;
-        if (S.time < d.at || S.time > d.at + 0.03) continue;
-        const grand = key === 'panateneias' && S.day % 4 === 0 && G.Fac.capitalOf(f.id) === set;
-        start(set, key, { grand });
-        break;
+      // the triumph is not on the calendar: it follows a victory
+      const tri = FE.of(f.civ).find(k => FE.DEF[k].trigger === 'victory');
+      if (tri && f.pendingTriumph >= S.day - 1 && G.Fac.capitalOf(f.id) === set && S.time >= FE.DEF[tri].at && S.time <= FE.DEF[tri].at + 0.4) { f.pendingTriumph = -1; start(set, tri); continue; }
+      const plan = yearPlan(set, f);
+      if (!plan || plan.done) continue;
+      const d = FE.DEF[plan.key];
+      if (S.time < d.at || S.time > d.at + 0.03) continue;
+      plan.done = true;
+      const grand = plan.key === 'panateneias' && S.day % 4 === 0 && G.Fac.capitalOf(f.id) === set;
+      if (!start(set, plan.key, { grand })) {
+        // it could not be held (no temple, no captive...): the next one on the calendar, later in the year
+        const next = FE.of(f.civ).filter(k => !FE.DEF[k].trigger && FE.DEF[k].every <= 1 && FE.DEF[k].at > S.time + 0.03);
+        if (next.length) { plan.key = next[(set.festTurn || 0) % next.length]; plan.done = false; }
       }
     }
   };
+  // the festival of the year for a town: the great cycles when they fall due (the Games every four
+  // years, the New Fire every fifty-two), otherwise the next feast in turn. Small towns every other year.
+  function yearPlan(set, f) {
+    const S = G.S;
+    if (set.festPlan && set.festPlan.day === S.day) return set.festPlan;
+    const small = (set.tier || 0) < 2 && G.Village.pop(set.id) < 40;
+    const cal = FE.of(f.civ).filter(k => !FE.DEF[k].trigger);
+    const due = cal.filter(k => FE.DEF[k].every > 1 && ((S.day + (FE.DEF[k].off || 0)) % FE.DEF[k].every) === 0 && FE.DEF[k].every !== 2);
+    const yearly = cal.filter(k => FE.DEF[k].every <= 1 || (FE.DEF[k].every === 2 && S.day % 2 === 0));
+    let key = null;
+    if (due.length) key = due[0];
+    else if (!(small && (S.day + set.id) % 2)) { set.festTurn = (set.festTurn || 0) + 1; key = yearly.length ? yearly[set.festTurn % yearly.length] : null; }
+    set.festPlan = { day: S.day, key, done: !key };
+    return set.festPlan;
+  }
   // the new fire: while it is out, no fire burns in the city
   FE.dark = function (setId) { reset(); for (const fe of live.values()) if (fe.set === setId && fe.dark) return fe; return null; };
   FE.darkB = function (b) { const fe = FE.dark(b.set); return !!fe && !fe.lit.has(b.id); };

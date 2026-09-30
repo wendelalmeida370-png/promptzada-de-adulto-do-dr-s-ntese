@@ -454,3 +454,29 @@ body.casting canvas#game { cursor: crosshair; }
 .rm-goods i { width: 7px; height: 7px; border-radius: 2px; display: inline-block; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
 .rm-goods b, .rm-money b { color: var(--text); font-variant-numeric: tabular-nums; }
 .rm-day em.neg { color: #ff8a7a; font-style: normal; }
+
+/* the speed the machine really keeps up at 8x/16x */
+#speed-real { font-size: 11px; font-weight: 800; color: #f7d07c; padding: 0 6px 0 2px; align-self: center; font-variant-numeric: tabular-nums; }
+#speed-real.hidden { display: none; }
+
+/* the top bar on laptop screens: everything on one line, a little tighter */
+@media (max-width: 1660px) and (min-width: 901px) {
+  #c-food, #c-wood, #c-stone { display: none; }
+  #fac-chip { max-width: 200px; }
+  #speed button, #tb-btns button { min-width: 30px; padding: 0 6px; }
+  #topbar { gap: 6px; }
+}
+@media (max-width: 1400px) and (min-width: 901px) {
+  #clock .clock-txt #era, #weather { display: none; }
+  #fac-chip { max-width: 170px; } #fac-chip .fc-more { display: none; }
+  #r-faith { display: none; }
+}
+@media (max-width: 1250px) and (min-width: 901px) {
+  #topbar { flex-wrap: wrap; justify-content: center; width: calc(100vw - 16px); }
+  #chronicle, #inspector { top: 104px; }
+}
+
+@media (max-width: 440px) {
+  .res { padding: 2px 3px; gap: 3px; } .res b { font-size: 13px; } .res .ri { width: 14px; height: 14px; }
+  #res { gap: 0; }
+}
