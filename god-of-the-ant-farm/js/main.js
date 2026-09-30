@@ -70,6 +70,7 @@
 
   // ------------------------------ modes ------------------------------
   M.toMenu = function () {
+    G.Cinema.stop();
     M.mode = 'menu';
     G.UI.showHUD(false); G.UI.select(null); G.UI.setPower(null); G.UI.closeModal();
     setupWorld((Math.random() * 1e9) | 0, { type: 'ilha', size: 64, tribes: 2 });
@@ -261,7 +262,7 @@
       if (I.held) { I.held.sx = e.clientX; I.held.sy = e.clientY; I.held.hist.unshift([performance.now(), e.clientX, e.clientY]); if (I.held.hist.length > 12) I.held.hist.pop(); }
       else if (m.down) {
         if (!m.dragged && Math.hypot(e.clientX - m.sx, e.clientY - m.sy) > 5) m.dragged = true;
-        if (m.dragged) { const cam = G.Render.cam; cam.x -= (e.clientX - m.lx) / cam.zoom; cam.y -= (e.clientY - m.ly) / cam.zoom; cam.follow = 0; cam.target = null; }
+        if (m.dragged) { const cam = G.Render.cam; cam.x -= (e.clientX - m.lx) / cam.zoom; cam.y -= (e.clientY - m.ly) / cam.zoom; cam.follow = 0; cam.target = null; G.Cinema.manual(); }
       }
       m.lx = e.clientX; m.ly = e.clientY;
     });
@@ -270,16 +271,18 @@
       m.down = false;
       if (I.held) { release(); return; }
       if (M.mode !== 'game' || m.dragged) return;
+      if (G.Cinema.on) { if (e.target === canvas) G.Cinema.stop(); return; }
       click(e.clientX, e.clientY, e.button);
     });
     canvas.addEventListener('dblclick', e => {
-      if (M.mode !== 'game' || I.power) return;
+      if (M.mode !== 'game' || I.power || G.Cinema.on) return;
       const ent = pick(e.clientX, e.clientY, true);
       if (ent) { G.UI.select(ent); G.Render.cam.follow = ent.id; }
     });
     canvas.addEventListener('wheel', e => {
       e.preventDefault();
       if (M.mode !== 'game') return;
+      G.Cinema.manual();
       const cam = G.Render.cam;
       cam.tz = G.clamp(cam.tz * Math.exp(-e.deltaY * 0.0016), G.Render.minZoom(), 3.6);
       cam.anchor = [e.clientX, e.clientY];
@@ -291,6 +294,16 @@
       const k = e.key;
       I.keys[k.toLowerCase()] = true;
       if (M.modalOpen) { if (k === 'Escape') G.UI.closeModal(); return; }
+      // cinema: only pause, speed, next scene and leaving — the rest would open the interface
+      if (G.Cinema.on) {
+        if (k === 'Escape' || k === 'c' || k === 'C') G.Cinema.stop();
+        else if (k === 'n' || k === 'N') G.Cinema.next();
+        else if (k === ' ') { e.preventDefault(); if (G.speed === 0) G.UI.setSpeed(M.lastSpeed || 1); else { M.lastSpeed = G.speed; G.UI.setSpeed(0); } }
+        else if (k === '+' || k === '=') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.min(sp.length - 1, sp.indexOf(G.speed) + 1)]); }
+        else if (k === '-' || k === '_') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.max(0, sp.indexOf(G.speed) - 1)]); }
+        else if (k === 'Tab') e.preventDefault();
+        return;
+      }
       if (k >= '1' && k <= '9') { const p = G.UI.tabPowers()[+k - 1]; if (p) G.UI.setPower(I.power === p.id ? null : p.id); }
       else if (k === 'Tab') { e.preventDefault(); G.UI.nextTab(e.shiftKey ? -1 : 1); }
       else if (k === 'r' || k === 'R') G.UI.openRealms();
@@ -301,6 +314,7 @@
       else if (k === 'Escape') { if (I.held) release(); else if (I.power) G.UI.setPower(null); else if (G.UI.selected) G.UI.select(null); else G.UI.openPause(); }
       else if (k === 'f' || k === 'F') { const s = G.UI.selected; if (s && s.x !== undefined && !s.type && !s.dead) G.Render.cam.follow = G.Render.cam.follow === s.id ? 0 : s.id; }
       else if (k === 'h' || k === 'H') $('#chronicle').classList.toggle('collapsed');
+      else if (k === 'c' || k === 'C') { if (I.held) release(); G.Cinema.start(); }
       else if (k === 't' || k === 'T') { const s = G.UI.selected; if (s && !s.type && !s.kind) G.UI.openTree(s.id); }
       else if (k === '+' || k === '=') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.min(sp.length - 1, sp.indexOf(G.speed) + 1)]); }
       else if (k === '-' || k === '_') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.max(0, sp.indexOf(G.speed) - 1)]); }
@@ -323,19 +337,19 @@
       e.preventDefault();
       if (pinch && e.touches.length === 2) {
         const [a, b] = e.touches; const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-        G.Render.cam.tz = G.clamp(pinch.z * d / pinch.d, G.Render.minZoom(), 3.6); G.Render.cam.anchor = [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2]; return;
+        G.Render.cam.tz = G.clamp(pinch.z * d / pinch.d, G.Render.minZoom(), 3.6); G.Render.cam.anchor = [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2]; G.Cinema.manual(); return;
       }
       const t = e.touches[0]; if (!tStart) return;
       if (I.held) { I.held.sx = t.clientX; I.held.sy = t.clientY; I.held.hist.unshift([performance.now(), t.clientX, t.clientY]); if (I.held.hist.length > 12) I.held.hist.pop(); return; }
       if (Math.hypot(t.clientX - tStart.x, t.clientY - tStart.y) > 8) tStart.moved = true;
-      if (tStart.moved) { const cam = G.Render.cam; cam.x -= (t.clientX - tStart.lx) / cam.zoom; cam.y -= (t.clientY - tStart.ly) / cam.zoom; cam.follow = 0; }
+      if (tStart.moved) { const cam = G.Render.cam; cam.x -= (t.clientX - tStart.lx) / cam.zoom; cam.y -= (t.clientY - tStart.ly) / cam.zoom; cam.follow = 0; G.Cinema.manual(); }
       tStart.lx = t.clientX; tStart.ly = t.clientY;
     }, { passive: false });
     canvas.addEventListener('touchend', e => {
       e.preventDefault();
       if (I.held) { release(); tStart = null; return; }
       if (pinch && e.touches.length < 2) { pinch = null; return; }
-      if (tStart && !tStart.moved && M.mode === 'game') click(tStart.x, tStart.y, 0);
+      if (tStart && !tStart.moved && M.mode === 'game') { if (G.Cinema.on) G.Cinema.stop(); else click(tStart.x, tStart.y, 0); }
       tStart = null;
     }, { passive: false });
     // menu buttons
@@ -386,11 +400,12 @@
         if (k.w || k.arrowup) dy -= v; if (k.s || k.arrowdown) dy += v; if (k.a || k.arrowleft) dx -= v; if (k.d || k.arrowright) dx += v;
         if (dx || dy) { cam.x += dx; cam.y += dy; cam.follow = 0; cam.target = null; }
       }
+      if (M.mode === 'game') G.Cinema.update(rdt);
       G.Render.update(rdt, dt);
       G.FX.update(dt > 0 ? dt : 0, rdt);
       // hover & preview
       hoverT -= rdt;
-      if (M.mode === 'game' && hoverT <= 0 && !I.mouse.down) {
+      if (M.mode === 'game' && hoverT <= 0 && !I.mouse.down && !G.Cinema.on) {
         hoverT = 0.05;
         const m = I.mouse;
         if (m.onCanvas) {
@@ -414,6 +429,7 @@
   window.addEventListener('load', () => {
     G.Render.init($('#game'));
     G.UI.init();
+    G.Cinema.init();
     G.Minimap.init();
     setupInput();
     M.toMenu();

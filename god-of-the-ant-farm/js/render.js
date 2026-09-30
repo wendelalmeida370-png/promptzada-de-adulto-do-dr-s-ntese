@@ -1501,7 +1501,7 @@
   R.showLabels = true;
   function drawCityLabels(view) {
     const S = G.S; const zoom = R.cam.zoom;
-    if (!R.showLabels || !G.Main || G.Main.mode !== 'game') return;
+    if (!R.showLabels || !G.Main || G.Main.mode !== 'game' || (G.Cinema && G.Cinema.on)) return;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const s of S.settlements.values()) {
       const tier = s.tier || 0;

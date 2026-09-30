@@ -33,6 +33,7 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Velocidade | botões 1x / 2x / 4x / **8x** / **16x** · `+` / `-` (em mundos muito grandes, o 16x mostra a velocidade real que o computador consegue manter) |
 | Crônica | `H` |
 | Árvore genealógica | `T` (com alguém selecionado) |
+| Modo cinema | `C` · ou o ícone da câmera no topo — `N` próxima cena · `Esc` ou um clique sai |
 | Menu | `Esc` |
 
 ## O que acontece na ilha
@@ -202,6 +203,20 @@ Os poderes ficam em sete abas (`Tab` troca). Poderes marcados com ✦ abrem uma 
 
 **Fé** é o recurso dos poderes. Ela nasce da **devoção** (quando você ajuda) e do **medo** (quando você castiga). Medo também rende fé, mas deixa o povo lento e menos fértil — e quem perde parentes para a sua fúria perde a devoção. O painel inferior mostra como eles te enxergam: *Um mistério*, *Protetor*, *Deus amado*, *Deus temido*, *Tirano divino*…
 
+## Modo cinema
+
+Aperte `C` (ou o ícone da câmera) e solte o mundo: a interface some atrás de faixas pretas e uma **câmera diretora** passa a filmar sozinha. A cada segundo ela pesa tudo o que está acontecendo de verdade no mundo e vai atrás do que vale mais a pena:
+
+- **batalhas campais** (filmadas entre os dois exércitos), assaltos, cercos, guerrilhas, exércitos em marcha — e, numa batalha longa, um segundo olhar de perto no general;
+- **festividades** no momento certo (a procissão segue quem carrega o peplo ou a barca; a subida da pirâmide segue a vítima) — e nunca chegando para o último minuto;
+- **batalhas navais**, brulotes, navios em chamas, frotas de invasão e desembarques;
+- o que acabou de entrar na **crônica**: um nascimento, uma morte, uma nova aldeia, uma maravilha, um golpe, um meteoro;
+- **incêndios**, com quantas pessoas estão lutando contra o fogo;
+- a **vida comum**: uma criança brincando, um casal namorando, um pastor, um ferreiro, um cobrador de impostos — com um halo suave sob os pés de quem a legenda fala;
+- **caçadas** da vida selvagem, a **feira**, uma **prece** pedindo sua ajuda e planos gerais das cidades ao amanhecer, ao entardecer e à noite.
+
+Perto, a câmera desliza; longe, corta pelo preto. Enquanto fica numa cena ela se aproxima ou se afasta devagar, e uma legenda diz onde estamos, o que se vê e quem é quem. Ela evita repetir cenas e tipos de cena, mas volta mais cedo às grandes (uma batalha, um cerco). `N` pula para a próxima cena; `Espaço` e `+`/`-` continuam pausando e mudando a velocidade; mexer a câmera (arrastar, roda, `WASD`) assume o controle e o diretor volta sozinho depois de alguns segundos. `Esc`, `C` ou um clique encerram o filme.
+
 ## O Livro do Mundo
 
 Cada mundo nasce com **nome**, **mito da criação**, **lendas de origem** de cada povo (com seu deus e seu símbolo) e **duas profecias antigas** — que se cumprem quando o mundo, ou você, as faz acontecer. Depois o livro se escreve sozinho:
@@ -248,5 +263,6 @@ js/minimap.js     minimapa com fronteiras e cidades
 js/audio.js       áudio sintetizado com WebAudio (efeitos, ambiente, música)
 js/save.js        salvar / carregar
 js/ui.js          interface
+js/cinema.js      modo cinema: o diretor que escolhe as cenas, a câmera, as legendas
 js/main.js        loop, input, câmera, menu, introdução
 ```

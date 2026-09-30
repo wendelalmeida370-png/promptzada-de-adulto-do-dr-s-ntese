@@ -18,6 +18,7 @@
     pause: svg('<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>'),
     scroll: svg('<path d="M6 3h11a2 2 0 0 1 2 2v12M6 3a2 2 0 0 0-2 2v2h4M6 3a2 2 0 0 1 2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-2h-11v2a2 2 0 0 1-2 2" ' + ST + '/><path d="M12 8h4M12 12h4" ' + ST + '/>'),
     stats: svg('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" ' + ST + '/>'),
+    film: svg('<rect x="2.5" y="6.5" width="13" height="11" rx="2" ' + ST + '/><path d="M15.5 10.5l6-3.5v10l-6-3.5" ' + ST + '/><circle cx="6.5" cy="10.5" r="1.3" fill="currentColor"/>'),
     sound: svg('<path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" ' + ST + '/>'),
     mute: svg('<path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M17 9l5 6M22 9l-5 6" ' + ST + '/>'),
     menu: svg('<path d="M4 6h16M4 12h16M4 18h16" ' + ST + '/>'),
@@ -165,6 +166,7 @@
     $('#btn-chron').onclick = () => { G.Audio.play('click'); $('#chronicle').classList.toggle('collapsed'); };
     $('#chron-toggle').onclick = () => { G.Audio.play('click'); $('#chronicle').classList.toggle('collapsed'); };
     $('#btn-stats').onclick = () => { G.Audio.play('click'); UI.openStats(); };
+    $('#btn-cinema').innerHTML = ICON.film; $('#btn-cinema').onclick = () => { G.Audio.play('click'); G.Cinema.start(); };
     $('#btn-realms').onclick = () => { G.Audio.play('click'); UI.openRealms(); };
     $('#btn-lore').onclick = () => { G.Audio.play('click'); G.Lore.openBook(); };
     $('#btn-map').innerHTML = ICON.map; $('#btn-map').onclick = () => { G.Audio.play('click'); G.Minimap.toggle(); };
@@ -586,7 +588,7 @@
   UI.openPause = function () {
     UI.openModal(`<h2>Pausa divina</h2><p class="muted">O mundo é salvo automaticamente.</p>
       <div class="mlist"><button class="primary" data-m="resume">Continuar</button><button data-m="save">${ICON.save} Salvar agora</button><button data-m="load">Carregar último save</button><button data-m="new">Novo mundo</button><button data-m="help">Como jogar</button><button data-m="mainmenu">Menu principal</button></div>
-      <div class="keys"><span><kbd>Espaço</kbd> pausar</span><span><kbd>1</kbd>–<kbd>8</kbd> poderes</span><span><kbd>Tab</kbd> aba de poderes</span><span><kbd>R</kbd> reinos</span><span><kbd>L</kbd> livro do mundo</span><span><kbd>WASD</kbd> mover</span><span><kbd>F</kbd> seguir</span><span><kbd>H</kbd> crônica</span><span><kbd>+</kbd>/<kbd>−</kbd> velocidade</span></div>`, 'small');
+      <div class="keys"><span><kbd>Espaço</kbd> pausar</span><span><kbd>1</kbd>–<kbd>8</kbd> poderes</span><span><kbd>Tab</kbd> aba de poderes</span><span><kbd>R</kbd> reinos</span><span><kbd>L</kbd> livro do mundo</span><span><kbd>WASD</kbd> mover</span><span><kbd>F</kbd> seguir</span><span><kbd>H</kbd> crônica</span><span><kbd>C</kbd> modo cinema</span><span><kbd>+</kbd>/<kbd>−</kbd> velocidade</span></div>`, 'small');
   };
   UI.openSound = function () {
     const A = G.Audio;
@@ -601,7 +603,7 @@
     UI.openModal(`<h2>Como jogar</h2>
       <div class="help">
       <p class="lead">Você é o deus de uma pequena ilha. Os habitantes vivem por conta própria: coletam, constroem, se apaixonam, têm filhos, envelhecem e morrem. <b>Você não dá ordens</b> — você interfere.</p>
-      <h4>Câmera</h4><ul><li><b>Arrastar</b> com o mouse (ou botão direito) move o mapa · <b>WASD</b>/setas também</li><li><b>Roda do mouse</b> dá zoom · <b>clique</b> num habitante, animal ou construção para ver detalhes · <b>duplo clique</b> segue alguém</li><li><b>Minimapa</b> (<kbd>M</kbd> ou o ícone do mapa): o mundo inteiro num canto, com fronteiras e cidades — clique ou arraste nele para voar até lá</li></ul>
+      <h4>Câmera</h4><ul><li><b>Arrastar</b> com o mouse (ou botão direito) move o mapa · <b>WASD</b>/setas também</li><li><b>Roda do mouse</b> dá zoom · <b>clique</b> num habitante, animal ou construção para ver detalhes · <b>duplo clique</b> segue alguém</li><li><b>Minimapa</b> (<kbd>M</kbd> ou o ícone do mapa): o mundo inteiro num canto, com fronteiras e cidades — clique ou arraste nele para voar até lá</li><li><b>Modo cinema</b> (<kbd>C</kbd> ou o ícone da câmera): a interface some e a câmera passeia sozinha pelo que está acontecendo — uma festa começando, um exército em marcha, um nascimento, um incêndio, um pastor com o rebanho — com legendas contando o que você vê. <kbd>N</kbd> pula para a próxima cena; mexer a câmera assume o controle por alguns segundos; <kbd>Esc</kbd> ou um clique sai</li></ul>
       <h4>Poderes divinos — sete abas (<kbd>Tab</kbd> troca, <kbd>1</kbd>–<kbd>8</kbd> escolhe)</h4><ul>
         <li><b>Dádivas</b> — Chuva, Crescimento, Cura, Fertilidade, <b>Era de Ouro</b> (três dias de prosperidade para um povo) e a <b>Mão Divina</b></li>
         <li><b>Ira</b> — Raio, Meteoro, Matilha, Terremoto, Praga e <b>Maldição</b> (colheitas murcham, filhos não vêm, a lealdade apodrece)</li>
