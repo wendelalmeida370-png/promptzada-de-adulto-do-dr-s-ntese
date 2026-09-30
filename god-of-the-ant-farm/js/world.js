@@ -550,6 +550,8 @@
 
     S.starts = starts.map(s => [s[0] + 0.5, s[1] + 0.5]);
     S.start = S.starts[0];
+    // veins of iron and gold: someone will have them, someone will want them
+    if (G.Eco) G.Eco.genDeposits(S);
     return S;
   };
 

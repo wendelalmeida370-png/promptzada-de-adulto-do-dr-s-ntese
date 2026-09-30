@@ -420,6 +420,10 @@
   }
   function light(sx, sy, r, c, a) { lights.push(sx, sy, r, c, a); }
   R.lightAt = light;
+  // other files draw their own things: on the ground, or sorted among the people
+  const HK = G.renderHooks = G.renderHooks || { ground: [], ents: [] };
+  const FXA = { light, glow: (sx, sy, r, c, a) => emisGlow.push(sx, sy, r, c, a), fire: (sx, sy, f) => emisFire.push(sx, sy, f), torch: (sx, sy) => emisTorch.push(sx, sy), overlay: (o, sx, sy) => overlays.push(o, sx, sy) };
+  R.fxApi = FXA;
 
   R.update = function (dt, gdt) {
     const cam = R.cam;
@@ -447,7 +451,8 @@
     if (gdt > 0) spawnAmbient(Math.min(gdt, 0.1));
   };
 
-  const SMOKE = { house: 1, workshop: 1, sobrado: 1, insula: 1, quarteirao: 1, banhos: 1, hut: 1 };
+  const SMOKE = { house: 1, workshop: 1, sobrado: 1, insula: 1, quarteirao: 1, banhos: 1, hut: 1, forja: 1, olaria: 1 };
+  const KILN = { workshop: 1, forja: 1, olaria: 1, ourives: 1 };
   const APRON = { monument: 1, temple: 1, palacio: 1, maravilha: 1, teatro: 1, biblioteca: 1, mercado: 1, banhos: 1 };
   const FIRELIT = { temple: 1, torre: 1, quartel: 1, maravilha: 1, praca: 1, palacio: 1 };
   function spawnAmbient(dt) {
@@ -474,16 +479,16 @@
       if (b.type === 'campfire') {
         if (G.R() < dt * 1.3) G.FX.spawn({ x: cx + G.rr(-0.1, 0.1), y: cy + G.rr(-0.1, 0.1), z: 10, vz: G.rr(12, 22), vx: wx * 0.6, vy: wy * 0.6, life: G.rr(2, 3.5), s0: 3, s1: 9, c: 'rgba(150,150,150,0.3)', k: 2 });
         if (G.R() < dt * 2.2) G.FX.spawn({ x: cx, y: cy, z: 5, vz: G.rr(20, 45), vx: G.rr(-0.3, 0.3), vy: G.rr(-0.3, 0.3), life: G.rr(0.6, 1.4), s0: 0.9, s1: 0.2, c: '#ffc060', k: 4, layer: 1 });
-      } else if (SMOKE[b.type] && (b.type === 'workshop' || b.type === 'banhos' || G.R() < 0.5 + night)) {
+      } else if (SMOKE[b.type] && (KILN[b.type] || b.type === 'banhos' || G.R() < 0.5 + night)) {
         const spr = G.Art.building(b.type, b.v, b.style, b.wd);
         const steam = b.type === 'banhos';
-        if (spr && spr.fires.length && G.R() < dt * (b.type === 'workshop' ? 1.2 : steam ? 1.4 : 0.55 + night * 0.5)) {
+        if (spr && spr.fires.length && G.R() < dt * (KILN[b.type] ? 1.2 : steam ? 1.4 : 0.55 + night * 0.5)) {
           const h = W.groundH(cx, cy);
           const f = G.pick(spr.fires);
           // convert sprite-local px to world tile offset
           const ox = f[0] / 32, oz = -f[1];
           G.FX.spawn({ x: cx + ox, y: cy - ox, h, z: oz, vz: G.rr(10, 18), vx: wx * 0.5, vy: wy * 0.5, life: G.rr(2.5, 4), s0: 2.2, s1: steam ? 9 : 7, c: steam ? 'rgba(240,245,250,0.45)' : 'rgba(200,200,205,0.35)', k: 2 });
-          if (b.type === 'workshop' && G.R() < 0.3) G.FX.spawn({ x: cx + ox, y: cy - ox, h, z: oz, vz: G.rr(25, 45), vx: G.rr(-0.3, 0.3), vy: G.rr(-0.3, 0.3), life: 0.8, s0: 0.8, s1: 0.1, c: '#ffb040', k: 4, layer: 1 });
+          if ((b.type === 'workshop' || b.type === 'forja') && G.R() < 0.3) G.FX.spawn({ x: cx + ox, y: cy - ox, h, z: oz, vz: G.rr(25, 45), vx: G.rr(-0.3, 0.3), vy: G.rr(-0.3, 0.3), life: 0.8, s0: 0.8, s1: 0.1, c: '#ffb040', k: 4, layer: 1 });
         }
       }
     }
@@ -680,6 +685,7 @@
       const p = vis(a.x, a.y, W.groundH(a.x, a.y)); if (p) pushD(a.x + a.y + 0.04, 6, a, p[0], p[1] - (sd.cls === 'water' ? 0 : (a.z || 0)));
     }
     for (const b of S.boats) { const p = vis(b.x, b.y, G.SEA); if (p) pushD(b.x + b.y, 7, b, p[0], p[1]); }
+    if (HK.ents.length) { const add = (d, e, x, y, h) => { const p = proj(x, y, h === undefined ? W.groundH(x, y) : h); if (p[0] > view[0] - 70 && p[0] < view[2] + 70 && p[1] > view[1] - 20 && p[1] < view[3] + 120) pushD(d, 13, e, p[0], p[1]); }; for (const h of HK.ents) h(add, view, R.cam.zoom); }
     const list = drawList.slice(0, drawN).sort((a, b) => a.d - b.d);
     G.Art.px = R.cam.zoom * dpr;
     if (nightF > 0.15) { homesLit.clear(); for (const v of S.villagers.values()) if (v.home) homesLit.add(v.home); }
@@ -885,6 +891,7 @@
       else if (b.type === 'cercado') { ctx.fillStyle = 'rgba(110,86,60,0.45)'; diamond(b.x + 0.05, b.y + 0.05, b.x + b.w - 0.05, b.y + b.h - 0.05); ctx.fill(); penStakes(b, penBack(b), 1); }
       else if (b.type === 'quartel') { ctx.fillStyle = 'rgba(150,130,100,0.35)'; diamond(b.x - 0.2, b.y - 0.2, b.x + b.w + 0.2, b.y + b.h + 0.2); ctx.fill(); }
     }
+    for (const h of HK.ground) h(ctx, proj, view, t, nightF, diamond, FXA);
     // selection & hover rings
     const sel = G.UI && G.UI.selected;
     const ring = (o, col, w) => {
@@ -1062,6 +1069,7 @@
       case 10: G.Naval && G.Naval.drawShip(ctx, o, sx, sy, t, nightF, light, emisTorch); break;
       case 11: { const wv = S.wall[o.i]; const hp = S.wallHp[o.i] || 0; G.Art.draw(ctx, G.Siege.wallSprite(G.Siege.wallDir(o.i), o.w.style, o.w.mat, wv !== 1, wv === 4, hp < (o.w.mat === 'pedra' ? 90 : 35)), sx, sy, 1); if (wv === 4 && nightF > 0.3) { light(sx, sy - 14, 22, 'warm', 0.5 * nightF); emisTorch.push(sx + 6, sy - 16); } break; }
       case 12: G.Siege.drawEngine(ctx, o, sx, sy, t); break;
+      case 13: o.fn(ctx, o, sx, sy, t, nightF, FXA); break;
     }
   }
 
@@ -1135,7 +1143,9 @@
       light(sx, sy - 8, 30 + b.w * 12, 'warm', 0.55 * nightF);
     }
     if (b.type === 'temple' || b.type === 'maravilha' || b.type === 'palacio') { for (const f of spr.fires) { emisFire.push(sx + f[0], sy + f[1], 0.45); light(sx + f[0], sy + f[1], 40, 'warm', 0.8); } for (const g of spr.glow) emisGlow.push(sx + g[0], sy + g[1], b.type === 'maravilha' ? 14 : 8, 'gold', 0.4 + nightF * 0.5 + (b.type === 'maravilha' ? 0.15 * Math.sin(t * 2) : 0)); if (b.type === 'maravilha') light(sx, sy - 50, 110, 'gold', 0.6 * nightF + 0.1); }
-    else if (b.type === 'workshop') { for (const g of spr.glow) emisGlow.push(sx + g[0], sy + g[1], 6, 'fire', 0.6 + 0.3 * Math.sin(t * 9)); light(sx + 10, sy - 4, 28, 'warm', 0.5 * nightF + 0.1); }
+    else if (KILN[b.type]) { for (const g of spr.glow) emisGlow.push(sx + g[0], sy + g[1], b.type === 'ourives' ? 3 : 6, b.type === 'ourives' ? 'gold' : 'fire', 0.6 + 0.3 * Math.sin(t * 9 + b.id)); light(sx + 10, sy - 4, 28, 'warm', 0.5 * nightF + 0.1); for (const f of spr.fires) if (b.type !== 'workshop' && b.type !== 'forja' && b.type !== 'olaria') emisFire.push(sx + f[0], sy + f[1], 0.3); }
+    else if (b.type === 'estatua' || b.type === 'mina') { for (const g of spr.glow) emisGlow.push(sx + g[0], sy + g[1], b.type === 'estatua' ? 12 : 3, 'gold', (b.type === 'estatua' ? 0.45 : 0.3) + nightF * 0.5 + 0.15 * Math.sin(t * 2 + g[1])); if (b.type === 'estatua') light(sx, sy - 30, 60, 'gold', 0.6 * nightF + 0.1); for (const f of spr.fires) { emisTorch.push(sx + f[0], sy + f[1]); light(sx + f[0], sy + f[1], 22, 'warm', 0.6 * nightF); } }
+    else if (b.type === 'mercado_negro') { for (const f of spr.fires) { emisTorch.push(sx + f[0], sy + f[1]); light(sx + f[0], sy + f[1], 20, 'warm', 0.7 * nightF + 0.05); } }
     else if (FIRELIT[b.type]) for (const f of spr.fires) { emisFire.push(sx + f[0], sy + f[1], 0.35); light(sx + f[0], sy + f[1], 34, 'warm', 0.7); }
     if (b.type === 'monument' || b.type === 'praca' || b.type === 'biblioteca') { for (const g of spr.glow) emisGlow.push(sx + g[0], sy + g[1], 10, 'gold', 0.5 + nightF * 0.6 + 0.15 * Math.sin(t * 2)); if (b.type === 'monument') light(sx, sy - 60, 80, 'gold', 0.7 * nightF + 0.1); }
     if (b.type === 'quartel') { const f = G.Fac.ofSet(b.set); if (f) drawBanner(sx - 22, sy - 16, G.Fac.hex(f.id), t, 22); }

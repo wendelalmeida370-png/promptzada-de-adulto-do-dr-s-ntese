@@ -32,6 +32,7 @@
       c.beginPath(); c.moveTo(-L * 0.95, by - br * 0.2);
       if (q.tail === 'long') c.quadraticCurveTo(-L * 1.4, by + 1, -L * 1.6 + tw, by - 1.8);
       else if (q.tail === 'bushy') c.quadraticCurveTo(-L * 1.35, by + 0.5 + tw, -L * 1.6, by + 1.4);
+      else if (q.tail === 'curly') { c.arc(-L * 1.05, by - br * 0.2, 0.55, 0, TAU * 0.85); }
       else c.quadraticCurveTo(-L * 1.15, by + 0.6, -L * 1.2 + tw * 0.4, by + 2.4);
       c.stroke();
       if (q.tail === 'tuft') ell(c, -L * 1.2 + tw * 0.4, by + 2.8, 0.5, 0.8, 0, q.mane || dark);
@@ -42,6 +43,8 @@
     ell(c, 0, by, L, br, -slope, col);
     ell(c, 0.2, by + br * 0.45, L * 0.8, br * 0.45, -slope, hurt ? col : q.belly);
     if (q.hump) { ell(c, -0.3, by - br * 0.9, L * 0.35, br * 0.75, 0, col); }
+    // a fleece that grows back after shearing
+    if (q.wool) { const full = !(a.shorn > 0); const r = full ? 1.05 + Math.min(1, a.wool || 0) * 0.25 : 0.55; c.fillStyle = hurt ? col : full ? q.col : shade(q.col, 0.92); for (let k = -2; k <= 2; k++) { c.beginPath(); c.arc(k * L * 0.36, by - br * 0.35 + (k % 2 ? 0.3 : -0.2), r * br * 0.62, 0, TAU); c.fill(); } }
     if (q.shag) { c.fillStyle = dark; c.beginPath(); c.moveTo(-L, by); c.lineTo(-L * 0.9, by + br * 1.2); c.lineTo(L * 0.9, by + br * 1.2); c.lineTo(L, by); c.fill(); }
     if (q.stripes) { c.strokeStyle = q.stripes; c.lineWidth = 0.55; for (let k = -3; k <= 3; k++) { const x = k * L * 0.26; c.beginPath(); c.moveTo(x - 0.3, by - br * 0.85); c.quadraticCurveTo(x + 0.4, by, x - 0.2, by + br * 0.85); c.stroke(); } }
     if (q.stripe) { c.strokeStyle = q.stripe; c.lineWidth = 0.6; line(c, -L * 0.8, by + br * 0.25, L * 0.8, by + br * 0.25); }
@@ -58,7 +61,7 @@
     if (q.lion && male && a.grown >= 1) ell(c, hx - 0.4, hy + 0.2, 2.5, 2.3, 0, q.mane);
     // head
     const hr = 1.1 + stout * 0.25;
-    ell(c, hx, hy, hr * 1.25, hr, graze ? 0.5 : 0, col);
+    ell(c, hx, hy, hr * 1.25, hr, graze ? 0.5 : 0, q.face || col);
     if (q.snout === 1) { c.strokeStyle = col; c.lineWidth = 0.9; line(c, hx + hr, hy + 0.2, hx + hr + 1.3, hy + 1); }
     else if (q.snout === 2) ell(c, hx + hr * 0.9, hy + 0.3, hr * 0.9, hr * 0.75, 0, shade(q.col, 1.08));
     else ell(c, hx + hr * 0.95, hy + 0.3, hr * 0.55, hr * 0.42, 0, q.pred ? shade(q.col, 0.8) : shade(q.col, 0.9));
@@ -76,6 +79,7 @@
     }
     if (q.antler === 2 && !male && a.grown >= 0.8) { c.strokeStyle = '#d8c8a0'; c.lineWidth = 0.45; line(c, hx - 0.2, hy - hr, hx - 0.8, hy - hr - 1.8); line(c, hx + 0.2, hy - hr, hx + 0.7, hy - hr - 1.8); }
     if (q.horn === 'straight') { c.strokeStyle = '#3a2a1a'; c.lineWidth = 0.45; line(c, hx - 0.3, hy - hr * 0.8, hx - 1.2, hy - hr - 2.4); line(c, hx + 0.1, hy - hr * 0.8, hx - 0.6, hy - hr - 2.4); }
+    if (q.horn === 'cow') { c.strokeStyle = '#efe6d2'; c.lineWidth = 0.55; c.beginPath(); c.moveTo(hx - 0.5, hy - hr * 0.7); c.quadraticCurveTo(hx - 1.6, hy - hr - 0.6, hx - 1.1, hy - hr - 1.4); c.moveTo(hx + 0.2, hy - hr * 0.7); c.quadraticCurveTo(hx + 1.2, hy - hr - 0.6, hx + 0.8, hy - hr - 1.4); c.stroke(); }
     if (q.horn === 'curl') { c.strokeStyle = '#d8ccb0'; c.lineWidth = 0.9; c.beginPath(); c.arc(hx - 0.3, hy - 0.2, 1.4, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); }
   }
 
@@ -272,7 +276,22 @@
     c.fillStyle = '#1a1410'; c.fillRect(hx + 0.1, hy - 0.3, 0.3, 0.3);
   }
 
-  const DRAW = { rabbit, boar, wolf, monkey, giraffe, elephant, frog, lizard, snake, croc, dolphin, shark, orca, whale, turtle, seal, penguin, bird, wader };
+  // the Aztec turkey: fan tail, red wattle, strutting
+  function turkey(c, a, sp, t) {
+    const mv = a.moving && !a.dead; const l = mv ? Math.sin(a.walkPh) * 0.8 : 0;
+    const peck = a.eating > 0; const strut = !mv && !peck && Math.sin(t * 0.6 + a.id) > 0.6;
+    c.strokeStyle = '#c87a4a'; c.lineWidth = 0.45; line(c, -0.3, -2.4, -0.3 + l, 0); line(c, 0.4, -2.4, 0.4 - l, 0);
+    if (strut) { c.fillStyle = '#5a3a26'; c.beginPath(); c.arc(-1.8, -4.8, 3.2, Math.PI * 0.6, Math.PI * 1.55); c.lineTo(-1.8, -4.8); c.fill(); c.strokeStyle = '#e8d8b0'; c.lineWidth = 0.35; c.beginPath(); c.arc(-1.8, -4.8, 3, Math.PI * 0.6, Math.PI * 1.55); c.stroke(); }
+    else { c.fillStyle = '#4a3222'; c.beginPath(); c.moveTo(-1.4, -3.8); c.lineTo(-3.6, -5.4); c.lineTo(-3.2, -3); c.fill(); }
+    ell(c, 0, -3.6, 2, 1.5, 0, a.hurt > 0 ? '#ff8a7a' : '#3e2a1e');
+    ell(c, -0.3, -3.8, 1.3, 0.9, 0, '#5a4030');
+    const hx = peck ? 2.2 : 1.7, hy = peck ? -1.6 : -6.2;
+    c.strokeStyle = '#6a4a3a'; c.lineWidth = 0.7; line(c, 1.2, -4.4, hx - 0.2, hy + 0.5);
+    ell(c, hx, hy, 0.6, 0.55, 0, '#8ab0c8');
+    c.fillStyle = '#d8342a'; c.beginPath(); c.ellipse(hx + 0.4, hy + 0.7, 0.3, 0.7, 0, 0, TAU); c.fill();
+    c.fillStyle = '#e8c070'; c.beginPath(); c.moveTo(hx + 0.5, hy - 0.1); c.lineTo(hx + 1.2, hy + 0.1); c.lineTo(hx + 0.5, hy + 0.3); c.fill();
+  }
+  const DRAW = { rabbit, boar, wolf, monkey, giraffe, elephant, frog, lizard, snake, croc, dolphin, shark, orca, whale, turtle, seal, penguin, bird, wader, turkey };
   Art.animal = function (c, a, x, y, t, lod) {
     const sp = G.Animals.DEF[a.kind]; if (!sp) return oldAnimal && oldAnimal(c, a, x, y, t);
     c.save(); c.translate(x, y);

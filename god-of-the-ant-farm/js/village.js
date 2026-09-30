@@ -78,7 +78,7 @@
     const S = G.S; const def = G.BDEF[type];
     const b = {
       id: S.nextId++, type, x, y, w: def.w, h: def.h, built: !!built, progress: built ? 1 : 0,
-      need: Object.assign({ wood: 0, stone: 0 }, built ? {} : def.cost), incoming: { wood: 0, stone: 0 },
+      need: Object.assign({ wood: 0, stone: 0 }, built ? {} : def.cost), incoming: Object.fromEntries(Object.keys(Object.assign({ wood: 0, stone: 0 }, def.cost)).map(k => [k, 0])),
       hp: def.hp, maxHp: def.hp, set: setId, blocks: def.blocks, v: Math.floor(G.R() * 3), born: S.day, burnHp: 0,
       style: G.Civ.idOfFac(V.facOfSet(setId)) || null, // architecture of the people who built it
     };
@@ -100,7 +100,7 @@
     const S = G.S; S.buildings.delete(b.id);
     for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const i = ty * N + tx; if (S.occ[i] === b.id) S.occ[i] = 0; }
   };
-  V.totalCost = def => (def.cost.wood || 0) + (def.cost.stone || 0);
+  V.totalCost = def => { let n = 0; for (const k in def.cost) n += def.cost[k] || 0; return n; };
   V.nameOf = (type, b) => G.Civ.bname(type, b ? b.style : null);
   V.buildName = b => (b.upgradeFrom && !b.built ? V.nameOf(b.type, b) + ' (obra)' : V.nameOf(b.type === 'ruin' ? (b.origType || 'ruin') : b.type, b));
 
@@ -262,6 +262,8 @@
   V.findSite = function (set, type) {
     const S = G.S; const def = G.BDEF[type];
     if (type === 'doca' && G.City) return G.City.dockSite(set);
+    if (G.Eco) { const e = G.Eco.findSite(set, type); if (e !== undefined) return e; }
+    const field = type === 'farm' || type === 'cercado' || type === 'curral' || type === 'estabulo';
     const pop = V.pop(set.id);
     const R = Math.min(17 + (set.tier || 0) * 3 + (def.w >= 3 ? 2 : 0), Math.round(6 + Math.sqrt(pop + 1) * 1.5 + (def.w >= 3 ? 2 : 0)));
     const counts = {}; for (const b of S.buildings.values()) if (b.set === set.id) counts[b.type] = (counts[b.type] || 0) + 1;
@@ -278,7 +280,7 @@
       for (let ty = y; ty < y + def.h && ok; ty++) for (let tx = x; tx < x + def.w; tx++) {
         const i = ty * N + tx; const t = S.type[i];
         if (t < T.SAND || S.occ[i] || S.objAt[i] || S.fire[i] > 0 || S.scar[i] > G.DAY_LEN * 2 || S.wall[i] || S.road[i] >= 2) { ok = false; break; }
-        if ((type === 'farm' || type === 'cercado') && (t === T.SAND || t === T.ROCKY)) { ok = false; break; }
+        if (field && (t === T.SAND || t === T.ROCKY)) { ok = false; break; }
         if (S.treeAt[i]) trees++;
         fert += S.fert[i];
       }
@@ -288,7 +290,7 @@
         if (ty >= y && ty < y + def.h && tx >= x && tx < x + def.w) continue;
         if (!W.inb(tx, ty)) { ok = false; break; }
         const i = ty * N + tx; const o = S.occ[i];
-        if (o) { const ob = S.buildings.get(o); if (ob && (def.blocks || ob.blocks)) { ok = false; break; } if (ob && (type === 'farm' || type === 'cercado') && ob.type !== 'farm') { ok = false; break; } }
+        if (o) { const ob = S.buildings.get(o); if (ob && (def.blocks || ob.blocks)) { ok = false; break; } if (ob && field && ob.type !== 'farm') { ok = false; break; } }
         if (def.blocks && S.type[i] < T.RIVER) { /* water side ok */ }
       }
       if (!ok) continue;
@@ -320,6 +322,7 @@
     if (!pos) { set.fails++; return null; }
     const b = V.addBuilding(type, pos[0], pos[1], set.id, false);
     if (type === 'cemetery') V.completeBuilding(b);
+    G.Eco && G.Eco.onPlaced(b);
     return b;
   };
 
@@ -370,6 +373,7 @@
     if (isMain && !c.monument && c.temple && facHas('temple') && allPop >= 45 && pop >= 16) want.push('monument');
     G.Politics && G.Politics.planExtra && G.Politics.planExtra(set, fac, c, want, pop);
     G.City && G.City.plan(set, fac, c, want, pop);
+    G.Eco && G.Eco.plan(set, fac, c, want, pop);
     if (c.storehouse && !c.siteTypes.storehouse && (st.wood > cap * 0.9 || st.food > cap * 0.9 || st.stone > cap * 0.9) && c.storehouse < 1 + Math.floor(pop / 30)) want.push('storehouse');
     // upgrade an old hut into a stone house
     if (workshop && c.hut > 0 && !c.siteTypes.house && st.stone >= 10 && st.wood >= 14 && want.length === 0) {
@@ -397,9 +401,12 @@
   }
 
   // ------------------------------ jobs ------------------------------
-  const WORK_ROLES = ['lenhador', 'coletor', 'agricultor', 'construtor', 'mineiro', 'cacador', 'sacerdote', 'guerreiro'];
+  const BASE_ROLES = ['lenhador', 'coletor', 'agricultor', 'construtor', 'mineiro', 'cacador', 'sacerdote', 'guerreiro'];
+  let WORK_ROLES = BASE_ROLES;
   function assignJobs(set) {
     const S = G.S;
+    // (the trades of the economy module load after this file)
+    if (WORK_ROLES === BASE_ROLES && G.Eco) WORK_ROLES = BASE_ROLES.concat(G.Eco.JOB_ROLES);
     const adults = [];
     let pop = 0;
     for (const v of S.villagers.values()) {
@@ -421,14 +428,29 @@
     let farmsBuilt = 0; for (const b of S.buildings.values()) if (b.set === set.id && b.type === 'farm' && b.built) farmsBuilt++;
     let templeBuilt = false; for (const b of S.buildings.values()) if (b.set === set.id && (b.type === 'temple') && b.built) templeBuilt = true;
     let threats = 0; for (const a of S.animals.values()) if (!a.dead && (G.Animals.threat(a) || (G.Animals.DEF[a.kind] && G.Animals.DEF[a.kind].bold > 0.3)) && G.dist(a.x, a.y, set.cx, set.cy) < 20) threats++;
-    const want = { lenhador: 0, coletor: 0, agricultor: 0, construtor: 0, mineiro: 0, cacador: 0, sacerdote: 0, guerreiro: 0 };
+    const want = {}; for (const r of WORK_ROLES) want[r] = 0;
+    // workplaces: shepherds, weavers, smiths, merchants...
+    const eco = G.Eco ? G.Eco.demand(set, fac, A) : {};
+    let ecoN = 0; for (const r in eco) { if (r === 'mineiro') continue; want[r] = eco[r]; ecoN += eco[r]; }
+    const mineJobs = eco.mineiro || 0;
     want.sacerdote = templeBuilt ? (pop >= 45 ? 2 : 1) : 0;
     want.guerreiro = G.War.warriorWant(set, fac, A);
     want.agricultor = Math.min(farmsBuilt * 2, Math.ceil(A * 0.45));
     want.construtor = sites ? Math.min(Math.max(1, Math.ceil(sites * 1.4) + (matNeed > 40 ? 1 : 0)), Math.max(1, Math.floor(A * 0.35))) : 0;
     want.cacador = (A >= 7 ? 1 : 0) + (A >= 22 ? 1 : 0) + Math.min(3, threats);
-    let rest = A - want.sacerdote - want.agricultor - want.construtor - want.cacador - want.guerreiro;
-    if (rest < 1) { want.cacador = Math.max(0, want.cacador - 1); want.guerreiro = Math.max(0, want.guerreiro - 1); rest = A - want.sacerdote - want.agricultor - want.construtor - want.cacador - want.guerreiro; }
+    const restOf = () => A - want.sacerdote - want.agricultor - want.construtor - want.cacador - want.guerreiro - ecoN;
+    // at least two hands for wood and forage; the trades give way last
+    const MIN_REST = A >= 12 ? 2 : 1;
+    let rest = restOf();
+    if (rest < MIN_REST) { want.construtor = Math.min(want.construtor, Math.max(1, Math.floor(A * 0.2))); want.cacador = Math.min(want.cacador, 1 + (threats > 1 ? 1 : 0)); rest = restOf(); }
+    if (rest < MIN_REST) { want.guerreiro = Math.max(0, want.guerreiro - 1); rest = restOf(); }
+    if (rest < MIN_REST) {
+      for (const r of ['contrabandista', 'escriba', 'taverneiro', 'ourives', 'feirante', 'oleiro', 'cavalarico', 'mercador', 'cobrador', 'tecelao', 'acougueiro', 'ferreiro']) {
+        if (rest >= MIN_REST) break;
+        if (!(want[r] > 0)) continue;
+        const cut = Math.min(want[r], MIN_REST - rest); want[r] -= cut; ecoN -= cut; rest += cut;
+      }
+    }
     let rocks = 0; for (const r of S.rocks.values()) if (G.dist(r.x, r.y, set.cx, set.cy) < 26) { rocks++; if (rocks > 2) break; }
     if (!rocks && G.Vg.canQuarry(set)) rocks = 1;
     // how much of each resource the whole island wants to keep in stock
@@ -450,6 +472,8 @@
       want.mineiro = Math.round(rest * wS / tot);
       want.lenhador = Math.max(0, rest - want.coletor - want.mineiro);
     }
+    // the mines take their crews from the quarrymen and woodcutters
+    if (mineJobs) { const m = Math.min(mineJobs, want.lenhador + want.coletor - 1); if (m > 0) { want.mineiro += m; const fromL = Math.min(m, want.lenhador); want.lenhador -= fromL; want.coletor -= m - fromL; } }
     // current counts
     const have = {}; for (const r of WORK_ROLES) have[r] = [];
     const none = [];
@@ -470,11 +494,13 @@
       sur.sort((a, b) => (have[b].length - want[b]) - (have[a].length - want[a]));
       const from = sur[0]; const to = pickRoleForList(have[from], d);
       const v = to.v; const r = to.r;
-      have[from].splice(have[from].indexOf(v), 1); v.role = r; have[r].push(v); changes++;
+      have[from].splice(have[from].indexOf(v), 1); v.role = r; v.job = 0; have[r].push(v); changes++;
     }
+    G.Eco && G.Eco.place(set);
   }
   function pickRoleFor(v, roles) {
     if (roles.includes('guerreiro') && v.courage > 0.55 && v.g === 'm') return 'guerreiro';
+    if (roles.includes('contrabandista')) { const r = roles.filter(q => q !== 'contrabandista'); if (r.length) return pickRoleFor(v, r); }
     if (roles.includes('cacador') && v.courage > 0.6) return 'cacador';
     if (roles.includes('sacerdote') && v.traits.includes('Devoto')) return 'sacerdote';
     return roles[0];
@@ -488,6 +514,8 @@
         if (r === 'cacador') s += v.courage * 3;
         if (r === 'guerreiro') s += v.courage * 3 + (v.g === 'm' ? 1 : 0) + (v.kills || 0) * 0.5;
         if (r === 'sacerdote' && v.traits.includes('Devoto')) s += 3;
+        if (r === 'contrabandista') s -= 20; // nobody is ordered into crime
+        if (v.job && G.Eco && G.Eco.isJobRole(v.role)) s -= 1.5; // artisans keep their trade
         if (r === roles[0]) s += 1.5;
         if (s > bs) { bs = s; best = { v, r }; }
       }

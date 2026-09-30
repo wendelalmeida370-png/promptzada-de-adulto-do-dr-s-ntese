@@ -267,6 +267,7 @@
         t -= far * dl;
       }
       if (G.City) t += G.City.loyaltyBonus(s);
+      if (G.Eco) t += G.Eco.loyaltyMod(s, f);
       if (hungry) t -= 18;
       t -= f.weariness * 0.3;
       if (f.gov === 'tirania') t -= 16 + pe.cru * 12; else t -= pe.cru * 8;

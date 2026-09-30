@@ -902,7 +902,17 @@
   // ------------------------------ dispatch ------------------------------
   const MAXZ = { quarteirao: 84, hut: 30, house: 40, sobrado: 52, insula: 64, temple: 64, monument: 72, storehouse: 44, workshop: 46, quartel: 44, torre: 54, praca: 44, mercado: 38, celeiro: 44, biblioteca: 44, teatro: 56, banhos: 50, palacio: 72, doca: 36, aqueduto: 36, maravilha: 100 };
   const NEW = { quarteirao: 1, sobrado: 1, insula: 1, praca: 1, mercado: 1, celeiro: 1, biblioteca: 1, teatro: 1, banhos: 1, palacio: 1, doca: 1, aqueduto: 1, maravilha: 1 };
+  // later files add building types of their own with the same drawing kit
+  A.EXT = {};
+  A.kit = () => ({ P, poly, ln, walls, top, box, onL, onR, shade, roof, hall, column, colonnade, steps, flag, palm, jar, barrel, awning, stall, statue, dome, tree, basin, pave, band, parapet, plinth, winsL, winsR, gableX, gableY, hip, pal, TAU });
   A.building = function (type, v, style, extra) {
+    const X = A.EXT[type];
+    if (X) {
+      const st = PAL[style] ? style : 'classico'; const def = G.BDEF[type]; if (!def) return null;
+      const key = 'x-' + type + (v || 0) + st + (extra ? extra.join(',') : '');
+      const [w, h, ax, ay] = dims(def.w, def.h, X.maxz);
+      return Art.sprite(key, w, h, ax, ay, (c, m) => X.draw(c, m, pal(st), st, v || 0, extra));
+    }
     const st = PAL[style] ? style : 'classico';
     if (st === 'classico' && !NEW[type]) return null; // the original drawings
     if (type === 'monument' && st === 'egipcio') return null; // the obelisk is already Egyptian

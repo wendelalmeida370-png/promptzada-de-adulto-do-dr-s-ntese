@@ -499,7 +499,7 @@
       ${status.length ? `<div class="status">${status.join('')}</div>` : ''}
       <div class="family">${fam.map(x => `<div>${x}</div>`).join('') || '<div class="muted">Sem laços familiares ainda.</div>'}</div>
       <div class="doing">Atualmente: <b>${esc(G.Vg.taskText(v))}</b></div>
-      <div class="meta">${set ? esc(set.name) : ''}${home ? (() => { const hn = G.Village.buildName(home).toLowerCase(); return ' · mora n' + (G.gen(hn) === 'a' ? 'uma ' : 'um ') + esc(hn); })() : ''}${feats.length ? '<br>Contribuiu com ' + feats.join(', ') : ''}</div>
+      <div class="meta">${set ? esc(set.name) : ''}${G.Eco && G.Eco.personLine(v) ? ' · ' + esc(G.Eco.personLine(v)) : ''}${home ? (() => { const hn = G.Village.buildName(home).toLowerCase(); return ' · mora n' + (G.gen(hn) === 'a' ? 'uma ' : 'um ') + esc(hn); })() : ''}${feats.length ? '<br>Contribuiu com ' + feats.join(', ') : ''}</div>
       <div class="btns"><button data-act="follow" class="${following ? 'on' : ''}">${ICON.eye} ${following ? 'Seguindo' : 'Seguir'}</button><button data-act="tree">${ICON.tree} Família</button></div>`;
   }
   function shipHTML(s) {
@@ -527,8 +527,7 @@
     else if (!b.built) {
       const al = G.Vg.allowedProgress(b);
       const miss = [];
-      if (b.need.wood > 0) miss.push(`${Math.ceil(b.need.wood)} madeira`);
-      if (b.need.stone > 0) miss.push(`${Math.ceil(b.need.stone)} pedra`);
+      for (const k in b.need) if (b.need[k] > 0) miss.push(`${Math.ceil(b.need[k])} ${G.Eco ? G.Eco.name(k) : k}`);
       let builders = 0; for (const v of S.villagers.values()) if (v.task && v.task.type === 'build' && v.task.id === b.id) builders++;
       body = `${bar('Obra', b.progress * 100, 'energy')}${bar('Material', al * 100, 'dev')}<div class="doing">${miss.length ? 'Faltam: <b>' + miss.join(', ') + '</b>' : 'Materiais completos.'}<br>${builders ? builders + (builders > 1 ? ' pessoas trabalhando' : ' pessoa trabalhando') : 'Ninguém trabalhando agora.'}</div>`;
     } else {
@@ -544,6 +543,7 @@
       }
       if (b.type === 'storehouse' || b.type === 'campfire' || b.type === 'celeiro') body += `<div class="doing">Capacidade de estoque: <b>${G.Village.cap(G.Village.facOfSet(b.set))}</b> de cada recurso.</div>`;
       if (b.type === 'temple') body += `<div class="doing">Gera fé continuamente. Os sacerdotes rezam aqui.</div>`;
+      if (G.Eco) body += G.Eco.buildingHTML(b, plink, esc);
       if (b.type === 'aqueduto') { const a = S.aqueducts.find(q => q.b === b.id); body += `<div class="doing">${a ? (a.done ? 'Água corrente: colheitas +20%, mais gente cabe na cidade.' : `Arcos erguidos: <b>${a.built}/${a.tiles.length}</b> (consome pedra).`) : set && set.aqua ? 'Cisterna cheia.' : ''}</div>`; }
       if (b.type === 'mercado' || b.type === 'praca') { const rs = S.routes.filter(r => r.ok && (r.a === b.set || r.b === b.set)); if (rs.length) body += `<div class="doing">${rs.length} ${rs.length > 1 ? 'rotas' : 'rota'} de carroças passando por aqui.</div>`; }
       if (b.type === 'cemetery') {
@@ -785,6 +785,7 @@
         <span title="Pedra">${ICON.stone}<b>${Math.floor(f.stock.stone)}</b></span>
         ${ships.length ? `<span title="Navios (${warships} de guerra)">${ICON.ship}<b>${ships.length}</b></span>` : ''}
       </div>
+      ${G.Eco ? G.Eco.realmHTML(f, esc) : ''}
       ${f.tech ? `<div class="rm-tech">${ICON.tech}<span>${known.length ? known.map(t => G.TECH[t].name).join(' · ') : 'Nenhum saber ainda'}${cur ? ` <em>pesquisando ${esc(cur)}</em>` : ''}</span></div>` : ''}
       ${bar('Estabilidade', stab, stab < 35 ? 'hp' : 'energy', stab + '%')}
       ${status.length ? `<div class="status">${status.join('')}</div>` : ''}

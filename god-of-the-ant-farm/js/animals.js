@@ -66,7 +66,16 @@
     parrot: { name: 'Arara', g: 'f', cls: 'air', diet: 'browse', hab: [4], dens: 1.3, herd: [3, 6], hp: 6, sp: 2.2, run: 3.4, meat: 1, size: 0.7, fear: 3, life: 30, breed: 0.6, app: 0.2, hunt: false, art: 'bird', b: { col: '#d8302a', wing: '#2a6ad0', tip: '#f2c23a', beak: '#f0e8d8', span: 8 } },
     heron: { name: 'Garça', g: 'f', cls: 'air', diet: 'fish', prey: ['frog'], wader: true, hab: [3, 0, 4], near: 'water', dens: 0.6, herd: [1, 2], hp: 8, sp: 1.8, run: 3, meat: 2, size: 0.9, fear: 4, life: 15, breed: 0.5, app: 0.3, hunt: false, art: 'wader', b: { col: '#f6f6f2', wing: '#e8e8e4', tip: '#3a3a3a', beak: '#e8c83a', leg: '#3a3a3a', span: 10 } },
     flamingo: { name: 'Flamingo', g: 'm', cls: 'air', diet: 'filter', wader: true, hab: [3, 5, 6], near: 'water', dens: 1.1, herd: [4, 9], hp: 8, sp: 1.8, run: 3, meat: 2, size: 0.9, fear: 4.5, life: 30, breed: 0.4, app: 0.3, hunt: false, art: 'wader', b: { col: '#f49aa8', wing: '#f07a8e', tip: '#2a2a2a', beak: '#2a2a2a', leg: '#e87a8a', span: 10 } },
+    // ---------------- livestock: kept, herded, shorn, milked and eaten by people ----------------
+    vaca: { name: 'Vaca', g: 'f', cls: 'land', diet: 'herb', dom: true, hab: [], dens: 0, herd: [1, 1], hp: 70, sp: 0.55, run: 1.8, meat: 16, size: 1.2, fear: 0, life: 16, breed: 0.4, app: 1.4, hunt: false, art: 'quad', q: { len: 4.6, h: 4.4, leg: 2.8, neck: 1.3, col: '#e8e0d2', belly: '#f4efe6', spots: '#4a3a2e', horn: 'cow', tail: 'tuft', mane: '#4a3a2e' } },
+    ovelha: { name: 'Ovelha', g: 'f', cls: 'land', diet: 'herb', dom: true, hab: [], dens: 0, herd: [1, 1], hp: 26, sp: 0.55, run: 1.9, meat: 7, size: 0.9, fear: 0, life: 12, breed: 0.8, app: 0.7, hunt: false, art: 'quad', q: { len: 3.4, h: 3.2, leg: 2, neck: 1, col: '#f0ece2', belly: '#e6e0d4', wool: 1, face: '#4a403a', ear: 0.5, noTail: 1 } },
+    cabra: { name: 'Cabra', g: 'f', cls: 'land', diet: 'browse', dom: true, hab: [], dens: 0, herd: [1, 1], hp: 24, sp: 0.6, run: 2.2, meat: 6, size: 0.85, fear: 0, life: 12, breed: 0.8, app: 0.6, hunt: false, art: 'quad', q: { len: 3.2, h: 3.4, leg: 2.6, neck: 1.4, col: '#a08262', belly: '#d8c4a4', horn: 'curl', ear: 0.7, tail: 'tuft' } },
+    porco: { name: 'Porco', g: 'm', cls: 'land', diet: 'omni', dom: true, hab: [], dens: 0, herd: [1, 1], hp: 34, sp: 0.5, run: 1.7, meat: 10, size: 0.95, fear: 0, life: 10, breed: 1.1, app: 0.9, hunt: false, art: 'quad', q: { len: 3.6, h: 2.8, leg: 1.4, neck: 0.5, col: '#eeaa9a', belly: '#f4bcae', stout: 1, snout: 2, ear: 0.8, tail: 'curly' } },
+    peru: { name: 'Peru', g: 'm', cls: 'land', diet: 'insect', dom: true, hab: [], dens: 0, herd: [1, 1], hp: 8, sp: 0.6, run: 2, meat: 3, size: 0.75, fear: 0, life: 6, breed: 1.6, app: 0.3, hunt: false, art: 'turkey' },
+    cavalo: { name: 'Cavalo', g: 'm', cls: 'land', diet: 'herb', dom: true, hab: [], dens: 0, herd: [1, 1], hp: 80, sp: 0.9, run: 3.4, meat: 18, size: 1.3, fear: 0, life: 22, breed: 0.3, app: 1.5, hunt: false, art: 'quad', q: { len: 4.6, h: 5, leg: 4.2, neck: 3.2, col: '#8a5a34', belly: '#9a6a44', mane: '#2a1a10', tail: 'tuft' } },
   };
+  // predators raid the herds too
+  for (const [p, list] of [['wolf', ['ovelha', 'cabra', 'porco', 'peru', 'vaca']], ['fox', ['peru']], ['bear', ['ovelha', 'porco', 'vaca', 'cabra']], ['lion', ['vaca', 'cabra', 'cavalo', 'ovelha']], ['jaguar', ['porco', 'peru', 'cabra']], ['hyena', ['cabra', 'ovelha', 'peru']], ['croc', ['vaca', 'cabra', 'cavalo', 'porco']], ['python', ['peru']], ['viper', ['peru']]]) SP[p].prey = SP[p].prey.concat(list);
   for (const k in SP) { SP[k].id = k; SP[k].nameA = (SP[k].g === 'f' ? 'uma ' : 'um ') + SP[k].name.toLowerCase(); }
   A.ids = Object.keys(SP);
   const DAY = () => G.DAY_LEN;
@@ -194,6 +203,7 @@
       lt: G.R() * 0.5, lifeMul: G.rr(0.8, 1.2), eating: 0, bite: 0, howl: 0, ph: G.R() * 6, leap: 0, spout: 0, flap: 0, ang: 0, perchZ: 0,
       swim: false, onPerson: false, named: null, kills: 0, shoal: 0, seek: false, sink: false, cause: null, raid: false, cd: 0, lod: 0, hx: x, hy: y,
       tamed: 0, guardSet: 0, gt: false, gscan: 0, legend: false, big: 1, epithet: null, mig: false,
+      dom: 0, pen: 0, herder: 0, ledBy: 0, wool: 0, milk: 0, eggs: 0, shorn: 0, hold: 0, tended: 0, flee: 0,
     }, extra || {});
     if (a.hx === undefined) { a.hx = a.x; a.hy = a.y; }
     S.animals.set(a.id, a);
@@ -201,7 +211,9 @@
   };
   A.remove = a => G.S.animals.delete(a.id);
   A.sp = a => SP[a.kind] || SP.rabbit;
-  A.huntable = a => { const sp = SP[a.kind]; return !!(sp && sp.hunt && !a.held && !a.air && !(sp.cls === 'water') && !(a.swim) && !a.tamed && !a.legend); };
+  A.huntable = a => { const sp = SP[a.kind]; return !!(sp && sp.hunt && !a.held && !a.air && !(sp.cls === 'water') && !(a.swim) && !a.tamed && !a.legend && !a.dom); };
+  // a wild predator going after somebody's herd
+  A.raider = a => !a.dead && !a.dom && a.state === 'chase' && !a.carc && a.target && !!(G.S.animals.get(a.target) || {}).dom;
   // is this animal a danger to people right now?
   A.threat = function (a) {
     if (a.dead) return false; const sp = SP[a.kind]; if (!sp) return false;
@@ -540,6 +552,57 @@
     }
   }
 
+  // ---------------- livestock ----------------
+  function domAI(a, dt) {
+    const S = G.S; const sp = SP[a.kind];
+    if (a.hold > 0) { a.hold -= dt; a.moving = false; return; }
+    a.scan -= dt;
+    if (a.scan <= 0) {
+      a.scan = 0.5 + G.R() * 0.3;
+      if (a.state !== 'led') { const th = fearCheck(a); if (th) { const p = fleeTarget(a, th.x, th.y, 4); if (p) { a.tx = p[0]; a.ty = p[1]; a.flee = 2.5; } } }
+    }
+    if (a.flee > 0) { a.flee -= dt; if (moveTo(a, dt, sp.run)) a.flee = 0; return; }
+    if (a.state === 'led') {
+      const v = S.villagers.get(a.ledBy);
+      if (!v || !v.task) { a.state = 'pen'; a.ledBy = 0; return; }
+      const d = G.dist(a.x, a.y, v.x, v.y);
+      if (d > 12) { a.x = v.x; a.y = v.y; }
+      if (d > 0.75) { a.tx = v.x - v.face * 0.45; a.ty = v.y + 0.15; moveTo(a, dt, Math.max(sp.sp, 1.2) * (d > 2.5 ? 1.7 : 1.05)); } else a.moving = false;
+      return;
+    }
+    if (a.state === 'herd') {
+      const v = S.villagers.get(a.herder);
+      if (!v || !v.task || v.task.type !== 'herd') { a.state = 'pen'; a.herder = 0; }
+      else {
+        const d = G.dist(a.x, a.y, v.x, v.y);
+        if (d > 14) { a.x = v.x + G.rr(-1, 1); a.y = v.y + G.rr(-1, 1); }
+        if (v.task.st === 3) { // spread out around the shepherd and graze
+          a.t -= dt;
+          if (a.t <= 0) { const ang = G.hash(a.id) * 6.28 + G.R() * 2; const r = G.rr(0.7, 2.8); const tx = v.x + Math.cos(ang) * r, ty = v.y + Math.sin(ang) * r; if (walkOK(a, tx, ty)) { a.tx = tx; a.ty = ty; } a.t = G.rr(2.5, 6); }
+          if (a.hunger > 0.03 && graze(a, dt)) { a.moving = false; return; }
+          if (G.dist(a.x, a.y, a.tx, a.ty) > 0.15) moveTo(a, dt, sp.sp * 0.6); else a.moving = false;
+        } else if (d > 1.1) {
+          const ang = G.hash(a.id) * 6.28; a.tx = v.x - v.face * 0.9 + Math.cos(ang) * 0.9; a.ty = v.y + Math.sin(ang) * 0.9;
+          moveTo(a, dt, Math.max(sp.sp * 1.4, 1.05) * (d > 4 ? 1.5 : 1));
+        } else a.moving = false;
+        return;
+      }
+    }
+    const pen = a.pen && S.buildings.get(a.pen);
+    if (!pen) { a.t -= dt; if (a.t <= 0) { const p = pickNear({ x: a.hx, y: a.hy, kind: a.kind }, 2.5); if (p) { a.tx = p[0]; a.ty = p[1]; } a.t = G.rr(3, 7); } if (G.dist(a.x, a.y, a.tx, a.ty) > 0.1) moveTo(a, dt, sp.sp * 0.5); else a.moving = false; return; }
+    const x0 = pen.x + 0.3, x1 = pen.x + pen.w - 0.3, y0 = pen.y + 0.3, y1 = pen.y + pen.h - 0.3;
+    if (a.x < pen.x - 0.2 || a.x > pen.x + pen.w + 0.2 || a.y < pen.y - 0.2 || a.y > pen.y + pen.h + 0.2) { // strayed: back through the gate
+      a.tx = pen.x + pen.w / 2 + G.rr(-0.5, 0.5); a.ty = pen.y + pen.h / 2 + G.rr(-0.5, 0.5); moveTo(a, dt, sp.sp * 1.2); return;
+    }
+    a.t -= dt;
+    if (a.eating > 0) { graze(a, dt); a.moving = false; return; }
+    if (a.t <= 0) {
+      if (a.hunger > 0.2 && graze(a, dt)) { a.t = G.rr(2, 5); return; }
+      a.tx = G.rr(x0, x1); a.ty = G.rr(y0, y1); a.t = G.rr(3, 9);
+    }
+    if (G.dist(a.x, a.y, a.tx, a.ty) > 0.1) { moveTo(a, dt, sp.sp * 0.45); a.x = G.clamp(a.x, x0 - 0.1, x1 + 0.1); a.y = G.clamp(a.y, y0 - 0.1, y1 + 0.1); } else a.moving = false;
+  }
+
   // raiders and summoned packs: the old wolves that come, bite and go
   function raidWolfAI(a, dt) {
     const S = G.S; const d = SP.wolf;
@@ -799,8 +862,9 @@
       if (a.lt >= 0.5) { const lt = a.lt; a.lt = 0; if (!life(a, sp, lt, S)) continue; }
       if (a.dead) continue;
       // resting animals with nothing to decide just let the clock run
-      if (a.state === 'idle' && a.t > dt && a.scan > dt && !(a.angry > 0) && sp.cls !== 'air') { a.t -= dt; a.scan -= dt; if (a.rest > 0) a.rest -= dt; a.moving = false; continue; }
+      if (a.state === 'idle' && a.t > dt && a.scan > dt && !(a.angry > 0) && sp.cls !== 'air' && !sp.dom) { a.t -= dt; a.scan -= dt; if (a.rest > 0) a.rest -= dt; a.moving = false; continue; }
       if (a.kind === 'wolf' && (a.raid || a.summoned)) raidWolfAI(a, dt);
+      else if (sp.dom) domAI(a, dt);
       else if (sp.cls === 'water') waterAI(a, dt);
       else if (sp.cls === 'air') airAI(a, dt);
       else if (sp.cls === 'amph') amphAI(a, dt);
@@ -827,8 +891,16 @@
       return false;
     }
     a.age += dayF; if (a.grown < 1) a.grown = Math.min(1, a.grown + dayF / Math.max(0.5, sp.life * 0.12));
-    a.hunger += dayF * (sp.diet === 'carn' ? (sp.apex ? 0.42 : 0.55) : sp.diet === 'scav' ? 0.5 : sp.diet === 'filter' || sp.diet === 'insect' ? 0.35 : 0.8) * (a.summoned || a.raid ? 0 : a.legend ? 0.6 : 1);
+    a.hunger += dayF * (sp.diet === 'carn' ? (sp.apex ? 0.42 : 0.55) : sp.diet === 'scav' ? 0.5 : sp.diet === 'filter' || sp.diet === 'insect' ? 0.35 : 0.8) * (a.summoned || a.raid ? 0 : a.legend ? 0.6 : a.dom ? 0.55 : 1);
     if (a.tamed) a.hunger = Math.max(0, a.hunger - dayF * 1.6); // its people feed it
+    if (a.dom && a.grown >= 1) {
+      const fed = a.hunger < 0.5 ? 1 : 0.3;
+      if (a.kind === 'ovelha') { if (a.shorn > 0) a.shorn -= dt; else a.wool = Math.min(2, a.wool + dayF * 1.8 * fed); }
+      else if (a.kind === 'vaca' || a.kind === 'cabra') a.milk = Math.min(1.5, a.milk + dayF * 2.2 * fed);
+      else if (a.kind === 'peru') a.eggs = Math.min(1.5, a.eggs + dayF * 2.6 * fed);
+      // a lost animal without a pen joins the nearest pen of its people
+      if (!a.pen || !G.S.buildings.has(a.pen)) { const p = [...G.S.buildings.values()].find(b => (b.type === (a.kind === 'cavalo' ? 'estabulo' : 'curral')) && b.built && G.Village.facOfSet(b.set) === a.dom && (!b.kind || b.kind === a.kind)); a.pen = p ? p.id : 0; if (p) { a.state = 'pen'; a.hx = p.x + 1.5; a.hy = p.y + 1.5; } }
+    }
     if (a.hunger >= 1) { a.hunger = 1; a.hp -= dt * sp.hp / (DAY() * 1.1); if (a.hp <= 0) { A.kill(a, null, 'hunger'); return false; } }
     else if (a.hp < a.maxHp && a.hunger < 0.5) a.hp = Math.min(a.maxHp, a.hp + dt * 0.5);
     const i = W.idx(a.x, a.y); const t = S.type[i];
@@ -862,7 +934,7 @@
       const eco = S.eco || (S.eco = { deaths: {}, born: {} }); eco.born[a.kind] = (eco.born[a.kind] || 0) + 1;
     }
   }
-  A.counts = function () { const c = {}; for (const a of G.S.animals.values()) if (!a.dead && !a.summoned && !a.raid) c[a.kind] = (c[a.kind] || 0) + 1; return c; };
+  A.counts = function () { const c = {}; for (const a of G.S.animals.values()) if (!a.dead && !a.summoned && !a.raid && !a.dom) c[a.kind] = (c[a.kind] || 0) + 1; return c; };
   // species that vanished from a habitat that still exists come back, slowly, from beyond the map
   function immigrate() {
     const S = G.S; const count = A.counts();
