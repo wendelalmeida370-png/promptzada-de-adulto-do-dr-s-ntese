@@ -516,10 +516,10 @@
     }
     v.act = act; if (b.blocks) faceB(v, b); else v.face = b.type === 'feira' ? 1 : v.id % 2 ? 1 : -1;
     if (b.type === 'feira') { b.openT = G.S.clock; if (!E.fairOpen()) return H.end(v); }
-    if (act === 'sell' && G.R() < dt * 0.25) G.Vg.emote(v, G.pick(['chat', 'happy', 'food']), 1.3);
-    if (act === 'write' && G.R() < dt * 0.15) G.Vg.emote(v, 'chat', 1);
-    if (act === 'lurk' && G.R() < dt * 0.1) G.Vg.emote(v, 'question', 1);
-    if (act === 'serve' && G.R() < dt * 0.2) G.Vg.emote(v, 'food', 1.2);
+    if (act === 'sell' && G.R() < dt * 0.05) G.Vg.emote(v, G.pick(['chat', 'happy', 'food']), 1.3);
+    if (act === 'write' && G.R() < dt * 0.03) G.Vg.emote(v, 'chat', 1);
+    if (act === 'lurk' && G.R() < dt * 0.03) G.Vg.emote(v, 'question', 1);
+    if (act === 'serve' && G.R() < dt * 0.05) G.Vg.emote(v, 'food', 1.2);
     if (act === 'sweep' && G.R() < dt * 0.3) { G.FX && G.FX.dust(v.x + v.face * 0.3, v.y, 1); }
     if (t.type === 'desk') { const f = G.Fac.ofV(v); if (f) f._scribes = G.S.clock; }
     if (v.actT > (t.dur || 12)) H.end(v);
@@ -851,7 +851,7 @@
       const r = walkTo(v, t, 'spot', t.spot[0], t.spot[1], false, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return;
     }
     v.act = v.actT % 6 < 4 ? 'drink' : 'talk'; faceB(v, b);
-    if (G.R() < dt * 0.35) G.Vg.emote(v, G.pick(['happy', 'chat', 'heart']), 1.3);
+    if (G.R() < dt * 0.08) G.Vg.emote(v, G.pick(['happy', 'chat', 'heart']), 1.3);
     if (v.actT > 12 && !t.paid) {
       t.paid = true;
       const I = inv(b); const f = G.Fac.ofV(v);

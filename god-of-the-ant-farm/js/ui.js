@@ -618,8 +618,12 @@
       <ul><li>Quando se encontram, os povos trocam emissários, fazem comércio, casamentos e alianças — ou declaram <b>guerra</b>: exércitos marcham, saqueiam, fazem <b>cativos</b>, conquistam vilas e, sob líderes cruéis, <b>massacram</b>.</li>
       <li>Vilas distantes e infelizes podem <b>rachar</b> e virar povos novos. Ambiciosos tramam <b>golpes</b>; tiranos executam em praça pública; o povo pode se levantar numa <b>revolução</b>.</li>
       <li>Cativos trabalham à força, tentam fugir, se revoltam — e às vezes fundam um povo livre.</li>
-      <li>Arqueiros, tropas de elite, <b>muralhas</b> com portões que se fecham, <b>aríetes</b> e <b>catapultas</b> em cercos.</li>
-      <li>Abra o painel <b>Reinos</b> (<kbd>R</kbd> ou o chip do povo no topo) para ver líderes, relações, exércitos, saberes e o mapa político. <kbd>B</kbd> mostra as fronteiras.</li></ul>
+      <li><b>Exércitos</b> de dezenas ou centenas: lanceiros, espadachins, arqueiros, cavalaria e milícia em companhias com capitães, coronéis e um general, em falange, parede de escudos, cunha ou tartaruga. O general escolhe o plano: cerco e fome, vários portões, pinça, guerrilha — e quem defende escolhe muralha, emboscada na floresta, colina ou vau do rio.</li>
+      <li><b>Cercos</b>: trincheiras, aríetes, catapultas, torres de cerco, escadas, sapadores, óleo fervente, cadáveres catapultados para espalhar a peste e cidades que se rendem de fome. No mar: esporões, abordagem, brulotes e bloqueio de portos.</li>
+      <li>Abra o painel <b>Reinos</b> (<kbd>R</kbd> ou o chip do povo no topo) para ver líderes, relações, exércitos, saberes e o mapa político. <kbd>B</kbd> mostra as fronteiras.</li>
+      </ul><h4>Vida na cidade e festas</h4><ul>
+      <li>Cada pessoa tem ofício e local de trabalho: pastores, tecelões, ferreiros, mineiros, ourives, oleiros, mercadores, feirantes, taverneiros, escribas, coletores de impostos — e contrabandistas. Clique num edifício para ver quem trabalha nele e o que produz.</li>
+      <li>Cada civilização tem suas <b>festividades</b>: Panateneias e Jogos Olímpicos, Saturnália e Triunfo, Opet e a Festa do Vale, Toxcatl e o Fogo Novo, Jól e Midsommar. Acompanhe pela Crônica e vá até lá.</li></ul>
       <h4>O Livro do Mundo</h4><p>Cada mundo nasce com nome, mito da criação, lendas de origem de cada povo e <b>duas profecias antigas</b>. Depois o livro se escreve sozinho: um capítulo a cada sete anos, lendas de heróis, profetas, monstros, vulcões e cidades afogadas. Abra com <kbd>L</kbd> ou pelo ícone do livro.</p>
       <h4>Dicas</h4><ul><li>Clique nos eventos da <b>Crônica</b> para ir até onde aconteceram.</li><li>Na seca, a chuva vale ouro. Num incêndio, também.</li><li>Tudo é salvo automaticamente no navegador.</li></ul>
       </div><div class="mbtns"><button class="primary" data-m="close">Entendi</button></div>`, 'wide');

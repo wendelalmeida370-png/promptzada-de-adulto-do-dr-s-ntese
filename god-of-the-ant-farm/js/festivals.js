@@ -484,15 +484,19 @@
   // walk to a slot: pathfinding once, then small direct corrections
   function toSlot(v, t, dt, H, slot, mul) {
     if (!slot) return true;
-    if (G.dist(v.x, v.y, slot[0], slot[1]) < 0.35) { v.moving = false; return true; }
-    if (!v.path || t.pathFor !== slot) {
-      if (t.delay > 0) { t.delay -= dt; v.moving = false; return false; }
-      t.pathFor = slot;
-      if (G.dist(v.x, v.y, slot[0], slot[1]) < 3) { v.path = null; t.direct = true; }
-      else if (!H.goto(v, slot[0], slot[1], false)) { t.direct = true; }
-      else t.direct = false;
+    const d = G.dist(v.x, v.y, slot[0], slot[1]);
+    if (d < 0.35) { v.moving = false; return true; }
+    if (t.delay > 0) { t.delay -= dt; v.moving = false; return false; }
+    t.rp = (t.rp || 0) - dt;
+    // close by and in the open: walk straight there
+    if (d < 3 && !t.stuck) { if (steer(v, slot[0], slot[1], dt, mul)) return true; if (!v.moving) t.stuck = 1; return false; }
+    // a path, planned again only when the goal has really moved (and not too often)
+    const moved = !t.pt || G.dist(t.pt[0], t.pt[1], slot[0], slot[1]) > 1.5;
+    if ((moved || !v.path || v.pi >= v.path.length) && t.rp <= 0) {
+      t.rp = 1.5; t.pt = [slot[0], slot[1]]; t.stuck = 0;
+      if (!H.goto(v, slot[0], slot[1], false, 5000)) { t.rp = 3; return false; }
     }
-    if (t.direct) { if (steer(v, slot[0], slot[1], dt, mul) ) return true; if (!v.moving) { t.stuck = (t.stuck || 0) + dt; if (t.stuck > 3) { t.direct = false; t.pathFor = null; t.delay = 2; } } return false; }
+    if (!v.path || v.pi >= v.path.length) { steer(v, slot[0], slot[1], dt, mul); return false; }
     return H.move(v, dt, mul);
   }
   FE.run = function (v, t, dt, H) {
@@ -514,7 +518,7 @@
           faceTo(v, C[0], C[1]);
           v.act = crowdAct(fe, s, role, v);
           if (s === 'feast' && v.hunger > 20) v.hunger = Math.max(0, v.hunger - dt * 4);
-          if (G.R() < dt * 0.06) G.Vg.emote(v, s === 'vigil' ? (G.R() < 0.5 ? 'sad' : 'heart') : s === 'dark' ? 'fear' : s === 'speech' ? 'chat' : G.R() < 0.5 ? 'happy' : 'heart', 1.6);
+          if (G.R() < dt * 0.025) G.Vg.emote(v, s === 'vigil' ? (G.R() < 0.5 ? 'sad' : 'heart') : s === 'dark' ? 'fear' : s === 'speech' ? 'chat' : G.R() < 0.5 ? 'happy' : 'heart', 1.6);
         } else if (role === 'chained') v.act = 'bound';
         return true;
       }

@@ -95,6 +95,41 @@ Cada povo pode ser de uma civilização histórica — ou um povo clássico, sem
 - **Carroças** levam bens pelas **rotas internas** e pelas **rotas de comércio** entre povos amigos.
 - **Aquedutos** trazem água do rio, arco por arco.
 
+## A vida na cidade
+
+Nada é enfeite: cada coisa que se vê na cidade é alguém fazendo um trabalho de verdade, com matéria-prima de verdade.
+
+- **Empregos fixos e rotinas**: cada pessoa tem um ofício e um local de trabalho. O mineiro atravessa a cidade até a **mina** no veio de minério e volta carregado; o agricultor vai à colheita e volta; o guerreiro sobe na **torre** ou guarda o portão da muralha e depois volta para a casa onde mora. À tarde uns vão para casa jantar da despensa, outros para a **taverna**.
+- **Criação de gado**: **currais** com vacas, ovelhas, cabras, porcos ou perus (conforme a civilização) e **estábulos** de cavalos. Pastores soltam o rebanho de manhã, levam ao pasto, vigiam contra lobos e trazem de volta; quando não há capim, buscam **feno** no celeiro e enchem o cocho. Tosquiam ovelhas, ordenham vacas e cabras, recolhem ovos. Os animais comem, dão cria — e morrem de fome se ninguém cuida.
+- **Cadeias de produção**: lã → **tecelagem** → tecido; animal levado na corda → **açougue** → carne e couro; minério → **forja** (queimando lenha) → ferramentas e **armas**; ouro → **ourivesaria** → joias; argila tirada da beira do rio → **olaria** → cerâmica; ouro e pedra → **estátua de ouro** do deus.
+- **Veios de ferro e ouro** no mapa (montanhas, desertos, rios da selva): quem tem, minera; quem não tem, compra — ou conquista.
+- **Mercado, feira e mercado clandestino**: mercadores reabastecem no armazém e vendem às famílias; a **feira** arma barracas toda manhã e desmonta ao meio-dia; o **contrabandista** rouba à noite e vende barato, até a guarda dar uma batida.
+- **Dinheiro e impostos**: com a Moeda, os **coletores de impostos** batem de porta em porta, o ouro é cunhado em moedas, salários são pagos às famílias, e cada governo cobra sua taxa (tirania 30%, era de ouro menos). Casas com tecido, cerâmica e joias vivem melhor; impostos altos e escassez derrubam a lealdade. O **prédio administrativo** (bouleutério, basílica, casa do vizir, tecpan, salão do thing) tem escribas que ajudam a governar.
+- **Muito mais animações**: tear, martelo na forja, torno de oleiro, tosquia, ordenha, pastor com cajado, varrer, servir na taverna, escrever, bater à porta, esgueirar-se, pechinchar, beber, carregar lã, tecido, couro, minério, armas, ouro, cerâmica, moedas e feno.
+- Clique num edifício para ver quem trabalha lá, o estoque, o rebanho ou o veio; no painel **Reinos**, cada povo mostra bens, tesouro, imposto e a produção do dia anterior.
+
+## Festividades
+
+Cada povo tem seu calendário, e as festas acontecem de verdade no mundo, com gente andando, carregando, dançando, comendo — e morrendo.
+
+- **Gregos**: **Panateneias** (o peplo novo levado em procissão até a deusa e uma novilha do curral sacrificada no altar; a cada quatro anos as **Grandes Panateneias**, com corrida), **Dionísias** (coro, atores de máscara e vinho) e os **Jogos Olímpicos** a cada quatro anos, com a **trégua sagrada**: nenhum grego marcha enquanto duram.
+- **Romanos**: **Saturnália** (à noite, com velas: os senhores servem a mesa e os cativos comem como convidados), **Jogos** com gladiadores e pão para a multidão, e o **Triunfo** depois de uma conquista: o exército desfila com os cativos acorrentados até o templo.
+- **Egípcios**: **Festa de Opet** (a barca dourada do deus nos ombros dos sacerdotes, do templo até o rio e de volta), a **Bela Festa do Vale** (as famílias passam a noite no cemitério com tochas e oferendas) e **Wepet Renpet** (água nova do rio para os campos, que crescem mais).
+- **Astecas**: **Toxcatl** (numa noite do ano, o cativo que foi o deus Tezcatlipoca dança, sobe a pirâmide e é sacrificado; sem cativo, um peru), **Tlacaxipehualiztli** (o cativo amarrado à pedra redonda luta contra guerreiros-águia e jaguar) e, a cada **52 anos**, o **Fogo Novo**: toda a cerâmica é quebrada, todas as luzes da cidade se apagam, e só depois que o fogo novo acende no alto da pirâmide os corredores levam tochas de casa em casa.
+- **Nórdicos**: **Jól** (a grande fogueira, o blót com um animal sacrificado e chifres de hidromel até o amanhecer), **Midsommar** (roda de dança em volta do mastro) e o **Thing** (o recitador das leis fala aos homens livres).
+- Festas dão lealdade, devoção e fé; custam comida, tecido, cerâmica e animais. São interrompidas se o inimigo chega.
+
+## Exércitos, batalhas e cercos
+
+- **Exércitos de verdade**: o povo levanta **recrutas** da região inteira (a guerra consome as **armas** da forja; sem elas vão com porrete, como milícia) e o tamanho depende do governo, da comida e da ambição do líder — dezenas, às vezes mais de cem soldados.
+- **Tipos de tropa**: **lanceiros**, **espadachins**, **arqueiros**, **cavalaria** (cavalos do estábulo; carros de guerra egípcios), **tropas de elite** de cada cultura e **milícia**.
+- **Oficiais**: um **general** com o título da cultura (Estratego, Legado, Grande Comandante, Tlacochcalcatl, Jarl), **coronéis** de ala (Taxiarca, Tribuno, Hersir…) e **capitães** de cada companhia (Lochagos, Centurião, Tequihua, Skipari…) com estandartes — a águia romana, o leque egípcio, o estandarte de plumas asteca, o estandarte do corvo nórdico.
+- **Formações**: linha, **falange**, **parede de escudos**, **cunha** (svinfylking), **tartaruga** (testudo), ordem dispersa dos arqueiros e coluna de marcha. Cada companhia tem uma frente: golpes pelo **flanco** e pelas **costas** machucam mais e derrubam o **moral**; companhias com moral baixo **debandam**, e se muitas fogem o exército é desbaratado. Lanças vencem cavalos, espadas vencem lanças, a colina e o rio contam.
+- **O general escolhe o plano** olhando o inimigo e o terreno: **cerco** e fome, **ataque por vários portões** para dividir os defensores, **pinça** com a cavalaria pelos flancos, **guerrilha** (queimar campos, roubar rebanhos, matar quem sai e sumir), a **cunha** dos berserkers, a **tartaruga** romana contra flechas.
+- **Quem defende também planeja**: o reino manda um exército de socorro e escolhe entre **defender as muralhas**, **emboscada na floresta** (caindo sobre o flanco inimigo), **segurar o alto da colina** ou **o vau do rio** — ou a batalha campal diante da cidade. Quando dois exércitos se encontram, formam **linhas de batalha**.
+- **Cercos profundos**: trincheiras e tendas em volta da cidade fora do alcance das flechas; a cidade passa a viver só da **comida dentro dos muros** e pode morrer de fome e **se render**. **Aríetes**, **catapultas**, **torres de cerco** que baixam a ponte sobre o muro, **escadas** (os defensores empurram), soldados que escalam e **abrem o portão por dentro**, **sapadores** que cavam sob a muralha até ela desabar, **óleo fervente** despejado do portão (incendeia aríetes) e — sob generais cruéis — **cadáveres catapultados** por cima dos muros para espalhar a **peste**.
+- **No mar**: frotas com **almirante** (navarco, prefeito da frota, jarl do mar…), **esporões de bronze** que abalroam, **abordagem** (o corvo romano, ganchos e machados nórdicos) que toma o navio inimigo, **brulotes** em chamas lançados contra frotas maiores e **bloqueio de portos**: nenhum barco de pesca ou mercante sai nem entra.
+
 ## O mar
 
 - **Portos**, **barcos de pesca** atrás de cardumes, **exploradores** que descobrem povos distantes, **navios mercantes** em rotas marítimas.
@@ -190,8 +225,11 @@ js/factions.js    povos: cores, bandeiras, estoques, território e fronteiras
 js/politics.js    líderes, dinastias, governos, lealdade, rachas, golpes, tirania, diplomacia
 js/war.js         exércitos, combate, saques, conquista, massacres, torres, cativos, revoltas
 js/city.js        níveis de cidade, novos edifícios, ruas, estradas, rotas, carroças, aquedutos
-js/naval.js       portos, pesca, exploração, comércio marítimo, frotas, invasões, colônias
-js/siege.js       arqueiros, tropas de elite, muralhas, portões, aríetes, catapultas, sacrifícios
+js/naval.js       portos, pesca, exploração, comércio marítimo, frotas com almirante, abordagem, brulotes, bloqueios, invasões, colônias
+js/siege.js       arqueiros, tropas de elite, muralhas, portões, aríetes, catapultas, torres de cerco, escadas, sapadores, óleo fervente, peste, sacrifícios
+js/economy.js     economia urbana: ofícios, currais, minas, forja, tecelagem, mercados, feira, taverna, impostos, crime
+js/festivals.js   calendário de festas de cada civilização: procissões, ritos, jogos, sacrifícios, o Fogo Novo
+js/army.js        exércitos: recrutamento, companhias, oficiais, formações, moral, planos de ataque e de defesa, cercos
 js/villagers.js   IA dos habitantes (necessidades, decisões, tarefas)
 js/animals.js     40 espécies, habitats, capim, cadeias alimentares, caça, filhotes, migrações, guardiões
 js/powers.js      poderes divinos e percepção
@@ -203,6 +241,7 @@ js/fx.js          partículas e efeitos
 js/art.js         arte procedural (sprites e vetores)
 js/fauna-art.js   o desenho de cada espécie
 js/arch.js        arquitetura de cada civilização
+js/cityart.js     oficinas, currais, feira, minas e veios no estilo de cada civilização
 js/render.js      renderizador isométrico (terreno em blocos com nível de detalhe), iluminação, clima
 js/minimap.js     minimapa com fronteiras e cidades
 js/audio.js       áudio sintetizado com WebAudio (efeitos, ambiente, música)
