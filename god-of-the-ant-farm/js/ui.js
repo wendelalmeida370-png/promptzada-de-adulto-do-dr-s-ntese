@@ -18,6 +18,7 @@
     pause: svg('<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>'),
     scroll: svg('<path d="M6 3h11a2 2 0 0 1 2 2v12M6 3a2 2 0 0 0-2 2v2h4M6 3a2 2 0 0 1 2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-2h-11v2a2 2 0 0 1-2 2" ' + ST + '/><path d="M12 8h4M12 12h4" ' + ST + '/>'),
     stats: svg('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" ' + ST + '/>'),
+    photo: svg('<path d="M4 8h3l2-2.5h6L17 8h3a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 19H4a1.5 1.5 0 0 1-1.5-1.5v-8A1.5 1.5 0 0 1 4 8z" ' + ST + '/><circle cx="12" cy="13" r="3.4" ' + ST + '/>'),
     film: svg('<rect x="2.5" y="6.5" width="13" height="11" rx="2" ' + ST + '/><path d="M15.5 10.5l6-3.5v10l-6-3.5" ' + ST + '/><circle cx="6.5" cy="10.5" r="1.3" fill="currentColor"/>'),
     sound: svg('<path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" ' + ST + '/>'),
     mute: svg('<path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M17 9l5 6M22 9l-5 6" ' + ST + '/>'),
@@ -166,6 +167,7 @@
     $('#btn-chron').onclick = () => { G.Audio.play('click'); $('#chronicle').classList.toggle('collapsed'); };
     $('#chron-toggle').onclick = () => { G.Audio.play('click'); $('#chronicle').classList.toggle('collapsed'); };
     $('#btn-stats').onclick = () => { G.Audio.play('click'); UI.openStats(); };
+    $('#btn-photo').innerHTML = ICON.photo; $('#btn-photo').onclick = () => { G.Audio.play('click'); G.Photo.start(); };
     $('#btn-cinema').innerHTML = ICON.film; $('#btn-cinema').onclick = () => { G.Audio.play('click'); G.Cinema.start(); };
     $('#btn-realms').onclick = () => { G.Audio.play('click'); UI.openRealms(); };
     $('#btn-lore').onclick = () => { G.Audio.play('click'); G.Lore.openBook(); };
@@ -190,6 +192,7 @@
       if (b.dataset.act === 'close') UI.select(null);
       else if (b.dataset.act === 'follow') { const s = UI.selected; if (s && !s.dead) { G.Render.cam.follow = G.Render.cam.follow === s.id ? 0 : s.id; renderInspector(true); } }
       else if (b.dataset.act === 'tree') UI.openTree(UI.selected.id);
+      else if (b.dataset.act === 'bio') UI.openBio(UI.selected.id);
     });
     $('#modal-bg').addEventListener('click', e => { if (e.target.id === 'modal-bg') UI.closeModal(); });
     $('#modal').addEventListener('click', e => {
@@ -226,6 +229,8 @@
       else if (m === 'music') { G.Audio.init(); G.Audio.setMusic(!G.Audio.musicOn); UI.openSound(); }
       else if (m === 'amb') { G.Audio.setAmb(!G.Audio.ambOn); UI.openSound(); }
       else if (m === 'yes') { const f = UI._confirm; UI.closeModal(); f && f(); }
+      else if (m === 'bio') UI.openBio(+b.dataset.id);
+      else if (m === 'tree') UI.openTree(+b.dataset.id);
       else if (m === 'person') { const p = G.person(+b.dataset.id); if (p) { UI.closeModal(); UI.select(p); if (!p.dead) G.Render.panTo(p.x, p.y); } }
     });
     document.querySelectorAll('button').forEach(b => b.addEventListener('mouseenter', () => G.Audio.play('hover')));
@@ -433,17 +438,17 @@
       const A = G.Animals; const d = A.DEF[o.kind];
       const tg = o.target && (S.animals.get(o.target) || S.villagers.get(o.target));
       const tgName = tg ? (tg.kind ? A.DEF[tg.kind].nameA : tg.name) : '';
-      const st = o.dead ? (o.meat > 0 ? 'Carcaça — alimento para carniceiros' : 'Só ossos') : o.state === 'flee' ? 'Fugindo' : o.state === 'lunge' ? 'De tocaia, esperando a presa' : o.state === 'chase' ? (o.carc ? 'Indo até uma carcaça' : 'Caçando ' + (tgName || 'uma presa') + '!') : o.state === 'eat' ? 'Comendo' : o.state === 'leave' ? 'Indo embora' : o.state === 'graze' ? (d.diet === 'browse' ? 'Comendo folhas e frutos' : 'Pastando') : o.state === 'fish' || o.state === 'fishdive' ? 'Pescando' : o.state === 'circle' ? 'Circulando sobre uma carcaça' : o.state === 'dive' ? 'Mergulhando sobre ' + (tgName || 'uma presa') : o.state === 'perch' ? 'Pousado' : o.state === 'fly' ? 'Voando' : o.state === 'wade' ? 'Andando na água rasa' : o.angry > 0 ? 'Furioso!' : o.state === 'wander' ? 'Vagando' : 'Descansando';
+      const st = d.town && G.Pets && !o.dead ? G.Pets.stateText(o) : o.dead ? (o.meat > 0 ? 'Carcaça — alimento para carniceiros' : 'Só ossos') : o.state === 'flee' ? 'Fugindo' : o.state === 'lunge' ? 'De tocaia, esperando a presa' : o.state === 'chase' ? (o.carc ? 'Indo até uma carcaça' : 'Caçando ' + (tgName || 'uma presa') + '!') : o.state === 'eat' ? 'Comendo' : o.state === 'leave' ? 'Indo embora' : o.state === 'graze' ? (d.diet === 'browse' ? 'Comendo folhas e frutos' : 'Pastando') : o.state === 'fish' || o.state === 'fishdive' ? 'Pescando' : o.state === 'circle' ? 'Circulando sobre uma carcaça' : o.state === 'dive' ? 'Mergulhando sobre ' + (tgName || 'uma presa') : o.state === 'perch' ? 'Pousado' : o.state === 'fly' ? 'Voando' : o.state === 'wade' ? 'Andando na água rasa' : o.angry > 0 ? 'Furioso!' : o.state === 'wander' ? 'Vagando' : 'Descansando';
       const eats = (d.prey || []).map(k => A.DEF[k].name.toLowerCase());
       const food = d.diet === 'herb' ? 'capim' : d.diet === 'browse' ? 'folhas e frutos' : d.diet === 'insect' ? 'insetos' : d.diet === 'fish' ? 'peixes' : d.diet === 'filter' ? 'plâncton' : d.diet === 'scav' ? 'carniça' : d.diet === 'omni' ? 'frutos e raízes' : '';
       const menu = [food].concat(eats).filter(Boolean);
       const by = (A.eatenBy[o.kind] || []).map(k => A.DEF[k].name.toLowerCase());
-      const role = d.apex ? 'Predador de topo' : A.predator(o.kind) ? (d.diet === 'scav' ? 'Carniceiro' : 'Predador') : 'Presa';
+      const role = d.town ? (o.kind === 'cao' ? 'Cão da casa' : o.kind === 'gato' ? 'Gato da vizinhança' : o.kind === 'galinha' ? (o.rooster ? 'Galo do quintal' : 'Galinha do quintal') : 'Pombo da praça') : d.apex ? 'Predador de topo' : A.predator(o.kind) ? (d.diet === 'scav' ? 'Carniceiro' : 'Predador') : 'Presa';
       const hab = d.cls === 'water' ? ({ cold: 'mares frios', warm: 'mares quentes', mild: 'mares temperados e quentes', any: 'todos os mares' })[d.sea] : (d.hab || []).map(b => G.BIOMES[b].name.toLowerCase()).join(', ');
       html = `<div class="insp-head"><div class="insp-title"><h3>${o.named ? esc(o.named) + ', ' + (o.epithet ? esc(o.epithet) : d.name.toLowerCase()) : d.name}${o.summoned ? ' (invocado)' : ''}</h3><div class="sub">${o.legend ? 'Fera lendária · ' : ''}${role} · ${A.dietName(o.kind)}${o.grown < 1 ? ' · filhote' : ''} · ${Math.floor(o.age || 0)} ${Math.floor(o.age || 0) === 1 ? 'ano' : 'anos'}</div></div><button class="x" data-act="close">${ICON.close}</button></div>
         ${o.dead ? '' : bar('Vida', o.hp / o.maxHp * 100, 'hp') + bar('Fome', (o.hunger || 0) * 100, 'hunger')}<div class="doing">Atualmente: <b>${o.tamed && o.gt && o.state === 'chase' ? 'Defendendo a cidade de ' + esc(tgName || 'um inimigo') + '!' : o.mig && o.state === 'wander' ? 'Migrando' : st}</b></div>
         ${o.tamed ? `<div class="doing">${UI.flag(o.tamed, 'mini')} Guardi${d.g === 'f' ? 'ã' : 'ão'} de <b>${esc((S.settlements.get(o.guardSet) || {}).name || (G.Fac.get(o.tamed) || {}).name || '?')}</b> — domad${d.g === 'f' ? 'a' : 'o'} pelos céus</div>` : ''}
-        <div class="food-chain"><div><span>Come</span>${menu.map(esc).join(', ') || '—'}</div><div><span>Caçado por</span>${by.length ? by.map(esc).join(', ') : 'ninguém — além das pessoas'}</div><div><span>Vive em</span>${esc(hab || '—')}</div>${o.kills ? `<div><span>Vítimas</span>${o.kills} pessoas</div>` : ''}</div>`;
+        ${d.town ? (() => { const ow = S.villagers.get(o.owner); const st2 = S.settlements.get(o.set); return `<div class="doing">${ow ? `Dono: <a data-pid="${ow.id}">${esc(ow.name)}</a> · ` : ''}Vive em ${esc(st2 ? st2.name : '?')}${o.kind === 'galinha' && !o.rooster ? ' · seus ovos vão para a despensa da casa' : o.kind === 'cao' ? ' · late e expulsa raposas e lobos' : ''}</div>`; })() : `<div class="food-chain"><div><span>Come</span>${menu.map(esc).join(', ') || '—'}</div><div><span>Caçado por</span>${by.length ? by.map(esc).join(', ') : 'ninguém — além das pessoas'}</div><div><span>Vive em</span>${esc(hab || '—')}</div>${o.kills ? `<div><span>Vítimas</span>${o.kills} pessoas</div>` : ''}</div>`}`;
     } else {
       const p = o.dead ? o : S.villagers.get(o.id);
       if (!p) { const d = S.dead.get(o.id); if (d) { UI.selected = d; return renderInspector(true); } UI.select(null); return; }
@@ -475,7 +480,8 @@
         ${df ? `<div class="fline">${UI.flag(df.id, 'mini')}${esc(df.name)}${v.reigned ? ' · governou' : ''}${v.captive ? ' · morreu no cativeiro' : ''}</div>` : ''}
         <div class="doing">Causa da morte: <b>${cause}</b>${killer && killer.id !== v.id ? ` — por <a data-pid="${killer.id}">${esc(killer.name)}</a>` : ''}${v.kills ? `<br>Derrubou ${v.kills} ${v.kills > 1 ? 'inimigos' : 'inimigo'} em vida.` : ''}</div>
         <div class="family">${fam.map(x => `<div>${x}</div>`).join('') || '<div class="muted">Sem família conhecida.</div>'}</div>
-        <div class="btns"><button data-act="tree">${ICON.tree} Árvore genealógica</button></div>`;
+        ${(() => { const body = G.Carnage && G.Carnage.list().find(c => c.vid === v.id); const t = body ? `O corpo ainda está no chão — ${G.Carnage.STAGE[G.Carnage.stage(body)]}${body.claim ? '; alguém está indo buscá-lo' : ''}.` : v.buried === 'pyre' ? 'O corpo foi queimado na pira dos inimigos.' : v.grave ? `Sepultad${f ? 'a' : 'o'} no cemitério.` : ''; return t ? `<div class="meta">${t}</div>` : ''; })()}
+        <div class="btns"><button data-act="tree">${ICON.tree} Árvore genealógica</button><button data-act="bio">${ICON.book} Biografia</button></div>`;
     }
     const role = G.roleName(v);
     const set = S.settlements.get(v.set);
@@ -497,6 +503,7 @@
     if (v.prophet) status.push(`<span class="st gold">${v.g === 'f' ? 'Profetisa' : 'Profeta'}</span>`);
     else if (v.kills) status.push(`<span class="st grey">${v.kills} ${v.kills > 1 ? 'inimigos derrubados' : 'inimigo derrubado'}</span>`);
     if (v.fury > 0) status.push('<span class="st red">Em fúria</span>');
+    if (v.lost) status.push(`<span class="st grey">${v.lost.armL ? 'Sem o braço esquerdo' : v.lost.armR ? 'Sem o braço direito' : 'Sem uma perna'}</span>`);
     if (v.coup) status.push('<span class="st red">Conspirador' + (f ? 'a' : '') + '</span>');
     if (v.rebel || v.revolt) status.push('<span class="st red">Rebelde</span>');
     const title = ruler ? esc(P.styled(fac, v)) : esc(v.name) + (v.ep ? ', ' + esc(P.epithet(v)) : '');
@@ -507,9 +514,10 @@
       <div class="bars">${bar('Vida', v.hp, 'hp')}${bar('Fome', v.hunger, 'hunger')}${bar('Energia', v.energy, 'energy')}${bar('Devoção', v.devotion, 'dev')}${bar('Medo', v.fear, 'fear')}</div>
       ${status.length ? `<div class="status">${status.join('')}</div>` : ''}
       <div class="family">${fam.map(x => `<div>${x}</div>`).join('') || '<div class="muted">Sem laços familiares ainda.</div>'}</div>
+      ${(() => { const mem = G.Life ? G.Life.bioList(v).slice(-3).reverse() : []; return mem.length ? `<div class="memories"><label>Memórias</label>${mem.map(e => `<div><em>${e.age} ${e.age === 1 ? 'ano' : 'anos'}</em>${esc(e.txt)}</div>`).join('')}</div>` : ''; })()}
       <div class="doing">Atualmente: <b>${esc(G.Vg.taskText(v))}</b></div>
-      <div class="meta">${set ? esc(set.name) : ''}${G.Eco && G.Eco.personLine(v) ? ' · ' + esc(G.Eco.personLine(v)) : ''}${home ? (() => { const hn = G.Village.buildName(home).toLowerCase(); return ' · mora n' + (G.gen(hn) === 'a' ? 'uma ' : 'um ') + esc(hn); })() : ''}${feats.length ? '<br>Contribuiu com ' + feats.join(', ') : ''}</div>
-      <div class="btns"><button data-act="follow" class="${following ? 'on' : ''}">${ICON.eye} ${following ? 'Seguindo' : 'Seguir'}</button><button data-act="tree">${ICON.tree} Família</button></div>`;
+      <div class="meta">${set ? esc(set.name) : ''}${v.skill ? ` · aprendeu o ofício de ${esc((G.ROLE[v.skill] || [v.skill])[0].toLowerCase())} ainda criança` : ''}${(() => { const d = G.Pets && G.Pets.dogOf(v); return d ? ` · cão: ${esc(d.named || 'sem nome')}` : ''; })()}${G.Eco && G.Eco.personLine(v) ? ' · ' + esc(G.Eco.personLine(v)) : ''}${home ? (() => { const hn = G.Village.buildName(home).toLowerCase(); return ' · mora n' + (G.gen(hn) === 'a' ? 'uma ' : 'um ') + esc(hn); })() : ''}${feats.length ? '<br>Contribuiu com ' + feats.join(', ') : ''}</div>
+      <div class="btns"><button data-act="follow" class="${following ? 'on' : ''}">${ICON.eye} ${following ? 'Seguindo' : 'Seguir'}</button><button data-act="tree">${ICON.tree} Família</button><button data-act="bio">${ICON.book} Biografia</button></div>`;
   }
   function shipHTML(s) {
     const S = G.S; if (!S.ships.includes(s)) { UI.select(null); return ''; }
@@ -588,7 +596,7 @@
   UI.openPause = function () {
     UI.openModal(`<h2>Pausa divina</h2><p class="muted">O mundo é salvo automaticamente.</p>
       <div class="mlist"><button class="primary" data-m="resume">Continuar</button><button data-m="save">${ICON.save} Salvar agora</button><button data-m="load">Carregar último save</button><button data-m="new">Novo mundo</button><button data-m="help">Como jogar</button><button data-m="mainmenu">Menu principal</button></div>
-      <div class="keys"><span><kbd>Espaço</kbd> pausar</span><span><kbd>1</kbd>–<kbd>8</kbd> poderes</span><span><kbd>Tab</kbd> aba de poderes</span><span><kbd>R</kbd> reinos</span><span><kbd>L</kbd> livro do mundo</span><span><kbd>WASD</kbd> mover</span><span><kbd>F</kbd> seguir</span><span><kbd>H</kbd> crônica</span><span><kbd>C</kbd> modo cinema</span><span><kbd>+</kbd>/<kbd>−</kbd> velocidade</span></div>`, 'small');
+      <div class="keys"><span><kbd>Espaço</kbd> pausar</span><span><kbd>1</kbd>–<kbd>8</kbd> poderes</span><span><kbd>Tab</kbd> aba de poderes</span><span><kbd>R</kbd> reinos</span><span><kbd>L</kbd> livro do mundo</span><span><kbd>WASD</kbd> mover</span><span><kbd>F</kbd> seguir</span><span><kbd>H</kbd> crônica</span><span><kbd>C</kbd> modo cinema</span><span><kbd>P</kbd> modo foto</span><span><kbd>+</kbd>/<kbd>−</kbd> velocidade</span></div>`, 'small');
   };
   UI.openSound = function () {
     const A = G.Audio;
@@ -603,7 +611,7 @@
     UI.openModal(`<h2>Como jogar</h2>
       <div class="help">
       <p class="lead">Você é o deus de uma pequena ilha. Os habitantes vivem por conta própria: coletam, constroem, se apaixonam, têm filhos, envelhecem e morrem. <b>Você não dá ordens</b> — você interfere.</p>
-      <h4>Câmera</h4><ul><li><b>Arrastar</b> com o mouse (ou botão direito) move o mapa · <b>WASD</b>/setas também</li><li><b>Roda do mouse</b> dá zoom · <b>clique</b> num habitante, animal ou construção para ver detalhes · <b>duplo clique</b> segue alguém</li><li><b>Minimapa</b> (<kbd>M</kbd> ou o ícone do mapa): o mundo inteiro num canto, com fronteiras e cidades — clique ou arraste nele para voar até lá</li><li><b>Modo cinema</b> (<kbd>C</kbd> ou o ícone da câmera): a interface some e a câmera passeia sozinha pelo que está acontecendo — uma festa começando, um exército em marcha, um nascimento, um incêndio, um pastor com o rebanho — com legendas contando o que você vê. <kbd>N</kbd> pula para a próxima cena; mexer a câmera assume o controle por alguns segundos; <kbd>Esc</kbd> ou um clique sai</li></ul>
+      <h4>Câmera</h4><ul><li><b>Arrastar</b> com o mouse (ou botão direito) move o mapa · <b>WASD</b>/setas também</li><li><b>Roda do mouse</b> dá zoom · <b>clique</b> num habitante, animal ou construção para ver detalhes · <b>duplo clique</b> segue alguém</li><li><b>Minimapa</b> (<kbd>M</kbd> ou o ícone do mapa): o mundo inteiro num canto, com fronteiras e cidades — clique ou arraste nele para voar até lá</li><li><b>Modo foto</b> (<kbd>P</kbd> ou o ícone da máquina fotográfica): o mundo congela e a interface some; enquadre com a câmera, escolha filtro (dourado, sépia, preto e branco, vivo, luar), miniatura, vinheta, moldura com o lugar e a data, e até a hora do dia — e salve a imagem</li><li><b>Modo cinema</b> (<kbd>C</kbd> ou o ícone da câmera): a interface some e a câmera passeia sozinha pelo que está acontecendo — uma festa começando, um exército em marcha, um nascimento, um incêndio, um pastor com o rebanho — com legendas contando o que você vê. <kbd>N</kbd> pula para a próxima cena; mexer a câmera assume o controle por alguns segundos; <kbd>Esc</kbd> ou um clique sai</li></ul>
       <h4>Poderes divinos — sete abas (<kbd>Tab</kbd> troca, <kbd>1</kbd>–<kbd>8</kbd> escolhe)</h4><ul>
         <li><b>Dádivas</b> — Chuva, Crescimento, Cura, Fertilidade, <b>Era de Ouro</b> (três dias de prosperidade para um povo) e a <b>Mão Divina</b></li>
         <li><b>Ira</b> — Raio, Meteoro, Matilha, Terremoto, Praga e <b>Maldição</b> (colheitas murcham, filhos não vêm, a lealdade apodrece)</li>
@@ -624,11 +632,18 @@
       <li>Vilas distantes e infelizes podem <b>rachar</b> e virar povos novos. Ambiciosos tramam <b>golpes</b>; tiranos executam em praça pública; o povo pode se levantar numa <b>revolução</b>.</li>
       <li>Cativos trabalham à força, tentam fugir, se revoltam — e às vezes fundam um povo livre.</li>
       <li><b>Exércitos</b> de dezenas ou centenas: lanceiros, espadachins, arqueiros, cavalaria e milícia em companhias com capitães, coronéis e um general, em falange, parede de escudos, cunha ou tartaruga. O general escolhe o plano: cerco e fome, vários portões, pinça, guerrilha — e quem defende escolhe muralha, emboscada na floresta, colina ou vau do rio.</li>
+      <li><b>A guerra pesa</b>: golpes que jogam o corpo para trás, sangue no chão, braços que voam e cabeças que rolam; quem sobrevive sem um braço ou uma perna fica assim — trabalha mais devagar, luta pior. Os mortos <b>ficam onde caíram</b>: incham, os corvos chegam, ressecam e viram ossos, a não ser que alguém os arraste — os nossos para o cemitério, os inimigos para a pira. Corpos apodrecendo perto das casas trazem <b>doença</b>.</li>
       <li><b>Cercos</b>: trincheiras, aríetes, catapultas, torres de cerco, escadas, sapadores, óleo fervente, cadáveres catapultados para espalhar a peste e cidades que se rendem de fome. No mar: esporões, abordagem, brulotes e bloqueio de portos.</li>
       <li>Abra o painel <b>Reinos</b> (<kbd>R</kbd> ou o chip do povo no topo) para ver líderes, relações, exércitos, saberes e o mapa político. <kbd>B</kbd> mostra as fronteiras.</li>
       </ul><h4>Vida na cidade e festas</h4><ul>
       <li>Cada pessoa tem ofício e local de trabalho: pastores, tecelões, ferreiros, mineiros, ourives, oleiros, mercadores, feirantes, taverneiros, escribas, coletores de impostos — e contrabandistas. Clique num edifício para ver quem trabalha nele e o que produz.</li>
+      <li>No <b>fim da tarde</b> as famílias se sentam à porta de casa em volta de um foguinho, jantam, se abraçam, e os pais jogam os pequenos para o alto. Os <b>velhos contam histórias</b> às crianças junto à fogueira — histórias que aconteceram de verdade: estão na Crônica, nas lendas ou na vida de quem conta.</li>
+      <li>Dos nove anos em diante, os filhos vão com o pai ou a mãe para o trabalho e <b>imitam o ofício</b>; quem aprende tende a seguir a mesma profissão e trabalha melhor nela.</li>
+      <li>Cada casa precisa de <b>água</b>: todo dia alguém vai ao poço (ou ao rio), espera na <b>fila</b> e volta com o jarro na cabeça. Casa sem água adoece mais. Há fila também nas barracas, <b>fileiras</b> de fiéis diante do templo, soldados treinando <b>em formação</b> e, nas cidades grandes, a trompa ou o tambor que <b>chama ao trabalho</b> ao amanhecer.</li>
+      <li><b>Animais da cidade</b>: cães com nome que seguem o dono, tocam o rebanho com o pastor e expulsam raposas e lobos; gatos nas portas; galinhas no quintal (os ovos vão para a despensa); pombos na praça que voam quando alguém passa.</li>
+      <li><b>Biografia viva</b>: cada pessoa guarda os marcos reais da sua vida — onde nasceu, com quem aprendeu, quem amou, os filhos, as guerras, as feridas, as perdas, as histórias que ouviu. Veja as memórias no painel da pessoa e a vida inteira no botão <b>Biografia</b>.</li>
       <li>Cada civilização tem suas <b>festividades</b>: Panateneias e Jogos Olímpicos, Saturnália e Triunfo, Opet e a Festa do Vale, Toxcatl e o Fogo Novo, Jól e Midsommar. Acompanhe pela Crônica e vá até lá.</li></ul>
+      <h4>O céu e os sons</h4><p>Névoa nos baixios ao amanhecer, raios de sol nas horas douradas, sombras de nuvens deslizando sobre os campos, <b>arco-íris</b> depois da chuva, vaga-lumes nas noites quentes, folhas no vento, redemoinhos de poeira no deserto, relâmpagos dentro das tempestades. O som acompanha o que a câmera mostra: ondas e gaivotas na costa, o rio correndo, folhas e pássaros na mata, o murmúrio da cidade, a forja, cães e galinhas, corujas e sapos à noite, o estrondo de uma batalha.</p>
       <h4>O Livro do Mundo</h4><p>Cada mundo nasce com nome, mito da criação, lendas de origem de cada povo e <b>duas profecias antigas</b>. Depois o livro se escreve sozinho: um capítulo a cada sete anos, lendas de heróis, profetas, monstros, vulcões e cidades afogadas. Abra com <kbd>L</kbd> ou pelo ícone do livro.</p>
       <h4>Dicas</h4><ul><li>Clique nos eventos da <b>Crônica</b> para ir até onde aconteceram.</li><li>Na seca, a chuva vale ouro. Num incêndio, também.</li><li>Tudo é salvo automaticamente no navegador.</li></ul>
       </div><div class="mbtns"><button class="primary" data-m="close">Entendi</button></div>`, 'wide');
@@ -668,6 +683,15 @@
     x.beginPath(); h.forEach((v, k) => k ? x.lineTo(px(k), py(v)) : x.moveTo(px(k), py(v))); x.strokeStyle = '#f5c86b'; x.lineWidth = 2; x.stroke();
     x.fillStyle = 'rgba(255,240,210,0.8)'; x.font = '12px Nunito, sans-serif'; x.fillText('População por dia · pico ' + Math.max(...h), 14, 18);
   }
+  // the whole life, as it happened
+  UI.openBio = function (id) {
+    const p = G.person(id); if (!p || !G.Life) return;
+    const list = G.Life.bioList(p);
+    const end = p.dead ? `<li class="bio-end"><span>Dia ${p.died} · ${Math.floor(p.age)} anos</span>${esc(G.cap(G.Village.deathText(p)))}.${p.buried === 'pyre' ? ' Seu corpo foi queimado numa pira.' : p.grave ? ' Está enterrad' + (p.g === 'f' ? 'a' : 'o') + ' no cemitério.' : ''}</li>` : '';
+    UI.openModal(`<h2>A vida de ${esc(p.name)}</h2><p class="muted center">${p.dead ? `Viveu ${Math.floor(p.age)} anos` : `${Math.floor(p.age)} anos · ${esc(G.roleName(p))}`} · tudo o que está escrito aqui aconteceu</p>
+      ${list.length || end ? `<ol class="bio">${list.map(e => `<li><span>Dia ${e.d} · ${e.age} ${e.age === 1 ? 'ano' : 'anos'}</span>${esc(e.txt)}</li>`).join('')}${end}</ol>` : '<p class="muted center">Uma vida ainda sem histórias.</p>'}
+      <div class="mbtns"><button data-m="person" data-id="${p.id}">Ver ${esc(p.name)}</button><button data-m="tree" data-id="${p.id}">Família</button><button class="primary" data-m="close">Fechar</button></div>`, 'wide');
+  };
   UI.openTree = function (id) {
     const S = G.S; const p = G.person(id); if (!p) return;
     const card = (q, big) => {
@@ -692,7 +716,7 @@
       <div class="ft-row main"><label>${p.dead ? 'Em memória' : 'Hoje'}</label><div class="ft-cards">${card(p, true)}${partner ? '<span class="ft-heart">' + ICON.heart + '</span>' + card(partner, true) : ''}</div></div>
       ${row('Irmãos', sibs)}${row('Filhos', kids)}${row('Netos', gk)}
       ${!gp.length && !parents.length && !kids.length && !sibs.length ? '<p class="muted center">Uma árvore ainda sem galhos. Talvez um dia.</p>' : ''}
-      </div><div class="mbtns"><button data-m="person" data-id="${p.id}">Ver ${esc(p.name)}</button><button class="primary" data-m="close">Fechar</button></div>`, 'wide');
+      </div><div class="mbtns"><button data-m="person" data-id="${p.id}">Ver ${esc(p.name)}</button><button data-m="bio" data-id="${p.id}">Biografia</button><button class="primary" data-m="close">Fechar</button></div>`, 'wide');
   };
   // ------------------------------ world setup ------------------------------
   const MAPSVG = {

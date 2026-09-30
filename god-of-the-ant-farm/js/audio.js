@@ -98,6 +98,30 @@
     bite: (t, v) => { nz(t, 0.07, 0.25 * v, 'bandpass', 2500, 3); },
     horn: (t, v) => { for (const [f, d] of [[146.83, 0], [220, 0.04], [293.66, 0.5]]) { const n = osc('sawtooth', f, t + d, d ? 0.9 : 1.5, 0.035 * v, sfx, f * 1.015, 0.18); n.g.connect(revIn); } nz(t, 1.2, 0.04 * v, 'bandpass', 600, 1); },
     swish: (t, v) => { nz(t, 0.14, 0.12 * v, 'bandpass', 3400, 2, sfx, 1500); },
+    // war: a wet cut, metal on metal, a cry cut short
+    gore: (t, v) => { nz(t, 0.16, 0.38 * v, 'bandpass', 700, 1.2, sfx, 260); osc('sine', 95, t, 0.18, 0.3 * v, sfx, 50); nz(t + 0.05, 0.25, 0.12 * v, 'lowpass', 500, 0, sfx, 200, 0.02); },
+    clang: (t, v) => { for (const [f, a] of [[2310, 0.07], [3470, 0.045], [5120, 0.03]]) { const n = osc('sine', f, t, 0.35, a * v, sfx, f * 0.98); n.g.connect(revIn); } nz(t, 0.03, 0.15 * v, 'highpass', 4000); },
+    scream: (t, v) => {
+      const o = ac.createOscillator(); o.type = 'sawtooth'; const f0 = G.rr(360, 520);
+      o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * 1.15, t + 0.08); o.frequency.exponentialRampToValueAtTime(f0 * 0.45, t + 0.55);
+      const f1 = ac.createBiquadFilter(); f1.type = 'bandpass'; f1.frequency.value = 900; f1.Q.value = 4;
+      const f2 = ac.createBiquadFilter(); f2.type = 'bandpass'; f2.frequency.value = 1500; f2.Q.value = 5;
+      const g = ac.createGain(); env(g, t, 0.02, 0.05 * v, 0.55);
+      o.connect(f1); o.connect(f2); f1.connect(g); f2.connect(g); g.connect(sfx); g.connect(revIn); o.start(t); o.stop(t + 0.65);
+    },
+    caw: (t, v) => { for (const d of [0, 0.32]) { osc('square', 620, t + d, 0.16, 0.025 * v, amb, 430, 0.01); nz(t + d, 0.14, 0.03 * v, 'bandpass', 1300, 3, amb); } },
+    bark: (t, v) => { for (const d of [0, 0.22]) { osc('sawtooth', 420, t + d, 0.09, 0.035 * v, sfx, 260, 0.005); nz(t + d, 0.07, 0.06 * v, 'bandpass', 900, 2); } },
+    cluck: (t, v) => { for (let k = 0; k < 3; k++) osc('square', 880 - k * 60, t + k * 0.09, 0.05, 0.012 * v, amb, 620); },
+    rooster: (t, v) => { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(560, t); o.frequency.linearRampToValueAtTime(760, t + 0.25); o.frequency.linearRampToValueAtTime(700, t + 0.7); o.frequency.linearRampToValueAtTime(420, t + 1.1); const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = 3; const g = ac.createGain(); env(g, t, 0.05, 0.05 * v, 1.1); o.connect(f); f.connect(g); g.connect(amb); g.connect(revIn); o.start(t); o.stop(t + 1.2); },
+    flap: (t, v) => { for (let k = 0; k < 5; k++) nz(t + k * 0.05, 0.04, 0.05 * v, 'bandpass', 1800, 1, amb); },
+    shutter: (t, v) => { nz(t, 0.03, 0.4 * v, 'highpass', 3000); nz(t + 0.07, 0.04, 0.3 * v, 'bandpass', 2200, 2); osc('square', 1800, t, 0.02, 0.05 * v); },
+    gull: (t, v) => { for (let k = 0; k < 3; k++) { osc('sine', 1350, t + k * 0.2, 0.16, 0.018 * v, amb, 820, 0.01); nz(t + k * 0.2, 0.12, 0.01 * v, 'bandpass', 2400, 4, amb); } },
+    owl: (t, v) => { for (const [d, f, l] of [[0, 390, 0.35], [0.5, 330, 0.6]]) { const n = osc('sine', f, t + d, l, 0.03 * v, amb, f * 0.94, 0.05); n.g.connect(revIn); } },
+    frog: (t, v) => { const n = 2 + (Math.random() * 3 | 0); for (let k = 0; k < n; k++) osc('square', 190, t + k * 0.11, 0.06, 0.012 * v, amb, 120, 0.005); },
+    trill: (t, v) => { const f = G.rr(3200, 4600); for (let k = 0; k < 8; k++) osc('sine', f + (k % 2) * 300, t + k * 0.045, 0.035, 0.013 * v, amb); },
+    cuckoo: (t, v) => { osc('sine', 740, t, 0.22, 0.02 * v, amb, 720, 0.02); osc('sine', 590, t + 0.3, 0.3, 0.02 * v, amb, 570, 0.02); },
+    wave: (t, v) => { const g = nz(t, 2.2, 0.09 * v, 'lowpass', 900, 0, amb, 300, 0.9); g.connect(revIn); },
+    drum: (t, v) => { for (let k = 0; k < 4; k++) { osc('sine', 110, t + k * 0.28, 0.35, (k === 3 ? 0.4 : 0.28) * v, sfx, 55); nz(t + k * 0.28, 0.08, 0.12 * v, 'lowpass', 800); } },
     quake: (t, v) => { nz(t, 2.6, 0.5 * v, 'lowpass', 240, 0, sfx, 80, 0.25); osc('sine', 48, t, 2.4, 0.4 * v, sfx, 30, 0.2); nz(t + 0.4, 1.4, 0.25 * v, 'lowpass', 900, 0, sfx, 200, 0.1); },
     plague: (t, v) => { const a = osc('triangle', 196, t, 1.8, 0.07 * v, sfx, 164.8, 0.3); a.g.connect(revIn); const b = osc('triangle', 233.1, t + 0.15, 1.6, 0.05 * v, sfx, 196, 0.3); b.g.connect(revIn); },
     fire: (t, v) => { nz(t, 0.7, 0.2 * v, 'bandpass', 900, 1, sfx, 380, 0.05); },
@@ -115,7 +139,7 @@
   A.play = function (name, vol) {
     if (!ac || !A.sfxOn || ac.state !== 'running') return;
     const now = ac.currentTime;
-    const gap = { chop: 0.07, hammer: 0.06, mine: 0.07, hit: 0.05, hover: 0.04, swish: 0.08, horn: 1.2, fire: 0.3 }[name] || 0.02;
+    const gap = { chop: 0.07, hammer: 0.06, mine: 0.07, hit: 0.05, hover: 0.04, swish: 0.08, horn: 1.2, fire: 0.3, gore: 0.12, clang: 0.06, scream: 0.4, caw: 0.6, drum: 1.4, bark: 0.35, cluck: 0.5, rooster: 3, flap: 0.5, gull: 2, owl: 4, frog: 0.8, trill: 1, cuckoo: 3, wave: 1.5 }[name] || 0.02;
     if (last[name] && now - last[name] < gap) return;
     last[name] = now;
     try { LIB[name] && LIB[name](now + 0.01, vol === undefined ? 1 : vol); } catch (e) { }
@@ -149,6 +173,9 @@
 
   // ---------------- ambience ----------------
   let ocean, wind, rain, windF, crackleT = 0, birdT = 2, cricketT = 0;
+  let river, leaves, crowd, battle, scapeT = 0, waveT = 3, gullT = 5, owlT = 7, frogT = 2, forgeT = 1, townT = 4, clangT = 1;
+  // what the camera sees is what you hear
+  const scape = A.scape = { sea: 0, river: 0, forest: 0, town: 0, snow: 0, desert: 0, swamp: 0, people: 0, fight: 0, forge: null, sell: 0, pets: [], zoomF: 1, fightAt: null };
   function loopNoise(filtType, f, q, gain) {
     const s = ac.createBufferSource(); s.buffer = noise; s.loop = true;
     const fl = ac.createBiquadFilter(); fl.type = filtType; fl.frequency.value = f; if (q) fl.Q.value = q;
@@ -160,15 +187,49 @@
     ocean = loopNoise('lowpass', 420, 0, 0.06);
     wind = loopNoise('bandpass', 500, 0.6, 0.02); windF = wind.fl;
     rain = loopNoise('highpass', 900, 0, 0.0);
+    river = loopNoise('bandpass', 1500, 1.1, 0);
+    { const l = ac.createOscillator(); const lg = ac.createGain(); l.frequency.value = 3.1; lg.gain.value = 520; l.connect(lg); lg.connect(river.fl.frequency); l.start(); }
+    leaves = loopNoise('highpass', 3200, 0, 0);
+    crowd = loopNoise('bandpass', 520, 0.9, 0);
+    { const l = ac.createOscillator(); const lg = ac.createGain(); l.frequency.value = 0.7; lg.gain.value = 160; l.connect(lg); lg.connect(crowd.fl.frequency); l.start(); }
+    battle = loopNoise('lowpass', 650, 0, 0);
     const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 7000; rain.g.disconnect(); rain.g.connect(lp); lp.connect(amb);
     musicLoop();
+  }
+  function analyse() {
+    const S = G.S; const R = G.Render; const W = G.W; const T = G.T;
+    let sea = 0, riv = 0, forest = 0, town = 0, snow = 0, desert = 0, swamp = 0, n = 0;
+    for (let gy = 0; gy < 7; gy++) for (let gx = 0; gx < 11; gx++) {
+      const [x, y] = R.screenToTile((gx + 0.5) / 11 * R.VW, (gy + 0.5) / 7 * R.VH); n++;
+      if (!W.inb(x, y)) { sea++; continue; }
+      const i = W.idx(x, y); const ty = S.type[i];
+      if (ty <= T.SEA) sea++; else if (ty === T.RIVER) riv++;
+      if (S.treeAt[i]) forest++; if (S.occ[i]) town++;
+      const b = S.biome ? S.biome[i] : 0; if (b === 1 || b === 2) snow++; else if (b === 6) desert++; else if (b === 3) swamp++;
+    }
+    Object.assign(scape, { sea: sea / n, river: riv / n, forest: forest / n, town: town / n, snow: snow / n, desert: desert / n, swamp: swamp / n });
+    const vis = (x, y) => { const [sx, sy] = R.proj(x, y, 2); const [px, py] = R.worldPxToScreen(sx, sy); return px > -40 && py > -40 && px < R.VW + 40 && py < R.VH + 40; };
+    let people = 0, sell = 0; scape.forge = null;
+    for (const v of S.villagers.values()) { if (v.inside || v.aboard || !vis(v.x, v.y)) continue; people++; if (!scape.forge && v.act === 'forge') scape.forge = v; if (v.act === 'sell' || v.act === 'buy') sell++; }
+    let fight = 0; scape.fightAt = null; for (const v of G.War.fighters) if (vis(v.x, v.y)) { fight++; if (!scape.fightAt || G.R() < 0.2) scape.fightAt = v; }
+    scape.pets = []; for (const a of S.animals.values()) { if ((a.kind === 'cao' || a.kind === 'galinha') && scape.pets.length < 6 && vis(a.x, a.y)) scape.pets.push(a); }
+    scape.people = people; scape.sell = sell; scape.fight = fight;
+    scape.zoomF = G.clamp((R.cam.zoom - 0.45) / 1.4, 0.15, 1);
   }
   A.update = function (dt) {
     if (!ac || ac.state !== 'running' || !G.S) return;
     const S = G.S; const t = ac.currentTime;
     const zoom = G.Render.cam.zoom;
-    ocean.g.gain.setTargetAtTime(0.045 + 0.03 * Math.sin(t * 0.35) + 0.02 / zoom, t, 0.5);
-    wind.g.gain.setTargetAtTime(0.012 + S.weather.windS * 0.06, t, 0.5);
+    scapeT -= dt; if (scapeT <= 0) { scapeT = 0.5; analyse(); }
+    const zf = scape.zoomF, night0 = G.Render.nightness() > 0.55;
+    const coast = Math.min(1, scape.sea * 2.2);
+    ocean.g.gain.setTargetAtTime((0.018 + 0.05 * coast) * (1 + 0.35 * Math.sin(t * 0.35)) + 0.012 / zoom, t, 0.6);
+    river.g.gain.setTargetAtTime(Math.min(1, scape.river * 7) * 0.05 * zf, t, 0.6);
+    leaves.g.gain.setTargetAtTime(Math.min(1, scape.forest * 1.6) * (0.25 + S.weather.windS) * 0.018 * zf, t, 0.8);
+    const busy = scape.people ? Math.min(1, Math.log(1 + scape.people) / 4.2) : 0;
+    crowd.g.gain.setTargetAtTime(busy * (night0 ? 0.25 : 1) * (0.05 + Math.min(0.03, scape.sell * 0.006)) * zf, t, 0.8);
+    battle.g.gain.setTargetAtTime(Math.min(1, scape.fight / 14) * 0.13 * zf, t, 0.4);
+    wind.g.gain.setTargetAtTime(0.012 + S.weather.windS * 0.06 + (scape.snow + scape.desert) * 0.03 + (1 - zf) * 0.02, t, 0.5);
     windF.frequency.setTargetAtTime(350 + S.weather.windS * 500 + Math.sin(t * 0.2) * 80, t, 0.5);
     // rain loudness from global + visible clouds
     let r = S.weather.rain;
@@ -183,10 +244,19 @@
     }
     const night = G.Render.nightness() > 0.55;
     birdT -= dt;
-    if (!night && birdT <= 0 && S.weather.rain < 0.2) {
-      birdT = G.rr(1.5, 6);
-      const f = G.rr(2400, 4200); const n = G.ri(2, 4);
-      for (let k = 0; k < n; k++) osc('sine', f * G.rr(0.9, 1.1), t + k * 0.11, 0.07, 0.018, amb, f * G.rr(1.1, 1.4));
+    if (!night && birdT <= 0 && S.weather.rain < 0.2 && scape.forest + scape.town * 0.3 > 0.04 && scape.snow < 0.6) {
+      birdT = G.rr(1.5, 6) / Math.min(2, 0.5 + scape.forest * 3);
+      if (G.R() < 0.25) A.play(G.R() < 0.6 ? 'trill' : 'cuckoo', zf);
+      else { const f = G.rr(2400, 4200); const n = G.ri(2, 4); for (let k = 0; k < n; k++) osc('sine', f * G.rr(0.9, 1.1), t + k * 0.11, 0.07, 0.018, amb, f * G.rr(1.1, 1.4)); }
+    }
+    if (A.ambOn) {
+      waveT -= dt; if (coast > 0.12 && waveT <= 0) { waveT = G.rr(3, 7); A.play('wave', coast); }
+      gullT -= dt; if (coast > 0.1 && !night && gullT <= 0) { gullT = G.rr(5, 14); A.play('gull', Math.min(1, coast + 0.2) * zf); }
+      owlT -= dt; if (night && scape.forest > 0.12 && owlT <= 0) { owlT = G.rr(8, 18); A.play('owl', zf); }
+      frogT -= dt; if (night && (scape.river > 0.03 || scape.swamp > 0.1) && frogT <= 0) { frogT = G.rr(0.8, 2.6); A.play('frog', zf); }
+      forgeT -= dt; if (scape.forge && forgeT <= 0) { forgeT = G.rr(0.55, 1); A.at(scape.forge.x, scape.forge.y, 'hammer'); }
+      townT -= dt; if (scape.pets.length && townT <= 0 && !night) { townT = G.rr(4, 10); const a = G.pick(scape.pets); A.at(a.x, a.y, a.kind === 'cao' ? 'bark' : 'cluck'); }
+      clangT -= dt; if (scape.fight > 1 && clangT <= 0 && scape.fightAt) { clangT = G.rr(0.15, 0.7) * 6 / Math.min(12, scape.fight + 2); A.at(scape.fightAt.x + G.rr(-1, 1), scape.fightAt.y + G.rr(-1, 1), G.R() < 0.6 ? 'clang' : 'hit'); }
     }
     cricketT -= dt;
     if (night && cricketT <= 0) {

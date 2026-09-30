@@ -131,6 +131,7 @@
     G.Vg.setTask(v, Object.assign({ type: 'fest', fid: fe.id, role, pri: role === 'victim' ? 6 : 3.2, kind: 'fest', st: 0, delay: G.R() * 1.5 }, extra || {}));
     fe.parts.push(v.id);
     if (role !== 'crowd') fe.roles[role] = (fe.roles[role] || []).concat(v.id);
+    if (G.Life && role !== 'crowd' && role !== 'server' && role !== 'guest' && role !== 'soldier' && role !== 'runner' && role !== 'chorus' && role !== 'priest') { const d = FE.DEF[fe.key]; G.Life.bio(v, 'fest', theName(d, fe.grand), role); }
   }
 
   // ------------------------------ starting ------------------------------
@@ -371,7 +372,7 @@
     if (fe.sname === 'dark') { fe.dark = true; }
     if (fe.sname === 'newfire') { fe.props.newfire = true; const p = fe.T ? G.Village.center(fe.T) : fe.C; G.FX && G.FX.ring(p[0], p[1], 0.3, 3, 1.4, 'rgba(255,190,80,0.9)', 2, true); }
     if (fe.sname === 'gather' && fe.props.bonfire) fe.props.fireOn = true;
-    if (fe.sname === 'crown' && fe.winner) { const w = S.villagers.get(fe.winner); if (w) { G.Vg.emote(w, 'happy', 4); log(`${w.name} venceu ${fe.key === 'olimpiadas' ? 'os Jogos Olímpicos' : 'os jogos'} em ${set.name} e recebeu a coroa de oliveira.`, 'fest', w.x, w.y); w.kills = w.kills || 0; } }
+    if (fe.sname === 'crown' && fe.winner) { const w = S.villagers.get(fe.winner); if (w) { G.Vg.emote(w, 'happy', 4); G.Life && G.Life.bio(w, 'fest', theName(FE.DEF[fe.key], fe.grand), 'win'); log(`${w.name} venceu ${fe.key === 'olimpiadas' ? 'os Jogos Olímpicos' : 'os jogos'} em ${set.name} e recebeu a coroa de oliveira.`, 'fest', w.x, w.y); w.kills = w.kills || 0; } }
     void f;
   }
 
@@ -577,7 +578,7 @@
         return true;
       }
       case 'race': {
-        if (role !== 'athlete') { if (toSlot(v, t, dt, H, slot)) { const c = fe.course; faceTo(v, c[2], c[3]); v.act = G.R() < 0.02 ? 'dance' : v.act; if (G.R() < dt * 0.2) G.Vg.emote(v, 'happy', 1); } return true; }
+        if (role !== 'athlete') { if (toSlot(v, t, dt, H, slot)) { const c = fe.course || [C[0], C[1], C[0] + 3, C[1]]; faceTo(v, c[2], c[3]); v.act = G.R() < 0.02 ? 'dance' : v.act; if (G.R() < dt * 0.2) G.Vg.emote(v, 'happy', 1); } return true; }
         const c = fe.course || [C[0], C[1], C[0] + 3, C[1]];
         const R = fe.racers[v.id] || (fe.racers[v.id] = { leg: 0, ready: false });
         if (!R.ready) { if (toSlot(v, t, dt, H, [c[0], c[1]])) { R.ready = true; } return true; }

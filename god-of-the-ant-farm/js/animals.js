@@ -73,9 +73,14 @@
     porco: { name: 'Porco', g: 'm', cls: 'land', diet: 'omni', dom: true, hab: [], dens: 0, herd: [1, 1], hp: 34, sp: 0.5, run: 1.7, meat: 10, size: 0.95, fear: 0, life: 10, breed: 1.1, app: 0.9, hunt: false, art: 'quad', q: { len: 3.6, h: 2.8, leg: 1.4, neck: 0.5, col: '#eeaa9a', belly: '#f4bcae', stout: 1, snout: 2, ear: 0.8, tail: 'curly' } },
     peru: { name: 'Peru', g: 'm', cls: 'land', diet: 'insect', dom: true, hab: [], dens: 0, herd: [1, 1], hp: 8, sp: 0.6, run: 2, meat: 3, size: 0.75, fear: 0, life: 6, breed: 1.6, app: 0.3, hunt: false, art: 'turkey' },
     cavalo: { name: 'Cavalo', g: 'm', cls: 'land', diet: 'herb', dom: true, hab: [], dens: 0, herd: [1, 1], hp: 80, sp: 0.9, run: 3.4, meat: 18, size: 1.3, fear: 0, life: 22, breed: 0.3, app: 1.5, hunt: false, art: 'quad', q: { len: 4.6, h: 5, leg: 4.2, neck: 3.2, col: '#8a5a34', belly: '#9a6a44', mane: '#2a1a10', tail: 'tuft' } },
+    // ---------------- town animals: they live with people, not in pens ----------------
+    cao: { name: 'Cão', g: 'm', cls: 'land', diet: 'omni', town: true, hab: [], dens: 0, herd: [1, 1], hp: 30, sp: 1.2, run: 3, meat: 4, size: 0.95, fear: 0, life: 13, breed: 0, app: 0, hunt: false, art: 'dog' },
+    gato: { name: 'Gato', g: 'm', cls: 'land', diet: 'carn', town: true, hab: [], dens: 0, herd: [1, 1], hp: 12, sp: 0.9, run: 3.2, meat: 1, size: 0.68, fear: 0, life: 15, breed: 0, app: 0, hunt: false, art: 'cat' },
+    galinha: { name: 'Galinha', g: 'f', cls: 'land', diet: 'insect', town: true, hab: [], dens: 0, herd: [1, 1], hp: 6, sp: 0.6, run: 1.9, meat: 2, size: 0.68, fear: 0, life: 7, breed: 0, app: 0, hunt: false, art: 'hen' },
+    pombo: { name: 'Pombo', g: 'm', cls: 'land', diet: 'insect', town: true, hab: [], dens: 0, herd: [1, 1], hp: 3, sp: 0.7, run: 3, meat: 1, size: 0.58, fear: 0, life: 6, breed: 0, app: 0, hunt: false, art: 'pigeon' },
   };
   // predators raid the herds too
-  for (const [p, list] of [['wolf', ['ovelha', 'cabra', 'porco', 'peru', 'vaca']], ['fox', ['peru']], ['bear', ['ovelha', 'porco', 'vaca', 'cabra']], ['lion', ['vaca', 'cabra', 'cavalo', 'ovelha']], ['jaguar', ['porco', 'peru', 'cabra']], ['hyena', ['cabra', 'ovelha', 'peru']], ['croc', ['vaca', 'cabra', 'cavalo', 'porco']], ['python', ['peru']], ['viper', ['peru']]]) SP[p].prey = SP[p].prey.concat(list);
+  for (const [p, list] of [['wolf', ['ovelha', 'cabra', 'porco', 'peru', 'vaca', 'galinha']], ['fox', ['peru', 'galinha']], ['bear', ['ovelha', 'porco', 'vaca', 'cabra']], ['lion', ['vaca', 'cabra', 'cavalo', 'ovelha']], ['jaguar', ['porco', 'peru', 'cabra']], ['hyena', ['cabra', 'ovelha', 'peru']], ['croc', ['vaca', 'cabra', 'cavalo', 'porco']], ['python', ['peru']], ['viper', ['peru']]]) SP[p].prey = SP[p].prey.concat(list);
   for (const k in SP) { SP[k].id = k; SP[k].nameA = (SP[k].g === 'f' ? 'uma ' : 'um ') + SP[k].name.toLowerCase(); }
   A.ids = Object.keys(SP);
   const DAY = () => G.DAY_LEN;
@@ -172,11 +177,15 @@
   }
 
   // ------------------------------ spatial grid ------------------------------
-  const CELL = 8; let grid = new Map(), vgrid = new Map(), gridT = 0;
+  const CELL = 8; let grid = new Map(), vgrid = new Map(), tgrid = new Map(), gridT = 0;
   const key = (x, y) => ((x / CELL) | 0) + ((y / CELL) | 0) * 4096;
   function rebuildGrid() {
-    const S = G.S; grid.clear(); vgrid.clear();
-    for (const a of S.animals.values()) { const k = key(a.x, a.y); let l = grid.get(k); if (!l) grid.set(k, l = []); l.push(a); }
+    const S = G.S; grid.clear(); vgrid.clear(); tgrid.clear();
+    for (const a of S.animals.values()) {
+      const k = key(a.x, a.y); let l = grid.get(k); if (!l) grid.set(k, l = []); l.push(a);
+      // the few that could be coming for someone right now: people only look at these
+      if (!a.dead && !a.tamed && (a.summoned || a.raid || a.legend || a.angry > 0 || a.state === 'chase' || a.state === 'lunge')) { let t = tgrid.get(k); if (!t) tgrid.set(k, t = []); t.push(a); }
+    }
     for (const v of S.villagers.values()) { if (v.inside || v.held) continue; const k = key(v.x, v.y); let l = vgrid.get(k); if (!l) vgrid.set(k, l = []); l.push(v); }
   }
   function each(g, x, y, r, fn) {
@@ -184,6 +193,7 @@
     for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) { const l = g.get(cx + cy * 4096); if (l) for (const o of l) if (fn(o) === false) return; }
   }
   A.near = (x, y, r, fn) => each(grid, x, y, r, fn);
+  A.nearThreat = (x, y, r, fn) => each(tgrid, x, y, r, fn);
   function nearestVillager(a, r, filter) {
     let best = null, bd = r * r;
     each(vgrid, a.x, a.y, r, v => { if (v.inside || v.held || v.air || v.aboard) return; if (filter && !filter(v)) return; const d = G.dist2(a.x, a.y, v.x, v.y); if (d < bd) { bd = d; best = v; } });
@@ -864,6 +874,7 @@
       // resting animals with nothing to decide just let the clock run
       if (a.state === 'idle' && a.t > dt && a.scan > dt && !(a.angry > 0) && sp.cls !== 'air' && !sp.dom) { a.t -= dt; a.scan -= dt; if (a.rest > 0) a.rest -= dt; a.moving = false; continue; }
       if (a.kind === 'wolf' && (a.raid || a.summoned)) raidWolfAI(a, dt);
+      else if (sp.town) { if (G.Pets) G.Pets.ai(a, dt, sp); }
       else if (sp.dom) domAI(a, dt);
       else if (sp.cls === 'water') waterAI(a, dt);
       else if (sp.cls === 'air') airAI(a, dt);

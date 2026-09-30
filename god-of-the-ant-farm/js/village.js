@@ -414,9 +414,10 @@
       if (v.set !== set.id) continue;
       if (v.captive) { v.role = 'cativo'; continue; }
       pop++;
+      const prev = v.role;
       if (v.age < 2) v.role = 'bebe';
       else if (v.age < 16) v.role = 'crianca';
-      else if (v.age >= 62) v.role = 'anciao';
+      else if (v.age >= 62) { v.role = 'anciao'; if (prev !== 'anciao' && G.Life) G.Life.onRole(v, prev); }
       else { if (!WORK_ROLES.includes(v.role)) v.role = null; adults.push(v); }
     }
     const A = adults.length; if (!A) return;
@@ -483,7 +484,7 @@
     const deficit = () => WORK_ROLES.filter(r => have[r].length < want[r]).sort((a, b) => (have[a].length - want[a]) - (have[b].length - want[b]));
     for (const v of none) {
       const d = deficit(); const r = d.length ? pickRoleFor(v, d) : 'coletor';
-      v.role = r; have[r].push(v);
+      v.role = r; have[r].push(v); G.Life && G.Life.onRole(v, null);
     }
     // move surplus to deficit (max 3 changes)
     let changes = 0;
@@ -495,11 +496,13 @@
       sur.sort((a, b) => (have[b].length - want[b]) - (have[a].length - want[a]));
       const from = sur[0]; const to = pickRoleForList(have[from], d);
       const v = to.v; const r = to.r;
-      have[from].splice(have[from].indexOf(v), 1); v.role = r; v.job = 0; have[r].push(v); changes++;
+      have[from].splice(have[from].indexOf(v), 1); v.role = r; v.job = 0; have[r].push(v); changes++; G.Life && G.Life.onRole(v, from);
     }
     G.Eco && G.Eco.place(set);
   }
   function pickRoleFor(v, roles) {
+    // the trade learned beside a parent comes first
+    const learned = G.Life && G.Life.learned(v); if (learned && roles.includes(learned) && learned !== 'contrabandista') return learned;
     if (roles.includes('guerreiro') && v.courage > 0.55 && v.g === 'm') return 'guerreiro';
     if (roles.includes('contrabandista')) { const r = roles.filter(q => q !== 'contrabandista'); if (r.length) return pickRoleFor(v, r); }
     if (roles.includes('cacador') && v.courage > 0.6) return 'cacador';
@@ -517,6 +520,7 @@
         if (r === 'sacerdote' && v.traits.includes('Devoto')) s += 3;
         if (r === 'contrabandista') s -= 20; // nobody is ordered into crime
         if (v.job && G.Eco && G.Eco.isJobRole(v.role)) s -= 1.5; // artisans keep their trade
+        if (v.skill && v.skill === r) s += 2.5; if (v.skill && v.skill === v.role) s -= 2; // and the ones who learned it as children
         if (r === roles[0]) s += 1.5;
         if (s > bs) { bs = s; best = { v, r }; }
       }
@@ -685,9 +689,12 @@
     kraken: (v) => `foi arrastad${v.g === 'f' ? 'a' : 'o'} para as profundezas pelo Kraken aos ${Math.floor(v.age)} anos`,
     unknown: (v) => `morreu aos ${Math.floor(v.age)} anos`,
   };
+  V.deathText = rec => (CAUSE[rec.cause] || CAUSE.unknown)(rec);
   V.kill = function (v, cause, byGod) {
     const S = G.S;
     if (!S.villagers.has(v.id)) return;
+    // a violent death leaves a body on the ground, to be carried away later (or not)
+    const body = !!(G.Carnage && G.Carnage.onKill(v, cause));
     G.Vg.endTask(v);
     S.villagers.delete(v.id);
     S.stats.deaths++;
@@ -697,7 +704,10 @@
       partner: v.partner, kids: v.kids.slice(), cause, role: v.role, dead: true, traits: v.traits,
       fac: G.Fac.idOfV(v), captive: !!v.captive, ord: v.ord, ep: v.ep, reigned: v.reigned, kills: v.kills, hero: v.hero, by: v.lastBy || 0,
     };
+    if (v.bio) rec.bio = v.bio;
+    if (v.lost) rec.lost = v.lost;
     S.dead.set(v.id, rec);
+    G.Life && G.Life.onDeath(v);
     const violent = cause === 'war' || cause === 'arrow' || cause === 'massacre' || cause === 'execution' || cause === 'coup' || cause === 'sacrifice';
     if (violent) G.War.noteDeath(v, cause);
     const wasRuler = G.Fac.all().some(f => f.leader === v.id);
@@ -717,7 +727,7 @@
     if (!S.milestones.firstDeath) S.milestones.firstDeath = S.day;
     // bury in the cemetery
     const set = S.settlements.get(v.set) || V.mainSettlement();
-    if (set) {
+    if (set && !body) {
       let cem = S.buildings.get(set.cemetery);
       if (!cem || cem.type !== 'cemetery' || cem.graves.length >= 12) {
         cem = V.startProject(set, 'cemetery');

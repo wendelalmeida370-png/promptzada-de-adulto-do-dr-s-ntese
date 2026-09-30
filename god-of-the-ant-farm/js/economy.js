@@ -808,13 +808,23 @@
     const h = homeOf(v);
     if (t.st === 0) {
       let r;
-      if (!b.blocks) { if (!t.spot) t.spot = b.type === 'feira' && E.stallSpot ? E.stallSpot(b, Math.floor(G.R() * 4), true) : [b.x + G.rr(0.3, b.w - 0.3), b.y + G.rr(0.3, b.h - 0.3)]; r = walkTo(v, t, 'spot', t.spot[0], t.spot[1], false, dt, H); }
+      if (!b.blocks) { if (!t.spot) { t.si = Math.floor(G.R() * 4); } if (!t.spot) t.spot = b.type === 'feira' && E.stallSpot ? E.stallSpot(b, t.si, true) : [b.x + G.rr(0.3, b.w - 0.3), b.y + G.rr(0.3, b.h - 0.3)]; r = walkTo(v, t, 'spot', t.spot[0], t.spot[1], false, dt, H); }
       else r = walkB(v, t, b, dt, H);
       if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return;
     }
     if (t.st === 1) {
+      // a line at the stall (or at the shop door) when others got there first
+      if (G.Life && !t.served) {
+        let fx, fy, dx, dy;
+        if (b.blocks) { const d = G.Vg.door(b), c = G.Village.center(b); fx = d[0]; fy = d[1]; dx = d[0] - c[0]; dy = d[1] - c[1]; }
+        else { fx = t.spot[0]; fy = t.spot[1]; dx = 0.72; dy = 0.63; }
+        const key = t.qkey = 'shop:' + b.id + ':' + (b.type === 'feira' ? t.si : 0);
+        if (v._q !== key && G.Life.queueFull(key)) { G.Vg.emote(v, 'sad', 1); return H.end(v); } // too long: another time
+        if (!G.Life.inLine(v, t, key, fx, fy, dx, dy, dt, H)) { if (t.waited > 30) { G.Life.leaveQueue(v); return H.end(v); } return; }
+        t.served = true; v.actT = 0;
+      }
       v.act = 'buy'; if (b.blocks) faceB(v, b); else if (b.type === 'feira') v.face = -1;
-      if (v.actT < 2.4) return;
+      if (v.actT < (t.qkey && G.Life.queueLen(t.qkey) > 1 ? 1.2 : 2.4)) return; // with a line behind, the seller hurries
       const I = inv(b); const k = t.k;
       if ((I[k] || 0) < 1) return H.end(v);
       const f = G.Fac.ofV(v); const n = k === 'food' ? Math.min(3, I[k]) : 1;
@@ -828,7 +838,7 @@
         else { const sh = homeOf(seller); if (sh) sh.coin = (sh.coin || 0) + price; else seller.purse = (seller.purse || 0) + price; }
         if (shady) f.eco.lostTax = (f.eco.lostTax || 0) + price * E.taxRate(f);
       }
-      I[k] -= n; v.carry = { k, n, bought: true };
+      I[k] -= n; v.carry = { k, n, bought: true }; G.Life && G.Life.leaveQueue(v);
       G.Vg.emote(v, 'happy', 1.2);
       if (!h) { v.carry = null; return H.end(v); }
       t.st = 2; return;

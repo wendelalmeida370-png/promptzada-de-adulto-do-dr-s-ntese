@@ -34,6 +34,7 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Crônica | `H` |
 | Árvore genealógica | `T` (com alguém selecionado) |
 | Modo cinema | `C` · ou o ícone da câmera no topo — `N` próxima cena · `Esc` ou um clique sai |
+| Modo foto | `P` · ou o ícone da máquina fotográfica — `Esc` sai |
 | Menu | `Esc` |
 
 ## O que acontece na ilha
@@ -109,6 +110,19 @@ Nada é enfeite: cada coisa que se vê na cidade é alguém fazendo um trabalho 
 - **Muito mais animações**: tear, martelo na forja, torno de oleiro, tosquia, ordenha, pastor com cajado, varrer, servir na taverna, escrever, bater à porta, esgueirar-se, pechinchar, beber, carregar lã, tecido, couro, minério, armas, ouro, cerâmica, moedas e feno.
 - Clique num edifício para ver quem trabalha lá, o estoque, o rebanho ou o veio; no painel **Reinos**, cada povo mostra bens, tesouro, imposto e a produção do dia anterior.
 
+## Fim de tarde, histórias, ofícios e filas
+
+A vida pequena, a que acontece entre um trabalho e outro. Tudo aqui **toma o lugar** de algo que as pessoas já faziam (voltar para casa, brincar, rezar) — então o dia não perde a forma: nas medições (50 dias de um mundo em guerra), a família à porta ocupa cerca de 2% do tempo de todos, a água ~2%, o aprendizado ~1,5%, recolher os mortos ~0,5% e as histórias bem menos que isso — uns 6% no total.
+
+- **Fim de tarde em família**: quando o trabalho acaba, cada família se senta **à porta da própria casa**, em volta de um foguinho, e janta da despensa. Quem chega por último ganha um **abraço**; os pais **jogam os pequenos para o alto**; as crianças correm em volta do fogo. Quando os adultos entram, as crianças vão junto.
+- **Os velhos contam histórias**: ao entardecer, um ancião se senta junto à fogueira da vila e as crianças (e um ou outro adulto) sentam no chão do outro lado para ouvir. As histórias **aconteceram de verdade** — são entradas da Crônica (a guerra de vinte anos atrás, o raio, a fundação), as lendas do Livro do Mundo ou a **vida de quem conta**, em primeira pessoa (“Perdi meu braço esquerdo lutando perto de Birka”). Histórias de medo assustam, as dos deuses aumentam a devoção, e as crianças lembram delas depois.
+- **Filhos aprendem o ofício dos pais**: dos nove anos em diante, a criança vai com o pai ou a mãe para o trabalho e **imita** o que eles fazem — o machado, a forja, o tear, a enxada, o cajado, até o treino com lança. Com a prática ela **aprende o ofício**: ao crescer, tende a seguir a mesma profissão e trabalha 15% mais rápido nela.
+- **Água e filas**: cada casa bebe seu jarro em cerca de um dia. Toda manhã alguém vai ao **poço** (ou à beira do rio), espera na **fila** e volta com o **jarro na cabeça**. Casa sem água adoece mais — um poço faz diferença de verdade.
+- **Rotinas coletivas**: fiéis rezando em **fileiras** diante do templo, com o sacerdote à frente; soldados treinando **em formação**, golpeando todos juntos; nas cidades maiores, ao amanhecer, a **trompa** (ou o tambor, entre egípcios e astecas) que chama ao trabalho.
+- **Animais da cidade**: **cães** com nome (Argos, Ferox, Garm, Xolo…) que seguem o dono, tocam o rebanho com o pastor, brincam com as crianças, latem e **expulsam raposas e lobos**, e dormem enrolados na porta; **gatos** nas soleiras (muitos no Egito); **galinhas** e um galo no quintal (os ovos vão para a despensa; as raposas vêm atrás delas); **pombos** na praça que levantam voo quando alguém passa. Contados de verdade, por cidade.
+- **Biografia viva**: cada pessoa guarda os **marcos reais** da sua vida — onde e de quem nasceu, com quem aprendeu o ofício, quem amou, os filhos, os que perdeu, as festas em que teve papel, as guerras, o primeiro inimigo, as feridas, o cativeiro, as histórias que ouviu. O painel mostra as últimas memórias; o botão **Biografia** abre a vida inteira, dia por dia, até a morte e o destino do corpo.
+- **Novas animações**: contar histórias com os braços, ouvir sentado de pernas cruzadas (e levar a mão à boca no susto), abraçar, jogar a criança para o alto, esperar na fila, carregar o jarro na cabeça, arrastar um corpo, cambalear com o golpe, andar de muleta, viver sem um braço.
+
 ## Festividades
 
 Cada povo tem seu calendário, e as festas acontecem de verdade no mundo, com gente andando, carregando, dançando, comendo — e morrendo.
@@ -130,6 +144,8 @@ Cada povo tem seu calendário, e as festas acontecem de verdade no mundo, com ge
 - **O general escolhe o plano** olhando o inimigo e o terreno: **cerco** e fome, **ataque por vários portões** para dividir os defensores, **pinça** com a cavalaria pelos flancos, **guerrilha** (queimar campos, roubar rebanhos, matar quem sai e sumir), a **cunha** dos berserkers, a **tartaruga** romana contra flechas.
 - **Quem defende também planeja**: o reino manda um exército de socorro e escolhe entre **defender as muralhas**, **emboscada na floresta** (caindo sobre o flanco inimigo), **segurar o alto da colina** ou **o vau do rio** — ou a batalha campal diante da cidade. Quando dois exércitos se encontram, formam **linhas de batalha**.
 - **Cercos profundos**: trincheiras e tendas em volta da cidade fora do alcance das flechas; a cidade passa a viver só da **comida dentro dos muros** e pode morrer de fome e **se render**. **Aríetes**, **catapultas**, **torres de cerco** que baixam a ponte sobre o muro, **escadas** (os defensores empurram), soldados que escalam e **abrem o portão por dentro**, **sapadores** que cavam sob a muralha até ela desabar, **óleo fervente** despejado do portão (incendeia aríetes) e — sob generais cruéis — **cadáveres catapultados** por cima dos muros para espalhar a **peste**.
+- **A guerra pesa**: cada golpe joga o corpo para trás e espirra sangue na direção do golpe; aparas de espadas soltam faíscas e o clangor do metal. Golpes pesados (elites, berserkers, heróis) **decepam braços** — que voam e ficam no chão — e às vezes **cabeças**. Quem sobrevive a um braço cortado fica **sem ele pelo resto da vida**: um coto enfaixado, trabalho mais lento, golpes mais fracos, e a memória na biografia. Quem morre **cai de verdade** — tomba, quica, fica — e uma poça de sangue se espalha embaixo.
+- **Os mortos ficam onde caíram**: com as roupas, o escudo e as flechas ainda cravadas. Com o tempo **incham** (moscas em volta), os **corvos** chegam para comer, eles **ressecam** e viram **esqueleto**, até sumirem. Quando o combate acaba, **coveiros** saem da cidade — parentes primeiro, depois cativos, depois quem estiver livre — e **arrastam** os corpos: os nossos para o **cemitério** (e a família vai ao enterro), os inimigos para a **pira**, que queima longe das casas. Deixados ali, os corpos **apodrecendo trazem doença** a quem mora perto, e a Crônica registra: “O fedor dos mortos trouxe a doença a Roma”.
 - **No mar**: frotas com **almirante** (navarco, prefeito da frota, jarl do mar…), **esporões de bronze** que abalroam, **abordagem** (o corvo romano, ganchos e machados nórdicos) que toma o navio inimigo, **brulotes** em chamas lançados contra frotas maiores e **bloqueio de portos**: nenhum barco de pesca ou mercante sai nem entra.
 
 ## O mar
@@ -203,6 +219,15 @@ Os poderes ficam em sete abas (`Tab` troca). Poderes marcados com ✦ abrem uma 
 
 **Fé** é o recurso dos poderes. Ela nasce da **devoção** (quando você ajuda) e do **medo** (quando você castiga). Medo também rende fé, mas deixa o povo lento e menos fértil — e quem perde parentes para a sua fúria perde a devoção. O painel inferior mostra como eles te enxergam: *Um mistério*, *Protetor*, *Deus amado*, *Deus temido*, *Tirano divino*…
 
+## O céu e os sons
+
+- **Clima bonito**: **névoa** nos baixios, nos rios e nos pântanos ao amanhecer (e depois da chuva); **raios de sol** atravessando a tela nas horas douradas; o céu fica rosado e alaranjado no nascer e no pôr do sol; **sombras de nuvens** deslizam sobre os campos com o vento; **arco-íris** quando uma chuva de verdade passa; **vaga-lumes** nas noites quentes, perto de árvores e da água; **folhas** arrancadas pelo vento; **redemoinhos de poeira** no deserto e na savana ao meio-dia; **relâmpagos** iluminando o céu dentro das tempestades.
+- **Som ambiente pelo lugar**: o jogo escuta o que a câmera está mostrando. Na costa, **ondas** quebrando e **gaivotas**; no rio, **água correndo**; na mata, **folhas** ao vento e **pássaros** (vários cantos); na cidade, o **murmúrio** das pessoas (mais forte com a feira cheia), o **martelo da forja**, **cães** e **galinhas**; à noite, **corujas**, **sapos** e grilos; no frio e no deserto, **vento**; numa batalha, o **estrondo** e o **clangor** das armas. Longe (zoom aberto) tudo fica mais baixo e mais misturado.
+
+## Modo foto
+
+Aperte `P` (ou o ícone da máquina fotográfica): o mundo **congela**, a interface some e a câmera continua livre para enquadrar. Uma pequena barra oferece filtros (**Dourado, Sépia, Preto e branco, Vivo, Luar**), **Miniatura** (tilt-shift: o alto e o baixo desfocados, como uma maquete), **Vinheta**, **Moldura** com o nome do lugar, do mundo e o dia, **Nomes** das cidades e a **hora do dia** da foto. **Capturar** salva um PNG exatamente como está na tela (e mostra a foto, para salvar com o botão direito onde o download for bloqueado). `Esc` ou `P` saem e o mundo volta a andar na velocidade em que estava.
+
 ## Modo cinema
 
 Aperte `C` (ou o ícone da câmera) e solte o mundo: a interface some atrás de faixas pretas e uma **câmera diretora** passa a filmar sozinha. A cada segundo ela pesa tudo o que está acontecendo de verdade no mundo e vai atrás do que vale mais a pena:
@@ -210,6 +235,7 @@ Aperte `C` (ou o ícone da câmera) e solte o mundo: a interface some atrás de 
 - **batalhas campais** (filmadas entre os dois exércitos), assaltos, cercos, guerrilhas, exércitos em marcha — e, numa batalha longa, um segundo olhar de perto no general;
 - **festividades** no momento certo (a procissão segue quem carrega o peplo ou a barca; a subida da pirâmide segue a vítima) — e nunca chegando para o último minuto;
 - **batalhas navais**, brulotes, navios em chamas, frotas de invasão e desembarques;
+- **histórias ao pé do fogo**, **famílias à porta** no fim da tarde, a **fila do poço**, o **campo dos mortos** depois de uma batalha e a **pira** queimando, e o **arco-íris** quando a chuva passa;
 - o que acabou de entrar na **crônica**: um nascimento, uma morte, uma nova aldeia, uma maravilha, um golpe, um meteoro;
 - **incêndios**, com quantas pessoas estão lutando contra o fogo;
 - a **vida comum**: uma criança brincando, um casal namorando, um pastor, um ferreiro, um cobrador de impostos — com um halo suave sob os pés de quem a legenda fala;
@@ -245,8 +271,11 @@ js/naval.js       portos, pesca, exploração, comércio marítimo, frotas com a
 js/siege.js       arqueiros, tropas de elite, muralhas, portões, aríetes, catapultas, torres de cerco, escadas, sapadores, óleo fervente, peste, sacrifícios
 js/economy.js     economia urbana: ofícios, currais, minas, forja, tecelagem, mercados, feira, taverna, impostos, crime
 js/festivals.js   calendário de festas de cada civilização: procissões, ritos, jogos, sacrifícios, o Fogo Novo
+js/life.js        biografia viva, família no fim da tarde, histórias dos velhos, aprendizes, água e filas, fileiras e chamada ao trabalho
+js/carnage.js     guerra que pesa: sangue, membros decepados, corpos que apodrecem, coveiros, piras, a doença dos mortos
 js/army.js        exércitos: recrutamento, companhias, oficiais, formações, moral, planos de ataque e de defesa, cercos
 js/villagers.js   IA dos habitantes (necessidades, decisões, tarefas)
+js/pets.js        animais da cidade: cães, gatos, galinhas e pombos
 js/animals.js     40 espécies, habitats, capim, cadeias alimentares, caça, filhotes, migrações, guardiões
 js/powers.js      poderes divinos e percepção
 js/miracles.js    Terra, Mar, Palavra, eras de ouro, maldições, heróis, muralhas divinas
@@ -257,12 +286,14 @@ js/fx.js          partículas e efeitos
 js/art.js         arte procedural (sprites e vetores)
 js/fauna-art.js   o desenho de cada espécie
 js/arch.js        arquitetura de cada civilização
+js/sky.js         névoa, raios de sol, arco-íris, sombras de nuvens, vaga-lumes, folhas, redemoinhos, relâmpagos
 js/cityart.js     oficinas, currais, feira, minas e veios no estilo de cada civilização
 js/render.js      renderizador isométrico (terreno em blocos com nível de detalhe), iluminação, clima
 js/minimap.js     minimapa com fronteiras e cidades
-js/audio.js       áudio sintetizado com WebAudio (efeitos, ambiente, música)
+js/audio.js       áudio sintetizado com WebAudio (efeitos, som ambiente conforme o lugar, música)
 js/save.js        salvar / carregar
 js/ui.js          interface
 js/cinema.js      modo cinema: o diretor que escolhe as cenas, a câmera, as legendas
+js/photo.js       modo foto: congelar, filtros, miniatura, moldura, salvar PNG
 js/main.js        loop, input, câmera, menu, introdução
 ```

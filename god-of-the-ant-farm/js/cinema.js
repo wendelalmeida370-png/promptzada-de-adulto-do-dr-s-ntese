@@ -222,6 +222,7 @@
     court: 46, play: 40, celebrate: 44, social: 32, tavern: 36, pray: 32, fish: 36, herd: 40, fodder: 32, chop: 32, build: 38, mine: 34, minejob: 34, quarry: 32, craft: 36, farm: 30,
     hunt: 46, sell: 36, shop: 30, penwork: 32, slaughter: 30, mint: 36, taxes: 38, steal: 52, drill: 40, patrol: 28, guard: 26, swim: 38, explore: 36, migrate: 42, deliver: 24, haul: 24,
     restock: 22, serve: 30, desk: 26, pave: 30, dig: 30, tend: 30, forage: 28, gather: 26, condemned: 58, escape: 54, flee: 46, fire: 56, hide: 38, visit: 30, citylife: 26, fetch: 24, wander: 16, idle: 10, eat: 18,
+    appr: 48, water: 30, corpse: 54, callwork: 46, family: 34,
   };
   function life(out) {
     const all = [...S().villagers.values()]; if (!all.length) return;
@@ -268,6 +269,48 @@
     }
   }
 
+  // the small hours: stories by the fire, families at the door, the line at the well
+  function evenings(out) {
+    if (!G.Life) return;
+    const Sx = S();
+    for (const s of G.Life.tales()) {
+      if (!s.begin) continue;
+      const set = Sx.settlements.get(s.set); const el = Sx.villagers.get(s.elder); if (!el) continue;
+      out.push({ key: 'tale:' + s.set + ':' + s.day, kind: 'tale', score: 68 + s.kids.length * 2, zoom: 2.7, dur: 14, drift: 1, pos: () => [s.x, s.y, 6], alive: () => G.Life.tales().includes(s),
+        kick: kickOf(set && set.name, 'Histórias ao pé do fogo'), title: `${el.name} conta às crianças`, sub: `“${trim(s.tale.txt, 170)}”` });
+    }
+    for (const f of G.Life.fams()) {
+      if (f.members.size < 3) continue;
+      const names = [...f.members.keys()].map(id => Sx.villagers.get(id)).filter(Boolean);
+      const adults = names.filter(v => v.age >= 16).map(v => v.name), kids = names.filter(v => v.age < 16).map(v => v.name);
+      out.push({ key: 'fam:' + f.key, kind: 'family', score: 50 + f.members.size * 3, zoom: 2.9, dur: 11, drift: 1, pos: () => [f.x, f.y, 5], alive: () => G.Life.fams().includes(f) && f.members.size > 1,
+        kick: place(f.x, f.y), title: 'Fim de tarde em família', sub: `${adults.join(' e ')}${kids.length ? `, com ${kids.length === 1 ? 'o pequeno' : 'as crianças'} ${kids.join(', ')}` : ''} — na porta de casa, até a noite chegar` });
+    }
+    for (const q of G.Life.queues()) {
+      if (q.n < 3) continue;
+      out.push({ key: 'queue:' + q.key, kind: 'queue', score: 34 + q.n * 3, zoom: 2.7, dur: 10, drift: 1, pos: () => [q.x, q.y, 5], alive: () => G.Life.queueLen(q.key) > 0,
+        kick: place(q.x, q.y), title: q.key.startsWith('well') ? 'A fila do poço' : 'A fila da feira', subFn: () => q.key.startsWith('well') ? `${G.Life.queueLen(q.key)} pessoas esperando a vez de tirar água, com o jarro na mão` : `${G.Life.queueLen(q.key)} pessoas esperando a vez na barraca` });
+    }
+  }
+  // after the battle: the dead where they fell, the pyre
+  function aftermath(out) {
+    if (!G.Carnage) return;
+    const cells = new Map();
+    for (const c of G.Carnage.list()) { const k = ((c.x / 6) | 0) + ':' + ((c.y / 6) | 0); let l = cells.get(k); if (!l) cells.set(k, l = []); l.push(c); }
+    for (const [k, l] of cells) {
+      if (l.length < 3) continue;
+      const cx = l.reduce((a, c) => a + c.x, 0) / l.length, cy = l.reduce((a, c) => a + c.y, 0) / l.length;
+      const crows = l.some(c => c.crows); const st = G.Carnage.stage(l[0]);
+      out.push({ key: 'dead:' + k, kind: 'dead', score: 52 + Math.min(22, l.length * 2) + (crows ? 8 : 0), zoom: 2.3, dur: 12, drift: 1, pos: () => [cx, cy, 4], alive: () => true,
+        kick: place(cx, cy), title: st === 'bones' ? 'Os ossos da batalha' : 'O campo dos mortos',
+        subFn: () => { const n = G.Carnage.list().filter(c => G.dist(c.x, c.y, cx, cy) < 5).length; const busy = G.Carnage.list().some(c => c.claim && G.dist(c.x, c.y, cx, cy) < 5); return `${n} ${n === 1 ? 'corpo' : 'corpos'} ${G.Carnage.STAGE[st]}${crows ? ', e os corvos' : ''}${busy ? ' — alguém veio arrastá-los' : ' — ninguém veio buscá-los ainda'}`; } });
+    }
+    for (const p of G.Carnage.pyres()) {
+      if (p.burn <= 0) continue;
+      out.push({ key: 'pyre:' + p.id + ':' + p.bodies, kind: 'dead', score: 66, zoom: 2.4, dur: 11, drift: 1, pos: () => [p.x, p.y, 8], alive: () => p.burn > 0,
+        kick: place(p.x, p.y), title: 'A pira dos inimigos', sub: `${p.bodies} ${p.bodies === 1 ? 'corpo queimado' : 'corpos queimados'} aqui, longe das casas` });
+    }
+  }
   // establishing shots: a town from above, the fair, a prayer, the whole world
   function places(out) {
     const Sx = S(); const t = Sx.time;
@@ -279,7 +322,7 @@
       out.push({
         key: 'set:' + set.id, kind: 'place', score: 24 + tier * 3 + Math.min(8, n / 40) + (dusk ? 16 : night ? 10 : dawn ? 8 : 0) + Math.random() * 6, zoom: zoomFit((set.radius || 6) * 0.75), dur: 12, drift: 1,
         pos: () => [set.cx, set.cy, 4], alive: () => Sx.settlements.has(set.id), kick: facName(set.fac), title: set.name,
-        subFn: () => { const t = Sx.time; return `${(G.City && G.City.TIERS[set.tier || 0]) || ''} · ${n} ${n === 1 ? 'habitante' : 'habitantes'}${G.isNight() ? ' · a cidade à noite' : t > 0.62 ? ' · o fim do dia' : t > 0.02 && t < 0.12 ? ' · o amanhecer' : ''}`; },
+        subFn: () => { const t = Sx.time; return `${(G.City && G.City.TIERS[set.tier || 0]) || ''} · ${n} ${n === 1 ? 'habitante' : 'habitantes'}${G.isNight() ? ' · a cidade à noite' : t > 0.62 ? ' · o fim do dia' : t > 0.02 && t < 0.14 ? ' · a névoa da manhã' : ''}${G.Pets ? (() => { const w = G.Pets.words(G.Pets.count(set.id)); return w ? ' · ' + w : ''; })() : ''}`; },
       });
       if (G.Eco && G.Eco.fairOpen() && tier >= 1) {
         const fb = G.Eco.byType(set.id, 'feira')[0];
@@ -288,6 +331,8 @@
     }
     const pr = Sx.prayer;
     if (pr && G.Events && G.Events.PRAYER && G.Events.PRAYER[pr.kind]) out.push({ key: 'pray:' + pr.set + ':' + pr.kind, kind: 'place', score: 54, zoom: 2.2, dur: 10, drift: 1, pos: () => [pr.x, pr.y, 6], alive: () => Sx.prayer === pr, kick: place(pr.x, pr.y), title: 'Uma prece', sub: `${G.Events.PRAYER[pr.kind].ask} — e olham para o céu, para você` });
+    const rainbow = G.Sky && G.Sky.state.rainbow > 4;
+    if (rainbow) { const s0 = [...Sx.settlements.values()].sort((a, b) => (b.tier || 0) - (a.tier || 0))[0]; if (s0) out.push({ key: 'rainbow:' + Sx.day, kind: 'sky', score: 74, zoom: zoomFit((s0.radius || 8) * 1.2), dur: 11, drift: 1, pos: () => [s0.cx, s0.cy, 4], alive: () => G.Sky.state.rainbow > 0, kick: s0.name, title: 'Arco-íris', sub: 'a chuva passou' }); }
     const nf = G.Fac.all().length;
     out.push({ key: 'world', kind: 'world', score: 16 + (dawn ? 16 : 0) + Math.random() * 6, zoom: R().minZoom() * 1.12, dur: 12, drift: 1, pos: () => [G.N / 2, G.N / 2, 0], alive: () => true, kick: `Dia ${Sx.day}`, title: (Sx.lore && Sx.lore.world) || 'O mundo', sub: `${Sx.villagers.size} almas · ${nf} ${nf === 1 ? 'povo' : 'povos'} · ${Sx.settlements.size} ${Sx.settlements.size === 1 ? 'povoado' : 'povoados'}` });
   }
@@ -295,7 +340,7 @@
   // ------------------------------ the director ------------------------------
   function candidates() {
     const out = [];
-    festivals(out); armies(out); fleets(out); chronicle(out); fires(out); life(out); beasts(out); places(out);
+    festivals(out); armies(out); fleets(out); chronicle(out); fires(out); life(out); beasts(out); places(out); evenings(out); aftermath(out);
     // not the same thing again so soon, not always the same kind of thing
     for (const c of out) {
       const last = seen.get(c.key);

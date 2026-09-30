@@ -129,6 +129,7 @@
       v.reigned = f.id;
     }
     f.rulers.push({ id: v.id, name: v.name, g: v.g, ord: v.ord || 0, from: S.day, how: how || 'escolha' });
+    G.Life && G.Life.bio(v, 'ruler', f.name);
     if (f.rulers.length > 40) f.rulers.splice(0, f.rulers.length - 40);
     f.legit = how === 'golpe' ? 25 : how === 'revolucao' ? 70 : how === 'ungido' ? 100 : how === 'heranca' ? 75 : 60;
     if (how === 'golpe') P.earn(f, v, 'usurpador', true);

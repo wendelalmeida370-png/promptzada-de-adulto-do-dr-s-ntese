@@ -422,6 +422,7 @@
   R.lightAt = light;
   // other files draw their own things: on the ground, or sorted among the people
   const HK = G.renderHooks = G.renderHooks || { ground: [], ents: [] };
+  HK.air = HK.air || []; HK.screen = HK.screen || []; // above the people (mist, fireflies) and on the glass (sun rays, rainbows)
   const FXA = { light, glow: (sx, sy, r, c, a) => emisGlow.push(sx, sy, r, c, a), fire: (sx, sy, f) => emisFire.push(sx, sy, f), torch: (sx, sy) => emisTorch.push(sx, sy), overlay: (o, sx, sy) => overlays.push(o, sx, sy) };
   R.fxApi = FXA;
 
@@ -585,13 +586,14 @@
     // ---------- background ----------
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const nq = Math.round(nightF * 40) / 40;
-    if (nq !== R._bgN || !R._bgC) {
-      R._bgN = nq;
+    const tt = S.time; const duskF = Math.round(20 * (tt > 0.58 && tt < 0.78 ? Math.sin((tt - 0.58) / 0.2 * Math.PI) : tt < 0.1 ? Math.sin(tt / 0.1 * Math.PI) * 0.8 : 0) * (1 - S.weather.rain)) / 20;
+    if (nq !== R._bgN || duskF !== R._bgD || !R._bgC) {
+      R._bgN = nq; R._bgD = duskF;
       const c = R._bgC || (R._bgC = document.createElement('canvas')); c.width = 2; c.height = 128;
       const x = c.getContext('2d');
       const dayTop = [214, 232, 236], dayBot = [150, 190, 204], nTop = [14, 20, 42], nBot = [30, 40, 70];
       const g = x.createLinearGradient(0, 0, 0, 128);
-      g.addColorStop(0, G.rgb(G.lerpColor(dayTop, nTop, nq))); g.addColorStop(1, G.rgb(G.lerpColor(dayBot, nBot, nq)));
+      g.addColorStop(0, G.rgb(G.lerpColor(G.lerpColor(dayTop, nTop, nq), [214, 140, 150], duskF * 0.75))); g.addColorStop(1, G.rgb(G.lerpColor(G.lerpColor(dayBot, nBot, nq), [246, 176, 110], duskF * 0.8)));
       x.fillStyle = g; x.fillRect(0, 0, 2, 128);
     }
     ctx.imageSmoothingEnabled = true;
@@ -706,6 +708,7 @@
     PROF.mark('entities', t0); t0 = now();
     // ---------- world particles, clouds ----------
     drawParticles(0, view);
+    for (const h of HK.air) h(ctx, proj, view, t, nightF, FXA);
     PROF.mark('particles', t0); t0 = now();
     if (!R.dbg.noClouds) drawClouds(t, view, nightF);
     PROF.mark('clouds', t0); t0 = now();
@@ -747,6 +750,7 @@
       }
       ctx.stroke();
     }
+    for (const h of HK.screen) h(ctx, canvas.width, canvas.height, t, nightF, dpr);
     G.Powers.drawSky && G.Powers.drawSky(ctx, canvas.width, canvas.height, t, dpr);
     if (G.FX.flash > 0) {
       ctx.fillStyle = `rgba(${G.FX.flashColor},${Math.min(1, G.FX.flash) * 0.85})`;

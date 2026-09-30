@@ -48,6 +48,8 @@
     G.City && G.City.reset();
     G.Naval && G.Naval.reset();
     G.Siege && G.Siege.reset();
+    G.Carnage && G.Carnage.reset();
+    G.Life && G.Life.reset();
     G.Powers.resetMiracles && G.Powers.resetMiracles();
     // 'classico' keeps the original nameless tribes; otherwise each people gets a civilization
     const civs = opts.classic ? S.starts.map(() => null) : G.Biome.matchCivs(G.Civ.assign(opts.civs, S.starts.length), S.starts);
@@ -70,7 +72,7 @@
 
   // ------------------------------ modes ------------------------------
   M.toMenu = function () {
-    G.Cinema.stop();
+    G.Cinema.stop(); G.Photo.stop();
     M.mode = 'menu';
     G.UI.showHUD(false); G.UI.select(null); G.UI.setPower(null); G.UI.closeModal();
     setupWorld((Math.random() * 1e9) | 0, { type: 'ilha', size: 64, tribes: 2 });
@@ -161,7 +163,10 @@
     G.Nature.update(dt);
     G.Village.update(dt);
     G.Vg.updateAll(dt);
+    G.Life && G.Life.update(dt);
+    G.Carnage && G.Carnage.update(dt);
     G.Animals.updateAll(dt);
+    G.Pets && G.Pets.update(dt);
     G.Powers.update(dt);
     G.Lore && G.Lore.update(dt);
     G.Events.update(dt);
@@ -272,10 +277,11 @@
       if (I.held) { release(); return; }
       if (M.mode !== 'game' || m.dragged) return;
       if (G.Cinema.on) { if (e.target === canvas) G.Cinema.stop(); return; }
+      if (G.Photo.on) return;
       click(e.clientX, e.clientY, e.button);
     });
     canvas.addEventListener('dblclick', e => {
-      if (M.mode !== 'game' || I.power || G.Cinema.on) return;
+      if (M.mode !== 'game' || I.power || G.Cinema.on || G.Photo.on) return;
       const ent = pick(e.clientX, e.clientY, true);
       if (ent) { G.UI.select(ent); G.Render.cam.follow = ent.id; }
     });
@@ -294,6 +300,8 @@
       const k = e.key;
       I.keys[k.toLowerCase()] = true;
       if (M.modalOpen) { if (k === 'Escape') G.UI.closeModal(); return; }
+      // photo: the world is frozen; only leaving (and panning with WASD)
+      if (G.Photo.on) { if (k === 'Escape' || k === 'p' || k === 'P') G.Photo.stop(); else if (k === 'Tab') e.preventDefault(); return; }
       // cinema: only pause, speed, next scene and leaving — the rest would open the interface
       if (G.Cinema.on) {
         if (k === 'Escape' || k === 'c' || k === 'C') G.Cinema.stop();
@@ -315,6 +323,7 @@
       else if (k === 'f' || k === 'F') { const s = G.UI.selected; if (s && s.x !== undefined && !s.type && !s.dead) G.Render.cam.follow = G.Render.cam.follow === s.id ? 0 : s.id; }
       else if (k === 'h' || k === 'H') $('#chronicle').classList.toggle('collapsed');
       else if (k === 'c' || k === 'C') { if (I.held) release(); G.Cinema.start(); }
+      else if (k === 'p' || k === 'P') { if (I.held) release(); G.Photo.start(); }
       else if (k === 't' || k === 'T') { const s = G.UI.selected; if (s && !s.type && !s.kind) G.UI.openTree(s.id); }
       else if (k === '+' || k === '=') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.min(sp.length - 1, sp.indexOf(G.speed) + 1)]); }
       else if (k === '-' || k === '_') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.max(0, sp.indexOf(G.speed) - 1)]); }
@@ -349,7 +358,7 @@
       e.preventDefault();
       if (I.held) { release(); tStart = null; return; }
       if (pinch && e.touches.length < 2) { pinch = null; return; }
-      if (tStart && !tStart.moved && M.mode === 'game') { if (G.Cinema.on) G.Cinema.stop(); else click(tStart.x, tStart.y, 0); }
+      if (tStart && !tStart.moved && M.mode === 'game') { if (G.Cinema.on) G.Cinema.stop(); else if (!G.Photo.on) click(tStart.x, tStart.y, 0); }
       tStart = null;
     }, { passive: false });
     // menu buttons
@@ -400,12 +409,13 @@
         if (k.w || k.arrowup) dy -= v; if (k.s || k.arrowdown) dy += v; if (k.a || k.arrowleft) dx -= v; if (k.d || k.arrowright) dx += v;
         if (dx || dy) { cam.x += dx; cam.y += dy; cam.follow = 0; cam.target = null; }
       }
-      if (M.mode === 'game') G.Cinema.update(rdt);
+      if (M.mode === 'game') { G.Cinema.update(rdt); G.Photo.update(rdt); }
       G.Render.update(rdt, dt);
       G.FX.update(dt > 0 ? dt : 0, rdt);
+      G.Sky && G.Sky.update(dt > 0 ? dt : 0, rdt);
       // hover & preview
       hoverT -= rdt;
-      if (M.mode === 'game' && hoverT <= 0 && !I.mouse.down && !G.Cinema.on) {
+      if (M.mode === 'game' && hoverT <= 0 && !I.mouse.down && !G.Cinema.on && !G.Photo.on) {
         hoverT = 0.05;
         const m = I.mouse;
         if (m.onCanvas) {
@@ -430,6 +440,7 @@
     G.Render.init($('#game'));
     G.UI.init();
     G.Cinema.init();
+    G.Photo.init();
     G.Minimap.init();
     setupInput();
     M.toMenu();

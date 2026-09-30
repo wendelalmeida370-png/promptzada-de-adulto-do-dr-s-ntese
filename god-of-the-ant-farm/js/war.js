@@ -116,7 +116,7 @@
       rx: rally[0], ry: rally[1], tx: stage[0], ty: stage[1], fury: !!opts.fury,
     };
     Wr.bands.set(b.id, b);
-    members.forEach((v, k) => { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'band', band: b.id, pri: 3.2, kind: 'band', flag: k === 0 }); });
+    members.forEach((v, k) => { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'band', band: b.id, pri: 3.2, kind: 'band', flag: k === 0 }); G.Life && G.Life.bio(v, 'war', enemy.name, best.name); });
     f.attackCD = G.rr(120, 200) * (1.2 - pe.agg * 0.5);
     // a real host: companies, officers, formations and a plan
     if (G.Army && members.length >= 8) G.Army.organize(b, members, f, enemy, best, from, opts);
@@ -130,7 +130,7 @@
       rx: set.cx, ry: set.cy, tx: set.cx, ty: set.cy, fury: !!o.fury, ship: o.ship || 0, reached: !!o.landed,
     };
     Wr.bands.set(b.id, b);
-    members.forEach((v, k) => { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'band', band: b.id, pri: 3.2, kind: 'band', flag: k === 0 }); });
+    members.forEach((v, k) => { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'band', band: b.id, pri: 3.2, kind: 'band', flag: k === 0 }); if (G.Life) { if (goal === 'defesa') G.Life.bio(v, 'defend', set.name, enemy.name); else G.Life.bio(v, 'war', enemy.name, set.name); } });
     return b;
   };
   Wr.disband = function (b, silent) {
@@ -300,6 +300,7 @@
     G.Vg.endTask(o);
     Wr.enslave(o, from, o.set);
     o.set = captor.set;
+    G.Life && G.Life.bio(o, 'captive', (G.Fac.get(fid(captor)) || {}).name || '?');
     G.Vg.setTask(o, { type: 'escorted', by: captor.id, pri: 5.5, kind: 'escorted' });
     G.Vg.emote(o, 'fear', 3);
     G.FX && G.FX.poof(o.x, o.y, '#8a7a5a');
@@ -313,6 +314,7 @@
     const S = G.S; if (!v.captive) return;
     const captor = G.Fac.ofV(v);
     v.captive = null; v.role = null; v.home = 0;
+    G.Life && G.Life.bio(v, 'freed');
     if (dest) { v.set = dest.id; G.Vg.endTask(v); G.Vg.setTask(v, { type: 'migrate', pri: 1.6, kind: 'migrate' }); }
     if (how === 'fuga') {
       S.stats.escapes = (S.stats.escapes || 0) + 1;
@@ -509,12 +511,14 @@
     // levies with a weapon from the forge hit harder than with a club
     if (v._armed && v.role !== 'guerreiro') d *= 1.35;
     if (G.Army) d *= G.Army.dmgMul(v, o, false);
+    if (v.lost && (v.lost.armL || v.lost.armR)) d *= 0.6; // one arm left
     return d * G.rr(0.8, 1.2);
   };
   Wr.hitChance = (v, o) => 0.72 + (v.role === 'guerreiro' ? 0.08 : 0) - (o.role === 'guerreiro' ? 0.08 : 0) + (v.fury > 0 ? 0.1 : 0);
   Wr.hero = function (v) {
     v.hero = true;
     const f = G.Fac.ofV(v);
+    G.Life && G.Life.bio(v, 'hero', v.kills);
     if (v.id === (f && f.leader)) { G.Politics.earn(f, v, 'bravo'); return; }
     if (!v.ep) v.ep = 'bravo';
     log(`${v.name}, de ${f ? f.name : 'lugar nenhum'}, já derrubou ${v.kills} inimigos. Chamam-n${oa(v)} de ${v.name}, ${G.Politics.epithet(v)}.`, 'war', v.x, v.y);
@@ -524,16 +528,18 @@
     // flower war: Aztec warriors wound to take prisoners rather than kill
     const flower = b && b.goal !== 'massacre' && G.Civ.t(b.fac, 'capture') > 1.5;
     const capMode = !o.captive && ((b && (b.goal === 'captura' || flower) && (o.age < 16 || o.hp < (flower ? 60 : 50))) || t.capMode);
-    if (G.R() > Wr.hitChance(v, o)) { G.Audio && G.Audio.at(o.x, o.y, 'swish'); return; }
+    if (G.R() > Wr.hitChance(v, o)) { G.Audio && G.Audio.at(o.x, o.y, 'swish'); if (G.Carnage && G.R() < 0.45) G.Carnage.onParry(v, o); return; }
     const dmg = Wr.damage(v, o);
     if (capMode && b && o.hp - dmg < 28) { Wr.capture(o, v, b); t.foe = 0; t.gotCaptive = o.id; return; }
     o.hurt = 0.3;
     G.FX && G.FX.blood(o.x, o.y);
     G.Audio && G.Audio.at(o.x, o.y, 'hit');
+    G.Carnage && G.Carnage.onHit(v, o, dmg, o.hp - dmg <= 0);
     const cause = t.cause || (b && b.goal === 'massacre' ? 'massacre' : 'war');
     G.Vg.damage(o, dmg, cause, false, v.id);
     if (!S.villagers.has(o.id)) {
       v.kills = (v.kills || 0) + 1; if (b) b.kills++;
+      if (v.kills === 1 && G.Life) G.Life.bio(v, 'kill', o.name);
       const f = G.Fac.get(fid(v)); if (f) f.st.kills++;
       if (v.kills === 5 && !v.hero) Wr.hero(v);
       t.foe = 0;
@@ -883,10 +889,12 @@
       const set = S.settlements.get(v.set); if (!set) return H.end(v);
       let q = null; for (const b of S.buildings.values()) if (b.type === 'quartel' && b.built && b.set === v.set) { q = b; break; }
       const c = q ? G.Village.frontTile(q) : [set.cx + 2, set.cy + 1];
-      const p = spotNear(c[0] + G.rr(-1.5, 1.5), c[1] + G.rr(-1.5, 1.5), 1);
-      if (!p || !H.goto(v, p[0], p[1], false)) return H.end(v);
+      const rank = q && G.Life && G.Life.rowSpot(q, v, 4, 0.7, 1.2);
+      if (rank) { t.row = q.id; t.face = rank[3] - rank[4] > 0 ? 1 : -1; if (!H.goto(v, rank[0], rank[1], false)) { G.Life.rowRelease(v); t.row = 0; return H.end(v); } }
+      else { const p = spotNear(c[0] + G.rr(-1.5, 1.5), c[1] + G.rr(-1.5, 1.5), 1); if (!p || !H.goto(v, p[0], p[1], false)) return H.end(v); }
       t.st = 1;
-    } else if (t.st === 1) { if (H.move(v, dt)) { t.st = 2; v.actT = 0; t.dur = G.rr(6, 11); if (G.R() < 0.5) v.face = -v.face; } }
+    } else if (t.st === 1) { if (H.move(v, dt)) { t.st = 2; v.actT = 0; t.dur = G.rr(8, 13); if (G.R() < 0.5) v.face = -v.face; } }
+    else if (t.row) { v.act = 'drill'; v.face = t.face; v.actT = G.S.clock % 2.4; t.dur -= dt; if (t.dur <= 0) H.end(v); }
     else { v.act = 'fight'; if (v.actT > 2.5) v.actT = 0; t.dur -= dt; if (t.dur <= 0) H.end(v); }
   }
   // dispatch for the new task types; returns false for unknown ones

@@ -609,15 +609,17 @@
   }
   Art.CLOTH = CLOTH;
   function line(c, x0, y0, x1, y1) { c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); }
+  Art.clothOf = v => (v.captive ? '#8b8478' : v.age < 16 ? v.kidCloth : v.role === 'guerreiro' ? (v._fc || '#8a3a2a') : (CLOTH[v.role] || '#c9763a'));
   Art.villager = function (c, v, x, y, t, lod) {
     const S = G.S;
     const age = v.age;
+    // a blow that just landed throws the body back for a moment
+    const act = v.stagT && v.stagT > S.clock ? 'stagger' : v.act, at = v.actT;
     const sc = age < 2 ? 0.45 : age < 16 ? 0.55 + (age / 16) * 0.42 : 1;
     const levy = !!(v.unit && v.task && v.task.type === 'band' && age >= 16 && !v.captive);
     const warrior = (v.role === 'guerreiro' && age >= 16 && !v.captive) || levy;
     const mounted = v.unit === 'cavalaria' && !v.elite && levy && act !== 'sit';
-    const cloth = v.captive ? '#8b8478' : age < 16 ? v.kidCloth : warrior ? (v._fc || '#8a3a2a') : (CLOTH[v.role] || '#c9763a');
-    const act = v.act, at = v.actT;
+    const cloth = v._cloth || (v.captive ? '#8b8478' : age < 16 ? v.kidCloth : warrior ? (v._fc || '#8a3a2a') : (CLOTH[v.role] || '#c9763a'));
     if (lod) { // far away: simple dots
       c.fillStyle = cloth; c.fillRect(x - 1.6 * sc, y - 7 * sc, 3.2 * sc, 5 * sc);
       c.fillStyle = v.skin; c.fillRect(x - 1.2 * sc, y - 9.5 * sc, 2.4 * sc, 2.4 * sc);
@@ -663,15 +665,17 @@
     // legs
     c.strokeStyle = '#3b2b20'; c.lineWidth = 1.15;
     if (mounted) { line(c, -0.5, -3.8, 1.4, -1.8); line(c, 1.4, -1.8, 1.2, 0.2); }
-    else if (act === 'sit' || act === 'pottery') { line(c, -0.8, -3.4, 2.4, -3.2); line(c, 2.4, -3.2, 2.6, -0.2); line(c, 0.6, -3.4, 3.4, -3); line(c, 3.4, -3, 3.6, 0); if (act === 'pottery') { c.fillStyle = '#6a4a30'; c.fillRect(-2.2, -1.6, 3.2, 1.6); } }
+    else if (act === 'sit' || act === 'pottery' || act === 'sittalk' || act === 'story') { line(c, -0.8, -3.4, 2.4, -3.2); line(c, 2.4, -3.2, 2.6, -0.2); if (!(v.lost && v.lost.leg)) { line(c, 0.6, -3.4, 3.4, -3); line(c, 3.4, -3, 3.6, 0); } if (act === 'pottery' || act === 'story') { c.fillStyle = '#6a4a30'; c.fillRect(-2.2, -1.6, 3.2, 1.6); } }
+    else if (act === 'listen') { line(c, -1.8, -0.9, 1.9, -0.3); line(c, 1.7, -1, -1.4, -0.2); }
     else if (act === 'milk') { line(c, -0.8, -2, 1.6, -1.6); line(c, 1.6, -1.6, 1.2, 0); line(c, 0.8, -2, 2.6, -1.2); line(c, 2.6, -1.2, 2.8, 0); c.fillStyle = '#6a4a30'; c.fillRect(-1.6, -1.4, 2.4, 1.4); }
     else {
       const run = act === 'run' ? 1.8 : 1.35;
       const leg = moving ? Math.sin(ph) * run : dancing ? Math.sin(at * 7 + v.id) * 1.3 : 0;
-      line(c, -0.85, -3.8, -0.85 + leg, -0.1); line(c, 0.85, -3.8, 0.85 - leg, -0.1);
+      if (v.lost && v.lost.leg) { line(c, 0.85, -3.8, 0.85 - leg * 0.5, -0.1); line(c, -0.85, -3.8, -1.1, -2.6); c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; line(c, 1.9, -8.4, 2.3 + leg * 0.4, 0); c.lineWidth = 1.15; }
+      else { line(c, -0.85, -3.8, -0.85 + leg, -0.1); line(c, 0.85, -3.8, 0.85 - leg, -0.1); }
     }
-    const bodyY = act === 'sit' || act === 'pottery' ? 2.6 : act === 'milk' ? 2 : act === 'sneak' ? 1 : 0;
-    const lean = (act === 'plant' || act === 'harvest' || act === 'gather' || act === 'fill' || act === 'dig' || act === 'shear' || act === 'feed') ? 0.35 : act === 'pottery' || act === 'milk' ? 0.28 : act === 'sneak' ? 0.25 : act === 'mourn' || act === 'butcher' || act === 'weave' ? 0.18 : act === 'write' ? 0.1 : 0;
+    const bodyY = act === 'sit' || act === 'pottery' || act === 'sittalk' || act === 'story' ? 2.6 : act === 'listen' ? 3.4 : act === 'milk' ? 2 : act === 'sneak' ? 1 : 0;
+    const lean = (act === 'plant' || act === 'harvest' || act === 'gather' || act === 'fill' || act === 'dig' || act === 'shear' || act === 'feed') ? 0.35 : act === 'pottery' || act === 'milk' ? 0.28 : act === 'sneak' ? 0.25 : act === 'mourn' || act === 'butcher' || act === 'weave' ? 0.18 : act === 'write' ? 0.1 : act === 'stagger' ? -0.32 : act === 'drag' ? -0.2 : act === 'wait' ? Math.sin(t * 1.3 + v.id) * 0.05 : act === 'story' ? Math.max(0, Math.sin(at * 1.1 + v.id)) * 0.12 : 0;
     c.save();
     c.translate(0, bodyY - bob);
     if (lean) { c.translate(0, -3.8); c.rotate(lean); c.translate(0, 3.8); }
@@ -695,15 +699,18 @@
     const sh = [-0.2, -8]; // shoulder
     const tool = (ang, len, draw) => { c.save(); c.translate(sh[0], sh[1]); c.rotate(ang); c.strokeStyle = v.skin; line(c, 0, 0, 0, 3.4); c.translate(0, 3.4); draw && draw(); c.restore(); };
     const sw = Math.sin(at * 11);
+    // a lost arm: the far arm is simply not there any more
+    const oneArm = v.lost && (v.lost.armL || v.lost.armR);
+    const arm = oneArm ? () => { } : line;
     switch (act) {
       case 'chop': tool(-2.2 + (sw > 0 ? sw : sw * 0.3) * 1.9, 3, () => { c.strokeStyle = '#7a5230'; c.lineWidth = 0.8; line(c, 0, 0, 0, 4); c.fillStyle = '#9aa0a8'; c.fillRect(-0.2, 3, 2.2, 1.6); }); break;
       case 'mine': tool(-2.4 + (sw > 0 ? sw : sw * 0.3) * 2, 3, () => { c.strokeStyle = '#7a5230'; c.lineWidth = 0.8; line(c, 0, 0, 0, 4.2); c.strokeStyle = '#8a8e96'; c.lineWidth = 0.9; c.beginPath(); c.arc(0, 4.4, 2.4, Math.PI * 0.1, Math.PI * 0.9); c.stroke(); }); break;
       case 'build': tool(-1.8 + Math.abs(Math.sin(at * 14)) * 1.4, 3, () => { c.strokeStyle = '#7a5230'; c.lineWidth = 0.7; line(c, 0, 0, 0, 3); c.fillStyle = '#6a6e76'; c.fillRect(-1.2, 2.6, 2.4, 1.2); }); break;
       case 'fight': { const j = Math.max(0, Math.sin(at * 7)); c.save(); c.translate(0, -7); c.rotate(1.35); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.7; line(c, 0, -3 - j * 3, 0, 7 - j * 3); c.fillStyle = '#b8bcc4'; c.beginPath(); c.moveTo(-0.9, 7 - j * 3); c.lineTo(0, 9.2 - j * 3); c.lineTo(0.9, 7 - j * 3); c.fill(); c.restore(); c.strokeStyle = v.skin; line(c, 0, -8, 2.2 + j * 2, -6.8); break; }
-      case 'pray': c.lineWidth = 1; line(c, -1.6, -8, -2.6, -11.5); line(c, 1.6, -8, 2.6, -11.5); break;
-      case 'run': { const s2 = Math.sin(ph * 1.3) * 1.5; line(c, -1.6, -8, -3, -11 + s2); line(c, 1.6, -8, 3, -11 - s2); break; }
-      case 'dance': { const s2 = Math.sin(at * 7 + v.id) * 2; line(c, -1.6, -8, -3.2, -10.5 + s2); line(c, 1.6, -8, 3.2, -10.5 - s2); break; }
-      case 'mourn': line(c, 0.2, -8, 0.9, -5); line(c, -0.2, -8, 0.6, -5.2); break;
+      case 'pray': c.lineWidth = 1; arm(c, -1.6, -8, -2.6, -11.5); line(c, 1.6, -8, 2.6, -11.5); break;
+      case 'run': { const s2 = Math.sin(ph * 1.3) * 1.5; arm(c, -1.6, -8, -3, -11 + s2); line(c, 1.6, -8, 3, -11 - s2); break; }
+      case 'dance': { const s2 = Math.sin(at * 7 + v.id) * 2; arm(c, -1.6, -8, -3.2, -10.5 + s2); line(c, 1.6, -8, 3.2, -10.5 - s2); break; }
+      case 'mourn': line(c, 0.2, -8, 0.9, -5); arm(c, -0.2, -8, 0.6, -5.2); break;
       case 'fish': {
         line(c, 0, -8, 2.2, -6.5);
         c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; line(c, 2.2, -6.5, 8, -12);
@@ -711,41 +718,50 @@
         c.fillStyle = '#e84a3a'; c.beginPath(); c.arc(11, by, 0.7, 0, TAU); c.fill();
         break;
       }
-      case 'plant': case 'harvest': case 'gather': case 'fill': { const s3 = Math.sin(at * 6) * 0.8; line(c, 0, -8, 1.5 + s3, -4); line(c, -0.5, -8, 0.6 - s3, -4.2); if (act === 'fill') { c.fillStyle = '#7a5a3a'; c.fillRect(0.6, -4.4, 2.2, 2); } break; }
+      case 'plant': case 'harvest': case 'gather': case 'fill': { const s3 = Math.sin(at * 6) * 0.8; line(c, 0, -8, 1.5 + s3, -4); arm(c, -0.5, -8, 0.6 - s3, -4.2); if (act === 'fill') { c.fillStyle = '#7a5a3a'; c.fillRect(0.6, -4.4, 2.2, 2); } break; }
       case 'throw': { const k = Math.min(1, at / 0.4); c.save(); c.translate(0, -8); c.rotate(-2.6 + k * 2.2); c.strokeStyle = v.skin; line(c, 0, 0, 0, 3.4); c.fillStyle = '#7a5a3a'; c.fillRect(-1.2, 3, 2.4, 2); c.restore(); break; }
       case 'beat': tool(-2.4 + Math.abs(Math.sin(at * 9)) * 2, 3, () => { c.strokeStyle = '#5a4a2a'; c.lineWidth = 0.9; line(c, 0, 0, 0, 5); c.fillStyle = '#4a7a3a'; c.beginPath(); c.ellipse(0, 5.4, 1.6, 1, 0, 0, TAU); c.fill(); }); break;
       case 'eat': line(c, 0, -8, 1.8, -8.6); c.fillStyle = '#c86a3a'; c.beginPath(); c.arc(2, -9, 0.9, 0, TAU); c.fill(); break;
-      case 'talk': { const g = Math.sin(at * 5) * 1; line(c, 0, -8, 2.4, -6 + g); line(c, -0.5, -8, -1.2, -4.4); break; }
-      case 'weave': { const s2 = Math.sin(at * 8) * 1.2; line(c, 0, -8, 2.6 + s2, -6.4); line(c, -0.4, -8, 2.2 - s2, -6.9); c.fillStyle = '#c8a060'; c.fillRect(2.2 + s2, -6.9, 1.4, 0.6); break; }
-      case 'forge': tool(-2.5 + Math.pow(Math.abs(Math.sin(at * 6)), 0.5) * 2.3, 3, () => { c.strokeStyle = '#6a4a2a'; c.lineWidth = 0.8; line(c, 0, 0, 0, 3.6); c.fillStyle = '#3a3a40'; c.fillRect(-1.4, 3.2, 2.8, 1.6); }); line(c, -0.4, -8, 2, -5.6); c.strokeStyle = '#4a4a50'; c.lineWidth = 0.5; line(c, 2, -5.6, 3.6, -5.2); break;
-      case 'craft': { const s2 = Math.sin(at * 14) * 0.35; line(c, 0, -8, 1.9, -6.2 + s2); line(c, -0.4, -8, 1.5, -6 - s2); c.fillStyle = '#f2c14e'; c.beginPath(); c.arc(2.1, -6.1, 0.55, 0, TAU); c.fill(); break; }
-      case 'pottery': { const s2 = Math.sin(at * 5) * 0.3; line(c, 0, -8, 2.4, -5 + s2); line(c, -0.4, -8, 2.2, -4.6 - s2); c.fillStyle = '#8a6a44'; c.beginPath(); c.ellipse(3.2, -3.4, 2.4, 0.8, 0, 0, TAU); c.fill(); c.fillStyle = '#b8704a'; c.beginPath(); c.ellipse(3.2, -4.6, 1.2, 1.3 + Math.sin(at * 2) * 0.2, 0, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,255,255,0.3)'; c.fillRect(3.2 + Math.sin(at * 12) * 0.8, -5.4, 0.4, 1.4); break; }
+      case 'story': { const a1 = Math.sin(at * 2.3 + v.id), a2 = Math.sin(at * 1.7 + 1 + v.id); line(c, 0, -8, 2.6 + a1 * 0.6, -10.4 - a1 * 2); arm(c, -0.4, -8, -2.4 - a2 * 0.6, -9 - a2 * 2.2); break; }
+      case 'listen': { if (v.emo && (v.emo.k === 'fear' || v.emo.k === 'awe')) { line(c, 0, -8, 1.2, -10.4); arm(c, -0.4, -8, 0.8, -10.2); } else { line(c, 0, -8, 1.4, -5.4); arm(c, -0.4, -8, 1, -5.2); } break; }
+      case 'hug': line(c, 0, -8, 2.8, -7.6); arm(c, -0.4, -8, 2.6, -6.6); break;
+      case 'lift': line(c, 0, -8, 0.9, -13.2); arm(c, -0.4, -8, -0.1, -13.2); break;
+      case 'joy': line(c, 0, -8, 2.2, -11.8); arm(c, -0.4, -8, -2.4, -11.6); break;
+      case 'wait': line(c, 0.2, -8, 1.1, -5); arm(c, -0.3, -8, 0.9, -5.2); break;
+      case 'drag': line(c, 0, -8, -2.8, -5.6); arm(c, -0.4, -8, -2.9, -6.2); break;
+      case 'stagger': line(c, 0, -8, 2.8, -9.8); arm(c, -0.4, -8, -2.9, -9.2); break;
+      case 'talk': case 'sittalk': { const g = Math.sin(at * 5) * 1; line(c, 0, -8, 2.4, -6 + g); arm(c, -0.5, -8, -1.2, -4.4); break; }
+      case 'weave': { const s2 = Math.sin(at * 8) * 1.2; line(c, 0, -8, 2.6 + s2, -6.4); arm(c, -0.4, -8, 2.2 - s2, -6.9); c.fillStyle = '#c8a060'; c.fillRect(2.2 + s2, -6.9, 1.4, 0.6); break; }
+      case 'forge': tool(-2.5 + Math.pow(Math.abs(Math.sin(at * 6)), 0.5) * 2.3, 3, () => { c.strokeStyle = '#6a4a2a'; c.lineWidth = 0.8; line(c, 0, 0, 0, 3.6); c.fillStyle = '#3a3a40'; c.fillRect(-1.4, 3.2, 2.8, 1.6); }); arm(c, -0.4, -8, 2, -5.6); c.strokeStyle = '#4a4a50'; c.lineWidth = 0.5; line(c, 2, -5.6, 3.6, -5.2); break;
+      case 'craft': { const s2 = Math.sin(at * 14) * 0.35; line(c, 0, -8, 1.9, -6.2 + s2); arm(c, -0.4, -8, 1.5, -6 - s2); c.fillStyle = '#f2c14e'; c.beginPath(); c.arc(2.1, -6.1, 0.55, 0, TAU); c.fill(); break; }
+      case 'pottery': { const s2 = Math.sin(at * 5) * 0.3; line(c, 0, -8, 2.4, -5 + s2); arm(c, -0.4, -8, 2.2, -4.6 - s2); c.fillStyle = '#8a6a44'; c.beginPath(); c.ellipse(3.2, -3.4, 2.4, 0.8, 0, 0, TAU); c.fill(); c.fillStyle = '#b8704a'; c.beginPath(); c.ellipse(3.2, -4.6, 1.2, 1.3 + Math.sin(at * 2) * 0.2, 0, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,255,255,0.3)'; c.fillRect(3.2 + Math.sin(at * 12) * 0.8, -5.4, 0.4, 1.4); break; }
       case 'dig': tool(-1.2 + Math.abs(Math.sin(at * 5)) * 1.6, 3, () => { c.strokeStyle = '#7a5230'; c.lineWidth = 0.8; line(c, 0, 0, 0, 5); c.fillStyle = '#8a8e96'; c.beginPath(); c.moveTo(-1.2, 5); c.lineTo(1.2, 5); c.lineTo(0.9, 7.2); c.lineTo(-0.9, 7.2); c.fill(); }); break;
-      case 'shear': { const o = Math.abs(Math.sin(at * 9)) * 0.9; line(c, 0, -8, 2.4, -5.2); line(c, -0.4, -8, 2.2, -4.6); c.strokeStyle = '#b8bcc4'; c.lineWidth = 0.5; line(c, 2.4, -5.2, 4.2, -5.4 - o); line(c, 2.4, -5.2, 4.2, -5 + o); break; }
-      case 'milk': { const s2 = Math.sin(at * 8) * 0.6; line(c, 0, -8, 2.6, -4 + s2); line(c, -0.4, -8, 2.3, -4.2 - s2); c.fillStyle = '#9a7a52'; c.fillRect(1.8, -2.6, 2, 2.2); c.fillStyle = '#f4f0e6'; c.fillRect(2, -2.6, 1.6, 0.6); break; }
-      case 'groom': { const s2 = Math.sin(at * 6) * 1.4; line(c, 0, -8, 2.8, -8.4 + s2); c.fillStyle = '#6a4a30'; c.fillRect(2.4, -9 + s2, 1.4, 0.8); line(c, -0.4, -8, 0.2, -4.6); break; }
+      case 'shear': { const o = Math.abs(Math.sin(at * 9)) * 0.9; line(c, 0, -8, 2.4, -5.2); arm(c, -0.4, -8, 2.2, -4.6); c.strokeStyle = '#b8bcc4'; c.lineWidth = 0.5; line(c, 2.4, -5.2, 4.2, -5.4 - o); line(c, 2.4, -5.2, 4.2, -5 + o); break; }
+      case 'milk': { const s2 = Math.sin(at * 8) * 0.6; line(c, 0, -8, 2.6, -4 + s2); arm(c, -0.4, -8, 2.3, -4.2 - s2); c.fillStyle = '#9a7a52'; c.fillRect(1.8, -2.6, 2, 2.2); c.fillStyle = '#f4f0e6'; c.fillRect(2, -2.6, 1.6, 0.6); break; }
+      case 'groom': { const s2 = Math.sin(at * 6) * 1.4; line(c, 0, -8, 2.8, -8.4 + s2); c.fillStyle = '#6a4a30'; c.fillRect(2.4, -9 + s2, 1.4, 0.8); arm(c, -0.4, -8, 0.2, -4.6); break; }
       case 'butcher': tool(-2.3 + Math.abs(Math.sin(at * 7)) * 1.9, 3, () => { c.strokeStyle = '#5a3a22'; c.lineWidth = 0.8; line(c, 0, 0, 0, 2); c.fillStyle = '#c4c8d0'; c.fillRect(-0.4, 1.8, 2.4, 2.2); }); break;
-      case 'call': line(c, 0, -8, 1.8, -10.4); line(c, -0.4, -8, 1.5, -10); c.fillStyle = 'rgba(255,255,255,0.6)'; if (Math.sin(at * 4) > 0) { c.fillRect(3.2, -11.6, 0.5, 0.5); c.fillRect(4.2, -12.2, 0.5, 0.5); } break;
-      case 'herd': line(c, 0, -8, 1.8, -6.2); line(c, -0.4, -8, -0.8, -4.6); c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; line(c, 1.8, -2, 2.4, -14.5); c.beginPath(); c.arc(1.7, -14.5, 0.8, -0.2, Math.PI); c.stroke(); break;
-      case 'feed': { const k = (at * 1.4) % 1; line(c, 0, -8, 1.6 + k * 1.6, -6.6 + k * 1.4); line(c, -0.4, -8, 1.2 + k * 1.6, -6.2 + k * 1.4); c.fillStyle = '#d8b862'; for (let q = 0; q < 3; q++) c.fillRect(3 + k * 3 + q, -5 + k * 3 - q * 0.6, 0.8, 0.4); break; }
-      case 'sweep': { const s2 = Math.sin(at * 6) * 1.2; line(c, 0, -8, 1.2, -5.2); line(c, -0.4, -8, 0.6, -4); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.6; line(c, 0.6, -6.4, 3 + s2, 0); c.strokeStyle = '#c8a860'; c.lineWidth = 1.2; line(c, 2.4 + s2, 0, 3.8 + s2, 0); break; }
-      case 'sell': case 'buy': { const g = Math.sin(at * 4 + v.id) * 1.2; line(c, 0, -8, 2.5, act === 'sell' ? -9.8 + g : -6.8 + g * 0.3); line(c, -0.4, -8, 1.6, -6); if (act === 'buy') { c.fillStyle = '#e8c24a'; c.beginPath(); c.arc(2.6, -6.6, 0.5, 0, TAU); c.fill(); } break; }
-      case 'lurk': line(c, 0, -8, 1.4, -6.6); line(c, -0.4, -8, 1.6, -6.4); line(c, 1.4, -6.6, -0.6, -6.2); break;
-      case 'serve': line(c, 0, -8, 2.6, -8.4); line(c, -0.4, -8, 2.2, -8.2); c.fillStyle = '#8a6a44'; c.fillRect(1.4, -8.9, 3.6, 0.5); c.fillStyle = '#c8a860'; c.fillRect(2, -10.2, 0.9, 1.3); c.fillRect(3.4, -10.2, 0.9, 1.3); break;
-      case 'drink': line(c, 0, -8, 1.8, -10.4); c.fillStyle = '#a07040'; c.fillRect(1.4, -11.4, 1.2, 1.6); line(c, -0.4, -8, -0.6, -4.6); break;
-      case 'write': { line(c, -0.4, -8, 1.6, -6.4); c.fillStyle = '#e8dcc0'; c.fillRect(1.2, -7.4, 2.6, 1.8); c.fillStyle = 'rgba(60,40,20,0.5)'; c.fillRect(1.5, -6.9, 1.8, 0.25); c.fillRect(1.5, -6.3, 1.4, 0.25); const s2 = Math.sin(at * 10) * 0.5; line(c, 0, -8, 2.4 + s2, -7.2); break; }
-      case 'act': { const g = Math.sin(at * 3 + v.id) * 1.6; line(c, 0, -8, 2.6, -10.5 + g); line(c, -0.4, -8, -2.4, -9.5 - g); break; }
-      case 'climb': { const s2 = Math.sin(at * 6) * 1.4; c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; const g0 = (v.z || 0) / sc; line(c, 1.4, g0, 2.4, -15); line(c, 3.4, g0, 4.4, -15); for (let yy = g0 - 1.5; yy > -15; yy -= 2.2) { const f = (g0 - yy) / (g0 + 15); line(c, 1.4 + f, yy, 3.4 + f, yy); } c.strokeStyle = v.skin; c.lineWidth = 1; line(c, 0, -8, 2.2, -11 + s2); line(c, -0.4, -8, 2, -10.4 - s2); break; }
-      case 'knock': line(c, 0, -8, 2.5, -9 + Math.abs(Math.sin(at * 9)) * 0.9); line(c, -0.4, -8, -0.4, -4.4); break;
-      case 'sneak': line(c, 0, -8, 1.6, -5.4); line(c, -0.4, -8, 1.2, -5); break;
-      case 'guard': line(c, 0.3, -8, 0.4, -4.4); line(c, -0.3, -8, -0.4, -4.4); if (warrior) G.Arch.arms(c, v); break;
+      case 'call': line(c, 0, -8, 1.8, -10.4); arm(c, -0.4, -8, 1.5, -10); c.fillStyle = 'rgba(255,255,255,0.6)'; if (Math.sin(at * 4) > 0) { c.fillRect(3.2, -11.6, 0.5, 0.5); c.fillRect(4.2, -12.2, 0.5, 0.5); } break;
+      case 'herd': line(c, 0, -8, 1.8, -6.2); arm(c, -0.4, -8, -0.8, -4.6); c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; line(c, 1.8, -2, 2.4, -14.5); c.beginPath(); c.arc(1.7, -14.5, 0.8, -0.2, Math.PI); c.stroke(); break;
+      case 'feed': { const k = (at * 1.4) % 1; line(c, 0, -8, 1.6 + k * 1.6, -6.6 + k * 1.4); arm(c, -0.4, -8, 1.2 + k * 1.6, -6.2 + k * 1.4); c.fillStyle = '#d8b862'; for (let q = 0; q < 3; q++) c.fillRect(3 + k * 3 + q, -5 + k * 3 - q * 0.6, 0.8, 0.4); break; }
+      case 'sweep': { const s2 = Math.sin(at * 6) * 1.2; line(c, 0, -8, 1.2, -5.2); arm(c, -0.4, -8, 0.6, -4); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.6; line(c, 0.6, -6.4, 3 + s2, 0); c.strokeStyle = '#c8a860'; c.lineWidth = 1.2; line(c, 2.4 + s2, 0, 3.8 + s2, 0); break; }
+      case 'sell': case 'buy': { const g = Math.sin(at * 4 + v.id) * 1.2; line(c, 0, -8, 2.5, act === 'sell' ? -9.8 + g : -6.8 + g * 0.3); arm(c, -0.4, -8, 1.6, -6); if (act === 'buy') { c.fillStyle = '#e8c24a'; c.beginPath(); c.arc(2.6, -6.6, 0.5, 0, TAU); c.fill(); } break; }
+      case 'lurk': line(c, 0, -8, 1.4, -6.6); arm(c, -0.4, -8, 1.6, -6.4); line(c, 1.4, -6.6, -0.6, -6.2); break;
+      case 'serve': line(c, 0, -8, 2.6, -8.4); arm(c, -0.4, -8, 2.2, -8.2); c.fillStyle = '#8a6a44'; c.fillRect(1.4, -8.9, 3.6, 0.5); c.fillStyle = '#c8a860'; c.fillRect(2, -10.2, 0.9, 1.3); c.fillRect(3.4, -10.2, 0.9, 1.3); break;
+      case 'drink': line(c, 0, -8, 1.8, -10.4); c.fillStyle = '#a07040'; c.fillRect(1.4, -11.4, 1.2, 1.6); arm(c, -0.4, -8, -0.6, -4.6); break;
+      case 'write': { arm(c, -0.4, -8, 1.6, -6.4); c.fillStyle = '#e8dcc0'; c.fillRect(1.2, -7.4, 2.6, 1.8); c.fillStyle = 'rgba(60,40,20,0.5)'; c.fillRect(1.5, -6.9, 1.8, 0.25); c.fillRect(1.5, -6.3, 1.4, 0.25); const s2 = Math.sin(at * 10) * 0.5; line(c, 0, -8, 2.4 + s2, -7.2); break; }
+      case 'act': { const g = Math.sin(at * 3 + v.id) * 1.6; line(c, 0, -8, 2.6, -10.5 + g); arm(c, -0.4, -8, -2.4, -9.5 - g); break; }
+      case 'climb': { const s2 = Math.sin(at * 6) * 1.4; c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; const g0 = (v.z || 0) / sc; line(c, 1.4, g0, 2.4, -15); line(c, 3.4, g0, 4.4, -15); for (let yy = g0 - 1.5; yy > -15; yy -= 2.2) { const f = (g0 - yy) / (g0 + 15); line(c, 1.4 + f, yy, 3.4 + f, yy); } c.strokeStyle = v.skin; c.lineWidth = 1; line(c, 0, -8, 2.2, -11 + s2); arm(c, -0.4, -8, 2, -10.4 - s2); break; }
+      case 'knock': line(c, 0, -8, 2.5, -9 + Math.abs(Math.sin(at * 9)) * 0.9); arm(c, -0.4, -8, -0.4, -4.4); break;
+      case 'sneak': line(c, 0, -8, 1.6, -5.4); arm(c, -0.4, -8, 1.2, -5); break;
+      case 'guard': line(c, 0.3, -8, 0.4, -4.4); arm(c, -0.3, -8, -0.4, -4.4); if (warrior) G.Arch.arms(c, v); break;
       case 'drill': { const j = Math.max(0, Math.sin(at * 5)); c.save(); c.translate(0, -7); c.rotate(1.45); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.7; line(c, 0, -3 - j * 3.5, 0, 7 - j * 3.5); c.fillStyle = '#b8bcc4'; c.beginPath(); c.moveTo(-0.9, 7 - j * 3.5); c.lineTo(0, 9.2 - j * 3.5); c.lineTo(0.9, 7 - j * 3.5); c.fill(); c.restore(); c.strokeStyle = v.skin; line(c, 0, -8, 2.2 + j * 2.4, -6.8); break; }
-      case 'bound': { line(c, 0, -8, 1.6, -5.4); line(c, -0.4, -8, 1.2, -5.2); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.55; c.beginPath(); c.arc(1.4, -5.3, 0.8, 0, TAU); c.stroke(); line(c, 1.6, -4.6, 3.2 + Math.sin(t * 3 + v.id) * 0.6, -1.5); break; }
+      case 'bound': { line(c, 0, -8, 1.6, -5.4); arm(c, -0.4, -8, 1.2, -5.2); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.55; c.beginPath(); c.arc(1.4, -5.3, 0.8, 0, TAU); c.stroke(); line(c, 1.6, -4.6, 3.2 + Math.sin(t * 3 + v.id) * 0.6, -1.5); break; }
       default: {
         const sw2 = moving ? Math.sin(ph) * 1.1 : 0;
-        if (v.carry && v.carry.k !== 'water') { line(c, 0, -8, 1.5, -10.2); line(c, -0.5, -8, -1.2, -10); }
-        else { line(c, 0.3, -8, 0.3 + sw2, -4.4); line(c, -0.3, -8, -0.3 - sw2, -4.4); }
-        if (v.captive && age >= 5) { c.strokeStyle = v.skin; line(c, 0, -8, 1.4, -5.6); line(c, -0.4, -8, 1, -5.4); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.5; c.beginPath(); c.arc(1.2, -5.4, 0.75, 0, TAU); c.stroke(); }
+        if (v.carry && v.carry.jar) { line(c, 0.3, -8, 1.2, -12.4); arm(c, -0.3, -8, -0.3 - sw2, -4.4); }
+        else if (v.carry && v.carry.k !== 'water') { line(c, 0, -8, 1.5, -10.2); arm(c, -0.5, -8, -1.2, -10); }
+        else { line(c, 0.3, -8, 0.3 + sw2, -4.4); arm(c, -0.3, -8, -0.3 - sw2, -4.4); }
+        if (v.captive && age >= 5) { c.strokeStyle = v.skin; line(c, 0, -8, 1.4, -5.6); arm(c, -0.4, -8, 1, -5.4); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.5; c.beginPath(); c.arc(1.2, -5.4, 0.75, 0, TAU); c.stroke(); }
         if (levy && v.role !== 'guerreiro' && !v.carry) {
           // the levy: what the forge gave them — or a club
           if (v.unit === 'milicia') { c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.9; line(c, 1.6, -4.5, 2.6, -12.5); c.fillStyle = '#5a3a22'; c.beginPath(); c.ellipse(2.7, -12.8, 1, 1.5, 0.2, 0, TAU); c.fill(); }
@@ -764,9 +780,10 @@
         if (v.role === 'cacador' && age >= 16 && !v.carry) { c.strokeStyle = '#8a6a44'; c.lineWidth = 0.6; line(c, 1.6, -13, 1.6, -1); c.fillStyle = '#b8bcc4'; c.beginPath(); c.moveTo(0.9, -13); c.lineTo(1.6, -15.2); c.lineTo(2.3, -13); c.fill(); }
         if (v.role === 'anciao') { c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; line(c, 2.2, -6, 2.6, 0); }
         if ((v.role === 'pastor' || v.role === 'cavalarico') && age >= 16 && !v.carry) { c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; line(c, 1.8, -1, 2.3, -14); c.beginPath(); c.arc(1.6, -14, 0.75, -0.2, Math.PI); c.stroke(); }
-        if (v.carry && v.carry.k === 'water') { c.fillStyle = '#7a5a3a'; c.fillRect(0.4 + sw2, -4.8, 2.2, 2.2); c.fillStyle = '#6ab8e8'; c.fillRect(0.6 + sw2, -4.8, 1.8, 0.6); }
+        if (v.carry && v.carry.k === 'water' && !v.carry.jar) { c.fillStyle = '#7a5a3a'; c.fillRect(0.4 + sw2, -4.8, 2.2, 2.2); c.fillStyle = '#6ab8e8'; c.fillRect(0.6 + sw2, -4.8, 1.8, 0.6); }
       }
     }
+    if (oneArm) { c.strokeStyle = v.skin; c.lineWidth = 1; line(c, -0.4, -8, -1, -6.9); c.fillStyle = '#ece4d4'; c.fillRect(-1.4, -7.4, 0.9, 0.9); if (v.lostT && G.S.clock - v.lostT < 40) { c.fillStyle = '#9a1e24'; c.fillRect(-1.25, -6.9, 0.55, 0.55); } }
     // carried goods
     if (v.carry && v.carry.k !== 'water' && !['chop', 'mine', 'build', 'fight', 'fish'].includes(act)) {
       const k = v.carry.k;
@@ -777,6 +794,7 @@
     }
     // head
     const hy = -10.6;
+    if (v.headless) { c.fillStyle = '#8a1a1e'; c.beginPath(); c.ellipse(0, -8.9, 1.4, 0.7, 0, 0, TAU); c.fill(); c.fillStyle = '#e8dccc'; c.fillRect(-0.3, -9.4, 0.6, 0.6); } else {
     c.fillStyle = v.skin; c.beginPath(); c.arc(0, hy, 2.05, 0, TAU); c.fill();
     const hair = age >= 62 ? '#dcdcdc' : v.hair;
     c.fillStyle = hair;
@@ -784,6 +802,8 @@
     if (v.g === 'f' && age >= 5) { c.beginPath(); c.moveTo(-2.1, hy - 0.4); c.quadraticCurveTo(-2.9, hy + 2.6, -1.4, hy + 3.4); c.lineTo(-0.9, hy + 0.2); c.fill(); }
     c.fillStyle = '#2a1c14'; c.fillRect(0.9, hy - 0.2, 0.55, 0.65);
     if (v.g === 'm' && age >= 25 && v.id % 3 === 0) { c.fillStyle = hair; c.beginPath(); c.arc(0.4, hy + 1.2, 1.5, 0.1, Math.PI - 0.3); c.fill(); }
+    // a water jar on the head
+    if (v.carry && v.carry.jar) { const jy = hy - 3.4; c.fillStyle = '#b8704a'; c.beginPath(); c.ellipse(0.4, jy, 1.9, 1.5, 0, 0, TAU); c.fill(); c.fillRect(-0.3, jy - 2.4, 1.4, 1.3); c.fillStyle = '#8a4a2a'; c.fillRect(-0.55, jy - 2.7, 1.9, 0.5); c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(-0.9, jy - 0.7, 0.6, 0.9); }
     // the theatre mask
     if (act === 'act') { c.fillStyle = v.id % 2 ? '#f4efe3' : '#e8b83a'; c.beginPath(); c.ellipse(0.9, hy, 2, 2.5, 0, 0, TAU); c.fill(); c.fillStyle = '#2a1c14'; c.fillRect(0.3, hy - 0.9, 0.6, 0.5); c.fillRect(1.5, hy - 0.9, 0.6, 0.5); c.strokeStyle = '#2a1c14'; c.lineWidth = 0.4; c.beginPath(); if (v.id % 2) c.arc(1.2, hy + 1.4, 0.8, Math.PI + 0.3, TAU - 0.3); else c.arc(1.2, hy + 0.6, 0.8, 0.3, Math.PI - 0.3); c.stroke(); }
     // role hats (rulers wear a crown instead)
@@ -808,6 +828,7 @@
       else if (v.role === 'cacador') { c.fillStyle = '#5a3a22'; c.beginPath(); c.arc(0, hy - 1, 2.1, Math.PI, TAU); c.fill(); c.strokeStyle = '#d84a3a'; c.lineWidth = 0.5; line(c, -1.2, hy - 2.6, -2.8, hy - 4.6); }
       else if ((warrior || v.role === 'arqueiro') && G.Arch.helmet(c, v, hy)) { /* culture's helmet */ }
       else if (warrior) { c.fillStyle = '#8a8e96'; c.beginPath(); c.arc(0, hy - 0.8, 2.35, Math.PI, TAU); c.fill(); c.fillRect(-2.35, hy - 0.9, 4.7, 0.7); c.fillStyle = v._fc || '#c83a2a'; c.fillRect(-0.4, hy - 4.2, 0.8, 1.6); }
+    }
     }
     // baby on the back
     if (v.babyOn) { c.fillStyle = '#f4efe3'; c.beginPath(); c.ellipse(-2.6, -8, 1.5, 2, 0.3, 0, TAU); c.fill(); c.fillStyle = v.babyOn.skin; c.beginPath(); c.arc(-2.7, -9.8, 1.1, 0, TAU); c.fill(); }

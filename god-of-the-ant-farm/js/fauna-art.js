@@ -291,7 +291,89 @@
     c.fillStyle = '#d8342a'; c.beginPath(); c.ellipse(hx + 0.4, hy + 0.7, 0.3, 0.7, 0, 0, TAU); c.fill();
     c.fillStyle = '#e8c070'; c.beginPath(); c.moveTo(hx + 0.5, hy - 0.1); c.lineTo(hx + 1.2, hy + 0.1); c.lineTo(hx + 0.5, hy + 0.3); c.fill();
   }
-  const DRAW = { rabbit, boar, wolf, monkey, giraffe, elephant, frog, lizard, snake, croc, dolphin, shark, orca, whale, turtle, seal, penguin, bird, wader, turkey };
+  // ---------------- town animals ----------------
+  const DOG = [['#8a5a34', '#c8a070'], ['#2a2420', '#5a4a40'], ['#e8e0d0', '#8a6a4a'], ['#c89a4a', '#e8c890'], ['#6a6a70', '#b8b8c0']];
+  const CAT = [['#d8843a', '#f0b878'], ['#6a6a72', '#9a9aa2'], ['#1e1c20', '#3a3640'], ['#f0ece4', '#d8c8b0'], ['#8a6a4a', '#c8a878']];
+  function dog(c, a, sp, t) {
+    const [col, lite] = DOG[(a.coat || 0) % DOG.length]; const mv = a.moving && !a.dead;
+    const lie = !mv && (a.pose === 'lie' || a.pose === 'sleep');
+    const wag = Math.sin(t * (a.happy > 0 ? 18 : 6) + a.id) * (a.happy > 0 ? 1.4 : 0.6);
+    if (lie) {
+      ell(c, 0, -1.8, 3.8, 1.5, 0, col); ell(c, 3.2, -2.4 - (a.pose === 'sleep' ? 0 : 0.8), 1.5, 1.2, 0, col);
+      ell(c, 4.3, -2.1 - (a.pose === 'sleep' ? 0 : 0.8), 0.9, 0.6, 0, lite); c.fillStyle = col; c.beginPath(); c.moveTo(2.6, -3.2); c.lineTo(3, -4.6); c.lineTo(3.6, -3.2); c.fill();
+      c.strokeStyle = col; c.lineWidth = 1; line(c, -3.6, -1.8, -5.2, -1.2 + wag * 0.3);
+      if (a.pose === 'sleep') { c.fillStyle = 'rgba(90,120,200,0.7)'; c.font = 'bold 3px sans-serif'; c.fillText('z', 4.5, -5 - (t * 2 % 2)); }
+      return;
+    }
+    const l = mv ? Math.sin(a.walkPh) * 1.2 : 0;
+    c.strokeStyle = shade(col, 0.8); c.lineWidth = 0.8;
+    line(c, -2.2, -2.8, -2.2 + l, 0); line(c, -1.4, -2.8, -1.4 - l, 0); line(c, 1.8, -2.8, 1.8 - l, 0); line(c, 2.5, -2.8, 2.5 + l, 0);
+    ell(c, 0, -3.6, 3.3, 1.6, 0, a.hurt > 0 ? '#ff8a7a' : col); ell(c, 0.4, -3, 2.4, 0.8, 0, lite);
+    c.strokeStyle = col; c.lineWidth = 1; c.beginPath(); c.moveTo(-3, -4); c.quadraticCurveTo(-4.2, -5.6 + wag * 0.3, -4.6 + wag, -6.2); c.stroke();
+    const bark = a.bark > 0 ? 1 : 0;
+    c.save(); c.translate(3, -5); c.rotate(-0.25 - bark * 0.2);
+    ell(c, 0.6, 0, 1.6, 1.25, 0, col); ell(c, 2, 0.4 + bark * 0.3, 0.95, 0.6 - bark * 0.1, 0, lite);
+    c.fillStyle = shade(col, 0.7); c.beginPath(); c.moveTo(-0.4, -0.6); c.lineTo(-0.2, -2.4); c.lineTo(0.6, -0.8); c.fill();
+    c.fillStyle = '#1a1410'; c.fillRect(1, -0.5, 0.45, 0.45); c.fillRect(2.8, 0.1, 0.5, 0.45);
+    if (bark) { c.fillStyle = '#8a2a2a'; c.fillRect(1.8, 0.9, 1.1, 0.5); }
+    c.restore();
+    if (bark) { c.strokeStyle = 'rgba(40,30,20,0.7)'; c.lineWidth = 0.4; for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(5.4, -4.6, 1 + k * 0.9, -0.7, 0.7); c.stroke(); } }
+  }
+  function cat(c, a, sp, t) {
+    const [col, lite] = CAT[(a.coat || 0) % CAT.length]; const mv = a.moving && !a.dead;
+    const tw = Math.sin(t * 2.5 + a.id) * 0.6;
+    if (!mv && (a.pose === 'sit' || a.pose === 'sleep')) {
+      if (a.pose === 'sleep') { ell(c, 0, -1.3, 2.4, 1.2, 0, col); ell(c, 1.6, -1.6, 1.1, 0.9, 0, col); c.strokeStyle = col; c.lineWidth = 0.7; c.beginPath(); c.arc(0, -1.2, 2.5, 0.2, 2.2); c.stroke(); return; }
+      ell(c, 0, -2.4, 1.5, 2.1, 0, col); ell(c, 0.4, -2, 0.8, 1.3, 0, lite);
+      ell(c, 0.5, -5, 1.25, 1.1, 0, col);
+      c.fillStyle = col; c.beginPath(); c.moveTo(-0.4, -5.6); c.lineTo(-0.3, -7); c.lineTo(0.4, -5.9); c.fill(); c.beginPath(); c.moveTo(0.8, -5.9); c.lineTo(1.5, -7); c.lineTo(1.6, -5.5); c.fill();
+      c.fillStyle = '#d8e070'; c.fillRect(0.6, -5.2, 0.35, 0.35); c.fillRect(1.25, -5.2, 0.35, 0.35);
+      c.strokeStyle = col; c.lineWidth = 0.7; c.beginPath(); c.moveTo(-1.2, -0.6); c.quadraticCurveTo(-3.2, -0.2, -2.8 + tw, -2.4); c.stroke();
+      return;
+    }
+    const l = mv ? Math.sin(a.walkPh) * 1 : 0;
+    c.strokeStyle = shade(col, 0.8); c.lineWidth = 0.6;
+    line(c, -1.6, -2.2, -1.6 + l, 0); line(c, -1, -2.2, -1 - l, 0); line(c, 1.4, -2.2, 1.4 - l, 0); line(c, 1.9, -2.2, 1.9 + l, 0);
+    ell(c, 0, -2.8, 2.5, 1.05, 0, a.hurt > 0 ? '#ff8a7a' : col);
+    ell(c, 2.6, -3.6, 1.1, 1, 0, col); c.fillStyle = col; c.beginPath(); c.moveTo(2, -4.2); c.lineTo(2.1, -5.4); c.lineTo(2.7, -4.4); c.fill(); c.beginPath(); c.moveTo(3, -4.4); c.lineTo(3.5, -5.4); c.lineTo(3.6, -4); c.fill();
+    c.fillStyle = '#d8e070'; c.fillRect(3.1, -3.9, 0.35, 0.35);
+    c.strokeStyle = col; c.lineWidth = 0.7; c.beginPath(); c.moveTo(-2.3, -3); c.quadraticCurveTo(-3.6, -4, -3.2 + tw, -5.8); c.stroke();
+  }
+  function hen(c, a, sp, t) {
+    const white = (a.coat || 0) % 3 === 0; const col = white ? '#f2eee4' : (a.coat || 0) % 3 === 1 ? '#b8683a' : '#6a4a32';
+    const mv = a.moving && !a.dead; const peck = !mv && a.pose === 'peck' ? Math.max(0, Math.sin(t * 9 + a.id)) : 0;
+    const rooster = a.rooster;
+    c.strokeStyle = '#d8a030'; c.lineWidth = 0.45; const l = mv ? Math.sin(a.walkPh * 1.4) * 0.6 : 0;
+    line(c, -0.3, -1.2, -0.3 + l, 0); line(c, 0.4, -1.2, 0.4 - l, 0);
+    if (a.pose === 'sleep') { ell(c, 0, -1.2, 1.8, 1.2, 0, col); ell(c, 1.2, -2, 0.7, 0.6, 0, col); c.fillStyle = '#d8302a'; c.fillRect(1, -2.8, 0.7, 0.4); return; }
+    if (rooster) { c.fillStyle = '#2a4a3a'; c.beginPath(); c.moveTo(-1.4, -2.4); c.quadraticCurveTo(-3.4, -4.4, -2.4, -1.4); c.fill(); c.fillStyle = '#b84a2a'; c.beginPath(); c.moveTo(-1.2, -2.2); c.quadraticCurveTo(-2.8, -3.6, -2.2, -1.2); c.fill(); }
+    ell(c, 0, -2, 1.8, 1.25, 0, a.hurt > 0 ? '#ff8a7a' : col);
+    c.fillStyle = col; c.beginPath(); c.moveTo(-1.4, -2.4); c.lineTo(-2.4, -3.4); c.lineTo(-1.6, -1.6); c.fill();
+    const hx = 1.4 + peck * 0.6, hy = -3.3 + peck * 2;
+    ell(c, hx, hy, 0.75, 0.75, 0, col);
+    c.fillStyle = '#d8302a'; c.fillRect(hx - 0.4, hy - (rooster ? 1.4 : 1), 0.8, rooster ? 0.7 : 0.45); c.fillRect(hx + 0.2, hy + 0.5, 0.35, 0.5);
+    c.fillStyle = '#e8a030'; c.beginPath(); c.moveTo(hx + 0.6, hy - 0.1); c.lineTo(hx + 1.3, hy + 0.2); c.lineTo(hx + 0.6, hy + 0.35); c.fill();
+    c.fillStyle = '#1a1410'; c.fillRect(hx + 0.1, hy - 0.3, 0.3, 0.3);
+  }
+  function pigeon(c, a, sp, t) {
+    const col = (a.coat || 0) % 4 === 0 ? '#e8e4dc' : (a.coat || 0) % 4 === 1 ? '#6a6660' : '#8a8a94';
+    const fly = a.z > 0.5;
+    if (fly) {
+      const fl = Math.sin(t * 22 + a.id) * 1.8;
+      ell(c, 0, -1.5, 1.5, 0.8, 0, col);
+      c.fillStyle = shade(col, 0.85); c.beginPath(); c.moveTo(-0.4, -1.6); c.lineTo(-2.6, -2.6 - fl); c.lineTo(0.4, -1.4); c.fill(); c.beginPath(); c.moveTo(-0.2, -1.4); c.lineTo(1.8, -3 - fl); c.lineTo(0.6, -1.3); c.fill();
+      ell(c, 1.4, -1.9, 0.55, 0.5, 0, col);
+      return;
+    }
+    const mv = a.moving; const bob = mv ? Math.sin(a.walkPh * 2) * 0.35 : a.pose === 'peck' ? Math.max(0, Math.sin(t * 8 + a.id)) * 0.9 : 0;
+    c.strokeStyle = '#c86a5a'; c.lineWidth = 0.35; line(c, -0.2, -0.8, -0.2, 0); line(c, 0.3, -0.8, 0.3, 0);
+    ell(c, 0, -1.4, 1.35, 0.85, 0, col); ell(c, -0.2, -1.4, 0.9, 0.55, 0, shade(col, 0.88));
+    c.fillStyle = col; c.beginPath(); c.moveTo(-1.1, -1.5); c.lineTo(-2.1, -1.8); c.lineTo(-1.1, -1.1); c.fill();
+    ell(c, 1.2 + bob * 0.3, -2.3 + bob, 0.55, 0.5, 0, (a.coat || 0) % 4 === 0 ? col : '#5a6a70');
+    c.fillStyle = '#6a9a8a'; c.fillRect(0.7 + bob * 0.2, -1.95 + bob * 0.6, 0.6, 0.3);
+    c.fillStyle = '#2a2a2a'; c.fillRect(1.6 + bob * 0.3, -2.4 + bob, 0.45, 0.2);
+  }
+  const DRAW = { rabbit, boar, wolf, monkey, giraffe, elephant, frog, lizard, snake, croc, dolphin, shark, orca, whale, turtle, seal, penguin, bird, wader, turkey, dog, cat, hen, pigeon };
   Art.animal = function (c, a, x, y, t, lod) {
     const sp = G.Animals.DEF[a.kind]; if (!sp) return oldAnimal && oldAnimal(c, a, x, y, t);
     c.save(); c.translate(x, y);

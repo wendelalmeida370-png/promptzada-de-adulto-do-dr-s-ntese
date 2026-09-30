@@ -75,7 +75,7 @@
   FX.deposit = function (x, y, k, n) {
     if (!G.Render || G.Render.cam.zoom < 1.6) return;
     const col = { wood: '#e8b77a', stone: '#d4d4d4', food: '#ff9f7a' }[k] || '#fff';
-    FX.floater(x, y, '+' + n, col, 1.2);
+    FX.floater(x, y, '+' + (n % 1 ? (n < 10 ? n.toFixed(1) : Math.round(n)) : n), col, 1.2);
   };
   FX.blood = function (x, y) {
     for (let k = 0; k < 4; k++) FX.spawn({ x, y, z: R(4, 8), vx: R(-0.6, 0.6), vy: R(-0.6, 0.6), vz: R(20, 60), g: 260, life: 0.5, s0: 1, c: '#a8323a', k: 0 });
