@@ -114,6 +114,7 @@
     cluck: (t, v) => { for (let k = 0; k < 3; k++) osc('square', 880 - k * 60, t + k * 0.09, 0.05, 0.012 * v, amb, 620); },
     rooster: (t, v) => { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(560, t); o.frequency.linearRampToValueAtTime(760, t + 0.25); o.frequency.linearRampToValueAtTime(700, t + 0.7); o.frequency.linearRampToValueAtTime(420, t + 1.1); const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = 3; const g = ac.createGain(); env(g, t, 0.05, 0.05 * v, 1.1); o.connect(f); f.connect(g); g.connect(amb); g.connect(revIn); o.start(t); o.stop(t + 1.2); },
     flap: (t, v) => { for (let k = 0; k < 5; k++) nz(t + k * 0.05, 0.04, 0.05 * v, 'bandpass', 1800, 1, amb); },
+    whoosh: (t, v) => { nz(t, 0.34, 0.16 * v, 'bandpass', 520, 0.8); nz(t + 0.06, 0.26, 0.1 * v, 'bandpass', 1300, 1.2); },
     shutter: (t, v) => { nz(t, 0.03, 0.4 * v, 'highpass', 3000); nz(t + 0.07, 0.04, 0.3 * v, 'bandpass', 2200, 2); osc('square', 1800, t, 0.02, 0.05 * v); },
     gull: (t, v) => { for (let k = 0; k < 3; k++) { osc('sine', 1350, t + k * 0.2, 0.16, 0.018 * v, amb, 820, 0.01); nz(t + k * 0.2, 0.12, 0.01 * v, 'bandpass', 2400, 4, amb); } },
     owl: (t, v) => { for (const [d, f, l] of [[0, 390, 0.35], [0.5, 330, 0.6]]) { const n = osc('sine', f, t + d, l, 0.03 * v, amb, f * 0.94, 0.05); n.g.connect(revIn); } },
@@ -137,7 +138,7 @@
   };
 
   A.play = function (name, vol) {
-    if (!ac || !A.sfxOn || ac.state !== 'running') return;
+    if (!ac || !A.sfxOn || A.mute || ac.state !== 'running') return;
     const now = ac.currentTime;
     const gap = { chop: 0.07, hammer: 0.06, mine: 0.07, hit: 0.05, hover: 0.04, swish: 0.08, horn: 1.2, fire: 0.3, gore: 0.12, clang: 0.06, scream: 0.4, caw: 0.6, drum: 1.4, bark: 0.35, cluck: 0.5, rooster: 3, flap: 0.5, gull: 2, owl: 4, frog: 0.8, trill: 1, cuckoo: 3, wave: 1.5 }[name] || 0.02;
     if (last[name] && now - last[name] < gap) return;
@@ -146,7 +147,7 @@
   };
   // positional: louder when on screen & zoomed in
   A.at = function (x, y, name, important, vol) {
-    if (!ac || !G.Render) return;
+    if (!ac || !G.Render || A.mute) return;
     const [sx, sy] = G.Render.proj(x, y, G.W.groundH(x, y));
     const [px, py] = G.Render.worldPxToScreen(sx, sy);
     const VW = G.Render.VW, VH = G.Render.VH;
@@ -214,6 +215,10 @@
     let fight = 0; scape.fightAt = null; for (const v of G.War.fighters) if (vis(v.x, v.y)) { fight++; if (!scape.fightAt || G.R() < 0.2) scape.fightAt = v; }
     scape.pets = []; for (const a of S.animals.values()) { if ((a.kind === 'cao' || a.kind === 'galinha') && scape.pets.length < 6 && vis(a.x, a.y)) scape.pets.push(a); }
     scape.people = people; scape.sell = sell; scape.fight = fight;
+    // waterfalls roar when they are on screen; the high mountains whistle
+    let falls = 0; for (const f of (S.relief && S.relief.falls) || []) if (vis(f.tx + 0.5, f.ty + 0.5)) falls += Math.min(2, f.drop / 2);
+    scape.falls = falls;
+    const [cx, cy] = R.screenToTile(R.VW / 2, R.VH / 2); scape.alt = W.inb(cx, cy) ? Math.max(0, W.tileH(W.idx(cx, cy)) - G.SEA) : 0;
     scape.zoomF = G.clamp((R.cam.zoom - 0.45) / 1.4, 0.15, 1);
   }
   A.update = function (dt) {
@@ -224,12 +229,12 @@
     const zf = scape.zoomF, night0 = G.Render.nightness() > 0.55;
     const coast = Math.min(1, scape.sea * 2.2);
     ocean.g.gain.setTargetAtTime((0.018 + 0.05 * coast) * (1 + 0.35 * Math.sin(t * 0.35)) + 0.012 / zoom, t, 0.6);
-    river.g.gain.setTargetAtTime(Math.min(1, scape.river * 7) * 0.05 * zf, t, 0.6);
+    river.g.gain.setTargetAtTime(Math.min(1.8, scape.river * 7 + (scape.falls || 0) * 0.6) * 0.05 * zf, t, 0.6);
     leaves.g.gain.setTargetAtTime(Math.min(1, scape.forest * 1.6) * (0.25 + S.weather.windS) * 0.018 * zf, t, 0.8);
     const busy = scape.people ? Math.min(1, Math.log(1 + scape.people) / 4.2) : 0;
     crowd.g.gain.setTargetAtTime(busy * (night0 ? 0.25 : 1) * (0.05 + Math.min(0.03, scape.sell * 0.006)) * zf, t, 0.8);
     battle.g.gain.setTargetAtTime(Math.min(1, scape.fight / 14) * 0.13 * zf, t, 0.4);
-    wind.g.gain.setTargetAtTime(0.012 + S.weather.windS * 0.06 + (scape.snow + scape.desert) * 0.03 + (1 - zf) * 0.02, t, 0.5);
+    wind.g.gain.setTargetAtTime(0.012 + S.weather.windS * 0.06 + (scape.snow + scape.desert) * 0.03 + (1 - zf) * 0.02 + Math.min(0.03, (scape.alt || 0) * 0.0012), t, 0.5);
     windF.frequency.setTargetAtTime(350 + S.weather.windS * 500 + Math.sin(t * 0.2) * 80, t, 0.5);
     // rain loudness from global + visible clouds
     let r = S.weather.rain;

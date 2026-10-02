@@ -334,8 +334,10 @@
       // back fences (the front ones are sorted with the animals)
       const cols = FENCE[b.type];
       const x0 = b.x + 0.05, y0 = b.y + 0.05, x1 = b.x + b.w - 0.05, y1 = b.y + b.h - 0.05;
-      for (let k = 0; k < b.w; k++) rail(c, proj, x0 + (x1 - x0) * k / b.w, y0, x0 + (x1 - x0) * (k + 1) / b.w, y0, cols, [3, 5.6]);
-      for (let k = 0; k < b.h; k++) rail(c, proj, x0, y0 + (y1 - y0) * k / b.h, x0, y0 + (y1 - y0) * (k + 1) / b.h, cols, [3, 5.6]);
+      for (const [ax, ay, bx, by] of G.Render.rectEdges(x0, y0, x1, y1).back) {
+        const n = Math.max(1, Math.round(Math.hypot(bx - ax, by - ay)));
+        for (let k = 0; k < n; k++) rail(c, proj, ax + (bx - ax) * k / n, ay + (by - ay) * k / n, ax + (bx - ax) * (k + 1) / n, ay + (by - ay) * (k + 1) / n, cols, [3, 5.6]);
+      }
       // the trough, with water — and hay when it was fed
       const tx = b.x + b.w - 0.45, ty = b.y + b.h / 2; const q = proj(tx, ty, W.hAt(tx, ty));
       c.fillStyle = '#6a4a2c'; c.beginPath(); c.moveTo(q[0] - 8, q[1] - 4); c.lineTo(q[0] + 4, q[1] + 2); c.lineTo(q[0] + 4, q[1] + 3.6); c.lineTo(q[0] - 8, q[1] - 2.4); c.fill();
@@ -345,19 +347,23 @@
   // sorted things: front fences in segments, sheds and stables, fair stalls, ore veins
   const segCache = new WeakMap();
   function segs(b) {
-    let s = segCache.get(b); if (s) return s;
+    const rv = G.Render.rot();
+    let s = segCache.get(b); if (s && s.rot === rv) return s.list;
     const list = [];
-    const x1 = b.x + b.w - 0.05, y1 = b.y + b.h - 0.05;
-    for (let k = 0; k < b.h; k++) list.push({ b, fn: drawRailSeg, ax: x1, ay: b.y + 0.05 + (b.h - 0.1) * k / b.h, bx: x1, by: b.y + 0.05 + (b.h - 0.1) * (k + 1) / b.h, gate: false });
-    for (let k = 0; k < b.w; k++) list.push({ b, fn: drawRailSeg, ax: b.x + 0.05 + (b.w - 0.1) * k / b.w, ay: y1, bx: b.x + 0.05 + (b.w - 0.1) * (k + 1) / b.w, by: y1, gate: k === Math.floor(b.w / 2) });
+    const x0 = b.x + 0.05, y0 = b.y + 0.05, x1 = b.x + b.w - 0.05, y1 = b.y + b.h - 0.05;
+    // the fences facing the camera stand among the animals; the gate is always on the same side of the pen
+    for (const [ax, ay, bx, by] of G.Render.rectEdges(x0, y0, x1, y1).front) {
+      const n = Math.max(1, Math.round(Math.hypot(bx - ax, by - ay))); const gateSide = ay === y1 && by === y1;
+      for (let k = 0; k < n; k++) list.push({ b, fn: drawRailSeg, ax: ax + (bx - ax) * k / n, ay: ay + (by - ay) * k / n, bx: ax + (bx - ax) * (k + 1) / n, by: ay + (by - ay) * (k + 1) / n, gate: gateSide && k === Math.floor(n / 2) });
+    }
     if (b.type === 'curral') list.push({ b, fn: drawShelter });
     if (b.type === 'estabulo') list.push({ b, fn: drawStable });
-    segCache.set(b, list); return list;
+    segCache.set(b, { rot: rv, list }); return list;
   }
   function drawRailSeg(c, e, sx, sy) {
     const b = e.b; const cols = FENCE[b.type];
     const dx = (e.bx - e.ax), dy = (e.by - e.ay);
-    const ex = (dx - dy) * 16, ey = (dx + dy) * 8 + (W.hAt(e.ax, e.ay) - W.hAt(e.bx, e.by)) * 4;
+    const o = G.Render.off(dx, dy); const ex = o[0], ey = o[1] + (W.hAt(e.ax, e.ay) - W.hAt(e.bx, e.by)) * 4;
     // the gate stands open while the flock is out
     if (e.gate && G.Eco.penAnimals && G.Eco.penAnimals(b).some(a => a.state === 'herd' || a.state === 'led')) {
       c.fillStyle = cols[1]; c.fillRect(sx - 0.7, sy - 7.2, 1.4, 7.2); c.fillRect(sx + ex - 0.7, sy + ey - 7.2, 1.4, 7.2);
@@ -395,8 +401,8 @@
       m.win.push([P(1.46, -0.1, 5), P(1.46, 0.1, 5), P(1.46, 0.1, 8), P(1.46, -0.1, 8)]);
     });
   }
-  function drawShelter(c, e, sx, sy) { G.Art.draw(c, shelterSpr(e.b.style || 'classico'), sx, sy, 1); }
-  function drawStable(c, e, sx, sy) { G.Art.draw(c, stableSpr(e.b.style || 'classico'), sx, sy, 1); }
+  function drawShelter(c, e, sx, sy) { G.Art.drawM(c, shelterSpr(e.b.style || 'classico'), sx, sy, 1); }
+  function drawStable(c, e, sx, sy) { G.Art.drawM(c, stableSpr(e.b.style || 'classico'), sx, sy, 1); }
 
   // the fair: four stalls, raised in the morning and taken down at noon
   const STALLS = [[0.8, 0.8], [2.2, 0.8], [0.8, 2.2], [2.2, 2.2]];
@@ -449,7 +455,7 @@
       if (!b.built) continue;
       if (PEN[b.type]) {
         for (const e of segs(b)) {
-          if (e.fn === drawRailSeg) add(Math.max(e.ax, e.bx) + Math.max(e.ay, e.by) - 0.45 + 0.02, e, e.ax, e.ay);
+          if (e.fn === drawRailSeg) add(e.ax + e.ay + (G.Render.depth(e.bx, e.by) - G.Render.depth(e.ax, e.ay) > 0 ? G.Render.depth(e.bx, e.by) - G.Render.depth(e.ax, e.ay) : 0) - 0.43, e, e.ax, e.ay);
           else if (e.fn === drawShelter) add(b.x + b.y + 1.05, e, b.x + 0.5, b.y + 0.5);
           else add(b.x + b.y + 1.9, e, b.x + b.w / 2, b.y + 0.5);
         }

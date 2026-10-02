@@ -16,7 +16,7 @@
 
   // kinds: 0 dot, 1 glow, 2 smoke, 3 rain, 4 spark, 5 leaf, 6 debris, 7 heart, 8 star, 9 petal
   FX.spawn = function (o) {
-    if (FX.list.length >= MAX) return null;
+    if (FX.off || FX.list.length >= MAX) return null; // (off while the years are skipped: nobody sees them)
     const p = pool.pop() || {};
     p.x = o.x; p.y = o.y; p.h = o.h !== undefined ? o.h : G.W.groundH(o.x, o.y);
     p.z = o.z || 0; p.vx = o.vx || 0; p.vy = o.vy || 0; p.vz = o.vz || 0;

@@ -380,13 +380,13 @@
     const sc = (sp.size || 1) * (0.55 + 0.45 * (a.grown === undefined ? 1 : a.grown));
     if (a.dead) {
       if (sp.cls === 'water' || a.sink) { c.globalAlpha = Math.max(0.1, 1 - a.rot / 10); }
-      else { c.globalAlpha = Math.max(0.25, 1 - a.rot / (G.DAY_LEN * 1.1)); c.rotate(a.face * 0.1); c.scale(1, 0.55); if (a.meat <= 0) { c.fillStyle = '#e8e0d0'; c.fillRect(-3 * sc, -1, 6 * sc, 0.8); c.fillRect(-1, -1.6, 0.6, 1.8); c.restore(); return; } }
+      else { c.globalAlpha = Math.max(0.25, 1 - a.rot / (G.DAY_LEN * 1.1)); c.rotate(G.Render.sface(a) * 0.1); c.scale(1, 0.55); if (a.meat <= 0) { c.fillStyle = '#e8e0d0'; c.fillRect(-3 * sc, -1, 6 * sc, 0.8); c.fillRect(-1, -1.6, 0.6, 1.8); c.restore(); return; } }
     }
     if (lod) { // far away: a dab of colour is enough
       const col = sp.q ? sp.q.col : sp.col ? sp.col[0] : sp.b ? sp.b.col : '#7a7a82';
       c.fillStyle = col; c.fillRect(-1.5 * sc, -2.5 * sc, 3 * sc, 2 * sc); c.restore(); return;
     }
-    c.scale(a.face * sc, sc);
+    c.scale(G.Render.sface(a) * sc, sc);
     if (sp.art === 'quad') quad(c, a, sp, sp.q, t);
     else if (DRAW[sp.art]) DRAW[sp.art](c, a, sp, t);
     c.restore();

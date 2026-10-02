@@ -27,6 +27,10 @@
       treeAt: new Int32Array(N * N),
       objAt: new Int32Array(N * N),
       bloom: new Float32Array(N * N),
+      wl: new Float32Array(N * N).fill(SEA),   // water surface of each tile (mountain rivers and lakes sit high)
+      cliff: new Uint8Array(N * N),            // cliff faces nobody can walk
+      slope: new Float32Array(N * N), th: new Float32Array(N * N), // (cached: steepness and height of each tile)
+      relief: { ranges: [], passes: [], peaks: [], falls: [], lakes: [] },
       nextId: 1,
       trees: new Map(), rocks: new Map(), bushes: new Map(), buildings: new Map(),
       villagers: new Map(), dead: new Map(), animals: new Map(), graves: new Map(),
@@ -65,7 +69,14 @@
     const a = H[yi * V + xi], b = H[yi * V + xi + 1], c = H[(yi + 1) * V + xi], d = H[(yi + 1) * V + xi + 1];
     return (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy;
   };
-  W.groundH = (x, y) => Math.max(W.hAt(x, y), SEA);
+  // the surface under a point: water where there is water (at its own level), ground elsewhere
+  W.groundH = (x, y) => {
+    const S = G.S; const h = W.hAt(x, y);
+    const xi = x < 0 ? 0 : x >= N ? N - 1 : x | 0, yi = y < 0 ? 0 : y >= N ? N - 1 : y | 0; const i = yi * N + xi;
+    return S.type[i] === T.RIVER ? Math.max(h, S.wl[i]) : Math.max(h, SEA);
+  };
+  W.waterH = (x, y) => { const S = G.S; const xi = G.clamp(x | 0, 0, N - 1), yi = G.clamp(y | 0, 0, N - 1); const i = yi * N + xi; return S.type[i] === T.RIVER ? S.wl[i] : SEA; };
+  W.isCliff = i => G.S.cliff[i] === 1;
   W.tileH = i => { // average vertex height of tile
     const x = i % N, y = (i / N) | 0, H = G.S.H;
     return (H[y * V + x] + H[y * V + x + 1] + H[(y + 1) * V + x] + H[(y + 1) * V + x + 1]) * 0.25;
@@ -75,7 +86,7 @@
   W.isLand = i => G.S.type[i] >= T.SAND;
   W.blocked = i => { const b = G.S.occ[i]; if (!b) return false; const B = G.S.buildings.get(b); return !!(B && B.blocks); };
   // walls block, open gates (2) and aqueduct arches (3) let people through, shut gates (4) don't
-  W.walkable = i => { const S = G.S; const t = S.type[i]; if (t < T.RIVER || W.blocked(i)) return false; const w = S.wall[i]; return !w || w === 2 || w === 3; };
+  W.walkable = i => { const S = G.S; const t = S.type[i]; if (t < T.RIVER || S.cliff[i] || W.blocked(i)) return false; const w = S.wall[i]; return !w || w === 2 || w === 3; };
   W.walkableXY = (x, y) => W.inb(x, y) && W.walkable(W.idx(x, y));
   // landmass labels: who can walk to whom (4-connected land, rivers included)
   let landIds = null, landKey = null, landVer = -1;
@@ -86,14 +97,15 @@
     landIds = new Int32Array(N * N).fill(-1); landKey = S; landVer = S.typeVer || 0;
     let id = 0;
     for (let i = 0; i < N * N; i++) {
-      if (landIds[i] >= 0 || S.type[i] < T.RIVER) continue;
+      if (landIds[i] >= 0 || S.type[i] < T.RIVER || S.cliff[i]) continue;
       const st = [i]; landIds[i] = id;
       while (st.length) {
         const a = st.pop(); const x = a % N, y = (a / N) | 0;
-        if (x > 0 && landIds[a - 1] < 0 && S.type[a - 1] >= T.RIVER) { landIds[a - 1] = id; st.push(a - 1); }
-        if (x < N - 1 && landIds[a + 1] < 0 && S.type[a + 1] >= T.RIVER) { landIds[a + 1] = id; st.push(a + 1); }
-        if (y > 0 && landIds[a - N] < 0 && S.type[a - N] >= T.RIVER) { landIds[a - N] = id; st.push(a - N); }
-        if (y < N - 1 && landIds[a + N] < 0 && S.type[a + N] >= T.RIVER) { landIds[a + N] = id; st.push(a + N); }
+        const ok = j => landIds[j] < 0 && S.type[j] >= T.RIVER && !S.cliff[j];
+        if (x > 0 && ok(a - 1)) { landIds[a - 1] = id; st.push(a - 1); }
+        if (x < N - 1 && ok(a + 1)) { landIds[a + 1] = id; st.push(a + 1); }
+        if (y > 0 && ok(a - N)) { landIds[a - N] = id; st.push(a - N); }
+        if (y < N - 1 && ok(a + N)) { landIds[a + N] = id; st.push(a + N); }
       }
       id++;
     }
@@ -101,7 +113,7 @@
   };
   W.landAt = (x, y) => W.inb(x, y) ? W.landIds()[W.idx(x, y)] : -1;
   W.sameLand = (ax, ay, bx, by) => { const L = W.landIds(); const a = L[W.idx(ax, ay)], b = L[W.idx(bx, by)]; return a < 0 || b < 0 || a === b; };
-  W.buildable = i => { const t = G.S.type[i]; return t >= T.SAND && !G.S.occ[i] && !G.S.objAt[i] && G.S.fire[i] < 0.05; };
+  W.buildable = i => { const t = G.S.type[i]; return t >= T.SAND && !G.S.cliff[i] && !G.S.occ[i] && !G.S.objAt[i] && G.S.fire[i] < 0.05; };
   W.slope = (x, y, w, h) => {
     let mn = 1e9, mx = -1e9;
     for (let vy = y; vy <= y + h; vy++) for (let vx = x; vx <= x + w; vx++) {
@@ -244,54 +256,10 @@
     const H = S.H;
     const shape = landShapeFn(mapType, rng, n1);
     const cx = N / 2, cy = N / 2;
-    const hillOffX = rng() * 100, hillOffY = rng() * 100;
-    const hillAmp = mapType === 'continente' ? 9.5 : 8.5;
-    for (let vy = 0; vy < V; vy++) for (let vx = 0; vx < V; vx++) {
-      const u = (vx - cx) / (N / 2), w = (vy - cy) / (N / 2);
-      const island = shape(u, w);
-      const detail = G.fbm(n2, vx * 0.085, vy * 0.085, 4);
-      const hills = Math.max(0, G.fbm(n3, vx * 0.05 + hillOffX, vy * 0.05 + hillOffY, 3) + 0.05);
-      let h = island * (2.95 + detail * 1.25 + hills * hillAmp) + (1 - island) * 0.3;
-      const edge = Math.min(vx, vy, N - vx, N - vy);
-      if (edge < 5) h = Math.min(h, 0.6 + edge * 0.15);
-      H[vy * V + vx] = h;
-    }
-
-    // ---- river + lake (carved valley at sea level) ----
-    const rivers = (mapType === 'arquipelago' || mapType === 'mar' ? 0 : mapType === 'ilha' ? (rng() < 0.8 ? 1 : 0) : (N >= 80 ? 2 : 1)) + (N >= 160 ? 2 : N >= 128 ? 1 : 0);
-    for (let rv = 0; rv < rivers; rv++) {
-      // start on high-ish land
-      let sx0 = cx, sy0 = cy, tries = 0;
-      do { sx0 = cx + (rng() - 0.5) * N * 0.5; sy0 = cy + (rng() - 0.5) * N * 0.5; tries++; } while (tries < 40 && H[Math.round(sy0) * V + Math.round(sx0)] < SEA + 2);
-      const ang = rng() * Math.PI * 2;
-      let px = sx0, py = sy0;
-      const pts = [[px, py]];
-      let dir = ang;
-      for (let k = 0; k < 400; k++) {
-        dir += (n4(k * 0.15, 3.3 + rv * 7) * 0.9);
-        dir = ang + G.clamp(dir - ang, -0.9, 0.9);
-        px += Math.cos(dir) * 0.5; py += Math.sin(dir) * 0.5;
-        pts.push([px, py]);
-        if (px < 2 || py < 2 || px > N - 2 || py > N - 2) break;
-        const hv = H[Math.round(py) * V + Math.round(px)];
-        if (hv < SEA - 0.6 && k > 10) { for (let e = 0; e < 4; e++) { px += Math.cos(dir) * 0.5; py += Math.sin(dir) * 0.5; pts.push([px, py]); } break; }
-      }
-      const lx = pts[0][0], ly = pts[0][1];
-      const minX = Math.max(0, Math.floor(Math.min(...pts.map(p => p[0])) - 6)), maxX = Math.min(N, Math.ceil(Math.max(...pts.map(p => p[0])) + 6));
-      const minY = Math.max(0, Math.floor(Math.min(...pts.map(p => p[1])) - 6)), maxY = Math.min(N, Math.ceil(Math.max(...pts.map(p => p[1])) + 6));
-      for (let vy = minY; vy <= maxY; vy++) for (let vx = minX; vx <= maxX; vx++) {
-        let dm = 1e9;
-        for (let k = 0; k < pts.length; k += 1) { const d2 = G.dist2(vx, vy, pts[k][0], pts[k][1]); if (d2 < dm) dm = d2; }
-        dm = Math.sqrt(dm);
-        const dl = Math.max(0, G.dist(vx, vy, lx, ly) - 1.5);
-        const d = Math.min(dm, dl);
-        if (d < 5) {
-          const target = SEA - 0.5 + Math.pow(d, 1.35) * 0.72;
-          const i = vy * V + vx;
-          if (target < H[i]) H[i] = G.lerp(target, H[i], G.smooth(2.5, 5, d));
-        }
-      }
-    }
+    // ---- relief: hills, mountain ranges, plateaus, basins; then the rain wears it down ----
+    const ro = G.Relief.resolve(opts, rng);
+    G.Relief.heights(S, { shape, rng, n2, n3, o: ro, mapType });
+    G.Relief.erode(S, G.Relief.preset(ro).erode, rng);
 
     // ---- classify tiles ----
     const type = S.type;
@@ -314,10 +282,10 @@
           const a = st.pop(); const x = a % N, y = (a / N) | 0;
           for (const [dx, dy] of NB4) { const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (water[j] && !ocean[j] && comp[j] < 0) { comp[j] = i; list.push(j); st.push(j); } }
         }
-        if (list.length < 4) for (const j of list) water[j] = 0;
+        for (const j of list) water[j] = 0;
       }
     }
-    for (let i = 0; i < N * N; i++) type[i] = ocean[i] ? T.SEA : water[i] ? T.RIVER : T.GRASS;
+    for (let i = 0; i < N * N; i++) type[i] = ocean[i] ? T.SEA : T.GRASS;
 
     // ---- land components (islands); join them with shallow fords ----
     const landComp = new Int32Array(N * N).fill(-1);
@@ -380,18 +348,15 @@
     const sizes = {}; if (mapType === 'mar') for (let i = 0; i < N * N; i++) if (land[i] >= 0) sizes[land[i]] = (sizes[land[i]] || 0) + 1;
     for (let i = 0; i < N * N; i++) if (type[i] >= T.RIVER && (mapType === 'mar' ? sizes[land[i]] < 60 : land[i] !== bestC)) type[i] = T.SEA;
 
-    // ---- normalise vertices so water meets land exactly at sea level ----
-    for (let vy = 0; vy < V; vy++) for (let vx = 0; vx < V; vx++) {
-      let tw = false, tl = false;
-      for (let dy = -1; dy <= 0; dy++) for (let dx = -1; dx <= 0; dx++) {
-        const x = vx + dx, y = vy + dy; if (!W.inb(x, y)) { tw = true; continue; }
-        if (type[y * N + x] <= T.RIVER) tw = true; else tl = true;
-      }
-      const i = vy * V + vx;
-      if (tw && tl) H[i] = SEA;
-      else if (tw) H[i] = Math.min(H[i], SEA - 0.08);
-      else H[i] = Math.max(H[i], SEA + 0.06);
-    }
+    // ---- cliffs over the sea, rivers from the peaks, lakes in the basins, ways up every plateau ----
+    G.Relief.coast(S, ro);
+    const hi = ro.relevo === 'montanhoso' || ro.relevo === 'alpino';
+    const rivers = mapType === 'mar' ? 0 : mapType === 'arquipelago' ? (hi ? 1 : 0) : (mapType === 'ilha' ? (rng() < 0.85 ? 1 : 0) + (hi && N >= 80 ? 1 : 0) : (N >= 80 ? 2 : 1) + (hi ? 1 : 0)) + (N >= 160 ? 2 : N >= 128 ? 1 : 0);
+    G.Relief.hydro(S, { o: ro, rivers });
+    G.Relief.normalize(S);
+    G.Relief.connect(S);
+    G.Relief.findPeaks(S);
+    G.Relief.nameAll(S);
 
     const bfsFrom = (test) => {
       const d = new Int32Array(N * N).fill(999); const bq = [];
@@ -410,7 +375,8 @@
     const landH = [];
     for (let i = 0; i < N * N; i++) if (type[i] === T.GRASS) landH.push(W.tileH(i));
     landH.sort((a, b) => a - b);
-    const rockTh = G.clamp(landH[Math.floor(landH.length * 0.9)] || SEA + 4.3, SEA + 2.4, SEA + 4.3);
+    // (with mountains, only their upper half turns to bare rock: plateaus and foothills stay green)
+    const rockTh = Math.max(G.clamp(landH[Math.floor(landH.length * 0.9)] || SEA + 4.3, SEA + 2.4, SEA + 4.3), SEA + ((landH[landH.length - 1] || SEA) - SEA) * 0.55);
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
       const i = y * N + x;
       const th = W.tileH(i);
@@ -423,10 +389,11 @@
         continue;
       }
       if (type[i] === T.RIVER) { S.fert[i] = 0; continue; }
-      const f = G.clamp(0.5 + G.fbm(n4, x * 0.07 + 40, y * 0.07 - 20, 3) * 1.1 + (dRiver[i] < 4 ? (4 - dRiver[i]) * 0.09 : 0) - (th - SEA) * 0.04, 0, 1);
+      const f = G.clamp(0.5 + G.fbm(n4, x * 0.07 + 40, y * 0.07 - 20, 3) * 1.1 + (dRiver[i] < 4 ? (4 - dRiver[i]) * 0.09 : 0) - Math.min(th - SEA, 12) * 0.035, 0, 1);
       S.fert[i] = f;
-      if (dOcean[i] <= 2 && th < SEA + 0.6) type[i] = T.SAND;
-      else if (th > rockTh + n2(x * 0.3, y * 0.3) * 0.5) type[i] = T.ROCKY;
+      const steep = G.Relief.range(i);
+      if (dOcean[i] <= 2 && th < SEA + 0.6 && steep < 1) type[i] = T.SAND;
+      else if (steep > G.Relief.STEEP || th > rockTh + n2(x * 0.3, y * 0.3) * 0.5) type[i] = T.ROCKY;
       else if (f > 0.7) type[i] = T.MEADOW;
       else type[i] = T.GRASS;
       if (type[i] === T.SAND) S.fert[i] *= 0.3;
@@ -439,13 +406,19 @@
 
     // ---- choose start locations (far apart when there are several peoples) ----
     const forest = (x, y) => G.fbm(n1, x * 0.09 + 50, y * 0.09 + 50, 3);
-    const cands = [];
+    // (never on a ledge cut off by cliffs)
+    const LID = W.landIds(); const lsz = {}; for (let i = 0; i < N * N; i++) if (LID[i] >= 0) lsz[LID[i]] = (lsz[LID[i]] || 0) + 1;
+    let cands = [];
+    // (rugged worlds: if the good valleys are too few, settle for rougher ground)
+    for (const [minO, maxSl] of [[5, 1.4], [3, 2.1], [2, 3]]) {
+    if (cands.length >= tribes * 4) break;
+    cands = [];
     for (let y = 8; y < N - 8; y++) for (let x = 8; x < N - 8; x++) {
       const i = y * N + x;
       if (type[i] !== T.GRASS && type[i] !== T.MEADOW) continue;
-      if (dOcean[i] < 5) continue;
+      if (dOcean[i] < minO) continue;
       if (dRiver[i] < 2) continue;
-      const sl = W.slope(x - 2, y - 2, 5, 5); if (sl > 1.4) continue;
+      const sl = W.slope(x - 2, y - 2, 5, 5); if (sl > maxSl || S.cliff[i] || !(lsz[LID[i]] >= 80)) continue;
       let s = -G.dist(x, y, cx, cy) * (tribes > 1 ? 0.05 : 0.35);
       let forestNear = 0, landNear = 0;
       for (let dy = -9; dy <= 9; dy += 2) for (let dx = -9; dx <= 9; dx += 2) {
@@ -458,8 +431,9 @@
       s += Math.min(forestNear, 12) * 0.4 + landNear * 0.13;
       if (dRiver[i] < 8) s += 2.5;
       const bm = S.biome[i]; s += bm === BI.NEVE ? -5 : bm === BI.PANTANO ? -2.5 : bm === BI.TAIGA ? -0.6 : bm === BI.SELVA ? -0.4 : 0;
-      s += S.fert[i] * 2 - sl * 2;
+      s += S.fert[i] * 2 - sl * 2 - Math.max(0, W.tileH(i) - SEA - 6) * 0.35;
       cands.push([x, y, s, landComp[i]]);
+    }
     }
     cands.sort((a, b) => b[2] - a[2]);
     const starts = [];
@@ -493,10 +467,12 @@
     }
 
     // ---- vegetation & rocks, by biome ----
+    const topH = landH[landH.length - 1] || SEA; const treeLine = topH > SEA + 12 ? SEA + (topH - SEA) * 0.68 : 0;
     for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) {
       const i = y * N + x; const t = type[i];
       if (t < T.SAND || t === T.RIVER) continue;
       if (starts.some(s => G.dist(x + 0.5, y + 0.5, s[0] + 0.5, s[1] + 0.5) < 3.2)) continue;
+      if (S.cliff[i] || (treeLine && W.tileH(i) > treeLine && rng() < 0.9)) continue;
       const bm = S.biome[i]; const BD = G.BIOMES[bm];
       const fd = forest(x, y);
       const th = W.tileH(i);
@@ -518,7 +494,7 @@
       const dense = fd > BD.patch + (mapType === 'mar' ? -0.09 : 0);
       if ((dense && rng() < BD.dens) || rng() < BD.sparse * (mapType === 'mar' ? 2 : 1)) {
         let kind = G.Biome.pickTree(bm, rng);
-        if (bm === BI.TEMP && th > SEA + 2.6 && rng() < 0.7) kind = 'pine';
+        if (bm === BI.TEMP && th > SEA + 2.6 + (landH[landH.length - 1] - SEA) * 0.2 && rng() < 0.7) kind = 'pine';
         const size = rng() < 0.15 ? 0.3 + rng() * 0.3 : 0.75 + rng() * 0.3;
         G.Nature.addTree(x + 0.5 + (rng() - 0.5) * 0.45, y + 0.5 + (rng() - 0.5) * 0.45, kind, size);
       } else if ((fd > -0.08 && fd < 0.1 && rng() < BD.bush) || (t === T.MEADOW && rng() < 0.03)) {
@@ -570,6 +546,7 @@
     const rd = S.road[i];
     if (rd) return (rd >= 3 ? 0.5 : 0.58) + (S.fire[i] > 0.02 ? 30 : 0); // streets, highways and bridges
     let c = t === T.RIVER ? 3.2 : t === T.SAND ? 1.08 : t === T.ROCKY ? 1.25 : 1;
+    if (t >= T.SAND) c *= 1 + S.slope[i] * 0.22; // slopes are hard going
     if (S.biome) c *= G.BIOMES[S.biome[i]].cost;
     const w = S.wear[i]; if (w > 8) c *= 1 - 0.38 * Math.min(1, w / G.WEAR_MAX);
     if (S.fire[i] > 0.02) c += 30;
@@ -590,6 +567,7 @@
     }
     if (s === t && !adj) return [[tx, ty]];
     gen++; heap.clear();
+    const TH = G.S.th;
     gS[s] = 0; seen[s] = gen; came[s] = -1;
     heap.push(s, 0);
     let found = -1, nodes = 0;
@@ -607,7 +585,8 @@
         if (closed[j] === gen) continue;
         if (!W.walkable(j)) continue;
         if (k >= 4 && (!W.walkable(ay * N + nx) || !W.walkable(ny * N + ax))) continue;
-        const g = gS[a] + (k >= 4 ? 1.4142 : 1) * W.cost(j);
+        // climbing costs more than walking on the flat: the path prefers valleys and passes
+        const g = gS[a] + (k >= 4 ? 1.4142 : 1) * W.cost(j) + Math.max(0, TH[j] - TH[a]) * 0.55;
         if (seen[j] !== gen || g < gS[j]) {
           seen[j] = gen; gS[j] = g; came[j] = a;
           const hx = Math.abs(nx - tX), hy = Math.abs(ny - tY);

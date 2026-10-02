@@ -675,7 +675,7 @@
     const slot = worldSlot(co, k, n, phase === 'marcha' && !co.hidden ? 'coluna' : null);
     const arrived = steerTo(v, t, slot[0], slot[1], dt, H, phase === 'marcha' ? 1.05 : 1.2);
     if (arrived) {
-      v.moving = false; v.face = Math.cos(co.dir) - Math.sin(co.dir) > 0 ? 1 : -1;
+      v.moving = false; G.faceTo(v, Math.cos(co.dir), Math.sin(co.dir));
       v.act = co.hidden ? 'sneak' : phase === 'cerco' ? (k % 5 === 0 ? 'dig' : k % 3 === 0 ? 'sit' : 'guard') : t.general && phase === 'reunir' ? 'talk' : 'guard';
       if (phase === 'cerco' && k % 5 === 0 && G.R() < dt * 0.4) G.FX && G.FX.chips(v.x, v.y, '#7a5a3a');
     }
@@ -689,7 +689,7 @@
     const sp = v.speed * mul * dt; const k = Math.min(1, sp / d);
     const nx = v.x + (x - v.x) * k, ny = v.y + (y - v.y) * k;
     if (walk(nx, ny) && (d < 6 || (W.losClear && W.losClear(v.x, v.y, x, y)))) {
-      v.x = nx; v.y = ny; v.path = null; const sdx = (x - v.x) - (y - v.y); if (Math.abs(sdx) > 0.02) v.face = sdx > 0 ? 1 : -1; v.walkPh += sp * 8.5; v.moving = true; t.stuck = 0; return d <= sp;
+      v.x = nx; v.y = ny; v.path = null; if (Math.abs(x - v.x) + Math.abs(y - v.y) > 0.02) G.faceTo(v, x - v.x, y - v.y); v.walkPh += sp * 8.5; v.moving = true; t.stuck = 0; return d <= sp;
     }
     t.stuck = (t.stuck || 0) + dt;
     if (t.stuck > 0.4) { t.stuck = 0; const p = nearWalk(x, y, 0.5) || [x, y]; if (H.goto(v, p[0], p[1], false, 3000)) { t.pathTo = true; t.pathT = 2.5; } }

@@ -333,6 +333,19 @@
     if (pr && G.Events && G.Events.PRAYER && G.Events.PRAYER[pr.kind]) out.push({ key: 'pray:' + pr.set + ':' + pr.kind, kind: 'place', score: 54, zoom: 2.2, dur: 10, drift: 1, pos: () => [pr.x, pr.y, 6], alive: () => Sx.prayer === pr, kick: place(pr.x, pr.y), title: 'Uma prece', sub: `${G.Events.PRAYER[pr.kind].ask} — e olham para o céu, para você` });
     const rainbow = G.Sky && G.Sky.state.rainbow > 4;
     if (rainbow) { const s0 = [...Sx.settlements.values()].sort((a, b) => (b.tier || 0) - (a.tier || 0))[0]; if (s0) out.push({ key: 'rainbow:' + Sx.day, kind: 'sky', score: 74, zoom: zoomFit((s0.radius || 8) * 1.2), dur: 11, drift: 1, pos: () => [s0.cx, s0.cy, 4], alive: () => G.Sky.state.rainbow > 0, kick: s0.name, title: 'Arco-íris', sub: 'a chuva passou' }); }
+    // the land itself: peaks in the low sun, waterfalls seen from the side where they fall, still lakes
+    if (G.Relief) {
+      const Rv = R(); const light = dusk || dawn ? 18 : night ? -12 : 0;
+      for (const p of G.Relief.places()) {
+        if (p.kind === 'pico') out.push({ key: 'peak:' + p.name, kind: 'land', score: 26 + light + Math.min(10, p.h / 4) + Math.random() * 8, zoom: 1.35, dur: 12, drift: 1, pos: () => [p.x, p.y, 14], alive: () => true, kick: 'As montanhas', title: p.name, sub: `${p.alt} de altitude${G.isNight() ? ' · sob as estrelas' : Sx.time > 0.6 ? ' · o sol se põe atrás do pico' : Sx.time < 0.14 ? ' · a névoa ainda nos vales' : ''}` });
+        else if (p.kind === 'cachoeira') {
+          const f = (Sx.relief.falls || []).find(q => q.name === p.name); let view;
+          if (f) for (let r = 0; r < 4; r++) { const ok = (() => { const d = (x, y) => r === 0 ? x + y : r === 1 ? G.N - y + x : r === 2 ? 2 * G.N - x - y : y + G.N - x; return d(f.x + 0.5, f.y + 0.5) < d(f.tx + 0.5, f.ty + 0.5); })(); if (ok) { view = r; break; } }
+          out.push({ key: 'fall:' + p.name, kind: 'land', score: 30 + light * 0.6 + Math.min(12, p.drop * 3) + Math.random() * 8, zoom: 2.9, dur: 11, drift: 1, view, pos: () => [p.x, p.y, 4], alive: () => true, kick: 'As águas', title: p.name, sub: p.alt });
+        } else if (p.kind === 'lago' && p.n >= 6) out.push({ key: 'lake:' + p.name, kind: 'land', score: 22 + light + Math.random() * 8, zoom: 1.9, dur: 11, drift: 1, pos: () => [p.x, p.y, 2], alive: () => true, kick: 'As águas', title: p.name, sub: p.alt });
+      }
+      void Rv;
+    }
     const nf = G.Fac.all().length;
     out.push({ key: 'world', kind: 'world', score: 16 + (dawn ? 16 : 0) + Math.random() * 6, zoom: R().minZoom() * 1.12, dur: 12, drift: 1, pos: () => [G.N / 2, G.N / 2, 0], alive: () => true, kick: `Dia ${Sx.day}`, title: (Sx.lore && Sx.lore.world) || 'O mundo', sub: `${Sx.villagers.size} almas · ${nf} ${nf === 1 ? 'povo' : 'povos'} · ${Sx.settlements.size} ${Sx.settlements.size === 1 ? 'povoado' : 'povoados'}` });
   }
@@ -378,7 +391,7 @@
     c.t = 0; c.push = (Math.random() < 0.7 ? 1 : -1) * G.rr(0.06, 0.14); c.driftA = Math.random() * TAU;
     c.zoom = G.clamp(c.zoom * (G.speed >= 8 && !c.drift ? 0.8 : 1), Rn.minZoom(), 3.4);
     const [tx, ty] = target(c, p);
-    const far = Math.hypot(tx - cam.x, ty - cam.y) * cam.zoom > Math.hypot(Rn.VW, Rn.VH) * 1.1;
+    const far = Math.hypot(tx - cam.x, ty - cam.y) * cam.zoom > Math.hypot(Rn.VW, Rn.VH) * 1.1 || (c.view !== undefined && c.view !== Rn.rot());
     prevKey = shot ? shot.key : ''; shot = c; lastTx = null; seenKind.set(c.kind, clock);
     hideCap();
     if (far || !prevKey) { fade = { t: 0, jumped: false }; el.fade.classList.add('on'); cap.showAt = clock + 1.05; }
@@ -421,8 +434,10 @@
     if (fade && !fade.jumped) {
       fade.t += rdt;
       if (fade.t < 0.5) return;
+      if (shot.view !== undefined && shot.view !== Rn.rot()) Rn.turnTo(shot.view);
       const p = shot.pos(); if (p) { shot.last = p; const [tx, ty] = target(shot, p); cam.x = tx; cam.y = ty; }
       vx = vy = 0; lz = Math.log(shot.zoom * (1 - shot.push * 0.5)); cam.zoom = cam.tz = Math.exp(lz);
+      if (shot.view !== undefined) Rn.paintVisible();
       fade.jumped = true; el.fade.classList.remove('on');
     }
     if (fade && fade.jumped && (fade.t += rdt) > 1.2) fade = null;

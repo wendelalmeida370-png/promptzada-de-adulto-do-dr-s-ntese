@@ -183,13 +183,9 @@
         S.H[k] = Math.max(S.H[k], h);
       } else S.H[k] = Math.min(S.H[k], SEA - 0.25 - 1.1 * f);
     }
-    // water meets land exactly at sea level
-    for (let vy = y0; vy <= y1 + 1; vy++) for (let vx = x0; vx <= x1 + 1; vx++) {
-      let tw = false, tl = false;
-      for (let dy = -1; dy <= 0; dy++) for (let dx = -1; dx <= 0; dx++) { const tx = vx + dx, ty = vy + dy; if (!W.inb(tx, ty)) { tw = true; continue; } if (S.type[ty * N + tx] <= T.RIVER) tw = true; else tl = true; }
-      const k = vy * V + vx;
-      if (tw && tl) S.H[k] = SEA; else if (tw) S.H[k] = Math.min(S.H[k], SEA - 0.08); else S.H[k] = Math.max(S.H[k], SEA + 0.06);
-    }
+    // water meets land exactly at its surface (the sea's, or a mountain lake's)
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (S.type[ty * N + tx] <= T.SEA) S.wl[ty * N + tx] = SEA;
+    G.Relief.normalize(S, x0, y0, x1 + 1, y1 + 1);
     // beaches, highlands, shallows
     const nearWater = (tx, ty) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = tx + dx, ny = ty + dy; if (!W.inb(nx, ny) || S.type[ny * N + nx] <= T.SEA) return true; } return false; };
     for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
@@ -202,7 +198,7 @@
         const th = W.tileH(i);
         let nt = t;
         if (o.rocky && G.dist(tx + 0.5, ty + 0.5, x, y) < r * 0.75) nt = T.ROCKY;
-        else if (th > SEA + 3.6) nt = T.ROCKY;
+        else if (G.Relief.range(i) > G.Relief.STEEP || (changed.has(i) && th > SEA + 3.6)) nt = T.ROCKY;
         else if (nw && th < SEA + 0.75) nt = T.SAND;
         else if (t === T.SAND || changed.has(i)) nt = S.fert[i] > 0.62 ? T.MEADOW : T.GRASS;
         if (nt !== t) { S.type[i] = nt; if (nt === T.SAND) S.fert[i] *= 0.3; }
@@ -618,7 +614,7 @@
       if (kr.path && kr.pi < kr.path.length) {
         const p = kr.path[kr.pi]; const dx = p[0] - kr.x, dy = p[1] - kr.y; const d = Math.hypot(dx, dy); const sp = 2.4 * dt;
         if (d <= sp) { kr.x = p[0]; kr.y = p[1]; kr.pi++; } else { kr.x += dx / d * sp; kr.y += dy / d * sp; }
-        if (Math.abs(dx - dy) > 0.02) kr.face = dx - dy > 0 ? 1 : -1;
+        if (Math.abs(dx - dy) > 0.02) G.faceTo(kr, dx, dy);
         if (G.R() < dt * 4) G.FX && G.FX.wake(kr.x, kr.y);
       }
     }

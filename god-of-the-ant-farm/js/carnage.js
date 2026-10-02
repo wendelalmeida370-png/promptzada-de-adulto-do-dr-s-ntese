@@ -181,7 +181,7 @@
       return true;
     }
     if (t.st === 2) { // a moment over the body
-      v.act = t.own ? 'mourn' : 'look'; v.face = (c.x - c.y) - (v.x - v.y) > 0 ? 1 : -1;
+      v.act = t.own ? 'mourn' : 'look'; G.faceTo(v, c.x - v.x, c.y - v.y);
       if (v.actT < (t.own ? 2.2 : 1)) return true;
       // where to: our dead to the cemetery, the others to the pyre
       let dest = null;
@@ -334,8 +334,9 @@
     // the fall: a sway, a drop, a small bounce
     const f = G.clamp(c.t / 0.5, 0, 1);
     const fall = f < 0.75 ? Math.pow(f / 0.75, 2) : 1 - Math.sin((f - 0.75) / 0.25 * Math.PI) * 0.06;
-    let ang = c.dir * (Math.PI / 2) * fall;
-    if (c.drag) ang = c.dir * Math.PI / 2 + Math.sin(t * 9) * 0.03;
+    const rv = G.Render.rot(); const cd = rv === 0 ? c.dir : rv === 2 ? -c.dir : G.Render.sdir(c.dir, c.dir * (rv === 1 ? -1 : 1));
+    let ang = cd * (Math.PI / 2) * fall;
+    if (c.drag) ang = cd * Math.PI / 2 + Math.sin(t * 9) * 0.03;
     ctx.rotate(ang);
     if (fall >= 0.99) ctx.scale(1, 0.9);
     if (st === 'bones') drawBones(ctx, c, t);

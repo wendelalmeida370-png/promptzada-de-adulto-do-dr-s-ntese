@@ -575,7 +575,7 @@
     // archers keep their distance and loose arrows
     if (v.arm === 'arco' && !v.captive && d > 1.1 && d < 5.2) {
       v.path = null; v.moving = false; v.act = 'shoot';
-      v.face = (o.x - o.y) - (v.x - v.y) > 0 ? 1 : -1;
+      G.faceTo(v, o.x - v.x, o.y - v.y);
       t.cd = (t.cd === undefined ? G.rr(0, 0.5) : t.cd) - dt;
       if (t.cd > 0) return;
       t.cd = G.rr(1.3, 1.7); v.actT = 0;
@@ -586,7 +586,7 @@
       // close and in the open: no need to plan a path
       const sp = v.speed * 1.2 * dt; const k = Math.min(1, sp / d);
       v.x += (o.x - v.x) * k; v.y += (o.y - v.y) * k; v.path = null; v.moving = true; v.walkPh += sp * 8.5; v.act = '';
-      v.face = (o.x - o.y) - (v.x - v.y) > 0 ? 1 : -1;
+      G.faceTo(v, o.x - v.x, o.y - v.y);
       return;
     }
     if (d > 0.85) {
@@ -599,7 +599,7 @@
       return;
     }
     v.path = null; v.act = 'fight'; v.moving = false;
-    v.face = (o.x - o.y) - (v.x - v.y) > 0 ? 1 : -1;
+    G.faceTo(v, o.x - v.x, o.y - v.y);
     t.cd = (t.cd === undefined ? G.rr(0, 0.4) : t.cd) - dt;
     if (t.cd > 0) return;
     t.cd = G.rr(0.8, 1.1); v.actT = 0;
@@ -831,7 +831,7 @@
   function runCondemned(v, t, dt, H) {
     if (t.st === 0) { if (!H.goto(v, t.x, t.y, false) && !H.goto(v, t.x, t.y, true)) { t.st = 2; return; } t.st = 1; }
     else if (t.st === 1) { v.act = 'bound'; if (H.move(v, dt, 0.7)) { t.st = 2; v.actT = 0; } }
-    else { v.act = 'mourn'; v.face = (t.x - 1.2 - t.y + 0.7) - (v.x - v.y) > 0 ? 1 : -1; if (!v.emo || v.emo.t < 0.2) G.Vg.emote(v, 'sad', 2); }
+    else { v.act = 'mourn'; G.faceTo(v, t.x - 1.2 - v.x, t.y - 0.7 - v.y); if (!v.emo || v.emo.t < 0.2) G.Vg.emote(v, 'sad', 2); }
   }
   function runAssembly(v, t, dt, H) {
     if (t.st === 0) {
@@ -840,7 +840,7 @@
       if (!p || !H.goto(v, p[0], p[1], false)) return H.end(v);
       t.st = 1;
     } else if (t.st === 1) { if (H.move(v, dt)) { t.st = 2; v.actT = 0; } if (t.age > 25) H.end(v); }
-    else { v.act = ''; v.face = (t.x - t.y) - (v.x - v.y) > 0 ? 1 : -1; if (t.age > 30) H.end(v); }
+    else { v.act = ''; G.faceTo(v, t.x - v.x, t.y - v.y); if (t.age > 30) H.end(v); }
   }
   function runEnvoy(v, t, dt, H) {
     const S = G.S; const to = G.Fac.get(t.to), from = G.Fac.get(t.from);
@@ -890,11 +890,11 @@
       let q = null; for (const b of S.buildings.values()) if (b.type === 'quartel' && b.built && b.set === v.set) { q = b; break; }
       const c = q ? G.Village.frontTile(q) : [set.cx + 2, set.cy + 1];
       const rank = q && G.Life && G.Life.rowSpot(q, v, 4, 0.7, 1.2);
-      if (rank) { t.row = q.id; t.face = rank[3] - rank[4] > 0 ? 1 : -1; if (!H.goto(v, rank[0], rank[1], false)) { G.Life.rowRelease(v); t.row = 0; return H.end(v); } }
+      if (rank) { t.row = q.id; t.face = rank[3] - rank[4] > 0 ? 1 : -1; t.fx = rank[3]; t.fy = rank[4]; if (!H.goto(v, rank[0], rank[1], false)) { G.Life.rowRelease(v); t.row = 0; return H.end(v); } }
       else { const p = spotNear(c[0] + G.rr(-1.5, 1.5), c[1] + G.rr(-1.5, 1.5), 1); if (!p || !H.goto(v, p[0], p[1], false)) return H.end(v); }
       t.st = 1;
-    } else if (t.st === 1) { if (H.move(v, dt)) { t.st = 2; v.actT = 0; t.dur = G.rr(8, 13); if (G.R() < 0.5) v.face = -v.face; } }
-    else if (t.row) { v.act = 'drill'; v.face = t.face; v.actT = G.S.clock % 2.4; t.dur -= dt; if (t.dur <= 0) H.end(v); }
+    } else if (t.st === 1) { if (H.move(v, dt)) { t.st = 2; v.actT = 0; t.dur = G.rr(8, 13); if (G.R() < 0.5) G.faceAs(v, v, true); } }
+    else if (t.row) { v.act = 'drill'; G.faceAs(v, t); v.actT = G.S.clock % 2.4; t.dur -= dt; if (t.dur <= 0) H.end(v); }
     else { v.act = 'fight'; if (v.actT > 2.5) v.actT = 0; t.dur -= dt; if (t.dur <= 0) H.end(v); }
   }
   // dispatch for the new task types; returns false for unknown ones

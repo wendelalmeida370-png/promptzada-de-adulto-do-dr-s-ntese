@@ -46,6 +46,7 @@
       v: S.v, seed: S.seed, day: S.day, time: r(S.time, 4), clock: r(S.clock, 1), savedAt: Date.now(),
       H: dl(S.H, 100), type: rl(S.type), fert: zr(S.fert, 100), wear: zr(S.wear, 1), burnt: zr(S.burnt, 1), scar: zr(S.scar, 1),
       wet: zr(S.wet, 100), fire: zr(S.fire, 100), fireT: zr(S.fireT, 1), bloom: zr(S.bloom, 1),
+      wl: zr(Float32Array.from(S.wl, v => v - G.SEA), 100), relief: S.relief,
       nextId: S.nextId,
       trees: [...S.trees.values()].map(t => [t.id, r(t.x, 2), r(t.y, 2), t.kind, r(t.size, 2), r(t.maxSize, 2), t.stage === 'fall' ? 'log' : t.stage, t.wood, t.v, r(t.t, 0), t.fallDir, t.burntLog ? 1 : 0, r(t.chop, 1)]),
       rocks: [...S.rocks.values()].map(o => [o.id, r(o.x, 2), r(o.y, 2), o.stone, o.max, o.v, o.meteor ? 1 : 0]),
@@ -60,7 +61,7 @@
       faith: r(S.faith, 2), stats: S.stats, history: S.history, milestones: S.milestones,
       weather: S.weather, clouds: S.clouds, zones: S.zones, boats: S.boats, awareness: S.awareness, era: S.era,
       pendingDiscovery: S.pendingDiscovery || null, prayer: S.prayer || null, prayerCD: S.prayerCD || 0, popHist: S.popHist || [], start: S.start,
-      cam: { x: r(G.Render.cam.x, 1), y: r(G.Render.cam.y, 1), zoom: r(G.Render.cam.zoom, 2) },
+      cam: { x: r(G.Render.cam.x, 1), y: r(G.Render.cam.y, 1), zoom: r(G.Render.cam.zoom, 2), view: G.Render.rot() },
     };
     // cities, fleets, lore... each module saves its own state
     for (const h of G.saveHooks || []) h.save(out, r, arr);
@@ -91,6 +92,9 @@
     S.day = o.day; S.time = o.time; S.clock = o.clock; S.nextId = o.nextId;
     setArr(S.H, o.H); setArr(S.type, o.type); setArr(S.fert, o.fert); setArr(S.wear, o.wear); setArr(S.burnt, o.burnt); setArr(S.scar, o.scar);
     setArr(S.wet, o.wet); setArr(S.fire, o.fire); setArr(S.fireT, o.fireT); setArr(S.bloom, o.bloom);
+    if (o.wl) { setArr(S.wl, o.wl); for (let i = 0; i < S.wl.length; i++) S.wl[i] += G.SEA; }
+    if (o.relief) S.relief = Object.assign(S.relief, o.relief);
+    G.Relief.cliffs(S);
     for (const a of o.trees) {
       const t = { id: a[0], x: a[1], y: a[2], kind: a[3], size: a[4], maxSize: a[5], stage: a[6], wood: a[7], v: a[8], t: a[9], fallDir: a[10], burntLog: !!a[11], chop: a[12] || 0, claim: 0, ph: Math.random() * 6.28, fallT: 1 };
       S.trees.set(t.id, t); S.treeAt[W.idx(t.x, t.y)] = t.id;
@@ -121,6 +125,7 @@
     S.awareness = o.awareness; S.era = o.era; S.pendingDiscovery = o.pendingDiscovery; S.prayer = o.prayer || null; S.prayerCD = o.prayerCD || 0; S.popHist = o.popHist || []; S.start = o.start;
     Sv.computeDistances();
     G.Nature.rebuildFire();
+    G.Render.setView((o.cam && o.cam.view) || 0);
     G.Render.buildTerrain(); G.Render.initSky();
     if (o.cam) { G.Render.cam.x = o.cam.x; G.Render.cam.y = o.cam.y; G.Render.cam.zoom = G.Render.cam.tz = o.cam.zoom; }
     for (const f of S.factions.values()) { if (f.civ === undefined) f.civ = null; G.Civ.initTech(f); }

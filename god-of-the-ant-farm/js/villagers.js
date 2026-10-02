@@ -72,6 +72,7 @@
     // the trade learned as a child goes faster; a lost arm makes everything slower
     if (v.skill && v.skill === v.role) m *= 1.15;
     if (v.lost) m *= v.lost.armL || v.lost.armR ? 0.72 : 0.85;
+    if (G.S.blessed) m *= 1.5; // years of plenty: everything gets done faster
     return m;
   }
   Vg.goto = function (v, x, y, adj, maxNodes) {
@@ -149,11 +150,11 @@
     const i = W.idx(v.x, v.y);
     const ty = S.type[i];
     const sp = v.speed * (mul || 1) * (ty === T.RIVER ? (S.road[i] ? 1 : 0.5) : 1) * (S.road[i] ? (S.road[i] >= 3 ? 1.4 : 1.3) : S.wear[i] > 28 ? 1.15 : 1) * (v.sick > 0 ? 0.75 : 1)
-      * (v.age < 8 ? 0.8 : v.age >= 62 ? 0.72 : 1) * (v.carry && v.carry.n >= 4 ? 0.9 : 1) * (v.lost && v.lost.leg ? 0.6 : 1) * (v.elite === 'carro' ? 1.45 : 1);
+      * (v.age < 8 ? 0.8 : v.age >= 62 ? 0.72 : 1) * (v.carry && v.carry.n >= 4 ? 0.9 : 1) * (v.lost && v.lost.leg ? 0.6 : 1) * (v.elite === 'carro' ? 1.45 : 1) * (ty >= T.SAND && !S.road[i] ? 1 / (1 + S.slope[i] * 0.16) : 1);
     const step = sp * dt;
     if (d <= step || d < 0.001) { v.x = p[0]; v.y = p[1]; v.pi++; }
     else { v.x += dx / d * step; v.y += dy / d * step; }
-    const sdx = dx - dy; if (Math.abs(sdx) > 0.02) v.face = sdx > 0 ? 1 : -1;
+    if (Math.abs(dx) + Math.abs(dy) > 0.02) G.faceTo(v, dx, dy);
     v.walkPh += step * 8.5;
     v.moving = true;
     if (ty >= T.SAND) {
@@ -697,7 +698,7 @@
         if (t.st === 0) { if (!approach(v, tr.x, tr.y)) return end(v); t.st = 1; }
         else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.act = 'chop'; v.actT = 0; } }
         else {
-          v.face = (tr.x - tr.y) - (v.x - v.y) > 0 ? 1 : -1;
+          G.faceTo(v, tr.x - v.x, tr.y - v.y);
           if (tr.stage === 'grow' || tr.stage === 'burnt') {
             v.act = 'chop';
             tr.chop += dt * workMul(v);
@@ -737,7 +738,7 @@
         if (t.st === 0) { if (!approach(v, r.x, r.y)) return end(v); t.st = 1; }
         else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; t.w = 0; } }
         else {
-          v.act = 'mine'; v.face = (r.x - r.y) - (v.x - v.y) > 0 ? 1 : -1;
+          v.act = 'mine'; G.faceTo(v, r.x - v.x, r.y - v.y);
           t.w += dt * workMul(v);
           if (v.actT > 0.6) { v.actT = 0; G.Audio && G.Audio.at(r.x, r.y, 'mine'); G.FX && G.FX.chips(r.x, r.y, '#a9a9a9'); }
           if (t.w > 3.8) {
@@ -763,7 +764,7 @@
         if (t.st === 0) { if (!Vg.goto(v, t.x, t.y, false)) return end(v); t.st = 1; }
         else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; t.dur = G.rr(5, 9) / workMul(v); } }
         else {
-          v.act = 'fish'; v.face = (t.wx - t.wy) >= 0 ? 1 : -1;
+          v.act = 'fish'; G.faceTo(v, t.wx, t.wy);
           if (v.actT > t.dur) {
             if (G.R() < 0.8 * Math.min(1.2, G.Civ.tV(v, 'fish'))) { v.carry = { k: 'food', n: Math.min(cap(v), Math.round(G.ri(1, 3) * G.Civ.tV(v, 'fish'))) }; emote(v, 'fish', 1.8); G.FX && G.FX.splash(t.x + t.wx * 0.8, t.y + t.wy * 0.8, 0.5); deliverTask(v); }
             else { v.actT = 0; t.dur = G.rr(4, 7); }
@@ -789,7 +790,7 @@
           if (t.rt <= 0 || arrived(v)) { t.rt = 0.7; if (!Vg.goto(v, a.x, a.y, false)) { if (t.age > 3) return end(v); } }
           move(v, dt, 1.25); v.act = '';
         } else {
-          v.act = 'fight'; v.face = (a.x - a.y) - (v.x - v.y) > 0 ? 1 : -1; v.path = null;
+          v.act = 'fight'; G.faceTo(v, a.x - v.x, a.y - v.y); v.path = null;
           t.cd = (t.cd || 0) - dt;
           if (t.cd <= 0) {
             t.cd = 0.9; v.actT = 0;
@@ -878,7 +879,7 @@
             t.st = 3;
             if (!o.task || o.task.pri <= (t.type === 'court' ? 1 : 0.9)) setTask(o, { type: 'talk', id: v.id, pri: 0.9, wait: 4, kind: 'talk', court: t.type === 'court' });
           }
-          v.act = 'talk'; v.face = (o.x - o.y) - (v.x - v.y) > 0 ? 1 : -1;
+          v.act = 'talk'; G.faceTo(v, o.x - v.x, o.y - v.y);
           if (v.actT > 0.9 && (!v.emo || v.emo.t < 0.2)) emote(v, t.type === 'court' ? 'heart' : t.type === 'visit' ? 'heart' : 'chat', 1.2);
           if (v.actT > (t.type === 'visit' ? 2.5 : 4)) {
             if (t.type === 'court') {
@@ -901,7 +902,7 @@
       case 'talk': {
         const o = S.villagers.get(t.id);
         if (!o) return end(v);
-        v.act = 'talk'; v.path = null; v.face = (o.x - o.y) - (v.x - v.y) > 0 ? 1 : -1;
+        v.act = 'talk'; v.path = null; G.faceTo(v, o.x - v.x, o.y - v.y);
         if (v.actT > 1.4 && (!v.emo || v.emo.t < 0.2)) emote(v, t.court ? 'heart' : 'chat', 1.2);
         t.wait -= dt; if (t.wait <= 0) end(v);
         break;
@@ -922,7 +923,7 @@
         else {
           v.act = 'pray';
           const b = S.buildings.get(t.b);
-          if (b) v.face = (b.x - b.y) - (v.x - v.y) > 0 ? 1 : -1;
+          if (b) G.faceTo(v, b.x - v.x, b.y - v.y);
           if (G.R() < dt * 1.5) G.FX && G.FX.prayer(v.x, v.y);
           const dur = t.priest ? 12 : 5;
           if (v.actT > dur) {
@@ -951,7 +952,7 @@
           t.st = 1; t.cx = cf.x + 0.5; t.cy = cf.y + 0.5;
         } else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; } }
         else {
-          v.act = 'sit'; v.face = (t.cx - t.cy) - (v.x - v.y) > 0 ? 1 : -1;
+          v.act = 'sit'; G.faceTo(v, t.cx - v.x, t.cy - v.y);
           if (G.R() < dt * 0.25) emote(v, t.stories ? 'chat' : 'happy', 1.5);
           if (v.actT > (t.stories ? 14 : 8)) end(v);
         }
@@ -1012,7 +1013,7 @@
         if (t.st === 0) { const [fx, fy] = G.Village.frontTile(b); if (!Vg.goto(v, fx + G.rr(-0.6, 0.6), fy + G.rr(-0.6, 0.6), true)) return end(v); t.st = 1; }
         else if (t.st === 1) { if (move(v, dt, 0.8)) { t.st = 2; v.actT = 0; } if (t.age > 40) return end(v); }
         else {
-          v.act = 'mourn'; v.face = (b.x - b.y) - (v.x - v.y) > 0 ? 1 : -1;
+          v.act = 'mourn'; G.faceTo(v, b.x - v.x, b.y - v.y);
           if (!v.emo || v.emo.t < 0.2) emote(v, 'sad', 2);
           if (v.actT > 7) end(v);
         }
@@ -1042,7 +1043,7 @@
         const dx = tgt[0] - v.x, dy = tgt[1] - v.y; const d = Math.hypot(dx, dy);
         const sp = 0.7 * dt;
         if (d < sp + 0.05) { v.x = tgt[0]; v.y = tgt[1]; end(v); }
-        else { v.x += dx / d * sp; v.y += dy / d * sp; v.face = (dx - dy) > 0 ? 1 : -1; v.walkPh += sp * 6; }
+        else { v.x += dx / d * sp; v.y += dy / d * sp; G.faceTo(v, dx, dy); v.walkPh += sp * 6; }
         v.energy -= dt * 3;
         if (v.energy <= 0) Vg.damage(v, dt * 6, 'drown', true);
         if (G.R() < dt * 2) G.FX && G.FX.splash(v.x, v.y, 0.25);
@@ -1107,7 +1108,7 @@
     if (t.st === 4) {
       const allowed = allowedProgress(b);
       const [cx, cy] = G.Village.center(b);
-      v.face = (cx - cy) - (v.x - v.y) > 0 ? 1 : -1;
+      G.faceTo(v, cx - v.x, cy - v.y);
       if (b.progress < allowed) {
         v.act = 'build';
         b.progress = Math.min(allowed, b.progress + dt * workMul(v) * G.Civ.tV(v, 'build') / Math.max(1, def.work));
@@ -1217,7 +1218,7 @@
     }
     if (t.st === 5) {
       const i = t.target; const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
-      v.face = (x - y) - (v.x - v.y) > 0 ? 1 : -1;
+      G.faceTo(v, x - v.x, y - v.y);
       if (t.beat) {
         v.act = 'beat'; G.Nature.extinguish(i, 0.22 * dt * workMul(v));
         if (v.actT > 0.5) { v.actT = 0; G.FX && G.FX.smokePuff(x, y); }
@@ -1272,7 +1273,7 @@
       v.carrier = c ? c.id : 0;
     }
     if (c) {
-      v.x = c.x + c.face * -0.08; v.y = c.y + 0.02; v.inside = c.inside; v.sleeping = c.sleeping; v.face = c.face;
+      v.x = c.x + c.face * -0.08; v.y = c.y + 0.02; v.inside = c.inside; v.sleeping = c.sleeping; G.faceAs(v, c);
       v.carried = !c.inside && !c.sleeping;
     } else {
       v.carried = false; v.sleeping = G.isNight();

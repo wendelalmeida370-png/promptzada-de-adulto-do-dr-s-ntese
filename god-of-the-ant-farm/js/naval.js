@@ -150,7 +150,7 @@
     const p = s.path[s.pi]; const dx = p[0] - s.x, dy = p[1] - s.y; const d = Math.hypot(dx, dy);
     const sp = Nv.SHIP[s.kind].sp * G.Civ.t(s.fac, 'naval') * (G.S.weather.storm > 0 ? 0.7 : 1) * (s.hp < s.maxHp * 0.4 ? 0.7 : 1) * (s.wind || 1) * dt;
     if (d <= sp) { s.x = p[0]; s.y = p[1]; s.pi++; } else { s.x += dx / d * sp; s.y += dy / d * sp; }
-    if (Math.abs(dx - dy) > 0.02) s.face = dx - dy > 0 ? 1 : -1;
+    if (Math.abs(dx - dy) > 0.02) G.faceTo(s, dx, dy);
     s.moving = true;
     if (G.R() < dt * 2.2) G.FX && G.FX.spawn({ x: s.x - dx / (d || 1) * 0.5, y: s.y - dy / (d || 1) * 0.5, h: G.SEA, z: 0, vz: 0, life: 1.4, s0: 1.5, s1: 4, c: 'rgba(255,255,255,0.45)', k: 2 });
     return s.pi >= s.path.length;
@@ -275,14 +275,14 @@
         const sp = Nv.SHIP[s.kind].sp * 1.6 * dt; const k = Math.min(1, sp / Math.max(0.01, d));
         const nx = s.x + (tg.x - s.x) * k, ny = s.y + (tg.y - s.y) * k;
         if (W.inb(nx, ny) && water(W.idx(nx, ny))) { s.x = nx; s.y = ny; s.moving = true; s.path = null; }
-        s.face = (tg.x - tg.y) - (s.x - s.y) > 0 ? 1 : -1;
+        G.faceTo(s, tg.x - s.x, tg.y - s.y);
         if (d < 0.95) { s.ramCd = 7; ram(s, tg); }
         s.st = 'hunt'; return;
       }
       // boarding: hooks and the corvus bridge, and the enemy ship changes hands
       if (d < 1.3 && tg.hp < tg.maxHp * 0.45 && BOARD[s.civ] && tg.kind !== 'pesca' && s.cd <= 0) { s.cd = 2; if (board2(s, tg)) { s.target = 0; return; } }
       if (d > 2.4) { if (!s.path || s.pi >= s.path.length || (s.rt = (s.rt || 0) - dt) <= 0) { s.rt = 1.5; const w = nearestWater(tg.x, tg.y, 1) || [tg.x, tg.y]; sailTo(s, w[0], w[1]); } moveShip(s, dt); }
-      else { s.moving = false; s.face = (tg.x - tg.y) - (s.x - s.y) > 0 ? 1 : -1; if (s.cd <= 0) { s.cd = 1.3; fire(s, tg); } }
+      else { s.moving = false; G.faceTo(s, tg.x - s.x, tg.y - s.y); if (s.cd <= 0) { s.cd = 1.3; fire(s, tg); } }
       s.st = 'hunt'; return;
     }
     if (s.st === 'hunt') { s.st = s.post ? 'blockade' : 'idle'; s.t = 0; s.path = null; }
@@ -380,7 +380,7 @@
       removeShip(s); return;
     }
     const sp = 2.1 * dt; const nx = s.x + (tg.x - s.x) / d * sp, ny = s.y + (tg.y - s.y) / d * sp;
-    if (W.inb(nx, ny) && water(W.idx(nx, ny))) { s.x = nx; s.y = ny; s.moving = true; s.face = (tg.x - tg.y) - (s.x - s.y) > 0 ? 1 : -1; }
+    if (W.inb(nx, ny) && water(W.idx(nx, ny))) { s.x = nx; s.y = ny; s.moving = true; G.faceTo(s, tg.x - s.x, tg.y - s.y); }
     else { if (!s.path || s.pi >= s.path.length) sailTo(s, tg.x, tg.y); moveShip(s, dt); }
   }
   Nv.blockaded = function (dock) { return dock && dock.blockT > G.S.clock; };
@@ -767,7 +767,7 @@
     const small = s.kind === 'pesca' || s.kind === 'explorador';
     const sc = small ? 0.62 : s.kind === 'mercante' ? 0.9 : 1.05;
     const bob = Math.sin(t * 2 + s.id) * 0.7;
-    ctx.save(); ctx.translate(sx, sy + bob); ctx.scale((s.face || 1) * sc, sc);
+    ctx.save(); ctx.translate(sx, sy + bob); ctx.scale(G.Render.sface(s) * sc, sc);
     const L = st.len, Hh = st.h;
     // shadow & wake on the water
     ctx.fillStyle = 'rgba(20,50,70,0.25)'; ctx.beginPath(); ctx.ellipse(0, 1.5, L + 2, 2.6, 0, 0, TAU); ctx.fill();
@@ -818,7 +818,7 @@
     if (s.hp < s.maxHp * 0.5) { ctx.fillStyle = 'rgba(30,20,15,0.35)'; ctx.fillRect(-L * 0.5, -Hh, L * 0.6, Hh); }
     ctx.restore();
     if (s.hurt > 0) { ctx.fillStyle = 'rgba(255,120,60,0.5)'; ctx.beginPath(); ctx.arc(sx, sy - 6, 5, 0, TAU); ctx.fill(); }
-    if (nightF > 0.4) { const lx = sx + (s.face || 1) * 6, ly = sy - 6; light(lx, ly, 26, 'warm', 0.6 * nightF); emisTorch.push(lx, ly); }
+    if (nightF > 0.4) { const lx = sx + G.Render.sface(s) * 6, ly = sy - 6; light(lx, ly, 26, 'warm', 0.6 * nightF); emisTorch.push(lx, ly); }
   };
   // fish shoals glint under the waves
   Nv.drawWater = function (ctx, proj, t, view) {

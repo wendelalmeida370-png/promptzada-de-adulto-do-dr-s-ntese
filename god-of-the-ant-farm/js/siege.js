@@ -286,7 +286,7 @@
       if (L && S.wall[L.i] === 1) {
         if (G.dist(v.x, v.y, L.out[0], L.out[1]) > 0.35) { if (!t.lp || H.arrived(v)) { t.lp = true; if (!H.goto(v, L.out[0], L.out[1], false, 4000)) { t.ladder = null; return false; } } H.move(v, dt, 1); v.act = ''; return true; }
         v.path = null; v.moving = false; v.act = 'climb'; L.t += dt; v.z = Math.min(12, L.t * 2.2);
-        v.face = (L.inn[0] - L.inn[1]) - (v.x - v.y) > 0 ? 1 : -1;
+        G.faceTo(v, L.inn[0] - v.x, L.inn[1] - v.y);
         // defenders push the ladders off the wall
         if (G.R() < dt * 0.12) { v.z = 0; L.t = 0; G.Vg.damage(v, G.rr(18, 34), 'fall', false, 0); G.Vg.emote(v, 'fear', 1.5); G.FX && G.FX.dust(v.x, v.y, 2); return true; }
         if (L.t > 6) { v.x = L.inn[0]; v.y = L.inn[1]; v.z = 0; t.overWall = true; t.dest = null; v.path = null; if (!b.laddered) { b.laddered = true; log(`Com escadas, soldados de ${G.Fac.get(b.fac).name} escalaram os muros de ${set.name}!`, 'siege', v.x, v.y); } }
@@ -313,7 +313,7 @@
       return true;
     }
     v.path = null; v.moving = false; v.act = 'fight';
-    v.face = (sg.x - sg.y) - (v.x - v.y) > 0 ? 1 : -1;
+    G.faceTo(v, sg.x - v.x, sg.y - v.y);
     t.cd = (t.cd || 0) - dt; if (t.cd > 0) return true;
     t.cd = 1.1;
     G.Audio && G.Audio.at(sg.x, sg.y, 'hit');
@@ -334,20 +334,20 @@
           if (e.wi === undefined || S.wall[e.wi] !== 1) { e.wi = -1; let bd = 1e9; for (const i of w.tiles) { if (S.wall[i] !== 1) continue; const d = G.dist(e.x, e.y, (i % N) + 0.5, ((i / N) | 0) + 0.5); if (d < bd) { bd = d; e.wi = i; } } e.dock = 0; }
           if (e.wi < 0) continue;
           const wx = (e.wi % N) + 0.5, wy = ((e.wi / N) | 0) + 0.5; const d = G.dist(e.x, e.y, wx, wy);
-          if (d > 1.05) { const sp = 0.35 * dt; e.x += (wx - e.x) / d * sp; e.y += (wy - e.y) / d * sp; e.face = (wx - wy) - (e.x - e.y) > 0 ? 1 : -1; e.moving = true; }
+          if (d > 1.05) { const sp = 0.35 * dt; e.x += (wx - e.x) / d * sp; e.y += (wy - e.y) / d * sp; G.faceTo(e, wx - e.x, wy - e.y); e.moving = true; }
           else { e.moving = false; e.dock = (e.dock || 0) + dt; e.bridge = Math.min(1, e.dock / 3); if (e.dock > 7) { if (Sg.damageWall(e.wi, 999, b.fac) && !b.towerLog) { b.towerLog = true; log(`A torre de cerco de ${G.Fac.get(b.fac).name} baixou a ponte sobre os muros de ${set.name}: os soldados passam por cima!`, 'siege', wx, wy); } e.wi = undefined; } }
           continue;
         }
         if (e.kind === 'ariete') {
           if (!tgt) continue;
           const d = G.dist(e.x, e.y, tgt.x, tgt.y);
-          if (d > 1.1) { const sp = 0.7 * dt; e.x += (tgt.x - e.x) / d * sp; e.y += (tgt.y - e.y) / d * sp; e.face = (tgt.x - tgt.y) - (e.x - e.y) > 0 ? 1 : -1; e.moving = true; }
+          if (d > 1.1) { const sp = 0.7 * dt; e.x += (tgt.x - e.x) / d * sp; e.y += (tgt.y - e.y) / d * sp; G.faceTo(e, tgt.x - e.x, tgt.y - e.y); e.moving = true; }
           else if (e.cd <= 0) { e.cd = 2.2; e.moving = false; e.hit = 0.4; G.Audio && G.Audio.at(e.x, e.y, 'collapse'); G.Render && G.Render.shake(0.02); if (Sg.damageWall(tgt.i, 34, b.fac)) b.siege = null; }
         } else {
           // catapults stand back and hurl stones over the walls
           const aim = tgt ? [tgt.x, tgt.y] : set ? [set.cx, set.cy] : null; if (!aim) continue;
           const d = G.dist(e.x, e.y, aim[0], aim[1]);
-          if (d > 7.5) { const sp = 0.5 * dt; e.x += (aim[0] - e.x) / d * sp; e.y += (aim[1] - e.y) / d * sp; e.face = (aim[0] - aim[1]) - (e.x - e.y) > 0 ? 1 : -1; continue; }
+          if (d > 7.5) { const sp = 0.5 * dt; e.x += (aim[0] - e.x) / d * sp; e.y += (aim[1] - e.y) / d * sp; G.faceTo(e, aim[0] - e.x, aim[1] - e.y); continue; }
           if (e.cd > 0) continue;
           e.cd = 4.5; e.fire = 0.5;
           let tx = aim[0], ty = aim[1], hitB = null;
@@ -530,7 +530,7 @@
     });
   };
   Sg.drawEngine = function (ctx, e, sx, sy, t) {
-    ctx.save(); ctx.translate(sx, sy); ctx.scale(e.face || 1, 1);
+    ctx.save(); ctx.translate(sx, sy); ctx.scale(G.Render.sface(e), 1);
     ctx.fillStyle = 'rgba(20,30,20,0.25)'; ctx.beginPath(); ctx.ellipse(0, 0, 9, 3, 0, 0, TAU); ctx.fill();
     if (e.kind === 'ariete') {
       const push = e.hit > 0 ? Math.sin((0.4 - e.hit) / 0.4 * Math.PI) * 3 : 0;

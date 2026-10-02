@@ -61,7 +61,7 @@
       const i = y * N + x;
       const lat = G.clamp(((x + y) / (2 * (N - 1)) - l0) / (l1 - l0), 0, 1);
       const th = W.tileH(i);
-      let t = band[0] + (band[1] - band[0]) * lat + G.fbm(n, x * 0.032, y * 0.032, 3) * 0.2 - Math.max(0, th - G.SEA - 1.6) * 0.045;
+      let t = band[0] + (band[1] - band[0]) * lat + G.fbm(n, x * 0.032, y * 0.032, 3) * 0.2 - Math.max(0, th - G.SEA - 2.2) * 0.027;
       let mo = 0.5 + G.fbm(m, x * 0.042 + 13, y * 0.042 - 7, 3) * 1.25 + (dR[i] < 6 ? (6 - dR[i]) * 0.075 : 0) + (dO && dO[i] < 4 ? (4 - dO[i]) * 0.03 : 0) + wet;
       S.temp[i] = Math.round(G.clamp(t, 0, 1) * 255); S.moist[i] = Math.round(G.clamp(mo, 0, 1) * 255);
     }

@@ -123,6 +123,11 @@ window.G = window.G || {};
   G.mapHooks = [];
   G.setMapSize = function (n) { G.N = n; for (const h of G.mapHooks) h(n); };
 
+  // facing: 'face' is the side on screen for the first view (+1 right); fx, fy keep the world direction
+  // so the other three views can show it too
+  G.faceTo = (o, dx, dy) => { o.face = dx - dy > 0 ? 1 : -1; o.fx = dx; o.fy = dy; };
+  G.faceAs = (o, src, flip) => { o.face = flip ? -src.face : src.face; const k = flip ? -1 : 1; if (src.fx !== undefined) { o.fx = src.fx * k; o.fy = src.fy * k; } else { o.fx = undefined; o.fy = undefined; } };
+
   G.fmt = n => (n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(Math.floor(n)));
   G.cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 })(window.G);

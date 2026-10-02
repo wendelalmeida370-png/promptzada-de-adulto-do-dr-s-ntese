@@ -41,6 +41,7 @@
     opts = Object.assign({ type: 'ilha', size: 64, tribes: 1, temper: 'normal' }, opts || {});
     G.FX.list.length = 0; G.FX.floaters.length = 0; G.FX.bolts.length = 0; G.FX.rings.length = 0; G.FX.glows.length = 0;
     G.setMapSize(opts.size);
+    G.Render.setView(0);
     G.genWorld(seed, opts);
     const S = G.S;
     S.temper = opts.temper || 'normal';
@@ -111,6 +112,9 @@
     const intro = $('#intro'); intro.classList.remove('hidden');
     intro.querySelectorAll('p').forEach(p => p.classList.remove('show'));
     G.Save.save(true);
+    // a later start: no intro, the years pass at once (the world lives them, the god watches the map)
+    const LATER = { anos30: ['anos30', 'livre'], cidades: ['cidade', 'fartura'], imperios: ['metropole', 'fartura'] };
+    if (LATER[opts.start]) { endIntro(); G.Skip.start(LATER[opts.start][0], LATER[opts.start][1], { opening: true }); }
   };
   function endIntro() {
     if (M.mode !== 'intro') return;
@@ -151,6 +155,7 @@
   };
 
   // ------------------------------ simulation ------------------------------
+  let animAcc = 0, animTick = 0;
   function step(dt) {
     const S = G.S;
     S.clock += dt;
@@ -165,7 +170,9 @@
     G.Vg.updateAll(dt);
     G.Life && G.Life.update(dt);
     G.Carnage && G.Carnage.update(dt);
-    G.Animals.updateAll(dt);
+    // while years are skipped the wild lives at half the beat (nobody is watching it move)
+    if (G.Skip && G.Skip.on) { animAcc += dt; if (++animTick % 2 === 0) { G.Animals.updateAll(animAcc); animAcc = 0; } }
+    else { if (animAcc) { G.Animals.updateAll(animAcc); animAcc = 0; } G.Animals.updateAll(dt); }
     G.Pets && G.Pets.update(dt);
     G.Powers.update(dt);
     G.Lore && G.Lore.update(dt);
@@ -211,7 +218,7 @@
       const hw = (b.w + b.h) * 8 * cam.zoom, top = (BH[b.type] || 20) * cam.zoom, bot = (b.w + b.h) * 4 * cam.zoom;
       if (px > sx - hw && px < sx + hw && py > sy - top - bot * 0.6 && py < sy + bot) {
         // favour the diamond footprint for flat things
-        const dep = b.x + b.y + b.w + b.h;
+        const dep = G.Render.depth(cx, cy) + (b.w + b.h) / 2;
         if (dep > bdep) { bdep = dep; bb = b; }
       }
     }
@@ -294,6 +301,7 @@
       cam.anchor = [e.clientX, e.clientY];
     }, { passive: false });
     window.addEventListener('keydown', e => {
+      if (G.Skip && G.Skip.on) { if (e.key === 'Escape' || e.key === ' ') { e.preventDefault(); G.Skip.stop(); } return; }
       if (M.modalOpen && e.key === 'Escape') { G.UI.closeModal(); return; }
       if (M.mode === 'intro') { endIntro(); return; }
       if (M.mode !== 'game') return;
@@ -301,7 +309,7 @@
       I.keys[k.toLowerCase()] = true;
       if (M.modalOpen) { if (k === 'Escape') G.UI.closeModal(); return; }
       // photo: the world is frozen; only leaving (and panning with WASD)
-      if (G.Photo.on) { if (k === 'Escape' || k === 'p' || k === 'P') G.Photo.stop(); else if (k === 'Tab') e.preventDefault(); return; }
+      if (G.Photo.on) { if (k === 'Escape' || k === 'p' || k === 'P') G.Photo.stop(); else if (k === 'q' || k === 'Q') G.Render.rotate(-1); else if (k === 'e' || k === 'E') G.Render.rotate(1); else if (k === 'Tab') e.preventDefault(); return; }
       // cinema: only pause, speed, next scene and leaving — the rest would open the interface
       if (G.Cinema.on) {
         if (k === 'Escape' || k === 'c' || k === 'C') G.Cinema.stop();
@@ -317,6 +325,9 @@
       else if (k === 'r' || k === 'R') G.UI.openRealms();
       else if (k === 'l' || k === 'L') G.Lore.openBook();
       else if (k === 'm' || k === 'M') G.Minimap.toggle();
+      else if (k === 'j' || k === 'J') G.Skip.open();
+      else if (k === 'q' || k === 'Q') G.Render.rotate(-1);
+      else if (k === 'e' || k === 'E') G.Render.rotate(1);
       else if (k === 'b' || k === 'B') { G.Render.showBorders = !G.Render.showBorders; G.UI.notice(G.Render.showBorders ? 'Fronteiras visíveis.' : 'Fronteiras ocultas.', 'eye'); }
       else if (k === ' ') { e.preventDefault(); if (G.speed === 0) G.UI.setSpeed(M.lastSpeed || 1); else { M.lastSpeed = G.speed; G.UI.setSpeed(0); } }
       else if (k === 'Escape') { if (I.held) release(); else if (I.power) G.UI.setPower(null); else if (G.UI.selected) G.UI.select(null); else G.UI.openPause(); }
@@ -389,6 +400,8 @@
   let lastT = performance.now(), saveT = 0, hoverT = 0;
   function loop(now) {
     const rdt = Math.min(0.1, Math.max(0, (now - lastT) / 1000)); lastT = now;
+    // the years are being skipped: the world only lives, nothing is drawn
+    if (G.S && G.Skip && G.Skip.on) { G.Skip.frame(rdt); requestAnimationFrame(loop); return; }
     if (G.S) {
       const cam = G.Render.cam;
       let sp = G.speed;

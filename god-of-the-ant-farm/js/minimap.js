@@ -74,7 +74,7 @@
     let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9;
     for (let i = 0; i < N * N; i++) {
       const t = S.type[i]; let c;
-      if (t >= T.RIVER) { const x = i % N, y = (i / N) | 0; const u = x - y, v = x + y; if (u < u0) u0 = u; if (u > u1) u1 = u; if (v < v0) v0 = v; if (v > v1) v1 = v; }
+      if (t >= T.RIVER) { const [x, y] = G.Render.toView((i % N) + 0.5, ((i / N) | 0) + 0.5); const u = x - y, v = x + y; if (u < u0) u0 = u; if (u > u1) u1 = u; if (v < v0) v0 = v; if (v > v1) v1 = v; }
       if (t <= T.RIVER) c = WATER[t];
       else {
         c = B ? B.groundColor(i, t, BASE[t] || BASE[4]) : (BASE[t] || BASE[4]);
@@ -96,11 +96,14 @@
     }
     ictx.putImageData(pix, 0, 0);
     const m = Math.max(4, N * 0.04);
-    bounds = u1 > u0 ? [u0 - m, u1 + m + 1, v0 - m, v1 + m + 2] : null;
+    bounds = u1 > u0 ? [u0 - m, u1 + m, v0 - m, v1 + m + 1] : null;
   }
   const hexCache = {};
   function hexRGB(h) { return hexCache[h] || (hexCache[h] = [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]); }
 
+  MM.refresh = () => { refreshT = 0; };
+  // the whole world as a little picture (the time skip draws it big)
+  MM.image = () => { if (!G.S || !img) return null; rebuild(); return img; };
   MM.update = function (dt) {
     if (!shown || !box || !G.S) return;
     refreshT -= dt;
@@ -112,10 +115,15 @@
     cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, cv.width, cv.height);
     // the terrain image, sheared into the isometric diamond
     cx.imageSmoothingEnabled = s < 1.5;
-    cx.setTransform(s, s / 2, -s, s / 2, ox, oy);
+    // (turned with the camera: world pixel -> view -> the diamond)
+    const r = G.Render.rot();
+    const A = r === 0 ? [1, 0, 0, 1, 0, 0] : r === 1 ? [0, 1, -1, 0, N, 0] : r === 2 ? [-1, 0, 0, -1, N, N] : [0, -1, 1, 0, 0, N]; // X = A0 x + A2 y + A4, Y = A1 x + A3 y + A5
+    const mX = (X, Y) => [(X - Y) * s, (X + Y) * s / 2];
+    const c0 = mX(A[0], A[1]), c1 = mX(A[2], A[3]), tr = mX(A[4], A[5]);
+    cx.setTransform(c0[0], c0[1], c1[0], c1[1], ox + tr[0], oy + tr[1]);
     cx.drawImage(img, 0, 0);
     cx.setTransform(1, 0, 0, 1, 0, 0);
-    const P = (x, y) => [ox + (x - y) * s, oy + (x + y) * s / 2];
+    const P = (x, y) => { const [X, Y] = G.Render.toView(x, y); return [ox + (X - Y) * s, oy + (X + Y) * s / 2]; };
     // cities
     for (const st of S.settlements.values()) {
       if (!st.fac) continue;

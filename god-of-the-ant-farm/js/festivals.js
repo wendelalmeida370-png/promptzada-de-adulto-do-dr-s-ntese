@@ -483,11 +483,11 @@
     const sp = v.speed * (mul || 1) * dt; const k = Math.min(1, sp / d);
     const nx = v.x + dx * k, ny = v.y + dy * k;
     if (!W.walkableXY(nx, ny)) { v.moving = false; return false; }
-    v.x = nx; v.y = ny; const sdx = dx - dy; if (Math.abs(sdx) > 0.02) v.face = sdx > 0 ? 1 : -1;
+    v.x = nx; v.y = ny; if (Math.abs(dx) + Math.abs(dy) > 0.02) G.faceTo(v, dx, dy);
     v.walkPh += sp * 8.5; v.moving = true;
     return d <= sp;
   }
-  function faceTo(v, x, y) { const s = (x - y) - (v.x - v.y); if (Math.abs(s) > 0.05) v.face = s > 0 ? 1 : -1; }
+  function faceTo(v, x, y) { if (Math.abs(x - v.x) + Math.abs(y - v.y) > 0.05) G.faceTo(v, x - v.x, y - v.y); }
   // walk to a slot: pathfinding once, then small direct corrections
   function toSlot(v, t, dt, H, slot, mul) {
     if (!slot) return true;
@@ -570,7 +570,7 @@
           const off = role === 'victim' ? 0 : role === 'leader' ? 0.18 : -0.18;
           const fx = T.x + T.w / 2 + 0.25 + (T.w / 2 + 0.05) * (1 - f) + off, fy = T.y + T.h / 2 + 0.25 + (T.h / 2 + 0.05) * (1 - f) - off;
           v.x = fx; v.y = fy; v.z = top * f; v.path = null; t.perch = true;
-          v.act = f < 1 ? '' : role === 'victim' ? '' : 'pray'; v.moving = f < 1; if (f < 1) v.walkPh += dt * 4; v.face = -1;
+          v.act = f < 1 ? '' : role === 'victim' ? '' : 'pray'; v.moving = f < 1; if (f < 1) v.walkPh += dt * 4; G.faceTo(v, -1, 1);
           if (role === 'victim' && f < 1 && G.R() < dt * 1.5) G.FX && G.FX.chips(v.x, v.y, '#c8a060');
           void cx; void cy; return true;
         }

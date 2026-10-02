@@ -296,7 +296,7 @@
     return 0;
   }
   const store = v => G.Village.nearestDropoff(v.x, v.y, v.set);
-  function faceB(v, b) { const [cx, cy] = G.Village.center(b); v.face = (cx - cy) - (v.x - v.y) > 0 ? 1 : -1; }
+  function faceB(v, b) { const [cx, cy] = G.Village.center(b); G.faceTo(v, cx - v.x, cy - v.y); }
   function inv(b) { return b.inv || (b.inv = {}); }
   function invN(b, keys) { const I = inv(b); let n = 0; for (const k of keys) n += I[k] || 0; return n; }
 
@@ -514,7 +514,7 @@
       if (r > 0) { t.st = 1; v.actT = 0; }
       return;
     }
-    v.act = act; if (b.blocks) faceB(v, b); else v.face = b.type === 'feira' ? 1 : v.id % 2 ? 1 : -1;
+    v.act = act; if (b.blocks) faceB(v, b); else { const f = b.type === 'feira' ? 1 : v.id % 2 ? 1 : -1; G.faceTo(v, f, -f); }
     if (b.type === 'feira') { b.openT = G.S.clock; if (!E.fairOpen()) return H.end(v); }
     if (act === 'sell' && G.R() < dt * 0.05) G.Vg.emote(v, G.pick(['chat', 'happy', 'food']), 1.3);
     if (act === 'write' && G.R() < dt * 0.03) G.Vg.emote(v, 'chat', 1);
@@ -628,7 +628,7 @@
       if (r > 0) { t.st = 3; v.actT = 0; }
       return;
     }
-    v.act = 'feed'; v.face = -1;
+    v.act = 'feed'; G.faceTo(v, -1, 1);
     if (v.actT < 3.5) return;
     // the flock crowds the trough and eats the hay
     const herd = E.penAnimals(b).filter(a => a.state === 'pen');
@@ -642,7 +642,7 @@
     if (!a || a.dead || a.pen !== b.id || a.state !== 'pen') return H.end(v);
     if (t.st === 0) { const r = walkTo(v, t, 'an', a.x - 0.35, a.y + 0.2, false, dt, H, 0.9); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; a.hold = 6; } return; }
     v.act = t.what === 'shear' ? 'shear' : t.what === 'milk' ? 'milk' : t.what === 'groom' ? 'groom' : 'gather';
-    v.face = (a.x - a.y) - (v.x - v.y) > 0 ? 1 : -1;
+    G.faceTo(v, a.x - v.x, a.y - v.y);
     a.hold = 1;
     if (t.what === 'shear' && G.R() < dt * 3) G.FX && G.FX.chips(a.x, a.y - 0.1, '#f4f0e6');
     if (v.actT < (t.what === 'shear' ? 4.5 : 3.2)) return;
@@ -823,7 +823,7 @@
         if (!G.Life.inLine(v, t, key, fx, fy, dx, dy, dt, H)) { if (t.waited > 30) { G.Life.leaveQueue(v); return H.end(v); } return; }
         t.served = true; v.actT = 0;
       }
-      v.act = 'buy'; if (b.blocks) faceB(v, b); else if (b.type === 'feira') v.face = -1;
+      v.act = 'buy'; if (b.blocks) faceB(v, b); else if (b.type === 'feira') G.faceTo(v, -1, 1);
       if (v.actT < (t.qkey && G.Life.queueLen(t.qkey) > 1 ? 1.2 : 2.4)) return; // with a line behind, the seller hurries
       const I = inv(b); const k = t.k;
       if ((I[k] || 0) < 1) return H.end(v);

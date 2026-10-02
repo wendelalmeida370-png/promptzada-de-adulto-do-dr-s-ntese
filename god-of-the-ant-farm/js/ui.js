@@ -18,6 +18,7 @@
     pause: svg('<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>'),
     scroll: svg('<path d="M6 3h11a2 2 0 0 1 2 2v12M6 3a2 2 0 0 0-2 2v2h4M6 3a2 2 0 0 1 2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-2h-11v2a2 2 0 0 1-2 2" ' + ST + '/><path d="M12 8h4M12 12h4" ' + ST + '/>'),
     stats: svg('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" ' + ST + '/>'),
+    skip: svg('<path d="M3.5 6.5l7 5.5-7 5.5z M11.5 6.5l7 5.5-7 5.5z" fill="currentColor"/><path d="M20.5 6v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'),
     photo: svg('<path d="M4 8h3l2-2.5h6L17 8h3a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 19H4a1.5 1.5 0 0 1-1.5-1.5v-8A1.5 1.5 0 0 1 4 8z" ' + ST + '/><circle cx="12" cy="13" r="3.4" ' + ST + '/>'),
     film: svg('<rect x="2.5" y="6.5" width="13" height="11" rx="2" ' + ST + '/><path d="M15.5 10.5l6-3.5v10l-6-3.5" ' + ST + '/><circle cx="6.5" cy="10.5" r="1.3" fill="currentColor"/>'),
     sound: svg('<path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" ' + ST + '/>'),
@@ -163,11 +164,18 @@
     bar.addEventListener('mouseover', e => { const b = e.target.closest('.pw'); if (!b) return; showPowerTip(b); G.Audio.play('hover'); });
     bar.addEventListener('mouseout', e => { const b = e.target.closest('.pw'); if (b && !b.contains(e.relatedTarget)) hideTip(); });
     // speed
-    $('#speed').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; G.Audio.play('click'); UI.setSpeed(+b.dataset.speed); });
+    $('#speed').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.dataset.speed === undefined) return; G.Audio.play('click'); UI.setSpeed(+b.dataset.speed); });
     $('#btn-chron').onclick = () => { G.Audio.play('click'); $('#chronicle').classList.toggle('collapsed'); };
     $('#chron-toggle').onclick = () => { G.Audio.play('click'); $('#chronicle').classList.toggle('collapsed'); };
     $('#btn-stats').onclick = () => { G.Audio.play('click'); UI.openStats(); };
     $('#btn-photo').innerHTML = ICON.photo; $('#btn-photo').onclick = () => { G.Audio.play('click'); G.Photo.start(); };
+    $('#btn-skip').innerHTML = ICON.skip; $('#btn-skip').onclick = () => { G.Audio.play('click'); G.Skip.open(); };
+    // the compass: turn the world a quarter at a time; the needle shows where the north went
+    const turnL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 3v5h5"/></svg>';
+    const cps = document.querySelectorAll('#compass button');
+    cps.forEach(b => { b.innerHTML = +b.dataset.rot < 0 ? turnL : turnL.replace('<svg ', '<svg style="transform:scaleX(-1)" '); b.onclick = () => G.Render.rotate(+b.dataset.rot); });
+    let lastRot = 0, spin = 0;
+    G.Render.rotHooks.push(r => { const d = ((r - lastRot) % 4 + 4) % 4; spin += d === 1 ? 90 : d === 3 ? -90 : d === 2 ? 180 : 0; lastRot = r; const i = document.querySelector('#compass .cp-rose i'); if (i) i.style.transform = `rotate(${spin}deg)`; });
     $('#btn-cinema').innerHTML = ICON.film; $('#btn-cinema').onclick = () => { G.Audio.play('click'); G.Cinema.start(); };
     $('#btn-realms').onclick = () => { G.Audio.play('click'); UI.openRealms(); };
     $('#btn-lore').onclick = () => { G.Audio.play('click'); G.Lore.openBook(); };
@@ -224,6 +232,10 @@
       else if (m === 'mainmenu') { G.Save.save(true); UI.closeModal(); G.Main.toMenu(); }
       else if (m === 'help') UI.openHelp();
       else if (m === 'lore') G.Lore.openBook(b.dataset.tab);
+      else if (m === 'skip-goal' || m === 'skip-course') { const p = G.Skip.pick; if (m === 'skip-goal') p.goal = b.dataset.k; else p.course = b.dataset.k; G.Audio.play('click'); G.Skip.open(); }
+      else if (m === 'skip-go') { const p = G.Skip.pick; if (G.Skip.reached(p.goal)) return; UI.closeModal(); G.Skip.start(p.goal, p.course); }
+      else if (m === 'skip-more') { UI.closeModal(); G.Skip.open(); }
+      else if (m === 'geo-go') { UI.closeModal(); G.Render.cam.follow = 0; G.Render.panTo(+b.dataset.x, +b.dataset.y); G.Render.cam.tz = Math.max(G.Render.cam.tz, 1.4); }
       else if (m === 'best') { G.Lore.bestSel = G.Lore.bestSel === b.dataset.k ? null : b.dataset.k; G.Lore.openBook('bestiario'); }
       else if (m === 'sfx') { G.Audio.setSfx(!G.Audio.sfxOn); UI.openSound(); }
       else if (m === 'music') { G.Audio.init(); G.Audio.setMusic(!G.Audio.musicOn); UI.openSound(); }
@@ -377,6 +389,7 @@
   // ------------------------------ notices & toasts ------------------------------
   UI.notice = function (text, icon) {
     if (!G.Main || G.Main.mode === 'menu') return;
+    if (G.Skip && G.Skip.on) return;
     const box = $('#notices');
     const [ic, col] = LOGICON[icon] || LOGICON.info;
     const d = document.createElement('div'); d.className = 'notice';
@@ -389,6 +402,7 @@
   const toastQ = []; let toastBusy = false;
   UI.toast = function (title, sub, icon) {
     if (!G.Main || G.Main.mode === 'menu') return;
+    if (G.Skip && G.Skip.on) { G.Skip.news(title, sub); return; }
     toastQ.push([title, sub, icon]); while (toastQ.length > 3) toastQ.shift(); if (!toastBusy) nextToast();
   };
   function nextToast() {
@@ -643,6 +657,8 @@
       <li><b>Animais da cidade</b>: cães com nome que seguem o dono, tocam o rebanho com o pastor e expulsam raposas e lobos; gatos nas portas; galinhas no quintal (os ovos vão para a despensa); pombos na praça que voam quando alguém passa.</li>
       <li><b>Biografia viva</b>: cada pessoa guarda os marcos reais da sua vida — onde nasceu, com quem aprendeu, quem amou, os filhos, as guerras, as feridas, as perdas, as histórias que ouviu. Veja as memórias no painel da pessoa e a vida inteira no botão <b>Biografia</b>.</li>
       <li>Cada civilização tem suas <b>festividades</b>: Panateneias e Jogos Olímpicos, Saturnália e Triunfo, Opet e a Festa do Vale, Toxcatl e o Fogo Novo, Jól e Midsommar. Acompanhe pela Crônica e vá até lá.</li></ul>
+      <h4>Montanhas, rios e a câmera que gira</h4><p>Cordilheiras com neve no alto, colinas, planaltos e mesas cercados de paredões, falésias sobre o mar, rios que descem das montanhas com <b>cachoeiras</b>, lagos nas bacias — tudo escolhido no <b>Novo mundo</b> (relevo plano, suave, montanhoso ou alpino). Subir custa caro, paredões não se escalam, os caminhos procuram os <b>passos</b>, e na guerra quem está no alto bate mais forte. Picos, passos, cachoeiras e lagos têm nome: veja no mapa e na aba <b>Geografia</b> do Livro do Mundo. <kbd>Q</kbd>/<kbd>E</kbd> (ou a bússola no canto) <b>giram a câmera</b> 90°: montanhas escondem o que está atrás delas, então gire para ver o outro lado.</p>
+      <h4>Avançar no tempo</h4><p>O botão ⏭ ao lado das velocidades (ou <kbd>J</kbd>) pula anos de história: o mundo vive de verdade, só que sem desenhar, e você vê os anos passarem num mapa, com as grandes notícias da crônica. Escolha até quando (anos, a primeira cidade, metrópole ou megalópole, a próxima guerra) e como: <b>anos de paz e fartura</b> (os povos crescem até virar impérios) ou <b>deixar o mundo seguir</b>. <kbd>Esc</kbd> para no meio do caminho. No Novo mundo, "Começar" já chega mais tarde.</p>
       <h4>O céu e os sons</h4><p>Névoa nos baixios ao amanhecer, raios de sol nas horas douradas, sombras de nuvens deslizando sobre os campos, <b>arco-íris</b> depois da chuva, vaga-lumes nas noites quentes, folhas no vento, redemoinhos de poeira no deserto, relâmpagos dentro das tempestades. O som acompanha o que a câmera mostra: ondas e gaivotas na costa, o rio correndo, folhas e pássaros na mata, o murmúrio da cidade, a forja, cães e galinhas, corujas e sapos à noite, o estrondo de uma batalha.</p>
       <h4>O Livro do Mundo</h4><p>Cada mundo nasce com nome, mito da criação, lendas de origem de cada povo e <b>duas profecias antigas</b>. Depois o livro se escreve sozinho: um capítulo a cada sete anos, lendas de heróis, profetas, monstros, vulcões e cidades afogadas. Abra com <kbd>L</kbd> ou pelo ícone do livro.</p>
       <h4>Dicas</h4><ul><li>Clique nos eventos da <b>Crônica</b> para ir até onde aconteceram.</li><li>Na seca, a chuva vale ouro. Num incêndio, também.</li><li>Tudo é salvo automaticamente no navegador.</li></ul>
@@ -734,9 +750,24 @@
     [160, 'Colossal', 'Um mundo vasto, com espaço para megalópoles de centenas de almas e muitos reinos.'],
     [192, 'Titânico', 'O maior de todos: megacidades, impérios e ecossistemas inteiros. Exige um computador mais forte.'],
   ];
+  const START_TIP = {
+    inicio: 'Onze almas ao redor de uma fogueira, e você assiste a tudo desde o primeiro dia.',
+    anos30: 'O mundo vive 30 anos sozinho antes de você chegar: aldeias, vilas, talvez as primeiras guerras. Leva alguns segundos.',
+    cidades: 'Os povos crescem sob anos de paz e fartura até surgir a primeira cidade. Quando você chega, a bênção acaba — e os vizinhos se olham.',
+    imperios: 'Paz e fartura até nascer a primeira metrópole: reinos grandes, prontos para as grandes guerras. Pode levar um ou dois minutos.',
+  };
+  const RELIEF_TIP = {
+    plano: 'Planícies, colinas baixas e rios mansos: o mundo de antes, fácil de andar e de plantar.',
+    suave: 'Serras e colinas, alguns morros de pedra; rios descem das terras altas até o mar.',
+    montanhoso: 'Cordilheiras de verdade, com neve no alto, passos entre os vales, cachoeiras e desfiladeiros. Os caminhos contornam as montanhas.',
+    alpino: 'Picos gigantes de neve eterna, paredões de rocha, vales fundos. Um mundo bonito e difícil — passos viram pontos de guerra.',
+    aleatorio: 'O mundo decide o próprio relevo.',
+  };
   UI.openSetup = function (fromGame, keep) {
     if (!keep || !UI._setup) UI._setup = { fromGame: !!fromGame, opts: Object.assign({}, G.Main.lastOpts) };
     const o = UI._setup.opts; if (!o.clima) o.clima = 'variado';
+    for (const k in G.Relief.OPTS) if (!o[k]) o[k] = G.Relief.OPTS[k].def;
+    if (!o.start) o.start = 'inicio';
     if (!UI.SIZES.some(z => z[0] === o.size)) o.size = 80;
     const maxT = o.size >= 128 ? 6 : 4; o.tribes = G.clamp(o.tribes || 1, 1, maxT);
     const sizeTip = (UI.SIZES.find(z => z[0] === o.size) || UI.SIZES[1])[2];
@@ -763,10 +794,17 @@
         <div class="st-label">Clima</div>
         <div class="st-row st-clima">${Object.entries(G.Biome.CLIMAS).map(([k, c]) => opt('clima', k, c.name)).join('')}</div>
         <p class="st-hint">${esc((G.Biome.CLIMAS[o.clima || 'variado'] || G.Biome.CLIMAS.variado).desc)}</p>
+        <div class="st-label">Relevo</div>
+        <div class="st-row">${G.Relief.OPTS.relevo.v.map(([k, n, sub]) => opt('relevo', k, n, sub)).join('')}</div>
+        <div class="st-relief">${['cordilheiras', 'planaltos', 'costa', 'lagos'].map(k => `<div class="st-rr"><span>${G.Relief.OPTS[k].label}</span><div class="st-row">${G.Relief.OPTS[k].v.map(([v, n]) => opt(k, v, n)).join('')}</div></div>`).join('')}</div>
+        <p class="st-hint">${RELIEF_TIP[o.relevo] || ''}</p>
         <div class="st-label">Civilizações</div>
         <div class="st-row">${opt('classic', 0, 'Históricas', 'cada povo com sua cultura')}${opt('classic', 1, 'Tribos sem nome', 'o modo clássico')}</div>
         <div class="st-civs">${rows}</div>
         <p class="st-hint civ">${civTip}</p>
+        <div class="st-label">Começar</div>
+        <div class="st-row st-start">${[['inicio', 'No princípio', 'a primeira fogueira'], ['anos30', '30 anos depois', 'aldeias e vilas'], ['cidades', 'Na era das cidades', 'praças e casas de pedra'], ['imperios', 'Na era dos impérios', 'metrópoles']].map(([k, n, sub]) => opt('start', k, n, sub)).join('')}</div>
+        <p class="st-hint">${START_TIP[o.start || 'inicio']}</p>
         <div class="st-label">Temperamento dos povos</div>
         <div class="st-row">${opt('temper', 'pacifico', 'Pacíficos', 'guerras raras e tardias')}${opt('temper', 'normal', 'Imprevisíveis', 'depende de quem governa')}${opt('temper', 'belicoso', 'Belicosos', 'sangue cedo e muitas vezes')}</div>
         <p class="st-hint">${tip}</p>

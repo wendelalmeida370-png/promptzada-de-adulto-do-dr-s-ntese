@@ -2,7 +2,7 @@
 
 > *Watch them live. Help them prosper. Or remind them who their god is.*
 
-Um jogo de simulação divina que roda direto no navegador. Ilhas, continentes, arquipélagos e mares abertos procedurais — com tundra, taiga, florestas, pântanos, selvas, savanas e desertos, e mais de 40 espécies de animais presas numa cadeia alimentar de verdade; povos autônomos — gregos, nórdicos, egípcios, astecas e romanos — que crescem de acampamento a megalópole, navegam, negociam, se casam, racham, guerreiam, cercam cidades, escravizam e se libertam. Cada mundo escreve a própria lenda. E você: uma entidade que observa e interfere.
+Um jogo de simulação divina que roda direto no navegador. Ilhas, continentes, arquipélagos e mares abertos procedurais — com cordilheiras nevadas, planaltos, falésias, rios que descem das montanhas, cachoeiras e lagos; com tundra, taiga, florestas, pântanos, selvas, savanas e desertos, e mais de 40 espécies de animais presas numa cadeia alimentar de verdade; povos autônomos — gregos, nórdicos, egípcios, astecas e romanos — que crescem de acampamento a megalópole, navegam, negociam, se casam, racham, guerreiam, cercam cidades, escravizam e se libertam. Cada mundo escreve a própria lenda. E você: uma entidade que observa e interfere.
 
 ## Como jogar
 
@@ -10,7 +10,7 @@ Um jogo de simulação divina que roda direto no navegador. Ilhas, continentes, 
 
 > Se preferir servir por HTTP: `npx serve .` ou `python3 -m http.server` dentro desta pasta.
 
-Em **NEW WORLD** você escolhe o **mapa** (Ilha, Continente, Arquipélago, Istmo ou Mar Aberto), o **tamanho** (Pequeno 64, Médio 80, Grande 96, **Enorme 128, Colossal 160 ou Titânico 192**), o **clima** (variado, frio, temperado, tropical ou árido), quantos **povos** despertam (1 a 4 — até 6 nos mapas enormes), a **civilização** de cada um (ou sorteio, ou povos clássicos sem nome) e o **temperamento** deles (pacíficos, imprevisíveis ou belicosos).
+Em **NEW WORLD** você escolhe o **mapa** (Ilha, Continente, Arquipélago, Istmo ou Mar Aberto), o **tamanho** (Pequeno 64, Médio 80, Grande 96, **Enorme 128, Colossal 160 ou Titânico 192**), quantos **povos** despertam (1 a 4 — até 6 nos mapas enormes), o **clima** (variado, frio, temperado, tropical ou árido), o **relevo** (plano, suave, montanhoso, alpino ou aleatório — com cordilheiras, planaltos e mesas, falésias na costa e lagos à escolha), a **civilização** de cada um (ou sorteio, ou povos clássicos sem nome), **quando começar** (no princípio, 30 anos depois, na era das cidades ou na era dos impérios) e o **temperamento** dos povos (pacíficos, imprevisíveis ou belicosos).
 
 O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fechar a aba) — os mapas grandes são compactados para caber. Use **CONTINUE** no menu para voltar ao seu mundo. Saves da versão anterior (um só povo) são convertidos automaticamente.
 
@@ -19,6 +19,7 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Ação | Controle |
 |---|---|
 | Mover a câmera | arrastar com o mouse (botão esquerdo ou direito) · `WASD` / setas |
+| Girar a câmera | `Q` / `E` · ou a bússola no canto (a agulha mostra onde ficou o norte) |
 | Zoom | roda do mouse · pinça no touch |
 | Ver detalhes | clique num habitante, animal ou construção |
 | Seguir alguém | duplo clique no habitante · `F` |
@@ -31,6 +32,7 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Cancelar poder | botão direito · `Esc` |
 | Pausar | `Espaço` |
 | Velocidade | botões 1x / 2x / 4x / **8x** / **16x** · `+` / `-` (em mundos muito grandes, o 16x mostra a velocidade real que o computador consegue manter) |
+| Avançar no tempo | `J` · ou o botão ⏭ ao lado das velocidades — pula anos de história (veja abaixo) |
 | Crônica | `H` |
 | Árvore genealógica | `T` (com alguém selecionado) |
 | Modo cinema | `C` · ou o ícone da câmera no topo — `N` próxima cena · `Esc` ou um clique sai |
@@ -48,6 +50,30 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 - **Fogo de verdade**: se espalha com o vento, queima árvores, plantações e casas; moradores formam brigadas com baldes do poço; a chuva apaga.
 - **Dia e noite** com janelas acesas, tochas, fogueiras e braseiros.
 - **Eventos com moderação**: tempestades, secas, lobos, febre, estações de fertilidade, descobertas, viajantes chegando de barco.
+
+## Montanhas, rios e o chão do mundo
+
+O terreno não é mais uma planície: cada mundo nasce com **relevo de verdade**, escolhido no Novo Mundo.
+
+- **Cordilheiras**: uma espinha de montanhas atravessa a terra, com picos que passam de 5.000 m no relevo alpino, **neve eterna** no alto, encostas de rocha com as camadas à mostra (granito cinza, arenito vermelho nos desertos) e **passos** — selas baixas onde se atravessa de um vale ao outro.
+- **Colinas, planaltos e mesas**: platôs de topo plano cercados de paredões, às vezes com uma segunda mesa por cima; sempre com uma rampa ou trilha para subir, para que nenhum povo fique preso.
+- **Falésias** onde a terra encontra o mar (ou praias, ou os dois), e **depressões** onde a água se junta.
+- **A chuva esculpe o terreno**: uma simulação de erosão cava ravinas nas encostas e espalha sedimento aos pés das montanhas antes do primeiro dia.
+- **Rios que descem**: nascem nas montanhas, seguem o vale até o mar ou até um lago, cada trecho na sua altura. Onde o terreno cai, o rio cai junto: **cachoeiras** com espuma, véu de água e névoa (e o barulho delas no som ambiente), corredeiras nos trechos íngremes. Riachos de montanha descem para engrossar os rios.
+- **Lagos nas bacias**, cada um no seu nível — inclusive lagos de altitude.
+- **Nomes**: a cordilheira, os picos (com a altitude), os passos, as grandes cachoeiras e os lagos ganham nomes, que aparecem no mapa e numa aba nova do Livro do Mundo, **Geografia**, com um botão para voar até cada lugar.
+
+O relevo muda a vida: subir custa caro (os caminhos contornam as montanhas e procuram os passos), encostas deixam todos mais lentos, **paredões não se escalam**, ninguém constrói em penhasco, o alto é frio (a neve e a taiga sobem as encostas) e menos fértil, o minério está nas terras altas — e na guerra, **quem está no alto bate mais forte**.
+
+**A câmera gira** em passos de 90° (`Q`/`E` ou a bússola): o mesmo mundo visto dos quatro lados, com as construções, as pessoas e os animais virados para o lado certo. **Montanhas escondem** o que está atrás delas — quem você selecionou continua visível como um fantasma através da rocha.
+
+## Avançar no tempo
+
+O botão ⏭ (ou `J`) abre **Avançar no tempo**: o mundo vive sozinho e depressa — de verdade, cada nascimento, obra e batalha acontece —, só que sem desenhar nada. Você vê os anos passarem num mapa do mundo inteiro (reinos, estradas, cidades crescendo, batalhas acendendo em vermelho), com os contadores e as grandes notícias da crônica, e pode **parar quando quiser** (`Esc`). No fim, um resumo do que aconteceu.
+
+- **Até quando**: 10, 25 ou 50 anos · até a primeira cidade · até a primeira metrópole · até a primeira megalópole · até a próxima guerra.
+- **Como passam os anos**: **anos de paz e fartura** (a sua bênção: nenhuma guerra começa, colheitas e obras andam mais rápido, os berços se enchem — os povos crescem até virar impérios, e quando a bênção acaba eles voltam a se olhar como rivais) ou **deixar o mundo seguir** (guerras, pestes e fomes vêm quando vierem).
+- No **Novo Mundo**, "Começar" faz o mesmo antes de você chegar: 30 anos depois, na era das cidades ou na era dos impérios.
 
 ## Biomas e clima
 
@@ -259,7 +285,8 @@ index.html        HUD, menus e ordem dos scripts
 css/style.css     interface
 js/util.js        RNG, ruído, heap, nomes
 js/civs.js        civilizações: nomes, traços, governos, unidades, tecnologias
-js/world.js       estado, geração dos mapas (ilha, continente, arquipélago, istmo), pathfinding A*
+js/world.js       estado, geração dos mapas (ilha, continente, arquipélago, istmo), pathfinding A* (subir custa, paredões barram)
+js/relief.js      relevo: cordilheiras, colinas, planaltos e mesas, falésias, bacias, erosão, rios que descem, lagos, cachoeiras, passos, nomes dos lugares
 js/biomes.js      clima, biomas, árvores e chão de cada bioma
 js/nature.js      árvores, arbustos, rochas, fogo, clima, nuvens
 js/village.js     construções, planejador, empregos, moradia, crônica, marcos, fé
@@ -288,12 +315,13 @@ js/fauna-art.js   o desenho de cada espécie
 js/arch.js        arquitetura de cada civilização
 js/sky.js         névoa, raios de sol, arco-íris, sombras de nuvens, vaga-lumes, folhas, redemoinhos, relâmpagos
 js/cityart.js     oficinas, currais, feira, minas e veios no estilo de cada civilização
-js/render.js      renderizador isométrico (terreno em blocos com nível de detalhe), iluminação, clima
+js/render.js      renderizador isométrico (terreno em blocos com nível de detalhe, quatro vistas, montanhas que escondem), rocha em camadas, cachoeiras e correnteza, iluminação, clima
 js/minimap.js     minimapa com fronteiras e cidades
 js/audio.js       áudio sintetizado com WebAudio (efeitos, som ambiente conforme o lugar, música)
 js/save.js        salvar / carregar
 js/ui.js          interface
 js/cinema.js      modo cinema: o diretor que escolhe as cenas, a câmera, as legendas
 js/photo.js       modo foto: congelar, filtros, miniatura, moldura, salvar PNG
+js/timeskip.js    avançar no tempo: anos que passam sem desenhar, mapa em time-lapse, anos de paz e fartura, resumo
 js/main.js        loop, input, câmera, menu, introdução
 ```

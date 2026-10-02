@@ -153,11 +153,11 @@
     if (d > 0.08) { // the last steps, or shuffling forward
       const st = Math.min(d, v.speed * 0.8 * dt);
       v.x += (sx - v.x) / d * st; v.y += (sy - v.y) / d * st; v.moving = true; v.walkPh += st * 8.5; v.path = null;
-      const sd = (sx - v.x) - (sy - v.y); if (Math.abs(sd) > 0.01) v.face = sd > 0 ? 1 : -1;
+      if (Math.abs(sx - v.x) + Math.abs(sy - v.y) > 0.01) G.faceTo(v, sx - v.x, sy - v.y);
       v.act = ''; return false;
     }
     v.moving = false;
-    v.face = ((q.x - q.y) - (v.x - v.y) + (k ? 0 : (q.dx - q.dy) * -0.3)) > 0 ? 1 : -1;
+    G.faceTo(v, q.x - v.x - (k ? 0 : q.dx * 0.3), q.y - v.y - (k ? 0 : q.dy * 0.3));
     if (k > 0) { v.act = 'wait'; t.waited = (t.waited || 0) + dt; return false; }
     return true;
   };
@@ -201,7 +201,7 @@
       const w = S.buildings.get(t.src.well.id); if (!w) return H.end(v);
       if (G.dist(v.x, v.y, t.src.x, t.src.y) > 5 && !v._q) { if (!t.walk) { if (!H.goto(v, t.src.x + t.src.dx * 1.5, t.src.y + t.src.dy * 1.5, false)) { if (!G.Vg.gotoB(v, w)) return H.end(v); } t.walk = true; } if (!H.move(v, dt)) return; }
       if (!L.inLine(v, t, 'well:' + w.id, t.src.x, t.src.y, t.src.dx, t.src.dy, dt, H)) { if (t.waited > 40) { L.leaveQueue(v); return H.end(v); } return; }
-      t.st = 2; v.actT = 0; v.face = (w.x - w.y) - (v.x - v.y) > 0 ? 1 : -1;
+      t.st = 2; v.actT = 0; G.faceTo(v, w.x - v.x, w.y - v.y);
       return;
     }
     if (t.st === 5) { if (!H.move(v, dt)) return; t.st = 2; v.actT = 0; return; }
@@ -280,7 +280,7 @@
       t.st = 2; v.actT = 0; t.dur = G.rr(10, 18);
       // whoever gets home first is welcomed with a hug
       const p = S.villagers.get(v.partner);
-      if (p && p.task && p.task.type === 'family' && p.task.st === 2 && !p.task.hug && G.dist(p.x, p.y, v.x, v.y) < 1.6) { t.hug = 1.5; p.task.hug = 1.5; v.face = (p.x - p.y) - (v.x - v.y) > 0 ? 1 : -1; p.face = -v.face; G.Vg.emote(v, 'heart', 1.4); }
+      if (p && p.task && p.task.type === 'family' && p.task.st === 2 && !p.task.hug && G.dist(p.x, p.y, v.x, v.y) < 1.6) { t.hug = 1.5; p.task.hug = 1.5; G.faceTo(v, p.x - v.x, p.y - v.y); G.faceAs(p, v, true); G.Vg.emote(v, 'heart', 1.4); }
       if (kid) { const m = S.villagers.get(v.mother) || S.villagers.get(v.father); if (m && m.task && m.task.type === 'family' && m.task.st === 2 && !m.task.lift && v.age < 8 && G.R() < 0.6) { m.task.lift = v.id; m.task.liftT = 2.4; t.lifted = m.id; } }
       return;
     }
@@ -290,7 +290,7 @@
     if (t.lifted) { // up in a parent's arms
       const p = S.villagers.get(t.lifted);
       if (!p || !p.task || p.task.lift !== v.id) { t.lifted = 0; t.perch = false; v.z = 0; v.x = t.sx; v.y = t.sy; return; }
-      t.perch = true; v.x = p.x + p.face * 0.08; v.y = p.y + 0.02; v.face = -p.face;
+      t.perch = true; v.x = p.x + p.face * 0.08; v.y = p.y + 0.02; G.faceAs(v, p, true);
       v.z = 7 + Math.abs(Math.sin((2.4 - p.task.liftT) * 4.2)) * 7; v.act = 'joy'; v.moving = false;
       if (G.R() < dt * 1.2) G.Vg.emote(v, 'happy', 1);
       return;
@@ -304,12 +304,12 @@
       t.play = (t.play || 0) + dt;
       const a = (S.clock * 1.6 + v.id) % TAU, r = 1.15;
       const tx = f.x + Math.cos(a) * r, ty = f.y + Math.sin(a) * r;
-      if (W.walkableXY(tx, ty)) { const d = G.dist(v.x, v.y, tx, ty); const st = Math.min(d, v.speed * 1.1 * dt); if (d > 0.01) { v.x += (tx - v.x) / d * st; v.y += (ty - v.y) / d * st; v.face = ((tx - ty) - (v.x - v.y)) > 0 ? 1 : -1; } v.moving = true; v.walkPh += st * 9; v.act = 'run'; }
+      if (W.walkableXY(tx, ty)) { const d = G.dist(v.x, v.y, tx, ty); const st = Math.min(d, v.speed * 1.1 * dt); if (d > 0.01) { v.x += (tx - v.x) / d * st; v.y += (ty - v.y) / d * st; G.faceTo(v, tx - v.x, ty - v.y); } v.moving = true; v.walkPh += st * 9; v.act = 'run'; }
       if (t.play > 5) { t.play = 0; const [sx, sy] = seatOf(f, v); t.sx = sx; t.sy = sy; H.goto(v, sx, sy, false); t.st = 1; }
       return;
     }
     v.moving = false;
-    v.face = (f.x - f.y) - (v.x - v.y) > 0 ? 1 : -1;
+    G.faceTo(v, f.x - v.x, f.y - v.y);
     // supper from the family pantry
     if (v.hunger > 40 && (h.pantry || 0) >= 1 && !t.ate) { h.pantry -= 1; v.hunger = Math.max(0, v.hunger - 55); t.ate = 2.2; }
     if (t.ate > 0) { t.ate -= dt; v.act = 'eat'; return; }
@@ -389,7 +389,7 @@
     const S = G.S; const s = tales.get(t.set); if (!s || s.elder !== v.id) return H.end(v);
     if (t.st === 0) { if (!H.goto(v, s.ex, s.ey, false)) { tales.delete(t.set); return H.end(v); } t.st = 1; return; }
     if (t.st === 1) { if (!H.move(v, dt, 0.8)) return; t.st = 2; v.actT = 0; s.begin = S.clock; return; }
-    v.moving = false; v.act = 'story'; v.face = (s.x - s.y) - (v.x - v.y) > 0 ? 1 : -1;
+    v.moving = false; v.act = 'story'; G.faceTo(v, s.x - v.x, s.y - v.y);
     if (G.R() < dt * 0.25) G.Vg.emote(v, s.tale.mood === 'fear' ? 'angry' : s.tale.mood === 'heart' ? 'heart' : 'chat', 1.4);
     if (S.clock - s.begin > s.dur || S.time > 0.8) { tales.delete(t.set); H.end(v); }
   }
@@ -398,7 +398,7 @@
     if (t.st === 0) { if (!H.goto(v, t.x, t.y, false)) return H.end(v); t.st = 1; return; }
     if (t.st === 1) { if (!H.move(v, dt, v.age < 16 ? 1.1 : 1)) return; t.st = 2; v.actT = 0; return; }
     v.moving = false; v.act = 'listen';
-    const e = S.villagers.get(s.elder); if (e) v.face = (e.x - e.y) - (v.x - v.y) > 0 ? 1 : -1;
+    const e = S.villagers.get(s.elder); if (e) G.faceTo(v, e.x - v.x, e.y - v.y);
     if (s.begin && G.R() < dt * 0.12) G.Vg.emote(v, s.tale.mood === 'fear' ? 'fear' : s.tale.mood, 1.3);
     if (!t.heard && s.begin && S.clock - s.begin > 4) {
       t.heard = true;
@@ -441,20 +441,20 @@
     const d = G.dist(v.x, v.y, tx, ty);
     if (d > 1.1) {
       t.rt = (t.rt || 0) - dt;
-      if (d < 4 && W.losClear(v.x, v.y, tx, ty)) { const st = Math.min(d, v.speed * 1.05 * dt); v.x += (tx - v.x) / d * st; v.y += (ty - v.y) / d * st; v.moving = true; v.walkPh += st * 8.5; v.path = null; const sd = (tx - ty) - (v.x - v.y); if (Math.abs(sd) > 0.01) v.face = sd > 0 ? 1 : -1; v.act = ''; return; }
+      if (d < 4 && W.losClear(v.x, v.y, tx, ty)) { const st = Math.min(d, v.speed * 1.05 * dt); v.x += (tx - v.x) / d * st; v.y += (ty - v.y) / d * st; v.moving = true; v.walkPh += st * 8.5; v.path = null; if (Math.abs(tx - v.x) + Math.abs(ty - v.y) > 0.01) G.faceTo(v, tx - v.x, ty - v.y); v.act = ''; return; }
       if (t.rt <= 0 || H.arrived(v)) { t.rt = 1.1; if (!H.goto(v, tx, ty, false)) return H.end(v); }
       H.move(v, dt, 1.05); v.act = ''; return;
     }
     v.path = null; v.moving = false;
     // copy what the master does, a beat behind
     if (m.act && !m.moving) {
-      v.act = m.act === 'fight' ? 'drill' : m.act; v.actT = Math.max(0, m.actT - 0.18); v.face = m.face;
+      v.act = m.act === 'fight' ? 'drill' : m.act; v.actT = Math.max(0, m.actT - 0.18); G.faceAs(v, m);
       v.learn = v.learn || {};
       const before = v.learn[m.role] || 0; v.learn[m.role] = before + dt * 4 / DAY();
       if (before < LEARN_AT && v.learn[m.role] >= LEARN_AT) { v.skill = m.role; L.bio(v, 'learned', m.role); G.Vg.emote(v, 'happy', 2); G.Vg.emote(m, 'heart', 2); }
       if (G.R() < dt * 0.06) G.Vg.emote(m, G.R() < 0.5 ? 'chat' : 'happy', 1.2);
       if (G.R() < dt * 0.05) G.Vg.emote(v, 'question', 1.1);
-    } else { v.act = ''; v.face = (m.x - m.y) - (v.x - v.y) > 0 ? 1 : -1; }
+    } else { v.act = ''; G.faceTo(v, m.x - v.x, m.y - v.y); }
   }
   // the most practised trade, if any
   L.learned = function (v) {

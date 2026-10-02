@@ -283,7 +283,7 @@
         const tx = b.st === 'arrive' ? b.tx : b.sx, ty = b.st === 'arrive' ? b.ty : b.sy;
         const dx = tx - b.x, dy = ty - b.y; const d = Math.hypot(dx, dy);
         const sp = 1.1 * dt;
-        b.face = (dx - dy) > 0 ? 1 : -1;
+        G.faceTo(b, dx, dy);
         if (d < sp) {
           b.x = tx; b.y = ty;
           if (b.st === 'arrive') { b.st = 'unload'; b.t = 0; land(b); }

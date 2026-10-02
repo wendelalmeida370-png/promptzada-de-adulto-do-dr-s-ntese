@@ -241,12 +241,13 @@
     if (sp.cls === 'water') return t <= T.SEA && (!sp.deep || t === T.DEEP || S.type[i] === T.SEA);
     if (sp.cls === 'amph') {
       if (t <= T.SEA) return dLand[i] <= 3;
-      if (W.blocked(i)) return false;
+      if (W.blocked(i) || S.cliff[i]) return false;
       if (sp.near === 'water' && dWater[i] > 3) return false;
       if (sp.near === 'sea' && dSea[i] > 3) return false;
       return true;
     }
     if (t <= T.SEA) return false;
+    if (S.cliff[i] && !sp.climb) return false;
     if (W.blocked(i) || S.wall[i] === 1 || S.wall[i] === 4) return false;
     if (t === T.RIVER && sp.near !== 'water' && a.kind === 'rabbit') return false;
     return true;
@@ -289,12 +290,13 @@
     if (def.cls === 'land' && S.type[i] === T.RIVER) mul = 0.55;
     if (def.cls === 'amph') { a.swim = S.type[i] <= T.RIVER; if (a.swim && (a.kind === 'croc' || a.kind === 'hippo' || a.kind === 'seal' || a.kind === 'penguin' || a.kind === 'polarbear')) mul = a.kind === 'polarbear' ? 0.8 : 1.4; }
     if (S.biome && def.cls === 'land') mul *= 0.85 + 0.15 * G.BIOMES[S.biome[i]].speed;
+    if (def.cls === 'land' && !def.climb && S.type[i] >= T.SAND) mul /= 1 + S.slope[i] * 0.14;
     const step = Math.min(d, sp * dt * mul * (0.6 + 0.4 * a.grown));
     const nx = a.x + dx / d * step, ny = a.y + dy / d * step;
     if (def.cls !== 'air' && !walkOK(a, nx, ny)) {
       if (walkOK(a, nx, a.y)) a.x = nx; else if (walkOK(a, a.x, ny)) a.y = ny; else { a.tx = a.x; a.ty = a.y; a.moving = false; return true; }
     } else { a.x = G.clamp(nx, 0.3, N - 0.3); a.y = G.clamp(ny, 0.3, N - 0.3); }
-    const sdx = dx - dy; if (Math.abs(sdx) > 0.02) a.face = sdx > 0 ? 1 : -1;
+    if (Math.abs(dx - dy) > 0.02 || Math.abs(dx + dy) > 0.02) G.faceTo(a, dx, dy);
     a.walkPh += step * (a.kind === 'rabbit' || a.kind === 'hare' || a.kind === 'frog' ? 6 : 8);
     a.moving = true;
     return false;
@@ -533,7 +535,7 @@
   }
   function bite(a, tg, dt) {
     const sp = SP[a.kind];
-    a.moving = false; a.face = (tg.x - tg.y) - (a.x - a.y) > 0 ? 1 : -1;
+    a.moving = false; G.faceTo(a, tg.x - a.x, tg.y - a.y);
     a.cd = (a.cd || 0) - dt;
     if (a.cd > 0) return;
     a.cd = 1.1; a.bite = 0.25;
@@ -635,7 +637,7 @@
       const dx = a.tx - a.x, dy = a.ty - a.y; const dd = Math.hypot(dx, dy);
       if (dd < 0.3) { G.FX && G.FX.splash(a.x, a.y, 0.6); A.remove(a); return; }
       const step = Math.min(dd, d.run * dt);
-      a.x += dx / dd * step; a.y += dy / dd * step; a.face = (dx - dy) > 0 ? 1 : -1; a.walkPh += step * 8; a.moving = true;
+      a.x += dx / dd * step; a.y += dy / dd * step; G.faceTo(a, dx, dy); a.walkPh += step * 8; a.moving = true;
       return;
     }
     if (a.state === 'eat') { a.t -= dt; a.moving = false; if (a.t <= 0) { a.state = 'idle'; a.t = 2; } return; }
@@ -659,7 +661,7 @@
       if (!tgt || tgt.dead || tgt.inside || tgt.held) { a.state = 'idle'; a.target = 0; a.t = 1; return; }
       a.tx = tgt.x; a.ty = tgt.y;
       if (G.dist(a.x, a.y, tgt.x, tgt.y) < 0.65) {
-        a.moving = false; a.face = (tgt.x - tgt.y) - (a.x - a.y) > 0 ? 1 : -1;
+        a.moving = false; G.faceTo(a, tgt.x - a.x, tgt.y - a.y);
         a.cd = (a.cd || 0) - dt;
         if (a.cd <= 0) {
           a.cd = 1.1; a.bite = 0.25; G.Audio && G.Audio.at(a.x, a.y, 'bite');
@@ -836,7 +838,7 @@
     if (d < 0.1) { a.moving = false; return true; }
     const step = Math.min(d, sp * dt);
     a.x += dx / d * step; a.y += dy / d * step; a.moving = true;
-    if (Math.abs(dx - dy) > 0.02) a.face = dx - dy > 0 ? 1 : -1;
+    if (Math.abs(dx - dy) > 0.02) G.faceTo(a, dx, dy);
     return false;
   }
 
@@ -874,7 +876,7 @@
       // resting animals with nothing to decide just let the clock run
       if (a.state === 'idle' && a.t > dt && a.scan > dt && !(a.angry > 0) && sp.cls !== 'air' && !sp.dom) { a.t -= dt; a.scan -= dt; if (a.rest > 0) a.rest -= dt; a.moving = false; continue; }
       if (a.kind === 'wolf' && (a.raid || a.summoned)) raidWolfAI(a, dt);
-      else if (sp.town) { if (G.Pets) G.Pets.ai(a, dt, sp); }
+      else if (sp.town) { if (G.Pets && !(G.Skip && G.Skip.on)) G.Pets.ai(a, dt, sp); }
       else if (sp.dom) domAI(a, dt);
       else if (sp.cls === 'water') waterAI(a, dt);
       else if (sp.cls === 'air') airAI(a, dt);

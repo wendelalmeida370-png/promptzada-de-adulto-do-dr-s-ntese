@@ -235,7 +235,7 @@
         const c = b.crops[k]; if (c.s === 0 || c.s === 3) continue;
         const [px, py] = V.cropPos(b, k); const i = W.idx(px, py);
         const rate = (1 / (G.DAY_LEN * 0.7)) * (0.55 + S.fert[i] * 0.7) * (1 + S.wet[i] * 0.9 + S.weather.rain * 0.5)
-          * (drought ? 0.35 : 1) * G.Nature.zoneMul(px, py, 'fertility') * (1 + (G.Nature.zoneMul(px, py, 'growth') - 1) * 0.5);
+          * (drought ? 0.35 : 1) * G.Nature.zoneMul(px, py, 'fertility') * (1 + (G.Nature.zoneMul(px, py, 'growth') - 1) * 0.5) * (S.blessed ? 1.5 : 1);
         c.g = Math.min(1, c.g + rate * dt);
         c.s = c.g < 0.3 ? 1 : c.g < 1 ? 2 : 3;
       }

@@ -38,6 +38,11 @@
     ctx.drawImage(img, x - s.ax * sc, y - s.ay * sc, s.w * sc, s.h * sc);
   };
   Art.clear = () => cache.clear();
+  // sprites are drawn for the first view: the two side views see them mirrored
+  Art.drawM = function (ctx, s, x, y, sc) {
+    if (!(G.Render && G.Render.mirror() < 0)) return Art.draw(ctx, s, x, y, sc);
+    ctx.save(); ctx.translate(x, y); ctx.scale(-1, 1); Art.draw(ctx, s, 0, 0, sc); ctx.restore();
+  };
 
   // ------------------------------ iso helpers ------------------------------
   const P = (dx, dy, z) => [(dx - dy) * 16, (dx + dy) * 8 - (z || 0)];
@@ -642,7 +647,7 @@
       c.strokeStyle = v.skin; c.lineWidth = 0.9; const s = Math.sin(t * 9) * 2; line(c, -1.5, -1, -3, -3 + s); line(c, 1.5, -1, 3, -3 - s);
       c.restore(); return;
     }
-    c.scale(v.face * sc, sc);
+    c.scale(G.Render.sface(v) * sc, sc);
     const moving = v.moving;
     const ph = v.walkPh;
     const dancing = act === 'dance';
@@ -843,8 +848,9 @@
   // ------------------------------ animals ------------------------------
   Art.animal = function (c, a, x, y, t) {
     c.save(); c.translate(x, y);
-    if (a.dead) { c.globalAlpha = Math.max(0.2, 1 - a.rot / (G.DAY_LEN * 0.8)); c.rotate(a.face * 0.1); c.scale(1, 0.55); }
-    c.scale(a.face, 1);
+    const af = G.Render.sface(a);
+    if (a.dead) { c.globalAlpha = Math.max(0.2, 1 - a.rot / (G.DAY_LEN * 0.8)); c.rotate(af * 0.1); c.scale(1, 0.55); }
+    c.scale(af, 1);
     const ph = a.walkPh; const mv = a.moving && !a.dead;
     const hurt = a.hurt > 0;
     switch (a.kind) {
@@ -901,7 +907,7 @@
     c.restore();
   };
   Art.boat = function (c, b, x, y, t) {
-    c.save(); c.translate(x, y + Math.sin(t * 2) * 0.6); c.scale(b.face || 1, 1);
+    c.save(); c.translate(x, y + Math.sin(t * 2) * 0.6); c.scale(G.Render.sface(b), 1);
     c.fillStyle = '#6e4a2c'; c.beginPath(); c.moveTo(-9, -2); c.lineTo(9, -2); c.lineTo(6, 2.5); c.lineTo(-7, 2.5); c.closePath(); c.fill();
     c.fillStyle = '#8f6238'; c.fillRect(-9, -2.8, 18, 1.2);
     c.strokeStyle = '#5a3a22'; c.lineWidth = 0.8; line(c, 0, -2, 0, -18);

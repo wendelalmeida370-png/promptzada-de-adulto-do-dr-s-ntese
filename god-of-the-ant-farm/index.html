@@ -35,7 +35,8 @@
         <button data-speed="2" title="Rápido">2x</button>
         <button data-speed="4" title="Muito rápido">4x</button>
         <button data-speed="8" title="Acelerado (8x)">8x</button>
-        <button data-speed="16" title="Turbo (16x) — para chegar logo ao meio e ao fim do jogo">16x</button>
+        <button data-speed="16" title="Turbo (16x)">16x</button>
+        <button id="btn-skip" title="Avançar no tempo (J) — pular anos de história e chegar às cidades, aos impérios e às grandes guerras"></button>
         <small id="speed-real" class="hidden" title="Velocidade que o seu computador está conseguindo manter"></small>
       </div>
       <div class="tb-group" id="tb-btns">
@@ -67,6 +68,7 @@
       <div id="powerbar" class="panel"></div>
     </div>
 
+    <div id="compass" class="panel"><button data-rot="-1" title="Girar a câmera (Q)"></button><div class="cp-rose" title="O norte do mundo"><i></i><b>N</b></div><button data-rot="1" title="Girar a câmera (E)"></button></div>
     <div id="minimap" class="panel hidden"><canvas></canvas><button class="mm-x" title="Fechar minimapa (M)">×</button></div>
     <div id="notices"></div>
     <div id="toast" class="hidden"></div>
@@ -102,6 +104,7 @@
   <script src="js/util.js"></script>
   <script src="js/civs.js"></script>
   <script src="js/world.js"></script>
+  <script src="js/relief.js"></script>
   <script src="js/biomes.js"></script>
   <script src="js/nature.js"></script>
   <script src="js/village.js"></script>
@@ -137,6 +140,7 @@
   <script src="js/ui.js"></script>
   <script src="js/cinema.js"></script>
   <script src="js/photo.js"></script>
+  <script src="js/timeskip.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

@@ -404,7 +404,7 @@
       t.st = 1; t.walk = 0; return;
     }
     if (t.st === 1) { t.walk += dt; if (H.move(v, dt)) { t.st = 2; v.actT = 0; } else if (t.walk > 70) { Ci.claims.delete(t.i); H.end(v); } return; }
-    v.act = 'build'; v.face = (x - y) - (v.x - v.y) > 0 ? 1 : -1;
+    v.act = 'build'; G.faceTo(v, x - v.x, y - v.y);
     if (v.actT > 0.5 && G.R() < 0.2) { G.Audio && G.Audio.at(x, y, 'hammer'); G.FX && G.FX.dust(x, y, 1); }
     const need = (t.lvl >= 3 ? 2.6 : t.lvl === 2 ? 2 : 1.3) / Math.max(0.5, v.work || 1);
     if (v.actT < need) return;
@@ -551,7 +551,7 @@
       const dx = p[0] - c.x, dy = p[1] - c.y; const d = Math.hypot(dx, dy);
       if (d <= sp) { c.x = p[0]; c.y = p[1]; c.k += (c.fwd !== c.back) ? 1 : -1; }
       else { c.x += dx / d * sp; c.y += dy / d * sp; }
-      if (Math.abs(dx - dy) > 0.02) c.face = dx - dy > 0 ? 1 : -1;
+      if (Math.abs(dx - dy) > 0.02) G.faceTo(c, dx, dy);
       c.dx = dx / (d || 1); c.dy = dy / (d || 1);
       if (c.t > 400) S.carts.splice(k, 1);
     }

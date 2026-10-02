@@ -318,7 +318,22 @@
 
   // ------------------------------ the book ------------------------------
   L.tab = 'genese';
-  const TABS = [['genese', 'Gênese'], ['cronicas', 'Crônicas'], ['lendas', 'Lendas'], ['povos', 'Povos'], ['bestiario', 'Bestiário'], ['profecias', 'Profecias']];
+  const TABS = [['genese', 'Gênese'], ['cronicas', 'Crônicas'], ['lendas', 'Lendas'], ['povos', 'Povos'], ['geografia', 'Geografia'], ['bestiario', 'Bestiário'], ['profecias', 'Profecias']];
+  // the land itself: its mountains, passes, falls and lakes, with the way there
+  function geography() {
+    const S = G.S; const rel = S.relief || {}; const Rf = G.Relief; const places = Rf.places();
+    const o = rel.opts || {}; const OPT = k => { const e = (Rf.OPTS[k].v.find(v => v[0] === o[k]) || [])[1]; return e ? e.toLowerCase() : '—'; };
+    const go = p => `<button class="bk-go" data-m="geo-go" data-x="${p.x}" data-y="${p.y}">ver</button>`;
+    let out = `<p class="facts">Relevo ${OPT('relevo')} · cordilheiras: ${OPT('cordilheiras')} · planaltos: ${OPT('planaltos')} · costa: ${OPT('costa')} · lagos: ${OPT('lagos')}</p>`;
+    const sec = (title, list, line) => list.length ? `<h4>${title}</h4>${list.map(p => `<div class="bk-geo">${line(p)}${go(p)}</div>`).join('')}` : '';
+    if (rel.ranges && rel.ranges.length) out += `<h4>Cordilheiras</h4>${rel.ranges.map(r => `<div class="bk-geo"><b>${esc(r.name || 'Cordilheira')}</b><span>${Math.round(r.len)} léguas de cristas${r.passS ? ' · ' + r.passS.length + (r.passS.length > 1 ? ' passos' : ' passo') : ''}</span>${go({ x: r.pts[Math.floor(r.pts.length / 2)][0], y: r.pts[Math.floor(r.pts.length / 2)][1] })}</div>`).join('')}`;
+    out += sec('Picos', places.filter(p => p.kind === 'pico'), p => `<b>${esc(p.name)}</b><span>${p.alt}</span>`);
+    out += sec('Passos', places.filter(p => p.kind === 'passo'), p => `<b>${esc(p.name)}</b><span>a travessia entre os vales</span>`);
+    out += sec('Cachoeiras', places.filter(p => p.kind === 'cachoeira'), p => `<b>${esc(p.name)}</b><span>${p.alt}</span>`);
+    out += sec('Lagos', places.filter(p => p.kind === 'lago'), p => `<b>${esc(p.name)}</b><span>${p.alt}</span>`);
+    if (!places.length && !(rel.ranges && rel.ranges.length)) out += '<p class="muted">Uma terra baixa e mansa: nenhum pico, nenhuma cachoeira. Os mapas deste mundo são curtos.</p>';
+    return out;
+  }
 
   // ------------------------------ the bestiary: the living food web, in numbers ------------------------------
   L.bestSel = null;
@@ -417,6 +432,8 @@
           ${f && f.st ? `<p class="facts">${f.st.battles || 0} batalhas · ${f.st.conquests || 0} conquistas · ${f.st.kills || 0} inimigos mortos${f.st.massacres ? ' · ' + f.st.massacres + ' massacres' : ''}${f.goldenN ? ' · ' + f.goldenN + (f.goldenN > 1 ? ' eras de ouro' : ' era de ouro') : ''}</p>` : ''}
           ${p.end ? `<p class="end">${esc(p.end)}</p>` : ''}</div>`;
       }).join('');
+    } else if (L.tab === 'geografia') {
+      body = geography();
     } else if (L.tab === 'bestiario') {
       body = bestiary();
     } else if (L.tab === 'profecias') {

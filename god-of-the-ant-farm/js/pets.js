@@ -32,7 +32,7 @@
     const s = Math.min(d, sp * dt); const nx = a.x + dx / d * s, ny = a.y + dy / d * s;
     if (!W.inb(nx, ny) || !W.walkableXY(nx, ny)) { a.moving = false; a.t = 0; return true; }
     a.x = nx; a.y = ny; a.moving = true; a.walkPh += s * 9;
-    const sd = dx - dy; if (Math.abs(sd) > 0.02) a.face = sd > 0 ? 1 : -1;
+    if (Math.abs(dx) + Math.abs(dy) > 0.02) G.faceTo(a, dx, dy);
     return false;
   }
   function roam(a, cx, cy, r, sp, dt, pose, rest) {
@@ -120,7 +120,7 @@
       const d = G.dist(a.x, a.y, a.tx, a.ty);
       a.z = Math.min(9, a.z + dt * 14) * (d < 1.2 ? d / 1.2 : 1) + (d < 1.2 ? 0 : 0);
       const dx = a.tx - a.x, dy = a.ty - a.y; const s = Math.min(d, 3.2 * dt);
-      if (d > 0.05) { a.x += dx / d * s; a.y += dy / d * s; if (Math.abs(dx - dy) > 0.02) a.face = dx - dy > 0 ? 1 : -1; }
+      if (d > 0.05) { a.x += dx / d * s; a.y += dy / d * s; if (Math.abs(dx - dy) > 0.02) G.faceTo(a, dx, dy); }
       if (d < 0.1) { a.fly = false; a.z = 0; a.t = G.rr(1, 3); }
       a.moving = false; return;
     }
