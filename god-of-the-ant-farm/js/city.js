@@ -419,7 +419,7 @@
     const stone = t.lvl === 1 ? 0 : bridge ? 3 : 1, wood = bridge ? 2 : 0;
     if (fac.stock.stone < stone || fac.stock.wood < wood || S.occ[t.i]) { Ci.claims.delete(t.i); return H.end(v); }
     fac.stock.stone -= stone; fac.stock.wood -= wood;
-    if (S.road[t.i] < t.lvl) S.road[t.i] = t.lvl;
+    if (S.road[t.i] < t.lvl) { if (!S.road[t.i] && S.deep[t.i]) { S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand(); } S.road[t.i] = t.lvl; }
     G.Nature.markDirty(t.i);
     G.FX && G.FX.chips(x, y, t.lvl >= 2 ? '#b8b0a0' : '#a08a66');
     Ci.claims.delete(t.i);

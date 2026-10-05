@@ -182,18 +182,20 @@
   function needs(v, dt) {
     const S = G.S; const day = G.DAY_LEN;
     const awake = !v.sleeping;
+    // meals and sleep keep the rhythm of the day, however long the day is
+    const dd = dt / G.DAY_K;
     v.age += dt / day;
-    v.hunger = Math.min(100, v.hunger + dt * (awake ? 0.95 : 0.45) * (v.age < 12 ? 0.6 : 1) * (v.traits.includes('Glutão') ? 1.2 : 1));
-    if (v.age >= 2) v.energy = G.clamp(v.energy + (awake ? -dt * (100 / 80) * (v.age >= 62 ? 1.12 : 1) * (v.task && v.task.type === 'flee' ? 1.6 : 1) : dt * (100 / 22)), 0, 100);
+    v.hunger = Math.min(100, v.hunger + dd * (awake ? 0.95 : 0.45) * (v.age < 12 ? 0.6 : 1) * (v.traits.includes('Glutão') ? 1.2 : 1));
+    if (v.age >= 2) v.energy = G.clamp(v.energy + (awake ? -dd * (100 / 80) * (v.age >= 62 ? 1.12 : 1) * (v.task && v.task.type === 'flee' ? 1.6 : 1) : dd * (100 / 22)), 0, 100);
     if (v.hurt > 0) v.hurt -= dt;
     // babies are fed from the common stock
     if (v.age < 2 && v.hunger > 60) { const st = G.Fac.stockV(v); if (st.food >= 1) { st.food -= 0.5; v.hunger -= 50; } }
     // on campaign, on a mission or under siege there is no time for a meal: they eat provisions
     if (v.hunger > 80 && v.task && (FIELD[v.task.type] || v.task.type === 'escorted') && (!v.captive || v.task.type === 'escorted') && v.age >= 2) { const st = G.Fac.stockV(v); if (st.food >= 1) { st.food -= 1; v.hunger = Math.max(0, v.hunger - 50); } }
-    if (v.hunger >= 100) { v.hp -= 0.45 * dt; v.lastCause = 'hunger'; v.lastGod = false; if (G.R() < dt * 0.3) emote(v, 'food'); }
+    if (v.hunger >= 100) { v.hp -= 0.45 * dd; v.lastCause = 'hunger'; v.lastGod = false; if (G.R() < dt * 0.3) emote(v, 'food'); }
     if (v.immune > 0) v.immune -= dt;
     if (v.sick > 0) {
-      v.sick -= dt; v.hp -= 0.08 * dt * (v.age < 6 || v.age > 60 ? 1.7 : 1); v.lastCause = 'sick'; v.lastGod = false;
+      v.sick -= dt; v.hp -= 0.08 * dd * (v.age < 6 || v.age > 60 ? 1.7 : 1); v.lastCause = 'sick'; v.lastGod = false;
       if (v.sick <= 0) v.immune = G.DAY_LEN * 3;
       if (G.R() < dt * 0.08) emote(v, 'sick');
     }
@@ -204,7 +206,7 @@
     if (v.mourn > 0) v.mourn -= dt;
     if (v.courtCD > 0) v.courtCD -= dt;
     if (v.fear > 0) v.fear = Math.max(0, v.fear - dt * 0.12);
-    if (v.devotion > 6) v.devotion -= dt * 0.012;
+    if (v.devotion > 6) v.devotion -= dd * 0.012;
     // pregnancy
     if (v.preg > 0) { v.preg -= dt; if (v.preg <= 0) { v.preg = 0; G.Village.birth(v); } }
     // old age
@@ -1146,15 +1148,18 @@
       }
       const set = S.settlements.get(v.set); const cf = set && S.buildings.get(set.campfire);
       const cx = cf ? cf.x + 0.5 : v.x, cy = cf ? cf.y + 0.5 : v.y;
-      const a = G.R() * 6.28, r = G.rr(1.2, 2.3);
-      let tx = cx + Math.cos(a) * r, ty = cy + Math.sin(a) * r;
-      if (!W.walkableXY(tx, ty)) { tx = v.x; ty = v.y; }
+      // under the stars, but on dry ground: never in a river or a lake
+      let tx = 0, ty = 0, ok = false;
+      for (let k = 0; k < 6 && !ok; k++) { const a = G.R() * 6.28, r = G.rr(1.2, 2.3); tx = cx + Math.cos(a) * r; ty = cy + Math.sin(a) * r; ok = W.dryXY(tx, ty); }
+      if (!ok) { const p = W.dryXY(v.x, v.y) ? [v.x, v.y] : W.nearestLand(v.x, v.y, 6); if (p) { tx = p[0]; ty = p[1]; } else { tx = v.x; ty = v.y; } }
       if (!Vg.goto(v, tx, ty, false)) v.path = null;
       t.st = 1; t.home = 0;
       return;
     }
     if (t.st === 1) {
       if (!move(v, dt)) return;
+      // a path that never came: they climb out of the water before lying down
+      if (!t.home && !W.dryXY(v.x, v.y)) { const p = W.nearestLand(v.x, v.y, 3); if (p) { v.x = p[0]; v.y = p[1]; } }
       t.st = 2; v.sleeping = true;
       if (t.home) { const h = S.buildings.get(t.home); if (h && h.built) v.inside = h.id; }
       // conception happens at night when partners share a bed

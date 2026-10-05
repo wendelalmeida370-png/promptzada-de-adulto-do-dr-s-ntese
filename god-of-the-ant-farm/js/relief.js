@@ -319,13 +319,17 @@
       wl[i] = Math.max(base, minV(i) - 0.3, SEA);
     }
     // steep stretches gather their descent into pools and falls instead of a hundred little steps
+    // the step varies along the course: here a run of rapids, there one tall drop
     const Pq = Rf.preset(o); const Q = 1.6 + Pq.peak * 0.035;
+    const nq = G.makeNoise(S.seed + 2024);
+    const qAt = i => Q * (0.4 + 1.1 * G.clamp(0.5 + G.fbm(nq, (i % N) * 0.09, ((i / N) | 0) * 0.09, 2) * 0.9, 0, 1));
     const raw = Float32Array.from(wl);
     const drop3 = i => { let c = i, n = 0; while (n < 3) { const d = down[c]; if (d < 0 || type[d] <= T.SEA || !(riv[d] || isLake(d))) break; c = d; n++; } return n ? (raw[i] - raw[c]) / n : 0; };
     for (const i of order) {
       if (!riv[i] || isLake(i) || drop3(i) < 0.3) continue;
       const d = down[i]; const base = d < 0 || type[d] <= T.SEA ? SEA : (riv[d] || isLake(d)) ? wl[d] : SEA;
-      wl[i] = Math.max(base, SEA + Math.floor((raw[i] - SEA) / Q) * Q + 0.02);
+      const q = qAt(i);
+      wl[i] = Math.max(base, SEA + Math.floor((raw[i] - SEA) / q) * q + 0.02);
     }
     // a lake never sits below the river that feeds it, a river never runs uphill
     for (const i of order) if (isLake(i)) { const d = down[i]; if (d >= 0 && (riv[d] || isLake(d)) && wl[d] > wl[i]) wl[d] = wl[i]; }
@@ -335,6 +339,14 @@
       type[i] = T.RIVER;
       const d = down[i];
       if (d >= 0 && type[d] <= T.RIVER && (riv[d] || isLake(d)) && wl[i] - wl[d] > 0.8 && !isLake(i)) rel.falls.push({ x: i % N, y: (i / N) | 0, tx: d % N, ty: (d / N) | 0, drop: +(wl[i] - wl[d]).toFixed(2) });
+    }
+    // falls one or two tiles apart are one waterfall in several leaps: the top one carries the whole height
+    const fallAt = new Map(); for (const f of rel.falls) fallAt.set(f.y * N + f.x, f);
+    for (const f of rel.falls.slice().sort((a, b) => wl[b.y * N + b.x] - wl[a.y * N + a.x])) {
+      if (f.sub) continue;
+      let tot = f.drop, steps = 1, c = f.ty * N + f.tx;
+      for (let k = 0; k < 3 && c >= 0; k++) { const g = fallAt.get(c); if (g && g !== f && !g.sub) { g.sub = 1; tot += g.drop; steps++; c = g.ty * N + g.tx; k = -1; continue; } c = down[c]; }
+      if (steps > 1) { f.tot = +tot.toFixed(2); f.steps = steps; }
     }
     for (const L of lakes) if (L.ok) { let sx = 0, sy = 0; for (const i of L.tiles) { sx += i % N; sy += (i / N) | 0; } rel.lakes.push({ x: sx / L.tiles.length + 0.5, y: sy / L.tiles.length + 0.5, n: L.tiles.length, lvl: +(L.lvl - 0.06).toFixed(2) }); }
     // ---- valleys: the banks fall toward the water ----
@@ -400,7 +412,7 @@
   // cliff faces, and two cached arrays the hot paths read (how steep a tile is, how high it stands)
   Rf.cliffs = function (S, x0, y0, x1, y1) {
     if (!S.cliff || S.cliff.length !== N * N) S.cliff = new Uint8Array(N * N);
-    if (!S.slope || S.slope.length !== N * N) { S.slope = new Float32Array(N * N); S.th = new Float32Array(N * N); x0 = y0 = x1 = y1 = undefined; }
+    if (!S.slope || S.slope.length !== N * N || !S.deep || S.deep.length !== N * N) { S.slope = new Float32Array(N * N); S.th = new Float32Array(N * N); S.deep = new Uint8Array(N * N); x0 = y0 = x1 = y1 = undefined; }
     x0 = Math.max(0, x0 === undefined ? 0 : x0 | 0); y0 = Math.max(0, y0 === undefined ? 0 : y0 | 0);
     x1 = Math.min(N - 1, x1 === undefined ? N - 1 : x1 | 0); y1 = Math.min(N - 1, y1 === undefined ? N - 1 : y1 | 0);
     const H = S.H; const V = N + 1;
@@ -412,6 +424,9 @@
       S.slope[i] = rg; S.th[i] = (a + b + cc + d) * 0.25;
       const c = S.type[i] >= T.SAND && rg > Rf.CLIFF ? 1 : 0;
       if (S.cliff[i] !== c) { S.cliff[i] = c; n++; }
+      // water deeper than a wade: the middle of lakes and broad rivers (only a bridge crosses it)
+      const dp = S.type[i] === T.RIVER && S.wl && S.wl[i] - S.th[i] > 0.26 ? 1 : 0;
+      if (S.deep[i] !== dp) { S.deep[i] = dp; n++; }
     }
     if (n) { S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand && W.invalidateLand(); }
   };
@@ -507,12 +522,21 @@
     for (const p of rel.peaks) p.name = uniq(() => pk([() => 'Monte ' + proper(), () => 'Pico ' + of(), () => 'Agulha ' + ofF(), () => 'Cume ' + ofM(), () => 'Dente ' + ofM(), () => proper()])());
     for (const p of rel.passes) { p.x = +p.x.toFixed(1); p.y = +p.y.toFixed(1); p.name = uniq(() => p.kind === 'rampa' ? pk([() => 'Trilha ' + of(), () => 'Escadaria ' + ofF(), () => 'Subida ' + ofM()])() : pk([() => 'Passo ' + of(), () => 'Garganta ' + ofM(), () => 'Portela dos Ventos', () => 'Boqueirão ' + ofM(), () => 'Passo ' + proper()])()); }
     // only the great falls get a name (a mountain world has a hundred little ones)
-    const falls = rel.falls.slice().sort((a, b) => b.drop - a.drop).filter(f => f.drop >= 1.5).slice(0, Math.max(3, Math.round(N / 14)));
+    const fh = f => f.tot || f.drop;
+    const falls = rel.falls.filter(f => !f.sub && fh(f) >= 1.5).sort((a, b) => fh(b) - fh(a)).slice(0, Math.max(3, Math.round(N / 14)));
     for (const f of falls) f.name = uniq(() => pk([() => 'Cachoeira ' + of(), () => 'Salto ' + ofM(), () => 'Véu ' + ofF(), () => 'Queda ' + proper()])());
     for (const l of rel.lakes) { l.x = +l.x.toFixed(1); l.y = +l.y.toFixed(1); if (l.n < 5) continue; l.name = uniq(() => pk([() => 'Lago ' + proper(), () => 'Lago ' + ofM(), () => 'Lagoa ' + ofF(), () => 'Lago Espelho', () => 'Lago dos Juncos', () => 'Lagoa Funda'])()); }
   };
   // heights as the peoples would count them
-  Rf.meters = h => Math.max(0, Math.round((h - SEA) * 150 / 10) * 10);
+  // altitude grows faster than the map's height: low hills are tens of meters, the great peaks thousands
+  const M = u => 12 * u + 5.2 * u * u;
+  Rf.meters = h => Math.max(0, Math.round(M(Math.max(0, h - SEA)) / 10) * 10);
+  // a waterfall's height, from the river's level at its top down to the pool at its foot
+  Rf.fallTxt = function (f) {
+    const top = G.S.wl[f.y * N + f.x] || (SEA + f.drop); const tot = f.tot || f.drop;
+    const m = Math.max(5, Math.round((M(Math.max(0, top - SEA)) - M(Math.max(0, top - tot - SEA))) / 5) * 5);
+    return m.toLocaleString('pt-BR') + ' m de queda' + (f.steps > 1 ? ` em ${f.steps} saltos` : '');
+  };
   Rf.metersTxt = h => Rf.meters(h).toLocaleString('pt-BR') + ' m';
   // the named places, for maps, the book and the camera
   Rf.places = function () {
@@ -520,7 +544,7 @@
     const out = [];
     for (const p of rel.peaks || []) if (p.name) out.push({ kind: 'pico', name: p.name, x: p.x, y: p.y, h: p.h, alt: Rf.metersTxt(p.h) });
     for (const p of rel.passes || []) if (p.name && p.kind === 'passo') out.push({ kind: 'passo', name: p.name, x: p.x, y: p.y });
-    for (const f of rel.falls || []) if (f.name) out.push({ kind: 'cachoeira', name: f.name, x: f.tx + 0.5, y: f.ty + 0.5, drop: f.drop, alt: Math.round(f.drop * 150 / 5) * 5 + ' m de queda' });
+    for (const f of rel.falls || []) if (f.name) out.push({ kind: 'cachoeira', name: f.name, x: f.tx + 0.5, y: f.ty + 0.5, drop: f.drop, alt: Rf.fallTxt(f) });
     for (const l of rel.lakes || []) if (l.name) out.push({ kind: 'lago', name: l.name, x: l.x, y: l.y, n: l.n, alt: Rf.metersTxt(l.lvl) + ' de altitude' });
     return out;
   };

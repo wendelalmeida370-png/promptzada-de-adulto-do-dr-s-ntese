@@ -7,7 +7,11 @@
   let V = N + 1;
   const SEA = G.SEA = 2.0;
   const T = G.T = { DEEP: 0, SEA: 1, RIVER: 2, SAND: 3, GRASS: 4, MEADOW: 5, ROCKY: 6 };
-  G.DAY_LEN = 100;           // seconds of game time per day (1 day == 1 year of life)
+  // seconds of game time per day (1 day == 1 year of life): long enough for a walk to a far wood, a full
+  // day's work and the way home before dark. What happens once a day (meals, sleep, births, ageing,
+  // harvests) is measured in days; walking and working in seconds, so a longer day gets more done.
+  G.DAY_LEN = 200;
+  G.DAY_K = G.DAY_LEN / 100; // (rhythms first tuned for a 100-second day divide by this)
   G.WEAR_MAX = 60;           // footpath wear saturation
 
   G.newState = function (seed) {
@@ -29,6 +33,7 @@
       bloom: new Float32Array(N * N),
       wl: new Float32Array(N * N).fill(SEA),   // water surface of each tile (mountain rivers and lakes sit high)
       cliff: new Uint8Array(N * N),            // cliff faces nobody can walk
+      deep: new Uint8Array(N * N),             // water too deep to wade (middle of lakes, broad rivers)
       slope: new Float32Array(N * N), th: new Float32Array(N * N), // (cached: steepness and height of each tile)
       relief: { ranges: [], passes: [], peaks: [], falls: [], lakes: [] },
       nextId: 1,
@@ -86,7 +91,9 @@
   W.isLand = i => G.S.type[i] >= T.SAND;
   W.blocked = i => { const b = G.S.occ[i]; if (!b) return false; const B = G.S.buildings.get(b); return !!(B && B.blocks); };
   // walls block, open gates (2) and aqueduct arches (3) let people through, shut gates (4) don't
-  W.walkable = i => { const S = G.S; const t = S.type[i]; if (t < T.RIVER || S.cliff[i] || W.blocked(i)) return false; const w = S.wall[i]; return !w || w === 2 || w === 3; };
+  W.walkable = i => { const S = G.S; const t = S.type[i]; if (t < T.RIVER || S.cliff[i] || W.blocked(i)) return false; if (t === T.RIVER && S.deep[i] && !S.road[i]) return false; const w = S.wall[i]; return !w || w === 2 || w === 3; };
+  // where one can lie down or stand around: walkable and out of the water
+  W.dryXY = (x, y) => { if (!W.inb(x, y)) return false; const i = W.idx(x, y); return G.S.type[i] >= T.SAND && W.walkable(i); };
   W.walkableXY = (x, y) => W.inb(x, y) && W.walkable(W.idx(x, y));
   // landmass labels: who can walk to whom (4-connected land, rivers included)
   let landIds = null, landKey = null, landVer = -1;
@@ -97,11 +104,11 @@
     landIds = new Int32Array(N * N).fill(-1); landKey = S; landVer = S.typeVer || 0;
     let id = 0;
     for (let i = 0; i < N * N; i++) {
-      if (landIds[i] >= 0 || S.type[i] < T.RIVER || S.cliff[i]) continue;
+      if (landIds[i] >= 0 || S.type[i] < T.RIVER || S.cliff[i] || (S.deep[i] && !S.road[i])) continue;
       const st = [i]; landIds[i] = id;
       while (st.length) {
         const a = st.pop(); const x = a % N, y = (a / N) | 0;
-        const ok = j => landIds[j] < 0 && S.type[j] >= T.RIVER && !S.cliff[j];
+        const ok = j => landIds[j] < 0 && S.type[j] >= T.RIVER && !S.cliff[j] && !(S.deep[j] && !S.road[j]);
         if (x > 0 && ok(a - 1)) { landIds[a - 1] = id; st.push(a - 1); }
         if (x < N - 1 && ok(a + 1)) { landIds[a + 1] = id; st.push(a + 1); }
         if (y > 0 && ok(a - N)) { landIds[a - N] = id; st.push(a - N); }

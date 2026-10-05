@@ -1274,6 +1274,20 @@
 
   // ------------------------------ entities ------------------------------
   let farLod = false;
+  // in water the body goes under: waders show from the knees up, swimmers only their back and head
+  function sinkOf(o) {
+    if (o.air || o.inside || o.aboard || o.held || o.dead || (o.z || 0) > 0.3) return 0;
+    const S = G.S; const xi = o.x | 0, yi = o.y | 0; if (xi < 0 || yi < 0 || xi >= N || yi >= N) return 0;
+    const i = yi * N + xi; const ty = S.type[i]; if (ty > T.RIVER) return 0;
+    if (o.kind) { const d = G.Animals.DEF[o.kind]; if (!d || d.cls === 'water' || d.cls === 'air') return 0; return (ty <= T.SEA || S.deep[i] ? 3.4 : 1.4) * (d.size || 1); }
+    return o.act === 'swim' || (o.task && o.task.type === 'swim') ? 0 : 2.4;
+  }
+  function drawSunk(draw, sx, sy, w, t) {
+    ctx.save(); ctx.beginPath(); ctx.rect(sx - 80, sy - 160, 160, 159.6); ctx.clip(); draw(); ctx.restore();
+    ctx.strokeStyle = 'rgba(235,248,255,0.55)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.ellipse(sx, sy, w + Math.sin(t * 4 + sx) * 0.35, w * 0.42, 0, 0, TAU); ctx.stroke();
+  }
+
   function drawEntity(e, t, nightF) {
     const o = e.o; const sx = e.sx, sy = e.sy;
     const S = G.S; const Art = G.Art;
@@ -1328,7 +1342,9 @@
         v.torch = night && !v.sleeping && v.moving && v.age >= 14 && ((v.task && v.task.torch) || v.id % 3 === 0);
         if (v.age >= 2) {
           const baby = v.babyOn;
-          G.Art.villager(ctx, v, sx, sy, t, R.cam.zoom < 0.95);
+          const sink = sinkOf(v);
+          if (sink) drawSunk(() => G.Art.villager(ctx, v, sx, sy + sink, t, R.cam.zoom < 0.95), sx, sy, 4.2, t);
+          else G.Art.villager(ctx, v, sx, sy, t, R.cam.zoom < 0.95);
           if (v._ruler && !v.inside) { const sc = v.age < 16 ? 0.55 + (v.age / 16) * 0.42 : 1; emisGlow.push(sx, sy - 15 * sc, 6, 'gold', 0.3 + 0.1 * Math.sin(t * 3)); }
           if ((v.chosen || v.prophet) && !v.inside) emisGlow.push(sx, sy - 8, v.chosen ? 11 : 9, v.chosen ? 'gold' : 'cool', 0.28 + 0.12 * Math.sin(t * 2.5 + v.id));
         } else { // baby lying (no carrier)
@@ -1344,7 +1360,9 @@
           ctx.strokeStyle = G.Fac.hex(o.tamed); ctx.lineWidth = 1.4; ctx.globalAlpha = 0.85;
           ctx.beginPath(); ctx.ellipse(sx, sy, 6 * (o.big || 1), 2.6 * (o.big || 1), 0, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
         }
-        if (o.big > 1) { ctx.save(); ctx.translate(sx, sy); ctx.scale(o.big, o.big); G.Art.animal(ctx, o, 0, 0, t, false); ctx.restore(); }
+        const sink = sinkOf(o) * (o.big || 1);
+        if (sink) drawSunk(() => { ctx.save(); ctx.translate(sx, sy + sink); ctx.scale(o.big || 1, o.big || 1); G.Art.animal(ctx, o, 0, 0, t, false); ctx.restore(); }, sx, sy, 3.6 * (o.big || 1) * ((G.Animals.DEF[o.kind] || {}).size || 1), t);
+        else if (o.big > 1) { ctx.save(); ctx.translate(sx, sy); ctx.scale(o.big, o.big); G.Art.animal(ctx, o, 0, 0, t, false); ctx.restore(); }
         else G.Art.animal(ctx, o, sx, sy, t, R.cam.zoom < 0.7);
         if (o.legend && !o.dead) emisGlow.push(sx + R.sface(o) * 4 * o.big, sy - 6 * o.big, 4, 'red', 0.5 + 0.2 * Math.sin(t * 3 + o.id));
         if (o.kind === 'wolf' && !o.dead && nightF > 0.4) emisGlow.push(sx + R.sface(o) * 5.4, sy - 5.7, 2.5, o.summoned ? 'red' : 'gold', 0.9);
