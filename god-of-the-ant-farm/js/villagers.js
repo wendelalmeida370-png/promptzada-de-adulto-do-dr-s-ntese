@@ -84,6 +84,9 @@
     if (!p) { v.path = null; v._pfI = ti; v._pfT = now; return false; }
     v.path = p; v.pi = 0; return true;
   };
+  // a tree, bush or boulder up on a ledge nobody from this town can climb to: for a day they go for another one
+  const cantReach = (o, v) => !!o.noPath && G.S.clock - (o.noPath[v.set] || -1e9) < G.DAY_LEN;
+  const noReach = (o, v) => { (o.noPath || (o.noPath = {}))[v.set] = G.S.clock; };
   // approach a small object (tree/bush/rock) standing just beside it
   function approach(v, ox, oy) {
     const dx = v.x - ox, dy = v.y - oy; const d = Math.hypot(dx, dy) || 1;
@@ -458,7 +461,7 @@
     const S = G.S;
     return nearestInGrid(v, maxR || 22, i => {
       const id = S.treeAt[i]; if (!id) return null; const t = S.trees.get(id);
-      if (!t || !G.Nature.isChoppable(t) || (t.stage === 'grow' && t.size < 0.7) || claimedByOther(t, v) || S.fire[i] > 0) return null;
+      if (!t || !G.Nature.isChoppable(t) || (t.stage === 'grow' && t.size < 0.7) || claimedByOther(t, v) || S.fire[i] > 0 || cantReach(t, v)) return null;
       return t;
     });
   }
@@ -466,14 +469,14 @@
     const S = G.S;
     return nearestInGrid(v, maxR || 18, i => {
       const id = S.objAt[i]; if (!id) return null; const b = S.bushes.get(id);
-      if (!b || b.berries < 1 || claimedByOther(b, v) || S.fire[i] > 0) return null; return b;
+      if (!b || b.berries < 1 || claimedByOther(b, v) || S.fire[i] > 0 || cantReach(b, v)) return null; return b;
     });
   }
   function nearestRock(v, maxR) {
     const S = G.S;
     return nearestInGrid(v, maxR || 24, i => {
       const id = S.objAt[i]; if (!id) return null; const r = S.rocks.get(id);
-      if (!r || r.stone < 1 || claimedByOther(r, v) || (r.noPath && S.clock - (r.noPath[v.set] || -1e9) < G.DAY_LEN)) return null; return r;
+      if (!r || r.stone < 1 || claimedByOther(r, v) || cantReach(r, v)) return null; return r;
     });
   }
   function chopTask(v) { const t = nearestTree(v); if (!t) return null; t.claim = v.id; return setTask(v, { type: 'chop', id: t.id, pri: 1 }); }
@@ -704,7 +707,7 @@
       case 'chop': {
         const tr = S.trees.get(t.id);
         if (!tr || (tr.stage !== 'fall' && !G.Nature.isChoppable(tr))) return end(v);
-        if (t.st === 0) { if (!approach(v, tr.x, tr.y)) return end(v); t.st = 1; }
+        if (t.st === 0) { if (!approach(v, tr.x, tr.y)) { noReach(tr, v); return end(v); } t.st = 1; }
         else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.act = 'chop'; v.actT = 0; } }
         else {
           G.faceTo(v, tr.x - v.x, tr.y - v.y);
@@ -726,7 +729,7 @@
       case 'gather': case 'forage': {
         const b = S.bushes.get(t.id);
         if (!b || b.berries < 1) return end(v);
-        if (t.st === 0) { if (!approach(v, b.x, b.y)) return end(v); t.st = 1; }
+        if (t.st === 0) { if (!approach(v, b.x, b.y)) { noReach(b, v); return end(v); } t.st = 1; }
         else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; } }
         else {
           v.act = 'gather';
@@ -744,8 +747,7 @@
       case 'mine': {
         const r = S.rocks.get(t.id);
         if (!r || r.stone < 1) return end(v);
-        // a boulder up on a ledge nobody from this town can climb to: they go for another one
-        if (t.st === 0) { if (!approach(v, r.x, r.y)) { (r.noPath || (r.noPath = {}))[v.set] = S.clock; return end(v); } t.st = 1; }
+        if (t.st === 0) { if (!approach(v, r.x, r.y)) { noReach(r, v); return end(v); } t.st = 1; }
         else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; t.w = 0; } }
         else {
           v.act = 'mine'; G.faceTo(v, r.x - v.x, r.y - v.y);
