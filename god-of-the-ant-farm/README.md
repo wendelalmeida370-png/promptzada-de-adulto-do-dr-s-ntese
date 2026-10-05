@@ -28,6 +28,7 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Minimapa | `M` · ou o ícone do mapa no topo (clique/arraste nele para voar até lá) |
 | Ver o subterrâneo | `U` · ou o ícone da caverna no topo · ou “Ver o interior” ao tocar a boca de uma caverna |
 | O Livro do Mundo | `L` · ou o ícone do livro no topo |
+| Histórias | `K` · ou o ícone da pena no topo |
 | Painel dos reinos | `R` · ou clique no chip do povo no topo |
 | Mostrar/ocultar fronteiras | `B` |
 | Cancelar poder | botão direito · `Esc` |
@@ -352,6 +353,19 @@ Cada mundo nasce com **nome**, **mito da criação**, **lendas de origem** de ca
 - **Bestiário**: todas as espécies do mundo em níveis da cadeia alimentar, com população, tendência, nascimentos, mortes por causa (fome, velhice, caçadores, cada predador) e extinções. Clique numa espécie para destacar o que ela come e quem a caça.
 - **Povos** e **Profecias**: a história de cada povo e o destino de cada palavra dita.
 
+## Histórias
+
+O mundo cria os fatos; um **diretor de histórias** procura histórias dentro deles. Ninguém escreveu nenhuma delas para esta partida: cada uma começa de algo que **aconteceu de verdade** — uma morte vista de perto, alguém levado acorrentado, uma fuga do cativeiro, uma cidade perdida, uma fera que matou um pai, um conto que uma criança ouviu junto à fogueira — e só segue o que o mundo faz depois. Nunca se inventa passado.
+
+- **Como nasce**: o mundo emite sinais → viram **fatos** (com lugar, testemunhas, quem sabe o quê e a guerra que os causou) → cada tipo de história avalia se ali há uma **semente** → o **diretor** escolhe poucas para acompanhar (3 a 9, conforme a população). Ele evita duas do mesmo tipo ao mesmo tempo, tragédias demais seguidas, várias histórias da mesma batalha; o que mostrou há pouco (o tipo, o tom, o parentesco, o lugar, o desfecho, até o título) pesa menos e volta a valer com o tempo. Sementes cujo protagonista morreu ou cujo motivo deixou de existir somem.
+- **Os tipos** (primeira biblioteca): **Vingança** (só jura quem sabe quem matou), **Resgate** de um parente cativo, **Volta para casa** (a fuga do cativeiro ou a saudade de um povo libertado), **Reconquista** (um governante que não esquece a cidade perdida), **O Sonho** (uma criança que ouviu falar de um lugar real e quer vê-lo um dia), **Peregrinação** (um devoto que perde alguém e promete ir a um oráculo, a uma maravilha, ao templo da capital) e **A Caçada** à fera que matou alguém da família.
+- **As pessoas agem, um pouco**: quem carrega uma história usa parte do tempo livre nela — treina com a lança no fim do dia, vai à beira da cidade olhar para onde levaram alguém, viaja, reza, segue o rastro da fera; se alista quando há guerra contra o povo do inimigo e o procura no campo de batalha; um vingador cujo alvo é o próprio governante dá ouvidos a uma conspiração; um governante que perdeu uma cidade pende para a guerra que a retome. Fome, sono, perigo e o trabalho de todo dia vêm antes. O diretor nunca teletransporta, ressuscita, protege ou força encontros: o que acontece é do mundo.
+- **Saber não é a verdade**: cada pessoa sabe o que **viu**, o que **soube pela família**, o que **ouviu contar** ou o que **todos dizem**.
+- **Fins de verdade**: cumprida, fracassada, **roubada pelo destino** (outro matou o alvo), abandonada, **transformada** (a vingança que vira prece), esquecida, interrompida, reencontro — e **herdada**: um filho, um irmão ou o companheiro pode levar a promessa adiante.
+- **Histórias se cruzam**: o assassino de uma é o cativo de outra; quem foi resgatado numa é o vingador da seguinte.
+- **Painel Histórias** (`K` ou a pena no topo): em andamento e concluídas, com protagonista, motivo, capítulos datados (◎ leva a câmera ao lugar), quem mais está nela, a situação agora e o que ainda pode acontecer — e botões para ver a pessoa, **segui-la** ou ir até lá. A ficha de cada pessoa mostra as histórias de que ela faz parte.
+- Só os clímax de verdade viram aviso; entram na **Crônica** e, quando excepcionais, nas **Lendas**; o **modo cinema** às vezes filma o momento; e os **velhos contam junto à fogueira** as histórias que acabaram. Tudo é salvo com o mundo e sobrevive a mortes, conquistas, extinções e ao Avançar no tempo.
+
 ## Estrutura do código
 
 ```
@@ -374,6 +388,9 @@ js/naval.js       portos, pesca, exploração, comércio marítimo, frotas com a
 js/siege.js       arqueiros, tropas de elite, muralhas, portões, aríetes, catapultas, torres de cerco, escadas, sapadores, óleo fervente, peste, sacrifícios
 js/economy.js     economia urbana: ofícios, currais, minas, forja, tecelagem, mercados, feira, taverna, impostos, crime
 js/festivals.js   calendário de festas de cada civilização: procissões, ritos, jogos, sacrifícios, o Fogo Novo
+js/stories.js     motor de histórias: sinais do mundo, fatos com testemunhas e causa, quem sabe o quê, sementes, diretor (capacidade, fadiga, ritmo), histórias como máquinas de estado abertas, storylets, herança, empurrões de comportamento, contexto para um futuro modo aventura, save/load
+js/story-lib.js   biblioteca de histórias: vingança, resgate, volta para casa, reconquista, sonho, peregrinação, caçada — com seus textos e variantes por civilização
+js/story-ui.js    painel Histórias, linha na ficha da pessoa, histórias contadas pelos velhos, cenas do cinema
 js/life.js        biografia viva, família no fim da tarde, histórias dos velhos, aprendizes, água e filas, fileiras e chamada ao trabalho
 js/carnage.js     guerra que pesa: sangue, membros decepados, corpos que apodrecem, coveiros, piras, a doença dos mortos
 js/army.js        exércitos: recrutamento, companhias, oficiais, formações, moral, planos de ataque e de defesa, cercos

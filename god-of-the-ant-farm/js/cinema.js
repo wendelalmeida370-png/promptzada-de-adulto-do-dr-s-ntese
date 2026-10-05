@@ -429,7 +429,7 @@
     administracao: [44, 'O governo'], coletoria: [40, 'Os impostos'], mercado_negro: [46, 'O mercado negro'], boat: [40, 'Barcos'], road: [30, 'Estradas'], cart: [34, 'Carroças'],
     curral: [34, 'Rebanhos'], estabulo: [36, 'Cavalos'], mina: [36, 'A mina'], forja: [34, 'A forja'], ourives: [34, 'Ouro'], olaria: [32, 'A olaria'], taverna: [34, 'A taverna'],
     tecelagem: [32, 'A tecelagem'], acougue: [30, 'O açougue'], deer: [40, 'A vida selvagem'], flower: [42, 'Fertilidade'], rain: [40, 'Chuva'], lore: [40, 'Lenda'], pop: [40, 'O povo'], campfire: [30, 'Uma fogueira'],
-    sea: [58, 'O mar'], workshop: [28, 'Uma oficina'], house: [22, 'Casas novas'], hut: [22, 'Cabanas novas'], farm: [20, 'Uma plantação'], storehouse: [22, 'Um celeiro'], well: [22, 'Um poço'], coin: [30, 'Moedas'],
+    sea: [58, 'O mar'], saga: [72, 'Uma história'], workshop: [28, 'Uma oficina'], house: [22, 'Casas novas'], hut: [22, 'Cabanas novas'], farm: [20, 'Uma plantação'], storehouse: [22, 'Um celeiro'], well: [22, 'Um poço'], coin: [30, 'Moedas'],
   };
   const WAR_IC = { war: 1, siege: 1, massacre: 1, battle: 1, army: 1, naval: 1, general: 1, chain: 1, skull: 1 };
   function chronicle(out) {
@@ -641,7 +641,7 @@
       // what is happening now beats what the chronicle already told
       for (const c of out) if (c.fromLog) c.score -= 12;
     } else {
-      festivals(out); armies(out); fleets(out); chronicle(out); fires(out); life(out); beasts(out); places(out); evenings(out); aftermath(out); caves(out); sea(out);
+      festivals(out); armies(out); fleets(out); chronicle(out); fires(out); life(out); beasts(out); places(out); evenings(out); aftermath(out); caves(out); sea(out); if (G.Stories && G.Stories.shots) G.Stories.shots(out);
       // the war's close-ups also show up now and then in the plain cinema
       const wd = []; warDetails(wd); for (const c of wd) { c.score -= 14; out.push(c); }
     }

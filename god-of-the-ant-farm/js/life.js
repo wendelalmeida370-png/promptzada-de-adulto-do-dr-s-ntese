@@ -328,8 +328,8 @@
   // ============================== the old tell stories ==============================
   const tales = new Map(); // settlement id -> session
   L.tales = () => [...tales.values()];
-  const TALE_IC = { war: 3, battle: 3, massacre: 3, siege: 3, meteor: 4, bolt: 3, wave: 4, mountain: 4, settle: 3, campfire: 3, crown: 2, tyrant: 3, split: 3, peace: 2, wonder: 3, monument: 2, temple: 2, era: 2, city: 2, plague: 3, fire: 2, prophecy: 3, lore: 3, sacrifice: 3, free: 3, general: 2, naval: 3, fest: 1, wolf: 2, storm: 2, heart: 1 };
-  const MOOD = { war: 'fear', battle: 'fear', massacre: 'fear', siege: 'fear', meteor: 'awe', bolt: 'awe', wave: 'fear', mountain: 'awe', plague: 'sad', fire: 'fear', sacrifice: 'fear', wolf: 'fear', prophecy: 'awe', lore: 'awe', wonder: 'awe', heart: 'heart', fest: 'happy', peace: 'happy', free: 'happy' };
+  const TALE_IC = { sea: 2, cave: 2, war: 3, battle: 3, massacre: 3, siege: 3, meteor: 4, bolt: 3, wave: 4, mountain: 4, settle: 3, campfire: 3, crown: 2, tyrant: 3, split: 3, peace: 2, wonder: 3, monument: 2, temple: 2, era: 2, city: 2, plague: 3, fire: 2, prophecy: 3, lore: 3, sacrifice: 3, free: 3, general: 2, naval: 3, fest: 1, wolf: 2, storm: 2, heart: 1 };
+  const MOOD = { sea: 'awe', cave: 'awe', war: 'fear', battle: 'fear', massacre: 'fear', siege: 'fear', meteor: 'awe', bolt: 'awe', wave: 'fear', mountain: 'awe', plague: 'sad', fire: 'fear', sacrifice: 'fear', wolf: 'fear', prophecy: 'awe', lore: 'awe', wonder: 'awe', heart: 'heart', fest: 'happy', peace: 'happy', free: 'happy' };
   function pickTale(elder, set) {
     const S = G.S; const cands = [];
     for (const e of elder.bio || []) { const s = firstPerson(elder, e); if (s) cands.push({ w: 4, txt: s, mood: e[1] === 'lost' ? 'sad' : e[1] === 'awoke' || e[1] === 'fest' ? 'awe' : 'fear', own: true }); }
@@ -338,12 +338,13 @@
       if (e.d > S.day - 2) continue;
       const w = TALE_IC[e.ic]; if (!w) continue;
       if (e.x !== undefined && G.dist(e.x, e.y, set.cx, set.cy) > 45 && !(f && e.txt.includes(f.name))) continue;
-      cands.push({ w: w * (1 + Math.min(3, (S.day - e.d) / 20)), txt: e.txt, mood: MOOD[e.ic] || 'awe', d: e.d });
+      cands.push({ w: w * (1 + Math.min(3, (S.day - e.d) / 20)), txt: e.txt, mood: MOOD[e.ic] || 'awe', d: e.d, x: e.x, y: e.y, ic: e.ic });
     }
     const lo = S.lore;
     if (lo && lo.legends) for (const l of lo.legends) cands.push({ w: 3, txt: `${l.title}: ${l.text[0]}`, mood: 'awe', d: l.day });
     if (lo && lo.myth && lo.myth.length && G.R() < 0.3) cands.push({ w: 2, txt: lo.myth.join(' '), mood: 'awe' });
     if (G.Caves) for (const c of G.Caves.talesFor(set)) cands.push(c);
+    if (G.Stories && G.Stories.talesFor) for (const c of G.Stories.talesFor(set)) cands.push(c);
     if (!cands.length) return null;
     let tot = 0; for (const c of cands) tot += c.w;
     let r = G.R() * tot; for (const c of cands) { r -= c.w; if (r <= 0) return c; }
@@ -386,6 +387,7 @@
       G.Vg.setTask(v, { type: 'listen', set: set.id, x: p[0], y: p[1], pri: 0.95, st: 0, kind: 'listen' });
     });
     G.Life.bio(elder, 'told', trim(tale.txt, 90));
+    G.Stories && G.Stories.signal('tale', { teller: elder.id, kids: s.kids.filter(id => { const k = S.villagers.get(id); return k && k.age < 16; }), tale });
     return s;
   }
   function runTell(v, t, dt, H) {

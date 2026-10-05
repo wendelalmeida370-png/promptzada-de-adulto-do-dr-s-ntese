@@ -16,6 +16,8 @@
     stone: svg('<path d="M3 18.5l2.8-7.5 5.2-3.6 6.2 2.2 3.8 8.9z" fill="currentColor"/><path d="M11 7.4l1.6 5.2 7.6 5.9M5.8 11l6.8 1.6" stroke="rgba(0,0,0,.25)" stroke-width="1.2" fill="none"/>'),
     faith: svg('<circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" ' + ST + '/>'),
     pause: svg('<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>'),
+    // a quill over an open page: the stories
+    saga: svg('<path d="M20.5 3.5c-4.8.6-8.6 3.6-10.6 8.3L8.4 15.6l1.9.8 1.4-3.6c2.4-.3 4.5-1.6 5.6-3.7-1.5.4-2.6.4-3.6.1 1.7-.8 3.2-2.2 4-3.9-.9.4-1.7.5-2.5.4 2.1-.5 4.2-1.2 5.3-2.2z" fill="currentColor"/><path d="M3 20.5c2.8-1.4 5.6-1.4 8.4 0M3 17.5c1.9-.9 3.8-1.1 5.6-.6" ' + ST + '/>'),
     scroll: svg('<path d="M6 3h11a2 2 0 0 1 2 2v12M6 3a2 2 0 0 0-2 2v2h4M6 3a2 2 0 0 1 2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-2h-11v2a2 2 0 0 1-2 2" ' + ST + '/><path d="M12 8h4M12 12h4" ' + ST + '/>'),
     stats: svg('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" ' + ST + '/>'),
     skip: svg('<path d="M3.5 6.5l7 5.5-7 5.5z M11.5 6.5l7 5.5-7 5.5z" fill="currentColor"/><path d="M20.5 6v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'),
@@ -128,7 +130,7 @@
     heal: ['heal', 'green'], food: ['leaf', 'green'], stone: ['stone', 'grey'], boat: ['boat', 'blue'], flower: ['fertility', 'pink'], info: ['leaf', 'green'],
     tech: ['tech', 'blue'], city: ['city', 'gold'], ship: ['ship', 'blue'], naval: ['ship', 'red'], cart: ['cart', 'gold'], wall: ['wall', 'grey'], road: ['road', 'gold'],
     aqueduct: ['aqueduct', 'blue'], wonder: ['wonder', 'gold'], siege: ['ram', 'red'], sacrifice: ['sacrifice', 'red'], lore: ['book', 'gold'], prophecy: ['word', 'gold'], cave: ['cave', 'orange'], paint: ['cave', 'red'],
-    mountain: ['mountain', 'brown'], wave: ['wave', 'blue'], sea: ['wave', 'blue'],
+    mountain: ['mountain', 'brown'], wave: ['wave', 'blue'], sea: ['wave', 'blue'], saga: ['saga', 'gold'],
     fest: ['fest', 'gold'], coin: ['scale', 'gold'], theft: ['chain', 'red'], army: ['sword', 'red'], battle: ['sword', 'red'], general: ['crown', 'red'], plague: ['heal', 'red'],
     curral: ['wolves', 'green'], estabulo: ['wolves', 'green'], acougue: ['hammer', 'gold'], tecelagem: ['hammer', 'gold'], mina: ['stone', 'grey'], forja: ['hammer', 'gold'], ourives: ['hammer', 'gold'],
     olaria: ['hammer', 'gold'], feira: ['scale', 'gold'], taverna: ['hammer', 'gold'], administracao: ['scroll', 'gold'], coletoria: ['scale', 'gold'], mercado_negro: ['chain', 'grey'], estatua: ['star', 'gold'],
@@ -157,7 +159,7 @@
   UI.init = function () {
     $('#ic-pop').innerHTML = ICON.pop; $('#ic-food').innerHTML = ICON.food; $('#ic-wood').innerHTML = ICON.wood; $('#ic-stone').innerHTML = ICON.stone; $('#ic-faith').innerHTML = ICON.faith;
     $('#btn-pause').innerHTML = ICON.pause;
-    $('#btn-chron').innerHTML = ICON.scroll; $('#btn-stats').innerHTML = ICON.stats; $('#btn-menu').innerHTML = ICON.menu; $('#btn-realms').innerHTML = ICON.crown; $('#btn-lore').innerHTML = ICON.book;
+    $('#btn-chron').innerHTML = ICON.scroll; $('#btn-stats').innerHTML = ICON.stats; $('#btn-menu').innerHTML = ICON.menu; $('#btn-realms').innerHTML = ICON.crown; $('#btn-lore').innerHTML = ICON.book; if ($('#btn-saga')) $('#btn-saga').innerHTML = ICON.saga;
     $('#btn-sound').innerHTML = G.Audio.sfxOn || G.Audio.musicOn ? ICON.sound : ICON.mute;
     // powers
     const bar = $('#powerbar');
@@ -200,6 +202,7 @@
     $('#btn-war').innerHTML = ICON.sword + '<i class="wb">0</i>'; $('#btn-war').onclick = () => { G.Audio.play('click'); G.Cinema.start({ war: 1 }); };
     $('#btn-realms').onclick = () => { G.Audio.play('click'); UI.openRealms(); };
     $('#btn-lore').onclick = () => { G.Audio.play('click'); G.Lore.openBook(); };
+    if ($('#btn-saga')) $('#btn-saga').onclick = () => { G.Audio.play('click'); G.Stories.open(); };
     $('#btn-under').innerHTML = ICON.cave; $('#btn-under').onclick = () => { G.Audio.play('click'); G.Render.setUnder(!G.Render.under); };
     G.Render.underHooks.push(on => { $('#btn-under').classList.toggle('on', !!on); });
     $('#btn-map').innerHTML = ICON.map; $('#btn-map').onclick = () => { G.Audio.play('click'); G.Minimap.toggle(); };
@@ -226,6 +229,7 @@
       else if (b.dataset.act === 'bio') UI.openBio(UI.selected.id);
       else if (b.dataset.act === 'cave-view') G.Caves.view(+b.dataset.id);
       else if (b.dataset.act === 'cave-panel') { const cv = G.Caves.get(+b.dataset.id); if (cv) UI.select(G.Caves.selectCave(cv)); }
+      else if (b.dataset.act === 'saga') G.Stories.openStory(+b.dataset.id);
     });
     $('#modal-bg').addEventListener('click', e => { if (e.target.id === 'modal-bg') UI.closeModal(); });
     $('#modal').addEventListener('click', e => {
@@ -269,6 +273,7 @@
       else if (m === 'yes') { const f = UI._confirm; UI.closeModal(); f && f(); }
       else if (m === 'bio') UI.openBio(+b.dataset.id);
       else if (m === 'tree') UI.openTree(+b.dataset.id);
+      else if (m.startsWith('saga-')) G.Stories.uiAct(m, b);
       else if (m === 'person') { const p = G.person(+b.dataset.id); if (p) { UI.closeModal(); UI.select(p); if (!p.dead) G.Render.panTo(p.x, p.y); } }
     });
     document.querySelectorAll('button').forEach(b => b.addEventListener('mouseenter', () => G.Audio.play('hover')));
@@ -532,6 +537,7 @@
       return `<div class="insp-head"><div class="portrait dead"></div><div class="insp-title"><h3>${deadName} †</h3><div class="sub">Viveu ${age} anos · Dia ${Math.max(1, Math.round(v.born))} – Dia ${v.died}</div><div class="traits">${traits}</div></div><button class="x" data-act="close">${ICON.close}</button></div>
         ${df ? `<div class="fline">${UI.flag(df.id, 'mini')}${esc(df.name)}${v.reigned ? ' · governou' : ''}${v.captive ? ' · morreu no cativeiro' : ''}</div>` : ''}
         <div class="doing">Causa da morte: <b>${cause}</b>${killer && killer.id !== v.id ? ` — por <a data-pid="${killer.id}">${esc(killer.name)}</a>` : ''}${v.kills ? `<br>Derrubou ${v.kills} ${v.kills > 1 ? 'inimigos' : 'inimigo'} em vida.` : ''}</div>
+        ${G.Stories ? G.Stories.personLine(v) : ''}
         <div class="family">${fam.map(x => `<div>${x}</div>`).join('') || '<div class="muted">Sem família conhecida.</div>'}</div>
         ${(() => { const body = G.Carnage && G.Carnage.list().find(c => c.vid === v.id); const t = body ? `O corpo ainda está no chão — ${G.Carnage.STAGE[G.Carnage.stage(body)]}${body.claim ? '; alguém está indo buscá-lo' : ''}.` : v.buried === 'pyre' ? 'O corpo foi queimado na pira dos inimigos.' : v.grave ? `Sepultad${f ? 'a' : 'o'} no cemitério.` : ''; return t ? `<div class="meta">${t}</div>` : ''; })()}
         <div class="btns"><button data-act="tree">${ICON.tree} Árvore genealógica</button><button data-act="bio">${ICON.book} Biografia</button></div>`;
@@ -566,6 +572,7 @@
       ${facLine}${rulerLine}
       <div class="bars">${bar('Vida', v.hp, 'hp')}${bar('Fome', v.hunger, 'hunger')}${bar('Energia', v.energy, 'energy')}${bar('Devoção', v.devotion, 'dev')}${bar('Medo', v.fear, 'fear')}</div>
       ${status.length ? `<div class="status">${status.join('')}</div>` : ''}
+      ${G.Stories ? G.Stories.personLine(v) : ''}
       <div class="family">${fam.map(x => `<div>${x}</div>`).join('') || '<div class="muted">Sem laços familiares ainda.</div>'}</div>
       ${(() => { const mem = G.Life ? G.Life.bioList(v).slice(-3).reverse() : []; return mem.length ? `<div class="memories"><label>Memórias</label>${mem.map(e => `<div><em>${e.age} ${e.age === 1 ? 'ano' : 'anos'}</em>${esc(e.txt)}</div>`).join('')}</div>` : ''; })()}
       <div class="doing">Atualmente: <b>${esc(G.Vg.taskText(v))}</b></div>
@@ -702,6 +709,7 @@
       <h4>Montanhas, rios e a câmera que gira</h4><p>Cordilheiras com neve no alto, colinas, planaltos e mesas cercados de paredões, falésias sobre o mar, rios que descem das montanhas com <b>cachoeiras</b>, lagos nas bacias — tudo escolhido no <b>Novo mundo</b> (relevo plano, suave, montanhoso ou alpino). Subir custa caro, paredões não se escalam, os caminhos procuram os <b>passos</b>, e na guerra quem está no alto bate mais forte. Picos, passos, cachoeiras e lagos têm nome: veja no mapa e na aba <b>Geografia</b> do Livro do Mundo. <b>A câmera gira livre</b> (dois dedos, botão do meio, <kbd>Shift</kbd> + arrastar, a bússola ou <kbd>Q</kbd>/<kbd>E</kbd>): montanhas escondem o que está atrás delas, então gire para ver o outro lado. Na beira dos rios e lagos a água é rasa; no meio, funda — só quem nada entra.</p>
       <h4>Avançar no tempo</h4><p>O botão ⏭ ao lado das velocidades (ou <kbd>J</kbd>) pula anos de história: o mundo vive de verdade, só que sem desenhar, e você vê os anos passarem num mapa, com as grandes notícias da crônica. Escolha até quando (anos, a primeira cidade, metrópole ou megalópole, a próxima guerra) e como: <b>anos de paz e fartura</b> (os povos crescem até virar impérios) ou <b>deixar o mundo seguir</b>. <kbd>Esc</kbd> para no meio do caminho. No Novo mundo, "Começar" já chega mais tarde.</p>
       <h4>O céu e os sons</h4><p>Névoa nos baixios ao amanhecer, raios de sol nas horas douradas, sombras de nuvens deslizando sobre os campos, <b>arco-íris</b> depois da chuva, vaga-lumes nas noites quentes, folhas no vento, redemoinhos de poeira no deserto, relâmpagos dentro das tempestades. O som acompanha o que a câmera mostra: ondas e gaivotas na costa, o rio correndo, folhas e pássaros na mata, o murmúrio da cidade, a forja, cães e galinhas, corujas e sapos à noite, o estrondo de uma batalha.</p>
+      <h4>Histórias</h4><p>Um <b>diretor de histórias</b> acompanha o que acontece e escolhe, entre os fatos reais do mundo, poucos que valem uma história: uma morte vista de perto vira <b>vingança</b>, alguém levado acorrentado vira <b>resgate</b>, uma fuga vira <b>volta para casa</b>, uma cidade perdida vira a <b>obsessão de um governante</b>, um conto junto à fogueira vira o <b>sonho</b> de uma criança, um luto vira <b>peregrinação</b>, uma fera que matou um pai vira <b>caçada</b>. Ninguém as escreveu: só o que o mundo faz decide como terminam — cumpridas, fracassadas, roubadas pelo destino, abandonadas, transformadas ou herdadas por um filho. Quem carrega uma história usa um pouco do tempo livre nela (treinar, vigiar, viajar, rezar, seguir um rastro) e se alista contra o povo do inimigo. Abra o painel com <kbd>K</kbd> ou a pena no topo para ver os capítulos, quem está em cada uma e seguir o protagonista.</p>
       <h4>O Livro do Mundo</h4><p>Cada mundo nasce com nome, mito da criação, lendas de origem de cada povo e <b>duas profecias antigas</b>. Depois o livro se escreve sozinho: um capítulo a cada sete anos, lendas de heróis, profetas, monstros, vulcões e cidades afogadas. Abra com <kbd>L</kbd> ou pelo ícone do livro.</p>
       <h4>Dicas</h4><ul><li>Clique nos eventos da <b>Crônica</b> para ir até onde aconteceram.</li><li>Na seca, a chuva vale ouro. Num incêndio, também.</li><li>Tudo é salvo automaticamente no navegador.</li></ul>
       </div><div class="mbtns"><button class="primary" data-m="close">Entendi</button></div>`, 'wide');

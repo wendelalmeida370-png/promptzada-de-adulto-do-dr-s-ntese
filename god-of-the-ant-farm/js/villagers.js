@@ -215,7 +215,7 @@
     if (v.hp <= 0) G.Village.kill(v, v.lastCause, v.lastGod);
   }
 
-  const FIELD = { band: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1, aboard: 1, embark: 1, boardBack: 1, pave: 1 };
+  const FIELD = { saga: 1, band: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1, aboard: 1, embark: 1, boardBack: 1, pave: 1 };
   // ------------------------------ emergencies ------------------------------
   Vg.alarms = new Map(); // settlement id -> [tile indices]
   Vg.fireFighters = new Map();
@@ -361,6 +361,9 @@
       if (v.devotion + v.fear * 0.7 > 28 || (S.awareness && v.traits.includes('Devoto'))) opt((0.1 + (v.devotion + v.fear * 0.8) / 320) * G.R() * 1.6, 0.5, 'pray');
       if (S.prayer && S.prayer.set === v.set) opt(0.3 + G.R() * 0.35, 0.6, 'pray');
       if (v.traits.includes('Curioso') && !elder) opt(0.22 * G.R(), 0, 'explore');
+      // a story this person carries takes a little of the free time (training, a vigil, a journey)
+      // (a wish, not a duty: at a free moment, now and then — about one free choice in ten)
+      if (G.Stories) { const u = G.Stories.urge(v); if (u > 0 && G.R() < u * (eve ? 0.7 : 1.2)) opt(0.9, 0.5, 'saga'); }
       opt(0.14 * G.R(), 0, 'visit');
       if (eve || elder) opt(0.3 * G.R() * (elder ? 2 : 1), 0, 'rest');
       // the working day ends: home, or a cup at the tavern
@@ -394,6 +397,7 @@
       case 'home': t = (G.Life && G.Life.familyTask(v, H)) || (G.Eco && G.Eco.goHomeTask(v, H)); break;
       case 'tavern': t = G.Eco && G.Eco.tavernTask(v, H); break;
       case 'shop': t = G.Eco && G.Eco.shopTask(v, H); break;
+      case 'saga': t = G.Stories && G.Stories.task(v, H); break;
     }
     if (!t) { if (!v.task) wander(v, 4); }
     else t.kind = kind;
@@ -1152,10 +1156,11 @@
         if (G.R() < dt * 2) G.FX && G.FX.splash(v.x, v.y, 0.25);
         break;
       }
+      case 'saga': if (G.Stories) G.Stories.run(v, t, dt, H); else end(v); break;
       default: if (!(G.Caves && G.Caves.run(v, t, dt, H)) && !G.War.run(v, t, dt, H) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Carnage && G.Carnage.run(v, t, dt, H))) end(v);
     }
   }
-  const LONG = { caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1 };
+  const LONG = { saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1 };
 
   function runBuild(v, t, dt) {
     const S = G.S;
@@ -1508,6 +1513,7 @@
       case 'mine': return t.st < 2 ? 'Indo quebrar pedras' : 'Quebrando pedras';
       case 'quarry': return t.st < 2 ? 'Indo à pedreira' : 'Extraindo pedra da encosta';
       case 'drift': return t.st < 2 ? 'Indo à praia' : 'Catando madeira que o mar trouxe';
+      case 'saga': return G.Stories ? G.Stories.taskText(v, t) : 'Pensando na vida';
       case 'mariscar': return t.st < 2 ? 'Indo à praia na maré baixa' : t.st === 3 ? (G.Sea.shift() < 0.14 ? 'Fugindo da maré que volta!' : 'Voltando com o cesto de mariscos') : t.rock ? 'Catando mariscos e caranguejos nas pedras da maré baixa' : 'Cavando mariscos na areia molhada da maré baixa';
       case 'baleia': return t.st < 2 ? 'Correndo para a praia: uma baleia encalhou!' : 'Cortando a carne da baleia encalhada';
       case 'olhar': return t.what === 'tartarugas' ? (t.st < 2 ? 'Correndo para a praia: as tartaruguinhas estão nascendo!' : 'Vendo as tartaruguinhas correrem para o mar') : 'Olhando';

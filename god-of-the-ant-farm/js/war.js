@@ -108,7 +108,7 @@
       if (fid(v) !== f.id || v.id === f.leader && !opts.all) continue;
       if (v.task && (v.task.type === 'band' || v.task.type === 'combat' || busyDiplomat(v) || v.task.pri >= 4)) continue;
       if (G.dist(v.x, v.y, from.cx, from.cy) > (G.Army ? 60 : 32)) continue; // a host is levied from the whole region
-      const w = v.role === 'guerreiro' ? 3 : (v.role === 'cacador' ? 1.5 : 0) + v.courage + (v.fury > 0 ? 3 : 0);
+      const w = (v.role === 'guerreiro' ? 3 : (v.role === 'cacador' ? 1.5 : 0) + v.courage + (v.fury > 0 ? 3 : 0)) + (G.Stories ? G.Stories.warPull(v, enemy.id) : 0);
       cands.push([w, v]);
     }
     cands.sort((a, b) => b[0] - a[0]);
@@ -122,6 +122,8 @@
     // only fools attack a much larger village (unless a god is pushing them)
     if (!opts.fury && size < defenders * (0.55 - pe.agg * 0.2)) return null;
     const members = cands.slice(0, size).map(c => c[1]);
+    // (a city with a story: where our own are held, or the one we lost — if the road is there)
+    if (!opts.target && G.Stories) { const st = G.Stories.warTarget(f, enemy); const tg = st && S.settlements.get(st); if (tg && tg.fac === enemy.id && reachable(from, tg)) opts.target = st; }
     if (opts.target) { const tg = S.settlements.get(opts.target); if (tg && tg.fac === enemy.id) best = tg; }
     const goal = opts.goal || Wr.chooseGoal(f, enemy, best, members.length);
     const ang = Math.atan2(best.cy - from.cy, best.cx - from.cx);
@@ -630,6 +632,8 @@
     const S = G.S; const R = b.st === 'ataque' ? 10 : b.st === 'retorno' ? 4 : 6; let best = null, bd = R * R;
     const massacre = b.goal === 'massacre' && b.st === 'ataque';
     const t = v.task;
+    // someone with a score to settle looks for that one face in the fight (if it is there at all)
+    const sagaFoe = G.Stories ? G.Stories.foeOf(v) : 0;
     for (const o of S.villagers.values()) {
       if (o.captive || o.held || o.air || badFoe(t, o) || (!o.inside && unreachableSpot(o))) continue;
       const fo = fid(o); if (fo === b.fac || !hostile(b.fac, fo)) continue;
@@ -641,7 +645,7 @@
         if (o.task && (o.task.type === 'flee' || o.task.type === 'hide') && !fighting(o)) continue;
         if (b.goal === 'captura' && !fighting(o) && o.role !== 'guerreiro') continue;
       }
-      const d = G.dist2(v.x, v.y, o.x, o.y); if (d < bd) { bd = d; best = o; }
+      const d = G.dist2(v.x, v.y, o.x, o.y) * (o.id === sagaFoe ? 0.3 : 1); if (d < bd) { bd = d; best = o; }
     }
     return best ? best.id : 0;
   }

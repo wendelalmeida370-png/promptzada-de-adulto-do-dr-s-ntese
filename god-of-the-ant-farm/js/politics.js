@@ -393,8 +393,10 @@
     let best = null, bs = 0;
     for (const v of adultsOf(f.id)) {
       if (v === ruler || v.id === ruler.partner || (ruler.kids || []).includes(v.id) || v.age > 60 || v.hp < 60) continue;
-      const pe = P.persona(v); const s = pe.amb * 1.2 + v.courage * 0.6 + (v.kills || 0) * 0.05 + (v.role === 'guerreiro' ? 0.3 : 0);
-      if (pe.amb > 0.62 && s > bs) { bs = s; best = v; }
+      // (someone who swore to see the ruler pay is among the first to listen to a conspiracy)
+      const grudge = G.Stories && G.Stories.foeOf(v) === ruler.id;
+      const pe = P.persona(v); const s = pe.amb * 1.2 + v.courage * 0.6 + (v.kills || 0) * 0.05 + (v.role === 'guerreiro' ? 0.3 : 0) + (grudge ? 0.6 : 0);
+      if ((pe.amb > 0.62 || (grudge && pe.amb > 0.4)) && s > bs) { bs = s; best = v; }
     }
     if (best) P.startCoup(f, best);
   }
@@ -405,7 +407,7 @@
     let k = 0;
     for (const v of adultsOf(f.id)) {
       if (k >= 2) break;
-      if (v !== u && v !== ruler && v.id !== ruler.partner && !isKin(v, ruler) && P.persona(v).amb > 0.5 && G.dist(v.x, v.y, u.x, u.y) < 18 && G.R() < 0.5) {
+      if (v !== u && v !== ruler && v.id !== ruler.partner && !isKin(v, ruler) && (P.persona(v).amb > 0.5 || (G.Stories && G.Stories.foeOf(v) === ruler.id)) && G.dist(v.x, v.y, u.x, u.y) < 18 && G.R() < 0.5) {
         v.coup = f.id; G.Vg.setTask(v, { type: 'combat', id: ruler.id, pri: 4.6, coup: true, any: true, cause: 'coup', kind: 'combat' }); k++;
       }
     }
@@ -709,7 +711,7 @@
   const REASON = {
     fome: 'a fome empurra seu povo contra os celeiros alheios', secessao: 'para esmagar os rebeldes', vinganca: 'para vingar seus mortos',
     fronteira: 'por disputas de fronteira', desconfianca: 'por pura desconfiança', divina: 'tomados por uma fúria divina', alianca: 'honrando uma aliança',
-    vassalo: 'para romper as correntes da vassalagem',
+    vassalo: 'para romper as correntes da vassalagem', reconquista: 'para retomar uma cidade perdida',
   };
   P.alliesOf = fid => G.Fac.all().filter(o => o.id !== fid && G.Fac.rel(fid, o.id) && G.Fac.rel(fid, o.id).st === 'alianca');
   P.strength = function (fid) {
@@ -759,8 +761,9 @@
     const rebels = b.parent === a.id && S.day - b.founded < 5;
     if (rebels) want += 0.25;
     want -= P.alliesOf(b.id).length * 0.12;
+    const lean = G.Stories ? G.Stories.warLean(a, b) : null; if (lean) want += lean.w;
     const th = S.temper === 'pacifico' ? 1.2 : S.temper === 'belicoso' ? 0.68 : 0.86;
-    if (want > th && G.R() < 0.3) P.declareWar(a, b, hungry ? 'fome' : rebels ? 'secessao' : r.grudge > 40 ? 'vinganca' : touch > 3 ? 'fronteira' : pa.agg > 0.68 ? 'ambicao' : 'desconfianca');
+    if (want > th && G.R() < 0.3) { if (lean && G.Stories) G.Stories._leanStory = lean.story; P.declareWar(a, b, lean ? 'reconquista' : hungry ? 'fome' : rebels ? 'secessao' : r.grudge > 40 ? 'vinganca' : touch > 3 ? 'fronteira' : pa.agg > 0.68 ? 'ambicao' : 'desconfianca'); }
   }
   function considerPeace(a, b, r) {
     const S = G.S;

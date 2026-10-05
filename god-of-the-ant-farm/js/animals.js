@@ -553,7 +553,7 @@
       if (tg.dead) { a.state = 'eat'; a.target = tg.id; a.t = 20; a.carc = true; a.onPerson = false; }
     } else {
       const cause = a.kind === 'wolf' ? 'wolf' : a.kind === 'boar' ? 'boar' : 'beast';
-      tg.lastBeast = a.kind;
+      tg.lastBeast = a.kind; tg.lastBeastId = a.id;
       G.Vg.damage(tg, dmg * 0.8, cause, a.summoned);
       G.FX && G.FX.blood(tg.x, tg.y);
       if (G.S.villagers.has(tg.id)) { G.Vg.emote(tg, 'fear', 2); tg.lastBeast = a.kind; }

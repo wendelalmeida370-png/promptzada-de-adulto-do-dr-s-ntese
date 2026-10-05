@@ -123,7 +123,7 @@
     return null;
   }
   // the great news of the chronicle, as they happen
-  const BIG = { war: 1, massacre: 1, crown: 1, city: 1, settle: 1, wonder: 1, split: 1, siege: 1, plague: 1, ship: 1, naval: 1, coup: 1, tyrant: 1, revolt: 1, peace: 1, ally: 1, tech: 0, legend: 1, prophecy: 1, sacrifice: 1 };
+  const BIG = { war: 1, massacre: 1, crown: 1, city: 1, settle: 1, wonder: 1, split: 1, siege: 1, plague: 1, ship: 1, naval: 1, coup: 1, tyrant: 1, revolt: 1, peace: 1, ally: 1, tech: 0, legend: 1, prophecy: 1, sacrifice: 1, saga: 1 };
   function collect() {
     const S = G.S; const H = S.history;
     for (let k = H.length - 1; k >= 0 && H[k].n > lastLog; k--) {

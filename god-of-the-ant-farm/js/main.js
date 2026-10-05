@@ -360,6 +360,7 @@
       else if (k === 'Tab') { e.preventDefault(); G.UI.nextTab(e.shiftKey ? -1 : 1); }
       else if (k === 'r' || k === 'R') G.UI.openRealms();
       else if (k === 'l' || k === 'L') G.Lore.openBook();
+      else if ((k === 'k' || k === 'K') && G.Stories) G.Stories.open();
       else if (k === 'm' || k === 'M') G.Minimap.toggle();
       else if (k === 'u' || k === 'U') G.Render.setUnder(!G.Render.under);
       else if (k === 'j' || k === 'J') G.Skip.open();
