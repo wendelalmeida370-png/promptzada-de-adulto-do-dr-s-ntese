@@ -418,7 +418,7 @@
   }
   E.fairOpen = () => { const t = G.S.time; return t > 0.08 && t < 0.5; };
   function fairTask(v, b, f, H) {
-    if (!E.fairOpen()) return null;
+    if (!E.fairOpen() || (G.War && G.War.threat(v.set))) return null;
     const I = inv(b);
     const goods = ['food', 'tecido', 'ceramica', 'couro'];
     const low = goods.filter(k => (I[k] || 0) < (k === 'food' ? 10 : 2) && (f.stock[k] || 0) >= (k === 'food' ? 14 : 2));

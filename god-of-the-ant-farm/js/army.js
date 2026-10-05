@@ -591,7 +591,7 @@
     // the threat is gone: back to work
     if (!att || att.st === 'retorno' || !set || set.fac !== b.fac) {
       A.idle = (A.idle || 0) + dt;
-      if (A.idle > 6 && A.phase !== 'batalha') { if (att && att.st === 'retorno' && !A.won) { A.won = true; log(`${set ? set.name : 'A cidade'} resistiu: o inimigo recuou diante dos defensores de ${f.name}.`, 'battle', set ? set.cx : undefined, set ? set.cy : undefined); } G.War.disband(b, true); return true; }
+      if (A.idle > 6 && A.phase !== 'batalha') { if (att && att.st === 'retorno' && !A.won) { A.won = true; if (set) set.victory = S.day; log(`${set ? set.name : 'A cidade'} resistiu: o inimigo recuou diante dos defensores de ${f.name}.`, 'battle', set ? set.cx : undefined, set ? set.cy : undefined); } G.War.disband(b, true); return true; }
     } else A.idle = 0;
     const foeHost = enemyHost(b);
     if (foeHost && A.phase !== 'batalha' && A.strat !== 'muralha') { A.phase = 'batalha'; A.bt = 0; A.foeHost = foeHost.id; deploy(b, A, f, foeHost); for (const co of A.cos) { co.hidden = false; if (A.strat === 'emboscada') co.morale += 10; } if (A.strat === 'emboscada') { const eg = S.villagers.get(foeHost.army.gen); if (eg) log(`Emboscada! Os defensores de ${set.name} saem da floresta sobre o flanco de ${G.Fac.get(foeHost.fac).name}.`, 'battle', eg.x, eg.y); for (const c of foeHost.army.cos) c.morale -= 14; } }

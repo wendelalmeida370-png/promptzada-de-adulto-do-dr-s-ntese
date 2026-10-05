@@ -985,7 +985,7 @@
   function dares() {
     const S = G.S;
     for (const set of S.settlements.values()) {
-      if (G.R() > 0.3 || (set.alarmT || 0) > 0) continue;
+      if (G.R() > 0.3 || (set.alarmT || 0) > 0 || (G.War && G.War.threat(set.id))) continue;
       let cv = null, bd = 18 * 18, m = null;
       for (const c of C.all()) { if (!c.known[set.fac]) continue; for (const mm of c.mouths) { const d = G.dist2(mm.x, mm.y, set.cx, set.cy); if (d < bd) { bd = d; cv = c; m = mm; } } }
       if (!cv) continue;

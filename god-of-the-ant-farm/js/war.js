@@ -20,6 +20,22 @@
   let nextBand = 1;
   const reach = new Map();
 
+  // is there fighting at a town, or an army about to reach it? festivals, fairs and games wait for it to pass
+  Wr.threat = function (setId) { return !!Wr.threatWhy(setId); };
+  Wr.threatWhy = function (setId) {
+    const S = G.S; const set = S.settlements.get(setId); if (!set) return '';
+    if (set.alarmT > 0) return 'alarm'; if (set.larder) return 'siege';
+    const R0 = (set.radius || 8) + 6;
+    for (const b of Wr.bands.values()) {
+      if (b.set !== setId || b.st === 'retorno' || b.members.length < 3) continue;
+      if (b.goal === 'defesa') { if (b.army && b.army.phase === 'batalha') return 'battle'; continue; }
+      if (b.st === 'ataque') return 'attack';
+      if (b.st === 'marcha') { const lead = S.villagers.get(b.army ? b.army.gen : b.members[0]); if (lead && G.dist(lead.x, lead.y, set.cx, set.cy) < R0 + 10) return 'march'; }
+    }
+    // a real fight at its doors (not a lone skirmish, not a ship sinking off the coast)
+    for (const bt of Wr.battles) { if (Wr.clock - bt.last > 20) continue; let n = 0; for (const k in bt.dead) n += bt.dead[k]; if (n >= 3 && G.dist(bt.x, bt.y, set.cx, set.cy) < R0 && S.type[W.idx(bt.x, bt.y)] > T.RIVER) return 'fight'; }
+    return '';
+  };
   Wr.reset = function () { Wr.bands.clear(); Wr.battles.length = 0; reach.clear(); Wr.warFacs.clear(); Wr.fighters.length = 0; Wr.escapers.length = 0; };
   Wr.GOAL = { saque: 'para saquear', captura: 'para fazer cativos', conquista: 'para conquistar', massacre: 'sem intenção de deixar sobreviventes' };
 

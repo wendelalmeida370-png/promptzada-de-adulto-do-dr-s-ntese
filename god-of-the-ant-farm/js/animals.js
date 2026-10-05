@@ -295,6 +295,11 @@
     if (def.cls === 'land' && !def.climb && S.type[i] >= T.SAND) mul /= 1 + S.slope[i] * 0.14;
     const step = Math.min(d, sp * dt * mul * (0.6 + 0.4 * a.grown));
     const nx = a.x + dx / d * step, ny = a.y + dy / d * step;
+    // a fence in the way: slide along it, or give up this way
+    if (def.cls !== 'air' && W.fenceBlocks(a, a.x, a.y, nx, ny)) {
+      if (!W.fenceBlocks(a, a.x, a.y, nx, a.y) && walkOK(a, nx, a.y)) a.x = nx; else if (!W.fenceBlocks(a, a.x, a.y, a.x, ny) && walkOK(a, a.x, ny)) a.y = ny; else { a.tx = a.x; a.ty = a.y; a.moving = false; return true; }
+      a.moving = true; return false;
+    }
     if (def.cls !== 'air' && !walkOK(a, nx, ny)) {
       if (walkOK(a, nx, a.y)) a.x = nx; else if (walkOK(a, a.x, ny)) a.y = ny; else { a.tx = a.x; a.ty = a.y; a.moving = false; return true; }
     } else { a.x = G.clamp(nx, 0.3, N - 0.3); a.y = G.clamp(ny, 0.3, N - 0.3); }
@@ -873,7 +878,14 @@
       if (!sp) { dead.push(a); continue; }
       // slow bookkeeping (hunger, age, fire, carrion) twice a second, staggered per animal
       a.lt += dt;
-      if (a.lt >= 0.5) { const lt = a.lt; a.lt = 0; if (!life(a, sp, lt, S)) continue; }
+      if (a.lt >= 0.5) {
+        const lt = a.lt; a.lt = 0; if (!life(a, sp, lt, S)) continue;
+        // a wild beast that wandered into a pen (or stood where a pen was built) walks back out
+        if (!a.pen && !sp.dom && !sp.town && sp.cls !== 'air' && a.state !== 'chase' && a.state !== 'eat') {
+          const F = W.fenceMap(); const f = F && F[W.idx(a.x, a.y)];
+          if (f) { const b = S.buildings.get(f); if (b) { const cx = b.x + b.w / 2, cy = b.y + b.h / 2; const a0 = Math.atan2(a.y - cy, a.x - cx); for (let k = 0; k < 8; k++) { const an = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.785; const tx = cx + Math.cos(an) * (b.w * 0.75 + 0.6), ty = cy + Math.sin(an) * (b.h * 0.75 + 0.6); if (walkOK(a, tx, ty) && walkOK(a, (a.x + tx) / 2, (a.y + ty) / 2)) { a.tx = tx; a.ty = ty; a.state = 'wander'; a.t = 3; break; } } } }
+        }
+      }
       if (a.dead) continue;
       // resting animals with nothing to decide just let the clock run
       if (a.state === 'idle' && a.t > dt && a.scan > dt && !(a.angry > 0) && sp.cls !== 'air' && !sp.dom) { a.t -= dt; a.scan -= dt; if (a.rest > 0) a.rest -= dt; a.moving = false; continue; }

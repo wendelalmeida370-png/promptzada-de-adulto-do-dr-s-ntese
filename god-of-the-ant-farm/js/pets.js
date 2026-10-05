@@ -30,7 +30,7 @@
     const dx = tx - a.x, dy = ty - a.y; const d = Math.hypot(dx, dy);
     if (d < 0.06) { a.moving = false; return true; }
     const s = Math.min(d, sp * dt); const nx = a.x + dx / d * s, ny = a.y + dy / d * s;
-    if (!W.inb(nx, ny) || !W.walkableXY(nx, ny)) { a.moving = false; a.t = 0; return true; }
+    if (!W.inb(nx, ny) || !W.walkableXY(nx, ny) || W.fenceBlocks(a, a.x, a.y, nx, ny)) { a.moving = false; a.t = 0; return true; }
     a.x = nx; a.y = ny; a.moving = true; a.walkPh += s * 9;
     if (Math.abs(dx) + Math.abs(dy) > 0.02) G.faceTo(a, dx, dy);
     return false;

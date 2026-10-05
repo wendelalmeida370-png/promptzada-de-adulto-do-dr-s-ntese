@@ -91,6 +91,33 @@
   W.isLand = i => G.S.type[i] >= T.SAND;
   W.blocked = i => { const b = G.S.occ[i]; if (!b) return false; const B = G.S.buildings.get(b); return !!(B && B.blocks); };
   // walls block, open gates (2) and aqueduct arches (3) let people through, shut gates (4) don't
+  // the fences of pens, stables, captives' pens and graveyards: an animal crosses them only at the gate
+  // (the middle of the pen's lower side); the flock of a pen may always go in and out of its own
+  const FENCED = { curral: 1, estabulo: 1, cercado: 1, cemetery: 1 };
+  let fenceMap = null, fenceT = -1e9, fenceN = 0;
+  W.fenceMap = function () {
+    const S = G.S; if (!S) return null;
+    if (!fenceMap || fenceN !== N || S.clock - fenceT > 2 || S.clock < fenceT) {
+      if (!fenceMap || fenceMap.length !== N * N) fenceMap = new Int32Array(N * N); else fenceMap.fill(0);
+      fenceN = N; fenceT = S.clock;
+      for (const b of S.buildings.values()) { if (!FENCED[b.type] || !b.built) continue; for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) if (x >= 0 && y >= 0 && x < N && y < N) fenceMap[y * N + x] = b.id; }
+    }
+    return fenceMap;
+  };
+  W.fenceBlocks = function (a, x0, y0, x1, y1) {
+    const F = W.fenceMap(); if (!F) return false;
+    const i0 = W.idx(x0, y0), i1 = W.idx(x1, y1); const f0 = F[i0], f1 = F[i1];
+    if (f0 === f1) return false;
+    for (const f of [f0, f1]) {
+      // one that found itself shut in someone else's pen may always get out; going in is at the gate
+      if (!f || (a && a.pen === f) || (f === f0 && f0 !== f1 && !(a && a.pen))) continue;
+      const b = G.S.buildings.get(f); if (!b) continue;
+      const gx = b.x + b.w / 2, gy = b.y + b.h; const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+      if (Math.abs(mx - gx) < 0.55 && Math.abs(my - gy) < 0.45) continue; // through the gate
+      return true;
+    }
+    return false;
+  };
   W.walkable = i => { const S = G.S; const t = S.type[i]; if (t < T.RIVER || S.cliff[i] || W.blocked(i)) return false; if (t === T.RIVER && S.deep[i] && !S.road[i]) return false; const w = S.wall[i]; return !w || w === 2 || w === 3; };
   // where one can lie down or stand around: walkable and out of the water
   W.dryXY = (x, y) => { if (!W.inb(x, y)) return false; const i = W.idx(x, y); return G.S.type[i] >= T.SAND && W.walkable(i); };

@@ -414,6 +414,7 @@
     const S = G.S; const set = S.settlements.get(fe.set); const f = G.Fac.get(fe.fac);
     if (!set || !f || set.fac !== fe.fac) return abort(fe, 'a cidade mudou de mãos');
     if (set.alarmT > 0 || (G.Village.alarm && G.Village.alarm(set.id))) return abort(fe, 'o inimigo chegou');
+    if (G.War && G.War.threat(set.id)) return abort(fe, 'a guerra chegou às portas da cidade');
     fe.t += dt; fe.stT += dt;
     if (fe.truce) f.truce = S.clock + 5;
     const s = fe.sname;
@@ -676,17 +677,26 @@
       const f = G.Fac.get(set.fac); if (!f || !f.civ) continue;
       if ((set.tier || 0) < 1 && G.Village.pop(set.id) < 14) continue;
       if (FE.active(set.id) || set.alarmT > 0) continue;
+      const threat = G.War && G.War.threat(set.id);
+      // the night after the enemy was driven off, the town celebrates (when the fighting is truly over)
+      if (set.victory !== undefined && set.victoryDone !== set.victory && !threat && S.time > 0.64 && S.time < 0.72 && S.day - set.victory <= 2) {
+        set.victoryDone = set.victory; set.feast = Math.max(set.feast || 0, 140);
+        let dead = 0; for (const e of S.history.slice(-60)) if (e.d >= set.victory - 1 && /morreu em combate/.test(e.txt) && e.x !== undefined && G.dist(e.x, e.y, set.cx, set.cy) < (set.radius || 8) + 14) dead++;
+        log(`Em ${set.name}, o povo festeja a vitória: fogueiras acesas, cantos até tarde${dead ? ` — e os nomes dos ${dead} que morreram defendendo a cidade, lembrados um por um` : ''}.`, 'fest', set.cx, set.cy);
+      }
       // a victory at war becomes a triumph in Rome
       const nc = f.st.conquests || 0; const pc = lastConq.get(f.id); lastConq.set(f.id, nc);
       if (pc !== undefined && nc > pc && f.civ === 'romano') f.pendingTriumph = S.day;
       // the triumph is not on the calendar: it follows a victory
       const tri = FE.of(f.civ).find(k => FE.DEF[k].trigger === 'victory');
-      if (tri && f.pendingTriumph >= S.day - 1 && G.Fac.capitalOf(f.id) === set && S.time >= FE.DEF[tri].at && S.time <= FE.DEF[tri].at + 0.4) { f.pendingTriumph = -1; start(set, tri); continue; }
+      if (tri && !threat && f.pendingTriumph >= S.day - 1 && G.Fac.capitalOf(f.id) === set && S.time >= FE.DEF[tri].at && S.time <= FE.DEF[tri].at + 0.4) { f.pendingTriumph = -1; start(set, tri); continue; }
       const plan = yearPlan(set, f);
       if (!plan || plan.done) continue;
       const d = FE.DEF[plan.key];
       if (S.time < d.at || S.time > d.at + 0.03) continue;
       plan.done = true;
+      // nobody sings with the enemy at the gates: this year the feast does not happen
+      if (threat) { const a = artOf(d, false); log(`${G.cap(theName(d, false))} de ${set.name} não ${/s$/.test(a) ? 'aconteceram' : 'aconteceu'} este ano: a guerra está às portas da cidade.`, 'fest', set.cx, set.cy); continue; }
       const grand = plan.key === 'panateneias' && S.day % 4 === 0 && G.Fac.capitalOf(f.id) === set;
       if (!start(set, plan.key, { grand })) {
         // it could not be held (no temple, no captive...): the next one on the calendar, later in the year
