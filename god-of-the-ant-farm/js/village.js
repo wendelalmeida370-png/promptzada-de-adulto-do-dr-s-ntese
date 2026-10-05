@@ -301,7 +301,7 @@
           if (!gone) gone = [];
           if (!gone.includes(o.id)) { gone.push(o.id); cost += RENEW[o.type]; beds += G.BDEF[o.type].housing || 0; }
         } else if (S.occ[i]) { ok = false; break; }
-        if (t < T.SAND || S.objAt[i] || S.fire[i] > 0 || S.scar[i] > G.DAY_LEN * 2 || S.wall[i] || S.road[i] >= 2) { ok = false; break; }
+        if (t < T.SAND || S.objAt[i] || S.fire[i] > 0 || S.scar[i] > G.DAY_LEN * 2 || S.wall[i] || S.road[i] >= 2 || (S.road[i] && G.City && G.City.onStreet(set, i))) { ok = false; break; }
         if (field && (t === T.SAND || t === T.ROCKY)) { ok = false; break; }
         if (S.treeAt[i]) trees++;
         fert += S.fert[i];

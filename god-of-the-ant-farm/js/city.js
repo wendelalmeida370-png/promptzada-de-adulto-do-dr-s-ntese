@@ -357,10 +357,49 @@
     }
     return false;
   }
+  // the street plan of a town: main streets from the hearth out to the edge (a grid of them in the Greek and
+  // Roman cities), every door joined to a street by a lane. Builders open them as dirt streets, the people
+  // walk them (a street is quicker than the grass), and later they are paved in stone.
+  const GRID = { romano: 4, grego: 5 };
+  Ci.streetPlan = function (set) {
+    const S = G.S; const p = set._plan; let nb = 0; for (const b of S.buildings.values()) if (b.set === set.id) nb++;
+    if (p && p.nb === nb && S.day - p.day < 3) return p.tiles;
+    const tiles = new Set(); const f = G.Fac.get(set.fac);
+    const r = Math.max(4, (set.radius || 6) + 1); const cx = Math.floor(set.cx), cy = Math.floor(set.cy);
+    const free = i => { const t = S.type[i]; if (t < T.SAND || S.cliff[i] || S.wall[i] === 1) return false; const o = S.occ[i]; if (o) { const b = S.buildings.get(o); if (b && (b.blocks || b.type === 'farm' || b.type === 'curral' || b.type === 'estabulo' || b.type === 'cercado')) return false; } return true; };
+    const line = (x, y, dx, dy, len) => { for (let k = 0; k <= len; k++) { const xx = x + dx * k, yy = y + dy * k; if (xx < 1 || yy < 1 || xx >= N - 1 || yy >= N - 1) break; const i = yy * N + xx; if (S.type[i] < T.RIVER || S.cliff[i]) break; if (free(i)) tiles.add(i); } };
+    // the main streets, out from the hearth (a grid where the city is planned)
+    const g = f && f.civ && GRID[f.civ] && (set.tier || 0) >= 2 ? GRID[f.civ] : 0;
+    if (g) { for (let o = -r; o <= r; o += g) { line(cx - r, cy + o, 1, 0, r * 2); line(cx + o, cy - r, 0, 1, r * 2); } }
+    else for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) line(cx, cy, dx, dy, r);
+    // a lane from every door to the nearest street
+    const near = (x, y) => { let best = null, bd = 64; for (const i of tiles) { const d = (i % N - x) ** 2 + (((i / N) | 0) - y) ** 2; if (d < bd) { bd = d; best = i; } } return best; };
+    for (const b of S.buildings.values()) {
+      if (b.set !== set.id || b.type === 'farm' || b.type === 'ruin' || b.type === 'cemetery') continue;
+      const d = G.Vg.door(b); const x0 = Math.floor(d[0]), y0 = Math.floor(d[1]); const t = near(x0, y0); if (t === null) continue;
+      const tx = t % N, ty = (t / N) | 0; let x = x0, y = y0;
+      for (let k = 0; k < 16 && (x !== tx || y !== ty); k++) { const i = y * N + x; if (free(i)) tiles.add(i); if (x !== tx && (Math.abs(tx - x) >= Math.abs(ty - y) || y === ty)) x += Math.sign(tx - x); else y += Math.sign(ty - y); }
+    }
+    set._plan = { nb, day: S.day, tiles };
+    return tiles;
+  };
+  Ci.onStreet = (set, i) => { const p = set && set._plan; return !!(p && p.tiles.has(i)); };
   function pickPave(set, fac, v, near) {
     const S = G.S; const t = set.tier || 0;
     const lvl = has(fac, 'alvenaria') ? 2 : 1;
     let best = null, bs = 1e9;
+    // first the planned streets: a dirt street costs nothing but work; stone once the town knows masonry
+    if (G.Village.pop(set.id) >= 6) {
+      const want = t >= 2 && fac.stock.stone >= 4 ? lvl : 1;
+      for (const i of Ci.streetPlan(set)) {
+        if (S.road[i] >= want || S.occ[i] || S.fire[i] > 0 || S.objAt[i] || claimed(i, v)) continue;
+        const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
+        let sc = G.dist(x, y, set.cx, set.cy) + (S.road[i] ? 4 : 0) + G.hash(i + S.day) * 0.5;
+        if (near !== undefined) sc += G.dist(x, y, (near % N) + 0.5, ((near / N) | 0) + 0.5) * 1.5;
+        if (sc < bs) { bs = sc; best = { i, lvl: want }; }
+      }
+      if (best) return best;
+    }
     // streets of the town itself, growing from the centre outwards
     const room = (set.streets || 0) < STREETS[t];
     if (t >= 2 && (lvl === 1 || fac.stock.stone >= 4)) {
