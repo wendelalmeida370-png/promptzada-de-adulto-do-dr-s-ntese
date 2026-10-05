@@ -227,7 +227,10 @@
         if (dep > bdep) { bdep = dep; bb = b; }
       }
     }
-    return bb;
+    if (bb) return bb;
+    // the sea's own things: stacks, arches, grottos, blue holes, ice — and from close, the bottom
+    if (G.Sea) { const [x, y] = R.screenToTile(px, py); const th = G.Sea.pickThing(x, y, cam.zoom); if (th) return th; }
+    return null;
   }
   M.pick = pick;
   // under the ground: the people in the caves, or the cave itself

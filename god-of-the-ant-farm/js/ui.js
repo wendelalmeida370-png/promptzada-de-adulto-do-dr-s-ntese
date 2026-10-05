@@ -483,6 +483,7 @@
     const S = G.S;
     let html = '';
     if (G.Caves && G.Caves.owns(o)) html = G.Caves.inspectorHTML(o);
+    else if (G.Sea && G.Sea.owns(o)) html = G.Sea.inspectorHTML(o);
     else if (o.type && G.BDEF[o.type]) html = buildingHTML(o);
     else if (o.kind && o.dock !== undefined && G.Naval && G.Naval.SHIP[o.kind]) html = shipHTML(o);
     else if (o.kind) {

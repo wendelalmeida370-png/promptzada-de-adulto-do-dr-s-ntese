@@ -138,6 +138,7 @@
     G.Civ.update(dt);
     G.City && G.City.update(dt);
     G.Naval && G.Naval.update(dt);
+    G.Sea && G.Sea.update(dt);
     G.Eco && G.Eco.update(dt);
     G.Army && G.Army.update(dt);
     G.Fest && G.Fest.update(dt);

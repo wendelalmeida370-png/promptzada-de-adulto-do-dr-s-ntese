@@ -243,10 +243,87 @@
   const WATER = [[108, 205, 210], [80, 176, 200], [58, 146, 186], [44, 118, 166], [38, 104, 152]];
   R.DEEP = 'rgb(38,104,152)';
   R.reshape = function (x, y, r) {
-    computeDLand(); buildShore();
+    G.Sea && G.Sea.build();
+    computeDLand(); buildShore(); buildOcean();
     sparkles = sparkles.filter(s => G.S.type[W.idx(s[0], s[1])] <= T.RIVER);
     R.invalidateTerrain(x, y, r);
   };
+  // The open ocean: one pixel per tile, laid under the world with the view's own slant and smoothed —
+  // the blue of the shelf darkens away from the coasts into the abyss, with trenches in it.
+  // The water over the shallows is a second such picture (its colour and how thick it is, tile by tile),
+  // laid smoothed over the visible sea of each cached chunk: no grid, no seams.
+  let oceanC = null, waterC = null;
+  function buildOcean() {
+    const S = G.S; if (!dLand) return;
+    if (!oceanC) { oceanC = document.createElement('canvas'); waterC = document.createElement('canvas'); }
+    oceanC.width = waterC.width = N; oceanC.height = waterC.height = N;
+    const o = oceanC.getContext('2d'); const img = o.createImageData(N, N), D = img.data;
+    const wimg = waterC.getContext('2d').createImageData(N, N), WD = wimg.data;
+    const nz = G.makeNoise((S.seed | 0) + 4242);
+    const Sea = G.Sea && G.Sea.floor ? G.Sea : null;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const i = y * N + x, p = i * 4; const tp = S.temp ? S.temp[i] / 255 : 0.5;
+      const k = G.smooth(2.5, 15, dLand[i]) * (0.82 + G.fbm(nz, x * 0.05, y * 0.05, 3) * 0.5);
+      const tr = G.smooth(4, 12, dLand[i]) * Math.max(0, 1 - Math.abs(G.fbm(nz, x * 0.03 + 30, y * 0.03 - 12, 2)) * 10) * 0.7;
+      let c = G.lerpColor([38, 104, 152], tp < 0.34 ? [24, 62, 96] : tp > 0.6 ? [14, 60, 122] : [18, 58, 112], G.clamp(k, 0, 1));
+      c = G.lerpColor(c, [8, 32, 72], tr);
+      D[p] = c[0]; D[p + 1] = c[1]; D[p + 2] = c[2]; D[p + 3] = 255;
+      // the water: the deep sea is the ocean itself; the shallows, their own look; the land, the look of its sea
+      if (!Sea) continue;
+      const t = S.type[i];
+      let wc = c, wa = 1;
+      if (t === T.SEA) { const L = Sea.look(i, dLand[i]); wc = L[0]; wa = L[1]; }
+      else if (t >= T.RIVER) {
+        let n = 0, r = 0, g = 0, b = 0, a = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (S.type[j] !== T.SEA) continue; const L = Sea.look(j, dLand[j]); r += L[0][0]; g += L[0][1]; b += L[0][2]; a += L[1]; n++; }
+        if (n) { wc = [r / n, g / n, b / n]; wa = Math.max(0.2, a / n - 0.1); } else { wc = [92, 196, 204]; wa = 0.3; }
+      }
+      WD[p] = wc[0]; WD[p + 1] = wc[1]; WD[p + 2] = wc[2]; WD[p + 3] = Math.round(wa * 255);
+    }
+    o.putImageData(img, 0, 0);
+    if (Sea) waterC.getContext('2d').putImageData(wimg, 0, 0);
+  }
+  // the glass of a chunk: where the sea's surface shows (land in front cuts it out), filled with the water
+  let glassC = null;
+  function seaGlass(ch, c, rs) {
+    const S = G.S; if (!G.Sea || !G.Sea.floor || !waterC || waterC.width !== N) return;
+    const cv = c.canvas;
+    if (!glassC) glassC = document.createElement('canvas');
+    if (glassC.width < cv.width || glassC.height < cv.height) { glassC.width = Math.max(glassC.width, cv.width); glassC.height = Math.max(glassC.height, cv.height); }
+    const g = glassC.getContext('2d'); const H = S.H, V = N + 1, SEA = G.SEA;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, cv.width, cv.height);
+    g.setTransform(rs, 0, 0, rs, -ch.sx * rs, -ch.sy * rs); g.lineJoin = 'round'; g.lineWidth = 0.7; g.fillStyle = g.strokeStyle = '#fff';
+    let any = false;
+    for (let Y = ch.vy0; Y < ch.vy0 + C; Y++) for (let X = ch.vx0; X < ch.vx0 + C; X++) {
+      const tt = tileFromView(X, Y), x = tt[0], y = tt[1], i = y * N + x, t = S.type[i];
+      let a, b, d, e;
+      if (t === T.SEA || (t === T.DEEP && dLand[i] <= 3)) { if (!any) any = true; g.globalCompositeOperation = 'source-over'; a = proj(x, y, SEA); b = proj(x + 1, y, SEA); d = proj(x + 1, y + 1, SEA); e = proj(x, y + 1, SEA); }
+      else if (t === T.DEEP) continue;
+      else {
+        if (!any) continue; // (nothing to cut yet)
+        g.globalCompositeOperation = 'destination-out';
+        if (t === T.RIVER) { const hh = S.wl[i]; a = proj(x, y, hh); b = proj(x + 1, y, hh); d = proj(x + 1, y + 1, hh); e = proj(x, y + 1, hh); }
+        else { a = proj(x, y, H[y * V + x]); b = proj(x + 1, y, H[y * V + x + 1]); d = proj(x + 1, y + 1, H[(y + 1) * V + x + 1]); e = proj(x, y + 1, H[(y + 1) * V + x]); }
+      }
+      g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(d[0], d[1]); g.lineTo(e[0], e[1]); g.closePath(); g.fill(); g.stroke();
+    }
+    if (!any) return;
+    g.globalCompositeOperation = 'source-in';
+    const m0 = proj(0, 0, SEA), m1 = proj(1, 0, SEA), m2 = proj(0, 1, SEA);
+    g.save(); g.transform(m1[0] - m0[0], m1[1] - m0[1], m2[0] - m0[0], m2[1] - m0[1], m0[0], m0[1]); g.imageSmoothingEnabled = true; g.drawImage(waterC, 0, 0); g.restore();
+    // what floats on it (the kelp's canopy), only where the water shows
+    g.globalCompositeOperation = 'source-atop';
+    const KELP = G.Sea.F.KELP, fl = G.Sea.floor;
+    for (let Y = ch.vy0; Y < ch.vy0 + C; Y++) for (let X = ch.vx0; X < ch.vx0 + C; X++) { const tt = tileFromView(X, Y), i = tt[1] * N + tt[0]; if (fl[i] === KELP) G.Sea.kelpCanopy(g, proj, tt[0], tt[1], i); }
+    g.globalCompositeOperation = 'source-over';
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(glassC, 0, 0, cv.width, cv.height, 0, 0, cv.width, cv.height); c.restore();
+  }
+  function drawOcean() {
+    if (!oceanC || oceanC.width !== N) return;
+    const m0 = proj(0, 0, G.SEA), m1 = proj(1, 0, G.SEA), m2 = proj(0, 1, G.SEA);
+    ctx.save(); ctx.transform(m1[0] - m0[0], m1[1] - m0[1], m2[0] - m0[0], m2[1] - m0[1], m0[0], m0[1]);
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(oceanC, 0, 0); ctx.restore();
+  }
   function computeDLand() {
     const S = G.S;
     dLand = new Int32Array(N * N).fill(99);
@@ -262,7 +339,8 @@
   }
   R.buildTerrain = function () {
     const S = G.S;
-    computeDLand();
+    G.Sea && G.Sea.build();
+    computeDLand(); buildOcean();
     for (const ch of chunks) { if (ch.canvas) ch.canvas.width = ch.canvas.height = 0; if (ch.lo) ch.lo.width = ch.lo.height = 0; }
     chunks = []; hiLive = 0; bigMap = N >= 128; warm = 40; spinCol = null;
     for (let cy = 0; cy < NC; cy++) for (let cx = 0; cx < NC; cx++) chunks.push(makeChunk(cx, cy));
@@ -319,6 +397,7 @@
     c.setTransform(rs, 0, 0, rs, -ch.sx * rs, -ch.sy * rs);
     c.lineJoin = 'round';
     for (let Y = ch.vy0; Y < ch.vy0 + C; Y++) for (let X = ch.vx0; X < ch.vx0 + C; X++) { const t = tileFromView(X, Y); drawTile(c, t[0], t[1]); }
+    seaGlass(ch, c, rs);
     if (lo) { ch.dirtyLo = false; ch.loRot = rot; } else { ch.dirty = false; ch.rot = rot; }
     if (ch.occRot !== rot || ch.occDirty) buildOcc(ch);
   }
@@ -345,6 +424,7 @@
       if ((pr.k & 7) === 0 && now() > until) break;
     }
     if (pr.k < n) return false;
+    seaGlass(ch, c, rs);
     ch[key] = null;
     if (lo) { ch.dirtyLo = false; ch.loRot = rot; } else { ch.dirty = false; ch.rot = rot; }
     if (ch.occRot !== rot || ch.occDirty) buildOcc(ch);
@@ -398,6 +478,9 @@
     if (spinCol) spinCol[y * N + x] = -1;
     const ch = chunkOf(x, y); if (!ch) return;
     ch.pr = ch.prL = null; // (a picture half painted starts again)
+    // (the sea under its glass is painted only with its whole chunk)
+    const ti = G.S.type[y * N + x];
+    if (ti === T.SEA || ti === T.DEEP) { if (G.S.road[y * N + x]) ch.dirty = ch.dirtyLo = true; return; }
     // while turning, or a picture kept for another view: painted again when it is needed
     if (spin) { ch.dirty = ch.dirtyLo = true; return; }
     if (ch.canvas && !ch.dirty && ch.rot === rot) { const c = ch.ctx; c.setTransform(RS, 0, 0, RS, -ch.sx * RS, -ch.sy * RS); drawTile(c, x, y); } else if (ch.rot !== rot) ch.dirty = true;
@@ -507,10 +590,102 @@
       }
     }
   }
+  // ------------------------------ the sea: a floor under clear water ------------------------------
+  // The bottom is the land going on under the water, at its own heights, seen through the water: clear at
+  // the beach and thicker as it deepens — turquoise in the warm seas, grey-green in the cold ones.
+  // (The water is mixed into the colours as they are painted, so the cached picture has no seams of glass.)
+  const CORAL = [[236, 112, 138], [246, 150, 76], [160, 104, 196], [238, 214, 92], [92, 196, 176], [226, 190, 140], [250, 120, 96]];
+  function drawSea(c, x, y, i) {
+    const S = G.S, H = S.H, V = N + 1, SEA = G.SEA, Sea = G.Sea;
+    const top = SEA + 0.04, hv = v => (H[v] < top ? H[v] : top);
+    const h00 = hv(y * V + x), h10 = hv(y * V + x + 1), h11 = hv((y + 1) * V + x + 1), h01 = hv((y + 1) * V + x);
+    const a = proj(x, y, h00), b = proj(x + 1, y, h10), d = proj(x + 1, y + 1, h11), e = proj(x, y + 1, h01);
+    const look = Sea.look(i, dLand[i]), al = look[1];
+    const gx = ((h10 + h11) - (h00 + h01)) / 2, gy = ((h01 + h11) - (h00 + h10)) / 2;
+    const vx = rot === 0 ? gx : rot === 1 ? -gy : rot === 2 ? -gx : gy, vy = rot === 0 ? gy : rot === 1 ? gx : rot === 2 ? -gy : -gx;
+    const lt = G.clamp(1 + vx * 0.16 + vy * 0.06, 0.72, 1.25), jit = (G.hash(i * 3 + 1) - 0.5) * 8;
+    // (deeper, the bottom loses its light)
+    const fc = G.lerpColor(Sea.floorCol(i), [44, 74, 96], look[2] * 0.7); const base = [fc[0] * lt + jit, fc[1] * lt + jit, fc[2] * lt + jit * 0.6];
+    // (the bottom in its own colours: the glass laid over the chunk brings the water)
+    const tint = (col, less, alpha) => (alpha === undefined ? G.rgb(col) : G.rgb(col, alpha));
+    const fill = tint(base);
+    c.fillStyle = fill; c.strokeStyle = fill; c.lineWidth = 0.7;
+    c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.lineTo(d[0], d[1]); c.lineTo(e[0], e[1]); c.closePath(); c.fill(); c.stroke();
+    if (al > 0.9) return; // too deep to see anything
+    const fh = (u, v) => { const px = x + u, py = y + v; const h = W.hAt(px, py); return h < top ? h : top; };
+    const pt = (u, v) => proj(x + u, y + v, fh(u, v));
+    const r = k => G.hash(i * 17 + k * 7);
+    const f = Sea.floor[i], F = Sea.F;
+    if (f === F.SAND || f === F.HOLE || f === F.MUD) {
+      // ripples the waves leave in the sand, a shell or two
+      c.lineWidth = 0.5; c.strokeStyle = tint([base[0] * 0.86, base[1] * 0.84, base[2] * 0.8]);
+      c.beginPath();
+      for (let k = 0; k < 3; k++) {
+        const v = 0.2 + k * 0.28 + r(k) * 0.08, u0 = 0.1 + r(k + 3) * 0.2, u1 = 0.7 + r(k + 5) * 0.2;
+        const p0 = pt(u0, v), pm = pt((u0 + u1) / 2, v + 0.07), p1 = pt(u1, v);
+        c.moveTo(p0[0], p0[1]); c.quadraticCurveTo(pm[0], pm[1], p1[0], p1[1]);
+      }
+      c.stroke();
+      if (r(9) < 0.3) { const p = pt(0.2 + r(10) * 0.6, 0.2 + r(11) * 0.6); c.fillStyle = tint([246, 236, 222], 0.15); c.fillRect(p[0] - 0.6, p[1] - 0.3, 1.2, 0.7); }
+    } else if (f === F.ROCK) {
+      // boulders, with weed on them
+      for (let k = 0; k < 3; k++) {
+        if (r(k) < 0.25) continue;
+        const p = pt(0.15 + r(k + 4) * 0.7, 0.15 + r(k + 8) * 0.7), w = 1.6 + r(k + 12) * 2.2;
+        c.fillStyle = tint([base[0] * 0.7, base[1] * 0.7, base[2] * 0.72]); c.beginPath(); c.ellipse(p[0], p[1], w, w * 0.6, 0, 0, TAU); c.fill();
+        c.fillStyle = tint([Math.min(255, base[0] * 1.15), Math.min(255, base[1] * 1.15), Math.min(255, base[2] * 1.12)]); c.beginPath(); c.ellipse(p[0] - w * 0.25, p[1] - w * 0.22, w * 0.5, w * 0.26, 0, 0, TAU); c.fill();
+        if (r(k + 20) < 0.6) { c.fillStyle = tint([84, 120, 64]); c.fillRect(p[0] - w * 0.4, p[1] - w * 0.55, w * 0.5, 0.7); }
+      }
+    } else if (f === F.GRASS) {
+      // a meadow of sea grass, leaning with the current
+      c.lineWidth = 0.55; c.strokeStyle = tint([70, 128, 58], 0.1);
+      c.beginPath();
+      for (let k = 0; k < 9; k++) { const p = pt(0.08 + r(k) * 0.84, 0.08 + r(k + 30) * 0.84); const ln = 1.6 + r(k + 60) * 1.6; c.moveTo(p[0], p[1]); c.quadraticCurveTo(p[0] + 0.6, p[1] - ln * 0.6, p[0] + 1.3, p[1] - ln); }
+      c.stroke();
+    } else if (f === F.REEF) {
+      // corals: round brain corals, branching ones, sea fans — the colours only the shallows keep
+      const n = 5 + Math.floor(r(1) * 4);
+      for (let k = 0; k < n; k++) {
+        const p = pt(0.1 + r(k + 2) * 0.8, 0.1 + r(k + 40) * 0.8), col = CORAL[Math.floor(r(k + 80) * CORAL.length)], kind = r(k + 120), s = 1 + r(k + 160) * 1.3;
+        if (kind < 0.4) {
+          c.fillStyle = tint(col, 0.22); c.beginPath(); c.ellipse(p[0], p[1] - s * 0.6, s * 1.6, s * 1.1, 0, 0, TAU); c.fill();
+          c.strokeStyle = tint([col[0] * 0.75, col[1] * 0.75, col[2] * 0.75], 0.22); c.lineWidth = 0.4; c.beginPath(); c.moveTo(p[0] - s, p[1] - s * 0.6); c.quadraticCurveTo(p[0], p[1] - s * 1.4, p[0] + s, p[1] - s * 0.5); c.stroke();
+        } else if (kind < 0.75) {
+          c.strokeStyle = tint(col, 0.22); c.lineWidth = 0.75; c.beginPath();
+          c.moveTo(p[0], p[1]); c.lineTo(p[0], p[1] - s * 2.2); c.moveTo(p[0], p[1] - s); c.lineTo(p[0] - s * 1.1, p[1] - s * 2.4); c.moveTo(p[0], p[1] - s * 1.3); c.lineTo(p[0] + s * 1.2, p[1] - s * 2.6);
+          c.stroke();
+        } else {
+          c.fillStyle = tint(col, 0.22, 0.9); c.beginPath(); c.moveTo(p[0], p[1]); c.arc(p[0], p[1], s * 2.4, -Math.PI * 0.85, -Math.PI * 0.15); c.closePath(); c.fill();
+        }
+      }
+      // the white sand between them
+      c.fillStyle = tint([236, 226, 200], 0.1); for (let k = 0; k < 3; k++) { const p = pt(r(k + 200), r(k + 210)); c.fillRect(p[0], p[1], 1.2, 0.6); }
+    } else if (f === F.KELP) {
+      // a kelp forest: stalks from the rocks to the light, the fronds floating on top
+      c.lineWidth = 0.8;
+      for (let k = 0; k < 4; k++) {
+        const u = 0.12 + r(k) * 0.76, v = 0.12 + r(k + 9) * 0.76, p = pt(u, v), q = proj(x + u + 0.08, y + v - 0.05, SEA);
+        const gr = c.createLinearGradient(0, p[1], 0, q[1]); gr.addColorStop(0, tint([96, 92, 44], 0)); gr.addColorStop(1, G.rgb([120, 112, 52]));
+        c.strokeStyle = gr; c.beginPath(); c.moveTo(p[0], p[1]); c.bezierCurveTo(p[0] + 1.5, (p[1] * 2 + q[1]) / 3, q[0] - 1.5, (p[1] + q[1] * 2) / 3, q[0], q[1]); c.stroke();
+        c.fillStyle = 'rgba(128,116,54,0.85)'; c.beginPath(); c.ellipse(q[0] + 1, q[1], 2.4, 0.9, 0.2, 0, TAU); c.fill();
+      }
+    }
+    // the light the waves focus on a clear bottom
+    if (al < 0.6) {
+      c.strokeStyle = `rgba(255,255,236,${(0.6 - al) * 0.4})`; c.lineWidth = 0.45; c.beginPath();
+      for (let k = 0; k < 2; k++) {
+        const v = 0.25 + k * 0.45 + r(k + 300) * 0.1;
+        const p0 = pt(0.05, v), p1 = pt(0.35, v - 0.12), p2 = pt(0.65, v + 0.1), p3 = pt(0.95, v - 0.05);
+        c.moveTo(p0[0], p0[1]); c.bezierCurveTo(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]);
+      }
+      c.stroke();
+    }
+  }
   function drawTile(c, x, y) {
     const S = G.S; const i = y * N + x; const t = S.type[i];
-    if (t === T.DEEP) return;
+    if (t === T.DEEP) return; // (the open sea is the ocean picture under the world; its glass blends into it)
     const V = N + 1; const H = S.H;
+    if (t === T.SEA && G.Sea && G.Sea.floor) { drawSea(c, x, y, i); if (S.road[i]) drawBridge(c, x, y, i); return; }
     if (t <= T.RIVER) {
       const hh = t === T.RIVER ? S.wl[i] : G.SEA;
       const a = proj(x, y, hh), b = proj(x + 1, y, hh), d = proj(x + 1, y + 1, hh), e = proj(x, y + 1, hh);
@@ -973,6 +1148,7 @@
     ctx.fillStyle = R.DEEP;
     const o0 = proj(0, 0, G.SEA), o1 = proj(N, 0, G.SEA), o2 = proj(N, N, G.SEA), o3 = proj(0, N, G.SEA);
     ctx.beginPath(); ctx.moveTo(o0[0], o0[1]); ctx.lineTo(o1[0], o1[1]); ctx.lineTo(o2[0], o2[1]); ctx.lineTo(o3[0], o3[1]); ctx.closePath(); ctx.fill();
+    drawOcean();
     PROF.mark('bg+base', t0); t0 = now();
     // terrain chunks (while the world turns: the terrain itself, at the angle of the moment)
     if (spin) drawSpinTerrain(view);
@@ -1871,7 +2047,8 @@
     if (t === T.RIVER) {
       let wn = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny) || S.type[ny * N + nx] <= T.RIVER) wn++; }
       col = G.lerpColor(COL.river, [52, 132, 176], G.clamp((wn - 11) / 13, 0, 1)).map(v => v + (G.hash(i) - 0.5) * 6);
-    } else if (t <= T.SEA) col = WATER[Math.min(4, Math.max(0, dLand[i] - 1))];
+    } else if (t === T.SEA && G.Sea && G.Sea.floor) col = G.Sea.seen(i, dLand[i]);
+    else if (t <= T.SEA) col = WATER[Math.min(4, Math.max(0, dLand[i] - 1))];
     else {
       const H = S.H, V = N + 1;
       const h00 = H[y * V + x], h10 = H[y * V + x + 1], h11 = H[(y + 1) * V + x + 1], h01 = H[(y + 1) * V + x];
