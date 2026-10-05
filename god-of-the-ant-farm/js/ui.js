@@ -919,7 +919,7 @@
     all.sort((a, b) => (b.id === UI.viewFac) - (a.id === UI.viewFac) || G.Fac.pop(b.id) - G.Fac.pop(a.id));
     UI.openModal(`<h2>Reinos</h2>
       <div class="realms-top"><canvas id="realm-map" width="320" height="200"></canvas>
-      <div class="realms-sum">
+      <div class="realms-sum">${G.WorldWar ? G.WorldWar.summary() : ''}
         <div><b>${all.length}</b> ${all.length === 1 ? 'povo vivo' : 'povos vivos'}${dead.length ? ` · <b>${dead.length}</b> ${dead.length > 1 ? 'caídos' : 'caído'}` : ''}</div>
         <div><b>${st.wars || 0}</b> guerras · <b>${st.battles || 0}</b> batalhas · <b>${st.warDeaths || 0}</b> mortos em combate</div>
         <div><b>${st.conquests || 0}</b> conquistas · <b>${st.massacres || 0}</b> massacres · <b>${st.captives || 0}</b> capturados · <b>${st.freed || 0}</b> libertados</div>

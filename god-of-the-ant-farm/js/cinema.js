@@ -343,7 +343,8 @@
     if (war) {
       sig = 'w|' + (war.front || '') + '|' + fronts.map(f => f.key + ':' + f.phase).join(',');
       if (sig === uiSig) return;
-      html = `<button data-x class="cw-t" title="Sair da câmera de guerra (G) e voltar ao cinema do mundo todo">${G.ICON ? G.ICON.sword : ''}<span>Câmera de guerra</span><em>×</em></button>` +
+      const ww = G.WorldWar && G.WorldWar.active();
+      html = `<button data-x class="cw-t" title="Sair da câmera de guerra (G) e voltar ao cinema do mundo todo">${G.ICON ? G.ICON.sword : ''}<span>${ww ? 'Guerra Mundial' : 'Câmera de guerra'}</span><em>×</em></button>` +
         (fronts.length > 1 ? `<button data-f="" class="${war.front ? '' : 'on'}">Todas as frentes</button>` : '') +
         fronts.map(f => `<button data-f="${f.key}" class="${war.front === f.key ? 'on' : HOT[f.phase] && war.front ? 'hot' : ''}" style="--a:${f.att ? G.Fac.hex(f.att) : '#888'};--d:${f.dfn ? G.Fac.hex(f.dfn) : '#888'}"><i></i><b>${f.key === 'mar' ? 'No mar' : (f.att ? shortFac(f.att) + ' × ' : '') + f.name}</b><small>${f.phase}</small></button>`).join('') +
         '';
@@ -370,8 +371,12 @@
     el.alert.classList.remove('hidden'); el.alert.classList.remove('pop'); void el.alert.offsetWidth; el.alert.classList.add('pop');
     G.Audio && G.Audio.play && G.Audio.play('horn');
   }
+  let wwSeen = -1;
   function watch() {
     if (!G.War) return;
+    // the world war breaks out: the loudest alert there is
+    const ww = G.WorldWar && G.WorldWar.active();
+    if (ww && wwSeen !== ww.start) { wwSeen = ww.start; alertOf(`Guerra Mundial: ${ww.name.replace(/^(a|o) /, '')}`, 'o mundo inteiro pegou em armas', null, 5); }
     const seenNow = new Set();
     for (const b of G.War.bands.values()) {
       seenNow.add('b' + b.id);
@@ -407,7 +412,7 @@
       if (!C.on) fronts = computeFronts();
       watch();
       const btn = document.getElementById('btn-war');
-      if (btn) { const n = fronts.length; btn.classList.toggle('hidden', !n); const i = btn.querySelector('i'); if (i && i.textContent !== String(n)) i.textContent = n; }
+      if (btn) { const n = fronts.length; btn.classList.toggle('hidden', !n); btn.classList.toggle('ww', !!(G.WorldWar && G.WorldWar.active())); const i = btn.querySelector('i'); if (i && i.textContent !== String(n)) i.textContent = n; }
     }
     if (alertT > 0) { alertT -= rdt; if (alertT <= 0) hideAlert(); }
   };

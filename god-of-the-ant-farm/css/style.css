@@ -546,6 +546,9 @@ body.cine-nocursor, body.cine-nocursor canvas#game { cursor: none !important; }
 #war-alert .wa-x { background: transparent; color: #fbe9e0; font-size: 18px; padding: 4px 8px; opacity: .7; flex: none; }
 #btn-war { position: relative; color: #ff9a80 !important; }
 #btn-war.hidden { display: none !important; }
+#btn-war.ww { animation: cwhot 1.4s ease-in-out infinite; border-radius: 8px; }
+.ww-box { margin-bottom: 6px; padding: 7px 10px; border-radius: 10px; background: rgba(120, 26, 20, .35); box-shadow: inset 0 0 0 1px rgba(255, 150, 120, .35); color: #fbe9e0; line-height: 1.4; }
+.ww-box small { opacity: .8; }
 #btn-war .wb { position: absolute; top: 1px; right: 1px; min-width: 14px; height: 14px; border-radius: 7px; background: #d8432e; color: #fff; font-size: 9px; font-style: normal; font-weight: 800; line-height: 14px; text-align: center; padding: 0 3px; }
 @media (max-width: 640px) {
   .cine-bar { height: 7vh; }

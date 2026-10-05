@@ -765,6 +765,7 @@
   function considerPeace(a, b, r) {
     const S = G.S;
     if (r.st !== 'guerra' || r.envoy) return;
+    if (G.WorldWar && G.WorldWar.locks(a.id, b.id)) return; // the world war: no separate peace yet
     const days = S.day - r.since; if (days < 1 || (r.peaceCD || 0) > S.day) return;
     const [asker, other] = a.weariness >= b.weariness ? [a, b] : [b, a];
     if (asker.weariness < 38 && days < 5) return;
@@ -773,6 +774,7 @@
   }
   function answerPeace(from, to, r) {
     const S = G.S; const pt = P.leaderPe(to);
+    if (G.WorldWar && G.WorldWar.locks(from.id, to.id)) { r.peaceCD = S.day + 3; return false; }
     const sf = P.strength(from.id), st = P.strength(to.id);
     const winning = st > sf * 1.25;
     const score = to.weariness / 100 + (1 - pt.agg) * 0.5 + (winning ? 0.1 : 0.35) + (S.day - r.since) * 0.05 - r.grudge / 200 + (S.divinePeace > 0 ? 1 : 0);
@@ -797,7 +799,7 @@
   }
   function considerAlliance(a, b, r) {
     if (r.envoy) return;
-    if (r.st === 'alianca' && r.op < 5) { r.st = 'paz'; log(`A aliança entre ${a.name} e ${b.name} se desfez.`, 'split'); return; }
+    if (r.st === 'alianca' && r.op < 5 && !(G.WorldWar && G.WorldWar.sameBloc(a.id, b.id))) { r.st = 'paz'; log(`A aliança entre ${a.name} e ${b.name} se desfez.`, 'split'); return; }
     if (r.st !== 'paz' || r.op < 55 || G.R() > 0.12) return;
     if (P.leaderPe(a).agg > 0.85) return;
     P.sendEnvoy(a, b, 'alianca');
