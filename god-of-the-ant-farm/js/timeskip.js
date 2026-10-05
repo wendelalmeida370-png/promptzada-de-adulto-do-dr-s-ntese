@@ -12,7 +12,9 @@
   const Sk = G.Skip = { on: false };
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const DT = 0.25; // a coarser step than at 16x: the skip trades smoothness nobody sees for speed
+  // a step five times coarser than at 16x: the skip trades smoothness nobody sees for speed
+  // (people still walk from waypoint to waypoint, animals never step further than their target)
+  const DT = 0.5;
 
   Sk.GOALS = {
     anos10: { label: '10 anos', sub: 'uma geração cresce', years: 10 },
@@ -25,7 +27,7 @@
     guerra: { label: 'Até a próxima guerra', sub: 'quando os povos pegarem em armas', war: true, max: 150 },
   };
   Sk.COURSES = {
-    fartura: { label: 'Anos de paz e fartura', sub: 'Sua bênção: nenhuma guerra começa, as colheitas e os berços se enchem. Os povos crescem até virar impérios — e quando a bênção acaba, impérios se encontram.' },
+    fartura: { label: 'Anos de paz e fartura', sub: 'Sua bênção: nenhuma guerra começa, colheitas, pedreiras e berços se enchem, o saber corre. Os povos crescem até virar impérios — e quando a bênção acaba, impérios se encontram.' },
     livre: { label: 'Deixar o mundo seguir', sub: 'Nada muda: guerras, pestes e fomes vêm quando vierem. A história como ela seria sem você.' },
   };
 
@@ -38,7 +40,7 @@
   Sk.open = function () {
     if (!G.S || !G.Main || G.Main.mode !== 'game') return;
     const o = Sk.pick || (Sk.pick = { goal: 'anos25', course: 'fartura' });
-    const goals = Object.entries(Sk.GOALS).filter(([, g]) => !g.hidden).map(([k, g]) => { const done = Sk.reached(k); return `<button class="sk-goal ${o.goal === k ? 'on' : ''} ${done ? 'done' : ''}" data-m="skip-goal" data-k="${k}" ${done ? 'disabled' : ''}><b>${g.label}</b><span>${done ? 'já existe' : g.sub}</span></button>`; }).join('');
+    const goals = Object.entries(Sk.GOALS).filter(([, g]) => !g.hidden).map(([k, g]) => { const done = Sk.reached(k); const sub = done ? 'já existe' : g.tier === 5 && G.N < 128 ? 'pede um mapa grande' : g.sub; return `<button class="sk-goal ${o.goal === k ? 'on' : ''} ${done ? 'done' : ''}" data-m="skip-goal" data-k="${k}" ${done ? 'disabled' : ''}><b>${g.label}</b><span>${sub}</span></button>`; }).join('');
     // (waiting for a war under a blessing that forbids wars would never end)
     const warGoal = !!(Sk.GOALS[o.goal] && Sk.GOALS[o.goal].war);
     const courses = Object.entries(Sk.COURSES).map(([k, c]) => { const off = warGoal && k === 'fartura'; const on = warGoal ? k === 'livre' : o.course === k; return `<button class="sk-course ${on ? 'on' : ''} ${off ? 'done' : ''}" data-m="skip-course" data-k="${k}" ${off ? 'disabled' : ''}><b>${c.label}</b><span>${off ? 'Não combina com esperar uma guerra: sob a bênção, ninguém pega em armas.' : c.sub}</span></button>`; }).join('');
@@ -50,7 +52,8 @@
   };
 
   // ------------------------------ running ------------------------------
-  let el = null, news = [], lastLog = 0, uiT = 0, mapT = 0, clock = 0, feed = [], startReal = 0;
+  const SLICE = 35; // ms of world per slice; the window and the god's clicks get the moments between
+  let el = null, news = [], lastLog = 0, uiT = 0, mapT = 0, clock = 0, feed = [], startReal = 0, pump = null, gen = 0;
   Sk.start = function (goalKey, course, opts) {
     const S = G.S; if (!S || Sk.on) return;
     const goal = Sk.GOALS[goalKey] || Sk.GOALS.anos25;
@@ -61,9 +64,10 @@
     const mt = maxTier();
     Sk.from = { day: S.day, pop: S.villagers.size, facs: G.Fac.all().length, sets: S.settlements.size, births: S.stats.births || 0, deaths: S.stats.deaths || 0, wars: warCount(), tier: mt.t, logN: S.logN || 0, warDecl: 0 };
     Sk.endDay = goal.years ? S.day + goal.years : S.day + (goal.max || 150);
+    Sk.best = { t: mt.t, pop: S.villagers.size, day: S.day };
     Sk.prevSpeed = G.speed || 1;
     news = []; feed = []; lastLog = S.logN || 0; uiT = 0; mapT = 0; clock = 0; startReal = performance.now();
-    G.FX.off = true; if (G.Audio) G.Audio.mute = true;
+    G.FX.off = true; if (G.Audio) G.Audio.mute = true; G.W.pathGreed = 1.3;
     if (Sk.course === 'fartura') {
       S.blessed = true;
       if (warCount() > 0 || G.War.bands.size) G.Politics.divinePeace();
@@ -73,6 +77,8 @@
     build();
     el.root.classList.add('on'); document.body.classList.add('skipping');
     paint(true);
+    if (!pump) { pump = new MessageChannel(); pump.port1.onmessage = e => slice(e.data); }
+    pump.port2.postMessage(++gen);
   };
   // the blessing, kept alive while the years pass
   function bless() {
@@ -80,24 +86,28 @@
     S.divinePeace = Math.max(S.divinePeace || 0, G.DAY_LEN * 0.5);
     S.weather.fertility = Math.max(S.weather.fertility || 0, G.DAY_LEN * 0.5);
   }
-  Sk.frame = function (rdt) {
-    if (!Sk.on) return;
+  // the world lives in slices posted back to back, not inside the screen's frames: most of the
+  // machine goes to the years, and they keep passing with the tab in the background
+  function slice(g) {
+    if (!Sk.on || g !== gen) return;
     const S = G.S; const t0 = performance.now();
-    // most of every frame goes to the world; a sliver to the window that shows it
-    const budget = document.hidden ? 120 : 40;
     let blessT = 0, done = null;
-    while (performance.now() - t0 < budget) {
+    while (performance.now() - t0 < SLICE) {
       const d0 = S.day;
       G.debug.step(DT);
       if (Sk.course === 'fartura' && (blessT -= DT) <= 0) { blessT = 2; bless(); }
       if (S.day !== d0) { done = check(); if (done) break; }
     }
     G.FX.list.length = 0; G.FX.rings.length = 0; G.FX.glows.length = 0; G.FX.bolts.length = 0; G.FX.floaters.length = 0;
-    clock += rdt; uiT -= rdt; mapT -= rdt;
     collect();
+    if (done) Sk.finish(done); else pump.port2.postMessage(g);
+  }
+  // each frame of the screen only repaints the window that shows them
+  Sk.frame = function (rdt) {
+    if (!Sk.on) return;
+    clock += rdt; uiT -= rdt; mapT -= rdt;
     if (uiT <= 0) { uiT = 0.2; paint(false); }
     if (mapT <= 0) { mapT = 0.5; drawMap(); }
-    if (done) Sk.finish(done);
   };
   function check() {
     const S = G.S; const g = Sk.goal;
@@ -106,6 +116,10 @@
     if (g.tier && maxTier().t >= g.tier) return 'meta';
     if (g.war && Sk.from.warDecl > 0) return 'meta';
     if (S.day >= Sk.endDay) return 'limite';
+    // waiting for a city that will not come: the world has stopped growing (no new rank, hardly more people)
+    const t = maxTier().t, pop = S.villagers.size, b = Sk.best;
+    if (t > b.t || pop > b.pop * 1.05) Sk.best = { t: Math.max(t, b.t), pop: Math.max(pop, b.pop), day: S.day };
+    else if (g.tier && S.day - b.day >= 40) return 'parou';
     return null;
   }
   // the great news of the chronicle, as they happen
@@ -126,7 +140,7 @@
   Sk.finish = function (why) {
     if (!Sk.on) return;
     const S = G.S;
-    Sk.on = false; G.FX.off = false; if (G.Audio) G.Audio.mute = false;
+    Sk.on = false; G.FX.off = false; if (G.Audio) G.Audio.mute = false; G.W.pathGreed = G.W.PATH_EXACT;
     // the blessing fades
     if (Sk.course === 'fartura') { S.divinePeace = 0; S.weather.fertility = 0; S.blessed = false; G.Village.log('Os anos de bênção terminaram. Os povos, agora grandes, voltam a se olhar como rivais.', 'eye'); }
     el.root.classList.remove('on'); document.body.classList.remove('skipping');
@@ -148,7 +162,7 @@
     if (big) lines.push(`<li>A maior: <b>${esc(big.name)}</b>, ${TI[big.tier || 0].toLowerCase()} de ${G.Village.pop(big.id)} habitantes${mt.t > f.tier ? ` — ${mt.t >= 3 ? 'o mundo ganhou cidades' : 'as aldeias cresceram'}` : ''}</li>`);
     lines.push(`<li>${Sk.from.warDecl ? `<b>${Sk.from.warDecl}</b> ${Sk.from.warDecl === 1 ? 'guerra declarada' : 'guerras declaradas'}` : 'nenhuma guerra declarada'}${warCount() ? ` · ${warCount()} em curso agora` : ''}</li>`);
     const ev = feed.slice(-9).reverse().map(e => `<li class="sk-ev"><em>ano ${e.d}</em> ${esc(e.txt)}</li>`).join('');
-    const WHY = { meta: '', parado: 'Você parou o tempo aqui.', limite: 'O limite de anos chegou antes da meta.', vazio: 'Não restou ninguém no mundo.' };
+    const WHY = { meta: '', parado: 'Você parou o tempo aqui.', limite: 'O limite de anos chegou antes da meta.', vazio: 'Não restou ninguém no mundo.', parou: 'O mundo parou de crescer antes da meta: falta chão para mais gente. Num mapa maior, as cidades vão mais longe.' };
     const real = Math.max(1, Math.round((performance.now() - startReal) / 1000));
     G.UI.openModal(`<h2>${years === 1 ? 'Passou-se um ano' : `Passaram-se ${years} anos`}</h2>
       <p class="sk-lead">${WHY[why] ? WHY[why] + ' ' : ''}Ano ${S.day} de ${esc((S.lore && S.lore.world) || 'o mundo')} · ${real} s para você.</p>

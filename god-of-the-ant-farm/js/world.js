@@ -552,6 +552,9 @@
     if (S.fire[i] > 0.02) c += 30;
     return c;
   };
+  // how hard the search leans towards the goal: 0.62 keeps it exact even along roads (they cost less than 1);
+  // while years are skipped it leans harder (a slightly longer walk nobody sees, a much shorter search)
+  W.PATH_EXACT = 0.62; W.pathGreed = W.PATH_EXACT;
   W.findPath = function (sx, sy, tx, ty, adj, maxNodes) {
     maxNodes = maxNodes || 3500;
     if (!W.inb(sx, sy) || !W.inb(tx, ty)) return null;
@@ -590,7 +593,7 @@
         if (seen[j] !== gen || g < gS[j]) {
           seen[j] = gen; gS[j] = g; came[j] = a;
           const hx = Math.abs(nx - tX), hy = Math.abs(ny - tY);
-          const h = (Math.max(hx, hy) + 0.4142 * Math.min(hx, hy)) * 0.62;
+          const h = (Math.max(hx, hy) + 0.4142 * Math.min(hx, hy)) * W.pathGreed;
           heap.push(j, g + h);
         }
       }

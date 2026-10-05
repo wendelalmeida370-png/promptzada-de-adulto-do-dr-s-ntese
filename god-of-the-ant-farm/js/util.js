@@ -76,20 +76,24 @@ window.G = window.G || {};
     return s / n;
   };
 
-  // ---------- binary min-heap keyed by float ----------
+  // ---------- binary min-heap keyed by float, holding integers (tile indices) ----------
+  // typed arrays: the pathfinder pushes and pops thousands of nodes a second and must not make garbage
   G.Heap = class {
-    constructor() { this.k = []; this.v = []; }
-    get size() { return this.k.length; }
-    clear() { this.k.length = 0; this.v.length = 0; }
+    constructor() { this.k = new Float64Array(1024); this.v = new Int32Array(1024); this.n = 0; }
+    get size() { return this.n; }
+    clear() { this.n = 0; }
     push(val, key) {
-      const k = this.k, v = this.v; let i = k.length; k.push(key); v.push(val);
+      if (this.n === this.k.length) { const k = new Float64Array(this.n * 2), v = new Int32Array(this.n * 2); k.set(this.k); v.set(this.v); this.k = k; this.v = v; }
+      const k = this.k, v = this.v; let i = this.n++;
       while (i > 0) { const p = (i - 1) >> 1; if (k[p] <= key) break; k[i] = k[p]; v[i] = v[p]; i = p; }
       k[i] = key; v[i] = val;
     }
     pop() {
-      const k = this.k, v = this.v; const top = v[0]; const lk = k.pop(), lv = v.pop();
-      if (k.length > 0) {
-        let i = 0; const n = k.length;
+      if (!this.n) return undefined;
+      const k = this.k, v = this.v; const top = v[0]; const n = --this.n;
+      if (n > 0) {
+        const lk = k[n], lv = v[n];
+        let i = 0;
         while (true) {
           let l = 2 * i + 1, r = l + 1, m = i, mk = lk;
           if (l < n && k[l] < mk) { m = l; mk = k[l]; }

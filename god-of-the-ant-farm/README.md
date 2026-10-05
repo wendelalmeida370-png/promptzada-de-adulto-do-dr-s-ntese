@@ -72,7 +72,7 @@ O relevo muda a vida: subir custa caro (os caminhos contornam as montanhas e pro
 O botão ⏭ (ou `J`) abre **Avançar no tempo**: o mundo vive sozinho e depressa — de verdade, cada nascimento, obra e batalha acontece —, só que sem desenhar nada. Você vê os anos passarem num mapa do mundo inteiro (reinos, estradas, cidades crescendo, batalhas acendendo em vermelho), com os contadores e as grandes notícias da crônica, e pode **parar quando quiser** (`Esc`). No fim, um resumo do que aconteceu.
 
 - **Até quando**: 10, 25 ou 50 anos · até a primeira cidade · até a primeira metrópole · até a primeira megalópole · até a próxima guerra.
-- **Como passam os anos**: **anos de paz e fartura** (a sua bênção: nenhuma guerra começa, colheitas e obras andam mais rápido, os berços se enchem — os povos crescem até virar impérios, e quando a bênção acaba eles voltam a se olhar como rivais) ou **deixar o mundo seguir** (guerras, pestes e fomes vêm quando vierem).
+- **Como passam os anos**: **anos de paz e fartura** (a sua bênção: nenhuma guerra começa, colheitas e obras andam mais rápido, pedreiras e matas rendem o dobro, o saber avança mais depressa e os berços se enchem; celeiros cheios mandam metade dos lavradores para as pedreiras — os povos crescem até virar impérios, e quando a bênção acaba eles voltam a se olhar como rivais) ou **deixar o mundo seguir** (guerras, pestes e fomes vêm quando vierem).
 - No **Novo Mundo**, "Começar" faz o mesmo antes de você chegar: 30 anos depois, na era das cidades ou na era dos impérios.
 
 ## Biomas e clima
@@ -118,7 +118,7 @@ Cada povo pode ser de uma civilização histórica — ou um povo clássico, sem
 
 - **Acampamento → Aldeia → Vila → Cidade → Metrópole → Megalópole**, com placas de nome sobre cada cidade.
 - Nos mapas **Enorme, Colossal e Titânico** as cidades não ficam presas: uma capital pode passar de centenas de habitantes, com **quarteirões** de casas de pátio (quatro sobrados em volta de um pátio), várias praças, mercados, termas e teatros, e ruas que se espalham por dezenas de quadras. Em testes, um mundo 160×160 pacífico chegou a 1.000 habitantes e à primeira megalópole por volta do ano 100.
-- Casas evoluem para **sobrados** e **ínsulas**; surgem **praça**, **mercado**, **celeiro**, **biblioteca**, **teatro**, **termas**, **palácio**, **porto** e uma **maravilha** — tudo desenhado no estilo de cada civilização.
+- Casas evoluem para **sobrados** e **ínsulas**; surgem **praça**, **mercado**, **celeiro**, **biblioteca**, **teatro**, **termas**, **palácio**, **porto** e uma **maravilha** — tudo desenhado no estilo de cada civilização. Uma cidade que ainda não tem palácio, teatro nem maravilha sonha primeiro com o teatro: é o que a faz virar metrópole. Quando o centro já está cheio, as grandes obras vão para a borda da cidade — além dos muros, se for preciso.
 - **Ruas** de cascalho e depois calçadas crescem do centro para fora; **estradas** e **pontes** ligam as cidades.
 - **Carroças** levam bens pelas **rotas internas** e pelas **rotas de comércio** entre povos amigos.
 - **Aquedutos** trazem água do rio, arco por arco.

@@ -432,7 +432,8 @@
     if (s === 'bout' && !fe.riteDone && fe.stT > fe.sdur * 0.92) rite(fe);
     if (s === 'water' && !fe.note.water && fe.stT > fe.sdur * 0.8 && ready) { fe.note.water = true; for (const b of byType(fe.set, 'farm')) if (b.crops) for (const c of b.crops) c.g = Math.min(1, (c.g || 0) + 0.25); }
     if (s === 'feast' && fe.food > 0) { const eat = Math.min(fe.food, dt * fe.parts.length * 0.02); f.stock.food = Math.max(0, f.stock.food - eat); fe.food -= eat; fe.note.eaten = (fe.note.eaten || 0) + eat; }
-    if (s === 'relight' && fe.houses && fe.houses.length) { const want = Math.floor(fe.stT / fe.sdur * fe.houses.length * 1.1); while (fe.lit.size < Math.min(want, fe.houses.length)) fe.lit.add(fe.houses[fe.lit.size]); }
+    // the lamps come back house by house (the runners may already have lit some out of turn)
+    if (s === 'relight' && fe.houses && fe.houses.length) { const want = Math.min(fe.houses.length, Math.floor(fe.stT / fe.sdur * fe.houses.length * 1.1)); for (let k = 0; k < want && fe.lit.size < want; k++) fe.lit.add(fe.houses[k]); }
     if (s === 'relight' && fe.stT > fe.sdur * 0.95) fe.dark = false;
     if (s === 'duel' && fe.stT > fe.sdur * 0.95 && !fe.riteDone) rite(fe);
     if (done) nextStage(fe);

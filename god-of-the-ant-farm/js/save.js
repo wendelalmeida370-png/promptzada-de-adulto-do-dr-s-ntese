@@ -121,6 +121,8 @@
       for (const s of S.settlements.values()) { s.fac = f.id; if (!f.capital) f.capital = s.id; s.loyalty = 60; s.emptyT = 0; }
     }
     S.faith = o.faith; S.stats = Object.assign(S.stats, o.stats); S.history = o.history; S.milestones = o.milestones;
+    // the chronicle keeps counting where it stopped (the skip, cinema and lore read only what is newer)
+    S.logN = S.history.reduce((m, e) => Math.max(m, e.n || 0), 0);
     S.weather = Object.assign(S.weather, o.weather); S.clouds = o.clouds || []; S.zones = o.zones || []; S.boats = o.boats || [];
     S.awareness = o.awareness; S.era = o.era; S.pendingDiscovery = o.pendingDiscovery; S.prayer = o.prayer || null; S.prayerCD = o.prayerCD || 0; S.popHist = o.popHist || []; S.start = o.start;
     Sv.computeDistances();

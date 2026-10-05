@@ -264,7 +264,7 @@
       C.initTech(f);
       const pop = G.Fac.pop(f.id);
       const acad = f.tech.known.filosofia ? 1 : 0;
-      const rate = (0.015 + pop * 0.0011 + (libs[f.id] || 0) * 0.05) * C.t(f.id, 'research') * (f.tech.known.escrita ? 1.2 : 1) * (1 + acad * 0.25) * (f.golden > 0 ? 1.5 : 1);
+      const rate = (0.015 + pop * 0.0011 + (libs[f.id] || 0) * 0.05) * C.t(f.id, 'research') * (f.tech.known.escrita ? 1.2 : 1) * (1 + acad * 0.25) * (f.golden > 0 ? 1.5 : 1) * (S.blessed ? 1.5 : 1);
       if (!f.tech.cur) f.tech.cur = C.nextTech(f);
       if (!f.tech.cur) continue;
       f.tech.pts += rate * dt;

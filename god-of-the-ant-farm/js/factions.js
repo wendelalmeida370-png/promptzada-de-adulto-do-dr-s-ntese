@@ -67,36 +67,43 @@
 
   // ------------------------------ territory ------------------------------
   F.terr = null; F.terrFac = null; F.borders = []; F.touch = {}; F.bordersVer = 0;
+  // the four edges of a tile: neighbour direction, then the segment's two corners (offsets from the tile)
+  const EDX = [1, -1, 0, 0], EDY = [0, 0, 1, -1], EAX = [1, 0, 1, 0], EAY = [0, 1, 1, 0], EBX = [1, 0, 0, 1], EBY = [1, 0, 1, 0];
+  const nBuilt = new Map(), touchN = new Map();
   F.updateTerritory = function () {
     const S = G.S;
     if (!F.terr || F.terr.length !== N * N) { F.terr = new Int32Array(N * N); F.terrFac = new Int32Array(N * N); F._inf = new Float32Array(N * N); }
     F.terr.fill(0); F.terrFac.fill(0); F._inf.fill(0);
+    nBuilt.clear(); for (const b of S.buildings.values()) if (b.built) nBuilt.set(b.set, (nBuilt.get(b.set) || 0) + 1);
     for (const s of S.settlements.values()) {
       const pop = G.Village.pop(s.id);
-      let nb = 0; for (const b of S.buildings.values()) if (b.set === s.id && b.built) nb++;
+      const nb = nBuilt.get(s.id) || 0;
       const R = Math.min(18 + (s.tier || 0) * 3, 6 + Math.sqrt(pop) * 1.3 + nb * 0.15);
       s.radius = R;
       const x0 = Math.floor(s.cx - R), x1 = Math.ceil(s.cx + R), y0 = Math.floor(s.cy - R), y1 = Math.ceil(s.cy + R);
       for (let y = Math.max(0, y0); y <= Math.min(N - 1, y1); y++) for (let x = Math.max(0, x0); x <= Math.min(N - 1, x1); x++) {
         const i = y * N + x; if (S.type[i] < T.RIVER) continue;
-        const inf = R - G.dist(x + 0.5, y + 0.5, s.cx, s.cy);
+        const dx = x + 0.5 - s.cx, dy = y + 0.5 - s.cy;
+        const inf = R - Math.sqrt(dx * dx + dy * dy);
         if (inf > F._inf[i]) { F._inf[i] = inf; F.terr[i] = s.id; F.terrFac[i] = s.fac; }
       }
     }
     // border segments per faction, drawn by the renderer; F.touch counts shared edges
-    const segs = {}; const touch = {};
+    const segs = {}; touchN.clear();
+    const TF = F.terrFac, type = S.type;
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const i = y * N + x; const f = F.terrFac[i]; if (!f) continue;
-      const edges = [[1, 0, x + 1, y, x + 1, y + 1], [-1, 0, x, y + 1, x, y], [0, 1, x + 1, y + 1, x, y + 1], [0, -1, x, y, x + 1, y]];
-      for (const [dx, dy, ax, ay, bx, by] of edges) {
-        const nx = x + dx, ny = y + dy;
-        const g = W.inb(nx, ny) ? F.terrFac[ny * N + nx] : 0;
+      const f = TF[y * N + x]; if (!f) continue;
+      for (let k = 0; k < 4; k++) {
+        const dx = EDX[k], dy = EDY[k], nx = x + dx, ny = y + dy;
+        const inb = nx >= 0 && ny >= 0 && nx < N && ny < N;
+        const g = inb ? TF[ny * N + nx] : 0;
         if (g === f) continue;
-        if (!g && W.inb(nx, ny) && S.type[ny * N + nx] < T.RIVER) continue; // coastline needs no border
-        (segs[f] = segs[f] || []).push(ax - dx * 0.1, ay - dy * 0.1, bx - dx * 0.1, by - dy * 0.1, g ? 1 : 0);
-        if (g && f < g) { const k = f + '|' + g; touch[k] = (touch[k] || 0) + 1; }
+        if (!g && inb && type[ny * N + nx] < T.RIVER) continue; // coastline needs no border
+        (segs[f] = segs[f] || []).push(x + EAX[k] - dx * 0.1, y + EAY[k] - dy * 0.1, x + EBX[k] - dx * 0.1, y + EBY[k] - dy * 0.1, g ? 1 : 0);
+        if (g && f < g) { const kk = f * 67108864 + g; touchN.set(kk, (touchN.get(kk) || 0) + 1); }
       }
     }
+    const touch = {}; for (const [kk, n] of touchN) touch[Math.floor(kk / 67108864) + '|' + (kk % 67108864)] = n;
     F.borders = Object.keys(segs).map(k => ({ fid: +k, s: segs[k] }));
     F.touch = touch; F.bordersVer++;
   };

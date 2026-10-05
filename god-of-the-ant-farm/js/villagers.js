@@ -75,9 +75,13 @@
     if (G.S.blessed) m *= 1.5; // years of plenty: everything gets done faster
     return m;
   }
+  // a place that could not be reached is not searched for again at once: a failed search is the most
+  // expensive kind (it spends the whole budget), and behind the cliffs of the highlands they are common
   Vg.goto = function (v, x, y, adj, maxNodes) {
+    const ti = W.inb(x, y) ? W.idx(x, y) * 2 + (adj ? 1 : 0) : -1; const now = G.S.clock;
+    if (ti === v._pfI && now - v._pfT < 12) { v.path = null; return false; }
     const p = W.findPath(v.x, v.y, x, y, adj, maxNodes);
-    if (!p) { v.path = null; return false; }
+    if (!p) { v.path = null; v._pfI = ti; v._pfT = now; return false; }
     v.path = p; v.pi = 0; return true;
   };
   // approach a small object (tree/bush/rock) standing just beside it
@@ -411,6 +415,9 @@
     if (cur && cur.type !== 'wander') return;
     const m = S.villagers.get(v.mother);
     const r = G.R();
+    // while the years are skipped nobody sees their games: the children stay put between meals,
+    // lessons and errands, and the world runs lighter
+    if (G.Skip && G.Skip.on && r >= 0.4) { setTask(v, { type: 'idle', pri: 0.1, wait: 5 + G.R() * 5, kind: 'play' }); return; }
     if (G.isEvening() && G.Life && r < 0.7) { const t = G.Life.familyTask(v, H); if (t) { t.kind = 'family'; return; } }
     if (v.age < 7 && m && !m.inside && !m.sleeping && m.set === v.set && r < 0.5) { setTask(v, { type: 'follow', id: m.id, pri: 0.2, kind: 'follow' }); return; }
     // from nine on, a child often goes along to learn a parent's trade
@@ -466,7 +473,7 @@
     const S = G.S;
     return nearestInGrid(v, maxR || 24, i => {
       const id = S.objAt[i]; if (!id) return null; const r = S.rocks.get(id);
-      if (!r || r.stone < 1 || claimedByOther(r, v)) return null; return r;
+      if (!r || r.stone < 1 || claimedByOther(r, v) || (r.noPath && S.clock - (r.noPath[v.set] || -1e9) < G.DAY_LEN)) return null; return r;
     });
   }
   function chopTask(v) { const t = nearestTree(v); if (!t) return null; t.claim = v.id; return setTask(v, { type: 'chop', id: t.id, pri: 1 }); }
@@ -685,7 +692,9 @@
           if (!Vg.goto(v, fx, fy, true)) return end(v);
           t.st = 1;
         } else if (move(v, dt)) {
-          const add = G.Village.addStock(v.carry.k, v.carry.n, G.Fac.idOfV(v));
+          // years of plenty: the quarries and the woods give twice what they cost
+          const n = v.carry.n * (S.blessed && (v.carry.k === 'stone' || v.carry.k === 'wood') ? 2 : 1);
+          const add = G.Village.addStock(v.carry.k, n, G.Fac.idOfV(v));
           v.st[v.carry.k] = (v.st[v.carry.k] || 0) + v.carry.n;
           if (add > 0) G.FX && G.FX.deposit(v.x, v.y, v.carry.k, add);
           v.carry = null; end(v);
@@ -735,7 +744,8 @@
       case 'mine': {
         const r = S.rocks.get(t.id);
         if (!r || r.stone < 1) return end(v);
-        if (t.st === 0) { if (!approach(v, r.x, r.y)) return end(v); t.st = 1; }
+        // a boulder up on a ledge nobody from this town can climb to: they go for another one
+        if (t.st === 0) { if (!approach(v, r.x, r.y)) { (r.noPath || (r.noPath = {}))[v.set] = S.clock; return end(v); } t.st = 1; }
         else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; t.w = 0; } }
         else {
           v.act = 'mine'; G.faceTo(v, r.x - v.x, r.y - v.y);
@@ -1284,6 +1294,7 @@
   let tAlarm = 0, tPush = 0;
   Vg.nightWatch = new Map();
   Vg.workshopFac = new Set();
+  const roster = [];
   Vg.updateAll = function (dt) {
     const S = G.S;
     tAlarm -= dt; tPush -= dt;
@@ -1335,7 +1346,10 @@
         } else if (S.type[i] <= T.SEA && (!v.task || v.task.type !== 'swim')) { setTask(v, { type: 'swim', pri: 6 }); }
       }
     }
-    for (const v of [...S.villagers.values()]) {
+    // (a list of its own: people die and are born while the loop runs)
+    roster.length = 0; for (const v of S.villagers.values()) roster.push(v);
+    for (let k = 0; k < roster.length; k++) {
+      const v = roster[k];
       if (v.held) continue;
       if (v.air) { G.airUpdate(v, dt, imp => land(v, imp)); continue; }
       // at sea: only the body's needs go on (provisions come from the stores)

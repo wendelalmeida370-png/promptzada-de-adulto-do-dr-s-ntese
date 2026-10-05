@@ -155,7 +155,6 @@
   };
 
   // ------------------------------ simulation ------------------------------
-  let animAcc = 0, animTick = 0;
   function step(dt) {
     const S = G.S;
     S.clock += dt;
@@ -170,9 +169,7 @@
     G.Vg.updateAll(dt);
     G.Life && G.Life.update(dt);
     G.Carnage && G.Carnage.update(dt);
-    // while years are skipped the wild lives at half the beat (nobody is watching it move)
-    if (G.Skip && G.Skip.on) { animAcc += dt; if (++animTick % 2 === 0) { G.Animals.updateAll(animAcc); animAcc = 0; } }
-    else { if (animAcc) { G.Animals.updateAll(animAcc); animAcc = 0; } G.Animals.updateAll(dt); }
+    G.Animals.updateAll(dt);
     G.Pets && G.Pets.update(dt);
     G.Powers.update(dt);
     G.Lore && G.Lore.update(dt);
