@@ -17,22 +17,23 @@
   function shade(hex, f) { const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16); const q = v => Math.max(0, Math.min(255, Math.round(v * f))); return `rgb(${q(r)},${q(g)},${q(b)})`; }
 
   // ------------------------------ the floor ------------------------------
-  A.deco = function (c, kind, sx, sy, seed, t, wallPx) {
-    const F = G.Caves.FT;
+  const DECO = { calcario: ['#7d7266', 'rgba(230,215,190,0.35)', '#6e6458', '#b2a48e', '#5a5248'], gelo: ['#a8d4ec', 'rgba(255,255,255,0.7)', '#86b8d8', '#e4f6ff', '#6a9cc0'], arenito: ['#9c6646', 'rgba(255,210,170,0.3)', '#8a5a3e', '#c89068', '#6e4630'], musgo: ['#6c7258', 'rgba(170,210,140,0.35)', '#5e644e', '#8e9a72', '#4a5040'], basalto: ['#55515a', 'rgba(200,200,215,0.25)', '#46434c', '#77737e', '#36343a'] };
+  A.deco = function (c, kind, sx, sy, seed, t, wallPx, rock) {
+    const F = G.Caves.FT; const DC = DECO[rock] || DECO.calcario;
     switch (kind) {
       case F.STAL: {
         const n = 1 + Math.floor(H(seed) * 3);
         for (let k = 0; k < n; k++) {
           const ox = (H(seed + k * 7) - 0.5) * 14, oy = (H(seed * 3 + k) - 0.5) * 5, hh = 4 + H(seed + k * 13) * 8, w = 1.4 + H(seed + k) * 1.6;
-          c.fillStyle = '#7d7266'; c.beginPath(); c.moveTo(sx + ox - w, sy + oy); c.quadraticCurveTo(sx + ox - w * 0.3, sy + oy - hh * 0.5, sx + ox, sy + oy - hh); c.quadraticCurveTo(sx + ox + w * 0.3, sy + oy - hh * 0.5, sx + ox + w, sy + oy); c.closePath(); c.fill();
-          c.fillStyle = 'rgba(230,215,190,0.35)'; c.beginPath(); c.moveTo(sx + ox - w * 0.2, sy + oy - 0.3); c.lineTo(sx + ox, sy + oy - hh + 0.6); c.lineTo(sx + ox - w * 0.7, sy + oy - 0.3); c.closePath(); c.fill();
+          c.fillStyle = DC[0]; c.beginPath(); c.moveTo(sx + ox - w, sy + oy); c.quadraticCurveTo(sx + ox - w * 0.3, sy + oy - hh * 0.5, sx + ox, sy + oy - hh); c.quadraticCurveTo(sx + ox + w * 0.3, sy + oy - hh * 0.5, sx + ox + w, sy + oy); c.closePath(); c.fill();
+          c.fillStyle = DC[1]; c.beginPath(); c.moveTo(sx + ox - w * 0.2, sy + oy - 0.3); c.lineTo(sx + ox, sy + oy - hh + 0.6); c.lineTo(sx + ox - w * 0.7, sy + oy - 0.3); c.closePath(); c.fill();
           ell(c, sx + ox, sy + oy, w * 1.5, w * 0.55, 'rgba(60,52,46,0.5)');
         }
         break;
       }
       case F.COL: {
         const top = sy - wallPx; const w0 = 3.6, wm = 2.2;
-        const g = c.createLinearGradient(sx - w0, 0, sx + w0, 0); g.addColorStop(0, '#6e6458'); g.addColorStop(0.45, '#b2a48e'); g.addColorStop(1, '#5a5248');
+        const g = c.createLinearGradient(sx - w0, 0, sx + w0, 0); g.addColorStop(0, DC[2]); g.addColorStop(0.45, DC[3]); g.addColorStop(1, DC[4]);
         c.fillStyle = g; c.beginPath(); c.moveTo(sx - w0 - 1.5, sy); c.quadraticCurveTo(sx - wm, sy - wallPx * 0.5, sx - w0, top); c.lineTo(sx + w0, top); c.quadraticCurveTo(sx + wm, sy - wallPx * 0.5, sx + w0 + 1.5, sy); c.closePath(); c.fill();
         c.strokeStyle = 'rgba(40,34,28,0.35)'; c.lineWidth = 0.5; for (let k = 1; k < 4; k++) line(c, sx - wm, sy - wallPx * k / 4, sx + wm, sy - wallPx * k / 4 + 0.6);
         ell(c, sx, sy, w0 + 2.5, 1.6, 'rgba(50,44,38,0.45)');
@@ -238,28 +239,142 @@
   };
 
   // ------------------------------ seen from above ------------------------------
-  // a dark door in the hillside, dressed by what the people made of it
+  // ------------------------------ the doors of the caves ------------------------------
+  // the stone of the land: grey and mossy, red in the deserts, blue-grey under snow, dark in the jungle
+  const STONE = {
+    0: { lit: '#9a9282', mid: '#7c7466', dark: '#585246', cap: '#6f8a44', moss: '#5e7a3a' },
+    1: { lit: '#a6acb8', mid: '#868c98', dark: '#5e6470', cap: '#eef3f8', moss: '#9fb0b8' },
+    2: { lit: '#8e8a84', mid: '#706c66', dark: '#4e4a46', cap: '#4f6a3a', moss: '#4a6236' },
+    3: { lit: '#7e806e', mid: '#646654', dark: '#44463a', cap: '#5a7a3a', moss: '#4e7034' },
+    4: { lit: '#7a7a6a', mid: '#5e5e50', dark: '#403f36', cap: '#3f7a32', moss: '#3a6e2c' },
+    5: { lit: '#b88a62', mid: '#98704e', dark: '#6e4e36', cap: '#a8a050', moss: '#8a8a44' },
+    6: { lit: '#c8946a', mid: '#a67652', dark: '#7a5238', cap: '#d8b47a', moss: '#a08a58' },
+  };
+  function darkHole(c, x, y, w, h, arch) {
+    const g = c.createLinearGradient(0, y - h, 0, y + 1); g.addColorStop(0, '#060505'); g.addColorStop(0.7, '#120e0c'); g.addColorStop(1, '#2a221c');
+    c.fillStyle = g; c.beginPath();
+    if (arch) { c.moveTo(x - w, y + 0.8); c.quadraticCurveTo(x - w * 1.08, y - h * 0.7, x, y - h); c.quadraticCurveTo(x + w * 1.08, y - h * 0.7, x + w, y + 0.8); c.quadraticCurveTo(x, y + 2, x - w, y + 0.8); }
+    else c.ellipse(x, y, w, h, 0, 0, TAU);
+    c.fill();
+  }
+  function rocks(c, x, y, n, spread, P, seed) {
+    for (let k = 0; k < n; k++) { const ox = (H(seed + k * 3) - 0.5) * spread, oy = (H(seed + k * 7) - 0.5) * spread * 0.32, r = 1 + H(seed + k * 11) * 1.8; ell(c, x + ox, y + oy + 0.5, r * 1.3, r * 0.55, 'rgba(0,0,0,0.25)'); c.fillStyle = H(seed + k) < 0.5 ? P.lit : P.mid; c.beginPath(); c.moveTo(x + ox - r, y + oy); c.lineTo(x + ox - r * 0.3, y + oy - r * 1.2); c.lineTo(x + ox + r * 0.7, y + oy - r * 0.8); c.lineTo(x + ox + r, y + oy); c.closePath(); c.fill(); }
+  }
+  function tufts(c, x, y, n, spread, col, seed) {
+    c.strokeStyle = col; c.lineWidth = 0.6;
+    for (let k = 0; k < n; k++) { const ox = (H(seed + k * 5) - 0.5) * spread, oy = (H(seed + k * 9) - 0.5) * spread * 0.3; for (let b = -1; b <= 1; b++) line(c, x + ox, y + oy, x + ox + b * 1.1, y + oy - 2.2 - H(seed + k + b) * 1.4); }
+  }
+  function vines(c, x0, x1, y, n, col, seed, t) {
+    c.strokeStyle = col; c.lineWidth = 0.55;
+    for (let k = 0; k < n; k++) { const x = x0 + (x1 - x0) * H(seed + k * 13), L = 3 + H(seed + k * 17) * 7, sw = Math.sin(t * 0.8 + k) * 0.6; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + sw, y + L * 0.6, x + sw * 1.5, y + L); c.stroke(); ell(c, x + sw * 1.5, y + L, 0.9, 0.6, col); }
+  }
+  // the door, the kind the ground made, dressed by what the people made of it
   A.mouth = function (c, sx, sy, t, o) {
-    c.save(); c.translate(sx, sy);
-    // rock lip
-    c.fillStyle = '#6e665a'; c.beginPath(); c.moveTo(-9, 1.5); c.quadraticCurveTo(-10, -9, 0, -11.5); c.quadraticCurveTo(10, -9, 9, 1.5); c.quadraticCurveTo(0, 3.2, -9, 1.5); c.fill();
-    c.fillStyle = '#8a8274'; c.beginPath(); c.moveTo(-9, 1.5); c.quadraticCurveTo(-10, -9, 0, -11.5); c.quadraticCurveTo(-6, -8, -6.5, 1.5); c.closePath(); c.fill();
-    // the dark
-    const g = c.createLinearGradient(0, -9, 0, 2); g.addColorStop(0, '#0a0808'); g.addColorStop(1, '#2a221c');
-    c.fillStyle = g; c.beginPath(); c.moveTo(-6, 1.6); c.quadraticCurveTo(-6.6, -7, 0, -8.6); c.quadraticCurveTo(6.6, -7, 6, 1.6); c.quadraticCurveTo(0, 2.6, -6, 1.6); c.fill();
-    if (o.sealed) { for (let k = 0; k < 7; k++) ell(c, -4 + (k % 4) * 2.7, -1 - Math.floor(k / 4) * 2.8, 1.6, 1.4, k % 2 ? '#8a8276' : '#a29a8c'); }
-    if (o.tomb) { c.fillStyle = '#c8a050'; c.fillRect(-6.5, -9.6, 13, 1.3); c.fillStyle = '#7a5a2a'; c.fillRect(-7, 0.6, 1.3, 1.4); c.fillRect(5.7, 0.6, 1.3, 1.4); }
-    if (o.oracle) { for (let k = 0; k < 4; k++) { const ph = (t * 0.3 + k / 4) % 1; c.fillStyle = `rgba(214,190,255,${0.35 * (1 - ph)})`; c.beginPath(); c.arc(Math.sin(t + k) * 2, -8 - ph * 14, 1.2 + ph * 3, 0, TAU); c.fill(); } ell(c, -7.5, 2, 1.2, 0.7, '#c8683a'); ell(c, 7.5, 2, 1.2, 0.7, '#e8c060'); }
-    if (o.mine) { c.strokeStyle = '#7a5530'; c.lineWidth = 1.3; line(c, -5.5, 1.5, -5.5, -7); line(c, 5.5, 1.5, 5.5, -7); line(c, -6.4, -7, 6.4, -7); }
-    if (o.camp && o.night) ell(c, 0, -1, 2.2, 1, 'rgba(255,160,70,0.8)');
+    const P = STONE[o.biome] || STONE[0]; const sd = o.seed || 7; const kind = o.kind || 'paredao';
+    c.save(); c.translate(sx, sy); if (o.mirror) c.scale(-1, 1);
+    let hx = 0, hy = 0, hw = 6, hh = 8.6; // the hole: where the dressing goes
+    if (kind === 'paredao') {
+      // a cut in the hillside: a wide face of stone that rises out of the slope, its ends sinking back
+      // into the grass; the arch opens at its foot and the fallen stones lie below
+      const W0 = 21, Ht = 19;
+      const pts = []; for (let k = 0; k <= 8; k++) { const u = k / 8; const env = Math.sin(u * Math.PI); pts.push([-W0 + u * 2 * W0, 2 - env * Ht - (H(sd + k) - 0.5) * 5 * env]); }
+      ell(c, 0, 2.5, W0, 4, 'rgba(0,0,0,0.18)');
+      // the face, lit from the left, shaded to the right
+      const g = c.createLinearGradient(-W0, 0, W0, 0); g.addColorStop(0, P.lit); g.addColorStop(0.45, P.mid); g.addColorStop(1, P.dark);
+      c.fillStyle = g; c.beginPath(); c.moveTo(-W0, 2.5); for (const [x, y] of pts) c.lineTo(x, y); c.lineTo(W0, 2.5); c.quadraticCurveTo(0, 5, -W0, 2.5); c.fill();
+      // the layers of the stone, bending with the hill
+      c.strokeStyle = 'rgba(30,22,16,0.26)'; c.lineWidth = 0.6;
+      for (let k = 1; k < 4; k++) { const f = k / 4.2; c.beginPath(); c.moveTo(-W0 * (1 - f * 0.55), 2 - Ht * f * 0.75); c.quadraticCurveTo(0, 2 - Ht * f - 1.5 + (H(sd + k) - 0.5) * 2, W0 * (1 - f * 0.55), 2 - Ht * f * 0.75); c.stroke(); }
+      // cracks
+      c.strokeStyle = 'rgba(20,14,10,0.35)'; c.lineWidth = 0.5; line(c, -12, -6, -10, -12); line(c, 11, -4, 13, -10); line(c, 13, -10, 12, -13);
+      // the top: the hill goes on above it — grass (or snow, or sand) curling over the edge
+      c.fillStyle = P.cap; c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (const [x, y] of pts) c.lineTo(x, y - 1.2); for (let k = pts.length - 1; k >= 0; k--) c.lineTo(pts[k][0], pts[k][1] + 1.6 + H(sd + k * 7) * 1.4); c.closePath(); c.fill();
+      if (o.biome !== 1 && o.biome !== 6) { ell(c, pts[6][0], pts[6][1] - 2, 3.4, 2.4, P.moss); ell(c, pts[6][0] + 2.2, pts[6][1] - 3.2, 2.2, 1.8, P.cap); tufts(c, pts[2][0], pts[2][1] - 0.5, 3, 6, P.moss, sd + 2); }
+      if (o.biome !== 6 && o.biome !== 5) vines(c, -8, 8, -12.5, o.biome === 4 || o.biome === 3 ? 9 : 4, P.moss, sd, t);
+      hw = 6.4; hh = 12; hy = 1.5;
+      darkHole(c, 0, hy, hw, hh, true);
+      c.strokeStyle = 'rgba(255,245,225,0.35)'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(-hw - 0.4, hy + 0.5); c.quadraticCurveTo(-hw * 1.1, hy - hh * 0.7, 0, hy - hh - 0.4); c.stroke();
+      rocks(c, 0, 4, 6, 28, P, sd + 40);
+    } else if (kind === 'abrigo') {
+      // a shelter under the rock: a long outcrop on the slope, its lower layer eaten away into a low dark
+      ell(c, 0, 2.5, 19, 4.5, 'rgba(0,0,0,0.18)');
+      const g = c.createLinearGradient(-19, 0, 19, 0); g.addColorStop(0, P.lit); g.addColorStop(0.5, P.mid); g.addColorStop(1, P.dark);
+      c.fillStyle = g; c.beginPath(); c.moveTo(-19, 2.5); c.quadraticCurveTo(-20, -6, -13, -11); c.quadraticCurveTo(-2, -15, 9, -13); c.quadraticCurveTo(18, -10, 19, 2.5); c.quadraticCurveTo(0, 5, -19, 2.5); c.fill();
+      hw = 12.5; hh = 6.2; hy = 1.6;
+      // the hollow under the ledge
+      const hg = c.createLinearGradient(0, hy - hh, 0, hy + 1); hg.addColorStop(0, '#070605'); hg.addColorStop(1, '#2a221c');
+      c.fillStyle = hg; c.beginPath(); c.moveTo(-hw, hy + 0.6); c.quadraticCurveTo(-hw + 1, hy - hh, -2, hy - hh - 0.6); c.quadraticCurveTo(hw - 1, hy - hh + 0.4, hw, hy + 0.6); c.quadraticCurveTo(0, hy + 2, -hw, hy + 0.6); c.fill();
+      // the lip of the ledge catching the light, the soot of old fires on its underside
+      c.strokeStyle = 'rgba(255,245,225,0.4)'; c.lineWidth = 0.9; c.beginPath(); c.moveTo(-hw - 0.6, hy - 1.5); c.quadraticCurveTo(-hw + 1, hy - hh - 0.8, -2, hy - hh - 1.4); c.quadraticCurveTo(hw - 1, hy - hh - 0.6, hw + 0.6, hy - 1); c.stroke();
+      ell(c, 1, hy - hh + 1.4, 6.5, 1.2, 'rgba(10,8,6,0.45)');
+      c.strokeStyle = 'rgba(30,22,16,0.25)'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(-16, -9); c.quadraticCurveTo(0, -12.5, 16, -9); c.stroke();
+      c.fillStyle = P.cap; c.beginPath(); c.moveTo(-13, -11); c.quadraticCurveTo(-2, -15, 9, -13); c.quadraticCurveTo(-2, -16.8, -13, -12.4); c.closePath(); c.fill();
+      vines(c, -10, 10, -8.5, o.biome === 4 ? 7 : 3, P.moss, sd, t);
+      rocks(c, -9, 3.5, 3, 10, P, sd + 30); tufts(c, 12, 3.5, 3, 8, P.moss, sd);
+    } else if (kind === 'dolina') {
+      // the ground gave way: a round hole of stone in the flat land
+      const rx = 13, ry = 6.2;
+      ell(c, 0, 0.8, rx + 2, ry + 1.6, 'rgba(0,0,0,0.12)');
+      c.fillStyle = P.mid; c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.fill();
+      // its inner walls, dark going down
+      const g = c.createLinearGradient(0, -ry, 0, ry); g.addColorStop(0, P.dark); g.addColorStop(1, '#0c0a08');
+      c.fillStyle = g; c.beginPath(); c.ellipse(0, 0.6, rx - 1.8, ry - 1.2, 0, 0, TAU); c.fill();
+      c.fillStyle = P.lit; c.beginPath(); c.ellipse(0, 0, rx - 1.6, ry - 1, 0, Math.PI * 0.05, Math.PI * 0.95); c.lineTo(-rx + 2, 1); c.ellipse(0, 1.6, rx - 2.4, ry - 1.4, 0, Math.PI, 0, true); c.closePath(); c.globalAlpha = 0.55; c.fill(); c.globalAlpha = 1;
+      hw = 6; hh = 3; hy = -1; darkHole(c, -1, -1.4, 6.2, 2.6, false);
+      // the edge: stones, grass, ferns leaning over the drop
+      rocks(c, 0, -ry + 0.5, 4, 22, P, sd + 11); rocks(c, 0, ry - 0.3, 3, 20, P, sd + 23);
+      tufts(c, 0, -ry, 6, 26, P.moss, sd + 3);
+      if (o.biome !== 6 && o.biome !== 1) { c.strokeStyle = P.moss; c.lineWidth = 0.7; for (let k = 0; k < 3; k++) { const x = -8 + k * 7; c.beginPath(); c.moveTo(x, -ry + 1); c.quadraticCurveTo(x + 1, -ry + 3, x + 0.5, -ry + 5); c.stroke(); } }
+      hx = 0; hy = 2;
+    } else if (kind === 'fenda') {
+      // two boulders leaning together, and the black crack between them
+      ell(c, 0, 2, 13, 3.5, 'rgba(0,0,0,0.22)');
+      c.fillStyle = P.mid; c.beginPath(); c.moveTo(-13, 2); c.quadraticCurveTo(-14, -9, -6, -15); c.lineTo(-0.8, -12); c.lineTo(-1.5, 2); c.closePath(); c.fill();
+      c.fillStyle = P.lit; c.beginPath(); c.moveTo(-13, 2); c.quadraticCurveTo(-14, -9, -6, -15); c.lineTo(-6.5, -8); c.lineTo(-9, 2); c.closePath(); c.fill();
+      c.fillStyle = P.dark; c.beginPath(); c.moveTo(12, 2); c.quadraticCurveTo(13, -7, 5, -13); c.lineTo(0.6, -11); c.lineTo(1.4, 2); c.closePath(); c.fill();
+      const g = c.createLinearGradient(0, -12, 0, 2); g.addColorStop(0, '#050404'); g.addColorStop(1, '#1e1814');
+      c.fillStyle = g; c.beginPath(); c.moveTo(-1.6, 2); c.lineTo(-0.9, -11.5); c.lineTo(0.7, -10.8); c.lineTo(1.5, 2); c.closePath(); c.fill();
+      c.fillStyle = P.moss; ell(c, -7, -13.5, 2.6, 1.2, P.moss); ell(c, 6, -12, 2.2, 1, P.moss);
+      tufts(c, 0, 2.5, 3, 16, P.moss, sd); rocks(c, 7, 3, 2, 8, P, sd + 9);
+      hw = 2; hh = 10; hy = 1.5;
+    } else { // poco
+      // a shaft going straight down out of bare rock
+      ell(c, 0, 1, 10, 4.6, 'rgba(0,0,0,0.2)');
+      c.fillStyle = P.lit; c.beginPath(); c.ellipse(0, 0, 9, 4.4, 0, 0, TAU); c.fill();
+      c.fillStyle = P.mid; c.beginPath(); c.ellipse(0, 0.5, 9, 4.2, 0, 0, Math.PI); c.fill();
+      c.fillStyle = '#060505'; c.beginPath(); c.ellipse(0, 0, 6.4, 2.9, 0, 0, TAU); c.fill();
+      c.fillStyle = P.dark; c.beginPath(); c.ellipse(0, -0.8, 6.4, 2.1, 0, Math.PI, TAU); c.fill();
+      c.strokeStyle = P.moss; c.lineWidth = 0.6; for (let k = 0; k < 4; k++) { const a = Math.PI * (1.1 + k * 0.25); const x = Math.cos(a) * 6, y = Math.sin(a) * 2.8; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x * 0.8, y + 2, x * 0.7, y + 3.5); c.stroke(); }
+      rocks(c, 0, 4, 3, 18, P, sd + 5);
+      hw = 6; hh = 2.6; hy = 0;
+      if (o.mine) { c.strokeStyle = '#7a5530'; c.lineWidth = 1; line(c, -6, 1, -3, -10); line(c, 6, 1, 3, -10); line(c, -4, -9.5, 4, -9.5); c.strokeStyle = 'rgba(210,190,150,0.8)'; c.lineWidth = 0.4; line(c, 0, -9.5, 0, 0); }
+    }
+    // a spring: the water of the cave comes out by the door
+    if (o.spring) {
+      const g = c.createLinearGradient(0, hy - 1, 0, hy + 9); g.addColorStop(0, 'rgba(70,130,170,0.9)'); g.addColorStop(1, 'rgba(110,170,205,0.75)');
+      c.fillStyle = g; c.beginPath(); c.moveTo(-hw * 0.5, hy); c.quadraticCurveTo(-hw * 0.7, hy + 5, -4, hy + 8); c.quadraticCurveTo(0, hy + 10.5, 6, hy + 8.4); c.quadraticCurveTo(hw * 0.7, hy + 4, hw * 0.5, hy); c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(230,245,255,0.6)'; c.lineWidth = 0.5; for (let k = 0; k < 3; k++) { const f = (t * 0.6 + k / 3) % 1; c.beginPath(); c.ellipse(0, hy + 2 + f * 6, 1.5 + f * 3, 0.5 + f, 0, 0, Math.PI); c.stroke(); }
+    }
+    // the cave breathes: its cold air shows on chill mornings, its warm air on frosty nights
+    if (o.breath > 0) { for (let k = 0; k < 4; k++) { const f = (t * 0.18 + k / 4) % 1; c.fillStyle = `rgba(235,240,245,${0.22 * o.breath * Math.sin(f * Math.PI)})`; c.beginPath(); c.ellipse(hx + Math.sin(t * 0.5 + k) * 2 + f * 4, hy - hh * 0.6 - f * 14, 2 + f * 5, 1.2 + f * 2.4, 0, 0, TAU); c.fill(); } }
+    // what the people made of it
+    if (o.sealed) { for (let k = 0; k < 7; k++) ell(c, hx - 4 + (k % 4) * 2.7, hy - 1 - Math.floor(k / 4) * 2.8, 1.6, 1.4, k % 2 ? '#8a8276' : '#a29a8c'); }
+    if (o.tomb) { c.fillStyle = '#c8a050'; c.fillRect(hx - hw - 0.5, hy - hh - 1, hw * 2 + 1, 1.3); c.fillStyle = '#7a5a2a'; c.fillRect(hx - hw - 1, hy - 0.4, 1.3, 1.6); c.fillRect(hx + hw - 0.3, hy - 0.4, 1.3, 1.6); }
+    if (o.oracle) { for (let k = 0; k < 4; k++) { const ph = (t * 0.3 + k / 4) % 1; c.fillStyle = `rgba(214,190,255,${0.35 * (1 - ph)})`; c.beginPath(); c.arc(hx + Math.sin(t + k) * 2, hy - hh - ph * 14, 1.2 + ph * 3, 0, TAU); c.fill(); } ell(c, hx - hw - 1.5, hy + 1, 1.2, 0.7, '#c8683a'); ell(c, hx + hw + 1.5, hy + 1, 1.2, 0.7, '#e8c060'); }
+    if (o.mine && kind !== 'poco') { c.strokeStyle = '#7a5530'; c.lineWidth = 1.3; line(c, hx - hw * 0.85, hy + 0.5, hx - hw * 0.85, hy - hh * 0.75); line(c, hx + hw * 0.85, hy + 0.5, hx + hw * 0.85, hy - hh * 0.75); line(c, hx - hw, hy - hh * 0.75, hx + hw, hy - hh * 0.75); }
+    if (o.camp && o.night) ell(c, hx, hy - 1, 2.2, 1, 'rgba(255,160,70,0.8)');
     c.restore();
   };
   // daylight falling into a cave from its mouth
-  A.shaft = function (c, sx, sy, a, len) {
+  A.shaft = function (c, sx, sy, a, len, kind) {
+    const down = kind === 'poco' || kind === 'dolina';
     const g = c.createLinearGradient(0, sy - len, 0, sy);
-    g.addColorStop(0, `rgba(255,244,214,0)`); g.addColorStop(0.7, `rgba(255,240,200,${0.22 * a})`); g.addColorStop(1, `rgba(255,236,190,${0.35 * a})`);
-    c.fillStyle = g; c.beginPath(); c.moveTo(sx - 6, sy - len); c.lineTo(sx + 6, sy - len); c.lineTo(sx + 13, sy + 2); c.lineTo(sx - 13, sy + 2); c.closePath(); c.fill();
-    ell(c, sx, sy + 1, 13, 5.5, `rgba(255,236,190,${0.2 * a})`);
+    g.addColorStop(0, `rgba(255,244,214,0)`); g.addColorStop(0.7, `rgba(255,240,200,${(down ? 0.3 : 0.22) * a})`); g.addColorStop(1, `rgba(255,236,190,${(down ? 0.45 : 0.35) * a})`);
+    const w0 = down ? 9 : 6, w1 = down ? 11 : 13;
+    c.fillStyle = g; c.beginPath(); c.moveTo(sx - w0, sy - len); c.lineTo(sx + w0, sy - len); c.lineTo(sx + w1, sy + 2); c.lineTo(sx - w1, sy + 2); c.closePath(); c.fill();
+    ell(c, sx, sy + 1, w1, w1 * 0.42, `rgba(255,236,190,${0.2 * a})`);
+    // leaves and earth fallen in from above
+    if (down) { for (let k = 0; k < 6; k++) ell(c, sx + (H(k * 7 + sx) - 0.5) * 16, sy + (H(k * 3 + sy) - 0.5) * 5, 1, 0.5, k % 2 ? 'rgba(110,130,60,0.7)' : 'rgba(120,90,50,0.7)'); }
   };
   const OCHRE_ = OCHRE; void OCHRE_; void shade;
 })(window.G);

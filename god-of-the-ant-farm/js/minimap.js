@@ -85,7 +85,7 @@
         if (S.occ[i]) c = [226, 206, 178];
       }
       // under the ground: the rock, and the caves lit in it
-      if (UG) { const k = UG.k[i]; c = k ? (k === 3 || k === 4 ? [70, 130, 170] : k === 5 ? [240, 220, 170] : [176, 146, 104]) : t <= T.SEA ? [30, 38, 50] : t === T.RIVER ? [38, 48, 58] : [62, 56, 52]; if (!k && S.occ[i]) c = [90, 80, 70]; }
+      if (UG) { const k = UG.k[i]; c = k ? (k === 3 || k === 4 ? [70, 130, 170] : k === 5 ? [240, 220, 170] : k === 7 ? [24, 18, 16] : [176, 146, 104]) : t <= T.SEA ? [30, 38, 50] : t === T.RIVER ? [38, 48, 58] : [62, 56, 52]; if (!k && S.occ[i]) c = [90, 80, 70]; }
       let r = c[0], g = c[1], b = c[2];
       const f = !UG && terr && terr[i];
       if (f && t > T.RIVER) {

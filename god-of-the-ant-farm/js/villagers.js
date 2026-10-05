@@ -1304,20 +1304,32 @@
   }
 
   // ------------------------------ babies ------------------------------
+  // nobody takes a baby to a battlefield: soldiers, hunters and guards leave it with someone at home
+  const ROUGH = { band: 1, fight: 1, patrol: 1, drill: 1, guard: 1, hunt: 1, flee: 0 };
+  const unfitCarrier = c => !c || c.dead || c.captive || c.role === 'guerreiro' || (c.task && (ROUGH[c.task.type] || c.task.kind === 'band' || (c.task.type === 'caverna' && c.task.kind === 'raid'))) || c.fury > 0;
   function babyUpdate(v, dt) {
     const S = G.S;
     v.task = null;
     let c = S.villagers.get(v.carrier);
-    if (!c || c.set !== v.set || c.age < 14) {
-      c = S.villagers.get(v.mother) || S.villagers.get(v.father);
-      if (!c || c.set !== v.set) { c = null; for (const o of S.villagers.values()) if (o.set === v.set && o.age >= 16 && o.g === 'f' && o.age < 62) { c = o; break; } }
+    if (!c || c.set !== v.set || c.age < 14 || unfitCarrier(c)) {
+      c = null;
+      if ((v.seekT = (v.seekT || 0) - dt) <= 0) {
+        v.seekT = 1;
+        const ok = o => o && o !== v && o.set === v.set && o.age >= 14 && !unfitCarrier(o);
+        c = [S.villagers.get(v.mother), S.villagers.get(v.father)].find(ok) || null;
+        // a grandmother, an aunt, a neighbour: the women of the village, then anyone grown
+        if (!c) { let bd = 1e9; for (const o of S.villagers.values()) if (ok(o) && o.age >= 16 && o.age < 70) { const d = G.dist2(o.x, o.y, v.x, v.y) + (o.g === 'f' ? 0 : 400); if (d < bd) { bd = d; c = o; } } }
+      }
       v.carrier = c ? c.id : 0;
     }
     if (c) {
       v.x = c.x + c.face * -0.08; v.y = c.y + 0.02; v.inside = c.inside; v.sleeping = c.sleeping; G.faceAs(v, c);
       v.carried = !c.inside && !c.sleeping;
     } else {
+      // no one free to hold it: the baby sleeps at home
       v.carried = false; v.sleeping = G.isNight();
+      const h = !v.ug && (S.buildings.get(v.home) || S.buildings.get((S.villagers.get(v.mother) || {}).home));
+      if (h && h.built) { const [hx, hy] = G.Village.center(h); v.x = hx; v.y = hy; v.inside = h.id; }
     }
   }
 
@@ -1445,7 +1457,7 @@
       }
       case 'eat': return t.st < 2 ? 'Indo comer' : 'Comendo';
       case 'sleep': return v.sleeping ? (v.inside ? 'Dormindo em casa' : 'Dormindo ao relento') : 'Indo dormir';
-      case 'flee': return t.why === 'meteor' ? 'Fugindo do céu em chamas!' : t.why === 'fire' ? 'Fugindo do incêndio!' : t.why === 'wolf' ? 'Fugindo de uma fera!' : t.why === 'war' ? 'Fugindo dos invasores!' : 'Correndo em pânico!';
+      case 'flee': return t.why === 'play' ? 'Correndo do eco da caverna, rindo' : t.why === 'meteor' ? 'Fugindo do céu em chamas!' : t.why === 'fire' ? 'Fugindo do incêndio!' : t.why === 'wolf' ? 'Fugindo de uma fera!' : t.why === 'war' ? 'Fugindo dos invasores!' : 'Correndo em pânico!';
       case 'fire': return t.st === 2 ? 'Enchendo o balde' : t.beat ? 'Abafando as chamas' : 'Combatendo o incêndio!';
       case 'social': return `Conversando com ${pname(t.id)}`;
       case 'talk': return t.court ? `Flertando com ${pname(t.id)}` : `Conversando com ${pname(t.id)}`;

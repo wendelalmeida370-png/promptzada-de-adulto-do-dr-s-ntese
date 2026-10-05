@@ -20,8 +20,8 @@
 
   // ------------------------------ the layer ------------------------------
   // cell kinds below the ground (one per tile)
-  const ROCK = 0, GAL = 1, HALL = 2, STREAM = 3, LAKE = 4, MOUTH = 5, DUG = 6;
-  C.K = { ROCK, GAL, HALL, STREAM, LAKE, MOUTH, DUG };
+  const ROCK = 0, GAL = 1, HALL = 2, STREAM = 3, LAKE = 4, MOUTH = 5, DUG = 6, PIT = 7;
+  C.K = { ROCK, GAL, HALL, STREAM, LAKE, MOUTH, DUG, PIT };
   C.walk = k => k === GAL || k === HALL || k === STREAM || k === MOUTH || k === DUG;
   C.FLOOR = 2.0; C.WALL = 3.2; // the floor of the caves and the height of their walls, in the view below
   // what lies on a cave floor
@@ -38,6 +38,82 @@
   const D8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
   const UGIN = -1; // v.inside while underground: out of the surface world's sight
   C.UGIN = UGIN;
+
+  // ------------------------------ what a cave is cut in ------------------------------
+  // the stone of the land above decides how it looks inside: grey limestone, red sandstone under the
+  // deserts, blue ice under the tundra, wet mossy rock under the jungle, black basalt in the high peaks
+  C.ROCKS = {
+    calcario: { name: 'calcário', floor: [138, 122, 104], gal: [126, 112, 96], wall: [116, 106, 96], deep: [64, 56, 50] },
+    gelo: { name: 'gelo', floor: [178, 198, 214], gal: [160, 184, 204], wall: [112, 146, 180], deep: [40, 62, 92] },
+    arenito: { name: 'arenito', floor: [178, 128, 90], gal: [164, 116, 82], wall: [150, 92, 64], deep: [76, 42, 30] },
+    musgo: { name: 'pedra úmida e musgo', floor: [100, 108, 78], gal: [92, 100, 72], wall: [84, 98, 74], deep: [34, 44, 34] },
+    basalto: { name: 'basalto', floor: [94, 90, 94], gal: [84, 80, 86], wall: [64, 62, 70], deep: [24, 22, 28] },
+  };
+  C.rockOf = function (cv) {
+    if (cv.rock) return cv.rock;
+    const S = G.S; const i = G.clamp(Math.round(cv.cy), 0, N - 1) * N + G.clamp(Math.round(cv.cx), 0, N - 1);
+    const b = S.biome ? S.biome[i] : 0; const h = W.tileH(i) - G.SEA;
+    cv.rock = b === 1 ? 'gelo' : b === 5 || b === 6 ? 'arenito' : b === 4 || b === 3 ? 'musgo' : (h > 7 && G.hash(cv.id * 31 + 7) < 0.55) || (b === 2 && G.hash(cv.id * 13) < 0.3) ? 'basalto' : 'calcario';
+    return cv.rock;
+  };
+  // the door follows the ground: a cut in a cliff, a shelter under a ledge on a slope, a sinkhole in the
+  // flat land, a crack between boulders, a shaft in bare rock — and, where a stream runs inside, a spring
+  function kindAt(S, x, y) {
+    const i = y * N + x; const h0 = W.tileH(i); let cliff = 0, up = 0;
+    for (const [dx, dy] of D8) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; if (S.cliff && S.cliff[j]) cliff = 1; up = Math.max(up, W.tileH(j) - h0); }
+    if (cliff || up > 2.6) return 'paredao';
+    if (up > 1.1) return 'abrigo';
+    if (S.type[i] === T.ROCKY) return G.hash(i * 3 + 1) < 0.5 ? 'fenda' : 'poco';
+    return 'dolina';
+  }
+  C.mouthKind = function (m, cv) {
+    if (m.fx === undefined) {
+      if (!m.kind) m.kind = kindAt(G.S, m.x, m.y);
+      // the lowest door of a cave with a stream lets the water out
+      if (cv && cv.stream && m.kind !== 'poco') { let low = null; for (const o of cv.mouths) if (!low || W.tileH(o.y * N + o.x) < W.tileH(low.y * N + low.x)) low = o; if (low === m) m.spring = 1; }
+      // which way the ground falls: the door faces it
+      let bx = 0, by = 0; const h0 = W.tileH(m.y * N + m.x);
+      for (const [dx, dy] of D8) { const nx = m.x + dx, ny = m.y + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const d = h0 - W.tileH(ny * N + nx); bx += dx * d; by += dy * d; }
+      m.fx = Math.sign(Math.round(bx * 4) / 4); m.fy = Math.sign(Math.round(by * 4) / 4);
+    }
+    return m.kind;
+  };
+  C.MOUTH_NAME = { paredao: 'uma boca num paredão de pedra', abrigo: 'um abrigo sob a rocha, na encosta', dolina: 'uma dolina: o chão afundou num buraco de pedra', fenda: 'uma fenda estreita entre pedras', poco: 'um poço que desce reto para o escuro' };
+
+  // ------------------------------ the floor is not flat ------------------------------
+  // the galleries go down as they go in, the halls have ledges by the walls and hollows in the middle,
+  // the lakes lie low, a chasm drops out of sight
+  C.LV = { step: 0.6, max: 3, ledge: 0.95, hollow: -0.6, lake: -0.75, stream: -0.35, pit: -6.5 };
+  let lvNoise = null;
+  function relevel(U) {
+    const NN = N * N; if (!U.lv || U.lv.length !== NN) U.lv = new Float32Array(NN);
+    const lv = U.lv; lv.fill(0); U.lvVer = U.ver;
+    if (!lvNoise) lvNoise = G.makeNoise(((G.S && G.S.seed) || 1) + 911);
+    const dist = new Int16Array(NN).fill(-1); const LV = C.LV;
+    const stepOf = d => -Math.min(LV.max, Math.floor(d / 6) * LV.step);
+    for (const cv of U.caves) {
+      if (cv.gone) continue;
+      const q = [];
+      for (const m of cv.mouths) { const i = m.y * N + m.x; if (U.id[i] === cv.id && dist[i] < 0) { dist[i] = 0; q.push(i); } }
+      if (!q.length && cv.halls[0]) { const i = cv.halls[0].y * N + cv.halls[0].x; if (U.id[i] === cv.id) { dist[i] = 6; q.push(i); } }
+      for (let h = 0; h < q.length; h++) { const c = q[h]; const x = c % N, y = (c / N) | 0; for (const [dx, dy] of D4) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; if (dist[j] >= 0 || U.id[j] !== cv.id || U.k[j] === ROCK) continue; dist[j] = dist[c] + 1; q.push(j); } }
+      const hallBase = cv.halls.map(hh => { const i = hh.y * N + hh.x; return stepOf(dist[i] >= 0 ? dist[i] : 8); });
+      for (const c of q) {
+        const k = U.k[c]; const x = c % N, y = (c / N) | 0;
+        if (k === MOUTH) { lv[c] = 0; continue; }
+        if (k === PIT) { lv[c] = LV.pit; continue; }
+        if (k === HALL || k === LAKE) {
+          let b = stepOf(dist[c]), bd = 1e9; cv.halls.forEach((hh, n) => { const dd = (hh.x - x) ** 2 + (hh.y - y) ** 2; if (dd < bd && dd <= (hh.r + 1.5) ** 2) { bd = dd; b = hallBase[n]; } });
+          if (k === LAKE) { lv[c] = b + LV.lake; continue; }
+          let edge = 0; for (const [dx, dy] of D4) if (U.k[(y + dy) * N + x + dx] === ROCK) edge++;
+          const nz = lvNoise(x * 0.42 + cv.id * 3.1, y * 0.42);
+          lv[c] = b + (edge && nz > 0.18 ? LV.ledge : !edge && nz < -0.3 ? LV.hollow : 0);
+        } else lv[c] = stepOf(dist[c]) + (k === STREAM ? LV.stream : 0);
+      }
+    }
+  }
+  C.level = i => { const U = C.U(); if (!U) return 0; if (U.lvVer !== U.ver || !U.lv) relevel(U); return U.lv[i]; };
+  C.floorAt = (x, y) => { const xi = Math.floor(x), yi = Math.floor(y); if (xi < 0 || yi < 0 || xi >= N || yi >= N) return C.FLOOR; return C.FLOOR + C.level(yi * N + xi); };
   const fresh = () => { const NN = N * N; return { k: new Uint8Array(NN), f: new Uint8Array(NN), ore: new Uint8Array(NN), oreN: new Uint8Array(NN), id: new Int16Array(NN), caves: [], beasts: [], ver: 1, nextBeast: 1 }; };
   C.U = () => G.S && G.S.ug;
   C.get = id => { const U = C.U(); return U && id > 0 ? U.caves[id - 1] || null : null; };
@@ -58,14 +134,14 @@
     crystal: ['dos Cristais', 'das Ametistas', 'do Cristal'], lake: ['do Lago Escuro', 'das Águas Negras', 'do Espelho'],
     stream: ['do Rio Oculto', 'da Água que Canta', 'do Rio sem Sol'], glow: ['das Estrelas', 'do Céu de Pedra', 'dos Mil Olhos'],
     fossil: ['do Gigante', 'dos Ossos Antigos'], bats: ['dos Morcegos', 'das Asas', 'do Morcego'], den: ['do Urso', 'da Ursa', 'do Sono Longo'],
-    big: ['das Mil Salas', 'dos Ecos'], gen: ['do Eco', 'das Vozes', 'do Vento', 'da Serpente', 'do Silêncio', 'da Lua', 'das Sombras', 'dos Ancestrais', 'da Coruja', 'do Trovão'],
+    big: ['das Mil Salas', 'dos Ecos'], ice: ['de Gelo', 'do Gelo Azul', 'do Inverno'], pit: ['do Abismo', 'sem Fundo'], gen: ['do Eco', 'das Vozes', 'do Vento', 'da Serpente', 'do Silêncio', 'da Lua', 'das Sombras', 'dos Ancestrais', 'da Coruja', 'do Trovão'],
   };
   const ADJ = [['Escura', 'Escuro'], ['Fria', 'Frio'], ['Funda', 'Fundo'], ['Encantada', 'Encantado'], ['Velha', 'Velho'], ['Grande', 'Grande']];
   function nameCave(cv, rng, used) {
     for (let k = 0; k < 30; k++) {
       const [n, g] = NOUN[Math.floor(rng() * (cv.halls.length >= 4 ? NOUN.length : NOUN.length - 1))];
       let q = null;
-      const tags = [cv.crystal && 'crystal', cv.lake && 'lake', cv.stream && 'stream', cv.glow && 'glow', cv.fossil && 'fossil', cv.bats > 60 && 'bats', cv.den && 'den', cv.halls.length >= 5 && 'big'].filter(Boolean);
+      const tags = [C.rockOf(cv) === 'gelo' && 'ice', cv.pit && 'pit', cv.crystal && 'crystal', cv.lake && 'lake', cv.stream && 'stream', cv.glow && 'glow', cv.fossil && 'fossil', cv.bats > 60 && 'bats', cv.den && 'den', cv.halls.length >= 5 && 'big'].filter(Boolean);
       if (tags.length && rng() < 0.8) q = QUAL[tags[Math.floor(rng() * Math.min(2, tags.length))]];
       const name = q ? `${n} ${q[Math.floor(rng() * q.length)]}` : rng() < 0.35 ? `${n} ${ADJ[Math.floor(rng() * ADJ.length)][g === 'f' ? 0 : 1]}` : `${n} ${QUAL.gen[Math.floor(rng() * QUAL.gen.length)]}`;
       if (!used.has(name)) { used.add(name); cv.g = g; return name; }
@@ -163,7 +239,7 @@
     cv.halls = cv.halls.filter(h => U.id[h.y * N + h.x] === id);
     // mouths on the hillsides around
     const nm = rng() < 0.07 ? 0 : rng() < 0.62 ? 1 : rng() < 0.82 ? 2 : 3;
-    for (let k = 0; k < nm; k++) { const m = findMouth(S, U, cv, id, rng); if (!m) break; worm(m.fx, m.fy, m.x, m.y); const i = m.y * N + m.x; U.k[i] = MOUTH; U.id[i] = id; cv.mouths.push({ x: m.x, y: m.y }); }
+    for (let k = 0; k < nm; k++) { const m = findMouth(S, U, cv, id, rng); if (!m) break; worm(m.fx, m.fy, m.x, m.y); const i = m.y * N + m.x; U.k[i] = MOUTH; U.id[i] = id; cv.mouths.push({ x: m.x, y: m.y, kind: kindAt(S, m.x, m.y) }); }
     keepJoined(U, id, cv.halls[0].y * N + cv.halls[0].x);
     cv.mouths = cv.mouths.filter(m => U.id[m.y * N + m.x] === id && U.k[m.y * N + m.x] === MOUTH);
     // water: a black lake in the biggest hall, a stream along a gallery
@@ -174,6 +250,16 @@
       if (was.length < 2 || !joined(U, id)) { for (const i of was) U.k[i] = HALL; } else cv.lake = big;
     }
     if (rng() < 0.38) { const p = paths.filter(q => q.length >= 5).sort((a, b) => b.length - a.length)[0]; if (p) { for (const i of p) if (U.id[i] === id && U.k[i] === GAL) U.k[i] = STREAM; cv.stream = 1; } }
+    // a chasm at the side of a big hall: a fall nobody has measured (only where the cave stays whole around it)
+    const pitHalls = cv.halls.filter(h => h !== cv.lake && h.r > 2.1);
+    if (pitHalls.length && rng() < 0.5) {
+      const ph = pitHalls[Math.floor(rng() * pitHalls.length)];
+      const a = rng() * TAU, off = Math.max(0.8, ph.r - 1.4);
+      const px = Math.round(ph.x + Math.cos(a) * off), py = Math.round(ph.y + Math.sin(a) * off), pr = 0.75 + rng() * 0.9;
+      const centers = new Set(cv.halls.map(h => h.y * N + h.x)); const was = [];
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const x = px + dx, y = py + dy; if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) continue; const i = y * N + x; if (U.id[i] !== id || U.k[i] !== HALL || centers.has(i)) continue; if (Math.hypot(dx, dy * 1.1) <= pr) { was.push(i); U.k[i] = PIT; } }
+      if (!was.length || was.length > 7 || !joined(U, id)) { for (const i of was) U.k[i] = HALL; } else cv.pit = 1;
+    }
     // what grows and lies in it
     cv.crystal = rng() < 0.14; cv.glow = !!(cv.lake || cv.stream || rng() < 0.25);
     let n = 0, sx2 = 0, sy2 = 0;
@@ -222,6 +308,9 @@
       const h = cv.halls[Math.floor(rng() * cv.halls.length)]; const c = freeCell(U, id, h.x, h.y, 3, rng); if (!c) continue;
       cv.treasures.push({ x: c % N, y: (c / N) | 0, kind: cv.crystal && rng() < 0.6 ? 'geodo' : TK[Math.floor(rng() * TK.length)], found: 0 });
     }
+    C.rockOf(cv); for (const m of cv.mouths) C.mouthKind(m, cv);
+    // a little clearing at each door: the wind, the animals and the people keep it open
+    for (const m of cv.mouths) for (const [dx, dy] of D8.concat([[0, 2], [2, 0], [0, -2], [-2, 0]])) { const x = m.x + dx, y = m.y + dy; if (x < 0 || y < 0 || x >= N || y >= N) continue; const tid = S.treeAt[y * N + x]; const tr = tid && S.trees.get(tid); if (tr && G.Nature.removeTree) G.Nature.removeTree(tr); }
     U.caves.push(cv);
     // its creatures
     const sp = (kind, num, where) => { for (let k = 0; k < num; k++) { const c = where(); if (c >= 0) U.beasts.push({ id: U.nextBeast++, kind, cave: id, x: (c % N) + 0.2 + rng() * 0.6, y: ((c / N) | 0) + 0.2 + rng() * 0.6, t: rng() * 4, face: 1, tx: 0, ty: 0 }); } };
@@ -261,6 +350,7 @@
     const LID = W.landIds(); const sizes = {}; for (let i = 0; i < N * N; i++) if (LID[i] >= 0) sizes[LID[i]] = (sizes[LID[i]] || 0) + 1;
     let avg = 0, na = 0; for (const h of cv.halls) { avg += W.tileH(h.y * N + h.x); na++; } avg /= Math.max(1, na);
     let best = null, bs = -1e9;
+    const wr = rng(); const wish = wr < 0.38 ? 'paredao' : wr < 0.58 ? 'abrigo' : wr < 0.8 ? 'dolina' : wr < 0.9 ? 'fenda' : 'poco';
     for (let i = 0; i < N * N; i++) {
       const d = dist[i]; if (d < 2 || d > 9) continue;
       const x = i % N, y = (i / N) | 0; if (x < 3 || y < 3 || x >= N - 3 || y >= N - 3) continue;
@@ -270,7 +360,10 @@
       if (S.starts && S.starts.some(s => Math.hypot(s[0] - x, s[1] - y) < 5)) continue;
       const rg = G.Relief ? G.Relief.range(i) : 0;
       let cliffNb = 0; for (const [dx, dy] of D4) if (S.cliff[(y + dy) * N + x + dx]) cliffNb = 1;
-      const s = Math.min(rg, 2.6) * 1.3 + cliffNb * 1.6 + (avg - W.tileH(i)) * 0.25 - d * 0.22 + rng() * 0.8;
+      // each cave wishes for a kind of door the ground may or may not give; a second door is another kind
+      const kd = kindAt(S, x, y);
+      const s = (Math.min(rg, 2.6) * 1.3 + cliffNb * 1.6) * (wish === 'paredao' ? 1 : 0.5) + (avg - W.tileH(i)) * 0.25 - d * 0.22 + rng() * 0.8
+        + (kd === wish ? 2.2 : 0) + (cv.mouths.length && !cv.mouths.some(mm => mm.kind === kd) ? 1.4 : 0);
       if (s > bs) { bs = s; best = i; }
     }
     if (best === null) return null;
@@ -395,7 +488,15 @@
     if (!cv || cv.gone) { if (v.ug) exit(v); H.end(v); return true; }
     switch (t.st) {
       case 0: if (!H.goto(v, t.mouth.x + 0.5, t.mouth.y + 0.5, true)) { if (G.dist(v.x, v.y, t.mouth.x + 0.5, t.mouth.y + 0.5) > 1.6) { H.end(v); return true; } } t.st = 1; break;
-      case 1: if (H.move(v, dt)) { enter(v, cv, t); goUG(v, t, cv, t.goal); t.st = 2; } break;
+      case 1: if (H.move(v, dt)) { if (t.kind === 'dare') { t.st = 10; t.t = 0; v.act = 'act'; v.actT = 0; G.faceTo(v, t.mouth.x + 0.5 - v.x, t.mouth.y + 0.5 - v.y); break; } enter(v, cv, t); goUG(v, t, cv, t.goal); t.st = 2; } break;
+      case 10: { // a child shouts into the dark... and the dark shouts back
+        t.t += dt; v.moving = false; const mx = t.mouth.x + 0.5, my = t.mouth.y + 0.5;
+        if (!t.said && t.t > 0.6) { t.said = 1; G.FX && G.FX.floater(v.x, v.y, t.word, '#fff7dc', 1.6); G.Audio && G.Audio.at && G.Audio.at(v.x, v.y, 'cheer'); }
+        if (t.said === 1 && t.t > 1.7) { t.said = 2; G.FX && G.FX.floater(mx, my, t.word.toLowerCase().replace(/!/g, '…'), 'rgba(255,247,220,0.7)', 1.4); }
+        if (t.said === 2 && t.t > 2.6) { t.said = 3; G.FX && G.FX.floater(mx, my, t.word.slice(-2).toLowerCase().replace(/!/g, '') + '…', 'rgba(255,247,220,0.4)', 1.2); }
+        if (t.t > 3.6) { v.act = ''; G.Vg.emote(v, G.R() < 0.5 ? 'happy' : 'fear', 2); if (G.Vg.fleeFrom) G.Vg.fleeFrom(v, mx, my, 5, 'play'); else H.end(v); if (v.task === t) H.end(v); }
+        break;
+      }
       case 2: if (walkUG(v, t, dt)) { t.st = 3; t.t = 0; v.act = ACT[t.kind] || ''; v.actT = 0; arrive(v, t, cv); } break;
       case 3: {
         t.t += dt; v.moving = false;
@@ -430,6 +531,7 @@
       case 'mine': { const o = ORES[t.ore || 0]; return t.st === 3 ? `Picando um veio de ${o ? o.name : 'minério'} ${where}` : t.st === 4 ? 'Saindo da mina carregad' + oa(v) : `Descendo à mina ${where}`; }
       case 'raid': return going ? `Marchando contra os bandidos ${where}` : `Lutando contra os bandidos ${where}!`;
       case 'treasure': return `Desenterrando algo que brilha ${where}`;
+      case 'dare': return t.st === 10 ? `Gritando na boca ${C.da(cv)} para ouvir o eco` : `Correndo com as outras crianças até ${into}`;
     }
     return `Dentro ${C.da(cv)}`;
   };
@@ -831,7 +933,73 @@
   }
 
   // ------------------------------ every tick ------------------------------
-  let tSec = 0, tPlan = 0, lastDay = -1, tRefuge = 0;
+  let tSec = 0, tPlan = 0, lastDay = -1, tRefuge = 0, tShelter = 0;
+  // a storm drives the wild animals into the caves: deer and a wolf under the same roof, and nobody bites
+  function shelter() {
+    const S = G.S; const W8 = S.weather || {}; const storm = W8.storm > 0 && W8.rain > 0.3;
+    for (const cv of C.all()) {
+      if (!cv.sheltered) cv.sheltered = [];
+      const m = cv.mouths[0]; if (!m) continue;
+      const mx = m.x + 0.5, my = m.y + 0.5;
+      if (!storm) {
+        if (cv.sheltered.length) { for (const a of cv.sheltered) { a.x = mx + rr(-0.4, 0.4); a.y = my + rr(-0.4, 0.4); a.state = 'idle'; a.t = 1; a.shelter = 0; S.animals.set(a.id, a); } cv.sheltered = []; }
+        continue;
+      }
+      let heading = 0;
+      for (const a of S.animals.values()) {
+        if (a.shelter !== cv.id) continue;
+        if (a.dead || a.held) { a.shelter = 0; continue; }
+        if (G.dist(a.x, a.y, mx, my) < 1) {
+          // in, out of the rain: a spot just inside the door
+          S.animals.delete(a.id); const c = innerCell(cv, m); a.sx = (c % N) + 0.25 + G.R() * 0.5; a.sy = ((c / N) | 0) + 0.25 + G.R() * 0.5; a.moving = false; cv.sheltered.push(a);
+        } else { heading++; if (a.state !== 'flee' && a.state !== 'chase') { a.tx = mx; a.ty = my; a.state = 'wander'; a.seek = true; } }
+      }
+      if (cv.sheltered.length >= 2 && cv.shelterLog !== S.day) {
+        cv.shelterLog = S.day;
+        const kinds = {}; for (const a of cv.sheltered) kinds[a.kind] = (kinds[a.kind] || 0) + 1;
+        const D = G.Animals.DEF; const ks = Object.keys(kinds);
+        const pred = ks.find(k => D[k].diet === 'carn'), prey = ks.find(k => D[k].diet !== 'carn');
+        const nm = k => kinds[k] > 1 ? `${kinds[k]} ${C.plural(D[k].name.toLowerCase())}` : D[k].nameA;
+        if (cv.known && Object.keys(cv.known).length && G.R() < 0.7) log(pred && prey ? `A tempestade empurrou para dentro ${C.da(cv)} ${nm(pred)} e ${nm(prey)}. Esperam a chuva passar lado a lado — e ninguém ataca ninguém.` : `Fugindo da tempestade, ${ks.map(nm).join(' e ')} se abrigaram ${C.na(cv)}.`, 'deer', mx, my);
+      }
+      if (cv.sheltered.length + heading >= 5) continue;
+      for (const a of S.animals.values()) {
+        if (cv.sheltered.length + heading >= 5) break;
+        if (a.shelter || a.dom || a.tamed || a.summoned || a.legend || a.raid || a.held || a.dead || a.pen) continue;
+        const sp = G.Animals.DEF[a.kind]; if (!sp || sp.cls !== 'land' || sp.size < 0.75 || sp.size > 1.2) continue;
+        if (G.dist2(a.x, a.y, mx, my) > 144 || G.R() < 0.5) continue;
+        a.shelter = cv.id; heading++;
+      }
+    }
+  }
+  // "boi-almiscarado" → "bois-almiscarados", "leão" → "leões", "chacal" → "chacais"
+  C.plural = w => w.split('-').map(p => (/^(de|do|da)$/.test(p) ? p : /ão$/.test(p) ? p.replace(/ão$/, 'ões') : /[aeou]l$/.test(p) ? p.replace(/l$/, 'is') : /[rz]$/.test(p) ? p + 'es' : /m$/.test(p) ? p.replace(/m$/, 'ns') : /s$/.test(p) ? p : p + 's')).join('-');
+  function innerCell(cv, m) {
+    const U = C.U(); const i0 = m.y * N + m.x; let best = i0, bd = 1e9;
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const x = m.x + dx, y = m.y + dy; if (x < 0 || y < 0 || x >= N || y >= N) continue; const i = y * N + x; if (U.id[i] !== cv.id || !C.walk(U.k[i]) || U.k[i] === MOUTH) continue; const d = dx * dx + dy * dy + G.R() * 2; if (d < bd) { bd = d; best = i; } }
+    return best;
+  }
+  // the children dare each other to shout into the dark — and run when it answers
+  const DARE = ['Ôôô!', 'Ei!', 'Uuuh!', 'Olá!', 'Quem tá aí?', 'Ahhh!'];
+  C.dares = dares;
+  function dares() {
+    const S = G.S;
+    for (const set of S.settlements.values()) {
+      if (G.R() > 0.3 || (set.alarmT || 0) > 0) continue;
+      let cv = null, bd = 18 * 18, m = null;
+      for (const c of C.all()) { if (!c.known[set.fac]) continue; for (const mm of c.mouths) { const d = G.dist2(mm.x, mm.y, set.cx, set.cy); if (d < bd) { bd = d; cv = c; m = mm; } } }
+      if (!cv) continue;
+      const kids = []; for (const v of S.villagers.values()) if (v.set === set.id && v.age >= 5 && v.age < 15 && !v.ug && !v.inside && !v.captive && (!v.task || v.task.pri < 1.2)) kids.push(v);
+      if (!kids.length) continue;
+      const n = Math.min(kids.length, 2 + Math.floor(G.R() * 2)); const went = [];
+      for (let k = 0; k < n; k++) { const v = kids.splice(Math.floor(G.R() * kids.length), 1)[0]; if (C.give(v, 'dare', cv, -1, { torch: 0, pri: 1.15, word: pick(DARE), force: 1 })) went.push(v); }
+      if (went.length && !cv.dared) {
+        cv.dared = S.day; const v = went[0];
+        log(went.length > 1 ? `As crianças de ${set.name} desafiam umas às outras a gritar na boca ${C.da(cv)}. O eco responde lá de dentro — e todo mundo sai correndo, rindo.` : `${v.name}, de ${set.name}, foi sozinh${oa(v)} até a boca ${C.da(cv)} gritar no escuro. O eco respondeu — e ${v.g === 'f' ? 'ela' : 'ele'} voltou correndo.`, 'pop', m.x, m.y);
+        for (const k of went) bio(k, `Gritou na boca ${C.da(cv)} e ouviu o eco responder.`, `Gritei na boca ${C.da(cv)} e o escuro respondeu.`);
+      }
+    }
+  }
   C.update = function (dt) {
     const S = G.S; const U = S.ug; if (!U) return;
     if (!U.near) C.rebuildNear();
@@ -854,6 +1022,7 @@
         const cv = C.get(cid); const fid = G.Fac.idOfV(v); if (cv && fid && !cv.known[fid]) discover(v, cv);
       }
       bears();
+      if ((tShelter += 1) >= 2) { tShelter = 0; shelter(); }
     }
     if (tRefuge >= 1.5) { tRefuge = 0; refuge(); }
     if (S.day !== lastDay) { lastDay = S.day; daily(); }
@@ -866,6 +1035,7 @@
   // once a day: the slow things
   function daily() {
     const S = G.S;
+    dares();
     for (const cv of C.all()) {
       if (cv.oracle) { ensureOracle(cv); if (cv.oracle) judge(cv); }
       const b = cv.bandits;
@@ -1039,8 +1209,76 @@
     P.witness(x, y, 14, 0, 30);
   };
 
+  // ------------------------------ the things of the dark, one by one ------------------------------
+  // a tap underground on a beast, a glow-worm, a crystal, a bone, a painting: what is it?
+  const THING = {
+    aranha: ['Aranha-das-cavernas', 'Fera do escuro', 'Pernas longas e quase nenhum olho. Estende os fios nas fendas por onde o ar corre e espera os grilos e as mariposas que entram com o vento. Pode passar meses sem comer.'],
+    grilo: ['Grilo-das-cavernas', 'Fera do escuro', 'Não canta e não tem asas; as antenas são mais compridas que o corpo, para tatear o que não vê. Come o guano dos morcegos e o que cai do mundo de cima — e é o pão das aranhas.'],
+    peixe: ['Peixe cego', 'Fera do escuro', 'Branco como a lua e sem olhos: nunca precisou deles. Sente a água tremer na pele e vive de quase nada, por muitos anos, no lago negro.'],
+    salamandra: ['Salamandra cega', 'Fera do escuro', 'Rosada e translúcida, com guelras de pluma. Pode ficar um ano inteiro sem comer, imóvel na água fria. Os antigos achavam que era filhote de dragão.'],
+    abrigado: ['Abrigado da tempestade', 'Esperando a chuva passar', 'Entrou para fugir da chuva e do vento. Aqui dentro, caça e caçador fazem trégua: cada um no seu canto, de olho no outro, até o céu abrir.'],
+    urso: ['Urso dormindo', 'Hibernando', 'Dorme no fundo da caverna com o coração batendo devagar, gordo da comida do verão. Acorda de manhã com fome — e às vezes com um filhote que nasceu no escuro.'],
+    morcegos: ['Colônia de morcegos', 'Dormem de cabeça para baixo', 'Penduram-se no teto do salão aos milhares. Saem num rio negro ao entardecer para caçar insetos e voltam antes do sol. O guano que deixam no chão é o melhor adubo que existe.'],
+    1: ['Estalagmite', 'Pedra que cresce', 'Gota a gota, a água que pinga do teto deixa um fio de calcário. Um palmo leva mil anos. Em cima, no teto, uma estalactite cresce ao encontro dela.'],
+    2: ['Coluna', 'Pedra que cresceu', 'Quando a estalactite do teto e a estalagmite do chão finalmente se tocam, nasce uma coluna: dez mil anos de gotas.'],
+    3: ['Cristais', 'Água que virou pedra', 'Água carregada de minério secou devagar no escuro e deixou pontas transparentes, roxas, frias. Brilham quando uma tocha passa.'],
+    4: ['Vaga-lumes das cavernas', 'Larvas que brilham no teto', 'Não são estrelas: são larvas penduradas no teto, cada uma com fios de seda pegajosa e uma luz azul-esverdeada. Os insetos voam para essa noite falsa e ficam presos.'],
+    5: ['Cogumelos pálidos', 'Vivem sem sol', 'Nascem no guano e na madeira podre que a água traz. Alguns brilham fraco no escuro. Os caçadores dizem que um deles faz sonhar acordado.'],
+    6: ['Ossos', 'Alguém que não achou a saída', 'Os ossos de um bicho que entrou para morrer, ou que se perdeu no escuro. Às vezes, de gente.'],
+    7: ['Fóssil', 'Mais velho que os deuses', 'Ossos de pedra de um bicho que não existe mais, presos na rocha desde antes de qualquer povo. Ninguém sabe o nome dele.'],
+    8: ['Guano', 'O adubo dos morcegos', 'Montes de excremento de morcego. Fede, mas faz o trigo crescer como nada: os povos vêm buscar em cestos.'],
+    lago: ['Lago subterrâneo', 'Água que nunca viu o sol', 'Tão parada e tão clara que parece não estar lá — até uma gota cair do teto e o círculo correr a caverna inteira.'],
+    rio: ['Rio subterrâneo', 'Corre no escuro', 'Água que entrou pela montanha como chuva e corre sem pressa por baixo da terra, até sair numa fonte lá fora.'],
+    abismo: ['Abismo', 'Ninguém sabe o fundo', 'Uma fenda que desce até onde a tocha não alcança. Uma pedra jogada lá dentro demora a bater.'],
+    veio: ['Veio de minério', 'Na parede', ''],
+    boca: ['A boca da caverna', 'A luz do dia', 'Por aqui entra o dia, o vento, as folhas — e quem tem coragem.'],
+  };
+  C.pickThing = function (x, y) {
+    const U = C.U(); if (!U) return null;
+    let best = null, bd = 0.75;
+    for (const b of U.beasts) { const d = G.dist(b.x, b.y, x, y); if (d < bd) { bd = d; best = { isCaveThing: 1, kind: b.kind, beast: b.id, cave: b.cave, x: b.x, y: b.y }; } }
+    if (best) return best;
+    for (const cv of C.all()) for (const a of cv.sleepers) if (G.dist(a.sx, a.sy, x, y) < 0.9) return { isCaveThing: 1, kind: 'urso', cave: cv.id, x: a.sx, y: a.sy };
+    for (const cv of C.all()) for (const a of cv.sheltered || []) if (G.dist(a.sx, a.sy, x, y) < 0.8) return { isCaveThing: 1, kind: 'abrigado', animal: a.kind, cave: cv.id, x: a.sx, y: a.sy };
+    const xi = Math.floor(x), yi = Math.floor(y); if (xi < 0 || yi < 0 || xi >= N || yi >= N) return null;
+    const i = yi * N + xi; const cv = C.at(i);
+    const mk = (kind, o) => Object.assign({ isCaveThing: 1, kind, cave: cv ? cv.id : 0, cell: i, x: xi + 0.5, y: yi + 0.5 }, o || {});
+    if (cv) {
+      if (cv.bats && cv.roost && G.dist(cv.roost.x + 0.5, cv.roost.y + 0.5, x, y) < Math.max(1.2, cv.roost.r * 0.6)) return mk('morcegos');
+      const tb = cv.tombs.find(t => t.i === i); if (tb) return mk('tumulo', { tomb: tb.name });
+      if (cv.oracle && cv.oracle.cell === i) return mk('oraculo');
+      if (cv.bandits && cv.bandits.camp === i) return mk('bandidos');
+      const p = cv.paintings.find(q => q.i === i); if (p) return mk('pintura', { paint: cv.paintings.indexOf(p) });
+      if (U.f[i]) return mk(U.f[i]);
+      if (U.k[i] === LAKE) return mk('lago');
+      if (U.k[i] === STREAM) return mk('rio');
+      if (U.k[i] === PIT) return mk('abismo');
+      if (U.k[i] === MOUTH) return mk('boca');
+    }
+    // the wall itself: a vein?
+    if (U.k[i] === ROCK && U.ore[i]) { for (const [dx, dy] of D4) { const j = (yi + dy) * N + xi + dx; if (j >= 0 && j < N * N && U.id[j]) return Object.assign(mk('veio', { ore: U.ore[i] }), { cave: U.id[j] }); } }
+    return null;
+  };
+  function thingHTML(o) {
+    const cv = C.get(o.cave); const S = G.S;
+    let [title, sub, text] = THING[o.kind] || ['?', '', ''];
+    let extra = '';
+    if (o.kind === 'morcegos' && cv) { const ph = C.batPhase(cv); sub = `${cv.bats} morcegos` + (ph && ph.night ? ' — lá fora, caçando' : ph && ph.out ? ' — saindo para caçar' : ph ? ' — voltando para dormir' : ' — dormindo de cabeça para baixo'); extra = `<div class="doing">${Math.floor(cv.guano)} cestos de guano no chão.</div>`; }
+    if (o.kind === 'abrigado') { const D = G.Animals.DEF[o.animal]; if (D) title = `${D.name}, abrigad${D.g === 'f' ? 'a' : 'o'} da tempestade`; }
+    if (o.kind === 'veio') { const ore = ORES[o.ore]; title = `Veio de ${ore.name}`; text = ore.id === 'ouro' ? 'Um fio amarelo na rocha escura. Por ele, povos inteiros já foram à guerra.' : ore.id === 'gemas' ? 'Pedras de cor presas na parede, como olhos. Os ourives pagam caro.' : ore.id === 'sal' ? 'Sal de pedra, limpo e branco: conserva a carne do inverno inteiro.' : `Minério de ${ore.name} na parede. Com a técnica certa, os mineiros abrem galerias atrás dele.`; }
+    if (o.kind === 'tumulo' && cv) { const tb = cv.tombs.find(t => t.name === o.tomb); title = `O túmulo de ${tb ? tb.name : '?'}`; sub = tb ? `Sepultad${tb.g === 'f' ? 'a' : 'o'} no ano ${tb.day}` : ''; text = tb ? `Com ${tb.goods}.${tb.robbed ? ' Ladrões já abriram a tampa e levaram o que puderam.' : ' Ninguém mexeu aqui desde o cortejo.'}` : ''; }
+    if (o.kind === 'oraculo' && cv && cv.oracle) { const q = cv.oracle; title = `O oráculo ${C.da(cv)}`; sub = `${q.name} · credibilidade ${Math.round(q.cred || 50)}%`; text = q.here ? 'Está lá agora, sentad' + (q.g === 'f' ? 'a' : 'o') + ' sobre a fenda de onde sobe a fumaça. Fala com a voz de outro.' : 'A fenda de onde sobe a fumaça. Ao meio-dia, quem tem coragem desce para ouvir o que o escuro diz.'; const said = q.said.slice(-2).reverse(); if (said.length) extra = `<div class="doing">${said.map(d => `“${esc(d.text)}” <small>(${d.st})</small>`).join('<br>')}</div>`; }
+    if (o.kind === 'bandidos' && cv && cv.bandits) { const b = cv.bandits; title = b.name; sub = `${b.n} foras-da-lei sob ${b.leader}`; text = `A fogueira deles nunca apaga. Saem à noite, pelas trilhas, para roubar das vilas — ${b.raids} assaltos até agora.`; }
+    if (o.kind === 'pintura' && cv) { const p = cv.paintings[o.paint]; if (p) { title = 'Pintura na parede'; sub = `Ano ${p.day} · ${p.by}`; text = p.txt ? `Conta: “${esc(trim(p.txt, 160))}”` : SCENE_TXT[p.scene]; } }
+    if ((o.kind === 'aranha' || o.kind === 'grilo' || o.kind === 'peixe' || o.kind === 'salamandra') && cv) { const n = C.U().beasts.filter(b => b.cave === cv.id && b.kind === o.kind).length; extra = `<div class="doing">${n > 1 ? `${n} delas nesta caverna.` : 'A única que se vê por aqui.'}</div>`; }
+    return `<div class="insp-head"><div class="insp-title"><h3>${esc(title)}</h3><div class="sub">${esc(sub)}${cv ? ' · ' + esc(cv.name) : ''}</div></div><button class="x" data-act="close">${G.ICON.close}</button></div><div class="doing">${text}</div>${extra}` +
+      (cv ? `<div class="btns"><button data-act="cave-panel" data-id="${cv.id}">${G.ICON.cave} Sobre ${esc(C.a(cv))}</button></div>` : '');
+    void S;
+  }
+  C.thingTitle = o => (THING[o.kind] || ['?'])[0];
+
   // ------------------------------ panel ------------------------------
-  C.owns = o => !!(o && o.isCave);
+  C.owns = o => !!(o && (o.isCave || o.isCaveThing));
   // look inside a cave (or come back up to its door)
   C.view = function (id, under) {
     const cv = C.get(id); const R = G.Render; if (!cv) return;
@@ -1049,10 +1287,12 @@
     const m = cv.mouths[0];
     if (go) R.panTo(cv.cx + 0.5, cv.cy + 0.5); else R.panTo(m ? m.x + 0.5 : cv.cx, m ? m.y + 0.5 : cv.cy);
     R.cam.tz = Math.max(R.cam.tz, 1.5);
-    if (G.UI) { G.UI.select(C.selectCave(cv)); }
+    // going in, the panel steps aside so the cave can be seen (a tap on the rock brings it back)
+    if (G.UI) { if (go) { G.UI.select(null); G.UI.notice(`${G.cap(cv.name)} — toque nas pessoas, nos bichos e nas coisas da caverna; U volta à superfície.`, 'cave'); } else G.UI.select(C.selectCave(cv)); }
   };
   C.selectCave = cv => ({ isCave: 1, id: cv.id, cave: cv });
   C.inspectorHTML = function (o) {
+    if (o.isCaveThing) return thingHTML(o);
     const S = G.S; const cv = C.get(o.id); if (!cv) return '<div class="muted">A caverna desabou.</div>';
     const U = C.U();
     let veins = {}; for (let i = 0; i < N * N; i++) { if (!U.ore[i]) continue; const x = i % N, y = (i / N) | 0; if (Math.abs(x - cv.cx) > 18 || Math.abs(y - cv.cy) > 18) continue; let adj = false; for (const [dx, dy] of D4) { const j = (y + dy) * N + x + dx; if (U.id[j] === cv.id) { adj = true; break; } } if (adj) veins[ORES[U.ore[i]].name] = (veins[ORES[U.ore[i]].name] || 0) + 1; }
@@ -1062,7 +1302,7 @@
     const beasts = {}; for (const b of U.beasts) if (b.cave === cv.id) beasts[b.kind] = (beasts[b.kind] || 0) + 1;
     const BN = { aranha: 'aranhas', grilo: 'grilos-das-cavernas', peixe: 'peixes cegos', salamandra: 'salamandras cegas' };
     const ph = C.batPhase(cv);
-    let h = `<div class="insp-head"><div class="insp-title"><h3>${esc(cv.name)}</h3><div class="sub">Caverna · ${cv.halls.length} ${cv.halls.length > 1 ? 'salões' : 'salão'} · ${cv.n} passos de galerias · ${cv.mouths.length ? cv.mouths.length + (cv.mouths.length > 1 ? ' entradas' : ' entrada') : 'sem entrada'}</div></div></div>`;
+    let h = `<div class="insp-head"><div class="insp-title"><h3>${esc(cv.name)}</h3><div class="sub">Caverna · ${cv.halls.length} ${cv.halls.length > 1 ? 'salões' : 'salão'} · ${cv.n} passos de galerias · ${cv.mouths.length ? cv.mouths.length + (cv.mouths.length > 1 ? ' entradas' : ' entrada') : 'sem entrada'}</div></div><button class="x" data-act="close">${G.ICON.close}</button></div>`;
     h += `<div class="doing">${cv.found ? `Descoberta por <a data-pid="${cv.found.id}">${esc(cv.found.name)}</a> no ano ${cv.found.day}` : 'Ninguém entrou aqui ainda.'}${peoples.length ? ' · conhecida por ' + peoples.map(f => esc(f.name)).join(', ') : ''}</div>`;
     if (feats.length) h += `<div class="doing">Lá dentro: ${feats.join(', ')}.</div>`;
     const vk = Object.entries(veins); if (vk.length) h += `<div class="doing">Veios nas paredes: ${vk.map(([k, n]) => `<b>${k}</b> (${n})`).join(', ')}.</div>`;
@@ -1109,7 +1349,7 @@
       const rl = a => { const o = []; let v = a[0], n = 0; for (let k = 0; k < a.length; k++) { if (a[k] === v) n++; else { o.push(v, n); v = a[k]; n = 1; } } o.push(v, n); return { e: o }; };
       out.ug = { k: rl(U.k), f: rl(U.f), ore: rl(U.ore), oreN: rl(U.oreN), id: rl(U.id), nextBeast: U.nextBeast, opt: G.S.cavesOpt,
         beasts: U.beasts.map(b => [b.id, b.kind, b.cave, +b.x.toFixed(2), +b.y.toFixed(2)]),
-        caves: U.caves.map(cv => Object.assign({}, cv, { sleepers: cv.sleepers.map(a => ({ id: a.id, kind: a.kind, age: a.age, grown: a.grown, named: a.named, sx: a.sx, sy: a.sy })), bandits: cv.bandits ? Object.assign({}, cv.bandits, { hunt: null }) : null, oracle: cv.oracle ? Object.assign({}, cv.oracle, { here: 0 }) : null })) };
+        caves: U.caves.map(cv => Object.assign({}, cv, { sleepers: cv.sleepers.map(a => ({ id: a.id, kind: a.kind, age: a.age, grown: a.grown, named: a.named, sx: a.sx, sy: a.sy })), sheltered: (cv.sheltered || []).map(a => ({ id: a.id, kind: a.kind, age: a.age, grown: a.grown, sx: a.sx, sy: a.sy })), bandits: cv.bandits ? Object.assign({}, cv.bandits, { hunt: null }) : null, oracle: cv.oracle ? Object.assign({}, cv.oracle, { here: 0 }) : null })) };
     },
     load(o) {
       const S = G.S; C.reset();
@@ -1119,6 +1359,7 @@
       U.beasts = (o.ug.beasts || []).map(a => ({ id: a[0], kind: a[1], cave: a[2], x: a[3], y: a[4], t: Math.random() * 3, face: 1, tx: 0, ty: 0 }));
       U.caves = (o.ug.caves || []).map(cv => {
         cv.sleepers = (cv.sleepers || []).map(a => { const x = G.Animals.spawn(a.kind, a.sx || cv.cx, a.sy || cv.cy, a); S.animals.delete(x.id); x.id = a.id; x.sx = a.sx; x.sy = a.sy; return x; });
+        cv.sheltered = (cv.sheltered || []).map(a => { const x = G.Animals.spawn(a.kind, a.sx || cv.cx, a.sy || cv.cy, a); S.animals.delete(x.id); x.id = a.id; x.sx = a.sx; x.sy = a.sy; x.shelter = 0; return x; }).filter(Boolean);
         return cv;
       });
       C.rebuildNear(); U.ver++;

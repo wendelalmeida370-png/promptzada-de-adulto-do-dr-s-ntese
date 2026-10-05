@@ -168,8 +168,8 @@
     bar.addEventListener('mouseout', e => { const b = e.target.closest('.pw'); if (b && !b.contains(e.relatedTarget)) hideTip(); });
     // speed
     $('#speed').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.dataset.speed === undefined) return; G.Audio.play('click'); UI.setSpeed(+b.dataset.speed); });
-    $('#btn-chron').onclick = () => { G.Audio.play('click'); $('#chronicle').classList.toggle('collapsed'); };
-    $('#chron-toggle').onclick = () => { G.Audio.play('click'); $('#chronicle').classList.toggle('collapsed'); };
+    $('#btn-chron').onclick = () => { G.Audio.play('click'); UI.toggleChronicle(); };
+    $('#chron-toggle').onclick = () => { G.Audio.play('click'); if (phone()) UI.toggleChronicle(false); else $('#chronicle').classList.toggle('collapsed'); };
     $('#btn-stats').onclick = () => { G.Audio.play('click'); UI.openStats(); };
     $('#btn-photo').innerHTML = ICON.photo; $('#btn-photo').onclick = () => { G.Audio.play('click'); G.Photo.start(); };
     $('#btn-skip').innerHTML = ICON.skip; $('#btn-skip').onclick = () => { G.Audio.play('click'); G.Skip.open(); };
@@ -225,6 +225,7 @@
       else if (b.dataset.act === 'tree') UI.openTree(UI.selected.id);
       else if (b.dataset.act === 'bio') UI.openBio(UI.selected.id);
       else if (b.dataset.act === 'cave-view') G.Caves.view(+b.dataset.id);
+      else if (b.dataset.act === 'cave-panel') { const cv = G.Caves.get(+b.dataset.id); if (cv) UI.select(G.Caves.selectCave(cv)); }
     });
     $('#modal-bg').addEventListener('click', e => { if (e.target.id === 'modal-bg') UI.closeModal(); });
     $('#modal').addEventListener('click', e => {
@@ -442,7 +443,18 @@
   }
 
   // ------------------------------ inspector ------------------------------
+  // on a phone the chronicle is a sheet that opens over the map; on a big screen it folds
+  const phone = () => window.matchMedia('(max-width: 600px)').matches;
+  UI.toggleChronicle = function (on) {
+    const el = $('#chronicle');
+    if (phone()) {
+      const open = on === undefined ? !el.classList.contains('m-open') : on;
+      el.classList.toggle('m-open', open); if (open) { el.classList.remove('collapsed'); UI.select(null); }
+    } else el.classList.toggle('collapsed', on === undefined ? undefined : !on);
+    $('#btn-chron').classList.toggle('on', phone() ? el.classList.contains('m-open') : !el.classList.contains('collapsed'));
+  };
   UI.select = function (o) {
+    if (o && phone()) { $('#chronicle').classList.remove('m-open'); $('#btn-chron').classList.remove('on'); }
     UI.selected = o;
     if (o && !o.dead && o.set) { const fid = G.Village.facOfSet(o.set); if (fid) UI.viewFac = fid; }
     if (!o && G.Render.cam.follow) G.Render.cam.follow = 0;

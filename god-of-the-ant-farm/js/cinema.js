@@ -76,7 +76,8 @@
     shot = null; fade = null; war = null; el.root.classList.remove('war'); el.war.innerHTML = ''; uiSig = '';
     el.root.classList.remove('on'); el.cap.classList.remove('show'); el.fade.classList.remove('on');
     document.body.classList.remove('cine-nocursor');
-    if (saved) { Rn.showBorders = saved.borders; if (!!saved.under !== !!Rn.under) Rn.setUnder(saved.under, true); }
+    // leaving the film keeps the place it was showing: inside a cave, we stay inside
+    if (saved) { Rn.showBorders = saved.borders; }
     cam.follow = 0; cam.target = null; cam.anchor = null; cam.tz = cam.zoom;
     if (G.Main.mode === 'game') G.UI.showHUD(true);
   };
@@ -676,7 +677,7 @@
   }
   // world pixel the camera aims at for this subject position
   function target(c, p) {
-    const [sx, sy] = R().proj(p[0], p[1], (c.under ? G.Caves.FLOOR : W.groundH(G.clamp(p[0], 0, G.N - 0.01), G.clamp(p[1], 0, G.N - 0.01))));
+    const [sx, sy] = R().proj(p[0], p[1], (c.under ? G.Caves.floorAt(p[0], p[1]) : W.groundH(G.clamp(p[0], 0, G.N - 0.01), G.clamp(p[1], 0, G.N - 0.01))));
     let x = sx, y = sy - (p[2] || 0);
     if (c.drift) { const d = (c.t || 0) * 9 / Math.max(0.5, c.zoom); x += Math.cos(c.driftA) * d; y += Math.sin(c.driftA) * d * 0.6; }
     return [x, y];

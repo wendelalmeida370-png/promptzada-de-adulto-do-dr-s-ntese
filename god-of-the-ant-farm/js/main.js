@@ -232,15 +232,17 @@
   M.pick = pick;
   // under the ground: the people in the caves, or the cave itself
   function pickUnder(px, py, mobileOnly, rad) {
-    const S = G.S; const R = G.Render; const cam = R.cam; const fl = G.Caves.FLOOR;
+    const S = G.S; const R = G.Render; const cam = R.cam;
     let best = null, bd = 1e9;
     for (const id of G.Caves.inside) {
       const v = S.villagers.get(id); if (!v || v.age < 2) continue;
-      const [wx, wy] = R.proj(v.x, v.y, fl); const [sx, sy] = R.worldPxToScreen(wx, wy);
+      const [wx, wy] = R.proj(v.x, v.y, G.Caves.floorAt(v.x, v.y)); const [sx, sy] = R.worldPxToScreen(wx, wy);
       const d = Math.hypot(px - sx, py - (sy - 6 * cam.zoom)); if (d < rad && d < bd) { bd = d; best = v; }
     }
     if (best || mobileOnly) return best;
     const [x, y] = R.screenToTile(px, py); const U = S.ug;
+    // a beast, a glow-worm, a crystal, a painting...
+    const th = G.Caves.pickThing(x, y); if (th) return th;
     for (let r = 0; r <= 1; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
       const tx = Math.floor(x) + dx, ty = Math.floor(y) + dy; if (!W.inb(tx, ty)) continue;
       const cv = G.Caves.at(ty * G.N + tx); if (cv) return G.Caves.selectCave(cv);
@@ -313,7 +315,7 @@
       if (m.turn) { if (m.turning) G.Render.spinRelease(m.vel * Math.max(0, 1 - (performance.now() - m.t) / 180)); m.turn = m.turning = false; return; }
       if (I.held) { release(); return; }
       if (M.mode !== 'game' || m.dragged) return;
-      if (G.Cinema.on) { if (e.target === canvas) G.Cinema.stop(); return; }
+      if (G.Cinema.on) { if (e.target === canvas) { G.Cinema.stop(); const ent = pick(e.clientX, e.clientY, true); if (ent) G.UI.select(ent); } return; }
       if (G.Photo.on) return;
       click(e.clientX, e.clientY, e.button);
     });
@@ -364,7 +366,7 @@
       else if (k === ' ') { e.preventDefault(); if (G.speed === 0) G.UI.setSpeed(M.lastSpeed || 1); else { M.lastSpeed = G.speed; G.UI.setSpeed(0); } }
       else if (k === 'Escape') { if (I.held) release(); else if (I.power) G.UI.setPower(null); else if (G.UI.selected) G.UI.select(null); else G.UI.openPause(); }
       else if (k === 'f' || k === 'F') { const s = G.UI.selected; if (s && s.x !== undefined && !s.type && !s.dead) G.Render.cam.follow = G.Render.cam.follow === s.id ? 0 : s.id; }
-      else if (k === 'h' || k === 'H') $('#chronicle').classList.toggle('collapsed');
+      else if (k === 'h' || k === 'H') G.UI.toggleChronicle();
       else if (k === 'c' || k === 'C') { if (I.held) release(); G.Cinema.start(); }
       else if (k === 'g' || k === 'G') { if (I.held) release(); G.Cinema.start({ war: 1 }); }
       else if (k === 'p' || k === 'P') { if (I.held) release(); G.Photo.start(); }
@@ -410,7 +412,7 @@
       e.preventDefault();
       if (I.held) { release(); tStart = null; return; }
       if (pinch && e.touches.length < 2) { if (pinch.turning) G.Render.spinRelease(pinch.vel * Math.max(0, 1 - (performance.now() - pinch.t) / 180)); pinch = null; return; }
-      if (tStart && !tStart.moved && M.mode === 'game') { if (G.Cinema.on) G.Cinema.stop(); else if (!G.Photo.on) click(tStart.x, tStart.y, 0); }
+      if (tStart && !tStart.moved && M.mode === 'game') { if (G.Cinema.on) { G.Cinema.stop(); const ent = pick(tStart.x, tStart.y, true); if (ent) G.UI.select(ent); } else if (!G.Photo.on) click(tStart.x, tStart.y, 0); }
       tStart = null;
     }, { passive: false });
     canvas.addEventListener('touchcancel', () => { if (pinch && pinch.turning) G.Render.spinRelease(0); pinch = null; tStart = null; if (I.held) release(); });
