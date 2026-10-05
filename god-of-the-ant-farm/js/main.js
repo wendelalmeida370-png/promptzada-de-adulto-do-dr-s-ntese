@@ -264,11 +264,18 @@
       if (M.mode !== 'game') return;
       const m = I.mouse;
       m.down = true; m.btn = e.button; m.sx = m.lx = e.clientX; m.sy = m.ly = e.clientY; m.dragged = false;
+      // the middle button, or Shift with the left, turns the world
+      m.turn = e.button === 1 || (e.button === 0 && e.shiftKey); m.turning = false; m.vel = 0; m.t = performance.now();
+      if (m.turn) { e.preventDefault(); return; }
       if (e.button === 0 && I.power === 'hand') { const ent = pick(e.clientX, e.clientY, true); if (ent) grab(ent, e.clientX, e.clientY); }
     });
     window.addEventListener('mousemove', e => {
       const m = I.mouse; m.x = e.clientX; m.y = e.clientY; m.onCanvas = e.target === canvas;
       if (I.held) { I.held.sx = e.clientX; I.held.sy = e.clientY; I.held.hist.unshift([performance.now(), e.clientX, e.clientY]); if (I.held.hist.length > 12) I.held.hist.pop(); }
+      else if (m.down && m.turn) {
+        if (!m.dragged && Math.abs(e.clientX - m.sx) > 4) { m.dragged = true; m.turning = true; G.Render.spinBegin(); G.Cinema.manual(); }
+        if (m.turning) { const da = -(e.clientX - m.lx) * 0.0065, tn = performance.now(), dt = Math.max(1, tn - m.t) / 1000; m.t = tn; G.Render.spinBy(da); m.vel = m.vel ? m.vel * 0.5 + (da / dt) * 0.5 : da / dt; }
+      }
       else if (m.down) {
         if (!m.dragged && Math.hypot(e.clientX - m.sx, e.clientY - m.sy) > 5) m.dragged = true;
         if (m.dragged) { const cam = G.Render.cam; cam.x -= (e.clientX - m.lx) / cam.zoom; cam.y -= (e.clientY - m.ly) / cam.zoom; cam.follow = 0; cam.target = null; G.Cinema.manual(); }
@@ -278,6 +285,7 @@
     window.addEventListener('mouseup', e => {
       const m = I.mouse; if (!m.down) return;
       m.down = false;
+      if (m.turn) { if (m.turning) G.Render.spinRelease(m.vel * Math.max(0, 1 - (performance.now() - m.t) / 180)); m.turn = m.turning = false; return; }
       if (I.held) { release(); return; }
       if (M.mode !== 'game' || m.dragged) return;
       if (G.Cinema.on) { if (e.target === canvas) G.Cinema.stop(); return; }
@@ -345,7 +353,7 @@
       if (M.mode === 'intro') { endIntro(); return; }
       if (M.mode !== 'game') return;
       if (e.touches.length === 2) {
-        const [a, b] = e.touches; pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), z: G.Render.cam.tz }; tStart = null; return;
+        const [a, b] = e.touches; pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), z: G.Render.cam.tz, a: Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX), acc: 0, turning: false, vel: 0, t: performance.now() }; tStart = null; return;
       }
       const t = e.touches[0]; tStart = { x: t.clientX, y: t.clientY, lx: t.clientX, ly: t.clientY, moved: false };
       if (I.power === 'hand') { const ent = pick(t.clientX, t.clientY, true); if (ent) grab(ent, t.clientX, t.clientY); }
@@ -354,7 +362,15 @@
       e.preventDefault();
       if (pinch && e.touches.length === 2) {
         const [a, b] = e.touches; const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-        G.Render.cam.tz = G.clamp(pinch.z * d / pinch.d, G.Render.minZoom(), 3.6); G.Render.cam.anchor = [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2]; G.Cinema.manual(); return;
+        // the twist of the two fingers turns the world with them (once it is clearly a twist, not a pinch)
+        const ang = Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX); let da = ang - pinch.a; pinch.a = ang;
+        da = Math.atan2(Math.sin(da), Math.cos(da));
+        const tn = performance.now(), dt = Math.max(1, tn - pinch.t) / 1000; pinch.t = tn;
+        if (!pinch.turning) { pinch.acc += da; if (Math.abs(pinch.acc) > 0.13 && d > 40) { pinch.turning = true; G.Render.spinBegin(); G.Render.spinBy(pinch.acc); pinch.vel = 0; } }
+        else { G.Render.spinBy(da); pinch.vel = pinch.vel ? pinch.vel * 0.5 + (da / dt) * 0.5 : da / dt; }
+        G.Render.cam.tz = G.clamp(pinch.z * d / pinch.d, G.Render.minZoom(), 3.6);
+        if (!pinch.turning) G.Render.cam.anchor = [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2];
+        G.Cinema.manual(); return;
       }
       const t = e.touches[0]; if (!tStart) return;
       if (I.held) { I.held.sx = t.clientX; I.held.sy = t.clientY; I.held.hist.unshift([performance.now(), t.clientX, t.clientY]); if (I.held.hist.length > 12) I.held.hist.pop(); return; }
@@ -365,10 +381,11 @@
     canvas.addEventListener('touchend', e => {
       e.preventDefault();
       if (I.held) { release(); tStart = null; return; }
-      if (pinch && e.touches.length < 2) { pinch = null; return; }
+      if (pinch && e.touches.length < 2) { if (pinch.turning) G.Render.spinRelease(pinch.vel * Math.max(0, 1 - (performance.now() - pinch.t) / 180)); pinch = null; return; }
       if (tStart && !tStart.moved && M.mode === 'game') { if (G.Cinema.on) G.Cinema.stop(); else if (!G.Photo.on) click(tStart.x, tStart.y, 0); }
       tStart = null;
     }, { passive: false });
+    canvas.addEventListener('touchcancel', () => { if (pinch && pinch.turning) G.Render.spinRelease(0); pinch = null; tStart = null; if (I.held) release(); });
     // menu buttons
     $('#btn-new').onclick = () => { G.Audio.init(); G.Audio.play('click'); G.UI.openSetup(); };
     $('#btn-continue').onclick = () => { G.Audio.init(); G.Audio.play('click'); M.continueGame(); };

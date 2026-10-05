@@ -16,28 +16,31 @@
   // ------------------------------ the four views ------------------------------
   // the god can walk around the diorama: rot turns the map a quarter at a time. Everything that
   // lands on screen goes through proj, so turning the world is turning this one function.
-  let rot = 0;
+  // While the world is being turned (spin), the view is at any angle phi around the map's centre;
+  // rot is then the nearest quarter, which the sprites use to know which side they show.
+  let rot = 0, spin = null, cphi = 1, sphi = 0;
   const proj = (x, y, h) => {
     let X = x, Y = y;
-    if (rot === 1) { X = N - y; Y = x; } else if (rot === 2) { X = N - x; Y = N - y; } else if (rot === 3) { X = y; Y = N - x; }
+    if (spin) { const c = N / 2, dx = x - c, dy = y - c; X = c + dx * cphi - dy * sphi; Y = c + dx * sphi + dy * cphi; }
+    else if (rot === 1) { X = N - y; Y = x; } else if (rot === 2) { X = N - x; Y = N - y; } else if (rot === 3) { X = y; Y = N - x; }
     return [(X - Y) * 16, (X + Y) * 8 - h * HS];
   };
   R.proj = proj;
   R.rot = () => rot;
   // how far back (small) or front (big) a point is in this view: the painter's order
-  const depth = (x, y) => rot === 0 ? x + y : rot === 1 ? N - y + x : rot === 2 ? 2 * N - x - y : y + N - x;
+  const depth = (x, y) => spin ? N + (x - N / 2) * (cphi + sphi) + (y - N / 2) * (cphi - sphi) : rot === 0 ? x + y : rot === 1 ? N - y + x : rot === 2 ? 2 * N - x - y : y + N - x;
   R.depth = depth;
-  R.toView = (x, y) => rot === 0 ? [x, y] : rot === 1 ? [N - y, x] : rot === 2 ? [N - x, N - y] : [y, N - x];
-  R.fromView = (X, Y) => rot === 0 ? [X, Y] : rot === 1 ? [Y, N - X] : rot === 2 ? [N - X, N - Y] : [N - Y, X];
+  R.toView = (x, y) => { if (spin) { const c = N / 2, dx = x - c, dy = y - c; return [c + dx * cphi - dy * sphi, c + dx * sphi + dy * cphi]; } return rot === 0 ? [x, y] : rot === 1 ? [N - y, x] : rot === 2 ? [N - x, N - y] : [y, N - x]; };
+  R.fromView = (X, Y) => { if (spin) { const c = N / 2, a = X - c, b = Y - c; return [c + a * cphi + b * sphi, c - a * sphi + b * cphi]; } return rot === 0 ? [X, Y] : rot === 1 ? [Y, N - X] : rot === 2 ? [N - X, N - Y] : [N - Y, X]; };
   // a view-space direction back to a world direction
-  R.vdirToWorld = (dX, dY) => rot === 0 ? [dX, dY] : rot === 1 ? [dY, -dX] : rot === 2 ? [-dX, -dY] : [-dY, dX];
+  R.vdirToWorld = (dX, dY) => spin ? [dX * cphi + dY * sphi, -dX * sphi + dY * cphi] : rot === 0 ? [dX, dY] : rot === 1 ? [dY, -dX] : rot === 2 ? [-dX, -dY] : [-dY, dX];
   // which way a world direction points on screen: +1 right, -1 left
-  R.sdir = (dx, dy) => ((rot === 0 ? dx - dy : rot === 1 ? -dy - dx : rot === 2 ? dy - dx : dy + dx) > 0 ? 1 : -1);
+  R.sdir = (dx, dy) => ((spin ? (dx * cphi - dy * sphi) - (dx * sphi + dy * cphi) : rot === 0 ? dx - dy : rot === 1 ? -dy - dx : rot === 2 ? dy - dx : dy + dx) > 0 ? 1 : -1);
   R.mirror = () => (rot & 1 ? -1 : 1);
   // the side a creature faces on screen (its world direction when known)
   R.sface = o => (o.fx !== undefined && o.fx !== null ? R.sdir(o.fx, o.fy) : (o.face || 1) * (rot >= 2 ? -1 : 1));
   // a world offset around an anchor, on screen
-  R.off = (dx, dy, z) => { let X = dx, Y = dy; if (rot === 1) { X = -dy; Y = dx; } else if (rot === 2) { X = -dx; Y = -dy; } else if (rot === 3) { X = dy; Y = -dx; } return [(X - Y) * 16, (X + Y) * 8 - (z || 0)]; };
+  R.off = (dx, dy, z) => { let X = dx, Y = dy; if (spin) { X = dx * cphi - dy * sphi; Y = dx * sphi + dy * cphi; } else if (rot === 1) { X = -dy; Y = dx; } else if (rot === 2) { X = -dx; Y = -dy; } else if (rot === 3) { X = dy; Y = -dx; } return [(X - Y) * 16, (X + Y) * 8 - (z || 0)]; };
   // an offset in a sprite's own space (sprites are mirrored on the side views)
   R.soff = (dx, dy, z) => [(dx - dy) * 16 * (rot & 1 ? -1 : 1), (dx + dy) * 8 - (z || 0)];
   // a sprite's screen-x offset (in its own space) as a world offset
@@ -103,34 +106,113 @@
     }
     return at(G.SEA);
   };
-  // turn the diorama a quarter (dir +1: clockwise). The point at the centre of the screen stays there.
-  R.rotHooks = [];
-  R.rotate = function (dir) {
-    const S = G.S; if (!S || R.turn) return;
+  // ------------------------------ turning the world ------------------------------
+  // The god turns the table with two fingers, a drag or Q/E. While it turns, the world is drawn at any
+  // angle (spin); when the hand lets go it settles on the nearest side, where the full drawing returns.
+  // The terrain pictures (chunks) belong to one side: during a settle they are laid out and painted for
+  // the side it is going to, a few per frame, so the end of the turn costs nothing.
+  R.rotHooks = []; R.angleHooks = [];
+  let restPhi = 0; // the view's angle at rest, never wrapped (the compass needle keeps turning the same way)
+  const QT = Math.PI / 2, mod4 = q => ((q % 4) + 4) % 4;
+  R.angle = () => spin ? spin.phi : restPhi;
+  R.spinning = () => !!spin;
+  function asChunkView(fn) { if (!spin) return fn(); const ks = spin, kr = rot; rot = ks.laidFor; spin = null; try { return fn(); } finally { rot = kr; spin = ks; } }
+  function setPhi(phi) {
+    spin.phi = phi; cphi = Math.cos(phi); sphi = Math.sin(phi);
+    const r = mod4(Math.round(phi / QT)); if (r !== rot) { rot = r; R.view = r; }
+    // the point the god turns around stays where it is on screen
+    const p = proj(spin.cx, spin.cy, spin.ch); R.cam.x = p[0]; R.cam.y = p[1];
+    for (const h of R.angleHooks) h(phi);
+  }
+  function spinStart(hold) {
     const c = R.screenToTile(VW / 2, VH / 2);
     const cx = G.clamp(c[0], 0.5, N - 0.5), cy = G.clamp(c[1], 0.5, N - 0.5);
-    // the old view, for the turn animation
-    const snap = R._snap || (R._snap = document.createElement('canvas'));
-    snap.width = canvas.width; snap.height = canvas.height; snap.getContext('2d').drawImage(canvas, 0, 0);
-    R.turn = { t: 0, dir: dir > 0 ? 1 : -1 };
-    applyView((rot + (dir > 0 ? 1 : 3)) % 4);
-    R.centerOn(cx, cy);
-    if (R.cam.target) R.cam.target = null;
-    paintVisible();
+    spin = { phi: restPhi, hold, cx, cy, ch: W.groundH(cx, cy), rot0: rot, laidFor: rot, from: restPhi, to: restPhi, k: 1, dur: 0.3, target: rot };
+    R.cam.target = null; R.cam.follow = 0;
+    setPhi(restPhi);
+  }
+  R.spinBegin = function () { if (!G.S) return; if (spin) spin.hold = true; else spinStart(true); };
+  R.spinBy = function (d) { if (!G.S) return; if (!spin) spinStart(true); spin.hold = true; setPhi(spin.phi + d); };
+  // let go: settle on the nearest side (a quick flick carries on to the next one)
+  R.spinRelease = function (vel) {
+    if (!spin) return;
+    let q = Math.round(spin.phi / QT);
+    if (Math.abs(vel || 0) > 1.5) { const f = spin.phi / QT; q = vel > 0 ? Math.ceil(f - 0.05) : Math.floor(f + 0.05); }
+    settleTo(q, 0.32);
+  };
+  function settleTo(q, per) {
+    spin.hold = false; spin.from = spin.phi; spin.to = q * QT; spin.k = 0;
+    spin.dur = G.clamp(Math.abs(spin.to - spin.from) / QT * (per || 0.5), 0.16, 0.9);
+    spin.target = mod4(q);
+    if (spin.laidFor !== spin.target) layoutFor(spin.target);
+  }
+  // Q/E and the compass: a quarter turn, smooth
+  R.rotate = function (dir) {
+    if (!G.S) return;
+    dir = dir > 0 ? 1 : -1;
+    if (spin && spin.hold) return;
+    if (!spin) spinStart(false);
+    settleTo(Math.round((spin.k < 1 ? spin.to : spin.phi) / QT) + dir, 0.55);
     G.Audio && G.Audio.play && G.Audio.play('whoosh');
   };
+  // where every chunk sits in the current view; a picture already painted for this view is kept
+  function relayout() {
+    for (const ch of chunks) {
+      const nc = makeChunk(ch.cx, ch.cy);
+      if (nc.w !== ch.w || nc.h !== ch.h) { dropHi(ch); ch.lo = null; ch.lctx = null; ch.loRot = -1; ch.prL = null; }
+      ch.sx = nc.sx; ch.sy = nc.sy; ch.w = nc.w; ch.h = nc.h; ch.vx0 = nc.vx0; ch.vy0 = nc.vy0;
+      ch.dirty = ch.dirty || ch.rot !== rot; ch.dirtyLo = ch.dirtyLo || ch.loRot !== rot;
+    }
+    sortChunks();
+  }
+  function layoutFor(r) {
+    const ks = spin, kr = rot; rot = r; spin = null;
+    try { relayout(); } finally { rot = kr; spin = ks; }
+    if (ks) ks.laidFor = r;
+  }
+  // while turning: paint, a part at a time, the pictures of the side the turn is heading for
+  function paintTarget(ms) {
+    if (!spin || spin.laidFor !== spin.target) return;
+    const ks = spin, kr = rot; rot = ks.target; spin = null;
+    try {
+      const p = proj(ks.cx, ks.cy, ks.ch); const hw = VW / 2 / R.cam.zoom + 40, hh = VH / 2 / R.cam.zoom + 40;
+      const lo = bigMap && R.cam.zoom * dpr <= LRS * 1.05; const until = now() + ms;
+      for (const ch of chunkOrder) {
+        if (ch.empty || (lo ? !(ch.dirtyLo || ch.loRot !== rot) : !(ch.dirty || ch.rot !== rot))) continue;
+        if (ch.sx > p[0] + hw || ch.sx + ch.w < p[0] - hw || ch.sy > p[1] + hh + 40 || ch.sy + ch.h < p[1] - hh) continue;
+        if (now() > until) break;
+        paintStep(ch, lo, until);
+      }
+    } finally { rot = kr; spin = ks; }
+  }
+  function updateSpin(dt) {
+    if (!spin) return;
+    if (spin.hold) {
+      // the hand still turns it: get ready for the side it is nearest to (clearly nearest: no dithering at 45°)
+      const q = Math.round(spin.phi / QT), r = mod4(q);
+      if (r !== spin.target && Math.abs(spin.phi - q * QT) < QT * 0.36) { spin.target = r; if (spin.laidFor !== r) layoutFor(r); }
+      return;
+    }
+    spin.k = Math.min(1, spin.k + dt / spin.dur);
+    const e = 1 - Math.pow(1 - spin.k, 3);
+    setPhi(spin.from + (spin.to - spin.from) * e);
+    if (spin.k >= 1) endSpin();
+  }
+  function endSpin() {
+    const ks = spin; const q = Math.round(ks.to / QT); const r = mod4(q);
+    spin = null; cphi = 1; sphi = 0; restPhi = q * QT; rot = r; R.view = r;
+    if (ks.laidFor !== r) layoutFor(r);
+    R.centerOn(ks.cx, ks.cy);
+    if (r !== ks.rot0) { borderCache.ver = -1; for (const h of R.rotHooks) h(rot); G.Minimap && G.Minimap.refresh && G.Minimap.refresh(); }
+    for (const h of R.angleHooks) h(restPhi);
+    // (pictures not painted yet are drawn tile by tile meanwhile; they arrive over the next frames)
+  }
   // a cut to another view, with no turning (the cinema uses it behind a fade)
-  R.turnTo = function (r) { r = ((r | 0) % 4 + 4) % 4; if (r === rot || !G.S) return; applyView(r); };
+  R.turnTo = function (r) { r = mod4(r | 0); if (spin) { spin.to = Math.round(spin.phi / QT) * QT; endSpin(); } if (r === rot || !G.S) return; restPhi += ((r - rot + 4) % 4 === 3 ? -1 : (r - rot + 4) % 4) * QT; applyView(r); for (const h of R.angleHooks) h(restPhi); };
   R.paintVisible = () => paintVisible();
   function applyView(r) {
     rot = r; R.view = rot;
-    for (const ch of chunks) {
-      const nc = makeChunk(ch.cx, ch.cy);
-      if (nc.w !== ch.w || nc.h !== ch.h) { dropHi(ch); ch.lo = null; ch.lctx = null; }
-      ch.sx = nc.sx; ch.sy = nc.sy; ch.w = nc.w; ch.h = nc.h; ch.vx0 = nc.vx0; ch.vy0 = nc.vy0;
-      ch.dirty = true; ch.dirtyLo = true;
-    }
-    sortChunks();
+    relayout();
     borderCache.ver = -1;
     for (const h of R.rotHooks) h(rot);
     G.Minimap && G.Minimap.refresh && G.Minimap.refresh();
@@ -141,24 +223,8 @@
     for (const ch of chunkOrder) if (!ch.empty && (ch.dirty || ch.rot !== rot) && !(ch.sx > vr[2] || ch.sx + ch.w < vr[0] || ch.sy > vr[3] || ch.sy + ch.h < vr[1])) renderChunk(ch, bigMap && R.cam.zoom * dpr <= LRS * 1.05);
   }
   // (before a world is built: the terrain is painted afterwards for this view)
-  R.setView = function (r) { r = ((r | 0) % 4 + 4) % 4; rot = r; R.view = r; borderCache.ver = -1; for (const h of R.rotHooks) h(rot); };
+  R.setView = function (r) { r = mod4(r | 0); spin = null; cphi = 1; sphi = 0; rot = r; R.view = r; restPhi = r * QT; borderCache.ver = -1; for (const h of R.rotHooks) h(rot); for (const h of R.angleHooks) h(restPhi); };
   R.view = 0;
-  // the turn, seen: the old view folds away like a card, the new one unfolds
-  function drawTurn(rdt) {
-    const tr = R.turn; tr.t += rdt; const k = tr.t / 0.42;
-    if (k >= 1) { R.turn = null; return; }
-    const w = canvas.width, h = canvas.height;
-    const tmp = R._turnC || (R._turnC = document.createElement('canvas'));
-    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-    let img, sc;
-    if (k < 0.5) { img = R._snap; sc = Math.cos(k * Math.PI); }
-    else { if (tmp.width !== w || tmp.height !== h) { tmp.width = w; tmp.height = h; } tmp.getContext('2d').drawImage(canvas, 0, 0); img = tmp; sc = -Math.cos(k * Math.PI); }
-    ctx.drawImage(R._bgC, 0, 0, 2, 128, 0, 0, w, h);
-    const shift = (k < 0.5 ? -1 : 1) * tr.dir * (1 - sc) * w * 0.08;
-    ctx.translate(w / 2 + shift, 0); ctx.scale(Math.max(0.04, sc), 1); ctx.drawImage(img, -w / 2, 0);
-    ctx.fillStyle = `rgba(10,14,24,${(1 - sc) * 0.35})`; ctx.fillRect(-w / 2, 0, w, h);
-    ctx.restore();
-  }
   R.centerOn = function (x, y, zoom) {
     const [sx, sy] = proj(x, y, W.groundH(x, y));
     R.cam.x = sx; R.cam.y = sy;
@@ -196,7 +262,7 @@
     const S = G.S;
     computeDLand();
     for (const ch of chunks) { if (ch.canvas) ch.canvas.width = ch.canvas.height = 0; if (ch.lo) ch.lo.width = ch.lo.height = 0; }
-    chunks = []; hiLive = 0; bigMap = N >= 128;
+    chunks = []; hiLive = 0; bigMap = N >= 128; warm = 40; spinCol = null;
     for (let cy = 0; cy < NC; cy++) for (let cx = 0; cx < NC; cx++) chunks.push(makeChunk(cx, cy));
     sortChunks(); measureRelief();
     buildShore();
@@ -230,7 +296,7 @@
   // Big maps keep a low-resolution copy of every chunk (cheap, used when zoomed out) and
   // only a bounded set of full-resolution canvases near the camera (LRU), so memory stays flat.
   const LRS = 1, HI_CAP = 60;
-  let bigMap = false, hiLive = 0, frameNo = 0, visCount = 0;
+  let bigMap = false, hiLive = 0, frameNo = 0, visCount = 0, warm = 0; // (warm: the first frames of a world paint more)
   function chunkCanvas(ch, lo) {
     const rs = lo ? LRS : RS;
     const cv = document.createElement('canvas');
@@ -238,7 +304,8 @@
     return cv;
   }
   function renderChunk(ch, lo) {
-    if (ch.empty) { ch.dirty = false; ch.dirtyLo = false; ch.rot = ch.loRot = rot; return; }
+    if (ch.empty) { ch.dirty = false; ch.dirtyLo = false; ch.rot = ch.loRot = rot; ch.pr = ch.prL = null; return; }
+    if (lo) ch.prL = null; else ch.pr = null;
     const rs = lo ? LRS : RS;
     let cv = lo ? ch.lo : ch.canvas;
     if (!cv) {
@@ -252,6 +319,40 @@
     for (let Y = ch.vy0; Y < ch.vy0 + C; Y++) for (let X = ch.vx0; X < ch.vx0 + C; X++) { const t = tileFromView(X, Y); drawTile(c, t[0], t[1]); }
     if (lo) { ch.dirtyLo = false; ch.loRot = rot; } else { ch.dirty = false; ch.rot = rot; }
     if (ch.occRot !== rot || ch.occDirty) buildOcc(ch);
+  }
+  // A picture for another view (or a new one) is painted a part at a time: it is not shown until it is
+  // whole (the tiles stand in for it meanwhile), so the work can be spread over frames.
+  function paintPart(ch, lo, until) {
+    if (ch.empty) { renderChunk(ch, lo); return true; }
+    const key = lo ? 'prL' : 'pr'; let pr = ch[key];
+    if (!pr || pr.rot !== rot) {
+      let cv = lo ? ch.lo : ch.canvas;
+      if (!cv) {
+        cv = chunkCanvas(ch, lo);
+        if (lo) { ch.lo = cv; ch.lctx = cv.getContext('2d'); } else { ch.canvas = cv; ch.ctx = cv.getContext('2d'); hiLive++; }
+      }
+      if (lo) ch.loRot = -1; else ch.rot = -1;
+      const c = lo ? ch.lctx : ch.ctx; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height);
+      pr = ch[key] = { rot, k: 0 };
+    }
+    const rs = lo ? LRS : RS, c = lo ? ch.lctx : ch.ctx;
+    c.setTransform(rs, 0, 0, rs, -ch.sx * rs, -ch.sy * rs); c.lineJoin = 'round';
+    const n = C * C;
+    while (pr.k < n) {
+      const t = tileFromView(ch.vx0 + pr.k % C, ch.vy0 + ((pr.k / C) | 0)); drawTile(c, t[0], t[1]); pr.k++;
+      if ((pr.k & 7) === 0 && now() > until) break;
+    }
+    if (pr.k < n) return false;
+    ch[key] = null;
+    if (lo) { ch.dirtyLo = false; ch.loRot = rot; } else { ch.dirty = false; ch.rot = rot; }
+    if (ch.occRot !== rot || ch.occDirty) buildOcc(ch);
+    return true;
+  }
+  // a picture on show is painted again at once (no gap); one that cannot be shown yet, a part at a time
+  function paintStep(ch, lo, until) {
+    const shown = lo ? ch.lo && ch.loRot === rot : ch.canvas && ch.rot === rot;
+    if (shown) { renderChunk(ch, lo); return true; }
+    return paintPart(ch, lo, until);
   }
   // ------------------------------ what the mountains hide ------------------------------
   // A tile that rises above the ground behind it (a ridge, a crest, a cliff seen from below) can hide
@@ -282,7 +383,7 @@
     for (const g of ch.occ) { g.x0 = Math.max(ch.sx, Math.floor(g.x0) - 1); g.y0 = Math.max(ch.sy, Math.floor(g.y0) - 1); g.x1 = Math.min(ch.sx + ch.w, Math.ceil(g.x1) + 1); g.y1 = Math.min(ch.sy + ch.h, Math.ceil(g.y1) + 1); }
     ch.occRot = rot; ch.occDirty = false;
   }
-  function dropHi(ch) { if (ch.canvas) { ch.canvas.width = ch.canvas.height = 0; ch.canvas = null; ch.ctx = null; hiLive--; } ch.dirty = true; }
+  function dropHi(ch) { if (ch.canvas) { ch.canvas.width = ch.canvas.height = 0; ch.canvas = null; ch.ctx = null; hiLive--; } ch.dirty = true; ch.pr = null; ch.rot = -1; }
   function evictHi() {
     if (!bigMap || hiLive <= HI_CAP) return;
     const live = chunks.filter(ch => ch.canvas && ch.seen < frameNo).sort((a, b) => a.seen - b.seen);
@@ -292,9 +393,13 @@
   const chunkOf = (x, y) => chunks[Math.floor(y / C) * NC + Math.floor(x / C)];
   function redrawTile(x, y) {
     if (!W.inb(x, y)) return;
+    if (spinCol) spinCol[y * N + x] = -1;
     const ch = chunkOf(x, y); if (!ch) return;
-    if (ch.canvas && !ch.dirty && ch.rot === rot) { const c = ch.ctx; c.setTransform(RS, 0, 0, RS, -ch.sx * RS, -ch.sy * RS); drawTile(c, x, y); }
-    if (ch.lo && !ch.dirtyLo && ch.loRot === rot) { const c = ch.lctx; c.setTransform(LRS, 0, 0, LRS, -ch.sx * LRS, -ch.sy * LRS); drawTile(c, x, y); }
+    ch.pr = ch.prL = null; // (a picture half painted starts again)
+    // while turning, or a picture kept for another view: painted again when it is needed
+    if (spin) { ch.dirty = ch.dirtyLo = true; return; }
+    if (ch.canvas && !ch.dirty && ch.rot === rot) { const c = ch.ctx; c.setTransform(RS, 0, 0, RS, -ch.sx * RS, -ch.sy * RS); drawTile(c, x, y); } else if (ch.rot !== rot) ch.dirty = true;
+    if (ch.lo && !ch.dirtyLo && ch.loRot === rot) { const c = ch.lctx; c.setTransform(LRS, 0, 0, LRS, -ch.sx * LRS, -ch.sy * LRS); drawTile(c, x, y); } else if (ch.loRot !== rot) ch.dirtyLo = true;
   }
   // a changed tile, then the ones in front of it that may rise over it (painter's order)
   function redrawAround(x, y) {
@@ -303,14 +408,15 @@
   }
   R.invalidateTerrain = function (x, y, r) {
     G.Relief && G.Relief.fixArea(Math.floor(x - r), Math.floor(y - r), Math.ceil(x + r), Math.ceil(y + r));
-    for (const ch of chunks) {
+    spinCol = null;
+    asChunkView(() => { for (const ch of chunks) {
       const cx = ch.x0 + C / 2, cy = ch.y0 + C / 2;
       if (Math.abs(cx - x) < C / 2 + r + 1 && Math.abs(cy - y) < C / 2 + r + 1) {
         const nc = makeChunk(ch.cx, ch.cy); // recompute bounds (heights changed)
         if (nc.w !== ch.w || nc.h !== ch.h || nc.sx !== ch.sx || nc.sy !== ch.sy) { dropHi(ch); ch.lo = null; ch.lctx = null; ch.sx = nc.sx; ch.sy = nc.sy; ch.w = nc.w; ch.h = nc.h; ch.vx0 = nc.vx0; ch.vy0 = nc.vy0; }
-        ch.hmax = nc.hmax; ch.empty = nc.empty; ch.dirty = true; ch.dirtyLo = true; ch.occDirty = true;
+        ch.hmax = nc.hmax; ch.empty = nc.empty; ch.dirty = true; ch.dirtyLo = true; ch.occDirty = true; ch.pr = ch.prL = null;
       }
-    }
+    } });
     measureRelief();
   };
   function tileColor(i, x, y) {
@@ -658,7 +764,7 @@
     }
     // smooth zoom around an anchor
     if (Math.abs(cam.tz - cam.zoom) > 0.0005) {
-      const an = cam.anchor || [VW / 2, VH / 2];
+      const an = (!spin && cam.anchor) || [VW / 2, VH / 2]; // (while the world turns it turns around the middle)
       const before = R.screenToWorldPx(an[0], an[1]);
       cam.zoom += (cam.tz - cam.zoom) * Math.min(1, dt * 12);
       const after = R.screenToWorldPx(an[0], an[1]);
@@ -781,12 +887,22 @@
     const cam = R.cam;
     // process dirty tiles/chunks (bounded work per frame; big maps: visible chunks first)
     frameNo++;
+    updateSpin(dt);
     const zPx = cam.zoom * dpr, wantHi = !bigMap || (zPx > LRS * 1.05 && visCount <= HI_CAP);
     let nVis = 0;
-    if (!bigMap) {
-      let budget = R.turn ? 8 : 2; const vr = viewRect(40);
-      for (const ch of chunkOrder) if (ch.dirty && budget > 0 && !(ch.sx > vr[2] || ch.sx + ch.w < vr[0] || ch.sy > vr[3] || ch.sy + ch.h < vr[1])) { renderChunk(ch, false); budget--; }
-      for (const ch of chunkOrder) if (ch.dirty && budget > 0) { renderChunk(ch, false); budget--; }
+    const lim = warm > 0 ? 40 : 8; if (warm > 0) warm--;
+    if (spin) paintTarget(spin.hold ? 3 : 7);
+    else if (!bigMap) {
+      // pictures on show that changed: two a frame; pictures for this view still missing: by time
+      let budget = 2; const vr = viewRect(40), tb = now();
+      for (const ch of chunkOrder) if (ch.dirty && !(ch.sx > vr[2] || ch.sx + ch.w < vr[0] || ch.sy > vr[3] || ch.sy + ch.h < vr[1])) {
+        if (ch.canvas && ch.rot === rot) { if (budget > 0) { renderChunk(ch, false); budget--; } }
+        else if (now() - tb < lim) paintPart(ch, false, tb + lim);
+      }
+      for (const ch of chunkOrder) if (ch.dirty) {
+        if (ch.canvas && ch.rot === rot) { if (budget > 0) { renderChunk(ch, false); budget--; } }
+        else if (now() - tb < 3) paintPart(ch, false, tb + 3);
+      }
     }
     else {
       const vr = viewRect(40), tb = now();
@@ -794,13 +910,13 @@
         if (ch.empty) continue;
         const vis = !(ch.sx > vr[2] || ch.sx + ch.w < vr[0] || ch.sy > vr[3] || ch.sy + ch.h < vr[1]);
         if (vis) { ch.seen = frameNo; nVis++; }
-        if (now() - tb > 7) continue;
-        if (vis && wantHi && ch.dirty) renderChunk(ch, false);
-        else if (ch.dirtyLo && (vis || now() - tb < 3)) renderChunk(ch, true);
+        if (now() - tb > lim) continue;
+        if (vis && wantHi && ch.dirty) paintStep(ch, false, tb + lim);
+        else if (ch.dirtyLo && (vis || now() - tb < 3)) paintStep(ch, true, tb + (vis ? lim : 3));
       }
       visCount = nVis; evictHi();
     }
-    if (G.Nature.dirty.size) {
+    if (G.Nature.dirty.size && !spin) {
       let n = 0;
       for (const i of G.Nature.dirty) {
         const x = i % N, y = (i / N) | 0;
@@ -854,13 +970,14 @@
     const o0 = proj(0, 0, G.SEA), o1 = proj(N, 0, G.SEA), o2 = proj(N, N, G.SEA), o3 = proj(0, N, G.SEA);
     ctx.beginPath(); ctx.moveTo(o0[0], o0[1]); ctx.lineTo(o1[0], o1[1]); ctx.lineTo(o2[0], o2[1]); ctx.lineTo(o3[0], o3[1]); ctx.closePath(); ctx.fill();
     PROF.mark('bg+base', t0); t0 = now();
-    // terrain chunks
-    if (!R.dbg.noChunks) for (const ch of chunkOrder) {
+    // terrain chunks (while the world turns: the terrain itself, at the angle of the moment)
+    if (spin) drawSpinTerrain(view);
+    else if (!R.dbg.noChunks) for (const ch of chunkOrder) {
       if (ch.empty) continue;
       if (ch.sx > view[2] || ch.sx + ch.w < view[0] || ch.sy > view[3] || ch.sy + ch.h < view[1]) continue;
       const hiOK = ch.canvas && ch.rot === rot, loOK = ch.lo && ch.loRot === rot;
       const cv = hiOK && ((wantHi && !ch.dirty) || !loOK) ? ch.canvas : loOK ? ch.lo : null;
-      if (cv) ctx.drawImage(cv, ch.sx, ch.sy, ch.w, ch.h);
+      if (cv) ctx.drawImage(cv, ch.sx, ch.sy, ch.w, ch.h); else quadChunk(ch);
     }
     PROF.mark('chunks', t0); t0 = now();
     if (!R.dbg.noWater) { drawWater(t, view); G.Naval && G.Naval.drawWater(ctx, proj, t, view); }
@@ -892,7 +1009,7 @@
     for (const a of S.aqueducts) for (let k = 0; k < a.built; k++) {
       const [x, y, d] = a.tiles[k]; const i = y * N + x;
       if (S.occ[i]) { const ob = S.buildings.get(S.occ[i]); if (ob && ob.blocks) continue; }
-      const p = vis(x + 0.5, y + 0.5, W.groundH(x + 0.5, y + 0.5)); if (p) pushD(depth(x + 0.5, y + 0.5) + 0.05, 8, { d, st: a.style || (a.style = (G.Fac.get(a.fac) || {}).civ || 'classico') }, p[0], p[1]);
+      const p = vis(x + 0.5, y + 0.5, W.groundH(x + 0.5, y + 0.5)); if (p) pushD(depth(x + 0.5, y + 0.5) + 0.05, 8, { d, x, y, st: a.style || (a.style = (G.Fac.get(a.fac) || {}).civ || 'classico') }, p[0], p[1]);
     }
     for (const c of S.carts) { const p = vis(c.x, c.y, W.groundH(c.x, c.y)); if (p) pushD(depth(c.x, c.y) + 0.03, 9, c, p[0], p[1]); }
     for (const s of S.ships) { const p = vis(s.x, s.y, W.groundH(s.x, s.y)); if (p) pushD(depth(s.x, s.y) + 0.3, 10, s, p[0], p[1]); }
@@ -931,7 +1048,7 @@
     }
     ctx.fill();
     PROF.mark('collect+shadows', t0); t0 = now();
-    const pieces = R.dbg.noOcc ? [] : occluders(list, view, wantHi);
+    const pieces = R.dbg.noOcc || spin ? [] : occluders(list, view, wantHi);
     if (!R.dbg.noEnt) {
       let pk = 0;
       for (const e of list) {
@@ -1001,20 +1118,31 @@
       ctx.fillStyle = `rgba(${G.FX.flashColor},${Math.min(1, G.FX.flash) * 0.85})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
-    if (R.turn) drawTurn(dt);
   };
 
   // ------------------------------ base of the diorama ------------------------------
   function drawBase() {
     const S = G.S; const V = N + 1; const BOT = -6;
     const wv = (X, Y) => { const p = R.fromView(X, Y); return S.H[Math.round(p[1]) * V + Math.round(p[0])]; };
-    const faces = [
+    let faces;
+    if (!spin) faces = [
       { pts: k => R.fromView(k, N), vh: k => wv(k, N), dark: 0.72 },
       { pts: k => R.fromView(N, k), vh: k => wv(N, k), dark: 0.88 },
     ];
+    else {
+      // turning: the sides of the world that face the god, each shaded by where it faces
+      const dX = cphi + sphi, dY = cphi - sphi, sX = cphi - sphi, sY = -(sphi + cphi);
+      const side = (nx, ny) => ({ dark: 0.8 + 0.115 * G.clamp((nx * sX + ny * sY) / 1.4142, -1, 1) });
+      faces = [];
+      if (dY > 0) faces.push({ pts: k => [k, N], vh: k => S.H[N * V + k], ...side(0, 1) });
+      if (dY < 0) faces.push({ pts: k => [N - k, 0], vh: k => S.H[N - k], ...side(0, -1) });
+      if (dX > 0) faces.push({ pts: k => [N, k], vh: k => S.H[k * V + N], ...side(1, 0) });
+      if (dX < 0) faces.push({ pts: k => [0, N - k], vh: k => S.H[(N - k) * V], ...side(-1, 0) });
+    }
+    let yLo = -1e9; for (const c of [[0, 0], [N, 0], [0, N], [N, N]]) yLo = Math.max(yLo, proj(c[0], c[1], 2)[1]);
     for (const f of faces) {
       // soil
-      const g = ctx.createLinearGradient(0, proj(N, N, 2)[1] - 20, 0, proj(N, N, BOT)[1]);
+      const g = ctx.createLinearGradient(0, yLo - 20, 0, yLo + (2 - BOT) * HS);
       g.addColorStop(0, G.rgb([128 * f.dark, 94 * f.dark, 66 * f.dark])); g.addColorStop(0.5, G.rgb([96 * f.dark, 70 * f.dark, 50 * f.dark])); g.addColorStop(1, G.rgb([60 * f.dark, 48 * f.dark, 40 * f.dark]));
       ctx.fillStyle = g;
       ctx.beginPath();
@@ -1216,8 +1344,10 @@
   let borderCache = { ver: -1, n: 0, paths: [] };
   function drawBorders() {
     const F = G.Fac;
-    if (borderCache.ver !== F.bordersVer || borderCache.n !== N) {
-      borderCache = { ver: F.bordersVer, n: N, paths: [] };
+    // (the lines are kept for the view they were drawn for; while the world turns they are drawn anew)
+    const ang = spin ? 'p' + spin.phi : rot;
+    if (borderCache.ver !== F.bordersVer || borderCache.n !== N || borderCache.ang !== ang) {
+      borderCache = { ver: F.bordersVer, n: N, ang, paths: [] };
       for (const b of F.borders) {
         const p = new Path2D(), pc = new Path2D(); const s = b.s;
         for (let k = 0; k < s.length; k += 5) {
@@ -1270,6 +1400,174 @@
     for (let k = 0; k <= 3; k++) for (const [fx, fy] of [[b.x + k, b.y], [b.x + k, b.y + 3], [b.x, b.y + k], [b.x + 3, b.y + k]]) {
       const p = proj(fx, fy, W.hAt(Math.min(fx, N - 0.01), Math.min(fy, N - 0.01))); ctx.fillRect(p[0] - 0.5, p[1] - 3.2, 1, 3.2);
     }
+  }
+
+  // ------------------------------ the world at any angle ------------------------------
+  // While the world turns, its ground is drawn tile by tile, back to front, at the angle of the moment,
+  // with the colours and the light of the pictures of the four sides (not their small details); the
+  // buildings stand as their masses (walls in their people's colours, the roof of their style).
+  let spinCol = null, spinOrd = null, spinKey = null, spinSorted = null, spinBuck = null;
+  function spinBase(i, x, y) {
+    const S = G.S; const t = S.type[i]; let col;
+    if (t === T.RIVER) {
+      let wn = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny) || S.type[ny * N + nx] <= T.RIVER) wn++; }
+      col = G.lerpColor(COL.river, [52, 132, 176], G.clamp((wn - 11) / 13, 0, 1)).map(v => v + (G.hash(i) - 0.5) * 6);
+    } else if (t <= T.SEA) col = WATER[Math.min(4, Math.max(0, dLand[i] - 1))];
+    else {
+      const H = S.H, V = N + 1;
+      const h00 = H[y * V + x], h10 = H[y * V + x + 1], h11 = H[(y + 1) * V + x + 1], h01 = H[(y + 1) * V + x];
+      const rg = Math.max(h00, h10, h11, h01) - Math.min(h00, h10, h11, h01);
+      col = tileColor(i, x, y);
+      if (rg > G.Relief.STEEP && S.burnt[i] <= 0 && S.scar[i] <= 0) col = rockColor(i, col, rg);
+      else if (rg > 0.9 && (t === T.GRASS || t === T.MEADOW)) col = G.lerpColor(col, [142, 128, 104], G.clamp((rg - 0.9) / 0.8, 0, 1) * 0.35);
+      if (S.road[i]) col = G.lerpColor(col, S.road[i] >= 2 ? [178, 170, 154] : COL.dirt, 0.75);
+    }
+    const q = v => Math.max(0, Math.min(255, Math.round(v)));
+    return (q(col[0]) << 16) | (q(col[1]) << 8) | q(col[2]);
+  }
+  // far away a block of s×s tiles is one quad (a whole continent in sight stays cheap)
+  const lodStep = () => { const z = R.cam.zoom, tiles = VW * VH / (256 * z * z); let st = 1; while (st < 8 && (tiles / (st * st) > 14000 || 32 * z * st < 5)) st *= 2; return st; };
+  let qc = 1, qs = 0; // the turn of the light (the view's angle)
+  // Quads of one colour that follow each other are filled together; each is pushed out by half a pixel
+  // so no seam shows between neighbours (cheaper than outlining every one).
+  const qStr = new Map(); let qCol = -1, qOpen = false, qGrow = 0;
+  const qFlush = () => { if (qOpen) { ctx.fill(); qOpen = false; } qCol = -1; };
+  function qPoly(a, q, d, e, col) {
+    if (col !== qCol) {
+      if (qOpen) ctx.fill();
+      let f = qStr.get(col); if (!f) { if (qStr.size > 6000) qStr.clear(); f = 'rgb(' + (col >> 16) + ',' + ((col >> 8) & 255) + ',' + (col & 255) + ')'; qStr.set(col, f); }
+      ctx.fillStyle = f; ctx.beginPath(); qCol = col; qOpen = true;
+    }
+    const cx = (a[0] + q[0] + d[0] + e[0]) / 4, cy = (a[1] + q[1] + d[1] + e[1]) / 4;
+    const P = [a, q, d, e];
+    for (let k = 0; k < 4; k++) {
+      const v = P[k], dx = v[0] - cx, dy = v[1] - cy, l = Math.abs(dx) + Math.abs(dy) * 2 + 0.01, g = qGrow / l;
+      if (k === 0) ctx.moveTo(v[0] + dx * g, v[1] + dy * g); else ctx.lineTo(v[0] + dx * g, v[1] + dy * g);
+    }
+    ctx.closePath();
+  }
+  function quadTile(x, y, s) {
+    const S = G.S; const H = S.H, V = N + 1, STEEP = G.Relief.STEEP;
+    const x1 = Math.min(N, x + s), y1 = Math.min(N, y + s);
+    const cx = Math.min(N - 1, x + (s >> 1)), cy = Math.min(N - 1, y + (s >> 1)), i = cy * N + cx; const t = S.type[i];
+    let c = spinCol[i]; if (c < 0) c = spinCol[i] = spinBase(i, cx, cy);
+    let r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+    let a, q, d, e;
+    if (t <= T.RIVER) { const hh = t === T.RIVER ? S.wl[i] : G.SEA; a = proj(x, y, hh); q = proj(x1, y, hh); d = proj(x1, y1, hh); e = proj(x, y1, hh); }
+    else {
+      const h00 = H[y * V + x], h10 = H[y * V + x1], h11 = H[y1 * V + x1], h01 = H[y1 * V + x];
+      a = proj(x, y, h00); q = proj(x1, y, h10); d = proj(x1, y1, h11); e = proj(x, y1, h01);
+      const gx = ((h10 + h11) - (h00 + h01)) / 2 / s, gy = ((h01 + h11) - (h00 + h10)) / 2 / s;
+      const vx = gx * qc - gy * qs, vy = gx * qs + gy * qc;
+      const rg = (Math.max(h00, h10, h11, h01) - Math.min(h00, h10, h11, h01)) / s;
+      const light = rg > STEEP ? G.clamp(1 + vx * 0.085 + vy * 0.03, 0.5, 1.34) : G.clamp(1 + vx * 0.13 + vy * 0.045, 0.62, 1.28);
+      r *= light; g *= light; b *= light;
+    }
+    // (a little rounding: neighbours of nearly one colour share a fill)
+    r = r > 252 ? 252 : (r / 4 | 0) * 4; g = g > 252 ? 252 : (g / 4 | 0) * 4; b = b > 252 ? 252 : (b / 4 | 0) * 4;
+    qPoly(a, q, d, e, (r << 16) | (g << 8) | b);
+    if (t === T.RIVER && s === 1) { qFlush(); waterSteps(ctx, x, y, i, S.wl[i]); }
+  }
+  function spinBuffers() {
+    const NN = N * N;
+    if (!spinCol || spinCol.length !== NN) spinCol = new Int32Array(NN).fill(-1);
+    if (!spinOrd || spinOrd.length !== NN) { spinOrd = new Int32Array(NN); spinKey = new Int32Array(NN); spinSorted = new Int32Array(NN); }
+  }
+  function drawSpinTerrain(view) {
+    const S = G.S; spinBuffers();
+    // the tiles in sight, with room for the mountains rising into the picture from below
+    const cs = [R.screenToTile(0, 0), R.screenToTile(VW, 0), R.screenToTile(0, VH), R.screenToTile(VW, VH)];
+    const mg = 3 + Math.ceil((R.maxH - G.SEA) * HS / 16);
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const p of cs) { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; }
+    const st = lodStep();
+    x0 = Math.max(0, Math.floor(x0) - mg); y0 = Math.max(0, Math.floor(y0) - mg); x1 = Math.min(N - 1, Math.ceil(x1) + mg); y1 = Math.min(N - 1, Math.ceil(y1) + mg);
+    x0 -= x0 % st; y0 -= y0 % st;
+    // back to front: a counting sort on the depth of each tile's (block's) middle
+    const NB = 6 * N + 8; if (!spinBuck || spinBuck.length !== NB + 1) spinBuck = new Int32Array(NB + 1);
+    spinBuck.fill(0);
+    let n = 0; const hs = st / 2, mx = 40 + st * 16, my = 50 + st * 8;
+    for (let y = y0; y <= y1; y += st) for (let x = x0; x <= x1; x += st) {
+      const cx = Math.min(N - 1, x + (st >> 1)), cy = Math.min(N - 1, y + (st >> 1)), i = cy * N + cx; const t = S.type[i];
+      if (t === T.DEEP) continue;
+      const hc = t <= T.RIVER ? (t === T.RIVER ? S.wl[i] : G.SEA) : S.th[i];
+      const p = proj(x + hs, y + hs, hc);
+      if (p[0] < view[0] - mx || p[0] > view[2] + mx || p[1] < view[1] - my || p[1] > view[3] + my + 20) continue;
+      const k = Math.max(0, Math.min(NB, Math.round((depth(x + hs, y + hs) + N * 0.5) * 2)));
+      spinKey[n] = k; spinOrd[n] = y * N + x; spinBuck[k]++; n++;
+    }
+    for (let k = 1; k <= NB; k++) spinBuck[k] += spinBuck[k - 1];
+    for (let m = n - 1; m >= 0; m--) spinSorted[--spinBuck[spinKey[m]]] = spinOrd[m];
+    qc = cphi; qs = sphi; qGrow = 0.6 / R.cam.zoom; qCol = -1;
+    for (let m = 0; m < n; m++) { const i = spinSorted[m]; quadTile(i % N, (i / N) | 0, st); }
+    qFlush();
+  }
+  // a chunk whose picture for this view is not painted yet: its tiles stand in for it, in the same order
+  function quadChunk(ch) {
+    spinBuffers();
+    const st = lodStep(); qc = Math.cos(rot * QT); qs = Math.sin(rot * QT); qGrow = 0.6 / R.cam.zoom; qCol = -1;
+    const S = G.S;
+    for (let Y = ch.vy0; Y < ch.vy0 + C; Y += st) for (let X = ch.vx0; X < ch.vx0 + C; X += st) {
+      const a = tileFromView(X, Y), b = tileFromView(X + st - 1, Y + st - 1);
+      const x = Math.min(a[0], b[0]), y = Math.min(a[1], b[1]);
+      if (S.type[Math.min(N - 1, y + (st >> 1)) * N + Math.min(N - 1, x + (st >> 1))] === T.DEEP) continue;
+      quadTile(x, y, st);
+    }
+    qFlush();
+  }
+  // a box standing on the ground: the walls that face the god, then its top
+  function massBox(x0, y0, x1, y1, base, hgt, colL, colR, colTop, roof) {
+    const C = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+    const lo = C.map(c => proj(c[0], c[1], base)), hi = C.map(c => proj(c[0], c[1], base + hgt));
+    const mid = depth((x0 + x1) / 2, (y0 + y1) / 2), msx = (lo[0][0] + lo[2][0]) / 2;
+    for (let k = 0; k < 4; k++) {
+      const a = C[k], b = C[(k + 1) % 4];
+      if (depth((a[0] + b[0]) / 2, (a[1] + b[1]) / 2) <= mid) continue; // the back walls are hidden
+      ctx.fillStyle = (lo[k][0] + lo[(k + 1) % 4][0]) / 2 < msx ? colL : colR;
+      const p = lo[k], q = lo[(k + 1) % 4], u = hi[(k + 1) % 4], v = hi[k];
+      ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.lineTo(u[0], u[1]); ctx.lineTo(v[0], v[1]); ctx.closePath(); ctx.fill();
+    }
+    if (!roof) { ctx.fillStyle = colTop; ctx.beginPath(); ctx.moveTo(hi[0][0], hi[0][1]); for (let k = 1; k < 4; k++) ctx.lineTo(hi[k][0], hi[k][1]); ctx.closePath(); ctx.fill(); return; }
+    // a hipped roof: four slopes up to a ridge (or a point), the back ones first
+    const [rh, rc0, rc1, ridge] = roof; const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    const along = (x1 - x0) >= (y1 - y0); const half = ridge ? (along ? (x1 - x0) : (y1 - y0)) * 0.3 : 0;
+    const R0 = along ? [cx - half, cy] : [cx, cy - half], R1 = along ? [cx + half, cy] : [cx, cy + half];
+    const top0 = proj(R0[0], R0[1], base + hgt + rh), top1 = proj(R1[0], R1[1], base + hgt + rh);
+    const faces = [];
+    for (let k = 0; k < 4; k++) {
+      const a = C[k], b = C[(k + 1) % 4]; const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      // the ridge end nearest to this eave
+      const d0 = Math.hypot(mx - R0[0], my - R0[1]), d1 = Math.hypot(mx - R1[0], my - R1[1]);
+      const pts = Math.abs(d0 - d1) < 1e-6 ? [hi[k], hi[(k + 1) % 4], top1, top0] : [hi[k], hi[(k + 1) % 4], d0 < d1 ? top0 : top1];
+      faces.push({ d: depth(mx, my), pts, lit: (lo[k][0] + lo[(k + 1) % 4][0]) / 2 < msx });
+    }
+    faces.sort((a, b) => a.d - b.d);
+    for (const f of faces) { ctx.fillStyle = f.lit ? rc0 : rc1; ctx.beginPath(); ctx.moveTo(f.pts[0][0], f.pts[0][1]); for (let k = 1; k < f.pts.length; k++) ctx.lineTo(f.pts[k][0], f.pts[k][1]); ctx.closePath(); ctx.fill(); }
+  }
+  // how tall each kind of building stands (walls, then roof), in pixels of the four-side pictures
+  const MASS = {
+    hut: [10, 12], house: [15, 11], sobrado: [26, 12], insula: [38, 12], quarteirao: [40, 14], storehouse: [16, 14], workshop: [18, 14],
+    temple: [24, 16], monument: [40, 26], well: [5, 0], campfire: [1, 0], quartel: [18, 12], torre: [40, 9], mercado: [10, 10],
+    biblioteca: [24, 10], teatro: [22, 8], banhos: [20, 10], palacio: [30, 16], aqueduto: [28, 6], maravilha: [46, 40], doca: [5, 0],
+    celeiro: [20, 14], ruin: [6, 0], _: [16, 12],
+  };
+  const FLATROOF = { teatro: 1, mercado: 1, banhos: 1, doca: 1, well: 1, campfire: 1, ruin: 1, aqueduto: 1 };
+  function drawMass(b, sx, sy, t, nightF) {
+    if (b.type === 'praca' || b.type === 'farm') return; // they lie on the ground layer
+    // the small things keep their own drawing (round, or made of posts: they look the same from any side)
+    if (b.type === 'campfire') { drawCampfire(b, sx, sy, t, nightF); return; }
+    if (b.type === 'cemetery') { drawCemetery(b, sx, sy, t); return; }
+    if (b.type === 'cercado') { penStakes(b, penFront(b), b.built ? 1 : b.progress); return; }
+    if (b.type === 'well' && b.built) { const base = W.maxH(b.x, b.y, b.w, b.h); massBox(b.x + 0.28, b.y + 0.28, b.x + b.w - 0.28, b.y + b.h - 0.28, base, 5 / HS, '#a39a8c', '#7f776b', '#34536c', null); return; }
+    const pal = G.Arch.PAL[b.style] || G.Arch.PAL.classico; const m = MASS[b.type] || MASS._;
+    const ruin = b.type === 'ruin', site = !b.built && !b.upgradeFrom;
+    let wall = m[0] / HS, rh = m[1] / HS;
+    if (site) { wall = Math.max(0.35, wall * (b.progress || 0)); rh = 0; }
+    const base = W.maxH(b.x, b.y, b.w, b.h); const inset = b.w > 1 ? 0.14 : 0.12;
+    const wl = site ? '#c4a57a' : ruin ? '#8a8378' : pal.wl, wr = site ? '#9c8058' : ruin ? '#6a645a' : pal.wr;
+    const flat = site || ruin || FLATROOF[b.type] || pal.kind === 'flat' || rh < 0.3;
+    const roof = flat ? null : [rh * (pal.pitch ? 0.6 + pal.pitch * 0.45 : 1), pal.roof[0], pal.roof[1] || pal.roof[0], b.w !== b.h || b.w > 1];
+    massBox(b.x + inset, b.y + inset, b.x + b.w - inset, b.y + b.h - inset, base, wall, wl, wr, site ? '#b39466' : (pal.top || pal.roof[0]), roof);
   }
 
   // ------------------------------ entities ------------------------------
@@ -1335,7 +1633,7 @@
         if (!o.burnt && o.berries > 0) Art.berries(ctx, sx, sy, o.berries, 1);
         break;
       }
-      case 4: drawBuilding(o, sx, sy, t, nightF); break;
+      case 4: if (spin) drawMass(o, sx, sy, t, nightF); else drawBuilding(o, sx, sy, t, nightF); break;
       case 5: {
         const v = o;
         const night = nightF > 0.5;
@@ -1370,7 +1668,7 @@
         break;
       }
       case 7: G.Art.boat(ctx, o, sx, sy, t); break;
-      case 8: G.Art.drawM(ctx, G.Arch.arch(o.d, o.st), sx, sy, 1); break;
+      case 8: if (spin) { const pl = G.Arch.PAL[o.st] || G.Arch.PAL.classico; const bh = W.groundH(o.x + 0.5, o.y + 0.5); massBox(o.x + 0.3, o.y + 0.3, o.x + 0.7, o.y + 0.7, bh, 6, pl.wl, pl.wr, pl.top || pl.wl); } else G.Art.drawM(ctx, G.Arch.arch(o.d, o.st), sx, sy, 1); break;
       case 9: {
         const g = o.back ? o.ret : o.goods;
         const spr = G.Arch.cart(o.civ, !!g, g ? g.k : 'food');
@@ -1382,7 +1680,7 @@
         break;
       }
       case 10: G.Naval && G.Naval.drawShip(ctx, o, sx, sy, t, nightF, light, emisTorch); break;
-      case 11: { const wv = S.wall[o.i]; const hp = S.wallHp[o.i] || 0; G.Art.drawM(ctx, G.Siege.wallSprite(G.Siege.wallDir(o.i), o.w.style, o.w.mat, wv !== 1, wv === 4, hp < (o.w.mat === 'pedra' ? 90 : 35)), sx, sy, 1); if (wv === 4 && nightF > 0.3) { light(sx, sy - 14, 22, 'warm', 0.5 * nightF); emisTorch.push(sx + 6, sy - 16); } break; }
+      case 11: if (spin) { const x = o.i % N, y = (o.i / N) | 0; const stone = o.w.mat === 'pedra'; massBox(x + 0.18, y + 0.18, x + 0.82, y + 0.82, W.groundH(x + 0.5, y + 0.5), S.wall[o.i] === 1 ? 4.2 : 5, stone ? '#b8b0a0' : '#9a7650', stone ? '#8e8678' : '#76583a', stone ? '#cfc8b8' : '#ad8a62'); break; } else { const wv = S.wall[o.i]; const hp = S.wallHp[o.i] || 0; G.Art.drawM(ctx, G.Siege.wallSprite(G.Siege.wallDir(o.i), o.w.style, o.w.mat, wv !== 1, wv === 4, hp < (o.w.mat === 'pedra' ? 90 : 35)), sx, sy, 1); if (wv === 4 && nightF > 0.3) { light(sx, sy - 14, 22, 'warm', 0.5 * nightF); emisTorch.push(sx + 6, sy - 16); } break; }
       case 12: G.Siege.drawEngine(ctx, o, sx, sy, t); break;
       case 13: o.fn(ctx, o, sx, sy, t, nightF, FXA); break;
     }

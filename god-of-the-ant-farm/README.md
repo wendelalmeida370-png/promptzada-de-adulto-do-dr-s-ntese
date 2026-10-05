@@ -19,7 +19,7 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Ação | Controle |
 |---|---|
 | Mover a câmera | arrastar com o mouse (botão esquerdo ou direito) · `WASD` / setas |
-| Girar a câmera | `Q` / `E` · ou a bússola no canto (a agulha mostra onde ficou o norte) |
+| Girar a câmera | **dois dedos girando** na tela · **botão do meio** ou `Shift` + arrastar · arrastar a agulha da bússola · `Q` / `E` (um quarto de volta) |
 | Zoom | roda do mouse · pinça no touch |
 | Ver detalhes | clique num habitante, animal ou construção |
 | Seguir alguém | duplo clique no habitante · `F` |
@@ -48,7 +48,7 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 - **Progressão orgânica**: Acampamento → Aldeia → Povoado → Comunidade Agrícola → Vila Artesã → Vila Sagrada → Vila Desenvolvida → Pequena Civilização. Com gente suficiente, grupos partem para fundar novos assentamentos.
 - **Natureza viva**: florestas que se espalham e regeneram, peixes pulando, vaga-lumes, nuvens, chuvas, tempestades, secas (veja *Biomas* e *Animais* abaixo).
 - **Fogo de verdade**: se espalha com o vento, queima árvores, plantações e casas; moradores formam brigadas com baldes do poço; a chuva apaga.
-- **Dia e noite** com janelas acesas, tochas, fogueiras e braseiros.
+- **Dia e noite** com janelas acesas, tochas, fogueiras e braseiros. O dia é longo (200 s na velocidade 1×): dá tempo de ir longe, trabalhar e voltar antes de escurecer — a fome, o sono e a fé seguem o ritmo do dia, não do relógio.
 - **Eventos com moderação**: tempestades, secas, lobos, febre, estações de fertilidade, descobertas, viajantes chegando de barco.
 
 ## Montanhas, rios e o chão do mundo
@@ -61,11 +61,12 @@ O terreno não é mais uma planície: cada mundo nasce com **relevo de verdade**
 - **A chuva esculpe o terreno**: uma simulação de erosão cava ravinas nas encostas e espalha sedimento aos pés das montanhas antes do primeiro dia.
 - **Rios que descem**: nascem nas montanhas, seguem o vale até o mar ou até um lago, cada trecho na sua altura. Onde o terreno cai, o rio cai junto: **cachoeiras** com espuma, véu de água e névoa (e o barulho delas no som ambiente), corredeiras nos trechos íngremes. Riachos de montanha descem para engrossar os rios.
 - **Lagos nas bacias**, cada um no seu nível — inclusive lagos de altitude.
-- **Nomes**: a cordilheira, os picos (com a altitude), os passos, as grandes cachoeiras e os lagos ganham nomes, que aparecem no mapa e numa aba nova do Livro do Mundo, **Geografia**, com um botão para voar até cada lugar.
+- **Raso e fundo**: na beira dos rios e lagos a água é rasa — gente e bichos atravessam com água pelos joelhos; no meio é funda e só nadadores entram (capivaras, sapos, aves aquáticas, peixes). Ninguém dorme dentro d'água, e uma rua calçada vira passagem.
+- **Nomes**: a cordilheira, os picos (com a altitude), os passos, as grandes cachoeiras (com a altura da queda — as escadarias de saltos contam como uma só) e os lagos ganham nomes, que aparecem no mapa e numa aba nova do Livro do Mundo, **Geografia**, com um botão para voar até cada lugar.
 
 O relevo muda a vida: subir custa caro (os caminhos contornam as montanhas e procuram os passos), encostas deixam todos mais lentos, **paredões não se escalam**, ninguém constrói em penhasco, o alto é frio (a neve e a taiga sobem as encostas) e menos fértil, o minério está nas terras altas — e na guerra, **quem está no alto bate mais forte**.
 
-**A câmera gira** em passos de 90° (`Q`/`E` ou a bússola): o mesmo mundo visto dos quatro lados, com as construções, as pessoas e os animais virados para o lado certo. **Montanhas escondem** o que está atrás delas — quem você selecionou continua visível como um fantasma através da rocha.
+**A câmera gira livre**, de forma contínua: **dois dedos girando** na tela do celular (a pinça continua dando zoom), o **botão do meio** do mouse ou `Shift` + arrastar no PC, ou arrastando a agulha da bússola. Enquanto gira, o mundo é desenhado no ângulo do momento — o relevo de verdade, as construções como volumes nas cores e telhados do seu povo, árvores, gente e bichos de pé —; ao soltar, ele **assenta suavemente** no lado mais próximo (um giro rápido leva ao lado seguinte), onde volta o desenho completo. `Q`/`E` dão um quarto de volta suave. São quatro lados de descanso, com as construções, as pessoas e os animais virados para o lado certo. **Montanhas escondem** o que está atrás delas — quem você selecionou continua visível como um fantasma através da rocha.
 
 ## Avançar no tempo
 
