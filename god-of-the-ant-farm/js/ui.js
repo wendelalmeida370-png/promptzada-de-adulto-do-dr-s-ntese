@@ -128,7 +128,7 @@
     heal: ['heal', 'green'], food: ['leaf', 'green'], stone: ['stone', 'grey'], boat: ['boat', 'blue'], flower: ['fertility', 'pink'], info: ['leaf', 'green'],
     tech: ['tech', 'blue'], city: ['city', 'gold'], ship: ['ship', 'blue'], naval: ['ship', 'red'], cart: ['cart', 'gold'], wall: ['wall', 'grey'], road: ['road', 'gold'],
     aqueduct: ['aqueduct', 'blue'], wonder: ['wonder', 'gold'], siege: ['ram', 'red'], sacrifice: ['sacrifice', 'red'], lore: ['book', 'gold'], prophecy: ['word', 'gold'], cave: ['cave', 'orange'], paint: ['cave', 'red'],
-    mountain: ['mountain', 'brown'], wave: ['wave', 'blue'],
+    mountain: ['mountain', 'brown'], wave: ['wave', 'blue'], sea: ['wave', 'blue'],
     fest: ['fest', 'gold'], coin: ['scale', 'gold'], theft: ['chain', 'red'], army: ['sword', 'red'], battle: ['sword', 'red'], general: ['crown', 'red'], plague: ['heal', 'red'],
     curral: ['wolves', 'green'], estabulo: ['wolves', 'green'], acougue: ['hammer', 'gold'], tecelagem: ['hammer', 'gold'], mina: ['stone', 'grey'], forja: ['hammer', 'gold'], ourives: ['hammer', 'gold'],
     olaria: ['hammer', 'gold'], feira: ['scale', 'gold'], taverna: ['hammer', 'gold'], administracao: ['scroll', 'gold'], coletoria: ['scale', 'gold'], mercado_negro: ['chain', 'grey'], estatua: ['star', 'gold'],

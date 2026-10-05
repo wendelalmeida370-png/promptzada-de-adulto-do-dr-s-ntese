@@ -861,7 +861,7 @@
       const edges = [[1, 0, x + 1, y, x + 1, y + 1], [-1, 0, x, y + 1, x, y], [0, 1, x + 1, y + 1, x, y + 1], [0, -1, x, y, x + 1, y]];
       for (const [dx, dy, ax, ay, bx, by] of edges) {
         const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue;
-        if (S.type[ny * N + nx] >= T.SAND) (river ? shoreRiver : shore).push([ax, ay, bx, by, -dx, -dy, river ? S.wl[i] : G.SEA]);
+        if (S.type[ny * N + nx] >= T.SAND) (river ? shoreRiver : shore).push([ax, ay, bx, by, -dx, -dy, river ? S.wl[i] : G.SEA, !river && S.type[i] === T.SEA && G.Sea && G.Sea.lowLand(ny * N + nx) ? 1 : 0]);
       }
     }
   }
@@ -1352,6 +1352,8 @@
 
   // ------------------------------ water animation ------------------------------
   function drawWater(t, view) {
+    // the tide: bare flats at low water, the sea up the sand at high water (the foam follows it)
+    if (G.Sea && G.Sea.drawTide) G.Sea.drawTide(ctx, proj, t, view);
     // shore foam
     const inV = (p) => p[0] > view[0] - 20 && p[0] < view[2] + 20 && p[1] > view[1] - 20 && p[1] < view[3] + 20;
     for (let pass = 0; pass < 2; pass++) {
@@ -1359,6 +1361,7 @@
       const segs = pass === 0 ? shore : shore;
       for (const s of segs) {
         const ph = t * (pass ? 0.9 : 1.3) + (s[0] + s[1]) * 0.8 + pass * 2;
+        if (s[7] && G.Sea && G.Sea.tideChains) continue; // (the tide draws the foam of its beaches itself)
         const off = pass ? 0.22 + 0.16 * (0.5 + 0.5 * Math.sin(ph)) : 0.05 + 0.07 * (0.5 + 0.5 * Math.sin(ph));
         const a = proj(s[0] + s[4] * off, s[1] + s[5] * off, G.SEA), b = proj(s[2] + s[4] * off, s[3] + s[5] * off, G.SEA);
         if (!inV(a)) continue;
@@ -2228,6 +2231,7 @@
     if (o.air || o.inside || o.aboard || o.held || o.dead || (o.z || 0) > 0.3) return 0;
     const S = G.S; const xi = o.x | 0, yi = o.y | 0; if (xi < 0 || yi < 0 || xi >= N || yi >= N) return 0;
     const i = yi * N + xi; const ty = S.type[i]; if (ty > T.RIVER) return 0;
+    if (ty === T.SEA && G.Sea && G.Sea.dryAt(o.x, o.y)) return 0;
     if (o.kind) { const d = G.Animals.DEF[o.kind]; if (!d || d.cls === 'water' || d.cls === 'air') return 0; return (ty <= T.SEA || S.deep[i] ? 3.4 : 1.4) * (d.size || 1); }
     return o.act === 'swim' || (o.task && o.task.type === 'swim') ? 0 : 2.4;
   }

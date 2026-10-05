@@ -74,6 +74,7 @@
       fl[pick] = F.HOLE; Sea.holes.push({ x: pick % N, y: (pick / N) | 0, i: pick });
     }
     buildStacks();
+    buildTide();
     // what floats: the kelp's canopy, the ice of the cold seas
     Sea.holeE = Sea.holes.map(h => ({ fn: drawHole, x: h.x + 0.5, y: h.y + 0.5, i: h.i }));
     buildIce();
@@ -233,6 +234,148 @@
     const s0 = 0.18 + w * 0.12, s1 = 0.82 - w * 0.12; const p0 = [a[0] + (b[0] - a[0]) * s0, a[1] + (b[1] - a[1]) * s0 + 1 - w * 2], p1 = [a[0] + (b[0] - a[0]) * s1, a[1] + (b[1] - a[1]) * s1 + 1 - w * 2];
     c.moveTo(p0[0], p0[1]); c.lineTo(p1[0], p1[1]); c.stroke();
   }
+
+  // ------------------------------ the tide ------------------------------
+  // Twice a day the sea goes out and comes back. On the low shores it leaves a band of wet sand bare
+  // (pools among the rocks, the holes of the clams), and at high water it climbs up the beach.
+  Sea.tide = function () { const S = G.S; return Math.cos(((S.time || 0) * 2 + (S.day || 0) * 0.13) * Math.PI * 2); }; // 1 high .. -1 low
+  Sea.OUT = 0.48; Sea.IN = 0.2;
+  Sea.shift = function () { const t = Sea.tide(); return t < 0 ? -t * Sea.OUT : -t * Sea.IN; }; // + bare toward the sea, - water up the beach
+  Sea.lowTide = () => Sea.tide() < -0.45;
+  // a shore the tide can uncover: a beach or a low bank, not a cliff
+  Sea.lowLand = function (j) { const S = G.S; const t = S.type[j]; if (t < T.SAND || S.cliff[j]) return false; return t === T.SAND || W.tileH(j) < G.SEA + 0.55; };
+  Sea.tideSegs = []; Sea.tideMask = null;
+  const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  function buildTide() {
+    const S = G.S; Sea.tideSegs = []; const mask = Sea.tideMask = new Uint8Array(N * N);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const i = y * N + x; if (S.type[i] !== T.SEA) continue;
+      for (let k = 0; k < 4; k++) {
+        const [dx, dy] = D4[k], nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue;
+        const j = ny * N + nx; if (!Sea.lowLand(j)) continue;
+        mask[i] |= 1 << k;
+        const e = dx === 1 ? [x + 1, y, x + 1, y + 1] : dx === -1 ? [x, y + 1, x, y] : dy === 1 ? [x + 1, y + 1, x, y + 1] : [x, y, x + 1, y];
+        Sea.tideSegs.push([e[0], e[1], e[2], e[3], -dx, -dy, S.type[j] === T.SAND ? 0 : 1, i, j]);
+      }
+    }
+    // The edges join into lines along the shore; each corner moves along the mean of its edges'
+    // normals, so the band of the tide is one smooth strip (no notches, no crossings on a staircase coast).
+    const segs = Sea.tideSegs, from = new Map(), used = new Uint8Array(segs.length);
+    segs.forEach((g, k) => { const key = g[0] * 4096 + g[1]; (from.get(key) || from.set(key, []).get(key)).push(k); });
+    const chains = [], to = new Map();
+    segs.forEach((g, q) => { const key = g[2] * 4096 + g[3]; (to.get(key) || to.set(key, []).get(key)).push(q); });
+    for (let k0 = 0; k0 < segs.length; k0++) {
+      if (used[k0]) continue;
+      // walk back to where this line begins (or once round a loop)
+      let k = k0, guard = 0;
+      while (guard++ < segs.length) { const g = segs[k]; const prev = (to.get(g[0] * 4096 + g[1]) || []).find(q => !used[q]); if (prev === undefined || prev === k0) break; k = prev; }
+      const ch = []; let cur = k;
+      while (cur !== undefined && !used[cur]) {
+        used[cur] = 1; ch.push(cur); const g = segs[cur];
+        const nx = (from.get(g[2] * 4096 + g[3]) || []).find(q => !used[q]); cur = nx;
+      }
+      if (!ch.length) continue;
+      const P = [[segs[ch[0]][0], segs[ch[0]][1]]]; for (const q of ch) P.push([segs[q][2], segs[q][3]]);
+      const Nn = P.map((_, v) => {
+        let x = 0, y = 0; if (v > 0) { x += segs[ch[v - 1]][4]; y += segs[ch[v - 1]][5]; } if (v < ch.length) { x += segs[ch[v]][4]; y += segs[ch[v]][5]; }
+        const l = Math.hypot(x, y) || 1; return [x / l, y / l];
+      });
+      chains.push({ P, Nn, segs: ch });
+    }
+    Sea.tideChains = chains;
+  }
+  // is this point of a sea tile left dry by the low water?
+  Sea.dryAt = function (x, y) {
+    if (!Sea.tideMask) return false; const sh = Sea.shift(); if (sh <= 0.02) return false;
+    const xi = x | 0, yi = y | 0; if (!W.inb(xi, yi)) return false; const m = Sea.tideMask[yi * N + xi]; if (!m) return false;
+    for (let k = 0; k < 4; k++) {
+      if (!(m & (1 << k))) continue; const [dx, dy] = D4[k];
+      const d = dx === 1 ? xi + 1 - x : dx === -1 ? x - xi : dy === 1 ? yi + 1 - y : y - yi;
+      if (d < sh) return true;
+    }
+    return false;
+  };
+  // a place on a beach to go down to the water from (for the shellfish, the pools)
+  Sea.shellSpot = function (x, y, R) {
+    let best = [], R2 = R * R;
+    for (const s of Sea.tideSegs) {
+      const j = s[8], jx = j % N + 0.5, jy = ((j / N) | 0) + 0.5; const d = G.dist2(jx, jy, x, y); if (d > R2) continue;
+      if (G.S.occ[j]) continue;
+      best.push([d, s]); 
+    }
+    if (!best.length) return null;
+    best.sort((a, b) => a[0] - b[0]); best = best.slice(0, 6);
+    const s = best[Math.floor(G.R() * best.length)][1]; const j = s[8];
+    // the edge of the land, at a random place along the shore
+    const u = 0.2 + G.R() * 0.6, ex = s[0] + (s[2] - s[0]) * u, ey = s[1] + (s[3] - s[1]) * u;
+    return { x: ex - s[4] * 0.12, y: ey - s[5] * 0.12, wx: s[4], wy: s[5], rock: s[6], j };
+  };
+  // the bare flats and the water climbing the sand, drawn under the foam
+  Sea.drawTide = function (c, proj, t, view) {
+    if (!Sea.tideSegs.length) return;
+    const sh = Sea.shift();
+    const SEA = G.SEA, inV = p => p[0] > view[0] - 30 && p[0] < view[2] + 30 && p[1] > view[1] - 30 && p[1] < view[3] + 30;
+    const quad = (s, d0, d1) => {
+      const a0 = proj(s[0] + s[4] * d0, s[1] + s[5] * d0, SEA), b0 = proj(s[2] + s[4] * d0, s[3] + s[5] * d0, SEA);
+      if (!inV(a0)) return false;
+      const b1 = proj(s[2] + s[4] * d1, s[3] + s[5] * d1, SEA), a1 = proj(s[0] + s[4] * d1, s[1] + s[5] * d1, SEA);
+      c.moveTo(a0[0], a0[1]); c.lineTo(b0[0], b0[1]); c.lineTo(b1[0], b1[1]); c.lineTo(a1[0], a1[1]); c.closePath(); return true;
+    };
+    const chains = Sea.tideChains || [];
+    // a strip along each line of shore, between two distances from it (per edge, joined at the corners)
+    const strip = (pick, d0, d1) => {
+      for (const ch of chains) {
+        const P = ch.P, Nn = ch.Nn;
+        const q0 = proj(P[0][0], P[0][1], SEA); if (!inV(q0) && !inV(proj(P[P.length - 1][0], P[P.length - 1][1], SEA))) continue;
+        for (let v = 0; v < ch.segs.length; v++) {
+          if (pick && !pick(Sea.tideSegs[ch.segs[v]])) continue;
+          const A = P[v], B = P[v + 1], na = Nn[v], nb = Nn[v + 1];
+          const a0 = proj(A[0] + na[0] * d0, A[1] + na[1] * d0, SEA), b0 = proj(B[0] + nb[0] * d0, B[1] + nb[1] * d0, SEA);
+          const b1 = proj(B[0] + nb[0] * d1, B[1] + nb[1] * d1, SEA), a1 = proj(A[0] + na[0] * d1, A[1] + na[1] * d1, SEA);
+          c.moveTo(a0[0], a0[1]); c.lineTo(b0[0], b0[1]); c.lineTo(b1[0], b1[1]); c.lineTo(a1[0], a1[1]); c.closePath();
+        }
+      }
+    };
+    if (sh < 0) { // high water over the sand
+      c.fillStyle = 'rgba(104,196,204,0.5)'; c.beginPath(); strip(null, 0, sh); c.fill();
+    } else {
+      // low water: wet sand, dark wet rock, a shine where the sea just left
+      c.fillStyle = 'rgba(174,158,116,0.95)'; c.beginPath(); strip(g => !g[6], -0.03, sh); c.fill();
+      c.fillStyle = 'rgba(84,90,76,0.95)'; c.beginPath(); strip(g => g[6], -0.03, sh); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.13)'; c.beginPath(); strip(null, sh * 0.62, sh); c.fill();
+    }
+    // the foam follows the water's edge
+    for (let pass = 0; pass < 2; pass++) {
+      c.beginPath();
+      for (const ch of chains) {
+        const P = ch.P, Nn = ch.Nn;
+        const q0 = proj(P[0][0], P[0][1], SEA); if (!inV(q0) && !inV(proj(P[P.length - 1][0], P[P.length - 1][1], SEA))) continue;
+        for (let v = 0; v < P.length; v++) {
+          const ph = t * (pass ? 0.9 : 1.3) + (P[v][0] + P[v][1]) * 0.8 + pass * 2;
+          const off = Math.max(sh, 0) + (sh < 0 ? sh : 0) + (pass ? 0.22 + 0.16 * (0.5 + 0.5 * Math.sin(ph)) : 0.05 + 0.07 * (0.5 + 0.5 * Math.sin(ph)));
+          const q = proj(P[v][0] + Nn[v][0] * off, P[v][1] + Nn[v][1] * off, SEA);
+          if (v) c.lineTo(q[0], q[1]); else c.moveTo(q[0], q[1]);
+        }
+      }
+      c.strokeStyle = pass ? `rgba(255,255,255,${0.16 + 0.1 * Math.sin(t * 0.9)})` : `rgba(255,255,255,${0.55 + 0.15 * Math.sin(t * 1.3)})`;
+      c.lineWidth = pass ? 1 : 1.5; c.lineJoin = 'round'; c.stroke();
+    }
+    if (sh < 0.16 || G.Render.cam.zoom < 1) return;
+    // pools in the rocks, weed, the little holes the clams breathe through
+    for (const s of Sea.tideSegs) {
+      const a = proj(s[0], s[1], SEA); if (!inV(a)) continue;
+      const i = s[7];
+      for (let k = 0; k < 2; k++) {
+        const u = 0.15 + G.hash(i * 13 + k * 5 + s[4] * 3) * 0.7, d = sh * (0.25 + G.hash(i * 7 + k + s[5] * 5) * 0.55);
+        const p = proj(s[0] + (s[2] - s[0]) * u + s[4] * d, s[1] + (s[3] - s[1]) * u + s[5] * d, SEA);
+        if (s[6]) {
+          c.fillStyle = k ? 'rgba(70,110,60,0.85)' : 'rgba(126,196,214,0.9)'; c.beginPath(); c.ellipse(p[0], p[1], k ? 2 : 3.2, k ? 0.8 : 1.3, 0, 0, 6.283); c.fill();
+        } else {
+          c.fillStyle = 'rgba(92,80,56,0.7)'; c.fillRect(p[0], p[1], 0.9, 0.5); c.fillRect(p[0] + 3, p[1] + 0.8, 0.8, 0.45);
+        }
+      }
+    }
+  };
 
   // ------------------------------ ice on the cold seas ------------------------------
   // floes drift with the wind along the frozen coasts, and melt back where the water warms

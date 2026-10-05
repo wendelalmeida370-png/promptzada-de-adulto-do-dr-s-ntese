@@ -121,6 +121,7 @@
     else if (t.type === 'hunt' || t.type === 'fight') { const o = S.animals.get(t.id); if (o && o.claim === v.id) o.claim = 0; }
     else if (t.type === 'farm') { const b = S.buildings.get(t.id); if (b && b.crops && b.crops[t.k] && b.crops[t.k].c === v.id) b.crops[t.k].c = 0; }
     else if (t.type === 'fish' || t.type === 'quarry') { Vg.fishSpots.delete(t.spot); }
+    else if ((t.type === 'mariscar' || t.type === 'pocas') && t.bx !== undefined && t.k > 0) { v.x = t.bx; v.y = t.by; } // (called away from the flats: back on the beach)
     else if (t.type === 'build') {
       const b = S.buildings.get(t.id);
       if (b && t.counted && v.carry && b.incoming[v.carry.k] !== undefined) b.incoming[v.carry.k] = Math.max(0, b.incoming[v.carry.k] - v.carry.n);
@@ -430,6 +431,8 @@
     // from nine on, a child often goes along to learn a parent's trade
     if (v.age >= 9 && G.Life && !G.isEvening() && r < 0.4) { const t = G.Life.apprenticeTask(v, H); if (t) return; }
     if (v.age >= 10 && r < 0.22) { const t = gatherTask(v); if (t) { t.kind = 'help'; return; } }
+    // low water: the pools left among the rocks and the sand are full of things to catch
+    if (v.age >= 5 && G.Sea && G.Sea.lowTide() && G.R() < 0.4) { const sp = G.Sea.shellSpot(v.x, v.y, 11); if (sp) { setTask(v, { type: 'pocas', x: sp.x, y: sp.y, wx: sp.wx, wy: sp.wy, rock: sp.rock, pri: 0.1, kind: 'play' }); return; } }
     setTask(v, { type: 'play', pri: 0.1, kind: 'play' });
   }
 
@@ -497,6 +500,12 @@
     return setTask(v, { type: 'drift', x: spot.x, y: spot.y, wx: spot.wx, wy: spot.wy, pri: 1 });
   }
   function gatherTask(v) { const b = nearestBush(v); if (!b) return null; b.claim = v.id; return setTask(v, { type: 'gather', id: b.id, pri: 1 }); }
+  // at low water the beaches give food too: clams and cockles in the wet sand, crabs in the pools
+  function shellTask(v) {
+    if (!G.Sea || !G.Sea.lowTide()) return null;
+    const sp = G.Sea.shellSpot(v.x, v.y, 18); if (!sp) return null;
+    return setTask(v, { type: 'mariscar', x: sp.x, y: sp.y, wx: sp.wx, wy: sp.wy, rock: sp.rock, pri: 1 });
+  }
   function mineTask(v) {
     const r = nearestRock(v);
     if (r) { r.claim = v.id; return setTask(v, { type: 'mine', id: r.id, pri: 1 }); }
@@ -678,14 +687,14 @@
         break;
       }
       case 'lenhador': t = (need('wood') && (chopTask(v) || driftTask(v))) || (need('food') && gatherTask(v)); break;
-      case 'coletor': t = need('food') ? (gatherTask(v) || (G.R() < 0.7 ? fishTask(v) : (preyCount() > 8 && huntTask(v, 14))) || fishTask(v)) : (need('wood') && chopTask(v)); break;
+      case 'coletor': t = need('food') ? ((G.R() < 0.5 && shellTask(v)) || gatherTask(v) || (G.R() < 0.7 ? fishTask(v) : (preyCount() > 8 && huntTask(v, 14))) || fishTask(v)) : (need('wood') && chopTask(v)); break;
       case 'agricultor': t = farmTask(v) || (need('food') && gatherTask(v)); break;
       case 'construtor': t = buildTask(v) || (G.City && G.City.paveTask(v, H)) || (need('wood') && chopTask(v)) || (need('stone') && mineTask(v)); break;
       case 'mineiro': t = (need('stone') && mineTask(v)) || (need('wood') && chopTask(v)); break;
       case 'cacador': t = ((need('food') || G.R() < 0.2) && preyCount() > 6 && huntTask(v)) || setTask(v, { type: 'patrol', pri: 1 }); break;
       case 'sacerdote': t = setTask(v, { type: 'pray', pri: 1, priest: true }); break;
-      case 'anciao': t = G.R() < 0.35 && need('food') ? gatherTask(v) : setTask(v, { type: 'rest', pri: 0.5, stories: true }); break;
-      default: t = gatherTask(v) || chopTask(v);
+      case 'anciao': t = G.R() < 0.35 && need('food') ? (shellTask(v) || gatherTask(v)) : setTask(v, { type: 'rest', pri: 0.5, stories: true }); break;
+      default: t = (G.R() < 0.3 && shellTask(v)) || gatherTask(v) || chopTask(v);
     }
     return t || leisureTask(v);
   }
@@ -773,6 +782,42 @@
             const n = Math.min(cap(v), r.stone); r.stone -= n;
             if (r.stone <= 0) G.Nature.removeRock(r);
             v.carry = { k: 'stone', n }; deliverTask(v);
+          }
+        }
+        break;
+      }
+      case 'mariscar': case 'pocas': {
+        const kid = t.type === 'pocas';
+        if (t.st === 0) { if (!Vg.goto(v, t.x, t.y, false)) return end(v); t.st = 1; }
+        else if (t.st === 1) { if (move(v, dt, kid ? 1.15 : 1)) { t.st = 2; t.w = 0; t.k = 0; t.bx = v.x; t.by = v.y; v.actT = 0; } }
+        else if (t.st === 2) {
+          // out onto the wet sand, following the water down
+          const sh = G.Sea.shift();
+          if (sh < 0.14) { t.st = 3; if (t.k > 0.2 && !v._tide) { v._tide = 1; emote(v, 'fear', 1.6); G.Life && G.Life.bio(v, 'note', kid ? 'A maré subiu de repente na poça onde brincava e voltou correndo, molhado até o peito' : 'A maré voltou de repente enquanto catava mariscos e saiu da água correndo, com o cesto na cabeça'); } break; }
+          const want = Math.min(sh - 0.1, kid ? 0.32 : 0.36);
+          t.k = Math.min(want, t.k + dt * 0.22); v.moving = t.k < want - 0.01;
+          v.x = t.bx + t.wx * t.k; v.y = t.by + t.wy * t.k;
+          if (!v.moving) {
+            v.act = 'gather'; G.faceTo(v, t.wx, t.wy);
+            t.w += dt * (kid ? 1 : workMul(v));
+            if (v.actT > 1.6) { v.actT = 0; G.FX && G.FX.splash && G.FX.splash(v.x + t.wx * 0.15, v.y + t.wy * 0.15, 0.1); if (kid && G.R() < 0.35) emote(v, 'happy', 1); }
+          }
+          if (kid && t.w > 10) {
+            if (!v._pool) { v._pool = 1; G.Life && G.Life.bio(v, 'note', t.rock ? ['Achou um polvinho numa poça entre as pedras da maré baixa', 'Pegou um caranguejo numa poça da maré baixa e saiu correndo com ele na mão', 'Achou uma estrela-do-mar numa poça da maré baixa'][Math.floor(G.R() * 3)] : 'Cavou a areia molhada da maré baixa atrás dos mariscos que esguicham água'); }
+            t.st = 3;
+          } else if (!kid && t.w > 9) { t.got = Math.min(cap(v), G.ri(2, 4)); t.st = 3; }
+        } else {
+          // back up the beach (in a hurry if the water is coming back)
+          const hurry = G.Sea.shift() < 0.14;
+          t.k = Math.max(0, t.k - dt * (hurry ? 0.75 : 0.35)); v.moving = t.k > 0;
+          v.x = t.bx + t.wx * t.k; v.y = t.by + t.wy * t.k;
+          if (t.k <= 0) {
+            v.moving = false;
+            if (t.got) {
+              v.carry = { k: 'food', n: t.got }; emote(v, 'food', 1.2);
+              const f = G.Fac.ofV(v); if (f && !f.shell) { f.shell = 1; const set = S.settlements.get(v.set); G.Village.log(`Na maré baixa, ${v.name}, de ${set ? set.name : f.name}, descobriu que a areia molhada esconde mariscos: agora a praia também dá de comer.`, 'sea', v.x, v.y); }
+              deliverTask(v);
+            } else end(v);
           }
         }
         break;
@@ -1386,7 +1431,7 @@
         const i = W.idx(v.x, v.y);
         if (!W.walkable(i) && S.type[i] !== T.SEA && S.type[i] !== T.DEEP) {
           const n = W.nearestLand(v.x, v.y, 5); if (n) { v.x = n[0]; v.y = n[1]; v.path = null; if (v.task) v.task.st = 0; }
-        } else if (S.type[i] <= T.SEA && (!v.task || v.task.type !== 'swim')) { setTask(v, { type: 'swim', pri: 6 }); }
+        } else if (S.type[i] <= T.SEA && (!v.task || v.task.type !== 'swim') && !(v.task && (v.task.type === 'mariscar' || v.task.type === 'pocas') && v.task.st >= 2)) { setTask(v, { type: 'swim', pri: 6 }); }
       }
     }
     // (a list of its own: people die and are born while the loop runs)
@@ -1443,6 +1488,8 @@
       case 'mine': return t.st < 2 ? 'Indo quebrar pedras' : 'Quebrando pedras';
       case 'quarry': return t.st < 2 ? 'Indo à pedreira' : 'Extraindo pedra da encosta';
       case 'drift': return t.st < 2 ? 'Indo à praia' : 'Catando madeira que o mar trouxe';
+      case 'mariscar': return t.st < 2 ? 'Indo à praia na maré baixa' : t.st === 3 ? (G.Sea.shift() < 0.14 ? 'Fugindo da maré que volta!' : 'Voltando com o cesto de mariscos') : t.rock ? 'Catando mariscos e caranguejos nas pedras da maré baixa' : 'Cavando mariscos na areia molhada da maré baixa';
+      case 'pocas': return t.st < 2 ? 'Correndo para a praia: a maré baixou!' : t.st === 3 ? 'Voltando da praia' : 'Brincando nas poças da maré baixa';
       case 'fish': return t.st < 2 ? 'Indo pescar' : 'Pescando';
       case 'hunt': { const a = S.animals.get(t.id); return a && a.dead ? 'Recolhendo a caça' : `Caçando ${a ? ANIMAL[a.kind] : 'um animal'}`; }
       case 'fight': { const a = S.animals.get(t.id); return `Lutando contra ${a ? ANIMAL[a.kind] : 'uma fera'}!`; }
