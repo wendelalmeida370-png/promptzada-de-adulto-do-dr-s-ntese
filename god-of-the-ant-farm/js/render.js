@@ -36,7 +36,8 @@
   R.vdirToWorld = (dX, dY) => spin ? [dX * cphi + dY * sphi, -dX * sphi + dY * cphi] : rot === 0 ? [dX, dY] : rot === 1 ? [dY, -dX] : rot === 2 ? [-dX, -dY] : [-dY, dX];
   // which way a world direction points on screen: +1 right, -1 left
   R.sdir = (dx, dy) => ((spin ? (dx * cphi - dy * sphi) - (dx * sphi + dy * cphi) : rot === 0 ? dx - dy : rot === 1 ? -dy - dx : rot === 2 ? dy - dx : dy + dx) > 0 ? 1 : -1);
-  R.mirror = () => (rot & 1 ? -1 : 1);
+  let mirOver = -1; // (while turning: the picture of the other side, for the cross-fade)
+  R.mirror = () => ((mirOver >= 0 ? mirOver : rot) & 1 ? -1 : 1);
   // the side a creature faces on screen (its world direction when known)
   R.sface = o => (o.fx !== undefined && o.fx !== null ? R.sdir(o.fx, o.fy) : (o.face || 1) * (rot >= 2 ? -1 : 1));
   // a world offset around an anchor, on screen
@@ -1863,6 +1864,21 @@
     massBox(b.x + inset, b.y + inset, b.x + b.w - inset, b.y + b.h - inset, base, wall, wl, wr, site ? '#b39466' : (pal.top || pal.roof[0]), roof);
   }
 
+  // While the world turns, a building keeps its whole picture (roofs, walls, every detail): the picture of
+  // the side it is nearest to. Around the middle of a quarter turn the picture of the next side fades in
+  // over it, so the building turns with the world instead of jumping. (Far away, the masses are enough.)
+  function drawSpinBuilding(b, sx, sy, t, nightF) {
+    if (R.cam.zoom < 0.42) { drawMass(b, sx, sy, t, nightF); return; }
+    drawBuilding(b, sx, sy, t, nightF);
+    const q = spin.phi / QT, fr = q - Math.floor(q), d = Math.abs(fr - 0.5);
+    if (d > 0.13) return;
+    const other = fr < 0.5 ? Math.floor(q) + 1 : Math.floor(q);
+    const a = Math.pow(1 - d / 0.13, 1.6);
+    if (((other % 2) + 2) % 2 === (rot & 1)) return; // (the same picture: nothing to fade)
+    ctx.save(); ctx.globalAlpha = a; mirOver = ((other % 4) + 4) % 4;
+    try { drawBuilding(b, sx, sy, t, nightF); } finally { mirOver = -1; ctx.restore(); }
+  }
+
   // ------------------------------ entities ------------------------------
   let farLod = false;
   // in water the body goes under: waders show from the knees up, swimmers only their back and head
@@ -1926,7 +1942,7 @@
         if (!o.burnt && o.berries > 0) Art.berries(ctx, sx, sy, o.berries, 1);
         break;
       }
-      case 4: if (spin) drawMass(o, sx, sy, t, nightF); else drawBuilding(o, sx, sy, t, nightF); break;
+      case 4: if (spin) drawSpinBuilding(o, sx, sy, t, nightF); else drawBuilding(o, sx, sy, t, nightF); break;
       case 5: {
         const v = o;
         const night = nightF > 0.5;

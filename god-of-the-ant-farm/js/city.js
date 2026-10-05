@@ -21,7 +21,7 @@
     teatro: { name: 'Teatro', w: 3, h: 3, cost: { wood: 24, stone: 80 }, work: 80, blocks: true, hp: 320, civic: 1 },
     banhos: { name: 'Banhos', w: 2, h: 2, cost: { wood: 14, stone: 50 }, work: 52, blocks: true, hp: 240, civic: 1 },
     palacio: { name: 'Palácio', w: 3, h: 3, cost: { wood: 50, stone: 100 }, work: 100, blocks: true, hp: 420, civic: 1 },
-    doca: { name: 'Doca', w: 2, h: 2, cost: { wood: 40 }, work: 34, blocks: true, dropoff: true, hp: 180 },
+    doca: { name: 'Doca', w: 2, h: 2, cost: { wood: 26, stone: 14 }, work: 34, blocks: true, dropoff: true, hp: 180 },
     aqueduto: { name: 'Aqueduto', w: 1, h: 1, cost: { wood: 10, stone: 55 }, work: 55, blocks: true, hp: 300 },
     maravilha: { name: 'Maravilha', w: 3, h: 3, cost: { wood: 60, stone: 240 }, work: 300, blocks: true, hp: 900, civic: 1 },
     quarteirao: { name: 'Quarteirão', w: 2, h: 2, cost: { wood: 40, stone: 80 }, work: 95, housing: 40, blocks: true, hp: 380 },
@@ -175,13 +175,17 @@
   function siteAnywhere(fac, type) { for (const b of G.S.buildings.values()) if (b.type === type && G.Village.facOfSet(b.set) === fac.id) return true; return false; }
   function trades(fac) { for (const k in fac.rel) if (fac.rel[k].trade > 0) return true; return false; }
   Ci.plan = function (set, fac, c, want, pop) {
-    const t = set.tier || 0; if (t < 2) return;
+    const t = set.tier || 0;
+    // a village by the sea gets its port as soon as its people knows the sea (sooner when food is short)
+    if (t < 2 && !c.doca && !c.siteTypes.doca && has(fac, 'navegacao') && Ci.coastal(set) && (pop >= 9 || (pop >= 6 && fac.stock.food < G.Fac.pop(fac.id) * 1.5))) want.unshift('doca');
+    if (t < 2) return;
     const st = fac.stock;
     const isCap = G.Fac.capitalOf(fac.id) === set;
     // big cities want a second (third...) square, market, bath-house
     const need = k => !c.siteTypes[k] && (c[k] || 0) < 1 + (k === 'praca' ? Math.floor(pop / 110) : k === 'mercado' ? Math.floor(pop / 140) : k === 'banhos' ? Math.floor(pop / 180) : k === 'teatro' ? Math.floor(pop / 260) : k === 'celeiro' ? Math.floor(pop / 150) : 0);
     if (need('celeiro') && (c.farm || 0) >= 2 && pop >= 18) want.push('celeiro');
-    if (need('doca') && has(fac, 'navegacao') && pop >= 12 && Ci.coastal(set)) want.push('doca');
+    // the first port jumps the queue; a second one waits its turn
+    if (need('doca') && has(fac, 'navegacao') && pop >= 12 && Ci.coastal(set)) { if (!c.doca) want.unshift('doca'); else want.push('doca'); }
     if (need('aqueduto') && t >= 3 && has(fac, 'engenharia') && st.stone >= 40 && Ci.waterSource(set)) want.push('aqueduto');
     // only one great civic project at a time
     for (const k in c.siteTypes) if (G.BDEF[k] && G.BDEF[k].civic) return;
@@ -417,7 +421,7 @@
     if (!fac) { Ci.claims.delete(t.i); return H.end(v); }
     const bridge = S.type[t.i] === T.RIVER;
     const stone = t.lvl === 1 ? 0 : bridge ? 3 : 1, wood = bridge ? 2 : 0;
-    if (fac.stock.stone < stone || fac.stock.wood < wood || S.occ[t.i]) { Ci.claims.delete(t.i); return H.end(v); }
+    if (fac.stock.stone < stone || fac.stock.wood - (wood ? fac._rsv || 0 : 0) < wood || S.occ[t.i]) { Ci.claims.delete(t.i); return H.end(v); }
     fac.stock.stone -= stone; fac.stock.wood -= wood;
     if (S.road[t.i] < t.lvl) { if (!S.road[t.i] && S.deep[t.i]) { S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand(); } S.road[t.i] = t.lvl; }
     G.Nature.markDirty(t.i);

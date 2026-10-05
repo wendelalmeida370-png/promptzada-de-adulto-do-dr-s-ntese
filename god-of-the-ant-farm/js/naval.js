@@ -136,7 +136,7 @@
   function spawn(kind, fac, dock, o) {
     const d = Nv.dockInfo(dock); if (!d.moor) return null;
     const def = Nv.SHIP[kind];
-    if (fac.stock.wood < def.cost + 6) return null;
+    if (fac.stock.wood < def.cost + (kind === 'pesca' ? 0 : 6)) return null;
     fac.stock.wood -= def.cost;
     const s = Object.assign({ id: G.S.nextId++, kind, fac: fac.id, civ: fac.civ || null, dock: dock.id, x: d.moor[0], y: d.moor[1], path: null, pi: 0, st: 'idle', t: 0, hp: def.hp, maxHp: def.hp, face: 1, crew: [], cd: 0, born: G.S.day }, o || {});
     G.S.ships.push(s);
@@ -694,12 +694,25 @@
   function manageFleets() {
     const S = G.S;
     for (const f of G.Fac.all()) {
+      f._rsv = 0;
       if (!G.Civ.has(f.id, 'navegacao')) continue;
+      // no timber on the island: the quay is finished in stone, block by block
+      if (f.stock.wood < 4 && f.stock.stone >= 12) for (const b of S.buildings.values()) {
+        if (b.type !== 'doca' || b.built || G.Village.facOfSet(b.set) !== f.id) continue;
+        const r = Math.min(4, Math.floor(b.need.wood - (b.incoming.wood || 0)));
+        if (r >= 1) { b.need.wood -= r; b.need.stone += Math.ceil(r * 1.5); }
+        break;
+      }
       const docks = Nv.docksOf(f.id); if (!docks.length) continue;
       const pop = G.Fac.pop(f.id);
       // fishing boats
       const fishers = Nv.shipsOf(f.id, 'pesca').length;
-      if (fishers < Math.min(docks.length * 2, 1 + Math.floor(pop / 25)) && f.stock.wood > 30) { const d = G.pick(docks); if (Nv.dockInfo(d).moor && !Nv.blockaded(d)) spawn('pesca', f, d); }
+      // hunger sends more boats out: the sea is the biggest pantry there is
+      const hungry = f.stock.food < pop * 1.6;
+      const wantF = Math.min(docks.length * (hungry ? 4 : 2), 1 + Math.floor(pop / (hungry ? 12 : 22)) + (hungry ? 1 : 0));
+      // the first boats are worth more than another hut: the builders leave their wood alone
+      if (fishers < Math.min(wantF, docks.length * (hungry ? 2 : 1))) f._rsv = Nv.SHIP.pesca.cost + 2;
+      if (fishers < wantF && f.stock.wood >= (hungry || fishers < docks.length ? Nv.SHIP.pesca.cost : 26)) { const d = G.pick(docks); if (Nv.dockInfo(d).moor && !Nv.blockaded(d)) spawn('pesca', f, d); }
       // explorers look for peoples we have not met yet
       const unmet = G.Fac.all().some(o => o.id !== f.id && G.Fac.rel(f.id, o.id) && !G.Fac.rel(f.id, o.id).met);
       if (unmet && !Nv.shipsOf(f.id, 'explorador').length && G.R() < 0.25) { const d = G.pick(docks); const di = Nv.dockInfo(d); if (di.moor && Nv.openSea(di.moor[0], di.moor[1])) { const s = spawn('explorador', f, d); if (s && !f._explored) { f._explored = 1; const st = S.settlements.get(d.set); log(`Um barco de ${f.name} parte de ${st ? st.name : 'seu porto'} para explorar o horizonte.`, 'ship', s.x, s.y); } } }

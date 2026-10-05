@@ -26,6 +26,8 @@
   F.idOfV = v => { const s = G.S.settlements.get(v.set); return s ? s.fac : 0; };
   F.stockOfSet = setId => { const f = F.ofSet(setId); return f ? f.stock : F._nullStock; };
   F.stockV = v => F.stockOfSet(v.set);
+  // what the builders may take: wood set aside for a boat stays in the store
+  F.free = (setId, k) => { const f = F.ofSet(setId); if (!f) return 0; return (f.stock[k] || 0) - (k === 'wood' ? (f._rsv || 0) : 0); };
   F._nullStock = { food: 0, wood: 0, stone: 0 };
   F.hex = fid => { const f = F.get(fid); return f ? F.COLORS[f.ci % F.COLORS.length].hex : '#999999'; };
   F.settlementsOf = fid => [...G.S.settlements.values()].filter(s => s.fac === fid);

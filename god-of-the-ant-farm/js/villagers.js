@@ -484,6 +484,18 @@
     });
   }
   function chopTask(v) { const t = nearestTree(v); if (!t) return null; t.claim = v.id; return setTask(v, { type: 'chop', id: t.id, pri: 1 }); }
+  // an island without forest still has its beaches: the sea brings planks, branches, whole trunks
+  function driftTask(v) {
+    const S = G.S;
+    const spot = nearestInGrid(v, 22, i => {
+      if (S.type[i] !== T.SAND || !W.walkable(i) || S.occ[i] || G.R() < 0.5) return null;
+      const x = i % N, y = (i / N) | 0;
+      for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) { const nx = x + dx, ny = y + dy; if (W.inb(nx, ny) && S.type[ny * N + nx] <= T.SEA) return { x: x + 0.5 + dx * 0.2, y: y + 0.5 + dy * 0.2, wx: dx, wy: dy }; }
+      return null;
+    });
+    if (!spot) return null;
+    return setTask(v, { type: 'drift', x: spot.x, y: spot.y, wx: spot.wx, wy: spot.wy, pri: 1 });
+  }
   function gatherTask(v) { const b = nearestBush(v); if (!b) return null; b.claim = v.id; return setTask(v, { type: 'gather', id: b.id, pri: 1 }); }
   function mineTask(v) {
     const r = nearestRock(v);
@@ -588,13 +600,13 @@
       if (b.built || b.set !== v.set || b.type === 'ruin') continue;
       if (b.unreach) { if (b.unreach >= 6) { abandonSite(b); continue; } if (S.clock - b.unreachT < 30) continue; }
       const st = G.Fac.stockOfSet(b.set);
-      let needMat = false; for (const k in b.need) if (b.need[k] - (b.incoming[k] || 0) > 0 && (st[k] || 0) >= 1) { needMat = true; break; }
+      let needMat = false; for (const k in b.need) if (b.need[k] - (b.incoming[k] || 0) > 0 && G.Fac.free(b.set, k) >= 1) { needMat = true; break; }
       const canWork = b.progress < allowedProgress(b) - 0.001;
       const carryFits = v.carry && b.need[v.carry.k] > 0;
       if (!needMat && !canWork && !carryFits) continue;
       let builders = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'build' && o.task.id === b.id) builders++;
       const [cx, cy] = G.Village.center(b);
-      const d = G.dist2(v.x, v.y, cx, cy) + builders * 40 + (b.type === 'campfire' ? -500 : 0) + (b.type === 'hut' || b.type === 'house' ? -30 : 0);
+      const d = G.dist2(v.x, v.y, cx, cy) + builders * 40 + (b.type === 'campfire' ? -500 : 0) + (b.type === 'hut' || b.type === 'house' ? -30 : 0) + (b.type === 'doca' ? -40 : 0);
       if (d < bd) { bd = d; best = b; }
     }
     if (!best) return null;
@@ -665,7 +677,7 @@
         t = (need('food') && r < (hungry ? 0.8 : 0.2) && ((preyCount() > 6 && huntTask(v)) || gatherTask(v) || fishTask(v))) || (r < 0.35 ? setTask(v, { type: 'drill', pri: 1 }) : (G.Eco && G.Eco.guardTask(v, H)) || setTask(v, { type: 'patrol', pri: 1 }));
         break;
       }
-      case 'lenhador': t = (need('wood') && chopTask(v)) || (need('food') && gatherTask(v)); break;
+      case 'lenhador': t = (need('wood') && (chopTask(v) || driftTask(v))) || (need('food') && gatherTask(v)); break;
       case 'coletor': t = need('food') ? (gatherTask(v) || (G.R() < 0.7 ? fishTask(v) : (preyCount() > 8 && huntTask(v, 14))) || fishTask(v)) : (need('wood') && chopTask(v)); break;
       case 'agricultor': t = farmTask(v) || (need('food') && gatherTask(v)); break;
       case 'construtor': t = buildTask(v) || (G.City && G.City.paveTask(v, H)) || (need('wood') && chopTask(v)) || (need('stone') && mineTask(v)); break;
@@ -762,6 +774,16 @@
             if (r.stone <= 0) G.Nature.removeRock(r);
             v.carry = { k: 'stone', n }; deliverTask(v);
           }
+        }
+        break;
+      }
+      case 'drift': {
+        if (t.st === 0) { if (!Vg.goto(v, t.x, t.y, false)) return end(v); t.st = 1; }
+        else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; t.w = 0; } }
+        else {
+          v.act = 'gather'; G.faceTo(v, t.wx, t.wy);
+          t.w += dt * workMul(v);
+          if (t.w > 6) { v.carry = { k: 'wood', n: Math.min(cap(v), G.ri(2, 4)) }; emote(v, 'wood', 1.2); deliverTask(v); }
         }
         break;
       }
@@ -1087,7 +1109,7 @@
       }
       if (v.carry) return deliverTask(v);
       const stk = G.Fac.stockOfSet(b.set);
-      const mat = Object.keys(b.need).find(k => b.need[k] - (b.incoming[k] || 0) > 0 && (stk[k] || 0) >= 1);
+      const mat = Object.keys(b.need).find(k => b.need[k] - (b.incoming[k] || 0) > 0 && G.Fac.free(b.set, k) >= 1);
       if (mat) {
         const d = G.Village.nearestDropoff(v.x, v.y, v.set); if (!d) return end(v);
         const [dx, dy] = G.Village.frontTile(d);
@@ -1100,7 +1122,7 @@
     if (t.st === 1) {
       if (!move(v, dt)) return;
       const stk = G.Fac.stockOfSet(b.set);
-      const n = Math.min(cap(v), Math.ceil(b.need[t.mat] - (b.incoming[t.mat] || 0)), Math.floor(stk[t.mat] || 0));
+      const n = Math.min(cap(v), Math.ceil(b.need[t.mat] - (b.incoming[t.mat] || 0)), Math.floor(G.Fac.free(b.set, t.mat)));
       if (n <= 0) { t.st = 0; return; }
       stk[t.mat] -= n; v.carry = { k: t.mat, n }; b.incoming[t.mat] = (b.incoming[t.mat] || 0) + n; t.counted = true;
       if (!gotoB(v, b)) { b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - n); t.counted = false; end(v); return deliverTask(v); }
@@ -1408,6 +1430,7 @@
       case 'forage': return 'Procurando algo para comer';
       case 'mine': return t.st < 2 ? 'Indo quebrar pedras' : 'Quebrando pedras';
       case 'quarry': return t.st < 2 ? 'Indo à pedreira' : 'Extraindo pedra da encosta';
+      case 'drift': return t.st < 2 ? 'Indo à praia' : 'Catando madeira que o mar trouxe';
       case 'fish': return t.st < 2 ? 'Indo pescar' : 'Pescando';
       case 'hunt': { const a = S.animals.get(t.id); return a && a.dead ? 'Recolhendo a caça' : `Caçando ${a ? ANIMAL[a.kind] : 'um animal'}`; }
       case 'fight': { const a = S.animals.get(t.id); return `Lutando contra ${a ? ANIMAL[a.kind] : 'uma fera'}!`; }

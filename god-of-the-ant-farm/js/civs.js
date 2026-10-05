@@ -239,8 +239,19 @@
   };
   C.nextTech = function (f) {
     const c = G.CIVS[f.civ];
-    const order = c ? c.techOrder : Object.keys(G.TECH);
-    return order.find(t => !f.tech.known[t]) || null;
+    const order = (c ? c.techOrder : Object.keys(G.TECH)).filter(t => !f.tech.known[t]);
+    if (!order.length) return null;
+    // a people living by the sea turns to it early: on islands, when hungry, or when its towns face the water
+    if (order.includes('navegacao') && order[0] !== 'navegacao' && C.seaCalls(f)) return 'navegacao';
+    return order[0];
+  };
+  C.seaCalls = function (f) {
+    if (!G.City || !G.City.coastal) return false;
+    const sets = G.Fac.settlementsOf(f.id); if (!sets.length) return false;
+    const coast = sets.filter(s => G.City.coastal(s)).length; if (!coast) return false;
+    const S = G.S; const pop = G.Fac.pop(f.id);
+    const islandish = S.mapType === 'mar' || S.mapType === 'arquipelago' || S.mapType === 'ilha';
+    return islandish || f.stock.food < pop * 1.6 || coast * 2 >= sets.length || f.civ === 'nordico' || f.civ === 'grego';
   };
   C.learn = function (f, t, how) {
     if (!f.tech || f.tech.known[t]) return false;

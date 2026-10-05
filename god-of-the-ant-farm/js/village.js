@@ -443,7 +443,7 @@
       if (c.siteTypes[type] && !G.BDEF[type].housing) continue;
       const def = G.BDEF[type];
       // don't open too many sites when materials are scarce
-      if (c.sites > 0 && (st.wood < (def.cost.wood || 0) * 0.3 && (def.cost.wood || 0) > 0)) continue;
+      if (c.sites > 0 && (st.wood < (def.cost.wood || 0) * 0.3 && (def.cost.wood || 0) > 0) && !(type === 'doca' && !c.doca)) continue;
       const b = V.startProject(set, type);
       if (b) return;
     }
@@ -513,12 +513,12 @@
     for (const b of S.buildings.values()) if (!b.built && b.type !== 'ruin' && V.facOfSet(b.set) === fac.id) { allWood += b.need.wood; allStone += b.need.stone; }
     const tg = fac.targets = {
       food: Math.min(cap * 0.95, Math.max(50, totalPop * 5)),
-      wood: Math.min(cap * 0.95, 45 + totalPop * 1.1 + allWood * 1.5),
+      wood: Math.min(cap * 0.95, 45 + totalPop * 1.1 + allWood * 1.5 + (fac._rsv || 0) * 2),
       stone: Math.min(cap * 0.95, (G.Fac.has(fac.id, 'storehouse') ? 25 + totalPop * 0.6 : 8) + allStone * 1.5),
     };
     const lack = k => G.clamp((tg[k] - st[k]) / tg[k], 0, 1);
     const wF = 0.25 + lack('food') * 3;
-    const wW = lack('wood') * 2.2 + (woodNeed > st.wood ? 0.8 : 0);
+    const wW = lack('wood') * 2.2 + (woodNeed > st.wood ? 0.8 : 0) + (fac._rsv && st.wood < fac._rsv ? 0.5 : 0);
     const wS = rocks ? lack('stone') * 2 + (stoneNeed > st.stone ? 0.6 : 0) : 0;
     const tot = wF + wW + wS;
     if (rest > 0) {
@@ -661,7 +661,7 @@
       }
       // seafaring peoples (and anyone boxed in on an island) sail off to found colonies
       const fac = G.Fac.get(set.fac);
-      const seaChance = (G.Civ.t(set.fac, 'colonize') - 1) * 0.6;
+      const seaChance = Math.max(0.15, (G.Civ.t(set.fac, 'colonize') - 1) * 0.6);
       const reachable = best && W.findPath(set.cx, set.cy, best[0], best[1], true, N * N);
       if ((!reachable || G.R() < seaChance) && G.Naval && fac && G.Naval.colonize(set, fac)) { set.fails = 0; return; }
       if (!reachable) { set.fails = 0; continue; }

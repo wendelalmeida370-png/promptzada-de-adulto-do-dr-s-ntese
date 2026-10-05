@@ -559,7 +559,7 @@
     }
     const speed = G.Civ.tV(v, 'build') * (f.stock.ferramentas > 0 ? 1.2 : 1) * (v.work || 1);
     if (v.actT < R.t / speed) return;
-    if (!canCraft(b, R) || (R.fuel && f.stock.wood < R.fuel)) return H.end(v);
+    if (!canCraft(b, R) || (R.fuel && f.stock.wood - (f._rsv || 0) < R.fuel)) return H.end(v);
     const I = inv(b);
     for (const k in R.in) { I[k] -= R.in[k]; used(f, k, R.in[k]); }
     if (R.fuel) { f.stock.wood -= R.fuel; used(f, 'wood', R.fuel); }

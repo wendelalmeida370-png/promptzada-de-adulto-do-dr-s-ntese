@@ -82,7 +82,9 @@
     for (const s of G.Fac.settlementsOf(enemy.id)) for (const o of G.Fac.settlementsOf(f.id)) { const d = G.dist(s.cx, s.cy, o.cx, o.cy); if (d < bd) { bd = d; best = s; from = o; } }
     // across the water (or by choice, for sea raiders) the war goes by ship
     const byLand = best && from && reachable(from, best);
-    if (G.Naval && (!byLand || (G.Civ.t(f.id, 'raid') > 1.2 && G.R() < 0.35)) && G.Naval.canSail(f)) { const sh = G.Naval.launchRaid(f, enemy, opts); if (sh || !byLand) return sh ? { id: 0, ship: sh.id, naval: true } : null; }
+    // (a long march along the coast is often shorter by sea)
+    const seaWay = byLand && bd > 30 && G.City && G.City.coastal(best) && G.City.coastal(from) && G.R() < 0.3;
+    if (G.Naval && (!byLand || seaWay || (G.Civ.t(f.id, 'raid') > 1.2 && G.R() < 0.35)) && G.Naval.canSail(f)) { const sh = G.Naval.launchRaid(f, enemy, opts); if (sh || !byLand) return sh ? { id: 0, ship: sh.id, naval: true } : null; }
     if (!best || !from || !byLand) return null;
     const cands = [];
     for (const v of S.villagers.values()) {
