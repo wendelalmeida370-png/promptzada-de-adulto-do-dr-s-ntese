@@ -34,9 +34,9 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Pausar | `Espaço` |
 | Velocidade | botões 1x / 2x / 4x / **8x** / **16x** · `+` / `-` (em mundos muito grandes, o 16x mostra a velocidade real que o computador consegue manter) |
 | Avançar no tempo | `J` · ou o botão ⏭ ao lado das velocidades — pula anos de história (veja abaixo) |
-| Crônica | `H` |
+| Crônica | `H` · ou o ícone do pergaminho no topo (no celular, ela sobe por baixo da tela; toque de novo ou no ✕ para fechar) |
 | Árvore genealógica | `T` (com alguém selecionado) |
-| Modo cinema | `C` · ou o ícone da câmera no topo — `N` próxima cena · `Esc` ou um clique sai |
+| Modo cinema | `C` · ou o ícone da câmera no topo — `N` próxima cena · `Esc` sai · um clique sai e seleciona o que você tocou |
 | Câmera de guerra | `G` · ou o ícone da espada no topo (só aparece enquanto há exércitos em campo) · ou **Assistir** no alerta de batalha — escolha uma frente para seguir só aquela batalha |
 | Modo foto | `P` · ou o ícone da máquina fotográfica — `Esc` sai |
 | Menu | `Esc` |
@@ -46,7 +46,7 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 - **Habitantes autônomos** com nome, idade, personalidade (corajoso, curioso, devoto, romântico…), fome, energia, vida, devoção e medo. Uma *utility AI* escolhe o que fazer a cada momento: trabalhar, comer, dormir, socializar, cortejar, rezar, explorar — e emergências (fogo, meteoros, lobos) passam na frente de tudo.
 - **Trabalho real**: lenhadores derrubam árvores e carregam a madeira, coletores colhem frutas, pescam e caçam, agricultores plantam e colhem trigo, mineiros quebram pedra, construtores buscam material no armazém e erguem as obras em etapas visíveis (fundação → estrutura → pronto). Os números da interface são o estoque real.
 - **Trilhas emergentes**: os caminhos mais usados viram estradas de terra.
-- **Famílias**: casais se formam, bebês nascem, crianças brincam e crescem, idosos morrem. Cemitérios, luto, funerais e árvore genealógica.
+- **Famílias**: casais se formam, bebês nascem (as camponesas levam o bebê amarrado às costas para o trabalho; quem vai à guerra, à caça ou à patrulha deixa o bebê em casa com alguém), crianças brincam e crescem, idosos morrem. Cemitérios, luto, funerais e árvore genealógica.
 - **Progressão orgânica**: Acampamento → Aldeia → Povoado → Comunidade Agrícola → Vila Artesã → Vila Sagrada → Vila Desenvolvida → Pequena Civilização. Com gente suficiente, grupos partem para fundar novos assentamentos.
 - **Natureza viva**: florestas que se espalham e regeneram, peixes pulando, vaga-lumes, nuvens, chuvas, tempestades, secas (veja *Biomas* e *Animais* abaixo).
 - **Fogo de verdade**: se espalha com o vento, queima árvores, plantações e casas; moradores formam brigadas com baldes do poço; a chuva apaga.
@@ -72,7 +72,18 @@ O relevo muda a vida: subir custa caro (os caminhos contornam as montanhas e pro
 
 ## Cavernas: o mundo de baixo
 
-Debaixo do mundo inteiro há uma **camada subterrânea**. Nos morros e serras a água cavou **galerias** e **salões**, com **rios subterrâneos**, **lagos negros**, **estalagmites**, **colunas**, **grutas de cristal**, **vaga-lumes de caverna** pendurados do teto, cogumelos que brilham, ossos e **fósseis**. Nas paredes aparecem **veios de minério** — cobre, estanho, ferro, ouro, sal-gema e gemas. As **bocas** se abrem nas encostas, como arcos escuros.
+Debaixo do mundo inteiro há uma **camada subterrânea**. Nos morros e serras a água cavou **galerias** e **salões**, com **rios subterrâneos**, **lagos negros**, **estalagmites**, **colunas**, **grutas de cristal**, **vaga-lumes de caverna** pendurados do teto, cogumelos que brilham, ossos e **fósseis**. Nas paredes aparecem **veios de minério** — cobre, estanho, ferro, ouro, sal-gema e gemas.
+
+**As bocas nascem da geografia** — cada caverna escolhe onde se abrir, e a forma vem do lugar:
+- **Paredão**: uma boca larga cortada numa parede de montanha ou falésia, com a rocha subindo acima dela;
+- **Abrigo sob a rocha**: um beiral de pedra na encosta, com a sombra embaixo;
+- **Dolina**: no chão plano, o terreno afundou num buraco redondo de pedra;
+- **Fenda**: uma rachadura estreita entre pedrões, no meio do pedregal;
+- **Poço**: um buraco que desce reto para o escuro.
+
+A pedra tem a cor do bioma (calcário no temperado, gelo azul na neve, arenito vermelho no deserto e na savana, pedra úmida com musgo no pântano e na selva, basalto escuro na taiga), e em volta crescem tufos, cipós ou neve. Quando um rio subterrâneo passa pela caverna, a boca mais baixa vira **nascente**: a água sai da pedra. Nas manhãs frias a caverna **respira** — um bafo de névoa sai da boca.
+
+**Dentro, o chão não é plano**: as galerias descem conforme entram, os salões têm **beirais** junto das paredes e **bacias** no meio, os lagos ficam no fundo, e às vezes uma **fenda sem fundo** corta o caminho. As paredes mostram as **camadas da rocha** (os estratos), as poças brilham, raios de luz descem das bocas com poeira dançando, gotas caem do teto. Clique em qualquer coisa lá dentro — uma estalagmite, um cristal, o lago, o abismo, a aranha, o urso dormindo — e o painel conta o que é.
 
 **A vista de dentro**: o botão da caverna no topo (ou `U`) mostra o mundo de baixo — a rocha cortada rente ao teto das cavernas, com as paredes de trás inteiras e as da frente rebaixadas, para nada ficar escondido. Lá é escuro: o que ilumina é a **luz do dia caindo pelas bocas**, as **tochas** de quem entra, a **fogueira dos bandidos**, os vaga-lumes e os cristais. Dá para girar, dar zoom, clicar nas pessoas e nas cavernas. O som muda: gotas pingando e o zumbido da rocha.
 
@@ -85,6 +96,12 @@ Debaixo do mundo inteiro há uma **camada subterrânea**. Nos morros e serras a 
 - **Ouvem o oráculo**: num povo devoto alguém começa a ouvir vozes na gruta; todo dia sobe com a fumaça, **profetiza** (guerra, paz, uma coroa que cai, fome, fartura, a mão do deus) e os **peregrinos** vêm de longe. Profecia cumprida vira lenda; profecia falha derruba a fé na gruta.
 - **Se escondem da guerra**: quando a cidade é atacada, crianças, velhos e mães com bebês correm para a caverna e só saem quando o perigo passa.
 - **Mineram**: mineiros descem até os veios e voltam carregados de minério, ouro, gemas ou sal; quando o veio acaba, a galeria cavada fica — e outros veios aparecem mais fundo.
+- **As minas são galerias de verdade**: o poço de cada mina (de ferro, de ouro…) desce para uma rede de túneis debaixo do morro, que vai crescendo com o trabalho. O mineiro desce com a tocha, cava a frente do veio e sobe carregado; quando a galeria encontra uma caverna natural, as duas se ligam. Na ficha da mina, **Ver as galerias** mostra os túneis por dentro, e o veio se esgota de verdade.
+
+**Momentos que acontecem sozinhos** (ninguém manda, é o mundo):
+- Numa **tempestade**, os bichos de fora correm para a caverna mais perto — e lá dentro **caça e caçador fazem trégua**, cada um no seu canto, até o céu abrir.
+- As **crianças desafiam umas às outras** a entrar na caverna: vão até a boca, gritam para ouvir o **eco**, uma entra mais fundo — e saem correndo e rindo. Fica na biografia.
+- Depois de uma batalha, uma criança pode se esconder lá dentro; ao amanhecer, os **morcegos** voltam aos milhares; ao entardecer e ao amanhecer, **andorinhões** rodopiam diante dos paredões.
 - **Bandidos** fazem de uma caverna afastada o seu esconderijo: à noite saem em fila, assaltam a vila mais próxima e voltam com o butim; saqueiam túmulos de reis; até que o povo roubado manda guerreiros entrarem com tochas para acabar com eles.
 
 No **Novo mundo** escolha **Cavernas**: nenhuma, poucas, normais ou muitas. No Livro do Mundo, a aba **Cavernas** conta a história de cada uma, com um botão para ver o interior. Os poderes **Abrir Gruta** e **Desabamento** (aba Terra) criam uma caverna nova sob uma colina ou derrubam o teto de uma — com quem estiver dentro.
@@ -141,7 +158,8 @@ Cada povo pode ser de uma civilização histórica — ou um povo clássico, sem
 - **Acampamento → Aldeia → Vila → Cidade → Metrópole → Megalópole**, com placas de nome sobre cada cidade.
 - Nos mapas **Enorme, Colossal e Titânico** as cidades não ficam presas: uma capital pode passar de centenas de habitantes, com **quarteirões** de casas de pátio (quatro sobrados em volta de um pátio), várias praças, mercados, termas e teatros, e ruas que se espalham por dezenas de quadras. Em testes, um mundo 160×160 pacífico chegou a 1.000 habitantes e à primeira megalópole por volta do ano 100.
 - Casas evoluem para **sobrados** e **ínsulas**; surgem **praça**, **mercado**, **celeiro**, **biblioteca**, **teatro**, **termas**, **palácio**, **porto** e uma **maravilha** — tudo desenhado no estilo de cada civilização. Uma cidade que ainda não tem palácio, teatro nem maravilha sonha primeiro com o teatro: é o que a faz virar metrópole. Quando o centro já está cheio, as grandes obras vão para a borda da cidade — além dos muros, se for preciso.
-- **Ruas** de cascalho e depois calçadas crescem do centro para fora; **estradas** e **pontes** ligam as cidades.
+- **Ruas de verdade**: cada cidade traça o seu plano — duas **ruas principais** que se cruzam na praça (os romanos e os gregos, nas cidades maiores, fazem uma **grade** de quarteirões) e **vielas** que ligam a porta de cada casa à rua mais perto. As ruas ficam reservadas: ninguém constrói em cima delas. Primeiro são de terra batida; quando a cidade cresce e sobra pedra, são **calçadas**. Por elas passam pedestres, carroças e o gado indo para o pasto.
+- **Estradas** e **pontes** ligam as cidades.
 - **Carroças** levam bens pelas **rotas internas** e pelas **rotas de comércio** entre povos amigos.
 - **Aquedutos** trazem água do rio, arco por arco.
 
@@ -150,7 +168,7 @@ Cada povo pode ser de uma civilização histórica — ou um povo clássico, sem
 Nada é enfeite: cada coisa que se vê na cidade é alguém fazendo um trabalho de verdade, com matéria-prima de verdade.
 
 - **Empregos fixos e rotinas**: cada pessoa tem um ofício e um local de trabalho. O mineiro atravessa a cidade até a **mina** no veio de minério e volta carregado; o agricultor vai à colheita e volta; o guerreiro sobe na **torre** ou guarda o portão da muralha e depois volta para a casa onde mora. À tarde uns vão para casa jantar da despensa, outros para a **taverna**.
-- **Criação de gado**: **currais** com vacas, ovelhas, cabras, porcos ou perus (conforme a civilização) e **estábulos** de cavalos. Pastores soltam o rebanho de manhã, levam ao pasto, vigiam contra lobos e trazem de volta; quando não há capim, buscam **feno** no celeiro e enchem o cocho. Tosquiam ovelhas, ordenham vacas e cabras, recolhem ovos. Os animais comem, dão cria — e morrem de fome se ninguém cuida.
+- **Criação de gado**: **currais** (com cerca de verdade: galinha, porco e ovelha não atravessam; entram e saem pela porteira) com vacas, ovelhas, cabras, porcos ou perus (conforme a civilização) e **estábulos** de cavalos. Pastores soltam o rebanho de manhã, levam ao pasto, vigiam contra lobos e trazem de volta; quando não há capim, buscam **feno** no celeiro e enchem o cocho. Tosquiam ovelhas, ordenham vacas e cabras, recolhem ovos. Os animais comem, dão cria — e morrem de fome se ninguém cuida.
 - **Cadeias de produção**: lã → **tecelagem** → tecido; animal levado na corda → **açougue** → carne e couro; minério → **forja** (queimando lenha) → ferramentas e **armas**; ouro → **ourivesaria** → joias; argila tirada da beira do rio → **olaria** → cerâmica; ouro e pedra → **estátua de ouro** do deus.
 - **Veios de ferro e ouro** no mapa (montanhas, desertos, rios da selva): quem tem, minera; quem não tem, compra — ou conquista.
 - **Mercado, feira e mercado clandestino**: mercadores reabastecem no armazém e vendem às famílias; a **feira** arma barracas toda manhã e desmonta ao meio-dia; o **contrabandista** rouba à noite e vende barato, até a guarda dar uma batida.
@@ -181,7 +199,8 @@ Cada povo tem seu calendário, e as festas acontecem de verdade no mundo, com ge
 - **Astecas**: **Toxcatl** (numa noite do ano, o cativo que foi o deus Tezcatlipoca dança, sobe a pirâmide e é sacrificado; sem cativo, um peru), **Tlacaxipehualiztli** (o cativo amarrado à pedra redonda luta contra guerreiros-águia e jaguar) e, a cada **52 anos**, o **Fogo Novo**: toda a cerâmica é quebrada, todas as luzes da cidade se apagam, e só depois que o fogo novo acende no alto da pirâmide os corredores levam tochas de casa em casa.
 - **Nórdicos**: **Jól** (a grande fogueira, o blót com um animal sacrificado e chifres de hidromel até o amanhecer), **Midsommar** (roda de dança em volta do mastro) e o **Thing** (o recitador das leis fala aos homens livres).
 - Cada cidade faz **uma festa por ano**, alternando o calendário (os Jogos a cada 4 anos e o Fogo Novo a cada 52 têm prioridade quando chega a vez deles); vilas pequenas, um ano sim, outro não. Participa **parte da cidade** — os vizinhos do lugar da festa, os devotos, crianças, idosos e quem está de folga —, enquanto agricultores, pastores, mineiros e guardas seguem trabalhando. Assim as festas ocupam menos de um décimo do tempo das pessoas.
-- Festas dão lealdade, devoção e fé; custam comida, tecido, cerâmica e animais. São interrompidas se o inimigo chega.
+- Festas dão lealdade, devoção e fé; custam comida, tecido, cerâmica e animais.
+- **Ninguém festeja com o inimigo às portas**: se a cidade está sitiada, em batalha, com um exército inimigo marchando perto ou com o alarme tocando, a festa do ano não acontece (a Crônica registra) e uma festa em andamento é interrompida. Mas depois de **vencer** uma defesa, na noite seguinte a cidade faz a **noite da vitória**: fogueiras, comida, música — e a lembrança dos que morreram.
 
 ## Exércitos, batalhas e cercos
 
@@ -215,6 +234,15 @@ Cada povo tem seu calendário, e as festas acontecem de verdade no mundo, com ge
 - **Cercos**: cidades grandes erguem **muralhas** (madeira, depois pedra) com portões que se fecham quando o inimigo chega e **arqueiros** nas ameias; os atacantes trazem **aríetes** e **catapultas**, abrem brechas e invadem.
 - **Cativos**: levados amarrados, fazem trabalho forçado (inclusive nas obras do tirano), dormem no **cercado**, rezam por liberdade, fogem à noite, são recapturados, se revoltam — e às vezes fundam um povo livre. Líderes clementes os aceitam como membros com o tempo; conselhos abolem o cativeiro.
 - **Queda de povos**: capitais são tomadas, povos inteiros deixam de existir; os últimos sobreviventes se juntam a vizinhos ou se rendem.
+
+### Guerra mundial
+
+Muito rara. Só acontece quando há pelo menos quatro povos de bom tamanho, quase todos já se conhecem e as rixas antigas se acumularam (mais guerras, mais rancor, líderes belicosos tornam mais provável; povos pacíficos, menos). Quando estoura, o mundo inteiro se divide — e há sempre um **motivo**:
+- **o ouro** das minas, **uma coroa** disputada, **a fé** (um deus contra outro), **o sangue** de uma afronta antiga, **a fome** de terras férteis;
+- **o império**: quando um povo fica forte demais, os outros se juntam numa **Grande Coalizão** contra ele;
+- **o caos**: às vezes não há blocos — é **todos contra todos**.
+
+Cada povo escolhe um lado pelo que sente pelos dois líderes, e os blocos tentam se equilibrar. Dentro de um bloco todos viram **aliados**; entre blocos, **guerra**. Ninguém pode fazer **paz separada**: a guerra só termina quando um bloco cai ou quando todos estão cansados demais — e aí vem a **paz geral**, com os mortos e as cidades conquistadas contados na Crônica e uma lenda no Livro. O painel **Reinos** mostra os blocos e o motivo, e o botão da câmera de guerra pulsa em vermelho.
 
 ## Poderes divinos
 
@@ -334,8 +362,9 @@ js/nature.js      árvores, arbustos, rochas, fogo, clima, nuvens
 js/village.js     construções, planejador, empregos, moradia, crônica, marcos, fé
 js/factions.js    povos: cores, bandeiras, estoques, território e fronteiras
 js/politics.js    líderes, dinastias, governos, lealdade, rachas, golpes, tirania, diplomacia
-js/war.js         exércitos, combate, saques, conquista, massacres, torres, cativos, revoltas
-js/city.js        níveis de cidade, novos edifícios, ruas, estradas, rotas, carroças, aquedutos
+js/war.js         exércitos, combate, saques, conquista, massacres, torres, cativos, revoltas, ameaça sobre uma cidade
+js/worldwar.js    a guerra mundial: motivos, blocos, aliados sem paz separada, paz geral
+js/city.js        níveis de cidade, novos edifícios, plano de ruas e vielas, calçamento, estradas, rotas, carroças, aquedutos
 js/naval.js       portos, pesca, exploração, comércio marítimo, frotas com almirante, abordagem, brulotes, bloqueios, invasões, colônias
 js/siege.js       arqueiros, tropas de elite, muralhas, portões, aríetes, catapultas, torres de cerco, escadas, sapadores, óleo fervente, peste, sacrifícios
 js/economy.js     economia urbana: ofícios, currais, minas, forja, tecelagem, mercados, feira, taverna, impostos, crime
@@ -349,7 +378,7 @@ js/animals.js     40 espécies, habitats, capim, cadeias alimentares, caça, fil
 js/powers.js      poderes divinos e percepção
 js/miracles.js    Terra, Mar, Palavra, eras de ouro, maldições, heróis, muralhas divinas
 js/wild.js        aba Natureza: chamar animais, primavera, migração, domar, clima, gafanhotos, feras lendárias
-js/caves.js       a camada de baixo: cavernas, galerias, rios e lagos subterrâneos, veios, bichos do escuro, morcegos, ursos, pinturas, tumbas reais, oráculo, refúgio, minas, bandidos, poderes Abrir Gruta e Desabamento
+js/caves.js       a camada de baixo: cavernas, bocas de cada tipo, níveis de piso, abismos, galerias, rios e lagos subterrâneos, veios, bichos do escuro, morcegos, ursos, pinturas, tumbas reais, oráculo, refúgio, abrigo na tempestade, desafio do eco, minas em galerias, bandidos, poderes Abrir Gruta e Desabamento
 js/lore.js        gênese, profecias antigas, crônicas, lendas, bestiário e o Livro do Mundo
 js/events.js      eventos e viajantes de barco
 js/fx.js          partículas e efeitos

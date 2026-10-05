@@ -363,7 +363,7 @@
   const GRID = { romano: 4, grego: 5 };
   Ci.streetPlan = function (set) {
     const S = G.S; const p = set._plan; let nb = 0; for (const b of S.buildings.values()) if (b.set === set.id) nb++;
-    if (p && p.nb === nb && S.day - p.day < 3) return p.tiles;
+    if (p && p.tiles instanceof Set && p.nb === nb && S.day - p.day < 3) return p.tiles;
     const tiles = new Set(); const f = G.Fac.get(set.fac);
     const r = Math.max(4, (set.radius || 6) + 1); const cx = Math.floor(set.cx), cy = Math.floor(set.cy);
     const free = i => { const t = S.type[i]; if (t < T.SAND || S.cliff[i] || S.wall[i] === 1) return false; const o = S.occ[i]; if (o) { const b = S.buildings.get(o); if (b && (b.blocks || b.type === 'farm' || b.type === 'curral' || b.type === 'estabulo' || b.type === 'cercado')) return false; } return true; };
@@ -380,10 +380,11 @@
       const tx = t % N, ty = (t / N) | 0; let x = x0, y = y0;
       for (let k = 0; k < 16 && (x !== tx || y !== ty); k++) { const i = y * N + x; if (free(i)) tiles.add(i); if (x !== tx && (Math.abs(tx - x) >= Math.abs(ty - y) || y === ty)) x += Math.sign(tx - x); else y += Math.sign(ty - y); }
     }
-    set._plan = { nb, day: S.day, tiles };
+    // (a cache, not part of the save: kept out of JSON)
+    Object.defineProperty(set, '_plan', { value: { nb, day: S.day, tiles }, writable: true, configurable: true, enumerable: false });
     return tiles;
   };
-  Ci.onStreet = (set, i) => { const p = set && set._plan; return !!(p && p.tiles.has(i)); };
+  Ci.onStreet = (set, i) => { const p = set && set._plan; return !!(p && p.tiles instanceof Set && p.tiles.has(i)); };
   function pickPave(set, fac, v, near) {
     const S = G.S; const t = set.tier || 0;
     const lvl = has(fac, 'alvenaria') ? 2 : 1;
