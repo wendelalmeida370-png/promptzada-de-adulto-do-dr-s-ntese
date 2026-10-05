@@ -690,7 +690,15 @@
     const S = G.S; const b = workB(v, t, H); if (!b) return;
     const o = S.ores && S.ores.find(q => q.id === b.ore);
     if (!o || o.amt <= 0) return H.end(v);
-    if (t.st === 0) { const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; v.inside = b.id; } return; }
+    if (t.st === 0) {
+      const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v);
+      if (r > 0) {
+        // the pithead: down the shaft into the galleries (a real place under the hill, see the caves)
+        if (G.Caves && G.Caves.mineShift && !(G.Skip && G.Skip.on) && G.Caves.mineShift(v, b, o)) return;
+        t.st = 1; v.actT = 0; v.inside = b.id;
+      }
+      return;
+    }
     if (t.st === 1) {
       v.act = 'mine';
       if (G.R() < dt * 0.8) G.Audio && G.Audio.at(b.x, b.y, 'mine');
@@ -707,6 +715,13 @@
       H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' });
     }
   }
+  // what a shift at the face brings out: the town's books, the miner's pay, the first gold, the end of the vein
+  E.mined = function (v, bId, o, n) {
+    const S = G.S; const b = S.buildings.get(bId); const k = o.kind === 'ouro' ? 'ouro' : 'minerio';
+    const f = G.Fac.ofV(v); if (f) made(f, k, n); E.pay(v, k, n);
+    if (o.kind === 'ouro' && f && !f._gold && b) { f._gold = S.day; const st = S.settlements.get(b.set); log(`Os mineiros de ${st ? st.name : f.name} encontraram ouro na montanha!`, 'star', b.x, b.y); G.Village.milestone('firstGold', 'Ouro!', 'Mineiros tiraram o primeiro ouro da montanha.', 'star'); }
+    if (o.amt <= 0 && b) { const st = S.settlements.get(b.set); log(`A mina de ${o.kind === 'ouro' ? 'ouro' : 'minério'}${st ? ' de ' + st.name : ''} se esgotou.`, 'stone', b.x, b.y); }
+  };
   function runRestock(v, t, dt, H) {
     const b = workB(v, t, H); if (!b) return;
     const f = G.Fac.ofV(v); if (!f) return H.end(v);
@@ -1075,7 +1090,7 @@
       const hungry = herd.length ? herd.reduce((s, a) => s + a.hunger, 0) / herd.length : 0;
       h += `<div class="doing">${herd.length ? `<b>${herd.length}</b> ${esc(G.Animals.plural(sp, herd.length).replace(/^\d+ /, ''))}${young ? ` (${young} filhote${young > 1 ? 's' : ''})` : ''} de ${def.pen}` : 'Nenhum animal — ainda'}${out ? ` · ${out} no pasto` : ''}${ready ? ` · ${ready} pronto${ready > 1 ? 's' : ''} para ${kind === 'ovelha' ? 'tosquiar' : kind === 'peru' ? 'recolher ovos' : 'ordenhar'}` : ''}<br>Capim do curral: ${Math.round(E.penGrass(b) * 100)}% · fome do rebanho ${Math.round(hungry * 100)}%</div>`;
     }
-    if (b.type === 'mina') { const o = (S.ores || []).find(q => q.id === b.ore); h += `<div class="doing">${o ? `Veio de <b>${o.kind === 'ouro' ? 'ouro' : 'ferro'}</b>: ${Math.round(o.amt)} de ${o.max} restantes` : 'Sem veio de minério.'}</div>`; }
+    if (b.type === 'mina') { const o = (S.ores || []).find(q => q.id === b.ore); const cv = b.cave && G.Caves && G.Caves.get(b.cave); h += `<div class="doing">${o ? `Veio de <b>${o.kind === 'ouro' ? 'ouro' : 'ferro'}</b>: ${Math.round(o.amt)} de ${o.max} restantes` : 'Sem veio de minério.'}${cv ? ` · ${cv.n} passos de galerias debaixo da terra${cv.links && cv.links.length ? ', ligadas a uma caverna natural' : ''}` : ''}</div>${cv ? `<div class="btns"><button data-act="cave-view" data-id="${cv.id}">${G.ICON.cave} Ver as galerias</button></div>` : ''}`; }
     if (b.type === 'feira') h += `<div class="doing">${E.fairOpen() ? (b.openT && S.clock - b.openT < 6 ? 'Barracas armadas: dia de feira!' : 'Esperando os feirantes.') : 'Fechada — a feira abre de manhã.'}</div>`;
     if (b.type === 'coletoria') { const f = G.Fac.ofSet(b.set); if (f) h += `<div class="doing">Imposto de ${esc(f.name)}: <b>${Math.round(E.taxRate(f) * 100)}%</b>${E.coinage(f.id) ? ` · tesouro com ${Math.floor(f.stock.moedas)} moedas` : ' · sem moeda ainda'}</div>`; }
     if (b.type === 'mercado_negro') h += `<div class="doing">${b.raids ? `Já foi batido ${b.raids} ${b.raids > 1 ? 'vezes' : 'vez'} pelos guardas.` : 'Ninguém sabe de nada. Ninguém viu nada.'}</div>`;

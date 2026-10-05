@@ -432,7 +432,7 @@
   function caveFor(set, maxD, test) {
     let best = null, bd = maxD * maxD;
     for (const cv of C.all()) {
-      if (!cv.mouths.length || !cv.known[set.fac] || (test && !test(cv))) continue;
+      if (!cv.mouths.length || cv.mine || !cv.known[set.fac] || (test && !test(cv))) continue;
       for (const m of cv.mouths) { const d = G.dist2(set.cx, set.cy, m.x, m.y); if (d < bd && W.sameLand(set.cx, set.cy, m.x, m.y)) { bd = d; best = cv; } }
     }
     return best;
@@ -528,7 +528,7 @@
       case 'oracle': return going ? `Subindo ${C.a(cv).replace(/^./, c => c)} para profetizar` : `Profetizando ${where}`;
       case 'tomb': return going ? 'Acompanhando o cortejo fúnebre do governante' : `Velando o túmulo real ${where}`;
       case 'refuge': return going ? `Fugindo para se esconder ${where}` : `Escondid${oa(v)} ${where}, esperando o perigo passar`;
-      case 'mine': { const o = ORES[t.ore || 0]; return t.st === 3 ? `Picando um veio de ${o ? o.name : 'minério'} ${where}` : t.st === 4 ? 'Saindo da mina carregad' + oa(v) : `Descendo à mina ${where}`; }
+      case 'mine': { const o = ORES[t.ore || 0] || (cv && cv.mine && ORES[cv.name.includes('Ouro') ? 4 : 3]); return t.st === 3 ? `Picando um veio de ${o ? o.name : 'minério'} ${where}` : t.st === 4 ? 'Saindo da mina carregad' + oa(v) : `Descendo à mina ${where}`; }
       case 'raid': return going ? `Marchando contra os bandidos ${where}` : `Lutando contra os bandidos ${where}!`;
       case 'treasure': return `Desenterrando algo que brilha ${where}`;
       case 'dare': return t.st === 10 ? `Gritando na boca ${C.da(cv)} para ouvir o eco` : `Correndo com as outras crianças até ${into}`;
@@ -549,12 +549,21 @@
     if (t.kind === 'mine' && t.vein >= 0) {
       t.dig = (t.dig || 0) + dt;
       if (v.actT > 0.6) { v.actT = 0; G.Audio && G.Audio.at && G.Audio.at(v.x, v.y, 'chop'); }
-      if (t.dig > 7 && !t.carry) {
+      if (t.dig > (cv.mine ? 9 : 7) && !t.carry) {
         const o = U.ore[t.vein]; const def = ORES[o];
-        if (def) { t.carry = { k: def.good, n: def.good === 'food' ? 4 : def.good === 'joias' ? 1 : def.good === 'ouro' ? 1 : 2 }; t.ore = o; }
+        const dep = cv.mine && (G.S.ores || []).find(q => q.id === cv.deposit);
+        if (dep) {
+          // the mine's deposit: what comes out of the face is what the town counts
+          if (dep.amt > 0) { const n = Math.min(dep.amt, dep.kind === 'ouro' ? 1 + (G.R() < 0.4 ? 1 : 0) : 2 + (G.R() < 0.5 ? 1 : 0)); dep.amt -= n; t.carry = { k: dep.kind === 'ouro' ? 'ouro' : 'minerio', n }; t.ore = o; G.Eco && G.Eco.mined && G.Eco.mined(v, cv.mine, dep, n); }
+        } else if (def) { t.carry = { k: def.good, n: def.good === 'food' ? 4 : def.good === 'joias' ? 1 : def.good === 'ouro' ? 1 : 2 }; t.ore = o; }
         U.oreN[t.vein] = Math.max(0, U.oreN[t.vein] - 1);
         // the vein gives out: the miners have dug a new gallery into the rock
-        if (!U.oreN[t.vein]) { U.ore[t.vein] = 0; U.k[t.vein] = DUG; U.id[t.vein] = cv.id; cv.n++; cv.dug = (cv.dug || 0) + 1; U.ver++; seedVeins(t.vein, cv); }
+        if (!U.oreN[t.vein]) {
+          const vx = t.vein % N, vy = (t.vein / N) | 0;
+          for (const [dx, dy] of D4) { const j = (vy + dy) * N + vx + dx; if (U.id[j] && U.id[j] !== cv.id && cv.mine) linkCave(cv, C.get(U.id[j]), vx, vy); }
+          U.ore[t.vein] = 0; U.k[t.vein] = DUG; U.id[t.vein] = cv.id; cv.n++; cv.dug = (cv.dug || 0) + 1; U.ver++;
+          if (dep) { if (dep.amt > 0) seedDeposit(cv, dep, 2); } else seedVeins(t.vein, cv);
+        }
         t.done = true;
       }
     } else if (t.kind === 'paint') {
@@ -773,7 +782,7 @@
   const EPI = [['o Caolho', 'a Caolha'], ['Mão-Leve', 'Mão-Leve'], ['o Ruivo', 'a Ruiva'], ['Dente-de-Lobo', 'Dente-de-Lobo'], ['a Raposa', 'a Raposa'], ['o Sem-Nome', 'a Sem-Nome'], ['Faca-Fina', 'Faca-Fina'], ['o Manco', 'a Manca']];
   function formBand() {
     const S = G.S;
-    const caves = C.all().filter(cv => cv.mouths.length && !cv.bandits && !cv.oracle);
+    const caves = C.all().filter(cv => cv.mouths.length && !cv.bandits && !cv.oracle && !cv.mine);
     const opts = [];
     for (const cv of caves) {
       const m = cv.mouths[0]; let nd = 1e9, near = null;
@@ -939,7 +948,7 @@
     const S = G.S; const W8 = S.weather || {}; const storm = W8.storm > 0 && W8.rain > 0.3;
     for (const cv of C.all()) {
       if (!cv.sheltered) cv.sheltered = [];
-      const m = cv.mouths[0]; if (!m) continue;
+      const m = cv.mouths[0]; if (!m || cv.mine) continue;
       const mx = m.x + 0.5, my = m.y + 0.5;
       if (!storm) {
         if (cv.sheltered.length) { for (const a of cv.sheltered) { a.x = mx + rr(-0.4, 0.4); a.y = my + rr(-0.4, 0.4); a.state = 'idle'; a.t = 1; a.shelter = 0; S.animals.set(a.id, a); } cv.sheltered = []; }
@@ -987,7 +996,7 @@
     for (const set of S.settlements.values()) {
       if (G.R() > 0.3 || (set.alarmT || 0) > 0 || (G.War && G.War.threat(set.id))) continue;
       let cv = null, bd = 18 * 18, m = null;
-      for (const c of C.all()) { if (!c.known[set.fac]) continue; for (const mm of c.mouths) { const d = G.dist2(mm.x, mm.y, set.cx, set.cy); if (d < bd) { bd = d; cv = c; m = mm; } } }
+      for (const c of C.all()) { if (!c.known[set.fac] || c.mine) continue; for (const mm of c.mouths) { const d = G.dist2(mm.x, mm.y, set.cx, set.cy); if (d < bd) { bd = d; cv = c; m = mm; } } }
       if (!cv) continue;
       const kids = []; for (const v of S.villagers.values()) if (v.set === set.id && v.age >= 5 && v.age < 15 && !v.ug && !v.inside && !v.captive && (!v.task || v.task.pri < 1.2)) kids.push(v);
       if (!kids.length) continue;
@@ -1107,6 +1116,62 @@
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = y * N + x; if (U.ore[i] && ok(U.ore[i]) && standBy(cv, i) >= 0) list.push(i); }
     return list.length ? list[Math.floor(G.R() * list.length)] : -1;
   }
+  // ------------------------------ the mines: real galleries under the hill ------------------------------
+  // A mine is a door into a cave the miners dig themselves: a shaft goes down from the pithead, a gallery
+  // runs into the hill, and the deposit lies in the rock around it as veins. As it is worked the gallery
+  // grows after the ore; if it breaks into a natural cave, the miners have found it.
+  const ORE_OF = { ferro: 3, ouro: 4 };
+  C.mineCave = function (b, o) {
+    const S = G.S, U = C.U(); if (!U || !b || !o) return null;
+    if (b.cave) { const cv = C.get(b.cave); if (cv && !cv.gone && cv.mine === b.id) return cv; }
+    const i0 = b.y * N + b.x; if (U.id[i0] || b.x < 2 || b.y < 2 || b.x >= N - 2 || b.y >= N - 2) return null;
+    const id = U.caves.length + 1; const set = S.settlements.get(b.set);
+    const cv = { id, name: `Mina de ${o.kind === 'ouro' ? 'Ouro' : 'Ferro'}${set ? ' de ' + set.name : ''}`, g: 'f', halls: [], mouths: [], n: 0, cx: b.x, cy: b.y, known: {}, found: null, paintings: [], tombs: [], oracle: null, bandits: null, treasures: [], sleepers: [], sheltered: [], guano: 0, bats: 0, roost: null, visits: 0, day: S.day, mine: b.id, deposit: o.id, den: 0, dug: 0 };
+    U.caves.push(cv); b.cave = id;
+    const dig = (x, y, k) => { if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) return false; const i = y * N + x; if (U.id[i] && U.id[i] !== id) { linkCave(cv, C.get(U.id[i]), x, y); return false; } U.k[i] = k; U.id[i] = id; U.f[i] = 0; U.ore[i] = 0; cv.n++; return true; };
+    dig(b.x, b.y, MOUTH);
+    // the gallery runs into the hill, toward the higher ground
+    let dx = 0, dy = 1, best = -1e9;
+    for (const [ax, ay] of D4) { const x = b.x + ax * 3, y = b.y + ay * 3; if (x < 2 || y < 2 || x >= N - 2 || y >= N - 2) continue; const h = W.tileH(y * N + x) + G.R() * 0.4; if (h > best) { best = h; dx = ax; dy = ay; } }
+    let x = b.x, y = b.y;
+    for (let k = 0; k < 4; k++) { const nx = x + dx, ny = y + dy; if (!dig(nx, ny, DUG)) break; x = nx; y = ny; if (k === 2 && G.R() < 0.5) { const sd = G.R() < 0.5 ? 1 : -1; if (dig(x + dy * sd, y + dx * sd, DUG)) { x += dy * sd; y += dx * sd; } } }
+    dig(x + dy, y + dx, DUG);
+    cv.halls.push({ x, y, r: 1 });
+    cv.mouths.push({ x: b.x, y: b.y, kind: 'mina', fx: 0, fy: 0 });
+    cv.cx = (b.x + x) / 2; cv.cy = (b.y + y) / 2;
+    if (set) cv.known[set.fac] = 1;
+    C.rockOf(cv); seedDeposit(cv, o, 6);
+    U.ver++; C.rebuildNear();
+    return cv;
+  };
+  // the deposit shows as veins in the walls of the gallery
+  function seedDeposit(cv, o, n) {
+    const U = C.U(); const kind = ORE_OF[o.kind] || 3; const cand = [];
+    for (let i = 0; i < N * N; i++) { if (U.id[i] !== cv.id || !C.walk(U.k[i])) continue; const x = i % N, y = (i / N) | 0; for (const [dx, dy] of D4) { const j = (y + dy) * N + x + dx; if (U.k[j] === ROCK && !U.id[j] && !U.ore[j] && x + dx > 0 && y + dy > 0 && x + dx < N - 1 && y + dy < N - 1) cand.push(j); } }
+    for (let k = 0; k < n && cand.length; k++) { const j = cand.splice(Math.floor(G.R() * cand.length), 1)[0]; U.ore[j] = kind; U.oreN[j] = 2 + Math.floor(G.R() * 3); }
+  }
+  // a gallery breaks into a cave nobody knew about (or one they knew)
+  function linkCave(cv, other, x, y) {
+    if (!other || other.mine || (cv.links && cv.links.includes(other.id))) return;
+    (cv.links = cv.links || []).push(other.id);
+    const S = G.S; const b = S.buildings.get(cv.mine); const set = b && S.settlements.get(b.set); const f = set && G.Fac.get(set.fac);
+    const known = f && other.known[f.id]; if (f) other.known[f.id] = 1;
+    log(known ? `As galerias da ${cv.name} romperam a rocha e saíram dentro ${C.da(other)}.` : `Os mineiros da ${cv.name} romperam a parede e caíram dentro de uma caverna que ninguém conhecia: ${C.a(other)}!`, 'cave', x, y);
+  }
+  // a miner's shift: down the shaft, along the gallery, to the face of the vein
+  C.mineShift = function (v, b, o) {
+    const cv = C.mineCave(b, o); if (!cv) return false;
+    let vein = mineVein(cv); if (vein < 0) { seedDeposit(cv, o, 3); vein = mineVein(cv); } if (vein < 0) return false;
+    const c = standBy(cv, vein); if (c < 0) return false;
+    return C.give(v, 'mine', cv, c, { vein, stay: 14, pri: 1.05, force: 1, job: b.id });
+  };
+  function mineVein(cv) {
+    const U = C.U(); const list = [];
+    const x0 = Math.max(1, Math.floor(cv.cx - 14)), x1 = Math.min(N - 2, Math.ceil(cv.cx + 14)), y0 = Math.max(1, Math.floor(cv.cy - 14)), y1 = Math.min(N - 2, Math.ceil(cv.cy + 14));
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = y * N + x; if (U.ore[i] && !U.id[i] && standBy(cv, i) >= 0) list.push(i); }
+    return list.length ? list[Math.floor(G.R() * list.length)] : -1;
+  }
+  C.isMine = cv => !!(cv && cv.mine);
   function standBy(cv, i) { const U = C.U(); const x = i % N, y = (i / N) | 0; for (const [dx, dy] of D4) { const j = (y + dy) * N + x + dx; if (U.id[j] === cv.id && C.walk(U.k[j])) return j; } return -1; }
   // war at the gates: the children and the old run to the cave
   function refuge() {

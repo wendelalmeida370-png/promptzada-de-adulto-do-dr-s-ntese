@@ -1038,7 +1038,7 @@
     }
     for (const b of S.boats) { const p = vis(b.x, b.y, W.groundH(b.x, b.y)); if (p) pushD(depth(b.x, b.y), 7, b, p[0], p[1]); }
     if (G.Caves && S.ug) {
-      for (const cv of G.Caves.all()) for (const m of cv.mouths) { const p = vis(m.x + 0.5, m.y + 0.5, W.groundH(m.x + 0.5, m.y + 0.5)); if (p) pushD(depth(m.x + 0.5, m.y + 0.5) - 0.3, 14, { cv, m }, p[0], p[1]); }
+      for (const cv of G.Caves.all()) for (const m of cv.mouths) { if (m.kind === 'mina') continue; const p = vis(m.x + 0.5, m.y + 0.5, W.groundH(m.x + 0.5, m.y + 0.5)); if (p) pushD(depth(m.x + 0.5, m.y + 0.5) - 0.3, 14, { cv, m }, p[0], p[1]); }
       for (const a of G.Caves.actors) { if (a.delay > 0) continue; const p = vis(a.x, a.y, W.groundH(a.x, a.y)); if (p) pushD(depth(a.x, a.y) + 0.05, 15, a, p[0], p[1]); }
     }
     // other modules give depths for the first view (x + y + offset): keep their offset, turn the rest
@@ -1737,7 +1737,7 @@
       case 30: { const cv = e.o; const ph = G.Caves.batPhase(cv); const n = !ph ? cv.bats : ph.night ? cv.bats * 0.08 : ph.out ? cv.bats * (1 - ph.k) : cv.bats * ph.k; G.CaveArt.roost(ctx, e.sx, e.sy, n, t, cv.id * 13); break; }
       case 31: {
         const m = e.o; const dayA = G.clamp(1 - R.nightness() * 0.85, 0.12, 1); const kind = G.Caves.mouthKind(m, G.Caves.at(m.y * N + m.x));
-        G.CaveArt.shaft(ctx, e.sx, e.sy, dayA, kind === 'poco' || kind === 'dolina' ? 110 : 70, kind);
+        G.CaveArt.shaft(ctx, e.sx, e.sy, dayA, kind === 'poco' || kind === 'dolina' || kind === 'mina' ? 110 : 70, kind === 'mina' ? 'poco' : kind);
         // dust turning slowly in the light that falls in
         for (let q = 0; q < 9; q++) { const sd = m.x * 13 + m.y * 7 + q * 3; const f = (t * (0.03 + G.hash(sd) * 0.04) + G.hash(sd + 1)) % 1; const px = e.sx + (G.hash(sd + 2) - 0.5) * 18 + Math.sin(t * 0.4 + q) * 2, py = e.sy - f * 50; ctx.fillStyle = `rgba(255,244,214,${0.5 * dayA * Math.sin(f * Math.PI)})`; ctx.fillRect(px, py, 0.7, 0.7); }
         light(e.sx, e.sy - 12, 86, dayA > 0.4 ? 'gold' : 'cool', 0.25 + 0.75 * dayA);
