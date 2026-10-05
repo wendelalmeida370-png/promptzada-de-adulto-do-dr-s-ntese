@@ -28,15 +28,35 @@
     d.innerHTML = `<div class="cine-bar top"></div><div class="cine-bar bot"></div>
       <div class="cine-cap"><div class="cine-kick"></div><div class="cine-title"></div><div class="cine-sub"></div></div>
       <div class="cine-hint">Modo cinema · <kbd>N</kbd> próxima cena · <kbd>Espaço</kbd> pausa · <kbd>+</kbd>/<kbd>−</kbd> velocidade · <kbd>Esc</kbd> ou clique para sair</div>
-      <div class="cine-status"></div><div class="cine-fade"></div>`;
+      <div class="cine-status"></div><div class="cine-war"></div><div class="cine-fade"></div>`;
     document.body.appendChild(d);
-    el = { root: d, cap: d.querySelector('.cine-cap'), kick: d.querySelector('.cine-kick'), title: d.querySelector('.cine-title'), sub: d.querySelector('.cine-sub'), hint: d.querySelector('.cine-hint'), status: d.querySelector('.cine-status'), fade: d.querySelector('.cine-fade') };
+    el = { root: d, cap: d.querySelector('.cine-cap'), kick: d.querySelector('.cine-kick'), title: d.querySelector('.cine-title'), sub: d.querySelector('.cine-sub'), hint: d.querySelector('.cine-hint'), status: d.querySelector('.cine-status'), fade: d.querySelector('.cine-fade'), war: d.querySelector('.cine-war') };
     window.addEventListener('mousemove', () => { if (C.on) { hintT = 2.6; document.body.classList.remove('cine-nocursor'); } });
+    // the fronts bar: one chip per battlefield, so a single war can be followed to its end
+    const stop = e => e.stopPropagation();
+    el.war.addEventListener('pointerdown', stop); el.war.addEventListener('touchstart', stop, { passive: true }); el.war.addEventListener('touchend', stop);
+    el.war.addEventListener('click', e => {
+      e.stopPropagation();
+      const bt = e.target.closest('button'); if (!bt) return;
+      G.Audio && G.Audio.play('click');
+      if (bt.dataset.x !== undefined) { C.setWar(null); return; }
+      C.setWar({ front: bt.dataset.f || null });
+    });
+    // the alert: a battle is about to start somewhere — one click to watch it
+    const al = document.createElement('div'); al.id = 'war-alert'; al.className = 'hidden';
+    al.innerHTML = `<span class="wa-ic">${G.ICON ? G.ICON.sword : ''}</span><span class="wa-txt"><b></b><small></small></span><button class="wa-go">Assistir</button><button class="wa-x" title="Fechar">×</button>`;
+    document.body.appendChild(al);
+    el.alert = al;
+    al.querySelector('.wa-go').onclick = () => { G.Audio && G.Audio.play('click'); const f = alertFront; hideAlert(); C.start({ war: 1, front: f }); };
+    al.querySelector('.wa-x').onclick = () => hideAlert();
   };
 
-  C.start = function () {
+  C.start = function (opts) {
+    if (C.on && opts && opts.war) { C.setWar({ front: opts.front || null }); return; }
     if (C.on || !G.Main || G.Main.mode !== 'game' || !el) return;
-    C.on = true;
+    C.on = true; hideAlert();
+    war = opts && opts.war ? { front: opts.front || null, quiet: 0 } : null;
+    fronts = computeFronts(); uiSig = ''; warUi();
     const Rn = R(), cam = Rn.cam;
     G.UI.select(null); G.UI.setPower(null); G.UI.showHUD(false); $('#tooltip').classList.add('hidden');
     saved = { borders: Rn.showBorders, under: Rn.under };
@@ -47,12 +67,13 @@
     // the last few entries of the chronicle are still news
     events = []; logN = Math.max(0, (S().logN || 0) - 3); seen = new Map(); seenKind = new Map();
     el.root.classList.add('on'); el.cap.classList.remove('show'); el.fade.classList.remove('on');
+    if (war) { statusT = 0; flash(war.front ? 'Câmera de guerra · ' + frontName(war.front) : 'Câmera de guerra'); }
   };
   C.stop = function () {
     if (!C.on) return;
     C.on = false;
     const Rn = R(), cam = Rn.cam;
-    shot = null; fade = null;
+    shot = null; fade = null; war = null; el.root.classList.remove('war'); el.war.innerHTML = ''; uiSig = '';
     el.root.classList.remove('on'); el.cap.classList.remove('show'); el.fade.classList.remove('on');
     document.body.classList.remove('cine-nocursor');
     if (saved) { Rn.showBorders = saved.borders; if (!!saved.under !== !!Rn.under) Rn.setUnder(saved.under, true); }
@@ -60,6 +81,20 @@
     if (G.Main.mode === 'game') G.UI.showHUD(true);
   };
   C.toggle = () => (C.on ? C.stop() : C.start());
+  // into the war camera (o = { front }), or back to the whole world (null)
+  C.setWar = function (o) {
+    if (!C.on) return;
+    const was = war ? war.front : undefined;
+    war = o ? { front: o.front || null, quiet: 0 } : null;
+    uiSig = ''; warUi();
+    if (war && was === war.front) return;
+    flash(war ? (war.front ? 'Seguindo · ' + frontName(war.front) : 'Câmera de guerra · todas as frentes') : 'Cinema · o mundo todo');
+    // cut straight to the war (or away from it)
+    if (shot) seen.set(shot.key, clock);
+    shot = null; manualT = 0; evalT = 0.1;
+  };
+  C.war = () => (war ? { front: war.front } : null);
+  C.fronts = () => fronts.map(f => ({ key: f.key, name: f.name, phase: f.phase, n: f.n }));
   // the player took the camera: the director waits a little, then takes it back
   C.manual = function () { if (!C.on) return; manualT = 7; shot = null; fade = null; el.fade.classList.remove('on'); hideCap(); };
   C.next = function () { if (!C.on) return; if (shot) seen.set(shot.key, clock); manualT = 0; direct(true); };
@@ -140,7 +175,7 @@
       // a pitched battle is one scene for both hosts, filmed between them
       const foe = ph === 'batalha' && A && A.foeHost ? G.War.bands.get(A.foeHost) : null;
       out.push({
-        key: foe ? 'battle:' + Math.min(b.id, foe.id) + ':' + Math.max(b.id, foe.id) : 'band:' + b.id, kind: 'war', score, zoom: siege ? 1.3 : P[2], dur: ph === 'batalha' || siege ? 16 : 12,
+        key: foe ? 'battle:' + Math.min(b.id, foe.id) + ':' + Math.max(b.id, foe.id) : 'band:' + b.id, kind: 'war', score, front: 'set:' + b.set, zoom: siege ? 1.3 : P[2], dur: ph === 'batalha' || siege ? 16 : 12,
         pos: () => { const a = centroid(members, 18); const o = foe && G.War.bands.has(foe.id) && centroid(foe.members, 18); return a && o ? [(a[0] + o[0]) / 2, (a[1] + o[1]) / 2, 8] : a || o; },
         alive: () => G.War.bands.has(b.id),
         kick: kickOf(tgt && tgt.name, f), title, sub,
@@ -170,9 +205,212 @@
       else if (s.kind === 'explorador' && s.st !== 'idle') { score = 36; title = 'Explorando o mar'; sub = `um barco de ${f} procura terras desconhecidas`; }
       else if (s.kind === 'pesca' && s.st === 'fish') { score = 24; title = 'Pescadores'; sub = `as redes de ${f} no mar`; }
       if (!score) continue;
-      out.push({ key: 'ship:' + s.id, kind: score > 60 ? 'war' : 'sea', score, zoom: 1.9, dur: 11, pos: shipAt(s.id), alive: () => S().ships.includes(s), kick: place(s.x, s.y), title, sub });
+      const warish = score > 60;
+      out.push({ key: 'ship:' + s.id, kind: warish ? 'war' : 'sea', score, zoom: 1.9, dur: 11, pos: shipAt(s.id), alive: () => S().ships.includes(s), kick: place(s.x, s.y), title, sub, front: !warish || s.purpose === 'colony' ? null : s.target && s.st === 'land' ? 'set:' + s.target : 'mar' });
     }
   }
+
+  // ------------------------------ the war camera ------------------------------
+  // A part of the cinema that films nothing but the war: the fronts, the column
+  // on the road, the defenders forming up, a flank going round, soldiers hidden
+  // in the woods waiting for the enemy, the archers, the rams at the gate.
+  let war = null, fronts = [], uiSig = '', warUiT = 0, frontT = 0, cidN = 0;
+  let alertT = 0, alertFront = null, alertPri = 0;
+  const watched = new Map(), alertCd = new Map();
+  const shortFac = id => { const f = G.Fac.get(id); return f ? f.name.split(' ').pop() : '?'; };
+  const aliveOf = ids => { const Sv = S().villagers; let n = 0; for (const id of ids) { const v = Sv.get(id); if (v && !v.dead) n++; } return n; };
+  function coPos(co) { let x = 0, y = 0, n = 0; for (const v of co.alive || []) if (v && !v.dead && !v.inside) { x += v.x; y += v.y; n++; } return n ? [x / n, y / n, 8] : null; }
+  const coAlive = co => (co.alive || []).filter(v => v && !v.dead).length;
+  const unitOf = co => { const u = G.Army && G.Army.UNIT[co.kind]; return u ? u.name.toLowerCase() : 'companhia'; };
+  function bandPhase(b) { const A = b.army; let ph = A ? A.phase : b.st; if (b.st === 'retorno') ph = 'retorno'; if (!A && b.st === 'marcha') ph = 'marcha'; return ph; }
+  const PH_WORD = { reunir: 'reunindo tropas', marcha: 'em marcha', posicao: 'em posição', batalha: 'batalha!', invadir: 'assalto', assalto: 'assalto', ataque: 'ataque', retorno: 'retirada', cercar: 'cercando', cerco: 'cerco', guerrilha: 'guerrilha', emboscada: 'emboscada armada' };
+  const HOT = { 'batalha!': 1, assalto: 1, ataque: 1, cerco: 1, 'emboscada armada': 1, 'batalha naval': 1 };
+  function computeFronts() {
+    const m = new Map();
+    if (G.War) for (const b of G.War.bands.values()) {
+      const n = aliveOf(b.members); if (n < 2) continue;
+      const set = S().settlements.get(b.set); if (!set) continue;
+      const def = b.goal === 'defesa', key = 'set:' + set.id;
+      let fr = m.get(key);
+      if (!fr) m.set(key, fr = { key, set: set.id, name: set.name, att: def ? b.enemy : b.fac, dfn: set.fac, n: 0, heat: -1, phase: '', x: set.cx, y: set.cy });
+      if (!def) fr.att = b.fac;
+      fr.n += n;
+      let ph = bandPhase(b); if (b.army && b.army.strat === 'emboscada' && ph === 'posicao' && b.army.cos.some(co => co.hidden)) ph = 'emboscada';
+      const h = (PHASE[ph] || PHASE.marcha)[0] + (b.siege || ph === 'cerco' ? 20 : 0) + (ph === 'emboscada' ? 30 : 0) - (def && ph !== 'batalha' ? 10 : 0);
+      if (h > fr.heat) { fr.heat = h; fr.phase = PH_WORD[ph] || ph; }
+    }
+    // the sea: invasion fleets, galleys on the hunt, a ship on fire
+    for (const s of S().ships) {
+      const hot = s.burn > 0 || s.st === 'fireship' || (s.kind === 'guerra' && s.st === 'hunt') || ((s.st === 'sail' || s.st === 'land') && s.purpose === 'raid');
+      if (!hot) continue;
+      let fr = m.get('mar'); if (!fr) m.set('mar', fr = { key: 'mar', name: 'No mar', att: s.fac, dfn: s.enemy || null, n: 0, heat: 58, phase: 'guerra no mar', x: s.x, y: s.y });
+      fr.n++; if (s.kind === 'guerra' && s.st === 'hunt') { fr.heat = 80; fr.phase = 'batalha naval'; }
+    }
+    // a front does not vanish the moment its soldiers regroup or a galley turns home
+    const now = performance.now() / 1000;
+    for (const f of m.values()) f.seen = now;
+    for (const f of fronts) if (!m.has(f.key) && now - (f.seen || 0) < 10) m.set(f.key, f);
+    return [...m.values()].sort((a, b) => b.heat - a.heat);
+  }
+  function frontNear(x, y) {
+    let best = null, bd = 24;
+    for (const f of fronts) { if (f.key === 'mar') continue; const d = G.dist(x, y, f.x, f.y); if (d < bd) { bd = d; best = f.key; } }
+    return best;
+  }
+  const anyWar = () => G.Fac.all().some(a => G.Fac.all().some(b => a.id < b.id && G.Fac.atWar(a.id, b.id)));
+  function frontName(key) { const f = fronts.find(o => o.key === key); return f ? f.name : key === 'mar' ? 'No mar' : 'a batalha'; }
+
+  // the close-ups only the war camera looks for
+  function warDetails(out) {
+    if (!G.War) return;
+    const Sv = S().villagers;
+    for (const b of G.War.bands.values()) {
+      const set = S().settlements.get(b.set); if (!set) continue;
+      const A = b.army, front = 'set:' + b.set, def = b.goal === 'defesa';
+      const f = facName(b.fac), en = facName(b.enemy);
+      const kick = kickOf(set.name, f), ph = bandPhase(b), n = aliveOf(b.members);
+      if (n < 2) continue;
+      const gen = A && Sv.get(A.gen), genOk = gen && !gen.dead && !gen.inside;
+      const live = () => G.War.bands.has(b.id);
+      // the column on the road, filmed from its head
+      if (ph === 'marcha' && !def) {
+        const leadId = genOk ? gen.id : b.members.find(id => { const v = Sv.get(id); return v && !v.dead && !v.inside; });
+        if (leadId) out.push({ key: 'col:' + b.id, kind: 'march', front, score: 72, zoom: 1.55, dur: 12, pos: vAt(leadId), alive: () => live() && bandPhase(b) === 'marcha', kick, title: 'A coluna em marcha',
+          subFn: () => { const l = Sv.get(leadId); const d = l ? Math.round(G.dist(l.x, l.y, set.cx, set.cy)) : 0; return `${aliveOf(b.members)} soldados de ${f} na estrada para ${set.name}, a ${d} passos das casas` + (genOk ? ` — à frente, ${G.roleName(gen).toLowerCase()} ${gen.name}` : ''); } });
+      }
+      if (!A) continue;
+      // at home: the defenders take their places (or hide)
+      if (def && (A.phase === 'reunir' || A.phase === 'posicao')) {
+        const hid = A.cos.filter(co => co.hidden && coAlive(co));
+        if (A.strat === 'emboscada' && hid.length) {
+          const hp = coPos(hid[0]);
+          // who is walking into it?
+          let foe = null, fd = 1e9;
+          for (const o of G.War.bands.values()) {
+            if (o.fac !== b.enemy || o.set !== b.set || bandPhase(o) !== 'marcha') continue;
+            const og = o.army ? Sv.get(o.army.gen) : null; const op = og ? [og.x, og.y] : centroid(o.members, 8);
+            if (op && hp) { const d = G.dist(op[0], op[1], hp[0], hp[1]); if (d < fd) { fd = d; foe = { o, id: og ? og.id : null }; } }
+          }
+          const nh = hid.reduce((a, co) => a + coAlive(co), 0);
+          out.push({ key: 'amb:' + b.id, kind: 'ambush', front, score: foe && fd < 28 ? 93 : 74, zoom: 2.0, dur: 11, pos: () => coPos(hid[0]), alive: () => live() && hid[0].hidden, kick, title: 'Emboscada',
+            subFn: () => (foe && fd < 40 ? `${nh} soldados de ${f} esperam escondidos na mata. ${en} vem pela estrada e ainda não viu nada.` : `${nh} soldados de ${f} se escondem na mata, à espera de ${en}`) });
+          if (foe && foe.id && fd < 26) out.push({ key: 'trap:' + foe.o.id, kind: 'march', front, score: 88, zoom: 1.7, dur: 9, pos: vAt(foe.id), alive: () => G.War.bands.has(foe.o.id) && bandPhase(foe.o) === 'marcha' && hid[0].hidden, kick: kickOf(set.name, facName(foe.o.fac)), title: 'Rumo à armadilha',
+            sub: `${facName(foe.o.fac)} marcha sem saber que ${f} espera na floresta` });
+        } else {
+          out.push({ key: 'def:' + b.id, kind: 'defense', front, score: A.phase === 'reunir' ? 66 : 60, zoom: 1.45, dur: 11, pos: () => centroid(b.members, 18), alive: () => live() && (b.army.phase === 'reunir' || b.army.phase === 'posicao'), kick,
+            title: A.phase === 'reunir' ? 'As defesas se organizam' : A.strat === 'muralha' ? 'Nas muralhas' : A.strat === 'colina' ? 'No alto da colina' : A.strat === 'rio' ? 'No vau do rio' : 'A linha de defesa',
+            sub: `${n} soldados de ${f} esperam ${en}` + (A.strat && G.Army ? ` — ${G.Army.STRAT[A.strat]}` : '') });
+        }
+      }
+      // the ambush is sprung
+      if (A.strat === 'emboscada' && A.phase === 'batalha' && (A.bt || 0) < 16) out.push({ key: 'ambush!:' + b.id, kind: 'ambush', front, score: 99, zoom: 1.8, dur: 10, pos: () => centroid(b.members, 18), alive: live, kick, title: 'A emboscada!', sub: `os soldados de ${f} saem da floresta e caem sobre o flanco de ${en}` });
+      if (A.phase === 'batalha') {
+        for (const co of A.cos) {
+          const k = coAlive(co); if (!k) continue;
+          const cl = () => live() && coAlive(co) > 0;
+          if (co.rout) { out.push({ key: 'rout:' + co.id, kind: 'rout', front, score: 86, zoom: 2.0, dur: 8, pos: () => coPos(co), alive: cl, kick, title: 'A debandada', sub: `os ${unitOf(co)} de ${f} quebram a formação e fogem do campo` }); continue; }
+          if (co.order === 'flanquear') out.push({ key: 'flank:' + co.id, kind: 'flank', front, score: 96, zoom: 1.8, dur: 10, pos: () => coPos(co), alive: () => cl() && (co.order === 'flanquear' || co.order === 'carregar'), kick, title: 'O flanco', sub: `${G.cap(unitOf(co))} de ${f} contornam pela ala ${co.wing === 'e' ? 'esquerda' : 'direita'} para cair sobre ${en}` });
+          else if (co.order === 'carregar' && co.kind === 'cavalaria') out.push({ key: 'charge:' + co.id, kind: 'flank', front, score: 90, zoom: 2.0, dur: 8, pos: () => coPos(co), alive: cl, kick, title: 'A carga', sub: `a cavalaria de ${f} cai sobre o flanco de ${en}` });
+          else if (co.kind === 'arqueiro' && k >= 2) out.push({ key: 'arch:' + co.id, kind: 'archers', front, score: 82, zoom: 2.1, dur: 9, pos: () => coPos(co), alive: cl, kick, title: 'Os arqueiros', sub: `${k} arqueiros de ${f} atiram sobre as linhas de ${en}` });
+        }
+        if (genOk) out.push({ key: 'gen:' + b.id, kind: 'general', front, score: 76, zoom: 2.5, dur: 9, mark: 1, pos: vAt(gen.id), alive: () => live() && !gen.dead, kick, title: gen.name, subFn: () => `${G.roleName(gen)} de ${f}, no meio da batalha — ${aliveOf(b.members)} soldados ainda de pé` });
+      }
+      // the siege: engines and the wall
+      for (const e of b.engines || []) {
+        const word = e.kind === 'ariete' ? 'O aríete' : e.kind === 'torre' ? 'A torre de cerco' : 'A catapulta';
+        const sub = e.kind === 'ariete' ? `${f} bate no portão de ${set.name}` : e.kind === 'torre' ? `a torre de ${f} rola contra a muralha de ${set.name}` : `as pedras de ${f} voam sobre as muralhas de ${set.name}`;
+        out.push({ key: 'eng:' + e.id, kind: 'engine', front, score: e.moving || e.hit > 0 ? 90 : 80, zoom: 2.2, dur: 9, pos: () => [e.x, e.y, 10], alive: () => !!(b.engines && b.engines.includes(e)), kick, title: word, sub });
+      }
+      if (b.siege) { const sg = b.siege; out.push({ key: 'wall:' + b.id, kind: 'wall', front, score: 84, zoom: 2.2, dur: 9, pos: () => [sg.x, sg.y, 6], alive: () => b.siege === sg, kick, title: 'Na muralha', sub: `os soldados de ${f} golpeiam a muralha de ${set.name}` }); }
+    }
+    // where the lines met: the thick of it
+    for (const bt of G.War.battles) {
+      if (G.War.clock - bt.last > 7) continue;
+      if (!bt._cid) bt._cid = ++cidN;
+      const tot = Object.values(bt.dead).reduce((a, n) => a + n, 0);
+      // the thick of it moves: film the fighters still at it around the first blood
+      const hot = () => { let x = 0, y = 0, k = 0; for (const o of G.War.fighters) if (!o.dead && G.dist2(o.x, o.y, bt.x, bt.y) < 196) { x += o.x; y += o.y; k++; } return k >= 2 ? [x / k, y / k, 6] : [bt.x, bt.y, 6]; };
+      out.push({ key: 'melee:' + bt._cid, kind: 'melee', front: frontNear(bt.x, bt.y), score: 84 + Math.min(10, tot), zoom: 2.2, dur: 9, pos: hot, alive: () => G.War.clock - bt.last < 12, kick: place(bt.x, bt.y), title: 'Corpo a corpo',
+        subFn: () => { const t = Object.values(bt.dead).reduce((a, n) => a + n, 0); return `${t} ${t === 1 ? 'morto' : 'mortos'} até agora` + (bt.names.length ? ` — entre eles ${bt.names.join(', ')}` : ''); } });
+    }
+  }
+
+  // the bar with the fronts (in war mode), or one chip to go there (in the plain cinema)
+  function warUi() {
+    if (!el) return;
+    let sig, html;
+    if (war) {
+      sig = 'w|' + (war.front || '') + '|' + fronts.map(f => f.key + ':' + f.phase).join(',');
+      if (sig === uiSig) return;
+      html = `<button data-x class="cw-t" title="Sair da câmera de guerra (G) e voltar ao cinema do mundo todo">${G.ICON ? G.ICON.sword : ''}<span>Câmera de guerra</span><em>×</em></button>` +
+        (fronts.length > 1 ? `<button data-f="" class="${war.front ? '' : 'on'}">Todas as frentes</button>` : '') +
+        fronts.map(f => `<button data-f="${f.key}" class="${war.front === f.key ? 'on' : HOT[f.phase] && war.front ? 'hot' : ''}" style="--a:${f.att ? G.Fac.hex(f.att) : '#888'};--d:${f.dfn ? G.Fac.hex(f.dfn) : '#888'}"><i></i><b>${f.key === 'mar' ? 'No mar' : (f.att ? shortFac(f.att) + ' × ' : '') + f.name}</b><small>${f.phase}</small></button>`).join('') +
+        '';
+    } else {
+      sig = 'n|' + fronts.length;
+      if (sig === uiSig) return;
+      html = fronts.length ? `<button data-f="" class="cw-go">${G.ICON ? G.ICON.sword : ''}Seguir só a guerra <small>${fronts.length} ${fronts.length === 1 ? 'frente' : 'frentes'}</small></button>` : '';
+    }
+    uiSig = sig; el.war.innerHTML = html;
+    el.root.classList.toggle('war', !!war);
+  }
+  function flash(t) { el.status.textContent = t; el.status.classList.add('show'); statusT = 2.6; cap.flash = t; }
+
+  // outside the cinema: the sword button and the alerts when a battle is about to start
+  function hideAlert() { if (el && el.alert) el.alert.classList.add('hidden'); alertT = 0; alertPri = 0; }
+  function alertOf(text, sub, front, pri) {
+    if (!el || !el.alert || C.on || (G.Photo && G.Photo.on) || G.Main.modalOpen || (G.Skip && G.Skip.on)) return;
+    if (alertT > 0 && pri < alertPri) return;
+    const ck = front + '|' + text, now = performance.now() / 1000;
+    if (now - (alertCd.get(ck) || -1e9) < 60) return;
+    alertCd.set(ck, now);
+    alertFront = front; alertPri = pri; alertT = pri >= 3 ? 14 : 10;
+    el.alert.querySelector('b').textContent = text; el.alert.querySelector('small').textContent = sub || '';
+    el.alert.classList.remove('hidden'); el.alert.classList.remove('pop'); void el.alert.offsetWidth; el.alert.classList.add('pop');
+    G.Audio && G.Audio.play && G.Audio.play('horn');
+  }
+  function watch() {
+    if (!G.War) return;
+    const seenNow = new Set();
+    for (const b of G.War.bands.values()) {
+      seenNow.add('b' + b.id);
+      const set = S().settlements.get(b.set); if (!set) continue;
+      const A = b.army; let ph = bandPhase(b);
+      if (A && A.strat === 'emboscada' && ph === 'posicao' && A.cos.some(co => co.hidden)) ph = 'emboscada';
+      const old = watched.get('b' + b.id); watched.set('b' + b.id, ph);
+      if (old === ph || aliveOf(b.members) < 3) continue;
+      const f = facName(b.fac), en = facName(b.enemy), front = 'set:' + b.set, def = b.goal === 'defesa';
+      if (ph === 'batalha' && A && A.strat === 'emboscada') alertOf('Emboscada!', `${f} cai sobre ${en} perto de ${set.name}`, front, 4);
+      else if (ph === 'batalha') alertOf('Batalha campal', `${f} e ${en} formam as linhas perto de ${set.name}`, front, 4);
+      else if (ph === 'cerco') alertOf(`O cerco de ${set.name}`, `${f} cerca a cidade de ${en}`, front, 3);
+      else if ((ph === 'invadir' || ph === 'assalto' || ph === 'ataque') && !def) alertOf(`O ataque a ${set.name}`, `${f} avança contra as casas de ${en}`, front, 3);
+      else if (ph === 'emboscada') alertOf('Uma emboscada armada', `${f} se esconde na mata à espera de ${en}`, front, 2);
+      else if (ph === 'marcha' && !def && old) alertOf(`${shortFac(b.fac)} marcha contra ${set.name}`, `${aliveOf(b.members)} soldados na estrada`, front, 1);
+    }
+    for (const s of S().ships) {
+      if (s.purpose !== 'raid' && !(s.kind === 'guerra' && s.st === 'hunt')) continue;
+      const k = 's' + s.id, st = s.st; seenNow.add(k);
+      const old = watched.get(k); watched.set(k, st); if (old === st) continue;
+      const tg = s.target && S().settlements.get(s.target);
+      if (s.purpose === 'raid' && st === 'sail') alertOf('Uma frota de invasão', `${facName(s.fac)} cruza o mar${tg ? ' rumo a ' + tg.name : ''}`, 'mar', 2);
+      else if (s.purpose === 'raid' && st === 'land' && tg) alertOf('O desembarque', `${facName(s.fac)} salta na praia perto de ${tg.name}`, 'set:' + tg.id, 3);
+      else if (s.kind === 'guerra' && st === 'hunt') alertOf('Batalha naval', `as galeras de ${facName(s.fac)} caçam navios inimigos`, 'mar', 2);
+    }
+    for (const k of [...watched.keys()]) if (!seenNow.has(k)) watched.delete(k);
+  }
+  C.tick = function (rdt) {
+    if (!el || G.Main.mode !== 'game') return;
+    frontT -= rdt;
+    if (frontT <= 0) {
+      frontT = 0.5;
+      if (!C.on) fronts = computeFronts();
+      watch();
+      const btn = document.getElementById('btn-war');
+      if (btn) { const n = fronts.length; btn.classList.toggle('hidden', !n); const i = btn.querySelector('i'); if (i && i.textContent !== String(n)) i.textContent = n; }
+    }
+    if (alertT > 0) { alertT -= rdt; if (alertT <= 0) hideAlert(); }
+  };
+  C.reset = function () { watched.clear(); alertCd.clear(); fronts = []; hideAlert(); };
 
   // the chronicle: things that just happened, where they happened
   const EV = {
@@ -181,12 +419,13 @@
     era: [78, 'Uma nova era'], city: [72, 'A cidade cresce'], crown: [68, 'O poder muda de mãos'], tyrant: [70, 'Tirania'], split: [68, 'Um povo se divide'], peace: [60, 'Paz'], ally: [54, 'Aliança'],
     baby: [56, 'Um nascimento'], heart: [52, 'Amor'], grave: [44, 'Uma morte'], skull: [62, 'Uma morte'], chain: [52, 'Cativos'], free: [66, 'Liberdade'], general: [64, 'Um general'],
     wolf: [58, 'Feras'], sick: [50, 'Doença'], heal: [46, 'Cura'], trade: [40, 'Comércio'], envoy: [46, 'Emissários'], prophecy: [64, 'Profecia'], estatua: [56, 'Uma estátua'], aqueduct: [60, 'O aqueduto'],
-    wall: [46, 'Muralhas'], ship: [48, 'Um navio'], naval: [72, 'Guerra no mar'], theft: [50, 'Roubo'], storm: [58, 'Tempestade'], tech: [46, 'Uma descoberta'], feira: [46, 'A feira'],
+    wall: [46, 'Muralhas'], ship: [48, 'Um navio'], naval: [72, 'Guerra no mar'], battle: [84, 'Batalha'], army: [70, 'O exército'], theft: [50, 'Roubo'], storm: [58, 'Tempestade'], tech: [46, 'Uma descoberta'], feira: [46, 'A feira'],
     administracao: [44, 'O governo'], coletoria: [40, 'Os impostos'], mercado_negro: [46, 'O mercado negro'], boat: [40, 'Barcos'], road: [30, 'Estradas'], cart: [34, 'Carroças'],
     curral: [34, 'Rebanhos'], estabulo: [36, 'Cavalos'], mina: [36, 'A mina'], forja: [34, 'A forja'], ourives: [34, 'Ouro'], olaria: [32, 'A olaria'], taverna: [34, 'A taverna'],
     tecelagem: [32, 'A tecelagem'], acougue: [30, 'O açougue'], deer: [40, 'A vida selvagem'], flower: [42, 'Fertilidade'], rain: [40, 'Chuva'], lore: [40, 'Lenda'], pop: [40, 'O povo'], campfire: [30, 'Uma fogueira'],
     workshop: [28, 'Uma oficina'], house: [22, 'Casas novas'], hut: [22, 'Cabanas novas'], farm: [20, 'Uma plantação'], storehouse: [22, 'Um celeiro'], well: [22, 'Um poço'], coin: [30, 'Moedas'],
   };
+  const WAR_IC = { war: 1, siege: 1, massacre: 1, battle: 1, army: 1, naval: 1, general: 1, chain: 1, skull: 1 };
   function chronicle(out) {
     const H = S().history; const n0 = S().logN || 0;
     if (n0 > logN) {
@@ -199,6 +438,7 @@
       out.push({
         key: 'log:' + e.n, kind: 'log:' + e.ic, score: base - (clock - o.born) * 0.9, zoom: base >= 70 ? 1.7 : 2.3, dur: 10,
         drift: 1, pos: () => [e.x, e.y, 6], alive: () => true, kick: kickOf(place(e.x, e.y), 'Dia ' + e.d), title: word, sub: trim(e.txt, 190), fromLog: true,
+        front: WAR_IC[e.ic] ? (e.ic === 'naval' ? 'mar' : frontNear(e.x, e.y)) : null,
       });
     }
   }
@@ -301,7 +541,7 @@
       if (l.length < 3) continue;
       const cx = l.reduce((a, c) => a + c.x, 0) / l.length, cy = l.reduce((a, c) => a + c.y, 0) / l.length;
       const crows = l.some(c => c.crows); const st = G.Carnage.stage(l[0]);
-      out.push({ key: 'dead:' + k, kind: 'dead', score: 52 + Math.min(22, l.length * 2) + (crows ? 8 : 0), zoom: 2.3, dur: 12, drift: 1, pos: () => [cx, cy, 4], alive: () => true,
+      out.push({ key: 'dead:' + k, kind: 'dead', score: 52 + Math.min(22, l.length * 2) + (crows ? 8 : 0), zoom: 2.3, dur: 12, drift: 1, pos: () => [cx, cy, 4], alive: () => true, front: frontNear(cx, cy),
         kick: place(cx, cy), title: st === 'bones' ? 'Os ossos da batalha' : 'O campo dos mortos',
         subFn: () => { const n = G.Carnage.list().filter(c => G.dist(c.x, c.y, cx, cy) < 5).length; const busy = G.Carnage.list().some(c => c.claim && G.dist(c.x, c.y, cx, cy) < 5); return `${n} ${n === 1 ? 'corpo' : 'corpos'} ${G.Carnage.STAGE[st]}${crows ? ', e os corvos' : ''}${busy ? ' — alguém veio arrastá-los' : ' — ninguém veio buscá-los ainda'}`; } });
     }
@@ -370,8 +610,20 @@
 
   // ------------------------------ the director ------------------------------
   function candidates() {
-    const out = [];
-    festivals(out); armies(out); fleets(out); chronicle(out); fires(out); life(out); beasts(out); places(out); evenings(out); aftermath(out); caves(out);
+    let out = [];
+    fronts = computeFronts();
+    if (war) {
+      // the war camera: only what belongs to the war (to one front, when one was chosen)
+      armies(out); fleets(out); chronicle(out); aftermath(out); warDetails(out);
+      if (war.front && !fronts.some(f => f.key === war.front)) { war.front = null; uiSig = ''; if (shot) seen.set(shot.key, clock); shot = null; flash(fronts.length ? 'Essa frente acabou · seguindo as outras' : anyWar() ? 'Nenhum exército em campo agora' : 'A guerra acabou'); }
+      out = out.filter(c => c.front && (!war.front || c.front === war.front));
+      // what is happening now beats what the chronicle already told
+      for (const c of out) if (c.fromLog) c.score -= 12;
+    } else {
+      festivals(out); armies(out); fleets(out); chronicle(out); fires(out); life(out); beasts(out); places(out); evenings(out); aftermath(out); caves(out);
+      // the war's close-ups also show up now and then in the plain cinema
+      const wd = []; warDetails(wd); for (const c of wd) { c.score -= 14; out.push(c); }
+    }
     // not the same thing again so soon, not always the same kind of thing
     for (const c of out) {
       const last = seen.get(c.key);
@@ -381,19 +633,25 @@
       c.score += Math.random() * 6;
     }
     out.sort((a, b) => b.score - a.score);
+    // the same scene offered twice (a battle seen from both hosts): keep the better
+    const keys = new Set(); out = out.filter(c => (keys.has(c.key) ? false : (keys.add(c.key), true)));
     return out;
   }
   function direct(force) {
     const list = candidates();
+    // the war camera never lingers on something that is not (or no longer) its war
+    if (shot && war && !shot.parent && (!shot.front || (war.front && shot.front !== war.front))) force = true;
     if (shot) {
       const alive = shot.alive() && shot.pos();
       if (shot.subFn) { const s = shot.subFn(); if (s !== cap.sub) { cap.sub = s; el.sub.textContent = trim(s, 200); if (shot.t > 3) { el.cap.classList.add('show'); cap.hideAt = clock + 6; } } }
       const best = list.find(c => c.key !== shot.key && c.key !== shot.parent);
       const hold = shot.t < 5 && !!shot.pos();
       if (!force && hold) return;
-      if (!force && alive && shot.t < shot.dur && !(best && best.score > shot.score + 26)) return;
-      // a long battle or festival: a second look from closer, then back out
       const same = list.find(c => c.key === (shot.parent || shot.key));
+      // the war camera weighs the scene as it is now (an ambush springing beats a column that is still walking)
+      const bar = war ? (same ? same.score : shot.score - 20) + 10 : shot.score + 26;
+      if (!force && alive && shot.t < shot.dur && !(best && best.score > bar && (!war || shot.t > 3))) return;
+      // a long battle or festival: a second look from closer, then back out
       if (!force && alive && same && same.score >= 70 && best && same.score >= best.score - 8 && !shot.parent && same.close) {
         const cl = same.close(); if (cl) { cl.key = same.key + ':close'; cl.parent = same.key; cl.score = same.score; return take(cl); }
       }
@@ -437,11 +695,18 @@
     // the hint, the mouse pointer and the speed badge
     hintT -= rdt; el.hint.classList.toggle('show', hintT > 0);
     if (hintT <= 0) document.body.classList.add('cine-nocursor');
-    if (G.speed !== lastSpeed) { lastSpeed = G.speed; statusT = 2.2; }
+    if (G.speed !== lastSpeed) { lastSpeed = G.speed; statusT = 2.2; cap.flash = ''; }
     statusT -= rdt;
-    const st = G.speed === 0 ? 'Pausado' : statusT > 0 ? `Velocidade ${G.speed}x` : '';
+    const st = G.speed === 0 ? 'Pausado' : statusT > 0 ? (cap.flash || `Velocidade ${G.speed}x`) : '';
+    if (statusT <= 0) cap.flash = '';
     if (el.status.textContent !== st) el.status.textContent = st;
     el.status.classList.toggle('show', !!st);
+    warUiT -= rdt;
+    if (warUiT <= 0) {
+      warUiT = 0.8;
+      if (war) { if (!fronts.length) { war.quiet += 0.8; if (war.quiet > 5) { war = null; flash(anyWar() ? 'Nenhum exército em campo agora · o cinema volta ao mundo' : 'A guerra acabou · o cinema volta ao mundo'); } } else war.quiet = 0; }
+      warUi();
+    }
     // WASD or the arrows: the player is flying the camera
     const k = G.Input.keys; if (k.w || k.a || k.s || k.d || k.arrowup || k.arrowdown || k.arrowleft || k.arrowright) C.manual();
     if (manualT > 0) { manualT -= rdt; if (manualT <= 0) { evalT = 0; prevKey = ''; } return; }
@@ -498,5 +763,45 @@
     c.strokeStyle = 'rgba(255,226,150,0.8)'; c.lineWidth = 1; c.beginPath(); c.ellipse(p[0], p[1], 7, 3.5, 0, 0, TAU); c.stroke();
     c.restore();
   });
+  G.renderHooks.ground.push(function (c, proj) {
+    if (!C.on || !war || !G.War || R().under) return;
+    const gh = (x, y) => W.groundH(G.clamp(x, 0, G.N - 0.01), G.clamp(y, 0, G.N - 0.01));
+    c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
+    for (const b of G.War.bands.values()) {
+      const A = b.army; if (!A || (war.front && 'set:' + b.set !== war.front)) continue;
+      const col = G.Fac.hex(b.fac);
+      if (A.phase === 'marcha' && b.goal !== 'defesa') {
+        const g = S().villagers.get(A.gen);
+        // where it has been: a faint trodden line
+        if (A.trail && A.trail.length > 2) {
+          c.strokeStyle = col; c.globalAlpha = 0.28; c.lineWidth = 2; c.setLineDash([]); c.beginPath();
+          const tr = A.trail, from = Math.max(0, tr.length - 90);
+          for (let k = from; k < tr.length; k++) { const p = proj(tr[k][0], tr[k][1], gh(tr[k][0], tr[k][1])); if (k === from) c.moveTo(p[0], p[1]); else c.lineTo(p[0], p[1]); }
+          c.stroke();
+        }
+        // where it is going: a dashed arrow to the town
+        if (g && !g.dead) {
+          const n = Math.max(2, Math.ceil(G.dist(g.x, g.y, b.tx, b.ty) / 1.5));
+          c.strokeStyle = col; c.globalAlpha = 0.55; c.lineWidth = 1.6; c.setLineDash([5, 5]); c.lineDashOffset = -clock * 14; c.beginPath();
+          let last = null, prev = null;
+          for (let k = 0; k <= n; k++) { const x = g.x + (b.tx - g.x) * k / n, y = g.y + (b.ty - g.y) * k / n; const p = proj(x, y, gh(x, y)); if (k === 0) c.moveTo(p[0], p[1]); else c.lineTo(p[0], p[1]); prev = last; last = p; }
+          c.stroke(); c.setLineDash([]);
+          if (prev && last) { const a = Math.atan2(last[1] - prev[1], last[0] - prev[0]); c.fillStyle = col; c.globalAlpha = 0.75; c.beginPath(); c.moveTo(last[0] + Math.cos(a) * 6, last[1] + Math.sin(a) * 6); c.lineTo(last[0] + Math.cos(a + 2.5) * 6, last[1] + Math.sin(a + 2.5) * 6); c.lineTo(last[0] + Math.cos(a - 2.5) * 6, last[1] + Math.sin(a - 2.5) * 6); c.fill(); }
+        }
+      }
+      // the hidden: a slow ring breathing in the woods, so the viewer knows where to look
+      for (const co of A.cos) {
+        if (!co.hidden) continue; const p0 = coPos(co); if (!p0) continue;
+        let sp = 0; for (const v of co.alive || []) if (v && !v.dead) sp = Math.max(sp, G.dist(v.x, v.y, p0[0], p0[1]));
+        const k = 0.5 + 0.5 * Math.sin(clock * 2.2), r = Math.max(1.6, sp + 0.9) + k * 0.25;
+        c.globalAlpha = 0.4 + 0.35 * k; c.strokeStyle = col; c.lineWidth = 1.4; c.setLineDash([4, 4]); c.lineDashOffset = -clock * 6;
+        c.beginPath();
+        for (let a = 0; a <= 28; a++) { const x = p0[0] + Math.cos(a / 28 * TAU) * r, y = p0[1] + Math.sin(a / 28 * TAU) * r; const p = proj(x, y, gh(x, y)); if (a === 0) c.moveTo(p[0], p[1]); else c.lineTo(p[0], p[1]); }
+        c.stroke(); c.setLineDash([]);
+      }
+    }
+    c.restore();
+  });
+  C.list = () => candidates().slice(0, 12).map(c => `${c.key} ${c.title} ${Math.round(c.score)}`);
   C.shot = () => (shot ? { key: shot.key, kind: shot.kind, title: shot.title, t: shot.t, score: shot.score } : null);
 })(window.G);

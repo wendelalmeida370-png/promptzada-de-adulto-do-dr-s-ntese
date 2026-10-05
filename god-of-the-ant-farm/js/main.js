@@ -42,7 +42,7 @@
     G.FX.list.length = 0; G.FX.floaters.length = 0; G.FX.bolts.length = 0; G.FX.rings.length = 0; G.FX.glows.length = 0;
     G.setMapSize(opts.size);
     G.Render.setView(0);
-    G.Caves && G.Caves.reset(); G.Render.setUnder && G.Render.setUnder(0, true);
+    G.Caves && G.Caves.reset(); G.Render.setUnder && G.Render.setUnder(0, true); G.Cinema.reset && G.Cinema.reset();
     G.genWorld(seed, opts);
     const S = G.S;
     S.temper = opts.temper || 'normal';
@@ -344,6 +344,7 @@
       if (G.Cinema.on) {
         if (k === 'Escape' || k === 'c' || k === 'C') G.Cinema.stop();
         else if (k === 'n' || k === 'N') G.Cinema.next();
+        else if (k === 'g' || k === 'G') G.Cinema.setWar(G.Cinema.war() ? null : {});
         else if (k === ' ') { e.preventDefault(); if (G.speed === 0) G.UI.setSpeed(M.lastSpeed || 1); else { M.lastSpeed = G.speed; G.UI.setSpeed(0); } }
         else if (k === '+' || k === '=') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.min(sp.length - 1, sp.indexOf(G.speed) + 1)]); }
         else if (k === '-' || k === '_') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.max(0, sp.indexOf(G.speed) - 1)]); }
@@ -365,6 +366,7 @@
       else if (k === 'f' || k === 'F') { const s = G.UI.selected; if (s && s.x !== undefined && !s.type && !s.dead) G.Render.cam.follow = G.Render.cam.follow === s.id ? 0 : s.id; }
       else if (k === 'h' || k === 'H') $('#chronicle').classList.toggle('collapsed');
       else if (k === 'c' || k === 'C') { if (I.held) release(); G.Cinema.start(); }
+      else if (k === 'g' || k === 'G') { if (I.held) release(); G.Cinema.start({ war: 1 }); }
       else if (k === 'p' || k === 'P') { if (I.held) release(); G.Photo.start(); }
       else if (k === 't' || k === 'T') { const s = G.UI.selected; if (s && !s.type && !s.kind) G.UI.openTree(s.id); }
       else if (k === '+' || k === '=') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.min(sp.length - 1, sp.indexOf(G.speed) + 1)]); }
@@ -463,7 +465,7 @@
         if (k.w || k.arrowup) dy -= v; if (k.s || k.arrowdown) dy += v; if (k.a || k.arrowleft) dx -= v; if (k.d || k.arrowright) dx += v;
         if (dx || dy) { cam.x += dx; cam.y += dy; cam.follow = 0; cam.target = null; }
       }
-      if (M.mode === 'game') { G.Cinema.update(rdt); G.Photo.update(rdt); }
+      if (M.mode === 'game') { G.Cinema.tick(rdt); G.Cinema.update(rdt); G.Photo.update(rdt); }
       G.Render.update(rdt, dt);
       G.FX.update(dt > 0 ? dt : 0, rdt);
       G.Sky && G.Sky.update(dt > 0 ? dt : 0, rdt);

@@ -1637,6 +1637,7 @@
     for (const cv of C.all()) {
       const cq = proj(cv.cx + 0.5, cv.cy + 0.5, fl); if (cq[0] < view[0] - 420 || cq[0] > view[2] + 420 || cq[1] < view[1] - 320 || cq[1] > view[3] + 320) continue;
       for (const p of cv.paintings) {
+        if (!p.w) continue;
         const r = p.i + p.w[0] + p.w[1] * N; const rx = r % N, ry = (r / N) | 0;
         if (ugStub[r] || depth((p.i % N) + 0.5, ((p.i / N) | 0) + 0.5) <= depth(rx + 0.5, ry + 0.5) + 0.01) continue;
         pushD(depth(rx + 0.5, ry + 0.5) + 0.02, 23, p, 0, 0);

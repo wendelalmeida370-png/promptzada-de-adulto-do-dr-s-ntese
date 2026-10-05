@@ -37,6 +37,7 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Crônica | `H` |
 | Árvore genealógica | `T` (com alguém selecionado) |
 | Modo cinema | `C` · ou o ícone da câmera no topo — `N` próxima cena · `Esc` ou um clique sai |
+| Câmera de guerra | `G` · ou o ícone da espada no topo (só aparece enquanto há exércitos em campo) · ou **Assistir** no alerta de batalha — escolha uma frente para seguir só aquela batalha |
 | Modo foto | `P` · ou o ícone da máquina fotográfica — `Esc` sai |
 | Menu | `Esc` |
 
@@ -67,7 +68,7 @@ O terreno não é mais uma planície: cada mundo nasce com **relevo de verdade**
 
 O relevo muda a vida: subir custa caro (os caminhos contornam as montanhas e procuram os passos), encostas deixam todos mais lentos, **paredões não se escalam**, ninguém constrói em penhasco, o alto é frio (a neve e a taiga sobem as encostas) e menos fértil, o minério está nas terras altas — e na guerra, **quem está no alto bate mais forte**.
 
-**A câmera gira livre**, de forma contínua: **dois dedos girando** na tela do celular (a pinça continua dando zoom), o **botão do meio** do mouse ou `Shift` + arrastar no PC, ou arrastando a agulha da bússola. Enquanto gira, o mundo é desenhado no ângulo do momento — o relevo de verdade, as construções como volumes nas cores e telhados do seu povo, árvores, gente e bichos de pé —; ao soltar, ele **assenta suavemente** no lado mais próximo (um giro rápido leva ao lado seguinte), onde volta o desenho completo. `Q`/`E` dão um quarto de volta suave. São quatro lados de descanso, com as construções, as pessoas e os animais virados para o lado certo. **Montanhas escondem** o que está atrás delas — quem você selecionou continua visível como um fantasma através da rocha.
+**A câmera gira livre**, de forma contínua: **dois dedos girando** na tela do celular (a pinça continua dando zoom), o **botão do meio** do mouse ou `Shift` + arrastar no PC, ou arrastando a agulha da bússola. Enquanto gira, o mundo é desenhado no ângulo do momento — o relevo de verdade, as casas inteiras, com telhado, varanda e todos os detalhes (na metade do giro o desenho de um lado se funde suavemente com o do outro; de muito longe viram volumes nas cores do seu povo), árvores, gente e bichos de pé —; ao soltar, ele **assenta suavemente** no lado mais próximo (um giro rápido leva ao lado seguinte), onde volta o desenho completo. `Q`/`E` dão um quarto de volta suave. São quatro lados de descanso, com as construções, as pessoas e os animais virados para o lado certo. **Montanhas escondem** o que está atrás delas — quem você selecionou continua visível como um fantasma através da rocha.
 
 ## Cavernas: o mundo de baixo
 
@@ -200,6 +201,7 @@ Cada povo tem seu calendário, e as festas acontecem de verdade no mundo, com ge
 - **Portos**, **barcos de pesca** atrás de cardumes, **exploradores** que descobrem povos distantes, **navios mercantes** em rotas marítimas.
 - **Frotas de guerra** que combatem no mar, **invasões anfíbias** (os nórdicos adoram) e **colônias** em outras ilhas.
 - O mapa **Mar Aberto** separa cada povo em sua ilha: só a navegação os une.
+- **Os povos usam o mar de verdade**: quem vive na costa (e mais ainda quem vive numa ilha, passa fome ou é nórdico ou grego) aprende **navegação** cedo; o **primeiro porto** passa na frente das outras obras — e, numa ilha sem árvores, o cais é terminado **em pedra**. O povo **guarda madeira** para os primeiros **barcos de pesca** (os construtores não mexem nela) e, com **fome**, manda mais barcos ao mar. Nas ilhas sem floresta, os lenhadores vão à praia catar a **madeira que o mar traz**. Guerras entre povos do litoral vão mais vezes **pelo mar**.
 
 ## Povos, reinos e guerras
 
@@ -292,6 +294,22 @@ Aperte `C` (ou o ícone da câmera) e solte o mundo: a interface some atrás de 
 
 Perto, a câmera desliza; longe, corta pelo preto. Enquanto fica numa cena ela se aproxima ou se afasta devagar, e uma legenda diz onde estamos, o que se vê e quem é quem. Ela evita repetir cenas e tipos de cena, mas volta mais cedo às grandes (uma batalha, um cerco). `N` pula para a próxima cena; `Espaço` e `+`/`-` continuam pausando e mudando a velocidade; mexer a câmera (arrastar, roda, `WASD`) assume o controle e o diretor volta sozinho depois de alguns segundos. `Esc`, `C` ou um clique encerram o filme.
 
+### Câmera de guerra
+
+Uma parte do cinema que filma **só a guerra**. Quando há exércitos em campo, aparece no topo o ícone da **espada** (com o número de frentes); `G` também abre. E quando uma batalha está para começar — duas linhas se formando, um cerco, um assalto, uma emboscada armada ou saltando da mata, uma frota de invasão, um desembarque — surge um **alerta** com o botão **Assistir**, que leva direto para lá.
+
+Lá dentro, uma barra com as **frentes** (*Argos × Óstia · cerco*, *No mar · batalha naval*…): **Todas as frentes** ou só uma — a câmera passa a seguir **apenas aquela batalha, aquela guerra**, até ela acabar. As frentes que esquentam enquanto você assiste a outra **pulsam** na barra. A câmera procura os momentos táticos:
+
+- **a coluna em marcha**, filmada da cabeça, com quantos passos faltam até as casas — e, no chão, a **trilha** por onde o exército passou e uma **seta tracejada** até o alvo;
+- **as defesas se organizando**: o plano do general (as muralhas, o alto da colina, o vau do rio, a linha diante da cidade);
+- **a emboscada**: os soldados escondidos na mata (um anel pulsando mostra onde estão), o inimigo **rumo à armadilha** sem saber de nada — e o momento em que eles **saltam sobre o flanco**;
+- **o flanco** e **a carga**: a cavalaria contornando pela ala esquerda ou direita e caindo sobre o inimigo;
+- **os arqueiros**, **o general** no meio da batalha, **o corpo a corpo** (onde a luta está agora, com os mortos até ali) e **a debandada** quando uma companhia quebra;
+- no cerco, **o aríete** no portão, **a catapulta**, **a torre de cerco** e os soldados **na muralha**;
+- no mar, galeras caçando, brulotes, navios em chamas e o desembarque.
+
+Ela corta mais rápido que o cinema comum: uma emboscada saltando passa na frente de uma coluna que ainda caminha. Sem exércitos em campo, o cinema volta sozinho ao mundo todo. O botão com a espada na barra (ou `G`) também volta ao cinema comum; no cinema comum, um botão **Seguir só a guerra** aparece enquanto houver frentes.
+
 ## O Livro do Mundo
 
 Cada mundo nasce com **nome**, **mito da criação**, **lendas de origem** de cada povo (com seu deus e seu símbolo) e **duas profecias antigas** — que se cumprem quando o mundo, ou você, as faz acontecer. Depois o livro se escreve sozinho:
@@ -346,7 +364,7 @@ js/minimap.js     minimapa com fronteiras e cidades
 js/audio.js       áudio sintetizado com WebAudio (efeitos, som ambiente conforme o lugar, música)
 js/save.js        salvar / carregar
 js/ui.js          interface
-js/cinema.js      modo cinema: o diretor que escolhe as cenas, a câmera, as legendas
+js/cinema.js      modo cinema: o diretor que escolhe as cenas, a câmera, as legendas; a câmera de guerra (frentes, alertas, cenas táticas)
 js/photo.js       modo foto: congelar, filtros, miniatura, moldura, salvar PNG
 js/timeskip.js    avançar no tempo: anos que passam sem desenhar, mapa em time-lapse, anos de paz e fartura, resumo
 js/main.js        loop, input, câmera, menu, introdução

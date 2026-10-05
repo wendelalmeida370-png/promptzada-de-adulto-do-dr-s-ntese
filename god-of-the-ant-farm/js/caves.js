@@ -327,11 +327,11 @@
   // a floor cell beside a wall (paintings face the rock)
   function wallSpot(cv) {
     const U = C.U(); const used = new Set(cv.paintings.map(p => p.i));
-    const list = cellsOfCave(cv, (k, i) => (k === HALL || k === GAL) && !used.has(i) && U.f[i] !== FT.COL && nearRock(U, i) >= 2);
+    const rockSides = i => { const x = i % N, y = (i / N) | 0; return D4.filter(([dx, dy]) => { const nx = x + dx, ny = y + dy; return nx >= 0 && ny >= 0 && nx < N && ny < N && U.k[ny * N + nx] === ROCK; }); };
+    const list = cellsOfCave(cv, (k, i) => (k === HALL || k === GAL) && !used.has(i) && U.f[i] !== FT.COL && nearRock(U, i) >= 2 && rockSides(i).length > 0);
     if (!list.length) return null;
-    const i = pick(list); const x = i % N, y = (i / N) | 0;
-    const walls = D4.filter(([dx, dy]) => U.k[(y + dy) * N + x + dx] === ROCK);
-    return { i, w: pick(walls) };
+    const i = pick(list);
+    return { i, w: pick(rockSides(i)) };
   }
   const nearestMouth = (cv, x, y) => { let b = null, bd = 1e9; for (const m of cv.mouths) { const d = G.dist2(x, y, m.x + 0.5, m.y + 0.5); if (d < bd) { bd = d; b = m; } } return b; };
   C.nearestMouth = nearestMouth;
