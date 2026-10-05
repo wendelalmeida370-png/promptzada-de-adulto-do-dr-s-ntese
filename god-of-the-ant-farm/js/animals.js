@@ -699,7 +699,28 @@
     a.ph = (a.ph || G.R() * 6) + dt;
     if (a.kind === 'whale' && G.R() < dt * 0.06) { a.spout = 1.6; G.FX && G.FX.spawn({ x: a.x, y: a.y, h: G.SEA, z: 6, vz: 70, g: 60, life: 1.2, s0: 3, s1: 9, c: 'rgba(235,245,255,0.7)', k: 2 }); }
     if (a.spout > 0) a.spout -= dt;
-    if (a.kind === 'dolphin' && a.moving && G.R() < dt * 0.25 && !(a.leap > 0)) a.leap = 1;
+    if (a.kind === 'dolphin' && a.moving && G.R() < dt * (a.state === 'ride' ? 0.7 : 0.25) && !(a.leap > 0)) a.leap = 1;
+    // dolphins come to play in the bow wave of a passing boat
+    if (a.kind === 'dolphin' && a.state !== 'chase') {
+      if (a.state === 'ride') {
+        const sh = S.ships.find(q => q.id === a.ride);
+        if (!sh || !sh.moving || a.t <= 0 || G.dist2(sh.x, sh.y, a.x, a.y) > 36) { a.state = 'idle'; a.ride = 0; a.t = G.rr(4, 10); }
+        else {
+          const l = Math.hypot(sh.fx || 0, sh.fy || 0) || 1, fx = (sh.fx || 0) / l, fy = (sh.fy || 0) / l, side = (a.id & 1 ? 1 : -1) * (0.25 + Math.sin(a.ph * 0.7) * 0.1);
+          a.tx = sh.x + fx * 0.9 - fy * side; a.ty = sh.y + fy * 0.9 + fx * side;
+          if (S.type[W.idx(a.tx, a.ty)] > T.SEA) { a.state = 'idle'; a.ride = 0; a.t = 3; return; }
+          moveTo(a, dt, sp.run * 1.05); return;
+        }
+      } else if (a.scan <= 0 && !(a.rideCD > S.clock)) {
+        const sh = S.ships.find(q => q.moving && G.dist2(q.x, q.y, a.x, a.y) < 16);
+        if (sh) {
+          a.state = 'ride'; a.ride = sh.id; a.t = G.rr(14, 26); a.rideCD = S.clock + 60;
+          const f = G.Fac.get(sh.fac);
+          if (f && !f.dolph) { f.dolph = 1; G.Village.log(`Golfinhos vieram brincar na proa de um barco de ${f.name}, saltando na onda que ele levanta. Os marinheiros juraram que era sinal de boa viagem.`, 'sea', sh.x, sh.y); }
+          for (const id of sh.crew || []) { const v = S.villagers.get(id); if (v && !v.dead) G.Life && G.Life.bio(v, 'note', 'Golfinhos acompanharam o barco, saltando na proa'); }
+        }
+      }
+    }
     if (a.leap > 0) { a.leap -= dt * 1.4; a.z = Math.sin((1 - Math.max(0, a.leap)) * Math.PI) * 14; if (a.leap <= 0) { a.z = 0; G.FX && G.FX.splash(a.x, a.y, 0.5); } }
     if (a.scan <= 0) {
       a.scan = 0.6 + G.R() * 0.4;

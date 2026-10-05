@@ -23,6 +23,8 @@
 
   Sea.build = function () {
     const S = G.S; if (!S || !S.type) return;
+    // a new world: nothing of the old one's sea comes along
+    if (Sea._S !== S) { Sea._S = S; Sea.nest = null; Sea.carcass = null; Sea.bones = []; Sea.glowDay = -1; }
     const NN = N * N;
     if (seedUsed !== S.seed || !noise) { noise = G.makeNoise((S.seed | 0) + 7717); noise2 = G.makeNoise((S.seed | 0) + 991); seedUsed = S.seed; }
     // distance of every water tile from the land
@@ -77,6 +79,11 @@
     buildTide();
     // what floats: the kelp's canopy, the ice of the cold seas
     Sea.holeE = Sea.holes.map(h => ({ fn: drawHole, x: h.x + 0.5, y: h.y + 0.5, i: h.i }));
+    // the reef's own fish: little shoals of colour turning over the corals (and over the kelp, silver ones)
+    Sea.shoals = [];
+    for (let i = 0; i < NN; i++) {
+      if ((fl[i] === F.REEF && G.hash(i * 23 + 7) < 0.28) || (fl[i] === F.KELP && G.hash(i * 29 + 3) < 0.12)) Sea.shoals.push({ fn: drawShoal, x: i % N + 0.3 + G.hash(i) * 0.4, y: ((i / N) | 0) + 0.3 + G.hash(i * 5) * 0.4, seed: i, reef: fl[i] === F.REEF });
+    }
     buildIce();
   };
 
@@ -361,6 +368,22 @@
       c.lineWidth = pass ? 1 : 1.5; c.lineJoin = 'round'; c.stroke();
     }
     if (sh < 0.16 || G.Render.cam.zoom < 1) return;
+    // crabs running sideways over the wet sand
+    if (G.Render.cam.zoom > 1.4) {
+      c.fillStyle = 'rgba(214,92,52,0.95)'; c.beginPath();
+      for (const ch of chains) {
+        const P = ch.P, Nn = ch.Nn;
+        for (let v = 0; v < P.length - 1; v++) {
+          const hsd = G.hash(P[v][0] * 131 + P[v][1] * 71); if (hsd > 0.14) continue;
+          const tx = P[v + 1][0] - P[v][0], ty = P[v + 1][1] - P[v][1], run = 0.5 + Math.sin(t * (0.5 + hsd * 3) + hsd * 40) * 0.45, d = sh * (0.3 + hsd * 3);
+          const q = proj(P[v][0] + tx * run + Nn[v][0] * d, P[v][1] + ty * run + Nn[v][1] * d, SEA); if (!inV(q)) continue;
+          c.moveTo(q[0] + 1.3, q[1]); c.ellipse(q[0], q[1], 1.3, 0.8, 0, 0, 6.283);
+          c.moveTo(q[0] - 1.2, q[1] + 0.2); c.lineTo(q[0] - 2.3, q[1] + 0.9); c.lineTo(q[0] - 2.1, q[1] + 1.1); c.lineTo(q[0] - 1, q[1] + 0.5);
+          c.moveTo(q[0] + 1.2, q[1] + 0.2); c.lineTo(q[0] + 2.3, q[1] + 0.9); c.lineTo(q[0] + 2.1, q[1] + 1.1); c.lineTo(q[0] + 1, q[1] + 0.5);
+        }
+      }
+      c.fill();
+    }
     // pools in the rocks, weed, the little holes the clams breathe through
     for (const s of Sea.tideSegs) {
       const a = proj(s[0], s[1], SEA); if (!inV(a)) continue;
@@ -396,7 +419,9 @@
     return null;
   }
   Sea.update = function (dt) {
-    const S = G.S; if (!Sea.ice.length || !S.weather) return;
+    const S = G.S; if (!S || !S.weather || !Sea.floor) return;
+    Sea.tick && Sea.tick(dt);
+    if (!Sea.ice.length) return;
     const wa = S.weather.windA || 0, ws = 0.03 + (S.weather.windS || 0) * 0.06;
     for (let k = 0; k < Sea.ice.length; k++) {
       const f = Sea.ice[k];
@@ -432,10 +457,321 @@
     c.fillStyle = g; c.beginPath(); c.ellipse(sx, sy, 16, 8, 0, 0, 6.283); c.fill();
     c.strokeStyle = 'rgba(150,236,226,0.35)'; c.lineWidth = 0.8; c.beginPath(); c.ellipse(sx, sy, 13.5, 6.75, 0, 0, 6.283); c.stroke();
   }
+  // ------------------------------ life in the water ------------------------------
+  const FISHC = [['rgba(250,214,70,0.8)', 'rgba(70,150,240,0.8)'], ['rgba(250,140,60,0.8)', 'rgba(240,240,240,0.75)'], ['rgba(120,220,200,0.8)', 'rgba(230,90,140,0.75)']];
+  function drawShoal(c, e, sx, sy, t) {
+    const cols = e.reef ? FISHC[e.seed % 3] : ['rgba(200,214,226,0.75)', 'rgba(150,170,190,0.7)'];
+    const dir = e.seed & 1 ? 1 : -1, n = e.reef ? 7 : 9;
+    for (let pass = 0; pass < 2; pass++) {
+      c.fillStyle = cols[pass]; c.beginPath();
+      for (let k = pass; k < n; k += 2) {
+        const a = t * 0.7 * dir + k * 0.85 + e.seed, r = 5 + Math.sin(t * 0.9 + k * 1.7) * 2.2 + (k % 3);
+        const px = sx + Math.cos(a) * r * 1.4, py = sy + Math.sin(a) * r * 0.55;
+        const ang = Math.atan2(Math.cos(a) * 0.55 * dir, -Math.sin(a) * 1.4 * dir);
+        c.moveTo(px + Math.cos(ang) * 1.3, py + Math.sin(ang) * 1.3); c.ellipse(px, py, 1.3, 0.55, ang, 0, 6.283);
+      }
+      c.fill();
+    }
+  }
+  // ------------------------------ the sea that shines at night ------------------------------
+  // On some warm, calm nights every breaking wave lights up blue, and so does the wake of the boats.
+  Sea.glowing = function () { const S = G.S; return Sea.glowDay === S.day && S.time > 0.7; };
+  const GLOW_SAY = {
+    grego: 'Os velhos disseram que era Poseidon passando com seu carro.',
+    romano: 'Os áugures disseram que Netuno estava contente.',
+    egipcio: 'Os sacerdotes disseram que eram as almas a caminho do Ocidente, com suas lamparinas.',
+    asteca: 'Disseram que era o brilho de Chalchiuhtlicue, a da saia de jade.',
+    nordico: 'Os velhos chamaram aquilo de fogo do mar e prometeram arenque farto.',
+  };
+  function glowCheck() {
+    const S = G.S;
+    if (Sea._glowAsk === S.day || S.time < 0.62 || S.time > 0.7) return;
+    Sea._glowAsk = S.day;
+    if ((S.weather.rain || 0) > 0.1 || (S.weather.storm || 0) > 0) return;
+    const warm = Sea.tideSegs.filter(g => temp(g[7]) > 0.45); if (!warm.length || G.R() > 0.12) return;
+    Sea.glowDay = S.day;
+    // the first time a people sees it, the chronicle keeps it — and what they made of it
+    for (const f of G.Fac.all()) {
+      if (f.seaGlow) continue;
+      for (const set of S.settlements.values()) {
+        if (set.fac !== f.id) continue;
+        const g = warm.find(q => Math.abs(q[0] - set.cx) < 9 && Math.abs(q[1] - set.cy) < 9); if (!g) continue;
+        f.seaGlow = 1;
+        G.Village.log(`Naquela noite o mar diante de ${set.name} se acendeu de azul a cada onda. ${GLOW_SAY[f.civ] || 'Os velhos disseram que eram as almas dos afogados acendendo lanternas.'}`, 'sea', g[0], g[1]);
+        for (const v of S.villagers.values()) if (v.set === set.id && !v.dead) v.devotion = Math.min(100, (v.devotion || 0) + 4);
+        break;
+      }
+    }
+  }
   G.renderHooks = G.renderHooks || { ground: [], ents: [] };
+  G.renderHooks.glow = G.renderHooks.glow || [];
+  G.renderHooks.glow.push(function (c, proj, view, t, nightF) {
+    if (!Sea.floor || G.Render.under || !Sea.glowing() || nightF < 0.3) return;
+    const SEA = G.SEA, sh = Sea.shift(), inV = p => p[0] > view[0] - 30 && p[0] < view[2] + 30 && p[1] > view[1] - 30 && p[1] < view[3] + 30;
+    for (let pass = 0; pass < 2; pass++) {
+      c.beginPath();
+      for (const ch of Sea.tideChains || []) {
+        if (temp(Sea.tideSegs[ch.segs[0]][7]) <= 0.45) continue;
+        const P = ch.P, Nn = ch.Nn; if (!inV(proj(P[0][0], P[0][1], SEA)) && !inV(proj(P[P.length - 1][0], P[P.length - 1][1], SEA))) continue;
+        for (let v = 0; v < P.length; v++) {
+          const ph = t * 1.3 + (P[v][0] + P[v][1]) * 0.8;
+          const off = Math.max(sh, 0) + (sh < 0 ? sh : 0) + 0.05 + 0.07 * (0.5 + 0.5 * Math.sin(ph)) + pass * 0.12;
+          const q = proj(P[v][0] + Nn[v][0] * off, P[v][1] + Nn[v][1] * off, SEA);
+          if (v) c.lineTo(q[0], q[1]); else c.moveTo(q[0], q[1]);
+        }
+      }
+      c.strokeStyle = pass ? `rgba(40,160,255,${0.22 * nightF})` : `rgba(110,235,255,${(0.55 + 0.3 * Math.sin(t * 1.3)) * nightF})`;
+      c.lineWidth = pass ? 5 : 1.8; c.lineJoin = 'round'; c.stroke();
+    }
+    // the wakes of the boats
+    c.strokeStyle = `rgba(110,235,255,${0.5 * nightF})`; c.lineWidth = 1.4; c.beginPath();
+    for (const sh2 of G.S.ships) {
+      if (!sh2.moving) continue; const fx = sh2.fx || 0, fy = sh2.fy || 0, l = Math.hypot(fx, fy) || 1;
+      const a = proj(sh2.x, sh2.y, SEA); if (!inV(a)) continue; const b = proj(sh2.x - fx / l * 1.6, sh2.y - fy / l * 1.6, SEA);
+      c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]);
+    }
+    c.stroke();
+  });
+
+  // ------------------------------ the turtles come ashore ------------------------------
+  // On a warm beach, on a quiet night, a sea turtle crawls up the sand, digs, lays and goes back.
+  // The next evening the little ones break out and run for the water — and the gulls are waiting.
+  Sea.nest = null;
+  function nestCheck() {
+    const S = G.S;
+    if (Sea.nest || Sea._nestAsk === S.day || S.time < 0.78 || S.time > 0.86) return;
+    Sea._nestAsk = S.day;
+    if (G.R() > 0.35) return;
+    const cand = Sea.tideSegs.filter(g => !g[6] && temp(g[7]) > 0.56 && !S.occ[g[8]]);
+    for (let tr = 0; tr < 12 && cand.length; tr++) {
+      const g = cand[Math.floor(G.R() * cand.length)], j = g[8], jx = j % N + 0.5, jy = ((j / N) | 0) + 0.5;
+      let busy = false;
+      for (const b of S.buildings.values()) if (Math.abs(b.x + b.w / 2 - jx) < 3.5 && Math.abs(b.y + b.h / 2 - jy) < 3.5) { busy = true; break; }
+      if (!busy) for (const v of S.villagers.values()) if (!v.inside && Math.abs(v.x - jx) < 3 && Math.abs(v.y - jy) < 3) { busy = true; break; }
+      if (busy) continue;
+      const u = 0.35 + G.R() * 0.3, ex = g[0] + (g[2] - g[0]) * u, ey = g[1] + (g[3] - g[1]) * u;
+      Sea.nest = { id: Math.round(S.clock * 10) + 1, ex, ey, nx: g[4], ny: g[5], x: ex - g[4] * 0.55, y: ey - g[5] * 0.55, st: 'crawl', p: 0, t: 0, hatchDay: S.day + 1, babies: [], kids: [], taken: 0, fn: drawNest };
+      return;
+    }
+  }
+  function nestUpdate(dt) {
+    const S = G.S, n = Sea.nest; if (!n) return;
+    n.t += dt;
+    if (n.st === 'crawl') { n.p = Math.min(1, n.p + dt / 22); if (n.p >= 1) { n.st = 'dig'; n.t = 0; } }
+    else if (n.st === 'dig') { if (G.R() < dt * 1.5) G.FX && G.FX.dust && G.FX.dust(n.x, n.y, 2); if (n.t > 16) { n.st = 'back'; n.t = 0; n.mound = 1; } }
+    else if (n.st === 'back') { n.p = Math.max(0, n.p - dt / 20); if (n.p <= 0) { n.st = 'wait'; n.t = 0; } }
+    else if (n.st === 'wait') {
+      if (S.day > n.hatchDay + 1) { Sea.nest = null; return; }
+      if (S.day >= n.hatchDay && S.time >= 0.645 && S.time < 0.75) startHatch(n);
+    } else if (n.st === 'hatch') {
+      let left = 0;
+      for (const b of n.babies) {
+        if (b.done) continue; left++;
+        if (n.t < b.delay) continue;
+        b.k = Math.min(1, b.k + dt * b.sp);
+        if (b.k >= 1) { b.done = 'sea'; G.FX && G.FX.splash && G.FX.splash(b.tx, b.ty, 0.08); }
+      }
+      // the gulls take a few
+      n.gt -= dt;
+      if (n.gt <= 0) {
+        n.gt = 3 + G.R() * 4;
+        const out = n.babies.filter(b => !b.done && n.t >= b.delay && b.k > 0.15 && b.k < 0.9);
+        if (out.length && n.taken < Math.max(2, n.babies.length * 0.25)) { const b = out[Math.floor(G.R() * out.length)]; b.done = 'gull'; b.dive = 1; n.taken++; n.dive = { x: n.x + (b.tx - n.x) * b.k, y: n.y + (b.ty - n.y) * b.k, t: 0 }; }
+      }
+      if (n.dive) { n.dive.t += dt; if (n.dive.t > 1.6) n.dive = null; }
+      if (!left || n.t > 60) endHatch(n);
+    } else if (n.st === 'done') { if (n.t > 8) Sea.nest = null; }
+  }
+  function startHatch(n) {
+    const S = G.S; n.st = 'hatch'; n.t = 0; n.gt = 4;
+    const k = 14 + Math.floor(G.R() * 10);
+    for (let q = 0; q < k; q++) {
+      const lat = (G.R() - 0.5) * 0.9;
+      n.babies.push({ delay: q * 0.7 + G.R() * 0.5, k: 0, sp: 0.07 + G.R() * 0.05, tx: n.ex + n.nx * 0.3 + n.ny * lat, ty: n.ey + n.ny * 0.3 + n.nx * lat, seed: q });
+    }
+    // the children of the nearest town come running to watch
+    let set = null, sd = 16 * 16;
+    for (const st of S.settlements.values()) { const d = G.dist2(st.cx, st.cy, n.x, n.y); if (d < sd) { sd = d; set = st; } }
+    n.set = set ? set.id : 0;
+    if (set) {
+      const kids = [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 4 && v.age < 15 && !v.inside && !v.sleeping && !v.held && !v.air && !v.dead && G.dist2(v.x, v.y, n.x, n.y) < 18 * 18);
+      kids.sort(() => G.R() - 0.5);
+      for (const v of kids.slice(0, 5)) {
+        const side = (G.R() - 0.5) * 1.6, px = n.x - n.nx * 0.9 + n.ny * side, py = n.y - n.ny * 0.9 + n.nx * side;
+        if (G.Vg.give(v, { type: 'olhar', x: px, y: py, fx: n.x, fy: n.y, pri: 1.1, until: S.clock + 55, what: 'tartarugas', ev: n.id })) n.kids.push(v.id);
+      }
+    }
+  }
+  function endHatch(n) {
+    const S = G.S; n.st = 'done'; n.t = 0;
+    const set = S.settlements.get(n.set);
+    const sea = n.babies.filter(b => b.done === 'sea').length;
+    const kids = n.kids.map(id => S.villagers.get(id)).filter(v => v && !v.dead && v._saw === n.id);
+    for (const v of kids) G.Life && G.Life.bio(v, 'note', 'Viu as tartaruguinhas saírem da areia ao entardecer e correrem para o mar');
+    if (kids.length && n.taken < 3) { const v = kids[Math.floor(G.R() * kids.length)]; G.Life && G.Life.bio(v, 'note', 'Espantou as gaivotas para as tartaruguinhas chegarem ao mar'); }
+    if (set && (kids.length || !S._turtleLog)) {
+      S._turtleLog = 1;
+      const names = kids.map(v => v.name);
+      G.Village.log(`Ao entardecer, na praia perto de ${set.name}, ${n.babies.length} tartaruguinhas saíram da areia e correram para o mar${n.taken ? `; as gaivotas levaram ${n.taken}` : ''}.${names.length ? ' ' + (names.length > 1 ? names.slice(0, -1).join(', ') + ' e ' + names[names.length - 1] + ' viram tudo.' : names[0] + ' viu tudo.') : ''}`, 'sea', n.x, n.y);
+    }
+    void sea;
+  }
+  // a turtle on the sand: the shell, the flippers rowing, the head up
+  function turtle(c, x, y, s, t, dx, dy, row) {
+    const R = G.Render, f = R.sdir(dx, dy);
+    const sw = Math.sin(t * (row ? 6 : 3)) * 0.35 * s;
+    c.fillStyle = '#4a5a34';
+    c.beginPath(); c.ellipse(x - 2.6 * s * f, y + 0.6 * s - sw, 1.6 * s, 0.6 * s, 0.5 * f, 0, 6.283); c.ellipse(x + 2.4 * s * f, y + 0.4 * s + sw, 1.4 * s, 0.55 * s, -0.5 * f, 0, 6.283); c.fill();
+    c.beginPath(); c.arc(x + 3.3 * s * f, y - 0.6 * s, 0.9 * s, 0, 6.283); c.fill();
+    c.fillStyle = '#6b5a36'; c.beginPath(); c.ellipse(x, y - 0.6 * s, 3 * s, 1.9 * s, 0, 0, 6.283); c.fill();
+    c.strokeStyle = 'rgba(40,30,16,0.55)'; c.lineWidth = 0.35 * s; c.beginPath(); c.moveTo(x - 1.5 * s, y - 0.6 * s); c.lineTo(x + 1.5 * s, y - 0.6 * s); c.moveTo(x, y - 2.2 * s); c.lineTo(x, y + 1 * s); c.stroke();
+  }
+  function drawNest(c, n, sx, sy, t) {
+    const R = G.Render, SEA = G.SEA;
+    // the tracks up the beach and the mound
+    if (n.st !== 'crawl' || n.p > 0.05) {
+      const a = R.proj(n.ex + n.nx * 0.2, n.ey + n.ny * 0.2, SEA), b = R.proj(n.x, n.y, G.W.groundH(n.x, n.y));
+      c.strokeStyle = 'rgba(120,98,64,0.45)'; c.lineWidth = 0.6; c.setLineDash([1, 1.6]);
+      const o = R.off(n.ny * 0.12, -n.nx * 0.12);
+      c.beginPath(); c.moveTo(a[0] + o[0], a[1] + o[1]); c.lineTo(b[0] + o[0], b[1] + o[1]); c.moveTo(a[0] - o[0], a[1] - o[1]); c.lineTo(b[0] - o[0], b[1] - o[1]); c.stroke(); c.setLineDash([]);
+    }
+    if (n.mound) { c.fillStyle = 'rgba(214,190,140,0.95)'; c.beginPath(); c.ellipse(sx, sy, 4, 1.8, 0, 0, 6.283); c.fill(); c.fillStyle = 'rgba(180,156,110,0.8)'; c.beginPath(); c.ellipse(sx + 0.6, sy - 0.3, 2.2, 0.8, 0, 0, 6.283); c.fill(); }
+    if (n.st === 'crawl' || n.st === 'dig' || n.st === 'back') {
+      const px = n.ex + n.nx * 0.25 + (n.x - n.ex - n.nx * 0.25) * n.p, py = n.ey + n.ny * 0.25 + (n.y - n.ey - n.ny * 0.25) * n.p;
+      const q = R.proj(px, py, G.W.groundH(px, py));
+      const dir = n.st === 'back' ? 1 : -1;
+      turtle(c, q[0], q[1], 1.15, t, n.nx * dir, n.ny * dir, n.st !== 'dig');
+      if (n.st === 'dig' && Math.sin(t * 5) > 0.6) { c.fillStyle = 'rgba(220,200,150,0.8)'; c.fillRect(q[0] - 4, q[1] - 2, 1, 1); c.fillRect(q[0] + 3, q[1] - 3, 1, 1); }
+    }
+    if (n.st === 'hatch' || n.st === 'done') {
+      for (const b of n.babies) {
+        if (b.done || n.t < b.delay) continue;
+        const px = n.x + (b.tx - n.x) * b.k, py = n.y + (b.ty - n.y) * b.k;
+        const q = R.proj(px, py, Math.max(SEA, G.W.groundH(px, py)));
+        turtle(c, q[0], q[1], 0.32, t + b.seed, b.tx - n.x, b.ty - n.y, true);
+      }
+      // gulls over the beach, one diving
+      for (let k = 0; k < 2; k++) {
+        const a = t * 0.9 + k * 3.1, gx = sx + Math.cos(a) * 16, gy = sy - 26 + Math.sin(a) * 6;
+        c.strokeStyle = '#f4f4f0'; c.lineWidth = 0.9; c.beginPath(); const w = Math.sin(t * 7 + k) * 1.2; c.moveTo(gx - 2.4, gy - w); c.lineTo(gx, gy); c.lineTo(gx + 2.4, gy - w); c.stroke();
+      }
+      if (n.dive) {
+        const q = R.proj(n.dive.x, n.dive.y, G.W.groundH(n.dive.x, n.dive.y)), k = n.dive.t / 1.6, h = (k < 0.5 ? 1 - k * 2 : (k - 0.5) * 2) * 26;
+        c.strokeStyle = '#f4f4f0'; c.lineWidth = 1; c.beginPath(); c.moveTo(q[0] - 2.6, q[1] - h - 1.5); c.lineTo(q[0], q[1] - h); c.lineTo(q[0] + 2.6, q[1] - h - 1.5); c.stroke();
+      }
+    }
+  }
+  // ------------------------------ a whale on the beach ------------------------------
+  // Once in a long while a whale comes ashore and cannot get back. The town nearby goes down with
+  // knives and baskets — meat for many days — and the bones stay on the sand for years.
+  Sea.carcass = null; Sea.bones = [];
+  function strandCheck() {
+    const S = G.S;
+    if (Sea.carcass || Sea._strandAsk === S.day || S.time < 0.15 || S.time > 0.45) return;
+    Sea._strandAsk = S.day;
+    if (G.R() > 0.03) return;
+    for (const a of S.animals.values()) {
+      if (a.kind !== 'whale' || a.dead) continue;
+      let best = null, bd = 12 * 12;
+      for (const g of Sea.tideSegs) { if (g[6] || S.occ[g[8]]) continue; const d = G.dist2(g[0], g[1], a.x, a.y); if (d < bd) { bd = d; best = g; } }
+      if (!best) continue;
+      const u = 0.5, ex = best[0] + (best[2] - best[0]) * u, ey = best[1] + (best[3] - best[1]) * u;
+      let set = null, sd = 18 * 18; for (const st of S.settlements.values()) { const d = G.dist2(st.cx, st.cy, ex, ey); if (d < sd) { sd = d; set = st; } }
+      G.Animals.remove(a);
+      Sea.carcass = { fn: drawCarcass, x: ex - best[4] * 0.25, y: ey - best[5] * 0.25, nx: best[4], ny: best[5], meat: 84, max: 84, day: S.day, set: set ? set.id : 0, cut: [] };
+      G.Village.log(`Uma baleia encalhou na praia${set ? ' perto de ' + set.name : ''} e não conseguiu voltar ao mar. ${set ? 'O povo desceu com facas e cestos: haverá carne para muitos dias.' : 'Ninguém mora perto: só as gaivotas vieram.'}`, 'sea', ex, ey);
+      return;
+    }
+  }
+  function carcassUpdate(dt) {
+    const S = G.S, c = Sea.carcass; if (!c) return;
+    const set = S.settlements.get(c.set);
+    // nobody to cut it: it rots, and the gulls and the crabs take their part
+    if (!set || S.day - c.day > 3) c.meat -= dt * 0.02;
+    if (set && c.meat > 0) {
+      c.ask = (c.ask || 0) - dt;
+      if (c.ask <= 0) {
+        c.ask = 3;
+        let busy = 0; for (const v of S.villagers.values()) if (v.task && v.task.type === 'baleia') busy++;
+        if (busy < 6) {
+          const cand = [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 14 && v.age < 62 && !v.inside && !v.sleeping && !v.held && !v.captive && !v.dead && (!v.task || v.task.pri < 1.05) && G.dist2(v.x, v.y, c.x, c.y) < 22 * 22);
+          cand.sort((a, b) => G.dist2(a.x, a.y, c.x, c.y) - G.dist2(b.x, b.y, c.x, c.y));
+          for (const v of cand.slice(0, 6 - busy)) {
+            const side = (G.R() - 0.5) * 1.4, px = c.x - c.nx * 0.45 + c.ny * side, py = c.y - c.ny * 0.45 + c.nx * side;
+            G.Vg.give(v, { type: 'baleia', x: px, y: py, fx: c.x, fy: c.y, pri: 1.05 });
+          }
+        }
+      }
+    }
+    if (c.meat <= 0) {
+      Sea.bones.push({ fn: drawBones, x: c.x, y: c.y, nx: c.nx, ny: c.ny, day: S.day });
+      if (Sea.bones.length > 4) Sea.bones.shift();
+      Sea.carcass = null;
+      if (set) G.Village.log(`Da baleia de ${set.name} só sobraram os ossos na praia. As crianças brincam entre as costelas.`, 'sea', c.x, c.y);
+    }
+  }
+  // a cut of meat for whoever is working on it
+  Sea.cutWhale = function (v) {
+    const c = Sea.carcass; if (!c || c.meat <= 0) return 0;
+    const n = Math.min(3, Math.ceil(c.meat)); c.meat -= n;
+    if (c.cut.length < 8) c.cut.push(G.R());
+    if (!v._whale) { v._whale = 1; G.Life && G.Life.bio(v, 'note', 'Ajudou a cortar a baleia que encalhou na praia'); }
+    return n;
+  };
+  Sea.whaleAt = () => Sea.carcass;
+  // the body along the beach: the axis runs with the shore
+  function whaleAxis(o) { const R = G.Render; const ax = -o.ny, ay = o.nx; const h = R.proj(o.x + ax * 0.75, o.y + ay * 0.75, G.W.groundH(o.x, o.y)), t = R.proj(o.x - ax * 0.75, o.y - ay * 0.75, G.W.groundH(o.x, o.y)); return [h, t]; }
+  function drawCarcass(c, o, sx, sy, t) {
+    const [h, tl] = whaleAxis(o); const k = Math.max(0.35, o.meat / o.max);
+    const mx = (h[0] + tl[0]) / 2, my = (h[1] + tl[1]) / 2, ang = Math.atan2(tl[1] - h[1], tl[0] - h[0]), len = Math.hypot(tl[0] - h[0], tl[1] - h[1]);
+    c.save(); c.translate(mx, my); c.rotate(ang);
+    c.fillStyle = 'rgba(0,0,0,0.18)'; c.beginPath(); c.ellipse(0, 3, len * 0.55, 5, 0, 0, 6.283); c.fill();
+    // the tail
+    c.fillStyle = '#3e4a58'; c.beginPath(); c.moveTo(len * 0.42, -1); c.lineTo(len * 0.62, -6); c.lineTo(len * 0.56, 0); c.lineTo(len * 0.62, 5); c.lineTo(len * 0.42, 1.5); c.closePath(); c.fill();
+    // the body, thinner as it is cut
+    c.fillStyle = '#4a5868'; c.beginPath(); c.ellipse(-len * 0.02, -2, len * 0.48, 6.5 * k + 1.5, 0, 0, 6.283); c.fill();
+    c.fillStyle = '#c9c4b4'; c.beginPath(); c.ellipse(-len * 0.06, 1.2, len * 0.38, 2.6 * k + 0.6, 0, 0, Math.PI); c.fill();
+    c.strokeStyle = 'rgba(150,140,128,0.7)'; c.lineWidth = 0.4; c.beginPath(); for (let q = -3; q <= 3; q++) { c.moveTo(-len * 0.3 + q * 3, 1.5); c.lineTo(-len * 0.28 + q * 3, 3.2); } c.stroke();
+    c.fillStyle = '#3e4a58'; c.beginPath(); c.ellipse(-len * 0.18, 2, 4, 1.4, 0.6, 0, 6.283); c.fill();
+    c.fillStyle = '#1c222a'; c.beginPath(); c.arc(-len * 0.38, -2.2, 0.7, 0, 6.283); c.fill();
+    // where it was cut: red, and the white of the ribs showing
+    for (let q = 0; q < o.cut.length; q++) { const u = -len * 0.25 + o.cut[q] * len * 0.55; c.fillStyle = '#8a2c2a'; c.fillRect(u - 2, -6 * k - 1, 4, 5 * k + 2); }
+    if (k < 0.6) { c.strokeStyle = '#ece6d6'; c.lineWidth = 0.8; c.beginPath(); for (let q = 0; q < 6; q++) { const u = -len * 0.18 + q * len * 0.07; c.moveTo(u, -5 * k); c.quadraticCurveTo(u + 1.5, -8 * k - 2, u + 3, -4 * k); } c.stroke(); }
+    c.restore();
+    // gulls on it
+    for (let q = 0; q < 2; q++) { const ph = (t * 0.1 + q * 0.5) % 1; const gx = mx + (q ? 8 : -6), gy = my - 8 * k - 3; if (ph < 0.7) { c.fillStyle = '#f6f6f2'; c.beginPath(); c.ellipse(gx, gy, 1.2, 1.6, 0, 0, 6.283); c.fill(); c.beginPath(); c.arc(gx + 0.3, gy - 1.9, 0.75, 0, 6.283); c.fill(); } }
+  }
+  function drawBones(c, o) {
+    const [h, tl] = whaleAxis(o);
+    const mx = (h[0] + tl[0]) / 2, my = (h[1] + tl[1]) / 2, ang = Math.atan2(tl[1] - h[1], tl[0] - h[0]), len = Math.hypot(tl[0] - h[0], tl[1] - h[1]);
+    c.save(); c.translate(mx, my); c.rotate(ang);
+    c.strokeStyle = '#efe9da'; c.lineWidth = 1; c.beginPath(); c.moveTo(-len * 0.4, 0); c.lineTo(len * 0.5, 0.5); c.stroke();
+    c.lineWidth = 0.9; c.beginPath();
+    for (let q = 0; q < 9; q++) { const u = -len * 0.22 + q * len * 0.055; c.moveTo(u, 0); c.quadraticCurveTo(u + 1.2, -6, u + 2.6, -1.5); c.moveTo(u, 0.4); c.quadraticCurveTo(u + 1.2, 4, u + 2.6, 2); }
+    c.stroke();
+    c.fillStyle = '#e8e2d2'; c.beginPath(); c.ellipse(-len * 0.42, -0.4, 5, 2.4, 0, 0, 6.283); c.fill();
+    c.restore();
+  }
+  Sea.tick = function (dt) { glowCheck(); nestCheck(); nestUpdate(dt); strandCheck(); carcassUpdate(dt); };
+  G.saveHooks = G.saveHooks || [];
+  G.saveHooks.push({
+    save(out) { out.sea = { c: Sea.carcass ? Object.assign({}, Sea.carcass, { fn: undefined }) : null, b: Sea.bones.map(b => ({ x: b.x, y: b.y, nx: b.nx, ny: b.ny, day: b.day })), glow: Sea.glowDay }; },
+    load(o) {
+      Sea._S = G.S; Sea.nest = null;
+      const d = o.sea || {};
+      Sea.carcass = d.c ? Object.assign({}, d.c, { fn: drawCarcass }) : null;
+      Sea.bones = (d.b || []).map(b => Object.assign({ fn: drawBones }, b));
+      Sea.glowDay = d.glow === undefined ? -1 : d.glow;
+    },
+  });
+
   G.renderHooks.ents.push(function (add, view, zoom) {
     if (!Sea.floor || G.Render.under) return;
     const SEA = G.SEA;
+    if (zoom > 1.05) for (const e of Sea.shoals) add(e.x + e.y - 0.45, e, e.x, e.y, SEA);
+    if (Sea.nest) add(Sea.nest.x + Sea.nest.y + 0.3, Sea.nest, Sea.nest.x, Sea.nest.y);
+    if (Sea.carcass) add(Sea.carcass.x + Sea.carcass.y, Sea.carcass, Sea.carcass.x, Sea.carcass.y);
+    for (const b of Sea.bones) add(b.x + b.y - 0.2, b, b.x, b.y);
     for (const e of Sea.stacks) add(e.x + e.y + 0.2, e, e.x, e.y, SEA);
     for (const e of Sea.grottos) add(e.x + e.y - 0.5, e, e.x, e.y, SEA);
     for (const e of Sea.holeE) add(e.x + e.y - 0.6, e, e.x, e.y, SEA);
@@ -493,6 +829,9 @@
     pilar: ['Pilar de pedra', 'O que sobrou da costa', 'A costa já chegou até aqui. O mar comeu a pedra mole em volta e deixou de pé a parte dura — um dia ele cai também. As aves do mar fazem ninho lá em cima, onde nada as alcança.'],
     arco: ['Arco de pedra', 'O mar furou a rocha', 'As ondas cavaram uma gruta de cada lado da ponta, até as duas se encontrarem: uma porta no meio do mar. Quando o teto cair, sobram dois pilares.'],
     gruta: ['Gruta marinha', 'O mar entra na rocha', 'Com o mar calmo dá para entrar de barco. Lá dentro, a luz do sol passa por baixo d\'água e acende tudo de azul; quando a onda entra, a gruta ronca.'],
+    baleia: ['Baleia encalhada', 'Na praia', 'Veio dar na areia e não conseguiu voltar ao mar. O povo corta a carne em pedaços e leva em cestos; as gaivotas brigam pelo resto.'],
+    ossada: ['Ossada de baleia', 'O que o mar deixou', 'As costelas brancas na areia, maiores que uma casa. Os velhos lembram do dia em que ela encalhou; as crianças brincam de esconder entre os ossos.'],
+    ninho: ['Ninho de tartaruga', 'Debaixo da areia', 'Uma tartaruga-marinha subiu a praia de noite, cavou e pôs os ovos aqui. Ao entardecer, os filhotes vão sair e correr para o mar.'],
     gelo: ['Gelo à deriva', 'Mar gelado', 'Placas de gelo que se soltaram da costa e andam com o vento. As focas sobem nelas para descansar, longe dos ursos — quase sempre.'],
   };
   const FLOOR_THING = ['areia', 'pedra', 'capim', 'recife', 'kelp', 'buraco', 'lama'];
@@ -503,6 +842,9 @@
     for (const e of Sea.grottos) if (near(e, 0.7)) return { isSeaThing: 1, kind: 'gruta', name: e.name, x: e.x, y: e.y };
     for (const e of Sea.holeE) if (near(e, 0.8)) return { isSeaThing: 1, kind: 'buraco', x: e.x, y: e.y };
     for (const f of Sea.ice) if (near(f, f.r + 0.2)) return { isSeaThing: 1, kind: 'gelo', x: f.x, y: f.y };
+    if (Sea.carcass && near(Sea.carcass, 0.9)) return { isSeaThing: 1, kind: 'baleia', x: Sea.carcass.x, y: Sea.carcass.y };
+    for (const b of Sea.bones) if (near(b, 0.9)) return { isSeaThing: 1, kind: 'ossada', x: b.x, y: b.y, day: b.day };
+    if (Sea.nest && near(Sea.nest, 0.6)) return { isSeaThing: 1, kind: 'ninho', x: Sea.nest.x, y: Sea.nest.y };
     // the bottom itself, only from close (a tap on the open water still closes the panels)
     if (zoom < 1.9) return null;
     const xi = x | 0, yi = y | 0; if (!W.inb(xi, yi)) return null; const i = yi * N + xi;

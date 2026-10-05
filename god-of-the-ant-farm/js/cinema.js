@@ -429,7 +429,7 @@
     administracao: [44, 'O governo'], coletoria: [40, 'Os impostos'], mercado_negro: [46, 'O mercado negro'], boat: [40, 'Barcos'], road: [30, 'Estradas'], cart: [34, 'Carroças'],
     curral: [34, 'Rebanhos'], estabulo: [36, 'Cavalos'], mina: [36, 'A mina'], forja: [34, 'A forja'], ourives: [34, 'Ouro'], olaria: [32, 'A olaria'], taverna: [34, 'A taverna'],
     tecelagem: [32, 'A tecelagem'], acougue: [30, 'O açougue'], deer: [40, 'A vida selvagem'], flower: [42, 'Fertilidade'], rain: [40, 'Chuva'], lore: [40, 'Lenda'], pop: [40, 'O povo'], campfire: [30, 'Uma fogueira'],
-    workshop: [28, 'Uma oficina'], house: [22, 'Casas novas'], hut: [22, 'Cabanas novas'], farm: [20, 'Uma plantação'], storehouse: [22, 'Um celeiro'], well: [22, 'Um poço'], coin: [30, 'Moedas'],
+    sea: [58, 'O mar'], workshop: [28, 'Uma oficina'], house: [22, 'Casas novas'], hut: [22, 'Cabanas novas'], farm: [20, 'Uma plantação'], storehouse: [22, 'Um celeiro'], well: [22, 'Um poço'], coin: [30, 'Moedas'],
   };
   const WAR_IC = { war: 1, siege: 1, massacre: 1, battle: 1, army: 1, naval: 1, general: 1, chain: 1, skull: 1 };
   function chronicle(out) {
@@ -597,6 +597,21 @@
   }
 
   // the caves: bats at dusk, the people inside (a funeral, the hidden, the oracle, a painter), outlaws by their fire and on the prowl
+  // the sea's own moments: a turtle on the beach, the little ones running, the shining waves, dolphins at the bow
+  function sea(out) {
+    const Sx = S(), Sea = G.Sea; if (!Sea || !Sea.floor) return;
+    const n = Sea.nest;
+    if (n && (n.st === 'crawl' || n.st === 'dig')) out.push({ key: 'nest:' + n.id, kind: 'sea', score: 66, zoom: 2.8, dur: 12, drift: 1, pos: () => [n.x, n.y, 4], alive: () => Sea.nest === n && n.st !== 'wait', kick: 'Na noite quente', title: 'Uma tartaruga sobe a praia', sub: n.st === 'dig' ? 'cava um buraco na areia e põe os ovos' : 'arrasta-se para fora do mar, até onde a onda não chega' });
+    if (n && n.st === 'hatch') out.push({ key: 'hatch:' + n.id, kind: 'sea', score: 88, zoom: 2.7, dur: 14, drift: 1, pos: () => [n.x + n.nx * 0.3, n.y + n.ny * 0.3, 4], alive: () => Sea.nest === n && n.st === 'hatch', kick: 'Ao entardecer', title: 'As tartaruguinhas nascem', subFn: () => `${n.babies.filter(b => b.done === 'sea').length} já chegaram ao mar${n.taken ? ` · as gaivotas levaram ${n.taken}` : ''}` });
+    if (Sea.glowing() && Sea.tideChains) {
+      const ch = Sea.tideChains.find(c => Sea.temp(Sea.tideSegs[c.segs[0]][7]) > 0.45 && c.P.length > 5);
+      if (ch) { const p = ch.P[ch.P.length >> 1]; out.push({ key: 'glow:' + Sx.day, kind: 'sea', score: 70, zoom: 2.1, dur: 12, drift: 1, pos: () => [p[0], p[1], 2], alive: () => Sea.glowing(), kick: 'À noite', title: 'O mar brilha', sub: 'cada onda que quebra acende de azul' }); }
+    }
+    const wc = Sea.carcass;
+    if (wc) { const cutting = [...Sx.villagers.values()].filter(v => v.task && v.task.type === 'baleia').length; out.push({ key: 'whale:' + wc.day, kind: 'sea', score: cutting ? 80 : 62, zoom: 2.3, dur: 13, drift: 1, pos: () => [wc.x, wc.y, 6], alive: () => Sea.carcass === wc, kick: 'Na praia', title: 'Uma baleia encalhou', subFn: () => cutting ? `${cutting} pessoas cortam a carne e levam em cestos` : 'as gaivotas brigam pelo que sobra' }); }
+    for (const a of Sx.animals.values()) if (a.state === 'ride') { out.push({ key: 'dolph:' + a.ride, kind: 'sea', score: 60, zoom: 2.4, dur: 10, drift: 1, pos: () => [a.x, a.y, 4], alive: () => a.state === 'ride', kick: 'No mar', title: 'Golfinhos na proa', sub: 'saltam na onda que o barco levanta' }); break; }
+    if (Sea.lowTide()) { let v = null; for (const q of Sx.villagers.values()) if (q.task && (q.task.type === 'mariscar' || q.task.type === 'pocas') && q.task.st === 2) { v = q; break; } if (v) out.push({ key: 'tide:' + Sx.day + ':' + Math.round(Sx.time * 4), kind: 'sea', score: 46, zoom: 2.7, dur: 10, mark: 1, pos: () => [v.x, v.y, 4], alive: () => !!(v.task && (v.task.type === 'mariscar' || v.task.type === 'pocas')), kick: 'Maré baixa', title: v.name, subFn: () => G.Vg.taskText(v) }); }
+  }
   function caves(out) {
     const Sx = S(); if (!G.Caves || !Sx.ug) return;
     const SC = { tomb: 78, refuge: 76, raid: 86, oracle: 66, pilgrim: 58, paint: 66, treasure: 72, explore: 58, mine: 52, guano: 40 };
@@ -626,7 +641,7 @@
       // what is happening now beats what the chronicle already told
       for (const c of out) if (c.fromLog) c.score -= 12;
     } else {
-      festivals(out); armies(out); fleets(out); chronicle(out); fires(out); life(out); beasts(out); places(out); evenings(out); aftermath(out); caves(out);
+      festivals(out); armies(out); fleets(out); chronicle(out); fires(out); life(out); beasts(out); places(out); evenings(out); aftermath(out); caves(out); sea(out);
       // the war's close-ups also show up now and then in the plain cinema
       const wd = []; warDetails(wd); for (const c of wd) { c.score -= 14; out.push(c); }
     }

@@ -2751,6 +2751,7 @@
     }
     ctx.globalCompositeOperation = 'lighter';
     G.Powers.drawGlow && G.Powers.drawGlow(ctx, proj, t, nightF);
+    if (HK.glow) for (const h of HK.glow) h(ctx, proj, view, t, nightF); // (things that shine in the dark: the glowing sea)
     ctx.globalAlpha = 1;
     drawFlames(t);
     // crater embers

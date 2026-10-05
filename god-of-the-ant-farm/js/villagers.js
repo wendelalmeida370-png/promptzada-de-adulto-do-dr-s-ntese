@@ -786,6 +786,26 @@
         }
         break;
       }
+      case 'baleia': {
+        // cutting up the whale on the beach, and carrying the meat home
+        const c = G.Sea && G.Sea.whaleAt(); if (!c || c.meat <= 0) return end(v);
+        if (t.st === 0) { if (!Vg.goto(v, t.x, t.y, false) && !Vg.goto(v, t.x, t.y, true)) return end(v); t.st = 1; }
+        else if (t.st === 1) { if (move(v, dt)) { t.st = 2; t.w = 0; v.actT = 0; } }
+        else {
+          v.act = 'butcher'; G.faceTo(v, t.fx - v.x, t.fy - v.y); t.w += dt * workMul(v);
+          if (v.actT > 0.8) { v.actT = 0; G.FX && G.FX.blood && G.FX.blood(t.fx, t.fy, 0.3); }
+          if (t.w > 6) { const n = G.Sea.cutWhale(v); if (n) { v.carry = { k: 'food', n: Math.min(cap(v), n) }; emote(v, 'food', 1.2); deliverTask(v); } else end(v); }
+        }
+        break;
+      }
+      case 'olhar': {
+        // going to watch something happen (the little turtles running for the sea...)
+        if (G.S.clock > t.until) return end(v);
+        if (t.st === 0) { if (!Vg.goto(v, t.x, t.y, false)) { if (!Vg.goto(v, t.x, t.y, true)) return end(v); } t.st = 1; }
+        else if (t.st === 1) { if (move(v, dt, 1.2)) { t.st = 2; v.actT = 0; if (t.ev) v._saw = t.ev; } }
+        else { v.moving = false; v.act = v.age < 10 && Math.sin(G.S.clock * 2 + v.id) > 0.55 ? 'act' : ''; G.faceTo(v, t.fx - v.x, t.fy - v.y); if (G.R() < dt * 0.25) emote(v, 'happy', 1.2); }
+        break;
+      }
       case 'mariscar': case 'pocas': {
         const kid = t.type === 'pocas';
         if (t.st === 0) { if (!Vg.goto(v, t.x, t.y, false)) return end(v); t.st = 1; }
@@ -1489,6 +1509,8 @@
       case 'quarry': return t.st < 2 ? 'Indo à pedreira' : 'Extraindo pedra da encosta';
       case 'drift': return t.st < 2 ? 'Indo à praia' : 'Catando madeira que o mar trouxe';
       case 'mariscar': return t.st < 2 ? 'Indo à praia na maré baixa' : t.st === 3 ? (G.Sea.shift() < 0.14 ? 'Fugindo da maré que volta!' : 'Voltando com o cesto de mariscos') : t.rock ? 'Catando mariscos e caranguejos nas pedras da maré baixa' : 'Cavando mariscos na areia molhada da maré baixa';
+      case 'baleia': return t.st < 2 ? 'Correndo para a praia: uma baleia encalhou!' : 'Cortando a carne da baleia encalhada';
+      case 'olhar': return t.what === 'tartarugas' ? (t.st < 2 ? 'Correndo para a praia: as tartaruguinhas estão nascendo!' : 'Vendo as tartaruguinhas correrem para o mar') : 'Olhando';
       case 'pocas': return t.st < 2 ? 'Correndo para a praia: a maré baixou!' : t.st === 3 ? 'Voltando da praia' : 'Brincando nas poças da maré baixa';
       case 'fish': return t.st < 2 ? 'Indo pescar' : 'Pescando';
       case 'hunt': { const a = S.animals.get(t.id); return a && a.dead ? 'Recolhendo a caça' : `Caçando ${a ? ANIMAL[a.kind] : 'um animal'}`; }
