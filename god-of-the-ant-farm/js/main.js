@@ -42,6 +42,7 @@
     G.FX.list.length = 0; G.FX.floaters.length = 0; G.FX.bolts.length = 0; G.FX.rings.length = 0; G.FX.glows.length = 0;
     G.setMapSize(opts.size);
     G.Render.setView(0);
+    G.Caves && G.Caves.reset(); G.Render.setUnder && G.Render.setUnder(0, true);
     G.genWorld(seed, opts);
     const S = G.S;
     S.temper = opts.temper || 'normal';
@@ -170,6 +171,7 @@
     G.Life && G.Life.update(dt);
     G.Carnage && G.Carnage.update(dt);
     G.Animals.updateAll(dt);
+    G.Caves && G.Caves.update(dt);
     G.Pets && G.Pets.update(dt);
     G.Powers.update(dt);
     G.Lore && G.Lore.update(dt);
@@ -197,6 +199,7 @@
     const S = G.S; const R = G.Render; const cam = R.cam;
     let best = null, bd = 1e9;
     const rad = Math.max(11, 8 * cam.zoom);
+    if (R.under && S.ug) return pickUnder(px, py, mobileOnly, rad);
     const test = (e, lift) => {
       const [wx, wy] = R.proj(e.x, e.y, W.groundH(e.x, e.y));
       const [sx, sy] = R.worldPxToScreen(wx, wy - (e.z || 0));
@@ -207,6 +210,11 @@
     for (const s of S.ships) test(s, 8);
     for (const a of S.animals.values()) { if (a.held) continue; test(a, 3); }
     if (best || mobileOnly) return best;
+    // the door of a cave
+    if (G.Caves) for (const cv of G.Caves.all()) for (const m of cv.mouths) {
+      const [wx, wy] = R.proj(m.x + 0.5, m.y + 0.5, W.groundH(m.x + 0.5, m.y + 0.5)); const [sx, sy] = R.worldPxToScreen(wx, wy - 5);
+      if (Math.hypot(px - sx, py - sy) < rad * 1.2) return G.Caves.selectCave(cv);
+    }
     let bb = null, bdep = -1e9;
     for (const b of S.buildings.values()) {
       const [cx, cy] = G.Village.center(b); const base = W.maxH(b.x, b.y, b.w, b.h);
@@ -222,6 +230,23 @@
     return bb;
   }
   M.pick = pick;
+  // under the ground: the people in the caves, or the cave itself
+  function pickUnder(px, py, mobileOnly, rad) {
+    const S = G.S; const R = G.Render; const cam = R.cam; const fl = G.Caves.FLOOR;
+    let best = null, bd = 1e9;
+    for (const id of G.Caves.inside) {
+      const v = S.villagers.get(id); if (!v || v.age < 2) continue;
+      const [wx, wy] = R.proj(v.x, v.y, fl); const [sx, sy] = R.worldPxToScreen(wx, wy);
+      const d = Math.hypot(px - sx, py - (sy - 6 * cam.zoom)); if (d < rad && d < bd) { bd = d; best = v; }
+    }
+    if (best || mobileOnly) return best;
+    const [x, y] = R.screenToTile(px, py); const U = S.ug;
+    for (let r = 0; r <= 1; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      const tx = Math.floor(x) + dx, ty = Math.floor(y) + dy; if (!W.inb(tx, ty)) continue;
+      const cv = G.Caves.at(ty * G.N + tx); if (cv) return G.Caves.selectCave(cv);
+    }
+    return null;
+  }
 
   // ------------------------------ divine hand ------------------------------
   function grab(e, px, py) {
@@ -330,6 +355,7 @@
       else if (k === 'r' || k === 'R') G.UI.openRealms();
       else if (k === 'l' || k === 'L') G.Lore.openBook();
       else if (k === 'm' || k === 'M') G.Minimap.toggle();
+      else if (k === 'u' || k === 'U') G.Render.setUnder(!G.Render.under);
       else if (k === 'j' || k === 'J') G.Skip.open();
       else if (k === 'q' || k === 'Q') G.Render.rotate(-1);
       else if (k === 'e' || k === 'E') G.Render.rotate(1);
@@ -399,6 +425,7 @@
     if (btn === 2) { if (I.power) G.UI.setPower(null); else G.UI.select(null); return; }
     if (btn !== 0) return;
     if (I.power && I.power !== 'hand') {
+      if (R.under && !(G.Powers.byId(I.power) || {}).under) { G.UI.notice('Volte à superfície (U) para usar este poder.', 'eye'); return; }
       const [x, y] = R.screenToTile(px, py);
       if (G.Powers.cast(I.power, x, y)) { G.UI.update(1, true); G.Render.shake(0.05); if (G.S.faith < G.Powers.byId(I.power).cost) G.UI.setPower(null); }
       else G.UI.notice(G.S.faith < G.Powers.byId(I.power).cost ? 'Fé insuficiente para este poder.' : (G.Powers.why || 'Não é possível usar isso aí.'), 'eye');

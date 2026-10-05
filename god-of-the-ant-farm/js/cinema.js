@@ -39,7 +39,7 @@
     C.on = true;
     const Rn = R(), cam = Rn.cam;
     G.UI.select(null); G.UI.setPower(null); G.UI.showHUD(false); $('#tooltip').classList.add('hidden');
-    saved = { borders: Rn.showBorders };
+    saved = { borders: Rn.showBorders, under: Rn.under };
     Rn.showBorders = false; Rn.hover = null; Rn.preview = null;
     cam.follow = 0; cam.target = null; cam.anchor = null; cam.tz = cam.zoom;
     clock = 0; shot = null; prevKey = ''; evalT = 0.5; manualT = 0; hintT = 4.5; statusT = 0; lastSpeed = G.speed;
@@ -55,7 +55,7 @@
     shot = null; fade = null;
     el.root.classList.remove('on'); el.cap.classList.remove('show'); el.fade.classList.remove('on');
     document.body.classList.remove('cine-nocursor');
-    if (saved) Rn.showBorders = saved.borders;
+    if (saved) { Rn.showBorders = saved.borders; if (!!saved.under !== !!Rn.under) Rn.setUnder(saved.under, true); }
     cam.follow = 0; cam.target = null; cam.anchor = null; cam.tz = cam.zoom;
     if (G.Main.mode === 'game') G.UI.showHUD(true);
   };
@@ -350,10 +350,28 @@
     out.push({ key: 'world', kind: 'world', score: 16 + (dawn ? 16 : 0) + Math.random() * 6, zoom: R().minZoom() * 1.12, dur: 12, drift: 1, pos: () => [G.N / 2, G.N / 2, 0], alive: () => true, kick: `Dia ${Sx.day}`, title: (Sx.lore && Sx.lore.world) || 'O mundo', sub: `${Sx.villagers.size} almas · ${nf} ${nf === 1 ? 'povo' : 'povos'} · ${Sx.settlements.size} ${Sx.settlements.size === 1 ? 'povoado' : 'povoados'}` });
   }
 
+  // the caves: bats at dusk, the people inside (a funeral, the hidden, the oracle, a painter), outlaws by their fire and on the prowl
+  function caves(out) {
+    const Sx = S(); if (!G.Caves || !Sx.ug) return;
+    const SC = { tomb: 78, refuge: 76, raid: 86, oracle: 66, pilgrim: 58, paint: 66, treasure: 72, explore: 58, mine: 52, guano: 40 };
+    for (const cv of G.Caves.all()) {
+      const m = cv.mouths[0];
+      const ph = G.Caves.batPhase(cv);
+      if (m && ph && ph.out === 1 && ph.k < 0.7 && cv.bats > 40) out.push({ key: 'bats:' + cv.id + ':' + Sx.day, kind: 'cave', score: 60 + Math.min(14, cv.bats / 16), zoom: 2.0, dur: 11, drift: 1, pos: () => [m.x + 0.5, m.y + 0.5, 16], alive: () => !!G.Caves.batPhase(cv), kick: 'O entardecer', title: cv.name, sub: `${cv.bats} morcegos saem para caçar insetos na noite` });
+      let best = null, bs = 0, n = 0;
+      for (const id of G.Caves.inside) { const v = Sx.villagers.get(id); if (!v || v.ug !== cv.id || v.age < 3 || !v.task || v.task.type !== 'caverna' || v.task.st < 2) continue; n++; const sc = SC[v.task.kind] || 45; if (sc > bs) { bs = sc; best = v; } }
+      if (best) { const v = best; out.push({ key: 'cave:' + cv.id + ':' + v.task.kind, kind: 'cave', under: 1, score: bs + Math.min(10, n * 2), zoom: 2.6, dur: 12, mark: 1, pos: () => { const q = Sx.villagers.get(v.id); return q && q.ug ? [q.x, q.y, 6] : null; }, alive: () => { const q = Sx.villagers.get(v.id); return !!q && !!q.ug; }, kick: cv.name, title: v.name, subFn: () => `${G.roleName(v)} — ${G.Vg.taskText(v)}` }); }
+      const b = cv.bandits;
+      if (b && b.camp >= 0 && (G.isNight() || G.isEvening())) { const cx = b.camp % G.N + 0.5, cy = ((b.camp / G.N) | 0) + 0.5; out.push({ key: 'den:' + cv.id + ':' + Sx.day, kind: 'cave', under: 1, score: 56, zoom: 2.7, dur: 11, drift: 1, pos: () => [cx, cy, 6], alive: () => !!cv.bandits, kick: cv.name, title: b.name, sub: `${b.n} foras-da-lei em volta do fogo, sob ${b.leader}` }); }
+      const a = G.Caves.actors.find(q => q.cave === cv.id && q.lead && q.delay <= 0);
+      if (a && b) out.push({ key: 'prowl:' + cv.id + ':' + Sx.day + ':' + a.st, kind: 'war', score: 74, zoom: 2.4, dur: 12, pos: () => [a.x, a.y, 6], alive: () => G.Caves.actors.includes(a), kick: 'Na calada da noite', title: b.name, sub: a.st ? 'voltam para a caverna com o que roubaram' : `vão assaltar ${(Sx.settlements.get(a.set) || {}).name || 'a vila'}` });
+    }
+  }
+
   // ------------------------------ the director ------------------------------
   function candidates() {
     const out = [];
-    festivals(out); armies(out); fleets(out); chronicle(out); fires(out); life(out); beasts(out); places(out); evenings(out); aftermath(out);
+    festivals(out); armies(out); fleets(out); chronicle(out); fires(out); life(out); beasts(out); places(out); evenings(out); aftermath(out); caves(out);
     // not the same thing again so soon, not always the same kind of thing
     for (const c of out) {
       const last = seen.get(c.key);
@@ -391,7 +409,7 @@
     c.t = 0; c.push = (Math.random() < 0.7 ? 1 : -1) * G.rr(0.06, 0.14); c.driftA = Math.random() * TAU;
     c.zoom = G.clamp(c.zoom * (G.speed >= 8 && !c.drift ? 0.8 : 1), Rn.minZoom(), 3.4);
     const [tx, ty] = target(c, p);
-    const far = Math.hypot(tx - cam.x, ty - cam.y) * cam.zoom > Math.hypot(Rn.VW, Rn.VH) * 1.1 || (c.view !== undefined && c.view !== Rn.rot());
+    const far = Math.hypot(tx - cam.x, ty - cam.y) * cam.zoom > Math.hypot(Rn.VW, Rn.VH) * 1.1 || (c.view !== undefined && c.view !== Rn.rot()) || !!c.under !== !!Rn.under;
     prevKey = shot ? shot.key : ''; shot = c; lastTx = null; seenKind.set(c.kind, clock);
     hideCap();
     if (far || !prevKey) { fade = { t: 0, jumped: false }; el.fade.classList.add('on'); cap.showAt = clock + 1.05; }
@@ -400,7 +418,7 @@
   }
   // world pixel the camera aims at for this subject position
   function target(c, p) {
-    const [sx, sy] = R().proj(p[0], p[1], W.groundH(G.clamp(p[0], 0, G.N - 0.01), G.clamp(p[1], 0, G.N - 0.01)));
+    const [sx, sy] = R().proj(p[0], p[1], (c.under ? G.Caves.FLOOR : W.groundH(G.clamp(p[0], 0, G.N - 0.01), G.clamp(p[1], 0, G.N - 0.01))));
     let x = sx, y = sy - (p[2] || 0);
     if (c.drift) { const d = (c.t || 0) * 9 / Math.max(0.5, c.zoom); x += Math.cos(c.driftA) * d; y += Math.sin(c.driftA) * d * 0.6; }
     return [x, y];
@@ -434,6 +452,7 @@
     if (fade && !fade.jumped) {
       fade.t += rdt;
       if (fade.t < 0.5) return;
+      if (!!shot.under !== !!Rn.under) Rn.setUnder(shot.under ? 1 : 0, true);
       if (shot.view !== undefined && shot.view !== Rn.rot()) Rn.turnTo(shot.view);
       const p = shot.pos(); if (p) { shot.last = p; const [tx, ty] = target(shot, p); cam.x = tx; cam.y = ty; }
       vx = vy = 0; lz = Math.log(shot.zoom * (1 - shot.push * 0.5)); cam.zoom = cam.tz = Math.exp(lz);

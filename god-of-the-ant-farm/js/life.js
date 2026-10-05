@@ -72,6 +72,7 @@
       case 'told': return `Contou às crianças: “${a}”`;
       case 'moved': return `Mudou-se para ${a}.`;
       case 'plague': return `Adoeceu com o fedor dos mortos${a ? ' de ' + a : ''}.`;
+      case 'note': return a;
     }
     return '';
   };
@@ -92,6 +93,7 @@
       case 'fest': return festPhrase(v, a, b, true);
       case 'lost': { const p = person(a); return p && b === 'partner' ? `Perdi ${REL.partner(p)}, ${p.name}` : null; }
       case 'ruler': return `Governei ${a}`;
+      case 'note': return b || null;
     }
     return null;
   }
@@ -341,6 +343,7 @@
     const lo = S.lore;
     if (lo && lo.legends) for (const l of lo.legends) cands.push({ w: 3, txt: `${l.title}: ${l.text[0]}`, mood: 'awe', d: l.day });
     if (lo && lo.myth && lo.myth.length && G.R() < 0.3) cands.push({ w: 2, txt: lo.myth.join(' '), mood: 'awe' });
+    if (G.Caves) for (const c of G.Caves.talesFor(set)) cands.push(c);
     if (!cands.length) return null;
     let tot = 0; for (const c of cands) tot += c.w;
     let r = G.R() * tot; for (const c of cands) { r -= c.w; if (r <= 0) return c; }

@@ -10,7 +10,7 @@ Um jogo de simulação divina que roda direto no navegador. Ilhas, continentes, 
 
 > Se preferir servir por HTTP: `npx serve .` ou `python3 -m http.server` dentro desta pasta.
 
-Em **NEW WORLD** você escolhe o **mapa** (Ilha, Continente, Arquipélago, Istmo ou Mar Aberto), o **tamanho** (Pequeno 64, Médio 80, Grande 96, **Enorme 128, Colossal 160 ou Titânico 192**), quantos **povos** despertam (1 a 4 — até 6 nos mapas enormes), o **clima** (variado, frio, temperado, tropical ou árido), o **relevo** (plano, suave, montanhoso, alpino ou aleatório — com cordilheiras, planaltos e mesas, falésias na costa e lagos à escolha), a **civilização** de cada um (ou sorteio, ou povos clássicos sem nome), **quando começar** (no princípio, 30 anos depois, na era das cidades ou na era dos impérios) e o **temperamento** dos povos (pacíficos, imprevisíveis ou belicosos).
+Em **NEW WORLD** você escolhe o **mapa** (Ilha, Continente, Arquipélago, Istmo ou Mar Aberto), o **tamanho** (Pequeno 64, Médio 80, Grande 96, **Enorme 128, Colossal 160 ou Titânico 192**), quantos **povos** despertam (1 a 4 — até 6 nos mapas enormes), o **clima** (variado, frio, temperado, tropical ou árido), o **relevo** (plano, suave, montanhoso, alpino ou aleatório — com cordilheiras, planaltos e mesas, falésias na costa, lagos e **cavernas** à escolha), a **civilização** de cada um (ou sorteio, ou povos clássicos sem nome), **quando começar** (no princípio, 30 anos depois, na era das cidades ou na era dos impérios) e o **temperamento** dos povos (pacíficos, imprevisíveis ou belicosos).
 
 O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fechar a aba) — os mapas grandes são compactados para caber. Use **CONTINUE** no menu para voltar ao seu mundo. Saves da versão anterior (um só povo) são convertidos automaticamente.
 
@@ -26,6 +26,7 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Poderes | barra inferior ou teclas `1`–`8` da aba atual, depois clique no mapa |
 | Trocar aba de poderes | `Tab` (Dádivas · Ira · Terra · Mar · Natureza · Palavra · Destino) |
 | Minimapa | `M` · ou o ícone do mapa no topo (clique/arraste nele para voar até lá) |
+| Ver o subterrâneo | `U` · ou o ícone da caverna no topo · ou “Ver o interior” ao tocar a boca de uma caverna |
 | O Livro do Mundo | `L` · ou o ícone do livro no topo |
 | Painel dos reinos | `R` · ou clique no chip do povo no topo |
 | Mostrar/ocultar fronteiras | `B` |
@@ -67,6 +68,25 @@ O terreno não é mais uma planície: cada mundo nasce com **relevo de verdade**
 O relevo muda a vida: subir custa caro (os caminhos contornam as montanhas e procuram os passos), encostas deixam todos mais lentos, **paredões não se escalam**, ninguém constrói em penhasco, o alto é frio (a neve e a taiga sobem as encostas) e menos fértil, o minério está nas terras altas — e na guerra, **quem está no alto bate mais forte**.
 
 **A câmera gira livre**, de forma contínua: **dois dedos girando** na tela do celular (a pinça continua dando zoom), o **botão do meio** do mouse ou `Shift` + arrastar no PC, ou arrastando a agulha da bússola. Enquanto gira, o mundo é desenhado no ângulo do momento — o relevo de verdade, as construções como volumes nas cores e telhados do seu povo, árvores, gente e bichos de pé —; ao soltar, ele **assenta suavemente** no lado mais próximo (um giro rápido leva ao lado seguinte), onde volta o desenho completo. `Q`/`E` dão um quarto de volta suave. São quatro lados de descanso, com as construções, as pessoas e os animais virados para o lado certo. **Montanhas escondem** o que está atrás delas — quem você selecionou continua visível como um fantasma através da rocha.
+
+## Cavernas: o mundo de baixo
+
+Debaixo do mundo inteiro há uma **camada subterrânea**. Nos morros e serras a água cavou **galerias** e **salões**, com **rios subterrâneos**, **lagos negros**, **estalagmites**, **colunas**, **grutas de cristal**, **vaga-lumes de caverna** pendurados do teto, cogumelos que brilham, ossos e **fósseis**. Nas paredes aparecem **veios de minério** — cobre, estanho, ferro, ouro, sal-gema e gemas. As **bocas** se abrem nas encostas, como arcos escuros.
+
+**A vista de dentro**: o botão da caverna no topo (ou `U`) mostra o mundo de baixo — a rocha cortada rente ao teto das cavernas, com as paredes de trás inteiras e as da frente rebaixadas, para nada ficar escondido. Lá é escuro: o que ilumina é a **luz do dia caindo pelas bocas**, as **tochas** de quem entra, a **fogueira dos bandidos**, os vaga-lumes e os cristais. Dá para girar, dar zoom, clicar nas pessoas e nas cavernas. O som muda: gotas pingando e o zumbido da rocha.
+
+**Quem vive no escuro**: **morcegos** (saem ao entardecer numa fita negra que sobe da boca da caverna, caçam insetos à noite, voltam antes do amanhecer — e o **guano** deles vira adubo para as roças), **ursos** que passam a noite (o inverno) dormindo no fundo e às vezes saem com um filhote, **aranhas**, **grilos-das-cavernas**, **salamandras cegas** e **peixes cegos** nos lagos.
+
+**O que os povos fazem com elas** — tudo acontece de verdade, com gente andando lá dentro de tocha na mão:
+- **Descobrem**: quem passa perto de uma boca entra e explora; às vezes acha um **tesouro** esquecido (um geodo de ametista, um ídolo de ouro, moedas que ninguém sabe cunhar, a ossada de uma fera gigante) — e nasce uma lenda.
+- **Pintam a própria história** nas paredes: guerras, reis, sinais do deus, feras, naufrágios — com mãos de ocre em volta. As pinturas aparecem nas paredes (gire para ver as que estão de costas), ficam na ficha da caverna e no Livro, e os **idosos contam o que está pintado** às crianças.
+- **Enterram os reis**: quando um governante morre, o cortejo desce com tochas até a **tumba**, feita no jeito de cada povo — sarcófago pintado com máscara de ouro, urna de bronze, sarcófago de mármore, barco de pedras com a espada, altar com máscara de jade — com o ouro do tesouro.
+- **Ouvem o oráculo**: num povo devoto alguém começa a ouvir vozes na gruta; todo dia sobe com a fumaça, **profetiza** (guerra, paz, uma coroa que cai, fome, fartura, a mão do deus) e os **peregrinos** vêm de longe. Profecia cumprida vira lenda; profecia falha derruba a fé na gruta.
+- **Se escondem da guerra**: quando a cidade é atacada, crianças, velhos e mães com bebês correm para a caverna e só saem quando o perigo passa.
+- **Mineram**: mineiros descem até os veios e voltam carregados de minério, ouro, gemas ou sal; quando o veio acaba, a galeria cavada fica — e outros veios aparecem mais fundo.
+- **Bandidos** fazem de uma caverna afastada o seu esconderijo: à noite saem em fila, assaltam a vila mais próxima e voltam com o butim; saqueiam túmulos de reis; até que o povo roubado manda guerreiros entrarem com tochas para acabar com eles.
+
+No **Novo mundo** escolha **Cavernas**: nenhuma, poucas, normais ou muitas. No Livro do Mundo, a aba **Cavernas** conta a história de cada uma, com um botão para ver o interior. Os poderes **Abrir Gruta** e **Desabamento** (aba Terra) criam uma caverna nova sob uma colina ou derrubam o teto de uma — com quem estiver dentro.
 
 ## Avançar no tempo
 
@@ -216,6 +236,8 @@ Os poderes ficam em sete abas (`Tab` troca). Poderes marcados com ✦ abrem uma 
 | Terra | Afundar Terra | 60 | O mar invade: separe continentes ou engula parte de uma cidade |
 | Terra | Floresta Sagrada | 24 | Uma floresta densa, com frutos e cervos |
 | Terra | Veio de Pedra | 28 | Chão rochoso e rochedos cheios de pedra |
+| Terra | Abrir Gruta | 34 | Uma caverna se abre sob a colina: galerias, salões, um rio no escuro — e algo que brilha no fundo |
+| Terra | Desabamento | 45 | O teto de uma caverna desaba: soterra bandidos, ursos, tesouros e túmulos |
 | Terra | Vulcão | 120 | Uma montanha nasce e explode: bombas e rios de lava, cinzas, terra fértil depois — e pode despertar de novo |
 | Mar | Cardume | 8 | Um cardume enorme para os pescadores |
 | Mar | Ventos Favoráveis | 20 | Navios na área andam muito mais rápido por dois dias |
@@ -276,6 +298,7 @@ Cada mundo nasce com **nome**, **mito da criação**, **lendas de origem** de ca
 
 - **Crônicas**: um capítulo a cada sete anos, com título e tom escolhidos pelo que dominou o período (*O Tempo das Espadas*, *A Era das Velas*, *Os Anos de Cinza*…), contado pelos cronistas do maior povo, com os fatos reais: guerras, conquistas, rachas, cidades, descobertas, nascimentos, mortes e intervenções divinas.
 - **Lendas**: heróis e profetas (com o fim de cada um), vulcões e seus mortos, o Kraken, feras devoradoras de gente e feras lendárias, guardiões domados, invernos sem fim e desertos que surgiram, pragas de gafanhotos, cidades afogadas, ilhas que subiram do mar, maravilhas, megalópoles, eras de ouro, profecias cumpridas.
+- **Cavernas**: cada caverna do mundo, quem a descobriu, as pinturas das paredes, os túmulos, o oráculo e o que ele disse, os bandidos que passaram por lá — com um botão para ver o interior.
 - **Bestiário**: todas as espécies do mundo em níveis da cadeia alimentar, com população, tendência, nascimentos, mortes por causa (fome, velhice, caçadores, cada predador) e extinções. Clique numa espécie para destacar o que ela come e quem a caça.
 - **Povos** e **Profecias**: a história de cada povo e o destino de cada palavra dita.
 
@@ -308,6 +331,7 @@ js/animals.js     40 espécies, habitats, capim, cadeias alimentares, caça, fil
 js/powers.js      poderes divinos e percepção
 js/miracles.js    Terra, Mar, Palavra, eras de ouro, maldições, heróis, muralhas divinas
 js/wild.js        aba Natureza: chamar animais, primavera, migração, domar, clima, gafanhotos, feras lendárias
+js/caves.js       a camada de baixo: cavernas, galerias, rios e lagos subterrâneos, veios, bichos do escuro, morcegos, ursos, pinturas, tumbas reais, oráculo, refúgio, minas, bandidos, poderes Abrir Gruta e Desabamento
 js/lore.js        gênese, profecias antigas, crônicas, lendas, bestiário e o Livro do Mundo
 js/events.js      eventos e viajantes de barco
 js/fx.js          partículas e efeitos
@@ -316,6 +340,7 @@ js/fauna-art.js   o desenho de cada espécie
 js/arch.js        arquitetura de cada civilização
 js/sky.js         névoa, raios de sol, arco-íris, sombras de nuvens, vaga-lumes, folhas, redemoinhos, relâmpagos
 js/cityart.js     oficinas, currais, feira, minas e veios no estilo de cada civilização
+js/cave-art.js    arte das cavernas: estalagmites, colunas, cristais, vaga-lumes, pinturas rupestres, tumbas de cada povo, oráculo, acampamento, bichos, morcegos, bocas
 js/render.js      renderizador isométrico (terreno em blocos com nível de detalhe, quatro vistas, montanhas que escondem), rocha em camadas, cachoeiras e correnteza, iluminação, clima
 js/minimap.js     minimapa com fronteiras e cidades
 js/audio.js       áudio sintetizado com WebAudio (efeitos, som ambiente conforme o lugar, música)

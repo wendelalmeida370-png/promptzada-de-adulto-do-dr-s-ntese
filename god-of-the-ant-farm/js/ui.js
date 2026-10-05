@@ -64,6 +64,9 @@
     peace: svg('<path d="M3 13c3 0 5-1 7-4 1-1.6 2.6-3 5-3 1.4 0 2.4.6 3 1.4L21 7l-2 2c0 5-4 9-10 9-2 0-4-.6-5-1.5L7 15c-2 0-3.2-.8-4-2z" fill="currentColor"/><path d="M8 13.5c2 .5 4-.5 5.5-2.5" stroke="#1a1410" stroke-width="1.2" fill="none" opacity=".45"/>'),
     grave: svg('<path d="M6 21v-10a6 6 0 0 1 12 0v10z" fill="currentColor"/><path d="M12 9v6M9.5 11.5h5" stroke="#1a1410" stroke-width="1.6"/>'),
     tech: svg('<path d="M2.5 5c3.2-1.2 6.4-1 9.5 1 3.1-2 6.3-2.2 9.5-1v14c-3.2-1.2-6.4-1-9.5 1-3.1-2-6.3-2.2-9.5-1z" fill="currentColor"/><path d="M12 6v14M5 9c1.6-.4 3.2-.3 4.6.3M5 12.5c1.6-.4 3.2-.3 4.6.3M14.4 9.3c1.4-.6 3-.7 4.6-.3M14.4 12.8c1.4-.6 3-.7 4.6-.3" stroke="#1a1410" stroke-width="1.2" fill="none"/>'),
+    cave: svg('<path d="M2.5 20c0-8.5 4.3-14.5 9.5-14.5s9.5 6 9.5 14.5z" fill="currentColor" opacity=".3"/><path d="M2.5 20c0-8.5 4.3-14.5 9.5-14.5s9.5 6 9.5 14.5M7.8 20c0-5.2 1.9-8.8 4.2-8.8s4.2 3.6 4.2 8.8M2 20h20" ' + ST + '/>'),
+    gruta: svg('<path d="M2 21c0-9 4.5-15.5 10-15.5S22 12 22 21z" fill="currentColor" opacity=".35"/><path d="M7.5 21c0-5.5 2-9.5 4.5-9.5s4.5 4 4.5 9.5" fill="currentColor"/><path d="M12 2v2.5M5.5 4.5l1.6 1.8M18.5 4.5l-1.6 1.8" ' + ST + '/>'),
+    desabar: svg('<path d="M2 21c0-9 4.5-15.5 10-15.5S22 12 22 21z" fill="currentColor" opacity=".35"/><path d="M7 21l2-5 3 2 2-4 3 7" fill="currentColor"/><path d="M6 9l2 1.5M15 7l1.8-1.5M11 10.5l1.5-2" ' + ST + '/>'),
     map: svg('<path d="M3 6.5l5.5-2.5 7 2.5 5.5-2.5v13.5l-5.5 2.5-7-2.5L3 20z" fill="currentColor" opacity=".35"/><path d="M3 6.5l5.5-2.5 7 2.5 5.5-2.5v13.5l-5.5 2.5-7-2.5L3 20zM8.5 4v13.5M15.5 6.5V20" ' + ST + '/>'),
     summon: svg('<path d="M7 3.5c0 2 1 3 2.5 3.5M5 5.5c1 .8 2.4 1.3 3.8 1.2M17 3.5c0 2-1 3-2.5 3.5M19 5.5c-1 .8-2.4 1.3-3.8 1.2" ' + ST + '/><path d="M8.5 9c0-1.4 1.6-2.4 3.5-2.4s3.5 1 3.5 2.4l-.6 5.6c-.3 2.4-1.5 4.4-2.9 4.4s-2.6-2-2.9-4.4z" fill="currentColor"/><circle cx="10.4" cy="11.2" r=".9" fill="#1a1410"/><circle cx="13.6" cy="11.2" r=".9" fill="#1a1410"/><path d="M4 16l1 1.6L6.6 18 5 19l-.6 1.6L3.4 19 2 18l1.6-.4zM20 13l.7 1.1 1.3.4-1.3.5-.7 1.1-.6-1.1-1.3-.5 1.3-.4z" fill="currentColor"/>'),
     spring: svg('<path d="M12 22v-9" ' + ST + '/><path d="M12 17c-3 0-5-2-5.5-4.5 3 0 5 1.5 5.5 4.5zM12 15c2.5 0 4.5-1.6 5-4 -2.6 0-4.6 1.4-5 4z" fill="currentColor" opacity=".6"/><circle cx="12" cy="7" r="2.2" fill="currentColor"/><circle cx="12" cy="3.4" r="2" fill="currentColor"/><circle cx="15.4" cy="6" r="2" fill="currentColor"/><circle cx="8.6" cy="6" r="2" fill="currentColor"/><circle cx="14.2" cy="9.6" r="2" fill="currentColor"/><circle cx="9.8" cy="9.6" r="2" fill="currentColor"/><circle cx="12" cy="7" r="1.4" fill="#f2c23a"/>'),
@@ -124,7 +127,7 @@
     eye: ['eye', 'gold'], rain: ['rain', 'blue'], storm: ['cloud', 'blue'], sun: ['sun', 'orange'], wolf: ['wolves', 'brown'], deer: ['wolves', 'green'], sick: ['heal', 'green'],
     heal: ['heal', 'green'], food: ['leaf', 'green'], stone: ['stone', 'grey'], boat: ['boat', 'blue'], flower: ['fertility', 'pink'], info: ['leaf', 'green'],
     tech: ['tech', 'blue'], city: ['city', 'gold'], ship: ['ship', 'blue'], naval: ['ship', 'red'], cart: ['cart', 'gold'], wall: ['wall', 'grey'], road: ['road', 'gold'],
-    aqueduct: ['aqueduct', 'blue'], wonder: ['wonder', 'gold'], siege: ['ram', 'red'], sacrifice: ['sacrifice', 'red'], lore: ['book', 'gold'], prophecy: ['word', 'gold'],
+    aqueduct: ['aqueduct', 'blue'], wonder: ['wonder', 'gold'], siege: ['ram', 'red'], sacrifice: ['sacrifice', 'red'], lore: ['book', 'gold'], prophecy: ['word', 'gold'], cave: ['cave', 'orange'], paint: ['cave', 'red'],
     mountain: ['mountain', 'brown'], wave: ['wave', 'blue'],
     fest: ['fest', 'gold'], coin: ['scale', 'gold'], theft: ['chain', 'red'], army: ['sword', 'red'], battle: ['sword', 'red'], general: ['crown', 'red'], plague: ['heal', 'red'],
     curral: ['wolves', 'green'], estabulo: ['wolves', 'green'], acougue: ['hammer', 'gold'], tecelagem: ['hammer', 'gold'], mina: ['stone', 'grey'], forja: ['hammer', 'gold'], ourives: ['hammer', 'gold'],
@@ -196,6 +199,8 @@
     $('#btn-cinema').innerHTML = ICON.film; $('#btn-cinema').onclick = () => { G.Audio.play('click'); G.Cinema.start(); };
     $('#btn-realms').onclick = () => { G.Audio.play('click'); UI.openRealms(); };
     $('#btn-lore').onclick = () => { G.Audio.play('click'); G.Lore.openBook(); };
+    $('#btn-under').innerHTML = ICON.cave; $('#btn-under').onclick = () => { G.Audio.play('click'); G.Render.setUnder(!G.Render.under); };
+    G.Render.underHooks.push(on => { $('#btn-under').classList.toggle('on', !!on); });
     $('#btn-map').innerHTML = ICON.map; $('#btn-map').onclick = () => { G.Audio.play('click'); G.Minimap.toggle(); };
     $('#fac-chip').onclick = () => { G.Audio.play('click'); UI.openRealms(); };
     $('#prayer').onclick = () => {
@@ -211,13 +216,14 @@
     });
     $('#inspector').addEventListener('click', e => {
       const a = e.target.closest('[data-pid]');
-      if (a) { const p = G.person(+a.dataset.pid); if (p) { UI.select(p); if (!p.dead) { G.Render.cam.follow = 0; G.Render.panTo(p.x, p.y); } } return; }
+      if (a) { const p = G.person(+a.dataset.pid); if (p) { UI.select(p); if (!p.dead) { if (!!p.ug !== !!G.Render.under) G.Render.setUnder(p.ug ? 1 : 0); G.Render.cam.follow = 0; G.Render.panTo(p.x, p.y); } } return; }
       const b = e.target.closest('[data-act]'); if (!b) return;
       G.Audio.play('click');
       if (b.dataset.act === 'close') UI.select(null);
       else if (b.dataset.act === 'follow') { const s = UI.selected; if (s && !s.dead) { G.Render.cam.follow = G.Render.cam.follow === s.id ? 0 : s.id; renderInspector(true); } }
       else if (b.dataset.act === 'tree') UI.openTree(UI.selected.id);
       else if (b.dataset.act === 'bio') UI.openBio(UI.selected.id);
+      else if (b.dataset.act === 'cave-view') G.Caves.view(+b.dataset.id);
     });
     $('#modal-bg').addEventListener('click', e => { if (e.target.id === 'modal-bg') UI.closeModal(); });
     $('#modal').addEventListener('click', e => {
@@ -252,6 +258,7 @@
       else if (m === 'skip-goal' || m === 'skip-course') { const p = G.Skip.pick; if (m === 'skip-goal') p.goal = b.dataset.k; else p.course = b.dataset.k; G.Audio.play('click'); G.Skip.open(); }
       else if (m === 'skip-go') { const p = G.Skip.pick; if (G.Skip.reached(p.goal)) return; UI.closeModal(); G.Skip.start(p.goal, p.course); }
       else if (m === 'skip-more') { UI.closeModal(); G.Skip.open(); }
+      else if (m === 'cave-go') { UI.closeModal(); G.Caves.view(+b.dataset.id, true); }
       else if (m === 'geo-go') { UI.closeModal(); G.Render.cam.follow = 0; G.Render.panTo(+b.dataset.x, +b.dataset.y); G.Render.cam.tz = Math.max(G.Render.cam.tz, 1.4); }
       else if (m === 'best') { G.Lore.bestSel = G.Lore.bestSel === b.dataset.k ? null : b.dataset.k; G.Lore.openBook('bestiario'); }
       else if (m === 'sfx') { G.Audio.setSfx(!G.Audio.sfxOn); UI.openSound(); }
@@ -462,7 +469,8 @@
     const o = UI.selected; const el = $('#inspector'); if (!o) return;
     const S = G.S;
     let html = '';
-    if (o.type && G.BDEF[o.type]) html = buildingHTML(o);
+    if (G.Caves && G.Caves.owns(o)) html = G.Caves.inspectorHTML(o);
+    else if (o.type && G.BDEF[o.type]) html = buildingHTML(o);
     else if (o.kind && o.dock !== undefined && G.Naval && G.Naval.SHIP[o.kind]) html = shipHTML(o);
     else if (o.kind) {
       if (!S.animals.has(o.id)) { UI.select(null); return; }
@@ -674,6 +682,7 @@
       <li><b>Animais da cidade</b>: cães com nome que seguem o dono, tocam o rebanho com o pastor e expulsam raposas e lobos; gatos nas portas; galinhas no quintal (os ovos vão para a despensa); pombos na praça que voam quando alguém passa.</li>
       <li><b>Biografia viva</b>: cada pessoa guarda os marcos reais da sua vida — onde nasceu, com quem aprendeu, quem amou, os filhos, as guerras, as feridas, as perdas, as histórias que ouviu. Veja as memórias no painel da pessoa e a vida inteira no botão <b>Biografia</b>.</li>
       <li>Cada civilização tem suas <b>festividades</b>: Panateneias e Jogos Olímpicos, Saturnália e Triunfo, Opet e a Festa do Vale, Toxcatl e o Fogo Novo, Jól e Midsommar. Acompanhe pela Crônica e vá até lá.</li></ul>
+      <h4>Cavernas: o mundo de baixo</h4><p>Sob os morros há galerias, salões, rios e lagos subterrâneos, cristais, vaga-lumes e veios de minério. O botão da <b>caverna</b> no topo (ou <kbd>U</kbd>) mostra o mundo de baixo, iluminado só pela luz que entra pelas bocas, pelas tochas e pelas fogueiras. Os povos <b>descobrem</b> as cavernas, <b>pintam</b> nelas a sua história (os idosos contam o que está pintado), <b>enterram os reis</b>, sobem para ouvir o <b>oráculo</b>, <b>se escondem</b> ali durante os ataques, <b>mineram</b> os veios e recolhem o <b>guano</b> dos morcegos para adubar as roças. Morcegos saem ao entardecer, ursos dormem no fundo — e às vezes <b>bandidos</b> fazem de uma caverna o seu covil. Toque a boca de uma caverna para ver a sua história.</p>
       <h4>Montanhas, rios e a câmera que gira</h4><p>Cordilheiras com neve no alto, colinas, planaltos e mesas cercados de paredões, falésias sobre o mar, rios que descem das montanhas com <b>cachoeiras</b>, lagos nas bacias — tudo escolhido no <b>Novo mundo</b> (relevo plano, suave, montanhoso ou alpino). Subir custa caro, paredões não se escalam, os caminhos procuram os <b>passos</b>, e na guerra quem está no alto bate mais forte. Picos, passos, cachoeiras e lagos têm nome: veja no mapa e na aba <b>Geografia</b> do Livro do Mundo. <b>A câmera gira livre</b> (dois dedos, botão do meio, <kbd>Shift</kbd> + arrastar, a bússola ou <kbd>Q</kbd>/<kbd>E</kbd>): montanhas escondem o que está atrás delas, então gire para ver o outro lado. Na beira dos rios e lagos a água é rasa; no meio, funda — só quem nada entra.</p>
       <h4>Avançar no tempo</h4><p>O botão ⏭ ao lado das velocidades (ou <kbd>J</kbd>) pula anos de história: o mundo vive de verdade, só que sem desenhar, e você vê os anos passarem num mapa, com as grandes notícias da crônica. Escolha até quando (anos, a primeira cidade, metrópole ou megalópole, a próxima guerra) e como: <b>anos de paz e fartura</b> (os povos crescem até virar impérios) ou <b>deixar o mundo seguir</b>. <kbd>Esc</kbd> para no meio do caminho. No Novo mundo, "Começar" já chega mais tarde.</p>
       <h4>O céu e os sons</h4><p>Névoa nos baixios ao amanhecer, raios de sol nas horas douradas, sombras de nuvens deslizando sobre os campos, <b>arco-íris</b> depois da chuva, vaga-lumes nas noites quentes, folhas no vento, redemoinhos de poeira no deserto, relâmpagos dentro das tempestades. O som acompanha o que a câmera mostra: ondas e gaivotas na costa, o rio correndo, folhas e pássaros na mata, o murmúrio da cidade, a forja, cães e galinhas, corujas e sapos à noite, o estrondo de uma batalha.</p>
@@ -813,7 +822,7 @@
         <p class="st-hint">${esc((G.Biome.CLIMAS[o.clima || 'variado'] || G.Biome.CLIMAS.variado).desc)}</p>
         <div class="st-label">Relevo</div>
         <div class="st-row">${G.Relief.OPTS.relevo.v.map(([k, n, sub]) => opt('relevo', k, n, sub)).join('')}</div>
-        <div class="st-relief">${['cordilheiras', 'planaltos', 'costa', 'lagos'].map(k => `<div class="st-rr"><span>${G.Relief.OPTS[k].label}</span><div class="st-row">${G.Relief.OPTS[k].v.map(([v, n]) => opt(k, v, n)).join('')}</div></div>`).join('')}</div>
+        <div class="st-relief">${['cordilheiras', 'planaltos', 'costa', 'lagos', 'cavernas'].map(k => `<div class="st-rr"><span>${G.Relief.OPTS[k].label}</span><div class="st-row">${G.Relief.OPTS[k].v.map(([v, n]) => opt(k, v, n)).join('')}</div></div>`).join('')}</div>
         <p class="st-hint">${RELIEF_TIP[o.relevo] || ''}</p>
         <div class="st-label">Civilizações</div>
         <div class="st-row">${opt('classic', 0, 'Históricas', 'cada povo com sua cultura')}${opt('classic', 1, 'Tribos sem nome', 'o modo clássico')}</div>

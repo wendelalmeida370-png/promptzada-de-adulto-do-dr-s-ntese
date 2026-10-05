@@ -22,6 +22,7 @@
     planaltos: { label: 'Planaltos e mesas', def: 'alguns', v: [['nenhum', 'Nenhum'], ['alguns', 'Alguns'], ['muitos', 'Muitos'], ['aleatorio', 'Aleatório']] },
     costa: { label: 'Costa', def: 'mista', v: [['praias', 'Praias'], ['mista', 'Mista'], ['falesias', 'Falésias'], ['aleatorio', 'Aleatório']] },
     lagos: { label: 'Lagos e depressões', def: 'normais', v: [['poucos', 'Poucos'], ['normais', 'Normais'], ['muitos', 'Muitos'], ['aleatorio', 'Aleatório']] },
+    cavernas: { label: 'Cavernas', def: 'normais', v: [['nenhuma', 'Nenhuma'], ['poucas', 'Poucas'], ['normais', 'Normais'], ['muitas', 'Muitas'], ['aleatorio', 'Aleatório']] },
   };
   Rf.resolve = function (opts, rng) {
     const o = {};

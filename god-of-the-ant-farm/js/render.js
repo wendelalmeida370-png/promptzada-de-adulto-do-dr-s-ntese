@@ -95,12 +95,13 @@
     const at = h => { const b = (wy + h * HS) / 8; return R.fromView((a + b) / 2, (b - a) / 2); };
     const inside = p => p[0] >= 0 && p[1] >= 0 && p[0] < N && p[1] < N;
     // the first surface the ray meets, coming from the front of the view
-    const top = R.maxH + 0.5, step = 0.4;
+    const gh = R.groundAt;
+    const top = R.under ? UF() + UW() + 0.5 : R.maxH + 0.5, step = 0.4;
     for (let h = top; h >= -1; h -= step) {
       const p = at(h); if (!inside(p)) continue;
-      if (W.groundH(p[0], p[1]) >= h) {
+      if (gh(p[0], p[1]) >= h) {
         let lo = h, up = h + step;
-        for (let k = 0; k < 7; k++) { const m = (lo + up) / 2; const q = at(m); if (inside(q) && W.groundH(q[0], q[1]) >= m) lo = m; else up = m; }
+        for (let k = 0; k < 7; k++) { const m = (lo + up) / 2; const q = at(m); if (inside(q) && gh(q[0], q[1]) >= m) lo = m; else up = m; }
         return at(lo);
       }
     }
@@ -127,7 +128,7 @@
   function spinStart(hold) {
     const c = R.screenToTile(VW / 2, VH / 2);
     const cx = G.clamp(c[0], 0.5, N - 0.5), cy = G.clamp(c[1], 0.5, N - 0.5);
-    spin = { phi: restPhi, hold, cx, cy, ch: W.groundH(cx, cy), rot0: rot, laidFor: rot, from: restPhi, to: restPhi, k: 1, dur: 0.3, target: rot };
+    spin = { phi: restPhi, hold, cx, cy, ch: R.groundAt(cx, cy), rot0: rot, laidFor: rot, from: restPhi, to: restPhi, k: 1, dur: 0.3, target: rot };
     R.cam.target = null; R.cam.follow = 0;
     setPhi(restPhi);
   }
@@ -226,11 +227,11 @@
   R.setView = function (r) { r = mod4(r | 0); spin = null; cphi = 1; sphi = 0; rot = r; R.view = r; restPhi = r * QT; borderCache.ver = -1; for (const h of R.rotHooks) h(rot); for (const h of R.angleHooks) h(restPhi); };
   R.view = 0;
   R.centerOn = function (x, y, zoom) {
-    const [sx, sy] = proj(x, y, W.groundH(x, y));
+    const [sx, sy] = proj(x, y, R.groundAt(x, y));
     R.cam.x = sx; R.cam.y = sy;
     if (zoom) { R.cam.zoom = zoom; R.cam.tz = zoom; }
   };
-  R.panTo = function (x, y) { R.cam.target = proj(x, y, W.groundH(x, y)); };
+  R.panTo = function (x, y) { R.cam.target = proj(x, y, R.groundAt(x, y)); };
 
   // ------------------------------ terrain cache ------------------------------
   let chunks = [], shore = [], shoreRiver = [], sparkles = [], dLand = null;
@@ -756,7 +757,7 @@
     // follow selected
     if (cam.follow) {
       const v = G.S.villagers.get(cam.follow) || G.S.animals.get(cam.follow) || G.S.ships.find(o => o.id === cam.follow);
-      if (v) { const [sx, sy] = proj(v.x, v.y, W.groundH(v.x, v.y)); cam.x += (sx - cam.x) * Math.min(1, dt * 4); cam.y += (sy - 8 - cam.y) * Math.min(1, dt * 4); }
+      if (v) { const [sx, sy] = proj(v.x, v.y, v.ug ? UF() : W.groundH(v.x, v.y)); cam.x += (sx - cam.x) * Math.min(1, dt * 4); cam.y += (sy - 8 - cam.y) * Math.min(1, dt * 4); }
       else cam.follow = 0;
     } else if (cam.target) {
       cam.x += (cam.target[0] - cam.x) * Math.min(1, dt * 4); cam.y += (cam.target[1] - cam.y) * Math.min(1, dt * 4);
@@ -926,6 +927,8 @@
       }
     }
     PROF.mark('dirty', t0); t0 = now();
+    underT += dt;
+    if (R.under && S.ug) { frameUnder(t, dt); return; }
     const nightF = G.clamp(R.nightness(), 0, 1);
     // ---------- background ----------
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1033,6 +1036,10 @@
       const p = vis(a.x, a.y, W.groundH(a.x, a.y)); if (p) pushD(depth(a.x, a.y) + 0.04, 6, a, p[0], p[1] - (sd.cls === 'water' ? 0 : (a.z || 0)));
     }
     for (const b of S.boats) { const p = vis(b.x, b.y, W.groundH(b.x, b.y)); if (p) pushD(depth(b.x, b.y), 7, b, p[0], p[1]); }
+    if (G.Caves && S.ug) {
+      for (const cv of G.Caves.all()) for (const m of cv.mouths) { const p = vis(m.x + 0.5, m.y + 0.5, W.groundH(m.x + 0.5, m.y + 0.5)); if (p) pushD(depth(m.x + 0.5, m.y + 0.5) - 0.3, 14, { cv, m }, p[0], p[1]); }
+      for (const a of G.Caves.actors) { if (a.delay > 0) continue; const p = vis(a.x, a.y, W.groundH(a.x, a.y)); if (p) pushD(depth(a.x, a.y) + 0.05, 15, a, p[0], p[1]); }
+    }
     // other modules give depths for the first view (x + y + offset): keep their offset, turn the rest
     if (HK.ents.length) { const add = (d, e, x, y, h) => { const p = proj(x, y, h === undefined ? W.groundH(x, y) : h); if (p[0] > view[0] - 70 && p[0] < view[2] + 70 && p[1] > view[1] - 20 && p[1] < view[3] + 120) pushD(rot ? depth(x, y) + (d - x - y) : d, 13, e, p[0], p[1]); }; for (const h of HK.ents) h(add, view, R.cam.zoom); }
     const list = drawList.slice(0, drawN).sort((a, b) => a.d - b.d);
@@ -1067,6 +1074,7 @@
     G.Siege && G.Siege.drawMissiles(ctx, proj);
     G.Powers.drawWorld && G.Powers.drawWorld(ctx, proj, t);
     G.Animals.drawAir && G.Animals.drawAir(ctx, proj, t, view, R.cam.zoom);
+    drawCaveBats(t, view);
     PROF.mark('entities', t0); t0 = now();
     // ---------- world particles, clouds ----------
     drawParticles(0, view);
@@ -1114,6 +1122,7 @@
     }
     for (const h of HK.screen) h(ctx, canvas.width, canvas.height, t, nightF, dpr);
     G.Powers.drawSky && G.Powers.drawSky(ctx, canvas.width, canvas.height, t, dpr);
+    if (underT < 0.4) { ctx.fillStyle = `rgba(0,0,0,${1 - underT / 0.4})`; ctx.fillRect(0, 0, canvas.width, canvas.height); }
     if (G.FX.flash > 0) {
       ctx.fillStyle = `rgba(${G.FX.flashColor},${Math.min(1, G.FX.flash) * 0.85})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1402,6 +1411,290 @@
     }
   }
 
+  // ------------------------------ the world below ------------------------------
+  // With the god's eye under the ground, the rock is cut flat at the height of the cave roofs and every
+  // cave is a pit in it: the walls at the back rise whole, the rock in front of a cave is cut down to a
+  // lip, so nothing inside hides. Down there it is dark: what lights it is the day falling through the
+  // mouths, the torches people carry, the outlaws' fire, glow-worms, crystals and the oracle's vapours.
+  R.under = 0; let underT = 9;
+  const UF = () => (G.Caves ? G.Caves.FLOOR : 2), UW = () => (G.Caves ? G.Caves.WALL : 3.2);
+  const UG_STUB = 0.42, UG_AMB = [146, 134, 144];
+  function ugGround(x, y) { const U = G.S && G.S.ug; const xi = Math.floor(x), yi = Math.floor(y); if (!U || xi < 0 || yi < 0 || xi >= N || yi >= N) return UF() + UW(); return U.k[yi * N + xi] ? UF() : UF() + UW(); }
+  R.groundAt = (x, y) => (R.under && G.S && G.S.ug ? ugGround(x, y) : W.groundH(x, y));
+  R.underHooks = [];
+  R.setUnder = function (on, quiet) {
+    on = on ? 1 : 0; if (on === R.under || (on && !(G.S && G.S.ug))) return;
+    if (spin) { spin.to = Math.round(spin.phi / QT) * QT; endSpin(); }
+    const c = G.S ? R.screenToTile(VW / 2, VH / 2) : [N / 2, N / 2];
+    R.under = on; underT = quiet ? 9 : 0; ugVer = -1;
+    if (G.S) { const p = proj(c[0], c[1], R.groundAt(c[0], c[1])); R.cam.x = p[0]; R.cam.y = p[1]; R.cam.target = null; }
+    if (!quiet && G.Audio && G.Audio.play) G.Audio.play('whoosh');
+    for (const h of R.underHooks) h(on);
+    G.Minimap && G.Minimap.refresh && G.Minimap.refresh();
+  };
+  let ugImg = null, ugVer = -1, ugCells = [], ugCol = null, ugStub = null, ugSet = null, ugSeen = null;
+  function floorCol(i, k) {
+    const K = G.Caves.K; const hv = (G.hash(i * 3 + 7) - 0.5) * 12;
+    let c = k === K.LAKE ? [30, 58, 82] : k === K.STREAM ? [62, 124, 156] : k === K.MOUTH ? [168, 152, 124] : k === K.DUG ? [140, 110, 78] : k === K.HALL ? [138, 122, 104] : [126, 112, 96];
+    if (G.S.ug.f[i] === G.Caves.FT.GUANO) c = [96, 78, 56];
+    return [c[0] + hv, c[1] + hv, c[2] + hv * 0.8];
+  }
+  // the stone of the land above: red under the deserts, blue-grey under the sea, lighter under the towns
+  function buildUnder() {
+    const S = G.S, U = S.ug; const NN = N * N;
+    ugVer = U.ver;
+    if (!ugImg || ugImg.width !== N) { ugImg = document.createElement('canvas'); ugImg.width = ugImg.height = N; }
+    ugCol = new Int32Array(NN); ugStub = new Uint8Array(NN); ugSet = new Uint8Array(NN); ugSeen = new Uint8Array(NN);
+    for (let i = 0; i < NN; i++) {
+      if (!U.k[i]) continue; ugSet[i] = 1;
+      const x = i % N, y = (i / N) | 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; if (!U.k[j]) ugSet[j] = 2; }
+    }
+    for (let i = 0; i < NN; i++) {
+      if (ugSet[i] !== 2) continue; const x = i % N, y = (i / N) | 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; if (!ugSet[j]) ugSet[j] = 3; }
+    }
+    const xc = ugImg.getContext('2d'); const img = xc.createImageData(N, N); const d = img.data;
+    ugCells = [];
+    for (let i = 0; i < NN; i++) {
+      let c;
+      if (U.k[i]) c = floorCol(i, U.k[i]);
+      else {
+        const t = S.type[i];
+        if (t <= T.SEA) c = [52, 64, 80]; else if (t === T.RIVER) c = [64, 76, 90];
+        else { const h = W.tileH(i) - G.SEA; const b = S.biome ? S.biome[i] : 0; c = b === 6 || b === 5 ? [124, 88, 66] : b === 1 ? [102, 106, 118] : [92, 85, 78]; const l = Math.min(h, 14) * 2; c = [c[0] + l, c[1] + l, c[2] + l]; }
+        if (S.occ[i]) c = [c[0] + 20, c[1] + 16, c[2] + 10]; else if (S.road[i]) c = [c[0] + 9, c[1] + 8, c[2] + 6];
+        if (U.ore[i]) c = G.lerpColor(c, G.hex2rgb(G.Caves.ORES[U.ore[i]].col), 0.2);
+        const hv = (G.hash(i * 5 + 1) - 0.5) * 10; c = [c[0] + hv, c[1] + hv, c[2] + hv * 0.8];
+      }
+      const r = G.clamp(Math.round(c[0]), 0, 255), g = G.clamp(Math.round(c[1]), 0, 255), b = G.clamp(Math.round(c[2]), 0, 255);
+      ugCol[i] = (r << 16) | (g << 8) | b;
+      d[i * 4] = r; d[i * 4 + 1] = g; d[i * 4 + 2] = b; d[i * 4 + 3] = ugSet[i] === 1 || ugSet[i] === 2 ? 0 : 255;
+      if (ugSet[i]) ugCells.push(i);
+    }
+    xc.putImageData(img, 0, 0);
+  }
+  const ugRGB = (c, f) => 'rgb(' + Math.min(255, ((c >> 16) & 255) * f | 0) + ',' + Math.min(255, ((c >> 8) & 255) * f | 0) + ',' + Math.min(255, (c & 255) * f | 0) + ')';
+  function quadFill(a, b, c, d, col) {
+    ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  function ugH(i) {
+    const U = G.S.ug, K = G.Caves.K; const k = U.k[i];
+    if (k) return k === K.LAKE ? UF() - 0.55 : k === K.STREAM ? UF() - 0.22 : UF();
+    return ugSet[i] === 2 && ugStub[i] ? UF() + UG_STUB : UF() + UW();
+  }
+  const EDGE = { '1,0': [1, 0, 1, 1], '-1,0': [0, 0, 0, 1], '0,1': [0, 1, 1, 1], '0,-1': [0, 0, 1, 0] };
+  // the sides of a cell that face the god and stand over something lower
+  function ugFaces(i, x, y, h, col, t, ore) {
+    const d0 = depth(x + 0.5, y + 0.5);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
+      if (depth(nx + 0.5, ny + 0.5) <= d0 + 0.01) continue;
+      const j = ny * N + nx; const hn = ugSet[j] ? ugH(j) : UF() + UW(); if (hn >= h - 0.01) continue;
+      const e = EDGE[dx + ',' + dy]; const ax = x + e[0], ay = y + e[1], bx = x + e[2], by = y + e[3];
+      const a = proj(ax, ay, h), b = proj(bx, by, h), c = proj(bx, by, hn), d = proj(ax, ay, hn);
+      const o = R.off(dx, dy); const sh = 0.7 - 0.13 * G.clamp(o[0] / 20, -1, 1);
+      quadFill(a, b, c, d, ugRGB(col, sh));
+      if (h - hn > 2) { // a darker band in the rock: its layers
+        const m0 = proj(ax, ay, hn + (h - hn) * 0.42), m1 = proj(bx, by, hn + (h - hn) * 0.42), n0 = proj(ax, ay, hn + (h - hn) * 0.5), n1 = proj(bx, by, hn + (h - hn) * 0.5);
+        ctx.fillStyle = 'rgba(20,14,10,0.16)'; ctx.beginPath(); ctx.moveTo(m0[0], m0[1]); ctx.lineTo(m1[0], m1[1]); ctx.lineTo(n1[0], n1[1]); ctx.lineTo(n0[0], n0[1]); ctx.closePath(); ctx.fill();
+      }
+      if (ore && h - hn > 1) { // the vein shows in the cut
+        const oc = G.Caves.ORES[ore].col;
+        for (let k = 0; k < 4; k++) {
+          const u = 0.15 + G.hash(i * 11 + k) * 0.7, v = 0.2 + G.hash(i * 13 + k * 3) * 0.6;
+          const px = a[0] + (b[0] - a[0]) * u, py = a[1] + (b[1] - a[1]) * u + (d[1] - a[1]) * v;
+          ctx.fillStyle = oc; ctx.beginPath(); ctx.moveTo(px, py - 1.1); ctx.lineTo(px + 0.9, py); ctx.lineTo(px, py + 1.1); ctx.lineTo(px - 0.9, py); ctx.closePath(); ctx.fill();
+          if (k === 0) emisGlow.push(px, py, 3.5, ore === 4 ? 'gold' : ore === 6 ? 'purple' : 'white', 0.25 + 0.25 * Math.max(0, Math.sin(t * 2 + i)));
+        }
+      }
+    }
+  }
+  function ugFloor(i, t) {
+    const U = G.S.ug, K = G.Caves.K; const x = i % N, y = (i / N) | 0; const k = U.k[i]; const h = ugH(i); const c = ugCol[i];
+    const a = proj(x, y, h), b = proj(x + 1, y, h), d = proj(x + 1, y + 1, h), e = proj(x, y + 1, h);
+    quadFill(a, b, d, e, ugRGB(c, 1));
+    if (k === K.LAKE || k === K.STREAM) {
+      const ph = t * (k === K.STREAM ? 1.6 : 0.5) + (x + y) * 0.9;
+      const m = proj(x + 0.5, y + 0.5, h);
+      ctx.strokeStyle = `rgba(170,215,240,${0.18 + 0.12 * Math.sin(ph)})`; ctx.lineWidth = 0.6;
+      ctx.beginPath(); ctx.ellipse(m[0] + Math.sin(ph) * 3, m[1] + Math.cos(ph * 0.7) * 1.2, 4 + Math.sin(ph * 1.3) * 1.5, 1.2, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    if (k === K.DUG) { const m = proj(x + 0.5, y + 0.5, h); ctx.strokeStyle = '#6a4a28'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(m[0] - 7, m[1]); ctx.lineTo(m[0] - 7, m[1] - 11); ctx.lineTo(m[0] + 7, m[1] - 11); ctx.lineTo(m[0] + 7, m[1]); ctx.stroke(); }
+    ugFaces(i, x, y, h, c, t, 0);
+  }
+  function ugRock(i, t) {
+    const U = G.S.ug; const x = i % N, y = (i / N) | 0; const h = ugH(i); const stub = h < UF() + 1;
+    const c = ugCol[i];
+    const a = proj(x, y, h), b = proj(x + 1, y, h), d = proj(x + 1, y + 1, h), e = proj(x, y + 1, h);
+    quadFill(a, b, d, e, ugRGB(c, stub ? 1.18 : 1));
+    ugFaces(i, x, y, h, c, t, U.ore[i]);
+  }
+  // a painting on the face of the wall it was made on (seen only when that face turns to the god)
+  function ugPainting(p) {
+    const r = p.i + p.w[0] + p.w[1] * N; const rx = r % N, ry = (r / N) | 0;
+    const e = EDGE[(-p.w[0]) + ',' + (-p.w[1])]; if (!e) return;
+    let A = proj(rx + e[0], ry + e[1], UF()), B = proj(rx + e[2], ry + e[3], UF());
+    if (B[0] < A[0]) { const q = A; A = B; B = q; }
+    const Hh = UW() * HS;
+    ctx.save(); ctx.transform(B[0] - A[0], B[1] - A[1], 0, -Hh, A[0], A[1]);
+    G.CaveArt.painting(ctx, p, G.S.day - p.day);
+    ctx.restore();
+  }
+  // the sides of the slab of rock
+  function drawUnderSides(top) {
+    const BOT = -6;
+    const dX = depth(1, 0) - depth(0, 0), dY = depth(0, 1) - depth(0, 0);
+    const faces = [];
+    if (dY > 0) faces.push([0, N, N, N, 0, 1]); if (dY < 0) faces.push([N, 0, 0, 0, 0, -1]);
+    if (dX > 0) faces.push([N, N, N, 0, 1, 0]); if (dX < 0) faces.push([0, 0, 0, N, -1, 0]);
+    for (const [ax, ay, bx, by, nx, ny] of faces) {
+      const a = proj(ax, ay, top), b = proj(bx, by, top), c = proj(bx, by, BOT), d = proj(ax, ay, BOT);
+      const o = R.off(nx, ny); const sh = 0.75 - 0.12 * G.clamp(o[0] / 20, -1, 1);
+      const g = ctx.createLinearGradient(0, Math.min(a[1], b[1]), 0, Math.max(c[1], d[1]));
+      g.addColorStop(0, G.rgb([78 * sh, 70 * sh, 62 * sh])); g.addColorStop(1, G.rgb([34 * sh, 28 * sh, 24 * sh]));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(20,14,10,0.3)'; ctx.lineWidth = 1;
+      for (const hh of [top - 2.5, top - 5.5, 0]) { const p = proj(ax, ay, hh), q = proj(bx, by, hh); ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); }
+    }
+  }
+  const bandLooks = new Map();
+  function banditLook(cv, k) {
+    const key = cv.id * 10 + k; let l = bandLooks.get(key);
+    if (!l) { const SK = ['#c99a74', '#a8784e', '#7a5232', '#e0b894'], HA = ['#2a1e16', '#4a3020', '#6a4a2a', '#1a1a1a']; l = { id: 8e6 + key, age: 30, g: 'm', skin: SK[(k + cv.id) % 4], hair: HA[(k * 3 + cv.id) % 4], role: 'cacador', _cloth: ['#3b3530', '#4a2a22', '#2f3a30'][k % 3], traits: [], face: 1, walkPh: 0, act: 'sit', actT: 0, moving: false, kidCloth: '#555' }; bandLooks.set(key, l); }
+    return l;
+  }
+  function drawUnderItem(e, t) {
+    const S = G.S, U = S.ug, FT = G.Caves.FT; const fl = UF();
+    switch (e.t) {
+      case 5: drawEntity(e, t, 1); break;
+      case 20: ugFloor(e.o, t); break;
+      case 21: ugRock(e.o, t); break;
+      case 22: {
+        const i = e.o; const f = U.f[i]; const sd = i * 7 + 3; const ox = (G.hash(sd) - 0.5) * 6, oy = (G.hash(sd + 1) - 0.5) * 3;
+        G.CaveArt.deco(ctx, f, e.sx + ox, e.sy + oy, sd, t, UW() * HS);
+        if (f === FT.CRYS) light(e.sx, e.sy - 6, 26, 'purple', 0.55);
+        else if (f === FT.GLOW) light(e.sx, e.sy - UW() * HS, 34, 'green', 0.45);
+        else if (f === FT.SHROOM && G.hash(sd * 7) < 0.5) light(e.sx, e.sy - 2, 16, 'cool', 0.4);
+        break;
+      }
+      case 23: ugPainting(e.o); break;
+      case 24: G.CaveArt.tomb(ctx, e.o, e.sx, e.sy, t); if (!e.o.robbed && e.o.gold) emisGlow.push(e.sx, e.sy - 3, 6, 'gold', 0.25); break;
+      case 25: { const cv = e.o; const here = !!(cv.oracle && cv.oracle.here); G.CaveArt.oracle(ctx, e.sx, e.sy, t, here); light(e.sx, e.sy - 8, here ? 46 : 24, 'purple', here ? 0.8 : 0.4); break; }
+      case 26: {
+        const cv = e.o, b = cv.bandits; if (!b) break;
+        G.CaveArt.camp(ctx, e.sx, e.sy, t, b); emisFire.push(e.sx, e.sy - 1, 0.6); light(e.sx, e.sy - 6, 64, 'fire', 0.95);
+        const out = G.Caves.actors.filter(a => a.cave === cv.id).length; const home = Math.max(0, b.n - out);
+        const cx = b.camp % N + 0.5, cy = ((b.camp / N) | 0) + 0.5;
+        for (let k = 0; k < home; k++) {
+          const a = k / Math.max(1, home) * Math.PI * 2 + 0.3; const ox = Math.cos(a) * 0.72, oy = Math.sin(a) * 0.72;
+          const q = proj(cx + ox, cy + oy, fl); const lk = banditLook(cv, k); lk.act = k === 0 ? 'sittalk' : (k % 2 ? 'sit' : 'sittalk'); lk.actT = t; G.faceTo(lk, -ox, -oy);
+          G.Art.villager(ctx, lk, q[0], q[1], t, R.cam.zoom < 0.95);
+        }
+        break;
+      }
+      case 27: G.CaveArt.treasure(ctx, e.sx, e.sy, t, e.o.x * 7 + e.o.y); light(e.sx, e.sy - 3, 14, 'gold', 0.35); break;
+      case 28: G.CaveArt.beast(ctx, e.o, e.sx, e.sy + (e.o.kind === 'peixe' ? 1.5 : 0), t); break;
+      case 29: { const a = e.o; a.pose = 'sleep'; a.moving = false; G.Art.animal(ctx, a, e.sx, e.sy, t); break; }
+      case 30: { const cv = e.o; const ph = G.Caves.batPhase(cv); const n = !ph ? cv.bats : ph.night ? cv.bats * 0.08 : ph.out ? cv.bats * (1 - ph.k) : cv.bats * ph.k; G.CaveArt.roost(ctx, e.sx, e.sy, n, t, cv.id * 13); break; }
+      case 31: { const dayA = G.clamp(1 - R.nightness() * 0.85, 0.12, 1); G.CaveArt.shaft(ctx, e.sx, e.sy, dayA, 70); light(e.sx, e.sy - 12, 86, dayA > 0.4 ? 'gold' : 'cool', 0.25 + 0.75 * dayA); break; }
+    }
+  }
+  function frameUnder(t, dt) {
+    const S = G.S, U = S.ug, cam = R.cam; const C = G.Caves;
+    if (ugVer !== U.ver || !ugImg || ugImg.width !== N) buildUnder();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const bg = ctx.createLinearGradient(0, 0, 0, canvas.height); bg.addColorStop(0, '#0e0c0c'); bg.addColorStop(1, '#231b16');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const shx = cam.shake > 0 ? (Math.random() - 0.5) * cam.shake * 16 : 0, shy = cam.shake > 0 ? (Math.random() - 0.5) * cam.shake * 16 : 0;
+    const z = cam.zoom * dpr;
+    const setWorld = (c, scale) => c.setTransform(z * scale, 0, 0, z * scale, (VW / 2 - (cam.x + shx) * cam.zoom) * dpr * scale, (VH / 2 - (cam.y + shy) * cam.zoom) * dpr * scale);
+    setWorld(ctx, 1);
+    const view = viewRect(60);
+    lights.length = 0; emisWin.length = 0; emisFire.length = 0; emisGlow.length = 0; emisTorch.length = 0; overlays.length = 0;
+    const fl = UF(), top = fl + UW();
+    drawUnderSides(top);
+    // the rock, cut flat (one picture: a tile per pixel)
+    const p0 = proj(0, 0, top), p1 = proj(1, 0, top), p2 = proj(0, 1, top);
+    ctx.save(); ctx.transform(p1[0] - p0[0], p1[1] - p0[1], p2[0] - p0[0], p2[1] - p0[1], p0[0], p0[1]); ctx.imageSmoothingEnabled = false; ctx.drawImage(ugImg, 0, 0); ctx.restore(); ctx.imageSmoothingEnabled = true;
+    // the rock in front of a cave is cut down to a lip
+    drawN = 0;
+    for (const i of ugCells) {
+      const x = i % N, y = (i / N) | 0; const k = U.k[i];
+      const q = proj(x + 0.5, y + 0.5, k ? fl : top);
+      if (q[0] < view[0] - 40 || q[0] > view[2] + 40 || q[1] < view[1] - 50 || q[1] > view[3] + 60) continue;
+      const d = depth(x + 0.5, y + 0.5);
+      if (!k && ugSet[i] === 2) {
+        let st = 0;
+        for (let dy = -1; dy <= 1 && !st; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; if (U.k[ny * N + nx] && depth(nx + 0.5, ny + 0.5) < d - 0.01) { st = 1; break; } }
+        ugStub[i] = st;
+      }
+      pushD(k ? d - 0.9 : d, k ? 20 : 21, i, q[0], q[1]);
+      if (k && U.f[i]) pushD(d + 0.02, 22, i, q[0], q[1]);
+    }
+    for (const cv of C.all()) {
+      const cq = proj(cv.cx + 0.5, cv.cy + 0.5, fl); if (cq[0] < view[0] - 420 || cq[0] > view[2] + 420 || cq[1] < view[1] - 320 || cq[1] > view[3] + 320) continue;
+      for (const p of cv.paintings) {
+        const r = p.i + p.w[0] + p.w[1] * N; const rx = r % N, ry = (r / N) | 0;
+        if (ugStub[r] || depth((p.i % N) + 0.5, ((p.i / N) | 0) + 0.5) <= depth(rx + 0.5, ry + 0.5) + 0.01) continue;
+        pushD(depth(rx + 0.5, ry + 0.5) + 0.02, 23, p, 0, 0);
+      }
+      const at = (i, dd, ty, o) => { const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5; const q = proj(x, y, fl); pushD(depth(x, y) + dd, ty, o, q[0], q[1]); };
+      for (const tb of cv.tombs) at(tb.i, 0.03, 24, tb);
+      if (cv.oracle && cv.oracle.cell >= 0) at(cv.oracle.cell, 0.01, 25, cv);
+      if (cv.bandits && cv.bandits.camp >= 0) at(cv.bandits.camp, 0.01, 26, cv);
+      for (const tr of cv.treasures) if (!tr.found) at(tr.y * N + tr.x, 0.02, 27, tr);
+      for (const a of cv.sleepers) { const q = proj(a.sx, a.sy, fl); pushD(depth(a.sx, a.sy) + 0.04, 29, a, q[0], q[1]); }
+      if (cv.bats && cv.roost) { const q = proj(cv.roost.x + 0.5, cv.roost.y + 0.5, top); pushD(depth(cv.roost.x + 0.5, cv.roost.y + 0.5) + 0.6, 30, cv, q[0], q[1] + 3); }
+      for (const m of cv.mouths) at(m.y * N + m.x, 0.1, 31, m);
+    }
+    for (const b of U.beasts) { const q = proj(b.x, b.y, fl); if (q[0] < view[0] || q[0] > view[2] || q[1] < view[1] || q[1] > view[3]) continue; pushD(depth(b.x, b.y) + 0.03, 28, b, q[0], q[1]); }
+    for (const id of C.inside) {
+      const v = S.villagers.get(id); if (!v || !v.ug) continue;
+      if (v.age < 2 && v.carried) { const c = S.villagers.get(v.carrier); if (c) c.babyOn = v; continue; }
+      const q = proj(v.x, v.y, fl); pushD(depth(v.x, v.y) + 0.05, 5, v, q[0], q[1]);
+    }
+    const list = drawList.slice(0, drawN).sort((a, b) => a.d - b.d);
+    ctx.lineJoin = 'round';
+    for (const e of list) drawUnderItem(e, t);
+    for (const id of C.inside) { const v = S.villagers.get(id); if (v) v.babyOn = null; }
+    lightingPass(setWorld, 1, t, UG_AMB, 1);
+    setWorld(ctx, 1);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; drawFlames(t); ctx.restore(); ctx.globalAlpha = 1;
+    drawOverlays(t, view);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // a vignette: the eye adjusts to the dark
+    const vg = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) * 0.3, canvas.width / 2, canvas.height / 2, Math.max(canvas.width, canvas.height) * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (underT < 0.4) { ctx.fillStyle = `rgba(0,0,0,${1 - underT / 0.4})`; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+    if (G.FX.flash > 0) { ctx.fillStyle = `rgba(${G.FX.flashColor},${Math.min(1, G.FX.flash) * 0.85})`; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+  }
+  // seen from above: bats leaving at dusk in a black ribbon, a few hunting at night, coming back at dawn
+  function drawCaveBats(t, view) {
+    if (!G.Caves || !G.S.ug) return;
+    for (const cv of G.Caves.all()) {
+      const ph = G.Caves.batPhase(cv); if (!ph) continue;
+      const m = cv.mouths[0]; if (!m) continue;
+      const base = proj(m.x + 0.5, m.y + 0.5, W.groundH(m.x + 0.5, m.y + 0.5));
+      if (base[0] < view[0] - 320 || base[0] > view[2] + 320 || base[1] < view[1] - 260 || base[1] > view[3] + 200) continue;
+      const n = Math.min(90, Math.round(cv.bats / 2.5));
+      for (let k = 0; k < n; k++) {
+        const r = G.hash(cv.id * 97 + k), r2 = G.hash(cv.id * 31 + k * 3);
+        let x, y;
+        if (ph.night) {
+          if (k % 5) continue;
+          const a = t * (0.5 + r * 0.9) + r2 * Math.PI * 2, R0 = 24 + r * 70; x = base[0] + Math.cos(a) * R0 * 1.5; y = base[1] - 36 - r2 * 30 + Math.sin(a) * R0 * 0.45;
+        } else {
+          const k0 = ph.out ? ph.k : 1 - ph.k; const s = k0 * 1.7 - r * 0.7; if (s < 0 || s > 1) continue;
+          const a = r2 * Math.PI * 2 + s * 7; const dist = s * (60 + r * 160);
+          x = base[0] + Math.cos(a) * 9 * (1 - s) + Math.cos(r2 * Math.PI * 2) * dist; y = base[1] - 8 - s * (40 + r2 * 70) + Math.sin(a) * 6;
+        }
+        G.CaveArt.bat(ctx, x, y, t, k);
+      }
+    }
+  }
+
   // ------------------------------ the world at any angle ------------------------------
   // While the world turns, its ground is drawn tile by tile, back to front, at the angle of the moment,
   // with the colours and the light of the pictures of the four sides (not their small details); the
@@ -1637,7 +1930,7 @@
       case 5: {
         const v = o;
         const night = nightF > 0.5;
-        v.torch = night && !v.sleeping && v.moving && v.age >= 14 && ((v.task && v.task.torch) || v.id % 3 === 0);
+        v.torch = R.under ? (v.age >= 10 && (v.moving || v.id % 2 === 0)) : night && !v.sleeping && v.moving && v.age >= 14 && ((v.task && v.task.torch) || v.id % 3 === 0);
         if (v.age >= 2) {
           const baby = v.babyOn;
           const sink = sinkOf(v);
@@ -1649,7 +1942,7 @@
           ctx.fillStyle = '#f4efe3'; ctx.beginPath(); ctx.ellipse(sx, sy - 1, 2.2, 1.2, 0, 0, TAU); ctx.fill();
           ctx.fillStyle = v.skin; ctx.beginPath(); ctx.arc(sx - 1.8, sy - 1.6, 1, 0, TAU); ctx.fill();
         }
-        if (v.torch) { const tx = sx + R.sface(v) * 3, ty = sy - 12.5; light(tx, ty, 30, 'warm', 0.85); emisTorch.push(tx, ty); }
+        if (v.torch) { const tx = sx + R.sface(v) * 3, ty = sy - 12.5; light(tx, ty, R.under ? 48 : 30, 'warm', 0.85); emisTorch.push(tx, ty); }
         if (v.emo || (R.hover === v) || (G.UI && G.UI.selected === v)) overlays.push(v, sx, sy);
         break;
       }
@@ -1683,6 +1976,8 @@
       case 11: if (spin) { const x = o.i % N, y = (o.i / N) | 0; const stone = o.w.mat === 'pedra'; massBox(x + 0.18, y + 0.18, x + 0.82, y + 0.82, W.groundH(x + 0.5, y + 0.5), S.wall[o.i] === 1 ? 4.2 : 5, stone ? '#b8b0a0' : '#9a7650', stone ? '#8e8678' : '#76583a', stone ? '#cfc8b8' : '#ad8a62'); break; } else { const wv = S.wall[o.i]; const hp = S.wallHp[o.i] || 0; G.Art.drawM(ctx, G.Siege.wallSprite(G.Siege.wallDir(o.i), o.w.style, o.w.mat, wv !== 1, wv === 4, hp < (o.w.mat === 'pedra' ? 90 : 35)), sx, sy, 1); if (wv === 4 && nightF > 0.3) { light(sx, sy - 14, 22, 'warm', 0.5 * nightF); emisTorch.push(sx + 6, sy - 16); } break; }
       case 12: G.Siege.drawEngine(ctx, o, sx, sy, t); break;
       case 13: o.fn(ctx, o, sx, sy, t, nightF, FXA); break;
+      case 14: { const cv = o.cv; G.CaveArt.mouth(ctx, sx, sy, t, { tomb: cv.tombs.length > 0, oracle: !!cv.oracle, mine: !!cv.dug, camp: !!cv.bandits, night: nightF > 0.5 }); if (cv.bandits && nightF > 0.5) light(sx, sy - 3, 22, 'fire', 0.55); if (cv.oracle && cv.oracle.here) emisGlow.push(sx, sy - 14, 8, 'purple', 0.35); break; }
+      case 15: G.Art.villager(ctx, o.look, sx, sy, t, R.cam.zoom < 0.95); break;
     }
   }
 
@@ -2001,17 +2296,17 @@
   }
 
   // ------------------------------ lighting ------------------------------
-  function lightingPass(setWorld, nightF, t) {
+  function lightingPass(setWorld, nightF, t, ambOver, strOver) {
     const S = G.S;
-    const amb = ambient();
+    const amb = ambOver || ambient();
     const glowActive = G.FX.glows.length > 0;
-    if (Math.min(amb[0], amb[1], amb[2]) > 236 && !glowActive) return;
+    if (!ambOver && Math.min(amb[0], amb[1], amb[2]) > 236 && !glowActive) return;
     lctx.setTransform(1, 0, 0, 1, 0, 0);
     lctx.globalCompositeOperation = 'source-over';
     lctx.fillStyle = G.rgb(amb); lctx.fillRect(0, 0, lightC.width, lightC.height);
     lctx.globalCompositeOperation = 'lighter';
     setWorld(lctx, 0.5);
-    const strength = G.clamp((nightF - 0.25) * 1.6, 0, 1);
+    const strength = strOver !== undefined ? strOver : G.clamp((nightF - 0.25) * 1.6, 0, 1);
     for (let k = 0; k < lights.length; k += 5) {
       const a = lights[k + 4] * strength; if (a <= 0.01) continue;
       const r = lights[k + 2];
@@ -2043,20 +2338,8 @@
     ctx.restore();
   }
 
-  // ------------------------------ emissive ------------------------------
-  function drawEmissive(t, nightF, view) {
-    const S = G.S;
-    ctx.save();
-    // windows
-    for (let k = 0; k < emisWin.length; k += 4) {
-      const spr = emisWin[k], sx = emisWin[k + 1], sy = emisWin[k + 2], a = Math.abs(emisWin[k + 3]), m = emisWin[k + 3] < 0 ? -1 : 1;
-      ctx.globalAlpha = Math.min(1, a);
-      ctx.fillStyle = '#ffcf73';
-      for (const w of spr.win) { ctx.beginPath(); ctx.moveTo(sx + w[0][0] * m, sy + w[0][1]); for (let q = 1; q < w.length; q++) ctx.lineTo(sx + w[q][0] * m, sy + w[q][1]); ctx.closePath(); ctx.fill(); }
-    }
-    ctx.globalCompositeOperation = 'lighter';
-    G.Powers.drawGlow && G.Powers.drawGlow(ctx, proj, t, nightF);
-    ctx.globalAlpha = 1;
+  // fires, torches and glows (also the only light of the world below)
+  function drawFlames(t) {
     // fires (flame shapes)
     for (let k = 0; k < emisFire.length; k += 3) {
       const sx = emisFire[k], sy = emisFire[k + 1], f = emisFire[k + 2];
@@ -2085,6 +2368,22 @@
       const r = emisGlow[k + 2]; ctx.globalAlpha = Math.min(1, emisGlow[k + 4]);
       ctx.drawImage(G.Art.glow(emisGlow[k + 3]), emisGlow[k] - r, emisGlow[k + 1] - r, r * 2, r * 2);
     }
+  }
+  // ------------------------------ emissive ------------------------------
+  function drawEmissive(t, nightF, view) {
+    const S = G.S;
+    ctx.save();
+    // windows
+    for (let k = 0; k < emisWin.length; k += 4) {
+      const spr = emisWin[k], sx = emisWin[k + 1], sy = emisWin[k + 2], a = Math.abs(emisWin[k + 3]), m = emisWin[k + 3] < 0 ? -1 : 1;
+      ctx.globalAlpha = Math.min(1, a);
+      ctx.fillStyle = '#ffcf73';
+      for (const w of spr.win) { ctx.beginPath(); ctx.moveTo(sx + w[0][0] * m, sy + w[0][1]); for (let q = 1; q < w.length; q++) ctx.lineTo(sx + w[q][0] * m, sy + w[q][1]); ctx.closePath(); ctx.fill(); }
+    }
+    ctx.globalCompositeOperation = 'lighter';
+    G.Powers.drawGlow && G.Powers.drawGlow(ctx, proj, t, nightF);
+    ctx.globalAlpha = 1;
+    drawFlames(t);
     // crater embers
     const tv = R.tileView;
     if (tv) for (let y = tv[1]; y <= tv[3]; y++) for (let x = tv[0]; x <= tv[2]; x++) {
@@ -2158,7 +2457,7 @@
   R.showLabels = true;
   function drawCityLabels(view) {
     const S = G.S; const zoom = R.cam.zoom;
-    if (!R.showLabels || !G.Main || G.Main.mode !== 'game' || (G.Cinema && G.Cinema.on)) return;
+    if (!R.showLabels || !G.Main || G.Main.mode !== 'game' || (G.Cinema && G.Cinema.on) || R.under) return;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const s of S.settlements.values()) {
       const tier = s.tier || 0;
@@ -2186,17 +2485,23 @@
     ctx.globalAlpha = 1; ctx.textBaseline = 'alphabetic';
   }
   // the named places of the land: peaks, passes, waterfalls, lakes
-  const PICON = { pico: '▲', passo: '⌇', cachoeira: '≋', lago: '◌' };
+  const PICON = { pico: '▲', passo: '⌇', cachoeira: '≋', lago: '◌', caverna: '◖' };
   function drawPlaceLabels(view) {
     const zoom = R.cam.zoom;
     if (!R.showLabels || !G.Main || G.Main.mode !== 'game' || (G.Cinema && G.Cinema.on) || zoom < 0.55 || zoom > 3.2) return;
-    const places = G.Relief.places(); if (!places.length) return;
+    const places = R.under ? [] : G.Relief.places().slice();
+    // the caves: their doors on the surface (once someone found them), their halls below
+    if (G.Caves) for (const cv of G.Caves.all()) {
+      if (R.under) places.push({ kind: 'caverna', name: cv.name, x: cv.cx + 0.5, y: cv.cy + 0.5, under: 1 });
+      else if (cv.found && cv.mouths[0]) places.push({ kind: 'caverna', name: cv.name, x: cv.mouths[0].x + 0.5, y: cv.mouths[0].y + 0.5 });
+    }
+    if (!places.length) return;
     const a = G.clamp(Math.min((zoom - 0.55) / 0.3, (3.2 - zoom) / 0.6), 0, 1) * 0.92;
     ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
     const taken = [];
     for (const p of places) {
-      const h = p.kind === 'pico' ? p.h : W.groundH(p.x, p.y);
-      const q = proj(p.x, p.y, h); const y = q[1] - (p.kind === 'pico' ? 12 : 8);
+      const h = p.kind === 'pico' ? p.h : p.under ? UF() + UW() + 1 : W.groundH(p.x, p.y);
+      const q = proj(p.x, p.y, h); const y = q[1] - (p.kind === 'pico' ? 12 : p.kind === 'caverna' && !p.under ? 16 : 8);
       if (q[0] < view[0] - 60 || q[0] > view[2] + 60 || y < view[1] - 30 || y > view[3] + 30) continue;
       const fs = (p.kind === 'pico' ? 12 : 10.5) / zoom;
       ctx.font = `italic 700 ${fs}px Cinzel, Georgia, serif`;
@@ -2206,7 +2511,7 @@
       if (taken.some(b => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) continue;
       taken.push(box);
       ctx.lineWidth = 3 / zoom; ctx.strokeStyle = 'rgba(20,16,12,0.7)'; ctx.strokeText(txt, q[0], y);
-      ctx.fillStyle = p.kind === 'lago' || p.kind === 'cachoeira' ? '#dff4ff' : '#fff1d6'; ctx.fillText(txt, q[0], y);
+      ctx.fillStyle = p.kind === 'lago' || p.kind === 'cachoeira' ? '#dff4ff' : p.kind === 'caverna' ? '#f0dcc0' : '#fff1d6'; ctx.fillText(txt, q[0], y);
       if (p.kind === 'pico' && zoom > 0.9) { ctx.font = `700 ${8.5 / zoom}px Nunito, sans-serif`; ctx.strokeText(p.alt, q[0], y + fs * 0.95); ctx.fillStyle = 'rgba(240,225,200,0.85)'; ctx.fillText(p.alt, q[0], y + fs * 0.95); }
     }
     ctx.restore();
@@ -2246,7 +2551,7 @@
     }
     // floating texts
     ctx.textAlign = 'center';
-    for (const f of G.FX.floaters) {
+    for (const f of (R.under ? [] : G.FX.floaters)) {
       const p = proj(f.x, f.y, f.h);
       ctx.globalAlpha = Math.min(1, f.life / f.max * 2);
       ctx.font = `800 ${Math.round(9 * is)}px Nunito, sans-serif`;

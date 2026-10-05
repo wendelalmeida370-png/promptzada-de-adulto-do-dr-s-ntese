@@ -72,6 +72,7 @@
     if (img.width !== N) { img.width = N; img.height = N; pix = ictx.createImageData(N, N); }
     const d = pix.data; const terr = G.Fac.terrFac; const B = G.Biome; const road = S.road;
     let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9;
+    const UG = G.Render.under && S.ug ? S.ug : null;
     for (let i = 0; i < N * N; i++) {
       const t = S.type[i]; let c;
       if (t >= T.RIVER) { const [x, y] = G.Render.toView((i % N) + 0.5, ((i / N) | 0) + 0.5); const u = x - y, v = x + y; if (u < u0) u0 = u; if (u > u1) u1 = u; if (v < v0) v0 = v; if (v > v1) v1 = v; }
@@ -83,8 +84,10 @@
         if (road && road[i]) c = road[i] >= 2 ? [196, 186, 168] : [176, 150, 110];
         if (S.occ[i]) c = [226, 206, 178];
       }
+      // under the ground: the rock, and the caves lit in it
+      if (UG) { const k = UG.k[i]; c = k ? (k === 3 || k === 4 ? [70, 130, 170] : k === 5 ? [240, 220, 170] : [176, 146, 104]) : t <= T.SEA ? [30, 38, 50] : t === T.RIVER ? [38, 48, 58] : [62, 56, 52]; if (!k && S.occ[i]) c = [90, 80, 70]; }
       let r = c[0], g = c[1], b = c[2];
-      const f = terr && terr[i];
+      const f = !UG && terr && terr[i];
       if (f && t > T.RIVER) {
         const fc = hexRGB(G.Fac.hex(f));
         const x = i % N, y = (i / N) | 0;
@@ -133,6 +136,8 @@
       cx.fillStyle = G.Fac.hex(st.fac); cx.fill();
       cx.lineWidth = dpr; cx.strokeStyle = G.Fac.capitalOf(st.fac) === st ? '#fff6d8' : 'rgba(20,16,12,.8)'; cx.stroke();
     }
+    // the doors of the caves
+    if (G.Caves) for (const c of G.Caves.all()) for (const m of c.mouths) { const [px, py] = P(m.x + 0.5, m.y + 0.5); cx.beginPath(); cx.arc(px, py, 1.5 * dpr, 0, Math.PI * 2); cx.fillStyle = '#1a1412'; cx.fill(); cx.lineWidth = 0.8 * dpr; cx.strokeStyle = c.found ? '#f0d8b0' : 'rgba(240,216,176,.35)'; cx.stroke(); }
     // fleets at sea
     if (S.ships) { cx.fillStyle = '#f4ecd8'; for (const sh of S.ships) { const [px, py] = P(sh.x, sh.y); cx.fillRect(px - dpr, py - dpr, 2 * dpr, 2 * dpr); } }
     // the god's gaze

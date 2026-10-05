@@ -221,6 +221,7 @@
   Vg.fishSpots = new Map();
   function emergency(v) {
     const S = G.S;
+    if (v.ug) return; // underground: the cave errand decides (the hidden stay hidden)
     const t = v.task;
     if (t && t.type === 'flee' && t.age < 3.5) return;
     if (t && (t.type === 'swim' || t.type === 'condemned' || t.type === 'escorted')) return;
@@ -332,6 +333,7 @@
 
   function decide(v) {
     const S = G.S; const cur = v.task;
+    if (v.ug) return;
     if (cur && cur.pri >= 3) return;
     if (cur && cur.type === 'tell' && S.time < 0.8) return;
     if (v.captive) return G.War.captiveDecide(v, H);
@@ -1063,10 +1065,10 @@
         if (G.R() < dt * 2) G.FX && G.FX.splash(v.x, v.y, 0.25);
         break;
       }
-      default: if (!G.War.run(v, t, dt, H) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Carnage && G.Carnage.run(v, t, dt, H))) end(v);
+      default: if (!(G.Caves && G.Caves.run(v, t, dt, H)) && !G.War.run(v, t, dt, H) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Carnage && G.Carnage.run(v, t, dt, H))) end(v);
     }
   }
-  const LONG = { corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1 };
+  const LONG = { caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1 };
 
   function runBuild(v, t, dt) {
     const S = G.S;
@@ -1394,7 +1396,7 @@
     if (v.air) return 'Voando pelos ares!';
     if (v.age < 2) { const c = S.villagers.get(v.carrier); return c ? (v.sleeping ? 'Dormindo' : `No colo de ${c.name}`) : 'Chorando sozinho'; }
     if (!t) return v.sleeping ? 'Dormindo' : 'Pensando no que fazer';
-    const wt = (G.Army && G.Army.taskText(v, t)) || G.War.taskText(v, t) || (G.City && G.City.taskText(v, t)) || (G.Naval && G.Naval.taskText(v, t)) || (G.Eco && G.Eco.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || (G.Fest && G.Fest.taskText(v, t)) || (G.Life && G.Life.taskText(v, t)) || (G.Carnage && G.Carnage.taskText(v, t)); if (wt) return wt;
+    const wt = (G.Caves && G.Caves.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || G.War.taskText(v, t) || (G.City && G.City.taskText(v, t)) || (G.Naval && G.Naval.taskText(v, t)) || (G.Eco && G.Eco.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || (G.Fest && G.Fest.taskText(v, t)) || (G.Life && G.Life.taskText(v, t)) || (G.Carnage && G.Carnage.taskText(v, t)); if (wt) return wt;
     const bname = id => { const b = S.buildings.get(id); return b ? G.Village.buildName(b) : 'construção'; };
     const pname = id => { const o = S.villagers.get(id); return o ? o.name : 'alguém'; };
     switch (t.type) {

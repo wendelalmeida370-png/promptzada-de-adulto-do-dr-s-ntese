@@ -132,6 +132,7 @@
     G.UI && G.UI.notice(`Nasce uma lenda: “${title}”.`, 'lore');
     return l;
   }
+  L.legend = legend;
   function append(key, text) { const l = lore().legends.find(q => q.key === key); if (l && !l.text.includes(text)) l.text.push(text); return l; }
 
   // ------------------------------ notes from the world ------------------------------
@@ -318,7 +319,7 @@
 
   // ------------------------------ the book ------------------------------
   L.tab = 'genese';
-  const TABS = [['genese', 'Gênese'], ['cronicas', 'Crônicas'], ['lendas', 'Lendas'], ['povos', 'Povos'], ['geografia', 'Geografia'], ['bestiario', 'Bestiário'], ['profecias', 'Profecias']];
+  const TABS = [['genese', 'Gênese'], ['cronicas', 'Crônicas'], ['lendas', 'Lendas'], ['povos', 'Povos'], ['geografia', 'Geografia'], ['cavernas', 'Cavernas'], ['bestiario', 'Bestiário'], ['profecias', 'Profecias']];
   // the land itself: its mountains, passes, falls and lakes, with the way there
   function geography() {
     const S = G.S; const rel = S.relief || {}; const Rf = G.Relief; const places = Rf.places();
@@ -434,6 +435,8 @@
       }).join('');
     } else if (L.tab === 'geografia') {
       body = geography();
+    } else if (L.tab === 'cavernas') {
+      body = G.Caves ? G.Caves.bookHTML() : '';
     } else if (L.tab === 'bestiario') {
       body = bestiary();
     } else if (L.tab === 'profecias') {

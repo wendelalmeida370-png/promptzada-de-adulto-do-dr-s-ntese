@@ -120,7 +120,7 @@
   };
   W.landAt = (x, y) => W.inb(x, y) ? W.landIds()[W.idx(x, y)] : -1;
   W.sameLand = (ax, ay, bx, by) => { const L = W.landIds(); const a = L[W.idx(ax, ay)], b = L[W.idx(bx, by)]; return a < 0 || b < 0 || a === b; };
-  W.buildable = i => { const t = G.S.type[i]; return t >= T.SAND && !G.S.cliff[i] && !G.S.occ[i] && !G.S.objAt[i] && G.S.fire[i] < 0.05; };
+  W.buildable = i => { const t = G.S.type[i]; return t >= T.SAND && !G.S.cliff[i] && !G.S.occ[i] && !G.S.objAt[i] && G.S.fire[i] < 0.05 && !(G.Caves && G.Caves.isMouth(i)); };
   W.slope = (x, y, w, h) => {
     let mn = 1e9, mx = -1e9;
     for (let vy = y; vy <= y + h; vy++) for (let vx = x; vx <= x + w; vx++) {
@@ -535,6 +535,8 @@
     S.start = S.starts[0];
     // veins of iron and gold: someone will have them, someone will want them
     if (G.Eco) G.Eco.genDeposits(S);
+    // the layer below: caves under the hills
+    if (G.Caves) G.Caves.gen(S, ro.cavernas);
     return S;
   };
 

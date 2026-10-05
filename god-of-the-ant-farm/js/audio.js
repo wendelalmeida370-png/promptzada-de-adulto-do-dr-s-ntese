@@ -173,7 +173,7 @@
   };
 
   // ---------------- ambience ----------------
-  let ocean, wind, rain, windF, crackleT = 0, birdT = 2, cricketT = 0;
+  let ocean, wind, rain, windF, crackleT = 0, birdT = 2, cricketT = 0, dripT = 0;
   let river, leaves, crowd, battle, scapeT = 0, waveT = 3, gullT = 5, owlT = 7, frogT = 2, forgeT = 1, townT = 4, clangT = 1;
   // what the camera sees is what you hear
   const scape = A.scape = { sea: 0, river: 0, forest: 0, town: 0, snow: 0, desert: 0, swamp: 0, people: 0, fight: 0, forge: null, sell: 0, pets: [], zoomF: 1, fightAt: null };
@@ -228,18 +228,22 @@
     scapeT -= dt; if (scapeT <= 0) { scapeT = 0.5; analyse(); }
     const zf = scape.zoomF, night0 = G.Render.nightness() > 0.55;
     const coast = Math.min(1, scape.sea * 2.2);
-    ocean.g.gain.setTargetAtTime((0.018 + 0.05 * coast) * (1 + 0.35 * Math.sin(t * 0.35)) + 0.012 / zoom, t, 0.6);
-    river.g.gain.setTargetAtTime(Math.min(1.8, scape.river * 7 + (scape.falls || 0) * 0.6) * 0.05 * zf, t, 0.6);
-    leaves.g.gain.setTargetAtTime(Math.min(1, scape.forest * 1.6) * (0.25 + S.weather.windS) * 0.018 * zf, t, 0.8);
+    // under the ground the world above goes quiet: drips, and the hum of the rock
+    const UND = !!(G.Render.under && S.ug), uf = UND ? 0.07 : 1;
+    ocean.g.gain.setTargetAtTime(((0.018 + 0.05 * coast) * (1 + 0.35 * Math.sin(t * 0.35)) + 0.012 / zoom) * uf, t, 0.6);
+    river.g.gain.setTargetAtTime(Math.min(1.8, scape.river * 7 + (scape.falls || 0) * 0.6) * 0.05 * zf * uf, t, 0.6);
+    leaves.g.gain.setTargetAtTime(Math.min(1, scape.forest * 1.6) * (0.25 + S.weather.windS) * 0.018 * zf * uf, t, 0.8);
     const busy = scape.people ? Math.min(1, Math.log(1 + scape.people) / 4.2) : 0;
-    crowd.g.gain.setTargetAtTime(busy * (night0 ? 0.25 : 1) * (0.05 + Math.min(0.03, scape.sell * 0.006)) * zf, t, 0.8);
-    battle.g.gain.setTargetAtTime(Math.min(1, scape.fight / 14) * 0.13 * zf, t, 0.4);
-    wind.g.gain.setTargetAtTime(0.012 + S.weather.windS * 0.06 + (scape.snow + scape.desert) * 0.03 + (1 - zf) * 0.02 + Math.min(0.03, (scape.alt || 0) * 0.0012), t, 0.5);
-    windF.frequency.setTargetAtTime(350 + S.weather.windS * 500 + Math.sin(t * 0.2) * 80, t, 0.5);
+    crowd.g.gain.setTargetAtTime(busy * (night0 ? 0.25 : 1) * (0.05 + Math.min(0.03, scape.sell * 0.006)) * zf * uf, t, 0.8);
+    battle.g.gain.setTargetAtTime(Math.min(1, scape.fight / 14) * 0.13 * zf * uf, t, 0.4);
+    wind.g.gain.setTargetAtTime(UND ? 0.03 : 0.012 + S.weather.windS * 0.06 + (scape.snow + scape.desert) * 0.03 + (1 - zf) * 0.02 + Math.min(0.03, (scape.alt || 0) * 0.0012), t, 0.5);
+    windF.frequency.setTargetAtTime(UND ? 140 + Math.sin(t * 0.13) * 30 : 350 + S.weather.windS * 500 + Math.sin(t * 0.2) * 80, t, 0.5);
+    if (UND && A.ambOn) { dripT -= dt; if (dripT <= 0) { dripT = G.rr(0.3, 1.5); const f = G.rr(800, 2000); osc('sine', f, t, 0.14, 0.045, amb, f * 0.42); if (G.R() < 0.3) osc('sine', f * 1.5, t + 0.18, 0.1, 0.02, amb, f * 0.6); } }
     // rain loudness from global + visible clouds
     let r = S.weather.rain;
     for (const c of S.clouds) { const [sx, sy] = G.Render.proj(c.x, c.y, 2); const [px, py] = G.Render.worldPxToScreen(sx, sy); if (px > -200 && px < G.Render.VW + 200 && py > -200 && py < G.Render.VH + 200) r = Math.max(r, G.Nature.cloudIntensity(c) * 0.8); }
-    rain.g.gain.setTargetAtTime(r * 0.22, t, 0.4);
+    rain.g.gain.setTargetAtTime(r * 0.22 * uf, t, 0.4);
+    if (UND) return;
     // fire crackles
     let fires = 0; for (const i of G.Nature.fireSet) { fires++; if (fires > 12) break; }
     crackleT -= dt;
