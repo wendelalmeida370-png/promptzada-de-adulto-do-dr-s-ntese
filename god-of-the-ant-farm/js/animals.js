@@ -334,40 +334,88 @@
     if (t === T.RIVER && sp.near !== 'water' && a.kind === 'rabbit') return false;
     return true;
   }
+  // can it walk straight there? (no cliff, wall, house or deep water on the way)
+  function lineOK(a, x1, y1, x0, y0) {
+    if (x0 === undefined) { x0 = a.x; y0 = a.y; }
+    const sp = SP[a.kind]; if (sp.cls === 'air') return true;
+    const d = Math.hypot(x1 - x0, y1 - y0); const n = Math.ceil(d / 0.5);
+    for (let k = 1; k <= n; k++) { const f = k / n; if (!walkOK(a, x0 + (x1 - x0) * f, y0 + (y1 - y0) * f)) return false; }
+    return true;
+  }
+  A.lineOK = lineOK;
+  // a way around: the same paths people walk (cliffs, walls and houses in the way), a few searches a frame
+  let pathBudget = 0;
+  const canRoute = a => { const sp = SP[a.kind]; return sp.cls === 'land' || (sp.cls === 'amph' && G.S.type[W.idx(a.x, a.y)] > T.RIVER && G.S.type[W.idx(a.tx, a.ty)] > T.RIVER); };
+  function route(a) {
+    const S = G.S;
+    if (!canRoute(a)) return false; // (water, and the edge of the water: no way round to look for)
+    if (pathBudget <= 0 || S.clock - (a.pfT || -99) < 1.6) return null; // not this frame
+    pathBudget--; a.pfT = S.clock;
+    const p = W.findPath(a.x, a.y, a.tx, a.ty, true, 700);
+    return p && p.length ? p : false;
+  }
+  // nowhere to go from here: stop pushing against the rock, and think of something else
+  function giveUp(a) {
+    const S = G.S; const sp = SP[a.kind];
+    a.noGo = { x: a.tx, y: a.ty, until: S.clock + 20 };
+    a.tx = a.x; a.ty = a.y; a.moving = false; a.path = null; a.blk = 0; a.stk = 0;
+    if (a.dom || a.pen || a.tamed || !sp) return;
+    if (a.target && (a.state === 'chase' || a.state === 'lunge' || a.state === 'stalk' || a.state === 'flank')) { a.noPrey = { id: a.target, until: S.clock + 30 }; a.target = 0; a.onPerson = false; a.rest = Math.max(a.rest || 0, 2); a.state = 'idle'; a.t = G.rr(0.5, 1.5); }
+    else if (a.state === 'wander' || a.state === 'flee') { a.state = 'idle'; a.t = G.rr(0.3, 1.2); }
+  }
+  const noGo = (a, x, y) => a.noGo && G.S.clock < a.noGo.until && G.dist(x, y, a.noGo.x, a.noGo.y) < 2.5;
   // strays head back towards their home range
   function homeward(a, r) {
     const dx = a.hx - a.x, dy = a.hy - a.y; const d = Math.hypot(dx, dy); if (d < 1) return null;
     const step = Math.min(d, r);
-    for (let k = 0; k < 5; k++) { const ang = Math.atan2(dy, dx) + (G.R() - 0.5) * 1.2; const x = a.x + Math.cos(ang) * step, y = a.y + Math.sin(ang) * step; if (walkOK(a, x, y)) return [x, y]; }
-    return null;
+    let any = null;
+    for (let k = 0; k < 7; k++) { const ang = Math.atan2(dy, dx) + (G.R() - 0.5) * (k < 4 ? 1.2 : 2.4); const x = a.x + Math.cos(ang) * step, y = a.y + Math.sin(ang) * step; if (!walkOK(a, x, y) || noGo(a, x, y)) continue; if (lineOK(a, x, y)) return [x, y]; any = any || [x, y]; }
+    return any;
   }
   function pickNear(a, r, needHab) {
     const sp = SP[a.kind];
     if (a.hx !== undefined && G.S.animals.has(a.id) && !A.habitat(sp, W.idx(a.x, a.y))) { const h = homeward(a, Math.max(r, 5)); if (h) return h; }
-    for (let k = 0; k < 10; k++) {
+    for (let k = 0; k < 14; k++) {
       const ang = G.R() * 6.28, d = G.R() * r;
       const x = a.x + Math.cos(ang) * d, y = a.y + Math.sin(ang) * d;
-      if (!walkOK(a, x, y)) continue;
+      if (!walkOK(a, x, y) || noGo(a, x, y)) continue;
       const i = W.idx(x, y);
       if (G.S.fire[i] > 0) continue;
       if ((needHab || k < 7) && !A.habitat(sp, i)) continue;
+      // (a spot behind a cliff is not a place to wander to; the walk there must be open)
+      if (k < 12 && a.id && !lineOK(a, x, y)) continue;
       return [x, y];
     }
     return null;
   }
   function fleeTarget(a, fx, fy, dist) {
     let dx = a.x - fx, dy = a.y - fy; const d = Math.hypot(dx, dy) || 1; dx /= d; dy /= d;
-    for (const ang of [0, 0.6, -0.6, 1.2, -1.2, 2, -2]) {
+    let any = null;
+    for (const f of [1, 0.6, 0.35]) for (const ang of [0, 0.6, -0.6, 1.2, -1.2, 2, -2]) {
       const c = Math.cos(ang), s = Math.sin(ang);
-      const x = a.x + (dx * c - dy * s) * dist, y = a.y + (dx * s + dy * c) * dist;
-      if (walkOK(a, x, y)) return [x, y];
+      const x = a.x + (dx * c - dy * s) * dist * f, y = a.y + (dx * s + dy * c) * dist * f;
+      if (!walkOK(a, x, y)) continue;
+      if (lineOK(a, x, y)) return [x, y];
+      any = any || [x, y];
     }
-    return null;
+    return any;
   }
   function moveTo(a, dt, sp) {
-    const dx = a.tx - a.x, dy = a.ty - a.y; const d = Math.hypot(dx, dy);
-    if (d < 0.05) { a.moving = false; return true; }
-    const S = G.S; const i = W.idx(a.x, a.y); const def = SP[a.kind];
+    const S = G.S; const def = SP[a.kind];
+    const fdx = a.tx - a.x, fdy = a.ty - a.y; const fd = Math.hypot(fdx, fdy);
+    if (fd < 0.05) { a.moving = false; a.path = null; a.stk = 0; return true; }
+    // a way around something: walk it waypoint by waypoint (dropped if the goal moved far from its end)
+    let gx = a.tx, gy = a.ty;
+    if (a.path) {
+      const end = a.path[a.path.length - 1];
+      if (G.dist(end[0], end[1], a.tx, a.ty) > 2.5) a.path = null;
+      else {
+        while (a.path && G.dist(a.x, a.y, a.path[a.pi][0], a.path[a.pi][1]) < 0.3) { a.pi++; if (a.pi >= a.path.length) a.path = null; }
+        if (a.path) { gx = a.path[a.pi][0]; gy = a.path[a.pi][1]; }
+      }
+    }
+    const dx = gx - a.x, dy = gy - a.y; const d = Math.hypot(dx, dy) || 1e-6;
+    const i = W.idx(a.x, a.y);
     let mul = 1;
     if (def.cls === 'land' && S.type[i] === T.RIVER) mul = 0.55;
     if (def.swims) a.swim = S.type[i] === T.RIVER && S.deep[i] === 1;
@@ -376,17 +424,43 @@
     if (def.cls === 'land' && !def.climb && S.type[i] >= T.SAND) mul /= 1 + S.slope[i] * 0.14;
     const step = Math.min(d, sp * dt * mul * (0.6 + 0.4 * a.grown));
     const nx = a.x + dx / d * step, ny = a.y + dy / d * step;
+    const x0 = a.x, y0 = a.y;
+    let blocked = false;
     // a fence in the way: slide along it, or give up this way
     if (def.cls !== 'air' && W.fenceBlocks(a, a.x, a.y, nx, ny)) {
-      if (!W.fenceBlocks(a, a.x, a.y, nx, a.y) && walkOK(a, nx, a.y)) a.x = nx; else if (!W.fenceBlocks(a, a.x, a.y, a.x, ny) && walkOK(a, a.x, ny)) a.y = ny; else { a.tx = a.x; a.ty = a.y; a.moving = false; return true; }
-      a.moving = true; return false;
-    }
-    if (def.cls !== 'air' && !walkOK(a, nx, ny)) {
-      if (walkOK(a, nx, a.y)) a.x = nx; else if (walkOK(a, a.x, ny)) a.y = ny; else { a.tx = a.x; a.ty = a.y; a.moving = false; return true; }
+      blocked = true;
+      if (!W.fenceBlocks(a, a.x, a.y, nx, a.y) && walkOK(a, nx, a.y)) a.x = nx; else if (!W.fenceBlocks(a, a.x, a.y, a.x, ny) && walkOK(a, a.x, ny)) a.y = ny;
+    } else if (def.cls !== 'air' && !walkOK(a, nx, ny)) {
+      blocked = true;
+      if (walkOK(a, nx, a.y)) a.x = nx; else if (walkOK(a, a.x, ny)) a.y = ny;
     } else { a.x = G.clamp(nx, 0.3, N - 0.3); a.y = G.clamp(ny, 0.3, N - 0.3); }
+    const moved = Math.hypot(a.x - x0, a.y - y0);
+    // up against a cliff or a wall: look for the way round — and if there is none, stop trying
+    if (blocked) {
+      a.blk = (a.blk || 0) + dt;
+      a.blkSeen = 1;
+      if (a.blk > 0.2 && !a.path) {
+        const p = route(a);
+        if (p) { a.path = p; a.pi = 0; a.blk = 0; }
+        else if (p === false || a.blk > 1.6) { giveUp(a); return true; }
+      } else if (a.path && a.blk > 1.2) { giveUp(a); return true; }
+      if (moved < 1e-4) { a.moving = false; return false; }
+    } else a.blk = 0;
+    // sliding along a wall that leads nowhere: no progress towards the goal for a while
+    // (only counted when it has been rubbing against something: a fast hare in the open is not "stuck")
+    a.stkT = (a.stkT || 0) + dt;
+    if (a.stkT >= 0.8) {
+      const left = G.dist(a.x, a.y, a.tx, a.ty);
+      const sameGoal = a.stkGX !== undefined && G.dist(a.stkGX, a.stkGY, a.tx, a.ty) < 1.5;
+      if (a.blkSeen && sameGoal && a.stkD !== undefined && a.stkD - left < 0.1 * sp && left > 0.4) {
+        a.stk = (a.stk || 0) + 1;
+        if (a.stk >= 2) { if (!a.path) { const p = route(a); if (p) { a.path = p; a.pi = 0; a.stk = 0; } else if (p === false || a.stk >= 4) { giveUp(a); return true; } } else if (a.stk >= 4) { giveUp(a); return true; } }
+      } else a.stk = 0;
+      a.stkD = left; a.stkT = 0; a.stkGX = a.tx; a.stkGY = a.ty; a.blkSeen = 0;
+    }
     if (Math.abs(dx - dy) > 0.02 || Math.abs(dx + dy) > 0.02) G.faceTo(a, dx, dy);
-    a.walkPh += step * (a.kind === 'rabbit' || a.kind === 'hare' || a.kind === 'frog' ? 6 : 8);
-    a.moving = true;
+    a.walkPh += moved * (a.kind === 'rabbit' || a.kind === 'hare' || a.kind === 'frog' ? 6 : 8);
+    a.moving = moved > 1e-4;
     return false;
   }
 
@@ -429,6 +503,7 @@
     const sp = SP[a.kind]; const ps = PREYSET[a.kind]; let best = null, bs = -1e9;
     each(grid, a.x, a.y, r, p => {
       if (p === a || p.dead || p.held || p.air || p.caught || !ps.has(p.kind)) return;
+      if (a.noPrey && a.noPrey.id === p.id && G.S.clock < a.noPrey.until) return;
       if (SP[p.kind].cls === 'air' && p.z > 6) return;
       if (p.z > 3 && SP[p.kind].cls !== 'air' && sp.cls !== 'air' && sp.climb !== 'tree') return;
       const d = G.dist2(a.x, a.y, p.x, p.y); if (d > r * r) return;
@@ -450,7 +525,7 @@
     const S = G.S; const veg = S.veg; let best = null, bv = -1;
     for (let k = 0; k < 8; k++) {
       const ang = G.R() * 6.28, d = G.R() * r; const x = a.x + Math.cos(ang) * d, y = a.y + Math.sin(ang) * d;
-      if (!walkOK(a, x, y)) continue; const i = W.idx(x, y); if (S.type[i] < T.SAND) continue; if (!A.habitat(SP[a.kind], i) && k < 6) continue;
+      if (!walkOK(a, x, y) || noGo(a, x, y)) continue; const i = W.idx(x, y); if (S.type[i] < T.SAND) continue; if (!A.habitat(SP[a.kind], i) && k < 6) continue; if (k < 7 && !lineOK(a, x, y)) continue;
       const v = veg[i] - d * 0.02; if (v > bv) { bv = v; best = [x, y]; }
     }
     return best;
@@ -1280,6 +1355,7 @@
     const S = G.S;
     distances(); ensureVeg();
     gridT -= dt; if (gridT <= 0) { gridT = 0.25; rebuildGrid(); }
+    pathBudget = Math.max(3, Math.min(7, Math.round(S.animals.size / 70)));
     const dayF = dt / DAY();
     for (const a of S.animals.values()) {
       if (a.held) continue;
