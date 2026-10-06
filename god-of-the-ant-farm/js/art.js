@@ -875,6 +875,9 @@
         if (Math.sin(at * 5) > 0.7) { c.fillStyle = fc; c.beginPath(); c.arc(1.2, -14.4, 0.55, 0, TAU); c.fill(); }
         break;
       }
+      case 'look': { // the head back, a hand shading the eyes, looking up at the nest
+        line(c, 0, -8, 1.2, -10.6); arm(c, -0.4, -8, -0.4, -4.4); c.strokeStyle = v.skin; c.lineWidth = 0.9; line(c, 1.2, -10.6, 2, -10.9); break;
+      }
       case 'play': { // a lute in the arms, one hand strumming
         const s2 = Math.sin(at * 9) * 0.6; c.fillStyle = '#a8703a'; c.beginPath(); c.ellipse(1.4, -6.2, 1.9, 1.4, -0.5, 0, TAU); c.fill(); c.fillStyle = '#3a2416'; c.beginPath(); c.arc(1.5, -6.2, 0.45, 0, TAU); c.fill();
         c.strokeStyle = '#7a4a2a'; c.lineWidth = 0.6; line(c, 2.4, -7, 4.6, -9.4); c.strokeStyle = v.skin; c.lineWidth = 1; line(c, 0, -8, 1.4 + s2, -6.6); arm(c, -0.4, -8, 3.8, -8.6); break;
