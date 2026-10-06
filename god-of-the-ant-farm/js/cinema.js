@@ -140,6 +140,40 @@
     }
   }
 
+  // power: a sentence carried out in the square, a riot with torches, a secret order at night
+  function power(out) {
+    if (G.Justice) for (const e of G.Justice.list()) {
+      if (e.phase === 'wait' || e.phase === 'done') continue;
+      const set = S().settlements.get(e.set); if (!set) continue;
+      const hot = e.phase === 'kill' || e.phase === 'read';
+      out.push({
+        key: 'exec:' + e.id, kind: 'exec', score: (hot ? 84 : 66) + Math.min(8, (e.seen || 0) / 4), zoom: e.pyr ? 1.9 : 2.5, dur: hot ? 18 : 12,
+        pos: () => [e.x, e.y, e.pyr ? e.top : 8], alive: () => G.Justice.list().includes(e) && e.phase !== 'done',
+        kick: kickOf(set.name, facName(e.fac)), title: e.sac ? 'Sacrifício' : 'Execução pública',
+        subFn: () => (e.phase === 'gather' ? 'A cidade se junta na praça.' : e.phase === 'march' ? 'Os condenados são trazidos.' : e.phase === 'read' ? 'O arauto lê a sentença.' : e.phase === 'after' ? 'A multidão se dispersa.' : e.names.join(', ') + (e.reason ? ' — ' + e.reason : '')),
+      });
+    }
+    if (G.Riots) for (const r of G.Riots.list()) {
+      const set = S().settlements.get(r.set); if (!set) continue;
+      out.push({
+        key: 'riot:' + r.id, kind: 'riot', score: r.phase === 'rage' ? 86 : 70, zoom: 2.1, dur: 16,
+        pos: () => (r.phase === 'rally' ? [r.x, r.y, 8] : [r.tg.x, r.tg.y, 8]), alive: () => G.Riots.list().includes(r),
+        kick: kickOf(set.name, facName(r.fac)), title: 'Motim',
+        subFn: () => (r.phase === 'rally' ? 'Tochas na praça' : r.phase === 'march' ? 'A multidão marcha' : 'Fogo, pedras e a guarda') + (r.wtxt ? ' — ' + r.wtxt : ''),
+      });
+    }
+    const sc = S().secrets;
+    if (sc) for (const m of sc.meets) {
+      if (m.phase !== 'rite' || m.kind === 'fachada') continue;
+      const q = G.Secrets && G.Secrets.get(m.soc); if (!q) continue;
+      out.push({
+        key: 'rite:' + m.id, kind: 'rite', score: 74 + (m.blood ? 10 : 0), zoom: 2.6, dur: 14,
+        pos: () => [m.x, m.y, 6], alive: () => sc.meets.includes(m),
+        kick: 'Em segredo', title: q.name, subFn: () => 'Mantos, velas e cânticos na noite. Só você vê.',
+      });
+    }
+  }
+
   // armies: the host is shown whole — the camera watches where most of it stands
   function centroid(ids, max) {
     const Sv = S().villagers; let x = 0, y = 0, n = 0;
@@ -641,7 +675,7 @@
       // what is happening now beats what the chronicle already told
       for (const c of out) if (c.fromLog) c.score -= 12;
     } else {
-      festivals(out); armies(out); fleets(out); chronicle(out); fires(out); life(out); beasts(out); places(out); evenings(out); aftermath(out); caves(out); sea(out); if (G.Stories && G.Stories.shots) G.Stories.shots(out);
+      festivals(out); power(out); armies(out); fleets(out); chronicle(out); fires(out); life(out); beasts(out); places(out); evenings(out); aftermath(out); caves(out); sea(out); if (G.Stories && G.Stories.shots) G.Stories.shots(out);
       // the war's close-ups also show up now and then in the plain cinema
       const wd = []; warDetails(wd); for (const c of wd) { c.score -= 14; out.push(c); }
     }

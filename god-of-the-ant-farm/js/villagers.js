@@ -227,7 +227,7 @@
     if (v.ug) return; // underground: the cave errand decides (the hidden stay hidden)
     const t = v.task;
     if (t && t.type === 'flee' && t.age < 3.5) return;
-    if (t && (t.type === 'swim' || t.type === 'condemned' || t.type === 'escorted')) return;
+    if (t && (t.type === 'swim' || t.type === 'condemned' || t.type === 'escorted' || t.type === 'jail')) return;
     const child = v.age < 16;
     // meteors
     for (const m of S.meteors) {

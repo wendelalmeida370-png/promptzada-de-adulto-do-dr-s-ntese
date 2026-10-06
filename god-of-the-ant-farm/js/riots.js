@@ -173,16 +173,12 @@
   }
   // the condemned set loose
   function freeCondemned(R, f, set) {
-    const S = G.S; R.freed = 1;
+    R.freed = 1;
     const e = G.Justice.list().find(q => q.id === R.free); if (!e) return;
-    const names = [];
-    for (const v of S.villagers.values()) if (v.task && v.task.type === 'condemned' && v.task.j === e.id) { names.push(v.name); v.hood = false; v.z = 0; v.dz = 0; G.Vg.endTask(v); G.Vg.fleeFrom(v, e.x, e.y, 9, 'war'); G.Vg.emote(v, 'happy', 3); }
-    const exe = S.villagers.get(e.exe); if (exe) { exe.hood = false; exe.z = 0; G.Vg.endTask(exe); G.Vg.fleeFrom(exe, e.x, e.y, 10, 'war'); }
-    G.Justice.cancel(e, '');
+    const names = G.Justice.free(e, 'motim');
     if (names.length) {
       log(`A multidão invadiu o cadafalso de ${set.name}, derrubou o carrasco e soltou ${names.length > 1 ? names.slice(0, -1).join(', ') + ' e ' + names[names.length - 1] : names[0]}!`, 'free', e.x, e.y);
       G.UI && G.UI.toast('O cadafalso tomado', `${set.name}: o povo soltou os condenados.`, 'free');
-      G.Stories && G.Stories.signal('rescued', { fac: f.id, ids: e.ids.slice(), set: set.id, riot: R.id, x: e.x, y: e.y });
     }
   }
   function outcome(R, f, set, act) {
@@ -218,7 +214,8 @@
     if (how === 'gone' || !f || !set) { goHome(); return; }
     const r = P.ruler(f); const styled = r ? P.styled(f, r) : 'quem governa'; const who = styled.includes(',') ? styled + ',' : styled;
     const burnt = R.burned.length;
-    const tail = `${dead ? ` ${dead} ${dead > 1 ? 'pessoas morreram' : 'pessoa morreu'} na praça` : ''}${dead && burnt ? ';' : dead ? '.' : ''}${burnt ? ` ${burnt > 1 ? burnt + ' prédios arderam' : HIT_NAME[R.tg.kind] ? cap(HIT_NAME[R.tg.kind]) + ' ardeu' : 'Um prédio ardeu'}.` : ''}`;
+    const parts = []; if (dead) parts.push(`${dead} ${dead > 1 ? 'pessoas morreram' : 'pessoa morreu'} na praça`); if (burnt) parts.push(burnt > 1 ? `${burnt} prédios arderam` : `${HIT_NAME[R.tg.kind] || 'um prédio'} ardeu`);
+    const tail = parts.length ? ' ' + cap(parts.join(', e ')) + '.' : '';
     const memo = (key, d) => { (f.pol || (f.pol = {}))[key] = { day: S.day, d }; };
     if (how === 'revolucao' && lead && G.Polity && G.Polity.uprising) {
       goHome();
@@ -253,7 +250,7 @@
       set.loyalty = G.clamp(set.loyalty - 6, 0, 100);
       memo('motim_esmagado', { povo: -10, artesaos: -8, mercadores: -4, militares: 4 });
       (f.grpHurt || (f.grpHurt = {})).povo = S.day;
-      const sentenced = caught.length && G.Justice && !f.exec && r ? G.Justice.sentence(f, caught, `por levantar o povo contra ${r.g === 'f' ? 'a' : 'o'} ${P.title(f, r).toLowerCase()}`, { set: set.id, quiet: true }) : false;
+      const sentenced = caught.length && G.Justice && r ? G.Justice.sentence(f, caught, `por levantar o povo contra ${r.g === 'f' ? 'a' : 'o'} ${P.title(f, r).toLowerCase()}`, { set: set.id, quiet: true }) : false;
       log(`A guarda de ${styled} esmagou o motim de ${set.name}.${tail}${sentenced ? ` ${caught.map(v => v.name).join(caught.length > 2 ? ', ' : ' e ').replace(/, ([^,]*)$/, ' e $1')} ${caught.length > 1 ? 'foram presos e vão' : 'foi pres' + oa(caught[0]) + ' e vai'} ao cadafalso.` : ''}`, 'tyrant', R.x, R.y);
       if (r && dead >= 4) P.earn(f, r, 'sanguinario');
       signalEnd(R, f, set, how, dead);
@@ -272,10 +269,12 @@
   }
   // a petition's leader who was arrested: the ruler lets them go
   function releaseArrested(f, set) {
-    if (!G.Justice || !f.exec) return;
-    const e = G.Justice.list().find(q => q.id === f.exec.j); if (!e || e.set !== set.id) return;
-    const names = e.names.slice();
-    G.Justice.cancel(e, `${names.join(' e ')} ${names.length > 1 ? 'foram soltos' : 'foi solt' + (e.gs[0] === 'f' ? 'a' : 'o')}: a execução foi suspensa.`);
+    if (!G.Justice) return;
+    const jailed = G.Justice.release(f, set, 'motim');
+    if (jailed.length) log(`${jailed.map(v => v.name).join(' e ')} ${jailed.length > 1 ? 'saíram' : 'saiu'} da prisão nos braços da multidão.`, 'free', set.cx, set.cy);
+    const e = f.exec && G.Justice.list().find(q => q.id === f.exec.j); if (!e || e.set !== set.id) return;
+    const names = G.Justice.free(e, 'perdao');
+    if (names.length) log(`${names.join(' e ')} ${names.length > 1 ? 'foram soltos' : 'foi solt' + (e.gs[0] === 'f' ? 'a' : 'o')}: a execução foi suspensa.`, 'free', e.x, e.y);
   }
   Ri.end = end;
 
@@ -392,7 +391,7 @@
     if (f.stock.food < pop * 0.35 && povo < 40) { why = 'fome'; heat = (40 - povo) / 40 + 0.3; }
     else if (recent('estatizou', 5) && (mer < 30 || povo < 38)) { why = 'estatizar'; heat = (35 - Math.min(mer, povo + 5)) / 35 + 0.2; }
     else if ((recent('impostos', 6) && (f.taxMod || 0) > 0.04 || (f.taxMod || 0) >= 0.1) && Math.min(povo, art) < 34) { why = 'impostos'; heat = (34 - Math.min(povo, art)) / 34 + 0.1; }
-    else if (GK.some(k => g[k] && g[k].refused && S.day - g[k].refused < 3) && f.exec && povo < 36) { why = 'recusa'; heat = (36 - povo) / 36; }
+    else if (GK.some(k => g[k] && g[k].refused && S.day - g[k].refused < 3) && (f.exec || (f.execQ && f.execQ.length)) && povo < 36) { why = 'recusa'; heat = (36 - povo) / 36; }
     else if (P.tyr(f) && povo < 26) { why = 'tirania'; heat = (26 - povo) / 26; }
     if (!why) return;
     const p = Math.max(0, heat) * 0.35 - (f.terror || 0) / 300;
@@ -411,7 +410,8 @@
   };
   (G.saveHooks = G.saveHooks || []).push({
     save(out) { out.riots = G.S.riots || []; },
-    load(o) { G.S.riots = o.riots || []; },
+    // (a riot is a moment, not a state: after a load the street is quiet again)
+    load() { G.S.riots = []; },
   });
 
   // ------------------------------ drawing: the torches light the square at night ------------------------------

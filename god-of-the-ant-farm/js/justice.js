@@ -32,6 +32,7 @@
     fogueira: { kind: 'pyre', verb: ['queimado vivo', 'queimada viva'], pl: 'queimados vivos', plf: 'queimadas vivas', z: 4, show: 1 },
     cruz: { kind: 'cross', verb: ['crucificado', 'crucificada'], pl: 'crucificados', plf: 'crucificadas', z: 7, show: 2 },
     pedras: { kind: 'post', verb: ['apedrejado', 'apedrejada'], pl: 'apedrejados', plf: 'apedrejadas', z: 0 },
+    guilhotina: { kind: 'guillotine', verb: ['guilhotinado', 'guilhotinada'], pl: 'guilhotinados', plf: 'guilhotinadas', z: 5 },
     sacrificio: { kind: 'altar', verb: ['sacrificado aos deuses', 'sacrificada aos deuses'], pl: 'sacrificados aos deuses', plf: 'sacrificadas aos deuses', z: 22 },
   };
   J.METHOD = METHOD;
@@ -39,6 +40,8 @@
     const civ = f.civ; const heresy = /culto|seita|sociedade|ritual|heresia|bruxa|deuses errad|feitiç/.test(reason || '');
     const rebels = /levant|revolt|rebel|revolu/.test(reason || '');
     if (civ === 'asteca') return 'sacrificio';
+    // the revolution's own justice: the republic, the assembly and the commune have the blade
+    if ((f.gov === 'republica' || f.gov === 'democracia' || f.gov === 'comuna') && (rebels || /trai|conspir|tiran|levantar/.test(reason || '')) && !heresy && G.hash(f.id * 3 + G.S.day) < 0.7) return 'guilhotina';
     if (heresy) return civ === 'romano' ? 'cruz' : 'fogueira';
     if (civ === 'romano') return vs.some(v => v.captive) || rebels ? 'cruz' : 'espada';
     if (civ === 'grego') return /trai/.test(reason || '') || rebels ? 'pedras' : 'espada';
@@ -85,9 +88,11 @@
   // victims: villagers; reason: 'por traição'...; returns true if an execution was set
   J.sentence = function (f, victims, reason, o) {
     const S = G.S; o = o || {};
-    if (!f || f.exec && f.exec.j) return false;
+    if (!f) return false;
     const vs = victims.filter(v => v && S.villagers.has(v.id) && !(v.task && v.task.j)).slice(0, 4);
     if (!vs.length) return false;
+    // the scaffold is busy: to the cells, until it is free
+    if (f.exec && f.exec.j) return J.jail(f, vs, reason, o);
     const set = (o.set && S.settlements.get(o.set)) || G.Fac.capitalOf(f.id); if (!set) return false;
     const method = o.method || methodFor(f, vs, reason);
     const st = siteFor(f, set, method);
@@ -110,6 +115,31 @@
     }
     G.Stories && G.Stories.signal('sentence', { fac: f.id, ids: e.ids.slice(), reason: e.reason, method, x: e.x, y: e.y, start: e.start, ex: e.id, set: set.id });
     return true;
+  };
+  // the cells: held, bound, until the scaffold is free (or someone lets them go)
+  J.jail = function (f, vs, reason, o) {
+    const S = G.S; const set = (o && o.set && S.settlements.get(o.set)) || G.Fac.capitalOf(f.id); if (!set) return false;
+    const at = holdSpot(f, set, { x: set.cx, y: set.cy });
+    vs.forEach((v, i) => { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'jail', fac: f.id, pri: 6, st: 0, x: at[0] + (i - (vs.length - 1) / 2) * 0.55, y: at[1] + 0.5, kind: 'jail' }); });
+    (f.execQ || (f.execQ = [])).push({ ids: vs.map(v => v.id), reason: reason || '', o: Object.assign({}, o || {}, { set: set.id }), day: S.day });
+    G.Stories && G.Stories.signal('jailed', { fac: f.id, ids: vs.map(v => v.id), reason: reason || '', set: set.id, x: at[0], y: at[1] });
+    return true;
+  };
+  // let the condemned go (a crowd on the scaffold, a pardon): they run; the executioner too
+  J.free = function (e, how) {
+    const S = G.S; const names = [];
+    for (const v of S.villagers.values()) if (v.task && (v.task.type === 'condemned' && v.task.j === e.id)) { names.push(v.name); v.hood = false; v.z = 0; v.dz = 0; G.Vg.endTask(v); G.Vg.fleeFrom(v, e.x, e.y, 9, 'war'); G.Vg.emote(v, 'happy', 3); }
+    const exe = S.villagers.get(e.exe); if (exe) { exe.hood = false; exe.z = 0; exe.dz = 0; G.Vg.endTask(exe); if (how !== 'perdao') G.Vg.fleeFrom(exe, e.x, e.y, 10, 'war'); }
+    cancel(e, '');
+    G.Stories && names.length && G.Stories.signal('rescued', { fac: e.fac, ids: e.ids.slice(), set: e.set, how: how || '', x: e.x, y: e.y });
+    return names;
+  };
+  J.release = function (f, set, how) {
+    const S = G.S; const out = [];
+    for (const v of S.villagers.values()) if (v.task && v.task.type === 'jail' && v.task.fac === f.id && (!set || v.set === set.id || G.dist(v.x, v.y, set.cx, set.cy) < 30)) { out.push(v); G.Vg.endTask(v); G.Vg.emote(v, 'happy', 2.5); }
+    if (f.execQ) f.execQ = f.execQ.filter(q => q.ids.some(id => { const v = S.villagers.get(id); return v && v.task && v.task.type === 'jail'; }));
+    if (out.length) G.Stories && G.Stories.signal('rescued', { fac: f.id, ids: out.map(v => v.id), set: set ? set.id : 0, how: how || 'soltos' });
+    return out;
   };
   function holdSpot(f, set, e) {
     const S = G.S;
@@ -178,6 +208,7 @@
     switch (METHOD[e.method].kind) {
       case 'gallows': return [e.x + off * 0.62, e.y - 0.05];
       case 'block': return [e.x + 0.22, e.y + 0.12];
+      case 'guillotine': return [e.x + 0.04, e.y + 0.24];
       case 'pyre': return [e.x + off * 0.85, e.y];
       case 'cross': return [e.x + off * 0.95, e.y];
       case 'post': return [e.x, e.y];
@@ -281,14 +312,14 @@
     const S = G.S;
     const id = e.ids.find(q => { if ((e.done || []).includes(q)) return false; const w = S.villagers.get(q); return w && w.task && w.task.type === 'condemned' && w.task.j === e.id; });
     if (!id) { finish(e, f, set); return; }
-    const v = S.villagers.get(id); const exe = S.villagers.get(e.exe);
+    const v = S.villagers.get(id); let exe = S.villagers.get(e.exe); if (exe && !(exe.task && exe.task.type === 'justice' && exe.task.j === e.id)) exe = null;
     const i = e.ids.indexOf(id); const [sx, sy] = spot(e, i); const M = METHOD[e.method];
     const t = v.task; t.perch = true; t.march = 0;
     if (e.sub === 0) {
       // up on the scaffold, into place
       v.x = sx; v.y = sy + (M.kind === 'block' ? 0.18 : 0); v.path = null; v.moving = false;
       v.z = e.method === 'sacrificio' ? e.top : M.kind === 'pedras' ? 0 : M.z; v.dz = e.dz || 0;
-      t.pose = M.kind === 'block' ? 'kneel' : M.kind === 'cross' ? 'cross' : M.kind === 'altar' ? 'hold' : 'bound';
+      t.pose = M.kind === 'block' || M.kind === 'guillotine' ? 'kneel' : M.kind === 'cross' ? 'cross' : M.kind === 'altar' ? 'hold' : 'bound';
       if (exe) { exe.task.perch = true; exe.dz = e.dz || 0; exe.x = M.kind === 'altar' ? e.x + (e.pyr ? 0.28 : 0.5) : M.kind === 'pyre' ? sx - 0.5 : sx - 0.55; exe.y = sy + (M.kind === 'pyre' ? 0.8 : 0.05); exe.z = M.kind === 'altar' ? e.top : M.kind === 'pyre' || M.kind === 'post' ? 0 : M.z; exe.path = null; exe.hood = M.kind !== 'altar' && M.kind !== 'post'; G.faceTo(exe, v.x - exe.x, v.y - exe.y); exe.task.act = ''; }
       e.sub = 1; e.st = S.clock;
       G.Audio && G.Audio.at(e.x, e.y, 'drum', true);
@@ -307,6 +338,12 @@
       case 'machado': case 'espada': {
         if (el > 2 && e.sub === 1) { e.sub = 2; if (exe) { exe.task.act = e.method === 'machado' ? 'axe' : 'sword2'; exe.actT = 0; } }
         if (el > 3.6 && e.sub === 2) { const ux = v.face > 0 ? 1 : -1; v._decap = { ux: ux * 0.7, uy: -0.4 }; G.Audio && G.Audio.at(v.x, v.y, 'gore', true); die(e, v, null); }
+        break;
+      }
+      case 'guilhotina': {
+        const sc = scaffolds().find(q => q.id === e.sc);
+        if (el > 2.4 && e.sub === 1) { e.sub = 2; if (exe) { exe.task.act = 'pull'; exe.actT = 0; } if (sc) sc.drop = S.clock; G.Audio && G.Audio.at(v.x, v.y, 'swish', true); }
+        if (el > 2.62 && e.sub === 2) { const ux = v.face > 0 ? 1 : -1; v._decap = { ux: ux * 0.4, uy: 0.5 }; G.Audio && G.Audio.at(v.x, v.y, 'gore', true); die(e, v, null); }
         break;
       }
       case 'fogueira': {
@@ -410,6 +447,13 @@
     v.moving = false; v.act = 'mourn'; if (!v.emo || v.emo.t < 0.2) G.Vg.emote(v, G.R() < 0.5 ? 'sad' : 'fear', 2);
   };
   J.run = function (v, t, dt, H) {
+    if (t.type === 'jail') {
+      if (t.age > G.DAY_LEN * 4) { H.end(v); return true; }
+      if (t.st === 0) { if (!H.goto(v, t.x, t.y, false) && !H.goto(v, t.x, t.y, true)) { v.x = t.x; v.y = t.y; t.st = 2; return true; } t.st = 1; return true; }
+      if (t.st === 1) { v.act = 'bound'; if (H.move(v, dt, 0.7)) { t.st = 2; v.actT = 0; } if (t.age > 60) { v.x = t.x; v.y = t.y; t.st = 2; } return true; }
+      v.moving = false; v.act = 'bound'; if (!v.emo || v.emo.t < 0.2) G.Vg.emote(v, G.R() < 0.6 ? 'sad' : 'fear', 2);
+      return true;
+    }
     if (t.type !== 'justice') return false;
     const e = execs().find(q => q.id === t.j);
     if (!e || e.phase === 'done') { v.hood = false; v.dz = 0; H.end(v); return true; }
@@ -429,6 +473,7 @@
     return true;
   };
   J.taskText = function (v, t) {
+    if (t.type === 'jail') return 'Pres' + oa(v) + ', esperando a sentença';
     if (t.type === 'condemned' && t.j) { const e = execs().find(q => q.id === t.j); return e && e.sac ? 'Esperando o sacrifício' : 'Condenad' + oa(v) + ', esperando a execução'; }
     if (t.type !== 'justice') return null;
     const e = execs().find(q => q.id === t.j); const m = e ? e.method : '';
@@ -440,6 +485,12 @@
   J.update = function (dt) {
     const S = G.S; if (!S) return;
     for (const e of execs().slice()) { try { tick(e, dt); } catch (err) { console.warn('justice', err); cancel(e); } }
+    for (const f of G.Fac.all()) {
+      if (!f.execQ || !f.execQ.length || (f.exec && f.exec.j)) continue;
+      const q = f.execQ.shift();
+      const vs = q.ids.map(id => S.villagers.get(id)).filter(v => v && v.task && v.task.type === 'jail' && v.task.fac === f.id);
+      if (vs.length && f.alive) J.sentence(f, vs, q.reason, q.o);
+    }
     // scaffolds stay a while — the hanged and the crucified with them — then come down
     tS += dt; if (tS < 3) return; tS = 0;
     const sc = scaffolds();
@@ -455,7 +506,26 @@
   J.reset = function () { bubbles.length = 0; };
   (G.saveHooks = G.saveHooks || []).push({
     save(out) { out.execs = G.S.execs || []; out.scaffolds = G.S.scaffolds || []; },
-    load(o) { G.S.execs = o.execs || []; G.S.scaffolds = o.scaffolds || []; bubbles.length = 0; },
+    load(o) {
+      const S = G.S; S.execs = o.execs || []; S.scaffolds = o.scaffolds || []; bubbles.length = 0;
+      // (the save keeps no errands: everyone goes back to their place — the hoods off, the condemned bound again)
+      for (const v of S.villagers.values()) { v.hood = false; v.dz = 0; }
+      for (const e of S.execs.slice()) {
+        const f = G.Fac.get(e.fac); const set = S.settlements.get(e.set);
+        const left = e.ids.filter(id => S.villagers.has(id) && !(e.done || []).includes(id));
+        if (!f || !f.alive || !set || !left.length || e.phase === 'after' || e.phase === 'done') { const k = S.execs.indexOf(e); S.execs.splice(k, 1); if (f && f.exec && f.exec.j === e.id) f.exec = null; continue; }
+        f.exec = { j: e.id };
+        // from the top: the hour again (a little later), the crowd called again
+        if (e.phase !== 'wait') { e.phase = 'wait'; e.start = S.clock + 30; e.exe = 0; e.her = 0; e.sub = 0; e.guards = 0; }
+        const at = holdSpot(f, set, e);
+        left.forEach(id => { const v = S.villagers.get(id); const i = e.ids.indexOf(id); G.Vg.setTask(v, { type: 'condemned', j: e.id, i, pri: 6, st: 0, x: at[0] + (i - (e.ids.length - 1) / 2) * 0.6, y: at[1], kind: 'condemned' }); });
+      }
+      // the cells
+      for (const f of G.Fac.all()) for (const q of f.execQ || []) {
+        const set = S.settlements.get(q.o && q.o.set) || G.Fac.capitalOf(f.id); if (!set) continue; const at = holdSpot(f, set, { x: set.cx, y: set.cy });
+        q.ids.forEach((id, i) => { const v = S.villagers.get(id); if (v) G.Vg.setTask(v, { type: 'jail', fac: f.id, pri: 6, st: 0, x: at[0] + i * 0.55, y: at[1] + 0.5, kind: 'jail' }); });
+      }
+    },
   });
 
   // ------------------------------ drawing ------------------------------
@@ -533,6 +603,26 @@
         c.fillStyle = woodD; c.fillRect(x - 0.85, y - 26, 1.7, 26); c.fillRect(x - 6.6, y - 17.6, 13.2, 1.6);
         c.fillStyle = 'rgba(255,255,255,0.08)'; c.fillRect(x - 0.85, y - 26, 0.5, 26);
       }
+    } else if (s.kind === 'guillotine') {
+      platform(c, -0.7, 0.7, -0.42, 0.42, H);
+      for (let k = 0; k < 3; k++) { const z = H - (k + 1) * 1.6; const a = O(0.8 + k * 0.16, -0.18, z), bb = O(0.8 + k * 0.16, 0.18, z); c.strokeStyle = woodD; c.lineWidth = 1; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(bb[0], bb[1]); c.stroke(); }
+      if (b < 1) c.globalAlpha = 0.25 + b * 0.75;
+      const TOP = H + 26;
+      post(c, -0.2, 0, H, TOP, 1.4, '#5a3a24'); post(c, 0.2, 0, H, TOP, 1.4, '#5a3a24');
+      { const a = O(-0.27, 0, TOP), d = O(0.27, 0, TOP); c.strokeStyle = woodD; c.lineWidth = 1.6; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(d[0], d[1]); c.stroke(); }
+      // the blade: up, falling, down — and slowly hauled up again
+      const dt = s.drop ? S.clock - s.drop : 99;
+      const hi = TOP - 7, lo = H + 6.2;
+      const bz = dt < 0.18 ? hi - (hi - lo) * (dt / 0.18) : dt < 2.6 ? lo : dt < 5 ? lo + (hi - lo) * ((dt - 2.6) / 2.4) : hi;
+      quad(c, O(-0.17, 0, bz), O(0.17, 0, bz + 2.4), O(0.17, 0, bz + 5.2), O(-0.17, 0, bz + 5.2), '#c8ccd4');
+      { const a = O(-0.17, 0, bz), d = O(0.17, 0, bz + 2.4); c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = 0.4; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(d[0], d[1]); c.stroke(); }
+      if (dt < 3) quad(c, O(-0.12, 0, bz), O(0.12, 0, bz + 1.6), O(0.12, 0, bz + 2.4), O(-0.12, 0, bz + 0.8), 'rgba(140,12,20,0.75)');
+      { const a = O(0, 0, bz + 5.2), d = O(0, 0, TOP); c.strokeStyle = rope; c.lineWidth = 0.45; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(d[0], d[1]); c.stroke(); }
+      // the lunette, and the basket below it
+      quad(c, O(-0.22, 0.02, H + 4), O(0.22, 0.02, H + 4), O(0.22, 0.02, H + 6), O(-0.22, 0.02, H + 6), '#6a4a2e');
+      { const m = O(0, 0.03, H + 5); c.fillStyle = '#1a100a'; c.beginPath(); c.ellipse(m[0], m[1], 1, 0.8, 0, 0, TAU); c.fill(); }
+      const bs = O(0.05, 0.36, H); c.fillStyle = '#8a6a34'; c.fillRect(bs[0] - 2, bs[1] - 2.2, 4, 2.2); c.fillStyle = '#b89858'; c.beginPath(); c.ellipse(bs[0], bs[1] - 2.2, 2, 0.8, 0, 0, TAU); c.fill();
+      c.fillStyle = 'rgba(110,14,20,0.55)'; c.beginPath(); c.ellipse(bs[0] + 0.4, bs[1] - 0.6, 3, 1, 0, 0, TAU); c.fill();
     } else if (s.kind === 'altar') {
       // the sacrificial stone: a dark slab on the square, the top black with old blood
       platform(c, -0.36, 0.36, -0.2, 0.2, 3, ['#5a5650', '#4a4640', '#7a746a']);

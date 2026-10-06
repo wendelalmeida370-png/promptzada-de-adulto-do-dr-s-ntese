@@ -62,9 +62,10 @@
     if (how === 'self') sc += 0.25;
     sc += (G.hash(c.id * 7 + s.id) - 0.5) * 0.3;
     const ok = sc > 0.78;
+    // (the words said back, in their own voice)
     let why = '';
-    if (ok) why = K.grief && s.cast[K.grief] && St.relOf(c, P(s.cast[K.grief])) ? 'também tinha perdido alguém' : rel ? (rel === 'companheiro' || rel === 'companheira' ? 'aonde você for, eu vou' : 'é sangue do meu sangue') : K.risky ? (pe.agg > 0.6 ? 'faz tempo que quer uma briga dessas' : 'não ia deixar ninguém ir sozinho') : 'sempre quis ver o mundo';
-    else why = c.preg > 0 ? 'espera um filho' : baby && K.risky ? 'tem filhos pequenos para criar' : K.risky && c.courage < 0.4 ? 'tem medo' : !rel ? 'não é assunto seu' : 'não pode largar tudo agora';
+    if (ok) why = K.grief && s.cast[K.grief] && St.relOf(c, P(s.cast[K.grief])) ? '“eu também perdi alguém”' : rel ? (rel === 'companheiro' || rel === 'companheira' ? '“aonde você for, eu vou”' : '“é sangue do meu sangue”') : K.risky ? (pe.agg > 0.6 ? '“faz tempo que eu quero uma briga dessas”' : '“ninguém vai sozinho”') : '“sempre quis ver o mundo”';
+    else why = c.preg > 0 ? 'espera um filho' : baby && K.risky ? 'tem filhos pequenos para criar' : K.risky && c.courage < 0.4 ? 'tem medo' : !rel ? '“não é assunto meu”' : 'não pode largar tudo agora';
     return { ok, why };
   };
   // the protagonist takes a volunteer, or sends them home
@@ -95,9 +96,9 @@
     const p = P(s.protag); if (!p || !c) return false;
     if (Pt.player && c.id === Pt.player) { s.data.ask = { to: c.id, from: p.id, kind: 'convite', day: G.S.day }; return false; }
     const r = Pt.decide(s, c, 'ask');
-    const rel = St.relOf(p, c); const rl = rel ? relWord(rel, c) : '';
-    if (r.ok) { join(s, c, 'convite'); St.chapter(s, `${p.name} pediu a ${rl}${c.name} que fosse junto. ${c.name} aceitou: ${r.why}.`, { x: p.x, y: p.y }); }
-    else if (r.why) St.chapter(s, `${p.name} pediu a ${rl}${c.name} que fosse junto. ${c.name} disse que não: ${r.why}.`, { x: p.x, y: p.y });
+    const rel = St.relOf(p, c);
+    if (r.ok) { join(s, c, 'convite'); St.chapter(s, `${p.name} pediu a ${named(rel, c)} que fosse junto. ${c.name} aceitou: ${r.why}.`, { x: p.x, y: p.y }); }
+    else if (r.why && (s.data.noes = (s.data.noes || 0) + 1) <= 2) St.chapter(s, `${p.name} pediu a ${named(rel, c)} que fosse junto. ${c.name} disse que não: ${r.why}.`, { x: p.x, y: p.y });
     return r.ok;
   };
   // someone offers first
@@ -105,9 +106,9 @@
     const p = P(s.protag); if (!p || !c) return false;
     if (Pt.player && p.id === Pt.player) { s.data.ask = { to: p.id, from: c.id, kind: 'oferta', day: G.S.day }; return false; }
     const d = Pt.decide(s, c, 'self'); if (!d.ok) return false;
-    const r = Pt.take(s, c); const rel = St.relOf(p, c); const rl = rel ? relWord(rel, c) : '';
-    if (r.ok) { join(s, c, 'oferta'); St.chapter(s, `${cap(rl)}${c.name} não esperou ser chamad${oa(c)}: ${d.why}, e foi junto.`, { x: p.x, y: p.y }); }
-    else St.chapter(s, `${cap(rl)}${c.name} quis ir junto, mas ${p.name} ${r.why}.`, { x: p.x, y: p.y });
+    const r = Pt.take(s, c); const rel = St.relOf(p, c);
+    if (r.ok) { join(s, c, 'oferta'); St.chapter(s, `${cap(named(rel, c))} não esperou ser chamad${oa(c)}: ${d.why}, e foi junto.`, { x: p.x, y: p.y }); }
+    else St.chapter(s, `${cap(named(rel, c))} quis ir junto, mas ${p.name} ${r.why}.`, { x: p.x, y: p.y });
     return r.ok;
   };
   // the answer of a player (the incarnation mode), when a question was waiting
@@ -116,8 +117,9 @@
     const a = s.data.ask; s.data.ask = null; const c = P(a.kind === 'convite' ? a.to : a.from);
     if (yes && c) { join(s, c, a.kind); St.chapter(s, a.kind === 'convite' ? `${c.name} aceitou ir junto.` : `${(P(s.protag) || {}).name} aceitou a companhia de ${c.name}.`); }
   };
-  const REL_A = { pai: 'seu pai, ', mae: 'sua mãe, ', filho: 'seu filho, ', filha: 'sua filha, ', companheiro: 'seu companheiro, ', companheira: 'sua companheira, ', irmao: 'seu irmão, ', irma: 'sua irmã, ' };
-  const relWord = rel => REL_A[rel] || '';
+  const REL_A = { pai: 'seu pai', mae: 'sua mãe', filho: 'seu filho', filha: 'sua filha', companheiro: 'seu companheiro', companheira: 'sua companheira', irmao: 'seu irmão', irma: 'sua irmã' };
+  // 'seu irmão, Knut,' — or just 'Knut'
+  const named = (rel, c) => (REL_A[rel] ? `${REL_A[rel]}, ${c.name},` : c.name);
   const cap = t => (t ? t.charAt(0).toUpperCase() + t.slice(1) : t);
 
   // ------------------------------ forming the party (once, when the road begins) ------------------------------
@@ -125,7 +127,10 @@
     const K = KIND[s.type]; if (!K || s.data.partyDone) return; s.data.partyDone = 1;
     const S = G.S; const want = Math.min(K.max, 1 + Math.floor(G.hash(s.id * 11) * K.max));
     const seen = new Set([p.id]); const cands = [];
-    const add = (v, w) => { if (!v || seen.has(v.id) || v.dead || v.captive || !alive(v.id)) return; seen.add(v.id); cands.push([v, w]); };
+    const cast = new Set(Object.values(s.cast || {}).filter(x => typeof x === 'number'));
+    // (whoever rules does not join a party against the throne's own sentence)
+    const fr = s.data.fac && G.Fac.get(s.data.fac); if (fr && fr.leader && (s.type === 'cadafalso' || s.type === 'insurreicao' || s.type === 'causa')) cast.add(fr.leader);
+    const add = (v, w) => { if (!v || seen.has(v.id) || cast.has(v.id) || v.dead || v.captive || !alive(v.id) || v.age < 15 || v.age > 66 || (v.task && (v.task.j || v.task.type === 'jail' || v.task.type === 'condemned'))) return; seen.add(v.id); cands.push([v, w]); };
     // the family first; for a grief, also the victim's other kin
     if (K.kin || K.risky) for (const k of St.kin(p)) add(k, 2 + (St.relOf(p, k) === 'companheiro' || St.relOf(p, k) === 'companheira' ? 0.5 : 0));
     if (K.grief && s.cast[K.grief]) { const g = P(s.cast[K.grief]); if (g) for (const k of St.kin(g)) add(k, 2.2); }
@@ -141,12 +146,12 @@
     }
   };
   // the road: every journey of a story with company takes its company along (and the errands that matter)
-  function bring(story, v) {
+  function bring(story, v, pri) {
     Pt.gather(story, v);
     for (const c of Pt.of(story)) {
-      if (c.captive || c.held || c.aboard || (c.task && (c.task.pri >= 3 || c.task.type === 'party'))) continue;
+      if (c.captive || c.held || c.aboard || (c.task && (c.task.pri >= Math.max(3, (pri || 0) + 0.1) || c.task.type === 'party' || c.task.type === 'jail'))) continue;
       G.Vg.endTask(c); c.sleeping = false;
-      G.Vg.setTask(c, { type: 'party', story: story.id, lead: v.id, pri: 2.04, st: 0, kind: 'party', k: (story.party || []).indexOf(c.id) });
+      G.Vg.setTask(c, { type: 'party', story: story.id, lead: v.id, pri: pri || 2.04, st: 0, kind: 'party', k: (story.party || []).indexOf(c.id) });
     }
   }
   Pt.bring = bring;
@@ -159,7 +164,7 @@
   const oldGo = St.go;
   St.go = function (story, v, H, o) {
     const t = oldGo.apply(this, arguments);
-    try { const K = KIND[story.type]; if (K && K.go && K.go.includes(o.sub) && v.id === story.protag) bring(story, v); } catch (e) { console.warn('party', e); }
+    try { const K = KIND[story.type]; if (K && K.go && K.go.includes(o.sub) && v.id === story.protag) bring(story, v, o.partyPri); } catch (e) { console.warn('party', e); }
     return t;
   };
 

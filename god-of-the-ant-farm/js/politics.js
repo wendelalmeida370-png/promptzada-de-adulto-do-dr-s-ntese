@@ -337,6 +337,8 @@
     for (const f of G.S.factions.values()) {
       P.setupFaction(f);
       f.coup = null; f.rev = null; f.revolt = null; f.exec = null;
+      // (a sentence already set in the square stays set — justice.js rebuilt it)
+      const ex = (G.S.execs || []).find(q => q.fac === f.id); if (ex) f.exec = { j: ex.id };
       if (f.alive && (!f.leader || !G.S.villagers.has(f.leader))) { f.leader = 0; P.crown(f, P.pickLeader(f), 'escolha', true); }
     }
     G.War && G.War.reset();

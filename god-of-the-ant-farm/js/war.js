@@ -656,7 +656,7 @@
     const S = G.S;
     if (!Wr.warFacs.size) return false;
     const t = v.task;
-    if (t && (t.type === 'combat' || t.type === 'band' || t.type === 'condemned' || t.type === 'escorted' || t.type === 'escape' || t.type === 'escort' || busyDiplomat(v))) return false;
+    if (t && (t.type === 'combat' || t.type === 'band' || t.type === 'condemned' || t.type === 'jail' || t.type === 'escorted' || t.type === 'escape' || t.type === 'escort' || busyDiplomat(v))) return false;
     if (t && t.type === 'hide' && t.age < 15) return false;
     if (v.captive) return false;
     const fv = fid(v); if (!Wr.warFacs.has(fv)) return false;

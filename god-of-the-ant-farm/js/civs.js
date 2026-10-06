@@ -112,7 +112,7 @@
       techOrder: ['alvenaria', 'bronze', 'engenharia', 'roda', 'escrita', 'moeda', 'arco', 'ferro', 'navegacao', 'filosofia'],
       techCost: { engenharia: 0.5, alvenaria: 0.6, roda: 0.7 },
       gov: {
-        tribo: ['Tribo', 'Chefe', 'Chefe'], chefia: ['Monarquia', 'Rei', 'Rainha'], reino: ['República', 'Cônsul', 'Cônsul'], imperio: ['Império', 'Imperador', 'Imperatriz'],
+        tribo: ['Tribo', 'Chefe', 'Chefe'], chefia: ['Monarquia', 'Rei', 'Rainha'], reino: ['Reino', 'Rei', 'Rainha'], imperio: ['Império', 'Imperador', 'Imperatriz'],
         teocracia: ['Colégio Pontifício', 'Pontífice Máximo', 'Pontífice Máxima'], tirania: ['Ditadura', 'Ditador', 'Ditadora'], conselho: ['Senado', 'Príncipe do Senado', 'Princesa do Senado'],
       },
       units: { guerreiro: ['Legionário', 'Legionária'], arqueiro: ['Sagitário', 'Sagitária'], elite: 'Legião', ship: 'Galera', trader: 'Corbita' },

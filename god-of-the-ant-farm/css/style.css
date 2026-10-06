@@ -469,6 +469,7 @@ body.casting canvas#game { cursor: crosshair; }
 .rm-goods i { width: 7px; height: 7px; border-radius: 2px; display: inline-block; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
 .rm-goods b, .rm-money b { color: var(--text); font-variant-numeric: tabular-nums; }
 .rm-day em.neg { color: #ff8a7a; font-style: normal; }
+.rm-card > .rm-day, .rm-day { font-size: 11.5px; color: var(--muted); line-height: 1.45; }
 
 /* the speed the machine really keeps up at 8x/16x */
 #speed-real { font-size: 11px; font-weight: 800; color: #f7d07c; padding: 0 6px 0 2px; align-self: center; font-variant-numeric: tabular-nums; }

@@ -370,6 +370,7 @@
   // what a decision does (also what a ruler concedes to a petition)
   function apply(f, k, r, how, by) {
     const S = G.S; const c = G.Fac.capitalOf(f.id); const x = c ? c.cx : undefined, y = c ? c.cy : undefined;
+    G.Stories && G.Stories.signal('policy', { fac: f.id, k, how: how || '', by: by || '', who: r ? r.id : 0 });
     const who = r ? styledV(f, r) : 'O governo'; const pop = G.Fac.pop(f.id);
     switch (k) {
       case 'impostosMais': f.taxDay = S.day; f.taxMod = Math.min(0.15, (f.taxMod || 0) + 0.05); memo(f, 'impostos', { povo: -6, artesaos: -5, mercadores: -6 }); log(`${who} aumentou os impostos de ${f.name}. Os cobradores já estão batendo nas portas.`, 'coin', x, y); break;
@@ -623,7 +624,17 @@
       <div class="sc-grps">${rows}</div>
       ${pol.length ? `<div class="sc-pol">Últimas decisões: ${esc(pol.join(' · '))}</div>` : ''}
       ${f.pet ? `<div class="sc-pol hot">Uma petição está na porta de quem governa.</div>` : ''}
+      ${nowLines(f, esc)}
     </div>`;
   };
+  // what is happening right now: a riot in the streets, a sentence set, people in the cells
+  function nowLines(f, esc) {
+    const S = G.S; const out = [];
+    if (G.Riots) for (const r of G.Riots.list()) if (r.fac === f.id) { const set = S.settlements.get(r.set); out.push(`Motim em ${esc(set ? set.name : '')}${r.wtxt ? ' ' + esc(r.wtxt) : ''}.`); }
+    if (G.Justice) for (const e of G.Justice.list()) if (e.fac === f.id && e.phase !== 'done' && e.phase !== 'after') { const set = S.settlements.get(e.set); const m = G.Justice.METHOD[e.method]; out.push(`${e.sac ? 'Sacrifício' : 'Execução'} em ${esc(set ? set.name : '')}: ${esc(e.names.join(', '))}${m && !e.sac ? ' (' + (e.method === 'pedras' ? 'apedrejamento' : e.method) + ')' : ''}${e.phase === 'wait' ? ', ao meio-dia' : ', agora'}.`); }
+    let jailed = 0; for (const v of S.villagers.values()) if (v.task && v.task.type === 'jail' && v.task.fac === f.id) jailed++;
+    if (jailed) out.push(`${jailed} ${jailed > 1 ? 'presos esperam' : 'preso espera'} a sentença.`);
+    return out.map(t => `<div class="sc-pol hot">${t}</div>`).join('');
+  }
   const POLNAME = { impostos: 'impostos', estatizou: 'estatização', privatizou: 'comércio livre', terras: 'terras aos nobres', conselho: 'o conselho', pao: 'pão ao povo', dizimo: 'dízimo', paz: 'busca da paz', soldo: 'soldo pago', templo: 'ofertas ao templo', peticao: 'petição atendida', recusa: 'petição recusada', regime: 'novo regime', econ: 'nova economia' };
 })(window.G);

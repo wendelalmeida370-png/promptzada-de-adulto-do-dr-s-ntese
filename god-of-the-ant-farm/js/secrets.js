@@ -364,6 +364,8 @@
     void pe;
   }
   Sc.startInquiry = startInquiry;
+  Sc.inquiry = id => st().inq.find(i => i.id === id) || null;
+  Sc.witnessOf = (sid, id) => { const q = soc(sid); return q ? (q.wit || []).find(w => w.id === id) || null : null; };
   function inquiryTick(i, dt) {
     const S = G.S; const s = st(); const f = G.Fac.get(i.fac); const inv = person(i.by); const q = soc(i.soc);
     const done = () => { const k = s.inq.indexOf(i); if (k >= 0) s.inq.splice(k, 1); if (inv && inv.task && inv.task.type === 'inquire') G.Vg.endTask(inv); };
@@ -386,7 +388,7 @@
       // nothing found: a calm ruler lets it be; a frightened, cruel one burns someone anyway
       const pe = P.leaderPe(f); const r = P.ruler(f);
       const rm = st().rumors.find(x => x.fac === f.id && x.accused && person(x.accused) && (!q ? x.fake === i.fake : true));
-      if (pe.cru > 0.55 && pe.pie > 0.35 && rm && G.Justice && !f.exec) {
+      if (pe.cru > 0.55 && pe.pie > 0.35 && rm && G.Justice) {
         const acc = person(rm.accused);
         const others = [...S.villagers.values()].filter(v => v.set === acc.set && v !== acc && !v.secret && !v.captive && v.age > 50 && G.R() < 0.2).slice(0, 1);
         G.Justice.sentence(f, [acc].concat(others), `por bruxaria, acusad${oa(acc)} de pertencer ${art(rm.fake || 'a uma seita', 'a')}`, { set: acc.set });
@@ -405,7 +407,7 @@
     log(`${inv.name} seguiu os mantos na noite e chegou ${l ? toPlace(l) : 'a um lugar escondido'}: ${art(q.name)} existe. ${caught.length ? caught.map(v => v.name).join(', ').replace(/, ([^,]*)$/, ' e $1') + (caught.length > 1 ? ' foram presos' : ' foi pres' + oa(caught[0])) + ' ali mesmo, ainda de capuz.' : 'Os encapuzados fugiram pela escuridão.'}`, 'secret', m.x, m.y);
     G.UI && G.UI.toast(cap(art(q.name)), `Descoberta em ${f.name}.`, 'secret');
     for (const v of caught) { leave(q, v.id); G.Vg.endTask(v); }
-    if (caught.length && G.Justice && !f.exec && r) G.Justice.sentence(f, caught, `por pertencerem a uma seita secreta, ${art(q.name)}`.replace('pertencerem', caught.length > 1 ? 'pertencerem' : 'pertencer'), { set: caught[0].set });
+    if (caught.length && G.Justice && r) G.Justice.sentence(f, caught, `por pertencerem a uma seita secreta, ${art(q.name)}`.replace('pertencerem', caught.length > 1 ? 'pertencerem' : 'pertencer'), { set: caught[0].set });
     if (l && l.kind === 'fachada' && l.b) { const b = S.buildings.get(l.b); if (b) G.Nature.ignite(W.idx(b.x, b.y), 0.9); }
     if (l) q.lodges = q.lodges.filter(x => x !== l);
     endMeet(m);
@@ -427,14 +429,15 @@
       if (r.secret === q.id) continue;
       const mst = person(q.master);
       // a hand behind the throne: when the order is strong in a realm and its master is hungry, it strikes
-      if (q.creed === 'poder' && q.power[f.id] >= 14 && mst && P.persona(mst).amb > 0.65 && G.R() < 0.06) {
+      if (q.creed === 'poder' && q.power[f.id] >= 16 && mst && P.persona(mst).amb > 0.7 && G.S.day - (q.lastCoup || -99) > 8 && G.R() < 0.035) {
+        q.lastCoup = G.S.day;
         const blade = mem.sort((a, b) => standing(b) - standing(a))[0];
         P.startCoup(f, blade); if (f.coup) { f.coup.goal = 'oligarquia'; f.coup.secret = q.id; }
         log(`Por trás do golpe em ${f.name} há mais do que ambição: ${blade.name} é ${art(q.name, 'de')}. Só você sabe.`, 'secret', blade.x, blade.y);
         G.Stories && G.Stories.signal('plot', { fac: f.id, lead: blade.id, goal: 'oligarquia', secret: q.id });
       }
       // the sons of the dawn arm the people against a tyrant
-      if (q.creed === 'liberdade' && P.tyr(f) && mem.length >= 2 && G.R() < 0.08 && G.Polity) {
+      if (q.creed === 'liberdade' && P.tyr(f) && mem.length >= 2 && G.R() < 0.05 && G.Polity) {
         const lead = mem.sort((a, b) => b.courage - a.courage)[0];
         if (G.Polity.uprising(f, lead, ['povo', 'artesaos'], G.Polity.available(f, 'democracia') ? 'democracia' : 'conselho', 'contra a tirania')) log(`O levante em ${f.name} foi preparado em segredo, noite após noite, ${art(q.name, 'por')}. Só você sabe.`, 'secret', lead.x, lead.y);
       }
@@ -586,7 +589,15 @@
   };
   (G.saveHooks = G.saveHooks || []).push({
     save(out) { out.secrets = G.S.secrets || null; },
-    load(o) { G.S.secrets = o.secrets || null; },
+    load(o) {
+      const S = G.S; S.secrets = o.secrets || null;
+      for (const v of S.villagers.values()) { v.robe = null; }
+      const s = S.secrets; if (!s) return;
+      // the night's meeting is over; the hunts and the questions start again
+      s.meets = [];
+      for (const q of s.socs) for (const w of q.wit || []) if (!w.done && w.hunter) w.hunter = 0;
+      for (const i of s.inq) { const v = S.villagers.get(i.by); if (v) G.Vg.setTask(v, { type: 'inquire', inq: i.id, pri: 2.15, st: 0, kind: 'inquire' }); }
+    },
   });
 
   // ------------------------------ the realm panel: what the streets whisper ------------------------------
