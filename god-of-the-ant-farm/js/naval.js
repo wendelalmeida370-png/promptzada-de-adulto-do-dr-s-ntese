@@ -215,7 +215,7 @@
         }
         break;
       }
-      case 'back': if (moveShip(s, dt)) { if (s.cargo) { G.Village.addStock('food', s.cargo, s.fac); G.FX && G.FX.floater(s.x, s.y, '+' + s.cargo, '#b8e070', 1.4); s.cargo = 0; } s.st = 'idle'; s.t = 0; if (s.hp < s.maxHp) s.hp = Math.min(s.maxHp, s.hp + 20); } break;
+      case 'back': if (moveShip(s, dt)) { if (s.cargo) { G.Village.addStock('food', s.cargo, s.fac); G.Riches && G.Riches.noteFood(s.fac, s.catchKind ? 'fish:' + s.catchKind : 'fish', s.cargo); G.FX && G.FX.floater(s.x, s.y, '+' + s.cargo, '#b8e070', 1.4); s.cargo = 0; } s.st = 'idle'; s.t = 0; if (s.hp < s.maxHp) s.hp = Math.min(s.maxHp, s.hp + 20); } break;
     }
   }
   function updateShoals(dt) {

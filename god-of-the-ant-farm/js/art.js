@@ -709,7 +709,7 @@
   const APRON = { acougueiro: '#f0ece2', ferreiro: '#6a4a30', oleiro: '#c8a078', taverneiro: '#e8e0cc', tecelao: null, feirante: '#e8d8a8' };
   // what each good looks like on someone's shoulder
   function carried(c, k, carry, t) {
-    if (G.Riches && (G.Riches.is(k) || (k === 'food' && (carry.meat || carry.basket)))) return G.Riches.drawCarry(c, k, carry, t);
+    if (G.Riches && (G.Riches.is(k) || (k === 'food' && (carry.meat || carry.basket || carry.fish || carry.shell || carry.berries || carry.grain)))) return G.Riches.drawCarry(c, k, carry, t);
     switch (k) {
       case 'la': c.fillStyle = '#f2eee2'; for (const [x, y, r] of [[-1.6, -12, 1.8], [0.6, -12.4, 2], [2, -11.6, 1.5], [-0.4, -13.6, 1.6]]) { c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); } c.fillStyle = 'rgba(0,0,0,0.08)'; c.beginPath(); c.arc(1, -11.4, 1.4, 0, TAU); c.fill(); return true;
       case 'tecido': for (let q = 0; q < 3; q++) { c.fillStyle = ['#c8483a', '#3f6fb0', '#e8b83a'][q]; c.fillRect(-2.8, -11 - q * 1.2, 5.6, 1.1); } return true;

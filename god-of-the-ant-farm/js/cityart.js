@@ -422,7 +422,8 @@
       poly(c, [tp, P(-s - 0.06, s + 0.06, 9), P(s + 0.06, s + 0.06, 9)], c1, shade(c1, 0.7), 0.4);
       poly(c, [tp, P(s + 0.06, s + 0.06, 9), P(s + 0.06, -s - 0.06, 9)], shade(c2, 0.85), shade(c2, 0.6), 0.4);
       for (let q = 0; q < 4; q++) { const a = P(-s + 0.06 + q * 0.15, s + 0.06, 9); c.fillStyle = q % 2 ? c1 : c2; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(a[0] + 2.4, a[1] + 1.2); c.lineTo(a[0] + 1.2, a[1] + 2.6); c.fill(); }
-      // the goods on the counter
+      // the goods on the counter (and hanging from the awning): whatever the town has
+      if (G.Riches && goods !== 'food' && goods !== 'tecido' && goods !== 'ceramica') { G.Riches.drawCounter(c, P, goods, C); return; }
       const G0 = { food: ['#e05a3a', '#f0b040', '#6ab04a'], tecido: [C[0], C[1], C[2]], ceramica: ['#c8683a', '#b85a30', '#d8804a'], couro: ['#8a5a34', '#6a4428', '#9a6a44'] }[goods] || ['#e05a3a', '#f0b040', '#6ab04a'];
       for (let q = 0; q < 4; q++) { const g = P(-0.16 + q * 0.1, 0.06, 3.5); c.fillStyle = G0[q % 3]; if (goods === 'ceramica') jar(c, g[0], g[1] + 0.6, 0.55, G0[q % 3]); else if (goods === 'tecido' || goods === 'couro') c.fillRect(g[0] - 1.1, g[1] - 1.2, 2.2, 1.3); else { c.beginPath(); c.arc(g[0], g[1] - 0.6, 0.8, 0, TAU); c.fill(); } }
       void p;
@@ -433,7 +434,8 @@
     const b = e.b; const S = G.S;
     const open = !!(b.openT && S.clock - b.openT < 6);
     const inv = b.inv || {}; let goods = GOODS_OF[e.k];
-    if (!(inv[goods] >= 1)) goods = GOODS_OF.find(k => inv[k] >= 1) || 'food';
+    if (G.Riches) goods = G.Riches.stallGoods(b, e.k);
+    else if (!(inv[goods] >= 1)) goods = GOODS_OF.find(k => inv[k] >= 1) || 'food';
     G.Art.draw(c, stallSpr(b.style || 'classico', e.k, open, goods), sx, sy, 1);
   }
 

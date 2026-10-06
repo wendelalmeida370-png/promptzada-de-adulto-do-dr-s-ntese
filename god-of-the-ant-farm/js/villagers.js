@@ -739,6 +739,7 @@
           if (add > 0) G.FX && G.FX.deposit(v.x, v.y, v.carry.k, add);
           // what came along with it: the hide off the deer's back, the tusks, a second sack
           if (v.carry.extra) G.Riches && G.Riches.unload(v, v.carry.extra);
+          G.Riches && G.Riches.delivered(v, v.carry, add);
           v.carry = null; end(v);
         }
         break;
@@ -776,7 +777,7 @@
             if (t.type === 'forage') {
               const n = Math.min(b.berries, 2); b.berries -= n; v.hunger = Math.max(0, v.hunger - 32 * n); emote(v, 'food', 1.5); end(v);
             } else {
-              const n = Math.min(cap(v), b.berries); b.berries -= n; v.carry = { k: 'food', n }; b.claim = 0;
+              const n = Math.min(cap(v), b.berries); b.berries -= n; v.carry = { k: 'food', n, berries: 1 }; b.claim = 0;
               deliverTask(v);
             }
           }
@@ -808,7 +809,7 @@
         else {
           v.act = 'butcher'; G.faceTo(v, t.fx - v.x, t.fy - v.y); t.w += dt * workMul(v);
           if (v.actT > 0.8) { v.actT = 0; G.FX && G.FX.blood && G.FX.blood(t.fx, t.fy, 0.3); }
-          if (t.w > 6) { const n = G.Sea.cutWhale(v); if (n) { v.carry = { k: 'food', n: Math.min(cap(v), n) }; emote(v, 'food', 1.2); deliverTask(v); } else end(v); }
+          if (t.w > 6) { const n = G.Sea.cutWhale(v); if (n) { v.carry = { k: 'food', n: Math.min(cap(v), n), meat: 'whale' }; emote(v, 'food', 1.2); deliverTask(v); } else end(v); }
         }
         break;
       }
@@ -848,7 +849,7 @@
           if (t.k <= 0) {
             v.moving = false;
             if (t.got) {
-              v.carry = { k: 'food', n: t.got }; emote(v, 'food', 1.2);
+              v.carry = { k: 'food', n: t.got, shell: 1 }; emote(v, 'food', 1.2);
               const f = G.Fac.ofV(v); if (f && !f.shell) { f.shell = 1; const set = S.settlements.get(v.set); G.Village.log(`Na maré baixa, ${v.name}, de ${set ? set.name : f.name}, descobriu que a areia molhada esconde mariscos: agora a praia também dá de comer.`, 'sea', v.x, v.y); }
               deliverTask(v);
             } else end(v);
@@ -883,7 +884,7 @@
         else {
           v.act = 'fish'; G.faceTo(v, t.wx, t.wy);
           if (v.actT > t.dur) {
-            if (G.R() < 0.8 * Math.min(1.2, G.Civ.tV(v, 'fish'))) { v.carry = { k: 'food', n: Math.min(cap(v), Math.round(G.ri(1, 3) * G.Civ.tV(v, 'fish'))) }; emote(v, 'fish', 1.8); G.FX && G.FX.splash(t.x + t.wx * 0.8, t.y + t.wy * 0.8, 0.5); deliverTask(v); }
+            if (G.R() < 0.8 * Math.min(1.2, G.Civ.tV(v, 'fish'))) { v.carry = { k: 'food', n: Math.min(cap(v), Math.round(G.ri(1, 3) * G.Civ.tV(v, 'fish'))), fish: G.Riches && G.Riches.fishAt ? G.Riches.fishAt(t.x + t.wx, t.y + t.wy) : 1 }; emote(v, 'fish', 1.8); G.FX && G.FX.splash(t.x + t.wx * 0.8, t.y + t.wy * 0.8, 0.5); deliverTask(v); }
             else { v.actT = 0; t.dur = G.rr(4, 7); }
           }
         }
@@ -897,7 +898,7 @@
           // collect the meat
           if (G.dist(v.x, v.y, a.x, a.y) > 0.8) { if (!t.carc) { if (!Vg.goto(v, a.x, a.y, false)) return end(v); t.carc = true; } move(v, dt); }
           else if (G.Riches && G.Riches.carcass(v, a, t, dt, H)) { /* skinned at the kill, then home with meat and hide */ }
-          else { const take = Math.min(8, Math.max(1, a.meat)); v.carry = { k: 'food', n: Math.max(1, Math.round(take * G.Civ.tV(v, 'hunt'))) }; a.meat -= take; if (a.meat <= 0.5) G.Animals.remove(a); else a.claim = 0; emote(v, 'food', 1.5); deliverTask(v); }
+          else { const take = Math.min(8, Math.max(1, a.meat)); v.carry = { k: 'food', n: Math.max(1, Math.round(take * G.Civ.tV(v, 'hunt'))), meat: a.kind }; a.meat -= take; if (a.meat <= 0.5) G.Animals.remove(a); else a.claim = 0; emote(v, 'food', 1.5); deliverTask(v); }
           break;
         }
         if (t.type === 'fight' && v.hp < 30) { fleeFrom(v, a.x, a.y, 7, 'wolf'); return; }
@@ -950,7 +951,7 @@
               if (b.aqua) yf *= 1.2;
               const y = Math.floor(yf) + (G.R() < yf % 1 ? 1 : 0);
               c.s = 0; c.g = 0;
-              if (v.carry && v.carry.k === 'food') v.carry.n += y; else v.carry = { k: 'food', n: y };
+              if (v.carry && v.carry.k === 'food') v.carry.n += y; else v.carry = { k: 'food', n: y, grain: 1 };
               G.FX && G.FX.chips(px, py, '#e8c24a');
             } else { c.s = 1; c.g = 0.02; G.FX && G.FX.chips(px, py, '#7a5a36'); }
             if (v.carry && v.carry.n >= 6) return deliverTask(v);

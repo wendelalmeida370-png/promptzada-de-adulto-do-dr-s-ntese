@@ -652,7 +652,7 @@
     const f = G.Fac.ofV(v);
     let carry = null;
     if (t.what === 'shear') { const n = Math.max(1, Math.floor(a.wool)); a.wool = 0; a.shorn = DAY() * 0.5; carry = { k: 'la', n: n * 2 }; }
-    else if (t.what === 'milk') { a.milk = 0; carry = { k: 'food', n: 2 }; }
+    else if (t.what === 'milk') { a.milk = 0; carry = G.R() < 0.4 && E.GOODS.queijo ? { k: 'queijo', n: 1 } : { k: 'food', n: 2 }; } // (some of the milk is made into cheese)
     else if (t.what === 'eggs') { a.eggs = 0; carry = { k: 'food', n: 2 }; }
     else { a.hunger = Math.max(0, a.hunger - 0.2); if (f) f._grooms = (f._grooms || 0) + 1; }
     a.hold = 0;
@@ -685,7 +685,7 @@
     G.Animals.remove(a);
     const I = inv(b); if (hide) I.couro = (I.couro || 0) + hide;
     if (f) { made(f, 'food', meat); if (hide) made(f, 'couro', hide); }
-    v.carry = { k: 'food', n: meat }; E.pay(v, 'food', meat);
+    v.carry = { k: 'food', n: meat, meat: a.kind }; E.pay(v, 'food', meat);
     H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' });
   }
   // miners vanish into the mountain and come back loaded
