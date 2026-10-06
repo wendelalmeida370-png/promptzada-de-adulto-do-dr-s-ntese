@@ -121,7 +121,7 @@
     grego: ['derramou o mel e o azeite na pedra, pedindo a Hermes que guiasse {L} até o outro lado', 'pendurou o ramo de oliveira na entrada e chamou {L} três vezes pelo nome'],
     romano: ['queimou o incenso à luz da lamparina, pedindo aos Manes que recebessem {L}', 'derramou o vinho e o sal no chão, recitando o nome de {L} para que não se perdesse'],
     egipcio: ['deixou o pão e a cerveja na pedra, pedindo que o coração de {L} fosse leve na balança de Maat', 'deixou as oferendas, pedindo a Osíris que abrisse os campos de juncos para {L}'],
-    nordico: ['derramou o hidromel na terra, pedindo que {L} tivesse lugar à mesa dos que já partiram', 'enterrou o anel de ferro ali, dizendo o nome de {L} ao vento'],
+    nordico: ['derramou o hidromel na terra, pedindo que {L} tivesse lugar à mesa dos que já partiram', 'enterrou o anel de ferro na terra, dizendo o nome de {L} ao vento'],
     asteca: ['acendeu o copal entre as flores amarelas, para que {L} achasse o caminho', 'deixou o cacau e as flores, pedindo que {L} atravessasse os nove rios'],
     '': ['deixou as oferendas e rezou por {L} até a vela se apagar', 'ficou de joelhos, rezando por {L} até o sol mudar de lugar'],
   };

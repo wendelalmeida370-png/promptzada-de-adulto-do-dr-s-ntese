@@ -112,19 +112,26 @@
     c => c.FOOD ? null : `${c.P} dormiu${c.AT} sem comer: o pão tinha acabado. Ainda faltava caminho.`,
   ] });
   // a road beat from what the world showed (St.roadWatch); one line each, at most a few per road
-  function roadBeat(s, v, r) {
+  // (on the way home, the road's chapters say so)
+  function roadSay(s, key, vars, o, back) {
+    if (!back) return St.beat(s, key, vars, o);
+    let txt = St.say(s, key, vars); if (!txt) return null;
+    if (/^(A|O|As|Os|Um|Uma|Chegou|Choveu|Caiu|Veio|Entrou|Desceu|Subiu|Começou)\s/.test(txt)) txt = txt[0].toLowerCase() + txt.slice(1);
+    return St.chapter(s, 'Na volta, ' + txt, Object.assign({ k: key }, o));
+  }
+  function roadBeat(s, v, r, t) {
     let key = null; const vars = { AT: '' };
     if (r.K === 'lugar') { key = { pico: 'rd-pico', passo: 'rd-passo', lago: 'rd-lago', cachoeira: 'rd-cachoeira' }[r.KIND]; Object.assign(vars, { NAME: r.NAME, ALT: r.ALT, SNOW: r.SNOW }); }
     else if (r.K === 'set') { key = r.WAR ? 'rd-cidade-guerra' : 'rd-cidade'; Object.assign(vars, { TOWN: r.TOWN, OTHER: r.OTHER }); }
     else if (r.K === 'vau') key = 'rd-vau';
     else if (r.K === 'bioma') { key = 'rd-bioma'; vars.BIOME = r.BIOME; }
     else if (r.K === 'tempo') { key = r.W === 'tempestade' ? 'rd-tempestade' : 'rd-chuva'; vars.COLD = r.COLD; }
-    if (key) St.beat(s, key, vars, { x: v.x, y: v.y });
+    if (key) roadSay(s, key, vars, { x: v.x, y: v.y }, t && t.leg === 1);
   }
   function campBeat(s, v, t) {
     if (t.camps > 1 || s.data.camped) return; s.data.camped = 1;
     const w = St.where(v.x, v.y);
-    St.beat(s, 'rd-acampou', { AT: w.at && !w.town ? w.at : '', COLD: St.cold(v.x, v.y), FOOD: t.food > 0 }, { x: v.x, y: v.y });
+    roadSay(s, 'rd-acampou', { AT: w.at && !w.town ? w.at : '', COLD: St.cold(v.x, v.y), FOOD: t.food > 0 }, { x: v.x, y: v.y }, t.leg === 1);
   }
   // the one who went comes home and tells the children: what they saw becomes a tale (and maybe a new dream)
   function tellKids(s, v, txt, place, ic) {
@@ -216,7 +223,7 @@
     asteca: [c => `${c.P} foi ao túmulo de ${c.V} e queimou copal. O Sol tinha bebido o sangue prometido.`],
     grego: [c => `${c.P} foi ao túmulo de ${c.V} e derramou mel e vinho: as Erínias podiam dormir.`],
   } });
-  K('vg-outro', { h: 'Outra mão', text: [c => c.MET ? `Na mesma luta, foi ${c.K} quem derrubou ${c.T}. ${c.P} chegou tarde.` : c.SAME ? `${c.T} caiu${c.at} diante de ${c.K}. ${c.P} não estava lá.` : `${c.T} morreu pelas mãos de ${c.K}${c.at}, longe de ${c.P}. A vingança não aconteceu.`] });
+  K('vg-outro', { h: 'Outra mão', text: [c => c.CAUSE === 'sacrifice' ? `${c.T} foi sacrificad${c.oT} aos deuses${c.at}, pelas mãos de ${c.K}. A dívida com ${c.P} morreu junto.` : c.CAUSE === 'execution' ? `${c.T} foi executad${c.oT}${c.at} por ordem de ${c.K}. ${c.P} não precisou erguer a mão — e o alívio que esperava não veio.` : c.MET ? `Na mesma luta, foi ${c.K} quem derrubou ${c.T}. ${c.P} chegou tarde.` : c.SAME ? `${c.T} caiu${c.at} diante de ${c.K}. ${c.P} não estava lá.` : `${c.T} morreu pelas mãos de ${c.K}${c.at}, longe de ${c.P}. A vingança não aconteceu.`] });
   K('vg-velhice', { h: 'O tempo', text: [c => `${c.T} morreu de velhice, na cama. ${c.P} ficou com a promessa na mão e ninguém para cumpri-la.`] });
   K('vg-acaso', { h: 'O acaso', text: [c => `${c.T} ${c.DEATH}. Ninguém cobrou a dívida.`, c => `${c.T} ${c.DEATH} — e ${c.P} descobriu que não sentia nada.`] });
   K('vg-morto-pelo-alvo', { h: 'Como antes', text: [
@@ -322,7 +329,7 @@
           if (graveOf(s.cast.victim) && p && !p.dead) { s.phase = 'tumulo'; s.data.doneDay = G.S.day; }
           else St.finish(s, 'cumprida', 'agridoce', null, { clima: s.data.clima, legend: true, bio: false });
         }
-        else if (f.b) { const k = P(f.b); St.finish(s, 'roubada', 'agridoce', St.say(s, 'vg-outro', { K: k ? k.name : 'outra mão', SAME: k && facOf(k) === s.fac, MET: s.data.met === G.S.day && P(s.protag) && G.dist(P(s.protag).x, P(s.protag).y, f.x, f.y) < 14, at }), { x: f.x, y: f.y, log: true }); }
+        else if (f.b) { const k = P(f.b); St.finish(s, 'roubada', 'agridoce', St.say(s, 'vg-outro', { K: k ? k.name : 'outra mão', CAUSE: f.cause, SAME: k && facOf(k) === s.fac, MET: s.data.met === G.S.day && P(s.protag) && G.dist(P(s.protag).x, P(s.protag).y, f.x, f.y) < 14, at }), { x: f.x, y: f.y, log: true }); }
         else if (f.cause === 'old') St.finish(s, 'roubada', 'sereno', St.say(s, 'vg-velhice'));
         else St.finish(s, 'roubada', 'sereno', St.say(s, 'vg-acaso', { DEATH: deathTxt(f.a) }));
         return true;
@@ -544,7 +551,7 @@
       if (!s.data.watched) { s.data.watched = 1; s.data.watchT = G.S.clock; St.beat(s, 'rs-vigia'); }
       return St.go(s, v, H, { x: spot[0], y: spot[1], sub: 'vigia', dur: 10, emo: 'sad', fx: to.cx, fy: to.cy });
     },
-    road: (s, v, t, r) => roadBeat(s, v, r),
+    road: (s, v, t, r) => roadBeat(s, v, r, t),
     camp: (s, v, t) => campBeat(s, v, t),
     arrive(s, v) { if (s.phase === 'noite' && !s.data.lurk) { s.data.lurk = 1; St.beat(s, 'rs-espreita', null, { x: v.x, y: v.y }); } },
     // at the town's edge: wait for the dark, then go in
@@ -626,10 +633,10 @@
   K('vt-saudade', { h: 'Saudade', text: [c => `${c.P} ajudou a fundar ${c.NEW}, longe de ${c.home}. Mas a casa de ${c.P} era ${c.home}.`] });
   K('vt-partiu', { h: 'A partida', text: [c => `${c.P} deixou ${c.cityNow || 'a vila'} para rever ${c.home}, ${c.DIR}.`, c => `${c.KIN ? c.KIN + ' foi até a saída da vila. ' : ''}${c.P} pegou o caminho de ${c.home}.`] });
   K('vt-reviu', { h: 'Rever', text: [c => (c.OWN ? `${c.P} voltou a ver ${c.home}. A cidade agora era de ${c.OWN}, e as ruas tinham outros nomes.` : `${c.P} voltou a ver ${c.home}. Andou pelas ruas tentando reconhecer as portas.`)] });
-  K('vt-voltou-novo', { h: 'A outra casa', text: [c => `${c.P} voltou para ${c.NEW}. ${c.home} era um lugar da memória; a casa, agora, era esta.`] });
+  K('vt-voltou-novo', { h: 'A outra casa', text: [c => (c.NEW0 && c.NEW0 !== c.NEW ? `${c.P} voltou — para ${c.NEW}, onde agora vivia. ${c.home} era um lugar da memória.` : `${c.P} voltou para ${c.NEW}. ${c.home} era um lugar da memória; a casa, agora, era esta.`)] });
   K('vt-morreu-longe', { h: 'O fim', text: [c => `${c.P} morreu${c.WHERE || ' longe'}, sem voltar a ver ${c.home}.`] });
   K('vt-morto-fuga', { h: 'O fim', text: [c => `${c.P} ${c.DEATH} durante a fuga.`] });
-  K('vt-morto-cativo', { h: 'O fim', text: [c => `${c.P} ${c.DEATH} de novo nas correntes, sem voltar a ver ${c.home}.`, c => `Pegaram ${c.P} de volta, e foi ali mesmo, cativ${c.o}, que ${c.P} ${c.DEATH.replace(/ aos \d+ anos/, '')}.`] });
+  K('vt-morto-cativo', { h: 'O fim', text: [c => `De volta às correntes, ${c.P} ${c.DEATH} sem voltar a ver ${c.home}.`, c => `${c.P} não teve outra chance: ${c.DEATH.replace(/ aos \d+ anos/, '')} ainda cativ${c.o}, longe de ${c.home}.`] });
   K('vt-sem-casa', { h: 'Sem casa', text: [c => `${c.homeName} não existe mais. Não havia para onde voltar.`] });
   K('vt-sem-caminho', { h: 'Sem caminho', text: [c => `O caminho até ${c.home} estava fechado. ${c.P} desistiu.`] });
 
@@ -706,10 +713,10 @@
       if (!s.data.left) { s.data.left = 1; const k = kinNear(v, 10); St.beat(s, 'vt-partiu', { DIR: St.dir(v.x, v.y, home.cx, home.cy), KIN: k ? k.txt : '' }, { x: v.x, y: v.y }); }
       return St.journey(s, v, H, { x: spot[0], y: spot[1], sub: 'jornada', dur: 14, emo: 'happy' });
     },
-    road: (s, v, t, r) => roadBeat(s, v, r),
+    road: (s, v, t, r) => roadBeat(s, v, r, t),
     camp: (s, v, t) => campBeat(s, v, t),
     done(s, v) { s.data.went = 1; const home = G.S.settlements.get(s.data.home); const own = home && s.data.homeFac && home.fac !== s.data.homeFac ? facName(home.fac) : ''; s.data.own = own; St.beat(s, 'vt-reviu', { OWN: own }, { x: v.x, y: v.y, log: true, big: 1, hot: 15 }); },
-    home(s, v) { s.data.back = 1; St.finish(s, 'cumprida', s.data.own ? 'agridoce' : 'sereno', St.say(s, 'vt-voltou-novo', { NEW: setName(v.set) || s.data.newName }), { x: v.x, y: v.y, log: true }); },
+    home(s, v) { s.data.back = 1; St.finish(s, 'cumprida', s.data.own ? 'agridoce' : 'sereno', St.say(s, 'vt-voltou-novo', { NEW: setName(v.set) || s.data.newName, NEW0: s.data.newName }), { x: v.x, y: v.y, log: true }); },
     blocked(s) { s.data.fail = (s.data.fail || 0) + 1; if (s.data.fail >= 3) St.finish(s, 'interrompida', 'agridoce', St.say(s, 'vt-sem-caminho')); },
     goal: (s, c) => (s.data.mode === 'saudade' ? `Rever ${c.home} antes de morrer.` : `Chegar a ${c.home}.`),
     status(s, c) { const p = P(s.protag); if (!p) return ''; if (s.data.mode === 'fuga') return p.captive && s.phase === 'cativeiro' ? `${c.P} foi recapturad${c.o}, mas não esqueceu o caminho.` : `${c.P} está em fuga, a caminho de ${c.home}.`; return onJourney(p) ? `${c.P} está na estrada${s.data.went ? ', voltando de ' + c.home : ' para ' + c.home}.` : `${c.P} vive em ${setName(p.set) || '?'}, e pensa em ${c.home}.`; },
@@ -841,11 +848,14 @@
     c => /^(cratera|monte)$/.test(c.KIND) ? `${c.P} chegou ${ao(c.X)} e ficou um tempo enorme olhando, em silêncio.` : null,
   ] });
   K('sn-voltou', { h: 'A volta', text: [
-    c => c.KIDS ? `${c.P} voltou para ${c.cityNow || 'casa'}${c.KIND === 'mar' ? ' com areia nos bolsos e sal no cabelo' : ''}. Naquela noite, as crianças não deixaram ${lhe(c.o)} dormir: queriam saber tudo ${deArt(c.X)}.` : null,
-    c => c.KIDS ? `De volta a ${c.cityNow || 'casa'}, ${c.P} contou ${deArt(c.X)} para as crianças, do jeito que um dia ${c.TELLER} tinha contado.` : null,
-    c => !c.KIDS ? `${c.P} voltou para ${c.cityNow || 'casa'} e contou ${deArt(c.X)} para quem quisesse ouvir.` : null,
-    c => c.TELLER_ALIVE ? `${c.P} voltou para ${c.cityNow || 'casa'} querendo contar a ${c.TELLER}, antes de todo mundo, que tinha visto ${c.X}.` : null,
+    c => c.NEWHOME ? `${c.P} voltou — não para ${c.OLD}, mas para ${c.cityNow}, onde agora vivia — e contou ${deArt(c.X)} a quem quisesse ouvir.` : null,
+    c => c.KIDS && !c.NEWHOME ? `${c.P} voltou para ${c.cityNow || 'casa'}${c.KIND === 'mar' ? ' com areia nos bolsos e sal no cabelo' : ''}. Naquela noite, as crianças não deixaram ${lhe(c.o)} dormir: queriam saber tudo ${deArt(c.X)}.` : null,
+    c => c.KIDS && !c.NEWHOME ? `De volta a ${c.cityNow || 'casa'}, ${c.P} contou ${deArt(c.X)} para as crianças, do jeito que um dia ${c.TELLER} tinha contado.` : null,
+    c => !c.KIDS && !c.NEWHOME ? `${c.P} voltou para ${c.cityNow || 'casa'} e contou ${deArt(c.X)} para quem quisesse ouvir.` : null,
+    c => c.TELLER_ALIVE && !c.NEWHOME ? `${c.P} voltou para ${c.cityNow || 'casa'} querendo contar a ${c.TELLER}, antes de todo mundo, que tinha visto ${c.X}.` : null,
   ] });
+  K('sn-cativo', { h: 'As correntes', text: [c => `${c.ROAD ? 'No caminho ' + deArt(c.X) + ', ' : ''}${c.P} foi levad${c.o} acorrentad${c.o} por ${c.FT}${c.CITY ? ' para ' + c.CITY : ''}. ${capName(c.X)} ficou ainda mais longe.`] });
+  K('sn-livre', { h: 'Livre', text: [c => `${c.P} voltou a ser livre${c.cityNow ? ', agora em ' + c.cityNow : ''}. ${capName(c.X)} continuava lá, esperando.`] });
   K('sn-de-passagem', { h: 'De passagem', text: [
     c => c.BAND ? `${c.P} acabou vendo ${c.X} pela primeira vez marchando com o exército, sem tempo de parar. Não era assim que tinha sonhado.` : `A vida levou ${c.P} até perto ${deArt(c.X)} sem que procurasse. Viu — mas de passagem, sem a viagem que tinha sonhado.`,
   ] });
@@ -904,6 +914,7 @@
       const p = P(s.protag); if (!p || p.dead) return;
       if (!placeAlive(s.place)) { St.finish(s, 'interrompida', 'agridoce', `${capName(s.place.name)} já não existe.`); return; }
       if (s.phase === 'sonhar' && p.age >= 16) { s.phase = 'esperar'; St.beat(s, 'sn-cresceu', { TELLER: s.data.tellerName || 'um velho' }); }
+      if (s.data.capt && !p.captive) { s.data.capt = 0; St.beat(s, 'sn-livre'); }
       // life took them there another way (a march, a move): they saw it — but not the way they dreamed
       if (!s.data.onRoad && !s.data.saw && G.dist(p.x, p.y, s.place.x, s.place.y) < 5) {
         s.data.saw = 1; St.finish(s, 'cumprida', 'agridoce', St.say(s, 'sn-de-passagem', { BAND: p.task && p.task.type === 'band' }), { x: p.x, y: p.y });
@@ -915,6 +926,8 @@
       }
     },
     react(s, f) {
+      // taken in chains on the way (or at home): the dream waits
+      if (f.k === 'captura' && f.a === s.protag && !s.data.capt) { const road = s.data.onRoad; s.data.onRoad = 0; s.data.capt = 1; s.data.left = 0; St.beat(s, 'sn-cativo', { ROAD: road, FT: (f.n && f.n.fb) || 'outro povo', CITY: (f.n && f.n.set) || '' }, { x: f.x, y: f.y }); return true; }
       if (f.k !== 'morte' || f.a !== s.protag) return false;
       if (s.data.saw) { St.finish(s, 'cumprida', 'agridoce', St.say(s, 'sn-morreu-volta', { DEATH: deathTxt(f.a) }), { x: f.x, y: f.y }); return true; }
       if (s.data.onRoad) { St.finish(s, 'fracassada', 'tragico', St.say(s, 'sn-morreu-caminho', { DEATH: deathTxt(f.a) }), { x: f.x, y: f.y }); return true; }
@@ -944,7 +957,7 @@
       s.data.onRoad = 1;
       return St.journey(s, v, H, { x: s.place.x, y: s.place.y, sub: 'jornada', dur: 16, emo: 'happy', fx: s.place.x, fy: s.place.y - 1 });
     },
-    road: (s, v, t, r) => roadBeat(s, v, r),
+    road: (s, v, t, r) => roadBeat(s, v, r, t),
     camp: (s, v, t) => campBeat(s, v, t),
     // the moment: what they see is the place as it is now — the hour, the weather, the cold
     arrive(s, v) {
@@ -959,7 +972,8 @@
       s.data.home2 = 1;
       const txt = s.place.kind === 'mar' ? `Fui até o mar, que ${s.data.tellerName || 'um velho'} contava quando eu era criança — e é tudo verdade` : `Andei até ${s.place.name}, que eu só conhecia de ouvir falar`;
       const n = tellKids(s, v, txt, s.place, KIND_IC[s.place.kind] || 'lore');
-      St.finish(s, 'cumprida', 'feliz', St.say(s, 'sn-voltou', { KIDS: n, TELLER: s.data.tellerName || 'um velho', TELLER_ALIVE: alive(s.data.teller) && P(s.data.teller).set === v.set, KIND: s.place.kind }), { x: v.x, y: v.y, log: true, legend: true });
+      const now = setName(v.set); const moved = !!(now && s.data.town && now !== s.data.town);
+      St.finish(s, 'cumprida', 'feliz', St.say(s, 'sn-voltou', { KIDS: n, TELLER: s.data.tellerName || 'um velho', TELLER_ALIVE: alive(s.data.teller) && P(s.data.teller).set === v.set, KIND: s.place.kind, NEWHOME: moved, OLD: s.data.town }), { x: v.x, y: v.y, log: true, legend: true });
     },
     blocked(s) { s.data.onRoad = 0; s.data.fail = (s.data.fail || 0) + 1; if (s.data.fail >= 3) St.finish(s, 'interrompida', 'agridoce', St.say(s, 'sn-sem-caminho')); },
     goal: (s, c) => `Ver ${c.X} com os próprios olhos.`,
@@ -1026,9 +1040,12 @@
   ] });
   K('pg-oraculo', { h: 'O oráculo', text: [c => `${c.ORACLE}, ${c.ORAC} ${deArt(c.X)}, saiu da sombra e disse a ${c.P} só uma coisa: “${c.SAY}”`] });
   K('pg-voltou', { h: 'A volta', text: [
-    c => `${c.P} voltou para ${c.cityNow || 'casa'} com o rosto em paz. A promessa a ${c.L} estava cumprida.`,
-    c => `De volta a ${c.cityNow || 'casa'}, ${c.P} pendurou a trouxa vazia na porta. Tinha rezado por ${c.L} onde prometeu.`,
+    c => !c.NEWHOME ? `${c.P} voltou para ${c.cityNow || 'casa'} com o rosto em paz. A promessa a ${c.L} estava cumprida.` : null,
+    c => !c.NEWHOME ? `De volta a ${c.cityNow || 'casa'}, ${c.P} pendurou a trouxa vazia na porta. Tinha rezado por ${c.L} onde prometeu.` : null,
+    c => c.NEWHOME ? `${c.P} voltou — não para ${c.OLD}, mas para ${c.cityNow}, onde agora vivia. A promessa a ${c.L} estava cumprida.` : null,
   ] });
+  K('pg-cativo', { h: 'As correntes', text: [c => `${c.ROAD ? 'No caminho ' + deArt(c.X) + ', ' : ''}${c.P} caiu nas mãos de ${c.FT}${c.CITY ? ' e foi levad' + c.o + ' para ' + c.CITY : ''}. A promessa a ${c.L} teria que esperar.`] });
+  K('pg-livre', { h: 'Livre', text: [c => `${c.P} voltou a ser livre${c.cityNow ? ', agora em ' + c.cityNow : ''} — e a primeira coisa em que pensou foi a promessa a ${c.L}.`] });
   K('pg-morreu', { h: 'O fim', text: [c => `${c.P} ${c.DEATH} sem chegar ${ao(c.X)}.`] });
   K('pg-morreu-volta', { h: 'O fim', text: [c => `${c.P} ${c.DEATH} na volta — mas tinha rezado por ${c.L} onde prometeu.`] });
   K('pg-sem-caminho', { h: 'De longe', text: [c => `O caminho até ${c.X} estava fechado. ${c.P} rezou de longe, virad${c.o} para o lado ${deArt(c.X)}.`] });
@@ -1084,8 +1101,14 @@
       s.phase = 'promessa'; const set = homeOf(p);
       St.beat(s, s.data.from ? 'pg-virou' : 'pg-promessa', { ALT: s.data.alt, KILLER: s.data.alt, WAS: s.place && s.place.was, DIR: set && s.place ? St.dir(set.cx, set.cy, s.place.x, s.place.y) : 'longe' });
     },
-    tick(s) { const p = P(s.protag); if (!p || p.dead) return; if (!holyAlive(s.place) && !s.data.prayed) St.finish(s, 'interrompida', 'sereno', St.say(s, 'pg-sem-lugar')); },
+    tick(s) {
+      const p = P(s.protag); if (!p || p.dead) return;
+      if (s.data.capt && !p.captive) { s.data.capt = 0; St.beat(s, 'pg-livre'); }
+      if (!holyAlive(s.place) && !s.data.prayed) St.finish(s, 'interrompida', 'sereno', St.say(s, 'pg-sem-lugar'));
+    },
     react(s, f) {
+      // taken in chains on the way (or before leaving): the promise waits
+      if (f.k === 'captura' && f.a === s.protag && !s.data.capt) { const road = s.data.onRoad; s.data.onRoad = 0; s.data.capt = 1; s.data.left = 0; St.beat(s, 'pg-cativo', { ROAD: road && !s.data.prayed, FT: (f.n && f.n.fb) || 'outro povo', CITY: (f.n && f.n.set) || '' }, { x: f.x, y: f.y }); return true; }
       if (f.k !== 'morte' || f.a !== s.protag) return false;
       if (s.data.prayed) St.finish(s, 'cumprida', 'agridoce', St.say(s, 'pg-morreu-volta', { DEATH: deathTxt(f.a) }), { x: f.x, y: f.y });
       else St.finish(s, s.data.onRoad ? 'fracassada' : 'interrompida', s.data.onRoad ? 'tragico' : 'sereno', St.say(s, 'pg-morreu', { DEATH: deathTxt(f.a) }), { x: f.x, y: f.y });
@@ -1106,7 +1129,7 @@
       s.data.onRoad = 1;
       return St.journey(s, v, H, { x: s.place.x, y: s.place.y, sub: 'peregrinar', dur: 16, act: 'pray', fx: s.place.x, fy: s.place.y - 1 });
     },
-    road: (s, v, t, r) => roadBeat(s, v, r),
+    road: (s, v, t, r) => roadBeat(s, v, r, t),
     camp: (s, v, t) => campBeat(s, v, t),
     arrive(s, v) {
       const civ = St.civOf(v); const lost = P(s.cast.lost);
@@ -1119,7 +1142,7 @@
       v.devotion = Math.min(100, (v.devotion || 0) + 20); G.FX && G.FX.prayer && G.FX.prayer(v.x, v.y);
       G.Life && G.Life.bio(v, 'note', `Andou até ${s.place.name} para rezar por ${lost ? lost.name : 'quem partiu'}`);
     },
-    home(s, v) { St.finish(s, 'cumprida', 'sereno', St.say(s, 'pg-voltou'), { x: v.x, y: v.y, log: true }); },
+    home(s, v) { const now = setName(v.set); St.finish(s, 'cumprida', 'sereno', St.say(s, 'pg-voltou', { NEWHOME: !!(now && s.data.town && now !== s.data.town), OLD: s.data.town }), { x: v.x, y: v.y, log: true }); },
     blocked(s) { s.data.onRoad = 0; s.data.fail = (s.data.fail || 0) + 1; if (s.data.fail >= 3) St.finish(s, 'interrompida', 'sereno', St.say(s, 'pg-sem-caminho')); },
     goal: (s, c) => `Rezar por ${c.L} diante ${deArt(c.X)}.`,
     status(s, c) { const p = P(s.protag); const set = homeOf(p); const where = set ? `${capName(c.X)} fica ${St.dir(set.cx, set.cy, s.place.x, s.place.y)} de ${set.name}` : ''; if (s.data.prayed) return `${c.P} rezou por ${c.L}. Volta para casa.`; return s.data.onRoad ? `${c.P} está na estrada, a caminho ${deArt(c.X)}.` : `${c.P} espera o momento de partir. ${where}.`; },
