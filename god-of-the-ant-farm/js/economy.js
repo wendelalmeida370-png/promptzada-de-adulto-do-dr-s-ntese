@@ -260,14 +260,15 @@
 
   // ------------------------------ money ------------------------------
   E.coinage = fid => has(fid, 'moeda');
-  const TAX = { tribo: 0, chefia: 0.08, reino: 0.12, imperio: 0.16, teocracia: 0.12, tirania: 0.3, conselho: 0.08, livre: 0.05 };
+  const TAX = { tribo: 0, chefia: 0.08, reino: 0.12, imperio: 0.16, teocracia: 0.12, tirania: 0.3, conselho: 0.08, livre: 0.05, parlamento: 0.1, feudal: 0.14, republica: 0.1, democracia: 0.08, oligarquia: 0.06, ditadura: 0.22, comuna: 0.02, anarquia: 0 };
   E.taxRate = function (f) {
     if (!f || !E.coinage(f.id)) return 0;
     let r = TAX[f.gov] !== undefined ? TAX[f.gov] : 0.1;
     if (G.Fac.enemiesOf(f.id).length) r += 0.06; // war costs money
     if (f.law === 'honra') r += 0.03; // the tithe
+    if (G.Polity) r = G.Polity.taxMod(f, r);
     if (f.golden > 0) r *= 0.6;
-    return Math.min(0.45, r);
+    return G.clamp(r, 0, 0.45);
   };
   const homeOf = v => { const h = v.home && G.S.buildings.get(v.home); return h && G.BDEF[h.type].housing ? h : null; };
   // the state pays for what a worker brings in (when it has coins)

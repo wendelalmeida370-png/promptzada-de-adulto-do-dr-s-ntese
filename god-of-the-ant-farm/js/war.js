@@ -62,11 +62,11 @@
   Wr.warriorWant = function (set, fac, A) {
     if (A < 5) return 0;
     const metAny = G.Fac.all().some(o => o.id !== fac.id && G.Fac.rel(fac.id, o.id) && G.Fac.rel(fac.id, o.id).met);
-    if (!metAny && fac.gov !== 'tirania') return 0;
+    if (!metAny && !G.Politics.tyr(fac)) return 0;
     const pe = G.Politics.leaderPe(fac);
     const atWar = G.Fac.enemiesOf(fac.id).length > 0;
     let share = atWar ? 0.22 + pe.agg * 0.18 : 0.03 + pe.agg * 0.07;
-    if (fac.gov === 'tirania') share += 0.06;
+    if (G.Politics.tyr(fac)) share += 0.06;
     if (G.Fac.has(fac.id, 'quartel')) share += 0.04;
     if (fac.weariness > 60) share *= 0.7;
     // an army marches on its stomach: hungry peoples send soldiers back to the fields
@@ -79,16 +79,16 @@
   Wr.chooseGoal = function (f, enemy, set, n) {
     const pe = G.Politics.leaderPe(f); const r = G.Fac.rel(f.id, enemy.id);
     let defenders = 0; for (const v of G.S.villagers.values()) if (v.set === set.id && adultFree(v)) defenders++;
-    if (f.law !== 'paz' && pe.cru > 0.72 && ((r && r.grudge > 35) || f.gov === 'tirania') && G.R() < 0.6) return 'massacre';
+    if (f.law !== 'paz' && pe.cru > 0.72 && ((r && r.grudge > 35) || G.Politics.tyr(f)) && G.R() < 0.6) return 'massacre';
     // each culture has its way of war
     if (G.Civ.t(f.id, 'capture') > 1.5 && G.R() < 0.55) return 'captura';
     if (G.Civ.t(f.id, 'raid') > 1.2 && G.R() < 0.45) return 'saque';
     if (G.Civ.t(f.id, 'assimilate') > 1.5 && n >= defenders * 1.1 && G.Fac.settlementsOf(f.id).length < 7 && G.R() < 0.55) return 'conquista';
     if (n >= defenders * 1.3 && pe.amb > 0.45 && G.Fac.settlementsOf(f.id).length < 5 && G.R() < 0.7) return 'conquista';
-    if (pe.cru > 0.45 && f.gov !== 'conselho' && f.gov !== 'livre' && G.R() < 0.55) return 'captura';
+    if (pe.cru > 0.45 && !G.Politics.free(f) && G.R() < 0.55) return 'captura';
     if (f.stock.food < G.Fac.pop(f.id) * 0.8) return 'saque';
     const strong = n >= defenders * 0.9;
-    return G.pick(f.gov === 'conselho' || f.gov === 'livre' ? (strong ? ['saque', 'conquista'] : ['saque']) : (strong ? ['saque', 'captura', 'conquista'] : ['saque', 'saque', 'captura']));
+    return G.pick(G.Politics.free(f) ? (strong ? ['saque', 'conquista'] : ['saque']) : (strong ? ['saque', 'captura', 'conquista'] : ['saque', 'saque', 'captura']));
   };
   Wr.launch = function (f, enemy, opts) {
     const S = G.S; opts = opts || {};
@@ -292,7 +292,7 @@
       if (pe.cru > 0.8 && v.age >= 16 && v.g === 'm' && G.R() < 0.6) { G.FX && G.FX.blood(v.x, v.y); G.Vg.damage(v, 999, 'massacre', false, killer ? killer.id : 0); killed++; continue; }
       // Romans make citizens of the vanquished; others make slaves
       const assim = G.Civ.t(f.id, 'assimilate') > 1.5;
-      if ((pe.cru > (assim ? 0.75 : 0.5) || f.gov === 'tirania') && !(assim && G.R() < 0.6)) { Wr.enslave(v, old.id, set.id); enslaved++; }
+      if ((pe.cru > (assim ? 0.75 : 0.5) || G.Politics.tyr(f)) && !(assim && G.R() < 0.6)) { Wr.enslave(v, old.id, set.id); enslaved++; }
     }
     const garrison = b.members.slice(0, Math.ceil(b.members.length * 0.4));
     for (const id of garrison) { const v = S.villagers.get(id); if (v) { v.set = set.id; v.home = 0; } }
@@ -449,13 +449,13 @@
       const pe = G.Politics.leaderPe(f);
       const days = S.day - v.captive.day;
       const assim = G.Civ.t(f.id, 'assimilate');
-      if (days >= 5 / assim && pe.cru < 0.55 + (assim > 1.5 ? 0.15 : 0) && f.gov !== 'tirania' && G.R() < 0.035 * assim * dt / 5) {
+      if (days >= 5 / assim && pe.cru < 0.55 + (assim > 1.5 ? 0.15 : 0) && !G.Politics.tyr(f) && G.R() < 0.035 * assim * dt / 5) {
         v.captive = null; v.role = null;
         if (G.R() < 0.4 || G.UI.selected === v) log(`Depois de ${Math.round(days)} anos de cativeiro, ${v.name} foi aceit${oa(v)} como parte de ${f.name}.`, 'free', v.x, v.y);
         continue;
       }
       const from = G.Fac.get(v.captive.from);
-      let p = 0.0006 * (G.isNight() ? 3 : 1) * (from && from.alive ? 1.5 : 0.4) * (v.courage + 0.4) * (Wr.penOf(v.set) ? 0.45 : 1) * (f.gov === 'tirania' ? 0.7 : 1) * (v.fury > 0 ? 4 : 1);
+      let p = 0.0006 * (G.isNight() ? 3 : 1) * (from && from.alive ? 1.5 : 0.4) * (v.courage + 0.4) * (Wr.penOf(v.set) ? 0.45 : 1) * (G.Politics.tyr(f) ? 0.7 : 1) * (v.fury > 0 ? 4 : 1);
       if (G.R() < p * dt) Wr.startEscape(v);
     }
     for (const f of G.Fac.all()) {

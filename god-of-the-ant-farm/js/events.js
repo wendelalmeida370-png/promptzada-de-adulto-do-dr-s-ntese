@@ -55,7 +55,7 @@
     return best;
   }
   const captivesIn = set => { let n = 0; for (const v of G.S.villagers.values()) if (v.captive && v.set === set.id) n++; return n; };
-  const tyrantOf = set => { const f = G.Fac.get(set.fac); return f && f.gov === 'tirania' && (f.terror > 15 || set.loyalty < 35) ? G.Politics.ruler(f) : null; };
+  const tyrantOf = set => { const f = G.Fac.get(set.fac); return f && G.Politics.tyr(f) && (f.terror > 15 || set.loyalty < 35) ? G.Politics.ruler(f) : null; };
   function updatePrayers(dt) {
     const S = G.S;
     if (S.prayer) {

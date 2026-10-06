@@ -57,7 +57,7 @@
   function nearWalk(x, y, r) { if (walk(x, y)) return [x, y]; for (let k = 1; k <= 3; k++) for (let a = 0; a < 8; a++) { const q = [x + Math.cos(a / 8 * TAU) * k * (r || 0.5), y + Math.sin(a / 8 * TAU) * k * (r || 0.5)]; if (walk(q[0], q[1])) return q; } return null; }
   const H0 = () => G.Vg.H;
   // how much of a people goes to war: the state, the goal and the granary decide
-  const LEVY = { tribo: 0.3, chefia: 0.36, reino: 0.42, imperio: 0.5, teocracia: 0.4, tirania: 0.55, conselho: 0.38, livre: 0.3 };
+  const LEVY = { tribo: 0.3, chefia: 0.36, reino: 0.42, imperio: 0.5, teocracia: 0.4, tirania: 0.55, conselho: 0.38, livre: 0.3, parlamento: 0.4, feudal: 0.48, republica: 0.42, democracia: 0.36, oligarquia: 0.32, ditadura: 0.58, comuna: 0.34, anarquia: 0.22 };
   AR.size = function (f, cands, set, opts, pe, defenders) {
     const warriors = cands.filter(c => c[1].role === 'guerreiro').length;
     const pop = G.Fac.pop(f.id);
@@ -65,7 +65,7 @@
     let n = Math.max(warriors, Math.round(cands.length * share));
     // weapons from the forge arm the levy; without them it is a mob with clubs and sickles
     const armed = warriors + Math.floor((f.stock.armas || 0));
-    if (n > armed) n = armed + Math.floor((n - armed) * (pe.agg > 0.6 || f.gov === 'tirania' ? 0.7 : 0.4));
+    if (n > armed) n = armed + Math.floor((n - armed) * (pe.agg > 0.6 || G.Politics.tyr(f) ? 0.7 : 0.4));
     // an army eats: two meals a head for the campaign
     const food = f.stock.food; if (n * 2.5 > food) n = Math.max(Math.min(n, 6), Math.floor(food / 2.5));
     // keep a garrison at home

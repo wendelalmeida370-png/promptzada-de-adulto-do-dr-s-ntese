@@ -22,7 +22,22 @@
     tirania: { name: 'Tirania', title: ['Tirano', 'Tirana'] },
     conselho: { name: 'Conselho', title: ['Conselheiro-Mor', 'Conselheira-Mor'] },
     livre: { name: 'Povo Livre', title: ['Porta-Voz', 'Porta-Voz'] },
+    // (the regimes a people can come to: see polity.js for how they rise and fall)
+    parlamento: { name: 'Monarquia com Conselho', title: ['Rei', 'Rainha'] },
+    feudal: { name: 'Senhorio Feudal', title: ['Suserano', 'Suserana'] },
+    republica: { name: 'República', title: ['Cônsul', 'Cônsul'] },
+    democracia: { name: 'Democracia', title: ['Primeiro Cidadão', 'Primeira Cidadã'] },
+    oligarquia: { name: 'Oligarquia Mercante', title: ['Grão-Mercador', 'Grã-Mercadora'] },
+    ditadura: { name: 'Ditadura', title: ['Ditador', 'Ditadora'] },
+    comuna: { name: 'Comuna', title: ['Guardião do Celeiro', 'Guardiã do Celeiro'] },
+    anarquia: { name: 'Anarquia', title: ['Voz do Povo', 'Voz do Povo'] },
   };
+  // families of regime: who inherits, who rules by fear, who shares the power
+  const FAM = { tribo: 'tribo', chefia: 'dyn', reino: 'dyn', imperio: 'dyn', parlamento: 'dyn', feudal: 'dyn', teocracia: 'teo', tirania: 'tyr', ditadura: 'tyr', conselho: 'council', oligarquia: 'council', republica: 'council', democracia: 'council', comuna: 'council', livre: 'free', anarquia: 'free' };
+  P.FAM = FAM;
+  P.fam = f => FAM[f && f.gov] || 'tribo';
+  P.tyr = f => !!f && FAM[f.gov] === 'tyr';
+  P.free = f => !!f && (FAM[f.gov] === 'council' || FAM[f.gov] === 'free');
   P.GOV_DESC = {
     tribo: 'Um pequeno grupo guiado pelos mais respeitados.',
     chefia: 'Um chefe forte governa, e seus filhos herdam o poder.',
@@ -31,6 +46,14 @@
     tirania: 'Um só governa pelo medo: execuções, trabalho forçado, cativos.',
     conselho: 'Depois da revolução, o poder é dividido. Ninguém é cativo.',
     livre: 'Ex-cativos que juraram nunca mais usar correntes.',
+    parlamento: 'O rei reina, mas os impostos e as guerras passam pelo conselho dos nobres e dos mercadores.',
+    feudal: 'As terras são dos senhores; os camponeses trabalham e pagam a eles; os senhores juram lealdade ao suserano.',
+    republica: 'Ninguém herda o poder: o conselho escolhe cônsules por um tempo, e quem governa presta contas.',
+    democracia: 'A assembleia de todos os cidadãos vota as leis e escolhe quem governa.',
+    oligarquia: 'Governam as famílias mais ricas: as casas de mercadores decidem tudo.',
+    ditadura: 'Um general tomou o poder: os soldados mandam, o medo cala os outros.',
+    comuna: 'Tudo é de todos: as terras, o celeiro, as ferramentas. Ninguém enriquece, ninguém passa fome.',
+    anarquia: 'Ninguém manda em ninguém: as decisões são tomadas em roda, e ninguém paga imposto.',
   };
   const EPI = {
     fundador: ['o Fundador', 'a Fundadora'], conquistador: ['o Conquistador', 'a Conquistadora'], cruel: ['o Cruel', 'a Cruel'],
@@ -95,7 +118,7 @@
     return Math.min(v.age, 58) * 0.5 + v.courage * 14 + pe.amb * 10 + (v.kills || 0) * 2 + (v.hero ? 12 : 0) + (v.st ? v.st.built * 0.5 : 0)
       + (f.gov === 'teocracia' && (v.role === 'sacerdote' || v.traits.includes('Devoto')) ? 15 : 0) + G.R() * 6;
   }
-  const DYNASTIC_GOV = { chefia: 1, reino: 1, tirania: 1, imperio: 1 };
+  const DYNASTIC_GOV = { chefia: 1, reino: 1, tirania: 1, imperio: 1, parlamento: 1, feudal: 1 };
   // a republic elects its consuls; everyone else passes the crown within the family
   const dyn = f => !!DYNASTIC_GOV[f.gov] && !(f.gov === 'reino' && f.civ === 'romano');
   P.dynastic = dyn;
@@ -181,7 +204,7 @@
       if (sc > bs) { bs = sc; best = v; bset = s; }
     }
     if (!best) return false;
-    const chance = 0.18 + (heir.age < 25 ? 0.18 : 0) + (f.gov === 'tirania' ? 0.15 : 0) + (bset.loyalty < 50 ? 0.15 : 0);
+    const chance = 0.18 + (heir.age < 25 ? 0.18 : 0) + (P.tyr(f) ? 0.15 : 0) + (f.gov === 'feudal' ? 0.12 : 0) + (bset.loyalty < 50 ? 0.15 : 0);
     if (G.R() > chance) return false;
     log(`Crise de sucessão em ${f.name}! ${best.name}, de ${bset.name}, não aceitou ${P.regnal(heir)} e proclamou-se soberan${oa(best)}.`, 'split', bset.cx, bset.cy);
     S.stats.successionWars = (S.stats.successionWars || 0) + 1;
@@ -204,12 +227,14 @@
     const base = P.baseGov(f);
     if (RANK[g] !== undefined && RANK[base] > RANK[g]) g = base;
     if (crowning && v) {
-      if (how === 'revolucao') g = 'conselho';
+      if (f._nextGov) { g = f._nextGov; f._nextGov = null; }
+      else if (how === 'eleicao') { /* an election keeps the regime */ }
+      else if (how === 'revolucao') g = 'conselho';
       else if (how === 'golpe' && pe.cru > 0.45) g = 'tirania';
-      else if (g === 'conselho' || g === 'livre') { /* free peoples keep their councils */ }
+      else if (P.free(f) || g === 'parlamento' || g === 'feudal') { /* councils, assemblies and lords outlive a ruler */ }
       else if (pe.cru > 0.72 && base !== 'tribo') g = 'tirania';
       else if (pe.pie > 0.72 && G.Fac.has(f.id, 'temple')) g = 'teocracia';
-      else if (g === 'tirania' || g === 'teocracia') g = base;
+      else if (g === 'tirania' || g === 'teocracia' || (g === 'ditadura' && v.role !== 'guerreiro')) g = base;
     }
     if (g !== f.gov) { const old = f.gov; f.gov = g; onGovChange(f, old, v); }
   };
@@ -240,7 +265,7 @@
       case 'conselho': log(`${f.name} agora é governad${G.Fac.oa(f)} por um conselho.`, 'crown', x, y); break;
       default: if (old === 'tirania') log(`A tirania acabou em ${f.name}.`, 'crown', x, y);
     }
-    if (f.gov === 'conselho' || f.gov === 'livre') G.War && G.War.freeAllOf(f, 'abolicao');
+    if (f.gov === 'conselho' || f.gov === 'livre' || f.gov === 'comuna' || f.gov === 'anarquia') G.War && G.War.freeAllOf(f, 'abolicao');
     if (S.stats) S.stats.govChanges = (S.stats.govChanges || 0) + 1;
   }
 
@@ -271,8 +296,9 @@
       if (G.Eco) t += G.Eco.loyaltyMod(s, f);
       if (hungry) t -= 18;
       t -= f.weariness * 0.3;
-      if (f.gov === 'tirania') t -= 16 + pe.cru * 12; else t -= pe.cru * 8;
-      if (f.gov === 'conselho' || f.gov === 'livre') t += 6;
+      if (P.tyr(f)) t -= 16 + pe.cru * 12; else t -= pe.cru * 8;
+      if (P.free(f)) t += 6;
+      if (G.Polity) t += G.Polity.loyaltyMod(s, f);
       if (s.conq) t -= Math.max(0, 40 - (S.day - s.conq) * 5 * assim);
       if (s.origFac && s.origFac !== s.fac) t -= 10 / assim;
       t += (f.legit - 60) * 0.25;
@@ -352,23 +378,28 @@
         log(`Golpe em ${f.name}! ${killer.name} matou ${P.styled(f, v)} e tomou o poder.`, 'tyrant', v.x, v.y);
         G.UI && G.UI.toast('Golpe de estado', `${killer.name} derrubou ${P.regnal(v)} em ${f.name}.`, 'tyrant');
         for (const o of S.villagers.values()) if (o.coup === f.id) o.coup = 0;
+        if (f.coup && f.coup.goal) f._nextGov = f.coup.goal;
         f.coup = null;
         P.crown(f, killer, 'golpe', true);
+        if (G.Polity) G.Polity.afterChange(f, 'golpe', killer, v);
         S.stats.coups = (S.stats.coups || 0) + 1;
         continue;
       }
       if (rev) {
         P.endReign(f, 'revolucao');
         const lead = S.villagers.get(f.rev.leader) || killer;
-        log(`O tirano caiu! ${P.styled(f, v)} foi mort${oa(v)} pelo próprio povo de ${f.name}.`, 'tyrant', v.x, v.y);
-        G.UI && G.UI.toast('Revolução', `${f.name} derrubou ${v.g === 'f' ? 'sua tirana' : 'seu tirano'}.`, 'tyrant');
+        const wasTyr = P.tyr(f); const goal = f.rev.goal || 'conselho';
+        log(wasTyr ? `O tirano caiu! ${P.styled(f, v)} foi mort${oa(v)} pelo próprio povo de ${f.name}.` : `${P.styled(f, v)} caiu: foi mort${oa(v)} pelos revoltosos de ${f.name}${f.rev.why ? ', que se levantaram ' + f.rev.why : ''}.`, 'tyrant', v.x, v.y);
+        G.UI && G.UI.toast('Revolução', wasTyr ? `${f.name} derrubou ${v.g === 'f' ? 'sua tirana' : 'seu tirano'}.` : `${f.name} derrubou ${P.regnal(v)}.`, 'tyrant');
         endRevolution(f);
+        f._nextGov = goal;
         P.crown(f, lead, 'revolucao', true);
-        log(`${lead.name} lidera agora ${f.name}, governad${G.Fac.oa(f)} por um conselho.`, 'crown', lead.x, lead.y);
+        log(`${lead.name} lidera agora ${f.name}: ${P.govName(f).toLowerCase() === 'conselho' ? 'governad' + G.Fac.oa(f) + ' por um conselho' : 'nasce ' + (G.gen(P.govName(f)) === 'a' ? 'a ' : 'o ') + P.govName(f)}.`, 'crown', lead.x, lead.y);
+        if (G.Polity) G.Polity.afterChange(f, 'revolucao', lead, v);
         S.stats.revolutions = (S.stats.revolutions || 0) + 1;
         continue;
       }
-      if (byGod && f.gov === 'tirania') {
+      if (byGod && P.tyr(f)) {
         log(`O céu respondeu: ${P.styled(f, v)} ${dt}. ${f.name} celebra em silêncio.`, 'bolt', v.x, v.y);
         G.UI && G.UI.toast('O tirano caiu', `Você derrubou ${P.regnal(v)}.`, 'tyrant');
         for (const o of S.villagers.values()) if (!o.captive && G.Fac.idOfV(o) === f.id) { o.devotion = Math.min(100, o.devotion + 18); o.fear = Math.min(100, o.fear + 10); }
@@ -387,7 +418,7 @@
   function checkCoup(f) {
     if (f.coup || f.rev || f.exec) return;
     const ruler = P.ruler(f); if (!ruler) return;
-    const control = f.stab + (f.gov === 'tirania' ? f.terror * 0.5 : 0);
+    const control = f.stab + (P.tyr(f) ? f.terror * 0.5 : 0);
     if (control > 44 || G.Fac.pop(f.id) < 10) return;
     if (G.R() > (44 - control) / 44 * 0.22) return;
     let best = null, bs = 0;
@@ -431,7 +462,7 @@
 
   // ------------------------------ revolutions ------------------------------
   function checkRevolution(f) {
-    if (f.gov !== 'tirania' || f.rev || f.coup) return;
+    if (!P.tyr(f) || f.rev || f.coup) return;
     const control = f.stab + f.terror * 0.5;
     if (control > 32 || G.Fac.pop(f.id) < 12) return;
     if (G.R() > 0.25) return;
@@ -471,9 +502,11 @@
       const alive = f.rev.rebels.map(id => S.villagers.get(id)).filter(v => v && !v.captive);
       endRevolution(f);
       let n = 0;
-      for (const v of alive.sort(() => G.R() - 0.5)) { if (n >= 3) break; G.FX && G.FX.blood(v.x, v.y); G.Vg.damage(v, 999, 'execution', false, tyrant.id); n++; }
+      const doomed = alive.sort(() => G.R() - 0.5).slice(0, 3);
+      if (G.Polity && G.Polity.sentence && doomed.length && G.Polity.sentence(f, doomed, 'por se levantarem contra ' + P.styled(f, tyrant))) n = doomed.length;
+      else for (const v of doomed) { G.FX && G.FX.blood(v.x, v.y); G.Vg.damage(v, 999, 'execution', false, tyrant.id); n++; }
       f.terror = Math.min(100, f.terror + 40); f.st.executions += n;
-      log(`A revolução foi esmagada em ${f.name}.${n ? ' ' + P.styled(f, tyrant) + ' mandou executar ' + n + ' rebeldes.' : ''}`, 'massacre', tyrant.x, tyrant.y);
+      log(`A revolução foi esmagada em ${f.name}.${n ? ' ' + P.styled(f, tyrant) + ' condenou ' + n + ' rebeldes à morte.' : ''}`, 'massacre', tyrant.x, tyrant.y);
       if (n >= 3) P.earn(f, tyrant, 'sanguinario');
       return;
     }
@@ -488,7 +521,7 @@
   function checkTyranny(f) {
     const S = G.S; const ruler = P.ruler(f); if (!ruler || f.exec || f.rev || f.coup) return;
     const pe = P.persona(ruler);
-    if (!(f.gov === 'tirania' || pe.cru > 0.82)) return;
+    if (!(P.tyr(f) || pe.cru > 0.82) || f.gov === 'anarquia' || f.gov === 'democracia') return;
     if (S.day - (f.lastExec === undefined ? -9 : f.lastExec) < 1.6 - pe.cru * 0.6) return;
     if (G.R() > 0.3) return;
     const cap = G.Fac.capitalOf(f.id); if (!cap) return;
@@ -583,7 +616,7 @@
     for (const k of ['food', 'wood', 'stone']) { const n = Math.floor(old.stock[k] * share); old.stock[k] -= n; nf.stock[k] += n; }
     s.fac = nf.id; nf.capital = s.id; s.loyalty = 75; s.conq = 0; s.origFac = 0;
     nf.era = G.Fac.eraOf(nf.id);
-    nf.gov = old.gov === 'tirania' ? 'conselho' : 'tribo';
+    nf.gov = P.tyr(old) ? 'conselho' : 'tribo';
     const joined = [];
     const cap = G.Fac.capitalOf(old.id);
     for (const o of G.Fac.settlementsOf(old.id)) {
@@ -604,7 +637,7 @@
     G.UI && G.UI.toast(succession ? 'Guerra de sucessão' : 'Racha!', `${s.name} rompeu com ${old.name}.`, 'split');
     G.Audio && G.Audio.play('horn');
     const po = P.persona(oldRuler);
-    if (succession || po.agg > 0.5 || old.gov === 'tirania' || G.R() < 0.25) P.declareWar(old, nf, 'secessao');
+    if (succession || po.agg > 0.5 || P.tyr(old) || G.R() < 0.25) P.declareWar(old, nf, 'secessao');
     return nf;
   };
   P.revert = function (s) {
@@ -751,7 +784,8 @@
     if (popA < 10 || !P.ruler(a)) return;
     const ratio = str.get(a.id) / Math.max(1, str.get(b.id));
     let want = -r.op / 100 + pa.agg * 0.55 + G.clamp(ratio - 1, -0.5, 1) * 0.3 + r.grudge / 140 - a.weariness / 120;
-    if (a.gov === 'tirania') want += 0.15;
+    if (P.tyr(a)) want += 0.15;
+    if (a.gov === 'anarquia' || a.gov === 'comuna') want -= 0.15;
     want += pa.amb * 0.25;
     // crowded peoples look at their neighbours' land
     const sets = G.Fac.settlementsOf(a.id).length;
@@ -982,7 +1016,8 @@
     t -= Math.min(25, (G.Fac.touch[key(a.id, b.id)] || 0) * 0.6);
     const la = P.leaderPe(a), lb = P.leaderPe(b);
     t -= (la.agg + lb.agg - 0.9) * 20;
-    if ((a.gov === 'tirania') !== (b.gov === 'tirania')) t -= 10;
+    if (P.tyr(a) !== P.tyr(b)) t -= 10;
+    if (P.free(a) && P.free(b)) t += 6;
     if (a.gov === 'teocracia' && b.gov === 'teocracia') t += 8;
     if (a.parent === b.id || b.parent === a.id) t -= 10;
     t += Math.min(25, (r.trade || 0) * 3) + Math.min(20, (r.marr || 0) * 7);
@@ -1035,7 +1070,7 @@
     const atWar = G.Fac.enemiesOf(fac.id).length > 0;
     const metAny = G.Fac.all().some(o => o.id !== fac.id && G.Fac.rel(fac.id, o.id) && G.Fac.rel(fac.id, o.id).met);
     const allPop = G.Fac.pop(fac.id);
-    if (isCap && !c.quartel && metAny && fac.era >= 2 && allPop >= 20 && (atWar || pe.agg > 0.55 || fac.gov === 'tirania' || fac.st.battles > 0) && !G.Fac.has(fac.id, 'quartel')) want[atWar ? 'unshift' : 'push']('quartel');
+    if (isCap && !c.quartel && metAny && fac.era >= 2 && allPop >= 20 && (atWar || pe.agg > 0.55 || P.tyr(fac) || fac.st.battles > 0) && !G.Fac.has(fac.id, 'quartel')) want[atWar ? 'unshift' : 'push']('quartel');
     if (metAny && (atWar || fac.st.battles > 0 || fac.st.lost > 0) && (c.torre || 0) < 1 + Math.floor(pop / 26) && pop >= 10 && fac.stock.stone >= 8 && !(c.siteTypes && c.siteTypes.torre)) want[atWar ? 'unshift' : 'push']('torre');
     let caps = 0; for (const v of S.villagers.values()) if (v.captive && v.set === set.id) caps++;
     if (caps >= 3 && !c.cercado && !(c.siteTypes && c.siteTypes.cercado)) want.push('cercado');

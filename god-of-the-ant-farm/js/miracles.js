@@ -712,7 +712,7 @@
       } else if (kind === 'eclipse') {
         for (const v of ppl) { v.fear = Math.min(100, v.fear + 22); v.devotion = Math.min(100, v.devotion + 8); if (!v.inside && !v.sleeping && G.R() < 0.4) G.Vg.emote(v, 'fear', 3); }
         for (const b of [...G.War.bands.values()]) if (b.fac === f.id && G.R() < 0.6) { G.War.disband(b); omen.push(`o exército de ${f.name} largou as armas e voltou para casa`); break; }
-        if (f.gov === 'tirania') { for (const s of G.Fac.settlementsOf(f.id)) s.loyalty = Math.max(0, s.loyalty - 15); omen.push(`em ${f.name} sussurram que o céu julgou o tirano`); }
+        if (G.Politics.tyr(f)) { for (const s of G.Fac.settlementsOf(f.id)) s.loyalty = Math.max(0, s.loyalty - 15); omen.push(`em ${f.name} sussurram que o céu julgou o tirano`); }
         if (f.civ === 'asteca') omen.push(`os sacerdotes de ${f.name} dizem que o sol tem fome`);
         if (f.civ === 'nordico') omen.push(`em ${f.name} juram ter visto o lobo engolir o sol`);
         if (f.civ === 'egipcio') omen.push(`em ${f.name} dizem que a serpente atacou o barco do sol`);

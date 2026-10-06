@@ -103,7 +103,9 @@
     const im = b.dep || (b.dep = {}); im[k] = { from: a.id, n: ((im[k] && im[k].from === a.id ? im[k].n : 0) + n), day: S.day };
     // the merchant's house takes its share
     const h = E.homeOf(v); const cut = Math.round(value * 0.18 * 10) / 10;
-    if (h) { h.coin = (h.coin || 0) + cut; h.trade = (h.trade || 0) + value; h.tradeGood = k; checkElite(h, v, a, k); } else v.purse = (v.purse || 0) + cut;
+    const seized = G.Polity && (G.Polity.econOf(a) === 'estatal' || G.Polity.econOf(a) === 'comunal');
+    if (seized) { a.stock.moedas = (a.stock.moedas || 0) + cut; if (h) h.trade = (h.trade || 0) + value * 0.3; }
+    else if (h) { h.coin = (h.coin || 0) + cut; h.trade = (h.trade || 0) + value; h.tradeGood = k; checkElite(h, v, a, k); } else v.purse = (v.purse || 0) + cut;
     // the road gets a name when it is walked again and again
     const rt = routes(); const key = rkey(a.id, b.id, k); const ro = rt[key] || (rt[key] = { a: a.id, b: b.id, k, n: 0, since: S.day, val: 0 });
     ro.n++; ro.val += value; ro.last = S.day;
@@ -143,7 +145,7 @@
   Tr.eliteOf = function (fid) { const out = []; for (const h of G.S.buildings.values()) if (h.elite && G.Village.facOfSet(h.set) === fid) out.push(h); return out; };
   // a strong merchant elite under a cruel or greedy ruler: the council of merchants takes over
   function eliteTick(f) {
-    const S = G.S; if (f.gov === 'conselho' || f.gov === 'livre' || f.gov === 'tribo') return;
+    const S = G.S; if (G.Politics.free(f) || f.gov === 'tribo') return;
     const el = Tr.eliteOf(f.id); if (el.length < 2) return;
     const ruler = P.ruler(f); if (!ruler) return;
     const pe = P.persona(ruler); const vain = G.Court ? G.Court.vanity(ruler) : 0.4;

@@ -195,7 +195,7 @@
   }
 
   // ------------------------------ tribute before coin ------------------------------
-  const TRIB = { chefia: 0.15, reino: 0.2, imperio: 0.25, teocracia: 0.2, tirania: 0.35, conselho: 0.1, livre: 0.05 };
+  const TRIB = { chefia: 0.15, reino: 0.2, imperio: 0.25, teocracia: 0.2, tirania: 0.35, conselho: 0.1, livre: 0.05, parlamento: 0.16, feudal: 0.24, republica: 0.12, democracia: 0.1, oligarquia: 0.08, ditadura: 0.28, comuna: 0, anarquia: 0 };
   Co.tributeRate = f => (f && !E.coinage(f.id) ? (TRIB[f.gov] || 0) + (buildingPalace(f) ? 0.08 : 0) : 0);
   const oldEPlan = E.plan;
   E.plan = function (set, fac, c, want, pop) {
