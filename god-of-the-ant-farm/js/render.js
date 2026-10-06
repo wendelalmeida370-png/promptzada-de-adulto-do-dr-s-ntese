@@ -1205,7 +1205,7 @@
     for (const v of S.villagers.values()) if (v.age < 2 && v.carried) { const c = S.villagers.get(v.carrier); if (c) c.babyOn = v; }
     for (const v of S.villagers.values()) {
       if (v.inside || v.held || v.aboard || (v.age < 2 && v.carried)) continue;
-      const p = vis(v.x, v.y, W.groundH(v.x, v.y)); if (p) pushD(depth(v.x, v.y) + 0.05, 5, v, p[0], p[1] - (v.z || 0));
+      const p = vis(v.x, v.y, W.groundH(v.x, v.y)); if (p) pushD(depth(v.x, v.y) + 0.05 + (v.dz || 0), 5, v, p[0], p[1] - (v.z || 0));
     }
     for (const a of S.animals.values()) {
       if (a.held) continue; const sd = G.Animals.DEF[a.kind]; if (!sd) continue;

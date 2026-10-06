@@ -130,7 +130,7 @@
     heal: ['heal', 'green'], food: ['leaf', 'green'], stone: ['stone', 'grey'], boat: ['boat', 'blue'], flower: ['fertility', 'pink'], info: ['leaf', 'green'],
     tech: ['tech', 'blue'], city: ['city', 'gold'], ship: ['ship', 'blue'], naval: ['ship', 'red'], cart: ['cart', 'gold'], wall: ['wall', 'grey'], road: ['road', 'gold'],
     aqueduct: ['aqueduct', 'blue'], wonder: ['wonder', 'gold'], siege: ['ram', 'red'], sacrifice: ['sacrifice', 'red'], lore: ['book', 'gold'], prophecy: ['word', 'gold'], cave: ['cave', 'orange'], paint: ['cave', 'red'],
-    mountain: ['mountain', 'brown'], wave: ['wave', 'blue'], sea: ['wave', 'blue'], saga: ['saga', 'gold'],
+    mountain: ['mountain', 'brown'], wave: ['wave', 'blue'], sea: ['wave', 'blue'], saga: ['saga', 'gold'], secret: ['eye', 'purple'], scroll: ['book', 'gold'], rumor: ['word', 'grey'],
     fest: ['fest', 'gold'], coin: ['scale', 'gold'], theft: ['chain', 'red'], army: ['sword', 'red'], battle: ['sword', 'red'], general: ['crown', 'red'], plague: ['heal', 'red'],
     curral: ['wolves', 'green'], estabulo: ['wolves', 'green'], acougue: ['hammer', 'gold'], tecelagem: ['hammer', 'gold'], mina: ['stone', 'grey'], forja: ['hammer', 'gold'], ourives: ['hammer', 'gold'],
     olaria: ['hammer', 'gold'], feira: ['scale', 'gold'], taverna: ['hammer', 'gold'], administracao: ['scroll', 'gold'], coletoria: ['scale', 'gold'], mercado_negro: ['chain', 'grey'], estatua: ['star', 'gold'],
@@ -531,13 +531,14 @@
     if (kids.length) fam.push(`${kids.length > 1 ? 'Filhos' : (G.person(v.kids[0]) && G.person(v.kids[0]).g === 'f' ? 'Filha' : 'Filho')}: ${kids.join(', ')}`);
     const traits = (v.traits || []).map(t => `<span class="trait">${G.traitName(v, t)}</span>`).join('');
     if (v.dead) {
-      const cause = { old: 'Velhice', hunger: 'Fome', wolf: 'Atacad' + (f ? 'a' : 'o') + ' por lobos', boar: 'Atacad' + (f ? 'a' : 'o') + ' por um javali', fire: 'Incêndio', lightning: 'Raio', meteor: 'Meteoro', sick: 'Doença', fall: 'Queda', drown: 'Afogamento', war: 'Morte em combate', arrow: 'Flecha', massacre: 'Massacre', execution: 'Execução', coup: 'Assassinato', quake: 'Terremoto', sacrifice: 'Sacrifício aos deuses', plague: 'Peste', oil: 'Óleo fervente', arrow: 'Flecha' }[v.cause] || 'Desconhecida';
+      const cause = { old: 'Velhice', hunger: 'Fome', wolf: 'Atacad' + (f ? 'a' : 'o') + ' por lobos', boar: 'Atacad' + (f ? 'a' : 'o') + ' por um javali', fire: 'Incêndio', lightning: 'Raio', meteor: 'Meteoro', sick: 'Doença', fall: 'Queda', drown: 'Afogamento', war: 'Morte em combate', arrow: 'Flecha', massacre: 'Massacre', execution: 'Execução', riot: 'Morte num motim', coup: 'Assassinato', quake: 'Terremoto', sacrifice: 'Sacrifício aos deuses', plague: 'Peste', oil: 'Óleo fervente', arrow: 'Flecha' }[v.cause] || 'Desconhecida';
       const df = G.Fac.get(v.fac); const killer = v.by ? G.person(v.by) : null;
       const deadName = v.reigned ? esc(G.Politics.fullName(v)) : esc(v.name) + (v.ep ? ', ' + esc(G.Politics.epithet(v)) : '');
       return `<div class="insp-head"><div class="portrait dead"></div><div class="insp-title"><h3>${deadName} †</h3><div class="sub">Viveu ${age} anos · Dia ${Math.max(1, Math.round(v.born))} – Dia ${v.died}</div><div class="traits">${traits}</div></div><button class="x" data-act="close">${ICON.close}</button></div>
         ${df ? `<div class="fline">${UI.flag(df.id, 'mini')}${esc(df.name)}${v.reigned ? ' · governou' : ''}${v.captive ? ' · morreu no cativeiro' : ''}</div>` : ''}
         <div class="doing">Causa da morte: <b>${cause}</b>${killer && killer.id !== v.id ? ` — por <a data-pid="${killer.id}">${esc(killer.name)}</a>` : ''}${v.kills ? `<br>Derrubou ${v.kills} ${v.kills > 1 ? 'inimigos' : 'inimigo'} em vida.` : ''}</div>
         ${G.Stories ? G.Stories.personLine(v) : ''}
+      ${G.Secrets ? G.Secrets.personLine(v) : ''}
         <div class="family">${fam.map(x => `<div>${x}</div>`).join('') || '<div class="muted">Sem família conhecida.</div>'}</div>
         ${(() => { const body = G.Carnage && G.Carnage.list().find(c => c.vid === v.id); const t = body ? `O corpo ainda está no chão — ${G.Carnage.STAGE[G.Carnage.stage(body)]}${body.claim ? '; alguém está indo buscá-lo' : ''}.` : v.buried === 'pyre' ? 'O corpo foi queimado na pira dos inimigos.' : v.grave ? `Sepultad${f ? 'a' : 'o'} no cemitério.` : ''; return t ? `<div class="meta">${t}</div>` : ''; })()}
         <div class="btns"><button data-act="tree">${ICON.tree} Árvore genealógica</button><button data-act="bio">${ICON.book} Biografia</button></div>`;

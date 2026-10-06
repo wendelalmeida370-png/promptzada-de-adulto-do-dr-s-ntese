@@ -569,6 +569,7 @@
   };
   Wr.react = function (o, by) {
     const t = o.task;
+    if (t && (t.type === 'riot' || t.type === 'riotguard')) { G.Riots && G.Riots.hit(o, by); return; }
     if (t && (t.type === 'combat' || t.type === 'condemned' || t.type === 'escorted')) return;
     if (t && t.type === 'band') { t.foe = by.id; t.scan = 0.6; return; }
     if (o.captive && !by.captive) { G.Vg.fleeFrom(o, by.x, by.y, 6, 'war'); return; }
@@ -928,7 +929,7 @@
       case 'escorted': runEscorted(v, t, dt, H); return true;
       case 'escort': runEscort(v, t, dt, H); return true;
       case 'escape': runEscape(v, t, dt, H); return true;
-      case 'condemned': runCondemned(v, t, dt, H); return true;
+      case 'condemned': if (t.j && G.Justice) G.Justice.runDoomed(v, t, dt, H); else runCondemned(v, t, dt, H); return true;
       case 'assembly': runAssembly(v, t, dt, H); return true;
       case 'envoy': runEnvoy(v, t, dt, H); return true;
       case 'trade': runTrade(v, t, dt, H); return true;

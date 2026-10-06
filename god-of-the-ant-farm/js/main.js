@@ -174,7 +174,7 @@
     G.Carnage && G.Carnage.update(dt);
     G.Animals.updateAll(dt);
     G.Flora && G.Flora.update(dt);
-    G.Riches && G.Riches.update(dt); G.Estates && G.Estates.update(dt); G.Court && G.Court.update(dt); G.Trade && G.Trade.update(dt); G.Migrate && G.Migrate.update(dt); G.Nests && G.Nests.update(dt); G.Polity && G.Polity.update(dt);
+    G.Riches && G.Riches.update(dt); G.Estates && G.Estates.update(dt); G.Court && G.Court.update(dt); G.Trade && G.Trade.update(dt); G.Migrate && G.Migrate.update(dt); G.Nests && G.Nests.update(dt); G.Polity && G.Polity.update(dt); G.Justice && G.Justice.update(dt); G.Riots && G.Riots.update(dt); G.Secrets && G.Secrets.update(dt);
     G.Caves && G.Caves.update(dt);
     G.Pets && G.Pets.update(dt);
     G.Powers.update(dt);

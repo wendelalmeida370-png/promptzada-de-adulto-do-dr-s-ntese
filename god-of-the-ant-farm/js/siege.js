@@ -428,6 +428,8 @@
       const pe = G.Politics.leaderPe(f);
       if (G.R() > 0.18 + pe.pie * 0.25 + (G.Fac.enemiesOf(f.id).length ? 0.1 : 0)) continue;
       const v = G.pick(caps);
+      // (the sacrifice is a ceremony on top of the temple, with the whole town below)
+      if (G.Justice && G.Justice.sacrifice(f, v)) return;
       const [fx, fy] = G.Village.frontTile(temple);
       G.Vg.endTask(v);
       G.Vg.setTask(v, { type: 'condemned', x: fx, y: fy, pri: 6, kind: 'condemned' });

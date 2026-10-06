@@ -17,7 +17,7 @@
   const oa = v => (v.g === 'f' ? 'a' : 'o');
 
   // deaths that leave a body in the field
-  const BODY = { war: 1, arrow: 1, massacre: 1, execution: 1, coup: 1, sacrifice: 1, beast: 1, wolf: 1, boar: 1, fall: 1, lightning: 1 };
+  const BODY = { war: 1, arrow: 1, massacre: 1, execution: 1, riot: 1, coup: 1, sacrifice: 1, beast: 1, wolf: 1, boar: 1, fall: 1, lightning: 1 };
   // stages, in days: fresh, swollen, dry, bones, gone
   const ROT = 0.45, DRY = 1.6, BONES = 3.2, GONE = 18;
   let corpses = [], pyres = [], nextId = 1;
@@ -164,7 +164,7 @@
     const S = G.S;
     const busy = new Map(); for (const v of S.villagers.values()) if (v.task && v.task.type === 'corpse') busy.set(v.set, (busy.get(v.set) || 0) + 1);
     for (const c of corpses) {
-      if (c.claim || c.t < 8) continue;
+      if (c.claim || c.t < 8 || c.pose) continue;
       if (c.feeder && G.S.clock - (c.feedT || 0) < 20 && G.S.animals.has(c.feeder)) continue;
       if (c.claim === 0 && c.skip && S.clock < c.skip) continue;
       const set = G.Village.nearestSettlement(c.x, c.y);
@@ -348,6 +348,8 @@
   }
   function drawCorpse(ctx, o, sx, sy, t, nightF) {
     const c = o.c; const S = G.S;
+    // shown on the gallows, the cross, the stake: justice draws them
+    if (c.pose && G.Justice) { G.Justice.drawPosed(ctx, c, sx, sy, t); return; }
     const st = C.stage(c); const days = c.t / DAY();
     ctx.save(); ctx.translate(sx, sy);
     if (days > GONE - 4) ctx.globalAlpha = G.clamp((GONE - days) / 4, 0, 1);

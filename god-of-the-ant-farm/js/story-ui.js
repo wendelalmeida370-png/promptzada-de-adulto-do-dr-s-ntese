@@ -13,7 +13,7 @@
   const trim = (s, n) => (s && s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s || '');
   const facName = id => { const f = G.Fac.get(id); return f ? f.name : ''; };
   const setName = id => { const s = G.S.settlements.get(id); return s ? s.name : ''; };
-  const ROLE = { victim: 'Por quem', target: 'O alvo', captive: 'Cativ{o}', teller: 'Quem contou', lost: 'Por quem reza', ruler: 'Governante', antes: 'Carregou antes' };
+  const ROLE = { victim: 'Por quem', target: 'O alvo', captive: 'Cativ{o}', teller: 'Quem contou', lost: 'Por quem reza', ruler: 'Governante', antes: 'Carregou antes', comp: 'Foi junto' };
   const TONE_CLS = { feliz: 'happy', tragico: 'tragic', agridoce: 'bitter', sereno: 'calm' };
   // each kind of story has its colour (the banner, the strip, the seal)
   const HUE = { vinganca: '#c8574b', resgate: '#d89a4a', volta: '#7fb36a', reconquista: '#a476d6', sonho: '#5ea9dc', peregrinacao: '#e3c46c', cacada: '#c27a3a', 'fera-rara': '#d8d2c4', caravana: '#c9a050', palacio: '#e6b84a', perola: '#6a7a9a', ninho: '#e8a0a8', migracao: '#b8a060', 'guerra-rica': '#a0603e' };

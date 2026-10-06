@@ -362,7 +362,7 @@
     boar: ['foi morto por um javali', 'foi morta por um javali'], lightning: ['foi fulminado por um raio', 'foi fulminada por um raio'],
     meteor: ['foi esmagado por um meteoro', 'foi esmagada por um meteoro'], fall: 'caiu das mãos de deus', drown: 'se afogou', war: 'tombou em batalha',
     massacre: ['foi massacrado', 'foi massacrada'], arrow: ['foi atingido por uma flecha', 'foi atingida por uma flecha'], execution: ['foi executado', 'foi executada'],
-    coup: ['foi assassinado', 'foi assassinada'],
+    coup: ['foi assassinado', 'foi assassinada'], riot: ['foi morto pela guarda num motim', 'foi morta pela guarda num motim'],
   };
   const deathTxt = (cause, v) => { const d = DEATH_TXT[cause] || 'morreu'; return Array.isArray(d) ? d[v.g === 'f' ? 1 : 0] : d; };
   P.onDeath = function (v, cause, killerId, byGod) {
@@ -548,7 +548,7 @@
     return true;
   };
   function execTick(f, dt) {
-    const e = f.exec; if (!e) return;
+    const e = f.exec; if (!e || e.j) return;
     const S = G.S; e.t += dt;
     const v = S.villagers.get(e.v);
     if (!v || !v.task || v.task.type !== 'condemned') { f.exec = null; return; }

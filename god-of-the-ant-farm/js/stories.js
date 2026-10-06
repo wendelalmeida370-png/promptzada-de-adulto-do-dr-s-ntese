@@ -40,7 +40,7 @@
   const recent = {}; // the variants of each storylet said lately, so two stories in a row don't use the same words
   const facName = id => { const f = G.Fac.get(id); return f ? f.name : 'um povo esquecido'; };
   const setName = id => { const s = G.S.settlements.get(id); return s ? s.name : null; };
-  const VIOLENT = { war: 1, arrow: 1, massacre: 1, execution: 1, coup: 1, sacrifice: 1 };
+  const VIOLENT = { war: 1, arrow: 1, massacre: 1, execution: 1, riot: 1, coup: 1, sacrifice: 1 };
 
   // ============================== state ==============================
   function fresh() { return { v: 1, facts: [], nf: 1, seeds: [], stories: [], ns: 1, mem: [], know: {}, wars: {}, lastPromo: -1e9 }; }

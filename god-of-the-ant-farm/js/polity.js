@@ -360,6 +360,7 @@
     if (g.povo.n && g.povo.sat < 42 && f.stock.food > pop * 6 && S.day - ((f.pol || {}).pao || { day: -99 }).day >= 7) opts.push(['pao', 0.3 + (1 - pe.cru) * 0.2]);
     if (pe.pie > 0.65 && g.sacerdotes.n && g.sacerdotes.sat < 55 && G.Fac.has(f.id, 'temple') && S.day - ((f.pol || {}).dizimo || { day: -99 }).day >= 10) opts.push(['dizimo', 0.25 + pe.pie * 0.2]);
     if (!opts.length) return;
+    G.Secrets && G.Secrets.bend(f, opts);
     opts.sort((a, b) => b[1] - a[1]);
     const [k, u] = opts[0];
     if (u < 0.45 || G.R() > 0.55) return;
@@ -533,7 +534,7 @@
       let best = null, bs = -1e9;
       for (const c of cands) {
         let s = c.grp === v.grp ? 3 : ((AFF[WISH[c.grp] ? WISH[c.grp][0] : 'conselho'] || {})[v.grp] || 0) / 10;
-        s += G.hash(v.id * 7 + c.id) * 2 + (c === r ? (g[v.grp] ? (g[v.grp].sat - 50) / 15 : 0) : 0) + (St() && St().relOf(v, c) ? 4 : 0);
+        s += G.hash(v.id * 7 + c.id) * 2 + (c === r ? (g[v.grp] ? (g[v.grp].sat - 50) / 15 : 0) : 0) + (St() && St().relOf(v, c) ? 4 : 0) + (G.Secrets ? G.Secrets.voteBias(v, c) : 0);
         if (s > bs) { bs = s; best = c; }
       }
       votes.set(best.id, votes.get(best.id) + w);
@@ -550,6 +551,8 @@
     G.Stories && G.Stories.signal('election', { fac: f.id, who: win.id, lost: second ? second.id : 0, x: at[0], y: at[1] });
   }
   const St = () => G.Stories;
+  // the street rises (riots.js)
+  Po.riot = (f, set, why, o) => (G.Riots ? G.Riots.start(f, set, why, o) : null);
   // the people gather in the square: to vote, to get bread, to hear a sentence
   Po.crowd = function (set, why) {
     if (!set) return; const S = G.S; const f = G.Fac.get(set.fac); const at = (f && Po.seat(f)) || [set.cx, set.cy];
@@ -594,6 +597,7 @@
         Po.decide(f);
         if (!f.pet && !f.rev && !f.coup) { const g = f.grp; const k = GK.filter(x => g[x].n && g[x].sat < 35 && g[x].inf >= 12 && (g[x].press || 0) >= 1 && S.day - (g[x].pet || -99) >= 3).sort((a, b) => g[b].inf - g[a].inf)[0]; if (k && G.R() < 0.5 && petition(f, k)) g[k].pet = S.day; }
         escalate(f);
+        G.Riots && G.Riots.consider(f);
       }
     }
     // a petition left unanswered (the ruler away, the road blocked) is answered anyway

@@ -1027,6 +1027,15 @@
       else if (warrior) { c.fillStyle = '#8a8e96'; c.beginPath(); c.arc(0, hy - 0.8, 2.35, Math.PI, TAU); c.fill(); c.fillRect(-2.35, hy - 0.9, 4.7, 0.7); c.fillStyle = v._fc || '#c83a2a'; c.fillRect(-0.4, hy - 4.2, 0.8, 1.6); }
     }
     }
+    // the robe of a secret order: a long cloak and a deep hood, the face lost in its shadow
+    if (v.robe && !v.headless && !v.hood) {
+      c.fillStyle = v.robe; c.beginPath(); c.moveTo(-2.2, -9.4); c.lineTo(2.2, -9.4); c.lineTo(3.3, -0.3); c.lineTo(-3.3, -0.3); c.closePath(); c.fill();
+      c.fillStyle = 'rgba(0,0,0,0.22)'; c.fillRect(-0.25, -9, 0.5, 8.6);
+      c.fillStyle = v.robe; c.beginPath(); c.arc(0, hy, 2.7, Math.PI * 0.8, Math.PI * 2.2); c.lineTo(2.4, hy + 2.6); c.lineTo(-2.4, hy + 2.6); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(-2.4, hy - 0.8); c.quadraticCurveTo(-1.2, hy - 4.6, 0.4, hy - 3.6); c.lineTo(1.6, hy - 1.4); c.fill();
+      c.fillStyle = 'rgba(8,6,10,0.78)'; c.beginPath(); c.ellipse(0.7, hy + 0.4, 1.35, 1.7, 0, 0, TAU); c.fill();
+      if (v.robeMark) { c.fillStyle = v.robeMark; c.fillRect(-0.5, -7.4, 1, 1); }
+    }
     if (v.hood && !v.headless) { c.fillStyle = '#16121a'; c.beginPath(); c.arc(0, hy, 2.35, 0, TAU); c.fill(); c.beginPath(); c.moveTo(-2.3, hy - 0.6); c.lineTo(0.1, hy - 5.2); c.lineTo(2.3, hy - 0.6); c.closePath(); c.fill(); c.fillRect(-2.5, hy + 1, 5, 2.4); c.fillStyle = '#e8dcc8'; c.fillRect(0.4, hy - 0.5, 0.7, 0.45); c.fillRect(1.5, hy - 0.5, 0.6, 0.45); }
     // baby on the back
     if (v.babyOn) { c.fillStyle = '#f4efe3'; c.beginPath(); c.ellipse(-2.6, -8, 1.5, 2, 0.3, 0, TAU); c.fill(); c.fillStyle = v.babyOn.skin; c.beginPath(); c.arc(-2.7, -9.8, 1.1, 0, TAU); c.fill(); }
