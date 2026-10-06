@@ -123,10 +123,13 @@
     }
     return best;
   }
+  // (the beavers are few among many animals: the list is refreshed now and then, not searched every step)
+  let beavers = [], bT = 99, bFor = null;
   function beaverTick(dt) {
     const S = G.S; if (!SP.beaver) return;
-    for (const a of S.animals.values()) {
-      if (a.kind !== 'beaver' || a.dead || a.held) continue;
+    bT += dt; if (bT > 2 || bFor !== S) { bT = 0; bFor = S; beavers = []; for (const a of S.animals.values()) if (a.kind === 'beaver') beavers.push(a); }
+    for (const a of beavers) {
+      if (a.dead || a.held || !S.animals.has(a.id)) continue;
       let d = a.dam && dams().find(q => q.id === a.dam);
       if (!d) { d = dams().find(q => G.dist(q.x, q.y, a.x, a.y) < 10); if (!d && G.R() < dt * 0.02) { const p = narrowRiver(a.x, a.y, 8); if (p) { d = { id: S.nextId++, x: p[0], y: p[1], prog: 0, trees: 0 }; dams().push(d); } } if (d) a.dam = d.id; else continue; }
       // gnawing a tree down by the stream
