@@ -16,7 +16,7 @@
   const ROLE = { victim: 'Por quem', target: 'O alvo', captive: 'Cativ{o}', teller: 'Quem contou', lost: 'Por quem reza', ruler: 'Governante', antes: 'Carregou antes' };
   const TONE_CLS = { feliz: 'happy', tragico: 'tragic', agridoce: 'bitter', sereno: 'calm' };
   // each kind of story has its colour (the banner, the strip, the seal)
-  const HUE = { vinganca: '#c8574b', resgate: '#d89a4a', volta: '#7fb36a', reconquista: '#a476d6', sonho: '#5ea9dc', peregrinacao: '#e3c46c', cacada: '#c27a3a' };
+  const HUE = { vinganca: '#c8574b', resgate: '#d89a4a', volta: '#7fb36a', reconquista: '#a476d6', sonho: '#5ea9dc', peregrinacao: '#e3c46c', cacada: '#c27a3a', 'fera-rara': '#d8d2c4', caravana: '#c9a050', palacio: '#e6b84a', perola: '#6a7a9a', ninho: '#e8a0a8', migracao: '#b8a060', 'guerra-rica': '#a0603e' };
   const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX', 'XXI', 'XXII', 'XXIII', 'XXIV'];
   const ic = name => (G.ICON && G.ICON[name]) || (G.ICON && G.ICON.saga) || '';
   const $ = s => document.querySelector(s);

@@ -130,6 +130,8 @@
   const pending = [];
   St.signal = function (kind, d) { if (!G.S || (G.Main && G.Main.mode === 'menu')) return; pending.push([kind, d]); if (pending.length > 400) pending.shift(); };
   const OBS = {};
+  // (other modules teach the observer new kinds of moments)
+  St.observe = (k, fn) => { OBS[k] = fn; };
   function flush() {
     while (pending.length) {
       const [k, d] = pending.shift();
@@ -158,6 +160,7 @@
     for (const story of s.stories) if (story._touch) { delete story._touch; if (f.id && !story.facts.includes(f.id)) story.facts.push(f.id); }
     return f;
   }
+  St.draft = (k, o) => draft(k, o); St.offer = f => offer(f); St.learn = (pid, fid, how) => learn(pid, fid, how);
   St.plantFrom = function (type, sd, fid) { const f = factById(fid) || { id: fid }; plant(type, Object.assign({ keyExtra: 'p' + fid }, sd), f); };
   function plant(type, sd, f) {
     const s = st(); const def = DEF[type];

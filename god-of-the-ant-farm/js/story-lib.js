@@ -1295,5 +1295,7 @@
     taskText: (s, v, t) => (t.sub === 'espera' ? `Esperando ${s.data.beastName} sair da toca` : `No rastro de ${s.data.beastName}`),
   });
 
+  // (the helpers other libraries of stories use)
+  St.lib = { P, alive, pe, has, facOf, facName, setName, atWar, desc, kinNear, homeOf, roadBeat, campBeat, tellKids, deathTxt, free, homeSafe, withArt, deArt, em, ao, por, titled, capName, cap1, lhe, REL_W, REL_POSS, REL_BARE };
   St.init();
 })(window.G);

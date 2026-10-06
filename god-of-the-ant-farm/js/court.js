@@ -138,7 +138,7 @@
     if (b.type === 'palacio_colossal') {
       log(`${r ? r.name : 'O governante'}, ${r && r.g === 'f' ? 'rainha' : 'rei'} de ${f.name}, não se contenta com pouco: mandou erguer, fora de ${set.name}, o maior palácio que o mundo já viu. Metade dos construtores vai carregar pedra para ele.`, 'crown', x, y);
       G.Stories && G.Stories.signal('palace', { who: r ? r.id : 0, fac: f.id, type: b.type, b: b.id, x, y });
-    } else if (b.type === 'grande_palacio') log(`${r ? r.name : 'O governante'} de ${f.name} quer um palácio à sua altura: começaram as obras ${G.gen(G.Village.buildName(b)) === 'a' ? 'da' : 'do'} ${G.Village.buildName(b)}, com alas e jardins.`, 'crown', x, y);
+    } else if (b.type === 'grande_palacio') G.Stories && G.Stories.signal('palace', { who: r ? r.id : 0, fac: f.id, type: b.type, b: b.id, x, y }), log(`${r ? r.name : 'O governante'} de ${f.name} quer um palácio à sua altura: começaram as obras ${G.gen(G.Village.buildName(b)) === 'a' ? 'da' : 'do'} ${G.Village.buildName(b)}, com alas e jardins.`, 'crown', x, y);
     else if (b.type === 'paco' && r && Co.vanity(r) < 0.18) log(`${r.name}, de ${f.name}, não quis palácio: mandou fazer uma casa só um pouco maior que as dos vizinhos.`, 'crown', x, y);
   };
   // builders: a great palace takes the town's hands
@@ -161,7 +161,7 @@
     const f = set && G.Fac.get(set.fac); if (!f) return true;
     const nm = G.Village.buildName(b); const [cx, cy] = G.Village.center(b);
     if (b.type === 'paco') log(`${f.name} tem agora ${G.gen(nm) === 'a' ? 'a sua' : 'o seu'} ${nm}, em ${set.name}.`, 'crown', cx, cy);
-    else if (b.type === 'grande_palacio') { log(`Ficou pronto ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}: alas, um pátio com fonte, jardins. ${f.name} recebe ali os enviados dos outros povos.`, 'crown', cx, cy); f.legit = Math.min(100, (f.legit || 50) + 16); }
+    else if (b.type === 'grande_palacio') { log(`Ficou pronto ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}: alas, um pátio com fonte, jardins. ${f.name} recebe ali os enviados dos outros povos.`, 'crown', cx, cy); f.legit = Math.min(100, (f.legit || 50) + 16); G.Stories && G.Stories.signal('palaceDone', { fac: f.id, b: b.id, x: cx, y: cy }); }
     else {
       const yrs = Math.max(1, G.S.day - (b.born || G.S.day));
       log(`Depois de ${yrs} ${yrs > 1 ? 'anos' : 'ano'}, ficou pronto ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}: telhados de ouro, fontes, uma avenida de estátuas e jardins até onde a vista alcança. Não há no mundo coisa igual.`, 'wonder', cx, cy);

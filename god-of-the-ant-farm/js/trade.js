@@ -116,6 +116,7 @@
       const who = v.ship ? `Um navio de ${a.name}` : `${v.name}, mercador${v.g === 'f' ? 'a' : ''} de ${a.name},`;
       log(`${who} vendeu ${n} de ${E.name(k)} em ${b.name}${back ? ' e volta com ' + back.n + ' de ' + E.name(back.k) : ''}.`, 'trade', v.x, v.y);
     }
+    if (v.id && !v.ship) G.Stories && G.Stories.signal('luxSale', { who: v.id, a: a.id, b: b.id, k, n, value: Math.round(value), back: back ? back.k : '' });
     checkMonopoly(a, k);
     return true;
   };
@@ -185,7 +186,7 @@
       if (!best || w > best.w) best = { w, k };
     }
     if (!best) return null;
-    best.why = `para tomar ${PLACE[best.k] || E.name(best.k)} de ${b.name}`;
+    best.why = `para tomar ${PLACE[best.k] || E.name(best.k)} de ${b.name}`; Tr._whyK = best.k;
     return best;
   };
 
@@ -205,7 +206,7 @@
       log(`Guerreiros de ${o.name} cercaram a caravana de ${a ? a.name : 'mercadores'} e levaram ${n} de ${E.name(k)}. ${v.name} escapou de mãos vazias.`, 'war', v.x, v.y);
       G.Stories && G.Stories.signal('robbery', { who: v.id, by: own, fac: t.from, k });
       // a road robbed twice is a cause for war
-      if (a && ro && ro.robbed >= 2 && r.st !== 'guerra' && P.leaderPe(a).agg > 0.35) { Tr._why = `para proteger a ${ro.name || routeName(k)}`; P.declareWar(a, o, 'rota'); }
+      if (a && ro && ro.robbed >= 2 && r.st !== 'guerra' && P.leaderPe(a).agg > 0.35) { Tr._why = `para proteger a ${ro.name || routeName(k)}`; Tr._whyK = k; P.declareWar(a, o, 'rota'); }
       G.Vg.endTask(v);
     }
   }

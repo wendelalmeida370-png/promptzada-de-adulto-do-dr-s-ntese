@@ -727,7 +727,7 @@
     r.op = Math.min(r.op, -30);
     a.attackCD = G.rr(20, 50); b.attackCD = Math.max(b.attackCD || 0, G.rr(50, 110));
     const why = reason === 'ambicao' ? `pela ambição de ${P.styled(a, P.ruler(a))}` : (reason === 'riqueza' || reason === 'rota') && G.Trade && G.Trade._why ? G.Trade._why : REASON[reason] || '';
-    if (reason === 'riqueza' || reason === 'rota') { r.riches = G.Trade && G.Trade._why; G.Stories && G.Stories.signal('richesWar', { a: a.id, b: b.id, why: r.riches, reason }); }
+    if (reason === 'riqueza' || reason === 'rota') { r.riches = G.Trade && G.Trade._why; G.Stories && G.Stories.signal('richesWar', { a: a.id, b: b.id, why: r.riches, reason, k: G.Trade && G.Trade._whyK || '' }); }
     const cb = G.Fac.capitalOf(b.id);
     log(`${a.name} declarou guerra a ${b.name}${why ? ' — ' + why : ''}.`, 'war', cb ? cb.cx : undefined, cb ? cb.cy : undefined);
     if (!S.milestones.firstWar) { G.Village.milestone('firstWar', 'A primeira guerra', `${a.name} contra ${b.name}.`, 'war'); }

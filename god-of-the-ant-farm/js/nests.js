@@ -26,6 +26,7 @@
   const EGG = { goose: '#f2ecd8', penguin: '#f6f6f2', gull: '#c8c0a0', eagle: '#ece4d0', raven: '#7aa8a0', parrot: '#f6f2e8', heron: '#a8c8c0', stork: '#f6f2ea', toucan: '#f6f2ea', owl: '#f6f6f2' };
   function onTree(t) { for (const n of nests()) if (n.type === 'tree' && n.host === t.id) return true; return false; }
   function onRoof(b) { for (const n of nests()) if (n.type === 'roof' && n.host === b.id) return true; return false; }
+  Ne.get = id => nests().find(n => n.id === id) || null;
   Ne.storkOn = bid => nests().some(n => n.type === 'roof' && n.host === bid && n.st !== 'empty');
   function site(a, type) {
     const S = G.S;
@@ -54,6 +55,7 @@
     const s = site(a, type); if (!s) return;
     const n = { id: S.nextId++, kind, type, host: s.host, x: s.x, y: s.y, st: 'build', t: 0, eggs: 0, chicks: 0, parent: a.id };
     nests().push(n); a.nest = n.id; a.hx = s.x; a.hy = s.y;
+    G.Stories && G.Stories.signal('nest', { id: n.id, kind, type, host: s.host || 0, x: s.x, y: s.y });
     if (type === 'roof' && G.R() < 0.6) { const b = S.buildings.get(s.host); const set = b && S.settlements.get(b.set); const f = set && G.Fac.get(set.fac); if (set && !(f && f._storkLog)) { if (f) f._storkLog = S.day; log(`Um casal de cegonhas fez ninho no telhado ${b.type === 'temple' ? 'do templo' : b.type === 'torre' ? 'da torre' : 'de uma casa'} de ${set.name}. Dizem que cegonha no telhado traz filho para a casa.`, 'bird', s.x, s.y); } }
   }
   // the year of a nest

@@ -82,7 +82,7 @@
     void from;
     log(`${G.cap(why)}: ${group.length} ${nm} partiram${toTxt}${ford ? `, cruzando o rio${crocs ? ' — e os crocodilos esperam na travessia' : ''}` : ''}${preds ? `, com ${preds > 1 ? 'predadores' : 'um predador'} no rastro` : ''}.`, 'deer', cx, cy);
     G.Lore && G.Lore.note('migration', { kind: group[0].kind, n: group.length, where: to.name });
-    G.Stories && G.Stories.signal('migration', { kind: group[0].kind, n: group.length, x: cx, y: cy, tx: dest[0], ty: dest[1], ford: !!ford });
+    G.Stories && G.Stories.signal('migration', { kind: group[0].kind, n: group.length, x: cx, y: cy, tx: dest[0], ty: dest[1], ford: !!ford, fx: ford ? ford[0] : 0, fy: ford ? ford[1] : 0, crocs, preds });
   }
   // the savanna herds follow the rains: to the wettest grass when the dry season comes, back to the open plains with the rains
   const SAVANNA = ['gnu', 'zebra', 'gazelle'];

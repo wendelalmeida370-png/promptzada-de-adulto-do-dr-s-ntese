@@ -133,12 +133,57 @@ Os povos preferem começar onde se sentem em casa (nórdicos no frio, egípcios 
 
 ## Animais e cadeias alimentares
 
-- **40 espécies** na terra, no mar (golfinhos, focas, baleias, tubarões, orcas, tartarugas) e no céu (gaivotas, águias, abutres, corvos, araras, garças, flamingos).
+- **Mais de 70 espécies** na terra (de tigres, leopardos-das-neves, rinocerontes, búfalos, bisões, gnus, alces, cabras-montesas, castores, lontras, preguiças, avestruzes e sucuris a cervos, lobos e elefantes), no mar (golfinhos, focas, morsas, baleias, tubarões, orcas, tartarugas) e no céu (gaivotas, águias, abutres, corvos, araras, tucanos, corujas, cegonhas, gansos-selvagens, garças, flamingos).
 - **Plantas → herbívoros → predadores → predadores de topo.** O capim cresce em cada pedaço de chão e é pastado; herbívoros comem capim, folhas e frutos; predadores caçam herbívoros; urso, leão, onça, crocodilo, tubarão, orca e águia estão no topo. Carniceiros (hienas, abutres, corvos) limpam as carcaças, e a carniça aduba o chão de novo.
 - Cada espécie tem **habitat**, **fome**, **idade**, **filhotes** e um **limite** que a terra aguenta. Se os lobos somem, os cervos explodem — e depois passam fome. Espécies extintas podem voltar, aos poucos, vindas de terras distantes.
 - Predadores perseguem, emboscam (onças, jiboias e crocodilos ficam de tocaia), e os mais ousados atacam gente sozinha — um bicho que mata duas pessoas ganha nome e vira lenda.
 - Os caçadores caçam o que existe por perto; os pescadores disputam os cardumes com as focas e as garças.
 - Clique num animal para ver o que ele come, quem o caça, onde vive e quantas vítimas fez. O **Bestiário** (no Livro do Mundo) mostra a teia alimentar inteira com as populações reais e sua história.
+
+### Bichos que pensam, raros que valem uma fortuna, migrações e ninhos
+
+- **Comportamento de verdade**: os grandes felinos se agacham e se esgueiram rente ao capim antes do **bote**; lobos e leões **cercam pelos flancos** para a presa correr para a boca do líder; o leopardo **sobe a caça na árvore**; o crocodilo **arrasta para o fundo** e gira; a sucuri **enrola e aperta**. A presa se debate, há sangue e carne voando, os carniceiros chegam depois. **Macacos** vivem em bando no alto das árvores — comem, se catam, vigiam — e passam de uma copa para outra **balançando num cipó**. Elefantes **velam os seus mortos**.
+- **Raros**: de vez em quando nasce um bicho de pelagem rara — o **tigre branco**, a **pantera-negra**, o leão branco, o elefante branco, o cervo branco, o lobo negro. É uma visão, uma lenda e uma fortuna: os caçadores largam tudo para ir atrás, e quem traz a pele vira assunto da cidade inteira.
+- **Migrações com motivo**: na savana, **gnus, zebras e gazelas** deixam o pasto que comeram até o chão (mais cedo na seca) e vão atrás do capim mais verde, **atravessando os rios** onde os **crocodilos** os esperam no vau — com **leões e hienas** no rastro. Os **bisões** seguem o capim das planícies. Todo ano as **renas** sobem para a tundra para dar cria e descem de volta para o abrigo da taiga, com os lobos atrás. **Gansos e cegonhas** voam em **formação de V** entre o frio e os brejos quentes. E no fim de cada verão os **salmões sobem os rios frios** saltando nas cachoeiras — onde os **ursos** ficam de pé na água pescando.
+- **Ninhos**: papagaios, corvos, garças, tucanos e corujas nas árvores grandes; **cegonhas no telhado** das casas (e casa com cegonha, dizem, terá filho — e de fato um pouco mais); águias e gaivotas nos paredões; gansos e pinguins no chão (raposas e corvos roubam os ovos). Primeiro os gravetos, depois os ovos, um dos pais chocando, os filhotes de bico aberto — e um dia eles voam. O povo para na rua para olhar, e as crianças passam horas de pescoço esticado. Os **castores** roem as árvores da beira de um riacho, fazem uma **represa** e constroem a toca na água parada.
+
+## Riquezas da terra, dos bichos e do mar
+
+Além de pão e madeira, o mundo dá **25 riquezas**, cada uma com seu preço, sua região e quem a deseja:
+
+| De onde vem | Riquezas |
+|---|---|
+| **Bichos** | **marfim** (elefantes), **peles** (lobos, ursos, raposas, felinos), **pele rara** (vale mais que uma casa), **couro exótico** (cobras e crocodilos), **chifre** de rinoceronte, **plumas** (avestruzes, araras), **óleo de baleia**, **carne-seca**, **queijo** |
+| **Plantas** | **mel** e **cera**, **seda**, **cacau**, **café**, **especiarias**, **azeite**, **vinho**, **tâmaras**, **incenso** |
+| **Mar e rios** | **sal**, **bacalhau**, **atum**, **camarão**, **pérolas**, **coral** |
+
+- **O caçador esfola** a caça onde ela caiu e volta com a carne num ombro e a pele (ou as presas, ou as plumas) no outro; a primeira vez que um povo traz marfim ou plumas, a crônica registra. Na feira se vê o que a cidade tem: presuntos pendurados, cervo, o peixe do dia, queijos, jarros de azeite e vinho, sacos de café.
+- **Frutas na árvore**: maçãs, azeitonas e amoras nas matas temperadas; **banana, cacau, café, pimenta e açaí** na selva; **tâmaras e olíbano** onde o deserto encontra a água. O fruto amadurece no galho (e aparece lá), macacos, pássaros e ursos comem, gente sobe e enche o cesto. **Abelhas** penduram favos nas árvores velhas perto das flores; o mel é tirado com fumaça — e um urso também sabe tirá-lo.
+- As casas ricas querem o que é raro; cidades com fome comem as reservas salgadas e secas.
+
+### Propriedades: pomares, plantações, vinhedos, apiários, salinas e seda
+
+- Cada povo planta **só o que cresce ali e o que conhece**: das árvores selvagens por perto, dos próprios costumes ou do que as caravanas trouxeram. **Pomares** (maçã, oliva, tâmara, banana, açaí, amora), **plantações** de cacau, café, pimenta e olíbano, **vinhedos** com a tina onde se pisa a uva, **apiários** de colmeias, **salinas** na beira do mar (o salineiro rasteleia o sal em montes), a **casa da seda** (as lagartas comem folha de amoreira e o fio é desenrolado do casulo — um povo pode **descobrir a seda**) e o **pátio da salga**, onde o peixe vira bacalhau seco.
+- Cada uma tem seus ofícios — fruticultor, lavrador, vinhateiro, apicultor, salineiro, sericultor, salgador — e suas animações: colher no galho, defumar a colmeia, pisar a uva, girar a prensa, rastelar o sal, desenrolar a seda, salgar o peixe. Cativos são mandados para as plantações e as salinas.
+- **As roças mudam com a terra**: trigal, cevada, **arrozal** alagado, **milharal**, sorgo.
+
+### O palácio, o cobrador e a taverna
+
+- **Cada governante tem a sua vaidade**: um chefe modesto mora numa casa só um pouco maior que as outras (o **paço**); um rei orgulhoso ergue um **palácio**; um vaidoso, um **grande palácio** com alas e jardins; e o mais vaidoso de todos quer o **maior palácio do mundo** — o **palácio colossal**, fora da cidade, com telhados de ouro, fontes e uma avenida de estátuas. Para isso ele tira metade dos construtores de todas as outras obras, **sobe os impostos**, deixa as roças esperando — e o povo resmunga (o contrabando cresce). Cada civilização ergue o seu: colunas com flores de papiro e obeliscos, pirâmide de degraus, salão comprido como um navio, colunas de mármore e cúpula.
+- **Antes da moeda há tributo**: os cobradores batem de porta em porta com a sua tábua de contas e levam ao chefe sacos do que as casas têm.
+- **A taverna** abre cedo; à noite há vinho e **música** (notas flutuando no ar), **bêbados** voltando para casa cambaleando — e de vez em quando uma **briga**.
+
+### Peixes de cada água
+
+- **Bacalhau e arenque só nos mares frios**, sardinha nos temperados, **atum** no mar quente e fundo, garoupa sobre os recifes, lagosta e polvo entre as pedras, **camarão** nas fozes lamacentas e nos mangues. **Salmão e truta** nos rios frios, carpa e enguia nos lagos, tilápia e bagre nos rios quentes, o gigante **pirarucu** (e as **piranhas**, que mordem quem entra) nos rios da selva — 17 espécies, cada uma com o seu valor. A crônica registra o primeiro de cada um, e um povo que pesca muito **vive da pesca**: bacalhau e atum viram riqueza de comércio.
+- Onde o mar é quente e tem coral, os **mergulhadores de pérolas** nadam até o recife, mergulham três vezes e voltam com ostras — às vezes com uma **pérola**, um galho de **coral** ou, muito raramente, uma **pérola negra**.
+
+### Comércio de luxo: rotas, casas de mercadores, monopólios e guerras
+
+- Um povo com marfim, seda, café ou pérolas sobrando manda um **mercador com um cavalo de carga** (o asteca carrega nas costas) a um povo que não tem; voltam moedas ou outras mercadorias. O mesmo caminho percorrido de novo e de novo ganha nome — a **Rota do Marfim**, a **Rota da Seda**, a Rota do Café — e os navios também levam riquezas pelo mar.
+- Os mercadores enriquecem: a casa deles ganha **bandeira na porta**, e uma **elite de mercadores** pode, um dia, derrubar um tirano vaidoso de impostos altos e governar como **conselho**.
+- Um povo que é o único a vender algo tem o **monopólio** e cobra mais caro; um que compra e não sabe produzir pode **cobiçar os cafezais do vizinho** e ir à guerra por eles. Caravanas que cruzam terra hostil são **roubadas** — e uma estrada roubada duas vezes é motivo de guerra.
+- No painel **Reinos**, cada povo mostra as suas rotas, casas de mercadores, monopólios e do que vive.
 
 ## Civilizações
 
@@ -358,7 +403,7 @@ Cada mundo nasce com **nome**, **mito da criação**, **lendas de origem** de ca
 O mundo cria os fatos; um **diretor de histórias** procura histórias dentro deles. Ninguém escreveu nenhuma delas para esta partida: cada uma começa de algo que **aconteceu de verdade** — uma morte vista de perto, alguém levado acorrentado, uma fuga do cativeiro, uma cidade perdida, uma fera que matou um pai, um conto que uma criança ouviu junto à fogueira — e só segue o que o mundo faz depois. Nunca se inventa passado.
 
 - **Como nasce**: o mundo emite sinais → viram **fatos** (com lugar, testemunhas, quem sabe o quê e a guerra que os causou) → cada tipo de história avalia se ali há uma **semente** → o **diretor** escolhe poucas para acompanhar (3 a 9, conforme a população). Ele evita duas do mesmo tipo ao mesmo tempo, tragédias demais seguidas, várias histórias da mesma batalha; o que mostrou há pouco (o tipo, o tom, o parentesco, o lugar, o desfecho, até o título) pesa menos e volta a valer com o tempo. Sementes cujo protagonista morreu ou cujo motivo deixou de existir somem.
-- **Os tipos** (primeira biblioteca): **Vingança** (só jura quem sabe quem matou), **Resgate** de um parente cativo, **Volta para casa** (a fuga do cativeiro ou a saudade de um povo libertado), **Reconquista** (um governante que não esquece a cidade perdida), **O Sonho** (uma criança que ouviu falar de um lugar real e quer vê-lo um dia), **Peregrinação** (um devoto que perde alguém e promete ir a um oráculo, a uma maravilha, ao templo da capital) e **A Caçada** à fera que matou alguém da família.
+- **Os tipos** (primeira biblioteca): **Vingança** (só jura quem sabe quem matou), **Resgate** de um parente cativo, **Volta para casa** (a fuga do cativeiro ou a saudade de um povo libertado), **Reconquista** (um governante que não esquece a cidade perdida), **O Sonho** (uma criança que ouviu falar de um lugar real e quer vê-lo um dia), **Peregrinação** (um devoto que perde alguém e promete ir a um oráculo, a uma maravilha, ao templo da capital) e **A Caçada** à fera que matou alguém da família. E as histórias das riquezas e do mundo vivo: **A Fera Rara** (um caçador atrás do tigre branco que apareceu perto da cidade — pela fortuna, pela glória ou, se for devoto, só para vê-lo de perto e deixá-lo ir), **A Caravana** (o mercador cuja estrada ganhou nome: as viagens, os ladrões, a guerra que fecha o caminho, até a família virar uma casa de mercadores, conquistar o monopólio ou chegar ao conselho que governa), **O Palácio** (o governante vaidoso e a sua obra: as pedras, o imposto, o povo resmungando, as visitas ao canteiro, o dia em que fica pronto — ou o trono perdido antes disso, e o herdeiro que manda continuar), **A Pérola Negra** (o mergulhador que achou uma: vender na capital, dar a quem ama ou devolver ao mar — e o governante cobiçoso que manda os guardas), **A Cegonha** (a casa que espera um filho com cegonhas no telhado, ou a criança que conta os dias até os filhotes voarem), **A Travessia** (um jovem que anda até o vau para ver a manada cruzar o rio, com os crocodilos esperando) e **A Guerra pela Riqueza** (o governante que foi à guerra pelo café, pelas especiarias ou para proteger uma rota, até tomar as terras ou voltar sem nada).
 - **Premissas verdadeiras**: cada pessoa guarda o que **já viu com os próprios olhos** (o mar, uma montanha, um lago, uma cachoeira, uma caverna, uma maravilha). Só sonha com o mar quem mora longe dele e nunca o viu — e a viagem vai até a costa mais próxima de casa. O lugar sonhado fica de verdade longe (um quarto do mapa ou mais), na mesma terra, e quem já mora ao lado de um lago não sonha com outro. Peregrinação é estrada, não passeio: o lugar santo fica bem longe da vila (o oráculo onde o morto servia, a maravilha, o templo da capital em outra cidade).
 - **Viagens de verdade**: quem parte leva pão da despensa, se despede de quem estiver por perto, e o caminho escreve os capítulos do que o mundo mostrar — um passo de montanha, um lago, uma cachoeira, um vau, a cidade de outro povo (ou a volta longe dela, se há guerra), a chegada a outra terra (pântano, deserto, tundra), a chuva ou a tempestade. Se a noite pega na estrada, acendem um **foguinho** e dormem ao relento. A chegada é escrita pela hora, pelo tempo e pelo lugar; depois vem **a volta**, e quem viu o mar conta às crianças — que às vezes começam a sonhar também.
 - **Missões com ação**: quem tem coragem vai **buscar o cativo de noite** — espera escondido nos arredores, entra quando todos dormem, e o mundo decide se há alguém acordado (pode libertar, ser pego, ou ter que correr); quem jurou vingança e vê o assassino **acorrentado na própria cidade** vai ficar frente a frente com ele — e o que faz é quem é: o cruel mata ali mesmo, o devoto **perdoa**; depois do acerto, uma visita ao **túmulo** de quem foi vingado. O caçador espera a fera **na boca da toca**.
@@ -390,17 +435,26 @@ js/sea.js         o mar: fundo e água transparente (uma camada lisa por cima), 
 js/naval.js       portos, pesca, exploração, comércio marítimo, frotas com almirante, abordagem, brulotes, bloqueios, invasões, colônias
 js/siege.js       arqueiros, tropas de elite, muralhas, portões, aríetes, catapultas, torres de cerco, escadas, sapadores, óleo fervente, peste, sacrifícios
 js/economy.js     economia urbana: ofícios, currais, minas, forja, tecelagem, mercados, feira, taverna, impostos, crime
+js/estates.js     propriedades: pomares, plantações, vinhedos, apiários, salinas, casa da seda, salga; os grãos de cada terra
+js/court.js       a vaidade de cada governante (paço, palácio, grande palácio, palácio colossal), tributo e cobradores, a taverna de noite
+js/waters.js      os peixes de cada água e clima, o que valem, quem vive da pesca, os mergulhadores de pérolas
+js/trade.js       comércio de luxo: caravanas com cavalo de carga, rotas com nome, casas de mercadores, conselho, monopólios, cobiça, roubos, navios
 js/festivals.js   calendário de festas de cada civilização: procissões, ritos, jogos, sacrifícios, o Fogo Novo
 js/stories.js     motor de histórias: sinais do mundo, fatos com testemunhas e causa, quem sabe o quê, sementes, diretor (capacidade, fadiga, ritmo), histórias como máquinas de estado abertas, storylets, herança, empurrões de comportamento, contexto para um futuro modo aventura, save/load
 js/story-world.js o que cada pessoa já viu, distâncias reais, direções, marcos no caminho, palavras para hora, tempo e terra, costumes de cada povo, a fogueira de quem dorme na estrada
 js/story-lib.js   biblioteca de histórias: vingança, resgate, volta para casa, reconquista, sonho, peregrinação, caçada — com seus textos e variantes por civilização
+js/story-riches.js histórias das riquezas e do mundo vivo: fera rara, caravana, palácio, pérola negra, cegonha, travessia, guerra pela riqueza
 js/story-ui.js    painel Histórias, linha na ficha da pessoa, histórias contadas pelos velhos, cenas do cinema
 js/life.js        biografia viva, família no fim da tarde, histórias dos velhos, aprendizes, água e filas, fileiras e chamada ao trabalho
 js/carnage.js     guerra que pesa: sangue, membros decepados, corpos que apodrecem, coveiros, piras, a doença dos mortos
 js/army.js        exércitos: recrutamento, companhias, oficiais, formações, moral, planos de ataque e de defesa, cercos
 js/villagers.js   IA dos habitantes (necessidades, decisões, tarefas)
 js/pets.js        animais da cidade: cães, gatos, galinhas e pombos
-js/animals.js     40 espécies, habitats, capim, cadeias alimentares, caça, filhotes, migrações, guardiões
+js/animals.js     mais de 70 espécies, habitats, capim, cadeias alimentares, bote, flanco, árvore, cipó, luto, pelagens raras, caça, filhotes, guardiões
+js/flora.js       árvores que dão fruto (o fruto no galho), quem come, colheita com cesto, colmeias selvagens e o mel tirado com fumaça
+js/riches.js      as 25 riquezas: catálogo, preços, caça que esfola e volta com a pele, peles raras, reservas, o que se vê na feira
+js/migrate.js     as grandes migrações: savana atrás das chuvas, bisões, renas, gansos e cegonhas em V, a subida dos salmões e os ursos
+js/nests.js       ninhos (árvore, telhado, paredão, chão) com ovos e filhotes, quem para para olhar, castores e represas
 js/powers.js      poderes divinos e percepção
 js/miracles.js    Terra, Mar, Palavra, eras de ouro, maldições, heróis, muralhas divinas
 js/wild.js        aba Natureza: chamar animais, primavera, migração, domar, clima, gafanhotos, feras lendárias
