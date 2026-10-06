@@ -90,6 +90,9 @@
     },
     rainStart: (t, v) => nz(t, 1.2, 0.18 * v, 'highpass', 1500, 0, sfx, 0, 0.4),
     magic: (t, v) => { for (let k = 0; k < 8; k++) { const f = PENTA[5 + Math.floor(Math.random() * 6)] * (Math.random() < 0.3 ? 2 : 1); const n = osc('sine', f, t + k * 0.07, 0.7, 0.05 * v); n.g.connect(revIn); } },
+    // a story begins (a plucked rising figure) — or closes (the same, falling)
+    saga: (t, v) => { [329.63, 440, 554.37, 659.25].forEach((f, k) => { const n = osc('triangle', f, t + k * 0.11, 1.6, 0.045 * v, sfx, 0, 0.25); n.g.connect(revIn); }); },
+    sagaEnd: (t, v) => { [659.25, 554.37, 440, 329.63].forEach((f, k) => { const n = osc('triangle', f, t + k * 0.14, 1.9, 0.04 * v, sfx, 0, 0.25); n.g.connect(revIn); }); },
     heal: (t, v) => { [392, 493.9, 587.3, 783.99].forEach((f, k) => { const n = osc('sine', f, t + k * 0.05, 1.8, 0.06 * v, sfx, 0, 0.3); n.g.connect(revIn); }); LIB.magic(t + 0.2, v * 0.7); },
     fertility: (t, v) => { [523.25, 659.25, 783.99, 987.8, 1174.7, 1318.5].forEach((f, k) => { const n = osc('triangle', f, t + k * 0.08, 1.2, 0.05 * v); n.g.connect(revIn); }); },
     splash: (t, v) => { nz(t, 0.25, 0.25 * v, 'bandpass', 1300, 1, sfx, 500); },

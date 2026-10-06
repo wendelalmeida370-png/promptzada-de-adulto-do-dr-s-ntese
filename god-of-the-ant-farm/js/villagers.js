@@ -363,7 +363,7 @@
       if (v.traits.includes('Curioso') && !elder) opt(0.22 * G.R(), 0, 'explore');
       // a story this person carries takes a little of the free time (training, a vigil, a journey)
       // (a wish, not a duty: at a free moment, now and then — about one free choice in ten)
-      if (G.Stories) { const u = G.Stories.urge(v); if (u > 0 && G.R() < u * (eve ? 0.7 : 1.2)) opt(0.9, 0.5, 'saga'); }
+      if (G.Stories) { const u = G.Stories.urge(v); if (u > 0 && G.R() < u * (eve ? 0.7 : 1.2)) opt(0.9 + u * 0.8, 0.5, 'saga'); }
       opt(0.14 * G.R(), 0, 'visit');
       if (eve || elder) opt(0.3 * G.R() * (elder ? 2 : 1), 0, 'rest');
       // the working day ends: home, or a cup at the tavern

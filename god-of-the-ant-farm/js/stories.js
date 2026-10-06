@@ -34,7 +34,10 @@
   const alive = id => !!(id && G.S && G.S.villagers.has(id));
   const oa = p => (p && p.g === 'f' ? 'a' : 'o');
   const ele = p => (p && p.g === 'f' ? 'ela' : 'ele');
-  const hashPick = (arr, k) => arr[Math.floor(G.hash(k) * arr.length) % arr.length];
+  // (a well-spread integer mix: small story ids must not all land on the same words)
+  const mix = St.mix = k => { let h = Math.imul((k | 0) ^ 0x9e3779b9, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+  const hashPick = (arr, k) => arr[Math.floor(mix(k) * arr.length)];
+  const recent = {}; // the variants of each storylet said lately, so two stories in a row don't use the same words
   const facName = id => { const f = G.Fac.get(id); return f ? f.name : 'um povo esquecido'; };
   const setName = id => { const s = G.S.settlements.get(id); return s ? s.name : null; };
   const VIOLENT = { war: 1, arrow: 1, massacre: 1, execution: 1, coup: 1, sacrifice: 1 };
@@ -79,7 +82,7 @@
     for (const s of S.settlements.values()) { const d = G.dist(x, y, s.cx, s.cy); if (d < bd) { bd = d; best = s; } }
     if (best && bd < 6) return { name: best.name, at: ' em ' + best.name, town: 1 };
     let pl = null, pd = 9; if (G.Relief && G.Relief.places) for (const p of G.Relief.places()) { const d = G.dist(x, y, p.x, p.y); if (d < pd) { pd = d; pl = p; } }
-    if (pl) return { name: pl.name, at: ' perto ' + (/^(Lagoa|Cachoeira|Agulha|Garganta|Trilha|Escadaria|Subida|Portela)/.test(pl.name) ? 'da ' : 'do ') + pl.name };
+    if (pl) return { name: pl.name, at: ' perto ' + (/^(Lagoa|Cachoeira|Agulha|Garganta|Trilha|Escadaria|Subida|Portela|Queda|Gruta|Lapa|Furna|Toca|Caverna|Serra|Cordilheira|Pedra|Boca|Cova|Fenda|Ponta|Montanha|Colina|Cratera|Ilha|Praia|Baía|Enseada|Garganta)/.test(pl.name) ? 'da ' : 'do ') + pl.name };
     if (best && bd < 18) return { name: best.name, at: ' perto de ' + best.name, town: 1 };
     return { name: '', at: ' nos ermos' };
   }
@@ -177,7 +180,7 @@
     const violent = !!VIOLENT[d.cause], beastDeath = d.cause === 'beast' || d.cause === 'wolf' || d.cause === 'boar';
     const killer = d.killer ? P(d.killer) : null;
     const fam = kin(v);
-    const f = draft('morte', { a: v.id, cause: d.cause, x: v.x, y: v.y, god: d.byGod ? 1 : 0, fa: v.fac !== undefined ? v.fac : facOf(v), n: { a: v.name } });
+    const f = draft('morte', { a: v.id, cause: d.cause, x: v.x, y: v.y, god: d.byGod ? 1 : 0, fa: v.fac !== undefined ? v.fac : facOf(v), cap: d.cap ? 1 : 0, n: { a: v.name } });
     if (killer && killer.id !== v.id) { f.b = killer.id; f.fb = facOf(killer); f.n.b = killer.name; }
     if (beastDeath && d.beast) { const a = G.S.animals.get(d.beast); f.beast = d.beast; f.bk = a ? a.kind : null; f.n.beast = a && a.named ? a.named : null; f.legend = a && a.legend ? 1 : 0; }
     f.n.place = where(v.x, v.y).at;
@@ -316,15 +319,26 @@
     // the opening chapter tells what happened — on the day it happened
     const of = factById(sd.origin[0]); if (of && story.chapters[0] && of.d < story.chapters[0].d) story.chapters[0].d = of.d;
     if (!story.title) titleOf(story);
+    logline(story);
     s.stories.push(story);
     for (const id of people(story)) addIdx(id, story.id);
     s.lastPromo = S.clock;
     remember(story.motifs.concat(story.tk ? ['titulo:' + story.tk] : []), 1);
-    G.UI && G.UI.notice(`Uma história começou: ${story.title}`, 'saga');
+    announce(story, 'start');
     if (St._ui && St._ui.open) St.refresh();
     return story;
   }
   St._promote = promote;
+  // the story in one sentence, as a book's back cover would say it
+  function logline(story) { const d = DEF[story.type]; let t = null; try { t = d.logline ? d.logline(story, distinctNames(story, ctxOf(story))) : null; } catch (e) { t = null; } story.log = t || ''; }
+  St.logline = logline;
+  // the screen hears of it: a story begins, a climax, an end (the panel module draws the card)
+  function announce(story, kind, txt) {
+    if (St._announce) { try { St._announce(story, kind, txt); return; } catch (e) { console.warn('stories announce', e); } }
+    if (kind === 'start') G.UI && G.UI.notice(`Uma história começou: ${story.title}`, 'saga');
+    else if (txt) G.UI && G.UI.toast(story.title, txt, 'saga');
+  }
+  St.announce = announce;
   // a chapter: only what changes the story
   function chapter(story, txt, o) {
     o = o || {};
@@ -334,7 +348,7 @@
     story.chapters.push(c);
     if (story.chapters.length > 24) story.chapters.splice(2, 1);
     if (o.log) G.Village.log(`${story.title}: ${txt}`, 'saga', c.x, c.y);
-    if (o.toast) G.UI && G.UI.toast(story.title, txt, 'saga');
+    if (o.toast) announce(story, 'beat', txt);
     if (o.hot && c.x !== undefined) hot(story, c.x, c.y, txt, o.hot);
     if (St._ui && St._ui.open) St.refresh();
     return c;
@@ -349,9 +363,12 @@
     const ctx = Object.assign(distinctNames(story, ctxOf(story)), vars || {});
     const civ = (P(story.protag) || {}).civ;
     const pool = b.civ && civ && b.civ[civ] ? b.civ[civ].concat(b.civ[civ], b.text) : b.text;
-    const ok = []; for (const fn of pool) { let t = null; try { t = fn(ctx); } catch (e) { t = null; } if (t) ok.push(t); }
+    const ok = []; pool.forEach((fn, i) => { let t = null; try { t = fn(ctx); } catch { t = null; } if (t) ok.push([i, t]); });
     if (!ok.length) return null;
-    return hashPick(ok, story.id * 31 + story.chapters.length * 7 + key.length);
+    const r = recent[key] || (recent[key] = []); const fresh = ok.filter(o => !r.includes(o[0]));
+    const o = hashPick(fresh.length ? fresh : ok, story.id * 31 + story.chapters.length * 7 + key.length);
+    r.push(o[0]); if (r.length > Math.max(1, Math.floor(b.text.length / 2))) r.shift();
+    return o[1];
   }
   St.say = say;
   function beat(story, key, vars, o) {
@@ -409,15 +426,16 @@
   // the end — and what the world will remember of it
   const END = {
     cumprida: 'Cumprida', tragica: 'Trágica', roubada: 'Roubada pelo destino', abandonada: 'Abandonada', esquecida: 'Esquecida',
-    interrompida: 'Interrompida', transformada: 'Transformada', reencontro: 'Reencontro', fracassada: 'Fracassada',
+    interrompida: 'Interrompida', transformada: 'Transformada', reencontro: 'Reencontro', fracassada: 'Fracassada', perdoada: 'Perdão',
   };
   const TONE = { feliz: 'feliz', tragico: 'trágico', agridoce: 'agridoce', sereno: 'sereno' };
   St.END = END; St.TONE = TONE;
   function finish(story, k, tone, txt, o) {
     if (story.st !== 'ativa') return;
     o = o || {};
-    if (txt) chapter(story, txt, Object.assign({ k: 'fim' }, o));
+    if (txt) chapter(story, txt, Object.assign({ k: 'fim' }, o, { toast: false }));
     story.st = 'fim'; story.end = { k, tone: tone || 'sereno', d: G.S.day };
+    if (o.toast || o.big) announce(story, 'end', txt);
     remember(['tipo:' + story.type, 'fim:' + (tone || 'sereno'), 'fim:' + k].concat(o.clima ? ['clima:' + o.clima] : []), 0.7);
     if (DEF[story.type].retitle) { const t = DEF[story.type].retitle(story, ctxOf(story)); if (t) story.title = t; }
     reindex();
@@ -452,6 +470,7 @@
     if (def.inherited) def.inherited(story, best, dead, why);
     const rv = P(story.cast.victim || story.cast.captive || story.cast.lost); if (rv) story.data.rel = relOf(best, rv) || story.data.rel;
     chapter(story, txt, { k: 'heranca', log: true, big: 1, x: best.x, y: best.y });
+    logline(story);
     if (G.Life) G.Life.bio(best, 'note', `${story.title}: ${txt}`);
     remember(['heranca', 'tipo:' + story.type], 0.5);
     addIdx(best.id, story.id);
@@ -495,19 +514,89 @@
     const t = H.setTask(v, Object.assign({ type: 'saga', story: story.id, pri: 1.02, st: 0, x: o.x, y: o.y, dur: o.dur || 8, act: o.act || '', sub: o.sub || 'ir', max: o.max || 160 }, o));
     return t;
   };
+  // a real road: provisions from home, the way there (camping when the night catches them, eating
+  // what they carried), the moment at the end of it, and — for most — the way back home
+  St.journey = function (story, v, H, o) {
+    const S = G.S; const set = S.settlements.get(v.set); const hb = S.buildings.get(v.home);
+    const hp = hb && hb.built ? G.Village.frontTile(hb) : set ? [set.cx, set.cy] : [v.x, v.y];
+    // (a traveller is not called back to fetch water or join a feast; hunger, danger and war still win)
+    const t = H.setTask(v, Object.assign({ type: 'saga', j: 1, story: story.id, pri: 2.05, st: 0, leg: 0, legs: 2, hx: hp[0], hy: hp[1], dur: 12, act: '', emo: '', sub: 'jornada', max: 1600, food: 0, camps: 0, homeBiome: St.biomeAt ? St.biomeAt(v.x, v.y) : '' }, o));
+    if (o.back === false) t.legs = 1;
+    if (!t.leg) { const stk = G.Fac.stockV(v); const n = stk && stk.food >= 8 ? 2 : stk && stk.food >= 3 ? 1 : 0; if (n) { stk.food -= n; t.food = n; } }
+    story.data.hx = +hp[0].toFixed(1); story.data.hy = +hp[1].toFixed(1);
+    return t;
+  };
+  function trail(story, v) {
+    const tr = story.data.trail || (story.data.trail = []); const last = tr[tr.length - 1];
+    if (!last || G.dist(last[0], last[1], v.x, v.y) > 3) { tr.push([+v.x.toFixed(1), +v.y.toFixed(1)]); if (tr.length > 60) tr.splice(1, 1); }
+  }
+  St.trail = trail;
+  function runJourney(v, t, dt, H, story) {
+    const d = DEF[story.type]; const S = G.S;
+    if (t.age > t.max) return H.end(v);
+    const back = t.leg === 1; const tx = back ? t.hx : t.x, ty = back ? t.hy : t.y;
+    // the bundle: they eat what they carried when the hunger comes
+    if (v.hunger > 62 && t.food > 0) { t.food--; v.hunger = Math.max(0, v.hunger - 55); G.Vg.emote(v, 'food', 1.4); }
+    if (t.st === 0) {
+      if (!H.goto(v, tx, ty, false, 30000) && !H.goto(v, tx, ty, true, 30000)) { if (!back) { story.data.retry = S.clock + DAY() * 0.7; if (d.blocked) d.blocked(story, v, t); } return H.end(v); }
+      t.st = 1; return;
+    }
+    if (t.st === 1) {
+      // night falls on the road: a small fire, sleep, and on again at first light
+      // (only on dry ground: someone wading a ford walks on to the far bank first)
+      if (G.isNight() && !t.noCamp && W.dryXY(v.x, v.y) && G.dist(v.x, v.y, tx, ty) > 6 && G.dist(v.x, v.y, t.hx, t.hy) > 9) {
+        t.st = 4; v.path = null; v.moving = false; t.cx = +(v.x + 0.55).toFixed(2); t.cy = +(v.y + 0.25).toFixed(2); t.camps++; if (d.camp) d.camp(story, v, t); return;
+      }
+      if ((t.rw = (t.rw || 0) + dt) > 2.5) { t.rw = 0; trail(story, v); if (d.road && St.roadWatch) { const r = St.roadWatch(story, v, t); if (r) d.road(story, v, t, r); } }
+      if (H.move(v, dt, t.hurry || 1)) {
+        trail(story, v);
+        if (back) { if (d.home) d.home(story, v, t); return H.end(v); }
+        t.st = 2; v.actT = 0; t.left = t.dur; if (d.arrive) d.arrive(story, v, t);
+      }
+      return;
+    }
+    if (t.st === 2) {
+      v.moving = false; v.act = t.act || ''; if (t.fx !== undefined) G.faceTo(v, t.fx - v.x, t.fy - v.y);
+      if (t.emo && G.R() < dt * 0.2) G.Vg.emote(v, t.emo, 1.4);
+      t.left -= dt;
+      if (t.left <= 0) {
+        // (an archetype may keep the moment going — waiting for the dark — or hand over to its own steps)
+        if (d.done && d.done(story, v, t) === 'stay') return;
+        if (v.task !== t) return;
+        if (story.st !== 'ativa') return H.end(v);
+        if (t.legs > 1) { t.leg = 1; t.st = 0; t.road = []; } else H.end(v);
+      }
+      return;
+    }
+    if (t.st >= 6) { if (d.step) d.step(story, v, t, dt, H); else H.end(v); return; }
+    if (t.st === 4) {
+      v.moving = false; v.sleeping = true; v.act = 'sleep';
+      if (G.R() < dt * 0.25) G.Vg.emote(v, 'zzz', 1.5);
+      if (!G.isNight()) { v.sleeping = false; t.st = 0; }
+    }
+  }
   St.run = function (v, t, dt, H) {
     const story = getStory(t.story); if (!story || story.st !== 'ativa') return H.end(v);
+    if (t.j) return runJourney(v, t, dt, H, story);
     if (t.age > t.max) return H.end(v);
     if (t.st === 0) {
       // no way there today: try again another day (the archetype decides when to give up)
       if (!H.goto(v, t.x, t.y, false, 24000) && !H.goto(v, t.x, t.y, true, 24000)) { story.data.retry = G.S.clock + DAY() * 0.7; const d = DEF[story.type]; if (d.blocked) d.blocked(story, v, t); return H.end(v); }
       t.st = 1;
     } else if (t.st === 1) {
+      // going to a person who moves (a captive at work): follow them until close
+      if (t.follow) {
+        const o = P(t.follow); if (!o || o.dead) return H.end(v);
+        t.rt = (t.rt || 0) - dt; if (t.rt <= 0 || H.arrived(v)) { t.rt = 2; if (!H.goto(v, o.x, o.y, true, 12000)) return H.end(v); }
+        H.move(v, dt, t.hurry || 1);
+        if (G.dist(v.x, v.y, o.x, o.y) < 1.7) { t.st = 2; v.actT = 0; t.left = t.dur; t.fx = o.x; t.fy = o.y; v.path = null; const d = DEF[story.type]; if (d.arrive) d.arrive(story, v, t); }
+        return;
+      }
       if (H.move(v, dt, t.hurry || 1)) { t.st = 2; v.actT = 0; t.left = t.dur; const d = DEF[story.type]; if (d.arrive) d.arrive(story, v, t); }
     } else {
       v.moving = false; v.act = t.act || ''; if (t.fx !== undefined) G.faceTo(v, t.fx - v.x, t.fy - v.y);
       if (t.emo && G.R() < dt * 0.2) G.Vg.emote(v, t.emo, 1.4);
-      t.left -= dt; if (t.left <= 0) { const d = DEF[story.type]; if (d.done) d.done(story, v, t); H.end(v); }
+      t.left -= dt; if (t.left <= 0) { const d = DEF[story.type]; if (d.done) d.done(story, v, t); if (v.task === t) H.end(v); }
     }
   };
   St.taskText = function (v, t) {
@@ -535,10 +624,13 @@
     flush();
     tAcc += dt; if (tAcc < 1.5) return; tAcc = 0;
     const s = st();
+    if (St.lookAround) St.lookAround(Math.max(4, Math.ceil(S.villagers.size / 10)));
     for (const story of s.stories) {
       if (story.st !== 'ativa') continue;
       const d = DEF[story.type]; if (!d) { story.st = 'fim'; story.end = { k: 'interrompida', tone: 'sereno', d: S.day }; continue; }
       try { if (d.tick) d.tick(story); } catch (e) { console.warn('stories tick', story.type, e); }
+      // the furthest step it reached (for the panel's track, even when it ends badly)
+      if (d.stage && story.st === 'ativa') { const k = d.stage(story); if (k > (story.data.stg || 0)) story.data.stg = k; }
       // nobody left to carry it, and nothing said: it ends quietly
       if (story.st === 'ativa' && !alive(story.protag) && !story.data.waitHeir) finish(story, 'interrompida', 'sereno', `${(P(story.protag) || {}).name || 'Quem a carregava'} se foi, e a história parou ali.`);
       if (story.st === 'ativa' && S.day - story.born > (d.maxDays || 70)) finish(story, 'esquecida', 'sereno', d.forgotten ? d.forgotten(story, ctxOf(story)) : 'O tempo passou, e ninguém mais falou disso.');
@@ -610,7 +702,7 @@
     // a death: the victim, the killer, the beast — read before the world forgets
     wrap(G.Village, 'kill', (r, a, pre) => { if (pre) St.signal('death', pre); }, (v, cause, byGod) => {
       if (!v || !G.S.villagers.has(v.id)) return null;
-      return { v, cause, byGod: !!byGod, killer: v.lastBy || 0, beast: v.lastBeastId || 0 };
+      return { v, cause, byGod: !!byGod, killer: v.lastBy || 0, beast: v.lastBeastId || 0, cap: !!v.captive };
     });
     wrap(G.War, 'capture', (r, a) => St.signal('capture', { o: a[0], captor: a[1], b: a[2] }));
     wrap(G.War, 'freeCaptive', (r, a, pre) => { if (pre) St.signal('freed', { v: a[0], dest: a[1] ? a[1].id : 0, how: a[2] }); }, v => !!(v && v.captive));
