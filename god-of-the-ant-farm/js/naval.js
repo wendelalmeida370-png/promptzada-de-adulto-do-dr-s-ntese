@@ -466,6 +466,7 @@
       const fa = G.Fac.get(s.fac), fb = G.Fac.get(G.Village.facOfSet(ob.set));
       if (fa && fb) {
         if (s.goods) G.Village.addStock(s.goods.k, s.goods.n, fb.id);
+        if (s.lux && G.Trade) G.Trade.shipArrive(s, fa, fb);
         if (fa !== fb) {
           const deal = 1.1 * G.Civ.t(fa.id, 'trade') * (G.Civ.has(fa.id, 'moeda') ? 1.15 : 1);
           const want = RES.filter(k => !s.goods || k !== s.goods.k).sort((x, y) => (fb.stock[y] - fa.stock[y]) - (fb.stock[x] - fa.stock[x]))[0];
@@ -480,7 +481,7 @@
       const h = home(s); if (h && sailTo(s, h.moor[0], h.moor[1])) s.st = 'back'; else removeShip(s);
       return;
     }
-    if (s.st === 'back' && moveShip(s, dt)) { if (s.ret) G.Village.addStock(s.ret.k, s.ret.n, s.fac); removeShip(s); }
+    if (s.st === 'back' && moveShip(s, dt)) { if (s.ret) G.Village.addStock(s.ret.k, s.ret.n, s.fac); G.Trade && G.Trade.shipHome(s); removeShip(s); }
   }
 
   // ------------------------------ expeditions: raids & colonies ------------------------------
@@ -733,6 +734,7 @@
         const n = Math.min(16, Math.floor(f.stock[give] * 0.08)); if (n < 4) continue;
         const s = spawn('mercante', f, mine, { route: r.id }); if (!s) continue;
         f.stock[give] -= n; s.goods = { k: give, n };
+        G.Trade && G.Trade.loadShip(f, s, r);
       }
     }
   }

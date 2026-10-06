@@ -620,7 +620,7 @@
     // pinned down or held: on its side, legs kicking
     if ((a.down > 0 || a.caught) && !a.dead && sp.cls === 'land') { c.rotate(G.Render.sface(a) * 0.95); c.translate(0, -1); }
     c.scale(G.Render.sface(a) * sc, sc);
-    if (sp.art === 'quad') quad(c, a, sp, a.morph ? morphQ(sp, a.morph) : sp.q, t);
+    if (sp.art === 'quad') { quad(c, a, sp, a.morph ? morphQ(sp, a.morph) : sp.q, t); if (a.pack && G.Trade) G.Trade.drawPack(c, a); }
     else if (DRAW[sp.art]) DRAW[sp.art](c, a, sp, t);
     // a carcass torn open by those who ate from it
     if (a.dead && !a.sink && sp.cls !== 'water' && sp.cls !== 'air' && a.meat > 0) { const e = 1 - a.meat / Math.max(1, sp.meat); if (e > 0.04 || a.gore > 0) gore(c, a, sp, Math.max(e, a.gore > 0 ? 0.15 : 0)); }

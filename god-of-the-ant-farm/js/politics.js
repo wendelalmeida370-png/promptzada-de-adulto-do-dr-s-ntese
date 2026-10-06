@@ -712,6 +712,7 @@
     fome: 'a fome empurra seu povo contra os celeiros alheios', secessao: 'para esmagar os rebeldes', vinganca: 'para vingar seus mortos',
     fronteira: 'por disputas de fronteira', desconfianca: 'por pura desconfiança', divina: 'tomados por uma fúria divina', alianca: 'honrando uma aliança',
     vassalo: 'para romper as correntes da vassalagem', reconquista: 'para retomar uma cidade perdida',
+    riqueza: 'pelas riquezas do vizinho', rota: 'para proteger suas caravanas',
   };
   P.alliesOf = fid => G.Fac.all().filter(o => o.id !== fid && G.Fac.rel(fid, o.id) && G.Fac.rel(fid, o.id).st === 'alianca');
   P.strength = function (fid) {
@@ -725,7 +726,8 @@
     r.st = 'guerra'; r.since = S.day; r.by = a.id; r.met = r.met || S.day; r.truce = 0; r.envoy = 0;
     r.op = Math.min(r.op, -30);
     a.attackCD = G.rr(20, 50); b.attackCD = Math.max(b.attackCD || 0, G.rr(50, 110));
-    const why = reason === 'ambicao' ? `pela ambição de ${P.styled(a, P.ruler(a))}` : REASON[reason] || '';
+    const why = reason === 'ambicao' ? `pela ambição de ${P.styled(a, P.ruler(a))}` : (reason === 'riqueza' || reason === 'rota') && G.Trade && G.Trade._why ? G.Trade._why : REASON[reason] || '';
+    if (reason === 'riqueza' || reason === 'rota') { r.riches = G.Trade && G.Trade._why; G.Stories && G.Stories.signal('richesWar', { a: a.id, b: b.id, why: r.riches, reason }); }
     const cb = G.Fac.capitalOf(b.id);
     log(`${a.name} declarou guerra a ${b.name}${why ? ' — ' + why : ''}.`, 'war', cb ? cb.cx : undefined, cb ? cb.cy : undefined);
     if (!S.milestones.firstWar) { G.Village.milestone('firstWar', 'A primeira guerra', `${a.name} contra ${b.name}.`, 'war'); }
@@ -762,8 +764,10 @@
     if (rebels) want += 0.25;
     want -= P.alliesOf(b.id).length * 0.12;
     const lean = G.Stories ? G.Stories.warLean(a, b) : null; if (lean) want += lean.w;
+    // the coffee fields, the ivory, the silk of a neighbour this people buys and cannot make
+    const cov = G.Trade ? G.Trade.covet(a, b) : null; if (cov) want += cov.w;
     const th = S.temper === 'pacifico' ? 1.2 : S.temper === 'belicoso' ? 0.68 : 0.86;
-    if (want > th && G.R() < 0.3) { if (lean && G.Stories) G.Stories._leanStory = lean.story; P.declareWar(a, b, lean ? 'reconquista' : hungry ? 'fome' : rebels ? 'secessao' : r.grudge > 40 ? 'vinganca' : touch > 3 ? 'fronteira' : pa.agg > 0.68 ? 'ambicao' : 'desconfianca'); }
+    if (want > th && G.R() < 0.3) { if (lean && G.Stories) G.Stories._leanStory = lean.story; if (cov && G.Trade) G.Trade._why = cov.why; P.declareWar(a, b, lean ? 'reconquista' : cov && cov.w >= 0.12 ? 'riqueza' : hungry ? 'fome' : rebels ? 'secessao' : r.grudge > 40 ? 'vinganca' : touch > 3 ? 'fronteira' : pa.agg > 0.68 ? 'ambicao' : 'desconfianca'); }
   }
   function considerPeace(a, b, r) {
     const S = G.S;

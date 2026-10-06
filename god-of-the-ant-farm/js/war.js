@@ -957,7 +957,7 @@
       case 'condemned': return 'Condenad' + oa(v) + ', esperando a execução';
       case 'assembly': return 'Assistindo a uma execução';
       case 'envoy': { const f = G.Fac.get(t.to); const m = { paz: 'uma proposta de paz', alianca: 'uma proposta de aliança', contato: 'presentes' }[t.msg] || 'uma mensagem'; return t.st >= 3 ? 'Voltando da missão diplomática' : `Levando ${m} para ${f ? f.name : 'outro povo'}`; }
-      case 'trade': { const f = G.Fac.get(t.st ? t.from : t.to); return t.st ? `Voltando da caravana${v.carry ? ' com ' + v.carry.n + ' de ' + MAT[v.carry.k] : ''}` : `Levando ${t.n} de ${MAT[t.give]} para ${f ? f.name : 'outro povo'}`; }
+      case 'trade': { if (t.lux && G.Trade) return G.Trade.taskText(v, t); const f = G.Fac.get(t.st ? t.from : t.to); return t.st ? `Voltando da caravana${v.carry ? ' com ' + v.carry.n + ' de ' + MAT[v.carry.k] : ''}` : `Levando ${t.n} de ${MAT[t.give]} para ${f ? f.name : 'outro povo'}`; }
       case 'drill': return 'Treinando para a guerra';
     }
     return null;
