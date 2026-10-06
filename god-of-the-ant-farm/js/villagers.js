@@ -683,7 +683,7 @@
     let t = null;
     if (v.captive) {
       // forced labour: whatever the masters need most
-      t = (G.R() < 0.35 && buildTask(v)) || (need('stone') && mineTask(v)) || (need('wood') && chopTask(v)) || farmTask(v) || (need('food') && gatherTask(v)) || chopTask(v);
+      t = (G.Estates && G.R() < 0.45 && G.Estates.captiveTask(v, H)) || (G.R() < 0.35 && buildTask(v)) || (need('stone') && mineTask(v)) || (need('wood') && chopTask(v)) || farmTask(v) || (need('food') && gatherTask(v)) || chopTask(v);
       return t || setTask(v, { type: 'rest', pri: 0.2 });
     }
     if (G.Eco && (G.Eco.isJobRole(v.role) || (v.role === 'mineiro' && v.job))) {

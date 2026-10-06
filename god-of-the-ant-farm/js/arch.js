@@ -904,7 +904,7 @@
   const NEW = { quarteirao: 1, sobrado: 1, insula: 1, praca: 1, mercado: 1, celeiro: 1, biblioteca: 1, teatro: 1, banhos: 1, palacio: 1, doca: 1, aqueduto: 1, maravilha: 1 };
   // later files add building types of their own with the same drawing kit
   A.EXT = {};
-  A.kit = () => ({ P, poly, ln, walls, top, box, onL, onR, shade, roof, hall, column, colonnade, steps, flag, palm, jar, barrel, awning, stall, statue, dome, tree, basin, pave, band, parapet, plinth, winsL, winsR, gableX, gableY, hip, pal, TAU });
+  A.kit = () => ({ longhouse, stepPyr, P, poly, ln, walls, top, box, onL, onR, shade, roof, hall, column, colonnade, steps, flag, palm, jar, barrel, awning, stall, statue, dome, tree, basin, pave, band, parapet, plinth, winsL, winsR, gableX, gableY, hip, pal, TAU });
   A.building = function (type, v, style, extra) {
     const X = A.EXT[type];
     if (X) {

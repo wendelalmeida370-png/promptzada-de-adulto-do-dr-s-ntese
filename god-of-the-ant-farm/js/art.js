@@ -760,10 +760,12 @@
       c.restore(); return;
     }
     c.scale(G.Render.sface(v) * sc, sc);
+    // the drunk weave
+    if (v.drunk > S.clock && G.Court) c.rotate(G.Court.sway(v));
     const moving = v.moving;
     const ph = v.walkPh;
     const dancing = act === 'dance';
-    const bob = moving ? Math.abs(Math.sin(ph)) * 0.6 : dancing ? Math.abs(Math.sin(at * 7 + v.id)) * 1.6 : 0;
+    const bob = moving ? Math.abs(Math.sin(ph)) * 0.6 : dancing ? Math.abs(Math.sin(at * 7 + v.id)) * 1.6 : act === 'press' ? Math.abs(Math.sin(at * 8)) * 1.2 : 0;
     const hurt = v.hurt > 0;
     // a horse under the rider
     if (mounted) {
@@ -787,7 +789,7 @@
     else if (act === 'milk' || act === 'skin') { line(c, -0.8, -2, 1.6, -1.6); line(c, 1.6, -1.6, 1.2, 0); line(c, 0.8, -2, 2.6, -1.2); line(c, 2.6, -1.2, 2.8, 0); c.fillStyle = '#6a4a30'; c.fillRect(-1.6, -1.4, 2.4, 1.4); }
     else {
       const run = act === 'run' ? 1.8 : 1.35;
-      const leg = moving ? Math.sin(ph) * run : dancing ? Math.sin(at * 7 + v.id) * 1.3 : 0;
+      const leg = moving ? Math.sin(ph) * run : dancing ? Math.sin(at * 7 + v.id) * 1.3 : act === 'press' ? Math.sin(at * 8) * 1.1 : 0;
       if (v.lost && v.lost.leg) { line(c, 0.85, -3.8, 0.85 - leg * 0.5, -0.1); line(c, -0.85, -3.8, -1.1, -2.6); c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; line(c, 1.9, -8.4, 2.3 + leg * 0.4, 0); c.lineWidth = 1.15; }
       else { line(c, -0.85, -3.8, -0.85 + leg, -0.1); line(c, 0.85, -3.8, 0.85 - leg, -0.1); }
     }
@@ -867,6 +869,31 @@
         c.fillStyle = fc; c.beginPath(); c.arc(-3, -6.3, 0.6, 0, TAU); c.arc(-1.8, -6.4, 0.6, 0, TAU); c.fill();
         if (Math.sin(at * 5) > 0.7) { c.fillStyle = fc; c.beginPath(); c.arc(1.2, -14.4, 0.55, 0, TAU); c.fill(); }
         break;
+      }
+      case 'play': { // a lute in the arms, one hand strumming
+        const s2 = Math.sin(at * 9) * 0.6; c.fillStyle = '#a8703a'; c.beginPath(); c.ellipse(1.4, -6.2, 1.9, 1.4, -0.5, 0, TAU); c.fill(); c.fillStyle = '#3a2416'; c.beginPath(); c.arc(1.5, -6.2, 0.45, 0, TAU); c.fill();
+        c.strokeStyle = '#7a4a2a'; c.lineWidth = 0.6; line(c, 2.4, -7, 4.6, -9.4); c.strokeStyle = v.skin; c.lineWidth = 1; line(c, 0, -8, 1.4 + s2, -6.6); arm(c, -0.4, -8, 3.8, -8.6); break;
+      }
+      case 'press': { // treading the grapes: skirts held up, purple to the shins
+        line(c, 0, -8, 2.2, -6.2); arm(c, -0.4, -8, -2, -6.4); c.fillStyle = 'rgba(110,20,60,0.75)'; c.fillRect(-1.6, -2.6, 3.2, 1.2); break;
+      }
+      case 'crank': { // leaning on the press beam
+        const s2 = Math.sin(at * 2) * 0.8; line(c, 0, -8, 3 + s2, -7.4); arm(c, -0.4, -8, 2.6 + s2, -6.8); break;
+      }
+      case 'rake': { // the long salt rake drawn across the pan
+        const s2 = Math.sin(at * 3) * 1.6; line(c, 0, -8, 1.6 + s2 * 0.4, -5.6); arm(c, -0.4, -8, 0.8 + s2 * 0.4, -6);
+        c.strokeStyle = '#8a6a44'; c.lineWidth = 0.6; line(c, 1 + s2 * 0.4, -6.4, 5.6 + s2, 0.2); c.strokeStyle = '#6a4a2c'; c.lineWidth = 0.9; line(c, 4.6 + s2, 0.4, 6.8 + s2, -0.2);
+        c.fillStyle = '#f4f4f0'; c.beginPath(); c.arc(6.2 + s2, 0.4, 0.8, 0, TAU); c.fill(); break;
+      }
+      case 'reel': { // turning the reel, the thread running from the basin of cocoons
+        const a2 = at * 6; line(c, 0, -8, 2.2 + Math.cos(a2) * 0.7, -6.4 + Math.sin(a2) * 0.7); arm(c, -0.4, -8, 1.4, -5);
+        c.strokeStyle = '#8a6a44'; c.lineWidth = 0.5; c.beginPath(); c.arc(3.2, -6.4, 1.4, 0, TAU); c.stroke();
+        c.strokeStyle = 'rgba(250,245,230,0.9)'; c.lineWidth = 0.25; c.beginPath(); c.moveTo(3.2, -5); c.lineTo(4.4, -1.6); c.stroke();
+        c.fillStyle = '#c8b088'; c.fillRect(3.4, -1.8, 2.4, 1.2); c.fillStyle = '#f8f4ea'; c.beginPath(); c.arc(4.6, -1.9, 0.5, 0, TAU); c.fill(); break;
+      }
+      case 'salt': { // rubbing salt into the fish
+        const s2 = Math.sin(at * 7) * 0.8; line(c, 0, -8, 2.6 + s2, -5.4); arm(c, -0.4, -8, 2.2 - s2, -5.6);
+        c.fillStyle = '#d8d0b8'; c.beginPath(); c.ellipse(3.2, -5, 2, 0.7, 0, 0, TAU); c.fill(); c.fillStyle = '#ffffff'; c.fillRect(2.6 + s2, -5.8, 0.6, 0.4); break;
       }
       case 'smoke': { // the smoking bundle held up to the comb, the face turned from the bees
         line(c, 0, -8, 2.3, -12.2); arm(c, -0.4, -8, 0.6, -10.6);
@@ -951,13 +978,16 @@
       c.fillStyle = '#e8453c'; c.fillRect(-0.45, hy - 3.4, 0.9, 0.9);
     } else if (age >= 16) {
       if (v.role === 'agricultor') { c.fillStyle = '#e8cf7a'; c.beginPath(); c.ellipse(0, hy - 1.4, 3.6, 0.9, 0, 0, TAU); c.fill(); c.beginPath(); c.arc(0, hy - 1.5, 1.7, Math.PI, TAU); c.fill(); c.fillStyle = '#b8903a'; c.fillRect(-1.6, hy - 1.8, 3.2, 0.4); }
+      else if (v.role === 'cobrador') { // the taxman's tall dark cap, and the tally board under the arm
+        c.fillStyle = '#2a1a1a'; c.fillRect(-1.7, hy - 4.4, 3.4, 2.6); c.fillRect(-2.2, hy - 2, 4.4, 0.7); c.fillStyle = '#a8322a'; c.fillRect(-1.7, hy - 2.6, 3.4, 0.5);
+        if (v.task && (v.task.type === 'taxes' || v.task.type === 'tribute')) { c.fillStyle = '#c8a878'; c.fillRect(-3.2, -7.4, 1.4, 2.4); c.fillStyle = 'rgba(60,40,20,0.6)'; c.fillRect(-3, -6.8, 1, 0.2); c.fillRect(-3, -6.2, 1, 0.2); }
+      }
       else if (v.role === 'construtor') { c.fillStyle = '#e8903a'; c.beginPath(); c.arc(0, hy - 1, 2.2, Math.PI, TAU); c.fill(); c.fillRect(0, hy - 1.2, 3, 0.6); }
       else if (v.role === 'mineiro') { c.fillStyle = '#5a5e68'; c.beginPath(); c.arc(0, hy - 1, 2.2, Math.PI, TAU); c.fill(); c.fillStyle = '#ffe28a'; c.fillRect(1.4, hy - 2.2, 0.8, 0.8); }
       else if (v.role === 'sacerdote') { c.fillStyle = '#f2ecdc'; c.beginPath(); c.arc(-0.3, hy - 0.3, 2.5, Math.PI * 0.9, Math.PI * 2.1); c.fill(); }
       else if (v.role === 'pastor') { c.fillStyle = '#c8a860'; c.beginPath(); c.ellipse(0, hy - 1.5, 3.4, 0.8, 0, 0, TAU); c.fill(); c.beginPath(); c.arc(0, hy - 1.6, 1.6, Math.PI, TAU); c.fill(); }
       else if (v.role === 'ferreiro' || v.role === 'tecelao' || v.role === 'oleiro') { c.fillStyle = v.role === 'ferreiro' ? '#3a2a1a' : v.role === 'tecelao' ? '#c8483a' : '#8a5a3a'; c.fillRect(-2.1, hy - 1.6, 4.2, 0.8); }
       else if (v.role === 'escriba') { c.fillStyle = '#f4efe3'; c.beginPath(); c.arc(0, hy - 0.9, 2.2, Math.PI, TAU); c.fill(); }
-      else if (v.role === 'cobrador') { c.fillStyle = '#3a1a1a'; c.fillRect(-1.8, hy - 4.2, 3.6, 2.6); c.fillRect(-2.8, hy - 1.8, 5.6, 0.7); c.fillStyle = '#e8b83a'; c.fillRect(-1.8, hy - 2.4, 3.6, 0.5); }
       else if (v.role === 'mercador' || v.role === 'ourives') { c.fillStyle = v.role === 'ourives' ? '#e8b83a' : '#e8e2d0'; c.beginPath(); c.ellipse(0, hy - 1.6, 2.4, 1.3, 0, Math.PI, TAU); c.fill(); c.fillRect(-2.4, hy - 1.8, 4.8, 0.6); }
       else if (v.role === 'feirante' || v.role === 'taverneiro') { c.fillStyle = v.role === 'feirante' ? '#e8c24a' : '#8a3a2a'; c.beginPath(); c.arc(-0.2, hy - 0.6, 2.2, Math.PI * 0.95, Math.PI * 2.05); c.fill(); }
       else if (v.role === 'contrabandista') { c.fillStyle = '#2a2430'; c.beginPath(); c.arc(-0.3, hy - 0.2, 2.6, Math.PI * 0.75, Math.PI * 2.1); c.lineTo(1.6, hy + 2.4); c.lineTo(-2.6, hy + 2.6); c.fill(); }

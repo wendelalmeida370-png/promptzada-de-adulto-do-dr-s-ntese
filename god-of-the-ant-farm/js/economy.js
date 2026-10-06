@@ -876,7 +876,8 @@
   function runTavernVisit(v, t, dt, H) {
     const b = workB(v, t, H); if (!b) return;
     if (t.st === 0) {
-      if (!t.spot) { const [dx, dy] = G.Vg.door(b); t.spot = [dx + G.rr(-0.6, 0.6), dy + G.rr(-0.1, 0.5)]; }
+      // a place by the door on dry ground (never in the river the tavern looks onto)
+      if (!t.spot) { const [dx, dy] = G.Vg.door(b); let sp = null; for (let k = 0; k < 10 && !sp; k++) { const x = dx + G.rr(-0.6, 0.6), y = dy + G.rr(-0.1, 0.5); const i = W.idx(x, y); if (W.walkable(i) && G.S.type[i] !== T.RIVER && !G.S.occ[i]) sp = [x, y]; } t.spot = sp || [dx, dy]; }
       const r = walkTo(v, t, 'spot', t.spot[0], t.spot[1], false, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return;
     }
     v.act = v.actT % 6 < 4 ? 'drink' : 'talk'; faceB(v, b);
@@ -902,7 +903,7 @@
   E.guardTask = function (v, H) {
     const S = G.S; const set = S.settlements.get(v.set); if (!set) return null;
     const posts = [];
-    for (const t of ['torre', 'palacio', 'coletoria', 'quartel', 'mercado_negro', 'mercado']) for (const b of E.byType(v.set, t)) posts.push({ b });
+    for (const t of ['torre', 'palacio', 'paco', 'grande_palacio', 'palacio_colossal', 'coletoria', 'quartel', 'mercado_negro', 'mercado']) for (const b of E.byType(v.set, t)) posts.push({ b });
     const w = G.Siege && G.Siege.wallOf(set.id);
     if (w && w.done) for (const i of w.gates) posts.push({ gate: i });
     if (!posts.length) return null;

@@ -491,6 +491,8 @@
     const fed = S.blessed && st.food > Math.max(50, G.Fac.pop(fac.id) * 5);
     want.agricultor = Math.min(farmsBuilt * (fed ? 1 : 2), Math.ceil(A * (fed ? 0.25 : 0.45)));
     want.construtor = sites ? Math.min(Math.max(1, Math.ceil(sites * 1.4) + (matNeed > 40 ? 1 : 0)), Math.max(1, Math.floor(A * 0.35))) : 0;
+    // a great palace going up takes the town's hands
+    G.Court && G.Court.builders(set, fac, want, A);
     want.cacador = (A >= 7 ? 1 : 0) + (A >= 22 ? 1 : 0) + Math.min(3, threats);
     const restOf = () => A - want.sacerdote - want.agricultor - want.construtor - want.cacador - want.guerreiro - ecoN;
     // at least two hands for wood and forage; the trades give way last
