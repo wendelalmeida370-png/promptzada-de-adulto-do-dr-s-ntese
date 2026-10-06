@@ -1038,7 +1038,11 @@
     c => !c.WAS && c.TW !== 'noite' ? `${c.P} chegou ${ao(c.X)} com a poeira da estrada até os joelhos. Ali, ${c.RITE}.` : null,
     c => !c.WAS && c.TW === 'noite' ? `${c.P} chegou ${ao(c.X)} já de noite. À luz de uma tocha, ${c.RITE}.` : null,
   ] });
-  K('pg-oraculo', { h: 'O oráculo', text: [c => `${c.ORACLE}, ${c.ORAC} ${deArt(c.X)}, saiu da sombra e disse a ${c.P} só uma coisa: “${c.SAY}”`] });
+  K('pg-oraculo', { h: 'O oráculo', text: [
+    c => !c.ORREL ? `${c.ORACLE}, ${c.ORAC} ${deArt(c.X)}, saiu da sombra e disse a ${c.P} só uma coisa: “${c.SAY}”` : null,
+    // (the oracle of the cave is family: not a stranger's words)
+    c => c.ORREL ? `Quem saiu da sombra foi ${c.ORACLE}, ${c.ORREL} de ${c.P}, que servia ali como oráculo. Segurou as mãos ${c.o === 'a' ? 'dela' : 'dele'} e disse só: “${c.SAY}”` : null,
+  ] });
   K('pg-voltou', { h: 'A volta', text: [
     c => !c.NEWHOME ? `${c.P} voltou para ${c.cityNow || 'casa'} com o rosto em paz. A promessa a ${c.L} estava cumprida.` : null,
     c => !c.NEWHOME ? `De volta a ${c.cityNow || 'casa'}, ${c.P} pendurou a trouxa vazia na porta. Tinha rezado por ${c.L} onde prometeu.` : null,
@@ -1138,7 +1142,7 @@
       St.beat(s, 'pg-rezou', { RITE: rite, WAS: s.place.was ? 1 : 0, TW: St.timeWord() }, { x: v.x, y: v.y, log: true, big: 1, hot: 20 });
       // (the oracle as it is today — not who it was when the promise was made, nor the one being mourned)
       const cv = s.place.kind === 'oraculo' && G.Caves ? G.Caves.get(s.place.ref) : null; const o = cv && cv.oracle;
-      if (o && o.id !== s.cast.lost && o.id !== v.id && o.name !== v.name && (!lost || o.name !== lost.name) && G.S.villagers.has(o.id)) St.beat(s, 'pg-oraculo', { ORACLE: o.name, ORAC: o.g === 'f' ? 'a oráculo' : 'o oráculo', SAY: oracleSays(s, lost) });
+      if (o && o.id !== s.cast.lost && o.id !== v.id && o.name !== v.name && (!lost || o.name !== lost.name) && G.S.villagers.has(o.id)) St.beat(s, 'pg-oraculo', { ORACLE: o.name, ORAC: o.g === 'f' ? 'a oráculo' : 'o oráculo', ORREL: REL_BARE[St.relOf(v, G.S.villagers.get(o.id))] || '', SAY: oracleSays(s, lost) });
       v.devotion = Math.min(100, (v.devotion || 0) + 20); G.FX && G.FX.prayer && G.FX.prayer(v.x, v.y);
       G.Life && G.Life.bio(v, 'note', `Andou até ${s.place.name} para rezar por ${lost ? lost.name : 'quem partiu'}`);
     },
