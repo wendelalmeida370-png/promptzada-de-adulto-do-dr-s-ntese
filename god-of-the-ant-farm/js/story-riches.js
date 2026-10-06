@@ -64,7 +64,7 @@
     const S = G.S;
     for (const a of S.animals.values()) {
       if (!a.morph || a.dead || a.tamed || a.dom || a.held || a.rareSeen) continue;
-      const sp = G.Animals.DEF[a.kind]; if (!sp || sp.cls !== 'land' || (a.grown !== undefined && a.grown < 0.7)) continue;
+      const sp = G.Animals.DEF[a.kind]; if (!sp || sp.cls !== 'land' || (sp.size || 1) < 0.8 || (a.grown !== undefined && a.grown < 0.7)) continue;
       let best = null, bd = 15 * 15;
       for (const s of S.settlements.values()) { const d = G.dist2(a.x, a.y, s.cx, s.cy); if (d < bd) { bd = d; best = s; } }
       if (!best) continue;
@@ -80,9 +80,9 @@
   // ====================================================================================
   K('fr-visto', { h: 'A fera', text: [
     c => (c.MOTIVE === 'ouro' ? `${c.Bc} foi vist${c.oB}${c.at}, ${c.COLOR}. ${c.P} fez as contas na hora: uma pele daquela vale mais que uma casa.` : null),
-    c => (c.MOTIVE === 'ouro' ? `Contaram em ${c.town} que ${c.B} anda${c.at}. ${c.P} não pensou em outra coisa o dia inteiro: com aquela pele, a família nunca mais passaria fome.` : null),
+    c => (c.MOTIVE === 'ouro' ? `Contaram em ${c.town} que ${c.B} anda${c.NEARAT}. ${c.P} não pensou em outra coisa o dia inteiro: com aquela pele, a família nunca mais passaria fome.` : null),
     c => (c.MOTIVE === 'gloria' ? `Viram ${c.B}${c.at}, ${c.COLOR} no meio do mato. ${c.P} pegou a lança: quem trouxer aquela pele nunca mais será esquecid${c.o}.` : null),
-    c => (c.MOTIVE === 'gloria' ? `${c.Bc} apareceu${c.at}. Em ${c.town}, os caçadores só falam disso. ${c.P} decidiu que seria ${c.ele} a trazê-l${c.oB}.` : null),
+    c => (c.MOTIVE === 'gloria' ? `${c.Bc} apareceu${c.NEARAT}. Em ${c.town}, os caçadores só falam disso. ${c.P} decidiu que seria ${c.ele} a trazê-l${c.oB}.` : null),
     c => (c.MOTIVE === 'sagrado' ? `${c.Bc} apareceu${c.at}, ${c.COLOR}. Os velhos dizem que um bicho daquela cor é mensageiro dos deuses. ${c.P} quer vê-l${c.oB} de perto — não matar.` : null),
   ], civ: {
     nordico: [c => (c.MOTIVE === 'sagrado' ? `${c.Bc} apareceu${c.at}. Os velhos dizem que bicho daquela cor é enviado de Odin, e quem o mata atrai o azar para a casa. ${c.P} só quer vê-l${c.oB}.` : null)],
@@ -95,7 +95,7 @@
     c => `${c.P} passou o dia no mato, atrás ${c.dB}, sem fazer barulho.`,
   ] });
   K('fr-perto', { h: 'Frente a frente', text: [
-    c => `${c.P} viu ${c.B} de perto${c.at}: ${c.COLOR}. Por um instante esqueceu de respirar.`,
+    c => `${c.P} chegou a poucos passos ${c.dB}${c.at}: ${c.COLOR}. Por um instante esqueceu de respirar.`,
     c => `${c.Bc} parou e olhou para ${c.P}${c.at}. Nenhum dos dois piscou.`,
   ] });
   K('fr-abateu', { h: 'A caçada', text: [
@@ -140,7 +140,7 @@
   const rareOf = s => G.S.animals.get(s.cast.beast);
   function rc(s) {
     const d = s.data; const a = d.art; const B = `${a} ${d.bname}`;
-    return { B, Bc: cap1(B), dB: (a === 'a' ? 'da ' : 'do ') + d.bname, oB: a, MORPH: d.morph, MOTIVE: d.motive, APEX: d.apex, town: d.town,
+    return { B, Bc: cap1(B), dB: (a === 'a' ? 'da ' : 'do ') + d.bname, oB: a, MORPH: d.morph, MOTIVE: d.motive, APEX: d.apex, town: d.town, NEARAT: d.at && d.town && d.at.includes(d.town) ? ' bem perto da cidade' : d.at || '',
       COLOR: d.morph === 'albino' ? `branc${a} como a neve` : `negr${a} como carvão` };
   }
   function finishPelt(s, p, skinned) {
@@ -240,7 +240,7 @@
     heirs: { minAge: 15, chance: 0.35, fit: (s, c) => 0.3 + (c.courage || 0.5) * 0.7, text: (s, c) => `${c.P} morreu atrás ${rc(s).dB}. ${c.H}, ${c.DEADREL}, pegou a lança.` },
     inherited(s, heir) { s.data.town = setName(heir.set) || s.data.town; s.data.tracked = 0; s.data.met = 0; if (s.data.motive === 'sagrado') s.data.motive = 'gloria'; },
     titles: {
-      pele: c => `A Pele ${c.s.data.art === 'a' ? 'da' : 'do'} ${titleCase(c.s.data.bname)}`,
+      pele: c => (c.s.data.motive === 'sagrado' ? `Os Olhos ${c.s.data.art === 'a' ? 'da' : 'do'} ${titleCase(c.s.data.bname)}` : `A Pele ${c.s.data.art === 'a' ? 'da' : 'do'} ${titleCase(c.s.data.bname)}`),
       e: c => `${c.P} e ${c.s.data.art} ${titleCase(c.s.data.bname)}`,
       cor: c => (c.s.data.morph === 'albino' ? `O Bicho Branco de ${c.s.data.town}` : `A Sombra Negra de ${c.s.data.town}`),
     },
@@ -370,16 +370,16 @@
   //  PALÁCIO — the ruler who wanted a palace
   // ====================================================================================
   K('pc-ordem', { h: 'A ordem', text: [
-    c => (c.BIG ? `${c.WHO} olhou para o palácio que tinha e achou pequeno. Mandou erguer, fora de ${c.town}, ${c.BNa}: maior que qualquer coisa que o mundo já viu.` : null),
+    c => (c.BIG ? `${c.WHOv} olhou para o palácio que tinha e achou pequeno. Mandou erguer, fora de ${c.town}, ${c.BNa}: maior que qualquer coisa que o mundo já viu.` : null),
     c => (c.BIG ? `"Quero que vejam do outro lado do mar", disse ${c.WHO}. Começaram as obras ${c.dBN}, e metade dos construtores de ${c.town} foi carregar pedra.` : null),
-    c => (!c.BIG ? `${c.WHO} quer um palácio à altura do próprio nome. Começaram as obras ${c.dBN}, com alas e jardins.` : null),
-    c => (!c.BIG ? `${c.WHO} mandou chamar os mestres de obras: queria um palácio de verdade, com pátio e fonte. Em ${c.town}, o povo fez as contas do imposto.` : null),
+    c => (!c.BIG ? `${c.WHOv} quer um palácio à altura do próprio nome. Começaram as obras ${c.dBN}, com alas e jardins.` : null),
+    c => (!c.BIG ? `${c.WHOv} mandou chamar os mestres de obras: queria um palácio de verdade, com pátio e fonte. Em ${c.town}, o povo fez as contas do imposto.` : null),
   ], civ: {
-    egipcio: [c => (c.BIG ? `${c.WHO} mandou chamar os escribas e os mestres de obras: queria um palácio que os deuses vissem do céu. Assim começou ${c.BNa}.` : null)],
-    asteca: [c => (c.BIG ? `${c.WHO} quis um palácio sobre uma pirâmide de degraus, mais alto que o templo do Sol. Começaram a cortar a pedra para ${c.BNa}.` : null)],
-    nordico: [c => (c.BIG ? `${c.WHO} quis um salão de banquetes tão comprido que um homem gritando numa ponta não fosse ouvido na outra. Começou ${c.BNa}.` : null)],
-    romano: [c => (c.BIG ? `${c.WHO} quis colunas de mármore, estátuas e jardins em terraços. Os arquitetos desenharam ${c.BNa}, e o tesouro tremeu.` : null)],
-    grego: [c => (c.BIG ? `${c.WHO} quis um palácio com colunas como as dos templos. Os mestres de obras desenharam ${c.BNa} na areia.` : null)],
+    egipcio: [c => (c.BIG ? `${c.WHOv} mandou chamar os escribas e os mestres de obras: queria um palácio que os deuses vissem do céu. Assim começou ${c.BNa}.` : null)],
+    asteca: [c => (c.BIG ? `${c.WHOv} quis um palácio sobre uma pirâmide de degraus, mais alto que o templo do Sol. Começaram a cortar a pedra para ${c.BNa}.` : null)],
+    nordico: [c => (c.BIG ? `${c.WHOv} quis um salão de banquetes tão comprido que um homem gritando numa ponta não fosse ouvido na outra. Começou ${c.BNa}.` : null)],
+    romano: [c => (c.BIG ? `${c.WHOv} quis colunas de mármore, estátuas e jardins em terraços. Os arquitetos desenharam ${c.BNa}, e o tesouro tremeu.` : null)],
+    grego: [c => (c.BIG ? `${c.WHOv} quis um palácio com colunas como as dos templos. Os mestres de obras desenharam ${c.BNa} na areia.` : null)],
   } });
   K('pc-pedra', { h: 'As pedras', text: [
     c => `As carroças de pedra não param de chegar ao canteiro ${c.dBN}. ${c.BIG ? 'Metade dos construtores de ' + c.town + ' trabalha lá.' : 'As paredes já passam da altura de um homem.'}`,
@@ -427,9 +427,10 @@
     const b = palOf(s); const raw = s.data.bname; const p = P(s.protag);
     const BNa = (G.gen(raw) === 'a' ? 'a ' : 'o ') + raw; const f = G.Fac.get(s.data.fac);
     const yrs = Math.max(1, G.S.day - (s.data.since || s.born));
+    const who = p && f && f.leader === p.id ? G.Politics.styled(f, p) : s.data.firstName || (p ? p.name : '');
     return { BN: raw, BNa, BNc: cap1(BNa), dBN: BNa.replace(/^o /, 'do ').replace(/^a /, 'da '), emBN: (G.gen(raw) === 'a' ? 'na ' : 'no ') + raw, BIG: s.data.type === 'palacio_colossal', town: s.data.town,
       PROG: b ? b.progress || 0 : 0, PRONTO: G.gen(raw) === 'a' ? 'pronta' : 'pronto', YRS: yrs + (yrs > 1 ? ' anos' : ' ano'), CIVBIT: CIVBIT[(p && p.civ) || (f && f.civ) || ''] || CIVBIT[''],
-      WHO: p && f && f.leader === p.id ? G.Politics.styled(f, p) : s.data.firstName || (p ? p.name : '') };
+      WHO: who, WHOv: who + (who.includes(',') ? ',' : '') };
   }
   // the ruler of the people is someone else now: the throne inherits the work, or the one who wanted it lost it
   function rulerChanged(s, nr, how) {
@@ -794,7 +795,7 @@
     on: {
       migracao(f) {
         const S = G.S; const sp = G.Animals.DEF[f.kind]; if (!sp || f.n < 5) return null;
-        const x = f.ford ? f.fx : f.x + (f.tx - f.x) * 0.45, y = f.ford ? f.fy : f.y + (f.ty - f.y) * 0.45;
+        const x = f.ford ? f.fx : f.tx, y = f.ford ? f.fy : f.ty;
         const spot = W.nearestLand(x, y, 6); if (!spot) return null;
         let set = null, bd = 34;
         for (const st of S.settlements.values()) { const d = G.dist(st.cx, st.cy, spot[0], spot[1]); if (d < bd && W.sameLand(st.cx, st.cy, spot[0], spot[1])) { bd = d; set = st; } }
@@ -808,7 +809,7 @@
         if (!best || bs < 0.42) return null;
         const w = St.where(spot[0], spot[1]);
         return [{ protag: best.id, score: Math.min(1, bs + (f.ford ? 0.08 : 0)), keyExtra: 'm' + f.d + f.kind, cast: {}, place: { kind: 'travessia', name: f.ford ? 'o vau' : (w.name || 'a planície'), x: spot[0], y: spot[1] },
-          data: { kind: f.kind, n: f.n, ford: f.ford, at: w.at && !w.town ? w.at : f.ford ? ' no vau do rio' : ' na planície', town: set.name }, motifs: ['gatilho:manada', 'amb:viagem', 'rel:nenhuma'] }];
+          data: { kind: f.kind, n: f.n, ford: f.ford, at: w.at && !w.town ? w.at : f.ford ? '' : ' na planície', town: set.name }, motifs: ['gatilho:manada', 'amb:viagem', 'rel:nenhuma'] }];
       },
     },
     valid: sd => alive(sd.protag),
@@ -822,7 +823,7 @@
       }
       return false;
     },
-    urge(s, v) { if (s.data.arrived) return v.hunger < 75 ? 0.3 : 0; if (!free(v) || !homeSafe(v)) return 0; return 0.2; },
+    urge(s, v) { if (s.data.arrived) return v.hunger < 75 ? 0.3 : 0; if (!free(v) || !homeSafe(v)) return 0; return G.S.day - s.born < 2 ? 0.32 : 0.2; },
     task(s, v, H) {
       if (s.data.arrived) { const set = homeOf(v); return set ? St.journey(s, v, H, { x: set.cx, y: set.cy, leg: 1 }) : null; }
       if (!s.data.left) { s.data.left = 1; s.phase = 'estrada'; const k = kinNear(v, 10); St.beat(s, 'mg-partiu', Object.assign(mgCtx(s), { KIN: k ? (k.rel ? L.REL_BARE[k.rel] + ', ' + k.name + ',' : k.name) : '' }), { x: v.x, y: v.y }); }
@@ -865,16 +866,16 @@
   //  GUERRA PELA RIQUEZA — coffee, spices, the silk road
   // ====================================================================================
   K('gr-cobica', { h: 'A cobiça', text: [
-    c => (c.REASON === 'riqueza' ? `${c.WHO} via ${c.GOODt} de ${c.FT} chegar caro, mês após mês. Um dia decidiu que era mais barato tomar: declarou guerra ${c.WHY}.` : null),
-    c => (c.REASON === 'riqueza' ? `"Por que pagar pelo que se pode tomar?", disse ${c.WHO} aos seus. E ${c.FP} marchou ${c.WHY}.` : null),
-    c => (c.REASON === 'rota' ? `As caravanas de ${c.FP} foram roubadas duas vezes na estrada por gente de ${c.FT}. ${c.WHO} não esperou a terceira: guerra ${c.WHY}.` : null),
+    c => (c.REASON === 'riqueza' ? `${c.WHOv} via ${c.GOODt} de ${c.FT} chegar caro, mês após mês. Um dia decidiu que era mais barato tomar: declarou guerra ${c.WHY}.` : null),
+    c => (c.REASON === 'riqueza' ? `"Por que pagar pelo que se pode tomar?", disse ${c.WHOv} aos seus. E ${c.FP} marchou ${c.WHY}.` : null),
+    c => (c.REASON === 'rota' ? `As caravanas de ${c.FP} foram roubadas duas vezes na estrada por gente de ${c.FT}. ${c.WHOv} não esperou a terceira: guerra ${c.WHY}.` : null),
   ], civ: {
-    asteca: [c => (c.REASON === 'riqueza' ? `${c.WHO} mandou dizer a ${c.FT} que pagasse tributo em ${c.GOODn}, ou pagaria em sangue. Não pagaram. Guerra ${c.WHY}.` : null)],
-    romano: [c => (c.REASON === 'riqueza' ? `O senado de ${c.FP} ouviu os mercadores reclamarem do preço ${c.deGOOD}. ${c.WHO} encontrou uma ofensa antiga e declarou guerra ${c.WHY}.` : null)],
+    asteca: [c => (c.REASON === 'riqueza' ? `${c.WHOv} mandou dizer a ${c.FT} que pagasse tributo em ${c.GOODn}, ou pagaria em sangue. Não pagaram. Guerra ${c.WHY}.` : null)],
+    romano: [c => (c.REASON === 'riqueza' ? `O senado de ${c.FP} ouviu os mercadores reclamarem do preço ${c.deGOOD}. ${c.WHOv} encontrou uma ofensa antiga e declarou guerra ${c.WHY}.` : null)],
   } });
   K('gr-tomou', { h: 'A conquista', text: [
     c => `${c.FP} tomou ${c.SET} de ${c.FT}.${c.ESTATE ? ' Com a cidade vieram ' + c.ESTATE + '.' : ''}`,
-    c => `${c.SET} caiu. ${c.WHO} entrou na cidade e foi direto ${c.ESTATE ? 'ver ' + c.ESTATE : 'aos armazéns'}.`,
+    c => `${c.SET} caiu. ${c.WHOv} entrou na cidade e foi direto ${c.ESTATE ? 'ver ' + c.ESTATE : 'aos armazéns'}.`,
   ] });
   K('gr-perdeu', { h: 'A derrota', text: [c => `${c.FT} tomou ${c.SET} de ${c.FP}. A guerra ${c.WHY} saiu cara.`] });
   K('gr-vitoria', { h: 'A vitória', text: [
@@ -890,7 +891,8 @@
   function grCtx(s) {
     const d = s.data; const p = P(s.protag); const f = G.Fac.get(d.fa);
     const good = d.good || ''; const gt = good ? goodThe(good) : 'as riquezas';
-    return { WHO: p && f && f.leader === p.id ? G.Politics.styled(f, p) : p ? p.name : '', REASON: d.reason, WHY: d.why || 'pelas riquezas do vizinho', GOODt: gt, GOODc: cap1(gt), GOODn: good ? goodName(good) : 'riquezas', deGOOD: good ? deGood(good) : 'das riquezas', FT: facName(d.fb), WON: (d.won || []).join(' e ') || 'nada' };
+    const who = p && f && f.leader === p.id ? G.Politics.styled(f, p) : p ? p.name : '';
+    return { WHO: who, WHOv: who + (who.includes(',') ? ',' : ''), REASON: d.reason, WHY: d.why || 'pelas riquezas do vizinho', GOODt: gt, GOODc: cap1(gt), GOODn: good ? goodName(good) : 'riquezas', deGOOD: good ? deGood(good) : 'das riquezas', FT: facName(d.fb), WON: (d.won || []).join(' e ') || 'nada' };
   }
   function estatesOf(setId) { const out = new Set(); for (const b of G.S.buildings.values()) if (b.set === setId && b.built && ESTATES[b.type]) out.add(ESTATES[b.type]); return [...out].slice(0, 2).join(' e '); }
   function grRuler(s, nr, how) {
