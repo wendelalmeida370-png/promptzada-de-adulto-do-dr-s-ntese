@@ -131,7 +131,7 @@
   const oldPlan = E.plan;
   E.plan = function (set, fac, c, want, pop) {
     oldPlan(set, fac, c, want, pop);
-    if ((set.tier || 0) >= 1 && pop >= 16 && !(c.perolaria || 0) && !c.siteTypes.perolaria) {
+    if ((set.tier || 0) >= 1 && pop >= 16 && !(c.perolaria || 0) && !c.siteTypes.perolaria && !(G.City.saving(set, fac) && fac.stock.wood < 40)) {
       if (set._reefDay !== G.S.day) { set._reefDay = G.S.day; set._reef = !!reefSpot(set.cx, set.cy, 14); }
       if (set._reef) want.push('perolaria');
     }

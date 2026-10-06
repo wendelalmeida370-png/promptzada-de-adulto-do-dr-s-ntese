@@ -391,6 +391,9 @@
   }
   V.housingInfo = housingInfo;
 
+  // what a growing town builds before any extra, and what it builds to defend itself
+  const ESSENTIAL = { hut: 1, house: 1, storehouse: 1, farm: 1, well: 1, workshop: 1, praca: 1, mercado: 1, temple: 1, celeiro: 1, doca: 1 };
+  const DEFENCE = { quartel: 1, torre: 1, muralha: 1, portao: 1, wall: 1, gate: 1 };
   function plan(set) {
     const S = G.S;
     const c = counts(set.id);
@@ -436,7 +439,15 @@
       return !!(G.City && G.City.upgradeHomes(set, fac, c, st));
     };
     let improved = false;
-    if (!want.length) { if (improve()) return; improved = true; }
+    // a vila one step from city, short of stone houses: the huts are rebuilt before any extra
+    const stoneHomes = (c.house || 0) + (c.sobrado || 0) + (c.insula || 0);
+    // a town still on its way to city does not sink its stone into big extras (a monument, a forge,
+    // a hall of scribes...) until its houses, square and temple are up — or the stone piles up
+    if (G.City && G.City.saving(set, fac)) {
+      for (let k = want.length - 1; k >= 0; k--) { const t = want[k], d = G.BDEF[t]; if (d && !ESSENTIAL[t] && !DEFENCE[t] && ((d.cost && d.cost.stone) || 0) >= 16) want.splice(k, 1); }
+    }
+    if ((set.tier || 0) === 2 && stoneHomes < 6 && c.hut > 0 && !want.some(t => ESSENTIAL[t])) { if (improve()) return; improved = true; }
+    if (!want.length && !improved) { if (improve()) return; improved = true; }
     // proactive housing for growing families
     if (!want.length && hi.cap + pendingHousing < pop + 5 && c.sites === 0) want.push(homeType);
     for (const type of want) {
@@ -487,8 +498,8 @@
     const mineJobs = eco.mineiro || 0;
     want.sacerdote = templeBuilt ? (pop >= 45 ? 2 : 1) : 0;
     want.guerreiro = G.War.warriorWant(set, fac, A);
-    // in years of plenty, full granaries send half the farmers to the quarries and the woods
-    const fed = S.blessed && st.food > Math.max(50, G.Fac.pop(fac.id) * 5);
+    // full granaries send half the farmers to the quarries and the woods (sooner in years of plenty)
+    const fed = st.food > Math.max(50, G.Fac.pop(fac.id) * (S.blessed ? 5 : 7));
     want.agricultor = Math.min(farmsBuilt * (fed ? 1 : 2), Math.ceil(A * (fed ? 0.25 : 0.45)));
     want.construtor = sites ? Math.min(Math.max(1, Math.ceil(sites * 1.4) + (matNeed > 40 ? 1 : 0)), Math.max(1, Math.floor(A * 0.35))) : 0;
     // a great palace going up takes the town's hands
@@ -496,12 +507,12 @@
     want.cacador = (A >= 7 ? 1 : 0) + (A >= 22 ? 1 : 0) + Math.min(3, threats);
     const restOf = () => A - want.sacerdote - want.agricultor - want.construtor - want.cacador - want.guerreiro - ecoN;
     // at least two hands for wood and forage; the trades give way last
-    const MIN_REST = A >= 12 ? 2 : 1;
+    const MIN_REST = A >= 30 ? 4 : A >= 18 ? 3 : A >= 12 ? 2 : 1;
     let rest = restOf();
     if (rest < MIN_REST) { want.construtor = Math.min(want.construtor, Math.max(1, Math.floor(A * 0.2))); want.cacador = Math.min(want.cacador, 1 + (threats > 1 ? 1 : 0)); rest = restOf(); }
     if (rest < MIN_REST) { want.guerreiro = Math.max(0, want.guerreiro - 1); rest = restOf(); }
     if (rest < MIN_REST) {
-      for (const r of ['contrabandista', 'escriba', 'taverneiro', 'ourives', 'feirante', 'oleiro', 'cavalarico', 'mercador', 'cobrador', 'tecelao', 'acougueiro', 'ferreiro']) {
+      for (const r of ['contrabandista', 'escriba', 'taverneiro', 'mergulhador', 'sericultor', 'salgador', 'salineiro', 'vinhateiro', 'apicultor', 'fruticultor', 'lavrador', 'ourives', 'feirante', 'oleiro', 'cavalarico', 'mercador', 'cobrador', 'tecelao', 'acougueiro', 'ferreiro']) {
         if (rest >= MIN_REST) break;
         if (!(want[r] > 0)) continue;
         const cut = Math.min(want[r], MIN_REST - rest); want[r] -= cut; ecoN -= cut; rest += cut;
@@ -524,7 +535,7 @@
     const wS = rocks ? lack('stone') * 2 + (stoneNeed > st.stone ? 0.6 : 0) : 0;
     const tot = wF + wW + wS;
     if (rest > 0) {
-      want.coletor = Math.max(1, Math.round(rest * wF / tot));
+      want.coletor = Math.max(fed ? 0 : 1, Math.round(rest * wF / tot));
       want.mineiro = Math.round(rest * wS / tot);
       want.lenhador = Math.max(0, rest - want.coletor - want.mineiro);
     }
@@ -639,8 +650,11 @@
       const cap = G.Fac.capitalOf(set.fac) === set;
       // real cities keep their people and grow up and out instead of sending settlers away
       const crowd = G.City ? G.City.crowdCap(set.id) : 48;
-      const need = Math.round(Math.max((cap ? 44 : 34) / ex, (set.tier || 0) >= 3 ? crowd * 0.9 : 0));
-      if (!(pop >= need || (pop >= Math.round(26 / ex) && set.fails >= 6))) continue;
+      let need = Math.round(Math.max((cap ? 44 : 34) / ex, (set.tier || 0) >= 3 ? crowd * 0.9 : 0));
+      // a capital keeps its young couples until it is a city (unless it is bursting)
+      const holding = cap && (set.tier || 0) < 3;
+      if (holding) need = Math.max(need, 48);
+      if (!(pop >= need || (!holding && pop >= Math.round(26 / ex) && set.fails >= 6))) continue;
       if (S.day - set.founded < 8) continue;
       if (G.R() > 0.5) continue;
       // find location

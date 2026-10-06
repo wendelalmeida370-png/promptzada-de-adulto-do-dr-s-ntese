@@ -756,6 +756,8 @@
     // crowded peoples look at their neighbours' land
     const sets = G.Fac.settlementsOf(a.id).length;
     if (popA > sets * 32) want += 0.15;
+    // a small people cannot spare its few grown men: it fights only for a strong reason
+    if (popA < 40) want -= (40 - popA) / 40 * 0.4;
     if (b.stock.food > a.stock.food * 2 && b.stock.food > 150) want += 0.08;
     const hungry = a.stock.food < popA * 0.45 && b.stock.food > 50;
     if (hungry) want += 0.3;

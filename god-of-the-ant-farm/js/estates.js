@@ -160,13 +160,15 @@
     const S = G.S; const t = set.tier || 0; const st = fac.stock;
     const n = k => (c[k] || 0); const site = k => !!c.siteTypes[k];
     const fed = st.food >= pop * 2;
+    // (a town still climbing to city plants only from spare wood, and builds no stone estates)
+    const climb = G.City && G.City.saving(set, fac); if (climb && t >= 2 && st.wood < 60) return;
     if (t >= 2 && pop >= 18 && fed && n('pomar') < 1 + Math.floor(pop / 75) && !site('pomar') && Es.cropFor(set, 'pomar')) want.push('pomar');
     if (t >= 2 && pop >= 22 && n('plantacao') < 1 + Math.floor(pop / 55) && !site('plantacao') && Es.cropFor(set, 'plantacao')) want.push('plantacao');
     if (t >= 2 && pop >= 22 && fed && n('vinhedo') < 1 + Math.floor(pop / 100) && !site('vinhedo') && Es.cropFor(set, 'vinhedo')) want.push('vinhedo');
     if (t >= 1 && pop >= 14 && !n('apiario') && !site('apiario') && ((st.mel || 0) >= 1 || (S.hives || []).some(h => G.dist(h.x, h.y, set.cx, set.cy) < 24))) want.push('apiario');
-    if (t >= 1 && pop >= 14 && !n('salina') && !site('salina') && saltCoast(set) && Es.salinaSite(set, true)) want.push('salina');
-    if (t >= 2 && pop >= 24 && fac.silk && !n('sericultura') && !site('sericultura') && mulberriesNear(set, 18)) want.push('sericultura');
-    if (t >= 2 && pop >= 24 && !n('salga') && !site('salga') && ((st.sal || 0) >= 4 || n('salina')) && st.food >= pop * 2.5) want.push('salga');
+    if (t >= 1 && pop >= 14 && !climb && !n('salina') && !site('salina') && saltCoast(set) && Es.salinaSite(set, true)) want.push('salina');
+    if (t >= 2 && pop >= 24 && !climb && fac.silk && !n('sericultura') && !site('sericultura') && mulberriesNear(set, 18)) want.push('sericultura');
+    if (t >= 2 && pop >= 24 && !climb && !n('salga') && !site('salga') && ((st.sal || 0) >= 4 || n('salina')) && st.food >= pop * 2.5) want.push('salga');
   };
   // salt pans: flat ground on the shore, the sea on one side
   Es.salinaSite = function (set, test) {
@@ -248,7 +250,8 @@
     }
     const pop = G.Village.pop(set.id); const hungry = fac.stock.food < pop * 1.5;
     // the hands go one by one: first one to each estate, then the rest, as far as the town can spare
-    let budget = Math.max(hungry ? 0 : 1, Math.floor(A * (hungry ? 0.08 : 0.2)));
+    const climb = G.City && G.City.saving(set, fac);
+    let budget = Math.max(hungry ? 0 : 1, Math.floor(A * (hungry ? 0.08 : climb ? 0.12 : 0.2)));
     const give = {};
     for (let round = 0; budget > 0 && round < 4; round++) for (const r in mine) { if (budget <= 0) break; if ((give[r] || 0) < mine[r]) { give[r] = (give[r] || 0) + 1; budget--; } }
     for (const r in give) out[r] = (out[r] || 0) + give[r];

@@ -76,6 +76,10 @@
     return t;
   };
   Ci.tierName = s => Ci.TIERS[(s && s.tier) || 0];
+  // a town still on its way to becoming a city puts its stone and hands into houses, a square and
+  // a temple first: the fine extras (a tavern, a chief's house, estates, a tribute house) wait for
+  // the city — or for a stone pile big enough to spare
+  Ci.saving = (set, fac, stone) => (set.tier || 0) < 3 && (!fac || (fac.stock.stone || 0) < (stone || 50));
   function countStreets(set) {
     const S = G.S; const r = Math.ceil((set.radius || 8)); let n = 0;
     const cx = Math.floor(set.cx), cy = Math.floor(set.cy);

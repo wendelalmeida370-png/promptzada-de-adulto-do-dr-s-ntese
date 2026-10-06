@@ -91,14 +91,14 @@
     oldPlan(set, fac, c, want, pop);
     // the city planner's plain palace is replaced by what the ruler wants
     for (let k = want.length - 1; k >= 0; k--) if (want[k] === 'palacio') want.splice(k, 1);
-    const isCap = G.Fac.capitalOf(fac.id) === set; if (!isCap || fac.gov === 'tribo' || (set.tier || 0) < 2) return;
+    const isCap = G.Fac.capitalOf(fac.id) === set; if (!isCap || fac.gov === 'tribo' || (set.tier || 0) < 2 || G.City.saving(set, fac)) return;
     for (const k in c.siteTypes) if (Co.RANK[k] || (G.BDEF[k] && G.BDEF[k].civic && k !== 'paco')) return;
     const st = fac.stock; const cur = bestPalace(fac); const want0 = desired(fac, set);
     const r = P.ruler(fac);
     if (cur && Co.RANK[cur.type] >= Co.RANK[want0]) return;
     // a new ruler gets settled first; a palace is only replaced by a far grander one
     if (cur && (!r || Co.vanity(r) < 0.62 || G.S.day - (fac.rulerSince || 0) < 2 || Co.RANK[want0] - Co.RANK[cur.type] < 1)) return;
-    if (st.stone < (want0 === 'paco' ? 10 : 20) || pop < (want0 === 'paco' ? 20 : 26)) return;
+    if ((want0 !== 'paco' && (set.tier || 0) < 3) || st.stone < (want0 === 'paco' ? 30 : 60) || pop < (want0 === 'paco' ? 20 : 26)) return;
     want.push(want0); fac._palaceWish = { type: want0, by: r ? r.id : 0, day: G.S.day };
   };
   // the vainest palaces go up outside the town, on open ground
@@ -202,9 +202,9 @@
     oldEPlan(set, fac, c, want, pop);
     const t = set.tier || 0; const n = k => (c[k] || 0); const site = k => !!c.siteTypes[k];
     // the tavern opens as soon as there is a village to drink in
-    if (t >= 1 && pop >= 18 && !n('taverna') && !site('taverna')) want.push('taverna');
+    if (t >= 3 && pop >= 18 && !n('taverna') && !site('taverna')) want.push('taverna');
     // a chief takes tribute long before there is coin
-    if (t >= 2 && pop >= 24 && !E.coinage(fac.id) && Co.tributeRate(fac) > 0 && !n('coletoria') && !site('coletoria')) want.push('coletoria');
+    if (t >= 2 && pop >= 24 && !G.City.saving(set, fac, 60) && !E.coinage(fac.id) && Co.tributeRate(fac) > 0 && !n('coletoria') && !site('coletoria')) want.push('coletoria');
   };
   const oldJob = E.jobTask;
   E.jobTask = function (v, H) {
