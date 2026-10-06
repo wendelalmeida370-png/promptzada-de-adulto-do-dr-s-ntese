@@ -809,7 +809,7 @@
         else {
           v.act = 'butcher'; G.faceTo(v, t.fx - v.x, t.fy - v.y); t.w += dt * workMul(v);
           if (v.actT > 0.8) { v.actT = 0; G.FX && G.FX.blood && G.FX.blood(t.fx, t.fy, 0.3); }
-          if (t.w > 6) { const n = G.Sea.cutWhale(v); if (n) { v.carry = { k: 'food', n: Math.min(cap(v), n), meat: 'whale' }; emote(v, 'food', 1.2); deliverTask(v); } else end(v); }
+          if (t.w > 6) { const n = G.Sea.cutWhale(v); if (n) { v.carry = { k: 'food', n: Math.min(cap(v), n), meat: 'whale', extra: G.R() < 0.5 ? { oleo: 1 } : undefined }; emote(v, 'food', 1.2); deliverTask(v); } else end(v); }
         }
         break;
       }
@@ -884,7 +884,7 @@
         else {
           v.act = 'fish'; G.faceTo(v, t.wx, t.wy);
           if (v.actT > t.dur) {
-            if (G.R() < 0.8 * Math.min(1.2, G.Civ.tV(v, 'fish'))) { v.carry = { k: 'food', n: Math.min(cap(v), Math.round(G.ri(1, 3) * G.Civ.tV(v, 'fish'))), fish: G.Riches && G.Riches.fishAt ? G.Riches.fishAt(t.x + t.wx, t.y + t.wy) : 1 }; emote(v, 'fish', 1.8); G.FX && G.FX.splash(t.x + t.wx * 0.8, t.y + t.wy * 0.8, 0.5); deliverTask(v); }
+            if (G.R() < 0.8 * Math.min(1.2, G.Civ.tV(v, 'fish'))) { const n = Math.min(cap(v), Math.round(G.ri(1, 3) * G.Civ.tV(v, 'fish'))); v.carry = G.Waters ? G.Waters.catchCarry(v, t.x + t.wx * 0.8, t.y + t.wy * 0.8, n) : { k: 'food', n, fish: 1 }; emote(v, 'fish', 1.8); G.FX && G.FX.splash(t.x + t.wx * 0.8, t.y + t.wy * 0.8, 0.5); deliverTask(v); }
             else { v.actT = 0; t.dur = G.rr(4, 7); }
           }
         }
@@ -1468,7 +1468,7 @@
         const i = W.idx(v.x, v.y);
         if (!W.walkable(i) && S.type[i] !== T.SEA && S.type[i] !== T.DEEP) {
           const n = W.nearestLand(v.x, v.y, 5); if (n) { v.x = n[0]; v.y = n[1]; v.path = null; if (v.task) v.task.st = 0; }
-        } else if (S.type[i] <= T.SEA && (!v.task || v.task.type !== 'swim') && !(v.task && (v.task.type === 'mariscar' || v.task.type === 'pocas') && v.task.st >= 2)) { setTask(v, { type: 'swim', pri: 6 }); }
+        } else if (S.type[i] <= T.SEA && (!v.task || v.task.type !== 'swim') && !(v.task && (v.task.type === 'mariscar' || v.task.type === 'pocas') && v.task.st >= 2) && !(v.task && v.task.type === 'dive' && v.task.st >= 1)) { setTask(v, { type: 'swim', pri: 6 }); }
       }
     }
     // (a list of its own: people die and are born while the loop runs)

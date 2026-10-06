@@ -752,6 +752,11 @@
       c.fillStyle = v.age >= 62 ? '#d8d8d8' : v.hair; c.beginPath(); c.arc(-4.6, -1.8, 1.4, Math.PI * 0.8, Math.PI * 1.9); c.fill();
       c.restore(); return;
     }
+    if (act === 'dive') { // under the water: only the rings and the bubbles show where they went down
+      c.strokeStyle = 'rgba(255,255,255,' + (0.4 + Math.sin(t * 5) * 0.2) + ')'; c.lineWidth = 0.5; c.beginPath(); c.ellipse(0, 0, 3 + (t * 2 % 2), 1.3 + (t % 1) * 0.6, 0, 0, TAU); c.stroke();
+      c.fillStyle = 'rgba(230,248,255,0.85)'; for (let q = 0; q < 3; q++) { const k = (t * 1.3 + q / 3) % 1; c.beginPath(); c.arc(Math.sin(q * 2 + t) * 1.2, -k * 3, 0.45 * (1 - k) + 0.2, 0, TAU); c.fill(); }
+      c.restore(); return;
+    }
     if (act === 'swim') {
       c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = 0.6; c.beginPath(); c.ellipse(0, 0, 4 + Math.sin(t * 6) * 0.6, 1.8, 0, 0, TAU); c.stroke();
       c.fillStyle = v.skin; c.beginPath(); c.arc(0, -2, 1.9, 0, TAU); c.fill();

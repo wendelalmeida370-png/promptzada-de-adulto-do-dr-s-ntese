@@ -210,12 +210,12 @@
           const sh = S.fish.find(f => f.id === s.shoal && G.dist(f.x, f.y, s.x, s.y) < 3);
           let n = G.rr(4, 8) * G.Civ.t(s.fac, 'fish') * (sh ? 1.8 : 1);
           if (sh) { sh.n -= n; if (sh.n <= 0) S.fish.splice(S.fish.indexOf(sh), 1); }
-          s.cargo = Math.round(n);
+          s.cargo = Math.round(n); s.catchKind = G.Waters ? G.Waters.fishAt(s.x, s.y, true) : null;
           if (sailTo(s, h.moor[0], h.moor[1])) s.st = 'back'; else removeShip(s);
         }
         break;
       }
-      case 'back': if (moveShip(s, dt)) { if (s.cargo) { G.Village.addStock('food', s.cargo, s.fac); G.Riches && G.Riches.noteFood(s.fac, s.catchKind ? 'fish:' + s.catchKind : 'fish', s.cargo); G.FX && G.FX.floater(s.x, s.y, '+' + s.cargo, '#b8e070', 1.4); s.cargo = 0; } s.st = 'idle'; s.t = 0; if (s.hp < s.maxHp) s.hp = Math.min(s.maxHp, s.hp + 20); } break;
+      case 'back': if (moveShip(s, dt)) { if (s.cargo) { if (G.Waters) G.Waters.landBoat(s); else G.Village.addStock('food', s.cargo, s.fac); G.FX && G.FX.floater(s.x, s.y, '+' + s.cargo, '#b8e070', 1.4); s.cargo = 0; } s.st = 'idle'; s.t = 0; if (s.hp < s.maxHp) s.hp = Math.min(s.maxHp, s.hp + 20); } break;
     }
   }
   function updateShoals(dt) {
