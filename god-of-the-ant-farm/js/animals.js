@@ -79,8 +79,70 @@
     galinha: { name: 'Galinha', g: 'f', cls: 'land', diet: 'insect', town: true, hab: [], dens: 0, herd: [1, 1], hp: 6, sp: 0.6, run: 1.9, meat: 2, size: 0.68, fear: 0, life: 7, breed: 0, app: 0, hunt: false, art: 'hen' },
     pombo: { name: 'Pombo', g: 'm', cls: 'land', diet: 'insect', town: true, hab: [], dens: 0, herd: [1, 1], hp: 3, sp: 0.7, run: 3, meat: 1, size: 0.58, fear: 0, life: 6, breed: 0, app: 0, hunt: false, art: 'pigeon' },
   };
+  // ---------------- more of the living world: the great cats, the giants, the river folk, the sky's travellers ----------------
+  // stalk: creeps up low on its prey before the pounce · climb: 'tree' hauls its kill up a tree, true climbs rock
+  // morphs: chance of a rare coat (albino, melanico) · trophy: what people take from it when they dare to hunt it
+  // goods: what a hunted body gives besides meat · migr: follows the grass (herds) or the warmth (birds) · nests: where it nests
+  Object.assign(SP, {
+    tiger: { name: 'Tigre', g: 'm', cls: 'land', diet: 'carn', prey: ['deer', 'boar', 'capybara', 'tapir', 'monkey', 'reindeer', 'buffalo', 'gnu', 'moose'], stalk: true, hab: [4, 2], swims: 1, dens: 0.06, herd: [1, 1], hp: 115, sp: 1.0, run: 3.5, meat: 20, size: 1.4, fear: 1.2, bold: 0.4, life: 16, breed: 0.4, app: 1.5, hunt: false, apex: true, trophy: true, goods: { peles: 2 }, morphs: { albino: 0.035 }, art: 'quad', q: { len: 5, h: 4, leg: 2.8, neck: 1.4, col: '#e2822a', belly: '#f6ecda', stripes: '#1e1a18', ear: 0.6, tail: 'long', pred: 1, cat: 1 } },
+    leopard: { name: 'Leopardo', g: 'm', cls: 'land', diet: 'carn', prey: ['gazelle', 'monkey', 'rabbit', 'boar', 'capybara', 'gnu', 'ibex'], stalk: true, climb: 'tree', hab: [5, 4], dens: 0.09, herd: [1, 1], hp: 64, sp: 1.05, run: 3.6, meat: 10, size: 1.05, fear: 2, bold: 0.25, life: 14, breed: 0.45, app: 1, hunt: false, apex: true, trophy: true, goods: { peles: 1 }, morphs: { melanico: 0.08, albino: 0.01 }, art: 'quad', q: { len: 4.2, h: 3.4, leg: 2.5, neck: 1.3, col: '#d8a848', belly: '#f2e2b8', rosettes: '#2e2216', ear: 0.6, tail: 'long', pred: 1, cat: 1 } },
+    snowleopard: { name: 'Leopardo-das-neves', g: 'm', cls: 'land', diet: 'carn', prey: ['ibex', 'hare', 'reindeer', 'muskox', 'rabbit'], stalk: true, climb: true, hab: [1, 2], high: true, dens: 0.05, herd: [1, 1], hp: 58, sp: 1.0, run: 3.4, meat: 8, size: 1, fear: 2.2, bold: 0.15, life: 15, breed: 0.4, app: 0.9, hunt: false, apex: true, trophy: true, goods: { peles: 3 }, morphs: { albino: 0.01 }, art: 'quad', q: { len: 4.2, h: 3.2, leg: 2.3, neck: 1.2, col: '#dcdcd4', belly: '#f2f2ec', rosettes: '#5a5a62', ear: 0.5, tail: 'bushy', pred: 1, cat: 1 } },
+    rhino: { name: 'Rinoceronte', g: 'm', cls: 'land', diet: 'herb', hab: [5], dens: 0.11, herd: [1, 2], hp: 200, sp: 0.7, run: 2.7, meat: 34, size: 1.7, fear: 2.2, defend: true, bold: 0.12, life: 35, breed: 0.2, app: 2.6, hunt: true, big: true, goods: { chifre: 1, couro: 3 }, morphs: { albino: 0.004 }, art: 'rhino' },
+    buffalo: { name: 'Búfalo', g: 'm', cls: 'land', diet: 'herb', hab: [5, 3], near: 'water', swims: 1, dens: 0.42, herd: [5, 10], hp: 120, sp: 0.75, run: 2.6, meat: 26, size: 1.45, fear: 2.6, defend: true, bold: 0.08, life: 18, breed: 0.4, app: 2.2, hunt: true, goods: { couro: 3 }, morphs: { albino: 0.005 }, art: 'quad', q: { len: 4.8, h: 4, leg: 2.6, neck: 1.1, col: '#38322e', belly: '#48403a', stout: 1, horn: 'buffalo', ear: 0.8, tail: 'tuft' } },
+    bison: { name: 'Bisão', g: 'm', cls: 'land', diet: 'herb', hab: [0], migr: 'herd', dens: 0.4, herd: [6, 12], hp: 120, sp: 0.75, run: 2.7, meat: 28, size: 1.5, fear: 3, defend: true, life: 18, breed: 0.45, app: 2.2, hunt: true, goods: { couro: 3, peles: 1 }, morphs: { albino: 0.006 }, art: 'quad', q: { len: 4.8, h: 4.2, leg: 2.6, neck: 1, col: '#5a3e28', belly: '#4a3220', hump: 1, shag: 1, stout: 1, horn: 'short', mane: '#3a2618', ear: 0.5, tail: 'tuft' } },
+    gnu: { name: 'Gnu', g: 'm', cls: 'land', diet: 'herb', hab: [5], migr: 'herd', swims: 1, dens: 2.2, herd: [8, 16], hp: 32, sp: 1.0, run: 3.2, meat: 9, size: 1.05, fear: 5, life: 14, breed: 0.8, app: 1.1, hunt: true, goods: { couro: 1 }, art: 'quad', q: { len: 4, h: 4.2, leg: 3.4, neck: 2.2, col: '#5c5c64', belly: '#6c6c72', mane: '#222226', horn: 'cow', slope: 1, face: '#3a3a40', beard: 1, tail: 'tuft' } },
+    moose: { name: 'Alce', g: 'm', cls: 'land', diet: 'browse', hab: [2, 0], near: 'water', swims: 1, dens: 0.28, herd: [1, 2], hp: 95, sp: 0.85, run: 2.8, meat: 24, size: 1.5, fear: 3, defend: true, life: 18, breed: 0.35, app: 2, hunt: true, goods: { couro: 2 }, morphs: { albino: 0.01 }, art: 'quad', q: { len: 4.4, h: 5.2, leg: 4.4, neck: 2, col: '#4a3424', belly: '#5a4430', antler: 3, snout: 2, ear: 0.8, tail: 'tuft', beard: 1 } },
+    ibex: { name: 'Cabra-montesa', g: 'f', cls: 'land', diet: 'browse', hab: [1, 2, 0, 6], high: true, climb: true, dens: 0.6, herd: [3, 6], hp: 24, sp: 0.9, run: 3, meat: 6, size: 0.9, fear: 5, life: 14, breed: 0.7, app: 0.6, hunt: true, goods: { couro: 1 }, art: 'quad', q: { len: 3.4, h: 3.6, leg: 2.8, neck: 1.6, col: '#a88a62', belly: '#e0ccaa', horn: 'ibex', ear: 0.6, tail: 'tuft', beard: 1 } },
+    beaver: { name: 'Castor', g: 'm', cls: 'amph', diet: 'browse', hab: [0, 2], near: 'water', river: true, swims: 1, dens: 0.7, herd: [2, 4], hp: 14, sp: 0.6, run: 1.8, meat: 3, size: 0.75, fear: 3, life: 12, breed: 0.8, app: 0.4, hunt: true, dam: true, goods: { peles: 1 }, art: 'beaver' },
+    otter: { name: 'Lontra', g: 'f', cls: 'amph', diet: 'fish', hab: [0, 2, 3, 4], near: 'water', swims: 1, dens: 0.55, herd: [1, 3], hp: 12, sp: 0.8, run: 2.6, meat: 2, size: 0.7, fear: 3.5, life: 10, breed: 0.7, app: 0.3, hunt: true, goods: { peles: 1 }, art: 'otter' },
+    sloth: { name: 'Bicho-preguiça', g: 'm', cls: 'land', diet: 'browse', hab: [4], arbor: true, dens: 0.45, herd: [1, 1], hp: 16, sp: 0.07, run: 0.2, meat: 4, size: 0.8, fear: 0, life: 20, breed: 0.3, app: 0.2, hunt: false, art: 'sloth' },
+    ostrich: { name: 'Avestruz', g: 'f', cls: 'land', diet: 'herb', hab: [5, 6], dens: 0.5, herd: [3, 6], hp: 34, sp: 1.2, run: 4.3, meat: 10, size: 1.2, fear: 5, life: 30, breed: 0.5, app: 0.9, hunt: true, goods: { plumas: 2 }, art: 'ostrich' },
+    walrus: { name: 'Morsa', g: 'm', cls: 'amph', diet: 'filter', sea: 'cold', near: 'sea', hab: [1, 2], dens: 0.4, herd: [3, 8], hp: 110, sp: 0.4, run: 1.1, meat: 30, size: 1.5, fear: 2, defend: true, life: 30, breed: 0.3, app: 1.5, hunt: true, goods: { marfim: 1, oleo: 2 }, art: 'walrus' },
+    anaconda: { name: 'Sucuri', g: 'f', cls: 'amph', diet: 'carn', prey: ['capybara', 'tapir', 'boar', 'monkey', 'frog', 'deer', 'otter'], ambush: true, constrict: true, hab: [3, 4], near: 'water', swims: 1, dens: 0.1, herd: [1, 1], hp: 70, sp: 0.5, run: 2, meat: 10, size: 1.6, fear: 1, bold: 0.12, life: 25, breed: 0.3, app: 1, hunt: false, trophy: true, goods: { couro_exotico: 2 }, art: 'snake', col: ['#3e4c2a', '#c8a43a'] },
+    stork: { name: 'Cegonha', g: 'f', cls: 'air', diet: 'fish', prey: ['frog', 'lizard'], wader: true, migr: 'bird', nests: 'roof', hab: [0, 3, 5], near: 'water', dens: 0.4, herd: [2, 4], hp: 8, sp: 1.8, run: 3, meat: 2, size: 1, fear: 3.5, life: 20, breed: 0.4, app: 0.3, hunt: false, art: 'wader', b: { col: '#f6f4ee', wing: '#f0eee8', tip: '#1e1e22', beak: '#e04a2a', leg: '#e05a3a', span: 12 } },
+    goose: { name: 'Ganso-selvagem', g: 'm', cls: 'air', diet: 'herb', wader: true, hab: [0, 2, 3], near: 'water', migr: 'bird', dens: 0.6, herd: [5, 10], hp: 10, sp: 2.2, run: 3.4, meat: 3, size: 0.85, fear: 4, life: 15, breed: 0.6, app: 0.4, hunt: false, nests: 'ground', art: 'bird', b: { col: '#8a8270', wing: '#6a6458', tip: '#2a2622', head: '#2a2622', beak: '#2a2622', span: 10 } },
+    toucan: { name: 'Tucano', g: 'm', cls: 'air', diet: 'browse', hab: [4], dens: 0.8, herd: [1, 3], hp: 6, sp: 2, run: 3, meat: 1, size: 0.72, fear: 3, life: 18, breed: 0.5, app: 0.2, hunt: false, nests: 'tree', art: 'bird', b: { col: '#18181c', wing: '#18181c', tip: '#18181c', head: '#f6e8a0', beak: '#f28a1a', span: 7, toucan: 1 } },
+    owl: { name: 'Coruja', g: 'f', cls: 'air', diet: 'carn', prey: ['rabbit', 'frog', 'lizard', 'hare'], night: true, hab: [0, 2, 4, 6], dens: 0.18, herd: [1, 1], hp: 8, sp: 1.8, run: 3.4, meat: 1, size: 0.75, fear: 2.5, life: 20, breed: 0.4, app: 0.2, hunt: false, nests: 'tree', art: 'bird', b: { col: '#9a7a5a', wing: '#8a6a4a', tip: '#5a4a3a', head: '#a88a6a', beak: '#d8c890', span: 9, owl: 1 } },
+  });
+  // the old residents, in the new web: who else they eat, what their bodies are worth, where they nest
+  const more = (k, o) => { if (!SP[k]) return; if (o.prey) SP[k].prey = (SP[k].prey || []).concat(o.prey.filter(p => !(SP[k].prey || []).includes(p))); delete o.prey; Object.assign(SP[k], o); };
+  more('lion', { prey: ['gnu', 'buffalo', 'ostrich'], pride: true, stalk: true, trophy: true, goods: { peles: 2 }, morphs: { albino: 0.012 } });
+  more('jaguar', { prey: ['sloth', 'otter', 'anaconda'], stalk: true, climb: 'tree', swims: 1, trophy: true, goods: { peles: 2 }, morphs: { melanico: 0.09, albino: 0.006 } });
+  more('wolf', { prey: ['bison', 'moose', 'ibex', 'beaver'], pack: true, goods: { peles: 1 }, morphs: { albino: 0.02, melanico: 0.04 } });
+  more('hyena', { prey: ['gnu', 'ostrich'], pack: true });
+  more('croc', { prey: ['gnu', 'buffalo', 'otter'], lurk: true, goods: { couro_exotico: 2 }, trophy: true });
+  more('python', { prey: ['otter'], constrict: true, goods: { couro_exotico: 1 } });
+  more('viper', { goods: { couro_exotico: 0.5 } });
+  more('bear', { prey: ['beaver', 'moose'], fishes: true, trophy: true, goods: { peles: 2 }, morphs: { albino: 0.008 } });
+  more('polarbear', { prey: ['walrus'], trophy: true, goods: { peles: 3 } });
+  more('orca', { prey: ['walrus'] });
+  more('eagle', { prey: ['otter', 'ibex'], nests: 'cliff' });
+  more('fox', { goods: { peles: 1 }, morphs: { melanico: 0.04 } });
+  more('arcticfox', { goods: { peles: 1 } });
+  more('seal', { goods: { peles: 1, oleo: 1 } });
+  more('elephant', { goods: { marfim: 2 }, morphs: { albino: 0.012 }, herdMourn: true });
+  more('deer', { goods: { couro: 1 }, morphs: { albino: 0.012 } });
+  more('reindeer', { goods: { couro: 1, peles: 1 }, migr: 'herd' });
+  more('zebra', { migr: 'herd', swims: 1, goods: { couro: 1 } });
+  more('gazelle', { migr: 'herd', goods: { couro: 0.5 } });
+  more('boar', { goods: { couro: 1 } });
+  more('muskox', { goods: { peles: 2 } });
+  more('giraffe', { goods: { couro: 2 } });
+  more('camel', { goods: { couro: 2 } });
+  more('hippo', { goods: { marfim: 0.5, couro: 2 } });
+  more('capybara', { goods: { couro: 1 } });
+  more('tapir', { goods: { couro: 1 } });
+  more('rabbit', { goods: { peles: 0.3 } });
+  more('hare', { goods: { peles: 0.4 } });
+  more('parrot', { nests: 'tree', goods: { plumas: 0.5 } });
+  more('raven', { nests: 'tree' });
+  more('heron', { nests: 'tree' });
+  more('gull', { nests: 'cliff' });
+  more('monkey', { arbor: 'troop' });
+  more('penguin', { nests: 'ground' });
+  more('turtle', { goods: { couro_exotico: 0.5 } });
   // predators raid the herds too
-  for (const [p, list] of [['wolf', ['ovelha', 'cabra', 'porco', 'peru', 'vaca', 'galinha']], ['fox', ['peru', 'galinha']], ['bear', ['ovelha', 'porco', 'vaca', 'cabra']], ['lion', ['vaca', 'cabra', 'cavalo', 'ovelha']], ['jaguar', ['porco', 'peru', 'cabra']], ['hyena', ['cabra', 'ovelha', 'peru']], ['croc', ['vaca', 'cabra', 'cavalo', 'porco']], ['python', ['peru']], ['viper', ['peru']]]) SP[p].prey = SP[p].prey.concat(list);
+  for (const [p, list] of [['wolf', ['ovelha', 'cabra', 'porco', 'peru', 'vaca', 'galinha']], ['fox', ['peru', 'galinha']], ['bear', ['ovelha', 'porco', 'vaca', 'cabra']], ['lion', ['vaca', 'cabra', 'cavalo', 'ovelha']], ['jaguar', ['porco', 'peru', 'cabra']], ['hyena', ['cabra', 'ovelha', 'peru']], ['croc', ['vaca', 'cabra', 'cavalo', 'porco']], ['python', ['peru']], ['viper', ['peru']], ['tiger', ['vaca', 'porco', 'cabra', 'cavalo']], ['leopard', ['cabra', 'ovelha', 'peru', 'porco']], ['snowleopard', ['cabra', 'ovelha']], ['anaconda', ['porco', 'cabra']]]) SP[p].prey = SP[p].prey.concat(list);
   for (const k in SP) { SP[k].id = k; SP[k].nameA = (SP[k].g === 'f' ? 'uma ' : 'um ') + SP[k].name.toLowerCase(); }
   A.ids = Object.keys(SP);
   const DAY = () => G.DAY_LEN;
@@ -147,9 +209,14 @@
     const b = S.biome ? S.biome[i] : 0;
     if (sp.hab && !sp.hab.includes(b)) return false;
     if (sp.near === 'water' && dWater[i] > 3) return false;
+    // the high places: ibex and snow leopards live where the land is mountain
+    if (sp.high && t !== T.ROCKY && !(G.Relief && G.Relief.meters && G.Relief.meters(W.tileH(i)) >= 520)) return false;
+    // beavers want running water (a river), not the sea shore
+    if (sp.river && !riverNear(i)) return false;
     if (sp.near === 'sea' && dSea[i] > 2) return false;
     return true;
   };
+  function riverNear(i) { const S = G.S; const x = i % N, y = (i / N) | 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= N || yy >= N) continue; if (S.type[yy * N + xx] === T.RIVER) return true; } return false; }
   let habCount = null;
   function habitatCounts() {
     distances();
@@ -214,11 +281,25 @@
       swim: false, onPerson: false, named: null, kills: 0, shoal: 0, seek: false, sink: false, cause: null, raid: false, cd: 0, lod: 0, hx: x, hy: y,
       tamed: 0, guardSet: 0, gt: false, gscan: 0, legend: false, big: 1, epithet: null, mig: false,
       dom: 0, pen: 0, herder: 0, ledBy: 0, wool: 0, milk: 0, eggs: 0, shorn: 0, hold: 0, tended: 0, flee: 0,
+      morph: null, seen: 0, prey2: 0, gore: 0, blood: 0, perch: 0, nest: 0, swing: 0, sub: 0, roll: 0, grip: 0, drag: 0, mourn: 0, crouch: 0, flank: null, pounce: 0,
+      down: 0, caught: 0, tree: 0, corpse: 0, dragT: 0, dragTo: null, mt: 0, ft: 0, rd: 0, dz: null, cached: false, slow: 0, sw0: null, sw1: null, px: 0, py: 0, fast: false,
     }, extra || {});
+    if (a.morph === null && !(extra && 'morph' in extra)) a.morph = rollMorph(d);
     if (a.hx === undefined) { a.hx = a.x; a.hy = a.y; }
     S.animals.set(a.id, a);
     return a;
   };
+  // a rare coat: the albino (white, pale-eyed) and the black one — a sight, a legend, a fortune in fur
+  function rollMorph(d) {
+    if (d.dom || d.town || d.cls === 'water' || d.cls === 'air') return null;
+    const m = d.morphs || (d.cls === 'land' && d.size >= 0.8 ? { albino: 0.002 } : null); if (!m) return null;
+    for (const k in m) if (G.R() < m[k]) return k;
+    return null;
+  }
+  A.rollMorph = rollMorph;
+  A.MORPH = { albino: ['branco', 'branca'], melanico: ['negro', 'negra'] };
+  // 'o tigre branco', 'a onça negra' — the name people give a rare animal
+  A.rareName = function (a) { const sp = SP[a.kind]; const m = A.MORPH[a.morph]; if (!m) return sp.name.toLowerCase(); if (a.morph === 'melanico' && (a.kind === 'leopard' || a.kind === 'jaguar')) return 'pantera-negra'; return sp.name.toLowerCase() + ' ' + m[sp.g === 'f' ? 1 : 0]; };
   A.remove = a => G.S.animals.delete(a.id);
   A.sp = a => SP[a.kind] || SP.rabbit;
   A.huntable = a => { const sp = SP[a.kind]; return !!(sp && sp.hunt && !a.held && !a.air && !(sp.cls === 'water') && !(a.swim) && !a.tamed && !a.legend && !a.dom); };
@@ -331,6 +412,13 @@
       if (by && by.name && S._wolfLogDay !== S.day) { S._wolfLogDay = S.day; G.Village.log(`${by.name} matou um lobo defendendo a vila.`, 'wolf', a.x, a.y); }
     } else if (by && by.name && SP[a.kind].apex && S._apexLog !== S.day) { S._apexLog = S.day; G.Village.log(`${by.name} abateu ${SP[a.kind].nameA}.`, 'wolf', a.x, a.y); }
     if (SP[a.kind].cls === 'water' && !by) { a.sink = true; }
+    if (by && by.kind && G.Carnage && G.Carnage.decal && SP[a.kind].cls !== 'water' && SP[a.kind].cls !== 'air' && !(a.z > 3)) G.Carnage.decal(a.x, a.y, G.rr(0.14, 0.22) * Math.min(2, SP[a.kind].size), 'pool');
+    a.caught = 0; a.down = 0;
+    if (SP[a.kind].herdMourn) {
+      let n = 0;
+      each(grid, a.x, a.y, 14, o => { if (o !== a && !o.dead && o.kind === a.kind && o.state !== 'flee' && !o.angry) { o.state = 'mourn'; o.target = a.id; o.t = G.rr(20, 40); n++; } });
+      if (n >= 2 && (S.mournLog || -99) < S.day - 4) { S.mournLog = S.day; const w = G.Stories && G.Stories.where ? G.Stories.where(a.x, a.y).at : ''; G.Village.log(`${n} elefantes voltaram para velar o corpo de um dos seus${w}. Ficaram ali muito tempo, tocando-o com as trombas.`, 'deer', a.x, a.y); }
+    }
     G.Lore && a.named && G.Lore.note('beastDied', { name: a.named, kind: a.kind, by: by && by.name ? by.name : null });
   };
 
@@ -340,8 +428,9 @@
   function findPrey(a, r) {
     const sp = SP[a.kind]; const ps = PREYSET[a.kind]; let best = null, bs = -1e9;
     each(grid, a.x, a.y, r, p => {
-      if (p === a || p.dead || p.held || p.air || !ps.has(p.kind)) return;
+      if (p === a || p.dead || p.held || p.air || p.caught || !ps.has(p.kind)) return;
       if (SP[p.kind].cls === 'air' && p.z > 6) return;
+      if (p.z > 3 && SP[p.kind].cls !== 'air' && sp.cls !== 'air' && sp.climb !== 'tree') return;
       const d = G.dist2(a.x, a.y, p.x, p.y); if (d > r * r) return;
       if (sp.cls === 'water' && !(G.S.type[W.idx(p.x, p.y)] <= T.SEA)) return;
       if (sp.cls === 'land' && G.S.type[W.idx(p.x, p.y)] <= T.SEA) return;
@@ -353,7 +442,8 @@
   }
   function findCarcass(a, r) {
     let best = null, bd = r * r;
-    each(grid, a.x, a.y, r, p => { if (!p.dead || p.meat <= 0 || p.held || p.sink) return; const d = G.dist2(a.x, a.y, p.x, p.y); if (d < bd) { bd = d; best = p; } });
+    const air = SP[a.kind].cls === 'air';
+    each(grid, a.x, a.y, r, p => { if (!p.dead || p.meat <= 0 || p.held || p.sink || (p.z > 3 && !air)) return; const d = G.dist2(a.x, a.y, p.x, p.y); if (d < bd) { bd = d; best = p; } });
     return best;
   }
   function bestGrass(a, r) {
@@ -403,12 +493,286 @@
       for (let k = 0; k < l.length; k++) {
         const p = l[k]; if (p.dead || !eaters.has(p.kind)) continue;
         if (p.z > 25 && p.state !== 'dive') continue;
-        const dx = a.x - p.x, dy = a.y - p.y; const d = dx * dx + dy * dy; if (d < td) { td = d; th = p; }
+        if (a.z > 3 && SP[p.kind].cls !== 'air' && SP[p.kind].climb !== 'tree') continue;
+        const dx = a.x - p.x, dy = a.y - p.y; let d = dx * dx + dy * dy;
+        if (p.state === 'stalk' || p.state === 'flank') d *= 7; else if (p.sub > 0) d *= 9;
+        if (d < td) { td = d; th = p; }
       }
     }
     return th;
   }
 
+
+  // ------------------------------ the hunt, the feast and the trees ------------------------------
+  // states in which a hunter is busy with its prey (no new prey, no new fears)
+  const UP = { climb: 1, tree: 1, swing: 1, cache: 1, eat: 1 };
+  const BUSY = { flee: 1, eat: 1, chase: 1, stalk: 1, pounce: 1, flank: 1, feedman: 1, lurk: 1, strike: 1, drown: 1, roll: 1, mourn: 1, cache: 1, swing: 1, climb: 1 };
+  const HUNTING = { chase: 1, eat: 1, stalk: 1, pounce: 1, flank: 1, feedman: 1, strike: 1, drown: 1, roll: 1, cache: 1, mourn: 1 };
+  // a tree near here, big enough to climb (the leafy ones; palms and cactus do not hold a monkey troop)
+  function treeNear(x, y, r, fn) {
+    const S = G.S; let best = null, bd = r * r;
+    const x0 = Math.max(0, Math.floor(x - r)), x1 = Math.min(N - 1, Math.ceil(x + r)), y0 = Math.max(0, Math.floor(y - r)), y1 = Math.min(N - 1, Math.ceil(y + r));
+    for (let yy = y0; yy <= y1; yy++) for (let xx = x0; xx <= x1; xx++) {
+      const id = S.treeAt[yy * N + xx]; if (!id) continue; const t = S.trees.get(id);
+      if (!t || t.stage !== 'grow' || t.size < 0.6 || t.kind === 'cactus') continue;
+      if (fn && !fn(t)) continue;
+      const d = G.dist2(x, y, t.x, t.y); if (d < bd) { bd = d; best = t; }
+    }
+    return best;
+  }
+  A.treeNear = treeNear;
+  // how high in the canopy an animal sits (screen px above the ground, like the trees' sprites)
+  const canopyZ = t => (t.kind === 'jungle' ? 21 : t.kind === 'baobab' ? 20 : t.kind === 'palm' ? 19 : t.kind === 'pine' || t.kind === 'snowpine' ? 17 : 14) * t.size;
+  A.canopyZ = canopyZ;
+  function startClimb(a, t, fast) {
+    a.state = 'climb'; a.tree = t.id; a.tx = t.x + G.rr(-0.15, 0.15); a.ty = t.y + G.rr(-0.15, 0.15); a.perchZ = canopyZ(t) * G.rr(0.75, 1); a.t = fast ? 4 : 10; a.fast = !!fast;
+  }
+  // where a pack member waits: beside and a little beyond the prey, so a run from the leader ends in its jaws
+  function flankSpot(a, L, p) {
+    const ang0 = Math.atan2(p.y - L.y, p.x - L.x);
+    const side = (G.hash(a.id) < 0.5 ? -1 : 1) * (0.8 + G.hash(a.id * 3) * 0.8);
+    const r = 2.6 + G.hash(a.id * 7) * 1.6;
+    const x = p.x + Math.cos(ang0 + side) * r + Math.cos(ang0) * 1.4, y = p.y + Math.sin(ang0 + side) * r + Math.sin(ang0) * 1.4;
+    return walkOK(a, x, y) ? [x, y] : null;
+  }
+  // blood and flesh flying from a kill being torn apart
+  function feastFX(a, c, dt) {
+    a.ft = (a.ft || 0) - dt; if (a.ft > 0 || !G.FX) return;
+    a.ft = G.rr(0.9, 1.8);
+    const fx = G.Render ? G.Render.sface(a) : 1;
+    for (let k = 0; k < 5; k++) G.FX.spawn({ x: c.x + G.rr(-0.2, 0.2), y: c.y + G.rr(-0.2, 0.2), h: W.groundH(c.x, c.y), z: (c.z || 0) + G.rr(1, 3), vx: G.rr(-0.8, 0.8) + fx * 0.3, vy: G.rr(-0.8, 0.8), vz: G.rr(15, 40), g: 160, life: G.rr(0.3, 0.6), s0: 1, s1: 0.4, c: k < 4 ? '#9a1a22' : '#c86a6a', k: 0 });
+    if (G.Carnage && G.Carnage.decal && !(c.z > 3) && G.R() < 0.5) G.Carnage.decal(c.x + G.rr(-0.3, 0.3), c.y + G.rr(-0.3, 0.3), G.rr(0.07, 0.13), 'splat');
+    if (G.R() < 0.3) G.Audio && G.Audio.at(c.x, c.y, 'bite');
+  }
+  // the one being held: pinned under a cat, dragged by a crocodile, crushed in a snake's coils
+  function heldDown(a, dt) {
+    if (a.caught) {
+      const h = G.S.animals.get(a.caught);
+      if (!h || h.dead || !(h.state === 'drown' || h.state === 'roll' || h.grip > 0)) { a.caught = 0; a.down = 0.6; }
+      else { const f = G.Render ? G.Render.sface(h) : 1; a.x = h.x + f * 0.5; a.y = h.y + f * 0.2; a.moving = false; a.hurt = 0.1; a.walkPh += dt * 14; return true; }
+    }
+    if (a.down > 0) { a.down -= dt; a.moving = false; a.walkPh += dt * 12; return true; }
+    return false;
+  }
+  const BEHAVE = {
+    // creeping in, belly low, freezing whenever the prey lifts its head
+    stalk(a, dt, sp, S) {
+      const tg = S.animals.get(a.target) || S.villagers.get(a.target);
+      if (!tg || tg.dead || tg.inside || tg.held || tg.air || tg.aboard || (tg.z > 3 && sp.climb !== 'tree')) { a.state = 'idle'; a.target = 0; a.crouch = 0; a.onPerson = false; return true; }
+      a.crouch = 1; a.t -= dt;
+      const d = G.dist(a.x, a.y, tg.x, tg.y);
+      if (tg.kind && tg.state === 'flee' && d < 6) { a.state = 'chase'; a.t = 6; a.crouch = 0; return true; } // seen: now it is a race
+      // a pride waits for its flankers — a few seconds, no more
+      let wait = false;
+      if ((sp.pride || sp.pack) && a.t > 9) { for (const o of packOf(a)) if (o.state === 'flank' && o.moving) { wait = true; break; } }
+      if (d < (sp.stalk ? 3.4 : 2.2) && !wait) {
+        a.crouch = 0;
+        if (sp.stalk) { a.state = 'pounce'; a.pounce = 0.001; a.px = a.x; a.py = a.y; }
+        else a.state = 'chase';
+        a.t = 6; for (const o of packOf(a)) if (o.state === 'flank') { o.state = 'chase'; o.t = 7; o.crouch = 0; }
+        return true;
+      }
+      if (a.t <= 0 || d > 15) { a.state = 'chase'; a.t = 6; a.crouch = 0; for (const o of packOf(a)) if (o.state === 'flank') { o.state = 'chase'; o.t = 7; o.crouch = 0; } return true; }
+      if (wait && d < 5) { a.moving = false; return true; }
+      if (tg.kind && Math.sin(S.clock * 1.7 + (tg.id || 0)) > 0.78) { a.moving = false; return true; }
+      a.tx = tg.x; a.ty = tg.y; moveTo(a, dt, tg.kind ? sp.sp * 0.42 : Math.max(sp.sp * 0.9, tg.moving ? 1.45 : 0.6));
+      return true;
+    },
+    // a pack member circling round to the far side, low in the grass
+    flank(a, dt, sp, S) {
+      const tg = S.animals.get(a.target);
+      if (!tg || tg.dead) { a.state = 'idle'; a.target = 0; a.crouch = 0; return true; }
+      a.crouch = 1; a.t -= dt;
+      if (tg.state === 'flee' && G.dist(a.x, a.y, tg.x, tg.y) < 5) { a.state = 'chase'; a.t = 7; a.crouch = 0; return true; }
+      if (a.t <= 0) { a.state = 'chase'; a.t = 6; a.crouch = 0; return true; }
+      if (G.dist(a.x, a.y, a.tx, a.ty) > 0.3) moveTo(a, dt, sp.sp * 1.15); else { a.moving = false; G.faceTo(a, tg.x - a.x, tg.y - a.y); }
+      return true;
+    },
+    // the leap: the body in the air, the claws out, the weight of the cat bringing the prey down
+    pounce(a, dt, sp, S) {
+      const tg = S.animals.get(a.target) || S.villagers.get(a.target);
+      if (!tg || tg.dead || tg.inside || tg.held) { a.state = 'idle'; a.pounce = 0; a.target = 0; return true; }
+      a.pounce += dt / 0.42; const f = Math.min(1, a.pounce);
+      const nx = a.px + (tg.x - a.px) * f, ny = a.py + (tg.y - a.py) * f;
+      if (walkOK(a, nx, ny)) { a.x = nx; a.y = ny; }
+      G.faceTo(a, tg.x - a.px, tg.y - a.py); a.moving = true;
+      if (f < 1) return true;
+      a.pounce = 0; a.moving = false;
+      if (G.dist(a.x, a.y, tg.x, tg.y) > 1.4) { a.state = 'chase'; a.t = 4; return true; } // a miss: one short sprint
+      G.Audio && G.Audio.at(a.x, a.y, 'bite'); a.bite = 0.3; a.blood = Math.max(a.blood || 0, 0.5);
+      if (tg.kind) {
+        tg.down = 1.6; A.damage(tg, (14 + sp.hp * 0.22) * a.grown, a);
+        if (G.FX) G.FX.blood(tg.x, tg.y);
+        if (tg.dead) { a.state = 'eat'; a.target = tg.id; a.t = 22; a.carc = true; } else { a.state = 'chase'; a.t = 4; }
+      } else {
+        tg.lastBeast = a.kind; tg.lastBeastId = a.id;
+        // thrown to the ground under the weight of the cat: a warrior may get up, a lone woodcutter rarely does
+        const armed = tg.role === 'guerreiro' || tg.role === 'arqueiro' || tg.unit; const dmg = 34 + sp.hp * 0.16;
+        tg.downT = S.clock + (armed ? 1 : 2.6); tg.stagT = tg.downT;
+        G.Carnage && G.Carnage.onHit(a, tg, dmg, tg.hp - dmg <= 0);
+        G.Vg.damage(tg, dmg, 'beast', false); G.FX && G.FX.blood(tg.x, tg.y);
+        if (!S.villagers.has(tg.id)) afterManKill(a, tg, sp); else { G.Vg.emote(tg, 'fear', 3); a.state = 'chase'; a.t = 6; }
+      }
+      return true;
+    },
+    // at the body of a person: drag it to cover, then eat — an arm, a leg, the belly
+    feedman(a, dt, sp, S) {
+      const C = G.Carnage; const cp = C && C.get(a.corpse);
+      a.t -= dt;
+      if (!cp || cp.claim || C.stage(cp) === 'bones' || a.t <= 0 || (cp.eaten || 0) >= 1 || a.hunger < 0.02) { if (cp) cp.bdrag = 0; a.state = 'idle'; a.t = 3; a.rest = G.rr(20, 40); a.corpse = 0; a.dragTo = null; return true; }
+      // the living come with spears and fire: it lets go (the bolder it is, the longer it stays)
+      const v = nearestVillager(a, 3.4, q => q.age >= 14 && !q.captive);
+      if (v && G.R() < dt * (1.2 - sp.bold)) { cp.bdrag = 0; const p = fleeTarget(a, v.x, v.y, 7); if (p) { a.tx = p[0]; a.ty = p[1]; } a.state = 'flee'; a.t = 3; a.corpse = 0; return true; }
+      const d = G.dist(a.x, a.y, cp.x, cp.y);
+      if (d > 0.75 && !cp.bdrag) { a.tx = cp.x; a.ty = cp.y; moveTo(a, dt, sp.sp * 1.1); return true; }
+      if (a.dragT > 0) { // dragging it by the neck, away from the open
+        if (!a.dragTo) { const tr = treeNear(cp.x, cp.y, 7); a.dragTo = tr ? [tr.x + 0.3, tr.y + 0.3] : [cp.x + G.rr(-3, 3), cp.y + G.rr(-3, 3)]; }
+        a.tx = a.dragTo[0]; a.ty = a.dragTo[1];
+        const done = moveTo(a, dt, sp.sp * 0.45);
+        const fx = G.Render ? G.Render.sface(a) : 1; cp.bdrag = 1; cp.x = a.x + fx * 0.45; cp.y = a.y - fx * 0.45;
+        a.dragT -= dt; if (done || a.dragT <= 0) { a.dragT = 0; cp.bdrag = 0; }
+        return true;
+      }
+      a.moving = false; a.eating = 0.4; a.blood = 1; a.state = 'feedman'; G.faceTo(a, cp.x - a.x, cp.y - a.y);
+      a.mt = (a.mt || 0) - dt;
+      if (a.mt <= 0) { a.mt = G.rr(1.3, 2.3); C.maul(cp, a); a.hunger = Math.max(0, a.hunger - 0.12); feastFX(a, cp, 1); }
+      return true;
+    },
+    // the leopard hauls its kill up into a tree
+    cache(a, dt, sp, S) {
+      const c = S.animals.get(a.target); const tr = S.trees.get(a.tree);
+      a.t -= dt;
+      if (!c || !c.dead || c.meat <= 0 || !tr || a.t <= 0) { a.state = 'eat'; a.cached = true; return true; }
+      const fx = G.Render ? G.Render.sface(a) : 1;
+      if (G.dist(a.x, a.y, tr.x, tr.y) > 0.3) { a.tx = tr.x; a.ty = tr.y; moveTo(a, dt, sp.sp * 0.5); c.x = a.x + fx * 0.4; c.y = a.y - fx * 0.3; return true; }
+      a.z = Math.min(canopyZ(tr) * 0.7, (a.z || 0) + dt * 14); c.x = a.x + fx * 0.3; c.y = a.y; c.z = a.z;
+      if (a.z >= canopyZ(tr) * 0.7 - 0.1) { a.state = 'eat'; a.cached = true; a.t = 30; a.perch = tr.id; }
+      return true;
+    },
+    // a crocodile waiting under the surface at the edge of the river
+    lurk(a, dt, sp, S) {
+      a.sub = 1; a.moving = false; a.t -= dt;
+      if (a.t <= 0 || S.type[W.idx(a.x, a.y)] > T.RIVER) { a.state = 'idle'; a.sub = 0; a.t = 2; return true; }
+      a.scan -= dt; if (a.scan > 0) return true; a.scan = 0.4;
+      const ok = p => p && !p.dead && dWater[W.idx(p.x, p.y)] <= 1 && G.dist(a.x, a.y, p.x, p.y) < 2.8;
+      let p = a.target && S.animals.get(a.target); if (!ok(p)) p = findPrey(a, 3);
+      if (ok(p)) { a.target = p.id; a.state = 'strike'; a.t = 2.2; a.sub = 0; G.FX && G.FX.splash(a.x, a.y, 0.8); return true; }
+      // a person at the water's edge, alone
+      if (a.hunger > 0.5 || a.legend) {
+        const v = nearestVillager(a, 2.6, q => !q.aboard && dWater[W.idx(q.x, q.y)] <= 1 && crowdAt(q.x, q.y, 3) <= 1);
+        if (v && G.R() < sp.bold * 0.5) { a.target = v.id; a.state = 'strike'; a.t = 2.2; a.sub = 0; a.onPerson = true; G.FX && G.FX.splash(a.x, a.y, 0.8); }
+      }
+      return true;
+    },
+    // out of the water like a thrown log
+    strike(a, dt, sp, S) {
+      const tg = S.animals.get(a.target) || S.villagers.get(a.target);
+      a.t -= dt;
+      if (!tg || tg.dead || tg.inside || tg.held || a.t <= 0) { a.state = 'idle'; a.target = 0; a.onPerson = false; return true; }
+      const d = G.dist(a.x, a.y, tg.x, tg.y);
+      if (d < 0.9) {
+        a.bite = 0.3; G.Audio && G.Audio.at(a.x, a.y, 'bite'); G.FX && G.FX.splash(a.x, a.y, 1);
+        if (tg.kind) { tg.caught = a.id; A.damage(tg, Math.min(6, tg.hp * 0.25), a); a.state = 'drown'; a.t = 3; a.dz = deepSpot(a); }
+        else { tg.lastBeast = a.kind; tg.lastBeastId = a.id; tg.downT = S.clock + 2.2; G.Vg.damage(tg, 22, 'beast', false); G.FX && G.FX.blood(tg.x, tg.y); if (!S.villagers.has(tg.id)) afterManKill(a, tg, sp); else { G.Vg.emote(tg, 'fear', 3); a.state = 'roll'; a.roll = 1.6; a.t = 1.6; } }
+        return true;
+      }
+      a.tx = tg.x; a.ty = tg.y; moveTo(a, dt, sp.run * 1.9);
+      return true;
+    },
+    // dragging the prey into deep water
+    drown(a, dt, sp, S) {
+      const tg = S.animals.get(a.target); a.t -= dt;
+      if (!tg || tg.dead) { a.state = tg && tg.dead ? 'eat' : 'idle'; a.t = 20; return true; }
+      if (a.dz) { a.tx = a.dz[0]; a.ty = a.dz[1]; }
+      if (moveTo(a, dt, sp.sp * 0.8) || a.t <= 0) { a.state = 'roll'; a.roll = 2.6; a.t = 2.6; }
+      return true;
+    },
+    // the death roll: over and over in the churning water
+    roll(a, dt, sp, S) {
+      a.roll -= dt; a.moving = false;
+      const tg = S.animals.get(a.target) || S.villagers.get(a.target);
+      if (G.FX && G.R() < dt * 10) G.FX.splash(a.x + G.rr(-0.4, 0.4), a.y + G.rr(-0.4, 0.4), 0.5);
+      a.rd = (a.rd || 0) - dt;
+      if (tg && !tg.dead && a.rd <= 0) {
+        a.rd = 0.45;
+        if (tg.kind) A.damage(tg, 12, a);
+        else { G.Vg.damage(tg, 14, 'beast', false); if (!S.villagers.has(tg.id)) { a.roll = 0; afterManKill(a, tg, sp); return true; } }
+      }
+      if (G.Carnage && G.Carnage.decal && G.R() < dt * 2) G.Carnage.decal(a.x + G.rr(-0.4, 0.4), a.y + G.rr(-0.4, 0.4), 0.2, 'splat');
+      if (a.roll <= 0) { a.roll = 0; if (tg && tg.dead && tg.kind) { a.state = 'eat'; a.t = 25; a.carc = true; } else { a.state = 'idle'; a.t = 2; if (tg && tg.kind) tg.caught = 0; } }
+      return true;
+    },
+    // the elephants come back to the body of one of their own, and stand there, touching it with their trunks
+    mourn(a, dt, sp, S) {
+      const c = S.animals.get(a.target); a.t -= dt;
+      if (!c || a.t <= 0) { a.state = 'idle'; a.t = 3; a.target = 0; return true; }
+      const ang = G.hash(a.id) * 6.28; const tx = c.x + Math.cos(ang) * 1.6, ty = c.y + Math.sin(ang) * 1.6;
+      if (G.dist(a.x, a.y, tx, ty) > 0.3) { a.tx = tx; a.ty = ty; moveTo(a, dt, sp.sp * 0.6); }
+      else { a.moving = false; G.faceTo(a, c.x - a.x, c.y - a.y); }
+      return true;
+    },
+    // up the trunk into the canopy
+    climb(a, dt, sp, S) {
+      const tr = S.trees.get(a.tree); a.t -= dt;
+      if (!tr || tr.stage !== 'grow' || a.t <= 0) { a.state = 'idle'; a.z = 0; a.perch = 0; a.t = 1; return true; }
+      if (G.dist(a.x, a.y, a.tx, a.ty) > 0.15 && !(a.z > 0.5)) { moveTo(a, dt, (a.fast ? sp.run : sp.sp) * (sp.arbor === true ? 3 : 1)); return true; }
+      a.moving = true; a.walkPh += dt * 6;
+      a.z = Math.min(a.perchZ, (a.z || 0) + dt * (a.fast ? 26 : 12) * (sp.arbor === true ? 0.3 : 1));
+      if (a.z >= a.perchZ - 0.05) { a.state = 'tree'; a.perch = tr.id; a.moving = false; a.t = sp.arbor === true ? G.rr(60, 200) : G.rr(6, 22); }
+      return true;
+    },
+    // in the canopy: eating, grooming, watching — then a swing on a vine to the next tree, or down
+    tree(a, dt, sp, S) {
+      const tr = S.trees.get(a.perch);
+      if (!tr || tr.stage !== 'grow') { a.state = 'idle'; a.z = 0; a.perch = 0; a.t = 1; return true; }
+      a.moving = false; a.t -= dt;
+      if (sp.diet === 'browse' || sp.diet === 'omni') { if (a.hunger > 0.2 && G.R() < dt * 0.5) { a.hunger = Math.max(0, a.hunger - (tr.fruit > 0 ? 0.25 : 0.1)); a.eating = 0.8; if (tr.fruit > 0) tr.fruit = Math.max(0, tr.fruit - 0.25); } }
+      if (sp.climb === 'tree' && a.target && S.animals.get(a.target) && S.animals.get(a.target).dead) return false; // (a leopard eating in its tree: the eat state carries on)
+      if (a.t > 0) return true;
+      if (sp.arbor === 'troop') {
+        const L = a.leader && S.animals.get(a.leader);
+        // follow the troop: the next tree is in the direction the leader went
+        const next = treeNear(L && L !== a && !L.dead ? L.x : a.x + G.rr(-3, 3), L && L !== a && !L.dead ? L.y : a.y + G.rr(-3, 3), 4.5, t => t.id !== tr.id && G.dist(t.x, t.y, tr.x, tr.y) > 1.2 && G.dist(t.x, t.y, tr.x, tr.y) < 5);
+        if (next && G.R() < 0.75) { a.state = 'swing'; a.swing = 0.001; a.sw0 = [a.x, a.y, a.z]; a.sw1 = [next.x + G.rr(-0.15, 0.15), next.y + G.rr(-0.15, 0.15), canopyZ(next) * G.rr(0.75, 1)]; a.tree = next.id; G.faceTo(a, next.x - a.x, next.y - a.y); return true; }
+        if (G.R() < 0.35 || a.hunger > 0.6) { a.state = 'idle'; a.z = 0; a.perch = 0; a.t = G.rr(4, 10); return true; } // down to drink and forage
+        a.t = G.rr(5, 14); return true;
+      }
+      if (sp.arbor === true) { // the sloth: once in a long while, to the tree next door
+        const next = treeNear(a.x, a.y, 2.2, t => t.id !== tr.id);
+        if (next && G.R() < 0.3) { a.state = 'swing'; a.swing = 0.001; a.slow = 1; a.sw0 = [a.x, a.y, a.z]; a.sw1 = [next.x, next.y, canopyZ(next) * 0.85]; a.tree = next.id; return true; }
+        a.t = G.rr(60, 200); return true;
+      }
+      a.state = 'idle'; a.z = 0; a.perch = 0; a.t = G.rr(2, 6); return true; // the cats come down
+    },
+    // from tree to tree on a vine: the arc dips in the middle
+    swing(a, dt, sp, S) {
+      a.swing += dt / (a.slow ? 40 : 1.15); const f = Math.min(1, a.swing);
+      const [x0, y0, z0] = a.sw0, [x1, y1, z1] = a.sw1;
+      a.x = x0 + (x1 - x0) * f; a.y = y0 + (y1 - y0) * f; a.z = z0 + (z1 - z0) * f - Math.sin(f * Math.PI) * (a.slow ? 2 : 7);
+      a.moving = true;
+      if (f >= 1) { a.swing = 0; a.slow = 0; a.state = 'tree'; a.perch = a.tree; a.z = z1; a.moving = false; a.t = sp.arbor === true ? G.rr(80, 220) : G.rr(4, 12); if (G.R() < 0.2) G.Audio && G.Audio.at(a.x, a.y, 'monkey'); }
+      return true;
+    },
+  };
+  // the others of the same pack, pride or clan
+  function packOf(a) {
+    const out = []; const L = a.leader || a.id;
+    each(grid, a.x, a.y, 14, o => { if (o !== a && !o.dead && o.kind === a.kind && (o.leader === L || o.id === L)) out.push(o); });
+    return out;
+  }
+  // deep water a little way from the shore, for the drowning
+  function deepSpot(a) {
+    const S = G.S; let best = null, bd = -1;
+    for (let k = 0; k < 12; k++) { const ang = k / 12 * 6.28; const x = a.x + Math.cos(ang) * 1.6, y = a.y + Math.sin(ang) * 1.6; if (!W.inb(x, y)) continue; const i = W.idx(x, y); if (S.type[i] > T.RIVER) continue; const d = dLand[i]; if (d > bd) { bd = d; best = [x, y]; } }
+    return best;
+  }
+  // a person killed by a beast: it stays with the body
+  function afterManKill(a, v, sp) {
+    noteManEater(a); a.onPerson = false; a.target = 0;
+    const cp = G.Carnage && G.Carnage.byVid ? G.Carnage.byVid(v.id) : null;
+    if (cp && (sp.stalk || sp.pack || sp.pride || sp.apex || a.legend)) { a.state = 'feedman'; a.corpse = cp.id; a.t = 45; a.dragT = sp.stalk && !a.legend ? G.rr(3, 6) : 0; a.dragTo = null; a.mt = 1.2; }
+    else { a.hunger = Math.max(0, a.hunger - 0.5); a.state = 'idle'; a.rest = 20; }
+  }
   function landAI(a, dt) {
     const S = G.S; const sp = SP[a.kind];
     // angry defenders & territorial giants charge whoever hurt them
@@ -423,33 +787,51 @@
       a.angry = 0; a.state = 'idle';
     }
     if (a.tamed && guardAI(a, dt)) return;
+    // pinned under a cat, in a crocodile's jaws, in a snake's coils: nothing left to decide
+    if (heldDown(a, dt)) return;
+    if (BEHAVE[a.state] && BEHAVE[a.state](a, dt, sp, S)) return;
     a.scan -= dt;
     const hungry = a.hunger > (sp.diet === 'carn' || sp.diet === 'scav' ? 0.42 : 0.3);
     if (a.scan <= 0) {
       a.scan = 0.45 + G.R() * 0.3;
-      if (a.state !== 'chase' && a.state !== 'eat' && !a.tamed && !a.legend) {
+      if (!HUNTING[a.state] && !a.tamed && !a.legend) {
         const th = fearCheck(a);
         if (th && a.state !== 'lunge') {
-          const p = fleeTarget(a, th.x, th.y, a.kind === 'rabbit' || a.kind === 'hare' || a.kind === 'frog' || a.kind === 'lizard' ? 4 : 6);
-          if (p) { a.tx = p[0]; a.ty = p[1]; a.state = 'flee'; a.t = 2.5; }
+          // up the nearest tree, out of reach (monkeys, and the cubs of the cats)
+          const up = sp.arbor && !(a.z > 3) && SP[th.kind || 'rabbit'] && SP[th.kind || 'rabbit'].climb !== 'tree' ? treeNear(a.x, a.y, 3.5) : null;
+          if (up) startClimb(a, up, true);
+          else {
+            const p = fleeTarget(a, th.x, th.y, a.kind === 'rabbit' || a.kind === 'hare' || a.kind === 'frog' || a.kind === 'lizard' ? 4 : 6);
+            if (p) { a.tx = p[0]; a.ty = p[1]; a.state = 'flee'; a.t = 2.5; if (a.z > 3) { a.z = 0; a.perch = 0; } }
+          }
         }
         const i = W.idx(a.x, a.y);
         if (S.fire[i] > 0 || S.fire[Math.min(N * N - 1, i + 1)] > 0 || S.fire[Math.max(0, i - 1)] > 0) { const p = fleeTarget(a, a.x + G.rr(-0.5, 0.5), a.y + G.rr(-0.5, 0.5), 6); if (p) { a.tx = p[0]; a.ty = p[1]; a.state = 'flee'; a.t = 2.5; } }
       }
       // hunters look for a meal
-      if ((sp.diet === 'carn' || sp.diet === 'omni' || sp.diet === 'scav') && a.state !== 'flee' && a.state !== 'eat' && a.state !== 'chase' && a.rest <= 0) {
+      if ((sp.diet === 'carn' || sp.diet === 'omni' || sp.diet === 'scav') && !BUSY[a.state] && a.rest <= 0) {
         if (sp.diet === 'scav' || (hungry && G.R() < 0.5)) { const c = findCarcass(a, sp.diet === 'scav' ? 14 : 8); if (c) { a.target = c.id; a.state = 'chase'; a.carc = true; } }
         if (a.state !== 'chase' && hungry && (sp.diet === 'carn' || a.hunger > 0.6)) {
           // packs share their leader's quarry
           const L = a.leader && S.animals.get(a.leader);
           let p = L && !L.dead && L.state === 'chase' && L.target ? S.animals.get(L.target) : null;
-          if (!p || p.dead) p = findPrey(a, sp.ambush ? 6 : 10);
-          if (p) { a.target = p.id; a.state = sp.ambush && G.dist(a.x, a.y, p.x, p.y) > 1.5 ? 'lunge' : 'chase'; a.t = sp.ambush ? 9 : 9; a.carc = false; }
+          // the pride closes in: while the leader creeps, the others take places on the far side of the prey
+          if ((!p || p.dead) && L && !L.dead && L.state === 'stalk' && L.target && (sp.pack || sp.pride)) {
+            const q = S.animals.get(L.target);
+            if (q && !q.dead) { const f = flankSpot(a, L, q); if (f) { a.tx = f[0]; a.ty = f[1]; a.state = 'flank'; a.target = q.id; a.t = 9; a.carc = false; return; } }
+          }
+          if (!p || p.dead) p = findPrey(a, sp.ambush ? 6 : sp.stalk || sp.pack ? 12 : 10);
+          if (p) {
+            a.target = p.id; a.carc = false; const dd = G.dist(a.x, a.y, p.x, p.y);
+            if (a.kind === 'croc' && S.type[W.idx(a.x, a.y)] <= T.RIVER) { a.state = 'lurk'; a.sub = 1; a.t = 30; }
+            else if ((sp.stalk || (sp.pack && !a.leader)) && dd > 3.2) { a.state = 'stalk'; a.t = 16; }
+            else { a.state = sp.ambush && dd > 1.5 ? 'lunge' : 'chase'; a.t = 9; }
+          } else if (a.kind === 'croc' && S.type[W.idx(a.x, a.y)] <= T.RIVER && dLand[W.idx(a.x, a.y)] <= 1) { a.state = 'lurk'; a.sub = 1; a.t = 25; a.target = 0; }
           else if ((sp.bold > 0 && a.hunger > 0.7 && !a.tamed) || (a.legend && a.hunger > 0.35)) {
             // hungry and bold: a lone person looks like prey (a legend fears no crowd)
             const night = G.isNight();
             const v = nearestVillager(a, a.legend ? 10 : a.kind === 'croc' ? 2.6 : 6, v => v.age >= 0 && (a.legend || crowdAt(v.x, v.y, 3) <= 1) && (a.legend || a.kind !== 'croc' || S.type[W.idx(v.x, v.y)] <= T.RIVER || (dWater[W.idx(v.x, v.y)] <= 1)));
-            if (v && G.R() < (a.legend ? 0.7 : sp.bold * (night ? 1.6 : 0.8))) { a.target = v.id; a.state = 'chase'; a.t = a.legend ? 14 : 8; a.carc = false; a.onPerson = true; }
+            if (v && G.R() < (a.legend ? 0.7 : sp.bold * (night ? 1.6 : 0.8))) { a.target = v.id; a.state = sp.stalk && !a.legend && G.dist(a.x, a.y, v.x, v.y) > 3.2 ? 'stalk' : 'chase'; a.t = a.legend ? 14 : a.state === 'stalk' ? 14 : 8; a.carc = false; a.onPerson = true; }
           }
         }
       }
@@ -476,8 +858,12 @@
       }
       case 'eat': {
         const c = S.animals.get(a.target);
-        if (!c || !c.dead || c.meat <= 0 || a.t <= 0) { a.state = 'idle'; a.target = 0; a.t = G.rr(2, 5); return; }
-        if (eatMeat(a, c, dt)) { a.state = 'idle'; a.target = 0; a.t = G.rr(3, 8); a.rest = G.rr(10, 25); }
+        if (!c || !c.dead || c.meat <= 0 || a.t <= 0) { a.state = 'idle'; a.target = 0; a.t = G.rr(2, 5); if (a.z > 3 && !sp.arbor) { a.z = 0; a.perch = 0; } return; }
+        // a leopard does not eat in the open: up the tree with it, out of the hyenas' reach
+        if (sp.climb === 'tree' && !c.z && c.meat > 2 && SP[c.kind].meat <= 14 && !a.cached) { const tr = treeNear(c.x, c.y, 6); if (tr) { a.state = 'cache'; a.tree = tr.id; a.t = 14; return; } }
+        if (c.z > 3) a.z = c.z; G.faceTo(a, c.x - a.x, c.y - a.y);
+        if (sp.diet === 'carn' || sp.apex || sp.diet === 'scav') { a.blood = Math.min(1, (a.blood || 0) + dt * 0.4); c.gore = 1; feastFX(a, c, dt); }
+        if (eatMeat(a, c, dt)) { a.state = 'idle'; a.target = 0; a.t = G.rr(3, 8); a.rest = G.rr(10, 25); a.cached = false; }
         return;
       }
       case 'graze': {
@@ -489,6 +875,9 @@
     // idle: eat, follow the herd, or roam the habitat
     a.moving = false;
     if (a.t > 0) return;
+    if (sp.arbor && !(a.z > 3)) { const tr = treeNear(a.x, a.y, sp.arbor === true ? 6 : 4); if (tr && G.R() < (sp.arbor === true ? 1 : 0.75)) { startClimb(a, tr, false); return; } }
+    if (sp.climb === 'tree' && !hungry && !G.isNight() && G.R() < 0.25) { const tr = treeNear(a.x, a.y, 4); if (tr) { startClimb(a, tr, false); a.t = G.rr(20, 50); return; } }
+    if (a.kind === 'croc' && S.type[W.idx(a.x, a.y)] <= T.RIVER && dLand[W.idx(a.x, a.y)] <= 1 && G.R() < 0.4) { a.state = 'lurk'; a.sub = 1; a.t = G.rr(15, 30); a.target = 0; return; }
     // migrants, guardians and legends keep to the place the god gave them
     if (a.mig || a.tamed || a.legend) {
       const dh = G.dist(a.x, a.y, a.hx, a.hy);
@@ -549,15 +938,18 @@
     G.Audio && G.Audio.at(a.x, a.y, 'bite');
     const dmg = (6 + sp.hp * 0.12 + (sp.apex ? 6 : 0)) * (a.legend ? 2.2 : a.tamed ? 1.4 : 1);
     if (tg.kind) { // another animal
-      A.damage(tg, dmg * (a.grown), a);
-      if (tg.dead) { a.state = 'eat'; a.target = tg.id; a.t = 20; a.carc = true; a.onPerson = false; }
+      if (sp.constrict && !tg.dead && SP[tg.kind].size <= sp.size * 1.3) { a.grip = 4; tg.caught = a.id; } // the coils close
+      A.damage(tg, dmg * (a.grown) * (sp.constrict ? 0.6 : 1), a);
+      if (sp.apex || sp.pack || sp.stalk) a.blood = Math.max(a.blood || 0, 0.4);
+      if (tg.dead) { a.state = 'eat'; a.target = tg.id; a.t = 20; a.carc = true; a.onPerson = false; a.grip = 0; }
     } else {
       const cause = a.kind === 'wolf' ? 'wolf' : a.kind === 'boar' ? 'boar' : 'beast';
       tg.lastBeast = a.kind; tg.lastBeastId = a.id;
+      if (sp.apex || sp.stalk || sp.pack) { G.Carnage && G.Carnage.onHit(a, tg, dmg * 0.8, tg.hp - dmg * 0.8 <= 0); if (tg.downT > G.S.clock - 0.5) tg.downT = G.S.clock + 1.25; }
       G.Vg.damage(tg, dmg * 0.8, cause, a.summoned);
       G.FX && G.FX.blood(tg.x, tg.y);
       if (G.S.villagers.has(tg.id)) { G.Vg.emote(tg, 'fear', 2); tg.lastBeast = a.kind; }
-      else { a.hunger = Math.max(0, a.hunger - 0.5); a.state = 'idle'; a.target = 0; a.rest = 20; a.onPerson = false; noteManEater(a); }
+      else afterManKill(a, tg, sp);
     }
   }
   // a beast that has killed people gets a name — and a legend
@@ -797,7 +1189,7 @@
         }
       }
     }
-    if (sp.diet === 'filter' || sp.diet === 'browse' || (sp.wader && sp.diet === 'fish')) if ((a.z < 4 || a.state === 'perch') && G.R() < dt * 0.5) a.hunger = Math.max(0, a.hunger - 0.1);
+    if (sp.diet === 'filter' || sp.diet === 'browse' || sp.diet === 'herb' || (sp.wader && sp.diet === 'fish')) if ((a.z < 4 || a.state === 'perch') && G.R() < dt * 0.5) a.hunger = Math.max(0, a.hunger - 0.1);
     if (sp.diet === 'browse' && a.state === 'fly' && a.hunger > 0.5 && a.t > 1) { const i = W.idx(a.x, a.y); if (S.treeAt[i]) { a.t = 0; } }
     switch (a.state) {
       case 'circle': { // vultures spiral down over the dead
@@ -849,7 +1241,7 @@
     a.z += (alt + Math.sin((a.ph = (a.ph || G.R() * 6) + dt)) * 6 - a.z) * Math.min(1, dt * 0.8);
     if (moveDirect(a, dt, sp.sp) || a.t <= 0) {
       // perch on a tree now and then (parrots, ravens) or pick a new patrol point
-      if ((a.kind === 'parrot' || a.kind === 'raven' || a.kind === 'gull') && G.R() < 0.35) {
+      if ((a.kind === 'parrot' || a.kind === 'raven' || a.kind === 'gull' || sp.nests === 'tree' || sp.diet === 'browse') && G.R() < (a.hunger > 0.4 ? 0.7 : 0.35)) {
         const i = W.idx(a.x, a.y); const tr = S.treeAt[i] && S.trees.get(S.treeAt[i]);
         if (tr || a.kind === 'gull') { a.state = 'perch'; a.perchZ = tr ? 22 * tr.size : 0; a.t = G.rr(4, 12); return; }
       }
@@ -939,6 +1331,10 @@
       return false;
     }
     a.age += dayF; if (a.grown < 1) a.grown = Math.min(1, a.grown + dayF / Math.max(0.5, sp.life * 0.12));
+    if (a.blood > 0) a.blood = Math.max(0, a.blood - dt / 70);
+    if (a.grip > 0) a.grip -= dt;
+    // off the branch: whoever is not climbing, perching or eating up there stands on the ground
+    if (a.z > 0 && sp.cls !== 'air' && sp.cls !== 'water' && !UP[a.state]) { a.z = 0; a.perch = 0; }
     a.hunger += dayF * (sp.diet === 'carn' ? (sp.apex ? 0.42 : 0.55) : sp.diet === 'scav' ? 0.5 : sp.diet === 'filter' || sp.diet === 'insect' ? 0.35 : 0.8) * (a.summoned || a.raid ? 0 : a.legend ? 0.6 : a.dom ? 0.55 : 1);
     if (a.tamed) a.hunger = Math.max(0, a.hunger - dayF * 1.6); // its people feed it
     if (a.dom && a.grown >= 1) {
@@ -977,7 +1373,7 @@
       const p = dt / DAY() * sp.breed * (1 - Math.pow(n / cap, 3)) * mul;
       if (G.R() >= p) continue;
       const q = pickNear(a, 1.2, true) || [a.x, a.y];
-      const kid = A.spawn(a.kind, q[0], q[1], { leader: a.leader || a.id, age: 0, grown: 0.35, hunger: 0.2, z: sp.cls === 'air' ? a.z : 0, hx: a.hx, hy: a.hy });
+      const kid = A.spawn(a.kind, q[0], q[1], { leader: a.leader || a.id, age: 0, grown: 0.35, hunger: 0.2, z: sp.cls === 'air' ? a.z : 0, hx: a.hx, hy: a.hy, morph: a.morph && G.R() < 0.3 ? a.morph : rollMorph(sp) });
       kid.hp = kid.maxHp * 0.6; a.hunger += 0.2; count[a.kind] = n + 1;
       const eco = S.eco || (S.eco = { deaths: {}, born: {} }); eco.born[a.kind] = (eco.born[a.kind] || 0) + 1;
     }
@@ -995,7 +1391,7 @@
     for (let j = 1; j < n; j++) { const q = pickNear(L, 1.5, true); if (q) A.spawn(k, q[0], q[1], { leader: L.id, grown: 1 }); }
     if (sp.apex || sp.dens < 0.4) { const to = G.Biome && G.S.biome ? G.Biome.toAt(spot[0], spot[1]) : 'à ilha'; G.Village.log(`${n > 1 ? G.cap(plural(sp, n)) + ' chegaram' : G.cap(sp.nameA) + ' chegou'} ${to}, vind${n > 1 ? (sp.g === 'f' ? 'as' : 'os') : (sp.g === 'f' ? 'a' : 'o')} ${sp.cls === 'water' ? 'de mares distantes' : 'de terras distantes'}.`, 'deer', spot[0], spot[1]); }
   }
-  const PL = { Leão: 'leões', Urso: 'ursos', 'Urso-polar': 'ursos-polares', Onça: 'onças', Tubarão: 'tubarões', Crocodilo: 'crocodilos', Águia: 'águias', Orca: 'orcas', Elefante: 'elefantes', Girafa: 'girafas', Lobo: 'lobos', Hiena: 'hienas', Hipopótamo: 'hipopótamos', 'Boi-almiscarado': 'bois-almiscarados', Anta: 'antas', Baleia: 'baleias', Abutre: 'abutres', Raposa: 'raposas', 'Raposa-do-ártico': 'raposas-do-ártico', Feneco: 'fenecos', Camelo: 'camelos', Jiboia: 'jiboias', Víbora: 'víboras', Garça: 'garças', Flamingo: 'flamingos', Pinguim: 'pinguins', 'Tartaruga-marinha': 'tartarugas-marinhas', Foca: 'focas', Golfinho: 'golfinhos' };
+  const PL = { Leão: 'leões', Urso: 'ursos', 'Urso-polar': 'ursos-polares', Onça: 'onças', Tubarão: 'tubarões', Crocodilo: 'crocodilos', Águia: 'águias', Orca: 'orcas', Elefante: 'elefantes', Girafa: 'girafas', Lobo: 'lobos', Hiena: 'hienas', Hipopótamo: 'hipopótamos', 'Boi-almiscarado': 'bois-almiscarados', Anta: 'antas', Baleia: 'baleias', Abutre: 'abutres', Raposa: 'raposas', 'Raposa-do-ártico': 'raposas-do-ártico', Feneco: 'fenecos', Camelo: 'camelos', Jiboia: 'jiboias', Víbora: 'víboras', Garça: 'garças', Flamingo: 'flamingos', Pinguim: 'pinguins', 'Tartaruga-marinha': 'tartarugas-marinhas', Foca: 'focas', Golfinho: 'golfinhos', Tigre: 'tigres', Leopardo: 'leopardos', 'Leopardo-das-neves': 'leopardos-das-neves', Rinoceronte: 'rinocerontes', Búfalo: 'búfalos', Bisão: 'bisões', Gnu: 'gnus', Alce: 'alces', 'Cabra-montesa': 'cabras-montesas', Castor: 'castores', Lontra: 'lontras', 'Bicho-preguiça': 'bichos-preguiça', Avestruz: 'avestruzes', Morsa: 'morsas', Sucuri: 'sucuris', Cegonha: 'cegonhas', 'Ganso-selvagem': 'gansos-selvagens', Tucano: 'tucanos', Coruja: 'corujas' };
   function plural(sp, n) { return n + ' ' + (PL[sp.name] || (sp.name.toLowerCase() + 's')); }
   A.plural = plural;
   function census() {

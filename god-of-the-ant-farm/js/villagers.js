@@ -152,6 +152,7 @@
   // ------------------------------ movement ------------------------------
   function move(v, dt, mul) {
     const S = G.S;
+    if (v.downT > S.clock) { v.moving = false; return false; } // knocked down (a beast on top of them)
     if (!v.path || v.pi >= v.path.length) { v.moving = false; return true; }
     const p = v.path[v.pi];
     const dx = p[0] - v.x, dy = p[1] - v.y; const d = Math.hypot(dx, dy);

@@ -23,6 +23,8 @@
   let corpses = [], pyres = [], nextId = 1;
   const decals = [], bits = [], gush = [];
   C.list = () => corpses;
+  C.get = id => corpses.find(c => c.id === id) || null;
+  C.byVid = vid => corpses.find(c => c.vid === vid) || null;
   C.pyres = () => pyres;
   C.stage = c => { const d = c.t / DAY(); return d < ROT ? 'fresh' : d < DRY ? 'rot' : d < BONES ? 'dry' : 'bones'; };
   C.STAGE = { fresh: 'morto há pouco', rot: 'apodrecendo', dry: 'ressecado', bones: 'só ossos' };
@@ -34,6 +36,23 @@
     if (decals.length > 900) decals.splice(0, decals.length - 900);
   }
   const DECAL_LIFE = { pool: 2.6, splat: 1.4, trail: 1, ash: 4, bone: 6 };
+  C.decal = decal;
+  // a beast at the dead: an arm, then a leg, then the belly — the pieces fly and the blood pools
+  C.maul = function (c, by) {
+    const L = c.look; L.lost = Object.assign({}, L.lost || {});
+    const ang = G.rr(0, TAU), ux = Math.cos(ang), uy = Math.sin(ang);
+    const k = ['armL', 'armR', 'leg'].find(q => !L.lost[q] && G.R() < 0.7) || 'gut';
+    if (k !== 'gut') {
+      L.lost[k] = true;
+      bits.push({ kind: k === 'leg' ? 'leg' : 'arm', x: c.x, y: c.y, z: 3, vx: ux * G.rr(0.5, 1.4), vy: uy * G.rr(0.5, 1.4), vz: G.rr(18, 40), rot: G.rr(0, TAU), vr: G.rr(-10, 10), skin: L.skin0 || L.skin, cloth: G.Art.clothOf(L), t: 0, owner: c.vid, corpse: c.id, chewed: 1 });
+    }
+    c.eaten = Math.min(1, (c.eaten || 0) + G.rr(0.1, 0.17));
+    c.feeder = by ? by.id : 0; c.feedT = G.S.clock;
+    decal(c.x + G.rr(-0.3, 0.3), c.y + G.rr(-0.3, 0.3), G.rr(0.12, 0.24), 'pool');
+    spray(c.x, c.y, ux, uy, 8);
+    G.Audio && G.Audio.at(c.x, c.y, 'gore', true);
+    return k;
+  };
   function spray(x, y, ux, uy, n) {
     if (!G.FX) return;
     for (let k = 0; k < n; k++) {
@@ -146,6 +165,7 @@
     const busy = new Map(); for (const v of S.villagers.values()) if (v.task && v.task.type === 'corpse') busy.set(v.set, (busy.get(v.set) || 0) + 1);
     for (const c of corpses) {
       if (c.claim || c.t < 8) continue;
+      if (c.feeder && G.S.clock - (c.feedT || 0) < 20 && G.S.animals.has(c.feeder)) continue;
       if (c.claim === 0 && c.skip && S.clock < c.skip) continue;
       const set = G.Village.nearestSettlement(c.x, c.y);
       if (!set || G.dist(c.x, c.y, set.cx, set.cy) > (set.radius || 8) + 14) continue;
@@ -294,7 +314,7 @@
           }
         }
       }
-      c.crows = (st === 'rot' || st === 'dry') && !near && !c.drag && G.hash(c.id) < 0.7 ? 1 + ((G.hash(c.id * 3) * 3) | 0) : 0;
+      c.crows = (st === 'rot' || st === 'dry') && !near && !c.drag && !c.bdrag && G.hash(c.id) < 0.7 ? 1 + ((G.hash(c.id * 3) * 3) | 0) : 0;
       if (c.crows && G.R() < 0.04) G.Audio && G.Audio.at(c.x, c.y, 'caw');
     }
     if (corpses.some(c => c.gone)) corpses = corpses.filter(c => !c.gone);
@@ -336,7 +356,7 @@
     const fall = f < 0.75 ? Math.pow(f / 0.75, 2) : 1 - Math.sin((f - 0.75) / 0.25 * Math.PI) * 0.06;
     const rv = G.Render.rot(); const cd = rv === 0 ? c.dir : rv === 2 ? -c.dir : G.Render.sdir(c.dir, c.dir * (rv === 1 ? -1 : 1));
     let ang = cd * (Math.PI / 2) * fall;
-    if (c.drag) ang = cd * Math.PI / 2 + Math.sin(t * 9) * 0.03;
+    if (c.drag || c.bdrag) ang = cd * Math.PI / 2 + Math.sin(t * 9) * 0.03;
     ctx.rotate(ang);
     if (fall >= 0.99) ctx.scale(1, 0.9);
     if (st === 'bones') drawBones(ctx, c, t);
@@ -349,6 +369,14 @@
       L.headless = c.headless;
       if (c.cause === 'lightning') { L.skin = '#3a3430'; L._cloth = '#2a2624'; }
       G.Art.villager(ctx, L, 0, 0, t, false);
+      // what the beast left: the belly torn open, the ribs, the guts on the ground
+      if (c.eaten > 0) {
+        const e = c.eaten;
+        ctx.fillStyle = '#5a0a10'; ctx.beginPath(); ctx.ellipse(0, -6.4, 1.3 + e * 0.5, 1 + e * 1.2, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#a01e28'; ctx.beginPath(); ctx.ellipse(0.1, -6.6, 0.8 + e * 0.4, 0.6 + e * 0.9, 0, 0, TAU); ctx.fill();
+        if (e > 0.45) { ctx.strokeStyle = '#efe6d2'; ctx.lineWidth = 0.3; for (let k = 0; k < 3; k++) { const y = -7.6 + k * 0.9; ctx.beginPath(); ctx.moveTo(-1.1, y); ctx.quadraticCurveTo(0, y - 0.35, 1.1, y); ctx.stroke(); } }
+        if (e > 0.25) { ctx.strokeStyle = '#c86a7a'; ctx.lineWidth = 0.4; ctx.beginPath(); ctx.moveTo(0.6, -5.6); ctx.bezierCurveTo(2, -5, 2.6, -3.2, 3.6, -3.8); ctx.stroke(); }
+      }
       // arrows standing out of the body
       ctx.strokeStyle = '#6e4a2c'; ctx.lineWidth = 0.45;
       for (let k = 0; k < c.arrows; k++) { const y = -8 + k * 1.3, x = (k % 2 ? 1 : -1) * 0.6; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 3.2, y - 1.4 - k * 0.3); ctx.stroke(); ctx.fillStyle = '#e8e0c8'; ctx.fillRect(x + 2.7, y - 1.6 - k * 0.3, 0.8, 0.5); }
@@ -374,7 +402,11 @@
     const b = o.b; const days = b.t / DAY();
     ctx.save(); ctx.translate(sx, sy - b.z); ctx.rotate(b.rot);
     const skin = days < 0.5 ? b.skin : days < 2.5 ? mix(b.skin, '#7a7a60', (days - 0.5) / 2) : '#e8e0cc';
-    if (b.kind === 'arm') {
+    if (b.kind === 'leg') {
+      ctx.strokeStyle = skin; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-2.6, 0); ctx.lineTo(2.4, 0); ctx.stroke();
+      ctx.fillStyle = '#4a3422'; ctx.fillRect(2.2, -0.6, 1, 1.2);
+      if (days < 2.5) { ctx.fillStyle = b.cloth; ctx.fillRect(-2.9, -0.7, 1.6, 1.4); ctx.fillStyle = '#8a1a1e'; ctx.fillRect(-3.2, -0.5, 0.5, 1); }
+    } else if (b.kind === 'arm') {
       ctx.strokeStyle = skin; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-1.8, 0); ctx.lineTo(1.8, 0); ctx.stroke();
       if (days < 2.5) { ctx.fillStyle = b.cloth; ctx.fillRect(-2.2, -0.6, 1.2, 1.2); ctx.fillStyle = '#8a1a1e'; ctx.fillRect(-2.5, -0.4, 0.5, 0.8); }
     } else {

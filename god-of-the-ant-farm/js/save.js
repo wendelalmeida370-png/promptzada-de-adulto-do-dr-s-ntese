@@ -54,7 +54,7 @@
       buildings: [...S.buildings.values()].map(b => { const o = Object.assign({}, b); delete o.res; if (o.crops) o.crops = o.crops.map(c => ({ s: c.s, g: r(c.g, 3), c: 0 })); o.incoming = { wood: 0, stone: 0 }; return o; }),
       villagers: vill,
       dead: [...S.dead.values()],
-      animals: [...S.animals.values()].map(a => ({ id: a.id, kind: a.kind, x: r(a.x, 2), y: r(a.y, 2), z: r(a.z || 0, 0), age: r(a.age || 0, 2), grown: r(a.grown === undefined ? 1 : a.grown, 2), hunger: r(a.hunger || 0, 2), named: a.named, kills: a.kills, sink: a.sink, hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: r(a.meat, 1), rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0, hx: r(a.hx, 1), hy: r(a.hy, 1), lifeMul: r(a.lifeMul || 1, 2), tamed: a.tamed || 0, guardSet: a.guardSet || 0, legend: a.legend || false, big: a.big || 1, epithet: a.epithet || null, mig: a.mig || false })),
+      animals: [...S.animals.values()].map(a => ({ id: a.id, kind: a.kind, x: r(a.x, 2), y: r(a.y, 2), z: r(a.z || 0, 0), age: r(a.age || 0, 2), grown: r(a.grown === undefined ? 1 : a.grown, 2), hunger: r(a.hunger || 0, 2), named: a.named, kills: a.kills, sink: a.sink, hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: r(a.meat, 1), rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0, hx: r(a.hx, 1), hy: r(a.hy, 1), lifeMul: r(a.lifeMul || 1, 2), tamed: a.tamed || 0, guardSet: a.guardSet || 0, legend: a.legend || false, big: a.big || 1, epithet: a.epithet || null, mig: a.mig || false, morph: a.morph || null, seen: a.seen || 0, perch: a.perch || 0 })),
       settlements: [...S.settlements.values()],
       N: S.N || N, mapType: S.mapType, temper: S.temper || 'normal', divinePeace: S.divinePeace || 0,
       factions: [...S.factions.values()].map(f => { const o = Object.assign({}, f); o.rel = {}; for (const k in f.rel) if (+k > f.id) o.rel[k] = Object.assign({}, f.rel[k], { envoy: 0 }); o.targets = null; o.coup = null; o.rev = null; o.revolt = null; o.exec = null; return o; }), usedNames: S.usedNames || [], starts: S.starts,
@@ -108,6 +108,7 @@
     for (const v of o.villagers) { v.path = null; v.task = null; v.emo = null; v.think = Math.random(); v.scan = Math.random() * 0.3; S.villagers.set(v.id, v); }
     for (const d of o.dead) S.dead.set(d.id, d);
     for (const a of o.animals) {
+      if (!('morph' in a)) a.morph = null; // (older worlds: no rare coats appear on loading)
       const x = G.Animals.spawn(a.kind, a.x, a.y, a); S.animals.delete(x.id); x.id = a.id; S.animals.set(a.id, x);
     }
     for (const s of o.settlements) S.settlements.set(s.id, s);
