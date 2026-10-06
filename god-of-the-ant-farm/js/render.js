@@ -2259,6 +2259,7 @@
           } else {
             Art.draw(ctx, Art.trunk(o.kind, o.v), sx, sy, s);
             Art.draw(ctx, Art.canopy(o.kind, o.v), sx + sway, sy, s);
+            if (o.fruit > 0.2) Art.fruit(ctx, o, sx + sway, sy, s);
           }
           if (o.chop > 0) { ctx.fillStyle = '#e8c890'; ctx.fillRect(sx - 1.2 * s, sy - 3 * s, 2.4 * s, 1.2 * s); }
         } else if (o.stage === 'fall') {

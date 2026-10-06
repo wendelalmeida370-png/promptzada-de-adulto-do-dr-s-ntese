@@ -281,7 +281,7 @@
   };
   function purse(v) { const h = homeOf(v); return h ? (h.coin || 0) : (v.purse || 0); }
   function spend(v, n) { const h = homeOf(v); if (h) { if ((h.coin || 0) < n) return false; h.coin -= n; return true; } if ((v.purse || 0) < n) return false; v.purse -= n; return true; }
-  E.purse = purse;
+  E.purse = purse; E.spend = spend; E.homeOf = homeOf;
 
   // ------------------------------ helpers for the task machines ------------------------------
   function walkTo(v, t, key, x, y, adj, dt, H, sp) {
@@ -409,18 +409,21 @@
   }
   function merchantTask(v, b, f, H) {
     const I = inv(b);
-    const wants = ['tecido', 'ceramica', 'joias', 'couro', 'food'];
+    const wants = E.MARKET_GOODS;
     const low = wants.filter(k => (I[k] || 0) < (k === 'food' ? 8 : 3) && (f.stock[k] || 0) >= (k === 'food' ? 12 : 2));
     if (low.length && G.R() < 0.6) return H.setTask(v, { type: 'restock', id: b.id, k: low[Math.floor(G.R() * low.length)], pri: 1 });
     let stock = 0; for (const k of wants) stock += I[k] || 0;
     if (!stock) return low.length ? H.setTask(v, { type: 'restock', id: b.id, k: low[0], pri: 1 }) : null;
     return H.setTask(v, { type: 'sell', id: b.id, pri: 1, dur: G.rr(14, 24) });
   }
+  // what the shops keep on their shelves (later files add their goods)
+  E.MARKET_GOODS = ['tecido', 'ceramica', 'joias', 'couro', 'food'];
+  E.FAIR_GOODS = ['food', 'tecido', 'ceramica', 'couro'];
   E.fairOpen = () => { const t = G.S.time; return t > 0.08 && t < 0.5; };
   function fairTask(v, b, f, H) {
     if (!E.fairOpen() || (G.War && G.War.threat(v.set))) return null;
     const I = inv(b);
-    const goods = ['food', 'tecido', 'ceramica', 'couro'];
+    const goods = E.FAIR_GOODS;
     const low = goods.filter(k => (I[k] || 0) < (k === 'food' ? 10 : 2) && (f.stock[k] || 0) >= (k === 'food' ? 14 : 2));
     if (low.length && G.R() < 0.5) return H.setTask(v, { type: 'restock', id: b.id, k: low[Math.floor(G.R() * low.length)], pri: 1 });
     return H.setTask(v, { type: 'sell', id: b.id, pri: 1, dur: G.rr(16, 26), fair: true });
@@ -793,11 +796,12 @@
     if (r > 0) { const I = inv(b); I[v.carry.k] = (I[v.carry.k] || 0) + v.carry.n; v.carry = null; H.end(v); }
   }
   // ------------------------------ citizens: shopping, the tavern, going home ------------------------------
-  const HOUSE_WANTS = { tecido: 0.3, ceramica: 0.15, joias: 0.03, couro: 0.05 };
+  const HOUSE_WANTS = E.HOUSE_WANTS = { tecido: 0.3, ceramica: 0.15, joias: 0.03, couro: 0.05 };
   E.shopTask = function (v, H) {
     const S = G.S; const h = homeOf(v); if (!h || v.captive) return null;
     const I = inv(h); const res = h.res || 1;
     const need = Object.keys(HOUSE_WANTS).filter(k => (I[k] || 0) < Math.max(1, res * HOUSE_WANTS[k] * 2));
+    if (E.wishes) for (const k of E.wishes(h, v)) need.push(k);
     if (!need.length && G.R() > 0.15) return null;
     const f = G.Fac.ofV(v); if (!f) return null;
     // the black market tempts the poor and the disloyal

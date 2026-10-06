@@ -624,6 +624,8 @@
     else if (DRAW[sp.art]) DRAW[sp.art](c, a, sp, t);
     // a carcass torn open by those who ate from it
     if (a.dead && !a.sink && sp.cls !== 'water' && sp.cls !== 'air' && a.meat > 0) { const e = 1 - a.meat / Math.max(1, sp.meat); if (e > 0.04 || a.gore > 0) gore(c, a, sp, Math.max(e, a.gore > 0 ? 0.15 : 0)); }
+    // skinned where it fell: the red body without its coat
+    if (a.dead && a.flay > 0 && a.meat > 0 && G.Riches) { c.save(); G.Riches.drawFlay(c, a, sp); c.restore(); }
     c.restore();
   };
   // birds high in the sky are drawn above everything, with a shadow on the ground

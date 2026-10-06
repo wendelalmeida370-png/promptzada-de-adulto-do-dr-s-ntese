@@ -62,6 +62,7 @@
   // ------------------------------ helpers ------------------------------
   const cap = v => (v.age < 12 ? 1 : v.age < 16 ? 2 : v.age >= 62 ? 2 : 4);
   Vg.cap = cap;
+  Vg.workMul = v => workMul(v);
   const isAdult = v => v.age >= 16 && v.age < 62;
   function workMul(v) {
     let m = v.work * (v.sick > 0 ? 0.5 : 1) * (v.mourn > 0 ? 0.85 : 1) * (v.fear > 70 ? 0.85 : 1);
@@ -504,7 +505,12 @@
     if (!spot) return null;
     return setTask(v, { type: 'drift', x: spot.x, y: spot.y, wx: spot.wx, wy: spot.wy, pri: 1 });
   }
-  function gatherTask(v) { const b = nearestBush(v); if (!b) return null; b.claim = v.id; return setTask(v, { type: 'gather', id: b.id, pri: 1 }); }
+  function gatherTask(v) {
+    // the fruit trees and the wild bees, now and then, if they are not much further than the bushes
+    if (G.Flora && v.age >= 12 && G.R() < 0.45) { const t = G.Flora.pickTask(v, H); if (t) return t; }
+    if (G.Flora && v.age >= 16 && G.R() < 0.12) { const t = G.Flora.honeyTask(v, H); if (t) return t; }
+    const b = nearestBush(v); if (!b) return (G.Flora && v.age >= 12 && G.Flora.pickTask(v, H)) || null; b.claim = v.id; return setTask(v, { type: 'gather', id: b.id, pri: 1 });
+  }
   // at low water the beaches give food too: clams and cockles in the wet sand, crabs in the pools
   function shellTask(v) {
     if (!G.Sea || !G.Sea.lowTide()) return null;
@@ -553,7 +559,8 @@
       if (a.claim && a.claim !== v.id && S.villagers.has(a.claim)) continue;
       if (set && G.dist2(a.x, a.y, set.cx, set.cy) > (maxD || 24) * (maxD || 24)) continue;
       if (!W.sameLand(v.x, v.y, a.x, a.y)) continue;
-      const d = G.dist2(v.x, v.y, a.x, a.y); if (d < bd) { bd = d; best = a; }
+      // when tusks and hides sell abroad, the hunters go for the beasts that carry them
+      const d = G.dist2(v.x, v.y, a.x, a.y) - (G.Riches ? G.Riches.huntPull(v, a) : 0); if (d < bd) { bd = d; best = a; }
     }
     if (!best) return null;
     best.claim = v.id;
@@ -730,6 +737,8 @@
           const add = G.Village.addStock(v.carry.k, n, G.Fac.idOfV(v));
           v.st[v.carry.k] = (v.st[v.carry.k] || 0) + v.carry.n;
           if (add > 0) G.FX && G.FX.deposit(v.x, v.y, v.carry.k, add);
+          // what came along with it: the hide off the deer's back, the tusks, a second sack
+          if (v.carry.extra) G.Riches && G.Riches.unload(v, v.carry.extra);
           v.carry = null; end(v);
         }
         break;
@@ -884,9 +893,10 @@
         const a = S.animals.get(t.id);
         if (!a || a.held) return end(v);
         if (a.dead) {
-          if (t.type === 'fight') { emote(v, 'happy', 2); return end(v); }
+          if (t.type === 'fight') { emote(v, 'happy', 2); if (G.Riches && G.Riches.spoils(v, a, t)) return; return end(v); }
           // collect the meat
           if (G.dist(v.x, v.y, a.x, a.y) > 0.8) { if (!t.carc) { if (!Vg.goto(v, a.x, a.y, false)) return end(v); t.carc = true; } move(v, dt); }
+          else if (G.Riches && G.Riches.carcass(v, a, t, dt, H)) { /* skinned at the kill, then home with meat and hide */ }
           else { const take = Math.min(8, Math.max(1, a.meat)); v.carry = { k: 'food', n: Math.max(1, Math.round(take * G.Civ.tV(v, 'hunt'))) }; a.meat -= take; if (a.meat <= 0.5) G.Animals.remove(a); else a.claim = 0; emote(v, 'food', 1.5); deliverTask(v); }
           break;
         }
@@ -1158,7 +1168,7 @@
         break;
       }
       case 'saga': if (G.Stories) G.Stories.run(v, t, dt, H); else end(v); break;
-      default: if (!(G.Caves && G.Caves.run(v, t, dt, H)) && !G.War.run(v, t, dt, H) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Carnage && G.Carnage.run(v, t, dt, H))) end(v);
+      default: if (!(G.Caves && G.Caves.run(v, t, dt, H)) && !G.War.run(v, t, dt, H) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Carnage && G.Carnage.run(v, t, dt, H)) && !(G.Flora && G.Flora.run(v, t, dt, H)) && !(G.Riches && G.Riches.run(v, t, dt, H))) end(v);
     }
   }
   const LONG = { saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1 };
@@ -1501,7 +1511,7 @@
     if (v.air) return 'Voando pelos ares!';
     if (v.age < 2) { const c = S.villagers.get(v.carrier); return c ? (v.sleeping ? 'Dormindo' : `No colo de ${c.name}`) : 'Chorando sozinho'; }
     if (!t) return v.sleeping ? 'Dormindo' : 'Pensando no que fazer';
-    const wt = (G.Caves && G.Caves.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || G.War.taskText(v, t) || (G.City && G.City.taskText(v, t)) || (G.Naval && G.Naval.taskText(v, t)) || (G.Eco && G.Eco.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || (G.Fest && G.Fest.taskText(v, t)) || (G.Life && G.Life.taskText(v, t)) || (G.Carnage && G.Carnage.taskText(v, t)); if (wt) return wt;
+    const wt = (G.Flora && G.Flora.taskText(v, t)) || (G.Riches && G.Riches.taskText && G.Riches.taskText(v, t)) || (G.Caves && G.Caves.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || G.War.taskText(v, t) || (G.City && G.City.taskText(v, t)) || (G.Naval && G.Naval.taskText(v, t)) || (G.Eco && G.Eco.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || (G.Fest && G.Fest.taskText(v, t)) || (G.Life && G.Life.taskText(v, t)) || (G.Carnage && G.Carnage.taskText(v, t)); if (wt) return wt;
     const bname = id => { const b = S.buildings.get(id); return b ? G.Village.buildName(b) : 'construção'; };
     const pname = id => { const o = S.villagers.get(id); return o ? o.name : 'alguém'; };
     switch (t.type) {

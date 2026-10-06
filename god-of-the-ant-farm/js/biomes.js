@@ -13,13 +13,13 @@
   const ID = B.ID = { TEMP: 0, NEVE: 1, TAIGA: 2, PANTANO: 3, SELVA: 4, SAVANA: 5, DESERTO: 6 };
   // trees: [kind, weight]; dens: chance inside a forest patch; sparse: chance outside; patch: forest-noise threshold
   G.BIOMES = [
-    { id: 'temperado', to: 'à floresta temperada', name: 'Floresta Temperada', adj: 'temperada', fert: 1, cost: 1, speed: 1, trees: [['oak', 5], ['pine', 2], ['birch', 2]], dens: 0.58, sparse: 0.035, patch: 0.07, bush: 0.07, fire: 1, grow: 1 },
+    { id: 'temperado', to: 'à floresta temperada', name: 'Floresta Temperada', adj: 'temperada', fert: 1, cost: 1, speed: 1, trees: [['oak', 5], ['pine', 2], ['birch', 2], ['apple', 0.55], ['olive', 0.35], ['mulberry', 0.35]], dens: 0.58, sparse: 0.035, patch: 0.07, bush: 0.07, fire: 1, grow: 1 },
     { id: 'neve', to: 'à tundra gelada', name: 'Tundra Gelada', adj: 'gelada', fert: 0.3, cost: 1.15, speed: 0.8, trees: [['snowpine', 1]], dens: 0.22, sparse: 0.02, patch: 0.1, bush: 0.012, fire: 0, grow: 0.45 },
     { id: 'taiga', to: 'à taiga', name: 'Taiga', adj: 'boreal', fert: 0.62, cost: 1.05, speed: 0.9, trees: [['pine', 3], ['snowpine', 2], ['birch', 1]], dens: 0.62, sparse: 0.05, patch: 0.02, bush: 0.035, fire: 0.8, grow: 0.75 },
-    { id: 'pantano', to: 'ao pântano', name: 'Pântano', adj: 'pantanosa', fert: 0.9, cost: 1.4, speed: 0.68, trees: [['willow', 1]], dens: 0.32, sparse: 0.09, patch: 0.0, bush: 0.08, fire: 0.15, grow: 1.1 },
-    { id: 'selva', to: 'à floresta tropical', name: 'Floresta Tropical', adj: 'tropical', fert: 1.22, cost: 1.12, speed: 0.85, trees: [['jungle', 5], ['palm', 1]], dens: 0.82, sparse: 0.16, patch: -0.06, bush: 0.1, fire: 0.45, grow: 1.4 },
-    { id: 'savana', to: 'à savana', name: 'Savana', adj: 'da savana', fert: 0.78, cost: 1, speed: 1, trees: [['acacia', 5], ['baobab', 1]], dens: 0.13, sparse: 0.025, patch: 0.12, bush: 0.035, fire: 1.5, grow: 0.8 },
-    { id: 'deserto', to: 'ao deserto', name: 'Deserto', adj: 'do deserto', fert: 0.22, cost: 1.08, speed: 0.9, trees: [['cactus', 4], ['palm', 1]], dens: 0.05, sparse: 0.012, patch: 0.15, bush: 0.006, fire: 0, grow: 0.5 },
+    { id: 'pantano', to: 'ao pântano', name: 'Pântano', adj: 'pantanosa', fert: 0.9, cost: 1.4, speed: 0.68, trees: [['willow', 1], ['acai', 0.45], ['banana', 0.2]], dens: 0.32, sparse: 0.09, patch: 0.0, bush: 0.08, fire: 0.15, grow: 1.1 },
+    { id: 'selva', to: 'à floresta tropical', name: 'Floresta Tropical', adj: 'tropical', fert: 1.22, cost: 1.12, speed: 0.85, trees: [['jungle', 5], ['palm', 1], ['banana', 0.5], ['cacao', 0.45], ['coffee', 0.35], ['pepper', 0.3], ['acai', 0.25]], dens: 0.82, sparse: 0.16, patch: -0.06, bush: 0.1, fire: 0.45, grow: 1.4 },
+    { id: 'savana', to: 'à savana', name: 'Savana', adj: 'da savana', fert: 0.78, cost: 1, speed: 1, trees: [['acacia', 5], ['baobab', 1], ['incense', 0.35], ['date', 0.25], ['coffee', 0.15]], dens: 0.13, sparse: 0.025, patch: 0.12, bush: 0.035, fire: 1.5, grow: 0.8 },
+    { id: 'deserto', to: 'ao deserto', name: 'Deserto', adj: 'do deserto', fert: 0.22, cost: 1.08, speed: 0.9, trees: [['cactus', 4], ['palm', 1], ['date', 1.1], ['incense', 0.45]], dens: 0.05, sparse: 0.012, patch: 0.15, bush: 0.006, fire: 0, grow: 0.5 },
   ];
   B.CLIMAS = {
     variado: { name: 'Variado', desc: 'Neve ao norte, trópicos ao sul — mapas pequenos pegam uma faixa sorteada.' },
@@ -114,12 +114,14 @@
     let r = (rnd ? rnd() : G.R()) * tot; for (const [k, w] of L) { r -= w; if (r <= 0) return k; } return L[0][0];
   };
   // can a tree of this kind take root here?
-  const HOME = { oak: [0, 2], birch: [0, 2], pine: [0, 2, 1], snowpine: [1, 2], willow: [3], jungle: [4], palm: [4, 6, 5], acacia: [5], baobab: [5], cactus: [6] };
+  const HOME = { oak: [0, 2], birch: [0, 2], pine: [0, 2, 1], snowpine: [1, 2], willow: [3], jungle: [4], palm: [4, 6, 5], acacia: [5], baobab: [5], cactus: [6], apple: [0], olive: [0, 5], mulberry: [0], acai: [3, 4], banana: [4, 3], cacao: [4], coffee: [4, 5], pepper: [4], date: [6, 5], incense: [6, 5] };
   B.canGrow = function (kind, i) {
     const S = G.S; const t = S.type[i]; const b = B.of(i);
     if (t < T.SAND || t === T.RIVER) return false;
     if (kind === 'palm') return (t === T.SAND && ((G.dOcean && G.dOcean[i] <= 3) || (S.moist && S.moist[i] > 150))) || b === ID.SELVA;
-    if (t === T.SAND && kind !== 'cactus') return false;
+    // (the date palm wants water under the sand: an oasis, a river; frankincense grows on dry stony ground)
+    if (kind === 'date') return (b === ID.DESERTO || b === ID.SAVANA) && ((S.moist && S.moist[i] > 120) || (G.dOcean && G.dOcean[i] <= 2));
+    if (t === T.SAND && kind !== 'cactus' && kind !== 'incense') return false;
     return (HOME[kind] || [0]).includes(b);
   };
   B.grassFire = i => B.def(i).fire;

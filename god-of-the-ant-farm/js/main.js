@@ -57,6 +57,8 @@
     const civs = opts.classic ? S.starts.map(() => null) : G.Biome.matchCivs(G.Civ.assign(opts.civs, S.starts.length), S.starts);
     const facs = S.starts.map(([x, y], k) => spawnPeople(x, y, k, civs[k]));
     G.Animals.populate();
+    G.Flora && G.Flora.onWorld();
+    G.Riches && G.Riches.onWorld();
     G.Village.forceUpdate();
     G.Politics && G.Politics.init();
     G.Fac.updateTerritory();
@@ -171,6 +173,8 @@
     G.Life && G.Life.update(dt);
     G.Carnage && G.Carnage.update(dt);
     G.Animals.updateAll(dt);
+    G.Flora && G.Flora.update(dt);
+    G.Riches && G.Riches.update(dt);
     G.Caves && G.Caves.update(dt);
     G.Pets && G.Pets.update(dt);
     G.Powers.update(dt);
