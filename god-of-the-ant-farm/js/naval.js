@@ -1047,7 +1047,8 @@
         s.path = null;
         if (s.st === 'sail' && s.water) sailTo(s, s.water[0], s.water[1]);
         else if (s.st === 'return' || s.st === 'back' || s.st === 'back2') { const h = home(s); if (h && h.moor) sailTo(s, h.moor[0], h.moor[1]); }
-        else if ((s.st === 'out' && s.kind !== 'pesca') || s.st === 'go' || s.st === 'patrol') { s.st = 'idle'; }
+        // (a ship of a voyage or a fleet is put back on course by its expedition or its admiral)
+        else if (((s.st === 'out' && s.kind !== 'pesca') || s.st === 'go' || s.st === 'patrol') && !s.exp && !s.fleet) { s.st = 'idle'; }
       }
       Nv.reset();
     },

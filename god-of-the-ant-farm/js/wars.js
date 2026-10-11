@@ -1077,7 +1077,8 @@
       ms.forEach((v, k) => G.Vg.setTask(v, { type: 'muster', army: a.id, k, pri: 3.15, kind: 'muster', st: 0 }));
       a.phase = 'mobilizar'; a.called = S.clock - DAY() * 0.3; a.band = 0;
     }
-    for (const bt of st().battles) if (bt.open) { bt.open = false; bt.t1 = S.clock; }
+    // (a land battle is fought again when the lines meet; a sea battle in progress goes on — the fleets keep it)
+    for (const bt of st().battles) if (bt.open && !bt.naval) { bt.open = false; bt.t1 = S.clock; }
   }
   (G.saveHooks = G.saveHooks || []).push({
     save(out) { if (G.S.wz) out.wz = G.S.wz; },

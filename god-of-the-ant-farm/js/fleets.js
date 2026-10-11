@@ -129,13 +129,15 @@
   Fl.form = form;
   function manShips(fl, f, ships, adm) {
     const S = G.S; const want = crewSize(f); const taken = new Set();
-    const pool = [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === f.id && !v.captive && v.age >= 16 && v.age < 56 && v.hp > 55 && !v.aboard && !(v.preg > 0) && v.id !== f.leader && !(v.task && (v.task.pri >= 3.15 || v.task.type === 'cais')) && !(G.Expe && G.Expe.memberOf(v.id)));
-    pool.sort((a, b) => ((b.role === 'guerreiro') * 3 + (b.role === 'pescador') * 2 + b.courage) - ((a.role === 'guerreiro') * 3 + (a.role === 'pescador') * 2 + a.courage));
+    // (the levy still gathering in the square can be sent down to the ships instead: at sea, the fleet is the front)
+    const levy = v => { const t = v.task; if (!t || t.type !== 'muster') return null; const a = Wz.army(t.army); return a && !a.done && a.phase === 'mobilizar' && a.fac === f.id && a.members.length > 8 ? a : null; };
+    const pool = [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === f.id && !v.captive && v.age >= 16 && v.age < 56 && v.hp > 55 && !v.aboard && !(v.preg > 0) && v.id !== f.leader && (!(v.task && (v.task.pri >= 3.15 || v.task.type === 'cais')) || levy(v)) && !(G.Expe && G.Expe.memberOf(v.id)));
+    pool.sort((a, b) => ((b.role === 'guerreiro') * 3 + (b.role === 'pescador') * 2 + b.courage - (levy(b) ? 1.5 : 0)) - ((a.role === 'guerreiro') * 3 + (a.role === 'pescador') * 2 + a.courage - (levy(a) ? 1.5 : 0)));
     let k = 0;
     for (const s of ships) {
       if (s.kind === 'transporte' && fl.mission === 'invasao') { s.crew = []; continue; }
       const crew = []; if (adm && s === ships[0]) { crew.push(adm); taken.add(adm.id); }
-      for (const v of pool) { if (crew.length >= want) break; if (taken.has(v.id)) continue; const d = G.dist(v.x, v.y, s.x, s.y); if (d > 70) continue; crew.push(v); taken.add(v.id); }
+      for (const v of pool) { if (crew.length >= want) break; if (taken.has(v.id)) continue; const d = G.dist(v.x, v.y, s.x, s.y); if (d > 70) continue; const a = levy(v); if (a) { if (a.members.length <= 8) continue; a.members = a.members.filter(id => id !== v.id); } crew.push(v); taken.add(v.id); }
       s.crew = crew.map(v => v.id); s.captain = crew[0] ? crew[0].id : 0;
       const di = Nv._home(s);
       for (const v of crew) { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'embark', ship: s.id, pri: 3.3, kind: 'embark', x: di && di.quay ? di.quay[0] : s.x, y: di && di.quay ? di.quay[1] : s.y, k: k++ }); }
@@ -317,6 +319,8 @@
   // ====================================================================================
   function engage(fl, f, ships, foe) {
     const S = G.S; if (fl.st === 'combate') return;
+    // (soldiers in the water or on the planks: the escorts shoot back from where they are, the fleet does not sail off to a battle)
+    if (fl.mission === 'invasao' && (fl.st === 'embarque' || fl.st === 'desembarque' || fl.st === 'espera' || fl.st === 'reembarque')) return;
     // (an escort with transports to protect fights; a hunter strikes only what it can take)
     const foeFl = foe.fleet ? Fl.get(foe.fleet) : null; const theirShips = foeFl ? foeFl.ships.map(ship).filter(Boolean) : [foe];
     const strong = ships.filter(s => s.kind === 'guerra' && s._nAb >= 2).length; const theirStrong = theirShips.filter(s => s.kind === 'guerra' && s._nAb >= 2).length;
@@ -341,7 +345,7 @@
     const base = `a Batalha ${pl.of}`; const same = w ? w.battles.map(Wz.battle).filter(b => b && b.base === base).length : 0;
     const name = same ? base.replace('a Batalha', `a ${['', 'Primeira', 'Segunda', 'Terceira', 'Quarta'][same + 1] || 'Nova'} Batalha`) : base;
     bt = { id: st.seq++, war: w ? w.id : 0, name, base, x: +x.toFixed(1), y: +y.toFixed(1), d: S.day, t0: S.clock, t1: 0, sides: {}, winner: 0, bands: [], open: true, ids: [], naval: true, kind: 'naval', fleets: [fl.id].concat(foeFl ? [foeFl.id] : []), ships: {} };
-    const side = (fac, list) => { const s = bt.sides[fac] || (bt.sides[fac] = { n: 0, ships: 0, gen: 0, genName: '', dead: 0, wounded: 0, captured: 0, fled: 0, sunk: 0, taken: 0, army: '', bands: [] }); for (const sh of list) { if (bt.ships[sh.id]) continue; bt.ships[sh.id] = fac; s.ships++; const ab = Nv.aboardOf(sh); s.n += ab.length; for (const v of ab) if (!bt.ids.includes(v.id)) bt.ids.push(v.id); } };
+    const side = (fac, list) => { const s = bt.sides[fac] || (bt.sides[fac] = { n: 0, ships: 0, gen: 0, genName: '', dead: 0, wounded: 0, captured: 0, fled: 0, sunk: 0, taken: 0, army: '', bands: [] }); for (const sh of list) { if (bt.ships[sh.id] || (!Nv.aboardOf(sh).length && !sh.grapple)) continue; bt.ships[sh.id] = fac; s.ships++; const ab = Nv.aboardOf(sh); s.n += ab.length; for (const v of ab) if (!bt.ids.includes(v.id)) bt.ids.push(v.id); } };
     side(fl.fac, ships); side(foe.fac, theirs);
     bt.sides[fl.fac].gen = fl.cmd; bt.sides[fl.fac].genName = fl.cmdName; bt.sides[fl.fac].army = fl.name;
     if (foeFl) { bt.sides[foe.fac].gen = foeFl.cmd; bt.sides[foe.fac].genName = foeFl.cmdName; bt.sides[foe.fac].army = foeFl.name; foeFl.battle = bt.id; foeFl.battles.push(bt.id); }
@@ -614,6 +618,12 @@
         break;
       }
       case 'travessia': {
+        // peace was made while they were at sea: the bow turns for home with everyone aboard (no one is put ashore for nothing)
+        if (!w || w.end || !a || a.done) {
+          if (w && !fl.peaceTurn) { fl.peaceTurn = 1; Wz.event(w, `A paz chegou antes da praia: ${fl.name} deu meia-volta no meio do mar, com os soldados a bordo.`, fl.x, fl.y, 'naval'); }
+          if (a && !a.done) { a.done = true; a.phase = 'retorno'; }
+          recall(fl, 'paz'); break;
+        }
         const arrived = steer(fl, ships, dt); keepSlots(fl, ships);
         // the soldiers eat from the transports' stores (the army's wagons came aboard)
         if (arrived || G.dist(fl.x, fl.y, fl.land.water[0], fl.land.water[1]) < 2.5) {
@@ -629,15 +639,20 @@
         // two by two off each transport, wading ashore
         fl.dq -= dt; if (fl.dq > 0) break; fl.dq = 0.5;
         let left = 0;
-        for (const s of trs) {
-          const ab = Nv.aboardOf(s); left += ab.length;
+        // (soldiers fished out of the water by the escorts after a transport went down land too; the escorts keep their own crews)
+        const mem = new Set(a ? a.members : []);
+        for (const s of ships) {
+          const ab = s.kind === 'transporte' ? Nv.aboardOf(s) : Nv.aboardOf(s).filter(v => mem.has(v.id) && v.id !== fl.cmd); left += ab.length;
+          if (s.kind !== 'transporte') for (const v of ab.slice(0, 2)) { const k = s.crew.indexOf(v.id); if (k >= 0) s.crew.splice(k, 1); }
           for (const v of ab.slice(0, 2)) { v.aboard = 0; v.task = null; v.path = null; const p = W.randomNear(fl.land.land[0], fl.land.land[1], 2) || fl.land.land; v.x = p[0]; v.y = p[1]; G.FX && G.FX.splash(v.x, v.y, 0.3); G.Vg.setTask(v, { type: 'praia', fleet: fl.id, k: (fl.landedN = (fl.landedN || 0) + 1), pri: 3.3, st: 0 }); }
         }
         defend(fl, ships, dt);
         if (left > 0 && fl.t < 60) break;
         // the beachhead: the army forms on the sand and the land war takes over
         if (a && !a.done) {
-          const ashore = [...S.villagers.values()].filter(v => v.task && v.task.type === 'praia' && v.task.fleet === fl.id);
+          // (everyone of the army on the sand, the ones holding the beachhead and the ones who lost their place in it)
+          const mem2 = new Set(a.members);
+          const ashore = [...S.villagers.values()].filter(v => !v.aboard && !v.captive && ((v.task && v.task.type === 'praia' && v.task.fleet === fl.id) || (mem2.has(v.id) && G.dist(v.x, v.y, fl.land.land[0], fl.land.land[1]) < 14)));
           a.members = ashore.map(v => v.id); a.muster = fl.land.land.slice(); a.beach = fl.land.land.slice(); a.phase = 'mobilizar'; a.called = S.clock - DAY();
           ashore.forEach((v, k) => { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'muster', army: a.id, k, pri: 3.15, kind: 'muster', st: 2 }); });
           Wz.formNow(a); const b = a.band && G.War.bands.get(a.band); if (b) b.fleet = fl.id;
@@ -649,7 +664,12 @@
         // offshore, guarding the beach: the army may need to come back
         keepSlots(fl, ships); defend(fl, ships, dt);
         const b = a && a.band && G.War.bands.get(a.band);
-        if (!a || a.done || !b || b.st === 'retorno') { fl.st = 'reembarque'; fl.t = 0; fl.dq = 0; break; }
+        if (!a || a.done || !b || b.st === 'retorno') {
+          fl.st = 'reembarque'; fl.t = 0; fl.dq = 0;
+          // an army that never formed on the sand (the war over while they waded ashore): every one of them is called back down to the boats
+          if (!b && a) for (const id of a.members) { const v = P(id); if (v && !v.aboard && !v.captive && G.dist(v.x, v.y, fl.land.land[0], fl.land.land[1]) < 60) { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'reembarque', fleet: fl.id, pri: 3.35, st: 0 }); } }
+          break;
+        }
         if (fl.t > DAY() * 6) { fl.st = 'reembarque'; fl.t = 0; }
         break;
       }
@@ -680,7 +700,7 @@
   }
   // the landed hold the beach in a ring until the last boat is in
   function runPraia(v, t, dt, H) {
-    const fl = Fl.get(t.fleet); if (!fl || !fl.land || fl.st !== 'desembarque') return H.end(v);
+    const fl = Fl.get(t.fleet); if (!fl || !fl.land || (fl.st !== 'desembarque' && !(fl.st === 'combate' && fl.prevSt === 'desembarque'))) return H.end(v);
     if (t.st === 0) { const k = t.k || 0; const a = k * 2.39996, r = 0.8 + Math.sqrt(k) * 0.5; const p = W.nearestLand(fl.land.land[0] + Math.cos(a) * r, fl.land.land[1] + Math.sin(a) * r, 2) || fl.land.land; if (!H.goto(v, p[0], p[1], true, 3000)) { t.st = 2; return; } t.st = 1; return; }
     if (t.st === 1) { if (H.move(v, dt, 1.05)) t.st = 2; return; }
     v.moving = false; v.act = t.k % 3 ? 'guard' : 'brandish';
@@ -747,8 +767,13 @@
   Fl.update = function (dt) {
     tCouncil -= dt; tTick -= dt;
     if (tCouncil <= 0) { tCouncil = 3; const fs = G.Fac.all(); if (fs.length) { for (let k = 0; k < Math.min(2, fs.length); k++) council(fs[ci++ % fs.length]); } }
-    if (tTick <= 0) { tTick = 0.5; for (const fl of fleets()) if (Fl.live(fl)) { try { tick(fl, 0.5); } catch (e) { console.error('fleet', fl.id, e); fl.st = 'fim'; } } }
+    if (tTick <= 0) {
+      tTick = 0.5; for (const fl of fleets()) if (Fl.live(fl)) { try { tick(fl, 0.5); } catch (e) { console.error('fleet', fl.id, e); fl.st = 'fim'; } }
+      // a sea battle nobody is fighting any more (the fleets sank, fled or went home) is closed and counted
+      if ((tSweep = (tSweep || 0) - 0.5) <= 0) { tSweep = 5; for (const bt of Wz.state().battles || []) if (bt.naval && bt.open && !fleets().some(fl => Fl.live(fl) && fl.st === 'combate' && fl.battle === bt.id)) closeBattle(bt); }
+    }
   };
+  let tSweep = 0;
 
   // ====================================================================================
   //  DRAWN OVER THE SHIPS: planks across, men fighting on the decks, buckets at a fire
@@ -782,7 +807,7 @@
       for (const fl of S.fleets) {
         if (!Fl.live(fl)) continue;
         // a battle in progress resumes as soon as the lines see each other again
-        if (fl.st === 'combate') { fl.st = fl.prevSt || 'navegar'; fl.battle = 0; }
+        if (fl.st === 'combate') { const bt = fl.battle && Wz.battle(fl.battle); if (!bt || !bt.open) { fl.st = fl.prevSt || 'navegar'; fl.battle = 0; } }
         for (const s of fl.ships.map(ship).filter(Boolean)) { s.grapple = 0; s.target = 0; s.path = null; }
         if (fl.st === 'navegar' || fl.st === 'casa' || fl.st === 'retirada') { const tg = fl.st === 'navegar' ? target(fl) : (() => { const d = S.buildings.get(fl.dock); const di = d && Nv.dockInfo(d); return di && di.moor; })(); if (tg) course(fl, tg[0], tg[1]); }
         if (fl.st === 'travessia' && fl.land) course(fl, fl.land.water[0], fl.land.water[1]);

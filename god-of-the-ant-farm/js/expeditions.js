@@ -247,11 +247,12 @@
     const ef = eff(f); const p = ef.p; const pop = G.Fac.pop(f.id);
     if (pop < 12) return null;
     const act = X.active(f.id).filter(e => e.kind !== 'colonia');
-    if (act.length >= (pop > 160 && ef.aff > 0.5 ? 2 : 1)) return null;
+    // (a people of the sea keeps more than one voyage out at a time)
+    if (act.length >= ((pop > 160 && ef.aff > 0.5) || (pop > 60 && ef.aff > 0.7) ? 2 : 1)) return null;
     // the sea must be calm enough to think of it (no famine at sea, no war fleet at the door)
     const enemyShips = S.ships.some(o => o.kind === 'guerra' && G.Fac.atWar(f.id, o.fac) && docks.some(d => G.dist(o.x, o.y, d.x, d.y) < 30));
     if (enemyShips && !force) return null;
-    const cool = (G.rr(2.5, 6) / (0.4 + ef.aff)) * (p.era === 'recolhimento' ? 2.5 : p.era === 'expansao' ? 0.6 : 1);
+    const cool = (G.rr(2, 6) / (0.3 + ef.aff * 1.4)) * (p.era === 'recolhimento' ? 2.5 : p.era === 'expansao' ? 0.6 : 1);
     if (!force && S.day - (p.last || -99) < cool) return null;
     const pr = X.pressure(f);
     const cs = candidates(f, docks, pr, ef); if (!cs.length) return null;
@@ -549,7 +550,7 @@
       if (r && K.distTo(r, flag.x, flag.y) < 9) return startApproach(e, r);
       // nothing found where the tale said: a leg sideways, then home
       e.legs++;
-      const near = landNear(e, flag, 18); if (near) return startApproach(e, near);
+      const near = landNear(e, flag, e.roles.cart ? 24 : 18); if (near) return startApproach(e, near);
       if (e.legs > (e.scale === 'grande' ? 4 : e.scale === 'media' ? 3 : 2)) { e.turned = e.turned || 'nada'; chapter(e, 'Mar vazio', `${pick(['Dias de água e céu', 'Nada no horizonte, dia após dia', 'Só mar'])}: ${P(e.leader).name} manda voltar.`, 'ship'); return goHome(e, ships); }
       const a = Math.atan2((e.tgt ? e.tgt[1] : flag.y) - e.moor[1], (e.tgt ? e.tgt[0] : flag.x) - e.moor[0]) + (G.R() < 0.5 ? 1 : -1) * G.rr(0.6, 1.2);
       e.obj.a = a; e.range = e.range * 0.6; e.obj.key = null; if (!plot(e, ships)) return goHome(e, ships);
@@ -942,7 +943,7 @@
     const S = G.S; const i = W.idx(flag.x, flag.y); const temp = S.temp ? S.temp[i] / 255 : 0.5;
     const near = k => { let n = 0; for (const a of S.animals.values()) if (!a.dead && a.kind === k && G.dist2(a.x, a.y, flag.x, flag.y) < 324) n++; return n; };
     const ab = aboardE(e); const days = (S.clock - (e.sea0 || S.clock)) / DAY();
-    let land = null, ld = 30; for (const r of K.regions()) { if (!K.big(r) || K.state(e.fac, r) >= K.EXP) continue; const d = K.distTo(r, flag.x, flag.y); if (d < ld) { ld = d; land = r; } }
+    let land = null, ld = 44; for (const r of K.regions()) { if (!K.big(r) || K.state(e.fac, r) >= K.EXP) continue; const d = K.distTo(r, flag.x, flag.y); if (d < ld) { ld = d; land = r; } }
     let wreck = null; for (const w of S.wrecks || []) if (G.dist2(w.x, w.y, flag.x, flag.y) < 100 && !(e.wrecksSeen || []).includes(w.id)) wreck = w;
     const reef = G.Sea && G.Sea.floor && (() => { for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const x = Math.floor(flag.x) + dx, y = Math.floor(flag.y) + dy; if (W.inb(x, y) && G.Sea.floor[y * N + x] === G.Sea.F.REEF) return true; } return false; })();
     const ship2 = S.ships.find(o => o.fac !== e.fac && !o.ghost && G.dist2(o.x, o.y, flag.x, flag.y) < 196);
@@ -985,6 +986,9 @@
     { id: 'golfinhos', w: c => (c.dolphins ? 1.6 : c.warm ? 0.3 : 0), run(e) { e.morale += 10; return ['Os golfinhos', 'Golfinhos brincaram na proa a tarde toda. Os marinheiros juraram que era sinal de boa viagem.', 'wave']; } },
     { id: 'predador', w: c => (c.orcas || c.sharks ? 1.4 : 0), run(e, c) { e.morale -= 6; const k = c.orcas ? 'orcas' : 'tubarões'; return ['As barbatanas', `${k === 'orcas' ? 'Orcas, pretas e brancas, rondaram o casco' : 'Barbatanas cortando a água em volta do barco'}. Ninguém pôs a mão para fora a noite inteira.`, 'paw']; } },
     { id: 'cardume', w: c => (c.S.fish.some(sh => G.dist2(sh.x, sh.y, c.flag.x, c.flag.y) < 100) ? 1.6 : 0.2), run(e) { const n = Math.round(G.rr(4, 12)); e.prov += n; e.morale += 4; return ['O cardume', `A água ferveu de peixe prateado. Encheram ${n > 8 ? 'os cestos' : 'um cesto'} só de puxar a rede.`, 'fish']; } },
+    // the signs of land a sailor knows how to read, from near to far
+    { id: 'nuvem', w: c => (c.land && c.ld >= 14 && c.ld < 44 && !c.back && !c.night && !c.storm ? 1.5 : 0), run(e, c) { const r = c.land; if (e.st === 'viagem' && r && (e.obj.key === null || G.R() < 0.5)) { e.obj.key = r.key; plot(e, e.ships.map(ship).filter(Boolean)); } return ['A nuvem parada', `Uma nuvem não se mexe no horizonte, a ${K.dir(r.cx - c.flag.x, r.cy - c.flag.y)}, enquanto todas as outras correm. ${c.lead ? c.lead.name : 'O líder'} conhece o sinal: debaixo de nuvem parada tem terra.`, 'eye']; } },
+    { id: 'galhos', w: c => (c.land && c.ld >= 10 && c.ld < 36 && !c.back ? 1.2 : 0), run(e, c) { const r = c.land; if (e.st === 'viagem' && r && (e.obj.key === null || G.R() < 0.5)) { e.obj.key = r.key; plot(e, e.ships.map(ship).filter(Boolean)); } return ['Galhos verdes', `Um galho com as folhas ainda verdes passou boiando, vindo de ${K.dir(r.cx - c.flag.x, r.cy - c.flag.y)}. Árvore não nasce no mar: ${c.lead ? c.lead.name : 'o líder'} manda subir a corrente.`, 'eye']; } },
     { id: 'aves', w: c => (c.land && c.ld < 22 && !c.back ? 2.2 : 0), run(e, c) { const r = c.land; if (e.st === 'viagem' && r && (e.obj.key === null || G.R() < 0.5)) { e.obj.key = r.key; plot(e, e.ships.map(ship).filter(Boolean)); } return ['Pássaros de terra', `Pássaros que não são do mar passaram voando para ${K.dir(r.cx - c.flag.x, r.cy - c.flag.y)}. Terra perto. ${c.lead ? c.lead.name : 'O líder'} manda seguir as aves.`, 'eye']; } },
     { id: 'recife', w: c => (c.reef ? 1.1 : 0), run(e, c) { const s = c.flag; const d = G.rr(8, 26) * (c.small ? 0.8 : 1); s.hp -= d; s.hurt = 0.5; if (s.hp <= s.maxHp * 0.25) s.flood = Math.max(s.flood || 0, 40); return ['O recife', `Um estalo no fundo: o casco raspou num recife de coral. ${s.hp < s.maxHp * 0.4 ? 'A água entra; todo mundo tira água com as mãos.' : 'Passaram, com o coração na boca.'}`, 'wave', s.hp < s.maxHp * 0.4]; } },
     { id: 'navio', w: c => (c.ship2 ? 2.2 : 0), run(e, c) {
