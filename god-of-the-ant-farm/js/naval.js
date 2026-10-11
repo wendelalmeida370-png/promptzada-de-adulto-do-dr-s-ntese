@@ -34,8 +34,8 @@
   Nv.atSea = s => !MOORED[s.st];
   // the people really aboard a ship (ids still listed may have died or stepped off)
   Nv.aboardOf = s => { const S = G.S; const out = []; for (const id of s.crew || []) { const v = S.villagers.get(id); if (v && v.aboard === s.id) out.push(v); } return out; };
-  let tFleet = 0, tShoal = 0, tRoute = 0, tScan = 0;
-  Nv.reset = function () { comp = null; tFleet = 2; tShoal = 0; tRoute = 5; tScan = 0; };
+  let tFleet = 0, tShoal = 0, tRoute = 0, tScan = 0, tCrew = 5;
+  Nv.reset = function () { comp = null; tFleet = 2; tShoal = 0; tRoute = 5; tScan = 0; tCrew = 5; };
 
   // ------------------------------ seas ------------------------------
   function comps() {
@@ -182,6 +182,38 @@
     const S = G.S; const k = S.ships.indexOf(s); if (k >= 0) S.ships.splice(k, 1);
     // nobody is left floating: whoever is still aboard steps ashore
     for (const v of S.villagers.values()) if (v.aboard === s.id) { v.aboard = 0; v.task = null; v.path = null; const p = W.nearestLand(s.x, s.y, 8); if (p) { v.x = p[0]; v.y = p[1]; } }
+  }
+  // the crew list starts over: whoever is still aboard steps ashore first (on the quay of the ship's port, or the nearest land)
+  Nv.clearCrew = function (s, at) {
+    const S = G.S; const h = home(s); const q = at || (h && h.quay) || null;
+    for (const v of S.villagers.values()) if (v.aboard === s.id) {
+      v.aboard = 0; v.task = null; v.path = null;
+      const p = q ? (W.randomNear(q[0], q[1], 1.2) || q) : W.nearestLand(s.x, s.y, 8); if (p) { v.x = p[0]; v.y = p[1]; }
+    }
+    s.crew = [];
+  };
+  // (and the list and the people agree: someone aboard is always on the list of the ship they are on)
+  Nv.repairs = 0;
+  function reconcileCrews() {
+    const S = G.S; let byId = null;
+    for (const s of S.ships) if (s.crew && s.crew.length) { const k = s.crew.filter(id => S.villagers.has(id)); if (k.length !== s.crew.length) s.crew = k; }
+    for (const v of S.villagers.values()) {
+      if (!v.aboard) continue;
+      if (!byId) { byId = new Map(); for (const s of S.ships) byId.set(s.id, s); }
+      const s = byId.get(v.aboard);
+      if (!s) { v.aboard = 0; v.task = null; v.path = null; const p = W.nearestLand(v.x, v.y, 8); if (p) { v.x = p[0]; v.y = p[1]; } Nv.repairs++; continue; }
+      if (!s.crew) s.crew = [];
+      if (!s.crew.includes(v.id)) { s.crew.push(v.id); Nv.repairs++; }
+    }
+  }
+  function reconcileOwners() {
+    const S = G.S;
+    for (const s of [...S.ships]) {
+      if (s.exp || s.fleet || s.army || s.ghost || (s.st !== 'build' && Nv.atSea(s))) continue;
+      const d = S.buildings.get(s.dock); const set = d && S.settlements.get(d.set); const owner = set && G.Fac.get(set.fac);
+      if (owner && owner.alive) { if (owner.id !== s.fac) { s.fac = owner.id; s.civ = owner.civ; s.crew = Nv.aboardOf(s).map(v => v.id); } continue; }
+      const f = G.Fac.get(s.fac); if (!(f && f.alive)) removeShip(s);
+    }
   }
   Nv.sink = function (s, by, why) {
     const S = G.S; const f = G.Fac.get(s.fac);
@@ -410,7 +442,7 @@
     // the side with more fighting spirit takes the deck
     const win = G.R() < 0.55 + (G.Civ.t(s.fac, 'war') - G.Civ.t(o.fac, 'war')) * 0.4 + (s.civ === 'romano' ? 0.1 : 0) + (s.civ === 'nordico' ? 0.08 : 0);
     if (!win) { s.hp -= 18; o.hp -= 8; return false; }
-    for (const id of o.crew || []) { const v = S.villagers.get(id); if (v && v.aboard === o.id) { v.aboard = 0; G.Village.kill(v, 'war', false); } }
+    for (const v of [...S.villagers.values()]) if (v.aboard === o.id) { v.aboard = 0; G.Village.kill(v, 'war', false); }
     o.crew = []; o.fac = s.fac; o.civ = s.civ; o.dock = s.dock; o.st = 'idle'; o.path = null; o.target = 0; o.hp = Math.max(o.hp, o.maxHp * 0.3); o.burn = 0;
     if (o.kind === 'transporte') o.kind = 'guerra';
     a.st.prizes = (a.st.prizes || 0) + 1;
@@ -858,6 +890,7 @@
     if (tShoal <= 0) { tShoal = 30; updateShoals(30); }
     if (tRoute <= 0) { tRoute = 20; updateSeaRoutes(); }
     if (tScan <= 0) { tScan = 1; if (!G.Know) scanContacts(); }
+    tCrew -= dt; if (tCrew <= 0) { tCrew = 5; reconcileOwners(); reconcileCrews(); }
     for (const s of [...S.ships]) {
       if (!S.ships.includes(s)) continue;
       if (s.hurt > 0) s.hurt -= dt;

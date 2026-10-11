@@ -895,7 +895,7 @@
     const single = (ruler, f) => (ruler.kids || []).map(id => S.villagers.get(id)).filter(v => v && !v.partner && !v.captive && v.age >= 17 && v.age <= 42 && G.Fac.idOfV(v) === f.id);
     const ka = single(ra, a), kb = single(rb, b);
     for (const x of ka) for (const y of kb) {
-      if (x.g === y.g) continue;
+      if (x.g === y.g || isKin(x, y)) continue;
       const [stay, move, mf] = P.strength(a.id) >= P.strength(b.id) ? [x, y, a] : [y, x, b];
       const dest = S.settlements.get(stay.set);
       move.set = stay.set; move.home = 0; G.Vg.endTask(move); G.Vg.setTask(move, { type: 'migrate', pri: 1.6 });
@@ -982,7 +982,7 @@
     if (!S.milestones.firstTrade) G.Village.milestone('firstTrade', 'Comércio', `${a.name} e ${b.name} começaram a negociar.`, 'trade');
     // love across borders
     if (!v.partner && v.age >= 17 && v.age <= 45 && G.R() < 0.3) {
-      let o = null; for (const x of S.villagers.values()) if (x.set === G.Fac.capitalOf(b.id)?.id && !x.partner && !x.captive && x.g !== v.g && x.age >= 17 && x.age <= 45 && Math.abs(x.age - v.age) < 14 && x.id !== b.leader) { o = x; break; }
+      let o = null; for (const x of S.villagers.values()) if (x.set === G.Fac.capitalOf(b.id)?.id && !x.partner && !x.captive && x.g !== v.g && x.age >= 17 && x.age <= 45 && Math.abs(x.age - v.age) < 14 && x.id !== b.leader && !isKin(x, v)) { o = x; break; }
       if (o) {
         if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, b.id); v.carry = null; }
         v.partner = o.id; o.partner = v.id; v.widow = 0; o.widow = 0; v.set = o.set; v.home = 0;
@@ -1004,7 +1004,7 @@
         const d = G.dist2(x.x, x.y, y.x, y.y); if (d < bd) { bd = d; pa = x; pb = y; }
       }
     }
-    if (!pa) return;
+    if (!pa || r.skD === S.day) return; r.skD = S.day;
     G.Vg.setTask(pa, { type: 'combat', id: pb.id, pri: 4, skirmish: true, any: true, kind: 'combat' });
     G.Vg.setTask(pb, { type: 'combat', id: pa.id, pri: 4, skirmish: true, any: true, kind: 'combat' });
     G.Vg.emote(pa, 'angry', 2.5); G.Vg.emote(pb, 'angry', 2.5);

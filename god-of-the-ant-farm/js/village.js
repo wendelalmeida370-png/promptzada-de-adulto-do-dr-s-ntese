@@ -96,7 +96,15 @@
   };
   V.center = b => [b.x + b.w / 2, b.y + b.h / 2];
   V.door = b => [b.x + b.w - 0.5, b.y + b.h + 0.05]; // front-left side
-  V.frontTile = b => [b.x + b.w - 1 + 0.5, b.y + b.h - 1 + 0.5];
+  V.frontTile = b => {
+    const x1 = b.x + b.w - 1, y1 = b.y + b.h - 1;
+    for (const [cx, cy] of [[x1, y1], [b.x, y1], [x1, b.y], [b.x, b.y]]) {
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const x = cx + dx, y = cy + dy; if ((dx || dy) && W.inb(x, y) && (x < b.x || x > x1 || y < b.y || y > y1) && W.walkable(W.idx(x, y))) return [cx + 0.5, cy + 0.5];
+      }
+    }
+    return [x1 + 0.5, y1 + 0.5];
+  };
   V.removeBuilding = function (b) {
     const S = G.S; S.buildings.delete(b.id);
     for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const i = ty * N + tx; if (S.occ[i] === b.id) S.occ[i] = 0; }

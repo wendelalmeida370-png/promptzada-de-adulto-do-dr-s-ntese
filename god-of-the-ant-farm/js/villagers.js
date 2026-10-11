@@ -438,7 +438,7 @@
     // lessons and errands, and the world runs lighter
     if (G.Skip && G.Skip.on && r >= 0.4) { setTask(v, { type: 'idle', pri: 0.1, wait: 5 + G.R() * 5, kind: 'play' }); return; }
     if (G.isEvening() && G.Life && r < 0.7) { const t = G.Life.familyTask(v, H); if (t) { t.kind = 'family'; return; } }
-    if (v.age < 7 && m && !m.inside && !m.sleeping && m.set === v.set && r < 0.5) { setTask(v, { type: 'follow', id: m.id, pri: 0.2, kind: 'follow' }); return; }
+    if (v.age < 7 && m && !m.inside && !m.sleeping && !m.aboard && !m.ug && !m.held && !m.air && m.set === v.set && r < 0.5) { setTask(v, { type: 'follow', id: m.id, pri: 0.2, kind: 'follow' }); return; }
     // from nine on, a child often goes along to learn a parent's trade
     if (v.age >= 9 && G.Life && !G.isEvening() && r < 0.4) { const t = G.Life.apprenticeTask(v, H); if (t) return; }
     if (v.age >= 10 && r < 0.22) { const t = gatherTask(v); if (t) { t.kind = 'help'; return; } }
@@ -971,8 +971,9 @@
       case 'eat': {
         if (t.st === 0) {
           const d = G.Village.nearestDropoff(v.x, v.y, v.set); if (!d) return end(v);
-          const [fx, fy] = G.Village.frontTile(d);
-          if (!Vg.goto(v, fx, fy, true)) return end(v); t.st = 1;
+          const alt = G.Village.dropoffs(v.set).filter(o => o !== d).sort((p, q) => G.dist2(p.x, p.y, v.x, v.y) - G.dist2(q.x, q.y, v.x, v.y)).slice(0, 3);
+          let ok = false; for (const b of [d].concat(alt)) { const [fx, fy] = G.Village.frontTile(b); if (Vg.goto(v, fx, fy, true)) { ok = true; break; } }
+          if (!ok) return end(v); t.st = 1;
         } else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; } }
         else {
           v.act = 'eat';
@@ -1106,8 +1107,8 @@
       }
       case 'follow': {
         const m = S.villagers.get(t.id);
-        if (!m || m.inside || m.sleeping || t.age > 20) return end(v);
-        if (G.dist(v.x, v.y, m.x, m.y) > 1.8) { t.rt = (t.rt || 0) - dt; if (t.rt <= 0 || arrived(v)) { t.rt = 1; const a = G.R() * 6.28; Vg.goto(v, m.x + Math.cos(a) * 0.7, m.y + Math.sin(a) * 0.7, false); } move(v, dt, 1.1); }
+        if (!m || m.inside || m.sleeping || m.aboard || m.ug || m.held || m.air || t.age > 20) return end(v);
+        if (G.dist(v.x, v.y, m.x, m.y) > 1.8) { t.rt = (t.rt || 0) - dt; if (t.rt <= 0 || arrived(v)) { t.rt = 1; const a = G.R() * 6.28; if (!Vg.goto(v, m.x + Math.cos(a) * 0.7, m.y + Math.sin(a) * 0.7, false)) return end(v); } move(v, dt, 1.1); }
         else v.act = '';
         break;
       }
@@ -1117,7 +1118,8 @@
           if (!Vg.goto(v, set.cx + G.rr(-1.5, 1.5), set.cy + G.rr(-1.5, 1.5), true, N * N)) {
             // no way there: settle with the nearest village of the same people instead
             let best = null, bd = 1e9;
-            for (const o of S.settlements.values()) if (o.fac === set.fac && o !== set) { const d = G.dist2(v.x, v.y, o.cx, o.cy); if (d < bd) { bd = d; best = o; } }
+            for (const o of S.settlements.values()) if (o.fac === set.fac && o !== set && W.sameLand(v.x, v.y, o.cx, o.cy)) { const d = G.dist2(v.x, v.y, o.cx, o.cy); if (d < bd) { bd = d; best = o; } }
+            if (!best && !W.sameLand(v.x, v.y, set.cx, set.cy)) for (const o of S.settlements.values()) if (o !== set && W.sameLand(v.x, v.y, o.cx, o.cy)) { const d = G.dist2(v.x, v.y, o.cx, o.cy); if (d < bd) { bd = d; best = o; } }
             if (best && !v.captive) { v.set = best.id; v.home = 0; }
             t.st = 9; return end(v);
           }
@@ -1499,6 +1501,7 @@
       // nobody stays up in the air once the ladder or the pyramid steps are behind them
       if (v.z && !v.air && !(v.task && (v.task.perch || v.task.ladder || v.task.type === 'fest'))) v.z = 0;
       if (v.age < 2) { babyUpdate(v, dt); if (v.emo) { v.emo.t -= dt; if (v.emo.t <= 0) v.emo = null; } continue; }
+      if (v.carried) { v.carried = false; v.carrier = 0; }
       v.scan -= dt;
       if (v.scan <= 0) { v.scan = 0.3 + G.R() * 0.15; emergency(v); }
       v.think -= dt;

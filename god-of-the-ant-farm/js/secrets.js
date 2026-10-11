@@ -86,9 +86,12 @@
   // ------------------------------ where they meet ------------------------------
   function lodgeNear(set, kinds) {
     const S = G.S;
+    // (the places the living orders already meet in)
+    const used = []; for (const q of st().socs) if (!q.gone) for (const l of q.lodges) used.push(l);
+    const taken = (x, y) => used.some(l => G.dist(l.x, l.y, x, y) < 4);
     for (const kind of kinds) {
       if (kind === 'caverna' && G.Caves) {
-        let best = null, bd = 24; for (const cv of G.Caves.all()) for (const m of cv.mouths || []) { const d = G.dist(m.x, m.y, set.cx, set.cy); if (d < bd && d > 4) { bd = d; best = [cv, m]; } }
+        let best = null, bd = 24; for (const cv of G.Caves.all()) { if (used.some(l => l.cave === cv.id)) continue; for (const m of cv.mouths || []) { const d = G.dist(m.x, m.y, set.cx, set.cy); if (d < bd && d > 4) { bd = d; best = [cv, m]; } } }
         if (best) { const [cv, m] = best; const sp = W.nearestLand(m.x + 0.5, m.y + 1.5, 3) || [m.x + 0.5, m.y + 0.5]; return { kind, set: set.id, x: sp[0], y: sp[1], cave: cv.id, name: G.Caves.a ? G.Caves.a(cv) : cv.name }; }
       }
       if (kind === 'bosque') {
@@ -96,7 +99,7 @@
         for (let k = 0; k < 60; k++) {
           const a = G.hash(set.id * 31 + k) * TAU, r = 7 + G.hash(set.id * 17 + k * 3) * 13;
           const x = Math.floor(set.cx + Math.cos(a) * r) + 0.5, y = Math.floor(set.cy + Math.sin(a) * r) + 0.5;
-          if (!W.inb(x, y) || !W.walkableXY(x, y) || W.isWater(W.idx(x, y)) || S.occ[W.idx(x, y)]) continue;
+          if (!W.inb(x, y) || !W.walkableXY(x, y) || W.isWater(W.idx(x, y)) || S.occ[W.idx(x, y)] || taken(x, y)) continue;
           let n = 0; for (const t of S.trees.values()) if (t.stage !== 'burnt' && Math.abs(t.x - x) < 3.2 && Math.abs(t.y - y) < 3.2) n++;
           let bld = false; for (const b of S.buildings.values()) if (G.dist(b.x, b.y, x, y) < 4) { bld = true; break; }
           if (!bld && n >= 5 && n > bs) { bs = n; best = [x, y]; }
@@ -105,7 +108,7 @@
       }
       if (kind === 'fachada') {
         const OK = { taverna: 'o porão da taverna', storehouse: 'o porão do armazém', workshop: 'o fundo da oficina', sobrado: 'o porão de um sobrado', house: 'uma casa comum', insula: 'um apartamento de uma ínsula', biblioteca: 'uma sala fechada da biblioteca', celeiro: 'o fundo do celeiro' };
-        const cand = [...S.buildings.values()].filter(b => b.set === set.id && b.built && OK[b.type]);
+        const cand = [...S.buildings.values()].filter(b => b.set === set.id && b.built && OK[b.type] && !used.some(l => l.b === b.id));
         if (cand.length) { const b = cand[Math.floor(G.hash(set.id * 7 + cand.length) * cand.length)]; const fr = G.Village.frontTile(b); return { kind, set: set.id, x: fr[0], y: fr[1] + 0.5, b: b.id, name: `${OK[b.type]} de ${set.name}` }; }
       }
     }

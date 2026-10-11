@@ -155,14 +155,14 @@
   const oldJob = E.jobTask;
   E.jobTask = function (v, H) {
     if (v.role !== 'mergulhador') return oldJob(v, H);
-    const b = v.job && G.S.buildings.get(v.job); if (!b || !b.built) return null;
+    const b = v.job && G.S.buildings.get(v.job); if (!b || !b.built || (b.noDive || -1e9) > G.S.clock - G.DAY_LEN) return null;
     const r = reefSpot(b.x + 0.5, b.y + 0.5, 10); if (!r) return null;
     return H.setTask(v, { type: 'dive', id: b.id, rx: r.rx, ry: r.ry, sx: r.sx, sy: r.sy, pri: 1 });
   };
   const oldRun = E.run;
   E.run = function (v, t, dt, H) {
     if (t.type !== 'dive') return oldRun(v, t, dt, H);
-    if (!t.st) { if (!t.go) { t.go = 1; if (!H.goto(v, t.sx, t.sy, false)) return H.end(v), true; } if (H.move(v, dt)) { t.st = 1; v.actT = 0; t.n = 0; } return true; }
+    if (!t.st) { if (!t.go) { t.go = 1; if (!H.goto(v, t.sx, t.sy, false) && !H.goto(v, t.sx, t.sy, true)) { const b = G.S.buildings.get(t.id); if (b) b.noDive = G.S.clock; return H.end(v), true; } } if (H.move(v, dt)) { t.st = 1; v.actT = 0; t.n = 0; } return true; }
     // into the water, under, up again (two or three dives), then back with the basket
     if (t.st === 1) { v.x = G.lerp(t.sx, t.rx, Math.min(1, v.actT / 1.2)); v.y = G.lerp(t.sy, t.ry, Math.min(1, v.actT / 1.2)); v.act = 'swim'; if (v.actT > 1.2) { t.st = 2; v.actT = 0; G.FX && G.FX.splash(v.x, v.y, 0.5); } return true; }
     if (t.st === 2) { v.act = 'dive'; if (G.R() < dt * 3) G.FX && G.FX.splash(v.x + G.rr(-0.15, 0.15), v.y + G.rr(-0.15, 0.15), 0.12); if (v.actT > 4.5 / (G.Vg.workMul ? G.Vg.workMul(v) : 1)) { t.n++; v.actT = 0; t.st = t.n >= 3 ? 3 : 4; G.FX && G.FX.splash(v.x, v.y, 0.4); } return true; }

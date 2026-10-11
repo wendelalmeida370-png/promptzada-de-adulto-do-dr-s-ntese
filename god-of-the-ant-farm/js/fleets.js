@@ -157,7 +157,7 @@
       s.fleet = 0; s.grapple = 0; s.post = null;
       const h = Nv._home(s); const q = h && h.quay ? h.quay : W.nearestLand(s.x, s.y, 6);
       for (const v of Nv.aboardOf(s)) { v.aboard = 0; v.task = null; v.path = null; const p = q ? (W.randomNear(q[0], q[1], 1.2) || q) : W.nearestLand(s.x, s.y, 8); if (p) { v.x = p[0]; v.y = p[1]; } if (v.captive && v.captive.toFac) { /* (prisoners walk off into the town that took them) */ } }
-      if (s.kind !== 'transporte' || !s.exp) { s.crew = []; s.st = 'idle'; s.t = 0; }
+      if (s.kind !== 'transporte' || !s.exp) { Nv.clearCrew(s, q); s.st = 'idle'; s.t = 0; }
     }
     const war = Wz.get(fl.war); if (war && (fl.sunk || fl.taken || fl.battles.length)) Wz.event(war, `${cap1(fl.name)} voltou ao porto${fl.sunk ? ` sem ${fl.sunk} ${fl.sunk > 1 ? 'navios' : 'navio'}` : ''}${fl.taken ? `, com ${fl.taken} ${fl.taken > 1 ? 'navios tomados' : 'navio tomado'} do inimigo` : ''}.`, fl.x, fl.y, 'naval', { quiet: true });
   }
@@ -219,7 +219,7 @@
       if (Nv.aboardOf(s).length) continue;
       s.fleet = 0; s.grapple = 0; s.target = 0; s.prize = 0;
       if (Nv.atSea(s) && G.dist(s.x, s.y, ...(Nv._home(s) && Nv._home(s).moor ? Nv._home(s).moor : [s.x, s.y])) > 6) { s.ghost = 1; s.st = 'deriva'; s.driftT = DAY() * G.rr(0.4, 1); s.exp0 = 0; }
-      else { s.st = 'idle'; s.crew = []; }
+      else { s.st = 'idle'; Nv.clearCrew(s); }
     }
     fl.ships = fl.ships.filter(id => { const q = ship(id); return q && q.fleet === fl.id; });
     if (!fl.ships.length) { fl.st = 'fim'; fl.end = S.day; return; }
@@ -572,7 +572,7 @@
     const fl = form(f, w, 'invasao', esc.concat(trs), { dock: best.d.id, army: a.id, set: tgt.id });
     if (!fl) return a;
     fl.land = best.l; fl.target = tgt.id; a.sea = fl.id; fl.army = a.id; fl.st = 'reunir';
-    for (const s of trs) { if (s.st !== 'build') s.st = 'embark'; s.army = a.id; s.crew = []; }
+    for (const s of trs) { if (s.st !== 'build') s.st = 'embark'; s.army = a.id; Nv.clearCrew(s); }
     Wz.event(w, `${f.name} vai atravessar o mar: ${n} soldados se juntam no porto de ${from.name}, e ${trs.length} ${trs.length > 1 ? 'transportes' : 'transporte'}${esc.length ? ` com ${esc.length} de escolta` : ''} vão levá-los até ${tgt.name}.`, quay[0], quay[1], 'naval');
     return a;
   };

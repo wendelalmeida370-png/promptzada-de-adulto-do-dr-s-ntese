@@ -929,7 +929,7 @@
     }
     e.dq = 0.6; if (ab.length > 2) return;
     // the ships go back to the port's work
-    for (const s of ships) { s.exp = 0; s.st = 'idle'; s.t = 0; s.crew = s.kind === 'pesca' ? [] : []; if (s.kind === 'canoa' || s.kind === 'jangada') Nv._remove(s); }
+    for (const s of ships) { s.exp = 0; s.st = 'idle'; s.t = 0; Nv.clearCrew(s, e.port); if (s.kind === 'canoa' || s.kind === 'jangada') Nv._remove(s); }
     e.st = 'fim'; e.end = e.end || G.S.day;
   }
   // ------------------------------ the end of it ------------------------------
@@ -939,7 +939,7 @@
     // whoever was waiting on the quay goes home; the provisions go back to the stores
     for (const id of e.crew) { const v = P(id); if (!v) continue; if (v.task && (v.task.type === 'cais' || v.task.type === 'expl') && v.task.exp === e.id) G.Vg.endTask(v); if (v.aboard && e.ships.includes(v.aboard)) { const s = ship(v.aboard); if (s && !Nv.atSea(s)) { v.aboard = 0; v.task = null; const q = W.randomNear(e.port[0], e.port[1], 1.4) || e.port; v.x = q[0]; v.y = q[1]; } } }
     const f = F(e.fac); if (status === 'cancelada' && f && e.prov > 0) { G.Village.addStock('food', Math.floor(e.prov), f.id); e.prov = 0; }
-    for (const s of e.ships.map(ship).filter(Boolean)) { if (!Nv.atSea(s) || status === 'cancelada') { s.exp = 0; if (s.st === 'prep') s.st = 'idle'; if (s.kind === 'pesca') s.crew = []; } }
+    for (const s of e.ships.map(ship).filter(Boolean)) { if (!Nv.atSea(s) || status === 'cancelada') { s.exp = 0; if (s.st === 'prep') s.st = 'idle'; if (s.kind === 'pesca') Nv.clearCrew(s, e.port); } }
   }
   // all hands lost: only the sea knows (home learns that they never came back, later)
   function lostAll(e) {
