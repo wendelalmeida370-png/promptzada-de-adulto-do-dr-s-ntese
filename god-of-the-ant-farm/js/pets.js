@@ -142,6 +142,7 @@
   let tMgr = 2, tGrid = 0;
   // people on 2-tile cells, for the pigeons to notice
   const vgrid = new Map();
+  G.worldHooks.push(() => { vgrid.clear(); tGrid = 0; tMgr = 2; anyPigeon = false; });
   function buildGrid() {
     vgrid.clear();
     for (const v of G.S.villagers.values()) { if (v.inside || v.aboard) continue; const k = ((v.x >> 1) << 12) | (v.y >> 1); let l = vgrid.get(k); if (!l) vgrid.set(k, l = []); l.push(v); }

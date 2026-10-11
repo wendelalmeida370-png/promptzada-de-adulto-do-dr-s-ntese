@@ -175,9 +175,11 @@
   };
   V.addStock = function (k, n, fid) {
     const S = G.S; const f = G.Fac.get(fid); if (!f) return 0;
-    const cap = V.cap(fid);
-    const add = Math.max(0, Math.min(n, cap - f.stock[k]));
-    f.stock[k] += add;
+    // (the water of the well is drunk and cooked, not stored: whoever was carrying a jar just puts it down)
+    if (!k || k === 'water' || !(n > 0)) return 0;
+    const cap = V.cap(fid); const cur = f.stock[k] || 0;
+    const add = Math.max(0, Math.min(n, cap - cur));
+    f.stock[k] = cur + add;
     if (k === 'food') S.stats.foodProduced += add;
     if (k === 'wood') S.stats.woodProduced += add;
     if (k === 'stone') S.stats.stoneProduced += add;

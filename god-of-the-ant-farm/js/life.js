@@ -355,9 +355,11 @@
   L.tales = () => [...tales.values()];
   const TALE_IC = { sea: 2, cave: 2, war: 3, battle: 3, massacre: 3, siege: 3, meteor: 4, bolt: 3, wave: 4, mountain: 4, settle: 3, campfire: 3, crown: 2, tyrant: 3, split: 3, peace: 2, wonder: 3, monument: 2, temple: 2, era: 2, city: 2, plague: 3, fire: 2, prophecy: 3, lore: 3, sacrifice: 3, free: 3, general: 2, naval: 3, fest: 1, wolf: 2, storm: 2, heart: 1 };
   const MOOD = { sea: 'awe', cave: 'awe', war: 'fear', battle: 'fear', massacre: 'fear', siege: 'fear', meteor: 'awe', bolt: 'awe', wave: 'fear', mountain: 'awe', plague: 'sad', fire: 'fear', sacrifice: 'fear', wolf: 'fear', prophecy: 'awe', lore: 'awe', wonder: 'awe', heart: 'heart', fest: 'happy', peace: 'happy', free: 'happy' };
+  // (memories of the sea: the voyage, the land seen beyond the nets, the wreck — a child may dream of it)
+  const SEA_BIO = { sawLand: 1, voyage: 1, discovered: 1, wrecked: 1, castaway: 1, colonist: 1 };
   function pickTale(elder, set) {
     const S = G.S; const cands = [];
-    for (const e of elder.bio || []) { const s = firstPerson(elder, e); if (s) cands.push({ w: 4, txt: s, mood: e[1] === 'lost' ? 'sad' : e[1] === 'awoke' || e[1] === 'fest' ? 'awe' : 'fear', own: true }); }
+    for (const e of elder.bio || []) { const s = firstPerson(elder, e); if (!s) continue; const sea = SEA_BIO[e[1]]; cands.push({ w: 4, txt: s, mood: sea || e[1] === 'awoke' || e[1] === 'fest' ? 'awe' : e[1] === 'lost' ? 'sad' : 'fear', own: true, ic: sea ? 'sea' : undefined, x: sea ? elder.x : undefined, y: sea ? elder.y : undefined }); }
     const f = G.Fac.get(set.fac);
     for (const e of S.history) {
       if (e.d > S.day - 2) continue;

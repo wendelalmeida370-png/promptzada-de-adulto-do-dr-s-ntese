@@ -161,14 +161,14 @@
     const f = set && G.Fac.get(set.fac); if (!f) return true;
     const nm = G.Village.buildName(b); const [cx, cy] = G.Village.center(b);
     if (b.type === 'paco') log(`${f.name} tem agora ${G.gen(nm) === 'a' ? 'a sua' : 'o seu'} ${nm}, em ${set.name}.`, 'crown', cx, cy);
-    else if (b.type === 'grande_palacio') { log(`Ficou pronto ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}: alas, um pátio com fonte, jardins. ${f.name} recebe ali os enviados dos outros povos.`, 'crown', cx, cy); f.legit = Math.min(100, (f.legit || 50) + 16); G.Stories && G.Stories.signal('palaceDone', { fac: f.id, b: b.id, x: cx, y: cy }); }
+    else if (b.type === 'grande_palacio') { log(`Ficou pronto ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}: alas, um pátio com fonte, jardins. ${f.name} recebe ali os enviados dos outros povos.`, 'crown', cx, cy); f.legit = Math.min(100, (f.legit ?? 50) + 16); G.Stories && G.Stories.signal('palaceDone', { fac: f.id, b: b.id, x: cx, y: cy }); }
     else {
       const yrs = Math.max(1, G.S.day - (b.born || G.S.day));
       log(`Depois de ${yrs} ${yrs > 1 ? 'anos' : 'ano'}, ficou pronto ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}: telhados de ouro, fontes, uma avenida de estátuas e jardins até onde a vista alcança. Não há no mundo coisa igual.`, 'wonder', cx, cy);
       G.UI && G.UI.toast(nm, `${f.name} ergueu o maior palácio do mundo.`, 'crown');
       G.Village.milestone('colossal' + f.id, 'O maior palácio do mundo', `${nm} · ${set.name}.`, 'crown');
       G.FX && G.FX.ring(cx, cy, 0.5, 10, 2.6, 'rgba(255,225,140,0.95)', 3, true);
-      f.legit = Math.min(100, (f.legit || 50) + 28); f.prestige = (f.prestige || 0) + 30;
+      f.legit = Math.min(100, (f.legit ?? 50) + 28); f.prestige = (f.prestige || 0) + 30;
       for (const o of G.Fac.all()) if (o.id !== f.id && G.Fac.rel(o.id, f.id)) { const r = G.Fac.rel(o.id, f.id); r.op = Math.min(100, (r.op || 0) + 4); }
       G.Lore && G.Lore.note('wonder', { set: set.id, fac: f.id, name: nm });
       G.Stories && G.Stories.signal('palaceDone', { fac: f.id, b: b.id, x: cx, y: cy });
@@ -285,6 +285,7 @@
     return r;
   };
   const brawls = new Map();
+  G.worldHooks.push(() => brawls.clear());
   function tavernLife(v, t, dt) {
     const S = G.S; const b = S.buildings.get(t.id); if (!b) return;
     const I = b.inv || (b.inv = {});

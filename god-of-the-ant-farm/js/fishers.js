@@ -72,12 +72,12 @@
       const taken = new Set();
       for (const s of boats) {
         // keep whoever is still a fisherman here (and anyone aboard right now)
-        s.crew = (s.crew || []).filter(id => { const v = P(id); return v && (v.aboard === s.id || (v.role === 'pescador' && v.job === b.id && !taken.has(id))); });
+        s.crew = (s.crew || []).filter(id => { const v = P(id); return v && (v.aboard === s.id || (!v.aboard && v.role === 'pescador' && v.job === b.id && !taken.has(id))); });
         for (const id of s.crew) taken.add(id);
       }
       for (const s of boats) {
         const want = Fi.cls(s).crew;
-        for (const v of fs) { if (s.crew.length >= want) break; if (taken.has(v.id)) continue; s.crew.push(v.id); taken.add(v.id); v.boat = s.id; }
+        for (const v of fs) { if (s.crew.length >= want) break; if (taken.has(v.id) || v.aboard) continue; s.crew.push(v.id); taken.add(v.id); v.boat = s.id; }
         for (const id of s.crew) { const v = P(id); if (v) v.boat = s.id; }
       }
       for (const v of fs) if (!taken.has(v.id)) v.boat = 0;
@@ -384,8 +384,8 @@
     if (zoom < 0.5) return;
     for (const b of G.S.buildings.values()) {
       if (b.type !== 'doca' || !b.built) continue;
-      if (b.crates && b.crates.length) { const p = crateSpot(b); let e = crateE.get(b.id); if (!e) crateE.set(b.id, e = { b, fn: drawCrates }); add(p[0] + p[1] + 0.05, e, p[0], p[1]); }
-      if (b._fishers) { const p = Fi.quaySpot(b, 14); let e = rackE.get(b.id); if (!e) rackE.set(b.id, e = { b, fn: drawRack }); add(p[0] + p[1] - 0.2, e, p[0] - 0.4, p[1] - 0.3); }
+      if (b.crates && b.crates.length) { const p = crateSpot(b); let e = crateE.get(b.id); if (!e || e.b !== b) crateE.set(b.id, e = { b, fn: drawCrates }); add(p[0] + p[1] + 0.05, e, p[0], p[1]); }
+      if (b._fishers) { const p = Fi.quaySpot(b, 14); let e = rackE.get(b.id); if (!e || e.b !== b) rackE.set(b.id, e = { b, fn: drawRack }); add(p[0] + p[1] - 0.2, e, p[0] - 0.4, p[1] - 0.3); }
     }
     if (crateE.size > 300) crateE.clear(); if (rackE.size > 300) rackE.clear();
   });

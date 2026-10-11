@@ -1489,6 +1489,7 @@
   // ====================================================================================
   let tTick = 0, tPlan = 0, tSlow = 0, planI = 0;
   X.reset = function () { tTick = 0; tPlan = 3; tSlow = 5; members = new Map(); memT = -1; };
+  G.worldHooks.push(() => X.reset());
   X.update = function (dt) {
     const S = G.S; tTick -= dt; tPlan -= dt; tSlow -= dt;
     if (tTick <= 0) { tTick = 0.5; memT = -1; for (const e of exps()) if (X.live(e)) { try { tick(e, 0.5); } catch (err) { console.error('expedition', e.id, err); e.st = 'fim'; e.status = 'cancelada'; } } }

@@ -607,6 +607,7 @@
     load() { if (Sn.watching) Sn.leave(true); Sn.list.length = 0; snapQ.length = 0; slow = null; flights.length = 0; props.length = 0; },
   });
   Sn.reset = function () { if (Sn.watching) Sn.leave(true); Sn.list.length = 0; snapQ.length = 0; slow = null; flights.length = 0; props.length = 0; };
+  G.worldHooks.push(() => Sn.reset());
   // the temper a line is written for
   Sn.temper = v => { if (!v) return 'firme'; const q = G.Politics.persona(v); if (v.courage > 0.7 || q.agg > 0.72) return 'bravo'; if (v.courage < 0.36) return 'medroso'; if (q.cru > 0.62) return 'frio'; if (q.pie > 0.66) return 'devoto'; return 'firme'; };
 })(window.G);

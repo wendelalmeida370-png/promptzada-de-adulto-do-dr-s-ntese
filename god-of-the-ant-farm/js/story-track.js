@@ -221,4 +221,5 @@
     }
   });
   (G.saveHooks = G.saveHooks || []).push({ save() { }, load() { skip = null; missed.length = 0; sig = ''; hideAlert(); lastChN = -1; } });
+  G.worldHooks.push(() => { skip = null; missed.length = 0; sig = ''; lastChN = -1; try { hideAlert(); } catch (e) { } });
 })(window.G);

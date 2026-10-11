@@ -450,7 +450,7 @@
     G.Audio && G.R() < 0.4 && G.Audio.at(o.x, o.y, 'clang', false, 0.3);
     // (outnumbered three to one, the deck strikes its colours)
     const b2 = Nv.aboardOf(o), a2 = Nv.aboardOf(s);
-    if (b2.length && a2.length >= b2.length * 3 && (o.mor || 70) < 35) return capture(s, o, true);
+    if (b2.length && a2.length >= b2.length * 3 && (o.mor ?? 70) < 35) return capture(s, o, true);
   }
   function battleFor(s) { const fl = s.fleet && Fl.get(s.fleet); return fl && fl.battle ? Wz.battle(fl.battle) : null; }
   function capture(s, o, surrender, anchored) {
@@ -764,6 +764,7 @@
   // ====================================================================================
   let tCouncil = 0, tTick = 0, ci = 0;
   Fl.reset = function () { tCouncil = 1; tTick = 0; reachC.clear(); };
+  G.worldHooks.push(() => Fl.reset());
   Fl.update = function (dt) {
     tCouncil -= dt; tTick -= dt;
     if (tCouncil <= 0) { tCouncil = 3; const fs = G.Fac.all(); if (fs.length) { for (let k = 0; k < Math.min(2, fs.length); k++) council(fs[ci++ % fs.length]); } }

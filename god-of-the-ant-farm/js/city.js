@@ -267,7 +267,7 @@
       case 'banhos': log(`${set.name} inaugurou ${oa} ${nm}. Água quente e conversa fiada.`, 'city', cx, cy); break;
       case 'palacio':
         log(`${f ? f.name : set.name} ergueu ${oa} ${nm} em ${set.name}. O poder agora tem endereço.`, 'crown', cx, cy);
-        if (f) f.legit = Math.min(100, (f.legit || 50) + 12);
+        if (f) f.legit = Math.min(100, (f.legit ?? 50) + 12);
         break;
       case 'doca': log(`${set.name} construiu ${oa} ${nm}: o mar agora é caminho.`, 'ship', cx, cy); G.Village.milestone('firstDock', 'Porto', `${set.name} se abre para o mar.`, 'ship'); break;
       case 'aqueduto': startAqueduct(b, set); break;
@@ -623,7 +623,7 @@
     const S = G.S; const home = S.settlements.get(c.home), dest = S.settlements.get(c.dest);
     if (!home || !dest) return true;
     if (r.kind === 'interno') {
-      if (!c.back) { dest.linkDay = S.day; dest.loyalty = Math.min(100, (dest.loyalty || 60) + 1.5); c.back = true; return false; }
+      if (!c.back) { dest.linkDay = S.day; dest.loyalty = Math.min(100, (dest.loyalty ?? 60) + 1.5); c.back = true; return false; }
       return true;
     }
     const fa = G.Fac.get(home.fac), fb = G.Fac.get(dest.fac); if (!fa || !fb) return true;

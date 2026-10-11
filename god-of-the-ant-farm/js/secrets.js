@@ -139,7 +139,7 @@
     const q = { id: S.nextId++, name, creed, born: S.day, master: best.id, members: [], lodges: [lodge], exposed: {}, power: {}, deeds: 0, gone: 0 };
     s.socs.push(q);
     join(q, best, 'mestre', true);
-    log(`Em segredo, numa noite sem lua, ${best.name}, de ${set.name}, fundou ${art(name)} em ${lodge.name}. Querem ${CREED[creed].want}. Ninguém mais sabe — só você.`, 'secret', lodge.x, lodge.y);
+    log(`Em segredo, numa noite sem lua, ${best.name}, de ${set.name}, fundou ${art(name)} ${/^(uma|um|o|a|os|as) /.test(lodge.name) ? inPlace(lodge) : 'em ' + lodge.name}. Querem ${CREED[creed].want}. Ninguém mais sabe — só você.`, 'secret', lodge.x, lodge.y);
     G.Stories && G.Stories.signal('secretFound', { soc: q.id, who: best.id, creed, x: lodge.x, y: lodge.y });
   }
   function join(q, v, rank, quiet) {

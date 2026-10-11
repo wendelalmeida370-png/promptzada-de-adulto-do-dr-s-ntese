@@ -231,6 +231,7 @@
   // ============================== the card that slides in ==============================
   // a story begins, climbs, ends: a small illustrated card at the edge of the screen (not for every chapter)
   const queue = []; let busy = false, cur = null;
+  G.worldHooks.push(() => { queue.length = 0; cur = null; busy = false; const el = document.querySelector('#saga-card'); if (el) { clearTimeout(el._t); el.classList.remove('in'); el.classList.add('out'); } });
   St._announce = function (s, kind, txt) {
     if (!G.Main || G.Main.mode === 'menu' || G.Main.mode === 'test') return;
     if (G.Skip && G.Skip.on) { if (kind !== 'beat') G.Skip.news(kind === 'start' ? 'Uma nova história: ' + s.title : s.title, kind === 'start' ? s.log || '' : txt || ''); return; }

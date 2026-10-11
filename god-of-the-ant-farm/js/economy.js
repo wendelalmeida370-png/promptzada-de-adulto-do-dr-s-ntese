@@ -1120,6 +1120,10 @@
   // ------------------------------ save ------------------------------
   (G.saveHooks = G.saveHooks || []).push({
     save(out) { out.ores = G.S.ores || null; },
-    load(o) { const S = G.S; S.ores = o.ores || null; if (!S.ores) E.genDeposits(S); for (const f of S.factions.values()) E.ensure(f); },
+    load(o) {
+      const S = G.S; S.ores = o.ores || null; if (!S.ores) E.genDeposits(S); for (const f of S.factions.values()) E.ensure(f);
+      // (worlds saved before the store refused water could carry a NaN in it)
+      for (const f of S.factions.values()) { delete f.stock.water; for (const k in f.stock) if (typeof f.stock[k] === 'number' && !isFinite(f.stock[k])) f.stock[k] = 0; }
+    },
   });
 })(window.G);

@@ -82,6 +82,7 @@
   Wz.warOf = warOf;
   const sideOf = (w, f) => (w.a.includes(f) ? 'a' : w.b.includes(f) ? 'b' : null);
   const foesOf = (w, f) => { const s = sideOf(w, f); return s === 'a' ? w.b : s === 'b' ? w.a : []; };
+  const liveFoes = (w, f) => foesOf(w, f).filter(e => { const x = G.Fac.get(e); return x && x.alive && G.Fac.atWar(f, e); });
   Wz.sideOf = sideOf;
   const armies = () => st().armies;
   Wz.army = id => armies().find(a => a.id === id) || null;
@@ -425,7 +426,7 @@
       if (v.id === f.leader && role !== 'defesa' && !(G.Politics.leaderPe(f).agg > 0.7 && G.R() < 0.5)) continue;
       if (land && land[W.idx(v.x, v.y)] !== myLand) continue;
       const d = dist(v.x, v.y, muster[0], muster[1]); if (d > 70) continue;
-      const wgt = (v.role === 'guerreiro' ? 4 : v.role === 'cacador' ? 1.6 : 0) + v.courage + (v.fury > 0 ? 2 : 0) + (G.Stories ? G.Stories.warPull(v, foesOf(w, f.id)[0]) : 0) - d / 60 + (v.vet || 0) * 0.3;
+      const wgt = (v.role === 'guerreiro' ? 4 : v.role === 'cacador' ? 1.6 : 0) + v.courage + (v.fury > 0 ? 2 : 0) + (G.Stories ? G.Stories.warPull(v, liveFoes(w, f.id)[0]) : 0) - d / 60 + (v.vet || 0) * 0.3;
       cands.push([wgt, v]);
     }
     cands.sort((p, q) => q[0] - p[0]);
@@ -436,7 +437,7 @@
     a.name = nameArmy(f, front, role, tgt);
     armies().push(a); w.armies.push(a.id);
     w.side[f.id] = w.side[f.id] || newSide(f); w.side[f.id].mob += n; w.side[f.id].levies++;
-    ms.forEach((v, k) => { G.Vg.endTask(v); v.sleeping = false; G.Vg.setTask(v, { type: 'muster', army: a.id, k, pri: 3.15, kind: 'muster', st: 0 }); v.mob = (v.mob || 0) + 1; G.Life && G.Life.bio(v, 'mustered', F(foesOf(w, f.id)[0]) ? F(foesOf(w, f.id)[0]).name : '', w.name); });
+    ms.forEach((v, k) => { G.Vg.endTask(v); v.sleeping = false; G.Vg.setTask(v, { type: 'muster', army: a.id, k, pri: 3.15, kind: 'muster', st: 0 }); v.mob = (v.mob || 0) + 1; G.Life && G.Life.bio(v, 'mustered', F(liveFoes(w, f.id)[0]) ? F(liveFoes(w, f.id)[0]).name : '', w.name); });
     const kindTxt = relief ? `${f.name} junta um exército de socorro para ${tgt.name}: ${n} se reúnem em ${front.name}` : role === 'defesa' ? `${front.name} chama seus defensores: ${n} pegam em armas` : o.reinforce ? `Segunda leva: ${f.name} chama mais ${n} para a guerra` : `${f.name} convoca ${n} para a guerra`;
     if (relief) a.relief = 1;
     event(w, `${kindTxt}${role === 'defesa' ? '' : `. O ponto de reunião é ${front.name}`}.`, muster[0], muster[1], 'army');
@@ -478,7 +479,7 @@
     for (const id of a.members) { const v = P(id); if (v && v.task && v.task.type === 'muster' && v.task.army === a.id && !ms.includes(v)) G.Vg.endTask(v); }
     if (!w || w.end || !f || !tgt || ms.length < 3) { a.done = true; a.phase = 'dispersado'; for (const v of ms) G.Vg.endTask(v); return; }
     const th = a.role === 'defesa' ? Wz.threatTo(tgt.id) : null;
-    const en = F(th ? th.fac : foesOf(w, f.id).includes(tgt.fac) ? tgt.fac : foesOf(w, f.id)[0]);
+    const en = F(th ? th.fac : liveFoes(w, f.id).includes(tgt.fac) ? tgt.fac : liveFoes(w, f.id)[0]);
     if (!en) { a.done = true; a.phase = 'dispersado'; for (const v of ms) G.Vg.endTask(v); return; }
     let b;
     if (a.role === 'defesa') { const tb = th && th.band ? G.War.bands.get(th.band) : null; b = G.Army.raiseDefense(tgt, f, ms, en, tb, { relief: !!a.relief, from: a.muster }); }
@@ -702,7 +703,7 @@
     const bt = { id: st().seq++, war: w ? w.id : 0, name: nm.name, base: nm.base, x: set.cx, y: set.cy, d: S.day, t0: S.clock, t1: 0, sides: {}, winner: 0, bands: [b.id], open: true, ids: ids.slice(), kind: b.members.length + def >= 30 ? 'batalha' : 'escaramuca', town: set.id };
     addSide(bt, b);
     bt.sides[set.fac] = { n: def, gen: 0, genName: '', dead: 0, wounded: 0, captured: 0, fled: 0, army: `o povo de ${set.name}`, bands: [] };
-    st().battles.push(bt); b.battle = bt.id; if (w) w.battles.push(bt.id);
+    st().battles.push(bt); if (st().battles.length > 80) st().battles.splice(0, st().battles.length - 80); b.battle = bt.id; if (w) w.battles.push(bt.id);
   };
   Wz.assaultEnd = function (b, won) {
     const bt = b && b.battle ? Wz.battle(b.battle) : null; if (!bt || !bt.open || !bt.town) return;
@@ -782,7 +783,7 @@
     if (set.occ) set.occ.garrison = garr.length;
     if (!a || !w || w.end || b.members.length < 8 || supplyDays(a) < 0.5) { b.st = 'retorno'; b.t = 0; if (a && w) event(w, `${cap1(a.name)} deixou ${garr.length} de guarnição em ${set.name} e voltou para casa.`, set.cx, set.cy, 'army'); return; }
     // the next aim: the enemy's nearest town still standing (the capital, if the aim was the crown)
-    const foes = foesOf(w, f.id).map(F).filter(Boolean);
+    const foes = liveFoes(w, f.id).map(F).filter(Boolean);
     const cands = []; for (const e of foes) for (const s of G.Fac.settlementsOf(e.id)) if (reachable(set, s)) cands.push(s);
     const g = w.goals[f.id] || {};
     const wantCap = g.k === 'submeter' || g.k === 'conquista' && g.imp >= 3;
@@ -808,7 +809,7 @@
       const from = F(o.from);
       let garr = 0; for (const v of S.villagers.values()) if (v.set === s.id && !v.captive && (v.role === 'guerreiro' || v.vet) && fid(v) === o.by) garr++;
       const pop = G.Village.pop(s.id);
-      if (from && from.alive && (s.loyalty || 50) < 26 && garr < pop * 0.12 && G.R() < dDays * 0.35) {
+      if (from && from.alive && (s.loyalty ?? 50) < 26 && garr < pop * 0.12 && G.R() < dDays * 0.35) {
         const by = F(s.fac); s.fac = from.id; s.occ = null; s.origFac = by ? by.id : s.origFac; s.loyalty = 45;
         const w = Wz.get(o.war);
         const txt = `${s.name} se levantou contra os ocupantes de ${by ? by.name : 'fora'} e voltou para ${from.name}.`;
@@ -975,9 +976,20 @@
     } else {
       event(w, `${from.name} e ${to.name} fizeram ${tname.replace(/^o Tratado/, 'um tratado').replace(/^a Paz/, 'a paz')}; ${w.name} continua para os outros.`, undefined, undefined, 'peace');
     }
-    // the soldiers of these two go home
+    // the soldiers these two sent against each other go home (in a war of many peoples, an army
+    // marching on a third one keeps marching: the peace was not made with that people)
     for (const a of armies()) {
       if (a.done || a.war !== w.id || ![from.id, to.id].includes(a.fac)) continue;
+      if (!ends) {
+        const foe = a.fac === from.id ? to.id : from.id;
+        const left = foesOf(w, a.fac).filter(y => still(a.fac, y));
+        if (left.length) {
+          const bd = G.War.bands.get(a.band); const tg = S.settlements.get(a.target);
+          const th = a.role === 'defesa' ? Wz.threatTo(a.target) : null;
+          const vs = bd ? bd.enemy : th ? th.fac : a.role !== 'defesa' && tg ? tg.fac : 0;
+          if (vs !== foe) continue;
+        }
+      }
       if (a.phase === 'mobilizar') { for (const id of a.members) { const v = P(id); if (v && v.task && v.task.type === 'muster') G.Vg.endTask(v); } a.done = true; a.phase = 'dispersado'; continue; }
       const b = G.War.bands.get(a.band); if (b && a.role === 'defesa') G.War.disband(b, true); else if (b && b.st !== 'retorno') { b.st = 'retorno'; b.t = 0; }
     }

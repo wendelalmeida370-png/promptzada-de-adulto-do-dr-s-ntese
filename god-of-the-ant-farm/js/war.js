@@ -44,7 +44,7 @@
     for (const bt of Wr.battles) { if (Wr.clock - bt.last > 20) continue; let n = 0; for (const k in bt.dead) n += bt.dead[k]; if (n >= 3 && G.dist(bt.x, bt.y, set.cx, set.cy) < R0 && S.type[W.idx(bt.x, bt.y)] > T.RIVER) return 'fight'; }
     return '';
   };
-  Wr.reset = function () { Wr.bands.clear(); Wr.battles.length = 0; reach.clear(); Wr.warFacs.clear(); Wr.fighters.length = 0; Wr.escapers.length = 0; };
+  Wr.reset = function () { Wr.bands.clear(); Wr.battles.length = 0; reach.clear(); Wr.warFacs.clear(); Wr.fighters.length = 0; Wr.escapers.length = 0; pending.length = 0; };
   Wr.GOAL = { saque: 'para saquear', captura: 'para fazer cativos', conquista: 'para conquistar', massacre: 'sem intenção de deixar sobreviventes' };
 
   // ------------------------------ helpers ------------------------------

@@ -245,6 +245,7 @@
 
   // ------------------------------ spatial grid ------------------------------
   const CELL = 8; let grid = new Map(), vgrid = new Map(), tgrid = new Map(), gridT = 0;
+  G.worldHooks.push(() => { grid.clear(); vgrid.clear(); tgrid.clear(); gridT = 0; });
   const key = (x, y) => ((x / CELL) | 0) + ((y / CELL) | 0) * 4096;
   function rebuildGrid() {
     const S = G.S; grid.clear(); vgrid.clear(); tgrid.clear();

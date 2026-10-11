@@ -465,7 +465,7 @@
       else if (pr >= 0.35 && !s.data.m2 && G.Fac.get(s.data.fac) && G.Eco.taxRate(G.Fac.get(s.data.fac)) > 0.08) { s.data.m2 = 1; St.beat(s, 'pc-imposto', c, at); }
       else if (pr >= 0.6 && !s.data.m3) { s.data.m3 = 1; s.phase = 'paredes'; St.beat(s, 'pc-meio', c, at); }
       const f = G.Fac.get(s.data.fac);
-      if (f && !s.data.grumble && (f.legit || 50) < 42 && pr > 0.25) { s.data.grumble = 1; St.beat(s, 'pc-murmurio', c); }
+      if (f && !s.data.grumble && (f.legit ?? 50) < 42 && pr > 0.25) { s.data.grumble = 1; St.beat(s, 'pc-murmurio', c); }
       // someone else on the throne, and nothing said of it: read the world
       if (f && f.leader && f.leader !== s.protag) { const nr = P(f.leader); if (nr) rulerChanged(s, nr, ''); }
     },

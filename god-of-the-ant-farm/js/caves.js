@@ -719,13 +719,13 @@
     for (const q of o.said) {
       if (q.st !== 'aberta') continue;
       if (f && f.alive && PROPH[q.k].test(f, q)) {
-        q.st = 'cumprida'; q.doneD = S.day; o.cred = Math.min(100, (o.cred || 50) + 15);
+        q.st = 'cumprida'; q.doneD = S.day; o.cred = Math.min(100, (o.cred ?? 50) + 15);
         log(`Cumpriu-se o que o oráculo ${C.da(cv)} disse: “${q.text}” O povo de ${f.name} sobe a montanha em procissão.`, 'prophecy');
         for (const v of S.villagers.values()) if (G.Fac.idOfV(v) === f.id) v.devotion = Math.min(100, (v.devotion || 0) + 4);
         S.faith = Math.min(999, S.faith + 6);
         G.Lore && G.Lore.legend && G.Lore.legend('oracle:' + cv.id, `O Oráculo ${C.da(cv)}`, `No ano ${q.day}, ${o.name} falou ${C.na(cv)}: “${q.text}” No ano ${S.day}, aconteceu. Desde então os peregrinos sobem a encosta com oferendas.`, { kind: 'cave' });
       } else if (S.day > q.until) {
-        q.st = 'falhou'; o.cred = Math.max(0, (o.cred || 50) - 20);
+        q.st = 'falhou'; o.cred = Math.max(0, (o.cred ?? 50) - 20);
         log(`O que o oráculo ${C.da(cv)} anunciou não aconteceu. Há quem diga que a voz da gruta mente.`, 'prophecy');
       }
     }
@@ -1089,7 +1089,7 @@
         const vein = veinFor(cv, f); if (vein >= 0) { const v = one(o => o.role === 'mineiro' || (o.role !== 'guerreiro' && o.age >= 16 && o.age < 50 && G.R() < 0.3)); const c = standBy(cv, vein); if (v && c >= 0) C.give(v, 'mine', cv, c, { vein, stay: 12, pri: 1.25 }); }
       }
       // pilgrims to the oracle
-      if (cv.oracle && (cv.oracle.fac === f.id || G.Fac.rel(cv.oracle.fac, f.id) && G.Fac.rel(cv.oracle.fac, f.id).st !== 'guerra') && cv.oracle.here && G.R() < 0.3 + (cv.oracle.cred || 50) / 200) {
+      if (cv.oracle && (cv.oracle.fac === f.id || G.Fac.rel(cv.oracle.fac, f.id) && G.Fac.rel(cv.oracle.fac, f.id).st !== 'guerra') && cv.oracle.here && G.R() < 0.3 + (cv.oracle.cred ?? 50) / 200) {
         const v = one(o => o.age >= 16); const c = spotIn(cv, nearHall(cv, cv.oracle.cell));
         if (v && c >= 0) C.give(v, 'pilgrim', cv, c, { stay: rr(6, 10), pri: 1.3 });
       }
@@ -1332,7 +1332,7 @@
     if (o.kind === 'abrigado') { const D = G.Animals.DEF[o.animal]; if (D) title = `${D.name}, abrigad${D.g === 'f' ? 'a' : 'o'} da tempestade`; }
     if (o.kind === 'veio') { const ore = ORES[o.ore]; title = `Veio de ${ore.name}`; text = ore.id === 'ouro' ? 'Um fio amarelo na rocha escura. Por ele, povos inteiros já foram à guerra.' : ore.id === 'gemas' ? 'Pedras de cor presas na parede, como olhos. Os ourives pagam caro.' : ore.id === 'sal' ? 'Sal de pedra, limpo e branco: conserva a carne do inverno inteiro.' : `Minério de ${ore.name} na parede. Com a técnica certa, os mineiros abrem galerias atrás dele.`; }
     if (o.kind === 'tumulo' && cv) { const tb = cv.tombs.find(t => t.name === o.tomb); title = `O túmulo de ${tb ? tb.name : '?'}`; sub = tb ? `Sepultad${tb.g === 'f' ? 'a' : 'o'} no ano ${tb.day}` : ''; text = tb ? `Com ${tb.goods}.${tb.robbed ? ' Ladrões já abriram a tampa e levaram o que puderam.' : ' Ninguém mexeu aqui desde o cortejo.'}` : ''; }
-    if (o.kind === 'oraculo' && cv && cv.oracle) { const q = cv.oracle; title = `O oráculo ${C.da(cv)}`; sub = `${q.name} · credibilidade ${Math.round(q.cred || 50)}%`; text = q.here ? 'Está lá agora, sentad' + (q.g === 'f' ? 'a' : 'o') + ' sobre a fenda de onde sobe a fumaça. Fala com a voz de outro.' : 'A fenda de onde sobe a fumaça. Ao meio-dia, quem tem coragem desce para ouvir o que o escuro diz.'; const said = q.said.slice(-2).reverse(); if (said.length) extra = `<div class="doing">${said.map(d => `“${esc(d.text)}” <small>(${d.st})</small>`).join('<br>')}</div>`; }
+    if (o.kind === 'oraculo' && cv && cv.oracle) { const q = cv.oracle; title = `O oráculo ${C.da(cv)}`; sub = `${q.name} · credibilidade ${Math.round(q.cred ?? 50)}%`; text = q.here ? 'Está lá agora, sentad' + (q.g === 'f' ? 'a' : 'o') + ' sobre a fenda de onde sobe a fumaça. Fala com a voz de outro.' : 'A fenda de onde sobe a fumaça. Ao meio-dia, quem tem coragem desce para ouvir o que o escuro diz.'; const said = q.said.slice(-2).reverse(); if (said.length) extra = `<div class="doing">${said.map(d => `“${esc(d.text)}” <small>(${d.st})</small>`).join('<br>')}</div>`; }
     if (o.kind === 'bandidos' && cv && cv.bandits) { const b = cv.bandits; title = b.name; sub = `${b.n} foras-da-lei sob ${b.leader}`; text = `A fogueira deles nunca apaga. Saem à noite, pelas trilhas, para roubar das vilas — ${b.raids} assaltos até agora.`; }
     if (o.kind === 'pintura' && cv) { const p = cv.paintings[o.paint]; if (p) { title = 'Pintura na parede'; sub = `Ano ${p.day} · ${p.by}`; text = p.txt ? `Conta: “${esc(trim(p.txt, 160))}”` : SCENE_TXT[p.scene]; } }
     if ((o.kind === 'aranha' || o.kind === 'grilo' || o.kind === 'peixe' || o.kind === 'salamandra') && cv) { const n = C.U().beasts.filter(b => b.cave === cv.id && b.kind === o.kind).length; extra = `<div class="doing">${n > 1 ? `${n} delas nesta caverna.` : 'A única que se vê por aqui.'}</div>`; }
@@ -1374,7 +1374,7 @@
     if (cv.bats) h += `<div class="doing">${cv.bats} morcegos${ph && ph.night ? ' — caçando insetos lá fora' : ph && ph.out ? ' — saindo para caçar' : ' dormindo de cabeça para baixo'} · ${Math.floor(cv.guano)} cestos de guano para adubo.</div>`;
     if (cv.sleepers.length) h += `<div class="doing">${cv.sleepers.length > 1 ? cv.sleepers.length + ' ursos dormem' : 'Um urso dorme'} no fundo.</div>`;
     const bk = Object.entries(beasts); if (bk.length) h += `<div class="doing">Vivem no escuro: ${bk.map(([k, n]) => n + ' ' + BN[k]).join(', ')}.</div>`;
-    if (cv.oracle) { const o = cv.oracle; const op = o.said.filter(q => q.st === 'aberta'); h += `<div class="doing"><b>Oráculo:</b> <a data-pid="${o.id}">${esc(o.name)}</a>${o.here ? ' — está lá agora, entre a fumaça' : ''} · credibilidade ${Math.round(o.cred || 50)}% · ${o.pilgrims || 0} peregrinos${op.length ? `<br>Anunciou: “${esc(op[0].text)}” (até o ano ${op[0].until})` : ''}</div>`; }
+    if (cv.oracle) { const o = cv.oracle; const op = o.said.filter(q => q.st === 'aberta'); h += `<div class="doing"><b>Oráculo:</b> <a data-pid="${o.id}">${esc(o.name)}</a>${o.here ? ' — está lá agora, entre a fumaça' : ''} · credibilidade ${Math.round(o.cred ?? 50)}% · ${o.pilgrims || 0} peregrinos${op.length ? `<br>Anunciou: “${esc(op[0].text)}” (até o ano ${op[0].until})` : ''}</div>`; }
     if (cv.bandits) { const b = cv.bandits; h += `<div class="doing"><b>${esc(b.name)}</b> moram aqui: ${b.n} foras-da-lei sob ${esc(b.leader)} · ${b.raids} assaltos${b.hunt ? ' · <b>guerreiros vieram atrás deles!</b>' : ''}</div>`; }
     if (cv.tombs.length) h += `<div class="doing"><b>Túmulos:</b> ${cv.tombs.map(t => `${esc(t.name)} <small>(ano ${t.day}${t.robbed ? ', saqueado' : ''})</small>`).join(' · ')}</div>`;
     if (cv.paintings.length) h += `<div class="cv-paint"><b>Pinturas nas paredes (${cv.paintings.length})</b>${cv.paintings.slice(-5).reverse().map(p => `<p>Ano ${p.day} · ${esc(p.by)}: ${esc(p.txt ? trim(p.txt, 120) : SCENE_TXT[p.scene])}</p>`).join('')}</div>`;
@@ -1422,11 +1422,13 @@
       const U = S.ug = fresh(); const sa = G.Save.setArr;
       sa(U.k, o.ug.k); sa(U.f, o.ug.f); sa(U.ore, o.ug.ore); sa(U.oreN, o.ug.oreN); sa(U.id, o.ug.id); U.nextBeast = o.ug.nextBeast || 1; S.cavesOpt = o.ug.opt || 'normais';
       U.beasts = (o.ug.beasts || []).map(a => ({ id: a[0], kind: a[1], cave: a[2], x: a[3], y: a[4], t: Math.random() * 3, face: 1, tx: 0, ty: 0 }));
+      const nid = S.nextId; // (spawn takes a fresh id before the saved one replaces it)
       U.caves = (o.ug.caves || []).map(cv => {
         cv.sleepers = (cv.sleepers || []).map(a => { const x = G.Animals.spawn(a.kind, a.sx || cv.cx, a.sy || cv.cy, a); S.animals.delete(x.id); x.id = a.id; x.sx = a.sx; x.sy = a.sy; return x; });
         cv.sheltered = (cv.sheltered || []).map(a => { const x = G.Animals.spawn(a.kind, a.sx || cv.cx, a.sy || cv.cy, a); S.animals.delete(x.id); x.id = a.id; x.sx = a.sx; x.sy = a.sy; x.shelter = 0; return x; }).filter(Boolean);
         return cv;
       });
+      S.nextId = nid;
       C.rebuildNear(); U.ver++;
       for (const v of S.villagers.values()) if (v.ug) exit(v);
     },

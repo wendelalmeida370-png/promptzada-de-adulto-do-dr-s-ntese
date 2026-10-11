@@ -22,7 +22,8 @@
     set.campfire = cf.id; set.lit = true;
     const make = o => {
       let x = sx, y = sy;
-      for (let t = 0; t < 10; t++) { const a = G.rr(0, 6.28), r = G.rr(1.3, 2.4); x = sx + Math.cos(a) * r; y = sy + Math.sin(a) * r; if (W.walkableXY(x, y)) break; }
+      let ok = false; for (let t = 0; t < 10 && !ok; t++) { const a = G.rr(0, 6.28), r = G.rr(1.3, 2.4); x = sx + Math.cos(a) * r; y = sy + Math.sin(a) * r; ok = W.walkableXY(x, y); }
+      if (!ok) { const p = W.nearestLand(x, y, 8); if (p) { x = p[0]; y = p[1]; } }
       return G.Vg.create(Object.assign({ x, y, set: set.id }, o));
     };
     const pair = (a, b) => { a.partner = b.id; b.partner = a.id; };
@@ -40,6 +41,7 @@
   function setupWorld(seed, opts) {
     opts = Object.assign({ type: 'ilha', size: 64, tribes: 1, temper: 'normal' }, opts || {});
     G.FX.list.length = 0; G.FX.floaters.length = 0; G.FX.bolts.length = 0; G.FX.rings.length = 0; G.FX.glows.length = 0;
+    G.newWorld();
     G.setMapSize(opts.size);
     G.Render.setView(0);
     G.Caves && G.Caves.reset(); G.Render.setUnder && G.Render.setUnder(0, true); G.Cinema.reset && G.Cinema.reset();

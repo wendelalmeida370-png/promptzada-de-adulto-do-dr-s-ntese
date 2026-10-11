@@ -181,7 +181,7 @@
   function removeShip(s) {
     const S = G.S; const k = S.ships.indexOf(s); if (k >= 0) S.ships.splice(k, 1);
     // nobody is left floating: whoever is still aboard steps ashore
-    for (const id of s.crew || []) { const v = S.villagers.get(id); if (v && v.aboard === s.id) { v.aboard = 0; v.task = null; v.path = null; const p = W.nearestLand(s.x, s.y, 8); if (p) { v.x = p[0]; v.y = p[1]; } } }
+    for (const v of S.villagers.values()) if (v.aboard === s.id) { v.aboard = 0; v.task = null; v.path = null; const p = W.nearestLand(s.x, s.y, 8); if (p) { v.x = p[0]; v.y = p[1]; } }
   }
   Nv.sink = function (s, by, why) {
     const S = G.S; const f = G.Fac.get(s.fac);

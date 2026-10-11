@@ -128,6 +128,9 @@ window.G = window.G || {};
 
   // map size can change between worlds: modules register a hook to refresh their cached N
   G.mapHooks = [];
+  // a new world begins (a new game, a save loaded): the modules drop what belonged to the one before
+  G.worldHooks = [];
+  G.newWorld = function () { for (const h of G.worldHooks) { try { h(); } catch (e) { console.warn('world hook', e); } } };
   G.setMapSize = function (n) { G.N = n; for (const h of G.mapHooks) h(n); };
 
   // facing: 'face' is the side on screen for the first view (+1 right); fx, fy keep the world direction

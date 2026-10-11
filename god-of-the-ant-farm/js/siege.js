@@ -369,7 +369,7 @@
         const gx = (i % N) + 0.5, gy = ((i / N) | 0) + 0.5;
         let hit = 0;
         for (const o of G.War.fighters) { if (o.captive || !G.Fac.atWar(w.fac, fid(o)) || G.dist2(o.x, o.y, gx, gy) > 2.3) continue; hit++; o.hurt = 0.4; G.Vg.damage(o, G.rr(14, 24), 'oil', false, 0); G.Vg.emote(o, 'fire', 1.2); }
-        if (G.War.bands) for (const b of G.War.bands.values()) if (b.engines) for (const e of b.engines) if (e.kind === 'ariete' && G.dist(e.x, e.y, gx, gy) < 1.6) { e.hp -= 12; hit++; if (e.hp <= 0) { b.engines.splice(b.engines.indexOf(e), 1); log(`O aríete diante de ${(S.settlements.get(w.set) || {}).name} pegou fogo com o óleo e desabou.`, 'siege', gx, gy); break; } }
+        if (G.War.bands) for (const b of G.War.bands.values()) if (b.engines) for (const e of b.engines.slice()) if (e.kind === 'ariete' && G.dist(e.x, e.y, gx, gy) < 1.6) { e.hp -= 12; hit++; if (e.hp <= 0) { b.engines.splice(b.engines.indexOf(e), 1); log(`O aríete diante de ${(S.settlements.get(w.set) || {}).name} pegou fogo com o óleo e desabou.`, 'siege', gx, gy); break; } }
         if (!hit) continue;
         f.stock.food -= 1;
         for (let q = 0; q < 14; q++) G.FX && G.FX.spawn({ x: gx + G.rr(-0.4, 0.4), y: gy + G.rr(-0.4, 0.4), z: 22, vz: G.rr(-20, -6), vx: G.rr(-0.5, 0.5), vy: G.rr(-0.5, 0.5), g: 30, life: G.rr(0.5, 0.9), s0: 1.4, s1: 0.4, c: q % 3 ? '#e8a23a' : '#c86a1a', k: 4, layer: 1 });

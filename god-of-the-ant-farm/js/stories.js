@@ -128,13 +128,14 @@
   // ============================== the observer ==============================
   // the world calls this; the work is done on the next step, when the moment has settled
   const pending = [];
-  St.signal = function (kind, d) { if (!G.S || (G.Main && G.Main.mode === 'menu')) return; pending.push([kind, d]); if (pending.length > 400) pending.shift(); };
+  St.signal = function (kind, d) { if (!G.S || (G.Main && G.Main.mode === 'menu')) return; pending.push([kind, d, G.S]); if (pending.length > 400) pending.shift(); };
+  G.worldHooks.push(() => { pending.length = 0; });
   const OBS = {};
   // (other modules teach the observer new kinds of moments)
   St.observe = (k, fn) => { OBS[k] = fn; };
   function flush() {
     while (pending.length) {
-      const [k, d] = pending.shift();
+      const [k, d, w] = pending.shift(); if (w !== G.S) continue;
       try { if (OBS[k]) OBS[k](d); } catch (e) { console.warn('stories:', k, e); }
     }
   }
@@ -247,7 +248,7 @@
     const ic = t.ic || '';
     if (G.Caves && (ic === 'cave' || ic === 'paint')) { let best = null, bd = 10; for (const cv of G.Caves.all()) { const d = G.dist(cv.cx, cv.cy, x, y); if (d < bd && cv.mouths.length) { bd = d; best = cv; } } if (best) { const m = best.mouths[0]; return { kind: 'caverna', name: G.Caves.a ? G.Caves.a(best) : best.name, x: m.x + 0.5, y: m.y + 0.5, ref: best.id }; } }
     if (ic === 'wonder') { for (const b of S.buildings.values()) if (b.type === 'maravilha' && G.dist(b.x, b.y, x, y) < 8) { const c = G.Village.center(b); const sp = W.nearestLand(c[0], c[1] + 2.5, 3) || [c[0], c[1] + 2]; return { kind: 'maravilha', name: 'a maravilha de ' + (setName(b.set) || 'longe'), x: sp[0], y: sp[1], ref: b.id, set: b.set }; } }
-    if (ic === 'wave' || ic === 'sea' || ic === 'naval' || ic === 'ship' || ic === 'boat') { const sp = G.Sea && G.Sea.shellSpot ? G.Sea.shellSpot(x, y, 14) : null; if (sp) return { kind: 'mar', name: 'o mar', x: sp.x, y: sp.y }; }
+    if (ic === 'wave' || ic === 'sea' || ic === 'naval' || ic === 'ship' || ic === 'boat') { const sp = G.Sea && G.Sea.shellSpot ? G.Sea.shellSpot(x, y, 14) : null; if (sp) return { kind: 'mar', name: 'o mar', x: sp.x, y: sp.y }; if (ic === 'sea') return { kind: 'mar', name: 'o mar', x, y }; }
     if (G.Relief && G.Relief.places) {
       let pl = null, pd = 8; for (const p of G.Relief.places()) { if (p.kind === 'passo') continue; const d = G.dist(x, y, p.x, p.y); if (d < pd) { pd = d; pl = p; } }
       if (pl) { const spot = W.nearestLand ? W.nearestLand(pl.x, pl.y, 6) : [pl.x, pl.y]; if (spot) return { kind: pl.kind, name: pl.name, x: spot[0], y: spot[1] }; }
