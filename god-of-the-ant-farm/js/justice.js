@@ -240,7 +240,7 @@
 
   // ------------------------------ speech, above heads ------------------------------
   const bubbles = [];
-  J.say = function (v, txt, secs) { if (!v || !txt) return; for (let k = bubbles.length - 1; k >= 0; k--) if (bubbles[k].id === v.id) bubbles.splice(k, 1); bubbles.push({ id: v.id, txt, until: G.S.clock + (secs || 3.2) }); if (bubbles.length > 14) bubbles.shift(); };
+  J.say = function (v, txt, secs) { if (!v || !txt) return; if (G.Talk) { G.Talk.say(v, txt, secs ? { dur: secs } : null); return; } for (let k = bubbles.length - 1; k >= 0; k--) if (bubbles[k].id === v.id) bubbles.splice(k, 1); bubbles.push({ id: v.id, txt, until: G.S.clock + (secs || 3.2) }); if (bubbles.length > 14) bubbles.shift(); };
 
   // ------------------------------ the ceremony ------------------------------
   function cancel(e, why) {
@@ -297,6 +297,8 @@
       return;
     }
     if (e.phase === 'read') {
+      // (a story's scene may hold the moment a little: the sentence read again, the drums going on)
+      if (e.hold && S.clock < e.hold) return;
       if (e.t > 6) { e.phase = 'kill'; e.t = 0; e.k = 0; e.sub = 0; e.done = e.done || []; }
       return;
     }
@@ -315,6 +317,7 @@
     const v = S.villagers.get(id); let exe = S.villagers.get(e.exe); if (exe && !(exe.task && exe.task.type === 'justice' && exe.task.j === e.id)) exe = null;
     const i = e.ids.indexOf(id); const [sx, sy] = spot(e, i); const M = METHOD[e.method];
     const t = v.task; t.perch = true; t.march = 0;
+    if (e.sub === 0 && e.hold && S.clock < e.hold) return;
     if (e.sub === 0) {
       // up on the scaffold, into place
       v.x = sx; v.y = sy + (M.kind === 'block' ? 0.18 : 0); v.path = null; v.moving = false;
@@ -570,7 +573,8 @@
           // the trapdoor that opened under whoever hangs there
           if (v || occ) { const a = O(sp(k) - 0.16, -0.16, H), b2 = O(sp(k) + 0.16, -0.16, H), d = O(sp(k) + 0.16, 0.16, H), f2 = O(sp(k) - 0.16, 0.16, H); quad(c, a, b2, d, f2, '#1a100a'); }
           c.strokeStyle = rope; c.lineWidth = 0.55;
-          if (v) { const nk = O(v.x - s.x, v.y - s.y, (v.z || 0) + 9.6); c.beginPath(); c.moveTo(top[0], top[1]); c.lineTo(nk[0], nk[1]); c.stroke(); }
+          if (v && !s.ropeCut) { const nk = O(v.x - s.x, v.y - s.y, (v.z || 0) + 9.6); c.beginPath(); c.moveTo(top[0], top[1]); c.lineTo(nk[0], nk[1]); c.stroke(); }
+          else if (s.ropeCut) { const lo = O(sp(k), 0, H + BEAM - 6.5); c.beginPath(); c.moveTo(top[0], top[1]); c.lineTo(lo[0] + Math.sin(t * 3 + k) * 0.6, lo[1]); c.stroke(); }
           else if (!occ) { const sw = Math.sin(t * 1.4 + k) * 0.5; const lo = O(sp(k), 0, H + 11); c.beginPath(); c.moveTo(top[0], top[1]); c.lineTo(lo[0] + sw, lo[1]); c.stroke(); c.beginPath(); c.ellipse(lo[0] + sw, lo[1] + 1.1, 0.9, 1.2, 0, 0, TAU); c.stroke(); }
         }
         const lv = O(w - 0.3, 0.25, H); c.strokeStyle = woodD; c.lineWidth = 0.7; c.beginPath(); c.moveTo(lv[0], lv[1]); c.lineTo(lv[0] + 1.6, lv[1] - 4); c.stroke();
@@ -683,5 +687,8 @@
     for (const b of bubbles) { const v = S.villagers.get(b.id); if (!v) continue; let e = ent.get(b); if (!e) ent.set(b, e = { b, fn: drawBubble }); add(v.x + v.y + 3, e, v.x, v.y); }
   });
   J.list = execs;
+  J.holdSpot = holdSpot;
+  J.scaffoldOf = e => scaffolds().find(s => s.id === e.sc) || null;
+  J.spotOf = (e, i) => spot(e, i);
   if (G.Polity) G.Polity.sentence = J.sentence;
 })(window.G);

@@ -174,7 +174,7 @@
     G.Carnage && G.Carnage.update(dt);
     G.Animals.updateAll(dt);
     G.Flora && G.Flora.update(dt);
-    G.Riches && G.Riches.update(dt); G.Estates && G.Estates.update(dt); G.Court && G.Court.update(dt); G.Trade && G.Trade.update(dt); G.Migrate && G.Migrate.update(dt); G.Nests && G.Nests.update(dt); G.Polity && G.Polity.update(dt); G.Justice && G.Justice.update(dt); G.Riots && G.Riots.update(dt); G.Secrets && G.Secrets.update(dt);
+    G.Riches && G.Riches.update(dt); G.Estates && G.Estates.update(dt); G.Court && G.Court.update(dt); G.Trade && G.Trade.update(dt); G.Migrate && G.Migrate.update(dt); G.Nests && G.Nests.update(dt); G.Polity && G.Polity.update(dt); G.Justice && G.Justice.update(dt); G.Riots && G.Riots.update(dt); G.Secrets && G.Secrets.update(dt); G.Scene && G.Scene.update(dt);
     G.Caves && G.Caves.update(dt);
     G.Pets && G.Pets.update(dt);
     G.Powers.update(dt);
@@ -349,6 +349,15 @@
       if (M.modalOpen) { if (k === 'Escape') G.UI.closeModal(); return; }
       // photo: the world is frozen; only leaving (and panning with WASD)
       if (G.Photo.on) { if (k === 'Escape' || k === 'p' || k === 'P') G.Photo.stop(); else if (k === 'q' || k === 'Q') G.Render.rotate(-1); else if (k === 'e' || k === 'E') G.Render.rotate(1); else if (k === 'Tab') e.preventDefault(); return; }
+      // a scene on the screen: only pause, speed and leaving it (it goes on in the world)
+      if (G.Scene && G.Scene.watching) {
+        if (k === 'Escape') G.Scene.leave();
+        else if (k === ' ') { e.preventDefault(); if (G.speed === 0) G.UI.setSpeed(M.lastSpeed || 1); else { M.lastSpeed = G.speed; G.UI.setSpeed(0); } }
+        else if (k === '+' || k === '=') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.min(sp.length - 1, sp.indexOf(G.speed) + 1)]); }
+        else if (k === '-' || k === '_') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.max(0, sp.indexOf(G.speed) - 1)]); }
+        else if (k === 'Tab') e.preventDefault();
+        return;
+      }
       // cinema: only pause, speed, next scene and leaving — the rest would open the interface
       if (G.Cinema.on) {
         if (k === 'Escape' || k === 'c' || k === 'C') G.Cinema.stop();
@@ -434,6 +443,7 @@
   }
   function click(px, py, btn) {
     const R = G.Render;
+    if (G.Scene && G.Scene.watching) return;
     if (btn === 2) { if (I.power) G.UI.setPower(null); else G.UI.select(null); return; }
     if (btn !== 0) return;
     if (I.power && I.power !== 'hand') {
@@ -464,7 +474,7 @@
         cam.x = M.menuBase[0] + Math.sin(t * 0.06) * 170; cam.y = M.menuBase[1] + Math.cos(t * 0.045) * 70;
       } else if (M.mode === 'intro') { sp = 1; updateIntro(rdt); }
       if (M.modalOpen && M.mode === 'game') sp = 0;
-      const want = rdt * sp;
+      const want = rdt * sp * (G.Scene && M.mode === 'game' ? G.Scene.timeScale() : 1);
       // the simulation may use most of the frame at 8x and 16x, never all of it
       const dt = simulate(want, sp >= 8 ? 38 : sp > 2 ? 60 : 0);
       if (sp >= 8 && rdt > 0) { M.realSpeed = (M.realSpeed || sp) * 0.95 + (dt / rdt) * 0.05; } else M.realSpeed = sp;
@@ -475,7 +485,7 @@
         if (k.w || k.arrowup) dy -= v; if (k.s || k.arrowdown) dy += v; if (k.a || k.arrowleft) dx -= v; if (k.d || k.arrowright) dx += v;
         if (dx || dy) { cam.x += dx; cam.y += dy; cam.follow = 0; cam.target = null; }
       }
-      if (M.mode === 'game') { G.Cinema.tick(rdt); G.Cinema.update(rdt); G.Photo.update(rdt); }
+      if (M.mode === 'game') { G.Cinema.tick(rdt); G.Cinema.update(rdt); G.Photo.update(rdt); G.Scene && G.Scene.frame(rdt); G.Track && G.Track.frame(rdt); }
       G.Render.update(rdt, dt);
       G.FX.update(dt > 0 ? dt : 0, rdt);
       G.Sky && G.Sky.update(dt > 0 ? dt : 0, rdt);
@@ -490,7 +500,9 @@
           canvas.style.cursor = I.held ? 'grabbing' : I.power === 'hand' ? (G.Render.hover ? 'grab' : 'default') : I.power ? 'crosshair' : (G.Render.hover ? 'pointer' : 'default');
         } else { G.Render.hover = null; G.Render.preview = null; }
       }
+      if (G.Scene && M.mode === 'game') G.Scene.beforeFrame();
       G.Render.frame(rdt);
+      if (G.Scene && M.mode === 'game') G.Scene.afterFrame();
       G.Render.perfSample(rdt);
       G.Audio.update(rdt);
       if (M.mode === 'game') {
@@ -507,6 +519,8 @@
     G.UI.init();
     G.Cinema.init();
     G.Photo.init();
+    G.Scene && G.Scene.init();
+    G.Track && G.Track.init();
     G.Minimap.init();
     setupInput();
     M.toMenu();

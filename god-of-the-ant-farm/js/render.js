@@ -2303,7 +2303,7 @@
       case 5: {
         const v = o;
         const night = nightF > 0.5;
-        v.torch = R.under ? (v.age >= 10 && (v.moving || v.id % 2 === 0)) : night && !v.sleeping && v.moving && v.age >= 14 && ((v.task && v.task.torch) || v.id % 3 === 0);
+        v.torch = R.under ? (v.age >= 10 && (v.moving || v.id % 2 === 0)) : (night && !v.sleeping && v.moving && v.age >= 14 && ((v.task && v.task.torch) || v.id % 3 === 0)) || (!!v.holdTorch && !v.inside);
         if (v.age >= 2) {
           const baby = v.babyOn;
           const sink = sinkOf(v);
@@ -2316,6 +2316,7 @@
           ctx.fillStyle = v.skin; ctx.beginPath(); ctx.arc(sx - 1.8, sy - 1.6, 1, 0, TAU); ctx.fill();
         }
         if (v.torch) { const tx = sx + R.sface(v) * 3, ty = sy - 12.5; light(tx, ty, R.under ? 48 : 30, 'warm', 0.85); emisTorch.push(tx, ty); }
+        if (v.lantern && !v.inside) { const lx = sx + R.sface(v) * 2.6, ly = sy - (v.act === 'lantern' ? 6 : 3); light(lx, ly, R.under ? 40 : 24, 'warm', 0.8); emisGlow.push(lx, ly, 4, 'warm', 0.55); }
         if (v.emo || (R.hover === v) || (G.UI && G.UI.selected === v)) overlays.push(v, sx, sy);
         break;
       }

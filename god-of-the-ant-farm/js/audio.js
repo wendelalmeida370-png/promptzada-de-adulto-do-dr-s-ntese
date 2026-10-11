@@ -142,6 +142,26 @@
     },
   };
 
+  // ---------------- the stories' own sounds ----------------
+  Object.assign(LIB, {
+    // a dramatic hit: a low boom under a dark chord
+    sting: (t, v) => { osc('sine', 62, t, 1.4, 0.32 * v, sfx, 38, 0.01); nz(t, 0.9, 0.14 * v, 'lowpass', 900, 0, sfx, 120, 0.02); for (const f of [220, 261.63, 311.13, 415.3]) { const n = osc('triangle', f, t + 0.02, 2.2, 0.035 * v, mus, 0, 0.04); n.g.connect(revIn); } },
+    reveal: (t, v) => { for (let k = 0; k < 7; k++) { const n = osc('sine', [880, 1046.5, 1318.5, 1567.98, 1760, 2093, 2637][k], t + k * 0.07, 1.8, 0.03 * v, sfx, 0, 0.05); n.g.connect(revIn); } nz(t, 1.2, 0.05 * v, 'highpass', 4000, 0, sfx, 0, 0.4); },
+    heartbeat: (t, v) => { osc('sine', 64, t, 0.16, 0.42 * v, sfx, 44); osc('sine', 58, t + 0.2, 0.2, 0.32 * v, sfx, 40); },
+    twig: (t, v) => { nz(t, 0.05, 0.42 * v, 'highpass', 2600); nz(t + 0.03, 0.04, 0.3 * v, 'bandpass', 1500, 3); },
+    arrow: (t, v) => { osc('sine', 1900, t, 0.28, 0.05 * v, sfx, 700); nz(t, 0.26, 0.08 * v, 'bandpass', 3000, 2, sfx, 1200); osc('sine', 140, t + 0.3, 0.08, 0.3 * v, sfx, 90); nz(t + 0.3, 0.05, 0.2 * v, 'bandpass', 900, 2); },
+    ropecut: (t, v) => { nz(t, 0.06, 0.4 * v, 'bandpass', 2200, 2); osc('triangle', 180, t + 0.02, 0.35, 0.12 * v, sfx, 70); },
+    gasp: (t, v) => { nz(t, 0.35, 0.16 * v, 'bandpass', 900, 2, sfx, 2200, 0.08); },
+    knock: (t, v) => { for (let k = 0; k < 3; k++) { osc('sine', 150, t + k * 0.24, 0.1, 0.4 * v, sfx, 80); nz(t + k * 0.24, 0.05, 0.2 * v, 'lowpass', 700); } },
+    slam: (t, v) => { osc('sine', 90, t, 0.35, 0.5 * v, sfx, 40); nz(t, 0.18, 0.4 * v, 'lowpass', 900); },
+    toll: (t, v) => { for (const [f, a] of [[196, 0.09], [392.4, 0.05], [587.3, 0.035], [831, 0.02]]) { const n = osc('sine', f, t, 4.5, a * v, sfx, 0, 0.005); n.g.connect(revIn); } },
+    drumroll: (t, v) => { let d = 0; for (let k = 0; k < 16; k++) { const gap = 0.16 * Math.pow(0.86, k); d += gap; osc('sine', 100 + k * 2, t + d, 0.12, (0.12 + k * 0.012) * v, sfx, 60); nz(t + d, 0.05, 0.08 * v, 'bandpass', 600, 1); } },
+    choir: (t, v) => { for (const f of [110, 164.8, 220]) { const o = ac.createOscillator(), g = ac.createGain(), lp = ac.createBiquadFilter(), lfo = ac.createOscillator(), lg = ac.createGain(); o.type = 'sawtooth'; o.frequency.value = f; lfo.frequency.value = 5.2; lg.gain.value = f * 0.012; lfo.connect(lg); lg.connect(o.frequency); lp.type = 'lowpass'; lp.frequency.value = 700; lp.Q.value = 6; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.025 * v, t + 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.6); o.connect(lp); lp.connect(g); g.connect(sfx); g.connect(revIn); o.start(t); lfo.start(t); o.stop(t + 2.7); lfo.stop(t + 2.7); } },
+    triumph: (t, v) => { [392, 493.9, 587.3, 783.99, 987.8].forEach((f, k) => { const n = osc('sawtooth', f, t + k * 0.1, 0.9, 0.025 * v, sfx, 0, 0.03); n.g.connect(revIn); }); osc('sine', 98, t, 1.4, 0.18 * v, sfx); },
+    sob: (t, v) => { for (let k = 0; k < 3; k++) nz(t + k * 0.32, 0.18, 0.06 * v, 'bandpass', 700 + k * 60, 3, sfx, 420); },
+  });
+  // the music leans to the scene: a held breath, a grief, a wonder (null: back to the world's own music)
+  A.mood = function (m) { A.moodNow = m || null; A.moodT = 0; };
   A.play = function (name, vol) {
     if (!ac || !A.sfxOn || A.mute || ac.state !== 'running') return;
     const now = ac.currentTime;
@@ -298,11 +318,28 @@
       o.connect(g); g.connect(mus); g.connect(revIn); o.start(t); o.stop(t + dur + 0.1);
     }
   }
+  // the scenes' music: each mood its chords, its pulse and its notes
+  const MOOD = {
+    tense: { chord: [55, 82.4, 116.5], pulse: 2, notes: [311.13, 329.63, 466.16], p: 0.18, step: 0.62 },
+    dread: { chord: [49, 51.9, 73.4], pulse: 4, notes: [233.08, 246.94], p: 0.1, step: 0.8 },
+    sad: { chord: [110, 130.81, 164.81], pulse: 0, notes: [220, 261.63, 293.66, 329.63, 392, 440], p: 0.32, step: 0.85 },
+    awe: { chord: [130.81, 196, 246.94], pulse: 0, notes: [523.25, 659.25, 783.99, 987.77, 1046.5, 1318.5], p: 0.5, step: 0.55 },
+    triumph: { chord: [98, 146.83, 196], pulse: 4, notes: [392, 493.88, 587.33, 783.99], p: 0.5, step: 0.5 },
+    night: { chord: [65.4, 98, 123.47], pulse: 0, notes: [261.63, 311.13, 392, 466.16], p: 0.14, step: 0.9 },
+  };
+  function moodBeat() {
+    const M = MOOD[A.moodNow]; if (!M) return;
+    const t = ac.currentTime + 0.05;
+    if (beat % 16 === 0) pad(M.chord.map(f => f * 2), t, M.step * 16);
+    if (M.pulse && beat % M.pulse === 0) { osc('sine', M.chord[0] * 1.2, t, 0.3, A.moodNow === 'triumph' ? 0.1 : 0.16, mus, M.chord[0] * 0.8); if (A.moodNow === 'tense') osc('sine', M.chord[0] * 1.1, t + 0.2, 0.25, 0.1, mus, M.chord[0] * 0.75); }
+    if (Math.random() < M.p) pluck(M.notes[Math.floor(Math.random() * M.notes.length)], t, A.moodNow === 'dread' ? 0.03 : 0.05, mus);
+  }
   function musicLoop() {
     if (!ac) return;
     const night = G.S && G.Render ? G.Render.nightness() > 0.55 : false;
     const step = night ? 0.85 : 0.62;
-    if (A.musicOn && ac.state === 'running') {
+    if (A.musicOn && ac.state === 'running' && A.moodNow) { moodBeat(night); beat++; }
+    else if (A.musicOn && ac.state === 'running') {
       const t = ac.currentTime + 0.05;
       if (beat % 16 === 0) { chord = (chord + (Math.random() < 0.7 ? 1 : 2)) % CHORDS.length; pad(CHORDS[chord].map(i => PENTA[i]), t, step * 16); }
       const tension = G.S ? (G.S.meteors.length > 0 || G.Nature.fireSet.size > 5) : false;
@@ -314,6 +351,6 @@
       }
       beat++;
     }
-    setTimeout(musicLoop, (night ? 0.85 : 0.62) * 1000);
+    setTimeout(musicLoop, (A.moodNow && MOOD[A.moodNow] ? MOOD[A.moodNow].step : night ? 0.85 : 0.62) * 1000);
   }
 })(window.G);

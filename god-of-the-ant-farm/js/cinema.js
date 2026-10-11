@@ -762,6 +762,8 @@
       if (war) { if (!fronts.length) { war.quiet += 0.8; if (war.quiet > 5) { war = null; flash(anyWar() ? 'Nenhum exército em campo agora · o cinema volta ao mundo' : 'A guerra acabou · o cinema volta ao mundo'); } } else war.quiet = 0; }
       warUi();
     }
+    // a story's scene has the screen: the director waits
+    if (G.Scene && G.Scene.watching) return;
     // WASD or the arrows: the player is flying the camera
     const k = G.Input.keys; if (k.w || k.a || k.s || k.d || k.arrowup || k.arrowdown || k.arrowleft || k.arrowright) C.manual();
     if (manualT > 0) { manualT -= rdt; if (manualT <= 0) { evalT = 0; prevKey = ''; } return; }

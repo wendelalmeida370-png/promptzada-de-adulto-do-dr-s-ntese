@@ -482,6 +482,14 @@
   St.bequeath = bequeath;
   // the camera's moments: a climax that deserves to be seen
   St.hotList = [];
+  // the story the player follows (the tracker, the scenes that take the screen, the marker on the map)
+  St.follow = function (id) { const s = st(); const prev = s.follow || 0; s.follow = id || 0; if (St.onFollow) try { St.onFollow(s.follow, prev); } catch (e) { console.warn('stories follow', e); } };
+  St.followed = function () { const s = G.S && G.S.saga; if (!s || !s.follow) return 0; const x = getStory(s.follow); return x && (x.st === 'ativa' || G.S.day - (x.end ? x.end.d : 0) < 1) ? x.id : 0; };
+  // what is coming next in a story, and when (the tracker counts down to it; the marker shows where)
+  St.expect = function (story, label, at, x, y, o) { if (!story) return; story.data.next = Object.assign({ label, at: Math.round(at * 10) / 10, x: x !== undefined ? +(+x).toFixed(1) : undefined, y: y !== undefined ? +(+y).toFixed(1) : undefined }, o || {}); };
+  St.unexpect = function (story) { if (story && story.data.next) delete story.data.next; };
+  // a scene of a story: the people, the place, and what the story does when it ends
+  St.scene = function (story, key, cast, o) { if (!G.Scene || !story) return null; return G.Scene.play(key, Object.assign({ story: story.id, cast: Object.assign({ p: story.protag }, cast || {}) }, o || {})); };
   function hot(story, x, y, txt, secs) { St.hotList = St.hotList.filter(h => G.S.clock < h.until && h.story !== story.id); St.hotList.push({ story: story.id, x, y, txt, until: G.S.clock + (secs === true ? 30 : secs), born: G.S.clock }); }
 
   // ============================== archetypes ==============================
@@ -686,7 +694,7 @@
   // ============================== save ==============================
   G.saveHooks = G.saveHooks || [];
   G.saveHooks.push({
-    save(out) { if (G.S.saga) { const s = G.S.saga; out.saga = { v: s.v, facts: s.facts, nf: s.nf, seeds: s.seeds, stories: s.stories, ns: s.ns, mem: s.mem, know: s.know, wars: s.wars, lastPromo: Math.round(s.lastPromo) }; } },
+    save(out) { if (G.S.saga) { const s = G.S.saga; out.saga = { v: s.v, facts: s.facts, nf: s.nf, seeds: s.seeds, stories: s.stories, ns: s.ns, mem: s.mem, know: s.know, wars: s.wars, lastPromo: Math.round(s.lastPromo), follow: s.follow || 0 }; } },
     load(o) { G.S.saga = o.saga ? Object.assign(fresh(), o.saga) : null; idxFor = null; factFor = null; pending.length = 0; St.hotList = []; },
   });
 

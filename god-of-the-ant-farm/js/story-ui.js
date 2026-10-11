@@ -39,6 +39,8 @@
     }
     return c;
   }
+  St.portrait = portrait;
+  St.hue = t => HUE[t] || '#f5c86b';
   function who(p, plain) {
     if (!p) return 'alguém';
     if (p.dead) { const a = Math.floor(p.age || 0); return `${plain ? esc(p.name) + ' · ' : ''}morreu${a ? ` aos ${a} ${a === 1 ? 'ano' : 'anos'}` : ''}${p.fac ? ' · ' + esc(facName(p.fac)) : ''}`; }
@@ -162,6 +164,14 @@
       <div class="mbtns"><button class="primary" data-m="close">Fechar</button></div>`, 'wide book saga');
     fillPics($('#modal'));
   };
+  // a chapter a scene wrote: its pictures (while the page lives) and its words (always)
+  function sceneBit(ch) {
+    if (!ch.scn && !ch.lines) return '';
+    const r = G.Scene && ch.scn ? G.Scene.record(ch.scn) : null;
+    const pics = r && r.snaps.length ? `<div class="sg-snaps">${r.snaps.slice(0, 3).map(sn => `<img src="${sn.img}" alt="" title="${esc(sn.cap || '')}">`).join('')}</div>` : '';
+    const lines = (ch.lines || []).filter(l => l[2] !== 'cap').slice(0, 4).map(l => `<span class="${esc(l[2] || 'say')}"><b>${esc(l[0])}:</b> “${esc(l[1])}”</span>`).join('');
+    return `<div class="sg-scene">${pics}${lines ? `<div class="sg-lines">${lines}</div>` : ''}${r ? `<button class="sg-replay" data-m="saga-replay" data-id="${r.id}">▶ Rever a cena</button>` : ''}</div>`;
+  }
   St.openStory = function (id) {
     const s = St.get(id); if (!s) return St.open();
     const ui = St._ui; ui.open = true; ui.view = 'story'; ui.id = id;
@@ -174,7 +184,7 @@
     const parts = ctx.participants.map(q => `<button class="sg-part" data-m="person" data-id="${q.id}"><span class="sg-pic" data-pid="${q.id}" data-size="40"></span><span class="sg-pt"><label>${(ROLE[q.role] || q.role).replace('{o}', P(q.id) && P(q.id).g === 'f' ? 'a' : 'o')}</label><b>${esc(q.name)}${q.alive ? '' : ' †'}</b><small>${q.alive ? (q.captive ? 'cativ' + (P(q.id).g === 'f' ? 'a' : 'o') + ' em ' + esc(setName(q.set)) : esc(setName(q.set) || '')) : 'morreu'}</small></span></button>`).join('');
     const others = new Map();
     for (const q of [p].concat(ctx.participants.map(x => P(x.id)))) if (q) for (const o of St.of(q.id)) if (o.id !== s.id) others.set(o.id, o);
-    const chs = s.chapters.map((ch, i) => `<li class="${ch.big ? 'big' : ''} ${ch.k === 'fim' ? 'fim' : ''}"><div class="sg-chh"><span class="sg-num">${ch.k === 'fim' ? '✦' : 'Capítulo ' + (ROMAN[i + 1] || i + 1)}</span>${headingOf(ch) ? `<b>${esc(headingOf(ch))}</b>` : ''}<em>dia ${ch.d}</em>${ch.x !== undefined ? `<button class="sg-pin" data-m="saga-at" data-x="${ch.x}" data-y="${ch.y}" title="Ir até onde aconteceu">◎</button>` : ''}</div><p>${esc(ch.txt)}</p></li>`).join('');
+    const chs = s.chapters.map((ch, i) => `<li class="${ch.big ? 'big' : ''} ${ch.k === 'fim' ? 'fim' : ''}"><div class="sg-chh"><span class="sg-num">${ch.k === 'fim' ? '✦' : 'Capítulo ' + (ROMAN[i + 1] || i + 1)}</span>${headingOf(ch) ? `<b>${esc(headingOf(ch))}</b>` : ''}<em>dia ${ch.d}</em>${ch.x !== undefined ? `<button class="sg-pin" data-m="saga-at" data-x="${ch.x}" data-y="${ch.y}" title="Ir até onde aconteceu">◎</button>` : ''}</div><p>${esc(ch.txt)}</p>${sceneBit(ch)}</li>`).join('');
     const seal = s.st === 'fim' ? `<div class="sg-seal ${TONE_CLS[s.end.tone] || ''}"><i>${ic(d.icon)}</i><div><b>${esc(St.END[s.end.k] || s.end.k)}</b><span>${esc(St.TONE[s.end.tone] || '')} · dia ${s.end.d}</span></div></div>` : '';
     const place = s.place && s.place.name ? `<button class="sg-chip" data-m="saga-place" data-id="${s.id}">${ic('map')}${esc(s.place.name)}</button>` : '';
     G.UI.openModal(`<div class="sg-hero" style="--hue:${hue}"><div class="sg-emb">${ic(d.icon)}</div><div class="sg-ht"><div class="sg-kicker">${esc(d.name)}${s.gen > 1 ? ` · ${s.gen}ª geração` : ''} · desde o dia ${s.born}</div><h2>${esc(s.title)}</h2>${s.log ? `<p>${esc(s.log)}</p>` : ''}</div>${seal}</div>
@@ -182,7 +192,7 @@
         ${stageTrack(s)}
         <div class="sg-row">
           <div class="sg-prot"><span class="sg-pic" data-pid="${s.protag}" data-size="72"></span><div class="sg-pi"><label>${s.prev.length ? 'Quem a carrega agora' : 'Protagonista'}</label><b>${esc(p ? p.name : '?')}</b><small>${who(p)}</small>${p && (p.traits || []).length ? `<div class="sg-traits">${p.traits.slice(0, 3).map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
-            <div class="sg-btns"><button data-m="person" data-id="${s.protag}">Ver personagem</button>${p && !p.dead ? `<button data-m="saga-follow" data-id="${s.id}">Seguir</button><button data-m="saga-go" data-id="${s.id}">Ir até</button>` : ''}</div></div></div>
+            <div class="sg-btns"><button data-m="person" data-id="${s.protag}">Ver personagem</button>${p && !p.dead ? (St.followed() === s.id ? `<button data-m="saga-unfollow" data-id="${s.id}" class="on">Seguindo ✓</button>` : `<button data-m="saga-follow" data-id="${s.id}">Seguir</button>`) + `<button data-m="saga-go" data-id="${s.id}">Ir até</button>` : ''}</div></div></div>
           <div class="sg-map"><canvas class="sg-mapc"></canvas>${place}</div>
         </div>
         <div class="sg-want"><h4>${s.st === 'fim' ? 'O que queria' : 'O que quer'}</h4><p>${esc(ctx.goal)}</p>
@@ -211,8 +221,10 @@
     else if (m === 'saga-go' || m === 'saga-follow') {
       const s = St.get(+b.dataset.id); const p = s && P(s.protag); if (!p || p.dead) return;
       G.UI.closeModal(); R.cam.follow = m === 'saga-follow' ? p.id : 0; R.panTo(p.x, p.y); R.cam.tz = Math.max(R.cam.tz, 1.6);
-      if (m === 'saga-follow') G.UI.select(p);
+      if (m === 'saga-follow') { St.follow(s.id); G.UI.notice(`Seguindo: ${s.title}. Os momentos importantes vão aparecer na tela.`, 'saga'); }
     } else if (m === 'saga-place') { const s = St.get(+b.dataset.id); if (s && s.place) { G.UI.closeModal(); R.cam.follow = 0; R.panTo(s.place.x, s.place.y); R.cam.tz = Math.max(R.cam.tz, 1.5); } }
+    else if (m === 'saga-replay') { const r = G.Scene && G.Scene.record(+b.dataset.id); if (r && G.Track) G.Track.openReplay(r); }
+    else if (m === 'saga-unfollow') { St.follow(0); St.openStory(+b.dataset.id); }
     else if (m === 'saga-at') { G.UI.closeModal(); R.cam.follow = 0; R.panTo(+b.dataset.x, +b.dataset.y); R.cam.tz = Math.max(R.cam.tz, 1.5); }
   };
 
@@ -226,6 +238,8 @@
     if (!busy) next();
   };
   function next() {
+    // (a scene on the screen keeps the cards waiting)
+    if (G.Scene && G.Scene.watching) { busy = true; setTimeout(next, 1500); return; }
     const q = queue.shift(); if (!q) { busy = false; return; }
     const s = St.get(q.id); if (!s) return next();
     busy = true;
@@ -238,7 +252,7 @@
     el.querySelector('.sg-pic').appendChild(portrait(p, 54));
     el.onclick = e => {
       const a = e.target.closest('[data-a]'); const act = a ? a.dataset.a : 'read';
-      if (act === 'follow' && p && !p.dead) { const R = G.Render; R.cam.follow = p.id; R.panTo(p.x, p.y); R.cam.tz = Math.max(R.cam.tz, 1.6); G.UI.select(p); }
+      if (act === 'follow' && p && !p.dead) { const R = G.Render; R.cam.follow = p.id; R.panTo(p.x, p.y); R.cam.tz = Math.max(R.cam.tz, 1.6); St.follow(s.id); }
       else if (act === 'read') { G.Audio && G.Audio.play && G.Audio.play('click'); St.openStory(s.id); }
       hide();
     };

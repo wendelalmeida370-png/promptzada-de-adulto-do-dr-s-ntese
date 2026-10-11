@@ -94,7 +94,7 @@
   ] });
   K('cd-preso', { h: 'Presos', text: [
     c => `Os guardas foram mais rápidos. ${c.P}${c.PARTY ? ' e ' + c.PARTY : ''} ${c.PN ? 'foram presos' : 'foi pres' + c.o} ali mesmo, ao pé do cadafalso, e ${c.PN ? 'levados amarrados' : 'levad' + c.o + ' amarrad' + c.o}.`,
-    c => (c.PN ? `${c.P} chegou a tocar a corda — e então os guardas pegaram todos. Agora são eles que vão esperar a vez.` : `${c.P} chegou a tocar a corda — e então os guardas ${c.o === 'a' ? 'a' : 'o'} agarraram. Agora é ${c.ele} quem vai esperar a vez.`),
+    c => !c.ROPE ? null : (c.PN ? `${c.P} chegou a tocar a corda — e então os guardas pegaram todos. Agora são eles que vão esperar a vez.` : `${c.P} chegou a tocar a corda — e então os guardas ${c.o === 'a' ? 'a' : 'o'} agarraram. Agora é ${c.ele} quem vai esperar a vez.`),
   ] });
   K('cd-chamado-proprio', { h: 'O nome', text: [
     c => `Desta vez o arauto disse outro nome: ${c.P}${c.PARTY ? ' — e, com ' + c.ele + ', ' + c.PARTY : ''}. ${c.WHY}.`,

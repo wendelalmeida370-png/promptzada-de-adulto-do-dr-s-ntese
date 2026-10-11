@@ -744,8 +744,8 @@
     }
     c.save();
     c.translate(x, y);
-    // sleeping outside: lie down
-    if (v.sleeping && !v.inside) {
+    // sleeping outside: lie down (and the scenes' fallen: the same body on the ground, eyes open)
+    if ((v.sleeping && !v.inside) || act === 'lie') {
       c.fillStyle = '#8a6a4a'; c.beginPath(); c.ellipse(0, 0, 6.5, 2.4, 0, 0, TAU); c.fill();
       c.fillStyle = cloth; c.beginPath(); c.ellipse(0.8, -0.8, 4.5, 1.7, 0, 0, TAU); c.fill();
       c.fillStyle = v.skin; c.beginPath(); c.arc(-4.2, -1.3, 1.7, 0, TAU); c.fill();
@@ -791,7 +791,8 @@
     if (mounted) { line(c, -0.5, -3.8, 1.4, -1.8); line(c, 1.4, -1.8, 1.2, 0.2); }
     else if (act === 'sit' || act === 'pottery' || act === 'sittalk' || act === 'story') { line(c, -0.8, -3.4, 2.4, -3.2); line(c, 2.4, -3.2, 2.6, -0.2); if (!(v.lost && v.lost.leg)) { line(c, 0.6, -3.4, 3.4, -3); line(c, 3.4, -3, 3.6, 0); } if (act === 'pottery' || act === 'story') { c.fillStyle = '#6a4a30'; c.fillRect(-2.2, -1.6, 3.2, 1.6); } }
     else if (act === 'listen') { line(c, -1.8, -0.9, 1.9, -0.3); line(c, 1.7, -1, -1.4, -0.2); }
-    else if (act === 'kneel') { line(c, -0.6, -3.4, 0.9, -0.6); line(c, 0.9, -0.6, -1.9, -0.1); line(c, 0.6, -3.4, 2, -0.6); line(c, 2, -0.6, -0.9, -0.1); }
+    else if (act === 'hide') { line(c, -0.8, -2.6, 0.9, -0.9); line(c, 0.9, -0.9, -0.4, 0); line(c, 0.6, -2.6, 2.2, -1); line(c, 2.2, -1, 1.6, 0); }
+    else if (act === 'kneel' || act === 'cower' || act === 'beg' || act === 'weepk') { line(c, -0.6, -3.4, 0.9, -0.6); line(c, 0.9, -0.6, -1.9, -0.1); line(c, 0.6, -3.4, 2, -0.6); line(c, 2, -0.6, -0.9, -0.1); }
     else if (act === 'cross' || act === 'hangd') { line(c, -0.5, -3.8, -0.2, 0.4); line(c, 0.5, -3.8, 0.3, 0.5); }
     else if (act === 'milk' || act === 'skin') { line(c, -0.8, -2, 1.6, -1.6); line(c, 1.6, -1.6, 1.2, 0); line(c, 0.8, -2, 2.6, -1.2); line(c, 2.6, -1.2, 2.8, 0); c.fillStyle = '#6a4a30'; c.fillRect(-1.6, -1.4, 2.4, 1.4); }
     else {
@@ -800,8 +801,8 @@
       if (v.lost && v.lost.leg) { line(c, 0.85, -3.8, 0.85 - leg * 0.5, -0.1); line(c, -0.85, -3.8, -1.1, -2.6); c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; line(c, 1.9, -8.4, 2.3 + leg * 0.4, 0); c.lineWidth = 1.15; }
       else { line(c, -0.85, -3.8, -0.85 + leg, -0.1); line(c, 0.85, -3.8, 0.85 - leg, -0.1); }
     }
-    const bodyY = act === 'kneel' ? 2.8 : act === 'sit' || act === 'pottery' || act === 'sittalk' || act === 'story' ? 2.6 : act === 'listen' ? 3.4 : act === 'milk' || act === 'skin' ? 2 : act === 'sneak' ? 1 : 0;
-    const lean = act === 'kneel' ? 0.55 : (act === 'plant' || act === 'harvest' || act === 'gather' || act === 'fill' || act === 'dig' || act === 'shear' || act === 'feed' || act === 'skin') ? 0.35 : act === 'pick' ? -0.12 : act === 'pottery' || act === 'milk' ? 0.28 : act === 'sneak' ? 0.25 : act === 'mourn' || act === 'butcher' || act === 'weave' ? 0.18 : act === 'write' ? 0.1 : act === 'stagger' ? -0.32 : act === 'drag' ? -0.2 : act === 'wait' ? Math.sin(t * 1.3 + v.id) * 0.05 : act === 'story' ? Math.max(0, Math.sin(at * 1.1 + v.id)) * 0.12 : 0;
+    const bodyY = act === 'kneel' || act === 'beg' || act === 'weepk' ? 2.8 : act === 'cower' ? 3.4 : act === 'hide' ? 2.4 : act === 'sit' || act === 'pottery' || act === 'sittalk' || act === 'story' ? 2.6 : act === 'listen' ? 3.4 : act === 'milk' || act === 'skin' ? 2 : act === 'sneak' ? 1 : 0;
+    const lean = act === 'kneel' ? 0.55 : act === 'cower' ? 0.75 : act === 'weepk' ? 0.62 : act === 'beg' ? -0.08 : act === 'hide' ? 0.3 : act === 'weep' ? 0.22 : act === 'embrace' ? 0.16 : act === 'shove' ? 0.28 : act === 'struggle' ? 0.18 + Math.sin(at * 9 + v.id) * 0.06 : act === 'shout' ? -0.1 : act === 'reach' ? -0.12 : (act === 'plant' || act === 'harvest' || act === 'gather' || act === 'fill' || act === 'dig' || act === 'shear' || act === 'feed' || act === 'skin') ? 0.35 : act === 'pick' ? -0.12 : act === 'pottery' || act === 'milk' ? 0.28 : act === 'sneak' ? 0.25 : act === 'mourn' || act === 'butcher' || act === 'weave' ? 0.18 : act === 'write' ? 0.1 : act === 'stagger' ? -0.32 : act === 'drag' ? -0.2 : act === 'wait' ? Math.sin(t * 1.3 + v.id) * 0.05 : act === 'story' ? Math.max(0, Math.sin(at * 1.1 + v.id)) * 0.12 : 0;
     c.save();
     c.translate(0, bodyY - bob);
     if (lean) { c.translate(0, -3.8); c.rotate(lean); c.translate(0, 3.8); }
@@ -948,6 +949,30 @@
         const fl = Math.sin(t * 14 + v.id) * 0.4; c.fillStyle = '#ff9a2a'; c.beginPath(); c.moveTo(1.2, -15.8 - s2); c.quadraticCurveTo(1.8 + fl, -19.6 - s2, 2.6, -15.8 - s2); c.fill(); c.fillStyle = '#ffe07a'; c.beginPath(); c.arc(1.9, -16.6 - s2, 0.6, 0, TAU); c.fill(); break; }
       case 'read': line(c, 0, -8, 2.4, -9.6); arm(c, -0.4, -8, 1.6, -9.8); c.fillStyle = '#efe4c8'; c.fillRect(1.4, -12.2, 2.2, 3.2); c.fillStyle = '#b8a070'; c.fillRect(1.2, -12.4, 2.6, 0.6); c.fillRect(1.2, -9.2, 2.6, 0.6); c.fillStyle = 'rgba(80,60,40,0.6)'; for (let q = 0; q < 3; q++) c.fillRect(1.7, -11.4 + q * 0.8, 1.6, 0.25); break;
       case 'torchfwd': line(c, 0, -8, 3, -8.6); arm(c, -0.4, -8, -0.4, -4.4); c.strokeStyle = '#5a3a22'; c.lineWidth = 0.7; line(c, 2.8, -8.4, 4.6, -10.8); c.fillStyle = '#ff9a2a'; c.beginPath(); c.moveTo(4.2, -10.6); c.quadraticCurveTo(5 + Math.sin(t * 15) * 0.4, -14, 5.6, -10.6); c.fill(); break;
+      case 'point': line(c, 0, -8, 4.4, -8.6); arm(c, -0.4, -8, -0.6, -4.4); break;
+      case 'shout': { const s2 = Math.abs(Math.sin(at * 7)) * 0.8; line(c, 0, -8, 1.6, -12.8 - s2); arm(c, -0.4, -8, 2.6, -8.6); c.fillStyle = v.skin; c.beginPath(); c.arc(1.6, -13.2 - s2, 0.75, 0, TAU); c.fill(); break; }
+      case 'cower': line(c, 0, -8, 1.4, -10.8); arm(c, -0.4, -8, 0.6, -11); break;
+      case 'beg': { const s2 = Math.sin(at * 3) * 0.5; line(c, 0, -8, 2.8, -10.6 + s2); arm(c, -0.4, -8, 2.2, -10.9 - s2); break; }
+      case 'weep': case 'weepk': line(c, 0, -8, 1.3, -10.2); arm(c, -0.4, -8, 0.9, -10.4); break;
+      case 'embrace': line(c, 0, -8, 3, -8.4); arm(c, -0.4, -8, 2.8, -7.4); break;
+      case 'reach': { const s2 = Math.sin(at * 5) * 0.4; line(c, 0, -8, 1.2 + s2, -14.6); arm(c, -0.4, -8, -0.4, -4.4); break; }
+      case 'cut': { // a knife at the rope (or the bonds): quick strokes
+        const k = (at * 2.6) % 1; const up = k < 0.5 ? k * 2 : 2 - k * 2;
+        line(c, 0, -8, 2.4, -10.8 - up * 2.6); arm(c, -0.4, -8, 1.8, -12 + up); c.fillStyle = '#c8ccd4'; c.save(); c.translate(2.4, -10.8 - up * 2.6); c.rotate(-0.6); c.fillRect(-0.25, -2.6, 0.5, 2.6); c.restore(); break;
+      }
+      case 'lantern': { line(c, 0, -8, 2.8, -7.8); arm(c, -0.4, -8, -0.4, -4.4); c.strokeStyle = '#4a3a2a'; c.lineWidth = 0.4; line(c, 2.8, -7.8, 2.8, -6.8); c.fillStyle = '#3a2a1a'; c.fillRect(1.9, -6.9, 1.8, 2.4); c.fillStyle = '#ffd56a'; c.fillRect(2.2, -6.5, 1.2, 1.6); break; }
+      case 'wave': { const s2 = Math.sin(at * 9) * 1.2; line(c, 0, -8, 1.4 + s2, -13); arm(c, -0.4, -8, -0.4, -4.4); break; }
+      case 'swear': line(c, 0, -8, 1.2, -12.8); arm(c, -0.4, -8, 0.6, -7.2); c.fillStyle = v.skin; c.fillRect(0.7, -14, 1, 1.4); break;
+      case 'brandish': { // the blade raised high: an oath, a call to arms
+        line(c, 0, -8, 1, -13.4); arm(c, -0.4, -8, -1.6, -6); c.strokeStyle = '#5a3a22'; c.lineWidth = 0.8; line(c, 0.8, -13, 1.2, -14.4); c.fillStyle = '#d4d8e0'; c.beginPath(); c.moveTo(0.6, -14.4); c.lineTo(1.6, -14.4); c.lineTo(1.3, -21); c.closePath(); c.fill(); c.fillStyle = 'rgba(255,255,255,0.6)'; c.fillRect(1, -20, 0.3, 5); break;
+      }
+      case 'draw': { line(c, 0, -8, 3, -8.8); arm(c, -0.4, -8, -0.6, -4.6); c.fillStyle = '#d4d8e0'; c.beginPath(); c.moveTo(2.8, -9.4); c.lineTo(3.4, -9.4); c.lineTo(7.4, -12.6); c.closePath(); c.fill(); c.strokeStyle = '#5a3a22'; c.lineWidth = 0.8; line(c, 2.4, -8.6, 3.2, -9.4); break; }
+      case 'struggle': { const s2 = Math.sin(at * 13 + v.id) * 0.8; line(c, 0, -8, 3 + s2, -9 + s2 * 0.5); arm(c, -0.4, -8, 2.8 - s2, -7.6); break; }
+      case 'shove': line(c, 0, -8, 3.6, -8.6); arm(c, -0.4, -8, 3.4, -7.6); break;
+      case 'gift': line(c, 0, -8, 2.8, -6.6); arm(c, -0.4, -8, 2.6, -6.2); c.fillStyle = v.giftCol || '#e8b83a'; c.beginPath(); c.arc(3.2, -6.8, 0.8, 0, TAU); c.fill(); break;
+      case 'unmask': line(c, 0, -8, 0.6, -12.4); arm(c, -0.4, -8, -0.4, -4.4); break;
+      case 'support': line(c, 0, -8, -2.6, -9.6); arm(c, -0.4, -8, 1.6, -5.8); break;
+      case 'catch': line(c, 0, -8, 3, -6.2); arm(c, -0.4, -8, 2.8, -5.6); break;
       case 'bound': { line(c, 0, -8, 1.6, -5.4); arm(c, -0.4, -8, 1.2, -5.2); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.55; c.beginPath(); c.arc(1.4, -5.3, 0.8, 0, TAU); c.stroke(); line(c, 1.6, -4.6, 3.2 + Math.sin(t * 3 + v.id) * 0.6, -1.5); break; }
       default: {
         const sw2 = moving ? Math.sin(ph) * 1.1 : 0;
@@ -995,6 +1020,8 @@
     c.beginPath(); c.arc(-0.2, hy - 0.5, 2.1, Math.PI * 0.95, Math.PI * 2.05); c.fill();
     if (v.g === 'f' && age >= 5) { c.beginPath(); c.moveTo(-2.1, hy - 0.4); c.quadraticCurveTo(-2.9, hy + 2.6, -1.4, hy + 3.4); c.lineTo(-0.9, hy + 0.2); c.fill(); }
     c.fillStyle = '#2a1c14'; c.fillRect(0.9, hy - 0.2, 0.55, 0.65);
+    if (act === 'shout' || act === 'boo' || act === 'writhe' || act === 'scream') { c.fillStyle = '#3a1410'; c.beginPath(); c.ellipse(1.25, hy + 1.1, 0.45, 0.6, 0, 0, TAU); c.fill(); }
+    else if ((act === 'weep' || act === 'weepk' || act === 'mourn') && Math.sin(at * 3 + v.id) > 0) { c.fillStyle = 'rgba(120,180,240,0.9)'; c.fillRect(1.05, hy + 0.6 + (at * 2 % 1.4), 0.35, 0.6); }
     if (v.g === 'm' && age >= 25 && v.id % 3 === 0) { c.fillStyle = hair; c.beginPath(); c.arc(0.4, hy + 1.2, 1.5, 0.1, Math.PI - 0.3); c.fill(); }
     // a water jar on the head
     if (v.carry && v.carry.jar) { const jy = hy - 3.4; c.fillStyle = '#b8704a'; c.beginPath(); c.ellipse(0.4, jy, 1.9, 1.5, 0, 0, TAU); c.fill(); c.fillRect(-0.3, jy - 2.4, 1.4, 1.3); c.fillStyle = '#8a4a2a'; c.fillRect(-0.55, jy - 2.7, 1.9, 0.5); c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(-0.9, jy - 0.7, 0.6, 0.9); }
@@ -1040,6 +1067,8 @@
     // baby on the back
     if (v.babyOn) { c.fillStyle = '#f4efe3'; c.beginPath(); c.ellipse(-2.6, -8, 1.5, 2, 0.3, 0, TAU); c.fill(); c.fillStyle = v.babyOn.skin; c.beginPath(); c.arc(-2.7, -9.8, 1.1, 0, TAU); c.fill(); }
     c.restore();
+    // a lantern in the hand (the scenes give them out at night)
+    if (v.lantern && act !== 'lantern') { c.strokeStyle = '#4a3a2a'; c.lineWidth = 0.4; line(c, 2.4, -4.6, 2.4, -3.8); c.fillStyle = '#3a2a1a'; c.fillRect(1.6, -3.9, 1.6, 2.2); c.fillStyle = '#ffd56a'; c.fillRect(1.9, -3.5, 1, 1.4); }
     // torch at night
     if (v.torch) {
       c.strokeStyle = '#6a4a2a'; c.lineWidth = 0.7; line(c, 2.2, -6, 3, -12);
