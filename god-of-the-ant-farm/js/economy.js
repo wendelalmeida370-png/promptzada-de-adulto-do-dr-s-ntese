@@ -310,9 +310,10 @@
   };
   // the smith forges what the realm needs most: weapons in war, tools in peace
   function forgeOut(f) {
-    const war = G.Fac.enemiesOf(f.id).length > 0; const pop = G.Fac.pop(f.id);
+    // (in a crisis, before any war is declared, the smiths already work for it — the levy will need weapons)
+    const war = G.Fac.enemiesOf(f.id).length > 0 || (G.Wars && G.Wars.preparing(f.id)); const pop = G.Fac.pop(f.id);
     const soldiers = G.War ? G.War.warriorsOf(f.id) : 0;
-    const wantArms = war ? soldiers * 1.5 + 10 : soldiers * 0.8 + 4;
+    const wantArms = war ? Math.max(soldiers * 1.5 + 10, pop * 0.12) : soldiers * 0.8 + 4;
     return f.stock.armas < wantArms && (war || f.stock.ferramentas >= pop * 0.15) ? 'armas' : 'ferramentas';
   }
   const mainIn = R => Object.keys(R.in)[0];

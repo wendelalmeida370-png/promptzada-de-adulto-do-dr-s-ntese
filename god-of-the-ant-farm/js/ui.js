@@ -131,7 +131,7 @@
     tech: ['tech', 'blue'], city: ['city', 'gold'], ship: ['ship', 'blue'], naval: ['ship', 'red'], cart: ['cart', 'gold'], wall: ['wall', 'grey'], road: ['road', 'gold'],
     aqueduct: ['aqueduct', 'blue'], wonder: ['wonder', 'gold'], siege: ['ram', 'red'], sacrifice: ['sacrifice', 'red'], lore: ['book', 'gold'], prophecy: ['word', 'gold'], cave: ['cave', 'orange'], paint: ['cave', 'red'],
     mountain: ['mountain', 'brown'], wave: ['wave', 'blue'], sea: ['wave', 'blue'], saga: ['saga', 'gold'], secret: ['eye', 'purple'], scroll: ['book', 'gold'], rumor: ['word', 'grey'],
-    fest: ['fest', 'gold'], coin: ['scale', 'gold'], theft: ['chain', 'red'], army: ['sword', 'red'], battle: ['sword', 'red'], general: ['crown', 'red'], plague: ['heal', 'red'],
+    fest: ['fest', 'gold'], coin: ['scale', 'gold'], theft: ['chain', 'red'], army: ['sword', 'red'], battle: ['sword', 'red'], tension: ['eye', 'orange'], flee: ['migrate', 'orange'], general: ['crown', 'red'], plague: ['heal', 'red'],
     curral: ['wolves', 'green'], estabulo: ['wolves', 'green'], acougue: ['hammer', 'gold'], tecelagem: ['hammer', 'gold'], mina: ['stone', 'grey'], forja: ['hammer', 'gold'], ourives: ['hammer', 'gold'],
     olaria: ['hammer', 'gold'], feira: ['scale', 'gold'], taverna: ['hammer', 'gold'], administracao: ['scroll', 'gold'], coletoria: ['scale', 'gold'], mercado_negro: ['chain', 'grey'], estatua: ['star', 'gold'],
   };
@@ -230,6 +230,7 @@
       else if (b.dataset.act === 'cave-view') G.Caves.view(+b.dataset.id);
       else if (b.dataset.act === 'cave-panel') { const cv = G.Caves.get(+b.dataset.id); if (cv) UI.select(G.Caves.selectCave(cv)); }
       else if (b.dataset.act === 'saga') G.Stories.openStory(+b.dataset.id);
+      else if (b.dataset.act === 'wz-army' && G.WarsUI) G.WarsUI.openArmy(+b.dataset.id);
     });
     $('#modal-bg').addEventListener('click', e => { if (e.target.id === 'modal-bg') UI.closeModal(); });
     $('#modal').addEventListener('click', e => {
@@ -273,6 +274,7 @@
       else if (m === 'yes') { const f = UI._confirm; UI.closeModal(); f && f(); }
       else if (m === 'bio') UI.openBio(+b.dataset.id);
       else if (m === 'tree') UI.openTree(+b.dataset.id);
+      else if (m.startsWith('wz-') && G.WarsUI) G.WarsUI.click(m, b);
       else if (m.startsWith('saga-')) G.Stories.uiAct(m, b);
       else if (m === 'person') { const p = G.person(+b.dataset.id); if (p) { UI.closeModal(); UI.select(p); if (!p.dead) G.Render.panTo(p.x, p.y); } }
     });
@@ -576,7 +578,7 @@
       ${G.Stories ? G.Stories.personLine(v) : ''}
       <div class="family">${fam.map(x => `<div>${x}</div>`).join('') || '<div class="muted">Sem laços familiares ainda.</div>'}</div>
       ${(() => { const mem = G.Life ? G.Life.bioList(v).slice(-3).reverse() : []; return mem.length ? `<div class="memories"><label>Memórias</label>${mem.map(e => `<div><em>${e.age} ${e.age === 1 ? 'ano' : 'anos'}</em>${esc(e.txt)}</div>`).join('')}</div>` : ''; })()}
-      <div class="doing">Atualmente: <b>${esc(G.Vg.taskText(v))}</b></div>
+      <div class="doing">Atualmente: <b>${esc(G.Vg.taskText(v))}</b></div>${G.WarsUI ? G.WarsUI.personLine(v) : ''}
       <div class="meta">${set ? esc(set.name) : ''}${v.skill ? ` · aprendeu o ofício de ${esc((G.ROLE[v.skill] || [v.skill])[0].toLowerCase())} ainda criança` : ''}${(() => { const d = G.Pets && G.Pets.dogOf(v); return d ? ` · cão: ${esc(d.named || 'sem nome')}` : ''; })()}${G.Eco && G.Eco.personLine(v) ? ' · ' + esc(G.Eco.personLine(v)) : ''}${home ? (() => { const hn = G.Village.buildName(home).toLowerCase(); return ' · mora n' + (G.gen(hn) === 'a' ? 'uma ' : 'um ') + esc(hn); })() : ''}${feats.length ? '<br>Contribuiu com ' + feats.join(', ') : ''}</div>
       <div class="btns"><button data-act="follow" class="${following ? 'on' : ''}">${ICON.eye} ${following ? 'Seguindo' : 'Seguir'}</button><button data-act="tree">${ICON.tree} Família</button><button data-act="bio">${ICON.book} Biografia</button></div>`;
   }
@@ -657,7 +659,7 @@
   UI.openPause = function () {
     UI.openModal(`<h2>Pausa divina</h2><p class="muted">O mundo é salvo automaticamente.</p>
       <div class="mlist"><button class="primary" data-m="resume">Continuar</button><button data-m="save">${ICON.save} Salvar agora</button><button data-m="load">Carregar último save</button><button data-m="new">Novo mundo</button><button data-m="help">Como jogar</button><button data-m="mainmenu">Menu principal</button></div>
-      <div class="keys"><span><kbd>Espaço</kbd> pausar</span><span><kbd>1</kbd>–<kbd>8</kbd> poderes</span><span><kbd>Tab</kbd> aba de poderes</span><span><kbd>R</kbd> reinos</span><span><kbd>L</kbd> livro do mundo</span><span><kbd>WASD</kbd> mover</span><span><kbd>F</kbd> seguir</span><span><kbd>H</kbd> crônica</span><span><kbd>C</kbd> modo cinema</span><span><kbd>P</kbd> modo foto</span><span><kbd>+</kbd>/<kbd>−</kbd> velocidade</span></div>`, 'small');
+      <div class="keys"><span><kbd>Espaço</kbd> pausar</span><span><kbd>1</kbd>–<kbd>8</kbd> poderes</span><span><kbd>Tab</kbd> aba de poderes</span><span><kbd>R</kbd> reinos</span><span><kbd>X</kbd> guerras</span><span><kbd>L</kbd> livro do mundo</span><span><kbd>WASD</kbd> mover</span><span><kbd>F</kbd> seguir</span><span><kbd>H</kbd> crônica</span><span><kbd>C</kbd> modo cinema</span><span><kbd>P</kbd> modo foto</span><span><kbd>+</kbd>/<kbd>−</kbd> velocidade</span></div>`, 'small');
   };
   UI.openSound = function () {
     const A = G.Audio;
@@ -703,6 +705,7 @@
       <li><b>Guerra mundial</b> (muito rara): quando quase todos se conhecem e as rixas se acumulam, o mundo se divide em blocos — pelo ouro, por uma coroa, pela fé, por sangue antigo, pela fome, contra um império forte demais, ou todos contra todos. Aliados não fazem paz separada; só a queda de um bloco ou o cansaço de todos traz a paz geral.</li>
       <li>Ninguém festeja com o inimigo às portas: em cidade sitiada ou em batalha a festa do ano não acontece — mas depois de uma defesa vencida vem a <b>noite da vitória</b>.</li>
       <li>Abra o painel <b>Reinos</b> (<kbd>R</kbd> ou o chip do povo no topo) para ver líderes, relações, exércitos, saberes e o mapa político. <kbd>B</kbd> mostra as fronteiras.</li>
+      <li>As <b>guerras</b> têm causa, nome e etapas: a <b>tensão</b> sobe antes (patrulhas, ferreiros de noite, celeiros cheios), o reino <b>convoca</b> e reúne o exército, que marcha com carroças, <b>acampa</b> à noite, luta <b>batalhas com nome</b>, <b>cerca</b> cidades muradas e volta para casa; o cansaço leva à <b>paz</b>, com tratado. Painel <b>Guerras</b>: <kbd>X</kbd> (ou o botão no painel Reinos). Quando dois exércitos formam as linhas, o aviso <b>Batalha iminente — Assistir</b> aparece.</li>
       </ul><h4>Vida na cidade e festas</h4><ul>
       <li>Cada pessoa tem ofício e local de trabalho: pastores, tecelões, ferreiros, mineiros, ourives, oleiros, mercadores, feirantes, taverneiros, escribas, coletores de impostos — e contrabandistas. Clique num edifício para ver quem trabalha nele e o que produz.</li>
       <li>No <b>fim da tarde</b> as famílias se sentam à porta de casa em volta de um foguinho, jantam, se abraçam, e os pais jogam os pequenos para o alto. Os <b>velhos contam histórias</b> às crianças junto à fogueira — histórias que aconteceram de verdade: estão na Crônica, nas lendas ou na vida de quem conta.</li>
@@ -939,7 +942,7 @@
       <div class="realms-top"><canvas id="realm-map" width="320" height="200"></canvas>
       <div class="realms-sum">${G.WorldWar ? G.WorldWar.summary() : ''}
         <div><b>${all.length}</b> ${all.length === 1 ? 'povo vivo' : 'povos vivos'}${dead.length ? ` · <b>${dead.length}</b> ${dead.length > 1 ? 'caídos' : 'caído'}` : ''}</div>
-        <div><b>${st.wars || 0}</b> guerras · <b>${st.battles || 0}</b> batalhas · <b>${st.warDeaths || 0}</b> mortos em combate</div>
+        <div><b>${st.wars || 0}</b> guerras · <b>${st.battles || 0}</b> batalhas · <b>${st.warDeaths || 0}</b> mortos em combate${G.Wars ? ` <button class="wz-open" data-m="wz-open">${ICON.sword} Guerras${G.Wars.active().length ? ' <b>' + G.Wars.active().length + '</b>' : ''}</button>` : ''}</div>
         <div><b>${st.conquests || 0}</b> conquistas · <b>${st.massacres || 0}</b> massacres · <b>${st.captives || 0}</b> capturados · <b>${st.freed || 0}</b> libertados</div>
         <div><b>${st.secessions || 0}</b> rachas · <b>${st.coups || 0}</b> golpes · <b>${st.revolutions || 0}</b> revoluções · <b>${st.executions || 0}</b> execuções</div>
         <div class="muted">Clique num povo para acompanhá-lo no HUD. <kbd>R</kbd> abre este painel, <kbd>B</kbd> mostra/oculta as fronteiras.</div>

@@ -15,6 +15,14 @@
   Wr.clock = 0;
   Wr.warFacs = new Set();
   Wr.fighters = []; Wr.escapers = [];
+  // the fighters by place: a coarse grid rebuilt with the list, so that "who is near me" does not ask everyone
+  const GRID = new Map(); const CS = 8;
+  function gridBuild() { GRID.clear(); for (const o of Wr.fighters) { const k = ((o.x / CS) | 0) * 4096 + ((o.y / CS) | 0); let a = GRID.get(k); if (!a) GRID.set(k, a = []); a.push(o); } }
+  Wr.fightersNear = function (x, y, r) {
+    const out = []; const r1 = r + 1.5; const x0 = Math.max(0, ((x - r1) / CS) | 0), x1 = ((x + r1) / CS) | 0, y0 = Math.max(0, ((y - r1) / CS) | 0), y1 = ((y + r1) / CS) | 0;
+    for (let cx = x0; cx <= x1; cx++) for (let cy = y0; cy <= y1; cy++) { const a = GRID.get(cx * 4096 + cy); if (a) for (const o of a) out.push(o); }
+    return out;
+  };
   Wr.armory = new Set();
   Wr.smith = new Set();
   let nextBand = 1;
@@ -55,6 +63,7 @@
   Wr.penOf = function (setId) { for (const b of G.S.buildings.values()) if (b.type === 'cercado' && b.built && b.set === setId) return b; return null; };
   Wr.captivesOf = function (f) { let n = 0; for (const v of G.S.villagers.values()) if (v.captive && fid(v) === f) n++; return n; };
   Wr.captivesBetween = function (a, b) { let n = 0; for (const v of G.S.villagers.values()) if (v.captive && ((v.captive.from === a && fid(v) === b) || (v.captive.from === b && fid(v) === a))) n++; return n; };
+  Wr.bandsOf = f => { const out = []; for (const b of Wr.bands.values()) if (b.fac === f) out.push(b); return out; };
   Wr.warriorsOf = function (f) { let n = 0; for (const v of G.S.villagers.values()) if (v.role === 'guerreiro' && !v.captive && fid(v) === f) n++; return n; };
   function adultFree(o) { return !o.captive && o.age >= 16 && o.age < 62; }
 
@@ -117,6 +126,7 @@
     let defenders = 0; for (const v of S.villagers.values()) if (v.set === best.id && adultFree(v)) defenders++;
     let size;
     if (G.Army) size = G.Army.size(f, cands, best, opts, pe, defenders);
+    if (opts.raid && opts.size) size = Math.min(size, opts.size, cands.length);
     else { size = Math.max(warriors, Math.round(cands.length * (0.22 + pe.agg * 0.25)), Math.min(4, cands.length)); if (opts.size) size = opts.size; size = Math.min(size, 18, cands.length); }
     if (size < 3) return null;
     // only fools attack a much larger village (unless a god is pushing them)
@@ -133,7 +143,7 @@
     const b = {
       id: nextBand++, fac: f.id, enemy: enemy.id, set: best.id, from: from.id, goal, st: 'reunir', t: 0, life: 0,
       members: members.map(v => v.id), start: members.length, kills: 0, lost: 0, captives: 0, loot: { food: 0, wood: 0, stone: 0 }, burned: 0, quiet: 0,
-      rx: rally[0], ry: rally[1], tx: stage[0], ty: stage[1], fury: !!opts.fury,
+      rx: rally[0], ry: rally[1], tx: stage[0], ty: stage[1], fury: !!opts.fury, raid: !!opts.raid,
     };
     Wr.bands.set(b.id, b);
     members.forEach((v, k) => { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'band', band: b.id, pri: 3.2, kind: 'band', flag: k === 0 }); G.Life && G.Life.bio(v, 'war', enemy.name, best.name); });
@@ -179,7 +189,7 @@
     log(`${b.retreat ? 'Derrotado, o' : 'O'} ataque de ${f.name}${set ? ' a ' + set.name : en ? ' contra ' + en.name : ''} terminou${bits.length ? ': ' + bits.join(', ') : ''}.`, 'war', set ? set.cx : undefined, set ? set.cy : undefined);
   };
   Wr.disbandAll = function () { for (const b of [...Wr.bands.values()]) Wr.disband(b, true); };
-  Wr.onWar = function (a, b) { Wr.warFacs.add(a.id); Wr.warFacs.add(b.id); };
+  Wr.onWar = function (a, b) { Wr.warFacs.add(a.id); Wr.warFacs.add(b.id); G.Wars && G.Wars.ensure(a, b); };
   Wr.onPeace = function (a, b) {
     for (const band of [...Wr.bands.values()]) if ((band.fac === a.id && band.enemy === b.id) || (band.fac === b.id && band.enemy === a.id)) { band.st = 'retorno'; band.t = 0; }
   };
@@ -189,24 +199,25 @@
     const S = G.S;
     b.t += dt; b.life += dt;
     const before = b.members.length;
-    b.members = b.members.filter(id => { const v = S.villagers.get(id); return v && v.task && v.task.type === 'band' && v.task.band === b.id && fid(v) === b.fac; });
+    b.members = b.members.filter(id => { const v = S.villagers.get(id); if (!v || !v.task || fid(v) !== b.fac) return false; if (v.task.type === 'band') return v.task.band === b.id; const pt = v.task.type === 'scene' && G.Scene && G.Scene.prevTask(v); return !!pt && pt.type === 'band' && pt.band === b.id; });
     for (let k = b.members.length; k < before; k++) { /* casualties counted in noteDeath */ }
     const f = G.Fac.get(b.fac), en = G.Fac.get(b.enemy), set = S.settlements.get(b.set);
     const alive = b.members.length;
     if (!f || !f.alive || !alive) { Wr.disband(b); return; }
     // hosts follow their general's plan; the old ways take over for plunder and the road home
-    if (b.army && b.life < 420 && G.Army.bandTick(b, dt, set, f, en)) return;
-    if (b.goal === 'defesa') { if (b.life > 300 || !set || set.fac !== b.fac) Wr.disband(b, true); return; }
+    // (a campaign army is not a raid: it is not bound by the raiders' clock)
+    if (b.army && (b.life < 420 || b.campaign) && G.Army.bandTick(b, dt, set, f, en)) return;
+    if (b.goal === 'defesa') { if ((b.life > 300 && !b.campaign) || !set || set.fac !== b.fac) Wr.disband(b, true); return; }
     if (b.st !== 'retorno' && (!en || !en.alive || !hostile(b.fac, b.enemy) || !set || set.fac !== b.enemy)) { b.st = 'retorno'; b.t = 0; }
-    if (b.life > 260) { Wr.disband(b); return; }
+    if (b.life > 260 && !b.campaign) { Wr.disband(b); return; }
     const lead = S.villagers.get(b.members[0]);
     switch (b.st) {
       case 'reunir': {
         let near = 0; for (const id of b.members) { const v = S.villagers.get(id); if (G.dist(v.x, v.y, b.rx, b.ry) < 3.5) near++; }
         if (near >= alive * 0.75 || b.t > 28) {
           b.st = 'marcha'; b.t = 0;
-          log(`${f.name} marcha contra ${set.name} com ${alive} guerreiros, ${Wr.GOAL[b.goal]}.`, 'war', b.rx, b.ry);
-          G.UI && G.UI.notice(`${f.name} marcha contra ${set.name}!`, 'war');
+          log(b.raid ? `Uma incursão de ${f.name}: ${alive} guerreiros partem contra ${set.name}, ${Wr.GOAL[b.goal]}.` : `${f.name} marcha contra ${set.name} com ${alive} guerreiros, ${Wr.GOAL[b.goal]}.`, 'war', b.rx, b.ry);
+          G.UI && G.UI.notice(b.raid ? `Incursão de ${f.name} contra ${set.name}` : `${f.name} marcha contra ${set.name}!`, 'war');
           G.Audio && G.Audio.at(b.rx, b.ry, 'horn', true);
         }
         break;
@@ -231,16 +242,20 @@
           if (G.dist2(o.x, o.y, set.cx, set.cy) > R2) continue;
           if (o.task && (o.task.type === 'flee' || o.task.type === 'hide')) continue;
           if (o.inside) continue;
+          // (against an army, only those who fight count: the soldiers, the warriors, whoever has taken up arms)
+          if (b.campaign && !(o.role === 'guerreiro' || (o.task && (o.task.type === 'combat' || o.task.type === 'band')))) continue;
           defenders++;
         }
         let fightingUs = false; for (const id of b.members) { const v = S.villagers.get(id); if (v.task.foe) { fightingUs = true; break; } }
         G.Siege && G.Siege.bandSiege(b, set, dt);
         if (defenders <= Math.floor(alive / 6) && !fightingUs && !b.siege) b.quiet += dt; else b.quiet = Math.max(0, b.quiet - dt * 2);
         set.alarmT = Math.max(set.alarmT || 0, 5);
-        if (alive < b.start * 0.4 || (defenders > alive * 2.2 && b.t > (b.siege ? 60 : 10))) {
+        const besieging = b.campaign && b.army && b.army.phase === 'cerco';
+        if (alive < b.start * 0.4 || (defenders > alive * 2.2 && b.t > (b.siege ? 60 : 10) && !besieging)) {
           b.st = 'retorno'; b.t = 0; b.retreat = true;
           log(`${f.name} recuou de ${set.name}.`, 'war', set.cx, set.cy);
           en.st.battles++;
+          G.Wars && G.Wars.assaultEnd(b, false);
           break;
         }
         if (b.goal === 'conquista' && b.quiet > 6 && alive >= 3) { Wr.conquer(set, b); return; }
@@ -251,7 +266,9 @@
         }
         let done = true; for (const id of b.members) { const v = S.villagers.get(id); if (!v.carry && !v.task.gotCaptive) { done = false; break; } }
         const stock = en.stock.food + en.stock.wood + en.stock.stone;
-        if ((b.quiet > 5 && (done || stock < 3)) || b.t > (b.siege ? 170 : 95) || (b.goal === 'conquista' && b.t > (b.siege ? 180 : 100))) { b.st = 'retorno'; b.t = 0; }
+        // (a campaign's assault goes on as long as the fighting does; a siege, as long as the general wills)
+        const lim = besieging ? 1e9 : b.campaign ? 280 : b.siege ? 170 : 95;
+        if ((b.quiet > 5 && (done || stock < 3)) || b.t > lim || (b.goal === 'conquista' && b.t > (b.campaign ? lim : b.siege ? 180 : 100))) { b.st = 'retorno'; b.t = 0; G.Wars && G.Wars.assaultEnd(b, false); }
         break;
       }
       case 'retorno':
@@ -294,15 +311,16 @@
       const assim = G.Civ.t(f.id, 'assimilate') > 1.5;
       if ((pe.cru > (assim ? 0.75 : 0.5) || G.Politics.tyr(f)) && !(assim && G.R() < 0.6)) { Wr.enslave(v, old.id, set.id); enslaved++; }
     }
-    const garrison = b.members.slice(0, Math.ceil(b.members.length * 0.4));
-    for (const id of garrison) { const v = S.villagers.get(id); if (v) { v.set = set.id; v.home = 0; } }
+    G.Wars && G.Wars.assaultEnd(b, true);
+    G.Wars && G.Wars.onConquer(set, b, old);
+    if (!b.campaign) { const garrison = b.members.slice(0, Math.ceil(b.members.length * 0.4)); for (const id of garrison) { const v = S.villagers.get(id); if (v) { v.set = set.id; v.home = 0; } } }
     old.st.lost++; f.st.conquests++; old.weariness = Math.min(100, old.weariness + 30);
     S.stats.conquests = (S.stats.conquests || 0) + 1;
     const extra = [enslaved ? `${enslaved} foram feitos cativos` : '', killed ? `${killed} foram passados a fio de espada` : '', freed ? `${freed} cativos de ${f.name} foram libertados` : ''].filter(Boolean);
     log(`${set.name} caiu! Agora pertence a ${f.name}.${extra.length ? ' ' + G.cap(extra.join('; ')) + '.' : ''}`, 'war', set.cx, set.cy);
     G.UI && G.UI.toast('Conquista', `${f.name} tomou ${set.name}.`, 'war');
     G.Politics.earn(f, G.Politics.ruler(f), 'conquistador');
-    Wr.disband(b, true);
+    if (b.campaign && G.Wars) G.Wars.afterConquest(b, set); else Wr.disband(b, true);
     G.Fac.updateTerritory();
     if (!G.Fac.settlementsOf(old.id).length) G.Politics.extinct(old, f);
     else if (wasCapital) { old.capital = 0; const c = G.Fac.capitalOf(old.id); if (c) log(`${old.name} perdeu sua capital e se reagrupou em ${c.name}.`, 'war', c.cx, c.cy); }
@@ -326,6 +344,7 @@
     G.FX && G.FX.poof(o.x, o.y, '#8a7a5a');
     const f = G.Fac.get(fid(captor)); if (f) f.st.captives++;
     if (b) b.captives++;
+    G.Wars && G.Wars.onCapture(o, captor);
     S.stats.captives = (S.stats.captives || 0) + 1;
     const r = G.Fac.rel(from, fid(captor)); if (r) r.grudge = Math.min(100, r.grudge + 6);
     if (!S.milestones.firstCaptive) G.Village.milestone('firstCaptive', 'Correntes', `${f ? f.name : 'Um povo'} fez seus primeiros cativos.`, 'chain');
@@ -667,7 +686,7 @@
       if (!o.captive || !o.task || o.task.type !== 'escape' || fid(o) !== fv) continue;
       const d = G.dist2(v.x, v.y, o.x, o.y); if (d < be) { be = d; esc = o; }
     }
-    for (const o of Wr.fighters) {
+    for (const o of Wr.fightersNear(v.x, v.y, guard ? 16 : 8)) {
       if (o.inside || o.held || o.air || o.captive || !S.villagers.has(o.id)) continue;
       if (unreachableSpot(o)) continue;
       if (!fighting(o)) continue;
@@ -981,8 +1000,9 @@
   // ------------------------------ battle reports ------------------------------
   Wr.noteDeath = function (v, cause) {
     const S = G.S; const f0 = fid(v);
-    const f = G.Fac.get(f0); if (f) { f.st.deaths = (f.st.deaths || 0) + 1; f.weariness = Math.min(100, f.weariness + 3); }
     const killer = v.lastBy ? S.villagers.get(v.lastBy) : null; const kf = killer ? fid(killer) : 0;
+    const f = G.Fac.get(f0); if (f) { f.st.deaths = (f.st.deaths || 0) + 1; if (!G.Wars) f.weariness = Math.min(100, f.weariness + 3); }
+    G.Wars && G.Wars.onDeath(v, killer, cause);
     if (kf && kf !== f0) { const r = G.Fac.rel(kf, f0); if (r) r.grudge = Math.min(100, r.grudge + 2); }
     for (const b of Wr.bands.values()) if (b.fac === f0 && b.members.includes(v.id)) b.lost++;
     G.Army && G.Army.onDeath(v, killer);
@@ -999,6 +1019,7 @@
       if (Wr.clock - b.last <= 18) continue;
       const entries = Object.entries(b.dead); const tot = entries.reduce((a, [, n]) => a + n, 0);
       const place = G.Village.nearSettlementName(b.x, b.y);
+      if (G.Wars && G.Wars.covers(b.x, b.y, b.last)) { S.stats.battles = (S.stats.battles || 0) + (tot > 1 ? 1 : 0); continue; }
       if (tot === 1) { if (!b.notable) log(`${b.names[0]} morreu em combate${place ? ' perto de ' + place : ''}.`, 'war', b.x, b.y); }
       else {
         const parts = entries.map(([id, n]) => { const f = G.Fac.get(+id); return `${n} de ${f ? f.name : '?'}`; });
@@ -1037,6 +1058,7 @@
       if (S.divinePeace > 0) continue;
       let busy = false; for (const b of Wr.bands.values()) if (b.fac === f.id && b.goal !== 'defesa') { busy = true; break; }
       if (busy || f.attackCD > 0) continue;
+      if (G.Wars && G.Wars.handles(f)) continue; // a war with aims, armies and campaigns: G.Wars plans it
       if (f.weariness > 85 && G.R() < 0.7) continue;
       const en = enemies.sort((a, b) => { const ca = G.Fac.capitalOf(a.id), cb = G.Fac.capitalOf(b.id), cf = G.Fac.capitalOf(f.id); return (ca && cf ? G.dist(ca.cx, ca.cy, cf.cx, cf.cy) : 999) - (cb && cf ? G.dist(cb.cx, cb.cy, cf.cx, cf.cy) : 999); })[0];
       if (!Wr.launch(f, en)) f.attackCD = G.rr(30, 60);
@@ -1067,6 +1089,7 @@
       }
       Wr.fighters.length = 0; Wr.escapers.length = 0;
       if (Wr.warFacs.size) for (const v of S.villagers.values()) { if (v.captive) { if (v.task && v.task.type === 'escape') Wr.escapers.push(v); } else if (v.age >= 14 && fighting(v)) Wr.fighters.push(v); }
+      gridBuild();
       for (const b of S.buildings.values()) if (b.built) { if (b.type === 'quartel') Wr.armory.add(G.Village.facOfSet(b.set)); else if (b.type === 'workshop') Wr.smith.add(G.Village.facOfSet(b.set)); }
       for (const b of [...Wr.bands.values()]) bandUpdate(b, d);
       for (const s of S.settlements.values()) if (s.alarmT > 0) s.alarmT -= d;

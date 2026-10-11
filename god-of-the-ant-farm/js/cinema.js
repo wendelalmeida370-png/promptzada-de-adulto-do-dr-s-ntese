@@ -421,7 +421,12 @@
       if (old === ph || aliveOf(b.members) < 3) continue;
       const f = facName(b.fac), en = facName(b.enemy), front = 'set:' + b.set, def = b.goal === 'defesa';
       if (ph === 'batalha' && A && A.strat === 'emboscada') alertOf('Emboscada!', `${f} cai sobre ${en} perto de ${set.name}`, front, 4);
-      else if (ph === 'batalha') alertOf('Batalha campal', `${f} e ${en} formam as linhas perto de ${set.name}`, front, 4);
+      else if (ph === 'batalha') {
+        // how many are about to fight: both hosts (and the name the battle will carry)
+        const foe = A && A.foeHost && G.War.bands.get(A.foeHost); const n = aliveOf(b.members) + (foe ? aliveOf(foe.members) : 0);
+        const bt = G.Wars && b.battle && G.Wars.battle(b.battle);
+        if (!(foe && watched.get('bt' + Math.min(b.id, foe.id) + ':' + Math.max(b.id, foe.id)))) { if (foe) watched.set('bt' + Math.min(b.id, foe.id) + ':' + Math.max(b.id, foe.id), 1); alertOf(`${n >= 30 ? 'Batalha' : 'Escaramuça'} iminente: ${n} combatentes`, `${f} × ${en}${bt ? ' · ' + bt.name.replace(/^(a|o) /, '') : ' perto de ' + set.name}`, front, n >= 60 ? 5 : 4); }
+      }
       else if (ph === 'cerco') alertOf(`O cerco de ${set.name}`, `${f} cerca a cidade de ${en}`, front, 3);
       else if ((ph === 'invadir' || ph === 'assalto' || ph === 'ataque') && !def) alertOf(`O ataque a ${set.name}`, `${f} avança contra as casas de ${en}`, front, 3);
       else if (ph === 'emboscada') alertOf('Uma emboscada armada', `${f} se esconde na mata à espera de ${en}`, front, 2);
@@ -436,7 +441,7 @@
       else if (s.purpose === 'raid' && st === 'land' && tg) alertOf('O desembarque', `${facName(s.fac)} salta na praia perto de ${tg.name}`, 'set:' + tg.id, 3);
       else if (s.kind === 'guerra' && st === 'hunt') alertOf('Batalha naval', `as galeras de ${facName(s.fac)} caçam navios inimigos`, 'mar', 2);
     }
-    for (const k of [...watched.keys()]) if (!seenNow.has(k)) watched.delete(k);
+    for (const k of [...watched.keys()]) if (!seenNow.has(k) && !(k.startsWith('bt') && watched.size < 400)) watched.delete(k);
   }
   C.tick = function (rdt) {
     if (!el || G.Main.mode !== 'game') return;
@@ -450,6 +455,7 @@
     }
     if (alertT > 0) { alertT -= rdt; if (alertT <= 0) hideAlert(); }
   };
+  C.alert = (text, sub, front, pri) => alertOf(text, sub, front, pri || 2);
   C.reset = function () { watched.clear(); alertCd.clear(); fronts = []; hideAlert(); };
 
   // the chronicle: things that just happened, where they happened

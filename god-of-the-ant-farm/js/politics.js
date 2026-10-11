@@ -311,7 +311,8 @@
     f.stab = n ? sum / n * 0.75 + f.legit * 0.25 : 50;
     f.legit = Math.min(100, f.legit + dt * 0.012);
     f.terror = Math.max(0, (f.terror || 0) - dt * 0.04);
-    f.weariness = war ? Math.min(100, f.weariness + dt * 0.015) : Math.max(0, f.weariness - dt * 0.06);
+    // (at war, the war itself measures the weariness: the dead, the battles lost, the men away, the hunger)
+    f.weariness = war ? (G.Wars ? f.weariness : Math.min(100, f.weariness + dt * 0.015)) : Math.max(0, f.weariness - dt * 0.06);
   }
 
   // ------------------------------ lifecycle ------------------------------
@@ -747,7 +748,7 @@
     fome: 'a fome empurra seu povo contra os celeiros alheios', secessao: 'para esmagar os rebeldes', vinganca: 'para vingar seus mortos',
     fronteira: 'por disputas de fronteira', desconfianca: 'por pura desconfiança', divina: 'tomados por uma fúria divina', alianca: 'honrando uma aliança',
     vassalo: 'para romper as correntes da vassalagem', reconquista: 'para retomar uma cidade perdida',
-    riqueza: 'pelas riquezas do vizinho', rota: 'para proteger suas caravanas',
+    riqueza: 'pelas riquezas do vizinho', rota: 'para proteger suas caravanas', traicao: 'traindo a aliança que tinha',
   };
   P.alliesOf = fid => G.Fac.all().filter(o => o.id !== fid && G.Fac.rel(fid, o.id) && G.Fac.rel(fid, o.id).st === 'alianca');
   P.strength = function (fid) {
@@ -764,15 +765,30 @@
     const why = reason === 'ambicao' ? `pela ambição de ${P.styled(a, P.ruler(a))}` : (reason === 'riqueza' || reason === 'rota') && G.Trade && G.Trade._why ? G.Trade._why : REASON[reason] || '';
     if (reason === 'riqueza' || reason === 'rota') { r.riches = G.Trade && G.Trade._why; G.Stories && G.Stories.signal('richesWar', { a: a.id, b: b.id, why: r.riches, reason, k: G.Trade && G.Trade._whyK || '' }); }
     const cb = G.Fac.capitalOf(b.id);
-    log(`${a.name} declarou guerra a ${b.name}${why ? ' — ' + why : ''}.`, 'war', cb ? cb.cx : undefined, cb ? cb.cy : undefined);
+    // the war is a thing in the world now: a name, a cause, aims (it writes its own chronicle line)
+    const war = G.Wars ? G.Wars.onDeclare(a, b, reason) : null;
+    if (!war) log(`${a.name} declarou guerra a ${b.name}${why ? ' — ' + why : ''}.`, 'war', cb ? cb.cx : undefined, cb ? cb.cy : undefined);
     if (!S.milestones.firstWar) { G.Village.milestone('firstWar', 'A primeira guerra', `${a.name} contra ${b.name}.`, 'war'); }
-    else G.UI && G.UI.toast('Guerra!', `${a.name} contra ${b.name}.`, 'war');
+    else if (reason !== 'alianca') G.UI && G.UI.toast(war ? war.name.replace(/^(a|o) /, '').replace(/^./, c => c.toUpperCase()) : 'Guerra!', `${a.name} contra ${b.name}.`, 'war');
     G.Audio && G.Audio.play('horn');
     S.stats.wars = (S.stats.wars || 0) + 1;
+    // the allies are called: some come, some find excuses, and a few sell their friend
     for (const c of P.alliesOf(b.id)) {
       if (c.id === a.id || G.Fac.atWar(c.id, a.id)) continue;
-      const rc = G.Fac.rel(c.id, a.id); if (rc && rc.op > 40) continue;
-      log(`${c.name} honrou a aliança e entrou na guerra ao lado de ${b.name}.`, 'ally');
+      const rc = G.Fac.rel(c.id, a.id); const rb = G.Fac.rel(c.id, b.id); const pc = P.leaderPe(c);
+      const tired = (c.weariness || 0) > 45 || G.Fac.enemiesOf(c.id).length > 0;
+      if (rc && rc.op > 40 || tired && G.R() < 0.7 || G.R() < 0.12 * (1 - pc.agg)) {
+        // the betrayal: an ambitious ruler, the stronger side, an old friendship with the attacker
+        if (rc && rc.op > 30 && pc.amb > 0.68 && P.strength(a.id) > P.strength(b.id) * 1.3 && G.R() < 0.35 && !(G.WorldWar && G.WorldWar.active())) {
+          if (rb) { rb.st = 'paz'; rb.grudge = Math.min(100, (rb.grudge || 0) + 50); rb.op = Math.min(rb.op, -40); }
+          P.declareWar(c, b, 'traicao');
+          continue;
+        }
+        if (rb) { rb.op -= 25; rb.grudge = Math.min(100, (rb.grudge || 0) + 15); if (rb.op < 20) rb.st = 'paz'; }
+        log(`${c.name} não respondeu ao chamado de ${b.name}${tired ? ': seu povo já está cansado de guerra' : rc && rc.op > 40 ? `: tem amigos demais em ${a.name}` : ''}. Em ${b.name}, ninguém vai esquecer.`, 'ally', cb ? cb.cx : undefined, cb ? cb.cy : undefined);
+        continue;
+      }
+      if (!G.Wars) log(`${c.name} honrou a aliança e entrou na guerra ao lado de ${b.name}.`, 'ally');
       P.declareWar(c, a, 'alianca');
     }
     G.War && G.War.onWar(a, b);
@@ -805,7 +821,12 @@
     // the coffee fields, the ivory, the silk of a neighbour this people buys and cannot make
     const cov = G.Trade ? G.Trade.covet(a, b) : null; if (cov) want += cov.w;
     const th = S.temper === 'pacifico' ? 1.2 : S.temper === 'belicoso' ? 0.68 : 0.86;
-    if (want > th && G.R() < 0.3) { if (lean && G.Stories) G.Stories._leanStory = lean.story; if (cov && G.Trade) G.Trade._why = cov.why; P.declareWar(a, b, lean ? 'reconquista' : cov && cov.w >= 0.12 ? 'riqueza' : hungry ? 'fome' : rebels ? 'secessao' : r.grudge > 40 ? 'vinganca' : touch > 3 ? 'fronteira' : pa.agg > 0.68 ? 'ambicao' : 'desconfianca'); }
+    if (want > th && G.R() < 0.3) {
+      const why = lean ? 'reconquista' : cov && cov.w >= 0.12 ? 'riqueza' : hungry ? 'fome' : rebels ? 'secessao' : r.grudge > 40 ? 'vinganca' : touch > 3 ? 'fronteira' : pa.agg > 0.68 ? 'ambicao' : 'desconfianca';
+      // a war ripens before it is declared: patrols, smiths, granaries — unless the ruler strikes by surprise
+      if (G.Wars && !G.Wars.ready(a, b, why, want - th)) return;
+      if (lean && G.Stories) G.Stories._leanStory = lean.story; if (cov && G.Trade) G.Trade._why = cov.why; P.declareWar(a, b, why);
+    }
   }
   function considerPeace(a, b, r) {
     const S = G.S;
@@ -813,7 +834,9 @@
     if (G.WorldWar && G.WorldWar.locks(a.id, b.id)) return; // the world war: no separate peace yet
     const days = S.day - r.since; if (days < 1 || (r.peaceCD || 0) > S.day) return;
     const [asker, other] = a.weariness >= b.weariness ? [a, b] : [b, a];
-    if (asker.weariness < 38 && days < 5) return;
+    if (asker.weariness < 38 && days < (G.Wars ? 9 : 5)) return;
+    // an army that is winning in the field does not ask for peace (it offers it once its aim is won)
+    if (G.Wars && G.Wars.winningCampaign(asker.id, other.id)) return;
     if (G.R() > 0.35) return;
     P.sendEnvoy(asker, other, 'paz');
   }
@@ -821,23 +844,32 @@
     const S = G.S; const pt = P.leaderPe(to);
     if (G.WorldWar && G.WorldWar.locks(from.id, to.id)) { r.peaceCD = S.day + 3; return false; }
     const sf = P.strength(from.id), st = P.strength(to.id);
-    const winning = st > sf * 1.25;
-    const score = to.weariness / 100 + (1 - pt.agg) * 0.5 + (winning ? 0.1 : 0.35) + (S.day - r.since) * 0.05 - r.grudge / 200 + (S.divinePeace > 0 ? 1 : 0);
+    // who is winning: the battles, the cities taken and lost, the dead — not only the head count
+    const war = G.Wars && G.Wars.warOf(from.id, to.id);
+    const edge = war ? G.Wars.score(war, to.id) - G.Wars.score(war, from.id) : 0;
+    const winning = war ? edge > 3 || (edge > -1 && st > sf * 1.6) : st > sf * 1.25;
+    const losing = war ? edge < -3 || (edge < 1 && sf > st * 1.6) : false;
+    // a ruler whose army is still marching to its aim waits for the outcome
+    const pressing = war && G.Wars.winningCampaign(to.id, from.id) ? 0.25 : 0;
+    const score = to.weariness / 100 + (1 - pt.agg) * 0.5 + (winning ? 0.1 : losing ? 0.5 : 0.35) + (S.day - r.since) * (war ? 0.035 : 0.05) - r.grudge / 200 - pressing + (S.divinePeace > 0 ? 1 : 0);
     const cb = G.Fac.capitalOf(to.id);
     if (score < 0.72) { r.peaceCD = S.day + 2 + G.R() * 2; log(`${P.styled(to, P.ruler(to))} recusou a paz oferecida por ${from.name}.`, 'war', cb ? cb.cx : undefined, cb ? cb.cy : undefined); r.op -= 5; return false; }
     let terms = 'sem vencedores';
-    if (winning) {
-      const food = Math.floor(Math.min(from.stock.food * 0.45, 70)), stone = Math.floor(Math.min(from.stock.stone * 0.4, 30));
-      from.stock.food -= food; from.stock.stone -= stone;
-      G.Village.addStock('food', food, to.id); G.Village.addStock('stone', stone, to.id);
-      terms = food + stone > 0 ? `${from.name} pagou tributo de ${food} comida${stone ? ' e ' + stone + ' pedra' : ''}` : terms;
-      if (sf < st * 0.5 && from.st.lost > 0) { r.st = 'vassalo'; r.over = to.id; terms += ` e tornou-se vassalo de ${to.name}`; }
+    const W0 = winning ? to : losing ? from : null, L0 = W0 === to ? from : to;
+    if (W0) {
+      const food = Math.floor(Math.min(L0.stock.food * 0.45, 70)), stone = Math.floor(Math.min(L0.stock.stone * 0.4, 30)), coin = Math.floor(Math.min(L0.stock.moedas || 0, 40) * 0.5);
+      L0.stock.food -= food; L0.stock.stone -= stone; if (coin) { L0.stock.moedas -= coin; W0.stock.moedas = (W0.stock.moedas || 0) + coin; }
+      G.Village.addStock('food', food, W0.id); G.Village.addStock('stone', stone, W0.id);
+      terms = food + stone + coin > 0 ? `${L0.name} pagou tributo de ${food} comida${stone ? ', ' + stone + ' pedra' : ''}${coin ? ' e ' + coin + ' moedas' : ''}` : `${L0.name} reconheceu a derrota`;
+      const sw = W0 === to ? st : sf, sl = W0 === to ? sf : st;
+      if (sl < sw * 0.5 && L0.st.lost > 0 && !(war && war.goals[L0.id] && war.goals[L0.id].k === 'independencia')) { r.st = 'vassalo'; r.over = W0.id; terms += ` e tornou-se vassal${G.Fac.oa(L0)} de ${W0.name}`; }
     }
     if (r.st !== 'vassalo') { r.st = 'tregua'; r.truce = G.DAY_LEN * 3; }
     r.since = S.day; r.envoy = 0; r.grudge *= 0.7;
     from.weariness *= 0.5; to.weariness *= 0.5;
-    log(`Paz entre ${from.name} e ${to.name}: ${terms}.`, 'peace', cb ? cb.cx : undefined, cb ? cb.cy : undefined);
+    if (!war) log(`Paz entre ${from.name} e ${to.name}: ${terms}.`, 'peace', cb ? cb.cx : undefined, cb ? cb.cy : undefined);
     G.UI && G.UI.toast('Paz', `${from.name} e ${to.name} baixaram as armas.`, 'peace');
+    if (war) G.Wars.onPeace(from, to, terms, W0);
     G.War && G.War.onPeace(from, to);
     if (pt.agg < 0.35) P.earn(to, P.ruler(to), 'pacifico');
     return true;

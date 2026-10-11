@@ -389,10 +389,70 @@
     return tiles;
   };
   Ci.onStreet = (set, i) => { const p = set && set._plan; return !!(p && p.tiles instanceof Set && p.tiles.has(i)); };
+  // ------------------------------ bridges inside the town ------------------------------
+  // every step taken through shallow water is counted; where a town keeps wading the same stream or pond,
+  // once it has grown into a town it throws a stone bridge across, bank to bank
+  Ci.fords = new Map();
+  Ci.ford = i => { Ci.fords.set(i, (Ci.fords.get(i) || 0) + 1); };
+  function fordDecay() { for (const [i, n] of Ci.fords) { const m = n * 0.6; if (m < 1) Ci.fords.delete(i); else Ci.fords.set(i, m); } }
+  // the shortest run of water through tile i (across, then up and down), bank to bank
+  function crossing(i) {
+    const S = G.S; const x0 = i % N, y0 = (i / N) | 0; let best = null;
+    for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
+      const run = [i]; let ok = true;
+      for (const sg of [1, -1]) {
+        let x = x0, y = y0;
+        for (let k = 0; k < 8; k++) {
+          x += dx * sg; y += dy * sg; if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) { ok = false; break; }
+          const j = y * N + x; const t = S.type[j];
+          if (t === T.RIVER) { if (S.wall[j] === 1 || S.occ[j]) { ok = false; break; } run.push(j); continue; }
+          if (t < T.RIVER || !W.walkable(j)) ok = false; // (the far side must be a bank to step onto)
+          break;
+        }
+        if (!ok) break;
+      }
+      if (ok && run.length <= 7 && (!best || run.length < best.length)) best = run;
+    }
+    return best;
+  }
+  function planBridges(set, fac) {
+    const S = G.S;
+    if (set._brDay === S.day) return set.bridges || [];
+    Object.defineProperty(set, '_brDay', { value: S.day, writable: true, configurable: true, enumerable: false });
+    const plans = (set.bridges || []).filter(pl => pl.some(i => !S.road[i] || S.road[i] < 3));
+    if ((set.tier || 0) < 1 || G.Village.pop(set.id) < 30) { set.bridges = plans; return plans; }
+    const R = (set.radius || 8) + 4; const R2 = R * R;
+    const hot = [];
+    for (const [i, n] of Ci.fords) { if (n < 18 || S.road[i]) continue; const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5; if (G.dist2(x, y, set.cx, set.cy) > R2) continue; hot.push([n, i]); }
+    hot.sort((a, b) => b[0] - a[0]);
+    const max = 1 + (set.tier || 0);
+    for (const [, i] of hot) {
+      if (plans.length >= max) break;
+      if (plans.some(pl => pl.some(j => Math.abs(j % N - i % N) + Math.abs(((j / N) | 0) - ((i / N) | 0)) < 4))) continue;
+      const run = crossing(i); if (!run) continue;
+      plans.push(run);
+      if (fac) fac._brNews = (fac._brNews || 0) + 1;
+    }
+    set.bridges = plans;
+    return plans;
+  }
+  Ci.planBridges = planBridges;
   function pickPave(set, fac, v, near) {
     const S = G.S; const t = set.tier || 0;
     const lvl = has(fac, 'alvenaria') ? 2 : 1;
     let best = null, bs = 1e9;
+    // a bridge over the water the town keeps wading (half the pavers, the ones already on it, before any street:
+    // the streets are never finished, and the bridge would never come)
+    if (fac.stock.stone >= 3 && fac.stock.wood >= 2 && (near !== undefined || G.hash(v.id * 7 + S.day) < 0.5)) {
+      for (const pl of planBridges(set, fac)) for (const i of pl) {
+        if (S.road[i] >= 3 || S.occ[i] || claimed(i, v)) continue;
+        const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
+        const sc = (near !== undefined ? G.dist(x, y, (near % N) + 0.5, ((near / N) | 0) + 0.5) * 1.5 : 0) + G.dist(x, y, set.cx, set.cy) * 0.2;
+        if (sc < bs) { bs = sc; best = { i, lvl: 3, bridge: 1 }; }
+      }
+      if (best && (near === undefined || bs < 6)) return best;
+      best = null; bs = 1e9;
+    }
     // first the planned streets: a dirt street costs nothing but work; stone once the town knows masonry
     if (G.Village.pop(set.id) >= 6) {
       const want = t >= 2 && fac.stock.stone >= 4 ? lvl : 1;
@@ -446,7 +506,7 @@
     const p = pickPave(set, fac, v);
     if (!p) { v._paveCD = S.clock + 25; return null; }
     Ci.claims.set(p.i, v.id);
-    return H.setTask(v, { type: 'pave', i: p.i, lvl: p.lvl, route: p.route || 0, pri: 1, n: 0 });
+    return H.setTask(v, { type: 'pave', i: p.i, lvl: p.lvl, route: p.route || 0, bridge: p.bridge || 0, pri: 1, n: 0 });
   };
   function runPave(v, t, dt, H) {
     const S = G.S;
@@ -472,10 +532,14 @@
     G.FX && G.FX.chips(x, y, t.lvl >= 2 ? '#b8b0a0' : '#a08a66');
     Ci.claims.delete(t.i);
     if (t.route) { const r = S.routes.find(q => q.id === t.route); if (r) r.paved = r.tiles.reduce((n, i) => n + (S.road[i] >= 3 ? 1 : 0), 0); if (r && bridge && !r.bridged) { r.bridged = true; log(`Uma ponte de pedra agora cruza o rio na estrada de ${set.name}.`, 'road', x, y); } }
+    if (t.bridge && set.bridges) {
+      const pl = set.bridges.find(q => q.includes(t.i));
+      if (pl && pl.every(j => S.road[j] >= 3)) { set.bridges = set.bridges.filter(q => q !== pl); set.nBridges = (set.nBridges || 0) + 1; log(`${set.name} ergueu ${set.nBridges > 1 ? 'mais uma ponte de pedra' : 'uma ponte de pedra'} sobre a água que o povo atravessava a pé.`, 'road', x, y); }
+    }
     t.n++;
     if (t.n < 7) {
       const nx = pickPave(set, fac, v, t.i);
-      if (nx && G.dist(x, y, (nx.i % N) + 0.5, ((nx.i / N) | 0) + 0.5) < 3.5) { t.i = nx.i; t.lvl = nx.lvl; t.route = nx.route || 0; t.st = 0; return; }
+      if (nx && G.dist(x, y, (nx.i % N) + 0.5, ((nx.i / N) | 0) + 0.5) < 3.5) { t.i = nx.i; t.lvl = nx.lvl; t.route = nx.route || 0; t.bridge = nx.bridge || 0; t.st = 0; return; }
     }
     H.end(v);
   }
@@ -659,10 +723,11 @@
   };
 
   // ------------------------------ update ------------------------------
-  let tT = 4, tR = 5, tA = 0;
+  let tT = 4, tR = 5, tA = 0, tF = 0;
   Ci.update = function (dt) {
     tT += dt; tR += dt; tA += dt;
     if (tT >= 5) { tT = 0; updateTiers(); }
+    tF += dt; if (tF >= G.DAY_LEN * 0.5) { tF = 0; fordDecay(); }
     if (tR >= 15) { tR = 0; updateRoutes(); }
     if (tA >= 1.2) { buildAqueducts(tA); tA = 0; }
     updateCarts(dt);

@@ -142,7 +142,7 @@
 
   // ------------------------------ who cleans up ------------------------------
   function quiet(x, y, fac) {
-    for (const o of G.War.fighters) { if (G.dist2(o.x, o.y, x, y) < 144 && G.Fac.atWar(fac, G.Fac.idOfV(o))) return false; }
+    for (const o of G.War.fightersNear(x, y, 12)) { if (G.dist2(o.x, o.y, x, y) < 144 && G.Fac.atWar(fac, G.Fac.idOfV(o))) return false; }
     for (const b of G.War.battles) if (G.War.clock - b.last < 10 && G.dist2(b.x, b.y, x, y) < 196) return false;
     return true;
   }

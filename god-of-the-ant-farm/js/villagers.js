@@ -82,8 +82,8 @@
     const ti = W.inb(x, y) ? W.idx(x, y) * 2 + (adj ? 1 : 0) : -1; const now = G.S.clock;
     if (ti === v._pfI && now - v._pfT < 12) { v.path = null; return false; }
     const p = W.findPath(v.x, v.y, x, y, adj, maxNodes);
-    if (!p) { v.path = null; v._pfI = ti; v._pfT = now; return false; }
-    v.path = p; v.pi = 0; return true;
+    if (!p) { v.path = null; v._pfI = ti; v._pfT = now; v._pfN = (v._pfN || 0) + 1; return false; }
+    v.path = p; v.pi = 0; v._pfN = 0; return true;
   };
   // a tree, bush or boulder up on a ledge nobody from this town can climb to: for a day they go for another one
   const cantReach = (o, v) => !!o.noPath && G.S.clock - (o.noPath[v.set] || -1e9) < G.DAY_LEN;
@@ -167,6 +167,8 @@
     if (Math.abs(dx) + Math.abs(dy) > 0.02) G.faceTo(v, dx, dy);
     v.walkPh += step * 8.5;
     v.moving = true;
+    // wading: counted, so that a town knows where it needs a bridge (once per tile stepped into)
+    if (ty === T.RIVER && !S.road[i] && v._ford !== i && G.City) { v._ford = i; G.City.ford(i); }
     if (ty >= T.SAND) {
       const lv = G.pathLevel(S.wear[i]);
       S.wear[i] = Math.min(G.WEAR_MAX, S.wear[i] + step * 1.3);
@@ -194,7 +196,7 @@
     // babies are fed from the common stock
     if (v.age < 2 && v.hunger > 60) { const st = G.Fac.stockV(v); if (st.food >= 1) { st.food -= 0.5; v.hunger -= 50; } }
     // on campaign, on a mission or under siege there is no time for a meal: they eat provisions
-    if (v.hunger > 80 && v.task && (FIELD[v.task.type] || v.task.type === 'escorted') && (!v.captive || v.task.type === 'escorted') && v.age >= 2) { const st = G.Fac.stockV(v); if (st.food >= 1) { st.food -= 1; v.hunger = Math.max(0, v.hunger - 50); } }
+    if (v.hunger > 80 && v.task && (FIELD[v.task.type] || v.task.type === 'escorted') && (!v.captive || v.task.type === 'escorted') && v.age >= 2) { const pv = G.Wars ? G.Wars.provision(v) : null; if (pv === true) v.hunger = Math.max(0, v.hunger - 50); else if (pv === null) { const st = G.Fac.stockV(v); if (st.food >= 1) { st.food -= 1; v.hunger = Math.max(0, v.hunger - 50); } } }
     if (v.hunger >= 100) { v.hp -= 0.45 * dd; v.lastCause = 'hunger'; v.lastGod = false; if (G.R() < dt * 0.3) emote(v, 'food'); }
     if (v.immune > 0) v.immune -= dt;
     if (v.sick > 0) {
@@ -217,7 +219,7 @@
     if (v.hp <= 0) G.Village.kill(v, v.lastCause, v.lastGod);
   }
 
-  const FIELD = { saga: 1, scene: 1, band: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1, aboard: 1, embark: 1, boardBack: 1, pave: 1 };
+  const FIELD = { saga: 1, scene: 1, band: 1, muster: 1, refugio: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1, aboard: 1, embark: 1, boardBack: 1, pave: 1 };
   // ------------------------------ emergencies ------------------------------
   Vg.alarms = new Map(); // settlement id -> [tile indices]
   Vg.fireFighters = new Map();
@@ -1174,7 +1176,7 @@
         break;
       }
       case 'saga': if (G.Stories) G.Stories.run(v, t, dt, H); else end(v); break;
-      default: if (!(G.Scene && G.Scene.run(v, t, dt, H)) && !(G.Caves && G.Caves.run(v, t, dt, H)) && !G.War.run(v, t, dt, H) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Carnage && G.Carnage.run(v, t, dt, H)) && !(G.Flora && G.Flora.run(v, t, dt, H)) && !(G.Nests && G.Nests.run(v, t, dt, H)) && !(G.Polity && G.Polity.run(v, t, dt, H)) && !(G.Justice && G.Justice.run(v, t, dt, H)) && !(G.Riots && G.Riots.run(v, t, dt, H)) && !(G.Secrets && G.Secrets.run(v, t, dt, H)) && !(G.Stories && G.Stories.party && G.Stories.party.run(v, t, dt, H)) && !(G.Riches && G.Riches.run(v, t, dt, H))) end(v);
+      default: if (!(G.Scene && G.Scene.run(v, t, dt, H)) && !(G.Caves && G.Caves.run(v, t, dt, H)) && !G.War.run(v, t, dt, H) && !(G.Wars && G.Wars.run(v, t, dt, H)) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Carnage && G.Carnage.run(v, t, dt, H)) && !(G.Flora && G.Flora.run(v, t, dt, H)) && !(G.Nests && G.Nests.run(v, t, dt, H)) && !(G.Polity && G.Polity.run(v, t, dt, H)) && !(G.Justice && G.Justice.run(v, t, dt, H)) && !(G.Riots && G.Riots.run(v, t, dt, H)) && !(G.Secrets && G.Secrets.run(v, t, dt, H)) && !(G.Stories && G.Stories.party && G.Stories.party.run(v, t, dt, H)) && !(G.Riches && G.Riches.run(v, t, dt, H))) end(v);
     }
   }
   const LONG = { scene: 1, saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1 };
@@ -1474,6 +1476,7 @@
         const i = W.idx(v.x, v.y);
         if (!W.walkable(i) && S.type[i] !== T.SEA && S.type[i] !== T.DEEP) {
           const n = W.nearestLand(v.x, v.y, 5); if (n) { v.x = n[0]; v.y = n[1]; v.path = null; if (v.task) v.task.st = 0; }
+        } else if (watch(v)) { /* (moved somewhere it can get out of) */
         } else if (S.type[i] <= T.SEA && (!v.task || v.task.type !== 'swim') && !(v.task && (v.task.type === 'mariscar' || v.task.type === 'pocas') && v.task.st >= 2) && !(v.task && v.task.type === 'dive' && v.task.st >= 1)) { setTask(v, { type: 'swim', pri: 6 }); }
       }
     }
@@ -1503,6 +1506,41 @@
       if (v.preg > 0 && G.R() < dt * 0.02) emote(v, 'heart', 1.5);
     }
   };
+  // ------------------------------ the stuck: someone who has not moved for a long while ------------------------------
+  // (a pocket between cliffs, a ledge, a gap between houses and a fence: every errand fails, or the feet keep walking
+  // in place. Twenty seconds of that and they are set down on the nearest spot from which home can be reached)
+  const STILL = { scene: 1, jail: 1, condemned: 1, escorted: 1, hide: 1, sleep: 1, pray: 1, aboard: 1, swim: 1, dive: 1, mariscar: 1, pocas: 1, fest: 1, assembly: 1 };
+  function watch(v) {
+    if (v.sleeping || v.captive && !(v.task && v.task.type === 'escape')) { v._wd = null; return false; }
+    const wd = v._wd || (v._wd = { x: v.x, y: v.y, t: 0, mv: 0 });
+    wd.t += 1; if (v.moving) wd.mv += 1;
+    if (wd.t < 20) return false;
+    const moved = G.dist(v.x, v.y, wd.x, wd.y); const mv = wd.mv;
+    wd.x = v.x; wd.y = v.y; wd.t = 0; wd.mv = 0;
+    if (moved > 0.6 || (v.task && STILL[v.task.type])) return false;
+    const failing = (v._pfN || 0) >= 4, treading = mv >= 15 && moved < 0.4;
+    if (!failing && !treading) return false;
+    return unstick(v);
+  }
+  const KEEP_TASK = { band: 1, muster: 1, refugio: 1 };
+  function unstick(v) {
+    const S = G.S; const set = S.settlements.get(v.set);
+    const home = set ? [set.cx, set.cy] : null;
+    const ok = (x, y) => W.walkableXY(x, y) && (!home || !!W.findPath(x, y, home[0], home[1], true, 20000));
+    if (home && ok(v.x, v.y)) { v._pfN = 0; v._pfI = -1; if (v.task && !v.task.pri) G.Vg.endTask(v); return false; }
+    for (const r of [1, 1.5, 2.2, 3, 4.5, 6, 8]) for (let k = 0; k < 8; k++) {
+      const a = k / 8 * Math.PI * 2; const x = Math.floor(v.x + Math.cos(a) * r) + 0.5, y = Math.floor(v.y + Math.sin(a) * r) + 0.5;
+      if (!ok(x, y)) continue;
+      v.x = x; v.y = y; v.path = null; v._pfN = 0; v._pfI = -1; v.moving = false;
+      // (a soldier stays in the army, a refugee on the road: only the errand that kept failing is given up)
+      if (v.task && v.task.pri < 4 && !KEEP_TASK[v.task.type]) G.Vg.endTask(v);
+      v.think = 0;
+      return true;
+    }
+    v._pfN = 0;
+    return false;
+  }
+  Vg.unstick = unstick;
   Vg.hasWell = function (setId) { for (const b of G.S.buildings.values()) if (b.type === 'well' && b.built && b.set === setId) return true; return false; };
 
   // helpers shared with the war & politics modules
@@ -1518,7 +1556,7 @@
     if (v.air) return 'Voando pelos ares!';
     if (v.age < 2) { const c = S.villagers.get(v.carrier); return c ? (v.sleeping ? 'Dormindo' : `No colo de ${c.name}`) : 'Chorando sozinho'; }
     if (!t) return v.sleeping ? 'Dormindo' : 'Pensando no que fazer';
-    const wt = (G.Scene && G.Scene.taskText(v, t)) || (G.Justice && G.Justice.taskText(v, t)) || (G.Riots && G.Riots.taskText(v, t)) || (G.Secrets && G.Secrets.taskText(v, t)) || (G.Stories && G.Stories.party && G.Stories.party.taskText(v, t)) || (G.Polity && G.Polity.taskText(v, t)) || (G.Flora && G.Flora.taskText(v, t)) || (G.Nests && G.Nests.taskText(v, t)) || (G.Riches && G.Riches.taskText && G.Riches.taskText(v, t)) || (G.Caves && G.Caves.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || G.War.taskText(v, t) || (G.City && G.City.taskText(v, t)) || (G.Naval && G.Naval.taskText(v, t)) || (G.Eco && G.Eco.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || (G.Fest && G.Fest.taskText(v, t)) || (G.Life && G.Life.taskText(v, t)) || (G.Carnage && G.Carnage.taskText(v, t)); if (wt) return wt;
+    const wt = (G.Scene && G.Scene.taskText(v, t)) || (G.Justice && G.Justice.taskText(v, t)) || (G.Riots && G.Riots.taskText(v, t)) || (G.Secrets && G.Secrets.taskText(v, t)) || (G.Stories && G.Stories.party && G.Stories.party.taskText(v, t)) || (G.Polity && G.Polity.taskText(v, t)) || (G.Flora && G.Flora.taskText(v, t)) || (G.Nests && G.Nests.taskText(v, t)) || (G.Riches && G.Riches.taskText && G.Riches.taskText(v, t)) || (G.Caves && G.Caves.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || G.War.taskText(v, t) || (G.Wars && G.Wars.taskText(v, t)) || (G.City && G.City.taskText(v, t)) || (G.Naval && G.Naval.taskText(v, t)) || (G.Eco && G.Eco.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || (G.Fest && G.Fest.taskText(v, t)) || (G.Life && G.Life.taskText(v, t)) || (G.Carnage && G.Carnage.taskText(v, t)); if (wt) return wt;
     const bname = id => { const b = S.buildings.get(id); return b ? G.Village.buildName(b) : 'construção'; };
     const pname = id => { const o = S.villagers.get(id); return o ? o.name : 'alguém'; };
     switch (t.type) {

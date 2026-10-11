@@ -102,7 +102,7 @@
     const S = G.S; opts = opts || {};
     const horses = { n: G.Eco ? G.Eco.horses(f.id) : 0 };
     // weapons: each levy takes one from the armory
-    for (const v of members) { v._armed = v.role === 'guerreiro'; if (!v._armed && (f.stock.armas || 0) >= 1) { f.stock.armas -= 1; v._armed = true; v._levy = true; } }
+    for (const v of members) { if (!(b.campaign && v._armed)) v._armed = v.role === 'guerreiro'; if (!v._armed && (f.stock.armas || 0) >= 1) { f.stock.armas -= 1; v._armed = true; v._levy = true; } }
     const byKind = {};
     for (const v of members) { const k = unitFor(v, f, horses, f.id); v.unit = k; (byKind[k] || (byKind[k] = [])).push(v); }
     // the general: the ruler if at the head of the host, else the most feared warrior
@@ -134,7 +134,7 @@
     // levied archers take up the bow
     for (const v of members) if (v.unit === 'arqueiro' && v.role !== 'guerreiro') { v.arm = 'arco'; v._bow = true; }
     // draw up on open ground outside the town, facing the enemy
-    if (b.goal !== 'defesa' && from) { const dir = Math.atan2(set.cy - from.cy, set.cx - from.cx); const og = openGround(from.cx, from.cy, dir, (from.radius || 8) * 0.6 + 2, (from.radius || 8) + 7); if (og) { b.rx = og[0]; b.ry = og[1]; } }
+    if (b.goal !== 'defesa' && from && !b.campaign) { const dir = Math.atan2(set.cy - from.cy, set.cx - from.cx); const og = openGround(from.cx, from.cy, dir, (from.radius || 8) * 0.6 + 2, (from.radius || 8) + 7); if (og) { b.rx = og[0]; b.ry = og[1]; } }
     // the plan
     A.strat = opts.strat || chooseStrategy(b, f, enemy, set, from, members);
     applyStrategy(b, A, f);
@@ -250,17 +250,30 @@
     if (!gen || !gen.task || gen.task.type !== 'band') {
       if (!A.lostGen) { A.lostGen = true; for (const co of A.cos) co.morale -= 18; const who = S.dead.get(A.gen); if (who) { A.reports.push(`${TT(f).gen[who.g === 'f' ? 1 : 0]} ${who.name} tombou`); log(`${TT(f).gen[who.g === 'f' ? 1 : 0]} ${who.name}, que comandava o exército de ${f.name}, tombou em combate. O exército vacila.`, 'war', who.x, who.y); } }
       // the bravest captain takes command
-      const cap = A.cos.map(c => S.villagers.get(c.cap)).filter(v => v && v.task && v.task.type === 'band')[0]; if (cap) { A.gen = cap.id; cap.task.general = true; cap.task.flag = false; A.lostGen = false; }
+      if (!A.genNoted) { A.genNoted = true; const who = S.dead.get(A.gen) || S.villagers.get(A.gen); G.Wars && G.Wars.commanderLost(b, who); }
+      const cap = A.cos.map(c => S.villagers.get(c.cap)).filter(v => v && v.task && v.task.type === 'band')[0];
+      if (cap) { A.gen = cap.id; cap.task.general = true; cap.task.flag = false; A.lostGen = false; A.genNoted = false; if (b.campaign) { log(`${cap.name} assume o comando do exército de ${f.name}.`, 'army', cap.x, cap.y); for (const co of A.cos) co.morale += 6; } }
     }
-    // the rout: frightened companies run for home
+    // the rout: frightened companies run for home — few fight to the last man
+    const contact = A.phase === 'batalha' && A.bt > (A.hold || 0);
+    let aliveAll = 0; for (const co of A.cos) aliveAll += co.alive.length;
+    const lossA = 1 - aliveAll / Math.max(1, A.start);
+    if (b.st !== 'retorno' && lossA > 0.4 && !A.hit40) { A.hit40 = true; for (const co of A.cos) co.morale -= 16; }
     for (const co of A.cos) {
       if (b.st === 'retorno') break;
-      if (!co.rout && co.morale < 16 && co.kind !== 'elite' && !(f.civ === 'nordico' && co.alive.some(v => v.elite === 'berserker'))) {
+      // a company that has lost too many of its own breaks, whatever its officers shout
+      const lossC = 1 - co.alive.length / Math.max(1, co.start);
+      if (lossC >= 0.3 && !co.hit30) { co.hit30 = true; co.morale -= co.kind === 'elite' ? 8 : 16; }
+      if (lossC >= 0.5 && !co.hit50) { co.hit50 = true; co.morale -= co.kind === 'elite' ? 14 : 24; }
+      const stubborn = co.kind === 'elite' && lossC < 0.7 || (f.civ === 'nordico' && co.alive.some(v => v.elite === 'berserker'));
+      if (!co.rout && co.morale < 20 && !stubborn) {
         co.rout = true; A.routed = (A.routed || 0) + 1;
         const c0 = centroid(co.alive);
         if (c0) log(`${nameCo(co, f)} de ${f.name} quebrou e fugiu!`, 'war', c0[0], c0[1]);
+        // the panic spreads to the companies alongside
+        for (const o of A.cos) if (o !== co && !o.rout && dist(o.ax, o.ay, co.ax, co.ay) < 8) o.morale -= 7;
       }
-      if (!co.rout) co.morale = Math.min(co.kind === 'elite' ? 100 : 90, co.morale + dt * (gen && co.alive.length && dist(gen.x, gen.y, co.ax, co.ay) < 8 ? 0.8 : 0.3));
+      if (!co.rout) co.morale = Math.min(co.kind === 'elite' ? 100 : 90, co.morale + dt * (contact ? 0.12 : 1) * (gen && co.alive.length && dist(gen.x, gen.y, co.ax, co.ay) < 8 ? 0.8 : 0.3));
     }
     const standing = A.cos.filter(c => !c.rout);
     if (b.st !== 'retorno' && (standing.length === 0 || (A.cos.length >= 2 && standing.length / A.cos.length < 0.4))) {
@@ -278,7 +291,7 @@
   // enemies close to a point
   function enemiesNear(fac, x, y, r) {
     const out = []; const r2 = r * r;
-    for (const o of G.War.fighters) { if (o.captive || !G.Fac.atWar(fac, fid(o))) continue; if (G.dist2(o.x, o.y, x, y) < r2) out.push(o); }
+    for (const o of G.War.fightersNear(x, y, r)) { if (o.captive || !G.Fac.atWar(fac, fid(o))) continue; if (G.dist2(o.x, o.y, x, y) < r2) out.push(o); }
     return out;
   }
   // an enemy host in the field?
@@ -298,7 +311,7 @@
     if (!set || b.st === 'retorno') return false; // the old ways: plunder, captives, the road home
     // meeting an enemy host in the open: form the battle line
     const foeHost = (b.st === 'marcha' || b.st === 'reunir') ? enemyHost(b) : null;
-    if (foeHost && A.phase !== 'batalha') { A.phase = 'batalha'; A.bt = 0; A.foeHost = foeHost.id; deploy(b, A, f, foeHost); const g2 = S.villagers.get(foeHost.army.gen); log(`${f.name} e ${G.Fac.get(foeHost.fac).name} formam linhas de batalha perto de ${G.Village.nearSettlementName(gen.x, gen.y) || 'os ermos'}.`, 'battle', gen.x, gen.y); void g2; }
+    if (foeHost && A.phase !== 'batalha') { if (A.phase === 'acampar') wake(b, A); A.phase = 'batalha'; A.bt = 0; A.foeHost = foeHost.id; deploy(b, A, f, foeHost); const bt = G.Wars && G.Wars.battleStart(b, foeHost); if (!bt || bt.kind === 'refrega') log(`${f.name} e ${G.Fac.get(foeHost.fac).name} formam linhas de batalha perto de ${G.Village.nearSettlementName(gen.x, gen.y) || 'os ermos'}.`, 'battle', gen.x, gen.y); }
     if (A.phase === 'batalha') { battleTick(b, A, dt, f); return true; }
     switch (b.st) {
       case 'reunir': {
@@ -308,6 +321,7 @@
         if ((near >= tot * 0.8 && A.t > 8) || A.t > 40) {
           b.st = 'marcha'; b.t = 0; A.phase = 'marcha';
           log(A.intro, 'army', b.rx, b.ry);
+          G.Stories && b.campaign && G.Stories.signal('armyMarched', { army: b.campaign, band: b.id, fac: b.fac, set: set.id, x: b.rx, y: b.ry, ids: b.members.slice() });
           G.UI && G.UI.notice(`${f.name} marcha contra ${set.name} com ${tot} soldados!`, 'war');
           G.Audio && G.Audio.at(b.rx, b.ry, 'horn', true);
           startMarch(b, A, set);
@@ -315,10 +329,15 @@
         return true;
       }
       case 'marcha': {
-        marchTick(b, A, dt);
         const lead = gen || A.cos[0].alive[0];
         const R = (set.radius || 8) + (A.strat === 'cerco' ? 6 : A.strat === 'multiplos' ? 5 : 3);
-        if (dist(lead.x, lead.y, set.cx, set.cy) < R || b.t > 170) {
+        // a campaign army camps for the night — tents, fires, sentries — and marches on at dawn
+        if (b.campaign) {
+          if (A.phase === 'acampar') { if (!G.isNight() || enemiesNear(b.fac, lead.x, lead.y, 10).length) wake(b, A); else { A.campT = (A.campT || 0) + dt; return true; } }
+          else if (G.isNight() && b.t > 6 && dist(lead.x, lead.y, set.cx, set.cy) > R + 8 && !enemiesNear(b.fac, lead.x, lead.y, 14).length) { pitchCamp(b, A); return true; }
+        }
+        marchTick(b, A, dt);
+        if (dist(lead.x, lead.y, set.cx, set.cy) < R || b.t - (A.campT || 0) > (b.campaign ? 700 : 170)) {
           b.st = 'ataque'; b.t = 0; b.reached = true;
           set.alarmT = 30; set.attacked = (set.attacked || 0) + 1;
           if (G.UI && (G.UI.viewFac === b.enemy || G.UI.viewFac === b.fac)) G.UI.notice(`${set.name} está sendo atacada por ${f.name}!`, 'war');
@@ -328,12 +347,18 @@
           if (A.phase === 'cerco') { startSiege(b, A, set, f); }
           if (A.phase === 'guerrilha') A.gT = 0;
           if (A.phase === 'assalto') { A.aT = 0; deployAt(b, A, set); }
+          if (A.phase === 'assalto' || A.phase === 'cercar') G.Wars && G.Wars.assault(b, set);
         }
         return true;
       }
       case 'ataque': {
         set.alarmT = Math.max(set.alarmT || 0, 5);
-        if (A.phase === 'cerco') return siegeTick(b, A, dt, set, f, en);
+        if (A.phase === 'cerco') {
+          // an army of relief comes for the besieged: the siege lines turn to face it
+          const rel = enemyHost(b);
+          if (rel && rel.army && rel.army.relief) { A.phase = 'batalha'; A.bt = 0; A.foeHost = rel.id; A.resume = 'cerco'; deploy(b, A, f, rel); G.Wars && G.Wars.battleStart(b, rel); log(`Um exército de socorro de ${G.Fac.get(rel.fac).name} cai sobre as linhas do cerco de ${set.name}!`, 'battle', set.cx, set.cy); return true; }
+          return siegeTick(b, A, dt, set, f, en);
+        }
         if (A.phase === 'cercar') {
           // companies take their gates; then everyone goes in at once
           let ready = 0; for (const co of A.cos) { coMove(co, dt, 0.9); if (!co.path || co.pi >= co.path.length) ready++; }
@@ -379,14 +404,30 @@
       co.ax = p[0]; co.ay = p[1]; if (dist(p[0], p[1], q[0], q[1]) > 0.1) co.dir = Math.atan2(p[1] - q[1], p[0] - q[0]);
     }
   }
+  // the camp for the night: each company where it stands, the general's tent in the middle
+  function pitchCamp(b, A) {
+    A.phase = 'acampar'; A.camps = (A.camps || 0) + 1; A.campT = A.campT || 0;
+    for (const co of A.cos) { co.camp = [co.ax, co.ay]; co.form = 'dispersa'; co.path = null; }
+    const g = G.S.villagers.get(A.gen); if (g) { g.path = null; g.moving = false; }
+    if (A.camps === 1 && g) { const f = G.Fac.get(b.fac); const Wa = G.Wars && G.Wars.armyOfBand(b); const nm = Wa ? Wa.name.charAt(0).toUpperCase() + Wa.name.slice(1) : f ? 'O exército de ' + f.name : 'O exército'; log(`${nm} acampa para a noite: tendas, fogueiras, sentinelas.`, 'army', g.x, g.y); }
+  }
+  function wake(b, A) {
+    A.phase = 'marcha';
+    for (const co of A.cos) { co.form = 'coluna'; co.camp = null; for (const v of co.alive || []) { v.sleeping = false; } }
+    const g = G.S.villagers.get(A.gen); if (g && g.task) g.task.gpFor = null;
+    G.Audio && g && G.Audio.at(g.x, g.y, 'horn', false, 0.5);
+  }
   // battle line against a host in the field
   function deploy(b, A, f, foe) {
     const S = G.S; const g = S.villagers.get(A.gen); const eg = S.villagers.get(foe.army.gen);
     if (!g || !eg) return;
     const dir = Math.atan2(eg.y - g.y, eg.x - g.x);
     const mid = [g.x + Math.cos(dir) * 2, g.y + Math.sin(dir) * 2];
-    drawUp(b, A, mid[0], mid[1], dir);
+    drawUp(b, A, mid[0], mid[1], dir); A.field = [(g.x + eg.x) / 2, (g.y + eg.y) / 2];
     for (const co of A.cos) { co.form = formFor(co.kind, f); if (A.strat === 'testudo' && co.kind !== 'arqueiro' && co.kind !== 'cavalaria') co.form = 'testudo'; if (A.strat === 'cunha' && co.kind !== 'arqueiro') co.form = 'cunha'; co.order = co.kind === 'arqueiro' ? 'segurar' : 'avancar'; }
+    // a big host forms its lines and waits — the shouting, the horns — before it closes
+    const n0 = b.members.length + foe.members.length; A.hold = n0 >= 24 ? 5 + G.R() * 7 : 0; A.held = false;
+    if (A.hold) for (const co of A.cos) if (co.order === 'avancar') co.order = 'esperar';
     // the pincer: cavalry rides wide around the flanks
     if (A.strat === 'pinca') for (const co of A.cos) if (co.kind === 'cavalaria') { co.order = 'flanquear'; const side = co.wing === 'e' ? 1 : -1; const fx = Math.cos(dir), fy = Math.sin(dir); const tx = eg.x - fy * side * 6 + fx * 2, ty = eg.y + fx * side * 6 + fy * 2; const p = nearWalk(tx, ty, 0.8); if (p) coGoto(co, p[0], p[1]); }
   }
@@ -418,24 +459,45 @@
     const g = S.villagers.get(A.gen);
     const ref = g || (A.cos[0] && A.cos[0].alive[0]);
     const close = ref ? enemiesNear(b.fac, ref.x, ref.y, 16) : [];
-    // the battle is over when the field is empty of enemies
-    if (!close.length) { A.quietB = (A.quietB || 0) + dt; } else A.quietB = 0;
+    // the battle is over when the field is empty of enemies — or the enemy host has left it (stragglers are not a battle)
+    const foeGone = !foe || foe.st === 'retorno' || !G.War.bands.has(foe.id) || (foe.army && foe.army.cos.every(c => c.rout));
+    const egFar = !eg || !ref || dist(ref.x, ref.y, eg.x, eg.y) > 40;
+    if (foeGone) A.quietB = (A.quietB || 0) + dt * (close.length ? 0.8 : 1);
+    else if (!close.length) A.quietB = (A.quietB || 0) + dt * (egFar ? 1 : 0.15); // (still closing in on them)
+    else A.quietB = 0;
     if (A.quietB > 5 || A.bt > 140) {
-      A.phase = b.goal === 'defesa' ? 'posicao' : 'marcha';
-      if (foe && (foe.st === 'retorno' || !G.War.bands.has(foe.id))) { const where = ref ? G.Village.nearSettlementName(ref.x, ref.y) : null; A.reports.push(`venceu a batalha${where ? ' de ' + where : ''}`); log(`${f.name} venceu a batalha${where ? ' de ' + where : ''}: o inimigo abandonou o campo.`, 'battle', ref ? ref.x : undefined, ref ? ref.y : undefined); }
+      const resume = A.resume; A.resume = null;
+      A.phase = b.goal === 'defesa' ? 'posicao' : resume || 'marcha';
+      if (foe && (foe.st === 'retorno' || !G.War.bands.has(foe.id))) { const where = ref ? G.Village.nearSettlementName(ref.x, ref.y) : null; A.reports.push(`venceu a batalha${where ? ' de ' + where : ''}`); if (!G.Wars) log(`${f.name} venceu a batalha${where ? ' de ' + where : ''}: o inimigo abandonou o campo.`, 'battle', ref ? ref.x : undefined, ref ? ref.y : undefined); }
+      G.Wars && G.Wars.battleEnd(b);
+      b.battle = 0;
       for (const co of A.cos) { co.form = b.goal === 'defesa' ? formFor(co.kind, f) : 'coluna'; co.order = 'seguir'; }
       if (b.goal !== 'defesa') { A.trail = ref ? [[ref.x, ref.y]] : []; }
+      if (resume === 'cerco') { const set = G.S.settlements.get(b.set); if (set) ringUp(b, A, set, (set.radius || 8) + 7); }
+      if (b.goal === 'defesa' && A.relief && A.pos) { for (const co of A.cos) coGoto(co, A.pos[0], A.pos[1]); }
+      // the defenders go back to their post
+      else if (b.goal === 'defesa' && A.pos) { A.phase = 'reunir'; A.rt = 0; A.drawn = true; }
       return;
+    }
+    if (A.hold && !A.held) {
+      const g0 = g || ref; const near = g0 ? enemiesNear(b.fac, g0.x, g0.y, 4.5).length : 0;
+      if (A.bt > A.hold || near) { A.held = true; for (const co of A.cos) if (co.order === 'esperar') co.order = 'avancar'; if (g0) { G.Audio && G.Audio.at(g0.x, g0.y, 'horn', true); G.Vg.emote(g0, 'angry', 2); } }
+      else { if (g0 && G.R() < dt * 0.5) G.Vg.emote(g0, 'angry', 1.5); }
     }
     for (const co of A.cos) {
       if (co.rout) continue;
       const c0 = centroid(co.alive) || [co.ax, co.ay];
       const en = enemiesNear(b.fac, c0[0], c0[1], 14);
       if (co.order === 'flanquear') { if (coMove(co, dt, 1.4) || !co.path) co.order = 'carregar'; continue; }
+      if (co.order === 'esperar') continue; // the lines formed, facing each other: waiting for the horn
       if (!en.length) { if (eg && co.kind !== 'arqueiro') { const d = dist(co.ax, co.ay, eg.x, eg.y); if (d > 1.5) { const k = Math.min(1, dt * 0.8 / d); const nx = co.ax + (eg.x - co.ax) * k, ny = co.ay + (eg.y - co.ay) * k; if (walk(nx, ny)) { co.ax = nx; co.ay = ny; } co.dir = turn(co.dir, Math.atan2(eg.y - co.ay, eg.x - co.ax), dt); } } continue; }
       const ec = centroid(en);
       co.dir = turn(co.dir, Math.atan2(ec[1] - co.ay, ec[0] - co.ax), dt * 1.5);
       if (co.kind === 'arqueiro' && co.order === 'segurar') continue;
+      // no chase beyond the field: the pursuit stops where the battle was (defenders keep near what they defend)
+      if (!A.field) A.field = [co.ax, co.ay];
+      const lim = b.goal === 'defesa' && !A.relief ? 16 : 13;
+      if (dist(ec[0], ec[1], A.field[0], A.field[1]) > lim) continue;
       // advance in formation until the lines meet, then it is every soldier for the fight
       const d = dist(co.ax, co.ay, ec[0], ec[1]);
       if (d > 1.2) { const sp = (co.order === 'carregar' || co.kind === 'cavalaria' ? 1.6 : co.form === 'testudo' ? 0.55 : 0.85) * dt; const nx = co.ax + (ec[0] - co.ax) / d * sp, ny = co.ay + (ec[1] - co.ay) / d * sp; if (walk(nx, ny)) { co.ax = nx; co.ay = ny; } }
@@ -453,6 +515,7 @@
     if (en) en.stock.food -= food;
     set.larder = { food, by: b.id, fac: b.fac, since: S.day, start: food };
     log(`${f.name} cercou ${set.name} e cavou trincheiras em volta. Ninguém entra, ninguém sai: ${Math.round(food)} de comida dentro dos muros.`, 'siege', set.cx, set.cy);
+    G.Wars && G.Wars.siegeStart(b, set);
     G.UI && G.UI.notice(`Cerco a ${set.name}!`, 'siege');
     A.trench = { x: set.cx, y: set.cy, r: (set.radius || 8) + 6, set: set.id };
   }
@@ -484,16 +547,36 @@
     const breach = w && w.tiles.some(i => !S.wall[i]) && w.built >= w.tiles.length;
     const starving = L && L.food <= 0 && sg.hungry > 30;
     // surrender: hunger and hopelessness open the gates
+    // a long siege: sickness inside the walls, among the hungry and the crowded
+    if (b.campaign && L && sg.t > G.DAY_LEN * 0.8 && L.food < (L.start || 1) * 0.3 && G.R() < dt * 0.02) {
+      const sick = [...S.villagers.values()].filter(v => v.set === set.id && !v.captive && !(v.sick > 0) && !(v.immune > 0));
+      const v = sick[Math.floor(G.R() * sick.length)]; if (v) { v.sick = G.DAY_LEN * 0.6; if (!sg.illNoted) { sg.illNoted = 1; log(`Dentro dos muros de ${set.name}, a fome trouxe a doença.`, 'plague', set.cx, set.cy); } }
+    }
     if (starving && !sg.surrender && G.R() < dt * 0.05) {
       sg.surrender = true; endSiege(set, 'rendicao');
+      G.Wars && G.Wars.siegeEnd(set, 'rendicao', b.fac);
       log(`${set.name}, faminta, abriu os portões e se rendeu a ${f.name}.`, 'siege', set.cx, set.cy);
       if (b.goal === 'conquista' || b.goal === 'captura') { G.War.conquer(set, b); return true; }
       // tribute instead
       if (en) { const k = Math.min(en.stock.moedas || 0, 40); en.stock.moedas -= k; f.stock.moedas = (f.stock.moedas || 0) + k; b.loot.food += 0; }
       b.st = 'retorno'; b.t = 0; return true;
     }
-    if ((breach || starving || sg.t > 150) && !sg.assault) {
+    // a campaign waits: the breach, the hunger, a crushing advantage after a day, or wagons running empty
+    const Wa = b.campaign && G.Wars ? G.Wars.armyOfBand(b) : null;
+    const tired = b.campaign ? (sg.t > G.DAY_LEN * 1.2 && b.members.length > (b.scout ? b.scout.adults : 10) * 2.2) || (Wa && G.Wars.supplyDays(Wa) < 0.6 && sg.t > G.DAY_LEN * 0.4) || sg.impatient || sg.t > G.DAY_LEN * 4 : sg.t > 150;
+    // a general short of bread before a town that can still fight lifts the siege rather than throw his men at the walls
+    if (tired && !breach && !starving && b.campaign && !sg.assault) {
+      let inside = 0; for (const v of S.villagers.values()) if (v.set === set.id && !v.captive && v.age >= 16 && v.age < 62) inside++;
+      if (inside * 0.9 > b.members.length) {
+        endSiege(set, 'fim'); b.st = 'retorno'; b.t = 0; b.retreat = true;
+        G.Wars && G.Wars.siegeEnd(set, 'levantado', b.fac);
+        log(`Sem pão para mais um inverno e diante de muros ainda bem guardados, ${f.name} levantou o cerco de ${set.name}.`, 'siege', set.cx, set.cy);
+        return true;
+      }
+    }
+    if ((breach || starving || tired) && !sg.assault) {
       sg.assault = 1; A.phase = 'invadir'; endSiege(set, 'assalto');
+      G.Wars && G.Wars.siegeEnd(set, 'assalto', b.fac); G.Wars && G.Wars.assault(b, set);
       log(`${breach ? 'Pela brecha nos muros' : starving ? 'Com a cidade morrendo de fome' : 'Cansados de esperar'}, os sitiantes de ${f.name} lançam o assalto a ${set.name}!`, 'battle', set.cx, set.cy);
       return false;
     }
@@ -529,14 +612,17 @@
   AR.defend = function (att) {
     const S = G.S; const set = S.settlements.get(att.set); if (!set) return null;
     const f = G.Fac.get(set.fac); if (!f || !f.alive) return null;
-    for (const o of G.War.bands.values()) if (o.fac === f.id && o.goal === 'defesa' && o.set === set.id) return o;
+    for (const o of G.War.bands.values()) if (o.fac === f.id && o.goal === 'defesa' && o.set === set.id) { if (!o.defOf || !G.War.bands.has(o.defOf)) o.defOf = att.id; return o; }
+    // the defenders a war already called (perhaps still gathering at the square)
+    const wa = G.Wars && G.Wars.defenseFor(set.id);
+    if (wa) { const ob = G.Wars.formNow(wa); if (ob) { ob.defOf = att.id; return ob; } }
     const cands = [];
     // the kingdom's own host marches to the rescue: the whole region is levied
     const near = new Set(); for (const o of S.settlements.values()) if (o.fac === f.id && dist(o.cx, o.cy, set.cx, set.cy) < 55) near.add(o.id);
     for (const v of S.villagers.values()) {
       if (!near.has(v.set) || v.captive || v.age < 16 || v.age >= 58 || v.hp < 50 || v.preg > 0 || v.held || v.air || v.aboard) continue;
       // those hiding or running are called back to the ranks
-      if (v.task && (v.task.type === 'band' || (v.task.pri >= 4 && !RECALL[v.task.type]))) continue;
+      if (v.task && (v.task.type === 'band' || v.task.type === 'muster' || (v.task.pri >= 4 && !RECALL[v.task.type]))) continue;
       const w = v.role === 'guerreiro' ? 3 : (v.role === 'cacador' ? 1.5 : 0) + v.courage;
       cands.push([w, v]);
     }
@@ -549,25 +635,33 @@
     n = Math.min(n, 140, cands.length);
     if (n < 4) return null;
     const ms = cands.slice(0, n).map(c => c[1]);
-    const en = G.Fac.get(att.fac);
+    return AR.raiseDefense(set, f, ms, G.Fac.get(att.fac), att);
+  };
+  // the defenders take their places: the walls, the forest, the hill, the river — or the open field;
+  // an army of relief marches on the besiegers instead
+  AR.raiseDefense = function (set, f, ms, en, att, o) {
+    const S = G.S; o = o || {}; if (!en || ms.length < 3) return null;
     const b = G.War.makeBand(f, en, set, ms, 'defesa', { from: set.id });
-    b.st = 'reunir'; b.rx = set.cx; b.ry = set.cy; b.defOf = att.id;
+    b.st = 'reunir'; b.rx = o.from ? o.from[0] : set.cx; b.ry = o.from ? o.from[1] : set.cy; b.defOf = att ? att.id : 0;
+    if (o.relief || o.from) b.campaign = -1; // (marked before organizing: the levy kept its weapons; the real id comes from G.Wars)
     const A = AR.organize(b, ms, f, en, set, set, {});
-    // the defenders' plan: the walls, the forest, the hill, the river — or the open field
-    const gA = S.villagers.get(att.army.gen) || S.villagers.get(att.members[0]);
-    const from = gA ? [gA.x, gA.y] : [set.cx + 10, set.cy];
+    const gA = att && (S.villagers.get(att.army && att.army.gen) || S.villagers.get(att.members[0]));
+    const capE = G.Fac.capitalOf(en.id);
+    const from = gA ? [gA.x, gA.y] : capE ? [capE.cx, capE.cy] : [set.cx + 10, set.cy];
     const w = G.Siege && G.Siege.wallOf(set.id); const walls = !!(w && w.fac === set.fac && (w.done || w.built > w.tiles.length * 0.6));
-    const tr = terrain(set.cx, set.cy, from[0], from[1]);
     const dir = Math.atan2(from[1] - set.cy, from[0] - set.cx);
+    const reachR = Math.min(dist(set.cx, set.cy, from[0], from[1]), (set.radius || 8) + 8);
+    const tr = terrain(set.cx, set.cy, set.cx + Math.cos(dir) * reachR, set.cy + Math.sin(dir) * reachR);
     let strat = 'campo', pos = null;
-    if (walls) { strat = 'muralha'; pos = [set.cx, set.cy]; }
-    else if (tr.forest > 0.25 && ms.length < att.members.length * 1.2) { strat = 'emboscada'; pos = forestSpot(set, dir); if (!pos) strat = 'campo'; }
+    if (o.relief) { strat = 'socorro'; pos = gA ? nearWalk(gA.x, gA.y, 0.8) || [gA.x, gA.y] : nearWalk(set.cx + Math.cos(dir) * ((set.radius || 8) + 9), set.cy + Math.sin(dir) * ((set.radius || 8) + 9), 0.8); A.relief = true; }
+    else if (walls) { strat = 'muralha'; pos = [set.cx, set.cy]; }
+    else if (tr.forest > 0.25 && ms.length < (att ? att.members.length : 20) * 1.2) { strat = 'emboscada'; pos = forestSpot(set, dir); if (!pos) strat = 'campo'; }
     if (strat === 'campo' && tr.hill) { strat = 'colina'; pos = nearWalk(tr.hill[0], tr.hill[1], 0.8); }
     if (strat === 'campo' && tr.river > 0) { strat = 'rio'; pos = riverSpot(set, dir); if (!pos) strat = 'campo'; }
     if (!pos) { const R = (set.radius || 8) + 2; pos = nearWalk(set.cx + Math.cos(dir) * R, set.cy + Math.sin(dir) * R, 0.8) || [set.cx, set.cy]; }
     A.strat = strat; A.pos = pos; A.dir = dir; A.phase = 'reunir';
     const T0 = TT(f); const g = S.villagers.get(A.gen);
-    log(`${set.name} se prepara: ${ms.length} defensores sob ${T0.gen[g && g.g === 'f' ? 1 : 0].toLowerCase()} ${g ? g.name : '?'}. Plano: ${AR.STRAT[strat]}.`, 'army', set.cx, set.cy);
+    log(o.relief ? `O exército de socorro de ${f.name} parte para ${set.name}: ${ms.length} soldados sob ${T0.gen[g && g.g === 'f' ? 1 : 0].toLowerCase()} ${g ? g.name : '?'}.` : `${set.name} se prepara: ${ms.length} defensores sob ${T0.gen[g && g.g === 'f' ? 1 : 0].toLowerCase()} ${g ? g.name : '?'}. Plano: ${AR.STRAT[strat] || 'defender'}.`, 'army', b.rx, b.ry);
     return b;
   };
   function forestSpot(set, dir) {
@@ -587,15 +681,36 @@
   }
   function defenseTick(b, A, dt, set, f) {
     const S = G.S;
-    const att = G.War.bands.get(b.defOf);
+    if (b.st === 'retorno') { G.War.disband(b, true); return true; }
+    let att = G.War.bands.get(b.defOf);
+    // (a war's defenders find the next threat: another enemy host bound for the town)
+    if ((!att || att.st === 'retorno') && b.campaign && set) { for (const o of G.War.bands.values()) if (o.set === set.id && o.goal !== 'defesa' && o.st !== 'retorno' && G.Fac.atWar(o.fac, b.fac)) { b.defOf = o.id; att = o; break; } }
+    const waiting = b.campaign && set && G.Wars && G.Wars.threatTo(set.id) && (A.idle || 0) < G.DAY_LEN * 0.5;
     // the threat is gone: back to work
     if (!att || att.st === 'retorno' || !set || set.fac !== b.fac) {
       A.idle = (A.idle || 0) + dt;
-      if (A.idle > 6 && A.phase !== 'batalha') { if (att && att.st === 'retorno' && !A.won) { A.won = true; if (set) set.victory = S.day; log(`${set ? set.name : 'A cidade'} resistiu: o inimigo recuou diante dos defensores de ${f.name}.`, 'battle', set ? set.cx : undefined, set ? set.cy : undefined); } G.War.disband(b, true); return true; }
+      if (A.idle > (waiting ? 1e9 : b.campaign ? 20 : 6) && A.phase !== 'batalha') { if (att && att.st === 'retorno' && !A.won) { A.won = true; if (set) set.victory = S.day; log(`${set ? set.name : 'A cidade'} resistiu: o inimigo recuou diante dos defensores de ${f.name}.`, 'battle', set ? set.cx : undefined, set ? set.cy : undefined); } G.War.disband(b, true); return true; }
     } else A.idle = 0;
+    // the enemy is in the streets (or came through the walls): the defenders leave their post and fall on it
+    if (att && att.army && att.st === 'ataque' && A.phase !== 'batalha' && !A.relief && (A.strat !== 'muralha' || att.army.phase === 'invadir') && set && S.villagers.get(att.army.gen)) {
+      A.phase = 'batalha'; A.bt = 0; A.foeHost = att.id; deploy(b, A, f, att); A.hold = 0;
+      for (const co of A.cos) { co.hidden = false; co.order = 'avancar'; }
+      G.Wars && G.Wars.battleStart(b, att);
+      return true;
+    }
     const foeHost = enemyHost(b);
-    if (foeHost && A.phase !== 'batalha' && A.strat !== 'muralha') { A.phase = 'batalha'; A.bt = 0; A.foeHost = foeHost.id; deploy(b, A, f, foeHost); for (const co of A.cos) { co.hidden = false; if (A.strat === 'emboscada') co.morale += 10; } if (A.strat === 'emboscada') { const eg = S.villagers.get(foeHost.army.gen); if (eg) log(`Emboscada! Os defensores de ${set.name} saem da floresta sobre o flanco de ${G.Fac.get(foeHost.fac).name}.`, 'battle', eg.x, eg.y); for (const c of foeHost.army.cos) c.morale -= 14; } }
+    if (foeHost && A.phase !== 'batalha' && A.strat !== 'muralha') { A.phase = 'batalha'; A.bt = 0; A.foeHost = foeHost.id; deploy(b, A, f, foeHost); G.Wars && G.Wars.battleStart(b, foeHost); for (const co of A.cos) { co.hidden = false; if (A.strat === 'emboscada') co.morale += 10; } if (A.strat === 'emboscada') { const eg = S.villagers.get(foeHost.army.gen); if (eg) log(`Emboscada! Os defensores de ${set.name} saem da floresta sobre o flanco de ${G.Fac.get(foeHost.fac).name}.`, 'battle', eg.x, eg.y); for (const c of foeHost.army.cos) c.morale -= 14; } }
     if (A.phase === 'batalha') { battleTick(b, A, dt, f); return true; }
+    // the relief: the general leads the march along the road; the companies follow in column
+    if (A.relief && (A.phase === 'reunir' || A.phase === 'marcha')) {
+      A.rt = (A.rt || 0) + dt;
+      if (A.phase === 'reunir') { if (!A.drawn) { A.drawn = true; drawUp(b, A, b.rx, b.ry, A.dir + Math.PI); } if (A.rt > 8) { A.phase = 'marcha'; b.tx = A.pos[0]; b.ty = A.pos[1]; startMarch(b, A, set); G.Audio && G.Audio.at(b.rx, b.ry, 'horn', true); } return true; }
+      marchTick(b, A, dt);
+      const g = S.villagers.get(A.gen); const tg = att && S.villagers.get(att.army && att.army.gen);
+      if (tg && G.R() < dt * 0.2) { b.tx = tg.x; b.ty = tg.y; if (g && g.task) g.task.gpFor = null; }
+      if (g && dist(g.x, g.y, b.tx, b.ty) < 4) { A.phase = 'posicao'; for (const co of A.cos) { co.form = formFor(co.kind, f); co.order = 'seguir'; } }
+      return true;
+    }
     if (A.phase === 'reunir') {
       if (!A.drawn) { A.drawn = true; drawUp(b, A, set.cx, set.cy, A.dir); }
       A.rt = (A.rt || 0) + dt;
@@ -625,10 +740,17 @@
     if (!co) return false;
     const S = G.S;
     // a routed company runs for home
-    if (co.rout) {
+    if (v.sleeping && A.phase !== 'acampar') v.sleeping = false;
+    // badly hurt, a soldier drops out of the line and limps home (some never do)
+    if (t.fled === undefined && v.hp < 24 && b.st !== 'retorno' && (A.phase === 'batalha' || A.phase === 'invadir')) t.fled = G.R() < (v.role === 'guerreiro' ? 0.3 : 0.6) || undefined;
+    if (co.rout || t.fled) {
+      if (!t.fledC) { t.fledC = 1; G.Wars && G.Wars.onFlee(v, b); }
       const home = S.settlements.get(b.from) || G.Fac.capitalOf(b.fac);
       if (!home) return false;
       v.act = 'run';
+      // caught: wounded, an enemy at arm's length — better a prisoner than dead
+      t.yield = (t.yield || 0) - dt;
+      if (t.yield <= 0) { t.yield = 1.2; if (v.hp < 45 && b.campaign) { let foe = null; for (const o of G.War.fightersNear(v.x, v.y, 1.5)) { if (o.captive || !G.Fac.atWar(b.fac, fid(o)) || G.dist2(o.x, o.y, v.x, v.y) > 2.2) continue; foe = o; break; } if (foe && G.R() < 0.45) { const fb = foe.task && foe.task.type === 'band' ? G.War.bands.get(foe.task.band) : null; G.Vg.emote(v, 'fear', 2); G.War.capture(v, foe, fb); return true; } } }
       if (!v.path || t.routTo !== home.id) { t.routTo = home.id; H.goto(v, home.cx + G.rr(-2, 2), home.cy + G.rr(-2, 2), false); }
       if (H.move(v, dt, 1.35) || dist(v.x, v.y, home.cx, home.cy) < 4) { if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, b.fac); v.carry = null; } H.end(v); }
       return true;
@@ -636,6 +758,22 @@
     if (b.st === 'retorno') return false;
     const phase = A.phase;
     const k = co.members.indexOf(v.id); const n = co.members.length;
+    // the camp: sentries at the edge, the rest round the fires, asleep in the small hours
+    if (phase === 'acampar' && !t.foe) {
+      const slot = worldSlot(co, k, n, 'dispersa');
+      if (steerTo(v, t, slot[0], slot[1], dt, H, 1)) {
+        v.moving = false;
+        const sentry = k % 6 === 0 || t.general && k % 2;
+        const deep = G.S.time > 0.85 || G.S.time < 0.02;
+        if (sentry) { v.sleeping = false; v.act = 'guard'; G.faceTo(v, Math.cos(co.dir), Math.sin(co.dir)); }
+        else if (deep || k % 3 === 0) { v.sleeping = true; v.act = 'sleep'; }
+        else { v.sleeping = false; v.act = k % 4 === 1 ? 'talk' : 'sit'; }
+      }
+      // an enemy in the night: the camp wakes
+      t.scan = (t.scan || 0) - dt;
+      if (t.scan <= 0) { t.scan = 1 + G.R(); for (const o of G.War.fightersNear(v.x, v.y, 3)) { if (o.captive || !G.Fac.atWar(b.fac, fid(o))) continue; if (G.dist2(v.x, v.y, o.x, o.y) < 9) { t.foe = o.id; v.sleeping = false; break; } } }
+      return true;
+    }
     // the general leads the march along a real road
     if (t.general && phase === 'marcha' && !t.foe) {
       if (!t.gpFor || t.gpFor !== b.tx + b.ty) { t.gpFor = b.tx + b.ty; if (!H.goto(v, b.tx, b.ty, false, N * N)) H.goto(v, b.tx, b.ty, true, N * N); }
@@ -650,7 +788,7 @@
     if (t.scan <= 0) {
       t.scan = 0.4 + G.R() * 0.2;
       let best = 0, bd = reach * reach;
-      for (const o of G.War.fighters) { if (o.captive || o.inside || o.air || o.held || !G.Fac.atWar(b.fac, fid(o))) continue; const d = G.dist2(v.x, v.y, o.x, o.y); if (d < bd) { bd = d; best = o.id; } }
+      for (const o of G.War.fightersNear(v.x, v.y, reach)) { if (o.captive || o.inside || o.air || o.held || !G.Fac.atWar(b.fac, fid(o))) continue; const d = G.dist2(v.x, v.y, o.x, o.y); if (d < bd) { bd = d; best = o.id; } }
       if (!best && phase === 'cerco' && co.kind !== 'arqueiro' && k % 3 === 0) {
         // anyone of the enemy who ventures outside the walls near the camp
         for (const o of S.villagers.values()) { if (o.captive || o.inside || o.age < 14 || !G.Fac.atWar(b.fac, fid(o))) continue; const d = G.dist2(v.x, v.y, o.x, o.y); if (d < 36 && d < bd * 9) { bd = d; best = o.id; } }
@@ -699,7 +837,7 @@
   // ------------------------------ the blows: flanks, formations, weapons ------------------------------
   function coOf(v) { const t = v.task; if (!t || t.type !== 'band' || !t.co) return null; const b = G.War.bands.get(t.band); if (!b || !b.army) return null; return b.army.cos.find(c => c.id === t.co) || null; }
   // a company holds its ranks only while it is formed: in the streets of a sacked town there are no flanks
-  const FORMED = { batalha: 1, posicao: 1, assalto: 1, cerco: 1, cercar: 1, marcha: 1, reunir: 1 };
+  const FORMED = { batalha: 1, posicao: 1, assalto: 1, cerco: 1, cercar: 1, marcha: 1, reunir: 1, acampar: 1 };
   function inRanks(v, co) { const b = G.War.bands.get(v.task.band); return !!b && b.st !== 'retorno' && FORMED[b.army.phase] && G.dist(v.x, v.y, co.ax, co.ay) < 5; }
   AR.coOf = coOf;
   AR.dmgMul = function (v, o, ranged) {
@@ -721,6 +859,7 @@
       if (G.S.treeAt[W.idx(o.x, o.y)]) m *= 0.65;
     }
     if (uo === 'milicia') m *= 1.15;
+    if (o.task && o.task.general) m *= 0.55; // the commander's guard
     // the flank and the back: facing is the company's front
     if (co && !co.rout && inRanks(o, co)) {
       const dx = v.x - o.x, dy = v.y - o.y; const a = Math.atan2(dy, dx);
@@ -758,14 +897,14 @@
     for (const s of G.S.settlements.values()) {
       const L = s.larder; if (!L) continue;
       const b = G.War.bands.get(L.by);
-      if (!b || b.st === 'retorno' || s.fac === L.fac) { endSiege(s, 'fim'); if (b && b.st === 'retorno') log(`O cerco a ${s.name} foi levantado.`, 'siege', s.cx, s.cy); }
+      if (!b || b.st === 'retorno' || s.fac === L.fac) { endSiege(s, 'fim'); if (b && b.st === 'retorno') log(`O cerco a ${s.name} foi levantado.`, 'siege', s.cx, s.cy); G.Wars && G.Wars.siegeEnd(s, s.fac === L.fac ? 'queda' : b && b.retreat && b.army && b.army.foeHost ? 'socorro' : 'levantado', L.fac); }
     }
   };
   // eating inside a besieged town comes from its larder
   AR.larder = function (v) { const s = G.S.settlements.get(v.set); return s && s.larder && !v.captive ? s.larder : null; };
   AR.onDisband = function (b) {
     const A = b.army; if (!A) return;
-    for (const co of A.cos) for (const id of co.members) { const v = G.S.villagers.get(id); if (v) { v.unit = null; if (v._bow) { v.arm = null; v._bow = false; } if (v._levy && v.role !== 'guerreiro') { const f = G.Fac.ofV(v); if (f) f.stock.armas = (f.stock.armas || 0) + 1; } v._levy = false; } }
+    for (const co of A.cos) for (const id of co.members) { const v = G.S.villagers.get(id); if (v) { v.unit = null; if (A.phase === 'acampar') v.sleeping = false; if (v._bow) { v.arm = null; v._bow = false; } if (v._levy && v.role !== 'guerreiro') { const f = G.Fac.ofV(v); if (f) f.stock.armas = (f.stock.armas || 0) + 1; } v._levy = false; } }
     const set = G.S.settlements.get(b.set); if (set && set.larder && set.larder.by === b.id) endSiege(set, 'fim');
     if (b.stolen) { const f = G.Fac.get(b.fac); if (f) log(`${f.name} voltou da guerrilha com ${b.stolen} animais roubados.`, 'war'); for (const a of G.S.animals.values()) if (a.stolen === b.fac && a.state === 'led') { a.state = 'pen'; a.pen = 0; a.dom = b.fac; a.ledBy = 0; a.stolen = 0; } }
     if (A.reports.length && b.goal !== 'defesa') { const f = G.Fac.get(b.fac); if (f) f.warLog = (f.warLog || []).concat([{ d: G.S.day, strat: A.strat, rep: A.reports.slice(0, 4) }]).slice(-6); }
@@ -826,6 +965,9 @@
     if (co && co.rout) return 'Fugindo em debandada!';
     const unit = co ? `${co.n}ª ${TT(f).co}` : 'o exército';
     const form = co ? AR.FORM[co.form] : '';
+    if (A.phase === 'acampar') return v.sleeping ? 'Dormindo no acampamento do exército' : (co && co.members.indexOf(v.id) % 6 === 0) ? 'De sentinela no acampamento' : 'No acampamento, junto ao fogo';
+    if (A.phase === 'batalha' && co && co.order === 'esperar') return `Em linha de batalha, esperando a ordem · ${unit}`;
+    if (A.relief && A.phase === 'marcha') return `No exército de socorro, marchando para ${set ? set.name : 'a cidade cercada'}`;
     const verb = b.goal === 'defesa' ? { reunir: 'Formando para defender', posicao: A.strat === 'emboscada' ? 'Escondido na floresta, esperando' : A.strat === 'colina' ? 'Segurando o alto da colina' : A.strat === 'rio' ? 'Guardando o vau do rio' : A.strat === 'muralha' ? 'Atrás do portão, guardando a muralha' : 'Em linha diante da cidade', batalha: 'Em batalha' }[A.phase] : { reunir: 'Reunindo o exército', marcha: `Marchando contra ${set ? set.name : 'o inimigo'}`, batalha: 'Em batalha campal', cerco: `No cerco de ${set ? set.name : ''}`, cercar: 'Tomando posição num dos portões', guerrilha: 'Em guerrilha nos arredores', assalto: 'Avançando em linha', invadir: 'No assalto à cidade' }[A.phase];
     if (!verb) return null;
     return `${verb} · ${unit}${form ? ', em ' + form : ''}`;
@@ -846,17 +988,56 @@
       void view;
     }
   });
-  const tentE = new WeakMap();
-  G.renderHooks.ents.push(function (add) {
+  const tentE = new WeakMap(), fireE = new WeakMap(), wagonE = new Map();
+  G.renderHooks.ents.push(function (add, view, zoom) {
     for (const b of G.War.bands.values()) {
-      const A = b.army; if (!A || A.phase !== 'cerco') continue;
-      for (const co of A.cos) {
+      const A = b.army; if (!A) continue;
+      const camp = A.phase === 'cerco' || A.phase === 'acampar';
+      if (camp) for (const co of A.cos) {
         if (!co.camp) continue;
         let e = tentE.get(co); if (!e) tentE.set(co, e = { co, fn: drawTents, fac: b.fac });
         add(co.camp[0] + co.camp[1] - 0.8, e, co.camp[0] - 1, co.camp[1] - 0.6);
+        // a fire for each company, at night
+        if ((G.isNight() || A.phase === 'acampar') && co.n % 2 === 1) { let f = fireE.get(co); if (!f) fireE.set(co, f = { co, fn: drawCampFire }); add(co.camp[0] + co.camp[1] + 0.4, f, co.camp[0] + 0.6, co.camp[1] + 0.6); }
       }
+      // the supply wagons at the tail of a campaign column (or parked in the camp)
+      const Wa = b.campaign > 0 && G.Wars ? G.Wars.army(b.campaign) : null;
+      if (!Wa || zoom < 0.55 || !A.trail || !A.trail.length || b.st === 'retorno' || A.phase === 'batalha') continue;
+      const nW = Math.min(4, Wa.wagons || 1);
+      for (let k = 0; k < nW; k++) {
+        const last = A.cos[A.cos.length - 1]; let x, y, dir = 0;
+        if (camp && A.cos.length) { const co = A.cos[k % A.cos.length]; const c0 = co.camp || [co.ax, co.ay]; x = c0[0] - 1.6 - k * 0.3; y = c0[1] + 1.2; }
+        else { const back = (last ? Math.max(0, A.trail.length - 1 - Math.round((A.cos.length * 6 + 4 + k * 3))) : 0); const p = A.trail[back] || A.trail[0]; const q = A.trail[Math.max(0, back - 2)] || p; x = p[0]; y = p[1]; dir = Math.atan2(p[1] - q[1], p[0] - q[0]); }
+        const key = b.id * 8 + k; let e = wagonE.get(key); if (!e) wagonE.set(key, e = { fn: drawWagon, fac: b.fac, k });
+        e.dir = dir; e.food = Wa.food; e.moving = !camp && A.phase === 'marcha';
+        add(x + y, e, x, y);
+      }
+      if (wagonE.size > 400) wagonE.clear();
     }
   });
+  function drawCampFire(c, e, sx, sy, t, nightF, fx) {
+    c.fillStyle = '#2a2220'; c.beginPath(); c.ellipse(sx, sy, 3.2, 1.6, 0, 0, TAU); c.fill();
+    c.strokeStyle = '#5a3a22'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(sx - 3, sy + 0.6); c.lineTo(sx + 2.4, sy - 1.4); c.moveTo(sx - 2.4, sy - 1.4); c.lineTo(sx + 3, sy + 0.6); c.stroke();
+    if (fx) { fx.fire(sx, sy - 2, 0.5 + 0.08 * Math.sin(t * 7 + e.co.id)); fx.light(sx, sy - 4, 30 + Math.sin(t * 9 + e.co.id) * 2, 'warm', 0.22 + nightF * 0.2); }
+  }
+  // a covered supply wagon, with its ox
+  function drawWagon(c, e, sx, sy, t) {
+    const fl = Math.cos(e.dir) < 0 ? -1 : 1; c.save(); c.translate(sx, sy); c.scale(fl, 1);
+    const bob = e.moving ? Math.sin(t * 6 + e.k) * 0.4 : 0;
+    // ox
+    c.fillStyle = '#6a4a32'; c.beginPath(); c.ellipse(8.5, -3.2 + bob, 3.6, 2.2, 0, 0, TAU); c.fill(); c.beginPath(); c.ellipse(12, -4 + bob, 1.6, 1.3, 0, 0, TAU); c.fill();
+    c.strokeStyle = '#e8dcc0'; c.lineWidth = 0.5; c.beginPath(); c.moveTo(12.4, -5.2 + bob); c.lineTo(13.6, -6.4 + bob); c.stroke();
+    c.fillStyle = '#4a3424'; for (const lx of [6.4, 10.2]) c.fillRect(lx, -1.6 + bob, 0.8, 2);
+    c.strokeStyle = '#5a3c22'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(4.2, -2.4); c.lineTo(7, -3); c.stroke();
+    // bed, cover, wheels
+    c.fillStyle = '#7a5230'; c.fillRect(-5, -4.4, 9.4, 2.6);
+    c.fillStyle = e.food > 0 ? '#e8dcc0' : '#b8ac94'; c.beginPath(); c.moveTo(-5, -4.4); c.quadraticCurveTo(-0.3, -10.4, 4.4, -4.4); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(90,70,50,0.45)'; c.lineWidth = 0.4; for (const x of [-2.6, -0.3, 2]) { c.beginPath(); c.moveTo(x, -4.4); c.lineTo(x * 0.7, -8.6); c.stroke(); }
+    c.fillStyle = G.Fac.hex(e.fac); c.fillRect(-4.6, -5.4, 1.4, 1);
+    const wr = t * (e.moving ? 4 : 0);
+    for (const wx of [-3.2, 2.6]) { c.strokeStyle = '#3a2a1c'; c.lineWidth = 0.8; c.beginPath(); c.arc(wx, -1.4, 1.6, 0, TAU); c.stroke(); c.beginPath(); c.moveTo(wx + Math.cos(wr) * 1.6, -1.4 + Math.sin(wr) * 1.6); c.lineTo(wx - Math.cos(wr) * 1.6, -1.4 - Math.sin(wr) * 1.6); c.stroke(); }
+    c.restore();
+  }
   function drawTents(c, e, sx, sy) {
     const col = G.Fac.hex(e.fac);
     for (const [dx, dy] of [[0, 0], [-14, 6], [12, 5]]) {

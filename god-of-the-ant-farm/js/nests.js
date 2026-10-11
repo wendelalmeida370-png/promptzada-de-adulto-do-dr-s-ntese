@@ -50,6 +50,8 @@
     const S = G.S; const sp = SP[kind]; const type = sp.nests;
     const birds = []; for (const a of S.animals.values()) if (a.kind === kind && !a.dead && !a.held && !a.tamed && (a.grown === undefined || a.grown >= 1) && !a.nest) birds.push(a);
     if (birds.length < 2) return;
+    // a sky that is already full: no more nests until the old ones die
+    if (birds.length >= A.capacity(kind) * 0.85) return;
     const have = nests().filter(n => n.kind === kind).length; if (have >= Math.min(6, Math.floor(birds.length / 2) + 1)) return;
     const a = birds[Math.floor(G.R() * birds.length)];
     const s = site(a, type); if (!s) return;
@@ -71,7 +73,10 @@
       else if (n.st === 'eggs' && n.t > DAY() * 0.22) { n.st = 'chicks'; n.t = 0; n.chicks = n.eggs; n.eggs = 0; }
       else if (n.st === 'chicks' && n.t > DAY() * 0.28) {
         // the young fly
-        for (let q = 0; q < n.chicks; q++) A.spawn(n.kind, n.x + G.rr(-0.6, 0.6), n.y + G.rr(-0.6, 0.6), { grown: 0.45, age: 0 });
+        // (not every chick lives to fly: never more than the land can feed)
+        const room = Math.max(0, A.capacity(n.kind) - (A.counts()[n.kind] || 0));
+        const fly = Math.min(n.chicks, room);
+        for (let q = 0; q < fly; q++) A.spawn(n.kind, n.x + G.rr(-0.6, 0.6), n.y + G.rr(-0.6, 0.6), { grown: 0.45, age: 0 });
         n.st = 'empty'; n.t = 0; n.chicks = 0; dropParent(n);
         if (!S.firstFledge) { S.firstFledge = S.day; log(`Os filhotes ${sp.g === 'f' ? 'da' : 'do'} ${sp.name.toLowerCase()} deixaram o ninho${G.Stories ? G.Stories.where(n.x, n.y).at : ''} e voaram pela primeira vez.`, 'bird', n.x, n.y); }
       } else if (n.st === 'empty' && n.t > DAY()) { list.splice(k, 1); continue; }

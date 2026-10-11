@@ -23,7 +23,7 @@
   // ============================== the living biography ==============================
   // entries are [day, code, ...args]; ids, names and short words only
   const BIO_MAX = 18;
-  const MINOR = { story: 1, told: 1, trade: 1, war: 1, moved: 1, fest: 1, appr: 1, elder: 1 };
+  const MINOR = { story: 1, told: 1, trade: 1, war: 1, mustered: 1, moved: 1, fest: 1, appr: 1, elder: 1 };
   L.bio = function (v, code, ...args) {
     if (!v || !G.S || v.dead) return;
     const e = [G.S.day, code, ...args];
@@ -65,6 +65,11 @@
       case 'limb': return `Perdeu ${LIMB[a] || 'um membro'} em combate${b ? ' perto de ' + b : ''}.`;
       case 'wounded': return `Foi ferid${o} em combate${a ? ' perto de ' + a : ''} e sobreviveu.`;
       case 'captive': return `Foi capturad${o} por ${a}.`;
+      case 'mustered': return `Atendeu ao chamado às armas${b ? ' n' + b.replace(/^(a|o) /, (m, x) => x + ' ') : a ? ' contra ' + a : ''}.`;
+      case 'command': return `Recebeu o comando d${/^(a|o|os|as) /.test(a) ? a.replace(/^(a|o|os|as) /, (m, x) => x + ' ') : 'o exército ' + a}${b ? ', n' + b.replace(/^(a|o) /, (m, x) => x + ' ') : ''}.`;
+      case 'battle': return `Lutou n${a.replace(/^(a|o) /, (m, x) => x + ' ')}${b ? ' — e ficou com o campo' : ' — e viu o seu lado recuar'}.`;
+      case 'deserted': return `Desertou d${/^(a|o|os|as) /.test(a) ? a.replace(/^(a|o|os|as) /, (m, x) => x + ' ') : 'o exército'} numa noite sem comida e sem esperança.`;
+      case 'veteran': return `Voltou para casa d${a.replace(/^(a|o) /, (m, x) => x + ' ')}${b ? `, depois de ${b} ${b > 1 ? 'batalhas' : 'batalha'}` : ''}.`;
       case 'freed': return `Voltou a ser livre.`;
       case 'ruler': return `Passou a governar ${a}.`;
       case 'fest': return festPhrase(v, a, b, false) + '.';
@@ -87,6 +92,10 @@
       case 'kill': return `Derrubei meu primeiro inimigo, ${a}`;
       case 'hero': return `Derrubei ${a} inimigos, e cantaram meu nome`;
       case 'captive': return `Fui capturad${o} por ${a}`;
+      case 'battle': return `Eu estava n${a.replace(/^(a|o) /, (m, x) => x + ' ')}${b ? '. Ficamos com o campo, mas eu ainda ouço os gritos' : '. Corremos, e eu não tenho vergonha de dizer'}`;
+      case 'veteran': return `Voltei d${a.replace(/^(a|o) /, (m, x) => x + ' ')} — nem todos voltaram`;
+      case 'command': return `Comandei ${a}`;
+      case 'deserted': return `Larguei a lança e voltei a pé, de noite. Não me orgulho`;
       case 'freed': return `Fui cativ${o}, e voltei a ser livre`;
       case 'awoke': return `Acordei junto à primeira fogueira de ${a}, quando não havia nada aqui`;
       case 'arrived': return `Cheguei a ${a} sem nada`;

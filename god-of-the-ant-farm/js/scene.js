@@ -69,6 +69,8 @@
     return sc;
   };
   Sn.get = id => Sn.list.find(s => s.id === id) || null;
+  // the errand someone was taken from (and will be given back): a soldier in a scene is still in the army
+  Sn.prevTask = v => { const t = v && v.task; if (!t || t.type !== 'scene') return null; const sc = Sn.get(t.sc); const rec = sc && sc.taken.get(v.id); return rec ? rec.prev : null; };
   Sn.of = storyId => Sn.list.find(s => s.story === storyId && s.st === 'run') || null;
   Sn.running = (storyId, key) => Sn.list.some(s => s.story === storyId && s.st === 'run' && (!key || s.key === key));
   Sn.actorScene = v => (v && v.task && v.task.type === 'scene' ? Sn.get(v.task.sc) : null);

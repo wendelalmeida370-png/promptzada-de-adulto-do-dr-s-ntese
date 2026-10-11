@@ -1439,9 +1439,17 @@
   // births: well-fed adults, while there is room in the habitat
   function breed(dt) {
     const S = G.S; const count = A.counts();
+    // a sky grown too crowded (old worlds, before nests had a limit) thins out by itself: the weakest die off
+    for (const k in count) {
+      const sp = SP[k]; if (!sp || sp.cls !== 'air') continue;
+      const cap = A.capacity(k); if (count[k] <= cap * 1.25) continue;
+      let cut = Math.min(3, Math.ceil((count[k] - cap) / 20));
+      for (const a of S.animals.values()) { if (cut <= 0) break; if (a.kind !== k || a.dead || a.legend || a.tamed || a.held || a.nest || a.named || G.R() > 0.3) continue; A.remove(a); count[k]--; cut--; }
+    }
     for (const a of [...S.animals.values()]) {
       if (a.dead || a.summoned || a.raid || a.grown < 1 || a.held || a.air || a.tamed || a.legend) continue;
       const sp = SP[a.kind]; if (!sp) continue;
+      if (sp.nests) continue; // (the birds that nest raise their young in the nest, not here)
       if (a.hunger > (A.predator(a.kind) ? 0.65 : 0.45)) continue;
       const cap = A.capacity(a.kind); const n = count[a.kind] || 0;
       if (n >= cap || n < 2) continue;

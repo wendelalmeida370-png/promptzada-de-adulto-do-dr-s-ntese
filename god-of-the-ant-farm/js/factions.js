@@ -142,6 +142,7 @@
     G.Stories && G.Stories.update(dt);
     G.Eco && G.Eco.update(dt);
     G.Army && G.Army.update(dt);
+    G.Wars && G.Wars.update(dt);
     G.Fest && G.Fest.update(dt);
   };
 })(window.G);
