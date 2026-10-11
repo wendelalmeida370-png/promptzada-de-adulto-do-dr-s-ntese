@@ -810,12 +810,17 @@
       const fishers = Nv.shipsOf(f.id, 'pesca').length;
       // hunger sends more boats out: the sea is the biggest pantry there is
       const hungry = f.stock.food < pop * 1.6;
-      const wantF = Math.min(docks.length * (hungry ? 4 : 2), 1 + Math.floor(pop / (hungry ? 12 : 22)) + (hungry ? 1 : 0));
+      // (a people of the sea keeps more boats in the water than one that only fishes when it must)
+      const aff = G.Expe ? G.Expe.prof(f).aff : 0.3; const seaW = S.mapType === 'mar' || S.mapType === 'arquipelago';
+      const per = hungry ? 12 : aff > 0.5 || seaW ? 14 : 22;
+      const wantF = Math.min(docks.length * (hungry ? 4 : aff > 0.5 || seaW ? 3 : 2), 1 + Math.floor(pop / per) + (hungry ? 1 : 0) + (seaW ? 1 : 0));
       // the first boats are worth more than another hut: the builders leave their wood alone
-      if (fishers < Math.min(wantF, docks.length * (hungry ? 2 : 1))) f._rsv = Nv.SHIP.pesca.cost + 2;
+      if (fishers < Math.min(wantF, docks.length * (hungry ? 2 : 1)) || (fishers < wantF && (seaW || aff > 0.55))) f._rsv = Nv.SHIP.pesca.cost + 2;
+      // timber set aside for a voyage the people has decided on
+      const sv = G.Expe && G.Expe.prof(f).saveWood; if (sv && sv.until > S.day) f._rsv = Math.max(f._rsv, sv.need); else if (sv) G.Expe.prof(f).saveWood = null;
       // (one hull at a time on each slip)
       const slip = () => { const free = docks.filter(d => !S.ships.some(o => o.dock === d.id && o.st === 'build')); return free.length ? G.pick(free) : null; };
-      if (fishers < wantF && f.stock.wood >= (hungry || fishers < docks.length ? Nv.SHIP.pesca.cost : 26)) { const d = slip(); if (d && Nv.dockInfo(d).moor && !Nv.blockaded(d)) spawn('pesca', f, d, { build: 1 }); }
+      if (fishers < wantF && f.stock.wood - (sv && sv.until > S.day ? sv.need : 0) >= (hungry || fishers < docks.length || seaW ? Nv.SHIP.pesca.cost : 26)) { const d = slip(); if (d && Nv.dockInfo(d).moor && !Nv.blockaded(d)) spawn('pesca', f, d, { build: 1 }); }
       // explorers look for peoples we have not met yet
       const unmet = G.Fac.all().some(o => o.id !== f.id && G.Fac.rel(f.id, o.id) && !G.Fac.rel(f.id, o.id).met);
       if (!G.Expe && unmet && !Nv.shipsOf(f.id, 'explorador').length && G.R() < 0.25) { const d = G.pick(docks); const di = Nv.dockInfo(d); if (di.moor && Nv.openSea(di.moor[0], di.moor[1])) { const s = spawn('explorador', f, d); if (s && !f._explored) { f._explored = 1; const st = S.settlements.get(d.set); log(`Um barco de ${f.name} parte de ${st ? st.name : 'seu porto'} para explorar o horizonte.`, 'ship', s.x, s.y); } } }

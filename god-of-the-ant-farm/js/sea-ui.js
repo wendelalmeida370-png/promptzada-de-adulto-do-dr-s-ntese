@@ -67,6 +67,21 @@
     if (!L.length) return '';
     return `<h4 class="wz-h">Náufragos</h4><div class="wz-events">${L.map(c => `<div>${flag(c.fac)} ${c.ids.map(P).filter(Boolean).map(v => `<a data-m="person" data-id="${v.id}">${esc(v.name)}</a>`).join(', ')} — náufragos ${esc(G.Expe.ofN(c.title || 'de um barco'))}, há ${Math.max(1, Math.round(G.S.day - c.d))} ${G.S.day - c.d >= 2 ? 'anos' : 'ano'}${c.raft > 0 ? ` · jangada ${Math.round(c.raft * 100)}%` : ''} <button class="wz-go sm" data-m="sea-goto" data-x="${c.x}" data-y="${c.y}">${I('eye')}</button></div>`).join('')}</div>`;
   }
+  // why this people is not at sea right now (read from the same rules the people follows)
+  function seaNow(f, p) {
+    const w = X().why ? X().why(f) : null; if (!w) return '';
+    const S = G.S; const sv = p.saveWood && p.saveWood.until > S.day ? p.saveWood : null;
+    const txt = sv ? `Decidiram uma viagem: juntando madeira para o casco (${Math.round(f.stock.wood)} de ${sv.need}).`
+      : w.gate === 'sem navegação' ? 'Ainda não sabem navegar.'
+      : w.gate === 'sem porto' ? 'Ainda não têm porto.'
+      : w.gate === 'porto sem saída para o mar aberto' ? 'O porto dá numa água fechada: nenhuma viagem longa sai dali.'
+      : w.gate === 'gente de menos' ? 'Gente de menos para tirar alguém do trabalho e mandar ao mar.'
+      : w.gate === 'já há uma viagem no mar' ? 'Já há uma viagem no mar: esperam notícias antes de mandar outra.'
+      : w.gate === 'nenhum motivo' ? 'Nada os chama para longe agora: pescam e vivem.'
+      : w.gate === 'descansando da última' ? 'A última viagem voltou há pouco.'
+      : w.p ? `Pensam em ir (${w.p > 0.35 ? 'logo' : w.p > 0.15 ? 'quando a coragem vier' : 'algum dia, talvez'}).` : '';
+    return txt ? `<div class="wz-al muted">${I('ship')}<span>${esc(txt)}</span></div>` : '';
+  }
   // the book of one voyage: every chapter, and the track over the sea
   SU.openExp = function (id) {
     const e = X().get(id); if (!e) return SU.open('exp');
@@ -136,10 +151,11 @@
           <div class="wz-al muted">${p.n || 0} expedições · ${p.won || 0} com descobertas · ${p.lost || 0} perdidas${p.saved ? ' · já foi salvo pelo mar numa fome' : ''}${p.era ? ` · <b>${p.era === 'expansao' ? 'era de navegações' : 'de costas para o mar'}</b>` : ''}</div>
           ${taboo ? `<div class="wz-treaty">${I('skull')}<span>Tabu: ninguém navega para o <b>${esc(taboo.dir)}</b> (${taboo.n} expedições não voltaram de lá).</span></div>` : ''}
           ${prTxt.length ? `<div class="wz-al">${I('star')}<span>O que empurra para o mar: ${esc(prTxt.join(', '))}.</span></div>` : ''}
+          ${seaNow(f, p)}
         </div>
       </div>
       ${rows.length ? `<h4 class="wz-h">Terras que ${esc(f.name)} conhece</h4><div class="wz-events">${rows.map(q => `<div><b>${esc(cap1(K().name(q.r)))}</b> <em>${esc(K().ST[q.s])}</em> · ${q.r.kind}${(() => { const e = K().of(f.id).r[q.r.key]; return e && e.via ? ` · ${esc(e.via)}` : ''; })()} <button class="wz-go sm" data-m="sea-goto" data-x="${q.r.cx.toFixed(1)}" data-y="${q.r.cy.toFixed(1)}">${I('eye')}</button></div>`).join('')}</div>` : ''}
-      ${ores.length ? `<div class="wz-al">${I('star')}<span>Veios que conhecem: ${ores.map(o => { const k = K().of(f.id).o[o.id]; return k && k.claim !== o.kind ? `${esc(k.claim)} <small>(acham)</small>` : esc(o.kind); }).join(', ')}</span></div>` : ''}
+      ${ores.length ? `<div class="wz-al">${I('star')}<span>Veios que conhecem: ${(() => { const n = {}; for (const o of ores) { const k = K().of(f.id).o[o.id]; const t = k && k.claim !== o.kind ? `${esc(k.claim)} <small>(acham)</small>` : esc(o.kind); n[t] = (n[t] || 0) + 1; } return Object.entries(n).map(([t, c]) => c > 1 ? `${t} (${c} veios)` : t).join(', '); })()}</span></div>` : ''}
       ${rum.length ? `<h4 class="wz-h">Boatos em que acreditam</h4><div class="wz-events">${rum.map(r => { const e = r.by[f.id]; return `<div>“${esc(cap1(r.claim))}” <em>${Math.round(e.conf * 100)}% de crédito · ${esc(r.origin.name ? 'contou ' + r.origin.name : r.origin.what || '')}${e.end ? (e.ok ? ' · confirmado' : ' · desmentido') : ''}</em></div>`; }).join('')}</div>` : ''}`;
   }
 

@@ -59,14 +59,27 @@
   //  A PEOPLE AND THE SEA
   // ====================================================================================
   // maritime affinity, curiosity, expansionism, risk tolerance: born of the culture, made by history
-  X.prof = function (f) {
-    if (f.sea) return f.sea;
+  // the love of the sea: what the culture brings, and — more — where the people lives
+  // (an island people turns to the water whatever its gods; a people of the steppe needs a reason)
+  function baseAff(f) {
     const t = (k, d) => G.Civ.t(f.id, k, d === undefined ? 1 : d);
     const cap = G.Fac.capitalOf(f.id); const r = cap && K.at(cap.cx, cap.cy);
     const island = !!r && r.kind !== 'continente'; const coastal = !!(cap && G.City && G.City.coastal(cap));
+    const seaWorld = G.S.mapType === 'mar' || G.S.mapType === 'arquipelago';
+    const h = G.hash(f.id * 131 + 1) - 0.5;
+    return clamp(0.25 + (t('naval') - 1) * 0.55 + (t('fish') - 1) * 0.3 + (t('colonize') - 1) * 0.2 + (island || (seaWorld && coastal) ? (seaWorld ? 0.3 : 0.2) : 0) + (coastal ? 0.08 : -0.15) + h * 0.12, 0.03, 0.98);
+  }
+  X.baseAff = baseAff;
+  X.prof = function (f) {
+    if (f.sea) {
+      // (worlds saved before the sea had its say: the place counts now)
+      if (!f.sea.v) { f.sea.v = 2; f.sea.aff = Math.max(f.sea.aff, baseAff(f) * 0.9); }
+      return f.sea;
+    }
+    const t = (k, d) => G.Civ.t(f.id, k, d === undefined ? 1 : d);
     const pe = G.Politics.leaderPe(f); const h = k => G.hash(f.id * 131 + k) - 0.5;
     f.sea = {
-      aff: clamp(0.18 + (t('naval') - 1) * 0.9 + (t('fish') - 1) * 0.4 + (t('colonize') - 1) * 0.3 + (island ? 0.16 : 0) + (coastal ? 0.06 : -0.12) + h(1) * 0.16, 0.02, 0.98),
+      v: 2, aff: baseAff(f),
       cur: clamp(0.3 + (t('research') - 1) * 0.8 + h(2) * 0.2, 0.05, 0.95),
       exp: clamp(0.22 + (t('expansion') - 1) * 0.8 + (t('colonize') - 1) * 0.4 + pe.amb * 0.15 + h(3) * 0.15, 0.03, 0.95),
       risk: clamp(0.35 + G.Civ.t(f.id, 'courage', 0) + pe.agg * 0.15 + h(4) * 0.16, 0.05, 0.95),
@@ -241,6 +254,17 @@
   // ====================================================================================
   //  THE PLAN: a people decides (low frequency, never on a clock alone)
   // ====================================================================================
+  // why a people is not at sea right now (no dice rolled: the panel and the tests read it)
+  X.why = function (f) {
+    const S = G.S; if (!f.alive) return { gate: 'morto' };
+    if (!G.Civ.has(f.id, 'navegacao')) return { gate: 'sem navegação' };
+    const all = Nv.docksOf(f.id); const docks = home(f); if (!docks.length) return { gate: all.length ? 'porto sem saída para o mar aberto' : 'sem porto' };
+    const ef = eff(f); const p = ef.p; const pop = G.Fac.pop(f.id); if (pop < 12) return { gate: 'gente de menos' };
+    const act = X.active(f.id).filter(e => e.kind !== 'colonia'); if (act.length >= ((pop > 160 && ef.aff > 0.5) || (pop > 60 && ef.aff > 0.7) ? 2 : 1)) return { gate: 'já há uma viagem no mar' };
+    const pr = X.pressure(f); const cs = candidates(f, docks, pr, ef);
+    const c = cs[0]; const will = c ? c.w * (0.35 + ef.aff * 0.9) * (0.55 + ef.risk * 0.6) * (p.era === 'recolhimento' ? 0.35 : 1) : 0;
+    return { gate: !cs.length ? 'nenhum motivo' : S.day - (p.last || -99) < 2 ? 'descansando da última' : '', aff: ef.aff, risk: ef.risk, cur: ef.cur, n: cs.length, top: c ? c.k + ':' + c.why + ':' + c.w.toFixed(2) : '', will: +will.toFixed(3), p: Math.min(0.7, will * 0.9), last: p.last };
+  };
   X.consider = function (f, force) {
     const S = G.S; if (!f.alive || !G.Civ.has(f.id, 'navegacao')) return null;
     const docks = home(f); if (!docks.length) return null;
@@ -315,10 +339,18 @@
     if (e.crew.length < (scale === 'grande' ? 8 : 1)) return null;
     // the ships: the idle ones of the port that fit, the rest built on the slip
     const S0 = S.ships; const slots = [];
+    const idle = kind => S0.find(q => q.fac === f.id && q.kind === kind && q.st === 'idle' && !q.exp && !q.fleet && !slots.includes(q.id) && (q.kind !== 'pesca' || !Nv.aboardOf(q).length) && G.dist(q.x, q.y, di.moor[0], di.moor[1]) < 12);
     for (const want of e.ships) {
-      let s = S0.find(q => q.fac === f.id && q.kind === want.kind && q.st === 'idle' && !q.exp && !q.fleet && (q.kind !== 'pesca' || !Nv.aboardOf(q).length) && G.dist(q.x, q.y, di.moor[0], di.moor[1]) < 12);
+      // (a small voyage borrows a fishing boat lying idle at the quay rather than wait for a canoe to be built)
+      // (never the village's only fishing boat: someone has to keep fishing while they are away)
+      let s = idle(want.kind) || (want.kind === 'canoa' && S0.filter(q => q.fac === f.id && q.kind === 'pesca' && !q.exp).length >= 2 ? idle('pesca') : null);
       if (!s) {
-        const cost = Nv.SHIP[want.kind].cost; if (f.stock.wood < cost + 4) { if (want === e.ships[0]) return null; continue; }
+        const cost = Nv.SHIP[want.kind].cost;
+        if (f.stock.wood < cost + 4) {
+          // the timber is not there: the people puts wood aside for the hull (the woodcutters work for it), and tries again later
+          if (want === e.ships[0]) { const p = X.prof(f); p.saveWood = { need: cost + 6, until: S.day + 3 }; return null; }
+          continue;
+        }
         s = Nv.spawn(want.kind, f, dock, { build: 1 }); if (!s) continue;
       }
       s.exp = e.id; s.prevSt = s.st === 'build' ? 'build' : 'idle'; slots.push(s.id);
@@ -1465,7 +1497,19 @@
       tPlan = DAY() * 0.06; const fs = G.Fac.all(); if (fs.length) { const f = fs[planI++ % fs.length]; X.consider(f); X.colonyPlan(f); }
     }
     if (tSlow <= 0) { tSlow = 3; castaways(); overdue(); colonies(); savedBySea(); }
+    if ((tLife -= dt) <= 0) { tLife = DAY() * 0.5; for (const f of G.Fac.all()) seaLife(f); }
   };
+  let tLife = 0;
+  // a people that fishes, builds boats and sees sails come and go grows fond of the sea (slowly);
+  // one that turns its back on it forgets (slowly too) — over a few generations, not a season
+  function seaLife(f) {
+    if (!f.alive) return; const p = X.prof(f); const S = G.S;
+    const docks = Nv.docksOf(f.id).length; const boats = S.ships.filter(s => s.fac === f.id && !s.ghost).length;
+    const sets = G.Fac.settlementsOf(f.id); const coast = sets.filter(s => G.City && G.City.coastal(s)).length;
+    const base = baseAff(f);
+    const target = clamp(base + Math.min(0.12, docks * 0.04) + Math.min(0.1, boats * 0.015) + (sets.length ? coast / sets.length * 0.06 : 0) + Math.min(0.08, (p.trad || 0) * 0.02) - Math.min(0.2, (p.lostDirs || []).filter(q => S.day - q.d < 25).length * 0.05), 0.03, 0.98);
+    p.aff = clamp(p.aff + (target - p.aff) * 0.05, 0.02, 0.98);
+  }
   // a famine the fishing boats saw a people through: they will look at the sea differently
   function savedBySea() {
     const S = G.S;

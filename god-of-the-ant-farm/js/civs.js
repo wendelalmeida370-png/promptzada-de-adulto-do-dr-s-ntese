@@ -235,7 +235,9 @@
   C.techCost = function (f, t) {
     const c = G.CIVS[f.civ]; const base = G.TECH[t].cost;
     const known = Object.keys(f.tech.known).length;
-    return base * (c && c.techCost[t] ? c.techCost[t] : 1) * (1 + known * 0.15);
+    // (boats come quickly to a people that can see the sea from every door)
+    const sea = t === 'navegacao' && C.seaCalls(f) ? (G.S.mapType === 'mar' || G.S.mapType === 'arquipelago' || G.S.mapType === 'ilha' ? 0.5 : 0.75) : 1;
+    return base * (c && c.techCost[t] ? c.techCost[t] : 1) * (1 + known * 0.15) * sea;
   };
   C.nextTech = function (f) {
     const c = G.CIVS[f.civ];
@@ -273,6 +275,8 @@
     for (const b of S.buildings.values()) if (b.built && (b.type === 'biblioteca' || b.type === 'teatro')) { const fid = G.Village.facOfSet(b.set); libs[fid] = (libs[fid] || 0) + (b.type === 'biblioteca' ? 1 : 0.4); }
     for (const f of G.Fac.all()) {
       C.initTech(f);
+      // islanders paddle from the first day: a canoe and a net are older than any art
+      if (!f.tech.seaStart) { f.tech.seaStart = 1; const sw = S.mapType === 'mar' || S.mapType === 'arquipelago'; const cap = G.Fac.capitalOf(f.id); if (sw && S.day < 2 && cap && G.City && G.City.coastal && G.City.coastal(cap) && !f.tech.known.navegacao) { f.tech.known.navegacao = S.day; if (f.tech.cur === 'navegacao') { f.tech.cur = null; f.tech.pts = 0; } } }
       const pop = G.Fac.pop(f.id);
       const acad = f.tech.known.filosofia ? 1 : 0;
       const rate = (0.015 + pop * 0.0011 + (libs[f.id] || 0) * 0.05) * C.t(f.id, 'research') * (f.tech.known.escrita ? 1.2 : 1) * (1 + acad * 0.25) * (f.golden > 0 ? 1.5 : 1) * (S.blessed ? 1.5 : 1);

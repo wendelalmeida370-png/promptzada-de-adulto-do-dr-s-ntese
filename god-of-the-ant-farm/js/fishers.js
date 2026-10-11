@@ -363,9 +363,12 @@
 
   // ------------------------------ update ------------------------------
   let tRoster = 0, tShoal = 0;
+  let tGear = 0;
   Fi.update = function (dt) {
-    tRoster -= dt; tShoal -= dt;
+    tRoster -= dt; tShoal -= dt; tGear -= dt;
     if (tRoster <= 0) { tRoster = 4; rosters(); }
+    // (the net goes back on its hook as soon as the work at sea is interrupted, not a while later)
+    if (tGear <= 0) { tGear = 0.6; for (const v of G.S.villagers.values()) if (v.gear && !v.aboard && !(v.task && (FISHERS[v.task.type] || v.task.type === 'scene'))) v.gear = null; }
     // the shoals wander with the currents (and the spots that held fish go quiet)
     if (tShoal <= 0) {
       tShoal = 3; const S = G.S;
