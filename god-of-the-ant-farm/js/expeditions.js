@@ -272,18 +272,18 @@
     if (pop < 12) return null;
     const act = X.active(f.id).filter(e => e.kind !== 'colonia');
     // (a people of the sea keeps more than one voyage out at a time)
-    if (act.length >= ((pop > 160 && ef.aff > 0.5) || (pop > 60 && ef.aff > 0.7) ? 2 : 1)) return null;
+    if (!(force && force.many) && act.length >= ((pop > 160 && ef.aff > 0.5) || (pop > 60 && ef.aff > 0.7) ? 2 : 1)) return null;
     // the sea must be calm enough to think of it (no famine at sea, no war fleet at the door)
     const enemyShips = S.ships.some(o => o.kind === 'guerra' && G.Fac.atWar(f.id, o.fac) && docks.some(d => G.dist(o.x, o.y, d.x, d.y) < 30));
     if (enemyShips && !force) return null;
     const cool = (G.rr(2, 6) / (0.3 + ef.aff * 1.4)) * (p.era === 'recolhimento' ? 2.5 : p.era === 'expansao' ? 0.6 : 1);
-    if (!force && S.day - (p.last || -99) < cool) return null;
+    if (!force && S.day - (p.last || -99) < cool / Math.max(0.05, G.dv('sea'))) return null;
     const pr = X.pressure(f);
     const cs = candidates(f, docks, pr, ef); if (!cs.length) return null;
     const c = cs[0];
     // the will to go: the pull of the reason, the people's love of the sea, the courage to risk it
     const will = c.w * (0.35 + ef.aff * 0.9) * (0.55 + ef.risk * 0.6) * (p.era === 'recolhimento' ? 0.35 : 1);
-    if (!force && G.R() > clamp(will * 0.9, 0, 0.7)) return null;
+    if (!force && G.R() > clamp(will * 0.9 * G.dv('sea'), 0, G.dv('sea') > 1 ? 0.95 : 0.7)) return null;
     // the scale: the state for great reasons, a merchant for profit, an adventurer for the horizon
     const big = pop >= 45 && f.stock.wood >= 70 && f.stock.food >= pop * 2.2 && (c.w > 0.55 || pr.ferro > 0.45 || pr.terra > 0.45 || pr.gloria > 0.2) && (ef.exp > 0.45 || ef.pe.amb > 0.6);
     const pat = patron(f, Nv.dockInfo(docks[0]).moor[0], Nv.dockInfo(docks[0]).moor[1]);

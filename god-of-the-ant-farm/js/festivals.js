@@ -170,6 +170,7 @@
     return fe;
   }
   FE.start = (set, key, opt) => { reset(); return start(set, key, opt); };
+  FE.list = () => { reset(); return [...live.values()]; };
 
   // ------------------------------ scripts ------------------------------
   // each festival: a setup (places + roles) and a list of stages (share of the time, what each role does)

@@ -293,7 +293,7 @@
   function rollMorph(d) {
     if (d.dom || d.town || d.cls === 'water' || d.cls === 'air') return null;
     const m = d.morphs || (d.cls === 'land' && d.size >= 0.8 ? { albino: 0.002 } : null); if (!m) return null;
-    for (const k in m) if (G.R() < m[k]) return k;
+    for (const k in m) if (G.R() < m[k] * G.dv('rare')) return k;
     return null;
   }
   A.rollMorph = rollMorph;

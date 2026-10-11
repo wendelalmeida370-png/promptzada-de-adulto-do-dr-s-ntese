@@ -48,6 +48,7 @@
     const t = tension(fs); if (t.met < t.pairs * 0.8) return; // they must know each other: a world, not islands
     let p = 0.0008 + (t.wars / t.pairs) * 0.008 + Math.min(0.003, t.grudge / 10000);
     if (S.temper === 'belicoso') p *= 1.8; else if (S.temper === 'pacifico') p *= 0.4;
+    p *= G.dv('ww');
     if (G.R() < p) WW.start();
   };
 

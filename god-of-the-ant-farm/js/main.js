@@ -346,6 +346,8 @@
       if (M.mode === 'intro') { endIntro(); return; }
       if (M.mode !== 'game') return;
       const k = e.key;
+      // the workbench: over everything, and never a shortcut of the game
+      if (k === 'F2') { e.preventDefault(); G.Dev && G.Dev.toggle(); return; }
       I.keys[k.toLowerCase()] = true;
       if (M.modalOpen) { if (k === 'Escape') G.UI.closeModal(); return; }
       // photo: the world is frozen; only leaving (and panning with WASD)

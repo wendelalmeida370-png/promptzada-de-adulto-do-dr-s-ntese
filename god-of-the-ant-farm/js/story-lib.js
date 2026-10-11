@@ -23,6 +23,15 @@
   const peopleOf = v => (!v ? 0 : v.captive ? v.captive.from : facOf(v)); // (a captive still belongs to the people they were taken from)
   const warSince = (a, b) => { const r = a && b && a !== b ? G.Fac.rel(a, b) : null; return r && r.st === 'guerra' ? r.since : null; };
   const fighting = v => !!(v && v.task && (v.task.type === 'band' || v.task.type === 'combat' || v.task.type === 'fight'));
+  // really in a fight: a blow being traded, a foe picked, a town being stormed, an open battle around them (not the camp, not the march)
+  const inBattle = v => {
+    const t = v && v.task; if (!t) return false;
+    if (t.type === 'combat' || t.type === 'fight') return true;
+    if (t.type !== 'band') return false;
+    const b = G.War && G.War.bands && G.War.bands.get(t.band); if (!b) return false;
+    if (t.foe || b.st === 'ataque') return true;
+    return !!(G.Wars && (G.Wars.state().battles || []).some(bt => bt.open && !bt.naval && G.dist(bt.x, bt.y, v.x, v.y) < 16));
+  };
   const onJourney = v => !!(v && v.task && v.task.type === 'saga' && v.task.j);
   const REL_W = { pai: 1, mae: 1, filho: 1, filha: 1, companheiro: 0.9, companheira: 0.9, irmao: 0.72, irma: 0.72 };
   const REL_POSS = { pai: 'seu pai', mae: 'sua mãe', filho: 'seu filho', filha: 'sua filha', companheiro: 'seu companheiro', companheira: 'sua companheira', irmao: 'seu irmão', irma: 'sua irmã' };
@@ -189,7 +198,18 @@
     c => c.FP === c.FT ? `Os dois lados de ${c.FP} pegaram em armas um contra o outro. Para ${c.P}, era a chance que esperava.` : null,
   ] });
   K('vg-parte', { h: 'A marcha', text: [c => `${c.P} partiu com o exército de ${c.FP}${c.DEST ? ' rumo a ' + c.DEST : ''}. Perguntava a todo mundo se ${c.T} estaria lá.`, c => `${c.P} foi d${c.o === 'a' ? 'as' : 'os'} primeir${c.o}s a se alistar quando o exército de ${c.FP} partiu${c.DEST ? ' contra ' + c.DEST : ''}.`] });
-  K('vg-mesmo-campo', { h: 'Frente a frente', text: [c => `${c.P} e ${c.T} estavam no mesmo campo de batalha${c.at}.`, c => `No meio da batalha${c.at}, ${c.P} e ${c.T} ficaram frente a frente.`, c => `${c.P} reconheceu ${c.T} no meio da poeira${c.at} — e foi direto na direção ${c.oT === 'a' ? 'dela' : 'dele'}.`] });
+  K('vg-mesmo-campo', { h: 'Frente a frente', text: [
+    c => `No meio da batalha${c.at}, ${c.P} reconheceu ${c.T}. A luta abriu um espaço entre os dois, e ficaram frente a frente, as armas erguidas, como se o resto do campo tivesse parado.`,
+    c => `${c.P} atravessou a batalha${c.at} sem olhar para mais ninguém. Parou a poucos passos de ${c.T} e gritou o nome de ${c.V}. ${c.T} entendeu na hora quem ${c.o === 'a' ? 'ela' : 'ele'} era.`,
+    c => (c.yrs > 1 ? `${cap1(c.an(c.yrs))} depois do juramento, ${c.P} e ${c.T} ficaram frente a frente${c.at}. Ninguém se meteu entre os dois.` : null),
+    c => `${c.T} ouviu o próprio nome gritado no meio da poeira${c.at} e se virou. Era ${c.P}, que vinha cobrar ${c.V}.`,
+  ], civ: {
+    nordico: [c => `${c.P} viu ${c.T} atrás da parede de escudos${c.at} e bateu o machado no próprio escudo, chamando. ${c.T} veio. Ficaram frente a frente, e os outros abriram roda.`],
+    romano: [c => `No meio da batalha${c.at}, ${c.P} saiu da fileira — coisa que nenhum soldado faz — e foi até ${c.T}. Frente a frente, enfim.`],
+    grego: [c => `${c.P} rompeu a fileira${c.at} para chegar a ${c.T}. Frente a frente: as Erínias, enfim, olhavam.`],
+    egipcio: [c => `No meio da batalha${c.at}, ${c.P} encontrou ${c.T}, sob o mesmo sol que tinha visto ${c.V} cair. Frente a frente.`],
+    asteca: [c => `${c.P} gritou o nome de ${c.T} no meio da batalha${c.at}, como um guerreiro chama o inimigo que escolheu. Ficaram frente a frente.`],
+  } });
   K('vg-alvo-cativo', { h: 'O alvo acorrentado', text: [c => `${c.T} caiu cativ${c.oT} nas mãos do povo de ${c.P}${c.city ? ' e está em ' + c.city : ''}.`, c => `Trouxeram ${c.T} acorrentad${c.oT}${c.city ? ' para ' + c.city : ''}. ${c.P} soube no mesmo dia.`] });
   K('vg-diante', { h: 'Diante das correntes', text: [
     c => `${c.P} foi até onde ${c.T} trabalhava acorrentad${c.oT} e ficou olhando, sem dizer nada.`,
@@ -206,13 +226,23 @@
     c => `${c.P} deixou ${c.T} viver. Disse só: "${c.V} não ia querer isso."`,
   ] });
   K('vg-conspira', { h: 'A conspiração', text: [c => `${c.P} entrou na conspiração contra ${c.T}.`, c => `Quando começaram a conspirar contra ${c.T}, ${c.P} foi d${c.o === 'a' ? 'as' : 'os'} primeir${c.o}s a pegar em armas.`] });
-  K('vg-de-novo', { h: 'De novo', text: [c => `${c.P} e ${c.T} voltaram a se cruzar numa batalha${c.at}.`, c => `De novo${c.at}, ${c.P} viu ${c.T} no meio da luta — e de novo a multidão separou os dois.`] });
+  K('vg-de-novo', { h: 'De novo, frente a frente', text: [
+    c => `De novo${c.at}: no meio da batalha, ${c.P} e ${c.T} se encontraram. Da outra vez a luta separou os dois. Desta vez, não.`,
+    c => `${c.T} reconheceu ${c.P} antes de ser reconhecid${c.oT}${c.at}. Os dois já sabiam o que vinha: ficaram frente a frente outra vez.`,
+    c => `${c.P} tinha jurado que não ia deixar escapar de novo. Quando viu ${c.T}${c.at}, foi direto, e ficaram frente a frente.`,
+  ] });
   K('vg-paz', { h: 'A paz', text: [c => `${c.FP} e ${c.FT} fizeram as pazes. ${c.T} ficou fora de alcance.`, c => `Veio a paz entre ${c.FP} e ${c.FT}. Para ${c.P}, foi como uma porta fechada.`] });
   K('vg-cumprida', { h: 'O acerto', text: [
-    c => `${c.P} matou ${c.T}${c.at}. ${c.V} estava vingad${c.oV}.`,
-    c => c.yrs > 2 ? `Depois de ${c.an(c.yrs)}, ${c.P} encontrou ${c.T}${c.at} — e foi ${c.P} quem saiu viv${c.o}.` : null,
-    c => `${c.T} caiu${c.at}, e foi a mão de ${c.P} que ${o3(c.oT)} derrubou. O nome de ${c.V} foi a última coisa que ${c.T} ouviu.`,
-  ] });
+    c => (!duel(c) ? `${c.P} matou ${c.T}${c.at}. ${c.V} estava vingad${c.oV}.` : null),
+    c => (!duel(c) && c.yrs > 2 ? `Depois de ${c.an(c.yrs)}, ${c.P} encontrou ${c.T}${c.at} — e foi ${c.P} quem saiu viv${c.o}.` : null),
+    c => (!duel(c) ? `${c.T} caiu${c.at}, e foi a mão de ${c.P} que ${o3(c.oT)} derrubou. O nome de ${c.V} foi a última coisa que ${c.T} ouviu.` : null),
+    c => (duel(c) ? `As lâminas se cruzaram${c.at} até uma delas parar. ${c.T} caiu, e ${c.P} ficou de pé sobre ${c.oT === 'a' ? 'ela' : 'ele'}, ofegante, com o nome de ${c.V} ainda na boca.` : null),
+    c => (duel(c) ? `Foi um duelo curto e feio${c.at}, sem nada das canções. Quando acabou, ${c.T} estava no chão e ${c.P} ainda respirava. ${c.V} estava vingad${c.oV}.` : null),
+    c => (duel(c) && c.yrs > 1 ? `${cap1(c.an(c.yrs))} de espera terminaram em poucos golpes${c.at}. ${c.P} derrubou ${c.T} e não sentiu a alegria que esperava, só um cansaço enorme.` : null),
+  ], civ: {
+    nordico: [c => (duel(c) ? `${c.P} derrubou ${c.T}${c.at} e não ${o3(c.oT) === 'a' ? 'a' : 'o'} deixou morrer de arma na mão: as Valquírias não iam buscar quem matou ${c.V}.` : null)],
+    asteca: [c => (duel(c) ? `${c.P} derrubou ${c.T}${c.at}. O sangue prometido ao Sol correu, enfim, nas pedras.` : null)],
+  } });
   K('vg-tumulo', { h: 'O túmulo', text: [
     c => `${c.P} foi até o túmulo de ${c.V} e contou, em voz baixa, que estava feito.`,
     c => `${c.P} ajoelhou-se no túmulo de ${c.V}, ficou ali um tempo e foi embora mais leve.`,
@@ -227,13 +257,16 @@
   K('vg-velhice', { h: 'O tempo', text: [c => `${c.T} morreu de velhice, na cama. ${c.P} ficou com a promessa na mão e ninguém para cumpri-la.`] });
   K('vg-acaso', { h: 'O acaso', text: [c => `${c.T} ${c.DEATH}. Ninguém cobrou a dívida.`, c => `${c.T} ${c.DEATH} — e ${c.P} descobriu que não sentia nada.`] });
   K('vg-morto-pelo-alvo', { h: 'Como antes', text: [
-    c => c.CAUSE === 'execution' ? `${c.T} mandou executar também ${c.P}.` : `${c.T} matou também ${c.P}${c.at}.`,
-    c => c.CAUSE !== 'execution' ? `${c.P} caiu diante de ${c.T}, como ${c.V} antes.` : null,
+    c => (c.CAUSE === 'execution' ? `${c.T} mandou executar também ${c.P}.` : !duel(c) ? `${c.T} matou também ${c.P}${c.at}.` : null),
+    c => (c.CAUSE !== 'execution' && !duel(c) ? `${c.P} caiu diante de ${c.T}, como ${c.V} antes.` : null),
+    c => (duel(c) ? `${c.P} lutou como quem já não tem nada a perder${c.at}. Não bastou: ${c.T} ${c.o === 'a' ? 'a' : 'o'} matou também, como tinha matado ${c.V}.` : null),
+    c => (duel(c) ? `O duelo durou pouco${c.at}. ${c.T} era mais forte, ou mais fri${c.oT} — e ${c.P} caiu no mesmo chão que ${c.V}.` : null),
   ] });
   K('vg-morreu', { h: 'O fim', text: [c => `${c.P} ${c.DEATH} sem ver ${c.T} pagar.`] });
   K('vg-esquecer', { h: 'Os anos de paz', text: [c => (c.age < 58 ? `Os anos de paz apagaram a raiva. ${c.P} deixou a lança encostada e cuidou dos seus.` : null), c => (c.age >= 58 ? `${c.P} envelheceu. A promessa ficou para trás, como ${c.V}.` : null)] });
   K('vg-oracao', { h: 'A prece', text: [c => `${c.P} trocou a vingança pela prece: decidiu rezar por ${c.V} em vez de caçar ${c.T}.`] });
   function o2(c) { return c.o === 'a' ? 'a' : 'o'; }
+  function duel(c) { const s = c.s; return !!(s && s.phase === 'confronto' && G.S.day - (s.data.met === undefined ? -99 : s.data.met) <= 1); }
   function o3(o) { return o === 'a' ? 'a' : 'o'; }
 
   // the victim's grave, if there is one: where the one who kept the promise goes to say it is done
@@ -299,10 +332,14 @@
       else if (s.data.peaceFrom < 0 && fp !== ft) s.data.peaceFrom = S.day;
       // marching against them
       if (p.task && p.task.type === 'band' && G.War.bands) { const b = G.War.bands.get(p.task.band); if (b && b.enemy === ft && s.data.band !== b.id) { s.data.band = b.id; if (!(S.day - (s.data.parte || -99) < 5)) { s.data.parte = S.day; St.beat(s, 'vg-parte', { DEST: setName(b.set), FP: facName(fp) }); } } }
-      // the same field: the world brought them together — what happens is the world's
-      if (!p.captive && !t.captive && fighting(p) && fighting(t) && G.dist(p.x, p.y, t.x, t.y) < 7 && !(S.day - (s.data.met || -99) < 4)) {
-        s.data.met = S.day; s.data.meets = (s.data.meets || 0) + 1; s.phase = 'confronto';
-        St.beat(s, s.data.meets > 1 ? 'vg-de-novo' : 'vg-mesmo-campo', { at: St.where(p.x, p.y).at }, { x: p.x, y: p.y, hot: 30, toast: s.data.meets === 1, big: 1 });
+      // the same field: the world brought them together — enemies, both in the thick of a real fight, a few steps apart
+      // (an army camp is not a battlefield: carrying food to the fire is not facing anyone). The duel itself is staged
+      // by the scene engine when it can be; the chapter is written by what really happened there.
+      if (!p.captive && !t.captive && inBattle(p) && inBattle(t) && atWar(fp, ft) && G.dist(p.x, p.y, t.x, t.y) < 9 && !(S.day - (s.data.met || -99) < 4) && !(s.data.retry > S.clock) && !(G.Scene && G.Scene.running(s.id))) {
+        if (St.vgEncounter ? St.vgEncounter(s, p, t) : true) {
+          s.data.met = S.day; s.data.meets = (s.data.meets || 0) + 1; s.phase = 'confronto';
+          if (!St.vgEncounter) St.beat(s, s.data.meets > 1 ? 'vg-de-novo' : 'vg-mesmo-campo', { at: St.where(p.x, p.y).at }, { x: p.x, y: p.y, hot: 30, toast: s.data.meets === 1, big: 1 });
+        }
       }
       // the killer in chains, among the protagonist's own people: one day they will stand before them
       if (t.captive && facOf(t) === facOf(p) && !p.captive && (t.set === p.set || G.dist(t.x, t.y, p.x, p.y) < 24)) { if (!s.data.caught) { s.data.caught = 1; St.beat(s, 'vg-alvo-cativo', { city: setName(t.set) }, { x: t.x, y: t.y }); } if (p.age >= 16 && s.phase !== 'frente') { s.data.prevPhase = s.phase; s.phase = 'frente'; } }
@@ -1296,6 +1333,6 @@
   });
 
   // (the helpers other libraries of stories use)
-  St.lib = { P, alive, pe, has, facOf, facName, setName, atWar, desc, kinNear, homeOf, roadBeat, campBeat, tellKids, deathTxt, free, homeSafe, withArt, deArt, em, ao, por, titled, capName, cap1, lhe, REL_W, REL_POSS, REL_BARE };
+  St.lib = { P, alive, pe, has, facOf, facName, setName, atWar, inBattle, desc, kinNear, homeOf, roadBeat, campBeat, tellKids, deathTxt, free, homeSafe, withArt, deArt, em, ao, por, titled, capName, cap1, lhe, REL_W, REL_POSS, REL_BARE };
   St.init();
 })(window.G);

@@ -52,6 +52,9 @@
   const hostile = (a, b) => G.Fac.atWar(a, b);
   const busyDiplomat = o => o.task && (o.task.type === 'envoy' || o.task.type === 'trade');
   const fighting = o => o.task && (o.task.type === 'combat' || o.task.type === 'band');
+  // a duel (a vengeance face to face, staged or fought): nobody else steps in between the two
+  const dueling = (o, v) => { const t = o.task; if (!t) return false; if (t.type === 'scene' && t.calm) return true; return !!t.duel && !(v && t.id === v.id); };
+  Wr.dueling = dueling;
   function reachable(a, b) {
     const k = a.id + '>' + b.id; const c = reach.get(k);
     if (c && c.day === G.S.day) return c.ok;
@@ -590,6 +593,7 @@
   };
   Wr.react = function (o, by) {
     const t = o.task;
+    if (t && t.type === 'scene' && t.calm) return;
     if (t && (t.type === 'riot' || t.type === 'riotguard')) { G.Riots && G.Riots.hit(o, by); return; }
     if (t && (t.type === 'combat' || t.type === 'condemned' || t.type === 'escorted')) return;
     if (t && t.type === 'band') { t.foe = by.id; t.scan = 0.6; return; }
@@ -658,6 +662,7 @@
     const sagaFoe = G.Stories ? G.Stories.foeOf(v) : 0;
     for (const o of S.villagers.values()) {
       if (o.captive || o.held || o.air || badFoe(t, o) || (!o.inside && unreachableSpot(o))) continue;
+      if (dueling(o, v)) continue;
       const fo = fid(o); if (fo === b.fac || !hostile(b.fac, fo)) continue;
       if (busyDiplomat(o)) continue;
       if (massacre) { if (o.age < 2) continue; }
@@ -678,6 +683,7 @@
     if (!Wr.warFacs.size) return false;
     const t = v.task;
     if (t && (t.type === 'combat' || t.type === 'band' || t.type === 'condemned' || t.type === 'jail' || t.type === 'escorted' || t.type === 'escape' || t.type === 'escort' || busyDiplomat(v))) return false;
+    if (t && t.type === 'scene' && t.calm) return false; // (two who face each other in the middle of the battle do not run from it)
     if (t && t.type === 'hide' && t.age < 15) return false;
     if (v.captive) return false;
     const fv = fid(v); if (!Wr.warFacs.has(fv)) return false;
@@ -689,7 +695,7 @@
       const d = G.dist2(v.x, v.y, o.x, o.y); if (d < be) { be = d; esc = o; }
     }
     for (const o of Wr.fightersNear(v.x, v.y, guard ? 16 : 8)) {
-      if (o.inside || o.held || o.air || o.captive || !S.villagers.has(o.id)) continue;
+      if (o.inside || o.held || o.air || o.captive || !S.villagers.has(o.id) || dueling(o, v)) continue;
       if (unreachableSpot(o)) continue;
       if (!fighting(o)) continue;
       const fo = fid(o); if (fo === fv || !hostile(fv, fo)) continue;

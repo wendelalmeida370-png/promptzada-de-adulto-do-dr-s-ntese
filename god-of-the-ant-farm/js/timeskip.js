@@ -91,11 +91,13 @@
   function slice(g) {
     if (!Sk.on || g !== gen) return;
     const S = G.S; const t0 = performance.now();
-    let blessT = 0, done = null;
+    let blessT = 0, done = null; const until = Sk.goal.until; let uc = 0;
     while (performance.now() - t0 < SLICE) {
       const d0 = S.day;
       G.debug.step(DT);
       if (Sk.course === 'fartura' && (blessT -= DT) <= 0) { blessT = 2; bless(); }
+      // (a hunt of the dev mode: a few times a game-hour, the thing looked for)
+      if (until && ++uc >= 8) { uc = 0; let hit = false; try { hit = !!until(); } catch (e) { hit = false; } if (hit) { done = 'alvo'; break; } }
       if (S.day !== d0) { done = check(); if (done) break; }
     }
     G.FX.list.length = 0; G.FX.rings.length = 0; G.FX.glows.length = 0; G.FX.bolts.length = 0; G.FX.floaters.length = 0;
@@ -146,6 +148,8 @@
     el.root.classList.remove('on'); document.body.classList.remove('skipping');
     // the world as it is now: fresh terrain, roads and borders, the camera on the greatest city
     G.Render.buildTerrain(); G.Fac.updateTerritory && G.Fac.updateTerritory(); G.Minimap && G.Minimap.refresh && G.Minimap.refresh();
+    // a hunt of the dev mode ends where the thing is, without the summary
+    if (Sk.goal.dev) { G.UI.setSpeed(Sk.prevSpeed || 1); G.UI.update(1, true); try { Sk.goal.then && Sk.goal.then(why); } catch (e) { console.warn('dev hunt', e); } return; }
     const c = biggestCity(); if (c) G.Render.centerOn(c.cx, c.cy, 1.25);
     G.UI.setSpeed(Sk.opening ? 1 : Sk.prevSpeed || 1);
     G.UI.update(1, true);

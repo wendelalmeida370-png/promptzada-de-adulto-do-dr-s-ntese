@@ -160,22 +160,85 @@
     yield 2.6;
     return 'ok';
   } });
-  // the field of battle: nothing is staged — the camera only finds them
-  Sn.define('vg-campo', { imp: 3, kick: 'Vingança', *gen(c) {
+  // the field of battle: the two of them find each other in the fight — and the fight becomes theirs
+  // (taken from the press of the battle for a breath: the recognition, the name shouted, the words; then the
+  //  blades are the world's — the combat decides who falls, or the battle tears them apart)
+  const DUEL_T = {
+    frio: [`Lembro. E vou fazer com você o mesmo.`, `${'{V}'} gritou desse jeito também.`],
+    bravo: [`Então vem!`, `Faz tempo que eu espero por isso.`],
+    medroso: [`Não... não fui eu, juro que não fui eu!`, `Era guerra! Eu só obedecia!`],
+    devoto: [`Que os deuses decidam, então.`, `Rezo por ${'{V}'} até hoje. Não vai mudar nada.`],
+    firme: [`Eu sei quem você é.`, `Eu sabia que esse dia ia chegar.`],
+  };
+  Sn.define('vg-duelo', { imp: 3, kick: 'Vingança', *gen(c) {
     const s = c.story(); const p = c.v('p'); const t = c.v('t'); if (!s || !p || !t) return 'sem';
-    const V = PD(s.cast.victim);
+    if (!c.take('p', { vital: true, force: true, calm: true })) return 'ocupada';
+    if (!c.take('t', { vital: true, force: true, calm: true })) return 'ocupada';
+    const V = PD(s.cast.victim); const VN = V ? V.name : 'quem você matou';
+    const again = (s.data.meets || 0) >= 1; const at = St.where(p.x, p.y).at; // (the count goes up once the scene is on)
     c.tag('p', 'quem jurou'); c.tag('t', 'o alvo');
     c.mood('tense'); c.focus('p', 't');
-    c.title('Vingança', 'No Meio da Batalha');
-    c.caption(`No meio da poeira, ${p.name} reconhece ${t.name}.`);
-    c.cam(['p', 't'], { zoom: 'fit' });
+    c.title('Vingança', again ? 'De Novo, no Meio da Batalha' : 'O Duelo');
+    c.caption(`No meio da batalha${at}, ${p.name} reconhece ${t.name}${again ? ' — de novo' : ''}.`, { hold: 3 });
+    c.cam(['p', 't'], { zoom: 4 });
+    c.slow(0.5, 2.2);
+    // the line breaks open between them: they close the last steps
+    c.face('p', 't'); c.face('t', 'p');
+    yield c.approach('p', 't', 1.8, { run: true, max: 6 });
+    c.face('p', 't'); c.face('t', 'p'); c.cam(['p', 't'], { zoom: 4.8 });
+    yield c.say('p', s.data.oathTxt && !again ? `${t.name.toUpperCase()}! ${s.data.oathTxt}` : pick([`${t.name.toUpperCase()}! Lembra de ${VN}?!`, `${t.name}! Por ${VN}!`, `Finalmente, ${t.name}.`]), { style: 'shout' });
+    const tt = Sn.temper(t);
+    if (tt === 'medroso') c.pose('t', 'cower');
+    yield c.say('t', pick(DUEL_T[tt] || DUEL_T.firme).replace('{V}', VN));
+    c.pose('t', ''); c.pose('p', 'brandish'); c.pose('t', tt === 'medroso' ? '' : 'brandish');
+    c.sfx('swish', null, 0.7); c.sfx('heartbeat');
+    c.slow(0.4, 2);
+    // now it is true: they stand face to face (the chapter is written here, not before)
+    St.beat(s, again ? 'vg-de-novo' : 'vg-mesmo-campo', { at }, { x: p.x, y: p.y, hot: 30, toast: !again, big: 1 });
+    s.data.faced = c.sc ? c.sc.id : 1;
+    c.attach();
+    c.snap(again ? 'De novo, frente a frente' : 'Frente a frente');
+    yield 1.6;
+    // the blades: released into a duel with each other, nobody else in between
+    c.pose('p', ''); c.pose('t', '');
+    c.release('p'); c.release('t');
+    const pv = P(p.id), tv = P(t.id);
+    if (pv && tv) {
+      G.Vg.H.setTask(pv, { type: 'combat', id: tv.id, pri: 4.6, any: true, kind: 'combat', cause: 'vinganca', duel: 1 });
+      if (!tv.captive) G.Vg.H.setTask(tv, { type: 'combat', id: pv.id, pri: 4.6, any: true, kind: 'combat', duel: 1, def: true });
+    }
+    c.cam([pv || p, tv || t], { zoom: 4.4 });
+    yield c.until(() => !P(t.id) || !P(p.id) || P(t.id).captive || P(p.id).captive || G.dist(P(p.id).x, P(p.id).y, P(t.id).x, P(t.id).y) > 12, 60);
+    // (still at it, a step apart: the scene steps back and lets them finish — nothing is told that did not happen)
+    if (P(t.id) && P(p.id) && !P(t.id).captive && !P(p.id).captive && G.dist(P(p.id).x, P(p.id).y, P(t.id).x, P(t.id).y) <= 12) return 'luta';
     c.slow(0.5, 2);
-    yield c.say('p', `${t.name.toUpperCase()}! Lembra de ${V ? V.name : 'mim'}?!`, { style: 'shout' });
-    c.snap('Frente a frente');
-    yield c.until(() => !P(t.id) || !P(p.id) || G.dist(p.x, p.y, t.x, t.y) > 12, 18);
-    if (!P(t.id)) c.snap(`${t.name} cai`);
-    return 'ok';
+    if (!P(t.id)) { c.mood('sad'); c.snap(`${t.name} cai`); c.caption(`${t.name} cai na lama do campo. ${p.name} fica de pé sobre ${t.g === 'f' ? 'ela' : 'ele'}, sem fôlego.`, { hold: 3 }); yield 3; return 'matou'; }
+    if (!P(p.id)) { c.mood('sad'); c.snap(`${p.name} cai`); c.caption(`${p.name} cai. ${t.name} limpa a lâmina e volta para a batalha.`, { hold: 3 }); yield 3; return 'morreu'; }
+    if (P(t.id).captive) { c.snap(`${t.name} rendid${oa(t)}`); c.caption(`${t.name} larga a arma: rendid${oa(t)}, em correntes.`, { hold: 3 }); yield 2.6; return 'rendido'; }
+    if (P(p.id).captive) { c.caption(`${p.name} é derrubad${oa(p)} e amarrad${oa(p)}. ${t.name} nem olha para trás.`, { hold: 3 }); yield 2.6; return 'cativo'; }
+    c.caption(`A batalha separa os dois. ${t.name} some no meio da poeira.`, { hold: 3 });
+    yield 2.6;
+    return 'separados';
   } });
+  // the vengeance engine asks: may the encounter be played? (true: it is; the scene writes the chapter)
+  St.vgEncounter = function (s, p, t) {
+    if (G.Scene.running(s.id)) return false;
+    s.data.faced = 0;
+    const sc = St.scene(s, 'vg-duelo', { t: t.id }, { at: [p.x, p.y], must: ['p', 't'], onEnd: (res, scn) => {
+      if (s.st !== 'ativa') return;
+      if (res === 'separados') { s.phase = 'preparar'; St.chapter(s, St.say(s, 'vg-separados') || 'A batalha separou os dois.', { k: 'vg-separados', x: p.x, y: p.y }); }
+      else if (res === 'ocupada' || res === 'sem' || /^abortada/.test(res)) {
+        // (they never stood face to face: it did not happen — the encounter is not counted, and the field may bring them together again soon)
+        if (!s.data.faced) { if (scn && scn.t > 0) s.data.meets = Math.max(0, (s.data.meets || 1) - 1); s.phase = 'preparar'; s.data.met = -99; s.data.retry = G.S.clock + 12; }
+        else s.phase = 'preparar';
+      }
+    } });
+    return !!sc && sc.st === 'run';
+  };
+  St.storylet('vg-separados', { h: 'A batalha separou os dois', text: [
+    c => `As lâminas mal se tocaram: a batalha separou ${c.P} e ${c.T}. ${c.T} sumiu na poeira. Não acabou.`,
+    c => `${c.P} chegou a ver o medo nos olhos de ${c.T}. Então a linha se desfez, e a multidão levou ${c.oT === 'a' ? 'ela' : 'ele'} embora.`,
+  ] });
 
   const OV = St.DEF.vinganca;
   if (OV) St.define('vinganca', Object.assign({}, OV, {
@@ -184,9 +247,7 @@
       if (!G.Scene.running(s.id) && p) {
         // the oath, played (if they are near the place, on the day)
         if (!s.data.jur) { s.data.jur = 1; if (free(p) && G.dist(p.x, p.y, s.place.x, s.place.y) < 30 && G.S.day - s.born < 1) { St.scene(s, 'vg-juramento', {}, { at: [s.place.x, s.place.y] }); return; } }
-        // the field of battle (the world brought them together)
-        const t = P(s.cast.target);
-        if (t && s.phase === 'confronto' && s.data.campo !== s.data.met && G.dist(p.x, p.y, t.x, t.y) < 7) { s.data.campo = s.data.met; St.scene(s, 'vg-campo', { t: t.id }, { at: [p.x, p.y] }); }
+        // (the field of battle: played by St.vgEncounter when the two of them really face each other)
       }
       return OV.tick.call(this, s);
     },

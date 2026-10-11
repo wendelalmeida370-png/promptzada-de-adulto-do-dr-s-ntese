@@ -789,7 +789,7 @@
     if (t.scan <= 0) {
       t.scan = 0.4 + G.R() * 0.2;
       let best = 0, bd = reach * reach;
-      for (const o of G.War.fightersNear(v.x, v.y, reach)) { if (o.captive || o.inside || o.air || o.held || !G.Fac.atWar(b.fac, fid(o))) continue; const d = G.dist2(v.x, v.y, o.x, o.y); if (d < bd) { bd = d; best = o.id; } }
+      for (const o of G.War.fightersNear(v.x, v.y, reach)) { if (o.captive || o.inside || o.air || o.held || !G.Fac.atWar(b.fac, fid(o)) || G.War.dueling(o, v)) continue; const d = G.dist2(v.x, v.y, o.x, o.y); if (d < bd) { bd = d; best = o.id; } }
       if (!best && phase === 'cerco' && co.kind !== 'arqueiro' && k % 3 === 0) {
         // anyone of the enemy who ventures outside the walls near the camp
         for (const o of S.villagers.values()) { if (o.captive || o.inside || o.age < 14 || !G.Fac.atWar(b.fac, fid(o))) continue; const d = G.dist2(v.x, v.y, o.x, o.y); if (d < 36 && d < bd * 9) { bd = d; best = o.id; } }

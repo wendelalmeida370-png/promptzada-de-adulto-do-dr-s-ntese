@@ -279,7 +279,7 @@
       if (!f.tech.seaStart) { f.tech.seaStart = 1; const sw = S.mapType === 'mar' || S.mapType === 'arquipelago'; const cap = G.Fac.capitalOf(f.id); if (sw && S.day < 2 && cap && G.City && G.City.coastal && G.City.coastal(cap) && !f.tech.known.navegacao) { f.tech.known.navegacao = S.day; if (f.tech.cur === 'navegacao') { f.tech.cur = null; f.tech.pts = 0; } } }
       const pop = G.Fac.pop(f.id);
       const acad = f.tech.known.filosofia ? 1 : 0;
-      const rate = (0.015 + pop * 0.0011 + (libs[f.id] || 0) * 0.05) * C.t(f.id, 'research') * (f.tech.known.escrita ? 1.2 : 1) * (1 + acad * 0.25) * (f.golden > 0 ? 1.5 : 1) * (S.blessed ? 1.5 : 1);
+      const rate = (0.015 + pop * 0.0011 + (libs[f.id] || 0) * 0.05) * C.t(f.id, 'research') * (f.tech.known.escrita ? 1.2 : 1) * (1 + acad * 0.25) * (f.golden > 0 ? 1.5 : 1) * (S.blessed ? 1.5 : 1) * G.dv('research');
       if (!f.tech.cur) f.tech.cur = C.nextTech(f);
       if (!f.tech.cur) continue;
       f.tech.pts += rate * dt;

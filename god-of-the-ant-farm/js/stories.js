@@ -264,10 +264,10 @@
   function fatigue(motifs) {
     let f = 1;
     for (const m of motifs) f *= 1 - Math.min(0.6, load(m) * (MOTIF_W[m.split(':')[0]] || 0.12));
-    return Math.max(0.25, f);
+    return Math.max(0.25, 1 - (1 - f) * G.dv('story.fatigue'));
   }
   St.fatigue = fatigue;
-  function capacity() { return Math.max(3, Math.min(9, Math.round(2.6 + G.S.villagers.size / 70))); }
+  function capacity() { return Math.max(1, Math.round(Math.max(3, Math.min(9, Math.round(2.6 + G.S.villagers.size / 70))) * G.dv('story.cap'))); }
   function worth(sd, active) {
     const S = G.S; const def = DEF[sd.type];
     let v = sd.score * Math.exp(-(S.day - sd.born) / Math.max(1, sd.life));
@@ -294,7 +294,7 @@
     s.seeds = s.seeds.filter(sd => S.day - sd.born <= sd.life * 1.6 && DEF[sd.type] && alive(sd.protag) && (!DEF[sd.type].valid || DEF[sd.type].valid(sd)));
     const active = s.stories.filter(x => x.st === 'ativa');
     if (!s.seeds.length || active.length >= capacity()) return;
-    if (S.clock - s.lastPromo < DAY() * (active.length < 2 ? 0.12 : 0.2)) return;
+    if (S.clock - s.lastPromo < DAY() * (active.length < 2 ? 0.12 : 0.2) / Math.max(0.05, G.dv('story.pace'))) return;
     let best = null, bv = 0;
     for (const sd of s.seeds) {
       if (sd.ripe && S.clock < sd.ripe) continue;

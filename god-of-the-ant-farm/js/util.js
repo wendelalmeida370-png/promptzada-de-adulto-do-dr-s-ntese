@@ -4,6 +4,9 @@
 // ============================================================
 window.G = window.G || {};
 (function (G) {
+  // ---------- dev-mode knobs: G.Dev sets them, everything else reads 1 ----------
+  G.DV = {};
+  G.dv = k => { const v = G.DV[k]; return v === undefined ? 1 : v; };
   // ---------- seeded RNG (used by world generation) ----------
   function mulberry32(a) {
     return function () {

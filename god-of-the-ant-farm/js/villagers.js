@@ -1302,6 +1302,7 @@
     chance *= G.Nature.zoneMul(v.x, v.y, 'fertility');
     if (G.Nests && v.home && G.Nests.storkOn(v.home)) chance *= 1.25; // the stork on the roof
     if (S.weather.fertility > 0) chance *= 2;
+    chance *= G.dv('births');
     if (G.R() < chance) { v.preg = G.DAY_LEN * 0.55; }
   }
 
@@ -1396,7 +1397,9 @@
   // ------------------------------ babies ------------------------------
   // nobody takes a baby to a battlefield: soldiers, hunters and guards leave it with someone at home
   const ROUGH = { band: 1, fight: 1, patrol: 1, drill: 1, guard: 1, hunt: 1, flee: 0 };
-  const unfitCarrier = c => !c || c.dead || c.captive || c.role === 'guerreiro' || (c.task && (ROUGH[c.task.type] || c.task.kind === 'band' || (c.task.type === 'caverna' && c.task.kind === 'raid'))) || c.fury > 0;
+  const unfitCarrier = c => !c || c.dead || c.captive || c.role === 'guerreiro' || (c.task && (ROUGH[c.task.type] || c.task.kind === 'band' || (c.task.type === 'caverna' && c.task.kind === 'raid'))) || c.fury > 0 || atSea(c);
+  // (nor out to sea: a baby stays ashore with someone while the boat fishes or the ship explores — only colonists take the whole family)
+  function atSea(c) { if (!c.aboard) return false; const e = G.Expe && G.Expe.memberOf(c.id); return !(e && e.kind === 'colonia'); }
   function babyUpdate(v, dt) {
     const S = G.S;
     v.task = null;

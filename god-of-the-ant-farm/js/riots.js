@@ -394,7 +394,7 @@
     else if (GK.some(k => g[k] && g[k].refused && S.day - g[k].refused < 3) && (f.exec || (f.execQ && f.execQ.length)) && povo < 36) { why = 'recusa'; heat = (36 - povo) / 36; }
     else if (P.tyr(f) && povo < 26) { why = 'tirania'; heat = (26 - povo) / 26; }
     if (!why) return;
-    const p = Math.max(0, heat) * 0.35 - (f.terror || 0) / 300;
+    const p = (Math.max(0, heat) * 0.35 - (f.terror || 0) / 300) * G.dv('riots');
     if (G.R() > p) return;
     // the biggest town of the realm with enough people
     let set = null; for (const s of G.Fac.settlementsOf(f.id)) { const n = [...S.villagers.values()].filter(v => v.set === s.id).length; if (n >= 14 && (!set || n > set._n)) { set = s; set._n = n; } }

@@ -820,7 +820,7 @@
     const lean = G.Stories ? G.Stories.warLean(a, b) : null; if (lean) want += lean.w;
     // the coffee fields, the ivory, the silk of a neighbour this people buys and cannot make
     const cov = G.Trade ? G.Trade.covet(a, b) : null; if (cov) want += cov.w;
-    const th = S.temper === 'pacifico' ? 1.2 : S.temper === 'belicoso' ? 0.68 : 0.86;
+    const th = (S.temper === 'pacifico' ? 1.2 : S.temper === 'belicoso' ? 0.68 : 0.86) / Math.max(0.01, G.dv('war'));
     if (want > th && G.R() < 0.3) {
       const why = lean ? 'reconquista' : cov && cov.w >= 0.12 ? 'riqueza' : hungry ? 'fome' : rebels ? 'secessao' : r.grudge > 40 ? 'vinganca' : touch > 3 ? 'fronteira' : pa.agg > 0.68 ? 'ambicao' : 'desconfianca';
       // a war ripens before it is declared: patrols, smiths, granaries — unless the ruler strikes by surprise
@@ -874,6 +874,7 @@
     if (pt.agg < 0.35) P.earn(to, P.ruler(to), 'pacifico');
     return true;
   }
+  P.answerPeace = answerPeace;
   function considerAlliance(a, b, r) {
     if (r.envoy) return;
     if (r.st === 'alianca' && r.op < 5 && !(G.WorldWar && G.WorldWar.sameBloc(a.id, b.id))) { r.st = 'paz'; log(`A aliança entre ${a.name} e ${b.name} se desfez.`, 'split'); return; }

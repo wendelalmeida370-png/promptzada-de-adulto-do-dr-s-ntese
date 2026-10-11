@@ -20,8 +20,8 @@
     } else S.emptyT = 0;
     updatePrayers(dt);
     if (w.nextEvent <= 0) {
-      w.nextEvent = G.rr(2.3, 4.6);
-      if (S.day < 4) return;
+      const ev = G.dv('events'); w.nextEvent = G.rr(2.3, 4.6) / Math.max(0.05, ev);
+      if (S.day < 4 || !ev) return;
       trigger();
     }
     updateBoats(dt);
