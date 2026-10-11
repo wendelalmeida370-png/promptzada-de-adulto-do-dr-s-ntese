@@ -488,13 +488,15 @@
     const left = crew.filter(v => !v.aboard);
     if (left.length) {
       // two at a time step down the plank (the ones still on their way are waited for, a while)
-      for (const v of left.slice(0, 2)) {
+      // (someone saying goodbye in a scene of their own is waited for: the ship does not leave in the middle of an embrace)
+      const inScene = v => !!(G.Scene && G.Scene.actorScene(v));
+      for (const v of left.filter(q => !inScene(q)).slice(0, 2)) {
         if (G.dist(v.x, v.y, e.port[0], e.port[1]) > 3.5 && e.t < 40) continue;
         const s = berth(e, v, ships); if (!s) continue;
         G.Vg.endTask(v); v.aboard = s.id; v.task = { type: 'aboard', ship: s.id, pri: 9, st: 0, age: 0 }; if (!s.crew.includes(v.id)) s.crew.push(v.id); v.gear = null;
         G.FX && G.FX.splash(s.x, s.y, 0.2);
       }
-      e.bq = 0.6; if (e.t < 45) return;
+      e.bq = 0.6; if (e.t < 45 || (left.some(inScene) && e.t < 90)) return;
       // whoever never came stays behind
       for (const v of crew.filter(q => !q.aboard)) { G.Vg.endTask(v); e.crew = e.crew.filter(id => id !== v.id); }
     }
@@ -695,7 +697,7 @@
   // a castaway found by an expedition joins it (and the mystery of a lost ship is solved)
   function rescue(e, c) {
     c.found = e.id; const S = G.S; let n = 0;
-    for (const id of c.ids) { const v = P(id); if (!v || v.aboard) continue; n++; G.Vg.endTask(v); v.wrecked = null; e.crew.push(id); G.Vg.setTask(v, { type: 'expl', exp: e.id, pri: 3.3, st: 'back', n: 9 }); }
+    for (const id of c.ids) { const v = P(id); if (!v || v.aboard) continue; n++; G.Vg.endTask(v); v.wrecked = null; if (!e.crew.includes(id)) e.crew.push(id); G.Vg.setTask(v, { type: 'expl', exp: e.id, pri: 3.3, st: 'back', n: 9 }); }
     if (n) chapter(e, 'Um sobrevivente', `Na praia, ${n > 1 ? n + ' pessoas magras' : 'uma pessoa magra'} acenando: ${c.ids.map(PD).filter(Boolean).map(v => v.name).join(' e ')}, náufragos d${c.title ? c.title.replace(/^(a|o) /, (m, x) => x + ' ') : 'e um barco perdido'}, há ${Math.max(1, Math.round(S.day - c.d))} ${S.day - c.d >= 2 ? 'anos' : 'ano'} naquela ilha.`, 'heart', true, { x: c.x, y: c.y });
   }
   // ------------------------------ the first meeting ------------------------------
@@ -809,13 +811,16 @@
   // ------------------------------ back aboard ------------------------------
   function reboardTick(e, f, crew, ships) {
     e.dq -= 0.5; if (e.dq > 0) return;
-    const ash = crew.filter(v => !v.aboard);
+    const ash = [...new Set(crew.filter(v => !v.aboard))];
+    // whoever ashore lost the errand (a feast with the strangers, a meal, a fright) is called back down to the boats
+    for (const v of ash) if (!v.captive && !(v.task && (v.task.type === 'expl' || v.task.pri >= 6)) && !(G.Scene && G.Scene.actorScene(v))) { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'expl', exp: e.id, pri: 3.3, st: 'back', n: 0 }); }
     const at = ash.filter(v => G.dist(v.x, v.y, e.landAt[0], e.landAt[1]) < 2.4);
     for (const v of at.slice(0, 2)) { const s = berth(e, v, ships); if (!s) continue; G.Vg.endTask(v); v.aboard = s.id; v.task = { type: 'aboard', ship: s.id, pri: 9, st: 0, age: 0 }; if (!s.crew.includes(v.id)) s.crew.push(v.id); }
     e.dq = 0.6;
     // the ones who never make it back to the beach (lost in the woods, taken, dead) are left
-    if (ash.length && e.t < 80) return;
-    for (const v of ash) { if (v.task && v.task.type === 'expl') G.Vg.endTask(v); e.crew = e.crew.filter(id => id !== v.id); v.wrecked = { ship: e.flag, name: e.name, d: G.S.day, fac: e.fac, exp: e.id, x: v.x, y: v.y, left: 1 }; chapter(e, 'Deixad' + oa(v), `${v.name} não voltou para a praia a tempo. Os navios partiram sem el${v.g === 'f' ? 'a' : 'e'}.`, 'skull'); }
+    // (the ones still walking back down to the beach are waited for a while longer)
+    if (ash.length && (e.t < 80 || (e.t < 170 && ash.some(v => v.task && v.task.type === 'expl' && !v.captive)))) return;
+    for (const v of ash) { if (v.task && v.task.type === 'expl') G.Vg.endTask(v); e.crew = e.crew.filter(id => id !== v.id); if (!(e.left = e.left || []).includes(v.id)) e.left.push(v.id); v.wrecked = { ship: e.flag, name: e.name, d: G.S.day, fac: e.fac, exp: e.id, x: v.x, y: v.y, left: 1 }; chapter(e, 'Deixad' + oa(v), `${v.name} não voltou para a praia a tempo. Os navios partiram sem el${v.g === 'f' ? 'a' : 'e'}.`, 'skull'); }
     // more to see, or home
     const left = e.prov / (Math.max(1, crew.length) * FOOD); const homeD = G.dist(e.landAt[0], e.landAt[1], e.moor[0], e.moor[1]);
     if (e.kind !== 'colonia' && e.scale === 'grande' && left > (homeD / 1.4 / DAY()) * 2.2 + 0.3 && (e.visited || []).length < 3) {
@@ -847,6 +852,7 @@
   // ------------------------------ home: what they bring ------------------------------
   function arrive(e, f) {
     const S = G.S; const lead = P(e.leader); const back = alive(e); const lostN = e.lost.length;
+    const leftN = (e.left || []).filter(id => P(id) && !back.some(b => b.id === id)).length;
     // the knowledge comes ashore with them
     const out = { regions: [], ores: [], facs: [], sp: [], wrecks: [], rumors: [] };
     const merge = o => { for (const k in out) out[k] = out[k].concat(o[k] || []); };
@@ -868,7 +874,7 @@
     if (e.contact) bits.push(`notícias de um povo: ${F(e.contact.fac) ? F(e.contact.fac).name : 'gente estranha'}`);
     if (e.learned) bits.push(`um saber novo (${e.learned})`);
     const days = Math.max(1, Math.round((S.day - (e.dayOut || e.day0)) * 10) / 10);
-    const txt = `${e.scale === 'so' && lead ? `${lead.name} voltou a ${e.fromName}` : `${e.name} voltou a ${e.fromName}${lead ? ` com ${lead.name} no comando` : ''}`}${lostN ? `, sem ${lostN} dos que partiram` : ''}. ${bits.length ? 'Trouxe ' + bits.join('; ') + '.' : 'Não trouxe nada além de histórias do mar.'}${e.presumed ? ' Já ninguém esperava.' : ''}`;
+    const txt = `${e.scale === 'so' && lead ? `${lead.name} voltou a ${e.fromName}` : `${e.name} voltou a ${e.fromName}${lead ? ` com ${lead.name} no comando` : ''}`}${lostN ? `, sem ${lostN} dos que partiram` : ''}${leftN ? `${lostN ? ' e' : ','} com ${leftN} deixad${leftN > 1 ? 'os' : 'o'} para trás do outro lado do mar` : ''}. ${bits.length ? 'Trouxe ' + bits.join('; ') + '.' : 'Não trouxe nada além de histórias do mar.'}${e.presumed ? ' Já ninguém esperava.' : ''}`;
     chapter(e, 'A volta', txt, found.length || ores.length ? 'star' : 'ship', true);
     X.mark(f, found.length || ores.length || e.contact ? 'achou' : 'voltou');
     for (const v of back) { v.voyages = (v.voyages || 0) + 1; v.expCD = S.day; G.Life && G.Life.bio(v, 'seaHome', `${days >= 2 ? Math.round(days) + ' anos' : 'um ano'} no mar${found.length ? ', com notícias de ' + found[0] : ''}`); }
@@ -1180,11 +1186,11 @@
       const homes = r ? G.Fac.settlementsOf(fid).filter(s => K.at(s.cx, s.cy) === r) : [];
       if (homes.length) { const h = homes.sort((a, b) => G.dist(a.cx, a.cy, v.x, v.y) - G.dist(b.cx, b.cy, v.x, v.y))[0]; if (G.dist(h.cx, h.cy, v.x, v.y) < (h.radius || 8) + 4) survivorHome(v, r); else G.Vg.setTask(v, { type: 'naufrago', st: 'home', set: h.id, pri: 3.4 }); continue; }
       const town = r && [...S.settlements.values()].find(s => K.at(s.cx, s.cy) === r && s.fac !== fid);
-      if (town) { G.Vg.setTask(v, { type: 'naufrago', st: 'native', set: town.id, pri: 3.4 }); continue; }
+      if (town) { G.Vg.setTask(v, { type: 'naufrago', st: 'native', set: town.id, pri: 3.4 }); G.Stories && G.Stories.signal('castaway', { v: v.id, camp: 0, exp: v.wrecked.exp || 0, fac: fid, ship: v.wrecked.name || '', x: v.x, y: v.y }); continue; }
       // a beach where nobody lives: a camp of the shipwrecked
       let c = L.find(q => q.key === (r ? r.key : -1) && q.fac === fid && !q.done);
       if (!c) { c = { id: S.nextId++, key: r ? r.key : -1, fac: fid, ids: [], x: +v.x.toFixed(1), y: +v.y.toFixed(1), d: S.day, raft: 0, ship: v.wrecked.ship, title: v.wrecked.name, exp: v.wrecked.exp || 0 }; L.push(c); if (L.length > 40) L.shift(); log(`${v.name} se arrastou para fora d'água numa praia ${r && K.named(r) ? K.de(K.name(r)) : 'que ninguém conhece'}: náufrag${oa(v)} ${ofN(v.wrecked.name)}.`, 'skull', v.x, v.y); G.Stories && G.Stories.signal('castaway', { v: v.id, camp: c.id, fac: fid, exp: c.exp, x: v.x, y: v.y }); G.Life && G.Life.bio(v, 'castaway', r && K.named(r) ? K.na(K.name(r)) : 'numa ilha deserta', ''); }
-      if (!c.ids.includes(v.id)) c.ids.push(v.id);
+      if (!c.ids.includes(v.id)) { c.ids.push(v.id); G.Stories && G.Stories.signal('castaway', { v: v.id, camp: c.id, exp: c.exp || 0, fac: fid, ship: v.wrecked.name || '', x: v.x, y: v.y }); }
       G.Vg.setTask(v, { type: 'naufrago', st: 'camp', camp: c.id, pri: 3.4 });
     }
     // the camps: alive? a raft? a hamlet?
@@ -1283,11 +1289,12 @@
     const e = w.exp && X.get(w.exp);
     const days = S.day - w.d;
     const news = out.regions.length ? ` Contou de ${out.regions.map(q => K.named(q.r) ? K.name(q.r) : 'uma terra nova').join(' e ')}.` : '';
+    // (home always hears of it: the stories decide whether it was a miracle or only a wet walk up the beach)
+    G.Stories && G.Stories.signal('survivorHome', { v: v.id, exp: w.exp || 0, fac: f.id, days, presumed: e && e.presumed ? 1 : 0, x: v.x, y: v.y });
     if (days > 0.5 || (e && e.presumed)) {
       const others = e ? e.crew.concat(e.lost).filter(id => id !== v.id && P(id) && (P(id).wrecked || (e.survivors || []).includes(id))).length : 0;
       if (e) (e.survivors = e.survivors || []).push(v.id);
       log(`${v.name} voltou${e ? (others || (e.survivors || []).length > 1 ? ` — ${v.g === 'f' ? 'uma' : 'um'} dos que se salvaram ${ofN(e.name)}` : ` — ${v.g === 'f' ? 'a única' : 'o único'} ${ofN(e.name)} que se salvou`) : ` do naufrágio ${ofN(w.name)}`}${days > 1 ? `, depois de ${Math.round(days)} anos dado como mort${oa(v)}` : ''}.${news}`, 'heart', v.x, v.y);
-      G.Stories && G.Stories.signal('survivorHome', { v: v.id, exp: w.exp || 0, fac: f.id, days, x: v.x, y: v.y });
     }
     G.Life && G.Life.bio(v, 'wrecked', w.name);
     if (e && e.status !== 'voltou' && !alive(e).some(o => o.aboard)) { e.survivor = v.id; if (!e.presumed) e.presumed = S.day; }
