@@ -998,3 +998,31 @@ body.tracking #chronicle { top: 214px; max-height: calc(100vh - 360px); }
 .doing > svg { width: 14px; height: 14px; vertical-align: -2px; color: var(--gold-2); }
 .wz-pl b { color: #ffcf9a; }
 .wz-al > span { flex: 1; min-width: 0; }
+/* ------------------------------ the sea (O) ------------------------------ */
+.sea-modal h2 svg { color: #8ac8ff; }
+.sea-tabs { display: flex; gap: 6px; margin: 4px 0 8px; flex-wrap: wrap; }
+.sea-tabs button, .sea-facs button { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; padding: 5px 11px; border-radius: 9px; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .1); color: var(--muted); cursor: pointer; }
+.sea-tabs button svg { width: 14px; height: 14px; }
+.sea-tabs button.on, .sea-facs button.on { color: #e6f4ff; background: rgba(90, 160, 220, .2); border-color: rgba(120, 180, 240, .45); }
+.sea-facs { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+.sea-card .wz-ph { color: #bfe2ff; background: rgba(90, 160, 220, .16); }
+.sea-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.sea-btns button { font-size: 11.5px; font-weight: 800; padding: 3px 9px; border-radius: 8px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .12); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.sea-btns button svg { width: 12px; height: 12px; }
+.sea-ships { display: flex; flex-direction: column; gap: 3px; margin-top: 2px; }
+.sea-ship { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: 11.5px; background: rgba(0, 0, 0, .14); border-radius: 7px; padding: 3px 6px; }
+.sea-ship > span:first-child { display: inline-flex; align-items: center; gap: 4px; flex: 1; min-width: 150px; } .sea-ship svg { width: 13px; height: 13px; color: #8ac8ff; } .sea-ship small { color: var(--muted); width: 100%; }
+.sea-track, .sea-kmap { width: 100%; height: 240px; border-radius: 10px; background: #141a24; display: block; margin: 8px 0; }
+.sea-kmap { height: 300px; }
+.sea-book { max-height: 320px; overflow: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+.sea-ch em { font-style: normal; font-family: 'Cinzel', serif; font-size: 12.5px; color: var(--gold); } .sea-ch small { color: var(--muted); font-family: sans-serif; }
+.sea-ch p { margin: 2px 0 0; font-size: 13px; line-height: 1.5; font-style: italic; color: #f1e8d6; }
+.sea-know { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; align-items: start; }
+.sea-kside { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.sea-prof { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--muted); } .sea-prof span { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+@media (max-width: 640px) { .sea-know { grid-template-columns: 1fr; } .sea-kmap { height: 220px; } }
+.sea-modal .wz-al span svg, .sea-modal .wz-events svg, .sea-modal .wz-treaty span svg { width: 12px; height: 12px; vertical-align: -2px; display: inline-block; }
+.sea-modal .wz-ah > svg, .sea-modal h4 svg { width: 14px; height: 14px; }
+.insp .doing svg, #inspector .doing svg { width: 13px; height: 13px; vertical-align: -2px; }
+.sea-modal .wz-armies { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+@media (max-width: 640px) { .sea-modal .wz-armies { grid-template-columns: 1fr; } }

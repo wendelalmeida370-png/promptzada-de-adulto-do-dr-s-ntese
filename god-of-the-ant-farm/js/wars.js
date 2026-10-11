@@ -92,6 +92,7 @@
   Wz.liveArmies = liveArmies;
   function nearestTo(list, x, y) { let best = null, bd = 1e9; for (const s of list) { const d = dist(s.cx, s.cy, x, y); if (d < bd) { bd = d; best = s; } } return best; }
   const reach = new Map();
+  function reachableAny(fId, tgt) { for (const s of G.Fac.settlementsOf(fId)) if (reachable(s, tgt)) return true; return false; }
   function reachable(a, b) {
     if (!a || !b) return false; const k = a.id + '>' + b.id; const c = reach.get(k);
     if (c && c.day === G.S.day) return c.ok;
@@ -399,7 +400,8 @@
     const S = G.S; o = o || {}; refresh();
     const own = G.Fac.settlementsOf(f.id); if (!own.length || !tgt) return null;
     const relief = role === 'defesa' && o.relief ? o.relief : null;
-    const front = relief || (role === 'defesa' ? tgt : own.filter(s => reachable(s, tgt)).sort((p, q) => dist(p.cx, p.cy, tgt.cx, tgt.cy) - dist(q.cx, q.cy, tgt.cx, tgt.cy))[0]);
+    // (an army that will cross the sea gathers at a port: o.front, o.at)
+    const front = o.front || relief || (role === 'defesa' ? tgt : own.filter(s => reachable(s, tgt)).sort((p, q) => dist(p.cx, p.cy, tgt.cx, tgt.cy) - dist(q.cx, q.cy, tgt.cx, tgt.cy))[0]);
     if (!front) return null;
     const adults = Wz.adults(f.id);
     const g = w.goals[f.id] || { imp: 2 };
@@ -415,7 +417,7 @@
       const best = [...S.villagers.values()].filter(v => v.set === s.id && canServe(v)).sort((p, q) => (q.role === 'guerreiro') - (p.role === 'guerreiro') || q.courage - p.courage).slice(0, gN);
       for (const v of best) keep.add(v.id);
     }
-    const muster = role === 'defesa' && !relief ? (W.nearestLand(front.cx, front.cy, 4) || [front.cx, front.cy]) : musterSpot(front, tgt);
+    const muster = o.at ? o.at.slice() : role === 'defesa' && !relief ? (W.nearestLand(front.cx, front.cy, 4) || [front.cx, front.cy]) : musterSpot(front, tgt);
     const land = W.landIds ? W.landIds() : null; const myLand = land ? land[W.idx(muster[0], muster[1])] : 0;
     const cands = [];
     for (const v of S.villagers.values()) {
@@ -442,6 +444,7 @@
     return a;
   }
   Wz.mobilize = mobilize;
+  Wz.mobilizeAt = (w, f, tgt, front, at, n, o) => mobilize(w, f, 'campanha', tgt, Object.assign({}, o || {}, { front, at, n }));
   // a soldier on the way to the rally point, and waiting there
   function runMuster(v, t, dt, H) {
     const a = Wz.army(t.army); if (!a || a.phase !== 'mobilizar') return H.end(v);
@@ -535,9 +538,11 @@
       const held = a.members.some(id => { const v = P(id); const pt = v && G.Scene && G.Scene.prevTask && G.Scene.prevTask(v); return pt && pt.type === 'muster' && pt.army === a.id; });
       if (held && age < DAY() * 0.6) return;
       if (ms.length < 3 && age > DAY() * 0.2) { a.done = true; a.phase = 'dispersado'; for (const v of ms) G.Vg.endTask(v); return; }
-      if ((there >= ms.length * 0.85 && age > 12) || (age > DAY() * 0.5 && there >= ms.length * 0.65) || age > DAY() * 0.8) formArmy(a);
+      if ((there >= ms.length * 0.85 && age > 12) || (age > DAY() * 0.5 && there >= ms.length * 0.65) || age > DAY() * 0.8) { if (a.sea && !a.beach && G.Fleets) { if (G.Fleets.embark(a)) return; if (age < DAY() * 1.5) return; a.done = true; a.phase = 'dispersado'; for (const v of ms) G.Vg.endTask(v); return; } formArmy(a); }
       return;
     }
+    // at sea, the fleet carries the army (there are no wagons, no desertions: there is nowhere to run)
+    if (a.phase === 'embarque' || a.phase === 'travessia') { const fl = G.Fleets && G.Fleets.get(a.sea); if (!fl || !G.Fleets.live(fl)) { a.done = true; a.phase = 'dispersado'; } return; }
     const b = a.band ? G.War.bands.get(a.band) : null;
     if (!b) { if (!a.done) { a.done = true; if (a.phase !== 'retorno' && a.phase !== 'dispersado') a.phase = 'dispersado'; homecoming(a); } return; }
     a.members = b.members.slice();
@@ -609,12 +614,12 @@
   // two hosts form their lines: a battle begins (both sides call this; the second joins the first's record)
   Wz.battleStart = function (b, foe) {
     const S = G.S; if (!b || !foe) return null;
-    const open = st().battles.find(x => x.open && x.bands.includes(foe.id));
+    const open = st().battles.find(x => x.open && !x.naval && x.bands.includes(foe.id));
     if (open) { if (!open.bands.includes(b.id)) { open.bands.push(b.id); addSide(open, b); } b.battle = open.id; return open; }
     const w = warOf(b.fac, foe.fac);
     // the same two hosts closing again on the same ground, moments later: it is still the same battle
     const g0 = P(b.army && b.army.gen) || P(b.members[0]);
-    const again = g0 && st().battles.find(x => !x.open && !x.town && x.sides[b.fac] && x.sides[foe.fac] && S.clock - (x.t1 || 0) < 90 && dist(x.x, x.y, g0.x, g0.y) < 24);
+    const again = g0 && st().battles.find(x => !x.open && !x.town && !x.naval && x.sides[b.fac] && x.sides[foe.fac] && S.clock - (x.t1 || 0) < 90 && dist(x.x, x.y, g0.x, g0.y) < 24);
     if (again) { again.open = true; again.reopened = (again.reopened || 0) + 1; for (const o of [b, foe]) if (!again.bands.includes(o.id)) { again.bands.push(o.id); addSide(again, o); } b.battle = again.id; foe.battle = again.id; return again; }
     const g1 = P(b.army && b.army.gen), g2 = P(foe.army && foe.army.gen);
     const x = g1 && g2 ? (g1.x + g2.x) / 2 : g1 ? g1.x : foe.members.length ? P(foe.members[0]).x : 0;
@@ -830,7 +835,7 @@
       const exh = f.weariness || 0;
       // ---- defence: the scouts see the enemy levy gather, and the threatened town calls its own
       for (const e of foes) for (const ea of liveArmies(e.id)) {
-        if (ea.role === 'defesa' || !{ mobilizar: 1, reunir: 1, marcha: 1, acampado: 1, cerco: 1 }[ea.phase]) continue;
+        if (ea.role === 'defesa' || !{ mobilizar: 1, reunir: 1, marcha: 1, acampado: 1, cerco: 1, travessia: 1 }[ea.phase]) continue;
         const tg = S.settlements.get(ea.target); if (!tg || tg.fac !== fId) continue;
         const besieged = ea.phase === 'cerco';
         if (mine.some(a => a.role === 'defesa' && a.target === tg.id && (!besieged || a.relief))) continue;
@@ -871,7 +876,8 @@
       const n = levySize(f, g.imp || 2, Wz.adults(fId));
       // too few for an army: the war is fought in raids, as small peoples fight
       if (n < 8) { if ((f.attackCD || 0) <= 0 && !G.War.bandsOf(fId).some(b => b.goal !== 'defesa')) raid(w, f, F(tgt.fac), n, tgt); continue; }
-      const a = mobilize(w, f, 'campanha', tgt, { reinforce: side.levies > 0 });
+      // (a city over the water: the army goes by sea, or not at all)
+      const a = mobilize(w, f, 'campanha', tgt, { reinforce: side.levies > 0 }) || (G.Fleets && !reachableAny(fId, tgt) && G.Fleets.amphibious(w, f, tgt, { reinforce: side.levies > 0 }));
       (w.nextLevy || (w.nextLevy = {}))[fId] = S.clock + DAY() * (a ? 0.8 : 0.3);
     }
   }
@@ -1048,7 +1054,7 @@
     }
     for (const f of G.Fac.all()) if (f._exh !== undefined) { f.weariness = f._exh; delete f._exh; }
     // close battles whose bands are all gone
-    for (const bt of st().battles) if (bt.open && !bt.bands.some(id => G.War.bands.has(id))) { const b0 = { battle: bt.id }; if (bt.town) Wz.assaultEnd(Object.assign(b0, { fac: Object.keys(bt.sides).map(Number)[0] }), false); else Wz.battleEnd(b0); }
+    for (const bt of st().battles) if (bt.open && !bt.naval && !bt.bands.some(id => G.War.bands.has(id))) { const b0 = { battle: bt.id }; if (bt.town) Wz.assaultEnd(Object.assign(b0, { fac: Object.keys(bt.sides).map(Number)[0] }), false); else Wz.battleEnd(b0); }
     // keep the archive short
     if (armies().length > 120) st().armies = armies().filter(a => !a.done || G.S.day - (a.day || 0) < 30).slice(-120);
     if (wars().length > 60) { const keep = wars().filter(w => !w.end).concat(wars().filter(w => w.end).slice(-50)); st().wars = wars().filter(w => keep.includes(w)); }
@@ -1062,6 +1068,7 @@
       const f = F(a.fac); const tgt = S.settlements.get(a.target);
       const ms = a.members.map(P).filter(v => v && !v.captive && fid(v) === a.fac);
       if (!f || !tgt || ms.length < 3) { a.done = true; continue; }
+      if (a.sea && (a.phase === 'embarque' || a.phase === 'travessia')) continue;
       if (a.phase === 'mobilizar') { a.called = S.clock; ms.forEach((v, k) => G.Vg.setTask(v, { type: 'muster', army: a.id, k, pri: 3.15, kind: 'muster', st: 0 })); continue; }
       if (a.phase === 'retorno' || a.phase === 'retirada' || a.phase === 'dispersado') { a.done = true; continue; }
       // the soldiers fall in again around their commander

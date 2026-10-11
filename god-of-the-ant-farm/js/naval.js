@@ -19,13 +19,21 @@
   G.mapHooks.push(n => { N = n; alloc(); });
   const water = i => G.S.type[i] <= T.SEA;
 
+  // crew: the hands it takes to sail it (rowers, a helmsman, the ones who haul the nets)
   Nv.SHIP = {
-    pesca: { hp: 40, sp: 1.5, cost: 12 },
-    explorador: { hp: 50, sp: 1.9, cost: 10 },
-    mercante: { hp: 70, sp: 1.3, cost: 28 },
-    guerra: { hp: 130, sp: 1.8, cost: 34, dmg: 11 },
-    transporte: { hp: 95, sp: 1.55, cost: 22, dmg: 5 },
+    canoa: { hp: 22, sp: 1.2, cost: 5, crew: 2, small: 1, build: 0.12 },
+    jangada: { hp: 16, sp: 0.75, cost: 0, crew: 4, small: 1, build: 0 },
+    pesca: { hp: 40, sp: 1.5, cost: 12, crew: 3, small: 1, build: 0.25 },
+    explorador: { hp: 70, sp: 1.85, cost: 22, crew: 8, build: 0.45 },
+    mercante: { hp: 70, sp: 1.3, cost: 28, crew: 4, build: 0.5 },
+    guerra: { hp: 130, sp: 1.8, cost: 34, dmg: 11, crew: 12, build: 0.6 },
+    transporte: { hp: 95, sp: 1.55, cost: 22, dmg: 5, crew: 16, build: 0.45 },
   };
+  Nv.small = s => !!(Nv.SHIP[s.kind] && Nv.SHIP[s.kind].small);
+  const MOORED = { idle: 1, board: 1, unload: 1, build: 1, embark: 1, load: 1, repair: 1, prep: 1 };
+  Nv.atSea = s => !MOORED[s.st];
+  // the people really aboard a ship (ids still listed may have died or stepped off)
+  Nv.aboardOf = s => { const S = G.S; const out = []; for (const id of s.crew || []) { const v = S.villagers.get(id); if (v && v.aboard === s.id) out.push(v); } return out; };
   let tFleet = 0, tShoal = 0, tRoute = 0, tScan = 0;
   Nv.reset = function () { comp = null; tFleet = 2; tShoal = 0; tRoute = 5; tScan = 0; };
 
@@ -138,17 +146,21 @@
     const def = Nv.SHIP[kind];
     if (fac.stock.wood < def.cost + (kind === 'pesca' ? 0 : 6)) return null;
     fac.stock.wood -= def.cost;
-    const s = Object.assign({ id: G.S.nextId++, kind, fac: fac.id, civ: fac.civ || null, dock: dock.id, x: d.moor[0], y: d.moor[1], path: null, pi: 0, st: 'idle', t: 0, hp: def.hp, maxHp: def.hp, face: 1, crew: [], cd: 0, born: G.S.day }, o || {});
+    const s = Object.assign({ id: G.S.nextId++, kind, fac: fac.id, civ: fac.civ || null, dock: dock.id, x: d.moor[0], y: d.moor[1], path: null, pi: 0, st: 'idle', t: 0, hp: def.hp, maxHp: def.hp, face: 1, crew: [], cd: 0, born: G.S.day, sail: 100, mast: 1, flood: 0 }, o || {});
+    // a ship is built before it sails: the hull goes up on the slip, plank by plank
+    if (o && o.build && def.build && G.Fishers) { s.st = 'build'; s.prog = 0; s.need = def.build; }
+    Nv.baptize(s);
     G.S.ships.push(s);
     return s;
   }
   Nv.shipsOf = (fid, kind) => G.S.ships.filter(s => s.fac === fid && (!kind || s.kind === kind));
+  Nv.spawn = spawn;
   function sailTo(s, x, y) { const p = Nv.seaPath(s.x, s.y, x, y); if (!p) return false; s.path = p; s.pi = 0; return true; }
   function moveShip(s, dt) {
     s.moving = false;
     if (!s.path || s.pi >= s.path.length) return true;
     const p = s.path[s.pi]; const dx = p[0] - s.x, dy = p[1] - s.y; const d = Math.hypot(dx, dy);
-    const sp = Nv.SHIP[s.kind].sp * G.Civ.t(s.fac, 'naval') * (G.S.weather.storm > 0 ? 0.7 : 1) * (s.hp < s.maxHp * 0.4 ? 0.7 : 1) * (s.wind || 1) * dt;
+    const sp = Nv.SHIP[s.kind].sp * G.Civ.t(s.fac, 'naval') * (G.S.weather.storm > 0 ? 0.7 : 1) * (s.hp < s.maxHp * 0.4 ? 0.7 : 1) * (s.wind || 1) * Nv.spMul(s) * dt;
     if (d <= sp) { s.x = p[0]; s.y = p[1]; s.pi++; } else { s.x += dx / d * sp; s.y += dy / d * sp; }
     if (Math.abs(dx - dy) > 0.02) G.faceTo(s, dx, dy);
     s.moving = true;
@@ -156,6 +168,16 @@
     return s.pi >= s.path.length;
   }
   function home(s) { const d = G.S.buildings.get(s.dock); return d && d.type === 'doca' ? Nv.dockInfo(d) : null; }
+  // what slows a ship: a torn sail, a broken mast, water in the hold, too few hands at the oars
+  Nv.spMul = function (s) {
+    let m = 1;
+    if (s.mast === 0) m *= 0.45; else if (s.sail !== undefined) m *= 0.55 + 0.45 * G.clamp(s.sail, 0, 100) / 100;
+    if (s.flood > 0) m *= 1 - Math.min(0.5, s.flood / 200);
+    const need = Nv.SHIP[s.kind] && Nv.SHIP[s.kind].crew; if (need && s.crew && s.kind !== 'jangada' && !s.ghost) { const n = s._nAb !== undefined ? s._nAb : need; if (n < need) m *= 0.45 + 0.55 * n / need; }
+    return m;
+  };
+  // home: whatever the crew saw becomes the people's
+  Nv.arrived = function (s) { if (G.Know && (s.news || s.cells)) { const out = G.Know.bring(s, s.fac, { via: s.kind }); G.Expe && G.Expe.newsHome(s, out); } };
   function removeShip(s) {
     const S = G.S; const k = S.ships.indexOf(s); if (k >= 0) S.ships.splice(k, 1);
     // nobody is left floating: whoever is still aboard steps ashore
@@ -163,16 +185,85 @@
   }
   Nv.sink = function (s, by, why) {
     const S = G.S; const f = G.Fac.get(s.fac);
-    let drowned = 0;
-    for (const id of s.crew) { const v = S.villagers.get(id); if (v && v.aboard === s.id) { v.aboard = 0; G.Village.kill(v, 'drown', why === 'god'); drowned++; } }
-    const nm = shipName(s);
-    if (s.kind !== 'pesca' || G.R() < 0.4) log(`${G.cap(nm)} de ${f ? f.name : 'um povo'} afundou${by ? ', atacad' + G.gen(nm) + ' por ' + (G.Fac.get(by.fac) || {}).name : why === 'storm' ? ' na tempestade' : why === 'fire' ? ' em chamas' : why === 'god' ? ' pela fúria do mar' : ''}${drowned ? ` — ${drowned} ${drowned > 1 ? 'afogados' : 'afogado'}` : ''}.`, 'naval', s.x, s.y);
+    if (s.sunk) return; s.sunk = true;
+    const nm = Nv.title(s); const ppl = Nv.aboardOf(s);
+    const land = W.nearestLand(s.x, s.y, 26); const dl = land ? G.dist(land[0], land[1], s.x, s.y) : 99;
+    let drowned = 0, swam = 0; const swimmers = [];
+    for (const v of ppl) {
+      v.aboard = 0;
+      // the sea takes most; the strong, the lucky and the ones near a shore swim for it
+      const p = (why === 'god' ? 0.05 : why === 'storm' ? 0.3 : why === 'fire' ? 0.45 : why === 'reef' ? 0.6 : 0.5) * (dl < 6 ? 1.6 : dl < 14 ? 1 : dl < 22 ? 0.45 : 0.06) * G.clamp(v.hp / 90, 0.2, 1.1) * (v.age < 12 || v.age > 60 ? 0.45 : 1) * ((v.traits || []).includes('Resistente') ? 1.3 : 1) * (v.role === 'pescador' ? 1.25 : 1);
+      if (G.R() < p) {
+        v.x = s.x + G.rr(-0.6, 0.6); v.y = s.y + G.rr(-0.6, 0.6); v.task = null; v.path = null;
+        G.Vg.setTask(v, { type: 'swim', pri: 6 }); v.energy = Math.max(v.energy, 55);
+        G.Know && G.Know.share(s, v);
+        v.wrecked = { ship: s.id, name: nm, d: S.day, fac: s.fac, exp: s.exp || 0, x: s.x, y: s.y };
+        swimmers.push(v); swam++;
+      } else { G.Village.kill(v, 'drown', why === 'god'); drowned++; }
+    }
+    const lost = drowned + (s.lostAtSea || 0);
+    const wk = Nv.addWreck(s, why, by, lost, swam);
+    const quiet = Nv.small(s) && !lost && !swam && !s.exp && G.R() < 0.6;
+    if (!quiet) log(`${G.cap(nm)}${f ? ' de ' + f.name : ''} ${Nv.small(s) ? 'virou' : 'afundou'}${by ? ', atacad' + (Nv.fem(s) ? 'a' : 'o') + ' por ' + (G.Fac.get(by.fac) || {}).name : why === 'storm' ? ' na tempestade' : why === 'fire' ? ' em chamas' : why === 'god' ? ' pela fúria do mar' : why === 'reef' ? ' num recife' : why === 'flood' ? ', com o casco aberto' : ''}${lost ? ` — ${lost} ${lost > 1 ? 'afogados' : 'afogado'}` : ''}${swam ? `${lost ? ', ' : ' — '}${swam} ${swam > 1 ? 'nadam' : 'nada'} para a vida` : ''}.`, 'naval', s.x, s.y);
     G.FX && G.FX.splash(s.x, s.y, 1.4);
     for (let k = 0; k < 8; k++) G.FX && G.FX.spawn({ x: s.x + G.rr(-0.5, 0.5), y: s.y + G.rr(-0.5, 0.5), h: G.SEA, z: G.rr(2, 8), vz: G.rr(10, 30), vx: G.rr(-0.6, 0.6), vy: G.rr(-0.6, 0.6), g: 60, life: G.rr(1, 2), s0: 1.6, s1: 1, c: '#6e4a2c', k: 0 });
     G.Audio && G.Audio.at(s.x, s.y, 'collapse', true);
     if (by) { const bf = G.Fac.get(by.fac); if (bf) bf.st.kills += drowned; }
+    G.Stories && G.Stories.signal('shipSunk', { ship: s.id, name: nm, fac: s.fac, by: by ? by.fac : 0, why, lost, swam, ids: swimmers.map(v => v.id), exp: s.exp || 0, fleet: s.fleet || 0, x: s.x, y: s.y, wreck: wk ? wk.id : 0 });
+    G.Expe && G.Expe.onSink(s, why, by, lost, swimmers);
+    G.Fleets && G.Fleets.onSink(s, by, lost, swimmers);
     removeShip(s);
   };
+  // ------------------------------ wrecks ------------------------------
+  // what is left of a ship stays: a landmark, timber, a story, a rumour on the next beach
+  Nv.addWreck = function (s, why, by, lost, swam) {
+    const S = G.S; const L = S.wrecks || (S.wrecks = []);
+    const i = W.idx(s.x, s.y); const shallow = W.inb(s.x, s.y) && S.type[i] === T.SEA;
+    const wk = { id: S.nextId++, x: +s.x.toFixed(2), y: +s.y.toFixed(2), kind: s.kind, civ: s.civ, fac: s.fac, name: s.name || '', title: Nv.title(s), d: S.day, why: why || '', by: by ? by.fac : 0, lost: lost || 0, saved: swam || 0, exp: s.exp || 0, shallow, wood: Math.round((Nv.SHIP[s.kind] ? Nv.SHIP[s.kind].cost : 10) * 0.5), face: s.face || 1, found: {} };
+    if (s.kind === 'jangada' || (Nv.small(s) && !lost && G.R() < 0.5)) return null;
+    L.push(wk); if (L.length > 70) L.splice(0, L.length - 70);
+    // timber and a painted plank drift to some beach: the people there wonder whose it was
+    if (G.Know && !Nv.small(s) && G.R() < 0.7) {
+      const wa = S.weather.windA || 0; const tx = s.x + Math.cos(wa) * G.rr(8, 22), ty = s.y + Math.sin(wa) * G.rr(8, 22);
+      let best = null, bd = 30 * 30;
+      for (const set of S.settlements.values()) { if (set.fac === s.fac || !G.City || !G.City.coastal(set)) continue; const d = G.dist2(set.cx, set.cy, tx, ty); if (d < bd) { bd = d; best = set; } }
+      if (best) {
+        const f = G.Fac.get(s.fac); const known = f && G.Fac.rel(best.fac, f.id) && G.Fac.rel(best.fac, f.id).met;
+        const sail = G.Know.SAIL[s.civ] || 'de vela clara';
+        G.Know.rumor({ kind: known ? 'naufragio' : 'povo', fac: s.fac, x: s.x, y: s.y, key: null, conf: known ? 0.8 : 0.45, claim: known ? `${Nv.title(s)}, de ${f.name}, se perdeu no mar` : `um povo que faz barcos ${sail.replace(/^(de|uma) /, m => m)} vive além do mar`, origin: { what: 'destroços', set: best.id, fac: best.fac, wreck: wk.id }, first: best.fac, text: known ? `Destroços pintados com as cores de ${f.name} deram na praia de ${best.name}: tábuas, um remo, ${G.pick(['um cesto de vime', 'um pedaço de vela', 'uma ânfora rachada', 'um escudo de madeira'])}.` : `Na praia de ${best.name}, a maré trouxe tábuas de um barco que ninguém de lá sabe fazer — ${G.pick(['madeira pintada com olhos', 'pregos de um metal estranho', 'um pedaço de vela listrada', 'uma figura de proa entalhada'])}. Quem fez isso vive em algum lugar do mar.`, lx: best.cx, ly: best.cy });
+      }
+    }
+    return wk;
+  };
+  Nv.wreckById = id => (G.S.wrecks || []).find(w => w.id === id) || null;
+  // the ship's own name, given at the launch
+  const NAMES = {
+    nordico: ['Serpente do Mar', 'Corvo das Ondas', 'Lobo Cinzento', 'Garra de Gelo', 'Filha de Ran', 'Asa de Tempestade', 'Dragão Vermelho', 'Javali do Fiorde'],
+    grego: ['Nike', 'Thalassa', 'Galateia', 'Pégaso', 'Estrela da Manhã', 'Coruja de Prata', 'Tritão', 'Anfitrite'],
+    romano: ['Fortuna', 'Concórdia', 'Vitória', 'Águia de Ouro', 'Netuno', 'Aurora', 'Lua Crescente', 'Loba'],
+    egipcio: ['Olho de Hórus', 'Barca do Sol', 'Flor de Lótus', 'Íbis', 'Escaravelho Dourado', 'Filha do Nilo'],
+    asteca: ['Serpente Emplumada', 'Jaguar das Águas', 'Flor de Jade', 'Colibri', 'Espelho Fumegante', 'Águia do Lago'],
+    classico: ['Aurora', 'Gaivota', 'Estrela do Mar', 'Vento Bom', 'Esperança', 'Andorinha', 'Filha do Vento', 'Três Irmãs'],
+  };
+  const SMALL_NAMES = ['Gaivota', 'Sardinha', 'Três Irmãos', 'Boa Sorte', 'Maré Alta', 'Mãe das Águas', 'Cardume', 'Andorinha', 'Peixe-Voador', 'Estrelinha', 'Concha', 'Vento Leste'];
+  Nv.baptize = function (s, nm) {
+    if (s.name) return s.name; const S = G.S; const taken = new Set(S.ships.filter(o => o !== s && o.fac === s.fac).map(o => o.name));
+    const L = nm ? [nm] : Nv.small(s) ? SMALL_NAMES : (NAMES[s.civ] || NAMES.classico).concat(NAMES.classico);
+    let n = L.find(x => !taken.has(x) && G.R() < 0.45) || L.find(x => !taken.has(x)) || L[0];
+    if (taken.has(n)) { let k = 2; while (taken.has(n + ' ' + ['II', 'III', 'IV', 'V', 'VI'][k - 2]) && k < 6) k++; n = n + ' ' + ['II', 'III', 'IV', 'V', 'VI'][k - 2]; }
+    s.name = n; return n;
+  };
+  const NOUN = { canoa: 'canoa', jangada: 'jangada', pesca: 'barco', explorador: 'navio' };
+  Nv.noun = function (s) {
+    const c = G.CIVS[s.civ];
+    if (NOUN[s.kind] && !(s.kind === 'explorador' && c && s.civ === 'nordico')) return s.kind === 'pesca' && s.civ === 'asteca' ? 'canoa' : NOUN[s.kind];
+    if (s.kind === 'mercante') return c ? c.units.trader.toLowerCase() : 'navio mercante';
+    if (s.kind === 'explorador') return 'knarr';
+    return c ? c.units.ship.toLowerCase() : 'navio';
+  };
+  Nv.fem = s => G.gen(Nv.noun(s)) === 'a';
+  // "a trirreme Nike", "o barco Gaivota"
+  Nv.title = function (s) { const n = Nv.noun(s); return (G.gen(n) === 'a' ? 'a ' : 'o ') + n + (s.name ? ' ' + s.name : ''); };
   function shipName(s) {
     const c = G.CIVS[s.civ];
     if (s.kind === 'pesca') return 'um barco de pesca';
@@ -255,7 +346,7 @@
   function runWarship(s, dt) {
     const S = G.S; const h = home(s); if (!h) return removeShip(s);
     s.t += dt; s.cd -= dt;
-    if (s.st === 'repair') { if (moveShip(s, dt)) { s.hp = Math.min(s.maxHp, s.hp + dt * 4); if (s.hp >= s.maxHp) { s.st = 'idle'; s.t = 0; } } return; }
+    if (s.st === 'repair') { if (moveShip(s, dt)) { if (!s._home) { s._home = 1; Nv.arrived(s); } s.hp = Math.min(s.maxHp, s.hp + dt * 4); s.sail = Math.min(100, (s.sail || 0) + dt * 5); if (s.hp >= s.maxHp * 0.95) { s.mast = 1; s.flood = 0; } if (s.hp >= s.maxHp) { s.st = 'idle'; s.t = 0; s._home = 0; } } return; }
     if (s.hp < s.maxHp * 0.35) { if (sailTo(s, h.moor[0], h.moor[1])) { s.st = 'repair'; return; } }
     // hunt the nearest enemy ship; transports first
     s.scan = (s.scan || 0) - dt;
@@ -384,6 +475,7 @@
     else { if (!s.path || s.pi >= s.path.length) sailTo(s, tg.x, tg.y); moveShip(s, dt); }
   }
   Nv.blockaded = function (dock) { return dock && dock.blockT > G.S.clock; };
+  Object.assign(Nv, { _sailTo: (s, x, y) => sailTo(s, x, y), _move: (s, dt) => moveShip(s, dt), _home: s => home(s), _remove: s => removeShip(s), _nearestWater: (x, y, r) => nearestWater(x, y, r), _threat: (s, r) => threat(s, r), _enemiesNear: (s, r) => enemiesNear(s, r), _fire: (s, o) => fire(s, o), _ram: (s, o) => ram(s, o), _board: (s, crew) => board(s, crew), _disembark: (s, at) => disembark(s, at), _fishingSpot: s => fishingSpot(s), _pickCrew: (f, from, n, w) => pickCrew(f, from, n, w), _homeDock: (f, near) => homeDock(f, near) });
 
   // ------------------------------ exploration & contact ------------------------------
   function runExplorer(s, dt) {
@@ -459,7 +551,7 @@
     const S = G.S; const r = S.seaRoutes.find(q => q.id === s.route);
     const hb = S.buildings.get(s.dock), ob = r ? S.buildings.get(r.a === s.dock ? r.b : r.a) : null;
     if (!r || !r.ok || !hb || !ob) { const h = home(s); if (h && s.st !== 'back2' && sailTo(s, h.moor[0], h.moor[1])) { s.st = 'back2'; return; } if (s.st === 'back2' && !moveShip(s, dt)) return; return removeShip(s); }
-    if (s.st === 'back2') { if (moveShip(s, dt)) removeShip(s); return; }
+    if (s.st === 'back2') { if (moveShip(s, dt)) { Nv.arrived(s); removeShip(s); } return; }
     if (threat(s, 5) && s.st === 'go') { const h = home(s); if (h && sailTo(s, h.moor[0], h.moor[1])) s.st = 'back'; }
     if (s.st === 'idle') { const oi = Nv.dockInfo(ob); if (oi.moor && sailTo(s, oi.moor[0], oi.moor[1])) s.st = 'go'; else removeShip(s); return; }
     if (s.st === 'go' && moveShip(s, dt)) {
@@ -481,7 +573,7 @@
       const h = home(s); if (h && sailTo(s, h.moor[0], h.moor[1])) s.st = 'back'; else removeShip(s);
       return;
     }
-    if (s.st === 'back' && moveShip(s, dt)) { if (s.ret) G.Village.addStock(s.ret.k, s.ret.n, s.fac); G.Trade && G.Trade.shipHome(s); removeShip(s); }
+    if (s.st === 'back' && moveShip(s, dt)) { if (s.ret) G.Village.addStock(s.ret.k, s.ret.n, s.fac); G.Trade && G.Trade.shipHome(s); Nv.arrived(s); removeShip(s); }
   }
 
   // ------------------------------ expeditions: raids & colonies ------------------------------
@@ -589,8 +681,15 @@
     return false;
   };
   Nv.taskText = function (v, t) {
-    if (t.type === 'embark') { const s = G.S.ships.find(o => o.id === t.ship); return s && s.purpose === 'colony' ? 'Embarcando para colonizar novas terras' : 'Embarcando para uma expedição'; }
-    if (t.type === 'aboard' || v.aboard) { const s = G.S.ships.find(o => o.id === v.aboard); return s ? (s.purpose === 'colony' ? 'No mar, rumo a uma nova terra' : s.st === 'return' ? 'Voltando para casa pelo mar' : 'No mar, rumo à batalha') : 'No mar'; }
+    if (t.type === 'embark') { const s = G.S.ships.find(o => o.id === t.ship); return t.army ? 'Subindo no transporte para a guerra do outro lado do mar' : s && s.fleet ? `Embarcando n${Nv.fem(s) ? 'a' : 'o'} ${Nv.title(s).replace(/^(a|o) /, '')}, para a frota` : s && s.purpose === 'colony' ? 'Embarcando para colonizar novas terras' : 'Embarcando para uma expedição'; }
+    if (t.type === 'aboard' || v.aboard) {
+      const s = G.S.ships.find(o => o.id === v.aboard); if (!s) return 'No mar';
+      const x = (G.Expe && G.Expe.aboardText(v, s)) || (G.Fleets && G.Fleets.aboardText(v, s)); if (x) return x;
+      const nm = Nv.title(s);
+      if (s.kind === 'pesca') return ({ board: `No ${Nv.noun(s)}, esperando os companheiros`, out: 'Remando para o pesqueiro', fish: 'Puxando a rede', adrift: 'Arrastado pela tempestade, longe da costa', back: 'Voltando para o porto com o peixe', unload: 'Descendo para o cais' })[s.st] || `A bordo d${Nv.fem(s) ? 'a' : 'o'} ${nm.replace(/^(a|o) /, '')}`;
+      if (s.kind === 'jangada') return 'Numa jangada, tentando voltar para casa';
+      return s.purpose === 'colony' ? 'No mar, rumo a uma nova terra' : s.st === 'return' ? 'Voltando para casa pelo mar' : s.kind === 'mercante' ? 'A bordo de um navio mercante' : s.purpose === 'raid' ? 'No mar, rumo à batalha' : `A bordo d${Nv.fem(s) ? 'a' : 'o'} ${nm.replace(/^(a|o) /, '')}`;
+    }
     return null;
   };
   function disembark(s, at) {
@@ -674,6 +773,7 @@
       }
       case 'return':
         if (moveShip(s, dt)) {
+          Nv.arrived(s);
           const people = disembark(s, h ? h.quay : [s.x, s.y]);
           const f = G.Fac.get(s.fac);
           for (const v of people) { if (v.carry && f) { G.Village.addStock(v.carry.k, v.carry.n, f.id); v.carry = null; } }
@@ -713,15 +813,17 @@
       const wantF = Math.min(docks.length * (hungry ? 4 : 2), 1 + Math.floor(pop / (hungry ? 12 : 22)) + (hungry ? 1 : 0));
       // the first boats are worth more than another hut: the builders leave their wood alone
       if (fishers < Math.min(wantF, docks.length * (hungry ? 2 : 1))) f._rsv = Nv.SHIP.pesca.cost + 2;
-      if (fishers < wantF && f.stock.wood >= (hungry || fishers < docks.length ? Nv.SHIP.pesca.cost : 26)) { const d = G.pick(docks); if (Nv.dockInfo(d).moor && !Nv.blockaded(d)) spawn('pesca', f, d); }
+      // (one hull at a time on each slip)
+      const slip = () => { const free = docks.filter(d => !S.ships.some(o => o.dock === d.id && o.st === 'build')); return free.length ? G.pick(free) : null; };
+      if (fishers < wantF && f.stock.wood >= (hungry || fishers < docks.length ? Nv.SHIP.pesca.cost : 26)) { const d = slip(); if (d && Nv.dockInfo(d).moor && !Nv.blockaded(d)) spawn('pesca', f, d, { build: 1 }); }
       // explorers look for peoples we have not met yet
       const unmet = G.Fac.all().some(o => o.id !== f.id && G.Fac.rel(f.id, o.id) && !G.Fac.rel(f.id, o.id).met);
-      if (unmet && !Nv.shipsOf(f.id, 'explorador').length && G.R() < 0.25) { const d = G.pick(docks); const di = Nv.dockInfo(d); if (di.moor && Nv.openSea(di.moor[0], di.moor[1])) { const s = spawn('explorador', f, d); if (s && !f._explored) { f._explored = 1; const st = S.settlements.get(d.set); log(`Um barco de ${f.name} parte de ${st ? st.name : 'seu porto'} para explorar o horizonte.`, 'ship', s.x, s.y); } } }
+      if (!G.Expe && unmet && !Nv.shipsOf(f.id, 'explorador').length && G.R() < 0.25) { const d = G.pick(docks); const di = Nv.dockInfo(d); if (di.moor && Nv.openSea(di.moor[0], di.moor[1])) { const s = spawn('explorador', f, d); if (s && !f._explored) { f._explored = 1; const st = S.settlements.get(d.set); log(`Um barco de ${f.name} parte de ${st ? st.name : 'seu porto'} para explorar o horizonte.`, 'ship', s.x, s.y); } } }
       // warships when there is a war to fight at sea
       const enemies = G.Fac.enemiesOf(f.id);
-      const want = enemies.length ? Math.min(1 + Math.floor(pop / 40) + (f.civ === 'nordico' || f.civ === 'grego' ? 1 : 0), 4) : (G.Politics.leaderPe(f).agg > 0.6 && pop > 40 ? 1 : 0);
+      const want = G.Fleets ? G.Fleets.wantWarships(f, pop, enemies) : enemies.length ? Math.min(1 + Math.floor(pop / 40) + (f.civ === 'nordico' || f.civ === 'grego' ? 1 : 0), 4) : (G.Politics.leaderPe(f).agg > 0.6 && pop > 40 ? 1 : 0);
       const war = Nv.shipsOf(f.id, 'guerra').length;
-      if (war < want && f.stock.wood > 60) { const d = G.pick(docks); if (Nv.dockInfo(d).moor) { const s = spawn('guerra', f, d); if (s && G.R() < 0.5) { const st = S.settlements.get(d.set); log(`${st ? st.name : f.name} lançou ao mar ${shipName(s)}.`, 'naval', s.x, s.y); } } }
+      if (war < want && f.stock.wood > (G.Fleets ? 44 : 60)) { const d = G.Fishers ? slip() : G.pick(docks); if (d && Nv.dockInfo(d).moor) { const s = spawn('guerra', f, d, { build: 1 }); if (s && s.st !== 'build' && G.R() < 0.5) { const st = S.settlements.get(d.set); log(`${st ? st.name : f.name} lançou ao mar ${Nv.title(s)}.`, 'naval', s.x, s.y); } } }
       // merchant ships on the sea routes
       for (const r of S.seaRoutes) {
         if (!r.ok || !docks.some(d => d.id === r.a || d.id === r.b)) continue;
@@ -740,32 +842,40 @@
   }
 
   // ------------------------------ update ------------------------------
+  // (each kind of ship has a runner; the newer modules replace them: Nv.RUN[kind] = fn)
+  const RUN0 = { pesca: (s, dt) => runFishing(s, dt), explorador: (s, dt) => runExplorer(s, dt), mercante: (s, dt) => runMerchant(s, dt), guerra: (s, dt) => runWarship(s, dt), transporte: (s, dt) => runTransport(s, dt) };
+  Nv.RUN = {};
+  Nv.RUN0 = RUN0;
   Nv.update = function (dt) {
     const S = G.S;
     tFleet -= dt; tShoal -= dt; tRoute -= dt; tScan -= dt;
-    if (tFleet <= 0) { tFleet = 4; manageFleets(); fleetCouncil(); }
+    if (tFleet <= 0) { tFleet = 4; manageFleets(); if (!G.Fleets) fleetCouncil(); }
     if (tShoal <= 0) { tShoal = 30; updateShoals(30); }
     if (tRoute <= 0) { tRoute = 20; updateSeaRoutes(); }
-    if (tScan <= 0) { tScan = 1; scanContacts(); }
+    if (tScan <= 0) { tScan = 1; if (!G.Know) scanContacts(); }
     for (const s of [...S.ships]) {
       if (!S.ships.includes(s)) continue;
       if (s.hurt > 0) s.hurt -= dt;
       // storms can sink small boats
-      if (S.weather.storm > 0 && (s.kind === 'pesca' || s.kind === 'explorador') && s.st !== 'idle' && G.R() < dt * 0.002) { Nv.sink(s, null, 'storm'); continue; }
+      if (S.weather.storm > 0 && Nv.atSea(s) && (Nv.small(s) || s.kind === 'explorador') && G.R() < dt * (s.kind === 'explorador' ? 0.0006 : 0.002) * (s.stormMul || 1)) { Nv.sink(s, null, 'storm'); continue; }
       if (s.dead) { removeShip(s); continue; }
       if (s.burn > 0) { s.burn -= dt; s.hp -= dt * 4; if (G.R() < dt * 6) G.FX && G.FX.spawn({ x: s.x + G.rr(-0.4, 0.4), y: s.y + G.rr(-0.4, 0.4), h: G.SEA, z: G.rr(3, 8), vz: G.rr(10, 22), life: G.rr(0.6, 1.1), s0: 1.4, s1: 0.3, c: '#ff8a30', k: 4, layer: 1 }); if (s.hp <= 0) { Nv.sink(s, null, 'fire'); continue; } }
       if (s.st === 'fireship') { runFireship(s, dt); continue; }
-      switch (s.kind) {
-        case 'pesca': runFishing(s, dt); break;
-        case 'explorador': runExplorer(s, dt); break;
-        case 'mercante': runMerchant(s, dt); break;
-        case 'guerra': runWarship(s, dt); break;
-        case 'transporte': runTransport(s, dt); break;
-      }
+      if (s.st === 'build') { G.Fishers && G.Fishers.slip(s, dt); continue; }
+      s._nAb = s.crew && s.crew.length ? Nv.aboardOf(s).length : undefined;
+      // water in the hold: the crew bails, a ship without hands goes down
+      if (s.hp < s.maxHp * 0.3 || s.flood > 0) { s.flood = G.clamp((s.flood || 0) + dt * ((s.hp < s.maxHp * 0.3 ? (1 - s.hp / (s.maxHp * 0.3)) * 6 : 0) - Math.min(3, (s._nAb || 0) * 0.4)), 0, 100); if (s.flood >= 100) { Nv.sink(s, null, 'flood'); continue; } }
+      const run = Nv.RUN[s.kind] || RUN0[s.kind];
+      if (run) run(s, dt);
+      if (!S.ships.includes(s)) continue;
       // people aboard ride with the ship
       if (s.kind === 'transporte') for (const id of s.crew) { const v = S.villagers.get(id); if (v && v.aboard === s.id) { v.x = s.x; v.y = s.y; } }
       if (s.kind === 'transporte' && (s.st === 'sail' || s.st === 'return' || s.st === 'wait')) { const e = threat(s, 3); if (e && s.cd <= 0) { s.cd = 1.8; fire(s, e); } s.cd -= dt; }
     }
+    G.Know && G.Know.update(dt);
+    G.Fishers && G.Fishers.update(dt);
+    G.Expe && G.Expe.update(dt);
+    G.Fleets && G.Fleets.update(dt);
   };
 
   // ------------------------------ drawing ------------------------------
@@ -777,63 +887,133 @@
     asteca: { col: '#8a5a34', dark: '#6a4424', len: 9, h: 1.8, bow: 1, stern: 1, sail: null, paddlers: true, paint: '#2fae8f' },
     classico: { col: '#6e4a2c', dark: '#4e321c', len: 10, h: 2.4, bow: 2, stern: 2, sail: ['#f4ecd8', '#f4ecd8'], oars: 0 },
   };
+  Nv.HULL = HULL;
   Nv.drawShip = function (ctx, s, sx, sy, t, nightF, light, emisTorch) {
     const st = HULL[s.civ] || HULL.classico;
-    const small = s.kind === 'pesca' || s.kind === 'explorador';
-    const sc = small ? 0.62 : s.kind === 'mercante' ? 0.9 : 1.05;
-    const bob = Math.sin(t * 2 + s.id) * 0.7;
-    ctx.save(); ctx.translate(sx, sy + bob); ctx.scale(G.Render.sface(s) * sc, sc);
-    const L = st.len, Hh = st.h;
+    const cls = s.kind === 'pesca' ? s.cls || 'barco' : null;
+    const raft = s.kind === 'jangada';
+    const canoe = cls === 'canoa' || s.kind === 'canoa';
+    const small = Nv.small(s);
+    const sc = raft ? 0.48 : canoe ? 0.52 : small ? (cls === 'traineira' ? 0.8 : 0.62) : s.kind === 'mercante' ? 0.9 : s.kind === 'explorador' ? 0.95 : 1.05;
+    const build = s.st === 'build' ? G.clamp(s.prog || 0, 0, 1) : 1;
+    const bob = build < 1 ? 0 : Math.sin(t * 2 + s.id) * (G.S.weather.storm > 0 ? 1.6 : 0.7);
+    const flood = s.flood || 0; const tilt = flood > 0 ? Math.min(0.28, flood / 260) * (s.id % 2 ? 1 : -1) : 0;
+    const face = G.Render.sface(s);
+    // the crew, read once in a while (real people: their clothes, their skin)
+    if (!s._abT || Math.abs(t - s._abT) > 0.6) { s._abT = t; s._ab = Nv.aboardOf(s).slice(0, 12).map(v => ({ c: G.Art ? G.Art.clothOf(v) : '#c9763a', sk: v.skin, id: v.id, w: v.role === 'guerreiro' || (v.task && v.task.type === 'aboard' && s.kind === 'guerra'), f: v.g === 'f' })); }
+    const ppl = s._ab || [];
+    // the sail goes up at sea, comes down at the quay
+    const want = build >= 1 && s.moving && s.mast !== 0 ? 1 : 0.12; s._sf = s._sf === undefined ? want : s._sf + (want - s._sf) * 0.05;
+    ctx.save(); ctx.translate(sx, sy + bob + flood * 0.03); if (tilt) ctx.rotate(tilt); ctx.scale(face * sc, sc);
+    const L = raft ? 7 : canoe ? 9 : st.len, Hh = raft ? 1 : canoe ? 1.4 : st.h;
     // shadow & wake on the water
     ctx.fillStyle = 'rgba(20,50,70,0.25)'; ctx.beginPath(); ctx.ellipse(0, 1.5, L + 2, 2.6, 0, 0, TAU); ctx.fill();
     if (s.moving) { ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(-L - 1, 0.8); ctx.quadraticCurveTo(-L - 6, 2.5, -L - 11, 1.5); ctx.moveTo(-L - 1, -0.2); ctx.quadraticCurveTo(-L - 6, -1.5, -L - 10, -1); ctx.stroke(); }
-    // oars
-    if (st.oars && !small) {
-      const sw = s.moving ? Math.sin(t * 6 + s.id) : 0;
-      ctx.strokeStyle = st.dark; ctx.lineWidth = 0.55;
-      for (let r = 0; r < (st.rows || 1); r++) for (let k = 0; k < st.oars; k++) { const x = -L * 0.7 + k * (L * 1.4 / st.oars); ctx.beginPath(); ctx.moveTo(x, -Hh * 0.2 - r * 0.8); ctx.lineTo(x - 1.2 - sw * 1.4, 3.2 + r * 0.6); ctx.stroke(); }
-    }
-    // hull
-    ctx.fillStyle = st.col; ctx.beginPath();
-    ctx.moveTo(-L, -Hh); ctx.quadraticCurveTo(-L - 1.5, -Hh - st.stern * 0.5, -L - 0.5, -Hh - st.stern);
-    ctx.quadraticCurveTo(-L + 1, 1.2, -L * 0.3, 1.6); ctx.lineTo(L * 0.4, 1.6);
-    ctx.quadraticCurveTo(L + 0.5, 1.2, L + 0.5, -Hh - st.bow);
-    ctx.quadraticCurveTo(L - 1, -Hh * 0.9, L - 1.5, -Hh); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = st.dark; ctx.fillRect(-L + 0.4, -Hh, L * 2 - 1.8, 0.9);
-    if (st.reed) { ctx.strokeStyle = 'rgba(120,90,40,0.6)'; ctx.lineWidth = 0.4; for (let k = -3; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(k * 2.6 - 1, -Hh + 0.4); ctx.lineTo(k * 2.6 + 1, 1.4); ctx.stroke(); } }
-    if (st.paint) { ctx.fillStyle = st.paint; ctx.fillRect(-L * 0.6, -Hh * 0.4, L * 1.2, 0.6); }
-    if (st.eye) { ctx.fillStyle = '#f4efe0'; ctx.beginPath(); ctx.ellipse(L - 2.5, -Hh * 0.45, 1, 0.6, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#b33a2a'; ctx.beginPath(); ctx.arc(L - 2.4, -Hh * 0.45, 0.35, 0, TAU); ctx.fill(); }
-    if (st.ram && !small) { ctx.fillStyle = '#b08a3a'; ctx.beginPath(); ctx.moveTo(L, 0.6); ctx.lineTo(L + 3, 0.9); ctx.lineTo(L, 1.5); ctx.fill(); }
-    if (st.head === 'dragon' && !small) { ctx.strokeStyle = st.dark; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L + 0.4, -Hh - st.bow); ctx.quadraticCurveTo(L + 2.5, -Hh - st.bow - 1.5, L + 2, -Hh - st.bow - 3); ctx.stroke(); ctx.fillStyle = st.dark; ctx.beginPath(); ctx.arc(L + 2.2, -Hh - st.bow - 3, 1, 0, TAU); ctx.fill(); }
     const fc = G.Fac.hex(s.fac);
-    if (st.shields && !small) for (let k = 0; k < 6; k++) { ctx.fillStyle = k % 2 ? fc : '#e8c24a'; ctx.beginPath(); ctx.arc(-L * 0.6 + k * (L * 1.2 / 5), -Hh - 0.3, 1, 0, TAU); ctx.fill(); }
+    if (raft) {
+      // logs lashed together, a shirt for a sail
+      for (let k = 0; k < 5; k++) { ctx.fillStyle = k % 2 ? '#7a5a34' : '#8a6a3c'; ctx.fillRect(-L, -1.6 + k * 0.7, L * 2, 0.75); }
+      ctx.strokeStyle = '#5a3a20'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(0, -1.6); ctx.lineTo(0, -10); ctx.stroke();
+      ctx.fillStyle = '#d8ccb0'; ctx.beginPath(); ctx.moveTo(0, -9.6); ctx.lineTo(4.4, -8.6); ctx.lineTo(3.6, -4); ctx.lineTo(0, -4.2); ctx.fill();
+    } else {
+      // oars (they move with the stroke: the crew rows)
+      const rowing = s.moving && (st.oars || canoe || !st.sail || s.mast === 0);
+      if ((st.oars && !small) || (small && !canoe && rowing && !st.sail)) {
+        const sw = s.moving ? Math.sin(t * 6 + s.id) : 0;
+        ctx.strokeStyle = st.dark; ctx.lineWidth = 0.55;
+        const oars = small ? 2 : st.oars; const n0 = s.kind === 'guerra' || s.kind === 'transporte' ? Math.max(2, Math.round(oars * Math.min(1, (ppl.length || 1) / 6))) : oars;
+        for (let r = 0; r < (small ? 1 : st.rows || 1); r++) for (let k = 0; k < n0; k++) { const x = -L * 0.7 + k * (L * 1.4 / n0); ctx.beginPath(); ctx.moveTo(x, -Hh * 0.2 - r * 0.8); ctx.lineTo(x - 1.2 - sw * 1.4, 3.2 + r * 0.6); ctx.stroke(); }
+      }
+      // hull (on the slip: the keel and the ribs first, then the planks rise)
+      if (build < 1) {
+        ctx.strokeStyle = '#4a3220'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-L, 1.4); ctx.lineTo(L, 1.4); ctx.stroke();
+        const ribs = Math.min(9, Math.ceil(build / 0.4 * 9));
+        ctx.strokeStyle = '#8a6438'; ctx.lineWidth = 0.6;
+        for (let k = 0; k < ribs; k++) { const x = -L * 0.8 + k * (L * 1.6 / 8); ctx.beginPath(); ctx.moveTo(x, 1.4); ctx.quadraticCurveTo(x - 0.6, -Hh * 0.5, x - 0.2, -Hh - 1); ctx.stroke(); }
+        // scaffolding poles and a ladder
+        ctx.strokeStyle = '#6a4a2c'; ctx.lineWidth = 0.5; for (const x of [-L - 1.5, L + 1.5]) { ctx.beginPath(); ctx.moveTo(x, 2); ctx.lineTo(x, -Hh - 7); ctx.stroke(); }
+        ctx.beginPath(); ctx.moveTo(-L - 1.5, -Hh - 4); ctx.lineTo(L + 1.5, -Hh - 4); ctx.stroke();
+      }
+      const planks = build < 0.4 ? 0 : build >= 0.85 ? 1 : (build - 0.4) / 0.45;
+      if (planks > 0) {
+        ctx.save(); if (planks < 1) { ctx.beginPath(); ctx.rect(-L - 3, 1.6 - (Hh + 1.6 + st.bow) * planks, L * 2 + 6, (Hh + 1.6 + st.bow) * planks + 1); ctx.clip(); }
+        ctx.fillStyle = st.col; ctx.beginPath();
+        if (canoe) { ctx.moveTo(-L, -Hh); ctx.quadraticCurveTo(-L - 1.2, 0.6, -L * 0.4, 1.4); ctx.lineTo(L * 0.4, 1.4); ctx.quadraticCurveTo(L + 1.2, 0.6, L, -Hh); ctx.closePath(); }
+        else { ctx.moveTo(-L, -Hh); ctx.quadraticCurveTo(-L - 1.5, -Hh - st.stern * 0.5, -L - 0.5, -Hh - st.stern); ctx.quadraticCurveTo(-L + 1, 1.2, -L * 0.3, 1.6); ctx.lineTo(L * 0.4, 1.6); ctx.quadraticCurveTo(L + 0.5, 1.2, L + 0.5, -Hh - st.bow); ctx.quadraticCurveTo(L - 1, -Hh * 0.9, L - 1.5, -Hh); ctx.closePath(); }
+        ctx.fill();
+        ctx.fillStyle = st.dark; ctx.fillRect(-L + 0.4, -Hh, L * 2 - 1.8, 0.9);
+        if (canoe && st.paint) { ctx.fillStyle = st.paint; ctx.fillRect(-L * 0.6, -Hh * 0.4, L * 1.2, 0.5); }
+        if (!canoe) {
+          if (st.reed) { ctx.strokeStyle = 'rgba(120,90,40,0.6)'; ctx.lineWidth = 0.4; for (let k = -3; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(k * 2.6 - 1, -Hh + 0.4); ctx.lineTo(k * 2.6 + 1, 1.4); ctx.stroke(); } }
+          if (st.paint) { ctx.fillStyle = st.paint; ctx.fillRect(-L * 0.6, -Hh * 0.4, L * 1.2, 0.6); }
+          if (st.eye) { ctx.fillStyle = '#f4efe0'; ctx.beginPath(); ctx.ellipse(L - 2.5, -Hh * 0.45, 1, 0.6, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#b33a2a'; ctx.beginPath(); ctx.arc(L - 2.4, -Hh * 0.45, 0.35, 0, TAU); ctx.fill(); }
+          if (st.ram && !small) { ctx.fillStyle = '#b08a3a'; ctx.beginPath(); ctx.moveTo(L, 0.6); ctx.lineTo(L + 3, 0.9); ctx.lineTo(L, 1.5); ctx.fill(); }
+          if (st.head === 'dragon' && !small) { ctx.strokeStyle = st.dark; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L + 0.4, -Hh - st.bow); ctx.quadraticCurveTo(L + 2.5, -Hh - st.bow - 1.5, L + 2, -Hh - st.bow - 3); ctx.stroke(); ctx.fillStyle = st.dark; ctx.beginPath(); ctx.arc(L + 2.2, -Hh - st.bow - 3, 1, 0, TAU); ctx.fill(); }
+          if (st.shields && !small && build >= 1) for (let k = 0; k < 6; k++) { ctx.fillStyle = k % 2 ? fc : '#e8c24a'; ctx.beginPath(); ctx.arc(-L * 0.6 + k * (L * 1.2 / 5), -Hh - 0.3, 1, 0, TAU); ctx.fill(); }
+        }
+        ctx.restore();
+      }
+    }
     // cargo
-    if (s.kind === 'mercante') { for (let k = 0; k < 3; k++) { ctx.fillStyle = k % 2 ? '#b8683a' : '#7a5230'; ctx.fillRect(-4 + k * 3, -Hh - 2.4, 2.2, 2.4); } }
-    // people aboard
-    const n = s.kind === 'transporte' ? s.crew.length : s.kind === 'pesca' ? 1 : s.kind === 'guerra' ? 4 : 1;
-    if (st.paddlers || s.kind === 'transporte' || s.kind === 'guerra') {
-      for (let k = 0; k < Math.min(6, n); k++) { const x = -L * 0.55 + k * (L * 1.1 / 5.5); ctx.fillStyle = fc; ctx.fillRect(x - 0.8, -Hh - 3, 1.6, 2.6); ctx.fillStyle = '#c99569'; ctx.beginPath(); ctx.arc(x, -Hh - 3.8, 0.9, 0, TAU); ctx.fill(); if (st.paddlers) { ctx.strokeStyle = '#5a3a20'; ctx.lineWidth = 0.5; const sw = s.moving ? Math.sin(t * 5 + k) * 1.2 : 0; ctx.beginPath(); ctx.moveTo(x + 0.6, -Hh - 2); ctx.lineTo(x + 1.5 + sw, 2.4); ctx.stroke(); } }
+    if (s.kind === 'mercante' || (s.kind === 'transporte' && s.cargoK)) { for (let k = 0; k < 3; k++) { ctx.fillStyle = k % 2 ? '#b8683a' : '#7a5230'; ctx.fillRect(-4 + k * 3, -Hh - 2.4, 2.2, 2.4); } }
+    if (s.kind === 'pesca' && (s.cargo || 0) > 0) { ctx.fillStyle = '#8a6a44'; ctx.fillRect(-L * 0.5, -Hh - 1.6, 2.2, 1.6); ctx.fillRect(-L * 0.5 + 2.6, -Hh - 1.4, 2, 1.4); }
+    if (s.exp && s.st === 'prep') { for (let k = 0; k < 4; k++) { ctx.fillStyle = k % 2 ? '#9a7a4a' : '#7a5a34'; ctx.fillRect(-5 + k * 2.6, -Hh - 2.2, 2, 2.2); } }
+    // the people aboard, as they are: rowing, hauling the net, standing to arms
+    if (build >= 1) {
+      const n = Math.min(raft ? 4 : canoe ? 3 : small ? 5 : 8, ppl.length);
+      const fishing = s.kind === 'pesca' && s.st === 'fish';
+      for (let k = 0; k < n; k++) {
+        const p = ppl[k]; const x = n === 1 ? 0 : -L * 0.55 + k * (L * 1.1 / Math.max(1, n - 1));
+        const row = s.moving && (canoe || st.paddlers || (!st.sail && !raft) || s.mast === 0);
+        const haul = fishing && k === 0; const lean = fishing && k === 1;
+        const by = -Hh - (canoe || raft ? 2.2 : 3) + (row ? Math.abs(Math.sin(t * 5 + k)) * 0.4 : 0);
+        ctx.save(); ctx.translate(x, by); if (haul) ctx.rotate(-0.25 + Math.sin(t * 3.2 + s.id) * 0.18); else if (lean) ctx.rotate(0.35);
+        ctx.fillStyle = p.c; ctx.fillRect(-0.8, 0, 1.6, 2.6);
+        ctx.fillStyle = p.sk || '#c99569'; ctx.beginPath(); ctx.arc(0, -0.8, 0.9, 0, TAU); ctx.fill();
+        if (p.w && !small) { ctx.fillStyle = fc; ctx.beginPath(); ctx.arc(1.1, 1.1, 0.9, 0, TAU); ctx.fill(); ctx.strokeStyle = '#b8bcc4'; ctx.lineWidth = 0.3; ctx.beginPath(); ctx.moveTo(-0.9, 2); ctx.lineTo(-0.6, -3.4); ctx.stroke(); }
+        ctx.restore();
+        if (row) { ctx.strokeStyle = '#5a3a20'; ctx.lineWidth = 0.5; const sw = Math.sin(t * 5 + k) * 1.2; ctx.beginPath(); ctx.moveTo(x + 0.6, by + 1); ctx.lineTo(x + 1.5 + sw, 2.4); ctx.stroke(); }
+        if (haul) { ctx.strokeStyle = 'rgba(232,224,200,0.8)'; ctx.lineWidth = 0.35; ctx.beginPath(); ctx.moveTo(x + 0.8, by + 1); ctx.quadraticCurveTo(L + 2, -1 + Math.sin(t * 3.2 + s.id), L + 5, 2.4); ctx.stroke(); }
+      }
     }
     // mast & sail
-    if (st.sail) {
+    if (!raft && st.sail && !canoe && build >= 0.85) {
       const mh = (st.tall ? 18 : 15) * (small ? 0.85 : 1);
-      ctx.strokeStyle = st.dark; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(0, -Hh); ctx.lineTo(0, -Hh - mh); ctx.stroke();
-      const billow = s.moving ? 1.5 : 0.4;
-      const sw2 = st.tall ? 8 : 6.5;
-      ctx.fillStyle = st.sail[0];
-      ctx.beginPath(); ctx.moveTo(-sw2, -Hh - mh + 1); ctx.lineTo(sw2, -Hh - mh + 1); ctx.quadraticCurveTo(sw2 + billow, -Hh - mh * 0.55, sw2 - 0.5, -Hh - 3.5); ctx.lineTo(-sw2 + 0.5, -Hh - 3.5); ctx.quadraticCurveTo(-sw2 + billow, -Hh - mh * 0.55, -sw2, -Hh - mh + 1); ctx.fill();
-      if (st.stripes) { ctx.fillStyle = st.sail[1]; for (let k = 0; k < 3; k++) { const x0 = -sw2 + 1.2 + k * (sw2 * 2 / 3); ctx.fillRect(x0, -Hh - mh + 1.2, sw2 * 0.34, mh - 5); } }
-      else if (!small) { ctx.fillStyle = fc; ctx.beginPath(); ctx.arc(0.3, -Hh - mh * 0.55, 1.8, 0, TAU); ctx.fill(); }
-      ctx.strokeStyle = 'rgba(40,30,20,0.5)'; ctx.lineWidth = 0.35; ctx.beginPath(); ctx.moveTo(-sw2, -Hh - mh + 1); ctx.lineTo(sw2, -Hh - mh + 1); ctx.stroke();
-      ctx.fillStyle = fc; ctx.beginPath(); ctx.moveTo(0, -Hh - mh); ctx.lineTo(3 + Math.sin(t * 4 + s.id) * 0.5, -Hh - mh + 0.8); ctx.lineTo(0, -Hh - mh + 1.6); ctx.fill();
+      if (s.mast === 0) {
+        // broken: a stump, and the mast across the deck with the sail in the water
+        ctx.strokeStyle = st.dark; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(0, -Hh); ctx.lineTo(0, -Hh - mh * 0.28); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0.4, -Hh - mh * 0.25); ctx.lineTo(L * 0.9, -Hh + 2.2); ctx.stroke();
+        ctx.fillStyle = 'rgba(240,232,214,0.7)'; ctx.beginPath(); ctx.moveTo(L * 0.3, -Hh - 0.4); ctx.lineTo(L * 0.9, -Hh + 2.2); ctx.lineTo(L * 0.6, 2.6); ctx.closePath(); ctx.fill();
+      } else {
+        ctx.strokeStyle = st.dark; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(0, -Hh); ctx.lineTo(0, -Hh - mh); ctx.stroke();
+        const billow = s.moving ? 1.5 : 0.4;
+        const sw2 = st.tall ? 8 : 6.5; const sf = build < 1 ? 0 : G.clamp(s._sf, 0.12, 1);
+        const top = -Hh - mh + 1, bot = top + (mh - 4.5) * sf;
+        if (sf > 0.14) {
+          ctx.fillStyle = st.sail[0];
+          ctx.beginPath(); ctx.moveTo(-sw2, top); ctx.lineTo(sw2, top); ctx.quadraticCurveTo(sw2 + billow, (top + bot) / 2, sw2 - 0.5, bot); ctx.lineTo(-sw2 + 0.5, bot); ctx.quadraticCurveTo(-sw2 + billow, (top + bot) / 2, -sw2, top); ctx.fill();
+          if (st.stripes) { ctx.fillStyle = st.sail[1]; for (let k = 0; k < 3; k++) { const x0 = -sw2 + 1.2 + k * (sw2 * 2 / 3); ctx.fillRect(x0, top + 0.2, sw2 * 0.34, Math.max(0, bot - top - 0.4)); } }
+          else if (!small) { ctx.fillStyle = fc; ctx.beginPath(); ctx.arc(0.3, (top + bot) / 2, 1.8 * sf, 0, TAU); ctx.fill(); }
+          // torn: holes, a ragged hem
+          if ((s.sail === undefined ? 100 : s.sail) < 70) { ctx.fillStyle = 'rgba(30,24,20,0.75)'; const nh = s.sail < 30 ? 4 : s.sail < 50 ? 3 : 2; for (let k = 0; k < nh; k++) { ctx.beginPath(); ctx.ellipse(-sw2 * 0.6 + k * sw2 * 0.45, top + (bot - top) * (0.3 + (k % 2) * 0.35), 1.1, 0.8, 0.4, 0, TAU); ctx.fill(); } }
+        } else { ctx.fillStyle = st.sail[0]; ctx.fillRect(-sw2, top - 0.3, sw2 * 2, 1.3); }
+        ctx.strokeStyle = 'rgba(40,30,20,0.5)'; ctx.lineWidth = 0.35; ctx.beginPath(); ctx.moveTo(-sw2, top); ctx.lineTo(sw2, top); ctx.moveTo(0, -Hh - mh); ctx.lineTo(L - 1, -Hh); ctx.moveTo(0, -Hh - mh); ctx.lineTo(-L + 1, -Hh); ctx.stroke();
+        ctx.fillStyle = fc; ctx.beginPath(); ctx.moveTo(0, -Hh - mh); ctx.lineTo(3 + Math.sin(t * 4 + s.id) * 0.5, -Hh - mh + 0.8); ctx.lineTo(0, -Hh - mh + 1.6); ctx.fill();
+      }
     }
-    // fishing net
-    if (s.kind === 'pesca' && s.st === 'fish') { ctx.strokeStyle = 'rgba(240,235,220,0.7)'; ctx.lineWidth = 0.4; ctx.beginPath(); ctx.moveTo(L * 0.5, -Hh); ctx.quadraticCurveTo(L + 4, -1, L + 6, 2); ctx.stroke(); }
-    // damage
-    if (s.hp < s.maxHp * 0.5) { ctx.fillStyle = 'rgba(30,20,15,0.35)'; ctx.fillRect(-L * 0.5, -Hh, L * 0.6, Hh); }
+    // fishing net over the side, its floats bobbing
+    if (s.kind === 'pesca' && s.st === 'fish') { ctx.fillStyle = '#e8b83a'; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(L + 2 + k * 1.6, 2 + Math.sin(t * 2 + k) * 0.3, 0.45, 0, TAU); ctx.fill(); } }
+    // moored: the line to the bollard
+    if (!s.moving && (s.st === 'idle' || s.st === 'board' || s.st === 'unload' || s.st === 'prep')) { ctx.strokeStyle = 'rgba(200,184,144,0.7)'; ctx.lineWidth = 0.35; ctx.beginPath(); ctx.moveTo(-L + 0.5, -Hh); ctx.quadraticCurveTo(-L - 2, 0, -L - 4, -1); ctx.stroke(); }
+    // damage: charred planks, water over the gunwale
+    if (s.hp < s.maxHp * 0.5 && build >= 1) { ctx.fillStyle = 'rgba(30,20,15,0.35)'; ctx.fillRect(-L * 0.5, -Hh, L * 0.6, Hh); }
+    if (s.burn > 0) { for (let k = 0; k < 3; k++) { const fx = -L * 0.4 + k * L * 0.4, fh = 3 + Math.sin(t * 9 + k * 2) * 1.2; ctx.fillStyle = k % 2 ? 'rgba(255,170,60,0.85)' : 'rgba(255,110,40,0.85)'; ctx.beginPath(); ctx.moveTo(fx - 1.2, -Hh); ctx.quadraticCurveTo(fx, -Hh - fh * 1.6, fx + 1.2, -Hh); ctx.fill(); } }
+    if (flood > 30) { ctx.fillStyle = 'rgba(60,120,150,0.5)'; ctx.fillRect(-L, -Hh * 0.2, L * 2, Hh * 0.6 + 1); }
     ctx.restore();
     if (s.hurt > 0) { ctx.fillStyle = 'rgba(255,120,60,0.5)'; ctx.beginPath(); ctx.arc(sx, sy - 6, 5, 0, TAU); ctx.fill(); }
-    if (nightF > 0.4) { const lx = sx + G.Render.sface(s) * 6, ly = sy - 6; light(lx, ly, 26, 'warm', 0.6 * nightF); emisTorch.push(lx, ly); }
+    if (nightF > 0.4 && build >= 1 && !raft) { const lx = sx + face * 6 * sc, ly = sy - 6 * sc; light(lx, ly, 26, 'warm', 0.6 * nightF); emisTorch.push(lx, ly); }
+    if (raft && nightF > 0.4) { light(sx, sy - 3, 14, 'warm', 0.3 * nightF); }
+    G.Fleets && G.Fleets.drawOver && G.Fleets.drawOver(ctx, s, sx, sy, t, sc, face);
   };
   // fish shoals glint under the waves
   Nv.drawWater = function (ctx, proj, t, view) {
@@ -867,7 +1047,7 @@
         s.path = null;
         if (s.st === 'sail' && s.water) sailTo(s, s.water[0], s.water[1]);
         else if (s.st === 'return' || s.st === 'back' || s.st === 'back2') { const h = home(s); if (h && h.moor) sailTo(s, h.moor[0], h.moor[1]); }
-        else if (s.st === 'out' || s.st === 'go' || s.st === 'patrol') { s.st = s.kind === 'mercante' ? 'idle' : 'idle'; }
+        else if ((s.st === 'out' && s.kind !== 'pesca') || s.st === 'go' || s.st === 'patrol') { s.st = 'idle'; }
       }
       Nv.reset();
     },

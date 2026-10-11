@@ -219,7 +219,7 @@
     if (v.hp <= 0) G.Village.kill(v, v.lastCause, v.lastGod);
   }
 
-  const FIELD = { saga: 1, scene: 1, band: 1, muster: 1, refugio: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1, aboard: 1, embark: 1, boardBack: 1, pave: 1 };
+  const FIELD = { praia: 1, reembarque: 1, expl: 1, naufrago: 1, saga: 1, scene: 1, band: 1, muster: 1, refugio: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1, aboard: 1, embark: 1, boardBack: 1, pave: 1 };
   // ------------------------------ emergencies ------------------------------
   Vg.alarms = new Map(); // settlement id -> [tile indices]
   Vg.fireFighters = new Map();
@@ -1179,7 +1179,7 @@
       default: if (!(G.Scene && G.Scene.run(v, t, dt, H)) && !(G.Caves && G.Caves.run(v, t, dt, H)) && !G.War.run(v, t, dt, H) && !(G.Wars && G.Wars.run(v, t, dt, H)) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Carnage && G.Carnage.run(v, t, dt, H)) && !(G.Flora && G.Flora.run(v, t, dt, H)) && !(G.Nests && G.Nests.run(v, t, dt, H)) && !(G.Polity && G.Polity.run(v, t, dt, H)) && !(G.Justice && G.Justice.run(v, t, dt, H)) && !(G.Riots && G.Riots.run(v, t, dt, H)) && !(G.Secrets && G.Secrets.run(v, t, dt, H)) && !(G.Stories && G.Stories.party && G.Stories.party.run(v, t, dt, H)) && !(G.Riches && G.Riches.run(v, t, dt, H))) end(v);
     }
   }
-  const LONG = { scene: 1, saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1 };
+  const LONG = { praia: 1, muster: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, embark: 1, boardBack: 1, scene: 1, saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1 };
 
   function runBuild(v, t, dt) {
     const S = G.S;
@@ -1509,7 +1509,7 @@
   // ------------------------------ the stuck: someone who has not moved for a long while ------------------------------
   // (a pocket between cliffs, a ledge, a gap between houses and a fence: every errand fails, or the feet keep walking
   // in place. Twenty seconds of that and they are set down on the nearest spot from which home can be reached)
-  const STILL = { scene: 1, jail: 1, condemned: 1, escorted: 1, hide: 1, sleep: 1, pray: 1, aboard: 1, swim: 1, dive: 1, mariscar: 1, pocas: 1, fest: 1, assembly: 1 };
+  const STILL = { praia: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, scene: 1, jail: 1, condemned: 1, escorted: 1, hide: 1, sleep: 1, pray: 1, aboard: 1, swim: 1, dive: 1, mariscar: 1, pocas: 1, fest: 1, assembly: 1 };
   function watch(v) {
     if (v.sleeping || v.captive && !(v.task && v.task.type === 'escape')) { v._wd = null; return false; }
     const wd = v._wd || (v._wd = { x: v.x, y: v.y, t: 0, mv: 0 });

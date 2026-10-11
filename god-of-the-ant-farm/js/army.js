@@ -745,6 +745,7 @@
     if (t.fled === undefined && v.hp < 24 && b.st !== 'retorno' && (A.phase === 'batalha' || A.phase === 'invadir')) t.fled = G.R() < (v.role === 'guerreiro' ? 0.3 : 0.6) || undefined;
     if (co.rout || t.fled) {
       if (!t.fledC) { t.fledC = 1; G.Wars && G.Wars.onFlee(v, b); }
+      if (b.fleet && G.Fleets && G.Fleets.rout(v, b, t, dt, H)) return true;
       const home = S.settlements.get(b.from) || G.Fac.capitalOf(b.fac);
       if (!home) return false;
       v.act = 'run';

@@ -203,6 +203,7 @@
     $('#btn-realms').onclick = () => { G.Audio.play('click'); UI.openRealms(); };
     $('#btn-lore').onclick = () => { G.Audio.play('click'); G.Lore.openBook(); };
     if ($('#btn-saga')) $('#btn-saga').onclick = () => { G.Audio.play('click'); G.Stories.open(); };
+    if ($('#btn-sea')) { $('#btn-sea').innerHTML = ICON.compass || ICON.ship; $('#btn-sea').onclick = () => { G.Audio.play('click'); G.SeaUI && G.SeaUI.open(); }; }
     $('#btn-under').innerHTML = ICON.cave; $('#btn-under').onclick = () => { G.Audio.play('click'); G.Render.setUnder(!G.Render.under); };
     G.Render.underHooks.push(on => { $('#btn-under').classList.toggle('on', !!on); });
     $('#btn-map').innerHTML = ICON.map; $('#btn-map').onclick = () => { G.Audio.play('click'); G.Minimap.toggle(); };
@@ -221,6 +222,7 @@
     $('#inspector').addEventListener('click', e => {
       const a = e.target.closest('[data-pid]');
       if (a) { const p = G.person(+a.dataset.pid); if (p) { UI.select(p); if (!p.dead) { if (!!p.ug !== !!G.Render.under) G.Render.setUnder(p.ug ? 1 : 0); G.Render.cam.follow = 0; G.Render.panTo(p.x, p.y); } } return; }
+      const sm = e.target.closest('[data-m]'); if (sm && sm.dataset.m.startsWith('sea-') && G.SeaUI) { G.Audio.play('click'); G.SeaUI.click(sm.dataset.m, sm); return; }
       const b = e.target.closest('[data-act]'); if (!b) return;
       G.Audio.play('click');
       if (b.dataset.act === 'close') UI.select(null);
@@ -275,6 +277,7 @@
       else if (m === 'bio') UI.openBio(+b.dataset.id);
       else if (m === 'tree') UI.openTree(+b.dataset.id);
       else if (m.startsWith('wz-') && G.WarsUI) G.WarsUI.click(m, b);
+      else if (m.startsWith('sea-') && G.SeaUI) G.SeaUI.click(m, b);
       else if (m.startsWith('saga-')) G.Stories.uiAct(m, b);
       else if (m === 'person') { const p = G.person(+b.dataset.id); if (p) { UI.closeModal(); UI.select(p); if (!p.dead) G.Render.panTo(p.x, p.y); } }
     });
@@ -578,24 +581,27 @@
       ${G.Stories ? G.Stories.personLine(v) : ''}
       <div class="family">${fam.map(x => `<div>${x}</div>`).join('') || '<div class="muted">Sem laços familiares ainda.</div>'}</div>
       ${(() => { const mem = G.Life ? G.Life.bioList(v).slice(-3).reverse() : []; return mem.length ? `<div class="memories"><label>Memórias</label>${mem.map(e => `<div><em>${e.age} ${e.age === 1 ? 'ano' : 'anos'}</em>${esc(e.txt)}</div>`).join('')}</div>` : ''; })()}
-      <div class="doing">Atualmente: <b>${esc(G.Vg.taskText(v))}</b></div>${G.WarsUI ? G.WarsUI.personLine(v) : ''}
+      <div class="doing">Atualmente: <b>${esc(G.Vg.taskText(v))}</b></div>${G.WarsUI ? G.WarsUI.personLine(v) : ''}${G.SeaUI ? G.SeaUI.personLine(v) : ''}
       <div class="meta">${set ? esc(set.name) : ''}${v.skill ? ` · aprendeu o ofício de ${esc((G.ROLE[v.skill] || [v.skill])[0].toLowerCase())} ainda criança` : ''}${(() => { const d = G.Pets && G.Pets.dogOf(v); return d ? ` · cão: ${esc(d.named || 'sem nome')}` : ''; })()}${G.Eco && G.Eco.personLine(v) ? ' · ' + esc(G.Eco.personLine(v)) : ''}${home ? (() => { const hn = G.Village.buildName(home).toLowerCase(); return ' · mora n' + (G.gen(hn) === 'a' ? 'uma ' : 'um ') + esc(hn); })() : ''}${feats.length ? '<br>Contribuiu com ' + feats.join(', ') : ''}</div>
       <div class="btns"><button data-act="follow" class="${following ? 'on' : ''}">${ICON.eye} ${following ? 'Seguindo' : 'Seguir'}</button><button data-act="tree">${ICON.tree} Família</button><button data-act="bio">${ICON.book} Biografia</button></div>`;
   }
   function shipHTML(s) {
     const S = G.S; if (!S.ships.includes(s)) { UI.select(null); return ''; }
-    const f = G.Fac.get(s.fac); const nm = G.Naval.shipName(s);
-    const KIND = { pesca: 'Barco de pesca', explorador: 'Barco explorador', mercante: 'Navio mercante', guerra: 'Navio de guerra', transporte: 'Navio de transporte' };
-    const ST = { idle: 'Atracado no porto', out: 'Rumo ao pesqueiro', fish: 'Pescando', back: 'Voltando ao porto', go: 'Navegando para o porto estrangeiro', back2: 'Voltando ao porto', patrol: 'Patrulhando a costa', hunt: 'Caçando navios inimigos!', repair: 'Voltando para reparos', embark: 'Esperando a tripulação embarcar', sail: s.purpose === 'colony' ? 'Levando colonos a uma nova terra' : 'Navegando para a batalha', land: 'Desembarcando', wait: 'Esperando os guerreiros na praia', return: 'Voltando para casa' };
-    const aboard = s.crew ? s.crew.filter(id => { const v = S.villagers.get(id); return v && v.aboard === s.id; }) : [];
+    const f = G.Fac.get(s.fac); const nm = G.Naval.title ? G.Naval.title(s) : G.Naval.shipName(s);
+    const KIND = { pesca: 'Barco de pesca', canoa: 'Canoa', jangada: 'Jangada de náufragos', explorador: 'Navio de exploração', mercante: 'Navio mercante', guerra: 'Navio de guerra', transporte: 'Navio de transporte' };
+    const ST = { idle: 'Atracado no porto', board: 'Esperando a tripulação embarcar', out: s.kind === 'pesca' ? 'Rumo ao pesqueiro' : 'Navegando', fish: 'Pescando: a rede está na água', adrift: 'Arrastado pela tempestade', unload: 'Descarregando no cais', back: 'Voltando ao porto', go: 'Navegando para o porto estrangeiro', back2: 'Voltando ao porto', patrol: 'Patrulhando a costa', hunt: 'Caçando navios inimigos!', repair: 'Voltando para reparos', embark: 'Esperando a tripulação embarcar', sail: s.purpose === 'colony' ? 'Levando colonos a uma nova terra' : 'Navegando para a batalha', land: 'Desembarcando', wait: 'Esperando os guerreiros na praia', return: 'Voltando para casa', build: 'No estaleiro', prep: 'Carregando provisões', fleet: 'Na frota', deriva: 'À deriva, sem ninguém a bordo', casa: 'Voltando ao porto' };
+    const aboard = G.Naval.aboardOf ? G.Naval.aboardOf(s).map(v => v.id) : [];
     const cargo = s.goods || s.ret || (s.cargo ? { k: 'food', n: s.cargo } : null);
     const MAT = { food: 'comida', wood: 'madeira', stone: 'pedra' };
-    return `<div class="insp-head"><div class="insp-title"><h3>${esc(G.cap(nm.replace(/^(um|uma) /, '')))}</h3><div class="sub">${KIND[s.kind] || ''}</div></div><button class="x" data-act="close">${ICON.close}</button></div>
+    const doing = (G.Expe && s.exp && (() => { const e = G.Expe.get(s.exp); const v = aboard.length && G.S.villagers.get(aboard[0]); return v ? G.Expe.aboardText(v, s) : null; })()) || ST[s.st] || 'Navegando';
+    return `<div class="insp-head"><div class="insp-title"><h3>${esc(G.cap(nm.replace(/^(um|uma|a|o) /, '')))}</h3><div class="sub">${KIND[s.kind] || ''}</div></div><button class="x" data-act="close">${ICON.close}</button></div>
       ${f ? `<div class="fline">${UI.flag(f.id, 'mini')}${esc(f.name)}</div>` : ''}
       ${bar('Casco', s.hp / s.maxHp * 100, 'hp')}
-      <div class="doing">Atualmente: <b>${ST[s.st] || 'Navegando'}</b></div>
-      ${aboard.length ? `<div class="family"><div>A bordo (${aboard.length}):</div><div>${aboard.slice(0, 12).map(id => plink(id)).join(', ')}</div></div>` : ''}
-      ${cargo ? `<div class="doing">Carga: <b>${cargo.n} de ${MAT[cargo.k]}</b></div>` : ''}`;
+      <div class="doing">Atualmente: <b>${esc(doing)}</b></div>
+      ${G.SeaUI ? G.SeaUI.shipHTML(s) : ''}
+      ${aboard.length ? `<div class="family"><div>A bordo (${aboard.length}):</div><div>${aboard.slice(0, 14).map(id => plink(id)).join(', ')}${aboard.length > 14 ? ' …' : ''}</div></div>` : s.kind === 'guerra' && s.st === 'idle' ? '<div class="meta">Ancorado sem tripulação: em tempo de paz, os navios de guerra esperam no porto.</div>' : ''}
+      ${cargo && MAT[cargo.k] ? `<div class="doing">Carga: <b>${cargo.n} de ${MAT[cargo.k]}</b></div>` : ''}
+      <div class="btns"><button data-act="follow" class="${G.Render.cam.follow === s.id ? 'on' : ''}">${ICON.eye} ${G.Render.cam.follow === s.id ? 'Seguindo' : 'Seguir'}</button></div>`;
   }
   function buildingHTML(b) {
     const S = G.S; const def = G.BDEF[b.type];
@@ -705,6 +711,7 @@
       <li><b>Guerra mundial</b> (muito rara): quando quase todos se conhecem e as rixas se acumulam, o mundo se divide em blocos — pelo ouro, por uma coroa, pela fé, por sangue antigo, pela fome, contra um império forte demais, ou todos contra todos. Aliados não fazem paz separada; só a queda de um bloco ou o cansaço de todos traz a paz geral.</li>
       <li>Ninguém festeja com o inimigo às portas: em cidade sitiada ou em batalha a festa do ano não acontece — mas depois de uma defesa vencida vem a <b>noite da vitória</b>.</li>
       <li>Abra o painel <b>Reinos</b> (<kbd>R</kbd> ou o chip do povo no topo) para ver líderes, relações, exércitos, saberes e o mapa político. <kbd>B</kbd> mostra as fronteiras.</li>
+      <li>O <b>mar</b> é gente: o <b>pescador</b> sai de casa, pega a rede, embarca, pesca, volta, descarrega as caixas no cais e leva ao armazém. Cada povo <b>sabe só o que os seus viram e voltaram para contar</b>: ilhas desconhecidas, boatos, avistadas, exploradas, mapeadas. Ninguém explora por relógio: <b>falta de ferro</b>, gente demais, um <b>boato</b>, um governante ambicioso ou um aventureiro mandam <b>expedições</b> (sozinho numa canoa, com um patrono, ou a grande expedição do Estado), que preparam o cais, partem, enfrentam o mar, descobrem, dão nome, encontram outros povos — e às vezes nunca voltam. Na guerra, <b>frotas</b> com almirante, formação e moral bloqueiam portos, travam <b>batalhas navais</b> com abordagem e fogo, e levam o exército pelo mar até a praia inimiga. Painel <b>O Mar</b>: <kbd>O</kbd>.</li>
       <li>As <b>guerras</b> têm causa, nome e etapas: a <b>tensão</b> sobe antes (patrulhas, ferreiros de noite, celeiros cheios), o reino <b>convoca</b> e reúne o exército, que marcha com carroças, <b>acampa</b> à noite, luta <b>batalhas com nome</b>, <b>cerca</b> cidades muradas e volta para casa; o cansaço leva à <b>paz</b>, com tratado. Painel <b>Guerras</b>: <kbd>X</kbd> (ou o botão no painel Reinos). Quando dois exércitos formam as linhas, o aviso <b>Batalha iminente — Assistir</b> aparece.</li>
       </ul><h4>Vida na cidade e festas</h4><ul>
       <li>Cada pessoa tem ofício e local de trabalho: pastores, tecelões, ferreiros, mineiros, ourives, oleiros, mercadores, feirantes, taverneiros, escribas, coletores de impostos — e contrabandistas. Clique num edifício para ver quem trabalha nele e o que produz.</li>

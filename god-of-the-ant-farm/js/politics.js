@@ -1019,14 +1019,16 @@
   }
 
   // ------------------------------ contact & opinion ------------------------------
-  P.meet = function (a, b) {
+  // o: { quiet (the caller tells it its own way), op (how the first meeting went), via }
+  P.meet = function (a, b, o) {
     const S = G.S; const r = G.Fac.rel(a.id, b.id); if (!r || r.met) return;
-    r.met = S.day;
+    o = o || {}; r.met = S.day; if (o.via) r.metVia = o.via;
     const pa = P.leaderPe(a), pb = P.leaderPe(b);
-    r.op = Math.round(15 - (pa.agg + pb.agg) * 18 + G.rr(-10, 10));
+    r.op = Math.round(15 - (pa.agg + pb.agg) * 18 + G.rr(-10, 10) + (o.op || 0));
+    G.Know && G.Know.met && G.Know.met(a.id, b.id);
     const ca = G.Fac.capitalOf(a.id), cb = G.Fac.capitalOf(b.id);
     const mx = ca && cb ? (ca.cx + cb.cx) / 2 : undefined, my = ca && cb ? (ca.cy + cb.cy) / 2 : undefined;
-    log(`${a.name} e ${b.name} se encontraram pela primeira vez.`, 'eye', mx, my);
+    if (!o.quiet) log(`${a.name} e ${b.name} se encontraram pela primeira vez.`, 'eye', mx, my);
     if (!S.milestones.contact) G.Village.milestone('contact', 'Primeiro contato', `${a.name} descobriu que não está só.`, 'eye');
     else G.UI && G.UI.notice(`${a.name} encontrou ${b.name}.`, 'eye');
     const giver = pa.agg <= pb.agg ? a : b;

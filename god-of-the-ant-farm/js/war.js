@@ -172,6 +172,8 @@
     for (const id of b.members) {
       const v = S.villagers.get(id);
       if (v && v.task && v.task.type === 'band' && v.task.band === b.id) {
+        // an army that came by sea walks back to the beach where its fleet waits
+        if (b.fleet && G.Fleets && G.Fleets.onDisband(b, v)) continue;
         // raiders who came by sea walk back to their ship
         if (ship && ship.st === 'wait') { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'boardBack', ship: ship.id, pri: 3.1, kind: 'boardBack' }); continue; }
         if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, fid(v)); v.carry = null; } G.Vg.endTask(v);
@@ -736,6 +738,7 @@
       case 'marcha': goPoint(v, t, b.tx, b.ty, 2.5, dt, H, 1.05); break;
       case 'ataque': if (set) attackActions(v, t, b, set, dt, H); break;
       case 'retorno': {
+        if (b.fleet && G.Fleets && G.Fleets.bandReturn(v, b, t, dt, H)) break;
         if (b.ship && G.Naval && G.Naval.bandReturn(v, b, t, dt, H)) break;
         let home = S.settlements.get(v.set);
         if (!home || home.fac !== b.fac) home = G.Fac.capitalOf(b.fac);

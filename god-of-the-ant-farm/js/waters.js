@@ -84,6 +84,7 @@
     noteCatch({ fac: s.fac }, k, s.x, s.y, s.cargo);
   };
   // the first of each, and the people who live by one
+  Wa.noteCatch = (v, k, x, y, n) => noteCatch(v, k, x, y, n);
   function noteCatch(v, k, x, y, n) {
     const fid = v.fac || G.Fac.idOfV(v); const fa = G.Fac.get(fid); if (!fa) return;
     const c = fa.catch || (fa.catch = {}); const S = G.S;

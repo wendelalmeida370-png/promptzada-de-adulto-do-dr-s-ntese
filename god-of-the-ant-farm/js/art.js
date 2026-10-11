@@ -709,6 +709,10 @@
   const APRON = { acougueiro: '#f0ece2', ferreiro: '#6a4a30', oleiro: '#c8a078', taverneiro: '#e8e0cc', tecelao: null, feirante: '#e8d8a8' };
   // what each good looks like on someone's shoulder
   function carried(c, k, carry, t) {
+    // a crate off the boat, fish tails over the rim
+    if (carry.crate) { c.fillStyle = '#8a6a44'; c.fillRect(-3, -13.6, 6, 3.6); c.fillStyle = '#6a4a2c'; c.fillRect(-3, -12.2, 6, 0.5); c.fillStyle = carry.fishCol || '#a8c0d0'; c.beginPath(); c.ellipse(-1.2, -13.9, 1.4, 0.6, 0.3, 0, TAU); c.ellipse(1.2, -14, 1.3, 0.55, -0.4, 0, TAU); c.fill(); return true; }
+    if (k === 'remo') { c.strokeStyle = '#8a6a44'; c.lineWidth = 0.7; line(c, -3.6, -9.4, 4.4, -14.8); c.fillStyle = '#8a6a44'; c.beginPath(); c.ellipse(4.6, -15, 1.6, 0.7, -0.6, 0, TAU); c.fill(); return true; }
+    if (k === 'rede') { c.fillStyle = 'rgba(214,200,160,0.95)'; c.beginPath(); c.ellipse(0, -12.4, 3.2, 1.8, 0.2, 0, TAU); c.fill(); c.strokeStyle = 'rgba(120,100,70,0.6)'; c.lineWidth = 0.3; for (let q = -2; q <= 2; q++) { c.beginPath(); c.moveTo(q * 1.2 - 0.6, -13.8); c.lineTo(q * 1.2 + 0.6, -11); c.stroke(); } c.fillStyle = '#c8683a'; c.beginPath(); c.arc(2.6, -11.6, 0.55, 0, TAU); c.fill(); return true; }
     if (G.Riches && (G.Riches.is(k) || (k === 'food' && (carry.meat || carry.basket || carry.fish || carry.shell || carry.berries || carry.grain)))) return G.Riches.drawCarry(c, k, carry, t);
     switch (k) {
       case 'la': c.fillStyle = '#f2eee2'; for (const [x, y, r] of [[-1.6, -12, 1.8], [0.6, -12.4, 2], [2, -11.6, 1.5], [-0.4, -13.6, 1.6]]) { c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); } c.fillStyle = 'rgba(0,0,0,0.08)'; c.beginPath(); c.arc(1, -11.4, 1.4, 0, TAU); c.fill(); return true;
@@ -801,8 +805,8 @@
       if (v.lost && v.lost.leg) { line(c, 0.85, -3.8, 0.85 - leg * 0.5, -0.1); line(c, -0.85, -3.8, -1.1, -2.6); c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; line(c, 1.9, -8.4, 2.3 + leg * 0.4, 0); c.lineWidth = 1.15; }
       else { line(c, -0.85, -3.8, -0.85 + leg, -0.1); line(c, 0.85, -3.8, 0.85 - leg, -0.1); }
     }
-    const bodyY = act === 'kneel' || act === 'beg' || act === 'weepk' ? 2.8 : act === 'cower' ? 3.4 : act === 'hide' ? 2.4 : act === 'sit' || act === 'pottery' || act === 'sittalk' || act === 'story' ? 2.6 : act === 'listen' ? 3.4 : act === 'milk' || act === 'skin' ? 2 : act === 'sneak' ? 1 : 0;
-    const lean = act === 'kneel' ? 0.55 : act === 'cower' ? 0.75 : act === 'weepk' ? 0.62 : act === 'beg' ? -0.08 : act === 'hide' ? 0.3 : act === 'weep' ? 0.22 : act === 'embrace' ? 0.16 : act === 'shove' ? 0.28 : act === 'struggle' ? 0.18 + Math.sin(at * 9 + v.id) * 0.06 : act === 'shout' ? -0.1 : act === 'reach' ? -0.12 : (act === 'plant' || act === 'harvest' || act === 'gather' || act === 'fill' || act === 'dig' || act === 'shear' || act === 'feed' || act === 'skin') ? 0.35 : act === 'pick' ? -0.12 : act === 'pottery' || act === 'milk' ? 0.28 : act === 'sneak' ? 0.25 : act === 'mourn' || act === 'butcher' || act === 'weave' ? 0.18 : act === 'write' ? 0.1 : act === 'stagger' ? -0.32 : act === 'drag' ? -0.2 : act === 'wait' ? Math.sin(t * 1.3 + v.id) * 0.05 : act === 'story' ? Math.max(0, Math.sin(at * 1.1 + v.id)) * 0.12 : 0;
+    const bodyY = act === 'kneel' || act === 'beg' || act === 'weepk' ? 2.8 : act === 'cower' ? 3.4 : act === 'hide' ? 2.4 : act === 'sit' || act === 'pottery' || act === 'sittalk' || act === 'story' || act === 'mend' ? 2.6 : act === 'listen' ? 3.4 : act === 'milk' || act === 'skin' ? 2 : act === 'sneak' ? 1 : 0;
+    const lean = act === 'kneel' ? 0.55 : act === 'cower' ? 0.75 : act === 'weepk' ? 0.62 : act === 'beg' ? -0.08 : act === 'hide' ? 0.3 : act === 'weep' ? 0.22 : act === 'embrace' ? 0.16 : act === 'shove' ? 0.28 : act === 'struggle' ? 0.18 + Math.sin(at * 9 + v.id) * 0.06 : act === 'shout' ? -0.1 : act === 'reach' ? -0.12 : (act === 'plant' || act === 'harvest' || act === 'gather' || act === 'fill' || act === 'dig' || act === 'shear' || act === 'feed' || act === 'skin') ? 0.35 : act === 'pick' ? -0.12 : act === 'lift' ? 0.42 + Math.sin(at * 3) * 0.08 : act === 'haul' ? -0.22 + Math.sin(at * 4 + v.id) * 0.1 : act === 'mend' ? 0.2 : act === 'pottery' || act === 'milk' ? 0.28 : act === 'sneak' ? 0.25 : act === 'mourn' || act === 'butcher' || act === 'weave' ? 0.18 : act === 'write' ? 0.1 : act === 'stagger' ? -0.32 : act === 'drag' ? -0.2 : act === 'wait' ? Math.sin(t * 1.3 + v.id) * 0.05 : act === 'story' ? Math.max(0, Math.sin(at * 1.1 + v.id)) * 0.12 : 0;
     c.save();
     c.translate(0, bodyY - bob);
     if (lean) { c.translate(0, -3.8); c.rotate(lean); c.translate(0, 3.8); }
@@ -838,6 +842,12 @@
       case 'run': { const s2 = Math.sin(ph * 1.3) * 1.5; arm(c, -1.6, -8, -3, -11 + s2); line(c, 1.6, -8, 3, -11 - s2); break; }
       case 'dance': { const s2 = Math.sin(at * 7 + v.id) * 2; arm(c, -1.6, -8, -3.2, -10.5 + s2); line(c, 1.6, -8, 3.2, -10.5 - s2); break; }
       case 'mourn': line(c, 0.2, -8, 0.9, -5); arm(c, -0.2, -8, 0.6, -5.2); break;
+      // mending a net in the lap: the needle goes in and out
+      case 'mend': { const k = Math.sin(at * 5 + v.id) * 0.9; line(c, 0, -8, 2.4 + k, -4.4); arm(c, -0.4, -8, 1.2 - k, -4.6); c.strokeStyle = 'rgba(232,224,200,0.85)'; c.lineWidth = 0.3; for (let q = 0; q < 4; q++) { c.beginPath(); c.moveTo(-1 + q * 1.2, -2.6); c.lineTo(0.2 + q * 1.2, -5); c.moveTo(-1 + q * 1.2, -5); c.lineTo(0.2 + q * 1.2, -2.6); c.stroke(); } break; }
+      // bending to a crate on the quay
+      case 'lift': line(c, 0, -8, 1.8, -2.4); arm(c, -0.4, -8, 0.8, -2.6); c.fillStyle = '#8a6a44'; c.fillRect(-0.6, -2.6, 3.4, 2.2); break;
+      // hauling on a rope: both hands forward, the body leaning back
+      case 'haul': { const k = Math.sin(at * 4 + v.id); line(c, 0, -8, 3.4 + k * 0.6, -6.6); arm(c, -0.3, -8, 3 + k * 0.6, -6.2); c.strokeStyle = '#c8b890'; c.lineWidth = 0.4; line(c, 3.4 + k * 0.6, -6.5, 8, -2); break; }
       case 'fish': {
         line(c, 0, -8, 2.2, -6.5);
         c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; line(c, 2.2, -6.5, 8, -12);
@@ -1002,8 +1012,10 @@
       }
     }
     if (oneArm) { c.strokeStyle = v.skin; c.lineWidth = 1; line(c, -0.4, -8, -1, -6.9); c.fillStyle = '#ece4d4'; c.fillRect(-1.4, -7.4, 0.9, 0.9); if (v.lostT && G.S.clock - v.lostT < 40) { c.fillStyle = '#9a1e24'; c.fillRect(-1.25, -6.9, 0.55, 0.55); } }
+    // gear on the shoulder (the fisherman's net, an oar): not a good, nobody stores it
+    if (!v.carry && v.gear && !['mend', 'lift', 'haul', 'build', 'fight'].includes(act)) carried(c, v.gear, { crate: v.gear === 'caixa' }, t);
     // carried goods
-    if (v.carry && v.carry.k !== 'water' && !['chop', 'mine', 'build', 'fight', 'fish'].includes(act)) {
+    if (v.carry && v.carry.k !== 'water' && !['chop', 'mine', 'build', 'fight', 'fish', 'lift', 'mend'].includes(act)) {
       const k = v.carry.k;
       if (v.carry.extra && G.Riches) G.Riches.drawExtra(c, v.carry.extra, v.carry, t);
       if (carried(c, k, v.carry, t)) { /* a good of the economy */ }
