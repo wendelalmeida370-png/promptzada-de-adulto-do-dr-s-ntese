@@ -535,6 +535,7 @@
     if (o.back === false) t.legs = 1;
     if (!t.leg) { const stk = G.Fac.stockV(v); const n = stk && stk.food >= 8 ? 2 : stk && stk.food >= 3 ? 1 : 0; if (n) { stk.food -= n; t.food = n; } }
     story.data.hx = +hp[0].toFixed(1); story.data.hy = +hp[1].toFixed(1);
+    if (St.onDepart && !t.leg) { try { St.onDepart(story, v, t); } catch (e) { console.warn('stories depart', e); } }
     return t;
   };
   function trail(story, v) {
@@ -556,13 +557,14 @@
       // night falls on the road: a small fire, sleep, and on again at first light
       // (only on dry ground: someone wading a ford walks on to the far bank first)
       if (G.isNight() && !t.noCamp && W.dryXY(v.x, v.y) && G.dist(v.x, v.y, tx, ty) > 6 && G.dist(v.x, v.y, t.hx, t.hy) > 9) {
-        t.st = 4; v.path = null; v.moving = false; t.cx = +(v.x + 0.55).toFixed(2); t.cy = +(v.y + 0.25).toFixed(2); t.camps++; if (d.camp) d.camp(story, v, t); return;
+        t.st = 4; v.path = null; v.moving = false; t.cx = +(v.x + 0.55).toFixed(2); t.cy = +(v.y + 0.25).toFixed(2); t.camps++; if (d.camp) d.camp(story, v, t); if (St.onCamp) { try { St.onCamp(story, v, t); } catch (e) { console.warn('stories camp', e); } } return;
       }
       if ((t.rw = (t.rw || 0) + dt) > 2.5) { t.rw = 0; trail(story, v); if (d.road && St.roadWatch) { const r = St.roadWatch(story, v, t); if (r) d.road(story, v, t, r); } }
       if (H.move(v, dt, t.hurry || 1)) {
         trail(story, v);
-        if (back) { if (d.home) d.home(story, v, t); return H.end(v); }
+        if (back) { if (d.home) d.home(story, v, t); H.end(v); if (St.onHome) { try { St.onHome(story, v, t); } catch (e) { console.warn('stories home', e); } } return; }
         t.st = 2; v.actT = 0; t.left = t.dur; if (d.arrive) d.arrive(story, v, t);
+        if (St.onArrive && v.task === t) { try { St.onArrive(story, v, t); } catch (e) { console.warn('stories arrive', e); } }
       }
       return;
     }

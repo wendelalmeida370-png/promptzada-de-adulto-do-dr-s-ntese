@@ -476,7 +476,7 @@
     c => `${c.P} seguiu os mantos no escuro e chegou ao lugar. ${cap1(c.WHAT)} existe — e agora tem nomes.${c.CAUGHT ? ' ' + c.CAUGHT + ' foram presos.' : ''}`,
     c => `${c.P} encontrou ${c.WHAT}. Tudo o que diziam era verdade.${c.CAUGHT ? ' ' + c.CAUGHT + ' irão ao cadafalso.' : ''}`,
   ] });
-  K('iq-morto', { h: 'Perguntas demais', text: [c => `${c.P} foi encontrad${c.o} mort${c.o}. Perguntou demais. Quem fez foi ${c.KILLER}, de ${c.WHAT} — só você sabe.`] });
+  K('iq-morto', { h: 'Perguntas demais', text: [c => `${c.P} foi encontrad${c.o} mort${c.o}. Perguntou demais. Quem fez foi ${c.KILLER}, ${/^(o|a|os|as) /.test(c.WHAT) ? 'd' + c.WHAT : 'de ' + c.WHAT} — só você sabe.`] });
   K('iq-nada', { h: 'Nada', text: [c => `${c.P} perguntou por toda parte, vigiou noites inteiras, e não achou nada. Talvez nunca tenha havido nada para achar.`, c => `O inquérito de ${c.P} terminou sem nenhum nome. ${c.WHAT} — se existe — continua no escuro.`] });
   K('iq-bruxas', { h: 'A fogueira', text: [c => `${c.P} não achou ${c.WHAT}. Mas ${c.RULER} precisava de culpados, e ${c.ACC} ${c.ACCn > 1 ? 'foram' : 'foi'} à fogueira mesmo assim. ${c.P} viu tudo da primeira fila.`] });
   function iqCtx(s, x) { return Object.assign({ RULER: styled(s.data.fac), WHAT: s.data.what || (s.data.soc ? socArt(s.data.soc) : s.data.fake ? (G.Secrets ? G.Secrets.art(s.data.fake) : s.data.fake) : 'uma seita') }, x || {}); }

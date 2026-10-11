@@ -104,6 +104,7 @@
       const v = P(id);
       if (v && v.task && v.task.type === 'scene' && v.task.sc === sc.id) continue;
       sc.taken.delete(id); sc.lost.push(id);
+      (sc.dbg || (sc.dbg = [])).push(`perdeu ${v ? v.name + ' para ' + (v.task ? v.task.type : 'nada') : id}`);
       if (rec.vital) return abort(sc, 'perdido');
     }
     if (!sc.wait) return advance(sc, undefined);
@@ -152,7 +153,7 @@
     v.sleeping = false; v.path = null;
     v.task = { type: 'scene', sc: sc.id, pri: 5.5, st: 0, age: 0, mv: null, act: '', kind: 'scene', calm: o.calm ? 1 : 0 };
     v.act = ''; v.actT = 0;
-    sc.taken.set(v.id, { prev, vital: !!o.vital, z: v.z || 0 });
+    sc.taken.set(v.id, { prev, vital: !!o.vital, z: v.z || 0, keepSt: !!o.keepSt });
     return true;
   }
   function releaseId(sc, id) {
@@ -160,7 +161,7 @@
     const v = P(id); if (!v || !taken(sc, v)) return;
     v.act = ''; v.path = null; v.moving = false; v.task = null;
     if (v.sceneHold) { v.sceneHold = null; }
-    if (rec && rec.prev && G.S.villagers.has(v.id)) { const p = rec.prev; p.st = 0; if (p.age !== undefined) p.age = Math.min(p.age, 1); v.task = p; }
+    if (rec && rec.prev && G.S.villagers.has(v.id)) { const p = rec.prev; if (!rec.keepSt) p.st = 0; if (p.age !== undefined && !rec.keepSt) p.age = Math.min(p.age, 1); v.task = p; if (rec.keepSt && p.st === 4) v.sleeping = true; }
     else v.think = Math.min(v.think || 0, 0.3);
   }
 
@@ -240,6 +241,8 @@
       mood(m) { sc.mood = m; if (Sn.watching === sc && G.Audio && G.Audio.mood) G.Audio.mood(m); return null; },
       snap(caption) { snapReq(sc, caption); return null; },
       // ---- the story ----
+      // the scene's words and pictures go to the story's last chapter (when the story already said it)
+      attach() { const st = sc.story && G.Stories && G.Stories.get(sc.story); if (st && st.chapters.length) sc.ch = st.chapters[st.chapters.length - 1]; return null; },
       chapter(txt, o) { const st = sc.story && G.Stories && G.Stories.get(sc.story); if (!st || !txt) return null; const ch = G.Stories.chapter(st, txt, Object.assign({ x: sc.at ? sc.at[0] : undefined, y: sc.at ? sc.at[1] : undefined }, o || {})); if (!sc.ch) sc.ch = ch; return null; },
       story: () => (sc.story && G.Stories ? G.Stories.get(sc.story) : null),
       // ---- places ----
@@ -537,6 +540,9 @@
         ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(2.5, 0); ctx.stroke();
         ctx.fillStyle = '#c8ccd4'; ctx.beginPath(); ctx.moveTo(4.2, 0); ctx.lineTo(2.2, -0.9); ctx.lineTo(2.2, 0.9); ctx.fill();
         ctx.fillStyle = '#e8e2d0'; ctx.fillRect(-5.5, -0.9, 1.6, 0.6); ctx.fillRect(-5.5, 0.3, 1.6, 0.6);
+      } else if (f.k === 'pearl') { // dark and glossy, a glint on top
+        ctx.fillStyle = '#1a1c26'; ctx.beginPath(); ctx.arc(p[0], p[1] - z, 1.3, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'rgba(220,230,255,0.85)'; ctx.beginPath(); ctx.arc(p[0] - 0.4, p[1] - z - 0.45, 0.42, 0, TAU); ctx.fill();
       } else { ctx.fillStyle = '#8a857c'; ctx.beginPath(); ctx.arc(p[0], p[1] - z, 1.1, 0, TAU); ctx.fill(); }
       ctx.restore();
     }

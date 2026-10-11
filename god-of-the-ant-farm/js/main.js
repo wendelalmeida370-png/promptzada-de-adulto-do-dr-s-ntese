@@ -161,7 +161,8 @@
   function step(dt) {
     const S = G.S;
     S.clock += dt;
-    S.time += dt / G.DAY_LEN;
+    // (while a scene is on the screen the sun lingers: a night of watching does not end in the middle of it)
+    S.time += dt / G.DAY_LEN * (G.Scene && G.Scene.watching && G.Scene.watching.st === 'run' ? 0.35 : 1);
     if (S.time >= 1) {
       S.time -= 1; S.day++;
       (S.popHist = S.popHist || []).push(S.villagers.size); if (S.popHist.length > 500) S.popHist.shift();

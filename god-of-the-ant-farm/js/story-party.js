@@ -180,7 +180,7 @@
     }
     if (L.task && L.task.type === 'fight' && L.task.id) { const a = G.S.animals.get(L.task.id); if (a && !a.dead && G.dist(v.x, v.y, a.x, a.y) < 9) { G.Vg.setTask(v, { type: 'fight', id: a.id, pri: 4, rt: 0 }); return true; } }
     const lt = L.task;
-    const onRoad = lt && lt.type === 'saga' && lt.story === s.id;
+    const onRoad = lt && ((lt.type === 'saga' && lt.story === s.id) || (lt.type === 'scene' && G.Scene && (G.Scene.get(lt.sc) || {}).story === s.id));
     if (!onRoad) { if ((t.lost = (t.lost || 0) + dt) > 6) H.end(v); return true; }
     t.lost = 0;
     if (v.hp < 30) { St.chapter(s, `${v.name} ficou para trás, ferid${oa(v)}.`, { x: v.x, y: v.y }); H.end(v); return true; }

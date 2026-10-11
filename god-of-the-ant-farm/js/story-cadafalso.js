@@ -216,11 +216,15 @@
     c.title('O Cadafalso', 'Pela Grade');
     c.caption(`A noite antes. ${cap.name} espera, amarrad${oa(cap)}, sem dormir.`);
     c.cam(['p', 'cap'], { zoom: 'fit' });
-    yield c.walk('p', hide, { sneak: true, max: 14 });
+    const sneak = c.walk('p', hide, { sneak: true, max: 14 });
+    yield 1.2;
+    yield c.say('p', pick([`Devagar. Ninguém pode me ver.`, `Se me pegarem aqui, amanhã são duas cordas.`, `Aguenta. Estou chegando.`]), { style: 'think' });
+    yield sneak;
     c.pose('p', 'hide');
     c.cam(['p', 'cap'].concat(g ? ['g'] : []), { zoom: 'fit' });
     if (g) { yield c.say('g', pick(['Frio dos diabos...', 'Mais uma noite inteira nisso.', 'Amanhã acaba.']), { style: 'think' }); c.walk('g', far, { slow: true }); }
-    yield c.wait(1.6);
+    else { c.sfx('owl', null, 0.6); yield c.say('p', pick([`Nenhum guarda... ou dormem, ou é armadilha.`, `Ninguém vigiando. Melhor assim.`]), { style: 'think' }); }
+    yield c.wait(1.2);
     c.sfx('heartbeat');
     yield c.approach('p', 'cap', 0.8, { sneak: true, max: 20 });
     c.pose('p', 'hide'); c.face('p', 'cap'); c.face('cap', 'p');

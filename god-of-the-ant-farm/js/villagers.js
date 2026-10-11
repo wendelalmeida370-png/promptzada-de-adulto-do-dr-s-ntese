@@ -217,7 +217,7 @@
     if (v.hp <= 0) G.Village.kill(v, v.lastCause, v.lastGod);
   }
 
-  const FIELD = { saga: 1, band: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1, aboard: 1, embark: 1, boardBack: 1, pave: 1 };
+  const FIELD = { saga: 1, scene: 1, band: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1, aboard: 1, embark: 1, boardBack: 1, pave: 1 };
   // ------------------------------ emergencies ------------------------------
   Vg.alarms = new Map(); // settlement id -> [tile indices]
   Vg.fireFighters = new Map();

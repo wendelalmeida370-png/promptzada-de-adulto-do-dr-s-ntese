@@ -210,9 +210,9 @@
     m.t += dt;
     const here = m.ids.map(person).filter(v => v && v.task && v.task.type === 'conclave' && v.task.m === m.id);
     const there = here.filter(v => v.task.st === 2);
-    if (m.phase === 'gather' && (there.length >= Math.max(2, here.length * 0.7) || m.t > 40)) { m.phase = 'rite'; m.t = 0; }
+    if (m.phase === 'gather' && (there.length >= Math.max(2, here.length * 0.7) || m.t > (m.keep > S.clock ? 70 : 40))) { m.phase = 'rite'; m.t = 0; }
     if (m.phase === 'rite') {
-      if (G.R() < dt * 0.5 && there.length) say(G.pick(there), G.pick(CREED[q.creed].chant), 2.6);
+      if (G.R() < dt * 0.5 && there.length) { const who = G.pick(there); if (G.Talk) G.Talk.say(who, G.pick(CREED[q.creed].chant), { style: 'chant', col: CREED[q.creed].mark, dur: 2.8 }); else say(who, G.pick(CREED[q.creed].chant), 2.6); }
       // the blood
       const vic = person(m.victim);
       if (vic && !m.blood && m.t > 12 && vic.task && vic.task.type === 'lured' && vic.task.st === 2) {
@@ -233,13 +233,13 @@
         if (G.dist(v.x, v.y, l.x, l.y) < (l.kind === 'fachada' ? 3 : 6.5)) { m.seen.push(v.id); witness(q, l, m, v); }
       }
       if (m.wt > 0.5) m.wt = 0;
-      if (m.t > 34) return endMeet(m);
+      if (m.t > 34 && !(m.keep > S.clock)) return endMeet(m);
     }
-    if (m.t > 120) endMeet(m);
+    if (m.t > 120 && !(m.keep > S.clock)) endMeet(m);
   }
   function endMeet(m) {
     const k = st().meets.indexOf(m); if (k >= 0) st().meets.splice(k, 1);
-    for (const id of m.ids) { const v = person(id); if (v) { v.robe = null; if (v.task && v.task.type === 'conclave' && v.task.m === m.id) G.Vg.endTask(v); } }
+    for (const id of m.ids) { const v = person(id); if (v) { v.robe = null; v.unmask = false; if (v.task && v.task.type === 'conclave' && v.task.m === m.id) G.Vg.endTask(v); } }
     const vic = person(m.victim); if (vic && vic.task && vic.task.type === 'lured') G.Vg.endTask(vic);
     const q = soc(m.soc); if (q) G.Stories && G.Stories.signal('ritual', { soc: q.id, lodge: m.lodge, x: m.x, y: m.y, ids: m.ids.slice(), blood: m.blood, seen: m.seen.slice() });
   }
@@ -364,6 +364,47 @@
     void pe;
   }
   Sc.startInquiry = startInquiry;
+  Sc._found = () => found();
+  // ---- for the stories that stage these nights ----
+  Sc.meetOfLodge = lid => st().meets.find(m => m.lodge === lid) || null;
+  Sc.meetById = id => st().meets.find(m => m.id === id) || null;
+  Sc.creed = q => CREED[q.creed];
+  Sc.lodgeName = l => inPlace(l);
+  Sc.toLodge = l => toPlace(l);
+  function endInquiry(i) { const s = st(); const k = s.inq.indexOf(i); if (k >= 0) s.inq.splice(k, 1); const inv = person(i.by); if (inv && inv.task && inv.task.type === 'inquire') G.Vg.endTask(inv); }
+  // the meeting broken in on, by the one who was watching
+  Sc.exposeMeet = function (iid, mid) {
+    const i = Sc.inquiry(iid); const m = Sc.meetById(mid); if (!i || !m) return false;
+    const q = soc(m.soc); const f = G.Fac.get(i.fac); const inv = person(i.by); if (!q || !f || !inv) return false;
+    i.found = 1; expose(q, f, m, inv); endInquiry(i); return true;
+  };
+  // the arrests at dawn, on a word sworn before the ruler (no meeting needed)
+  Sc.raid = function (iid, ids) {
+    const i = Sc.inquiry(iid); if (!i) return [];
+    const q = soc(i.soc); const f = G.Fac.get(i.fac); const inv = person(i.by); if (!q || !f) return [];
+    const caught = ids.map(person).filter(v => v && v.secret === q.id && v.id !== f.leader && !v.captive).slice(0, 4);
+    q.exposed[f.id] = G.S.day;
+    for (const v of caught) { leave(q, v.id); v.robe = null; G.Vg.endTask(v); }
+    if (caught.length && G.Justice) G.Justice.sentence(f, caught, `por pertencerem a uma seita secreta, ${art(q.name)}`.replace('pertencerem', caught.length > 1 ? 'pertencerem' : 'pertencer'), { set: caught[0].set });
+    rumor(f.id, caught[0] ? caught[0].set : 0, `${art(q.name)} existe mesmo — e quem foi pego vai pagar.`.replace(/^./, c => c.toUpperCase()), q.id, true, 3);
+    log(`Ao amanhecer, os guardas de ${f.name} bateram nas portas que ${inv ? inv.name : 'alguém'} apontou: ${caught.map(v => v.name).join(', ').replace(/, ([^,]*)$/, ' e $1') || 'ninguém foi achado'}${caught.length ? (caught.length > 1 ? ' foram levados' : ' foi levad' + oa(caught[0])) : ''}. ${cap(art(q.name))} existe.`, 'secret', inv ? inv.x : undefined, inv ? inv.y : undefined);
+    G.Stories && G.Stories.signal('exposed', { soc: q.id, fac: f.id, by: i.by, ids: caught.map(v => v.id), x: inv ? inv.x : 0, y: inv ? inv.y : 0 });
+    if (q.members.length === 0 || !person(q.master)) q.gone = G.S.day;
+    endInquiry(i); return caught;
+  };
+  // the one who saw too much, made silent
+  Sc.silence = function (killer, victim, sid, iid) {
+    const q = soc(sid); if (!q || !killer || !victim) return;
+    G.FX && G.FX.blood(victim.x, victim.y); victim.lastBy = killer.id;
+    const nm = victim.name, og = victim.g, ox = victim.x, oy = victim.y;
+    G.Vg.damage(victim, 999, 'coup', false, killer.id); q.deeds++;
+    const w = (q.wit || []).find(x => x.id === victim.id); if (w) w.done = 1;
+    log(`${nm}, que ${iid ? 'fazia perguntas demais' : 'tinha visto o que não devia'}, foi ${og === 'f' ? 'encontrada morta' : 'encontrado morto'}. Quem fez foi ${killer.name}, ${art(q.name, 'de')} — mas isso só você sabe.`, 'secret', ox, oy);
+    rumor(G.Fac.idOfV(killer), killer.set, `${nm} morreu porque viu o que não devia.`, q.id, true, 1.6);
+    G.Stories && G.Stories.signal('silenced', { who: victim.id, by: killer.id, soc: q.id, x: ox, y: oy, inq: iid || 0 });
+    if (iid) { const i = Sc.inquiry(iid); if (i) endInquiry(i); }
+  };
+  Sc.endInquiry = id => { const i = Sc.inquiry(id); if (i) endInquiry(i); };
   Sc.inquiry = id => st().inq.find(i => i.id === id) || null;
   Sc.witnessOf = (sid, id) => { const q = soc(sid); return q ? (q.wit || []).find(w => w.id === id) || null : null; };
   function inquiryTick(i, dt) {
@@ -380,11 +421,11 @@
       } else i.hunted = 1;
     }
     // found: a meeting in the act, with the investigator watching
-    if (q && !i.found) for (const m of s.meets) {
+    if (q && !i.found && !(i.hold && G.S.clock < i.hold)) for (const m of s.meets) {
       if (m.soc !== q.id || m.phase !== 'rite') continue;
       if (G.dist(inv.x, inv.y, m.x, m.y) < 9 || (i.clue >= 1 && G.R() < 0.02)) { i.found = 1; expose(q, f, m, inv); return done(); }
     }
-    if (i.t > DAY() * 3.5) {
+    if (i.t > DAY() * (i.long || 3.5) && !(i.hold && G.S.clock < i.hold)) {
       // nothing found: a calm ruler lets it be; a frightened, cruel one burns someone anyway
       const pe = P.leaderPe(f); const r = P.ruler(f);
       const rm = st().rumors.find(x => x.fac === f.id && x.accused && person(x.accused) && (!q ? x.fake === i.fake : true));

@@ -96,6 +96,7 @@
     heal: (t, v) => { [392, 493.9, 587.3, 783.99].forEach((f, k) => { const n = osc('sine', f, t + k * 0.05, 1.8, 0.06 * v, sfx, 0, 0.3); n.g.connect(revIn); }); LIB.magic(t + 0.2, v * 0.7); },
     fertility: (t, v) => { [523.25, 659.25, 783.99, 987.8, 1174.7, 1318.5].forEach((f, k) => { const n = osc('triangle', f, t + k * 0.08, 1.2, 0.05 * v); n.g.connect(revIn); }); },
     splash: (t, v) => { nz(t, 0.25, 0.25 * v, 'bandpass', 1300, 1, sfx, 500); },
+    coin: (t, v) => { for (let k = 0; k < 3; k++) { osc('sine', 2400 + k * 380, t + k * 0.07, 0.12, 0.06 * v, sfx, 2100 + k * 300); osc('triangle', 3600 + k * 200, t + k * 0.07, 0.05, 0.03 * v); } },
     thud: (t, v) => { osc('sine', 110, t, 0.2, 0.4 * v, sfx, 50); nz(t, 0.12, 0.25 * v, 'lowpass', 400); },
     hit: (t, v) => { nz(t, 0.08, 0.3 * v, 'bandpass', 900, 2); osc('square', 200, t, 0.05, 0.05 * v, sfx, 120); },
     bite: (t, v) => { nz(t, 0.07, 0.25 * v, 'bandpass', 2500, 3); },

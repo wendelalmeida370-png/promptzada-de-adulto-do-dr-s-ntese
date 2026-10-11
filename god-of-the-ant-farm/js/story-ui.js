@@ -230,7 +230,7 @@
 
   // ============================== the card that slides in ==============================
   // a story begins, climbs, ends: a small illustrated card at the edge of the screen (not for every chapter)
-  const queue = []; let busy = false;
+  const queue = []; let busy = false, cur = null;
   St._announce = function (s, kind, txt) {
     if (!G.Main || G.Main.mode === 'menu' || G.Main.mode === 'test') return;
     if (G.Skip && G.Skip.on) { if (kind !== 'beat') G.Skip.news(kind === 'start' ? 'Uma nova história: ' + s.title : s.title, kind === 'start' ? s.log || '' : txt || ''); return; }
@@ -242,7 +242,7 @@
     if (G.Scene && G.Scene.watching) { busy = true; setTimeout(next, 1500); return; }
     const q = queue.shift(); if (!q) { busy = false; return; }
     const s = St.get(q.id); if (!s) return next();
-    busy = true;
+    busy = true; cur = q;
     let el = $('#saga-card'); if (!el) { el = document.createElement('div'); el.id = 'saga-card'; document.body.appendChild(el); }
     const d = St.DEF[s.type]; const p = P(s.protag);
     const eyebrow = q.kind === 'start' ? 'Uma nova história' : q.kind === 'end' ? 'Fim · ' + (St.END[s.end ? s.end.k : ''] || '') : 'Uma história';
@@ -260,7 +260,12 @@
     if (q.kind !== 'beat') G.Audio && G.Audio.play && G.Audio.play(q.kind === 'end' ? 'sagaEnd' : 'saga');
     clearTimeout(el._t); el._t = setTimeout(hide, q.kind === 'beat' ? 7000 : 9500);
   }
-  function hide() { const el = $('#saga-card'); if (!el) { busy = false; return; } el.classList.remove('in'); el.classList.add('out'); clearTimeout(el._t); setTimeout(() => { busy = false; next(); }, 600); }
+  // a scene takes the screen: the card on show steps aside and comes back after it
+  St._cardHold = function () {
+    const el = $('#saga-card'); if (!el || !cur || !el.classList.contains('in')) return;
+    clearTimeout(el._t); el.classList.remove('in'); el.classList.add('out'); queue.unshift(cur); cur = null; setTimeout(next, 600);
+  };
+  function hide() { cur = null; const el = $('#saga-card'); if (!el) { busy = false; return; } el.classList.remove('in'); el.classList.add('out'); clearTimeout(el._t); setTimeout(() => { busy = false; next(); }, 600); }
 
   // ============================== on a person's card ==============================
   St.personLine = function (v) {

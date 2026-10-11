@@ -75,11 +75,22 @@
     if (!G.Main || G.Main.mode !== 'game' || (G.Skip && G.Skip.on) || (G.Photo && G.Photo.on)) return;
     const fol = St.followed();
     if (skip && skip.story === sc.story) stopSkip();
-    if (sc.story && sc.story === fol && sc.present !== false) { if (!Sn.watching || (Sn.watching.imp || 1) <= sc.imp) Sn.show(sc); return; }
+    // (a scene that just ended and is only fading out, or one of the same story, never holds the next one back)
+    const w = Sn.watching;
+    if (sc.story && sc.story === fol && sc.present !== false) { if (!w || w.st !== 'run' || w.story === sc.story || (w.imp || 1) <= sc.imp) Sn.show(sc); else nowAlert(sc); return; }
     if (G.Cinema && G.Cinema.on && sc.imp >= 2 && !Sn.watching) { Sn.show(sc); return; }
     if (sc.imp >= 2) nowAlert(sc);
   };
-  Sn.onShow = function (sc) { if (prevShow) prevShow(sc); sc.watched = 1; if (alertSc === sc) hideAlert(); };
+  Sn.onShow = function (sc) { if (prevShow) prevShow(sc); sc.watched = 1; if (alertSc === sc) hideAlert(); if (St._cardHold) St._cardHold(); };
+  // a scene over (not left by hand): the followed story's next moment, if one is already on, comes up
+  const prevLeave = Sn.onLeave;
+  Sn.onLeave = function (sc) {
+    if (prevLeave) prevLeave(sc);
+    if (sc.st === 'run') return; // (left by hand: the player chose to look elsewhere)
+    const fol = St.followed(); if (!fol) return;
+    const nx = Sn.list.find(x => x.st === 'run' && x.ready && !x.watched && x.story === fol && x.present !== false);
+    if (nx) setTimeout(() => { if (!Sn.watching && nx.st === 'run') Sn.show(nx); }, 400);
+  };
   Sn.onEnd = function (sc) {
     if (prevEnd) prevEnd(sc);
     if (alertSc === sc) hideAlert();
