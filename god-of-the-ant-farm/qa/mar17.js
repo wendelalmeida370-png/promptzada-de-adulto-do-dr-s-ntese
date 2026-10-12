@@ -122,6 +122,9 @@ const CASE = process.argv[2] || 'rich'; const seed = +(process.argv[3] || 7);
       const S = G.S; const K = G.Know; const f = G.Fac.get(window._F); let e = null; let g = 0;
       while (!e && g++ < 60) { e = G.Expe.consider(f, { scale: 'grande' }); if (!e) T.run(0.02); }
       if (!e) return { err: 'nenhuma' };
+      // (one voyage at sea for this people while we watch: a second one that sails to the same island and comes back
+      // would bring home, honestly, what this one saw — and the proof could not tell it from telepathy: T-024)
+      if (c === 'dead') { const oc = G.Expe.consider, op = G.Expe.colonyPlan; G.Expe.consider = function (ff) { return ff && ff.id === f.id ? null : oc.apply(this, arguments); }; G.Expe.colonyPlan = function (ff) { return ff && ff.id === f.id ? null : op.apply(this, arguments); }; }
       const snap = () => K.regions().filter(K.big).map(q => K.state(f.id, q));
       const before = snap(); const others0 = window._O.map(id => K.regions().filter(K.big).map(q => K.state(id, q)));
       const out = { name: e.name };
