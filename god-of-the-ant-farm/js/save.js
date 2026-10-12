@@ -75,7 +75,7 @@
       return true;
     } catch (e) {
       console.warn('save failed', e);
-      if (!silent) G.UI && G.UI.notice('Não foi possível salvar (armazenamento cheio?).', 'skull');
+      const now = Date.now(); if (!silent || !(now - (Sv.failT || 0) < 600000)) { Sv.failT = now; G.UI && G.UI.notice(silent ? 'O salvamento automático falhou (armazenamento do navegador cheio?). O último mundo salvo é mais antigo.' : 'Não foi possível salvar (armazenamento cheio?).', 'skull'); }
       return false;
     }
   };

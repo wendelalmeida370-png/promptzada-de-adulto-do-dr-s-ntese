@@ -168,22 +168,21 @@
     if (S.time >= 1) {
       S.time -= 1; S.day++;
       (S.popHist = S.popHist || []).push(S.villagers.size); if (S.popHist.length > 500) S.popHist.shift();
-      G.Village.onNewDay();
+      G.tryRun('novo dia', () => G.Village.onNewDay());
     }
-    G.Nature.update(dt);
-    G.Village.update(dt);
-    G.Vg.updateAll(dt);
-    G.Life && G.Life.update(dt);
-    G.Carnage && G.Carnage.update(dt);
-    G.Animals.updateAll(dt);
-    G.Flora && G.Flora.update(dt);
-    G.Riches && G.Riches.update(dt); G.Estates && G.Estates.update(dt); G.Court && G.Court.update(dt); G.Trade && G.Trade.update(dt); G.Migrate && G.Migrate.update(dt); G.Nests && G.Nests.update(dt); G.Polity && G.Polity.update(dt); G.Justice && G.Justice.update(dt); G.Riots && G.Riots.update(dt); G.Secrets && G.Secrets.update(dt); G.Scene && G.Scene.update(dt);
-    G.Caves && G.Caves.update(dt);
-    G.Pets && G.Pets.update(dt);
-    G.Powers.update(dt);
-    G.Lore && G.Lore.update(dt);
-    G.Events.update(dt);
+    for (const m of MODS) G.tryRun(m[0], m[1], dt);
   }
+  // the world's modules, in the order they live (each one on its own: one that throws does not stop the rest)
+  const MODS = [
+    ['Nature', dt => G.Nature.update(dt)], ['Village', dt => G.Village.update(dt)], ['Villagers', dt => G.Vg.updateAll(dt)],
+    ['Life', dt => G.Life && G.Life.update(dt)], ['Carnage', dt => G.Carnage && G.Carnage.update(dt)], ['Animals', dt => G.Animals.updateAll(dt)],
+    ['Flora', dt => G.Flora && G.Flora.update(dt)], ['Riches', dt => G.Riches && G.Riches.update(dt)], ['Estates', dt => G.Estates && G.Estates.update(dt)],
+    ['Court', dt => G.Court && G.Court.update(dt)], ['Trade', dt => G.Trade && G.Trade.update(dt)], ['Migrate', dt => G.Migrate && G.Migrate.update(dt)],
+    ['Nests', dt => G.Nests && G.Nests.update(dt)], ['Polity', dt => G.Polity && G.Polity.update(dt)], ['Justice', dt => G.Justice && G.Justice.update(dt)],
+    ['Riots', dt => G.Riots && G.Riots.update(dt)], ['Secrets', dt => G.Secrets && G.Secrets.update(dt)], ['Scene', dt => G.Scene && G.Scene.update(dt)],
+    ['Caves', dt => G.Caves && G.Caves.update(dt)], ['Pets', dt => G.Pets && G.Pets.update(dt)], ['Powers', dt => G.Powers.update(dt)],
+    ['Lore', dt => G.Lore && G.Lore.update(dt)], ['Events', dt => G.Events.update(dt)],
+  ];
   // at high speed the steps get a little longer and the frame has a time budget:
   // if the world is too big for the machine, the game runs as fast as it can instead of freezing
   function simulate(dt, budget) {
@@ -468,7 +467,10 @@
 
   // ------------------------------ loop ------------------------------
   let lastT = performance.now(), saveT = 0, hoverT = 0;
-  function loop(now) {
+  // (one broken frame must not stop the world: the error is reported and the next frame comes anyway)
+  let frameErrs = 0;
+  function loop(now) { try { frame(now); } catch (e) { frameErrs++; if (frameErrs <= 5 || frameErrs % 200 === 0) console.error('frame', e); requestAnimationFrame(loop); } }
+  function frame(now) {
     const rdt = Math.min(0.1, Math.max(0, (now - lastT) / 1000)); lastT = now;
     // the years are being skipped: the world only lives, nothing is drawn
     if (G.S && G.Skip && G.Skip.on) { G.Skip.frame(rdt); requestAnimationFrame(loop); return; }

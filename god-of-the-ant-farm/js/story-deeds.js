@@ -40,7 +40,7 @@
     if (!c.take('p', { vital: true, force: true })) return 'ocupada';
     const V = PD(s.cast.victim), T = PD(s.cast.target);
     const body = G.Carnage && G.Carnage.byVid(s.cast.victim);
-    const at = body ? [body.x, body.y] : [s.place.x, s.place.y];
+    const at = body ? [body.x, body.y] : s.place ? [s.place.x, s.place.y] : [p.x, p.y];
     yield c.walk('p', Sn.spot(at[0] + 0.8, at[1] + 0.5, 1.5) || at, { max: 60 });
     c.ready();
     c.tag('p', ({ pai: 'filh', mae: 'filh', filho: 'pai', filha: 'pai' })[s.data.rel] ? (s.data.rel === 'pai' || s.data.rel === 'mae' ? (p.g === 'f' ? 'filha' : 'filho') : (p.g === 'f' ? 'mãe' : 'pai')) + ' de ' + (V ? V.name : '') : 'quem ficou');
@@ -246,7 +246,7 @@
       const p = P(s.protag);
       if (!G.Scene.running(s.id) && p) {
         // the oath, played (if they are near the place, on the day)
-        if (!s.data.jur) { s.data.jur = 1; if (free(p) && G.dist(p.x, p.y, s.place.x, s.place.y) < 30 && G.S.day - s.born < 1) { St.scene(s, 'vg-juramento', {}, { at: [s.place.x, s.place.y] }); return; } }
+        if (!s.data.jur) { s.data.jur = 1; if (free(p) && s.place && G.dist(p.x, p.y, s.place.x, s.place.y) < 30 && G.S.day - s.born < 1) { St.scene(s, 'vg-juramento', {}, { at: [s.place.x, s.place.y] }); return; } }
         // (the field of battle: played by St.vgEncounter when the two of them really face each other)
       }
       return OV.tick.call(this, s);

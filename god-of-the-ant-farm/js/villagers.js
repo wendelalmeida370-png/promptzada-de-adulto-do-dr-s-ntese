@@ -453,7 +453,7 @@
     if (v.carry && v.carry.k === 'food') { // eat what you carry
       v.carry.n -= 1; v.hunger = Math.max(0, v.hunger - 55); if (v.carry.n <= 0) v.carry = null; emote(v, 'food', 1.5); return setTask(v, { type: 'idle', pri: 0, wait: 1 });
     }
-    if (((G.Army && G.Army.larder(v)) || G.Fac.stockV(v)).food >= 1) return setTask(v, { type: 'eat', pri: v.hunger > 85 ? 2.5 : 1.2 });
+    if (((G.Army && G.Army.larder(v)) || G.Fac.stockV(v)).food >= 1 && !(v._noStore > S.clock)) return setTask(v, { type: 'eat', pri: v.hunger > 85 ? 2.5 : 1.2 });
     const b = nearestBush(v, 20); if (b) return setTask(v, { type: 'forage', id: b.id, pri: 1.4 });
     emote(v, 'food', 2);
     return null;
@@ -972,8 +972,8 @@
         if (t.st === 0) {
           const d = G.Village.nearestDropoff(v.x, v.y, v.set); if (!d) return end(v);
           const alt = G.Village.dropoffs(v.set).filter(o => o !== d).sort((p, q) => G.dist2(p.x, p.y, v.x, v.y) - G.dist2(q.x, q.y, v.x, v.y)).slice(0, 3);
-          let ok = false; for (const b of [d].concat(alt)) { const [fx, fy] = G.Village.frontTile(b); if (Vg.goto(v, fx, fy, true)) { ok = true; break; } }
-          if (!ok) return end(v); t.st = 1;
+          const n0 = v._pfN || 0; let ok = false; for (const b of [d].concat(alt)) { const [fx, fy] = G.Village.frontTile(b); if (Vg.goto(v, fx, fy, true, b === d ? 8000 : 0)) { ok = true; break; } }
+          if (!ok) { v._pfN = n0 + 1; v._noStore = S.clock + 12; unstick(v); return end(v); } t.st = 1;
         } else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; } }
         else {
           v.act = 'eat';
@@ -1523,7 +1523,8 @@
     if (wd.t < 20) return false;
     const moved = G.dist(v.x, v.y, wd.x, wd.y); const mv = wd.mv;
     wd.x = v.x; wd.y = v.y; wd.t = 0; wd.mv = 0;
-    if (moved > 0.6 || (v.task && STILL[v.task.type])) return false;
+    if (v.task && STILL[v.task.type]) return false;
+    if (moved > 0.6) return (v._pfN || 0) >= 8 ? unstick(v) : false;
     const failing = (v._pfN || 0) >= 4, treading = mv >= 15 && moved < 0.4;
     if (!failing && !treading) return false;
     return unstick(v);

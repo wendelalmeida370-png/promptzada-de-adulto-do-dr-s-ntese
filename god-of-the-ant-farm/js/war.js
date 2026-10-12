@@ -359,6 +359,12 @@
     const captor = G.Fac.ofV(v);
     v.captive = null; v.role = null; v.home = 0;
     G.Life && G.Life.bio(v, 'freed');
+    if (dest && !W.sameLand(v.x, v.y, dest.cx, dest.cy)) {
+      let near = null, bd = 1e9; for (const s of S.settlements.values()) if (s.fac === dest.fac && W.sameLand(v.x, v.y, s.cx, s.cy)) { const d = G.dist2(v.x, v.y, s.cx, s.cy); if (d < bd) { bd = d; near = s; } }
+      const here = S.settlements.get(v.set);
+      if (near) dest = near;
+      else if (here && W.sameLand(v.x, v.y, here.cx, here.cy)) { G.Vg.endTask(v); v.guestOf = { fac: here.fac, from: dest.fac, d: S.day }; dest = null; }
+    }
     if (dest) { v.set = dest.id; G.Vg.endTask(v); G.Vg.setTask(v, { type: 'migrate', pri: 1.6, kind: 'migrate' }); }
     if (how === 'fuga') {
       S.stats.escapes = (S.stats.escapes || 0) + 1;
@@ -372,7 +378,7 @@
     return null;
   }
   Wr.startEscape = function (v) {
-    const dest = destFor(v); if (!dest) return false;
+    const dest = destFor(v); if (!dest || !W.sameLand(v.x, v.y, dest.cx, dest.cy)) return false;
     G.Vg.endTask(v);
     G.Vg.setTask(v, { type: 'escape', to: dest.id, pri: 4.6, kind: 'escape' });
     return true;

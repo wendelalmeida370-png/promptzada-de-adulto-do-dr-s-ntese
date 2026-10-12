@@ -1223,6 +1223,8 @@
     const band = cv.bandits;
     if (band) { dead += band.n; breakBand(cv, `A terra engoliu ${C.a(cv)} com ${band.name} lá dentro. Nunca mais se viu ${band.leader}.`); }
     for (const a of cv.sleepers) { dead++; void a; } cv.sleepers = [];
+    dead += (cv.sheltered || []).length; cv.sheltered = [];
+    for (const a of S.animals.values()) if (a.shelter === cv.id) { a.shelter = 0; a.seek = false; }
     for (let i = 0; i < N * N; i++) if (U.id[i] === cv.id) { U.k[i] = ROCK; U.f[i] = 0; U.id[i] = 0; S.scar[i] = Math.max(S.scar[i], G.DAY_LEN * 0.5); }
     U.beasts = U.beasts.filter(b => b.cave !== cv.id);
     cv.gone = S.day; cv.mouths = [];

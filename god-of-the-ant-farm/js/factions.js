@@ -131,18 +131,14 @@
   F.update = function (dt) {
     tTerr -= dt;
     if (tTerr <= 0) { tTerr = 3; F.updateTerritory(); }
-    G.Politics && G.Politics.update(dt);
-    G.WorldWar && G.WorldWar.update(dt);
-    G.War && G.War.update(dt);
-    G.Siege && G.Siege.update(dt);
-    G.Civ.update(dt);
-    G.City && G.City.update(dt);
-    G.Naval && G.Naval.update(dt);
-    G.Sea && G.Sea.update(dt);
-    G.Stories && G.Stories.update(dt);
-    G.Eco && G.Eco.update(dt);
-    G.Army && G.Army.update(dt);
-    G.Wars && G.Wars.update(dt);
-    G.Fest && G.Fest.update(dt);
+    for (const m of MODS) G.tryRun(m[0], m[1], dt);
   };
+  // (each on its own: one that throws does not stop the others)
+  const MODS = [
+    ['Politics', dt => G.Politics && G.Politics.update(dt)], ['WorldWar', dt => G.WorldWar && G.WorldWar.update(dt)], ['War', dt => G.War && G.War.update(dt)],
+    ['Siege', dt => G.Siege && G.Siege.update(dt)], ['Civ', dt => G.Civ.update(dt)], ['City', dt => G.City && G.City.update(dt)],
+    ['Naval', dt => G.Naval && G.Naval.update(dt)], ['Sea', dt => G.Sea && G.Sea.update(dt)], ['Stories', dt => G.Stories && G.Stories.update(dt)],
+    ['Eco', dt => G.Eco && G.Eco.update(dt)], ['Army', dt => G.Army && G.Army.update(dt)], ['Wars', dt => G.Wars && G.Wars.update(dt)],
+    ['Fest', dt => G.Fest && G.Fest.update(dt)],
+  ];
 })(window.G);

@@ -796,6 +796,6 @@
     const p = P(s.protag); const r = s.data.vow && P(s.data.vow);
     St.finish(s, 'fracassada', 'tragico', `${(PD(s.cast.captive) || {}).name} foi ${ctx(s).DONE} na praça de ${townOf(s)}. Na noite seguinte, ${p ? p.name : 'quem tentou salvar'} ${s.data.vow ? 'voltou ao cadafalso, desceu o corpo e jurou vingança.' : 'voltou ao cadafalso e ficou ali até o dia clarear.'}`, { log: true, big: 1, clima: 'cadafalso' });
     // the oath becomes a story of its own
-    if (p && r && St.DEF.vinganca && s.origin[0] && G.S.villagers.has(r.id)) St.plantFrom('vinganca', { protag: p.id, score: 0.9, cast: { victim: s.cast.captive, target: r.id }, data: { rel: St.relOf(p, PD(s.cast.captive)), cause: 'execution', saw: 1, town: townOf(s), ft: G.Fac.idOfV(r) }, motifs: ['gatilho:cadafalso', 'rel:' + (St.relOf(p, PD(s.cast.captive)) || '')] }, s.origin[0]);
+    if (p && r && St.DEF.vinganca && s.origin[0] && G.S.villagers.has(r.id)) St.plantFrom('vinganca', { protag: p.id, score: 0.9, cast: { victim: s.cast.captive, target: r.id }, place: { kind: 'lugar', name: 'o cadafalso de ' + townOf(s), x: p.x, y: p.y, town: true }, data: { rel: St.relOf(p, PD(s.cast.captive)), cause: 'execution', saw: 1, town: townOf(s), ft: G.Fac.idOfV(r) }, motifs: ['gatilho:cadafalso', 'rel:' + (St.relOf(p, PD(s.cast.captive)) || '')] }, s.origin[0]);
   }
 })(window.G);

@@ -53,10 +53,10 @@
   }
   Sc.art = art;
   // 'uma clareira…' -> 'numa clareira…', 'o porão…' -> 'no porão…'
-  const inPlace = l => l.name.replace(/^(uma|um|o|a|os|as) /, (w, a) => ({ uma: 'numa ', um: 'num ', o: 'no ', a: 'na ', os: 'nos ', as: 'nas ' })[a]);
+  const inPlace = l => !l ? 'num lugar escondido' : l.name.replace(/^(uma|um|o|a|os|as) /, (w, a) => ({ uma: 'numa ', um: 'num ', o: 'no ', a: 'na ', os: 'nos ', as: 'nas ' })[a]);
   const plural = n => /^(Os|As) /.test(n);
   // 'a Furna…' -> 'à Furna…', 'o porão…' -> 'ao porão…', 'uma clareira…' -> 'a uma clareira…'
-  const toPlace = l => l.name.replace(/^(uma|um|o|a|os|as) /, (w, a) => ({ uma: 'a uma ', um: 'a um ', o: 'ao ', a: 'à ', os: 'aos ', as: 'às ' })[a]);
+  const toPlace = l => !l ? 'a um lugar escondido' : l.name.replace(/^(uma|um|o|a|os|as) /, (w, a) => ({ uma: 'a uma ', um: 'a um ', o: 'ao ', a: 'à ', os: 'aos ', as: 'às ' })[a]);
   // the subject with its epithet: 'Faraó Mutemwia, a Justa,'
   const styV = (f, v) => { const t = P.styled(f, v); return t.includes(',') ? t + ',' : t; };
   const investigating = id => st().inq.some(i => i.by === id);
@@ -591,6 +591,21 @@
   };
 
   // ------------------------------ the loop ------------------------------
+  function lodgeGone(l) {
+    const S = G.S; if (!S.settlements.has(l.set)) return true;
+    if (l.b) { const b = S.buildings.get(l.b); if (!b || !b.built || b.set !== l.set) return true; }
+    if (l.cave && G.Caves) { const cv = G.Caves.get(l.cave); if (!cv || cv.gone) return true; }
+    return false;
+  }
+  function moveLodges(q) {
+    for (const l of q.lodges.slice()) {
+      if (!lodgeGone(l) || meetOf(l)) continue;
+      q.lodges = q.lodges.filter(x => x !== l);
+      const m = person(q.master); const set = G.S.settlements.get(l.set) || (m && G.S.settlements.get(m.set));
+      const n = set && lodgeNear(set, CREED[q.creed].lodge);
+      if (n) { Object.assign(l, n); l.b = n.b || 0; l.cave = n.cave || 0; q.lodges.push(l); }
+    }
+  }
   let tA = 0, tB = 0, lastDay = -1;
   Sc.update = function (dt) {
     const S = G.S; if (!S) return; const s = st();
@@ -612,6 +627,7 @@
         for (const mm of q.members.slice()) if (!person(mm.id)) q.members = q.members.filter(x => x !== mm);
         if (!person(q.master)) { const heir = Sc.membersOf(q).sort((a, b) => standing(b) - standing(a))[0]; if (heir) { q.master = heir.id; const mm = q.members.find(x => x.id === heir.id); if (mm) mm.rank = 'mestre'; } else { q.gone = S.day; continue; } }
         if (G.R() < 0.25) recruit(q);
+        moveLodges(q);
         if (newDay) politics(q);
       }
       if (newDay) for (const f of G.Fac.all()) {

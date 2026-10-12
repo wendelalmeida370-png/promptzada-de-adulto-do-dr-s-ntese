@@ -196,7 +196,7 @@
   Nv.repairs = 0;
   function reconcileCrews() {
     const S = G.S; let byId = null;
-    for (const s of S.ships) if (s.crew && s.crew.length) { const k = s.crew.filter(id => S.villagers.has(id)); if (k.length !== s.crew.length) s.crew = k; }
+    for (const s of S.ships) if (s.crew && s.crew.length) { const k = s.crew.filter(id => { const v = S.villagers.get(id); return v && (!v.aboard || v.aboard === s.id); }); if (k.length !== s.crew.length) s.crew = k; }
     for (const v of S.villagers.values()) {
       if (!v.aboard) continue;
       if (!byId) { byId = new Map(); for (const s of S.ships) byId.set(s.id, s); }

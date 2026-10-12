@@ -319,7 +319,7 @@
       tone: sd.tone || def.tone, tags: (sd.tags || def.tags).slice(), motifs: sd.motifs.slice(), heat: Math.round(sd.score * 100) / 100,
       gen: 1, prev: [], fac: facOf(p), title: '', tk: '', alt: sd.alt || null, src: sd.src || 0,
     };
-    def.begin(story, sd);
+    try { def.begin(story, sd); } catch (e) { console.warn('stories begin', sd.type, e); return null; }
     // the opening chapter tells what happened — on the day it happened
     const of = factById(sd.origin[0]); if (of && story.chapters[0] && of.d < story.chapters[0].d) story.chapters[0].d = of.d;
     if (!story.title) titleOf(story);

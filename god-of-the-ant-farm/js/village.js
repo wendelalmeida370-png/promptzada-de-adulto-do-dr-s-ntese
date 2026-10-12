@@ -636,11 +636,12 @@
       }
       if (!v.home) { const b = findHome(1); if (b) { v.home = b.id; b.res++; } }
     }
-    // grown single adults move out of an overcrowded parental home when possible
+    // grown single adults move out of an overcrowded parental home when possible (not the parent the children follow)
+    const minders = new Set(); for (const v of vs) if (v.age < 16 && v.home) { const m = S.villagers.get(v.mother), f = S.villagers.get(v.father); if (m && m.home === v.home) minders.add(m.id); else if (f && f.home === v.home) minders.add(f.id); }
     for (const b of homes) {
       if (!b.built || space(b) >= 0) continue;
       for (const v of vs) {
-        if (v.home !== b.id || v.age < 18 || v.partner) continue;
+        if (v.home !== b.id || v.age < 18 || v.partner || minders.has(v.id)) continue;
         const nb = findHome(1); if (nb && nb !== b) { v.home = nb.id; nb.res++; b.res--; }
         if (space(b) >= 0) break;
       }
@@ -922,7 +923,33 @@
     for (const s of G.S.settlements.values()) { assignHousing(s); assignJobs(s); }
     V.updateEra();
   };
+  // someone who lives in a town across the water they cannot walk to (a captive freed overseas, a migrant whose road broke):
+  // after a day of it, a village of their own people on this land takes them in — or a town not at war with them, as a guest
+  const IN_TRANSIT = { band: 1, swim: 1, naufrago: 1, muster: 1, scene: 1, embark: 1, aboard: 1, escorted: 1, cais: 1, expl: 1 };
+  function strays() {
+    const S = G.S;
+    for (const v of S.villagers.values()) {
+      if (v.captive || v.aboard || v.ug || v.wrecked || v.held || v.air || v.age < 3 || (v.task && IN_TRANSIT[v.task.type]) || (G.Expe && G.Expe.memberOf(v.id))) { v._stray = 0; continue; }
+      const set = S.settlements.get(v.set); if (!set || W.sameLand(v.x, v.y, set.cx, set.cy)) { v._stray = 0; continue; }
+      const f = G.Fac.get(set.fac); if (f && f.leader === v.id) continue;
+      if (!v._stray) { v._stray = S.day; continue; }
+      let best = null, bd = 1e18, own = false, foe = null, fd = 1e18;
+      for (const o of S.settlements.values()) {
+        if (!W.sameLand(v.x, v.y, o.cx, o.cy)) continue; const mine = o.fac === set.fac; const d = G.dist2(v.x, v.y, o.cx, o.cy);
+        if (!mine && G.Fac.atWar(o.fac, set.fac)) { if (d < fd) { fd = d; foe = o; } continue; }
+        if (d + (mine ? 0 : 1e9) < bd) { bd = d + (mine ? 0 : 1e9); best = o; own = mine; }
+      }
+      // (only enemies on this land: like a castaway on a hostile shore, they are taken)
+      if (!best && foe && G.War && G.War.enslave) { G.Vg.endTask(v); G.War.enslave(v, set.fac, set.id); v.set = foe.id; v.home = 0; v._stray = 0; continue; }
+      // (nobody at all on this land: stranded like a castaway — the camp, the raft, the hamlet of the shipwrecked)
+      if (!best && !foe) { v.wrecked = { ship: 0, name: 'o barco', d: S.day, fac: set.fac, exp: 0, x: +v.x.toFixed(1), y: +v.y.toFixed(1) }; v._stray = 0; continue; }
+      if (!best) continue;
+      G.Vg.endTask(v); v.set = best.id; v.home = 0; v._stray = 0;
+      if (!own) v.guestOf = { fac: best.fac, from: set.fac, d: S.day };
+    }
+  }
   V.onNewDay = function () {
+    strays();
     checkExpansion();
     V.updateEra();
     G.Politics.onNewDay();

@@ -128,6 +128,9 @@ window.G = window.G || {};
 
   // map size can change between worlds: modules register a hook to refresh their cached N
   G.mapHooks = [];
+  // (a module that throws does not stop the others: it is reported a few times, then only counted)
+  G.modErr = {};
+  G.tryRun = function (name, fn, dt) { try { fn(dt); } catch (e) { const n = G.modErr[name] = (G.modErr[name] || 0) + 1; if (n <= 3 || n % 500 === 0) console.error(`[${name}]${n > 1 ? ` (${n}×)` : ''}`, e); } };
   // a new world begins (a new game, a save loaded): the modules drop what belonged to the one before
   G.worldHooks = [];
   G.newWorld = function () { for (const h of G.worldHooks) { try { h(); } catch (e) { console.warn('world hook', e); } } };

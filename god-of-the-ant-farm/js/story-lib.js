@@ -316,7 +316,7 @@
       const p = P(s.protag); s.phase = p.age < 16 ? 'crescer' : 'remoer'; s.data.peaceFrom = -1;
       s.data.war = warSince(peopleOf(p), peopleOf(P(s.cast.target)));
       const k = s.data.cause === 'execution' || s.data.cause === 'coup' ? 'vg-execucao' : !s.data.saw ? 'vg-noticia' : p.age < 12 ? 'vg-crianca' : 'vg-juramento';
-      St.beat(s, k, null, { x: s.place.x, y: s.place.y });
+      St.beat(s, k, null, s.place ? { x: s.place.x, y: s.place.y } : null);
       if (G.Life) G.Life.bio(p, 'note', `Jurou vingar ${REL_POSS[s.data.rel] || ''} ${(P(s.cast.victim) || {}).name || ''}`.replace(/\s+/g, ' ').trim());
     },
     tick(s) {
@@ -541,7 +541,7 @@
         else St.finish(s, 'reencontro', 'agridoce', St.say(s, 'rs-livre-longe', { CNOW: cn }));
         return;
       }
-      if (c.set !== s.data.city && setName(c.set)) { s.data.city = c.set; s.data.cityName = setName(c.set); s.data.ft = facOf(c); St.beat(s, 'rs-mudou'); }
+      if (c.set !== s.data.city && setName(c.set)) { s.data.city = c.set; s.data.cityName = setName(c.set); s.data.ft = facOf(c); const seen = s.data.told || (s.data.told = []); if (!seen.includes(c.set)) { seen.push(c.set); St.beat(s, 'rs-mudou'); } }
       if (p.captive && !s.data.pcap) {
         s.data.pcap = 1;
         if (p.set === c.set) { St.finish(s, 'reencontro', 'agridoce', St.say(s, 'rs-correntes-juntos', { FREED: s.data.freed ? 1 : 0 }), { log: true, x: p.x, y: p.y, big: s.data.freed ? 1 : 0 }); return; }

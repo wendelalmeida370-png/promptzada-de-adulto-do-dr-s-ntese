@@ -92,14 +92,14 @@
     if (!Sk.on || g !== gen) return;
     const S = G.S; const t0 = performance.now();
     let blessT = 0, done = null; const until = Sk.goal.until; let uc = 0;
-    while (performance.now() - t0 < SLICE) {
+    try { while (performance.now() - t0 < SLICE) {
       const d0 = S.day;
       G.debug.step(DT);
       if (Sk.course === 'fartura' && (blessT -= DT) <= 0) { blessT = 2; bless(); }
       // (a hunt of the dev mode: a few times a game-hour, the thing looked for)
       if (until && ++uc >= 8) { uc = 0; let hit = false; try { hit = !!until(); } catch (e) { hit = false; } if (hit) { done = 'alvo'; break; } }
       if (S.day !== d0) { done = check(); if (done) break; }
-    }
+    } } catch (e) { console.error('skip', e); done = 'parado'; }
     G.FX.list.length = 0; G.FX.rings.length = 0; G.FX.glows.length = 0; G.FX.bolts.length = 0; G.FX.floaters.length = 0;
     collect();
     if (done) Sk.finish(done); else pump.port2.postMessage(g);
