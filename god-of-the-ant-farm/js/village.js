@@ -535,7 +535,7 @@
     const cap = V.cap(fac.id); const st = fac.stock;
     let farmsBuilt = 0; for (const b of S.buildings.values()) if (b.set === set.id && b.type === 'farm' && b.built) farmsBuilt++;
     let templeBuilt = false; for (const b of S.buildings.values()) if (b.set === set.id && (b.type === 'temple') && b.built) templeBuilt = true;
-    let threats = 0; for (const a of S.animals.values()) if (!a.dead && (G.Animals.threat(a) || (G.Animals.DEF[a.kind] && G.Animals.DEF[a.kind].bold > 0.3)) && G.dist(a.x, a.y, set.cx, set.cy) < 20) threats++;
+    let threats = 0; for (const a of S.animals.values()) if (!a.dead && (G.Animals.danger(a) || (G.Animals.DEF[a.kind] && G.Animals.DEF[a.kind].bold > 0.3)) && G.dist(a.x, a.y, set.cx, set.cy) < 20) threats++;
     const want = {}; for (const r of WORK_ROLES) want[r] = 0;
     // workplaces: shepherds, weavers, smiths, merchants...
     const eco = G.Eco ? G.Eco.demand(set, fac, A) : {};

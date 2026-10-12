@@ -313,6 +313,9 @@
   // a wild predator going after somebody's herd
   A.raider = a => !a.dead && !a.dom && a.state === 'chase' && !a.carc && a.target && !!(G.S.animals.get(a.target) || {}).dom;
   // is this animal a danger to people right now?
+  // the danger a town knows of from one day to the next: a raid, a beast called up or of legend — not the chase or the
+  // rage of this moment (the save keeps neither, so a town's choices made on one changed on loading: L-082)
+  A.danger = a => !a.dead && !!SP[a.kind] && !a.tamed && !!(a.summoned || a.raid || a.legend);
   A.threat = function (a) {
     if (a.dead) return false; const sp = SP[a.kind]; if (!sp) return false;
     if (a.tamed) return false; // a city's guardian beast
