@@ -168,8 +168,8 @@
       V.removeBuilding(b);
       if (b.type === 'campfire' && set) set.campfire = 0;
     } else {
-      // turn into ruins in place (non-blocking)
-      b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.ruinT = G.DAY_LEN * 3; b.hp = 1; W.touchWalk();
+      // turn into ruins in place (non-blocking); what stands now is the ruin, finished or not what it was going to be (L-081)
+      b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.progress = 1; b.upgradeFrom = null; b.ruinT = G.DAY_LEN * 3; b.hp = 1; W.touchWalk();
     }
     G.FX && G.FX.collapse(cx, cy, b);
     G.Audio && G.Audio.at(cx, cy, 'collapse', true);

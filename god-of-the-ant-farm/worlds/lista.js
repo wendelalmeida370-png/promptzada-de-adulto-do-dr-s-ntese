@@ -2,22 +2,22 @@
 // os mundos prontos que vêm com o jogo: o que cada um é, sem o seu peso (escrito por qa/prontos.js — não editar à mão)
 G.Ready.list({
  "metropole": {
-  "day": 42,
-  "pop": 471,
+  "day": 43,
+  "pop": 515,
   "peoples": 5,
-  "towns": 14,
+  "towns": 15,
   "N": 160,
   "map": "continente",
   "seed": 3202,
   "city": {
    "name": "Tenochtitlan",
    "tier": 4,
-   "pop": 104
+   "pop": 107
   },
   "wars": 0,
   "ww": null,
   "world": "Valante",
-  "bytes": 2165679
+  "bytes": 2264197
  },
  "cidade": {
   "day": 11,
