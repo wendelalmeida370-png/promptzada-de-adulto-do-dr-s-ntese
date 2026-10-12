@@ -128,6 +128,8 @@ O botão ⏭ (ou `J`) abre **Avançar no tempo**: o mundo vive sozinho e depress
 
 O mundo lembra seus mortos por três gerações. Depois de 80 anos, um nome some do registro — a menos que alguém vivo o chame de pai, mãe ou avô, ou que ele tenha importado: governantes, heróis, quem ganhou um apelido, os grandes guerreiros. Os cemitérios guardam doze túmulos; quando uma cidade já tem os cemitérios que o seu tamanho pede, o mais antigo é reaproveitado e os ossos vão para o **ossuário**. Assim um mundo de mil anos não carrega dezenas de milhares de estranhos nem vira um campo de cemitérios.
 
+Mundos grandes (mais de mil e poucas almas) são salvos **comprimidos** no navegador — cabem dez vezes mais, e o jogo só para um instante.
+
 ## Biomas e clima
 
 O clima nasce da latitude (neve ao norte, trópicos ao sul), da altitude, da umidade, dos rios e do mar. Cada mundo mistura **sete biomas**, cada um com chão, árvores, fertilidade, custo de caminhada, risco de fogo e bichos próprios:

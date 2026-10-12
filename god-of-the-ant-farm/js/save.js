@@ -39,9 +39,26 @@
 
   // ages kept to a thousandth, never rounded across a birthday (a baby of 1.9996 must not wake up from a load a child)
   Sv.ageR = a => { const x = Math.round(a * 1000) / 1000; return Math.floor(x) > Math.floor(a) ? Math.floor(a) + 0.999 : x; };
+  // A big world goes to the browser compressed: the browser keeps about five million characters for the whole site, and a
+  // world of fifteen hundred souls is more than that as plain text (gzip makes it about a tenth). The compression is the
+  // browser's own and finishes a moment later (Sv.pending); a small world is still written at once, as plain text. A short
+  // note beside it says what the save is, so the menu does not have to open the world to tell (L-076).
+  const BIG = 3e6, INFO = KEY + ':info';
+  Sv.BIG = BIG;
+  let seq = 0; Sv.pending = null;
+  const canZip = () => typeof CompressionStream === 'function' && typeof DecompressionStream === 'function';
+  const b64 = u8 => { let t = ''; for (let i = 0; i < u8.length; i += 0x8000) t += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(t); };
+  const unb64 = t => { const b = atob(t); const u8 = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u8[i] = b.charCodeAt(i); return u8; };
+  const gzip = str => new Response(new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer().then(b => b64(new Uint8Array(b)));
+  const gunzip = t => new Response(new Blob([unb64(t)]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
   Sv.has = function () { try { return !!localStorage.getItem(KEY); } catch (e) { return false; } };
   Sv.info = function () {
-    try { const s = localStorage.getItem(KEY); if (!s) return null; const o = JSON.parse(s); return { day: o.day, pop: o.villagers.length, era: o.era, when: o.savedAt }; } catch (e) { return null; }
+    try {
+      const s = localStorage.getItem(KEY); if (!s) return null;
+      const i = localStorage.getItem(INFO); if (i) { const o = JSON.parse(i); return { day: o.day, pop: o.pop, era: o.era, when: o.when }; }
+      if (s.startsWith('gz1:')) return null;
+      const o = JSON.parse(s); return { day: o.day, pop: o.villagers.length, era: o.era, when: o.savedAt }; // (a save from before the note)
+    } catch (e) { return null; }
   };
   Sv.serialize = function () {
     const S = G.S;
@@ -81,21 +98,38 @@
     for (const h of G.saveHooks || []) h.save(out, r, arr);
     return JSON.stringify(out);
   };
+  function failed(e, silent) {
+    console.warn('save failed', e);
+    const now = Date.now(); if (!silent || !(now - (Sv.failT || 0) < 600000)) { Sv.failT = now; G.UI && G.UI.notice(silent ? 'O salvamento automático falhou (armazenamento do navegador cheio?). O último mundo salvo é mais antigo.' : 'Não foi possível salvar (armazenamento cheio?).', 'skull'); }
+  }
   Sv.save = function (silent) {
     if (!G.S) return false;
-    try {
-      localStorage.setItem(KEY, Sv.serialize());
+    let str; try { str = Sv.serialize(); } catch (e) { failed(e, silent); return false; }
+    const zip = str.length >= BIG && canZip();
+    const info = JSON.stringify({ day: G.S.day, pop: G.S.villagers.size, era: G.S.era, when: Date.now(), zip: zip ? 1 : 0 });
+    const my = ++seq;
+    if (!zip) {
+      try { localStorage.setItem(KEY, str); localStorage.setItem(INFO, info); } catch (e) { failed(e, silent); return false; }
       if (!silent) G.UI && G.UI.notice('Mundo salvo.', 'save');
       return true;
-    } catch (e) {
-      console.warn('save failed', e);
-      const now = Date.now(); if (!silent || !(now - (Sv.failT || 0) < 600000)) { Sv.failT = now; G.UI && G.UI.notice(silent ? 'O salvamento automático falhou (armazenamento do navegador cheio?). O último mundo salvo é mais antigo.' : 'Não foi possível salvar (armazenamento cheio?).', 'skull'); }
-      return false;
     }
+    // (a newer save started meanwhile: this one is dropped, the newer one is written)
+    const p = Sv.pending = gzip(str).then(z => { if (my !== seq) return; localStorage.setItem(KEY, 'gz1:' + z); localStorage.setItem(INFO, info); if (!silent) G.UI && G.UI.notice('Mundo salvo.', 'save'); })
+      .catch(e => failed(e, silent)).then(() => { if (Sv.pending === p) Sv.pending = null; });
+    return true;
   };
+  // the last save as an object, to cb (a compressed one comes a moment later; cb(null) when there is none or it is damaged)
+  Sv.read = function (cb) {
+    let s = null; try { s = localStorage.getItem(KEY); } catch (e) { s = null; }
+    if (!s) return cb(null);
+    if (!s.startsWith('gz1:')) { let o = null; try { o = JSON.parse(s); } catch (e) { console.warn('load failed', e); } return cb(o); }
+    if (!canZip()) return cb(null);
+    Promise.resolve(s.slice(4)).then(gunzip).then(t => { let o = null; try { o = JSON.parse(t); } catch (e) { console.warn('load failed', e); } cb(o); }, e => { console.warn('load failed', e); cb(null); });
+  };
+  // (the plain save at once — the tests' way; a compressed one needs Sv.read)
   Sv.load = function () {
     let o;
-    try { const s = localStorage.getItem(KEY); if (!s) return false; o = JSON.parse(s); } catch (e) { console.warn('load failed', e); return false; }
+    try { const s = localStorage.getItem(KEY); if (!s || s.startsWith('gz1:')) return false; o = JSON.parse(s); } catch (e) { console.warn('load failed', e); return false; }
     try { Sv.apply(o); return true; } catch (e) { console.error('corrupt save', e); return false; }
   };
   // (loading is part of the world's life: what it draws comes from the world's generator)
@@ -181,5 +215,5 @@
     }
     G.dOcean = d;
   };
-  Sv.clear = function () { try { localStorage.removeItem(KEY); } catch (e) { } };
+  Sv.clear = function () { seq++; try { localStorage.removeItem(KEY); localStorage.removeItem(INFO); } catch (e) { } };
 })(window.G);

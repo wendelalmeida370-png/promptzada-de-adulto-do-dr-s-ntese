@@ -37,6 +37,7 @@ const LIVE = +(process.env.LIVE || 0.3); // anos vividos depois de abrir
       await page.waitForSelector('[data-m="yes"]'); await page.click('[data-m="yes"]');
     } else { await page.click(`.rd-world[data-k="${k}"]`); }
     await page.waitForFunction(day => G.Main.mode === 'game' && G.S && G.S.day === day && document.querySelector('#modal-bg').classList.contains('hidden'), m.day, { timeout: 120000 });
+    await page.waitForFunction(() => !G.Save.pending, null, { timeout: 60000 }); // (a big world is saved compressed, a moment later)
     const r = await page.evaluate(([m, live]) => {
       const S = G.S; const out = { load: [] };
       if (S.villagers.size !== m.pop) out.load.push(`gente ${S.villagers.size} ≠ ${m.pop}`);
@@ -59,6 +60,17 @@ const LIVE = +(process.env.LIVE || 0.3); // anos vividos depois de abrir
     for (const x of r.v1) bad(`${k} depois de viver: ${x}`);
     for (const x of r.trip) bad(`${k} save/load: ${JSON.stringify(x).slice(0, 200)}`);
     if (r.mods) bad(`${k}: erro de módulo (G.modErr)`);
+  }
+  // the last one, from the menu's "continue": what the autosave kept comes back (compressed or not)
+  if (keys.length) {
+    const k = keys[keys.length - 1];
+    const w0 = await page.evaluate(() => { G.UI.closeModal(); G.Save.save(true); return { day: G.S.day, pop: G.S.villagers.size, zip: (localStorage.getItem('gotaf-save-v1') || '').startsWith('gz1:') }; });
+    await page.waitForFunction(() => !G.Save.pending, null, { timeout: 60000 });
+    await page.evaluate(() => G.Main.toMenu()); await page.waitForTimeout(800);
+    await page.click('#btn-continue');
+    const back = await page.waitForFunction(w => G.Main.mode === 'game' && G.S.day === w.day && G.S.villagers.size === w.pop, w0, { timeout: 60000 }).then(() => true, () => false);
+    console.log(`continuar (${k}): ${back ? 'voltou o mesmo mundo' : 'NÃO voltou'} — save ${w0.zip ? 'comprimido' : 'em texto'}`);
+    if (!back) bad(`${k}: o "Continuar" não trouxe de volta o mundo salvo`);
   }
   // a world that is not there: a clean message, nothing breaks
   await page.evaluate(() => { G.Ready.INFO.__falta = { name: 'Falta', sub: '' }; G.Ready.load('__falta'); });

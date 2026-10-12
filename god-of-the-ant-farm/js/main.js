@@ -149,7 +149,9 @@
     ps[2].classList.toggle('show', t > 7.4 && t < 11.8);
     if (t > 12.6) endIntro();
   }
-  M.continueGame = function () { enterSaved(() => G.Save.load(), () => `Bem-vindo de volta. Dia ${G.S.day}, ${G.S.villagers.size} habitantes.`); };
+  M.continueGame = function () {
+    G.Save.read(o => enterSaved(() => { if (!o) return false; try { G.Save.apply(o); return true; } catch (e) { console.error('corrupt save', e); return false; } }, () => `Bem-vindo de volta. Dia ${G.S.day}, ${G.S.villagers.size} habitantes.`));
+  };
   // a world from elsewhere (a ready-made one): loaded like the last save, then kept as the last save
   M.openSave = function (o, welcome) {
     enterSaved(() => { try { G.Save.apply(o); return true; } catch (e) { console.error('corrupt save', e); return false; } }, () => welcome);

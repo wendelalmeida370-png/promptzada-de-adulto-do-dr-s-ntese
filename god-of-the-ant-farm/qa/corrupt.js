@@ -20,6 +20,11 @@ const seed = +(process.argv[2] || 7);
     ['números viram null', s => { const o = JSON.parse(s); for (const v of o.villagers.slice(0, 15)) { v.hunger = null; v.hp = null; v.age = null; } for (const f of o.factions || []) if (f.stock) for (const k in f.stock) f.stock[k] = null; return JSON.stringify(o); }],
     ['campos de gente apagados', s => { const o = JSON.parse(s); let k = 0; for (const v of o.villagers) { const ks = Object.keys(v).filter(x => x !== 'id'); delete v[ks[(k++ * 7) % ks.length]]; } return JSON.stringify(o); }],
     ['dia no futuro distante', s => { const o = JSON.parse(s); o.day = 9999; return JSON.stringify(o); }],
+    // (a big world is saved compressed, L-076: the good one must load, the broken ones be refused)
+    ['comprimido bom', s => 'gz1:' + require('zlib').gzipSync(s).toString('base64')],
+    ['comprimido cortado', s => { const z = require('zlib').gzipSync(s).toString('base64'); return 'gz1:' + z.slice(0, z.length >> 1); }],
+    ['comprimido com lixo', () => 'gz1:@@não é base64@@'],
+    ['comprimido de lixo', () => 'gz1:' + require('zlib').gzipSync('{"day": 3, "villagers": [1, 2').toString('base64')],
     ...top.map(k => ['sem a seção ' + k, s => { const o = JSON.parse(s); delete o[k]; return JSON.stringify(o); }])];
   const res = { recusou: 0, rodou: 0, quebrado: [] };
   for (const [name, fn] of cases.filter(c => !process.env.CASE || new RegExp(process.env.CASE).test(c[0]))) {
@@ -28,6 +33,7 @@ const seed = +(process.argv[2] || 7);
     const r = await page.evaluate(async bad => {
       G.Main.toMenu(); try { localStorage.setItem('gotaf-save-v1', bad); } catch (e) { return { st: 'quota' }; }
       let threw = null; try { G.Main.continueGame(); } catch (e) { threw = e.message; }
+      if (bad.startsWith('gz1:')) await new Promise(r => setTimeout(r, 2500)); // (a compressed save opens a moment later)
       const loaded = G.Main.mode === 'game';
       let ran = 0, stepErr = null;
       const t = performance.now();
