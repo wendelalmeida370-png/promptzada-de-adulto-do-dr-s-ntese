@@ -1,27 +1,9 @@
 'use strict';
 // os mundos prontos que vêm com o jogo: o que cada um é, sem o seu peso (escrito por qa/prontos.js — não editar à mão)
 G.Ready.list({
- "metropole": {
-  "day": 43,
-  "pop": 515,
-  "peoples": 5,
-  "towns": 15,
-  "N": 160,
-  "map": "continente",
-  "seed": 3202,
-  "city": {
-   "name": "Tenochtitlan",
-   "tier": 4,
-   "pop": 107
-  },
-  "wars": 0,
-  "ww": null,
-  "world": "Valante",
-  "bytes": 2264197
- },
  "cidade": {
-  "day": 11,
-  "pop": 119,
+  "day": 12,
+  "pop": 120,
   "peoples": 4,
   "towns": 4,
   "N": 128,
@@ -30,11 +12,47 @@ G.Ready.list({
   "city": {
    "name": "Roma",
    "tier": 3,
-   "pop": 30
+   "pop": 31
   },
   "wars": 0,
   "ww": null,
   "world": "Ysdun",
-  "bytes": 840777
+  "bytes": 870886
+ },
+ "metropole": {
+  "day": 54,
+  "pop": 730,
+  "peoples": 5,
+  "towns": 19,
+  "N": 160,
+  "map": "continente",
+  "seed": 3202,
+  "city": {
+   "name": "Tenochtitlan",
+   "tier": 4,
+   "pop": 127
+  },
+  "wars": 0,
+  "ww": null,
+  "world": "Valante",
+  "bytes": 2823028
+ },
+ "mega": {
+  "day": 76,
+  "pop": 1445,
+  "peoples": 5,
+  "towns": 19,
+  "N": 160,
+  "map": "continente",
+  "seed": 3303,
+  "city": {
+   "name": "Hedeby",
+   "tier": 5,
+   "pop": 271
+  },
+  "wars": 0,
+  "ww": null,
+  "world": "Selos",
+  "bytes": 4074677
  }
 });

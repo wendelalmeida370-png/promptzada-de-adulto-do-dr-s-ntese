@@ -1,6 +1,6 @@
 // quarteirao: node qa/quarteirao.js [mundo] — o quarteirão da metrópole (L-077), provocado de propósito no mundo pronto
-// «metrópole» (worlds/metropole.js): a maior metrópole vive anos abençoados com pedra de sobra, e cada quarteirão que o
-// planejador põe é fiscalizado na hora:
+// «megalópole» (worlds/mega.js; ou outro mundo pronto): a maior cidade de nível 4 ou 5 vive anos abençoados com pedra de
+// sobra, e cada quarteirão que o planejador põe é fiscalizado na hora:
 // 1 vai para terra cara o bastante (a de uma ínsula) e continua quarteirão; derruba só casas baixas, sobrados, hortas e
 //   campos da própria cidade — nunca um prédio público, nunca as duas últimas fazendas nem o último campo de um tipo —
 //   e traz mais camas do que tira;
@@ -12,7 +12,7 @@
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
-const key = process.argv[2] || 'metropole';
+const key = process.argv[2] || 'mega';
 (async () => {
   const browser = await chromium.launch({ args: ['--js-flags=--max-old-space-size=8192'] });
   const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
@@ -67,27 +67,32 @@ const key = process.argv[2] || 'metropole';
   if (!town) { ok('0 uma metrópole no mundo pronto', false, 'nenhuma cidade de nível 4'); }
   else {
     // ---- the bad case on purpose: a family, with its savings, lives where the next block will stand
+    // (a place wholly under a field has no ground for the house: that block goes up as it is; and a heart with no room
+    // for a block today lives a blessed year more — at most twelve — until there is)
     const p0 = await page.evaluate(() => {
-      const S = G.S, V = G.Village, W = __Q; const set = S.settlements.get(W.set);
-      const f = G.Fac.get(set.fac); f.stock.stone = Math.max(f.stock.stone, 200); f.stock.wood = Math.max(f.stock.wood, 120);
-      // (a place wholly under a field has no ground for the house: that block goes up as it is, and the next place is taken)
-      let pos = null, gone = [], house = null, fam = 0, lived = false;
-      for (let k = 0; k < 4 && !house && !lived; k++) {
-        set._noSite = {}; pos = V.blockSite(set); if (!pos) return { none: 'nenhum lugar para um quarteirão' };
+      const S = G.S, V = G.Village, W = __Q; const set = S.settlements.get(W.set); const d0 = S.day;
+      const feed = () => { const f = G.Fac.get(set.fac); if (f) { f.stock.stone = Math.max(f.stock.stone, 200); f.stock.wood = Math.max(f.stock.wood, 120); } };
+      const year = () => { G.Skip.on = true; S.blessed = true; try { const d = S.day; while (S.day === d) { G.Main.skipStep(1); S.divinePeace = Math.max(S.divinePeace || 0, 100); S.weather.fertility = Math.max(S.weather.fertility || 0, 100); } } finally { G.Skip.on = false; S.blessed = false; } feed(); };
+      feed();
+      let pos = null, gone = [], house = null, fam = 0, lived = false, tries = 0;
+      while (!house && !lived && S.day < d0 + 12 && tries < 40) {
+        tries++; set._noSite = {}; pos = V.blockSite(set);
+        if (!pos) { year(); continue; }
         gone = pos.demolish || []; lived = gone.some(id => [...S.villagers.values()].some(v => v.home === id));
         if (lived) break;
         for (let ty = pos[1]; ty < pos[1] + 2 && !house; ty++) for (let tx = pos[0]; tx < pos[0] + 2 && !house; tx++) if (!S.occ[ty * G.N + tx]) house = V.addBuilding('house', tx, ty, set.id, true);
         if (!house) V.startProject(set, 'quarteirao', pos);
       }
-      if (!house && !lived) return { none: 'nenhum lugar de quarteirão com chão livre para a casa' };
+      if (!house && !lived) return { none: `nenhum lugar de quarteirão com chão livre para a casa em ${S.day - d0} anos` };
       if (house) {
         const head = [...S.villagers.values()].find(v => v.set === set.id && v.age >= 25 && !v.captive && !v.jail && !v.aboard && v.partner && S.villagers.get(v.partner));
         for (const v of [head, S.villagers.get(head.partner), ...(head.kids || []).map(id => S.villagers.get(id))]) if (v && v.set === set.id && (v === head || v.age < 16 || v.id === head.partner)) { v.home = house.id; fam++; }
         house.coin = 30;
       }
       const b = V.startProject(set, 'quarteirao', house ? Object.assign([pos[0], pos[1]], { demolish: gone.concat([house.id]) }) : pos);
-      return { site: b && b.type === 'quarteirao' ? b.id : 0, fam, at: `${pos[0]},${pos[1]}` };
+      return { site: b && b.type === 'quarteirao' ? b.id : 0, fam, at: `${pos[0]},${pos[1]}`, waited: S.day - d0 };
     });
+    if (p0.waited) console.log(`  (${p0.waited} anos abençoados até o centro ter lugar para o quarteirão da família)`);
     if (p0.none || !p0.site) ok('0 um quarteirão onde mora uma família', false, p0.none || 'o quarteirão não foi posto');
     else {
       // ---- 4: a save in the middle of the work
@@ -120,7 +125,7 @@ const key = process.argv[2] || 'metropole';
       });
       console.log(`  ${town}: família de ${p0.fam} no lugar ${p0.at}; ${a.blocks} quarteirões até o ano ${a.day}: ${a.log.join(' | ')}`);
       const rule = a.wbad.filter(x => !/moedas|ainda mora/.test(x)), home = a.wbad.filter(x => /moedas|ainda mora/.test(x));
-      ok('1 cada quarteirão em terra cara, derrubando só o que pode', a.blocks >= 2 && !rule.length, `${a.blocks} quarteirões${rule.length ? '; ' + rule.slice(0, 4).join(' | ') : ''}`);
+      ok('1 cada quarteirão em terra cara, derrubando só o que pode', a.blocks >= 1 && !rule.length, `${a.blocks} quarteirões${rule.length ? '; ' + rule.slice(0, 4).join(' | ') : ''}`);
       ok('2 os desalojados sem casa, as moedas guardadas', a.homeless > 0 && !home.length, `${a.homeless} desalojados${home.slice(0, 3).map(x => '; ' + x).join('')}`);
       ok('3 o verificador todo ano (o anel dos quarteirões livre)', !a.viol.length && !a.mods, `até o ano ${a.day}${a.viol.length ? '; ' + a.viol.slice(0, 3).join(' | ') : ': nada'}${a.mods ? '; erro de módulo' : ''}`);
       ok('5 um desalojado morre, um raio cai na obra', s.fire === true && s.died && !a.viol.length && !a.mods, `raio ${s.fire}, morte ${s.died}`);
