@@ -206,8 +206,7 @@
       // where to: our dead to the cemetery, the others to the pyre
       let dest = null;
       if (t.own) {
-        let cem = S.buildings.get(set.cemetery);
-        if (!cem || cem.type !== 'cemetery' || (cem.graves || []).length >= 12) { cem = G.Village.startProject(set, 'cemetery'); if (cem) set.cemetery = cem.id; }
+        const cem = G.Village.cemeteryFor(set);
         if (cem) { t.cem = cem.id; const [fx, fy] = G.Village.frontTile(cem); dest = [fx, fy, true]; }
       }
       if (!dest) { const p = pyreOf(set); if (!p) { c.claim = 0; H.end(v); return true; } t.pyre = p.id; dest = [p.x + 0.5, p.y + 0.4, false]; }
@@ -227,7 +226,7 @@
       const rec = S.dead.get(c.vid);
       if (t.cem) {
         const cem = S.buildings.get(t.cem);
-        if (cem) { (cem.graves = cem.graves || []).push(c.vid); if (rec) { rec.grave = cem.id; rec.buried = 'cem'; } }
+        if (cem && rec) G.Village.bury(cem, rec, 'cem');
         for (const o of S.villagers.values()) {
           if (!rec) break;
           const kin = o.id === rec.partner || o.mother === c.vid || o.father === c.vid || rec.mother === o.id || rec.father === o.id;

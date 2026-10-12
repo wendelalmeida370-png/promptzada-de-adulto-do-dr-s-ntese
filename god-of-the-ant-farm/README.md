@@ -118,6 +118,15 @@ O botão ⏭ (ou `J`) abre **Avançar no tempo**: o mundo vive sozinho e depress
 - **Até quando**: 10, 25 ou 50 anos · até a primeira cidade · até a primeira metrópole · até a primeira megalópole · até a próxima guerra.
 - **Como passam os anos**: **anos de paz e fartura** (a sua bênção: nenhuma guerra começa, colheitas e obras andam mais rápido, pedreiras e matas rendem o dobro, o saber avança mais depressa e os berços se enchem; celeiros cheios mandam metade dos lavradores para as pedreiras — os povos crescem até virar impérios, e quando a bênção acaba eles voltam a se olhar como rivais) ou **deixar o mundo seguir** (guerras, pestes e fomes vêm quando vierem).
 - No **Novo Mundo**, "Começar" faz o mesmo antes de você chegar: 30 anos depois, na era das cidades ou na era dos impérios.
+- Durante o salto o mundo vive em **dois ritmos**: as pessoas, as lutas, os exércitos, os navios e o fogo em meios passos; os bichos, as plantas, o planejamento das cidades, a política e a economia em passos inteiros. Bichos longe de qualquer pessoa e quem está dormindo vivem a cada dois passos (com o tempo somado); as contagens (gente de um povo, de uma vila) são feitas uma vez por passo. Nada é inventado — só fica mais barato o que ninguém está vendo.
+
+### Mundos prontos
+
+**Mundos prontos** (no menu principal, no menu do jogo e na tela do Avançar no tempo) abre na hora mundos que o próprio jogo já viveu, ano por ano, com as mesmas regras: **a primeira cidade**, **a primeira metrópole**, **a primeira megalópole**, **a guerra mundial** (no momento em que o mundo se parte em blocos) e o mesmo mundo depois de **100**, **500** e **1000 anos**. Cada um vem com o ano, a gente, os povos e a maior cidade escritos no cartão. Abrir um mundo pronto é como carregar um save: ele passa a ser o seu mundo salvo (o anterior é substituído).
+
+### A memória dos mortos
+
+O mundo lembra seus mortos por três gerações. Depois de 80 anos, um nome some do registro — a menos que alguém vivo o chame de pai, mãe ou avô, ou que ele tenha importado: governantes, heróis, quem ganhou um apelido, os grandes guerreiros. Os cemitérios guardam doze túmulos; quando uma cidade já tem os cemitérios que o seu tamanho pede, o mais antigo é reaproveitado e os ossos vão para o **ossuário**. Assim um mundo de mil anos não carrega dezenas de milhares de estranhos nem vira um campo de cemitérios.
 
 ## Biomas e clima
 

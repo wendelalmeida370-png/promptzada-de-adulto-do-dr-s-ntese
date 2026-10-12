@@ -31,6 +31,32 @@
     return tr.slice(0, 2);
   }
 
+  // A person is always laid out with the same keys in the same order. The browser's engine reads a field of objects that
+  // share a layout in one go; a thousand people, each with a layout of its own (fields come and go over a life), made every
+  // step a third slower. Keys this list does not know join it at the end (they only cost their own person a little).
+  const SHAPE = [
+    'id', 'name', 'age', 'born', 'civ', 'hp', 'hunger', 'energy', 'role', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'air',
+    'held', 'path', 'pi', 'task', 'act', 'actT', 'carry', 'home', 'set', 'partner', 'mother', 'father', 'kids',
+    'widow', 'devotion', 'fear', 'sick', 'preg', 'lastBirth', 'conceiveDay', 'mourn', 'courtCD', 'emo', 'face',
+    'walkPh', 'moving', 'think', 'scan', 'sleeping', 'inside', 'hurt', 'speed', 'work', 'skin', 'hair', 'kidCloth',
+    'st', 'lastCause', 'lastGod', '_armed', '_bow', '_civ', '_decap', '_fc', '_ford', '_levy', '_noStore', '_ok',
+    '_paveCD', '_pfI', '_pfN', '_pfT', '_pool', '_q', '_ruler', '_saw', '_stray', '_tide', '_vetWar', '_wave',
+    '_wax', '_wd', '_whale', 'aboard', 'arm', 'arrowT', 'arrows', 'babyOn', 'bio', 'boat', 'captive', 'carried',
+    'carrier', 'caught', 'cells', 'chosen', 'coup', 'courage', 'deserter', 'downT', 'drinkDay', 'drinks', 'drunk',
+    'dz', 'elite', 'ep', 'expCD', 'fishXp', 'fury', 'fx', 'fy', 'g', 'gear', 'grp', 'guestOf', 'hang', 'heavyN',
+    'hero', 'hh', 'hhType', 'holdTorch', 'hood', 'hunt', 'immune', 'jail', 'jailUntil', 'job', 'kills', 'lantern',
+    'lastBeast', 'lastBeastId', 'lastBy', 'learn', 'lost', 'lostT', 'merchant', 'mob', 'moves', 'navXp', 'news',
+    'ord', 'palace', 'pe', 'prophet', 'purse', 'rebel', 'reigned', 'revolt', 'rioted', 'robe', 'robeMark', 'rua',
+    'ruaEnd', 'ruaWhy', 'saw', 'sceneHold', 'secret', 'seekT', 'seen', 'shackTry', 'skill', 'stagT', 'thefts',
+    'torch', 'traits', 'ug', 'unit', 'unmask', 'unpaid', 'vet', 'voyages', 'wound', 'wrecked',
+  ];
+  const SHAPED = new Set(SHAPE);
+  Vg.shape = function (o) {
+    for (const k in o) if (!SHAPED.has(k)) { SHAPED.add(k); SHAPE.push(k); }
+    const v = {}; for (let i = 0; i < SHAPE.length; i++) { const k = SHAPE[i]; v[k] = o[k]; }
+    return v;
+  };
+
   Vg.create = function (o) {
     const S = G.S;
     const m = o.mother ? G.person(o.mother) : null, f = o.father ? G.person(o.father) : null;
@@ -38,7 +64,7 @@
     const traits = o.traits || rollTraits([m, f]);
     const home = S.settlements.get(o.set); const civId = o.civ || (home ? G.Civ.idOfFac(home.fac) : null); const civ = G.CIVS[civId];
     let courage = G.clamp(0.45 + (G.R() - 0.5) * 0.5 + (traits.includes('Corajoso') ? 0.35 : 0) - (traits.includes('Medroso') ? 0.35 : 0) + (civ && civ.traits.courage || 0), 0, 1);
-    const v = {
+    const v = Vg.shape({
       id: S.nextId++, name: o.name || uniqueName(g, civId), g, age: o.age, born: S.day - o.age, civ: civId || null,
       hp: 100, hunger: G.rr(5, 35), energy: G.rr(65, 100),
       role: null, x: o.x, y: o.y, z: 0, vx: 0, vy: 0, vz: 0, air: false, held: false,
@@ -52,7 +78,7 @@
       skin: m && f ? (G.R() < 0.5 ? m.skin : f.skin) : (o.skin || G.pick(civ ? civ.skin : SKIN)),
       hair: m && f ? (G.R() < 0.5 ? m.hair : f.hair) : G.pick(civ ? civ.hair : HAIR),
       kidCloth: G.pick(KID_CLOTH), st: { wood: 0, food: 0, stone: 0, built: 0 }, lastCause: 'unknown', lastGod: false,
-    };
+    });
     if (!v.skin) v.skin = G.pick(SKIN); if (!v.hair) v.hair = G.pick(HAIR);
     S.villagers.set(v.id, v);
     G.Life && G.Life.onCreate(v);
@@ -1439,7 +1465,8 @@
   G.worldHooks.push(() => { tAlarm = 0; tPush = 0; });
   Vg.nightWatch = new Map();
   Vg.workshopFac = new Set();
-  const roster = [];
+  const roster = [], sleepAcc = new Map(); let sleepTick = 0;
+  G.worldHooks.push(() => { sleepAcc.clear(); sleepTick = 0; });
   G.worldHooks.push(() => { Vg.alarms.clear(); Vg.fireFighters.clear(); Vg.fishSpots.clear(); Vg.nightWatch.clear(); Vg.workshopFac.clear(); roster.length = 0; }); // (a new world, or a save loaded: it starts over)
   Vg.updateAll = function (dt) {
     const S = G.S;
@@ -1495,29 +1522,37 @@
     }
     // (a list of its own: people die and are born while the loop runs)
     roster.length = 0; for (const v of S.villagers.values()) roster.push(v);
+    const lod = !!(G.Skip && G.Skip.on); if (lod) sleepTick++; else if (sleepAcc.size) sleepAcc.clear();
     for (let k = 0; k < roster.length; k++) {
       const v = roster[k];
       if (v.held) continue;
       if (v.air) { G.airUpdate(v, dt, imp => land(v, imp)); continue; }
+      let vdt = dt;
+      // (the skip: one asleep in bed lives every other half-step, the time added up — nothing that happens to a sleeper
+      // turns on half a second; a fire in the house still wakes them, in the needs)
+      if (lod && v.sleeping && v.task && v.task.type === 'sleep') {
+        if ((v.id + sleepTick) & 1) { sleepAcc.set(v.id, (sleepAcc.get(v.id) || 0) + dt); continue; }
+        const w = sleepAcc.get(v.id); if (w) { vdt += w; sleepAcc.delete(v.id); }
+      }
       // at sea: only the body's needs go on (provisions come from the stores)
       if (v.aboard) {
         if (!G.Naval || !G.Naval.aboard(v.aboard)) { if (G.Naval) G.Naval.unboard(v); else { v.aboard = 0; v.task = null; } const p = W.nearestLand(v.x, v.y, 8); if (p) { v.x = p[0]; v.y = p[1]; } }
-        else { if (!v.task || v.task.type !== 'aboard') v.task = { type: 'aboard', ship: v.aboard, pri: 9, st: 0, age: 0 }; needs(v, dt); v.moving = false; if (v.emo) { v.emo.t -= dt; if (v.emo.t <= 0) v.emo = null; } continue; }
+        else { if (!v.task || v.task.type !== 'aboard') v.task = { type: 'aboard', ship: v.aboard, pri: 9, st: 0, age: 0 }; needs(v, vdt); v.moving = false; if (v.emo) { v.emo.t -= vdt; if (v.emo.t <= 0) v.emo = null; } continue; }
       }
-      needs(v, dt);
+      needs(v, vdt);
       if (!S.villagers.has(v.id)) continue;
       // nobody stays up in the air once the ladder or the pyramid steps are behind them
       if (v.z && !v.air && !(v.task && (v.task.perch || v.task.ladder || v.task.type === 'fest'))) v.z = 0;
-      if (v.age < 2) { babyUpdate(v, dt); if (v.emo) { v.emo.t -= dt; if (v.emo.t <= 0) v.emo = null; } continue; }
+      if (v.age < 2) { babyUpdate(v, vdt); if (v.emo) { v.emo.t -= vdt; if (v.emo.t <= 0) v.emo = null; } continue; }
       if (v.carried) { v.carried = false; v.carrier = 0; }
-      v.scan -= dt;
+      v.scan -= vdt;
       if (v.scan <= 0) { v.scan = 0.3 + G.R() * 0.15; emergency(v); }
-      v.think -= dt;
+      v.think -= vdt;
       if (!v.task || v.think <= 0) { v.think = 1.4 + G.R() * 1.6; decide(v); }
-      if (v.task) runTask(v, dt); else v.moving = false;
+      if (v.task) runTask(v, vdt); else v.moving = false;
       if (!v.task || !v.path || v.pi >= v.path.length) v.moving = false;
-      if (v.emo) { v.emo.t -= dt; if (v.emo.t <= 0) v.emo = null; }
-      if (v.preg > 0 && G.R() < dt * 0.02) emote(v, 'heart', 1.5);
+      if (v.emo) { v.emo.t -= vdt; if (v.emo.t <= 0) v.emo = null; }
+      if (v.preg > 0 && G.R() < vdt * 0.02) emote(v, 'heart', 1.5);
     }
   };
   // ------------------------------ the stuck: someone who has not moved for a long while ------------------------------
@@ -1556,7 +1591,7 @@
     return false;
   }
   Vg.unstick = unstick;
-  Vg.hasWell = function (setId) { for (const b of G.S.buildings.values()) if (b.type === 'well' && b.built && b.set === setId) return true; return false; };
+  Vg.hasWell = G.perPart(function (setId) { for (const b of G.S.buildings.values()) if (b.type === 'well' && b.built && b.set === setId) return true; return false; });
 
   // helpers shared with the war & politics modules
   const H = Vg.H = { setTask, end, move, goto: (v, x, y, adj, max) => Vg.goto(v, x, y, adj, max), arrived, flee: fleeFrom, eatTask, workTask, childDecide };

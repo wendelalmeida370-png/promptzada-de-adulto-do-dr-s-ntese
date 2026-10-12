@@ -149,12 +149,18 @@
     ps[2].classList.toggle('show', t > 7.4 && t < 11.8);
     if (t > 12.6) endIntro();
   }
-  M.continueGame = function () {
+  M.continueGame = function () { enterSaved(() => G.Save.load(), () => `Bem-vindo de volta. Dia ${G.S.day}, ${G.S.villagers.size} habitantes.`); };
+  // a world from elsewhere (a ready-made one): loaded like the last save, then kept as the last save
+  M.openSave = function (o, welcome) {
+    enterSaved(() => { try { G.Save.apply(o); return true; } catch (e) { console.error('corrupt save', e); return false; } }, () => welcome);
+    if (M.mode === 'game' && G.S && G.S.day === o.day) G.Save.save(true);
+  };
+  function enterSaved(load, welcome) {
     G.Audio.init();
-    G.UI.select(null); G.UI.setPower(null);
+    G.UI.closeModal(); G.UI.select(null); G.UI.setPower(null);
     G.FX.list.length = 0; G.FX.floaters.length = 0;
     const S0 = G.S;
-    if (!G.Save.load()) { if (G.S !== S0) { try { M.toMenu(); } catch (e) { console.warn('menu', e); } } G.UI.toast('Não foi possível carregar', 'O save parece corrompido ou inexistente.', 'skull'); return; }
+    if (!load()) { if (G.S !== S0) { try { M.toMenu(); } catch (e) { console.warn('menu', e); } } G.UI.toast('Não foi possível carregar', 'O save parece corrompido ou inexistente.', 'skull'); return; }
     $('#menu').classList.add('fade');
     setTimeout(() => $('#menu').classList.add('hidden'), 700);
     $('#intro').classList.add('hidden');
@@ -162,12 +168,12 @@
     G.UI.setSpeed(1);
     G.UI.showHUD(true); G.Minimap.reset();
     G.UI.viewFac = (G.Fac.all().sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id))[0] || {}).id || 0;
-    G.UI.notice(`Bem-vindo de volta. Dia ${G.S.day}, ${G.S.villagers.size} habitantes.`, 'eye');
-  };
+    G.UI.notice(welcome(), 'eye');
+  }
 
   // ------------------------------ simulation ------------------------------
   function step(dt) { G.inSim++; try { live(dt); } finally { G.inSim--; } }
-  function live(dt) {
+  function tick(dt) {
     const S = G.S;
     S.clock += dt;
     // (while a scene is happening the sun lingers: a night scene does not end in the middle of it — watched or not, the same)
@@ -177,8 +183,29 @@
       (S.popHist = S.popHist || []).push(S.villagers.size); if (S.popHist.length > 500) S.popHist.shift();
       G.tryRun('novo dia', () => G.Village.onNewDay());
     }
+  }
+  function live(dt) {
+    tick(dt);
     for (const m of MODS) G.tryRun(m[0], m[1], dt);
   }
+  // the time skip's step: the world in two rhythms. What is quick and close — people at their tasks, fights, armies,
+  // ships, fire — lives in two half-steps, as the skip always lived; what is slow — beasts, plants, the town planner,
+  // politics, the books of the economy — in one whole step between them. (Nobody watches during the skip; nothing is
+  // invented: every module still lives every second of the years, only with a coarser hand where coarseness changes
+  // nothing. The slow step goes in the middle: what it decides — a peace, a town given up — is acted on by the quick
+  // half that follows, so the world between two steps is as settled as on the screen.)
+  const FINE = { Nature: 1, Villagers: 1, Carnage: 1, Scene: 1, Powers: 1, Riots: 1, Justice: 1 };
+  const fine = h => { tick(h); for (const m of MODS) if (FINE[m[0]]) G.tryRun(m[0], m[1], h); G.tryRun('Factions', dt2 => G.Fac.updatePart(dt2, 'fine'), h); };
+  M.skipStep = function (dt) {
+    G.inSim++;
+    try {
+      const h = dt / 2;
+      G.part++; fine(h);
+      G.part++; G.stepPart = 'coarse';
+      try { for (const m of MODS) if (!FINE[m[0]]) G.tryRun(m[0], m[1], dt); } finally { G.stepPart = null; }
+      G.part++; fine(h);
+    } finally { G.inSim--; }
+  };
   // the world's modules, in the order they live (each one on its own: one that throws does not stop the rest)
   const MODS = [
     ['Nature', dt => G.Nature.update(dt)], ['Village', dt => G.Village.update(dt)], ['Urban', dt => G.Urban && G.Urban.update(dt)], ['Social', dt => G.Social && G.Social.update(dt)], ['Villagers', dt => G.Vg.updateAll(dt)],
@@ -453,6 +480,7 @@
     // menu buttons
     $('#btn-new').onclick = () => { G.Audio.init(); G.Audio.play('click'); G.UI.openSetup(); };
     $('#btn-continue').onclick = () => { G.Audio.init(); G.Audio.play('click'); M.continueGame(); };
+    $('#btn-ready').onclick = () => { G.Audio.init(); G.Audio.play('click'); G.Ready.open(false); };
     $('#btn-howto').onclick = () => { G.Audio.init(); G.Audio.play('click'); G.UI.openHelp(); };
     $('#intro').addEventListener('click', () => endIntro());
     document.addEventListener('visibilitychange', () => { if (document.hidden && M.mode === 'game') G.Save.save(true); });

@@ -12,9 +12,10 @@
   const Sk = G.Skip = { on: false };
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  // a step five times coarser than at 16x: the skip trades smoothness nobody sees for speed
+  // a step ten times coarser than at 16x, lived in two rhythms (G.Main.skipStep): people, fights, armies and ships in
+  // half-steps five times coarser than at 16x, the slow world in whole ones — the skip trades smoothness nobody sees for speed
   // (people still walk from waypoint to waypoint, animals never step further than their target)
-  const DT = 0.5;
+  const DT = 1;
 
   Sk.GOALS = {
     anos10: { label: '10 anos', sub: 'uma geração cresce', years: 10 },
@@ -48,7 +49,8 @@
       <p class="sk-lead">O mundo vive sozinho e depressa, sem desenhar nada: você vê os anos passarem num mapa e as grandes notícias da crônica, e pode parar quando quiser.</p>
       <div class="st-label">Até quando</div><div class="sk-goals">${goals}</div>
       <div class="st-label">Como passam os anos</div><div class="sk-courses">${courses}</div>
-      <div class="mbtns"><button data-m="close">Cancelar</button><button class="primary" data-m="skip-go">Avançar</button></div>`, 'wide skip-modal');
+      <p class="st-hint">Com pressa? Os <b>mundos prontos</b> já viveram esses anos: a primeira cidade, a metrópole, a guerra mundial, mil anos de história — abrem na hora.</p>
+      <div class="mbtns"><button data-m="close">Cancelar</button><button data-m="ready">Mundos prontos</button><button class="primary" data-m="skip-go">Avançar</button></div>`, 'wide skip-modal');
   };
 
   // ------------------------------ running ------------------------------
@@ -94,7 +96,7 @@
     let blessT = 0, done = null; const until = Sk.goal.until; let uc = 0;
     try { while (performance.now() - t0 < SLICE) {
       const d0 = S.day;
-      G.debug.step(DT);
+      G.Main.skipStep(DT);
       if (Sk.course === 'fartura' && (blessT -= DT) <= 0) { blessT = 2; bless(); }
       // (a hunt of the dev mode: a few times a game-hour, the thing looked for)
       if (until && ++uc >= 8) { uc = 0; let hit = false; try { hit = !!until(); } catch (e) { hit = false; } if (hit) { done = 'alvo'; break; } }

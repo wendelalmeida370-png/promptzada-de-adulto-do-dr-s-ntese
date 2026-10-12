@@ -5,6 +5,15 @@
   const P = id => S().villagers.get(id);
   const person = id => S().villagers.get(id) || S().dead.get(id);
   const fin = x => typeof x === 'number' && isFinite(x);
+  // the memory of the dead is judged the moment the world forgets, at the turn of the year: later in the year a widow
+  // marries again or the last grandchild dies, and that name rightly waits for the next turn (L-072)
+  const staleDead = () => {
+    const s = S(); const kin = new Set();
+    for (const v of s.villagers.values()) { if (v.widow) kin.add(v.widow); for (const id of [v.mother, v.father]) { if (!id) continue; kin.add(id); const p = person(id); if (p) { if (p.mother) kin.add(p.mother); if (p.father) kin.add(p.father); } } }
+    let n = 0, ex = null; for (const [id, d] of s.dead) if (s.day - (d.died || 0) >= 80 && !kin.has(id) && !G.Village.remembered(d)) { n++; ex = d; }
+    return { day: s.day, world: s, n, ex };
+  };
+  if (G.Village.forget && !G.Village.forget.qa) { const f = G.Village.forget; G.Village.forget = function () { const r = f.apply(this, arguments); QA.memAfter = staleDead(); return r; }; G.Village.forget.qa = true; }
 
   // ---------------- invariants ----------------
   QA.check = function (opts) {
@@ -94,7 +103,12 @@
     for (const a of armies) {
       const live = (a.members || []).filter(id => P(id));
       if ((a.members || []).length && !live.length) add('war', 2, `exército ${a.name}: todos os membros mortos, mas ativo (${a.phase})`);
-      const w = (wz.wars || []).find(x => x.id === a.war); if (!w) add('war', 1, `exército ${a.name}: guerra ${a.war} não existe`); else if (w.end) add('war', 1, `exército ${a.name}: ativo (${a.phase}) numa guerra que terminou no ano ${w.end}`);
+      const w = (wz.wars || []).find(x => x.id === a.war); if (!w) add('war', 1, `exército ${a.name}: guerra ${a.war} não existe`); else if (w.end) {
+        // (after the peace an army walks home and is closed when its band gets there, as on the screen: only one still
+        // marching, camped, besieging or fighting is wrong — or one that never gets home — T-021)
+        if (a.phase !== 'retorno' && a.phase !== 'retirada' && a.phase !== 'dispersado') add('war', 1, `exército ${a.name}: ativo (${a.phase}) numa guerra que terminou no ano ${w.end}`);
+        else if (S().day - w.end > 2) add('war', 3, `exército ${a.name}: voltando para casa há ${S().day - w.end} anos, desde o fim da guerra`);
+      }
       if (!G.Fac.get(a.fac) || !G.Fac.get(a.fac).alive) add('war', 1, `exército ${a.name}: povo ${a.fac} extinto`);
       if (S().day - (a.day || 0) > 40) add('war', 3, `exército ${a.name}: em campo há ${S().day - a.day} anos (${a.phase})`);
     }
@@ -137,6 +151,15 @@
       if (fin(b.x) && fin(b.y)) { let bad = 0, by = 0; for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const o = s.occ[ty * G.N + tx]; if (o !== b.id) { bad++; by = o; } } if (bad) add('city', 2, `prédio ${b.type}#${b.id}: ${bad} casa(s) do terreno marcadas como de ${by ? (s.buildings.get(by) ? s.buildings.get(by).type + '#' + by : 'fantasma #' + by) : 'ninguém'}`); }
     }
     { let ghost = 0, ex = 0; for (let i = 0; i < s.occ.length; i++) { const o = s.occ[i]; if (o && !s.buildings.has(o)) { ghost++; ex = o; } } if (ghost) add('city', 2, `${ghost} casa(s) do mapa ocupadas por prédio inexistente #${ex}`); }
+    // ---- the memory of the dead: cemeteries hold twelve, a grave and its record agree, nobody is kept past three
+    // generations unless they mattered or the living are their children and grandchildren (L-072)
+    for (const b of s.buildings.values()) {
+      if (b.type !== 'cemetery') continue;
+      const gr = b.graves || []; if (gr.length > 12) add('mem', 3, `cemitério #${b.id}: ${gr.length} túmulos (cabem 12)`);
+      for (const id of gr) { const d = s.dead.get(id); if (d && d.grave !== b.id) add('mem', 3, `cemitério #${b.id}: o túmulo de ${d.name} #${id} aponta para ${d.grave}`); }
+    }
+    for (const [id, d] of s.dead) if (d.grave) { const b = s.buildings.get(d.grave); if (b && (b.type !== 'cemetery' || !(b.graves || []).includes(id))) add('mem', 3, `${d.name} #${id}: enterrado no cemitério ${d.grave}, que não guarda seu túmulo`); }
+    { const m = QA.memAfter; if (m && m.world === s && m.day === s.day && m.n) add('mem', 3, `na virada do ano ficaram ${m.n} morto(s) de mais de 80 anos que ninguém lembra (ex.: ${m.ex.name}, ano ${m.ex.died})`); }
     // ---- quarters of the towns
     if (G.Urban) {
       const owner = new Map(); const NC = Math.ceil(G.N / G.Urban.C);

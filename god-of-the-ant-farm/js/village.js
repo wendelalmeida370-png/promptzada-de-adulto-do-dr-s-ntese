@@ -180,11 +180,11 @@
 
   // ------------------------------ stock (each people has its own) ------------------------------
   V.facOfSet = setId => { const s = G.S.settlements.get(setId); return s ? s.fac : 0; };
-  V.cap = function (fid) {
+  V.cap = G.perPart(function (fid) {
     let c = 80;
     for (const b of G.S.buildings.values()) if (b.built && G.BDEF[b.type].storage && V.facOfSet(b.set) === fid) c += G.BDEF[b.type].storage;
     return c;
-  };
+  });
   V.addStock = function (k, n, fid) {
     const S = G.S; const f = G.Fac.get(fid); if (!f) return 0;
     // (the water of the well is drunk and cooked, not stored: whoever was carrying a jar just puts it down)
@@ -227,7 +227,7 @@
     for (const s of G.S.settlements.values()) { const d = G.dist(x, y, s.cx, s.cy); if (d < bd) { bd = d; best = s; } }
     return best;
   };
-  V.pop = setId => { let n = 0; for (const v of G.S.villagers.values()) if (setId === undefined || v.set === setId) n++; return n; };
+  V.pop = G.perPart(setId => { let n = 0; for (const v of G.S.villagers.values()) if (setId === undefined || v.set === setId) n++; return n; });
   V.mainSettlement = () => { let best = null, bp = -1; for (const s of G.S.settlements.values()) { const p = V.pop(s.id); if (p > bp) { bp = p; best = s; } } return best; };
   V.newSettlementName = function (fid) {
     const civ = fid ? G.Civ.idOfFac(fid) : null;
@@ -817,13 +817,9 @@
     // bury in the cemetery
     const set = S.settlements.get(v.set) || V.mainSettlement();
     if (set && !body) {
-      let cem = S.buildings.get(set.cemetery);
-      if (!cem || cem.type !== 'cemetery' || cem.graves.length >= 12) {
-        cem = V.startProject(set, 'cemetery');
-        if (cem) set.cemetery = cem.id;
-      }
+      const cem = V.cemeteryFor(set);
       if (cem) {
-        cem.graves.push(v.id); rec.grave = cem.id;
+        V.bury(cem, rec);
         // the family comes to say goodbye
         for (const o of S.villagers.values()) {
           const rel = o.id === v.partner || o.mother === v.id || o.father === v.id || v.mother === o.id || v.father === o.id || (v.mother && o.mother === v.mother);
@@ -895,8 +891,11 @@
     updateFaith(dt);
     G.Fac.update(dt);
     if (tSlow >= 1) { updateFarms(tSlow); updateRuins(tSlow); checkMilestones(); tSlow = 0; }
-    if (tHouse >= 2.5) { tHouse = 0; for (const s of S.settlements.values()) assignHousing(s); }
-    if (tJobs >= 4) { tJobs = 0; for (const s of S.settlements.values()) assignJobs(s); }
+    // (during the time skip homes and trades are dealt out half as often: a few seconds more for a new house to fill
+    // or a trade to change hands is nothing in a year of two hundred, and nobody is watching)
+    const sk = G.Skip && G.Skip.on ? 2 : 1;
+    if (tHouse >= 2.5 * sk) { tHouse = 0; for (const s of S.settlements.values()) assignHousing(s); }
+    if (tJobs >= 4 * sk) { tJobs = 0; for (const s of S.settlements.values()) assignJobs(s); }
     if (tPlan >= 3.5) {
       const step = tPlan; tPlan = 0;
       for (const s of [...S.settlements.values()]) {
@@ -958,7 +957,54 @@
       if (!own) v.guestOf = { fac: best.fac, from: set.fac, d: S.day };
     }
   }
+  // ------------------------------ the memory of the dead ------------------------------
+  // A cemetery holds twelve. A full one opens a new one — until the town has as many as its size calls for: then the
+  // oldest is reused, its bones gone to the ossuary (a town of three hundred souls does not grow forty cemeteries).
+  const GRAVES = 12, BONES = 30;
+  V.cemeteryFor = function (set) {
+    const S = G.S;
+    const cur = S.buildings.get(set.cemetery);
+    if (cur && cur.type === 'cemetery' && (cur.graves || []).length < GRAVES) return cur;
+    let old = null, n = 0;
+    for (const b of S.buildings.values()) {
+      if (b.type !== 'cemetery' || b.set !== set.id || !b.built) continue;
+      n++; if (!old || lastBurial(b) < lastBurial(old)) old = b;
+    }
+    if (old && (S.day - lastBurial(old) >= BONES || n >= 2 + Math.floor(V.pop(set.id) / 60))) {
+      for (const id of old.graves || []) { const d = S.dead.get(id); if (d && d.grave === old.id) { d.grave = 0; d.buried = 'ossuario'; } }
+      old.graves = []; set.cemetery = old.id;
+      return old;
+    }
+    const cem = V.startProject(set, 'cemetery'); if (cem) set.cemetery = cem.id;
+    return cem;
+  };
+  // (an old world's cemetery does not know its last burial: its dead do)
+  function lastBurial(b) { if (b.last !== undefined) return b.last; let m = 0; for (const id of b.graves || []) { const d = G.S.dead.get(id); if (d && d.died > m) m = d.died; } return m; }
+  // (a body carried a long way may find its cemetery full: the town's next one takes it, or the common pit)
+  V.bury = function (cem, rec, how) {
+    if ((cem.graves || []).length >= GRAVES) { const set = G.S.settlements.get(cem.set); cem = set ? V.cemeteryFor(set) : null; }
+    if (!cem) { rec.grave = 0; rec.buried = 'vala'; return null; }
+    (cem.graves = cem.graves || []).push(rec.id); cem.last = G.S.day; rec.grave = cem.id; if (how) rec.buried = how;
+    return cem;
+  };
+  // The registry of the dead remembers three generations. After that a name fades — unless someone living still calls
+  // them father, mother or grandparent, or they mattered: rulers, heroes, those with an epithet, great killers.
+  // (a thousand years would otherwise keep tens of thousands of strangers, heavier than the world itself)
+  const FORGET = 80;
+  V.remembered = d => !!(d.reigned || d.hero || d.ep || (d.kills || 0) >= 5);
+  V.forget = function () {
+    const S = G.S; if (!S.dead.size) return 0;
+    const keep = new Set();
+    for (const v of S.villagers.values()) {
+      if (v.widow) keep.add(v.widow);
+      for (const id of [v.mother, v.father]) { if (!id) continue; keep.add(id); const p = G.person(id); if (p) { if (p.mother) keep.add(p.mother); if (p.father) keep.add(p.father); } }
+    }
+    let n = 0;
+    for (const [id, d] of S.dead) if (S.day - (d.died || 0) >= FORGET && !keep.has(id) && !V.remembered(d)) { S.dead.delete(id); n++; }
+    return n;
+  };
   V.onNewDay = function () {
+    V.forget();
     strays();
     checkExpansion();
     V.updateEra();

@@ -54,6 +54,20 @@ window.G = window.G || {};
   G.rngSeed = (seed, day) => ((seed ^ 0x2545F491) + Math.imul(day | 0, 0x9E3779B1)) | 0;
   // (the QA tools set G.rngWatch to see who draws from which generator, and G.inSim says whether the world is living a step)
   G.rngWatch = null; G.inSim = 0;
+  // During the time skip a few head counts (people of a realm or a town, a realm's stores, a well) are taken once per part
+  // of a step instead of once per asker: a birth, a death or a new store in the same part shows in the next one, half a
+  // second later. On the screen, and outside the world's step, they are always counted fresh. (G.Main.skipStep turns G.part)
+  G.part = 0;
+  G.perPart = function (count, key) {
+    let part = -1; const memo = new Map();
+    return function (a, b) {
+      if (!G.inSim || !(G.Skip && G.Skip.on)) return count(a, b);
+      if (part !== G.part) { part = G.part; memo.clear(); }
+      const k = key ? key(a, b) : a; let r = memo.get(k);
+      if (r === undefined) { r = count(a, b); memo.set(k, r); }
+      return r;
+    };
+  };
 
   // ---------- math ----------
   G.clamp = (v, a, b) => (v < a ? a : v > b ? b : v);

@@ -32,8 +32,8 @@
   F.hex = fid => { const f = F.get(fid); return f ? F.COLORS[f.ci % F.COLORS.length].hex : '#999999'; };
   F.settlementsOf = fid => [...G.S.settlements.values()].filter(s => s.fac === fid);
   F.captives = fid => { let n = 0; for (const v of G.S.villagers.values()) if (v.captive && F.idOfV(v) === fid) n++; return n; };
-  F.pop = fid => { let n = 0; for (const v of G.S.villagers.values()) { if (v.captive) continue; const s = G.S.settlements.get(v.set); if (s && s.fac === fid) n++; } return n; };
-  F.has = (fid, type) => { for (const b of G.S.buildings.values()) if (b.type === type && b.built) { const s = G.S.settlements.get(b.set); if (s && s.fac === fid) return true; } return false; };
+  F.pop = G.perPart(fid => { let n = 0; for (const v of G.S.villagers.values()) { if (v.captive) continue; const s = G.S.settlements.get(v.set); if (s && s.fac === fid) n++; } return n; });
+  F.has = G.perPart((fid, type) => { for (const b of G.S.buildings.values()) if (b.type === type && b.built) { const s = G.S.settlements.get(b.set); if (s && s.fac === fid) return true; } return false; }, (fid, type) => fid + '|' + type);
 
   F.create = function (o) {
     const S = G.S;
@@ -130,9 +130,17 @@
   let tTerr = 0;
   G.worldHooks.push(() => { tTerr = 0; }); // (a new world, or a save loaded: it starts over)
   F.update = function (dt) {
+    // (inside the time skip's slow step the quick part already lived, in its own half-steps)
+    if (G.stepPart === 'coarse') return F.updatePart(dt, 'coarse');
     tTerr -= dt;
     if (tTerr <= 0) { tTerr = 3; F.updateTerritory(); }
     for (const m of MODS) G.tryRun(m[0], m[1], dt);
+  };
+  // the time skip's two rhythms: wars, armies, sieges and ships in half-steps; the rest in whole ones
+  const QUICK = { WorldWar: 1, War: 1, Siege: 1, Naval: 1, Sea: 1, Army: 1, Wars: 1 };
+  F.updatePart = function (dt, part) {
+    if (part === 'coarse') { tTerr -= dt; if (tTerr <= 0) { tTerr = 3; F.updateTerritory(); } }
+    for (const m of MODS) if (!QUICK[m[0]] === (part === 'coarse')) G.tryRun(m[0], m[1], dt);
   };
   // (each on its own: one that throws does not stop the others)
   const MODS = [

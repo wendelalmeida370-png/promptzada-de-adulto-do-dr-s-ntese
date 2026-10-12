@@ -286,6 +286,10 @@
       dom: 0, pen: 0, herder: 0, ledBy: 0, wool: 0, milk: 0, eggs: 0, shorn: 0, hold: 0, tended: 0, flee: 0,
       morph: null, seen: 0, prey2: 0, gore: 0, blood: 0, perch: 0, nest: 0, swing: 0, sub: 0, roll: 0, grip: 0, drag: 0, mourn: 0, crouch: 0, flank: null, pounce: 0,
       down: 0, caught: 0, tree: 0, corpse: 0, dragT: 0, dragTo: null, mt: 0, ft: 0, rd: 0, dz: null, cached: false, slow: 0, sw0: null, sw1: null, px: 0, py: 0, fast: false,
+      // (and those that come later in a life — a way round, being stuck, a den, a rider, a skin — held empty from the start)
+      path: undefined, pi: undefined, pfT: undefined, blk: undefined, blkSeen: undefined, stk: undefined, stkD: undefined, stkGX: undefined, stkGY: undefined, stkT: undefined,
+      noGo: undefined, noPrey: undefined, fx: undefined, fy: undefined, sx: undefined, sy: undefined, home: undefined, set: undefined, owner: undefined, ride: undefined, rideCD: undefined,
+      shelter: undefined, migFrom: undefined, dam: undefined, coat: undefined, flay: undefined, skinned: undefined, rareSeen: undefined, rooster: undefined, gnawT: undefined, gnawTree: undefined, _denDay: undefined,
     }, extra || {});
     if (a.morph === null && !(extra && 'morph' in extra)) a.morph = rollMorph(d);
     if (a.hx === undefined) { a.hx = a.x; a.hy = a.y; }
@@ -337,6 +341,7 @@
     if (t === T.RIVER && sp.near !== 'water' && a.kind === 'rabbit') return false;
     return true;
   }
+  A.walkOK = (a, x, y) => !!SP[a.kind] && walkOK(a, x, y);
   // can it walk straight there? (no cliff, wall, house or deep water on the way)
   function lineOK(a, x1, y1, x0, y0) {
     if (x0 === undefined) { x0 = a.x; y0 = a.y; }
@@ -404,7 +409,15 @@
     }
     return any;
   }
+  // a coarse step (the time skip's) walks in pieces: one jump of several tiles would hop a river or a cliff
+  // (the screen's steps never get there: a cheetah at full run covers half a tile in one)
   function moveTo(a, dt, sp) {
+    if (sp * dt <= 0.9) return moveStep(a, dt, sp);
+    const n = Math.ceil(sp * dt * 1.4 / 0.9), h = dt / n;
+    for (let k = 0; k < n; k++) if (moveStep(a, h, sp)) return true;
+    return false;
+  }
+  function moveStep(a, dt, sp) {
     const S = G.S; const def = SP[a.kind];
     const fdx = a.tx - a.x, fdy = a.ty - a.y; const fd = Math.hypot(fdx, fdy);
     if (fd < 0.05) { a.moving = false; a.path = null; a.stk = 0; return true; }
@@ -1356,15 +1369,42 @@
   // ------------------------------ the whole zoo ------------------------------
   let tBreed = 0, tVeg = 0, tImm = 30, tDay = 0;
   G.worldHooks.push(() => { tBreed = 0; tVeg = 0; tImm = 30; tDay = 0; });
-  A.updateAll = function (dt) {
+  // the time skip, far from people: a wild beast out where nobody lives keeps its whole life — hunger, age, births, hunts —
+  // but takes its steps two at a time (every other skip step, the time it waited added to the next); one that is hunting
+  // or being hunted, near a town, kept, tamed or anyone's legend lives every step
+  const lodFar = new Set(), lodAcc = new Map(); let lodT = 0, lodTick = 0;
+  G.worldHooks.push(() => { lodFar.clear(); lodAcc.clear(); lodT = 0; lodTick = 0; });
+  // far = no person within a dozen tiles or so (cells of 8: the animal's cell and its eight neighbours are empty of
+  // people) and outside the heart of every town — what nobody is near enough to hunt, herd or be bitten by
+  const FARC = 8;
+  function markFar() {
+    const S = G.S; lodFar.clear();
+    const cw = Math.ceil(N / FARC), people = new Uint8Array(cw * cw);
+    for (const v of S.villagers.values()) people[Math.min(cw - 1, (v.y / FARC) | 0) * cw + Math.min(cw - 1, (v.x / FARC) | 0)] = 1;
+    const towns = []; for (const s of S.settlements.values()) { const r = (s.radius || 8) + 4; towns.push([s.cx, s.cy, r * r]); }
+    for (const a of S.animals.values()) {
+      const sp = SP[a.kind]; if (!sp || sp.dom || sp.town || sp.cls === 'air' || a.dom || a.pen || a.raid || a.summoned || a.legend || a.tamed || a.named || a.dead) continue;
+      const cx = (a.x / FARC) | 0, cy = (a.y / FARC) | 0; let far = true;
+      for (let dy = -1; dy <= 1 && far; dy++) for (let dx = -1; dx <= 1; dx++) { const x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < cw && y < cw && people[y * cw + x]) { far = false; break; } }
+      if (far) for (const t of towns) if (G.dist2(a.x, a.y, t[0], t[1]) < t[2]) { far = false; break; }
+      if (far) lodFar.add(a.id);
+    }
+  }
+  A.updateAll = function (dt0) {
     const S = G.S;
     distances(); ensureVeg();
-    gridT -= dt; if (gridT <= 0) { gridT = 0.25; rebuildGrid(); }
+    gridT -= dt0; if (gridT <= 0) { gridT = 0.25; rebuildGrid(); }
     pathBudget = Math.max(3, Math.min(7, Math.round(S.animals.size / 70)));
-    const dayF = dt / DAY();
+    const lod = !!(G.Skip && G.Skip.on);
+    if (lod) { lodTick++; if ((lodT -= dt0) <= 0) { lodT = 6; markFar(); } } else if (lodAcc.size) lodAcc.clear();
     for (const a of S.animals.values()) {
       if (a.held) continue;
-      if (a.air) { G.airUpdate(a, dt, imp => landAnimal(a, imp)); continue; }
+      if (a.air) { G.airUpdate(a, dt0, imp => landAnimal(a, imp)); continue; }
+      let dt = dt0;
+      if (lod && lodFar.has(a.id)) {
+        if (!BUSY[a.state] && ((a.id + lodTick) & 1)) { lodAcc.set(a.id, (lodAcc.get(a.id) || 0) + dt0); continue; }
+        const w = lodAcc.get(a.id); if (w) { dt += w; lodAcc.delete(a.id); }
+      }
       if (a.hurt > 0) a.hurt -= dt;
       if (a.bite > 0) a.bite -= dt;
       if (a.eating > 0) a.eating -= dt;
@@ -1393,6 +1433,7 @@
     }
     for (const a of dead) S.animals.delete(a.id);
     dead.length = 0;
+    const dt = dt0;
     tVeg += dt; if (tVeg >= 0.5) { growVeg(tVeg); tVeg = 0; }
     tBreed += dt; if (tBreed > 6) { breed(tBreed); tBreed = 0; }
     tImm -= dt; if (tImm <= 0) { tImm = DAY() * 0.5; immigrate(); }

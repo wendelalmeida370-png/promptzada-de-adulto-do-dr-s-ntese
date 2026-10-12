@@ -270,7 +270,7 @@
   }
 
   // ------------------------------ loyalty & stability ------------------------------
-  function freePopOfSet(sid) { let n = 0; for (const v of G.S.villagers.values()) if (v.set === sid && !v.captive) n++; return n; }
+  const freePopOfSet = G.perPart(sid => { let n = 0; for (const v of G.S.villagers.values()) if (v.set === sid && !v.captive) n++; return n; });
   P.freePopOfSet = freePopOfSet;
   function updateLoyalty(f, dt) {
     const S = G.S; const cap = G.Fac.capitalOf(f.id); if (!cap) return;
