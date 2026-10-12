@@ -55,7 +55,7 @@
 
   // ------------------------------ running ------------------------------
   const SLICE = 35; // ms of world per slice; the window and the god's clicks get the moments between
-  let el = null, news = [], lastLog = 0, uiT = 0, mapT = 0, clock = 0, feed = [], startReal = 0, pump = null, gen = 0;
+  let el = null, news = [], lastLog = 0, uiT = 0, mapT = 0, clock = 0, feed = [], startReal = 0, pump = null, gen = 0, untilN = 0;
   Sk.start = function (goalKey, course, opts) {
     const S = G.S; if (!S || Sk.on) return;
     const goal = Sk.GOALS[goalKey] || Sk.GOALS.anos25;
@@ -68,7 +68,7 @@
     Sk.endDay = goal.years ? S.day + goal.years : S.day + (goal.max || 150);
     Sk.best = { t: mt.t, pop: S.villagers.size, day: S.day };
     Sk.prevSpeed = G.speed || 1;
-    news = []; feed = []; lastLog = S.logN || 0; uiT = 0; mapT = 0; clock = 0; startReal = performance.now();
+    news = []; feed = []; lastLog = S.logN || 0; uiT = 0; mapT = 0; clock = 0; untilN = 0; startReal = performance.now();
     G.FX.off = true; if (G.Audio) G.Audio.mute = true; G.W.pathGreed = 1.3;
     if (Sk.course === 'fartura') {
       S.blessed = true;
@@ -93,13 +93,15 @@
   function slice(g) {
     if (!Sk.on || g !== gen) return;
     const S = G.S; const t0 = performance.now();
-    let blessT = 0, done = null; const until = Sk.goal.until; let uc = 0;
+    let blessT = 0, done = null; const until = Sk.goal.until;
     try { while (performance.now() - t0 < SLICE) {
       const d0 = S.day;
       G.Main.skipStep(DT);
       if (Sk.course === 'fartura' && (blessT -= DT) <= 0) { blessT = 2; bless(); }
       // (a hunt of the dev mode: a few times a game-hour, the thing looked for)
-      if (until && ++uc >= 8) { uc = 0; let hit = false; try { hit = !!until(); } catch (e) { hit = false; } if (hit) { done = 'alvo'; break; } }
+      // (counted across slices: in a big world a slice holds fewer than eight steps, and a count kept in the slice never got
+      // there — the thing looked for was never looked at: L-083)
+      if (until && ++untilN >= 8) { untilN = 0; let hit = false; try { hit = !!until(); } catch (e) { hit = false; } if (hit) { done = 'alvo'; break; } }
       if (S.day !== d0) { done = check(); if (done) break; }
     } } catch (e) { console.error('skip', e); done = 'parado'; }
     G.FX.list.length = 0; G.FX.rings.length = 0; G.FX.glows.length = 0; G.FX.bolts.length = 0; G.FX.floaters.length = 0;

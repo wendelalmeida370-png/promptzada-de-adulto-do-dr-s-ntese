@@ -4,7 +4,9 @@
 // 3. um save no meio, carregado duas vezes, salta o mesmo futuro;
 // 4. parar no meio (como o Esc) e continuar: nada fica pendurado;
 // 5. o chão muda antes do salto (um terremoto do deus) e o salto segue;
-// 6. bichos fora do lugar no salto não passam do que se vê na tela (D-010: passos grossos andam em pedaços).
+// 6. bichos fora do lugar no salto não passam do que se vê na tela (D-010: passos grossos andam em pedaços);
+// 7. num mundo grande (o mundo pronto «megalópole»), um salto «até» uma coisa para quando ela acontece (L-083: a conta
+//    das conferências recomeçava a cada fatia, e numa fatia de mundo grande não cabem oito passos).
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
@@ -68,6 +70,18 @@ const seed = +(process.argv[2] || 41);
     return { skipW, liveW, animals: G.S.animals.size };
   });
   ok('6 bichos fora do lugar: o salto como a tela', f.skipW <= Math.max(6, f.liveW * 2), `no pior momento: ${f.skipW} no salto, ${f.liveW} na tela (de ${f.animals} bichos)`);
+  // 7: a big world, a skip «until» something: it stops there
+  await page.addScriptTag({ path: path.join(ROOT, 'worlds', 'mega.js') });
+  const u = await page.evaluate(() => new Promise(res => {
+    G.Save.apply(JSON.parse(G.Ready.data.mega)); G.Main.mode = 'game'; G.UI.setSpeed(0);
+    const c0 = G.S.clock, t0 = performance.now(); let steps = 0; const old = G.Main.skipStep; G.Main.skipStep = function () { steps++; return old.apply(this, arguments); };
+    G.Skip.GOALS.__u = { years: 0, max: 5, hidden: true, until: () => G.S.clock >= c0 + 30 };
+    G.Skip.start('__u', 'livre');
+    const tick = () => { if (G.Skip.on && performance.now() - t0 < 240000) return setTimeout(tick, 200); const on = G.Skip.on; if (on) G.Skip.finish('parado'); G.UI.closeModal(); G.Main.skipStep = old;
+      res({ on, past: Math.round(G.S.clock - c0), steps, ms: Math.round((performance.now() - t0) / Math.max(1, steps)) }); };
+    tick();
+  }));
+  ok('7 num mundo grande, o salto «até» para no ponto', !u.on && u.past >= 30 && u.past <= 60, `pediu 30 s de mundo, parou em ${u.past} s (${u.steps} passos, ${u.ms} ms por passo)${u.on ? '; não parou' : ''}`);
   console.log(`erros: ${errs.length ? [...new Set(errs)].slice(0, 8).join('\n  ') : 'nenhum'}`);
   console.log(fails.length || errs.length ? `SALTO: ${fails.length + errs.length} falha(s)` : 'SALTO: ok');
   await browser.close();
