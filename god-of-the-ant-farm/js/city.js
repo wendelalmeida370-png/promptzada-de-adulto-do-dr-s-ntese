@@ -233,8 +233,9 @@
       cands.push([sc, x, y]);
     }
     cands.sort((a, b) => b[0] - a[0]);
-    const from = W.nearestLand(set.cx, set.cy, 4) || [set.cx, set.cy];
-    for (const c of cands.slice(0, 6)) if (W.findPath(from[0], from[1], c[1] + 1, c[2] + 1, true, N * N)) { best = [c[1], c[2]]; break; }
+    let from = null; for (const v of S.villagers.values()) if (v.set === set.id && v.age >= 12 && !v.inside && !v.aboard && W.walkableXY(v.x, v.y)) { from = [v.x, v.y]; break; }
+    from = from || W.nearestLand(set.cx, set.cy, 4) || [set.cx, set.cy];
+    for (const c of cands.slice(0, 12)) if (W.findPath(from[0], from[1], c[1] + 1, c[2] + 1, true, N * N)) { best = [c[1], c[2]]; break; }
     return best;
   };
   Ci.coastal = function (set) {
