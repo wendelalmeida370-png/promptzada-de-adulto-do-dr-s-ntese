@@ -124,7 +124,7 @@
   W.walkableXY = (x, y) => W.inb(x, y) && W.walkable(W.idx(x, y));
   // landmass labels: who can walk to whom (4-connected land, rivers included)
   let landIds = null, landKey = null, landVer = -1;
-  W.invalidateLand = () => { landIds = null; };
+  W.invalidateLand = () => { landIds = null; W.invalidateReach && W.invalidateReach(); };
   W.landIds = function () {
     const S = G.S;
     if (landIds && landKey === S && landVer === (S.typeVer || 0) && landIds.length === N * N) return landIds;
@@ -147,6 +147,91 @@
   };
   W.landAt = (x, y) => W.inb(x, y) ? W.landIds()[W.idx(x, y)] : -1;
   W.sameLand = (ax, ay, bx, by) => { const L = W.landIds(); const a = L[W.idx(ax, ay)], b = L[W.idx(bx, by)]; return a < 0 || b < 0 || a === b; };
+
+  // ---- where one can walk to. The walkable tiles joined side by side: findPath walks exactly this graph (a diagonal step
+  // needs both sides open, so it joins nothing the sides do not), so two places in different regions never have a path.
+  // A closed gate counts as open here (it opens again; findPath itself still finds it shut), so the map never says "no way"
+  // where there is one. Rebuilt when the ground, a building or a wall changes, and every 20 s of game time all the same.
+  let reachIds = null, reachStack = null, reachKey = null, reachWV = -1, reachTV = -1, reachT = -1e9;
+  W.reachBuilds = 0;
+  W.touchWalk = () => { const S = G.S; if (S) S.walkVer = (S.walkVer || 0) + 1; };
+  const passable = i => { const S = G.S; const t = S.type[i]; if (t < T.RIVER || S.cliff[i] || W.blocked(i)) return false; if (t === T.RIVER && S.deep[i] && !S.road[i]) return false; const w = S.wall[i]; return !w || w === 2 || w === 3 || w === 4; };
+  W.reachIds = function (peek) {
+    const S = G.S; const n = N * N;
+    if (reachIds && reachKey === S && reachWV === (S.walkVer || 0) && reachTV === (S.typeVer || 0) && reachIds.length === n && (peek || (S.clock >= reachT && S.clock - reachT < 20))) return reachIds;
+    if (!reachIds || reachIds.length !== n) { reachIds = new Int32Array(n); reachStack = new Int32Array(n); }
+    reachKey = S; reachWV = S.walkVer || 0; reachTV = S.typeVer || 0; reachT = S.clock; W.reachBuilds++;
+    const L = reachIds, st = reachStack; L.fill(-1); let id = 0;
+    for (let i = 0; i < n; i++) {
+      if (L[i] >= 0 || !passable(i)) continue;
+      let sp = 0; st[sp++] = i; L[i] = id;
+      while (sp) {
+        const a = st[--sp]; const x = a % N;
+        if (x > 0 && L[a - 1] < 0 && passable(a - 1)) { L[a - 1] = id; st[sp++] = a - 1; }
+        if (x < N - 1 && L[a + 1] < 0 && passable(a + 1)) { L[a + 1] = id; st[sp++] = a + 1; }
+        if (a >= N && L[a - N] < 0 && passable(a - N)) { L[a - N] = id; st[sp++] = a - N; }
+        if (a + N < n && L[a + N] < 0 && passable(a + N)) { L[a + N] = id; st[sp++] = a + N; }
+      }
+      id++;
+    }
+    return L;
+  };
+  W.invalidateReach = () => { reachIds && (reachWV = -1); };
+  // the regions a point can step into: its own, or (standing where one cannot stand) those beside it
+  function stepRegs(i, out) {
+    const L = W.reachIds(); if (L[i] >= 0) { out.push(L[i]); return out; }
+    const x = i % N;
+    if (x > 0 && L[i - 1] >= 0) out.push(L[i - 1]); if (x < N - 1 && L[i + 1] >= 0) out.push(L[i + 1]);
+    if (i >= N && L[i - N] >= 0) out.push(L[i - N]); if (i + N < N * N && L[i + N] >= 0) out.push(L[i + N]);
+    return out;
+  }
+  // the regions that reach (tx, ty), or the tiles around it (adj)
+  function goalRegs(t, adj, out) {
+    const L = W.reachIds(); if (!adj) { if (L[t] >= 0) out.push(L[t]); return out; }
+    const tx = t % N, ty = (t / N) | 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = tx + dx, y = ty + dy; if (x < 0 || y < 0 || x >= N || y >= N) continue; const r = L[y * N + x]; if (r >= 0 && !out.includes(r)) out.push(r); }
+    return out;
+  }
+  const meet = (a, b) => { for (const r of a) if (b.includes(r)) return true; return false; };
+  // can someone at (sx, sy) walk to (tx, ty), or beside it (adj, the default): the answer findPath gives with no node limit
+  W.canWalk = function (sx, sy, tx, ty, adj) {
+    if (!W.inb(sx, sy) || !W.inb(tx, ty)) return false;
+    if (adj === undefined) adj = true;
+    const s = W.idx(sx, sy), t = W.idx(tx, ty);
+    if (!adj && !W.walkable(t)) adj = true;
+    if (adj ? (Math.max(Math.abs(s % N - t % N), Math.abs(((s / N) | 0) - ((t / N) | 0))) <= 1 && (s !== t || W.walkable(s))) : s === t) return true;
+    return meet(stepRegs(s, []), goalRegs(t, adj, []));
+  };
+  // the main streets of a town: the largest region among the walkable tiles around its centre (its centre itself can be a palace,
+  // or a yard boxed in by its own houses)
+  const townReg = new Map(); let townAt = -1;
+  W.townRegion = function (set) {
+    W.reachIds(); if (townAt !== W.reachBuilds) { townReg.clear(); townAt = W.reachBuilds; }
+    let r = townReg.get(set.id); if (r !== undefined) return r;
+    const L = W.reachIds(); const cnt = new Map(); const R = Math.max(3, Math.min(10, Math.round((set.radius || 6) * 0.6)));
+    const cx = Math.floor(set.cx), cy = Math.floor(set.cy);
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { const x = cx + dx, y = cy + dy; if (!W.inb(x, y)) continue; const k = L[y * N + x]; if (k >= 0) cnt.set(k, (cnt.get(k) || 0) + 1); }
+    r = -1; let bn = 0; for (const [k, c] of cnt) if (c > bn) { bn = c; r = k; }
+    townReg.set(set.id, r); return r;
+  };
+  // where a person stands, as regions: inside a building, at its door; on no walkable ground, what is within two steps.
+  // null when nothing is near at all (the caller then does not judge)
+  W.regsOf = function (v) {
+    let x = v.x, y = v.y;
+    if (v.inside > 0) { const b = G.S.buildings.get(v.inside); if (b) { const d = G.Village.door(b); x = d[0]; y = d[1]; } }
+    if (!W.inb(x, y)) return null;
+    const i = W.idx(x, y); const out = stepRegs(i, []); if (out.length) return out;
+    const L = W.reachIds(); const x0 = i % N, y0 = (i / N) | 0;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const xx = x0 + dx, yy = y0 + dy; if (xx < 0 || yy < 0 || xx >= N || yy >= N) continue; const r = L[yy * N + xx]; if (r >= 0 && !out.includes(r)) out.push(r); }
+    return out.length ? out : null;
+  };
+  // can this person walk to that town / that place (unknown → yes: the map does not judge what it cannot see)
+  W.reachesTown = function (v, set) { if (!set) return false; const r = W.townRegion(set); if (r < 0) return W.sameLand(v.x, v.y, set.cx, set.cy); const a = W.regsOf(v); return !a || a.includes(r); };
+  W.reaches = function (v, x, y) { if (!W.inb(x, y)) return false; const a = W.regsOf(v); return !a || meet(a, goalRegs(W.idx(x, y), true, [])); };
+  // from a point (no person), and between a town and a place or another town
+  W.reachesTownXY = function (x, y, set) { if (!set || !W.inb(x, y)) return false; const r = W.townRegion(set); if (r < 0) return W.sameLand(x, y, set.cx, set.cy); const a = stepRegs(W.idx(x, y), []); return !a.length || a.includes(r); };
+  W.townReaches = function (set, x, y) { if (!set || !W.inb(x, y)) return false; const r = W.townRegion(set); if (r < 0) return W.sameLand(set.cx, set.cy, x, y); return goalRegs(W.idx(x, y), true, []).includes(r); };
+  W.townsLinked = function (a, b) { if (!a || !b) return false; const ra = W.townRegion(a), rb = W.townRegion(b); if (ra < 0 || rb < 0) return W.sameLand(a.cx, a.cy, b.cx, b.cy); return ra === rb; };
   W.buildable = i => { const t = G.S.type[i]; return t >= T.SAND && !G.S.cliff[i] && !G.S.occ[i] && !G.S.objAt[i] && G.S.fire[i] < 0.05 && !(G.Caves && G.Caves.isMouth(i)); };
   W.slope = (x, y, w, h) => {
     let mn = 1e9, mx = -1e9;
@@ -597,13 +682,8 @@
     const s = W.idx(sx, sy), t = W.idx(tx, ty);
     const tX = t % N, tY = (t / N) | 0;
     if (!adj && !W.walkable(t)) adj = true;
-    // different islands: no walking there (fail fast instead of flooding the map)
-    const L = W.landIds(), ls = L[s];
-    if (ls >= 0) {
-      let ok = L[t] === ls;
-      if (!ok && adj) for (let k = 0; k < 8 && !ok; k++) { const nx = tX + DX[k], ny = tY + DY[k]; if (nx >= 0 && ny >= 0 && nx < N && ny < N && L[ny * N + nx] === ls) ok = true; }
-      if (!ok) return null;
-    }
+    // no walking there (another island, a pocket boxed in by buildings, a cliff, a wall): fail at once instead of flooding the map
+    if (!W.canWalk(sx, sy, tx, ty, !!adj)) return null;
     if (s === t && !adj) return [[tx, ty]];
     gen++; heap.clear();
     const TH = G.S.th;

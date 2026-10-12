@@ -468,7 +468,7 @@
         const x = x0 + dx, y = y0 + dy; if (x < 0 || y < 0 || x >= N || y >= N) continue;
         const o = test(y * N + x); if (!o) continue;
         if (set && G.dist2(o.x, o.y, set.cx, set.cy) > 28 * 28) continue;
-        if (!W.sameLand(v.x, v.y, o.x, o.y)) continue;
+        if (!W.reaches(v, o.x, o.y)) continue;
         const d = G.dist2(v.x, v.y, o.x, o.y); if (d < bd) { bd = d; best = o; }
       }
       if (best) return best;
@@ -563,7 +563,7 @@
       if (a.dead || !G.Animals.huntable(a)) continue;
       if (a.claim && a.claim !== v.id && S.villagers.has(a.claim)) continue;
       if (set && G.dist2(a.x, a.y, set.cx, set.cy) > (maxD || 24) * (maxD || 24)) continue;
-      if (!W.sameLand(v.x, v.y, a.x, a.y)) continue;
+      if (!W.reaches(v, a.x, a.y)) continue;
       // when tusks and hides sell abroad, the hunters go for the beasts that carry them
       const d = G.dist2(v.x, v.y, a.x, a.y) - (G.Riches ? G.Riches.huntPull(v, a) : 0); if (d < bd) { bd = d; best = a; }
     }
@@ -1118,8 +1118,8 @@
           if (!Vg.goto(v, set.cx + G.rr(-1.5, 1.5), set.cy + G.rr(-1.5, 1.5), true, N * N)) {
             // no way there: settle with the nearest village of the same people instead
             let best = null, bd = 1e9;
-            for (const o of S.settlements.values()) if (o.fac === set.fac && o !== set && W.sameLand(v.x, v.y, o.cx, o.cy)) { const d = G.dist2(v.x, v.y, o.cx, o.cy); if (d < bd) { bd = d; best = o; } }
-            if (!best && !W.sameLand(v.x, v.y, set.cx, set.cy)) for (const o of S.settlements.values()) if (o !== set && W.sameLand(v.x, v.y, o.cx, o.cy)) { const d = G.dist2(v.x, v.y, o.cx, o.cy); if (d < bd) { bd = d; best = o; } }
+            for (const o of S.settlements.values()) if (o.fac === set.fac && o !== set && W.reachesTown(v, o)) { const d = G.dist2(v.x, v.y, o.cx, o.cy); if (d < bd) { bd = d; best = o; } }
+            if (!best && !W.reachesTown(v, set)) for (const o of S.settlements.values()) if (o !== set && W.reachesTown(v, o)) { const d = G.dist2(v.x, v.y, o.cx, o.cy); if (d < bd) { bd = d; best = o; } }
             if (best && !v.captive) { v.set = best.id; v.home = 0; }
             t.st = 9; return end(v);
           }
@@ -1533,7 +1533,7 @@
   function unstick(v) {
     const S = G.S; const set = S.settlements.get(v.set);
     const home = set ? [set.cx, set.cy] : null;
-    const ok = (x, y) => W.walkableXY(x, y) && (!home || !!W.findPath(x, y, home[0], home[1], true, 20000));
+    const ok = (x, y) => W.walkableXY(x, y) && (!home || W.reachesTownXY(x, y, set));
     if (home && ok(v.x, v.y)) { v._pfN = 0; v._pfI = -1; if (v.task && !v.task.pri) G.Vg.endTask(v); return false; }
     for (const r of [1, 1.5, 2.2, 3, 4.5, 6, 8]) for (let k = 0; k < 8; k++) {
       const a = k / 8 * Math.PI * 2; const x = Math.floor(v.x + Math.cos(a) * r) + 0.5, y = Math.floor(v.y + Math.sin(a) * r) + 0.5;

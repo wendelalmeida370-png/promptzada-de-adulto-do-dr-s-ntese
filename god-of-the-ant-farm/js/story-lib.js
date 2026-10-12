@@ -555,7 +555,7 @@
       // after a while of waiting, the brave decide to go and get them (only where a road leads there)
       if (s.phase === 'saudade' && s.data.watched && S.clock - (s.data.watchT || S.clock) > G.DAY_LEN * 0.35 && !p.captive && p.age >= 16 && p.age <= 60 && (p.courage >= 0.42 || REL_W[s.data.rel] >= 0.9) && !has(p, 'Medroso')) {
         const to = S.settlements.get(c.set), from = homeOf(p);
-        if (to && from && to.id !== from.id && W.sameLand(from.cx, from.cy, to.cx, to.cy) && G.R() < 0.08) { s.phase = 'plano'; St.beat(s, 'rs-plano'); }
+        if (to && from && to.id !== from.id && W.townsLinked(from, to) && G.R() < 0.08) { s.phase = 'plano'; St.beat(s, 'rs-plano'); }
       }
     },
     react(s, f) {
@@ -696,7 +696,7 @@
         const out = [];
         for (const [id, home] of f.homes || []) {
           const v = P(id); const h = G.S.settlements.get(home); if (!v || v.dead || !h || v.age < 25) continue;
-          const nw = G.S.settlements.get(f.set); if (!nw || G.dist(nw.cx, nw.cy, h.cx, h.cy) < 14 || !W.sameLand(nw.cx, nw.cy, h.cx, h.cy)) continue;
+          const nw = G.S.settlements.get(f.set); if (!nw || G.dist(nw.cx, nw.cy, h.cx, h.cy) < 14 || !W.townsLinked(nw, h)) continue;
           let sc = 0.36 + (v.age >= 45 ? 0.15 : 0) + (St.kin(v).some(k => k.set === h.id) ? 0.2 : 0) + (has(v, 'Romântico') || has(v, 'Sociável') ? 0.08 : 0);
           out.push({ protag: id, score: sc, keyExtra: 'livre' + home, place: { kind: 'cidade', name: h.name, x: h.cx, y: h.cy, set: h.id },
             data: { mode: 'saudade', home: h.id, homeName: h.name, homeFac: h.fac, newSet: f.set, newName: f.n.set }, tone: 'contemplativo', motifs: ['gatilho:exilio', 'amb:viagem'] });
@@ -921,7 +921,7 @@
       return Object.assign({}, pl, { name: 'o mar', x: c.x, y: c.y });
     }
     const lp = W.nearestLand(pl.x, pl.y, 4) || [pl.x, pl.y];
-    if (G.dist(set.cx, set.cy, pl.x, pl.y) < far || !W.sameLand(set.cx, set.cy, lp[0], lp[1])) return null;
+    if (G.dist(set.cx, set.cy, pl.x, pl.y) < far || !W.townReaches(set, lp[0], lp[1])) return null;
     // they already live by one: a lake next to home makes a far lake a tale, not a longing
     if (/^(lago|pico|cachoeira|caverna)$/.test(pl.kind) && St.featureNear(pl.kind, set.cx, set.cy) < 14) return null;
     return Object.assign({}, pl, { x: lp[0], y: lp[1] });
@@ -1102,7 +1102,7 @@
       else if (b.type === 'temple' && G.Fac.capitalOf(fid) === s) { const c = G.Village.frontTile(b); out.push({ kind: 'templo', name: `o templo de ${s.name}`, x: c[0], y: c[1], ref: b.id, w: 1.5 }); }
       else if (b.type === 'monument') { const c = G.Village.frontTile(b); out.push({ kind: 'monumento', name: `o monumento de ${s.name}`, x: c[0], y: c[1], ref: b.id, w: 1 }); }
     }
-    const ok = out.filter(h => G.dist(h.x, h.y, home.cx, home.cy) >= far && W.sameLand(h.x, h.y, home.cx, home.cy));
+    const ok = out.filter(h => G.dist(h.x, h.y, home.cx, home.cy) >= far && W.townReaches(home, h.x, h.y));
     ok.sort((a, b) => b.w - a.w || G.dist(a.x, a.y, home.cx, home.cy) - G.dist(b.x, b.y, home.cx, home.cy));
     return ok[0] || null;
   }
@@ -1124,7 +1124,7 @@
           // a cave at the edge of town is a walk, not a pilgrimage)
           const shrine = G.Caves && G.Caves.all().find(cv => cv.mouths.length && ((cv.oracle && cv.oracle.id === f.a) || (cv.oraclePast || []).some(x => x.name === f.n.a && x.to >= G.S.day - 1)));
           const m = shrine && shrine.mouths[0];
-          const holy = m && W.sameLand(m.x, m.y, home.cx, home.cy) && G.dist(m.x, m.y, home.cx, home.cy) >= PFAR() ? { kind: 'oraculo', name: G.Caves.a(shrine), x: m.x + 0.5, y: m.y + 0.5, ref: shrine.id, oracle: f.n.a, was: 1, w: 3 } : holyFor(p);
+          const holy = m && W.townReaches(home, m.x, m.y) && G.dist(m.x, m.y, home.cx, home.cy) >= PFAR() ? { kind: 'oraculo', name: G.Caves.a(shrine), x: m.x + 0.5, y: m.y + 0.5, ref: shrine.id, oracle: f.n.a, was: 1, w: 3 } : holyFor(p);
           if (!holy) continue;
           const violent = !!f.b;
           const sc = REL_W[rel] * (0.35 + q.pie * 0.5) + (violent ? 0.05 : 0) + (holy.was ? 0.1 : 0);

@@ -315,7 +315,7 @@
   function leafSource(b, v) {
     const S = G.S;
     for (const o of E.byType(b.set, 'pomar')) if (o.crop === 'mulberry' && o.pl) { const k = o.pl.findIndex(p => p.g >= 0.8); if (k >= 0) { const p = Es.plantPos(o, k); return [p[0] + 0.3, p[1] + 0.3, 0]; } }
-    const t = G.Animals.treeNear && G.Animals.treeNear(b.x + 1, b.y + 1, 18, q => q.kind === 'mulberry' && q.stage === 'grow' && q.size > 0.5 && W.sameLand(v.x, v.y, q.x, q.y));
+    const t = G.Animals.treeNear && G.Animals.treeNear(b.x + 1, b.y + 1, 18, q => q.kind === 'mulberry' && q.stage === 'grow' && q.size > 0.5 && W.reaches(v, q.x, q.y));
     void S; return t ? [t.x + 0.35, t.y + 0.35, t.id] : null;
   }
 

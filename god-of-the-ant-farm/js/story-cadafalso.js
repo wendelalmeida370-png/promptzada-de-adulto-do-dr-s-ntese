@@ -708,7 +708,7 @@
     const p = P(s.protag); const cap = P(s.cast.captive);
     // they leave: a refuge in another people's town, if there is one
     let ref = null, rd = 1e9; const fac = s.data.fac;
-    for (const t of G.S.settlements.values()) { if (G.Village.facOfSet(t.id) === fac || !p || !G.W.sameLand(p.x, p.y, t.cx, t.cy)) continue; const d = G.dist(t.cx, t.cy, p.x, p.y); if (d < rd) { rd = d; ref = t; } }
+    for (const t of G.S.settlements.values()) { if (G.Village.facOfSet(t.id) === fac || !p || !G.W.reachesTown(p, t)) continue; const d = G.dist(t.cx, t.cy, p.x, p.y); if (d < rd) { rd = d; ref = t; } }
     let tail = '';
     if (ref && p) { for (const v of [p, cap].filter(Boolean)) { v.set = ref.id; v.home = 0; G.Vg.setTask(v, { type: 'migrate', pri: 1.6, st: 0 }); } tail = ` Na manhã seguinte, partiram para ${ref.name}, onde ninguém conhecia os dois.`; }
     St.finish(s, 'cumprida', 'feliz', `${cap ? cap.name : 'Quem ia morrer'} está viv${oa(cap)}. ${p ? p.name : ''} cortou as cordas no meio da praça de ${townOf(s)} — e os dois sumiram no mato.${tail}`, { log: true, toast: true, big: 1, legend: true, clima: 'cadafalso' });

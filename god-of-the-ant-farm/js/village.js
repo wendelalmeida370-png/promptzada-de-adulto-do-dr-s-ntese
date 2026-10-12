@@ -94,6 +94,7 @@
       const tid = S.treeAt[i]; if (tid) { const t = S.trees.get(tid); if (t) { G.Nature.removeTree(t); if (t.stage === 'grow' && t.size > 0.5) V.addStock('wood', 1, V.facOfSet(setId)); G.FX && G.FX.poof(tx + 0.5, ty + 0.5, '#6d8f3c'); } }
       const oid = S.objAt[i]; if (oid) { const bu = S.bushes.get(oid); if (bu) G.Nature.removeBush(bu); }
     }
+    W.touchWalk();
     return b;
   };
   V.center = b => [b.x + b.w / 2, b.y + b.h / 2];
@@ -110,6 +111,7 @@
   V.removeBuilding = function (b) {
     const S = G.S; S.buildings.delete(b.id);
     for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const i = ty * N + tx; if (S.occ[i] === b.id) S.occ[i] = 0; }
+    W.touchWalk();
   };
   V.totalCost = def => { let n = 0; for (const k in def.cost) n += def.cost[k] || 0; return n; };
   V.nameOf = (type, b) => G.Civ.bname(type, b ? b.style : null);
@@ -167,7 +169,7 @@
       if (b.type === 'campfire' && set) set.campfire = 0;
     } else {
       // turn into ruins in place (non-blocking)
-      b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.ruinT = G.DAY_LEN * 3; b.hp = 1;
+      b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.ruinT = G.DAY_LEN * 3; b.hp = 1; W.touchWalk();
     }
     G.FX && G.FX.collapse(cx, cy, b);
     G.Audio && G.Audio.at(cx, cy, 'collapse', true);
@@ -913,7 +915,7 @@
       if (b.set !== s.id) continue;
       if (b.type === 'cemetery') { b.set = 0; continue; }
       if (b.type === 'farm' || b.type === 'campfire' || !b.built) { V.removeBuilding(b); continue; }
-      if (b.type !== 'ruin') { b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.ruinT = G.DAY_LEN * (2 + G.R() * 3); b.hp = 1; }
+      if (b.type !== 'ruin') { b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.ruinT = G.DAY_LEN * (2 + G.R() * 3); b.hp = 1; W.touchWalk(); }
       b.set = 0;
     }
     const f = G.Fac.get(s.fac);
@@ -932,12 +934,12 @@
     const S = G.S;
     for (const v of S.villagers.values()) {
       if (v.captive || v.aboard || v.ug || v.wrecked || v.held || v.air || v.age < 3 || (v.task && IN_TRANSIT[v.task.type]) || (G.Expe && G.Expe.memberOf(v.id))) { v._stray = 0; continue; }
-      const set = S.settlements.get(v.set); if (!set || W.sameLand(v.x, v.y, set.cx, set.cy)) { v._stray = 0; continue; }
+      const set = S.settlements.get(v.set); if (!set || W.reachesTown(v, set)) { v._stray = 0; continue; }
       const f = G.Fac.get(set.fac); if (f && f.leader === v.id) continue;
       if (!v._stray) { v._stray = S.day; continue; }
       let best = null, bd = 1e18, own = false, foe = null, fd = 1e18;
       for (const o of S.settlements.values()) {
-        if (!W.sameLand(v.x, v.y, o.cx, o.cy)) continue; const mine = o.fac === set.fac; const d = G.dist2(v.x, v.y, o.cx, o.cy);
+        if (!W.reachesTown(v, o)) continue; const mine = o.fac === set.fac; const d = G.dist2(v.x, v.y, o.cx, o.cy);
         if (!mine && G.Fac.atWar(o.fac, set.fac)) { if (d < fd) { fd = d; foe = o; } continue; }
         if (d + (mine ? 0 : 1e9) < bd) { bd = d + (mine ? 0 : 1e9); best = o; own = mine; }
       }

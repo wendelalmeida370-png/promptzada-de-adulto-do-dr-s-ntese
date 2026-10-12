@@ -91,7 +91,7 @@
   // ------------------------------ people stop to look ------------------------------
   Ne.watchTask = function (v, H) {
     const S = G.S; let best = null, bd = 18 * 18;
-    for (const n of nests()) { if (n.st === 'empty' || n.st === 'build' && G.R() < 0.5) continue; const d = G.dist2(n.x, n.y, v.x, v.y); if (d < bd && W.sameLand(v.x, v.y, n.x, n.y)) { bd = d; best = n; } }
+    for (const n of nests()) { if (n.st === 'empty' || n.st === 'build' && G.R() < 0.5) continue; const d = G.dist2(n.x, n.y, v.x, v.y); if (d < bd && W.reaches(v, n.x, n.y)) { bd = d; best = n; } }
     if (!best) return null;
     const p = W.randomNear(best.x + G.rr(-2.2, 2.2), best.y + G.rr(-2.2, 2.2), 1.5); if (!p) return null;
     return H.setTask(v, { type: 'nestwatch', id: best.id, x: p[0], y: p[1], pri: 0.35 });

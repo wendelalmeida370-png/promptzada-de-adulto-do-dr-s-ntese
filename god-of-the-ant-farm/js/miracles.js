@@ -348,6 +348,7 @@
     const tid = S.treeAt[i]; if (tid) { const tr = S.trees.get(tid); if (tr) G.Nature.removeTree(tr); }
     const oid = S.objAt[i]; if (oid) { const b = S.bushes.get(oid); if (b) G.Nature.removeBush(b); }
     const bid = S.occ[i]; if (bid) { const b = S.buildings.get(bid); if (b && b.hp > 0) G.Village.damageBuilding(b, 9999, 'lava'); }
+    if (S.road[i] && S.deep[i]) W.touchWalk();
     S.road[i] = 0; S.wear[i] = 0;
     return true;
   }

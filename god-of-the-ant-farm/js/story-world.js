@@ -60,7 +60,7 @@
   // where someone from this town would first stand at the sea: the nearest shore one can walk to
   St.coastFor = function (set) {
     const sea = St.nearestSea(set.cx, set.cy, G.N); if (!sea) return null;
-    const land = W.nearestLand(sea[0], sea[1], 4); if (!land || !W.sameLand(set.cx, set.cy, land[0], land[1])) return null;
+    const land = W.nearestLand(sea[0], sea[1], 4); if (!land || !W.townReaches(set, land[0], land[1])) return null;
     return { x: land[0], y: land[1], d: G.dist(set.cx, set.cy, land[0], land[1]) };
   };
   // the nearest feature of a kind to a point (for "they already live by a lake")

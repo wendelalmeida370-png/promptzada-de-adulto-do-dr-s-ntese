@@ -140,3 +140,11 @@ Frame (rAF): Cinema, Photo, Scene.frame, Track.frame, Render, FX, Sky; Skip runs
 - Checker: castaways (v.wrecked) are not "living where they cannot walk" — the expeditions module re-tasks them (camp / native town / home); they were a false positive after a save (tasks are not saved).
 - performance.memory is bucketed and cached by Chromium unless `--enable-precise-memory-info` is passed: heap figures from runs before that flag (ev.js/soak.js now carry it) are coarse (the 15-world loop read 23.1 MB every time). Re-measured with the flag in the memory phase.
 - QA.canon drops `ug` (underground): a save never keeps anyone in a cave or mine — load brings them out at the mouth by design (caves.js load hook), so it showed up as a save/load "diff" in every long soak.
+
+## 5. Foundations (reforms after the stabilization)
+Three sources of whole families of bugs were rebuilt so that new systems cannot bring them back. Each one ships with its own checker invariant, a scenario test, and (where a rule can be read off the code) a static guard.
+
+| ID | Reform | What changed | Checks |
+|---|---|---|---|
+| RF-1 | Where one can walk to | `W.reachIds()`: the walkable tiles labelled by 4-connected flood (findPath walks exactly this graph); a shut gate counts as a way through. Every change of the ground announces itself (`W.touchWalk()` on buildings up/down, ruins, walls, lava on a bridge; `S.typeVer` on terrain), with a 20 s safety rebuild. `W.canWalk` answers what findPath would, and findPath fails at once on another region (impossible searches 118 ms → 0.2 ms per 30). Strays, captives, hunting, gathering, migrations, caves, mulberries, nests and the stories ask `W.reaches / reachesTown / townReaches / townsLinked` instead of "same island". | checker S1 "mapa de alcance desatualizado" (a fresh flood against the map in use); "não chega a pé" uses the town's region; `reach.js` (500/500 pairs agree with the search; wall ring, gates, a building in the gap, an unannounced change caught) |
+

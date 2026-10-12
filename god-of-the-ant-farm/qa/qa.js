@@ -18,6 +18,20 @@
     for (const b of s.buildings.values()) maxId = Math.max(maxId, b.id);
     for (const a of s.animals.values()) maxId = Math.max(maxId, a.id);
     if (s.nextId <= maxId) add('ids', 0, `nextId ${s.nextId} <= maior id ${maxId}: colisão possível`);
+    // the map of where one can walk to must match the ground as it is now (a change nobody told it about leaves it stale)
+    if (G.W.reachIds && !opts.noReach) {
+      const L = G.W.reachIds(true); const n = N * N; const T = G.T;
+      const pass = i => { const t = s.type[i]; if (t < T.RIVER || s.cliff[i] || G.W.blocked(i)) return false; if (t === T.RIVER && s.deep[i] && !s.road[i]) return false; const w = s.wall[i]; return !w || w === 2 || w === 3 || w === 4; };
+      let bad = 0, ex = '';
+      for (let i = 0; i < n && bad < 50; i++) {
+        const p = pass(i);
+        if (p !== (L[i] >= 0)) { if (!bad) ex = `casa ${i % N},${(i / N) | 0} ${p ? 'pisável sem região' : 'com região mas não pisável'}`; bad++; continue; }
+        if (!p) continue;
+        if (i % N < N - 1 && pass(i + 1) && L[i + 1] !== L[i]) { if (!bad) ex = `casas vizinhas ${i % N},${(i / N) | 0} em regiões diferentes`; bad++; }
+        if (i + N < n && pass(i + N) && L[i + N] !== L[i]) { if (!bad) ex = `casas vizinhas ${i % N},${(i / N) | 0} em regiões diferentes`; bad++; }
+      }
+      if (bad) add('path', 1, `mapa de alcance desatualizado: ${bad}${bad >= 50 ? '+' : ''} casas (${ex})`);
+    }
     // ---- people
     const bandOf = new Map(), armyOf = new Map();
     if (G.War && G.War.bands) for (const b of G.War.bands.values()) for (const id of b.members || []) { if (bandOf.has(id)) add('war', 1, `#${id} em dois bandos (${bandOf.get(id)} e ${b.id})`, id); bandOf.set(id, b.id); }
@@ -30,7 +44,7 @@
       for (const k of ['age', 'hp', 'hunger', 'energy']) if (!fin(v[k])) add('pop', 1, `${nm}: ${k} = ${v[k]}`, v.id);
       if (v.hp <= 0) add('pop', 1, `${nm}: vivo com hp ${v.hp}`, v.id);
       if (!s.settlements.has(v.set)) add('pop', 2, `${nm}: povoado ${v.set} não existe (captive=${!!v.captive})`, v.id);
-      { const set = s.settlements.get(v.set); if (set && !v.captive && !v.aboard && !v.ug && !v.wrecked && v.age >= 3 && !(G.Expe && G.Expe.memberOf(v.id)) && !(v.task && (v.task.type === 'band' || v.task.type === 'swim' || v.task.type === 'naufrago' || v.task.type === 'muster')) && !G.W.sameLand(v.x, v.y, set.cx, set.cy)) add('pop', v._stray && s.day - v._stray >= 2 ? 2 : 3, `${nm}: mora em ${set.name}, numa terra aonde não chega a pé${v._stray && s.day - v._stray >= 2 ? ' há ' + (s.day - v._stray) + ' dias' : ' (recente)'} (${v.task ? v.task.type : '-'})`, v.id); }
+      { const set = s.settlements.get(v.set); if (set && !v.captive && !v.aboard && !v.ug && !v.wrecked && v.age >= 3 && !(G.Expe && G.Expe.memberOf(v.id)) && !(v.task && (v.task.type === 'band' || v.task.type === 'swim' || v.task.type === 'naufrago' || v.task.type === 'muster')) && !(G.W.reachesTown ? G.W.reachesTown(v, set) : G.W.sameLand(v.x, v.y, set.cx, set.cy))) add('pop', v._stray && s.day - v._stray >= 2 ? 2 : 3, `${nm}: mora em ${set.name}, numa terra aonde não chega a pé${v._stray && s.day - v._stray >= 2 ? ' há ' + (s.day - v._stray) + ' dias' : ' (recente)'} (${v.task ? v.task.type : '-'})`, v.id); }
       const f = G.Fac.ofV(v); if (f && !f.alive) add('pop', 1, `${nm}: pertence a povo extinto ${f.name}`, v.id);
       if (v.home) { const h = s.buildings.get(v.home); if (!h) add('pop', 2, `${nm}: casa ${v.home} não existe`, v.id); else if (h.set !== v.set && !v.captive) add('pop', 3, `${nm}: mora em outro povoado (${h.set} ≠ ${v.set})`, v.id); }
       if (v.partner) {
@@ -135,6 +149,8 @@
       if (moving && !aboard && !sh.ghost && sh.st !== 'deriva' && sh.kind !== 'pesca' && sh.kind !== 'mercante') add('sea', 3, `${nm}: navegando (${sh.st}) sem ninguém a bordo`);
       if (sh.kind === 'pesca' && moving && !aboard && sh.st !== 'adrift') add('sea', 3, `${nm}: barco de pesca (${sh.st}) sem ninguém a bordo`);
     }
+    // who is aboard comes from v.aboard alone; the index of who is on which ship must not miss anyone (someone put aboard without Naval.board)
+    if (G.Naval && G.Naval.aboardIndex && !opts.noReach) { const ix = G.Naval.aboardIndex(true); let miss = 0, ex = ''; for (const v of s.villagers.values()) if (v.aboard && !(ix.get(v.aboard) || []).includes(v)) { if (!miss) ex = `${v.name} #${v.id}`; miss++; } if (miss) add('sea', 1, `índice de quem está a bordo desatualizado: ${miss} pessoa(s) (${ex}) embarcaram sem passar por Naval.board`); }
     if (G.Naval && G.Naval.repairs) add('sea', 3, `tripulações reconciliadas ${G.Naval.repairs}× (alguém a bordo fora da lista do navio)`);
     // ---- expeditions & fleets
     if (G.Expe) for (const e of G.Expe.list()) {

@@ -559,7 +559,7 @@
     if (partner && (has(p, 'Romântico') || q.cru < 0.3 || G.hash(p.id * 3 + 1) < 0.35)) { s.cast.target = partner.id; St.reindex(); return 'amor'; }
     if (q.pie > 0.74 || has(p, 'Devoto')) { s.data.temple = templeOf(set) ? 1 : 0; return 'mar'; }
     const mk = marketOf(set);
-    if (cap && set && cap.id !== set.id && G.dist(cap.cx, cap.cy, set.cx, set.cy) > 10 && W.sameLand(cap.cx, cap.cy, set.cx, set.cy)) { s.data.to = cap.id; s.data.toName = cap.name; s.data.far = 1; }
+    if (cap && set && cap.id !== set.id && G.dist(cap.cx, cap.cy, set.cx, set.cy) > 10 && W.townsLinked(cap, set)) { s.data.to = cap.id; s.data.toName = cap.name; s.data.far = 1; }
     else if (mk) { s.data.mk = mk.id; s.data.toName = set.name; }
     else if (set) { s.data.toName = set.name; }
     return 'vender';
@@ -798,7 +798,7 @@
         const x = f.ford ? f.fx : f.tx, y = f.ford ? f.fy : f.ty;
         const spot = W.nearestLand(x, y, 6); if (!spot) return null;
         let set = null, bd = 34;
-        for (const st of S.settlements.values()) { const d = G.dist(st.cx, st.cy, spot[0], spot[1]); if (d < bd && W.sameLand(st.cx, st.cy, spot[0], spot[1])) { bd = d; set = st; } }
+        for (const st of S.settlements.values()) { const d = G.dist(st.cx, st.cy, spot[0], spot[1]); if (d < bd && W.townReaches(st, spot[0], spot[1])) { bd = d; set = st; } }
         if (!set || bd < 6) return null;
         let best = null, bs = 0;
         for (const v of S.villagers.values()) {

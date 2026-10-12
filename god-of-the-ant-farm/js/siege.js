@@ -129,7 +129,7 @@
     if (mat) w.mat = mat;
     S.walls.push(w);
     if (instant) for (const i of w.tiles) { if (S.wall[i] || (S.occ[i] && (S.buildings.get(S.occ[i]) || {}).blocks)) continue; const gate = w.gates.includes(i); S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; }
-    if (instant) { w.built = w.tiles.length; w.done = true; }
+    if (instant) { w.built = w.tiles.length; w.done = true; G.W.touchWalk(); }
     return w;
   };
   function considerWalls() {
@@ -163,7 +163,7 @@
       if (i !== undefined && !S.wall[i] && !(S.occ[i] && (S.buildings.get(S.occ[i]) || {}).blocks)) {
         f.stock[k] -= 2;
         const gate = w.gates.includes(i);
-        S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0];
+        S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; G.W.touchWalk();
         const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
         G.FX && G.FX.dust(x, y, 2);
         // nobody stays buried inside the new wall
@@ -215,7 +215,7 @@
     if (G.R() < 0.4) G.FX && G.FX.chips(x, y, '#a8a090');
     if (S.wallHp[i] > 0) return false;
     const gate = S.wall[i] === 2 || S.wall[i] === 4;
-    S.wall[i] = 0; delete S.wallHp[i];
+    S.wall[i] = 0; delete S.wallHp[i]; G.W.touchWalk();
     G.FX && G.FX.collapse(x, y, { w: 1, h: 1, type: 'ruin' });
     G.Audio && G.Audio.at(x, y, 'collapse', true);
     const w = S.walls.find(q => q.tiles.includes(i)); const s = w && S.settlements.get(w.set);

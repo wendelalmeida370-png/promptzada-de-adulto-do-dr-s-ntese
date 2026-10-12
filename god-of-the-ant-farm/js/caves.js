@@ -433,7 +433,7 @@
     let best = null, bd = maxD * maxD;
     for (const cv of C.all()) {
       if (!cv.mouths.length || cv.mine || !cv.known[set.fac] || (test && !test(cv))) continue;
-      for (const m of cv.mouths) { const d = G.dist2(set.cx, set.cy, m.x, m.y); if (d < bd && W.sameLand(set.cx, set.cy, m.x, m.y)) { bd = d; best = cv; } }
+      for (const m of cv.mouths) { const d = G.dist2(set.cx, set.cy, m.x, m.y); if (d < bd && W.townReaches(set, m.x, m.y)) { bd = d; best = cv; } }
     }
     return best;
   }
@@ -804,7 +804,7 @@
   function raid(cv) {
     const S = G.S; const b = cv.bandits; const m = cv.mouths[0]; if (!m) return;
     let tgt = null, bd = 44 * 44;
-    for (const s of S.settlements.values()) { const d = G.dist2(s.cx, s.cy, m.x, m.y); if (d < bd && W.sameLand(s.cx, s.cy, m.x, m.y)) { bd = d; tgt = s; } }
+    for (const s of S.settlements.values()) { const d = G.dist2(s.cx, s.cy, m.x, m.y); if (d < bd && W.townReaches(s, m.x, m.y)) { bd = d; tgt = s; } }
     if (!tgt) return;
     const p = W.findPath(m.x + 0.5, m.y + 0.5, tgt.cx, tgt.cy, true, 6000); if (!p) return;
     const k = Math.min(b.n, 3);
