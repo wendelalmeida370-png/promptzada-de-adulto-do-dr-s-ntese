@@ -291,9 +291,9 @@
     const I = b.inv || (b.inv = {});
     // the wine (or the mead) once paid for
     if (t.paid && !t.wine) {
-      t.wine = 1; const drink = (I.vinho || 0) >= 0.5 ? 'vinho' : (I.mel || 0) >= 0.5 ? 'mel' : null;
+      t.wine = 1; const drink = G.Tavern ? G.Tavern.onShelf(b) : (I.vinho || 0) >= 0.5 ? 'vinho' : (I.mel || 0) >= 0.5 ? 'mel' : null;
       const heavy = (v.traits || []).includes('Glutão') || (v.traits || []).includes('Sociável');
-      if (drink) { I[drink] -= 0.5; if (G.R() < (heavy ? 0.7 : 0.35)) v.drunk = S.clock + G.rr(40, 90); }
+      if (drink) { I[drink] -= 0.5; t.drank = drink; if (G.R() < (heavy ? 0.7 : 0.35)) v.drunk = S.clock + G.rr(40, 90); }
     }
     const night = G.isNight() || G.isEvening();
     // music: one plays when the room is full
@@ -366,7 +366,7 @@
       if (b.patron) h += `<div class="doing">Mandado construir por ${v ? plink(v.id) : esc(b.patron)}${v && !G.S.villagers.has(v.id) ? ' (já morto)' : ''}.${!b.built ? ` Obra em <b>${Math.round(b.progress * 100)}%</b>.` : ''}</div>`;
       if (b.inv && b.inv.food >= 1) h += `<div class="doing">A corte tem ${Math.floor(b.inv.food)} de comida do tributo.</div>`;
     }
-    if (b.type === 'taverna' && b.inv) h += `<div class="doing">${b.inv.vinho >= 1 ? `${Math.floor(b.inv.vinho)} ânforas de vinho` : b.inv.mel >= 1 ? `${Math.floor(b.inv.mel)} potes de hidromel` : 'Só tem comida e água por enquanto.'}</div>`;
+    if (b.type === 'taverna' && b.inv && !G.Tavern) h += `<div class="doing">${b.inv.vinho >= 1 ? `${Math.floor(b.inv.vinho)} ânforas de vinho` : b.inv.mel >= 1 ? `${Math.floor(b.inv.mel)} potes de hidromel` : 'Só tem comida e água por enquanto.'}</div>`;
     return h;
   };
   // (rulerSince and the palace wish live on the faction, saved with it)

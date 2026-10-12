@@ -1480,6 +1480,7 @@
     }
     // kingdoms: borders, war alarms, pens and executions
     if (R.showBorders && G.Fac.borders.length && G.Fac.all().length > 1) drawBorders();
+    if (R.urbView && G.Urban) drawUrbView();
     for (const s of S.settlements.values()) if (s.alarmT > 0) {
       groundEllipse(s.cx, s.cy, (s.radius || 8) * 0.85); ctx.strokeStyle = `rgba(255,70,50,${Math.min(1, s.alarmT / 4) * (0.35 + 0.25 * Math.sin(t * 6))})`;
       ctx.lineWidth = 1.6; ctx.setLineDash([6, 5]); ctx.lineDashOffset = t * 12; ctx.stroke(); ctx.setLineDash([]);
@@ -1531,6 +1532,26 @@
     }
   }
   let borderCache = { ver: -1, n: 0, paths: [] };
+  R.urbView = 0;
+  function drawUrbView() {
+    const U = G.Urban, C = U.C; const owner = new Map();
+    for (const s of G.S.settlements.values()) for (const d of U.districtsOf(s)) for (const c of d.cells) owner.set(c, d);
+    ctx.save();
+    for (const s of G.S.settlements.values()) {
+      const sn = U.peek(s.id); if (!sn) continue;
+      for (const o of sn.cells.values()) {
+        let col;
+        if (R.urbView === 1) { const d = owner.get(o.c); if (!d) continue; col = G.hex2rgb((U.KINDS[d.k] || {}).col || '#ffffff'); }
+        else { const v = G.clamp(o.value / 100, 0, 1); col = v < 0.5 ? [200, 70 + v * 2 * 120, 50] : [200 - (v - 0.5) * 2 * 150, 190, 60 + (v - 0.5) * 2 * 40]; }
+        const [x0, y0] = U.cellXY(o.c); const pts = [];
+        for (const [u, v] of [[0, 0], [0.5, 0], [1, 0], [1, 0.5], [1, 1], [0.5, 1], [0, 1], [0, 0.5]]) { const x = x0 + u * C, y = y0 + v * C; pts.push(proj(x, y, W.hAt(Math.min(N - 0.01, x), Math.min(N - 0.01, y)) + 0.1)); }
+        ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k][0], pts[k][1]); ctx.closePath();
+        ctx.fillStyle = G.rgb(col, R.urbView === 1 ? 0.42 : 0.46); ctx.fill();
+        ctx.strokeStyle = G.rgb(col, 0.85); ctx.lineWidth = 0.9; ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
   function drawBorders() {
     const F = G.Fac;
     // (the lines are kept for the view they were drawn for; while the world turns they are drawn anew)
@@ -2837,8 +2858,9 @@
 
   // ------------------------------ overlays ------------------------------
   R.showLabels = true;
+  R.cityBoxes = [];
   function drawCityLabels(view) {
-    const S = G.S; const zoom = R.cam.zoom;
+    const S = G.S; const zoom = R.cam.zoom; R.cityBoxes.length = 0;
     if (!R.showLabels || !G.Main || G.Main.mode !== 'game' || (G.Cinema && G.Cinema.on) || R.under) return;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const s of S.settlements.values()) {
@@ -2854,6 +2876,7 @@
       ctx.font = `600 ${ss}px Nunito, sans-serif`;
       const sw = ctx.measureText(sub).width;
       const w = Math.max(tw, sw) + 18 / zoom, h = fs + ss + 8 / zoom;
+      R.cityBoxes.push([p[0] - w / 2, y - h / 2, p[0] + w / 2, y + h / 2, s.id]);
       const a = zoom > 2.6 ? 0.5 : 0.85;
       ctx.globalAlpha = a;
       ctx.fillStyle = 'rgba(22,18,14,0.62)';
@@ -2865,6 +2888,26 @@
       ctx.fillStyle = 'rgba(240,225,200,0.75)'; ctx.font = `600 ${ss}px Nunito, sans-serif`; ctx.fillText(sub, p[0], y0 + 4 / zoom + fs + ss / 2);
     }
     ctx.globalAlpha = 1; ctx.textBaseline = 'alphabetic';
+  }
+  // the quarters of the towns: their names over their ground, when the camera is close enough to see streets
+  R.urbBoxes = [];
+  function drawDistrictLabels(view) {
+    const zoom = R.cam.zoom; R.urbBoxes.length = 0;
+    if (!G.Urban || !R.showLabels || !G.Main || G.Main.mode !== 'game' || (G.Cinema && G.Cinema.on) || R.under || zoom < 0.8 || zoom > 3.6) return;
+    const a = G.clamp(Math.min((zoom - 0.8) / 0.35, (3.6 - zoom) / 0.6), 0, 1) * 0.9;
+    ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    const fs = 9.5 / zoom; ctx.font = `italic 700 ${fs}px Cinzel, Georgia, serif`;
+    for (const s of G.S.settlements.values()) for (const d of G.Urban.districtsOf(s)) {
+      if (d.k === 'agrario' && zoom < 1.3) continue;
+      const q = proj(d.x, d.y, W.groundH(d.x, d.y)); const y = q[1] - 10;
+      if (q[0] < view[0] - 60 || q[0] > view[2] + 60 || y < view[1] - 30 || y > view[3] + 30) continue;
+      const w = ctx.measureText(d.name).width; const col = (G.Urban.KINDS[d.k] || {}).col || '#fff';
+      ctx.lineWidth = 3 / zoom; ctx.strokeStyle = 'rgba(20,16,12,0.72)'; ctx.strokeText(d.name, q[0], y);
+      ctx.fillStyle = '#fff3dc'; ctx.fillText(d.name, q[0], y);
+      ctx.fillStyle = col; ctx.fillRect(q[0] - w / 2, y + fs * 0.62, w, 1.4 / zoom);
+      R.urbBoxes.push([q[0] - w / 2, y - fs * 0.7, q[0] + w / 2, y + fs * 0.8, d.id]);
+    }
+    ctx.restore();
   }
   // the named places of the land: peaks, passes, waterfalls, lakes
   const PICON = { pico: '▲', passo: '⌇', cachoeira: '≋', lago: '◌', caverna: '◖' };
@@ -2902,6 +2945,7 @@
     const S = G.S; const zoom = R.cam.zoom;
     const is = G.clamp(1.5 / zoom, 0.7, 1.4);
     drawPlaceLabels(view);
+    drawDistrictLabels(view);
     drawCityLabels(view);
     for (let k = 0; k < overlays.length; k += 3) {
       const o = overlays[k], sx = overlays[k + 1], sy = overlays[k + 2];

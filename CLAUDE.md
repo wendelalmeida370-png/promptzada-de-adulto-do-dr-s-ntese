@@ -30,6 +30,9 @@ Três famílias inteiras de bugs foram eliminadas reconstruindo a base. Código 
   - Resultado: a mesma semente faz o mesmo mundo, com ou sem gente olhando, e o mesmo save carregado duas vezes vive o mesmo futuro. `qa/det3.js` prova isso; `qa/detloc.js` aponta o passo e a linha exatos onde duas vidas que deveriam ser iguais se separam; `qa/rngtrace.js` mostra quem sorteia de qual acaso.
   - Para reproduzir um bug: o modo desenvolvedor (F2 → Tempo → "Mundo novo de teste") mostra a semente do mundo, recria o mesmo mundo e aceita uma semente para o próximo.
 
+- **A cidade — `G.Urban`** (`js/urban.js`): células de 6×6 casas, valor da terra, núcleos e bairros (os bairros vivem em `set.urb` e vão no save; o retrato do dia, `G.Urban.peek`, não). Prédio novo numa cidade pergunta a `G.Urban` onde vai e se pode ser alto; um módulo novo registra o peso e o nome do seu prédio com `G.Urban.addWeight / addName / addBirth / addNear`. As moedas de uma família ficam na casa (`h.coin`): quem rouba, quem paga a rodada, quem compra a casa da terra cara mexe nelas de verdade.
+- **Quem está preso — `v.jail`** (`js/crime.js`): é a única verdade, e só o `crime.js` põe e tira alguém da cadeia (o `guard.js` cobra). Toda tarefa dada a um preso passa por `G.Crime.keeps` (dentro de `setTask`): um afazer comum devolve a cela; só um tumulto (prioridade ≥ 5: fogo, pânico, um navio) o tira de lá — e isso é fuga. Barraco só o `social.js` levanta.
+
 ## Outras regras do código
 
 - Cada módulo roda isolado (`G.tryRun`): um que quebra não derruba os outros, mas conta em `G.modErr` — e isso é falha nos testes.

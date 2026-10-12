@@ -1,6 +1,6 @@
 #!/bin/bash
 # A regressão completa, antes de cada versão: bash qa/regress.sh [pasta de saída]   (≈ 1 h 15 min numa máquina de 4 núcleos)
-# Roda o vigia do código, as 17 provas do mar, as 10 da guerra, vidas longas com o verificador, a mão divina, saves danificados,
+# Roda o vigia do código, as 17 provas do mar, as 10 da guerra, as da cidade (bairros, porto, taverna, moradia, crime), vidas longas com o verificador, a mão divina, saves danificados,
 # o save como ponto fixo, os mapas de alcance e de quem está a bordo, o determinismo, os painéis, o desenho e o macaco no teclado.
 # No fim escreve resumo.txt e o compara com a linha de base (linha-de-base.txt): o que mudou desde a última versão aparece como NOVO.
 # Tudo é determinístico (a mesma semente faz o mesmo mundo): uma prova que muda de resultado mudou porque o jogo mudou.
@@ -41,11 +41,15 @@ wait; echo "== saves danificados, alcance, a bordo, determinismo"
 (timeout 900 node monkey.js 7 90 > "$OUT/macaco.txt" 2>&1) &
 (timeout 900 node ev.js 13 ilha 80 2 2 extinct.js > "$OUT/extincao.txt" 2>&1) &
 wait; echo "== painéis, desenho, macaco, extinção"
-# 6. desempenho: sozinho na máquina, para os tempos valerem alguma coisa
+# 6. a cidade: bairros, valor da terra, núcleos e avenidas; o porto, a taverna, a horta, o barraco, o roubo e a cadeia
+skip cidade || { (timeout 2400 node urb1.js 41 128 90 > "$OUT/cidade_bairros.txt" 2>&1) & (timeout 2000 node urb2.js 7 > "$OUT/cidade_vida.txt" 2>&1) & wait; }
+echo "== cidade: $(cat "$OUT"/cidade_*.txt 2>/dev/null | grep -c '^PASSOU') passaram, $(cat "$OUT"/cidade_*.txt 2>/dev/null | grep -c '^FALHOU') falharam"
+# 7. desempenho: sozinho na máquina, para os tempos valerem alguma coisa
 m17 perf 7; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/mar_perf.txt" | cut -c1-160)"
 # resumo: uma linha por prova
 {
   for f in "$OUT"/mar_*.txt; do grep -h "PASSOU\|FALHOU" "$f" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | mar \2/'; done
+  for f in "$OUT"/cidade_*.txt; do [ -f "$f" ] && grep -h "^PASSOU\|^FALHOU" "$f" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | cidade \2/'; done
   for f in "$OUT"/guerra_*.txt; do grep -h " PASS \| FAIL " "$f" | grep -v RESULT | sed -E 's/^([^—]*) (PASS|FAIL) .*/\2 | guerra \1/; s/^PASS/PASSOU/; s/^FAIL/FALHOU/'; done
   grep -h "^PASSOU\|^FALHOU" "$OUT/guard.txt" "$OUT/determinismo.txt" | sed -E 's/^(PASSOU|FALHOU).*/\1/' | head -2 | paste -d' ' - <(echo vigia; echo determinismo) | sed 's/ / | /'
   for f in vida_103 vida_107; do v=$(grep -c "^  S[0-2] " "$OUT/$f.txt"); echo "$([ "$v" = 0 ] && echo PASSOU || echo FALHOU) | $f sem violações S0–S2"; done

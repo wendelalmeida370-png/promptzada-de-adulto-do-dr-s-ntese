@@ -37,6 +37,8 @@
   // how many tiles a saved per-tile array holds, whatever its encoding
   const arrLen = a => !a ? 0 : Array.isArray(a) ? a.length : a.d ? a.d.length : a.e ? a.e.reduce((n, v, k) => (k % 2 ? n + v : n), 0) : a.z ? a.z.reduce((n, v) => n + (v < 0 ? -v : 1), 0) : 0;
 
+  // ages kept to a thousandth, never rounded across a birthday (a baby of 1.9996 must not wake up from a load a child)
+  Sv.ageR = a => { const x = Math.round(a * 1000) / 1000; return Math.floor(x) > Math.floor(a) ? Math.floor(a) + 0.999 : x; };
   Sv.has = function () { try { return !!localStorage.getItem(KEY); } catch (e) { return false; } };
   Sv.info = function () {
     try { const s = localStorage.getItem(KEY); if (!s) return null; const o = JSON.parse(s); return { day: o.day, pop: o.villagers.length, era: o.era, when: o.savedAt }; } catch (e) { return null; }
@@ -50,7 +52,7 @@
       o.pi = 0; o.moving = false; o.held = false;
       if (o.air) { o.air = false; o.z = 0; o.vz = 0; o.vx = 0; o.vy = 0; }
       if (o.inside) { const b = S.buildings.get(o.inside); if (b) { const d = G.Vg.door(b); o.x = d[0]; o.y = d[1]; } o.inside = 0; o.sleeping = false; }
-      o.x = r(o.x, 2); o.y = r(o.y, 2); o.hunger = r(o.hunger, 1); o.energy = r(o.energy, 1); o.hp = r(o.hp, 1); o.age = r(o.age, 3);
+      o.x = r(o.x, 2); o.y = r(o.y, 2); o.hunger = r(o.hunger, 1); o.energy = r(o.energy, 1); o.hp = r(o.hp, 1); o.age = Sv.ageR(o.age);
       o.devotion = r(o.devotion, 1); o.fear = r(o.fear, 1);
       return o;
     });

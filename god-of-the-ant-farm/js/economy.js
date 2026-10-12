@@ -890,9 +890,9 @@
     if (v.actT > 12 && !t.paid) {
       t.paid = true;
       const I = inv(b); const f = G.Fac.ofV(v);
-      if ((I.food || 0) >= 1) { I.food -= 1; v.hunger = Math.max(0, v.hunger - 35); if (f && E.coinage(f.id) && spend(v, 0.4)) { const keeper = [...G.S.villagers.values()].find(o => o.job === b.id); const kh = keeper && homeOf(keeper); if (kh) kh.coin = (kh.coin || 0) + 0.4; } }
+      if ((I.food || 0) >= 1) { I.food -= 1; v.hunger = Math.max(0, v.hunger - 35); if (f && E.coinage(f.id) && spend(v, 0.4)) { const keeper = [...G.S.villagers.values()].find(o => o.job === b.id); const kh = keeper && homeOf(keeper); b.takings = (b.takings || 0) + 0.4; if (kh) kh.coin = (kh.coin || 0) + 0.4; else { f.stock.moedas += 0.4; f.eco.sales += 0.4; } } }
     }
-    if (v.actT > 16) H.end(v);
+    if (v.actT > (t.dur || 16)) H.end(v);
   }
   // the end of the working day: back to the house
   E.goHomeTask = function (v, H) { const h = homeOf(v); if (!h || !h.built) return null; return H.setTask(v, { type: 'goHome', id: h.id, pri: 0.5 }); };

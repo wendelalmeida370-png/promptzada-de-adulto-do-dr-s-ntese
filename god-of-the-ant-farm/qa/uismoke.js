@@ -23,6 +23,10 @@ const people = [...S.villagers.values()]; const sample = [people[0], people[Math
 for (const v of sample) { check('bio ' + v.name, () => G.UI.openBio(v.id)); close(); check('árvore ' + v.name, () => G.UI.openTree(v.id)); close(); }
 for (const v of people.slice(0, 3)) { await checkA('painel pessoa ' + v.name, () => { G.UI.select(v); G.UI.refresh && G.UI.refresh(); G.UI.update(0.5, true); }); }
 for (const b of [...S.buildings.values()].filter((b, i, a) => i % Math.max(1, Math.floor(a.length / 6)) === 0).slice(0, 6)) await checkA('painel prédio ' + b.type, () => { G.UI.select(b); G.UI.update(0.5, true); });
+if (G.Urban) for (const st of [...S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id)).slice(0, 2)) {
+  await checkA('painel cidade ' + st.name, () => { G.UI.select(G.Urban.selectCity(st)); G.UI.update(0.5, true); });
+  for (const d of G.Urban.districtsOf(st).slice(0, 2)) await checkA('painel bairro ' + d.name, () => { G.UI.select(G.Urban.select(d)); G.UI.update(0.5, true); });
+}
 for (const a of [...S.animals.values()].slice(0, 3)) await checkA('painel bicho ' + a.kind, () => { G.UI.select(a); G.UI.update(0.5, true); });
 for (const sh of S.ships.slice(0, 3)) await checkA('painel navio ' + sh.kind, () => { G.UI.select(sh); G.UI.update(0.5, true); });
 G.UI.select(null);

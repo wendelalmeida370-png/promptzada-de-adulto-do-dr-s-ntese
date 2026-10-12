@@ -227,6 +227,8 @@
       G.Audio.play('click');
       if (b.dataset.act === 'close') UI.select(null);
       else if (b.dataset.act === 'follow') { const s = UI.selected; if (s && !s.dead) { G.Render.cam.follow = G.Render.cam.follow === s.id ? 0 : s.id; renderInspector(true); } }
+      else if (b.dataset.act === 'urbgo') { const s = UI.selected; if (s && (s.urbD || s.urbS)) { G.Render.cam.follow = 0; G.Render.panTo(s.x, s.y); } }
+      else if (b.dataset.act === 'urb') { const d = G.Urban && G.Urban.byId(+b.dataset.id); if (d) UI.select(G.Urban.select(d)); }
       else if (b.dataset.act === 'tree') UI.openTree(UI.selected.id);
       else if (b.dataset.act === 'bio') UI.openBio(UI.selected.id);
       else if (b.dataset.act === 'cave-view') G.Caves.view(+b.dataset.id);
@@ -493,7 +495,8 @@
     const o = UI.selected; const el = $('#inspector'); if (!o) return;
     const S = G.S;
     let html = '';
-    if (G.Caves && G.Caves.owns(o)) html = G.Caves.inspectorHTML(o);
+    if (G.Urban && G.Urban.owns(o)) html = G.Urban.inspectorHTML(o, esc);
+    else if (G.Caves && G.Caves.owns(o)) html = G.Caves.inspectorHTML(o);
     else if (G.Sea && G.Sea.owns(o)) html = G.Sea.inspectorHTML(o);
     else if (o.type && G.BDEF[o.type]) html = buildingHTML(o);
     else if (o.kind && o.dock !== undefined && G.Naval && G.Naval.SHIP[o.kind]) html = shipHTML(o);
@@ -558,7 +561,8 @@
     if (v.mourn > 0) status.push('<span class="st grey">De luto</span>');
     if (v.fear > 55) status.push('<span class="st red">Aterrorizad' + (f ? 'a' : 'o') + '</span>');
     if (v.hunger >= 95) status.push('<span class="st red">Faminto</span>');
-    if (!v.home && v.age >= 16) status.push('<span class="st grey">Sem casa</span>');
+    if (!v.home && v.age >= 16) status.push(`<span class="st grey" title="${G.Social && G.Social.whyText(v) ? esc(G.Social.whyText(v)) : ''}">Sem casa${v.rua ? ' há ' + Math.max(0, G.S.day - v.rua) + (G.S.day - v.rua === 1 ? ' ano' : ' anos') : ''}</span>`);
+    else if (v.home && (G.S.buildings.get(v.home) || {}).type === 'barraco') status.push('<span class="st grey">Mora num barraco</span>');
     const feats = [];
     if (v.st.wood) feats.push(`${v.st.wood} de madeira`); if (v.st.food) feats.push(`${v.st.food} de comida`); if (v.st.stone) feats.push(`${v.st.stone} de pedra`); if (v.st.built) feats.push(`${v.st.built} ${v.st.built > 1 ? 'obras concluídas' : 'obra concluída'}`);
     const following = G.Render.cam.follow === v.id;
@@ -639,6 +643,7 @@
       }
     }
     const bf = set ? G.Fac.get(set.fac) : null;
+    { const qd = G.Urban && b.set && G.Urban.districtAt(b.x + b.w / 2, b.y + b.h / 2); if (qd && qd.set === b.set) body += `<div class="doing">Bairro: <a data-act="urb" data-id="${qd.id}">${esc(qd.name)}</a> <span class="muted">(${esc(G.Urban.kindName(qd.k).toLowerCase())})</span></div>`; }
     if (b.type === 'cercado' && b.built) { const n = [...S.villagers.values()].filter(v => v.captive && v.set === b.set).length; body += `<div class="doing">${n ? n + (n > 1 ? ' cativos vivem' : ' cativo vive') + ' nesta vila.' : 'Vazio, por enquanto.'}</div>`; }
     if (b.type === 'quartel' && b.built && bf) body += `<div class="doing">${G.War.warriorsOf(bf.id)} guerreiros em ${esc(bf.name)}.</div>`;
     return `<div class="insp-head"><div class="insp-title"><h3>${esc(title)}</h3><div class="sub">${set ? esc(set.name) + ' · ' + G.City.tierName(set).toLowerCase() : ''}${!b.built && b.type !== 'ruin' ? ' · em construção' : ''}${b.style && G.CIVS[b.style] ? ' · arquitetura ' + G.CIVS[b.style].adj : ''}</div></div><button class="x" data-act="close">${ICON.close}</button></div>${bf ? `<div class="fline">${UI.flag(bf.id, 'mini')}${esc(bf.name)}${set && G.Fac.capitalOf(bf.id) === set ? ' · capital' : ''}${set ? ' · lealdade ' + Math.round(set.loyalty) + '%' : ''}</div>` : ''}${body}`;
@@ -715,6 +720,8 @@
       <li>O <b>mar</b> é gente: o <b>pescador</b> sai de casa, pega a rede, embarca, pesca, volta, descarrega as caixas no cais e leva ao armazém. Cada povo <b>sabe só o que os seus viram e voltaram para contar</b>: ilhas desconhecidas, boatos, avistadas, exploradas, mapeadas. Ninguém explora por relógio: <b>falta de ferro</b>, gente demais, um <b>boato</b>, um governante ambicioso ou um aventureiro mandam <b>expedições</b> (sozinho numa canoa, com um patrono, ou a grande expedição do Estado), que preparam o cais, partem, enfrentam o mar, descobrem, dão nome, encontram outros povos — e às vezes nunca voltam. Na guerra, <b>frotas</b> com almirante, formação e moral bloqueiam portos, travam <b>batalhas navais</b> com abordagem e fogo, e levam o exército pelo mar até a praia inimiga. Painel <b>O Mar</b>: <kbd>O</kbd>.</li>
       <li>As <b>guerras</b> têm causa, nome e etapas: a <b>tensão</b> sobe antes (patrulhas, ferreiros de noite, celeiros cheios), o reino <b>convoca</b> e reúne o exército, que marcha com carroças, <b>acampa</b> à noite, luta <b>batalhas com nome</b>, <b>cerca</b> cidades muradas e volta para casa; o cansaço leva à <b>paz</b>, com tratado. Painel <b>Guerras</b>: <kbd>X</kbd> (ou o botão no painel Reinos). Quando dois exércitos formam as linhas, o aviso <b>Batalha iminente — Assistir</b> aparece.</li>
       </ul><h4>Vida na cidade e festas</h4><ul>
+      <li>A cidade cresce de <b>vários núcleos</b> (o velho fogo, praças, mercados, porto, templo, palácio, estradas) e forma <b>bairros</b> com nome e história — o centro antigo, o comércio, os nobres, o popular, os ofícios, o porto, o militar, o sagrado, os campos, os barracos. A terra vale mais perto do palácio e da praça, no alto, junto à água; prédio alto só onde ela é cara. <kbd>V</kbd> pinta os bairros (de novo: o valor da terra); clique no nome de uma cidade ou de um bairro no mapa para o painel.</li>
+      <li>O navio mercante descarrega <b>caixas no cais</b> que os estivadores levam ao armazém; a <b>taverna</b> faz a bebida do seu povo e cobra cada rodada; as casas da borda têm <b>horta</b>; quem perde a casa (e sabe por quê) levanta um <b>barraco</b>; o <b>ladrão</b> rouba moedas de verdade, a testemunha conta ao guarda, o guarda procura, prende e leva à <b>cadeia</b> pelo tempo que a lei do povo manda.</li>
       <li>Cada pessoa tem ofício e local de trabalho: pastores, tecelões, ferreiros, mineiros, ourives, oleiros, mercadores, feirantes, taverneiros, escribas, coletores de impostos — e contrabandistas. Clique num edifício para ver quem trabalha nele e o que produz.</li>
       <li>No <b>fim da tarde</b> as famílias se sentam à porta de casa em volta de um foguinho, jantam, se abraçam, e os pais jogam os pequenos para o alto. Os <b>velhos contam histórias</b> às crianças junto à fogueira — histórias que aconteceram de verdade: estão na Crônica, nas lendas ou na vida de quem conta.</li>
       <li>Dos nove anos em diante, os filhos vão com o pai ou a mãe para o trabalho e <b>imitam o ofício</b>; quem aprende tende a seguir a mesma profissão e trabalha melhor nela.</li>

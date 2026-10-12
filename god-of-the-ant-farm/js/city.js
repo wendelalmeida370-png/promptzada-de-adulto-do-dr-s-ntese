@@ -168,7 +168,7 @@
     if (!from) return false;
     // the city densifies from its heart outwards
     let old = null, bd = 1e9;
-    for (const b of G.S.buildings.values()) if (b.set === set.id && b.type === from && b.built) { const d = G.dist(b.x + 0.5, b.y + 0.5, set.cx, set.cy); if (d < bd) { bd = d; old = b; } }
+    for (const b of G.S.buildings.values()) if (b.set === set.id && b.type === from && b.built && (!G.Urban || G.Urban.dearEnough(set, b, to))) { const d = G.dist(b.x + 0.5, b.y + 0.5, set.cx, set.cy); if (d < bd) { bd = d; old = b; } }
     if (!old) return false;
     const def = G.BDEF[to];
     old.type = to; old.built = false; old.progress = 0; old.upgradeFrom = from;
@@ -381,6 +381,10 @@
     const g = f && f.civ && GRID[f.civ] && (set.tier || 0) >= 2 ? GRID[f.civ] : 0;
     if (g) { for (let o = -r; o <= r; o += g) { line(cx - r, cy + o, 1, 0, r * 2); line(cx + o, cy - r, 0, 1, r * 2); } }
     else for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) line(cx, cy, dx, dy, r);
+    // the avenues: from the hearth to the port, the markets, the temple, the palace, the barracks, the gates
+    // and the roads that come in from the next town — around the houses, along the paths already worn
+    const av = new Set();
+    if (G.Urban && (set.tier || 0) >= 2) for (const i of G.Urban.avenues(set, cx, cy, free)) if (free(i) && S.type[i] >= T.RIVER) { tiles.add(i); av.add(i); }
     // a lane from every door to the nearest street
     const near = (x, y) => { let best = null, bd = 64; for (const i of tiles) { const d = (i % N - x) ** 2 + (((i / N) | 0) - y) ** 2; if (d < bd) { bd = d; best = i; } } return best; };
     for (const b of S.buildings.values()) {
@@ -390,10 +394,11 @@
       for (let k = 0; k < 16 && (x !== tx || y !== ty); k++) { const i = y * N + x; if (free(i)) tiles.add(i); if (x !== tx && (Math.abs(tx - x) >= Math.abs(ty - y) || y === ty)) x += Math.sign(tx - x); else y += Math.sign(ty - y); }
     }
     // (a cache, not part of the save: kept out of JSON)
-    Object.defineProperty(set, '_plan', { value: { nb, day: S.day, tiles }, writable: true, configurable: true, enumerable: false });
+    Object.defineProperty(set, '_plan', { value: { nb, day: S.day, tiles, av }, writable: true, configurable: true, enumerable: false });
     return tiles;
   };
   Ci.onStreet = (set, i) => { const p = set && set._plan; return !!(p && p.tiles instanceof Set && p.tiles.has(i)); };
+  Ci.onAvenue = (set, i) => { const p = set && set._plan; return !!(p && p.av instanceof Set && p.av.has(i)); };
   // ------------------------------ bridges inside the town ------------------------------
   // every step taken through shallow water is counted; where a town keeps wading the same stream or pond,
   // once it has grown into a town it throws a stone bridge across, bank to bank
@@ -465,7 +470,7 @@
       for (const i of Ci.streetPlan(set)) {
         if (S.road[i] >= want || S.occ[i] || S.fire[i] > 0 || S.objAt[i] || claimed(i, v)) continue;
         const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
-        let sc = G.dist(x, y, set.cx, set.cy) + (S.road[i] ? 4 : 0) + G.hash(i + S.day) * 0.5;
+        let sc = G.dist(x, y, set.cx, set.cy) + (S.road[i] ? 4 : 0) + G.hash(i + S.day) * 0.5 - (set._plan && set._plan.av && set._plan.av.has(i) ? 6 : 0);
         if (near !== undefined) sc += G.dist(x, y, (near % N) + 0.5, ((near / N) | 0) + 0.5) * 1.5;
         if (sc < bs) { bs = sc; best = { i, lvl: want }; }
       }

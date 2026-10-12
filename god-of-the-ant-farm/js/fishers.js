@@ -137,18 +137,19 @@
   function runDescarga(v, t, dt, H) {
     const S = G.S; const b = S.buildings.get(t.dock); if (!b) return H.end(v);
     if (t.st === 0) {
+      if (v.carry && v.carry.crate) { t.st = 2; return; }
       if (!b.crates || !b.crates.length) return H.end(v);
       const p = t.alt ? G.Vg.door(b) : crateSpot(b); const r = walk(v, t, t.alt ? 'crates2' : 'crates', p[0], p[1], dt, H); if (r < 0) { if (!t.alt) { t.alt = 1; return; } return H.end(v); } if (r > 0) { t.st = 1; v.actT = 0; } return;
     }
     if (t.st === 1) {
       v.act = 'lift'; if (v.actT < 1) return;
       v.act = ''; const c = b.crates && b.crates.shift(); if (!c) return H.end(v);
-      v.carry = { k: c.k, n: c.n, crate: 1, fish: c.fish, fishCol: c.col, catchOf: c.boat };
+      v.carry = { k: c.k, n: c.n, crate: 1, fish: c.fish, fishCol: c.col, catchOf: c.boat, imp: c.imp };
       t.st = 2; return;
     }
     if (t.st === 2) {
-      const d = G.Village.nearestDropoff(v.x, v.y, v.set); if (!d) { if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, G.Fac.idOfV(v)); v.carry = null; } return H.end(v); }
-      const ft = G.Village.frontTile(d); const r = walk(v, t, 'store' + d.id, ft[0], ft[1], dt, H); if (r < 0) { if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, G.Fac.idOfV(v)); v.carry = null; } return H.end(v); }
+      const d = G.Village.nearestDropoff(v.x, v.y, v.set); if (!d) { if (v.carry) { delivered(v, v.carry); v.carry = null; } return H.end(v); }
+      const ft = G.Village.frontTile(d); const r = walk(v, t, 'store' + d.id, ft[0], ft[1], dt, H); if (r < 0) { if (v.carry) { delivered(v, v.carry); v.carry = null; } return H.end(v); }
       if (r > 0) {
         if (v.carry) delivered(v, v.carry);
         v.carry = null; t.trips++;
@@ -159,7 +160,8 @@
   function delivered(v, c) {
     const fid = G.Fac.idOfV(v); const fa = G.Fac.get(fid); if (!fa) return;
     const add = G.Village.addStock(c.k, c.n, fid);
-    if (c.k !== 'food') E.made(fa, c.k, c.n);
+    if (c.k !== 'food' && !c.imp) E.made(fa, c.k, c.n);
+    if (c.imp) { E.ensure(fa); fa.eco.imp = (fa.eco.imp || 0) + c.n; }
     G.FX && G.FX.deposit(v.x, v.y, c.k, add || c.n);
     v.st[c.k] = (v.st[c.k] || 0) + c.n;
     if (c.fish) { G.Riches && G.Riches.noteFood(fid, 'peixe:' + c.fish, c.n); }

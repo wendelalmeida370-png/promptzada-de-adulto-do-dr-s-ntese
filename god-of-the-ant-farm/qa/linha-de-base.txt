@@ -5,7 +5,7 @@ PASSOU | mar 5 rotina do pescador
 PASSOU | mar 7 grande expedição do Estado 
 PASSOU | mar 11 guerra entre ilhas: frota + transporte + desembarque 
 PASSOU | mar 2 ilha sem ferro busca solução no mar 
-PASSOU | mar 8 ilha conhecida só por quem soube 
+FALHOU | mar 8 ilha conhecida só por quem soube 
 PASSOU | mar 17 desempenho com muitos barcos 
 PASSOU | mar 1 ilha rica não coloniza tudo 
 PASSOU | mar 14 salvar/carregar durante uma expedição 
@@ -14,10 +14,29 @@ PASSOU | mar 13 navio afundado: consequências para a tripulação
 PASSOU | mar 16 avanço no tempo 
 PASSOU | mar 6 expedição individual 
 PASSOU | mar 3 cultura aventureira explora mais 
-FALHOU | mar 4 cultura não marítima explora menos 
+PASSOU | mar 4 cultura não marítima explora menos 
+PASSOU | cidade 1 bairros nascem do que a cidade tem 
+PASSOU | cidade 2 nomes únicos e guardados no save 
+PASSOU | cidade 3 a terra vale mais no bairro nobre 
+PASSOU | cidade 4 a cidade cresce de vários núcleos 
+PASSOU | cidade 5 avenidas ligam os núcleos e são calçadas primeiro 
+PASSOU | cidade 6 o centro é denso, a borda tem espaço 
+PASSOU | cidade 7 o verificador não vê nada errado nos bairros 
+PASSOU | cidade 8 as hortas da borda foram cuidadas e colhidas 
+PASSOU | cidade 9 as tavernas serviram bebida 
+PASSOU | cidade 10 a carga dos navios entrou pelo armazém 
+PASSOU | cidade 11 os roubos tiveram resposta 
+PASSOU | cidade 12 os ricos moram em terra mais cara 
+PASSOU | cidade 1 a carga do navio desce no cais e vai a pé ao armazém 
+PASSOU | cidade 2 a taverna faz a bebida do seu povo e cobra cada rodada 
+PASSOU | cidade 3 a horta do quintal: cuidada, colhida, comida na despensa 
+PASSOU | cidade 4 a casa queima: a família vai para a rua (por isso), levanta um barraco e depois sai dele 
+PASSOU | cidade 5 o roubo: a moeda muda de casa, o guarda vê, prende e leva à cadeia 
+PASSOU | cidade 6 o preso continua na cela depois do save e sai quando a lei manda 
+PASSOU | cidade 7 o verificador não vê nada errado 
 PASSOU | guerra 2 reinos médios: dezenas
 PASSOU | guerra 5 guerra longa: economia, suprimento, desgaste
-PASSOU | guerra 6 derrota: retirada/fuga/rendição
+FALHOU | guerra 6 derrota: retirada/fuga/rendição
 PASSOU | guerra 7 paz: volta dos soldados e consequências
 PASSOU | guerra 8 save/load
 PASSOU | guerra 1 aldeias pequenas

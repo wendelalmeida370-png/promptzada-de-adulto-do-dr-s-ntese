@@ -181,11 +181,11 @@
   }
   // the world's modules, in the order they live (each one on its own: one that throws does not stop the rest)
   const MODS = [
-    ['Nature', dt => G.Nature.update(dt)], ['Village', dt => G.Village.update(dt)], ['Villagers', dt => G.Vg.updateAll(dt)],
+    ['Nature', dt => G.Nature.update(dt)], ['Village', dt => G.Village.update(dt)], ['Urban', dt => G.Urban && G.Urban.update(dt)], ['Social', dt => G.Social && G.Social.update(dt)], ['Villagers', dt => G.Vg.updateAll(dt)],
     ['Life', dt => G.Life && G.Life.update(dt)], ['Carnage', dt => G.Carnage && G.Carnage.update(dt)], ['Animals', dt => G.Animals.updateAll(dt)],
     ['Flora', dt => G.Flora && G.Flora.update(dt)], ['Riches', dt => G.Riches && G.Riches.update(dt)], ['Estates', dt => G.Estates && G.Estates.update(dt)],
-    ['Court', dt => G.Court && G.Court.update(dt)], ['Trade', dt => G.Trade && G.Trade.update(dt)], ['Migrate', dt => G.Migrate && G.Migrate.update(dt)],
-    ['Nests', dt => G.Nests && G.Nests.update(dt)], ['Polity', dt => G.Polity && G.Polity.update(dt)], ['Justice', dt => G.Justice && G.Justice.update(dt)],
+    ['Court', dt => G.Court && G.Court.update(dt)], ['Tavern', dt => G.Tavern && G.Tavern.update(dt)], ['Trade', dt => G.Trade && G.Trade.update(dt)], ['Migrate', dt => G.Migrate && G.Migrate.update(dt)],
+    ['Nests', dt => G.Nests && G.Nests.update(dt)], ['Polity', dt => G.Polity && G.Polity.update(dt)], ['Justice', dt => G.Justice && G.Justice.update(dt)], ['Crime', dt => G.Crime && G.Crime.update(dt)],
     ['Riots', dt => G.Riots && G.Riots.update(dt)], ['Secrets', dt => G.Secrets && G.Secrets.update(dt)], ['Scene', dt => G.Scene && G.Scene.update(dt)],
     ['Caves', dt => G.Caves && G.Caves.update(dt)], ['Pets', dt => G.Pets && G.Pets.update(dt)], ['Powers', dt => G.Powers.update(dt)],
     ['Lore', dt => G.Lore && G.Lore.update(dt)], ['Events', dt => G.Events.update(dt)],
@@ -223,6 +223,9 @@
     for (const s of S.ships) test(s, 8);
     for (const a of S.animals.values()) { if (a.held) continue; test(a, 3); }
     if (best || mobileOnly) return best;
+    // the name of a quarter on the map
+    if (G.Urban && R.cityBoxes && R.cityBoxes.length) { const [wx, wy] = R.screenToWorldPx(px, py); for (const b of R.cityBoxes) if (wx >= b[0] && wx <= b[2] && wy >= b[1] && wy <= b[3]) { const s = G.S.settlements.get(b[4]); if (s) return G.Urban.selectCity(s); } }
+    if (G.Urban && R.urbBoxes && R.urbBoxes.length) { const [wx, wy] = R.screenToWorldPx(px, py); for (const b of R.urbBoxes) if (wx >= b[0] && wx <= b[2] && wy >= b[1] && wy <= b[3]) { const d = G.Urban.byId(b[4]); if (d) return G.Urban.select(d); } }
     // the door of a cave
     if (G.Caves) for (const cv of G.Caves.all()) for (const m of cv.mouths) {
       const [wx, wy] = R.proj(m.x + 0.5, m.y + 0.5, W.groundH(m.x + 0.5, m.y + 0.5)); const [sx, sy] = R.worldPxToScreen(wx, wy - 5);
@@ -392,6 +395,7 @@
       else if (k === 'j' || k === 'J') G.Skip.open();
       else if (k === 'q' || k === 'Q') G.Render.rotate(-1);
       else if (k === 'e' || k === 'E') G.Render.rotate(1);
+      else if (k === 'v' || k === 'V') { const R = G.Render; R.urbView = (R.urbView + 1) % 3; G.UI.notice(['Visão da cidade desligada.', 'Bairros: a cor de cada um é a sua vocação (V de novo: o valor da terra).', 'Valor da terra: do vermelho (barato) ao verde (caro).'][R.urbView], 'eye'); }
       else if (k === 'b' || k === 'B') { G.Render.showBorders = !G.Render.showBorders; G.UI.notice(G.Render.showBorders ? 'Fronteiras visíveis.' : 'Fronteiras ocultas.', 'eye'); }
       else if (k === ' ') { e.preventDefault(); if (G.speed === 0) G.UI.setSpeed(M.lastSpeed || 1); else { M.lastSpeed = G.speed; G.UI.setSpeed(0); } }
       else if (k === 'Escape') { if (I.held) release(); else if (I.power) G.UI.setPower(null); else if (G.UI.selected) G.UI.select(null); else G.UI.openPause(); }

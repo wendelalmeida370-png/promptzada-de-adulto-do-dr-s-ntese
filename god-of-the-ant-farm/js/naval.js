@@ -617,7 +617,7 @@
     if (s.st === 'go' && moveShip(s, dt)) {
       const fa = G.Fac.get(s.fac), fb = G.Fac.get(G.Village.facOfSet(ob.set));
       if (fa && fb) {
-        if (s.goods) G.Village.addStock(s.goods.k, s.goods.n, fb.id);
+        if (s.goods) { if (G.Harbor) G.Harbor.land(ob, s.goods, s); else G.Village.addStock(s.goods.k, s.goods.n, fb.id); }
         if (s.lux && G.Trade) G.Trade.shipArrive(s, fa, fb);
         if (fa !== fb) {
           const deal = 1.1 * G.Civ.t(fa.id, 'trade') * (G.Civ.has(fa.id, 'moeda') ? 1.15 : 1);
@@ -633,7 +633,7 @@
       const h = home(s); if (h && sailTo(s, h.moor[0], h.moor[1])) s.st = 'back'; else removeShip(s);
       return;
     }
-    if (s.st === 'back' && moveShip(s, dt)) { if (s.ret) G.Village.addStock(s.ret.k, s.ret.n, s.fac); G.Trade && G.Trade.shipHome(s); Nv.arrived(s); removeShip(s); }
+    if (s.st === 'back' && moveShip(s, dt)) { if (s.ret) { if (G.Harbor) G.Harbor.land(hb, s.ret, s); else G.Village.addStock(s.ret.k, s.ret.n, s.fac); } G.Trade && G.Trade.shipHome(s); Nv.arrived(s); removeShip(s); }
   }
 
   // ------------------------------ expeditions: raids & colonies ------------------------------

@@ -31,6 +31,7 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Histórias | `K` · ou o ícone da pena no topo |
 | Painel dos reinos | `R` · ou clique no chip do povo no topo |
 | Mostrar/ocultar fronteiras | `B` |
+| Ver a cidade por bairros | `V` (bairros pela vocação · de novo: o valor da terra · de novo: desliga) · clique no **nome de uma cidade** para o painel da cidade, no **nome de um bairro** para o painel do bairro |
 | Cancelar poder | botão direito · `Esc` |
 | Pausar | `Espaço` |
 | Velocidade | botões 1x / 2x / 4x / **8x** / **16x** · `+` / `-` (em mundos muito grandes, o 16x mostra a velocidade real que o computador consegue manter) |
@@ -224,6 +225,20 @@ Nada é enfeite: cada coisa que se vê na cidade é alguém fazendo um trabalho 
 - **Dinheiro e impostos**: com a Moeda, os **coletores de impostos** batem de porta em porta, o ouro é cunhado em moedas, salários são pagos às famílias, e cada governo cobra sua taxa (tirania 30%, era de ouro menos). Casas com tecido, cerâmica e joias vivem melhor; impostos altos e escassez derrubam a lealdade. O **prédio administrativo** (bouleutério, basílica, casa do vizir, tecpan, salão do thing) tem escribas que ajudam a governar.
 - **Muito mais animações**: tear, martelo na forja, torno de oleiro, tosquia, ordenha, pastor com cajado, varrer, servir na taverna, escrever, bater à porta, esgueirar-se, pechinchar, beber, carregar lã, tecido, couro, minério, armas, ouro, cerâmica, moedas e feno.
 - Clique num edifício para ver quem trabalha lá, o estoque, o rebanho ou o veio; no painel **Reinos**, cada povo mostra bens, tesouro, imposto e a produção do dia anterior.
+
+## Bairros, porto, taverna, quintais, barracos e a lei
+
+A cidade não é mais um anel em volta da fogueira: ela cresce de **vários núcleos** ao mesmo tempo — o velho fogo, as praças e mercados, o porto, o templo, o palácio, o quartel, os portões e as estradas que chegam — e cada coisa procura o lugar ao qual pertence.
+
+- **Valor da terra**: cada pedaço da cidade vale mais perto do palácio, do templo e da praça, no alto e seco, junto à água e dentro da muralha; vale menos ao lado da forja, do curtume e dos currais, e na borda. **Prédios altos só onde a terra é cara**: na terra barata, a mesma família faz uma casa baixa, com quintal.
+- **Bairros que nascem sozinhos**: o centro antigo, o bairro do comércio, o dos nobres, o popular, o dos ofícios, o do porto, o militar, o sagrado, os campos — e, se faltar casa, o de barracos. Cada um tem **nome próprio** da sua cultura (Ágora, Fórum, Cerâmico, Subura, Tianguis, Colina dos Nobres, Rua dos Ferreiros, Cais dos Barcos, Chinampas, Burgo Velho…), ano de nascimento e história: cresce, muda de vocação, esvazia, é engolido por um vizinho — e a crônica conta. O nome aparece no mapa; clique para abrir o painel do bairro (gente, riqueza, valor da terra, trabalho, idade, história).
+- **Avenidas** ligam o velho fogo a cada núcleo e são calçadas antes das ruas de dentro. Uma cidade grande demais para uma muralha só cerca a **cidade velha**.
+- **Quintais**: as casas da borda arejada ganham uma **horta**; a família cava, cuida no fim do dia (ou cedo, antes do trabalho) e colhe — a comida vai para a despensa da casa. Quando a cidade adensa em volta, o quintal some.
+- **O porto**: a carga do navio mercante desce em **caixas no cais**; os **estivadores** levam caixa por caixa ao **armazém do porto**, e só então ela entra no estoque. Quem é chamado no meio do caminho devolve a caixa ao cais.
+- **A taverna**: cada povo bebe o seu — vinho (gregos e romanos), hidromel (nórdicos), **cerveja** (egípcios), **pulque** (astecas); cerveja e pulque são feitos ali mesmo pelo taverneiro, do grão da cidade. A primeira caneca vem com a refeição; cada rodada a mais custa moeda da casa de quem bebe. Luto, companhia e um temperamento sociável pedem mais uma; três ou mais e a manhã seguinte pesa.
+- **Sem teto, por um motivo**: quem fica sem casa sabe por quê (a casa pegou fogo, caiu no terremoto, foi destruída na guerra, foi derrubada para uma obra, ou a cidade não tem lugar). Depois de duas noites na rua, levanta um **barraco** de tábuas na terra mais barata da borda — e um bairro de barracos pode nascer ali. Quando aparece uma casa com lugar, a família se muda; quem junta moedas troca o barraco por uma cabana. A biografia guarda tudo.
+- **O roubo e a lei**: o ladrão tem motivo (fome com o bolso vazio, noites na rua, um primeiro roubo que deu certo, a pobreza no meio de casas cheias de moedas). Ele vai de noite à porta de uma casa e leva parte das moedas — que saem de verdade de lá. Quem estava acordado perto **viu**, e só sabe o que viu; uma testemunha que cruza um guarda conta. O guarda **não sabe onde o ladrão está**: procura na casa dele, onde foi visto, em volta, e desiste se não acha; o ladrão pode fugir. Preso, vai amarrado até a **cadeia** (celas contadas, carcereiro) pelo tempo que a **lei do seu povo** manda (tirania três anos, reinos e templos dois, repúblicas e democracias um, tribos só a devolução) — e as moedas voltam para a casa roubada. Ninguém tira o preso da cela para uma festa ou uma assembleia; só um tumulto de verdade. Uma cidade com cadeia, com roubos ou grande mantém uma **guarda**, que faz **ronda** à noite com tocha pelos bairros.
+- **O painel da cidade** (clique no nome da cidade no mapa): gente, riqueza, valor da terra, sem-teto e por quê, barracos, quintais, porto, noite, ordem — e a lista dos bairros.
 
 ## Fim de tarde, histórias, ofícios e filas
 

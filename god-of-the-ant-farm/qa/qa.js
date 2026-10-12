@@ -137,6 +137,57 @@
       if (fin(b.x) && fin(b.y)) { let bad = 0, by = 0; for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const o = s.occ[ty * G.N + tx]; if (o !== b.id) { bad++; by = o; } } if (bad) add('city', 2, `prédio ${b.type}#${b.id}: ${bad} casa(s) do terreno marcadas como de ${by ? (s.buildings.get(by) ? s.buildings.get(by).type + '#' + by : 'fantasma #' + by) : 'ninguém'}`); }
     }
     { let ghost = 0, ex = 0; for (let i = 0; i < s.occ.length; i++) { const o = s.occ[i]; if (o && !s.buildings.has(o)) { ghost++; ex = o; } } if (ghost) add('city', 2, `${ghost} casa(s) do mapa ocupadas por prédio inexistente #${ex}`); }
+    // ---- quarters of the towns
+    if (G.Urban) {
+      const owner = new Map(); const NC = Math.ceil(G.N / G.Urban.C);
+      for (const st of s.settlements.values()) {
+        const u = st.urb; if (!u) continue;
+        if (!Array.isArray(u.d)) { add('urb', 1, `${st.name}: bairros não são uma lista`); continue; }
+        const names = new Set();
+        for (const d of u.d) {
+          const nm = `bairro ${d && d.name}#${d && d.id} de ${st.name}`;
+          if (!d || !d.id || typeof d.name !== 'string' || !d.name) { add('urb', 1, `${st.name}: bairro sem id ou sem nome`); continue; }
+          if (d.set !== st.id) add('urb', 2, `${nm}: diz ser do povoado ${d.set}`);
+          if (!G.Urban.KINDS[d.k]) add('urb', 2, `${nm}: vocação desconhecida ${d.k}`);
+          if (names.has(d.name.toLowerCase())) add('urb', 2, `${nm}: nome repetido na mesma cidade`); names.add(d.name.toLowerCase());
+          if (!Array.isArray(d.cells) || (!d.cells.length && !(d.gone > 0))) add('urb', 2, `${nm}: sem chão`);
+          else for (const c of d.cells) { if (!Number.isInteger(c) || c < 0 || c >= NC * NC) { add('urb', 1, `${nm}: célula inválida ${c}`); break; } const o = owner.get(c); if (o && o !== d) add('urb', o.set === d.set ? 2 : 4, `${nm}: divide o chão com ${o.name}${o.set === d.set ? '' : ' (de outra cidade: na virada do dia, um passo)'}`); owner.set(c, d); }
+          if (!fin(d.x) || !fin(d.y)) add('urb', 2, `${nm}: centro inválido`);
+          if (!(d.born <= s.day)) add('urb', 2, `${nm}: nasceu no futuro (${d.born})`);
+          if (d.hist && !Array.isArray(d.hist)) add('urb', 2, `${nm}: história não é uma lista`);
+        }
+        if ((st.tier || 0) < 2 && u.d.some(d => d.k !== 'agrario' && (d.gone || 0) === 0)) add('urb', 3, `${st.name}: ${G.City.tierName(st).toLowerCase()} com bairro que não é de campos`);
+      }
+    }
+    // ---- the life of the towns (gardens, shacks, the quay, purses, thefts, the jail)
+    {
+      const jails = new Map();
+      for (const b of s.buildings.values()) {
+        if (b.type === 'horta') { const h = s.buildings.get(b.home); if (!h) add('urb', 3, `horta#${b.id}: sem a casa ${b.home}`); if (!fin(b.g || 0) || (b.g || 0) < 0 || (b.g || 0) > 1.0001) add('urb', 2, `horta#${b.id}: crescimento ${b.g}`); }
+        if (b.type === 'cadeia') jails.set(b.id, 0);
+        if (b.crates && b.crates.length > 10) add('urb', 3, `${b.type}#${b.id}: ${b.crates.length} caixas no cais (máximo 10)`);
+        if (b.crates) for (const c of b.crates) if (!c || !fin(c.n) || c.n <= 0) { add('urb', 2, `${b.type}#${b.id}: caixa vazia ou inválida no cais`); break; }
+        if (b.coin !== undefined && (!fin(b.coin) || b.coin < -0.01)) add('urb', 2, `${b.type}#${b.id}: ${b.coin} moedas na casa`);
+      }
+      for (const v of s.villagers.values()) {
+        const nm = `${v.name} #${v.id}`;
+        if (v.purse !== undefined && (!fin(v.purse) || v.purse < -0.01)) add('urb', 2, `${nm}: bolso com ${v.purse} moedas`);
+        if (v.jail) {
+          const b = s.buildings.get(v.jail);
+          if (!b || b.type !== 'cadeia') add('urb', 2, `${nm}: preso numa cadeia que não existe (${v.jail})`);
+          else jails.set(b.id, (jails.get(b.id) || 0) + 1);
+          if (!(v.jailUntil >= 0) || v.jailUntil > s.day + 6) add('urb', 2, `${nm}: pena até o ano ${v.jailUntil}`);
+          if (!(v.task && (v.task.type === 'cela' || v.task.type === 'levado'))) add('urb', 3, `${nm}: preso fora da cela (${v.task ? v.task.type : '-'})`);
+        }
+        if (v.rua && !(v.rua <= s.day)) add('urb', 3, `${nm}: sem casa desde o futuro (${v.rua})`);
+      }
+      for (const [id, n] of jails) if (n > ((G.BDEF.cadeia && G.BDEF.cadeia.cells) || 4)) add('urb', 2, `cadeia#${id}: ${n} presos para ${G.BDEF.cadeia.cells} celas`);
+      for (const c of s.crimes || []) {
+        if (!c || !c.id || !fin(c.n) || c.n < 0) { add('urb', 2, 'crime sem id ou com valor inválido'); continue; }
+        if (!s.villagers.has(c.thief) && !s.dead.has(c.thief)) add('urb', 3, `crime#${c.id}: ladrão ${c.thief} não existe`);
+        if (!(c.day <= s.day)) add('urb', 2, `crime#${c.id}: no futuro`);
+      }
+    }
     // ---- ships
     for (const sh of s.ships) {
       const nm = `${sh.kind}#${sh.id}`;
@@ -216,7 +267,7 @@
   // ---------------- canonical state (for save/load comparison) ----------------
   QA.canon = function () {
     const s = S(); const r = x => Math.round(x * 100) / 100;
-    const vs = [...s.villagers.values()].sort((a, b) => a.id - b.id).map(v => [v.id, v.name, v.set, v.home, v.partner, v.mother, v.father, Math.round(v.age * 1000) / 1000, v.captive ? 'c' + v.captive.from : '', v.aboard || 0, v.role || '', v.job || 0, (v.kids || []).length, v.g, v.secret || 0, v.grp || '', v.reigned || 0]);
+    const vs = [...s.villagers.values()].sort((a, b) => a.id - b.id).map(v => [v.id, v.name, v.set, v.home, v.partner, v.mother, v.father, (G.Save.ageR ? G.Save.ageR(v.age) : Math.round(v.age * 1000) / 1000), v.captive ? 'c' + v.captive.from : '', v.aboard || 0, v.role || '', v.job || 0, (v.kids || []).length, v.g, v.secret || 0, v.grp || '', v.reigned || 0]);
     const fs = [...s.factions.values()].sort((a, b) => a.id - b.id).map(f => [f.id, f.name, f.alive, f.leader, f.gov, f.capital, Object.keys(f.stock).sort().map(k => k + '=' + Math.round(f.stock[k] || 0)).join(','), Object.keys(f.rel).sort().map(k => k + ':' + f.rel[k].st + ':' + Math.round(f.rel[k].op || 0)).join(','), Object.keys((f.tech && f.tech.known) || {}).length]);
     const ss = [...s.settlements.values()].sort((a, b) => a.id - b.id).map(x => [x.id, x.name, x.fac, x.tier || 0, Math.round(x.loyalty || 0)]);
     const bs = [...s.buildings.values()].sort((a, b) => a.id - b.id).map(b => [b.id, b.type, b.set, b.built ? 1 : 0, Math.round(b.hp || 0)]);

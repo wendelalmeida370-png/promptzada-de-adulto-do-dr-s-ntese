@@ -283,7 +283,7 @@
     if (noSite[type] === S.day) return null;
     const field = type === 'farm' || type === 'cercado' || type === 'curral' || type === 'estabulo';
     const pop = V.pop(set.id);
-    const R = Math.min(17 + (set.tier || 0) * 3 + (def.w >= 3 ? 2 : 0), Math.round(6 + Math.sqrt(pop + 1) * 1.5 + (def.w >= 3 ? 2 : 0)));
+    const R = G.Urban ? G.Urban.radius(set, def, pop) : Math.min(17 + (set.tier || 0) * 3 + (def.w >= 3 ? 2 : 0), Math.round(6 + Math.sqrt(pop + 1) * 1.5 + (def.w >= 3 ? 2 : 0)));
     const counts = {}; for (const b of S.buildings.values()) if (b.set === set.id) counts[b.type] = (counts[b.type] || 0) + 1;
     let best = search(set, type, def, R, field, counts, false);
     // a full city puts its great buildings out by its edge, beyond the walls if need be,
@@ -348,7 +348,9 @@
       else if (type === 'quartel') ideal = 6.5;
       else if (type === 'torre') ideal = Math.max(5, R * 0.75);
       else if (type === 'cercado') ideal = 6;
-      let sc = -Math.abs(d - ideal) * 1.2 - trees * 0.7 - sl * 1.5 + G.R() * 0.8 - cost * 2;
+      // (a vila and smaller: so far from the hearth; a city: so far from where the building belongs — the port, the market, the other workshops)
+      const place = G.Urban && (set.tier || 0) >= 2 ? G.Urban.siteScore(set, type, def, x, y, fx, fy, d, ideal) : -Math.abs(d - ideal) * 1.2;
+      let sc = place - trees * 0.7 - sl * 1.5 + G.R() * 0.8 - cost * 2;
       if (type === 'farm') sc += (fert / 9) * 7;
       if (S.type[y * N + x] === T.SAND) sc -= 1.5;
       if (sc > bestSc) { bestSc = sc; best = gone ? Object.assign([x, y], { demolish: gone }) : [x, y]; }
@@ -359,6 +361,8 @@
   V.startProject = function (set, type) {
     const pos = V.findSite(set, type);
     if (!pos) { set.fails++; return null; }
+    // (a city builds tall only where its land is dear; on cheap ground the same family builds a house with a yard)
+    if (G.Urban && !pos.demolish) type = G.Urban.homeFor(set, type, pos);
     if (pos.demolish) renew(set, type, pos.demolish);
     const b = V.addBuilding(type, pos[0], pos[1], set.id, false);
     if (type === 'cemetery') V.completeBuilding(b);
@@ -399,8 +403,8 @@
   function globalHas(type) { for (const b of G.S.buildings.values()) if (b.type === type && b.built) return true; return false; }
   function housingInfo(setId) {
     const S = G.S; let cap = 0, homeless = 0, pop = 0;
-    for (const b of S.buildings.values()) if (b.set === setId && b.built && G.BDEF[b.type].housing) cap += G.BDEF[b.type].housing;
-    for (const v of S.villagers.values()) if (v.set === setId && !v.captive) { pop++; if (!v.home && v.age >= 16) homeless++; }
+    for (const b of S.buildings.values()) if (b.set === setId && b.built && G.BDEF[b.type].housing && b.type !== 'barraco') cap += G.BDEF[b.type].housing;
+    for (const v of S.villagers.values()) if (v.set === setId && !v.captive) { pop++; if ((!v.home || (S.buildings.get(v.home) || {}).type === 'barraco') && v.age >= 16) homeless++; }
     return { cap, homeless, pop };
   }
   V.housingInfo = housingInfo;
@@ -436,6 +440,7 @@
     G.Politics && G.Politics.planExtra && G.Politics.planExtra(set, fac, c, want, pop);
     G.City && G.City.plan(set, fac, c, want, pop);
     G.Eco && G.Eco.plan(set, fac, c, want, pop);
+    G.Harbor && G.Harbor.plan(set, fac, c, want, pop);
     if (c.storehouse && !c.siteTypes.storehouse && (st.wood > cap * 0.9 || st.food > cap * 0.9 || st.stone > cap * 0.9) && c.storehouse < 1 + Math.floor(pop / 30)) want.push('storehouse');
     // the town improves what it has: an old hut becomes a stone house, stone houses grow a second
     // floor and then become apartment blocks

@@ -86,14 +86,17 @@
     for (let y = y1 - 1; y > y0; y--) out.push([x0, y]);
     return out;
   }
-  function planWall(s, f) {
+  function planWall(s, f, core) {
     const S = G.S;
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
     for (const b of S.buildings.values()) {
       if (b.set !== s.id || b.type === 'farm' || b.type === 'cemetery' || b.type === 'doca' || b.type === 'ruin' || b.type === 'cercado') continue;
+      if (core && G.dist(b.x + b.w / 2, b.y + b.h / 2, s.cx, s.cy) > core) continue;
       x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.w - 1); y1 = Math.max(y1, b.y + b.h - 1); n++;
     }
     if (n < 5) return null;
+    // a city too wide for one wall raises it around its old town (the new quarters stay outside)
+    if (!core && (x1 - x0 > 26 || y1 - y0 > 26) && (s.tier || 0) >= 3) { const w = planWall(s, f, 12); if (w) { w.old = 1; return w; } }
     x0 -= 2; y0 -= 2; x1 += 2; y1 += 2;
     if (x0 < 2 || y0 < 2 || x1 > N - 3 || y1 > N - 3) { x0 = Math.max(2, x0); y0 = Math.max(2, y0); x1 = Math.min(N - 3, x1); y1 = Math.min(N - 3, y1); }
     if (x1 - x0 > 30 || y1 - y0 > 30 || x1 - x0 < 5 || y1 - y0 < 5) return null;
@@ -147,7 +150,7 @@
       if (G.R() > 0.3) continue;
       const w = planWall(s, f); if (!w) { s.attacked = 0; continue; }
       S.walls.push(w);
-      log(`${s.name} começou a erguer ${w.mat === 'pedra' ? 'muralhas de pedra' : 'uma paliçada de troncos'} ao redor da cidade.`, 'wall', s.cx, s.cy);
+      log(`${s.name} começou a erguer ${w.mat === 'pedra' ? 'muralhas de pedra' : 'uma paliçada de troncos'} ${w.old ? 'em volta da cidade velha — os bairros novos vão ficar do lado de fora' : 'ao redor da cidade'}.`, 'wall', s.cx, s.cy);
       return;
     }
   }

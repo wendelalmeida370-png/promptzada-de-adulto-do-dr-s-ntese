@@ -103,6 +103,7 @@
   }
   const arrived = v => !v.path || v.pi >= v.path.length;
   function setTask(v, t) {
+    if (v.jail && G.Crime) { const kept = G.Crime.keeps(v, t); if (kept) return kept; }
     Vg.endTask(v);
     t.age = 0; if (t.st === undefined) t.st = 0;
     v.task = t; v.act = ''; v.actT = 0;
@@ -350,7 +351,8 @@
     let best = null, bs = -1, bp = 0;
     const opt = (score, pri, kind) => { if (score > bs) { bs = score; best = kind; bp = pri; } };
     if (v.hunger > 50) opt((v.hunger - 40) / 60 * 1.3 + (v.hunger > 88 ? 1 : 0), v.hunger > 85 ? 2.5 : 1.2, 'eat');
-    if (night) opt(0.95 + (100 - v.energy) / 250, 1.5, 'sleep');
+    const atTav = cur && cur.type === 'tavern' && v.energy > 20 && S.time > 0.5 && S.time < (cur.st === 1 ? 0.88 : 0.78);
+    if (night) opt(0.95 + (100 - v.energy) / 250, atTav ? 0.3 : 1.5, 'sleep');
     else if (v.energy < 22) opt(0.6 + (22 - v.energy) / 30, v.energy < 8 ? 2.5 : 1.2, 'sleep');
     const elder = v.age >= 62;
     // a night watch keeps a torch lit when the village is big enough
@@ -375,8 +377,9 @@
       if (eve || elder) opt(0.3 * G.R() * (elder ? 2 : 1), 0, 'rest');
       // the working day ends: home, or a cup at the tavern
       if (eve && v.home) opt(0.55 + G.R() * 0.4, 0.45, 'home');
-      if (eve && G.Eco) opt((v.traits.includes('Sociável') ? 0.6 : 0.35) * G.R() * 1.5, 0.4, 'tavern');
+      if (eve && G.Eco && G.Eco.byType(v.set, 'taverna').length) opt((v.traits.includes('Sociável') ? 0.62 : 0.4) + G.R() * 0.5 + (v.mourn > 0 ? 0.15 : 0) - (v.traits.includes('Devoto') ? 0.2 : 0), 0.4, 'tavern');
       if (G.Eco && !eve) opt(0.16 * G.R() * 1.6, 0.35, 'shop');
+      if (G.Urban && v.home && G.Urban.gardenDue(v)) opt(((elder ? 0.6 : 0.3) + G.R() * 0.4) * (eve ? 1.4 : S.time < 0.16 ? 1.25 : 0.8), 0.4, 'garden');
     }
     opt(0.04, 0, 'wander');
     if (cur) {
@@ -401,9 +404,10 @@
       case 'visit': { const o = relativeTarget(v); if (o) t = setTask(v, { type: 'visit', id: o.id, pri: 0.3 }); break; }
       case 'rest': t = setTask(v, { type: 'rest', pri: 0.2 }); break;
       case 'shelter': t = setTask(v, { type: 'shelter', pri: 1.05 }); emote(v, 'fear', 1.5); break;
-      case 'home': t = (G.Life && G.Life.familyTask(v, H)) || (G.Eco && G.Eco.goHomeTask(v, H)); break;
+      case 'home': t = (G.Urban && G.R() < (G.Urban.gardenDue(v) ? 0.75 : 0) && G.Urban.gardenTask(v, H)) || (G.Life && G.Life.familyTask(v, H)) || (G.Eco && G.Eco.goHomeTask(v, H)); break;
       case 'tavern': t = G.Eco && G.Eco.tavernTask(v, H); break;
       case 'shop': t = G.Eco && G.Eco.shopTask(v, H); break;
+      case 'garden': t = G.Urban && G.Urban.gardenTask(v, H); break;
       case 'saga': t = G.Stories && G.Stories.task(v, H); break;
     }
     if (!t) { if (!v.task) wander(v, 4); }
@@ -412,8 +416,9 @@
   function wander(v, r) {
     const set = G.S.settlements.get(v.set);
     const cx = set ? set.cx : v.x, cy = set ? set.cy : v.y;
-    if (set && G.dist(v.x, v.y, cx, cy) > 16 && (!v.task || v.task.type !== 'migrate')) { setTask(v, { type: 'migrate', pri: 1.5, kind: 'migrate' }); return; }
-    const base = G.dist(v.x, v.y, cx, cy) > 10 ? [cx, cy] : [v.x, v.y];
+    const lim = Math.max(16, set ? (set.radius || 0) + 4 : 0); const hm = v.home && G.S.buildings.get(v.home); const byHome = !!hm && G.dist(v.x, v.y, hm.x + 0.5, hm.y + 0.5) < 7;
+    if (set && !byHome && G.dist(v.x, v.y, cx, cy) > lim && (!v.task || v.task.type !== 'migrate')) { setTask(v, { type: 'migrate', pri: 1.5, kind: 'migrate' }); return; }
+    const base = !byHome && G.dist(v.x, v.y, cx, cy) > lim - 6 ? [cx, cy] : [v.x, v.y];
     const p = W.randomNear(base[0], base[1], r || 4);
     setTask(v, { type: 'wander', pri: 0, kind: 'wander' });
     if (p) Vg.goto(v, p[0], p[1], false);
@@ -1179,7 +1184,7 @@
         break;
       }
       case 'saga': if (G.Stories) G.Stories.run(v, t, dt, H); else end(v); break;
-      default: if (!(G.Scene && G.Scene.run(v, t, dt, H)) && !(G.Caves && G.Caves.run(v, t, dt, H)) && !G.War.run(v, t, dt, H) && !(G.Wars && G.Wars.run(v, t, dt, H)) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Carnage && G.Carnage.run(v, t, dt, H)) && !(G.Flora && G.Flora.run(v, t, dt, H)) && !(G.Nests && G.Nests.run(v, t, dt, H)) && !(G.Polity && G.Polity.run(v, t, dt, H)) && !(G.Justice && G.Justice.run(v, t, dt, H)) && !(G.Riots && G.Riots.run(v, t, dt, H)) && !(G.Secrets && G.Secrets.run(v, t, dt, H)) && !(G.Stories && G.Stories.party && G.Stories.party.run(v, t, dt, H)) && !(G.Riches && G.Riches.run(v, t, dt, H))) end(v);
+      default: if (!(G.Scene && G.Scene.run(v, t, dt, H)) && !(G.Caves && G.Caves.run(v, t, dt, H)) && !G.War.run(v, t, dt, H) && !(G.Wars && G.Wars.run(v, t, dt, H)) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Urban && G.Urban.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Carnage && G.Carnage.run(v, t, dt, H)) && !(G.Flora && G.Flora.run(v, t, dt, H)) && !(G.Nests && G.Nests.run(v, t, dt, H)) && !(G.Polity && G.Polity.run(v, t, dt, H)) && !(G.Justice && G.Justice.run(v, t, dt, H)) && !(G.Riots && G.Riots.run(v, t, dt, H)) && !(G.Secrets && G.Secrets.run(v, t, dt, H)) && !(G.Stories && G.Stories.party && G.Stories.party.run(v, t, dt, H)) && !(G.Riches && G.Riches.run(v, t, dt, H))) end(v);
     }
   }
   const LONG = { praia: 1, muster: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, embark: 1, boardBack: 1, scene: 1, saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1 };
@@ -1566,7 +1571,7 @@
     if (v.air) return 'Voando pelos ares!';
     if (v.age < 2) { const c = S.villagers.get(v.carrier); return c ? (v.sleeping ? 'Dormindo' : `No colo de ${c.name}`) : 'Chorando sozinho'; }
     if (!t) return v.sleeping ? 'Dormindo' : 'Pensando no que fazer';
-    const wt = (G.Scene && G.Scene.taskText(v, t)) || (G.Justice && G.Justice.taskText(v, t)) || (G.Riots && G.Riots.taskText(v, t)) || (G.Secrets && G.Secrets.taskText(v, t)) || (G.Stories && G.Stories.party && G.Stories.party.taskText(v, t)) || (G.Polity && G.Polity.taskText(v, t)) || (G.Flora && G.Flora.taskText(v, t)) || (G.Nests && G.Nests.taskText(v, t)) || (G.Riches && G.Riches.taskText && G.Riches.taskText(v, t)) || (G.Caves && G.Caves.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || G.War.taskText(v, t) || (G.Wars && G.Wars.taskText(v, t)) || (G.City && G.City.taskText(v, t)) || (G.Naval && G.Naval.taskText(v, t)) || (G.Eco && G.Eco.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || (G.Fest && G.Fest.taskText(v, t)) || (G.Life && G.Life.taskText(v, t)) || (G.Carnage && G.Carnage.taskText(v, t)); if (wt) return wt;
+    const wt = (G.Scene && G.Scene.taskText(v, t)) || (G.Justice && G.Justice.taskText(v, t)) || (G.Riots && G.Riots.taskText(v, t)) || (G.Secrets && G.Secrets.taskText(v, t)) || (G.Stories && G.Stories.party && G.Stories.party.taskText(v, t)) || (G.Polity && G.Polity.taskText(v, t)) || (G.Flora && G.Flora.taskText(v, t)) || (G.Nests && G.Nests.taskText(v, t)) || (G.Riches && G.Riches.taskText && G.Riches.taskText(v, t)) || (G.Caves && G.Caves.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || G.War.taskText(v, t) || (G.Wars && G.Wars.taskText(v, t)) || (G.City && G.City.taskText(v, t)) || (G.Urban && G.Urban.taskText(v, t)) || (G.Naval && G.Naval.taskText(v, t)) || (G.Eco && G.Eco.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || (G.Fest && G.Fest.taskText(v, t)) || (G.Life && G.Life.taskText(v, t)) || (G.Carnage && G.Carnage.taskText(v, t)); if (wt) return wt;
     const bname = id => { const b = S.buildings.get(id); return b ? G.Village.buildName(b) : 'construção'; };
     const pname = id => { const o = S.villagers.get(id); return o ? o.name : 'alguém'; };
     switch (t.type) {
