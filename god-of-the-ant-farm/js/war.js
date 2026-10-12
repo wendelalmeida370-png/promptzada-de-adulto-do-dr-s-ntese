@@ -902,6 +902,7 @@
   function runEnvoy(v, t, dt, H) {
     const S = G.S; const to = G.Fac.get(t.to), from = G.Fac.get(t.from);
     if (!to || !from || !to.alive || !from.alive) return H.end(v);
+    if (t.said && t.st < 3) { t.st = 3; t.dest = null; }
     if (t.st === 0 || t.st === 1) {
       const dest = G.Fac.capitalOf(to.id); if (!dest) return H.end(v);
       const cf = S.buildings.get(dest.campfire);
@@ -912,7 +913,7 @@
     } else if (t.st === 2) {
       v.act = 'talk'; if (!v.emo || v.emo.t < 0.2) G.Vg.emote(v, 'chat', 1.4);
       if (v.actT > 3.5) {
-        G.Politics.deliver(from, to, t.msg, v);
+        t.said = 1; G.Politics.deliver(from, to, t.msg, v);
         if (!S.villagers.has(v.id)) return;
         t.st = 3; t.dest = null;
       }

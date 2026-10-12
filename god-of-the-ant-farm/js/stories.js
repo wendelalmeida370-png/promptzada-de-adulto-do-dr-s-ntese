@@ -346,6 +346,7 @@
   // a chapter: only what changes the story
   function chapter(story, txt, o) {
     o = o || {};
+    const dup = story.chapters.slice(-6).find(x => x.txt === txt); if (dup) return dup;
     const c = { d: G.S.day, txt };
     if (o.x !== undefined) { c.x = +(+o.x).toFixed(1); c.y = +(+o.y).toFixed(1); }
     if (o.big) c.big = 1; if (o.k) c.k = o.k; if (o.fact) c.f = o.fact;

@@ -907,6 +907,7 @@
   }
   P.sendEnvoy = function (from, to, msg) {
     const S = G.S; const r = G.Fac.rel(from.id, to.id); if (!r) return;
+    const on = r.envoy && S.villagers.get(r.envoy); if (on && on.task && on.task.type === 'envoy' && on.task.msg === msg && !on.task.said) return;
     const cap = G.Fac.capitalOf(from.id), dest = G.Fac.capitalOf(to.id);
     if (!cap || !dest) return;
     let best = null, bs = -1e9;

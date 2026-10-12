@@ -61,7 +61,7 @@
   // ------------------------------ chronicle ------------------------------
   V.log = function (text, icon, x, y) {
     const e = { d: G.S.day, txt: text, ic: icon || 'info', n: G.S.logN = (G.S.logN || 0) + 1 };
-    if (x !== undefined) { e.x = +x.toFixed(1); e.y = +y.toFixed(1); }
+    if (Number.isFinite(x) && Number.isFinite(y)) { e.x = +x.toFixed(1); e.y = +y.toFixed(1); }
     G.S.history.push(e);
     if (G.S.history.length > 700) G.S.history.splice(0, G.S.history.length - 700);
     G.UI && G.UI.onLog(e);

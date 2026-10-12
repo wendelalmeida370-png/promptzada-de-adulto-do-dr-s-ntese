@@ -103,6 +103,7 @@
     for (const a of o.rocks) { const k = { id: a[0], x: a[1], y: a[2], stone: a[3], max: a[4], v: a[5], meteor: !!a[6], claim: 0 }; S.rocks.set(k.id, k); S.objAt[W.idx(k.x, k.y)] = k.id; }
     for (const a of o.bushes) { const k = { id: a[0], x: a[1], y: a[2], berries: a[3], grow: a[4], v: a[5], burnt: a[6], max: 5, claim: 0 }; S.bushes.set(k.id, k); S.objAt[W.idx(k.x, k.y)] = k.id; }
     for (const b of o.buildings) {
+      if (!b || !G.BDEF[b.type]) { console.warn('save: prédio de tipo desconhecido deixado de fora', b && b.type); continue; }
       S.buildings.set(b.id, b);
       for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) S.occ[ty * N + tx] = b.id;
     }

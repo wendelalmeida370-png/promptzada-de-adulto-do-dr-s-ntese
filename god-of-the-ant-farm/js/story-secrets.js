@@ -175,7 +175,7 @@
     // waiting (unseen): if they do not come tonight, another night
     yield c.until(() => Sc.meetOfLodge(l.id) || (G.S.time > 0.97 || (G.S.time > 0.2 && G.S.time < 0.6)), 300);
     let m = Sc.meetOfLodge(l.id);
-    if (!m) { c.chapter(`${p.name} passou a noite em claro, escondid${oa(p)} perto ${deW(l.name)}. Ninguém veio.`); return 'vazio'; }
+    if (!m) { const n = s.data.vigEmpty = (s.data.vigEmpty || 0) + 1; if (n === 1) c.chapter(`${p.name} passou a noite em claro, escondid${oa(p)} perto ${deW(l.name)}. Ninguém veio.`); else if (n === 2) c.chapter(`Mais uma noite em claro perto ${deW(l.name)}. De novo, ninguém.`); return 'vazio'; }
     const mid = m.id;
     const hold = () => { const mm = Sc.meetById(mid); if (mm) mm.keep = G.S.clock + 25; return mm; };
     hold();

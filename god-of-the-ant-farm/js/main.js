@@ -148,7 +148,8 @@
     G.Audio.init();
     G.UI.select(null); G.UI.setPower(null);
     G.FX.list.length = 0; G.FX.floaters.length = 0;
-    if (!G.Save.load()) { G.UI.toast('Não foi possível carregar', 'O save parece corrompido ou inexistente.', 'skull'); return; }
+    const S0 = G.S;
+    if (!G.Save.load()) { if (G.S !== S0) { try { M.toMenu(); } catch (e) { console.warn('menu', e); } } G.UI.toast('Não foi possível carregar', 'O save parece corrompido ou inexistente.', 'skull'); return; }
     $('#menu').classList.add('fade');
     setTimeout(() => $('#menu').classList.add('hidden'), 700);
     $('#intro').classList.add('hidden');
