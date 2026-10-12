@@ -842,6 +842,7 @@
   }
   function answerPeace(from, to, r) {
     const S = G.S; const pt = P.leaderPe(to);
+    if (r.peaceNo === S.day) return false;
     if (G.WorldWar && G.WorldWar.locks(from.id, to.id)) { r.peaceCD = S.day + 3; return false; }
     const sf = P.strength(from.id), st = P.strength(to.id);
     // who is winning: the battles, the cities taken and lost, the dead — not only the head count
@@ -853,7 +854,7 @@
     const pressing = war && G.Wars.winningCampaign(to.id, from.id) ? 0.25 : 0;
     const score = to.weariness / 100 + (1 - pt.agg) * 0.5 + (winning ? 0.1 : losing ? 0.5 : 0.35) + (S.day - r.since) * (war ? 0.035 : 0.05) - r.grudge / 200 - pressing + (S.divinePeace > 0 ? 1 : 0);
     const cb = G.Fac.capitalOf(to.id);
-    if (score < 0.72) { r.peaceCD = S.day + 2 + G.R() * 2; log(`${P.styled(to, P.ruler(to))} recusou a paz oferecida por ${from.name}.`, 'war', cb ? cb.cx : undefined, cb ? cb.cy : undefined); r.op -= 5; return false; }
+    if (score < 0.72) { r.peaceCD = S.day + 2 + G.R() * 2; r.peaceNo = S.day; log(`${P.styled(to, P.ruler(to))} recusou a paz oferecida por ${from.name}.`, 'war', cb ? cb.cx : undefined, cb ? cb.cy : undefined); r.op -= 5; return false; }
     let terms = 'sem vencedores';
     const W0 = winning ? to : losing ? from : null, L0 = W0 === to ? from : to;
     if (W0) {
