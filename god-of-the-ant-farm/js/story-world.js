@@ -12,6 +12,7 @@
   // a bit for each kind of wonder; set when someone passes close to one (a few people each tick)
   const SEEN = St.SEEN = { mar: 1, pico: 2, lago: 4, cachoeira: 8, caverna: 16, maravilha: 32, neve: 64, deserto: 128, selva: 256 };
   let order = [], at = 0, wonders = [], wondersT = -1e9;
+  G.worldHooks.push(() => { order = []; at = 0; wonders = []; wondersT = -1e9; }); // (a new world, or a save loaded: it starts over)
   function refreshWonders() {
     const S = G.S; wonders = [];
     for (const b of S.buildings.values()) if (b.type === 'maravilha' && b.built) { const c = G.Village.center(b); wonders.push([c[0], c[1]]); }
@@ -169,6 +170,7 @@
   G.renderHooks = G.renderHooks || { ground: [], ents: [] };
   const camps = [];
   St.camps = camps;
+  G.worldHooks.push(() => { camps.length = 0; }); // (a new world, or a save loaded: it starts over)
   function drawCamp(ctx, o, sx, sy, t, nightF, fx) {
     ctx.fillStyle = 'rgba(60,48,36,0.55)'; ctx.beginPath(); ctx.ellipse(sx, sy, 4.2, 2.1, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#6b6258'; for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; ctx.beginPath(); ctx.ellipse(sx + Math.cos(a) * 3.2, sy + Math.sin(a) * 1.6, 0.9, 0.6, 0, 0, Math.PI * 2); ctx.fill(); }

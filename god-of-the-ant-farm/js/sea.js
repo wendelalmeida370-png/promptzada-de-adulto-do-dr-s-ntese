@@ -412,9 +412,9 @@
   }
   function newFloe(k) {
     for (let tr = 0; tr < 40; tr++) {
-      const x = Math.random() * N, y = Math.random() * N;
+      const x = G.VR() * N, y = G.VR() * N;
       if (!coldWater(x, y)) continue;
-      return { fn: drawFloe, x, y, r: 0.25 + Math.random() * 0.55, seed: Math.floor(Math.random() * 1e6), a: Math.random() * 6.28, k };
+      return { fn: drawFloe, x, y, r: 0.25 + G.VR() * 0.55, seed: Math.floor(G.VR() * 1e6), a: G.VR() * 6.28, k };
     }
     return null;
   }
@@ -665,6 +665,7 @@
   // Once in a long while a whale comes ashore and cannot get back. The town nearby goes down with
   // knives and baskets — meat for many days — and the bones stay on the sand for years.
   Sea.carcass = null; Sea.bones = [];
+  G.worldHooks.push(() => { Sea._glowAsk = -1; Sea._nestAsk = -1; Sea._strandAsk = -1; Sea.nest = null; Sea.carcass = null; Sea.bones = []; }); // (a new world, or a save loaded: it starts over)
   function strandCheck() {
     const S = G.S;
     if (Sea.carcass || Sea._strandAsk === S.day || S.time < 0.15 || S.time > 0.45) return;

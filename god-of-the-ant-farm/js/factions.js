@@ -128,6 +128,7 @@
   };
 
   let tTerr = 0;
+  G.worldHooks.push(() => { tTerr = 0; }); // (a new world, or a save loaded: it starts over)
   F.update = function (dt) {
     tTerr -= dt;
     if (tTerr <= 0) { tTerr = 3; F.updateTerritory(); }

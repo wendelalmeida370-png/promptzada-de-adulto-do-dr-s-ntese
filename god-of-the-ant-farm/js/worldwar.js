@@ -135,6 +135,7 @@
     G.Lore && G.Lore.legend && G.Lore.legend('wwEnd' + w.n + ':' + S.day, `O fim d${w.name.startsWith('a ') ? 'a' : 'o'} ${w.name.replace(/^(a|o) /, '')}`, txt, { kind: 'war' });
   }
   let lastDay = -1, tChk = 0;
+  G.worldHooks.push(() => { lastDay = -1; tChk = 0; }); // (a new world, or a save loaded: it starts over)
   WW.update = function (dt) {
     const S = G.S; if (!S) return;
     if (S.day !== lastDay) { lastDay = S.day; WW.daily(); }

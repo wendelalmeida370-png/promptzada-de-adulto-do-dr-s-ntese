@@ -1,0 +1,32 @@
+PASSOU | mar 12 grande batalha naval 
+PASSOU | mar 10 colônia: fundação e sobrevivência 
+PASSOU | mar 9 expedição toda morta → sem telepatia 
+PASSOU | mar 5 rotina do pescador 
+PASSOU | mar 7 grande expedição do Estado 
+PASSOU | mar 11 guerra entre ilhas: frota + transporte + desembarque 
+PASSOU | mar 2 ilha sem ferro busca solução no mar 
+PASSOU | mar 8 ilha conhecida só por quem soube 
+PASSOU | mar 17 desempenho com muitos barcos 
+PASSOU | mar 1 ilha rica não coloniza tudo 
+PASSOU | mar 14 salvar/carregar durante uma expedição 
+PASSOU | mar 15 salvar/carregar durante batalha naval 
+PASSOU | mar 13 navio afundado: consequências para a tripulação 
+PASSOU | mar 16 avanço no tempo 
+PASSOU | mar 6 expedição individual 
+PASSOU | mar 3 cultura aventureira explora mais 
+FALHOU | mar 4 cultura não marítima explora menos 
+PASSOU | guerra 2 reinos médios: dezenas
+PASSOU | guerra 5 guerra longa: economia, suprimento, desgaste
+PASSOU | guerra 6 derrota: retirada/fuga/rendição
+PASSOU | guerra 7 paz: volta dos soldados e consequências
+PASSOU | guerra 8 save/load
+PASSOU | guerra 1 aldeias pequenas
+PASSOU | guerra 10 causalidade
+PASSOU | guerra 4 cidade murada: cerco
+PASSOU | vigia
+PASSOU | determinismo
+PASSOU | vida_103 sem violações S0–S2
+PASSOU | vida_107 sem violações S0–S2
+PASSOU | alcance
+PASSOU | a bordo
+PASSOU | saves danificados

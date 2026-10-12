@@ -16,7 +16,7 @@
 
   G.newState = function (seed) {
     return {
-      v: 4, seed, N, mapType: 'ilha',
+      v: 4, seed, N, mapType: 'ilha', rng: G.rngSeed(seed, 0),
       day: 1, time: 0.1, clock: 0,
       H: new Float32Array(V * V),
       type: new Uint8Array(N * N),
@@ -95,8 +95,10 @@
   // (the middle of the pen's lower side); the flock of a pen may always go in and out of its own
   const FENCED = { curral: 1, estabulo: 1, cercado: 1, cemetery: 1 };
   let fenceMap = null, fenceT = -1e9, fenceN = 0;
+  G.worldHooks.push(() => { fenceMap = null; fenceT = -1e9; fenceN = 0; }); // (a new world, or a save loaded: it starts over)
   W.fenceMap = function () {
     const S = G.S; if (!S) return null;
+    if (!G.inSim && fenceMap && fenceN === N) return fenceMap;
     if (!fenceMap || fenceN !== N || S.clock - fenceT > 2 || S.clock < fenceT) {
       if (!fenceMap || fenceMap.length !== N * N) fenceMap = new Int32Array(N * N); else fenceMap.fill(0);
       fenceN = N; fenceT = S.clock;

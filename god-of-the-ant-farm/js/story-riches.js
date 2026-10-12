@@ -59,6 +59,7 @@
 
   // a beast of a rare coat near a town: the town sees it (once)
   let pollT = 0;
+  G.worldHooks.push(() => { pollT = 0; }); // (a new world, or a save loaded: it starts over)
   function poll(dt) {
     pollT += dt; if (pollT < 10) return; pollT = 0;
     const S = G.S;

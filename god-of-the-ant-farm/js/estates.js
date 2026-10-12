@@ -453,6 +453,7 @@
 
   // ------------------------------ update ------------------------------
   let tG = 0, tSilk = 0;
+  G.worldHooks.push(() => { tG = 0; tSilk = 0; }); // (a new world, or a save loaded: it starts over)
   Es.update = function (dt) {
     const S = G.S; if (!S) return;
     tG += dt; tSilk += dt;

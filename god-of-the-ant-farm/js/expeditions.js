@@ -1501,6 +1501,7 @@
     if ((tLife -= dt) <= 0) { tLife = DAY() * 0.5; for (const f of G.Fac.all()) seaLife(f); }
   };
   let tLife = 0;
+  G.worldHooks.push(() => { tLife = 0; planI = 0; X.reset(); }); // (a new world, or a save loaded: it starts over)
   // a people that fishes, builds boats and sees sails come and go grows fond of the sea (slowly);
   // one that turns its back on it forgets (slowly too) — over a few generations, not a season
   function seaLife(f) {

@@ -1048,6 +1048,7 @@
     return null;
   };
   let tk = 0, tTen = 0, tOcc = 0, tRef = 0;
+  G.worldHooks.push(() => { tk = 0; tTen = 0; tOcc = 0; tRef = 0; }); // (a new world, or a save loaded: it starts over)
   Wz.update = function (dt) {
     const S = G.S; if (!S) return;
     tk += dt; tTen += dt; tOcc += dt; tRef += dt;

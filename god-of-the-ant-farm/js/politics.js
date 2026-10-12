@@ -1117,6 +1117,7 @@
 
   // ------------------------------ update ------------------------------
   let t1 = 0, t3 = 0, t10 = 0;
+  G.worldHooks.push(() => { t1 = 0; t3 = 0; t10 = 0; }); // (a new world, or a save loaded: it starts over)
   P.update = function (dt) {
     const S = G.S; if (!S) return;
     if (S.divinePeace > 0) S.divinePeace -= dt;

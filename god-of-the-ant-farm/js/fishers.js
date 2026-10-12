@@ -364,6 +364,7 @@
   // ------------------------------ update ------------------------------
   let tRoster = 0, tShoal = 0;
   let tGear = 0;
+  G.worldHooks.push(() => { tRoster = 0; tShoal = 0; tGear = 0; }); // (a new world, or a save loaded: it starts over)
   Fi.update = function (dt) {
     tRoster -= dt; tShoal -= dt; tGear -= dt;
     if (tRoster <= 0) { tRoster = 4; rosters(); }
@@ -380,6 +381,7 @@
   // ------------------------------ the quay, drawn ------------------------------
   G.renderHooks = G.renderHooks || { ground: [], ents: [] };
   const crateE = new Map(), rackE = new Map();
+  G.worldHooks.push(() => { crateE.clear(); rackE.clear(); }); // (a new world, or a save loaded: it starts over)
   G.renderHooks.ents.push(function (add, view, zoom) {
     if (zoom < 0.5) return;
     for (const b of G.S.buildings.values()) {

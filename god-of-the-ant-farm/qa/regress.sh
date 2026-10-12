@@ -1,0 +1,60 @@
+#!/bin/bash
+# A regressão completa, antes de cada versão: bash qa/regress.sh [pasta de saída]   (≈ 1 h 15 min numa máquina de 4 núcleos)
+# Roda o vigia do código, as 17 provas do mar, as 10 da guerra, vidas longas com o verificador, a mão divina, saves danificados,
+# o save como ponto fixo, os mapas de alcance e de quem está a bordo, o determinismo, os painéis, o desenho e o macaco no teclado.
+# No fim escreve resumo.txt e o compara com a linha de base (linha-de-base.txt): o que mudou desde a última versão aparece como NOVO.
+# Tudo é determinístico (a mesma semente faz o mesmo mundo): uma prova que muda de resultado mudou porque o jogo mudou.
+cd "$(dirname "$0")"
+OUT=${1:-/tmp/gotaf-regress}; mkdir -p "$OUT"
+# (SKIP="mar guerra" pula fases já rodadas nessa pasta; sem SKIP a pasta começa limpa)
+skip() { [[ " $SKIP " == *" $1 "* ]]; }
+[ -z "$SKIP" ] && rm -f "$OUT"/*.txt
+t0=$(date +%s)
+echo "== vigia do código"; node guard.js "${GAMEDIR:-$(dirname "$PWD")}" > "$OUT/guard.txt" 2>&1; tail -1 "$OUT/guard.txt"
+# 1. o mar: 17 provas, quatro de cada vez
+m17() { DET=1 timeout 1500 node mar17.js $1 $2 > "$OUT/mar_$1.txt" 2>&1; }
+if ! skip mar; then
+(m17 rich 7; m17 iron 7; m17 temper 11; m17 fisher 3) &
+(m17 solo 7; m17 grand 11; m17 know 7; m17 dead 11) &
+(m17 colony 7; m17 invasion 7; m17 bigbattle 7; m17 sink 7) &
+(m17 saveexp 7; m17 savewar 7; m17 skip 7) &
+wait; echo "== mar: $(cat "$OUT"/mar_*.txt | grep -c PASSOU) passaram, $(cat "$OUT"/mar_*.txt | grep -c FALHOU) falharam"
+fi
+# 2. a guerra: 10 provas em quatro mundos
+skip guerra || for m in small medium walls save; do (DET=1 timeout 1500 node guerra10.js $m 7 > "$OUT/guerra_$m.txt" 2>&1) & done; wait
+echo "== guerra: $(cat "$OUT"/guerra_*.txt | grep -v RESULT | grep -c ' PASS ') passaram, $(cat "$OUT"/guerra_*.txt | grep -v RESULT | grep -c ' FAIL ') falharam"
+# 3. o mundo vivendo: anos com o verificador e save→load, a mão divina, o save como ponto fixo
+(timeout 1700 node soak.js 103 continente 128 4 normal 20 5 1 > "$OUT/vida_103.txt" 2>&1) &
+(timeout 1700 node soak.js 107 arquipelago 128 4 belicoso 12 3 1 > "$OUT/vida_107.txt" 2>&1) &
+(timeout 900 node hand.js 5 continente 128 4 3 40 > "$OUT/mao.txt" 2>&1) &
+(timeout 900 node ev.js 9 continente 128 4 4 saveloop.js > "$OUT/saveloop.txt" 2>&1) &
+wait; echo "== vidas, mão, saveloop"
+# 4. saves danificados, alcance, a bordo, determinismo
+(timeout 1700 node corrupt.js 7 > "$OUT/corrupt.txt" 2>&1) &
+(timeout 900 node ev.js 31 mar 160 4 3 reach.js > "$OUT/alcance.txt" 2>&1) &
+(timeout 900 node ev.js 31 mar 160 4 8 aboard.js > "$OUT/bordo.txt" 2>&1) &
+(timeout 1700 node det3.js 77 arquipelago 96 3 2 > "$OUT/determinismo.txt" 2>&1) &
+wait; echo "== saves danificados, alcance, a bordo, determinismo"
+# 5. o que o jogador vê: painéis, desenho, o macaco, o fim do mundo
+(timeout 900 node ev.js 21 continente 128 4 6 uismoke.js > "$OUT/paineis.txt" 2>&1) &
+(FRAMES=1 timeout 900 node ev.js 22 arquipelago 128 4 4 rendersmoke.js > "$OUT/desenho.txt" 2>&1) &
+(timeout 900 node monkey.js 7 90 > "$OUT/macaco.txt" 2>&1) &
+(timeout 900 node ev.js 13 ilha 80 2 2 extinct.js > "$OUT/extincao.txt" 2>&1) &
+wait; echo "== painéis, desenho, macaco, extinção"
+# 6. desempenho: sozinho na máquina, para os tempos valerem alguma coisa
+m17 perf 7; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/mar_perf.txt" | cut -c1-160)"
+# resumo: uma linha por prova
+{
+  for f in "$OUT"/mar_*.txt; do grep -h "PASSOU\|FALHOU" "$f" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | mar \2/'; done
+  for f in "$OUT"/guerra_*.txt; do grep -h " PASS \| FAIL " "$f" | grep -v RESULT | sed -E 's/^([^—]*) (PASS|FAIL) .*/\2 | guerra \1/; s/^PASS/PASSOU/; s/^FAIL/FALHOU/'; done
+  grep -h "^PASSOU\|^FALHOU" "$OUT/guard.txt" "$OUT/determinismo.txt" | sed -E 's/^(PASSOU|FALHOU).*/\1/' | head -2 | paste -d' ' - <(echo vigia; echo determinismo) | sed 's/ / | /'
+  for f in vida_103 vida_107; do v=$(grep -c "^  S[0-2] " "$OUT/$f.txt"); echo "$([ "$v" = 0 ] && echo PASSOU || echo FALHOU) | $f sem violações S0–S2"; done
+  for f in "$OUT"/*.txt; do e=$(grep -h "erros: \|^erros " "$f" | grep -v "erros: nenhum\|erros nenhum" | head -1); [ -n "$e" ] && echo "FALHOU | $(basename "$f" .txt) com erros: ${e:0:120}"; done
+  grep -q '"fails": \[\]' "$OUT/alcance.txt" && echo "PASSOU | alcance" || echo "FALHOU | alcance"
+  grep -q '"fails": \[\]' "$OUT/bordo.txt" && echo "PASSOU | a bordo" || echo "FALHOU | a bordo"
+  grep -q "falhas: nenhuma" "$OUT/corrupt.txt" && echo "PASSOU | saves danificados" || echo "FALHOU | saves danificados"
+} | sed 's/  */ /g' > "$OUT/resumo.txt"
+echo; cat "$OUT/resumo.txt"
+echo; echo "== diferenças desde a linha de base"
+if [ -f linha-de-base.txt ]; then diff <(sort linha-de-base.txt) <(sort "$OUT/resumo.txt") | grep '^[<>]' | sed 's/^</ANTES:/; s/^>/NOVO: /' || echo "(nenhuma)"; else echo "(sem linha de base: copie resumo.txt para qa/linha-de-base.txt)"; fi
+echo "fim em $(( ($(date +%s) - t0) / 60 )) min; tudo em $OUT"

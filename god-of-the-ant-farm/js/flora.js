@@ -37,6 +37,7 @@
 
   // ------------------------------ ripening ------------------------------
   let cur = null, curIt = null, tSlow = 0;
+  G.worldHooks.push(() => { cur = null; curIt = null; tSlow = 0; }); // (a new world, or a save loaded: it starts over)
   function eachSlice(n, fn) {
     const S = G.S;
     if (!curIt || cur !== S) { cur = S; curIt = S.trees.values(); }

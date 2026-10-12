@@ -348,8 +348,8 @@
     buildShore();
     sparkles = [];
     for (let k = 0; k < 320; k++) {
-      const i = Math.floor(Math.random() * N * N);
-      if (S.type[i] <= T.RIVER) sparkles.push([(i % N) + Math.random(), ((i / N) | 0) + Math.random(), Math.random() * 20, 0.5 + Math.random()]);
+      const i = Math.floor(G.VR() * N * N);
+      if (S.type[i] <= T.RIVER) sparkles.push([(i % N) + G.VR(), ((i / N) | 0) + G.VR(), G.VR() * 20, 0.5 + G.VR()]);
     }
     G.Nature.dirty.clear();
   };
@@ -888,7 +888,7 @@
   let birdT = 5;
   function initSky() {
     skyClouds.length = 0;
-    for (let k = 0; k < 6; k++) skyClouds.push({ x: G.rr(-10, N + 10), y: G.rr(-10, N + 10), v: k % 3, s: G.rr(1.3, 2.2) });
+    for (let k = 0; k < 6; k++) skyClouds.push({ x: G.vrr(-10, N + 10), y: G.vrr(-10, N + 10), v: k % 3, s: G.vrr(1.3, 2.2) });
   }
   R.initSky = initSky;
   function updateCosmetic(dt) {
@@ -900,10 +900,10 @@
     }
     birdT -= dt;
     if (birdT <= 0 && !G.isNight()) {
-      birdT = G.rr(10, 25);
-      const a = G.R() * TAU; const sx = N / 2 - Math.cos(a) * N * 0.8, sy = N / 2 - Math.sin(a) * N * 0.8;
-      const n = G.ri(3, 7); const fl = [];
-      for (let k = 0; k < n; k++) fl.push([Math.floor((k + 1) / 2) * 0.6, (k % 2 ? 1 : -1) * Math.floor((k + 1) / 2) * 0.5, G.R() * 6]);
+      birdT = G.vrr(10, 25);
+      const a = G.VR() * TAU; const sx = N / 2 - Math.cos(a) * N * 0.8, sy = N / 2 - Math.sin(a) * N * 0.8;
+      const n = G.vri(3, 7); const fl = [];
+      for (let k = 0; k < n; k++) fl.push([Math.floor((k + 1) / 2) * 0.6, (k % 2 ? 1 : -1) * Math.floor((k + 1) / 2) * 0.5, G.VR() * 6]);
       birds.push({ x: sx, y: sy, vx: Math.cos(a) * 2.2, vy: Math.sin(a) * 2.2, fl, t: 0 });
     }
     for (let k = birds.length - 1; k >= 0; k--) {
@@ -969,9 +969,9 @@
       if (!inView(x, y)) continue;
       const tree = S.treeAt[i] > 0, bld = S.occ[i] > 0;
       const zb = tree ? 10 : bld ? 8 : 0;
-      if (G.R() < dt * f * 22) FX_flame(x + G.rr(-0.35, 0.35), y + G.rr(-0.35, 0.35), zb + G.rr(0, 8), f);
-      if (G.R() < dt * f * 4) G.FX.spawn({ x: x + G.rr(-0.3, 0.3), y: y + G.rr(-0.3, 0.3), z: zb + 12, vz: G.rr(14, 26), vx: wx * 0.8, vy: wy * 0.8, life: G.rr(2.2, 3.8), s0: 4, s1: 13, c: 'rgba(70,66,64,0.42)', k: 2, drag: 0.1 });
-      if (G.R() < dt * f * 3) G.FX.spawn({ x, y, z: zb + 6, vz: G.rr(30, 60), vx: G.rr(-0.4, 0.4) + wx, vy: G.rr(-0.4, 0.4) + wy, g: -5, life: G.rr(1, 2), s0: 0.9, s1: 0.2, c: '#ffb050', k: 4, layer: 1 });
+      if (G.VR() < dt * f * 22) FX_flame(x + G.vrr(-0.35, 0.35), y + G.vrr(-0.35, 0.35), zb + G.vrr(0, 8), f);
+      if (G.VR() < dt * f * 4) G.FX.spawn({ x: x + G.vrr(-0.3, 0.3), y: y + G.vrr(-0.3, 0.3), z: zb + 12, vz: G.vrr(14, 26), vx: wx * 0.8, vy: wy * 0.8, life: G.vrr(2.2, 3.8), s0: 4, s1: 13, c: 'rgba(70,66,64,0.42)', k: 2, drag: 0.1 });
+      if (G.VR() < dt * f * 3) G.FX.spawn({ x, y, z: zb + 6, vz: G.vrr(30, 60), vx: G.vrr(-0.4, 0.4) + wx, vy: G.vrr(-0.4, 0.4) + wy, g: -5, life: G.vrr(1, 2), s0: 0.9, s1: 0.2, c: '#ffb050', k: 4, layer: 1 });
     }
     // chimneys & campfires
     const night = R.nightness();
@@ -980,18 +980,18 @@
       const [cx, cy] = G.Village.center(b);
       if (!inView(cx, cy)) continue;
       if (b.type === 'campfire') {
-        if (G.R() < dt * 1.3) G.FX.spawn({ x: cx + G.rr(-0.1, 0.1), y: cy + G.rr(-0.1, 0.1), z: 10, vz: G.rr(12, 22), vx: wx * 0.6, vy: wy * 0.6, life: G.rr(2, 3.5), s0: 3, s1: 9, c: 'rgba(150,150,150,0.3)', k: 2 });
-        if (G.R() < dt * 2.2) G.FX.spawn({ x: cx, y: cy, z: 5, vz: G.rr(20, 45), vx: G.rr(-0.3, 0.3), vy: G.rr(-0.3, 0.3), life: G.rr(0.6, 1.4), s0: 0.9, s1: 0.2, c: '#ffc060', k: 4, layer: 1 });
-      } else if (SMOKE[b.type] && (KILN[b.type] || b.type === 'banhos' || G.R() < 0.5 + night)) {
+        if (G.VR() < dt * 1.3) G.FX.spawn({ x: cx + G.vrr(-0.1, 0.1), y: cy + G.vrr(-0.1, 0.1), z: 10, vz: G.vrr(12, 22), vx: wx * 0.6, vy: wy * 0.6, life: G.vrr(2, 3.5), s0: 3, s1: 9, c: 'rgba(150,150,150,0.3)', k: 2 });
+        if (G.VR() < dt * 2.2) G.FX.spawn({ x: cx, y: cy, z: 5, vz: G.vrr(20, 45), vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.3, 0.3), life: G.vrr(0.6, 1.4), s0: 0.9, s1: 0.2, c: '#ffc060', k: 4, layer: 1 });
+      } else if (SMOKE[b.type] && (KILN[b.type] || b.type === 'banhos' || G.VR() < 0.5 + night)) {
         const spr = G.Art.building(b.type, b.v, b.style, b.wd);
         const steam = b.type === 'banhos';
-        if (spr && spr.fires.length && G.R() < dt * (KILN[b.type] ? 1.2 : steam ? 1.4 : 0.55 + night * 0.5)) {
+        if (spr && spr.fires.length && G.VR() < dt * (KILN[b.type] ? 1.2 : steam ? 1.4 : 0.55 + night * 0.5)) {
           const h = W.groundH(cx, cy);
-          const f = G.pick(spr.fires);
+          const f = G.vpick(spr.fires);
           // convert sprite-local px to world tile offset
           const wo = R.sprToWorld(f[0]), oz = -f[1];
-          G.FX.spawn({ x: cx + wo[0], y: cy + wo[1], h, z: oz, vz: G.rr(10, 18), vx: wx * 0.5, vy: wy * 0.5, life: G.rr(2.5, 4), s0: 2.2, s1: steam ? 9 : 7, c: steam ? 'rgba(240,245,250,0.45)' : 'rgba(200,200,205,0.35)', k: 2 });
-          if ((b.type === 'workshop' || b.type === 'forja') && G.R() < 0.3) G.FX.spawn({ x: cx + wo[0], y: cy + wo[1], h, z: oz, vz: G.rr(25, 45), vx: G.rr(-0.3, 0.3), vy: G.rr(-0.3, 0.3), life: 0.8, s0: 0.8, s1: 0.1, c: '#ffb040', k: 4, layer: 1 });
+          G.FX.spawn({ x: cx + wo[0], y: cy + wo[1], h, z: oz, vz: G.vrr(10, 18), vx: wx * 0.5, vy: wy * 0.5, life: G.vrr(2.5, 4), s0: 2.2, s1: steam ? 9 : 7, c: steam ? 'rgba(240,245,250,0.45)' : 'rgba(200,200,205,0.35)', k: 2 });
+          if ((b.type === 'workshop' || b.type === 'forja') && G.VR() < 0.3) G.FX.spawn({ x: cx + wo[0], y: cy + wo[1], h, z: oz, vz: G.vrr(25, 45), vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.3, 0.3), life: 0.8, s0: 0.8, s1: 0.1, c: '#ffb040', k: 4, layer: 1 });
         }
       }
     }
@@ -1001,8 +1001,8 @@
       const inten = G.Nature.cloudIntensity(c);
       const n = dt * c.r * c.r * 14 * inten * (c.kind === 'storm' ? 1.4 : 1);
       for (let k = 0; k < n; k++) {
-        const a = G.R() * TAU, d = Math.sqrt(G.R()) * c.r;
-        G.FX.spawn({ x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d, z: G.rr(60, 95), vz: -420, vx: wx * 1.2, vy: wy * 1.2, life: 1, s0: 1, c: 'rgba(190,215,240,0.55)', k: 3 });
+        const a = G.VR() * TAU, d = Math.sqrt(G.VR()) * c.r;
+        G.FX.spawn({ x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d, z: G.vrr(60, 95), vz: -420, vx: wx * 1.2, vy: wy * 1.2, life: 1, s0: 1, c: 'rgba(190,215,240,0.55)', k: 3 });
       }
     }
     // meteors in flight
@@ -1011,35 +1011,35 @@
       const off = 1 - e; // 1 far, 0 impact
       const dx = 300 * off, dz = 520 * off;
       if (k > 0.05) {
-        for (let q = 0; q < 3; q++) G.FX.spawn({ x: m.x + dx / 32 + G.rr(-0.1, 0.1), y: m.y - dx / 32 + G.rr(-0.1, 0.1), z: dz + G.rr(-6, 6), vz: G.rr(-10, 30), vx: G.rr(-0.3, 0.3), vy: G.rr(-0.3, 0.3), life: G.rr(0.3, 0.8), s0: G.rr(3, 6), s1: 0.5, c: G.pick(['#ffdd88', '#ff9944', '#ff6622']), k: 1, layer: 1 });
-        G.FX.spawn({ x: m.x + dx / 32, y: m.y - dx / 32, z: dz, vz: 5, life: G.rr(1.5, 2.5), s0: 6, s1: 16, c: 'rgba(80,70,65,0.45)', k: 2 });
+        for (let q = 0; q < 3; q++) G.FX.spawn({ x: m.x + dx / 32 + G.vrr(-0.1, 0.1), y: m.y - dx / 32 + G.vrr(-0.1, 0.1), z: dz + G.vrr(-6, 6), vz: G.vrr(-10, 30), vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.3, 0.3), life: G.vrr(0.3, 0.8), s0: G.vrr(3, 6), s1: 0.5, c: G.vpick(['#ffdd88', '#ff9944', '#ff6622']), k: 1, layer: 1 });
+        G.FX.spawn({ x: m.x + dx / 32, y: m.y - dx / 32, z: dz, vz: 5, life: G.vrr(1.5, 2.5), s0: 6, s1: 16, c: 'rgba(80,70,65,0.45)', k: 2 });
       }
       if (m.t > m.delay - 1.4) R.shake(0.12);
     }
     // fireflies & butterflies near the camera
-    if (G.R() < dt * 3) {
-      const [tx, ty] = R.screenToTile(G.rr(0, VW), G.rr(0, VH));
+    if (G.VR() < dt * 3) {
+      const [tx, ty] = R.screenToTile(G.vrr(0, VW), G.vrr(0, VH));
       if (W.inb(tx, ty)) {
         const i = W.idx(tx, ty);
         if (S.type[i] >= T.GRASS && S.fire[i] === 0) {
-          if (night > 0.55 && (S.treeAt[i] || S.type[i] === T.MEADOW)) G.FX.spawn({ x: tx, y: ty, z: G.rr(4, 14), vx: G.rr(-0.2, 0.2), vy: G.rr(-0.2, 0.2), vz: G.rr(-2, 2), life: G.rr(3, 6), s0: 1.6, s1: 1.2, c: '#d8ff7a', k: 1, layer: 1, fadeIn: 1 });
-          else if (night < 0.2 && (S.type[i] === T.MEADOW || S.bloom[i] > 0) && S.weather.rain < 0.1) G.FX.spawn({ x: tx, y: ty, z: G.rr(3, 8), vx: G.rr(-0.3, 0.3), vy: G.rr(-0.3, 0.3), vz: G.rr(-3, 3), life: G.rr(3, 6), s0: 1.3, c: G.pick(['#fff3a0', '#ffffff', '#ffb0d0', '#a8d8ff']), k: 10 });
+          if (night > 0.55 && (S.treeAt[i] || S.type[i] === T.MEADOW)) G.FX.spawn({ x: tx, y: ty, z: G.vrr(4, 14), vx: G.vrr(-0.2, 0.2), vy: G.vrr(-0.2, 0.2), vz: G.vrr(-2, 2), life: G.vrr(3, 6), s0: 1.6, s1: 1.2, c: '#d8ff7a', k: 1, layer: 1, fadeIn: 1 });
+          else if (night < 0.2 && (S.type[i] === T.MEADOW || S.bloom[i] > 0) && S.weather.rain < 0.1) G.FX.spawn({ x: tx, y: ty, z: G.vrr(3, 8), vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.3, 0.3), vz: G.vrr(-3, 3), life: G.vrr(3, 6), s0: 1.3, c: G.vpick(['#fff3a0', '#ffffff', '#ffb0d0', '#a8d8ff']), k: 10 });
         }
       }
     }
     // spray rising from the waterfalls
     for (const fl of S.relief.falls || []) {
-      if (!inView(fl.tx + 0.5, fl.ty + 0.5) || G.R() > dt * (1 + fl.drop * 0.4)) continue;
-      G.FX.spawn({ x: fl.tx + 0.5 + G.rr(-0.3, 0.3), y: fl.ty + 0.5 + G.rr(-0.3, 0.3), h: S.wl[fl.ty * N + fl.tx], z: 2, vz: G.rr(6, 14), vx: G.rr(-0.2, 0.2), vy: G.rr(-0.2, 0.2), life: G.rr(1.5, 2.6), s0: 3, s1: 10, c: 'rgba(240,248,255,0.42)', k: 2 });
+      if (!inView(fl.tx + 0.5, fl.ty + 0.5) || G.VR() > dt * (1 + fl.drop * 0.4)) continue;
+      G.FX.spawn({ x: fl.tx + 0.5 + G.vrr(-0.3, 0.3), y: fl.ty + 0.5 + G.vrr(-0.3, 0.3), h: S.wl[fl.ty * N + fl.tx], z: 2, vz: G.vrr(6, 14), vx: G.vrr(-0.2, 0.2), vy: G.vrr(-0.2, 0.2), life: G.vrr(1.5, 2.6), s0: 3, s1: 10, c: 'rgba(240,248,255,0.42)', k: 2 });
     }
     // fish jumping near the shore
-    if (G.R() < dt * 0.5 && shore.length) {
-      const s = G.pick(shore); const x = s[0] + s[4] * 1.3, y = s[1] + s[5] * 1.3;
-      if (inView(x, y)) G.FX.spawn({ x, y, h: G.SEA, z: 0, vz: 55, g: 170, vx: G.rr(-0.5, 0.5), vy: G.rr(-0.5, 0.5), life: 0.65, s0: 1.5, c: '#bcd8e8', k: 11 });
+    if (G.VR() < dt * 0.5 && shore.length) {
+      const s = G.vpick(shore); const x = s[0] + s[4] * 1.3, y = s[1] + s[5] * 1.3;
+      if (inView(x, y)) G.FX.spawn({ x, y, h: G.SEA, z: 0, vz: 55, g: 170, vx: G.vrr(-0.5, 0.5), vy: G.vrr(-0.5, 0.5), life: 0.65, s0: 1.5, c: '#bcd8e8', k: 11 });
     }
   }
   function FX_flame(x, y, z, f) {
-    G.FX.spawn({ x, y, z, vz: G.rr(18, 36), vx: G.rr(-0.1, 0.1), vy: G.rr(-0.1, 0.1), life: G.rr(0.35, 0.7), s0: G.rr(4, 7) * (0.6 + f * 0.5), s1: 0.6, c: G.pick(['#ffcf5a', '#ff9a3a', '#ff6a2a']), k: 1, layer: 1 });
+    G.FX.spawn({ x, y, z, vz: G.vrr(18, 36), vx: G.vrr(-0.1, 0.1), vy: G.vrr(-0.1, 0.1), life: G.vrr(0.35, 0.7), s0: G.vrr(4, 7) * (0.6 + f * 0.5), s1: 0.6, c: G.vpick(['#ffcf5a', '#ff9a3a', '#ff6a2a']), k: 1, layer: 1 });
   }
 
   function viewRect(margin) {
@@ -1131,8 +1131,8 @@
       ctx.globalAlpha = 1;
     }
     // ---------- world transform ----------
-    const shx = cam.shake > 0 ? (Math.random() - 0.5) * cam.shake * 16 : 0;
-    const shy = cam.shake > 0 ? (Math.random() - 0.5) * cam.shake * 16 : 0;
+    const shx = cam.shake > 0 ? (G.VR() - 0.5) * cam.shake * 16 : 0;
+    const shy = cam.shake > 0 ? (G.VR() - 0.5) * cam.shake * 16 : 0;
     const z = cam.zoom * dpr;
     const setWorld = (c, scale) => c.setTransform(z * scale, 0, 0, z * scale, (VW / 2 - (cam.x + shx) * cam.zoom) * dpr * scale, (VH / 2 - (cam.y + shy) * cam.zoom) * dpr * scale);
     setWorld(ctx, 1);
@@ -1921,7 +1921,7 @@
       }
       case 27: G.CaveArt.treasure(ctx, e.sx, e.sy, t, e.o.x * 7 + e.o.y); light(e.sx, e.sy - 3, 14, 'gold', 0.35); break;
       case 28: G.CaveArt.beast(ctx, e.o, e.sx, e.sy + (e.o.kind === 'peixe' ? 1.5 : 0), t); break;
-      case 29: { const a = e.o; a.pose = 'sleep'; a.moving = false; G.Art.animal(ctx, a, e.sx, e.sy, t); break; }
+      case 29: { const a = e.o; const p0 = a.pose, m0 = a.moving; a.pose = 'sleep'; a.moving = false; G.Art.animal(ctx, a, e.sx, e.sy, t); a.pose = p0; a.moving = m0; break; } // (drawn asleep; the beast itself is left as it was)
       case 30: { const cv = e.o; const ph = G.Caves.batPhase(cv); const n = !ph ? cv.bats : ph.night ? cv.bats * 0.08 : ph.out ? cv.bats * (1 - ph.k) : cv.bats * ph.k; G.CaveArt.roost(ctx, e.sx, e.sy, n, t, cv.id * 13); break; }
       case 31: {
         const m = e.o; const dayA = G.clamp(1 - R.nightness() * 0.85, 0.12, 1); const kind = G.Caves.mouthKind(m, G.Caves.at(m.y * N + m.x));
@@ -1931,7 +1931,7 @@
         light(e.sx, e.sy - 12, 86, dayA > 0.4 ? 'gold' : 'cool', 0.25 + 0.75 * dayA);
         break;
       }
-      case 32: { const a = e.o; a.pose = a.kind === 'cervo' || a.kind === 'veado' ? 'rest' : 'sleep'; a.moving = false; G.Art.animal(ctx, a, e.sx, e.sy, t); break; }
+      case 32: { const a = e.o; const p0 = a.pose, m0 = a.moving; a.pose = a.kind === 'cervo' || a.kind === 'veado' ? 'rest' : 'sleep'; a.moving = false; G.Art.animal(ctx, a, e.sx, e.sy, t); a.pose = p0; a.moving = m0; break; }
     }
   }
   function frameUnder(t, dt) {
@@ -1940,7 +1940,7 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const bg = ctx.createLinearGradient(0, 0, 0, canvas.height); bg.addColorStop(0, '#0e0c0c'); bg.addColorStop(1, '#231b16');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const shx = cam.shake > 0 ? (Math.random() - 0.5) * cam.shake * 16 : 0, shy = cam.shake > 0 ? (Math.random() - 0.5) * cam.shake * 16 : 0;
+    const shx = cam.shake > 0 ? (G.VR() - 0.5) * cam.shake * 16 : 0, shy = cam.shake > 0 ? (G.VR() - 0.5) * cam.shake * 16 : 0;
     const z = cam.zoom * dpr;
     const setWorld = (c, scale) => c.setTransform(z * scale, 0, 0, z * scale, (VW / 2 - (cam.x + shx) * cam.zoom) * dpr * scale, (VH / 2 - (cam.y + shy) * cam.zoom) * dpr * scale);
     setWorld(ctx, 1);
@@ -2537,7 +2537,7 @@
     ctx.strokeStyle = '#1e1714'; ctx.lineWidth = 1.2;
     for (let k = 0; k < 3 * b.w; k++) { const dx = (G.hash(b.id * 3 + k) - 0.5) * b.w * 0.7; const px = sx + dx * 20, py = sy + G.hash(b.id + k * 5) * 6 - 3; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + (G.hash(k * 9) - 0.5) * 8, py - 5 - G.hash(k) * 5); ctx.stroke(); }
     ctx.globalAlpha = 1;
-    if (G.R() < 0.02) G.FX.smokePuff(b.x + b.w / 2, b.y + b.h / 2);
+    if (G.VR() < 0.02) G.FX.smokePuff(b.x + b.w / 2, b.y + b.h / 2);
   }
   function drawSite(b, sx, sy, t) {
     const def = G.BDEF[b.type];
@@ -2801,7 +2801,7 @@
     // lightning bolts
     for (const b of G.FX.bolts) {
       const p = proj(b.x, b.y, b.h);
-      const a = b.life / b.max; const flick = Math.random() < 0.3 ? 0.4 : 1;
+      const a = b.life / b.max; const flick = G.VR() < 0.3 ? 0.4 : 1;
       for (const [w, col] of [[6, `rgba(150,180,255,${0.35 * a * flick})`], [2.6, `rgba(220,230,255,${0.9 * a * flick})`], [1, `rgba(255,255,255,${a * flick})`]]) {
         ctx.globalAlpha = 1; ctx.strokeStyle = col; ctx.lineWidth = w;
         ctx.beginPath(); ctx.moveTo(p[0] + b.segs[0][0], p[1] - b.segs[0][1]);
@@ -2965,7 +2965,7 @@
       ctx.drawImage(G.Art.glow('gold'), wx - 16, wy - 12, 32, 32); ctx.restore();
       if (!e.kind) G.Art.draw(ctx, G.Art.icon('fear'), wx, wy - 8, is);
       ctx.save(); ctx.translate(wx, wy + 8); ctx.rotate(sway); ctx.scale(1.25, 1.25);
-      if (e.kind) G.Art.animal(ctx, e, 0, 0, t); else { const mv = e.moving; e.moving = true; e.act = 'run'; G.Art.villager(ctx, e, 0, 0, t, false); e.moving = mv; }
+      if (e.kind) G.Art.animal(ctx, e, 0, 0, t); else { const mv = e.moving, ac = e.act; e.moving = true; e.act = 'run'; G.Art.villager(ctx, e, 0, 0, t, false); e.moving = mv; e.act = ac; }
       ctx.restore();
       // shadow on the ground under it
       const [tx, ty] = R.screenToTile(hd.sx, hd.sy + 30);

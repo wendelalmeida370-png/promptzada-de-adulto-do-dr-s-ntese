@@ -37,7 +37,7 @@
       if (p.life <= 0) { pool.push(p); continue; }
       p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; p.vz -= p.g * dt;
       if (p.drag) { const f = Math.max(0, 1 - p.drag * dt); p.vx *= f; p.vy *= f; p.vz *= f; }
-      if (p.z < 0) { if (p.bounce) { p.z = 0; p.vz = -p.vz * p.bounce; p.vx *= 0.6; p.vy *= 0.6; if (Math.abs(p.vz) < 20) { p.vz = 0; p.g = 0; p.bounce = 0; } } else if (p.k === 3) { p.life = 0; pool.push(p); if (G.Render && G.Render.cam.zoom > 1.3 && Math.random() < 0.25) FX.spawn({ x: p.x, y: p.y, h: p.h, k: 0, life: 0.25, s0: 0.8, s1: 0.2, c: 'rgba(210,230,255,0.8)' }); continue; } else p.z = 0; }
+      if (p.z < 0) { if (p.bounce) { p.z = 0; p.vz = -p.vz * p.bounce; p.vx *= 0.6; p.vy *= 0.6; if (Math.abs(p.vz) < 20) { p.vz = 0; p.g = 0; p.bounce = 0; } } else if (p.k === 3) { p.life = 0; pool.push(p); if (G.Render && G.Render.cam.zoom > 1.3 && G.VR() < 0.25) FX.spawn({ x: p.x, y: p.y, h: p.h, k: 0, life: 0.25, s0: 0.8, s1: 0.2, c: 'rgba(210,230,255,0.8)' }); continue; } else p.z = 0; }
       p.rot += p.vr * dt;
       L[w++] = p;
     }
@@ -56,7 +56,7 @@
   FX.ring = function (x, y, r0, r1, life, color, width, glow) {
     FX.rings.push({ x, y, h: G.W.groundH(x, y), r0, r1, life, max: life, c: color, w: width || 2, glow: !!glow });
   };
-  const R = G.rr;
+  const R = G.vrr;
 
   // ---------------- small feedback ----------------
   FX.chips = function (x, y, c) {
@@ -110,7 +110,7 @@
     const size = Math.max(b.w, b.h);
     for (let k = 0; k < 18 * size; k++) {
       const a = R(0, 6.28), sp = R(0.5, 1.6) * size;
-      FX.spawn({ x, y, z: R(8, 20), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: R(20, 70), g: 60, drag: 1.5, life: R(0.8, 1.6), s0: 2.2, s1: 0.4, c: G.pick(['#ffe08a', '#fff3c8', '#ffd05a']), k: 8, layer: 1 });
+      FX.spawn({ x, y, z: R(8, 20), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: R(20, 70), g: 60, drag: 1.5, life: R(0.8, 1.6), s0: 2.2, s1: 0.4, c: G.vpick(['#ffe08a', '#fff3c8', '#ffd05a']), k: 8, layer: 1 });
     }
     FX.ring(x, y, 0.2, size * 1.4, 0.9, 'rgba(255,230,150,0.9)', 2, true);
     if (G.Render && G.Render.cam.zoom > 1.1) FX.floater(x, y, G.Village.buildName(b) + '!', '#fff1c4', 2.2);
@@ -119,7 +119,7 @@
   FX.blessing = function (x, y) {
     for (let k = 0; k < 50; k++) {
       const a = R(0, 6.28), sp = R(0.4, 2.2);
-      FX.spawn({ x, y, z: R(10, 40), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: R(10, 60), g: 30, drag: 1.2, life: R(1.2, 2.4), s0: R(2, 3.2), s1: 0.4, c: G.pick(['#ffe08a', '#fff3c8', '#ffd05a', '#ffffff']), k: 8, layer: 1 });
+      FX.spawn({ x, y, z: R(10, 40), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: R(10, 60), g: 30, drag: 1.2, life: R(1.2, 2.4), s0: R(2, 3.2), s1: 0.4, c: G.vpick(['#ffe08a', '#fff3c8', '#ffd05a', '#ffffff']), k: 8, layer: 1 });
     }
     FX.ring(x, y, 0.3, 4, 1.4, 'rgba(255,230,150,0.9)', 2.4, true);
     FX.pillar = { x, y, t: 1.6, max: 1.6, c: '255,225,140' };
@@ -127,26 +127,26 @@
   };
   FX.collapse = function (x, y, b) {
     const size = Math.max(b.w, b.h);
-    for (let k = 0; k < 14 * size; k++) FX.spawn({ x: x + R(-0.5, 0.5) * size, y: y + R(-0.5, 0.5) * size, z: R(2, 14), vx: R(-1, 1), vy: R(-1, 1), vz: R(30, 90), g: 280, bounce: 0.25, life: R(1, 2), s0: 1.6, c: G.pick(['#6e5a48', '#4a3a2e', '#8a8a86']), k: 6, vr: R(-6, 6) });
+    for (let k = 0; k < 14 * size; k++) FX.spawn({ x: x + R(-0.5, 0.5) * size, y: y + R(-0.5, 0.5) * size, z: R(2, 14), vx: R(-1, 1), vy: R(-1, 1), vz: R(30, 90), g: 280, bounce: 0.25, life: R(1, 2), s0: 1.6, c: G.vpick(['#6e5a48', '#4a3a2e', '#8a8a86']), k: 6, vr: R(-6, 6) });
     for (let k = 0; k < 10 * size; k++) FX.spawn({ x: x + R(-0.5, 0.5) * size, y: y + R(-0.5, 0.5) * size, z: R(0, 10), vx: R(-0.5, 0.5), vy: R(-0.5, 0.5), vz: R(8, 30), life: R(1.5, 3), s0: 5, s1: 13, c: 'rgba(120,105,90,0.5)', k: 2, drag: 1 });
   };
 
   // ---------------- miracles ----------------
   FX.growth = function (x, y, r) {
     for (let k = 0; k < 90; k++) {
-      const a = R(0, 6.28), d = Math.sqrt(Math.random()) * r;
-      FX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: R(0, 6), vz: R(15, 45), vx: R(-0.1, 0.1), vy: R(-0.1, 0.1), life: R(1, 2.2), s0: R(1.6, 2.6), s1: 0.3, c: G.pick(['#b8ff8a', '#7de06a', '#e8ffb0']), k: 8, layer: 1, fadeIn: 0.2 });
+      const a = R(0, 6.28), d = Math.sqrt(G.VR()) * r;
+      FX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: R(0, 6), vz: R(15, 45), vx: R(-0.1, 0.1), vy: R(-0.1, 0.1), life: R(1, 2.2), s0: R(1.6, 2.6), s1: 0.3, c: G.vpick(['#b8ff8a', '#7de06a', '#e8ffb0']), k: 8, layer: 1, fadeIn: 0.2 });
     }
     for (let k = 0; k < 30; k++) {
-      const a = R(0, 6.28), d = Math.sqrt(Math.random()) * r;
-      FX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: R(0, 4), vz: R(30, 60), g: 30, drag: 0.8, life: R(1.5, 2.5), s0: 2.2, c: G.pick(['#5fae3e', '#86c95a']), k: 5, vr: R(-5, 5) });
+      const a = R(0, 6.28), d = Math.sqrt(G.VR()) * r;
+      FX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: R(0, 4), vz: R(30, 60), g: 30, drag: 0.8, life: R(1.5, 2.5), s0: 2.2, c: G.vpick(['#5fae3e', '#86c95a']), k: 5, vr: R(-5, 5) });
     }
     FX.ring(x, y, 0.3, r, 1.1, 'rgba(170,255,140,0.9)', 2.4, true);
   };
   FX.heal = function (x, y, r) {
     for (let k = 0; k < 60; k++) {
-      const a = R(0, 6.28), d = Math.sqrt(Math.random()) * r;
-      FX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: R(0, 10), vz: R(15, 40), life: R(1, 2), s0: R(1.8, 3), s1: 0.3, c: G.pick(['#fff2a8', '#b8ffd0', '#ffffff']), k: 8, layer: 1 });
+      const a = R(0, 6.28), d = Math.sqrt(G.VR()) * r;
+      FX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: R(0, 10), vz: R(15, 40), life: R(1, 2), s0: R(1.8, 3), s1: 0.3, c: G.vpick(['#fff2a8', '#b8ffd0', '#ffffff']), k: 8, layer: 1 });
     }
     FX.ring(x, y, r * 0.2, r, 1, 'rgba(255,245,180,0.95)', 2.5, true);
     FX.ring(x, y, r, r * 0.2, 1.2, 'rgba(190,255,210,0.7)', 1.5, true);
@@ -157,8 +157,8 @@
   };
   FX.fertility = function (x, y, r) {
     for (let k = 0; k < 110; k++) {
-      const a = R(0, 6.28), d = Math.sqrt(Math.random()) * r;
-      FX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: R(40, 90), vz: R(-22, -10), vx: R(-0.3, 0.3), vy: R(-0.3, 0.3), life: R(2.5, 4.5), s0: 2, s1: 1.4, c: G.pick(['#ffb3cf', '#ffd6e6', '#fff0a8', '#ff9ac0']), k: 9, vr: R(-3, 3) });
+      const a = R(0, 6.28), d = Math.sqrt(G.VR()) * r;
+      FX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: R(40, 90), vz: R(-22, -10), vx: R(-0.3, 0.3), vy: R(-0.3, 0.3), life: R(2.5, 4.5), s0: 2, s1: 1.4, c: G.vpick(['#ffb3cf', '#ffd6e6', '#fff0a8', '#ff9ac0']), k: 9, vr: R(-3, 3) });
     }
     for (let k = 0; k < 14; k++) FX.hearts(x + R(-r, r) * 0.6, y + R(-r, r) * 0.6);
     FX.ring(x, y, 0.5, r, 1.4, 'rgba(255,180,210,0.9)', 2.5, true);
@@ -178,14 +178,14 @@
     segs[segs.length - 1][0] = 0;
     const branches = [];
     for (let b = 0; b < 3; b++) {
-      const k = 2 + Math.floor(Math.random() * (segs.length - 3)); let [bx, bz] = segs[k]; const br = [[bx, bz]];
-      const dir = Math.random() < 0.5 ? -1 : 1;
+      const k = 2 + Math.floor(G.VR() * (segs.length - 3)); let [bx, bz] = segs[k]; const br = [[bx, bz]];
+      const dir = G.VR() < 0.5 ? -1 : 1;
       for (let s = 0; s < 4; s++) { bx += dir * R(6, 16); bz -= R(10, 22); br.push([bx, bz]); }
       branches.push(br);
     }
     FX.bolts.push({ x, y, h, segs, branches, life: 0.35, max: 0.35 });
     FX.flash = Math.max(FX.flash, 0.85); FX.flashColor = '235,240,255';
-    for (let k = 0; k < 24; k++) FX.spawn({ x, y, z: R(0, 6), vx: R(-2, 2), vy: R(-2, 2), vz: R(40, 140), g: 300, life: R(0.3, 0.8), s0: 1.6, s1: 0.2, c: G.pick(['#fff9d0', '#bcd6ff', '#ffffff']), k: 4, layer: 1 });
+    for (let k = 0; k < 24; k++) FX.spawn({ x, y, z: R(0, 6), vx: R(-2, 2), vy: R(-2, 2), vz: R(40, 140), g: 300, life: R(0.3, 0.8), s0: 1.6, s1: 0.2, c: G.vpick(['#fff9d0', '#bcd6ff', '#ffffff']), k: 4, layer: 1 });
     for (let k = 0; k < 6; k++) FX.spawn({ x: x + R(-0.3, 0.3), y: y + R(-0.3, 0.3), z: R(0, 6), vz: R(10, 30), life: R(1.5, 2.5), s0: 4, s1: 11, c: 'rgba(70,70,75,0.5)', k: 2, drag: 0.6 });
     FX.ring(x, y, 0.1, 2, 0.5, 'rgba(210,225,255,0.9)', 2, true);
     FX.glowAt(x, y, 1.2, 'cool', 90);
@@ -202,26 +202,26 @@
     FX.spawn({ x: x0, y: y0, h, z: z0, vx: (x1 - x0) / T, vy: (y1 - y0) / T, vz, g: gr, life: T, s0: 1, c: '#4a3420', k: 12 });
   };
   FX.chainsBreak = function (x, y) {
-    for (let k = 0; k < 10; k++) FX.spawn({ x: x + R(-0.15, 0.15), y: y + R(-0.15, 0.15), z: R(4, 9), vx: R(-1, 1), vy: R(-1, 1), vz: R(40, 110), g: 300, bounce: 0.3, life: R(0.7, 1.2), s0: 1.3, c: G.pick(['#8e8e96', '#b4b4bc', '#6c6c74']), k: 6, vr: R(-10, 10) });
+    for (let k = 0; k < 10; k++) FX.spawn({ x: x + R(-0.15, 0.15), y: y + R(-0.15, 0.15), z: R(4, 9), vx: R(-1, 1), vy: R(-1, 1), vz: R(40, 110), g: 300, bounce: 0.3, life: R(0.7, 1.2), s0: 1.3, c: G.vpick(['#8e8e96', '#b4b4bc', '#6c6c74']), k: 6, vr: R(-10, 10) });
     for (let k = 0; k < 8; k++) FX.spawn({ x: x + R(-0.3, 0.3), y: y + R(-0.3, 0.3), z: R(6, 16), vz: R(10, 30), life: R(0.8, 1.6), s0: 2.2, s1: 0.3, c: '#fff1b8', k: 8, layer: 1 });
     FX.ring(x, y, 0.1, 0.9, 0.6, 'rgba(255,235,170,0.9)', 1.5, true);
   };
   FX.plague = function (x, y, r) {
-    for (let k = 0; k < 60; k++) { const a = R(0, 6.28), d = Math.sqrt(Math.random()) * r; FX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: R(0, 10), vz: R(4, 16), vx: R(-0.3, 0.3), vy: R(-0.3, 0.3), drag: 0.5, life: R(2, 4), s0: R(4, 7), s1: R(10, 16), c: G.pick(['rgba(120,150,60,0.45)', 'rgba(90,120,50,0.4)', 'rgba(150,160,80,0.35)']), k: 2 }); }
+    for (let k = 0; k < 60; k++) { const a = R(0, 6.28), d = Math.sqrt(G.VR()) * r; FX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: R(0, 10), vz: R(4, 16), vx: R(-0.3, 0.3), vy: R(-0.3, 0.3), drag: 0.5, life: R(2, 4), s0: R(4, 7), s1: R(10, 16), c: G.vpick(['rgba(120,150,60,0.45)', 'rgba(90,120,50,0.4)', 'rgba(150,160,80,0.35)']), k: 2 }); }
     FX.ring(x, y, 0.3, r, 1.3, 'rgba(160,210,80,0.8)', 2, true);
   };
   FX.anoint = function (x, y) {
-    for (let k = 0; k < 40; k++) FX.spawn({ x: x + R(-0.4, 0.4), y: y + R(-0.4, 0.4), z: R(10, 60), vz: R(-30, -8), life: R(1, 2), s0: R(1.8, 2.8), s1: 0.4, c: G.pick(['#ffe08a', '#fff3c8', '#ffd05a']), k: 8, layer: 1 });
+    for (let k = 0; k < 40; k++) FX.spawn({ x: x + R(-0.4, 0.4), y: y + R(-0.4, 0.4), z: R(10, 60), vz: R(-30, -8), life: R(1, 2), s0: R(1.8, 2.8), s1: 0.4, c: G.vpick(['#ffe08a', '#fff3c8', '#ffd05a']), k: 8, layer: 1 });
     FX.ring(x, y, 0.2, 2.2, 1.2, 'rgba(255,220,120,0.95)', 2.4, true);
     FX.pillar = { x, y, t: 1.8, max: 1.8, c: '255,215,110' };
   };
   FX.fury = function (x, y, r) {
-    for (let k = 0; k < 70; k++) { const a = R(0, 6.28), d = Math.sqrt(Math.random()) * r; FX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: R(0, 8), vz: R(20, 60), life: R(0.8, 1.8), s0: R(1.6, 2.6), s1: 0.3, c: G.pick(['#ff5a3a', '#ff8a4a', '#ffcf6a']), k: 4, layer: 1 }); }
+    for (let k = 0; k < 70; k++) { const a = R(0, 6.28), d = Math.sqrt(G.VR()) * r; FX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: R(0, 8), vz: R(20, 60), life: R(0.8, 1.8), s0: R(1.6, 2.6), s1: 0.3, c: G.vpick(['#ff5a3a', '#ff8a4a', '#ffcf6a']), k: 4, layer: 1 }); }
     FX.ring(x, y, 0.3, r, 0.9, 'rgba(255,80,50,0.9)', 3, true);
     FX.glowAt(x, y, 1.6, 'red', 140);
   };
   FX.discord = function (x, y) {
-    for (let k = 0; k < 40; k++) { const a = R(0, 6.28), d = Math.sqrt(Math.random()) * 5; FX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: R(0, 12), vz: R(5, 20), drag: 0.5, life: R(2, 3.5), s0: R(5, 8), s1: R(12, 18), c: G.pick(['rgba(90,40,120,0.45)', 'rgba(60,30,80,0.5)']), k: 2 }); }
+    for (let k = 0; k < 40; k++) { const a = R(0, 6.28), d = Math.sqrt(G.VR()) * 5; FX.spawn({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: R(0, 12), vz: R(5, 20), drag: 0.5, life: R(2, 3.5), s0: R(5, 8), s1: R(12, 18), c: G.vpick(['rgba(90,40,120,0.45)', 'rgba(60,30,80,0.5)']), k: 2 }); }
     FX.ring(x, y, 5, 0.3, 1.4, 'rgba(170,90,230,0.85)', 2, true);
   };
   FX.doves = function (x, y) {
@@ -237,19 +237,19 @@
     FX.ring(x, y, 0.3, r * 2.2, 1.3, 'rgba(255,170,90,0.8)', 3, true);
     FX.ring(x, y, 0.2, r * 4.5, 1.8, 'rgba(255,255,255,0.35)', 2);
     if (water) {
-      for (let k = 0; k < 140; k++) FX.spawn({ x: x + R(-0.5, 0.5), y: y + R(-0.5, 0.5), z: R(0, 10), vx: R(-3, 3), vy: R(-3, 3), vz: R(80, 320), g: 330, life: R(1, 2.2), s0: R(1.5, 2.6), s1: 1, c: G.pick(['rgba(210,240,255,0.95)', 'rgba(160,215,240,0.9)', '#ffffff']), k: 0 });
+      for (let k = 0; k < 140; k++) FX.spawn({ x: x + R(-0.5, 0.5), y: y + R(-0.5, 0.5), z: R(0, 10), vx: R(-3, 3), vy: R(-3, 3), vz: R(80, 320), g: 330, life: R(1, 2.2), s0: R(1.5, 2.6), s1: 1, c: G.vpick(['rgba(210,240,255,0.95)', 'rgba(160,215,240,0.9)', '#ffffff']), k: 0 });
       for (let k = 0; k < 30; k++) FX.spawn({ x: x + R(-1, 1), y: y + R(-1, 1), z: R(0, 20), vz: R(20, 50), life: R(2, 4), s0: 8, s1: 20, c: 'rgba(235,245,255,0.45)', k: 2, drag: 0.4 });
       return;
     }
     for (let k = 0; k < 70; k++) {
       const a = R(0, 6.28), sp = R(1, 4.2);
-      FX.spawn({ x: x + R(-0.4, 0.4), y: y + R(-0.4, 0.4), z: R(2, 12), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: R(90, 300), g: 330, bounce: 0.25, life: R(1.6, 3), s0: R(1.4, 3), c: G.pick(['#5a4636', '#3d2f25', '#7a6450', '#2e2622']), k: 6, vr: R(-10, 10) });
+      FX.spawn({ x: x + R(-0.4, 0.4), y: y + R(-0.4, 0.4), z: R(2, 12), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: R(90, 300), g: 330, bounce: 0.25, life: R(1.6, 3), s0: R(1.4, 3), c: G.vpick(['#5a4636', '#3d2f25', '#7a6450', '#2e2622']), k: 6, vr: R(-10, 10) });
     }
     for (let k = 0; k < 50; k++) {
       const a = R(0, 6.28), sp = R(0.5, 3);
-      FX.spawn({ x, y, z: R(4, 20), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: R(60, 260), g: 200, life: R(0.8, 2.2), s0: R(1.5, 2.5), s1: 0.3, c: G.pick(['#ffdd88', '#ff9944', '#ff6622', '#fff3c0']), k: 4, layer: 1 });
+      FX.spawn({ x, y, z: R(4, 20), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: R(60, 260), g: 200, life: R(0.8, 2.2), s0: R(1.5, 2.5), s1: 0.3, c: G.vpick(['#ffdd88', '#ff9944', '#ff6622', '#fff3c0']), k: 4, layer: 1 });
     }
-    for (let k = 0; k < 40; k++) FX.spawn({ x: x + R(-1.5, 1.5), y: y + R(-1.5, 1.5), z: R(0, 30), vx: R(-0.5, 0.5), vy: R(-0.5, 0.5), vz: R(15, 60), drag: 0.3, life: R(3, 6), s0: R(8, 12), s1: R(22, 34), c: G.pick(['rgba(60,52,48,0.55)', 'rgba(90,80,72,0.5)', 'rgba(40,34,30,0.6)']), k: 2 });
-    for (let k = 0; k < 26; k++) FX.spawn({ x: x + R(-r, r), y: y + R(-r, r), z: R(0, 5), vz: R(5, 15), life: R(2, 4), s0: 3, s1: 1, c: G.pick(['#ff7a2a', '#ffb347']), k: 1, layer: 1 });
+    for (let k = 0; k < 40; k++) FX.spawn({ x: x + R(-1.5, 1.5), y: y + R(-1.5, 1.5), z: R(0, 30), vx: R(-0.5, 0.5), vy: R(-0.5, 0.5), vz: R(15, 60), drag: 0.3, life: R(3, 6), s0: R(8, 12), s1: R(22, 34), c: G.vpick(['rgba(60,52,48,0.55)', 'rgba(90,80,72,0.5)', 'rgba(40,34,30,0.6)']), k: 2 });
+    for (let k = 0; k < 26; k++) FX.spawn({ x: x + R(-r, r), y: y + R(-r, r), z: R(0, 5), vz: R(5, 15), life: R(2, 4), s0: 3, s1: 1, c: G.vpick(['#ff7a2a', '#ffb347']), k: 1, layer: 1 });
   };
 })(window.G);

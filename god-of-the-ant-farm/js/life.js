@@ -539,6 +539,7 @@
 
   // ============================== bookkeeping ==============================
   let tMgr = 0, tQ = 0;
+  G.worldHooks.push(() => { tMgr = 0; tQ = 0; L.reset(); }); // (a new world, or a save loaded: it starts over)
   L.update = function (dt) {
     const S = G.S; if (!S) return;
     tMgr -= dt; tQ -= dt;

@@ -345,6 +345,7 @@
 
   // ------------------------------ update and save ------------------------------
   let tC = 0, tN = 0;
+  G.worldHooks.push(() => { tC = 0; tN = 0; }); // (a new world, or a save loaded: it starts over)
   Co.update = function (dt) {
     const S = G.S; if (!S) return;
     tC += dt; tN += dt;

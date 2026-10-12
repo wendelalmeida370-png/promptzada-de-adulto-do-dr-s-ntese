@@ -347,6 +347,7 @@
 
   // ------------------------------ update ------------------------------
   let tHome = 0, tSpread = 0, tLook = 0;
+  G.worldHooks.push(() => { K.reset(); }); // (a new world, or a save loaded: it starts over)
   K.reset = function () { regs = null; tHome = 0; tSpread = 5; tLook = 0; };
   K.update = function (dt) {
     const S = G.S; if (!S.know || !S.know._init) { K.init(); S.know._init = S.day + 1; }

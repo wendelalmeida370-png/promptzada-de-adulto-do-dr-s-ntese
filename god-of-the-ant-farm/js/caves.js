@@ -85,6 +85,7 @@
   // the lakes lie low, a chasm drops out of sight
   C.LV = { step: 0.6, max: 3, ledge: 0.95, hollow: -0.6, lake: -0.75, stream: -0.35, pit: -6.5 };
   let lvNoise = null;
+  G.worldHooks.push(() => { lvNoise = null; }); // (a new world, or a save loaded: it starts over)
   function relevel(U) {
     const NN = N * N; if (!U.lv || U.lv.length !== NN) U.lv = new Float32Array(NN);
     const lv = U.lv; lv.fill(0); U.lvVer = U.ver;
@@ -674,7 +675,7 @@
     let tot = 0; for (const e of cand) tot += W8[SCENE_OF[e.ic]] || 1;
     let roll = G.R() * tot; for (const e of cand) { roll -= W8[SCENE_OF[e.ic]] || 1; if (roll <= 0) { ev = e; break; } }
     const scene = ev ? SCENE_OF[ev.ic] : pick(['caca', 'caca', 'maos', 'fera', 'festa', 'deus']);
-    const p = { i: t.cell2, w: t.wall, scene, ev: ev ? ev.n : 0, txt: ev ? ev.txt : null, by: v.name, pid: v.id, fac: f ? f.id : 0, civ: f ? f.civ : null, day: S.day, seed: (Math.random() * 1e9) | 0, fade: 0 };
+    const p = { i: t.cell2, w: t.wall, scene, ev: ev ? ev.n : 0, txt: ev ? ev.txt : null, by: v.name, pid: v.id, fac: f ? f.id : 0, civ: f ? f.civ : null, day: S.day, seed: (G.R() * 1e9) | 0, fade: 0 };
     cv.paintings.push(p); if (cv.paintings.length > 40) cv.paintings.shift();
     const what = ev ? `“${trim(ev.txt.replace(/[.!…]+$/, ''), 110)}”` : SCENE_TXT[scene];
     log(`${v.name} pintou nas paredes ${C.da(cv)} ${ev ? 'o que viu: ' + what : SCENE_TXT[scene]}.`, 'paint', (p.i % N), (p.i / N) | 0);
@@ -931,18 +932,19 @@
     for (const b of U.beasts) {
       b.t -= dt;
       if (b.t > 0) { if (b.tx) { const dx = b.tx - b.x, dy = b.ty - b.y, d = Math.hypot(dx, dy); const sp = b.kind === 'grilo' ? 1.4 : b.kind === 'peixe' ? 0.5 : b.kind === 'aranha' ? 0.6 : 0.18; if (d < 0.03) b.tx = 0; else { const s = Math.min(d, sp * dt); b.x += dx / d * s; b.y += dy / d * s; b.face = dx - dy > 0 ? 1 : -1; b.moving = 1; } } else b.moving = 0; continue; }
-      b.t = b.kind === 'salamandra' ? rr(3, 9) : b.kind === 'grilo' ? rr(0.6, 2.5) : rr(1.5, 5);
+      b.t = b.kind === 'salamandra' ? G.vrr(3, 9) : b.kind === 'grilo' ? G.vrr(0.6, 2.5) : G.vrr(1.5, 5);
       const x = b.x | 0, y = b.y | 0; const r = b.kind === 'grilo' ? 1 : 2;
-      const nx = x + Math.round(rr(-r, r)), ny = y + Math.round(rr(-r, r)); if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
+      const nx = x + Math.round(G.vrr(-r, r)), ny = y + Math.round(G.vrr(-r, r)); if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
       const k = U.k[ny * N + nx]; if (U.id[ny * N + nx] !== b.cave) continue;
       const water = k === LAKE || k === STREAM;
       if (b.kind === 'peixe' ? !water : !(C.walk(k) || (b.kind === 'salamandra' && k === STREAM))) continue;
-      b.tx = nx + rr(0.2, 0.8); b.ty = ny + rr(0.2, 0.8);
+      b.tx = nx + G.vrr(0.2, 0.8); b.ty = ny + G.vrr(0.2, 0.8);
     }
   }
 
   // ------------------------------ every tick ------------------------------
   let tSec = 0, tPlan = 0, lastDay = -1, tRefuge = 0, tShelter = 0;
+  G.worldHooks.push(() => { tSec = 0; tPlan = 0; lastDay = -1; tRefuge = 0; tShelter = 0; });
   // a storm drives the wild animals into the caves: deer and a wolf under the same roof, and nobody bites
   function shelter() {
     const S = G.S; const W8 = S.weather || {}; const storm = W8.storm > 0 && W8.rain > 0.3;
@@ -1197,7 +1199,7 @@
   C.openAt = function (x, y) {
     const S = G.S; const U = S.ug || (S.ug = fresh());
     if (!W.inb(x, y)) return null;
-    const rng = G.mulberry32((Math.random() * 1e9) >>> 0); const nk = G.makeNoise((Math.random() * 1e9) | 0);
+    const rng = G.mulberry32((G.R() * 1e9) >>> 0); const nk = G.makeNoise((G.R() * 1e9) | 0);
     // under the clicked hill, or as near to it as the rock allows
     let best = null, bd = 1e9;
     for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) { const cx = Math.round(x) + dx, cy = Math.round(y) + dy; if (cx < 4 || cy < 4 || cx >= N - 4 || cy >= N - 4) continue; const i = cy * N + cx; if (S.type[i] < T.SAND || U.id[i]) continue; const d = dx * dx + dy * dy; if (d < bd) { bd = d; best = [cx, cy]; } }
@@ -1423,7 +1425,7 @@
       if (!o.ug) { C.gen(S, 'normais'); return; }
       const U = S.ug = fresh(); const sa = G.Save.setArr;
       sa(U.k, o.ug.k); sa(U.f, o.ug.f); sa(U.ore, o.ug.ore); sa(U.oreN, o.ug.oreN); sa(U.id, o.ug.id); U.nextBeast = o.ug.nextBeast || 1; S.cavesOpt = o.ug.opt || 'normais';
-      U.beasts = (o.ug.beasts || []).map(a => ({ id: a[0], kind: a[1], cave: a[2], x: a[3], y: a[4], t: Math.random() * 3, face: 1, tx: 0, ty: 0 }));
+      U.beasts = (o.ug.beasts || []).map(a => ({ id: a[0], kind: a[1], cave: a[2], x: a[3], y: a[4], t: G.R() * 3, face: 1, tx: 0, ty: 0 }));
       const nid = S.nextId; // (spawn takes a fresh id before the saved one replaces it)
       U.caves = (o.ug.caves || []).map(cv => {
         cv.sleepers = (cv.sleepers || []).map(a => { const x = G.Animals.spawn(a.kind, a.sx || cv.cx, a.sy || cv.cy, a); S.animals.delete(x.id); x.id = a.id; x.sx = a.sx; x.sy = a.sy; return x; });

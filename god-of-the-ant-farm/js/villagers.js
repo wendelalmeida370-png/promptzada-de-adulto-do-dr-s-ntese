@@ -677,6 +677,7 @@
     return t;
   }
   let preyN = 0, preyT = -1;
+  G.worldHooks.push(() => { preyN = 0; preyT = -1; }); // (a new world, or a save loaded: it starts over)
   function preyCount() { const S = G.S; if (preyT !== S.clock) { preyT = S.clock; preyN = 0; for (const a of S.animals.values()) if (!a.dead && G.Animals.huntable(a)) preyN++; } return preyN; }
   function workTask(v) {
     const S = G.S; const fac = G.Fac.ofV(v); if (!fac) return null;
@@ -1017,7 +1018,7 @@
                 if (G.Life) { G.Life.bio(v, 'couple', o.id); G.Life.bio(o, 'couple', v.id); }
                 G.FX && G.FX.hearts((v.x + o.x) / 2, (v.y + o.y) / 2);
                 const [a, b] = v.g === 'f' ? [v, o] : [o, v];
-                if (S.villagers.size < 35 || G.UI.selected === v || G.UI.selected === o) G.Village.log(`${a.name} e ${b.name} formaram um casal.`, 'heart', v.x, v.y);
+                if (S.villagers.size < 35) G.Village.log(`${a.name} e ${b.name} formaram um casal.`, 'heart', v.x, v.y); else if (G.UI.selected === v || G.UI.selected === o) G.UI.notice(`${a.name} e ${b.name} formaram um casal.`, 'heart');
                 if (!S.milestones.firstCouple) S.milestones.firstCouple = S.day;
               }
             } else if (v.age >= 62 && o.age < 16) { o.devotion += 1; }
@@ -1430,9 +1431,11 @@
 
   // ------------------------------ per-frame update ------------------------------
   let tAlarm = 0, tPush = 0;
+  G.worldHooks.push(() => { tAlarm = 0; tPush = 0; });
   Vg.nightWatch = new Map();
   Vg.workshopFac = new Set();
   const roster = [];
+  G.worldHooks.push(() => { Vg.alarms.clear(); Vg.fireFighters.clear(); Vg.fishSpots.clear(); Vg.nightWatch.clear(); Vg.workshopFac.clear(); roster.length = 0; }); // (a new world, or a save loaded: it starts over)
   Vg.updateAll = function (dt) {
     const S = G.S;
     tAlarm -= dt; tPush -= dt;

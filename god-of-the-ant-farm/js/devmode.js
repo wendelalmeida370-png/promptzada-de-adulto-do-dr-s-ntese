@@ -475,7 +475,10 @@
         + row(btn('goal', 'cidade', 'até a 1ª cidade'), btn('goal', 'metropole', 'até a 1ª metrópole'), btn('goal', 'mega', 'até a megalópole'), btn('goal', 'guerra', 'até a próxima guerra')),
         '<b>Início</b>: anos 0–10, tribos e aldeias. <b>Meio</b>: vilas viram cidades, os povos se encontram. <b>Fim</b>: metrópoles, impérios, Guerra Mundial. O caminho mais curto para o fim: “até a 1ª metrópole” com “Paz e fartura”, depois Parâmetros → Caos.')
       + sec('Momentos guardados — para repetir um teste ou reproduzir um bug', ['A', 'B', 'C'].map(k => `<div class="dv-row"><b class="dv-slot">${k}</b><span class="dv-grow">${snapInfo(k)}</span>${btn('snap', k, 'Guardar')}${snaps[k] || store.get(snapKey(k) + '.i', null) ? btn('restore', k, 'Voltar') : ''}</div>`).join(''))
-      + sec('Mundo novo de teste', row(...NEWW.map((w, i) => btn('neww', i, w.label))));
+      + sec('Mundo novo de teste', row(...NEWW.map((w, i) => btn('neww', i, w.label)))
+        + `<div class="dv-row"><span class="dv-grow">Semente deste mundo: <b>${G.S ? G.S.seed >>> 0 : '—'}</b></span>${btn('again', 0, 'Recriar este mundo')}</div>`
+        + `<div class="dv-row"><input class="dv-in" data-k="seed" inputmode="numeric" placeholder="semente do próximo mundo (vazio = ao acaso)" value="${esc(D.seed || '')}"></div>`,
+        'A mesma semente, o mesmo mapa e os mesmos povos fazem o mesmo mundo — e, sem a mão do deus, ele vive a mesma história.');
   };
   TAB.povos = () => {
     const A = FA(), B = FB(); if (!A) return '<p class="dv-note">Nenhum povo vivo.</p>';
@@ -587,7 +590,7 @@
       else if (t.dataset.k === 'fb') { D.fb = +t.value; show(true); }
       else if (t.dataset.p) { setParam(t.dataset.p, parseFloat(t.value)); show(true); }
     });
-    el.addEventListener('input', e => { if (e.target.dataset.k === 'sigf') { D.sigf = e.target.value; tickLive(true); } });
+    el.addEventListener('input', e => { if (e.target.dataset.k === 'sigf') { D.sigf = e.target.value; tickLive(true); } else if (e.target.dataset.k === 'seed') D.seed = e.target.value.replace(/\D/g, '').slice(0, 10); });
     el.addEventListener('click', e => {
       const tb = e.target.closest('[data-tab]'); if (tb) { D.tab = tb.dataset.tab; store.set('.tab', D.tab); show(true); return; }
       const b = e.target.closest('[data-d]'); if (!b) return;
@@ -735,7 +738,8 @@
       G.Save.apply(JSON.parse(s)); G.Minimap && G.Minimap.reset && G.Minimap.reset(); G.UI.update(1, true);
       say(`De volta ao momento ${k}: ano ${G.S.day}.`);
     },
-    neww(i) { const w = NEWW[+i]; if (w) G.UI.confirm(`Criar um mundo novo (${w.label})? O atual será substituído.`, () => G.Main.newGame(Object.assign({}, G.Main.lastOpts || {}, w.o, { civs: [] }))); },
+    neww(i) { const w = NEWW[+i]; if (w) G.UI.confirm(`Criar um mundo novo (${w.label})? O atual será substituído.`, () => G.Main.newGame(Object.assign({}, G.Main.lastOpts || {}, w.o, { civs: [] }, D.seed ? { seed: +D.seed } : {}))); },
+    again() { const S = G.S; if (!S) return; const o = Object.assign({}, S.genOpts || G.Main.lastOpts || {}, { seed: S.seed >>> 0 }); G.UI.confirm(`Recriar este mundo desde o primeiro dia (semente ${S.seed >>> 0})? O atual será substituído.`, () => G.Main.newGame(o)); },
     fam(n) { const A = FA(); const k = families(A, +n); say(`${k} pessoas chegaram a ${A.name}.`); },
     rich() { const A = FA(); const st = A.stock; for (const k of ['food', 'wood', 'stone']) st[k] = (st[k] || 0) + 1500; for (const k of ['moedas', 'armas', 'ferramentas', 'minerio', 'ferro', 'bronze', 'tecido', 'ceramica']) st[k] = (st[k] || 0) + 200; say(`${A.name} está rico.`); },
     tech1() { const A = FA(); const t = A.tech.cur || (G.Civ.next ? G.Civ.next(A) : null) || Object.keys(G.TECH).find(x => !A.tech.known[x]); if (!t) return say('Já sabe tudo.', true); G.Civ.learn(A, t, 'divina'); say(`${A.name} aprendeu ${G.TECH[t].name}.`); },

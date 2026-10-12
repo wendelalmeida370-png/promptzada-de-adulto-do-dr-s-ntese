@@ -75,7 +75,6 @@
   };
 
   // ------------------------------ organizing a host ------------------------------
-  let nextCo = 1;
   function unitFor(v, f, horses, fid0) {
     if (v.elite === 'carro') return 'cavalaria';
     if (v.elite) return 'elite';
@@ -118,7 +117,7 @@
       for (let c = 0; c < nco; c++) {
         const ms = list.slice(c * per, (c + 1) * per); if (!ms.length) continue;
         const cap = ms.slice().sort((a, d) => (d.kills || 0) + d.courage * 2 - ((a.kills || 0) + a.courage * 2))[0];
-        const co = { id: nextCo++, n: ++idx, kind, form: formFor(kind, f), members: ms.map(v => v.id), cap: cap.id, ax: b.rx, ay: b.ry, dir: 0, morale: kind === 'elite' ? 90 : kind === 'milicia' ? 55 : 72, order: 'seguir', path: null, pi: 0, start: ms.length, rout: false, wing: 'c', tx: null, ty: null, hidden: false };
+        const co = { id: G.S.nextId++, n: ++idx, kind, form: formFor(kind, f), members: ms.map(v => v.id), cap: cap.id, ax: b.rx, ay: b.ry, dir: 0, morale: kind === 'elite' ? 90 : kind === 'milicia' ? 55 : 72, order: 'seguir', path: null, pi: 0, start: ms.length, rout: false, wing: 'c', tx: null, ty: null, hidden: false };
         A.cos.push(co);
         for (const v of ms) { v.task.co = co.id; v.task.flag = v.id === cap.id; }
       }
@@ -884,6 +883,7 @@
 
   // ------------------------------ the war councils, twice a second ------------------------------
   let tick = 0;
+  G.worldHooks.push(() => { tick = 0; }); // (a new world, or a save loaded: it starts over)
   AR.update = function (dt) {
     tick += dt; if (tick < 0.5) return; tick = 0;
     // hosts marching on a town wake its defenders

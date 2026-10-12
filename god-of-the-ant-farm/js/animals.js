@@ -170,6 +170,7 @@
     return S.veg;
   }
   let vegCursor = 0;
+  G.worldHooks.push(() => { vegCursor = 0; }); // (a new world, or a save loaded: it starts over)
   function growVeg(dt) {
     // a slice of the map per tick keeps this cheap on huge worlds
     const S = G.S; const veg = ensureVeg(); const total = N * N;
@@ -218,6 +219,7 @@
   };
   function riverNear(i) { const S = G.S; const x = i % N, y = (i / N) | 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= N || yy >= N) continue; if (S.type[yy * N + xx] === T.RIVER) return true; } return false; }
   let habCount = null;
+  G.worldHooks.push(() => { habCount = null; });
   function habitatCounts() {
     distances();
     if (habCount) return habCount;
@@ -346,6 +348,7 @@
   A.lineOK = lineOK;
   // a way around: the same paths people walk (cliffs, walls and houses in the way), a few searches a frame
   let pathBudget = 0;
+  G.worldHooks.push(() => { pathBudget = 0; });
   const canRoute = a => { const sp = SP[a.kind]; return sp.cls === 'land' || (sp.cls === 'amph' && G.S.type[W.idx(a.x, a.y)] > T.RIVER && G.S.type[W.idx(a.tx, a.ty)] > T.RIVER); };
   function route(a) {
     const S = G.S;
@@ -615,7 +618,7 @@
   function feastFX(a, c, dt) {
     a.ft = (a.ft || 0) - dt; if (a.ft > 0 || !G.FX) return;
     a.ft = G.rr(0.9, 1.8);
-    const fx = G.Render ? G.Render.sface(a) : 1;
+    const fx = G.wface(a);
     for (let k = 0; k < 5; k++) G.FX.spawn({ x: c.x + G.rr(-0.2, 0.2), y: c.y + G.rr(-0.2, 0.2), h: W.groundH(c.x, c.y), z: (c.z || 0) + G.rr(1, 3), vx: G.rr(-0.8, 0.8) + fx * 0.3, vy: G.rr(-0.8, 0.8), vz: G.rr(15, 40), g: 160, life: G.rr(0.3, 0.6), s0: 1, s1: 0.4, c: k < 4 ? '#9a1a22' : '#c86a6a', k: 0 });
     if (G.Carnage && G.Carnage.decal && !(c.z > 3) && G.R() < 0.5) G.Carnage.decal(c.x + G.rr(-0.3, 0.3), c.y + G.rr(-0.3, 0.3), G.rr(0.07, 0.13), 'splat');
     if (G.R() < 0.3) G.Audio && G.Audio.at(c.x, c.y, 'bite');
@@ -625,7 +628,7 @@
     if (a.caught) {
       const h = G.S.animals.get(a.caught);
       if (!h || h.dead || !(h.state === 'drown' || h.state === 'roll' || h.grip > 0)) { a.caught = 0; a.down = 0.6; }
-      else { const f = G.Render ? G.Render.sface(h) : 1; a.x = h.x + f * 0.5; a.y = h.y + f * 0.2; a.moving = false; a.hurt = 0.1; a.walkPh += dt * 14; return true; }
+      else { const f = G.wface(h); a.x = h.x + f * 0.5; a.y = h.y + f * 0.2; a.moving = false; a.hurt = 0.1; a.walkPh += dt * 14; return true; }
     }
     if (a.down > 0) { a.down -= dt; a.moving = false; a.walkPh += dt * 12; return true; }
     return false;
@@ -705,7 +708,7 @@
         if (!a.dragTo) { const tr = treeNear(cp.x, cp.y, 7); a.dragTo = tr ? [tr.x + 0.3, tr.y + 0.3] : [cp.x + G.rr(-3, 3), cp.y + G.rr(-3, 3)]; }
         a.tx = a.dragTo[0]; a.ty = a.dragTo[1];
         const done = moveTo(a, dt, sp.sp * 0.45);
-        const fx = G.Render ? G.Render.sface(a) : 1; cp.bdrag = 1; cp.x = a.x + fx * 0.45; cp.y = a.y - fx * 0.45;
+        const fx = G.wface(a); cp.bdrag = 1; cp.x = a.x + fx * 0.45; cp.y = a.y - fx * 0.45;
         a.dragT -= dt; if (done || a.dragT <= 0) { a.dragT = 0; cp.bdrag = 0; }
         return true;
       }
@@ -719,7 +722,7 @@
       const c = S.animals.get(a.target); const tr = S.trees.get(a.tree);
       a.t -= dt;
       if (!c || !c.dead || c.meat <= 0 || !tr || a.t <= 0) { a.state = 'eat'; a.cached = true; return true; }
-      const fx = G.Render ? G.Render.sface(a) : 1;
+      const fx = G.wface(a);
       if (G.dist(a.x, a.y, tr.x, tr.y) > 0.3) { a.tx = tr.x; a.ty = tr.y; moveTo(a, dt, sp.sp * 0.5); c.x = a.x + fx * 0.4; c.y = a.y - fx * 0.3; return true; }
       a.z = Math.min(canopyZ(tr) * 0.7, (a.z || 0) + dt * 14); c.x = a.x + fx * 0.3; c.y = a.y; c.z = a.z;
       if (a.z >= canopyZ(tr) * 0.7 - 0.1) { a.state = 'eat'; a.cached = true; a.t = 30; a.perch = tr.id; }
@@ -1352,6 +1355,7 @@
 
   // ------------------------------ the whole zoo ------------------------------
   let tBreed = 0, tVeg = 0, tImm = 30, tDay = 0;
+  G.worldHooks.push(() => { tBreed = 0; tVeg = 0; tImm = 30; tDay = 0; });
   A.updateAll = function (dt) {
     const S = G.S;
     distances(); ensureVeg();

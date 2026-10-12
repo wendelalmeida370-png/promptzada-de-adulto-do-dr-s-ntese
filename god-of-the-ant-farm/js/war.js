@@ -25,7 +25,7 @@
   };
   Wr.armory = new Set();
   Wr.smith = new Set();
-  let nextBand = 1;
+  G.worldHooks.push(() => { Wr.armory.clear(); Wr.smith.clear(); Wr.clock = 0; GRID.clear(); Wr.reset(); }); // (a new world, or a save loaded: it starts over)
   const reach = new Map();
 
   // is there fighting at a town, or an army about to reach it? festivals, fairs and games wait for it to pass
@@ -144,7 +144,7 @@
     const rad = (best.radius || 8) * 0.8;
     const stage = spotNear(best.cx - Math.cos(ang) * rad, best.cy - Math.sin(ang) * rad, 2) || [best.cx, best.cy];
     const b = {
-      id: nextBand++, fac: f.id, enemy: enemy.id, set: best.id, from: from.id, goal, st: 'reunir', t: 0, life: 0,
+      id: G.S.nextId++, fac: f.id, enemy: enemy.id, set: best.id, from: from.id, goal, st: 'reunir', t: 0, life: 0,
       members: members.map(v => v.id), start: members.length, kills: 0, lost: 0, captives: 0, loot: { food: 0, wood: 0, stone: 0 }, burned: 0, quiet: 0,
       rx: rally[0], ry: rally[1], tx: stage[0], ty: stage[1], fury: !!opts.fury, raid: !!opts.raid,
     };
@@ -158,7 +158,7 @@
   Wr.makeBand = function (f, enemy, set, members, goal, o) {
     o = o || {};
     const b = {
-      id: nextBand++, fac: f.id, enemy: enemy.id, set: set.id, from: o.from || set.id, goal, st: o.landed ? 'ataque' : 'reunir', t: 0, life: 0,
+      id: G.S.nextId++, fac: f.id, enemy: enemy.id, set: set.id, from: o.from || set.id, goal, st: o.landed ? 'ataque' : 'reunir', t: 0, life: 0,
       members: members.map(v => v.id), start: members.length, kills: 0, lost: 0, captives: 0, loot: { food: 0, wood: 0, stone: 0 }, burned: 0, quiet: 0,
       rx: set.cx, ry: set.cy, tx: set.cx, ty: set.cy, fury: !!o.fury, ship: o.ship || 0, reached: !!o.landed,
     };
@@ -481,7 +481,7 @@
       const assim = G.Civ.t(f.id, 'assimilate');
       if (days >= 5 / assim && pe.cru < 0.55 + (assim > 1.5 ? 0.15 : 0) && !G.Politics.tyr(f) && G.R() < 0.035 * assim * dt / 5) {
         v.captive = null; v.role = null;
-        if (G.R() < 0.4 || G.UI.selected === v) log(`Depois de ${Math.round(days)} anos de cativeiro, ${v.name} foi aceit${oa(v)} como parte de ${f.name}.`, 'free', v.x, v.y);
+        { const txt = `Depois de ${Math.round(days)} anos de cativeiro, ${v.name} foi aceit${oa(v)} como parte de ${f.name}.`; if (G.R() < 0.4) log(txt, 'free', v.x, v.y); else if (G.UI.selected === v) G.UI.notice(txt, 'free'); }
         continue;
       }
       const from = G.Fac.get(v.captive.from);
@@ -1089,6 +1089,7 @@
 
   // ------------------------------ update ------------------------------
   let tick = 0, tCap = 0, tFlush = 0;
+  G.worldHooks.push(() => { tick = 0; tCap = 0; tFlush = 0; }); // (a new world, or a save loaded: it starts over)
   Wr.update = function (dt) {
     const S = G.S; if (!S) return;
     Wr.clock += dt;

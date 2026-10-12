@@ -71,6 +71,7 @@
   Sn.get = id => Sn.list.find(s => s.id === id) || null;
   // the errand someone was taken from (and will be given back): a soldier in a scene is still in the army
   Sn.prevTask = v => { const t = v && v.task; if (!t || t.type !== 'scene') return null; const sc = Sn.get(t.sc); const rec = sc && sc.taken.get(v.id); return rec ? rec.prev : null; };
+  Sn.lingers = () => { for (const s of Sn.list) if (s.st === 'run') return true; return false; };
   Sn.of = storyId => Sn.list.find(s => s.story === storyId && s.st === 'run') || null;
   Sn.running = (storyId, key) => Sn.list.some(s => s.story === storyId && s.st === 'run' && (!key || s.key === key));
   Sn.actorScene = v => (v && v.task && v.task.type === 'scene' ? Sn.get(v.task.sc) : null);
@@ -557,7 +558,7 @@
       c.strokeStyle = '#6a4a2a'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(-2.6, 0.4); c.lineTo(2.2, -0.8); c.moveTo(-2, -0.8); c.lineTo(2.6, 0.5); c.stroke();
       for (let k = 0; k < 4; k++) { const fl = Math.sin(t * 11 + k * 1.9) * 0.6; c.fillStyle = k % 2 ? 'rgba(255,170,40,0.92)' : 'rgba(255,96,24,0.88)'; c.beginPath(); c.moveTo(-1.8 + k * 1.2, -0.4); c.quadraticCurveTo(-1.4 + k * 1.2 + fl, -4.6 - (k % 2) * 1.6, -0.6 + k * 1.2, -0.4); c.fill(); }
       if (G.Art.glow) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.25 + nightF * 0.45; c.drawImage(G.Art.glow('warm'), -22, -26, 44, 44); }
-      if (G.R() < 0.04 && G.FX) G.FX.spawn({ x: p.x, y: p.y, z: 6, vz: 10, vx: G.rr(-0.1, 0.1), vy: 0, g: -2, life: 1.6, s0: 1, s1: 3, c: 'rgba(80,72,64,0.35)', k: 4 });
+      if (G.VR() < 0.04 && G.FX) G.FX.spawn({ x: p.x, y: p.y, z: 6, vz: 10, vx: G.vrr(-0.1, 0.1), vy: 0, g: -2, life: 1.6, s0: 1, s1: 3, c: 'rgba(80,72,64,0.35)', k: 4 });
     } else if (p.k === 'basket') {
       c.fillStyle = '#a07040'; c.beginPath(); c.ellipse(0, -0.6, 2.2, 1.1, 0.4, 0, TAU); c.fill();
       c.fillStyle = p.col || '#d8302a'; for (const [dx, dy] of [[2.6, 0.8], [3.8, 0.2], [-2.6, 1], [1, 1.6]]) { c.beginPath(); c.arc(dx, dy, 0.6, 0, TAU); c.fill(); }

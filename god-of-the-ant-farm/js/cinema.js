@@ -217,7 +217,7 @@
         // a second look, closer: the general, or whoever is fighting
         close: () => {
           const g = gen && !gen.dead && !gen.inside ? gen : null;
-          const pick = g || Sv.get(members[(Math.random() * members.length) | 0]);
+          const pick = g || Sv.get(members[(G.VR() * members.length) | 0]);
           if (!pick || pick.dead) return null;
           return { kind: 'war', zoom: 2.6, dur: 10, mark: 1, pos: vAt(pick.id), alive: () => G.War.bands.has(b.id) && !!Sv.get(pick.id), kick: title, title: pick.name, subFn: () => `${G.roleName(pick)} — ${G.Vg.taskText(pick)}` };
         },
@@ -514,13 +514,13 @@
     const all = [...S().villagers.values()]; if (!all.length) return;
     let best = [];
     for (let k = 0; k < Math.min(70, all.length); k++) {
-      const v = all[(Math.random() * all.length) | 0];
+      const v = all[(G.VR() * all.length) | 0];
       if (v.dead || v.inside || v.aboard || v.held || !v.task) continue;
       const tt = v.task.type; let sc = LIFE[tt]; if (sc === undefined) continue;
       if (v.act === 'dance' || v.act === 'mourn') sc += 8;
       if (v.age < 12) sc += 6; if (v.age >= 60) sc += 3;
       if (tt === 'fest' || tt === 'band' || tt === 'combat') continue;
-      best.push([sc + Math.random() * 10, v]);
+      best.push([sc + G.VR() * 10, v]);
     }
     best.sort((a, b) => b[0] - a[0]);
     for (const [sc, v] of best.slice(0, 3)) {
@@ -537,7 +537,7 @@
     const all = [...S().animals.values()]; if (!all.length) return;
     let hunt = null, herd = null;
     for (let k = 0; k < Math.min(90, all.length); k++) {
-      const a = all[(Math.random() * all.length) | 0];
+      const a = all[(G.VR() * all.length) | 0];
       if (a.dead || a.dom || a.held) continue;
       const d = G.Animals.DEF[a.kind]; if (!d) continue;
       if (!hunt && a.state === 'chase' && a.target) hunt = a;
@@ -551,7 +551,7 @@
     }
     if (herd) {
       const d = G.Animals.DEF[herd.kind];
-      out.push({ key: 'a:' + herd.id, kind: 'wild', score: 26 + Math.random() * 10, zoom: 2.3, dur: 10, pos: aAt(herd.id), alive: () => !!S().animals.get(herd.id), kick: place(herd.x, herd.y), title: d.name, sub: 'a vida selvagem longe das cidades' });
+      out.push({ key: 'a:' + herd.id, kind: 'wild', score: 26 + G.VR() * 10, zoom: 2.3, dur: 10, pos: aAt(herd.id), alive: () => !!S().animals.get(herd.id), kick: place(herd.x, herd.y), title: d.name, sub: 'a vida selvagem longe das cidades' });
     }
   }
 
@@ -606,7 +606,7 @@
       const n = pop.get(set.id) || 0; if (!n) continue;
       const tier = set.tier || 0;
       out.push({
-        key: 'set:' + set.id, kind: 'place', score: 24 + tier * 3 + Math.min(8, n / 40) + (dusk ? 16 : night ? 10 : dawn ? 8 : 0) + Math.random() * 6, zoom: zoomFit((set.radius || 6) * 0.75), dur: 12, drift: 1,
+        key: 'set:' + set.id, kind: 'place', score: 24 + tier * 3 + Math.min(8, n / 40) + (dusk ? 16 : night ? 10 : dawn ? 8 : 0) + G.VR() * 6, zoom: zoomFit((set.radius || 6) * 0.75), dur: 12, drift: 1,
         pos: () => [set.cx, set.cy, 4], alive: () => Sx.settlements.has(set.id), kick: facName(set.fac), title: set.name,
         subFn: () => { const t = Sx.time; return `${(G.City && G.City.TIERS[set.tier || 0]) || ''} · ${n} ${n === 1 ? 'habitante' : 'habitantes'}${G.isNight() ? ' · a cidade à noite' : t > 0.62 ? ' · o fim do dia' : t > 0.02 && t < 0.14 ? ' · a névoa da manhã' : ''}${G.Pets ? (() => { const w = G.Pets.words(G.Pets.count(set.id)); return w ? ' · ' + w : ''; })() : ''}`; },
       });
@@ -623,17 +623,17 @@
     if (G.Relief) {
       const Rv = R(); const light = dusk || dawn ? 18 : night ? -12 : 0;
       for (const p of G.Relief.places()) {
-        if (p.kind === 'pico') out.push({ key: 'peak:' + p.name, kind: 'land', score: 26 + light + Math.min(10, p.h / 4) + Math.random() * 8, zoom: 1.35, dur: 12, drift: 1, pos: () => [p.x, p.y, 14], alive: () => true, kick: 'As montanhas', title: p.name, sub: `${p.alt} de altitude${G.isNight() ? ' · sob as estrelas' : Sx.time > 0.6 ? ' · o sol se põe atrás do pico' : Sx.time < 0.14 ? ' · a névoa ainda nos vales' : ''}` });
+        if (p.kind === 'pico') out.push({ key: 'peak:' + p.name, kind: 'land', score: 26 + light + Math.min(10, p.h / 4) + G.VR() * 8, zoom: 1.35, dur: 12, drift: 1, pos: () => [p.x, p.y, 14], alive: () => true, kick: 'As montanhas', title: p.name, sub: `${p.alt} de altitude${G.isNight() ? ' · sob as estrelas' : Sx.time > 0.6 ? ' · o sol se põe atrás do pico' : Sx.time < 0.14 ? ' · a névoa ainda nos vales' : ''}` });
         else if (p.kind === 'cachoeira') {
           const f = (Sx.relief.falls || []).find(q => q.name === p.name); let view;
           if (f) for (let r = 0; r < 4; r++) { const ok = (() => { const d = (x, y) => r === 0 ? x + y : r === 1 ? G.N - y + x : r === 2 ? 2 * G.N - x - y : y + G.N - x; return d(f.x + 0.5, f.y + 0.5) < d(f.tx + 0.5, f.ty + 0.5); })(); if (ok) { view = r; break; } }
-          out.push({ key: 'fall:' + p.name, kind: 'land', score: 30 + light * 0.6 + Math.min(12, p.drop * 3) + Math.random() * 8, zoom: 2.9, dur: 11, drift: 1, view, pos: () => [p.x, p.y, 4], alive: () => true, kick: 'As águas', title: p.name, sub: p.alt });
-        } else if (p.kind === 'lago' && p.n >= 6) out.push({ key: 'lake:' + p.name, kind: 'land', score: 22 + light + Math.random() * 8, zoom: 1.9, dur: 11, drift: 1, pos: () => [p.x, p.y, 2], alive: () => true, kick: 'As águas', title: p.name, sub: p.alt });
+          out.push({ key: 'fall:' + p.name, kind: 'land', score: 30 + light * 0.6 + Math.min(12, p.drop * 3) + G.VR() * 8, zoom: 2.9, dur: 11, drift: 1, view, pos: () => [p.x, p.y, 4], alive: () => true, kick: 'As águas', title: p.name, sub: p.alt });
+        } else if (p.kind === 'lago' && p.n >= 6) out.push({ key: 'lake:' + p.name, kind: 'land', score: 22 + light + G.VR() * 8, zoom: 1.9, dur: 11, drift: 1, pos: () => [p.x, p.y, 2], alive: () => true, kick: 'As águas', title: p.name, sub: p.alt });
       }
       void Rv;
     }
     const nf = G.Fac.all().length;
-    out.push({ key: 'world', kind: 'world', score: 16 + (dawn ? 16 : 0) + Math.random() * 6, zoom: R().minZoom() * 1.12, dur: 12, drift: 1, pos: () => [G.N / 2, G.N / 2, 0], alive: () => true, kick: `Dia ${Sx.day}`, title: (Sx.lore && Sx.lore.world) || 'O mundo', sub: `${Sx.villagers.size} almas · ${nf} ${nf === 1 ? 'povo' : 'povos'} · ${Sx.settlements.size} ${Sx.settlements.size === 1 ? 'povoado' : 'povoados'}` });
+    out.push({ key: 'world', kind: 'world', score: 16 + (dawn ? 16 : 0) + G.VR() * 6, zoom: R().minZoom() * 1.12, dur: 12, drift: 1, pos: () => [G.N / 2, G.N / 2, 0], alive: () => true, kick: `Dia ${Sx.day}`, title: (Sx.lore && Sx.lore.world) || 'O mundo', sub: `${Sx.villagers.size} almas · ${nf} ${nf === 1 ? 'povo' : 'povos'} · ${Sx.settlements.size} ${Sx.settlements.size === 1 ? 'povoado' : 'povoados'}` });
   }
 
   // the caves: bats at dusk, the people inside (a funeral, the hidden, the oracle, a painter), outlaws by their fire and on the prowl
@@ -691,7 +691,7 @@
       // the big things (a battle, a siege, a great festival) come back sooner
       if (last !== undefined) c.score -= c.score >= 85 ? Math.max(0, 30 - (clock - last) * 0.6) : Math.max(0, 50 - (clock - last) * 0.28);
       const lk = seenKind.get(c.kind); if (lk !== undefined && (!shot || c.key !== shot.key)) c.score -= Math.max(0, 16 - (clock - lk) * 0.25);
-      c.score += Math.random() * 6;
+      c.score += G.VR() * 6;
     }
     out.sort((a, b) => b.score - a.score);
     // the same scene offered twice (a battle seen from both hosts): keep the better
@@ -725,7 +725,7 @@
   function take(c) {
     const Rn = R(), cam = Rn.cam;
     const p = c.pos(); if (!p) return;
-    c.t = 0; c.push = (Math.random() < 0.7 ? 1 : -1) * G.rr(0.06, 0.14); c.driftA = Math.random() * TAU;
+    c.t = 0; c.push = (G.VR() < 0.7 ? 1 : -1) * G.vrr(0.06, 0.14); c.driftA = G.VR() * TAU;
     c.zoom = G.clamp(c.zoom * (G.speed >= 8 && !c.drift ? 0.8 : 1), Rn.minZoom(), 3.4);
     const [tx, ty] = target(c, p);
     const far = Math.hypot(tx - cam.x, ty - cam.y) * cam.zoom > Math.hypot(Rn.VW, Rn.VH) * 1.1 || (c.view !== undefined && c.view !== Rn.rot()) || !!c.under !== !!Rn.under;

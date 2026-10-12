@@ -48,6 +48,7 @@
   St.state = st;
   // people -> the stories they are in (rebuilt when the world changes)
   let idx = new Map(), idxFor = null;
+  G.worldHooks.push(() => { idx = new Map(); idxFor = null; }); // (a new world, or a save loaded: it starts over)
   function reindex() {
     idx = new Map(); idxFor = G.S;
     for (const s of st().stories) if (s.st === 'ativa') for (const id of people(s)) addIdx(id, s.id);
@@ -64,6 +65,7 @@
   // ============================== facts ==============================
   // what happened: the objective truth, with names kept as they were, and the facts that led to it
   let factIdx = new Map(), factFor = null;
+  G.worldHooks.push(() => { factIdx = new Map(); factFor = null; });
   function factById(id) {
     if (factFor !== G.S || factIdx.size !== st().facts.length) { factIdx = new Map(); for (const f of st().facts) factIdx.set(f.id, f); factFor = G.S; }
     return factIdx.get(id) || null;
@@ -484,6 +486,7 @@
   St.bequeath = bequeath;
   // the camera's moments: a climax that deserves to be seen
   St.hotList = [];
+  G.worldHooks.push(() => { St.hotList = []; }); // (a new world, or a save loaded: it starts over)
   // the story the player follows (the tracker, the scenes that take the screen, the marker on the map)
   St.follow = function (id) { const s = st(); const prev = s.follow || 0; s.follow = id || 0; if (St.onFollow) try { St.onFollow(s.follow, prev); } catch (e) { console.warn('stories follow', e); } };
   St.followed = function () { const s = G.S && G.S.saga; if (!s || !s.follow) return 0; const x = getStory(s.follow); return x && (x.st === 'ativa' || G.S.day - (x.end ? x.end.d : 0) < 1) ? x.id : 0; };
@@ -633,6 +636,7 @@
 
   // ============================== the loop ==============================
   let tAcc = 0;
+  G.worldHooks.push(() => { tAcc = 0; });
   St.update = function (dt) {
     const S = G.S; if (!S) return;
     if (idxFor !== S) reindex();

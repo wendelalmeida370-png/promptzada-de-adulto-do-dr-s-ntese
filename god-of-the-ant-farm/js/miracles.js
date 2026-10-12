@@ -812,6 +812,7 @@
 
   // ------------------------------ ticking ------------------------------
   let tFac = 0, tPro = 0, tPreach = 0;
+  G.worldHooks.push(() => { tFac = 0; tPro = 0; tPreach = 0; }); // (a new world, or a save loaded: it starts over)
   function facTick(dt) {
     const S = G.S;
     for (const f of G.Fac.all()) {

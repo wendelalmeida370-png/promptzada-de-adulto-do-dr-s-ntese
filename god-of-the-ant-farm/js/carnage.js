@@ -256,6 +256,7 @@
 
   // ------------------------------ time does its work ------------------------------
   let tSlow = 0; const sickNear = new Map();
+  G.worldHooks.push(() => { tSlow = 0; sickNear.clear(); }); // (a new world, or a save loaded: it starts over)
   C.update = function (dt) {
     const S = G.S; if (!S) return;
     for (const c of corpses) c.t += dt * (c.crows ? 1.3 : 1) * (S.weather.drought > 0 ? 1.2 : 1);

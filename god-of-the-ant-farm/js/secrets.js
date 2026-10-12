@@ -607,6 +607,7 @@
     }
   }
   let tA = 0, tB = 0, lastDay = -1;
+  G.worldHooks.push(() => { tA = 0; tB = 0; lastDay = -1; }); // (a new world, or a save loaded: it starts over)
   Sc.update = function (dt) {
     const S = G.S; if (!S) return; const s = st();
     for (const m of s.meets.slice()) { try { tickMeet(m, dt); } catch (e) { console.warn('secrets meet', e); endMeet(m); } }

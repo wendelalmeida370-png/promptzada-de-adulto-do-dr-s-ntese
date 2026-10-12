@@ -18,6 +18,8 @@
     for (const b of s.buildings.values()) maxId = Math.max(maxId, b.id);
     for (const a of s.animals.values()) maxId = Math.max(maxId, a.id);
     if (s.nextId <= maxId) add('ids', 0, `nextId ${s.nextId} <= maior id ${maxId}: colisão possível`);
+    // the world's chance lives in the world (and goes into the save): without it a loaded world would not live the same future
+    if (G.VR && !Number.isInteger(s.rng)) add('ids', 1, `o acaso do mundo se perdeu (S.rng = ${s.rng})`);
     // the map of where one can walk to must match the ground as it is now (a change nobody told it about leaves it stale)
     if (G.W.reachIds && !opts.noReach) {
       const L = G.W.reachIds(true); const n = N * N; const T = G.T;

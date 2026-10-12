@@ -467,6 +467,7 @@
 
   // ------------------------------ update ------------------------------
   let tEq = 0, tWall = 0, tGate = 0, tSac = 0;
+  G.worldHooks.push(() => { Sg.reset(); }); // (a new world, or a save loaded: it starts over)
   Sg.reset = function () { tEq = 1; tWall = 5; tGate = 0; tSac = 10; };
   Sg.update = function (dt) {
     tEq -= dt; tWall -= dt; tGate -= dt; tSac -= dt;

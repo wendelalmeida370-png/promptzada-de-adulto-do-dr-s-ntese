@@ -177,21 +177,21 @@
           const adults = l.filter(v => v.age >= 16);
           const owner = adults.find(v => v.role === 'cacador' || v.role === 'pastor') || G.pick(adults);
           const d = doorOf(h); const names = DOGNAME[civ] || DOGNAME.classico;
-          G.Animals.spawn('cao', d[0], d[1], { dom: set.fac, set: set.id, home: h.id, owner: owner.id, coat: (Math.random() * 5) | 0, named: G.pick(names), age: G.rr(0.5, 6), hx: d[0], hy: d[1] });
+          G.Animals.spawn('cao', d[0], d[1], { dom: set.fac, set: set.id, home: h.id, owner: owner.id, coat: (G.R() * 5) | 0, named: G.pick(names), age: G.rr(0.5, 6), hx: d[0], hy: d[1] });
         }
       }
       if (count('gato') < want.gato) {
         const stores = [...S.buildings.values()].filter(b => b.set === set.id && b.built && (b.type === 'storehouse' || b.type === 'temple' || HOMES[b.type]));
-        if (stores.length) { const b = G.pick(stores); const d = doorOf(b); G.Animals.spawn('gato', d[0], d[1], { dom: set.fac, set: set.id, home: b.id, coat: (Math.random() * 5) | 0, age: G.rr(0.5, 8), hx: d[0], hy: d[1] }); }
+        if (stores.length) { const b = G.pick(stores); const d = doorOf(b); G.Animals.spawn('gato', d[0], d[1], { dom: set.fac, set: set.id, home: b.id, coat: (G.R() * 5) | 0, age: G.rr(0.5, 8), hx: d[0], hy: d[1] }); }
       }
       if (count('galinha') < want.galinha && yards.length) {
         const h = G.pick(yards); const d = doorOf(h);
         const rooster = !have.galinha.some(a => a.rooster);
-        G.Animals.spawn('galinha', d[0] + G.rr(-0.5, 0.5), d[1] + G.rr(-0.5, 0.5), { dom: set.fac, set: set.id, home: h.id, coat: (Math.random() * 3) | 0, rooster, age: G.rr(0.3, 3), hx: d[0], hy: d[1] });
+        G.Animals.spawn('galinha', d[0] + G.rr(-0.5, 0.5), d[1] + G.rr(-0.5, 0.5), { dom: set.fac, set: set.id, home: h.id, coat: (G.R() * 3) | 0, rooster, age: G.rr(0.3, 3), hx: d[0], hy: d[1] });
       }
       if (count('pombo') < want.pombo) {
         const sq = [...S.buildings.values()].filter(b => b.set === set.id && b.built && (b.type === 'praca' || b.type === 'mercado' || b.type === 'temple' || b.type === 'feira'));
-        if (sq.length) { const b = G.pick(sq); const [cx, cy] = G.Village.center(b); for (let k = 0; k < 3 && count('pombo') + k < want.pombo; k++) { const x = cx + G.rr(-1.5, 1.5), y = cy + G.rr(-1.5, 1.5); if (W.walkableXY(x, y)) G.Animals.spawn('pombo', x, y, { dom: set.fac, set: set.id, home: b.id, coat: (Math.random() * 4) | 0, age: G.rr(0.3, 3), hx: cx, hy: cy }); } }
+        if (sq.length) { const b = G.pick(sq); const [cx, cy] = G.Village.center(b); for (let k = 0; k < 3 && count('pombo') + k < want.pombo; k++) { const x = cx + G.rr(-1.5, 1.5), y = cy + G.rr(-1.5, 1.5); if (W.walkableXY(x, y)) G.Animals.spawn('pombo', x, y, { dom: set.fac, set: set.id, home: b.id, coat: (G.R() * 4) | 0, age: G.rr(0.3, 3), hx: cx, hy: cy }); } }
       }
       // eggs for the pantry
       for (const a of have.galinha) { const h = S.buildings.get(a.home); if (h && a.grown >= 1 && !G.isNight()) h.pantry = (h.pantry || 0) + 0.02; }

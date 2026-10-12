@@ -38,7 +38,9 @@
     S.stats.couples += 3;
     return fac;
   }
-  function setupWorld(seed, opts) {
+  // (making a world is part of its life: what it draws comes from the world's generator)
+  function setupWorld(seed, opts) { G.inSim++; try { return makeWorld(seed, opts); } finally { G.inSim--; } }
+  function makeWorld(seed, opts) {
     opts = Object.assign({ type: 'ilha', size: 64, tribes: 1, temper: 'normal' }, opts || {});
     G.FX.list.length = 0; G.FX.floaters.length = 0; G.FX.bolts.length = 0; G.FX.rings.length = 0; G.FX.glows.length = 0;
     G.newWorld();
@@ -48,6 +50,7 @@
     G.genWorld(seed, opts);
     const S = G.S;
     S.temper = opts.temper || 'normal';
+    S.genOpts = JSON.parse(JSON.stringify(opts)); // (what this world was made from, with its seed: enough to make it again)
     G.War.reset();
     G.City && G.City.reset();
     G.Naval && G.Naval.reset();
@@ -98,10 +101,12 @@
   }
   M.newGame = function (opts) {
     G.Audio.init();
-    opts = opts || M.lastOpts;
+    opts = Object.assign({}, opts || M.lastOpts);
+    // (a world asked for by its seed — the dev mode, the tests — is made from it; the seed is not kept for the next game)
+    const fixed = Number.isFinite(opts.seed) ? opts.seed >>> 0 : null; delete opts.seed;
     M.lastOpts = opts; try { localStorage.setItem('gotaf-setup', JSON.stringify(opts)); } catch (e) { }
     G.UI.closeModal(); G.UI.select(null); G.UI.setPower(null);
-    setupWorld((Date.now() ^ (Math.random() * 1e9)) >>> 0, opts);
+    setupWorld(fixed !== null ? fixed : (Date.now() ^ (Math.random() * 1e9)) >>> 0, opts);
     G.UI.viewFac = G.Fac.all()[0].id;
     const S = G.S;
     $('#menu').classList.add('fade');
@@ -161,11 +166,12 @@
   };
 
   // ------------------------------ simulation ------------------------------
-  function step(dt) {
+  function step(dt) { G.inSim++; try { live(dt); } finally { G.inSim--; } }
+  function live(dt) {
     const S = G.S;
     S.clock += dt;
-    // (while a scene is on the screen the sun lingers: a night of watching does not end in the middle of it)
-    S.time += dt / G.DAY_LEN * (G.Scene && G.Scene.watching && G.Scene.watching.st === 'run' ? 0.35 : 1);
+    // (while a scene is happening the sun lingers: a night scene does not end in the middle of it — watched or not, the same)
+    S.time += dt / G.DAY_LEN * (G.Scene && G.Scene.lingers && G.Scene.lingers() ? 0.35 : 1);
     if (S.time >= 1) {
       S.time -= 1; S.day++;
       (S.popHist = S.popHist || []).push(S.villagers.size); if (S.popHist.length > 500) S.popHist.shift();

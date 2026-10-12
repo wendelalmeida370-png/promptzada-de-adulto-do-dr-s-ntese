@@ -64,6 +64,7 @@
   // ------------------------------ state ------------------------------
   // live festivals are not saved: a festival cut by a save simply ends
   let live = new Map(), liveS = null, nextId = 1;
+  G.worldHooks.push(() => { live = new Map(); liveS = null; nextId = 1; }); // (a new world, or a save loaded: it starts over)
   function reset() { if (liveS !== G.S) { liveS = G.S; live = new Map(); lastConq = new Map(); } }
   FE.list = () => { reset(); return [...live.values()]; };
   FE.active = setId => { reset(); for (const f of live.values()) if (f.set === setId) return f; return null; };
@@ -668,6 +669,7 @@
 
   // ------------------------------ the calendar runs ------------------------------
   let tCheck = 0; let lastConq = new Map();
+  G.worldHooks.push(() => { tCheck = 0; lastConq = new Map(); });
   FE.update = function (dt) {
     reset();
     const S = G.S;

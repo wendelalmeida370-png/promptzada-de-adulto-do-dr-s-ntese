@@ -38,26 +38,26 @@
     if (st.rainPeak > 0.3 && w.rain < 0.12 && t > 0.08 && t < 0.6 && st.rainbow <= 0) { st.rainbow = st.rainbowMax = 22; st.rainPeak = 0; }
     if (st.rainbow > 0) st.rainbow -= dt;
     // sheet lightning inside a storm
-    if (w.storm > 0 && G.R() < dt * 0.25) { st.flash = 0.35; G.Audio && G.Audio.play('thunderFar', 0.8); }
+    if (w.storm > 0 && G.VR() < dt * 0.25) { st.flash = 0.35; G.Audio && G.Audio.play('thunderFar', 0.8); }
     if (st.flash > 0) st.flash = Math.max(0, st.flash - rdt * 2.5);
     // cloud shadows: a handful of big soft shapes riding the wind
-    if (st.shadows.length < 5) st.shadows.push({ x: G.rr(0, N), y: G.rr(0, N), r: G.rr(4, 8), s: G.rr(0.6, 1.2) });
+    if (st.shadows.length < 5) st.shadows.push({ x: G.vrr(0, N), y: G.vrr(0, N), r: G.vrr(4, 8), s: G.vrr(0.6, 1.2) });
     const wx = Math.cos(w.windA) * (0.3 + w.windS * 0.9), wy = Math.sin(w.windA) * (0.3 + w.windS * 0.9);
-    for (const c of st.shadows) { c.x += wx * dt; c.y += wy * dt; if (c.x < -12 || c.y < -12 || c.x > N + 12 || c.y > N + 12) { c.x = N / 2 - wx * N * 0.7 + G.rr(-N / 2, N / 2); c.y = N / 2 - wy * N * 0.7 + G.rr(-N / 2, N / 2); } }
+    for (const c of st.shadows) { c.x += wx * dt; c.y += wy * dt; if (c.x < -12 || c.y < -12 || c.x > N + 12 || c.y > N + 12) { c.x = N / 2 - wx * N * 0.7 + G.vrr(-N / 2, N / 2); c.y = N / 2 - wy * N * 0.7 + G.vrr(-N / 2, N / 2); } }
     // dust devils on the hot dry plains at midday
-    if (!st.devil && t > 0.28 && t < 0.52 && w.rain < 0.05 && G.R() < dt * 0.02) {
-      const R = G.Render; const [x, y] = R.screenToTile(R.VW * G.rr(0.25, 0.75), R.VH * G.rr(0.3, 0.7));
-      if (W.inb(x, y)) { const b = bio(W.idx(x, y)); if ((b === BIO.DESERT || b === BIO.SAVANNA) && S.type[W.idx(x, y)] >= G.T.SAND) st.devil = { x, y, t: 0, life: G.rr(14, 22), vx: wx * 0.8 + G.rr(-0.3, 0.3), vy: wy * 0.8 + G.rr(-0.3, 0.3) }; }
+    if (!st.devil && t > 0.28 && t < 0.52 && w.rain < 0.05 && G.VR() < dt * 0.02) {
+      const R = G.Render; const [x, y] = R.screenToTile(R.VW * G.vrr(0.25, 0.75), R.VH * G.vrr(0.3, 0.7));
+      if (W.inb(x, y)) { const b = bio(W.idx(x, y)); if ((b === BIO.DESERT || b === BIO.SAVANNA) && S.type[W.idx(x, y)] >= G.T.SAND) st.devil = { x, y, t: 0, life: G.vrr(14, 22), vx: wx * 0.8 + G.vrr(-0.3, 0.3), vy: wy * 0.8 + G.vrr(-0.3, 0.3) }; }
     }
     if (st.devil) {
       const d = st.devil; d.t += dt; d.x += d.vx * dt; d.y += d.vy * dt;
       if (d.t > d.life || !W.inb(d.x, d.y)) st.devil = null;
-      else if (G.FX) for (let k = 0; k < 3; k++) { const a = G.R() * TAU, z = G.rr(0, 22); G.FX.spawn({ x: d.x + Math.cos(a) * (0.15 + z * 0.012), y: d.y + Math.sin(a) * (0.15 + z * 0.012), z, vz: G.rr(8, 18), vx: -Math.sin(a) * 1.4 + d.vx, vy: Math.cos(a) * 1.4 + d.vy, life: G.rr(0.8, 1.5), s0: 1.6, s1: 3.2, c: 'rgba(210,180,130,0.35)', k: 2 }); }
+      else if (G.FX) for (let k = 0; k < 3; k++) { const a = G.VR() * TAU, z = G.vrr(0, 22); G.FX.spawn({ x: d.x + Math.cos(a) * (0.15 + z * 0.012), y: d.y + Math.sin(a) * (0.15 + z * 0.012), z, vz: G.vrr(8, 18), vx: -Math.sin(a) * 1.4 + d.vx, vy: Math.cos(a) * 1.4 + d.vy, life: G.vrr(0.8, 1.5), s0: 1.6, s1: 3.2, c: 'rgba(210,180,130,0.35)', k: 2 }); }
     }
     // leaves on a windy day, from the trees in sight
-    if (w.windS > 0.45 && G.FX && G.R() < dt * 6 * w.windS && G.Render.cam.zoom > 1) {
-      const R = G.Render; const [x, y] = R.screenToTile(G.R() * R.VW, G.R() * R.VH);
-      if (W.inb(x, y)) { const tr = S.trees.get(S.treeAt[W.idx(x, y)]); if (tr && tr.stage === 'grow') G.FX.spawn({ x: tr.x, y: tr.y, z: G.rr(8, 16), vx: wx * 1.2, vy: wy * 1.2, vz: G.rr(-3, 3), g: 4, drag: 0.2, life: G.rr(3, 5), s0: 1.4, s1: 1.2, c: G.pick(['#8ab04a', '#c8a040', '#b07a3a']), k: 5, rot: G.R() * 6, vr: G.rr(-4, 4) }); }
+    if (w.windS > 0.45 && G.FX && G.VR() < dt * 6 * w.windS && G.Render.cam.zoom > 1) {
+      const R = G.Render; const [x, y] = R.screenToTile(G.VR() * R.VW, G.VR() * R.VH);
+      if (W.inb(x, y)) { const tr = S.trees.get(S.treeAt[W.idx(x, y)]); if (tr && tr.stage === 'grow') G.FX.spawn({ x: tr.x, y: tr.y, z: G.vrr(8, 16), vx: wx * 1.2, vy: wy * 1.2, vz: G.vrr(-3, 3), g: 4, drag: 0.2, life: G.vrr(3, 5), s0: 1.4, s1: 1.2, c: G.vpick(['#8ab04a', '#c8a040', '#b07a3a']), k: 5, rot: G.VR() * 6, vr: G.vrr(-4, 4) }); }
     }
   };
 

@@ -775,6 +775,7 @@
     }
   };
   let tSweep = 0;
+  G.worldHooks.push(() => { tSweep = 0; ci = 0; Fl.reset(); }); // (a new world, or a save loaded: it starts over)
 
   // ====================================================================================
   //  DRAWN OVER THE SHIPS: planks across, men fighting on the decks, buckets at a fire

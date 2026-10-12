@@ -55,7 +55,7 @@
       return o;
     });
     const out = {
-      v: S.v, seed: S.seed, day: S.day, time: r(S.time, 4), clock: r(S.clock, 1), savedAt: Date.now(),
+      v: S.v, seed: S.seed, rng: S.rng | 0, day: S.day, time: r(S.time, 4), clock: r(S.clock, 1), savedAt: Date.now(),
       H: dl(S.H, 100), type: rl(S.type), fert: zr(S.fert, 100), wear: zr(S.wear, 1), burnt: zr(S.burnt, 1), scar: zr(S.scar, 1),
       wet: zr(S.wet, 100), fire: zr(S.fire, 100), fireT: zr(S.fireT, 1), bloom: zr(S.bloom, 1),
       wl: zr(Float32Array.from(S.wl, v => v - G.SEA), 100), relief: S.relief,
@@ -68,7 +68,7 @@
       dead: [...S.dead.values()],
       animals: [...S.animals.values()].map(a => ({ id: a.id, kind: a.kind, x: r(a.x, 2), y: r(a.y, 2), z: r(a.z || 0, 0), age: r(a.age || 0, 2), grown: r(a.grown === undefined ? 1 : a.grown, 2), hunger: r(a.hunger || 0, 2), named: a.named, kills: a.kills, sink: a.sink, hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: r(a.meat, 1), rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0, hx: r(a.hx, 1), hy: r(a.hy, 1), lifeMul: r(a.lifeMul || 1, 2), tamed: a.tamed || 0, guardSet: a.guardSet || 0, legend: a.legend || false, big: a.big || 1, epithet: a.epithet || null, mig: a.mig || false, morph: a.morph || null, seen: a.seen || 0, perch: a.perch || 0, dom: a.dom || 0, pen: a.pen || 0, wool: r(a.wool || 0, 2), milk: r(a.milk || 0, 2), eggs: r(a.eggs || 0, 2), shorn: r(a.shorn || 0, 0), tended: a.tended || 0 })),
       settlements: [...S.settlements.values()],
-      N: S.N || N, mapType: S.mapType, temper: S.temper || 'normal', divinePeace: S.divinePeace || 0,
+      N: S.N || N, mapType: S.mapType, temper: S.temper || 'normal', genOpts: S.genOpts || null, divinePeace: S.divinePeace || 0,
       factions: [...S.factions.values()].map(f => { const o = Object.assign({}, f); o.rel = {}; for (const k in f.rel) if (+k > f.id) o.rel[k] = Object.assign({}, f.rel[k], { envoy: 0 }); o.targets = null; o.coup = null; o.rev = null; o.revolt = null; o.exec = null; return o; }), usedNames: S.usedNames || [], starts: S.starts,
       faith: r(S.faith, 2), stats: S.stats, history: S.history, milestones: S.milestones,
       weather: S.weather, clouds: S.clouds, zones: S.zones, boats: S.boats, awareness: S.awareness, era: S.era,
@@ -96,7 +96,9 @@
     try { const s = localStorage.getItem(KEY); if (!s) return false; o = JSON.parse(s); } catch (e) { console.warn('load failed', e); return false; }
     try { Sv.apply(o); return true; } catch (e) { console.error('corrupt save', e); return false; }
   };
-  Sv.apply = function (o) {
+  // (loading is part of the world's life: what it draws comes from the world's generator)
+  Sv.apply = function (o) { G.inSim++; try { return apply(o); } finally { G.inSim--; } };
+  function apply(o) {
     // (the size is read from the terrain itself: one tile type per tile, one height per corner)
     const lt = arrLen(o.type), lh = arrLen(o.H), nt = Math.round(Math.sqrt(lt)), nh = Math.round(Math.sqrt(lh)) - 1;
     const fromMap = lt && nt * nt === lt ? nt : lh && (nh + 1) * (nh + 1) === lh ? nh : 0;
@@ -105,7 +107,9 @@
     G.newWorld();
     G.setMapSize(NS);
     const S = G.newState(o.seed);
-    S.N = NS; S.mapType = o.mapType || 'ilha'; S.usedNames = o.usedNames || []; S.starts = o.starts || [o.start]; S.temper = o.temper || 'normal'; S.divinePeace = o.divinePeace || 0;
+    // (the world's chance goes on from where it was saved; what loading itself draws comes from a generator of its own, the same each time)
+    const rng0 = Number.isInteger(o.rng) ? o.rng : G.rngSeed(o.seed | 0, o.day); const lr = G.mulberry32(rng0 ^ 0x5A5A5A5A);
+    S.N = NS; S.mapType = o.mapType || 'ilha'; S.usedNames = o.usedNames || []; S.starts = o.starts || [o.start]; S.temper = o.temper || 'normal'; S.genOpts = o.genOpts && typeof o.genOpts === 'object' ? o.genOpts : null; S.divinePeace = o.divinePeace || 0;
     G.S = S;
     if (!Number.isFinite(o.day) || !Number.isFinite(o.clock)) throw new Error('save: sem dia ou relógio');
     S.day = o.day; S.time = Number.isFinite(o.time) ? o.time : 0.3; S.clock = o.clock; S.nextId = o.nextId;
@@ -115,7 +119,7 @@
     if (o.relief) S.relief = Object.assign(S.relief, o.relief);
     G.Relief.cliffs(S);
     for (const a of o.trees) {
-      const t = { id: a[0], x: a[1], y: a[2], kind: a[3], size: a[4], maxSize: a[5], stage: a[6], wood: a[7], v: a[8], t: a[9], fallDir: a[10], burntLog: !!a[11], chop: a[12] || 0, claim: 0, ph: Math.random() * 6.28, fallT: 1 };
+      const t = { id: a[0], x: a[1], y: a[2], kind: a[3], size: a[4], maxSize: a[5], stage: a[6], wood: a[7], v: a[8], t: a[9], fallDir: a[10], burntLog: !!a[11], chop: a[12] || 0, claim: 0, ph: lr() * 6.28, fallT: 1 };
       S.trees.set(t.id, t); S.treeAt[W.idx(t.x, t.y)] = t.id;
     }
     for (const a of o.rocks) { const k = { id: a[0], x: a[1], y: a[2], stone: a[3], max: a[4], v: a[5], meteor: !!a[6], claim: 0 }; S.rocks.set(k.id, k); S.objAt[W.idx(k.x, k.y)] = k.id; }
@@ -125,7 +129,7 @@
       S.buildings.set(b.id, b);
       for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) S.occ[ty * N + tx] = b.id;
     }
-    for (const v of o.villagers) { v.path = null; v.task = null; v.emo = null; v.think = Math.random(); v.scan = Math.random() * 0.3; S.villagers.set(v.id, v); }
+    for (const v of o.villagers) { v.path = null; v.task = null; v.emo = null; v.think = lr(); v.scan = lr() * 0.3; S.villagers.set(v.id, v); }
     for (const d of o.dead) S.dead.set(d.id, d);
     for (const a of o.animals) {
       if (!('morph' in a)) a.morph = null; // (older worlds: no rare coats appear on loading)
@@ -164,7 +168,8 @@
     G.Village.forceUpdate();
     G.Politics && G.Politics.afterLoad && G.Politics.afterLoad();
     G.Fac.updateTerritory();
-  };
+    S.rng = rng0; // (whatever loading drew, the world's chance resumes exactly where it was saved)
+  }
   Sv.computeDistances = function () {
     const S = G.S; const d = new Int32Array(N * N).fill(999); const q = [];
     for (let i = 0; i < N * N; i++) if (S.type[i] <= T.SEA) { d[i] = 0; q.push(i); }

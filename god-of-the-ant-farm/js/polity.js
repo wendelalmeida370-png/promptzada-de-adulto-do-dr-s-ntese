@@ -582,6 +582,7 @@
 
   // ------------------------------ the loop ------------------------------
   let tA = 0, tB = 0, lastDay = -1;
+  G.worldHooks.push(() => { tA = 0; tB = 0; lastDay = -1; }); // (a new world, or a save loaded: it starts over)
   Po.update = function (dt) {
     const S = G.S; if (!S) return;
     tA += dt; tB += dt;

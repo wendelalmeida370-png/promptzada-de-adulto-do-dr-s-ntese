@@ -40,6 +40,7 @@
   };
   E.PRAYER = PRAYER;
   let tPray = 0;
+  G.worldHooks.push(() => { tPray = 0; }); // (a new world, or a save loaded: it starts over)
   function hostileNear(set, r) {
     let best = null, bd = r * r;
     for (const a of G.S.animals.values()) if (G.Animals.threat(a) && (a.raid || a.summoned || a.onPerson || a.angry > 0)) { const d = G.dist2(a.x, a.y, set.cx, set.cy); if (d < bd) { bd = d; best = a; } }

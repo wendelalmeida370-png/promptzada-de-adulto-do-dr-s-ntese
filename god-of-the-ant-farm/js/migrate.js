@@ -206,6 +206,7 @@
 
   // ------------------------------ the salmon run ------------------------------
   Mg.run = null; // { falls: [[x, y, tx, ty]], until }
+  G.worldHooks.push(() => { Mg.reset(); }); // (a new world, or a save loaded: it starts over)
   function startRun() {
     const S = G.S; const falls = ((S.relief && S.relief.falls) || []).filter(f => S.temp && S.temp[W.idx(f.x, f.y)] / 255 < 0.5);
     if (!falls.length) return;
@@ -255,6 +256,7 @@
 
   // ------------------------------ the year's clock ------------------------------
   let tG = 0, lastPhase = -1, lastDay = -1;
+  G.worldHooks.push(() => { tG = 0; lastPhase = -1; lastDay = -1; }); // (a new world, or a save loaded: it starts over)
   Mg.update = function (dt) {
     const S = G.S; if (!S || !S.biome) return;
     if (Mg._S !== S) { Mg._S = S; if (!S._flocksLoaded) Mg.reset(); }

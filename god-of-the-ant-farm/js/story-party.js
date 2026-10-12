@@ -218,6 +218,7 @@
 
   // ------------------------------ who fell along the way ------------------------------
   let acc = 0;
+  G.worldHooks.push(() => { acc = 0; }); // (a new world, or a save loaded: it starts over)
   Pt.tick = function (dt) {
     acc += dt; if (acc < 2) return; acc = 0;
     for (const s of St.state().stories) {

@@ -149,7 +149,7 @@
     const t = P(x, y, 10);
     for (let k = 0; k < 4; k++) { poly(c, [t, P(x - s - 0.04 + (k < 2 ? 0 : 0), y + s + 0.04, 7), P(x + s + 0.04, y + s + 0.04, 7)], k % 2 ? col1 : col2); }
     poly(c, [t, P(x + s + 0.04, y + s + 0.04, 7), P(x + s + 0.04, y - s - 0.04, 7)], shade(col1, 0.8));
-    c.fillStyle = G.pick(['#e05a3a', '#f0b040', '#6ab04a']); for (let k = 0; k < 3; k++) { const q = P(x - 0.1 + k * 0.1, y + 0.05, 3.6); c.beginPath(); c.arc(q[0], q[1], 0.7, 0, TAU); c.fill(); }
+    c.fillStyle = G.vpick(['#e05a3a', '#f0b040', '#6ab04a']); for (let k = 0; k < 3; k++) { const q = P(x - 0.1 + k * 0.1, y + 0.05, 3.6); c.beginPath(); c.arc(q[0], q[1], 0.7, 0, TAU); c.fill(); }
   }
   function statue(c, x, y, z, col, h, spear) {
     const b = P(x, y, z); h = h || 10; const w = Math.max(1.4, h * 0.13);
@@ -246,7 +246,7 @@
     onR(c, x1, -0.05, 0.05, H - 4, H - 2, p.win, m);
     const zr = roof(c, m, p, x0, y0, x1, y1, H, { rh, ov: 0.1 });
     m.fires.push(P(0, 0, zr));
-    if (big) { for (const x of [x0 + 0.2, 0.2 * lx, x1 - 0.25]) { const q = P(x, y1 + 0.02, H * 0.55); c.fillStyle = G.pick(['#a23c2a', '#d8b25a', '#3f6fb0']); c.beginPath(); c.ellipse(q[0], q[1], 2, 1.5, 0, 0, TAU); c.fill(); c.fillStyle = '#d8c89a'; c.beginPath(); c.arc(q[0], q[1], 0.5, 0, TAU); c.fill(); } }
+    if (big) { for (const x of [x0 + 0.2, 0.2 * lx, x1 - 0.25]) { const q = P(x, y1 + 0.02, H * 0.55); c.fillStyle = G.vpick(['#a23c2a', '#d8b25a', '#3f6fb0']); c.beginPath(); c.ellipse(q[0], q[1], 2, 1.5, 0, 0, TAU); c.fill(); c.fillStyle = '#d8c89a'; c.beginPath(); c.arc(q[0], q[1], 0.5, 0, TAU); c.fill(); } }
   }
   function roundHut(c, m, wa, wb, straw, band2) {
     let g = c.createLinearGradient(-10, 0, 10, 0); g.addColorStop(0, wa); g.addColorStop(1, wb);

@@ -130,6 +130,7 @@
   }
   // (the beavers are few among many animals: the list is refreshed now and then, not searched every step)
   let beavers = [], bT = 99, bFor = null;
+  G.worldHooks.push(() => { beavers = []; bT = 99; bFor = null; }); // (a new world, or a save loaded: it starts over)
   function beaverTick(dt) {
     const S = G.S; if (!SP.beaver) return;
     bT += dt; if (bT > 2 || bFor !== S) { bT = 0; bFor = S; beavers = []; for (const a of S.animals.values()) if (a.kind === 'beaver') beavers.push(a); }
@@ -156,6 +157,7 @@
 
   // ------------------------------ update ------------------------------
   let tN = 0, tT = 0;
+  G.worldHooks.push(() => { tN = 0; tT = 0; });
   Ne.update = function (dt) {
     const S = G.S; if (!S) return;
     tN += dt; tT += dt; beaverTick(dt);

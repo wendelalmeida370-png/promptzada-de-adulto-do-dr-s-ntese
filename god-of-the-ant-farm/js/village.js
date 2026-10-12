@@ -883,6 +883,7 @@
 
   // ------------------------------ main update ------------------------------
   let tPlan = 0, tJobs = 0, tHouse = 0, tSlow = 0;
+  G.worldHooks.push(() => { tPlan = 0; tJobs = 0; tHouse = 0; tSlow = 0; }); // (a new world, or a save loaded: it starts over)
   V.update = function (dt) {
     const S = G.S;
     tPlan += dt; tJobs += dt; tHouse += dt; tSlow += dt;

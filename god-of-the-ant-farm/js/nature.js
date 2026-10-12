@@ -8,6 +8,7 @@
   const Nat = G.Nature = {};
   // how much wild the land can hold grows with the land itself
   let landN = 0, landKey = null;
+  G.worldHooks.push(() => { landN = 0; landKey = null; }); // (a new world, or a save loaded: it starts over)
   Nat.landTiles = function () {
     const S = G.S; if (landKey === S && landN) return landN;
     landKey = S; landN = 0; for (let i = 0; i < S.type.length; i++) if (S.type[i] >= T.SAND) landN++;
@@ -73,6 +74,7 @@
 
   // ------------------------------ fire ------------------------------
   Nat.fireSet = new Set();
+  G.worldHooks.push(() => { Nat.fireSet.clear(); Nat.dirty.clear(); }); // (a new world, or a save loaded: it starts over)
   Nat.rebuildFire = function () { Nat.fireSet.clear(); const F = G.S.fire; for (let i = 0; i < F.length; i++) if (F[i] > 0) Nat.fireSet.add(i); };
   Nat.fuel = function (i) {
     const S = G.S;
@@ -308,6 +310,7 @@
   G.pathLevel = w => (w < 14 ? 0 : w < 28 ? 1 : w < 45 ? 2 : 3);
 
   let fireAcc = 0, slowAcc = 0;
+  G.worldHooks.push(() => { fireAcc = 0; slowAcc = 0; });
   Nat.update = function (dt) {
     fireAcc += dt; slowAcc += dt;
     if (fireAcc >= 0.2) { updateFire(fireAcc); fireAcc = 0; }

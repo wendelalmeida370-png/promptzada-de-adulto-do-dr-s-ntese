@@ -398,6 +398,7 @@
   // every step taken through shallow water is counted; where a town keeps wading the same stream or pond,
   // once it has grown into a town it throws a stone bridge across, bank to bank
   Ci.fords = new Map();
+  G.worldHooks.push(() => { Ci.fords.clear(); Ci.reset(); }); // (a new world, or a save loaded: it starts over)
   Ci.ford = i => { Ci.fords.set(i, (Ci.fords.get(i) || 0) + 1); };
   function fordDecay() { for (const [i, n] of Ci.fords) { const m = n * 0.6; if (m < 1) Ci.fords.delete(i); else Ci.fords.set(i, m); } }
   // the shortest run of water through tile i (across, then up and down), bank to bank
@@ -729,6 +730,7 @@
 
   // ------------------------------ update ------------------------------
   let tT = 4, tR = 5, tA = 0, tF = 0;
+  G.worldHooks.push(() => { tT = 4; tR = 5; tA = 0; tF = 0; }); // (a new world, or a save loaded: it starts over)
   Ci.update = function (dt) {
     tT += dt; tR += dt; tA += dt;
     if (tT >= 5) { tT = 0; updateTiers(); }

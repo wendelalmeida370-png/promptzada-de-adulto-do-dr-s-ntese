@@ -91,6 +91,7 @@
   E.HERDS = { grego: ['ovelha', 'cabra'], romano: ['porco', 'ovelha', 'vaca'], egipcio: ['vaca', 'cabra'], nordico: ['ovelha', 'vaca'], asteca: ['peru'], classico: ['ovelha', 'vaca'] };
   // herds per pen, rebuilt once per tick (the renderer and the jobs ask many times)
   let herdS = null, herdT = -1; const HERDS = new Map(); const NONE = [];
+  G.worldHooks.push(() => { herdS = null; herdT = -1; HERDS.clear(); }); // (a new world, or a save loaded: it starts over)
   E.penAnimals = b => {
     const S = G.S;
     if (herdS !== S || herdT !== S.clock) { herdS = S; herdT = S.clock; HERDS.clear(); for (const a of S.animals.values()) if (a.pen && !a.dead) { let l = HERDS.get(a.pen); if (!l) HERDS.set(a.pen, l = []); l.push(a); } }
@@ -99,8 +100,10 @@
   E.penDirty = () => { herdT = -1; };
   // buildings by settlement and type, rebuilt every second
   let idxS = null, idxT = -1e9; const IDX = new Map(); const EMPTY = [];
+  G.worldHooks.push(() => { idxS = null; idxT = -1e9; IDX.clear(); });
   E.byType = function (setId, type) {
     const S = G.S;
+    if (!G.inSim) { const out = []; for (const b of S.buildings.values()) if (b.built && b.set === setId && b.type === type) out.push(b); return out; }
     if (idxS !== S || S.clock - idxT > 1 || S.clock < idxT) { idxS = S; idxT = S.clock; IDX.clear(); for (const b of S.buildings.values()) { if (!b.built) continue; let m = IDX.get(b.set); if (!m) IDX.set(b.set, m = {}); (m[b.type] || (m[b.type] = [])).push(b); } }
     const m = IDX.get(setId); return (m && m[type]) || EMPTY;
   };
@@ -1022,6 +1025,7 @@
 
   // ------------------------------ update ------------------------------
   let tPen = 0, tHouse = 0, tBM = 0, tDay = -1;
+  G.worldHooks.push(() => { tPen = 0; tHouse = 0; tBM = 0; tDay = -1; });
   E.update = function (dt) {
     const S = G.S; if (!S) return;
     if (!S.ores) E.genDeposits(S);

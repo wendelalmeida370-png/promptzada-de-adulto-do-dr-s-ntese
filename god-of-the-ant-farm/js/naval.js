@@ -65,6 +65,7 @@
     Nv.abVer++;
   };
   let tFleet = 0, tShoal = 0, tRoute = 0, tScan = 0, tCrew = 5;
+  G.worldHooks.push(() => { Nv.reset(); }); // (a new world, or a save loaded: it starts over)
   Nv.reset = function () { comp = null; tFleet = 2; tShoal = 0; tRoute = 5; tScan = 0; tCrew = 5; };
 
   // ------------------------------ seas ------------------------------

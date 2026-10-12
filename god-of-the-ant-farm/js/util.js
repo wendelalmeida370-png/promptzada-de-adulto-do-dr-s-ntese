@@ -18,13 +18,42 @@ window.G = window.G || {};
   }
   G.mulberry32 = mulberry32;
 
-  // simulation randomness (not deterministic, doesn't need to be)
-  const R = Math.random;
+  // ---------- chance: one generator per system ----------
+  // the world's (G.R, rr, ri, pick, chance): seeded by the world's seed, its state lives in G.S.rng and goes into the save,
+  // so the same seed and the same acts of the god give the same world, and a save loaded twice lives the same future
+  let loose = (Math.random() * 4294967296) | 0; // (before any world exists)
+  const R = () => {
+    const S = G.S; let a = S && S.rng !== undefined ? S.rng : loose;
+    a = (a + 0x6D2B79F5) | 0;
+    if (S) S.rng = a; else loose = a;
+    if (G.rngWatch) G.rngWatch(0);
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
   G.R = R;
   G.rr = (a, b) => a + R() * (b - a);
   G.ri = (a, b) => Math.floor(a + R() * (b - a + 1));
   G.pick = arr => arr[Math.floor(R() * arr.length)];
   G.chance = p => R() < p;
+  // what only shows or sounds (particles, sky, the camera, music) draws from its own: watching never changes what happens
+  let look = (Math.random() * 4294967296) | 0;
+  const VR = () => {
+    let a = look = (look + 0x6D2B79F5) | 0;
+    if (G.rngWatch) G.rngWatch(1);
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  G.VR = VR;
+  G.vrr = (a, b) => a + VR() * (b - a);
+  G.vri = (a, b) => Math.floor(a + VR() * (b - a + 1));
+  G.vpick = arr => arr[Math.floor(VR() * arr.length)];
+  G.vchance = p => VR() < p;
+  // the world's seed for its generator (a new world, or a save from before the generator was saved)
+  G.rngSeed = (seed, day) => ((seed ^ 0x2545F491) + Math.imul(day | 0, 0x9E3779B1)) | 0;
+  // (the QA tools set G.rngWatch to see who draws from which generator, and G.inSim says whether the world is living a step)
+  G.rngWatch = null; G.inSim = 0;
 
   // ---------- math ----------
   G.clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -138,6 +167,8 @@ window.G = window.G || {};
 
   // facing: 'face' is the side on screen for the first view (+1 right); fx, fy keep the world direction
   // so the other three views can show it too
+  // the side something faces in the world (the first view's right is +1): for the world's own placing, never the screen's
+  G.wface = o => (o.fx !== undefined && o.fx !== null ? (o.fx - o.fy > 0 ? 1 : -1) : (o.face || 1));
   G.faceTo = (o, dx, dy) => { o.face = dx - dy > 0 ? 1 : -1; o.fx = dx; o.fy = dy; };
   G.faceAs = (o, src, flip) => { o.face = flip ? -src.face : src.face; const k = flip ? -1 : 1; if (src.fx !== undefined) { o.fx = src.fx * k; o.fy = src.fy * k; } else { o.fx = undefined; o.fy = undefined; } };
 

@@ -230,6 +230,7 @@
 
   // ------------------------------ update ------------------------------
   let tL = 0, tR = 0, tE = 0;
+  G.worldHooks.push(() => { tL = 0; tR = 0; tE = 0; }); // (a new world, or a save loaded: it starts over)
   Tr.update = function (dt) {
     const S = G.S; if (!S) return;
     tL += dt; tR += dt; tE += dt;

@@ -252,6 +252,7 @@
 
   // ------------------------------ update ------------------------------
   let tSlow = 0, hooked = false;
+  G.worldHooks.push(() => { tSlow = 0; }); // (a new world, or a save loaded: it starts over)
   function hookFX() {
     if (hooked || !G.FX) return; hooked = true;
     const old = G.FX.deposit;

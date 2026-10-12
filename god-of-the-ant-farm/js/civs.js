@@ -299,6 +299,7 @@
     }
   };
   let tRes = 0, tDiff = 0;
+  G.worldHooks.push(() => { tRes = 0; tDiff = 0; }); // (a new world, or a save loaded: it starts over)
   C.update = function (dt) {
     tRes += dt; tDiff += dt;
     if (tRes >= 2) { C.research(tRes); tRes = 0; }

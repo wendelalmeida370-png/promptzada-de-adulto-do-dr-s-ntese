@@ -485,6 +485,7 @@
 
   // ------------------------------ the loop ------------------------------
   let tS = 0;
+  G.worldHooks.push(() => { tS = 0; }); // (a new world, or a save loaded: it starts over)
   J.update = function (dt) {
     const S = G.S; if (!S) return;
     for (const e of execs().slice()) { try { tick(e, dt); } catch (err) { console.warn('justice', err); cancel(e); } }
@@ -661,7 +662,7 @@
       L.skin = '#2e221e'; L._cloth = '#1a1614'; L.hair = '#1a1614';
       const a = L.act; L.act = 'bound'; L.actT = 0; L.moving = false;
       G.Art.villager(ctx, L, 0, 0, t, false); L.act = a;
-      if (G.R() < 0.05) G.FX && G.FX.spawn({ x: c.x, y: c.y, z: 14, vz: 8, vx: G.rr(-0.1, 0.1), vy: 0, g: -2, life: 2, s0: 1.4, s1: 3.6, c: 'rgba(70,64,60,0.35)', k: 4 });
+      if (G.VR() < 0.05) G.FX && G.FX.spawn({ x: c.x, y: c.y, z: 14, vz: 8, vx: G.vrr(-0.1, 0.1), vy: 0, g: -2, life: 2, s0: 1.4, s1: 3.6, c: 'rgba(70,64,60,0.35)', k: 4 });
     }
     // crows on the hanged and the crucified
     if (st !== 'fresh' && c.pose !== 'burnt') { ctx.fillStyle = '#16161c'; for (let k = 0; k < 2; k++) { const hop = Math.abs(Math.sin(t * 2 + k * 2 + c.id)) * 0.8; ctx.beginPath(); ctx.ellipse(k ? 2.4 : -2.2, -(c.pose === 'cross' ? 27 : 23) - hop, 1.4, 0.9, 0, 0, TAU); ctx.fill(); } }
