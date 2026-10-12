@@ -561,6 +561,13 @@
     for (const s of ships) if (s !== flag) follow(s, flag, ships.indexOf(s));
     return true;
   }
+  // a voyage picks up the course it was on: the same point it was sailing for, not a new one plotted from where the ship
+  // is now — from out at sea the old bearing ran off the map, and the voyage turned for home on loading (L-086)
+  function resume(e, ships) {
+    const flag = ship(e.flag); if (!flag || !e.tgt || !Nv._sailTo(flag, e.tgt[0], e.tgt[1])) return plot(e, ships);
+    for (const s of ships) if (s !== flag) follow(s, flag, ships.indexOf(s));
+    return true;
+  }
   function follow(s, flag, k) {
     const dx = flag.path && flag.path[flag.pi] ? flag.path[flag.pi][0] - flag.x : 1, dy = flag.path && flag.path[flag.pi] ? flag.path[flag.pi][1] - flag.y : 0; const d = Math.hypot(dx, dy) || 1;
     const bx = flag.x - dx / d * 2.4 * k + (-dy / d) * (k % 2 ? 1.6 : -1.6), by = flag.y - dy / d * 2.4 * k + (dx / d) * (k % 2 ? 1.6 : -1.6);
@@ -1589,7 +1596,7 @@
         // the ships pick their course up again
         const flag = ship(e.flag);
         if (flag) {
-          if (e.st === 'viagem') { if (!plot(e, e.ships.map(ship).filter(Boolean))) goHome(e, e.ships.map(ship).filter(Boolean)); }
+          if (e.st === 'viagem') { if (!resume(e, e.ships.map(ship).filter(Boolean))) goHome(e, e.ships.map(ship).filter(Boolean)); }
           else if (e.st === 'volta') goHome(e, e.ships.map(ship).filter(Boolean));
           else if (e.st === 'aproximacao' && e.waterAt) Nv._sailTo(flag, e.waterAt[0], e.waterAt[1]);
         }
