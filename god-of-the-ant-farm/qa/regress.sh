@@ -6,7 +6,9 @@
 # Tudo é determinístico (a mesma semente faz o mesmo mundo): uma prova que muda de resultado mudou porque o jogo mudou.
 cd "$(dirname "$0")"
 OUT=${1:-/tmp/gotaf-regress}; mkdir -p "$OUT"
-# (SKIP="mar guerra" pula fases já rodadas nessa pasta; sem SKIP a pasta começa limpa)
+# (SKIP="mar guerra" pula fases já rodadas nessa pasta — mar, guerra, vida, estado, tela, cidade, perf; sem SKIP a pasta
+# começa limpa. Com a máquina ocupada: SKIP="perf" agora, e depois, com ela livre, só o desempenho:
+# SKIP="mar guerra vida estado tela cidade" bash regress.sh pasta)
 skip() { [[ " $SKIP " == *" $1 "* ]]; }
 [ -z "$SKIP" ] && rm -f "$OUT"/*.txt
 t0=$(date +%s)
@@ -24,24 +26,30 @@ fi
 skip guerra || for m in small medium walls save; do (DET=1 timeout 1500 node guerra10.js $m 7 > "$OUT/guerra_$m.txt" 2>&1) & done; wait
 echo "== guerra: $(cat "$OUT"/guerra_*.txt | grep -v RESULT | grep -c ' PASS ') passaram, $(cat "$OUT"/guerra_*.txt | grep -v RESULT | grep -c ' FAIL ') falharam"
 # 3. o mundo vivendo: anos com o verificador e save→load, a mão divina, o save como ponto fixo
+if ! skip vida; then
 (timeout 1700 node soak.js 103 continente 128 4 normal 20 5 1 > "$OUT/vida_103.txt" 2>&1) &
 (timeout 1700 node soak.js 107 arquipelago 128 4 belicoso 12 3 1 > "$OUT/vida_107.txt" 2>&1) &
 (timeout 900 node hand.js 5 continente 128 4 3 40 > "$OUT/mao.txt" 2>&1) &
 (timeout 900 node ev.js 9 continente 128 4 4 saveloop.js > "$OUT/saveloop.txt" 2>&1) &
 wait; echo "== vidas, mão, saveloop"
+fi
 # 4. saves danificados, alcance, a bordo, determinismo
+if ! skip estado; then
 (timeout 1700 node corrupt.js 7 > "$OUT/corrupt.txt" 2>&1) &
 (timeout 900 node ev.js 31 mar 160 4 3 reach.js > "$OUT/alcance.txt" 2>&1) &
 (timeout 900 node ev.js 31 mar 160 4 8 aboard.js > "$OUT/bordo.txt" 2>&1) &
 (timeout 1700 node det3.js 77 arquipelago 96 3 2 > "$OUT/determinismo.txt" 2>&1) &
 (timeout 2400 node salto.js 41 > "$OUT/salto.txt" 2>&1) &
 wait; echo "== saves danificados, alcance, a bordo, determinismo, o salto em dois ritmos"
+fi
 # 5. o que o jogador vê: painéis, desenho, o macaco, o fim do mundo
+if ! skip tela; then
 (timeout 900 node ev.js 21 continente 128 4 6 uismoke.js > "$OUT/paineis.txt" 2>&1) &
 (FRAMES=1 timeout 900 node ev.js 22 arquipelago 128 4 4 rendersmoke.js > "$OUT/desenho.txt" 2>&1) &
 (timeout 900 node monkey.js 7 90 > "$OUT/macaco.txt" 2>&1) &
 (timeout 900 node ev.js 13 ilha 80 2 2 extinct.js > "$OUT/extincao.txt" 2>&1) &
 wait; echo "== painéis, desenho, macaco, extinção"
+fi
 # 6. a cidade: bairros, valor da terra, núcleos e avenidas; o porto, a taverna, a horta, o barraco, o roubo e a cadeia; o quarteirão
 # (e o tempo: a memória dos mortos — esquecer, o ossuário, a vala — e os mundos prontos abertos pelo menu)
 skip cidade || { (timeout 2400 node urb1.js 41 128 90 > "$OUT/cidade_bairros.txt" 2>&1) & (timeout 2000 node urb2.js 7 > "$OUT/cidade_vida.txt" 2>&1) &
@@ -49,7 +57,7 @@ skip cidade || { (timeout 2400 node urb1.js 41 128 90 > "$OUT/cidade_bairros.txt
   (timeout 1500 node quarteirao.js > "$OUT/cidade_quarteirao.txt" 2>&1); }
 echo "== cidade: $(cat "$OUT"/cidade_*.txt 2>/dev/null | grep -c '^PASSOU') passaram, $(cat "$OUT"/cidade_*.txt 2>/dev/null | grep -c '^FALHOU') falharam; memória e mundos prontos: $(grep -h '^MUNDOS' "$OUT/mundos.txt" 2>/dev/null)"
 # 7. desempenho: sozinho na máquina, para os tempos valerem alguma coisa
-m17 perf 7; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/mar_perf.txt" | cut -c1-160)"
+skip perf || m17 perf 7; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/mar_perf.txt" | cut -c1-160)"
 # resumo: uma linha por prova
 {
   for f in "$OUT"/mar_*.txt; do grep -h "PASSOU\|FALHOU" "$f" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | mar \2/'; done
