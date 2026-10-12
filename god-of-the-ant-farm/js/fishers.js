@@ -130,7 +130,7 @@
     }
     if (t.st === 4) {
       const k = Math.min(1, v.actT / 0.6); v.x = G.lerp(t.bx, s.x, k); v.y = G.lerp(t.by, s.y, k); v.z = Math.sin(k * Math.PI) * 0.4;
-      if (k >= 1) { v.z = 0; G.Vg.endTask(v); v.aboard = s.id; v.task = { type: 'aboard', ship: s.id, pri: 9, st: 0, age: 0 }; if (!s.crew.includes(v.id)) s.crew.push(v.id); if (s.st === 'idle') { s.st = 'board'; s.t = 0; } G.FX && G.FX.splash(s.x, s.y, 0.25); }
+      if (k >= 1) { v.z = 0; Nv.board(v, s); if (s.st === 'idle') { s.st = 'board'; s.t = 0; } G.FX && G.FX.splash(s.x, s.y, 0.25); }
     }
   }
   // the catch, crate by crate, up to the storehouse
@@ -245,7 +245,7 @@
   }
   // a fisherman steps off onto the quay (and goes for the crates)
   function ashore(v, s, b, k) {
-    const q = Fi.quaySpot(b, k); v.aboard = 0; v.task = null; v.x = q[0]; v.y = q[1]; v.path = null; v.gear = null;
+    const q = Fi.quaySpot(b, k); Nv.unboard(v); v.x = q[0]; v.y = q[1]; v.path = null; v.gear = null;
     G.Vg.setTask(v, b.crates && b.crates.length ? { type: 'descarga', dock: b.id, pri: 1.1, st: 0, trips: 0 } : { type: 'redes', dock: b.id, pri: 0.8, st: 0, dur: G.rr(6, 12) });
   }
   function drift(s) {

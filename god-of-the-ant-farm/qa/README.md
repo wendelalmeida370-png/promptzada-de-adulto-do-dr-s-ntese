@@ -35,6 +35,8 @@ O acaso é semeado (`Math.random` substituído por um gerador com semente e `Dat
 | `extinct.js` | via `ev.js` | O fim do mundo: todos morrem; o mundo vazio precisa rodar, desenhar, abrir painéis, avançar no tempo, salvar e carregar. |
 | `swim1.js` | via `ev.js` (mapa `mar`) | Gente largada em mar aberto, longe de qualquer margem: nada até a costa ou se afoga — nunca boia para sempre. |
 | `reach.js` | via `ev.js` | O mapa de aonde se chega a pé contra a busca de caminho de verdade (500 pares), um anel de muro com portão fechado e aberto, um prédio tapando a brecha, e uma mudança de chão que ninguém avisou (o verificador precisa acusar). |
+| `aboard.js` | via `ev.js` (mapa `mar`) | Quem está a bordo: o índice contra uma contagem simples em cada navio, embarcar, trocar de navio, descer, um naufrágio, e um embarque que ninguém anunciou (o verificador precisa acusar). |
+| `guard.js` | `node guard.js` | Regras de arquitetura lidas direto do código (um segundo, sem abrir o jogo): só `Naval.board`/`unboard` escrevem `v.aboard`; quem muda muro, prédio ou bloqueio avisa o mapa de alcance. Uma exceção nova entra na lista do próprio arquivo, com o motivo. |
 | `oldsave.js` | `node oldsave.js pastaVelha pastaNova semente tipo tamanho povos anosVelho anosNovo` | Um mundo vive na versão antiga, é salvo e carregado na nova, que continua com o verificador. |
 
 Qualquer erro de página, aviso no console ou erro capturado por um módulo (`G.modErr`) conta como falha.

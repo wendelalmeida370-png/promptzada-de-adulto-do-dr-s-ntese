@@ -32,8 +32,38 @@
   Nv.small = s => !!(Nv.SHIP[s.kind] && Nv.SHIP[s.kind].small);
   const MOORED = { idle: 1, board: 1, unload: 1, build: 1, embark: 1, load: 1, repair: 1, prep: 1 };
   Nv.atSea = s => !MOORED[s.st];
-  // the people really aboard a ship (ids still listed may have died or stepped off)
-  Nv.aboardOf = s => { const S = G.S; const out = []; for (const id of s.crew || []) { const v = S.villagers.get(id); if (v && v.aboard === s.id) out.push(v); } return out; };
+  // who is aboard: v.aboard is the one truth (s.crew is only the ship's roster: who belongs to it, aboard or ashore)
+  // everyone gets on and off through Nv.board / Nv.unboard; the index of who is on which ship follows from v.aboard
+  Nv.abVer = 0; Nv.abBuilds = 0;
+  let abIdx = null, abKey = null, abV = -1, abT = -1e9;
+  Nv.aboardIndex = function (peek) {
+    const S = G.S;
+    if (abIdx && abKey === S && abV === Nv.abVer && (peek || (S.clock >= abT && S.clock - abT < 5))) return abIdx;
+    abIdx = new Map(); abKey = S; abV = Nv.abVer; abT = S.clock; Nv.abBuilds++;
+    for (const v of S.villagers.values()) if (v.aboard) { let a = abIdx.get(v.aboard); if (!a) abIdx.set(v.aboard, a = []); a.push(v); }
+    return abIdx;
+  };
+  // the people really aboard a ship, in the order of its roster (the dead and those who stepped off drop out)
+  Nv.aboardOf = s => {
+    const S = G.S; const a = Nv.aboardIndex().get(s.id); if (!a) return [];
+    const out = a.filter(v => v.aboard === s.id && S.villagers.get(v.id) === v);
+    if (out.length > 1 && s.crew && s.crew.length) { const r = new Map(s.crew.map((id, k) => [id, k])); out.sort((p, q) => (r.has(p.id) ? r.get(p.id) : 1e9) - (r.has(q.id) ? r.get(q.id) : 1e9)); }
+    return out;
+  };
+  // on board: the task becomes riding the ship, and the ship's roster has them (off the roster of a ship they left)
+  Nv.board = function (v, s) {
+    if (v.aboard && v.aboard !== s.id) { const o = G.S.ships.find(x => x.id === v.aboard); if (o && o.crew) o.crew = o.crew.filter(id => id !== v.id); }
+    G.Vg.endTask(v);
+    v.aboard = s.id; v.task = { type: 'aboard', ship: s.id, pri: 9, st: 0, age: 0 }; v.path = null;
+    if (!s.crew) s.crew = []; if (!s.crew.includes(v.id)) s.crew.push(v.id);
+    Nv.abVer++;
+  };
+  // ashore (at p, or where they stand); keepTask for whoever goes over the side into the water or to their death
+  Nv.unboard = function (v, p, keepTask) {
+    v.aboard = 0; if (!keepTask) { v.task = null; v.path = null; }
+    if (p) { v.x = p[0]; v.y = p[1]; }
+    Nv.abVer++;
+  };
   let tFleet = 0, tShoal = 0, tRoute = 0, tScan = 0, tCrew = 5;
   Nv.reset = function () { comp = null; tFleet = 2; tShoal = 0; tRoute = 5; tScan = 0; tCrew = 5; };
 
@@ -181,15 +211,12 @@
   function removeShip(s) {
     const S = G.S; const k = S.ships.indexOf(s); if (k >= 0) S.ships.splice(k, 1);
     // nobody is left floating: whoever is still aboard steps ashore
-    for (const v of S.villagers.values()) if (v.aboard === s.id) { v.aboard = 0; v.task = null; v.path = null; const p = W.nearestLand(s.x, s.y, 8); if (p) { v.x = p[0]; v.y = p[1]; } }
+    for (const v of Nv.aboardOf(s)) Nv.unboard(v, W.nearestLand(s.x, s.y, 8));
   }
   // the crew list starts over: whoever is still aboard steps ashore first (on the quay of the ship's port, or the nearest land)
   Nv.clearCrew = function (s, at) {
     const S = G.S; const h = home(s); const q = at || (h && h.quay) || null;
-    for (const v of S.villagers.values()) if (v.aboard === s.id) {
-      v.aboard = 0; v.task = null; v.path = null;
-      const p = q ? (W.randomNear(q[0], q[1], 1.2) || q) : W.nearestLand(s.x, s.y, 8); if (p) { v.x = p[0]; v.y = p[1]; }
-    }
+    for (const v of Nv.aboardOf(s)) Nv.unboard(v, q ? (W.randomNear(q[0], q[1], 1.2) || q) : W.nearestLand(s.x, s.y, 8));
     s.crew = [];
   };
   // (and the list and the people agree: someone aboard is always on the list of the ship they are on)
@@ -201,7 +228,7 @@
       if (!v.aboard) continue;
       if (!byId) { byId = new Map(); for (const s of S.ships) byId.set(s.id, s); }
       const s = byId.get(v.aboard);
-      if (!s) { v.aboard = 0; v.task = null; v.path = null; const p = W.nearestLand(v.x, v.y, 8); if (p) { v.x = p[0]; v.y = p[1]; } Nv.repairs++; continue; }
+      if (!s) { Nv.unboard(v); const p = W.nearestLand(v.x, v.y, 8); if (p) { v.x = p[0]; v.y = p[1]; } Nv.repairs++; continue; }
       if (!s.crew) s.crew = [];
       if (!s.crew.includes(v.id)) { s.crew.push(v.id); Nv.repairs++; }
     }
@@ -222,7 +249,7 @@
     const land = W.nearestLand(s.x, s.y, 26); const dl = land ? G.dist(land[0], land[1], s.x, s.y) : 99;
     let drowned = 0, swam = 0; const swimmers = [];
     for (const v of ppl) {
-      v.aboard = 0;
+      Nv.unboard(v, null, true);
       // the sea takes most; the strong, the lucky and the ones near a shore swim for it
       const p = (why === 'god' ? 0.05 : why === 'storm' ? 0.3 : why === 'fire' ? 0.45 : why === 'reef' ? 0.6 : 0.5) * (dl < 6 ? 1.6 : dl < 14 ? 1 : dl < 22 ? 0.45 : 0.06) * G.clamp(v.hp / 90, 0.2, 1.1) * (v.age < 12 || v.age > 60 ? 0.45 : 1) * ((v.traits || []).includes('Resistente') ? 1.3 : 1) * (v.role === 'pescador' ? 1.25 : 1);
       if (G.R() < p) {
@@ -442,7 +469,7 @@
     // the side with more fighting spirit takes the deck
     const win = G.R() < 0.55 + (G.Civ.t(s.fac, 'war') - G.Civ.t(o.fac, 'war')) * 0.4 + (s.civ === 'romano' ? 0.1 : 0) + (s.civ === 'nordico' ? 0.08 : 0);
     if (!win) { s.hp -= 18; o.hp -= 8; return false; }
-    for (const v of [...S.villagers.values()]) if (v.aboard === o.id) { v.aboard = 0; G.Village.kill(v, 'war', false); }
+    for (const v of Nv.aboardOf(o)) { Nv.unboard(v, null, true); G.Village.kill(v, 'war', false); }
     o.crew = []; o.fac = s.fac; o.civ = s.civ; o.dock = s.dock; o.st = 'idle'; o.path = null; o.target = 0; o.hp = Math.max(o.hp, o.maxHp * 0.3); o.burn = 0;
     if (o.kind === 'transporte') o.kind = 'guerra';
     a.st.prizes = (a.st.prizes || 0) + 1;
@@ -696,7 +723,7 @@
     const s = G.S.ships.find(o => o.id === t.ship);
     if (!s || s.st !== 'embark') return H.end(v);
     if (t.st === 0) { if (!H.goto(v, t.x, t.y, false, N * N) && !H.goto(v, t.x, t.y, true, N * N)) { t.st = 9; return; } t.st = 1; return; }
-    if (t.st === 1) { if (H.move(v, dt, 1.1) || G.dist(v.x, v.y, t.x, t.y) < 1.4) { G.Vg.endTask(v); v.aboard = s.id; v.task = { type: 'aboard', ship: s.id, pri: 9, st: 0, age: 0 }; } return; }
+    if (t.st === 1) { if (H.move(v, dt, 1.1) || G.dist(v.x, v.y, t.x, t.y) < 1.4) { Nv.board(v, s); } return; }
     if (t.age > 60) H.end(v);
   }
   function runBoardBack(v, t, dt, H) {
@@ -726,19 +753,14 @@
   };
   function disembark(s, at) {
     const S = G.S; const out = [];
-    for (const id of s.crew) {
-      const v = S.villagers.get(id); if (!v || v.aboard !== s.id) continue;
-      v.aboard = 0; v.task = null; v.path = null;
-      const p = W.randomNear(at[0], at[1], 1.2) || at; v.x = p[0]; v.y = p[1];
-      out.push(v);
-    }
+    for (const v of Nv.aboardOf(s)) { Nv.unboard(v, W.randomNear(at[0], at[1], 1.2) || at); out.push(v); }
     s.crew = s.crew.filter(id => { const v = S.villagers.get(id); return v && v.aboard === s.id; });
     return out;
   }
   function runTransport(s, dt) {
     const S = G.S; const h = home(s);
     s.t += dt;
-    const aboard = () => s.crew.filter(id => { const v = S.villagers.get(id); return v && v.aboard === s.id; }).length;
+    const aboard = () => Nv.aboardOf(s).length;
     switch (s.st) {
       case 'embark': {
         const walking = s.crew.filter(id => { const v = S.villagers.get(id); return v && !v.aboard && v.task && v.task.type === 'embark' && v.task.ship === s.id; }).length;
@@ -790,10 +812,10 @@
           for (const v of S.villagers.values()) {
             if (v.aboard || G.Fac.idOfV(v) !== s.fac || v.captive) continue;
             const on = (v.task && v.task.type === 'band' && v.task.band === s.band) || (v.task && v.task.type === 'boardBack' && v.task.ship === s.id);
-            if (on && G.dist(v.x, v.y, s.land[0], s.land[1]) < 2.2) { G.Vg.endTask(v); v.aboard = s.id; v.task = { type: 'aboard', ship: s.id, pri: 9, st: 0, age: 0 }; if (!s.crew.includes(v.id)) s.crew.push(v.id); }
+            if (on && G.dist(v.x, v.y, s.land[0], s.land[1]) < 2.2) { Nv.board(v, s); }
           }
           // captives walk aboard with their captors
-          for (const v of S.villagers.values()) if (v.captive && v.task && v.task.type === 'escorted' && G.dist(v.x, v.y, s.land[0], s.land[1]) < 2.5) { const c = S.villagers.get(v.task.by); if (c && c.aboard === s.id) { G.Vg.endTask(v); v.aboard = s.id; v.task = { type: 'aboard', ship: s.id, pri: 9, st: 0, age: 0 }; s.crew.push(v.id); } }
+          for (const v of S.villagers.values()) if (v.captive && v.task && v.task.type === 'escorted' && G.dist(v.x, v.y, s.land[0], s.land[1]) < 2.5) { const c = S.villagers.get(v.task.by); if (c && c.aboard === s.id) { Nv.board(v, s); } }
           let still = 0; if (b) for (const id of b.members) { const v = S.villagers.get(id); if (v && !v.aboard) still++; }
           for (const v of S.villagers.values()) if (v.task && v.task.type === 'boardBack' && v.task.ship === s.id && !v.aboard) still++;
           if (!still || s.t > (b ? 300 : 260)) {
@@ -907,7 +929,7 @@
       if (run) run(s, dt);
       if (!S.ships.includes(s)) continue;
       // people aboard ride with the ship
-      if (s.kind === 'transporte') for (const id of s.crew) { const v = S.villagers.get(id); if (v && v.aboard === s.id) { v.x = s.x; v.y = s.y; } }
+      if (s.kind === 'transporte') for (const v of Nv.aboardOf(s)) { v.x = s.x; v.y = s.y; }
       if (s.kind === 'transporte' && (s.st === 'sail' || s.st === 'return' || s.st === 'wait')) { const e = threat(s, 3); if (e && s.cd <= 0) { s.cd = 1.8; fire(s, e); } s.cd -= dt; }
     }
     G.Know && G.Know.update(dt);

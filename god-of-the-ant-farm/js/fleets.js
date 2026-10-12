@@ -156,7 +156,7 @@
     for (const s of fl.ships.map(ship).filter(Boolean)) {
       s.fleet = 0; s.grapple = 0; s.post = null;
       const h = Nv._home(s); const q = h && h.quay ? h.quay : W.nearestLand(s.x, s.y, 6);
-      for (const v of Nv.aboardOf(s)) { v.aboard = 0; v.task = null; v.path = null; const p = q ? (W.randomNear(q[0], q[1], 1.2) || q) : W.nearestLand(s.x, s.y, 8); if (p) { v.x = p[0]; v.y = p[1]; } if (v.captive && v.captive.toFac) { /* (prisoners walk off into the town that took them) */ } }
+      for (const v of Nv.aboardOf(s)) { Nv.unboard(v); const p = q ? (W.randomNear(q[0], q[1], 1.2) || q) : W.nearestLand(s.x, s.y, 8); if (p) { v.x = p[0]; v.y = p[1]; } if (v.captive && v.captive.toFac) { /* (prisoners walk off into the town that took them) */ } }
       if (s.kind !== 'transporte' || !s.exp) { Nv.clearCrew(s, q); s.st = 'idle'; s.t = 0; }
     }
     const war = Wz.get(fl.war); if (war && (fl.sunk || fl.taken || fl.battles.length)) Wz.event(war, `${cap1(fl.name)} voltou ao porto${fl.sunk ? ` sem ${fl.sunk} ${fl.sunk > 1 ? 'navios' : 'navio'}` : ''}${fl.taken ? `, com ${fl.taken} ${fl.taken > 1 ? 'navios tomados' : 'navio tomado'} do inimigo` : ''}.`, fl.x, fl.y, 'naval', { quiet: true });
@@ -460,7 +460,7 @@
     const left = Nv.aboardOf(o); const home = G.Fac.capitalOf(A.id);
     for (const v of left) { G.War.enslave(v, B.id, v.set); if (home) v.set = home.id; if (bt && bt.sides[B.id]) bt.sides[B.id].captured++; }
     const ours = Nv.aboardOf(s); const prize = ours.slice(0, Math.max(1, Math.floor(ours.length / 3)));
-    for (const v of prize) { v.aboard = o.id; v.task = { type: 'aboard', ship: o.id, pri: 9, st: 0, age: 0 }; s.crew = s.crew.filter(id => id !== v.id); }
+    for (const v of prize) Nv.board(v, o);
     o.crew = left.map(v => v.id).concat(prize.map(v => v.id));
     const ofl = o.fleet && Fl.get(o.fleet); if (ofl) ofl.ships = ofl.ships.filter(id => id !== o.id);
     o.fac = s.fac; o.civ = s.civ; o.dock = s.dock; o.grapple = 0; s.grapple = 0; o.burn = 0; o.target = 0; o.exp = 0; o.mor = 50; o.st = 'fleet'; o.captain = prize[0] ? prize[0].id : 0;
@@ -482,7 +482,7 @@
       if (!best) continue;
       const friend = best.fac === s.fac; if (!friend && !G.Fac.atWar(best.fac, s.fac)) continue;
       if (!friend && G.R() < 0.35) continue;
-      G.Vg.endTask(v); v.aboard = best.id; v.task = { type: 'aboard', ship: best.id, pri: 9, st: 0, age: 0 }; best.crew.push(v.id); v.wrecked = null;
+      Nv.board(v, best); v.wrecked = null;
       if (!friend) { const cf = F(best.fac); G.War.enslave(v, s.fac, v.set); const home = cf && G.Fac.capitalOf(cf.id); if (home) v.set = home.id; if (bt && bt.sides[s.fac]) bt.sides[s.fac].captured++; }
     }
     if (bt && (bt.sunkLog = (bt.sunkLog || 0) + 1) <= 4 && !Nv.small(s)) G.Stories && G.Stories.signal('shipSunkBattle', { battle: bt.id, ship: s.id, fac: s.fac });
@@ -644,7 +644,7 @@
         for (const s of ships) {
           const ab = s.kind === 'transporte' ? Nv.aboardOf(s) : Nv.aboardOf(s).filter(v => mem.has(v.id) && v.id !== fl.cmd); left += ab.length;
           if (s.kind !== 'transporte') for (const v of ab.slice(0, 2)) { const k = s.crew.indexOf(v.id); if (k >= 0) s.crew.splice(k, 1); }
-          for (const v of ab.slice(0, 2)) { v.aboard = 0; v.task = null; v.path = null; const p = W.randomNear(fl.land.land[0], fl.land.land[1], 2) || fl.land.land; v.x = p[0]; v.y = p[1]; G.FX && G.FX.splash(v.x, v.y, 0.3); G.Vg.setTask(v, { type: 'praia', fleet: fl.id, k: (fl.landedN = (fl.landedN || 0) + 1), pri: 3.3, st: 0 }); }
+          for (const v of ab.slice(0, 2)) { Nv.unboard(v); const p = W.randomNear(fl.land.land[0], fl.land.land[1], 2) || fl.land.land; v.x = p[0]; v.y = p[1]; G.FX && G.FX.splash(v.x, v.y, 0.3); G.Vg.setTask(v, { type: 'praia', fleet: fl.id, k: (fl.landedN = (fl.landedN || 0) + 1), pri: 3.3, st: 0 }); }
         }
         defend(fl, ships, dt);
         if (left > 0 && fl.t < 60) break;
@@ -678,7 +678,7 @@
         keepSlots(fl, ships);
         fl.dq -= dt; if (fl.dq > 0) break; fl.dq = 0.6;
         const nearBeach = [...S.villagers.values()].filter(v => !v.aboard && G.Fac.idOfV(v) === f.id && (v.task && (v.task.type === 'reembarque' || (v.task.type === 'band' && v.task.band && (G.War.bands.get(v.task.band) || {}).fleet === fl.id))) && G.dist(v.x, v.y, fl.land.land[0], fl.land.land[1]) < 3);
-        for (const v of nearBeach.slice(0, 4)) { const s = trs.sort((x, y) => Nv.aboardOf(x).length - Nv.aboardOf(y).length)[0] || ships[0]; G.Vg.endTask(v); v.aboard = s.id; v.task = { type: 'aboard', ship: s.id, pri: 9, st: 0, age: 0 }; if (!s.crew.includes(v.id)) s.crew.push(v.id); }
+        for (const v of nearBeach.slice(0, 4)) { const s = trs.sort((x, y) => Nv.aboardOf(x).length - Nv.aboardOf(y).length)[0] || ships[0]; Nv.board(v, s); }
         const coming = [...S.villagers.values()].some(v => !v.aboard && G.Fac.idOfV(v) === f.id && v.task && (v.task.type === 'reembarque' || (v.task.type === 'band' && (G.War.bands.get(v.task.band) || {}).fleet === fl.id)));
         if ((!coming && fl.t > 6) || fl.t > 160) {
           for (const v of S.villagers.values()) if (v.task && v.task.type === 'reembarque' && v.task.fleet === fl.id) G.Vg.endTask(v);

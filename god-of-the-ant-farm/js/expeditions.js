@@ -526,7 +526,7 @@
       for (const v of left.filter(q => !inScene(q)).slice(0, 2)) {
         if (G.dist(v.x, v.y, e.port[0], e.port[1]) > 3.5 && e.t < 40) continue;
         const s = berth(e, v, ships); if (!s) continue;
-        G.Vg.endTask(v); v.aboard = s.id; v.task = { type: 'aboard', ship: s.id, pri: 9, st: 0, age: 0 }; if (!s.crew.includes(v.id)) s.crew.push(v.id); v.gear = null;
+        Nv.board(v, s); v.gear = null;
         G.FX && G.FX.splash(s.x, s.y, 0.2);
       }
       e.bq = 0.6; if (e.t < 45 || (left.some(inScene) && e.t < 90)) return;
@@ -644,7 +644,7 @@
     const wait = crew.filter(v => v.aboard && !keep.has(v.id));
     if (wait.length) {
       for (const v of wait.slice(0, 2)) {
-        const s = ship(v.aboard); v.aboard = 0; v.task = null; v.path = null;
+        const s = ship(v.aboard); Nv.unboard(v);
         const p = W.randomNear(e.landAt[0], e.landAt[1], 1.4) || e.landAt; v.x = p[0]; v.y = p[1];
         G.Vg.setTask(v, { type: 'expl', exp: e.id, pri: 3.3, st: 'walk', n: 0, wp: null });
         e.landed.push(v.id);
@@ -848,7 +848,7 @@
     // whoever ashore lost the errand (a feast with the strangers, a meal, a fright) is called back down to the boats
     for (const v of ash) if (!v.captive && !(v.task && (v.task.type === 'expl' || v.task.pri >= 6)) && !(G.Scene && G.Scene.actorScene(v))) { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'expl', exp: e.id, pri: 3.3, st: 'back', n: 0 }); }
     const at = ash.filter(v => G.dist(v.x, v.y, e.landAt[0], e.landAt[1]) < 2.4);
-    for (const v of at.slice(0, 2)) { const s = berth(e, v, ships); if (!s) continue; G.Vg.endTask(v); v.aboard = s.id; v.task = { type: 'aboard', ship: s.id, pri: 9, st: 0, age: 0 }; if (!s.crew.includes(v.id)) s.crew.push(v.id); }
+    for (const v of at.slice(0, 2)) { const s = berth(e, v, ships); if (!s) continue; Nv.board(v, s); }
     e.dq = 0.6;
     // the ones who never make it back to the beach (lost in the woods, taken, dead) are left
     // (the ones still walking back down to the beach are waited for a while longer)
@@ -921,7 +921,7 @@
     e.dq -= 0.5; if (e.dq > 0) return;
     const ab = crew.filter(v => v.aboard);
     for (const v of ab.slice(0, 2)) {
-      const s = ship(v.aboard); v.aboard = 0; v.task = null; v.path = null; const q = W.randomNear(e.port[0], e.port[1], 1.4) || e.port; v.x = q[0]; v.y = q[1];
+      const s = ship(v.aboard); Nv.unboard(v); const q = W.randomNear(e.port[0], e.port[1], 1.4) || e.port; v.x = q[0]; v.y = q[1];
       // home: the families run down to the quay
       const kin = G.Stories ? G.Stories.kin(v).filter(k => !k.captive && G.dist(k.x, k.y, v.x, v.y) < 40 && !(k.task && k.task.pri >= 3)) : [];
       if (kin.length) { const k = kin[0]; G.Vg.emote(k, 'heart', 3); G.Vg.emote(v, 'heart', 3); }
@@ -937,7 +937,7 @@
     o = o || {}; const S = G.S; e.status = status; e.end = S.day; e.st = 'fim';
     if (txt) chapter(e, status === 'cancelada' ? 'Fim' : 'O fim', txt, status === 'perdida' ? 'skull' : 'ship', !!o.chron || status !== 'cancelada' || e.scale === 'grande');
     // whoever was waiting on the quay goes home; the provisions go back to the stores
-    for (const id of e.crew) { const v = P(id); if (!v) continue; if (v.task && (v.task.type === 'cais' || v.task.type === 'expl') && v.task.exp === e.id) G.Vg.endTask(v); if (v.aboard && e.ships.includes(v.aboard)) { const s = ship(v.aboard); if (s && !Nv.atSea(s)) { v.aboard = 0; v.task = null; const q = W.randomNear(e.port[0], e.port[1], 1.4) || e.port; v.x = q[0]; v.y = q[1]; } } }
+    for (const id of e.crew) { const v = P(id); if (!v) continue; if (v.task && (v.task.type === 'cais' || v.task.type === 'expl') && v.task.exp === e.id) G.Vg.endTask(v); if (v.aboard && e.ships.includes(v.aboard)) { const s = ship(v.aboard); if (s && !Nv.atSea(s)) { Nv.unboard(v); const q = W.randomNear(e.port[0], e.port[1], 1.4) || e.port; v.x = q[0]; v.y = q[1]; } } }
     const f = F(e.fac); if (status === 'cancelada' && f && e.prov > 0) { G.Village.addStock('food', Math.floor(e.prov), f.id); e.prov = 0; }
     for (const s of e.ships.map(ship).filter(Boolean)) { if (!Nv.atSea(s) || status === 'cancelada') { s.exp = 0; if (s.st === 'prep') s.st = 'idle'; if (s.kind === 'pesca') Nv.clearCrew(s, e.port); } }
   }
@@ -988,7 +988,7 @@
       const sev = G.rr(0.5, 1.2) * (c.small ? 1.8 : 1);
       for (const s of e.ships.map(ship).filter(Boolean)) { s.hp -= G.rr(6, 22) * sev; s.sail = Math.max(0, (s.sail === undefined ? 100 : s.sail) - G.rr(10, 45) * sev); if (!c.small && G.R() < 0.12 * sev) s.mast = 0; s.hurt = 0.5; }
       const lostP = Math.round(e.prov * G.rr(0.08, 0.3)); e.prov -= lostP; e.morale -= 10; e.storm = 1;
-      let over = null; if (G.R() < 0.18 * sev && c.n > 1) { over = someone(c, e.leader); if (over) { over.aboard = 0; G.Village.kill(over, 'drown', false); } }
+      let over = null; if (G.R() < 0.18 * sev && c.n > 1) { over = someone(c, e.leader); if (over) { Nv.unboard(over, null, true); G.Village.kill(over, 'drown', false); } }
       const div = G.R() < 0.3; if (div) { const flag = c.flag; const wa = c.S.weather.windA || G.R() * TAU; const w = Nv._nearestWater(clamp(flag.x + Math.cos(wa) * 20, 2, N - 3), clamp(flag.y + Math.sin(wa) * 20, 2, N - 3), 4); if (w && Nv._sailTo(flag, w[0], w[1])) { e.legs = Math.max(0, e.legs - 1); } }
       const flagS = ship(e.flag); const mast = flagS && flagS.mast === 0;
       return ['A tempestade', `${pick(['O céu fechou de repente', 'Ondas da altura de casas', 'Uma noite inteira de vento e água'])}. ${lostP ? `As ondas levaram ${lostP > 6 ? 'boa parte' : 'um pouco'} da comida. ` : ''}${mast ? 'O mastro partiu como um graveto. ' : ''}${over ? `${over.name} foi arrancad${oa(over)} do convés e o mar não devolveu. ` : ''}${div ? 'Quando o vento parou, ninguém sabia mais onde estava.' : 'De manhã, ainda estavam inteiros.'}`, over ? 'skull' : 'storm', !!over || mast];
@@ -1005,7 +1005,7 @@
       for (const v of c.ab) G.Life && G.Life.bio(v, 'mutiny', Nv.title(c.flag));
       if (hold > 0.85) { e.morale += 18; return ['O motim', `${ring.name} juntou os descontentes e exigiu a volta. ${L.name} subiu no barril de água e falou até eles baixarem os olhos. O barco segue em frente.`, 'shout', true]; }
       if (hold > 0.45 || !c.back) { e.morale += 8; e.turned = 'motim'; goHome(e, e.ships.map(ship).filter(Boolean)); return ['O motim', `${ring.name} e os outros cercaram ${L.name} no convés: “Para casa, ou para o fundo.” ${L.name} cedeu. As proas viram para casa.`, 'shout', true]; }
-      L.aboard = 0; G.Village.kill(L, 'drown', false); e.morale += 12; e.turned = 'motim'; goHome(e, e.ships.map(ship).filter(Boolean));
+      Nv.unboard(L, null, true); G.Village.kill(L, 'drown', false); e.morale += 12; e.turned = 'motim'; goHome(e, e.ships.map(ship).filter(Boolean));
       return ['O motim', `De madrugada, ${ring.name} e mais três jogaram ${L.name} ao mar. Ninguém viu nada, todos juram. ${ring.name} manda voltar.`, 'skull', true];
     } },
     { id: 'briga', w: c => (c.n >= 3 && c.morale < 60 ? 0.6 : 0), run(e, c) { const a = someone(c), b = a && someone(c, a.id); if (!a || !b) return null; const hurt = G.R() < 0.5; if (hurt) G.Vg.damage(b, G.rr(10, 25), 'war'); return ['A briga', `${a.name} e ${b.name} rolaram no convés por causa de ${pick(['um pedaço de peixe', 'um jogo de ossinhos', 'uma palavra sobre a mãe de alguém', 'quem ficava com a vigia'])}${hurt ? `. ${b.name} ficou com a cabeça aberta` : '; no fim, dividiram a mesma manta'}.`, 'sword']; } },
@@ -1077,7 +1077,7 @@
       if (s.st === 'prep' || s.st === 'idle') { s.exp = 0; s.st = 'idle'; if (s.kind === 'canoa' && !Nv.aboardOf(s).length) Nv._remove(s); return; }
       // the voyage is over for this hull: back to its port
       const h = Nv._home(s); if (h && h.moor && s.st !== 'casa') { if (Nv._sailTo(s, h.moor[0], h.moor[1])) s.st = 'casa'; else { s.st = 'idle'; } }
-      if (s.st === 'casa' && Nv._move(s, dt)) { s.st = 'idle'; s.exp = 0; for (const v of Nv.aboardOf(s)) { v.aboard = 0; v.task = null; const q = W.nearestLand(s.x, s.y, 6); if (q) { v.x = q[0]; v.y = q[1]; } } }
+      if (s.st === 'casa' && Nv._move(s, dt)) { s.st = 'idle'; s.exp = 0; for (const v of Nv.aboardOf(s)) { Nv.unboard(v); const q = W.nearestLand(s.x, s.y, 6); if (q) { v.x = q[0]; v.y = q[1]; } } }
       return;
     }
     if (s.st === 'prep' || s.st === 'idle') return;
@@ -1294,7 +1294,7 @@
     const f = F(c.fac); if (!f) return;
     const s = { id: S.nextId++, kind: 'jangada', fac: f.id, civ: f.civ || null, dock: 0, x: w[0], y: w[1], path: null, pi: 0, st: 'out', t: 0, hp: Nv.SHIP.jangada.hp, maxHp: Nv.SHIP.jangada.hp, face: 1, crew: [], cd: 0, born: S.day, sail: 60, mast: 1, flood: 0, raft: c.id, to: hw.l.water, land: hw.l.land, toSet: hw.set.id, name: '' };
     S.ships.push(s);
-    for (const id of c.ids) { const v = P(id); if (!v) continue; G.Vg.endTask(v); v.aboard = s.id; v.task = { type: 'aboard', ship: s.id, pri: 9, st: 0, age: 0 }; s.crew.push(v.id); }
+    for (const id of c.ids) { const v = P(id); if (!v) continue; Nv.board(v, s); }
     if (!Nv._sailTo(s, s.to[0], s.to[1])) { Nv._remove(s); return; }
     c.done = S.day; c.rafted = s.id;
     log(`${c.ids.map(PD).filter(Boolean).map(v => v.name).join(' e ')} amarraram troncos com cipó e se lançaram ao mar numa jangada, rumo a ${hw.set.name}.`, 'ship', s.x, s.y);
@@ -1302,7 +1302,7 @@
   function runRaft(s, dt) {
     if (s.st === 'out') { if (Nv._move(s, dt)) { s.st = 'land'; } return; }
     if (s.st === 'land') {
-      for (const v of Nv.aboardOf(s)) { v.aboard = 0; v.task = null; const p = W.randomNear(s.land[0], s.land[1], 1.2) || s.land; v.x = p[0]; v.y = p[1]; }
+      for (const v of Nv.aboardOf(s)) { Nv.unboard(v); const p = W.randomNear(s.land[0], s.land[1], 1.2) || s.land; v.x = p[0]; v.y = p[1]; }
       Nv._remove(s);
     }
   }

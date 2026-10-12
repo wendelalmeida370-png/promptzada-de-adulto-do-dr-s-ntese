@@ -859,7 +859,7 @@
   function runEscorted(v, t, dt, H) {
     const S = G.S; const c = S.villagers.get(t.by);
     // the captor boards a ship: the captive goes aboard too
-    if (c && c.aboard) { const sh = G.Naval && G.Naval.aboard(c.aboard); if (sh && G.dist(v.x, v.y, c.x, c.y) < 5) { G.Vg.endTask(v); v.aboard = sh.id; v.task = { type: 'aboard', ship: sh.id, pri: 9, st: 0, age: 0 }; sh.crew.push(v.id); } else H.end(v); return; }
+    if (c && c.aboard) { const sh = G.Naval && G.Naval.aboard(c.aboard); if (sh && G.dist(v.x, v.y, c.x, c.y) < 5) { G.Naval.board(v, sh); } else H.end(v); return; }
     if (!c) { const dest = destFor(v); if (dest) { log(`Com a morte de seu captor, ${v.name} conseguiu fugir.`, 'free', v.x, v.y); Wr.freeCaptive(v, dest); } else H.end(v); return; }
     if (!c.task || !(c.task.type === 'band' || c.task.type === 'combat' || c.task.type === 'escort')) return H.end(v);
     v.act = 'bound';

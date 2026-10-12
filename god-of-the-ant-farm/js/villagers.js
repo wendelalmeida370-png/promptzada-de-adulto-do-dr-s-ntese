@@ -1493,7 +1493,7 @@
       if (v.air) { G.airUpdate(v, dt, imp => land(v, imp)); continue; }
       // at sea: only the body's needs go on (provisions come from the stores)
       if (v.aboard) {
-        if (!G.Naval || !G.Naval.aboard(v.aboard)) { v.aboard = 0; v.task = null; const p = W.nearestLand(v.x, v.y, 8); if (p) { v.x = p[0]; v.y = p[1]; } }
+        if (!G.Naval || !G.Naval.aboard(v.aboard)) { if (G.Naval) G.Naval.unboard(v); else { v.aboard = 0; v.task = null; } const p = W.nearestLand(v.x, v.y, 8); if (p) { v.x = p[0]; v.y = p[1]; } }
         else { if (!v.task || v.task.type !== 'aboard') v.task = { type: 'aboard', ship: v.aboard, pri: 9, st: 0, age: 0 }; needs(v, dt); v.moving = false; if (v.emo) { v.emo.t -= dt; if (v.emo.t <= 0) v.emo = null; } continue; }
       }
       needs(v, dt);
