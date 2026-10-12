@@ -348,7 +348,10 @@
 
   // ---------------- a round trip: canon → save → load → canon ----------------
   QA.roundTrip = function () {
-    G.Village.forceUpdate(); // (load re-runs housing and jobs: settle them first so only what the save loses shows)
+    // (load re-runs housing and jobs: settle them first so only what the save loses shows — the jobs move at most three
+    // people a town at a time, so a growing city needs a few rounds before it stands still; T-022)
+    const roles = () => { let t = ''; for (const v of S().villagers.values()) t += v.id + ':' + (v.role || '') + ':' + (v.home || 0) + ';'; return t; };
+    for (let k = 0, prev = null; k < 30; k++) { G.Village.forceUpdate(); const r = roles(); if (r === prev) break; prev = r; }
     const a = QA.canon(); const str = G.Save.serialize();
     G.UI.select(null); G.Save.apply(JSON.parse(str));
     const b = QA.canon(); return { bytes: str.length, diff: QA.diff(a, b) };

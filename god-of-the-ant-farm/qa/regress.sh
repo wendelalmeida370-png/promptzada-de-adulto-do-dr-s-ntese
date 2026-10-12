@@ -34,7 +34,8 @@ wait; echo "== vidas, mão, saveloop"
 (timeout 900 node ev.js 31 mar 160 4 3 reach.js > "$OUT/alcance.txt" 2>&1) &
 (timeout 900 node ev.js 31 mar 160 4 8 aboard.js > "$OUT/bordo.txt" 2>&1) &
 (timeout 1700 node det3.js 77 arquipelago 96 3 2 > "$OUT/determinismo.txt" 2>&1) &
-wait; echo "== saves danificados, alcance, a bordo, determinismo"
+(timeout 2400 node salto.js 41 > "$OUT/salto.txt" 2>&1) &
+wait; echo "== saves danificados, alcance, a bordo, determinismo, o salto em dois ritmos"
 # 5. o que o jogador vê: painéis, desenho, o macaco, o fim do mundo
 (timeout 900 node ev.js 21 continente 128 4 6 uismoke.js > "$OUT/paineis.txt" 2>&1) &
 (FRAMES=1 timeout 900 node ev.js 22 arquipelago 128 4 4 rendersmoke.js > "$OUT/desenho.txt" 2>&1) &
@@ -52,6 +53,7 @@ m17 perf 7; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/mar_perf.txt" 
 {
   for f in "$OUT"/mar_*.txt; do grep -h "PASSOU\|FALHOU" "$f" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | mar \2/'; done
   for f in "$OUT"/cidade_*.txt; do [ -f "$f" ] && grep -h "^PASSOU\|^FALHOU" "$f" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | cidade \2/'; done
+  [ -f "$OUT/salto.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/salto.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | salto \2/'
   for f in "$OUT"/guerra_*.txt; do grep -h " PASS \| FAIL " "$f" | grep -v RESULT | sed -E 's/^([^—]*) (PASS|FAIL) .*/\2 | guerra \1/; s/^PASS/PASSOU/; s/^FAIL/FALHOU/'; done
   grep -h "^PASSOU\|^FALHOU" "$OUT/guard.txt" "$OUT/determinismo.txt" | sed -E 's/^(PASSOU|FALHOU).*/\1/' | head -2 | paste -d' ' - <(echo vigia; echo determinismo) | sed 's/ / | /'
   for f in vida_103 vida_107; do v=$(grep -c "^  S[0-2] " "$OUT/$f.txt"); echo "$([ "$v" = 0 ] && echo PASSOU || echo FALHOU) | $f sem violações S0–S2"; done

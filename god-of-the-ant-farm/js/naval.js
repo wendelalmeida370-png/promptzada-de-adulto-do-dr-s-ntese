@@ -90,7 +90,21 @@
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const nx = Math.floor(x) + dx, ny = Math.floor(y) + dy; if (!W.inb(nx, ny)) continue; const c = comp[ny * N + nx]; if (c >= 0 && compSize[c] >= 80) return true; }
     return false;
   };
-  function losWater(ax, ay, bx, by) { const n = Math.ceil(Math.hypot(bx - ax, by - ay) / 0.3); for (let k = 1; k < n; k++) { const f = k / n; if (!water(W.idx(ax + (bx - ax) * f, ay + (by - ay) * f))) return false; } return true; }
+  // every tile the straight line crosses is water (a walk along the grid: points every 0.3 of a tile missed the corner of a
+  // rock the line only grazed, and the ship sailed over it — L-075); a line through a corner counts both tiles beside it
+  function losWater(ax, ay, bx, by) {
+    let x = Math.floor(ax), y = Math.floor(ay); const ex = Math.floor(bx), ey = Math.floor(by);
+    const dx = bx - ax, dy = by - ay, sx = dx > 0 ? 1 : -1, sy = dy > 0 ? 1 : -1;
+    const tdx = dx ? Math.abs(1 / dx) : Infinity, tdy = dy ? Math.abs(1 / dy) : Infinity;
+    let tx = dx ? (dx > 0 ? x + 1 - ax : ax - x) * tdx : Infinity, ty = dy ? (dy > 0 ? y + 1 - ay : ay - y) * tdy : Infinity;
+    for (let n = 0; n < 4 * N; n++) {
+      if (!W.inb(x, y) || !water(y * N + x)) return false;
+      if (x === ex && y === ey) return true;
+      if (Math.abs(tx - ty) < 1e-9) { if (!W.inb(x + sx, y) || !water(y * N + x + sx) || !W.inb(x, y + sy) || !water((y + sy) * N + x)) return false; x += sx; y += sy; tx += tdx; ty += tdy; }
+      else if (tx < ty) { x += sx; tx += tdx; } else { y += sy; ty += tdy; }
+    }
+    return false;
+  }
   function smooth(pts) {
     if (pts.length <= 2) return pts.slice(1);
     const out = []; let a = 0;
