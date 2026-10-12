@@ -54,5 +54,23 @@ G.Ready.list({
   "ww": null,
   "world": "Selos",
   "bytes": 4074677
+ },
+ "mundial": {
+  "day": 131,
+  "pop": 1594,
+  "peoples": 4,
+  "towns": 18,
+  "N": 160,
+  "map": "continente",
+  "seed": 3505,
+  "city": {
+   "name": "Roma",
+   "tier": 4,
+   "pop": 390
+  },
+  "wars": 3,
+  "ww": "a Grande Coalizão",
+  "world": "Myrora",
+  "bytes": 6085586
  }
 });
