@@ -27,6 +27,12 @@ PASSOU | cidade 9 as tavernas serviram bebida
 PASSOU | cidade 10 a carga dos navios entrou pelo armazém 
 PASSOU | cidade 11 os roubos tiveram resposta 
 PASSOU | cidade 12 os ricos moram em terra mais cara 
+PASSOU | cidade 4 um save no meio da obra 
+PASSOU | cidade 1 cada quarteirão em terra cara, derrubando só o que pode 
+PASSOU | cidade 2 os desalojados sem casa, as moedas guardadas 
+PASSOU | cidade 3 o verificador todo ano (o anel dos quarteirões livre) 
+PASSOU | cidade 5 um desalojado morre, um raio cai na obra 
+PASSOU | cidade 6 os anos passam: quarteirões prontos e morados 
 PASSOU | cidade 1 a carga do navio desce no cais e vai a pé ao armazém 
 PASSOU | cidade 2 a taverna faz a bebida do seu povo e cobra cada rodada 
 PASSOU | cidade 3 a horta do quintal: cuidada, colhida, comida na despensa 
@@ -34,9 +40,16 @@ PASSOU | cidade 4 a casa queima: a família vai para a rua (por isso), levanta u
 PASSOU | cidade 5 o roubo: a moeda muda de casa, o guarda vê, prende e leva à cadeia 
 PASSOU | cidade 6 o preso continua na cela depois do save e sai quando a lei manda 
 PASSOU | cidade 7 o verificador não vê nada errado 
+PASSOU | salto 1 quinze anos com o verificador todo ano 
+PASSOU | salto 2 a mesma semente, o mesmo mundo 
+PASSOU | salto 3 um save carregado duas vezes salta o mesmo futuro 
+PASSOU | salto 4 parar no meio e continuar 
+PASSOU | salto 5 um terremoto e depois o salto 
+PASSOU | salto 6 bichos fora do lugar: o salto como a tela 
+PASSOU | salto 7 num mundo grande, o salto «até» para no ponto 
 PASSOU | guerra 2 reinos médios: dezenas
 PASSOU | guerra 5 guerra longa: economia, suprimento, desgaste
-FALHOU | guerra 6 derrota: retirada/fuga/rendição
+PASSOU | guerra 6 derrota: retirada/fuga/rendição
 PASSOU | guerra 7 paz: volta dos soldados e consequências
 PASSOU | guerra 8 save/load
 PASSOU | guerra 1 aldeias pequenas
@@ -49,3 +62,5 @@ PASSOU | vida_107 sem violações S0–S2
 PASSOU | alcance
 PASSOU | a bordo
 PASSOU | saves danificados
+PASSOU | memória dos mortos
+PASSOU | mundos prontos
