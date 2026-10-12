@@ -43,9 +43,12 @@ const seed = +(process.argv[2] || 41);
   // 4: stop half way (as Esc does) and go on
   const d = await page.evaluate(() => new Promise(res => {
     G.Skip.GOALS.__t = { years: 6, hidden: true }; const d0 = G.S.day; G.Skip.start('__t', 'fartura');
-    setTimeout(() => { const mid = G.S.day; G.Skip.finish('parado'); G.UI.closeModal(); const stopped = !G.Skip.on && !G.S.blessed;
+    // (stopped once a year has gone by, however long the machine takes for it — not after a fixed wait: T-025)
+    let n = 0; const mid0 = () => (G.S.day > d0 || ++n > 3000) ? stop() : setTimeout(mid0, 100);
+    const stop = () => { const mid = G.S.day; G.Skip.finish('parado'); G.UI.closeModal(); const stopped = !G.Skip.on && !G.S.blessed;
       const bad = QA.check().filter(q => q.sev <= 2).map(q => `S${q.sev} ${q.sys} ${q.msg}`);
-      G.Skip.start('__t', 'livre'); const tick = () => { if (G.Skip.on) return setTimeout(tick, 200); G.UI.closeModal(); res({ d0, mid, end: G.S.day, stopped, bad: bad.concat(QA.check().filter(q => q.sev <= 2).map(q => `S${q.sev} ${q.sys} ${q.msg}`)) }); }; tick(); }, 4000);
+      G.Skip.start('__t', 'livre'); const tick = () => { if (G.Skip.on) return setTimeout(tick, 200); G.UI.closeModal(); res({ d0, mid, end: G.S.day, stopped, bad: bad.concat(QA.check().filter(q => q.sev <= 2).map(q => `S${q.sev} ${q.sys} ${q.msg}`)) }); }; tick(); };
+    setTimeout(mid0, 100);
   }));
   ok('4 parar no meio e continuar', d.stopped && d.mid > d.d0 && d.end >= d.mid + 6 && !d.bad.length, `parou no ano ${d.mid} (começou no ${d.d0}), seguiu até o ${d.end}${d.bad.length ? '; ' + d.bad.slice(0, 3).join(' | ') : ''}`);
   // 5: the ground changes before the skip (an earthquake under the biggest town)
