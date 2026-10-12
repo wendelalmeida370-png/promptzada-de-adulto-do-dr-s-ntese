@@ -162,6 +162,10 @@
   };
   Ci.upgradeHomes = function (set, fac, c, st) {
     const t = set.tier || 0; if (t < 2) return false;
+    // a metropolis grown tall rebuilds its heart in blocks, as many as its people fill (L-077)
+    if (t >= 4 && has(fac, 'engenharia') && !c.siteTypes.quarteirao && st.stone >= 80 && st.wood >= 40 && (c.insula || 0) >= 2 && (c.quarteirao || 0) * 40 < G.Village.pop(set.id) * 0.6) {
+      const pos = G.Village.blockSite(set); if (pos && G.Village.startProject(set, 'quarteirao', pos)) return true;
+    }
     let from = null, to = null;
     if (t >= 3 && has(fac, 'engenharia') && (c.sobrado || 0) > 2 && !c.siteTypes.insula && st.stone >= 40 && st.wood >= 22) { from = 'sobrado'; to = 'insula'; }
     else if (has(fac, 'alvenaria') && (c.house || 0) > 0 && !c.siteTypes.sobrado && st.stone >= 22 && st.wood >= 16) { from = 'house'; to = 'sobrado'; }

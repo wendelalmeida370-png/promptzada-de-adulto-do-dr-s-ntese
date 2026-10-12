@@ -144,7 +144,11 @@
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nb = cells.get(o.c + dx + dy * NC); if (nb && Math.abs((o.c % NC) - (nb.c % NC)) <= 1) { prest += nb.prest * 0.5; nuis += nb.nuis * 0.5; } }
       const [mx, my] = cellCenter(o.c); const dc = G.dist(mx, my, set.cx, set.cy);
       const water = o.sea || o.river ? 1 : 0;
-      o.value = Math.round(G.clamp(45 + prest * 6 - nuis * 8 + G.clamp((o.h - hCity) * 5, -10, 14) + water * 6 - o.flood * 12 + o.paved * 16 + (o.walled ? 6 : 0) - G.clamp(dc / R, 0, 1.6) * 18, 0, 100));
+      // (and the heart of a big city is dearer than the heart of a town: a city of rank 3 adds 5 at its centre, a metropolis
+      // 10, fading to nothing at its edge — without it no heart ever got dear enough for a block, and no city became a
+      // megalopolis: L-077)
+      const big = Math.max(0, (set.tier || 0) - 2) * 5 * Math.max(0, 1 - dc / R);
+      o.value = Math.round(G.clamp(45 + prest * 6 - nuis * 8 + G.clamp((o.h - hCity) * 5, -10, 14) + water * 6 - o.flood * 12 + o.paved * 16 + (o.walled ? 6 : 0) - G.clamp(dc / R, 0, 1.6) * 18 + big, 0, 100));
       o.prestN = prest; o.nuisN = nuis; o.dc = dc;
       o.age = o.n ? S.day - o.born / o.n : 0;
     }
@@ -432,8 +436,9 @@
     return -Math.abs(d - ideal) * 1.2;
   };
   // tall where the land is dear: a city builds up in its heart and low at its edge, where a family
-  // gets a house with a yard for the same stone (the planner asked for the tallest it can afford)
-  const DEAR = { quarteirao: 62, insula: 52, sobrado: 40 };
+  // gets a house with a yard for the same stone (the planner asked for the tallest it can afford);
+  // a block is ínsulas round a yard, so it stands where an ínsula may (at 62 no heart had room for one: L-077)
+  const DEAR = U.DEAR = { quarteirao: 52, insula: 52, sobrado: 40 };
   const LOWER = { quarteirao: 'insula', insula: 'sobrado', sobrado: 'house' };
   U.valueAt = function (set, x, y) { const sn = sim(set); const c = sn.cells.get(U.cellOf(x, y)); return c ? c.value : 30; };
   U.homeFor = function (set, type, pos) {
@@ -522,6 +527,14 @@
   const GARDENABLE = { hut: 1, house: 1, sobrado: 1 };
   const oldDestroy = G.Village.destroyBuilding;
   G.Village.destroyBuilding = function (b, cause) { if (b && b.type === 'horta') return G.Village.removeBuilding(b); return oldDestroy(b, cause); };
+  // a yard goes with its house: pulled down for a block, or its ruin cleared away (L-079)
+  const oldRemove = G.Village.removeBuilding;
+  G.Village.removeBuilding = function (b) {
+    oldRemove(b);
+    if (b.type !== 'ruin' && !(G.BDEF[b.type] && G.BDEF[b.type].housing)) return;
+    const yards = []; for (const g of G.S.buildings.values()) if (g.type === 'horta' && g.home === b.id) yards.push(g);
+    for (const g of yards) oldRemove(g);
+  };
   function gardens(set, sn, bs) {
     const S = G.S; const list = bs.filter(b => b.type === 'horta'); const byHome = new Map();
     // the yards the town has kept, and the ones it lost
@@ -628,6 +641,7 @@
       const old = snap.get(set.id); if (old && old.day === S.day) continue;
       const H = households();
       const sn = build(set, townBuildings(set.id), H);
+      sn.rank = set.tier || 0; // (the rank the town had at its look of the day: what its quarters were judged by)
       snap.set(set.id, sn);
       sn.cross = (set.tier || 0) >= 2 ? crossings(set) : [];
       gardens(set, sn, townBuildings(set.id));

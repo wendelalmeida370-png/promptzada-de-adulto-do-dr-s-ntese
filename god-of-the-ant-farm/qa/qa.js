@@ -150,6 +150,12 @@
       for (const k in b.need || {}) if (!fin(b.need[k]) || b.need[k] < -0.01) add('city', 2, `prédio ${b.type}#${b.id}: falta ${k} = ${b.need[k]}`);
       if (fin(b.x) && fin(b.y)) { let bad = 0, by = 0; for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const o = s.occ[ty * G.N + tx]; if (o !== b.id) { bad++; by = o; } } if (bad) add('city', 2, `prédio ${b.type}#${b.id}: ${bad} casa(s) do terreno marcadas como de ${by ? (s.buildings.get(by) ? s.buildings.get(by).type + '#' + by : 'fantasma #' + by) : 'ninguém'}`); }
     }
+    // a block of a metropolis keeps a walkable ring: no building that blocks touches it, not even one it did not pull down (L-077)
+    for (const b of s.buildings.values()) {
+      if (b.type !== 'quarteirao' || !fin(b.x) || !fin(b.y)) continue;
+      let by = null; for (let ty = b.y - 1; ty <= b.y + b.h && !by; ty++) for (let tx = b.x - 1; tx <= b.x + b.w; tx++) { if (ty >= b.y && ty < b.y + b.h && tx >= b.x && tx < b.x + b.w) continue; if (tx < 0 || ty < 0 || tx >= G.N || ty >= G.N) continue; const o = s.buildings.get(s.occ[ty * G.N + tx]); if (o && o.blocks && o !== b) { by = o; break; } }
+      if (by) add('city', 3, `quarteirão#${b.id}: ${by.type}#${by.id} encostado nele (o anel de passagem fechou)`);
+    }
     { let ghost = 0, ex = 0; for (let i = 0; i < s.occ.length; i++) { const o = s.occ[i]; if (o && !s.buildings.has(o)) { ghost++; ex = o; } } if (ghost) add('city', 2, `${ghost} casa(s) do mapa ocupadas por prédio inexistente #${ex}`); }
     // ---- the memory of the dead: cemeteries hold twelve, a grave and its record agree, nobody is kept past three
     // generations unless they mattered or the living are their children and grandchildren (L-072)
@@ -179,7 +185,9 @@
           if (!(d.born <= s.day)) add('urb', 2, `${nm}: nasceu no futuro (${d.born})`);
           if (d.hist && !Array.isArray(d.hist)) add('urb', 2, `${nm}: história não é uma lista`);
         }
-        if ((st.tier || 0) < 2 && u.d.some(d => d.k !== 'agrario' && (d.gone || 0) === 0)) add('urb', 3, `${st.name}: ${G.City.tierName(st).toLowerCase()} com bairro que não é de campos`);
+        // (judged by the town's look of the day: one that fell to a village since has not seen its quarters start to fade — T-023)
+        const look = G.Urban.peek(st.id);
+        if ((st.tier || 0) < 2 && look && look.rank !== undefined && look.rank < 2 && u.d.some(d => d.k !== 'agrario' && (d.gone || 0) === 0)) add('urb', 3, `${st.name}: ${G.City.tierName(st).toLowerCase()} com bairro que não é de campos`);
       }
     }
     // ---- the life of the towns (gardens, shacks, the quay, purses, thefts, the jail)

@@ -285,7 +285,9 @@
     const pop = V.pop(set.id);
     const R = G.Urban ? G.Urban.radius(set, def, pop) : Math.min(17 + (set.tier || 0) * 3 + (def.w >= 3 ? 2 : 0), Math.round(6 + Math.sqrt(pop + 1) * 1.5 + (def.w >= 3 ? 2 : 0)));
     const counts = {}; for (const b of S.buildings.values()) if (b.set === set.id) counts[b.type] = (counts[b.type] || 0) + 1;
-    let best = search(set, type, def, R, field, counts, false);
+    // (a block that finds no room in the heart settles for a lower house, wherever a family would like to live)
+    let best = type === 'quarteirao' && G.Urban ? V.blockSite(set) : null;
+    if (!best) best = search(set, type, def, R, field, counts, false);
     // a full city puts its great buildings out by its edge, beyond the walls if need be,
     // and when even there is no room, it builds them over its own old fields and houses
     if (!best && def.civic) best = search(set, type, def, R + 6, field, counts, false);
@@ -293,10 +295,29 @@
     if (!best) noSite[type] = S.day;
     return best;
   };
-  // what a town may pull down for a great work (and how much it hurts to): never tall houses or anything civic
+  // a block of a metropolis goes where the land is dear enough for it — and that heart is full: so it pulls down
+  // the low houses, the gardens and the fields still standing there (L-077)
+  V.blockSite = function (set) {
+    const S = G.S; const noSite = set._noSite || (set._noSite = {});
+    if (noSite.bloco === S.day) return null;
+    const def = G.BDEF.quarteirao, dear = G.Urban.DEAR.quarteirao, R = G.Urban.radius(set, def, V.pop(set.id));
+    const counts = {}; for (const b of S.buildings.values()) if (b.set === set.id) counts[b.type] = (counts[b.type] || 0) + 1;
+    const best = search(set, 'quarteirao', def, R, false, counts, false, dear) || search(set, 'quarteirao', def, R, false, counts, true, dear);
+    if (!best) noSite.bloco = S.day;
+    return best;
+  };
+  // what a town may pull down for a great work (and how much it hurts to): never tall houses or anything civic;
+  // a block may also take a sobrado and the gardens of the heart, and the low houses on its ring, but it must
+  // bring more beds than it takes (24 of its 40)
+  // — and never the town's last two farms, nor the last field of its kind (a city with no farm is a village again:
+  // Argos fell to one under a block, and found no room to plough again)
   const RENEW = { farm: 1, hut: 2, house: 3 };
-  function search(set, type, def, R, field, counts, renew) {
-    const S = G.S;
+  const RENEW_BLOCK = { farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, hut: 2, house: 3, sobrado: 4 };
+  const KEEP = { farm: 2, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1 };
+  function search(set, type, def, R, field, counts, renew, dear) {
+    const S = G.S; const block = renew && type === 'quarteirao'; const may = block ? RENEW_BLOCK : RENEW;
+    const left = gone => { const n = {}; for (const id of gone) { const t = S.buildings.get(id).type; if (KEEP[t] && (counts[t] || 0) - (n[t] = (n[t] || 0) + 1) < KEEP[t]) return false; } return true; };
+    const bad = (gone, beds) => renew && ((!gone && !block) || (gone && (gone.length > 4 || !left(gone))) || beds > (block ? 24 : 12));
     const homes = (counts.hut || 0) + (counts.house || 0) + (counts.sobrado || 0) + (counts.insula || 0) + (counts.quarteirao || 0);
     let best = null, bestSc = -1e9;
     const cxi = Math.floor(set.cx), cyi = Math.floor(set.cy);
@@ -306,21 +327,22 @@
       const fx = x + def.w / 2, fy = y + def.h / 2;
       const d = G.dist(fx, fy, set.cx, set.cy);
       if (d > R) continue;
+      if (dear && G.Urban.valueAt(set, fx, fy) < dear) continue;
       let ok = true, trees = 0, fert = 0, gone = null, cost = 0, beds = 0;
       for (let ty = y; ty < y + def.h && ok; ty++) for (let tx = x; tx < x + def.w; tx++) {
         const i = ty * N + tx; const t = S.type[i];
         if (renew && S.occ[i]) {
           const o = S.buildings.get(S.occ[i]);
-          if (!o || !o.built || !RENEW[o.type] || o.set !== set.id) { ok = false; break; }
+          if (!o || !o.built || !may[o.type] || o.set !== set.id) { ok = false; break; }
           if (!gone) gone = [];
-          if (!gone.includes(o.id)) { gone.push(o.id); cost += RENEW[o.type]; beds += G.BDEF[o.type].housing || 0; }
+          if (!gone.includes(o.id)) { gone.push(o.id); cost += may[o.type]; beds += G.BDEF[o.type].housing || 0; }
         } else if (S.occ[i]) { ok = false; break; }
         if (t < T.SAND || S.objAt[i] || S.fire[i] > 0 || S.scar[i] > G.DAY_LEN * 2 || S.wall[i] || S.road[i] >= 2 || (S.road[i] && G.City && G.City.onStreet(set, i))) { ok = false; break; }
         if (field && (t === T.SAND || t === T.ROCKY)) { ok = false; break; }
         if (S.treeAt[i]) trees++;
         fert += S.fert[i];
       }
-      if (!ok || (renew && (!gone || gone.length > 4 || beds > 12))) continue;
+      if (!ok || bad(gone, beds)) continue;
       // keep a walkable ring around blocking buildings (when renewing: no wall of buildings that stay)
       for (let ty = y - 1; ty <= y + def.h && ok; ty++) for (let tx = x - 1; tx <= x + def.w; tx++) {
         if (ty >= y && ty < y + def.h && tx >= x && tx < x + def.w) continue;
@@ -328,11 +350,12 @@
         const i = ty * N + tx; const o = S.occ[i];
         if (o) {
           const ob = S.buildings.get(o); if (ob && gone && gone.includes(ob.id)) continue;
+          if (ob && block && ob.blocks && ob.built && ob.set === set.id && G.BDEF[ob.type].housing && may[ob.type]) { if (!gone) gone = []; gone.push(ob.id); cost += may[ob.type]; beds += G.BDEF[ob.type].housing; continue; }
           if (ob && (renew ? ob.blocks : (def.blocks || ob.blocks))) { ok = false; break; } if (ob && field && ob.type !== 'farm') { ok = false; break; }
         }
         if (def.blocks && S.type[i] < T.RIVER) { /* water side ok */ }
       }
-      if (!ok) continue;
+      if (!ok || bad(gone, beds)) continue;
       const sl = W.slope(x, y, def.w, def.h);
       if (sl > (type === 'farm' ? 1.6 : 1.15)) continue;
       let ideal = 3;
@@ -358,8 +381,8 @@
     return best;
   }
 
-  V.startProject = function (set, type) {
-    const pos = V.findSite(set, type);
+  V.startProject = function (set, type, at) {
+    const pos = at || V.findSite(set, type);
     if (!pos) { set.fails++; return null; }
     // (a city builds tall only where its land is dear; on cheap ground the same family builds a house with a yard)
     if (G.Urban && !pos.demolish) type = G.Urban.homeFor(set, type, pos);
@@ -375,10 +398,13 @@
     const S = G.S; let homes = 0, fields = 0, cx = set.cx, cy = set.cy;
     for (const id of ids) {
       const o = S.buildings.get(id); if (!o) continue;
+      let head = null;
       for (const v of S.villagers.values()) {
-        if (v.home === o.id) v.home = 0;
+        if (v.home === o.id) { v.home = 0; if (!head || v.age > head.age) head = v; }
         if (v.inside === o.id) { v.inside = 0; v.sleeping = false; G.Vg.endTask(v); }
       }
+      // (the family's savings do not come down with the house: the eldest carries them in his purse)
+      if (head && o.coin > 0) { head.purse = (head.purse || 0) + o.coin; o.coin = 0; }
       if (o.type === 'farm') fields++; else homes++;
       [cx, cy] = V.center(o);
       G.FX && G.FX.dust(cx, cy, 4);

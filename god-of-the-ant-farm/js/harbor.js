@@ -86,8 +86,9 @@
     const t = v.task;
     if (t && t.type === 'descarga' && v.carry && v.carry.crate) {
       const d = G.S.buildings.get(t.dock);
-      if (d) (d.crates || (d.crates = [])).unshift({ k: v.carry.k, n: v.carry.n, col: v.carry.fishCol, fish: v.carry.fish, boat: v.carry.catchOf, imp: v.carry.imp });
-      else G.Village.addStock(v.carry.k, v.carry.n, G.Fac.idOfV(v));
+      // (on a quay that filled up meanwhile it goes straight in, as cargo does when the quay is full: L-078)
+      if (d && (d.crates || []).length < 10) (d.crates || (d.crates = [])).unshift({ k: v.carry.k, n: v.carry.n, col: v.carry.fishCol, fish: v.carry.fish, boat: v.carry.catchOf, imp: v.carry.imp });
+      else G.Village.addStock(v.carry.k, v.carry.n, d ? G.Village.facOfSet(d.set) : G.Fac.idOfV(v));
       v.carry = null;
     }
     return oldEnd(v);
