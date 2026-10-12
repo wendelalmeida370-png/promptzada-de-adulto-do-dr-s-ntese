@@ -72,5 +72,59 @@ G.Ready.list({
   "ww": "a Grande Coalizão",
   "world": "Myrora",
   "bytes": 6085586
+ },
+ "anos100": {
+  "day": 101,
+  "pop": 1097,
+  "peoples": 2,
+  "towns": 13,
+  "N": 128,
+  "map": "continente",
+  "seed": 3404,
+  "city": {
+   "name": "Mênfis",
+   "tier": 4,
+   "pop": 183
+  },
+  "wars": 0,
+  "ww": null,
+  "world": "Selara",
+  "bytes": 3731585
+ },
+ "anos500": {
+  "day": 501,
+  "pop": 1075,
+  "peoples": 2,
+  "towns": 14,
+  "N": 128,
+  "map": "continente",
+  "seed": 3404,
+  "city": {
+   "name": "Mênfis",
+   "tier": 4,
+   "pop": 173
+  },
+  "wars": 0,
+  "ww": null,
+  "world": "Selara",
+  "bytes": 5235695
+ },
+ "anos1000": {
+  "day": 1001,
+  "pop": 1065,
+  "peoples": 2,
+  "towns": 13,
+  "N": 128,
+  "map": "continente",
+  "seed": 3404,
+  "city": {
+   "name": "Mênfis",
+   "tier": 4,
+   "pop": 197
+  },
+  "wars": 0,
+  "ww": null,
+  "world": "Selara",
+  "bytes": 5370610
  }
 });
