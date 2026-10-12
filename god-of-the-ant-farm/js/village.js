@@ -60,6 +60,8 @@
 
   // ------------------------------ chronicle ------------------------------
   V.log = function (text, icon, x, y) {
+    // (two systems telling the same thing the same day: once is enough)
+    const H = G.S.history; for (let k = H.length - 1, m = 0; k >= 0 && m < 30; k--, m++) { if (H[k].d !== G.S.day) break; if (H[k].txt === text) return; }
     const e = { d: G.S.day, txt: text, ic: icon || 'info', n: G.S.logN = (G.S.logN || 0) + 1 };
     if (Number.isFinite(x) && Number.isFinite(y)) { e.x = +x.toFixed(1); e.y = +y.toFixed(1); }
     G.S.history.push(e);
