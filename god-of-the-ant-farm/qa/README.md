@@ -32,6 +32,8 @@ O acaso é semeado (`Math.random` substituído por um gerador com semente e `Dat
 | `audiorun.js` | `node audiorun.js semente segundos` | O jogo em tempo real com som, música, ambiente, cinema e poderes. |
 | `hand.js` | `node hand.js semente tipo tamanho povos anos arremessos` | A mão divina com o mouse de verdade: pega cativos, soldados, atores de cena, marujos, náufragos, governantes, emissários e solta no mar fundo, em outra ilha, num penhasco, dentro de um prédio. |
 | `corrupt.js` | `node corrupt.js [semente]` (`CASE=regex`) | Saves danificados (cortados, vazios, com seções faltando, referências penduradas, números nulos): o "Continuar" precisa recusar limpo ou carregar um mundo que roda sem erros. |
+| `extinct.js` | via `ev.js` | O fim do mundo: todos morrem; o mundo vazio precisa rodar, desenhar, abrir painéis, avançar no tempo, salvar e carregar. |
+| `swim1.js` | via `ev.js` (mapa `mar`) | Gente largada em mar aberto, longe de qualquer margem: nada até a costa ou se afoga — nunca boia para sempre. |
 | `oldsave.js` | `node oldsave.js pastaVelha pastaNova semente tipo tamanho povos anosVelho anosNovo` | Um mundo vive na versão antiga, é salvo e carregado na nova, que continua com o verificador. |
 
 Qualquer erro de página, aviso no console ou erro capturado por um módulo (`G.modErr`) conta como falha.

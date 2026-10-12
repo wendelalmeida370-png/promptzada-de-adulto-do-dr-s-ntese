@@ -24,6 +24,18 @@
     else if (o.d) { let v = 0; const m = o.m || 1; for (let k = 0; k < o.d.length; k++) { v += o.d[k]; into[k] = v / m; } }
   }
   Sv.setArr = setArr;
+  // a person the save lost a field of (a damaged save) gets what a newborn would have, not an undefined every system trips on
+  const VNUM = { hp: 100, hunger: 20, energy: 80, age: 20, speed: 1.35, work: 1, courage: 0.5, devotion: 3, fear: 0, sick: 0, preg: 0, mourn: 0, z: 0, vx: 0, vy: 0, vz: 0, pi: 0, actT: 0, walkPh: 0, face: 1, hurt: 0 };
+  function repairV(v, S) {
+    for (const k in VNUM) if (!Number.isFinite(v[k])) v[k] = VNUM[k];
+    if (!Array.isArray(v.traits)) v.traits = []; if (!Array.isArray(v.kids)) v.kids = [];
+    if (!v.st || typeof v.st !== 'object') v.st = { wood: 0, food: 0, stone: 0, built: 0 };
+    if (typeof v.name !== 'string' || !v.name) v.name = '…'; if (v.g !== 'f' && v.g !== 'm') v.g = 'f';
+    if (!Number.isFinite(v.born)) v.born = S.day - v.age;
+    if (!Number.isFinite(v.x) || !Number.isFinite(v.y)) { const s = S.settlements.get(v.set); const p = s ? [s.cx, s.cy] : (S.start || [N / 2, N / 2]); v.x = p[0]; v.y = p[1]; v.inside = 0; v.aboard = 0; }
+  }
+  // how many tiles a saved per-tile array holds, whatever its encoding
+  const arrLen = a => !a ? 0 : Array.isArray(a) ? a.length : a.d ? a.d.length : a.e ? a.e.reduce((n, v, k) => (k % 2 ? n + v : n), 0) : a.z ? a.z.reduce((n, v) => n + (v < 0 ? -v : 1), 0) : 0;
 
   Sv.has = function () { try { return !!localStorage.getItem(KEY); } catch (e) { return false; } };
   Sv.info = function () {
@@ -85,12 +97,18 @@
     try { Sv.apply(o); return true; } catch (e) { console.error('corrupt save', e); return false; }
   };
   Sv.apply = function (o) {
+    // (the size is read from the terrain itself: one tile type per tile, one height per corner)
+    const lt = arrLen(o.type), lh = arrLen(o.H), nt = Math.round(Math.sqrt(lt)), nh = Math.round(Math.sqrt(lh)) - 1;
+    const fromMap = lt && nt * nt === lt ? nt : lh && (nh + 1) * (nh + 1) === lh ? nh : 0;
+    const NS = o.N || fromMap || 64;
+    if (fromMap && NS !== fromMap) throw new Error(`save: o terreno salvo é de ${fromMap}×${fromMap}, não ${NS}×${NS}`);
     G.newWorld();
-    G.setMapSize(o.N || 64);
+    G.setMapSize(NS);
     const S = G.newState(o.seed);
-    S.N = o.N || 64; S.mapType = o.mapType || 'ilha'; S.usedNames = o.usedNames || []; S.starts = o.starts || [o.start]; S.temper = o.temper || 'normal'; S.divinePeace = o.divinePeace || 0;
+    S.N = NS; S.mapType = o.mapType || 'ilha'; S.usedNames = o.usedNames || []; S.starts = o.starts || [o.start]; S.temper = o.temper || 'normal'; S.divinePeace = o.divinePeace || 0;
     G.S = S;
-    S.day = o.day; S.time = o.time; S.clock = o.clock; S.nextId = o.nextId;
+    if (!Number.isFinite(o.day) || !Number.isFinite(o.clock)) throw new Error('save: sem dia ou relógio');
+    S.day = o.day; S.time = Number.isFinite(o.time) ? o.time : 0.3; S.clock = o.clock; S.nextId = o.nextId;
     setArr(S.H, o.H); setArr(S.type, o.type); setArr(S.fert, o.fert); setArr(S.wear, o.wear); setArr(S.burnt, o.burnt); setArr(S.scar, o.scar);
     setArr(S.wet, o.wet); setArr(S.fire, o.fire); setArr(S.fireT, o.fireT); setArr(S.bloom, o.bloom);
     if (o.wl) { setArr(S.wl, o.wl); for (let i = 0; i < S.wl.length; i++) S.wl[i] += G.SEA; }
@@ -117,6 +135,7 @@
       if (x.dom) { x.herder = 0; x.ledBy = 0; x.hold = 0; if (x.pen) { x.state = 'pen'; } }
     }
     for (const s of o.settlements) S.settlements.set(s.id, s);
+    for (const v of S.villagers.values()) repairV(v, S);
     if (o.factions && o.factions.length) {
       for (const f of o.factions) S.factions.set(f.id, f);
       // relations are shared objects between both peoples: relink them
@@ -126,11 +145,15 @@
       const f = G.Fac.create({ stock: o.stock, ci: 0 });
       for (const s of S.settlements.values()) { s.fac = f.id; if (!f.capital) f.capital = s.id; s.loyalty = 60; s.emptyT = 0; }
     }
-    S.faith = o.faith; S.stats = Object.assign(S.stats, o.stats); S.history = o.history; S.milestones = o.milestones;
+    // (a section the save lost keeps the default of a new world)
+    if (Number.isFinite(o.faith)) S.faith = o.faith; S.stats = Object.assign(S.stats, o.stats); if (Array.isArray(o.history)) S.history = o.history; if (o.milestones) S.milestones = o.milestones;
+    // the next id is above every id the world holds (a save that lost it, or a damaged one, would give the newborn an id already taken)
+    let maxId = 0; for (const m of [S.villagers, S.dead, S.buildings, S.animals, S.factions]) if (m) for (const k of m.keys()) if (k > maxId) maxId = k;
+    if (!(S.nextId > maxId)) S.nextId = maxId + 1;
     // the chronicle keeps counting where it stopped (the skip, cinema and lore read only what is newer)
     S.logN = S.history.reduce((m, e) => Math.max(m, e.n || 0), 0);
     S.weather = Object.assign(S.weather, o.weather); S.clouds = o.clouds || []; S.zones = o.zones || []; S.boats = o.boats || [];
-    S.awareness = o.awareness; S.era = o.era; S.pendingDiscovery = o.pendingDiscovery; S.prayer = o.prayer || null; S.prayerCD = o.prayerCD || 0; S.popHist = o.popHist || []; S.start = o.start;
+    if (o.awareness !== undefined) S.awareness = o.awareness; if (o.era !== undefined) S.era = o.era; S.pendingDiscovery = o.pendingDiscovery || null; S.prayer = o.prayer || null; S.prayerCD = o.prayerCD || 0; S.popHist = o.popHist || []; S.start = o.start;
     Sv.computeDistances();
     G.Nature.rebuildFire();
     G.Render.setView((o.cam && o.cam.view) || 0);

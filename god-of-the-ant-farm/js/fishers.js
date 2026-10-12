@@ -121,7 +121,7 @@
     if (t.st === 0) { const d = G.Vg.door(b); const r = walk(v, t, 'shed', d[0], d[1], dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return; }
     if (t.st === 1) { v.act = 'lift'; if (v.actT > 1.1) { v.act = ''; v.gear = (s.crew.indexOf(v.id) % 2 === 0) ? 'rede' : 'remo'; t.st = 2; } return; }
     // 2. down to the quay
-    if (t.st === 2) { const k = Math.max(0, s.crew.indexOf(v.id)); const q = Fi.quaySpot(b, k); const r = walk(v, t, 'quay', q[0], q[1], dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 3; v.actT = 0; } return; }
+    if (t.st === 2) { const k = Math.max(0, s.crew.indexOf(v.id)); const q = t.alt ? G.Vg.door(b) : Fi.quaySpot(b, k); const r = walk(v, t, t.alt ? 'quay2' : 'quay', q[0], q[1], dt, H); if (r < 0) { if (!t.alt) { t.alt = 1; return; } return H.end(v); } if (r > 0) { t.st = 3; v.actT = 0; } return; }
     // 3. a step down into the boat (when it is at the quay)
     if (t.st === 3) {
       if (G.dist(s.x, s.y, di.moor[0], di.moor[1]) > 2) { v.act = 'wait'; if (t.age > 90) H.end(v); return; }
@@ -138,7 +138,7 @@
     const S = G.S; const b = S.buildings.get(t.dock); if (!b) return H.end(v);
     if (t.st === 0) {
       if (!b.crates || !b.crates.length) return H.end(v);
-      const p = crateSpot(b); const r = walk(v, t, 'crates', p[0], p[1], dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return;
+      const p = t.alt ? G.Vg.door(b) : crateSpot(b); const r = walk(v, t, t.alt ? 'crates2' : 'crates', p[0], p[1], dt, H); if (r < 0) { if (!t.alt) { t.alt = 1; return; } return H.end(v); } if (r > 0) { t.st = 1; v.actT = 0; } return;
     }
     if (t.st === 1) {
       v.act = 'lift'; if (v.actT < 1) return;

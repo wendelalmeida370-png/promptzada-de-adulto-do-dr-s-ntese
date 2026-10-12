@@ -1166,8 +1166,8 @@
       }
       case 'swim': {
         v.act = 'swim';
-        const tgt = t.to || (t.to = W.nearestLand(v.x, v.y, 30));
-        if (!tgt) return end(v);
+        const tgt = t.to || (t.to = W.nearestLand(v.x, v.y, 30) || W.nearestLand(v.x, v.y, 90));
+        if (!tgt) { Vg.damage(v, 999, 'drown', true); return; }
         const dx = tgt[0] - v.x, dy = tgt[1] - v.y; const d = Math.hypot(dx, dy);
         const sp = 0.7 * dt;
         if (d < sp + 0.05) { v.x = tgt[0]; v.y = tgt[1]; end(v); }

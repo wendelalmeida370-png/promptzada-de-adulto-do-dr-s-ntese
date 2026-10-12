@@ -213,7 +213,7 @@
 
   // ------------------------------ sites by the water ------------------------------
   Ci.dockSite = function (set, test) {
-    const S = G.S; let best = null, bs = -1e9;
+    const S = G.S; let best = null, bs = -1e9; const cands = [];
     const R = Math.min(18, Math.round((set.radius || 8) + 4));
     const cx = Math.floor(set.cx), cy = Math.floor(set.cy);
     for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
@@ -229,8 +229,12 @@
       const sl = W.slope(x, y, 2, 2); if (sl > 1.5) continue;
       const d = G.dist(x + 1, y + 1, set.cx, set.cy);
       const sc = -d * 0.8 + sea * 0.4 - sl * 2 + G.R();
-      if (sc > bs) { bs = sc; best = [x, y]; if (test) return best; }
+      if (test) return [x, y];
+      cands.push([sc, x, y]);
     }
+    cands.sort((a, b) => b[0] - a[0]);
+    const from = W.nearestLand(set.cx, set.cy, 4) || [set.cx, set.cy];
+    for (const c of cands.slice(0, 6)) if (W.findPath(from[0], from[1], c[1] + 1, c[2] + 1, true, N * N)) { best = [c[1], c[2]]; break; }
     return best;
   };
   Ci.coastal = function (set) {
