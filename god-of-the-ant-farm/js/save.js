@@ -165,7 +165,9 @@
       S.buildings.set(b.id, b);
       for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) S.occ[ty * N + tx] = b.id;
     }
-    for (const v0 of o.villagers) { const v = G.Vg.shape(v0); v.path = null; v.task = null; v.emo = null; v.think = lr(); v.scan = lr() * 0.3; S.villagers.set(v.id, v); }
+    // (nobody stands in a line the save does not keep: the lines start empty, and one who still thought he stood in one
+    // broke the shop and the well — L-085)
+    for (const v0 of o.villagers) { const v = G.Vg.shape(v0); v.path = null; v.task = null; v.emo = null; v._q = null; v.think = lr(); v.scan = lr() * 0.3; S.villagers.set(v.id, v); }
     for (const d of o.dead) S.dead.set(d.id, d);
     for (const a of o.animals) {
       if (!('morph' in a)) a.morph = null; // (older worlds: no rare coats appear on loading)

@@ -31,7 +31,8 @@
         if (!v.jail) continue;
         const b = G.S.buildings.get(v.jail);
         if (!b || b.type !== 'cadeia') { v.jail = 0; v.jailUntil = 0; continue; }
-        const [dx, dy] = G.Vg.door(b); v.x = dx; v.y = dy; v.inside = b.id; v.task = { type: 'cela', id: b.id, pri: 5.3, kind: 'cela' };
+        // (a task as setTask makes it, with its clock: without one the cell's clock read NaN — L-084)
+        const [dx, dy] = G.Vg.door(b); v.x = dx; v.y = dy; v.inside = b.id; v.task = { type: 'cela', id: b.id, pri: 5.3, kind: 'cela', age: 0, st: 0 };
       }
     },
   });

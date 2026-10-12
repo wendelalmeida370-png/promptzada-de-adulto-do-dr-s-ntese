@@ -167,6 +167,8 @@
     const k = q.ids.indexOf(v.id); if (k >= 0) q.ids.splice(k, 1);
     if (!q.ids.length) Q.delete(key);
   };
+  // (for the checker: one who thinks he stands in a line is in it)
+  L.inQueue = v => { if (!v._q) return true; const q = Q.get(v._q); return !!(q && q.ids.includes(v.id)); };
   // stand in line; true once this person is at the front, on the spot
   L.inLine = function (v, t, key, fx, fy, dx, dy, dt, H) {
     let q = Q.get(key);

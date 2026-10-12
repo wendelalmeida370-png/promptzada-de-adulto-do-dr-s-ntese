@@ -203,6 +203,7 @@
       for (const v of s.villagers.values()) {
         const nm = `${v.name} #${v.id}`;
         if (v.purse !== undefined && (!fin(v.purse) || v.purse < -0.01)) add('urb', 2, `${nm}: bolso com ${v.purse} moedas`);
+        if (v._q && G.Life && G.Life.inQueue && !G.Life.inQueue(v)) add('urb', 2, `${nm}: acha que está na fila ${v._q}, que não o conhece (L-085)`);
         if (v.jail) {
           const b = s.buildings.get(v.jail);
           if (!b || b.type !== 'cadeia') add('urb', 2, `${nm}: preso numa cadeia que não existe (${v.jail})`);
