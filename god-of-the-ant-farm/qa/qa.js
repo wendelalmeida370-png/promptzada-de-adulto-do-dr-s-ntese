@@ -115,7 +115,10 @@
     for (const w of (wz.wars || [])) {
       if (w.end) continue;
       const sidesA = w.a.filter(id => G.Fac.get(id) && G.Fac.get(id).alive), sidesB = w.b.filter(id => G.Fac.get(id) && G.Fac.get(id).alive);
-      if (!sidesA.length || !sidesB.length) add('war', 2, `guerra ${w.name}: um dos lados não existe mais e ela segue`);
+      // (a people that has just fallen: its wars close at the next tick of the war, half a second on — T-026)
+      const fresh = id => { const f = G.Fac.get(id); return f && !f.alive && fin(f.diedT) && s.clock - f.diedT < 1; };
+      if (w.a.concat(w.b).some(fresh)) { /* closing */ }
+      else if (!sidesA.length || !sidesB.length) add('war', 2, `guerra ${w.name}: um dos lados não existe mais e ela segue`);
       else if (!sidesA.some(a => sidesB.some(b => G.Fac.atWar(a, b)))) add('war', 2, `guerra ${w.name}: ativa sem nenhum par em guerra`);
       if (s.day - w.start > 60) add('war', 3, `guerra ${w.name}: dura ${s.day - w.start} anos`);
     }
@@ -246,6 +249,22 @@
           if (!s.settlements.has(w.set)) add('gift', 2, `vinho#${w.id}: a cidade ${w.set} não existe`);
           if (towns.has(w.set)) add('gift', 2, `vinho#${w.id}: dois vinhos na mesma cidade`); towns.add(w.set);
           if (!fin(w.until) || w.until - s.clock > G.DAY_LEN * 0.5 + 0.01) add('gift', 2, `vinho#${w.id}: dura até ${w.until}`);
+        }
+      }
+    }
+    // ---- the dead who walk (beyond.js): a haunt has its cemetery, a ghost is someone dead (one brought back is no ghost)
+    if (s.beyond) {
+      const b = s.beyond;
+      if (!Array.isArray(b.haunts)) add('alem', 1, 'S.beyond sem a lista de assombrações');
+      else for (const h of b.haunts) {
+        const cem = s.buildings.get(h.cem);
+        if (!cem || cem.type !== 'cemetery') add('alem', 2, `assombração#${h.id}: o cemitério ${h.cem} não existe`);
+        if (!fin(h.until) || h.until - s.day > 2) add('alem', 2, `assombração#${h.id}: dura até o ano ${h.until}`);
+        if (!Array.isArray(h.ghosts) || h.ghosts.length > 6) add('alem', 3, `assombração#${h.id}: ${h.ghosts ? h.ghosts.length : '?'} fantasmas (máximo 6)`);
+        for (const g of h.ghosts || []) {
+          if (!fin(g.x) || !fin(g.y) || g.x < 0 || g.y < 0 || g.x >= N || g.y >= N) { add('alem', 1, `fantasma#${g.id}: posição inválida`); continue; }
+          if (s.villagers.has(g.vid)) add('alem', 2, `fantasma de ${g.name} #${g.vid}, que está vivo`);
+          else if (!s.dead.has(g.vid)) add('alem', 3, `fantasma de ${g.name} #${g.vid}, que nem o registro dos mortos lembra`);
         }
       }
     }

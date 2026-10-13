@@ -337,6 +337,23 @@
   // ------------------------------ the days and nights of the town ------------------------------
   let tA = 0, lastNight = -1;
   G.worldHooks.push(() => { tA = 0; lastNight = -1; }); // (a new world, or a save loaded: it starts over)
+  // what a witness would have told, told by another (the ghosts of the god's Fantasmas): the nearest guard of the town goes after the thief
+  Cr.reveal = function (c) {
+    const S = G.S; if (!c || c.st !== 'aberto') return null;
+    c.told = c.told || S.day; c.ghost = 1;
+    let best = null, bd = 1e9;
+    for (const g of S.villagers.values()) { if (g.set !== c.set || !WATCH[g.role] || g.captive || g.jail || g.aboard || g.ug || g.hunt) continue; const d = G.dist2(g.x, g.y, c.x, c.y); if (d < bd) { bd = d; best = g; } }
+    if (!best) {
+      // (no guard to tell: found out by the dead, the thief gives the coin back himself)
+      const th = S.villagers.get(c.thief); const back = th ? Math.min(c.n, th.purse || 0) : 0;
+      if (back > 0) { th.purse -= back; const h = S.buildings.get(c.house); if (h) h.coin = (h.coin || 0) + back; }
+      c.st = 'devolvido'; c.how = 'devolveu as moedas, com medo dos mortos';
+      return null;
+    }
+    best.hunt = c.id;
+    if (!(best.task && best.task.pri >= 1.65)) G.Vg.setTask(best, { type: 'prender', crime: c.id, id: c.thief, pri: 1.65, st: 0, look: 0, kind: 'prender' });
+    return best;
+  };
   Cr.update = function (dt) {
     const S = G.S; if (!S) return;
     tA += dt; if (tA < 2) return; tA = 0;

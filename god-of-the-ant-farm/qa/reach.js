@@ -68,4 +68,16 @@ let t0 = performance.now(); for (const [s, g] of lone) W.findPath(s[0], s[1], g[
 W.canWalk = () => true; t0 = performance.now(); for (const [s, g] of lone) W.findPath(s[0], s[1], g[0], g[1], false, 3500); const tOld = performance.now() - t0; W.canWalk = realCan;
 t0 = performance.now(); W.invalidateReach(); W.reachIds(); const tBuild = performance.now() - t0;
 out.push(`${lone.length} buscas impossíveis: ${tNew.toFixed(1)} ms com o mapa, ${tOld.toFixed(1)} ms sem · refazer o mapa ${tBuild.toFixed(1)} ms · mapas refeitos até aqui ${W.reachBuilds}`);
+// 6. a town lives where its homes open: the region of the town is the one most of its houses face (a town the god cut in
+// two lives on the side of its homes, not on the side of its old centre — L-089)
+{
+  const L6 = W.reachIds(true); let towns = 0, agreeT = 0, ex = '';
+  for (const set of S.settlements.values()) {
+    const cnt = new Map(); for (const b of S.buildings.values()) { if (b.set !== set.id || !b.built || !G.BDEF[b.type].housing) continue; const d = G.Vg.door(b); const k = d && W.inb(d[0], d[1]) ? L6[W.idx(d[0], d[1])] : -1; if (k >= 0) cnt.set(k, (cnt.get(k) || 0) + 1); }
+    const top = [...cnt.entries()].sort((a, b) => b[1] - a[1]); if (!top.length || (top[1] && top[1][1] === top[0][1])) continue;
+    towns++; if (W.townRegion(set) === top[0][0]) agreeT++; else if (!ex) ex = `${set.name}: região ${W.townRegion(set)}, casas na ${top[0][0]}`;
+  }
+  out.push(`cidades cuja região é a das suas casas: ${agreeT}/${towns}`);
+  if (agreeT !== towns) fails.push('região da cidade não é a das suas casas: ' + ex);
+}
 return { fails, out };

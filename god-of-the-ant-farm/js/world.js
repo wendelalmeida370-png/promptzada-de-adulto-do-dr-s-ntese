@@ -206,10 +206,27 @@
   };
   // the main streets of a town: the largest region among the walkable tiles around its centre (its centre itself can be a palace,
   // or a yard boxed in by its own houses)
-  const townReg = new Map(); let townAt = -1;
+  // — unless its homes say otherwise: a town the god cut in two lives on the side where most of its houses open (L-089)
+  const townReg = new Map(); let townAt = -1, townHomes = null;
+  function homesByRegion() {
+    const S = G.S; const L = W.reachIds(); const out = new Map();
+    for (const b of S.buildings.values()) {
+      if (!b.built || !b.set) continue; const d = G.BDEF[b.type]; if (!d || !d.housing) continue;
+      const p = G.Vg && G.Vg.door(b); if (!p || !W.inb(p[0], p[1])) continue;
+      const k = L[W.idx(p[0], p[1])]; if (k < 0) continue;
+      let m = out.get(b.set); if (!m) out.set(b.set, m = new Map()); m.set(k, (m.get(k) || 0) + 1);
+    }
+    return out;
+  }
   W.townRegion = function (set) {
-    W.reachIds(); if (townAt !== W.reachBuilds) { townReg.clear(); townAt = W.reachBuilds; }
+    W.reachIds(); if (townAt !== W.reachBuilds) { townReg.clear(); townHomes = null; townAt = W.reachBuilds; }
     let r = townReg.get(set.id); if (r !== undefined) return r;
+    if (!townHomes) townHomes = homesByRegion();
+    const hm = townHomes.get(set.id);
+    if (hm && hm.size) {
+      let a = -1, an = 0, bn = 0; for (const [k, c] of hm) { if (c > an) { bn = an; an = c; a = k; } else if (c > bn) bn = c; }
+      if (an > bn) { townReg.set(set.id, a); return a; }
+    }
     const L = W.reachIds(); const cnt = new Map(); const R = Math.max(3, Math.min(10, Math.round((set.radius || 6) * 0.6)));
     const cx = Math.floor(set.cx), cy = Math.floor(set.cy);
     for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { const x = cx + dx, y = cy + dy; if (!W.inb(x, y)) continue; const k = L[y * N + x]; if (k >= 0) cnt.set(k, (cnt.get(k) || 0) + 1); }

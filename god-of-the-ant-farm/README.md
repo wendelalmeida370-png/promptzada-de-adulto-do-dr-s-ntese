@@ -24,7 +24,7 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Ver detalhes | clique num habitante, animal ou construção |
 | Seguir alguém | duplo clique no habitante · `F` |
 | Poderes | barra inferior ou teclas `1`–`8` da aba atual, depois clique no mapa |
-| Trocar aba de poderes | `Tab` (Dádivas · Ira · Terra · Mar · Natureza · Cidade · Palavra · Destino) |
+| Trocar aba de poderes | `Tab` (Dádivas · Ira · Terra · Mar · Natureza · Cidade · Palavra · Destino · Além) |
 | Minimapa | `M` · ou o ícone do mapa no topo (clique/arraste nele para voar até lá) |
 | Ver o subterrâneo | `U` · ou o ícone da caverna no topo · ou “Ver o interior” ao tocar a boca de uma caverna |
 | O Livro do Mundo | `L` · ou o ícone do livro no topo |
@@ -431,6 +431,8 @@ Os poderes ficam em sete abas (`Tab` troca). Poderes marcados com ✦ abrem uma 
 | Destino | Discórdia | 40 | A lealdade de uma vila despenca e os vizinhos passam a se odiar |
 | Destino | Muralha Divina | 65 | Muralhas de pedra erguem-se numa noite ao redor de uma cidade |
 | Destino | Paz Divina | 80 | Encerra todas as guerras; ninguém declara guerra por dois dias e meio |
+| Além | Ressurreição ✦ | 90 | Toque um corpo ainda no chão ou um cemitério e escolha quem volta (quem morreu há até seis anos): o mesmo nome, a mesma família. A viúva recebe o marido de volta; quem já casou de novo, não |
+| Além | Fantasmas | 35 | Por duas noites os mortos de um cemitério andam entre as casas: o povo foge, as famílias choram, os devotos rezam — e um fantasma aponta o ladrão que ninguém pegou ou vai atrás de quem o matou |
 
 **Preces**: em momentos difíceis (seca, incêndio, doença, fome, lobos, invasores, cativeiro, tirania) a vila reza pedindo algo específico. Um aviso dourado aparece sobre a barra de poderes — clique nele para ir até lá com o poder certo selecionado. Atender faz a devoção disparar; ignorar custa devoção.
 

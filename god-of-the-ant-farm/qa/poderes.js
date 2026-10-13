@@ -188,6 +188,132 @@ const key = process.argv[2] || 'cidade';
     if (r) ok('v4 o dia seguinte: ressaca', !r.wineOn && r.heavy >= 1 && r.hung >= 1 && !r.qa.length, `${r.heavy} beberam demais no dia ${r.sameDay}; ${r.hung} acordaram de ressaca; vinho ainda correndo: ${r.wineOn}`);
   }
 
+  // ------------------------------ Ressurreição ------------------------------
+  await page.evaluate(() => {
+    // a married adult of the biggest town, free and on the ground
+    __H.mate = set => [...G.S.villagers.values()].filter(v => v.set === set.id && v.partner && G.S.villagers.has(v.partner) && v.age >= 18 && v.age < 55 && !v.captive && !v.aboard && !v.ug && !v.jail && !v.inside && !(v.task && v.task.type === 'scene')).sort((a, b) => a.id - b.id)[0];
+    __H.raise = (x, y, id) => { const o = G.Powers.options('resurrect', x, y) || []; const k = o.find(q => +q.k === id); return k ? G.Powers.castChoice('resurrect', x, y, k.k) : 'não está entre as escolhas: ' + o.map(q => q.name).join(', '); };
+  });
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S;
+      const set = H.town(); const v = H.mate(set); if (!v) return null;
+      const id = v.id, name = v.name, mate = v.partner, kids = v.kids.slice(), x = v.x, y = v.y;
+      G.Village.kill(v, 'war', true); H.run(0.5);
+      const body = G.Carnage.byVid(id);
+      const cast = H.raise(body ? body.x : x, body ? body.y : y, id);
+      H.run(2);
+      const w = S.villagers.get(id); const m = S.villagers.get(mate);
+      return { name, cast, body: !!body, back: !!w, dead: S.dead.has(id), corpse: !!G.Carnage.byVid(id), sameName: w && w.name === name, together: !!(w && m && w.partner === m.id && m.partner === w.id && !m.widow), kids: w ? w.kids.length + '/' + kids.length : '-', bio: w ? (w.bio || []).some(e => /Voltou dos mortos/.test(e[2] || '')) : false, qa: H.qa() };
+    });
+    if (r) ok('r1 ressurreição de um corpo: volta igual e casad' + 'o de novo', r.cast === true && r.body && r.back && !r.dead && !r.corpse && r.sameName && r.together && r.bio && !r.qa.length, `${r.name}: corpo ${r.body}; lançado ${r.cast}; vivo ${r.back}, no registro dos mortos ${r.dead}, corpo no chão ${r.corpse}; casal de novo ${r.together}; filhos ${r.kids}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+  }
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S;
+      const set = H.town(); const v = H.mate(set); if (!v) return null;
+      const id = v.id, name = v.name, mateId = v.partner;
+      G.Village.kill(v, 'sick', true); H.run(0.5);
+      const rec = S.dead.get(id); const cem = rec && S.buildings.get(rec.grave); if (!cem) return { name, grave: false };
+      // the widow marries again before the god acts: she does not go back
+      const mate = S.villagers.get(mateId); const other = [...S.villagers.values()].find(o => o.set === set.id && o.g !== mate.g && !o.partner && o.age >= 18 && o.id !== mate.mother && o.id !== mate.father && o.mother !== mate.id && !(mate.mother && o.mother === mate.mother));
+      if (other) { mate.partner = other.id; other.partner = mate.id; mate.widow = 0; }
+      const [cx, cy] = G.Village.center(cem);
+      const cast = H.raise(cx, cy, id); H.run(2);
+      const w = S.villagers.get(id);
+      const empty = !(cem.graves || []).includes(id);
+      // the world with them back goes through a save
+      const back = JSON.parse(G.Save.serialize()); G.Save.apply(back); G.Main.mode = 'game'; G.UI.setSpeed(0); H.run(1);
+      const w2 = G.S.villagers.get(id);
+      return { name, grave: true, cast, back: !!w, empty, single: w ? !w.partner : null, mateStays: other ? G.S.villagers.get(mateId).partner === other.id : 'sem par', saved: !!(w2 && w2.name === name), qa: H.qa() };
+    });
+    if (r) ok('r2 ressurreição da cova: a cova fica vazia; a viúva casada de novo não volta', r.grave && r.cast === true && r.back && r.empty && r.single && r.mateStays !== false && r.saved && !r.qa.length, `${r.name}: cova ${r.grave}; lançado ${r.cast}; vivo ${r.back}; cova vazia ${r.empty}; sozinho ${r.single}; o par fica com o novo ${r.mateStays}; passou pelo save ${r.saved}; ${(r.qa || []).slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+  }
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S;
+      const set = H.town(); const v = H.mate(set); if (!v) return null;
+      const id = v.id;
+      // dies, comes back, dies again (the god's lightning), comes back again
+      G.Village.kill(v, 'sick', true); H.run(0.5);
+      let rec = S.dead.get(id); let cem = S.buildings.get(rec.grave); let [cx, cy] = G.Village.center(cem);
+      const a = H.raise(cx, cy, id); H.run(1);
+      const w = S.villagers.get(id); G.Powers.lightning(w.x, w.y); H.run(0.5);
+      const died2 = !S.villagers.has(id);
+      if (!died2) G.Village.kill(w, 'lightning', true), H.run(0.5);
+      const body = G.Carnage.byVid(id); rec = S.dead.get(id); cem = rec && S.buildings.get(rec.grave);
+      const [px, py] = body ? [body.x, body.y] : cem ? G.Village.center(cem) : [w.x, w.y];
+      const b = H.raise(px, py, id); H.run(1);
+      return { a, b, died2, back: S.villagers.has(id), dead: S.dead.has(id), qa: H.qa() };
+    });
+    if (r) ok('r3 volta, morre de novo, volta de novo', r.a === true && r.b === true && r.back && !r.dead && !r.qa.length, `primeira volta ${r.a}; o raio ${r.died2 ? 'matou' : 'não matou (morte forçada)'}; segunda volta ${r.b}; vivo ${r.back}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+  }
+
+  // ------------------------------ Fantasmas ------------------------------
+  await page.evaluate(() => {
+    __H.cem = set => [...G.S.buildings.values()].filter(b => b.type === 'cemetery' && b.set === set.id && (b.graves || []).some(id => G.S.dead.has(id))).sort((a, b) => (b.graves || []).length - (a.graves || []).length)[0];
+    __H.toNight = () => { const S = G.S; while (!(S.time > 0.76)) __H.run(1); };
+    __H.ghostsCast = cem => { const [cx, cy] = G.Village.center(cem); return G.Powers.cast('ghosts', cx, cy); };
+  });
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S;
+      const set = H.town(); let cem = H.cem(set);
+      // (a town that never buried anyone gets its first dead)
+      if (!cem) { const v = [...S.villagers.values()].find(o => o.set === set.id && o.age > 40); G.Village.kill(v, 'old'); cem = H.cem(set); }
+      if (!cem) return null;
+      // a thief nobody caught, and one who killed and was not punished
+      const th = [...S.villagers.values()].find(o => o.set === set.id && o.age >= 18 && o.home && !o.jail && !o.captive);
+      const house = [...S.buildings.values()].find(b => b.set === set.id && b.built && G.BDEF[b.type].housing && b.id !== th.home);
+      const crime = { id: S.nextId++, kind: 'furto', day: S.day, set: set.id, thief: th.id, house: house.id, n: 3, x: house.x, y: house.y, seen: [], told: 0, found: 0, st: 'aberto' };
+      (S.crimes = S.crimes || []).push(crime); th.purse = (th.purse || 0) + 3;
+      const killer = [...S.villagers.values()].find(o => o.set === set.id && o.age >= 18 && o !== th && !o.captive && !o.jail);
+      const victim = [...S.villagers.values()].find(o => o.set === set.id && o.age >= 18 && o !== th && o !== killer && !o.captive && !o.jail && !o.aboard);
+      victim.lastBy = killer.id; G.Village.kill(victim, 'sick'); H.run(0.5);
+      cem = S.buildings.get((S.dead.get(victim.id) || {}).grave) || cem;
+      const fear0 = killer.fear;
+      const ok = H.ghostsCast(cem); const h = S.beyond && S.beyond.haunts[0];
+      const again = G.Powers.canCast('ghosts', ...G.Village.center(cem)); const why = G.Powers.why;
+      H.toNight();
+      let maxFled = 0, bad = []; const day0 = S.day;
+      while (S.beyond.haunts.length && S.day < day0 + 4) { H.run(5); maxFled = Math.max(maxFled, h.fled); const e = H.qa(); if (e.length && bad.length < 3) bad.push(...e.map(q => q.msg)); }
+      const hunted = [...S.villagers.values()].some(g => g.hunt === crime.id) || crime.st !== 'aberto';
+      return { set: set.name, ok, again, why, ghosts: h ? h.ghosts.length : 0, seen: h ? h.seen : 0, fled: maxFled, told: h ? h.told.slice() : [], theft: h ? h.told.includes('c' + crime.id) : false, hunted, crimeSt: crime.st, killer: h ? h.told.includes('k' + killer.id) : false, fear0, fear1: killer.fear, kbio: (killer.bio || []).some(e => /fantasma/.test(e[2] || '')), ended: !S.beyond.haunts.length, bad, qa: H.qa() };
+    });
+    if (!r) ok('f1 fantasmas', false, 'nenhuma cidade com cemitério');
+    else {
+      ok('f1 fantasmas: andam à noite, o povo vê e foge', r.ok && r.ghosts >= 1 && r.seen >= 3 && r.ended && !r.again && !r.bad.length && !r.qa.length, `${r.set}: ${r.ghosts} fantasmas; ${r.seen} pessoas viram, ${r.fled} fugiram; terminou ${r.ended}; de novo no mesmo cemitério: ${r.why}; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}`);
+      ok('f1 o fantasma aponta o ladrão', r.theft && r.hunted, `contou o roubo ${r.theft}; guarda atrás do ladrão (ou já preso) ${r.hunted} (crime: ${r.crimeSt})`);
+      ok('f1 o fantasma vai atrás de quem o matou', r.killer && r.fear1 > r.fear0 && r.kbio, `foi atrás ${r.killer}; medo do assassino ${Math.round(r.fear0)} → ${Math.round(r.fear1)}; biografia ${r.kbio}`);
+    }
+  }
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S;
+      const set = H.town();
+      // (one who died just now lies in the cemetery: their ghost is one the god can still bring back)
+      const fresh = [...S.villagers.values()].find(o => o.set === set.id && o.age >= 18 && !o.captive && !o.aboard && !o.jail);
+      G.Village.kill(fresh, 'sick'); H.run(0.5);
+      const cem = S.buildings.get((S.dead.get(fresh.id) || {}).grave) || H.cem(set); if (!cem) return null;
+      H.ghostsCast(cem); H.toNight(); H.run(10);
+      const save = G.Save.serialize(); const n = S.beyond.haunts[0].ghosts.length;
+      G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0); H.run(25); const a = H.digest(cem.x, cem.y) + JSON.stringify(G.S.beyond);
+      G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0); H.run(25); const b = H.digest(cem.x, cem.y) + JSON.stringify(G.S.beyond);
+      let k = 0; while (k < a.length && a[k] === b[k]) k++;
+      // then one of the dead is brought back while walking, and the god razes the cemetery
+      const g = G.S.beyond.haunts[0].ghosts.find(q => q.vid === fresh.id) || G.S.beyond.haunts[0].ghosts[0]; const rec = G.S.dead.get(g.vid);
+      const recent = rec && G.S.day - rec.died <= 6;
+      if (recent) { G.S.faith = 999; const [cx, cy] = G.Village.center(G.S.buildings.get(cem.id)); __H.raise(cx, cy, g.vid); }
+      H.run(1); const ghostAlive = G.S.beyond.haunts.some(h => h.ghosts.some(q => G.S.villagers.has(q.vid)));
+      G.Village.destroyBuilding(G.S.buildings.get(cem.id), 'teste'); H.run(1);
+      return { same: a === b, n, at: k, ctx: a.slice(Math.max(0, k - 60), k + 60) + ' ≠ ' + b.slice(Math.max(0, k - 60), k + 60), recent, ghostAlive, left: G.S.beyond.haunts.length, qa: H.qa() };
+    });
+    if (r) {
+      ok('f2 save no meio da assombração: o mesmo futuro', r.same, r.same ? `${r.n} fantasmas na hora do save; futuro idêntico` : `diferem no caractere ${r.at}: ${r.ctx}`);
+      ok('f2 o morto que volta deixa de assombrar; cemitério derrubado acaba com tudo', !r.ghostAlive && !r.left && !r.qa.length, `${r.recent ? 'um fantasma ressuscitado' : '(fantasma antigo demais para voltar)'}; fantasma de alguém vivo ${r.ghostAlive}; assombrações depois do cemitério derrubado ${r.left}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+    }
+  }
+
   ok('sem erros de página', !errs.length, errs.slice(0, 3).join(' | ') || 'nenhum');
   const modErr = await page.evaluate(() => JSON.stringify(G.modErr || {}));
   ok('sem erros de módulo', modErr === '{}' || modErr === '[]', modErr);

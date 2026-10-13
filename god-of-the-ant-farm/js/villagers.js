@@ -65,7 +65,7 @@
     const home = S.settlements.get(o.set); const civId = o.civ || (home ? G.Civ.idOfFac(home.fac) : null); const civ = G.CIVS[civId];
     let courage = G.clamp(0.45 + (G.R() - 0.5) * 0.5 + (traits.includes('Corajoso') ? 0.35 : 0) - (traits.includes('Medroso') ? 0.35 : 0) + (civ && civ.traits.courage || 0), 0, 1);
     const v = Vg.shape({
-      id: S.nextId++, name: o.name || uniqueName(g, civId), g, age: o.age, born: S.day - o.age, civ: civId || null,
+      id: o.id || S.nextId++, name: o.name || uniqueName(g, civId), g, age: o.age, born: S.day - o.age, civ: civId || null,
       hp: 100, hunger: G.rr(5, 35), energy: G.rr(65, 100),
       role: null, x: o.x, y: o.y, z: 0, vx: 0, vy: 0, vz: 0, air: false, held: false,
       path: null, pi: 0, task: null, act: '', actT: 0, carry: null,
@@ -75,13 +75,14 @@
       emo: null, face: G.R() < 0.5 ? 1 : -1, walkPh: G.R() * 10, moving: false,
       think: G.R(), scan: G.R() * 0.3, sleeping: false, inside: 0, hurt: 0,
       speed: G.rr(1.25, 1.5), work: traits.includes('Trabalhador') ? 1.25 : traits.includes('Preguiçoso') ? 0.8 : 1,
-      skin: m && f ? (G.R() < 0.5 ? m.skin : f.skin) : (o.skin || G.pick(civ ? civ.skin : SKIN)),
-      hair: m && f ? (G.R() < 0.5 ? m.hair : f.hair) : G.pick(civ ? civ.hair : HAIR),
+      skin: o.skin || (m && f ? (G.R() < 0.5 ? m.skin : f.skin) : G.pick(civ ? civ.skin : SKIN)),
+      hair: o.hair || (m && f ? (G.R() < 0.5 ? m.hair : f.hair) : G.pick(civ ? civ.hair : HAIR)),
       kidCloth: G.pick(KID_CLOTH), st: { wood: 0, food: 0, stone: 0, built: 0 }, lastCause: 'unknown', lastGod: false,
     });
     if (!v.skin) v.skin = G.pick(SKIN); if (!v.hair) v.hair = G.pick(HAIR);
     S.villagers.set(v.id, v);
-    G.Life && G.Life.onCreate(v);
+    // (one brought back from the dead keeps the life already written: nobody is born twice)
+    if (!o.back) G.Life && G.Life.onCreate(v);
     return v;
   };
 
@@ -1638,7 +1639,7 @@
       }
       case 'eat': return t.st < 2 ? 'Indo comer' : 'Comendo';
       case 'sleep': return v.sleeping ? (v.inside ? 'Dormindo em casa' : 'Dormindo ao relento') : 'Indo dormir';
-      case 'flee': return t.why === 'play' ? 'Correndo do eco da caverna, rindo' : t.why === 'meteor' ? 'Fugindo do céu em chamas!' : t.why === 'fire' ? 'Fugindo do incêndio!' : t.why === 'wolf' ? 'Fugindo de uma fera!' : t.why === 'war' ? 'Fugindo dos invasores!' : 'Correndo em pânico!';
+      case 'flee': return t.why === 'play' ? 'Correndo do eco da caverna, rindo' : t.why === 'meteor' ? 'Fugindo do céu em chamas!' : t.why === 'fire' ? 'Fugindo do incêndio!' : t.why === 'wolf' ? 'Fugindo de uma fera!' : t.why === 'war' ? 'Fugindo dos invasores!' : t.why === 'ghost' ? 'Fugindo de um fantasma!' : 'Correndo em pânico!';
       case 'fire': return t.st === 2 ? 'Enchendo o balde' : t.beat ? 'Abafando as chamas' : 'Combatendo o incêndio!';
       case 'social': return `Conversando com ${pname(t.id)}`;
       case 'talk': return t.court ? `Flertando com ${pname(t.id)}` : `Conversando com ${pname(t.id)}`;

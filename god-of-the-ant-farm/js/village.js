@@ -817,7 +817,7 @@
     const rec = {
       id: v.id, name: v.name, g: v.g, born: v.born, died: S.day, age: v.age, mother: v.mother, father: v.father,
       partner: v.partner, kids: v.kids.slice(), cause, role: v.role, dead: true, traits: v.traits,
-      fac: G.Fac.idOfV(v), captive: !!v.captive, ord: v.ord, ep: v.ep, reigned: v.reigned, kills: v.kills, hero: v.hero, by: v.lastBy || 0,
+      fac: G.Fac.idOfV(v), captive: !!v.captive, ord: v.ord, ep: v.ep, reigned: v.reigned, kills: v.kills, hero: v.hero, by: v.lastBy || 0, skin: v.skin, hair: v.hair,
     };
     if (v.bio) rec.bio = v.bio;
     if (v.lost) rec.lost = v.lost;
@@ -854,6 +854,7 @@
       }
     }
     if (G.UI && G.UI.selected === v) G.UI.select(null);
+    G.Politics.lastSoul && G.Politics.lastSoul(v);
     if (S.villagers.size === 0) {
       V.log('Não resta ninguém na ilha. O silêncio toma conta.', 'skull');
       G.UI && G.UI.toast('A ilha está vazia', 'Todos se foram. Você pode trazer viajantes com o tempo…', 'skull');
@@ -1017,6 +1018,12 @@
   // them father, mother or grandparent, or they mattered: rulers, heroes, those with an epithet, great killers.
   // (a thousand years would otherwise keep tens of thousands of strangers, heavier than the world itself)
   const FORGET = 80;
+  // one brought back from the dead leaves an empty grave (the only other hand on the graves: the god's)
+  V.unbury = function (rec) {
+    const cem = rec.grave && G.S.buildings.get(rec.grave);
+    if (cem && cem.graves) cem.graves = cem.graves.filter(id => id !== rec.id);
+    rec.grave = 0;
+  };
   V.remembered = d => !!(d.reigned || d.hero || d.ep || (d.kills || 0) >= 5);
   V.forget = function () {
     const S = G.S; if (!S.dead.size) return 0;

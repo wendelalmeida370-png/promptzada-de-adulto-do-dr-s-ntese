@@ -204,7 +204,14 @@
     const S = G.S;
     b.t += dt; b.life += dt;
     const before = b.members.length;
-    b.members = b.members.filter(id => { const v = S.villagers.get(id); if (!v || !v.task || fid(v) !== b.fac) return false; if (v.task.type === 'band') return v.task.band === b.id; const pt = v.task.type === 'scene' && G.Scene && G.Scene.prevTask(v); return !!pt && pt.type === 'band' && pt.band === b.id; });
+    const turned = [];
+    b.members = b.members.filter(id => {
+      const v = S.villagers.get(id); if (!v || !v.task) return false;
+      // (one whose town went over to another people — a secession, a conquest — leaves this band and goes home: L-088)
+      if (fid(v) !== b.fac) { if (v.task.type === 'band' && v.task.band === b.id) turned.push(v); return false; }
+      if (v.task.type === 'band') return v.task.band === b.id; const pt = v.task.type === 'scene' && G.Scene && G.Scene.prevTask(v); return !!pt && pt.type === 'band' && pt.band === b.id;
+    });
+    for (const v of turned) G.Vg.endTask(v);
     for (let k = b.members.length; k < before; k++) { /* casualties counted in noteDeath */ }
     const f = G.Fac.get(b.fac), en = G.Fac.get(b.enemy), set = S.settlements.get(b.set);
     const alive = b.members.length;

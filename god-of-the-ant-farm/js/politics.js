@@ -657,7 +657,7 @@
   P.extinct = function (f, by) {
     const S = G.S; if (!f.alive) return;
     P.endReign(f, 'queda');
-    f.alive = false; f.died = S.day; f.fate = by ? 'conquistad' + G.Fac.oa(f) + ' por ' + by.name : 'desapareceu';
+    f.alive = false; f.died = S.day; f.diedT = S.clock; f.fate = by ? 'conquistad' + G.Fac.oa(f) + ' por ' + by.name : 'desapareceu';
     for (const o of S.factions.values()) { const r = o.rel[f.id]; if (r) { r.st = 'paz'; r.envoy = 0; } }
     G.War && G.War.onExtinct(f);
     S.stats.fallen = (S.stats.fallen || 0) + 1;
@@ -667,9 +667,34 @@
   };
 
   // the last few survivors of a broken people join a neighbour — or surrender to it
+  // the last free soul of a people died: the people is gone with them, not a minute later — or, if it kept captives in its
+  // towns, they are free now and the towns are theirs (L-090)
+  function emptied(f, last) {
+    const S = G.S;
+    const held = [...S.villagers.values()].filter(o => o.captive && (S.settlements.get(o.set) || {}).fac === f.id);
+    if (held.length) {
+      for (const o of held) { o.captive = null; o.role = null; G.Vg.endTask(o); G.Vg.emote(o, 'happy', 3); }
+      const s = S.settlements.get(held[0].set);
+      log(`${last ? `Com a morte de ${last.name}, ${last.g === 'f' ? 'a última' : 'o último'} de ${f.name}, os` : 'Os'} cativos de ${s ? s.name : f.name} se viram livres: a cidade agora é deles.`, 'free', s ? s.cx : undefined, s ? s.cy : undefined);
+      return;
+    }
+    const sets = G.Fac.settlementsOf(f.id);
+    P.extinct(f, null);
+    for (const s of sets) G.Village.abandon(s);
+  }
+  P.lastSoul = function (v) {
+    const S = G.S; if (v.captive) return;
+    const s0 = S.settlements.get(v.set); const f = s0 && G.Fac.get(s0.fac);
+    if (!f || !f.alive || G.Fac.pop(f.id) > 1) return;
+    for (const o of S.villagers.values()) { if (o.captive) continue; const so = S.settlements.get(o.set); if (so && so.fac === f.id) return; }
+    emptied(f, v);
+  };
   function checkRemnant(f) {
     const S = G.S; const pop = G.Fac.pop(f.id);
     if (pop > 3) { f.remnantT = 0; return; }
+    // (nobody left at all: nothing to wait for)
+    if (!pop) return emptied(f, null);
+    if (G.Fac.all().length < 2) return;
     f.remnantT = (f.remnantT || 0) + 10;
     if (f.remnantT < 60) return;
     let best = null, bs = -1e9;
@@ -1130,7 +1155,7 @@
     if (t10 >= 10) {
       t10 = 0;
       decisions();
-      for (const f of G.Fac.all()) { P.checkGov(f, false); checkSecession(f); if (!f.alive) continue; checkCoup(f); checkRevolution(f); checkTyranny(f); if (G.Fac.all().length > 1) checkRemnant(f); }
+      for (const f of G.Fac.all()) { P.checkGov(f, false); checkSecession(f); if (!f.alive) continue; checkCoup(f); checkRevolution(f); checkTyranny(f); checkRemnant(f); }
     }
   };
 })(window.G);

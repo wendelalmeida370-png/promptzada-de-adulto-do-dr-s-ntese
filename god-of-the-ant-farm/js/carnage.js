@@ -26,6 +26,8 @@
   C.get = id => corpses.find(c => c.id === id) || null;
   C.byVid = vid => corpses.find(c => c.vid === vid) || null;
   C.pyres = () => pyres;
+  // (the god's Ressurreição: the body gets up — whoever was dragging it finds nothing to drag)
+  C.raise = function (c) { const k = corpses.indexOf(c); if (k < 0) return false; corpses.splice(k, 1); for (const b of bits) if (b.corpse === c.id) b.t = 1e9; return true; };
   C.stage = c => { const d = c.t / DAY(); return d < ROT ? 'fresh' : d < DRY ? 'rot' : d < BONES ? 'dry' : 'bones'; };
   C.STAGE = { fresh: 'morto há pouco', rot: 'apodrecendo', dry: 'ressecado', bones: 'só ossos' };
 
