@@ -14,7 +14,91 @@
   let THREE = null, R3 = null, scene = null, flame = null, glow = null, rain = null, rainP = null, hull = null, mast = null, sail = null, deck = null, light = null;
   const MAXF = 140, MAXS = 40, NR = 1600;
   const TAU = Math.PI * 2;
-  const svis = new Map(); G.worldHooks.push(() => svis.clear());
+  const svis = new Map(); G.worldHooks.push(() => { svis.clear(); for (const pl of [PA, PG]) if (pl) pl.n = 0; emit.clear(); leafT = 0; ripN = 0; for (const f of falling.values()) R3.dropMesh(f.m); falling.clear(); });
+  // ------------------------------ particles ------------------------------
+  // (two pools of soft points: smoke, dust, leaves, chips, splashes, drawn over what is behind them; sparks and
+  // fireflies, glowing. Each point: where, how fast, how long it lives, its size from birth to death, its colour, its
+  // shape — a puff, a drop, a flake of wood or a leaf — how the air slows it, how it falls)
+  const NP = 1600;
+  function pool(add) {
+    const P = { n: 0, add, x: new Float32Array(NP), y: new Float32Array(NP), z: new Float32Array(NP), vx: new Float32Array(NP), vy: new Float32Array(NP), vz: new Float32Array(NP), t: new Float32Array(NP), life: new Float32Array(NP),
+      s0: new Float32Array(NP), s1: new Float32Array(NP), r: new Float32Array(NP), g: new Float32Array(NP), b: new Float32Array(NP), a: new Float32Array(NP), sh: new Float32Array(NP), drag: new Float32Array(NP), grav: new Float32Array(NP), wob: new Float32Array(NP), fade: new Float32Array(NP) };
+    P.pos = new Float32Array(NP * 3); P.col = new Float32Array(NP * 4); P.size = new Float32Array(NP); P.shape = new Float32Array(NP);
+    return P;
+  }
+  let PA = null, PG = null; const emit = new Map(); let leafT = 0, ripN = 0; const falling = new Map();
+  // a new point (o: x, y, z, vx, vy, vz, life, s0, s1, c [r, g, b 0..1], a, sh 0 puff · 1 drop · 2 flake, drag, grav, wob, fade 0 linear · 1 in and out)
+  function spawn(P, o) {
+    if (!P) return; let k = P.n; if (k >= NP) { k = (G.vri(0, NP - 1)); } else P.n++;
+    P.x[k] = o.x; P.y[k] = o.y; P.z[k] = o.z; P.vx[k] = o.vx || 0; P.vy[k] = o.vy || 0; P.vz[k] = o.vz || 0; P.t[k] = 0; P.life[k] = o.life || 1;
+    P.s0[k] = o.s0 || 0.3; P.s1[k] = o.s1 === undefined ? P.s0[k] : o.s1; P.r[k] = o.c[0]; P.g[k] = o.c[1]; P.b[k] = o.c[2]; P.a[k] = o.a === undefined ? 1 : o.a; P.sh[k] = o.sh || 0; P.drag[k] = o.drag || 0; P.grav[k] = o.grav || 0; P.wob[k] = o.wob || 0; P.fade[k] = o.fade || 0;
+  }
+  F3.spawn = (o, add) => spawn(add ? PG : PA, o);
+  function stepPool(P, dt, wx, wz, t) {
+    let k = 0;
+    while (k < P.n) {
+      P.t[k] += dt; if (P.t[k] >= P.life[k]) { const j = --P.n; for (const f of ['x', 'y', 'z', 'vx', 'vy', 'vz', 't', 'life', 's0', 's1', 'r', 'g', 'b', 'a', 'sh', 'drag', 'grav', 'wob', 'fade']) P[f][k] = P[f][j]; continue; }
+      const dr = Math.exp(-P.drag[k] * dt); P.vx[k] = P.vx[k] * dr + wx * (1 - dr); P.vz[k] = P.vz[k] * dr + wz * (1 - dr); P.vy[k] = P.vy[k] * (P.drag[k] > 0 ? dr : 1) - P.grav[k] * dt;
+      P.x[k] += P.vx[k] * dt + (P.wob[k] ? Math.sin(t * 2.7 + k) * P.wob[k] * dt : 0); P.y[k] += P.vy[k] * dt; P.z[k] += P.vz[k] * dt + (P.wob[k] ? Math.cos(t * 2.1 + k * 1.3) * P.wob[k] * dt : 0);
+      const f = P.t[k] / P.life[k];
+      P.pos[k * 3] = P.x[k]; P.pos[k * 3 + 1] = P.y[k]; P.pos[k * 3 + 2] = P.z[k];
+      const al = P.fade[k] ? Math.min(1, f * 6) * (1 - f) * 1.4 : 1 - f;
+      P.col[k * 4] = P.r[k]; P.col[k * 4 + 1] = P.g[k]; P.col[k * 4 + 2] = P.b[k]; P.col[k * 4 + 3] = P.a[k] * Math.min(1, al);
+      P.size[k] = P.s0[k] + (P.s1[k] - P.s0[k]) * f; P.shape[k] = P.sh[k];
+      k++;
+    }
+    P.geo.setDrawRange(0, P.n);
+    for (const a of ['position', 'aCol', 'aSize', 'aShape']) { const at = P.geo.attributes[a]; at.needsUpdate = true; }
+  }
+  const PVERT = `attribute float aSize; attribute vec4 aCol; attribute float aShape; uniform float uScale; varying vec4 vCol; varying float vShape; varying float vRot; varying float vFog; uniform float uFogN; uniform float uFogF;
+    void main() { vCol = aCol; vShape = aShape; vRot = position.x * 3.1 + position.z * 1.7 + position.y * 2.3; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv;
+      gl_PointSize = clamp(aSize * uScale / max(0.2, -mv.z), 0.0, 220.0); vFog = smoothstep(uFogN, uFogF, -mv.z); }`;
+  const PFRAG = `varying vec4 vCol; varying float vShape; varying float vRot; varying float vFog; uniform vec3 uFogC; uniform float uLit; uniform float uAdd;
+    void main() { vec2 p = gl_PointCoord * 2.0 - 1.0; float a;
+      if (vShape < 0.5) a = smoothstep(1.0, 0.15, dot(p, p)) * (0.75 + 0.25 * sin(vRot * 7.0 + p.x * 3.0) * sin(vRot * 5.0 + p.y * 3.0));
+      else if (vShape < 1.5) a = smoothstep(1.0, 0.55, dot(p, p));
+      else { float c = cos(vRot), s = sin(vRot); vec2 q = vec2(c * p.x - s * p.y, s * p.x + c * p.y); a = smoothstep(1.0, 0.75, q.x * q.x * 0.55 + q.y * q.y * 3.2); }
+      a *= vCol.a; if (a < 0.01) discard;
+      vec3 col = uAdd > 0.5 ? vCol.rgb : vCol.rgb * uLit;
+      gl_FragColor = vec4(mix(col, uFogC, vFog * (uAdd > 0.5 ? 0.6 : 1.0)), a * (1.0 - vFog * uAdd * 0.5)); }`;
+  let PU = null, ring = null, ringT = null;
+  const NR2 = 60;
+  function makePools() {
+    PU = { uScale: { value: 600 }, uFogC: { value: new THREE.Color() }, uFogN: { value: 100 }, uFogF: { value: 500 }, uLit: { value: 1 } };
+    for (const add of [false, true]) {
+      const P = pool(add); const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(P.pos, 3).setUsage(THREE.DynamicDrawUsage)); g.setAttribute('aCol', new THREE.BufferAttribute(P.col, 4).setUsage(THREE.DynamicDrawUsage));
+      g.setAttribute('aSize', new THREE.BufferAttribute(P.size, 1).setUsage(THREE.DynamicDrawUsage)); g.setAttribute('aShape', new THREE.BufferAttribute(P.shape, 1).setUsage(THREE.DynamicDrawUsage)); g.setDrawRange(0, 0);
+      const m = new THREE.ShaderMaterial({ uniforms: Object.assign({}, PU, { uAdd: { value: add ? 1 : 0 } }), vertexShader: PVERT, fragmentShader: PFRAG, transparent: true, depthWrite: false, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending });
+      const pts = new THREE.Points(g, m); pts.frustumCulled = false; pts.renderOrder = 4; scene.add(pts); P.geo = g;
+      if (add) PG = P; else PA = P;
+    }
+    // ripples on the water: flat rings that open and fade (each ring's age in aT)
+    const rg = new THREE.RingGeometry(0.82, 1, 24); rg.rotateX(-Math.PI / 2);
+    ringT = new THREE.InstancedBufferAttribute(new Float32Array(NR2), 1); ringT.setUsage(THREE.DynamicDrawUsage); rg.setAttribute('aT', ringT);
+    ring = new THREE.InstancedMesh(rg, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uLit: PU.uLit },
+      vertexShader: 'attribute float aT; varying float vT; void main(){ vT = aT; float s = 0.25 + aT * 1.6; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position * vec3(s, 1.0, s), 1.0); }',
+      fragmentShader: 'varying float vT; uniform float uLit; void main(){ gl_FragColor = vec4(vec3(0.92, 0.96, 1.0) * uLit, (1.0 - vT) * 0.45); }' }), NR2);
+    ring.count = 0; ring.frustumCulled = false; ring.renderOrder = 3; ring.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(ring); ring.userData.age = new Float32Array(NR2); ring.userData.max = new Float32Array(NR2); ring.userData.pos = new Float32Array(NR2 * 3);
+  }
+  function ripple(x, y, z, life) { if (!ring) return; const k = ripN < NR2 ? ripN++ : G.vri(0, NR2 - 1); const u = ring.userData; u.age[k] = 0; u.max[k] = life || 1.2; u.pos[k * 3] = x; u.pos[k * 3 + 1] = y; u.pos[k * 3 + 2] = z; }
+  F3.ripple = ripple;
+  // (for the verifier: the pools within bounds, every point where a number is; every tree drawn falling is falling)
+  F3.check = function () {
+    const out = []; for (const P of [PA, PG]) { if (!P) continue; if (P.n < 0 || P.n > NP) out.push(`partículas: ${P.n} num poço de ${NP}`); for (let k = 0; k < P.n; k++) if (!Number.isFinite(P.x[k] + P.y[k] + P.z[k] + P.t[k])) { out.push(`partícula ${k}: posição inválida`); break; } }
+    if (ripN < 0 || ripN > NR2) out.push(`anéis na água: ${ripN}`);
+    for (const id of falling.keys()) { const t = G.S.trees.get(id); if (!t || t.stage !== 'fall') out.push(`árvore#${id} desenhada caindo, mas no mundo ${t ? t.stage : 'não existe'}`); }
+    return out;
+  };
+  F3.fallingN = () => falling.size;
+  function stepRings(dt) {
+    if (!ring) return; const u = ring.userData; let k = 0;
+    while (k < ripN) { u.age[k] += dt; if (u.age[k] >= u.max[k]) { const j = --ripN; u.age[k] = u.age[j]; u.max[k] = u.max[j]; u.pos[k * 3] = u.pos[j * 3]; u.pos[k * 3 + 1] = u.pos[j * 3 + 1]; u.pos[k * 3 + 2] = u.pos[j * 3 + 2]; continue; }
+      M.a.makeTranslation(u.pos[k * 3], u.pos[k * 3 + 1], u.pos[k * 3 + 2]); ring.setMatrixAt(k, M.a); ringT.array[k] = u.age[k] / u.max[k]; k++; }
+    ring.count = ripN; ring.instanceMatrix.needsUpdate = true; ringT.needsUpdate = true;
+  }
+  // (an emitter's clock: true when it is time for another puff, at `rate` a second)
+  function every(key, rate, dt) { let t = (emit.get(key) || 0) + dt * rate; let n = 0; while (t >= 1) { t -= 1; n++; } emit.set(key, t); return n; }
   F3.init = function (three, realm) {
     THREE = three; R3 = realm; scene = realm.scene();
     const cone = new THREE.ConeGeometry(0.5, 1, 6); cone.translate(0, 0.5, 0);
@@ -32,6 +116,7 @@
     const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
     hull = new THREE.InstancedMesh(box, mat, MAXS); deck = new THREE.InstancedMesh(box, mat, MAXS); mast = new THREE.InstancedMesh(cyl, mat, MAXS); sail = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide }), MAXS);
     for (const m of [hull, deck, mast, sail]) { m.count = 0; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); }
+    makePools();
   };
   const M = {}; const mats = () => { if (M.a) return; M.a = new THREE.Matrix4(); M.b = new THREE.Matrix4(); M.c = new THREE.Color(); M.z = new THREE.Matrix4().makeScale(0, 0, 0); };
   // (ship sizes, metres: [length, beam, mast])
@@ -55,11 +140,20 @@
         if (f > best) { best = f; bx = (x + 0.5) * L; by = gY + 2; bz = (y + 0.5) * L; }
       }
     }
+    // (the campfires of the towns: always burning, as the god sees them — flames, sparks, a column of smoke, their light)
+    for (const b of S.buildings.values()) {
+      if (b.type !== 'campfire' || !b.built || n >= MAXF - 2) continue; const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > 3600) continue;
+      const gY = W.hAt(b.x + b.w / 2, b.y + b.h / 2) * H + 0.55;
+      for (let k = 0; k < 2; k++) { const fl = 0.8 + Math.sin(t * (8 + k * 3) + b.id) * 0.15 + G.VR() * 0.1; M.a.makeScale(0.75 - k * 0.25, (1.3 - k * 0.3) * fl, 0.75 - k * 0.25); M.a.setPosition(X + (k ? 0.15 : 0), gY, Z); flame.setMatrixAt(n, M.a); M.a.makeScale(0.35, 0.8 * fl, 0.35); M.a.setPosition(X, gY, Z); glow.setMatrixAt(n, M.a); n++; }
+      const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; const f = 0.75 * (1 - Math.min(0.6, d2 / 3600)); if (f > best) { best = f; bx = X; by = gY + 1.2; bz = Z; }
+      for (let k = every('cf' + b.id, 1.3, rdt); k > 0; k--) spawn(PA, { x: X, y: gY + 1.2, z: Z, vy: G.vrr(0.9, 1.4), life: G.vrr(3, 5), s0: 0.4, s1: 2.6, c: [0.6, 0.6, 0.6], a: 0.32, drag: 0.4, fade: 1 });
+      for (let k = every('cs' + b.id, 3, rdt); k > 0; k--) spawn(PG, { x: X + G.vrr(-0.3, 0.3), y: gY + 0.4, z: Z + G.vrr(-0.3, 0.3), vx: G.vrr(-0.3, 0.3), vy: G.vrr(1.8, 3.4), vz: G.vrr(-0.3, 0.3), life: G.vrr(0.7, 1.4), s0: 0.12, s1: 0.03, c: [1, 0.72, 0.3], a: 1, sh: 1, drag: 0.6, wob: 1 });
+    }
     flame.count = glow.count = n; flame.instanceMatrix.needsUpdate = glow.instanceMatrix.needsUpdate = true; F3.fires = n;
     light.intensity = best > 0 ? 18 * best * (0.85 + G.VR() * 0.3) : 0; light.position.set(bx, by, bz);
     // ---- rain (or snow on the cold lands): round the eye, as much as the world's weather pours
     const cam = R3.camera(); const wr = S.weather ? S.weather.rain || 0 : 0;
-    const cold = G.Biomes && G.Biomes.cold ? G.Biomes.cold(W.idx(G.clamp(focus.X / L, 0, G.N - 1), G.clamp(focus.Z / L, 0, G.N - 1))) : false;
+    const cold = G.Biome && G.Biome.cold ? G.Biome.cold(W.idx(G.clamp(focus.X / L, 0, G.N - 1), G.clamp(focus.Z / L, 0, G.N - 1))) : false;
     rain.material.opacity = G.clamp(wr * 1.4, 0, 0.75); rain.material.size = cold ? 0.16 : 0.08; rain.material.color.set(cold ? 0xf4f8ff : 0xc8d8e8);
     if (wr > 0.05) {
       const sp = cold ? 2.2 : 16; const cnt = Math.floor(NR * G.clamp(wr * 1.5, 0.1, 1));
@@ -93,5 +187,86 @@
     for (const id of svis.keys()) if (!seen.has(id)) svis.delete(id);
     for (const im of [hull, deck, mast, sail]) { im.count = m; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }
     F3.ships = m;
+    // ---- the trees falling near the eye: each one its own picture, turned over on its foot as the world's tree falls,
+    // with a burst of leaves and dust where it lands
+    for (const tr of S.trees.values()) { if (tr.stage !== 'fall' || falling.has(tr.id)) continue; const X = tr.x * L, Z = tr.y * L; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > 90 * 90) continue; falling.set(tr.id, { m: R3.treeMesh(tr), landed: false }); R3.refreshAt(tr.x, tr.y); }
+    for (const [id, f] of falling) {
+      const tr = S.trees.get(id);
+      if (!tr || tr.stage !== 'fall') { R3.dropMesh(f.m); falling.delete(id); if (tr) R3.refreshAt(tr.x, tr.y); continue; }
+      const k = G.easeIn ? G.easeIn(Math.min(1, tr.fallT / 0.9)) : Math.min(1, tr.fallT / 0.9) ** 2; f.m.rotation.set(0, 0, -(tr.fallDir || 1) * k * Math.PI / 2 * 0.92); f.m.updateMatrixWorld();
+      if (k > 0.9 && !f.landed) { f.landed = true; const X = tr.x * L + (tr.fallDir || 1) * 5 * Math.max(0.4, tr.size), Y = W.groundH(tr.x, tr.y) * H, Z = tr.y * L; const c = R3.crownOf(Object.assign({}, tr, { stage: 'grow' }));
+        for (let q = 0; q < 14; q++) spawn(PA, { x: X + G.vrr(-2.5, 2.5), y: Y + 0.3, z: Z + G.vrr(-1.5, 1.5), vx: G.vrr(-1.2, 1.2), vy: G.vrr(0.4, 1.2), vz: G.vrr(-1.2, 1.2), life: G.vrr(1, 1.8), s0: 0.6, s1: 2.2, c: [0.7, 0.62, 0.5], a: 0.35, drag: 1.2 });
+        if (c) for (let q = 0; q < 26; q++) spawn(PA, { x: X + G.vrr(-3, 3), y: Y + G.vrr(0.5, 2.5), z: Z + G.vrr(-2, 2), vx: G.vrr(-1.5, 1.5), vy: G.vrr(0.5, 2), vz: G.vrr(-1.5, 1.5), life: G.vrr(2, 4), s0: 0.17, s1: 0.17, c: c[4], a: 1, sh: 2, drag: 1.4, grav: 1.5, wob: 1.6 }); }
+    }
+    // ---- the small life of the air: smoke, sparks, dust, splashes, chips, leaves, fireflies
+    emitters(rdt, focus, t);
+    { const w = S.weather; const ws = G.clamp(w.windS || 0, 0, 2); const wx = Math.cos(w.windA || 0) * (0.4 + ws * 1.4), wz = Math.sin(w.windA || 0) * (0.4 + ws * 1.4);
+      stepPool(PA, rdt, wx, wz, t); stepPool(PG, rdt, wx, wz, t); stepRings(rdt); }
+    const cam2 = R3.camera(); const ren = R3.renderer(); PU.uScale.value = ren.domElement.height / (2 * Math.tan(cam2.fov * Math.PI / 360));
+    const fog = R3.scene().fog; PU.uFogC.value.copy(fog.color).convertLinearToSRGB(); PU.uFogN.value = fog.near; PU.uFogF.value = fog.far;
+    { const am = G.Render.ambient(); PU.uLit.value = G.clamp((am[0] + am[1] + am[2]) / 765, 0.3, 1); }
+    F3.particles = PA.n + PG.n; F3.rings = ripN;
   };
+  // ------------------------------ what raises the particles ------------------------------
+  let leaves = [];
+  function leafList(focus) {
+    const S = G.S; const L = G.Space.TILE; leaves = []; const x0 = Math.floor(focus.X / L), y0 = Math.floor(focus.Z / L);
+    for (let y = y0 - 8; y <= y0 + 8; y++) for (let x = x0 - 8; x <= x0 + 8; x++) { if (!W.inb(x, y)) continue; const id = S.treeAt[y * G.N + x]; const t = id && S.trees.get(id); if (!t) continue; const c = R3.crownOf(t); if (c) leaves.push(c); if (leaves.length > 60) return; }
+  }
+  function emitters(dt, focus, t) {
+    const S = G.S; const L = G.Space.TILE, H = G.Space.HM; const w = S.weather; const ws = G.clamp(w.windS || 0, 0, 2); const wx = Math.cos(w.windA || 0) * (0.4 + ws * 1.4), wz = Math.sin(w.windA || 0) * (0.4 + ws * 1.4);
+    const night = G.clamp(G.Render.nightness(), 0, 1); const tm = S.time; const snowAt = R3.snowAt || (() => 0);
+    // the chimneys: houses at the cold hours (and all day where it snows), the forge, the kiln and the inn while they work
+    if (G.Build3D) for (const [id, c] of G.Build3D.chim) {
+      if ((c[0] - focus.X) ** 2 + (c[2] - focus.Z) ** 2 > 6400) continue;
+      const b = S.buildings.get(id); if (!b || !b.built) { G.Build3D.chim.delete(id); continue; }
+      const work = b.type === 'forja' || b.type === 'olaria' || b.type === 'workshop' || b.type === 'taverna';
+      // (as the god's view smokes them: the kilns always, a house more at night and in the cold)
+      const rate = work ? (b.type === 'forja' ? 4 : 2.6) : 0.8 + night * 1.4 + (snowAt(W.idx(b.x, b.y)) > 0.3 ? 0.8 : 0) + (tm < 0.14 ? 0.8 : 0);
+      if (S.fire[W.idx(b.x, b.y)] > 0.05) continue;
+      for (let k = every('c' + id, rate, dt); k > 0; k--) spawn(PA, { x: c[0] + G.vrr(-0.15, 0.15), y: c[1], z: c[2] + G.vrr(-0.15, 0.15), vx: G.vrr(-0.1, 0.1), vy: G.vrr(0.7, 1.1), vz: G.vrr(-0.1, 0.1), life: G.vrr(5, 7.5), s0: 0.5, s1: G.vrr(3, 4.4), c: b.type === 'forja' ? [0.34, 0.33, 0.34] : [0.68, 0.68, 0.7], a: 0.4, drag: 0.35, fade: 1 });
+    }
+    // fire: a column of smoke over each burning tile near the eye, and sparks flying up out of it
+    if (G.Nature && G.Nature.fireSet && G.Nature.fireSet.size) { let m = 0; for (const i of G.Nature.fireSet) {
+      if (m > 40) break; const f = S.fire[i]; if (f < 0.08) continue; const x = i % G.N, y = (i / G.N) | 0; const X = (x + 0.5) * L, Z = (y + 0.5) * L; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > 4900) continue; m++;
+      const top = G.Build3D ? G.Build3D.heightAt(i) : 0; const Y = W.maxH(x, y, 1, 1) * H + (top ? top * 0.75 : 0) + 1.5;
+      for (let k = every('fs' + i, 2.5 * f + 0.5, dt); k > 0; k--) spawn(PA, { x: X + G.vrr(-1.5, 1.5), y: Y + 1, z: Z + G.vrr(-1.5, 1.5), vy: G.vrr(1.6, 2.6), life: G.vrr(4, 6), s0: 1.2, s1: G.vrr(5, 7), c: [0.2, 0.19, 0.19], a: 0.5, drag: 0.25, fade: 1 });
+      for (let k = every('fk' + i, 7 * f + 1, dt); k > 0; k--) spawn(PG, { x: X + G.vrr(-1.2, 1.2), y: Y, z: Z + G.vrr(-1.2, 1.2), vx: G.vrr(-0.6, 0.6), vy: G.vrr(2.5, 5), vz: G.vrr(-0.6, 0.6), life: G.vrr(0.8, 1.8), s0: 0.16, s1: 0.04, c: [1, 0.62, 0.22], a: 1, sh: 1, drag: 0.6, grav: -0.5, wob: 1.2 });
+    } }
+    // the steps of people: dust when they run (snow kicked up where it lies), rings and splashes in the water
+    const av = G.People3D && G.People3D.avatar;
+    const feet = (X, Y, Z, sp, id, wade) => {
+      const x = Math.floor(X / L), y = Math.floor(Z / L); if (!W.inb(x, y)) return; const i = y * G.N + x; const ty = S.type[i];
+      if (ty <= G.T.RIVER || wade > 0.05) {
+        if (sp < 0.4) return; const wy = (ty === G.T.RIVER ? S.wl[i] : G.SEA) * H + 0.06;
+        for (let k = every('w' + id, 2.5 + sp, dt); k > 0; k--) { ripple(X + G.vrr(-0.2, 0.2), Math.max(Y, wy), Z + G.vrr(-0.2, 0.2), 1.3); for (let q = 0; q < 3; q++) spawn(PA, { x: X, y: Math.max(Y, wy) + 0.1, z: Z, vx: G.vrr(-1, 1), vy: G.vrr(1.5, 2.6), vz: G.vrr(-1, 1), life: 0.55, s0: 0.09, s1: 0.05, c: [0.85, 0.92, 0.98], a: 0.8, sh: 1, grav: 9.8 }); }
+        return;
+      }
+      if (sp < 2.4 && !(id === 'av' && sp > 0.9)) return;
+      const snow = snowAt(i); const soft = (ty === G.T.GRASS || ty === G.T.MEADOW) && !S.road[i] && G.pathLevel(S.wear[i]) < 2 && snow < 0.4;
+      if (soft && sp < 4) return; // (soft grass raises little)
+      let c; if (snow > 0.4) c = [0.94, 0.96, 1]; else { const g = G.Ground3D.tileCol(i, x, y); c = [Math.min(1, g[0] / 255 * 1.15), Math.min(1, g[1] / 255 * 1.12), Math.min(1, g[2] / 255 * 1.1)]; }
+      for (let k = every('d' + id, sp > 2.4 ? sp * 1.6 : 1.2, dt); k > 0; k--) spawn(PA, { x: X + G.vrr(-0.15, 0.15), y: Y + 0.08, z: Z + G.vrr(-0.15, 0.15), vx: G.vrr(-0.4, 0.4), vy: G.vrr(0.25, 0.6), vz: G.vrr(-0.4, 0.4), life: G.vrr(0.7, 1.2), s0: 0.25, s1: G.vrr(0.8, 1.3), c, a: snow > 0.4 ? 0.6 : 0.32, drag: 1.4 });
+    };
+    if (av) feet(av.X, av.Y, av.Z, av.sp || 0, 'av', av.wade || 0);
+    if (G.People3D) for (const p of G.People3D.walkers) {
+      feet(p[0], p[1], p[2], p[3], p[7], 0);
+      // (the chips of the axe, the pick, the hammer, at the blow)
+      const a = p[5]; if (a === 'chop' || a === 'mine' || a === 'build' || a === 'hammer' || a === 'dig') { const n = every('h' + p[7], 2.2, dt); const fx = Math.cos(p[6]) * 0.7, fz = Math.sin(p[6]) * 0.7; const wood = a === 'chop' || a === 'build';
+        for (let k = 0; k < n * 4; k++) spawn(PA, { x: p[0] + fx, y: p[1] + (a === 'chop' ? 0.9 : 0.3), z: p[2] + fz, vx: fx * 2 + G.vrr(-1.2, 1.2), vy: G.vrr(1.5, 3.2), vz: fz * 2 + G.vrr(-1.2, 1.2), life: G.vrr(0.6, 1), s0: 0.09, s1: 0.07, c: wood ? [0.86, 0.72, 0.5] : a === 'dig' ? [0.5, 0.4, 0.3] : [0.62, 0.6, 0.58], a: 1, sh: 2, grav: 9.8 }); }
+    }
+    // leaves falling from the crowns round the eye, more in the wind (a few already turning)
+    leafT -= dt; if (leafT <= 0) { leafT = 2; leafList(focus); }
+    if (leaves.length) for (let k = every('leaf', (1.2 + ws * 5) * Math.min(1, leaves.length / 8), dt); k > 0; k--) { const tr = G.vpick(leaves); const au = G.VR() < 0.25 ? G.VR() * 0.6 : 0;
+      spawn(PA, { x: tr[0] + G.vrr(-tr[3], tr[3]), y: tr[1] + G.vrr(-1, 1), z: tr[2] + G.vrr(-tr[3], tr[3]), vx: wx * 0.5, vy: -G.vrr(0.5, 0.9), vz: wz * 0.5, life: G.vrr(5, 8), s0: 0.17, s1: 0.17, c: [G.lerp(tr[4][0], 0.86, au), G.lerp(tr[4][1], 0.56, au), G.lerp(tr[4][2], 0.2, au)], a: 1, sh: 2, drag: 1.2, wob: 1.6 }); }
+    // fireflies over the land on warm, dry nights
+    const fi = W.idx(G.clamp(Math.floor(focus.X / L), 0, G.N - 1), G.clamp(Math.floor(focus.Z / L), 0, G.N - 1));
+    if (night > 0.6 && !(w.rain > 0.1) && S.temp && S.temp[fi] / 255 > 0.36) for (let k = every('ff', 3.4, dt); k > 0; k--) { const X = focus.X + G.vrr(-14, 14), Z = focus.Z + G.vrr(-14, 14); const x = Math.floor(X / L), y = Math.floor(Z / L); if (!W.inb(x, y) || S.type[y * G.N + x] <= G.T.RIVER) continue;
+      spawn(PG, { x: X, y: W.hAt(X / L, Z / L) * H + G.vrr(0.4, 1.8), z: Z, vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.08, 0.08), vz: G.vrr(-0.3, 0.3), life: G.vrr(6, 10), s0: 0.13, s1: 0.13, c: [0.78, 1, 0.38], a: 1, sh: 1, wob: 0.8, fade: 1 }); }
+    // rain: drops striking the ground, rings on the water (snow falls soft: nothing)
+    const rain = w.rain || 0;
+    if (rain > 0.15 && snowAt(fi) < 0.3) for (let k = every('rn', rain * 60, dt); k > 0; k--) { const X = focus.X + G.vrr(-14, 14), Z = focus.Z + G.vrr(-14, 14); const x = Math.floor(X / L), y = Math.floor(Z / L); if (!W.inb(x, y)) continue; const i = y * G.N + x;
+      if (S.type[i] <= G.T.RIVER) ripple(X, (S.type[i] === G.T.RIVER ? S.wl[i] : G.SEA) * H + 0.06, Z, 0.8);
+      else spawn(PA, { x: X, y: W.hAt(X / L, Z / L) * H + 0.05, z: Z, vy: 0.8, life: 0.25, s0: 0.12, s1: 0.03, c: [0.85, 0.9, 0.95], a: 0.7, sh: 1, grav: 6 }); }
+  }
 })(window.G);

@@ -348,6 +348,14 @@
       // (the view: the mode and the truth agree — never the god's eye on a body nobody lives, never a lived body unseen)
       if (G.Modes && G.Modes.state === 'INC' && !a) add('avatar', 2, 'o Modo Encarnado está ativo sem ninguém encarnado');
     }
+    // ---- the 3D of the body (realm3d, ground3d, fx3d): only seen, but it must show the world as it is — the ground's
+    // picture painted from the tiles the world has now, the particles in their bounds, the trees falling only while they fall
+    if (G.Realm && G.Realm.on && G.Ground3D && G.Ground3D.check) {
+      const b = (G.Possess && G.Possess.body()) || null;
+      if (b) { const c = G.Ground3D.check(b.x, b.y, 30, 200); if (c.n > 50 && c.bad > c.n * 0.25) add('vista3d', 3, `o chão do 3D não bate com o mundo em ${c.bad} de ${c.n} casas perto do corpo`); }
+      if (G.FX3D && G.FX3D.check) for (const m of G.FX3D.check()) add('vista3d', 2, m);
+      if (G.People3D && G.People3D.check) for (const m of G.People3D.check()) add('vista3d', 2, m);
+    }
     // ---- the dragon (dragon.js): where it is, what it holds, and who is climbing to its lair
     {
       const L = s.dragons || []; const T = G.T; const ST = { chega: 1, caca: 1, passe: 1, curva: 1, rouba: 1, volta: 1, dorme: 1, luta: 1, parte: 1, morre: 1 };

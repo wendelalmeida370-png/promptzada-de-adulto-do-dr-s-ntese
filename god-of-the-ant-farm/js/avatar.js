@@ -262,7 +262,7 @@
     if (!b) return; // (the step ended the body: a fall killed it, the world took it)
     // the picture between two steps (interpolated: smooth at any frame rate)
     const f = b.acc / TUNE.step;
-    const P3 = G.People3D; if (P3) { const L = P3.look(v); P3.avatar = { id: v.id, X: G.lerp(b.pX, b.X, f), Y: G.lerp(b.pY, b.Y, f) - (b.wade > 0 ? 0 : 0), Z: G.lerp(b.pZ, b.Z, f), yaw: b.yaw, pose: b.pose, look: L }; }
+    const P3 = G.People3D; if (P3) { const L = P3.look(v); P3.avatar = { id: v.id, X: G.lerp(b.pX, b.X, f), Y: G.lerp(b.pY, b.Y, f) - (b.wade > 0 ? 0 : 0), Z: G.lerp(b.pZ, b.Z, f), yaw: b.yaw, pose: b.pose, look: L, sp: b.speed, wade: b.wade, ground: b.ground, act: b.act }; } // (its speed, its wading and footing: for the dust and the splashes it raises)
   };
   // where the body is, for the camera (interpolated)
   Av.pos = function () { if (!b) return null; const f = b.acc / TUNE.step; return { X: G.lerp(b.pX, b.X, f), Y: G.lerp(b.pY, b.Y, f), Z: G.lerp(b.pZ, b.Z, f), yaw: b.yaw, speed: b.speed, ground: b.ground, vy: b.vy }; };

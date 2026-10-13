@@ -12,6 +12,10 @@
 //  e9  casos ruins — capturado por inimigos, levado a um navio, a terra afunda sob os pés, um prédio nasce em cima, a guerra
 //      chama, uma cena quer o corpo; e as mãos mudando o mundo: lenha, frutas, pedra, armazém, comida, obra, templo, a cama
 //  e10 interface — o botão Encarnar (e o motivo quando não pode), a tecla I, a ficha com os dados reais, o menu, as teclas
+//  e11 o 3D bonito é o mesmo mundo — o chão pintado casa por casa como o mundo é (ruas, roças, mar) e seguindo-o quando muda;
+//      as plantas que balançam e os padrões das paredes e telhados nas geometrias; o fogo solta fumaça e faíscas; a árvore
+//      derrubada cai e deita (nunca de pé e caída ao mesmo tempo); quem está perto vira a cabeça para o corpo; com o mundo
+//      parado, o desenho não mexe no acaso nem no relógio do mundo
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'); const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
@@ -475,6 +479,62 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   ok('e10 Esc abre o menu e pausa; as teclas mudam; G volta; I encarna', e10.menu.open && e10.menu.paused && e10.menu.closed && e10.rebind && e10.gkey && e10.ikey, JSON.stringify({ menu: e10.menu, rebind: e10.rebind, g: e10.gkey, i: e10.ikey }));
   ok('e10 no toque: o polegar à esquerda anda, os botões aparecem', e10.touch.walked > 2 && e10.touch.buttons, JSON.stringify(e10.touch));
 
+  }
+  if (await need('e11')) {
+  // ================================ e11: the looks of the 3D, and that they are the world's ================================
+  const e11 = await E(() => {
+    __E.fresh('cidade'); const S = G.S, N = G.N, T = G.T; const K = G.Ground3D.K; const out = {};
+    const s = __E.town(); const v = __E.adults(s)[0]; out.inn = __E.enter(v); __E.f(30); const b = __E.body();
+    // the ground's picture: round the body, and every street, field and sea tile of the map
+    out.near = G.Ground3D.check(b.x, b.y, 30, 400);
+    let road = 0, roadOk = 0, farm = 0, farmOk = 0, sea = 0, seaOk = 0;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const i = y * N + x; const t = G.Ground3D.texel(x, y); if (!t) continue; const burnt = S.burnt[i] > 0 || S.scar[i] > 0;
+      if (S.road[i] && S.type[i] > T.RIVER && !burnt) { road++; if (t[3] === K.gravel || t[3] === K.paved || t[3] === K.highway) roadOk++; }
+      const bb = S.occ[i] && S.buildings.get(S.occ[i]); if (bb && bb.type === 'farm' && !S.road[i] && !burnt && S.type[i] > T.RIVER) { farm++; if (t[3] === K.field) farmOk++; }
+      if (S.type[i] <= T.SEA) { sea++; if (t[3] === K.bed) seaOk++; }
+    }
+    out.map = { road: [roadOk, road], farm: [farmOk, farm], sea: [seaOk, sea] };
+    // the picture follows the world: a tile near the body scorched, and its texel turns to ash a few frames later
+    let spot = null; for (let r = 2; r < 9 && !spot; r++) for (let dy = -r; dy <= r && !spot; dy++) for (let dx = -r; dx <= r; dx++) { const x = Math.floor(b.x) + dx, y = Math.floor(b.y) + dy; if (!G.W.inb(x, y)) continue; const i = y * N + x; if ((S.type[i] === T.GRASS || S.type[i] === T.MEADOW) && !S.occ[i] && !S.road[i] && !S.treeAt[i] && !S.objAt[i]) { spot = [x, y, i]; break; } }
+    if (spot) { const k0 = G.Ground3D.texel(spot[0], spot[1])[3]; S.burnt[spot[2]] = 80; const fr = __E.until(() => G.Ground3D.texel(spot[0], spot[1])[3] === K.burnt, 160); out.burn = { before: k0, frames: fr, after: G.Ground3D.texel(spot[0], spot[1])[3], burnt: K.burnt }; S.burnt[spot[2]] = 0; }
+    // the plants that sway and the stuff of the walls: in the geometries of the near world
+    let plants = 0, swayed = 0, solid = 0, noAP = 0, pat = 0, all = 0; const M = G.Realm.mats();
+    G.Realm.scene().traverse(o => { if (!o.isMesh || !o.geometry || o.isInstancedMesh) return; const g = o.geometry;
+      if (o.material === M.plant) { plants++; if (g.attributes.aK) swayed++; }
+      if (o.material === M.solid) { solid++; const a = g.attributes.aP; if (!a) { noAP++; return; } for (let k = 0; k < a.count; k++) if (a.array[k] > 0) pat++; all += a.count; } });
+    out.geo = { plants, swayed, solid, noAP, share: all ? +(pat / all).toFixed(2) : 0 };
+    // (and the houses near the body: each with the walls and the roof of its people — planks and turf in the north, tiles in Rome)
+    const hs = [...S.buildings.values()].filter(q => q.built && (q.type === 'house' || q.type === 'hut' || q.type === 'sobrado') && G.dist(q.x, q.y, b.x, b.y) < 30).slice(0, 6);
+    out.houses = hs.map(q => { const r = G.Build3D.patsOf(q); return { id: q.id, ok: !!(r.pats[r.wall] && r.pats[r.roof]), wall: r.wall, roof: r.roof, pats: r.pats }; });
+    // fire near the body: smoke and sparks rise; the points stay numbers in their pool
+    // (what burns here: a tree, a bush — in the cold the grass does not take fire)
+    let fs = null; for (let r = 2; r < 12 && !fs; r++) for (let dy = -r; dy <= r && !fs; dy++) for (let dx = -r; dx <= r; dx++) { const x = Math.floor(b.x) + dx, y = Math.floor(b.y) + dy; if (!G.W.inb(x, y)) continue; const i = y * N + x; const fu = G.Nature.fuel(i); if (fu && fu !== 'building' && fu !== 'crop') { fs = i; break; } }
+    if (fs !== null) { const p0 = G.FX3D.particles || 0; const lit = G.Nature.ignite(fs, 0.9); __E.f(45); out.fire = { lit, before: p0, after: G.FX3D.particles, burning: S.fire[fs] > 0, check: G.FX3D.check() }; G.Nature.extinguish(fs, 9); }
+    // a tree near the body felled by the world: drawn falling, then lying — and the falling picture gone
+    const tr = [...S.trees.values()].filter(t => t.stage === 'grow' && t.size > 0.5).sort((p, q) => G.dist2(p.x, p.y, b.x, b.y) - G.dist2(q.x, q.y, b.x, b.y))[0];
+    if (tr && G.dist(tr.x, tr.y, b.x, b.y) < 18) { G.Nature.fellTree(tr, 1); __E.f(3); const during = G.FX3D.fallingN(); const fr = __E.until(() => tr.stage !== 'fall', 300); __E.f(3); out.fall = { during, frames: fr, after: G.FX3D.fallingN(), stage: tr.stage, check: G.FX3D.check() }; }
+    // someone standing in front of the body turns their head to it
+    // the head turned to the body: the rule (in front, near, idle or talking — not behind, not far, not bent over work)
+    // and the living people round the body who stand in front of it
+    { const F = G.People3D.lookFor; const av0 = { X: 2, Z: 1 };
+      out.lookRule = { front: +F(0, 0, 0, av0, 'idle').toFixed(2), behind: F(0, 0, 0, { X: -2, Z: 0 }, 'idle'), far: F(0, 0, 0, { X: 9, Z: 0 }, 'talk'), work: F(0, 0, 0, av0, 'low'), side: +F(Math.PI / 2, 0, 0, { X: 0, Z: 3 }, 'talk').toFixed(2) };
+      const av = G.People3D.avatar; let n = 0, good = 0; __E.f(20);
+      for (const p of G.People3D.walkers) { const vs = G.People3D.visOf(p[7]); if (!vs || !av) continue; const want = F(vs.yaw, p[0], p[2], av, vs.st); if (!want) continue; n++; if (Math.abs((vs.pose.lookY || 0) - want) < 0.35 || Math.sign(vs.pose.lookY || 0) === Math.sign(want)) good++; }
+      out.look = { n, good }; }
+    // the drawing leaves the world alone: with the world paused (the menu), a second of frames changes neither its chance nor its clock
+    G.Modes.menu(true); __E.f(2); const r0 = JSON.stringify(S.rng), c0 = S.clock; __E.f(30); out.still = { rng: JSON.stringify(S.rng) === r0, clock: S.clock === c0 }; G.Modes.menu(false);
+    out.people = G.People3D.check(); __E.leave(); out.qa = __E.qa(); out.err = JSON.stringify(G.modErr);
+    return out;
+  });
+  ok('e11 o chão do 3D pinta o que o mundo tem (perto do corpo, ruas, roças, mar)', e11.inn && e11.near.n > 300 && e11.near.bad <= 2 && e11.map.road[0] === e11.map.road[1] && e11.map.road[1] > 0 && e11.map.farm[0] === e11.map.farm[1] && e11.map.sea[0] === e11.map.sea[1], JSON.stringify({ near: e11.near, map: e11.map }));
+  ok('e11 o chão segue o mundo: a casa queimada vira cinza', e11.burn && e11.burn.frames >= 0 && e11.burn.after === e11.burn.burnt, JSON.stringify(e11.burn));
+  ok('e11 plantas que balançam, paredes e telhados com o material do povo', e11.geo.plants > 0 && e11.geo.swayed === e11.geo.plants && e11.geo.solid > 0 && !e11.geo.noAP && e11.houses.length > 0 && e11.houses.every(h => h.ok), JSON.stringify(e11.geo) + ' · casas: ' + e11.houses.map(h => `#${h.id} ${h.ok ? 'ok' : 'parede ' + h.wall + '/telhado ' + h.roof + ' em ' + JSON.stringify(h.pats)}`).join(', '));
+  ok('e11 o fogo solta fumaça e faíscas', e11.fire && e11.fire.lit && e11.fire.after > e11.fire.before + 10 && !e11.fire.check.length, e11.fire ? JSON.stringify(e11.fire) : 'nada que queime perto');
+  ok('e11 a árvore derrubada cai e deita', !e11.fall || (e11.fall.during === 1 && e11.fall.after === 0 && e11.fall.stage === 'log' && !e11.fall.check.length), e11.fall ? JSON.stringify(e11.fall) : 'nenhuma árvore perto (nada a provar)');
+  ok('e11 quem está na frente vira a cabeça para o corpo', Math.abs(e11.lookRule.front + 0.46) < 0.02 && !e11.lookRule.behind && !e11.lookRule.far && !e11.lookRule.work && Math.abs(e11.lookRule.side) < 0.02 && (!e11.look.n || e11.look.good >= e11.look.n * 0.7), JSON.stringify({ regra: e11.lookRule, perto: e11.look }));
+  ok('e11 com o mundo parado, o desenho não mexe no mundo', e11.still.rng && e11.still.clock, JSON.stringify(e11.still));
+  ok('e11 verificador', !e11.qa.length && e11.err === '{}' && !e11.people.length, `${e11.qa.slice(0, 3).join(' · ') || 'limpo'} · ${e11.err} · ${e11.people.join(' · ')}`);
   }
   if (await need('e8')) {
   // ================================ e8: stress (last: it is the longest) ================================

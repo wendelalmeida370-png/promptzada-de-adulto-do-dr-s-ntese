@@ -27,27 +27,45 @@
     ['uArmL', 'box', 0.095, 0.3, 0.095], ['uArmR', 'box', 0.095, 0.3, 0.095], ['fArmL', 'box', 0.085, 0.28, 0.085], ['fArmR', 'box', 0.085, 0.28, 0.085], ['handL', 'sph', 0.09, 0.09, 0.09], ['handR', 'sph', 0.09, 0.09, 0.09],
     ['thighL', 'box', 0.135, 0.44, 0.14], ['thighR', 'box', 0.135, 0.44, 0.14], ['shinL', 'box', 0.115, 0.44, 0.12], ['shinR', 'box', 0.115, 0.44, 0.12], ['footL', 'box', 0.1, 0.07, 0.24], ['footR', 'box', 0.1, 0.07, 0.24],
     ['skirt', 'cyl', 0.44, 0.42, 0.34], ['carry', 'box', 0.34, 0.26, 0.3], ['tool', 'box', 0.04, 0.95, 0.04], ['marker', 'cone', 0.14, 0.2, 0.14],
+    ['neckP', 'cyl', 0.09, 0.08, 0.09], ['eyeL', 'sph', 0.04, 0.045, 0.03], ['eyeR', 'sph', 0.04, 0.045, 0.03], ['nose', 'sph', 0.045, 0.06, 0.05], ['belt', 'cyl', 0.37, 0.06, 0.24], ['brow', 'box', 0.17, 0.025, 0.03],
   ];
+  // (the shape of each part: rounded limbs, a torso with a waist and shoulders, a cap of hair — not crates)
+  const SHAPE = { pelvis: 'ball', torso: 'torso', head: 'head', hair: 'cap', hairL: 'limb', uArmL: 'limb', uArmR: 'limb', fArmL: 'limb', fArmR: 'limb', thighL: 'limb', thighR: 'limb', shinL: 'limb', shinR: 'limb', footL: 'foot', footR: 'foot', neckP: 'cyl', eyeL: 'sph', eyeR: 'sph', nose: 'sph', belt: 'cyl', brow: 'box' };
   const PI = {}; PARTS.forEach((p, k) => { PI[p[0]] = k; });
   let mesh = null; // InstancedMesh per part
-  let beastMesh = null, crowd = null, crowdHead = null;
+  let beastMesh = null, crowd = null, crowdHead = null, crowdHair = null, crowdLegs = null;
   const vis = new Map(); // id → the view's own memory of someone: where they were, which way they face, their walk, their pose
-  P3.clear = function () { vis.clear(); if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = 0; } P3.count = 0; P3.crowd = 0; };
+  P3.clear = function () { vis.clear(); if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
   G.worldHooks.push(() => vis.clear());
 
   P3.init = function (three, realm) {
     THREE = three; R3 = realm; scene = realm.scene();
     const geo = { box: new THREE.BoxGeometry(1, 1, 1), sph: new THREE.SphereGeometry(0.5, 10, 8), cyl: new THREE.CylinderGeometry(0.42, 0.5, 1, 10), cone: new THREE.ConeGeometry(0.5, 1, 4) };
     geo.cone.rotateX(Math.PI); // (a marker over a head points down at it)
+    // (a limb: a capsule one unit long; the torso turned on a lathe — waist, chest, shoulders; the head a little egg;
+    // the hair a cap over its top and back; a foot a capsule lying along the step)
+    geo.limb = new THREE.CapsuleGeometry(0.5, 1, 3, 9); geo.limb.scale(1, 0.5, 1);
+    geo.ball = new THREE.SphereGeometry(0.5, 12, 8);
+    geo.torso = new THREE.LatheGeometry([[0.0, 0], [0.4, 0.0], [0.43, 0.2], [0.47, 0.55], [0.5, 0.78], [0.44, 0.94], [0.2, 1.0], [0.0, 1.0]].map(([r, y]) => new THREE.Vector2(r, y)), 14); geo.torso.translate(0, -0.5, 0);
+    geo.head = new THREE.SphereGeometry(0.5, 16, 12);
+    geo.cap = new THREE.SphereGeometry(0.5, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+    geo.foot = new THREE.CapsuleGeometry(0.5, 1, 3, 8); geo.foot.rotateX(Math.PI / 2); geo.foot.scale(1, 1, 0.5);
     const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-    mesh = PARTS.map(p => { const m = new THREE.InstancedMesh(geo[p[1]], p[0] === 'marker' ? new THREE.MeshBasicMaterial({ color: 0xffffff }) : mat, MAX); m.count = 0; m.castShadow = p[0] !== 'marker'; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); return m; });
-    // the beasts: body, head, four legs, tail
-    const bp = [['body', 'sph'], ['bhead', 'sph'], ['leg0', 'box'], ['leg1', 'box'], ['leg2', 'box'], ['leg3', 'box'], ['tail', 'box'], ['wing0', 'box'], ['wing1', 'box']]; // (round bodies and heads: a beast, not a crate)
-    beastMesh = bp.map(p => { const m = new THREE.InstancedMesh(geo[p[1]], mat, MAXA); m.count = 0; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); return m; });
-    // the crowd further off: the same real people, drawn simply (a body and a head, the colours of their clothes and skin)
-    const body = new THREE.CylinderGeometry(0.17, 0.22, 1, 6); body.translate(0, 0.5, 0);
-    crowd = new THREE.InstancedMesh(body, mat, MAXC); crowdHead = new THREE.InstancedMesh(new THREE.SphereGeometry(0.13, 6, 4), mat, MAXC);
-    for (const m of [crowd, crowdHead]) { m.count = 0; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); }
+    // (a soft light on the edges of a body, as the god's view outlines its little people: they read against the ground)
+    mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * 0.32;\n#include <opaque_fragment>'); };
+    mesh = PARTS.map(p => { const m = new THREE.InstancedMesh(geo[SHAPE[p[0]] || p[1]], p[0] === 'marker' ? new THREE.MeshBasicMaterial({ color: 0xffffff }) : mat, MAX); m.count = 0; m.castShadow = p[0] !== 'marker' && p[0] !== 'eyeL' && p[0] !== 'eyeR' && p[0] !== 'brow' && p[0] !== 'nose'; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); return m; });
+    // the beasts: a round body, a neck, a head with its snout and ears and eyes, four legs (or two), a tail, wings, horns,
+    // a mane — each part one instanced mesh (BP names them)
+    const cone = new THREE.ConeGeometry(0.5, 1, 6); cone.translate(0, 0.5, 0);
+    beastMesh = BP.map(p => { const m = new THREE.InstancedMesh(p[1] === 'cone' ? cone : geo[p[1]], mat, MAXA); m.count = 0; m.castShadow = p[0] !== 'eye0' && p[0] !== 'eye1'; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); return m; });
+    // the crowd further off: the same real people, drawn simply — a body in their clothes, a head, hair, two legs
+    // stepping when they walk (the colours of their clothes, skin and hair)
+    const body = new THREE.CapsuleGeometry(0.2, 0.42, 2, 8); body.translate(0, 0.5, 0);
+    const leg = new THREE.CapsuleGeometry(0.075, 0.6, 2, 6); leg.translate(0, -0.37, 0);
+    crowd = new THREE.InstancedMesh(body, mat, MAXC); crowdHead = new THREE.InstancedMesh(new THREE.SphereGeometry(0.13, 10, 8), mat, MAXC);
+    crowdHair = new THREE.InstancedMesh(new THREE.SphereGeometry(0.14, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat, MAXC);
+    crowdLegs = [new THREE.InstancedMesh(leg, mat, MAXC), new THREE.InstancedMesh(leg, mat, MAXC)];
+    for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs]) { m.count = 0; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); }
   };
 
   // ------------------------------ looks ------------------------------
@@ -63,7 +81,8 @@
     const h = ad < 2 ? 0.55 : ad < 16 ? 0.75 + (ad / 16) * 0.9 : ad >= 70 ? 1.68 : 1.75;
     const s = (h / 1.75) * (v.g === 'f' && ad >= 14 ? 0.95 : 1);
     const robe = v.role === 'sacerdote' || v.role === 'anciao' || v.role === 'escriba' || (v.g === 'f' && ad >= 12 && (v.id % 3 !== 0));
-    return { s, skin: v.skin || '#d8a888', hair: v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', robe, long: v.g === 'f' && ad >= 8, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia' };
+    const hair = ad >= 62 ? G.lerpColor(G.hex2rgb(v.hair || '#3a2a1a'), [214, 210, 204], G.clamp((ad - 62) / 18, 0, 0.85)) : null;
+    return { s, skin: v.skin || '#d8a888', hair: hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', belt: darker(cloth, 0.38), brow: darker(v.hair || '#3a2a1a', 0.8), nose: darker(v.skin || '#d8a888', 0.88), robe, long: v.g === 'f' && ad >= 8, bald: v.g === 'm' && ad >= 55 && v.id % 4 === 0, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia' };
   };
 
   // ------------------------------ poses ------------------------------
@@ -73,7 +92,7 @@
   // every state: a function of its own clock and of the speed (m/s) → the pose it wants
   const ST = {
     idle: (t) => ({ bob: Math.sin(t * 1.7) * 0.008, shLp: 0.05, shRp: 0.05, shLr: 0.08, shRr: -0.08, elL: 0.2, elR: 0.2, neck: Math.sin(t * 0.4) * 0.05 }),
-    walk: (t, sp) => { const ph = t, A = G.clamp(sp / 1.9, 0.25, 1) * 0.55; return { bob: Math.abs(Math.sin(ph)) * 0.035, hipL: Math.sin(ph) * A, hipR: -Math.sin(ph) * A, knL: Math.max(0, -Math.cos(ph)) * A * 1.4 + 0.08, knR: Math.max(0, Math.cos(ph)) * A * 1.4 + 0.08, shLp: -Math.sin(ph) * A * 0.75, shRp: Math.sin(ph) * A * 0.75, elL: 0.25, elR: 0.25, lean: 0.04, shLr: 0.06, shRr: -0.06 }; },
+    walk: (t, sp) => { const ph = t, A = G.clamp(sp / 1.9, 0.25, 1) * 0.55; return { bob: Math.abs(Math.sin(ph)) * 0.035, hipL: Math.sin(ph) * A, hipR: -Math.sin(ph) * A, knL: Math.max(0, -Math.cos(ph)) * A * 1.4 + 0.08, knR: Math.max(0, Math.cos(ph)) * A * 1.4 + 0.08, shLp: -Math.sin(ph) * A * 0.75, shRp: Math.sin(ph) * A * 0.75, elL: 0.25 + Math.max(0, Math.sin(ph)) * 0.2, elR: 0.25 + Math.max(0, -Math.sin(ph)) * 0.2, lean: 0.04, shLr: 0.06, shRr: -0.06, twist: Math.sin(ph) * 0.12, sway: Math.cos(ph) * 0.04 }; },
     run: (t, sp) => { const ph = t, A = G.clamp(sp / 5, 0.6, 1.1) * 0.85; return { bob: Math.abs(Math.sin(ph)) * 0.08 - 0.02, hipL: Math.sin(ph) * A, hipR: -Math.sin(ph) * A, knL: Math.max(0, -Math.cos(ph)) * A * 1.9 + 0.2, knR: Math.max(0, Math.cos(ph)) * A * 1.9 + 0.2, shLp: -Math.sin(ph) * A * 0.9, shRp: Math.sin(ph) * A * 0.9, elL: 1.25, elR: 1.25, lean: 0.24, shLr: 0.1, shRr: -0.1 }; },
     sneak: (t, sp) => { const ph = t, A = 0.35; return { crouch: 0.2, lean: 0.45, hipL: Math.sin(ph) * A - 0.3, hipR: -Math.sin(ph) * A - 0.3, knL: 0.7 + Math.max(0, -Math.cos(ph)) * 0.5, knR: 0.7 + Math.max(0, Math.cos(ph)) * 0.5, shLp: -0.5, shRp: -0.4, elL: 0.9, elR: 0.9 }; },
     jump: () => ({ hipL: -0.9, hipR: -0.3, knL: 1.4, knR: 0.6, shLp: -2.4, shRp: -2.2, shLr: 0.3, shRr: -0.3, elL: 0.3, elR: 0.3, lean: -0.05 }),
@@ -125,7 +144,7 @@
   Anim.blend = function (pose, want, dt, rate) {
     const k = 1 - Math.exp(-(rate || 12) * dt);
     for (const j in want) { if (j === 'tool') { pose.tool = want.tool; continue; } pose[j] += (want[j] - pose[j]) * k; }
-    for (const j in pose) if (!(j in want) && j !== 'tool') pose[j] += ((j === 'elL' || j === 'elR' ? 0.15 : j === 'knL' || j === 'knR' ? 0.05 : 0) - pose[j]) * k;
+    for (const j in pose) if (!(j in want) && j !== 'tool' && j !== 'lookY' && j !== 'blink') pose[j] += ((j === 'elL' || j === 'elR' ? 0.15 : j === 'knL' || j === 'knR' ? 0.05 : 0) - pose[j]) * k; // (the look and the blink have their own clocks)
     if (!('tool' in want)) pose.tool = 0;
   };
   Anim.pose = (state, t, sp) => (ST[state] || ST.idle)(t, sp || 0);
@@ -162,33 +181,42 @@
     M.b.makeScale(s, s, s); root.multiply(M.b);
     const hipY = 0.92 - pose.crouch * 0.92 + pose.bob;
     // hips, then the trunk leaning and turning above them
-    put('pelvis', idx, root, 0, hipY, 0, 0, pose.twist * 0.3, 0, 0, 0, 0, 0.34, 0.16, 0.2, L.robe ? L.cloth : L.pants, F.pel);
-    put('torso', idx, F.pel, 0, 0.06, 0, pose.lean, pose.twist * 0.7, 0, 0, 0.27, 0, 0.38, 0.52, 0.22, L.cloth, F.trunk);
-    F.neck.copy(F.trunk); M.b.makeTranslation(0, 0.54, 0); F.neck.multiply(M.b); M.b.makeRotationX(pose.neck); F.neck.multiply(M.b);
-    put('head', idx, F.neck, 0, 0.13, 0.01, 0, 0, 0, 0, 0, 0, 0.24, 0.27, 0.25, L.skin);
-    put('hair', idx, F.neck, 0, 0.18, -0.02, 0, 0, 0, 0, 0, 0, 0.265, 0.19, 0.275, L.hair);
-    if (L.long) put('hairL', idx, F.neck, 0, 0.08, -0.12, 0.1, 0, 0, 0, -0.1, 0, 0.22, 0.32, 0.07, L.hair); else hide('hairL', idx);
+    put('pelvis', idx, root, 0, hipY, 0, 0, pose.twist * 0.3, (pose.sway || 0), 0, 0.02, 0, 0.36, 0.22, 0.24, L.robe ? L.cloth : L.pants, F.pel);
+    put('torso', idx, F.pel, 0, 0.06, 0, pose.lean, pose.twist * 0.7, -(pose.sway || 0) * 0.6, 0, 0.27, 0, 0.42, 0.56, 0.25, L.cloth, F.trunk);
+    put('belt', idx, F.trunk, 0, 0.03, 0, 0, 0, 0, 0, 0, 0, 0.37, 0.06, 0.24, L.belt);
+    put('neckP', idx, F.trunk, 0, 0.54, 0, 0, 0, 0, 0, 0.02, 0, 0.1, 0.1, 0.1, L.skin);
+    F.neck.copy(F.trunk); M.b.makeTranslation(0, 0.56, 0); F.neck.multiply(M.b); M.eu.set(pose.neck, pose.lookY || 0, 0, 'YXZ'); M.b.makeRotationFromEuler(M.eu); F.neck.multiply(M.b);
+    put('head', idx, F.neck, 0, 0.14, 0.01, 0, 0, 0, 0, 0, 0, 0.23, 0.27, 0.25, L.skin);
+    // (the face: two eyes that blink now and then, the brows over them, a nose)
+    const bl = pose.blink || 1;
+    put('eyeL', idx, F.neck, 0.052, 0.155, 0.122, 0, 0, 0, 0, 0, 0, 0.042, 0.048 * bl, 0.03, '#1c1612'); put('eyeR', idx, F.neck, -0.052, 0.155, 0.122, 0, 0, 0, 0, 0, 0, 0.042, 0.048 * bl, 0.03, '#1c1612');
+    put('brow', idx, F.neck, 0, 0.2, 0.118, 0, 0, 0, 0, 0, 0, 0.17, 0.022, 0.03, L.brow);
+    put('nose', idx, F.neck, 0, 0.12, 0.128, 0, 0, 0, 0, 0, 0, 0.045, 0.06, 0.05, L.nose);
+    // (the hair: a cap tilted back, its edge over the brow in front and down to the nape behind; an old man's only behind)
+    if (L.bald) put('hair', idx, F.neck, 0, 0.12, -0.02, -1.25, 0, 0, 0, 0, 0, 0.265, 0.3, 0.285, L.hair); else put('hair', idx, F.neck, 0, 0.13, -0.01, -0.6, 0, 0, 0, 0, 0, 0.27, 0.38, 0.29, L.hair);
+    if (L.long) put('hairL', idx, F.neck, 0, 0.1, -0.11, 0.12, 0, 0, 0, -0.12, 0, 0.21, 0.36, 0.07, L.hair); else hide('hairL', idx);
     // arms: from the shoulders, down to the elbows, down to the hands (a roll above 0 opens the arm away from the body)
     // (facing +Z, the body's left hand is on +X: L at +X, R at -X; a roll toward one's own side opens the arm)
     for (const [sd, sp, sr, el, u, f, h] of [[1, pose.shLp, pose.shLr, pose.elL, 'uArmL', 'fArmL', 'handL'], [-1, pose.shRp, pose.shRr, pose.elR, 'uArmR', 'fArmR', 'handR']]) {
-      put(u, idx, F.trunk, sd * 0.235, 0.47, 0, sp, 0, sr + sd * 0.05, 0, -0.15, 0, 0.095, 0.3, 0.095, L.cloth, F.sh);
-      put(f, idx, F.sh, 0, -0.3, 0, -el, 0, 0, 0, -0.14, 0, 0.085, 0.28, 0.085, L.skin, F.fa);
-      put(h, idx, F.fa, 0, -0.29, 0, 0, 0, 0, 0, 0, 0, 0.09, 0.09, 0.09, L.skin, F.hd);
+      put(u, idx, F.trunk, sd * 0.235, 0.46, 0, sp, 0, sr + sd * 0.05, 0, -0.15, 0, 0.11, 0.34, 0.11, L.cloth, F.sh);
+      put(f, idx, F.sh, 0, -0.3, 0, -el, 0, 0, 0, -0.14, 0, 0.09, 0.31, 0.09, L.skin, F.fa);
+      put(h, idx, F.fa, 0, -0.29, 0, 0, 0, 0, 0, 0, 0, 0.1, 0.11, 0.09, L.skin, F.hd);
       if (sd < 0) { if (pose.tool || L.tool) put('tool', idx, F.hd, 0, 0, 0, pose.tool ? -Math.PI / 2 : 0, 0, 0, 0, pose.tool ? 0.3 : -0.25, 0, 0.04, 0.95, 0.04, '#7a5a3a'); else hide('tool', idx); }
     }
     // legs: from the hips, down to the knees, down to the feet
     for (const [sd, hp, kn, th, sn, ft] of [[1, pose.hipL, pose.knL, 'thighL', 'shinL', 'footL'], [-1, pose.hipR, pose.knR, 'thighR', 'shinR', 'footR']]) {
-      put(th, idx, F.pel, sd * 0.09, -0.04, 0, hp, 0, 0, 0, -0.22, 0, 0.135, 0.44, 0.14, L.pants, F.th);
-      put(sn, idx, F.th, 0, -0.44, 0, kn, 0, 0, 0, -0.22, 0, 0.115, 0.44, 0.12, L.pants, F.sn);
-      put(ft, idx, F.sn, 0, -0.45, 0.05, 0, 0, 0, 0, 0, 0, 0.1, 0.07, 0.24, L.feet);
+      put(th, idx, F.pel, sd * 0.095, -0.04, 0, hp, 0, 0, 0, -0.22, 0, 0.155, 0.48, 0.16, L.pants, F.th);
+      put(sn, idx, F.th, 0, -0.44, 0, kn, 0, 0, 0, -0.22, 0, 0.125, 0.48, 0.13, L.pants, F.sn);
+      put(ft, idx, F.sn, 0, -0.45, 0.04, 0, 0, 0, 0, 0, 0.03, 0.12, 0.09, 0.26, L.feet);
     }
-    if (L.robe) put('skirt', idx, F.pel, 0, -0.2, 0, 0, 0, 0, 0, -0.04, 0, 0.42, 0.42, 0.32, L.cloth); else hide('skirt', idx);
+    if (L.robe) put('skirt', idx, F.pel, 0, -0.2, 0, 0, 0, 0, 0, -0.06, 0, 0.46, 0.46, 0.36, L.cloth); else hide('skirt', idx);
     if (L.carry) put('carry', idx, F.trunk, 0, 0.3, 0.26, 0, 0, 0, 0, 0, 0, 0.34, 0.26, 0.3, '#9a7a4a'); else hide('carry', idx);
     if (marker) put('marker', idx, root, 0, 2.15 + Math.sin(performance.now() / 300) * 0.04, 0, 0, performance.now() / 600, 0, 0, 0, 0, 0.16, 0.22, 0.16, marker); else hide('marker', idx);
   };
 
   // ------------------------------ the frame ------------------------------
   P3.avatar = null; // (set by the body's controller: { X, Y, Z, yaw, pose, look })
+  P3.walkers = []; // (the people drawn whole this frame: [X, Y, Z, speed, state, act, yaw, id] — only seen)
   P3.highlight = 0; // (the one the body is looking at, to talk to)
   P3.update = function (dt, focus) {
     if (!mesh || !focus) return;
@@ -205,7 +233,7 @@
     }
     near.sort((a, b) => a[0] - b[0]);
     let n = Math.min(near.length, q.npcs, MAX - 1); while (n > 0 && near[n - 1][0] > R2) n--;
-    let idx = 0;
+    let idx = 0; P3.walkers.length = 0;
     if (av) { P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null); }
     const seen = new Set();
     for (let k = 0; k < n; k++) {
@@ -222,52 +250,177 @@
       const st = Anim.stateOf(v, s.sp);
       if (st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak') s.ph += dt * s.sp * (st === 'run' ? 1.9 : 2.6); else s.ph += dt * 4;
       Anim.blend(s.pose, Anim.pose(st, st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak' ? s.ph : s.t, s.sp), dt, 10);
+      // (someone standing near the body turns their head to it — and back when it goes; a blink now and then)
+      const look = P3.lookFor(s.yaw, X, Z, av, st);
+      s.pose.lookY = (s.pose.lookY || 0) + (look - (s.pose.lookY || 0)) * (1 - Math.exp(-4 * dt));
+      s.pose.blink = (s.t + (v.id % 13) * 0.37) % 4.1 < 0.12 ? 0.12 : 1;
       s.st = st;
       P3.body(idx++, X, Y, Z, s.yaw, s.pose, P3.look(v), P3.highlight === v.id ? '#ffd76a' : null);
+      if (P3.walkers.length < 40) P3.walkers.push([X, Y, Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise)
     }
     for (const id of vis.keys()) if (!seen.has(id) && !(av && id === av.id)) vis.delete(id);
     // the crowd: everyone else in reach, simply (where the world has them; no animation of their own but a step's bob)
     mats(); let c = 0; const tnow = performance.now() / 1000;
     for (let k = n; k < near.length && c < MAXC; k++) {
-      const v = near[k][1]; const L = P3.look(v); const s = L.s; const X = v.x * TL, Z = v.y * TL; const Y = W.groundH(v.x, v.y) * HM + (v.moving ? Math.abs(Math.sin(tnow * 7 + v.id)) * 0.05 : 0);
-      M.a.makeScale(s, s * 1.38, s); M.a.setPosition(X, Y, Z); crowd.setMatrixAt(c, M.a); crowd.setColorAt(c, color(L.cloth));
-      M.a.makeScale(s, s, s); M.a.setPosition(X, Y + 1.5 * s, Z); crowdHead.setMatrixAt(c, M.a); crowdHead.setColorAt(c, color(L.skin));
+      const v = near[k][1]; const L = P3.look(v); const s = L.s; const X = v.x * TL, Z = v.y * TL; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const Y = W.groundH(v.x, v.y) * HM + Math.abs(st) * 0.04;
+      const pp = v.path && v.pi < v.path.length ? v.path[v.pi] : null; const yaw = pp ? Math.atan2(pp[1] - v.y, pp[0] - v.x) : (v.face > 0 ? 0 : Math.PI);
+      M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); M.root.multiply(M.b); M.b.makeScale(s, s, s); M.root.multiply(M.b);
+      M.a.copy(M.root); M.b.makeTranslation(0, 0.72, 0); M.a.multiply(M.b); M.c.makeScale(1, 0.92, 0.72); M.a.multiply(M.c); crowd.setMatrixAt(c, M.a); crowd.setColorAt(c, color(L.cloth));
+      M.a.copy(M.root); M.b.makeTranslation(0, 1.62, 0.01); M.a.multiply(M.b); crowdHead.setMatrixAt(c, M.a); crowdHead.setColorAt(c, color(L.skin));
+      M.a.copy(M.root); M.b.makeTranslation(0, 1.64, -0.01); M.a.multiply(M.b); M.c.makeRotationX(-0.6); M.a.multiply(M.c); crowdHair.setMatrixAt(c, M.a); crowdHair.setColorAt(c, color(L.hair));
+      for (const sd of [0, 1]) { M.a.copy(M.root); M.b.makeTranslation(sd ? -0.09 : 0.09, 0.86, 0); M.a.multiply(M.b); M.c.makeRotationX((sd ? -st : st) * 0.45); M.a.multiply(M.c); crowdLegs[sd].setMatrixAt(c, M.a); crowdLegs[sd].setColorAt(c, color(L.robe ? L.cloth : L.pants)); }
       c++;
     }
-    crowd.count = crowdHead.count = c; for (const m of [crowd, crowdHead]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+    crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = c; for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
     P3.crowd = c;
     for (const m of mesh) { m.count = idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
     P3.count = idx;
     beasts(focus, R2, dt);
   };
   P3.visOf = id => vis.get(id);
+  // the turn of the head someone wants toward the body: facing yaw at (X, Z), the body av, their state — only when they
+  // stand, talk, carry or walk, the body within 6 m and somewhere in front of them (not behind their back)
+  P3.lookFor = function (yaw, X, Z, av, st) {
+    if (!av || !(st === 'idle' || st === 'talk' || st === 'carry' || st === 'interact' || st === 'walk')) return 0;
+    const ax = av.X - X, az = av.Z - Z, ad = Math.hypot(ax, az); if (ad >= 6 || ad <= 0.3) return 0;
+    let da = Math.atan2(az, ax) - yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU;
+    return Math.abs(da) < 1.9 ? -G.clamp(da, -1.05, 1.05) : 0;
+  };
+  // (for the verifier: every matrix of a body or a beast drawn this frame is made of numbers)
+  P3.check = function () {
+    const out = []; const scan = (list, n, what) => { for (const m of list || []) { const a = m.instanceMatrix.array; for (let k = 0; k < Math.min(n, m.count) * 16; k++) if (!Number.isFinite(a[k])) { out.push(`${what}: matriz inválida no desenho`); return; } } };
+    scan(mesh, P3.count, 'pessoas'); scan(beastMesh, P3.beasts, 'bichos'); return out;
+  };
 
   // ------------------------------ the beasts ------------------------------
+  // (each kind's build, in the god's units — the same numbers its picture is drawn with (Animals.DEF[kind].q) where it
+  // has them; the others here: length, height, legs, neck, colours, ears, tail, snout, horns; biped for the birds afoot)
+  const ART3 = {
+    quad: { len: 4, h: 4, leg: 3, neck: 1.5, col: '#8a7a5a', ear: 0.8, tail: 'thin' },
+    wolf: { len: 4.2, h: 3.8, leg: 3, neck: 1.4, col: '#7e7a72', belly: '#b8b2a6', ear: 1.1, tail: 'bushy' },
+    dog: { len: 3.4, h: 3.2, leg: 2.6, neck: 1.4, col: '#a87a4a', belly: '#d8c0a0', ear: 0.9, tail: 'wag' },
+    cat: { len: 2.6, h: 2.4, leg: 1.9, neck: 0.9, col: '#c88a4a', belly: '#e8d0b0', ear: 1.1, tail: 'long' },
+    boar: { len: 3.8, h: 3.2, leg: 1.8, neck: 0.5, col: '#5a4636', ear: 0.8, tail: 'thin', stout: 1, snout: 1.4, tusk: 1 },
+    rabbit: { len: 1.6, h: 2, leg: 1, neck: 0.3, col: '#b89a7a', ear: 2.6, tail: 'puff', hop: 1 },
+    monkey: { len: 2.2, h: 2.6, leg: 2.6, neck: 0.6, col: '#7a5230', belly: '#e8c8a0', ear: 0.7, tail: 'long' },
+    giraffe: { len: 4.2, h: 6, leg: 6, neck: 9, col: '#d8a85a', belly: '#f0dcae', ear: 0.8, tail: 'tuft', horn: 'ossicone' },
+    elephant: { len: 5, h: 5, leg: 3.8, neck: 0.4, col: '#8a8884', ear: 3.2, tail: 'thin', stout: 1.4, trunk: 1, tusk: 1 },
+    rhino: { len: 5, h: 4, leg: 2.4, neck: 0.5, col: '#8a8680', ear: 0.7, tail: 'thin', stout: 1.5, snout: 0.8, horn: 'nose' },
+    croc: { len: 5, h: 1.2, leg: 0.9, neck: 0.2, col: '#4a5a2a', belly: '#8a8a5a', ear: 0, tail: 'croc', snout: 3, low: 1 },
+    lizard: { len: 2, h: 0.8, leg: 0.5, neck: 0.2, col: '#9a8a4a', ear: 0, tail: 'croc', snout: 1, low: 1 },
+    snake: { len: 4, h: 0.5, leg: 0, neck: 0.1, col: '#4a6a2a', ear: 0, tail: 'croc', snout: 0.6, low: 1 },
+    frog: { len: 1.4, h: 1, leg: 0.8, neck: 0, col: '#4a8a3a', ear: 0, tail: null, hop: 1 },
+    beaver: { len: 2.6, h: 1.8, leg: 0.8, neck: 0.3, col: '#6a4a30', ear: 0.4, tail: 'flat', stout: 1 },
+    otter: { len: 2.8, h: 1.4, leg: 0.7, neck: 0.6, col: '#5a4030', belly: '#a08a6a', ear: 0.3, tail: 'long' },
+    sloth: { len: 2.2, h: 2, leg: 1.4, neck: 0.6, col: '#8a7a5a', ear: 0.2, tail: null },
+    seal: { len: 3.6, h: 1.6, leg: 0, neck: 0.8, col: '#7a7a78', ear: 0, tail: 'flipper' },
+    walrus: { len: 4.6, h: 2.4, leg: 0, neck: 0.4, col: '#8a6a58', ear: 0, tail: 'flipper', stout: 1.5, tusk: 1 },
+    hen: { biped: 1, len: 1.6, h: 1.8, leg: 1, neck: 0.8, col: '#e8dcc8', beak: '#e8b83a', legc: '#e8b83a', comb: '#d23a2a', tail: 'fan' },
+    pigeon: { biped: 1, len: 1.4, h: 1.4, leg: 0.6, neck: 0.6, col: '#8a8c98', beak: '#3a3a3a', legc: '#c86a6a', tail: 'fan', nod: 1 },
+    turkey: { biped: 1, len: 2.2, h: 2.4, leg: 1.4, neck: 1.2, col: '#4a3a2e', beak: '#c8b08a', legc: '#c8a08a', comb: '#c8303a', tail: 'fan' },
+    ostrich: { biped: 1, len: 2.6, h: 4, leg: 4.4, neck: 4.4, col: '#2a2622', beak: '#d8b88a', legc: '#d8b0a0', tail: 'fan' },
+    penguin: { biped: 1, upright: 1, len: 1.4, h: 2.4, leg: 0.4, neck: 0.3, col: '#1c1c22', belly: '#f2f2ee', beak: '#e8a83a', legc: '#e8a83a', tail: null },
+    wader: { biped: 1, len: 1.8, h: 2, leg: 3.4, neck: 2.6, col: '#f6f6f2', beak: '#e8c83a', legc: '#3a3a3a', tail: 'fan' },
+    turtle: { len: 2.4, h: 1, leg: 0.4, neck: 0.4, col: '#5a6a3a', ear: 0, tail: null, shell: '#6a5a3a', low: 1 },
+  };
+  const BP = [['body', 'ball'], ['neck', 'limb'], ['head', 'ball'], ['snout', 'limb'], ['ear0', 'cone'], ['ear1', 'cone'], ['leg0', 'limb'], ['leg1', 'limb'], ['leg2', 'limb'], ['leg3', 'limb'], ['tail', 'limb'], ['wing0', 'box'], ['wing1', 'box'], ['horn0', 'cone'], ['horn1', 'cone'], ['mane', 'ball'], ['eye0', 'sph'], ['eye1', 'sph']];
+  const BI = {}; BP.forEach((p, k) => { BI[p[0]] = k; });
+  const formCache = new Map(); G.worldHooks.push(() => formCache.clear());
+  function formOf(sp, kind) {
+    let F = formCache.get(kind); if (F) return F;
+    const q = sp.q; const art = sp.art === 'bird' || sp.cls === 'air' ? 'bird' : sp.art;
+    if (q) F = { len: q.len, h: q.h, leg: q.leg, neck: q.neck, col: q.col, belly: q.belly, ear: q.ear === undefined ? 0.8 : q.ear, tail: q.noTail ? null : q.tail || 'thin', stout: q.stout || 0, snout: q.snout || 0, horn: q.antler ? 'antler' : q.horn || null, mane: q.mane || null, hump: q.hump || 0 };
+    else if (art === 'bird') { const b = sp.b || {}; F = { bird: 1, len: 1.6, h: 1.4, leg: 0.6, neck: 0.4, col: b.col || '#6a6a6a', wingc: b.wing || b.col || '#5a5a5a', head: b.head, beak: b.beak || '#e8b83a', span: (b.span || 8) / 8, tail: 'fan', biped: 1 }; }
+    else F = Object.assign({}, ART3[art] || ART3.quad, sp.col ? { col: sp.col[0], belly: sp.col[1] } : {});
+    formCache.set(kind, F); return F;
+  }
   const bvis = new Map(); G.worldHooks.push(() => bvis.clear());
-  function bput(k, idx, m, x, y, z, sx, sy, sz, col) { M.a.copy(m); M.b.makeTranslation(x, y, z); M.a.multiply(M.b); M.c.makeScale(sx, sy, sz); M.a.multiply(M.c); beastMesh[k].setMatrixAt(idx, M.a); beastMesh[k].setColorAt(idx, color(col)); }
+  // (a part of a beast: in the frame m, at (x, y, z), turned by (rx, ry, rz) about its own base, sized (sx, sy, sz))
+  function bput(name, idx, m, x, y, z, sx, sy, sz, col, rx, ry, rz) {
+    M.a.copy(m); M.b.makeTranslation(x, y, z); M.a.multiply(M.b);
+    if (rx || ry || rz) { M.eu.set(rx || 0, ry || 0, rz || 0, 'YXZ'); M.c.makeRotationFromEuler(M.eu); M.a.multiply(M.c); }
+    M.c.makeScale(sx, sy, sz); M.a.multiply(M.c); const im = beastMesh[BI[name]]; im.setMatrixAt(idx, M.a); im.setColorAt(idx, color(col));
+  }
+  const bhide = (name, idx) => beastMesh[BI[name]].setMatrixAt(idx, M.z);
+  // (a limb hanging from a joint: its base at the joint, swung by `a` about Z — forward and back — of length len)
+  function limb(name, idx, m, x, y, z, len, r, a, col, rx) { M.a.copy(m); M.b.makeTranslation(x, y, z); M.a.multiply(M.b); M.eu.set(rx || 0, 0, a, 'XYZ'); M.c.makeRotationFromEuler(M.eu); M.a.multiply(M.c); M.b.makeTranslation(0, -len / 2, 0); M.a.multiply(M.b); M.c.makeScale(r, len, r); M.a.multiply(M.c); const im = beastMesh[BI[name]]; im.setMatrixAt(idx, M.a); im.setColorAt(idx, color(col)); }
   function beasts(focus, R2, dt) {
-    const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; let idx = 0;
+    const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; let idx = 0; mats();
     const list = [];
     for (const a of S.animals.values()) { if (a.dead || a.held) continue; const X = a.x * TL, Z = a.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 < R2 * 0.7) list.push([d2, a]); }
     list.sort((p, q) => p[0] - q[0]);
     for (const [, a] of list) {
       if (idx >= MAXA) break;
       const sp = G.Animals.DEF[a.kind]; if (!sp || sp.cls === 'water') continue;
-      const X = a.x * TL, Z = a.y * TL; let s = bvis.get(a.id); if (!s) { s = { X, Z, yaw: 0, ph: a.id % 5 }; bvis.set(a.id, s); }
+      const X = a.x * TL, Z = a.y * TL; let s = bvis.get(a.id); if (!s) { s = { X, Z, yaw: 0, ph: a.id % 5, t: 0, graze: 0, v: 0 }; bvis.set(a.id, s); }
       const dx = X - s.X, dz = Z - s.Z; const dist = Math.hypot(dx, dz); if (dist > 0.002 && dist < 6) { const want = Math.atan2(dz, dx); let da = want - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * (1 - Math.exp(-8 * dt)); }
-      const v = dt > 0 && dist < 6 ? dist / dt : 0; s.ph += dt * (v * 3 + 0.5); s.X = X; s.Z = Z;
-      const air = sp.cls === 'air'; const Y = W.groundH(a.x, a.y) * HM + (air ? Math.max(0.5, (a.z || 0) * 0.22) : 0);
-      const col = (sp.q && sp.q.col) || (sp.col && sp.col[0]) || '#8a7a5a';
-      const L = air ? 0.3 : sp.art === 'rabbit' ? 0.4 : (0.5 + (sp.size || 1) * 0.9) * (sp.q ? sp.q.len / 4 : 1) * (a.big || 1);
-      const H = air ? 0.12 : L * (sp.q ? sp.q.h / 8 : 0.45);
-      mats(); const m = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-s.yaw); m.multiply(M.b);
-      const legH = air ? 0 : H * 0.9; const sw = Math.sin(s.ph) * 0.35 * G.clamp(v, 0, 1);
-      bput(0, idx, m, 0, legH + H / 2, 0, L, H, L * 0.42, col);
-      bput(1, idx, m, L * 0.55, legH + H * 0.9, 0, L * 0.32, H * 0.6, L * 0.28, darker(col, 0.9));
-      for (let k = 0; k < 4; k++) { const fx = k < 2 ? L * 0.35 : -L * 0.35, fz = (k % 2 ? 1 : -1) * L * 0.15; if (air) { beastMesh[2 + k].setMatrixAt(idx, M.z); continue; } M.a.copy(m); M.b.makeTranslation(fx, legH, fz); M.a.multiply(M.b); M.c.makeRotationZ((k % 2 ? sw : -sw) * (k < 2 ? 1 : -1)); M.a.multiply(M.c); M.b.makeTranslation(0, -legH / 2, 0); M.a.multiply(M.b); M.c.makeScale(L * 0.1, legH, L * 0.1); M.a.multiply(M.c); beastMesh[2 + k].setMatrixAt(idx, M.a); beastMesh[2 + k].setColorAt(idx, color(darker(col, 0.8))); }
-      bput(6, idx, m, -L * 0.55, legH + H * 0.7, 0, L * 0.25, H * 0.15, H * 0.15, col);
-      if (air) { const f = Math.sin(s.ph * 4) * 0.5; for (const k of [0, 1]) { M.a.copy(m); M.b.makeTranslation(0, legH + H / 2, (k ? 1 : -1) * L * 0.25); M.a.multiply(M.b); M.c.makeRotationX((k ? 1 : -1) * f); M.a.multiply(M.c); M.c.makeScale(L * 0.6, 0.03, L * 0.8); M.a.multiply(M.c); beastMesh[7 + k].setMatrixAt(idx, M.a); beastMesh[7 + k].setColorAt(idx, color(col)); } }
-      else for (const k of [7, 8]) { beastMesh[k].setMatrixAt(idx, M.z); }
+      const v = dt > 0 && dist < 6 ? dist / dt : 0; s.v += (v - s.v) * (1 - Math.exp(-6 * dt)); s.t += dt; s.X = X; s.Z = Z;
+      const F = formOf(sp, a.kind); const air = sp.cls === 'air' && (a.z || 0) > 0.3;
+      const u = (0.5 + (sp.size || 1) * 0.9) / 4 * (a.big || 1) * (a.age !== undefined && a.age < 1 ? 0.6 : 1); // (metres to the god's unit)
+      const run = G.clamp(s.v / 3, 0, 1.4); s.ph += dt * (s.v * (F.biped ? 6 : 3.4) / Math.max(0.4, F.leg * u * 2) + 0.4);
+      const col = F.col, dark = darker(col, 0.78), bel = F.belly || darker(col, 1.12);
+      const Y = W.groundH(a.x, a.y) * HM + (air ? Math.max(0.5, (a.z || 0) * 0.22) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
+      const m = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-s.yaw); m.multiply(M.b);
+      // (grazing: a beast that eats grass lowers its head now and then while it stands)
+      const grazer = sp.diet === 'herb' || sp.diet === 'browse'; const wantG = grazer && s.v < 0.15 && Math.sin(s.t * 0.35 + a.id) > 0.1 ? 1 : 0; s.graze += (wantG - s.graze) * (1 - Math.exp(-2 * dt));
+      for (const n of BP) bhide(n[0], idx);
+      if (F.bird && air) {
+        // a bird in the air: a body, wings beating (slower while it glides), a tail
+        const L = F.len * u * 0.6, sw = F.span * u * 1.4; const fl = Math.sin(s.t * (sp.size > 1 ? 5 : 11) + a.id) * 0.7;
+        bput('body', idx, m, 0, 0, 0, L, L * 0.45, L * 0.5, col); bput('head', idx, m, L * 0.5, L * 0.12, 0, L * 0.4, L * 0.38, L * 0.36, F.head || col); bput('snout', idx, m, L * 0.72, L * 0.1, 0, L * 0.09, L * 0.3, L * 0.09, F.beak, 0, 0, -Math.PI / 2);
+        for (const sd of [-1, 1]) bput(sd < 0 ? 'wing0' : 'wing1', idx, m, 0, L * 0.05, sd * sw * 0.5 * Math.cos(fl), L * 0.55, 0.03, sw, F.wingc, sd * fl);
+        bput('tail', idx, m, -L * 0.6, 0, 0, L * 0.35, L * 0.08, L * 0.3, F.wingc);
+        idx++; continue;
+      }
+      if (F.biped) {
+        // a bird afoot (a hen, a pigeon, an ostrich, a heron): two legs stepping, the head nodding with the steps
+        const L = F.len * u * 0.7, legL = F.leg * u * 0.45, nk = F.neck * u * 0.45, H = F.h * u * 0.35; const bodyY = legL + H * 0.5;
+        const step = Math.sin(s.ph) * 0.6 * G.clamp(s.v, 0, 1); const nod = (F.nod || s.v > 0.1 ? Math.sin(s.ph * 2) * 0.06 : 0) - s.graze * 0.0;
+        if (F.upright) { bput('body', idx, m, 0, legL + H * 0.6, 0, H * 0.55, H * 1.1, H * 0.55, col); bput('mane', idx, m, H * 0.12, legL + H * 0.55, 0, H * 0.35, H * 0.9, H * 0.45, F.belly || col); }
+        else bput('body', idx, m, 0, bodyY, 0, L, H, L * 0.62, col);
+        const hx = (F.upright ? 0.05 : L * 0.42) + nod, hy = F.upright ? legL + H * 1.25 : bodyY + H * 0.3 + nk;
+        if (!F.upright && nk > 0.05) bput('neck', idx, m, L * 0.35 + nod * 0.5, bodyY + H * 0.2 + nk * 0.5, 0, H * 0.28, nk + H * 0.2, H * 0.28, col, 0, 0, -0.25);
+        const hr = Math.max(0.05, H * 0.42); bput('head', idx, m, hx, hy, 0, hr, hr, hr * 0.9, F.head || col);
+        bput('snout', idx, m, hx + hr * 0.55, hy - hr * 0.08, 0, hr * 0.28, hr * 0.7, hr * 0.28, F.beak || '#e8b83a', 0, 0, -Math.PI / 2);
+        if (F.comb) bput('mane', idx, m, hx, hy + hr * 0.5, 0, hr * 0.5, hr * 0.5, hr * 0.15, F.comb);
+        for (const [n, sd] of [['eye0', -1], ['eye1', 1]]) bput(n, idx, m, hx + hr * 0.3, hy + hr * 0.15, sd * hr * 0.38, hr * 0.16, hr * 0.16, hr * 0.12, '#141210');
+        for (const [n, sd] of [['leg0', -1], ['leg1', 1]]) limb(n, idx, m, 0, legL + 0.02, sd * L * 0.16, legL, Math.max(0.025, legL * 0.12), sd * step, F.legc || dark);
+        if (F.tail === 'fan') bput('tail', idx, m, -L * 0.48, bodyY + H * 0.25, 0, L * 0.18, H * 0.75, L * 0.42, F.wingc || dark, 0, 0, 0.6);
+        idx++; continue;
+      }
+      // a beast on four legs (or none: a seal, a snake): its body, neck and head; legs trotting in diagonal pairs
+      const L = F.len * u, H = F.len * u * 0.36 * (1 + (F.stout || 0) * 0.22) * (F.low ? 0.45 : 1), Wd = H * (F.stout ? 0.95 : 0.78);
+      const legL = F.leg * u * 0.62, nk = F.neck * u * 0.5; const bodyY = (F.low ? H * 0.55 : legL + H * 0.42) + (F.hop ? Math.abs(Math.sin(s.ph)) * 0.12 * run : Math.abs(Math.sin(s.ph * 2)) * 0.02 * run);
+      bput('body', idx, m, 0, bodyY, 0, L, H, Wd, col);
+      if (F.hump) bput('mane', idx, m, -L * 0.05, bodyY + H * 0.45, 0, L * 0.38, H * 0.55, Wd * 0.7, col);
+      if (F.shell) bput('mane', idx, m, 0, bodyY + H * 0.2, 0, L * 0.9, H * 1.1, Wd * 1.05, F.shell);
+      // (neck up and forward, lower while grazing; the head at its end)
+      const na = (F.neck > 3 ? 0.35 : 0.9) + s.graze * 1.6; const nx = L * 0.38, ny = bodyY + H * 0.2;
+      const hx = nx + Math.sin(na) * (nk + H * 0.2), hy = ny + Math.cos(na) * (nk + H * 0.2) - (F.low ? H * 0.3 : 0);
+      if (nk > 0.04) bput('neck', idx, m, (nx + hx) / 2, (ny + hy) / 2 - nk * 0.15, 0, H * 0.42, nk + H * 0.35, Wd * 0.5, col, 0, 0, -na);
+      const hr = H * (F.low ? 0.9 : 0.62) * (F.trunk ? 1.3 : 1); bput('head', idx, m, hx, hy, 0, hr * 1.05, hr * 0.85, hr * 0.8, col);
+      const sn = (0.45 + (F.snout || 0) * 0.35) * hr; bput('snout', idx, m, hx + hr * 0.35 + sn * 0.4, hy - hr * 0.12 - s.graze * hr * 0.2, 0, hr * 0.5, sn, hr * 0.42, F.snout >= 2 || F.low ? col : darker(col, 0.92), 0, 0, -Math.PI / 2 - 0.25 * (1 - (F.low ? 1 : 0)));
+      if (F.trunk) limb('tail', idx, m, hx + hr * 0.6, hy - hr * 0.1, 0, hr * 1.7, hr * 0.3, 0.25 + Math.sin(s.t * 1.3) * 0.15, col);
+      for (const [n, sd] of [['eye0', -1], ['eye1', 1]]) bput(n, idx, m, hx + hr * 0.42, hy + hr * 0.18, sd * hr * 0.36, hr * 0.12, hr * 0.12, hr * 0.1, '#141210');
+      if (F.ear) for (const [n, sd] of [['ear0', -1], ['ear1', 1]]) { const big = F.trunk ? 1 : 0; bput(n, idx, m, hx - hr * 0.15, hy + hr * (big ? 0 : 0.35), sd * hr * (big ? 0.6 : 0.3), hr * 0.32 * F.ear * (big ? 0.5 : 1), hr * 0.5 * Math.min(2.6, F.ear), hr * (big ? 0.9 : 0.16) * Math.min(1.5, F.ear), big ? darker(col, 0.9) : dark, sd * (big ? 1.3 : 0.25), 0, F.hop ? 0.1 : -0.2); }
+      if (F.horn === 'antler') for (const [n, sd] of [['horn0', -1], ['horn1', 1]]) bput(n, idx, m, hx - hr * 0.1, hy + hr * 0.5, sd * hr * 0.25, hr * 0.12, hr * 1.6, hr * 0.12, '#d8c8a8', sd * 0.5, 0, -0.35);
+      else if (F.horn === 'nose') bput('horn0', idx, m, hx + hr * 0.5, hy + hr * 0.15, 0, hr * 0.3, hr * 0.9, hr * 0.3, '#c8c0b0', 0, 0, -0.5);
+      else if (F.horn === 'ossicone') for (const [n, sd] of [['horn0', -1], ['horn1', 1]]) bput(n, idx, m, hx - hr * 0.1, hy + hr * 0.5, sd * hr * 0.2, hr * 0.12, hr * 0.5, hr * 0.12, darker(col, 0.6));
+      else if (F.horn) for (const [n, sd] of [['horn0', -1], ['horn1', 1]]) bput(n, idx, m, hx - hr * 0.05, hy + hr * 0.45, sd * hr * 0.3, hr * 0.1, hr * (F.horn === 'curl' ? 0.7 : 1.1), hr * 0.1, '#3a3028', sd * (F.horn === 'curl' ? 1.2 : 0.25), 0, 0.6);
+      if (F.tusk) for (const [n, sd] of [['horn0', -1], ['horn1', 1]]) bput(n, idx, m, hx + hr * 0.55, hy - hr * 0.45, sd * hr * 0.25, hr * 0.1, hr * 0.7, hr * 0.1, '#f2ecd8', 0, 0, -1.1);
+      if (F.mane) bput('mane', idx, m, hx - hr * 0.35, hy - hr * 0.1, 0, hr * 1.5, hr * 1.5, hr * 1.4, F.mane);
+      // (legs: front and back, left and right; a trot in diagonal pairs, the swing growing with the speed)
+      if (legL > 0.02) { const sw = Math.sin(s.ph) * 0.55 * G.clamp(run, 0, 1.2) * (F.hop ? 0 : 1); const hop = F.hop ? Math.sin(s.ph) * 0.7 * run : 0;
+        for (let k = 0; k < 4; k++) { const front = k < 2, sd = k % 2 ? 1 : -1; const ph = (front ? 1 : -1) * sd; limb('leg' + k, idx, m, (front ? 1 : -1) * L * 0.32, bodyY - H * 0.15, sd * Wd * 0.3, legL + H * 0.15, Math.max(0.03, Wd * 0.22), (F.hop ? (front ? hop : -hop) : sw * ph), front ? darker(col, 0.9) : dark); } }
+      else if (F.tail === 'flipper') { for (const [n, sd] of [['leg0', -1], ['leg1', 1]]) bput(n, idx, m, L * 0.2, bodyY - H * 0.35, sd * Wd * 0.55, L * 0.3, 0.04, L * 0.15, dark, 0, sd * 0.4, 0); }
+      // (the tail: wagging for a dog, hanging for most, flat for a beaver, long and low for a crocodile)
+      if (F.tail && !F.trunk) {
+        const tL = F.tail === 'croc' ? L * 0.8 : F.tail === 'long' ? L * 0.7 : F.tail === 'bushy' ? L * 0.55 : F.tail === 'puff' ? H * 0.4 : F.tail === 'flat' ? L * 0.35 : L * 0.4;
+        const tr = F.tail === 'bushy' ? H * 0.3 : F.tail === 'puff' ? H * 0.4 : F.tail === 'croc' ? H * 0.5 : F.tail === 'flat' ? H * 0.35 : H * 0.12;
+        const wag = F.tail === 'wag' ? Math.sin(s.t * 9) * 0.6 : F.tail === 'croc' ? Math.sin(s.ph) * 0.25 : Math.sin(s.t * 1.7 + a.id) * 0.15;
+        const ta = F.tail === 'croc' || F.tail === 'flat' ? -Math.PI / 2 - 0.05 : F.tail === 'wag' || F.tail === 'bushy' ? -2.2 : -0.35;
+        limb('tail', idx, m, -L * 0.45, bodyY + (F.tail === 'croc' ? -H * 0.1 : H * 0.15), 0, tL, tr, ta, F.tail === 'puff' ? '#f4f0ea' : dark, wag);
+      }
       idx++;
     }
     for (const m of beastMesh) { m.count = idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }

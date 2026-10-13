@@ -243,7 +243,7 @@
     const T = G.T; const t = S.type[i];
     const ground = S.road[i] ? (S.type[i] === T.RIVER ? 'ponte' : 'estrada') : t === T.RIVER ? 'rio' : t === T.SAND ? 'areia' : S.treeAt[i] ? 'bosque' : S.cliff[i] ? 'penhasco' : 'campo';
     const town = set && sd < 6 + Math.sqrt(G.Village.pop(set.id)) * 1.2 ? set : null;
-    return { x: +v.x.toFixed(2), y: +v.y.toFixed(2), tile: i, town: town ? town.name : null, near: set ? set.name : null, nearD: Math.round(sd), district: dist ? dist.name : null, biome: G.Biomes && G.Biomes.nameAt ? G.Biomes.nameAt(v.x, v.y) : null, ground, h: +W.groundH(v.x, v.y).toFixed(2) };
+    return { x: +v.x.toFixed(2), y: +v.y.toFixed(2), tile: i, town: town ? town.name : null, near: set ? set.name : null, nearD: Math.round(sd), district: dist ? dist.name : null, biome: G.Biome && G.Biome.nameAt ? G.Biome.nameAt(v.x, v.y) : null, ground, h: +W.groundH(v.x, v.y).toFixed(2) };
   };
   Po.context = function () {
     const S = G.S; const a = S.avatar; const v = Po.body(); if (!a || !v) return null;

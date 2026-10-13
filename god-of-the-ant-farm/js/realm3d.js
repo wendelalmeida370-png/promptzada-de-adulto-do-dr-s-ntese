@@ -21,9 +21,9 @@
   const Sp = () => G.Space;
   // quality: what the machine can carry (the player's choice, kept in this browser only)
   const QUAL = {
-    baixa: { scale: 0.75, near: 2, shadows: 0, npcs: 18, grass: 0, view: 260 },
-    media: { scale: 1, near: 3, shadows: 1024, npcs: 36, grass: 1, view: 420 },
-    alta: { scale: 1, near: 4, shadows: 2048, npcs: 60, grass: 1, view: 640 },
+    baixa: { scale: 0.75, near: 2, shadows: 0, npcs: 18, grass: 0, view: 260, detail: 0 },
+    media: { scale: 1, near: 3, shadows: 1024, npcs: 36, grass: 1, view: 420, detail: 1 },
+    alta: { scale: 1, near: 4, shadows: 2048, npcs: 60, grass: 1, view: 640, detail: 1 },
   };
   R3.QUAL = QUAL;
   R3.q = (() => { try { return localStorage.getItem('gotaf-3dq') || 'media'; } catch (e) { return 'media'; } })();
@@ -38,7 +38,7 @@
   let THREE = null, renderer = null, scene = null, camera = null, canvas = null;
   let sun = null, hemi = null, skyMesh = null, skyU = null, stars = null, moonL = null;
   const MAT = {};
-  const U = { time: { value: 0 } }; // (the water's own clock: only seen)
+  const U = { time: { value: 0 }, wind: { value: null }, body: { value: null }, sky: { value: null } }; // (the clocks and winds of the drawing: only seen)
   R3.scene = () => scene; R3.camera = () => camera; R3.three = () => THREE; R3.renderer = () => renderer; R3.canvas = () => canvas; R3.mats = () => MAT;
 
   // ------------------------------ colours ------------------------------
@@ -55,9 +55,15 @@
   // ------------------------------ geometry: one builder, many shapes ------------------------------
   // (every static thing of a chunk goes into one geometry with its colours: a few draw calls, not thousands)
   class Geo {
-    constructor() { this.p = []; this.n = []; this.c = []; }
-    // a shape (BufferGeometry), moved by a matrix, painted one colour (or a function of the vertex)
-    put(g, m, color) {
+    constructor() { this.p = []; this.n = []; this.c = []; this.k = null; this.ao = null; this.pat = 0; this.q = null; }
+    // (the sway of each point: 0 is rooted, 1 moves all the wind gives — only the plants' material reads it)
+    _k(v, n) { if (!this.k) { if (!v) return; this.k = new Array(this.p.length / 3 - n).fill(0); } for (let q = 0; q < n; q++) this.k.push(typeof v === 'object' ? v[q] : v || 0); }
+    // (the pattern of the surface each point is on — stone, planks, tiles, thatch...: this.pat at the time it was put;
+    // only the solid material reads it, Build3D.PAT names them)
+    _q(n) { if (!this.q) { if (!this.pat) return; this.q = new Array(this.p.length / 3 - n).fill(0); } for (let k = 0; k < n; k++) this.q.push(this.pat); }
+    // a shape (BufferGeometry), moved by a matrix, painted one colour (or a function of the vertex); sway: a number, or
+    // a function of the point's height in the shape (0 at its foot, 1 at its top)
+    put(g, m, color, sway) {
       const P = g.attributes.position.array, Nn = g.attributes.normal.array, I = g.index ? g.index.array : null;
       const e = m.elements; const nm = R3._nm.getNormalMatrix(m).elements;
       const cc = typeof color === 'function' ? null : lin(color);
@@ -68,7 +74,11 @@
         const a = Nn[j * 3], b = Nn[j * 3 + 1], d = Nn[j * 3 + 2];
         let nx = nm[0] * a + nm[3] * b + nm[6] * d, ny = nm[1] * a + nm[4] * b + nm[7] * d, nz = nm[2] * a + nm[5] * b + nm[8] * d; const l = Math.hypot(nx, ny, nz) || 1;
         this.p.push(X, Y, Z); this.n.push(nx / l, ny / l, nz / l);
-        const q = cc || lin(color(X, Y, Z, nx / l, ny / l, nz / l)); this.c.push(q[0], q[1], q[2]);
+        const q = cc || lin(color(X, Y, Z, nx / l, ny / l, nz / l));
+        // (the foot of a wall is darker: the sky does not reach it — this.ao gives the ground under a point)
+        if (this.ao) { const f = 0.6 + 0.4 * G.clamp((Y - this.ao(X, Z)) / 2.6, 0, 1); this.c.push(q[0] * f, q[1] * f, q[2] * f); } else this.c.push(q[0], q[1], q[2]);
+        if (sway || this.k) this._k(typeof sway === 'function' ? sway(y) : sway, 1);
+        if (this.pat || this.q) this._q(1);
       }
     }
     // a raw triangle (three points, one colour each or one for all), with its own normal
@@ -77,14 +87,30 @@
       let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
       const A = lin(ca), B = lin(cb || ca), Cc = lin(cc || ca);
       this.p.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]); this.n.push(nx, ny, nz, nx, ny, nz, nx, ny, nz); this.c.push(A[0], A[1], A[2], B[0], B[1], B[2], Cc[0], Cc[1], Cc[2]);
+      if (this.k) this._k(0, 3);
+      if (this.pat || this.q) this._q(3);
+    }
+    // a blade (of grass, of wheat, a leaf): one triangle from a root two points wide to a tip, lit as the ground under it
+    // is lit (its normal leans up: both faces read alike), the tip swaying
+    blade(x, y, z, w, ax, tx, ty, tz, cb, ct, sw) {
+      const dx = Math.cos(ax) * w / 2, dz = Math.sin(ax) * w / 2; const A = lin(cb), Bc = lin(ct);
+      this.p.push(x - dx, y, z - dz, x + dx, y, z + dz, tx, ty, tz);
+      const lx = tx - x, lz = tz - z, l = Math.hypot(lx * 0.25, 1, lz * 0.25); const nx = lx * 0.25 / l, ny = 1 / l, nz = lz * 0.25 / l;
+      this.n.push(nx, ny, nz, nx, ny, nz, nx, ny, nz); this.c.push(A[0], A[1], A[2], A[0], A[1], A[2], Bc[0], Bc[1], Bc[2]);
+      this._k([0, 0, sw === undefined ? 1 : sw], 3);
+      if (this.q) this._q(3);
     }
     quad(a, b, c, d, ca, cb, cc, cd) { this.tri(a, b, c, ca, cb, cc); this.tri(a, c, d, ca, cc, cd || ca); }
     get empty() { return !this.p.length; }
-    build() {
-      const g = new THREE.BufferGeometry();
+    // (solid: the geometry always carries its patterns, even all plain — a shader's attribute never read unbound)
+    build(solid, sway) {
+      const g = new THREE.BufferGeometry(); const nv = this.p.length / 3;
+      if (sway && !this.k) this.k = new Array(nv).fill(0);
       g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3));
       g.setAttribute('normal', new THREE.Float32BufferAttribute(this.n, 3));
       g.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 3));
+      if (this.k) g.setAttribute('aK', new THREE.Float32BufferAttribute(this.k, 1));
+      if (this.q || solid) g.setAttribute('aP', this.q ? new THREE.Float32BufferAttribute(this.q, 1) : new THREE.BufferAttribute(new Float32Array(nv), 1));
       g.computeBoundingSphere();
       return g;
     }
@@ -104,40 +130,105 @@
   // ------------------------------ setting up ------------------------------
   function init() {
     THREE = window.THREE; if (!THREE) throw new Error('three.js não carregou');
+    U.wind.value = new THREE.Vector3(); U.body.value = new THREE.Vector4(); U.sky.value = new THREE.Color(0xbfd8ea);
+    G.Ground3D.init(THREE);
     R3._m = new THREE.Matrix4(); R3._m2 = new THREE.Matrix4(); R3._v = new THREE.Vector3(); R3._nm = new THREE.Matrix3();
     canvas = document.createElement('canvas'); canvas.id = 'game3d';
     canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;display:none;z-index:1;opacity:0;outline:none;';
     document.body.insertBefore(canvas, document.getElementById('game').nextSibling);
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', alpha: false });
-    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+    // (the neutral curve keeps the colours the god's view paints: ACES would darken and wash them)
+    renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1.0;
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1600);
     hemi = new THREE.HemisphereLight(0xcfe6ff, 0x5a5a3a, 1.2); scene.add(hemi);
     sun = new THREE.DirectionalLight(0xfff2dc, 2.4); sun.position.set(40, 80, 30); scene.add(sun); scene.add(sun.target);
     moonL = new THREE.DirectionalLight(0x8aa4ff, 0); scene.add(moonL);
     scene.fog = new THREE.Fog(0xbfd8ea, 120, 600);
-    // the sky: a dome painted from the horizon up, the sun and moon on it, stars at night
-    skyU = { top: { value: new THREE.Color(0x5a9ae0) }, hor: { value: new THREE.Color(0xcfe4f2) }, sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color(0xfff0c0) }, night: { value: 0 } };
-    skyMesh = new THREE.Mesh(new THREE.SphereGeometry(1400, 24, 12), new THREE.ShaderMaterial({
+    // the sky: a dome painted from the horizon up, the glow of the sun, the moon, and a layer of clouds drifting with the
+    // world's wind — thin on a fair day, a grey ceiling in the rain (only seen: it reads the weather, it is not the weather)
+    skyU = { top: { value: new THREE.Color(0x5a9ae0) }, hor: { value: new THREE.Color(0xcfe4f2) }, sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color(0xfff0c0) }, night: { value: 0 },
+      cover: { value: 0.3 }, cloudCol: { value: new THREE.Color(0xffffff) }, uT: U.time, uWind: U.wind, uNoise: { value: G.Ground3D.cloudNoise() } };
+    skyMesh = new THREE.Mesh(new THREE.SphereGeometry(1400, 32, 16), new THREE.ShaderMaterial({
       uniforms: skyU, side: THREE.BackSide, depthWrite: false, fog: false,
       vertexShader: 'varying vec3 vd; void main(){ vd = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-      fragmentShader: 'uniform vec3 top; uniform vec3 hor; uniform vec3 sunDir; uniform vec3 sunCol; uniform float night; varying vec3 vd;' +
-        'void main(){ float h = clamp(vd.y, -0.2, 1.0); vec3 c = mix(hor, top, pow(max(h, 0.0), 0.55)); if (h < 0.0) c = mix(hor, hor * 0.7, -h * 4.0);' +
-        ' float s = max(dot(vd, sunDir), 0.0); c += sunCol * (pow(s, 600.0) * 2.0 + pow(s, 12.0) * 0.18) * (1.0 - night * 0.7);' +
-        ' vec3 md = -sunDir; float m = max(dot(vd, md), 0.0); c += vec3(0.85, 0.9, 1.0) * pow(m, 900.0) * 1.6 * night; gl_FragColor = vec4(c, 1.0); }',
+      fragmentShader: `uniform vec3 top; uniform vec3 hor; uniform vec3 sunDir; uniform vec3 sunCol; uniform float night; uniform float cover; uniform vec3 cloudCol; uniform float uT; uniform vec3 uWind; uniform sampler2D uNoise; varying vec3 vd;
+        void main(){
+          vec3 d = normalize(vd); float h = d.y;
+          vec3 c = mix(hor, top, pow(clamp(h, 0.0, 1.0), 0.48)); if (h < 0.0) c = mix(hor, hor * 0.72, clamp(-h * 4.0, 0.0, 1.0));
+          float s = max(dot(d, sunDir), 0.0); float low = 1.0 - clamp(h * 2.5, 0.0, 1.0);
+          c += sunCol * (pow(s, 900.0) * 3.0 + pow(s, 28.0) * 0.22 + pow(s, 5.0) * 0.1 * low) * (1.0 - night * 0.85);
+          vec3 md = -sunDir; float m = max(dot(d, md), 0.0); c += vec3(0.85, 0.9, 1.0) * (pow(m, 1400.0) * 2.0 + pow(m, 60.0) * 0.05) * night;
+          if (h > 0.0) {
+            vec2 uv = d.xz / (h + 0.08) * 0.11 + uWind.xy * uT * 0.0016;
+            float n = texture2D(uNoise, uv).r * 0.68 + texture2D(uNoise, uv * 3.1 + 0.37).g * 0.32;
+            float cl = smoothstep(0.98 - cover, 1.18 - cover, n) * smoothstep(0.0, 0.22, h);
+            float thick = smoothstep(0.98 - cover, 1.5 - cover, n);
+            vec3 cc = cloudCol * (1.0 - thick * 0.38) + sunCol * pow(s, 6.0) * 0.35 * (1.0 - night);
+            c = mix(c, cc, cl * 0.94);
+          }
+          gl_FragColor = vec4(c, 1.0); }`,
     }));
     skyMesh.renderOrder = -1; skyMesh.frustumCulled = false; scene.add(skyMesh);
     { const n = 700, p = new Float32Array(n * 3); for (let k = 0; k < n; k++) { const a = G.hash(k * 3 + 1) * TAU, e = Math.asin(G.hash(k * 7 + 2) * 0.95 + 0.04), r = 1300; p[k * 3] = Math.cos(a) * Math.cos(e) * r; p[k * 3 + 1] = Math.sin(e) * r; p[k * 3 + 2] = Math.sin(a) * Math.cos(e) * r; }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
       stars = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 2.2, sizeAttenuation: false, fog: false, transparent: true, opacity: 0, depthWrite: false })); stars.frustumCulled = false; scene.add(stars); }
     // materials (shared by every chunk)
-    MAT.land = new THREE.MeshLambertMaterial({ vertexColors: true });
+    // (the ground: painted tile by tile with the god's colours, by the Ground3D; its vertex colour is only the shade of
+    // the hollows and of the foot of the walls)
+    MAT.land = G.Ground3D.material();
     MAT.solid = new THREE.MeshLambertMaterial({ vertexColors: true });
+    // the trees: crowns swaying with the wind (aK: how much each point moves), leaves speckled with light and shade
     MAT.flora = new THREE.MeshLambertMaterial({ vertexColors: true });
-    MAT.water = new THREE.MeshPhongMaterial({ vertexColors: true, transparent: true, opacity: 0.8, shininess: 90, specular: 0x9ab8d0, depthWrite: false });
+    MAT.flora.onBeforeCompile = sh => {
+      Object.assign(sh.uniforms, { uTime: U.time, uWind: U.wind, uDet: { value: G.Ground3D.detail() } });
+      sh.vertexShader = 'attribute float aK; uniform float uTime; uniform vec3 uWind; varying vec3 vFP; varying float vFK;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        vec4 wq = modelMatrix * vec4(transformed, 1.0); vFP = wq.xyz; vFK = aK;
+        float ph = uTime * (0.9 + uWind.z) + wq.x * 0.11 + wq.z * 0.07;
+        transformed.xz += uWind.xy * (sin(ph) * 0.6 + sin(ph * 2.7 + 1.3) * 0.25 + 0.3) * aK * (0.25 + uWind.z * 0.6);`);
+      sh.fragmentShader = 'uniform sampler2D uDet; varying vec3 vFP; varying float vFK;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+        #ifndef NOPAT
+        if (vFK > 0.07) { float lf = texture2D(uDet, (vFP.xz + vFP.y * 0.73) / 1.3).r * 0.6 + texture2D(uDet, (vFP.zy + vFP.x * 0.4) / 1.1).r * 0.4; diffuseColor.rgb *= 0.78 + lf * 0.44; }
+        #endif`);
+    };
+    // the plants that bend: grass, crops, reeds — swaying with the world's wind, parting round the body that walks in them
+    MAT.plant = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    MAT.plant.onBeforeCompile = sh => {
+      Object.assign(sh.uniforms, { uTime: U.time, uWind: U.wind, uBody: U.body });
+      sh.vertexShader = 'attribute float aK; uniform float uTime; uniform vec3 uWind; uniform vec4 uBody;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        vec4 wq = modelMatrix * vec4(transformed, 1.0);
+        float ph = uTime * (1.5 + uWind.z * 1.5) + wq.x * 0.37 + wq.z * 0.23;
+        float sw = (sin(ph) * 0.55 + sin(ph * 2.3 + 1.7) * 0.22 + 0.4) * aK;
+        transformed.xz += uWind.xy * sw * (0.12 + uWind.z * 0.35);
+        vec2 dv = wq.xz - uBody.xz; float dd = length(dv); float pr = aK * uBody.w * (1.0 - smoothstep(0.25, 1.4, dd));
+        transformed.xz += dv / max(dd, 0.001) * pr * 0.5; transformed.y -= pr * 0.22;`);
+      // (a blade is lit the same on both faces: three.js turns the normal of a back face round; here it is turned back)
+      sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n normal = normal * faceDirection;');
+    };
+    // water: the waves the god's view draws, in light — ripples moving over it, the sky in it at a low angle, the sun's
+    // glint, the shallows clear and the deep dark, foam where it meets the land
+    MAT.water = new THREE.MeshPhongMaterial({ vertexColors: true, transparent: true, opacity: 1, shininess: 140, specular: 0xc8dcea, depthWrite: false });
     MAT.water.onBeforeCompile = sh => {
-      sh.uniforms.uTime = U.time;
-      sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vec4 wp = modelMatrix * vec4(position, 1.0); transformed.y += sin(wp.x * 0.33 + uTime * 1.3) * 0.07 + cos(wp.z * 0.29 + uTime * 1.05) * 0.06;');
+      Object.assign(sh.uniforms, { uTime: U.time, uSky: U.sky, uDet: { value: G.Ground3D.detail() }, uWind: U.wind });
+      sh.vertexShader = 'uniform float uTime; attribute float aShore; varying float vShore; varying vec3 vWW;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        vec4 wp = modelMatrix * vec4(position, 1.0); transformed.y += sin(wp.x * 0.33 + uTime * 1.3) * 0.06 + cos(wp.z * 0.29 + uTime * 1.05) * 0.05;
+        vShore = aShore; vWW = wp.xyz;`);
+      sh.fragmentShader = 'uniform float uTime; uniform vec3 uSky; uniform sampler2D uDet; uniform vec3 uWind; varying float vShore; varying vec3 vWW;\n' + sh.fragmentShader
+        .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+        vec2 wq = vWW.xz; vec2 dr = uWind.xy * 0.06 + vec2(0.012, 0.008);
+        float r1 = texture2D(uDet, wq / 7.0 + dr * uTime).r, r2 = texture2D(uDet, wq / 4.3 - dr.yx * uTime * 1.3).r;
+        float r3 = texture2D(uDet, (wq + 0.11) / 7.0 + dr * uTime).r, r4 = texture2D(uDet, (wq + vec2(0.0, 0.11)) / 4.3 - dr.yx * uTime * 1.3).r;
+        vec2 gw = vec2(cos(wq.x * 0.33 + uTime * 1.3) * 0.33 * 0.06, -sin(wq.y * 0.29 + uTime * 1.05) * 0.29 * 0.05) * 6.0;
+        gw += vec2(r3 - r1, r4 - r2) * 2.2;
+        normal = normalize(normal + (viewMatrix * vec4(-gw.x, 0.0, -gw.y, 0.0)).xyz * 0.6);`)
+        .replace('#include <opaque_fragment>', `
+        float fr = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 4.0);
+        outgoingLight = mix(outgoingLight, uSky, fr * 0.42); diffuseColor.a = mix(diffuseColor.a, 1.0, fr * 0.6);
+        float fn = texture2D(uDet, vWW.xz / 5.0 + uTime * 0.01).g;
+        float band = vShore + (fn - 0.5) * 0.55 + sin(uTime * 0.9 - vShore * 7.0 + fn * 3.0) * 0.08;
+        float foam = smoothstep(0.76, 0.94, band) * (0.45 + fn * 0.55);
+        outgoingLight = mix(outgoingLight, vec3(0.9, 0.94, 0.96) * (0.55 + 0.45 * uSky), clamp(foam, 0.0, 0.8)); diffuseColor.a = max(diffuseColor.a, foam * 0.9);
+        #include <opaque_fragment>`);
     };
     MAT.ice = new THREE.MeshPhongMaterial({ color: 0xdcecf6, shininess: 60, transparent: true, opacity: 0.92 });
     MAT.wallWater = new THREE.MeshPhongMaterial({ color: 0x3f9cbc, transparent: true, opacity: 0.6, shininess: 100, side: THREE.DoubleSide, depthWrite: false });
@@ -162,6 +253,7 @@
     window.addEventListener('resize', resize);
     resize();
     G.Build3D && G.Build3D.init && G.Build3D.init(THREE, R3);
+    G.Build3D && G.Build3D.dress && G.Build3D.dress(MAT.solid); // (the solid material learns the patterns of the walls and roofs)
     G.People3D && G.People3D.init && G.People3D.init(THREE, R3);
     G.FX3D && G.FX3D.init && G.FX3D.init(THREE, R3);
   }
@@ -171,30 +263,30 @@
     renderer.shadowMap.enabled = !!q.shadows; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     sun.castShadow = !!q.shadows;
     if (q.shadows) { sun.shadow.mapSize.set(q.shadows, q.shadows); const c = sun.shadow.camera; c.left = -45; c.right = 45; c.top = 45; c.bottom = -45; c.near = 1; c.far = 260; c.updateProjectionMatrix(); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.04; if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
-    for (const m of [MAT.land, MAT.solid, MAT.flora]) if (m) m.needsUpdate = true;
+    // (the patterns of walls and roofs and the speckle of the leaves only where the machine carries the ground's grain too)
+    for (const m of [MAT.solid, MAT.flora]) if (m) m.defines = q.detail === 0 ? { NOPAT: 1 } : {};
+    for (const m of [MAT.land, MAT.solid, MAT.flora, MAT.plant]) if (m) m.needsUpdate = true;
+    G.Ground3D.quality();
     resize();
   }
   function resize() { if (!renderer) return; const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix(); }
 
   // ------------------------------ the ground of a chunk ------------------------------
-  const tileCol = (i, x, y) => {
-    const S = G.S; const t = S.type[i];
-    if (t <= T.SEA) { const d = G.clamp((G.SEA - W.tileH(i)) / 2.2, 0, 1); return G.lerpColor([214, 196, 150], [70, 96, 108], d); }
-    if (t === T.RIVER) return G.lerpColor([150, 132, 98], [96, 104, 92], S.deep[i] ? 0.7 : 0.25);
-    let c = G.Render.tileColor ? G.Render.tileColor(i, x, y) : [118, 172, 78];
-    if (S.cliff[i] || S.slope[i] > 2.6) c = G.lerpColor(c, G.Render.rockColor ? G.Render.rockColor(i, S.slope[i]) : [140, 134, 124], S.cliff[i] ? 0.9 : 0.5);
-    // (a farm's field is turned earth)
-    const b = S.occ[i] && S.buildings.get(S.occ[i]); if (b && (b.type === 'farm' || b.type === 'horta' || b.type === 'plantacao' || b.type === 'vinhedo')) c = G.lerpColor(c, [122, 92, 62], 0.75);
-    return c;
-  };
-  // a point of the ground: the colour of the tiles around it, mixed
-  function groundAt(x, y) {
-    const xi = Math.floor(x - 0.001), yi = Math.floor(y - 0.001); let r = 0, g = 0, b = 0, n = 0;
-    const fx = x - Math.floor(x), fy = y - Math.floor(y);
-    const xs = fx < 0.01 || fx > 0.99 ? [Math.round(x) - 1, Math.round(x)] : [Math.floor(x)], ys = fy < 0.01 || fy > 0.99 ? [Math.round(y) - 1, Math.round(y)] : [Math.floor(y)];
-    void xi; void yi;
-    for (const ty of ys) for (const tx of xs) { if (!W.inb(tx, ty)) continue; const c = tileCol(ty * N + tx, tx, ty); r += c[0]; g += c[1]; b += c[2]; n++; }
-    return n ? [r / n, g / n, b / n] : [90, 120, 80];
+  // (its colour is the Ground3D's tile picture, read by the land's shader; here only its shape and its shade)
+  const tileCol = (i, x, y) => G.Ground3D.tileCol(i, x, y);
+  // the shade of a point of the ground: in a hollow, and at the foot of a house or a wall (what the god's view darkens
+  // with its contour of shade) — the light the sky does not reach
+  function shadeAt(x, y) {
+    const S = G.S; let k = 1;
+    // (the tiles this point touches: four at a corner, one in the middle of a tile)
+    const x0 = Math.abs(x - Math.round(x)) < 0.01 ? Math.round(x) - 1 : Math.floor(x), x1 = Math.floor(x + 0.01);
+    const y0 = Math.abs(y - Math.round(y)) < 0.01 ? Math.round(y) - 1 : Math.floor(y), y1 = Math.floor(y + 0.01);
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+      if (!W.inb(tx, ty)) continue; const i = ty * N + tx;
+      const b = S.occ[i] && S.buildings.get(S.occ[i]); if (b && b.blocks) k = Math.min(k, 0.66); else if (S.wall[i] && S.wall[i] !== 3) k = Math.min(k, 0.72);
+    }
+    const h = W.hAt(x, y), m = (W.hAt(x + 1, y) + W.hAt(x - 1, y) + W.hAt(x, y + 1) + W.hAt(x, y - 1)) / 4;
+    return k * G.clamp(1 - (m - h) * 0.12, 0.72, 1);
   }
   // the slope of the ground from its heights (continuous across chunks: no seams of light between them)
   function normalAt(x, y, out) { const e = 0.25; const hx = (W.hAt(x + e, y) - W.hAt(x - e, y)) * G.Space.HM / (2 * e * G.Space.TILE), hz = (W.hAt(x, y + e) - W.hAt(x, y - e)) * G.Space.HM / (2 * e * G.Space.TILE); const l = Math.hypot(hx, 1, hz); out[0] = -hx / l; out[1] = 1 / l; out[2] = -hz / l; return out; }
@@ -205,7 +297,7 @@
       const x = Math.min(N, x0 + i * step), y = Math.min(N, y0 + j * step); const k = (j * gw + i) * 3;
       pos[k] = x * TL; pos[k + 1] = W.hAt(x, y) * HM - (step > 1 ? 0.3 : 0); pos[k + 2] = y * TL; // (the far picture a little low: a crack at its edge shows ground, not sky)
       normalAt(x, y, nn); nor[k] = nn[0]; nor[k + 1] = nn[1]; nor[k + 2] = nn[2];
-      const gc = groundAt(x, y); const jit = step < 1 ? 0.94 + G.hash(Math.round(x * 2) * 7919 + Math.round(y * 2) * 104729) * 0.12 : 1; const c = lin([gc[0] * jit, gc[1] * jit, gc[2] * jit]); colr[k] = c[0]; colr[k + 1] = c[1]; colr[k + 2] = c[2];
+      const sh = step < 1 ? shadeAt(x, y) : 1; colr[k] = colr[k + 1] = colr[k + 2] = sh * sh; // (a shade, so linear)
     }
     const idx = []; for (let j = 0; j < gh - 1; j++) for (let i = 0; i < gw - 1; i++) { const a = j * gw + i, b = a + 1, c = a + gw, d = c + 1; idx.push(a, c, b, b, c, d); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.BufferAttribute(colr, 3)); g.setIndex(idx); g.computeBoundingSphere();
@@ -214,8 +306,32 @@
   // water: the sea at its level, every river and lake at its own; the ice of a sudden winter; the walls of a parted sea
   const WATER = [[108, 205, 210], [80, 176, 200], [58, 146, 186], [44, 118, 166], [38, 104, 152]];
   const waterCol = d => { const k = G.clamp(d / 1.6, 0, 3.999); const a = WATER[Math.floor(k)], b = WATER[Math.min(4, Math.floor(k) + 1)]; return G.lerpColor(a, b, k - Math.floor(k)); };
+  // (a water surface: its colour and clearness at each corner — the shallows let the bed show — and how near the land the
+  // corner is, for the foam)
+  class WGeo {
+    constructor() { this.p = []; this.c = []; this.s = []; }
+    quad(P, cols, al, sh) { for (const k of [0, 1, 2, 0, 2, 3]) { this.p.push(P[k][0], P[k][1], P[k][2]); const c = lin(cols[k]); this.c.push(c[0], c[1], c[2], al[k]); this.s.push(sh[k]); } }
+    get empty() { return !this.p.length; }
+    build() {
+      const g = new THREE.BufferGeometry(); const n = this.p.length / 3; const nr = new Float32Array(n * 3); for (let k = 0; k < n; k++) nr[k * 3 + 1] = 1;
+      g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nr, 3));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 4)); g.setAttribute('aShore', new THREE.Float32BufferAttribute(this.s, 1));
+      g.computeBoundingSphere(); return g;
+    }
+  }
+  R3.WGeo = () => new WGeo();
+  // (how far below the water a corner's bed is, and whether land touches it)
+  function wetCorner(x, y, lvl, river) {
+    const S = G.S; let d = 0, n = 0, land = 0;
+    for (const [dx, dy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]]) {
+      const tx = x + dx, ty = y + dy; if (!W.inb(tx, ty)) continue; const i = ty * N + tx; const t = S.type[i];
+      const wet = river ? t === T.RIVER || t <= T.SEA : t <= T.SEA && !(S.dry && S.dry[i]);
+      if (!wet) { land = 1; continue; } d += lvl - W.tileH(i); n++;
+    }
+    return [n ? d / n : 0, land];
+  }
   function waterGeo(x0, y0, w, h, far) {
-    const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; const g = new Geo(), ice = new Geo(), walls = new Geo();
+    const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; const g = new WGeo(), ice = new Geo(), walls = new Geo();
     const sea = G.SEA * HM;
     for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {
       if (!W.inb(x, y)) continue; const i = y * N + x; const t = S.type[i];
@@ -233,31 +349,45 @@
           }
           continue;
         }
-        const c = waterCol(G.SEA - W.tileH(i));
-        g.quad([x * TL, sea, y * TL], [x * TL, sea, (y + 1) * TL], [(x + 1) * TL, sea, (y + 1) * TL], [(x + 1) * TL, sea, y * TL], c);
+        const C4 = [[x, y], [x, y + 1], [x + 1, y + 1], [x + 1, y]].map(([cx, cy]) => wetCorner(cx, cy, G.SEA, false));
+        g.quad([[x * TL, sea, y * TL], [x * TL, sea, (y + 1) * TL], [(x + 1) * TL, sea, (y + 1) * TL], [(x + 1) * TL, sea, y * TL]],
+          C4.map(c => waterCol(c[0])), C4.map(c => G.clamp(0.42 + c[0] * 0.3, 0.42, 0.93)), C4.map(c => c[1]));
       } else if (t === T.RIVER) {
         const wl = S.wl[i] * HM + 0.05;
         if (S.ice && S.ice[i]) { ice.quad([x * TL, wl + 0.05, y * TL], [x * TL, wl + 0.05, (y + 1) * TL], [(x + 1) * TL, wl + 0.05, (y + 1) * TL], [(x + 1) * TL, wl + 0.05, y * TL], '#dcecf6'); continue; }
-        const c = waterCol((S.wl[i] - W.tileH(i)) * 1.4 + (S.deep[i] ? 1.2 : 0));
-        g.quad([x * TL, wl, y * TL], [x * TL, wl, (y + 1) * TL], [(x + 1) * TL, wl, (y + 1) * TL], [(x + 1) * TL, wl, y * TL], c);
+        const dp = (S.wl[i] - W.tileH(i)) * 1.4 + (S.deep[i] ? 1.2 : 0); const c = waterCol(dp); const al = G.clamp(0.5 + dp * 0.25, 0.5, 0.9);
+        const C4 = [[x, y], [x, y + 1], [x + 1, y + 1], [x + 1, y]].map(([cx, cy]) => wetCorner(cx, cy, S.wl[i], true)[1] * 0.85);
+        g.quad([[x * TL, wl, y * TL], [x * TL, wl, (y + 1) * TL], [(x + 1) * TL, wl, (y + 1) * TL], [(x + 1) * TL, wl, y * TL]], [c, c, c, c], [al, al, al, al], C4);
       }
     }
     return { water: g.empty ? null : g.build(), ice: ice.empty ? null : ice.build(), walls: walls.empty ? null : walls.build() };
   }
-  // the roads: a strip of beaten earth or paving laid on the ground, following it
-  const ROADC = [null, [168, 140, 98], [150, 142, 128], [132, 126, 116]];
+  // the bridges: where a road crosses the water, a deck of planks (or of stone, on a paved road) on its beams and posts,
+  // with a rail on each side (the road on land is painted on the ground by the Ground3D)
   function roadGeo(x0, y0, w, h) {
     const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; const g = new Geo();
+    const isB = (x, y) => W.inb(x, y) && S.road[y * N + x] && S.type[y * N + x] === T.RIVER;
+    const onRoad = (x, y) => W.inb(x, y) && S.road[y * N + x];
     for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {
-      if (!W.inb(x, y)) continue; const i = y * N + x; const r = S.road[i]; if (!r || S.type[i] <= T.SEA) continue;
-      const lift = S.type[i] === T.RIVER ? Math.max(0, S.wl[i] - W.tileH(i)) * HM + 0.12 : 0.05; // (a bridge stands over the water)
-      const P = (a, b) => [a * TL, W.hAt(a, b) * HM + lift, b * TL];
-      const c = ROADC[Math.min(3, r)]; const v = G.hash(i * 5) * 10 - 5; const cc = [c[0] + v, c[1] + v, c[2] + v];
-      g.quad(P(x, y), P(x, y + 1), P(x + 1, y + 1), P(x + 1, y), cc);
-      // (paved: the joints of the stones)
-      if (r >= 2) { const d = [cc[0] * 0.8, cc[1] * 0.8, cc[2] * 0.8]; g.quad(P(x + 0.48, y), P(x + 0.48, y + 1), P(x + 0.52, y + 1), P(x + 0.52, y), d); }
+      if (!isB(x, y)) continue; const i = y * N + x; const r = S.road[i];
+      const top = Math.max(W.hAt(x + 0.5, y + 0.5), S.wl[i]) * HM + 0.32;
+      const alongX = onRoad(x - 1, y) || onRoad(x + 1, y) || !(onRoad(x, y - 1) || onRoad(x, y + 1));
+      const X = (x + 0.5) * TL, Z = (y + 0.5) * TL; const ry = alongX ? 0 : Math.PI / 2; const stone = r >= 2;
+      const deck = stone ? '#9a948a' : '#8a6a44', beam = stone ? '#7a756c' : '#5e4630';
+      // (the deck in planks across the way, each a little different)
+      const n = stone ? 1 : 8;
+      for (let k = 0; k < n; k++) { const f = (k + 0.5) / n - 0.5; const v = stone ? 0 : (G.hash(i * 9 + k) - 0.5) * 18; const c = G.hex2rgb(deck).map(q => q + v);
+        g.put(SH.box, R3.mat(X + (alongX ? f * TL : 0), top - 0.22, Z + (alongX ? 0 : f * TL), ry, stone ? TL : TL / n - 0.04, 0.22, 3.0), c); }
+      for (const s of [-1, 1]) {
+        const ox = alongX ? 0 : s * 1.55, oz = alongX ? s * 1.55 : 0;
+        g.put(SH.box, R3.mat(X + ox, top - 0.5, Z + oz, ry, TL, 0.3, 0.3), beam);
+        g.put(SH.box, R3.mat(X + ox, top, Z + oz, ry, TL, stone ? 0.75 : 0.1, stone ? 0.3 : 0.1), stone ? deck : beam);
+        if (!stone) { g.put(SH.box, R3.mat(X + ox, top + 0.85, Z + oz, ry, TL, 0.12, 0.12), beam); for (const e of [-0.5, 0]) g.put(SH.box, R3.mat(X + ox + (alongX ? e * TL : 0), top - 0.1, Z + oz + (alongX ? 0 : e * TL), 0, 0.16, 1.05, 0.16), beam); }
+        // (the posts down into the bed)
+        const bed = W.tileH(i) * HM; g.put(SH.box, R3.mat(X + ox, bed - 0.3, Z + oz, 0, 0.32, top - bed, 0.32), beam);
+      }
     }
-    return g.empty ? null : g.build();
+    return g.empty ? null : g.build(true);
   }
   // ------------------------------ trees, rocks, bushes ------------------------------
   const KIND = {
@@ -267,109 +397,198 @@
     jungle: ['tall', '#2f7a2a', '#6b5038'], acacia: ['flat', '#7a9a3a', '#6b5038'], baobab: ['baobab', '#6a8a3a', '#9a8068'], cactus: ['cactus', '#5a8a3a'], incense: ['bush', '#8a9a5a', '#7a6a5a'],
     palm: ['palm', '#4a8a2a', '#8a6a44'], date: ['palm', '#5a8a3a', '#8a6a44', '#a8642a'], acai: ['palm', '#3f7a2a', '#6a5038', '#4a2a5a'], banana: ['banana', '#6aa83a', '#7a6a44', '#e8d04a'],
   };
-  function treeInto(g, t) {
+  // the god's three tones of each crown: [base, dark, light] by kind and variant (art.js canopies)
+  const TPAL = {
+    oak: [['#4e8f3a', '#37692c', '#79b653'], ['#5b9d3e', '#3f7630', '#8fc75c'], ['#7c9b3a', '#5c7a2b', '#abc35b']],
+    pine: [['#2f6e4a', '#224f36', '#4d9063'], ['#2c6a52', '#1f4d3c', '#4a8a6e'], ['#3a7445', '#2a5733', '#5b9660']],
+    snowpine: [['#2e5e48', '#1f4234', '#4a7a60'], ['#2a5a4e', '#1c3e36', '#467666'], ['#35644a', '#244634', '#507e62']],
+    birch: [['#8cc05a', '#679a3e', '#b4dc7a'], ['#9cc85a', '#76a23e', '#c4e27e'], ['#d0b44a', '#a88e30', '#e8d070']],
+    jungle: [['#2f8a3a', '#1e6228', '#4fae4a'], ['#3a9440', '#246a2c', '#5cbc52'], ['#28803e', '#18582a', '#44a452']],
+    acacia: [['#7a9a3a', '#5a7a28', '#9aba50'], ['#869e40', '#667e2c', '#a8c05a'], ['#8a9234', '#6a7226', '#aab04a']],
+    willow: [['#6a8a42', '#4c6a30', '#8aa858'], ['#72904a', '#526e34', '#94b060'], ['#62823e', '#46642c', '#80a052']],
+    apple: [['#5aa040', '#3e7a2e', '#88c860'], ['#64a646', '#447e30', '#94ce6a'], ['#58983c', '#3a722a', '#82be5a']],
+    mulberry: [['#3e7e36', '#2a5a26', '#5e9e4a'], ['#448238', '#2e5e28', '#64a250'], ['#3a7632', '#285624', '#5a9646']],
+  };
+  const SNOW = [238, 244, 250];
+  // (how much snow lies on a tile: where the land is cold enough that the god's view paints its ground white)
+  const snowAt = i => (G.S.temp ? G.clamp((0.235 - G.S.temp[i] / 255) / 0.07, 0, 1) : 0);
+  R3.snowAt = snowAt;
+  function tpal(t) { const P = TPAL[t.kind]; if (P) return P[(t.v || 0) % 3].map(c => G.hex2rgb(c)); const b = G.hex2rgb((KIND[t.kind] || KIND.oak)[1]); return [b, [b[0] * 0.7, b[1] * 0.72, b[2] * 0.7], [Math.min(255, b[0] * 1.25 + 12), Math.min(255, b[1] * 1.22 + 12), Math.min(255, b[2] * 1.15 + 8)]]; }
+  // (the colour of a point of a crown: dark under it and near its heart, the base on its sides, light on top; snow
+  // resting on the upper faces where it is cold)
+  const leafCol = (pal, snow, cx, cz, r) => (X, Y, Z, nx, ny) => {
+    let c = ny < 0 ? G.lerpColor(pal[1], pal[0], (ny + 1)) : G.lerpColor(pal[0], pal[2], G.clamp(ny * 0.85, 0, 1) * 0.75);
+    const inner = G.clamp(1 - Math.hypot(X - cx, Z - cz) / Math.max(0.5, r), 0, 1); c = G.lerpColor(c, pal[1], inner * 0.3 * (1 - Math.max(0, ny)));
+    if (snow > 0 && ny > 0.3) c = G.lerpColor(c, SNOW, snow * G.clamp((ny - 0.3) / 0.35, 0, 1));
+    return c;
+  };
+  // (where a tree's crown hangs, for the leaves it lets fall: [X, Y, Z, its radius, its colour 0..1], or null)
+  R3.crownOf = function (t) {
+    const k = KIND[t.kind] || KIND.oak; if (t.stage !== 'grow' || t.size < 0.35 || (k[0] !== 'round' && k[0] !== 'tall' && k[0] !== 'willow' && k[0] !== 'flat')) return null;
+    const TL = G.Space.TILE, HM = G.Space.HM; const sz = G.clamp(t.size, 0.15, 1.4); const h = G.hash(t.id * 7); const tall = k[0] === 'tall' ? 1.35 : 1; const H = (5 + 7 * sz) * (0.85 + h * 0.3);
+    const c = tpal(t)[0]; return [t.x * TL, W.groundH(t.x, t.y) * HM + H * 0.62 * tall, t.y * TL, (2.6 * sz + 0.8) * tall, [c[0] / 255, c[1] / 255, c[2] / 255]];
+  };
+  const barkCol = (bark, snow) => (X, Y, Z, nx, ny) => (snow > 0 && ny > 0.6 ? G.lerpColor(bark, SNOW, snow) : bark);
+  // a tree of the world as it stands: the god's shapes and tones in the round — a crown of many lumps, faceted, lit from
+  // above, swaying a little in the wind (its sway grows with height); pines in tiers; palms with drooping fronds; the
+  // snow on top where the land is cold. gp: the plants that bend (fronds, hanging strands of a willow)
+  function treeInto(g, t, gp) {
     const TL = G.Space.TILE, HM = G.Space.HM;
     const X = t.x * TL, Z = t.y * TL, Y = W.groundH(t.x, t.y) * HM; const sz = G.clamp(t.size, 0.15, 1.4); const k = KIND[t.kind] || KIND.oak;
-    const h = G.hash(t.id * 7) ; const rot = h * TAU; const s = 0.85 + h * 0.3;
-    if (t.stage === 'stump') { g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.6, 0.45, 0.6), k[2] || '#6b4a2e'); return; }
-    if (t.stage === 'log' || t.stage === 'fall') { g.put(SH.cyl, R3.mat(X, Y + 0.3, Z, rot, 0.5, 4.5 * sz, 0.5, 0, Math.PI / 2), k[2] || '#6b4a2e'); return; }
+    const h = G.hash(t.id * 7); const rot = h * TAU; const s = 0.85 + h * 0.3;
+    const snow = t.kind === 'snowpine' ? 0.85 : snowAt(W.idx(Math.floor(t.x), Math.floor(t.y))) * 0.85;
+    const bark0 = G.hex2rgb(k[2] || '#6b4a2e');
+    if (t.stage === 'stump') { g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.6, 0.45, 0.6), (X2, Y2, Z2, nx, ny) => (ny > 0.9 ? [214, 180, 128] : bark0)); return; }
+    if (t.stage === 'fall' && !t._standing) return; // (a tree falling is drawn moving, by FX3D, until it lies)
+    if (t.stage === 'log' || t.stage === 'fall') { g.put(SH.cyl, R3.mat(X, Y + 0.3, Z, rot, 0.5, 4.5 * sz, 0.5, 0, Math.PI / 2), (X2, Y2, Z2, nx, ny) => (Math.abs(ny) < 0.2 && Math.abs(nx) < 0.3 ? [214, 180, 128] : bark0)); return; }
     const burnt = t.stage === 'burnt';
-    const leaf = burnt ? '#2a2420' : k[1], bark = burnt ? '#1e1a18' : (k[2] || '#6b4a2e');
+    const pal = burnt ? [[42, 36, 32], [26, 22, 20], [58, 50, 44]] : tpal(t); const bark = burnt ? [30, 26, 24] : bark0;
     const H = (5 + 7 * sz) * s; // (a grown oak, 11 m; a sapling, a little more than a person)
+    const bc = barkCol(bark, snow);
+    const lump = (x, y, z, sx, sy, sz2, cr, sw) => g.put(SH.ico0, R3.mat(x, y, z, rot + x * 0.7 + z * 0.3, sx, sy, sz2), leafCol(pal, snow, X, Z, cr), sw);
     switch (k[0]) {
       case 'cone': {
-        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.45 * sz + 0.15, H * 0.3, 0.45 * sz + 0.15), bark);
-        if (!burnt) for (let q = 0; q < 3; q++) g.put(SH.cone, R3.mat(X, Y + H * (0.22 + q * 0.22), Z, rot + q, (3.4 - q * 0.9) * sz + 0.6, H * 0.42, (3.4 - q * 0.9) * sz + 0.6), q === 2 && k[3] ? k[3] : leaf);
+        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.45 * sz + 0.15, H * 0.3, 0.45 * sz + 0.15), bc);
+        if (!burnt) for (let q = 0; q < 4; q++) {
+          const w2 = (3.6 - q * 0.8) * sz + 0.6, y = Y + H * (0.2 + q * 0.17);
+          g.put(SH.cone, R3.mat(X + Math.cos(rot + q) * 0.12, y, Z + Math.sin(rot + q) * 0.12, rot + q * 0.9, w2, H * 0.36, w2), leafCol(pal, snow, X, Z, w2 * 0.5), 0.08 + q * 0.05);
+        }
         break;
       }
       case 'palm': case 'banana': {
-        const lean = (h - 0.5) * 0.35;
-        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.32, H * 0.85, 0.32, lean, 0), bark);
-        const tx = X + Math.sin(rot) * Math.sin(lean) * H * 0.85, tz = Z + Math.cos(rot) * Math.sin(lean) * H * 0.85, ty = Y + H * 0.82;
-        if (!burnt) for (let q = 0; q < 7; q++) g.put(SH.box, R3.mat(tx, ty, tz, q / 7 * TAU, 0.9, 0.12, 3.6 * sz + 1, 0.55, 0), leaf);
-        if (k[3] && !burnt) g.put(SH.sph, R3.mat(tx, ty - 0.6, tz, 0, 0.9), k[3]);
+        // (a trunk that leans and curves, in rings; fronds drooping from its top)
+        const lean = (h - 0.5) * 0.5, segs = 4; let px = X, py = Y, pz = Z; const dx = Math.sin(rot), dz = Math.cos(rot);
+        for (let q = 0; q < segs; q++) { const a = lean * (q + 1) / segs; const len = H * 0.85 / segs; g.put(SH.cyl, R3.mat(px, py, pz, rot, 0.36 - q * 0.03, len + 0.05, 0.36 - q * 0.03, a, 0), (X2, Y2, Z2, nx, ny) => G.lerpColor(bark, [bark[0] * 0.75, bark[1] * 0.75, bark[2] * 0.75], ((Y2 - Y) * 2.2) % 1 > 0.5 ? 1 : 0), q * 0.04); px += dx * Math.sin(a) * len; pz += dz * Math.sin(a) * len; py += Math.cos(a) * len; }
+        if (!burnt) {
+          const fl = (3.6 * sz + 1) * (t.kind === 'banana' ? 0.8 : 1); const nf = t.kind === 'banana' ? 6 : 9;
+          for (let q = 0; q < nf; q++) {
+            const a = q / nf * TAU + rot, cs = Math.cos(a), sn = Math.sin(a); const wd = t.kind === 'banana' ? 0.9 : 0.55;
+            // (each frond in three pieces, rising a little, then falling)
+            const P0 = [px, py, pz], P1 = [px + cs * fl * 0.35, py + 0.45, pz + sn * fl * 0.35], P2 = [px + cs * fl * 0.7, py + 0.1, pz + sn * fl * 0.7], P3 = [px + cs * fl, py - 0.9, pz + sn * fl];
+            const c0 = pal[1], c1 = pal[0], c2 = pal[2];
+            gp.blade(P0[0], P0[1], P0[2], wd * 0.6, a + Math.PI / 2, P1[0], P1[1], P1[2], c0, c1, 0.25);
+            gp.blade(P1[0], P1[1], P1[2], wd, a + Math.PI / 2, P2[0], P2[1], P2[2], c1, c2, 0.4);
+            gp.blade(P2[0], P2[1], P2[2], wd * 0.8, a + Math.PI / 2, P3[0], P3[1], P3[2], c2, c1, 0.6);
+          }
+          if (k[3]) for (let q = 0; q < 3; q++) g.put(SH.sph, R3.mat(px + Math.cos(q * 2.1) * 0.35, py - 0.5, pz + Math.sin(q * 2.1) * 0.35, 0, 0.5), k[3], 0.2);
+        }
         break;
       }
       case 'cactus': {
-        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.7, 2.5 * sz + 0.8, 0.7), k[1]);
-        g.put(SH.cyl, R3.mat(X + 0.5, Y + 1.1, Z, rot, 0.4, 1.2 * sz + 0.3, 0.4), k[1]);
+        const c = (X2, Y2, Z2, nx, ny) => (ny > 0.7 ? G.lerpColor(pal[0], pal[2], 0.6) : G.lerpColor(pal[1], pal[0], 0.5 + nx * 0.3));
+        const hh = 2.5 * sz + 0.8; g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.7, hh, 0.7), c); g.put(SH.sph, R3.mat(X, Y + hh, Z, 0, 0.7, 0.5, 0.7), c);
+        for (const sd of [-1, 1]) { if ((t.v || 0) === (sd > 0 ? 1 : 2)) continue; const ax = X + Math.cos(rot) * 0.55 * sd, az = Z + Math.sin(rot) * 0.55 * sd, ay = Y + hh * (sd > 0 ? 0.42 : 0.32);
+          g.put(SH.cyl, R3.mat(ax, ay, az, rot, 0.38, 0.4, 0.38, 0, sd * Math.PI / 2), c); g.put(SH.cyl, R3.mat(ax + Math.cos(rot) * 0.35 * sd, ay, az + Math.sin(rot) * 0.35 * sd, rot, 0.38, hh * 0.45, 0.38), c); }
         break;
       }
       case 'bush': {
-        g.put(SH.ico, R3.mat(X, Y + 0.9, Z, rot, 2.2 * sz + 0.6, 1.8 * sz + 0.5, 2.2 * sz + 0.6), leaf);
-        if (k[3] && !burnt) for (let q = 0; q < 4; q++) g.put(SH.sph, R3.mat(X + Math.cos(q * 1.7) * 0.8, Y + 1.2 + (q % 2) * 0.4, Z + Math.sin(q * 1.7) * 0.8, 0, 0.22), k[3]);
+        for (let q = 0; q < 4; q++) { const a = rot + q * 1.7, d = q ? 0.55 : 0; lump(X + Math.cos(a) * d, Y + 0.7 + (q ? 0 : 0.35), Z + Math.sin(a) * d, (2 * sz + 0.6) * (q ? 0.8 : 1), (1.6 * sz + 0.5) * (q ? 0.8 : 1), (2 * sz + 0.6) * (q ? 0.8 : 1), 1.4, 0.15); }
+        if (k[3] && !burnt) for (let q = 0; q < 6; q++) g.put(SH.sph, R3.mat(X + Math.cos(q * 1.7) * 0.85, Y + 1.0 + (q % 2) * 0.4, Z + Math.sin(q * 1.7) * 0.85, 0, 0.2), k[3], 0.15);
         break;
       }
       case 'flat': {
-        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.35, H * 0.75, 0.35), bark);
-        if (!burnt) g.put(SH.ico, R3.mat(X, Y + H * 0.78, Z, rot, 7 * sz + 1, 1.4, 7 * sz + 1), leaf);
+        // (the acacia: a trunk that forks, an umbrella of flat lumps)
+        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.38, H * 0.45, 0.38), bc);
+        for (const sd of [-1, 1]) g.put(SH.cyl, R3.mat(X, Y + H * 0.42, Z, rot, 0.22, H * 0.4, 0.22, 0, sd * 0.55), bc, 0.05);
+        if (!burnt) { const R = 3.5 * sz + 0.6; for (let q = 0; q < 6; q++) { const a = rot + q * 1.05, d = q ? R * 0.55 : 0; lump(X + Math.cos(a) * d, Y + H * 0.8 + (q ? -0.1 : 0.2), Z + Math.sin(a) * d, R * (q ? 0.9 : 1.1), 1.1, R * (q ? 0.9 : 1.1), R * 1.5, 0.22); } }
         break;
       }
       case 'baobab': {
-        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 2.2 * sz + 0.4, H * 0.7, 2.2 * sz + 0.4), bark);
-        if (!burnt) g.put(SH.ico, R3.mat(X, Y + H * 0.72, Z, rot, 5 * sz + 1, 1.8, 5 * sz + 1), leaf);
+        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 2.2 * sz + 0.4, H * 0.62, 2.2 * sz + 0.4), bc);
+        for (let q = 0; q < 5; q++) { const a = rot + q * 1.26; g.put(SH.cyl, R3.mat(X, Y + H * 0.58, Z, a, 0.3, H * 0.3, 0.3, 0.8, 0), bc, 0.05);
+          if (!burnt) lump(X + Math.sin(a) * H * 0.22, Y + H * 0.8, Z + Math.cos(a) * H * 0.22, 2.2 * sz + 0.6, 1.2, 2.2 * sz + 0.6, 2, 0.2); }
         break;
       }
       case 'willow': {
-        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.5, H * 0.5, 0.5), bark);
-        if (!burnt) { g.put(SH.ico, R3.mat(X, Y + H * 0.6, Z, rot, 6 * sz + 1.2, 4 * sz + 1.4, 6 * sz + 1.2), leaf); g.put(SH.cyl, R3.mat(X, Y + H * 0.15, Z, rot, 5.5 * sz + 1, H * 0.42, 5.5 * sz + 1), leaf); }
+        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.55, H * 0.5, 0.55), bc);
+        if (!burnt) {
+          const R = 2.8 * sz + 0.9;
+          for (let q = 0; q < 6; q++) { const a = rot + q * 1.05, d = q ? R * 0.5 : 0; lump(X + Math.cos(a) * d, Y + H * 0.6 + (q ? 0 : R * 0.3), Z + Math.sin(a) * d, R * 1.1, R * 0.8, R * 1.1, R, 0.25); }
+          // (the hanging curtains of leaves)
+          for (let q = 0; q < 22; q++) { const a = rot + q / 22 * TAU, d = R * (1.05 + G.hash(t.id + q) * 0.25), ty = Y + H * 0.55 + G.hash(t.id * 3 + q) * 0.8; const lx = X + Math.cos(a) * d, lz = Z + Math.sin(a) * d;
+            gp.blade(lx, ty, lz, 0.32, a + Math.PI / 2, lx + Math.cos(a) * 0.2, ty - H * 0.38, lz + Math.sin(a) * 0.2, pal[0], pal[1], 0.7); }
+        }
         break;
       }
       default: { // round crowns: oak, birch, the fruit trees, the tall trees of the forests of the south
         const tall = k[0] === 'tall' ? 1.35 : 1;
-        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.45 * sz + 0.15, H * 0.5 * tall, 0.45 * sz + 0.15), bark);
+        const birch = t.kind === 'birch';
+        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.45 * sz + 0.15, H * 0.55 * tall, 0.45 * sz + 0.15), birch ? (X2, Y2, Z2, nx, ny) => (Math.floor((Y2 - Y) * 2.6 + h * 5) % 4 === 0 ? [46, 42, 38] : bark) : bc);
+        // (two branches into the crown)
+        for (const sd of [-1, 1]) g.put(SH.cyl, R3.mat(X, Y + H * 0.38 * tall, Z, rot + sd * 1.2, 0.18 * sz + 0.08, H * 0.28, 0.18 * sz + 0.08, 0.7, 0), bc, 0.05);
         if (!burnt) {
-          const r = (2.6 * sz + 0.8) * tall;
-          for (let q = 0; q < 3; q++) { const a = rot + q * 2.1, d = r * 0.35; g.put(SH.ico, R3.mat(X + Math.cos(a) * d, Y + H * 0.62 * tall + (q === 0 ? r * 0.35 : 0), Z + Math.sin(a) * d, a, r * 1.25, r * 1.05, r * 1.25), q === 0 ? leaf : G.lerpColor(G.hex2rgb(leaf), [20, 40, 20], 0.14)); }
-          if (k[3] && t.fruit !== 0) for (let q = 0; q < 5; q++) { const a = rot + q * 1.3; g.put(SH.sph, R3.mat(X + Math.cos(a) * r * 0.8, Y + H * 0.55 * tall, Z + Math.sin(a) * r * 0.8, 0, 0.32), k[3]); }
+          const r = (2.6 * sz + 0.8) * tall; const cy = Y + H * 0.66 * tall; const n = birch ? 6 : 8;
+          lump(X, cy + r * 0.55, Z, r * 1.25, r * 1.0, r * 1.25, r * 1.4, 0.3);
+          for (let q = 0; q < n - 1; q++) {
+            const a = rot + q * (TAU / (n - 1)) + G.hash(t.id + q) * 0.5, ring = q % 2 ? 0.62 : 0.78, up = q % 2 ? 0.25 : -0.15;
+            const sc = r * (0.78 + G.hash(t.id * 5 + q) * 0.3) * (birch ? 0.8 : 1);
+            lump(X + Math.cos(a) * r * ring, cy + r * up, Z + Math.sin(a) * r * ring, sc * 1.1, sc * 0.92 * (birch ? 1.2 : 1), sc * 1.1, r * 1.4, 0.22 + up * 0.1);
+          }
+          if (k[3] && t.fruit !== 0) for (let q = 0; q < 7; q++) { const a = rot + q * 0.9; g.put(SH.sph, R3.mat(X + Math.cos(a) * r * 0.95, cy - r * 0.1 + (q % 3) * 0.3, Z + Math.sin(a) * r * 0.95, 0, 0.32), k[3], 0.25); }
         }
       }
     }
   }
   function floraGeo(x0, y0, w, h, far) {
-    const S = G.S; const g = new Geo(); const TL = G.Space.TILE, HM = G.Space.HM;
+    const S = G.S; const g = new Geo(), gp = new Geo(); const TL = G.Space.TILE, HM = G.Space.HM;
     for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {
       if (!W.inb(x, y)) continue; const i = y * N + x;
       const tid = S.treeAt[i]; const t = tid && S.trees.get(tid);
       if (t) {
-        if (far) { if (t.stage !== 'grow' || t.size < 0.3) continue; const k = KIND[t.kind] || KIND.oak; const H = 5 + 7 * t.size; g.put(k[0] === 'cone' ? SH.cone : SH.ico0, R3.mat(t.x * TL, W.groundH(t.x, t.y) * HM + (k[0] === 'cone' ? 0 : H * 0.6), t.y * TL, 0, k[0] === 'cone' ? 4 : 5.5 * t.size + 1.5, k[0] === 'cone' ? H : 4.5, k[0] === 'cone' ? 4 : 5.5 * t.size + 1.5), k[1]); }
-        else treeInto(g, t);
+        if (far) { if (t.stage !== 'grow' || t.size < 0.3) continue; const k = KIND[t.kind] || KIND.oak; const H = 5 + 7 * t.size; const pal = tpal(t); g.put(k[0] === 'cone' ? SH.cone : SH.ico0, R3.mat(t.x * TL, W.groundH(t.x, t.y) * HM + (k[0] === 'cone' ? 0 : H * 0.6), t.y * TL, 0, k[0] === 'cone' ? 4 : 5.5 * t.size + 1.5, k[0] === 'cone' ? H : 4.5, k[0] === 'cone' ? 4 : 5.5 * t.size + 1.5), (X, Y, Z, nx, ny) => G.lerpColor(pal[1], pal[2], G.clamp(ny * 0.5 + 0.5, 0, 1) * 0.8)); }
+        else treeInto(g, t, gp);
       }
       if (far) continue;
       const oid = S.objAt[i]; if (!oid) continue;
       const r = S.rocks.get(oid);
-      if (r) { const sc = 0.8 + 1.6 * G.clamp(r.stone / Math.max(1, r.max || r.stone), 0.2, 1); g.put(SH.dode, R3.mat(r.x * TL, W.groundH(r.x, r.y) * HM + sc * 0.25, r.y * TL, G.hash(r.id) * TAU, sc * 1.4, sc, sc * 1.2), r.meteor ? '#4a3a34' : '#8c867a'); continue; }
+      if (r) {
+        // (a boulder: lit grey on top, darker below; moss in the wet lands, snow in the cold)
+        const sc = 0.8 + 1.6 * G.clamp(r.stone / Math.max(1, r.max || r.stone), 0.2, 1); const base = r.meteor ? [74, 58, 52] : [140, 134, 122];
+        const cold = snowAt(i) > 0.4; const sty = G.Biome && G.Biome.style ? G.Biome.style(i) : 'grass'; const moss = sty === 'jungle' || sty === 'swamp' || sty === 'taiga';
+        g.put(SH.dode, R3.mat(r.x * TL, W.groundH(r.x, r.y) * HM + sc * 0.25, r.y * TL, G.hash(r.id) * TAU, sc * 1.4, sc, sc * 1.2), (X, Y, Z, nx, ny) => { let c = G.lerpColor([base[0] * 0.6, base[1] * 0.6, base[2] * 0.62], base, G.clamp(ny * 0.6 + 0.5, 0, 1)); if (ny > 0.55) { if (cold) c = G.lerpColor(c, SNOW, 0.8); else if (moss) c = G.lerpColor(c, [90, 120, 60], 0.5); } return c; });
+        continue;
+      }
       const b = S.bushes.get(oid);
       if (b) {
-        const X = b.x * TL, Z = b.y * TL, Y = W.groundH(b.x, b.y) * HM;
-        g.put(SH.ico, R3.mat(X, Y + 0.45, Z, G.hash(b.id) * TAU, 1.5, 1.0, 1.5), b.burnt > 0 ? '#3a3028' : '#3f7a34');
-        if (b.berries > 0 && !(b.burnt > 0)) for (let q = 0; q < Math.min(6, b.berries); q++) g.put(SH.sph, R3.mat(X + Math.cos(q * 1.9) * 0.55, Y + 0.6 + (q % 2) * 0.25, Z + Math.sin(q * 1.9) * 0.55, 0, 0.16), '#c8283a');
+        const X = b.x * TL, Z = b.y * TL, Y = W.groundH(b.x, b.y) * HM; const dead = b.burnt > 0; const pal = dead ? [[58, 48, 40], [40, 34, 28], [70, 60, 50]] : [[63, 122, 52], [42, 88, 36], [96, 156, 70]];
+        for (let q = 0; q < 3; q++) { const a = G.hash(b.id) * TAU + q * 2.1, d = q ? 0.4 : 0; g.put(SH.ico0, R3.mat(X + Math.cos(a) * d, Y + 0.45 + (q ? 0 : 0.15), Z + Math.sin(a) * d, a, 1.3 - q * 0.15, 0.95, 1.3 - q * 0.15), leafCol(pal, 0, X, Z, 1), 0.12); }
+        if (b.berries > 0 && !dead) for (let q = 0; q < Math.min(6, b.berries); q++) g.put(SH.sph, R3.mat(X + Math.cos(q * 1.9) * 0.55, Y + 0.6 + (q % 2) * 0.25, Z + Math.sin(q * 1.9) * 0.55, 0, 0.16), '#c8283a', 0.12);
       }
     }
-    return g.empty ? null : g.build();
+    return { flora: g.empty ? null : g.build(false, true), plants: gp.empty ? null : gp.build() };
   }
   // a little grass and flowers on the open land near the body: only seen, the same tufts every time (the world's seed),
   // and of the land's own kind — short and green in the meadows, tall and golden in the savanna, reeds in the swamp,
   // sparse in the taiga, none on snow or dune
-  const GRASS = { grass: [3, 0.45, 1, 0], savanna: [4, 0.95, 0.75, 1], swamp: [3, 1.2, 0.9, 2], jungle: [4, 0.8, 1.1, 0], taiga: [1, 0.4, 0.9, 0], snow: null, dune: null };
+  // [tufts a tile, height (m), blades a tuft, tips: 0 green, 1 golden, 2 reeds]
+  const GRASS = { grass: [7, 0.42, 4, 0], savanna: [8, 0.9, 5, 1], swamp: [6, 1.25, 4, 2], jungle: [8, 0.75, 5, 0], taiga: [3, 0.38, 3, 0], snow: null, dune: null };
+  const FLOWER = ['#f2e46a', '#e86a8a', '#f4f4f0', '#9a7ae8', '#f29a4a'];
   function grassGeo(x0, y0, w, h) {
     const S = G.S; const g = new Geo(); const TL = G.Space.TILE, HM = G.Space.HM;
     for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {
       if (!W.inb(x, y)) continue; const i = y * N + x; const t = S.type[i];
-      if ((t !== T.GRASS && t !== T.MEADOW) || S.road[i] || S.occ[i] || S.cliff[i] || S.burnt[i] > 0 || (S.wear[i] || 0) > 20) continue;
-      const K = GRASS[G.Biomes && G.Biomes.style ? G.Biomes.style(i) : 'grass']; if (!K) continue;
-      const n = K[0] + (t === T.MEADOW ? 2 : 0);
-      const c = tileCol(i, x, y);
+      if ((t !== T.GRASS && t !== T.MEADOW) || S.road[i] || S.occ[i] || S.cliff[i] || S.burnt[i] > 0 || S.scar[i] > 0 || G.pathLevel(S.wear[i]) >= 2) continue;
+      const K = GRASS[G.Biome && G.Biome.style ? G.Biome.style(i) : 'grass']; if (!K || snowAt(i) > 0.45) continue;
+      // (a worn tile keeps a little grass at its edges; a meadow has more, and flowers)
+      const lv = G.pathLevel(S.wear[i]); const n = Math.round((K[0] + (t === T.MEADOW ? 3 : 0)) * (lv ? 0.4 : 1));
+      const c = tileCol(i, x, y); const root = [c[0] * 0.62, c[1] * 0.72, c[2] * 0.55];
       for (let q = 0; q < n; q++) {
-        const hx = G.hash(i * 13 + q * 7 + (S.seed | 0)), hz = G.hash(i * 17 + q * 11 + 3);
-        const px = x + hx, pz = y + hz; const Y = W.hAt(px, pz) * HM;
-        const tip = K[3] === 1 ? [205, 178, 96] : K[3] === 2 ? [96, 120, 64] : [c[0] * 0.8 + 18, c[1] * 1.08 + 10, c[2] * 0.7];
-        // (a tuft: three thin blades leaning out from one root)
-        for (let k = 0; k < 3; k++) {
-          const a = hx * TAU + k * 2.1, ht = K[1] * (0.6 + G.hash(i * 5 + q * 3 + k) * 0.6);
-          g.put(SH.cone, R3.mat(px * TL + Math.cos(a) * 0.06, Y, pz * TL + Math.sin(a) * 0.06, a, 0.07 * K[2] + 0.02, ht, 0.05 * K[2] + 0.02, 0.32, 0), G.lerpColor([c[0] * 0.7, c[1] * 0.8, c[2] * 0.6], tip, 0.4 + k * 0.2));
+        const hx = G.hash(i * 13 + q * 7 + (S.seed | 0)), hz = G.hash(i * 17 + q * 11 + 3), hs = G.hash(i * 5 + q * 3 + 1);
+        const px = (x + hx) * TL, pz = (y + hz) * TL; const Y = W.hAt(x + hx, y + hz) * HM - 0.02;
+        const tip = K[3] === 1 ? G.lerpColor([205, 178, 96], [176, 160, 84], hs) : K[3] === 2 ? [110, 132, 70] : [Math.min(255, c[0] * 0.9 + 22), Math.min(255, c[1] * 1.12 + 12), c[2] * 0.78];
+        const ht = K[1] * (0.6 + hs * 0.7);
+        // (a tuft: blades fanning out from one root, each leaning its own way)
+        for (let k = 0; k < K[2]; k++) {
+          const a = hx * TAU + k * (TAU / K[2]) + hs, lean = 0.18 + G.hash(i * 3 + q * 5 + k) * 0.3; const hh = ht * (0.7 + G.hash(i + q * 7 + k * 3) * 0.5);
+          const ox = Math.cos(a) * 0.05, oz = Math.sin(a) * 0.05;
+          g.blade(px + ox, Y, pz + oz, K[3] === 2 ? 0.09 : 0.07, a + Math.PI / 2, px + ox + Math.cos(a) * hh * lean, Y + hh, pz + oz + Math.sin(a) * hh * lean, root, G.lerpColor(root, tip, 0.75 + k / K[2] * 0.25));
         }
-        if (t === T.MEADOW && q === 0 && hz > 0.45 && K[3] === 0) g.put(SH.sph, R3.mat(px * TL + 0.2, Y + 0.42, pz * TL, 0, 0.13), ['#f2e46a', '#e86a8a', '#f4f4f0', '#9a7ae8'][Math.floor(hx * 4)]);
+        // (a flower on its stem, in the meadows and on the grass of spring)
+        if (K[3] === 0 && hz > (t === T.MEADOW ? 0.55 : 0.86) && q < 3) {
+          const fc = FLOWER[Math.floor(hx * 997) % FLOWER.length]; const fy = Y + ht * 1.15;
+          g.blade(px, Y, pz, 0.03, hx * 3, px + 0.04, fy, pz, root, [90, 130, 60]);
+          for (let k = 0; k < 3; k++) { const a = k * 2.1 + hx * 5; g.blade(px + 0.04, fy, pz, 0.09, a + Math.PI / 2, px + 0.04 + Math.cos(a) * 0.09, fy + 0.04, pz + Math.sin(a) * 0.09, fc, fc, 0.8); }
+        }
       }
     }
     return g.empty ? null : g.build();
@@ -402,7 +621,7 @@
     const x0 = ch.cx * C, y0 = ch.cy * C;
     addMesh(grp, terrainGeo(x0, y0, C, C, 2), MAT.land, { recv: false });
     const wg = waterGeo(x0, y0, C, C, true); addMesh(grp, wg.water, MAT.water, { order: 2 }); addMesh(grp, wg.ice, MAT.ice);
-    addMesh(grp, floraGeo(x0, y0, C, C, true), MAT.flora);
+    addMesh(grp, floraGeo(x0, y0, C, C, true).flora, MAT.flora);
     if (G.Build3D) addMesh(grp, G.Build3D.farGeo(x0, y0, C), MAT.solid);
     scene.add(grp); grp.visible = !ch.near;
   }
@@ -414,11 +633,11 @@
     if (part === 'ground') {
       addMesh(grp, terrainGeo(x0, y0, C, C, 0.5), MAT.land, { recv: true });
       const wg = waterGeo(x0, y0, C, C, false); addMesh(grp, wg.water, MAT.water, { order: 2 }); addMesh(grp, wg.ice, MAT.ice, { recv: true }); addMesh(grp, wg.walls, MAT.wallWater, { order: 3 });
-      addMesh(grp, roadGeo(x0, y0, C, C), MAT.land, { recv: true });
+      addMesh(grp, roadGeo(x0, y0, C, C), MAT.solid, { cast: true, recv: true });
     } else if (part === 'flora') {
-      addMesh(grp, floraGeo(x0, y0, C, C, false), MAT.flora, { cast: true, recv: true });
-      if (q.grass) addMesh(grp, grassGeo(x0, y0, C, C), MAT.flora);
-    } else if (G.Build3D) { const bg = G.Build3D.nearGeo(x0, y0, C); addMesh(grp, bg.solid, MAT.solid, { cast: true, recv: true }); if (bg.glass) addMesh(grp, bg.glass, G.Build3D.glassMat()); }
+      const fg = floraGeo(x0, y0, C, C, false); addMesh(grp, fg.flora, MAT.flora, { cast: true, recv: true }); addMesh(grp, fg.plants, MAT.plant, { cast: true, recv: true });
+      if (q.grass) addMesh(grp, grassGeo(x0, y0, C, C), MAT.plant, { recv: true });
+    } else if (G.Build3D) { const bg = G.Build3D.nearGeo(x0, y0, C); addMesh(grp, bg.solid, MAT.solid, { cast: true, recv: true }); if (bg.glass) addMesh(grp, bg.glass, G.Build3D.glassMat()); addMesh(grp, bg.plants, MAT.plant, { recv: true }); addMesh(grp, bg.water, MAT.water, { order: 2 }); }
     disposeGroup(ch.parts[part]); ch.parts[part] = grp; ch.near.add(grp);
   }
   function buildNear(ch, s) {
@@ -443,8 +662,8 @@
     if (ocean) { ocean.geometry.dispose(); scene.remove(ocean); }
     const L = G.Space.size(), E = 1400;
     const g = new THREE.PlaneGeometry(L + E * 2, L + E * 2, 1, 1); g.rotateX(-Math.PI / 2);
-    const c = lin(WATER[4]); const cl = new Float32Array(g.attributes.position.count * 3); for (let k = 0; k < cl.length; k += 3) { cl[k] = c[0]; cl[k + 1] = c[1]; cl[k + 2] = c[2]; }
-    g.setAttribute('color', new THREE.BufferAttribute(cl, 3));
+    const c = lin(WATER[4]); const nv = g.attributes.position.count; const cl = new Float32Array(nv * 4); for (let k = 0; k < cl.length; k += 4) { cl[k] = c[0]; cl[k + 1] = c[1]; cl[k + 2] = c[2]; cl[k + 3] = 0.94; }
+    g.setAttribute('color', new THREE.BufferAttribute(cl, 4)); g.setAttribute('aShore', new THREE.BufferAttribute(new Float32Array(nv), 1));
     ocean = new THREE.Mesh(g, MAT.water); ocean.position.set(L / 2, G.SEA * G.Space.HM - 0.25, L / 2); ocean.renderOrder = 1; scene.add(ocean);
   }
   // streaming: the near pictures within reach of the focus, nearest first, a few milliseconds a frame
@@ -481,27 +700,35 @@
 
   // ------------------------------ the sky and the light of the hour ------------------------------
   function light() {
-    const S = G.S; const a = G.Render.ambient(); const night = G.clamp(G.Render.nightness(), 0, 1);
+    const S = G.S; const a = G.Render.ambient(); const night = G.clamp(G.Render.nightness(), 0, 1); const w = S.weather;
     const t = S.time; const dayK = G.clamp((t - 0.02) / 0.71, 0, 1); const el = Math.sin(dayK * Math.PI); // 0 at dawn and dusk, 1 at noon
-    const az = dayK * Math.PI; // east to west
-    const sd = new THREE.Vector3(Math.cos(az) * Math.max(0.15, 1 - el * 0.6), Math.max(0.05, el), 0.35).normalize();
+    // (the sun climbs no higher than about 55°: the walls get their side of light and the shadows their length, as the
+    // god's view shades a house — one face lit, one in shade)
+    const az = dayK * Math.PI; const alt = Math.max(0.05, el) * 0.96;
+    const sd = new THREE.Vector3(Math.cos(az) * Math.cos(alt), Math.sin(alt), 0.45 * Math.cos(alt) + 0.2).normalize();
     const am = [a[0] / 255, a[1] / 255, a[2] / 255];
+    const rain = G.clamp(w.rain || 0, 0, 1), storm = G.clamp(w.storm || 0, 0, 1);
     skyU.sunDir.value.copy(night > 0.6 ? sd.clone().negate() : sd);
-    const top = new THREE.Color().setRGB(0.22 + 0.15 * am[0], 0.42 + 0.2 * am[1], 0.8 * am[2] + 0.1, THREE.SRGBColorSpace).multiplyScalar(1 - night * 0.82);
-    const horC = new THREE.Color().setRGB(Math.min(1, am[0] * 0.95 + 0.06), Math.min(1, am[1] * 0.92 + 0.05), Math.min(1, am[2] * 0.95 + 0.04), THREE.SRGBColorSpace).multiplyScalar(1 - night * 0.7);
+    const top = new THREE.Color().setRGB(0.2 + 0.14 * am[0], 0.42 + 0.2 * am[1], 0.82 * am[2] + 0.1, THREE.SRGBColorSpace).multiplyScalar(1 - night * 0.84);
+    const horC = new THREE.Color().setRGB(Math.min(1, am[0] * 0.93 + 0.06), Math.min(1, am[1] * 0.92 + 0.06), Math.min(1, am[2] * 0.95 + 0.05), THREE.SRGBColorSpace).multiplyScalar(1 - night * 0.7);
     // (dawn and dusk: the horizon warms)
     const warm = G.clamp(1 - el * 3, 0, 1) * (1 - night);
     horC.lerp(new THREE.Color(0xf0a070), warm * 0.45);
+    // (rain greys the sky)
+    const grey = new THREE.Color().setRGB(0.55, 0.58, 0.62).multiplyScalar(1 - night * 0.8);
+    top.lerp(grey, rain * 0.75); horC.lerp(grey, rain * 0.55);
     skyU.top.value.copy(top); skyU.hor.value.copy(horC); skyU.night.value = night;
-    skyU.sunCol.value.setRGB(1, 0.85 + el * 0.15, 0.6 + el * 0.4);
-    scene.fog.color.copy(horC);
+    skyU.sunCol.value.setRGB(1, 0.82 + el * 0.18, 0.55 + el * 0.45).multiplyScalar(1 - rain * 0.7);
+    skyU.cover.value = G.clamp(0.36 + rain * 0.55 + storm * 0.2 + (S.clouds ? Math.min(0.15, S.clouds.length * 0.01) : 0), 0, 0.98);
+    skyU.cloudCol.value.setRGB(am[0] * 0.98, am[1] * 0.98, am[2]).lerp(new THREE.Color(0.46, 0.48, 0.52), rain * 0.7).multiplyScalar(1 - night * 0.85);
+    scene.fog.color.copy(horC); U.sky.value.copy(horC).lerp(top, 0.55);
     renderer.setClearColor(horC);
-    sun.intensity = (0.4 + 2.4 * el) * (1 - night) * (S.weather.rain > 0.1 ? 0.6 : 1);
-    sun.color.setRGB(1, 0.86 + 0.14 * el, 0.7 + 0.3 * el);
-    hemi.intensity = 0.55 + 0.75 * (1 - night);
-    hemi.color.setRGB(am[0] * 0.8 + 0.2, am[1] * 0.85 + 0.15, am[2] * 0.9 + 0.1);
-    moonL.intensity = night * 0.5;
-    stars.material.opacity = G.clamp((night - 0.35) * 1.6, 0, 1);
+    sun.intensity = (0.5 + 2.6 * el) * (1 - night) * (1 - rain * 0.55);
+    sun.color.setRGB(1, 0.84 + 0.16 * el, 0.66 + 0.34 * el).multiply(new THREE.Color(am[0], am[1], am[2]));
+    hemi.intensity = (0.6 + 0.75 * (1 - night)) * (1 + rain * 0.2);
+    hemi.color.setRGB(am[0] * 0.75 + 0.2, am[1] * 0.82 + 0.15, am[2] * 0.9 + 0.12);
+    moonL.intensity = night * 0.55;
+    stars.material.opacity = G.clamp((night - 0.35) * 1.6, 0, 1) * (1 - rain);
     G.Build3D && G.Build3D.night(G.clamp((night - 0.25) * 1.6, 0, 1)); // (the windows light up as the dark comes)
     return sd;
   }
@@ -518,6 +745,7 @@
     if (R3.built !== G.S || !chunks.size || NC !== Math.ceil(N / C)) { makeAll(); makeOcean(); }
     // (the far pictures kept from the last time: the ones whose part of the world changed meanwhile are made again)
     else for (const ch of chunks.values()) { const s = sigOf(ch.cx, ch.cy); if (!sameSig(s, ch.farSig)) { buildFar(ch); ch.farSig = s; } }
+    G.Ground3D.full(); // (the ground's picture as the world is now)
     canvas.style.display = 'block'; R3.on = true; resize();
   };
   R3.stop = function () {
@@ -537,6 +765,10 @@
     if (!R3.on || !renderer) return;
     U.time.value += rdt;
     const sd = light();
+    // (the wind of the world bends the plants; the body walking parts them)
+    { const w = G.S.weather; const ws = G.clamp(w.windS || 0, 0, 2); U.wind.value.set(Math.cos(w.windA || 0) * (0.35 + ws), Math.sin(w.windA || 0) * (0.35 + ws), ws); }
+    if (focus) U.body.value.set(focus.X, focus.Y || 0, focus.Z, 1); else U.body.value.w = 0;
+    G.Ground3D.tick(focus);
     if (focus) {
       stream(focus.X, focus.Z, budget === undefined ? 6 : budget);
       sun.position.set(focus.X + sd.x * 120, focus.Y + sd.y * 120, focus.Z + sd.z * 120); sun.target.position.set(focus.X, focus.Y, focus.Z); sun.target.updateMatrixWorld();
@@ -554,6 +786,19 @@
   };
   // (what the GPU holds — counted by three.js when a geometry is first drawn — and what the scene holds right now, drawn or not)
   R3.memory = () => { if (!renderer) return null; const seen = new Set(); scene.traverse(o => { if (o.geometry) seen.add(o.geometry); }); return { geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, live: seen.size }; };
+  // (a single tree, standing, in its own geometry with its foot at the origin — for one that falls: FX3D turns it over)
+  R3.treeMesh = function (t) {
+    const g = new Geo(), gp = new Geo(); const o = Object.assign({}, t, { stage: 'grow', _standing: 1 }); treeInto(g, o, gp);
+    const TL = G.Space.TILE, HM = G.Space.HM; const X = t.x * TL, Y = W.groundH(t.x, t.y) * HM, Z = t.y * TL;
+    const grp = new THREE.Group();
+    if (!g.empty) { const geo = g.build(false, true); geo.translate(-X, -Y, -Z); const m = new THREE.Mesh(geo, MAT.flora); m.castShadow = true; grp.add(m); }
+    if (!gp.empty) { const geo = gp.build(); geo.translate(-X, -Y, -Z); const m = new THREE.Mesh(geo, MAT.plant); grp.add(m); }
+    grp.position.set(X, Y, Z); scene.add(grp); return grp;
+  };
+  R3.dropMesh = grp => disposeGroup(grp);
+  // (the near picture of the chunk with a tile is looked at again next frame, not in a second and a half: a tree that
+  // starts to fall is gone from it at once)
+  R3.refreshAt = function (x, y) { const ch = chunks.get(ckey(Math.floor(x / C), Math.floor(y / C))); if (ch) ch.sigT = -1e9; };
   // (for the tests: a chunk's signature, read only)
   R3.sigOf = (cx, cy) => sigOf(cx, cy);
   R3.chunkCount = () => ({ all: chunks.size, near: [...chunks.values()].filter(c => c.near).length });
