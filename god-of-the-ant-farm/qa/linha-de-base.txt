@@ -47,6 +47,51 @@ PASSOU | salto 4 parar no meio e continuar
 PASSOU | salto 5 um terremoto e depois o salto 
 PASSOU | salto 6 bichos fora do lugar: o salto como a tela 
 PASSOU | salto 7 num mundo grande, o salto «até» para no ponto 
+PASSOU | guerra guerreiro que muda de povo sai do bando 
+PASSOU | guerra a última alma morre e o povo acaba junto 
+PASSOU | guerra a última alma livre morre e os cativos herdam a cidade 
+PASSOU | guerra sem erros 
+PASSOU | poderes o1 chuva de ouro: o povo corre e cata 
+PASSOU | poderes o1 toda moeda contada 
+PASSOU | poderes o1 a corrida termina com crônica e biografia 
+PASSOU | poderes o1 verificador 
+PASSOU | poderes o2 save no meio da chuva: o mesmo futuro 
+PASSOU | poderes o3 morte, raio e mar no meio da corrida 
+PASSOU | poderes o4 povo sem moeda: o ouro vai ao armazém 
+PASSOU | poderes v1 vinho nos poços: bebem, dançam, cambaleiam 
+PASSOU | poderes v1 um vinho por cidade 
+PASSOU | poderes v1 verificador 
+PASSOU | poderes v2 save no meio da festa: o mesmo futuro 
+PASSOU | poderes v3 morte no poço e poços derrubados 
+PASSOU | poderes v4 o dia seguinte: ressaca 
+PASSOU | poderes r1 ressurreição de um corpo: volta igual e casado de novo 
+PASSOU | poderes r2 ressurreição da cova: a cova fica vazia; a viúva casada de novo não volta 
+PASSOU | poderes r3 volta, morre de novo, volta de novo 
+PASSOU | poderes f1 fantasmas: andam à noite, o povo vê e foge 
+PASSOU | poderes f1 o fantasma aponta o ladrão 
+PASSOU | poderes f1 o fantasma vai atrás de quem o matou 
+PASSOU | poderes f2 save no meio da assombração: o mesmo futuro 
+PASSOU | poderes f2 o morto que volta deixa de assombrar; cemitério derrubado acaba com tudo 
+PASSOU | poderes a1 amor divino na mesma cidade 
+PASSOU | poderes a2 amor entre povos: vão morar juntos e os povos se estimam 
+PASSOU | poderes a3 save no meio da corrida do amor: o mesmo futuro 
+PASSOU | poderes a3 o amado morre no caminho 
+PASSOU | poderes d1 duelo de campeões: um vence, o nome fica 
+PASSOU | poderes d1 um duelo por vez 
+PASSOU | poderes d2 save no meio do duelo: o mesmo futuro 
+PASSOU | poderes d2 o raio do deus num campeão: o duelo acaba limpo 
+PASSOU | poderes s1 sonho dos deuses: o povo acorda devoto; não sonha duas vezes seguidas 
+PASSOU | poderes s1 sonho da grande obra: um monumento começa 
+PASSOU | poderes s1 sonho da terra além do mar 
+PASSOU | poderes s1 sonho da paz numa guerra 
+PASSOU | poderes s1 verificador 
+PASSOU | poderes i1 o gelo vira caminho 
+PASSOU | poderes i2 save no meio do inverno: o gelo volta igual, o mesmo futuro 
+PASSOU | poderes i3 terra erguida sob o gelo; no degelo, quem está no gelo cai na água 
+PASSOU | poderes sem erros de página 
+PASSOU | poderes sem erros de módulo 
+PASSOU | caos sem violações S0–S2
+PASSOU | caos_13 sem violações S0–S2
 PASSOU | guerra 2 reinos médios: dezenas
 PASSOU | guerra 5 guerra longa: economia, suprimento, desgaste
 PASSOU | guerra 6 derrota: retirada/fuga/rendição
