@@ -6,7 +6,8 @@
 //  e3  (prova 52) o mundo continua — enquanto encarnado (e dormindo, o tempo correndo), longe dali o mundo acontece: tudo fica
 //  e4  (prova 53) troca de personagem — A, Deus, B; e B → C de dentro; ninguém duplicado; a IA de A volta; histórias intactas
 //  e5  (prova 54) morte — pelo fogo, pela fome e numa queda: morre de verdade, o controle acaba, o deus volta, a biografia e a crônica contam
-//  e6  (prova 55) terreno — plano, ladeira, estrada, bosque, costa, entre prédios: pulos, colisões, câmera; nunca dentro de nada
+//  e6  (prova 55) terreno — plano, ladeira, estrada, bosque, costa, entre prédios: pulos, colisões, câmera; nunca dentro de nada;
+//      o mundo leva o corpo longe e a câmera vai junto (sem voar atrás dele por dentro das casas)
 //  e7  (prova 56) save/load A–E — antes, durante (volta encarnado), depois, após andar muito, após a morte; save danificado
 //  e8  (prova 57) estresse — 30 idas e voltas (com saves), caminhada longa (chunks), salto de 10 anos: memória e erros
 //  e9  casos ruins — capturado por inimigos, levado a um navio, a terra afunda sob os pés, um prédio nasce em cima, a guerra
@@ -284,10 +285,24 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       G.Cam3D.yaw += Math.PI; __E.f(40); G.Input3D.down.frente = false; __E.f(6);
       unstuck = { inWall, away: G.dist(p0[0], p0[1], v.x, v.y) * 4 };
     }
-    return { out, unstuck, qa: __E.qa() };
+    // the world carries the body far (a scene, a load, a building rising where it stood): the eye goes along at once —
+    // never easing after it through the houses on the way, never left inside one (L-106)
+    let warp = null;
+    if (pb) {
+      const far = Object.values(places).filter(Boolean).sort((a, b) => G.dist2(b[0], b[1], pb[0], pb[1]) - G.dist2(a[0], a[1], pb[0], pb[1]))[0];
+      G.Avatar.place(far[0], far[1]); __E.f(30); G.Avatar.place(pb[0], pb[1]);
+      let camIn = 0, gap = 0, inside = 0;
+      for (let i = 0; i < 12; i++) {
+        G.Main.frameFor(33); const c = G.Realm.camera().position; if (G.Cam3D.solid(c.x, c.y, c.z)) camIn++; if (G.Cam3D.inside) inside++;
+        if (i === 0) { const a = G.Cam3D.last.at; gap = Math.hypot(a[0] - st.X, a[2] - st.Z); }
+      }
+      warp = { from: +(G.dist(far[0], far[1], pb[0], pb[1]) * 4).toFixed(1), gap: +gap.toFixed(2), camIn, inside };
+    }
+    return { out, unstuck, warp, qa: __E.qa() };
   });
   for (const k in e6.out) { const r = e6.out[k]; if (!r) { ok(`e6 terreno: ${k}`, true, 'não há este tipo de lugar por perto (nada a provar)'); continue; } ok(`e6 terreno: ${k}`, !r.bad && !r.under && !r.high && !r.camIn && !r.camLow && !r.wet && r.maxUp > 0.4, JSON.stringify(r)); }
   ok('e6 encostado num prédio, nunca preso', e6.unstuck && !e6.unstuck.inWall && e6.unstuck.away > 1.5, JSON.stringify(e6.unstuck));
+  ok('e6 o mundo leva o corpo longe: a câmera vai junto, sem atravessar casas', !e6.warp || (!e6.warp.camIn && !e6.warp.inside && e6.warp.gap < 1), e6.warp ? JSON.stringify(e6.warp) : 'não há prédios por perto (nada a provar)');
   ok('e6 verificador', !e6.qa.length, e6.qa.slice(0, 3).join(' · ') || 'limpo');
   await shot('e6-terreno');
 

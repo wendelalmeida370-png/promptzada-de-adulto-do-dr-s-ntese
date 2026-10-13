@@ -1,4 +1,4 @@
-# Projeto Encarnação — relatório de entrega (v32)
+# Projeto Encarnação — relatório de entrega (v32, e a v33: o visual)
 
 > Escrito para ser lido por quem não programa. Onde diz **testado**, há uma prova que roda de verdade e o resultado
 > está anotado; onde diz **não testado**, não houve como provar aqui — e está dito.
@@ -247,6 +247,50 @@ mesma prova passa depois.
 5. **Colisão entre corpos** perto do jogador (as pessoas desviam do corpo), e reação das pessoas ao jogador.
 6. **Interiores** das casas e das tavernas (o mundo já sabe quem está dentro).
 7. Arte: rostos, roupas por ofício e época, plantações mais naturais, água com ondas.
+
+## 17. v33 — o 3D com a cara do Modo Deus
+
+O pedido: deixar o Modo Encarnado "mais ou menos no mesmo nível gráfico" do Modo Deus e a transição o mais suave
+possível. O que foi feito, o que foi provado, o que não foi.
+
+### 17.1 O que mudou no desenho (comparado com a seção 9)
+- **Chão**: deixou de ser triângulos coloridos com manchas duras. É pintado casa por casa com a **mesma cor** que o
+  Modo Deus usa para cada casa (`Render.tileColor`), misturada suavemente com as vizinhas, com o grão de cada tipo de chão
+  desenhado no próprio chão (capim, areia, seixos, neve, lajotas, sulcos de roça, camadas de rocha). Ruas e roças têm
+  borda firme. **Testado** (e11): cada rua, roça e mar do mapa e 400 casas em volta do corpo têm exatamente a cor e o
+  tipo do mundo; uma casa queimada vira cinza na figura em 13 quadros.
+- **Água**: ondas que andam, reflexo do céu de lado, brilho do sol, raso claro, fundo escuro, espuma na beira. **Fotos**.
+- **Céu e luz**: nuvens que andam com o vento do mundo (e as nuvens de chuva do mundo, onde o deus as vê, com a chuva
+  caindo embaixo delas), sombras de nuvem passando no chão, sol mais baixo (as casas com um lado claro e outro escuro,
+  como no desenho do deus), cores sem lavar. **Fotos** (dia, noite, chuva).
+- **Prédios**: o material de cada povo (enxaimel, reboco, adobe, tábua; telha, palha, grama), telhados altos como os do
+  deus, casas longas nórdicas com telhado de grama e cabeça de dragão, janelas com moldura e postigos, portas com batente,
+  chaminés com fumaça, aquedutos com arcos, toldos e torres de vento no Egito, vasos de flores nos terraços astecas.
+  **Testado** (e11): as casas perto do corpo têm a parede e o telhado do seu povo; nenhuma malha sem a lista de padrões.
+- **Plantas e árvores**: capim em tufos que balança e abre caminho para o corpo; roças em fileiras com a safra real;
+  árvores de tufos facetados nos três tons do deus, neve em cima no frio; a árvore derrubada cai e deita. **Testado**
+  (e11: a queda; as plantas com o balanço).
+- **Pessoas e bichos**: corpos arredondados, rosto com olhos que piscam, cabelo, grisalho nos velhos; o peso do corpo
+  mudando de perna quando paradas; quem está parado perto vira a cabeça para você; bichos com focinho, orelhas, chifres,
+  crina, cauda, trote, pastando; aves de duas patas. **Testado** (e11: a regra do olhar; o verificador confere que
+  nenhuma matriz de desenho é inválida). A animação continua calculada (não capturada).
+- **Partículas e reações**: fumaça das chaminés e das fogueiras, faíscas, poeira ao correr, pegadas na neve, na areia e na
+  terra, respingos e anéis na água, lascas do machado, folhas caindo, vaga-lumes, gotas de chuva no chão. **Testado**
+  (e11: o fogo solta fumaça e faíscas; o verificador: as partículas nos limites e todas números).
+- **A descida**: no meio dela, as duas imagens são quase a mesma cidade (fotos `descida-*`); a fusão das duas ficou um
+  pouco mais longa (0,8 s).
+- **O desenho não mexe no mundo** — **testado** (e11): com o mundo parado, um segundo de quadros não muda nem o acaso nem
+  o relógio do mundo; e a vida curta de 5 anos (soak 103) sai idêntica número por número à da v32.
+
+### 17.2 O que continua simples (e não é mostrado como pronto)
+- Tudo continua **procedural**: não há modelos nem texturas desenhadas por artista; os padrões são desenhados pelo
+  shader. As pessoas não têm dedos, nem roupas com dobras; as animações são poses calculadas.
+- Não há reflexo de verdade na água (é o céu misturado), nem iluminação global, nem brilho (bloom).
+- Interiores, sons próprios do 3D, navios detalhados (melhoraram — casco com proa e vela inflada — mas seguem simples).
+- Alguns prédios menos comuns (teatro, banhos, mina, apiário, mercado) ganharam só o material, não formas novas.
+
+### 17.3 Desempenho
+(números da regressão — preencher)
 
 ## Anexo — os critérios de aceitação (Parte XVI), um por um
 

@@ -64,6 +64,8 @@ Selecione qualquer habitante (com 6 anos ou mais) e clique em **Encarnar**: a c�
 
 A pessoa continua sendo quem é — a mesma idade, a mesma casa, a mesma família — e continua **mortal**: a fome, o sono, o fogo, as feras e a guerra valem para ela. Se ela morre, a morte é de verdade (fica na biografia, na crônica e no cemitério) e você volta a ser deus. O que o mundo pede (o chamado às armas, um incêndio) aparece como **chamado** — você atende se quiser; o que o mundo impõe (a prisão, a captura, um navio, a água) toma o corpo de volta. Quando você sobe de novo, a pessoa fica onde você a deixou, selecionada, e a IA volta a cuidar da vida dela; a biografia lembra ("Viveu 2 dias guiada pelo deus: cortou 3 árvores, conversou com 5 pessoas"). Um save feito encarnado volta encarnado.
 
+**Como ele se parece (v33):** o mesmo jeito do Modo Deus — o chão pintado casa por casa com as mesmas cores (as ruas calçadas, as trilhas gastas, a neve, as roças em sulcos), as casas de cada povo com o seu material (o enxaimel e a telha clássicos, a telha romana, o branco e o azul gregos, o adobe e o toldo egípcios, o reboco e os terraços floridos astecas, as casas longas nórdicas com telhado de grama e cabeça de dragão), as árvores nos mesmos tons, as roças com as plantas da safra de verdade. No meio da descida as duas imagens são quase a mesma cidade. O capim e as plantações balançam com o vento e abrem caminho para você; quem está parado perto vira a cabeça para te olhar; há fumaça nas chaminés e nas fogueiras, faíscas, poeira e pegadas na neve e na areia, respingos e anéis na água, folhas caindo, vaga-lumes nas noites quentes, nuvens que passam (e chove onde a nuvem de chuva do mundo passa) e a árvore derrubada cai de verdade. Num computador mais fraco, Esc → Gráficos → Leve tira o grão do chão, os padrões e o capim.
+
 **Ainda não existem** (a base está pronta para eles): nadar e mergulhar (a água funda para o corpo), escalar, planar, interiores das casas, combate, diálogos com escolhas, encarnar bichos. Detalhes da arquitetura em `ENCARNACAO.md`; o relatório do que foi testado em `qa/RELATORIO_ENCARNACAO.md`.
 
 ## O que acontece na ilha
@@ -650,6 +652,7 @@ js/main.js        loop, input, câmera, menu, introdução
 js/devmode.js     modo desenvolvedor: tempo, povos, guerra, mar, histórias (receitas, sementes, diretor), raros, parâmetros, inspeção
 js/lib/three.min.js  Three.js r170 (MIT), embutido — gerado por tools/vendor-three.sh
 js/space.js       Modo Encarnado: a conversão única entre as casas do mundo e os metros do corpo (1 casa = 4 m, 1 unidade de altura = 1,5 m)
+js/ground3d.js    o chão do 3D pintado com as cores do Modo Deus: uma figura do mapa (cor e tipo de cada casa) e o grão de cada chão
 js/realm3d.js     o mundo em 3D: chunks perto e longe, terreno, água, árvores, capim, céu, luz da hora, qualidade
 js/build3d.js     os prédios reais em 3D (~50 tipos, por civilização), muralhas, portões, aquedutos, plantações, lápides
 js/people3d.js    as pessoas reais em 3D (bonecos articulados + figuras simples de longe) e a máquina de estados de animação; bichos

@@ -16,14 +16,14 @@
 (function (G) {
   const W = G.W;
   const TAU = Math.PI * 2;
-  const C3 = G.Cam3D = { yaw: 0, pitch: 0.26, dist: 4.8, cur: 4.8, fov: 58, lock: null };
+  const C3 = G.Cam3D = { yaw: 0, pitch: 0.26, dist: 4.8, cur: 4.8, fov: 58, lock: null, inside: false };
   // the player's choices (kept in this browser only)
   const OPT = C3.OPT = { sens: 1, invertY: false, follow: true, fov: 58, dist: 4.8, smooth: 1 };
   try { const o = JSON.parse(localStorage.getItem('gotaf-cam3d') || 'null'); if (o && typeof o === 'object') for (const k in OPT) if (k in o && typeof o[k] === typeof OPT[k]) OPT[k] = o[k]; } catch (e) { }
   C3.saveOpt = () => { try { localStorage.setItem('gotaf-cam3d', JSON.stringify(OPT)); } catch (e) { } };
   const PMIN = -1.05, PMAX = 1.2, DMIN = 1.4, DMAX = 11;
   let piv = null, lookT = -1e9, fovNow = 58, clock = 0;
-  G.worldHooks.push(() => { piv = null; C3.lock = null; });
+  G.worldHooks.push(() => { piv = null; C3.lock = null; C3.inside = false; });
 
   C3.attach = function (pos, yaw) { C3.yaw = yaw; C3.pitch = 0.26; C3.dist = G.clamp(OPT.dist, DMIN, DMAX); C3.cur = C3.dist; piv = { X: pos.X, Y: pos.Y + 1.5, Z: pos.Z }; lookT = -1e9; fovNow = OPT.fov; };
   // the mouse turns it (pixels of movement)
@@ -65,8 +65,10 @@
   // every frame: follow the body, keep clear of the world, place the camera
   C3.update = function (rdt, body, cam) {
     clock += rdt;
-    if (!piv) piv = { X: body.X, Y: body.Y + 1.5, Z: body.Z };
     const head = (body.h || 1.75) * 0.86;
+    // (the world moved the body — a building rose where it stood, a scene, a load: the eye goes with it at once;
+    // easing after it would fly through the houses on the way, and a pivot inside a house leaves the eye there — L-106)
+    if (!piv || Math.hypot(body.X - piv.X, body.Z - piv.Z) > 2.5 || solid(piv.X, piv.Y, piv.Z)) piv = { X: body.X, Y: body.Y + head, Z: body.Z };
     // (the pivot follows quickly on the ground, more softly up and down: a jump does not jerk the view)
     const kxz = 1 - Math.exp(-16 * rdt / OPT.smooth), ky = 1 - Math.exp(-(body.ground ? 12 : 5) * rdt / OPT.smooth);
     piv.X += (body.X - piv.X) * kxz; piv.Z += (body.Z - piv.Z) * kxz; piv.Y += (body.Y + head - piv.Y) * ky;
@@ -95,6 +97,9 @@
     // (the point itself must be clear too: the shoulder can lean into a wall the ray along the back did not meet,
     // and the ground under it can lift it into an eave — then closer, and straight behind)
     for (let k = 0; k < 8 && solid(P.X, P.Y, P.Z); k++) { sh *= 0.4; C3.cur = Math.max(0.25, C3.cur * 0.75); P = at(C3.cur, sh); }
+    // (still inside — a wall a hand behind the head: the eye goes to the head itself for this frame; the pivot is always clear)
+    if (solid(P.X, P.Y, P.Z)) { sh = 0; C3.cur = 0.05; P = at(C3.cur, 0); }
+    C3.inside = solid(P.X, P.Y, P.Z);
     // the running body: the lens opens a little (a sense of speed)
     fovNow += (OPT.fov + (body.speed > 4 ? 5 : 0) - fovNow) * (1 - Math.exp(-3 * rdt));
     cam.fov = fovNow; cam.near = 0.12; cam.far = 1600; cam.updateProjectionMatrix();
