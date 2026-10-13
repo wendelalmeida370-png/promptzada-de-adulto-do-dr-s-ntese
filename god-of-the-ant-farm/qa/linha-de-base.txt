@@ -141,6 +141,7 @@ PASSOU | encarna e6 terreno: bosque
 PASSOU | encarna e6 terreno: costa 
 PASSOU | encarna e6 terreno: entre prédios 
 PASSOU | encarna e6 encostado num prédio, nunca preso 
+PASSOU | encarna e6 o mundo leva o corpo longe: a câmera vai junto, sem atravessar casas 
 PASSOU | encarna e6 verificador 
 PASSOU | encarna e7 A: save antes de encarnar 
 PASSOU | encarna e7 B: save encarnado volta encarnado, no mesmo lugar 
@@ -170,6 +171,14 @@ PASSOU | encarna e10 o botão Encarnar no painel da pessoa (e o motivo quando n�
 PASSOU | encarna e10 a ficha diz quem são os pais (dos registros do mundo) 
 PASSOU | encarna e10 Esc abre o menu e pausa; as teclas mudam; G volta; I encarna 
 PASSOU | encarna e10 no toque: o polegar à esquerda anda, os botões aparecem 
+PASSOU | encarna e11 o chão do 3D pinta o que o mundo tem (perto do corpo, ruas, roças, mar) 
+PASSOU | encarna e11 o chão segue o mundo: a casa queimada vira cinza 
+PASSOU | encarna e11 plantas que balançam, paredes e telhados com o material do povo 
+PASSOU | encarna e11 o fogo solta fumaça e faíscas 
+PASSOU | encarna e11 a árvore derrubada cai e deita 
+PASSOU | encarna e11 quem está na frente vira a cabeça para o corpo 
+PASSOU | encarna e11 com o mundo parado, o desenho não mexe no mundo 
+PASSOU | encarna e11 verificador 
 PASSOU | encarna e8 30 idas e voltas (6 com save no meio): sem acúmulo 
 PASSOU | encarna e8 sem ouvintes acumulados 
 PASSOU | encarna e8 caminhada longa: chunks vêm e vão, a memória fica 

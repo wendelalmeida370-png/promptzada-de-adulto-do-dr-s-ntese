@@ -6,7 +6,7 @@ Requisitos: Node 18+ e Playwright com Chromium (`npm i playwright`). Se o Playwr
 
 O mundo tem o seu próprio acaso, semeado pela semente do mundo e guardado no save (`G.R` e família; o que só se vê ou se ouve usa `G.VR`). Os testes congelam o relógio e semeiam `Math.random` só para escolher a semente de cada mundo: a mesma semente de teste gera o mesmo mundo, rodada após rodada, com ou sem quadros na tela, e o mesmo save carregado duas vezes vive o mesmo futuro.
 
-**Antes de cada versão:** `bash regress.sh [pasta]` roda tudo (≈ 2 h em 4 núcleos), escreve `resumo.txt` e o compara com `linha-de-base.txt`: o que mudou aparece como `NOVO:`. **Antes de cada commit:** `node guard.js` e uma vida curta (`node soak.js 103 continente 128 4 normal 5 1 1`). O protocolo inteiro está no `CLAUDE.md` da raiz do repositório.
+**Antes de cada versão:** `bash regress.sh [pasta]` roda tudo (≈ 3 h em 4 núcleos), escreve `resumo.txt` e o compara com `linha-de-base.txt`: o que mudou aparece como `NOVO:`. **Antes de cada commit:** `node guard.js` e uma vida curta (`node soak.js 103 continente 128 4 normal 5 1 1`). O protocolo inteiro está no `CLAUDE.md` da raiz do repositório.
 
 ## O verificador
 

@@ -36,7 +36,7 @@
   let mesh = null; // InstancedMesh per part
   let beastMesh = null, crowd = null, crowdHead = null, crowdHair = null, crowdLegs = null;
   const vis = new Map(); // id → the view's own memory of someone: where they were, which way they face, their walk, their pose
-  P3.clear = function () { vis.clear(); if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
+  P3.clear = function () { vis.clear(); for (const sp of emoPool) sp.visible = false; if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
   G.worldHooks.push(() => vis.clear());
 
   P3.init = function (three, realm) {
@@ -67,7 +67,11 @@
     crowdHair = new THREE.InstancedMesh(new THREE.SphereGeometry(0.14, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat, MAXC);
     crowdLegs = [new THREE.InstancedMesh(leg, mat, MAXC), new THREE.InstancedMesh(leg, mat, MAXC)];
     for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs]) { m.count = 0; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); }
+    // (a feeling over a head: the god's little bubble with its sign — fear, joy, love, anger, a question)
+    emoPool = []; for (let k = 0; k < 20; k++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); sp.visible = false; sp.renderOrder = 4; scene.add(sp); emoPool.push(sp); }
   };
+  let emoPool = []; const emoTex = new Map();
+  function emoMap(k) { let t = emoTex.get(k); if (t === undefined) { const s = G.Art && G.Art.icon ? G.Art.icon(k) : null; t = s && s.c ? new THREE.CanvasTexture(s.c) : null; if (t) t.colorSpace = THREE.SRGBColorSpace; emoTex.set(k, t); } return t; }
 
   // ------------------------------ looks ------------------------------
   const C3 = {};
@@ -270,7 +274,7 @@
     }
     near.sort((a, b) => a[0] - b[0]);
     let n = Math.min(near.length, q.npcs, MAX - 1); while (n > 0 && near[n - 1][0] > R2) n--;
-    let idx = 0; P3.walkers.length = 0; P3.flames.length = 0;
+    let idx = 0, emoN = 0; P3.walkers.length = 0; P3.flames.length = 0;
     if (av) { P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null); }
     const seen = new Set();
     for (let k = 0; k < n; k++) {
@@ -296,8 +300,10 @@
       s.st = st;
       P3.body(idx++, X, Y, Z, s.yaw, s.pose, P3.look(v), P3.highlight === v.id ? '#ffd76a' : null);
       if (P3.walkers.length < 40) P3.walkers.push([X, Y, Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise)
+      if (v.emo && v.emo.k && emoN < emoPool.length) { const tx = emoMap(v.emo.k); if (tx) { const sp = emoPool[emoN++]; if (sp.material.map !== tx) { sp.material.map = tx; sp.material.needsUpdate = true; } const L2 = P3.look(v).s; sp.position.set(X, Y + 2.2 * L2 + Math.sin(s.t * 3) * 0.03, Z); sp.scale.set(0.42, 0.45, 1); sp.visible = true; } }
     }
     for (const id of vis.keys()) if (!seen.has(id) && !(av && id === av.id)) vis.delete(id);
+    for (let k = emoN; k < emoPool.length; k++) emoPool[k].visible = false; P3.emos = emoN;
     // the dead of the world where they fell — until they are buried, burnt or only bones (the carnage keeps them)
     const Cg = G.Carnage && G.Carnage.view ? G.Carnage.view() : null; P3.dead = 0;
     if (Cg) for (const c of Cg.corpses) {

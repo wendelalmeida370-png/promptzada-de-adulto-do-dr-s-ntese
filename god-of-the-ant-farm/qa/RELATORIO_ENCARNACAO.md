@@ -290,7 +290,17 @@ possível. O que foi feito, o que foi provado, o que não foi.
 - Alguns prédios menos comuns (teatro, banhos, mina, apiário, mercado) ganharam só o material, não formas novas.
 
 ### 17.3 Desempenho
-(números da regressão — preencher)
+Medido na regressão, no navegador de testes (sem placa de vídeo: o 3D é desenhado por software, então os tempos absolutos
+valem como piso e para comparar versões, não como os quadros por segundo de um computador de verdade):
+- **Modo Encarnado na metrópole** (15 pessoas e 64 bichos desenhados inteiros, 114 chamadas de desenho, 332 mil
+  triângulos): o quadro inteiro (simulação + 3D na qualidade média) leva 848 ms de mediana (975 ms no pior décimo) — na
+  v32 eram 702 ms com 308 mil triângulos: o desenho por software ficou ~20% mais caro com o chão, os padrões e o capim.
+  Na qualidade leve: **11,5 ms** de mediana e 17,5 ms no pior décimo (v32: 16,0 / 24,8) — mais leve que antes.
+- **Modo Deus** sem mudança: o porto com 37 barcos, 3,8 → 3,1 ms por passo do mundo (pior 18 ms), igual à v32.
+- **O salto de 10 anos** depois de 30 idas e voltas ao corpo: 103 s (v32: 136 s); a memória não cresce (as mesmas 315
+  geometrias no Modo Deus depois de cada volta) e nenhum ouvinte de evento se acumula.
+- A regressão inteira passou (todas as provas de antes iguais à linha de base, mais as 9 novas). A fase do Encarnado
+  ficou mais longa que o seu limite de 2 h: a e8 rodou sozinha logo depois, no mesmo código, e passou (T-033).
 
 ## Anexo — os critérios de aceitação (Parte XVI), um por um
 
