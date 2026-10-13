@@ -480,5 +480,7 @@
       decals.length = 0; bits.length = 0; gush.length = 0;
     },
   });
+  // (for the body's eyes, the 3D: what lies on the ground and burns — read only)
+  C.view = () => ({ corpses, pyres, decals, bits });
   C.reset = function () { corpses = []; pyres = []; decals.length = 0; bits.length = 0; gush.length = 0; nextId = 1; };
 })(window.G);

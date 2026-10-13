@@ -11,7 +11,7 @@
 (function (G) {
   const W = G.W;
   const F3 = G.FX3D = { fires: 0, ships: 0, drops: 0 };
-  let THREE = null, R3 = null, scene = null, flame = null, glow = null, rain = null, rainP = null, hull = null, mast = null, sail = null, deck = null, light = null;
+  let THREE = null, R3 = null, scene = null, flame = null, glow = null, rain = null, rainP = null, hull = null, mast = null, sail = null, deck = null, light = null, light2 = null;
   const MAXF = 140, MAXS = 40, NR = 1600;
   const TAU = Math.PI * 2;
   const svis = new Map(); G.worldHooks.push(() => { svis.clear(); for (const pl of [PA, PG]) if (pl) pl.n = 0; emit.clear(); leafT = 0; ripN = 0; fpN = 0; steps.clear(); for (const f of falling.values()) R3.dropMesh(f.m); falling.clear(); });
@@ -136,6 +136,8 @@
     glow = new THREE.InstancedMesh(cone, new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending }), MAXF);
     for (const m of [flame, glow]) { m.count = 0; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); }
     light = new THREE.PointLight(0xff8a3a, 0, 26, 1.6); scene.add(light);
+    // (the light of the nearest torch or lamp: a warm circle round whoever carries it at night)
+    light2 = new THREE.PointLight(0xffa04a, 0, 16, 1.5); scene.add(light2);
     // rain: short streaks falling round the eye
     rainP = new Float32Array(NR * 3); const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(rainP, 3));
     rain = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xc8d8e8, size: 0.09, transparent: true, opacity: 0, depthWrite: false })); rain.frustumCulled = false; scene.add(rain);
@@ -193,6 +195,17 @@
       for (let k = every('cf' + b.id, 1.3, rdt); k > 0; k--) spawn(PA, { x: X, y: gY + 1.2, z: Z, vy: G.vrr(0.9, 1.4), life: G.vrr(3, 5), s0: 0.4, s1: 2.6, c: [0.6, 0.6, 0.6], a: 0.32, drag: 0.4, fade: 1 });
       for (let k = every('cs' + b.id, 3, rdt); k > 0; k--) spawn(PG, { x: X + G.vrr(-0.3, 0.3), y: gY + 0.4, z: Z + G.vrr(-0.3, 0.3), vx: G.vrr(-0.3, 0.3), vy: G.vrr(1.8, 3.4), vz: G.vrr(-0.3, 0.3), life: G.vrr(0.7, 1.4), s0: 0.12, s1: 0.03, c: [1, 0.72, 0.3], a: 1, sh: 1, drag: 0.6, wob: 1 });
     }
+    // (the small flames the others hand over: torches and lanterns in people's hands, the lamps of carts and taverns, the
+    // fires of camps and pyres — each a flame, a spark now and then, and the nearest one lights round it)
+    let tb = 0, tx = 0, ty = 0, tz = 0; F3.torches = 0;
+    for (const src of [G.People3D && G.People3D.flames, G.Things3D && G.Things3D.flames]) if (src) for (const q of src) {
+      if (n >= MAXF) break; const k = q[3]; const fl = 0.8 + Math.sin(t * 11 + q[0] * 3.1) * 0.15 + G.VR() * 0.1;
+      M.a.makeScale(0.22 * k, 0.5 * k * fl, 0.22 * k); M.a.setPosition(q[0], q[1], q[2]); flame.setMatrixAt(n, M.a);
+      M.a.makeScale(0.11 * k, 0.32 * k * fl, 0.11 * k); M.a.setPosition(q[0], q[1], q[2]); glow.setMatrixAt(n, M.a); n++; F3.torches++;
+      const d2 = (q[0] - focus.X) ** 2 + (q[2] - focus.Z) ** 2; const w = k / (1 + d2 / 40); if (w > tb) { tb = w; tx = q[0]; ty = q[1] + 0.35; tz = q[2]; }
+      if (G.VR() < rdt * 1.6 * k) spawn(PG, { x: q[0], y: q[1] + 0.3 * k, z: q[2], vx: G.vrr(-0.2, 0.2), vy: G.vrr(0.8, 1.6), vz: G.vrr(-0.2, 0.2), life: G.vrr(0.5, 0.9), s0: 0.06, s1: 0.02, c: [1, 0.7, 0.3], a: 1, sh: 1, drag: 0.5, wob: 1 });
+    }
+    light2.intensity = tb > 0.02 ? Math.min(8, tb * 9) * (0.88 + G.VR() * 0.24) : 0; light2.position.set(tx, ty, tz);
     flame.count = glow.count = n; flame.instanceMatrix.needsUpdate = glow.instanceMatrix.needsUpdate = true; F3.fires = n;
     light.intensity = best > 0 ? 18 * best * (0.85 + G.VR() * 0.3) : 0; light.position.set(bx, by, bz);
     // ---- rain (or snow on the cold lands): round the eye, as much as the world's weather pours

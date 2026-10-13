@@ -361,4 +361,34 @@
       return { ok: true, card: { kind: 'thing', name: G.cap ? G.cap(d.name || a.kind) : (d.name || a.kind), sub: a.grown < 1 ? 'um filhote' : 'adulto', rows } };
     },
   });
+  // water at the feet: a river or a lake is drunk from, kneeling (the breath comes back); the sea is salt
+  I.add({
+    id: 'agua', prio: 1.5, reach: 2.4,
+    find(ctx) {
+      const S = G.S; const T = G.T; const out = []; const x0 = Math.floor(ctx.x), y0 = Math.floor(ctx.y);
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = x0 + dx, y = y0 + dy; if (!W.inb(x, y)) continue; const i = W.idx(x, y); const t = S.type[i];
+        if ((t === T.RIVER || t <= T.SEA) && !(S.dry && S.dry[i]) && !(S.ice && S.ice[i]) && !S.road[i]) out.push({ i, sea: t <= T.SEA, X: (x + 0.5) * L(), Z: (y + 0.5) * L() }); }
+      return out;
+    },
+    label(ctx, t) { return t.sea ? 'Provar a água do mar' : 'Beber água'; },
+    can(ctx, t) { return t.sea ? { ok: false, why: 'A água do mar é salgada.' } : { ok: true }; },
+    run(ctx, t) {
+      const f = face(ctx, t.X, t.Z);
+      G.Avatar.act({ anim: 'low', dur: 2, face: f, at: [0.8, () => { const p = G.Avatar.pos(); if (p && G.FX3D) for (let k = 0; k < 6; k++) G.FX3D.spawn({ x: p.X + Math.cos(f) * 0.6, y: p.Y + 0.1, z: p.Z + Math.sin(f) * 0.6, vx: G.vrr(-0.4, 0.4), vy: G.vrr(0.6, 1.4), vz: G.vrr(-0.4, 0.4), life: 0.6, s0: 0.06, s1: 0.03, c: [0.85, 0.93, 0.98], a: 0.8, sh: 1, grav: 8 }); }],
+        done: () => { G.Avatar.rest(); G.Possess.deed('agua'); } });
+      return { ok: true, msg: 'Você bebe da água fresca.' };
+    },
+  });
+  // a tame beast near (a dog, a cat, a hen, the herd): stroked — it leans into the hand, a little heart over it
+  I.add({
+    id: 'carinho', prio: 2.5, reach: 2.4,
+    find(ctx) { const out = []; const R = 2.6 / L(); for (const a of G.S.animals.values()) { if (a.dead || a.held || Math.abs(a.x - ctx.x) > R || Math.abs(a.y - ctx.y) > R) continue; const d = G.Animals.DEF[a.kind]; if (!d || d.cls === 'water' || d.cls === 'air' || !(a.dom || a.tamed || d.dom || d.pet)) continue; out.push({ a, X: a.x * L(), Z: a.y * L() }); } return out; },
+    label(ctx, t) { const d = G.Animals.DEF[t.a.kind]; return `Fazer carinho ${d ? 'n' + (d.g === 'f' ? 'a ' : 'o ') + (d.name || '').toLowerCase() : 'no bicho'}`; },
+    can(ctx, t) { return G.S.animals.has(t.a.id) ? { ok: true } : { ok: false, why: 'Foi embora.' }; },
+    run(ctx, t) {
+      const f = face(ctx, t.X, t.Z); const a = t.a;
+      G.Avatar.act({ anim: 'low', dur: 1.6, face: f, at: [0.6, () => { if (G.FX3D) G.FX3D.spawn({ x: a.x * L(), y: (W.groundH(a.x, a.y) * G.Space.HM) + 1.2, z: a.y * L(), vx: 0, vy: 0.5, vz: 0, life: 1.2, s0: 0.25, s1: 0.4, c: [1, 0.45, 0.6], a: 0.9, fade: 1 }, true); }], done: () => G.Possess.deed('carinho') });
+      return { ok: true, msg: 'Ele se encosta na sua mão.' };
+    },
+  });
 })(window.G);

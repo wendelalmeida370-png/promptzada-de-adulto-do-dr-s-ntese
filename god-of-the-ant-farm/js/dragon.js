@@ -47,6 +47,9 @@
   const alive = d => d.st !== 'morre';
   const landed = d => d.st === 'dorme' || d.st === 'luta';
   P.dragons = () => (G.S.dragons || []);
+  // (for the body's eyes, the 3D: the colours of each one, and the arrows and the fires in the air — read only)
+  P.dragonLook = d => HUES[d.hue] || HUES[0];
+  P.dragonShots = () => shots;
 
   // ------------------------------ checks ------------------------------
   const prevCheck = P.check;

@@ -355,6 +355,8 @@
       if (b) { const c = G.Ground3D.check(b.x, b.y, 30, 200); if (c.n > 50 && c.bad > c.n * 0.25) add('vista3d', 3, `o chão do 3D não bate com o mundo em ${c.bad} de ${c.n} casas perto do corpo`); }
       if (G.FX3D && G.FX3D.check) for (const m of G.FX3D.check()) add('vista3d', 2, m);
       if (G.People3D && G.People3D.check) for (const m of G.People3D.check()) add('vista3d', 2, m);
+      if (G.Dragon3D && G.Dragon3D.check) for (const m of G.Dragon3D.check()) add('vista3d', 2, m);
+      if (G.Things3D && G.Things3D.check) for (const m of G.Things3D.check()) add('vista3d', 2, m);
       // (the eye of the body never ends a frame inside the ground, a house or a wall — L-106; asleep in its own bed the body is indoors)
       if (b && !b.inside && G.Modes && G.Modes.state === 'INC' && G.Cam3D && G.Cam3D.inside) add('vista3d', 2, `o olho do corpo terminou o quadro dentro do chão, de um prédio ou de um muro (${G.Cam3D.last ? G.Cam3D.last.pos.map(n => n.toFixed(1)).join(', ') : '?'})`);
     }

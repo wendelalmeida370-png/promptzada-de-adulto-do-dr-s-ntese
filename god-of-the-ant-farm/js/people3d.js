@@ -28,6 +28,7 @@
     ['thighL', 'box', 0.135, 0.44, 0.14], ['thighR', 'box', 0.135, 0.44, 0.14], ['shinL', 'box', 0.115, 0.44, 0.12], ['shinR', 'box', 0.115, 0.44, 0.12], ['footL', 'box', 0.1, 0.07, 0.24], ['footR', 'box', 0.1, 0.07, 0.24],
     ['skirt', 'cyl', 0.44, 0.42, 0.34], ['carry', 'box', 0.34, 0.26, 0.3], ['tool', 'box', 0.04, 0.95, 0.04], ['marker', 'cone', 0.14, 0.2, 0.14],
     ['neckP', 'cyl', 0.09, 0.08, 0.09], ['eyeL', 'sph', 0.04, 0.045, 0.03], ['eyeR', 'sph', 0.04, 0.045, 0.03], ['nose', 'sph', 0.045, 0.06, 0.05], ['belt', 'cyl', 0.37, 0.06, 0.24], ['brow', 'box', 0.17, 0.025, 0.03],
+    ['torch', 'cyl', 0.05, 0.55, 0.05], ['hem', 'cyl', 0.44, 0.24, 0.34], ['bootL', 'cyl', 0.14, 0.24, 0.15], ['bootR', 'cyl', 0.14, 0.24, 0.15], ['strap', 'box', 0.05, 0.62, 0.27],
   ];
   // (the shape of each part: rounded limbs, a torso with a waist and shoulders, a cap of hair — not crates)
   const SHAPE = { pelvis: 'ball', torso: 'torso', head: 'head', hair: 'cap', hairL: 'limb', uArmL: 'limb', uArmR: 'limb', fArmL: 'limb', fArmR: 'limb', thighL: 'limb', thighR: 'limb', shinL: 'limb', shinR: 'limb', footL: 'foot', footR: 'foot', neckP: 'cyl', eyeL: 'sph', eyeR: 'sph', nose: 'sph', belt: 'cyl', brow: 'box' };
@@ -52,7 +53,7 @@
     geo.foot = new THREE.CapsuleGeometry(0.5, 1, 3, 8); geo.foot.rotateX(Math.PI / 2); geo.foot.scale(1, 1, 0.5);
     const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
     // (a soft light on the edges of a body, as the god's view outlines its little people: they read against the ground)
-    mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * 0.32;\n#include <opaque_fragment>'); };
+    mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * 0.2;\n#include <opaque_fragment>'); };
     mesh = PARTS.map(p => { const m = new THREE.InstancedMesh(geo[SHAPE[p[0]] || p[1]], p[0] === 'marker' ? new THREE.MeshBasicMaterial({ color: 0xffffff }) : mat, MAX); m.count = 0; m.castShadow = p[0] !== 'marker' && p[0] !== 'eyeL' && p[0] !== 'eyeR' && p[0] !== 'brow' && p[0] !== 'nose'; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); return m; });
     // the beasts: a round body, a neck, a head with its snout and ears and eyes, four legs (or two), a tail, wings, horns,
     // a mane — each part one instanced mesh (BP names them)
@@ -82,13 +83,27 @@
     const s = (h / 1.75) * (v.g === 'f' && ad >= 14 ? 0.95 : 1);
     const robe = v.role === 'sacerdote' || v.role === 'anciao' || v.role === 'escriba' || (v.g === 'f' && ad >= 12 && (v.id % 3 !== 0));
     const hair = ad >= 62 ? G.lerpColor(G.hex2rgb(v.hair || '#3a2a1a'), [214, 210, 204], G.clamp((ad - 62) / 18, 0, 0.85)) : null;
-    return { s, skin: v.skin || '#d8a888', hair: hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', belt: darker(cloth, 0.38), brow: darker(v.hair || '#3a2a1a', 0.8), nose: darker(v.skin || '#d8a888', 0.88), robe, long: v.g === 'f' && ad >= 8, bald: v.g === 'm' && ad >= 55 && v.id % 4 === 0, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia' };
+    return { s, skin: v.skin || '#d8a888', hair: hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', belt: darker(cloth, 0.38), brow: darker(v.hair || '#3a2a1a', 0.8), nose: darker(v.skin || '#d8a888', 0.88), robe, long: v.g === 'f' && ad >= 8, bald: v.g === 'm' && ad >= 55 && v.id % 4 === 0, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia', torch: torchOf(v), lantern: !!v.lantern && !v.inside, strap: ad >= 14 && (v.role === 'cacador' || v.role === 'guerreiro' || v.role === 'mercador' || v.role === 'explorador' || (G.Possess && G.Possess.body && G.Possess.body() === v)) };
   };
+  // (who carries a torch: the god's own rule — at night, walking, one in three grown people, those whose errand asks for one,
+  // and those the scenes hand one to; and the body, at night, always: the player has to see)
+  function torchOf(v) {
+    if (v.inside || v.sleeping) return false; if (v.holdTorch) return true;
+    if (G.Render.nightness() <= 0.5) return false;
+    if (G.Possess && G.Possess.body && G.Possess.body() === v) return true;
+    return !!(v.moving && v.age >= 14 && ((v.task && v.task.torch) || v.id % 3 === 0));
+  }
 
   // ------------------------------ poses ------------------------------
   // a pose: the angles of the joints, and the hips' height and lean (radians, metres)
   const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, lie: 0, tool: 0 });
   Anim.POSE0 = POSE0;
+  // (the dead lie as they fell: on the back or face down, the limbs thrown out)
+  const DEAD = [
+    Object.assign(POSE0(), { lie: 1, hipL: 0.35, hipR: -0.25, knL: 0.3, knR: 0.6, shLp: -1.7, shRp: 0.5, shLr: 0.7, shRr: -0.6, elL: 0.4, elR: 0.2, neck: 0.3 }),
+    Object.assign(POSE0(), { lie: 1, prone: 1, hipL: -0.2, hipR: 0.3, knL: 0.9, knR: 0.2, shLp: -2.6, shRp: -0.4, shLr: 0.3, shRr: -1.0, elL: 0.6, elR: 0.9, neck: -0.4 }),
+    Object.assign(POSE0(), { lie: 1, hipL: -0.6, hipR: -0.1, knL: 1.2, knR: 0.1, shLp: 0.3, shRp: -1.2, shLr: 1.2, shRr: -0.3, elL: 1.4, elR: 0.3, neck: 0.5 }),
+  ];
   // every state: a function of its own clock and of the speed (m/s) → the pose it wants
   const ST = {
     // (standing: breathing, the weight shifting from one leg to the other now and then, a look round)
@@ -117,6 +132,11 @@
     fight: (t) => ({ ...ST.swing(t), crouch: 0.08, hipL: -0.35, hipR: 0.35, knL: 0.45, knR: 0.25, tool: 1 }),
     // (turning on the spot: small steps in place, the body leading)
     turn: (t) => ({ hipL: Math.sin(t) * 0.2, hipR: -Math.sin(t) * 0.2, knL: Math.max(0, -Math.cos(t)) * 0.4 + 0.08, knR: Math.max(0, Math.cos(t)) * 0.4 + 0.08, shLp: 0.05, shRp: 0.05, shLr: 0.08, shRr: -0.08, elL: 0.22, elR: 0.22, twist: 0.14 }),
+    // (sitting on the ground, the knees up and the arms round them; climbing a ledge: the hands up to the edge, then
+    // pushing down on it as the knee comes over — its clock is how far up it is, 0 to 1; a wave of the hand)
+    rest: (t) => ({ crouch: 0.82, hipL: -1.45, hipR: -1.35, knL: 1.95, knR: 1.85, shLp: -0.75, shRp: -0.7, shLr: 0.15, shRr: -0.15, elL: 1.05, elR: 1.0, lean: 0.12 + Math.sin(t * 1.3) * 0.015, neck: Math.sin(t * 0.37) * 0.08 }),
+    climb: (u) => { const a = G.clamp(u * 1.8, 0, 1), k = G.clamp((u - 0.4) * 1.8, 0, 1); return { shLp: -2.85 + k * 2.3, shRp: -2.85 + k * 2.3, shLr: 0.22, shRr: -0.22, elL: 0.35 + a * 0.5 - k * 0.5, elR: 0.35 + a * 0.5 - k * 0.5, hipL: -1.3 * a + k * 1.0, hipR: -0.35 * a + k * 0.25, knL: 1.7 * a - k * 1.4, knR: 0.6 * a - k * 0.4, lean: 0.3 + a * 0.15 - k * 0.2, crouch: 0.12 * a * (1 - k) }; },
+    wave: (t) => ({ ...ST.idle(t), shRp: -2.55, shRr: -0.55 + Math.sin(t * 9) * 0.3, elR: 0.5 + Math.sin(t * 9) * 0.25, neck: -0.05 }),
     // (wading through a ford: arms out for balance, the steps high)
     wade: (t, sp) => ({ ...ST.walk(t, sp), shLr: 0.5, shRr: -0.5, elL: 0.55, elR: 0.55, lean: 0.12, knL: Math.max(0, -Math.cos(t)) * 0.9 + 0.15, knR: Math.max(0, Math.cos(t)) * 0.9 + 0.15 }),
   };
@@ -159,7 +179,7 @@
     if (M.root) return;
     for (const k of ['root', 'a', 'b', 'c', 'z']) M[k] = new THREE.Matrix4();
     for (const k of ['pel', 'trunk', 'neck', 'sh', 'fa', 'hd', 'th', 'sn']) F[k] = new THREE.Matrix4();
-    M.eu = new THREE.Euler(); M.z.makeScale(0, 0, 0);
+    M.eu = new THREE.Euler(); M.z.makeScale(0, 0, 0); M.v = new THREE.Vector3();
   }
   // a part: parent × (to the joint) × (its turn) — kept in `out`, the frame of the next part down the limb —
   // then × (half its length down the limb) × (its size), the matrix of its box
@@ -198,10 +218,20 @@
     if (L.long) put('hairL', idx, F.neck, 0, 0.1, -0.11, 0.12, 0, 0, 0, -0.12, 0, 0.21, 0.36, 0.07, L.hair); else hide('hairL', idx);
     // arms: from the shoulders, down to the elbows, down to the hands (a roll above 0 opens the arm away from the body)
     // (facing +Z, the body's left hand is on +X: L at +X, R at -X; a roll toward one's own side opens the arm)
-    for (const [sd, sp, sr, el, u, f, h] of [[1, pose.shLp, pose.shLr, pose.elL, 'uArmL', 'fArmL', 'handL'], [-1, pose.shRp, pose.shRr, pose.elR, 'uArmR', 'fArmR', 'handR']]) {
+    const hold = (L.torch || L.lantern) && !lie; // (a torch or a lantern held up in the left hand, in front)
+    for (const [sd, sp0, sr0, el0, u, f, h] of [[1, pose.shLp, pose.shLr, pose.elL, 'uArmL', 'fArmL', 'handL'], [-1, pose.shRp, pose.shRr, pose.elR, 'uArmR', 'fArmR', 'handR']]) {
+      const sp = hold && sd > 0 ? -1.05 : sp0, sr = hold && sd > 0 ? 0.12 : sr0, el = hold && sd > 0 ? 1.25 : el0;
       put(u, idx, F.trunk, sd * 0.235, 0.46, 0, sp, 0, sr + sd * 0.05, 0, -0.15, 0, 0.11, 0.34, 0.11, L.cloth, F.sh);
       put(f, idx, F.sh, 0, -0.3, 0, -el, 0, 0, 0, -0.14, 0, 0.09, 0.31, 0.09, L.skin, F.fa);
       put(h, idx, F.fa, 0, -0.29, 0, 0, 0, 0, 0, 0, 0, 0.1, 0.11, 0.09, L.skin, F.hd);
+      if (sd > 0) {
+        if (hold) {
+          // (the stick upright in the hand whatever the arm does; its flame handed to the fire's drawing)
+          M.v.setFromMatrixPosition(F.hd); M.c.makeRotationY(-yaw + Math.PI / 2); M.c.setPosition(M.v.x, M.v.y, M.v.z); M.b.makeScale(s, s, s); M.c.multiply(M.b);
+          put('torch', idx, M.c, 0, 0, 0, 0.12, 0, 0, 0, L.lantern ? -0.1 : 0.18, 0, 0.045, L.lantern ? 0.2 : 0.55, 0.045, L.lantern ? '#3a2a1a' : '#5a3c22');
+          if (P3.flames.length < 40) P3.flames.push([M.v.x, M.v.y + (L.lantern ? -0.18 : 0.47) * s, M.v.z, L.lantern ? 0.5 : 0.85]);
+        } else hide('torch', idx);
+      }
       if (sd < 0) { if (pose.tool || L.tool) put('tool', idx, F.hd, 0, 0, 0, pose.tool ? -Math.PI / 2 : 0, 0, 0, 0, pose.tool ? 0.3 : -0.25, 0, 0.04, 0.95, 0.04, '#7a5a3a'); else hide('tool', idx); }
     }
     // legs: from the hips, down to the knees, down to the feet
@@ -209,14 +239,20 @@
       put(th, idx, F.pel, sd * 0.095, -0.04, 0, hp, 0, 0, 0, -0.22, 0, 0.155, 0.48, 0.16, L.pants, F.th);
       put(sn, idx, F.th, 0, -0.44, 0, kn, 0, 0, 0, -0.22, 0, 0.125, 0.48, 0.13, L.pants, F.sn);
       put(ft, idx, F.sn, 0, -0.45, 0.04, 0, 0, 0, 0, 0, 0.03, 0.12, 0.09, 0.26, L.feet);
+      // (boots of leather to the middle of the shin)
+      put(sd > 0 ? 'bootL' : 'bootR', idx, F.sn, 0, -0.3, 0, 0, 0, 0, 0, -0.04, 0, 0.145, 0.24, 0.155, L.feet);
     }
     if (L.robe) put('skirt', idx, F.pel, 0, -0.2, 0, 0, 0, 0, 0, -0.06, 0, 0.46, 0.46, 0.36, L.cloth); else hide('skirt', idx);
+    // (a tunic falls from the belt to the middle of the thigh, flaring a little; a strap across the chest for the bag)
+    if (!L.robe && L.s > 0.8) put('hem', idx, F.pel, 0, -0.02, 0, 0, 0, 0, 0, -0.1, 0, 0.42 + Math.abs(pose.hipL - pose.hipR) * 0.08, 0.24, 0.33, L.cloth); else hide('hem', idx);
+    if (L.strap) put('strap', idx, F.trunk, 0, 0.28, 0, 0, 0, 0.72, 0, 0, 0, 0.05, 0.62, 0.27, L.belt); else hide('strap', idx);
     if (L.carry) put('carry', idx, F.trunk, 0, 0.3, 0.26, 0, 0, 0, 0, 0, 0, 0.34, 0.26, 0.3, '#9a7a4a'); else hide('carry', idx);
     if (marker) put('marker', idx, root, 0, 2.15 + Math.sin(performance.now() / 300) * 0.04, 0, 0, performance.now() / 600, 0, 0, 0, 0, 0.16, 0.22, 0.16, marker); else hide('marker', idx);
   };
 
   // ------------------------------ the frame ------------------------------
   P3.avatar = null; // (set by the body's controller: { X, Y, Z, yaw, pose, look })
+  P3.flames = []; // (the flames of the torches and lanterns in the hands drawn this frame: [X, Y, Z, size] — for FX3D)
   P3.walkers = []; // (the people drawn whole this frame: [X, Y, Z, speed, state, act, yaw, id] — only seen)
   P3.highlight = 0; // (the one the body is looking at, to talk to)
   P3.update = function (dt, focus) {
@@ -234,7 +270,7 @@
     }
     near.sort((a, b) => a[0] - b[0]);
     let n = Math.min(near.length, q.npcs, MAX - 1); while (n > 0 && near[n - 1][0] > R2) n--;
-    let idx = 0; P3.walkers.length = 0;
+    let idx = 0; P3.walkers.length = 0; P3.flames.length = 0;
     if (av) { P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null); }
     const seen = new Set();
     for (let k = 0; k < n; k++) {
@@ -248,7 +284,9 @@
       if (dist > 0.002) { const want = Math.atan2(dz, dx); let da = want - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * (1 - Math.exp(-10 * dt)); }
       if (dist > 6) s.sp = 0; // (a jump of the world — a teleport, a load — is not a step)
       s.X = X; s.Z = Z; s.t += dt;
-      const st = Anim.stateOf(v, s.sp);
+      let st = Anim.stateOf(v, s.sp);
+      // (waved at by the body: those standing or strolling near wave back, a moment later — only seen)
+      if (s.greetT > 0) { if ((s.greetD -= dt) <= 0) { s.greetT -= dt; if (st === 'idle' || st === 'walk' || st === 'talk') st = 'wave'; } }
       if (st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak') s.ph += dt * s.sp * (st === 'run' ? 1.9 : 2.6); else s.ph += dt * 4;
       Anim.blend(s.pose, Anim.pose(st, st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak' ? s.ph : s.t, s.sp), dt, 10);
       // (someone standing near the body turns their head to it — and back when it goes; a blink now and then)
@@ -260,6 +298,14 @@
       if (P3.walkers.length < 40) P3.walkers.push([X, Y, Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise)
     }
     for (const id of vis.keys()) if (!seen.has(id) && !(av && id === av.id)) vis.delete(id);
+    // the dead of the world where they fell — until they are buried, burnt or only bones (the carnage keeps them)
+    const Cg = G.Carnage && G.Carnage.view ? G.Carnage.view() : null; P3.dead = 0;
+    if (Cg) for (const c of Cg.corpses) {
+      if (idx >= MAX) break; const X = c.x * TL, Z = c.y * TL; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > R2) continue;
+      const stg = G.Carnage.stage(c); if (stg === 'bones') continue;
+      const L = P3.look(c.look); if (stg !== 'fresh') L.skin = stg === 'rot' ? '#8a8a6a' : '#7a6a5a';
+      P3.body(idx++, X, W.groundH(c.x, c.y) * HM, Z, G.hash(c.id) * TAU, DEAD[c.id % DEAD.length], L, null); P3.dead++;
+    }
     // the crowd: everyone else in reach, simply (where the world has them; no animation of their own but a step's bob)
     mats(); let c = 0; const tnow = performance.now() / 1000;
     for (let k = n; k < near.length && c < MAXC; k++) {
@@ -279,6 +325,7 @@
     beasts(focus, R2, dt);
   };
   P3.visOf = id => vis.get(id);
+  P3.greet = function (X, Z) { let n = 0; for (const [id, s] of vis) if ((s.X - X) ** 2 + (s.Z - Z) ** 2 < 81) { s.greetT = 1.3 + (id % 5) * 0.15; s.greetD = 0.25 + (id % 7) * 0.08; n++; } return n; };
   // the turn of the head someone wants toward the body: facing yaw at (X, Z), the body av, their state — only when they
   // stand, talk, carry or walk, the body within 6 m and somewhere in front of them (not behind their back)
   P3.lookFor = function (yaw, X, Z, av, st) {

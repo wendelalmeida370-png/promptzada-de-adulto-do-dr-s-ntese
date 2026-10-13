@@ -20,7 +20,7 @@
   const G3 = G.Ground3D = {};
   // the kinds of ground (the alpha of a tile's texel)
   const K = G3.K = { grass: 0, meadow: 1, sand: 2, dune: 3, rocky: 4, snow: 5, swamp: 6, savanna: 7, jungle: 8, path: 9, gravel: 10, paved: 11, highway: 12, burnt: 13, field: 14, bed: 15, rock: 16, taiga: 17, wet: 18 };
-  let THREE = null, map = null, data = null, det = null, mat = null, size = 0, dirtyAll = true, row = 0;
+  let THREE = null, map = null, data = null, det = null, mat = null, size = 0, dirtyAll = true, row = 0, gmap = null, gdata = null;
   G.worldHooks.push(() => { dirtyAll = true; row = 0; sweep = 0; });
   // (the god's road colours: the same streets from both heights)
   const ROADC = [null, [184, 164, 128], [190, 182, 164], [146, 142, 134]];
@@ -66,14 +66,31 @@
     return out;
   }
   G3.paint = (i, x, y) => paint(i, x, y, [0, 0, 0, 0]);
+  // the grass of a tile, for the field of blades round the body (Grass3D): R how thick, G how tall (255 = 1.5 m), B how
+  // many flowers, A its kind (0 green grass, 1 the gold of the savanna, 2 reeds, 3 the jungle's, 4 the short grass of the
+  // taiga, 5 the few blades of the dunes). None on a road, a house, a field, a wall, the water, rock, snow or ash
+  const GK = { 0: [215, 62, 10, 0], 1: [250, 80, 70, 0], 7: [200, 170, 6, 1], 8: [205, 125, 12, 3], 6: [165, 175, 0, 2], 17: [130, 38, 4, 4], 3: [22, 85, 0, 5], 2: [8, 60, 0, 5], 18: [36, 70, 0, 2], 9: [45, 34, 0, 0] };
+  function grassOf(i, k, out) {
+    const S = G.S; const g = GK[k];
+    if (!g || S.occ[i] || S.wall[i] || S.road[i] || S.type[i] <= T.RIVER) { out[0] = out[1] = out[2] = out[3] = 0; return out; }
+    const worn = G.pathLevel(S.wear[i]) === 1 ? 0.5 : 1;
+    // (where the cold whitens the ground the grass is under the snow: thinner as it whitens, none where it lies deep)
+    const snow = S.temp ? G.clamp((0.235 - S.temp[i] / 255) / 0.07, 0, 1) : 0; if (snow > 0.45) { out[0] = out[1] = out[2] = out[3] = 0; return out; }
+    out[0] = Math.round(g[0] * worn * (1 - snow * 1.6)); out[1] = g[1]; out[2] = g[2]; out[3] = g[3];
+    return out;
+  }
+  G3.grassMap = () => gmap;
+  G3.map = () => map;
   // a band of rows of the picture made again from the world; true when something changed
-  const px = [0, 0, 0, 0];
+  const px = [0, 0, 0, 0], gx = [0, 0, 0, 0];
   function rows(y0, y1, x0, x1) {
-    if (!data) return false; let ch = false;
+    if (!data) return false; let ch = false, gch = false;
     for (let y = Math.max(0, y0); y < Math.min(N, y1); y++) for (let x = Math.max(0, x0); x < Math.min(N, x1); x++) {
       const i = y * N + x; paint(i, x, y, px); const o = i * 4;
       if (data[o] !== px[0] || data[o + 1] !== px[1] || data[o + 2] !== px[2] || data[o + 3] !== px[3]) { data[o] = px[0]; data[o + 1] = px[1]; data[o + 2] = px[2]; data[o + 3] = px[3]; ch = true; }
+      grassOf(i, px[3], gx); if (gdata[o] !== gx[0] || gdata[o + 1] !== gx[1] || gdata[o + 2] !== gx[2] || gdata[o + 3] !== gx[3]) { gdata[o] = gx[0]; gdata[o + 1] = gx[1]; gdata[o + 2] = gx[2]; gdata[o + 3] = gx[3]; gch = true; }
     }
+    if (gch && gmap) gmap.needsUpdate = true;
     return ch;
   }
   // the whole picture (a new world, or the first descent)
@@ -84,6 +101,8 @@
       size = N; data = new Uint8Array(N * N * 4);
       map = new THREE.DataTexture(data, N, N, THREE.RGBAFormat, THREE.UnsignedByteType);
       map.colorSpace = THREE.SRGBColorSpace; map.magFilter = map.minFilter = THREE.NearestFilter; map.generateMipmaps = false; map.flipY = false;
+      if (gmap) gmap.dispose(); gdata = new Uint8Array(N * N * 4);
+      gmap = new THREE.DataTexture(gdata, N, N, THREE.RGBAFormat, THREE.UnsignedByteType); gmap.magFilter = gmap.minFilter = THREE.NearestFilter; gmap.generateMipmaps = false; gmap.flipY = false;
     }
     rows(0, N, 0, N); map.needsUpdate = true; dirtyAll = false; row = 0;
     U.uMap.value = map; U.uN.value = N;

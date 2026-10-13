@@ -296,6 +296,9 @@
     if (menuOpen) return;
     if (a === 'deus') { M3.leave('deus'); return; }
     if (a === 'ficha') { if (panel === 'self') { G.IncUI.closeAll(); panel = null; } else { G.IncUI.selfCard(); } return; }
+    if (a === 'sentar') { G.Avatar.sit(); return; }
+    // (a wave of the hand: those standing near turn to it and wave back — the hello of the people, only seen)
+    if (a === 'acenar') { if (G.Avatar.wave()) { G.Possess.deed('aceno'); const p = G.Avatar.pos(); if (p && G.People3D.greet) G.People3D.greet(p.X, p.Z); } return; }
     if (a === 'interagir') {
       if (panel) { G.IncUI.closeAll(); panel = null; return; }
       const v = G.Possess.body(); if (v && v.sleeping) { G.Possess.wake(v); return; }

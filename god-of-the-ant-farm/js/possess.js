@@ -259,7 +259,7 @@
   // ------------------------------ words ------------------------------
   const tt0 = G.Vg.taskText;
   G.Vg.taskText = function (v) { return v.task && v.task.type === 'avatar' ? (v.sleeping ? 'Dormindo — guiad' + oa(v) + ' pelo deus' : 'Vivid' + oa(v) + ' pelo deus (Modo Encarnado)') : tt0(v); };
-  const DEED = { conversa: ['conversou com', 'pessoa', 'pessoas'], lenha: ['cortou', 'árvore', 'árvores'], pedra: ['quebrou', 'pedra', 'pedras'], frutas: ['colheu', 'punhado de frutas', 'punhados de frutas'], entrega: ['levou ao armazém', 'carga', 'cargas'], refeicao: ['fez', 'refeição', 'refeições'], sono: ['dormiu', 'noite', 'noites'], exame: ['examinou', 'coisa', 'coisas'], porta: ['bateu em', 'porta', 'portas'], reza: ['rezou', 'vez no templo', 'vezes no templo'], obra: ['levou às obras', 'carga de material', 'cargas de material'] };
+  const DEED = { escalada: ['escalou', 'barranco', 'barrancos'], carinho: ['fez carinho em', 'bicho', 'bichos'], agua: ['bebeu água de', 'rio', 'rios'], aceno: ['acenou', 'vez', 'vezes'], conversa: ['conversou com', 'pessoa', 'pessoas'], lenha: ['cortou', 'árvore', 'árvores'], pedra: ['quebrou', 'pedra', 'pedras'], frutas: ['colheu', 'punhado de frutas', 'punhados de frutas'], entrega: ['levou ao armazém', 'carga', 'cargas'], refeicao: ['fez', 'refeição', 'refeições'], sono: ['dormiu', 'noite', 'noites'], exame: ['examinou', 'coisa', 'coisas'], porta: ['bateu em', 'porta', 'portas'], reza: ['rezou', 'vez no templo', 'vezes no templo'], obra: ['levou às obras', 'carga de material', 'cargas de material'] };
   Po.DEED = DEED;
   if (G.Life) {
     const bl0 = G.Life.bioLine;

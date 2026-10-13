@@ -29,6 +29,7 @@
   const TUNE = Av.TUNE = {
     accel: 15, brake: 19, airAccel: 3.5, turn: 10, gravity: 21, coyote: 0.12, buffer: 0.14, stepUp: 0.6, radius: 0.32,
     runDrain: 20, staminaRegen: 16, jumpCost: 9, sneak: 0.45, wade: 0.58, road: 1.12, hurtFall: 6.5, step: 1 / 60,
+    climbMax: 2.6, climbWait: 0.22,
   };
   try { const o = JSON.parse(localStorage.getItem('gotaf-tune') || 'null'); if (o && typeof o === 'object') for (const k in o) if (k in TUNE && Number.isFinite(o[k]) && k !== 'step') TUNE[k] = o[k]; } catch (e) { }
   Av.saveTune = () => { try { localStorage.setItem('gotaf-tune', JSON.stringify(TUNE)); } catch (e) { } };
@@ -56,7 +57,7 @@
     b = {
       id: v.id, X, Y, Z, pX: X, pY: Y, pZ: Z, vx: 0, vy: 0, vz: 0, yaw: yaw === undefined ? (v.face > 0 ? 0 : Math.PI) : yaw, ground: true, coyote: 0, buffer: 0,
       loco: 'ground', anim: 'idle', animT: 0, ph: 0, pose: G.Anim3D.POSE0(), landT: 0, fallFrom: Y, hurt: 0, stamina: 100, acc: 0, wx: v.x, wy: v.y,
-      act: null, speed: 0, turnT: 0, block: null, blockT: 0, capsT: 0, caps: null, wade: 0,
+      act: null, speed: 0, turnT: 0, block: null, blockT: 0, capsT: 0, caps: null, wade: 0, climb: null, ledgeT: 0, yawP: 0, spP: 0, bank: 0,
     };
     Av.on = true;
     return b;
@@ -109,6 +110,18 @@
     // asleep: the body lies where it lay down; the world's needs (villagers.js) give the strength back
     sleep: {
       step(v, h) { b.vx = b.vz = 0; b.speed = 0; if (!v.sleeping) b.loco = 'ground'; void h; },
+    },
+    // climbing a ledge (Breath of the Wild's way: pushing against it, the hands take the edge and the body pulls itself
+    // up and over). From one tile the world walks to the next one the world walks on: the world sees a step
+    climb: {
+      step(v, h) {
+        const c = b.climb; if (!c) { b.loco = 'ground'; return; }
+        c.t += h; const u = G.clamp(c.t / c.dur, 0, 1);
+        const up = G.smooth(0.05, 0.62, u), fw = G.smooth(0.42, 1, u);
+        b.X = G.lerp(c.X0, c.X1, fw); b.Z = G.lerp(c.Z0, c.Z1, fw); b.Y = G.lerp(c.Y0, c.Y1 + 0.04, up);
+        b.vx = b.vz = b.vy = 0; b.ground = true;
+        if (u >= 1) { b.Y = floorAt(b.X, b.Z); b.loco = 'ground'; b.climb = null; b.fallFrom = b.Y; G.Possess.deed('escalada'); }
+      },
     },
     // busy with the hands (chopping, picking, eating): the feet keep still until it is done
     busy: {
@@ -169,8 +182,29 @@
     if ((ox || oz) && !blocked(b.X + ox, b.Z + oz, feet, Math.sign(ox), Math.sign(oz))) { b.X += ox; b.Z += oz; }
     const L = TL(); b.X = G.clamp(b.X, 0.5 * L, (G.N - 0.5) * L); b.Z = G.clamp(b.Z, 0.5 * L, (G.N - 0.5) * L);
     if (b.blockT > 0) b.blockT -= h; else b.block = null;
+    // (pushing against a ledge too high to step on: after a moment — or at once with the jump — the body climbs it)
+    if (onGround && (hit === 'ledge' || hz === 'ledge') && wl > 0.3) { b.ledgeT += h; if (b.ledgeT > TUNE.climbWait || b.buffer > 0) tryClimb(wx, wz); } else b.ledgeT = 0;
+    if (b.loco === 'climb') return;
     settle(h);
     b.wade = here.kind === 'shallow' ? Math.max(0, (S.wl[here.i] || 0) * HM() - floorAt(b.X, b.Z)) : 0;
+  }
+  // a ledge ahead, within the reach of the arms: where the hands take it and where the feet will stand on top
+  function tryClimb(wx, wz) {
+    const l = Math.hypot(wx, wz); if (l < 0.1) return false; const dx = wx / l, dz = wz / l; const feet = b.Y;
+    for (let d = 0.3; d <= 1.3; d += 0.1) {
+      const ex = b.X + dx * d, ez = b.Z + dz * d; const top = floorAt(ex, ez);
+      if (top <= feet + TUNE.stepUp) continue;
+      if (top - feet > TUNE.climbMax) return false; // (too high to reach)
+      // (where the feet go: a little beyond the edge, on open ground of the world, with nothing higher right behind it)
+      const tx = b.X + dx * (d + 0.45), tz = b.Z + dz * (d + 0.45); const sf = G.Space.surface(tx, tz);
+      if (!sf.walk || sf.kind !== 'ground') return false;
+      const ty = floorAt(tx, tz); if (ty - feet > TUNE.climbMax || ty < top - 0.6) return false;
+      if (blocked(tx, tz, ty, dx, dz)) return false;
+      b.climb = { X0: b.X, Z0: b.Z, Y0: b.Y, X1: tx, Z1: tz, Y1: ty, t: 0, dur: 0.45 + (ty - feet) * 0.22 }; b.loco = 'climb'; b.ledgeT = 0; b.buffer = 0; b.vx = b.vz = 0;
+      b.yaw = Math.atan2(dz, dx); b.stamina = Math.max(0, b.stamina - 6);
+      return true;
+    }
+    return false;
   }
   // gravity and the ground: falling, landing, staying on a slope going down
   function settle(h) {
@@ -209,15 +243,22 @@
     return true;
   };
   Av.busy = () => !!(b && b.act);
+  // sitting down where the body stands (until the player walks); and a wave of the hand to those around
+  Av.sit = function () { if (!b) return false; if (b.act && b.act.sit) { b.act = null; b.loco = 'ground'; return true; } if (!b.ground || b.loco !== 'ground' || b.act) return false; Av.act({ anim: 'rest', dur: 1e9, lock: true }); b.act.sit = true; return true; };
+  Av.wave = function () { if (!b || b.loco !== 'ground') return false; return Av.act({ anim: 'wave', dur: 1.6, lock: false }); };
+  Av.climbing = () => !!(b && b.climb);
+  Av.rest = () => { if (b && b.caps) b.stamina = b.caps.stamina; }; // (a drink of water: the breath comes back)
   Av.cancelAct = () => { if (b && b.act) { b.act = null; b.loco = 'ground'; } };
 
   // ------------------------------ the step and the frame ------------------------------
   function step(v, h) {
     // the world moved the body (a building rose where it stood, a load, the world's own push): the world is right
-    if (Math.abs(v.x - b.wx) > 1e-6 || Math.abs(v.y - b.wy) > 1e-6) { b.X = b.pX = v.x * TL(); b.Z = b.pZ = v.y * TL(); b.Y = b.pY = floorAt(b.X, b.Z); b.vx = b.vz = b.vy = 0; b.ground = true; b.loco = 'ground'; }
+    if (Math.abs(v.x - b.wx) > 1e-6 || Math.abs(v.y - b.wy) > 1e-6) { b.X = b.pX = v.x * TL(); b.Z = b.pZ = v.y * TL(); b.Y = b.pY = floorAt(b.X, b.Z); b.vx = b.vz = b.vy = 0; b.ground = true; b.loco = 'ground'; b.climb = null; }
     b.pX = b.X; b.pY = b.Y; b.pZ = b.Z;
     if ((b.capsT -= h) <= 0 || !b.caps) { b.caps = G.Possess.caps(v); b.capsT = 0.5; }
     if (v.sleeping && b.loco !== 'sleep') { b.loco = 'sleep'; b.act = null; }
+    // (sitting, the body gets up as soon as the player walks or jumps)
+    if (b.act && b.act.sit && (Math.abs(IN.mx) + Math.abs(IN.mz) > 0.2 || b.buffer > 0 || IN.jump)) { b.act = null; b.loco = 'ground'; }
     if (b.act) {
       b.act.t += h;
       if (b.faceTo !== undefined) { let da = b.faceTo - b.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; b.yaw += da * (1 - Math.exp(-8 * h)); }
@@ -243,6 +284,7 @@
     const caps = b.caps; const carry = !!(v.carry && v.carry.n > 0);
     let st;
     if (b.loco === 'sleep') st = 'sleep';
+    else if (b.loco === 'climb') st = 'climb';
     else if (b.act && (b.act.lock || b.speed < 0.22)) st = b.act.anim;
     else if (!b.ground) st = b.vy > 0.4 ? 'jump' : 'fall';
     else if (b.landT > 0) st = 'land';
@@ -253,7 +295,16 @@
     b.animT += h;
     const loc = st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak' || st === 'wade' || st === 'turn';
     if (loc) b.ph += h * Math.max(b.speed, st === 'turn' ? 1.2 : 0) * (st === 'run' ? 1.9 : 2.6);
-    G.Anim3D.blend(b.pose, G.Anim3D.pose(st, loc ? b.ph : b.animT, b.speed), h, st === 'land' || st === 'jump' ? 20 : 12);
+    const want = G.Anim3D.pose(st, loc ? b.ph : st === 'climb' && b.climb ? b.climb.t / b.climb.dur : b.animT, b.speed);
+    // (moving, the body leans into its turns and forward as it speeds up, back as it stops; standing, the head follows the
+    // eye of the camera a little, as a person looks where they mean to go)
+    let dy = b.yaw - b.yawP; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; b.yawP = b.yaw;
+    const acc = (b.speed - b.spP) / h; b.spP = b.speed;
+    b.bank += (G.clamp(dy / h * b.speed * 0.03, -0.22, 0.22) - b.bank) * (1 - Math.exp(-8 * h));
+    if (loc && b.ground) { want.sway = (want.sway || 0) + b.bank; want.lean = (want.lean || 0) + G.clamp(acc * 0.025, -0.18, 0.22); }
+    if (st === 'idle' || st === 'walk' || st === 'carry') { let la = IN.camYaw - b.yaw; while (la > Math.PI) la -= TAU; while (la < -Math.PI) la += TAU; want.lookY = Math.abs(la) < 1.9 ? -G.clamp(la, -1, 1) * 0.55 : 0; }
+    G.Anim3D.blend(b.pose, want, h, st === 'land' || st === 'jump' || st === 'climb' ? 20 : 12);
+    if (want.lookY !== undefined) b.pose.lookY = (b.pose.lookY || 0) + ((want.lookY || 0) - (b.pose.lookY || 0)) * (1 - Math.exp(-5 * h));
   }
   Av.frame = function (rdt) {
     const v = G.Possess.body(); if (!b || !v || v.id !== b.id) return;
