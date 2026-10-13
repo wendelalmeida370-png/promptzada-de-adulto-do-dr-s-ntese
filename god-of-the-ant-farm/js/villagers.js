@@ -1414,7 +1414,7 @@
   };
   function land(v, impact) {
     const S = G.S; const i = W.idx(v.x, v.y);
-    if (S.type[i] <= T.SEA || (S.type[i] === T.RIVER)) {
+    if ((S.type[i] <= T.SEA && !(S.dry && S.dry[i])) || (S.type[i] === T.RIVER)) {
       G.FX && G.FX.splash(v.x, v.y, 1.2); G.Audio && G.Audio.at(v.x, v.y, 'splash', true);
       if (S.type[i] <= T.SEA) { setTask(v, { type: 'swim', pri: 6 }); emote(v, 'fear', 3); return; }
     } else {
@@ -1519,7 +1519,7 @@
         if (!W.walkable(i) && S.type[i] !== T.SEA && S.type[i] !== T.DEEP) {
           const n = W.nearestLand(v.x, v.y, 5); if (n) { const e = v.path && v.pi < v.path.length ? v.path[v.path.length - 1] : null; v.x = n[0]; v.y = n[1]; v.path = null; if (v.task && e && !Vg.goto(v, e[0], e[1], false)) v.task.st = 0; }
         } else if (watch(v)) { /* (moved somewhere it can get out of) */
-        } else if (S.type[i] <= T.SEA && (!v.task || v.task.type !== 'swim') && !(v.task && (v.task.type === 'mariscar' || v.task.type === 'pocas') && v.task.st >= 2) && !(v.task && v.task.type === 'dive' && v.task.st >= 1)) { setTask(v, { type: 'swim', pri: 6 }); }
+        } else if (S.type[i] <= T.SEA && !(S.dry && S.dry[i]) && (!v.task || v.task.type !== 'swim') && !(v.task && (v.task.type === 'mariscar' || v.task.type === 'pocas') && v.task.st >= 2) && !(v.task && v.task.type === 'dive' && v.task.st >= 1)) { setTask(v, { type: 'swim', pri: 6 }); }
       }
     }
     // (a list of its own: people die and are born while the loop runs)

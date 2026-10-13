@@ -411,6 +411,7 @@ Os poderes ficam em sete abas (`Tab` troca). Poderes marcados com ✦ abrem uma 
 | Mar | Tempestade | 45 | Ondas, raios e navios quebrados |
 | Mar | Maremoto | 90 | Uma onda gigante corre até a costa mais próxima e varre tudo |
 | Mar | Kraken | 70 | O monstro caça navios até ser morto pelas frotas ou voltar ao fundo |
+| Mar | Abrir o Mar | 75 | Clique no mar entre duas margens: as águas se erguem em duas paredes e o fundo vira caminho de uma terra à outra (de preferência duas terras que não se alcançavam a pé). O povo desce para catar os peixes que ficaram na areia e atravessa a pé — exércitos também; navios no caminho são empurrados para a água. Quase um dia depois as paredes tremem, quem está lá embaixo corre, e o mar se fecha: quase todos que não saíram a tempo morrem afogados |
 | Natureza | Chamar Animais ✦ | 16 | Um bando da espécie que você escolher, dentre as que vivem ali |
 | Natureza | Primavera Sagrada | 24 | Capim alto, arbustos carregados, flores — e os animais da área dão cria na hora |
 | Natureza | Grande Migração ✦ | 30 | Os rebanhos de uma espécie atravessam o mapa até o ponto escolhido; os predadores vão atrás |
@@ -603,6 +604,7 @@ js/miracles.js    Terra, Mar, Palavra, eras de ouro, maldições, heróis, mural
 js/wild.js        aba Natureza: chamar animais, primavera, migração, domar, clima, gafanhotos, feras lendárias
 js/winter.js      aba Natureza: o Inverno Súbito (gelo que vira chão, neve que mata a colheita, o degelo)
 js/dragon.js      aba Ira: o Dragão (covil, rasantes de fogo, o ouro roubado, os bravos no covil, o Matador de Dragões, os ossos)
+js/seapart.js     aba Mar: Abrir o Mar (o fundo que vira chão entre duas paredes de água, os peixes na areia, a travessia, o fechamento)
 js/citygifts.js   aba Cidade: Chuva de Ouro (o povo cata as moedas) e Vinho nos Poços (bebem, dançam, ressaca)
 js/beyond.js      aba Além: Ressurreição (do corpo ou da cova) e Fantasmas (assombram, apontam segredos)
 js/fates.js       Amor Divino e Duelo de Campeões (Destino), Sonho Coletivo (Palavra)

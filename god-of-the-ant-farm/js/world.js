@@ -78,9 +78,10 @@
   W.groundH = (x, y) => {
     const S = G.S; const h = W.hAt(x, y);
     const xi = x < 0 ? 0 : x >= N ? N - 1 : x | 0, yi = y < 0 ? 0 : y >= N ? N - 1 : y | 0; const i = yi * N + xi;
-    return S.type[i] === T.RIVER ? Math.max(h, S.wl[i]) : Math.max(h, SEA);
+    // (the bed of a parted sea: the ground is the sea floor, down between the walls of water)
+    return S.type[i] === T.RIVER ? Math.max(h, S.wl[i]) : S.dry && S.dry[i] ? h : Math.max(h, SEA);
   };
-  W.waterH = (x, y) => { const S = G.S; const xi = G.clamp(x | 0, 0, N - 1), yi = G.clamp(y | 0, 0, N - 1); const i = yi * N + xi; return S.type[i] === T.RIVER ? S.wl[i] : SEA; };
+  W.waterH = (x, y) => { const S = G.S; const xi = G.clamp(x | 0, 0, N - 1), yi = G.clamp(y | 0, 0, N - 1); const i = yi * N + xi; return S.type[i] === T.RIVER ? S.wl[i] : S.dry && S.dry[i] ? W.hAt(x, y) : SEA; };
   W.isCliff = i => G.S.cliff[i] === 1;
   W.tileH = i => { // average vertex height of tile
     const x = i % N, y = (i / N) | 0, H = G.S.H;
@@ -121,8 +122,9 @@
     return false;
   };
   // (a deep river or a lake frozen by the god's Inverno Súbito is ground while the ice holds: S.ice, written only by
-  // winter.js, which tells the maps each time)
-  W.walkable = i => { const S = G.S; const t = S.type[i]; if (t < T.RIVER || S.cliff[i] || W.blocked(i)) return false; if (t === T.RIVER && S.deep[i] && !S.road[i] && !(S.ice && S.ice[i])) return false; const w = S.wall[i]; return !w || w === 2 || w === 3; };
+  // winter.js; and the bed of a sea the god parted is ground while the waters stand aside: S.dry, written only by
+  // seapart.js — each tells the maps every time)
+  W.walkable = i => { const S = G.S; const t = S.type[i]; if ((t < T.RIVER && !(S.dry && S.dry[i])) || S.cliff[i] || W.blocked(i)) return false; if (t === T.RIVER && S.deep[i] && !S.road[i] && !(S.ice && S.ice[i])) return false; const w = S.wall[i]; return !w || w === 2 || w === 3; };
   // where one can lie down or stand around: walkable and out of the water
   W.dryXY = (x, y) => { if (!W.inb(x, y)) return false; const i = W.idx(x, y); return G.S.type[i] >= T.SAND && W.walkable(i); };
   W.walkableXY = (x, y) => W.inb(x, y) && W.walkable(W.idx(x, y));
@@ -135,11 +137,11 @@
     landIds = new Int32Array(N * N).fill(-1); landKey = S; landVer = S.typeVer || 0;
     let id = 0;
     for (let i = 0; i < N * N; i++) {
-      if (landIds[i] >= 0 || S.type[i] < T.RIVER || S.cliff[i] || (S.deep[i] && !S.road[i] && !(S.ice && S.ice[i]))) continue;
+      if (landIds[i] >= 0 || (S.type[i] < T.RIVER && !(S.dry && S.dry[i])) || S.cliff[i] || (S.deep[i] && !S.road[i] && !(S.ice && S.ice[i]))) continue;
       const st = [i]; landIds[i] = id;
       while (st.length) {
         const a = st.pop(); const x = a % N, y = (a / N) | 0;
-        const ok = j => landIds[j] < 0 && S.type[j] >= T.RIVER && !S.cliff[j] && !(S.deep[j] && !S.road[j] && !(S.ice && S.ice[j]));
+        const ok = j => landIds[j] < 0 && (S.type[j] >= T.RIVER || (S.dry && S.dry[j])) && !S.cliff[j] && !(S.deep[j] && !S.road[j] && !(S.ice && S.ice[j]));
         if (x > 0 && ok(a - 1)) { landIds[a - 1] = id; st.push(a - 1); }
         if (x < N - 1 && ok(a + 1)) { landIds[a + 1] = id; st.push(a + 1); }
         if (y > 0 && ok(a - N)) { landIds[a - N] = id; st.push(a - N); }
@@ -159,7 +161,7 @@
   let reachIds = null, reachStack = null, reachKey = null, reachWV = -1, reachTV = -1, reachT = -1e9;
   W.reachBuilds = 0;
   W.touchWalk = () => { const S = G.S; if (S) S.walkVer = (S.walkVer || 0) + 1; };
-  const passable = i => { const S = G.S; const t = S.type[i]; if (t < T.RIVER || S.cliff[i] || W.blocked(i)) return false; if (t === T.RIVER && S.deep[i] && !S.road[i] && !(S.ice && S.ice[i])) return false; const w = S.wall[i]; return !w || w === 2 || w === 3 || w === 4; };
+  const passable = i => { const S = G.S; const t = S.type[i]; if ((t < T.RIVER && !(S.dry && S.dry[i])) || S.cliff[i] || W.blocked(i)) return false; if (t === T.RIVER && S.deep[i] && !S.road[i] && !(S.ice && S.ice[i])) return false; const w = S.wall[i]; return !w || w === 2 || w === 3 || w === 4; };
   W.reachIds = function (peek) {
     const S = G.S; const n = N * N;
     if (reachIds && reachKey === S && reachWV === (S.walkVer || 0) && reachTV === (S.typeVer || 0) && reachIds.length === n && (peek || (S.clock >= reachT && S.clock - reachT < 20))) return reachIds;

@@ -32,7 +32,7 @@
     // the map of where one can walk to must match the ground as it is now (a change nobody told it about leaves it stale)
     if (G.W.reachIds && !opts.noReach) {
       const L = G.W.reachIds(true); const n = N * N; const T = G.T;
-      const pass = i => { const t = s.type[i]; if (t < T.RIVER || s.cliff[i] || G.W.blocked(i)) return false; if (t === T.RIVER && s.deep[i] && !s.road[i] && !(s.ice && s.ice[i])) return false; const w = s.wall[i]; return !w || w === 2 || w === 3 || w === 4; };
+      const pass = i => { const t = s.type[i]; if ((t < T.RIVER && !(s.dry && s.dry[i])) || s.cliff[i] || G.W.blocked(i)) return false; if (t === T.RIVER && s.deep[i] && !s.road[i] && !(s.ice && s.ice[i])) return false; const w = s.wall[i]; return !w || w === 2 || w === 3 || w === 4; };
       let bad = 0, ex = '';
       for (let i = 0; i < n && bad < 50; i++) {
         const p = pass(i);
@@ -96,7 +96,8 @@
       if ((v._pfN || 0) >= 6) add('path', 3, `${nm}: ${v._pfN} caminhos falhos seguidos (${t ? t.type : '-'})`, v.id);
       if (v.age < 2 && v.carried) continue;
       const i = G.W.idx(v.x, v.y);
-      if (!v.aboard && !v.ug && !v.held && s.type[i] === G.T.DEEP && !(t && (t.type === 'swim' || t.type === 'naufrago'))) add('pop', 2, `${nm}: em mar profundo sem nadar (${t ? t.type : '-'})`, v.id);
+      // (the bed of a sea the god parted is ground while it stays open)
+      if (!v.aboard && !v.ug && !v.held && s.type[i] === G.T.DEEP && !(s.dry && s.dry[i]) && !(t && (t.type === 'swim' || t.type === 'naufrago'))) add('pop', 2, `${nm}: em mar profundo sem nadar (${t ? t.type : '-'})`, v.id);
     }
     // dead ones are nowhere among the living
     for (const [id, bid] of bandOf) { const v = P(id); if (!v) add('war', 1, `bando ${bid}: membro morto/inexistente #${id}`, id); else if (!v.task || v.task.type !== 'band' || v.task.band !== bid) { const b = G.War.bands.get(bid); if (!(b && b.campaign)) add('war', 3, `bando ${bid}: membro #${id} sem tarefa de bando (${v.task ? v.task.type : '-'})`, id); } }
@@ -298,6 +299,28 @@
         for (const i of w.tiles || []) { mine.add(i); if (s.type[i] !== T.RIVER || !s.deep[i]) add('gelo', 2, `inverno#${w.id}: gelo na casa ${i % N},${(i / N) | 0}, que não é água funda`); if (!(s.ice && s.ice[i])) add('gelo', 2, `inverno#${w.id}: a casa ${i % N},${(i / N) | 0} deveria estar congelada`); }
       }
       if (s.ice) { let stray = 0, ex = -1; for (let i = 0; i < s.ice.length; i++) if (s.ice[i] && !mine.has(i)) { stray++; if (ex < 0) ex = i; } if (stray) add('gelo', 2, `${stray} casa(s) de gelo sem inverno (ex.: ${ex % N},${(ex / N) | 0})`); }
+    }
+    // ---- the parted sea (seapart.js): the bed is dry where — and only where — an open parting holds the water back
+    {
+      const L = s.parts || []; const T = G.T; const mine = new Set(); const D = s.dry; const ST = { abre: 1, aberto: 1, fecha: 1 };
+      if (L.length > 2) add('marAberto', 3, `${L.length} mares abertos ao mesmo tempo (máximo 2)`);
+      for (const p of L) {
+        const nm = `mar aberto#${p.id}`;
+        if (!ST[p.st]) add('marAberto', 1, `${nm}: estado desconhecido (${p.st})`);
+        if (!fin(p.t) || p.t > G.DAY_LEN * 0.75 + 1) add('marAberto', 2, `${nm}: aberto há ${p.t}s (máximo ${G.DAY_LEN * 0.75})`);
+        for (const i of p.tiles || []) {
+          if (s.type[i] > T.SEA) add('marAberto', 2, `${nm}: a casa ${i % N},${(i / N) | 0} do fundo não é mar`);
+          if (p.st === 'abre') { if (D && D[i]) add('marAberto', 2, `${nm}: ainda se abrindo, mas a casa ${i % N},${(i / N) | 0} já é chão`); }
+          else { mine.add(i); if (!(D && D[i])) add('marAberto', 2, `${nm}: a casa ${i % N},${(i / N) | 0} deveria estar seca`); }
+        }
+      }
+      if (D) { let stray = 0, ex = -1; for (let i = 0; i < D.length; i++) if (D[i] && !mine.has(i)) { stray++; if (ex < 0) ex = i; } if (stray) add('marAberto', 2, `${stray} casa(s) de fundo seco sem mar aberto (ex.: ${ex % N},${(ex / N) | 0})`); }
+      if (D) {
+        for (const sh of s.ships) if (G.W.inb(sh.x, sh.y) && D[G.W.idx(sh.x, sh.y)]) add('marAberto', 2, `${sh.kind}#${sh.id}: navio encalhado no fundo do mar aberto`);
+        for (const a of s.animals.values()) { if (a.dead || !G.W.inb(a.x, a.y) || !D[G.W.idx(a.x, a.y)]) continue; const sp = G.Animals.DEF[a.kind]; if (sp && sp.cls === 'water') add('marAberto', 3, `${a.kind}#${a.id}: bicho do mar na areia do fundo`); }
+        for (const v of s.villagers.values()) if (v.task && v.task.type === 'swim' && G.W.inb(v.x, v.y) && D[G.W.idx(v.x, v.y)]) add('marAberto', 3, `${v.name}#${v.id}: nadando em chão seco`);
+      }
+      for (const v of s.villagers.values()) if (v.task && (v.task.type === 'fundo' || v.task.type === 'sair') && !L.some(p => p.id === v.task.part)) add('marAberto', 3, `${v.name}#${v.id}: ${v.task.type} num mar aberto que já se fechou`);
     }
     // ---- the dragon (dragon.js): where it is, what it holds, and who is climbing to its lair
     {

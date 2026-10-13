@@ -29,6 +29,11 @@
 //  g2 um save no meio do rasante carregado duas vezes: o mesmo futuro
 //  g3 enquanto dorme, os bravos sobem ao covil; um morre no meio da luta; o dragão morre: o Matador de Dragões, os ossos, o tesouro no chão
 //  g4 raio e meteoro em pleno voo; o covil afunda no mar (outro covil); ele parte levando o tesouro; um save com um dragão quebrado
+// Abrir o Mar (no mundo pronto «metrópole», o estreito entre duas cidades)
+//  p1 o mar se abre: o fundo vira chão pisável e as duas cidades se alcançam a pé; o povo desce para catar peixes; alguém atravessa
+//  p2 um save com o mar aberto carregado duas vezes: o fundo seco volta igual, o mesmo futuro
+//  p3 o fim: as paredes tremem, quem está lá embaixo corre; quem não sai é levado; depois, nada de fundo seco e as cidades separadas
+//  p4 um navio no caminho quando o mar se abre; o deus ergue terra no meio do fundo; um save com um mar aberto quebrado
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
@@ -44,6 +49,7 @@ const key = process.argv[2] || 'cidade';
   await page.addScriptTag({ path: __dirname + '/qa.js' });
   await page.addScriptTag({ path: path.join(ROOT, 'worlds', key + '.js') });
   await page.addScriptTag({ path: path.join(ROOT, 'worlds', 'mundial.js') }); // (a world at war, for the duel of champions)
+  await page.addScriptTag({ path: path.join(ROOT, 'worlds', 'metropole.js') }); // (two great towns across a strait, for the parted sea)
   const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASSOU' : 'FALHOU'} | ${name} | ${info}`); if (!cond) fails.push(name); };
   // the helpers every test uses: the ready world, steps of the world, the checker
   await page.evaluate(key => {
@@ -660,6 +666,111 @@ const key = process.argv[2] || 'cidade';
     ok('g4 a mão do deus: raio e meteoro derrubam o dragão em pleno voo', r.bolt >= 200 && r.falling && r.godKill && r.bones >= 1, `o raio tirou ${r.bolt} de vida; caindo ${r.falling}; crônica ${r.godKill}; ${r.bones} esqueleto(s)`);
     ok('g4 o covil afunda no mar: outro covil; depois parte levando o tesouro', r.moved && r.newLair && r.leaving && r.gone, `covil mudou ${r.moved}, novo covil em terra firme ${r.newLair}; partindo ${r.leaving}; sumiu com 25 moedas ${r.gone}`);
     ok('g4 save danificado: o dragão quebrado fica de fora, o mundo carrega', r.loaded && r.kept && !r.bad.length && !r.qa.length, `carregou ${r.loaded}, ficou só o dragão bom ${r.kept}; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}`);
+  }
+
+  // ------------------------------ Abrir o Mar ------------------------------
+  await page.evaluate(() => {
+    // the strait: in the ready world «metrópole», the widest way the sea can open between two lands with a town on each side
+    __H.strait = () => {
+      const S = G.S, N = G.N; let best = null;
+      for (let y = 2; y < N - 2; y++) for (let x = 2; x < N - 2; x++) {
+        if (S.type[G.W.idx(x, y)] > G.T.SEA) continue;
+        const w = G.Powers.seaWay(x + 0.5, y + 0.5); if (!w || !w.two) continue;
+        const A = G.Village.nearSettlementName(w.a.x, w.a.y), B = G.Village.nearSettlementName(w.b.x, w.b.y);
+        if (!A || !B || A === B) continue;
+        if (!best || w.tiles.length > best.n) best = { x: x + 0.5, y: y + 0.5, n: w.tiles.length, A, B };
+      }
+      return best;
+    };
+    __H.qaSea = () => QA.check().filter(e => (e.sev <= 2 || (e.sev === 3 && e.sys === 'marAberto')) && !(__H.base && __H.base.has(__H.qkey(e))));
+    __H.seaDigest = c => { const S = G.S; return JSON.stringify(S.parts) + '|' + S.rng + '|' + (S.dry ? S.dry.reduce((a, b) => a + b, 0) : 0) + '|' + [...S.villagers.values()].filter(v => G.dist(v.x, v.y, c.x, c.y) < 25).map(v => `${v.id}:${v.x.toFixed(2)},${v.y.toFixed(2)}:${v.task ? v.task.type : '-'}`).join(';'); };
+    __H.setByName = n => [...G.S.settlements.values()].find(s => s.name === n);
+  });
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh('metropole'); const S = G.S; const W = G.W;
+      const c = H.strait(); if (!c) return { none: true };
+      const A = H.setByName(c.A), B = H.setByName(c.B);
+      const w0 = G.Powers.seaWay(c.x, c.y); const linked0 = W.canWalk(w0.a.x, w0.a.y, w0.b.x, w0.b.y);
+      const ok = G.Powers.cast('seapart', c.x, c.y); const p = S.parts[0];
+      H.run(4);
+      const dry = p.tiles.every(i => S.dry[i] && W.walkable(i)); const linked = W.canWalk(p.ax, p.ay, p.bx, p.by);
+      const shipOn = S.ships.some(s => p.tiles.includes(W.idx(s.x, s.y)));
+      // someone of the town on one side walks across to the other
+      const v = [...S.villagers.values()].filter(o => o.set === A.id && o.age >= 16 && !o.inside && !o.aboard && !o.captive && !(o.task && o.task.pri >= 3)).sort((a, b) => G.dist2(a.x, a.y, p.ax, p.ay) - G.dist2(b.x, b.y, p.ax, p.ay))[0];
+      let walker = null, across = false;
+      if (v) { walker = v.name; G.Vg.H.setTask(v, { type: 'olhar', x: p.bx, y: p.by, fx: p.bx + 1, fy: p.by, pri: 3, until: S.clock + 120, what: 'mar', kind: 'olhar' }); }
+      let down = 0, onBed = 0; const bad = [];
+      H.until(() => { down = Math.max(down, H.tasks('fundo').length); const set = new Set(p.tiles); onBed = Math.max(onBed, [...S.villagers.values()].filter(o => set.has(W.idx(o.x, o.y))).length); if (v && S.villagers.has(v.id) && G.dist(v.x, v.y, p.bx, p.by) < 2) across = true; const e = H.qaSea(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); return across && p.fished >= p.fish; }, 100);
+      return { c, linked0, ok, tiles: p.tiles.length, dry, linked, shipOn, walker, across, down, onBed, fished: p.fished, fish: p.fish, log: S.history.some(e => /O mar se abriu/.test(e.txt)), bad, qa: H.qaSea() };
+    });
+    if (r.none) ok('p1 abrir o mar', false, 'nenhum estreito entre duas cidades no mundo pronto');
+    else {
+      ok('p1 o mar se abre entre duas terras: o fundo vira caminho', r.ok && r.dry && !r.linked0 && r.linked && !r.shipOn && r.log, `${r.c.A} ↔ ${r.c.B}: ${r.tiles} casas de fundo seco, pisáveis ${r.dry}; de uma margem se chega à outra a pé: antes ${r.linked0}, agora ${r.linked}; navio no fundo ${r.shipOn}`);
+      ok('p1 o povo desce para catar peixes e atravessa a pé', r.down >= 2 && r.fished >= 1 && r.across, `até ${r.down} descendo, ${r.onBed} no fundo ao mesmo tempo; ${r.fished} de ${r.fish} cestos de peixe; ${r.walker} atravessou ${r.across}`);
+      ok('p1 verificador', !r.bad.length && !r.qa.length, [...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'limpo');
+    }
+  }
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh('metropole'); const S = G.S;
+      const c = H.strait(); G.Powers.cast('seapart', c.x, c.y); H.run(20);
+      const dry0 = S.dry.reduce((a, b) => a + b, 0);
+      const save = G.Save.serialize();
+      G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0); const dry1 = G.S.dry ? G.S.dry.reduce((a, b) => a + b, 0) : 0; const walk = G.S.parts[0] && G.W.walkable(G.S.parts[0].tiles[0]);
+      H.run(40); const a = H.seaDigest(c);
+      G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0); H.run(40); const b = H.seaDigest(c);
+      let j = 0; while (j < a.length && a[j] === b[j]) j++;
+      return { dry0, dry1, walk, same: a === b, len: a.length, at: j, ctx: a.slice(Math.max(0, j - 60), j + 60) + ' ≠ ' + b.slice(Math.max(0, j - 60), j + 60), qa: H.qaSea() };
+    });
+    ok('p2 save com o mar aberto: o fundo volta igual, o mesmo futuro', r.same && r.dry0 === r.dry1 && r.walk && !r.qa.length, r.same ? `${r.dry0} casas secas no save, ${r.dry1} depois de carregar, pisável ${r.walk}; futuro idêntico (${r.len} caracteres)` : `diferem no caractere ${r.at}: ${r.ctx}`);
+  }
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh('metropole'); const S = G.S; const W = G.W, T = G.T;
+      const c = H.strait(); const A = H.setByName(c.A), B = H.setByName(c.B);
+      G.Powers.cast('seapart', c.x, c.y); const p = S.parts[0];
+      // (wait until the last moments: three people are down on the bed when the walls start to tremble)
+      H.until(() => p.t > G.DAY_LEN * 0.75 - 14, 200);
+      const mid = p.tiles[Math.floor(p.tiles.length / 2)]; const near = p.tiles.slice(0, 3);
+      const ppl = [...S.villagers.values()].filter(o => o.age >= 16 && !o.inside && !o.aboard && !o.captive && !o.jail && (o.set === A.id || o.set === B.id)).slice(0, 3);
+      ppl.forEach((o, k) => { const i = k === 0 ? mid : near[k]; G.Vg.endTask(o); o.x = (i % G.N) + 0.5; o.y = ((i / G.N) | 0) + 0.5; o.path = null; G.Vg.H.setTask(o, { type: 'olhar', x: o.x, y: o.y, fx: o.x + 1, fy: o.y, pri: 3, until: S.clock + 60, what: 'mar', kind: 'olhar' }); });
+      let ran = 0; H.until(() => { ran = Math.max(ran, H.tasks('sair').length); return p.st === 'fecha'; }, 20);
+      H.until(() => { ran = Math.max(ran, H.tasks('sair').length); return false; }, 3);
+      // (the one in the middle is caught: the god holds him there for the last seconds)
+      const held = ppl[0]; const hid = held.id;
+      H.until(() => { const o = S.villagers.get(hid); if (o) { o.x = (mid % G.N) + 0.5; o.y = ((mid / G.N) | 0) + 0.5; o.path = null; } return !S.parts.includes(p); }, 20);
+      H.run(2);
+      const o = S.villagers.get(hid);
+      const caught = !o || S.dead.has(hid) || (S.type[W.idx(o.x, o.y)] >= T.SAND);
+      const wet = [...S.villagers.values()].filter(q => !q.aboard && S.type[W.idx(q.x, q.y)] <= T.SEA && !(q.task && q.task.type === 'swim')).length;
+      const dryLeft = S.dry ? S.dry.reduce((a, b) => a + b, 0) : 0;
+      return { ran, held: held.name, dead: !o, caught, wet, dryLeft, walk: W.walkable(mid), linked: W.canWalk(p.ax, p.ay, p.bx, p.by), log: S.history.some(e => /O mar se fechou/.test(e.txt) && (o ? new RegExp(o.name + '.*cuspid') : /não saiu a tempo|não saíram a tempo/).test(e.txt)), warn: S.history.some(e => /paredes do mar começaram a tremer/.test(e.txt)), qa: H.qaSea() };
+    });
+    ok('p3 o mar se fecha: quem está lá embaixo corre; quem não sai é levado', r.warn && r.ran >= 2 && r.caught && r.log && !r.wet && !r.dryLeft && !r.walk && !r.linked && !r.qa.length, `aviso ${r.warn}; ${r.ran} correram para a margem; ${r.held} ficou no meio: ${r.dead ? 'morreu afogado' : 'sobreviveu e foi cuspido na praia'}; crônica ${r.log}; gente na água sem nadar ${r.wet}; fundo seco restante ${r.dryLeft}; de uma margem ainda se chega à outra ${r.linked}; ${r.qa.map(e => e.msg).slice(0, 3).join(' | ') || 'verificador limpo'}`);
+  }
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh('metropole'); const S = G.S; const W = G.W, T = G.T; const bad = []; const chk = () => { const e = H.qaSea(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); };
+      const c = H.strait(); const w = G.Powers.seaWay(c.x, c.y);
+      // a ship lying in the way when the sea opens: it is pushed out to the water, never left on the sand
+      const sh = S.ships.find(q => q.st === 'idle') || S.ships[0]; let shipMoved = null;
+      if (sh) { const i = w.tiles[Math.floor(w.tiles.length / 2)]; sh.x = (i % G.N) + 0.5; sh.y = ((i / G.N) | 0) + 0.5; }
+      G.Powers.cast('seapart', c.x, c.y); const p = S.parts[0]; H.run(4); chk();
+      if (sh) shipMoved = S.ships.includes(sh) ? !p.tiles.includes(W.idx(sh.x, sh.y)) : 'afundou';
+      // the god raises land in the middle of the bed: that tile is land now, not sea held back
+      const i0 = p.tiles[Math.floor(p.tiles.length / 2)]; const n0 = p.tiles.length;
+      G.Powers.raise((i0 % G.N) + 0.5, ((i0 / G.N) | 0) + 0.5); H.run(2); chk();
+      const raised = p.tiles.length < n0 && p.tiles.every(i => S.type[i] <= T.SEA);
+      // a damaged save: the broken parting is dropped, the world loads, and the sea stays as it was
+      const o = JSON.parse(G.Save.serialize()); o.parts.push({ id: 1, st: 'aberto', t: NaN, tiles: [1, 2] }); o.parts.push(null); if (o.parts[0]) o.parts[0].tiles.push(-5, 'x', G.N * G.N + 10);
+      let loaded = true; try { G.Save.apply(o); G.Main.mode = 'game'; G.UI.setSpeed(0); } catch (e) { loaded = false; }
+      const kept = loaded && G.S.parts.length === 1 && G.S.parts[0].tiles.every(i => Number.isInteger(i) && i >= 0 && i < G.N * G.N);
+      H.run(3); chk();
+      return { ship: !!sh, shipMoved, raised, n0, n1: p.tiles.length, loaded, kept, bad, qa: H.qaSea() };
+    });
+    ok('p4 um navio no caminho é empurrado para a água; terra erguida no fundo deixa de ser fundo', (!r.ship || r.shipMoved === true || r.shipMoved === 'afundou') && r.raised, `navio ${r.ship ? (r.shipMoved === true ? 'empurrado para a água' : r.shipMoved) : 'nenhum no mundo'}; terra erguida: fundo ${r.n0} → ${r.n1} casas, todas ainda mar ${r.raised}`);
+    ok('p4 save danificado: o mar aberto quebrado fica de fora, o mundo carrega', r.loaded && r.kept && !r.bad.length && !r.qa.length, `carregou ${r.loaded}, ficou só o mar aberto bom ${r.kept}; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}`);
   }
 
   ok('sem erros de página', !errs.length, errs.slice(0, 3).join(' | ') || 'nenhum');

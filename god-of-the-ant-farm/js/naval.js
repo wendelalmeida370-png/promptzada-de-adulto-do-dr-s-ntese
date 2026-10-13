@@ -17,7 +17,8 @@
   function alloc() { gS = new Float32Array(N * N); came = new Int32Array(N * N); seen = new Uint32Array(N * N); closed = new Uint32Array(N * N); comp = null; }
   alloc();
   G.mapHooks.push(n => { N = n; alloc(); });
-  const water = i => G.S.type[i] <= T.SEA;
+  // (a sea parted by the god is no sea while the walls of water stand: no ship sails the dry bed)
+  const water = i => G.S.type[i] <= T.SEA && !(G.S.dry && G.S.dry[i]);
 
   // crew: the hands it takes to sail it (rowers, a helmsman, the ones who haul the nets)
   Nv.SHIP = {
