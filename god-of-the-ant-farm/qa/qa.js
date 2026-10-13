@@ -32,7 +32,7 @@
     // the map of where one can walk to must match the ground as it is now (a change nobody told it about leaves it stale)
     if (G.W.reachIds && !opts.noReach) {
       const L = G.W.reachIds(true); const n = N * N; const T = G.T;
-      const pass = i => { const t = s.type[i]; if (t < T.RIVER || s.cliff[i] || G.W.blocked(i)) return false; if (t === T.RIVER && s.deep[i] && !s.road[i]) return false; const w = s.wall[i]; return !w || w === 2 || w === 3 || w === 4; };
+      const pass = i => { const t = s.type[i]; if (t < T.RIVER || s.cliff[i] || G.W.blocked(i)) return false; if (t === T.RIVER && s.deep[i] && !s.road[i] && !(s.ice && s.ice[i])) return false; const w = s.wall[i]; return !w || w === 2 || w === 3 || w === 4; };
       let bad = 0, ex = '';
       for (let i = 0; i < n && bad < 50; i++) {
         const p = pass(i);
@@ -289,6 +289,15 @@
         }
         for (const d of F.dreams) if (!s.factions.has(d.fac) || !['obra', 'paz', 'fe', 'mar'].includes(d.k)) add('fado', 3, `sonho de ${d.fac}: povo ou sonho desconhecido (${d.k})`);
       }
+    }
+    // ---- the sudden winter (winter.js): the ice is on deep water only, and there is ice where — and only where — a winter froze it
+    {
+      const L = s.winters || []; const T = G.T; const mine = new Set();
+      for (const w of L) {
+        if (!fin(w.t) || w.t > G.DAY_LEN + 1) add('gelo', 2, `inverno#${w.id}: dura ${w.t}s (máximo ${G.DAY_LEN})`);
+        for (const i of w.tiles || []) { mine.add(i); if (s.type[i] !== T.RIVER || !s.deep[i]) add('gelo', 2, `inverno#${w.id}: gelo na casa ${i % N},${(i / N) | 0}, que não é água funda`); if (!(s.ice && s.ice[i])) add('gelo', 2, `inverno#${w.id}: a casa ${i % N},${(i / N) | 0} deveria estar congelada`); }
+      }
+      if (s.ice) { let stray = 0, ex = -1; for (let i = 0; i < s.ice.length; i++) if (s.ice[i] && !mine.has(i)) { stray++; if (ex < 0) ex = i; } if (stray) add('gelo', 2, `${stray} casa(s) de gelo sem inverno (ex.: ${ex % N},${(ex / N) | 0})`); }
     }
     // ---- ships
     for (const sh of s.ships) {

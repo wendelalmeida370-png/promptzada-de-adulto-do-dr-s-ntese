@@ -20,6 +20,10 @@
 //  d2 um save no meio do duelo carregado duas vezes; o raio do deus num dos campeões
 // Sonho Coletivo
 //  s1 a grande obra, os deuses, a terra além do mar, a paz (numa guerra provocada); o mesmo povo não sonha duas vezes seguidas
+// Inverno Súbito
+//  i1 as águas fundas congelam e viram caminho: alguém anda até o meio do gelo; as plantações morrem
+//  i2 um save no meio do inverno carregado duas vezes (o gelo volta igual)
+//  i3 o deus ergue terra debaixo do gelo; no degelo, quem está no gelo cai na água gelada e sai na margem
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
@@ -480,6 +484,80 @@ const key = process.argv[2] || 'cidade';
     ok('s1 sonho da terra além do mar', r.mar[0] === true ? r.mar[2] !== r.mar[1] : r.mar[0] === 'sem a opção', `lançado ${r.mar[0]}; conhecimento ${r.mar[1]} → ${r.mar[2]}`);
     if (r.paz) ok('s1 sonho da paz numa guerra', r.paz[0] && r.paz[1] === true && /sonhou com a paz/.test(r.paz[3]), `em guerra ${r.paz[0]}; lançado ${r.paz[1]}; ainda em guerra ${r.paz[2]}; crônica: ${r.paz[3].slice(0, 200)}`);
     ok('s1 verificador', !r.qa.length, r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'limpo');
+  }
+
+  // ------------------------------ Inverno Súbito ------------------------------
+  await page.evaluate(() => {
+    // deep water close to a town: the place for a winter (the middle of it, and someone who will walk out onto the ice)
+    __H.lake = () => {
+      const S = G.S, T = G.T, N = G.N; let best = null, bn = 0;
+      for (const set of S.settlements.values()) {
+        const pts = []; for (let y = Math.floor(set.cy - 12); y <= set.cy + 12; y++) for (let x = Math.floor(set.cx - 12); x <= set.cx + 12; x++) { if (!G.W.inb(x, y)) continue; const i = y * N + x; if (S.type[i] === T.RIVER && S.deep[i] && !S.road[i]) pts.push([x + 0.5, y + 0.5, i]); }
+        if (pts.length > bn) { bn = pts.length; best = { set, pts }; }
+      }
+      if (!best || bn < 6) return null;
+      const cx = best.pts.reduce((a, p) => a + p[0], 0) / bn, cy = best.pts.reduce((a, p) => a + p[1], 0) / bn;
+      const mid = best.pts.slice().sort((a, b) => G.dist2(a[0], a[1], cx, cy) - G.dist2(b[0], b[1], cx, cy))[0];
+      return { set: best.set, x: mid[0], y: mid[1], i: mid[2], n: bn };
+    };
+  });
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S; H.toDay();
+      const L = H.lake(); if (!L) return null;
+      const walk0 = G.W.walkable(L.i);
+      const v = [...S.villagers.values()].filter(o => o.set === L.set.id && o.age >= 16 && !o.inside && !o.aboard && !o.captive && !o.jail).sort((a, b) => G.dist2(a.x, a.y, L.x, L.y) - G.dist2(b.x, b.y, L.x, L.y))[0];
+      const reach0 = v ? G.W.reaches(v, L.x, L.y) : null;
+      const crops0 = [...S.buildings.values()].filter(b => b.type === 'farm' && b.crops && G.dist(b.x, b.y, L.x, L.y) < 8).reduce((a, b) => a + b.crops.filter(c => c.s > 0).length, 0);
+      const ok = G.Powers.cast('winter', L.x, L.y); const w = S.winters && S.winters[0];
+      const walk1 = G.W.walkable(L.i); const reach1 = v ? G.W.reaches(v, L.x, L.y) : null;
+      let got = false;
+      if (v) { G.Vg.H.setTask(v, { type: 'olhar', x: L.x, y: L.y, fx: L.x + 1, fy: L.y, pri: 3, until: S.clock + 150, what: 'gelo', kind: 'olhar' }); H.run(40); got = G.dist(v.x, v.y, L.x, L.y) < 1.2 && !!(S.ice && S.ice[G.W.idx(v.x, v.y)]); }
+      return { ok, set: L.set.name, deep: L.n, frozen: w ? w.tiles.length : 0, walk0, walk1, reach0, reach1, who: v && v.name, got, crops0, dead: w ? w.crops : 0, qa: H.qa() };
+    });
+    if (!r) ok('i1 inverno súbito', false, 'nenhuma água funda perto de uma cidade neste mundo');
+    else ok('i1 o gelo vira caminho', r.ok && r.frozen > 0 && !r.walk0 && r.walk1 && r.reach1 && r.got && !r.qa.length, `${r.set}: ${r.frozen} de ${r.deep} casas de água funda congelaram; pisável ${r.walk0} → ${r.walk1}; ${r.who} alcança o meio ${r.reach0} → ${r.reach1} e andou até lá ${r.got}; plantações mortas ${r.dead} de ${r.crops0}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+  }
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S; H.toDay();
+      const L = H.lake(); if (!L) return null;
+      G.Powers.cast('winter', L.x, L.y); H.run(5);
+      const save = G.Save.serialize(); const n = S.winters[0].tiles.length;
+      G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0);
+      const n1 = G.S.ice ? G.S.ice.reduce((a, b) => a + b, 0) : 0; const walk = G.W.walkable(L.i);
+      H.run(20); const a = H.digest(L.x, L.y) + JSON.stringify(G.S.winters);
+      G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0); H.run(20); const b = H.digest(L.x, L.y) + JSON.stringify(G.S.winters);
+      let k = 0; while (k < a.length && a[k] === b[k]) k++;
+      return { n, n1, walk, same: a === b, at: k, ctx: a.slice(Math.max(0, k - 60), k + 60) + ' ≠ ' + b.slice(Math.max(0, k - 60), k + 60), qa: H.qa() };
+    });
+    if (r) ok('i2 save no meio do inverno: o gelo volta igual, o mesmo futuro', r.same && r.n1 === r.n && r.walk && !r.qa.length, r.same ? `${r.n} casas de gelo no save, ${r.n1} depois de carregar; pisável ${r.walk}; futuro idêntico` : `diferem no caractere ${r.at}: ${r.ctx}`);
+  }
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S; H.toDay();
+      const L = H.lake(); if (!L) return null;
+      G.Powers.cast('winter', L.x, L.y); const w = S.winters[0];
+      // the god raises land under one edge of the ice
+      const edge = w.tiles[w.tiles.length - 1]; const ex = edge % G.N + 0.5, ey = ((edge / G.N) | 0) + 0.5;
+      G.Powers.raise(ex, ey); H.run(1);
+      const after = w.tiles.length;
+      // someone walks to the middle of the ice and stays there, watching, until the thaw
+      const v = [...S.villagers.values()].filter(o => o.set === L.set.id && o.age >= 16 && !o.inside && !o.aboard && !o.captive && !o.jail).sort((a, b) => G.dist2(a.x, a.y, L.x, L.y) - G.dist2(b.x, b.y, L.x, L.y))[0];
+      const mid = w.tiles.slice().sort((a, b) => G.dist2(a % G.N, (a / G.N) | 0, L.x, L.y) - G.dist2(b % G.N, (b / G.N) | 0, L.x, L.y))[0];
+      const mx = mid % G.N + 0.5, my = ((mid / G.N) | 0) + 0.5;
+      let onIce = false; const bad = [];
+      // (the day goes by; near the end of it, out onto the ice)
+      H.until(() => { const e = H.qa(); if (e.length && bad.length < 3) bad.push(...e.map(q => q.msg)); return w.t > G.DAY_LEN - 30; }, G.DAY_LEN);
+      G.Vg.H.setTask(v, { type: 'olhar', x: mx, y: my, fx: mx + 1, fy: my, pri: 3, until: S.clock + 100, what: 'gelo', kind: 'olhar' });
+      H.until(() => { if (S.ice && S.ice[G.W.idx(v.x, v.y)] && w.t > G.DAY_LEN - 2) onIce = true; return !(S.winters || []).length; }, 60);
+      H.run(2);
+      const alive = S.villagers.get(v.id); const i = alive ? G.W.idx(alive.x, alive.y) : -1;
+      const wet = [...S.villagers.values()].filter(o => !o.aboard && !o.inside && S.type[G.W.idx(o.x, o.y)] === G.T.RIVER && S.deep[G.W.idx(o.x, o.y)] && !S.road[G.W.idx(o.x, o.y)] && !(o.task && o.task.type === 'swim')).length;
+      const iceLeft = S.ice ? S.ice.reduce((a, b) => a + b, 0) : 0;
+      return { before: w.tiles.length, after, onIce, fell: w.fell, who: v.name, alive: !!alive, dry: alive ? G.W.walkable(i) : null, bio: alive ? (alive.bio || []).some(e => /água gelada/.test(e[2] || '')) : null, wet, iceLeft, bad, qa: H.qa() };
+    });
+    if (r) ok('i3 terra erguida sob o gelo; no degelo, quem está no gelo cai na água', r.onIce && r.fell >= 1 && (!r.alive || (r.dry && r.bio)) && !r.wet && !r.iceLeft && !r.bad.length && !r.qa.length, `gelo depois da terra erguida: ${r.after} casas; ${r.who} no gelo ${r.onIce}; caíram ${r.fell}; ${r.who} ${r.alive ? `vivo, em terra seca ${r.dry}, biografia ${r.bio}` : 'morreu na água'}; gente em água funda ${r.wet}; gelo restante ${r.iceLeft}; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}`);
   }
 
   ok('sem erros de página', !errs.length, errs.slice(0, 3).join(' | ') || 'nenhum');
