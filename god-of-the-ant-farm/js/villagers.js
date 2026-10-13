@@ -268,7 +268,7 @@
     // panic zones (lightning, explosions)
     for (const p of S.panic || []) {
       const d = G.dist(v.x, v.y, p.x, p.y);
-      if (d < p.r && !(t && (t.type === 'fire' || t.type === 'fight'))) { if (v.inside) Vg.endTask(v); fleeFrom(v, p.x, p.y, p.r + 3 - d, p.why || 'panic'); emote(v, 'fear', 2.5); return; }
+      if (d < p.r && !(t && (t.type === 'fire' || t.type === 'fight' || t.type === 'dragao'))) { if (v.inside) Vg.endTask(v); fleeFrom(v, p.x, p.y, p.r + 3 - d, p.why || 'panic'); emote(v, 'fear', 2.5); return; }
     }
     if (G.War.emergency(v, H)) return;
     if (t && (t.type === 'riot' || t.type === 'riotguard')) return;
@@ -293,8 +293,8 @@
       let raider = null; G.Animals.nearThreat(v.x, v.y, 9, a => { if (!raider && G.Animals.raider(a)) raider = a; });
       if (raider) { let fighters = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'fight' && o.task.id === raider.id) fighters++; if (fighters < 3) { setTask(v, { type: 'fight', id: raider.id, pri: 4, rt: 0 }); emote(v, 'angry', 2); return; } }
     }
-    // fire close by
-    if (t && t.type === 'fire') return;
+    // fire close by (the ones on their way to a dragon's lair do not turn round for a burning bush)
+    if (t && (t.type === 'fire' || t.type === 'dragao')) return;
     const xi = v.x | 0, yi = v.y | 0;
     let fx = -1, fy = -1, fmax = 0;
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
@@ -1640,7 +1640,7 @@
       }
       case 'eat': return t.st < 2 ? 'Indo comer' : 'Comendo';
       case 'sleep': return v.sleeping ? (v.inside ? 'Dormindo em casa' : 'Dormindo ao relento') : 'Indo dormir';
-      case 'flee': return t.why === 'play' ? 'Correndo do eco da caverna, rindo' : t.why === 'meteor' ? 'Fugindo do céu em chamas!' : t.why === 'fire' ? 'Fugindo do incêndio!' : t.why === 'wolf' ? 'Fugindo de uma fera!' : t.why === 'war' ? 'Fugindo dos invasores!' : t.why === 'ghost' ? 'Fugindo de um fantasma!' : 'Correndo em pânico!';
+      case 'flee': return t.why === 'play' ? 'Correndo do eco da caverna, rindo' : t.why === 'meteor' ? 'Fugindo do céu em chamas!' : t.why === 'fire' ? 'Fugindo do incêndio!' : t.why === 'wolf' ? 'Fugindo de uma fera!' : t.why === 'war' ? 'Fugindo dos invasores!' : t.why === 'ghost' ? 'Fugindo de um fantasma!' : t.why === 'dragon' ? 'Fugindo do dragão!' : 'Correndo em pânico!';
       case 'fire': return t.st === 2 ? 'Enchendo o balde' : t.beat ? 'Abafando as chamas' : 'Combatendo o incêndio!';
       case 'social': return `Conversando com ${pname(t.id)}`;
       case 'talk': return t.court ? `Flertando com ${pname(t.id)}` : `Conversando com ${pname(t.id)}`;

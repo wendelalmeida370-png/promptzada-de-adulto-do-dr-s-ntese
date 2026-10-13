@@ -42,7 +42,7 @@
     const S = G.S; const b = S.gifts; const i = W.idx(x, y);
     if (p.id === 'goldrain') {
       if (S.type[i] < T.SAND) { P.why = 'O ouro precisa cair em terra firme.'; return false; }
-      if (b && b.rains.length >= 2) { P.why = 'Ainda está chovendo ouro.'; return false; }
+      if (b && b.rains.filter(r => !r.from).length >= 2) { P.why = 'Ainda está chovendo ouro.'; return false; }
       if (b && b.piles.length >= MAX_PILES) { P.why = 'Ainda há ouro demais pelo chão.'; return false; }
     }
     if (p.id === 'winewell') {
@@ -88,6 +88,24 @@
     rn.street += n;
     G.FX && G.FX.sparkle(px, py);
   }
+  // gold that comes down another way — a dragon's hoard where it fell: piles on the ground, and the same race for them
+  // (a record like a rain's, so that every coin stays counted: picked, lying, found under a wall, or sunk in the dust)
+  P.spillGold = function (x, y, n, fid, from) {
+    const S = G.S; const B = st(); const s = P.setAt(x, y, 16);
+    const rn = { id: S.nextId++, x, y, r: 2.5, t: RAIN_T, acc: 0, drops: 0, fac: fid || 0, set: s ? s.id : 0, houses: 0, street: 0, lost: 0, found: 0, sunk: 0, got: {}, n: 0, from: from || 'um tesouro' };
+    B.rains.push(rn);
+    let left = Math.round(n * 100) / 100; const each = Math.max(1, Math.round(n / 16));
+    for (let k = 0; left > 0.004 && k < 400; k++) {
+      const a = k * 2.39996, d = 0.4 + Math.sqrt(k) * 0.35; const px = G.clamp(x + Math.cos(a) * d, 0.5, N - 0.5), py = G.clamp(y + Math.sin(a) * d, 0.5, N - 0.5);
+      if (!groundOk(W.idx(px, py))) continue;
+      const m = left - each < 1 ? left : each; left = Math.round((left - m) * 100) / 100;
+      B.piles.push({ id: S.nextId++, x: px, y: py, n: m, t: S.clock, rain: rn.id, fac: rn.fac, c: 0 });
+      rn.street = Math.round((rn.street + m) * 100) / 100;
+    }
+    rn.lost = left;
+    G.FX && G.FX.sparkle(x, y);
+    return rn;
+  };
   // who runs for the gold: the closest pair of free hands, each to its own pile
   function rush(B) {
     const S = G.S; const busy = new Set(); const hands = [];
@@ -119,7 +137,8 @@
     B.piles.splice(B.piles.indexOf(q), 1);
     const rn = B.rains.find(r => r.id === q.rain); if (rn) { rn.got[v.id] = (rn.got[v.id] || 0) + q.n; rn.n += q.n; }
     const f = G.Fac.ofV(v);
-    G.FX && G.FX.floater(v.x, v.y, `+${q.n} ${q.n > 1 ? 'moedas' : 'moeda'}`, '#ffd85a', 1.6);
+    const shown = Math.max(1, Math.round(q.n));
+    G.FX && G.FX.floater(v.x, v.y, `+${shown} ${shown > 1 ? 'moedas' : 'moeda'}`, '#ffd85a', 1.6);
     if (f && E.coinage(f.id)) {
       const h = E.homeOf(v); if (h) h.coin = (h.coin || 0) + q.n; else v.purse = (v.purse || 0) + q.n;
       G.Vg.emote(v, 'happy', 2); H.end(v);
@@ -135,11 +154,11 @@
     const S = G.S; const w = where(rn.x, rn.y);
     let lucky = null, ln = 0; for (const id in rn.got) if (rn.got[id] > ln) { ln = rn.got[id]; lucky = S.villagers.get(+id) || S.dead.get(+id); }
     const parts = [];
-    if (rn.n) parts.push(`${rn.n} moedas catadas do chão`);
+    if (rn.n) parts.push(`${Math.round(rn.n)} moedas catadas do chão`);
     if (rn.houses) parts.push(`${rn.houses} entraram pelos telhados`);
-    log(`Acabou a corrida do ouro${w ? ' em ' + w : ''}${parts.length ? ': ' + parts.join(', ') : ''}.${lucky && ln >= 4 ? ` Quem mais catou foi ${lucky.name}: ${ln} moedas.` : ''}`, 'gold', rn.x, rn.y);
-    if (lucky && ln >= 4 && S.villagers.has(lucky.id)) G.Life && G.Life.bio(lucky, 'note', `Catou ${ln} moedas de ouro caídas do céu na Chuva de Ouro${w ? ' de ' + w : ''}`);
-    if (w && rn.n + rn.houses >= 30 && G.Lore) G.Lore.legend('goldrain:' + rn.id, `A Chuva de Ouro de ${w}`, `No ano ${S.day}, choveu ouro sobre ${w}. ${rn.houses ? 'Casas acordaram ricas; ' : ''}gente corria pelas ruas com as mãos cheias${lucky && ln >= 4 ? `, e ${lucky.name} juntou ${ln} moedas antes de todos` : ''}.`, { kind: 'milagre' });
+    log(`Acabou a corrida ${rn.from ? 'pelo tesouro de ' + rn.from : 'do ouro'}${w ? ' em ' + w : ''}${parts.length ? ': ' + parts.join(', ') : ''}.${lucky && ln >= 4 ? ` Quem mais catou foi ${lucky.name}: ${ln} moedas.` : ''}`, 'gold', rn.x, rn.y);
+    if (lucky && ln >= 4 && S.villagers.has(lucky.id)) G.Life && G.Life.bio(lucky, 'note', rn.from ? `Catou ${Math.round(ln)} moedas do tesouro de ${rn.from}` : `Catou ${ln} moedas de ouro caídas do céu na Chuva de Ouro${w ? ' de ' + w : ''}`);
+    if (w && !rn.from && rn.n + rn.houses >= 30 && G.Lore) G.Lore.legend('goldrain:' + rn.id, `A Chuva de Ouro de ${w}`, `No ano ${S.day}, choveu ouro sobre ${w}. ${rn.houses ? 'Casas acordaram ricas; ' : ''}gente corria pelas ruas com as mãos cheias${lucky && ln >= 4 ? `, e ${lucky.name} juntou ${ln} moedas antes de todos` : ''}.`, { kind: 'milagre' });
   }
   function updateGold(dt) {
     const S = G.S; const B = S.gifts;

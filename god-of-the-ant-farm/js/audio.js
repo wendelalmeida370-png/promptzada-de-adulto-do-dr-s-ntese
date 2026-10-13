@@ -160,6 +160,12 @@
     choir: (t, v) => { for (const f of [110, 164.8, 220]) { const o = ac.createOscillator(), g = ac.createGain(), lp = ac.createBiquadFilter(), lfo = ac.createOscillator(), lg = ac.createGain(); o.type = 'sawtooth'; o.frequency.value = f; lfo.frequency.value = 5.2; lg.gain.value = f * 0.012; lfo.connect(lg); lg.connect(o.frequency); lp.type = 'lowpass'; lp.frequency.value = 700; lp.Q.value = 6; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.025 * v, t + 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.6); o.connect(lp); lp.connect(g); g.connect(sfx); g.connect(revIn); o.start(t); lfo.start(t); o.stop(t + 2.7); lfo.stop(t + 2.7); } },
     triumph: (t, v) => { [392, 493.9, 587.3, 783.99, 987.8].forEach((f, k) => { const n = osc('sawtooth', f, t + k * 0.1, 0.9, 0.025 * v, sfx, 0, 0.03); n.g.connect(revIn); }); osc('sine', 98, t, 1.4, 0.18 * v, sfx); },
     sob: (t, v) => { for (let k = 0; k < 3; k++) nz(t + k * 0.32, 0.18, 0.06 * v, 'bandpass', 700 + k * 60, 3, sfx, 420); },
+    // the dragon: a roar from deep in the chest, the rush of its breath
+    roar: (t, v) => { const a = osc('sawtooth', 112, t, 1.9, 0.11 * v, sfx, 50, 0.16); a.g.connect(revIn); const b = osc('sawtooth', 167, t + 0.05, 1.6, 0.05 * v, sfx, 72, 0.22); b.g.connect(revIn); nz(t, 1.8, 0.24 * v, 'lowpass', 760, 1, sfx, 170, 0.12); nz(t + 0.1, 1.1, 0.08 * v, 'bandpass', 1500, 2, sfx, 520, 0.1); },
+    flame: (t, v) => { nz(t, 1.1, 0.22 * v, 'bandpass', 600, 0.8, sfx, 1900, 0.08); nz(t + 0.12, 0.9, 0.1 * v, 'highpass', 2600, 0, sfx, 0, 0.1); },
+    // the sea: the waters drawing back with a long roar, and their falling back
+    seapart: (t, v) => { nz(t, 3.4, 0.34 * v, 'lowpass', 280, 0, sfx, 950, 0.8); osc('sine', 38, t, 3.1, 0.3 * v, sfx, 62, 0.6); const g = nz(t + 0.4, 2.8, 0.12 * v, 'bandpass', 1200, 0.7, amb, 560, 0.6); g.connect(revIn); },
+    seaclose: (t, v) => { nz(t, 2.6, 0.5 * v, 'lowpass', 1300, 0, sfx, 190, 0.05); osc('sine', 54, t, 2.2, 0.42 * v, sfx, 30, 0.02); const g = nz(t + 0.2, 2, 0.18 * v, 'bandpass', 900, 0.6, amb, 300, 0.1); g.connect(revIn); },
   });
   // the music leans to the scene: a held breath, a grief, a wonder (null: back to the world's own music)
   A.mood = function (m) { A.moodNow = m || null; A.moodT = 0; };

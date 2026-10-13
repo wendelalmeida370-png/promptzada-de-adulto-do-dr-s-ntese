@@ -24,6 +24,11 @@
 //  i1 as águas fundas congelam e viram caminho: alguém anda até o meio do gelo; as plantações morrem
 //  i2 um save no meio do inverno carregado duas vezes (o gelo volta igual)
 //  i3 o deus ergue terra debaixo do gelo; no degelo, quem está no gelo cai na água gelada e sai na margem
+// Dragão
+//  g1 o dragão faz o covil e ataca a maior cidade: rasantes de fogo, o povo foge, arqueiros acertam; o ouro que leva é o que a cidade perde
+//  g2 um save no meio do rasante carregado duas vezes: o mesmo futuro
+//  g3 enquanto dorme, os bravos sobem ao covil; um morre no meio da luta; o dragão morre: o Matador de Dragões, os ossos, o tesouro no chão
+//  g4 raio e meteoro em pleno voo; o covil afunda no mar (outro covil); ele parte levando o tesouro; um save com um dragão quebrado
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
@@ -558,6 +563,103 @@ const key = process.argv[2] || 'cidade';
       return { before: w.tiles.length, after, onIce, fell: w.fell, who: v.name, alive: !!alive, dry: alive ? G.W.walkable(i) : null, bio: alive ? (alive.bio || []).some(e => /água gelada/.test(e[2] || '')) : null, wet, iceLeft, bad, qa: H.qa() };
     });
     if (r) ok('i3 terra erguida sob o gelo; no degelo, quem está no gelo cai na água', r.onIce && r.fell >= 1 && (!r.alive || (r.dry && r.bio)) && !r.wet && !r.iceLeft && !r.bad.length && !r.qa.length, `gelo depois da terra erguida: ${r.after} casas; ${r.who} no gelo ${r.onIce}; caíram ${r.fell}; ${r.who} ${r.alive ? `vivo, em terra seca ${r.dry}, biografia ${r.bio}` : 'morreu na água'}; gente em água funda ${r.wet}; gelo restante ${r.iceLeft}; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}`);
+  }
+
+  // ------------------------------ Dragão ------------------------------
+  await page.evaluate(() => {
+    // (a fire dragon over the biggest town, a purse in each of its houses, coins in the people's hands)
+    __H.dragon = () => {
+      const S = G.S; const set = __H.town(); const f = G.Fac.get(set.fac); if (!G.Eco.coinage(f.id)) G.Civ.learn(f, 'moeda', 'teste');
+      for (const b of S.buildings.values()) if (b.set === set.id && b.built && G.BDEF[b.type].housing) b.coin = (b.coin || 0) + 20;
+      const ok = G.Powers.cast('dragon', set.cx + 6, set.cy + 6); const d = S.dragons[S.dragons.length - 1]; d.hue = 0;
+      return { ok, d, set, f };
+    };
+    __H.dragonDigest = () => { const S = G.S; return JSON.stringify(S.dragons) + '|' + S.rng + '|' + [...S.villagers.values()].map(v => `${v.id}:${v.x.toFixed(2)},${v.y.toFixed(2)}:${v.hp.toFixed(1)}:${v.task ? v.task.type : '-'}`).join(';') + '|' + G.Nature.fireSet.size; };
+  });
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S; const { ok, d, set, f } = H.dragon();
+      const li = G.W.idx(d.lx, d.ly); const lairOk = G.W.walkable(li) && S.type[li] >= G.T.SAND && S.type[li] !== G.T.RIVER;
+      // (the town it robs is the one it last flew over: the one the god pointed at)
+      const sum = () => { const t = S.settlements.get(d.set); const ff = t && G.Fac.get(t.fac); let n = ff ? ff.stock.moedas || 0 : 0; for (const b of S.buildings.values()) if (t && b.set === t.id && G.BDEF[b.type].housing) n += b.coin || 0; return n; };
+      let flee = 0, fires = 0, rob = null, k = 0; const bad = [];
+      while (d.st !== 'dorme' && k++ < 4000) {
+        const st0 = d.st; const before = st0 === 'rouba' ? sum() : 0; const took0 = d.took;
+        G.debug.step(0.05);
+        // (the gold the town loses in the moment of the claws is the gold in its hoard: none made, none lost)
+        if (st0 === 'rouba' && d.st !== 'rouba') rob = { gone: Math.round((before - sum()) * 100) / 100, took: Math.round((d.took - took0) * 100) / 100 };
+        if (k % 10 === 0) { flee = Math.max(flee, H.tasks('flee').filter(v => v.task.why === 'dragon').length); fires = Math.max(fires, G.Nature.fireSet.size); }
+        if (k % 100 === 0) { const e = H.qa(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); }
+      }
+      return { ok, lairOk, name: d.name, set: (S.settlements.get(d.set) || set).name, aimed: d.set === set.id, st: d.st, passes: d.passes, burned: d.burned, killed: d.killed, hp: Math.round(d.hp), flee, fires, rob, hoard: d.hoard, log: S.history.some(e => e.txt.includes(d.name) && /desceu das nuvens/.test(e.txt)), legend: !!(S.lore && S.lore.legends.some(l => l.key === 'dragon:' + d.id)), bad, qa: H.qa() };
+    });
+    ok('g1 o dragão ataca: rasantes de fogo, o povo foge, as flechas acertam', r.ok && r.lairOk && r.aimed && r.st === 'dorme' && r.passes >= 3 && r.burned > 0 && r.fires > 0 && r.flee > 0 && r.hp < 520 && r.log && r.legend, `${r.name} sobre ${r.set} (a cidade apontada: ${r.aimed}): ${r.passes} rasantes, ${r.burned} lugares em chamas (até ${r.fires} focos), ${r.flee} fugindo, ${r.killed} mortos; vida 520 → ${r.hp}; covil em terra firme ${r.lairOk}; crônica ${r.log}, lenda ${r.legend}; agora: ${r.st}`);
+    ok('g1 o ouro levado: o que a cidade perde é o que vai para o tesouro', r.rob && r.rob.took > 0 && Math.abs(r.rob.gone - r.rob.took) < 0.05 && Math.abs(r.hoard - r.rob.took) < 0.05, r.rob ? `a cidade perdeu ${r.rob.gone} moedas, o dragão levou ${r.rob.took}; tesouro ${r.hoard}` : 'não roubou');
+    ok('g1 verificador', !r.bad.length && !r.qa.length, [...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'limpo');
+  }
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S; const { d } = H.dragon();
+      let k = 0; while (d.st !== 'passe' && k++ < 3000) G.debug.step(0.05); for (let j = 0; j < 12; j++) G.debug.step(0.05);
+      const mid = d.st + (d.breath ? ' cuspindo fogo' : '');
+      const save = G.Save.serialize();
+      G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0); H.run(40); const a = H.dragonDigest(); const st = (G.S.dragons[0] || {}).st;
+      G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0); H.run(40); const b = H.dragonDigest();
+      let j = 0; while (j < a.length && a[j] === b[j]) j++;
+      return { same: a === b, mid, st, len: a.length, at: j, ctx: a.slice(Math.max(0, j - 60), j + 60) + ' ≠ ' + b.slice(Math.max(0, j - 60), j + 60), qa: H.qa() };
+    });
+    ok('g2 save no meio do rasante: o mesmo futuro', r.same && !r.qa.length, r.same ? `salvo em «${r.mid}»; depois de carregar, 40 s depois: ${r.st}; futuro idêntico (${r.len} caracteres)` : `diferem no caractere ${r.at}: ${r.ctx}`);
+  }
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S; const { d } = H.dragon();
+      d.hoard = 60; // (what it took from the towns before)
+      H.until(() => d.st === 'dorme', 400); H.toDay();
+      // (asleep in daylight: the brave of the burned town climb to the lair; one of them falls in the fight)
+      let fighting = 0, fell = null; const bad = []; const climbed = new Set();
+      let woke = false;
+      H.until(() => { const e = H.qa(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); const t = H.tasks('dragao'); for (const v of t) climbed.add(v.id); fighting = t.filter(v => v.task.st === 2).length; if (d.st === 'luta') woke = true; if (!fell && fighting >= 1 && d.st === 'luta') { const v = t.find(o => o.task.st === 2); fell = v.name; G.Village.kill(v, 'teste', true); } return !!fell; }, 160);
+      d.fled = 1; d.hp = Math.min(d.hp, 40); // (the blows have told: the next ones kill — and it does not get away)
+      // (the spill is caught in the step it happens, before anyone picks a coin)
+      let rn = null, spill = 0;
+      const t0 = H.until(() => { for (const v of H.tasks('dragao')) climbed.add(v.id); const q = S.gifts && S.gifts.rains.find(o => o.from === d.name); if (q && !rn) { rn = q; spill = Math.round((q.street + q.lost) * 100) / 100; } return !S.dragons.includes(d); }, 150);
+      const slayer = [...S.villagers.values(), ...S.dead.values()].find(v => v.ep === 'matadragao');
+      H.run(60);
+      const left = rn ? S.gifts.piles.filter(q => q.rain === rn.id).reduce((a, q) => a + q.n, 0) : 0;
+      const sent = climbed.size;
+      return { sent, fell, woke, dead: !S.dragons.includes(d), t0, hoard: d.spilt, slayer: slayer ? slayer.name + ' ' + G.Politics.epithet(slayer) : null, bio: !!(slayer && (slayer.bio || []).some(e => /Matou/.test(e[2] || ''))), bones: (S.dragonBones || []).length, spill, picked: rn ? Math.round(rn.n * 100) / 100 : 0, left: Math.round(left * 100) / 100, sunk: rn ? rn.sunk : 0, stray: H.tasks('dragao').length, log: S.history.some(e => /matou .*! /.test(e.txt) && e.txt.includes(d.name)), bad, qa: H.qa() };
+    });
+    ok('g3 os bravos sobem ao covil, um cai na luta, o dragão morre: o Matador de Dragões', r.sent >= 2 && r.fell && r.woke && r.dead && r.slayer && r.bio && r.bones >= 1 && r.log && !r.stray, `${r.sent} subiram; ${r.fell} morreu no meio da luta; o dragão acordou ${r.woke}; morto ${r.dead} (${r.t0} s); ${r.slayer || 'sem matador'}, biografia ${r.bio}; ${r.bones} esqueleto(s); ninguém mais subindo: ${!r.stray}`);
+    ok('g3 o tesouro se esparrama: toda moeda contada', r.hoard >= 60 && Math.abs(r.spill - r.hoard) < 0.01 && r.picked + r.left + r.sunk > 0 && !r.bad.length && !r.qa.length, `${r.hoard} moedas no tesouro (60 de antes e o que levou agora) → ${r.spill} no chão; ${r.picked} catadas, ${r.left} ainda no chão, ${r.sunk} perdidas; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}`);
+  }
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S; const W = G.W, T = G.T; const bad = []; const chk = () => { const e = H.qa(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); };
+      // the god's own hand: a lightning bolt in flight, the impact of a meteor, a last bolt — it falls from the sky
+      const a = H.dragon().d; let k = 0; while (a.st !== 'passe' && k++ < 3000) G.debug.step(0.05);
+      const hp0 = a.hp; G.Powers.lightning(a.x, a.y); const bolt = Math.round(hp0 - a.hp);
+      G.Powers.meteorImpact({ x: a.x, y: a.y, r: 3.4 }); G.Powers.lightning(a.x, a.y);
+      const falling = a.st === 'morre' || a.hp <= 0; H.until(() => !S.dragons.includes(a), 20); chk();
+      const godKill = S.history.some(e => /O céu matou/.test(e.txt) && e.txt.includes(a.name));
+      // the ground under its lair sinks into the sea: it finds another
+      const b = H.dragon().d; H.until(() => b.st === 'dorme', 400); const l0 = [b.lx, b.ly];
+      G.Powers.sink(b.lx, b.ly); H.run(2);
+      const moved = b.lx !== l0[0] || b.ly !== l0[1]; H.until(() => b.st === 'dorme', 120); chk();
+      const li = W.idx(b.lx, b.ly); const newLair = b.st === 'dorme' && S.type[li] >= T.SAND && S.type[li] !== T.RIVER;
+      // it has had enough: it flies away with the treasure
+      b.hoard = 25; b.sorties = 3; b.wake = S.clock; H.run(1); const leaving = b.st === 'parte';
+      H.until(() => !S.dragons.includes(b), 80); chk();
+      const gone = !S.dragons.includes(b) && S.history.some(e => /além do horizonte/.test(e.txt) && e.txt.includes(b.name) && /25 moedas/.test(e.txt));
+      // a damaged save: the broken dragon is dropped, the world loads
+      const c = H.dragon().d; H.run(3); const o = JSON.parse(G.Save.serialize()); o.dragons.push({ id: 999999, x: NaN, y: 3, st: 'voa' }); o.dragons.push(null);
+      let loaded = true; try { G.Save.apply(o); G.Main.mode = 'game'; G.UI.setSpeed(0); } catch (e) { loaded = false; }
+      const kept = loaded ? G.S.dragons.map(q => q.id) : [];
+      H.run(5); chk();
+      return { bolt, falling, godKill, bones: (S.dragonBones || []).length, moved, newLair, leaving, gone, loaded, kept: kept.length === 1 && kept[0] === c.id, bad, qa: H.qa() };
+    });
+    ok('g4 a mão do deus: raio e meteoro derrubam o dragão em pleno voo', r.bolt >= 200 && r.falling && r.godKill && r.bones >= 1, `o raio tirou ${r.bolt} de vida; caindo ${r.falling}; crônica ${r.godKill}; ${r.bones} esqueleto(s)`);
+    ok('g4 o covil afunda no mar: outro covil; depois parte levando o tesouro', r.moved && r.newLair && r.leaving && r.gone, `covil mudou ${r.moved}, novo covil em terra firme ${r.newLair}; partindo ${r.leaving}; sumiu com 25 moedas ${r.gone}`);
+    ok('g4 save danificado: o dragão quebrado fica de fora, o mundo carrega', r.loaded && r.kept && !r.bad.length && !r.qa.length, `carregou ${r.loaded}, ficou só o dragão bom ${r.kept}; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}`);
   }
 
   ok('sem erros de página', !errs.length, errs.slice(0, 3).join(' | ') || 'nenhum');

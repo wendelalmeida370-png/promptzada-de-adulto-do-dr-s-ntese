@@ -228,7 +228,7 @@
       const g = s.gifts; const T = G.T;
       if (!Array.isArray(g.piles) || !Array.isArray(g.rains) || !Array.isArray(g.wine)) add('gift', 1, 'S.gifts sem as listas de ouro e vinho');
       else {
-        if (g.rains.length > 2) add('gift', 3, `${g.rains.length} chuvas de ouro ao mesmo tempo (máximo 2)`);
+        if (g.rains.filter(r => !r.from).length > 2) add('gift', 3, `${g.rains.length} chuvas de ouro ao mesmo tempo (máximo 2)`);
         for (const rn of g.rains) {
           if (!fin(rn.t) || !(rn.drops >= 0) || !fin(rn.street) || !fin(rn.n)) { add('gift', 2, `chuva de ouro#${rn.id}: contas inválidas`); continue; }
           // every coin that fell in the street is in a pile, in somebody's hands, in the town's store, or sunk
@@ -298,6 +298,33 @@
         for (const i of w.tiles || []) { mine.add(i); if (s.type[i] !== T.RIVER || !s.deep[i]) add('gelo', 2, `inverno#${w.id}: gelo na casa ${i % N},${(i / N) | 0}, que não é água funda`); if (!(s.ice && s.ice[i])) add('gelo', 2, `inverno#${w.id}: a casa ${i % N},${(i / N) | 0} deveria estar congelada`); }
       }
       if (s.ice) { let stray = 0, ex = -1; for (let i = 0; i < s.ice.length; i++) if (s.ice[i] && !mine.has(i)) { stray++; if (ex < 0) ex = i; } if (stray) add('gelo', 2, `${stray} casa(s) de gelo sem inverno (ex.: ${ex % N},${(ex / N) | 0})`); }
+    }
+    // ---- the dragon (dragon.js): where it is, what it holds, and who is climbing to its lair
+    {
+      const L = s.dragons || []; const T = G.T; const ST = { chega: 1, caca: 1, passe: 1, curva: 1, rouba: 1, volta: 1, dorme: 1, luta: 1, parte: 1, morre: 1 };
+      if (L.filter(d => d.st !== 'morre').length > 2) add('dragao', 3, `${L.length} dragões vivos ao mesmo tempo (máximo 2)`);
+      const ids = new Set();
+      for (const d of L) {
+        const nm = `dragão#${d.id} (${d.name})`; ids.add(d.id);
+        if (!fin(d.x) || !fin(d.y) || !fin(d.h) || !fin(d.hp) || !fin(d.lx) || !fin(d.ly)) { add('dragao', 0, `${nm}: posição ou vida inválida`); continue; }
+        if (!ST[d.st]) add('dragao', 1, `${nm}: estado desconhecido (${d.st})`);
+        if (d.hp > d.maxHp + 0.01) add('dragao', 2, `${nm}: vida ${d.hp} acima do máximo ${d.maxHp}`);
+        if (!(d.hoard >= 0) || !fin(d.hoard)) add('dragao', 1, `${nm}: tesouro inválido (${d.hoard})`);
+        // (it flies out over the sea and around the towns, but only the one that is leaving goes beyond the edge of the world)
+        if (d.st !== 'parte' && (d.x < -18 || d.y < -18 || d.x > N + 18 || d.y > N + 18)) add('dragao', 2, `${nm}: longe do mundo (${d.x.toFixed(1)},${d.y.toFixed(1)}) sem estar partindo`);
+        if (d.st === 'dorme' || d.st === 'luta') {
+          const i = G.W.idx(d.lx, d.ly);
+          if (!G.W.inb(d.lx, d.ly) || s.type[i] < T.SAND || s.type[i] === T.RIVER) add('dragao', 2, `${nm}: dorme num covil que não é terra firme (${d.lx},${d.ly})`);
+          if (G.dist(d.x, d.y, d.lx, d.ly) > 0.5) add('dragao', 2, `${nm}: dorme fora do covil`);
+          if (d.h - G.W.groundH(d.x, d.y) > 0.5) add('dragao', 2, `${nm}: pousado, mas flutuando ${(d.h - G.W.groundH(d.x, d.y)).toFixed(1)} acima do chão`);
+        } else if (d.st !== 'morre' && d.st !== 'parte' && G.W.inb(d.x, d.y) && d.h < G.W.groundH(d.x, d.y) + 1) add('dragao', 2, `${nm}: voando enterrado no chão`);
+      }
+      for (const v of s.villagers.values()) if (v.task && v.task.type === 'dragao') {
+        const d = L.find(q => q.id === v.task.id);
+        if (!d) add('dragao', 2, `${v.name}#${v.id} sobe ao covil de um dragão que não existe (${v.task.id})`);
+      }
+      for (const b of s.dragonBones || []) if (!fin(b.x) || !fin(b.y) || !G.W.inb(b.x, b.y)) add('dragao', 1, `ossos do dragão ${b.name}: fora do mapa`);
+      if ((s.dragonBones || []).length > 6) add('dragao', 3, `${s.dragonBones.length} esqueletos de dragão (máximo 6)`);
     }
     // ---- ships
     for (const sh of s.ships) {

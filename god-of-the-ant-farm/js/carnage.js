@@ -17,7 +17,7 @@
   const oa = v => (v.g === 'f' ? 'a' : 'o');
 
   // deaths that leave a body in the field
-  const BODY = { war: 1, arrow: 1, massacre: 1, execution: 1, riot: 1, coup: 1, sacrifice: 1, beast: 1, wolf: 1, boar: 1, fall: 1, lightning: 1 };
+  const BODY = { war: 1, arrow: 1, massacre: 1, execution: 1, riot: 1, coup: 1, sacrifice: 1, beast: 1, wolf: 1, boar: 1, fall: 1, lightning: 1, dragon: 1 };
   // stages, in days: fresh, swollen, dry, bones, gone
   const ROT = 0.45, DRY = 1.6, BONES = 3.2, GONE = 18;
   let corpses = [], pyres = [], nextId = 1;

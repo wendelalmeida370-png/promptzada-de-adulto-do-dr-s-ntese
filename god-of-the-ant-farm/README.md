@@ -398,6 +398,7 @@ Os poderes ficam em sete abas (`Tab` troca). Poderes marcados com ✦ abrem uma 
 | Ira | Terremoto | 55 | Construções racham e desabam, árvores tombam, pedras brotam |
 | Ira | Praga | 32 | Uma doença muito contagiosa nasce no ponto escolhido |
 | Ira | Maldição | 45 | Dois dias de colheitas murchas, poucos nascimentos, pesca ruim e lealdade em queda |
+| Ira | Dragão | 120 | Um dragão desce do céu e faz o covil nas alturas: rasantes de fogo sobre a cidade apontada, leva o ouro das casas ricas e dorme sobre o tesouro. Arqueiros e torres atiram; enquanto dorme, os bravos se reúnem e sobem ao covil — quem der o último golpe vira o Matador de Dragões, os ossos ficam e o tesouro se esparrama. Se ninguém o matar, parte levando tudo (o dragão das terras frias é branco e sopra gelo) |
 | Terra | Erguer Terra | 40 | Ilhas novas, pontes de terra entre povos isolados, colinas |
 | Terra | Afundar Terra | 60 | O mar invade: separe continentes ou engula parte de uma cidade |
 | Terra | Floresta Sagrada | 24 | Uma floresta densa, com frutos e cervos |
@@ -601,6 +602,7 @@ js/powers.js      poderes divinos e percepção
 js/miracles.js    Terra, Mar, Palavra, eras de ouro, maldições, heróis, muralhas divinas
 js/wild.js        aba Natureza: chamar animais, primavera, migração, domar, clima, gafanhotos, feras lendárias
 js/winter.js      aba Natureza: o Inverno Súbito (gelo que vira chão, neve que mata a colheita, o degelo)
+js/dragon.js      aba Ira: o Dragão (covil, rasantes de fogo, o ouro roubado, os bravos no covil, o Matador de Dragões, os ossos)
 js/citygifts.js   aba Cidade: Chuva de Ouro (o povo cata as moedas) e Vinho nos Poços (bebem, dançam, ressaca)
 js/beyond.js      aba Além: Ressurreição (do corpo ou da cova) e Fantasmas (assombram, apontam segredos)
 js/fates.js       Amor Divino e Duelo de Campeões (Destino), Sonho Coletivo (Palavra)

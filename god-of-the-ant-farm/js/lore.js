@@ -73,6 +73,8 @@
     metropole: { t: 'A Profecia da Grande Cidade', text: 'Haverá uma cidade tão grande que ninguém saberá o nome de todos os seus filhos.', on: 'city', test: d => d.tier >= 4 },
     imperio: { t: 'A Profecia do Trono', text: 'Um só trono há de reinar sobre muitas cidades.', on: 'gov', test: d => d.gov === 'imperio' },
     irmaos: { t: 'A Profecia dos Irmãos', text: 'Irmãos de sangue hão de erguer espadas uns contra os outros.', on: 'split' },
+    dragao: { t: 'A Profecia das Asas de Fogo', text: 'Do céu descerá uma serpente de asas e fogo, e as cidades dormirão de olhos abertos.', on: 'dragon' },
+    caminho: { t: 'A Profecia do Caminho no Mar', text: 'O mar há de se abrir, e gente atravessará a pé por onde só os barcos passavam.', on: 'seapart' },
     estrela: { t: 'A Profecia da Estrela', text: 'Uma estrela de fogo cairá do céu claro.', on: 'meteor' },
     onda: { t: 'A Profecia da Onda', text: 'Uma onda maior que as árvores varrerá a costa.', on: 'tsunami' },
     velas: { t: 'A Profecia das Velas', text: 'Um povo cruzará o mar e fará casa do outro lado.', on: 'colony' },
@@ -122,7 +124,7 @@
     const S = G.S; const st = S.stats;
     return { from: S.day, b0: st.births || 0, d0: st.deaths || 0, k0: st.godKills || 0, p0: Object.assign({}, st.powers || {}), pop0: S.villagers.size, ic: {}, notes: [] };
   }
-  const MAJOR = { tech: 1, gov: 1, city: 1, wonder: 1, aqueduct: 1, route: 1, contact: 1, colony: 1, wall: 1, sacrifice: 1, raise: 1, sink: 1, forest: 1, volcano: 1, volcanoSleep: 1, volcanoWake: 1, tsunami: 1, kraken: 1, krakenSlain: 1, krakenGone: 1, prophecy: 1, prophecyDone: 1, prophecyFail: 1, law: 1, sign: 1, vision: 1, golden: 1, goldenEnd: 1, curse: 1, hero: 1, divwall: 1, sin: 1, war: 1, peace: 1, conquer: 1, massacre: 1, split: 1, extinct: 1, crown: 1, meteor: 1, beast: 1, extinctSpecies: 1, tamed: 1, legendBeast: 1, climate: 1, migration: 1, locusts: 1 };
+  const MAJOR = { tech: 1, gov: 1, city: 1, wonder: 1, aqueduct: 1, route: 1, contact: 1, colony: 1, wall: 1, sacrifice: 1, raise: 1, sink: 1, forest: 1, volcano: 1, volcanoSleep: 1, volcanoWake: 1, tsunami: 1, kraken: 1, krakenSlain: 1, krakenGone: 1, prophecy: 1, prophecyDone: 1, prophecyFail: 1, law: 1, sign: 1, vision: 1, golden: 1, goldenEnd: 1, curse: 1, hero: 1, divwall: 1, sin: 1, war: 1, peace: 1, conquer: 1, massacre: 1, split: 1, extinct: 1, crown: 1, meteor: 1, beast: 1, extinctSpecies: 1, tamed: 1, legendBeast: 1, climate: 1, migration: 1, locusts: 1, dragon: 1, dragonSlain: 1, dragonGone: 1, seapart: 1 };
 
   // ------------------------------ legends ------------------------------
   function legend(key, title, text, o) {
@@ -134,6 +136,7 @@
   }
   L.legend = legend;
   function append(key, text) { const l = lore().legends.find(q => q.key === key); if (l && !l.text.includes(text)) l.text.push(text); return l; }
+  L.append = append;
 
   // ------------------------------ notes from the world ------------------------------
   L.note = function (kind, d) {
