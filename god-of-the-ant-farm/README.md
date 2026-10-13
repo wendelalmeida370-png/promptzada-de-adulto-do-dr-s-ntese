@@ -424,6 +424,7 @@ Os poderes ficam em sete abas (`Tab` troca). Poderes marcados com ✦ abrem uma 
 | Palavra | Inspiração ✦ | 60 | Revele a tecnologia que quiser a um povo |
 | Palavra | Sinal nos Céus ✦ | 30 | Cometa, eclipse, aurora ou chuva de estrelas — cada povo interpreta à sua maneira |
 | Palavra | Visão | 25 | Um adulto vira profeta: prega, espalha fé e às vezes revela povos distantes |
+| Palavra | Sonho Coletivo ✦ | 45 | Um povo inteiro sonha o mesmo sonho e acorda para ele: uma grande obra (um monumento começa na capital), a paz (oferecem a paz aos inimigos), os deuses (devoção e templos cheios) ou uma terra além do mar (agora sabem que ela existe) |
 | Destino | Ungir | 45 | Quem você tocar passa a governar seu povo; um cativo ungido lidera a fuga dos outros |
 | Destino | Herói | 55 | Um campeão escolhido pelos céus: luta como dez e nunca foge |
 | Destino | Libertação | 30 | Quebra as correntes dos cativos e salva condenados da execução |
@@ -431,6 +432,8 @@ Os poderes ficam em sete abas (`Tab` troca). Poderes marcados com ✦ abrem uma 
 | Destino | Discórdia | 40 | A lealdade de uma vila despenca e os vizinhos passam a se odiar |
 | Destino | Muralha Divina | 65 | Muralhas de pedra erguem-se numa noite ao redor de uma cidade |
 | Destino | Paz Divina | 80 | Encerra todas as guerras; ninguém declara guerra por dois dias e meio |
+| Destino | Amor Divino ✦ | 20 | Toque alguém sem par e escolha quem vai amar: os dois correm um para o outro e viram um casal — até de povos diferentes (um vai morar com o outro, e os dois povos se estimam mais) |
+| Destino | Duelo de Campeões | 55 | Toque uma batalha: o melhor guerreiro de cada lado sai da fila e os dois lutam sozinhos, até o fim; quem vence vira o Campeão (ou a Campeã), e o lado de quem cai foge do campo |
 | Além | Ressurreição ✦ | 90 | Toque um corpo ainda no chão ou um cemitério e escolha quem volta (quem morreu há até seis anos): o mesmo nome, a mesma família. A viúva recebe o marido de volta; quem já casou de novo, não |
 | Além | Fantasmas | 35 | Por duas noites os mortos de um cemitério andam entre as casas: o povo foge, as famílias choram, os devotos rezam — e um fantasma aponta o ladrão que ninguém pegou ou vai atrás de quem o matou |
 

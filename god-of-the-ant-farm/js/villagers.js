@@ -335,6 +335,7 @@
   Vg.fleeFrom = fleeFrom;
 
   // ------------------------------ decisions ------------------------------
+  Vg.relatedClose = (a, b) => relatedClose(a, b);
   function relatedClose(a, b) {
     if (a.mother && (a.mother === b.id || a.mother === b.mother)) return true;
     if (a.father && (a.father === b.id || a.father === b.father)) return true;

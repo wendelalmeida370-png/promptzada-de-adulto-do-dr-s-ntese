@@ -268,6 +268,28 @@
         }
       }
     }
+    // ---- hearts, blades and dreams (fates.js): an arrow of love is short and between two free people; one duel at a time,
+    // between two of peoples at war; a dream is of a people that exists
+    if (s.fates) {
+      const F = s.fates;
+      if (!Array.isArray(F.loves) || !Array.isArray(F.duels) || !Array.isArray(F.dreams)) add('fado', 1, 'S.fates sem as listas de amores, duelos e sonhos');
+      else {
+        const inLove = new Set();
+        for (const l of F.loves) {
+          if (!fin(l.t) || l.t > 151) add('fado', 2, `amor#${l.id}: dura ${l.t}s (máximo 150)`);
+          for (const id of [l.a, l.b]) { if (inLove.has(id)) add('fado', 2, `amor#${l.id}: #${id} em dois amores ao mesmo tempo`); inLove.add(id); }
+          const a = P(l.a), b = P(l.b);
+          if (!l.done && a && b && ((a.partner && a.partner !== b.id) || (b.partner && b.partner !== a.id))) add('fado', 3, `amor#${l.id}: ${a.name} e ${b.name} correm um para o outro, mas um deles já tem par`);
+        }
+        if (F.duels.length > 1) add('fado', 2, `${F.duels.length} duelos de campeões ao mesmo tempo`);
+        for (const d of F.duels) {
+          if (!fin(d.t) || d.t > 91) add('fado', 2, `duelo#${d.id}: dura ${d.t}s (máximo 90)`);
+          if (!fin(d.x) || !fin(d.y)) add('fado', 1, `duelo#${d.id}: lugar inválido`);
+          if (d.a === d.b) add('fado', 1, `duelo#${d.id}: um campeão contra si mesmo`);
+        }
+        for (const d of F.dreams) if (!s.factions.has(d.fac) || !['obra', 'paz', 'fe', 'mar'].includes(d.k)) add('fado', 3, `sonho de ${d.fac}: povo ou sonho desconhecido (${d.k})`);
+      }
+    }
     // ---- ships
     for (const sh of s.ships) {
       const nm = `${sh.kind}#${sh.id}`;

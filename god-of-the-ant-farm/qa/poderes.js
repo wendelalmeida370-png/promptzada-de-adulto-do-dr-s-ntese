@@ -10,6 +10,16 @@
 //  v2 um save no meio da festa, carregado duas vezes: o mesmo futuro
 //  v3 quem bebia morre no poço, e o deus derruba o último poço: o vinho acaba, ninguém fica indo beber
 //  v4 o dia seguinte: ressaca de quem bebeu demais
+// Ressurreição, Fantasmas (r1–r3, f1–f2: ver abaixo)
+// Amor Divino
+//  a1 dois da mesma cidade correm um para o outro e viram um casal
+//  a2 de povos diferentes: um vai morar na cidade do outro, e os povos se estimam mais
+//  a3 o amado morre no caminho (ninguém casa, quem corria fica de luto); um save no meio carregado duas vezes
+// Duelo de Campeões (no mundo pronto «guerra mundial»)
+//  d1 os dois campeões lutam sozinhos; quem vence ganha o nome de Campeão; quem perde, o seu lado foge
+//  d2 um save no meio do duelo carregado duas vezes; o raio do deus num dos campeões
+// Sonho Coletivo
+//  s1 a grande obra, os deuses, a terra além do mar, a paz (numa guerra provocada); o mesmo povo não sonha duas vezes seguidas
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
@@ -24,13 +34,20 @@ const key = process.argv[2] || 'cidade';
   await page.goto(process.env.GAME || 'file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(900);
   await page.addScriptTag({ path: __dirname + '/qa.js' });
   await page.addScriptTag({ path: path.join(ROOT, 'worlds', key + '.js') });
+  await page.addScriptTag({ path: path.join(ROOT, 'worlds', 'mundial.js') }); // (a world at war, for the duel of champions)
   const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASSOU' : 'FALHOU'} | ${name} | ${info}`); if (!cond) fails.push(name); };
   // the helpers every test uses: the ready world, steps of the world, the checker
   await page.evaluate(key => {
     window.__H = {
-      fresh() { G.Save.apply(JSON.parse(G.Ready.data[key])); G.Main.mode = 'game'; G.UI.setSpeed(0); if (G.Audio) G.Audio.mute = true; G.S.faith = 999; },
+      fresh(w) { G.Save.apply(JSON.parse(G.Ready.data[w || key])); G.Main.mode = 'game'; G.UI.setSpeed(0); if (G.Audio) G.Audio.mute = true; G.S.faith = 999; __H.base = new Set(QA.check().filter(e => e.sev <= 3).map(__H.qkey)); },
+      // (what the world already had when it was loaded — a ready world's own small faults — is not this test's)
+      qkey: e => e.id + '|' + e.msg.replace(/\s*\([^)]*\)\s*$/, ''),
       run(sec, each) { const S = G.S; const n = Math.round(sec / 0.05); for (let k = 0; k < n; k++) { G.debug.step(0.05); if (each) each(k); } return S.clock; },
-      qa() { return QA.check().filter(e => e.sev <= 3); },
+      qa() { return QA.check().filter(e => e.sev <= 3 && !(__H.base && __H.base.has(__H.qkey(e)))); },
+      // (the world-war world lives a steady trickle of newcomers who cannot walk home yet — S3 "recente", the same with or
+      // without these powers, settled by the stray rule the next morning: in a battle there, what counts is S0–S2 and the
+      // war's and the duel's own S3)
+      qaWar() { return QA.check().filter(e => e.sev <= 2 || (e.sev === 3 && (e.sys === 'war' || e.sys === 'fado'))); },
       town(test) { const V = G.Village; return [...G.S.settlements.values()].filter(s => !test || test(s)).sort((a, b) => V.pop(b.id) - V.pop(a.id))[0]; },
       wells: sid => [...G.S.buildings.values()].filter(b => b.type === 'well' && b.built && b.set === sid),
       tasks: type => [...G.S.villagers.values()].filter(v => v.task && v.task.type === type),
@@ -312,6 +329,157 @@ const key = process.argv[2] || 'cidade';
       ok('f2 save no meio da assombração: o mesmo futuro', r.same, r.same ? `${r.n} fantasmas na hora do save; futuro idêntico` : `diferem no caractere ${r.at}: ${r.ctx}`);
       ok('f2 o morto que volta deixa de assombrar; cemitério derrubado acaba com tudo', !r.ghostAlive && !r.left && !r.qa.length, `${r.recent ? 'um fantasma ressuscitado' : '(fantasma antigo demais para voltar)'}; fantasma de alguém vivo ${r.ghostAlive}; assombrações depois do cemitério derrubado ${r.left}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
     }
+  }
+
+  // ------------------------------ Amor Divino ------------------------------
+  await page.evaluate(() => {
+    // someone free, in the biggest town, with a choice of suitors (of their people, and — if wanted — of another)
+    // (a world of married people: the god first frees a few hearts — the partners of some die — in two peoples)
+    __H.toDay = () => { const S = G.S; while (!(S.time > 0.12 && S.time < 0.5)) __H.run(2); };
+    __H.freeHearts = () => { __H.toDay(); const S = G.S; const F = G.Fac.all().filter(f => f.alive).sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id)).slice(0, 2); for (const f of F) { let n = 0; for (const v of [...S.villagers.values()].sort((a, b) => a.id - b.id)) { if (n >= 6 || G.Fac.idOfV(v) !== f.id || !v.partner || v.age < 18 || v.age > 45 || v.captive || v.inside) continue; const p = S.villagers.get(v.partner); if (p) { G.Village.kill(p, 'sick'); v.mourn = 0; n++; } } } __H.run(1); };
+    __H.lover = foreign => { const S = G.S; for (const v of [...S.villagers.values()].sort((a, b) => a.id - b.id)) { if (v.partner || v.age < 18 || v.age > 45 || v.captive || v.inside || v.aboard || v.jail) continue; const o = G.Powers.options('love', v.x, v.y) || []; const pick = o.find(q => /De outro povo/.test(q.desc) === !!foreign); if (pick && G.Powers.targetAt(v.x, v.y, 1.3) === v) return { v, k: pick.k }; } return null; };
+    __H.until = (fn, max) => { let t = 0; while (t < max && !fn()) { __H.run(1); t += 1; } return t; };
+  });
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S; H.freeHearts();
+      const c = H.lover(false); if (!c) return null;
+      const v = c.v, o = S.villagers.get(+c.k);
+      const ok = G.Powers.castChoice('love', v.x, v.y, c.k);
+      const t = H.until(() => v.partner === o.id, 120);
+      return { ok, a: v.name, b: o.name, t, wed: v.partner === o.id && o.partner === v.id, bio: (v.bio || []).some(e => e[1] === 'couple'), left: (S.fates.loves || []).length, qa: H.qa() };
+    });
+    if (!r) ok('a1 amor divino na mesma cidade', false, 'ninguém livre com pretendentes no mundo');
+    else ok('a1 amor divino na mesma cidade', r.ok && r.wed && r.bio && !r.left && !r.qa.length, `${r.a} e ${r.b}: casal ${r.wed} em ${r.t}s; biografia ${r.bio}; flechas abertas ${r.left}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+  }
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S; H.freeHearts();
+      const c = H.lover(true); if (!c) return null;
+      const v = c.v, o = S.villagers.get(+c.k); const fa = G.Fac.idOfV(v), fb = G.Fac.idOfV(o);
+      const op0 = (G.Fac.rel(fa, fb) || {}).op || 0;
+      G.Powers.castChoice('love', v.x, v.y, c.k);
+      const t = H.until(() => v.partner === o.id, 150);
+      const op1 = (G.Fac.rel(fa, fb) || {}).op || 0;
+      return { a: v.name, b: o.name, t, wed: v.partner === o.id && o.partner === v.id, together: v.set === o.set, op0, op1, legend: (S.lore && S.lore.legends || []).some(l => /^love:/.test(l.key)), qa: H.qa() };
+    });
+    if (r) ok('a2 amor entre povos: vão morar juntos e os povos se estimam', r.wed && r.together && r.op1 > r.op0 && !r.qa.length, `${r.a} e ${r.b}: casal ${r.wed} em ${r.t}s; mesma cidade ${r.together}; estima entre os povos ${Math.round(r.op0)} → ${Math.round(r.op1)}; lenda ${r.legend}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+    else ok('a2 amor entre povos', false, 'nenhum pretendente de outro povo no mundo');
+  }
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S; H.freeHearts();
+      const c = H.lover(false); if (!c) return null;
+      const v = c.v, o = S.villagers.get(+c.k);
+      G.Powers.castChoice('love', v.x, v.y, c.k);
+      H.run(1.5);
+      const save = G.Save.serialize();
+      G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0); H.run(20); const a = H.digest(v.x, v.y) + JSON.stringify(G.S.fates);
+      G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0); H.run(20); const b = H.digest(v.x, v.y) + JSON.stringify(G.S.fates);
+      let k = 0; while (k < a.length && a[k] === b[k]) k++;
+      // and again from the save: the beloved dies on the way
+      G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0);
+      const v2 = G.S.villagers.get(v.id), o2 = G.S.villagers.get(o.id);
+      G.Village.kill(o2, 'sick'); H.run(5);
+      return { same: a === b, at: k, ctx: a.slice(Math.max(0, k - 60), k + 60) + ' ≠ ' + b.slice(Math.max(0, k - 60), k + 60), single: !v2.partner, mourn: v2.mourn > 0, left: (G.S.fates.loves || []).length, task: v2.task ? v2.task.type : '-', qa: H.qa() };
+    });
+    if (r) {
+      ok('a3 save no meio da corrida do amor: o mesmo futuro', r.same, r.same ? 'futuro idêntico' : `diferem no caractere ${r.at}: ${r.ctx}`);
+      ok('a3 o amado morre no caminho', r.single && r.mourn && !r.left && r.task !== 'amor' && !r.qa.length, `sozinho ${r.single}; de luto ${r.mourn}; flechas abertas ${r.left}; tarefa agora ${r.task}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+    }
+  }
+
+  // ------------------------------ Duelo de Campeões ------------------------------
+  await page.evaluate(() => {
+    // a battle of the world at war: two fighters of peoples at war, close to each other
+    // (and if nobody is fighting just now, the scenario sets one up on purpose: four fighters of each of two peoples at war,
+    // face to face near a town of one of them, already at each other's throats)
+    __H.battle = () => {
+      const S = G.S; __H.toDay();
+      for (const v of S.villagers.values()) { const t = v.task; if (!t || t.type !== 'combat' || t.duel) continue; const o = S.villagers.get(t.id); if (o && G.Fac.atWar(G.Fac.idOfV(v), G.Fac.idOfV(o)) && G.Powers.canCast('duel', v.x, v.y)) return [v.x, v.y]; }
+      const fit = sid => [...S.villagers.values()].filter(v => v.set === sid && v.age >= 18 && v.age < 50 && !v.captive && !v.aboard && !v.jail && !v.ug && !v.inside && v.hp > 60).sort((a, b) => a.id - b.id);
+      let best = null, bd = 1e18;
+      for (const a of S.settlements.values()) for (const b of S.settlements.values()) { if (a.fac === b.fac || !G.Fac.atWar(a.fac, b.fac) || !G.W.townsLinked(a, b) || fit(a.id).length < 4 || fit(b.id).length < 4) continue; const d = G.dist2(a.cx, a.cy, b.cx, b.cy); if (d < bd) { bd = d; best = [a, b]; } }
+      if (!best) return null;
+      const [A, B] = best; const at = G.W.randomNear(B.cx + 4, B.cy + 4, 4) || [B.cx, B.cy];
+      const ma = fit(A.id).slice(0, 4), mb = fit(B.id).slice(0, 4);
+      ma.forEach((v, k) => { G.Vg.endTask(v); v.x = at[0] - 0.6; v.y = at[1] + k * 0.4; v.role = 'guerreiro'; });
+      mb.forEach((v, k) => { G.Vg.endTask(v); v.x = at[0] + 0.6; v.y = at[1] + k * 0.4; v.role = 'guerreiro'; });
+      ma.forEach((v, k) => { G.Vg.H.setTask(v, { type: 'combat', id: mb[k].id, pri: 4.2, kind: 'combat' }); G.Vg.H.setTask(mb[k], { type: 'combat', id: v.id, pri: 4.2, def: true, kind: 'combat' }); });
+      __H.run(0.3);
+      return G.Powers.canCast('duel', at[0], at[1]) ? at : null;
+    };
+  });
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh('mundial'); const S = G.S;
+      const at = H.battle(); if (!at) return null;
+      const ok = G.Powers.cast('duel', at[0], at[1]); const rec = S.fates && S.fates.duels[0];
+      if (!rec) return { ok, none: true };
+      const again = G.Powers.canCast('duel', at[0], at[1]); const why = G.Powers.why;
+      const a = rec.a, b = rec.b, fa = rec.fa, fb = rec.fb;
+      const t = H.until(() => !S.fates.duels.length, 100);
+      const A = S.villagers.get(a), B = S.villagers.get(b);
+      const winner = A && !B ? A : B && !A ? B : null;
+      const lines = S.history.slice(-30).map(e => e.txt).filter(x => /duelo de campeões/.test(x));
+      const fled = [...G.War.bands.values()].filter(x => x.fac === (winner === A ? fb : fa) && x.retreat).length;
+      return { ok, again, why, t, a: G.person(a).name, b: G.person(b).name, winner: winner ? winner.name : null, ep: winner ? winner.ep : null, fled, lines, qa: H.qaWar() };
+    });
+    if (!r) ok('d1 duelo de campeões', false, 'nenhuma batalha no mundo pronto da guerra mundial');
+    else if (r.none) ok('d1 duelo de campeões', false, `lançado ${r.ok}, mas nenhum duelo começou`);
+    else {
+      ok('d1 duelo de campeões: um vence, o nome fica', r.ok && r.lines.length && (!r.winner || r.ep === 'campeao') && !r.qa.length, `${r.a} × ${r.b}: ${r.winner ? `venceu ${r.winner} (${r.ep}), ${r.fled} bando(s) do outro lado fugiram` : 'sem vencedor'} em ${r.t}s; crônica: ${r.lines.slice(-1)[0] || '-'}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+      ok('d1 um duelo por vez', !r.again && /já está acontecendo/.test(r.why), r.why);
+    }
+  }
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh('mundial'); const S = G.S;
+      const at = H.battle(); if (!at) return null;
+      G.Powers.cast('duel', at[0], at[1]); const rec = S.fates && S.fates.duels[0]; if (!rec) return null;
+      H.run(3);
+      const save = G.Save.serialize();
+      G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0); H.run(15); const a = H.digest(rec.x, rec.y) + JSON.stringify(G.S.fates);
+      G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0); H.run(15); const b = H.digest(rec.x, rec.y) + JSON.stringify(G.S.fates);
+      let k = 0; while (k < a.length && a[k] === b[k]) k++;
+      // from the save again: the god's lightning strikes one of the champions
+      G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0);
+      const c = G.S.villagers.get(rec.a); const other = G.S.villagers.get(rec.b);
+      if (c) { G.Powers.lightning(c.x, c.y); if (G.S.villagers.has(c.id)) G.Village.kill(c, 'lightning', true); }
+      H.run(3);
+      const D = (G.S.fates && G.S.fates.duels) || [];
+      const stale = [...G.S.villagers.values()].filter(v => v.task && v.task.champ && !D.some(d => d.id === v.task.champ)).length;
+      return { same: a === b, at: k, ctx: a.slice(Math.max(0, k - 60), k + 60) + ' ≠ ' + b.slice(Math.max(0, k - 60), k + 60), open: D.length, stale, otherEp: other && G.S.villagers.get(other.id) ? G.S.villagers.get(other.id).ep : '-', qa: H.qaWar() };
+    });
+    if (r) {
+      ok('d2 save no meio do duelo: o mesmo futuro', r.same, r.same ? 'futuro idêntico' : `diferem no caractere ${r.at}: ${r.ctx}`);
+      ok('d2 o raio do deus num campeão: o duelo acaba limpo', !r.open && !r.stale && !r.qa.length, `duelos abertos ${r.open}; tarefas de duelo órfãs ${r.stale}; o outro campeão: ${r.otherEp}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+    }
+  }
+
+  // ------------------------------ Sonho Coletivo ------------------------------
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(); const S = G.S; const out = {};
+      const F = G.Fac.all().filter(f => f.alive).sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id));
+      const dreamOf = (f, k) => { const c = G.Fac.capitalOf(f.id); const o = G.Powers.options('dream', c.cx, c.cy) || []; if (!o.some(q => q.k === k)) return 'sem a opção'; return G.Powers.castChoice('dream', c.cx, c.cy, k); };
+      // the gods
+      { const f = F[0]; const dev = () => { let n = 0, d = 0; for (const v of S.villagers.values()) if (G.Fac.idOfV(v) === f.id) { n++; d += v.devotion; } return d / n; }; const d0 = dev(); out.fe = [dreamOf(f, 'fe'), Math.round(d0), Math.round(dev())]; out.twice = [G.Powers.canCast('dream', G.Fac.capitalOf(f.id).cx, G.Fac.capitalOf(f.id).cy), G.Powers.why]; }
+      // the great work
+      { const f = F[1] || F[0]; const c = G.Fac.capitalOf(f.id); const before = [...S.buildings.values()].filter(b => b.type === 'monument' && b.set === c.id).length; out.obra = [dreamOf(f, 'obra'), before, [...S.buildings.values()].filter(b => b.type === 'monument' && b.set === c.id).length]; }
+      // the land beyond the sea
+      { const f = F[2] || F[0]; const K = G.Know; const before = K.counts ? JSON.stringify(K.counts(f.id)) : ''; out.mar = [dreamOf(f, 'mar'), before, K.counts ? JSON.stringify(K.counts(f.id)) : '']; }
+      // peace, in a war made for it
+      { const a = F[0], b = F[1]; if (a && b) { const rel = G.Fac.rel(a.id, b.id); if (rel && !rel.met) G.Politics.meet(a, b, { quiet: true }); const dp = S.divinePeace; S.divinePeace = 0; if (!G.Fac.atWar(a.id, b.id)) G.Politics.declareWar(a, b, 'ambicao'); S.divinePeace = dp; S.day += 2; const w0 = G.Fac.atWar(a.id, b.id); out.paz = [w0, dreamOf(b, 'paz'), G.Fac.atWar(a.id, b.id), S.history.slice(-3).map(e => e.txt).join(' | ')]; } }
+      H.run(5);
+      out.qa = H.qa();
+      return out;
+    });
+    ok('s1 sonho dos deuses: o povo acorda devoto; não sonha duas vezes seguidas', r.fe[0] === true && r.fe[2] > r.fe[1] && !r.twice[0] && /último sonho/.test(r.twice[1]), `devoção média ${r.fe[1]} → ${r.fe[2]}; de novo: ${r.twice[1]}`);
+    ok('s1 sonho da grande obra: um monumento começa', r.obra[0] === true && r.obra[2] > r.obra[1], `lançado ${r.obra[0]}; monumentos na capital ${r.obra[1]} → ${r.obra[2]}`);
+    ok('s1 sonho da terra além do mar', r.mar[0] === true ? r.mar[2] !== r.mar[1] : r.mar[0] === 'sem a opção', `lançado ${r.mar[0]}; conhecimento ${r.mar[1]} → ${r.mar[2]}`);
+    if (r.paz) ok('s1 sonho da paz numa guerra', r.paz[0] && r.paz[1] === true && /sonhou com a paz/.test(r.paz[3]), `em guerra ${r.paz[0]}; lançado ${r.paz[1]}; ainda em guerra ${r.paz[2]}; crônica: ${r.paz[3].slice(0, 200)}`);
+    ok('s1 verificador', !r.qa.length, r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'limpo');
   }
 
   ok('sem erros de página', !errs.length, errs.slice(0, 3).join(' | ') || 'nenhum');
