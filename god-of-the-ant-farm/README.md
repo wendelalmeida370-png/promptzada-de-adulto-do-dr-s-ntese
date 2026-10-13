@@ -417,6 +417,7 @@ Os poderes ficam em sete abas (`Tab` troca). Poderes marcados com ✦ abrem uma 
 | Natureza | Mudar o Clima ✦ | 50 | Neve eterna, taiga, bosque, pântano, selva, savana ou deserto: o chão, as árvores e os animais mudam junto |
 | Natureza | Gafanhotos | 38 | Uma nuvem voa até as plantações mais próximas e devora colheitas, capim e frutos |
 | Natureza | Fera Lendária | 85 | Um predador gigante típico daquela terra desperta, com nome e epíteto, para caçar gente |
+| Natureza | Inverno Súbito | 45 | Um dia de neve numa região: os lagos e rios congelam e viram caminho a pé, as plantações morrem; no degelo, quem ainda está no gelo cai na água gelada |
 | Cidade | Chuva de Ouro | 40 | Moedas caem do céu sobre um bairro: o que cai no telhado fica na casa, o que cai na rua é de quem pegar primeiro (o povo corre a catar; um povo sem moeda leva o ouro ao armazém). Rua rica atrai ladrão |
 | Cidade | Vinho nos Poços | 28 | Por meio dia os poços de uma cidade dão vinho: o povo larga o trabalho, bebe, dança e cambaleia — e quem bebeu demais acorda de ressaca |
 | Palavra | Profecia ✦ | 35 | Anuncie a queda, a grandeza, a morte do governante, a guerra ou a paz de uma cidade; se acontecer, a fé explode |
@@ -599,6 +600,10 @@ js/nests.js       ninhos (árvore, telhado, paredão, chão) com ovos e filhotes
 js/powers.js      poderes divinos e percepção
 js/miracles.js    Terra, Mar, Palavra, eras de ouro, maldições, heróis, muralhas divinas
 js/wild.js        aba Natureza: chamar animais, primavera, migração, domar, clima, gafanhotos, feras lendárias
+js/winter.js      aba Natureza: o Inverno Súbito (gelo que vira chão, neve que mata a colheita, o degelo)
+js/citygifts.js   aba Cidade: Chuva de Ouro (o povo cata as moedas) e Vinho nos Poços (bebem, dançam, ressaca)
+js/beyond.js      aba Além: Ressurreição (do corpo ou da cova) e Fantasmas (assombram, apontam segredos)
+js/fates.js       Amor Divino e Duelo de Campeões (Destino), Sonho Coletivo (Palavra)
 js/caves.js       a camada de baixo: cavernas, bocas de cada tipo, níveis de piso, abismos, galerias, rios e lagos subterrâneos, veios, bichos do escuro, morcegos, ursos, pinturas, tumbas reais, oráculo, refúgio, abrigo na tempestade, desafio do eco, minas em galerias, bandidos, poderes Abrir Gruta e Desabamento
 js/lore.js        gênese, profecias antigas, crônicas, lendas, bestiário e o Livro do Mundo
 js/events.js      eventos e viajantes de barco
