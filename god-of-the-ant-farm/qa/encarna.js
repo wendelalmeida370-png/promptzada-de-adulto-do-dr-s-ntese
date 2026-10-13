@@ -1,0 +1,540 @@
+// encarna: node qa/encarna.js [pasta das fotos] — o Modo Encarnado provocado de propósito, com os casos ruins
+// (o 3D roda de verdade, com o WebGL do navegador sem GPU — SwiftShader: é lento, os tempos aqui são o piso, não o jogo)
+//  e1  (prova 50) cidade real — na metrópole: cada prédio perto do corpo está no lugar e na terra que o mundo diz; o chão 3D
+//      é a altura do mundo; o corpo anda pelo caminho real até o mercado e até o porto, sem atravessar nada
+//  e2  (prova 51) personagem real — mesma pessoa (id, nome, família, casa) antes e depois; a IA volta; a biografia lembra
+//  e3  (prova 52) o mundo continua — enquanto encarnado (e dormindo, o tempo correndo), longe dali o mundo acontece: tudo fica
+//  e4  (prova 53) troca de personagem — A, Deus, B; e B → C de dentro; ninguém duplicado; a IA de A volta; histórias intactas
+//  e5  (prova 54) morte — pelo fogo, pela fome e numa queda: morre de verdade, o controle acaba, o deus volta, a biografia e a crônica contam
+//  e6  (prova 55) terreno — plano, ladeira, estrada, bosque, costa, entre prédios: pulos, colisões, câmera; nunca dentro de nada
+//  e7  (prova 56) save/load A–E — antes, durante (volta encarnado), depois, após andar muito, após a morte; save danificado
+//  e8  (prova 57) estresse — 30 idas e voltas (com saves), caminhada longa (chunks), salto de 10 anos: memória e erros
+//  e9  casos ruins — capturado por inimigos, levado a um navio, a terra afunda sob os pés, um prédio nasce em cima, a guerra
+//      chama, uma cena quer o corpo; e as mãos mudando o mundo: lenha, frutas, pedra, armazém, comida, obra, templo, a cama
+//  e10 interface — o botão Encarnar (e o motivo quando não pode), a tecla I, a ficha com os dados reais, o menu, as teclas
+const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
+const path = require('path'); const fs = require('fs');
+const ROOT = path.resolve(__dirname, '..');
+const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.mkdirSync(OUT, { recursive: true });
+(async () => {
+  const browser = await chromium.launch({ args: ['--js-flags=--max-old-space-size=8192', '--enable-unsafe-swiftshader'] });
+  const page = await browser.newPage({ viewport: { width: 1000, height: 640 } });
+  const errs = []; page.on('pageerror', e => errs.push(e.message + ' ' + (e.stack || '').split('\n').slice(0, 3).join(' | ')));
+  page.on('console', m => { const t = m.text(); if ((m.type() === 'warning' || m.type() === 'error') && !/ERR_FAILED|fonts|GL Driver Message|GroupMarkerNotSet|software WebGL/.test(t)) errs.push('console: ' + t.slice(0, 300)); });
+  // (every listener put on the page is counted: going up and down a hundred times must not pile them up)
+  await page.addInitScript(() => { window.requestAnimationFrame = () => 0; try { localStorage.clear(); } catch (e) { } window.__L = 0; const a = EventTarget.prototype.addEventListener; EventTarget.prototype.addEventListener = function () { window.__L++; return a.apply(this, arguments); }; });
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
+  await page.goto('file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(900);
+  await page.addScriptTag({ path: __dirname + '/qa.js' });
+  for (const w of ['cidade', 'metropole']) await page.addScriptTag({ path: path.join(ROOT, 'worlds', w + '.js') });
+  const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASSOU' : 'FALHOU'} | encarna ${name} | ${info}`); if (!cond) fails.push(name); };
+  // (the logic runs at the light quality — the browser draws 3D in software, slowly; the photos at the medium one)
+  const shot = async name => {
+    await page.evaluate(() => { if (G.Modes.state !== 'GOD') { G.Realm.setQuality('media'); for (let k = 0; k < 24; k++) G.Main.frameFor(33); } });
+    try { await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: 180000 }); } catch (e) { console.log('(foto ' + name + ' não saiu: ' + e.message.slice(0, 60) + ')'); }
+    await page.evaluate(() => G.Realm.setQuality('baixa'));
+  };
+  await page.evaluate(() => {
+    const E = window.__E = {
+      fresh(w) { G.Realm.setQuality('baixa'); G.Save.apply(JSON.parse(G.Ready.data[w])); G.Main.mode = 'game'; document.querySelector('#menu').classList.add('hidden'); G.UI.showHUD(true); G.UI.setSpeed(1); if (G.Audio) G.Audio.mute = true; E.base = new Set(QA.check().filter(e => e.sev <= 3).map(E.qk)); },
+      qk: e => e.id + '|' + e.msg.replace(/\s*\([^)]*\)\s*$/, ''),
+      qa: () => QA.check().filter(e => e.sev <= 2 && !E.base.has(E.qk(e))).map(e => `${e.id}/S${e.sev}: ${e.msg}`),
+      f(n, ms) { for (let k = 0; k < n; k++) G.Main.frameFor(ms || 33); },
+      until(c, max, ms) { for (let k = 0; k < (max || 400); k++) { if (c()) return k; G.Main.frameFor(ms || 33); } return c() ? max : -1; },
+      enter(v) { if (!G.Modes.enter(v)) return false; return E.until(() => G.Modes.state === 'INC', 300) >= 0; },
+      leave() { if (G.Modes.state === 'INC') G.Modes.leave('deus'); return E.until(() => G.Modes.state === 'GOD', 400) >= 0; },
+      town: k => [...G.S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[k || 0],
+      adults: (s, f) => [...G.S.villagers.values()].filter(o => (!s || o.set === s.id) && o.age >= 18 && o.age < 55 && !o.inside && G.Possess.can(o).ok && (!f || f(o))),
+      body: () => G.Possess.body(),
+      // the body walked along the world's own path to (x, y) — the camera turned toward each next step, W held
+      walkTo(x, y, max, run) {
+        const v = E.body(); const st = G.Avatar.state(); if (!v || !st) return { ok: false, why: 'sem corpo' };
+        const p = G.W.findPath(v.x, v.y, x, y, true, 30000); if (!p) return { ok: false, why: 'sem caminho' };
+        let i = 0, bad = 0, under = 0, still = 0, last = [v.x, v.y], k = 0, camIn = 0;
+        for (; k < (max || 1500); k++) {
+          const w = p[Math.min(i, p.length - 1)]; const dx = w[0] - v.x, dy = w[1] - v.y; const d = Math.hypot(dx, dy);
+          if (d < 0.3) { if (i >= p.length - 1) break; i++; continue; }
+          G.Cam3D.yaw = Math.atan2(dy, dx); G.Input3D.down.frente = true; G.Input3D.down.correr = !!run;
+          G.Main.frameFor(33);
+          if (!G.W.walkableXY(v.x, v.y)) bad++;
+          if (st.Y < G.Avatar.floorAt(st.X, st.Z) - 0.05) under++;
+          const c = G.Realm.camera().position; if (G.Cam3D.solid(c.x, c.y, c.z)) camIn++;
+          if (k % 60 === 59) { if (G.dist(last[0], last[1], v.x, v.y) < 0.15) still++; else still = 0; last = [v.x, v.y]; if (still >= 3) break; }
+        }
+        G.Input3D.down.frente = false; G.Input3D.down.correr = false; E.f(4);
+        const end = p[p.length - 1];
+        return { ok: G.dist(v.x, v.y, end[0], end[1]) < 0.8, frames: k, steps: p.length, bad, under, camIn, stuck: still >= 3, d: +(G.dist(v.x, v.y, end[0], end[1]) * 4).toFixed(1) };
+      },
+      // the box of a building against the world's footprint and ground (metres)
+      fits(b) {
+        const B = G.Build3D.bounds(b); if (!B) return null; const L = G.Space.TILE;
+        const cx = (b.x + b.w / 2) * L, cz = (b.y + b.h / 2) * L; const mx = (B.lo[0] + B.hi[0]) / 2, mz = (B.lo[2] + B.hi[2]) / 2;
+        const out = Math.max(b.x * L - B.lo[0], B.hi[0] - (b.x + b.w) * L, b.y * L - B.lo[2], B.hi[2] - (b.y + b.h) * L);
+        return { off: Math.hypot(mx - cx, mz - cz), out, floats: B.lo[1] - B.ground[1], sunk: B.ground[0] - B.floor };
+      },
+    };
+  });
+  const E = (fn, arg) => page.evaluate(fn, arg);
+  // (one part alone, or a few: ONLY=e9,e10 — the parts after e2 live in the 'cidade' world, loaded once if e2 is skipped)
+  const ONLY = (process.env.ONLY || '').split(',').filter(Boolean); let city = false;
+  const need = async k => { if (ONLY.length && !ONLY.includes(k)) return false; if (k === 'e2') city = true; else if (k !== 'e1' && k !== 'e8' && !city) { await E(() => __E.fresh('cidade')); city = true; } return true; };
+
+  if (await need('e1')) {
+  // ================================ e1: the real city (metropole) ================================
+  {
+    const r = await E(() => {
+      __E.fresh('metropole'); const S = G.S;
+      // (the biggest town with a market and a port: the walk goes across it, from one to the other)
+      const has = (s, f) => [...S.buildings.values()].some(b => b.set === s.id && b.built && f(b));
+      const s = [...S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id)).find(t => has(t, b => b.type === 'doca') && has(t, b => b.type === 'mercado' || b.type === 'feira')) || __E.town();
+      const market = [...S.buildings.values()].find(b => b.set === s.id && b.built && (b.type === 'mercado' || b.type === 'feira'));
+      const dock = [...S.buildings.values()].find(b => b.set === s.id && b.built && b.type === 'doca');
+      const m = market || [...S.buildings.values()].find(b => b.set === s.id && b.built && b.type === 'storehouse');
+      const v = __E.adults(s).sort((a, c) => G.dist2(a.x, a.y, m.x, m.y) - G.dist2(c.x, c.y, m.x, m.y))[0];
+      window.__v = v; window.__m = m; window.__dock = dock;
+      G.UI.select(v); G.Render.cam.follow = v.id; __E.f(10);
+      const inn = __E.enter(v);
+      // every building within 48 m of the body: in its place, on its ground
+      const near = [...S.buildings.values()].filter(b => G.dist(b.x + b.w / 2, b.y + b.h / 2, v.x, v.y) < 12);
+      const PART = { farm: 1, horta: 1, plantacao: 1, vinhedo: 1, pomar: 1, cemetery: 1, apiario: 1, mercado: 1, feira: 1, mercado_negro: 1, campfire: 1, curral: 1, cercado: 1, ruin: 1 };
+      let bad = []; for (const b of near) { const f = __E.fits(b); if (!f) continue; if (b.type !== 'doca' && ((!PART[b.type] && f.off > 1.2) || f.out > 1.6)) bad.push(`${b.type}#${b.id} fora ${f.off.toFixed(1)}/${f.out.toFixed(1)}m`); if (f.floats > 0.35) bad.push(`${b.type}#${b.id} flutua ${f.floats.toFixed(2)}m`); if (f.sunk > 0.05) bad.push(`${b.type}#${b.id} afundado`); }
+      // the ground of the near chunks is the world's own heights, vertex by vertex
+      const st = G.Avatar.state(); const ms = G.Realm.nearOf(st.X, st.Z); let err = 0, nv = 0;
+      if (ms && ms[0]) { const P = ms[0].geometry.attributes.position.array; for (let k = 0; k < P.length; k += 3) { const h = G.W.hAt(P[k] / 4, P[k + 2] / 4) * 1.5; err = Math.max(err, Math.abs(P[k + 1] - h)); nv++; } }
+      const roads = (() => { let n = 0; for (let y = 0; y < G.N; y++) for (let x = 0; x < G.N; x++) if (S.road[y * G.N + x] && G.dist(x, y, v.x, v.y) < 10) n++; return n; })();
+      return { town: s.name, pop: G.Village.pop(s.id), v: v.name, inn, near: near.length, bad, err, nv, market: market ? market.type : 'storehouse', dock: !!dock, roads, chunks: G.Realm.chunkCount() };
+    });
+    ok('e1 entra na metrópole', r.inn, `${r.v} em ${r.town} (${r.pop} hab.) · chunks ${JSON.stringify(r.chunks)}`);
+    ok('e1 prédios no lugar e no chão', r.near >= 8 && !r.bad.length, `${r.near} prédios a menos de 48 m; problemas: ${r.bad.slice(0, 4).join('; ') || 'nenhum'}`);
+    ok('e1 o chão 3D é a altura do mundo', r.nv > 500 && r.err < 0.02, `${r.nv} vértices, erro máximo ${r.err.toFixed(4)} m`);
+    await shot('e1-mercado');
+    const w = await E(() => { const m = window.__m; const d = G.Vg.door(m); return { w: __E.walkTo(d[0], d[1], 1800), qa: __E.qa() }; });
+    ok('e1 anda pelas ruas até o mercado', w.w.ok && !w.w.bad && !w.w.under && !w.w.camIn, `${JSON.stringify(w.w)} · roads perto: ${r.roads}`);
+    await shot('e1-no-mercado');
+    if (r.dock) {
+      const d = await E(() => { const b = window.__dock; const p = G.Vg.door(b); const f = __E.fits(b); const sea = (() => { for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) if (G.W.inb(x, y) && G.S.type[y * G.N + x] <= G.T.SEA) return true; return false; })(); return { w: __E.walkTo(p[0], p[1], 2400, true), sea, f }; });
+      ok('e1 o porto fica na costa e se chega a ele a pé', d.sea && d.w.ok && !d.w.bad && !d.w.camIn, `cais junto do mar: ${d.sea} · ${JSON.stringify(d.w)}`);
+      await shot('e1-porto');
+      // across the town: from the port to the farthest door of the town the feet can reach (40 m or more: the world's path
+      // is smoothed into straight legs, so the proof is the distance, not the number of corners)
+      const x = await E(() => { const v = __E.body(); const s = G.S.settlements.get(v.set); let far = null, fd = 0; for (const b of G.S.buildings.values()) { if (b.set !== v.set || !b.built) continue; const p = G.Vg.door(b); if (!G.W.reaches(v, p[0], p[1])) continue; const dd = G.dist(p[0], p[1], v.x, v.y); if (dd > fd && dd < 40) { fd = dd; far = p; } } return far ? { to: +(fd * 4).toFixed(0), w: __E.walkTo(far[0], far[1], 3600, true) } : null; });
+      ok('e1 atravessa a cidade a pé, entre os prédios reais', x && x.w.ok && !x.w.bad && !x.w.under && !x.w.camIn && x.to >= 40, JSON.stringify(x));
+      await shot('e1-atravessou');
+    } else ok('e1 o porto fica na costa e se chega a ele a pé', true, 'a maior cidade não tem cais (nada a provar)');
+    const q = await E(() => ({ qa: __E.qa(), err: JSON.stringify(G.modErr) }));
+    ok('e1 verificador', !q.qa.length && q.err === '{}', `${q.qa.slice(0, 3).join(' · ') || 'limpo'} · erros de módulo ${q.err}`);
+  }
+
+  }
+  if (await need('e2')) {
+  // ================================ e2: the real person ================================
+  const e2 = await E(() => {
+    __E.fresh('cidade'); const s = __E.town();
+    const v = __E.adults(s, o => o.mother && o.bio && o.bio.length >= 3).sort((a, b) => (b.kids.length - a.kids.length))[0];
+    const id0 = { id: v.id, name: v.name, mother: v.mother, father: v.father, partner: v.partner, kids: v.kids.slice(), home: v.home, set: v.set, role: v.role, age: v.age, bio: (v.bio || []).length, stories: G.Stories ? G.Stories.of(v.id).map(x => x.id).sort().join(',') : '' };
+    const inn = __E.enter(v); const inTask = v.task && v.task.type;
+    const st = G.Avatar.state(); const x0 = v.x, y0 = v.y;
+    G.Input3D.down.frente = true; G.Cam3D.yaw = 0.7; __E.f(140); G.Input3D.down.frente = false; __E.f(10);
+    const moved = G.dist(x0, y0, v.x, v.y) * 4; const at = { x: v.x, y: v.y };
+    const n = G.S.villagers.size; let same = 0; for (const o of G.S.villagers.values()) if (o.id === v.id) same++;
+    const left = __E.leave();
+    const o = G.S.villagers.get(id0.id);
+    // (the moment the god's view is back: the person is exactly where the body was left)
+    const atGod = G.dist(at.x, at.y, o.x, o.y) * 4;
+    const ai = __E.until(() => o.task && o.task.type !== 'avatar', 120) >= 0;
+    return { inn, inTask, moved, left, n, same, alive: !!o, same2: o === v, id0, after: o && { name: o.name, mother: o.mother, father: o.father, partner: o.partner, kids: o.kids.slice(), home: o.home, set: o.set, role: o.role, age: o.age, stories: G.Stories ? G.Stories.of(o.id).map(x => x.id).sort().join(',') : '' }, task: o && o.task && o.task.type, ai, sel: G.UI.selected && G.UI.selected.id === o.id, leftAt: atGod, bio: G.Life.bioList(o).slice(-1)[0], avatar: !!G.S.avatar, qa: __E.qa() };
+  });
+  ok('e2 encarna uma pessoa real', e2.inn && e2.inTask === 'avatar', `${e2.id0.name} #${e2.id0.id}, ${Math.floor(e2.id0.age)} anos, ${e2.id0.kids.length} filhos, ${e2.id0.bio} memórias`);
+  ok('e2 anda com ela', e2.moved > 6, `${e2.moved.toFixed(1)} m em 4,6 s`);
+  ok('e2 a mesma pessoa depois (id, família, casa, povo)', e2.alive && e2.same2 && e2.same === 1 && JSON.stringify([e2.id0.name, e2.id0.mother, e2.id0.father, e2.id0.partner, e2.id0.kids, e2.id0.home, e2.id0.set, e2.id0.role]) === JSON.stringify([e2.after.name, e2.after.mother, e2.after.father, e2.after.partner, e2.after.kids, e2.after.home, e2.after.set, e2.after.role]) && e2.after.age > e2.id0.age, `mesmo objeto: ${e2.same2}; idade ${e2.id0.age.toFixed(3)} → ${e2.after && e2.after.age.toFixed(3)}; histórias ${e2.id0.stories || '-'} → ${e2.after && e2.after.stories || '-'}`);
+  ok('e2 volta ao Modo Deus: exatamente onde foi deixada, selecionada; depois a IA de novo', e2.left && !e2.avatar && e2.ai && e2.sel && e2.leftAt < 0.05, `a ${e2.leftAt.toFixed(2)} m de onde o jogador a deixou quando o Modo Deus voltou; tarefa depois: ${e2.task}`);
+  ok('e2 a biografia lembra', !!e2.bio && /guiad/.test(e2.bio.txt), e2.bio ? e2.bio.txt : '-');
+  ok('e2 verificador', !e2.qa.length, e2.qa.slice(0, 3).join(' · ') || 'limpo');
+  await shot('e2-volta-deus');
+
+  }
+  if (await need('e3')) {
+  // ================================ e3: the world goes on ================================
+  const e3 = await E(() => {
+    const S = G.S; const s = __E.town(); const v = __E.adults(s)[0];
+    __E.enter(v);
+    const far = [...S.villagers.values()].filter(o => G.dist(o.x, o.y, v.x, v.y) > 40 && o.age > 10)[0];
+    const f0 = far && { id: far.id, x: far.x, y: far.y, age: far.age };
+    const t0 = { day: S.day, clock: S.clock, births: S.stats.births || 0, deaths: S.stats.deaths || 0, logN: S.logN, built: [...S.buildings.values()].filter(b => b.built).length };
+    let farNews = 0; const hook = (e) => { if (Number.isFinite(e.x) && G.dist(e.x, e.y, v.x, v.y) > 30) farNews++; }; G.Possess.onLog.push(hook);
+    v.energy = 5; G.Possess.sleep(v); const slept = v.sleeping;
+    // (a tired body sleeps; whenever it wakes it is put back to bed: the nights pass quickly, as they do for the player)
+    for (let k = 0; k < 600; k++) { if (!v.sleeping) { v.energy = 5; G.Possess.sleep(v); } G.Main.frameFor(100); }
+    G.Possess.onLog.splice(G.Possess.onLog.indexOf(hook), 1);
+    const awake = !v.sleeping || (G.Possess.wake(v), true);
+    const t1 = { day: S.day, clock: S.clock, births: S.stats.births || 0, deaths: S.stats.deaths || 0, logN: S.logN };
+    const entries = S.history.filter(e => e.n > t0.logN).map(e => e.n);
+    const fo = far && S.villagers.get(far.id) || (far && S.dead.get(far.id));
+    __E.leave();
+    const stillThere = entries.every(n => S.history.some(e => e.n === n));
+    return { slept, awake, t0, t1, farNews, entries: entries.length, stillThere, far: f0 && fo ? { moved: fo.dead ? 'morreu' : G.dist(f0.x, f0.y, fo.x, fo.y).toFixed(1), aged: fo.dead ? '-' : (fo.age - f0.age).toFixed(2) } : null, clockAfter: S.clock, qa: __E.qa() };
+  });
+  ok('e3 o tempo passa no corpo (dormir acelera)', e3.slept && e3.t1.clock > e3.t0.clock + 200, `relógio ${e3.t0.clock.toFixed(0)} → ${e3.t1.clock.toFixed(0)} s; dia ${e3.t0.day} → ${e3.t1.day}`);
+  ok('e3 longe dali o mundo acontece', e3.entries > 0 && (e3.t1.births > e3.t0.births || e3.t1.deaths > e3.t0.deaths) && e3.far && e3.far.moved !== '0.0', `${e3.entries} linhas novas na crônica (${e3.farNews} a mais de 120 m); nascimentos ${e3.t0.births}→${e3.t1.births}, mortes ${e3.t0.deaths}→${e3.t1.deaths}; alguém a 160 m andou ${e3.far && e3.far.moved} casas e envelheceu ${e3.far && e3.far.aged}`);
+  ok('e3 de volta a Deus, nada desfeito', e3.stillThere && e3.clockAfter >= e3.t1.clock, `crônica intacta; relógio ${e3.clockAfter.toFixed(0)}`);
+  ok('e3 verificador', !e3.qa.length, e3.qa.slice(0, 3).join(' · ') || 'limpo');
+
+  }
+  if (await need('e4')) {
+  // ================================ e4: another person ================================
+  const e4 = await E(() => {
+    const S = G.S; const s = __E.town(); const [a, b] = __E.adults(s);
+    const stA = G.Stories ? G.Stories.of(a.id).map(x => x.id).join(',') : '';
+    __E.enter(a); __E.f(30); __E.leave();
+    const aiA = __E.until(() => a.task && a.task.type !== 'avatar', 120) >= 0;
+    __E.enter(b);
+    const bOk = S.avatar && S.avatar.id === b.id && b.task.type === 'avatar';
+    const aOk = S.villagers.get(a.id) === a && a.task && a.task.type !== 'avatar';
+    // from inside: B → C (the card's button)
+    const c = __E.adults(s).find(o => o.id !== a.id && o.id !== b.id);
+    const sw = G.Modes.switchTo(c); __E.f(40);
+    const cOk = S.avatar && S.avatar.id === c.id && c.task.type === 'avatar' && (!b.task || b.task.type !== 'avatar');
+    const aiB = __E.until(() => b.task && b.task.type !== 'avatar', 120) >= 0;
+    __E.leave();
+    const ids = new Set(); let dup = 0; for (const o of S.villagers.values()) { if (ids.has(o.id)) dup++; ids.add(o.id); }
+    let marks = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'avatar') marks++;
+    return { aiA, bOk, aOk, sw, cOk, aiB, dup, marks, stA, stA2: G.Stories ? G.Stories.of(a.id).map(x => x.id).join(',') : '', bioA: G.Life.bioList(a).slice(-1)[0].txt, bioB: G.Life.bioList(b).slice(-1)[0].txt, qa: __E.qa(), names: [a.name, b.name, c.name] };
+  });
+  ok('e4 A, Deus, B: os dois existem, a IA de A voltou, B tem o corpo', e4.aiA && e4.bOk && e4.aOk, `${e4.names[0]} → ${e4.names[1]}`);
+  ok('e4 de dentro, B → C: a IA de B volta, C tem o corpo', e4.sw && e4.cOk && e4.aiB, `${e4.names[1]} → ${e4.names[2]}`);
+  ok('e4 ninguém duplicado, nenhuma marca sobrando, histórias intactas', !e4.dup && !e4.marks && e4.stA === e4.stA2, `duplicados ${e4.dup}, marcas ${e4.marks}; histórias de A: ${e4.stA || '-'} → ${e4.stA2 || '-'}; bio A: ${e4.bioA}`);
+  ok('e4 verificador', !e4.qa.length, e4.qa.slice(0, 3).join(' · ') || 'limpo');
+
+  }
+  if (await need('e5')) {
+  // ================================ e5: death ================================
+  const e5 = await E(() => {
+    const out = {};
+    // (and a fall of 40 m: the body lifted over its ground, as off the edge of a high drop — the controller's own landing hurts)
+    for (const [k, how] of [['fogo', v => G.Vg.damage(v, 999, 'fire', false)], ['fome', v => { v.hunger = 100; v.hp = 0.6; }], ['queda', () => { G.Avatar.state().Y += 40; }]]) {
+      // (after a load the world is a new object: always G.S, never a copy kept from before)
+      const S = G.S; const s = __E.town();
+      const v = __E.adults(s)[0]; const id = v.id; __E.enter(v);
+      how(v);
+      const seq = []; for (let i = 0; i < 900; i++) { G.Main.frameFor(33); if (seq[seq.length - 1] !== G.Modes.state) seq.push(G.Modes.state); if (G.Modes.state === 'GOD' && i > 10) break; }
+      const rec = S.dead.get(id);
+      const line = S.history.slice(-8).find(e => e.txt.includes(rec ? rec.name : '?') && /deus vivendo/.test(e.txt));
+      const sv = G.Save.serialize(); let loaded = true; try { G.Save.apply(JSON.parse(sv)); } catch (e) { loaded = false; }
+      __E.base = new Set(QA.check().filter(e => e.sev <= 3).map(__E.qk));
+      out[k] = { seq, dead: !!rec && !S.villagers.has(id), cause: rec && rec.cause, avatar: !!S.avatar, mode: G.Modes.state, bio: rec && rec.bio ? G.Life.bioLine(rec, rec.bio[rec.bio.length - 1]) : null, line: line ? line.txt : null, loaded, deadAfter: !!G.S.dead.get(id), avAfter: !!G.S.avatar };
+    }
+    out.qa = __E.qa(); out.err = JSON.stringify(G.modErr);
+    return out;
+  });
+  for (const k of ['fogo', 'fome', 'queda']) { const r = e5[k]; const by = k === 'fogo' ? 'pelo fogo' : k === 'fome' ? 'pela fome' : 'numa queda'; ok(`e5 morte ${by}: morre de verdade, o deus volta`, r.dead && !r.avatar && r.mode === 'GOD' && r.seq.join('>').includes('DYING>TO_GOD>GOD') && (k !== 'queda' || r.cause === 'queda'), `${r.seq.join(' > ')} · causa ${r.cause}`); ok(`e5 morte ${by}: biografia e crônica contam; o save carrega`, !!r.bio && !!r.line && r.loaded && r.deadAfter && !r.avAfter, `${r.bio} · ${r.line}`); }
+  ok('e5 verificador', !e5.qa.length && e5.err === '{}', `${e5.qa.slice(0, 3).join(' · ') || 'limpo'} · erros de módulo ${e5.err}`);
+  await shot('e5-depois-da-morte');
+
+  }
+  if (await need('e6')) {
+  // ================================ e6: the terrain ================================
+  const e6 = await E(() => {
+    const S = G.S; const W = G.W; const N = G.N; const T = G.T;
+    const s = __E.town(); const v = __E.adults(s)[0]; __E.enter(v); const st = G.Avatar.state();
+    const reach = (x, y) => W.walkableXY(x, y) && W.reachesTown(v, s) !== undefined && W.canWalk ? true : W.walkableXY(x, y);
+    const near = (f, R) => { let best = null, bd = 1e9; for (let y = 2; y < N - 2; y++) for (let x = 2; x < N - 2; x++) { const i = y * N + x; if (!W.walkable(i) || !f(i, x, y)) continue; if (G.W.reaches && !G.W.reaches(v, x + 0.5, y + 0.5)) continue; const d = G.dist2(x, y, v.x, v.y); if (d < bd && d < (R || 60) * (R || 60)) { bd = d; best = [x + 0.5, y + 0.5]; } } return best; };
+    const trees = (x, y) => { let n = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (W.inb(x + dx, y + dy) && S.treeAt[(y + dy) * N + x + dx]) n++; return n; };
+    const sea = (x, y) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => W.inb(x + a, y + b) && S.type[(y + b) * N + x + a] <= T.SEA && !(S.dry && S.dry[(y + b) * N + x + a]));
+    const blockedN = (x, y) => [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b]) => W.inb(x + a, y + b) && W.blocked((y + b) * N + x + a)).length;
+    const places = {
+      plano: near((i, x, y) => S.slope[i] < 0.3 && !trees(x, y) && !blockedN(x, y) && S.type[i] >= T.GRASS),
+      ladeira: near(i => S.slope[i] > 1.1 && S.type[i] >= T.SAND),
+      estrada: near(i => S.road[i] > 0 && S.type[i] !== T.RIVER),
+      bosque: near((i, x, y) => trees(x, y) >= 6, 90),
+      costa: near((i, x, y) => sea(x, y) && S.type[i] >= T.SAND, 90),
+      'entre prédios': near((i, x, y) => blockedN(x, y) >= 2),
+    };
+    const out = {};
+    for (const k in places) {
+      const p = places[k]; if (!p) { out[k] = null; continue; }
+      G.Avatar.place(p[0], p[1]); __E.f(6);
+      let bad = 0, under = 0, high = 0, camIn = 0, camLow = 0, jumps = 0, maxUp = 0, wet = 0;
+      const dirs = k === 'costa' ? (() => { const x = Math.floor(p[0]), y = Math.floor(p[1]); for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (W.inb(x + a, y + b) && S.type[(y + b) * N + x + a] <= T.SEA) return [Math.atan2(b, a), Math.atan2(b, a) + 0.4, Math.atan2(b, a) - 0.4]; return [0]; })() : [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+      for (const yaw of dirs) {
+        G.Cam3D.yaw = yaw; G.Input3D.down.frente = true;
+        for (let i = 0; i < 45; i++) {
+          if (i === 20) { G.Avatar.input.jump = true; jumps++; }
+          G.Main.frameFor(33);
+          const fl = G.Avatar.floorAt(st.X, st.Z); maxUp = Math.max(maxUp, st.Y - fl);
+          if (!W.walkableXY(v.x, v.y)) bad++; if (st.Y < fl - 0.05) under++; if (st.Y > fl + 1.6) high++;
+          if (S.type[W.idx(v.x, v.y)] <= T.SEA && !(S.dry && S.dry[W.idx(v.x, v.y)])) wet++;
+          const c = G.Realm.camera().position; if (G.Cam3D.solid(c.x, c.y, c.z)) camIn++; if (c.y < G.W.hAt(c.x / 4, c.z / 4) * 1.5) camLow++;
+        }
+      }
+      G.Input3D.down.frente = false; __E.f(10);
+      out[k] = { at: p.map(n => +n.toFixed(1)), bad, under, high, camIn, camLow, maxUp: +maxUp.toFixed(2), wet, still: st.speed };
+    }
+    // pressed against a wall: never stuck — turning away, the body walks
+    const pb = places['entre prédios']; let unstuck = null;
+    if (pb) {
+      G.Avatar.place(pb[0], pb[1]); __E.f(6); const x = Math.floor(pb[0]), y = Math.floor(pb[1]);
+      const d = [[1, 0], [-1, 0], [0, 1], [0, -1]].find(([a, b]) => W.inb(x + a, y + b) && W.blocked((y + b) * N + x + a));
+      G.Cam3D.yaw = Math.atan2(d[1], d[0]); G.Input3D.down.frente = true; __E.f(60);
+      const p0 = [v.x, v.y]; const inWall = !W.walkableXY(v.x, v.y);
+      G.Cam3D.yaw += Math.PI; __E.f(40); G.Input3D.down.frente = false; __E.f(6);
+      unstuck = { inWall, away: G.dist(p0[0], p0[1], v.x, v.y) * 4 };
+    }
+    return { out, unstuck, qa: __E.qa() };
+  });
+  for (const k in e6.out) { const r = e6.out[k]; if (!r) { ok(`e6 terreno: ${k}`, true, 'não há este tipo de lugar por perto (nada a provar)'); continue; } ok(`e6 terreno: ${k}`, !r.bad && !r.under && !r.high && !r.camIn && !r.camLow && !r.wet && r.maxUp > 0.4, JSON.stringify(r)); }
+  ok('e6 encostado num prédio, nunca preso', e6.unstuck && !e6.unstuck.inWall && e6.unstuck.away > 1.5, JSON.stringify(e6.unstuck));
+  ok('e6 verificador', !e6.qa.length, e6.qa.slice(0, 3).join(' · ') || 'limpo');
+  await shot('e6-terreno');
+
+  }
+  if (await need('e7')) {
+  // ================================ e7: save and load A–E ================================
+  const e7 = await E(() => {
+    const S = G.S; const Sv = G.Save; const out = {};
+    __E.leave();
+    const s = __E.town(); const v = __E.adults(s)[0]; const id = v.id;
+    const load = str => { Sv.apply(JSON.parse(str)); __E.f(4); };
+    // A) before
+    const A = Sv.serialize(); load(A); out.A = { avatar: !!G.S.avatar, mode: G.Modes.state };
+    // B) while incarnated: it opens incarnated
+    __E.enter(G.S.villagers.get(id)); const b0 = G.S.villagers.get(id); const pB = [b0.x, b0.y];
+    const B = Sv.serialize(); load(B); const b1 = G.S.villagers.get(id);
+    out.B = { avatar: G.S.avatar && G.S.avatar.id, task: b1 && b1.task && b1.task.type, mode: G.Modes.state, at: b1 ? G.dist(pB[0], pB[1], b1.x, b1.y) : -1, hud: (document.querySelector('#inc-hud .ih-name') || {}).textContent };
+    // D) after walking far
+    const w = (() => { const x0 = b1.x, y0 = b1.y; G.Input3D.down.frente = true; G.Input3D.down.correr = true; G.Cam3D.yaw = 1.1; __E.f(240); G.Input3D.down.frente = false; G.Input3D.down.correr = false; __E.f(8); return G.dist(x0, y0, b1.x, b1.y) * 4; })();
+    const pD = [b1.x, b1.y]; const D = Sv.serialize(); load(D); const d1 = G.S.villagers.get(id);
+    out.D = { walked: w, at: d1 ? G.dist(pD[0], pD[1], d1.x, d1.y) : -1, avatar: G.S.avatar && G.S.avatar.id, mode: G.Modes.state };
+    // C) after leaving
+    __E.leave(); const C = Sv.serialize(); load(C); const c1 = G.S.villagers.get(id);
+    out.C = { avatar: !!G.S.avatar, mode: G.Modes.state, task: c1 && c1.task ? c1.task.type : null };
+    // E) after the body's death
+    __E.enter(c1); G.Vg.damage(c1, 999, 'fire', false); __E.until(() => G.Modes.state === 'GOD', 400);
+    const Es = Sv.serialize(); load(Es); out.E = { avatar: !!G.S.avatar, dead: !!G.S.dead.get(id), alive: G.S.villagers.has(id), mode: G.Modes.state };
+    // a damaged save: the body's record pointing at nobody, garbage in its lists — loads clean, in the god's eyes
+    const o = JSON.parse(B); o.avatar = { id: 987654, kind: 'dragao', asks: 'x', deeds: { conversa: 'muitas' }, seen: [null, 3], met: ['a'] };
+    let dmg = true; try { G.Save.apply(o); __E.f(4); } catch (e) { dmg = false; } out.dmg = { loaded: dmg, avatar: !!G.S.avatar, mode: G.Modes.state };
+    const o2 = JSON.parse(B); o2.avatar.asks = [{ txt: 5 }, null, { type: 'muster', txt: 'ok' }]; o2.avatar.deeds = { lenha: 3, bogus: 9, entrega: NaN };
+    G.Save.apply(o2); __E.f(4); out.dmg2 = { avatar: G.S.avatar && G.S.avatar.id, asks: G.S.avatar && G.S.avatar.asks.length, deeds: G.S.avatar && JSON.stringify(G.S.avatar.deeds), mode: G.Modes.state };
+    __E.base = new Set(QA.check().filter(e => e.sev <= 3).map(__E.qk));
+    __E.leave();
+    out.qa = __E.qa();
+    return out;
+  });
+  ok('e7 A: save antes de encarnar', !e7.A.avatar && e7.A.mode === 'GOD', JSON.stringify(e7.A));
+  ok('e7 B: save encarnado volta encarnado, no mesmo lugar', !!e7.B.avatar && e7.B.task === 'avatar' && e7.B.mode === 'INC' && e7.B.at < 0.01 && !!e7.B.hud, JSON.stringify(e7.B));
+  ok('e7 C: save depois de desencarnar', !e7.C.avatar && e7.C.mode === 'GOD' && e7.C.task !== 'avatar', JSON.stringify(e7.C));
+  ok('e7 D: depois de andar muito, a pessoa está onde ficou', e7.D.walked > 15 && e7.D.at < 0.01 && !!e7.D.avatar && e7.D.mode === 'INC', JSON.stringify(e7.D));
+  ok('e7 E: depois da morte do corpo', !e7.E.avatar && e7.E.dead && !e7.E.alive && e7.E.mode === 'GOD', JSON.stringify(e7.E));
+  ok('e7 save danificado: carrega limpo', e7.dmg.loaded && !e7.dmg.avatar && e7.dmg.mode === 'GOD' && e7.dmg2.asks === 1 && e7.dmg2.deeds === '{"lenha":3}', `${JSON.stringify(e7.dmg)} · ${JSON.stringify(e7.dmg2)}`);
+  ok('e7 verificador', !e7.qa.length, e7.qa.slice(0, 3).join(' · ') || 'limpo');
+
+  }
+  if (await need('e9')) {
+  // ================================ e9: the bad cases, and the hands changing the world ================================
+  const e9 = await E(() => {
+    const S = G.S; const out = {}; const s = __E.town();
+    // captured by enemies (the war's own capture): the body is the captor's now
+    { const v = __E.adults(s)[0]; __E.enter(v); const foe = __E.adults(null, o => o.set !== v.set)[0] || __E.adults(s)[1]; G.War.capture(v, foe, null); __E.until(() => G.Modes.state === 'GOD', 400); out.capture = { avatar: !!S.avatar, task: v.task && v.task.type, captive: !!v.captive, mode: G.Modes.state }; }
+    // taken aboard a ship (Naval.board): the incarnation ends with it
+    { const v = __E.adults(s)[0]; const sh = S.ships[0]; if (sh) { __E.enter(v); G.Naval.board(v, sh); const k = __E.until(() => !S.avatar, 60); const aboard = v.aboard === sh.id; __E.until(() => G.Modes.state === 'GOD', 400); out.ship = { released: k >= 0, avatar: !!S.avatar, aboard, mode: G.Modes.state }; if (v.aboard) G.Naval.unboard(v); } else out.ship = null; }
+    // a building rises where the body stands: the world moves the body; the body follows the world
+    { const v = __E.adults(s)[0]; __E.enter(v); __E.f(4); const x = Math.floor(v.x), y = Math.floor(v.y);
+      const b = G.Village.addBuilding('house', x, y, v.set, true); if (b) G.W.touchWalk && G.W.touchWalk(); __E.f(60, 50);
+      out.building = { made: !!b, onIt: b ? (v.x >= b.x && v.x < b.x + b.w && v.y >= b.y && v.y < b.y + b.h && b.blocks) : null, walk: G.W.walkableXY(v.x, v.y), avatar: S.avatar && S.avatar.id === v.id };
+      // the ground sinks into the sea under the feet (the god's own reshaping): the water takes the body
+      const L = G.Powers.reshape; let sank = false; if (L) { L(Math.floor(v.x), Math.floor(v.y), 2.5, -1); sank = true; } __E.until(() => G.Modes.state === 'GOD', 400, 50);
+      out.sink = { sank, avatar: !!S.avatar, alive: S.villagers.has(v.id), task: S.villagers.has(v.id) && v.task ? v.task.type : null, mode: G.Modes.state };
+    }
+    // the war calls, a scene wants the body: asked, not taken
+    { const v = __E.adults(s, o => !o.inside)[2] || __E.adults(s)[0]; __E.enter(v);
+      G.Vg.setTask(v, { type: 'muster', pri: 6 }); G.Vg.give(v, { type: 'fire', pri: 4 }); __E.f(4);
+      const sc = G.Scene && G.Scene.list ? null : null; void sc;
+      const asks = G.Possess.calls().map(q => q.type); const kept = v.task && v.task.type === 'avatar';
+      out.calls = { asks, kept, hud: (document.querySelector('#inc-hud .ih-calls') || {}).textContent };
+      // the hands: a tree felled with the woodcutters' felling, its wood carried to the people's store
+      const tr = [...S.trees.values()].filter(t => G.Nature.isChoppable(t) && t.stage === 'grow' && !t.claim && G.W.reaches(v, t.x, t.y)).sort((a, b) => G.dist2(a.x, a.y, v.x, v.y) - G.dist2(b.x, b.y, v.x, v.y))[0];
+      // (the body brought within arm's reach, as a player walks up to it: on the side the world's path arrives from,
+      // a metre and a little from the thing — or on the spot, for a door)
+      const near = (x, y, at) => { const p = G.W.findPath(v.x, v.y, x, y, true, 30000); if (!p) return false; const e = p.length ? p[p.length - 1] : [x, y]; let px = e[0], py = e[1]; // (an empty path: already there)
+        if (!at) { const d = Math.hypot(e[0] - x, e[1] - y) || 1; for (const r of [0.3, 0.4, 0.22, 0.5]) { const qx = x + (e[0] - x) / d * r, qy = y + (e[1] - y) / d * r; if (G.W.walkableXY(qx, qy)) { px = qx; py = qy; break; } } } else { px = x; py = y; }
+        G.Avatar.place(px, py); __E.f(6); G.Avatar.state().yaw = Math.atan2(y - v.y, x - v.x); return true; };
+      const R = {};
+      if (tr && near(tr.x, tr.y)) {
+        v.carry = null; // (empty hands for the axe: a woodcutter taken with a full load is told "your hands are full")
+        const chop0 = tr.chop; let swings = 0;
+        // (the very tree: the provider's own target, so a passer-by does not take the prompt in the test)
+        const T = { id: 'arvore', t: { tr, X: tr.x * 4, Z: tr.y * 4 } };
+        for (let k = 0; k < 20 && tr.stage === 'grow'; k++) { const r = G.Interact.run(T); if (!r || !r.ok) { R.why = r && r.msg; break; } swings++; __E.until(() => !G.Avatar.busy(), 120); }
+        __E.until(() => tr.stage === 'log', 300, 50);
+        for (let k = 0; k < 4 && !v.carry && tr.stage === 'log'; k++) { G.Interact.run(T); __E.until(() => !G.Avatar.busy(), 120); }
+        R.tree = { swings, chop0, felled: tr.stage === 'log' || tr.stage === 'stump', carry: v.carry ? v.carry.k + ':' + v.carry.n : null, why: R.why || null };
+        const sh = G.Village.nearestDropoff(v.x, v.y, v.set); const stock0 = G.Fac.stockV(v).wood;
+        if (sh && v.carry) { const d = G.Vg.door(sh); near(d[0], d[1], true); G.Interact.run({ id: 'porta', t: { b: sh, X: d[0] * 4, Z: d[1] * 4 } }); __E.until(() => !G.Avatar.busy(), 120); }
+        R.store = { stock0, stock1: G.Fac.stockV(v).wood, carry: !!v.carry };
+        // a meal at the store: the stock gives it, the hunger goes
+        const sh2 = G.Village.nearestDropoff(v.x, v.y, v.set); const d2 = sh2 && G.Vg.door(sh2); if (d2) near(d2[0], d2[1], true);
+        v.hunger = 70; const f0 = G.Fac.stockV(v).food; let ate = false;
+        if (sh2) { const r = G.Interact.run({ id: 'porta', t: { b: sh2, X: d2[0] * 4, Z: d2[1] * 4 } }); __E.until(() => !G.Avatar.busy(), 160); ate = v.hunger < 70; R.mealMsg = r && r.msg; }
+        R.meal = { ate, food: [f0, G.Fac.stockV(v).food], hunger: v.hunger };
+      }
+      // berries
+      const bu = [...S.bushes.values()].filter(b => b.berries >= 2 && G.W.reaches(v, b.x, b.y)).sort((a, b) => G.dist2(a.x, a.y, v.x, v.y) - G.dist2(b.x, b.y, v.x, v.y))[0];
+      if (bu && near(bu.x, bu.y)) { const n0 = bu.berries; v.hunger = 60; const r = G.Interact.run({ id: 'arbusto', t: { bu, X: bu.x * 4, Z: bu.y * 4 } }); __E.until(() => !G.Avatar.busy(), 160); R.berries = { before: n0, after: bu.berries, hunger: v.hunger, msg: r && r.msg }; }
+      // a rock broken the quarrymen's way: its stone leaves it, into the arms; then carried to a building going up (a well
+      // the town plans by its own rule, if none of its works wants stone): the work's need falls by what was brought
+      { v.carry = null; // (empty hands for the rock)
+        const ro = [...S.rocks.values()].filter(r => r.stone >= 2 && !r.claim && G.W.reaches(v, r.x, r.y)).sort((a, b) => G.dist2(a.x, a.y, v.x, v.y) - G.dist2(b.x, b.y, v.x, v.y))[0];
+        if (ro && near(ro.x, ro.y)) { const s0 = ro.stone; const r = G.Interact.run({ id: 'pedra', t: { r: ro, X: ro.x * 4, Z: ro.y * 4 } }); __E.until(() => !G.Avatar.busy(), 200); R.rock = { before: s0, after: S.rocks.has(ro.id) ? ro.stone : 0, carry: v.carry ? v.carry.k + ':' + v.carry.n : null, msg: r && r.msg }; }
+        if (v.carry && v.carry.k === 'stone') {
+          const work = b => !b.built && b.need && b.need.stone > 0 && b.set === v.set && G.W.reaches(v, ...G.Vg.door(b));
+          const set = S.settlements.get(v.set); const ob = [...S.buildings.values()].filter(work)[0] || (set && G.Village.startProject(set, 'well'));
+          if (ob && work(ob)) { const d = G.Vg.door(ob); near(d[0], d[1], true); const cx = G.clamp(v.x, ob.x, ob.x + ob.w), cy = G.clamp(v.y, ob.y, ob.y + ob.h); G.Avatar.state().yaw = Math.atan2(cy - v.y, cx - v.x);
+            const n0 = ob.need.stone; const r = G.Interact.run({ id: 'obra', t: { b: ob, X: cx * 4, Z: cy * 4 } }); __E.until(() => !G.Avatar.busy(), 160);
+            R.obra = { type: ob.type, before: n0, after: ob.need.stone, carry: !!v.carry, msg: r && r.msg };
+          } else R.obra = { none: true };
+        }
+      }
+      // a prayer at the temple of the body's town: the devotion grows
+      { const tp = [...S.buildings.values()].filter(b => b.type === 'temple' && b.built && b.set === v.set && G.W.reaches(v, ...G.Vg.door(b)))[0];
+        if (tp) { const d = G.Vg.door(tp); near(d[0], d[1], true); v.devotion = Math.min(v.devotion, 80); const d0 = v.devotion; const r = G.Interact.run({ id: 'porta', t: { b: tp, X: d[0] * 4, Z: d[1] * 4 } }); __E.until(() => !G.Avatar.busy(), 200); R.temple = { before: d0, after: v.devotion, msg: r && r.msg }; } else R.temple = null; }
+      // home through its door, tired: the body goes in and lies down (the world's sleep), and gets up and out by the door again
+      { const h = S.buildings.get(v.home);
+        if (h && h.built && G.W.reaches(v, ...G.Vg.door(h))) { const d = G.Vg.door(h); near(d[0], d[1], true); v.energy = 30; const r = G.Interact.run({ id: 'porta', t: { b: h, X: d[0] * 4, Z: d[1] * 4 } }); __E.until(() => !G.Avatar.busy(), 120);
+          R.home = { inside: v.inside === h.id, sleeping: !!v.sleeping, msg: r && r.msg }; G.Possess.wake(v); __E.f(6); R.home.out = !v.inside && !v.sleeping && G.W.walkableXY(v.x, v.y); } else R.home = null; }
+      // a talk: up to someone, E — the card is theirs, and they answer with a line over their head (seen by the god too)
+      { const o = [...S.villagers.values()].filter(x => x.id !== v.id && !x.inside && !x.sleeping && x.age >= 6 && !x.aboard && G.W.reaches(v, x.x, x.y)).sort((a, b) => G.dist2(a.x, a.y, v.x, v.y) - G.dist2(b.x, b.y, v.x, v.y))[0];
+        if (o) { near(o.x, o.y); G.Avatar.state().yaw = Math.atan2(o.y - v.y, o.x - v.x); __E.f(8); const b = G.Interact.best(); G.IncUI.use(); __E.f(4);
+          const card = document.querySelector('#inc-card'); const said = G.Talk && G.Talk.list.find(t => t.id === (b && b.t.o ? b.t.o.id : -1));
+          R.talk = { best: b && b.id, label: b && b.label, card: card && !card.classList.contains('hidden') ? (card.querySelector('h3') || {}).textContent : null, said: said ? said.txt : null, name: b && b.t.o ? b.t.o.name : null };
+          G.IncUI.closeAll(); G.Modes.setPanel(null); } }
+      // a scene that wants the body is refused (it is not taken from the player)
+      if (G.Scene && G.Scene.H && G.Scene.H.take) R.scene = G.Scene.H.take({ id: -1, taken: new Map() }, v) === false;
+      out.hands = R; out.deeds = Object.assign({}, S.avatar ? S.avatar.deeds : {});
+      __E.leave(); out.bio = G.Life.bioList(v).slice(-1)[0].txt;
+    }
+    out.qa = __E.qa(); out.err = JSON.stringify(G.modErr);
+    return out;
+  });
+  ok('e9 capturado por inimigos: o corpo vai com o mundo', e9.capture && !e9.capture.avatar && e9.capture.captive && e9.capture.mode === 'GOD', JSON.stringify(e9.capture));
+  ok('e9 levado a um navio: a encarnação acaba', !e9.ship || (e9.ship.released && !e9.ship.avatar && e9.ship.aboard && e9.ship.mode === 'GOD'), JSON.stringify(e9.ship));
+  ok('e9 um prédio nasce em cima: o mundo move o corpo, o corpo segue', e9.building.made && !e9.building.onIt && e9.building.walk && e9.building.avatar, JSON.stringify(e9.building));
+  ok('e9 a terra afunda sob os pés: a água leva o corpo, o deus volta', e9.sink.sank && !e9.sink.avatar && e9.sink.mode === 'GOD', JSON.stringify(e9.sink));
+  ok('e9 a guerra e o fogo chamam: viram chamados, o corpo fica', e9.calls.kept && e9.calls.asks.includes('muster') && e9.calls.asks.includes('fire') && /armas/.test(e9.calls.hud || ''), JSON.stringify(e9.calls));
+  const H = e9.hands;
+  ok('e9 mãos: a árvore cai pelo corte, a lenha vai para os braços', H.tree && H.tree.felled && /^wood:/.test(H.tree.carry || ''), JSON.stringify(H.tree));
+  ok('e9 mãos: a lenha entra no estoque do povo', H.store && H.store.stock1 > H.store.stock0 && !H.store.carry, JSON.stringify(H.store));
+  ok('e9 mãos: comer no armazém tira do estoque e mata a fome', H.meal && H.meal.ate && H.meal.food[1] < H.meal.food[0], JSON.stringify(H.meal));
+  ok('e9 mãos: as frutas saem do arbusto', !H.berries || (H.berries.after < H.berries.before), JSON.stringify(H.berries));
+  ok('e9 mãos: a pedra quebrada vai para os braços', H.rock && H.rock.after < H.rock.before && /^stone:/.test(H.rock.carry || ''), JSON.stringify(H.rock));
+  ok('e9 mãos: a pedra levada à obra entra nela', H.obra && !H.obra.none && H.obra.after < H.obra.before && !H.obra.carry, JSON.stringify(H.obra));
+  ok('e9 mãos: rezar no templo', H.temple === null || H.temple.after > H.temple.before, H.temple === null ? 'a cidade não tem templo ao alcance (nada a provar)' : JSON.stringify(H.temple));
+  ok('e9 mãos: em casa pela porta, dorme; acorda e sai pela porta', H.home === null || (H.home.inside && H.home.sleeping && H.home.out), H.home === null ? 'sem casa ao alcance (nada a provar)' : JSON.stringify(H.home));
+  ok('e9 conversar: a ficha é da pessoa, ela responde (o balão também no Modo Deus)', H.talk && H.talk.best === 'pessoa' && H.talk.card && H.talk.card.startsWith(H.talk.name) && !!H.talk.said, JSON.stringify(H.talk));
+  ok('e9 uma cena não toma o corpo', H.scene !== false, String(H.scene));
+  ok('e9 os feitos entram na biografia', /cortou 1 árvore/.test(e9.bio) && /levou ao armazém/.test(e9.bio) && /conversou com 1 pessoa/.test(e9.bio) && /quebrou \d pedras?/.test(e9.bio) && /levou às obras 1 carga/.test(e9.bio) && (!H.temple || /rezou 1 vez/.test(e9.bio)) && (!H.home || /dormiu 1 noite/.test(e9.bio)), `${JSON.stringify(e9.deeds)} · ${e9.bio}`);
+  ok('e9 verificador', !e9.qa.length && e9.err === '{}', `${e9.qa.slice(0, 3).join(' · ') || 'limpo'} · ${e9.err}`);
+
+  }
+  if (await need('e10')) {
+  // ================================ e10: the interface ================================
+  const e10 = await E(() => {
+    const S = G.S; const s = __E.town(); const out = {};
+    // (at night everyone is in bed: the god waits for the morning, at 8×)
+    if (!__E.adults(s, o => o.mother).length) { G.UI.setSpeed(8); __E.until(() => __E.adults(s, o => o.mother).length > 0, 2000, 100); G.UI.setSpeed(1); }
+    const v = __E.adults(s, o => o.mother)[0]; G.UI.select(v); __E.f(4);
+    const btn = document.querySelector('#inspector button[data-act=incarnate]'); out.btn = btn ? !btn.disabled : null;
+    const baby = [...S.villagers.values()].find(o => o.age < 3); if (baby) { G.UI.select(baby); __E.f(4); const b2 = document.querySelector('#inspector button[data-act=incarnate]'); out.baby = b2 ? { disabled: b2.disabled, why: b2.title } : null; }
+    G.UI.select(v); __E.f(4); document.querySelector('#inspector button[data-act=incarnate]').click(); __E.until(() => G.Modes.state === 'INC', 300);
+    out.clicked = G.Modes.state === 'INC' && S.avatar && S.avatar.id === v.id;
+    out.hud = document.querySelector('#inc-hud .ih-name').textContent;
+    // the card of the mother, as the world knows her
+    const m = G.person(v.mother); const card = G.Interact.personCard(v, null); out.card = { parents: card.parents.join(' e '), mother: m ? m.name : null };
+    // the menu: Esc opens it, the world pauses; the keys can be changed
+    const c0 = S.clock; window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); __E.f(10); out.menu = { open: G.Modes.menuOpen(), paused: S.clock === c0 };
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); __E.f(4); out.menu.closed = !G.Modes.menuOpen();
+    G.Input3D.rebind('pular', 'j'); out.rebind = G.Input3D.actionOf('j') === 'pular' && G.Input3D.actionOf(' ') !== 'pular'; G.Input3D.resetBinds();
+    // the key G goes back up
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'g' })); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'g' })); __E.until(() => G.Modes.state === 'GOD', 400); out.gkey = G.Modes.state === 'GOD';
+    // the key I, in the god's view: someone near the middle of the screen
+    G.UI.select(null); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'i' })); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'i' })); out.ikey = G.Modes.state !== 'GOD'; __E.until(() => G.Modes.state === 'INC', 300);
+    // the fingers: a thumb on the left half pushed up walks the body forward; the on-screen buttons show
+    { const cv = G.Realm.canvas(); const b = G.Possess.body(); const x0 = b.x, y0 = b.y;
+      const T = (id, x, y) => new Touch({ identifier: id, target: cv, clientX: x, clientY: y });
+      cv.dispatchEvent(new TouchEvent('touchstart', { changedTouches: [T(1, 200, 450)], touches: [T(1, 200, 450)], cancelable: true, bubbles: true }));
+      cv.dispatchEvent(new TouchEvent('touchmove', { changedTouches: [T(1, 200, 380)], touches: [T(1, 200, 380)], cancelable: true, bubbles: true }));
+      __E.f(60);
+      cv.dispatchEvent(new TouchEvent('touchend', { changedTouches: [T(1, 200, 380)], touches: [], cancelable: true, bubbles: true })); __E.f(4);
+      const tb = document.querySelector('#inc-hud .ih-touch');
+      out.touch = { walked: +(G.dist(x0, y0, b.x, b.y) * 4).toFixed(1), buttons: !!tb && !tb.classList.contains('hidden') };
+    }
+    __E.leave();
+    return out;
+  });
+  ok('e10 o botão Encarnar no painel da pessoa (e o motivo quando não pode)', e10.btn === true && (!e10.baby || (e10.baby.disabled && /pequen/.test(e10.baby.why))) && e10.clicked, JSON.stringify({ btn: e10.btn, baby: e10.baby, clicked: e10.clicked, hud: e10.hud }));
+  ok('e10 a ficha diz quem são os pais (dos registros do mundo)', e10.card.mother && e10.card.parents.includes(e10.card.mother), JSON.stringify(e10.card));
+  ok('e10 Esc abre o menu e pausa; as teclas mudam; G volta; I encarna', e10.menu.open && e10.menu.paused && e10.menu.closed && e10.rebind && e10.gkey && e10.ikey, JSON.stringify({ menu: e10.menu, rebind: e10.rebind, g: e10.gkey, i: e10.ikey }));
+  ok('e10 no toque: o polegar à esquerda anda, os botões aparecem', e10.touch.walked > 2 && e10.touch.buttons, JSON.stringify(e10.touch));
+
+  }
+  if (await need('e8')) {
+  // ================================ e8: stress (last: it is the longest) ================================
+  const e8 = await E(() => {
+    __E.fresh('metropole'); const S = G.S;
+    const s = __E.town(); const pool = __E.adults(null).filter((o, i) => i % 7 === 0).slice(0, 40);
+    const roots = () => document.querySelectorAll('#inc-root').length;
+    const trip = (v, save) => { if (!G.Modes.enter(v)) return false; __E.until(() => G.Modes.state === 'INC', 300, 100); __E.f(6, 50); if (save) { G.Save.apply(JSON.parse(G.Save.serialize())); __E.f(6); } G.Modes.leave('deus'); __E.until(() => G.Modes.state === 'GOD', 300, 100); return true; };
+    // (the first descent builds what stays — the 3D canvas, its listeners, the far pictures: measured after it)
+    trip(pool[0]); const god0 = G.Realm.memory().live; const L0 = window.__L;
+    const mem = []; let fails = 0, saves = 0;
+    for (let k = 1; k <= 30; k++) {
+      const v = G.S.villagers.get(pool[k % pool.length].id); if (!v || !G.Possess.can(v).ok) continue;
+      if (!trip(v, k % 5 === 4)) { fails++; continue; } if (k % 5 === 4) saves++;
+      const m = G.Realm.memory(); mem.push([m.live, m.geometries]);
+    }
+    const L1 = window.__L;
+    // a long walk, running, along the world's own path to the farthest door the feet reach: the near pictures are made
+    // ahead and thrown away behind; at most the disc that is kept (37 at the light quality) is ever held
+    const v = __E.adults(s)[0]; __E.enter(v); const st0 = G.Realm.stats; const b0 = st0.builds, r0 = st0.rebuilds;
+    let far = null, fd = 0; for (const b of S.buildings.values()) { if (!b.built) continue; const d = G.Vg.door(b); const dd = G.dist(d[0], d[1], v.x, v.y); if (dd > fd && dd < 50 && G.W.reaches(v, d[0], d[1])) { fd = dd; far = d; } }
+    let maxNear = 0, maxLive = 0; const watch = () => { maxNear = Math.max(maxNear, G.Realm.chunkCount().near); maxLive = Math.max(maxLive, G.Realm.memory().live); };
+    const f0 = G.Main.frameFor; G.Main.frameFor = ms => { f0(ms); watch(); };
+    const p0 = G.Realm.stats.parts; const w = far ? __E.walkTo(far[0], far[1], 4500, true) : null;
+    G.Main.frameFor = f0;
+    const walk = { to: +(fd * 4).toFixed(0), ok: w && w.ok, frames: w && w.frames, maxNear, maxLive, built: G.Realm.stats.builds - b0, rebuilt: G.Realm.stats.rebuilds - r0, parts: G.Realm.stats.parts - p0, ms: Math.round(G.Realm.stats.ms) };
+    // (L-099) a house raised far from the body, and the world's counters moving, change nothing in the pictures near it
+    { const b = __E.body(); const C = 16, cx = Math.floor(b.x / C), cy = Math.floor(b.y / C); const keys = []; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) keys.push([cx + dx, cy + dy]);
+      const sig = () => keys.map(([x, y]) => JSON.stringify(G.Realm.sigOf(x, y))).join('|'); const s0 = sig();
+      let spot = null; for (let y = 2; y < G.N - 2 && !spot; y++) for (let x = 2; x < G.N - 2; x++) { const i = y * G.N + x; if (Math.max(Math.abs(Math.floor(x / C) - cx), Math.abs(Math.floor(y / C) - cy)) >= 4 && G.W.walkable(i) && !S.occ[i] && !S.road[i] && S.type[i] === G.T.GRASS) { spot = [x, y]; break; } }
+      const hb = spot && G.Village.addBuilding('hut', spot[0], spot[1], b.set, true); G.W.touchWalk(); S.typeVer = (S.typeVer || 0) + 1;
+      walk.farHouse = !!hb && sig() === s0; if (hb) { G.Village.removeBuilding(hb); G.W.touchWalk(); } }
+    // the frame's cost, in the biggest town, with the near world built (the medium quality, then the light one)
+    G.Realm.setQuality('media'); __E.f(40, 33);
+    const times = []; for (let k = 0; k < 90; k++) { const t0 = performance.now(); G.Main.frameFor(16); times.push(performance.now() - t0); }
+    times.sort((a, b) => a - b); const near = G.People3D.count, beasts = G.People3D.beasts, info = G.Realm.memory();
+    G.Realm.setQuality('baixa'); const tl = []; for (let k = 0; k < 60; k++) { const t0 = performance.now(); G.Main.frameFor(16); tl.push(performance.now() - t0); } tl.sort((a, b) => a - b);
+    __E.leave(); walk.godAfter = G.Realm.memory().live;
+    return { fails, saves, mem, god0, L0, L1, roots: roots(), walk, frame: { med: times[45], p95: times[85], calls: info.calls, tris: info.tris, people: near, beasts }, low: { med: tl[30], p95: tl[57] } };
+  });
+  // the years skipped after (the skip lives in slices of its own, between the browser's turns: waited for, not looped)
+  const sk = await page.evaluate(() => new Promise(res => {
+    const d0 = G.S.day, t0 = performance.now(); G.Skip.start('anos10', 'livre');
+    const tick = () => { if (G.Skip.on && performance.now() - t0 < 1500000) return setTimeout(tick, 400); const on = G.Skip.on; if (on) G.Skip.stop(); G.UI.closeModal(); res({ on, d0, d1: G.S.day, s: Math.round((performance.now() - t0) / 1000) }); };
+    tick();
+  }));
+  const again = await E(() => { const v = __E.adults(null)[0] || [...G.S.villagers.values()].find(o => o.age >= 18 && G.Possess.can(o).ok); const ok = !!v && __E.enter(v); __E.leave(); return { ok, qa: __E.qa(), err: JSON.stringify(G.modErr) }; });
+  e8.qa = again.qa; e8.err = again.err;
+  const g = e8.mem.map(m => m[0]);
+  ok('e8 30 idas e voltas (6 com save no meio): sem acúmulo', !e8.fails && e8.mem.length >= 25 && Math.max(...g) - Math.min(...g) <= 6 && Math.abs(g[g.length - 1] - e8.god0) <= 6 && e8.roots === 1, `geometrias no Modo Deus: ${e8.god0} depois da 1ª descida; ${g.slice(0, 3).join(',')} … ${g.slice(-3).join(',')} nas voltas; saves ${e8.saves}; HUD ${e8.roots}`);
+  ok('e8 sem ouvintes acumulados', e8.L1 - e8.L0 <= 2, `ouvintes novos em 30 voltas (depois da 1ª descida): ${e8.L1 - e8.L0}`);
+  ok('e8 caminhada longa: chunks vêm e vão, a memória fica', e8.walk.ok && e8.walk.to >= 150 && e8.walk.maxNear <= 37 && e8.walk.built >= 8 && Math.abs(e8.walk.godAfter - e8.god0) <= 6, JSON.stringify(e8.walk));
+  ok('e8 uma casa erguida longe não refaz os pedaços perto do corpo (L-099)', e8.walk.farHouse, String(e8.walk.farHouse));
+  ok('e8 salto de 10 anos depois, e encarna de novo', !sk.on && sk.d1 - sk.d0 >= 9 && again.ok, JSON.stringify(Object.assign({}, sk, { again: again.ok })));
+  console.log(`DESEMPENHO | encarna | metrópole, perto do corpo: ${e8.frame.people} pessoas e ${e8.frame.beasts} bichos desenhados, ${e8.frame.calls} chamadas, ${e8.frame.tris} triângulos; quadro inteiro (simulação + 3D, WebGL por software): mediana ${e8.frame.med.toFixed(1)} ms, p95 ${e8.frame.p95.toFixed(1)} ms; qualidade leve: ${e8.low.med.toFixed(1)} / ${e8.low.p95.toFixed(1)} ms; o salto de 10 anos: ${sk.s} s`);
+  ok('e8 verificador', !e8.qa.length && e8.err === '{}', `${e8.qa.slice(0, 3).join(' · ') || 'limpo'} · ${e8.err}`);
+
+  }
+  ok('sem erros de página', !errs.length, errs.slice(0, 4).join(' || ') || 'nenhum');
+  console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');
+  await browser.close();
+  process.exit(fails.length ? 1 : 0);
+})();

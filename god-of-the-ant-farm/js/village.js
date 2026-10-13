@@ -789,6 +789,7 @@
     meteor: (v) => `foi esmagad${v.g === 'f' ? 'a' : 'o'} por um meteoro aos ${Math.floor(v.age)} anos`,
     sick: (v) => `sucumbiu à doença aos ${Math.floor(v.age)} anos`,
     fall: (v) => `caiu das mãos de deus aos ${Math.floor(v.age)} anos`,
+    queda: (v) => `morreu de uma queda aos ${Math.floor(v.age)} anos`,
     quake: (v) => `morreu soterrad${v.g === 'f' ? 'a' : 'o'} no terremoto aos ${Math.floor(v.age)} anos`,
     drown: (v) => `se afogou aos ${Math.floor(v.age)} anos`,
     war: (v) => `tombou em combate aos ${Math.floor(v.age)} anos`,

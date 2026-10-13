@@ -6,7 +6,7 @@ Um jogo de simulação divina que roda direto no navegador. Ilhas, continentes, 
 
 ## Como jogar
 
-**Abra `index.html` no navegador** (Chrome, Edge, Firefox ou Safari recentes). Só isso: não precisa de servidor, build ou instalação. Tudo é JavaScript puro + Canvas 2D, sem bibliotecas externas.
+**Abra `index.html` no navegador** (Chrome, Edge, Firefox ou Safari recentes). Só isso: não precisa de servidor, build ou instalação. Tudo é JavaScript puro + Canvas 2D; o Modo Encarnado (3D) usa o Three.js r170, que vem dentro do jogo (`js/lib/three.min.js`, licença MIT) — nada é baixado da internet.
 
 > Se preferir servir por HTTP: `npx serve .` ou `python3 -m http.server` dentro desta pasta.
 
@@ -45,6 +45,26 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Modo foto | `P` · ou o ícone da máquina fotográfica — `Esc` sai |
 | Modo desenvolvedor | `F2` · ou **Modo desenvolvedor** no menu (`Esc`) · ou `?dev` no fim do endereço — veja abaixo |
 | Menu | `Esc` |
+| **Encarnar** | selecione um habitante e clique em **Encarnar** no painel · `I` (com ninguém selecionado: alguém perto do meio da tela) — veja abaixo |
+
+## Modo Encarnado: descer ao mundo
+
+Selecione qualquer habitante (com 6 anos ou mais) e clique em **Encarnar**: a câmera do deus desce até a pessoa, o mundo ganha profundidade e você passa a viver a vida dela **em terceira pessoa, em 3D de verdade**. Não é outro mundo: é **o mesmo** — as mesmas ruas, casas, árvores, rios, o mesmo mar, os mesmos navios, as mesmas pessoas (cada uma com o seu nome, a sua roupa de ofício, a sua família), a mesma guerra, a mesma economia. Enquanto você anda, o resto do mundo continua vivendo (no passo de uma pessoa: o tempo corre a 0,35× do Modo Deus; dormindo, uma noite passa em segundos).
+
+| Ação | Controle |
+|---|---|
+| Andar (relativo à câmera) | `WASD` / setas · no celular, arraste a metade esquerda da tela |
+| Olhar | mouse (clique para prender o mouse; `Esc` solta) · arraste · no celular, a metade direita |
+| Correr | `Shift` (gasta fôlego) |
+| Pular | `Espaço` |
+| Interagir | `E` — conversar (a ficha da pessoa, com os dados reais), bater à porta, dormir em casa, comer no armazém, guardar a carga, rezar no templo, cortar lenha (segure `E`), colher frutas, quebrar pedra, levar material para uma obra, ler as lápides |
+| Quem sou eu | `Tab` — quem você é, onde está, as histórias que te envolvem, o que esperam de você, o que você viu |
+| Voltar ao Modo Deus | `G` · ou o botão no canto |
+| Menu (pausa, teclas, sensibilidade, gráficos) | `Esc` |
+
+A pessoa continua sendo quem é — a mesma idade, a mesma casa, a mesma família — e continua **mortal**: a fome, o sono, o fogo, as feras e a guerra valem para ela. Se ela morre, a morte é de verdade (fica na biografia, na crônica e no cemitério) e você volta a ser deus. O que o mundo pede (o chamado às armas, um incêndio) aparece como **chamado** — você atende se quiser; o que o mundo impõe (a prisão, a captura, um navio, a água) toma o corpo de volta. Quando você sobe de novo, a pessoa fica onde você a deixou, selecionada, e a IA volta a cuidar da vida dela; a biografia lembra ("Viveu 2 dias guiada pelo deus: cortou 3 árvores, conversou com 5 pessoas"). Um save feito encarnado volta encarnado.
+
+**Ainda não existem** (a base está pronta para eles): nadar e mergulhar (a água funda para o corpo), escalar, planar, interiores das casas, combate, diálogos com escolhas, encarnar bichos. Detalhes da arquitetura em `ENCARNACAO.md`; o relatório do que foi testado em `qa/RELATORIO_ENCARNACAO.md`.
 
 ## O que acontece na ilha
 
@@ -628,4 +648,17 @@ js/photo.js       modo foto: congelar, filtros, miniatura, moldura, salvar PNG
 js/timeskip.js    avançar no tempo: anos que passam sem desenhar, mapa em time-lapse, anos de paz e fartura, resumo; a procura do modo desenvolvedor
 js/main.js        loop, input, câmera, menu, introdução
 js/devmode.js     modo desenvolvedor: tempo, povos, guerra, mar, histórias (receitas, sementes, diretor), raros, parâmetros, inspeção
+js/lib/three.min.js  Three.js r170 (MIT), embutido — gerado por tools/vendor-three.sh
+js/space.js       Modo Encarnado: a conversão única entre as casas do mundo e os metros do corpo (1 casa = 4 m, 1 unidade de altura = 1,5 m)
+js/realm3d.js     o mundo em 3D: chunks perto e longe, terreno, água, árvores, capim, céu, luz da hora, qualidade
+js/build3d.js     os prédios reais em 3D (~50 tipos, por civilização), muralhas, portões, aquedutos, plantações, lápides
+js/people3d.js    as pessoas reais em 3D (bonecos articulados + figuras simples de longe) e a máquina de estados de animação; bichos
+js/fx3d.js        fogo, chuva e neve do clima do mundo, os navios reais
+js/possess.js     a posse: quem é o corpo (S.avatar), a autoridade sobre a IA, chamados e forças do mundo, devolver, a morte, o contexto de aventura
+js/interact.js    as interações (conversar, portas, armazém, templo, árvores, frutas, pedra, obras, bichos) — sempre mudando o mundo de verdade
+js/avatar.js      o controlador do corpo: passo fixo, colisões pelo W.walkable, pulo, fôlego, estados de locomoção
+js/cam3d.js       a câmera em terceira pessoa com colisão
+js/input3d.js     teclas trocáveis, mouse, toque
+js/incui.js       o HUD do corpo, as fichas, o menu
+js/modes.js       o gerenciador de modos (Deus ↔ Encarnado), a descida e a subida, o tempo do corpo
 ```

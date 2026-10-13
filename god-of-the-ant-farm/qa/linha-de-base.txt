@@ -5,7 +5,7 @@ PASSOU | mar 5 rotina do pescador
 PASSOU | mar 7 grande expedição do Estado 
 PASSOU | mar 11 guerra entre ilhas: frota + transporte + desembarque 
 PASSOU | mar 2 ilha sem ferro busca solução no mar 
-FALHOU | mar 8 ilha conhecida só por quem soube 
+PASSOU | mar 8 ilha conhecida só por quem soube 
 PASSOU | mar 17 desempenho com muitos barcos 
 PASSOU | mar 1 ilha rica não coloniza tudo 
 PASSOU | mar 14 salvar/carregar durante uma expedição 
@@ -106,6 +106,77 @@ PASSOU | poderes p4 um navio no caminho é empurrado para a água; terra erguida
 PASSOU | poderes p4 save danificado: o mar aberto quebrado fica de fora, o mundo carrega 
 PASSOU | poderes sem erros de página 
 PASSOU | poderes sem erros de módulo 
+PASSOU | encarna e1 entra na metrópole 
+PASSOU | encarna e1 prédios no lugar e no chão 
+PASSOU | encarna e1 o chão 3D é a altura do mundo 
+PASSOU | encarna e1 anda pelas ruas até o mercado 
+PASSOU | encarna e1 o porto fica na costa e se chega a ele a pé 
+PASSOU | encarna e1 atravessa a cidade a pé, entre os prédios reais 
+PASSOU | encarna e1 verificador 
+PASSOU | encarna e2 encarna uma pessoa real 
+PASSOU | encarna e2 anda com ela 
+PASSOU | encarna e2 a mesma pessoa depois (id, família, casa, povo) 
+PASSOU | encarna e2 volta ao Modo Deus: exatamente onde foi deixada, selecionada; depois a IA de novo 
+PASSOU | encarna e2 a biografia lembra 
+PASSOU | encarna e2 verificador 
+PASSOU | encarna e3 o tempo passa no corpo (dormir acelera) 
+PASSOU | encarna e3 longe dali o mundo acontece 
+PASSOU | encarna e3 de volta a Deus, nada desfeito 
+PASSOU | encarna e3 verificador 
+PASSOU | encarna e4 A, Deus, B: os dois existem, a IA de A voltou, B tem o corpo 
+PASSOU | encarna e4 de dentro, B → C: a IA de B volta, C tem o corpo 
+PASSOU | encarna e4 ninguém duplicado, nenhuma marca sobrando, histórias intactas 
+PASSOU | encarna e4 verificador 
+PASSOU | encarna e5 morte pelo fogo: morre de verdade, o deus volta 
+PASSOU | encarna e5 morte pelo fogo: biografia e crônica contam; o save carrega 
+PASSOU | encarna e5 morte pela fome: morre de verdade, o deus volta 
+PASSOU | encarna e5 morte pela fome: biografia e crônica contam; o save carrega 
+PASSOU | encarna e5 morte numa queda: morre de verdade, o deus volta 
+PASSOU | encarna e5 morte numa queda: biografia e crônica contam; o save carrega 
+PASSOU | encarna e5 verificador 
+PASSOU | encarna e6 terreno: plano 
+PASSOU | encarna e6 terreno: ladeira 
+PASSOU | encarna e6 terreno: estrada 
+PASSOU | encarna e6 terreno: bosque 
+PASSOU | encarna e6 terreno: costa 
+PASSOU | encarna e6 terreno: entre prédios 
+PASSOU | encarna e6 encostado num prédio, nunca preso 
+PASSOU | encarna e6 verificador 
+PASSOU | encarna e7 A: save antes de encarnar 
+PASSOU | encarna e7 B: save encarnado volta encarnado, no mesmo lugar 
+PASSOU | encarna e7 C: save depois de desencarnar 
+PASSOU | encarna e7 D: depois de andar muito, a pessoa está onde ficou 
+PASSOU | encarna e7 E: depois da morte do corpo 
+PASSOU | encarna e7 save danificado: carrega limpo 
+PASSOU | encarna e7 verificador 
+PASSOU | encarna e9 capturado por inimigos: o corpo vai com o mundo 
+PASSOU | encarna e9 levado a um navio: a encarnação acaba 
+PASSOU | encarna e9 um prédio nasce em cima: o mundo move o corpo, o corpo segue 
+PASSOU | encarna e9 a terra afunda sob os pés: a água leva o corpo, o deus volta 
+PASSOU | encarna e9 a guerra e o fogo chamam: viram chamados, o corpo fica 
+PASSOU | encarna e9 mãos: a árvore cai pelo corte, a lenha vai para os braços 
+PASSOU | encarna e9 mãos: a lenha entra no estoque do povo 
+PASSOU | encarna e9 mãos: comer no armazém tira do estoque e mata a fome 
+PASSOU | encarna e9 mãos: as frutas saem do arbusto 
+PASSOU | encarna e9 mãos: a pedra quebrada vai para os braços 
+PASSOU | encarna e9 mãos: a pedra levada à obra entra nela 
+PASSOU | encarna e9 mãos: rezar no templo 
+PASSOU | encarna e9 mãos: em casa pela porta, dorme; acorda e sai pela porta 
+PASSOU | encarna e9 conversar: a ficha é da pessoa, ela responde (o balão também no Modo Deus) 
+PASSOU | encarna e9 uma cena não toma o corpo 
+PASSOU | encarna e9 os feitos entram na biografia 
+PASSOU | encarna e9 verificador 
+PASSOU | encarna e10 o botão Encarnar no painel da pessoa (e o motivo quando não pode) 
+PASSOU | encarna e10 a ficha diz quem são os pais (dos registros do mundo) 
+PASSOU | encarna e10 Esc abre o menu e pausa; as teclas mudam; G volta; I encarna 
+PASSOU | encarna e10 no toque: o polegar à esquerda anda, os botões aparecem 
+PASSOU | encarna e8 30 idas e voltas (6 com save no meio): sem acúmulo 
+PASSOU | encarna e8 sem ouvintes acumulados 
+PASSOU | encarna e8 caminhada longa: chunks vêm e vão, a memória fica 
+PASSOU | encarna e8 uma casa erguida longe não refaz os pedaços perto do corpo (L-099) 
+PASSOU | encarna e8 salto de 10 anos depois, e encarna de novo 
+PASSOU | encarna e8 verificador 
+PASSOU | encarna sem erros de página 
 PASSOU | caos sem violações S0–S2
 PASSOU | caos_13 sem violações S0–S2
 PASSOU | guerra 2 reinos médios: dezenas

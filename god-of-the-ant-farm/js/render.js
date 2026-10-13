@@ -528,6 +528,9 @@
     else if (S.burnt[i] > 0) c = G.lerpColor(c, COL.burnt, S.burnt[i] > G.DAY_LEN * 0.5 ? 0.85 : 0.45);
     return c;
   }
+  // (the ground's own colour, the same one the 3D view of the body uses: the land looks like itself from both heights)
+  R.tileColor = (i, x, y) => tileColor(i, x, y);
+  R.rockColor = (i, rg) => rockColor(i, null, rg);
   // bare rock: granite, red sandstone in the dry lands, snow clinging where it is cold
   function rockColor(i, base, rg) {
     const S = G.S; const b = S.biome ? S.biome[i] : -1; const tp = S.temp ? S.temp[i] / 255 : 0.5;

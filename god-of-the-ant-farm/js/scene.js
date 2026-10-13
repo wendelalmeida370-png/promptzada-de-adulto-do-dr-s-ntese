@@ -40,7 +40,7 @@
   const $ = s => document.querySelector(s);
   const DAY = () => G.DAY_LEN;
   // errands a scene never takes by itself (it may borrow them on purpose, with force)
-  const GUARDED = { condemned: 1, jail: 1, justice: 1, conclave: 1, lured: 1, riot: 1, riotguard: 1, band: 1, combat: 1, aboard: 1, escape: 1, flee: 1, swim: 1, army: 1, siege: 1, escorted: 1, envoy: 1, sail: 1 };
+  const GUARDED = { condemned: 1, jail: 1, justice: 1, conclave: 1, lured: 1, riot: 1, riotguard: 1, band: 1, combat: 1, aboard: 1, escape: 1, flee: 1, swim: 1, army: 1, siege: 1, escorted: 1, envoy: 1, sail: 1, avatar: 1 };
 
   Sn.define = function (key, d) { d.key = key; Sn.defs[key] = d; };
 
@@ -72,6 +72,7 @@
   // the errand someone was taken from (and will be given back): a soldier in a scene is still in the army
   Sn.prevTask = v => { const t = v && v.task; if (!t || t.type !== 'scene') return null; const sc = Sn.get(t.sc); const rec = sc && sc.taken.get(v.id); return rec ? rec.prev : null; };
   Sn.lingers = () => { for (const s of Sn.list) if (s.st === 'run') return true; return false; };
+  Sn.H = { take: (sc, v, o) => take(sc, v, o) }; // (the tests ask whether a scene could take a body)
   Sn.of = storyId => Sn.list.find(s => s.story === storyId && s.st === 'run') || null;
   Sn.running = (storyId, key) => Sn.list.some(s => s.story === storyId && s.st === 'run' && (!key || s.key === key));
   Sn.actorScene = v => (v && v.task && v.task.type === 'scene' ? Sn.get(v.task.sc) : null);

@@ -322,6 +322,32 @@
       }
       for (const v of s.villagers.values()) if (v.task && (v.task.type === 'fundo' || v.task.type === 'sair') && !L.some(p => p.id === v.task.part)) add('marAberto', 3, `${v.name}#${v.id}: ${v.task.type} num mar aberto que já se fechou`);
     }
+    // ---- the incarnation (possess.js): one body lent to the player, and only while it can be lived
+    {
+      const a = s.avatar; const KINDS = (G.Possess && G.Possess.KINDS) || {};
+      let marked = 0;
+      for (const v of s.villagers.values()) if (v.task && v.task.type === 'avatar') { marked++; if (!a || a.id !== v.id) add('avatar', 1, `${v.name}#${v.id}: tem a tarefa 'avatar' sem ser o corpo encarnado`, v.id); }
+      if (a) {
+        const v = s.villagers.get(a.id);
+        if (!v) add('avatar', 1, `S.avatar aponta para #${a.id}, que não está entre os vivos${s.dead.has(a.id) ? ' (morreu)' : ''}`);
+        else {
+          const nm = `${v.name}#${v.id} (encarnado)`;
+          if (!v.task || v.task.type !== 'avatar') add('avatar', 1, `${nm}: a tarefa é ${v.task ? v.task.type : 'nenhuma'}, não 'avatar'`, v.id);
+          if (v.aboard || v.jail || v.captive || v.held || v.air || v.ug) add('avatar', 1, `${nm}: ${v.aboard ? 'a bordo' : v.jail ? 'preso' : v.captive ? 'cativo' : v.held ? 'na mão do deus' : v.air ? 'no ar' : 'na caverna'} e ainda encarnado`, v.id);
+          if (v.inside && !(v.sleeping && v.inside === v.home)) add('avatar', 2, `${nm}: dentro de ${v.inside} sem estar dormindo em casa`, v.id);
+          if (!v.inside && !G.W.walkableXY(v.x, v.y)) add('avatar', 3, `${nm}: de pé num lugar onde ninguém pisa (${v.x.toFixed(1)},${v.y.toFixed(1)})`, v.id);
+          if (v.age < 6) add('avatar', 2, `${nm}: criança pequena demais encarnada`, v.id);
+        }
+        if (!KINDS[a.kind]) add('avatar', 2, `S.avatar: tipo de encarnação desconhecido (${a.kind})`);
+        if (!Array.isArray(a.asks) || a.asks.length > 6) add('avatar', 3, `S.avatar: chamados malformados (${a.asks && a.asks.length})`);
+        if (!Array.isArray(a.seen) || a.seen.length > 20 || !Array.isArray(a.met) || a.met.length > 60) add('avatar', 3, 'S.avatar: memórias do corpo malformadas ou grandes demais');
+        for (const k in a.deeds || {}) if (!fin(a.deeds[k]) || a.deeds[k] < 0) add('avatar', 3, `S.avatar: feito ${k} = ${a.deeds[k]}`);
+        if (!fin(a.since) || a.since > s.day) add('avatar', 3, `S.avatar: desde o dia ${a.since} (hoje ${s.day})`);
+      }
+      if (marked > 1) add('avatar', 1, `${marked} pessoas com a tarefa 'avatar' ao mesmo tempo`);
+      // (the view: the mode and the truth agree — never the god's eye on a body nobody lives, never a lived body unseen)
+      if (G.Modes && G.Modes.state === 'INC' && !a) add('avatar', 2, 'o Modo Encarnado está ativo sem ninguém encarnado');
+    }
     // ---- the dragon (dragon.js): where it is, what it holds, and who is climbing to its lair
     {
       const L = s.dragons || []; const T = G.T; const ST = { chega: 1, caca: 1, passe: 1, curva: 1, rouba: 1, volta: 1, dorme: 1, luta: 1, parte: 1, morre: 1 };

@@ -131,13 +131,18 @@
   const arrived = v => !v.path || v.pi >= v.path.length;
   function setTask(v, t) {
     if (v.jail && G.Crime) { const kept = G.Crime.keeps(v, t); if (kept) return kept; }
+    // (a body the player lives: the world asks first — a request becomes a call, a force of the world takes the body back)
+    if (G.S.avatar && G.S.avatar.id === v.id && G.Possess) { const kept = G.Possess.ask(v, t); if (kept) return kept; }
     Vg.endTask(v);
     t.age = 0; if (t.st === undefined) t.st = 0;
     v.task = t; v.act = ''; v.actT = 0;
     return t;
   }
   function emote(v, k, t) { v.emo = { k, t: t || 2.5 }; }
-  Vg.give = function (v, t) { if (v.task && v.task.pri >= (t.pri || 0) + 0.01 && v.task.pri >= 2) return false; if (v.sleeping || v.inside || v.air || v.held || v.age < 3) return false; setTask(v, t); return true; };
+  Vg.give = function (v, t) {
+    // (the body the player lives: a request is a call it may answer; a force of the world goes through setTask and takes it)
+    if (G.S.avatar && G.S.avatar.id === v.id && G.Possess) { if (!G.Possess.FORCE[t.type]) { G.Possess.ask(v, t); return false; } setTask(v, t); return true; }
+    if (v.task && v.task.pri >= (t.pri || 0) + 0.01 && v.task.pri >= 2) return false; if (v.sleeping || v.inside || v.air || v.held || v.age < 3) return false; setTask(v, t); return true; };
   Vg.emote = emote;
 
   Vg.endTask = function (v) {
@@ -1547,6 +1552,8 @@
       if (v.z && !v.air && !(v.task && (v.task.perch || v.task.ladder || v.task.type === 'fest'))) v.z = 0;
       if (v.age < 2) { babyUpdate(v, vdt); if (v.emo) { v.emo.t -= vdt; if (v.emo.t <= 0) v.emo = null; } continue; }
       if (v.carried) { v.carried = false; v.carrier = 0; }
+      // (the body the player lives: its needs went on above; its will is the player's — no deciding of its own)
+      if (S.avatar && S.avatar.id === v.id) { G.Possess.live(v, vdt); if (v.emo) { v.emo.t -= vdt; if (v.emo.t <= 0) v.emo = null; } continue; }
       v.scan -= vdt;
       if (v.scan <= 0) { v.scan = 0.3 + G.R() * 0.15; emergency(v); }
       v.think -= vdt;
@@ -1560,7 +1567,7 @@
   // ------------------------------ the stuck: someone who has not moved for a long while ------------------------------
   // (a pocket between cliffs, a ledge, a gap between houses and a fence: every errand fails, or the feet keep walking
   // in place. Twenty seconds of that and they are set down on the nearest spot from which home can be reached)
-  const STILL = { praia: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, scene: 1, jail: 1, condemned: 1, escorted: 1, hide: 1, sleep: 1, pray: 1, aboard: 1, swim: 1, dive: 1, mariscar: 1, pocas: 1, fest: 1, assembly: 1 };
+  const STILL = { praia: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, scene: 1, jail: 1, condemned: 1, escorted: 1, hide: 1, sleep: 1, pray: 1, aboard: 1, swim: 1, dive: 1, mariscar: 1, pocas: 1, fest: 1, assembly: 1, avatar: 1 };
   function watch(v) {
     if (v.sleeping || v.captive && !(v.task && v.task.type === 'escape')) { v._wd = null; return false; }
     const wd = v._wd || (v._wd = { x: v.x, y: v.y, t: 0, mv: 0 });

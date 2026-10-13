@@ -196,7 +196,7 @@
   // invented: every module still lives every second of the years, only with a coarser hand where coarseness changes
   // nothing. The slow step goes in the middle: what it decides — a peace, a town given up — is acted on by the quick
   // half that follows, so the world between two steps is as settled as on the screen.)
-  const FINE = { Nature: 1, Villagers: 1, Carnage: 1, Scene: 1, Powers: 1, Riots: 1, Justice: 1 };
+  const FINE = { Nature: 1, Villagers: 1, Carnage: 1, Scene: 1, Powers: 1, Riots: 1, Justice: 1, Possess: 1 };
   const fine = h => { tick(h); for (const m of MODS) if (FINE[m[0]]) G.tryRun(m[0], m[1], h); G.tryRun('Factions', dt2 => G.Fac.updatePart(dt2, 'fine'), h); };
   M.skipStep = function (dt) {
     G.inSim++;
@@ -218,6 +218,7 @@
     ['Riots', dt => G.Riots && G.Riots.update(dt)], ['Secrets', dt => G.Secrets && G.Secrets.update(dt)], ['Scene', dt => G.Scene && G.Scene.update(dt)],
     ['Caves', dt => G.Caves && G.Caves.update(dt)], ['Pets', dt => G.Pets && G.Pets.update(dt)], ['Powers', dt => G.Powers.update(dt)],
     ['Lore', dt => G.Lore && G.Lore.update(dt)], ['Events', dt => G.Events.update(dt)],
+    ['Possess', dt => G.Possess && G.Possess.update(dt)],
   ];
   // at high speed the steps get a little longer and the frame has a time budget:
   // if the world is too big for the machine, the game runs as fast as it can instead of freezing
@@ -385,6 +386,8 @@
       if (M.modalOpen && e.key === 'Escape') { G.UI.closeModal(); return; }
       if (M.mode === 'intro') { endIntro(); return; }
       if (M.mode !== 'game') return;
+      // the body's keys (the incarnated mode, and its transitions, take every key but the workbench's)
+      if (G.Modes && G.Modes.key(e, true)) return;
       const k = e.key;
       // the workbench: over everything, and never a shortcut of the game
       if (k === 'F2') { e.preventDefault(); G.Dev && G.Dev.toggle(); return; }
@@ -434,10 +437,11 @@
       else if (k === 'g' || k === 'G') { if (I.held) release(); G.Cinema.start({ war: 1 }); }
       else if (k === 'p' || k === 'P') { if (I.held) release(); G.Photo.start(); }
       else if (k === 't' || k === 'T') { const s = G.UI.selected; if (s && !s.type && !s.kind) G.UI.openTree(s.id); }
+      else if ((k === 'i' || k === 'I') && G.Modes) { const s = G.UI.selected; if (s && !s.type && !s.kind && !s.dead && s.x !== undefined && G.S.villagers.has(s.id)) G.Modes.enter(s); else G.Modes.quick(); }
       else if (k === '+' || k === '=') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.min(sp.length - 1, sp.indexOf(G.speed) + 1)]); }
       else if (k === '-' || k === '_') { const sp = [0, 1, 2, 4, 8, 16]; G.UI.setSpeed(sp[Math.max(0, sp.indexOf(G.speed) - 1)]); }
     });
-    window.addEventListener('keyup', e => { I.keys[e.key.toLowerCase()] = false; });
+    window.addEventListener('keyup', e => { I.keys[e.key.toLowerCase()] = false; if (G.Modes && !G.Modes.god()) G.Modes.key(e, false); });
     window.addEventListener('blur', () => { I.keys = {}; });
     // touch
     let tStart = null, pinch = null;
@@ -511,6 +515,8 @@
   // (one broken frame must not stop the world: the error is reported and the next frame comes anyway)
   let frameErrs = 0;
   function loop(now) { try { frame(now); } catch (e) { frameErrs++; if (frameErrs <= 5 || frameErrs % 200 === 0) console.error('frame', e); requestAnimationFrame(loop); } }
+  // (for the tests: one whole frame, as if ms had passed — with the browser's own loop switched off)
+  M.frameFor = ms => frame(lastT + ms);
   function frame(now) {
     const rdt = Math.min(0.1, Math.max(0, (now - lastT) / 1000)); lastT = now;
     // the years are being skipped: the world only lives, nothing is drawn
@@ -524,24 +530,27 @@
         cam.x = M.menuBase[0] + Math.sin(t * 0.06) * 170; cam.y = M.menuBase[1] + Math.cos(t * 0.045) * 70;
       } else if (M.mode === 'intro') { sp = 1; updateIntro(rdt); }
       if (M.modalOpen && M.mode === 'game') sp = 0;
-      const want = rdt * sp * (G.Scene && M.mode === 'game' ? G.Scene.timeScale() : 1);
+      // (in the body the world runs at a person's pace, G.Modes says how fast; one world, one clock — D-015)
+      const inc = !!(G.Modes && !G.Modes.god() && M.mode === 'game');
+      if (inc) sp = G.Modes.timeScale(sp);
+      const want = rdt * sp * (G.Scene && M.mode === 'game' && !inc ? G.Scene.timeScale() : 1);
       // the simulation may use most of the frame at 8x and 16x, never all of it
       const dt = simulate(want, sp >= 8 ? 38 : sp > 2 ? 60 : 0);
       if (sp >= 8 && rdt > 0) { M.realSpeed = (M.realSpeed || sp) * 0.95 + (dt / rdt) * 0.05; } else M.realSpeed = sp;
       // keyboard panning
-      if (M.mode === 'game' && !M.modalOpen) {
+      if (M.mode === 'game' && !M.modalOpen && !inc) {
         const k = I.keys; const v = 520 * rdt / cam.zoom;
         let dx = 0, dy = 0;
         if (k.w || k.arrowup) dy -= v; if (k.s || k.arrowdown) dy += v; if (k.a || k.arrowleft) dx -= v; if (k.d || k.arrowright) dx += v;
         if (dx || dy) { cam.x += dx; cam.y += dy; cam.follow = 0; cam.target = null; }
       }
-      if (M.mode === 'game') { G.Cinema.tick(rdt); G.Cinema.update(rdt); G.Photo.update(rdt); G.Scene && G.Scene.frame(rdt); G.Track && G.Track.frame(rdt); }
+      if (M.mode === 'game' && !inc) { G.Cinema.tick(rdt); G.Cinema.update(rdt); G.Photo.update(rdt); G.Scene && G.Scene.frame(rdt); G.Track && G.Track.frame(rdt); }
       G.Render.update(rdt, dt);
       G.FX.update(dt > 0 ? dt : 0, rdt);
       G.Sky && G.Sky.update(dt > 0 ? dt : 0, rdt);
       // hover & preview
       hoverT -= rdt;
-      if (M.mode === 'game' && hoverT <= 0 && !I.mouse.down && !G.Cinema.on && !G.Photo.on) {
+      if (M.mode === 'game' && hoverT <= 0 && !I.mouse.down && !G.Cinema.on && !G.Photo.on && !inc) {
         hoverT = 0.05;
         const m = I.mouse;
         if (m.onCanvas) {
@@ -550,14 +559,16 @@
           canvas.style.cursor = I.held ? 'grabbing' : I.power === 'hand' ? (G.Render.hover ? 'grab' : 'default') : I.power ? 'crosshair' : (G.Render.hover ? 'pointer' : 'default');
         } else { G.Render.hover = null; G.Render.preview = null; }
       }
-      if (G.Scene && M.mode === 'game') G.Scene.beforeFrame();
-      G.Render.frame(rdt);
-      if (G.Scene && M.mode === 'game') G.Scene.afterFrame();
-      G.Render.perfSample(rdt);
+      if (G.Scene && M.mode === 'game' && !inc) G.Scene.beforeFrame();
+      // (the god's picture is not drawn while the body's covers the screen)
+      if (!(inc && G.Modes.cover())) G.Render.frame(rdt);
+      if (G.Scene && M.mode === 'game' && !inc) G.Scene.afterFrame();
+      if (G.Modes && M.mode === 'game') G.tryRun('Modo Encarnado', () => G.Modes.frame(rdt));
+      if (!inc) G.Render.perfSample(rdt);
       G.Audio.update(rdt);
       if (M.mode === 'game') {
         G.UI.update(rdt);
-        G.Minimap.update(rdt);
+        if (!inc) G.Minimap.update(rdt);
         saveT += rdt; if (saveT > 45) { saveT = 0; G.Save.save(true); }
       }
     }
