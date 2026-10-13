@@ -88,6 +88,22 @@ PASSOU | poderes s1 verificador
 PASSOU | poderes i1 o gelo vira caminho 
 PASSOU | poderes i2 save no meio do inverno: o gelo volta igual, o mesmo futuro 
 PASSOU | poderes i3 terra erguida sob o gelo; no degelo, quem está no gelo cai na água 
+PASSOU | poderes g1 o dragão ataca: rasantes de fogo, o povo foge, as flechas acertam 
+PASSOU | poderes g1 o ouro levado: o que a cidade perde é o que vai para o tesouro 
+PASSOU | poderes g1 verificador 
+PASSOU | poderes g2 save no meio do rasante: o mesmo futuro 
+PASSOU | poderes g3 os bravos sobem ao covil, um cai na luta, o dragão morre: o Matador de Dragões 
+PASSOU | poderes g3 o tesouro se esparrama: toda moeda contada 
+PASSOU | poderes g4 a mão do deus: raio e meteoro derrubam o dragão em pleno voo 
+PASSOU | poderes g4 o covil afunda no mar: outro covil; depois parte levando o tesouro 
+PASSOU | poderes g4 save danificado: o dragão quebrado fica de fora, o mundo carrega 
+PASSOU | poderes p1 o mar se abre entre duas terras: o fundo vira caminho 
+PASSOU | poderes p1 o povo desce para catar peixes e atravessa a pé 
+PASSOU | poderes p1 verificador 
+PASSOU | poderes p2 save com o mar aberto: o fundo volta igual, o mesmo futuro 
+PASSOU | poderes p3 o mar se fecha: quem está lá embaixo corre; quem não sai é levado 
+PASSOU | poderes p4 um navio no caminho é empurrado para a água; terra erguida no fundo deixa de ser fundo 
+PASSOU | poderes p4 save danificado: o mar aberto quebrado fica de fora, o mundo carrega 
 PASSOU | poderes sem erros de página 
 PASSOU | poderes sem erros de módulo 
 PASSOU | caos sem violações S0–S2
