@@ -25,6 +25,18 @@ if (ships.length >= 2 && land.length) {
   if (s2[0] || s2[1] || !s2[2] || !s2[3]) fails.push('troca de navio: ficou nos dois ou em nenhum');
   if (s3[0] || s3[1] || !s3[2]) fails.push('desembarque: ainda a bordo ou fora do lugar');
   const f = seaFinds(); if (f.length) fails.push('verificador depois das trocas: ' + f.map(x => x.msg).slice(0, 2).join(' | '));
+  // 2b. a fisherman ashore, on his boat's roster, goes aboard another ship (a voyage, a fleet): off the roster at once (L-018, L-087)
+  const ashore = s => (s.crew || []).find(id => { const u = S.villagers.get(id); return u && !u.aboard && !u.captive; });
+  const boat = S.ships.find(s => s.kind === 'pesca' && ashore(s));
+  const other = boat && (ships.find(s => s !== boat && s.kind !== 'pesca') || ships.find(s => s !== boat));
+  if (boat && other) {
+    const u = S.villagers.get(ashore(boat));
+    Nv.board(u, other);
+    const still = boat.crew.includes(u.id); const g = seaFinds().filter(x => /outro navio/.test(x.msg));
+    out.push(`pescador ${u.name} do ${boat.kind}#${boat.id}, em terra, embarca em ${other.kind}#${other.id}: ainda na lista do barco ${still}; verificador ${g.length}`);
+    if (still || g.length) fails.push('pescador embarcado noutro navio continua na lista do barco de pesca');
+    Nv.unboard(u, G.W.nearestLand(other.x, other.y, 30) || [u.x, u.y]);
+  } else out.push('sem barco de pesca com pescador em terra para testar');
   // 3. someone put aboard by hand, without Naval.board: the checker must notice; once announced, quiet
   const w = land[1] || land[0]; Nv.aboardIndex();
   w.aboard = a.id;

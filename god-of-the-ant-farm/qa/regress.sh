@@ -1,14 +1,14 @@
 #!/bin/bash
 # A regressão completa, antes de cada versão: bash qa/regress.sh [pasta de saída]   (≈ 1 h 15 min numa máquina de 4 núcleos)
 # Roda o vigia do código, as 17 provas do mar, as 10 da guerra, as da cidade (bairros, porto, taverna, moradia, crime, quarteirão), a memória dos mortos, os mundos prontos, vidas longas com o verificador, a mão divina, saves danificados,
-# o save como ponto fixo, os mapas de alcance e de quem está a bordo, o determinismo, os painéis, o desenho e o macaco no teclado.
+# o save como ponto fixo, os mapas de alcance e de quem está a bordo, o determinismo, os painéis, o desenho, o macaco no teclado e os poderes (os novos e o deus caótico).
 # No fim escreve resumo.txt e o compara com a linha de base (linha-de-base.txt): o que mudou desde a última versão aparece como NOVO.
 # Tudo é determinístico (a mesma semente faz o mesmo mundo): uma prova que muda de resultado mudou porque o jogo mudou.
 cd "$(dirname "$0")"
 OUT=${1:-/tmp/gotaf-regress}; mkdir -p "$OUT"
-# (SKIP="mar guerra" pula fases já rodadas nessa pasta — mar, guerra, vida, estado, tela, cidade, perf; sem SKIP a pasta
+# (SKIP="mar guerra" pula fases já rodadas nessa pasta — mar, guerra, vida, estado, tela, cidade, poderes, perf; sem SKIP a pasta
 # começa limpa. Com a máquina ocupada: SKIP="perf" agora, e depois, com ela livre, só o desempenho:
-# SKIP="mar guerra vida estado tela cidade" bash regress.sh pasta)
+# SKIP="mar guerra vida estado tela cidade poderes" bash regress.sh pasta)
 skip() { [[ " $SKIP " == *" $1 "* ]]; }
 [ -z "$SKIP" ] && rm -f "$OUT"/*.txt
 t0=$(date +%s)
@@ -56,13 +56,18 @@ skip cidade || { (timeout 2400 node urb1.js 41 128 90 > "$OUT/cidade_bairros.txt
   (timeout 900 node ev.js 5 continente 128 4 4 memoria.js > "$OUT/memoria.txt" 2>&1) & (timeout 2400 node mundos.js > "$OUT/mundos.txt" 2>&1) & wait
   (timeout 1500 node quarteirao.js > "$OUT/cidade_quarteirao.txt" 2>&1); }
 echo "== cidade: $(cat "$OUT"/cidade_*.txt 2>/dev/null | grep -c '^PASSOU') passaram, $(cat "$OUT"/cidade_*.txt 2>/dev/null | grep -c '^FALHOU') falharam; memória e mundos prontos: $(grep -h '^MUNDOS' "$OUT/mundos.txt" 2>/dev/null)"
-# 7. desempenho: sozinho na máquina, para os tempos valerem alguma coisa
+# 7. os poderes do deus: os novos (v30) provocados de propósito com os casos ruins, e o deus caótico lançando todos ao acaso
+skip poderes || { (timeout 1500 node poderes.js > "$OUT/poderes.txt" 2>&1) & (timeout 1500 node ev.js 7 continente 128 4 3 chaos.js > "$OUT/caos.txt" 2>&1) & wait; }
+echo "== poderes: $(grep -c '^PASSOU' "$OUT/poderes.txt" 2>/dev/null) passaram, $(grep -c '^FALHOU' "$OUT/poderes.txt" 2>/dev/null) falharam; caos: $(grep -c '"viol": \[\]' "$OUT/caos.txt" 2>/dev/null) limpo"
+# 8. desempenho: sozinho na máquina, para os tempos valerem alguma coisa
 skip perf || m17 perf 7; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/mar_perf.txt" | cut -c1-160)"
 # resumo: uma linha por prova
 {
   for f in "$OUT"/mar_*.txt; do grep -h "PASSOU\|FALHOU" "$f" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | mar \2/'; done
   for f in "$OUT"/cidade_*.txt; do [ -f "$f" ] && grep -h "^PASSOU\|^FALHOU" "$f" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | cidade \2/'; done
   [ -f "$OUT/salto.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/salto.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | salto \2/'
+  [ -f "$OUT/poderes.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/poderes.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | poderes \2/'
+  [ -f "$OUT/caos.txt" ] && { grep -q '"viol": \[\]' "$OUT/caos.txt" && grep -q '"errs": \[\]' "$OUT/caos.txt" && echo "PASSOU | caos sem violações S0–S2" || echo "FALHOU | caos sem violações S0–S2"; }
   for f in "$OUT"/guerra_*.txt; do grep -h " PASS \| FAIL " "$f" | grep -v RESULT | sed -E 's/^([^—]*) (PASS|FAIL) .*/\2 | guerra \1/; s/^PASS/PASSOU/; s/^FAIL/FALHOU/'; done
   grep -h "^PASSOU\|^FALHOU" "$OUT/guard.txt" "$OUT/determinismo.txt" | sed -E 's/^(PASSOU|FALHOU).*/\1/' | head -2 | paste -d' ' - <(echo vigia; echo determinismo) | sed 's/ / | /'
   for f in vida_103 vida_107; do v=$(grep -c "^  S[0-2] " "$OUT/$f.txt"); echo "$([ "$v" = 0 ] && echo PASSOU || echo FALHOU) | $f sem violações S0–S2"; done

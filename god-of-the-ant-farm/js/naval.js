@@ -52,7 +52,8 @@
   };
   // on board: the task becomes riding the ship, and the ship's roster has them (off the roster of a ship they left)
   Nv.board = function (v, s) {
-    if (v.aboard && v.aboard !== s.id) { const o = G.S.ships.find(x => x.id === v.aboard); if (o && o.crew) o.crew = o.crew.filter(id => id !== v.id); }
+    // (off every other roster: the ship one was on, and the fishing boat one was waiting for ashore — L-087)
+    for (const o of G.S.ships) if (o !== s && o.crew && o.crew.includes(v.id)) o.crew = o.crew.filter(id => id !== v.id);
     G.Vg.endTask(v);
     v.aboard = s.id; v.task = { type: 'aboard', ship: s.id, pri: 9, st: 0, age: 0 }; v.path = null;
     if (!s.crew) s.crew = []; if (!s.crew.includes(v.id)) s.crew.push(v.id);

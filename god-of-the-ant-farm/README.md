@@ -24,7 +24,7 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 | Ver detalhes | clique num habitante, animal ou construção |
 | Seguir alguém | duplo clique no habitante · `F` |
 | Poderes | barra inferior ou teclas `1`–`8` da aba atual, depois clique no mapa |
-| Trocar aba de poderes | `Tab` (Dádivas · Ira · Terra · Mar · Natureza · Palavra · Destino) |
+| Trocar aba de poderes | `Tab` (Dádivas · Ira · Terra · Mar · Natureza · Cidade · Palavra · Destino) |
 | Minimapa | `M` · ou o ícone do mapa no topo (clique/arraste nele para voar até lá) |
 | Ver o subterrâneo | `U` · ou o ícone da caverna no topo · ou “Ver o interior” ao tocar a boca de uma caverna |
 | O Livro do Mundo | `L` · ou o ícone do livro no topo |
@@ -417,6 +417,8 @@ Os poderes ficam em sete abas (`Tab` troca). Poderes marcados com ✦ abrem uma 
 | Natureza | Mudar o Clima ✦ | 50 | Neve eterna, taiga, bosque, pântano, selva, savana ou deserto: o chão, as árvores e os animais mudam junto |
 | Natureza | Gafanhotos | 38 | Uma nuvem voa até as plantações mais próximas e devora colheitas, capim e frutos |
 | Natureza | Fera Lendária | 85 | Um predador gigante típico daquela terra desperta, com nome e epíteto, para caçar gente |
+| Cidade | Chuva de Ouro | 40 | Moedas caem do céu sobre um bairro: o que cai no telhado fica na casa, o que cai na rua é de quem pegar primeiro (o povo corre a catar; um povo sem moeda leva o ouro ao armazém). Rua rica atrai ladrão |
+| Cidade | Vinho nos Poços | 28 | Por meio dia os poços de uma cidade dão vinho: o povo larga o trabalho, bebe, dança e cambaleia — e quem bebeu demais acorda de ressaca |
 | Palavra | Profecia ✦ | 35 | Anuncie a queda, a grandeza, a morte do governante, a guerra ou a paz de uma cidade; se acontecer, a fé explode |
 | Palavra | Mandamento ✦ | 50 | Uma lei divina para um povo: *Não matarás*, *Crescei e multiplicai-vos*, *Trabalharás*, *Honrarás teu deus*, *Buscarás o saber*, *Guerra santa* |
 | Palavra | Inspiração ✦ | 60 | Revele a tecnologia que quiser a um povo |

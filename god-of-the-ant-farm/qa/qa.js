@@ -220,6 +220,35 @@
         if (!(c.day <= s.day)) add('urb', 2, `crime#${c.id}: no futuro`);
       }
     }
+    // ---- the god's gifts to the towns (citygifts.js): gold on the ground lies where one can walk, the wine flows in a town that exists
+    if (s.gifts) {
+      const g = s.gifts; const T = G.T;
+      if (!Array.isArray(g.piles) || !Array.isArray(g.rains) || !Array.isArray(g.wine)) add('gift', 1, 'S.gifts sem as listas de ouro e vinho');
+      else {
+        if (g.rains.length > 2) add('gift', 3, `${g.rains.length} chuvas de ouro ao mesmo tempo (máximo 2)`);
+        for (const rn of g.rains) {
+          if (!fin(rn.t) || !(rn.drops >= 0) || !fin(rn.street) || !fin(rn.n)) { add('gift', 2, `chuva de ouro#${rn.id}: contas inválidas`); continue; }
+          // every coin that fell in the street is in a pile, in somebody's hands, in the town's store, or sunk
+          let left = 0; for (const q of g.piles) if (q.rain === rn.id) left += q.n;
+          const sum = Object.values(rn.got || {}).reduce((a, b) => a + b, 0);
+          if (Math.abs(rn.street - (rn.n + left + rn.found + rn.sunk)) > 0.01) add('gift', 2, `chuva de ouro#${rn.id}: caíram ${rn.street} moedas na rua, ${rn.n} catadas + ${left} no chão + ${rn.found} achadas + ${rn.sunk} perdidas`);
+          if (Math.abs(sum - rn.n) > 0.01) add('gift', 2, `chuva de ouro#${rn.id}: ${rn.n} catadas, mas as mãos somam ${sum}`);
+        }
+        for (const q of g.piles) {
+          if (!fin(q.x) || !fin(q.y) || !(q.n > 0) || !fin(q.t)) { add('gift', 1, `ouro#${q.id}: monte inválido`); continue; }
+          if (q.x < 0 || q.y < 0 || q.x >= N || q.y >= N) { add('gift', 1, `ouro#${q.id}: fora do mapa`); continue; }
+          const i = G.W.idx(q.x, q.y);
+          if (s.type[i] < T.SAND || !G.W.walkable(i)) add('gift', 2, `ouro#${q.id}: ${q.n} moedas onde ninguém pisa (${q.x.toFixed(1)},${q.y.toFixed(1)})`);
+          if (s.clock - q.t > G.DAY_LEN * 3 + 2) add('gift', 3, `ouro#${q.id}: no chão há mais de três dias`);
+        }
+        const towns = new Set();
+        for (const w of g.wine) {
+          if (!s.settlements.has(w.set)) add('gift', 2, `vinho#${w.id}: a cidade ${w.set} não existe`);
+          if (towns.has(w.set)) add('gift', 2, `vinho#${w.id}: dois vinhos na mesma cidade`); towns.add(w.set);
+          if (!fin(w.until) || w.until - s.clock > G.DAY_LEN * 0.5 + 0.01) add('gift', 2, `vinho#${w.id}: dura até ${w.until}`);
+        }
+      }
+    }
     // ---- ships
     for (const sh of s.ships) {
       const nm = `${sh.kind}#${sh.id}`;
