@@ -127,7 +127,9 @@ float pattern(float p, vec2 uv, vec3 wp, out vec2 bump) {
     const L = TL(); const x0 = b.x * L, z0 = b.y * L, w = b.w * L, d = b.h * L;
     // the ground under the footprint: the base stands on the lowest point and reaches the highest
     let lo = 1e9, hi = -1e9; for (let ty = b.y; ty <= b.y + b.h; ty++) for (let tx = b.x; tx <= b.x + b.w; tx++) { const h = W.hAt(Math.min(N, tx), Math.min(N, ty)) * HM(); lo = Math.min(lo, h); hi = Math.max(hi, h); }
-    const y0 = hi + 0.4; // (the floor of the building: on a plinth, as the god's view draws it)
+    // (the floor: a house stands on a plinth, as the god's view draws it; a field, a fence, a square lies on the ground — L-105)
+    const BASELESS = { farm: 1, horta: 1, plantacao: 1, vinhedo: 1, doca: 1, praca: 1, cemetery: 1, curral: 1, cercado: 1, campfire: 1 };
+    const y0 = hi + (BASELESS[b.type] ? 0.12 : 0.4);
     g.ao = () => lo; // (its walls darken toward the ground)
     const P = palOf(b); const hurt = b.maxHp ? G.clamp(b.hp / b.maxHp, 0, 1) : 1; const soot = hurt < 0.6 ? 0.55 + hurt * 0.75 : 1;
     const c = cc => (soot < 1 ? dim(cc, soot) : cc);
@@ -151,7 +153,7 @@ float pattern(float p, vec2 uv, vec3 wp, out vec2 bump) {
       as(pat, fn) { const o = g.pat; g.pat = PAT[pat] || 0; fn(); g.pat = o; },
     };
     // the base: stone from the lowest ground up to the floor (on a slope it shows; on flat ground it is a step)
-    if (b.type !== 'farm' && b.type !== 'horta' && b.type !== 'plantacao' && b.type !== 'vinhedo' && b.type !== 'doca' && b.type !== 'praca' && b.type !== 'cemetery' && b.type !== 'curral' && b.type !== 'cercado' && b.type !== 'campfire')
+    if (!BASELESS[b.type])
       K.as(stuff(b).base, () => g.put(SH.box, R3.mat(x0 + w / 2, lo - 0.2, z0 + d / 2, 0, w - 0.2, y0 - lo + 0.2, d - 0.2), c(P.base ? P.base[0] : '#8a8478')));
     return K;
   }
@@ -265,6 +267,19 @@ float pattern(float p, vec2 uv, vec3 wp, out vec2 bump) {
     K.as('beam', () => K.box(x, h - 0.2, z, sx + 0.1, 0.2, sz + 0.1, P.trim || '#6b4a30'));
     openings(g, gw, K, x, z, sx, sz, 0, h, floors, o.door);
     const top = o.noRoof ? h : roofOf(K, x, z, sx, sz, h, o.roof, o.roofCols);
+    // (the flat roofs of the south, as the god draws them: the Egyptian house with its awning of cloth and its wind-catcher,
+    // the Aztec one with a band of colour under the parapet and pots of plants on the terrace)
+    const civ = styleOf(K.b);
+    if (!o.noRoof && (o.roof || P.kind) === 'flat' && K.b.type !== 'cadeia') {
+      if (civ === 'egipcio') {
+        K.as('beam', () => { for (const [px, pz] of [[-0.3, -0.25], [0.05, -0.25], [0.05, 0.2], [-0.3, 0.2]]) K.box(x + px * sx, h + 0.25, z + pz * sz, 0.1, 1.5, 0.1, '#7a5a3a'); });
+        K.as('cloth', () => K.rbox(x - 0.12 * sx, h + 1.72, z - 0.02 * sz, sx * 0.42, 0.05, sz * 0.52, '#e8e0c8', 0, 0.08));
+        K.as(stuff(K.b).wall, () => { K.box(x + 0.3 * sx, h + 0.25, z - 0.28 * sz, 0.7, 1.6, 0.7, P.wl); }); K.box(x + 0.3 * sx, h + 1.1, z - 0.28 * sz + 0.36, 0.5, 0.55, 0.04, '#3a2a1c');
+      } else if (civ === 'asteca') {
+        K.as('plaster', () => K.box(x, h - 0.35, z, sx + 0.08, 0.3, sz + 0.08, P.trim || '#b33a2a'));
+        for (let k = 0; k < 3; k++) { const px = x - sx * 0.3 + k * sx * 0.3, pz = z + sz * 0.3; K.as('mud', () => K.cyl(px, h + 0.25, pz, 0.22, 0.32, '#b8683a')); K.gp.blade(K.x0 + px, K.y0 + h + 0.55, K.z0 + pz, 0.18, k, K.x0 + px + 0.1, K.y0 + h + 1.05, K.z0 + pz, [70, 120, 50], k % 2 ? [90, 160, 70] : [224, 90, 122], 0.5); K.gp.blade(K.x0 + px, K.y0 + h + 0.55, K.z0 + pz, 0.18, k + 1.6, K.x0 + px - 0.12, K.y0 + h + 0.95, K.z0 + pz + 0.05, [70, 120, 50], [96, 164, 72], 0.5); }
+      }
+    }
     if (o.chimney) { K.as('stone', () => { const cx = x + sx * 0.28, cz = z - sz * 0.18; K.box(cx, h * 0.6, cz, 0.62, top - h * 0.6 + 0.8, 0.62, P.base ? P.base[1] : '#6f6a60'); K.box(cx, top + 0.8, cz, 0.78, 0.14, 0.78, P.base ? P.base[0] : '#8a8478'); });
       B3.chim.set(K.b.id, [K.x0 + x + sx * 0.28, K.y0 + top + 0.95, K.z0 + z - sz * 0.18]); } // (where its smoke comes out: FX3D)
     return top;

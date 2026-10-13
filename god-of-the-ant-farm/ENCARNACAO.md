@@ -133,27 +133,49 @@ chamados), `around` (gente perto), `deeds`, `caps`. É a porta do "viver uma his
   rio, árvores, arbustos, prédios, estradas, gelo, fundo seco, muros — nada de contadores gerais do mundo: L-099), e só a
   parte que mudou — o chão, as plantas ou os prédios. Ao reabrir o modo, só as imagens distantes que mudaram são refeitas.
   O contexto 3D só é criado na primeira descida (`Realm.ready`): o Modo Deus nunca segura um.
-- **Terreno**: malha das quinas `S.H` (a mesma altura do Modo Deus — o teste e1 confere vértice a vértice), cores por
-  tipo de casa e bioma (as mesmas do Modo Deus), penhascos de pedra, estradas pintadas, pontes acima da água.
-- **Água**: o mar a 3 m (e um oceano até o horizonte), rios e lagos no seu nível (`wl`), o gelo do Inverno Súbito,
-  as paredes de água do Abrir o Mar.
-- **Vegetação**: as árvores reais (`S.trees`, cada uma na sua casa, espécie, tamanho e estágio — toco, tronco caído,
-  queimada), arbustos com as frutas que têm, pedras do tamanho da pedra que sobra; capim do bioma (curto e verde,
-  alto e dourado na savana, juncos no pântano, nada na neve e na duna).
-- **Prédios** (`js/build3d.js`): cada prédio real com tipo, tamanho, paleta da civilização (`Arch.PAL`), telhado
-  (duas águas, quatro águas, plano, palha, turfa), portas (no lado de onde as pessoas saem: `Vg.door`), janelas que
-  acendem à noite, base de pedra que acompanha a ladeira, obra com andaimes, fuligem quando ferido; ~50 tipos.
-  Muralhas, portões (abertos ou fechados), aquedutos. Plantações com a safra real de cada casa; cemitérios com as
-  lápides reais.
-- **Pessoas** (`js/people3d.js`): o corpo e as pessoas próximas são as **pessoas reais** — boneco procedural
-  (quadril, tronco, cabeça, cabelo, braços e pernas articulados, saia/túnica, carga, ferramenta), com a pele, o cabelo,
-  a roupa do ofício (e a cor do povo para guerreiros) e a altura da idade e do sexo; animado pela **máquina de estados**
-  `G.Anim3D` (idle, andar, correr, agachado, pular, cair, aterrissar, girar, vadear, golpear, colher, carregar, rezar,
-  sentar, conversar, dançar, luto, abraço, dormir, nadar, arremessar, amarrado, lutar, interagir) escolhida pelo que a
-  pessoa faz no mundo (`v.act`, a tarefa, a velocidade real). Mais longe: figuras simples das mesmas pessoas; além:
-  nada desenhado. Bichos terrestres e aves também.
-- **Efeitos** (`js/fx3d.js`): o fogo onde o mundo está pegando fogo, a chuva (e a neve nas terras frias) do clima do
-  mundo, os **navios reais** com a cor do povo na vela.
+- **O visual é o do Modo Deus** (v33, `qa/AUDIT.md` §10, D-019 a D-021): as mesmas cores, as mesmas formas, os mesmos
+  tons — no meio da descida as duas imagens são quase a mesma cidade.
+- **Chão** (`js/ground3d.js`): a malha das quinas `S.H` (a mesma altura do Modo Deus — o teste e1 confere vértice a
+  vértice), pintada por uma figura do mapa — uma casa por ponto, com a cor do próprio `Render.tileColor` do deus (ruas,
+  roças, neve, areia, trilha gasta, cinza) e o tipo de chão. O shader mistura as quatro casas em volta de cada ponto com
+  borda irregular (rua e roça com linha firme e meio-fio) e põe o grão de cada tipo (capim, areia, seixos, neve, poças do
+  pântano, ondas da duna, lajotas, sulcos da roça, camadas da rocha nas encostas). A figura segue o mundo: as fileiras em
+  volta do corpo são refeitas umas por quadro, e uma fileira do mapa inteiro também (o verificador `vista3d` e o e11
+  conferem casa por casa). A cor dos vértices é só a sombra (as cavidades, o pé das paredes).
+- **Água**: o mar a 3 m (e um oceano até o horizonte), rios e lagos no seu nível (`wl`); ondas que andam, o céu refletido
+  de lado, o brilho do sol, o raso claro (o fundo aparece) e o fundo escuro, espuma onde a água encosta na terra; o gelo
+  do Inverno Súbito, as paredes de água do Abrir o Mar; pontes de tábua (ou de pedra, nas ruas calçadas) sobre os rios.
+- **Céu e luz**: nuvens que andam com o vento do mundo (mais cobertas e cinzentas na chuva), o sol baixo, a lua, as
+  estrelas; o sol sobe só até ~55° (um lado da casa claro, o outro na sombra, como no desenho do deus); a curva de cor
+  neutra (as cores não lavam); sombras.
+- **Vegetação**: as árvores reais (`S.trees`: espécie, tamanho, estágio, variante) com copas de vários tufos facetados nos
+  três tons do deus, pinheiros em camadas, palmeiras de folhas caídas, salgueiros com cortinas, acácias em guarda-chuva,
+  neve em cima onde a terra é fria; tudo balança com o vento (atributo `aK`). A árvore derrubada cai de verdade (FX3D) e
+  deita. Arbustos com as frutas que têm, pedras com musgo ou neve; capim do bioma em tufos de folhas (dourado na savana,
+  junco no pântano, nada na neve), flores; tudo balança e abre caminho para o corpo.
+- **Prédios** (`js/build3d.js`): cada prédio real com tipo, tamanho, paleta da civilização (`Arch.PAL`), o **material do
+  povo** (padrões desenhados no shader, `Build3D.PAT`: enxaimel, reboco, adobe, tábuas; telha, telha plana, palha, grama;
+  pedra na base) e os telhados altos do desenho do deus (beiral, empenas fechadas, cumeeira; as casas longas nórdicas com
+  telhado de grama e cabeças de dragão), janelas com moldura, peitoril e postigos, portas de tábua com batente e degrau,
+  chaminés (com fumaça), andaimes da obra, fuligem quando ferido; ~50 tipos. Muralhas e portões de pedra, aquedutos com
+  arcos. Roças em fileiras de plantas com a safra real de cada casa (trigo, cevada, arroz alagado, milho, sorgo, com as
+  alturas do desenho do deus); cemitérios com as lápides reais.
+- **Pessoas** (`js/people3d.js`): o corpo e as pessoas próximas são as **pessoas reais** — boneco arredondado (quadril,
+  tronco com cintura e ombros, cinto, pescoço, cabeça com olhos que piscam, sobrancelhas e nariz, cabelo — grisalho nos
+  velhos —, braços e pernas articulados, saia/túnica, carga, ferramenta), com a pele, o cabelo, a roupa do ofício (e a
+  cor do povo para guerreiros) e a altura da idade e do sexo; animado pela **máquina de estados** `G.Anim3D` (idle,
+  andar — com o quadril e o tronco —, correr, agachado, pular, cair, aterrissar, girar, vadear, golpear, colher,
+  carregar, rezar, sentar, conversar, dançar, luto, abraço, dormir, nadar, arremessar, amarrado, lutar, interagir)
+  escolhida pelo que a pessoa faz no mundo. Quem está parado perto do corpo vira a cabeça para ele (`People3D.lookFor`).
+  Mais longe: figuras simples das mesmas pessoas, com pernas que andam; além: nada. Os bichos com corpo, pescoço,
+  focinho, orelhas, olhos, chifres ou galhada, crina, cauda (que abana no cão), pernas em trote, pastando; aves de duas
+  patas no chão e batendo as asas no ar.
+- **Efeitos** (`js/fx3d.js`, só se veem, acaso do desenho): o fogo onde o mundo está pegando fogo e as fogueiras das
+  vilas (chamas, faíscas, coluna de fumaça, luz), a fumaça das chaminés, a chuva (e a neve) do clima do mundo com gotas
+  batendo no chão e anéis na água, poeira e neve levantadas por quem corre, respingos e anéis de quem anda na água,
+  lascas do machado e da picareta, folhas caindo com o vento, vaga-lumes nas noites quentes; os **navios reais** com a
+  cor do povo na vela.
+- **Qualidade baixa**: sem o grão do chão, sem os padrões dos prédios, sem o capim, sem sombras — as cores lisas.
 
 ## 6. "LOD de simulação" — o que é e o que não é (D-017)
 A simulação deste jogo já roda **todo mundo, sempre**, barato (é ela que faz a história). Encarnar **não muda a

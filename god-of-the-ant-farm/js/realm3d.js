@@ -769,6 +769,8 @@
     { const w = G.S.weather; const ws = G.clamp(w.windS || 0, 0, 2); U.wind.value.set(Math.cos(w.windA || 0) * (0.35 + ws), Math.sin(w.windA || 0) * (0.35 + ws), ws); }
     if (focus) U.body.value.set(focus.X, focus.Y || 0, focus.Z, 1); else U.body.value.w = 0;
     G.Ground3D.tick(focus);
+    // (the clouds' shadows move as the sky's clouds do; darker under a bright sun, none at night)
+    { const w = U.wind.value; const T = U.time.value; G.Ground3D.clouds(w.x * T * 0.0016 * 4.7, w.y * T * 0.0016 * 4.7, skyU.cover.value, G.clamp(sun.intensity / 3, 0, 1) * 0.3); }
     if (focus) {
       stream(focus.X, focus.Z, budget === undefined ? 6 : budget);
       sun.position.set(focus.X + sd.x * 120, focus.Y + sd.y * 120, focus.Z + sd.z * 120); sun.target.position.set(focus.X, focus.Y, focus.Z); sun.target.updateMatrixWorld();

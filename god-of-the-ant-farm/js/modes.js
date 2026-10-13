@@ -21,7 +21,9 @@
 // ============================================================
 (function (G) {
   const M3 = G.Modes = { state: 'GOD', t: 0, n: 0 };
-  const TIN = [1.0, 1.6, 3.5], TOUT = [1.7, 2.3, 3.1]; // (the beats of the descent and of the ascent, seconds)
+  // (the beats of the descent and of the ascent, seconds: the two pictures are the same now — the god's colours and
+  // houses in the 3D — so they melt into each other a little longer, 0,8 s)
+  const TIN = [0.9, 1.7, 3.6], TOUT = [1.7, 2.5, 3.3];
   let god = null;        // the god's camera and speed before going down (given back on the way up)
   let fromPose = null, toPose = null, person = 0, dying = null, msg = '', menuOpen = false, panel = null, sleepK = 1, quickT = 0;
   const ease = t => t * t * t * (t * (t * 6 - 15) + 10); // (smootherstep)

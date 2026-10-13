@@ -14,7 +14,7 @@
   let THREE = null, R3 = null, scene = null, flame = null, glow = null, rain = null, rainP = null, hull = null, mast = null, sail = null, deck = null, light = null;
   const MAXF = 140, MAXS = 40, NR = 1600;
   const TAU = Math.PI * 2;
-  const svis = new Map(); G.worldHooks.push(() => { svis.clear(); for (const pl of [PA, PG]) if (pl) pl.n = 0; emit.clear(); leafT = 0; ripN = 0; for (const f of falling.values()) R3.dropMesh(f.m); falling.clear(); });
+  const svis = new Map(); G.worldHooks.push(() => { svis.clear(); for (const pl of [PA, PG]) if (pl) pl.n = 0; emit.clear(); leafT = 0; ripN = 0; fpN = 0; steps.clear(); for (const f of falling.values()) R3.dropMesh(f.m); falling.clear(); });
   // ------------------------------ particles ------------------------------
   // (two pools of soft points: smoke, dust, leaves, chips, splashes, drawn over what is behind them; sparks and
   // fireflies, glowing. Each point: where, how fast, how long it lives, its size from birth to death, its colour, its
@@ -80,6 +80,35 @@
       vertexShader: 'attribute float aT; varying float vT; void main(){ vT = aT; float s = 0.25 + aT * 1.6; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position * vec3(s, 1.0, s), 1.0); }',
       fragmentShader: 'varying float vT; uniform float uLit; void main(){ gl_FragColor = vec4(vec3(0.92, 0.96, 1.0) * uLit, (1.0 - vT) * 0.45); }' }), NR2);
     ring.count = 0; ring.frustumCulled = false; ring.renderOrder = 3; ring.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(ring); ring.userData.age = new Float32Array(NR2); ring.userData.max = new Float32Array(NR2); ring.userData.pos = new Float32Array(NR2 * 3);
+    makeFeet();
+  }
+  // footprints in the snow, the sand, the mud of a path, the earth of a field: little hollows that fade
+  const NFP = 160; let fp = null, fpN = 0; const steps = new Map();
+  function makeFeet() {
+    const g = new THREE.PlaneGeometry(0.15, 0.3); g.rotateX(-Math.PI / 2);
+    const aT = new THREE.InstancedBufferAttribute(new Float32Array(NFP), 1); const aC = new THREE.InstancedBufferAttribute(new Float32Array(NFP), 1); aT.setUsage(THREE.DynamicDrawUsage); aC.setUsage(THREE.DynamicDrawUsage); g.setAttribute('aT', aT); g.setAttribute('aC', aC);
+    fp = new THREE.InstancedMesh(g, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, uniforms: { uLit: PU.uLit },
+      vertexShader: 'attribute float aT; attribute float aC; varying float vT; varying float vC; varying vec2 vUv; void main(){ vT = aT; vC = aC; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'varying float vT; varying float vC; varying vec2 vUv; uniform float uLit; void main(){ vec2 p = vUv * 2.0 - 1.0; float a = smoothstep(1.0, 0.6, dot(p, p)) * (1.0 - vT) * 0.5; vec3 c = vC < 0.5 ? vec3(0.62, 0.7, 0.82) : vec3(0.32, 0.25, 0.18); gl_FragColor = vec4(c * uLit, a); }' }), NFP);
+    fp.count = 0; fp.frustumCulled = false; fp.renderOrder = 1; fp.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(fp); fp.userData = { age: new Float32Array(NFP), max: new Float32Array(NFP), aT, aC };
+  }
+  function footprint(x, y, z, yaw, kind, life) { if (!fp) return; const k = fpN < NFP ? fpN++ : (() => { let o = 0; for (let q = 1; q < fpN; q++) if (fp.userData.age[q] / fp.userData.max[q] > fp.userData.age[o] / fp.userData.max[o]) o = q; return o; })();
+    M.a.makeRotationY(-yaw + Math.PI / 2); M.a.setPosition(x, y, z); fp.setMatrixAt(k, M.a); fp.userData.age[k] = 0; fp.userData.max[k] = life; fp.userData.aC.array[k] = kind; fp.userData.aC.needsUpdate = true; fp.instanceMatrix.needsUpdate = true; }
+  function stepFeet(dt) {
+    if (!fp) return; const u = fp.userData; let k = 0;
+    while (k < fpN) { u.age[k] += dt; if (u.age[k] >= u.max[k]) { const j = --fpN; u.age[k] = u.age[j]; u.max[k] = u.max[j]; u.aC.array[k] = u.aC.array[j]; fp.getMatrixAt(j, M.b); fp.setMatrixAt(k, M.b); continue; } u.aT.array[k] = u.age[k] / u.max[k]; k++; }
+    fp.count = fpN; fp.instanceMatrix.needsUpdate = true; u.aT.needsUpdate = true; u.aC.needsUpdate = true;
+    if (steps.size > 400) steps.clear(); // (the memory of who walked where, kept small)
+  }
+  // (a step: every 0.72 m a walker goes on soft ground, a print — left, right — beside the line of the walk)
+  function walkPrints(id, X, Y, Z, yaw) {
+    const S = G.S; const L = G.Space.TILE; const x = Math.floor(X / L), y = Math.floor(Z / L); if (!W.inb(x, y)) return; const i = y * G.N + x; const ty = S.type[i];
+    let st = steps.get(id); if (!st) { st = { X, Z, side: 1 }; steps.set(id, st); return; }
+    const d = Math.hypot(X - st.X, Z - st.Z); if (d < 0.72) return; if (d > 4) { st.X = X; st.Z = Z; return; } st.X = X; st.Z = Z; st.side = -st.side;
+    if (ty <= G.T.RIVER || S.road[i]) return; const snow = R3.snowAt ? R3.snowAt(i) : 0; const b = S.occ[i] && S.buildings.get(S.occ[i]);
+    const soft = snow > 0.4 ? 0 : ty === G.T.SAND || G.pathLevel(S.wear[i]) >= 2 || (b && (b.type === 'farm' || b.type === 'horta' || b.type === 'plantacao')) ? 1 : -1; if (soft < 0) return;
+    const ox = -Math.sin(yaw) * 0.12 * st.side, oz = Math.cos(yaw) * 0.12 * st.side;
+    footprint(X + ox, W.hAt((X + ox) / L, (Z + oz) / L) * G.Space.HM + 0.03, Z + oz, yaw, soft, soft === 0 ? 30 : 14);
   }
   function ripple(x, y, z, life) { if (!ring) return; const k = ripN < NR2 ? ripN++ : G.vri(0, NR2 - 1); const u = ring.userData; u.age[k] = 0; u.max[k] = life || 1.2; u.pos[k * 3] = x; u.pos[k * 3 + 1] = y; u.pos[k * 3 + 2] = z; }
   F3.ripple = ripple;
@@ -87,6 +116,7 @@
   F3.check = function () {
     const out = []; for (const P of [PA, PG]) { if (!P) continue; if (P.n < 0 || P.n > NP) out.push(`partículas: ${P.n} num poço de ${NP}`); for (let k = 0; k < P.n; k++) if (!Number.isFinite(P.x[k] + P.y[k] + P.z[k] + P.t[k])) { out.push(`partícula ${k}: posição inválida`); break; } }
     if (ripN < 0 || ripN > NR2) out.push(`anéis na água: ${ripN}`);
+    if (fpN < 0 || fpN > NFP) out.push(`pegadas: ${fpN}`);
     for (const id of falling.keys()) { const t = G.S.trees.get(id); if (!t || t.stage !== 'fall') out.push(`árvore#${id} desenhada caindo, mas no mundo ${t ? t.stage : 'não existe'}`); }
     return out;
   };
@@ -114,7 +144,21 @@
     const box = new THREE.BoxGeometry(1, 1, 1); box.translate(0, 0.5, 0);
     const cyl = new THREE.CylinderGeometry(0.5, 0.5, 1, 6); cyl.translate(0, 0.5, 0);
     const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-    hull = new THREE.InstancedMesh(box, mat, MAXS); deck = new THREE.InstancedMesh(box, mat, MAXS); mast = new THREE.InstancedMesh(cyl, mat, MAXS); sail = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide }), MAXS);
+    // (a hull with a bow and a stern: wide amidships, drawn to a point forward, rounder aft, narrower at the keel than at
+    // the gunwale — one unit long, one wide, one high, its base on the water line's floor)
+    const hg = (() => {
+      const g = new THREE.BufferGeometry(); const P = [];
+      const sec = [[-0.5, 0.32, 0.18], [-0.32, 0.46, 0.3], [0, 0.5, 0.34], [0.28, 0.44, 0.26], [0.42, 0.26, 0.1], [0.52, 0.02, 0.0]]; // [x, half-width at the gunwale, half-width at the keel]
+      for (let k = 0; k < sec.length - 1; k++) { const a = sec[k], b = sec[k + 1];
+        for (const sd of [-1, 1]) { const q = [[a[0], 1, sd * a[1]], [b[0], 1, sd * b[1]], [b[0], 0, sd * b[2]], [a[0], 0, sd * a[2]]]; const t = sd > 0 ? [0, 2, 1, 0, 3, 2] : [0, 1, 2, 0, 2, 3]; for (const i of t) P.push(...q[i]); }
+        P.push(a[0], 0, -a[2], b[0], 0, -b[2], b[0], 0, b[2], a[0], 0, -a[2], b[0], 0, b[2], a[0], 0, a[2]);
+        P.push(a[0], 1, -a[1], a[0], 1, a[1], b[0], 1, b[1], a[0], 1, -a[1], b[0], 1, b[1], b[0], 1, -b[1]); }
+      const a = sec[0]; P.push(a[0], 0, -a[2], a[0], 0, a[2], a[0], 1, a[1], a[0], 0, -a[2], a[0], 1, a[1], a[0], 1, -a[1]);
+      g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.computeVertexNormals(); return g;
+    })();
+    // (a sail that bellies in the wind: a strip of a cylinder)
+    const sg = new THREE.CylinderGeometry(1.6, 1.6, 1, 10, 1, true, -0.32, 0.64); sg.translate(0, 0.5, -1.6); sg.rotateY(Math.PI / 2); sg.scale(1, 1, 1);
+    hull = new THREE.InstancedMesh(hg, new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide }), MAXS); deck = new THREE.InstancedMesh(box, mat, MAXS); mast = new THREE.InstancedMesh(cyl, mat, MAXS); sail = new THREE.InstancedMesh(sg, new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide }), MAXS);
     for (const m of [hull, deck, mast, sail]) { m.count = 0; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); }
     makePools();
   };
@@ -152,7 +196,8 @@
     flame.count = glow.count = n; flame.instanceMatrix.needsUpdate = glow.instanceMatrix.needsUpdate = true; F3.fires = n;
     light.intensity = best > 0 ? 18 * best * (0.85 + G.VR() * 0.3) : 0; light.position.set(bx, by, bz);
     // ---- rain (or snow on the cold lands): round the eye, as much as the world's weather pours
-    const cam = R3.camera(); const wr = S.weather ? S.weather.rain || 0 : 0;
+    // (the weather's rain, or the rain of a cloud of the world passing over the body — the god's rain clouds are local)
+    const cam = R3.camera(); const wr = Math.max(S.weather ? S.weather.rain || 0 : 0, G.Nature && G.Nature.rainAt ? G.Nature.rainAt(focus.X / L, focus.Z / L) : 0);
     const cold = G.Biome && G.Biome.cold ? G.Biome.cold(W.idx(G.clamp(focus.X / L, 0, G.N - 1), G.clamp(focus.Z / L, 0, G.N - 1))) : false;
     rain.material.opacity = G.clamp(wr * 1.4, 0, 0.75); rain.material.size = cold ? 0.16 : 0.08; rain.material.color.set(cold ? 0xf4f8ff : 0xc8d8e8);
     if (wr > 0.05) {
@@ -178,9 +223,9 @@
       const col = G.Fac.hex(s.fac); const wood = s.kind === 'guerra' ? '#5a3a24' : '#7a5232';
       // (the ship's frame: at its place, turned to its heading — the length along its own X — rolling on the swell)
       const put = (im, ox, oy, oz, sx, sy, sz, c) => { M.a.makeTranslation(X, wy - 0.4 + bob + sink, Z); M.b.makeRotationY(-v.yaw); M.a.multiply(M.b); M.b.makeRotationX(rock); M.a.multiply(M.b); M.b.makeTranslation(ox, oy, oz); M.a.multiply(M.b); M.b.makeScale(sx, sy, sz); M.a.multiply(M.b); im.setMatrixAt(m, M.a); im.setColorAt(m, M.c.set(c)); };
-      put(hull, 0, 0, 0, D[0], 1.1, D[1], wood);
+      put(hull, 0, -0.1, 0, D[0], 1.25, D[1], wood);
       put(deck, -D[0] * 0.25, 1.1, 0, D[0] * 0.25, D[0] > 6 ? 1.3 : 0.01, D[1] * 0.7, '#8a6a44');
-      if (D[2] && s.mast !== 0) { put(mast, 0, 1.1, 0, 0.25, D[2], 0.25, '#4a3424'); put(sail, 0.1, 1.1 + D[2] * 0.3, 0, 0.08, D[2] * 0.6 * G.clamp((s.sail || 100) / 100, 0.2, 1), D[1] * 1.3, hp < 0.4 ? '#8a8478' : col); }
+      if (D[2] && s.mast !== 0) { put(mast, 0, 1.1, 0, 0.25, D[2], 0.25, '#4a3424'); put(sail, 0.1, 1.1 + D[2] * 0.3, 0, 3, D[2] * 0.6 * G.clamp((s.sail || 100) / 100, 0.2, 1), D[1] * 1.3, hp < 0.4 ? '#8a8478' : col); }
       else { mast.setMatrixAt(m, M.z); sail.setMatrixAt(m, M.z); }
       m++;
     }
@@ -201,7 +246,7 @@
     // ---- the small life of the air: smoke, sparks, dust, splashes, chips, leaves, fireflies
     emitters(rdt, focus, t);
     { const w = S.weather; const ws = G.clamp(w.windS || 0, 0, 2); const wx = Math.cos(w.windA || 0) * (0.4 + ws * 1.4), wz = Math.sin(w.windA || 0) * (0.4 + ws * 1.4);
-      stepPool(PA, rdt, wx, wz, t); stepPool(PG, rdt, wx, wz, t); stepRings(rdt); }
+      stepPool(PA, rdt, wx, wz, t); stepPool(PG, rdt, wx, wz, t); stepRings(rdt); stepFeet(rdt); }
     const cam2 = R3.camera(); const ren = R3.renderer(); PU.uScale.value = ren.domElement.height / (2 * Math.tan(cam2.fov * Math.PI / 360));
     const fog = R3.scene().fog; PU.uFogC.value.copy(fog.color).convertLinearToSRGB(); PU.uFogN.value = fog.near; PU.uFogF.value = fog.far;
     { const am = G.Render.ambient(); PU.uLit.value = G.clamp((am[0] + am[1] + am[2]) / 765, 0.3, 1); }
@@ -246,11 +291,12 @@
       const snow = snowAt(i); const soft = (ty === G.T.GRASS || ty === G.T.MEADOW) && !S.road[i] && G.pathLevel(S.wear[i]) < 2 && snow < 0.4;
       if (soft && sp < 4) return; // (soft grass raises little)
       let c; if (snow > 0.4) c = [0.94, 0.96, 1]; else { const g = G.Ground3D.tileCol(i, x, y); c = [Math.min(1, g[0] / 255 * 1.15), Math.min(1, g[1] / 255 * 1.12), Math.min(1, g[2] / 255 * 1.1)]; }
-      for (let k = every('d' + id, sp > 2.4 ? sp * 1.6 : 1.2, dt); k > 0; k--) spawn(PA, { x: X + G.vrr(-0.15, 0.15), y: Y + 0.08, z: Z + G.vrr(-0.15, 0.15), vx: G.vrr(-0.4, 0.4), vy: G.vrr(0.25, 0.6), vz: G.vrr(-0.4, 0.4), life: G.vrr(0.7, 1.2), s0: 0.25, s1: G.vrr(0.8, 1.3), c, a: snow > 0.4 ? 0.6 : 0.32, drag: 1.4 });
+      // (a little puff at each stride, not a trail: low, quick, faint)
+      for (let k = every('d' + id, sp > 2.4 ? sp * 0.8 : 1, dt); k > 0; k--) spawn(PA, { x: X + G.vrr(-0.15, 0.15), y: Y + 0.06, z: Z + G.vrr(-0.15, 0.15), vx: G.vrr(-0.3, 0.3), vy: G.vrr(0.15, 0.4), vz: G.vrr(-0.3, 0.3), life: G.vrr(0.5, 0.8), s0: 0.2, s1: G.vrr(0.55, 0.85), c, a: snow > 0.4 ? 0.42 : 0.2, drag: 2 });
     };
-    if (av) feet(av.X, av.Y, av.Z, av.sp || 0, 'av', av.wade || 0);
+    if (av) { feet(av.X, av.Y, av.Z, av.sp || 0, 'av', av.wade || 0); if (av.ground !== false) walkPrints('av', av.X, av.Y, av.Z, av.yaw); }
     if (G.People3D) for (const p of G.People3D.walkers) {
-      feet(p[0], p[1], p[2], p[3], p[7], 0);
+      feet(p[0], p[1], p[2], p[3], p[7], 0); if (p[3] > 0.3) walkPrints(p[7], p[0], p[1], p[2], p[6]);
       // (the chips of the axe, the pick, the hammer, at the blow)
       const a = p[5]; if (a === 'chop' || a === 'mine' || a === 'build' || a === 'hammer' || a === 'dig') { const n = every('h' + p[7], 2.2, dt); const fx = Math.cos(p[6]) * 0.7, fz = Math.sin(p[6]) * 0.7; const wood = a === 'chop' || a === 'build';
         for (let k = 0; k < n * 4; k++) spawn(PA, { x: p[0] + fx, y: p[1] + (a === 'chop' ? 0.9 : 0.3), z: p[2] + fz, vx: fx * 2 + G.vrr(-1.2, 1.2), vy: G.vrr(1.5, 3.2), vz: fz * 2 + G.vrr(-1.2, 1.2), life: G.vrr(0.6, 1), s0: 0.09, s1: 0.07, c: wood ? [0.86, 0.72, 0.5] : a === 'dig' ? [0.5, 0.4, 0.3] : [0.62, 0.6, 0.58], a: 1, sh: 2, grav: 9.8 }); }
@@ -263,8 +309,12 @@
     const fi = W.idx(G.clamp(Math.floor(focus.X / L), 0, G.N - 1), G.clamp(Math.floor(focus.Z / L), 0, G.N - 1));
     if (night > 0.6 && !(w.rain > 0.1) && S.temp && S.temp[fi] / 255 > 0.36) for (let k = every('ff', 3.4, dt); k > 0; k--) { const X = focus.X + G.vrr(-14, 14), Z = focus.Z + G.vrr(-14, 14); const x = Math.floor(X / L), y = Math.floor(Z / L); if (!W.inb(x, y) || S.type[y * G.N + x] <= G.T.RIVER) continue;
       spawn(PG, { x: X, y: W.hAt(X / L, Z / L) * H + G.vrr(0.4, 1.8), z: Z, vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.08, 0.08), vz: G.vrr(-0.3, 0.3), life: G.vrr(6, 10), s0: 0.13, s1: 0.13, c: [0.78, 1, 0.38], a: 1, sh: 1, wob: 0.8, fade: 1 }); }
+    // the rain clouds of the world, where the god sees them: big soft puffs high over the land, grey with the rain they carry
+    for (let q = 0; q < S.clouds.length && q < 14; q++) { const c = S.clouds[q]; const X = c.x * L, Z = c.y * L; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > 380 * 380) continue;
+      const it = G.Nature.cloudIntensity ? G.Nature.cloudIntensity(c) : 0.6; const R = c.r * L * 0.8; const gy = G.SEA * H + 70 + (c.ph % 3) * 6;
+      for (let k = every('cl' + q, 2.2 * Math.min(1, c.r / 3), dt); k > 0; k--) { const a = G.VR() * Math.PI * 2, d = Math.sqrt(G.VR()) * R; spawn(PA, { x: X + Math.cos(a) * d, y: gy + G.vrr(-4, 6), z: Z + Math.sin(a) * d, vx: c.vx * L * 0.35, vz: c.vy * L * 0.35, life: G.vrr(7, 10), s0: G.vrr(26, 34), s1: G.vrr(36, 46), c: c.kind === 'divine' ? [0.92, 0.9, 0.82] : [0.62 + (1 - it) * 0.25, 0.64 + (1 - it) * 0.25, 0.7 + (1 - it) * 0.2], a: 0.32 * Math.max(0.3, it), fade: 1 }); } }
     // rain: drops striking the ground, rings on the water (snow falls soft: nothing)
-    const rain = w.rain || 0;
+    const rain = Math.max(w.rain || 0, G.Nature && G.Nature.rainAt ? G.Nature.rainAt(focus.X / L, focus.Z / L) : 0);
     if (rain > 0.15 && snowAt(fi) < 0.3) for (let k = every('rn', rain * 60, dt); k > 0; k--) { const X = focus.X + G.vrr(-14, 14), Z = focus.Z + G.vrr(-14, 14); const x = Math.floor(X / L), y = Math.floor(Z / L); if (!W.inb(x, y)) continue; const i = y * G.N + x;
       if (S.type[i] <= G.T.RIVER) ripple(X, (S.type[i] === G.T.RIVER ? S.wl[i] : G.SEA) * H + 0.06, Z, 0.8);
       else spawn(PA, { x: X, y: W.hAt(X / L, Z / L) * H + 0.05, z: Z, vy: 0.8, life: 0.25, s0: 0.12, s1: 0.03, c: [0.85, 0.9, 0.95], a: 0.7, sh: 1, grav: 6 }); }

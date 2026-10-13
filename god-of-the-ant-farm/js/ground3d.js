@@ -149,9 +149,9 @@
   }
 
   // ------------------------------ the land's material ------------------------------
-  const U = { uMap: { value: null }, uDet: { value: null }, uN: { value: 128 }, uTL: { value: 4 } };
+  const U = { uMap: { value: null }, uDet: { value: null }, uN: { value: 128 }, uTL: { value: 4 }, uCN: { value: null }, uCO: { value: null }, uCC: { value: 0 }, uCS: { value: 0 } };
   const FRAG = `
-uniform sampler2D uMap; uniform sampler2D uDet; uniform float uN; uniform float uTL;
+uniform sampler2D uMap; uniform sampler2D uDet; uniform float uN; uniform float uTL; uniform sampler2D uCN; uniform vec2 uCO; uniform float uCC; uniform float uCS;
 varying vec3 vGP; varying vec3 vGN;
 float gHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 vec3 gShade(vec4 t, vec4 d, float m1, float m2) {
@@ -200,6 +200,11 @@ vec3 groundCol() {
   // (the kerb where a street meets the rest)
   float r = mix(mix(gRoad(t00), gRoad(t10), s.x), mix(gRoad(t01), gRoad(t11), s.x), s.y);
   c *= 1.0 - (1.0 - abs(r * 2.0 - 1.0)) * 0.32 * hard;
+  // (the shadows of the clouds sliding over the land, as the god sees them pass)
+#ifdef GDETAIL
+  vec2 cu = vGP.xz / 520.0 + uCO; float cn = texture2D(uCN, cu).r * 0.68 + texture2D(uCN, cu * 3.1 + 0.37).g * 0.32;
+  c *= 1.0 - smoothstep(0.98 - uCC, 1.18 - uCC, cn) * uCS;
+#endif
   // (a steep face shows its layers of rock, whatever the tiles say)
   float steep = 1.0 - smoothstep(0.55, 0.8, vGN.y);
 #ifdef GDETAIL
@@ -209,7 +214,7 @@ vec3 groundCol() {
 }
 `;
   G3.init = function (three) {
-    THREE = three; det = makeDetail(); U.uDet.value = det; U.uTL.value = G.Space.TILE;
+    THREE = three; det = makeDetail(); U.uDet.value = det; U.uTL.value = G.Space.TILE; U.uCO.value = new THREE.Vector2(); U.uCN.value = G3.cloudNoise();
     mat = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true });
     mat.onBeforeCompile = sh => {
       Object.assign(sh.uniforms, U);
@@ -223,6 +228,8 @@ vec3 groundCol() {
   // (the grain only where the machine can carry it)
   G3.quality = function () { if (!mat) return; const q = G.Realm.Q(); const want = q.detail !== 0; const has = !!(mat.defines && mat.defines.GDETAIL); if (want !== has) { mat.defines = want ? { GDETAIL: 1 } : {}; mat.needsUpdate = true; } };
   G3.material = () => mat;
+  // (the clouds over the land: their offset as the wind carries them, how much of the sky they cover, how dark their shadow)
+  G3.clouds = function (ox, oz, cover, k) { if (!U.uCO.value) U.uCO.value = new THREE.Vector2(); U.uCN.value = G3.cloudNoise(); U.uCO.value.set(ox, oz); U.uCC.value = cover; U.uCS.value = k; };
   // a soft noise for the clouds (R: the big shapes, G: the small; tiling) — made once
   let cloudTx = null;
   G3.cloudNoise = function () {

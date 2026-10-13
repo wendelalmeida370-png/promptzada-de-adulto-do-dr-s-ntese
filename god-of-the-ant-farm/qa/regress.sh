@@ -1,5 +1,5 @@
 #!/bin/bash
-# A regressão completa, antes de cada versão: bash qa/regress.sh [pasta de saída]   (≈ 1 h 45 min numa máquina de 4 núcleos — 1 h dela é o Modo Encarnado, sozinho)
+# A regressão completa, antes de cada versão: bash qa/regress.sh [pasta de saída]   (≈ 2 h numa máquina de 4 núcleos — 1 h 20 dela é o Modo Encarnado, sozinho)
 # Roda o vigia do código, as 17 provas do mar, as 10 da guerra, as da cidade (bairros, porto, taverna, moradia, crime, quarteirão), a memória dos mortos, os mundos prontos, vidas longas com o verificador, a mão divina, saves danificados,
 # o save como ponto fixo, os mapas de alcance e de quem está a bordo, o determinismo, os painéis, o desenho, o macaco no teclado, os poderes (os novos e o deus caótico)
 # e o Modo Encarnado (encarna.js: o 3D de verdade, com o WebGL por software do navegador de testes).
@@ -61,9 +61,9 @@ echo "== cidade: $(cat "$OUT"/cidade_*.txt 2>/dev/null | grep -c '^PASSOU') pass
 skip poderes || { (timeout 1500 node poderes.js > "$OUT/poderes.txt" 2>&1) & (timeout 1500 node ev.js 7 continente 128 4 3 chaos.js > "$OUT/caos.txt" 2>&1) & (timeout 1500 node ev.js 13 arquipelago 128 4 3 chaos.js > "$OUT/caos_13.txt" 2>&1) & wait; }
 echo "== poderes: $(grep -c '^PASSOU' "$OUT/poderes.txt" 2>/dev/null) passaram, $(grep -c '^FALHOU' "$OUT/poderes.txt" 2>/dev/null) falharam; caos: $(cat "$OUT"/caos*.txt 2>/dev/null | grep -c '"viol": \[\]') de 2 limpos"
 # 7b. o Modo Encarnado: a cidade real em 3D, a pessoa real, o mundo que continua, a troca, a morte, o terreno, os saves A–E,
-# o estresse (30 idas e voltas, a caminhada longa, o salto de 10 anos) e os casos ruins — com fotos em encarna-fotos/ (≈ 1 h sozinho:
-# o 3D é desenhado de verdade, sem placa de vídeo)
-skip encarnado || (timeout 5400 node encarna.js "$OUT/encarna-fotos" > "$OUT/encarnado.txt" 2>&1)
+# o estresse (30 idas e voltas, a caminhada longa, o salto de 10 anos), os casos ruins e o visual (e11) — com fotos em encarna-fotos/
+# (≈ 1 h 20 sozinho: o 3D é desenhado de verdade, sem placa de vídeo — desde a v33, com o chão e os padrões, mais pesado: T-032)
+skip encarnado || (timeout 7200 node encarna.js "$OUT/encarna-fotos" > "$OUT/encarnado.txt" 2>&1)
 echo "== encarnado: $(grep -c '^PASSOU' "$OUT/encarnado.txt" 2>/dev/null) passaram, $(grep -c '^FALHOU' "$OUT/encarnado.txt" 2>/dev/null) falharam; $(grep -h '^DESEMPENHO' "$OUT/encarnado.txt" 2>/dev/null | cut -c1-200)"
 # 8. desempenho: sozinho na máquina, para os tempos valerem alguma coisa
 skip perf || m17 perf 7; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/mar_perf.txt" | cut -c1-160)"

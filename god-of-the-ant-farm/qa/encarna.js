@@ -34,7 +34,8 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASSOU' : 'FALHOU'} | encarna ${name} | ${info}`); if (!cond) fails.push(name); };
   // (the logic runs at the light quality — the browser draws 3D in software, slowly; the photos at the medium one)
   const shot = async name => {
-    await page.evaluate(() => { if (G.Modes.state !== 'GOD') { G.Realm.setQuality('media'); for (let k = 0; k < 24; k++) G.Main.frameFor(33); } });
+    // (10 frames at the medium quality before the photo: the 3D drawn by software is heavier since v33 — T-032)
+    await page.evaluate(() => { if (G.Modes.state !== 'GOD') { G.Realm.setQuality('media'); for (let k = 0; k < 10; k++) G.Main.frameFor(33); } });
     try { await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: 180000 }); } catch (e) { console.log('(foto ' + name + ' não saiu: ' + e.message.slice(0, 60) + ')'); }
     await page.evaluate(() => G.Realm.setQuality('baixa'));
   };
