@@ -36,15 +36,24 @@ def warp(img, dx, dy, amt):
     S = img.shape[0]; y, x = np.mgrid[0:S, 0:S].astype(np.float32)
     return sample(img, x + (dx - 0.5) * amt * S, y + (dy - 0.5) * amt * S)
 
-def voronoi(S, n, seed, jitter=0.9, ny=None, stretch=(1.0, 1.0)):
-    """cells: F1, F2 (in cell units), the id of the nearest point and the offset to it"""
+def voronoi(S, n, seed, jitter=0.9, ny=None, stretch=(1.0, 1.0), dx=None, dy=None, jy=None):
+    """cells: F1, F2 (in cell units), the id of the nearest point and the offset to it; dx, dy: a periodic warp of the
+    picture (0..1 units) so the edges wander instead of running straight; jy: the jitter up and down (rows of stones)"""
     ny = ny or n; r = rng(seed)
-    P = r.random((ny, n, 2)).astype(np.float32) * jitter + (1 - jitter) / 2
-    x, y = grid(S); fx = x * n; fy = y * ny; cx = np.floor(fx).astype(int); cy = np.floor(fy).astype(int)
+    P = r.random((ny, n, 2)).astype(np.float32); jy = jitter if jy is None else jy
+    P[..., 0] = P[..., 0] * jitter + (1 - jitter) / 2; P[..., 1] = P[..., 1] * jy + (1 - jy) / 2
+    x, y = grid(S)
+    if dx is not None: x = x + dx
+    if dy is not None: y = y + dy
+    fx = x * n; fy = y * ny; cx = np.floor(fx).astype(int); cy = np.floor(fy).astype(int)
     f1 = np.full((S, S), 9.0, np.float32); f2 = np.full((S, S), 9.0, np.float32); idc = np.zeros((S, S), np.int64); ox = np.zeros((S, S), np.float32); oy = np.zeros((S, S), np.float32)
-    for dy in (-1, 0, 1):
-        for dx in (-1, 0, 1):
-            gx = cx + dx; gy = cy + dy; p = P[gy % ny, gx % n]
+    # (cells stretched one way have their nearest points further off the other way: look that many rows or columns more,
+    # or the edges break into straight seams)
+    ry = 1 + int(np.ceil(stretch[0] / stretch[1] - 1)) if stretch[1] < stretch[0] else 1
+    rx = 1 + int(np.ceil(stretch[1] / stretch[0] - 1)) if stretch[0] < stretch[1] else 1
+    for ky in range(-ry, ry + 1):
+        for kx in range(-rx, rx + 1):
+            gx = cx + kx; gy = cy + ky; p = P[gy % ny, gx % n]
             px = gx + p[..., 0]; py = gy + p[..., 1]
             ddx = (px - fx) * stretch[0]; ddy = (py - fy) * stretch[1]; d = np.sqrt(ddx * ddx + ddy * ddy)
             m = d < f1
@@ -96,6 +105,61 @@ def light(h, strength=4.0, sun=(-0.6, -0.7, 0.9)):
 def ao(h, sigma=6.0, k=2.5):
     """cavities darker: how far below its surroundings a point lies"""
     return np.clip(1 - np.maximum(blur(h, sigma) - h, 0) * k, 0, 1)
+
+def curv(h, sigma=2.0, k=6.0):
+    """the shape of the surface without a sun: -1 in the hollows, +1 on the edges and crowns (a painter's edge light and
+    cavity dark that reads the same on a wall, a roof or the ground, whichever way the picture is laid)"""
+    return np.clip((h - blur(h, sigma)) * k, -1, 1)
+
+def smin(a, b, k=0.05):
+    """the smaller of two, blended where they are close (no crease where one takes over from the other)"""
+    h = np.clip(0.5 + 0.5 * (b - a) / k, 0, 1); return b * (1 - h) + a * h - k * h * (1 - h)
+
+def ridged(S, n, octaves, seed, ny=None, gain=0.5):
+    """lines where a noise crosses its middle: veins, cracks, furrows (1 on the line, falling off to 0)"""
+    return 1 - np.abs(fbm(S, n, octaves, seed, gain, ny) * 2 - 1)
+
+def wfield(S, n, seed, amt, octaves=3, ny=None):
+    """a periodic warp (dx, dy) in picture units, ±amt/2"""
+    return (fbm(S, n, octaves, seed, ny=ny) - 0.5) * amt, (fbm(S, n, octaves, seed + 7, ny=ny) - 0.5) * amt
+
+def stamp_polys(S, items, supersample=2):
+    """filled polygons on a wrapping canvas: items = [(points [(x, y)...] in 0..1, value)] — value map and coverage
+    (later ones over earlier ones)"""
+    W = S * supersample; im = Image.new('F', (W * 3, W * 3), 0.0); cov = Image.new('F', (W * 3, W * 3), 0.0); dr = ImageDraw.Draw(im); dc = ImageDraw.Draw(cov)
+    for pts, v in items:
+        for ox in (0, 1, 2):
+            for oy in (0, 1, 2):
+                poly = [((px + ox) * W, (py + oy) * W) for px, py in pts]; dr.polygon(poly, fill=float(v)); dc.polygon(poly, fill=1.0)
+    f = lambda img: np.asarray(img, np.float32)[W:2 * W, W:2 * W]
+    a, c = f(im), f(cov)
+    if supersample > 1:
+        a = np.asarray(Image.fromarray(a).resize((S, S), Image.BILINEAR), np.float32); c = np.asarray(Image.fromarray(c).resize((S, S), Image.BILINEAR), np.float32)
+    return a, c
+
+def polyline_items(pts, v, w):
+    """a bent line (a hair, a twig, a crack) as strokes() items"""
+    return [(pts[k][0], pts[k][1], pts[k + 1][0], pts[k + 1][1], v, w) for k in range(len(pts) - 1)]
+
+def weave(S, nx, ny, kind='plain', seed=0, slub=0.3, gap=0.18, herring=6):
+    """threads crossing over and under: the height of the cloth (0..1), which thread is on top (1 warp — up and down —,
+    0 weft — across) and the id of each thread (for its own tone). kind: plain (tabby), twill (2/2) or herringbone
+    (the twill turning every few threads, as the northern weavers did)"""
+    r = rng(seed); x, y = grid(S)
+    # (threads not quite even: each its own thickness, a slub here and there, the rows wandering a little)
+    wx, wy = wfield(S, 6, seed + 1, 0.6 / max(nx, ny))
+    u = (x + wx) * nx; v = (y + wy) * ny; i = np.floor(u).astype(int); j = np.floor(v).astype(int); fu = u - i; fv = v - j
+    thick_w = 1 - slub * value_noise(S, nx, seed + 2, 3) * (r.random(nx)[i % nx] > 0.7); thick_f = 1 - slub * value_noise(S, 3, seed + 3, ny) * (r.random(ny)[j % ny] > 0.7)
+    if kind == 'plain': top = (i + j) % 2 == 0
+    elif kind == 'twill': top = (i - j) % 4 < 2
+    else: d = (i // herring) % 2; top = np.where(d == 0, (i - j) % 4 < 2, (i + j) % 4 < 2)
+    # (a thread is round across, and dips where it passes under the other)
+    pw = np.clip(1 - (np.abs(fu - 0.5) / (0.5 - gap * 0.5)) ** 2, 0, 1) ** 0.5 * thick_w
+    pf = np.clip(1 - (np.abs(fv - 0.5) / (0.5 - gap * 0.5)) ** 2, 0, 1) ** 0.5 * thick_f
+    hw = pw * np.where(top, 0.6 + 0.4 * np.sin(np.pi * fv), 0.35); hf = pf * np.where(top, 0.35, 0.6 + 0.4 * np.sin(np.pi * fu))
+    h = np.maximum(hw, hf); which = (hw >= hf).astype(np.int32)
+    ids = np.where(which == 1, i % nx, 4096 + j % ny)
+    return h.astype(np.float32), which, ids
 
 def hexc(s):
     s = s.lstrip('#'); return np.array([int(s[i:i + 2], 16) for i in (0, 2, 4)], np.float32) / 255.0
