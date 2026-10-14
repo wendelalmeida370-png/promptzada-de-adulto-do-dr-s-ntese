@@ -74,7 +74,8 @@
     MATS.flag.onBeforeCompile = sh => { sh.uniforms.uT = { value: 0 }; MATS.flag.userData.sh = sh; sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n transformed.z += sin(transformed.x * 5.0 - uT * 4.0 + instanceMatrix[3].x) * 0.12 * transformed.x;'); };
     MATS.decal.vertexColors = false;
     for (const [name, geo, max, mat, cast] of LIST) {
-      const m = new THREE.InstancedMesh(G3[geo], MATS[mat || 'lam'], max); m.count = 0; m.frustumCulled = false; m.castShadow = cast !== false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      const m = new THREE.InstancedMesh(G3[geo], MATS[mat || 'lam'], max); m.name = 'things:' + name; // (named: the tests say which thing, not which material)
+      m.count = 0; m.frustumCulled = false; m.castShadow = cast !== false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       m.setColorAt(0, new THREE.Color(1, 1, 1)); m.userData.max = max; m.userData.n = 0; scene.add(m); I[name] = m;
     }
     I.decal.renderOrder = 1; I.ghost.renderOrder = 3;
@@ -98,6 +99,13 @@
   }
   const near2 = (X, Z, f, R) => (X - f.X) ** 2 + (Z - f.Z) ** 2 < R * R;
   const gY = (x, y) => (W.inb(x, y) ? W.groundH(x, y) : G.SEA) * G.Space.HM;
+  // (a flat thing laid on the ground — a stain, the dark of a pit — tilted to the slope there (level on water), its own turn
+  // yaw on it: a disc kept level through its middle went under the ground uphill and stood in the air downhill)
+  function lay(name, X, Y, Z, yaw, sx, sz, hex) {
+    const x = X / TL(), z = Z / TL(), e = 0.35, d = 2 * e * TL(); // (the slope over 2.8 m, in metres a metre)
+    const gx = (gY(x + e, z) - gY(x - e, z)) / d, gz = (gY(x, z + e) - gY(x, z - e)) / d; const c = Math.cos(yaw), s = Math.sin(yaw);
+    put(name, X, Y, Z, yaw, sx, 1, sz, hex, Math.atan(gx * c + gz * s), -Math.atan(gz * c - gx * s));
+  }
   const flame = (x, y, z, s) => { if (T3.flames.length < 60) T3.flames.push([x, y, z, s]); };
   function memo(key, X, Z, dt, yaw0) {
     let s = vis.get(key); if (!s) { s = { X, Z, yaw: yaw0 || 0, roll: 0, ph: 0, sp: 0 }; vis.set(key, s); }
@@ -240,7 +248,7 @@
       const X = d.x * TL(), Z = d.y * TL(); if (!near2(X, Z, f, Math.min(R, 90))) continue;
       const D = DECAL[d.k] || DECAL.pool; const life = D[1] * DAY; if (d.t > life) continue;
       const r = Math.max(0.2, (d.r || 0.3) * TL() * 0.5);
-      put('decal', X, gY(d.x, d.y) + 0.04, Z, d.a || 0, r * 2 * (d.s || 1), 1, r * 2 / (d.s || 1), D[0]);
+      lay('decal', X, gY(d.x, d.y) + 0.04, Z, d.a || 0, r * 2 * (d.s || 1), r * 2 / (d.s || 1), D[0]);
     }
     for (const p of C.pyres) {
       if (!(p.heap || p.burn > 0)) continue; const X = p.x * TL(), Z = p.y * TL(); if (!near2(X, Z, f, R)) continue; const Y = gY(p.x, p.y);
@@ -259,12 +267,21 @@
       // (the way into the slope: toward where the land rises)
       const hx = W.hAt(m.x + 1.5, m.y + 0.5) - W.hAt(m.x - 0.5, m.y + 0.5), hz = W.hAt(m.x + 0.5, m.y + 1.5) - W.hAt(m.x + 0.5, m.y - 0.5);
       const yaw = m.fx || m.fy ? Math.atan2(-m.fy, -m.fx) : Math.atan2(hz, hx);
-      if (pit) { put('decal', X, Y + 0.05, Z, 0, 3.4, 1, 3.4, '#07080a'); for (let k = 0; k < 9; k++) { const a = k / 9 * TAU; put('rock', X + Math.cos(a) * 1.9, Y + 0.1, Z + Math.sin(a) * 1.9, a, 0.9 + G.hash(k + m.x) * 0.5, 0.6, 0.8, '#7a746a'); } continue; }
+      // (each stone sits on the ground where it is, not at the height of the mouth's middle: round a pit on a hillside, or at
+      // the foot of an arch cut into a slope, the ground there is higher or lower: the visual hunt found them buried)
+      const floor = (x, z) => W.hAt(x / TL(), z / TL()) * HM;
+      if (pit) {
+        lay('decal', X, Y + 0.05, Z, 0, 3.4, 3.4, '#07080a'); // (the dark of the pit on the slope round it)
+        for (let k = 0; k < 9; k++) { const a = k / 9 * TAU; const x = X + Math.cos(a) * 1.9, z = Z + Math.sin(a) * 1.9; put('rock', x, floor(x, z) + 0.1, z, a, 0.9 + G.hash(k + m.x) * 0.5, 0.6, 0.8, '#7a746a'); }
+        continue;
+      }
       const w = kind === 'fenda' ? 1.4 : kind === 'abrigo' ? 4.2 : 2.8, h = kind === 'fenda' ? 3.4 : kind === 'abrigo' ? 2 : 2.6;
       // (the dark half-disc faces out of the slope, a little inside it)
       const P = at(X, Y, Z, yaw, 0.6, 0.02, 0); const im = I.mouth; const k = im.userData.n;
       if (k < im.userData.max) { M.e.set(0, -yaw - Math.PI / 2, 0, 'YXZ'); M.q.setFromEuler(M.e); M.a.compose(M.v.set(P[0], P[1], P[2]), M.q, M.s.set(w, h * 2, 1)); im.setMatrixAt(k, M.a); im.setColorAt(k, M.c.set('#07080a')); im.userData.n = k + 1; }
-      for (let j = 0; j < 7; j++) { const a = j / 6 * Math.PI; const r = at(X, Y, Z, yaw, 0.4, Math.sin(a) * h * 0.95, Math.cos(a) * w * 0.55); put('rock', r[0], r[1], r[2], a + m.x, 0.8 + G.hash(j * 3 + m.y) * 0.6, 0.7, 0.7, '#8a8478'); }
+      // (the stones round its lip: the two at its feet on their own ground, the ones up the arch never under it)
+      for (let j = 0; j < 7; j++) { const a = j / 6 * Math.PI; const r = at(X, Y, Z, yaw, 0.4, Math.sin(a) * h * 0.95, Math.cos(a) * w * 0.55); const g = floor(r[0], r[2]);
+        put('rock', r[0], j === 0 || j === 6 ? g + 0.1 : Math.max(r[1], g + 0.05), r[2], a + m.x, 0.8 + G.hash(j * 3 + m.y) * 0.6, 0.7, 0.7, '#8a8478'); }
     }
   }
 
@@ -273,7 +290,8 @@
     const B = S.gifts; if (!B) return;
     for (const q of B.piles) {
       const X = q.x * TL(), Z = q.y * TL(); if (!near2(X, Z, f, R)) continue; const Y = gY(q.x, q.y); const n = Math.min(14, 4 + q.n * 2);
-      for (let k = 0; k < n; k++) { const a = G.hash(k * 7 + q.id) * TAU, r = Math.sqrt(G.hash(k * 13 + q.id)) * 0.7; put('coin', X + Math.cos(a) * r, Y + 0.03 + (1 - r / 0.7) * 0.25 * G.hash(k), Z + Math.sin(a) * r, a, 0.22, 0.22, 0.22, '#f2c14e', (G.hash(k * 3) - 0.5) * 0.6, (G.hash(k * 5) - 0.5) * 0.6); }
+      for (let k = 0; k < n; k++) { const a = G.hash(k * 7 + q.id) * TAU, r = Math.sqrt(G.hash(k * 13 + q.id)) * 0.7; const cx = X + Math.cos(a) * r, cz = Z + Math.sin(a) * r; // (each coin on the ground where it fell)
+        put('coin', cx, gY(cx / TL(), cz / TL()) + 0.03 + (1 - r / 0.7) * 0.25 * G.hash(k), cz, a, 0.22, 0.22, 0.22, '#f2c14e', (G.hash(k * 3) - 0.5) * 0.6, (G.hash(k * 5) - 0.5) * 0.6); }
       if (G.FX3D && G.VR() < dt * 0.8) G.FX3D.spawn({ x: X + G.vrr(-0.4, 0.4), y: Y + 0.3, z: Z + G.vrr(-0.4, 0.4), vy: 0.1, life: 0.5, s0: 0.3, s1: 0.05, c: [1, 0.95, 0.7], a: 1, fade: 1 }, true);
     }
     for (const rn of B.rains) {
@@ -287,7 +305,7 @@
     }
     for (const w of B.wine) for (const b of S.buildings.values()) {
       if (b.type !== 'well' || !b.built || b.set !== w.set) continue; const [cx, cy] = G.Village.center(b); const X = cx * TL(), Z = cy * TL(); if (!near2(X, Z, f, R)) continue; const Y = gY(cx, cy);
-      put('decal', X, Y + 0.05, Z, 0, 5.5, 1, 5.5, '#5a0a30');
+      lay('decal', X, Y + 0.05, Z, 0, 5.5, 5.5, '#5a0a30');
       if (G.FX3D) for (let k = 0; k < Math.ceil(dt * 30); k++) { const a = G.VR() * TAU; G.FX3D.spawn({ x: X, y: Y + 1.4, z: Z, vx: Math.cos(a) * G.vrr(0.6, 1.4), vy: G.vrr(3.5, 5), vz: Math.sin(a) * G.vrr(0.6, 1.4), life: 1.1, s0: 0.14, s1: 0.1, c: G.VR() < 0.3 ? [0.82, 0.27, 0.5] : [0.55, 0.06, 0.3], a: 0.9, sh: 1, grav: 9 }); }
     }
   }
@@ -341,7 +359,14 @@
 
   // (for the checker: every thing drawn this frame is made of numbers)
   T3.check = function () {
-    const out = []; for (const k in I) { const m = I[k]; const a = m.instanceMatrix.array; for (let j = 0; j < m.count * 16; j += 5) if (!Number.isFinite(a[j])) { out.push(`as coisas do 3D (${k}): matriz inválida`); break; } } return out;
+    const out = []; for (const k in I) { const m = I[k]; const a = m.instanceMatrix.array; for (let j = 0; j < m.count * 16; j += 5) if (!Number.isFinite(a[j])) { out.push(`as coisas do 3D (${k}): matriz inválida`); break; } }
+    // (no stone of a cave's mouth under the ground it should sit on: each on the ground of its own point — the stones are
+    // only turned about the vertical, so their top is the middle plus half their height)
+    const r = I.rock; if (r && W && G.S) { const a = r.instanceMatrix.array, HM = G.Space.HM; let bad = 0, worst = 0, at = null;
+      for (let j = 0; j < r.count; j++) { const e = j * 16; const X = a[e + 12], Z = a[e + 14]; const top = a[e + 13] + 0.5 * Math.abs(a[e + 5]); const fl = W.hAt(X / TL(), Z / TL()) * HM;
+        if (top < fl - 0.05) { bad++; if (fl - top > worst) { worst = fl - top; at = [+(X / TL()).toFixed(1), +(Z / TL()).toFixed(1)]; } } }
+      if (bad) out.push(`as coisas do 3D (rock): ${bad} pedra(s) enterrada(s), a pior ${worst.toFixed(2)} m abaixo do chão em ${at}`); }
+    return out;
   };
   T3.clear = function () { for (const k in I) I[k].count = 0; T3.flames.length = 0; };
 })(window.G);
