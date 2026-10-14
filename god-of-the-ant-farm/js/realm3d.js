@@ -262,6 +262,13 @@
         #else
         #define FMOSS M3_GRASS
         #define FMOSS_S M3S_GRASS
+        #endif
+        #ifdef M3_CRAG
+        #define FROCK M3_CRAG
+        #define FROCK_S M3S_CRAG
+        #else
+        #define FROCK M3_ROCK
+        #define FROCK_S M3S_ROCK
         #endif`)
         .replace('#include <color_fragment>', `#include <color_fragment>
         #ifndef NOPAT
@@ -273,7 +280,7 @@
           float sn = smoothstep(0.6, 0.8, min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b)));
           if (uTexOn > 0.5) {
             vec3 w = pow(abs(n), vec3(4.0)); w /= w.x + w.y + w.z + 1e-4;
-            vec4 r = m3raw(M3_ROCK, vFP.zy * M3S_ROCK * 1.7) * w.x + m3raw(M3_ROCK, vFP.xz * M3S_ROCK * 1.7 + 0.31) * w.y + m3raw(M3_ROCK, vFP.xy * M3S_ROCK * 1.7 + 0.57) * w.z;
+            vec4 r = m3raw(FROCK, vFP.zy * FROCK_S * 1.6) * w.x + m3raw(FROCK, vFP.xz * FROCK_S * 1.6 + 0.31) * w.y + m3raw(FROCK, vFP.xy * FROCK_S * 1.6 + 0.57) * w.z;
             vec3 rc = diffuseColor.rgb * m3col(r);
             if (sn > 0.01) rc = mix(rc, diffuseColor.rgb * m3col(m3raw(M3_SNOW, vFP.xz * M3S_SNOW)), sn);
             float mm = 0.0;

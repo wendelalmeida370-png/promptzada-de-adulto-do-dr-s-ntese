@@ -120,6 +120,32 @@ def trail(seed=351):
     col *= (0.86 + 0.18 * light(h, 3))[..., None]
     return col, h
 
+def crag(seed=361):
+    # rock of a crag or a boulder: layers laid down long ago and bent, each its own grey and brown, weathered smooth on their
+    # faces; joints running across the layers and a few long cracks (the ridges of a slow noise, not the cells of a
+    # pattern), pits, and lichen
+    x, y = grid(S)
+    wv = fbm(S, 3, 4, seed); wv2 = fbm(S, 9, 3, seed + 1)
+    layer = y * 6 + wv * 2.2 + wv2 * 0.4
+    band = np.sin(layer * np.pi * 2) * 0.5 + 0.5; lid = np.floor(layer).astype(int) % 6
+    tone = np.array([0.12, 0.66, 0.32, 0.9, 0.48, 0.22], np.float32)[lid]
+    base = ramp(tone * 0.6 + band * 0.4, [(0, '#66625c'), (0.35, '#827c72'), (0.65, '#9c9486'), (1, '#7a7266')])
+    n = fbm(S, 20, 5, seed + 2); fine = value_noise(S, 220, seed + 3)
+    col = base * (0.84 + n[..., None] * 0.26 + (fine[..., None] - 0.5) * 0.1)
+    # (the layer lines themselves, a thin darker seam between two layers)
+    seam = smooth(0.06, 0.0, np.abs(((layer + 0.5) % 1.0) - 0.5)) * smooth(0.3, 0.6, fbm(S, 6, 2, seed + 10))
+    # (joints across the layers, broken; and a few long cracks)
+    d = np.abs(((x * 4 + wv * 0.5 + 0.5) % 1.0) - 0.5); joint = smooth(0.014, 0.0, d) * smooth(0.5, 0.65, fbm(S, 3, 2, seed + 11, ny=6))
+    c1 = np.abs(fbm(S, 3, 2, seed + 4) - 0.5); crack = smooth(0.012, 0.0, c1) * smooth(0.45, 0.65, fbm(S, 4, 2, seed + 6))
+    lines = np.maximum(np.maximum(seam * 0.45, joint * 0.8), crack)
+    col = col * (1 - lines[..., None] * 0.5)
+    pits = smooth(0.8, 0.9, fine) * smooth(0.5, 0.8, n); col = col * (1 - pits[..., None] * 0.16)
+    lichen = smooth(0.64, 0.74, fbm(S, 8, 4, seed + 8)); col = mix(col, hexc('#a4a670'), lichen * 0.35)
+    lichen2 = smooth(0.7, 0.78, fbm(S, 14, 3, seed + 9)); col = mix(col, hexc('#c8c4b4'), lichen2 * 0.28)
+    h = 0.5 + band * 0.2 + (n - 0.5) * 0.3 - lines * 0.35 - pits * 0.08 + lichen * 0.04
+    col *= (0.78 + 0.34 * light(h, 4))[..., None] * ao(h, 4, 1.8)[..., None]
+    return col, h
+
 MATS = [
     ('moss', moss, 1.2, 'musgo em almofadas, pontas amareladas, rachas escuras'),
     ('needles', needles, 3.0, 'chão de pinheiral: agulhas caídas, pinhas, um pouco de musgo'),
@@ -127,4 +153,5 @@ MATS = [
     ('pebbles', pebbles, 2.4, 'leito de rio: seixos rolados com areia entre eles'),
     ('stony', stony, 3.0, 'chão pedregoso: pedras de todo tamanho meio enterradas na terra seca'),
     ('trail', trail, 4.0, 'trilha: terra batida pelos pés e rodas, rachas finas, pedrinhas'),
+    ('crag', crag, 5.0, 'rocha de penhasco e rochedo: camadas dobradas, rachas que vagueiam, líquen'),
 ]

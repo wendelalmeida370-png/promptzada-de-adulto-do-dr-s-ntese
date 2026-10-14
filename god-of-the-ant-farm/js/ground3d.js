@@ -269,13 +269,17 @@ float gRoad(vec4 t) { float k = floor(t.a * 255.0 + 0.5); return (k == 10.0 || k
 #define M3_TRAIL M3_DIRT
 #define M3S_TRAIL M3S_DIRT
 #endif
+#ifndef M3_CRAG
+#define M3_CRAG M3_ROCK
+#define M3S_CRAG M3S_ROCK
+#endif
 float gLay(float k) {
   if (k == 2.0 || k == 3.0 || k == 15.0 || k == 18.0) return M3_SAND;
   if (k == 4.0) return M3_STONY;
-  if (k == 16.0) return M3_ROCK;
+  if (k == 16.0) return M3_CRAG;
   if (k == 5.0) return M3_SNOW;
   if (k == 9.0) return M3_TRAIL;
-  if (k == 10.0) return M3_GRAVEL;
+  if (k == 10.0) return M3_TRAIL; // (a road of the first rank: packed earth, gravel worked into it — gStack)
   if (k == 19.0) return M3_PEBBLES;
   if (k == 11.0) return M3_COBBLE;
   if (k == 12.0) return M3_SLAB;
@@ -286,11 +290,11 @@ float gScl(float L) {
   if (L == M3_GRASS) return M3S_GRASS; if (L == M3_SAND) return M3S_SAND; if (L == M3_ROCK) return M3S_ROCK; if (L == M3_SNOW) return M3S_SNOW;
   if (L == M3_FOREST) return M3S_FOREST; if (L == M3_DIRT) return M3S_DIRT; if (L == M3_GRAVEL) return M3S_GRAVEL; if (L == M3_COBBLE) return M3S_COBBLE;
   if (L == M3_SLAB) return M3S_SLAB; if (L == M3_SOIL) return M3S_SOIL; if (L == M3_NEEDLES) return M3S_NEEDLES; if (L == M3_MUD) return M3S_MUD;
-  if (L == M3_PEBBLES) return M3S_PEBBLES; if (L == M3_STONY) return M3S_STONY; if (L == M3_TRAIL) return M3S_TRAIL; return 0.25;
+  if (L == M3_PEBBLES) return M3S_PEBBLES; if (L == M3_STONY) return M3S_STONY; if (L == M3_TRAIL) return M3S_TRAIL; if (L == M3_CRAG) return M3S_CRAG; return 0.25;
 }
 // (how high the stuff of each picture stands, in metres, for the light: rock and cobbles most, sand and snow least)
 float gAmp(float L) {
-  if (L == M3_ROCK) return 0.1; if (L == M3_COBBLE || L == M3_SLAB || L == M3_STONY) return 0.05; if (L == M3_GRAVEL || L == M3_PEBBLES) return 0.045; if (L == M3_MUD || L == M3_TRAIL) return 0.02;
+  if (L == M3_ROCK || L == M3_CRAG) return 0.1; if (L == M3_COBBLE || L == M3_SLAB || L == M3_STONY) return 0.05; if (L == M3_GRAVEL || L == M3_PEBBLES) return 0.045; if (L == M3_MUD || L == M3_TRAIL) return 0.02;
   if (L == M3_SAND || L == M3_SNOW) return 0.025; return 0.035;
 }
 // (the open green land: where the trees drop their leaves, and the bare earth shows here and there)
@@ -355,8 +359,11 @@ vec3 gStack(vec4 t00, vec4 t10, vec4 t01, vec4 t11, vec2 s, float mP, float mB, 
     gAdd(M3_MUD, gOwn(GM_MUD, cg, 0.5), fm.b * gs * 0.8 + smoothstep(0.55, 0.65, mP) * sw * 1.4);
   }
   gAdd(M3_SNOW, cAll, snowy * 2.2);
+  // (a road of the first rank: gravel worked into its packed earth)
+  { float r0 = k00 == 10.0 ? w00 : 0.0, r1 = k10 == 10.0 ? w10 : 0.0, r2 = k01 == 10.0 ? w01 : 0.0, r3 = k11 == 10.0 ? w11 : 0.0; float rs = r0 + r1 + r2 + r3;
+    if (rs > 0.003) gAdd(M3_GRAVEL, (c00 * r0 + c10 * r1 + c01 * r2 + c11 * r3) / rs, rs * 0.55); }
   // (a steep face is bare rock, whatever the tiles say)
-  gAdd(M3_ROCK, gRockish(cAll), gStp * 2.0);
+  gAdd(M3_CRAG, gRockish(cAll), gStp * 2.0);
   // the heights decide where each stuff shows: the higher stands out of the lower
   vec4 T[GMX]; float mx = -9.0;
   for (int i = 0; i < GMX; i++) { if (i >= gN) break; T[i] = gTex(gL[i]); mx = max(mx, T[i].a + gW[i] * 2.0); }
