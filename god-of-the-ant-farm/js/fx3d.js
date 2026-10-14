@@ -160,9 +160,11 @@
     const box = new THREE.BoxGeometry(1, 1, 1); box.translate(0, 0.5, 0);
     const cyl = new THREE.CylinderGeometry(0.5, 0.5, 1, 6); cyl.translate(0, 0.5, 0);
     const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-    // (a hull with a bow and a stern: wide amidships, drawn to a point forward, rounder aft, narrower at the keel than at
-    // the gunwale — one unit long, one wide, one high, its base on the water line's floor)
-    const hg = (() => {
+    // (a hull with a bow and a stern: the clinker-built one made in the Blender (G.MESH3D.casco: strakes overlapping down
+    // the sides, the stem and the sternpost rising in scrolls) in the same unit frame — one long, one wide, the keel on the
+    // frame's floor, the bow toward +x — and until it is loaded, the faceted one: wide amidships, drawn to a point forward,
+    // rounder aft, narrower at the keel than at the gunwale)
+    const hg = (G.Mesh3D && G.Mesh3D.geo && G.Mesh3D.geo('casco')) || (() => {
       const g = new THREE.BufferGeometry(); const P = [];
       const sec = [[-0.5, 0.32, 0.18], [-0.32, 0.46, 0.3], [0, 0.5, 0.34], [0.28, 0.44, 0.26], [0.42, 0.26, 0.1], [0.52, 0.02, 0.0]]; // [x, half-width at the gunwale, half-width at the keel]
       for (let k = 0; k < sec.length - 1; k++) { const a = sec[k], b = sec[k + 1];
