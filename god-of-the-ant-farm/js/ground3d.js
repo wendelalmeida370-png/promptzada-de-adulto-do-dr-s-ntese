@@ -117,8 +117,8 @@
     }
     // (under the snow, the ground: the snow itself is laid by the shader, from the floor's snow)
     if (k !== K.bed && k !== K.river && k !== K.field && k !== K.burnt && k !== K.gravel && k !== K.paved && k !== K.highway) { const w = G3.snowAt(i); if (w > 0) c = bareOf(i, c, w); }
-    // (the edge of the water: the sand is wet and dark, the grass a little darker)
-    if (k !== K.bed && k < K.path && k !== K.snow) { for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy; if (W.inb(nx, ny) && S.type[ny * N + nx] <= T.RIVER && !(S.dry && S.dry[ny * N + nx])) { if (k === K.sand || k === K.dune) k = K.wet; else c = [c[0] * 0.9, c[1] * 0.92, c[2] * 0.9]; break; } } }
+    // (the edge of the water: the sand is wet and dark, the grass a little darker — the tundra's too, under its snow)
+    if (k !== K.bed && k < K.path) { for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy; if (W.inb(nx, ny) && S.type[ny * N + nx] <= T.RIVER && !(S.dry && S.dry[ny * N + nx])) { if (k === K.sand || k === K.dune) k = K.wet; else c = [c[0] * 0.9, c[1] * 0.92, c[2] * 0.9]; break; } } }
     out[0] = G.clamp(Math.round(c[0]), 0, 255); out[1] = G.clamp(Math.round(c[1]), 0, 255); out[2] = G.clamp(Math.round(c[2]), 0, 255); out[3] = k;
     return out;
   }
@@ -278,6 +278,7 @@ float gRough(vec4 t) { float k = floor(t.a * 255.0 + 0.5); return (k == 4.0 || k
 vec2 gBumpV = vec2(0.0);
 float gHgt = 0.0; // (the height of the stuff of the ground at this point, in metres: the light reads its slopes)
 float gHa = 0.5; // (and the same 0..1, as its pictures have it: where the snow fills the gaps first)
+float gWL = 0.0; // (how much this point is the line of the water on a shore: the band the waves roll their stones in)
 // (the snow's own colour, linear: the god's white of the frozen land)
 #define GSNOW vec3(0.78, 0.835, 0.9)
 varying vec3 vGP; varying vec3 vGN;
@@ -380,6 +381,8 @@ vec3 gTint(vec3 c, float k, float mP) {
 // (a stuff laid over the land in its own colour — the leaves under the trees, bare earth, mud: the picture's own colour, as
 // bright as the god's colour there (times k), with a little of its hue)
 vec3 gOwn(vec3 m, vec3 c, float k) { float lc = dot(c, vec3(0.3, 0.59, 0.11)), lm = dot(m, vec3(0.3, 0.59, 0.11)); return mix(m * (lc / max(lm, 1e-4)), c, 0.18) * k; }
+// (the stones of a shore: the sand's colour greyed and darker)
+vec3 gPeb(vec3 c) { float l = dot(c, vec3(0.3, 0.59, 0.11)); return mix(vec3(l) * vec3(0.98, 0.95, 0.9), c, 0.3) * 0.72; }
 // (a steep face: the colour of the land there, greyed toward stone)
 vec3 gRockish(vec3 c) { float l = dot(c, vec3(0.3, 0.55, 0.15)); return mix(vec3(l) * vec3(1.05, 1.0, 0.93), c, 0.35) * 0.92; }
 // the stuffs at this point: a picture of the stack, its colour (summed by weight), its weight
@@ -428,6 +431,8 @@ vec3 gStack(vec4 t00, vec4 t10, vec4 t01, vec4 t11, vec2 s, float mP, float mB, 
   // (a road of the first rank: gravel worked into its packed earth)
   { float r0 = k00 == 10.0 ? w00 : 0.0, r1 = k10 == 10.0 ? w10 : 0.0, r2 = k01 == 10.0 ? w01 : 0.0, r3 = k11 == 10.0 ? w11 : 0.0; float rs = r0 + r1 + r2 + r3;
     if (rs > 0.003) gAdd(M3_GRAVEL, (c00 * r0 + c10 * r1 + c01 * r2 + c11 * r3) / rs, rs * 0.55); }
+  // (the swash of a shore: the stones the waves roll, standing out of the sand)
+  if (gWL > 0.01) gAdd(M3_PEBBLES, gPeb(cAll), gWL * 1.7);
   // (a steep face is bare rock, whatever the tiles say)
   gAdd(M3_CRAG, gRockish(cAll), gStp * 2.0);
   // the heights decide where each stuff shows: the higher stands out of the lower
@@ -471,6 +476,9 @@ vec3 groundCol() {
     gWX = smoothstep(0.3, 0.7, abs(vGN.x) / (abs(vGN.x) + abs(vGN.z) + 1e-4));
     gAT = mT; gStp = steep;
     near = smoothstep(0.08, 0.6, fm.b);
+    // (the line of the water on a shore: a few decimetres round the sea's level, near the water — the stones of the swash,
+    // here and there along it, not all the way: a beach of sand, then a stretch of shingle)
+    gWL = (1.0 - smoothstep(0.06, 0.26, abs(vGP.y - uSeaY - 0.03))) * near * smoothstep(0.38, 0.62, texture2D(uCN, vGP.xz / 47.0 + 0.83).r + 0.06);
     c = gStack(t00, t10, t01, t11, s, mP, mB, fm);
   } else
 #endif
@@ -541,6 +549,13 @@ vec3 groundCol() {
     c = mix(c, c * 0.82 + uSkyH * sheen * 0.22, max(lap, wetB * 0.6));
     c = mix(c, vec3(0.86, 0.9, 0.9), smoothstep(run - 0.07, run - 0.015, vGP.y) * (1.0 - smoothstep(run - 0.015, run + 0.02, vGP.y)) * (1.0 - wb) * near * step(uSeaY, vGP.y) * (0.25 + 0.2 * cos(ph)));
     gHgt *= 1.0 - lap * 0.7; // (the wet sand lies smooth)
+    // (the stones of the swash green with weed where the water covers them; and the line of the high water, just above the
+    // waves' reach: dark strands of seaweed and wrack the sea left there, broken here and there)
+    c = mix(c, c * vec3(0.62, 0.8, 0.48), gWL * (1.0 - smoothstep(uSeaY - 0.2, uSeaY + 0.08, vGP.y)) * 0.8);
+    float wy = uSeaY + 0.46 + (mB - 0.5) * 0.14;
+    float wk = (1.0 - smoothstep(0.025, 0.085, abs(vGP.y - wy))) * near * (1.0 - wb) * smoothstep(0.42, 0.58, texture2D(uCN, vGP.xz / 19.0 + 0.4).g + 0.04);
+    float wst = smoothstep(0.5, 0.64, texture2D(uDet, vGP.xz / 0.85 + 0.31).r) * wk;
+    c = mix(c, vec3(0.05, 0.052, 0.026) * (0.8 + d.g * 0.5), wst * 0.85); gHgt += wst * 0.012;
   }
 #endif
   return c;
