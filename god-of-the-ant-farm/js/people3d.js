@@ -1046,6 +1046,15 @@
       const Y = s.Y + (air ? Math.max(0.5, (a.z || 0) * 0.22) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
       if (!seen(X, Y, Z, Math.max(0.6, F.len * u))) { P3.bculled++; continue; } // (outside the eye's field: not drawn)
       const m = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-s.yaw); m.multiply(M.b);
+      // (on a slope a beast of four legs lies along it: pitched by the ground under its fore and hind feet, rolled by the ground
+      // at its sides — its feet neither in the air nor in the ground; eased, so it never snaps)
+      if (!air && !a.swim && !F.biped) {
+        const hl = F.len * u * 0.42, hw = hl * 0.45, c = Math.cos(s.yaw), n = Math.sin(s.yaw), k = 1 / TL;
+        const gf = groundY(a.x + c * hl * k, a.y + n * hl * k), gb = groundY(a.x - c * hl * k, a.y - n * hl * k), gl = groundY(a.x - n * hw * k, a.y + c * hw * k), gr = groundY(a.x + n * hw * k, a.y - c * hw * k);
+        const wp = G.clamp(Math.atan2(gf - gb, 2 * hl), -0.5, 0.5), wr = G.clamp(Math.atan2(gl - gr, 2 * hw), -0.4, 0.4), e = 1 - Math.exp(-8 * dt);
+        s.tp = s.tp === undefined || dt <= 0 ? wp : s.tp + (wp - s.tp) * e; s.tr = s.tr === undefined || dt <= 0 ? wr : s.tr + (wr - s.tr) * e;
+        M.c.makeRotationZ(s.tp); m.multiply(M.c); M.c.makeRotationX(-s.tr); m.multiply(M.c);
+      }
       // (grazing: a beast that eats grass lowers its head now and then while it stands)
       const grazer = sp.diet === 'herb' || sp.diet === 'browse'; const wantG = grazer && s.v < 0.15 && Math.sin(s.t * 0.35 + a.id) > 0.1 ? 1 : 0; s.graze += (wantG - s.graze) * (1 - Math.exp(-2 * dt));
       for (const n of BP) bhide(n[0], idx);
