@@ -396,8 +396,9 @@ function CACA() {
     return out;
   };
 
-  // ---- the leaves in the light: a crown's leaves blown out to white in the sun (or crushed to black by day) — the leaf
-  // pixels found by drawing the frame again with them in one flat colour, their light read in the frame as it was
+  // ---- the leaves in the light: a crown's leaves blown out to white in the sun, crushed to black by day, or neon (a large
+  // surface over 70% saturation, the bible's §2.2) — the leaf pixels found by drawing the frame again with them in one flat
+  // colour, their light read in the frame as it was
   C.leaves = function (at, groups) {
     const r = G.Realm.renderer(), sc = G.Realm.scene(), cam = G.Realm.camera(), M = G.Realm.mats(); const out = {};
     const draw = () => { if (!(G.Post3D && G.Post3D.render && G.Post3D.render(sc, cam))) r.render(sc, cam); const gl = r.getContext(); const px = new Uint8Array(gl.drawingBufferWidth * gl.drawingBufferHeight * 4); gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, px); return px; };
@@ -408,11 +409,14 @@ function CACA() {
       const flat = new THREE.MeshBasicMaterial({ color: 0xffffff, map: mat.map || null, alphaTest: mat.alphaTest || 0, side: mat.side, toneMapped: false, fog: false });
       flat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);'); };
       let B; for (const o of ms) o.material = flat; try { B = draw(); } finally { for (const o of ms) o.material = mat; flat.dispose(); }
-      let n = 0, wh = 0, bl = 0, sum = 0;
-      for (let k = 0; k < B.length; k += 4) { if (!(B[k] > 190 && B[k + 1] < 80 && B[k + 2] > 190)) continue; const L = 0.2126 * A[k] + 0.7152 * A[k + 1] + 0.0722 * A[k + 2]; n++; sum += L; if (L >= 250) wh++; if (L <= 6) bl++; }
-      const day = G.S.time > 0.2 && G.S.time < 0.62; out[name] = { px: n, mean: n ? +(sum / n).toFixed(1) : null, white: n ? +(wh / n * 100).toFixed(1) : 0, black: n ? +(bl / n * 100).toFixed(1) : 0 };
+      let n = 0, wh = 0, bl = 0, sum = 0, neon = 0, lit = 0;
+      for (let k = 0; k < B.length; k += 4) { if (!(B[k] > 190 && B[k + 1] < 80 && B[k + 2] > 190)) continue; const L = 0.2126 * A[k] + 0.7152 * A[k + 1] + 0.0722 * A[k + 2]; n++; sum += L; if (L >= 250) wh++; if (L <= 6) bl++;
+        // (the bible's neon: a large surface lit, with saturation over 70% — §2.2)
+        const mx = Math.max(A[k], A[k + 1], A[k + 2]), mn = Math.min(A[k], A[k + 1], A[k + 2]); if (mx > 76) { lit++; if ((mx - mn) / mx > 0.7) neon++; } }
+      const day = G.S.time > 0.2 && G.S.time < 0.62; out[name] = { px: n, mean: n ? +(sum / n).toFixed(1) : null, white: n ? +(wh / n * 100).toFixed(1) : 0, black: n ? +(bl / n * 100).toFixed(1) : 0, neon: lit ? +(neon / lit * 100).toFixed(1) : 0 };
       if (n >= 300 && wh / n > 0.05) add(3, `${name} estourando em branco`, 'A3', `${(wh / n * 100).toFixed(0)}% dos ${n} pixels de ${name} em branco puro (luz média ${(sum / n).toFixed(0)}, hora ${(+G.S.time).toFixed(2)}; a luz é do A5)`, at);
       else if (n >= 300 && day && bl / n > 0.3) add(3, `${name} pretas de dia`, 'A3', `${(bl / n * 100).toFixed(0)}% dos ${n} pixels de ${name} quase pretos (hora ${(+G.S.time).toFixed(2)}; a luz é do A5)`, at);
+      if (lit >= 300 && neon / lit > 0.3) add(3, `${name} neon (saturação acima de 70%)`, 'A3', `${(neon / lit * 100).toFixed(0)}% dos ${lit} pixels iluminados de ${name} com saturação > 70% (a BÍBLIA §2.2: superfície grande acima de 70 é neon), hora ${(+G.S.time).toFixed(2)}`, at);
     }
     // (the screen as it was: drawn again with everything in its own colours)
     if (A) draw();
@@ -588,7 +592,7 @@ if (require.main !== module) return;
       if (r.eyes) for (const e of r.eyes) calls.push(e.calls);
       if (!first && r.mem) first = r.mem;
       (W.visits = W.visits || []).push(Object.assign(r, { problems: ps.length, s: Math.round((Date.now() - t0) / 1000) }));
-      console.log(`${k + 1}. ${sp.kind} ${sp.x},${sp.y}: ${r.err ? 'ERRO ' + r.err : r.skip ? r.skip : `chamadas ${r.eyes.map(e => e.calls).join('/')}, luz ${r.eyes.map(e => e.pix.mean).join('/')}, corpos ${r.bodies.bodies} (${r.bodies.parts} peças), árvores ${r.trees && r.trees.n}, faces no chão ${r.zfight ? r.zfight.faces : '-'}, roupas ${r.cloth && r.cloth.checked !== undefined ? r.cloth.checked : '-'}, LOD ${r.lod && r.lod.people !== undefined ? `${r.lod.flick} piscando de ${r.lod.people}` : '-'}${r.leaves ? ', folhas ' + Object.entries(r.leaves).map(([k, x]) => `${k} ${x.px}px ${x.white}% branco`).join(' ') : ''}`} · ${ps.length} problema(s) · ${Math.round((Date.now() - t0) / 1000)} s`);
+      console.log(`${k + 1}. ${sp.kind} ${sp.x},${sp.y}: ${r.err ? 'ERRO ' + r.err : r.skip ? r.skip : `chamadas ${r.eyes.map(e => e.calls).join('/')}, luz ${r.eyes.map(e => e.pix.mean).join('/')}, corpos ${r.bodies.bodies} (${r.bodies.parts} peças), árvores ${r.trees && r.trees.n}, faces no chão ${r.zfight ? r.zfight.faces : '-'}, roupas ${r.cloth && r.cloth.checked !== undefined ? r.cloth.checked : '-'}, LOD ${r.lod && r.lod.people !== undefined ? `${r.lod.flick} piscando de ${r.lod.people}` : '-'}${r.leaves ? ', folhas ' + Object.entries(r.leaves).map(([k, x]) => `${k} ${x.px}px ${x.white}% branco ${x.neon}% neon`).join(' ') : ''}`} · ${ps.length} problema(s) · ${Math.round((Date.now() - t0) / 1000)} s`);
     }
     // draw calls exploding: far above the others of this world, or above the reference run
     if (calls.length >= 4) {

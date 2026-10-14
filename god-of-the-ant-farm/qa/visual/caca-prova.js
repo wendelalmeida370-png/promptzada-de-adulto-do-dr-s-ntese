@@ -21,7 +21,7 @@ const { open } = require('./vistas.js'); const { CACA } = require('./caca.js');
     __CACA.take(); let undo = null, got = [], na = null; const old = new Set(base);
     try { undo = (0, eval)('(' + fn + ')')(); got = __CACA.take(); } catch (e) { if (/^NA:/.test(e.message)) na = e.message.slice(3).trim(); else got = [{ kind: 'ERRO ' + e.message }]; } finally { try { if (typeof undo === 'function') undo(); } catch (e) { got.push({ kind: 'ERRO ao desfazer ' + e.message }); } }
     __CACA.take(); const fresh = got.filter(p => !old.has(p.kind + '|' + p.msg));
-    return { na, hit: fresh.some(p => p.kind.includes(want)), kinds: [...new Set(fresh.map(p => `S${p.sev} ${p.kind}`))].slice(0, 6), stale: got.length - fresh.length };
+    return { na, hit: fresh.some(p => (p.kind + ' ' + p.msg).includes(want)), kinds: [...new Set(fresh.map(p => `S${p.sev} ${p.kind}`))].slice(0, 6), stale: got.length - fresh.length };
   }, [fn.toString(), want, BASE]).then(r => r.na ? ok(name, true, `não se aplica a este jogo: ${r.na}`) : ok(name, r.hit, `procurado: «${want}» · acusou: ${r.kinds.join('; ') || 'nada'}${r.stale ? ` (${r.stale} que a base já tinha, sem contar)` : ''}`));
   // nothing planted: quiet (S0–S2 fail; the S3/S4 the base has are shown, and every kind it has is kept as the base the plants
   // are measured against)
@@ -94,6 +94,10 @@ const { open } = require('./vistas.js'); const { CACA } = require('./caca.js');
     // (the body's own row, 0, made to wear it)
     const ra = g.attributes.aRow; const n0 = g.instanceCount; const r0 = ra.array[n0]; ra.array[n0] = 0; g.instanceCount = n0 + 1;
     __CACA.cloth(['capa']); return () => { pa.set(keep); ra.array[n0] = r0; g.instanceCount = n0; }; });
+  // (someone drawn with no clothes on the trunk and the hips: the continuous body's own verifier, Body3D.check, must say so)
+  await plant('alguém desenhado sem roupa', 'sem roupa', () => { const B = G.Body3D, P = G.People3D; if (!B || !B.ready || typeof B.bare !== 'function') throw new Error('NA: sem o verificador de roupa (Body3D.bare)');
+    const f = P.look; P.look = function () { const L = f.apply(this, arguments); if (L && L.out) L.out = Object.assign({}, L.out, { torso: 1, overK: 0, skirt: null, legs: 0 }); return L; };
+    try { __VIS.f(1); } finally { P.look = f; } __CACA.modules(); return () => { __VIS.f(1); }; });
   await plant('as folhas acesas de branco', 'folhas estourando em branco', () => { const M = G.Realm.mats(); if (!M.leaf) throw new Error('NA: sem o material das folhas'); const S = G.S; const b = G.Possess.body(); const x0 = b.x, y0 = b.y;
     // (the body taken beside the nearest tree, the eye looking up into its crown, by day)
     const t = [...S.trees.values()].filter(q => q.stage === 'grow' && q.size > 0.6).sort((p, q) => G.dist2(p.x, p.y, x0, y0) - G.dist2(q.x, q.y, x0, y0))[0]; if (!t) throw new Error('NA: nenhuma árvore crescida');
