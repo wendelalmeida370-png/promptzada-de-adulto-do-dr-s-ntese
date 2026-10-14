@@ -85,7 +85,7 @@
         vec4 sfm = mk.r > 0.0 ? texture2D(uFMap, tile / uN) : vec4(0.0); float snowE = sfm.a > 0.004 ? gSnowE(sfm, gNy, root, uGust) : 0.0;
         // (how thick it grows here: the tile's own, thinning toward a tile without grass with a ragged edge — tufts, and the
         // earth showing between them — never spilling over it; the jungle's undergrowth thinner in the deep shade of the trees)
-        float th = min(mk.r, texture2D(uMask, tile / uN).r + (texture2D(uGust, root / 7.0 + 0.3).g - 0.5) * 0.7 + (r2 - 0.5) * 0.18);
+        float th = mk.r > 0.0 ? min(mk.r, texture2D(uMask, tile / uN).r + (texture2D(uGust, root / 7.0 + 0.3).g - 0.5) * 0.7 + (r2 - 0.5) * 0.18) : 0.0;
         float Hh = (0.1 + mk.g * 1.5) * (0.7 + r4 * 0.6) * step(r3, th * (kind == 3.0 ? 1.0 - sfm.r * 0.5 : 1.0)) * fade * (1.0 - smoothstep(0.44, 0.52, snowE));
         float ang = r1 * 6.2832 + r3 * 2.0; float ca = cos(ang), sa = sin(ang);
         vec2 wd = uWind.xy; float ws = length(wd) + 1e-4; wd /= ws;
