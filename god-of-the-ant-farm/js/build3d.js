@@ -540,6 +540,33 @@ float m3scale(float p) {
   }
   // (how far it is from a wall of a body (centre x, z, sx × sz) facing o to the edge of its lot)
   const stripOf = (K, x, z, sx, sz, o) => (o[0] > 0 ? K.w - (x + sx / 2) : o[0] < 0 ? x - sx / 2 : o[1] > 0 ? K.d - (z + sz / 2) : z - sz / 2);
+  // the steps before a door, from its sill (top, local) down to the ground: one stone where the drop is small (sd1 its depth
+  // at most); else a flight, each riser what the drop needs (at most 26 cm), each stone down to its own ground — on a slope a
+  // door is reached, not climbed to: straight out where the room before the door allows (treads of 22–32 cm), or else a
+  // landing before the door and the flight down along the wall, to the side with more of it (free: how much wall there is
+  // from the door's middle to each end); else as many as fit. D, bx: the door's frame (a along the wall, y up, n out of it);
+  // w the steps' width; room how far out from n0 they may go. Gives back where a flight along the wall stands ([a, width]
+  // from the door's middle — nothing else is put there), or null
+  function doorSteps(K, D, bx, w, room, n0, top, sd1, col, pat, free) {
+    const gAt = (a, n) => { if (!K.footed) return -0.4; const p = D(a, 0, n); return K.gy(p[0], p[2]); };
+    const tone = k => dim(col, 0.94 + K.hv(260 + k) * 0.1);
+    const drop = top - gAt(0, n0 + 0.3), need = Math.min(8, Math.ceil(drop / 0.26)), nOut = Math.floor(room / 0.22);
+    const out = (n, rise) => { const t = Math.min(0.32, room / n); K.as(pat, () => { for (let k = 0; k < n; k++) { const sn = n0 + (k + 0.5) * t, yt = top - k * rise; const gy = Math.min(yt - rise, gAt(0, sn)) - 0.04;
+      bx((K.hv(262 + k) - 0.5) * 0.04, gy, sn, w - k * 0.02, yt - gy, t + 0.02, tone(k)); } }); };
+    if (drop <= 0.5 || need < 2 || (nOut < 2 && !free)) { const sd = Math.min(sd1, room), sn = n0 + sd / 2; const gy = Math.min(top - 0.4, gAt(0, sn) - 0.04); K.as(pat, () => bx(0, gy, sn, w, top - gy, sd, col)); return null; }
+    if (nOut >= need) { out(need, drop / need); return null; }
+    // (the side with room for it; of two, the one whose ground is higher where the flight would end — the shorter way down)
+    const dp = Math.min(room, 0.6), sn = n0 + dp / 2; let sg = 0, run = 0, hi = -1e9;
+    if (free && room >= 0.3) for (const s of [1, -1]) { const r = free[s > 0 ? 1 : 0] - w / 2 - 0.3; if (r < (need - 1) * 0.24) continue; const g = gAt(s * (w / 2 + (need - 1) * 0.28), sn); if (g > hi) { hi = g; sg = s; run = r; } }
+    if (sg) {
+      const rise = G.clamp((top - hi) / need, 0.12, 0.26), t = Math.min(0.32, run / (need - 1));
+      K.as(pat, () => { const gy = Math.min(top - rise, gAt(0, sn)) - 0.04; bx(0, gy, sn, w, top - gy, dp, col); // (the landing)
+        for (let k = 1; k < need; k++) { const a = sg * (w / 2 + (k - 0.5) * t), yt = top - k * rise; const gk = Math.min(yt - rise, gAt(a, sn)) - 0.04; bx(a, gk, sn, t + 0.02, yt - gk, dp - k * 0.01, tone(k)); } });
+      return [sg * (need - 1) * t / 2, w + (need - 1) * t];
+    }
+    if (nOut < 2) { const sd = Math.min(sd1, room), sn = n0 + sd / 2; const gy = Math.min(top - 0.4, gAt(0, sn) - 0.04); K.as(pat, () => bx(0, gy, sn, w, top - gy, sd, col)); return null; }
+    out(nOut, 0.26); return null;
+  }
   // which side the door opens to (the side people come out of — the world's own door)
   function doorSide(b) {
     const dr = G.Vg.door(b); const cx = b.x + b.w / 2, cy = b.y + b.h / 2; const dx = dr[0] - cx, dy = dr[1] - cy;
@@ -624,9 +651,8 @@ float m3scale(float p) {
       if (!strap && !panel) for (const f of [0.22, 0.78]) bx(-dw * 0.3, y + dh * f, 0.09, dw * 0.36, 0.045, 0.012, '#2e2b28');
       const r = [dx + (ax ? ra : 0) + o[0] * 0.09, y + (strap ? 1.06 : dh * 0.5), dz + (ax ? 0 : ra) + o[1] * 0.09]; K.log(r, [r[0] + o[0] * 0.03, r[1], r[2] + o[1] * 0.03], strap ? 0.03 : 0.055, st === 'grego' || st === 'romano' ? '#8a7440' : '#2e2b28'); });
     // (the step: down to the ground before a footed house — no further out than a hand past the lot)
-    const sdp = Math.min(0.7, stripOf(K, x, z, sx, sz, o) + 0.15), sn = 0.1 + sdp / 2;
-    const sp = [dx + o[0] * sn, 0, dz + o[1] * sn]; const gy = K.footed ? Math.min(-0.4, K.gy(sp[0], sp[2]) - 0.04) : -0.4;
-    K.as('stone', () => bx(0, gy, sn, dw + 0.5, 0.42 + (-0.4 - gy), sdp, stone));
+    { const wl = (ax ? sx : sz) / 2; const cut = doorSteps(K, (a, yy, n) => [dx + (ax ? a : 0) + o[0] * n, yy, dz + (ax ? 0 : a) + o[1] * n], bx, dw + 0.5, stripOf(K, x, z, sx, sz, o) + 0.15, 0.1, 0.02, 0.7, stone, 'stone', [wl, wl]);
+      if (cut && K.body && K.body.door) K.body.door.cut = cut; }
   }
   // a roof of the people's kind over a box of sx × sz (centre x, z) whose walls end at y: gable, hip, flat with its
   // parapet, thatch or turf — with the god's pitches (the roof of a cottage is as tall as its walls), eaves that stand
@@ -1249,10 +1275,8 @@ float m3scale(float p) {
       K.as('beam', () => { for (const s of [-1, 1]) K.bar(D(s * (wdt / 2 - 0.1), yb - 0.45, 0.03), D(s * (wdt / 2 - 0.1), yb + 0.02, dep - 0.08), [0, 0.07, 0], ax ? [0.06, 0, 0] : [0, 0, 0.06], fc); bx(0, yb - 0.03, dep / 2, wdt - 0.1, 0.03, dep, dim(fc, 0.8)); });
       const c0 = D(0, yb, dep / 2); K.as('shingle', () => K.gable(c0[0], c0[1], c0[2], ax ? wdt : dep + 0.1, 0.42, ax ? dep + 0.1 : wdt, dim(fc, 0.9), ax)); }
     // (the stone step before it, from the ground up to the floor — no further out than a hand past the lot)
-    const strip = stripOf(K, x, z, lx, lz, o); const sd = Math.min(0.36, strip + 0.12), sn = 0.06 + sd / 2;
-    const sp = D(0, 0, sn); const gy = Math.min(-0.36, K.gy(sp[0], sp[2]) - 0.04);
-    K.as('rock', () => bx(0, gy, sn, dw + 0.4, 0.04 - gy, sd, P.base ? P.base[2] : '#a09a8e'));
-    return { o, a: off, w: dw + 0.5, side };
+    const cut = doorSteps(K, D, bx, dw + 0.4, stripOf(K, x, z, lx, lz, o) + 0.12, 0.06, 0.04, 0.36, P.base ? P.base[2] : '#a09a8e', 'rock', [len / 2 + off, len / 2 - off]);
+    return { o, a: off, w: dw + 0.5, side, cut: cut ? [off + cut[0], cut[1]] : null };
   }
   // the windows of a timber house of the north: small and high in the bays between the posts of the long walls (and the
   // gables of a hall), each in its frame with a sill and its shutter — open against the wall, or shut (no light in it)

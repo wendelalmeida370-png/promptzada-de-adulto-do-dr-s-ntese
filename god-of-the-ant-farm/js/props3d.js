@@ -33,7 +33,8 @@
       const off = K.footed ? 0.2 : 0.02; const edge = o[0] + o[1] > 0 ? (ax ? K.d : K.w) - m : m; const depth = Math.abs(edge - wall) - off - 0.02;
       if (depth < 0.22) continue;
       const mid = ax ? B.x : B.z; let spans = [[mid - len / 2 + 0.06, mid + len / 2 - 0.06]];
-      const D = B.door; if (D && D.side === side) { const a = mid + D.a; spans = [[spans[0][0], a - D.w / 2 - 0.4], [a + D.w / 2 + 0.4, spans[0][1]]].filter(s => s[1] - s[0] > 0.3); }
+      // (cut where the door is — and where its steps run along the wall, when it has a flight there: Build3D's door.cut)
+      const D = B.door; if (D && D.side === side) { const a = mid + (D.cut ? D.cut[0] : D.a), cw = D.cut ? Math.max(D.w, D.cut[1] + 0.1) : D.w; spans = [[spans[0][0], a - cw / 2 - 0.4], [a + cw / 2 + 0.4, spans[0][1]]].filter(s => s[1] - s[0] > 0.3); }
       for (const s of spans) out.push({ side, o, ax, a0: s[0], a1: s[1], cur: s[0], wall: wall + (o[0] + o[1]) * off, depth, ry: Math.atan2(o[0], o[1]), door: !!(D && D.side === side), da: D && D.side === side ? mid + D.a : 0, near: D && D.side === side ? Math.abs((s[0] + s[1]) / 2 - (mid + D.a)) : 0 });
     }
     return out;
