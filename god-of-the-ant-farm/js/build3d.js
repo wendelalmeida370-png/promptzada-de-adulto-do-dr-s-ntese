@@ -1719,13 +1719,13 @@ float m3scale(float p) {
   // ------------------------------ a chunk's buildings ------------------------------
   const inChunk = (b, x0, y0, n) => b.x >= x0 && b.y >= y0 && b.x < x0 + n && b.y < y0 + n;
   // (how far round the body the near houses keep their finest form — the iron, the pieces made in Blender, what lies about
-  // them: 35 m × the preset's lod (Realm.Q().lod; 1 where the preset has none), a chunk at a time by its nearest edge. Once
+  // them: 35 m × the preset's lod (Realm.Q().lod; all the near ones where the preset has none), a chunk at a time by its nearest edge. Once
   // fine it stays so until the body is 8 m further: walking along a chunk's edge does not draw it again and again. Only seen)
   const fineOf = new Map(); G.worldHooks.push(() => fineOf.clear());
   function fineAt(x0, y0, n) {
     const q = R3 && R3.Q ? R3.Q() : null; if (!q || !q.detail) return false;
-    const f = G.Possess && G.Possess.body && G.Possess.body(); if (!f) return true; // (no body: every near picture fine, as before)
-    const L = TL(), X = f.x * L, Z = f.y * L, D = 35 * (q.lod === undefined ? 1 : q.lod); const key = x0 + ',' + y0;
+    const f = G.Possess && G.Possess.body && G.Possess.body(); if (!f || q.lod === undefined) return true; // (no body, or a preset without lod: every near picture fine, as before)
+    const L = TL(), X = f.x * L, Z = f.y * L, D = 35 * q.lod; const key = x0 + ',' + y0;
     const d = Math.hypot(Math.max(x0 * L - X, 0, X - (x0 + n) * L), Math.max(y0 * L - Z, 0, Z - (y0 + n) * L));
     const now = fineOf.get(key) ? d < D + 8 : d < D; fineOf.set(key, now); return now;
   }
