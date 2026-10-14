@@ -66,7 +66,7 @@
   // every frame: follow the body, keep clear of the world, place the camera
   C3.update = function (rdt, body, cam) {
     clock += rdt;
-    const head = (body.h || 1.75) * 0.86;
+    const head = body.head !== undefined ? body.head : (body.h || 1.75) * 0.86;
     // (the world moved the body — a building rose where it stood, a scene, a load: the eye goes with it at once;
     // easing after it would fly through the houses on the way, and a pivot inside a house leaves the eye there — L-106)
     if (!piv || Math.hypot(body.X - piv.X, body.Z - piv.Z) > 2.5 || solid(piv.X, piv.Y, piv.Z)) piv = { X: body.X, Y: body.Y + head, Z: body.Z };

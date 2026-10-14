@@ -20,6 +20,8 @@
   const $ = (sel, r) => (r || document).querySelector(sel);
   let root = null, hud = null, card = null, menu = null, fadeEl = null, banner = null, deathEl = null, label = null, stickEl = null;
   let best = null, bestT = 0, upT = 0, toasts = [], news = [], fade = null, hintT = 0, bannerT = 0, repeatT = 0, slowT = 0, slowSaid = false;
+  let swimTold = false, lowTold = false, drownTold = false; // (the water's words: said once, and again each time it comes back)
+  G.worldHooks.push(() => { swimTold = lowTold = drownTold = false; });
   IU.best = () => best;
   const bar = (k, txt) => `<div class="ih-bar ${k}"><span class="ih-bl">${txt}</span><i><b></b></i></div>`;
 
@@ -127,9 +129,16 @@
     $('.ih-sub', hud).textContent = `${id.age} ${id.age === 1 ? 'ano' : 'anos'} · ${id.role}${id.set ? ' · ' + id.set : ''}`;
     const setBar = (k, val, warn) => { const e = $('.ih-bar.' + k, hud); e.querySelector('b').style.width = G.clamp(val, 0, 100) + '%'; e.classList.toggle('warn', !!warn); };
     setBar('hp', v.hp, v.hp < 30); setBar('st', st ? st.stamina / Math.max(1, caps.stamina) * 100 : 100, st && st.stamina < 15); setBar('fo', 100 - v.hunger, v.hunger > 80); setBar('en', v.energy, v.energy < 15);
+    // (in the water: what the breath is doing — the first time how it works, then only when it runs low or out)
+    const sw = G.Avatar.swimming && G.Avatar.swimming();
+    if (sw && !swimTold) { swimTold = true; IU.toast(`Nadando: na água o fôlego vai acabando. ${G.Input3D.label('pular')} dá uma braçada forte; chegue à margem antes que ele acabe.`, 6); }
+    if (sw && st && st.stamina > 0 && st.stamina < caps.stamina * 0.25 && !lowTold) { lowTold = true; IU.toast('O fôlego está acabando — nade para a margem!', 4); }
+    if (sw && st && st.stamina <= 0 && !drownTold) { drownTold = true; IU.toast('Sem fôlego: você está se afogando!', 4); }
+    if (!sw) { lowTold = false; drownTold = false; }
+    hud.classList.toggle('drowning', !!(sw && st && st.stamina <= 0));
     $('.ih-carry', hud).textContent = v.carry && v.carry.n > 0 ? `Carregando ${v.carry.n} de ${G.Eco ? G.Eco.name(v.carry.k) : v.carry.k}` : '';
     $('.ih-time', hud).textContent = `Dia ${S.day} · ${hourOf(S.time)}${S.weather && S.weather.rain > 0.2 ? ' · chuva' : ''}`;
-    $('.ih-place', hud).textContent = w.district ? `${w.district}, ${w.town || w.near}` : w.town ? w.town : w.near ? `${w.ground === 'estrada' ? 'Na estrada' : w.ground === 'bosque' ? 'No bosque' : 'No campo'}, ${w.nearD > 2 ? w.nearD * 4 + ' m de ' : 'perto de '}${w.near}` : 'Terras selvagens';
+    $('.ih-place', hud).textContent = w.district ? `${w.district}, ${w.town || w.near}` : w.town ? w.town : w.near ? `${w.ground === 'estrada' ? 'Na estrada' : w.ground === 'bosque' ? 'No bosque' : w.ground === 'mar' ? 'No mar' : w.ground === 'rio' ? 'Na água' : 'No campo'}, ${w.nearD > 2 ? w.nearD * 4 + ' m de ' : 'perto de '}${w.near}` : 'Terras selvagens';
     // the compass: the strip turns with the eye
     const yaw = G.Cam3D.yaw; const deg = ((yaw * 180 / Math.PI) % 360 + 360) % 360;
     const strip = $('.ih-strip', hud); let html = ''; for (let k = -2; k <= 10; k++) { const a = k * 45; html += `<span style="left:${(a - deg) * 1.4 + 90}px">${DIRS[((k % 8) + 8) % 8]}</span>`; } strip.innerHTML = html;

@@ -335,7 +335,11 @@
           if (!v.task || v.task.type !== 'avatar') add('avatar', 1, `${nm}: a tarefa é ${v.task ? v.task.type : 'nenhuma'}, não 'avatar'`, v.id);
           if (v.aboard || v.jail || v.captive || v.held || v.air || v.ug) add('avatar', 1, `${nm}: ${v.aboard ? 'a bordo' : v.jail ? 'preso' : v.captive ? 'cativo' : v.held ? 'na mão do deus' : v.air ? 'no ar' : 'na caverna'} e ainda encarnado`, v.id);
           if (v.inside && !(v.sleeping && v.inside === v.home)) add('avatar', 2, `${nm}: dentro de ${v.inside} sem estar dormindo em casa`, v.id);
-          if (!v.inside && !G.W.walkableXY(v.x, v.y)) add('avatar', 3, `${nm}: de pé num lugar onde ninguém pisa (${v.x.toFixed(1)},${v.y.toFixed(1)})`, v.id);
+          // (where the world does not walk, the body may only be in the water — swimming, or wading the sea's shallows — and
+          // marked so, for the world to leave it there; out of the water the mark goes)
+          const ti = G.W.idx(v.x, v.y), wet = s.type[ti] <= G.T.RIVER && !(s.dry && s.dry[ti]) && !(s.ice && s.ice[ti]) && !s.road[ti], afl = G.Possess.afloat(v);
+          if (!v.inside && !G.W.walkableXY(v.x, v.y) && !(wet && afl)) add('avatar', 3, `${nm}: ${wet ? 'na água sem a marca de quem nada (o mundo o puxaria para fora)' : 'de pé num lugar onde ninguém pisa'} (${v.x.toFixed(1)},${v.y.toFixed(1)})`, v.id);
+          if (afl && G.W.walkableXY(v.x, v.y)) add('avatar', 3, `${nm}: com a marca de quem nada, em chão onde o mundo anda`, v.id);
           if (v.age < 6) add('avatar', 2, `${nm}: criança pequena demais encarnada`, v.id);
         }
         if (!KINDS[a.kind]) add('avatar', 2, `S.avatar: tipo de encarnação desconhecido (${a.kind})`);

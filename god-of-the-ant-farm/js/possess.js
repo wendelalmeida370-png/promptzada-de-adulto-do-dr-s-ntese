@@ -32,7 +32,7 @@
   const Po = G.Possess = { onEnd: [], onLog: [] };
   // the kinds of incarnation: what the body of each can do (the future ones are only named, not made)
   const KINDS = {
-    humano: { label: 'Humano mortal', mortal: true, swim: false, climb: false, glide: false, dive: false },
+    humano: { label: 'Humano mortal', mortal: true, swim: true, climb: false, glide: false, dive: false },
     // extraordinario: { … }, avatarDivino: { … } — capacidades acima do humano (D-018: reservado, não implementado)
   };
   Po.KINDS = KINDS;
@@ -46,7 +46,9 @@
 
   // ------------------------------ who can be lived ------------------------------
   const oa = v => (v.g === 'f' ? 'a' : 'o');
-  Po.can = function (v) {
+  // (water: only a save opens a body in the water — it was swimming when the game was saved, and swims on; one does not
+  // step into a body in the middle of the sea)
+  Po.can = function (v, water) {
     const S = G.S;
     if (!v || !S || !S.villagers.has(v.id)) return { ok: false, why: 'Esta pessoa não está mais entre os vivos.' };
     if (v.age < 6) return { ok: false, why: `${v.name} é pequen${oa(v)} demais para andar por aí sozinh${oa(v)}.` };
@@ -59,7 +61,7 @@
     const t = v.task;
     if (t && (t.type === 'scene')) return { ok: false, why: `${v.name} está no meio de uma cena da história.` };
     if (t && (t.type === 'condemned' || t.type === 'escorted' || t.type === 'swim' || t.type === 'cela')) return { ok: false, why: `${v.name} não está em condições agora.` };
-    if (!v.inside) { const s = G.Space.surface(v.x * G.Space.TILE, v.y * G.Space.TILE); if (!s.walk) return { ok: false, why: `${v.name} não está em chão firme.` }; }
+    if (!v.inside) { const s = G.Space.surface(v.x * G.Space.TILE, v.y * G.Space.TILE); if (!s.walk && !(water && s.kind === 'deep' && KINDS.humano.swim)) return { ok: false, why: `${v.name} não está em chão firme.` }; }
     return { ok: true };
   };
   // what the body can do, from the person (age, a lost leg, sickness, tiredness) and the kind of incarnation
@@ -82,7 +84,7 @@
     G.Vg.endTask(v);
     v.sleeping = false; v.path = null; v.act = ''; v.actT = 0; v.moving = false; v.z = 0;
     S.avatar = { id: v.id, kind: KINDS[kind] ? kind : 'humano', since: S.day, t0: S.clock, x0: +v.x.toFixed(2), y0: +v.y.toFixed(2), asks: [], deeds: {}, seen: [], met: [] };
-    G.Vg.setTask(v, { type: 'avatar', pri: 100, st: 0 });
+    G.Vg.setTask(v, mark());
     cur = v;
     return { ok: true };
   };
@@ -129,17 +131,20 @@
 
   // ------------------------------ orders from the world ------------------------------
   // (setTask asks here before an order reaches the body: null lets it through, a task is what the body keeps doing)
-  const FORCE = { jail: 'a justiça', cela: 'a justiça', condemned: 'a justiça', escorted: 'o cativeiro', aboard: 'o mar', embark: 'o mar', swim: 'a água' };
+  const FORCE = { jail: 'a justiça', cela: 'a justiça', condemned: 'a justiça', escorted: 'o cativeiro', aboard: 'o mar', embark: 'o mar' };
   Po.FORCE = FORCE;
   Po.ask = function (v, t) {
     if (!t || t.type === 'avatar') return null;
+    // (the world found the body in the water and would have it swim for the shore: a body that swims swims on its own —
+    // the player swims, or drowns; one that cannot is taken back, as before)
+    if (t.type === 'swim') { if (Po.caps(v).swim && v.task && v.task.type === 'avatar') { v.task.afloat = 1; return v.task; } Po.release('forca', 'swim'); return null; }
     if (FORCE[t.type]) { Po.release('forca', t.type); return null; }
     call(v, t);
     // (someone may have ended the body's task just before giving the order — a fire in the house: the body stays the player's)
     if (!v.task || v.task.type !== 'avatar') v.task = mark();
     return v.task;
   };
-  const mark = () => ({ type: 'avatar', pri: 100, st: 0, age: 0 });
+  const mark = () => ({ type: 'avatar', pri: 100, st: 0, age: 0, afloat: 0 });
   // a call: what the world asked of the body, kept for the player (the base of duties and their breaking, later)
   const CALL = {
     muster: 'Seu povo te chama às armas.', band: 'Seu povo te chama às armas.', army: 'O exército te espera.', defend: 'A vila está sendo atacada — pegue em armas!',
@@ -157,6 +162,11 @@
     if (a.asks.length > 6) a.asks.shift();
   }
   Po.calls = () => (G.S.avatar ? G.S.avatar.asks.slice() : []);
+  // the body in the water by the player's will — swimming, or wading where the world does not walk (the sea's shallows, a
+  // deep river): the world leaves it there, it does not pull it out (the body swims, or drowns). The mark is on the
+  // body's task, and only this file writes it (the controller tells it where the body is)
+  Po.afloat = v => !!(v && v.task && v.task.type === 'avatar' && v.task.afloat);
+  Po.setAfloat = function (on) { const v = Po.body(); if (!v || !v.task || v.task.type !== 'avatar') return; v.task.afloat = on ? 1 : 0; };
 
   // ------------------------------ the body's own step ------------------------------
   // (villagers.js calls this instead of emergency/decide/runTask: the will is the player's)
@@ -241,7 +251,7 @@
     let set = null, sd = 1e9; for (const s of S.settlements.values()) { const d = G.dist(s.cx, s.cy, v.x, v.y); if (d < sd) { sd = d; set = s; } }
     const i = W.idx(v.x, v.y); const dist = G.Urban && G.Urban.districtAt ? G.Urban.districtAt(v.x, v.y) : null;
     const T = G.T; const t = S.type[i];
-    const ground = S.road[i] ? (S.type[i] === T.RIVER ? 'ponte' : 'estrada') : t === T.RIVER ? 'rio' : t === T.SAND ? 'areia' : S.treeAt[i] ? 'bosque' : S.cliff[i] ? 'penhasco' : 'campo';
+    const ground = S.road[i] ? (S.type[i] === T.RIVER ? 'ponte' : 'estrada') : t === T.RIVER ? 'rio' : t <= T.SEA && !(S.dry && S.dry[i]) ? 'mar' : t === T.SAND ? 'areia' : S.treeAt[i] ? 'bosque' : S.cliff[i] ? 'penhasco' : 'campo';
     const town = set && sd < 6 + Math.sqrt(G.Village.pop(set.id)) * 1.2 ? set : null;
     return { x: +v.x.toFixed(2), y: +v.y.toFixed(2), tile: i, town: town ? town.name : null, near: set ? set.name : null, nearD: Math.round(sd), district: dist ? dist.name : null, biome: G.Biome && G.Biome.nameAt ? G.Biome.nameAt(v.x, v.y) : null, ground, h: +W.groundH(v.x, v.y).toFixed(2) };
   };
@@ -283,7 +293,7 @@
       const a = o.avatar; if (!a || typeof a !== 'object') return;
       const v = S.villagers.get(a.id);
       // (a body that is gone, or in no state to be lived, is not taken back: the save simply opens in the god's eyes)
-      if (!v || !Po.can(v).ok) return;
+      if (!v || !Po.can(v, true).ok) return;
       const deeds = {}; if (a.deeds && typeof a.deeds === 'object') for (const k in a.deeds) if (DEED[k] && Number.isFinite(a.deeds[k])) deeds[k] = a.deeds[k];
       S.avatar = {
         id: v.id, kind: KINDS[a.kind] ? a.kind : 'humano', since: num(a.since, S.day), t0: num(a.t0, S.clock), x0: num(a.x0, v.x), y0: num(a.y0, v.y),
@@ -291,6 +301,7 @@
         deeds, seen: Array.isArray(a.seen) ? a.seen.filter(e => e && typeof e.txt === 'string') : [], met: Array.isArray(a.met) ? a.met.filter(Number.isFinite) : [],
       };
       v.task = mark(); v.sleeping = false; v.path = null; v.inside = 0;
+      if (!v.inside && !W.walkableXY(v.x, v.y)) v.task.afloat = 1; // (saved swimming: it swims on)
       cur = v;
     },
   });

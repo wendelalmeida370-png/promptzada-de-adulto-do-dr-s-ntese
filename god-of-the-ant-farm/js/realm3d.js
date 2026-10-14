@@ -278,28 +278,58 @@
       // (a blade is lit the same on both faces: three.js turns the normal of a back face round; here it is turned back)
       sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n normal = normal * faceDirection;');
     };
-    // water: the waves the god's view draws, in light — ripples moving over it, the sky in it at a low angle, the sun's
-    // glint, the shallows clear and the deep dark, foam where it meets the land
-    MAT.water = new THREE.MeshPhongMaterial({ vertexColors: true, transparent: true, opacity: 1, shininess: 140, specular: 0xc8dcea, depthWrite: false });
+    // water: the waves the god's view draws, in light — trains of waves running with the wind (long swells on the open sea,
+    // a chop on the rivers, calm against the shore), the sky in it (pale at the horizon, deep blue above, as the angle asks),
+    // the sun glittering on the slopes of the waves, the crests lit through, the shallows clear and the deep dark, foam where
+    // it meets the land and on the crests when the wind blows hard
+    MAT.water = new THREE.MeshPhongMaterial({ vertexColors: true, transparent: true, opacity: 1, shininess: 60, specular: 0x1c2228, depthWrite: false });
     MAT.water.onBeforeCompile = sh => {
-      Object.assign(sh.uniforms, { uTime: U.time, uSky: U.sky, uDet: { value: G.Ground3D.detail() }, uWind: U.wind });
-      sh.vertexShader = 'uniform float uTime; attribute float aShore; varying float vShore; varying vec3 vWW;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-        vec4 wp = modelMatrix * vec4(position, 1.0); transformed.y += sin(wp.x * 0.33 + uTime * 1.3) * 0.06 + cos(wp.z * 0.29 + uTime * 1.05) * 0.05;
+      Object.assign(sh.uniforms, { uTime: U.time, uSky: U.sky, uSkyTop: skyU.top, uSkyHor: skyU.hor, uSunDir: skyU.sunDir, uSunCol: skyU.sunCol, uNight: skyU.night, uDet: { value: G.Ground3D.detail() }, uWind: U.wind, uSeaY: { value: G.SEA * G.Space.HM } });
+      sh.vertexShader = 'uniform float uTime; uniform vec3 uWind; uniform float uSeaY; attribute float aShore; varying float vShore; varying vec3 vWW;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        vec4 wp = modelMatrix * vec4(position, 1.0); float sea = 1.0 - step(0.15, abs(wp.y - uSeaY));
+        float sw = (0.35 + uWind.z * 0.5) * (1.0 - aShore * 0.75) * mix(0.3, 1.0, sea);
+        transformed.y += (sin(wp.x * 0.33 + uTime * 1.3) * 0.06 + cos(wp.z * 0.29 + uTime * 1.05) * 0.05) + sin(dot(wp.xz, normalize(uWind.xy + vec2(0.001))) * 0.21 - uTime * 1.4) * 0.12 * sw;
         vShore = aShore; vWW = wp.xyz;`);
-      sh.fragmentShader = 'uniform float uTime; uniform vec3 uSky; uniform sampler2D uDet; uniform vec3 uWind; varying float vShore; varying vec3 vWW;\n' + sh.fragmentShader
+      sh.fragmentShader = 'uniform float uTime; uniform vec3 uSky; uniform vec3 uSkyTop; uniform vec3 uSkyHor; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uNight; uniform sampler2D uDet; uniform vec3 uWind; uniform float uSeaY; varying float vShore; varying vec3 vWW;\n' + sh.fragmentShader
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
-        vec2 wq = vWW.xz; vec2 dr = uWind.xy * 0.06 + vec2(0.012, 0.008);
-        float r1 = texture2D(uDet, wq / 7.0 + dr * uTime).r, r2 = texture2D(uDet, wq / 4.3 - dr.yx * uTime * 1.3).r;
-        float r3 = texture2D(uDet, (wq + 0.11) / 7.0 + dr * uTime).r, r4 = texture2D(uDet, (wq + vec2(0.0, 0.11)) / 4.3 - dr.yx * uTime * 1.3).r;
-        vec2 gw = vec2(cos(wq.x * 0.33 + uTime * 1.3) * 0.33 * 0.06, -sin(wq.y * 0.29 + uTime * 1.05) * 0.29 * 0.05) * 6.0;
-        gw += vec2(r3 - r1, r4 - r2) * 2.2;
-        normal = normalize(normal + (viewMatrix * vec4(-gw.x, 0.0, -gw.y, 0.0)).xyz * 0.6);`)
+        // (four trains of waves: their slopes summed, steeper with the wind, flatter on the rivers and against the land)
+        vec2 wq = vWW.xz; float isSea = 1.0 - step(0.15, abs(vWW.y - uSeaY));
+        vec2 wd = normalize(uWind.xy + vec2(0.001)); float ws = clamp(uWind.z, 0.0, 2.0);
+        float calm = mix(0.4, 1.0, isSea) * (1.0 - vShore * 0.55) * (0.65 + ws * 0.35);
+        vec2 gw = vec2(0.0); float hw = 0.0;
+        for (int i = 0; i < 4; i++) {
+          float fi = float(i); float an = (fi - 1.5) * 0.55 + fi * 0.37; vec2 d = vec2(wd.x * cos(an) - wd.y * sin(an), wd.x * sin(an) + wd.y * cos(an));
+          float L = 11.0 / (1.0 + fi * 1.15); float k = 6.2832 / L; float A = 0.05 * L / 6.0;
+          float ph = dot(d, wq) * k - uTime * sqrt(9.8 * k) * 0.85 + fi * 1.7; float c = cos(ph);
+          hw += A * sin(ph); gw += d * (A * k * c);
+        }
+        vec2 dr = wd * 0.07 + vec2(0.012, 0.008);
+        float r1 = texture2D(uDet, wq / 11.0 + dr * uTime).r, r2 = texture2D(uDet, wq / 6.5 - dr.yx * uTime * 1.3).r;
+        float r3 = texture2D(uDet, (wq + 0.2) / 11.0 + dr * uTime).r, r4 = texture2D(uDet, (wq + vec2(0.0, 0.2)) / 6.5 - dr.yx * uTime * 1.3).r;
+        // (far off the small ripples blur into one sheen: only the long waves are seen, no glitter of noise)
+        float wnear = 1.0 - smoothstep(22.0, 130.0, length(cameraPosition - vWW));
+        gw = gw * calm * mix(0.45, 1.0, wnear) + vec2(r3 - r1, r4 - r2) * 0.7 * wnear;
+        vec3 nW = normalize(vec3(-gw.x, 1.0, -gw.y));
+        normal = normalize((viewMatrix * vec4(nW, 0.0)).xyz);`)
         .replace('#include <opaque_fragment>', `
-        float fr = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 4.0);
-        outgoingLight = mix(outgoingLight, uSky, fr * 0.42); diffuseColor.a = mix(diffuseColor.a, 1.0, fr * 0.6);
+        // (water takes little of the sun's light on itself: its colour is the depth's, lit softly, and what it reflects)
+        vec3 sd0 = normalize(uSunDir); float day0 = (1.0 - uNight) * step(0.0, sd0.y);
+        outgoingLight = mix(outgoingLight, diffuseColor.rgb * (0.34 + 0.46 * day0 * clamp(sd0.y * 1.4, 0.0, 1.0)) + totalEmissiveRadiance, 0.75);
+        // (the sky in the water: the reflected ray's height picks the colour — pale near the horizon, deep blue overhead)
+        vec3 Vw = normalize(cameraPosition - vWW); vec3 Rw = reflect(-Vw, nW); float rel = clamp(Rw.y, 0.0, 1.0);
+        vec3 skyR = mix(uSkyHor, uSkyTop, pow(rel, 0.55));
+        float fr = 0.02 + 0.98 * pow(1.0 - clamp(dot(nW, Vw), 0.0, 1.0), 5.0);
+        outgoingLight = mix(outgoingLight, skyR * 0.88, clamp(fr * 0.78, 0.0, 0.8)); diffuseColor.a = mix(diffuseColor.a, 1.0, fr * 0.65);
+        // (the sun on the slopes of the waves: a hard glitter and a soft sheen around it; the crests lit from within)
+        vec3 sd = normalize(uSunDir); float rs = max(dot(Rw, sd), 0.0);
+        float day = (1.0 - uNight) * step(0.0, sd.y);
+        outgoingLight += uSunCol * (pow(rs, 900.0) * 5.0 + pow(rs, 90.0) * 0.22) * day;
+        outgoingLight += vec3(0.02, 0.09, 0.08) * smoothstep(-0.02, 0.05, hw) * isSea * day * (1.0 - vShore * 0.5);
         float fn = texture2D(uDet, vWW.xz / 5.0 + uTime * 0.01).g;
         float band = vShore + (fn - 0.5) * 0.55 + sin(uTime * 0.9 - vShore * 7.0 + fn * 3.0) * 0.08;
         float foam = smoothstep(0.76, 0.94, band) * (0.45 + fn * 0.55);
+        // (whitecaps on the open sea when the wind blows)
+        foam = max(foam, smoothstep(0.06, 0.1, hw + (fn - 0.5) * 0.05) * smoothstep(0.9, 1.6, ws) * isSea * 0.7);
         outgoingLight = mix(outgoingLight, vec3(0.9, 0.94, 0.96) * (0.55 + 0.45 * uSky), clamp(foam, 0.0, 0.8)); diffuseColor.a = max(diffuseColor.a, foam * 0.9);
         #include <opaque_fragment>`);
     };
@@ -371,7 +401,7 @@
     const pos = new Float32Array(gw * gh * 3), nor = new Float32Array(gw * gh * 3), colr = new Float32Array(gw * gh * 3); const nn = [0, 0, 0];
     for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
       const x = Math.min(N, x0 + i * step), y = Math.min(N, y0 + j * step); const k = (j * gw + i) * 3;
-      pos[k] = x * TL; pos[k + 1] = W.hAt(x, y) * HM - (step > 1 ? 0.3 : 0); pos[k + 2] = y * TL; // (the far picture a little low: a crack at its edge shows ground, not sky)
+      pos[k] = x * TL; pos[k + 1] = W.hAt(x, y) * HM - (step > 1 ? 0.3 : G.Space.bedDrop(x, y)); pos[k + 2] = y * TL; // (the far picture a little low: a crack at its edge shows ground, not sky; near, the beds of the rivers under their water)
       normalAt(x, y, nn); nor[k] = nn[0]; nor[k + 1] = nn[1]; nor[k + 2] = nn[2];
       const sh = step < 1 ? shadeAt(x, y) : 1; colr[k] = colr[k + 1] = colr[k + 2] = sh * sh; // (a shade, so linear)
     }
@@ -380,7 +410,7 @@
     return g;
   }
   // water: the sea at its level, every river and lake at its own; the ice of a sudden winter; the walls of a parted sea
-  const WATER = [[108, 205, 210], [80, 176, 200], [58, 146, 186], [44, 118, 166], [38, 104, 152]];
+  const WATER = [[96, 200, 204], [60, 166, 192], [36, 124, 172], [24, 90, 146], [18, 66, 120]]; // (clear and green over the sand, deep blue far out)
   const waterCol = d => { const k = G.clamp(d / 1.6, 0, 3.999); const a = WATER[Math.floor(k)], b = WATER[Math.min(4, Math.floor(k) + 1)]; return G.lerpColor(a, b, k - Math.floor(k)); };
   // (a water surface: its colour and clearness at each corner — the shallows let the bed show — and how near the land the
   // corner is, for the foam)

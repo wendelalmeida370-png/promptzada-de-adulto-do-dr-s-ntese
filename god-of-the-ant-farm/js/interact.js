@@ -40,7 +40,7 @@
   }
   // the best thing to do right now (what the prompt shows: "E — …")
   I.best = function () {
-    const ctx = I.ctx(); if (!ctx) return null;
+    const ctx = I.ctx(); if (!ctx || G.Avatar.swimming()) return null; // (the hands are swimming)
     let best = null, bs = -1;
     for (const p of I.list) {
       for (const t of p.find(ctx)) {
@@ -55,7 +55,7 @@
   };
   // doing it: checked again at the moment of doing (the world moves between seeing and doing)
   I.run = function (choice) {
-    const ctx = I.ctx(); if (!ctx || !choice || G.Avatar.busy()) return null;
+    const ctx = I.ctx(); if (!ctx || !choice || G.Avatar.busy() || G.Avatar.swimming()) return null;
     const p = choice.p || I.list.find(q => q.id === choice.id); if (!p) return null;
     const t = choice.t;
     if (score(ctx, t.X, t.Z, p.reach + 0.6) < 0) return { ok: false, msg: 'Longe demais.' };

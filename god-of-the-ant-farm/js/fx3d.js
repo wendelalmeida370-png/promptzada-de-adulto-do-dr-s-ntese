@@ -307,7 +307,18 @@
       // (a little puff at each stride, not a trail: low, quick, faint)
       for (let k = every('d' + id, sp > 2.4 ? sp * 0.8 : 1, dt); k > 0; k--) spawn(PA, { x: X + G.vrr(-0.15, 0.15), y: Y + 0.06, z: Z + G.vrr(-0.15, 0.15), vx: G.vrr(-0.3, 0.3), vy: G.vrr(0.15, 0.4), vz: G.vrr(-0.3, 0.3), life: G.vrr(0.5, 0.8), s0: 0.2, s1: G.vrr(0.55, 0.85), c, a: snow > 0.4 ? 0.42 : 0.2, drag: 2 });
     };
-    if (av) { feet(av.X, av.Y, av.Z, av.sp || 0, 'av', av.wade || 0); if (av.ground !== false) walkPrints('av', av.X, av.Y, av.Z, av.yaw); }
+    if (av && !av.swim) { feet(av.X, av.Y, av.Z, av.sp || 0, 'av', av.wade || 0); if (av.ground !== false) walkPrints('av', av.X, av.Y, av.Z, av.yaw); }
+    // (the swimmer: rings round the shoulders even when still, the arms' splashes at each stroke, a trail of foam behind;
+    // going under, bubbles)
+    if (av && av.swim && G.Avatar.waterAt) { const wy = G.Avatar.waterAt(av.X, av.Z); if (wy > -Infinity) {
+      for (let k = every('sw', 1.1 + av.sp * 1.6, dt); k > 0; k--) ripple(av.X + G.vrr(-0.3, 0.3), wy + 0.04, av.Z + G.vrr(-0.3, 0.3), 1.7);
+      if (av.sp > 0.3 || av.stroke) for (let k = every('ss', 1.6 + av.sp * 1.8 + (av.stroke ? 6 : 0), dt); k > 0; k--) {
+        const a = av.yaw + G.vrr(-1, 1); const fx = Math.cos(a) * 0.5, fz = Math.sin(a) * 0.5;
+        for (let q = 0; q < 5; q++) spawn(PA, { x: av.X + fx, y: wy + 0.08, z: av.Z + fz, vx: fx * 1.5 + G.vrr(-0.7, 0.7), vy: G.vrr(1.1, 2.4), vz: fz * 1.5 + G.vrr(-0.7, 0.7), life: 0.6, s0: 0.1, s1: 0.06, c: [0.88, 0.94, 1], a: 0.85, sh: 1, grav: 9.8 });
+        spawn(PA, { x: av.X - Math.cos(av.yaw) * 0.9, y: wy + 0.03, z: av.Z - Math.sin(av.yaw) * 0.9, vx: G.vrr(-0.15, 0.15), vy: 0, vz: G.vrr(-0.15, 0.15), life: 1.4, s0: 0.35, s1: 0.8, c: [0.92, 0.96, 1], a: 0.45, drag: 2 });
+      }
+      if (av.drown > 0.3) for (let k = every('sb', 5, dt); k > 0; k--) spawn(PA, { x: av.X + G.vrr(-0.3, 0.3), y: wy - 0.25, z: av.Z + G.vrr(-0.3, 0.3), vy: G.vrr(0.7, 1.3), life: 0.45, s0: 0.07, s1: 0.13, c: [0.9, 0.96, 1], a: 0.75, sh: 1 });
+    } }
     if (G.People3D) for (const p of G.People3D.walkers) {
       feet(p[0], p[1], p[2], p[3], p[7], 0); if (p[3] > 0.3) walkPrints(p[7], p[0], p[1], p[2], p[6]);
       // (the chips of the axe, the pick, the hammer, at the blow)

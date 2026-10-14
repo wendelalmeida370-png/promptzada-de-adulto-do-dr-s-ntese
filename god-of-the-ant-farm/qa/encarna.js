@@ -23,6 +23,9 @@
 //  e13 o corpo no mundo — escala uma pedra grande (anda por cima e desce do outro lado; a parede de uma casa não), senta e
 //      levanta, acena e é respondido, bebe no rio (o mar é salgado), faz carinho num bicho manso, cata o ouro do chão; os
 //      feitos entram na biografia
+//  e14 o corpo na água — a água sobe pelas pernas (mais lento), funda ele nada (o mundo o deixa lá, o deus o vê nadar),
+//      o fôlego acaba nadando, a ordem do mundo de nadar não tira o corpo, salvar no meio do mar, voltar à praia, o vau
+//      do rio, e sem fôlego se afoga de verdade (morte do mundo, crônica, o deus volta)
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'); const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
@@ -691,6 +694,69 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   ok('e13 fazer carinho num bicho manso', !e13.pet || (e13.pet.ran && e13.pet.deed === 1), JSON.stringify(e13.pet));
   ok('e13 catar ouro do chão: some do chão, vai para a casa (ou para as mãos) e entra na biografia', e13.gold.piles > 0 && e13.gold.ran && e13.gold.gone && e13.gold.deed >= 1 && (e13.gold.coinage ? e13.gold.coin > 0 : e13.gold.carry > 0), JSON.stringify(e13.gold));
   ok('e13 verificador', !e13.qa.length && e13.err === '{}', `${e13.qa.slice(0, 3).join(' · ') || 'limpo'} · ${e13.err}`);
+  }
+  if (await need('e14')) {
+  // ================================ e14: the body in the water: wading, swimming, the breath, the world's own order, a save, drowning ================================
+  const e14 = await E(() => {
+    __E.fresh('cidade'); let S = G.S; const N = G.N, T = G.T, TL = G.Space.TILE; const out = {};
+    const s = __E.town(); const v = __E.adults(s)[0]; out.inn = __E.enter(v); __E.f(10); let st = G.Avatar.state(); const id = v.id;
+    const body = () => S.villagers.get(id);
+    // a beach: sand the world walks on, the sea beyond it growing deep within a straight line, nothing solid in the way
+    let best = null;
+    for (let y = 3; y < N - 3 && !best; y++) for (let x = 3; x < N - 3 && !best; x++) { const i = y * N + x; if (!G.W.walkable(i) || S.type[i] !== T.SAND || !G.W.reaches(v, x + 0.5, y + 0.5)) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { let ok = true, deep = -1; for (let k = 1; k <= 7; k++) { const X = (x + 0.5 + dx * k) * TL, Z = (y + 0.5 + dy * k) * TL; const sf = G.Space.surface(X, Z); if (sf.kind === 'cliff' || sf.kind === 'building' || sf.kind === 'wall' || sf.kind === 'edge') { ok = false; break; } const d = G.Avatar.waterAt(X, Z) - G.Avatar.floorAt(X, Z); if (d > 1.6) { deep = k; break; } } if (ok && deep > 0) { best = { x, y, dx, dy, deep }; break; } } }
+    out.beach = best; if (!best) { out.qa = __E.qa(); out.err = JSON.stringify(G.modErr); return out; }
+    const yaw0 = Math.atan2(best.dy, best.dx);
+    // (every frame: never where the world would not have it — out of the water and off the walkable ground, unmarked in the
+    // water, under the floor, the eye inside something)
+    const watch = o => { const b = body(); if (!b) return; const ti = G.W.idx(b.x, b.y); const wet = S.type[ti] <= T.RIVER; if (!G.W.walkableXY(b.x, b.y) && !(wet && G.Possess.afloat(b))) o.bad++; if (G.Possess.afloat(b) && G.W.walkableXY(b.x, b.y)) o.bad++;
+      if (st.loco !== 'swim' && st.loco !== 'climb' && st.Y < G.Avatar.floorAt(st.X, st.Z) - 0.05) o.under++; if (G.Cam3D.inside) o.cam++; if (st.loco === 'swim' && b.act !== 'swim') o.act++; };
+    // 1. from the sand into the sea: the water climbs the legs and slows them; deep enough, it swims (the world leaves it, the god sees it swim)
+    G.Avatar.place(best.x + 0.5, best.y + 0.5); __E.f(6); G.Cam3D.yaw = yaw0; G.Input3D.down.frente = true;
+    const a = { bad: 0, under: 0, cam: 0, act: 0, landSp: 0, wadeSp: 0, maxWade: 0, swimAt: -1, st0: 0, st1: 0 };
+    for (let k = 0; k < 420; k++) { G.Main.frameFor(33); watch(a); if (k === 12) a.landSp = st.speed; if (st.loco === 'ground') { a.maxWade = Math.max(a.maxWade, st.wade); if (st.wade > 0.55 && st.wade < 0.65) a.wadeSp = st.speed; }
+      if (st.loco === 'swim' && a.swimAt < 0) { a.swimAt = k; a.st0 = st.stamina; } if (a.swimAt >= 0 && k - a.swimAt === 60) { a.st1 = st.stamina; break; } }
+    G.Input3D.down.frente = false; __E.f(4);
+    a.afloat = G.Possess.afloat(body()); a.avatar = !!S.avatar; a.anim = st.anim; a.loco = st.loco;
+    a.overWater = +(G.Avatar.pos().Y + (G.Avatar.pos().head || 0) - G.Avatar.waterAt(st.X, st.Z)).toFixed(2);
+    out.into = a;
+    // 2. the world's own order to someone in the sea (the watchdog's "swim for the shore"): the body stays the player's, swimming
+    if (st.loco === 'swim') { G.Vg.setTask(body(), { type: 'swim', pri: 6 }); __E.f(30); out.order = { avatar: !!S.avatar && S.avatar.id === id, task: body() && body().task && body().task.type, afloat: G.Possess.afloat(body()), loco: st.loco }; }
+    // 3. a save and a load in the middle of the sea: it opens swimming, marked, where it was
+    if (st.loco === 'swim') { const b = body(); const p0 = [b.x, b.y]; const str = G.Save.serialize(); G.Save.apply(JSON.parse(str)); S = G.S; __E.f(12); st = G.Avatar.state(); const b1 = body();
+      out.load = { avatar: !!S.avatar && S.avatar.id === id, mode: G.Modes.state, at: b1 ? +G.dist(p0[0], p0[1], b1.x, b1.y).toFixed(2) : -1, afloat: G.Possess.afloat(b1), loco: st && st.loco }; }
+    // 4. back to the beach: swimming, then the bed under the feet — wading — then the sand; the mark goes, the breath comes back
+    if (st) { G.Cam3D.yaw = yaw0 + Math.PI; G.Input3D.down.frente = true; const r = { bad: 0, under: 0, cam: 0, act: 0, waded: 0, land: -1 };
+      let low = st.stamina; for (let k = 0; k < 520; k++) { G.Main.frameFor(33); watch(r); low = Math.min(low, st.stamina); if (st.loco === 'ground' && st.wade > 0.1) r.waded++; if (G.W.walkableXY(body().x, body().y) && st.wade < 0.02 && r.land < 0) r.land = k; if (r.land >= 0 && k - r.land > 15) break; }
+      G.Input3D.down.frente = false; __E.f(40); r.breath = +(st.stamina - low).toFixed(1); r.afloat = G.Possess.afloat(body()); r.loco = st.loco; out.back = r; }
+    // 5. a ford: a river shallow enough to walk — the water at the shins or the knees, slower, never swimming
+    { let ford = null; for (let y = 2; y < N - 2 && !ford; y++) for (let x = 2; x < N - 2 && !ford; x++) { const i = y * N + x; if (S.type[i] !== T.RIVER || S.deep[i] || S.road[i] || !G.W.walkable(i) || !G.W.reaches(body(), x + 0.5, y + 0.5)) continue; ford = [x + 0.5, y + 0.5]; }
+      if (ford) { G.Avatar.place(ford[0], ford[1]); __E.f(10); out.ford = { wade: +st.wade.toFixed(2), loco: st.loco, afloat: G.Possess.afloat(body()) }; } else out.ford = null; }
+    // 6. out of breath far from the shore: it goes under and drowns — the world's death (cause: drowned), and the god again
+    G.Avatar.place(best.x + 0.5, best.y + 0.5); __E.f(6); G.Cam3D.yaw = yaw0; G.Input3D.down.frente = true; __E.until(() => st.loco === 'swim', 420); __E.f(30); G.Input3D.down.frente = false;
+    out.drown = { swimming: st.loco === 'swim' };
+    if (st.loco === 'swim') { const hp0 = body().hp; st.stamina = 0; __E.f(30); out.drown.hpFell = +(hp0 - (body() ? body().hp : 0)).toFixed(1); out.drown.anim = st.anim; out.drown.sank = +(G.Avatar.waterAt(st.X, st.Z) - st.Y).toFixed(2);
+      out.drown.drowning = document.querySelector('#inc-hud') ? document.querySelector('#inc-hud').classList.contains('drowning') : null;
+      const k = __E.until(() => G.Modes.state === 'GOD', 900); const rec = S.dead.get(id);
+      Object.assign(out.drown, { k, dead: !!rec && !S.villagers.has(id), cause: rec && rec.cause, mode: G.Modes.state, avatar: !!S.avatar, corpse: G.Carnage.view().corpses.some(c => c.vid === id), told: S.history.slice(-30).some(e => /afogou/.test(e.txt) && e.txt.includes(rec ? rec.name : '?')) }); }
+    out.qa = __E.qa(); out.err = JSON.stringify(G.modErr);
+    return out;
+  });
+  ok('e14 há uma praia de onde se entra no mar', !!e14.beach, JSON.stringify(e14.beach));
+  if (e14.beach) {
+    const a = e14.into;
+    ok('e14 entrando no mar: a água sobe pelas pernas e as deixa mais lentas; funda, o corpo nada', a.maxWade > 0.6 && a.wadeSp > 0 && a.wadeSp < a.landSp * 0.85 && a.swimAt > 0 && a.loco === 'swim' && a.anim !== 'walk', JSON.stringify(a));
+    ok('e14 nadando: o mundo o deixa lá (a marca de quem nada), o deus o vê nadar, a cabeça fica fora d\'água, nunca dentro do chão nem a câmera dentro de nada', a.afloat && a.avatar && !a.bad && !a.under && !a.cam && !a.act && a.overWater > 0.1, JSON.stringify(a));
+    ok('e14 nadando o fôlego vai acabando', a.st0 - a.st1 > 2, JSON.stringify({ st0: a.st0, st1: a.st1 }));
+    ok('e14 a ordem do mundo de nadar para a margem não tira o corpo do jogador', !e14.order || (e14.order.avatar && e14.order.task === 'avatar' && e14.order.afloat && e14.order.loco === 'swim'), JSON.stringify(e14.order));
+    ok('e14 salvar e carregar no meio do mar: continua nadando, onde estava', !e14.load || (e14.load.avatar && e14.load.mode === 'INC' && e14.load.at < 0.05 && e14.load.afloat && e14.load.loco === 'swim'), JSON.stringify(e14.load));
+    ok('e14 de volta à praia: nada, depois pisa no fundo, sai andando; a marca some e o fôlego volta', e14.back && e14.back.waded > 5 && e14.back.land > 0 && !e14.back.afloat && e14.back.loco === 'ground' && e14.back.breath > 0 && !e14.back.bad && !e14.back.under && !e14.back.cam, JSON.stringify(e14.back));
+    ok('e14 no vau do rio a água fica nas canelas ou nos joelhos e não se nada', !e14.ford || (e14.ford.wade > 0.02 && e14.ford.wade < 0.9 && e14.ford.loco === 'ground' && !e14.ford.afloat), JSON.stringify(e14.ford));
+    const d = e14.drown || {};
+    ok('e14 sem fôlego longe da margem: afunda, a vida cai e a tela escurece', d.swimming && d.hpFell > 0 && d.anim === 'drown' && d.sank > 0.1 && d.drowning === true, JSON.stringify(d));
+    ok('e14 e se afoga de verdade: a morte do mundo (afogado), na crônica, sem corpo na praia, e o deus volta', d.dead && d.cause === 'drown' && d.mode === 'GOD' && !d.avatar && !d.corpse && d.told, JSON.stringify(d));
+  }
+  ok('e14 verificador', !e14.qa.length && e14.err === '{}', `${e14.qa.slice(0, 3).join(' · ') || 'limpo'} · ${e14.err}`);
   }
   if (await need('e8')) {
   // ================================ e8: stress (last: it is the longest) ================================

@@ -168,9 +168,16 @@
   }
 
   // ------------------------------ the land's material ------------------------------
-  const U = { uMap: { value: null }, uDet: { value: null }, uN: { value: 128 }, uTL: { value: 4 }, uCN: { value: null }, uCO: { value: null }, uCC: { value: 0 }, uCS: { value: 0 } };
+  const U = { uMap: { value: null }, uDet: { value: null }, uN: { value: 128 }, uTL: { value: 4 }, uCN: { value: null }, uCO: { value: null }, uCC: { value: 0 }, uCS: { value: 0 }, uTime: { value: 0 }, uSeaY: { value: 3 } };
   const FRAG = `
-uniform sampler2D uMap; uniform sampler2D uDet; uniform float uN; uniform float uTL; uniform sampler2D uCN; uniform vec2 uCO; uniform float uCC; uniform float uCS;
+uniform sampler2D uMap; uniform sampler2D uDet; uniform float uN; uniform float uTL; uniform sampler2D uCN; uniform vec2 uCO; uniform float uCC; uniform float uCS; uniform float uTime; uniform float uSeaY;
+// (the light of the waves on a bed under the water: a net of bright lines that drifts and folds)
+float gCaus(vec2 p, float t) {
+  vec2 q = p * 0.55; float c = 0.0;
+  for (int i = 0; i < 3; i++) { float fi = float(i); q += vec2(sin(q.y * 1.3 + t * (0.6 + fi * 0.2) + fi), cos(q.x * 1.1 - t * (0.5 + fi * 0.15) - fi)) * 0.55; c += abs(sin(q.x * 1.6 + q.y * 0.4)); }
+  return pow(clamp(1.0 - c / 3.0, 0.0, 1.0), 3.0) * 2.4;
+}
+float gBed(vec4 t) { return floor(t.a * 255.0 + 0.5) == 15.0 ? 1.0 : 0.0; }
 varying vec3 vGP; varying vec3 vGN;
 float gHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 vec3 gShade(vec4 t, vec4 d, float m1, float m2) {
@@ -228,12 +235,19 @@ vec3 groundCol() {
   float steep = 1.0 - smoothstep(0.55, 0.8, vGN.y);
 #ifdef GDETAIL
   c = mix(c, c * (0.84 + 0.16 * sin(vGP.y * 3.6 + d.g * 3.0)) * (0.8 + d.b * 0.4), steep * 0.8);
+  // (under the water: the waves' light dancing on the bed, the sea's blue over what lies deep; just above it, the sand is wet)
+  float wb = mix(mix(gBed(t00), gBed(t10), s.x), mix(gBed(t01), gBed(t11), s.x), s.y);
+  float under = clamp((uSeaY - vGP.y) / 3.5, 0.0, 1.0);
+  c += vec3(0.8, 0.95, 0.9) * gCaus(vGP.xz, uTime) * wb * 0.14 * (1.0 - under * 0.7);
+  c = mix(c, c * vec3(0.5, 0.74, 0.8), under);
+  float wetB = (1.0 - smoothstep(uSeaY + 0.02, uSeaY + 0.6, vGP.y)) * step(uSeaY - 0.05, vGP.y) * (1.0 - wb);
+  c *= 1.0 - wetB * 0.32;
 #endif
   return c;
 }
 `;
   G3.init = function (three) {
-    THREE = three; det = makeDetail(); U.uDet.value = det; U.uTL.value = G.Space.TILE; U.uCO.value = new THREE.Vector2(); U.uCN.value = G3.cloudNoise();
+    THREE = three; det = makeDetail(); U.uDet.value = det; U.uTL.value = G.Space.TILE; U.uSeaY.value = G.SEA * G.Space.HM; U.uTime = G.Realm.U.time; // (the view's clock: the light on the beds moves with the waves) U.uCO.value = new THREE.Vector2(); U.uCN.value = G3.cloudNoise();
     mat = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true });
     mat.onBeforeCompile = sh => {
       Object.assign(sh.uniforms, U);

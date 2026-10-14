@@ -353,7 +353,7 @@
       if (v.aboard && !ships.has(v.aboard)) add(2, `${v.name}: a bordo de um navio que não existe`, v.x, v.y, v.id);
       const i = G.W.idx(Math.floor(v.x), Math.floor(v.y));
       const tt = v.task && v.task.type;
-      if (!v.aboard && !v.ug && S.type[i] <= T.SEA && tt !== 'swim' && tt !== 'mariscar' && tt !== 'pocas' && tt !== 'naufrago' && !v.held) add(2, `${v.name}: dentro d'água sem nadar nem barco (${tt || 'sem tarefa'})`, v.x, v.y, v.id);
+      if (!v.aboard && !v.ug && S.type[i] <= T.SEA && tt !== 'swim' && tt !== 'mariscar' && tt !== 'pocas' && tt !== 'naufrago' && !v.held && !(G.Possess && G.Possess.afloat(v))) add(2, `${v.name}: dentro d'água sem nadar nem barco (${tt || 'sem tarefa'})`, v.x, v.y, v.id);
       if ((v._pfN || 0) >= 4) add(1, `${v.name}: o caminho falha há ${v._pfN} tentativas (${tt || 'sem tarefa'})`, v.x, v.y, v.id);
       if (v.set !== undefined && v.set && !S.settlements.has(v.set) && !v.captive) add(2, `${v.name}: povoado ${v.set} não existe`, v.x, v.y, v.id);
       if (v.home && !S.buildings.has(v.home)) add(1, `${v.name}: casa ${v.home} não existe`, v.x, v.y, v.id);

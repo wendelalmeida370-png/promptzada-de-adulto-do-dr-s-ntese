@@ -30,6 +30,9 @@
     accel: 15, brake: 19, airAccel: 3.5, turn: 10, gravity: 21, coyote: 0.12, buffer: 0.14, stepUp: 0.6, radius: 0.32,
     runDrain: 20, staminaRegen: 16, jumpCost: 9, sneak: 0.45, wade: 0.58, road: 1.12, hurtFall: 6.5, step: 1 / 60,
     climbMax: 2.6, climbWait: 0.22, stoneStep: 0.35,
+    // (the water: how deep — in body heights — before the feet leave the bed and the body swims, and before they find it again;
+    // the swim's pace, the breath it spends — swimming, racing, treading water — and how quickly one out of breath drowns)
+    swimIn: 0.66, swimOut: 0.56, swimSpeed: 0.56, swimFast: 1.6, swimDrain: 2.2, swimFastDrain: 6.5, treadDrain: 1.1, strokeCost: 6, drownHurt: 9, wadeDrag: 0.5,
   };
   try { const o = JSON.parse(localStorage.getItem('gotaf-tune') || 'null'); if (o && typeof o === 'object') for (const k in o) if (k in TUNE && Number.isFinite(o[k]) && k !== 'step') TUNE[k] = o[k]; } catch (e) { }
   Av.saveTune = () => { try { localStorage.setItem('gotaf-tune', JSON.stringify(TUNE)); } catch (e) { } };
@@ -45,13 +48,23 @@
   function floorAt(X, Z) {
     const S = G.S; const x = X / TL(), y = Z / TL();
     if (!W.inb(x, y)) return W.hAt(G.clamp(x, 0, G.N), G.clamp(y, 0, G.N)) * HM();
-    const i = W.idx(x, y); const h = W.hAt(x, y) * HM();
+    const i = W.idx(x, y); let h = W.hAt(x, y) * HM();
     if (S.type[i] === T.RIVER && (S.road[i] || (S.ice && S.ice[i]))) return Math.max(h, S.wl[i] * HM() + (S.road[i] ? 0.17 : 0.1));
+    h -= G.Space.bedAt(x, y); // (the bed of a river or a lake, under its water)
     // (a boulder is ground too: the feet stand on its faces)
     const st = G.Space.stoneTop(X, Z);
     return st > h ? st : h;
   }
   Av.floorAt = floorAt;
+  // the face of the water at a point (metres) — the sea, a lake, a river — or -Infinity where there is none to be in
+  // (dry land, a bridge's deck, the ice, the bed of a parted sea)
+  function waterAt(X, Z) {
+    const S = G.S; const x = X / TL(), y = Z / TL(); if (!W.inb(x, y)) return -Infinity;
+    const i = W.idx(x, y); const t = S.type[i];
+    if (t > T.RIVER || (S.dry && S.dry[i]) || (S.ice && S.ice[i]) || (t === T.RIVER && S.road[i])) return -Infinity;
+    return W.waterH(x, y) * HM();
+  }
+  Av.waterAt = waterAt;
 
   // ------------------------------ attach / detach ------------------------------
   Av.attach = function (v, yaw) {
@@ -60,6 +73,7 @@
       id: v.id, X, Y, Z, pX: X, pY: Y, pZ: Z, vx: 0, vy: 0, vz: 0, yaw: yaw === undefined ? (v.face > 0 ? 0 : Math.PI) : yaw, ground: true, coyote: 0, buffer: 0,
       loco: 'ground', anim: 'idle', animT: 0, ph: 0, pose: G.Anim3D.POSE0(), landT: 0, fallFrom: Y, hurt: 0, stamina: 100, acc: 0, wx: v.x, wy: v.y,
       act: null, speed: 0, turnT: 0, block: null, blockT: 0, capsT: 0, caps: null, wade: 0, climb: null, ledgeT: 0, yawP: 0, spP: 0, bank: 0,
+      h: 1.75, swimK: 0, stroke: 0, drown: 0, drownHurt: 0,
     };
     Av.on = true;
     return b;
@@ -69,7 +83,9 @@
   // ------------------------------ collisions ------------------------------
   // (a point is solid for the body if the world says nobody stands there, or if the ground there rises above a step)
   function solidAt(X, Z, feet) {
-    const s = G.Space.surface(X, Z); if (!s.walk) return s.kind;
+    const s = G.Space.surface(X, Z);
+    // (water the world does not walk — the sea, a lake, a deep river — is no wall to a body that swims: in it goes)
+    if (!s.walk && !(s.kind === 'deep' && b && b.caps && b.caps.swim)) return s.kind;
     return ledge(X, Z, feet, floorAt(X, Z)) ? 'ledge' : null;
   }
   // too high for a step: more than a stair's rise — or a boulder's steep face standing high over the earth, which is
@@ -129,6 +145,11 @@
         if (u >= 1) { b.Y = floorAt(b.X, b.Z); b.loco = 'ground'; b.climb = null; b.fallFrom = b.Y; G.Possess.deed('escalada'); }
       },
     },
+    // swimming (Breath of the Wild's way: the body floats and the breath goes; out of breath it goes under). Any water of the
+    // world — the sea, a lake, a deep river; out again where the bed comes up under the feet, or up a bank with the hands
+    swim: {
+      step(v, h, caps) { swim(v, h, caps); },
+    },
     // busy with the hands (chopping, picking, eating): the feet keep still until it is done
     busy: {
       step(v, h, caps) { b.vx *= Math.exp(-12 * h); b.vz *= Math.exp(-12 * h); settle(h); if (!b.act) b.loco = 'ground'; void caps; },
@@ -152,7 +173,8 @@
     const running = IN.run && caps.run > 1 && b.stamina > 1 && wl > 0.2 && !IN.sneak;
     if (running) sp *= caps.run;
     if (IN.sneak) sp *= TUNE.sneak;
-    if (here.kind === 'shallow') sp *= TUNE.wade; else if (here.road) sp *= TUNE.road;
+    // (water to the shins slows a little, to the thighs a lot)
+    if (b.wade > 0.05) sp *= Math.max(0.4, 1 - b.wade * TUNE.wadeDrag); else if (here.road) sp *= TUNE.road;
     if (v.energy < 8) sp *= 0.7; if (v.hunger >= 100) sp *= 0.8; if (v.carry && v.carry.n >= 4) sp *= 0.9;
     // (uphill is slower, as for everyone of the world)
     if (wl > 0.1) { const a = floorAt(b.X + wx * 0.6, b.Z + wz * 0.6) - floorAt(b.X, b.Z); if (a > 0) sp *= 1 / (1 + a * 0.9); }
@@ -192,7 +214,46 @@
     if (onGround && (hit === 'ledge' || hz === 'ledge') && wl > 0.3) { b.ledgeT += h; if (b.ledgeT > TUNE.climbWait || b.buffer > 0) tryClimb(wx, wz); } else b.ledgeT = 0;
     if (b.loco === 'climb') return;
     settle(h);
-    b.wade = here.kind === 'shallow' ? Math.max(0, (S.wl[here.i] || 0) * HM() - floorAt(b.X, b.Z)) : 0;
+    // (how deep the water is round the legs; deep enough, the feet leave the bed and the body swims)
+    b.wade = Math.max(0, waterAt(b.X, b.Z) - floorAt(b.X, b.Z));
+    if (b.ground && b.caps.swim && b.wade > TUNE.swimIn * b.h) { b.loco = 'swim'; b.swimK = G.clamp(b.speed / 1.2, 0, 1); b.vy = 0; b.landT = 0; G.Audio && G.Audio.play && G.Audio.play('splash'); }
+    void S;
+  }
+  // a stroke of the swim (the controller's own step in the water)
+  function swim(v, h, caps) {
+    const [wx, wz, wl] = wish(); const wy = waterAt(b.X, b.Z);
+    // (the water went from under the body — the sea parted, the ice came: on its feet again)
+    if (wy === -Infinity) { b.loco = 'ground'; b.ground = false; b.vy = 0; b.fallFrom = b.Y; b.drown = 0; return; }
+    const out = b.stamina <= 0;
+    const fast = IN.run && b.stamina > 4 && wl > 0.2 && !out;
+    let sp = caps.walk * TUNE.swimSpeed * (fast ? TUNE.swimFast : 1) * (out ? 0.3 : 1) * (v.energy < 8 ? 0.7 : 1);
+    const heavy = !!(v.carry && v.carry.n > 0); if (heavy) sp *= 0.75;
+    const k = 1 - Math.exp(-(wl > 0.05 ? 3.2 : 2.0) * h);
+    b.vx += (wx * sp * wl - b.vx) * k; b.vz += (wz * sp * wl - b.vz) * k;
+    // (a push of the arms — the jump in the water: a burst forward, paid in breath)
+    if (IN.jump) { IN.jump = false; if (!out && b.stamina > TUNE.strokeCost) { const f = wl > 0.1 ? 1 : 0; const fx = f ? wx / wl : Math.cos(b.yaw), fz = f ? wz / wl : Math.sin(b.yaw); b.vx += fx * caps.walk * 0.9; b.vz += fz * caps.walk * 0.9; b.stamina -= TUNE.strokeCost; b.stroke = 0.45; } }
+    if (b.stroke > 0) b.stroke -= h;
+    if (wl > 0.08) { const want = Math.atan2(wz, wx); let da = want - b.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; b.yaw += da * (1 - Math.exp(-TUNE.turn * 0.45 * h)); }
+    // the breath: swimming spends it, racing more, treading water less; nothing gives it back in the water
+    if (!out) b.stamina = Math.max(0, b.stamina - (wl > 0.1 ? (fast ? TUNE.swimFastDrain : TUNE.swimDrain) : TUNE.treadDrain) * h * (heavy ? 1.6 : 1));
+    // the arms move the body across the water: a bank or a wall stops it as on land, a bank low enough is climbed out of
+    const feet = wy - 0.45; let hit = null, hz = null;
+    const nx = b.X + b.vx * h, nz = b.Z + b.vz * h;
+    if (nx === b.X || !(hit = blocked(nx, b.Z, feet, Math.sign(b.vx), 0))) b.X = nx; else b.vx = 0;
+    if (nz === b.Z || !(hz = blocked(b.X, nz, feet, 0, Math.sign(b.vz)))) b.Z = nz; else b.vz = 0;
+    const L = TL(); b.X = G.clamp(b.X, 0.5 * L, (G.N - 0.5) * L); b.Z = G.clamp(b.Z, 0.5 * L, (G.N - 0.5) * L);
+    if ((hit === 'ledge' || hz === 'ledge') && wl > 0.3 && !out) { b.ledgeT += h; if (b.ledgeT > TUNE.climbWait || b.stroke > 0) { const y0 = b.Y; b.Y = feet; if (tryClimb(wx, wz)) { b.drown = 0; return; } b.Y = y0; } } else b.ledgeT = 0;
+    // floating: moving, flat at the face of the water; still, upright with the head out; out of breath, going under
+    b.swimK += (((b.speed > 0.3 || b.stroke > 0) ? 1 : 0) - b.swimK) * (1 - Math.exp(-3 * h));
+    if (out) { b.drown += h; b.drownHurt += h * TUNE.drownHurt; } else b.drown = Math.max(0, b.drown - h * 3);
+    const wy2 = waterAt(b.X, b.Z); const fl = floorAt(b.X, b.Z);
+    if (wy2 === -Infinity) { b.loco = 'ground'; b.Y = fl; b.ground = true; b.fallFrom = b.Y; b.drown = 0; return; }
+    const want = G.lerp(wy2 - 1.42 * b.h / 1.75, wy2 - 0.32, b.swimK) - Math.min(1.6, b.drown * 0.3) + Math.sin(b.animT * 1.9) * 0.035;
+    b.Y += (want - b.Y) * (1 - Math.exp(-6 * h)); b.vy = 0; b.ground = false;
+    // (the bed comes up under the feet: standing again, wading out)
+    // (and one going under touches the bottom without being saved by it: only where the head is out of the water)
+    if (wy2 - fl < TUNE.swimOut * b.h || (fl > b.Y && !out && b.drown <= 0)) { b.loco = 'ground'; b.Y = fl; b.ground = true; b.fallFrom = b.Y; b.drown = 0; b.wade = wy2 - fl; }
+    if (b.Y < fl) b.Y = fl;
   }
   // a ledge ahead, within the reach of the arms: where the hands take it and where the feet will stand on top
   function tryClimb(wx, wz) {
@@ -265,7 +326,7 @@
     // the world moved the body (a building rose where it stood, a load, the world's own push): the world is right
     if (Math.abs(v.x - b.wx) > 1e-6 || Math.abs(v.y - b.wy) > 1e-6) { b.X = b.pX = v.x * TL(); b.Z = b.pZ = v.y * TL(); b.Y = b.pY = floorAt(b.X, b.Z); b.vx = b.vz = b.vy = 0; b.ground = true; b.loco = 'ground'; b.climb = null; }
     b.pX = b.X; b.pY = b.Y; b.pZ = b.Z;
-    if ((b.capsT -= h) <= 0 || !b.caps) { b.caps = G.Possess.caps(v); b.capsT = 0.5; }
+    if ((b.capsT -= h) <= 0 || !b.caps) { b.caps = G.Possess.caps(v); b.capsT = 0.5; b.h = 1.75 * (G.People3D ? G.People3D.look(v).s : 1); }
     if (v.sleeping && b.loco !== 'sleep') { b.loco = 'sleep'; b.act = null; }
     // (sitting, the body gets up as soon as the player walks or jumps)
     if (b.act && b.act.sit && (Math.abs(IN.mx) + Math.abs(IN.mz) > 0.2 || b.buffer > 0 || IN.jump)) { b.act = null; b.loco = 'ground'; }
@@ -282,12 +343,18 @@
     // the world's record of the body: where it is (tiles), that it walks, which way it faces
     const S = G.S; const nxT = b.X / TL(), nyT = b.Z / TL();
     v.x = nxT; v.y = nyT; b.wx = nxT; b.wy = nyT;
-    v.moving = b.speed > 0.2 && b.ground;
+    v.moving = b.speed > 0.2 && (b.ground || b.loco === 'swim');
+    // (in the water where the world does not walk, the world is told the body is the player's swimmer — it leaves it there;
+    // the god sees it swim)
+    const afl = !W.walkableXY(v.x, v.y) && waterAt(b.X, b.Z) > -Infinity; if (afl !== G.Possess.afloat(v)) G.Possess.setAfloat(afl);
+    if (b.loco === 'swim') v.act = 'swim'; else if (v.act === 'swim') v.act = '';
     if (d > 0.001) { v.walkPh += (d / TL()) * 8.5; G.faceTo(v, dX, dZ); }
     // (feet wear the paths, as everybody's do)
     if (v.moving) { const i = W.idx(v.x, v.y); if (S.type[i] >= T.SAND) { const lv = G.pathLevel(S.wear[i]); S.wear[i] = Math.min(G.WEAR_MAX, S.wear[i] + (d / TL()) * 1.3); if (G.pathLevel(S.wear[i]) !== lv) G.Nature.markDirty(i); } }
     animate(v, h);
-    if (b.hurt > 0) { const hh = b.hurt; b.hurt = 0; G.Vg.damage(v, hh, 'queda', false); }
+    if (b.hurt > 0) { const hh = b.hurt; b.hurt = 0; G.Vg.damage(v, hh, 'queda', false); if (!b) return; }
+    // (out of breath under the water: the world's drowning, dealt at the end of the step like a fall)
+    if (b.drownHurt > 0) { const hh = b.drownHurt; b.drownHurt = 0; G.Vg.damage(v, hh, 'drown', false); }
   }
   // the animation the body is in: from what it really does (Part 25: no walking in place, no sliding in idle)
   function animate(v, h) {
@@ -295,6 +362,7 @@
     let st;
     if (b.loco === 'sleep') st = 'sleep';
     else if (b.loco === 'climb') st = 'climb';
+    else if (b.loco === 'swim') st = b.stamina <= 0 ? 'drown' : b.swimK > 0.5 ? 'swim' : 'tread';
     else if (b.act && (b.act.lock || b.speed < 0.22)) st = b.act.anim;
     else if (!b.ground) st = b.vy > 0.4 ? 'jump' : 'fall';
     else if (b.landT > 0) st = 'land';
@@ -305,7 +373,9 @@
     b.animT += h;
     const loc = st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak' || st === 'wade' || st === 'turn';
     if (loc) b.ph += h * Math.max(b.speed, st === 'turn' ? 1.2 : 0) * (st === 'run' ? 1.9 : 2.6);
-    const want = G.Anim3D.pose(st, loc ? b.ph : st === 'climb' && b.climb ? b.climb.t / b.climb.dur : b.animT, b.speed);
+    else if (st === 'swim' || st === 'tread' || st === 'drown') { b.ph += h * (st === 'swim' ? 2.2 + b.speed * 1.4 + (b.stroke > 0 ? 3 : 0) : st === 'drown' ? 5 : 1.6); }
+    const wet = st === 'swim' || st === 'tread' || st === 'drown';
+    const want = G.Anim3D.pose(st, loc || wet ? b.ph : st === 'climb' && b.climb ? b.climb.t / b.climb.dur : b.animT, b.speed);
     // (moving, the body leans into its turns and forward as it speeds up, back as it stops; standing, the head follows the
     // eye of the camera a little, as a person looks where they mean to go)
     let dy = b.yaw - b.yawP; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; b.yawP = b.yaw;
@@ -313,7 +383,7 @@
     b.bank += (G.clamp(dy / h * b.speed * 0.03, -0.22, 0.22) - b.bank) * (1 - Math.exp(-8 * h));
     if (loc && b.ground) { want.sway = (want.sway || 0) + b.bank; want.lean = (want.lean || 0) + G.clamp(acc * 0.025, -0.18, 0.22); }
     if (st === 'idle' || st === 'walk' || st === 'carry') { let la = IN.camYaw - b.yaw; while (la > Math.PI) la -= TAU; while (la < -Math.PI) la += TAU; want.lookY = Math.abs(la) < 1.9 ? -G.clamp(la, -1, 1) * 0.55 : 0; }
-    G.Anim3D.blend(b.pose, want, h, st === 'land' || st === 'jump' || st === 'climb' ? 20 : 12);
+    G.Anim3D.blend(b.pose, want, h, st === 'land' || st === 'jump' || st === 'climb' ? 20 : wet ? 7 : 12);
     if (want.lookY !== undefined) b.pose.lookY = (b.pose.lookY || 0) + ((want.lookY || 0) - (b.pose.lookY || 0)) * (1 - Math.exp(-5 * h));
   }
   Av.frame = function (rdt) {
@@ -323,10 +393,16 @@
     if (!b) return; // (the step ended the body: a fall killed it, the world took it)
     // the picture between two steps (interpolated: smooth at any frame rate)
     const f = b.acc / TUNE.step;
-    const P3 = G.People3D; if (P3) { const L = P3.look(v); P3.avatar = { id: v.id, X: G.lerp(b.pX, b.X, f), Y: G.lerp(b.pY, b.Y, f) - (b.wade > 0 ? 0 : 0), Z: G.lerp(b.pZ, b.Z, f), yaw: b.yaw, pose: b.pose, look: L, sp: b.speed, wade: b.wade, ground: b.ground, act: b.act }; } // (its speed, its wading and footing: for the dust and the splashes it raises)
+    const P3 = G.People3D; if (P3) { const L = P3.look(v); P3.avatar = { id: v.id, X: G.lerp(b.pX, b.X, f), Y: G.lerp(b.pY, b.Y, f) - (b.wade > 0 ? 0 : 0), Z: G.lerp(b.pZ, b.Z, f), yaw: b.yaw, pose: b.pose, look: L, sp: b.speed, wade: b.wade, ground: b.ground, act: b.act, swim: b.loco === 'swim', swimK: b.swimK, drown: b.drown, stroke: b.stroke > 0 }; } // (its speed, its wading and footing: for the dust and the splashes it raises)
   };
   // where the body is, for the camera (interpolated)
-  Av.pos = function () { if (!b) return null; const f = b.acc / TUNE.step; return { X: G.lerp(b.pX, b.X, f), Y: G.lerp(b.pY, b.Y, f), Z: G.lerp(b.pZ, b.Z, f), yaw: b.yaw, speed: b.speed, ground: b.ground, vy: b.vy }; };
+  // (in the water the eye looks at the head over the face of the water, wherever the body floats)
+  Av.pos = function () {
+    if (!b) return null; const f = b.acc / TUNE.step; const Y = G.lerp(b.pY, b.Y, f); const X = G.lerp(b.pX, b.X, f), Z = G.lerp(b.pZ, b.Z, f);
+    const wy = b.loco === 'swim' ? waterAt(X, Z) : -Infinity;
+    return { X, Y, Z, yaw: b.yaw, speed: b.speed, ground: b.ground, vy: b.vy, h: b.h, head: wy > -Infinity ? wy + 0.38 - Y : undefined };
+  };
+  Av.swimming = () => !!(b && b.loco === 'swim');
   // (tests and the dev panel: put the body somewhere, by the world's rules)
   Av.place = function (x, y) { const v = G.Possess.body(); if (!v || !b || !W.walkableXY(x, y)) return false; v.x = x; v.y = y; return true; };
 })(window.G);

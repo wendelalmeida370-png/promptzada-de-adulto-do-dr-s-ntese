@@ -48,6 +48,33 @@
   };
   // a tile index can be stood on (the same rule, for the controller's quick tests)
   Sp.walk = i => i >= 0 && W.walkable(i);
+  // the bed of the rivers and lakes as the 3D carves it (metres below the world's own height): the world keeps one height
+  // per corner and one level of water per tile, so a ford's bed sits at the water's face. Here it sinks inside a river tile —
+  // to the shins in a ford, out of one's depth where the world says deep — and rises back to the world's height at the banks.
+  // The feet of the body and of everyone drawn, and the land's picture, all stand on it
+  Sp.bedDrop = function (x, y) {
+    const S = G.S; const tx = Math.floor(x), ty = Math.floor(y); if (tx < 0 || ty < 0 || tx >= N || ty >= N) return 0;
+    const i = ty * N + tx; if (S.type[i] !== T.RIVER || S.road[i] || (S.ice && S.ice[i])) return 0;
+    const drop = W.hAt(x, y) * HM - (S.wl[i] * HM - (S.deep[i] ? 1.75 : 0.42)); if (drop <= 0) return 0;
+    // (how far the point is from the land round the tile: nothing at the bank, all of it half a tile in)
+    let d = 1;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue; const nx = tx + dx, ny = ty + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
+      const j = ny * N + nx; if (S.type[j] <= T.RIVER && !S.road[j]) continue;
+      const ex = dx < 0 ? x - tx : tx + 1 - x, ey = dy < 0 ? y - ty : ty + 1 - y;
+      const dd = dx && dy ? Math.hypot(ex, ey) : dx ? ex : ey; if (dd < d) d = dd;
+    }
+    return drop * G.smooth(0, 0.42, d);
+  };
+  // (between the points of the land's picture — every half tile — as the picture itself has it: what the feet stand on)
+  Sp.bedAt = function (x, y) {
+    const S = G.S; const tx = Math.floor(x), ty = Math.floor(y); if (tx < 0 || ty < 0 || tx >= N || ty >= N) return 0;
+    let wet = false; for (let dy = -1; dy <= 1 && !wet; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = tx + dx, ny = ty + dy; if (nx >= 0 && ny >= 0 && nx < N && ny < N && S.type[ny * N + nx] === T.RIVER) { wet = true; break; } }
+    if (!wet) return 0;
+    const gx = x * 2, gy = y * 2, x0 = Math.floor(gx), y0 = Math.floor(gy), fx = gx - x0, fy = gy - y0;
+    const a = Sp.bedDrop(x0 / 2, y0 / 2), b = Sp.bedDrop((x0 + 1) / 2, y0 / 2), c = Sp.bedDrop(x0 / 2, (y0 + 1) / 2), d = Sp.bedDrop((x0 + 1) / 2, (y0 + 1) / 2);
+    return (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy;
+  };
   // a boulder's stones, one shape for the drawing and for the feet: the big one (twelve faces, as big as what is left
   // of it, a quarter sunk in the ground) and, beside a big one, a small one half sunk
   let stoneMemo = new Map();

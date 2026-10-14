@@ -129,7 +129,12 @@
     mourn: (t) => ({ neck: 0.65, lean: 0.25, shLp: -0.6, shRp: -0.6, shLr: 0.35, shRr: -0.35, elL: 1.7, elR: 1.7, bob: Math.sin(t * 5) * 0.006 }),
     hug: () => ({ shLp: -1.35, shRp: -1.35, shLr: -0.5, shRr: 0.5, elL: 1.0, elR: 1.0, lean: 0.12 }),
     sleep: () => ({ lie: 1, hipL: 0.1, hipR: -0.05, knL: 0.25, knR: 0.1, shLp: 0.2, shRp: -0.1, elL: 0.6, elR: 0.3 }),
-    swim: (t) => ({ lie: 0.85, prone: 1, shLp: -Math.PI + Math.sin(t * 3) * 1.4, shRp: -Math.PI - Math.sin(t * 3) * 1.4, hipL: Math.sin(t * 6) * 0.3, hipR: -Math.sin(t * 6) * 0.3, knL: 0.2, knR: 0.2 }),
+    // (in the water: a stroke with the head out — the arms reaching and pulling in turn, the body rolling with them, the
+    // legs kicking twice to a stroke; treading water upright, the hands sculling and the legs pedalling; out of breath,
+    // the arms beating at the water and the head thrown back)
+    swim: (t) => { const a = Math.sin(t), c = Math.cos(t), kk = Math.sin(t * 2); return { lie: 0.8, prone: 1, neck: -0.6, twist: a * 0.2, shLp: -Math.PI + a * 1.45, shRp: -Math.PI - a * 1.45, shLr: 0.3 + Math.max(0, c) * 0.35, shRr: -0.3 - Math.max(0, -c) * 0.35, elL: 0.3 + Math.max(0, -a) * 0.9, elR: 0.3 + Math.max(0, a) * 0.9, hipL: kk * 0.3, hipR: -kk * 0.3, knL: 0.2 + Math.max(0, kk) * 0.35, knR: 0.2 + Math.max(0, -kk) * 0.35 }; },
+    tread: (t) => { const a = Math.sin(t * 2), p = Math.sin(t * 1.6), q = Math.cos(t * 1.6); return { bob: a * 0.025, neck: -0.12, shLp: -0.4, shRp: -0.4, shLr: 0.95 + a * 0.35, shRr: -0.95 - a * 0.35, elL: 0.6 + Math.sin(t * 2 + 1) * 0.3, elR: 0.6 + Math.sin(t * 2 + 1) * 0.3, hipL: -0.55 + p * 0.45, hipR: -0.55 - p * 0.45, knL: 0.9 + q * 0.5, knR: 0.9 - q * 0.5, lean: 0.1 }; },
+    drown: (t) => ({ lie: 0.12, neck: -0.7, lean: -0.15, shLp: -2.7 + Math.sin(t * 1.7) * 0.7, shRp: -2.5 - Math.sin(t * 2.1) * 0.8, shLr: 0.55 + Math.sin(t * 2.6) * 0.3, shRr: -0.55 - Math.sin(t * 2.3) * 0.3, elL: 0.5 + Math.abs(Math.sin(t * 1.3)) * 0.8, elR: 0.5 + Math.abs(Math.cos(t * 1.5)) * 0.8, hipL: -0.6 + Math.sin(t * 2.4) * 0.5, hipR: -0.6 - Math.sin(t * 2.4) * 0.5, knL: 1.0, knR: 0.8 }),
     throw: (t) => { const k = (t * 1.6) % 1; return { shRp: -2.8 + k * 3, elR: 0.4, shLp: -0.6, lean: k * 0.3 - 0.1, twist: -0.4 + k * 0.6 }; },
     bound: () => ({ shLp: 0.55, shRp: 0.55, shLr: -0.35, shRr: 0.35, elL: 1.2, elR: 1.2, neck: 0.25 }),
     interact: (t) => ({ ...ST.idle(t), shRp: -1.35, shRr: -0.1, elR: 0.25, lean: 0.12 }),
@@ -254,6 +259,8 @@
     if (marker) put('marker', idx, root, 0, 2.15 + Math.sin(performance.now() / 300) * 0.04, 0, 0, performance.now() / 600, 0, 0, 0, 0, 0.16, 0.22, 0.16, marker); else hide('marker', idx);
   };
 
+  // (where the feet of someone walking stand: the ground — and, crossing a ford, the bed under the water, not its face)
+  function groundY(x, y) { const S = G.S; const i = W.idx(x, y); if (S.type[i] === G.T.RIVER && !S.road[i] && !(S.ice && S.ice[i])) return W.hAt(x, y) * G.Space.HM - G.Space.bedAt(x, y); return W.groundH(x, y) * G.Space.HM; }
   // ------------------------------ the frame ------------------------------
   P3.avatar = null; // (set by the body's controller: { X, Y, Z, yaw, pose, look })
   P3.flames = []; // (the flames of the torches and lanterns in the hands drawn this frame: [X, Y, Z, size] — for FX3D)
@@ -282,7 +289,7 @@
       let s = vis.get(v.id);
       const X = v.x * TL, Z = v.y * TL; const swim = v.task && v.task.type === 'swim';
       // (the world walks them over a boulder's tile: the feet go up onto the stone and down again, a quick step — never through it)
-      const Yf = swim ? G.SEA * HM - 0.5 : Math.max(W.groundH(v.x, v.y) * HM, G.Space.stoneTop(X, Z));
+      const Yf = swim ? W.waterH(v.x, v.y) * HM - 0.32 : Math.max(groundY(v.x, v.y), G.Space.stoneTop(X, Z));
       if (!s) { s = { X, Z, Y: Yf, yaw: v.face > 0 ? 0 : Math.PI, ph: (v.id % 7), pose: POSE0(), t: 0, sp: 0, st: 'idle' }; vis.set(v.id, s); }
       s.Y = Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
       const Y = s.Y + (v.z ? v.z * 0.22 : 0);
@@ -418,7 +425,7 @@
       const run = G.clamp(s.v / 3, 0, 1.4); s.ph += dt * (s.v * (F.biped ? 6 : 3.4) / Math.max(0.4, F.leg * u * 2) + 0.4);
       const col = F.col, dark = darker(col, 0.78), bel = F.belly || darker(col, 1.12);
       // (over a boulder's tile the feet go up onto the stone, as the people's do)
-      const Yf = Math.max(W.groundH(a.x, a.y) * HM, sp.cls === 'water' ? -Infinity : G.Space.stoneTop(X, Z)); s.Y = Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
+      const Yf = sp.cls === 'water' || air || a.swim ? W.groundH(a.x, a.y) * HM : Math.max(groundY(a.x, a.y), G.Space.stoneTop(X, Z)); s.Y = Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
       const Y = s.Y + (air ? Math.max(0.5, (a.z || 0) * 0.22) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
       const m = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-s.yaw); m.multiply(M.b);
       // (grazing: a beast that eats grass lowers its head now and then while it stands)
