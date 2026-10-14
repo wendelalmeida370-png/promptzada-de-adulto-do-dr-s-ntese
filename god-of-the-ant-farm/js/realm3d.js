@@ -823,7 +823,8 @@ vec3 gxHaze( vec3 d ) {
     const P = TPAL[t.kind]; let p;
     if (P) p = P[(t.v || 0) % 3].map(c => G.hex2rgb(c)); else { const b = G.hex2rgb((KIND[t.kind] || KIND.oak)[1]); p = [b, [b[0] * 0.7, b[1] * 0.72, b[2] * 0.7], [Math.min(255, b[0] * 1.25 + 12), Math.min(255, b[1] * 1.22 + 12), Math.min(255, b[2] * 1.15 + 8)]]; }
     const f = 0.9 + G.hash(t.id * 13 + 5) * 0.2, w = G.hash(t.id * 29 + 3) - 0.5;
-    return p.map(c => [Math.min(255, c[0] * f * (1 + w * 0.16)), Math.min(255, c[1] * f), Math.min(255, c[2] * f * (1 - w * 0.2))]);
+    // (a little quieter than the god's flat greens, as the moss of the turf roofs is: a crown among them, not lime)
+    return p.map(c => { const q = [c[0] * f * (1 + w * 0.16), c[1] * f, c[2] * f * (1 - w * 0.2)]; const l = 0.3 * q[0] + 0.59 * q[1] + 0.11 * q[2]; return q.map(v => Math.min(255, l + (v - l) * 0.88)); });
   }
   // (the colour of a point of a crown: dark under it and near its heart, the base on its sides, light on top; snow
   // resting on the upper faces where it is cold)
