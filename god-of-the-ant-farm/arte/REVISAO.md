@@ -91,7 +91,10 @@ existem (A2).
 5. **Cactos** [caca-03]: cilindros lisos; 8–12 costelas, braços curvados para cima, espinho na figura.
 6. **A neve em manchas no chão** [e6-terreno, em volta da casa]: lê como tinta branca derramada; a borda macia e a neve
    com volume (a sua camada nova de neve no chão deve resolver — conferir).
-7. **Orçamento**: `needles` tem 295 KB na pilha (o teto da BIBLIA é 200 KB por material); um `hblur`/`q` resolve.
+7. **A grama em mancha de borda dura sobre a terra** [e1-mercado, embaixo à esquerda]: um retângulo verde chapado,
+   recortado — a transição grama/terra precisa da borda esfiapada (tufos, terra aparecendo) que o chão do Modo Deus já
+   insinua.
+8. **Orçamento**: `needles` tem 295 KB na pilha (o teto da BIBLIA é 200 KB por material); um `hblur`/`q` resolve.
 
 ## A4 — personagens e animação (people3d, body3d)
 

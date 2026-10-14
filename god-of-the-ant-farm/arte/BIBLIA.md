@@ -140,7 +140,9 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
   coisa nova entra na geometria do pedaço (`Geo.put`), não ganha malha própria nem chamada de desenho própria.
 - Cena inteira, qualidade média: alvo ≤ 500 mil triângulos e ≤ 200 chamadas de desenho; a `alta` pode dobrar triângulos.
 - Pilha de texturas: 512 × 512 por material, **≤ 6 MB** de base64 no total (hoje: 47 materiais, 5,33 MB — sobra pouco: material novo de outra área, avise o A1). Cada material
-  ≤ 200 KB; tecido e couro em 256 px (o fio nunca chega à tela).
+  ≤ 200 KB; os chãos e a turfa vistos de perto podem ir a 300 KB (o peso deles é o capim e a folha que se vê: `turf`,
+  `forest`, `grass`, `needles` passam de 200 — baixar a qualidade só tira 12% e borra o que importa); tecido e couro em
+  256 px (o fio nunca chega à tela). O limite que manda é o total.
 - Arquivo de malha: ≤ 60 KB cada (a cabeça de dragão: 25,6 KB; a pedra rúnica: 36,7 KB; o portal: 34,3 KB); todas juntas ≤ 1 MB.
 - Decoração só com `G.Realm.Q().detail`; densidade lida dos campos do preset, nunca fixa.
 
