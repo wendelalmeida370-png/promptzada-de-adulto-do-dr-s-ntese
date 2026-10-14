@@ -246,9 +246,11 @@
     const a = new Float32Array(n * n * 2); let k = 0; for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { a[k++] = i; a[k++] = j; }
     geo.setAttribute('aCell', new THREE.InstancedBufferAttribute(a, 2)); geo.instanceCount = n * n;
   }
-  // (the grid of the small things: cells of a metre, round the body, a little nearer than the grass)
-  function layoutLittle() {
-    const n = Math.ceil(LR * 2 / LCELL); if (n === lside) return; lside = n;
+  // (the grid of the small things: cells of a metre, round the body, a little nearer than the grass — its circle as wide as
+  // the preset's share of the decoration (props) has it: the same things in the same places, the far ones left out)
+  const littleR = q => LR * (Number.isFinite(q.props) ? Math.sqrt(G.clamp(q.props, 0.1, 1)) : 1);
+  function layoutLittle(R) {
+    const n = Math.ceil(R * 2 / LCELL); if (n === lside) return; lside = n;
     const a = new Float32Array(n * n * 2); let k = 0; for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { a[k++] = i; a[k++] = j; }
     lgeo.setAttribute('aCell', new THREE.InstancedBufferAttribute(a, 2)); lgeo.instanceCount = n * n;
   }
@@ -271,7 +273,7 @@
     U.uMask.value = G.Ground3D.grassMap(); U.uGMap.value = G.Ground3D.map(); U.uFMap.value = G.Ground3D.floorMap(); U.uN.value = G.N; U.uR.value = R;
     const e = cam ? cam.position : { x: focus.X, y: focus.Y, z: focus.Z }; U.uEye.value.set(e.x, e.y, e.z);
     U.uOrigin.value.set(Math.floor(e.x / CELL) - side / 2, Math.floor(e.z / CELL) - side / 2);
-    if (lmesh && lmesh.visible) { layoutLittle(); U.uLOrigin.value.set(Math.floor(e.x / LCELL) - lside / 2, Math.floor(e.z / LCELL) - lside / 2); GR.bits = lside * lside; } else GR.bits = 0;
+    if (lmesh && lmesh.visible) { const lr = littleR(q); U.uLR.value = lr; layoutLittle(lr); U.uLOrigin.value.set(Math.floor(e.x / LCELL) - lside / 2, Math.floor(e.z / LCELL) - lside / 2); GR.bits = lside * lside; } else GR.bits = 0;
     // (the people walking nearest part it too)
     const W3 = (G.People3D && G.People3D.walkers) || []; let j = 0;
     for (const w of W3) { if (j >= PUSH) break; if ((w[0] - e.x) ** 2 + (w[2] - e.z) ** 2 > R * R) continue; U.uPush.value[j++].set(w[0], w[1], w[2], 1); }
@@ -285,7 +287,7 @@
     if (side * CELL < U.uR.value * 2) out.push(`capim: a grade de ${side} casas não cobre o raio ${U.uR.value}`);
     for (const k of ['uOrigin', 'uLOrigin']) { const v = U[k].value; if (!Number.isFinite(v.x) || !Number.isFinite(v.y)) out.push(`capim: ${k} não é número`); }
     if (lmesh && lmesh.visible && !U.uFMap.value) out.push('miudezas: desenhadas sem a pintura do chão');
-    if (lmesh && lmesh.visible && lside * LCELL < LR * 2) out.push(`miudezas: a grade de ${lside} não cobre o raio ${LR}`);
+    if (lmesh && lmesh.visible && lside * LCELL < U.uLR.value * 2) out.push(`miudezas: a grade de ${lside} não cobre o raio ${U.uLR.value}`);
     return out;
   };
 })(window.G);

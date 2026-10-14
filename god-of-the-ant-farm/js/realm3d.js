@@ -329,15 +329,18 @@ vec3 gxHaze( vec3 d ) {
     // the trees, the bushes and the stones: crowns swaying with the wind (aK: how much each point moves), leaves speckled with
     // light and shade; wood in its bark and stone in its grain once the pictures of the stack are in (wrapped from the sides
     // round a trunk, from all three round a boulder), moss on the tops of the stones of the wet lands, snow on the cold ones
+    // (how near the plants keep their finest form — the leaves' cards at the edge of the crowns, the grain and the relief of
+    // stone and bark: 40 m times the preset's lod, read every frame; a preset without lod keeps it everywhere, as before)
+    const UFINE = { get value() { const q = R3.Q(); return Number.isFinite(q.lod) ? 40 * q.lod : 1e5; } };
     MAT.flora = new THREE.MeshLambertMaterial({ vertexColors: true });
     MAT.flora.onBeforeCompile = sh => {
-      Object.assign(sh.uniforms, { uTime: U.time, uWind: U.wind, uDet: { value: G.Ground3D.detail() } }, G.Ground3D.U3());
+      Object.assign(sh.uniforms, { uTime: U.time, uWind: U.wind, uDet: { value: G.Ground3D.detail() }, uFine: UFINE }, G.Ground3D.U3());
       sh.vertexShader = 'attribute float aK; uniform float uTime; uniform vec3 uWind; varying vec3 vFP; varying float vFK; varying vec3 vFN;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
         vec4 wq = modelMatrix * vec4(transformed, 1.0); vFP = wq.xyz; vFK = aK; vFN = normalize(mat3(modelMatrix) * objectNormal);
         float sk = aK < -2.5 ? 0.0 : aK < -0.5 ? -aK - 1.0 : aK > 3.5 ? aK - 4.0 : aK > 1.5 ? aK - 2.0 : aK; // (a conifer's crown +4, a fruit +2)
         float ph = uTime * (0.9 + uWind.z) + wq.x * 0.11 + wq.z * 0.07;
         transformed.xz += uWind.xy * (sin(ph) * 0.6 + sin(ph * 2.7 + 1.3) * 0.25 + 0.3) * sk * (0.25 + uWind.z * 0.6);`);
-      sh.fragmentShader = 'uniform sampler2D uDet; varying vec3 vFP; varying float vFK; varying vec3 vFN; float fHgt = 0.0; float fCrown = 0.0;\n' + sh.fragmentShader
+      sh.fragmentShader = 'uniform sampler2D uDet; uniform float uFine; varying vec3 vFP; varying float vFK; varying vec3 vFN; float fHgt = 0.0; float fCrown = 0.0; float fFine = 0.0;\n' + sh.fragmentShader
         .replace('#include <common>', '#include <common>\n' + G.Ground3D.texGLSL() + `
         #ifdef M3_MOSS
         #define FMOSS M3_MOSS
@@ -358,6 +361,9 @@ vec3 gxHaze( vec3 d ) {
         #endif`)
         .replace('#include <color_fragment>', `#include <color_fragment>
         #ifndef NOPAT
+        // (the grain of stone and bark and the relief of all three only as near as the machine carries them; beyond, fading
+        // over the last quarter, the plain colours — the crowns keep their leaves' picture)
+        fFine = uTexOn > 0.5 ? 1.0 - smoothstep(uFine * 0.75, uFine, length(vViewPosition)) : 0.0;
         if (vFK > 3.5 || (vFK > 0.07 && vFK < 1.5)) {
           // (a crown: leaves, not the smooth side of a lump — the picture of the broad leaves, or of the sprays of needles of a
           // conifer, laid on it from the three sides by its own soft normal, with their relief; before the pictures are in,
@@ -368,7 +374,7 @@ vec3 gxHaze( vec3 d ) {
             vec3 n = normalize(vFN); vec3 w = pow(abs(n), vec3(3.0)); w /= w.x + w.y + w.z + 1e-4; bool cf = vFK > 3.5;
             float L = cf ? M3_BOUGHS : M3_FOLIAGE, sc = cf ? M3S_BOUGHS : M3S_FOLIAGE;
             vec4 f = m3raw(L, vFP.zy * sc) * w.x + m3raw(L, vFP.xz * sc + 0.31) * w.y + m3raw(L, vFP.xy * sc + 0.57) * w.z;
-            diffuseColor.rgb *= m3col(f); fHgt = f.a * 0.05;
+            diffuseColor.rgb *= m3col(f); fHgt = f.a * 0.05 * fFine;
           } else
           #endif
           { float lf = texture2D(uDet, (vFP.xz + vFP.y * 0.73) / 1.3).r * 0.6 + texture2D(uDet, (vFP.zy + vFP.x * 0.4) / 1.1).r * 0.4; diffuseColor.rgb *= 0.78 + lf * 0.44; }
@@ -386,25 +392,26 @@ vec3 gxHaze( vec3 d ) {
           // the point across the screen — the light keeps the stone's soft volume)
           { vec3 fn = normalize(cross(dFdx(vFP), dFdy(vFP))); float fh = fract(sin(dot(floor(fn * 3.0 + 0.5), vec3(12.9898, 78.233, 37.719))) * 43758.5453); diffuseColor.rgb *= 0.86 + fh * 0.26; }
           float sn = smoothstep(0.6, 0.8, min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b)));
-          if (uTexOn > 0.5) {
+          vec3 plain = mix(diffuseColor.rgb, vec3(0.12, 0.19, 0.055), top * moss * 0.55 * (1.0 - sn));
+          if (fFine > 0.0) {
             vec3 w = pow(abs(n), vec3(4.0)); w /= w.x + w.y + w.z + 1e-4;
             vec4 r = m3raw(FROCK, vFP.zy * FROCK_S * 1.6) * w.x + m3raw(FROCK, vFP.xz * FROCK_S * 1.6 + 0.31) * w.y + m3raw(FROCK, vFP.xy * FROCK_S * 1.6 + 0.57) * w.z;
             vec3 rc = diffuseColor.rgb * m3col(r);
             if (sn > 0.01) rc = mix(rc, diffuseColor.rgb * m3col(m3raw(M3_SNOW, vFP.xz * M3S_SNOW)), sn);
             float mm = 0.0;
             if (moss > 0.01) { vec4 mt = m3raw(FMOSS, vFP.xz * FMOSS_S * 1.5); mm = smoothstep(0.38, 0.6, top * moss + (mt.a - r.a) * 0.5 - 0.06) * (1.0 - sn); rc = mix(rc, vec3(0.12, 0.19, 0.055) * m3col(mt) * 1.2, mm); fHgt = mt.a * 0.02 * mm; }
-            diffuseColor.rgb = rc; fHgt += r.a * 0.08 * (1.0 - mm);
-          } else diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.12, 0.19, 0.055), top * moss * 0.55 * (1.0 - sn));
+            diffuseColor.rgb = mix(plain, rc, fFine); fHgt = (fHgt + r.a * 0.08 * (1.0 - mm)) * fFine;
+          } else diffuseColor.rgb = plain;
         }
         // (bark: the picture of the stack running up the wood — before it is in, deep grooves drawn up it, ridges between
         // them, darker and greener patches: moss, lichen, the wet side)
         else if (vFK < -0.5) {
-          if (uTexOn > 0.5) {
-            vec3 n = normalize(vFN); float wx = smoothstep(0.25, 0.75, abs(n.x) / (abs(n.x) + abs(n.z) + 1e-4)); float side = 1.0 - smoothstep(0.65, 0.9, abs(n.y));
+          if (fFine > 0.0) {
+            vec3 n = normalize(vFN); float wx = smoothstep(0.25, 0.75, abs(n.x) / (abs(n.x) + abs(n.z) + 1e-4)); float side = (1.0 - smoothstep(0.65, 0.9, abs(n.y))) * fFine;
             vec4 tb = mix(m3raw(M3_BARK, vec2(vFP.x, vFP.y * 0.7) * M3S_BARK + 0.5), m3raw(M3_BARK, vec2(vFP.z, vFP.y * 0.7) * M3S_BARK), wx);
             diffuseColor.rgb *= mix(vec3(1.0), m3col(tb), side);
             fHgt = tb.a * 0.03 * side;
-          } else {
+          } else if (uTexOn < 0.5) {
             float ga = texture2D(uDet, vec2(vFP.x * 1.5 + vFP.z * 0.4, vFP.y * 0.16)).r, gb = texture2D(uDet, vec2(vFP.z * 1.5 - vFP.x * 0.4, vFP.y * 0.16 + 0.5)).r;
             float gr = smoothstep(0.32, 0.68, (ga + gb) * 0.5); float pt = texture2D(uDet, vFP.xy * 0.35 + vFP.z * 0.21).a;
             diffuseColor.rgb *= mix(0.56, 1.14, gr) * (0.9 + pt * 0.2);
@@ -416,7 +423,7 @@ vec3 gxHaze( vec3 d ) {
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         #ifndef NOPAT
         { vec3 dpx = dFdx(vFP), dpy = dFdy(vFP); float hx = dFdx(fHgt), hy = dFdy(fHgt);
-          if (uTexOn > 0.5 && (vFK < -0.5 || fCrown > 0.5)) { vec3 nw = normalize(vFN); vec3 r1 = cross(dpy, nw), r2 = cross(nw, dpx); float det = dot(dpx, r1); vec3 gr = sign(det) * (hx * r1 + hy * r2); normal = normalize((viewMatrix * vec4(normalize(abs(det) * nw - gr), 0.0)).xyz); } }
+          if (fFine > 0.0 && (vFK < -0.5 || fCrown > 0.5)) { vec3 nw = normalize(vFN); vec3 r1 = cross(dpy, nw), r2 = cross(nw, dpx); float det = dot(dpx, r1); vec3 gr = sign(det) * (hx * r1 + hy * r2); normal = normalize((viewMatrix * vec4(normalize(abs(det) * nw - gr), 0.0)).xyz); } }
         #endif`)
         // (the sun behind a crown shines through its edge, as through the leaves)
         .replace('#include <opaque_fragment>', `
@@ -459,13 +466,17 @@ vec3 gxHaze( vec3 d ) {
       const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;
       MAT.leaf = new THREE.MeshLambertMaterial({ map: tx, alphaTest: 0.5, side: THREE.DoubleSide, vertexColors: true }); MAT.leaf.defines = { RIM: 0.28 };
       MAT.leaf.onBeforeCompile = sh => {
-        Object.assign(sh.uniforms, { uTime: U.time, uWind: U.wind });
+        Object.assign(sh.uniforms, { uTime: U.time, uWind: U.wind, uFine: UFINE });
         sh.vertexShader = 'attribute float aK; uniform float uTime; uniform vec3 uWind;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
           vec4 wq = modelMatrix * vec4(transformed, 1.0);
           float ph = uTime * (0.9 + uWind.z) + wq.x * 0.11 + wq.z * 0.07;
           transformed.xz += uWind.xy * (sin(ph) * 0.6 + sin(ph * 2.7 + 1.3) * 0.25 + 0.3) * aK * (0.25 + uWind.z * 0.6) + vec2(sin(uTime * 3.1 + wq.y * 2.0), cos(uTime * 2.7 + wq.x)) * 0.04 * aK;`);
         // (a card is lit by the crown's own normal on both its faces: three.js would turn a back face's into the crown's dark)
-        sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n normal = normal * faceDirection;').replace('#include <opaque_fragment>', `
+        // (the cards only as near as the machine carries them: past three quarters of the preset's distance they thin out and
+        // go — the crown's lumps and their picture of leaves stand alone, as in the far pictures)
+        sh.fragmentShader = 'uniform float uFine;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+          { float fd = length(vViewPosition) / uFine; if (fd > 0.75 && fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) < (fd - 0.75) * 4.0) discard; }`)
+          .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n normal = normal * faceDirection;').replace('#include <opaque_fragment>', `
           #if NUM_DIR_LIGHTS > 0
           // (the sun behind the leaves shines through them)
           { float bl = saturate(dot(-normalize(vViewPosition), directionalLights[0].direction)); outgoingLight += diffuseColor.rgb * directionalLights[0].color * pow(bl, 4.0) * 0.28; }
