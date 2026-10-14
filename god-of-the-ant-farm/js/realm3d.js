@@ -334,10 +334,10 @@ vec3 gxHaze( vec3 d ) {
       Object.assign(sh.uniforms, { uTime: U.time, uWind: U.wind, uDet: { value: G.Ground3D.detail() } }, G.Ground3D.U3());
       sh.vertexShader = 'attribute float aK; uniform float uTime; uniform vec3 uWind; varying vec3 vFP; varying float vFK; varying vec3 vFN;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
         vec4 wq = modelMatrix * vec4(transformed, 1.0); vFP = wq.xyz; vFK = aK; vFN = normalize(mat3(modelMatrix) * objectNormal);
-        float sk = aK < -2.5 ? 0.0 : aK < -0.5 ? -aK - 1.0 : aK;
+        float sk = aK < -2.5 ? 0.0 : aK < -0.5 ? -aK - 1.0 : aK > 3.5 ? aK - 4.0 : aK > 1.5 ? aK - 2.0 : aK; // (a conifer's crown +4, a fruit +2)
         float ph = uTime * (0.9 + uWind.z) + wq.x * 0.11 + wq.z * 0.07;
         transformed.xz += uWind.xy * (sin(ph) * 0.6 + sin(ph * 2.7 + 1.3) * 0.25 + 0.3) * sk * (0.25 + uWind.z * 0.6);`);
-      sh.fragmentShader = 'uniform sampler2D uDet; varying vec3 vFP; varying float vFK; varying vec3 vFN; float fHgt = 0.0;\n' + sh.fragmentShader
+      sh.fragmentShader = 'uniform sampler2D uDet; varying vec3 vFP; varying float vFK; varying vec3 vFN; float fHgt = 0.0; float fCrown = 0.0;\n' + sh.fragmentShader
         .replace('#include <common>', '#include <common>\n' + G.Ground3D.texGLSL() + `
         #ifdef M3_MOSS
         #define FMOSS M3_MOSS
@@ -352,10 +352,32 @@ vec3 gxHaze( vec3 d ) {
         #else
         #define FROCK M3_ROCK
         #define FROCK_S M3S_ROCK
+        #endif
+        #if defined(M3_FOLIAGE) && defined(M3_BOUGHS)
+        #define FLEAF 1
         #endif`)
         .replace('#include <color_fragment>', `#include <color_fragment>
         #ifndef NOPAT
-        if (vFK > 0.07) { float lf = texture2D(uDet, (vFP.xz + vFP.y * 0.73) / 1.3).r * 0.6 + texture2D(uDet, (vFP.zy + vFP.x * 0.4) / 1.1).r * 0.4; diffuseColor.rgb *= 0.78 + lf * 0.44; }
+        if (vFK > 3.5 || (vFK > 0.07 && vFK < 1.5)) {
+          // (a crown: leaves, not the smooth side of a lump — the picture of the broad leaves, or of the sprays of needles of a
+          // conifer, laid on it from the three sides by its own soft normal, with their relief; before the pictures are in,
+          // speckled with light and shade)
+          fCrown = 1.0;
+          #ifdef FLEAF
+          if (uTexOn > 0.5) {
+            vec3 n = normalize(vFN); vec3 w = pow(abs(n), vec3(3.0)); w /= w.x + w.y + w.z + 1e-4; bool cf = vFK > 3.5;
+            float L = cf ? M3_BOUGHS : M3_FOLIAGE, sc = cf ? M3S_BOUGHS : M3S_FOLIAGE;
+            vec4 f = m3raw(L, vFP.zy * sc) * w.x + m3raw(L, vFP.xz * sc + 0.31) * w.y + m3raw(L, vFP.xy * sc + 0.57) * w.z;
+            diffuseColor.rgb *= m3col(f); fHgt = f.a * 0.05;
+          } else
+          #endif
+          { float lf = texture2D(uDet, (vFP.xz + vFP.y * 0.73) / 1.3).r * 0.6 + texture2D(uDet, (vFP.zy + vFP.x * 0.4) / 1.1).r * 0.4; diffuseColor.rgb *= 0.78 + lf * 0.44; }
+        }
+        else if (vFK < -5.5) {
+          // (a cactus: its skin a little paler down its ribs, and the small pale tufts of its spines in rows)
+          float sp = texture2D(uDet, vec2(atan(vFN.z, vFN.x) * 1.6, vFP.y * 2.4)).a;
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.6, 0.48), step(0.975, sp) * 0.75);
+        }
         else if (vFK < -2.5) {
           // (a stone: its grain from the three sides; moss on its top where the land is wet, in the low of its grain first;
           // the white the cold leaves on it, snow)
@@ -391,8 +413,14 @@ vec3 gxHaze( vec3 d ) {
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         #ifndef NOPAT
         { vec3 dpx = dFdx(vFP), dpy = dFdy(vFP); float hx = dFdx(fHgt), hy = dFdy(fHgt);
-          if (uTexOn > 0.5 && vFK < -0.5) { vec3 nw = normalize(vFN); vec3 r1 = cross(dpy, nw), r2 = cross(nw, dpx); float det = dot(dpx, r1); vec3 gr = sign(det) * (hx * r1 + hy * r2); normal = normalize((viewMatrix * vec4(normalize(abs(det) * nw - gr), 0.0)).xyz); } }
-        #endif`);
+          if (uTexOn > 0.5 && (vFK < -0.5 || fCrown > 0.5)) { vec3 nw = normalize(vFN); vec3 r1 = cross(dpy, nw), r2 = cross(nw, dpx); float det = dot(dpx, r1); vec3 gr = sign(det) * (hx * r1 + hy * r2); normal = normalize((viewMatrix * vec4(normalize(abs(det) * nw - gr), 0.0)).xyz); } }
+        #endif`)
+        // (the sun behind a crown shines through its edge, as through the leaves)
+        .replace('#include <opaque_fragment>', `
+        #if NUM_DIR_LIGHTS > 0
+        { float bl = saturate(dot(-normalize(vViewPosition), directionalLights[0].direction)); outgoingLight += diffuseColor.rgb * directionalLights[0].color * pow(bl, 4.0) * 0.2 * fCrown; }
+        #endif
+        #include <opaque_fragment>`);
     };
     // the leaves at the edge of the crowns: four pictures of sprays of leaves with gaps between them, dabbed as a painter does
     // a tree — 0 broad leaves on their twigs (the oaks, the fruit trees), 1 small round ones (the birches, the willows, the
@@ -835,7 +863,7 @@ vec3 gxHaze( vec3 d ) {
   };
   // (the bark's mark: a sway below -0.5 is wood — trunks, branches, roots, stumps, logs — read back as -1 - sway: the crown's
   // own sway for a branch, none for a trunk; the drawing paints it with bark. Below -2.5 it is stone: -3 - its moss)
-  const BARK = -1, ROCK = -3;
+  const BARK = -1, ROCK = -3, CACTUS = -6, FRUIT = 2, CONIF = 4; // (a cactus's skin; a fruit and a conifer's crown: their sway, raised)
   const barkCol = (bark, snow) => (X, Y, Z, nx, ny) => (snow > 0 && ny > 0.6 ? G.lerpColor(bark, SNOW, snow) : bark);
   // the plants' own shapes, made once
   let FS = null;
@@ -854,6 +882,12 @@ vec3 gxHaze( vec3 d ) {
       if (under) { const b = P.length / 3; P.push(0, 0.3, 0); rim(); for (let k = 0; k < n * 2; k++) I.push(b, b + 1 + k, b + 1 + ((k + 1) % (n * 2))); }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setIndex(I); g.computeVertexNormals(); return g; };
     FS.tier = tier(true); FS.tierT = tier(false);
+    // (a cactus: a column of ribs — a dozen round the trunk, eight round an arm — and its crown, the same ribs closing over)
+    const ribbed = (g, n) => { const P = g.attributes.position; for (let k = 0; k < P.count; k++) { const x = P.getX(k), z = P.getZ(k); const f = 1 + 0.09 * Math.cos(Math.atan2(z, x) * n); P.setX(k, x * f); P.setZ(k, z * f); } g.computeVertexNormals(); return g; };
+    { const g = new THREE.CylinderGeometry(0.5, 0.5, 1, 24, 2, true); g.translate(0, 0.5, 0); FS.cact = ribbed(g, 12); }
+    { const g = new THREE.CylinderGeometry(0.5, 0.5, 1, 16, 2, true); g.translate(0, 0.5, 0); FS.cactArm = ribbed(g, 8); }
+    FS.cactTop = ribbed(new THREE.SphereGeometry(0.5, 24, 3, 0, TAU, 0, Math.PI / 2), 12);
+    FS.cactTop8 = ribbed(new THREE.SphereGeometry(0.5, 16, 3, 0, TAU, 0, Math.PI / 2), 8);
     return FS;
   }
   // (a branch or a root from one point to another, of radius r0 at its start: a turned limb)
@@ -928,14 +962,15 @@ vec3 gxHaze( vec3 d ) {
           g.sph = [X, Y + H * 0.52, Z, 0.35];
           for (let q = 0; q < nt; q++) {
             const u = q / (nt - 1); const w2 = ((3.5 - u * 2.7) * sz + 0.6) * (0.9 + G.hash(t.id * 3 + q * 7) * 0.2); const y = Y + H * (0.15 + u * 0.63);
-            g.put(q < 1 && fine ? FS.tier : FS.tierT, R3.mat(X + Math.cos(rot + q * 2.3) * 0.1, y, Z + Math.sin(rot + q * 2.3) * 0.1, rot + q * 1.7, w2, H * (0.3 - u * 0.1), w2), lc, 0.08 + u * 0.12);
+            g.put(q < 1 && fine ? FS.tier : FS.tierT, R3.mat(X + Math.cos(rot + q * 2.3) * 0.1, y, Z + Math.sin(rot + q * 2.3) * 0.1, rot + q * 1.7, w2, H * (0.3 - u * 0.1), w2), lc, CONIF + 0.08 + u * 0.12);
           }
-          g.put(SH.cone, R3.mat(X, Y + H * 0.8, Z, rot, 0.7 * sz + 0.35, H * 0.24, 0.7 * sz + 0.35), lc, 0.22);
+          g.put(SH.cone, R3.mat(X, Y + H * 0.8, Z, rot, 0.7 * sz + 0.35, H * 0.24, 0.7 * sz + 0.35), lc, CONIF + 0.22);
           g.sph = null;
-          // (needles standing out of the tips of the lower tiers)
-          if (gl) for (let q = 0; q < nt - 1; q++) { const u = q / (nt - 1); const w2 = ((3.5 - u * 2.7) * sz + 0.6) * 0.5; const y = Y + H * (0.15 + u * 0.63);
-            for (let j = 0; j < 4; j++) { const a = rot + q * 1.7 + j * TAU / 4 + G.hash(t.id + q * 5 + j) * 0.8; const dx = Math.cos(a), dz = Math.sin(a); const px = X + dx * w2 * 0.86, pz = Z + dz * w2 * 0.86;
-              card4(gl, px, y + 0.05, pz, w2 * 0.62 + 0.25, a, 1.0 + G.hash(q + j * 3 + t.id) * 0.3, [dx * 0.6, 0.8, dz * 0.6], lc(px, y, pz, dx * 0.6, 0.8, dz * 0.6), 0.12 + u * 0.12, 2); } }
+          // (the boughs' sprays of needles standing out of every tier, drooping at their tips, each its own way — the tier's
+          // rim broken into boughs)
+          if (gl) for (let q = 0; q < nt; q++) { const u = q / (nt - 1); const w2 = ((3.5 - u * 2.7) * sz + 0.6) * 0.5; const y = Y + H * (0.15 + u * 0.63); const nc = q < nt - 1 ? 7 : 4;
+            for (let j = 0; j < nc; j++) { const a = rot + q * 1.7 + j * TAU / nc + (G.hash(t.id + q * 5 + j) - 0.5) * 0.7; const dx = Math.cos(a), dz = Math.sin(a); const rr = w2 * (0.78 + G.hash(t.id * 3 + q * 7 + j) * 0.2); const px = X + dx * rr, pz = Z + dz * rr;
+              card4(gl, px, y - w2 * 0.08, pz, w2 * 0.66 + 0.3, a, 0.55 + G.hash(q + j * 3 + t.id) * 0.4, [dx * 0.6, 0.8, dz * 0.6], lc(px, y, pz, dx * 0.6, 0.8, dz * 0.6), 0.12 + u * 0.12, 2); } }
         }
         break;
       }
@@ -955,15 +990,18 @@ vec3 gxHaze( vec3 d ) {
             gp.blade(P2[0], P2[1], P2[2], wd * 0.8, a + Math.PI / 2, P3[0], P3[1], P3[2], c2, c1, 0.6);
             if (t.kind !== 'banana') for (const sd of [-1, 1]) for (let j = 1; j <= 3; j++) { const f = j / 4; const Q = [P1[0] + (P2[0] - P1[0]) * f, P1[1] + (P2[1] - P1[1]) * f, P1[2] + (P2[2] - P1[2]) * f]; const la = a + sd * 1.1; gp.blade(Q[0], Q[1], Q[2], 0.16, a, Q[0] + Math.cos(la) * 0.9, Q[1] - 0.45, Q[2] + Math.sin(la) * 0.9, c1, c2, 0.5); }
           }
-          if (k[3]) for (let q = 0; q < 3; q++) g.put(SH.ico0, R3.mat(px + Math.cos(q * 2.1) * 0.35, py - 0.5, pz + Math.sin(q * 2.1) * 0.35, q, 0.5), k[3], 0.2);
+          if (k[3]) { for (let q = 0; q < 3; q++) { const fx = px + Math.cos(q * 2.1) * 0.35, fz = pz + Math.sin(q * 2.1) * 0.35; g.sph = [fx, py - 0.5, fz, 1]; g.put(SH.ico0, R3.mat(fx, py - 0.5, fz, q, 0.5), k[3], FRUIT + 0.2); } g.sph = null; }
         }
         break;
       }
       case 'cactus': {
-        const c = (X2, Y2, Z2, nx, ny) => (ny > 0.7 ? G.lerpColor(pal[0], pal[2], 0.6) : G.lerpColor(pal[1], pal[0], 0.5 + nx * 0.3));
-        const hh = 2.5 * sz + 0.8; g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.7, hh, 0.7), c); g.put(SH.sph, R3.mat(X, Y + hh, Z, 0, 0.7, 0.5, 0.7), c);
-        for (const sd of [-1, 1]) { if ((t.v || 0) === (sd > 0 ? 1 : 2)) continue; const ax = X + Math.cos(rot) * 0.55 * sd, az = Z + Math.sin(rot) * 0.55 * sd, ay = Y + hh * (sd > 0 ? 0.42 : 0.32);
-          g.put(SH.cyl, R3.mat(ax, ay, az, rot, 0.38, 0.4, 0.38, 0, sd * Math.PI / 2), c); g.put(SH.cyl, R3.mat(ax + Math.cos(rot) * 0.35 * sd, ay, az + Math.sin(rot) * 0.35 * sd, rot, 0.38, hh * 0.45, 0.38), c); }
+        // (a column of a dozen ribs, its crown rounded and paler; its arms going out and turning up at an elbow)
+        const c = (X2, Y2, Z2, nx, ny) => (ny > 0.75 ? G.lerpColor(pal[0], pal[2], 0.45) : pal[0]);
+        const hh = 2.5 * sz + 0.8; g.put(FS.cact, R3.mat(X, Y, Z, rot, 0.7, hh, 0.7), c, CACTUS); g.put(FS.cactTop, R3.mat(X, Y + hh, Z, rot, 0.7, 0.5, 0.7), c, CACTUS);
+        for (const sd of [-1, 1]) { if ((t.v || 0) === (sd > 0 ? 1 : 2)) continue; const ax = X + Math.cos(rot) * 0.3 * sd, az = Z + Math.sin(rot) * 0.3 * sd, ay = Y + hh * (sd > 0 ? 0.42 : 0.32);
+          const ex = X + Math.cos(rot) * 0.78 * sd, ez = Z + Math.sin(rot) * 0.78 * sd, ey = ay + 0.12;
+          limb(g, FS.cactArm, ax, ay - 0.02, az, ex, ey, ez, 0.2, c, CACTUS); g.put(SH.sph, R3.mat(ex, ey, ez, 0, 0.4, 0.4, 0.4), c, CACTUS);
+          g.put(FS.cactArm, R3.mat(ex, ey, ez, rot, 0.38, hh * 0.42, 0.38), c, CACTUS); g.put(FS.cactTop8, R3.mat(ex, ey + hh * 0.42, ez, rot, 0.38, 0.26, 0.38), c, CACTUS); }
         break;
       }
       case 'bush': {
@@ -972,7 +1010,7 @@ vec3 gxHaze( vec3 d ) {
         for (let q = 0; q < 3; q++) { const a = rot + q * 2.1; limb(g, FS.limb, X, Y - 0.05, Z, X + Math.cos(a) * r * 0.35, Y + 0.9, Z + Math.sin(a) * r * 0.35, 0.07, bc, BARK - 0.05); }
         if (!burnt) crownInto(g, gl, t.id, X, Y + 0.6 + r * 0.35, Z, r, 6, 0.8, pal, snow, 0.15, 1, 2);
         // (its fruit, each round and lit as one)
-        if (k[3] && !burnt) { for (let q = 0; q < 7; q++) { const px = X + Math.cos(q * 1.7) * r * 0.82, py = Y + 0.7 + r * 0.25 + (q % 2) * 0.35, pz = Z + Math.sin(q * 1.7) * r * 0.82; g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, q, 0.14), k[3], 0.15); } g.sph = null; }
+        if (k[3] && !burnt) { for (let q = 0; q < 12; q++) { const a = q * 1.7 + G.hash(t.id * 5 + q) * 0.8, d = r * (0.62 + G.hash(t.id * 9 + q) * 0.28); const px = X + Math.cos(a) * d, py = Y + 0.62 + r * 0.2 + G.hash(t.id * 3 + q) * 0.5, pz = Z + Math.sin(a) * d; g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, q, 0.085), k[3], FRUIT + 0.15); } g.sph = null; }
         break;
       }
       case 'flat': {
@@ -1022,8 +1060,15 @@ vec3 gxHaze( vec3 d ) {
         }
         if (!burnt) {
           // (the olive's crown wide and open, of small silver-green leaves)
-          crownInto(g, gl, t.id, X, cy, Z, olive ? r * 1.12 : r, birch ? 7 : olive ? 8 : 9, birch ? 1.12 : olive ? 0.72 : 1, pal, snow, 0.24, birch || olive ? 1 : jung ? 3 : 0, 4);
-          if (k[3] && t.fruit !== 0) { for (let q = 0; q < 9; q++) { const a = rot + q * 0.9; const px = X + Math.cos(a) * r * 0.95, py = cy - r * 0.1 + (q % 3) * 0.3, pz = Z + Math.sin(a) * r * 0.95; g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, a, 0.3), k[3], 0.25); } g.sph = null; }
+          const lumps = crownInto(g, gl, t.id, X, cy, Z, olive ? r * 1.12 : r, birch ? 7 : olive ? 8 : 9, birch ? 1.12 : olive ? 0.72 : 1, pal, snow, 0.24, birch || olive ? 1 : jung ? 3 : 0, 4);
+          // (its fruit: small — an apple of eight centimetres —, many, hanging on the sides and under the crown's lumps, some
+          // of them half among the leaves; the god's colour, a little deeper)
+          if (k[3] && t.fruit !== 0) { const fc = G.lerpColor(G.hex2rgb(k[3]), [70, 40, 30], 0.18);
+            for (let q = 0; q < lumps.length; q++) { const [lx, ly, lz, ls] = lumps[q]; for (let j = 0; j < 3; j++) {
+              const a = G.hash(t.id * 13 + q * 7 + j) * TAU, e = -0.65 + G.hash(t.id * 17 + q * 3 + j) * 1.0, rf = 0.5 * ls * (0.84 + G.hash(t.id * 19 + q + j * 5) * 0.24);
+              const px = lx + Math.cos(a) * Math.cos(e) * rf * 1.1, py = ly + Math.sin(e) * rf * 0.92, pz = lz + Math.sin(a) * Math.cos(e) * rf * 1.1;
+              g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, a, 0.08 + G.hash(q + j * 11 + t.id) * 0.03), fc, FRUIT + 0.25); } }
+            g.sph = null; }
         } else for (let q = 0; q < 3; q++) { const a = rot + q * 2.1; limb(g, FS.limb, X, cy - r * 0.3, Z, X + Math.cos(a) * r * 0.7, cy + r * 0.4, Z + Math.sin(a) * r * 0.7, r0 * 0.25, bc, BARK - 0.05); }
       }
     }
@@ -1060,6 +1105,11 @@ vec3 gxHaze( vec3 d ) {
         // (and, near, the stones broken off it lying round its foot, sunk in the ground)
         if (gl) for (let q = 0; q < 5; q++) { const a = G.hash(oid * 7 + q) * TAU, d = big.sx * (0.55 + G.hash(oid * 11 + q) * 0.5), s = 0.08 + G.hash(oid * 13 + q) * 0.12; const px = big.X + Math.cos(a) * d, pz = big.Z + Math.sin(a) * d;
           if (!W.inb(px / TL, pz / TL) || S.road[W.idx(px / TL, pz / TL)]) continue; g.put(SH.dode, R3.mat(px, G.Space.floorY(px, pz) - s * 0.3, pz, a * 3, s * 1.3, s * 0.8, s), col, ROCK - moss * 0.5); }
+        // (and, where the land is green, the grass growing up round its foot: the stone sits in the ground, not on it)
+        if (gl && moss > 0 && !S.road[i]) { const tc = tileCol(i, x, y); const root = [tc[0] * 0.62, tc[1] * 0.72, tc[2] * 0.55], tip = [Math.min(255, tc[0] * 0.92 + 16), Math.min(255, tc[1] * 1.02 + 10), tc[2] * 0.82];
+          for (let q = 0; q < 9; q++) { const a = G.hash(oid * 23 + q) * TAU, d = big.sx * 0.5 * (0.9 + G.hash(oid * 29 + q) * 0.32); const px = big.X + Math.cos(a) * d, pz = big.Z + Math.sin(a) * d;
+            if (!W.inb(px / TL, pz / TL) || S.road[W.idx(px / TL, pz / TL)] || S.occ[W.idx(px / TL, pz / TL)]) continue; const py = G.Space.floorY(px, pz) - 0.02;
+            for (let k = 0; k < 4; k++) { const ba = a + k * 1.6 + G.hash(oid + q * 3 + k), hh = 0.16 + G.hash(oid * 31 + q * 5 + k) * 0.22; gp.blade(px, py, pz, 0.055, ba + Math.PI / 2, px + Math.cos(ba) * hh * 0.32, py + hh, pz + Math.sin(ba) * hh * 0.32, root, G.lerpColor(root, tip, 0.8), 1); } } }
         continue;
       }
       const b = S.bushes.get(oid);
@@ -1082,7 +1132,7 @@ vec3 gxHaze( vec3 d ) {
             const a = G.hash(b.id * 7 + q) * 0.9 + q * 1.05, d = 0.66 + G.hash(b.id * 11 + q) * 0.12, hy = Y + 0.42 + G.hash(b.id * 13 + q) * 0.42;
             const cx = X + Math.cos(a) * d, cz = Z + Math.sin(a) * d;
             for (let j = 0; j < 3; j++) { const aj = a + j * 2.09 + q, px = cx + Math.cos(aj) * 0.045, pz = cz + Math.sin(aj) * 0.045, py = hy + (j === 2 ? 0.05 : -0.01);
-              g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, j + q, 0.072), j ? bc : G.lerpColor(bc, [190, 60, 70], 0.25), 0.12); }
+              g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, j + q, 0.072), j ? bc : G.lerpColor(bc, [190, 60, 70], 0.25), FRUIT + 0.12); }
           }
           g.sph = null;
         }

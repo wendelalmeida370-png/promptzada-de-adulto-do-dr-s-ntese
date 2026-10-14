@@ -178,7 +178,8 @@
       map = new THREE.DataTexture(data, N, N, THREE.RGBAFormat, THREE.UnsignedByteType);
       map.colorSpace = THREE.SRGBColorSpace; map.magFilter = map.minFilter = THREE.NearestFilter; map.generateMipmaps = false; map.flipY = false;
       if (gmap) gmap.dispose(); gdata = new Uint8Array(N * N * 4);
-      gmap = new THREE.DataTexture(gdata, N, N, THREE.RGBAFormat, THREE.UnsignedByteType); gmap.magFilter = gmap.minFilter = THREE.NearestFilter; gmap.generateMipmaps = false; gmap.flipY = false;
+      // (read texel by texel for what grows where, and smoothly for how thick: the edge of a meadow frays — Grass3D)
+      gmap = new THREE.DataTexture(gdata, N, N, THREE.RGBAFormat, THREE.UnsignedByteType); gmap.magFilter = gmap.minFilter = THREE.LinearFilter; gmap.generateMipmaps = false; gmap.flipY = false;
       // (the floor read smoothly: the leaves thin out from tree to tree, the wet fades up the bank)
       if (fmap) fmap.dispose(); fdata = new Uint8Array(N * N * 4);
       fmap = new THREE.DataTexture(fdata, N, N, THREE.RGBAFormat, THREE.UnsignedByteType); fmap.magFilter = fmap.minFilter = THREE.LinearFilter; fmap.generateMipmaps = false; fmap.flipY = false;
