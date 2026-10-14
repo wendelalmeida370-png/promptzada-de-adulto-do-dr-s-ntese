@@ -367,7 +367,8 @@
     find(ctx) {
       const S = G.S; const T = G.T; const out = []; const x0 = Math.floor(ctx.x), y0 = Math.floor(ctx.y);
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = x0 + dx, y = y0 + dy; if (!W.inb(x, y)) continue; const i = W.idx(x, y); const t = S.type[i];
-        if ((t === T.RIVER || t <= T.SEA) && !(S.dry && S.dry[i]) && !(S.ice && S.ice[i]) && !S.road[i]) out.push({ i, sea: t <= T.SEA, X: (x + 0.5) * L(), Z: (y + 0.5) * L() }); }
+        // (where the hands reach it: the edge of that water nearest the body)
+        if ((t === T.RIVER || t <= T.SEA) && !(S.dry && S.dry[i]) && !(S.ice && S.ice[i]) && !S.road[i]) out.push({ i, sea: t <= T.SEA, X: G.clamp(ctx.X, x * L() + 0.2, (x + 1) * L() - 0.2), Z: G.clamp(ctx.Z, y * L() + 0.2, (y + 1) * L() - 0.2) }); }
       return out;
     },
     label(ctx, t) { return t.sea ? 'Provar a água do mar' : 'Beber água'; },

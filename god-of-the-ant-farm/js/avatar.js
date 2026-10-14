@@ -29,7 +29,7 @@
   const TUNE = Av.TUNE = {
     accel: 15, brake: 19, airAccel: 3.5, turn: 10, gravity: 21, coyote: 0.12, buffer: 0.14, stepUp: 0.6, radius: 0.32,
     runDrain: 20, staminaRegen: 16, jumpCost: 9, sneak: 0.45, wade: 0.58, road: 1.12, hurtFall: 6.5, step: 1 / 60,
-    climbMax: 2.6, climbWait: 0.22,
+    climbMax: 2.6, climbWait: 0.22, stoneStep: 0.35,
   };
   try { const o = JSON.parse(localStorage.getItem('gotaf-tune') || 'null'); if (o && typeof o === 'object') for (const k in o) if (k in TUNE && Number.isFinite(o[k]) && k !== 'step') TUNE[k] = o[k]; } catch (e) { }
   Av.saveTune = () => { try { localStorage.setItem('gotaf-tune', JSON.stringify(TUNE)); } catch (e) { } };
@@ -47,7 +47,9 @@
     if (!W.inb(x, y)) return W.hAt(G.clamp(x, 0, G.N), G.clamp(y, 0, G.N)) * HM();
     const i = W.idx(x, y); const h = W.hAt(x, y) * HM();
     if (S.type[i] === T.RIVER && (S.road[i] || (S.ice && S.ice[i]))) return Math.max(h, S.wl[i] * HM() + (S.road[i] ? 0.17 : 0.1));
-    return h;
+    // (a boulder is ground too: the feet stand on its faces)
+    const st = G.Space.stoneTop(X, Z);
+    return st > h ? st : h;
   }
   Av.floorAt = floorAt;
 
@@ -68,8 +70,13 @@
   // (a point is solid for the body if the world says nobody stands there, or if the ground there rises above a step)
   function solidAt(X, Z, feet) {
     const s = G.Space.surface(X, Z); if (!s.walk) return s.kind;
-    if (floorAt(X, Z) > feet + TUNE.stepUp) return 'ledge';
-    return null;
+    return ledge(X, Z, feet, floorAt(X, Z)) ? 'ledge' : null;
+  }
+  // too high for a step: more than a stair's rise — or a boulder's steep face standing high over the earth, which is
+  // climbed with the hands and not walked (a low stone is just stepped on)
+  function ledge(X, Z, feet, f) {
+    if (f > feet + TUNE.stepUp) return true;
+    return f > feet + TUNE.stoneStep && f - W.hAt(X / TL(), Z / TL()) * HM() > TUNE.stepUp && G.Space.stoneTop(X, Z) >= f;
   }
   // the body is a circle on the ground: its centre, and the points of its rim on the side it moves toward, must stand
   // on open ground (only the leading side: a body touching a wall can always step away from it — it never sticks)
@@ -80,7 +87,7 @@
     for (const [dx, dz] of RIM) { if (dx * mx + dz * mz <= 0.05) continue; const k = solidAt(X + dx * r, Z + dz * r, feet); if (k) return k; }
     return null;
   }
-  // round things one walks around: the trunks of grown trees, big rocks
+  // round things one walks around: the trunks of grown trees (a boulder is ground one climbs: floorAt)
   function pushRound(X, Z) {
     const S = G.S; const L = TL(); const x0 = Math.floor(X / L), y0 = Math.floor(Z / L); let ox = 0, oz = 0;
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
@@ -88,7 +95,6 @@
       let cx = 0, cz = 0, rr = 0;
       const tid = S.treeAt[i]; const t = tid && S.trees.get(tid);
       if (t && t.stage !== 'stump' && t.stage !== 'log' && t.stage !== 'fall' && t.size >= 0.3) { cx = t.x * L; cz = t.y * L; rr = 0.28 + 0.32 * Math.min(1.2, t.size); }
-      else { const o = S.objAt[i]; const k = o && S.rocks.get(o); if (k) { cx = k.x * L; cz = k.y * L; rr = 0.6 + 0.9 * G.clamp(k.stone / Math.max(1, k.max || k.stone), 0.2, 1); } }
       if (!rr) continue;
       const ddx = X + ox - cx, ddz = Z + oz - cz; const d = Math.hypot(ddx, ddz); const m = rr + TUNE.radius;
       if (d < m && d > 1e-4) { ox += ddx / d * (m - d); oz += ddz / d * (m - d); }
@@ -193,16 +199,20 @@
     const l = Math.hypot(wx, wz); if (l < 0.1) return false; const dx = wx / l, dz = wz / l; const feet = b.Y;
     for (let d = 0.3; d <= 1.3; d += 0.1) {
       const ex = b.X + dx * d, ez = b.Z + dz * d; const top = floorAt(ex, ez);
-      if (top <= feet + TUNE.stepUp) continue;
+      if (!ledge(ex, ez, feet, top)) continue;
       if (top - feet > TUNE.climbMax) return false; // (too high to reach)
-      // (where the feet go: a little beyond the edge, on open ground of the world, with nothing higher right behind it)
-      const tx = b.X + dx * (d + 0.45), tz = b.Z + dz * (d + 0.45); const sf = G.Space.surface(tx, tz);
-      if (!sf.walk || sf.kind !== 'ground') return false;
-      const ty = floorAt(tx, tz); if (ty - feet > TUNE.climbMax || ty < top - 0.6) return false;
-      if (blocked(tx, tz, ty, dx, dz)) return false;
-      b.climb = { X0: b.X, Z0: b.Z, Y0: b.Y, X1: tx, Z1: tz, Y1: ty, t: 0, dur: 0.45 + (ty - feet) * 0.22 }; b.loco = 'climb'; b.ledgeT = 0; b.buffer = 0; b.vx = b.vz = 0;
-      b.yaw = Math.atan2(dz, dx); b.stamina = Math.max(0, b.stamina - 6);
-      return true;
+      // (where the feet go: a little beyond the edge, on open ground of the world, up there and with nothing higher right
+      // behind — a narrow stone is stood on nearer its edge)
+      for (const o of [0.45, 0.3, 0.6, 0.2]) {
+        const tx = b.X + dx * (d + o), tz = b.Z + dz * (d + o); const sf = G.Space.surface(tx, tz);
+        if (!sf.walk || sf.kind !== 'ground') continue;
+        const ty = floorAt(tx, tz); if (ty - feet > TUNE.climbMax || ty < top - 0.6) continue;
+        if (blocked(tx, tz, ty, dx, dz)) continue;
+        b.climb = { X0: b.X, Z0: b.Z, Y0: b.Y, X1: tx, Z1: tz, Y1: ty, t: 0, dur: 0.45 + (ty - feet) * 0.22 }; b.loco = 'climb'; b.ledgeT = 0; b.buffer = 0; b.vx = b.vz = 0;
+        b.yaw = Math.atan2(dz, dx); b.stamina = Math.max(0, b.stamina - 6);
+        return true;
+      }
+      return false;
     }
     return false;
   }

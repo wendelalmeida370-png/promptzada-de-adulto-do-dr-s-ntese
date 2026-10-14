@@ -358,6 +358,9 @@
       if (G.Dragon3D && G.Dragon3D.check) for (const m of G.Dragon3D.check()) add('vista3d', 2, m);
       if (G.Things3D && G.Things3D.check) for (const m of G.Things3D.check()) add('vista3d', 2, m);
       // (the eye of the body never ends a frame inside the ground, a house or a wall — L-106; asleep in its own bed the body is indoors)
+      // (the feet stand on the floor the body walks on — the earth or a boulder's faces — and never sink into it)
+      const ab = b && !b.inside && G.Modes && G.Modes.state === 'INC' && G.Avatar && G.Avatar.state();
+      if (ab && ab.loco !== 'climb' && ab.Y < G.Avatar.floorAt(ab.X, ab.Z) - 0.1) add('vista3d', 2, `os pés do corpo afundaram ${(G.Avatar.floorAt(ab.X, ab.Z) - ab.Y).toFixed(2)} m no chão ou numa pedra`);
       if (b && !b.inside && G.Modes && G.Modes.state === 'INC' && G.Cam3D && G.Cam3D.inside) add('vista3d', 2, `o olho do corpo terminou o quadro dentro do chão, de um prédio ou de um muro (${G.Cam3D.last ? G.Cam3D.last.pos.map(n => n.toFixed(1)).join(', ') : '?'})`);
     }
     // ---- the dragon (dragon.js): where it is, what it holds, and who is climbing to its lair

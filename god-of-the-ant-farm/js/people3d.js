@@ -280,8 +280,12 @@
     for (let k = 0; k < n; k++) {
       const v = near[k][1]; seen.add(v.id);
       let s = vis.get(v.id);
-      const X = v.x * TL, Z = v.y * TL; const Y = (v.task && v.task.type === 'swim' ? G.SEA * HM - 0.5 : W.groundH(v.x, v.y) * HM) + (v.z ? v.z * 0.22 : 0);
-      if (!s) { s = { X, Z, yaw: v.face > 0 ? 0 : Math.PI, ph: (v.id % 7), pose: POSE0(), t: 0, sp: 0, st: 'idle' }; vis.set(v.id, s); }
+      const X = v.x * TL, Z = v.y * TL; const swim = v.task && v.task.type === 'swim';
+      // (the world walks them over a boulder's tile: the feet go up onto the stone and down again, a quick step — never through it)
+      const Yf = swim ? G.SEA * HM - 0.5 : Math.max(W.groundH(v.x, v.y) * HM, G.Space.stoneTop(X, Z));
+      if (!s) { s = { X, Z, Y: Yf, yaw: v.face > 0 ? 0 : Math.PI, ph: (v.id % 7), pose: POSE0(), t: 0, sp: 0, st: 'idle' }; vis.set(v.id, s); }
+      s.Y = Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
+      const Y = s.Y + (v.z ? v.z * 0.22 : 0);
       // (the speed and direction of their steps since the last frame: what their legs must show)
       const dx = X - s.X, dz = Z - s.Z; const dist = Math.hypot(dx, dz);
       const sp = dt > 0 ? dist / dt : 0; s.sp += (Math.min(sp, 9) - s.sp) * (1 - Math.exp(-8 * dt));
@@ -406,14 +410,16 @@
     for (const [, a] of list) {
       if (idx >= MAXA) break;
       const sp = G.Animals.DEF[a.kind]; if (!sp || sp.cls === 'water') continue;
-      const X = a.x * TL, Z = a.y * TL; let s = bvis.get(a.id); if (!s) { s = { X, Z, yaw: 0, ph: a.id % 5, t: 0, graze: 0, v: 0 }; bvis.set(a.id, s); }
+      const X = a.x * TL, Z = a.y * TL; let s = bvis.get(a.id); if (!s) { s = { X, Z, Y: 0, yaw: 0, ph: a.id % 5, t: 0, graze: 0, v: 0 }; bvis.set(a.id, s); }
       const dx = X - s.X, dz = Z - s.Z; const dist = Math.hypot(dx, dz); if (dist > 0.002 && dist < 6) { const want = Math.atan2(dz, dx); let da = want - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * (1 - Math.exp(-8 * dt)); }
       const v = dt > 0 && dist < 6 ? dist / dt : 0; s.v += (v - s.v) * (1 - Math.exp(-6 * dt)); s.t += dt; s.X = X; s.Z = Z;
       const F = formOf(sp, a.kind); const air = sp.cls === 'air' && (a.z || 0) > 0.3;
       const u = (0.5 + (sp.size || 1) * 0.9) / 4 * (a.big || 1) * (a.age !== undefined && a.age < 1 ? 0.6 : 1); // (metres to the god's unit)
       const run = G.clamp(s.v / 3, 0, 1.4); s.ph += dt * (s.v * (F.biped ? 6 : 3.4) / Math.max(0.4, F.leg * u * 2) + 0.4);
       const col = F.col, dark = darker(col, 0.78), bel = F.belly || darker(col, 1.12);
-      const Y = W.groundH(a.x, a.y) * HM + (air ? Math.max(0.5, (a.z || 0) * 0.22) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
+      // (over a boulder's tile the feet go up onto the stone, as the people's do)
+      const Yf = Math.max(W.groundH(a.x, a.y) * HM, sp.cls === 'water' ? -Infinity : G.Space.stoneTop(X, Z)); s.Y = Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
+      const Y = s.Y + (air ? Math.max(0.5, (a.z || 0) * 0.22) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
       const m = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-s.yaw); m.multiply(M.b);
       // (grazing: a beast that eats grass lowers its head now and then while it stands)
       const grazer = sp.diet === 'herb' || sp.diet === 'browse'; const wantG = grazer && s.v < 0.15 && Math.sin(s.t * 0.35 + a.id) > 0.1 ? 1 : 0; s.graze += (wantG - s.graze) * (1 - Math.exp(-2 * dt));

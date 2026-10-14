@@ -57,7 +57,7 @@ Selecione qualquer habitante (com 6 anos ou mais) e clique em **Encarnar**: a c�
 | Olhar | mouse (clique para prender o mouse; `Esc` solta) · arraste · no celular, a metade direita |
 | Correr | `Shift` (gasta fôlego) |
 | Pular | `Espaço` |
-| Escalar | empurre contra um barranco (até ~2,6 m): o corpo agarra a beirada e sobe sozinho (`Espaço` sobe na hora) |
+| Escalar | empurre contra uma pedra grande ou uma beirada (até ~2,6 m): o corpo agarra com as mãos e sobe sozinho (`Espaço` sobe na hora); dá para andar por cima da pedra e descer do outro lado. Pedra baixa se pisa com um passo; parede de casa, muro e paredão não se escalam |
 | Sentar no chão / levantar | `X` (andar também levanta) |
 | Acenar | `V` — quem está perto acena de volta |
 | Interagir | `E` — conversar (a ficha da pessoa, com os dados reais), bater à porta, dormir em casa, comer no armazém, guardar a carga, rezar no templo, cortar lenha (segure `E`), colher frutas, quebrar pedra, beber água no rio, fazer carinho num bicho manso, levar material para uma obra, ler as lápides |
@@ -71,7 +71,7 @@ A pessoa continua sendo quem é — a mesma idade, a mesma casa, a mesma famíli
 
 **O mundo inteiro e a luz de um mundo pintado (v34):** tudo o que o deus vê agora aparece também de dentro do corpo — **o dragão** (voando sobre a cidade, soprando fogo ou gelo, dormindo no covil sobre o tesouro, e os ossos de quem foi morto), as tochas e lanternas da noite (o seu corpo leva uma tocha quando escurece), as carroças com o boi, golfinhos saltando e baleias soprando, os barcos de quem chega, as máquinas de cerco e as pedras que atiram, as tendas dos exércitos, os mortos e o sangue da guerra, as piras, as bocas das cavernas, a chuva de ouro e o vinho dos poços, os fantasmas, as bandeiras das casas ricas, o lampião da taverna, o cadafalso, as colmeias e os ninhos. A luz segue o jeito de *Breath of the Wild*: sombras em faixa suave e azuladas, um contorno de sol nas bordas, a distância azulando na névoa, o céu azul fundo com nuvens que têm lado de sol e lado de sombra; e em volta do corpo um **campo de capim** de verdade, milhares de folhas que o vento do mundo dobra em ondas e que se abrem quando você passa. Esc → Gráficos → Leve desliga o campo de capim.
 
-**Ainda não existem** (a base está pronta para eles): nadar e mergulhar (a água funda para o corpo), escalar, planar, interiores das casas, combate, diálogos com escolhas, encarnar bichos. Detalhes da arquitetura em `ENCARNACAO.md`; o relatório do que foi testado em `qa/RELATORIO_ENCARNACAO.md`.
+**Ainda não existem** (a base está pronta para eles): nadar e mergulhar (a água funda para o corpo), escalar paredões e árvores, planar, interiores das casas, combate, diálogos com escolhas, encarnar bichos. Detalhes da arquitetura em `ENCARNACAO.md`; o relatório do que foi testado em `qa/RELATORIO_ENCARNACAO.md`.
 
 ## O que acontece na ilha
 

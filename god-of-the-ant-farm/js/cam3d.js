@@ -42,6 +42,7 @@
     const S = G.S; const L = G.Space.TILE, H = G.Space.HM; const x = X / L, y = Z / L;
     if (!W.inb(x, y)) return Y < G.SEA * H + 0.3;
     if (Y < W.hAt(x, y) * H + 0.3) return true;
+    if (Y < G.Space.stoneTop(X, Z) + 0.2) return true; // (a boulder)
     const i = W.idx(x, y);
     if ((S.type[i] <= G.T.SEA || S.type[i] === G.T.RIVER) && !(S.dry && S.dry[i]) && Y < W.waterH(x, y) * H + 0.25) return true;
     // (a wall is its own stones, a gate has its passage: the shape the drawing puts there)

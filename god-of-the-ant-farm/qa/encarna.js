@@ -20,8 +20,8 @@
 //  e12 o que o mundo tem, o 3D mostra — o dragão (voando onde o mundo diz, soprando fogo, dormindo no tesouro, os ossos),
 //      a tocha do corpo à noite, as carroças com o boi, os bichos do mar, a chuva de ouro, os mortos onde caíram, o campo
 //      de capim só onde o chão do mundo tem capim
-//  e13 o corpo no mundo — escala um barranco ao alcance dos braços (e não um alto demais), senta e levanta, acena e é
-//      respondido, bebe no rio (o mar é salgado), faz carinho num bicho manso; os feitos entram na biografia
+//  e13 o corpo no mundo — escala uma pedra grande (anda por cima e desce do outro lado; a parede de uma casa não), senta e
+//      levanta, acena e é respondido, bebe no rio (o mar é salgado), faz carinho num bicho manso; os feitos entram na biografia
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'); const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
@@ -566,14 +566,15 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // the dragon: woken by the god's power, brought over the body, flying, breathing, asleep on its hoard; then its bones
     P.dragon(b.x, b.y); const d = (S.dragons || [])[S.dragons.length - 1]; out.dragon = null;
     if (d) {
-      d.x = b.x + 6; d.y = b.y; d.h = W.groundH(d.x, d.y) + 9; d.st = 'caca'; __E.f(8);
+      // (the world paused — the menu — so the dragon stays as set: what is tested is the drawing of it)
+      d.x = b.x + 6; d.y = b.y; d.h = G.W.groundH(d.x, d.y) + 9; d.st = 'caca'; G.Modes.menu(true); __E.f(8);
       const L1 = G.Dragon3D.drawnList(); const r = L1[0];
       out.dragon = { drawn: L1.length, off: r ? Math.hypot(r.X - d.x * TL, r.Z - d.y * TL) : 99, dy: r ? Math.abs(r.Y - d.h * HM) : 99, mode: r && r.mode };
       const p0 = G.FX3D.particles; d.breath = 1; d.st = 'passe'; __E.f(10); const L2 = G.Dragon3D.drawnList(); out.dragon.breath = { on: !!(L2[0] && L2[0].breathing), parts: G.FX3D.particles - p0, light: G.Dragon3D.breath };
-      d.breath = 0; d.st = 'dorme'; d.x = d.lx = b.x + 5; d.y = d.ly = b.y + 2; d.h = W.groundH(d.x, d.y); d.alt = 0; d.hoard = 40; __E.f(8);
+      d.breath = 0; d.st = 'dorme'; d.x = d.lx = b.x + 5; d.y = d.ly = b.y + 2; d.h = G.W.groundH(d.x, d.y); d.alt = 0; d.hoard = 40; __E.f(8);
       const L3 = G.Dragon3D.drawnList(); out.dragon.sleep = { mode: L3[0] && L3[0].mode, coins: G.Dragon3D.coins };
       S.dragons.splice(S.dragons.indexOf(d), 1); S.dragonBones = S.dragonBones || []; S.dragonBones.push({ id: S.nextId++, x: b.x + 4, y: b.y - 3, hd: 0.5, name: d.name, hue: d.hue, day: S.day }); __E.f(4);
-      out.dragon.bones = G.Dragon3D.bones; out.dragon.after = G.Dragon3D.drawn;
+      out.dragon.bones = G.Dragon3D.bones; out.dragon.after = G.Dragon3D.drawn; G.Modes.menu(false); __E.f(2);
     }
     // night: the body carries a torch, and so do some who walk; its flame burns and lights round it
     const t0 = S.time; S.time = 0.86; G.Input3D.down.frente = true; __E.f(16); G.Input3D.down.frente = false; __E.f(4);
@@ -591,16 +592,19 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       if (w) { const a = G.Animals.spawn ? G.Animals.spawn('dolphin', w[0], w[1]) : null; __E.f(6); out.sea = { spawned: !!a, drawn: G.Things3D.n.sea || 0 }; }
     }
     // the god's gifts over the town: gold falling and heaped, wine leaping from a well
-    G.Avatar.place(v.x, v.y); __E.f(2); const set = __E.town();
+    const set = __E.town(); const tp = near((i, x, y) => G.W.walkable(i) && G.dist(x + 0.5, y + 0.5, set.cx, set.cy) < 6, 400); if (tp) G.Avatar.place(tp[0], tp[1]); __E.f(2);
     P.goldrain(set.cx, set.cy); __E.f(30); out.gold = { rains: (S.gifts && S.gifts.rains.length) || 0, coins: G.Things3D.n.coin || 0 };
     // the dead where they fell: a man of the town struck down near the body
-    const o = [...S.villagers.values()].find(q => q !== b && q.age >= 18 && !q.inside && G.dist(q.x, q.y, b.x, b.y) < 12);
-    out.dead = null; if (o) { G.Vg.damage(o, 9999, 'guerra', true); __E.f(10); out.dead = { gone: !S.villagers.has(o.id), corpses: G.Carnage.view().corpses.length, drawn: G.People3D.dead }; }
+    // (one on land, the nearest: one who dies at sea leaves no body on the shore; the body goes to stand beside them)
+    const bb = __E.body(); const onLand = q => q !== bb && q.age >= 18 && !q.inside && !q.aboard && !q.jail && G.W.walkableXY(q.x, q.y);
+    const o = [...S.villagers.values()].filter(onLand).sort((p, q) => G.dist(p.x, p.y, bb.x, bb.y) - G.dist(q.x, q.y, bb.x, bb.y))[0];
+    out.dead = null; if (o) { if (G.dist(o.x, o.y, bb.x, bb.y) > 6) G.Avatar.place(o.x + 0.6, o.y) || G.Avatar.place(o.x, o.y + 0.6) || G.Avatar.place(o.x, o.y); __E.f(2);
+      G.Vg.damage(o, 9999, 'war', true); __E.f(10); out.dead = { gone: !S.villagers.has(o.id), corpses: G.Carnage.view().corpses.length, drawn: G.People3D.dead }; }
     // the grass round the body: at the medium quality a field of blades, where the world's ground grows grass and nowhere else
-    G.Realm.setQuality('media'); __E.f(4);
-    let bad = 0, n = 0; const gm = G.Ground3D.grassMap(); const gd = gm && gm.image.data;
-    if (gd) for (let y = Math.max(0, Math.floor(b.y) - 20); y < Math.min(N, Math.floor(b.y) + 20); y++) for (let x = Math.max(0, Math.floor(b.x) - 20); x < Math.min(N, Math.floor(b.x) + 20); x++) { const i = y * N + x; if (!(S.occ[i] || S.road[i] || S.type[i] <= T.RIVER)) continue; n++; if (gd[i * 4] > 0) bad++; }
-    out.grass = { on: G.Grass3D.on, clumps: G.Grass3D.clumps, checked: n, onBad: bad };
+    G.Realm.setQuality('media'); __E.f(24); // (the picture round the body is painted again, four rows a frame)
+    let bad = 0, n = 0; const gm = G.Ground3D.grassMap(); const gd = gm && gm.image.data; const badAt = [];
+    if (gd) for (let y = Math.max(0, Math.floor(b.y) - 20); y < Math.min(N, Math.floor(b.y) + 20); y++) for (let x = Math.max(0, Math.floor(b.x) - 20); x < Math.min(N, Math.floor(b.x) + 20); x++) { const i = y * N + x; if (!(S.occ[i] || S.road[i] || S.type[i] <= T.RIVER)) continue; n++; if (gd[i * 4] > 0) { bad++; if (badAt.length < 3) { const bb = S.occ[i] && S.buildings.get(S.occ[i]); badAt.push([x, y, bb ? bb.type : S.road[i] ? 'rua' : 'água', gd[i * 4]]); } } }
+    out.grass = { on: G.Grass3D.on, clumps: G.Grass3D.clumps, checked: n, onBad: bad, badAt };
     G.Realm.setQuality('baixa');
     out.check = [].concat(G.Dragon3D.check(), G.Things3D.check(), G.People3D.check());
     out.qa = __E.qa(); out.err = JSON.stringify(G.modErr);
@@ -614,7 +618,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   ok('e12 as carroças das estradas aparecem, com o boi', !e12.cart || (e12.cart.bed >= 1 && e12.cart.ox >= 1), e12.cart ? JSON.stringify(e12.cart) : 'não há carroças neste mundo (nada a provar)');
   ok('e12 os bichos do mar aparecem na água', !e12.sea || !e12.sea.spawned || e12.sea.drawn >= 1, e12.sea ? JSON.stringify(e12.sea) : 'sem costa por perto');
   ok('e12 a chuva de ouro do deus cai também no 3D', e12.gold.rains >= 1 && e12.gold.coins >= 20, JSON.stringify(e12.gold));
-  ok('e12 os mortos ficam onde caíram', !e12.dead || (e12.dead.gone && (e12.dead.corpses === 0 || e12.dead.drawn >= 1)), e12.dead ? JSON.stringify(e12.dead) : 'ninguém por perto');
+  ok('e12 os mortos ficam onde caíram', !e12.dead || (e12.dead.gone && e12.dead.corpses >= 1 && e12.dead.drawn >= 1), e12.dead ? JSON.stringify(e12.dead) : 'ninguém por perto');
   ok('e12 o campo de capim: aceso na qualidade média, nunca em rua, casa ou água', e12.grass.on && e12.grass.clumps > 1000 && e12.grass.checked > 20 && e12.grass.onBad === 0, JSON.stringify(e12.grass));
   ok('e12 verificador', !e12.qa.length && e12.err === '{}' && !e12.check.length, `${e12.qa.slice(0, 3).join(' · ') || 'limpo'} · ${e12.err} · ${e12.check.join(' · ')}`);
   await shot('e12-o-mundo-no-3d');
@@ -623,26 +627,33 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   // ================================ e13: the body's new ways: climbing, sitting, waving, drinking, stroking ================================
   const e13 = await E(() => {
     __E.fresh('cidade'); const S = G.S, N = G.N, T = G.T; const HM = G.Space.HM, TL = G.Space.TILE; const out = {};
-    const s = __E.town(); const v = __E.adults(s)[0]; out.inn = __E.enter(v); __E.f(10); const st = G.Avatar.state(); const A = () => S.avatar.deeds;
+    const s = __E.town(); const v = __E.adults(s)[0]; out.inn = __E.enter(v); __E.f(10); const p0 = [v.x, v.y]; const st = G.Avatar.state(); const A = () => S.avatar.deeds;
     const TU = G.Avatar.TUNE; const fl = (x, y) => G.Avatar.floorAt((x + 0.5) * TL, (y + 0.5) * TL);
-    // a ledge: two tiles side by side the world walks on, the second one higher than a step and lower than the arms reach
-    let led = null, high = null;
-    for (let y = 3; y < N - 3 && !(led && high); y++) for (let x = 3; x < N - 3 && !(led && high); x++) {
-      const i = y * N + x; if (!G.W.walkable(i) || S.type[i] !== T.GRASS && S.type[i] !== T.MEADOW && S.type[i] !== T.ROCKY && S.type[i] !== T.SAND) continue;
-      for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) { const j = (y + dy) * N + x + dx; if (!G.W.walkable(j) || S.occ[j] || S.treeAt[j]) continue; const d = fl(x + dx, y + dy) - fl(x, y);
-        if (!led && d > TU.stepUp + 0.25 && d < TU.climbMax - 0.3 && G.W.reaches(v, x + 0.5, y + 0.5)) led = { x, y, dx, dy, d };
-        if (!high && d > TU.climbMax + 0.6 && G.W.reaches(v, x + 0.5, y + 0.5)) high = { x, y, dx, dy, d }; }
+    // a boulder in the way: a big stone set on open flat ground near the body (the feet stand on its faces: G.Space.stoneTop)
+    const flat = (x, y) => { for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const j = (y + dy) * N + x + dx; if (!G.W.walkable(j) || S.occ[j] || S.treeAt[j] || S.objAt[j] || S.road[j] || S.type[j] === T.RIVER) return false; } return Math.abs(fl(x - 2, y) - fl(x + 2, y)) < 0.8 && Math.abs(fl(x, y - 2) - fl(x, y + 2)) < 0.8; };
+    let spot = null; for (let r = 2; r < 40 && !spot; r++) for (let k = 0; k < r * 8 && !spot; k++) { const a = k / (r * 8) * Math.PI * 2; const x = Math.round(v.x + Math.cos(a) * r), y = Math.round(v.y + Math.sin(a) * r); if (x > 4 && y > 4 && x < N - 5 && y < N - 5 && flat(x, y) && G.W.reaches(v, x + 0.5, y + 0.5)) spot = [x, y]; }
+    out.climb = null;
+    if (spot) {
+      const rk = G.Nature.addRock(spot[0] + 0.5, spot[1] + 0.5, 40); const st0 = G.Space.stones(rk)[0]; const top = G.Space.stoneTop(st0.X, st0.Z); const g0 = G.W.hAt(rk.x, rk.y) * HM;
+      // (from the west, three metres off, pushing east: up its face with the hands, along the top, and down the other side)
+      G.Avatar.place(rk.x - 3 / TL, rk.y); __E.f(4); G.Cam3D.yaw = 0; G.Cam3D.pitch = 0.2; G.Input3D.down.frente = true;
+      const y0 = st.Y; let bad = 0, climbF = 0, sunk = 0, maxY = -1e9, onTop = 0; const d0 = A().escalada || 0;
+      for (let k = 0; k < 150; k++) { G.Main.frameFor(33); st.yaw = 0; const b = __E.body(); if (!G.W.walkableXY(b.x, b.y)) bad++; if (G.Avatar.climbing()) climbF++; if (!G.Avatar.climbing() && st.Y < G.Avatar.floorAt(st.X, st.Z) - 0.1) sunk++; maxY = Math.max(maxY, st.Y); if (!G.Avatar.climbing() && G.Space.stoneTop(st.X, st.Z) > g0 + 0.9 && Math.abs(st.Y - G.Space.stoneTop(st.X, st.Z)) < 0.05) onTop++; }
+      G.Input3D.down.frente = false; __E.f(10);
+      out.climb = { top: +(top - g0).toFixed(2), rose: +(maxY - y0).toFixed(2), climbF, onTop, deed: (A().escalada || 0) - d0, past: +(st.X - st0.X).toFixed(2), down: +(st.Y - G.Avatar.floorAt(st.X, st.Z)).toFixed(2), hurt: st.hurt || 0, bad, sunk, cam: G.Cam3D.inside };
+      G.Nature.removeRock(rk); __E.f(2);
     }
-    const tryIt = L => {
-      G.Avatar.place(L.x + 0.5 - L.dx * 0.3, L.y + 0.5 - L.dy * 0.3); __E.f(4); const y0 = st.Y; let bad = 0, maxT = 0, climbF = 0; const d0 = A().escalada || 0;
-      G.Cam3D.yaw = Math.atan2(L.dy, L.dx); G.Input3D.down.frente = true;
-      for (let k = 0; k < 90; k++) { G.Main.frameFor(33); const b = __E.body(); if (!G.W.walkableXY(b.x, b.y)) bad++; if (G.Avatar.climbing()) climbF++; }
-      G.Input3D.down.frente = false; __E.f(6); const b = __E.body();
-      return { on: Math.floor(b.x) === L.x + L.dx && Math.floor(b.y) === L.y + L.dy || G.dist(b.x, b.y, L.x + 0.5, L.y + 0.5) > 0.9, rose: +(st.Y - y0).toFixed(2), d: +L.d.toFixed(2), bad, climbF, deed: (A().escalada || 0) - d0 };
-    };
-    out.climb = led ? tryIt(led) : null; out.tooHigh = high ? tryIt(high) : null;
+    // a house wall is no ledge: pushing against it, the body stays at its foot
+    out.tooHigh = null; let wallAt = null;
+    for (const bd of S.buildings.values()) { if (wallAt || bd.ruin || bd.w > 3) continue; const y = bd.y + Math.floor(bd.h / 2), x = bd.x - 1; if (G.W.inb(x, y) && G.W.walkable(y * N + x) && !S.objAt[y * N + x] && !S.treeAt[y * N + x] && G.W.reaches(v, x + 0.5, y + 0.5)) wallAt = [x, y]; }
+    if (wallAt) {
+      G.Avatar.place(wallAt[0] + 0.3, wallAt[1] + 0.5); __E.f(4); G.Cam3D.yaw = 0; G.Input3D.down.frente = true; const y0 = st.Y; let bad = 0, climbF = 0; const d0 = A().escalada || 0;
+      for (let k = 0; k < 60; k++) { G.Main.frameFor(33); st.yaw = 0; const b = __E.body(); if (!G.W.walkableXY(b.x, b.y)) bad++; if (G.Avatar.climbing()) climbF++; }
+      G.Input3D.down.frente = false; __E.f(4);
+      out.tooHigh = { rose: +(st.Y - y0).toFixed(2), climbF, deed: (A().escalada || 0) - d0, bad, x: +__E.body().x.toFixed(2), wall: wallAt[0] + 1 };
+    }
     // sitting on the ground; walking gets the body up
-    G.Avatar.place(v.x, v.y); __E.f(4); out.sit = { ok: G.Avatar.sit() }; __E.f(20); out.sit.anim = st.anim;
+    G.Avatar.place(p0[0], p0[1]); __E.f(4); out.sit = { ok: G.Avatar.sit() }; __E.f(20); out.sit.anim = st.anim;
     G.Input3D.down.frente = true; __E.f(30); G.Input3D.down.frente = false; out.sit.after = st.anim; out.sit.moved = st.speed > 0.2 || st.anim === 'walk';
     __E.f(10);
     // a wave: the body waves, those standing near wave back
@@ -650,20 +661,22 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // water: drunk from a river or lake; the sea is salt
     const nearT = f => { let best = null, bd = 1e9; for (let y = 2; y < N - 2; y++) for (let x = 2; x < N - 2; x++) { const i = y * N + x; if (!G.W.walkable(i) || S.type[i] === T.RIVER) continue; if (!f(x, y)) continue; const d = G.dist2(x, y, v.x, v.y); if (d < bd) { bd = d; best = [x + 0.5, y + 0.5]; } } return best; };
     const by = k => (x, y) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => G.W.inb(x + a, y + b) && (k === 'sea' ? S.type[(y + b) * N + x + a] <= T.SEA : S.type[(y + b) * N + x + a] === T.RIVER && !S.road[(y + b) * N + x + a]));
+    // (the nearest one, as the prompt would choose: a tile is 4 m, the water two tiles off on the diagonal is out of the arms' reach)
+    const near = ts => ts.sort((p, q) => Math.hypot(p.X - st.X, p.Z - st.Z) - Math.hypot(q.X - st.X, q.Z - st.Z));
     out.drink = null; const rv = nearT(by('river'));
-    if (rv) { G.Avatar.place(rv[0], rv[1]); __E.f(4); const ctx = G.Interact.ctx(); const pr = G.Interact.list.find(q => q.id === 'agua'); const ts = pr.find(ctx).filter(t => !t.sea); const d0 = A().agua || 0;
-      if (ts.length) { const r = G.Interact.run({ id: 'agua', t: ts[0] }); __E.until(() => !G.Avatar.busy(), 200); out.drink = { ran: !!(r && r.ok), deed: (A().agua || 0) - d0, msg: r && r.msg }; } }
+    if (rv) { G.Avatar.place(rv[0], rv[1]); __E.f(4); const ctx = G.Interact.ctx(); const pr = G.Interact.list.find(q => q.id === 'agua'); const ts = near(pr.find(ctx).filter(t => !t.sea)); const d0 = A().agua || 0;
+      if (ts.length) { st.yaw = Math.atan2(ts[0].Z - st.Z, ts[0].X - st.X); __E.f(1); const r = G.Interact.run({ id: 'agua', t: ts[0] }); __E.until(() => !G.Avatar.busy(), 200); out.drink = { ran: !!(r && r.ok), deed: (A().agua || 0) - d0, msg: r && r.msg }; } }
     out.salt = null; const sp = nearT(by('sea'));
-    if (sp) { G.Avatar.place(sp[0], sp[1]); __E.f(4); const ctx = G.Interact.ctx(); const pr = G.Interact.list.find(q => q.id === 'agua'); const ts = pr.find(ctx).filter(t => t.sea); if (ts.length) { const r = G.Interact.run({ id: 'agua', t: ts[0] }); out.salt = { ok: !!(r && r.ok), msg: r && r.msg }; } }
+    if (sp) { G.Avatar.place(sp[0], sp[1]); __E.f(4); const ctx = G.Interact.ctx(); const pr = G.Interact.list.find(q => q.id === 'agua'); const ts = near(pr.find(ctx).filter(t => t.sea)); if (ts.length) { st.yaw = Math.atan2(ts[0].Z - st.Z, ts[0].X - st.X); __E.f(1); const r = G.Interact.run({ id: 'agua', t: ts[0] }); out.salt = { ok: !!(r && r.ok), msg: r && r.msg }; } }
     // a tame beast: stroked
-    G.Avatar.place(v.x, v.y); __E.f(4); const b = __E.body(); const a = G.Animals.spawn('ovelha', b.x + 0.4, b.y);
-    out.pet = null; if (a) { a.dom = true; __E.f(2); const ctx = G.Interact.ctx(); const pr = G.Interact.list.find(q => q.id === 'carinho'); const ts = pr.find(ctx); const d0 = A().carinho || 0;
-      if (ts.length) { const r = G.Interact.run({ id: 'carinho', t: ts[0] }); __E.until(() => !G.Avatar.busy(), 200); out.pet = { ran: !!(r && r.ok), deed: (A().carinho || 0) - d0 }; } else out.pet = { found: 0 }; }
+    G.Avatar.place(p0[0], p0[1]); __E.f(4); const b = __E.body(); const a = G.Animals.spawn('ovelha', b.x + 0.4, b.y);
+    out.pet = null; if (a) { a.dom = true; __E.f(2); const ctx = G.Interact.ctx(); const pr = G.Interact.list.find(q => q.id === 'carinho'); const ts = near(pr.find(ctx)); const d0 = A().carinho || 0;
+      if (ts.length) { st.yaw = Math.atan2(ts[0].Z - st.Z, ts[0].X - st.X); __E.f(1); const r = G.Interact.run({ id: 'carinho', t: ts[0] }); __E.until(() => !G.Avatar.busy(), 200); out.pet = { ran: !!(r && r.ok), deed: (A().carinho || 0) - d0 }; } else out.pet = { found: 0 }; }
     out.qa = __E.qa(); out.err = JSON.stringify(G.modErr);
     return out;
   });
-  ok('e13 empurrando um barranco ao alcance dos braços, o corpo o escala e fica em cima', !e13.climb || (e13.climb.on && e13.climb.rose > 0.5 && e13.climb.climbF > 5 && e13.climb.deed === 1 && !e13.climb.bad), e13.climb ? JSON.stringify(e13.climb) : 'nenhum barranco assim por perto (nada a provar)');
-  ok('e13 um barranco alto demais não se escala', !e13.tooHigh || (!e13.tooHigh.deed && !e13.tooHigh.climbF && !e13.tooHigh.bad), e13.tooHigh ? JSON.stringify(e13.tooHigh) : 'nenhum paredão por perto (nada a provar)');
+  ok('e13 uma pedra grande no caminho: o corpo a escala com as mãos, anda por cima e desce do outro lado', e13.climb && e13.climb.climbF > 5 && e13.climb.deed >= 1 && e13.climb.onTop > 3 && e13.climb.rose > e13.climb.top - 0.3 && e13.climb.past > 1 && Math.abs(e13.climb.down) < 0.06 && !e13.climb.hurt && !e13.climb.bad && !e13.climb.sunk, JSON.stringify(e13.climb));
+  ok('e13 a parede de uma casa não se escala', !e13.tooHigh || (!e13.tooHigh.deed && !e13.tooHigh.climbF && !e13.tooHigh.bad && e13.tooHigh.rose < 0.3 && e13.tooHigh.x < e13.tooHigh.wall), e13.tooHigh ? JSON.stringify(e13.tooHigh) : 'nenhuma casa ao alcance (nada a provar)');
   ok('e13 sentar no chão (X) e levantar andando', e13.sit.ok && e13.sit.anim === 'rest' && e13.sit.after !== 'rest' && e13.sit.moved, JSON.stringify(e13.sit));
   ok('e13 acenar (V): o corpo acena e quem está perto responde', e13.wave.ok && e13.wave.anim === 'wave', JSON.stringify(e13.wave));
   ok('e13 beber água no rio; o mar é salgado', (!e13.drink || (e13.drink.ran && e13.drink.deed === 1)) && (!e13.salt || (!e13.salt.ok && /salgada/.test(e13.salt.msg))), JSON.stringify({ drink: e13.drink, salt: e13.salt }));

@@ -625,12 +625,14 @@
       const r = S.rocks.get(oid);
       if (r) {
         // (a boulder: lit grey on top, darker below; moss in the wet lands, snow in the cold)
-        const sc = 0.8 + 1.6 * G.clamp(r.stone / Math.max(1, r.max || r.stone), 0.2, 1); const base = r.meteor ? [74, 58, 52] : [140, 134, 122];
+        const base = r.meteor ? [74, 58, 52] : [140, 134, 122];
         const cold = snowAt(i) > 0.4; const sty = G.Biome && G.Biome.style ? G.Biome.style(i) : 'grass'; const moss = sty === 'jungle' || sty === 'swamp' || sty === 'taiga';
         // (its faces softened a little in the light; a stone beside the big one, half sunk)
         g.sph = [r.x * TL, W.groundH(r.x, r.y) * HM, r.y * TL, 0.35];
-        if (!r.meteor && sc > 1.2) g.put(SH.dode, R3.mat(r.x * TL + Math.cos(r.id) * sc * 0.9, W.groundH(r.x, r.y) * HM + sc * 0.05, r.y * TL + Math.sin(r.id) * sc * 0.9, r.id, sc * 0.55, sc * 0.4, sc * 0.5), base);
-        g.put(SH.dode, R3.mat(r.x * TL, W.groundH(r.x, r.y) * HM + sc * 0.25, r.y * TL, G.hash(r.id) * TAU, sc * 1.4, sc, sc * 1.2), (X, Y, Z, nx, ny) => { let c = G.lerpColor([base[0] * 0.6, base[1] * 0.6, base[2] * 0.62], base, G.clamp(ny * 0.6 + 0.5, 0, 1)); if (ny > 0.55) { if (cold) c = G.lerpColor(c, SNOW, 0.8); else if (moss) c = G.lerpColor(c, [90, 120, 60], 0.5); else if (sty === 'grass' && !r.meteor) c = G.lerpColor(c, [118, 150, 74], 0.32 * G.clamp((ny - 0.55) / 0.3, 0, 1)); } return c; });
+        // (the shape is the Space's: the feet stand on these very faces)
+        const [big, small] = G.Space.stones(r);
+        if (small) g.put(SH.dode, R3.mat(small.X, small.Y, small.Z, small.ry, small.sx, small.sy, small.sz), base);
+        g.put(SH.dode, R3.mat(big.X, big.Y, big.Z, big.ry, big.sx, big.sy, big.sz), (X, Y, Z, nx, ny) => { let c = G.lerpColor([base[0] * 0.6, base[1] * 0.6, base[2] * 0.62], base, G.clamp(ny * 0.6 + 0.5, 0, 1)); if (ny > 0.55) { if (cold) c = G.lerpColor(c, SNOW, 0.8); else if (moss) c = G.lerpColor(c, [90, 120, 60], 0.5); else if (sty === 'grass' && !r.meteor) c = G.lerpColor(c, [118, 150, 74], 0.32 * G.clamp((ny - 0.55) / 0.3, 0, 1)); } return c; });
         g.sph = null;
         continue;
       }
@@ -696,7 +698,7 @@
     for (let y = y0; y < y0 + C && y < N; y++) for (let x = x0; x < x0 + C && x < N; x++) {
       const i = y * N + x;
       const tid = S.treeAt[i]; if (tid) { const t = S.trees.get(tid); if (t) b = (b * 31 + tid * 3 + (t.stage.charCodeAt(0)) + Math.floor(t.size * 4)) | 0; }
-      const oid = S.objAt[i]; if (oid) { const bu = S.bushes.get(oid); b = (b * 17 + oid + (bu ? (bu.berries > 0 ? 1 : 0) + (bu.burnt > 0 ? 2 : 0) : 0)) | 0; }
+      const oid = S.objAt[i]; if (oid) { const bu = S.bushes.get(oid), rk = !bu && S.rocks.get(oid); b = (b * 17 + oid + (bu ? (bu.berries > 0 ? 1 : 0) + (bu.burnt > 0 ? 2 : 0) : 0) + (rk ? G.Space.stoneSize(rk) * 5 : 0)) | 0; }
       c = (c * 7 + S.road[i] + (S.burnt[i] > 0 ? 3 : 0) + (S.ice && S.ice[i] ? 5 : 0) + (S.dry && S.dry[i] ? 11 : 0) + S.wall[i] * 13 + S.occ[i] * 19 + S.type[i] * 23 + (S.cliff[i] ? 29 : 0)) | 0;
       if (S.type[i] === T.RIVER) a = (a * 7 + Math.round(S.wl[i] * 8)) | 0;
     }
@@ -771,10 +773,11 @@
     const keep = new Set(); const RK = (R + 1.5) * (R + 1.5);
     for (let dy = -R - 2; dy <= R + 2; dy++) for (let dx = -R - 2; dx <= R + 2; dx++) if (dx * dx + dy * dy <= RK) keep.add(ckey(ccx + dx, ccy + dy));
     const t0 = performance.now(); let n = 0;
-    for (const [, cx, cy] of want) {
+    for (const [d2, cx, cy] of want) {
       const ch = chunks.get(ckey(cx, cy)); if (!ch) continue;
       if (!ch.near) { buildNear(ch); n++; }
-      else if (G.S.clock - ch.sigT > 1.5) { ch.sigT = G.S.clock; const s = sigOf(cx, cy); if (!sameSig(s, ch.sig)) { buildNear(ch, s); n++; } }
+      // (the ground round the body is looked at more often: a stone fallen beside it is under its feet at once — G.Space.stoneTop)
+      else if (G.S.clock - ch.sigT > (d2 <= 2 ? 0.25 : 1.5)) { ch.sigT = G.S.clock; const s = sigOf(cx, cy); if (!sameSig(s, ch.sig)) { buildNear(ch, s); n++; } }
       if (performance.now() - t0 > budget && n) break;
     }
     // (behind the body, beyond reach: thrown away, its geometry given back)
