@@ -1157,11 +1157,12 @@ canvas#game3d { touch-action: none; transition: none; }
 .ih-compass > i { position: absolute; left: 50%; top: 0; width: 0; height: 0; margin-left: -4px; border: 4px solid transparent; border-top: 5px solid var(--ih-gold); }
 
 /* the news that reach the ears, under the compass; what happens near has no label, what comes from afar says so */
-.ih-news { position: absolute; top: calc(46px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: min(520px, calc(100vw - 600px)); display: flex; flex-direction: column; align-items: center; gap: 4px; transition: opacity .4s ease; }
+.ih-news { position: absolute; top: calc(46px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: min(460px, calc(100vw - 600px)); display: flex; flex-direction: column; align-items: center; gap: 4px; transition: opacity .4s ease; }
 #inc-root.ib-on .ih-news { opacity: .16; }
 /* (where the two panels at the top leave no room between them, the news come down below them instead of over them) */
 @media (max-width: 900px) { .ih-news { top: calc(124px + env(safe-area-inset-top, 0px)); width: min(520px, 92vw); } }
-.ih-news div { font-size: 12.5px; line-height: 1.35; font-weight: 700; color: var(--ih-text); background: var(--ih-glass-2); padding: 4px 12px 5px; border-radius: 8px; border: 1px solid var(--ih-edge); text-shadow: var(--ih-ts); text-align: center; max-width: 100%; animation: ihIn .35s ease both; transition: opacity .2s linear; }
+.ih-news div { font-size: 12px; line-height: 1.35; font-weight: 700; color: var(--ih-text); background: var(--ih-glass-2); padding: 4px 12px 5px; border-radius: 8px; border: 1px solid var(--ih-edge); text-shadow: var(--ih-ts); text-align: center; max-width: 100%; animation: ihIn .35s ease both; transition: opacity .2s linear; }
+.ih-news small { color: var(--ih-mute); font-weight: 700; white-space: nowrap; }
 .ih-news div b { font-size: 9.5px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--ih-gold); margin-right: 7px; }
 
 /* the calls of the world (a war, a fire): bottom left, gold, with a mark */

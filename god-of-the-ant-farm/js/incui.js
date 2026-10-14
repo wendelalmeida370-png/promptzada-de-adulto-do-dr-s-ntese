@@ -22,7 +22,7 @@
   let root = null, hud = null, card = null, menu = null, fadeEl = null, banner = null, deathEl = null, label = null, stickEl = null;
   let best = null, bestT = 0, upT = 0, toasts = [], news = [], fade = null, hintT = 0, bannerT = 0, repeatT = 0, slowT = 0, slowSaid = false;
   let swimTold = false, lowTold = false, drownTold = false; // (the water's words: said once, and again each time it comes back)
-  G.worldHooks.push(() => { swimTold = lowTold = drownTold = false; });
+  G.worldHooks.push(() => { swimTold = lowTold = drownTold = false; news = []; if (root) renderNews(); });   // (the old world's news go with it)
   IU.best = () => best;
   const bar = (k, txt) => `<div class="ih-bar ${k}"><span class="ih-bl">${txt}</span><i><b></b></i></div>`;
 
@@ -91,11 +91,22 @@
   G.Possess.onLog.push((e, v) => {
     if (!root || !G.Modes.inc()) return;
     const near = v && Number.isFinite(e.x) && G.dist(e.x, e.y, v.x, v.y) < 30;
-    news.push({ txt: e.txt, far: !near, t: 9 }); if (news.length > 3) news.shift();
+    // (the same thing happening in several places at once — the games of three cities, the feast of two — is one line,
+    // with how many more places: the view stays open)
+    const same = news.find(n => alike(n.txt, e.txt));
+    if (same) { same.more++; same.t = 9; same.far = same.far && !near; }
+    else { news.push({ txt: e.txt, far: !near, t: 9, more: 0 }); if (news.length > 2) news.shift(); }
     renderNews();
   });
+  // (two lines alike: they end the same way for most of their length — only the place they begin with differs)
+  function alike(a, b) {
+    if (a === b) return true; let k = 0; const n = Math.min(a.length, b.length);
+    while (k < n && a[a.length - 1 - k] === b[b.length - 1 - k]) k++;
+    return k >= 24 && k >= n * 0.6;
+  }
+  IU._alike = alike;
   // (what comes from afar carries a small label instead of a word in front of it: the eye reads the news, not the label)
-  function renderNews() { $('.ih-news', hud).innerHTML = news.map(n => `<div>${n.far ? '<b>Notícia</b>' : ''}${esc(n.txt)}</div>`).join(''); }
+  function renderNews() { $('.ih-news', hud).innerHTML = news.map(n => `<div class="${n.far ? 'far' : ''}">${n.far ? '<b>Notícia</b>' : ''}${esc(n.txt)}${n.more ? ` <small>— e em mais ${n.more} ${n.more > 1 ? 'lugares' : 'lugar'}</small>` : ''}</div>`).join(''); }
   // (words that go away fade out over their last moments instead of blinking off)
   const fadeOut = (el, t, d) => { const o = t < d ? (Math.max(0, t) / d).toFixed(2) : ''; if (el._o !== o) { el._o = o; el.style.opacity = o; } };
 
