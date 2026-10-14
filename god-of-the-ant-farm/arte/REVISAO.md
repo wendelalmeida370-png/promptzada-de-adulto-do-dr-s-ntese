@@ -151,8 +151,9 @@ Do relatório do A6 sobre a integração (`SP/a6/integracao-relatorio.md`), o qu
 
 | Quem | O que entregou (commits) | Fotos depois | Revisto |
 |---|---|---|---|
-| A3 | neve como camada com bordas orgânicas; arbusto de frutinhas; linha d'água; biomas dos outros povos (dunas, oliveira, sub-bosque); copas de folhas, pinheiros de ramos, frutas pequenas, cactos com costelas, capim no pé das pedras; pé das árvores nas encostas; copas num verde mais calmo, perto do musgo da turfa; pedras com um tom por faceta (7 commits até 18:40) | a rodada dele está na fila | a ver nas fotos — pelos títulos, responde aos itens 1–6 do A3 e ao "verde que briga" |
-| A2, A4, A5 | ainda sem commit da onda 2 (o trabalho em andamento do A2 já liga materiais e malhas) | — | — |
+| A3 | neve como camada com bordas orgânicas; arbusto de frutinhas; linha d'água; biomas dos outros povos (dunas, oliveira, sub-bosque); copas de folhas, pinheiros de ramos, frutas pequenas, cactos com costelas, capim no pé das pedras; pé das árvores nas encostas; copas num verde mais calmo, perto do musgo da turfa; pedras com um tom por faceta (7 commits até 18:40) | a rodada dele está na fila | no código (d68aec0): as frutas com 8–11 cm, três por massa da copa, lisas e de cor mais funda — a nota 1 atendida; o resto pelos títulos responde aos itens 2–6 e ao "verde que briga". Conferir nas fotos dele |
+| A2 | 12 commits até 18:58: os materiais novos por padrão (os nove dos povos com `#ifdef`); as peças do Blender (as duas cabeças de dragão pelo id da casa, a empena, o portal, a banca, as pedras rúnicas); a onda 5 dos outros povos (vão das janelas de 16/22 cm, venezianas, grades, cornija, cunhais, soco, alpendre, templos); os pátios com mercadoria; as pedras das bocas de caverna no chão; o orçamento da Leve e da Média | as provas dele estão na fila | pelos títulos e pelo relatório, responde aos itens 1–6 do A2; conferir nas fotos (com a pilha de 47 materiais: o branch dele ainda tem a de 38, e sem ela os materiais novos caem no desenho antigo) |
+| A4, A5 | ainda sem commit da onda 2 | — | — |
 
 ## A1 — o que a própria revisão mudou na coluna do A1
 
