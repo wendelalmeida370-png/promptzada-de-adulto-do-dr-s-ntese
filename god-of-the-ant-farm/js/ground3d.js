@@ -26,7 +26,7 @@
   // the kinds of ground (the alpha of a tile's texel)
   const K = G3.K = { grass: 0, meadow: 1, sand: 2, dune: 3, rocky: 4, snow: 5, swamp: 6, savanna: 7, jungle: 8, path: 9, gravel: 10, paved: 11, highway: 12, burnt: 13, field: 14, bed: 15, rock: 16, taiga: 17, wet: 18, river: 19 };
   let THREE = null, map = null, data = null, det = null, mat = null, size = 0, dirtyAll = true, row = 0, gmap = null, gdata = null, fmap = null, fdata = null;
-  G.worldHooks.push(() => { dirtyAll = true; row = 0; sweep = 0; });
+  G.worldHooks.push(() => { dirtyAll = true; row = 0; sweep = 0; wBox = []; });
   // (the god's road colours: the same streets from both heights)
   const ROADC = [null, [184, 164, 128], [190, 182, 164], [146, 142, 134]];
   const FARM = { farm: 1, horta: 1, plantacao: 1, vinhedo: 1 };
@@ -189,17 +189,26 @@
   };
   // every frame: a few rows of the land round the body made again (the paths worn, the fields growing, the fire, the snow),
   // and one row of the whole map (the far land changes too: a town grows on the horizon)
-  let sweep = 0;
+  // — and the circle of each sudden winter of the god's, whole, every frame while it lasts, wherever it is: its snow fades in
+  // and melts away smoothly, and is gone with it the frame it ends (the frame after, for the circle of one just ended)
+  let sweep = 0, wBox = [];
   G3.tick = function (focus) {
     if (!THREE) return; if (dirtyAll || !map) { G3.full(); return; }
     let ch = rows(sweep, sweep + 1, 0, N); sweep = (sweep + 1) % N;
+    const L = G.S.winters; if (wBox.length || (L && L.length)) {
+      const now = L && L.length ? L.map(q => [q.x, q.y, q.r]) : [];
+      for (const b of wBox) if (!now.some(q => q[0] === b[0] && q[1] === b[1])) now.push(b);
+      for (const [x, y, r] of now) if (rows(Math.floor(y - r) - 1, Math.ceil(y + r) + 2, Math.floor(x - r) - 1, Math.ceil(x + r) + 2)) ch = true;
+      wBox = L && L.length ? L.map(q => [q.x, q.y, q.r]) : [];
+    }
     if (focus) { const L = G.Space.TILE; const cx = Math.floor(focus.X / L), cy = Math.floor(focus.Z / L); const R = 40; const y = cy - R + row; row = (row + 4) % (R * 2); if (rows(y, y + 4, cx - R, cx + R)) ch = true; }
     if (ch) map.needsUpdate = true;
   };
   // (for the verifier: of n tiles round a point, how many the picture paints otherwise than the world is now — a few may
   // lag a moment behind, the rows are made again a few a frame; fbad: the same for the floor — the leaves where the trees
   // are, nothing loose on a road, a house or the water, the snow where the cold lays it; snowBad: snow in the picture on
-  // the water, or where it is warm and no winter fell — never, whatever lags: the climate does not change in a frame)
+  // the water, or where it is warm and no winter lies — never: the climate does not change from frame to frame, and a
+  // winter's circle is made again every frame (only the god's Change of Climate lags a moment, as the rest of the picture))
   G3.check = function (fx, fy, R, n) {
     if (!data || size !== N) return { n: 0, bad: 0, fbad: 0, snowBad: 0 }; let bad = 0, fbad = 0, snowBad = 0, k = 0; const x0 = Math.floor(fx), y0 = Math.floor(fy);
     const S = G.S; const winter = !!(S.winters && S.winters.length);
