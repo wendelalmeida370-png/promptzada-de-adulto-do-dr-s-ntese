@@ -21,7 +21,8 @@
 //      a tocha do corpo à noite, as carroças com o boi, os bichos do mar, a chuva de ouro, os mortos onde caíram, o campo
 //      de capim só onde o chão do mundo tem capim
 //  e13 o corpo no mundo — escala uma pedra grande (anda por cima e desce do outro lado; a parede de uma casa não), senta e
-//      levanta, acena e é respondido, bebe no rio (o mar é salgado), faz carinho num bicho manso; os feitos entram na biografia
+//      levanta, acena e é respondido, bebe no rio (o mar é salgado), faz carinho num bicho manso, cata o ouro do chão; os
+//      feitos entram na biografia
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'); const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
@@ -672,6 +673,13 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     G.Avatar.place(p0[0], p0[1]); __E.f(4); const b = __E.body(); const a = G.Animals.spawn('ovelha', b.x + 0.4, b.y);
     out.pet = null; if (a) { a.dom = true; __E.f(2); const ctx = G.Interact.ctx(); const pr = G.Interact.list.find(q => q.id === 'carinho'); const ts = near(pr.find(ctx)); const d0 = A().carinho || 0;
       if (ts.length) { st.yaw = Math.atan2(ts[0].Z - st.Z, ts[0].X - st.X); __E.f(1); const r = G.Interact.run({ id: 'carinho', t: ts[0] }); __E.until(() => !G.Avatar.busy(), 200); out.pet = { ran: !!(r && r.ok), deed: (A().carinho || 0) - d0 }; } else out.pet = { found: 0 }; }
+    // gold on the ground (the god's rain, a dragon's hoard): picked up before the others get there — into the house, or the hands
+    G.Avatar.place(p0[0], p0[1]); __E.f(4);
+    { const b = __E.body(); const h = G.Eco.homeOf(b); const c0 = h ? h.coin || 0 : b.purse || 0; const k0 = b.carry && b.carry.k === 'ouro' ? b.carry.n : 0;
+      G.Powers.spillGold(b.x + 0.5, b.y, 12, G.Fac.idOfV(b), 'um teste'); const ctx = G.Interact.ctx(); const pr = G.Interact.list.find(q => q.id === 'ouro'); const ts = near(pr.find(ctx)); const d0 = A().ouro || 0;
+      out.gold = { piles: ts.length };
+      if (ts.length) { const id = ts[0].q.id; st.yaw = Math.atan2(ts[0].Z - st.Z, ts[0].X - st.X); __E.f(1); const r = G.Interact.run({ id: 'ouro', t: ts[0] }); __E.until(() => !G.Avatar.busy(), 200); const h2 = G.Eco.homeOf(b);
+        out.gold = { piles: ts.length, ran: !!(r && r.ok), msg: r && r.msg, gone: !G.Powers.goldPiles().some(q => q.id === id), deed: (A().ouro || 0) - d0, coin: +((h2 ? h2.coin || 0 : b.purse || 0) - c0).toFixed(2), carry: +((b.carry && b.carry.k === 'ouro' ? b.carry.n : 0) - k0).toFixed(2), coinage: G.Powers.coinage(b) }; } }
     out.qa = __E.qa(); out.err = JSON.stringify(G.modErr);
     return out;
   });
@@ -681,6 +689,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   ok('e13 acenar (V): o corpo acena e quem está perto responde', e13.wave.ok && e13.wave.anim === 'wave', JSON.stringify(e13.wave));
   ok('e13 beber água no rio; o mar é salgado', (!e13.drink || (e13.drink.ran && e13.drink.deed === 1)) && (!e13.salt || (!e13.salt.ok && /salgada/.test(e13.salt.msg))), JSON.stringify({ drink: e13.drink, salt: e13.salt }));
   ok('e13 fazer carinho num bicho manso', !e13.pet || (e13.pet.ran && e13.pet.deed === 1), JSON.stringify(e13.pet));
+  ok('e13 catar ouro do chão: some do chão, vai para a casa (ou para as mãos) e entra na biografia', e13.gold.piles > 0 && e13.gold.ran && e13.gold.gone && e13.gold.deed >= 1 && (e13.gold.coinage ? e13.gold.coin > 0 : e13.gold.carry > 0), JSON.stringify(e13.gold));
   ok('e13 verificador', !e13.qa.length && e13.err === '{}', `${e13.qa.slice(0, 3).join(' · ') || 'limpo'} · ${e13.err}`);
   }
   if (await need('e8')) {

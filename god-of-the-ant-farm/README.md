@@ -60,7 +60,7 @@ Selecione qualquer habitante (com 6 anos ou mais) e clique em **Encarnar**: a c�
 | Escalar | empurre contra uma pedra grande ou uma beirada (até ~2,6 m): o corpo agarra com as mãos e sobe sozinho (`Espaço` sobe na hora); dá para andar por cima da pedra e descer do outro lado. Pedra baixa se pisa com um passo; parede de casa, muro e paredão não se escalam |
 | Sentar no chão / levantar | `X` (andar também levanta) |
 | Acenar | `V` — quem está perto acena de volta |
-| Interagir | `E` — conversar (a ficha da pessoa, com os dados reais), bater à porta, dormir em casa, comer no armazém, guardar a carga, rezar no templo, cortar lenha (segure `E`), colher frutas, quebrar pedra, beber água no rio, fazer carinho num bicho manso, levar material para uma obra, ler as lápides |
+| Interagir | `E` — conversar (a ficha da pessoa, com os dados reais), bater à porta, dormir em casa, comer no armazém, guardar a carga, rezar no templo, cortar lenha (segure `E`), colher frutas, quebrar pedra, beber água no rio, fazer carinho num bicho manso, catar o ouro do chão (depois da Chuva de Ouro ou do tesouro de um dragão: as moedas vão para a sua casa, antes que os vizinhos cheguem), levar material para uma obra, ler as lápides |
 | Quem sou eu | `Tab` — quem você é, onde está, as histórias que te envolvem, o que esperam de você, o que você viu |
 | Voltar ao Modo Deus | `G` · ou o botão no canto |
 | Menu (pausa, teclas, sensibilidade, gráficos) | `Esc` |

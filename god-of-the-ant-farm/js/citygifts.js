@@ -134,21 +134,28 @@
     if (t.st === 1) { t.walk += dt; if (H.move(v, dt, 1.3)) { t.st = 2; v.actT = 0; } else if (t.walk > 40) H.end(v); return; }
     v.act = 'pick'; G.faceTo(v, q.x - v.x, q.y - v.y);
     if (v.actT < 1.4) return;
-    B.piles.splice(B.piles.indexOf(q), 1);
+    G.Vg.emote(v, 'happy', 2);
+    if (take(v, q).coins) H.end(v);
+    // (a people without coins brings the gold to the store, for the smith to work)
+    else H.setTask(v, { type: 'deliver', pri: 1 });
+  }
+  // a pile picked up: the coins go home (or into the purse) — or, a people without coins, the gold into the hands
+  function take(v, q) {
+    const B = G.S.gifts; B.piles.splice(B.piles.indexOf(q), 1);
     const rn = B.rains.find(r => r.id === q.rain); if (rn) { rn.got[v.id] = (rn.got[v.id] || 0) + q.n; rn.n += q.n; }
     const f = G.Fac.ofV(v);
     const shown = Math.max(1, Math.round(q.n));
     G.FX && G.FX.floater(v.x, v.y, `+${shown} ${shown > 1 ? 'moedas' : 'moeda'}`, '#ffd85a', 1.6);
-    if (f && E.coinage(f.id)) {
-      const h = E.homeOf(v); if (h) h.coin = (h.coin || 0) + q.n; else v.purse = (v.purse || 0) + q.n;
-      G.Vg.emote(v, 'happy', 2); H.end(v);
-    } else {
-      // (a people without coins brings the gold to the store, for the smith to work)
-      G.Vg.emote(v, 'happy', 2);
-      v.carry = { k: 'ouro', n: Math.max(0.2, Math.round(q.n / 6 * 10) / 10) };
-      H.setTask(v, { type: 'deliver', pri: 1 });
-    }
+    if (f && E.coinage(f.id)) { const h = E.homeOf(v); if (h) h.coin = (h.coin || 0) + q.n; else v.purse = (v.purse || 0) + q.n; return { n: q.n, coins: true }; }
+    const n = Math.max(0.2, Math.round(q.n / 6 * 10) / 10);
+    v.carry = { k: 'ouro', n: (v.carry && v.carry.k === 'ouro' ? v.carry.n : 0) + n };
+    return { n: q.n, coins: false };
   }
+  // the hands of the body (interact.js): a pile at its feet, picked up as anyone of the world picks it — the one who
+  // was running for it finds the ground bare
+  P.goldPiles = () => (G.S.gifts ? G.S.gifts.piles : []);
+  P.coinage = v => { const f = G.Fac.ofV(v); return !!(f && E.coinage(f.id)); };
+  P.takeGold = function (v, id) { const B = G.S.gifts; const q = B && B.piles.find(p => p.id === id); return q ? take(v, q) : null; };
   function endRain(B, rn) {
     B.rains.splice(B.rains.indexOf(rn), 1);
     const S = G.S; const w = where(rn.x, rn.y);

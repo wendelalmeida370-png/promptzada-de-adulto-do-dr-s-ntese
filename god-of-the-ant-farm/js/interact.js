@@ -327,6 +327,23 @@
       return { ok: true, msg: 'Você golpeia a pedra.' };
     },
   });
+  // gold on the ground (the god's Chuva de Ouro, a dragon's hoard): picked up before the others get to it
+  I.add({
+    id: 'ouro', prio: 3.5, reach: 2.4,
+    find(ctx) { const out = []; const R = 2.6 / L(); for (const q of G.Powers.goldPiles()) if (Math.abs(q.x - ctx.x) < R && Math.abs(q.y - ctx.y) < R) out.push({ q, X: q.x * L(), Z: q.y * L() }); return out; },
+    label(ctx, t) { const n = Math.max(1, Math.round(t.q.n)); return `Catar ${n} ${n > 1 ? 'moedas' : 'moeda'} de ouro`; },
+    can(ctx, t) {
+      const v = ctx.v; if (!G.Powers.goldPiles().includes(t.q)) return { ok: false, why: 'Alguém catou primeiro.' };
+      if (!hands(v)) return { ok: false, why: 'Você não tem mãos para isso.' };
+      if (!G.Powers.coinage(v) && v.carry && v.carry.n > 0 && v.carry.k !== 'ouro') return { ok: false, why: 'Suas mãos já estão cheias.' };
+      return { ok: true };
+    },
+    run(ctx, t) {
+      const v = ctx.v; const f = face(ctx, t.X, t.Z); const id = t.q.id;
+      G.Avatar.act({ anim: 'low', dur: 1.1, face: f, at: [0.5, () => { G.Audio && G.Audio.play && G.Audio.play('coin'); }], done: () => { const r = G.Powers.takeGold(v, id); if (r) G.Possess.deed('ouro', r.n); } });
+      return { ok: true, msg: G.Powers.coinage(v) ? 'Você cata as moedas: vão para a sua casa.' : 'Você cata o ouro: leve-o ao armazém.' };
+    },
+  });
   // a building going up: what one carries goes into it, as the builders' loads do (Vg's build: need, then the stock)
   I.add({
     id: 'obra', prio: 4.5, reach: 3.4,
