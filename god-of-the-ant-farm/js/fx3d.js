@@ -105,14 +105,18 @@
     fp.count = fpN; fp.instanceMatrix.needsUpdate = true; u.aT.needsUpdate = true; u.aC.needsUpdate = true;
     if (steps.size > 400) steps.clear(); // (the memory of who walked where, kept small)
   }
-  // (a step: every 0.72 m a walker goes on soft ground, a print — left, right — beside the line of the walk)
+  // (whether snow lies where a foot comes down: the snow the land's shader lays — trodden off the paths, none on a road —
+  // or, where the land cannot say, the cold's)
+  const snowUnder = (X, Z, snow) => (G.Ground3D && G.Ground3D.snowXZ ? G.Ground3D.snowXZ(X, Z) > 0.5 : snow > 0.4);
+  // (a step: every 0.72 m a walker goes on soft ground, a print — left, right — beside the line of the walk: a blue hollow
+  // in the snow, a dark one in the earth beside it, where the cold land's paths are trodden bare)
   function walkPrints(id, X, Y, Z, yaw) {
     const S = G.S; const L = G.Space.TILE; const x = Math.floor(X / L), y = Math.floor(Z / L); if (!W.inb(x, y)) return; const i = y * G.N + x; const ty = S.type[i];
     let st = steps.get(id); if (!st) { st = { X, Z, side: 1 }; steps.set(id, st); return; }
     const d = Math.hypot(X - st.X, Z - st.Z); if (d < 0.72) return; if (d > 4) { st.X = X; st.Z = Z; return; } st.X = X; st.Z = Z; st.side = -st.side;
     if (ty <= G.T.RIVER || S.road[i]) return; const snow = R3.snowAt ? R3.snowAt(i) : 0; const b = S.occ[i] && S.buildings.get(S.occ[i]);
-    const soft = snow > 0.4 ? 0 : ty === G.T.SAND || G.pathLevel(S.wear[i]) >= 2 || (b && (b.type === 'farm' || b.type === 'horta' || b.type === 'plantacao')) ? 1 : -1; if (soft < 0) return;
     const ox = -Math.sin(yaw) * 0.12 * st.side, oz = Math.cos(yaw) * 0.12 * st.side;
+    const soft = snowUnder(X + ox, Z + oz, snow) ? 0 : snow > 0.4 || ty === G.T.SAND || G.pathLevel(S.wear[i]) >= 2 || (b && (b.type === 'farm' || b.type === 'horta' || b.type === 'plantacao')) ? 1 : -1; if (soft < 0) return;
     footprint(X + ox, W.hAt((X + ox) / L, (Z + oz) / L) * G.Space.HM + 0.03, Z + oz, yaw, soft, soft === 0 ? 30 : 14);
   }
   function ripple(x, y, z, life) { if (!ring) return; const k = ripN < NR2 ? ripN++ : G.vri(0, NR2 - 1); const u = ring.userData; u.age[k] = 0; u.max[k] = life || 1.2; u.pos[k * 3] = x; u.pos[k * 3 + 1] = y; u.pos[k * 3 + 2] = z; }
@@ -462,11 +466,11 @@
         return;
       }
       if (sp < 2.4 && !(id === 'av' && sp > 0.9)) return;
-      const snow = snowAt(i); const soft = (ty === G.T.GRASS || ty === G.T.MEADOW) && !S.road[i] && G.pathLevel(S.wear[i]) < 2 && snow < 0.4;
+      const snow = snowUnder(X, Z, snowAt(i)); const soft = (ty === G.T.GRASS || ty === G.T.MEADOW) && !S.road[i] && G.pathLevel(S.wear[i]) < 2 && !snow;
       if (soft && sp < 4) return; // (soft grass raises little)
-      let c; if (snow > 0.4) c = [0.94, 0.96, 1]; else { const g = G.Ground3D.tileCol(i, x, y); c = [Math.min(1, g[0] / 255 * 1.15), Math.min(1, g[1] / 255 * 1.12), Math.min(1, g[2] / 255 * 1.1)]; }
+      let c; if (snow) c = [0.94, 0.96, 1]; else { const g = G.Ground3D.tileCol(i, x, y); c = [Math.min(1, g[0] / 255 * 1.15), Math.min(1, g[1] / 255 * 1.12), Math.min(1, g[2] / 255 * 1.1)]; }
       // (a little puff at each stride, not a trail: low, quick, faint)
-      for (let k = every('d' + id, sp > 2.4 ? sp * 0.8 : 1, dt); k > 0; k--) spawn(PA, { x: X + G.vrr(-0.15, 0.15), y: Y + 0.06, z: Z + G.vrr(-0.15, 0.15), vx: G.vrr(-0.3, 0.3), vy: G.vrr(0.15, 0.4), vz: G.vrr(-0.3, 0.3), life: G.vrr(0.5, 0.8), s0: 0.2, s1: G.vrr(0.55, 0.85), c, a: snow > 0.4 ? 0.42 : 0.2, drag: 2 });
+      for (let k = every('d' + id, sp > 2.4 ? sp * 0.8 : 1, dt); k > 0; k--) spawn(PA, { x: X + G.vrr(-0.15, 0.15), y: Y + 0.06, z: Z + G.vrr(-0.15, 0.15), vx: G.vrr(-0.3, 0.3), vy: G.vrr(0.15, 0.4), vz: G.vrr(-0.3, 0.3), life: G.vrr(0.5, 0.8), s0: 0.2, s1: G.vrr(0.55, 0.85), c, a: snow ? 0.42 : 0.2, drag: 2 });
     };
     if (av && !av.swim) { feet(av.X, av.Y, av.Z, av.sp || 0, 'av', av.wade || 0); if (av.ground !== false) walkPrints('av', av.X, av.Y, av.Z, av.yaw); }
     // (the swimmer: rings round the shoulders even when still, the arms' splashes at each stroke, a trail of foam behind;
