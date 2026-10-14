@@ -64,7 +64,7 @@ def planks(seed=11, vertical=True):
     gap = smooth(0.0, 0.035, np.minimum(u, 1 - u)) * (1 - joint)
     h = 0.75 + 0.12 * np.sin(u * np.pi) + (grain - 0.5) * 0.08 - kmap * 0.05
     h = h * gap + 0.05 * (1 - gap)
-    col = col * (0.32 + 0.68 * gap[..., None])
+    col = col * (0.44 + 0.56 * gap[..., None])          # (the gap in shade, never black: BIBLIA §2.1, joints ≥ 0.35×)
     k = curv(h, 2.0, 4.0)
     col *= (0.94 + 0.08 * k)[..., None]
     if not vertical: col = np.transpose(col, (1, 0, 2)); h = h.T
