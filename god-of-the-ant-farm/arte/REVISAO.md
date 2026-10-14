@@ -78,6 +78,9 @@ existem (A2).
 1. **Árvores frutíferas e arbustos**: trocar os poliedros chapados por cartões de folha (como o arbusto de folhas
    desenhadas já faz [crop-casa-arbusto, à direita, no alto]) ou, no mínimo, massas suaves com a folha na textura e luz
    que atravessa; frutas de 6–10 cm, muitas e meio escondidas, cor dentro da BIBLIA (S ≤ 60 numa área tão grande).
+   Onde está no código: as frutas são `SH.ico0` (icosaedro de 20 faces) com **0,3 m** na copa larga e 0,16 m nas bagas
+   do arbusto, todas `#c8283a` (S ~80%) — `realm3d.js`, o fim do `default:` das copas e o arbusto de `S.bushes`; as massas
+   da copa vêm do `crownInto` (as facetas aparecem de perto).
 2. **Coníferas** [caca-02, à direita]: camadas irregulares de galhos (cartões com agulha), pontas caídas, cada árvore com
    o seu tom (pelo id).
 3. **Pedras e rochedos** [caca-03]: o bloco de poucas faces lê como 2000; a forma com facetas partidas e o material

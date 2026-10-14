@@ -227,6 +227,8 @@ K.g.put(G.Mesh3D.part('dragao', 'olho'), R3.mat(K.x0 + p[0], K.y0 + p[1], K.z0 +
 | `runa` (1.404 tri) | pedra rúnica de granito, 2,05 m (25 cm enterrada), faixa-serpente em relevo com 43 runas, calços no pé | `pedra`, `faixa`, `runas`, `olho` | dentro da caixa de um prédio público nórdico (praça, salão, templo, cemitério), nunca num caminho; a face entalhada para quem chega; a faixa no vermelho do povo |
 | `portal` (1.144 tri) | batentes e verga entalhados com entrelaçado e volutas em volta de um vão de 1,0 × 1,9 m; soleira | `madeira`, `entalhe` | a porta de frente da casa longa e do salão, só perto e com `detail`; escale pelo vão |
 | `empena` (cavalo 252 · voluta 524 tri) | as pontas recortadas na prancha da empena: uma cabeça de cavalo com crina e olho furado, e uma voluta que enrola para dentro (as outras duas formas do `bargeEnd`, ao lado do dragão) | `cavalo` + `olho`, ou `voluta` (uma por ponta) | as pontas das tábuas de empena além da cumeeira: o plano da prancha é o da empena, a frente vai para o `out`; para o lado oposto, espelhe em x |
+| `banca` (1.174 tri) | banca de feira do tamanho da do `stalls()`: balcão de tábuas, postes, toldo de lona listrado com a barra recortada, três cestos com montes de fruta, sacos e um caixote | `madeira`, `lona` + `lona2` (as listras), `vime`, `fruta`, `saco` | o mercado e a feira, no lugar da caixa com as três bolas; a fruta na cor do que se vende, as listras nas cores do povo |
+| `casco` (868 tri) | casco de navio trincado, borda subindo nas pontas, roda e cadaste em voluta — **no quadro unitário do fx3d** (proa em +x) | `casco` | os navios do `fx3d.js` (A5), no lugar do casco facetado |
 
 ## 9. A interface do corpo (HUD — `js/incui.js`, `css/style.css`)
 
