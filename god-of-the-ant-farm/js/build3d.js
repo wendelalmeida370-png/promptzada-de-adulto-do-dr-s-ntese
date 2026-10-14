@@ -556,7 +556,7 @@ float m3scale(float p) {
     const framed = st !== 'nordico' && st !== 'egipcio'; const shut = (st === 'classico' || st === 'grego') && K.b.type !== 'insula'; const tc = st === 'asteca' ? (P.trim2 || P.trim) : (P.trim || '#6b4a30');
     const stone = P.base ? P.base[2] : '#a09a8e'; const cut = st === 'grego' ? 'marble' : st === 'romano' ? 'ashlar' : st === 'egipcio' ? 'sandstone' : 'stone'; const sh2 = st === 'grego' ? (P.trim || '#3f6fb0') : [[86, 104, 70], [104, 74, 50], [70, 92, 104]][Math.floor(K.hv(17) * 3)];
     let wk = 0; const fc = calm(tc, 0.75, 0.9); // (the people's trim calmed on a frame: a strong red only in small things)
-    const wcol = K.wallCol || P.wl || '#efe2c4', wpat = K.wallPat || (stuff(K.b).wall === 'frame' ? 'plaster' : stuff(K.b).wall); const RV = st === 'egipcio' ? 0.2 : 0.14;
+    const wcol = K.wallCol || P.wl || '#efe2c4', wpat = K.wallPat || (stuff(K.b).wall === 'frame' ? 'plaster' : stuff(K.b).wall); const RV = st === 'egipcio' ? 0.22 : 0.16; // (the wall's thickness: 15–25 cm of reveal)
     // (a window on the face whose outward direction is (ox, oz), at (px, py, pz), ww wide and hh high: the pane at the back of a
     // reveal as deep as the wall is thick — its sides of the wall's own stuff — the frame at its mouth, a sill under it; what
     // closes it by the people and the house's id: shutters, iron bars, a grille, a rolled mat)
@@ -831,7 +831,8 @@ float m3scale(float p) {
         if (cross && style > 0) {
           // (the board's end cut in a horse's head or a scroll — the model made in Blender, G.Mesh3D 'empena': a board's thickness in
           // the gable's plane, growing out from the ridge and up — where the machine carries detail; the boards' own cut elsewhere)
-          if (EMP && (style === 2 ? cls >= 1 : cls >= 2)) { const out = vec(0, 0, -sd); // (the horse on the houses, the scroll on the big ones: a cabin's own cut is boards) const s = 0.9 + cls * 0.07; const m = R3.mat(K.x0 + b2[0], K.y0 + b2[1], K.z0 + b2[2], Math.atan2(out[0], out[2]), s, s, s);
+          // (the horse on the houses, the scroll on the big ones: a cabin's own cut is boards)
+          if (EMP && (style === 2 ? cls >= 1 : cls >= 2)) { const out = vec(0, 0, -sd); const s = 0.9 + cls * 0.07; const m = R3.mat(K.x0 + b2[0], K.y0 + b2[1], K.z0 + b2[2], Math.atan2(out[0], out[2]), s, s, s);
             K.g.put(G.Mesh3D.part('empena', style === 2 ? 'cavalo' : 'voluta'), m, K.c(style === 2 ? (paint || bc) : bc)); const eye = style === 2 && G.Mesh3D.part('empena', 'olho'); if (eye) K.g.put(eye, m, K.c('#1e1610')); }
           else { const d = [b2[0] - a[0], b2[1] - a[1], b2[2] - a[2]]; const l = Math.hypot(d[0], d[1], d[2]); bargeEnd(K, b2, [d[0] / l, d[1] / l, d[2] / l], vec(0, 0, -sd), sc(rU, bt), bw * 0.8, style, bc, paint, cls >= 2 ? (P.acc || '#d8b25a') : '#1e1610'); } }
       } });
