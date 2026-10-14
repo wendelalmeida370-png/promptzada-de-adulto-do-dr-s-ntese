@@ -16,6 +16,9 @@ run('js/lib/three.min.js'); global.THREE = THREE;
 run('js/util.js');
 G.worldHooks = G.worldHooks || []; G.mapHooks = G.mapHooks || [];
 G.W = G.W || {}; G.Render = { nightness: () => 0 }; G.Art = { CLOTH: {}, icon: () => null }; G.Fac = { ofV: () => null, hex: () => '#884422' };
+// (the trades' own colours, read from js/art.js as the game has them)
+{ const m = fs.readFileSync(path.join(ROOT, 'js/art.js'), 'utf8').match(/const CLOTH = (\{[\s\S]*?\});/); if (m) G.Art.CLOTH = vm.runInThisContext('(' + m[1] + ')'); }
+try { run('js/civs.js'); } catch (e) { } // (the peoples' colours, for the clothes)
 run('js/bodymesh.js'); run('js/body3d.js'); run('js/people3d.js');
 // (the realm the modules are given: a scene and the quality — enough to make their meshes)
 const scene = new THREE.Scene();
@@ -181,6 +184,29 @@ const inside = (cm, bm) => {
       if (bad || (seat && fr > 0.01)) row.push(`${st} ${(fr * 100).toFixed(1)}% (${(wo * 100).toFixed(1)} cm)${bad ? ' FALHA' : ''}`); if (bad) fail++; }
     out.push(`${nm}: ${row.length ? row.join(', ') : 'limpa'}`); }
   ok('a capa e as saias não atravessam o corpo (capa: em todos os estados ≤1% do pano a mais de 8 mm dentro da pele; saias: ≤1%, sentadas ≤6% e ≤3 cm)', !fail, out.join(' · ')); }
+// nobody naked: every sex, age, trade, people, class, the captive, the ruler, the rich, swimming and asleep — drawn, and
+// the verifier (Body3D.check) says nothing; and an outfit made bare on purpose, which it must catch
+{ const ROLES = [null, 'lenhador', 'coletor', 'agricultor', 'construtor', 'mineiro', 'cacador', 'sacerdote', 'anciao', 'pastor', 'cavalarico', 'acougueiro', 'tecelao', 'ferreiro', 'ourives', 'oleiro', 'mercador', 'feirante', 'taverneiro', 'escriba', 'cobrador', 'contrabandista', 'guerreiro', 'pescador', 'vigia', 'explorador', 'estivador', 'curandeiro', 'carcereiro', 'vinhateiro', 'lavrador'];
+  const CIV = ['nordico', 'romano', 'grego', 'egipcio', 'asteca', 'classico'];
+  const keepFac = G.Fac.ofV, keepEco = G.Eco; G.Fac.ofV = v => v._fac || null; G.Eco = { homeOf: v => v._home || null };
+  const bad = []; let n = 0, row = 0; const st = ['idle', 'swim', 'sleep', 'walk'];
+  const flush = () => { B3.end(); for (const e of B3.check()) if (/sem roupa/.test(e)) bad.push(e); B3.begin(); row = 0; };
+  B3.begin();
+  for (const civ of CIV) for (const g of ['m', 'f']) for (const age of [1, 5, 11, 15, 30, 75]) for (const role of ROLES) for (const k of [0, 1, 2, 3]) {
+    const id = 1000 + n; const skins = (G.CIVS && G.CIVS[civ] && G.CIVS[civ].skin) || ['#d8a888'];
+    const v = { id, g, age, role: age < 13 ? null : role, civ, skin: skins[n % skins.length], hair: '#3a2a1a', kidCloth: '#4fa0d8', captive: k === 1 ? { from: 2 } : null, home: k >= 2 ? 1 : 0 };
+    if (k === 2) v._home = { type: 'sobrado', coin: 100 };
+    if (k === 3) v._fac = { id: 1, civ, leader: id };
+    const L = P3.look(v); const p = A.POSE0(); Object.assign(p, A.pose(st[n % 4], 0.5, 0));
+    P3.body(row++, 0, 0, 0, 0, p, Object.assign(L, { ground: st[n % 4] === 'swim' ? undefined : 0 }), null); n++;
+    if (row >= B3.MAXR - 1) flush();
+  }
+  flush(); B3.end(); G.Fac.ofV = keepFac; G.Eco = keepEco;
+  // (an outfit stripped on purpose: no tunic, no skirt, no trousers — and one whose only cloth is the skin's colour)
+  const o = Object.assign({}, P3.outfit({ id: 7, g: 'm', age: 30, role: 'lenhador', civ: 'egipcio', skin: '#a8744c' })); o.torso = 1; o.skirt = null; o.legs = 0;
+  const o2 = Object.assign({}, o, { torso: 0, lin: Object.assign({}, o.lin, { cloth: [0.39, 0.18, 0.073] }) });
+  const caught = !!B3.bare(o, '#a8744c'), caught2 = !!B3.bare(o2, '#a8744c');
+  ok('ninguém desenhado nu (sexo, idade, ofício, povo, cativo, governante, rico, nadando, dormindo); o verificador acusa quem está', !bad.length && caught && caught2, `${n} pessoas desenhadas, ${bad.length} sem roupa${bad.length ? ': ' + bad.slice(0, 2).join(' · ') : ''}; o despido de propósito: ${caught ? 'acusado' : 'NÃO acusado'}; o pano da cor da pele: ${caught2 ? 'acusado' : 'NÃO acusado'}`); }
 if (process.env.V) console.log(JSON.stringify(res));
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');
 process.exit(fails.length ? 1 : 0);

@@ -179,7 +179,8 @@
     }
     // (the trades: the robe of the priest and the elder, the scribe's; aprons; the hats)
     if (!kid) {
-      if (role === 'sacerdote' || role === 'anciao' || role === 'escriba') { o.skirt = 'saiaL'; o.legs = 0; o.overK = 0; o.sleeve = 0.585; if (role === 'anciao') o.cloakM = 'capa'; if (role === 'sacerdote' && civ !== 'egipcio') o.hatM = hh(27) < 0.5 ? 'capuz' : null, o.cloak = o.cloth; }
+      // (the robe is of the trade's wool — a woman of the north takes off her apron-dress for it, not down to her linen)
+      if (role === 'sacerdote' || role === 'anciao' || role === 'escriba') { if (o.overK === 1) o.cloth = o.over; o.skirt = 'saiaL'; o.legs = 0; o.overK = 0; o.sleeve = 0.585; if (role === 'anciao') o.cloakM = 'capa'; if (role === 'sacerdote' && civ !== 'egipcio') o.hatM = hh(27) < 0.5 ? 'capuz' : null, o.cloak = o.cloth; }
       if (role === 'ferreiro' || role === 'acougueiro' || role === 'taverneiro' || role === 'oleiro' || role === 'feirante') { o.overK = 2; o.over = role === 'ferreiro' ? '#5a3a24' : role === 'oleiro' ? '#b8946a' : '#e8e0cc'; o.sleeve = role === 'ferreiro' ? 0.2 : 0.42; }
       if (role === 'agricultor' || role === 'pastor' || role === 'vinhateiro' || role === 'lavrador') { o.hatM = 'chapeu'; o.hat = '#d8b86a'; o.sleeve = 0.4; }
       if (role === 'cacador' && hh(28) < 0.5) { o.hatM = 'capuz'; o.cloak = wool('#5a4a2a'); }
@@ -192,8 +193,12 @@
     if (v.captive) { o.cloakM = null; o.hatM = null; o.motif = 0; o.overK = 0; o.feetK = 1; o.trim = o.cloth; o.belt = '#6a5a4a'; o.cloakTrim = 0; }
     // (a northern cloak has a collar of fur — white on a ruler's —; every other cloak, a collar of its own cloth)
     o.fur = o.cloakM === 'capa' && civ === 'nordico' && !v.robe ? (ruler ? 2 : 1) : 0;
-    // (the colours once, as the graphics card wants them: linear)
-    o.lin = {}; for (const k of ['cloth', 'trim', 'pants', 'boots', 'belt', 'metal', 'over', 'beads', 'cloak', 'hat', 'iris', 'lips']) { const c = color(o[k]); o.lin[k] = [c.r, c.g, c.b]; }
+    // (nobody naked: the hips always under a skirt, a kilt or trousers — and no cloth the colour of its wearer's skin: a linen
+    // as pale as the skin is dyed a little darker, until it reads as cloth; Body3D.bare is the verifier's own rule)
+    if (!o.skirt && !(o.legs >= 1)) o.skirt = 'saiaC';
+    const linOf = () => { o.lin = {}; for (const k of ['cloth', 'trim', 'pants', 'boots', 'belt', 'metal', 'over', 'beads', 'cloak', 'hat', 'iris', 'lips']) { const c = color(o[k]); o.lin[k] = [c.r, c.g, c.b]; } };
+    linOf(); // (the colours once, as the graphics card wants them: linear)
+    for (let k = 0; k < 3 && G.Body3D && G.Body3D.bare && G.Body3D.bare(o, L.skin); k++) { for (const q of ['cloth', 'over', 'pants']) o[q] = mixHex(o[q], '#5a4030', 0.3); linOf(); }
     OUT.set(id, o); if (OUT.size > 2000) OUT.clear();
     return o;
   }

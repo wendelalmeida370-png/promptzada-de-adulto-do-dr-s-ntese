@@ -352,10 +352,11 @@ vec3 b3paint() {
   B3.begin = function () { for (const k in MESH) MESH[k].n = 0; B3.rows = 0; };
   // a person in row `row`: R the rig's frames (world), pose and look; which meshes they wear
   const AT = []; // (where each row's person stands, for the verifier: X, Y, Z, size)
+  const WORN = []; // (what each row's person wears, for the verifier: their clothes, their skin)
   B3.put = function (row, R, pose, L, X, Y, Z) {
     if (!K.m) { K.m = new THREE.Matrix4(); K.c = new THREE.Color(); }
     AT[row] = [X, Y, Z, L.s || 1, R[0].elements[12], R[0].elements[13], R[0].elements[14]];
-    const o = row * TW * 4;
+    const o = row * TW * 4; WORN[row] = [L.out || DEF, L.skin];
     for (let b = 0; b < NB; b++) {
       const e = K.m.multiplyMatrices(R[b], inv[b]).elements; const j = o + b * 12;
       buf[j] = e[0]; buf[j + 1] = e[4]; buf[j + 2] = e[8]; buf[j + 3] = e[12];
@@ -414,8 +415,26 @@ vec3 b3paint() {
       const a = AT[r]; if (!a) continue; const dh = Math.hypot(a[4] - a[0], a[6] - a[2]), dv = a[5] - a[1];
       if (dh > 1.2 * a[3] || dv < -0.4 || dv > 1.4 * a[3]) { out.push(`corpo ${r}: a pelve a ${dh.toFixed(2)} m de onde a pessoa está (altura ${dv.toFixed(2)})`); break; }
     }
+    // (nobody drawn naked: clothes on the trunk or on the hips — a tunic, a dress, an apron-dress; a skirt, a kilt, a
+    // loincloth or trousers —, and not of the colour of their own skin)
+    for (let r = 0; r < B3.rows; r++) { const w = WORN[r]; if (!w) continue; const why = B3.bare(w[0], w[1]); if (why) { out.push(`corpo ${r}: ${why} (${w[0].sig || 'sem roupa própria'})`); break; } }
     return out;
   };
+  // what is bare of a person dressed in u with skin skin: '' if they are dressed, or what is missing
+  B3.bare = function (u, skin) {
+    if (!K.c) K.c = new THREE.Color();
+    K.c.set(skin || '#888888'); const sk = lab(K.c.r, K.c.g, K.c.b);
+    const far = c => { const q = lab(c[0], c[1], c[2]); return Math.hypot(q[0] - sk[0], q[1] - sk[1], q[2] - sk[2]) >= 10; }; // (a cloth the colour of the skin is no cloth)
+    const trunk = (u.torso === 0 && far(u.lin.cloth)) || (u.overK === 1 && far(u.lin.over));
+    const skirtC = u.overK === 1 ? u.lin.over : u.lin.cloth;
+    const hips = (!!u.skirt && far(skirtC)) || (u.legs >= 1 && far(u.lin.pants));
+    return !trunk && !hips ? 'sem roupa no tronco e nos quadris' : '';
+  };
+  function lab(r, g, b) { // (linear RGB → CIE L*a*b*, D65)
+    const f = t => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+    const X = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.9505), Y = f(0.2126 * r + 0.7152 * g + 0.0722 * b), Z = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.089);
+    return [116 * Y - 16, 500 * (X - Y), 200 * (Y - Z)];
+  }
   B3.meshes = () => Object.keys(MESH).map(k => ({ name: k, n: MESH[k].n, tris: MESH[k].tris }));
   B3.at = row => AT[row]; // (for the verifier: where row's person stands [X, Y, Z, size, hips X, Y, Z, the lighter body])
   B3._buf = () => buf; B3._tw = () => TW; // (for the tests: the rows of numbers, read only)
