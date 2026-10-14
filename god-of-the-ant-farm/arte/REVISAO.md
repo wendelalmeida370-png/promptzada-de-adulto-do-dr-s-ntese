@@ -50,11 +50,11 @@ existem (A2).
 
 ## A2 — arquitetura (build3d, props3d, things3d)
 
-1. **Ligar as peças-herói que já existem.** A cabeça de dragão (onda 1), a pedra rúnica, o portal entalhado e as pontas
-   de empena (onda 2) estão no `index.html` e, na integração, nenhuma é desenhada (nenhum `G.Mesh3D.part` no código). As
-   pontas da cumeeira ainda são os segmentos do `bargeEnd` (a conferir de perto na vista `hedeby-casa`): trocar pelo
-   `dragao` (casa longa, salão) e pela `empena` (`cavalo` ou `voluta` pelo `G.hash(b.id)`), e o portal na porta de frente
-   da casa longa. O como está em `SP/a1/pedidos.md` e na BIBLIA §8. De passagem: as pontas das terças saindo da empena são
+1. **Ligar as peças-herói que já existem.** Na integração nenhuma malha do Blender é desenhada (nenhum
+   `G.Mesh3D.part` no código): as pontas da cumeeira são os segmentos do `bargeEnd`. No seu trabalho em andamento (lido sem
+   editar, 13:42) o `dragao` já entra nas casas ricas e a `runa` já tem lugar — ótimo. Faltam: a `empena` (`cavalo` ou
+   `voluta` pelo `G.hash(b.id)`, nas casas que não levam dragão: hoje são segmentos), o `portal` na porta de frente da casa
+   longa e do salão, e a `banca` no mercado (item 4). O como está em `SP/a1/pedidos.md` e na BIBLIA §8. De passagem: as pontas das terças saindo da empena são
    prismas de 6 lados [e6-terreno, no alto; `SP/a1/crop-confere.png`, à esquerda] — 8 a 10 lados e um chanfro na ponta.
 2. **Janelas dos povos quentes rentes à parede, de moldura vermelho-vivo** [crop-romanas, à direita: as quatro janelas]:
    recuar o vidro na espessura da parede (15–25 cm de vão, a parede mostrando a grossura), acalmar a moldura (o
@@ -64,11 +64,11 @@ existem (A2).
    ligados (caiação, estuque, adobe), a parede ganha calombo e pincel; falta quebrar a caixa — base de cantaria/arenito
    (`ashlar`, `sandstone`), cunhais de pedra nos cantos, uma cornija sob o beiral (a faixa escura sob o beiral, que você já
    fez no trabalho em andamento, ajuda). Uma coisa-herói por casa (porta com arco ou alpendre, um balcão).
-4. **As bancas do mercado** [e1-no-mercado]: tampo de tábuas (`planksH`) com pernas, toldo de lona listrada (`canvas`),
-   cestos (`wicker`) e caixotes, a fruta em montinhos de muitas bolinhas pequenas e cores calmas — a feira de Hedeby da
-   BIBLIA §10.
-5. **Os nove materiais das outras culturas** já estão ligados no seu trabalho em andamento (o seu pedido ao líder): a
-   conferir nas vistas `metropole-*` quando entregar — o grego branco e azul, o romano de tégula e cantaria, o egípcio de
+4. **As bancas do mercado** [e1-no-mercado; `SP/a1/crop-bancas.png`]: hoje um caixote com três bolas de 36 cm. A malha
+   `banca` (feita para isto, do tamanho da sua `stalls()`) traz o balcão de tábuas, o toldo listrado com a barra
+   recortada, os cestos com montes de fruta, os sacos e um caixote — a feira de Hedeby da BIBLIA §10.
+5. **Os nove materiais das outras culturas** já estão ligados no seu trabalho em andamento (números de padrão a partir
+   de 34, com `#ifdef`): a conferir nas vistas `metropole-*` quando entregar — o grego branco e azul, o romano de tégula e cantaria, o egípcio de
    adobe e arenito, o asteca de estuque e tezontle.
 6. **Detalhe menor**: na casa nórdica a porta e a parede ficam do mesmo marrom [caca-01, à direita]; a porta nórdica do
    povo é bem mais escura (`#3a2616` contra `#7e5e40`) — confira se a porta usa `P.door`.
@@ -80,7 +80,9 @@ existem (A2).
    que atravessa; frutas de 6–10 cm, muitas e meio escondidas, cor dentro da BIBLIA (S ≤ 60 numa área tão grande).
    Onde está no código: as frutas são `SH.ico0` (icosaedro de 20 faces) com **0,3 m** na copa larga e 0,16 m nas bagas
    do arbusto, todas `#c8283a` (S ~80%) — `realm3d.js`, o fim do `default:` das copas e o arbusto de `S.bushes`; as massas
-   da copa vêm do `crownInto` (as facetas aparecem de perto).
+   da copa vêm do `crownInto` (as facetas aparecem de perto). No seu trabalho em andamento (lido sem editar, 13:43) o
+   arbusto já tem massas redondas de perto e bagas pequenas em cachos de três — é isso; falta a árvore frutífera, cujas
+   frutas continuam com 0,3 m (agora lisas): 6–10 cm, mais numerosas, parte delas dentro da copa.
 2. **Coníferas** [caca-02, à direita]: camadas irregulares de galhos (cartões com agulha), pontas caídas, cada árvore com
    o seu tom (pelo id).
 3. **Pedras e rochedos** [caca-03]: o bloco de poucas faces lê como 2000; a forma com facetas partidas e o material
