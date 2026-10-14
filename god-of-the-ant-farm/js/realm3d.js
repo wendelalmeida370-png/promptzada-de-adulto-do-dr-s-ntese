@@ -19,12 +19,19 @@
   const R3 = G.Realm = { on: false, built: 0, failed: null, stats: { chunks: 0, near: 0, builds: 0, rebuilds: 0, parts: 0, farBuilds: 0, ms: 0 } };
   const C = 16, TAU = Math.PI * 2;
   const Sp = () => G.Space;
-  // quality: what the machine can carry (the player's choice, kept in this browser only)
+  // quality: what the machine can carry (the player's choice, kept in this browser only) — the same world and the same light
+  // in every one; the higher ones only draw more of it, farther and finer. shadows: the side of the sun's picture in texels
+  // (0: none); sbox: half the side of the ground it covers (m); ao: the shade in the corners and where things touch (0 off,
+  // 1 at half the resolution, 2 finer); bloom: the glow of what is brighter than white (lamps at night, the sun on the water);
+  // lights: how many of the nearest flames and lit windows light what is round them
   const QUAL = {
-    baixa: { scale: 0.75, near: 2, shadows: 0, npcs: 18, grass: 0, view: 260, detail: 0, field: 0 },
-    media: { scale: 1, near: 3, shadows: 1024, npcs: 36, grass: 1, view: 420, detail: 1, field: 20 },
-    alta: { scale: 1, near: 4, shadows: 2048, npcs: 60, grass: 1, view: 640, detail: 1, field: 30 },
+    baixa: { scale: 0.75, near: 2, shadows: 0, npcs: 18, grass: 0, view: 260, detail: 0, field: 0, sbox: 36, ao: 0, bloom: 0, lights: 1 },
+    media: { scale: 1, near: 3, shadows: 1024, npcs: 36, grass: 1, view: 420, detail: 1, field: 20, sbox: 40, ao: 0, bloom: 0, lights: 2 },
+    alta: { scale: 1, near: 4, shadows: 2048, npcs: 60, grass: 1, view: 640, detail: 1, field: 30, sbox: 52, ao: 1, bloom: 1, lights: 3 },
+    ultra: { scale: 1, near: 5, shadows: 4096, npcs: 90, grass: 1, view: 900, detail: 1, field: 40, sbox: 68, ao: 2, bloom: 1, lights: 4 },
   };
+  // (the presets in the order the menu shows them, with their names)
+  R3.QNAMES = [['baixa', 'Leve'], ['media', 'Média'], ['alta', 'Alta'], ['ultra', 'Ultra']];
   R3.QUAL = QUAL;
   R3.q = (() => { try { return localStorage.getItem('gotaf-3dq') || 'media'; } catch (e) { return 'media'; } })();
   if (!QUAL[R3.q]) R3.q = 'media';
@@ -36,7 +43,7 @@
   R3.setOver = function (k, v) { if (!(k in QUAL.media) || !Number.isFinite(v)) return; over[k] = v; qc = null; try { localStorage.setItem('gotaf-3dover', JSON.stringify(over)); } catch (e) { } if (renderer) applyQuality(); };
 
   let THREE = null, renderer = null, scene = null, camera = null, canvas = null;
-  let sun = null, hemi = null, skyMesh = null, skyU = null, stars = null, moonL = null;
+  let sun = null, hemi = null, skyMesh = null, skyU = null, stars = null;
   const MAT = {};
   const U = R3.U = { time: { value: 0 }, wind: { value: null }, body: { value: null }, sky: { value: null } }; // (the clocks and winds of the drawing: only seen)
   R3.scene = () => scene; R3.camera = () => camera; R3.three = () => THREE; R3.renderer = () => renderer; R3.canvas = () => canvas; R3.mats = () => MAT;
@@ -146,47 +153,96 @@
   // ------------------------------ the painter's light ------------------------------
   // (patched once into three.js' own pieces of shader, so every material of the 3D has it — the look of the god's drawing
   // and of a painted world like Breath of the Wild: a soft band from shade to light instead of a smooth fall; a rim of
-  // sunlight on the edges that turn away from it; the far land going blue into the haze, the haze warmer toward the sun;
-  // the colours kept a little richer after the tone curve)
+  // sunlight on the edges that turn away from it; the air — the far land going blue into a haze that is the sky's own colour
+  // at the horizon (warm toward the sun), a low mist over the water and in the hollows, thick at dawn; shadows that fade out
+  // at the edge of the sun's picture instead of stopping on a line; the colours kept a little richer after the tone curve)
+  // the air and the sky, the same for every material: three.js copies the uniforms of its own materials from its library,
+  // a plain object by reference — so these few objects, set once a frame by light(), reach every material made after this
+  // gxSunW: toward the sun · gxHor: the sky at the horizon · gxGlow: its glow toward the sun · gxBelt: the pink of the
+  // dusk opposite it · gxAir: (haze k [1/m], mist at its base [1/m], mist falloff [1/m], mist base height [m]) ·
+  // gxAir2: (haze start [m], the end of the view from, to [m], how blue the distance goes)
+  const v4 = (x, y, z, w) => ({ value: { x, y, z, w } });
+  const GX = { gxSunW: v4(0, 1, 0, 0), gxHor: v4(0.6, 0.7, 0.85, 0), gxGlow: v4(0, 0, 0, 0), gxBelt: v4(0, 0, 0, 0), gxAir: v4(0.003, 0.001, 0.11, 3), gxAir2: v4(0, 1250, 1520, 1) };
+  R3.GX = GX;
+  // (the haze of the horizon in a direction: shared by the sky's dome and the air in front of everything, so the far land
+  // melts into exactly the sky behind it)
+  const GXHAZE = `uniform vec3 gxSunW; uniform vec3 gxHor; uniform vec3 gxGlow; uniform vec3 gxBelt;
+vec3 gxHaze( vec3 d ) {
+	float cs = dot( d, gxSunW ); float s = max( cs, 0.0 ); float s2 = s * s; float s4 = s2 * s2; float s8 = s4 * s4; float a = max( - cs, 0.0 );
+	return gxHor + gxGlow * ( s4 * 0.45 + s8 * s8 * 0.55 ) + gxBelt * a * a;
+}`;
+  // (the grade after the tone curve, the same here and in the post-processing's last pass)
+  const GXGRADE = `vec3 gxGrade( vec3 c ) {
+	float lum = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
+	// (a little richer in the middle tones, not in the lights: green stays moss, never neon)
+	c = max( mix( vec3( lum ), c, 1.0 + 0.12 * ( 1.0 - smoothstep( 0.5, 0.95, lum ) ) ), 0.0 );
+	// (a gentle S in the eye's own scale: the shade deeper, the light brighter — not washed out; the darks kept)
+	vec3 cp = sqrt( c ); cp = mix( cp, cp * cp * ( 3.0 - 2.0 * cp ), 0.22 * smoothstep( 0.18, 0.5, cp ) ); c = cp * cp;
+	// (the painter's split: the shadows a little cool, the lights a little warm)
+	return c * mix( vec3( 0.96, 0.985, 1.04 ), vec3( 1.025, 1.0, 0.97 ), smoothstep( 0.04, 0.5, lum ) );
+}`;
+  R3.GLSL = { haze: GXHAZE, grade: GXGRADE };
   let toned = false;
   function toon() {
     if (toned) return; toned = true; const SC = THREE.ShaderChunk;
-    SC.lights_lambert_pars_fragment = SC.lights_lambert_pars_fragment.replace('float dotNL = saturate( dot( geometryNormal, directLight.direction ) );', `float nl = dot( geometryNormal, directLight.direction );
+    // (each patch must find its place: a three.js that changed under it is said out loud, not drawn wrong in silence)
+    const rep = (n, a, b) => { if (SC[n].indexOf(a) < 0) { console.warn('3D: o pedaço ' + n + ' do three.js mudou — luz incompleta'); return; } SC[n] = SC[n].replace(a, b); };
+    rep('lights_lambert_pars_fragment', 'float dotNL = saturate( dot( geometryNormal, directLight.direction ) );', `float nl = dot( geometryNormal, directLight.direction );
 	float dotNL = smoothstep( -0.06, 0.4, nl ) * 0.8 + saturate( nl ) * 0.2;
 	#ifndef RIM
 	#define RIM 0.14
 	#endif
 	float rimV = pow( 1.0 - saturate( dot( geometryNormal, geometryViewDir ) ), 4.0 ) * saturate( dot( -geometryViewDir, directLight.direction ) + 0.25 );
 	reflectedLight.directDiffuse += directLight.color * material.diffuseColor * rimV * RIM;`);
-    SC.fog_fragment = `#ifdef USE_FOG
+    // (the sun's picture ends softly: near its edge the shadows thin out, so its border never shows as a line on the land)
+    rep('shadowmap_pars_fragment', 'return mix( 1.0, shadow, shadowIntensity );', `vec2 se = abs( shadowCoord.xy * 2.0 - 1.0 );
+		return mix( 1.0, shadow, shadowIntensity * ( 1.0 - smoothstep( 0.8, 0.97, max( se.x, se.y ) ) ) );`);
+    // the air: where each point is in the world (for the mist, which lies low), carried to the fragment
+    SC.fog_pars_vertex = `#ifdef USE_FOG
+	varying float vFogDepth;
+	varying vec3 vFogW;
+#endif`;
+    SC.fog_vertex = `#ifdef USE_FOG
+	vFogDepth = - mvPosition.z;
+	vFogW = cameraPosition + ( vec4( mvPosition.xyz, 0.0 ) * viewMatrix ).xyz;
+#endif`;
+    SC.fog_pars_fragment = `#ifdef USE_FOG
+	uniform vec3 fogColor;
+	varying float vFogDepth;
+	varying vec3 vFogW;
 	#ifdef FOG_EXP2
-		float fogFactor = 1.0 - exp( - fogDensity * fogDensity * vFogDepth * vFogDepth );
+		uniform float fogDensity;
 	#else
-		float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
+		uniform float fogNear;
+		uniform float fogFar;
 	#endif
-	vec3 fogC = fogColor;
-	#if ( defined( LAMBERT ) || defined( PHONG ) ) && NUM_DIR_LIGHTS > 0
+	uniform vec4 gxAir; uniform vec4 gxAir2;
+	${GXHAZE}
+#endif`;
+    // (the air is laid over the light itself, before the tone curve — the same in the picture drawn straight to the screen
+    // and in the one the post-processing finishes: the haze and the sky meet in the same light)
+    SC.fog_fragment = '';
+    SC.tonemapping_pars_fragment += '\n' + GXGRADE;
+    SC.tonemapping_fragment = `#ifdef USE_FOG
 	{
-		vec3 ray = normalize( -vViewPosition );
-		float toSun = pow( saturate( dot( ray, directionalLights[ 0 ].direction ) ), 6.0 );
-		vec3 sl = directionalLights[ 0 ].color; vec3 sc = sl / max( 0.001, max( sl.r, max( sl.g, sl.b ) ) );
-		fogC = mix( fogColor, fogColor * 0.6 + sc * 0.4, toSun * 0.55 * step( 0.05, sl.r + sl.g + sl.b ) );
-		float aer = smoothstep( fogNear * 0.3, fogFar * 1.1, vFogDepth );
-		gl_FragColor.rgb = mix( gl_FragColor.rgb, gl_FragColor.rgb * vec3( 0.55, 0.62, 0.74 ) + fogC * 0.3, aer * 0.6 );
+		vec3 fr = vFogW - cameraPosition; float fl = length( fr ); vec3 fd = fr / max( fl, 1e-4 );
+		float dl = max( fl - gxAir2.x, 0.0 );
+		// (the haze of distance: nothing near, then more and more — and the low mist, thicker toward its base)
+		float tau = dl * dl * gxAir.x * gxAir.x;
+		float bd = clamp( gxAir.z * fr.y, -60.0, 60.0 ); float lk = abs( bd ) > 1e-3 ? ( 1.0 - exp( - bd ) ) / bd : 1.0 - 0.5 * bd;
+		tau += gxAir.y * exp( - gxAir.z * ( cameraPosition.y - gxAir.w ) ) * dl * lk;
+		// (the blue goes first: the far hills turn blue before they fade; at the very end of the view everything is haze)
+		vec3 ff = 1.0 - exp( - tau * mix( vec3( 1.0 ), vec3( 0.8, 0.93, 1.12 ), gxAir2.w ) );
+		ff = max( ff, vec3( smoothstep( gxAir2.y, gxAir2.z, fl ) ) );
+		gl_FragColor.rgb = mix( gl_FragColor.rgb, gxHaze( normalize( vec3( fd.x, max( fd.y, 0.0 ) * 0.25, fd.z ) ) ), ff );
 	}
-	#endif
-	gl_FragColor.rgb = mix( gl_FragColor.rgb, fogC, fogFactor );
+#endif
+#if defined( TONE_MAPPING )
+	gl_FragColor.rgb = gxGrade( toneMapping( gl_FragColor.rgb ) );
 #endif`;
-    SC.tonemapping_fragment = `#if defined( TONE_MAPPING )
-	gl_FragColor.rgb = toneMapping( gl_FragColor.rgb );
-	{ vec3 c = gl_FragColor.rgb; float lum = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
-	  c = max( mix( vec3( lum ), c, 1.18 ), 0.0 );
-	  // (a gentle S in the eye's own scale: the shade deeper, the light brighter — not washed out)
-	  vec3 cp = sqrt( c ); cp = mix( cp, cp * cp * ( 3.0 - 2.0 * cp ), 0.26 * smoothstep( 0.18, 0.5, cp ) ); c = cp * cp; // (the darks kept: a shade is never black)
-	  // (the painter's split: the shadows a little cool, the lights a little warm)
-	  c *= mix( vec3( 0.95, 0.98, 1.05 ), vec3( 1.03, 1.0, 0.96 ), smoothstep( 0.04, 0.5, lum ) );
-	  gl_FragColor.rgb = c; }
-#endif`;
+    // (and every material three.js makes from its library from now on gets the air's uniforms — the same objects)
+    for (const k in THREE.ShaderLib) { const u = THREE.ShaderLib[k].uniforms; if (u && u.fogColor) Object.assign(u, GX); }
+    Object.assign(THREE.UniformsLib.fog, GX);
   }
   function init() {
     THREE = window.THREE; if (!THREE) throw new Error('three.js não carregou');
@@ -198,41 +254,68 @@
     canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;display:none;z-index:1;opacity:0;outline:none;';
     document.body.insertBefore(canvas, document.getElementById('game').nextSibling);
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', alpha: false });
-    // (the neutral curve keeps the colours the god's view paints: ACES would darken and wash them)
-    renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1.0;
+    // (the neutral curve keeps the colours the god's view paints: ACES would darken and wash them; the exposure follows the
+    // hour — light(): the eye opens a little at dusk and at night, as ours does)
+    renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1.0; renderer.outputColorSpace = THREE.SRGBColorSpace;
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1600);
-    hemi = new THREE.HemisphereLight(0xcfe6ff, 0x5a5a3a, 1.2); scene.add(hemi);
+    // the light of the hour: the sky's (a hemisphere — the sky's own colour from above, the warm bounce of the land from
+    // below) and one key light that casts the shadows: the sun by day, the moon by night (one light: every material pays
+    // for each light it is lit by)
+    hemi = new THREE.HemisphereLight(0xcfe6ff, 0x5a5a3a, 1); scene.add(hemi);
     sun = new THREE.DirectionalLight(0xfff2dc, 2.4); sun.position.set(40, 80, 30); scene.add(sun); scene.add(sun.target);
-    moonL = new THREE.DirectionalLight(0x8aa4ff, 0); scene.add(moonL);
-    scene.fog = new THREE.Fog(0xbfd8ea, 120, 600);
-    // the sky: a dome painted from the horizon up, the glow of the sun, the moon, and a layer of clouds drifting with the
-    // world's wind — thin on a fair day, a grey ceiling in the rain (only seen: it reads the weather, it is not the weather)
-    skyU = { top: { value: new THREE.Color(0x5a9ae0) }, hor: { value: new THREE.Color(0xcfe4f2) }, sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color(0xfff0c0) }, night: { value: 0 },
-      cover: { value: 0.3 }, cloudCol: { value: new THREE.Color(0xffffff) }, uT: U.time, uWind: U.wind, uNoise: { value: G.Ground3D.cloudNoise() } };
-    R3.skyU = skyU; // (the sky's colours, for what reflects it: the water, the windows)
+    scene.fog = new THREE.Fog(0xbfd8ea, 1250, 1520);
+    // the sky: a dome painted from the haze of the horizon (the very colour the far land melts into) up to the deep colour
+    // overhead, the glow round the sun, the pink of the dusk opposite it, the sun's disc and the moon's, the stars, and a
+    // layer of clouds drifting with the world's wind — thin on a fair day, a grey ceiling in the rain, lit gold at sunset
+    // (only seen: it reads the weather, it is not the weather). In the same light as everything (linear, the same tone curve)
+    skyU = Object.assign({ top: { value: new THREE.Color(0x5a9ae0) }, hor: { value: new THREE.Color(0xcfe4f2) }, sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color(0xfff0c0) }, night: { value: 0 },
+      disc: { value: new THREE.Color(0) }, moonDir: { value: new THREE.Vector3(0, -1, 0) }, moonCol: { value: new THREE.Color(0) }, keyDir: { value: new THREE.Vector3(0, 1, 0) }, uStars: { value: 0 },
+      cover: { value: 0.3 }, cloudCol: { value: new THREE.Color(0xffffff) }, cloudSh: { value: new THREE.Color(0x8890a0) }, uT: U.time, uWind: U.wind, uNoise: { value: G.Ground3D.cloudNoise() } }, GX);
+    R3.skyU = skyU; // (the sky's colours, for what reflects it: the water, the windows — top, hor; sunDir/sunCol: the sun itself)
     skyMesh = new THREE.Mesh(new THREE.SphereGeometry(1400, 32, 16), new THREE.ShaderMaterial({
       uniforms: skyU, side: THREE.BackSide, depthWrite: false, fog: false,
       vertexShader: 'varying vec3 vd; void main(){ vd = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-      fragmentShader: `uniform vec3 top; uniform vec3 hor; uniform vec3 sunDir; uniform vec3 sunCol; uniform float night; uniform float cover; uniform vec3 cloudCol; uniform float uT; uniform vec3 uWind; uniform sampler2D uNoise; varying vec3 vd;
+      fragmentShader: `uniform vec3 top; uniform vec3 disc; uniform vec3 moonDir; uniform vec3 moonCol; uniform vec3 keyDir; uniform float uStars; uniform float cover; uniform vec3 cloudCol; uniform vec3 cloudSh; uniform float uT; uniform vec3 uWind; uniform sampler2D uNoise; varying vec3 vd;
+        ${GXHAZE}
+        float cloudN(vec2 uv) { return texture2D(uNoise, uv).r * 0.68 + texture2D(uNoise, uv * 3.1 + 0.37).g * 0.32; }
         void main(){
-          vec3 d = normalize(vd); float h = d.y;
-          vec3 c = mix(hor, top, pow(clamp(h, 0.0, 1.0), 0.48)); if (h < 0.0) c = mix(hor, hor * 0.72, clamp(-h * 4.0, 0.0, 1.0));
-          float s = max(dot(d, sunDir), 0.0); float low = 1.0 - clamp(h * 2.5, 0.0, 1.0);
-          c += sunCol * (pow(s, 900.0) * 3.0 + pow(s, 28.0) * 0.22 + pow(s, 5.0) * 0.1 * low) * (1.0 - night * 0.85);
-          vec3 md = -sunDir; float m = max(dot(d, md), 0.0); c += vec3(0.85, 0.9, 1.0) * (pow(m, 1400.0) * 2.0 + pow(m, 60.0) * 0.05) * night;
+          vec3 d = normalize(vd); float h = d.y; float e = pow(max(h, 0.0), 0.42);
+          // (from the haze of the horizon to the deep colour overhead: most of the change low down, where the air is thickest)
+          vec3 hz = gxHaze(d); vec3 c = mix(hz, top, e);
+          float cs = max(dot(d, gxSunW), 0.0);
+          // (the bright sky round the sun reaches higher than the haze)
+          c += gxGlow * (cs * cs * cs * cs * cs) * 0.3 * e * (1.0 - e * 0.6);
+          // (under the horizon: the far haze over the sea, a little darker downward)
+          if (h < 0.0) c = hz * (1.0 - min(-h * 2.0, 0.3));
+          // (on a clear night, the faint river of the galaxy across the stars)
+          if (uStars > 0.01 && h > 0.0) { float bd = dot(d, vec3(0.42, 0.56, 0.71)); float n = texture2D(uNoise, d.xz / (h + 0.4) * 0.6).r;
+            c += vec3(0.5, 0.56, 0.75) * exp(-bd * bd * 30.0) * (0.35 + n * 0.9) * 0.028 * uStars * smoothstep(0.0, 0.25, h); }
+          float cl = 0.0;
           if (h > 0.0) {
             vec2 uv = d.xz / (h + 0.08) * 0.11 + uWind.xy * uT * 0.0016;
-            float n = texture2D(uNoise, uv).r * 0.68 + texture2D(uNoise, uv * 3.1 + 0.37).g * 0.32;
-            float cl = smoothstep(0.98 - cover, 1.18 - cover, n) * smoothstep(0.0, 0.22, h);
+            float n = cloudN(uv);
+            cl = smoothstep(0.98 - cover, 1.18 - cover, n) * smoothstep(0.0, 0.22, h);
             float thick = smoothstep(0.98 - cover, 1.5 - cover, n);
-            // (a cloud is lit on the side of the sun and grey in its own shade: denser toward the sun is darker here)
-            float ns = texture2D(uNoise, uv + normalize(sunDir.xz + 1e-4) * 0.018).r * 0.68 + texture2D(uNoise, (uv + normalize(sunDir.xz + 1e-4) * 0.018) * 3.1 + 0.37).g * 0.32;
-            float sh = clamp((ns - n) * 5.0, -0.5, 0.6);
-            vec3 cc = cloudCol * (1.06 - thick * 0.3) * (1.0 - sh * 0.35) + sunCol * pow(s, 6.0) * 0.35 * (1.0 - night) + sunCol * max(0.0, -sh) * 0.25 * (1.0 - night);
+            // (a cloud is lit on the side of the key light and grey in its own shade: denser toward the light is darker here;
+            // its thin edges toward the sun shine — the silver lining, gold at sunset)
+            float ns = cloudN(uv + normalize(keyDir.xz + 1e-4) * 0.018);
+            float sh = clamp((ns - n) * 5.0 + thick * 0.45, 0.0, 1.0);
+            vec3 cc = mix(cloudCol, cloudSh, sh) + gxGlow * pow(cs, 4.0) * 0.55 * (1.0 - thick);
             c = mix(c, cc, cl * 0.94);
           }
-          gl_FragColor = vec4(c, 1.0); }`,
+          // (the sun's disc, brighter than white — the glow of the higher qualities catches it — and the moon's with its halo;
+          // both behind the clouds)
+          c += disc * smoothstep(0.99955, 0.99975, cs) * (1.0 - cl);
+          float cm = max(dot(d, moonDir), 0.0);
+          c += moonCol * (smoothstep(0.99955, 0.99972, cm) + pow(cm, 300.0) * 0.05) * (1.0 - cl * 0.85);
+          gl_FragColor = vec4(c, 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+          #ifdef TONE_MAPPING
+          gl_FragColor.rgb += (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0; // (no bands in the gradient)
+          #endif
+        }`,
     }));
     skyMesh.renderOrder = -1; skyMesh.frustumCulled = false; scene.add(skyMesh);
     { const n = 700, p = new Float32Array(n * 3); for (let k = 0; k < n; k++) { const a = G.hash(k * 3 + 1) * TAU, e = Math.asin(G.hash(k * 7 + 2) * 0.95 + 0.04), r = 1300; p[k * 3] = Math.cos(a) * Math.cos(e) * r; p[k * 3 + 1] = Math.sin(e) * r; p[k * 3 + 2] = Math.sin(a) * Math.cos(e) * r; }
@@ -293,23 +376,30 @@
       sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n normal = normal * faceDirection;');
     };
     // water: the waves the god's view draws, in light — trains of waves running with the wind (long swells on the open sea,
-    // a chop on the rivers, calm against the shore), the sky in it (pale at the horizon, deep blue above, as the angle asks),
-    // the sun glittering on the slopes of the waves, the crests lit through, the shallows clear and the deep dark, foam where
-    // it meets the land and on the crests when the wind blows hard
+    // a chop on the rivers, calm against the shore, still in a basin), and what water is to the eye: how deep it is, read at
+    // every point from the bed the 3D draws under it (bedTick) — clear over the sand at the shore, where it thins to nothing on
+    // the land wherever the two meet, blue and then dark as it deepens; the sky in its face as the angle asks (the lower one
+    // looks along it, the more sky: Fresnel); the key light glittering on the slopes of the waves (the sun by day, the moon's
+    // road at night); the crests lit through; foam where it runs up the land, and on the crests when the wind blows hard
+    // (aShore, a corner's mark: 0 open water, 1 against the land, 2 the still water of a basin, -1 the sea beyond the map; the
+    // alpha of its colour: the least it hides of what is under it — a paddy's water stays water)
+    WU.bedN.value = new THREE.Vector2(2 / G.Space.TILE, 1); WU.key.value = new THREE.Color(); WU.irr.value = new THREE.Color(); WU.deep.value = new THREE.Color(0.008, 0.04, 0.075);
     MAT.water = new THREE.MeshPhongMaterial({ vertexColors: true, transparent: true, opacity: 1, shininess: 60, specular: 0x1c2228, depthWrite: false });
     MAT.water.onBeforeCompile = sh => {
-      Object.assign(sh.uniforms, { uTime: U.time, uSky: U.sky, uSkyTop: skyU.top, uSkyHor: skyU.hor, uSunDir: skyU.sunDir, uSunCol: skyU.sunCol, uNight: skyU.night, uDet: { value: G.Ground3D.detail() }, uWind: U.wind, uSeaY: { value: G.SEA * G.Space.HM } });
-      sh.vertexShader = 'uniform float uTime; uniform vec3 uWind; uniform float uSeaY; attribute float aShore; varying float vShore; varying vec3 vWW;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-        vec4 wp = modelMatrix * vec4(position, 1.0); float sea = 1.0 - step(0.15, abs(wp.y - uSeaY));
-        float sw = (0.35 + uWind.z * 0.5) * (1.0 - aShore * 0.75) * mix(0.3, 1.0, sea);
-        transformed.y += (sin(wp.x * 0.33 + uTime * 1.3) * 0.06 + cos(wp.z * 0.29 + uTime * 1.05) * 0.05) + sin(dot(wp.xz, normalize(uWind.xy + vec2(0.001))) * 0.21 - uTime * 1.4) * 0.12 * sw;
-        vShore = aShore; vWW = wp.xyz;`);
-      sh.fragmentShader = 'uniform float uTime; uniform vec3 uSky; uniform vec3 uSkyTop; uniform vec3 uSkyHor; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uNight; uniform sampler2D uDet; uniform vec3 uWind; uniform float uSeaY; varying float vShore; varying vec3 vWW;\n' + sh.fragmentShader
+      Object.assign(sh.uniforms, { uTime: U.time, uSky: U.sky, uSkyTop: skyU.top, uKeyDir: skyU.keyDir, uKeyCol: WU.key, uIrr: WU.irr, uDeep: WU.deep, uDet: { value: G.Ground3D.detail() }, uWind: U.wind, uSeaY: { value: G.SEA * G.Space.HM }, uBed: WU.bed, uBedN: WU.bedN, uK: WU.k });
+      sh.vertexShader = 'uniform float uTime; uniform vec3 uWind; uniform float uSeaY; uniform sampler2D uBed; uniform vec2 uBedN; uniform float uK; attribute float aShore; varying float vShore; varying float vSea; varying vec3 vWW;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        vec4 wp = modelMatrix * vec4(position, 1.0); float sea = 1.0 - step(0.15, abs(wp.y - uSeaY * uK)); float still = step(1.5, aShore); float shore = clamp(aShore, 0.0, 1.0);
+        // (the swell dies where the water is shallow: a paddy, a ford, the last of the beach hardly move)
+        float dep = aShore < -0.5 ? 9.0 : wp.y - (texture2D(uBed, (wp.xz * uBedN.x + 0.5) * uBedN.y).r + uSeaY) * uK;
+        float sw = (0.35 + uWind.z * 0.5) * (1.0 - shore * 0.75) * mix(0.3, 1.0, sea);
+        transformed.y += ((sin(wp.x * 0.33 + uTime * 1.3) * 0.06 + cos(wp.z * 0.29 + uTime * 1.05) * 0.05) + sin(dot(wp.xz, normalize(uWind.xy + vec2(0.001))) * 0.21 - uTime * 1.4) * 0.12 * sw) * (1.0 - still) * smoothstep(0.05, 0.9, dep); // (none in the last centimetres: the water's edge stays where the land meets it)
+        vShore = aShore; vSea = sea; vWW = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
+      sh.fragmentShader = 'uniform float uTime; uniform vec3 uSky; uniform vec3 uSkyTop; uniform vec3 uKeyDir; uniform vec3 uKeyCol; uniform vec3 uIrr; uniform vec3 uDeep; uniform sampler2D uDet; uniform vec3 uWind; uniform float uSeaY; uniform sampler2D uBed; uniform vec2 uBedN; uniform float uK; varying float vShore; varying float vSea; varying vec3 vWW;\n' + sh.fragmentShader
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
-        // (four trains of waves: their slopes summed, steeper with the wind, flatter on the rivers and against the land)
-        vec2 wq = vWW.xz; float isSea = 1.0 - step(0.15, abs(vWW.y - uSeaY));
+        // (four trains of waves: their slopes summed, steeper with the wind, flatter on the rivers and against the land, none in a basin)
+        vec2 wq = vWW.xz; float isSea = vSea; float still = step(1.5, vShore); float shore = clamp(vShore, 0.0, 1.0);
         vec2 wd = normalize(uWind.xy + vec2(0.001)); float ws = clamp(uWind.z, 0.0, 2.0);
-        float calm = mix(0.4, 1.0, isSea) * (1.0 - vShore * 0.55) * (0.65 + ws * 0.35);
+        float calm = mix(0.4, 1.0, isSea) * (1.0 - shore * 0.55) * (0.65 + ws * 0.35) * (1.0 - still * 0.9);
         vec2 gw = vec2(0.0); float hw = 0.0;
         for (int i = 0; i < 4; i++) {
           float fi = float(i); float an = (fi - 1.5) * 0.55 + fi * 0.37; vec2 d = vec2(wd.x * cos(an) - wd.y * sin(an), wd.x * sin(an) + wd.y * cos(an));
@@ -322,32 +412,59 @@
         float r3 = texture2D(uDet, (wq + 0.2) / 11.0 + dr * uTime).r, r4 = texture2D(uDet, (wq + vec2(0.0, 0.2)) / 6.5 - dr.yx * uTime * 1.3).r;
         // (far off the small ripples blur into one sheen: only the long waves are seen, no glitter of noise)
         float wnear = 1.0 - smoothstep(22.0, 130.0, length(cameraPosition - vWW));
-        gw = gw * calm * mix(0.45, 1.0, wnear) + vec2(r3 - r1, r4 - r2) * 0.7 * wnear;
+        gw = gw * calm * mix(0.45, 1.0, wnear) + vec2(r3 - r1, r4 - r2) * 0.7 * wnear * (1.0 - still * 0.75);
         vec3 nW = normalize(vec3(-gw.x, 1.0, -gw.y));
         normal = normalize((viewMatrix * vec4(nW, 0.0)).xyz);`)
         .replace('#include <opaque_fragment>', `
-        // (water takes little of the sun's light on itself: its colour is the depth's, lit softly, and what it reflects)
-        vec3 sd0 = normalize(uSunDir); float day0 = (1.0 - uNight) * step(0.0, sd0.y);
-        outgoingLight = mix(outgoingLight, diffuseColor.rgb * (0.34 + 0.46 * day0 * clamp(sd0.y * 1.4, 0.0, 1.0)) + totalEmissiveRadiance, 0.75);
-        // (the sky in the water: the reflected ray's height picks the colour — pale near the horizon, deep blue overhead)
-        vec3 Vw = normalize(cameraPosition - vWW); vec3 Rw = reflect(-Vw, nW); float rel = clamp(Rw.y, 0.0, 1.0);
-        vec3 skyR = mix(uSkyHor, uSkyTop, pow(rel, 0.55));
+        // (how deep it is here: its face over the bed under it)
+        vec2 bu = (vWW.xz * uBedN.x + 0.5) * uBedN.y; float b0 = texture2D(uBed, bu).r;
+        float wD = vShore < -0.5 ? 40.0 : max(vWW.y - (b0 + uSeaY) * uK, 0.0) / max(uK, 0.3);
+        // (how steeply the bed rises here: the surf breaks on a slope, not over a flat that is barely wet)
+        float bSl = length(vec2(texture2D(uBed, bu + vec2(uBedN.y, 0.0)).r - b0, texture2D(uBed, bu + vec2(0.0, uBedN.y)).r - b0)) * uBedN.x;
+        // (its body: the colour it is given — clear and green — going blue, then dark, as it deepens; lit softly by the sky and
+        // the key light, as water takes little light on itself; the torches by it a little)
+        vec3 body = mix(diffuseColor.rgb, uDeep, 1.0 - exp(-wD * 0.32));
+        vec3 lit = mix(body * (uKeyCol * clamp(uKeyDir.y, 0.0, 1.0) * 0.55 + uIrr) * 0.3183, outgoingLight * (body / max(diffuseColor.rgb, vec3(0.02))), 0.2);
+        // (how much of the bed it hides: nothing where it thins on the sand, all of it in the deep — and never less than its colour asks)
+        float a = max(1.0 - exp(-wD * 0.9), diffuseColor.a);
+        // (the sky in its face: the reflected ray's height picks the colour, as the sky's own dome has it)
+        vec3 Vw = normalize(cameraPosition - vWW); vec3 Rw = reflect(-Vw, nW); float rel = max(Rw.y, 0.0);
+        #ifdef USE_FOG
+        vec3 skyR = mix(gxHaze(normalize(vec3(Rw.x, rel, Rw.z))), uSkyTop, pow(rel, 0.42));
+        #else
+        vec3 skyR = mix(uSky, uSkyTop, pow(rel, 0.42));
+        #endif
         float fr = 0.02 + 0.98 * pow(1.0 - clamp(dot(nW, Vw), 0.0, 1.0), 5.0);
-        outgoingLight = mix(outgoingLight, skyR * 0.88, clamp(fr * 0.78, 0.0, 0.8)); diffuseColor.a = mix(diffuseColor.a, 1.0, fr * 0.65);
-        // (the sun on the slopes of the waves: a hard glitter and a soft sheen around it; the crests lit from within)
-        vec3 sd = normalize(uSunDir); float rs = max(dot(Rw, sd), 0.0);
-        float day = (1.0 - uNight) * step(0.0, sd.y);
-        outgoingLight += uSunCol * (pow(rs, 900.0) * 5.0 + pow(rs, 90.0) * 0.22) * day;
-        outgoingLight += vec3(0.02, 0.09, 0.08) * smoothstep(-0.02, 0.05, hw) * isSea * day * (1.0 - vShore * 0.5);
+        // (the key light on the slopes of the waves: a hard glitter and a soft sheen round it — the sun's, or the moon's road)
+        float rs = max(dot(Rw, uKeyDir), 0.0);
+        vec3 col = lit * a * (1.0 - fr) + skyR * fr + uKeyCol * (pow(rs, 900.0) * 1.7 + pow(rs, 90.0) * 0.075) * step(0.0, uKeyDir.y);
+        float al = 1.0 - (1.0 - a) * (1.0 - fr);
+        // (the crests lit from within where the sun shines through them)
+        col += vec3(0.02, 0.09, 0.08) * smoothstep(-0.02, 0.05, hw) * isSea * clamp(uKeyCol.g * 0.33, 0.0, 1.0) * (1.0 - shore * 0.5) * a;
+        // (foam: where the sea runs up the land and thins over it, breaking white, coming and going with the waves; a little at
+        // the banks of the rivers; whitecaps on the open sea when the wind blows hard)
         float fn = texture2D(uDet, vWW.xz / 5.0 + uTime * 0.01).g;
-        float band = vShore + (fn - 0.5) * 0.55 + sin(uTime * 0.9 - vShore * 7.0 + fn * 3.0) * 0.08;
-        float foam = smoothstep(0.76, 0.94, band) * (0.45 + fn * 0.55);
-        // (whitecaps on the open sea when the wind blows)
+        float run = sin(uTime * 0.9 + fn * 4.0 + (vWW.x + vWW.z) * 0.07) * 0.07;
+        float foam = (1.0 - smoothstep(0.03, 0.34, wD + (fn - 0.5) * 0.2 + run)) * smoothstep(0.0, 0.025, wD) * (0.45 + fn * 0.55) * (isSea + (1.0 - isSea) * shore * 0.45) * (1.0 - still) * step(-0.5, vShore) * smoothstep(0.012, 0.05, bSl);
         foam = max(foam, smoothstep(0.06, 0.1, hw + (fn - 0.5) * 0.05) * smoothstep(0.9, 1.6, ws) * isSea * 0.7);
-        outgoingLight = mix(outgoingLight, vec3(0.9, 0.94, 0.96) * (0.55 + 0.45 * uSky), clamp(foam, 0.0, 0.8)); diffuseColor.a = max(diffuseColor.a, foam * 0.9);
+        col = mix(col, vec3(0.9, 0.94, 0.96) * (uKeyCol * clamp(uKeyDir.y, 0.0, 1.0) * 0.6 + uIrr) * 0.3183, clamp(foam, 0.0, 0.85)); al = max(al, foam * 0.9);
+        // (and where it thins to nothing it is gone — no sheen of a film of water over the sand, no flicker where the two meet)
+        al *= smoothstep(0.0, 0.04, wD) * step(-0.5, vShore) + step(vShore, -0.5);
+        outgoingLight = col / max(al, 0.001); diffuseColor.a = al;
         #include <opaque_fragment>`);
     };
-    MAT.ice = new THREE.MeshPhongMaterial({ color: 0xdcecf6, shininess: 60, transparent: true, opacity: 0.92 });
+    MAT.ice = new THREE.MeshPhongMaterial({ color: 0xdcecf6, shininess: 70, specular: 0x5a6672, transparent: true, opacity: 0.92 });
+    // (the ice shows the sky in its face, more as one looks along it — as the water does, duller)
+    MAT.ice.onBeforeCompile = sh => {
+      Object.assign(sh.uniforms, { uSkyTop: skyU.top });
+      sh.vertexShader = 'varying vec3 vIW;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vIW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      sh.fragmentShader = 'uniform vec3 uSkyTop; varying vec3 vIW;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `
+        #ifdef USE_FOG
+        { vec3 Vw = normalize(cameraPosition - vIW); vec3 Rw = reflect(-Vw, vec3(0.0, 1.0, 0.0)); float fr = 0.04 + 0.55 * pow(1.0 - clamp(Vw.y, 0.0, 1.0), 5.0);
+          outgoingLight = mix(outgoingLight, mix(gxHaze(normalize(vec3(Rw.x, max(Rw.y, 0.0), Rw.z))), uSkyTop, pow(max(Rw.y, 0.0), 0.42)), fr); }
+        #endif
+        #include <opaque_fragment>`);
+    };
     MAT.wallWater = new THREE.MeshPhongMaterial({ color: 0x3f9cbc, transparent: true, opacity: 0.6, shininess: 100, side: THREE.DoubleSide, depthWrite: false });
     // the shapes
     SH.box = new THREE.BoxGeometry(1, 1, 1); SH.box.translate(0, 0.5, 0); // (standing on its base)
@@ -376,20 +493,24 @@
     G.Dragon3D && G.Dragon3D.init && G.Dragon3D.init(THREE, R3);
     G.Things3D && G.Things3D.init && G.Things3D.init(THREE, R3);
     G.Grass3D && G.Grass3D.init && G.Grass3D.init(THREE, R3);
+    G.Post3D && G.Post3D.init && G.Post3D.init(THREE, R3);
   }
   function applyQuality() {
     const q = R3.Q();
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2) * q.scale);
     renderer.shadowMap.enabled = !!q.shadows; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     sun.castShadow = !!q.shadows;
-    if (q.shadows) { sun.shadow.mapSize.set(q.shadows, q.shadows); const c = sun.shadow.camera; c.left = -45; c.right = 45; c.top = 45; c.bottom = -45; c.near = 1; c.far = 260; c.updateProjectionMatrix(); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.04; if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
+    // (the side of the sun's picture: never more than the graphics card can hold)
+    if (q.shadows) { const n = Math.min(q.shadows, renderer.capabilities.maxTextureSize || 4096); sun.shadow.mapSize.set(n, n); shadowKey = ''; if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
     // (the patterns of walls and roofs and the speckle of the leaves only where the machine carries the ground's grain too)
     for (const m of [MAT.solid, MAT.flora]) if (m) m.defines = q.detail === 0 ? { NOPAT: 1 } : {};
     for (const m of [MAT.land, MAT.solid, MAT.flora, MAT.plant]) if (m) m.needsUpdate = true;
     G.Ground3D.quality();
+    G.FX3D && G.FX3D.quality && G.FX3D.quality(q);
+    G.Post3D && G.Post3D.quality && G.Post3D.quality(q);
     resize();
   }
-  function resize() { if (!renderer) return; const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix(); }
+  function resize() { if (!renderer) return; const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix(); G.Post3D && G.Post3D.resize && G.Post3D.resize(); }
 
   // ------------------------------ the ground of a chunk ------------------------------
   // (its colour is the Ground3D's tile picture, read by the land's shader; here only its shape and its shade)
@@ -426,11 +547,46 @@
   // water: the sea at its level, every river and lake at its own; the ice of a sudden winter; the walls of a parted sea
   const WATER = [[96, 200, 204], [60, 166, 192], [36, 124, 172], [24, 90, 146], [18, 66, 120]]; // (clear and green over the sand, deep blue far out)
   const waterCol = d => { const k = G.clamp(d / 1.6, 0, 3.999); const a = WATER[Math.floor(k)], b = WATER[Math.min(4, Math.floor(k) + 1)]; return G.lerpColor(a, b, k - Math.floor(k)); };
-  // (a water surface: its colour and clearness at each corner — the shallows let the bed show — and how near the land the
-  // corner is, for the foam)
+  // (the colour of the sea's and the rivers' water where it is shallow: the shader takes it to blue and dark by the depth it
+  // reads at each point — one colour for all their corners, so no tile shows its edges in the water)
+  const SHALLOW = [64, 162, 172];
+  // the water's uniforms, shared by its materials: the bed under it (its height every half tile), the key light on it, the
+  // sky's light on it, the colour of the deep
+  const WU = { bed: { value: null }, bedN: { value: null }, key: { value: null }, irr: { value: null }, deep: { value: null }, k: { value: 1 } }; // (k: the world's height on the screen — flatter in the descent)
+  // the bed under the water as the 3D draws it — the land's own height, and the beds the Space carves into the rivers — one
+  // value every half tile (the near land's own points): the water's shader reads how deep it is at each point from it. Made
+  // whole for a new world or a changed land (S.typeVer), and a few rows a frame after that (a river's level changing)
+  let bedTex = null, bedData = null, bedFor = null, bedVer = -1, bedRow = 0;
+  function bedRows(j0, j1) {
+    const n = 2 * N + 1, HM = G.Space.HM, sea = G.SEA * HM, half = THREE.DataUtils.toHalfFloat; let ch = false;
+    for (let j = j0; j < j1; j++) for (let i = 0; i < n; i++) { const x = i / 2, y = j / 2; const o = j * n + i; const v = half(W.hAt(x, y) * HM - G.Space.bedDrop(x, y) - sea); if (bedData[o] !== v) { bedData[o] = v; ch = true; } }
+    return ch;
+  }
+  function bedTick() {
+    const S = G.S; const n = 2 * N + 1;
+    if (!bedTex || bedTex.image.width !== n) {
+      if (bedTex) bedTex.dispose(); bedData = new Uint16Array(n * n);
+      bedTex = new THREE.DataTexture(bedData, n, n, THREE.RedFormat, THREE.HalfFloatType); bedTex.magFilter = bedTex.minFilter = THREE.LinearFilter; bedTex.generateMipmaps = false; bedTex.flipY = false;
+      WU.bed.value = bedTex; WU.bedN.value.set(2 / G.Space.TILE, 1 / n); bedFor = null;
+    }
+    if (bedFor !== S || bedVer !== S.typeVer) { bedFor = S; bedVer = S.typeVer; bedRows(0, n); bedTex.needsUpdate = true; bedRow = 0; return; }
+    const k = Math.min(n, bedRow + 8); if (bedRows(bedRow, k)) bedTex.needsUpdate = true; bedRow = k >= n ? 0 : k;
+  }
+  // (for the verifier: the bed the water reads, against the land's own height at a few points of the map)
+  R3.bedCheck = function (n) {
+    if (!bedData || bedFor !== G.S) return { n: 0, bad: 0 }; const m = 2 * N + 1, HM = G.Space.HM; let bad = 0, k = 0;
+    for (let q = 0; q < (n || 64); q++) { const i = Math.floor(G.hash(q * 7 + 3) * m), j = Math.floor(G.hash(q * 11 + 5) * m); k++; const want = W.hAt(i / 2, j / 2) * HM - G.Space.bedDrop(i / 2, j / 2) - G.SEA * HM; if (Math.abs(THREE.DataUtils.fromHalfFloat(bedData[j * m + i]) - want) > 0.05 + Math.abs(want) * 0.002) bad++; }
+    return { n: k, bad };
+  };
+  // (a water surface: its colour and the least it hides at each corner, and the corner's mark — near the land, still, beyond)
   class WGeo {
     constructor() { this.p = []; this.c = []; this.s = []; }
     quad(P, cols, al, sh) { for (const k of [0, 1, 2, 0, 2, 3]) { this.p.push(P[k][0], P[k][1], P[k][2]); const c = lin(cols[k]); this.c.push(c[0], c[1], c[2], al[k]); this.s.push(sh[k]); } }
+    // a disc of still water (a basin, a fountain's bowl): its centre in the world (m), radius, colour and the least it hides
+    disc(X, Y, Z, r, col, al, n) {
+      const m = n || 18, c = lin(col), a = al === undefined ? 0.6 : al;
+      for (let k = 0; k < m; k++) { const a0 = k / m * TAU, a1 = (k + 1) / m * TAU; this.p.push(X, Y, Z, X + Math.cos(a1) * r, Y, Z + Math.sin(a1) * r, X + Math.cos(a0) * r, Y, Z + Math.sin(a0) * r); for (let q = 0; q < 3; q++) { this.c.push(c[0], c[1], c[2], a); this.s.push(2); } }
+    }
     get empty() { return !this.p.length; }
     build() {
       const g = new THREE.BufferGeometry(); const n = this.p.length / 3; const nr = new Float32Array(n * 3); for (let k = 0; k < n; k++) nr[k * 3 + 1] = 1;
@@ -449,6 +605,12 @@
       if (!wet) { land = 1; continue; } d += lvl - W.tileH(i); n++;
     }
     return [n ? d / n : 0, land];
+  }
+  // (whether the open sea touches a tile, at a side or a corner)
+  function seaBeside(x, y) {
+    const S = G.S;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy; if ((dx || dy) && W.inb(nx, ny)) { const j = ny * N + nx; if (S.type[j] <= T.SEA && !(S.dry && S.dry[j])) return true; } }
+    return false;
   }
   function waterGeo(x0, y0, w, h, far) {
     const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; const g = new WGeo(), ice = new Geo(), walls = new Geo();
@@ -469,15 +631,19 @@
           }
           continue;
         }
+        // (its colour and clearness come from the depth the shader reads at each point; the corners only say where the land is)
         const C4 = [[x, y], [x, y + 1], [x + 1, y + 1], [x + 1, y]].map(([cx, cy]) => wetCorner(cx, cy, G.SEA, false));
         g.quad([[x * TL, sea, y * TL], [x * TL, sea, (y + 1) * TL], [(x + 1) * TL, sea, (y + 1) * TL], [(x + 1) * TL, sea, y * TL]],
-          C4.map(c => waterCol(c[0])), C4.map(c => G.clamp(0.42 + c[0] * 0.3, 0.42, 0.93)), C4.map(c => c[1]));
+          [SHALLOW, SHALLOW, SHALLOW, SHALLOW], [0, 0, 0, 0], C4.map(c => c[1]));
       } else if (t === T.RIVER) {
         const wl = S.wl[i] * HM + 0.05;
         if (S.ice && S.ice[i]) { ice.quad([x * TL, wl + 0.05, y * TL], [x * TL, wl + 0.05, (y + 1) * TL], [(x + 1) * TL, wl + 0.05, (y + 1) * TL], [(x + 1) * TL, wl + 0.05, y * TL], '#dcecf6'); continue; }
-        const dp = (S.wl[i] - W.tileH(i)) * 1.4 + (S.deep[i] ? 1.2 : 0); const c = waterCol(dp); const al = G.clamp(0.5 + dp * 0.25, 0.5, 0.9);
         const C4 = [[x, y], [x, y + 1], [x + 1, y + 1], [x + 1, y]].map(([cx, cy]) => wetCorner(cx, cy, S.wl[i], true)[1] * 0.85);
-        g.quad([[x * TL, wl, y * TL], [x * TL, wl, (y + 1) * TL], [(x + 1) * TL, wl, (y + 1) * TL], [(x + 1) * TL, wl, y * TL]], [c, c, c, c], [al, al, al, al], C4);
+        g.quad([[x * TL, wl, y * TL], [x * TL, wl, (y + 1) * TL], [(x + 1) * TL, wl, (y + 1) * TL], [(x + 1) * TL, wl, y * TL]], [SHALLOW, SHALLOW, SHALLOW, SHALLOW], [0, 0, 0, 0], C4);
+      } else if (!far && Math.min(W.vh(x, y), W.vh(x + 1, y), W.vh(x, y + 1), W.vh(x + 1, y + 1)) < G.SEA + 0.12 && seaBeside(x, y)) {
+        // (the shore: over a tile of land that dips toward the sea, the sea goes on until the land rises out of it — the water's
+        // edge is where the two meet, wherever that is in the tile, not the tile's own edge; the land hides the rest)
+        g.quad([[x * TL, sea, y * TL], [x * TL, sea, (y + 1) * TL], [(x + 1) * TL, sea, (y + 1) * TL], [(x + 1) * TL, sea, y * TL]], [SHALLOW, SHALLOW, SHALLOW, SHALLOW], [0, 0, 0, 0], [1, 1, 1, 1]);
       }
     }
     return { water: g.empty ? null : g.build(), ice: ice.empty ? null : ice.build(), walls: walls.empty ? null : walls.build() };
@@ -798,16 +964,22 @@
     for (let cy = 0; cy < NC; cy++) for (let cx = 0; cx < NC; cx++) { const ch = { cx, cy, far: null, near: null, sig: null, sigT: -1e9, farSig: null }; chunks.set(ckey(cx, cy), ch); clist.push(ch); buildFar(ch); ch.farSig = sigOf(cx, cy); }
     R3.built = G.S;
   }
-  // the beyond: the sea to the horizon, past the edge of the map
+  // the beyond: the sea to the horizon, past the edge of the map — a frame round it, at the sea's own level (inside the map
+  // the sea is its chunks' own: one water over another would hide the shallows under a second, darker sea)
   let ocean = null;
   function makeOcean() {
     if (ocean) { ocean.geometry.dispose(); scene.remove(ocean); }
-    const L = G.Space.size(), E = 1400;
-    const g = new THREE.PlaneGeometry(L + E * 2, L + E * 2, 1, 1); g.rotateX(-Math.PI / 2);
-    const c = lin(WATER[4]); const nv = g.attributes.position.count; const cl = new Float32Array(nv * 4); for (let k = 0; k < cl.length; k += 4) { cl[k] = c[0]; cl[k + 1] = c[1]; cl[k + 2] = c[2]; cl[k + 3] = 0.94; }
-    g.setAttribute('color', new THREE.BufferAttribute(cl, 4)); g.setAttribute('aShore', new THREE.BufferAttribute(new Float32Array(nv), 1));
-    ocean = new THREE.Mesh(g, MAT.water); ocean.position.set(L / 2, G.SEA * G.Space.HM - 0.25, L / 2); ocean.renderOrder = 1; scene.add(ocean);
+    const L = G.Space.size(), E = 1400, y = G.SEA * G.Space.HM; const P = [];
+    const quad = (x0, z0, x1, z1) => P.push(x0, y, z0, x0, y, z1, x1, y, z1, x0, y, z0, x1, y, z1, x1, y, z0);
+    quad(-E, -E, L + E, 0); quad(-E, L, L + E, L + E); quad(-E, 0, 0, L); quad(L, 0, L + E, L);
+    const nv = P.length / 3; const c = lin(WATER[4]); const cl = new Float32Array(nv * 4), nr = new Float32Array(nv * 3);
+    for (let k = 0; k < nv; k++) { cl[k * 4] = c[0]; cl[k * 4 + 1] = c[1]; cl[k * 4 + 2] = c[2]; cl[k * 4 + 3] = 0.94; nr[k * 3 + 1] = 1; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nr, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(cl, 4)); g.setAttribute('aShore', new THREE.BufferAttribute(new Float32Array(nv).fill(-1), 1)); g.computeBoundingSphere();
+    ocean = new THREE.Mesh(g, MAT.water); ocean.renderOrder = 1; ocean.frustumCulled = false; scene.add(ocean);
   }
+  // (the water's material, for the water other drawings hold — a paddy, a fountain's bowl: WGeo quads or discs drawn with it)
+  R3.waterMat = () => MAT.water;
   // streaming: the near pictures within reach of the focus, nearest first, a few milliseconds a frame
   function stream(fx, fz, budget) {
     const q = R3.Q(); const TL = G.Space.TILE; const R = q.near;
@@ -842,42 +1014,141 @@
   let farTick = 0, clist = [];
 
   // ------------------------------ the sky and the light of the hour ------------------------------
-  let SKYB = null;
-  function light() {
-    if (!SKYB) SKYB = new THREE.Color(0.6, 0.75, 1.05);
-    const S = G.S; const a = G.Render.ambient(); const night = G.clamp(G.Render.nightness(), 0, 1); const w = S.weather;
-    const t = S.time; const dayK = G.clamp((t - 0.02) / 0.71, 0, 1); const el = Math.sin(dayK * Math.PI); // 0 at dawn and dusk, 1 at noon
-    // (the sun climbs no higher than about 55°: the walls get their side of light and the shadows their length, as the
-    // god's view shades a house — one face lit, one in shade)
-    const az = dayK * Math.PI; const alt = Math.max(0.05, el) * 0.96;
-    const sd = new THREE.Vector3(Math.cos(az) * Math.cos(alt), Math.sin(alt), 0.45 * Math.cos(alt) + 0.2).normalize();
-    const am = [a[0] / 255, a[1] / 255, a[2] / 255];
+  // the hour is the world's (S.time) and nothing else. The sun's way: up in the east a little before the god's pink dawn,
+  // over the south at mid-day — no higher than about 55°, so the walls keep a side of light and a side of shade and the
+  // shadows their length, as the god's view shades a house — down in the west at his purple dusk; at night it goes on
+  // under the world and the moon takes the sky: up in the east at dusk, over the south, down at dawn
+  const RISE = -0.015, SET = 0.735;
+  const dirOf = (alt, az, out) => out.set(Math.cos(az) * Math.cos(alt), Math.sin(alt), 0.45 * Math.cos(alt) + 0.2).normalize();
+  // what the light, the sky and the air are at each height of the sun (the sine of its altitude), in linear light: warm and
+  // low at dawn, clean and white at noon, gold late in the day; the glow of the sky round the sun at its rise and set and the
+  // pink band opposite it after sunset; the deep blue of the night
+  const RAMP = {
+    sun: [[-0.06, [1, 0.3, 0.1]], [0, [1, 0.45, 0.2]], [0.08, [1, 0.64, 0.38]], [0.2, [1, 0.8, 0.56]], [0.45, [1, 0.92, 0.8]], [0.8, [1, 0.97, 0.92]]],
+    zen: [[-0.3, [0.0035, 0.006, 0.016]], [-0.12, [0.012, 0.02, 0.055]], [-0.04, [0.04, 0.06, 0.16]], [0.05, [0.08, 0.14, 0.34]], [0.2, [0.08, 0.2, 0.5]], [0.6, [0.07, 0.21, 0.56]]],
+    hor: [[-0.3, [0.01, 0.014, 0.028]], [-0.12, [0.03, 0.035, 0.07]], [-0.04, [0.2, 0.14, 0.17]], [0, [0.62, 0.42, 0.33]], [0.08, [0.78, 0.66, 0.56]], [0.2, [0.7, 0.75, 0.82]], [0.6, [0.62, 0.74, 0.88]]],
+    glow: [[-0.15, [0, 0, 0]], [-0.05, [0.35, 0.1, 0.04]], [0, [1.1, 0.45, 0.15]], [0.1, [0.85, 0.5, 0.22]], [0.3, [0.55, 0.4, 0.24]], [0.5, [0.24, 0.2, 0.15]], [0.8, [0.14, 0.13, 0.11]]],
+    belt: [[-0.15, [0, 0, 0]], [-0.04, [0.12, 0.06, 0.1]], [0.03, [0.14, 0.08, 0.1]], [0.12, [0, 0, 0]]],
+    // (the eye opens as the light goes: dusk and night are dark, but one sees in them)
+    exp: [[-0.3, 1.75], [-0.1, 1.5], [0, 1.3], [0.1, 1.18], [0.3, 1.07], [0.55, 1]],
+  };
+  // the low mist over the hours of the day (S.time): thick at dawn, still lying in the morning, burnt off by noon, a little
+  // back at dusk and at night
+  // (the same height of the sun is not the same hour: the morning's air is cool and clear, the afternoon's warmer — a touch
+  // only, over the god's own light: by the hour, a tint of the sun and of the sky at the horizon)
+  const AIRT = [[0, [1, 1, 1]], [0.08, [1, 1, 1]], [0.16, [0.96, 0.985, 1.05]], [0.32, [0.97, 0.99, 1.035]], [0.42, [1, 1, 1]], [0.52, [1.025, 1, 0.95]], [0.6, [1.02, 1, 0.96]], [0.68, [1, 1, 1]], [1, [1, 1, 1]]];
+  const MIST = [[0, 1], [0.06, 0.95], [0.16, 0.7], [0.3, 0.42], [0.42, 0.18], [0.6, 0.16], [0.72, 0.32], [0.8, 0.42], [0.95, 0.65], [1, 1]];
+  // (a ramp of keys [s, value]: the value at s, eased between its keys)
+  function ramp(R, s, out) {
+    const n = R.length; let a = R[0], b = R[0], u = 0;
+    if (s >= R[n - 1][0]) a = b = R[n - 1]; else if (s > R[0][0]) { let k = 0; while (s > R[k + 1][0]) k++; a = R[k]; b = R[k + 1]; u = (s - a[0]) / (b[0] - a[0]); u = u * u * (3 - 2 * u); }
+    if (typeof a[1] === 'number') return a[1] + (b[1] - a[1]) * u;
+    for (let k = 0; k < 3; k++) out[k] = a[1][k] + (b[1][k] - a[1][k]) * u; return out;
+  }
+  const lum = c => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  const LT = { air: [1, 1, 1], sun: [0, 0, 0], zen: [0, 0, 0], hor: [0, 0, 0], glow: [0, 0, 0], belt: [0, 0, 0], fill: [0, 0, 0], sky: [0, 0, 0], bounce: [0, 0, 0], key: [0, 0, 0] };
+  R3.LT = LT; // (the light of this hour, read only: for the tests and for what wants to match it)
+  let _sd = null, _md = null, _cf = null, shadowKey = '';
+  function light(focus) {
+    if (!_sd) { _sd = new THREE.Vector3(); _md = new THREE.Vector3(); _cf = new THREE.Vector3(); }
+    const S = G.S; const w = S.weather; const t = S.time; const night = G.clamp(G.Render.nightness(), 0, 1);
     const rain = G.clamp(w.rain || 0, 0, 1), storm = G.clamp(w.storm || 0, 0, 1);
-    skyU.sunDir.value.copy(night > 0.6 ? sd.clone().negate() : sd);
-    // (a deep blue overhead and a pale, bright band at the horizon: the sky of a painted world)
-    const top = new THREE.Color().setRGB(0.15 + 0.1 * am[0], 0.38 + 0.13 * am[1], 0.76 * am[2] + 0.14, THREE.SRGBColorSpace).multiplyScalar(1 - night * 0.84);
-    const horC = new THREE.Color().setRGB(Math.min(1, am[0] * 0.8 + 0.07), Math.min(1, am[1] * 0.88 + 0.06), Math.min(1, am[2] * 0.95 + 0.05), THREE.SRGBColorSpace).multiplyScalar(1 - night * 0.7);
-    // (dawn and dusk: the horizon warms)
-    const warm = G.clamp(1 - el * 3, 0, 1) * (1 - night);
-    horC.lerp(new THREE.Color(0xf0a070), warm * 0.45);
-    // (rain greys the sky)
-    const grey = new THREE.Color().setRGB(0.55, 0.58, 0.62).multiplyScalar(1 - night * 0.8);
-    top.lerp(grey, rain * 0.75); horC.lerp(grey, rain * 0.55);
-    skyU.top.value.copy(top); skyU.hor.value.copy(horC); skyU.night.value = night;
-    skyU.sunCol.value.setRGB(1, 0.82 + el * 0.18, 0.55 + el * 0.45).multiplyScalar(1 - rain * 0.7);
+    // the sun and the moon where the hour has them
+    let k = t - RISE; k -= Math.floor(k); const DAY = SET - RISE;
+    let alt, az, malt = -0.5, maz = 0;
+    if (k <= DAY) { const u = k / DAY; alt = 0.96 * Math.sin(Math.PI * u); az = Math.PI * u; }
+    else { const u = (k - DAY) / (1 - DAY); alt = -0.75 * Math.pow(Math.sin(Math.PI * u), 1.6); az = Math.PI * (1 + u); malt = 0.8 * Math.sin(Math.PI * u) - 0.03; maz = Math.PI * u; } // (slow just under the horizon: the dusk and the dawn last as long as the god's)
+    dirOf(alt, az, _sd); dirOf(malt, maz, _md);
+    const s = _sd.y; const dayL = G.smooth(-0.15, 0.1, s); // (the sine of the sun's height: every colour of the hour is read by it)
+    // (the god's light of the hour — its hue only: the pink of his dawn, the gold of his afternoon, the blue of his night, the
+    // grey of his rain — tints it all, as it tints his picture: the same dawn and the same dusk from both heights)
+    const a = G.Render.ambient(); const am = Math.max(a[0], a[1], a[2], 1); const hue = [a[0] / am, a[1] / am, a[2] / am];
+    const tint = (c, f) => { for (let q = 0; q < 3; q++) c[q] *= 1 - f + f * hue[q]; return c; };
+    const sunC = tint(ramp(RAMP.sun, s, LT.sun), 0.6), zen = tint(ramp(RAMP.zen, s, LT.zen), 0.3), hor = tint(ramp(RAMP.hor, s, LT.hor), 0.35);
+    const glow = tint(ramp(RAMP.glow, s, LT.glow), 0.65), belt = ramp(RAMP.belt, s, LT.belt);
+    { const at = ramp(AIRT, t - Math.floor(t), LT.air); for (let q = 0; q < 3; q++) { sunC[q] *= at[q]; hor[q] *= 1 + (at[q] - 1) * 0.6; } }
+    // (rain: the sky goes grey and low, the sun white and dim behind it, its glow gone)
+    { const g = 0.06 + 0.3 * dayL; const wet = rain * 0.8 + storm * 0.2;
+      for (let q = 0; q < 3; q++) { const gq = g * [0.95, 1, 1.08][q]; zen[q] += (gq * 0.85 - zen[q]) * wet; hor[q] += (gq - hor[q]) * wet * 0.85; glow[q] *= 1 - wet * 0.85; belt[q] *= 1 - wet; } }
+    // the key light: the sun while it is up (dim and red near the horizon, through more air), the moon when it is not
+    const sunI = 3 * (0.45 + 0.55 * G.smooth(0, 0.6, s)) * G.smooth(-0.03, 0.06, s) * (1 - rain * 0.72) * (1 - storm * 0.3);
+    const moonI = 0.42 * G.smooth(-0.02, 0.15, _md.y) * G.smooth(0.05, -0.1, s) * (1 - rain * 0.8);
+    const byMoon = moonI > sunI; const key = LT.key;
+    if (byMoon) { key[0] = 0.62; key[1] = 0.72; key[2] = 1; tint(key, 0.4); } else { key[0] = sunC[0]; key[1] = sunC[1]; key[2] = sunC[2]; }
+    const keyI = byMoon ? moonI : sunI; const kd = byMoon ? _md : _sd;
+    sun.color.setRGB(key[0], key[1], key[2]); sun.intensity = keyI;
+    // the sky's light in the shade: the sky that is drawn, averaged over the dome (blue by day, as a painter has it), and a
+    // floor of night light — the stars, the moon's scattered glow: a night is dark, never black. From below, the warm
+    // bounce of the land in the sun
+    const fill = LT.fill; for (let q = 0; q < 3; q++) fill[q] = hor[q] * 0.55 + zen[q] * 0.45;
+    const skyIrr = LT.sky, bounce = LT.bounce; const NF = [0.045, 0.06, 0.11];
+    for (let q = 0; q < 3; q++) { skyIrr[q] = fill[q] * 0.68 * Math.PI + NF[q] * (1 - dayL) * (1 - rain * 0.5); bounce[q] = (key[q] * keyI * Math.max(kd.y, 0) + skyIrr[q] * 0.4) * [0.22, 0.2, 0.15][q]; }
+    hemi.intensity = 1; hemi.color.setRGB(skyIrr[0], skyIrr[1], skyIrr[2]); hemi.groundColor.setRGB(bounce[0], bounce[1], bounce[2]);
+    // the sky's dome: its colours, the discs, the clouds lit by the key light (gold at sunset, grey and low in the rain)
+    skyU.top.value.setRGB(zen[0], zen[1], zen[2]); skyU.hor.value.setRGB(hor[0], hor[1], hor[2]); skyU.night.value = night;
+    skyU.sunDir.value.copy(_sd); skyU.sunCol.value.setRGB(sunC[0], sunC[1], sunC[2]).multiplyScalar(G.smooth(-0.02, 0.04, s) * (1 - rain * 0.7));
+    skyU.disc.value.setRGB(sunC[0], sunC[1], sunC[2]).multiplyScalar(24 * G.smooth(-0.02, 0.02, s) * (1 - rain * 0.9));
+    skyU.moonDir.value.copy(_md); skyU.moonCol.value.setRGB(0.85, 0.9, 1).multiplyScalar(2.4 * G.smooth(-0.02, 0.06, _md.y) * G.smooth(0.08, -0.08, s) * (1 - rain));
+    skyU.keyDir.value.copy(kd);
     skyU.cover.value = G.clamp(0.36 + rain * 0.55 + storm * 0.2 + (S.clouds ? Math.min(0.15, S.clouds.length * 0.01) : 0), 0, 0.98);
-    skyU.cloudCol.value.setRGB(am[0] * 0.98, am[1] * 0.98, am[2]).lerp(new THREE.Color(0.46, 0.48, 0.52), rain * 0.7).multiplyScalar(1 - night * 0.85);
-    scene.fog.color.copy(horC); U.sky.value.copy(horC).lerp(top, 0.55);
-    renderer.setClearColor(horC);
-    sun.intensity = (0.5 + 2.6 * el) * (1 - night) * (1 - rain * 0.55);
-    sun.color.setRGB(1, 0.84 + 0.16 * el, 0.66 + 0.34 * el).multiply(new THREE.Color(am[0], am[1], am[2]));
-    hemi.intensity = (0.55 + 0.66 * (1 - night)) * (1 + rain * 0.2); // (the sky's light in the shade: enough to see, not so much it washes the shadows out)
-    // (the light of the sky in the shade is blue, as a painter has it; the ground's bounce warm)
-    hemi.color.setRGB(am[0] * 0.75 + 0.2, am[1] * 0.82 + 0.15, am[2] * 0.9 + 0.12).lerp(SKYB, 0.35 * (1 - night) * (1 - rain * 0.6));
-    moonL.intensity = night * 0.55;
-    stars.material.opacity = G.clamp((night - 0.35) * 1.6, 0, 1) * (1 - rain);
+    skyU.cloudCol.value.setRGB(key[0] * keyI * 0.24 + skyIrr[0] * 0.24, key[1] * keyI * 0.24 + skyIrr[1] * 0.24, key[2] * keyI * 0.24 + skyIrr[2] * 0.24);
+    skyU.cloudSh.value.setRGB(skyIrr[0] * 0.27 + key[0] * keyI * 0.05, skyIrr[1] * 0.27 + key[1] * keyI * 0.05, skyIrr[2] * 0.27 + key[2] * keyI * 0.05);
+    stars.material.opacity = G.smooth(-0.03, -0.16, s) * (1 - rain); skyU.uStars.value = stars.material.opacity * (1 - skyU.cover.value * 0.6);
+    // the air (every material reads it: GX)
+    const q = R3.Q();
+    GX.gxSunW.value.x = _sd.x; GX.gxSunW.value.y = _sd.y; GX.gxSunW.value.z = _sd.z;
+    GX.gxHor.value.x = hor[0]; GX.gxHor.value.y = hor[1]; GX.gxHor.value.z = hor[2];
+    GX.gxGlow.value.x = glow[0]; GX.gxGlow.value.y = glow[1]; GX.gxGlow.value.z = glow[2];
+    GX.gxBelt.value.x = belt[0]; GX.gxBelt.value.y = belt[1]; GX.gxBelt.value.z = belt[2];
+    { const A = GX.gxAir.value, A2 = GX.gxAir2.value; const mist = ramp(MIST, t - Math.floor(t));
+      A.x = 1.25 / Math.max(120, q.view) * (1 + rain * 0.8 + storm * 0.4); A.y = 0.0055 * mist * (1 + rain * 1.2); A.z = 0.12 / scene.scale.y; A.w = G.SEA * G.Space.HM * scene.scale.y;
+      // (the haze starts past what the eye looks at: from far up, in the descent, the town is not lost in it)
+      const cd = focus ? Math.hypot(camera.position.x - focus.X, camera.position.y - (focus.Y || 0), camera.position.z - focus.Z) : 0;
+      A2.x = Math.max(0, cd - 8) * 0.9; A2.y = 1250; A2.z = 1520; A2.w = 0.5 + 0.5 * dayL; }
+    scene.fog.color.setRGB(hor[0], hor[1], hor[2]); U.sky.value.setRGB(hor[0], hor[1], hor[2]).lerp(skyU.top.value, 0.55);
+    renderer.setClearColor(scene.fog.color);
+    renderer.toneMappingExposure = ramp(RAMP.exp, s) * (1 + rain * 0.12);
+    // (the water: the key light on it, the sky's light on it, the bed under it)
+    WU.key.value.setRGB(key[0] * keyI, key[1] * keyI, key[2] * keyI); WU.irr.value.setRGB(skyIrr[0], skyIrr[1], skyIrr[2]); WU.k.value = scene.scale.y; bedTick();
     G.Build3D && G.Build3D.night(G.clamp((night - 0.25) * 1.6, 0, 1)); // (the windows light up as the dark comes)
-    return sd;
+    // the dome and the stars go with the eye; the key light's picture of the shadows over the ground round the body
+    skyMesh.position.copy(camera.position); stars.position.copy(camera.position);
+    if (focus) placeKey(kd, focus, q);
+    return kd;
+  }
+  // (for the verifier: the light of the hour is numbers in their range; the key light is the sun by day and the moon by night,
+  // and its picture of the shadows covers the body; the bed the water reads is the land's)
+  R3.lightCheck = function () {
+    const out = []; if (!renderer || !R3.on) return out;
+    const bad = v => !Number.isFinite(v);
+    for (const k in LT) if (LT[k].some(bad)) out.push(`luz: ${k} não é número`);
+    for (const k in GX) { const v = GX[k].value; if (bad(v.x) || bad(v.y) || bad(v.z) || bad(v.w)) out.push(`ar: ${k} não é número`); }
+    const e = renderer.toneMappingExposure; if (bad(e) || e < 0.5 || e > 3) out.push(`exposição fora do lugar: ${e}`);
+    if (bad(sun.intensity) || sun.intensity < 0 || sun.intensity > 4) out.push(`luz principal com intensidade ${sun.intensity}`);
+    const s = skyU.sunDir.value.y; if (s > 0.1 && skyU.keyDir.value.dot(skyU.sunDir.value) < 0.999) out.push('de dia, a luz principal não é o sol');
+    if (sun.castShadow && U.body.value && U.body.value.w) { const b = U.body.value; const c = sun.target.position; const h = sun.shadow.camera.right; if (Math.abs(b.x - c.x) > h || Math.abs(b.z - c.z) > h) out.push('a imagem das sombras não cobre o corpo'); }
+    const bc = R3.bedCheck(48); if (bc.bad > 2) out.push(`leito da água: ${bc.bad} de ${bc.n} pontos fora da altura do chão`);
+    return out;
+  };
+  // the key light's picture of what is near the body (its shadows): a square of ground round the body, pushed a little ahead
+  // of the eye (what one looks at gets the texels), its texels fixed on the land (walking, the shadows do not crawl), and only
+  // as deep as the near world, so the shadows still touch the feet that cast them
+  function placeKey(dir, focus, q) {
+    const half = q.sbox || 45, size = sun.shadow.mapSize.x || 1024;
+    camera.getWorldDirection(_cf); let fx = _cf.x, fz = _cf.z; const fl = Math.hypot(fx, fz); if (fl > 1e-3) { fx /= fl; fz /= fl; } else fx = fz = 0;
+    let cx = focus.X + fx * half * 0.3, cy = focus.Y || 0, cz = focus.Z + fz * half * 0.3;
+    // (the light's frame as three.js's lookAt makes it: z toward the light, x = up × z, y = z × x)
+    const xl = Math.hypot(dir.z, dir.x) || 1, xx = dir.z / xl, xz = -dir.x / xl; const yx = dir.y * xz, yy = dir.z * xx - dir.x * xz, yz = -dir.y * xx;
+    const tx = 2 * half / size; const u = cx * xx + cz * xz, v = cx * yx + cy * yy + cz * yz;
+    const du = Math.round(u / tx) * tx - u, dv = Math.round(v / tx) * tx - v;
+    cx += du * xx + dv * yx; cy += dv * yy; cz += du * xz + dv * yz;
+    const D = half * 2.5 + 20; sun.position.set(cx + dir.x * D, cy + dir.y * D, cz + dir.z * D); sun.target.position.set(cx, cy, cz); sun.target.updateMatrixWorld();
+    const kk = half + ':' + size; if (kk !== shadowKey) {
+      shadowKey = kk; const c = sun.shadow.camera; c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.near = Math.max(1, D - half * 2.5 - 20); c.far = D + half * 2.5 + 20; c.updateProjectionMatrix();
+      // (a bias of a few centimetres in the picture's depth, and along the normal a little under a texel: no stripes of
+      // self-shadow on the lit walls, and no gap between a foot and its shadow)
+      sun.shadow.bias = -0.05 / (c.far - c.near); sun.shadow.normalBias = tx * 0.7;
+    }
   }
 
   // ------------------------------ the frame ------------------------------
@@ -914,28 +1185,20 @@
   R3.frame = function (rdt, focus, budget) {
     if (!R3.on || !renderer) return;
     U.time.value += rdt;
-    const sd = light();
+    light(focus); // (the hour's light, the sky, the air; the sun's picture of the shadows round the focus)
     // (the wind of the world bends the plants; the body walking parts them)
     { const w = G.S.weather; const ws = G.clamp(w.windS || 0, 0, 2); U.wind.value.set(Math.cos(w.windA || 0) * (0.35 + ws), Math.sin(w.windA || 0) * (0.35 + ws), ws); }
     if (focus) U.body.value.set(focus.X, focus.Y || 0, focus.Z, 1); else U.body.value.w = 0;
     G.Ground3D.tick(focus);
     // (the clouds' shadows move as the sky's clouds do; darker under a bright sun, none at night)
     { const w = U.wind.value; const T = U.time.value; G.Ground3D.clouds(w.x * T * 0.0016 * 4.7, w.y * T * 0.0016 * 4.7, skyU.cover.value, G.clamp(sun.intensity / 3, 0, 1) * 0.3); }
-    if (focus) {
-      stream(focus.X, focus.Z, budget === undefined ? 6 : budget);
-      sun.position.set(focus.X + sd.x * 120, focus.Y + sd.y * 120, focus.Z + sd.z * 120); sun.target.position.set(focus.X, focus.Y, focus.Z); sun.target.updateMatrixWorld();
-      moonL.position.set(focus.X - sd.x * 100, focus.Y + 80, focus.Z - sd.z * 100);
-      skyMesh.position.copy(camera.position); stars.position.copy(camera.position);
-      // (the fog starts past what the eye looks at: from far up, during the descent, the town is not lost in it)
-      const q = R3.Q(); const cd = Math.hypot(camera.position.x - focus.X, camera.position.y - (focus.Y || 0), camera.position.z - focus.Z);
-      scene.fog.near = cd + q.view * 0.25; scene.fog.far = cd + q.view;
-    }
+    if (focus) stream(focus.X, focus.Z, budget === undefined ? 6 : budget);
     G.People3D && G.People3D.update && G.People3D.update(rdt, focus);
     G.Things3D && G.Things3D.update && G.Things3D.update(rdt, focus); // (before the fire's drawing: it hands over its flames)
     G.FX3D && G.FX3D.update && G.FX3D.update(rdt, focus);
     G.Dragon3D && G.Dragon3D.update && G.Dragon3D.update(rdt, focus);
     G.Grass3D && G.Grass3D.update && G.Grass3D.update(rdt, focus, camera);
-    renderer.render(scene, camera);
+    if (!(G.Post3D && G.Post3D.render(scene, camera))) renderer.render(scene, camera); // (the post-processing, where the quality has it)
     R3.info = renderer.info;
     if (rdt > 0) R3.fps = R3.fps ? R3.fps * 0.95 + (1 / rdt) * 0.05 : 1 / rdt;
   };
