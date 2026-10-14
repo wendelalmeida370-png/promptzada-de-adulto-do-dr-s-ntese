@@ -1157,10 +1157,12 @@ canvas#game3d { touch-action: none; transition: none; }
 .ih-compass > i { position: absolute; left: 50%; top: 0; width: 0; height: 0; margin-left: -4px; border: 4px solid transparent; border-top: 5px solid var(--ih-gold); }
 
 /* the news that reach the ears, under the compass; what happens near has no label, what comes from afar says so */
-.ih-news { position: absolute; top: calc(46px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: min(520px, calc(100vw - 600px)); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.ih-news { position: absolute; top: calc(46px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: min(460px, calc(100vw - 600px)); display: flex; flex-direction: column; align-items: center; gap: 4px; transition: opacity .4s ease; }
+#inc-root.ib-on .ih-news { opacity: .16; }
 /* (where the two panels at the top leave no room between them, the news come down below them instead of over them) */
 @media (max-width: 900px) { .ih-news { top: calc(124px + env(safe-area-inset-top, 0px)); width: min(520px, 92vw); } }
-.ih-news div { font-size: 12.5px; line-height: 1.35; font-weight: 700; color: var(--ih-text); background: var(--ih-glass-2); padding: 4px 12px 5px; border-radius: 8px; border: 1px solid var(--ih-edge); text-shadow: var(--ih-ts); text-align: center; max-width: 100%; animation: ihIn .35s ease both; transition: opacity .2s linear; }
+.ih-news div { font-size: 12px; line-height: 1.35; font-weight: 700; color: var(--ih-text); background: var(--ih-glass-2); padding: 4px 12px 5px; border-radius: 8px; border: 1px solid var(--ih-edge); text-shadow: var(--ih-ts); text-align: center; max-width: 100%; animation: ihIn .35s ease both; transition: opacity .2s linear; }
+.ih-news small { color: var(--ih-mute); font-weight: 700; white-space: nowrap; }
 .ih-news div b { font-size: 9.5px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--ih-gold); margin-right: 7px; }
 
 /* the calls of the world (a war, a fire): bottom left, gold, with a mark */
@@ -1233,9 +1235,9 @@ canvas#game3d { touch-action: none; transition: none; }
 .im-note { font-size: 12px; line-height: 1.45; color: var(--ih-mute); margin-top: 12px; }
 .im-keys { width: 100%; font-size: 12.5px; border-collapse: collapse; } .im-keys td { padding: 3px 0; } .im-keys td:last-child { text-align: right; }
 .im-row { margin-top: 10px; font-size: 12.5px; } .im-row label { display: flex; align-items: center; gap: 8px; justify-content: space-between; } .im-row input[type=range] { flex: 1; max-width: 200px; accent-color: var(--ih-gold); }
-.im-seg { display: flex; gap: 4px; }
+.im-seg { display: flex; gap: 4px; } .im-seg button { flex: 1; justify-content: center; }
 /* who one is, said once on arriving; the end of a life; the fade to and from black */
-#inc-banner { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font-family: 'Cinzel', Georgia, serif; font-size: clamp(16px, 2.4vw, 26px); letter-spacing: .03em; color: var(--ih-gold-2); text-shadow: 0 2px 10px rgba(0,0,0,.8), 0 0 2px rgba(0,0,0,.6); text-align: center; animation: incIn .8s ease both; max-width: 86vw; }
+#inc-banner { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); text-wrap: balance; font-family: 'Cinzel', Georgia, serif; font-size: clamp(16px, 2.4vw, 26px); letter-spacing: .03em; color: var(--ih-gold-2); text-shadow: 0 2px 10px rgba(0,0,0,.8), 0 0 2px rgba(0,0,0,.6); text-align: center; animation: incIn .8s ease both; max-width: 86vw; }
 #inc-death { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(0,0,0,.25), rgba(0,0,0,.8)); opacity: 0; transition: opacity .9s ease; text-align: center; }
 #inc-death.show { opacity: 1; }
 #inc-death .d-name { font-family: 'Cinzel', Georgia, serif; font-size: clamp(28px, 5vw, 52px); color: #e8dcc4; letter-spacing: .06em; }

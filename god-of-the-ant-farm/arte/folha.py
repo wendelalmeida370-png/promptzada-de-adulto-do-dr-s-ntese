@@ -20,6 +20,10 @@ SEEN = {
     'door': ('thing', '#3a2616'), 'frame': ('thing', '#6b4a30'), 'iron': ('thing', '#4a4a50'), 'linen': ('thing', '#e8dcc6'),
     'canvas': ('thing', '#d8ccb0'), 'wool': ('thing', '#7a6a5a'), 'rope': ('thing', '#a08a62'), 'leather': ('thing', '#7a5034'),
     'fur': ('thing', '#8a6a4a'), 'wicker': ('thing', '#a8865a'),
+    # (the other peoples: arte/mat_culturas.py — each with the colour its people's palette gives, arch.js PAL)
+    'ashlar': ('wall', '#a59c8b'), 'marble': ('wall', '#d4ccb6'), 'tegula': ('roof', '#b5523a'), 'whitewash': ('wall', '#f4efe4'),
+    'painted': ('thing', '#3f6fb0'), 'adobe': ('wall', '#e8d2a2'), 'sandstone': ('wall', '#cdb98f'), 'stucco': ('wall', '#f1e9d6'),
+    'tezontle': ('wall', '#8a4a3a'),
 }
 PX = 96          # pixels per metre in the big view
 WALL = (4.0, 2.6)  # metres of the big view

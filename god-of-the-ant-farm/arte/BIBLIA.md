@@ -130,6 +130,8 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
 | Coisa pequena (barril, caixote, banco, saco) | 100–400 | — (some a 60 m) |
 | Coisa média (carroça, poço, barco a remo, barraca) | ≤ 1,5 mil | ≤ 50 |
 | Cabeça de dragão (feita: 898) | ≤ 900 | ≤ 20 |
+| Pedra rúnica (feita: 1.404) · portal entalhado (feito: 1.144) | ≤ 1,5 mil | ≤ 40 |
+| Ponta de empena recortada (cavalo: 252 · voluta: 524) | ≤ 600 | ≤ 20 |
 | Árvore | ≤ 1,2 mil | ≤ 40 |
 | Pessoa | ≤ 3 mil (corpo 2 mil + roupa e cabelo) | média ≤ 800 |
 | Bicho | ≤ 1,5 mil | ≤ 300 |
@@ -137,9 +139,11 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
 - Um pedaço do mundo perto (64 × 64 m) tem **uma geometria por material** (sólido, flora, folhas, plantas, água, vidro):
   coisa nova entra na geometria do pedaço (`Geo.put`), não ganha malha própria nem chamada de desenho própria.
 - Cena inteira, qualidade média: alvo ≤ 500 mil triângulos e ≤ 200 chamadas de desenho; a `alta` pode dobrar triângulos.
-- Pilha de texturas: 512 × 512 por material, **≤ 6 MB** de base64 no total (hoje: 31 materiais, 3,55 MB). Cada material
-  ≤ 200 KB; tecido e couro em 256 px (o fio nunca chega à tela).
-- Arquivo de malha: ≤ 60 KB cada (a cabeça de dragão: 25,6 KB); todas juntas ≤ 1 MB.
+- Pilha de texturas: 512 × 512 por material, **≤ 6 MB** de base64 no total (hoje: 47 materiais, 5,33 MB — sobra pouco: material novo de outra área, avise o A1). Cada material
+  ≤ 200 KB; os chãos e a turfa vistos de perto podem ir a 300 KB (o peso deles é o capim e a folha que se vê: `turf`,
+  `forest`, `grass`, `needles` passam de 200 — baixar a qualidade só tira 12% e borra o que importa); tecido e couro em
+  256 px (o fio nunca chega à tela). O limite que manda é o total.
+- Arquivo de malha: ≤ 60 KB cada (a cabeça de dragão: 25,6 KB; a pedra rúnica: 36,7 KB; o portal: 34,3 KB); todas juntas ≤ 1 MB.
 - Decoração só com `G.Realm.Q().detail`; densidade lida dos campos do preset, nunca fixa.
 
 ## 7. Materiais (a pilha: `arte/texturas.py` + `arte/mat_<área>.py` → `js/tex3d.js`)
@@ -160,8 +164,18 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
 | `iron` | 0,5 | ferro forjado: dobradiças, aros, pregos, ferramentas | A1 |
 | `linen` `wool` `canvas` | 0,15 / 0,4 / 1,0 | linho (roupa de baixo, egípcia); lã em espinha de peixe (nórdica); lona com costuras (toldo, vela, tenda) | A1 |
 | `rope` `leather` `fur` `wicker` | 0,2 / 0,4 / 0,4 / 0,6 | corda de três pernas; couro; pele com pelo (capa nórdica); vime (cesto; em escala 3×, cerca e parede trançada de Hedeby) | A1 |
-| *(reservados)* `daub`, `wattle`, `marble`, `painted` | — | barro sobre trançado, mármore, madeira pintada | A2, se precisar |
-| *(reservados)* `moss`, `mud`, `leaves`, `needles`, `riverbed` | — | o que o chão e a mata pedirem | A3, se precisar |
+| `ashlar` | 2,4 | cantaria de calcário em fiadas: base romana e clássica, templos, muros de prédio público | A1 (`mat_culturas.py`) |
+| `marble` | 2,4 | mármore em blocos de veios suaves (juntas verticais quase invisíveis: serve para tambor de coluna): base e colunas gregas | A1 |
+| `tegula` | 2,0 | telhado romano: telhas planas de aba e capas redondas a cada 50 cm (o topo é a cumeeira) | A1 |
+| `whitewash` | 3,0 | caiação grega sobre pedra solta, calombos arredondados por demão sobre demão | A1 |
+| `painted` | 1,2 | tábuas pintadas, gastas e lascadas até a demão de baixo: portas e postigos gregos, acabamentos pintados | A1 |
+| `adobe` | 2,4 | tijolo de barro com palha e reboco de barro gasto em manchas: parede egípcia (o `mud` do `PAT`) | A1 |
+| `sandstone` | 3,0 | arenito em blocos de ombro arredondado, camadas, colmeia: templos e bases egípcias | A1 |
+| `stucco` | 3,0 | estuque brunido e pintado: paredes e plataformas astecas, o reboco pintado egípcio | A1 |
+| `tezontle` | 2,4 | pedra vulcânica vermelha (e basalto) cheia de bolhas, argamassa larga: base e plataformas astecas | A1 |
+| *(reservados)* `daub`, `wattle` | — | barro sobre trançado | A2, se precisar |
+| `moss` `needles` `mud` `pebbles` `stony` `trail` `crag` | 1,2–5 | musgo, chão de pinheiral, lama, leito de seixos, chão pedregoso, trilha, rocha de penhasco | A3 (`mat_natureza.py`) |
+| *(reservados)* `leaves`, `riverbed` | — | o que o chão e a mata pedirem | A3, se precisar |
 
 **Material novo** (num `arte/mat_<área>.py`, lista `MATS` de tuplas `(nome, função, metros, descrição[, opções])`):
 1. a figura repete sem emenda (use só as ferramentas periódicas do `texlib.py`: `fbm`, `voronoi`, `strokes`, `stamp_*`,
@@ -207,6 +221,17 @@ K.g.put(G.Mesh3D.part('dragao', 'olho'), R3.mat(K.x0 + p[0], K.y0 + p[1], K.z0 +
   A geometria é **compartilhada** (não a descarte); para mudar, `clone()`. `G.Mesh3D.info(nome)` dá pontos, triângulos,
   caixa e partes; `G.Mesh3D.check()` é a prova do módulo (contagens, índices, NaN, normais, caixa, partes) — vazia é bom.
 - Coisa pequena e repetida (prego, pedrinha) não vira malha: é caixa/cilindro do kit, ou detalhe da textura.
+- **As peças que existem** (quem decide onde vai cada uma é o A2):
+
+| Malha | O que é | Partes | Onde (sugestão) |
+|---|---|---|---|
+| `dragao` (898 tri) | cabeça de dragão da ponta da cumeeira, pescoço em S, boca aberta, chifres e crista | `madeira`, `olho` | as duas pontas da cumeeira de turfa, olhando para fora (o trecho acima) |
+| `dragao2` (898 tri) | a outra cabeça de dragão da cumeeira: pescoço em S mais fundo, focinho longo, babados atrás da mandíbula, crista em leque, uma argola presa na boca | `madeira`, `olho` | as mesmas pontas que o `dragao`, escolhida pelo `G.hash(b.id)`: duas casas ricas lado a lado não repetem a cabeça |
+| `runa` (1.404 tri) | pedra rúnica de granito, 2,05 m (25 cm enterrada), faixa-serpente em relevo com 43 runas, calços no pé | `pedra`, `faixa`, `runas`, `olho` | dentro da caixa de um prédio público nórdico (praça, salão, templo, cemitério), nunca num caminho; a face entalhada para quem chega; a faixa no vermelho do povo |
+| `portal` (1.144 tri) | batentes e verga entalhados com entrelaçado e volutas em volta de um vão de 1,0 × 1,9 m; soleira | `madeira`, `entalhe` | a porta de frente da casa longa e do salão, só perto e com `detail`; escale pelo vão |
+| `empena` (cavalo 252 · voluta 524 tri) | as pontas recortadas na prancha da empena: uma cabeça de cavalo com crina e olho furado, e uma voluta que enrola para dentro (as outras duas formas do `bargeEnd`, ao lado do dragão) | `cavalo` + `olho`, ou `voluta` (uma por ponta) | as pontas das tábuas de empena além da cumeeira: o plano da prancha é o da empena, a frente vai para o `out`; para o lado oposto, espelhe em x |
+| `banca` (1.174 tri) | banca de feira do tamanho da do `stalls()`: balcão de tábuas, postes, toldo de lona listrado com a barra recortada, três cestos com montes de fruta, sacos e um caixote | `madeira`, `lona` + `lona2` (as listras), `vime`, `fruta`, `saco` | o mercado e a feira, no lugar da caixa com as três bolas; a fruta na cor do que se vende, as listras nas cores do povo |
+| `casco` (868 tri) | casco de navio trincado, borda subindo nas pontas, roda e cadaste em voluta — **no quadro unitário do fx3d** (proa em +x) | `casco` | os navios do `fx3d.js` (A5), no lugar do casco facetado |
 
 ## 9. A interface do corpo (HUD — `js/incui.js`, `css/style.css`)
 

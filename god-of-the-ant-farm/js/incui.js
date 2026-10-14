@@ -22,7 +22,7 @@
   let root = null, hud = null, card = null, menu = null, fadeEl = null, banner = null, deathEl = null, label = null, stickEl = null;
   let best = null, bestT = 0, upT = 0, toasts = [], news = [], fade = null, hintT = 0, bannerT = 0, repeatT = 0, slowT = 0, slowSaid = false;
   let swimTold = false, lowTold = false, drownTold = false; // (the water's words: said once, and again each time it comes back)
-  G.worldHooks.push(() => { swimTold = lowTold = drownTold = false; });
+  G.worldHooks.push(() => { swimTold = lowTold = drownTold = false; news = []; if (root) renderNews(); });   // (the old world's news go with it)
   IU.best = () => best;
   const bar = (k, txt) => `<div class="ih-bar ${k}"><span class="ih-bl">${txt}</span><i><b></b></i></div>`;
 
@@ -72,7 +72,8 @@
     $('.ih-toasts', hud).appendChild(el); toasts.push({ el, t: dur || 3.6 });
     while (toasts.length > 4) { const o = toasts.shift(); o.el.remove(); }
   };
-  IU.banner = function (txt, dur) { if (!root) return; banner.textContent = txt; banner.classList.remove('hidden'); bannerT = dur || 2.6; };
+  // (while the banner speaks the news step back: on a narrow screen they sit right behind it)
+  IU.banner = function (txt, dur) { if (!root) return; banner.textContent = txt; banner.classList.remove('hidden'); root.classList.add('ib-on'); bannerT = dur || 2.6; };
   IU.hello = function (v) {
     const id = G.Possess.identity(v); const w = G.Possess.where(v);
     IU.banner(`${id.name} · ${id.age} ${id.age === 1 ? 'ano' : 'anos'} · ${id.role}${w.town || w.near ? ' · ' + (w.town || 'perto de ' + w.near) : ''}`, 3.4);
@@ -90,11 +91,22 @@
   G.Possess.onLog.push((e, v) => {
     if (!root || !G.Modes.inc()) return;
     const near = v && Number.isFinite(e.x) && G.dist(e.x, e.y, v.x, v.y) < 30;
-    news.push({ txt: e.txt, far: !near, t: 9 }); if (news.length > 3) news.shift();
+    // (the same thing happening in several places at once — the games of three cities, the feast of two — is one line,
+    // with how many more places: the view stays open)
+    const same = news.find(n => alike(n.txt, e.txt));
+    if (same) { same.more++; same.t = 9; same.far = same.far && !near; }
+    else { news.push({ txt: e.txt, far: !near, t: 9, more: 0 }); if (news.length > 2) news.shift(); }
     renderNews();
   });
+  // (two lines alike: they end the same way for most of their length — only the place they begin with differs)
+  function alike(a, b) {
+    if (a === b) return true; let k = 0; const n = Math.min(a.length, b.length);
+    while (k < n && a[a.length - 1 - k] === b[b.length - 1 - k]) k++;
+    return k >= 24 && k >= n * 0.6;
+  }
+  IU._alike = alike;
   // (what comes from afar carries a small label instead of a word in front of it: the eye reads the news, not the label)
-  function renderNews() { $('.ih-news', hud).innerHTML = news.map(n => `<div>${n.far ? '<b>Notícia</b>' : ''}${esc(n.txt)}</div>`).join(''); }
+  function renderNews() { $('.ih-news', hud).innerHTML = news.map(n => `<div class="${n.far ? 'far' : ''}">${n.far ? '<b>Notícia</b>' : ''}${esc(n.txt)}${n.more ? ` <small>— e em mais ${n.more} ${n.more > 1 ? 'lugares' : 'lugar'}</small>` : ''}</div>`).join(''); }
   // (words that go away fade out over their last moments instead of blinking off)
   const fadeOut = (el, t, d) => { const o = t < d ? (Math.max(0, t) / d).toFixed(2) : ''; if (el._o !== o) { el._o = o; el.style.opacity = o; } };
 
@@ -106,7 +118,7 @@
     const S = G.S;
     // fades, banners, toasts, news
     if (fade) { fade.t += rdt; const k = Math.min(1, fade.t / fade.d); fadeEl.style.opacity = G.lerp(fade.a, fade.b, k); if (k >= 1) { const d = fade.done; fade = null; d && d(); } }
-    if (bannerT > 0) { bannerT -= rdt; if (bannerT <= 0) banner.classList.add('hidden'); }
+    if (bannerT > 0) { bannerT -= rdt; if (bannerT <= 0) { banner.classList.add('hidden'); root.classList.remove('ib-on'); } }
     for (let k = toasts.length - 1; k >= 0; k--) { const o = toasts[k]; o.t -= rdt; if (o.t <= 0) { o.el.remove(); toasts.splice(k, 1); } else fadeOut(o.el, o.t, 0.5); }
     let nd = false; for (let k = news.length - 1; k >= 0; k--) { news[k].t -= rdt; if (news[k].t <= 0) { news.splice(k, 1); nd = true; } } if (nd) renderNews();
     { const els = $('.ih-news', hud).children; for (let k = 0; k < news.length && k < els.length; k++) fadeOut(els[k], news[k].t, 0.8); }
@@ -287,9 +299,13 @@
         <div class="im-col"><button data-m="resetkeys">Restaurar teclas</button></div>`;
     } else {
       const Q = G.Realm.Q();
-      h += `<div class="im-title">Gráficos</div><div class="im-seg">${[['baixa', 'Leve'], ['media', 'Média'], ['alta', 'Alta']].map(([k, t]) => `<button data-m="q" data-q="${k}" class="${q === k ? 'on' : ''}">${t}</button>`).join('')}</div>
-        <div class="im-row"><label>Distância de visão <input type="range" min="180" max="800" step="20" value="${Q.view}" data-g="view"></label></div>
-        <div class="im-row"><label>Pessoas desenhadas por perto <input type="range" min="8" max="90" step="2" value="${Q.npcs}" data-g="npcs"></label></div>
+      // (the presets come from the realm, in its order and with its names — the Ultra among them; the sliders reach the
+      // farthest of them, so a preset's own value is never cut by the slider)
+      const QN = G.Realm.QNAMES || [['baixa', 'Leve'], ['media', 'Média'], ['alta', 'Alta']];
+      const most = k => Math.max(...Object.values(G.Realm.QUAL || {}).map(p => p[k] || 0), Q[k] || 0);
+      h += `<div class="im-title">Gráficos</div><div class="im-seg">${QN.map(([k, t]) => `<button data-m="q" data-q="${k}" class="${q === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+        <div class="im-row"><label>Distância de visão <input type="range" min="180" max="${Math.max(800, most('view'))}" step="20" value="${Q.view}" data-g="view"></label></div>
+        <div class="im-row"><label>Pessoas desenhadas por perto <input type="range" min="8" max="${Math.max(90, most('npcs'))}" step="2" value="${Q.npcs}" data-g="npcs"></label></div>
         <div class="im-row"><label>Resolução <input type="range" min="0.5" max="1" step="0.05" value="${Q.scale}" data-g="scale"></label></div>
         <div class="im-row"><label><input type="checkbox" data-g="shadows" ${Q.shadows ? 'checked' : ''}> Sombras</label> <label><input type="checkbox" data-g="grass" ${Q.grass ? 'checked' : ''}> Capim e flores</label></div>
         <div class="im-note">Agora: ${G.Realm.fps ? Math.round(G.Realm.fps) + ' quadros por segundo · ' : ''}${G.Realm.memory() ? G.Realm.memory().calls + ' chamadas de desenho' : ''}</div>`;
@@ -309,6 +325,8 @@
   function onMenuInput(e) {
     const t = e.target; const O = G.Cam3D.OPT;
     if (t.dataset.o) { const k = t.dataset.o; O[k] = t.type === 'checkbox' ? t.checked : +t.value; G.Cam3D.saveOpt(); }
-    if (t.dataset.g) { const k = t.dataset.g; G.Realm.setOver(k, t.type === 'checkbox' ? (t.checked ? (k === 'shadows' ? 1024 : 1) : 0) : +t.value); }
+    // (a box turned back on returns to what the preset itself has — the Ultra's shadows are 4096, not 1024; a preset that
+    // has none, the Leve, gets the middle size)
+    if (t.dataset.g) { const k = t.dataset.g; const P = (G.Realm.QUAL || {})[G.Realm.q] || {}; G.Realm.setOver(k, t.type === 'checkbox' ? (t.checked ? (P[k] || (k === 'shadows' ? 1024 : 1)) : 0) : +t.value); }
   }
 })(window.G);
