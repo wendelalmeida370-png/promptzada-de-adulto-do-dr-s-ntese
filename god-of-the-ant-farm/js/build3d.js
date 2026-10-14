@@ -75,8 +75,8 @@
   B3.doorPat = doorPat;
   // what each people builds with: the walls of a house, its base, its roofs
   const STUFF = {
-    classico: { wall: 'frame', base: 'stone', tile: 'tile' }, grego: { wall: 'plaster', base: 'marble', tile: 'tile' }, romano: { wall: 'plaster', base: 'stone', tile: 'tile' },
-    egipcio: { wall: 'mud', base: 'stone', tile: 'mud' }, asteca: { wall: 'plaster', base: 'stone', tile: 'thatch' }, nordico: { wall: 'plankV', base: 'stone', tile: 'shingle' },
+    classico: { wall: 'frame', base: 'stone', tile: 'tile' }, grego: { wall: 'whitewash', base: 'marble', tile: 'tile' }, romano: { wall: 'plaster', base: 'ashlar', tile: 'tegula' },
+    egipcio: { wall: 'mud', base: 'sandstone', tile: 'mud' }, asteca: { wall: 'stucco', base: 'tezontle', tile: 'thatch' }, nordico: { wall: 'plankV', base: 'stone', tile: 'shingle' },
   };
   const stuff = b => STUFF[styleOf(b)] || STUFF.classico;
   const PFRAG = `
@@ -507,7 +507,7 @@ float m3scale(float p) {
     const mossy = G.clamp((K.hv(3) + K.hv(4)) * 0.5 - 0.28, 0, 0.42) * (dressed ? 0.5 : 1);
     const sides = [[[x - sx / 2, z + sz / 2], [x + sx / 2, z + sz / 2], [0, 1]], [[x + sx / 2, z - sz / 2], [x - sx / 2, z - sz / 2], [0, -1]], [[x + sx / 2, z + sz / 2], [x + sx / 2, z - sz / 2], [1, 0]], [[x - sx / 2, z - sz / 2], [x - sx / 2, z + sz / 2], [-1, 0]]];
     let n = 0;
-    K.as('rock', () => { for (const [A0, B, o] of sides) {
+    K.as(dressed ? (K.st === 'grego' ? 'marble' : 'ashlar') : 'rock', () => { for (const [A0, B, o] of sides) { // (dressed: the people's cut stone)
       const len0 = Math.hypot(B[0] - A0[0], B[1] - A0[1]); const dx = (B[0] - A0[0]) / len0, dz = (B[1] - A0[1]) / len0;
       const A = [A0[0] - dx * 0.17, A0[1] - dz * 0.17], len = len0 + 0.17; // (each side starts round its corner: no notch there)
       for (let row = 0, top = 0; row < 6; row++) {
@@ -554,21 +554,38 @@ float m3scale(float p) {
   function openings(g, gw, K, x, z, sx, sz, y, h, floors, door) {
     const side = doorSide(K.b); const P = K.P; const fh = h / floors; const st = styleOf(K.b);
     const framed = st !== 'nordico' && st !== 'egipcio'; const shut = (st === 'classico' || st === 'grego') && K.b.type !== 'insula'; const tc = st === 'asteca' ? (P.trim2 || P.trim) : (P.trim || '#6b4a30');
-    const stone = P.base ? P.base[2] : '#a09a8e'; const sh2 = st === 'grego' ? (P.trim || '#3f6fb0') : [[86, 104, 70], [104, 74, 50], [70, 92, 104]][Math.floor(K.hv(17) * 3)];
-    let wk = 0;
-    // (a window on the face whose outward direction is (ox, oz), at (px, py, pz), ww wide and hh high)
+    const stone = P.base ? P.base[2] : '#a09a8e'; const cut = st === 'grego' ? 'marble' : st === 'romano' ? 'ashlar' : st === 'egipcio' ? 'sandstone' : 'stone'; const sh2 = st === 'grego' ? (P.trim || '#3f6fb0') : [[86, 104, 70], [104, 74, 50], [70, 92, 104]][Math.floor(K.hv(17) * 3)];
+    let wk = 0; const fc = calm(tc, 0.75, 0.9); // (the people's trim calmed on a frame: a strong red only in small things)
+    const wcol = K.wallCol || P.wl || '#efe2c4', wpat = K.wallPat || (stuff(K.b).wall === 'frame' ? 'plaster' : stuff(K.b).wall); const RV = st === 'egipcio' ? 0.2 : 0.14;
+    // (a window on the face whose outward direction is (ox, oz), at (px, py, pz), ww wide and hh high: the pane at the back of a
+    // reveal as deep as the wall is thick — its sides of the wall's own stuff — the frame at its mouth, a sill under it; what
+    // closes it by the people and the house's id: shutters, iron bars, a grille, a rolled mat)
     const win = (px, py, pz, ox, oz, ww, hh) => {
       const ax = oz !== 0; const k = wk++; // (the face runs along X)
-      gw.put(SH.box, R3.mat(K.x0 + px + ox * 0.03, K.y0 + py, K.z0 + pz + oz * 0.03, ax ? 0 : Math.PI / 2, ww, hh, 0.06), '#2a3440');
-      const fx = (dx, dy, w2, h2, d2, col) => K.box(px + ox * 0.06 + (ax ? dx : 0), py + dy, pz + oz * 0.06 + (ax ? 0 : dx), ax ? w2 : d2, h2, ax ? d2 : w2, col || tc);
-      if (framed) { const fc = tc; const fw = st === 'asteca' ? 0.13 : 0.09;
-        fx(0, -0.08, ww + 0.2, 0.08, 0.1, fc); fx(0, hh, ww + 0.2, 0.09, 0.1, fc); fx(-ww / 2 - 0.05, 0, fw, hh, 0.1, fc); fx(ww / 2 + 0.05, 0, fw, hh, 0.1, fc); if (st === 'classico' || st === 'grego') fx(0, 0, 0.05, hh, 0.07); }
-      K.as('stone', () => K.box(px + ox * 0.1, py - 0.14, pz + oz * 0.1, ax ? ww + 0.3 : 0.2, 0.08, ax ? 0.2 : ww + 0.3, stone));
+      gw.put(SH.box, R3.mat(K.x0 + px + ox * 0.004, K.y0 + py, K.z0 + pz + oz * 0.004, ax ? 0 : Math.PI / 2, ww, hh, 0.02), '#2a3440'); if (K.lit) K.lit.push([K.x0 + px + ox * 0.05, K.y0 + py + hh / 2, K.z0 + pz + oz * 0.05, ox, oz]);
+      // (a piece at dx along the face, dy up from the pane's foot, n out of the wall; w2 along, h2 high, d2 deep)
+      const fx = (dx, dy, w2, h2, d2, col, n) => { const nn = n === undefined ? RV + 0.02 : n; K.box(px + ox * nn + (ax ? dx : 0), py + dy, pz + oz * nn + (ax ? 0 : dx), ax ? w2 : d2, h2, ax ? d2 : w2, col || fc); };
+      const tw = 0.1; K.as(wpat, () => { for (const s2 of [-1, 1]) fx(s2 * (ww / 2 + tw / 2), -0.06, tw, hh + 0.06 + tw, RV, wcol, RV / 2); fx(0, hh, ww, tw, RV, wcol, RV / 2); fx(0, -0.06, ww, 0.06, RV, wcol, RV / 2); });
+      if (framed) { const fw = st === 'asteca' ? 0.13 : 0.09;
+        fx(0, -0.08, ww + 0.2, 0.08, 0.05, fc); fx(0, hh, ww + 0.2, 0.09, 0.05, fc); fx(-ww / 2 - 0.05, 0, fw, hh, 0.05, fc); fx(ww / 2 + 0.05, 0, fw, hh, 0.05, fc); if (st === 'classico' || st === 'grego') fx(0, 0, 0.05, hh, 0.04, fc, 0.03); }
+      K.as(cut, () => K.box(px + ox * (RV + 0.06), py - 0.14, pz + oz * (RV + 0.06), ax ? ww + 0.3 : 0.2, 0.08, ax ? 0.2 : ww + 0.3, stone));
       // (a lintel of stone over it in the stone-building lands)
-      if (st === 'romano' || st === 'grego' || st === 'egipcio') K.as('stone', () => fx(0, hh + 0.09, ww + 0.34, 0.12, 0.08, st === 'egipcio' ? (P.trim || '#2f8f8a') : stone));
-      if (st === 'egipcio') K.as('beam', () => { for (const e of [-0.22, 0, 0.22]) fx(e * ww, 0, 0.035, hh, 0.04, '#5a4430'); });
-      if (st === 'romano' && K.fine) K.as('iron', () => { for (const e of [-0.25, 0.25]) fx(e * ww, 0, 0.025, hh, 0.04, '#2e2c2a'); });
-      if (shut) K.as('plankV', () => { const open = K.hv(110 + k) < 0.7; for (const s2 of [-1, 1]) { if (open) fx(s2 * (ww / 2 + 0.3), 0, ww * 0.5, hh, 0.05, sh2); else fx(s2 * ww * 0.25, 0, ww * 0.5, hh, 0.06, sh2); } });
+      if (st === 'romano' || st === 'grego' || st === 'egipcio') K.as(st === 'egipcio' ? 'stucco' : cut, () => fx(0, hh + 0.09, ww + 0.34, 0.12, 0.08, st === 'egipcio' ? (P.trim || '#2f8f8a') : stone));
+      const r = K.hv(130 + k); // (what closes it, by the house's id)
+      if (st === 'egipcio') K.as('beam', () => { for (const e of [-0.22, 0, 0.22]) fx(e * ww, 0, 0.035, hh, 0.04, '#5a4430', 0.06); });
+      if (st === 'romano' && K.fine && r < 0.45) K.as('iron', () => { for (const e of [-0.25, 0.25]) fx(e * ww, 0, 0.025, hh, 0.04, '#2e2c2a', 0.08); fx(0, hh * 0.5, ww, 0.025, 0.03, '#2e2c2a', 0.08); });
+      if (st === 'asteca' && K.fine && r < 0.4) K.as('wicker', () => fx(0, hh - 0.16, ww + 0.04, 0.16, 0.16, [176, 150, 98], RV + 0.1)); // (a mat of reed, rolled up)
+      // (a box of flowers under some windows of the classical and the southern towns — the house's id: geraniums, a white one)
+      if (K.fine && (st === 'classico' || st === 'grego' || st === 'romano') && K.hv(120 + k) < 0.32) {
+        K.as('jamb', () => K.box(px + ox * (RV + 0.18), py - 0.36, pz + oz * (RV + 0.18), ax ? ww + 0.08 : 0.2, 0.2, ax ? 0.2 : ww + 0.08, dim(fc, 0.9)));
+        const fl = [[204, 62, 56], [222, 112, 140], [236, 230, 214]][Math.floor(K.hv(125 + k) * 3)];
+        for (let q = 0; q < 6; q++) { const t = (q + 0.5) / 6 - 0.5, a = t * ww; const X = K.x0 + px + ox * (RV + 0.19) + (ax ? a : 0), Z = K.z0 + pz + oz * (RV + 0.19) + (ax ? 0 : a), Y = K.y0 + py - 0.17; const ang = q * 1.9 + k;
+          K.gp.blade(X, Y, Z, 0.09, ang, X + ox * 0.12 + Math.cos(ang) * 0.05, Y + 0.24, Z + oz * 0.12 + Math.sin(ang) * 0.05, [62, 104, 46], q % 2 ? [84, 140, 62] : fl, 0.5); }
+      }
+      // (shutters: open flat on the wall beside the reveal, or half shut over its mouth — the classical town's all, most Greek ones,
+      // some Roman ones)
+      const sh = shut ? (st === 'grego' ? r < 0.78 : true) : st === 'romano' && K.b.type !== 'insula' && r >= 0.45 && r < 0.75;
+      if (sh) K.as('painted', () => { const open = K.hv(110 + k) < 0.7; for (const s2 of [-1, 1]) { if (open) fx(s2 * (ww / 2 + tw + ww / 4 + 0.03), 0, ww * 0.5, hh, 0.04, sh2, 0.03); else fx(s2 * ww * 0.25, 0, ww * 0.5, hh, 0.05, sh2, RV + 0.06); } });
     };
     for (let f = 0; f < floors; f++) {
       const wy = y + f * fh + fh * 0.36, wh = Math.min(1.15, fh * 0.38);
@@ -584,17 +601,28 @@ float m3scale(float p) {
     const dx = x + o[0] * (sx / 2), dz = z + o[1] * (sz / 2);
     // (in the door's frame: a along the wall, n out of it)
     const bx = (a, yy, n, wa, hy, wn, col) => K.box(dx + (ax ? a : 0) + o[0] * n, yy, dz + (ax ? 0 : a) + o[1] * n, ax ? wa : wn, hy, ax ? wn : wa, col);
-    K.as('plankV', () => bx(0, y, 0.03, dw, dh, 0.1, dc));
-    // (its panels: rails across the leaf and a stile down its middle)
-    K.as('beam', () => { for (const f of [0.2, 0.55, 0.88]) bx(0, y + dh * f - 0.04, 0.085, dw - 0.06, 0.08, 0.02, dim(dc, 0.82)); bx(0, y + 0.08, 0.085, 0.07, dh - 0.16, 0.02, dim(dc, 0.82)); });
+    // (the leaf, as each people makes it: the classical town's planks with strap hinges and nails — one leaf of the stack's door
+    // picture, hinged left or right by the house's id; the Greek's and the Aztec's painted; the Roman's and the Greek's panelled,
+    // rails and a stile of planed wood; the Egyptian's plain planks)
+    const strap = st === 'classico', painted = st === 'grego' || st === 'asteca', panel = st === 'romano' || st === 'grego'; const lf = K.hv(19) < 0.5 ? 0 : 1;
+    K.as(strap ? doorPat(K.x0 + dx + o[0] * 0.03, K.y0 + y, K.z0 + dz + o[1] * 0.03, o, dw, lf) : painted ? 'painted' : 'plankV', () => bx(0, y, 0.03, dw, dh, 0.1, dc));
+    if (panel) K.as(painted ? 'painted' : 'jamb', () => { for (const f of [0.2, 0.55, 0.88]) bx(0, y + dh * f - 0.04, 0.085, dw - 0.06, 0.08, 0.02, dim(dc, 0.82)); bx(0, y + 0.08, 0.085, 0.07, dh - 0.16, 0.02, dim(dc, 0.82)); });
     // (its frame and lintel, and the step)
     const tr = P.trim || '#6b4a30'; const sl = st === 'romano' || st === 'grego' || st === 'egipcio' || st === 'asteca';
     K.as('beam', () => { for (const s2 of [-1, 1]) bx(s2 * (dw / 2 + 0.07), y, 0.07, 0.14, dh, 0.14, tr); });
-    K.as(sl ? 'stone' : 'beam', () => bx(0, y + dh, 0.08, dw + 0.42, 0.2, 0.18, sl ? (st === 'asteca' ? (P.trim || '#b33a2a') : stone) : tr));
+    K.as(sl ? (st === 'asteca' ? 'stucco' : cut) : 'beam', () => bx(0, y + dh, 0.08, dw + 0.42, 0.2, 0.18, sl ? (st === 'asteca' ? (P.trim || '#b33a2a') : stone) : tr));
+    // (the classical house's porch, now and then: a little roof of tiles over the door on two brackets)
+    if (st === 'classico' && floors <= 2 && K.hv(26) < 0.6) { const D2 = (a, yy, n) => [dx + (ax ? a : 0) + o[0] * n, yy, dz + (ax ? 0 : a) + o[1] * n]; const yb = y + dh + 0.36, dep = 0.62, wdt = dw + 0.7;
+      K.as('beam', () => { for (const s2 of [-1, 1]) K.bar(D2(s2 * (wdt / 2 - 0.1), yb - 0.45, 0.03), D2(s2 * (wdt / 2 - 0.1), yb + 0.02, dep - 0.08), [0, 0.07, 0], ax ? [0.06, 0, 0] : [0, 0, 0.06], tr); bx(0, yb - 0.03, dep / 2, wdt - 0.1, 0.03, dep, dim(tr, 0.8)); });
+      const c0 = D2(0, yb, dep / 2); K.as('tile', () => K.gable(c0[0], c0[1], c0[2], ax ? wdt : dep + 0.1, 0.4, ax ? dep + 0.1 : wdt, (P.roof && P.roof[1]) || '#94452d', ax)); }
     if (st === 'romano') K.as('stone', () => { for (const s2 of [-1, 1]) { const a = s2 * (dw / 2 + 0.28); const A = [dx + (ax ? a : 0) + o[0] * 0.13, y + dh + 0.22, dz + (ax ? 0 : a) + o[1] * 0.13], B = [dx + o[0] * 0.13, y + dh + 0.58, dz + o[1] * 0.13]; const da = -a, dy = 0.36, l = Math.hypot(da, dy); K.bar(A, B, [ax ? -dy / l * 0.12 : 0, da / l * 0.12, ax ? 0 : -dy / l * 0.12], [o[0] * 0.12, 0, o[1] * 0.12], stone); } });
     if (st === 'grego') gw.put(SH.box, R3.mat(K.x0 + dx + o[0] * 0.03, K.y0 + y + dh + 0.22, K.z0 + dz + o[1] * 0.03, ax ? 0 : Math.PI / 2, dw * 0.8, 0.26, 0.05), '#2a3440');
-    if (st === 'asteca') K.as('plaster', () => { bx(0, y + dh + 0.2, 0.1, dw + 0.7, 0.14, 0.2, P.trim2 || '#2fae8f'); bx(0, y + dh + 0.34, 0.1, dw + 0.25, 0.1, 0.2, P.trim || '#b33a2a'); });
-    if (K.fine) K.as('iron', () => { for (const f of [0.22, 0.78]) bx(-dw * 0.3, y + dh * f, 0.09, dw * 0.36, 0.045, 0.012, '#2e2b28'); const r = [dx + (ax ? dw * 0.3 : 0) + o[0] * 0.09, y + dh * 0.5, dz + (ax ? 0 : dw * 0.3) + o[1] * 0.09]; K.log(r, [r[0] + o[0] * 0.03, r[1], r[2] + o[1] * 0.03], 0.055, st === 'grego' || st === 'romano' ? '#8a7440' : '#2e2b28'); });
+    if (st === 'asteca') K.as('stucco', () => { bx(0, y + dh + 0.2, 0.1, dw + 0.7, 0.14, 0.2, P.trim2 || '#2fae8f'); bx(0, y + dh + 0.34, 0.1, dw + 0.25, 0.1, 0.2, P.trim || '#b33a2a'); });
+    // (the iron: on the strap door only the pin of the picture's ring, in relief where the picture has it; on a plain one its two
+    // straps; on a panelled one a knob of bronze)
+    if (K.fine) K.as('iron', () => { const su = ax ? -o[1] : o[0]; const ra = strap ? su * ((lf ? 0.16 : 0.84) - 0.5) * dw : dw * 0.3;
+      if (!strap && !panel) for (const f of [0.22, 0.78]) bx(-dw * 0.3, y + dh * f, 0.09, dw * 0.36, 0.045, 0.012, '#2e2b28');
+      const r = [dx + (ax ? ra : 0) + o[0] * 0.09, y + (strap ? 1.06 : dh * 0.5), dz + (ax ? 0 : ra) + o[1] * 0.09]; K.log(r, [r[0] + o[0] * 0.03, r[1], r[2] + o[1] * 0.03], strap ? 0.03 : 0.055, st === 'grego' || st === 'romano' ? '#8a7440' : '#2e2b28'); });
     // (the step: down to the ground before a footed house — no further out than a hand past the lot)
     const sdp = Math.min(0.7, stripOf(K, x, z, sx, sz, o) + 0.15), sn = 0.1 + sdp / 2;
     const sp = [dx + o[0] * sn, 0, dz + o[1] * sn]; const gy = K.footed ? Math.min(-0.4, K.gy(sp[0], sp[2]) - 0.04) : -0.4;
@@ -612,7 +640,7 @@ float m3scale(float p) {
       if (civ === 'egipcio') {
         // (the Egyptian cornice: the wall's top curving out in a gorge, the round moulding under it, a flat band over it)
         const yb = y + 0.08, H2 = 0.5, F = 0.26; const c2 = (P.par && P.par[1]) || dim(pc, 0.88);
-        K.as('plaster', () => { for (const W2 of wallsOf(sx, sz)) {
+        K.as('mud', () => { for (const W2 of wallsOf(sx, sz)) {
           const a0 = -W2.len / 2, a1 = W2.len / 2; const p = (a, up, out) => [x + (W2.ax ? a * (1 + out * 2 / W2.len) : W2.o[0] * (sx / 2 + out)), yb + up, z + (W2.ax ? W2.o[1] * (sz / 2 + out) : a * (1 + out * 2 / W2.len))];
           // (the gorge in three bands, flaring more as it rises)
           const prof = [[0, 0], [0.18, 0.05], [0.34, 0.14], [H2, F]];
@@ -629,7 +657,7 @@ float m3scale(float p) {
       K.as(st.wall, () => { for (const [px, pz, a, bb] of [[x, z - sz / 2, sx + 0.12, 0.25], [x, z + sz / 2, sx + 0.12, 0.25], [x - sx / 2, z, 0.25, sz], [x + sx / 2, z, 0.25, sz]]) K.box(px, y + 0.25, pz, a, 0.6, bb, pc); });
       K.as('slab', () => { for (const [px, pz, a, bb] of [[x, z - sz / 2, sx + 0.22, 0.34], [x, z + sz / 2, sx + 0.22, 0.34], [x - sx / 2, z, 0.34, sz], [x + sx / 2, z, 0.34, sz]]) K.box(px, y + 0.85, pz, a, 0.06, bb, (P.par && P.par[1]) || dim(pc, 0.9)); });
       if (K.fine) K.as('stone', () => { for (const W2 of wallsOf(sx, sz)) { const n = Math.max(1, Math.floor(W2.len / 3)); for (let k = 0; k < n; k++) { const a = -W2.len / 2 + W2.len * (k + 0.5) / n; K.box(x + (W2.ax ? a : W2.o[0] * (sx / 2 + 0.2)), y + 0.3, z + (W2.ax ? W2.o[1] * (sz / 2 + 0.2) : a), W2.ax ? 0.12 : 0.36, 0.1, W2.ax ? 0.36 : 0.12, P.base ? P.base[1] : '#8a8478'); } } });
-      if (civ === 'asteca') K.as('plaster', () => { for (const W2 of wallsOf(sx, sz)) { const n = Math.max(2, Math.round(W2.len / 0.9)); for (let k = 0; k < n; k++) { const a = -W2.len / 2 + W2.len * (k + 0.5) / n; const px = x + (W2.ax ? a : W2.o[0] * sx / 2), pz = z + (W2.ax ? W2.o[1] * sz / 2 : a);
+      if (civ === 'asteca') K.as('stucco', () => { for (const W2 of wallsOf(sx, sz)) { const n = Math.max(2, Math.round(W2.len / 0.9)); for (let k = 0; k < n; k++) { const a = -W2.len / 2 + W2.len * (k + 0.5) / n; const px = x + (W2.ax ? a : W2.o[0] * sx / 2), pz = z + (W2.ax ? W2.o[1] * sz / 2 : a);
         K.box(px, y + 0.91, pz, W2.ax ? 0.44 : 0.24, 0.16, W2.ax ? 0.24 : 0.44, pc); K.box(px, y + 1.07, pz, W2.ax ? 0.26 : 0.2, 0.14, W2.ax ? 0.2 : 0.26, k % 2 ? (P.trim || '#b33a2a') : pc); } } });
       return y + 0.91;
     }
@@ -855,7 +883,8 @@ float m3scale(float p) {
     const frame = st.wall === 'frame' && !o.wall && !o.pat;
     // (the wall itself: plaster where the timber is geometry, the people's stuff otherwise; under eaves, its top band in their shade)
     const w0 = frame ? mixc(wc, [244, 236, 214], 0.25) : wc; const eave = !o.noRoof && (o.roof || P.kind) !== 'flat';
-    K.as(o.pat || (frame || o.wall ? 'plaster' : st.wall), () => { if (eave) { K.box(x, 0, z, sx, h - 0.45, sz, w0); K.box(x, h - 0.45, z, sx, 0.45, sz, eaveShade(K, w0, h)); } else K.box(x, 0, z, sx, h, sz, w0); });
+    K.wallCol = w0; K.wallPat = o.pat || (st.wall === 'frame' ? 'plaster' : st.wall); // (the windows' reveals are of the wall: openings())
+    K.as(K.wallPat, () => { if (eave) { K.box(x, 0, z, sx, h - 0.45, sz, w0); K.box(x, h - 0.45, z, sx, 0.45, sz, eaveShade(K, w0, h)); } else K.box(x, 0, z, sx, h, sz, w0); });
     const tr = P.trim || '#6b4a30';
     if (frame) {
       const side = doorSide(K.b); const wt = mixc(tr, [74, 52, 36], 0.25); const t = 0.15, pr = 0.035;
@@ -881,13 +910,18 @@ float m3scale(float p) {
       });
     } else if (civ === 'grego' || civ === 'romano' || civ === 'classico') {
       // (a socle of stone round the foot, a band at each floor, a cornice under the eaves)
-      K.as('stone', () => K.box(x, 0, z, sx + 0.06, 0.42, sz + 0.06, P.base ? P.base[1] : '#8a8478'));
-      for (let f = 1; f < floors; f++) K.as('plaster', () => K.box(x, f * fh - 0.1, z, sx + 0.08, 0.16, sz + 0.08, dim(wc, 0.86)));
+      K.as(st.base === 'marble' || st.base === 'ashlar' ? st.base : 'stone', () => K.box(x, 0, z, sx + 0.06, 0.42, sz + 0.06, P.base ? P.base[1] : '#8a8478'));
+      for (let f = 1; f < floors; f++) K.as(st.wall === 'frame' ? 'plaster' : st.wall, () => K.box(x, f * fh - 0.1, z, sx + 0.08, 0.16, sz + 0.08, dim(wc, 0.86)));
+      // (quoins: the Roman house's corners of cut stone, long and short in turn up the wall — the box's edges broken)
+      if (K.fine && civ === 'romano' && floors <= 2) K.as(st.base === 'ashlar' ? 'ashlar' : 'stone', () => { const q0 = P.base ? P.base[2] : '#a09a8e'; let k = 0;
+        for (const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) for (let yy = 0.44, i = 0; yy < h - 0.42; yy += 0.32, i++) { const lng = (i + (px * pz > 0 ? 0 : 1)) % 2 === 0; const la = lng ? 0.46 : 0.26, lb = lng ? 0.26 : 0.46;
+          K.box(x + px * (sx / 2 - la / 2 + 0.03), yy, z + pz * (sz / 2 + 0.015), la, 0.29, 0.06, dim(q0, 0.92 + K.hv(240 + k) * 0.12)); K.box(x + px * (sx / 2 + 0.015), yy, z + pz * (sz / 2 - lb / 2 + 0.03), 0.06, 0.29, lb, dim(q0, 0.92 + K.hv(241 + k) * 0.12)); k += 2; } });
     } else if (civ === 'egipcio') {
+      K.as('sandstone', () => K.box(x, 0, z, sx + 0.08, 0.36, sz + 0.08, P.base ? P.base[1] : '#cdb98f')); // (a low socle of sandstone under the mud brick)
       // (the round moulding up the corners)
-      K.as('plaster', () => { for (const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.cyl(x + px * sx / 2, 0.1, z + pz * sz / 2, 0.09, h - 0.1, dim(wc, 0.92)); });
+      K.as('mud', () => { for (const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.cyl(x + px * sx / 2, 0.1, z + pz * sz / 2, 0.09, h - 0.1, dim(wc, 0.92)); });
     } else if (civ === 'asteca') {
-      K.as('plaster', () => { K.box(x, 0, z, sx + 0.05, 0.5, sz + 0.05, P.trim2 || '#2fae8f'); K.box(x, 0.5, z, sx + 0.04, 0.08, sz + 0.04, P.trim || '#b33a2a'); });
+      K.as('stucco', () => { K.box(x, 0, z, sx + 0.05, 0.5, sz + 0.05, P.trim2 || '#2fae8f'); K.box(x, 0.5, z, sx + 0.04, 0.08, sz + 0.04, P.trim || '#b33a2a'); });
     }
     // (the floors between storeys and the band at the top: timber in the timber lands, a band of plaster elsewhere)
     if (!frame) K.as(civ === 'grego' || civ === 'romano' || civ === 'egipcio' || civ === 'asteca' ? 'plaster' : 'beam', () => { for (let f = 1; f < floors; f++) if (civ !== 'grego' && civ !== 'romano') K.box(x, f * fh - 0.12, z, sx + 0.14, 0.24, sz + 0.14, civ === 'asteca' ? (P.trim || '#b33a2a') : tr); });
@@ -898,15 +932,15 @@ float m3scale(float p) {
     const P = K.P; const fh = h / floors; const back = Math.min(0.5, Math.min(sx, sz) * 0.12); let top = h;
     for (let f = 0; f < floors; f++) {
       const fx = sx - f * back * 2, fz = sz - f * back * 2, yb = f * fh;
-      K.as('plaster', () => K.box(x, yb, z, fx, fh, fz, f % 2 ? P.wr : P.wl));
-      if (!f) K.as('plaster', () => { K.box(x, 0, z, fx + 0.05, 0.5, fz + 0.05, P.trim2 || '#2fae8f'); K.box(x, 0.5, z, fx + 0.04, 0.08, fz + 0.04, P.trim || '#b33a2a'); });
-      K.as('plaster', () => K.box(x, yb + fh - 0.36, z, fx + 0.06, 0.3, fz + 0.06, f % 2 ? (P.trim2 || '#2fae8f') : (P.trim || '#b33a2a')));
-      openings(g, gw, K, x, z, fx, fz, yb, fh, 1, f === 0 ? o.door : false);
+      K.as(stuff(K.b).wall, () => K.box(x, yb, z, fx, fh, fz, f % 2 ? P.wr : P.wl));
+      if (!f) K.as('stucco', () => { K.box(x, 0, z, fx + 0.05, 0.5, fz + 0.05, P.trim2 || '#2fae8f'); K.box(x, 0.5, z, fx + 0.04, 0.08, fz + 0.04, P.trim || '#b33a2a'); });
+      K.as('stucco', () => K.box(x, yb + fh - 0.36, z, fx + 0.06, 0.3, fz + 0.06, f % 2 ? (P.trim2 || '#2fae8f') : (P.trim || '#b33a2a')));
+      K.wallCol = f % 2 ? P.wr : P.wl; K.wallPat = stuff(K.b).wall; openings(g, gw, K, x, z, fx, fz, yb, fh, 1, f === 0 ? o.door : false);
       if (f < floors - 1) {
         // (the terrace: the floor of the step, its low parapet, flowers along it)
         const tx = fx + 0.1, tz = fz + 0.1, pc = (P.par && P.par[0]) || P.wl;
         K.as('slab', () => K.box(x, yb + fh, z, tx, 0.12, tz, P.top || P.wl));
-        K.as('plaster', () => { for (const [px, pz, a2, b2] of [[x, z - tz / 2 + 0.07, tx, 0.14], [x, z + tz / 2 - 0.07, tx, 0.14], [x - tx / 2 + 0.07, z, 0.14, tz], [x + tx / 2 - 0.07, z, 0.14, tz]]) K.box(px, yb + fh + 0.12, pz, a2, 0.34, b2, pc); });
+        K.as('stucco', () => { for (const [px, pz, a2, b2] of [[x, z - tz / 2 + 0.07, tx, 0.14], [x, z + tz / 2 - 0.07, tx, 0.14], [x - tx / 2 + 0.07, z, 0.14, tz], [x + tx / 2 - 0.07, z, 0.14, tz]]) K.box(px, yb + fh + 0.12, pz, a2, 0.34, b2, pc); });
         const n = Math.max(2, Math.round(fx / 1.2)); const side = doorSide(K.b); const so = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[side];
         for (let k = 0; k < n; k++) { const a2 = -fx / 2 + fx * (k + 0.5) / n; const px = x + (so[1] ? a2 : so[0] * (tx / 2 - 0.22)), pz = z + (so[1] ? so[1] * (tz / 2 - 0.22) : a2); const py = yb + fh + 0.12;
           K.as('mud', () => K.cyl(px, py, pz, 0.15, 0.26, '#b8683a'));
@@ -955,7 +989,10 @@ float m3scale(float p) {
     if (!o.plinth) footing(K, x, z, sx, sz, K.st !== 'egipcio' && K.st !== 'asteca');
     if (K.st === 'asteca' && floors > 1 && (o.roof || P.kind) === 'flat' && !o.noRoof && !o.wall) return stepped(g, gw, K, o, x, z, sx, sz, h, floors);
     warmWalls(K, x, z, sx, sz, h, floors, o);
-    K.as(K.st === 'egipcio' ? 'plaster' : 'beam', () => K.box(x, h - 0.2, z, sx + 0.1, 0.2, sz + 0.1, K.st === 'egipcio' ? (P.trim || '#2f8f8a') : (P.trim || '#6b4a30')));
+    // (the band under the eaves: a cornice of cut stone in two steps in the Roman and the Greek town, timber in the classical,
+    // painted in the Egyptian)
+    if (K.st === 'romano' || K.st === 'grego') { const cs = P.base ? P.base[2] : '#a09a8e'; K.as(K.st === 'grego' ? 'marble' : 'ashlar', () => { K.box(x, h - 0.24, z, sx + 0.08, 0.13, sz + 0.08, cs); K.box(x, h - 0.11, z, sx + 0.2, 0.11, sz + 0.2, dim(cs, 0.95)); }); }
+    else K.as(K.st === 'egipcio' ? 'stucco' : 'beam', () => K.box(x, h - 0.2, z, sx + 0.1, 0.2, sz + 0.1, K.st === 'egipcio' ? (P.trim || '#2f8f8a') : (P.trim || '#6b4a30')));
     openings(g, gw, K, x, z, sx, sz, 0, h, floors, o.door);
     // (the wooden balcony of the classical and the southern town houses, on the floor under the roof, over the door)
     if (floors >= 2 && (K.st === 'classico' || K.st === 'grego' || K.st === 'romano') && (K.b.type === 'sobrado' || K.b.type === 'insula') && K.hv(18) < 0.75) balcony(K, x, z, sx, sz, h, floors);
@@ -969,7 +1006,7 @@ float m3scale(float p) {
         K.as('cloth', () => K.rbox(x - 0.12 * sx, h + 1.72, z - 0.02 * sz, sx * 0.42, 0.05, sz * 0.52, '#e8e0c8', 0, 0.08));
         K.as(stuff(K.b).wall, () => { K.box(x + 0.3 * sx, h + 0.25, z - 0.28 * sz, 0.7, 1.6, 0.7, P.wl); }); K.box(x + 0.3 * sx, h + 1.1, z - 0.28 * sz + 0.36, 0.5, 0.55, 0.04, '#3a2a1c');
       } else if (civ === 'asteca') {
-        K.as('plaster', () => K.box(x, h - 0.35, z, sx + 0.08, 0.3, sz + 0.08, P.trim || '#b33a2a'));
+        K.as('stucco', () => K.box(x, h - 0.35, z, sx + 0.08, 0.3, sz + 0.08, P.trim || '#b33a2a'));
         for (let k = 0; k < 3; k++) { const px = x - sx * 0.3 + k * sx * 0.3, pz = z + sz * 0.3; K.as('mud', () => K.cyl(px, h + 0.25, pz, 0.22, 0.32, '#b8683a')); K.gp.blade(K.x0 + px, K.y0 + h + 0.55, K.z0 + pz, 0.18, k, K.x0 + px + 0.1, K.y0 + h + 1.05, K.z0 + pz, [70, 120, 50], k % 2 ? [90, 160, 70] : [224, 90, 122], 0.5); K.gp.blade(K.x0 + px, K.y0 + h + 0.55, K.z0 + pz, 0.18, k + 1.6, K.x0 + px - 0.12, K.y0 + h + 0.95, K.z0 + pz + 0.05, [70, 120, 50], [96, 164, 72], 0.5); }
       }
     }
@@ -1343,7 +1380,7 @@ float m3scale(float p) {
     quarteirao(g, gw, K) { house(g, gw, K, { floors: 4, h: 2.9, roof: K.P.kind === 'flat' ? 'flat' : 'hip', inset: 0.3 }); },
     barraco(g, gw, K) {
       const sx = K.w * 0.7, sz = K.d * 0.6;
-      K.box(K.w / 2, 0, K.d / 2, sx, 2.1, sz, ['#8a7a5a', '#7a6a4a', '#9a8a6a'][K.b.v || 0]);
+      K.wallCol = ['#8a7a5a', '#7a6a4a', '#9a8a6a'][K.b.v || 0]; K.wallPat = 'plankV'; K.as('plankV', () => K.box(K.w / 2, 0, K.d / 2, sx, 2.1, sz, K.wallCol));
       g.put(SH.box, R3.mat(K.x0 + K.w / 2, K.y0 + 2.1, K.z0 + K.d / 2, 0, sx + 0.4, 0.12, sz + 0.5, 0.18), '#6a6a6a');
       openings(g, gw, K, K.w / 2, K.d / 2, sx, sz, 0, 2.1, 1);
     },
@@ -1369,8 +1406,8 @@ float m3scale(float p) {
     temple(g, gw, K) {
       const st = styleOf(K.b); const P = K.P;
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 5); return; }
-      if (st === 'asteca' || st === 'maia' || st === 'inca') { K.as('stone', () => { for (let k = 0; k < 4; k++) { const s = (K.w - 0.5) * (1 - k * 0.2); K.box(K.w / 2, k * 1.6, K.d / 2, s, 1.6, s, P.base ? P.base[k % 2] : '#b9ad93'); } }); K.as('plaster', () => K.box(K.w / 2, 6.4, K.d / 2, K.w * 0.3, 2, K.d * 0.3, P.wl)); K.as('stone', () => K.box(K.w / 2, 0.8, K.d - 0.6, 1.2, 0.2, 2.6, P.trim || '#b33a2a')); return; }
-      if (st === 'egipcio') { K.as('stone', () => K.box(K.w / 2, 0, K.d / 2, K.w - 0.6, 6, K.d - 0.6, P.wl)); K.box(K.w / 2, 6, K.d / 2, K.w - 0.4, 0.5, K.d - 0.4, P.trim || '#2f8f8a'); K.as('plankV', () => K.box(K.w / 2, 0, K.d - 0.25, 1.6, 3.4, 0.2, P.door || '#3e2e1c')); K.as('stone', () => { for (const s of [-1, 1]) K.box(K.w / 2 + s * 2.6, 0, K.d + 0.4, 0.6, 7.5, 0.6, P.wr); }); return; }
+      if (st === 'asteca' || st === 'maia' || st === 'inca') { K.as('tezontle', () => { for (let k = 0; k < 4; k++) { const s = (K.w - 0.5) * (1 - k * 0.2); K.box(K.w / 2, k * 1.6, K.d / 2, s, 1.6, s, P.base ? P.base[k % 2] : '#b9ad93'); } }); K.as('stucco', () => K.box(K.w / 2, 6.4, K.d / 2, K.w * 0.3, 2, K.d * 0.3, P.wl)); K.as('stucco', () => K.box(K.w / 2, 0.8, K.d - 0.6, 1.2, 0.2, 2.6, P.trim || '#b33a2a')); return; }
+      if (st === 'egipcio') { K.as('sandstone', () => K.box(K.w / 2, 0, K.d / 2, K.w - 0.6, 6, K.d - 0.6, P.wl)); K.box(K.w / 2, 6, K.d / 2, K.w - 0.4, 0.5, K.d - 0.4, P.trim || '#2f8f8a'); K.as('plankV', () => K.box(K.w / 2, 0, K.d - 0.25, 1.6, 3.4, 0.2, P.door || '#3e2e1c')); K.as('sandstone', () => { for (const s of [-1, 1]) K.box(K.w / 2 + s * 2.6, 0, K.d + 0.4, 0.6, 7.5, 0.6, P.wr); }); return; }
       if (st === 'nordico') { house(g, gw, K, { h: 3.4, roof: 'turf', inset: 0.3 }); return; }
       // the classical temple: steps, columns all round, a pediment roof
       K.as('stone', () => { K.box(K.w / 2, 0, K.d / 2, K.w - 0.3, 0.4, K.d - 0.3, P.base ? P.base[1] : '#8a8478'); K.box(K.w / 2, 0.4, K.d / 2, K.w - 0.8, 0.4, K.d - 0.8, P.base ? P.base[2] : '#a09a8e'); });
@@ -1515,7 +1552,7 @@ float m3scale(float p) {
     // (a ring's middle point faces -X: what 'out' is told for the rings)
     const wc = rgbOf(P.wl || '#efe2c4'); const ring = (rr, y0, y1, f0, f1) => { const pts = []; for (let j = 0; j <= 1; j++) for (let i = 0; i <= N2; i++) { const a = i / N2 * TAU; pts.push([cx + Math.cos(a) * rr, j ? y1 : y0, cz + Math.sin(a) * rr]); } return pts; };
     K.as(wallPat, () => K.sheet(ring(r, 0, H), N2, 1, (X, Y) => { const f = 0.78 + 0.22 * G.clamp((Y - K.y0) / 0.7, 0, 1); return qc([wc[0] * f, wc[1] * f, wc[2] * f]); }, [-1, 0, 0]));
-    if (K.st === 'asteca') K.as('plaster', () => { K.sheet(ring(r + 0.015, H - 0.5, H - 0.3), N2, 1, P.trim || '#b33a2a', [-1, 0, 0]); K.sheet(ring(r + 0.015, 0.06, 0.42), N2, 1, P.trim2 || '#2fae8f', [-1, 0, 0]); });
+    if (K.st === 'asteca') K.as('stucco', () => { K.sheet(ring(r + 0.015, H - 0.5, H - 0.3), N2, 1, P.trim || '#b33a2a', [-1, 0, 0]); K.sheet(ring(r + 0.015, 0.06, 0.42), N2, 1, P.trim2 || '#2fae8f', [-1, 0, 0]); });
     // (the straw: a cone in three courses swelling a little, its eaves thick, the underside, the knot at the top)
     const th = rgbOf((P.thatch && P.thatch[0]) || '#c8a85a'), th2 = rgbOf((P.thatch && P.thatch[1]) || '#a3843f'); const R0 = r * 1.36, Y0 = H - 0.25, HT = 2.6;
     const cone = []; const rows = 4; for (let j = 0; j <= rows; j++) for (let i = 0; i <= N2; i++) { const a = i / N2 * TAU, f = j / rows; const rr = R0 * (1 - f) + (f > 0 && f < 1 ? 0.05 : 0) + 0.02; cone.push([cx + Math.cos(a) * rr, Y0 + HT * f, cz + Math.sin(a) * rr]); }
@@ -1525,10 +1562,12 @@ float m3scale(float p) {
       K.as('thatch', () => K.sheet(und, N2, 1, dim(th2, 0.6), [0, -1, 0])); }
     K.as('thatch', () => { K.cyl(cx, Y0 + HT - 0.42, cz, 0.16, 0.32, dim(th2, 0.85)); K.cone(cx, Y0 + HT - 0.12, cz, 0.15, 0.32, dim(th2, 0.75)); });
     // (the door in its frame on its side, a step before it, a window on another side)
-    const side = doorSide(K.b); const od = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[side]; const ax = od[1] !== 0; const dw = 0.84, dh = 1.75;
+    const side = doorSide(K.b); const od = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[side]; const ax = od[1] !== 0; const dw = 0.85, dh = 1.75;
     const D = (a, y, n) => [cx + (ax ? a : od[0] * (r + n)), y, cz + (ax ? od[1] * (r + n) : a)];
     const bx = (a, y, n, wa, hy, wn, col) => { const q = D(a, y, n); K.box(q[0], q[1], q[2], ax ? wa : wn, hy, ax ? wn : wa, col); };
-    K.as('plankV', () => bx(0, 0, -0.02, dw, dh, 0.1, P.door || '#3a2a1c'));
+    // (its leaf as the people make theirs — openings(): planks with straps in the classical lands, painted by the Greek and the Aztec)
+    { const lp = D(0, 0, -0.02); const pat = K.st === 'classico' ? doorPat(K.x0 + lp[0], K.y0, K.z0 + lp[2], od, dw, K.hv(19) < 0.5 ? 0 : 1) : K.st === 'grego' || K.st === 'asteca' ? 'painted' : 'plankV';
+      K.as(pat, () => bx(0, 0, -0.02, dw, dh, 0.1, P.door || '#3a2a1c')); }
     K.as('beam', () => { for (const e of [-1, 1]) bx(e * (dw / 2 + 0.06), 0, 0.02, 0.12, dh + 0.04, 0.14, P.trim || '#6b4a30'); bx(0, dh, 0.02, dw + 0.34, 0.16, 0.16, P.trim || '#6b4a30'); });
     const sp = D(0, 0, 0.35); const gy = Math.min(-0.36, K.gy(sp[0], sp[2]) - 0.04); K.as('stone', () => bx(0, gy, 0.33, dw + 0.3, 0.04 - gy, 0.42, base[2]));
     const wo = [-od[1], od[0]]; const wq = [cx + wo[0] * (r - 0.02), 1.2, cz + wo[1] * (r - 0.02)];
