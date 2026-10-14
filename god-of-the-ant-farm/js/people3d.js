@@ -105,6 +105,7 @@
     const robe = v.role === 'sacerdote' || v.role === 'anciao' || v.role === 'escriba' || (v.g === 'f' && ad >= 12 && (v.id % 3 !== 0));
     const hair = ad >= 62 ? G.lerpColor(G.hex2rgb(v.hair || '#3a2a1a'), [214, 210, 204], G.clamp((ad - 62) / 18, 0, 0.85)) : null;
     const L = { s, skin: v.skin || '#d8a888', hair: hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', belt: darker(cloth, 0.38), brow: darker(v.hair || '#3a2a1a', 0.8), nose: darker(v.skin || '#d8a888', 0.88), lips: darker(v.skin || '#d8a888', 0.62), robe, fem: v.g === 'f' && ad >= 13, bun: v.g === 'f' && ad >= 16 && v.id % 3 === 1, beard: v.g === 'm' && ad >= 26 && v.id % 3 === 0, long: v.g === 'f' && ad >= 8 && v.id % 3 !== 1, bald: v.g === 'm' && ad >= 55 && v.id % 4 === 0, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia', torch: torchOf(v), lantern: !!v.lantern && !v.inside, strap: ad >= 14 && (v.role === 'cacador' || v.role === 'guerreiro' || v.role === 'mercador' || v.role === 'explorador' || (G.Possess && G.Possess.body && G.Possess.body() === v)) };
+    L.id = v.id || 0; // (only for the drawing's own clocks: each one's cloth moves on its own beat)
     if (skin) {
       L.out = outfitOf(v, L, fac); L.headK = L.out.headK; L.armOut = L.out.skirt === 'saiaL' || L.out.cloakM ? 0.07 : 0;
       // (the face's mood, from the world's: joy smiles, grief and sadness frown with the brows raised inside, fear opens the
@@ -189,6 +190,8 @@
     if (v.robe && !v.hood) { o.cloakM = 'capa'; o.cloak = v.robe; o.hatM = v.unmask ? o.hatM : 'capuz'; }
     if (ruler && ad >= 10) { o.hatM = 'coroa'; o.cloakM = 'capa'; o.cloak = wool(darker(fac && G.Fac.hex ? G.Fac.hex(fac.id) : '#8a2a2a', 0.85)); o.metal = METAL.gold; o.motif = 1; o.cloakTrim = 1; }
     if (v.captive) { o.cloakM = null; o.hatM = null; o.motif = 0; o.overK = 0; o.feetK = 1; o.trim = o.cloth; o.belt = '#6a5a4a'; o.cloakTrim = 0; }
+    // (a northern cloak has a collar of fur — white on a ruler's —; every other cloak, a collar of its own cloth)
+    o.fur = o.cloakM === 'capa' && civ === 'nordico' && !v.robe ? (ruler ? 2 : 1) : 0;
     // (the colours once, as the graphics card wants them: linear)
     o.lin = {}; for (const k of ['cloth', 'trim', 'pants', 'boots', 'belt', 'metal', 'over', 'beads', 'cloak', 'hat', 'iris', 'lips']) { const c = color(o[k]); o.lin[k] = [c.r, c.g, c.b]; }
     OUT.set(id, o); if (OUT.size > 2000) OUT.clear();
@@ -643,10 +646,12 @@
     for (let k = 0; k < 2; k++) leg(R, pose, L, k, s, grounded, want[k]);
     // (the skirt: its front follows the leg that is most forward, its back the one most behind, its sides their own leg)
     const hl = pose.hipL, hr = pose.hipR, cl = pose.cloth || 0, cs = pose.clothS || 0;
-    fr(R[B.skF], R[B.pel], 0, -0.04, 0, Math.min(hl, hr, 0) * 0.8 + Math.min(0, cl) * 0.5, 0, cs * 0.3);
+    // (a thigh raised far — sitting, crouching — carries the cloth over it nearly all the way: in a step, four fifths)
+    const fk = a => a * (0.8 + 0.17 * G.clamp(-a - 0.6, 0, 1)), sk = a => a * (0.75 + 0.2 * G.clamp(-a - 0.6, 0, 1));
+    fr(R[B.skF], R[B.pel], 0, -0.04, 0, fk(Math.min(hl, hr, 0)) + Math.min(0, cl) * 0.5, 0, cs * 0.3);
     // (its back: the foot most behind — the thigh and half the knee's fold: the heel kicked up in the swing stays inside)
-    fr(R[B.skB], R[B.pel], 0, -0.04, 0, Math.max(hl + pose.knL * 0.5, hr + pose.knR * 0.5, 0) * 0.85 + Math.max(0, cl) * 0.5, 0, cs * 0.3);
-    fr(R[B.skL], R[B.pel], 0.095, -0.04, 0, hl * 0.75 + cl * 0.3, 0, cs * 0.4); fr(R[B.skR], R[B.pel], -0.095, -0.04, 0, hr * 0.75 + cl * 0.3, 0, cs * 0.4);
+    fr(R[B.skB], R[B.pel], 0, -0.04, 0, Math.max(hl + pose.knL * 0.5, hr + pose.knR * 0.5, 0) * 0.85 + Math.max(0, cl) * 0.5 - Math.min(hl, hr, 0) * 0.12, 0, cs * 0.3); // (seated, drawn back over the buttocks)
+    fr(R[B.skL], R[B.pel], 0.095, -0.04, 0, sk(hl) + cl * 0.3, 0, cs * 0.4); fr(R[B.skR], R[B.pel], -0.095, -0.04, 0, sk(hr) + cl * 0.3, 0, cs * 0.4);
     fr(R[B.clk1], R[B.chest], 0, 0.46, -0.11, Math.max(0, cl) * 0.6, 0, cs * 0.3); fr(R[B.clk2], R[B.clk1], 0, -0.45, 0, Math.max(0, cl) * 0.5, 0, cs * 0.3);
     // (what is held: the torch upright in the left hand whatever the arm does; the tool in the right; the load at the chest)
     M.v.setFromMatrixPosition(R[B.hdL]); R[B.torch].makeRotationY(-yaw + Math.PI / 2); R[B.torch].setPosition(M.v.x, M.v.y, M.v.z); M.b.makeScale(s, s, s); R[B.torch].multiply(M.b);
@@ -791,6 +796,11 @@
     const want = G.clamp(Math.max(0, fw) * 0.1 + G.clamp(acc * 0.025, -0.25, 0.25), -0.2, 0.75), side = G.clamp(-dy / dt * Math.max(0.3, fw) * 0.06, -0.35, 0.35);
     const k = 40, c = 7; s.cw += ((want - s.ca) * k - s.cw * c) * dt; s.ca += s.cw * dt; s.cs += (side - s.cs) * (1 - Math.exp(-5 * dt));
     pose.cloth = G.clamp(s.ca, -0.3, 0.9); pose.clothS = s.cs;
+    // (the rise and fall of the steps: the cloth's free part lags the hips — a spring of its own; and how fast it goes)
+    const hy = (pose.bob || 0) + (pose.pelY || 0) - (pose.crouch || 0) * 0.92;
+    if (s.cb === undefined || Math.abs(hy - s.cb) > 0.3) { s.cb = hy; s.cbv = 0; }
+    s.cbv += ((hy - s.cb) * 90 - s.cbv * 9) * dt; s.cb += s.cbv * dt;
+    pose.clothB = G.clamp(s.cb - hy, -0.06, 0.06); pose.clothV = Math.max(0, fw);
   }
   P3.visOf = id => vis.get(id);
   P3.skin = () => skin; // (the bodies drawn as one skin — Body3D — or as the pieces of old)

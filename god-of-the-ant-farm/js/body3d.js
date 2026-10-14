@@ -21,12 +21,17 @@
   const B3 = G.Body3D = { ready: false, failed: null, rows: 0, calls: 0, lod: true }; // (lod: the far ones in the lighter bodies — off only to measure)
   let THREE = null, scene = null;
   const MAXR = 96; // (rows: People3D's MAX — the bodies drawn whole, the living and the dead)
-  let D = null, NB = 0, PB = 0, TW = 0, buf = null, tex = null, mat = null, depth = null;
+  let D = null, NB = 0, PB = 0, TW = 0, buf = null, tex = null, mat = null, depth = null, TU = null, JIDX = null;
   B3.rim = { value: 0.2 }; // (the edge light's strength: People3D sets it from the sky of the hour)
   const MESH = {}; // name → { mesh, geo, rows (Float32Array), n }
   let inv = null; // the bones' inverse bind matrices (the rig in its bind pose, inverted)
-  const NP = 20; // texels of params and colours a row
+  const NP = 40; // texels of params and colours a row (20), then the cloth's state and the joints it is kept off (20)
   B3.MAXR = MAXR;
+  // (the joints a cape and a skirt are kept off, in the order of their texels from 22: the hips and the neck — the trunk's
+  // axis —, the chest's side and front axes, then shoulder, elbow, wrist of each arm, hip, knee, ankle of each leg)
+  const JOINTS = ['pel', 'head', null, null, 'shL', 'faL', 'hdL', 'shR', 'faR', 'hdR', 'thL', 'snL', 'ftL', 'thR', 'snR', 'ftR'];
+  // (and, at 38 and 39, the shoulder caps' middles — the deltoids, which turn with the arms under a cloak's yoke)
+  const CAP = [0.016, -0.05, 0];
 
   // ------------------------------ the data ------------------------------
   function bytes(s) { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
@@ -59,13 +64,70 @@ void b3skin(in vec3 p, in vec3 n, out vec3 P, out vec3 N) {
   vec4 q = vec4(p, 1.0); P = vec3(dot(r0, q), dot(r1, q), dot(r2, q)); N = vec3(dot(r0.xyz, n), dot(r1.xyz, n), dot(r2.xyz, n));
 }
 `;
+  // the cloth's own motion and its collisions (a cape, a skirt), after the skin, in the world: its free part (from under the
+  // yoke, from the hips) lags the hips' rise and fall at each step, ripples down its length as it goes through the air,
+  // leans and flutters in the world's wind; then it is kept off the body — the trunk, the arms, the hands, the legs — and
+  // above the ground. The row's texels 20 (the lag of the steps, the speed, its own clock, -) and 21 (the ground, the size,
+  // on the ground?, -), then the joints (JOINTS) from 22
+  const CLOTH = `
+uniform float uTime; uniform vec3 uWind;
+vec4 b3V(int k) { return texelFetch(uBody, ivec2(PB + k, int(aRow + 0.5)), 0); }
+vec3 b3off(vec3 P, vec3 a, vec3 b, float r) {
+  vec3 ab = b - a; float t = clamp(dot(P - a, ab) / max(dot(ab, ab), 1e-8), 0.0, 1.0); vec3 d = P - (a + ab * t); float l = length(d);
+  return l < r && l > 1e-5 ? P + d * ((r - l) / l) : P;
+}
+vec3 b3cloth(vec3 P, vec3 p) {
+  int z = int(aZone + 0.5); bool cape = z == 7; if (!cape && z != 5 && z != 6) return P;
+  vec4 m = b3V(20), gs = b3V(21); float s = gs.y;
+  vec3 pel = b3V(22).xyz, nk = b3V(23).xyz, ex = b3V(24).xyz, ez = b3V(25).xyz;
+  vec3 up = normalize(nk - pel); float L = dot(nk - pel, up);
+  // (how free the point is: 0 where it is held — the yoke, the waist —, 1 at the hem)
+  float w = cape ? clamp((1.40 - p.y) / 0.85, 0.0, 1.0) : clamp((0.98 - p.y) / 0.85, 0.0, 1.0); w = w * w * (3.0 - 2.0 * w);
+  float t = uTime + m.z, sp = min(m.y, 6.0);
+  vec3 rd = P - pel - up * clamp(dot(P - pel, up), 0.0, L); rd = length(rd) > 1e-4 ? normalize(rd) : -ez;
+  P += up * (m.x * w * (cape ? 1.0 : 0.5));
+  P += rd * (sin(t * (4.2 + sp * 1.6) - p.y * 11.0 + p.x * 7.0) * (0.004 + 0.005 * sp) * w * (cape ? 1.0 : 0.35) * s);
+  vec3 Wd = vec3(uWind.x, 0.0, uWind.y);
+  P += Wd * ((cape ? 0.022 : 0.008) + 0.012 * uWind.z) * w * (0.75 + 0.25 * sin(t * (1.3 + uWind.z * 0.8) + p.y * 4.0 + p.x * 5.0)) * s;
+  P += rd * (sin(t * (5.0 + uWind.z * 2.0) + p.x * 17.0 - p.y * 11.0) * 0.006 * uWind.z * w * (cape ? 1.0 : 0.4) * s);
+  if (cape) {
+    // (the arms: the shoulder caps, the upper arm from a little under the shoulder — the yoke is made for the shoulder as it
+    // hangs —, the forearm, the hand)
+    vec3 sL = b3V(26).xyz, eL = b3V(27).xyz, wL = b3V(28).xyz, sR = b3V(29).xyz, eR = b3V(30).xyz, wR = b3V(31).xyz;
+    P = b3off(P, b3V(38).xyz, b3V(38).xyz, 0.078 * s); P = b3off(P, b3V(39).xyz, b3V(39).xyz, 0.078 * s);
+    P = b3off(P, mix(sL, eL, 0.15), eL, 0.072 * s); P = b3off(P, eL, wL, 0.056 * s); P = b3off(P, wL, wL + (wL - eL) * 0.62, 0.052 * s);
+    P = b3off(P, mix(sR, eR, 0.15), eR, 0.072 * s); P = b3off(P, eR, wR, 0.056 * s); P = b3off(P, wR, wR + (wR - eR) * 0.62, 0.052 * s);
+    // (then the trunk, last — nothing pushes the cloth into it: an elliptic cylinder round the hips-to-neck axis, a little
+    // inside the cloth's place at rest; not the yoke, which lies on the shoulders as it was made)
+    float h = dot(P - pel, up); vec3 q = P - pel - up * clamp(h, 0.0, L); float qx = dot(q, ex), qz = dot(q, ez);
+    float u = clamp(h / L, 0.0, 1.0); float rx = mix(0.17, 0.2, u) * s, rz = mix(0.135, 0.122, u) * s;
+    float kk = clamp((1.40 - p.y) / 0.1, 0.0, 1.0);
+    vec2 qa = abs(vec2(qx / rx, qz / rz)); float k = pow(qa.x * qa.x * qa.x + qa.y * qa.y * qa.y, 1.0 / 3.0); // (a back fuller at its corners: the shoulder blades)
+    if (k < 1.0 && k > 1e-4) P += (ex * qx + ez * qz) * ((1.0 / k - 1.0) * kk);
+    // (the legs, from a little under the hips)
+    float lr = (1.0 - smoothstep(0.82, 0.97, p.y)) * s;
+    P = b3off(P, b3V(32).xyz, b3V(33).xyz, 0.092 * lr); P = b3off(P, b3V(33).xyz, b3V(34).xyz, 0.07 * lr);
+    P = b3off(P, b3V(35).xyz, b3V(36).xyz, 0.092 * lr); P = b3off(P, b3V(36).xyz, b3V(37).xyz, 0.07 * lr);
+  } else {
+    // (a skirt: its waist kept off the belly as the trunk bows over it, a little inside where it sits at rest; the thighs
+    // from a tenth of their length — standing they never reach the waist, raised they carry the cloth over them)
+    if (p.y > 0.86) { float h = dot(P - pel, up); vec3 q = P - pel - up * clamp(h, 0.0, L); float qx = dot(q, ex), qz = dot(q, ez);
+      float k = length(vec2(qx / (0.155 * s), qz / (0.112 * s))); if (k < 1.0 && k > 1e-4) P += (ex * qx + ez * qz) * (1.0 / k - 1.0); }
+    vec3 hL = b3V(32).xyz, kL = b3V(33).xyz, hR = b3V(35).xyz, kR = b3V(36).xyz;
+    P = b3off(P, mix(hL, kL, 0.1), kL, 0.09 * s); P = b3off(P, kL, b3V(34).xyz, 0.068 * s);
+    P = b3off(P, mix(hR, kR, 0.1), kR, 0.09 * s); P = b3off(P, kR, b3V(37).xyz, 0.068 * s);
+  }
+  if (gs.z > 0.5) P.y = max(P.y, gs.x + 0.012 * s);
+  return P;
+}
+`;
   const VARY = 'varying vec3 vBind; varying vec3 vBindN; varying float vAO; flat varying int vRowI; flat varying int vZoneI;\n';
   // the paint of a body: from where the point is on the body as modelled (vBind) — the eyes from their own normal.
   // The row's texels after the bones: 0 face (shut, gaze x, gaze y, mouth open) · 1 mood (smile, brows up, brows in, blush)
   // · 2 cut (sleeve end down the arm, neckline, boot top, legs: 0 bare 1 trousers 2 wrapped) · 3 cut (belt height, belt
   // half-width, over: 0 none 1 the northern apron-dress 2 an apron, strap) · 4 skin · 5 cloth · 6 trim · 7 trousers ·
   // 8 boots · 9 belt · 10 hair · 11 iris · 12 lips · 13 over · 14 metal · 15 style (torso: 0 dressed 1 bare 2 bare with a
-  // collar; trim motif; feet: 0 shoes 1 bare 2 sandals; stubble) · 16 hat · 17 cloak · 18 beads · 19 (hem trim, cloak trim, -, -)
+  // collar; trim motif; feet: 0 shoes 1 bare 2 sandals; stubble) · 16 hat · 17 cloak · 18 beads · 19 (hem trim, cloak trim, the collar: 0 cloth 1 fur 2 white fur, -) · 20, 21 and the joints: the cloth (CLOTH)
   const PAINT = `
 vec4 b3T(int k) { return texelFetch(uBody, ivec2(PB + k, vRowI), 0); }
 float b3aa(float d) { float w = fwidth(d) * 0.8 + 1e-5; return clamp(0.5 - d / w, 0.0, 1.0); }
@@ -135,8 +197,21 @@ vec3 b3piece(vec3 p) {
   }
   if (z == 7 || z == 11) {
     vec3 c = b3T(17).rgb * b3weave(p.yxz);
-    if (z == 7 && b3T(19).y > 0.5 && p.y < B3_HEMK + 0.035) c = b3band(b3T(6).rgb, ang * 7.0, (p.y - B3_HEMK) / 0.035, b3T(15).y);
+    if (z == 7) {
+      // (the hem's band follows the hem: higher at the sides than at the back)
+      float th = atan(p.x, -(p.z + 0.035)); float hy = B3_HEMK + 0.035 * (th / 1.4) * (th / 1.4);
+      if (b3T(19).y > 0.5 && p.y < hy + 0.04) c = b3band(b3T(6).rgb, th * 9.0, clamp((p.y - hy) / 0.04, 0.0, 1.0), b3T(15).y);
+    }
     return c;
+  }
+  if (z == 14) {
+    // the collar: a roll of fur on a northern cloak — locks of a lighter and a darker hair, white for a ruler — or of the
+    // cloak's own cloth
+    float fk = b3T(19).z; if (fk < 0.5) return b3T(17).rgb * b3weave(p.yxz) * 0.94;
+    vec3 fur = fk > 1.5 ? vec3(0.74, 0.7, 0.64) : vec3(0.3, 0.22, 0.15);
+    float a = atan(p.x, -(p.z + 0.012)); float st = sin(a * 70.0 + sin(p.y * 160.0 + a * 9.0) * 2.0) * 0.5 + 0.5;
+    float k = 1.0 - smoothstep(0.0, 0.03, fwidth(a) * 70.0);
+    return fur * mix(1.0, 0.72 + 0.5 * st, k);
   }
   if (z == 8 || z == 13) { vec3 m = z == 13 ? b3T(14).rgb : b3T(16).rgb; float rv = step(0.5, fract(ang * 2.546)) * 0.0; return m * (0.92 + 0.12 * sin(ang * 4.0 + p.y * 30.0)) + rv; }
   if (z == 10) { float w = step(0.5, fract(ang * 16.0 + p.y * 45.0)) * 0.5 + step(0.5, fract(ang * 16.0 - p.y * 45.0)) * 0.5; float k = 1.0 - smoothstep(0.0, 0.03, fwidth(ang) * 16.0); return b3T(16).rgb * mix(1.0, 0.82 + 0.3 * w, k); }
@@ -214,28 +289,28 @@ vec3 b3paint() {
     const pb = '#define PB ' + PB + '\n#define B3_SR ' + Math.sin(D.roll).toFixed(6) + '\n#define B3_CR ' + Math.cos(D.roll).toFixed(6) + '\n#define B3_HEMC ' + hem.saiaC.toFixed(4) + '\n#define B3_HEML ' + hem.saiaL.toFixed(4) + '\n#define B3_HEMK ' + hem.cape.toFixed(4) + '\n';
     mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
     mat.onBeforeCompile = sh => {
-      sh.uniforms.uBody = B3.U; sh.uniforms.uRim = B3.rim;
-      sh.vertexShader = pb + SKIN + VARY + sh.vertexShader
+      sh.uniforms.uBody = B3.U; sh.uniforms.uTime = TU.time; sh.uniforms.uWind = TU.wind; sh.uniforms.uRim = B3.rim;
+      sh.vertexShader = pb + SKIN + CLOTH + VARY + sh.vertexShader
         .replace('#include <beginnormal_vertex>', `vec3 b3P, b3N; b3skin(position, normal, b3P, b3N);
           vec3 objectNormal = b3N;
           #ifdef USE_TANGENT
           vec3 objectTangent = vec3( tangent.xyz );
           #endif
           vBind = position; vBindN = normal; vAO = aAO; vRowI = int(aRow + 0.5); vZoneI = int(aZone + 0.5);`)
-        .replace('#include <begin_vertex>', 'vec3 transformed = b3P;');
+        .replace('#include <begin_vertex>', 'vec3 transformed = b3cloth(b3P, position);');
       sh.fragmentShader = pb + 'uniform highp sampler2D uBody; uniform float uRim;\n' + VARY + PAINT + sh.fragmentShader
         .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = b3paint() * mix(1.0, vAO, 0.75);')
         // (a soft light on the edges, as the old figures had: the people read against the ground — as bright as the sky of
         // the hour: at night it does not glow)
         .replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim;\n#include <opaque_fragment>');
     };
-    mat.customProgramCacheKey = () => 'body3d-v1';
+    mat.customProgramCacheKey = () => 'body3d-v2';
     depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     depth.onBeforeCompile = sh => {
-      sh.uniforms.uBody = B3.U;
-      sh.vertexShader = SKIN + sh.vertexShader.replace('#include <begin_vertex>', 'vec3 b3P, b3N; b3skin(position, vec3(0.0, 1.0, 0.0), b3P, b3N); vec3 transformed = b3P;');
+      sh.uniforms.uBody = B3.U; sh.uniforms.uTime = TU.time; sh.uniforms.uWind = TU.wind;
+      sh.vertexShader = pb + SKIN + CLOTH + sh.vertexShader.replace('#include <begin_vertex>', 'vec3 b3P, b3N; b3skin(position, vec3(0.0, 1.0, 0.0), b3P, b3N); vec3 transformed = b3cloth(b3P, position);');
     };
-    depth.customProgramCacheKey = () => 'body3d-depth-v1';
+    depth.customProgramCacheKey = () => 'body3d-depth-v2';
   }
 
   // ------------------------------ starting ------------------------------
@@ -244,6 +319,8 @@ vec3 b3paint() {
     try {
       D = G.BODYMESH; if (!D || !D.meshes || !D.meshes.corpoM) throw new Error('sem malhas (js/bodymesh.js)');
       NB = D.bones.length; PB = NB * 3; TW = PB + NP;
+      TU = realm.U && realm.U.time && realm.U.wind ? realm.U : { time: { value: 0 }, wind: { value: new THREE.Vector3() } }; // (the view's clock and the world's wind)
+      JIDX = JOINTS.map(n => (n ? D.bones.indexOf(n) : -1)); B3.CHEST = D.bones.indexOf('chest');
       buf = new Float32Array(TW * MAXR * 4);
       tex = new THREE.DataTexture(buf, TW, MAXR, THREE.RGBAFormat, THREE.FloatType);
       tex.minFilter = tex.magFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.needsUpdate = true;
@@ -293,8 +370,18 @@ vec3 b3paint() {
     set(2, u.sleeve, u.neck, u.bootTop, u.legs); set(3, u.beltY, u.beltH, u.overK, u.strap);
     col(p + 4 * 4, L.skin); lin(5, u.lin.cloth); lin(6, u.lin.trim); lin(7, u.lin.pants); lin(8, u.lin.boots); lin(9, u.lin.belt);
     col(p + 10 * 4, L.hair); lin(11, u.lin.iris); lin(12, u.lin.lips); lin(13, u.lin.over); lin(14, u.lin.metal);
-    set(15, u.torso, u.motif, u.feetK, 0); lin(16, u.lin.hat); lin(17, u.lin.cloak); lin(18, u.lin.beads); set(19, u.hem, u.cloakTrim, 0, 0);
+    set(15, u.torso, u.motif, u.feetK, 0); lin(16, u.lin.hat); lin(17, u.lin.cloak); lin(18, u.lin.beads); set(19, u.hem, u.cloakTrim, u.fur || 0, 0);
     function lin(k, c) { const j = p + k * 4; buf[j] = c[0]; buf[j + 1] = c[1]; buf[j + 2] = c[2]; buf[j + 3] = 1; }
+    // (the cloth: the lag of the steps, the speed, its own clock; the ground under it; the joints it is kept off)
+    const gr = L.ground !== undefined && Number.isFinite(L.ground);
+    set(20, pose.clothB || 0, pose.clothV || 0, ((L.id || 0) % 97) * 0.37, 0); set(21, gr ? L.ground : 0, L.s || 1, gr ? 1 : 0, 0);
+    for (let k = 0; k < JOINTS.length; k++) {
+      const j = p + (22 + k) * 4;
+      if (JIDX[k] >= 0) { const e = R[JIDX[k]].elements; buf[j] = e[12]; buf[j + 1] = e[13]; buf[j + 2] = e[14]; buf[j + 3] = 1; }
+      else { const e = R[B3.CHEST].elements, o = k === 2 ? 0 : 8, l = Math.hypot(e[o], e[o + 1], e[o + 2]) || 1; buf[j] = e[o] / l; buf[j + 1] = e[o + 1] / l; buf[j + 2] = e[o + 2] / l; buf[j + 3] = 0; }
+    }
+    for (let k = 0; k < 2; k++) { const e = R[JIDX[4 + k * 3]].elements, j = p + (38 + k) * 4, x = (k ? -1 : 1) * CAP[0], y = CAP[1];
+      buf[j] = e[0] * x + e[4] * y + e[12]; buf[j + 1] = e[1] * x + e[5] * y + e[13]; buf[j + 2] = e[2] * x + e[6] * y + e[14]; buf[j + 3] = 1; }
     // (what this person wears: the body, the hair, the beard, the skirt or the robe, the cloak, the hat)
     // (far from the eye, the lighter body; its clothes and hair the same)
     const bd0 = u.body || (L.fem ? 'corpoF' : 'corpoM'), bd = L.lod && B3.lod && MESH[bd0 + '_1'] ? bd0 + '_1' : bd0; use(MESH[bd] ? bd : 'corpoM', row);
@@ -303,7 +390,7 @@ vec3 b3paint() {
     if (row + 1 > B3.rows) B3.rows = row + 1;
   };
   // (who has no clothes of their own yet — the fallback's look: a plain tunic)
-  const DEF = { sleeve: 0.585, neck: 0, bootTop: 0.11, legs: 1, beltY: 1.01, beltH: 0.017, overK: 0, strap: 0, torso: 0, motif: 0, feetK: 0, hem: 1, cloakTrim: 0, blush: 0,
+  const DEF = { sleeve: 0.585, neck: 0, bootTop: 0.11, legs: 1, beltY: 1.01, beltH: 0.017, overK: 0, strap: 0, torso: 0, motif: 0, feetK: 0, hem: 1, cloakTrim: 0, fur: 0, blush: 0,
     lin: { cloth: [0.4, 0.25, 0.12], trim: [0.4, 0.06, 0.04], pants: [0.07, 0.05, 0.04], boots: [0.1, 0.05, 0.03], belt: [0.05, 0.03, 0.02], iris: [0.07, 0.04, 0.02], lips: [0.5, 0.2, 0.18], over: [0.4, 0.25, 0.12], metal: [0.45, 0.25, 0.07], hat: [0.4, 0.25, 0.12], cloak: [0.2, 0.12, 0.06], beads: [0.6, 0.2, 0.03] } };
   function col(j, hex) { K.c.set(hex || '#888888'); buf[j] = K.c.r; buf[j + 1] = K.c.g; buf[j + 2] = K.c.b; buf[j + 3] = 1; }
   function use(name, row) { const M = MESH[name]; if (M && M.n < MAXR) M.rows[M.n++] = row; }

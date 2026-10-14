@@ -252,8 +252,9 @@ def surface_nets(Fg, lo, h):
     return V, Q
 
 
-def project(prims, V, iters=3, eps=1e-4):
-    """Move each vertex onto the surface along the field's gradient."""
+def project(prims, V, iters=3, eps=1e-4, maxstep=None):
+    """Move each vertex onto the surface along the field's gradient (each step at most maxstep: where a field is nearly
+    flat — the edge of a cut — a full step would throw the vertex far away)."""
     V = V.copy()
     for _ in range(iters):
         f = field_at(prims, V)
@@ -262,7 +263,10 @@ def project(prims, V, iters=3, eps=1e-4):
             d = np.zeros(3); d[a] = eps
             g[:, a] = (field_at(prims, V + d) - field_at(prims, V - d)) / (2 * eps)
         gl2 = np.maximum(np.einsum('ij,ij->i', g, g), 1e-12)
-        V -= (f / gl2)[:, None] * g
+        st = (f / gl2)[:, None] * g
+        if maxstep is not None:
+            L = np.linalg.norm(st, axis=1); st *= np.minimum(1.0, maxstep / np.maximum(L, 1e-12))[:, None]
+        V -= st
     return V
 
 
@@ -305,7 +309,7 @@ def band_field(prims, lo, hi, h, coarse=4):
     return Fg, lo, n
 
 
-def mesh_of(prims, h, pad=0.02, box=None, coarse=4):
+def mesh_of(prims, h, pad=0.02, box=None, coarse=4, maxstep=None):
     """The mesh of a list of primitives at grid step h."""
     if box is None:
         los, his = zip(*[p.bbox() for p in prims if p.op == 'u'])
@@ -315,7 +319,7 @@ def mesh_of(prims, h, pad=0.02, box=None, coarse=4):
     if coarse > 1: Fg, lo, n = band_field(prims, lo, hi, h, coarse)
     else: Fg, lo, n = grid_field(prims, lo, hi, h)
     V, Q = surface_nets(Fg, lo, h)
-    V = project(prims, V)
+    V = project(prims, V, maxstep=maxstep)
     return V, Q
 
 

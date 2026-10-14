@@ -134,27 +134,202 @@ def skirt(long):
     return [Custom(f, (np.array([-ext, y1 - 0.02, -ext]), np.array([ext, y0 + 0.02, ext]))).set(bone='pel')]
 
 
+# ------------------------------ the cape ------------------------------
+CZ = -0.035           # (the cape's axis: a little behind the body's)
+CAPE_HEM = 0.55       # (its hem at the back, in the bind: just above the knees)
+
+
+def _bones(p): return set(p.bone) if isinstance(p.bone, dict) else {p.bone}
+
+
+def _deltoid(p):
+    """The first, roundest piece of clay of an arm (its shoulder cap) — not the biceps under it."""
+    return isinstance(p, Ellipsoid) and bool(_bones(p) & {'shL', 'shR'}) and p.r[0] > 0.055 and p.r[1] > 0.085
+
+
+HUNG_ROLL = 0.21      # (the arms as they hang under a cloak: the rig's roll with its armOut — in the bind they are out, 0.6)
+
+
+def _hung(p):
+    """A shoulder cap turned down about its shoulder from the bind's open arm to the arm hanging: what a cloak lies on."""
+    sd = 1.0 if 'shL' in _bones(p) else -1.0; S = CF.mirror(CF.S_L, sd); a = sd * (HUNG_ROLL - CF.BIND_ROLL)
+    Rz = rot_z(a); q = Ellipsoid(S + Rz @ (p.c - S), p.r, Rz @ (p.R if p.R is not None else np.eye(3)))
+    return q.set(op=p.op, k=p.k, bone=p.bone, tau=p.tau, tag=p.tag)
+
+
+def _union(prims, P):
+    acc = np.full(len(P), 1e3)
+    for p in prims: acc = smin(acc, p.sdf(P), p.k)
+    return acc
+
+
+def _torso(fem):
+    """The pieces of clay a cape lies on: the trunk, the buttocks, the thighs, the shoulder caps (not the arms below them)."""
+    out = []
+    for p in CF.body(fem):
+        if p.op != 'u' or p.bone is None: continue
+        b = _bones(p)
+        if b & {'pel', 'chest', 'thL', 'thR'}: out.append(p)
+        elif b & {'shL', 'shR'} and _deltoid(p): out.append(_hung(p))   # (the deltoid — the shoulder cap — with the arm hanging)
+    return out
+
+
+def _girdle():
+    """The shoulders a cloak lies on: the upper chest and back, the trapezius, the shoulder caps (not the neck)."""
+    out = []
+    for p in _torso(0.0):
+        b = _bones(p)
+        if b & {'shL', 'shR'}: out.append(p); continue
+        if 'chest' not in b: continue
+        if isinstance(p, RoundCone):
+            if abs(p.a[0]) < 0.01 and abs(p.b[0]) < 0.01: continue         # (the neck)
+            if max(p.a[1], p.b[1]) > 1.2: out.append(p)
+        elif p.c[1] > 1.2: out.append(p)
+    return out
+
+
+def no_arms(prims):
+    """A body without its arms (the shoulder caps kept): what a cloak's own shadow is cast by — in the bind the arms are
+    out, in the world they hang inside it."""
+    arm = {'shL', 'shR', 'faL', 'faR', 'hdL', 'hdR', 'fgL', 'fgR', 'tbL', 'tbR', 'elHL', 'elHR'}
+    return [p for p in prims if not (p.bone is not None and _bones(p) & arm and not _deltoid(p))]
+
+
+_DRAPE = {}
+def drape(gap=0.013, flare=0.09):
+    """How far from the cape's axis the cloth hangs, at each angle round the back (0 behind, + toward the body's left) and
+    each height: on the body where it is the widest so far from the top (the shoulder blades, then the buttocks), falling
+    straight down from there and opening a little (flare: metres out per metre down) — a man's body or a woman's, the wider."""
+    if 'R' in _DRAPE: return _DRAPE['TH'], _DRAPE['YS'], _DRAPE['R'], _DRAPE['RB']
+    TH = np.linspace(-np.pi, np.pi, 145); YS = np.arange(1.60, 0.30, -0.01); RS = np.arange(0.0, 0.46, 0.004)
+    T, Yg, Rg = np.meshgrid(TH, YS, RS, indexing='ij')
+    P = np.stack([np.sin(T) * Rg, Yg, CZ - np.cos(T) * Rg], -1).reshape(-1, 3)
+    rb = np.zeros(T.shape[:2])
+    for fem in (0.0, 1.0):
+        F = _union(_torso(fem), P).reshape(T.shape); ins = F < 0
+        last = len(RS) - 1 - np.argmax(ins[..., ::-1], axis=2); nxt = np.minimum(last + 1, len(RS) - 1)
+        # (where the surface crosses between the last sample inside and the next: not the samples' 4 mm steps)
+        fa = np.take_along_axis(F, last[..., None], 2)[..., 0]; fb = np.take_along_axis(F, nxt[..., None], 2)[..., 0]
+        r = RS[last] + (RS[1] - RS[0]) * np.clip(fa / np.minimum(fa - fb, -1e-9), 0, 1)
+        rb = np.maximum(rb, np.where(ins.any(2), r, 0.0))
+    for _ in range(2):                                        # (and a little smoothing, round and down)
+        Rp = np.pad(rb, 1, mode='edge'); rb = (4 * rb + Rp[:-2, 1:-1] + Rp[2:, 1:-1] + Rp[1:-1, :-2] + Rp[1:-1, 2:]) / 8
+    R = np.zeros_like(rb); R[:, 0] = rb[:, 0] + gap
+    fl = flare * (1 + 1.2 * np.clip(np.abs(TH) / 1.5, 0, 1) ** 2)       # (opening more at the sides: the hem wider than the shoulders)
+    # (and over the shoulder blades a little more: the arms swing them back under it)
+    gp = gap + 0.009 * smooth01((YS[None, :] - 1.33) / 0.06) * smooth01((np.abs(TH)[:, None] - 0.2) / 0.3)
+    R[:, 0] = rb[:, 0] + gp[:, 0]
+    for j in range(1, len(YS)): R[:, j] = np.maximum(rb[:, j] + gp[:, j], R[:, j - 1] + fl * 0.01)
+    _DRAPE.update(TH=TH, YS=YS, R=R, RB=rb)
+    return TH, YS, R, rb
+
+
+_TOP = {}
+def shoulder_top():
+    """The height of the top of the shoulders over each point of the ground plan (the upper chest and back, the trapezius,
+    the shoulder caps), and its slope: what a cloak's yoke lies on. Where there is no shoulder under a point, very low."""
+    if 'H' in _TOP: return _TOP['X'], _TOP['Z'], _TOP['H'], _TOP['GX'], _TOP['GZ']
+    XS = np.arange(-0.38, 0.3801, 0.004); ZS = np.arange(-0.18, 0.1801, 0.004); YS = np.arange(1.62, 1.20, -0.002)
+    X, Z, Y = np.meshgrid(XS, ZS, YS, indexing='ij')
+    F = _union(_girdle(), np.stack([X.ravel(), Y.ravel(), Z.ravel()], 1)).reshape(X.shape); ins = F < 0
+    first = np.argmax(ins, axis=2); has = ins.any(2); prv = np.maximum(first - 1, 0)
+    fa = np.take_along_axis(F, first[..., None], 2)[..., 0]; fb = np.take_along_axis(F, prv[..., None], 2)[..., 0]
+    H = np.where(has, YS[first] + (YS[0] - YS[1]) * np.clip(fa / np.minimum(fa - fb, -1e-9), 0, 1), 0.0)   # (the crossing, between samples)
+    # (beyond the shoulders' outline the height falls away as a cone, and the whole is smoothed: the cloth's edge is a
+    # smooth line, not the steps of the grid)
+    for _ in range(30):
+        Hp = np.pad(H, 1, mode='edge'); nb = np.max([Hp[:-2, 1:-1], Hp[2:, 1:-1], Hp[1:-1, :-2], Hp[1:-1, 2:]], axis=0) - 0.008
+        H = np.where(has, H, np.maximum(H, nb))
+    for _ in range(4):
+        Hp = np.pad(H, 1, mode='edge'); H = (4 * H + Hp[:-2, 1:-1] + Hp[2:, 1:-1] + Hp[1:-1, :-2] + Hp[1:-1, 2:]) / 8
+    H = np.where(H > 0.2, H, 0.6)
+    GX, GZ = np.gradient(H, XS, ZS)
+    GX = np.clip(GX, -6, 6); GZ = np.clip(GZ, -6, 6)
+    _TOP.update(X=XS, Z=ZS, H=H, GX=GX, GZ=GZ)
+    return XS, ZS, H, GX, GZ
+
+
+def _table(TH, YS, A, th, y):
+    """A table over (angle, height) read at points (bilinear; the heights run downward)."""
+    fi = np.clip((th - TH[0]) / (TH[1] - TH[0]), 0, len(TH) - 1.001); fj = np.clip((YS[0] - y) / (YS[0] - YS[1]), 0, len(YS) - 1.001)
+    i = fi.astype(int); j = fj.astype(int); u = fi - i; v = fj - j
+    return (A[i, j] * (1 - u) + A[i + 1, j] * u) * (1 - v) + (A[i, j + 1] * (1 - u) + A[i + 1, j + 1] * u) * v
+
+
+def pleat(th, y):
+    """The folds of a hanging cloth: round crests, sharp hollows between them, about seven across the back, deeper toward
+    the hem (none where it lies on the shoulders)."""
+    # (not mirrored: a cloth never hangs the same on both sides — seven big folds, irregularly spaced, smaller ones between)
+    u = th * 7.2 + 0.7 * np.sin(th * 2.3 + 0.4) + 0.35 * np.sin(th * 4.9 + 1.7)
+    f = 2.0 * (0.5 + 0.5 * np.cos(u)) ** 0.6 - 1.0
+    t = np.clip((1.33 - y) / (1.33 - CAPE_HEM), 0, 1)
+    F = f * 0.85 + 0.15 * t * np.sin(th * 15.0 + 1.3 + 0.8 * np.sin(th * 3.1))
+    return (0.05 * t ** 1.1 + 0.004 * t) * F, f
+
+
 def cape():
-    """A cape over the back: from the shoulders (over their tops, pinned at the chest) to the knees, falling wider."""
-    yT, yB = 1.475, 0.55
-    def f(P):
-        y = P[:, 1]; t = np.clip((yT - y) / (yT - yB), 0, 1)
-        rx = 0.25 + 0.08 * t ** 0.7; rz = 0.155 + 0.075 * t
-        th = np.arctan2(P[:, 0], P[:, 2] + 0.02)
-        rr = 1.0 + 0.03 * t * np.sin(th * 9)
-        q = np.stack([P[:, 0] / (rx * rr), (P[:, 2] + 0.02) / (rz * rr)], 1); k0 = np.linalg.norm(q, axis=1)
-        shell = np.abs((k0 - 1.0) * np.minimum(rx, rz)) - 0.0055
-        # (behind the body, wrapping the shoulders; the opening in front a little wider below)
-        front = (P[:, 2] + 0.02) / rz - (0.55 - 0.45 * np.clip((1.36 - y) / 0.2, 0, 1))
-        top = smax(y - (yT - 0.075 * np.clip(np.abs(P[:, 0]) / 0.25, 0, 1.3) ** 2), yB - y, 0.004)   # (its top edge down the shoulders' slope)
-        # (over the shoulders the cape lies on them: near its top it narrows round the neck and the shoulder line)
-        return smax(smax(shell, top, 0.003), front * 0.1, 0.004)
-    def g(P):
-        # (the narrowing: at the top the cape's ellipse shrinks toward the neck, so it rests on the shoulders, not over the air)
-        y = P[:, 1]; k = np.clip((y - 1.36) / (yT - 1.36), 0, 1); Q = P.copy(); Q[:, 0] = P[:, 0] * (1 + 0.32 * k); Q[:, 2] = (P[:, 2] + 0.02) * (1 + 0.5 * k) - 0.02
-        return f(Q) / (1 + 0.4 * k)
-    P = [Custom(g, (np.array([-0.36, yB - 0.02, -0.26]), np.array([0.36, yT + 0.03, 0.2]))).set(bone='clk1')]
+    """A cloak of wool: over the shoulders (lying on them and on the collarbones), pinned at the throat by a brooch, a
+    rolled collar round the back of the neck, down the back to the knees — standing off the back as cloth falls, from
+    the shoulder blades over the buttocks; folds deepening toward the hem, the hem waving with them; its sides behind
+    the arms. The yoke over the shoulders is the body's own shape grown by the cloth; the rest hangs (drape)."""
+    TH, YS, R0, RB = drape()
+    th_ = 0.009                                              # (the cloth's thickness: a heavy wool)
+    # (the hanging part, with its folds — never into the body — and its slopes, for a true distance)
+    PL = np.stack([pleat(t, YS)[0] for t in TH]); Rf = np.maximum(R0 + PL, RB + 0.008)
+    dRt = np.gradient(Rf, TH, axis=0); dRy = np.gradient(Rf, -0.01, axis=1)
+    girdle = _girdle()
+    def hang(P):
+        x, y, z = P[:, 0], P[:, 1], P[:, 2]
+        th = np.arctan2(x, -(z - CZ)); rho = np.hypot(x, z - CZ)
+        Rr = _table(TH, YS, Rf, th, y); gt = _table(TH, YS, dRt, th, y) / np.maximum(rho, 0.05); gy = _table(TH, YS, dRy, th, y)
+        d = (rho - Rr) / np.sqrt(1 + gt * gt + gy * gy)
+        shell = np.abs(d) - th_ * 0.5 * np.clip((1.50 - y) / 0.04, 0.3, 1)   # (thinning under the yoke: no edge to show)
+        # (the hem: lower at the back than at the sides, waving with the folds; the sides behind the arms)
+        f = pleat(th, y)[1]; hem = CAPE_HEM + 0.035 * (th / 1.4) ** 2 + 0.006 * f
+        side = (np.abs(th) - (1.56 - 0.26 * np.clip((1.38 - y) / 0.43, 0, 1))) * rho   # (from the shoulder tip, then behind the arm)
+        top = y - 1.50                                         # (above, the yoke: the two lie together over the shoulder blades)
+        return smax(smax(smax(shell, hem - y, 0.004), side, 0.006), top, 0.004)
+    XS, ZS, HT, GX, GZ = shoulder_top()
+    def yoke(P):
+        # (lying on the top of the shoulders: the cloth at the shoulders' height plus its gap, wherever there is a shoulder
+        # under it and it is not too steep — down the steep sides it is the hanging part that goes on)
+        x, y, z = P[:, 0], P[:, 1], P[:, 2]; ax = np.abs(x)
+        fx = np.clip((x - XS[0]) / (XS[1] - XS[0]), 0, len(XS) - 1.001); fz = np.clip((z - ZS[0]) / (ZS[1] - ZS[0]), 0, len(ZS) - 1.001)
+        i = fx.astype(int); j = fz.astype(int); u = fx - i; v = fz - j
+        bl = lambda A: (A[i, j] * (1 - u) + A[i + 1, j] * u) * (1 - v) + (A[i, j + 1] * (1 - u) + A[i + 1, j + 1] * u) * v
+        hh = bl(HT); gx = bl(GX); gz = bl(GZ); g2 = gx * gx + gz * gz
+        # (more over the shoulder caps — an arm raised lifts them — and over the shoulder blades, which the arms swing)
+        gap = 0.012 + 0.01 * smooth01((ax - 0.17) / 0.09) + 0.009 * smooth01((-0.02 - z) / 0.04) * smooth01((ax - 0.04) / 0.06)
+        shell = np.abs((y - hh - gap) / np.sqrt(1 + g2)) - th_ * 0.5
+        steep = np.maximum((np.sqrt(g2) - 1.25) * 0.03, (1.25 - hh) * 0.5)   # (too steep — the back goes on below — or no shoulder under it)
+        # (its front edge: from the shoulder tops down to the brooch at the throat — a V; behind, no cut)
+        vy = 1.405 + 0.095 * np.clip(ax / 0.165, 0, 1) + 0.55 * np.clip(ax - 0.165, 0, None)
+        w = smooth01((z + 0.02) / 0.05); front = (vy - y) * w - (1 - w) * 0.05
+        neck = 0.083 - np.hypot(x, z + 0.012)                # (round the neck, the collar's opening)
+        # (out over the shoulder cap, to its top only: the cloth's edge across the shoulder, square to the arm)
+        S = np.stack([ax - CF.S_L[0], y - CF.S_L[1]], 1); tip = S @ np.array([np.sin(HUNG_ROLL), -np.cos(HUNG_ROLL)]) - 0.035
+        return smax(smax(smax(smax(shell, front, 0.008), neck, 0.006), steep, 0.006), tip, 0.008)
+    def f(P): return smin(hang(P), yoke(P), 0.012)
+    P = [Custom(f, (np.array([-0.40, CAPE_HEM - 0.04, -0.34]), np.array([0.40, 1.60, 0.16]))).set(bone='clk1')]
+    # (the collar: a roll of the cloth round the back of the neck; the brooch at the throat, of the person's metal)
+    def collar(Q):
+        # (the roll lies on the yoke: its height at each point round the neck is the shoulders' there, plus the cloth)
+        x, y, z = Q[:, 0], Q[:, 1], Q[:, 2]; a = np.arctan2(x, -(z + 0.012)); rr = 0.093 + 0.025 * np.clip(np.abs(a) / 2.2, 0, 1)
+        xr, zr = np.sin(a) * rr, -0.012 - np.cos(a) * rr
+        fx = np.clip((xr - XS[0]) / (XS[1] - XS[0]), 0, len(XS) - 1.001); fz = np.clip((zr - ZS[0]) / (ZS[1] - ZS[0]), 0, len(ZS) - 1.001)
+        i = fx.astype(int); j = fz.astype(int); u = fx - i; v = fz - j
+        hh = (HT[i, j] * (1 - u) + HT[i + 1, j] * u) * (1 - v) + (HT[i, j + 1] * (1 - u) + HT[i + 1, j + 1] * u) * v
+        yc = np.maximum(hh, 1.40) + 0.012 + 0.014
+        d = np.hypot(np.hypot(x, z + 0.012) - rr, (y - yc) * 0.9) - 0.016
+        return smax(d, np.abs(a) - 2.55, 0.01)
+    P.append(Custom(collar, (np.array([-0.16, 1.36, -0.14]), np.array([0.16, 1.62, 0.15]))).set(op="u", k=0.006, bone="chest", tag="fur"))
+    P.append(E([0, 1.405, 0.122], [0.021, 0.021, 0.007], rot_x(0.35), op='u', k=0.004, bone='chest', tag='gold'))
+    P.append(Torus([0, 1.405, 0.127], 0.016, 0.0035, rot_x(0.35 + np.pi / 2)).set(op='u', k=0.002, bone='chest', tag='gold'))
     return P
+
+
+def smooth01(x):
+    t = np.clip(x, 0, 1); return t * t * (3 - 2 * t)
 
 
 # ------------------------------ hats ------------------------------

@@ -26,7 +26,7 @@ BI = {b: i for i, b in enumerate(BONES)}
 HALF = [('pel', 'chest', 'spine'), ('chest', 'head', 'neck'),
         ('chest', 'shL', 'shHL'), ('chest', 'shR', 'shHR'), ('shL', 'faL', 'elHL'), ('shR', 'faR', 'elHR'),
         ('pel', 'thL', 'hpHL'), ('pel', 'thR', 'hpHR'), ('thL', 'snL', 'knHL'), ('thR', 'snR', 'knHR')]
-ZONE = {'body': 0, 'eyeL': 1, 'eyeR': 2, 'hair': 3, 'beard': 4, 'saiaC': 5, 'saiaL': 6, 'cape': 7, 'metal': 8, 'hat': 9, 'straw': 10, 'hood': 11, 'scarf': 12, 'gold': 13}
+ZONE = {'body': 0, 'eyeL': 1, 'eyeR': 2, 'hair': 3, 'beard': 4, 'saiaC': 5, 'saiaL': 6, 'cape': 7, 'metal': 8, 'hat': 9, 'straw': 10, 'hood': 11, 'scarf': 12, 'gold': 13, 'fur': 14}
 
 
 # ------------------------------ Blender: the decimator ------------------------------
@@ -168,10 +168,14 @@ def w_rule(V, rule):
         # (the waist with the pelvis; below, the front with the leg most forward, the back with the one behind, the sides
         # with their own — blended round the body)
         th = np.arctan2(x, z); f = np.maximum(0, np.cos(th)) ** 2; b = np.maximum(0, -np.cos(th)) ** 2; l = np.maximum(0, np.sin(th)) ** 2; r = np.maximum(0, -np.sin(th)) ** 2
-        down = smooth(1.0, 0.8, y); W[:, BI['pel']] = 1 - down
+        # (in front, under the waist the cloth folds at the hip's crease as the thigh comes up — it does not turn with it)
+        down = smooth(1.0, 0.8, y) * (1 - f) + smooth(0.98, 0.6, y) * f; W[:, BI['pel']] = 1 - down
         for k, w in (('skF', f), ('skB', b), ('skL', l), ('skR', r)): W[:, BI[k]] = down * w
     elif rule == 'cape':
-        top = smooth(1.36, 1.44, y); low = smooth(1.05, 0.85, y)
+        # (the yoke on the shoulders — modelled on them with the arms hanging —, the collar and the brooch with the chest;
+        # the hanging part with the cape's own bones, the upper then the lower; an arm raised pushes the cloth out (body3d))
+        front = smooth(-0.06, 0.0, z)
+        top = np.maximum(smooth(1.36, 1.44, y), front * smooth(1.3, 1.36, y)); low = smooth(1.05, 0.85, y)
         W[:, BI['chest']] = top; W[:, BI['clk1']] = (1 - top) * (1 - low); W[:, BI['clk2']] = (1 - top) * low
     elif rule == 'hood':
         c = smooth(1.5, 1.6, y); W[:, BI['head']] = c; W[:, BI['chest']] = 1 - c
@@ -181,7 +185,7 @@ def w_rule(V, rule):
 
 def piece_mesh(prims, zone, h, tris, rule=None, body=None, sym=True):
     t0 = time.time()
-    V, Q = mesh_of(prims, h)
+    V, Q = mesh_of(prims, h, maxstep=1.5 * h)
     V, T = decimate(V, Q, tris, sym)
     N = normals_of(prims, V)
     if rule: bi, bw = w_rule(V, rule)
@@ -201,6 +205,14 @@ def piece_mesh(prims, zone, h, tris, rule=None, body=None, sym=True):
 
 
 _BODY = {}
+def torso_occluder():
+    # (the body without its arms: what a cloak's own shadow is cast by — in the bind the arms are out through its sides,
+    # in the world they hang inside it)
+    if 't' not in _BODY:
+        P = CR.no_arms(CF.body(0.0)); V, Q = mesh_of(P, 0.012); _BODY['t'] = (V, np.concatenate([Q[:, [0, 1, 2]], Q[:, [0, 2, 3]]]))
+    return _BODY['t']
+
+
 def body_occluder():
     # (the man's body as the eyes of the occlusion see it: what the pieces sit on)
     if 'm' not in _BODY:
@@ -242,7 +254,7 @@ def main(only):
         jobs[st] = (lambda st: lambda: piece_mesh(CR.beard(st), 'beard', 0.003, 700 if st == 'bigode' else 1100, body=body_occluder()))(st)
     jobs['saiaC'] = lambda: piece_mesh(CR.skirt(False), 'saiaC', 0.004, 1300, rule='skirt', body=body_occluder())
     jobs['saiaL'] = lambda: piece_mesh(CR.skirt(True), 'saiaL', 0.0045, 1900, rule='skirt', body=body_occluder())
-    jobs['capa'] = lambda: piece_mesh(CR.cape(), 'cape', 0.0045, 1500, rule='cape', body=body_occluder())
+    jobs['capa'] = lambda: piece_mesh(CR.cape(), 'cape', 0.0045, 2200, rule='cape', body=torso_occluder(), sym=False)
     for st, z in (('gorro', 'hat'), ('elmo', 'metal'), ('chapeu', 'straw'), ('capuz', 'hood'), ('lenco', 'scarf'), ('coroa', 'gold')):
         jobs[st] = (lambda st, z: lambda: piece_mesh(CR.hat(st), z, 0.0035, 1300 if st != 'coroa' else 600, rule='hood' if st == 'capuz' else None, body=body_occluder()))(st, z)
     for name, f in jobs.items():
