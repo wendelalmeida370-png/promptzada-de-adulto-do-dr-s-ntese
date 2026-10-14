@@ -61,7 +61,7 @@ uma construção. Trocar a escala. Introduzir outro motor. Depender de internet/
 |---|---|---|
 | **Líder** (Technical Director) | `index.html`, `js/realm3d.js` núcleo (classe `Geo`, `R3.mat`, `init()` exceto os blocos de material dos outros, chunks, `R3.frame`), `js/modes.js`, `js/main.js`, `js/space.js`, `qa/guard.js`, `qa/AUDIT.md`, `README.md`, `CLAUDE.md`, a seção "materiais" de `js/ground3d.js` (`G3.tex`, `U3`, `texGLSL`) | integração, merges, testes globais, aprovação |
 | **A1 Art Director & Pipeline** | `arte/` (exceto `mat_<area>.py` dos outros), `js/tex3d.js`, `js/mesh3d.js` (leitor de malhas), `css/style.css`, `js/incui.js` (a HUD) | bíblia de arte, texturas, exportador Blender → JS, manifesto de licenças, HUD |
-| **A2 Arquitetura** | `js/build3d.js`, `js/props3d.js` (novo: decoração contextual), `arte/mat_arquitetura.py` | casas, telhados, vigas, portas, janelas, fundações, variantes, decoração por função |
+| **A2 Arquitetura** | `js/build3d.js`, `js/props3d.js` (novo: decoração contextual), `js/things3d.js` (lampiões, carroças e as outras coisas do mundo; desde a onda 2), `arte/mat_arquitetura.py` | casas, telhados, vigas, portas, janelas, fundações, variantes, decoração por função |
 | **A3 Terreno & Natureza** | `js/ground3d.js` (exceto a seção "materiais"), `js/grass3d.js`, em `js/realm3d.js`: `shadeAt`, `normalAt`, `terrainGeo`, `roadGeo`, `KIND`, `TPAL`, `tpal`, `leafCol`, `crownOf`, `BARK`, `barkCol`, `treeInto`, `floraGeo`, `GRASS`, `FLOWER`, `grassGeo`, `R3.treeMesh` e os blocos `MAT.flora`, `MAT.leaf`, `MAT.plant` do `init()`; `arte/mat_natureza.py` | chão com texturas e transições, árvores, arbustos, pedras, capim, flores, costas |
 | **A4 Personagens & Animação** | `js/people3d.js`, `js/body3d.js` (novo), `js/bodymesh.js` (gerado), `arte/corpo*.py`; em `js/avatar.js` **só** `animate()` e a linha que alimenta `P3.avatar` | corpo contínuo com pele, rosto, cabelos, roupas por cultura/ofício, animações, bichos |
 | **A5 Luz, Materiais & Renderização** | em `js/realm3d.js`: `QUAL`/`Q`/`setQuality`, `toon()`, o bloco do renderer/luzes/`ShaderChunk` no `init()`, `applyQuality`, `resize`, `light()`, `WATER`, `waterCol`, `WGeo`, `wetCorner`, `waterGeo`, `makeOcean`, o bloco `MAT.water`/`MAT.ice`; `js/fx3d.js`; `js/cam3d.js` (só enquadramento/FOV); `js/post3d.js` (novo: pós-processamento) | luz do dia/tarde/noite, sombras, AO, tone mapping, céu, névoa, água, presets (incl. `ultra`) |
@@ -89,3 +89,17 @@ cores harmoniosas e naturais (verdes de musgo e capim, não neon; madeira quente
 névoa que dá profundidade, detalhe concentrado onde o olho para (portas, janelas, beirais, rostos, mãos) e calma no resto.
 Cada cultura com sua linguagem (nórdico: madeira escura, turfa, cabeças de dragão; clássico: reboco e telha; grego:
 branco e azul; egípcio: adobe; asteca: reboco pintado e terraços). Hedeby (nórdica, mundo pronto `cidade`) é o piloto.
+
+## 6. Onda 2 (a retomada)
+
+- **O ponto de partida é o branch `integracao`** (as entregas da onda 1 de todos, juntas e testadas pelo líder). Primeiro
+  comando no worktree novo: `git merge --ff-only integracao`. O líder junta as entregas da onda 2 nele por merge; para ver
+  o trabalho de um colega antes disso, leia o branch dele (`git log/show worktree-agent-<id>`) — sem editar.
+- Trabalho deixado pela metade na onda 1 (sem commit): `scratchpad/pendente/A2-wip.patch` e `A4-wip.patch`
+  (`git apply`). O que um especialista pediu a outro está em `scratchpad/a<N>/pedidos.md` — leia os pedidos a você.
+- A catraca do navegador (`qa/navegador.sh`, 2 vagas) é de todos: rodadas longas só com `RAPIDO=1`; nada de laço que
+  segura a vaga sem precisar. Quatro núcleos para seis agentes: gere texturas/malhas uma vez, não em laço.
+- **Revisão cruzada**: o A1 revisa a imagem de todos (arte/REVISAO.md); o A6 roda a rodada nos branches de cada um e
+  escreve o que achou em `scratchpad/a6/achados-<agente>.md`. Leia o que é para você antes de cada entrega.
+- Onda 5 (generalizar): o que ficou bom em Hedeby (nórdico) passa às outras culturas — clássico (romano), grego,
+  egípcio, asteca —, cada uma com a sua linguagem (§5). Fotos: as vistas `metropole-*` e mundos com as outras culturas.
