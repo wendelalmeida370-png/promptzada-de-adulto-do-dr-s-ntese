@@ -493,7 +493,7 @@ vec3 groundCol() {
     near = smoothstep(0.08, 0.6, fm.b);
     // (the line of the water on a shore: a few decimetres round the sea's level, near the water — the stones of the swash,
     // here and there along it, not all the way: a beach of sand, then a stretch of shingle)
-    gWL = (1.0 - smoothstep(0.06, 0.26, abs(vGP.y - uSeaY - 0.03))) * near * smoothstep(0.38, 0.62, texture2D(uCN, vGP.xz / 47.0 + 0.83).r + 0.06);
+    if (near > 0.01) gWL = (1.0 - smoothstep(0.06, 0.26, abs(vGP.y - uSeaY - 0.03))) * near * smoothstep(0.38, 0.62, texture2D(uCN, vGP.xz / 47.0 + 0.83).r + 0.06);
     c = gStack(t00, t10, t01, t11, s, mP, mB, fm);
     // (a swamp's pools: still water, the sky in it the more one looks along it, smooth)
     if (gPool > 0.01) { float pf = pow(1.0 - clamp(dot(normalize(cameraPosition - vGP), vec3(0.0, 1.0, 0.0)), 0.0, 1.0), 3.0); c = mix(c, c * 0.55 + uSkyH * (0.08 + pf * 0.32), gPool * 0.8); gHgt *= 1.0 - gPool; }
@@ -568,11 +568,13 @@ vec3 groundCol() {
     gHgt *= 1.0 - lap * 0.7; // (the wet sand lies smooth)
     // (the stones of the swash green with weed where the water covers them; and the line of the high water, just above the
     // waves' reach: dark strands of seaweed and wrack the sea left there, broken here and there)
-    c = mix(c, c * vec3(0.62, 0.8, 0.48), gWL * (1.0 - smoothstep(uSeaY - 0.2, uSeaY + 0.08, vGP.y)) * 0.8);
-    float wy = uSeaY + 0.46 + (mB - 0.5) * 0.14;
-    float wk = (1.0 - smoothstep(0.025, 0.085, abs(vGP.y - wy))) * near * (1.0 - wb) * smoothstep(0.42, 0.58, texture2D(uCN, vGP.xz / 19.0 + 0.4).g + 0.04);
-    float wst = smoothstep(0.5, 0.64, texture2D(uDet, vGP.xz / 0.85 + 0.31).r) * wk;
-    c = mix(c, vec3(0.05, 0.052, 0.026) * (0.8 + d.g * 0.5), wst * 0.85); gHgt += wst * 0.012;
+    if (near > 0.01) {
+      c = mix(c, c * vec3(0.62, 0.8, 0.48), gWL * (1.0 - smoothstep(uSeaY - 0.2, uSeaY + 0.08, vGP.y)) * 0.8);
+      float wy = uSeaY + 0.46 + (mB - 0.5) * 0.14;
+      float wk = (1.0 - smoothstep(0.025, 0.085, abs(vGP.y - wy))) * near * (1.0 - wb);
+      if (wk > 0.001) { wk *= smoothstep(0.42, 0.58, texture2D(uCN, vGP.xz / 19.0 + 0.4).g + 0.04); float wst = smoothstep(0.5, 0.64, texture2D(uDet, vGP.xz / 0.85 + 0.31).r) * wk;
+        c = mix(c, vec3(0.05, 0.052, 0.026) * (0.8 + d.g * 0.5), wst * 0.85); gHgt += wst * 0.012; }
+    }
   }
 #endif
   return c;
