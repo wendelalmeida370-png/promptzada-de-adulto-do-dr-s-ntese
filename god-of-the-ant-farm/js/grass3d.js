@@ -98,7 +98,7 @@
         // shade — one greener, one drier; brighter in a gust; the savanna's gold, the reeds' grey-green; a flower now and
         // then on the meadow)
         { vec3 tc = texelFetch(uGMap, ti, 0).rgb; float bv = fract(r2 * 13.7 + aB * 0.61 + r4 * 3.1);
-          vec3 tip = tc * mix(vec3(1.02, 1.12, 0.8), vec3(1.18, 1.1, 0.7), bv) + vec3(0.02, 0.025, 0.0);
+          vec3 tip = tc * mix(vec3(0.98, 1.08, 0.84), vec3(1.1, 1.06, 0.74), bv) + vec3(0.015, 0.02, 0.0);
           if (kind == 1.0) tip = mix(tip, vec3(0.74, 0.6, 0.28), 0.7); else if (kind == 2.0) tip = mix(tip, vec3(0.36, 0.42, 0.22), 0.6); else if (kind == 4.0) tip *= 0.88; else if (kind == 5.0) tip = mix(tip, vec3(0.62, 0.6, 0.36), 0.6);
           vec3 c = mix(tc * mix(0.62, 0.78, bv), tip, smoothstep(0.0, 1.0, aU)) * (1.0 + gust * 0.22 * aU);
           if (aB > 2.5 && r4 < mk.b * 1.2 && aU > 0.66) { float fk = fract(r2 * 7.0); c = fk < 0.25 ? vec3(0.95, 0.88, 0.3) : fk < 0.5 ? vec3(0.95, 0.95, 0.92) : fk < 0.75 ? vec3(0.85, 0.42, 0.55) : vec3(0.5, 0.45, 0.9); }
@@ -207,7 +207,7 @@
         // and twigs brown, the flowers of the meadow, the shells pale, the mushrooms red or brown with pale stems)
         { vec3 tc = tk.rgb; vec3 c;
           if (pick < 1.5) c = mix(vec3(0.3, 0.29, 0.27), vec3(0.2, 0.17, 0.13), q5) * mix(vec3(1.0), tc * 2.2, 0.25);
-          else if (pick == 2.0) c = mix(mix(tc * 0.9, vec3(0.42, 0.22, 0.06), 0.5 + q1 * 0.4), vec3(0.5, 0.36, 0.08), step(0.7, q2) * 0.6);
+          else if (pick == 2.0) c = mix(mix(tc * 0.8, vec3(0.2, 0.1, 0.035), 0.55 + q1 * 0.4), vec3(0.3, 0.2, 0.05), step(0.72, q2) * 0.6);
           else if (pick == 3.0 || pick == 5.0) c = vec3(0.22, 0.14, 0.08) * (0.8 + q1 * 0.4);
           else if (pick == 4.0) { float fk = fract(q5 * 7.0); vec3 fc = fk < 0.25 ? vec3(0.95, 0.85, 0.2) : fk < 0.5 ? vec3(0.95, 0.95, 0.92) : fk < 0.75 ? vec3(0.85, 0.35, 0.5) : vec3(0.5, 0.42, 0.9); c = mix(tc * 0.7, fc, step(0.5, aY)); }
           else if (pick == 6.0) c = mix(vec3(0.85, 0.8, 0.72), vec3(0.8, 0.62, 0.55), q1);

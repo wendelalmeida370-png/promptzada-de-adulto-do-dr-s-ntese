@@ -73,7 +73,8 @@ const VIEWS = [
       else if (place === 'field') at = best((i, x, y) => count(x, y, 3, j => { const b = S.occ[j] && S.buildings.get(S.occ[j]); return !!(b && (b.type === 'farm' || b.type === 'vinhedo' || b.type === 'plantacao')); }));
       else if (place.startsWith('b:')) {
         const id = +place.slice(2); const of = j => (G.Biome.of(j) === id);
-        at = best((i, x, y) => { if (!of(i)) return -1; const pure = count(x, y, 6, of); if (pure < 150) return -1; return pure + count(x, y, 4, j => S.treeAt[j] && of(j)) * 6 - count(x, y, 6, j => S.type[j] <= T.RIVER) * 4 - count(x, y, 6, j => S.occ[j]) * 8; });
+        // (deep in the biome, among its trees but with room round the body for the eye — no trunk or bough in its face)
+        at = best((i, x, y) => { if (!of(i)) return -1; const pure = count(x, y, 6, of); if (pure < 110) return -1; return pure + count(x, y, 4, j => S.treeAt[j] && of(j)) * 6 - count(x, y, 2, j => S.treeAt[j]) * 40 - count(x, y, 6, j => S.type[j] <= T.RIVER) * 4 - count(x, y, 6, j => S.occ[j]) * 8; });
       }
       if (!at) { quiet(false); return { skip: 'sem lugar' }; }
       G.Avatar.place(at[0], at[1]); S.time = hour; f(30);

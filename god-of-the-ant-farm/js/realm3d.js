@@ -710,7 +710,7 @@
         const a = Math.atan2(oz, ox) + (G.hash(id * 17 + k * 7 + j) - 0.5) * 2.4, e = Math.asin(G.clamp(oy, -1, 1)) * 0.6 + (G.hash(id * 19 + k * 3 + j * 5) - 0.35) * 1.3;
         const dx = Math.cos(a) * Math.cos(e), dy = Math.sin(e), dz = Math.sin(a) * Math.cos(e);
         const px = x + dx * s * 0.86, py = y + dy * s * 0.8 * fl, pz = z + dz * s * 0.86;
-        card4(gl, px, py, pz, s * (0.85 + G.hash(id + k * 13 + j) * 0.3), a, (G.hash(j * 31 + k + id) - 0.5) * 1.1, [dx, dy, dz], lc(px, py, pz, dx, dy, dz), sw + 0.08, q);
+        card4(gl, px, py, pz, s * (1.0 + G.hash(id + k * 13 + j) * 0.35), a, (G.hash(j * 31 + k + id) - 0.5) * 1.1, [dx, dy, dz], lc(px, py, pz, dx, dy, dz), sw + 0.08, q);
       }
     }
     return lumps;
@@ -834,7 +834,7 @@
           if (fine && !birch && q % 2 === 0) limb(g, FS.limb, ex, ey, ez, ex + Math.cos(a + 0.8) * r * 0.32, ey + r * 0.32, ez + Math.sin(a + 0.8) * r * 0.32, r0 * 0.24, bc, BARK - 0.12);
         }
         if (!burnt) {
-          crownInto(g, gl, t.id, X, cy, Z, r, birch ? 7 : 9, birch ? 1.12 : 1, pal, snow, 0.24, birch ? 1 : jung ? 3 : 0, 3);
+          crownInto(g, gl, t.id, X, cy, Z, r, birch ? 7 : 9, birch ? 1.12 : 1, pal, snow, 0.24, birch ? 1 : jung ? 3 : 0, 4);
           if (k[3] && t.fruit !== 0) for (let q = 0; q < 9; q++) { const a = rot + q * 0.9; g.put(SH.ico0, R3.mat(X + Math.cos(a) * r * 0.95, cy - r * 0.1 + (q % 3) * 0.3, Z + Math.sin(a) * r * 0.95, a, 0.3), k[3], 0.25); }
         } else for (let q = 0; q < 3; q++) { const a = rot + q * 2.1; limb(g, FS.limb, X, cy - r * 0.3, Z, X + Math.cos(a) * r * 0.7, cy + r * 0.4, Z + Math.sin(a) * r * 0.7, r0 * 0.25, bc, BARK - 0.05); }
       }

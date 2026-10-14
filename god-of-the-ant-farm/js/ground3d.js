@@ -250,37 +250,47 @@ float gRoad(vec4 t) { float k = floor(t.a * 255.0 + 0.5); return (k == 10.0 || k
 #ifndef M3_NEEDLES
 #define M3_NEEDLES M3_FOREST
 #define M3S_NEEDLES M3S_FOREST
+#define GM_NEEDLES GM_FOREST
 #endif
 #ifndef M3_MUD
 #define M3_MUD M3_DIRT
 #define M3S_MUD M3S_DIRT
+#define GM_MUD GM_DIRT
 #endif
 #ifndef M3_PEBBLES
 #define M3_PEBBLES M3_GRAVEL
 #define M3S_PEBBLES M3S_GRAVEL
 #endif
+#ifndef M3_STONY
+#define M3_STONY M3_GRAVEL
+#define M3S_STONY M3S_GRAVEL
+#endif
+#ifndef M3_TRAIL
+#define M3_TRAIL M3_DIRT
+#define M3S_TRAIL M3S_DIRT
+#endif
 float gLay(float k) {
   if (k == 2.0 || k == 3.0 || k == 15.0 || k == 18.0) return M3_SAND;
-  if (k == 4.0 || k == 16.0) return M3_ROCK;
+  if (k == 4.0) return M3_STONY;
+  if (k == 16.0) return M3_ROCK;
   if (k == 5.0) return M3_SNOW;
-  if (k == 8.0) return M3_FOREST;
-  if (k == 9.0) return M3_DIRT;
+  if (k == 9.0) return M3_TRAIL;
   if (k == 10.0) return M3_GRAVEL;
   if (k == 19.0) return M3_PEBBLES;
   if (k == 11.0) return M3_COBBLE;
   if (k == 12.0) return M3_SLAB;
   if (k == 13.0 || k == 14.0) return M3_SOIL;
-  return M3_GRASS; // (grass, meadow, swamp, savanna, taiga)
+  return M3_GRASS; // (grass, meadow, swamp, savanna, the jungle's, taiga)
 }
 float gScl(float L) {
   if (L == M3_GRASS) return M3S_GRASS; if (L == M3_SAND) return M3S_SAND; if (L == M3_ROCK) return M3S_ROCK; if (L == M3_SNOW) return M3S_SNOW;
   if (L == M3_FOREST) return M3S_FOREST; if (L == M3_DIRT) return M3S_DIRT; if (L == M3_GRAVEL) return M3S_GRAVEL; if (L == M3_COBBLE) return M3S_COBBLE;
   if (L == M3_SLAB) return M3S_SLAB; if (L == M3_SOIL) return M3S_SOIL; if (L == M3_NEEDLES) return M3S_NEEDLES; if (L == M3_MUD) return M3S_MUD;
-  if (L == M3_PEBBLES) return M3S_PEBBLES; return 0.25;
+  if (L == M3_PEBBLES) return M3S_PEBBLES; if (L == M3_STONY) return M3S_STONY; if (L == M3_TRAIL) return M3S_TRAIL; return 0.25;
 }
 // (how high the stuff of each picture stands, in metres, for the light: rock and cobbles most, sand and snow least)
 float gAmp(float L) {
-  if (L == M3_ROCK) return 0.1; if (L == M3_COBBLE || L == M3_SLAB) return 0.05; if (L == M3_GRAVEL || L == M3_PEBBLES) return 0.045; if (L == M3_MUD) return 0.02;
+  if (L == M3_ROCK) return 0.1; if (L == M3_COBBLE || L == M3_SLAB || L == M3_STONY) return 0.05; if (L == M3_GRAVEL || L == M3_PEBBLES) return 0.045; if (L == M3_MUD || L == M3_TRAIL) return 0.02;
   if (L == M3_SAND || L == M3_SNOW) return 0.025; return 0.035;
 }
 // (the open green land: where the trees drop their leaves, and the bare earth shows here and there)
@@ -295,6 +305,9 @@ vec3 gTint(vec3 c, float k, float mP) {
   else if (k == 18.0) c *= 0.72;
   return c;
 }
+// (a stuff laid over the land in its own colour — the leaves under the trees, bare earth, mud: the picture's own colour, as
+// bright as the god's colour there (times k), with a little of its hue)
+vec3 gOwn(vec3 m, vec3 c, float k) { float lc = dot(c, vec3(0.3, 0.59, 0.11)), lm = dot(m, vec3(0.3, 0.59, 0.11)); return mix(m * (lc / max(lm, 1e-4)), c, 0.18) * k; }
 // (a steep face: the colour of the land there, greyed toward stone)
 vec3 gRockish(vec3 c) { float l = dot(c, vec3(0.3, 0.55, 0.15)); return mix(vec3(l) * vec3(1.05, 1.0, 0.93), c, 0.35) * 0.92; }
 // the stuffs at this point: a picture of the stack, its colour (summed by weight), its weight
@@ -318,31 +331,30 @@ vec4 gTex(float L) {
 }
 // (the four tiles round the point, each its stuff; and what lies over them: the leaves under the trees, bare earth, the
 // wet of a bank, snow, gravel between stones, the rock of a steep face — mixed by the heights of their pictures)
-vec3 gStack(vec4 t00, vec4 t10, vec4 t01, vec4 t11, vec2 s, float mP, float mB) {
+vec3 gStack(vec4 t00, vec4 t10, vec4 t01, vec4 t11, vec2 s, float mP, float mB, vec4 fm) {
   gN = 0;
   float k00 = floor(t00.a * 255.0 + 0.5), k10 = floor(t10.a * 255.0 + 0.5), k01 = floor(t01.a * 255.0 + 0.5), k11 = floor(t11.a * 255.0 + 0.5);
   float w00 = (1.0 - s.x) * (1.0 - s.y), w10 = s.x * (1.0 - s.y), w01 = (1.0 - s.x) * s.y, w11 = s.x * s.y;
   vec3 c00 = gTint(t00.rgb, k00, mP), c10 = gTint(t10.rgb, k10, mP), c01 = gTint(t01.rgb, k01, mP), c11 = gTint(t11.rgb, k11, mP);
   gAdd(gLay(k00), c00, w00); gAdd(gLay(k10), c10, w10); gAdd(gLay(k01), c01, w01); gAdd(gLay(k11), c11, w11);
   vec3 cAll = c00 * w00 + c10 * w10 + c01 * w01 + c11 * w11;
-  float g00 = gGrassy(k00) * w00, g10 = gGrassy(k10) * w10, g01 = gGrassy(k01) * w01, g11 = gGrassy(k11) * w11; float gs = g00 + g10 + g01 + g11;
-  vec4 fm = texture2D(uFMap, vGP.xz / (uTL * uN));
+  float g00 = gGrassy(k00) * w00, g10 = gGrassy(k10) * w10, g01 = gGrassy(k01) * w01, g11 = gGrassy(k11) * w11;
+  // (snow lying on any ground, where the god's view paints it white — and over it, no leaves, no bare earth)
+  float snowy = smoothstep(0.6, 0.8, min(cAll.r, min(cAll.g, cAll.b)));
+  float gs = (g00 + g10 + g01 + g11) * (1.0 - snowy * 0.9);
   if (gs > 0.01) {
-    vec3 cg = (c00 * g00 + c10 * g10 + c01 * g01 + c11 * g11) / gs;
-    // (under the trees: their fallen leaves over the moss, browner than the grass — the needles, in the taiga)
+    vec3 cg = (c00 * g00 + c10 * g10 + c01 * g01 + c11 * g11) / (g00 + g10 + g01 + g11);
+    // (under the trees: their fallen leaves over the moss, darker than the grass — the needles, in the taiga)
     float tg = (k00 == 17.0 ? g00 : 0.0) + (k10 == 17.0 ? g10 : 0.0) + (k01 == 17.0 ? g01 : 0.0) + (k11 == 17.0 ? g11 : 0.0);
-    gAdd(M3_FOREST, cg * vec3(0.84, 0.76, 0.6), fm.r * (gs - tg) * 2.2);
-    gAdd(M3_NEEDLES, cg * vec3(0.8, 0.7, 0.56), fm.r * tg * 2.2);
+    gAdd(M3_FOREST, gOwn(GM_FOREST, cg, 0.62), fm.r * (gs - tg) * 2.2);
+    gAdd(M3_NEEDLES, gOwn(GM_NEEDLES, cg, 0.6), fm.r * tg * 2.2);
     // (here and there the earth shows, worn bare)
-    gAdd(M3_DIRT, mix(cg, vec3(0.34, 0.24, 0.14), 0.45), smoothstep(0.66, 0.86, mB) * 0.85 * gs);
+    gAdd(M3_DIRT, gOwn(GM_DIRT, cg, 0.72), smoothstep(0.66, 0.86, mB) * 0.85 * gs);
     // (down a bank to the water, and in the pools of a swamp, mud)
     float sw = (k00 == 6.0 ? g00 : 0.0) + (k10 == 6.0 ? g10 : 0.0) + (k01 == 6.0 ? g01 : 0.0) + (k11 == 6.0 ? g11 : 0.0);
-    gAdd(M3_MUD, mix(cg, vec3(0.2, 0.16, 0.1), 0.5), fm.b * gs * 0.8 + smoothstep(0.55, 0.65, mP) * sw * 1.4);
+    gAdd(M3_MUD, gOwn(GM_MUD, cg, 0.5), fm.b * gs * 0.8 + smoothstep(0.55, 0.65, mP) * sw * 1.4);
   }
-  // (snow lying on any ground: where the god's view paints it white)
-  gAdd(M3_SNOW, cAll, smoothstep(0.6, 0.8, min(cAll.r, min(cAll.g, cAll.b))) * 2.2);
-  // (stony ground: gravel between its rocks)
-  gAdd(M3_GRAVEL, cAll * 0.95, ((k00 == 4.0 ? w00 : 0.0) + (k10 == 4.0 ? w10 : 0.0) + (k01 == 4.0 ? w01 : 0.0) + (k11 == 4.0 ? w11 : 0.0)) * 0.75);
+  gAdd(M3_SNOW, cAll, snowy * 2.2);
   // (a steep face is bare rock, whatever the tiles say)
   gAdd(M3_ROCK, gRockish(cAll), gStp * 2.0);
   // the heights decide where each stuff shows: the higher stands out of the lower
@@ -374,7 +386,7 @@ vec3 groundCol() {
 #endif
   vec2 s = smoothstep(0.5 - B, 0.5 + B, f + (nE - 0.5) * 0.4 * (1.0 - hard));
   float steep = 1.0 - smoothstep(0.55, 0.8, vGN.y);
-  vec3 c; float mB = 0.5;
+  vec3 c; float mB = 0.5; vec4 fm = vec4(0.0); float near = 1.0; // (near: how near the water — the floor's wet bank — the wash of the waves reaches only there)
 #ifdef GDETAIL
   if (tex > 0.5) {
     // (soft noises of the land, over ten, fifteen and forty metres: where the earth shows bare, which copy of a picture
@@ -383,7 +395,8 @@ vec3 groundCol() {
     gP = vGP.xz; gP2 = mat2(0.454, -0.891, 0.891, 0.454) * vGP.xz * 0.41 + vec2(0.37, 0.71);
     gWX = smoothstep(0.3, 0.7, abs(vGN.x) / (abs(vGN.x) + abs(vGN.z) + 1e-4));
     gAT = mT; gStp = steep;
-    c = gStack(t00, t10, t01, t11, s, mP, mB);
+    fm = texture2D(uFMap, vGP.xz / (uTL * uN)); near = smoothstep(0.08, 0.6, fm.b);
+    c = gStack(t00, t10, t01, t11, s, mP, mB, fm);
   } else
 #endif
   c = mix(mix(gShade(t00, d, m1, m2), gShade(t10, d, m1, m2), s.x), mix(gShade(t01, d, m1, m2), gShade(t11, d, m1, m2), s.x), s.y);
@@ -417,22 +430,24 @@ vec3 groundCol() {
   float under = clamp((uSeaY - vGP.y) / 3.5, 0.0, 1.0);
   c += vec3(0.8, 0.95, 0.9) * gCaus(vGP.xz, uTime) * wb * 0.14 * (1.0 - under * 0.7);
   c = mix(c, c * vec3(0.5, 0.74, 0.8), under);
-  float wetB = (1.0 - smoothstep(uSeaY + 0.02, uSeaY + 0.6, vGP.y)) * step(uSeaY - 0.05, vGP.y) * (1.0 - wb);
+  float wetB = (1.0 - smoothstep(uSeaY + 0.02, uSeaY + 0.6, vGP.y)) * step(uSeaY - 0.05, vGP.y) * (1.0 - wb) * near;
   c *= 1.0 - wetB * 0.32;
   if (tex > 0.5) {
     // (the waves run up the beach and back: the sand they wet darker and shining with the sky, a thin line of foam at
     // their edge — a little different all along the shore)
     float ph = uTime * 0.5 + dot(vGP.xz, vec2(0.045, 0.031)) + mB * 5.0; float run = uSeaY + 0.2 + 0.17 * sin(ph);
-    float lap = (1.0 - smoothstep(run - 0.05, run + 0.02, vGP.y)) * step(uSeaY - 0.05, vGP.y) * (1.0 - wb);
+    float lap = (1.0 - smoothstep(run - 0.05, run + 0.02, vGP.y)) * step(uSeaY - 0.05, vGP.y) * (1.0 - wb) * near;
     float sheen = pow(1.0 - clamp(dot(normalize(cameraPosition - vGP), vec3(0.0, 1.0, 0.0)), 0.0, 1.0), 3.0);
     c = mix(c, c * 0.82 + uSkyH * sheen * 0.22, max(lap, wetB * 0.6));
-    c = mix(c, vec3(0.86, 0.9, 0.9), smoothstep(run - 0.07, run - 0.015, vGP.y) * (1.0 - smoothstep(run - 0.015, run + 0.02, vGP.y)) * (1.0 - wb) * step(uSeaY, vGP.y) * (0.25 + 0.2 * cos(ph)));
+    c = mix(c, vec3(0.86, 0.9, 0.9), smoothstep(run - 0.07, run - 0.015, vGP.y) * (1.0 - smoothstep(run - 0.015, run + 0.02, vGP.y)) * (1.0 - wb) * near * step(uSeaY, vGP.y) * (0.25 + 0.2 * cos(ph)));
     gHgt *= 1.0 - lap * 0.7; // (the wet sand lies smooth)
   }
 #endif
   return c;
 }
 `;
+  // (the mean colour of each picture of the stack, linear — for the stuffs drawn in their own colour)
+  const gMeans = () => Object.keys(G.TEX3D || {}).map(n => `#define GM_${n.toUpperCase()} vec3(${G.TEX3D[n].mean.map(v => Math.pow(v, 2.2).toFixed(4)).join(', ')})`).join('\n') + '\n';
   G3.init = function (three) {
     THREE = three; det = makeDetail(); U.uDet.value = det; U.uTL.value = G.Space.TILE; U.uSeaY.value = G.SEA * G.Space.HM;
     U.uTime = G.Realm.U.time; // (the view's clock: the light on the beds moves with the waves)
@@ -443,7 +458,7 @@ vec3 groundCol() {
       if (G.Realm.skyU) U.uSkyH = G.Realm.skyU.hor;
       Object.assign(sh.uniforms, U, G3.U3());
       sh.vertexShader = 'varying vec3 vGP; varying vec3 vGN;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vGP = (modelMatrix * vec4(transformed, 1.0)).xyz; vGN = normalize(mat3(modelMatrix) * objectNormal);');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G3.texGLSL() + FRAG).replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( groundCol(), opacity );')
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G3.texGLSL() + gMeans() + FRAG).replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( groundCol(), opacity );')
         // (the relief: from the stuff's heights once the pictures are in — the slopes of a pebble, a cobble, a tuft — and
         // from the drawn grain before)
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>

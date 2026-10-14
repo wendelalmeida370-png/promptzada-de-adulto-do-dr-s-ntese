@@ -82,9 +82,49 @@ def pebbles(seed=331):
     col *= (0.72 + 0.38 * light(h, 5))[..., None] * ao(h, 3, 2.0)[..., None]
     return col, h
 
+def stony(seed=341):
+    # stony ground: broken stones of every size, angular, half sunk in dry earth — their tops lit, their edges worn —
+    # with grit and small chips between them
+    r = rng(seed)
+    soil = mix(hexc('#7a6a56'), hexc('#5e5244'), fbm(S, 10, 4, seed)) * (0.9 + value_noise(S, 180, seed + 1)[..., None] * 0.2)
+    h = 0.22 + (fbm(S, 12, 3, seed + 2) - 0.5) * 0.1; col = soil
+    for (n, keepP, sd) in ((5, 0.45, 3), (11, 0.6, 4), (24, 0.7, 5)):
+        f1, f2, ids, ox, oy = voronoi(S, n, seed + sd * 10, 0.9)
+        e = f2 - f1 + (fbm(S, n * 4, 2, seed + sd * 7) - 0.5) * 0.08     # (the stone's own rough edge)
+        gap = 0.12 + hash01(ids, seed + sd) * 0.22                        # (each sunk its own depth: more or less of it shows)
+        keep = hash01(ids, seed + sd + 50) < keepP
+        st = smooth(gap, gap + 0.06, e) * keep
+        dome = smooth(gap, gap + 0.45, e) ** 0.6
+        tone = hash01(ids, seed + sd + 9)
+        sc = ramp(tone, [(0, '#74706a'), (0.35, '#8c867c'), (0.7, '#a0988a'), (1, '#6a645e')]) * (0.8 + fbm(S, 60, 2, seed + sd)[..., None] * 0.32)
+        hs = 0.3 + dome * (0.4 + 2.0 / n)
+        up = st * (hs > h)
+        col = mix(col, sc, up); h = np.where(up > 0.5, hs, h)
+    chips, cc = stamp_ellipses(S, [(r.random(), r.random(), r.uniform(0.002, 0.005), r.uniform(0.002, 0.004), r.uniform(0, 3), 1.0) for _ in range(600)])
+    col = mix(col, hexc('#9a9284'), cc * 0.8); h = h + cc * 0.06
+    col *= (0.7 + 0.42 * light(h, 6))[..., None] * ao(h, 3, 2.2)[..., None]
+    return col, h
+
+def trail(seed=351):
+    # a trodden path: earth packed hard by the feet and the wheels, smooth and a little shiny, fine cracks, a few small
+    # stones pressed into it, dust lighter on its highs
+    r = rng(seed)
+    n = fbm(S, 6, 5, seed); n2 = fbm(S, 40, 3, seed + 1)
+    col = mix(hexc('#8a7458'), hexc('#76624a'), n) * (0.93 + n2[..., None] * 0.12)
+    dust = smooth(0.55, 0.75, fbm(S, 9, 3, seed + 2)); col = mix(col, hexc('#a08a6a'), dust * 0.35)
+    f1, f2, ids, _, _ = voronoi(S, 7, seed + 3); crack = smooth(0.01, 0.0, f2 - f1) * smooth(0.45, 0.7, fbm(S, 5, 3, seed + 4))
+    col = col * (1 - crack[..., None] * 0.3)
+    pv, pc = stamp_ellipses(S, [(r.random(), r.random(), r.uniform(0.003, 0.008), r.uniform(0.003, 0.006), r.uniform(0, 3), r.uniform(0.5, 1.0)) for _ in range(160)])
+    col = mix(col, mix(hexc('#7e786c'), hexc('#9a9284'), pv), pc * 0.85)
+    h = 0.45 + (n - 0.5) * 0.12 + blur(pc, 0.6) * 0.25 - crack * 0.12 + (n2 - 0.5) * 0.04
+    col *= (0.86 + 0.18 * light(h, 3))[..., None]
+    return col, h
+
 MATS = [
     ('moss', moss, 1.2, 'musgo em almofadas, pontas amareladas, rachas escuras'),
     ('needles', needles, 3.0, 'chão de pinheiral: agulhas caídas, pinhas, um pouco de musgo'),
     ('mud', mud, 3.0, 'lama: terra molhada, poças nas baixas, pegadas, capim'),
     ('pebbles', pebbles, 2.4, 'leito de rio: seixos rolados com areia entre eles'),
+    ('stony', stony, 3.0, 'chão pedregoso: pedras de todo tamanho meio enterradas na terra seca'),
+    ('trail', trail, 4.0, 'trilha: terra batida pelos pés e rodas, rachas finas, pedrinhas'),
 ]
