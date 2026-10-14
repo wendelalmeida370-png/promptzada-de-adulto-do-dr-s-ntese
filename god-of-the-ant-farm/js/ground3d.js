@@ -280,6 +280,7 @@ vec2 gBumpV = vec2(0.0);
 float gHgt = 0.0; // (the height of the stuff of the ground at this point, in metres: the light reads its slopes)
 float gHa = 0.5; // (and the same 0..1, as its pictures have it: where the snow fills the gaps first)
 float gDune = 0.0; // (how much of this point is dune)
+float gPool = 0.0; // (how much of this point is the still water of a swamp's pool)
 float gWL = 0.0; // (how much this point is the line of the water on a shore: the band the waves roll their stones in)
 // (the snow's own colour, linear: the god's white of the frozen land)
 #define GSNOW vec3(0.78, 0.835, 0.9)
@@ -437,6 +438,7 @@ vec3 gStack(vec4 t00, vec4 t10, vec4 t01, vec4 t11, vec2 s, float mP, float mB, 
     // (down a bank to the water, and in the pools of a swamp, mud)
     float sw = (k00 == 6.0 ? g00 : 0.0) + (k10 == 6.0 ? g10 : 0.0) + (k01 == 6.0 ? g01 : 0.0) + (k11 == 6.0 ? g11 : 0.0);
     gAdd(M3_MUD, gOwn(GM_MUD, cg, 0.5), fm.b * gs * 0.8 + smoothstep(0.55, 0.65, mP) * sw * 1.4);
+    gPool = smoothstep(0.6, 0.665, mP) * sw;
   }
   // (a road of the first rank: gravel worked into its packed earth)
   { float r0 = k00 == 10.0 ? w00 : 0.0, r1 = k10 == 10.0 ? w10 : 0.0, r2 = k01 == 10.0 ? w01 : 0.0, r3 = k11 == 10.0 ? w11 : 0.0; float rs = r0 + r1 + r2 + r3;
@@ -493,6 +495,8 @@ vec3 groundCol() {
     // here and there along it, not all the way: a beach of sand, then a stretch of shingle)
     gWL = (1.0 - smoothstep(0.06, 0.26, abs(vGP.y - uSeaY - 0.03))) * near * smoothstep(0.38, 0.62, texture2D(uCN, vGP.xz / 47.0 + 0.83).r + 0.06);
     c = gStack(t00, t10, t01, t11, s, mP, mB, fm);
+    // (a swamp's pools: still water, the sky in it the more one looks along it, smooth)
+    if (gPool > 0.01) { float pf = pow(1.0 - clamp(dot(normalize(cameraPosition - vGP), vec3(0.0, 1.0, 0.0)), 0.0, 1.0), 3.0); c = mix(c, c * 0.55 + uSkyH * (0.08 + pf * 0.32), gPool * 0.8); gHgt *= 1.0 - gPool; }
   } else
 #endif
   c = mix(mix(gShade(t00, d, m1, m2), gShade(t10, d, m1, m2), s.x), mix(gShade(t01, d, m1, m2), gShade(t11, d, m1, m2), s.x), s.y);
