@@ -18,7 +18,21 @@
   B3.chim = new Map(); G.worldHooks.push(() => B3.chim.clear()); // (the tops of the chimneys drawn: building id → [X, Y, Z])
   let THREE = null, R3 = null, SH = null, glass = null;
   const TAU = Math.PI * 2;
-  B3.init = function (three, realm) { THREE = three; R3 = realm; SH = realm.SH; glass = new THREE.MeshPhongMaterial({ color: 0x24303c, specular: 0x8aa0b4, shininess: 90, emissive: 0xffb860, emissiveIntensity: 0 }); };
+  B3.init = function (three, realm) {
+    THREE = three; R3 = realm; SH = realm.SH; glass = new THREE.MeshPhongMaterial({ color: 0x1c2630, specular: 0x8aa0b4, shininess: 90, emissive: 0xffb860, emissiveIntensity: 0 });
+    // (a window shows the sky it faces — pale low, deeper above — more as one looks along the wall; at night, its lamp)
+    const sk = realm.skyU;
+    if (sk) glass.onBeforeCompile = sh => {
+      Object.assign(sh.uniforms, { uSkyTop: sk.top, uSkyHor: sk.hor });
+      sh.vertexShader = 'varying vec3 vGW;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vGW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      sh.fragmentShader = 'uniform vec3 uSkyTop; uniform vec3 uSkyHor; varying vec3 vGW;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `
+        { vec3 nW = normalize((vec4(normal, 0.0) * viewMatrix).xyz); vec3 Vw = normalize(cameraPosition - vGW); vec3 Rw = reflect(-Vw, nW);
+          float fr = 0.08 + 0.92 * pow(1.0 - clamp(abs(dot(nW, Vw)), 0.0, 1.0), 4.0);
+          vec3 sky = mix(uSkyHor, uSkyTop, clamp(Rw.y * 1.4, 0.0, 1.0)) * (0.55 + 0.45 * step(0.0, Rw.y));
+          outgoingLight = mix(outgoingLight, sky * 0.8, fr * 0.7 * (1.0 - clamp(length(totalEmissiveRadiance) * 1.5, 0.0, 0.9))); }
+        #include <opaque_fragment>`);
+    };
+  };
   // ------------------------------ the surfaces: what walls and roofs are made of ------------------------------
   // (each point of a building carries a pattern — Geo.pat when it was put — and the solid material draws it on the
   // surface, in metres of the world: blocks of stone, planks, courses of tiles, straw, turf; the god's view draws the
@@ -33,16 +47,31 @@
   const PFRAG = `
 uniform sampler2D uDet; varying vec3 vPP; varying vec3 vPN; varying float vPat;
 float pHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float pattern(float p, vec2 uv, vec3 wp, out vec2 bump) {
+vec3 pattern(float p, vec2 uv, vec3 wp, out vec2 bump) {
   bump = vec2(0.0);
-  vec4 d = texture2D(uDet, uv / 1.7); float big = texture2D(uDet, uv / 11.0).r;
-  if (p == 1.0) return 0.95 + (d.g - 0.5) * 0.1 + (big - 0.5) * 0.16;
+  vec4 d = texture2D(uDet, uv / 1.7); float big = texture2D(uDet, uv / 11.0).r; float huge = texture2D(uDet, uv / 31.0 + 0.3).r;
+  // (the weather on every wall and roof: broad stains, a warmer or cooler patch, streaks the rain ran down)
+  float streak = texture2D(uDet, vec2(uv.x * 0.45, uv.y * 0.035) + 0.17).r;
+  vec3 wthr = vec3(0.93 + (huge - 0.5) * 0.24) * (1.0 - smoothstep(0.55, 0.8, streak) * 0.13) * mix(vec3(1.03, 1.0, 0.95), vec3(0.96, 0.99, 1.04), big);
+  if (p == 1.0) {
+    // (plaster: mottled, mended, worn through to the bricks here and there)
+    float m = 0.93 + (d.g - 0.5) * 0.16 + (big - 0.5) * 0.22;
+    float pk = texture2D(uDet, uv / 13.0 + 0.41).r * 0.75 + texture2D(uDet, uv / 3.1 + 0.2).g * 0.25; float here = step(0.56, texture2D(uDet, uv / 37.0 + 0.7).g);
+    float hole = smoothstep(0.66, 0.69, pk) * here;
+    vec2 q = uv / vec2(0.42, 0.19); q.x += 0.5 * mod(floor(q.y), 2.0); vec2 f = fract(q); float e = min(min(f.x, 1.0 - f.x) * 0.42, min(f.y, 1.0 - f.y) * 0.19);
+    vec3 brick = mix(vec3(0.5, 0.4, 0.35), vec3(0.95, 0.66, 0.5) * (0.85 + pHash(floor(q)) * 0.3), smoothstep(0.012, 0.03, e));
+    float rim = smoothstep(0.6, 0.66, pk) * here * (1.0 - hole);
+    return mix(vec3(m) * wthr * (1.0 - rim * 0.2), brick, hole);
+  }
   if (p == 2.0 || p == 3.0) {
     vec2 sz = p == 2.0 ? vec2(0.9, 0.5) : vec2(0.42, 0.19);
     vec2 q = uv / sz; q.x += 0.5 * mod(floor(q.y), 2.0) + (p == 2.0 ? (pHash(vec2(floor(q.y), 7.0)) - 0.5) * 0.4 : 0.0); vec2 f = fract(q);
     float e = min(min(f.x, 1.0 - f.x) * sz.x, min(f.y, 1.0 - f.y) * sz.y); float m = smoothstep(0.012, 0.032, e); float h = pHash(floor(q));
     bump = vec2(f.x < 0.5 ? -1.0 : 1.0, f.y < 0.5 ? -1.0 : 1.0) * (1.0 - smoothstep(0.0, 0.07, e)) * 0.35;
-    return mix(0.58, 0.84 + h * 0.26, m) * (0.9 + d.g * 0.2);
+    // (each block its own: warmer or cooler, now and then a dark one; moss in the joints low on the wall)
+    vec3 tn = mix(vec3(1.08, 1.0, 0.9), vec3(0.9, 0.97, 1.08), pHash(floor(q) + 3.1)) * (pHash(floor(q) + 8.3) > 0.9 ? 0.78 : 1.0);
+    vec3 joint = mix(vec3(0.5), vec3(0.42, 0.5, 0.32), smoothstep(0.55, 0.75, big) * (p == 2.0 ? 1.0 : 0.3));
+    return mix(joint, vec3(0.84 + h * 0.26) * tn, m) * (0.9 + d.g * 0.2) * wthr;
   }
   if (p == 4.0 || p == 5.0 || p == 12.0) {
     float w = p == 5.0 ? 0.3 : 0.24; float a = p == 5.0 ? uv.y : uv.x; float o = p == 5.0 ? uv.x : uv.y;
@@ -50,28 +79,34 @@ float pattern(float p, vec2 uv, vec3 wp, out vec2 bump) {
     float seam = p == 12.0 ? 1.0 : smoothstep(0.0, 0.07, f) * smoothstep(0.0, 0.07, 1.0 - f);
     float grain = 0.92 + 0.08 * sin(o * 7.0 + h * 20.0 + sin(o * 1.9 + h * 7.0) * 2.5) + (d.g - 0.5) * 0.08;
     bump = (p == 5.0 ? vec2(0.0, 1.0) : vec2(1.0, 0.0)) * (f - 0.5) * (p == 12.0 ? 0.0 : 0.3);
-    return mix(0.55, 0.84 + h * 0.24, seam) * grain;
+    // (a plank greyed by the years beside a fresher one; a knot here and there)
+    vec3 tn = mix(vec3(1.08, 1.0, 0.9), vec3(0.86, 0.88, 0.92), h * h);
+    vec2 kq = vec2(f, o / 0.9 + h * 7.0); vec2 kf = fract(kq) - 0.5; float knot = (1.0 - smoothstep(0.05, 0.12, length(kf * vec2(1.0, 2.8)))) * step(0.72, pHash(floor(kq) + vec2(h, 9.0)));
+    return mix(vec3(0.52), vec3(0.84 + h * 0.24) * tn, seam) * grain * (1.0 - knot * 0.45) * wthr;
   }
   if (p == 6.0 || p == 7.0) {
     float rh = p == 6.0 ? 0.34 : 0.26; float rw = p == 6.0 ? 0.26 : 0.36;
     float r = uv.y / rh; float fr = fract(r); float row = floor(r);
     float x = uv.x / rw + (p == 7.0 ? 0.5 * mod(row, 2.0) : 0.0); float fx = fract(x); float h = pHash(vec2(floor(x), row));
-    float sh = 0.66 + 0.34 * (1.0 - smoothstep(0.5, 1.0, fr));
+    float sh = 0.62 + 0.38 * (1.0 - smoothstep(0.5, 1.0, fr));
     float lat = p == 6.0 ? 0.8 + 0.2 * sin(fx * 3.14159) : mix(0.72, 1.0, smoothstep(0.0, 0.06, fx) * smoothstep(0.0, 0.06, 1.0 - fx));
     bump = vec2(p == 6.0 ? cos(fx * 3.14159) * 0.4 : 0.0, (fr - 0.5) * 0.45);
-    return sh * lat * (0.86 + h * 0.22) * (0.94 + d.g * 0.12);
+    // (no two tiles alike, a darker one replaced now and then, moss creeping over the old ones)
+    vec3 tn = (1.0 + (h - 0.5) * vec3(0.24, 0.13, 0.06)) * (pHash(vec2(floor(x), row) + 5.0) > 0.92 ? 0.76 : 1.0);
+    tn = mix(tn, vec3(0.6, 0.76, 0.42), smoothstep(0.62, 0.78, texture2D(uDet, uv / 5.0 + 0.9).r) * 0.5);
+    return vec3(sh * lat * (0.86 + h * 0.22) * (0.94 + d.g * 0.12)) * tn * wthr;
   }
   if (p == 8.0) {
     float r = uv.y / 0.42; float fr = fract(r + (pHash(vec2(floor(uv.x / 0.3), floor(r))) - 0.5) * 0.25);
     float st = texture2D(uDet, vec2(uv.x * 1.9, uv.y * 0.16)).r;
     bump = vec2(0.0, (fr - 0.5) * 0.4);
-    return (0.7 + 0.3 * (1.0 - smoothstep(0.45, 1.0, fr))) * (0.78 + st * 0.44);
+    return vec3((0.68 + 0.32 * (1.0 - smoothstep(0.45, 1.0, fr))) * (0.76 + st * 0.48)) * mix(vec3(1.05, 1.0, 0.9), vec3(0.84, 0.84, 0.8), big) * wthr;
   }
-  if (p == 9.0) { bump = vec2(d.r - 0.5, big - 0.5) * 0.5; return 0.84 + (d.r - 0.5) * 0.55 + (big - 0.5) * 0.3; }
-  if (p == 10.0) { float v = sin(uv.x * 2.6 + uv.y * 1.3 + big * 9.0); return 0.97 + 0.03 * v - smoothstep(0.95, 1.0, abs(v)) * 0.07; }
+  if (p == 9.0) { bump = vec2(d.r - 0.5, big - 0.5) * 0.5; return vec3(0.84 + (d.r - 0.5) * 0.55 + (big - 0.5) * 0.3) * mix(vec3(1.0), vec3(0.92, 0.98, 0.8), huge); }
+  if (p == 10.0) { float v = sin(uv.x * 2.6 + uv.y * 1.3 + big * 9.0); return vec3(0.97 + 0.03 * v - smoothstep(0.95, 1.0, abs(v)) * 0.09) * mix(vec3(1.0), wthr, 0.5); }
   if (p == 11.0) {
     vec2 q = wp.xz / 1.1; q.x += 0.5 * mod(floor(q.y), 2.0); vec2 f = fract(q); float e = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
-    return mix(0.66, 0.88 + pHash(floor(q)) * 0.2, smoothstep(0.01, 0.04, e)) * (0.92 + d.g * 0.16);
+    return vec3(mix(0.62, 0.88 + pHash(floor(q)) * 0.2, smoothstep(0.01, 0.04, e)) * (0.92 + d.g * 0.16)) * wthr;
   }
   if (p == 13.0) {
     float px = fract(uv.x / 1.35); float py = fract(wp.y / 1.25);
@@ -79,15 +114,14 @@ float pattern(float p, vec2 uv, vec3 wp, out vec2 bump) {
     float beam = 1.0 - smoothstep(0.06, 0.085, min(py, 1.0 - py) * 1.25);
     float br = 1.0 - smoothstep(0.05, 0.075, abs(px - py) * 1.2);
     float tim = max(max(post, beam), br * step(0.5, pHash(vec2(floor(uv.x / 1.35), floor(wp.y / 1.25)))));
-    bump = vec2(0.0, 0.0);
-    return mix(0.96 + (d.g - 0.5) * 0.1 + (big - 0.5) * 0.08, 0.3, tim);
+    return mix(vec3(0.95 + (d.g - 0.5) * 0.12 + (big - 0.5) * 0.14) * wthr, vec3(0.3, 0.26, 0.22), tim);
   }
   if (p == 14.0) {
     vec2 q = uv / vec2(0.5, 0.25); q.x += 0.5 * mod(floor(q.y), 2.0); vec2 f = fract(q); float e = min(min(f.x, 1.0 - f.x) * 0.5, min(f.y, 1.0 - f.y) * 0.25);
-    return (0.9 + (d.g - 0.5) * 0.2 + (big - 0.5) * 0.18) * mix(0.9, 1.0, smoothstep(0.004, 0.02, e));
+    return vec3((0.9 + (d.g - 0.5) * 0.24 + (big - 0.5) * 0.22) * mix(0.88, 1.0, smoothstep(0.004, 0.02, e))) * wthr;
   }
-  if (p == 15.0) return 0.9 + 0.1 * sin(uv.x * 5.0);
-  return 1.0;
+  if (p == 15.0) return vec3(0.9 + 0.1 * sin(uv.x * 5.0));
+  return vec3(1.0);
 }
 `;
   // the solid material learns to draw the patterns (and fades them far away, where they would only shimmer)
@@ -102,9 +136,9 @@ float pattern(float p, vec2 uv, vec3 wp, out vec2 bump) {
         #endif
         if (pp > 0.5) {
           vec3 pn = normalize(vPN); vec3 pt = abs(pn.y) > 0.92 ? vec3(1.0, 0.0, 0.0) : normalize(vec3(-pn.z, 0.0, pn.x)); vec3 pb = normalize(cross(pn, pt)); if (pb.y < 0.0) pb = -pb;
-          vec2 bump; float pk = pattern(pp, vec2(dot(vPP, pt), dot(vPP, pb)), vPP, bump);
+          vec2 bump; vec3 pk = pattern(pp, vec2(dot(vPP, pt), dot(vPP, pb)), vPP, bump);
           float fade = 1.0 - smoothstep(30.0, 90.0, length(vViewPosition));
-          diffuseColor.rgb *= mix(0.88, pk, fade);
+          diffuseColor.rgb *= mix(vec3(0.88), pk, fade);
           normal = normalize(normal + (viewMatrix * vec4(pt * bump.x + pb * bump.y, 0.0)).xyz * fade);
         }`);
     };

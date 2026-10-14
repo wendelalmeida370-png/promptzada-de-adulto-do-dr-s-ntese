@@ -178,20 +178,26 @@ float gCaus(vec2 p, float t) {
   return pow(clamp(1.0 - c / 3.0, 0.0, 1.0), 3.0) * 2.4;
 }
 float gBed(vec4 t) { return floor(t.a * 255.0 + 0.5) == 15.0 ? 1.0 : 0.0; }
+// (how rough each kind of ground is to the light: stone and gravel most, the snow and the sand least)
+float gRough(vec4 t) { float k = floor(t.a * 255.0 + 0.5); return (k == 4.0 || k == 10.0 || k == 16.0) ? 1.0 : (k == 9.0 || k == 13.0 || k == 14.0) ? 0.7 : (k == 2.0 || k == 3.0 || k == 5.0 || k == 15.0) ? 0.3 : 0.5; }
+vec2 gBumpV = vec2(0.0);
 varying vec3 vGP; varying vec3 vGN;
 float gHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 vec3 gShade(vec4 t, vec4 d, float m1, float m2) {
   vec3 c = t.rgb; float k = floor(t.a * 255.0 + 0.5);
-  c *= 1.0 + (m1 - 0.5) * 0.22;
+  c *= 1.0 + (m1 - 0.5) * 0.34;
 #ifdef GDETAIL
   if (k < 1.5 || k == 17.0 || (k > 5.5 && k < 8.5)) {
-    c *= 1.0 + (d.r - 0.5) * (k == 7.0 ? 0.55 : 0.45);
+    // (the grass: blades light and dark, darker clumps, patches gone yellow in the sun)
+    c *= 1.0 + (d.r - 0.5) * (k == 7.0 ? 0.7 : 0.6);
+    c *= 1.0 - smoothstep(0.5, 0.75, d.b) * 0.16;
+    c = mix(c, c * vec3(1.14, 1.06, 0.66), smoothstep(0.58, 0.8, m2) * (k == 6.0 ? 0.0 : 0.45));
     if (k == 6.0) c = mix(c, vec3(0.022, 0.05, 0.05), smoothstep(0.56, 0.62, m2) * 0.85);
-  } else if (k == 2.0 || k == 15.0) { c *= 1.0 + (d.g - 0.5) * 0.24;
+  } else if (k == 2.0 || k == 15.0) { c *= 1.0 + (d.g - 0.5) * 0.36 + (d.b - 0.5) * 0.1;
   } else if (k == 3.0) { c *= 1.0 + (d.g - 0.5) * 0.14 + 0.07 * sin(vGP.x * 1.9 + vGP.z * 0.7 + d.g * 2.0);
   } else if (k == 4.0) { c *= 0.75 + d.b * 0.6;
-  } else if (k == 5.0) { c *= 1.0 + (d.a - 0.5) * 0.16; c += step(0.97, d.a) * 0.5;
-  } else if (k == 9.0 || k == 10.0) { c *= 1.0 + (d.g - 0.5) * 0.42; c *= mix(1.0, 0.8 + d.b * 0.4, 0.5);
+  } else if (k == 5.0) { c *= 1.0 + (d.a - 0.5) * 0.2; c *= mix(vec3(0.84, 0.9, 1.04), vec3(1.0), smoothstep(0.25, 0.7, m1)); c += step(0.97, d.a) * 0.5; // (the snow: drifts, blue in its hollows, glints)
+  } else if (k == 9.0 || k == 10.0) { c *= 1.0 + (d.g - 0.5) * 0.5; c *= mix(1.0, 0.72 + d.b * 0.5, 0.6);
   } else if (k == 11.0 || k == 12.0) {
     vec2 q = vGP.xz / (k == 12.0 ? 1.33 : 0.95); q.x += 0.5 * mod(floor(q.y), 2.0) * (k == 11.0 ? 1.0 : 0.0);
     vec2 f = fract(q); float j = smoothstep(0.0, 0.08, f.x) * smoothstep(0.0, 0.08, 1.0 - f.x) * smoothstep(0.0, 0.08, f.y) * smoothstep(0.0, 0.08, 1.0 - f.y);
@@ -212,9 +218,9 @@ vec3 groundCol() {
   vec2 u = vGP.xz / uTL - 0.5; vec2 i0 = floor(u); vec2 f = u - i0;
   ivec2 a = ivec2(i0); ivec2 hi = ivec2(int(uN) - 1);
 #ifdef GDETAIL
-  vec4 d = texture2D(uDet, vGP.xz / 1.7); float m1 = texture2D(uDet, vGP.xz / 37.0).r; float m2 = texture2D(uDet, vGP.xz / 9.0).g;
+  vec4 d = texture2D(uDet, vGP.xz / 1.7); float m1 = texture2D(uDet, vGP.xz / 37.0).r; float m2 = texture2D(uDet, vGP.xz / 9.0).g; float m3 = texture2D(uDet, vGP.xz / 91.0 + 0.4).g;
 #else
-  vec4 d = vec4(0.5); float m1 = 0.5; float m2 = 0.5;
+  vec4 d = vec4(0.5); float m1 = 0.5; float m2 = 0.5; float m3 = 0.5;
 #endif
   vec4 t00 = texelFetch(uMap, clamp(a, ivec2(0), hi), 0), t10 = texelFetch(uMap, clamp(a + ivec2(1, 0), ivec2(0), hi), 0);
   vec4 t01 = texelFetch(uMap, clamp(a + ivec2(0, 1), ivec2(0), hi), 0), t11 = texelFetch(uMap, clamp(a + ivec2(1, 1), ivec2(0), hi), 0);
@@ -223,6 +229,18 @@ vec3 groundCol() {
   float B = mix(0.27, 0.035, hard);
   vec2 s = smoothstep(0.5 - B, 0.5 + B, f + (m2 - 0.5) * 0.4 * (1.0 - hard));
   vec3 c = mix(mix(gShade(t00, d, m1, m2), gShade(t10, d, m1, m2), s.x), mix(gShade(t01, d, m1, m2), gShade(t11, d, m1, m2), s.x), s.y);
+#ifdef GDETAIL
+  // (the land a little warmer here, a little cooler there, over a hundred metres: no two fields the same green)
+  c *= mix(vec3(1.05, 1.0, 0.9), vec3(0.93, 1.0, 1.07), m3);
+  // (snow that fell on any ground: drifts, blue in the hollows, a glint now and then — not a flat white)
+  float snowy = smoothstep(0.62, 0.8, min(c.r, min(c.g, c.b)));
+  c = mix(c, c * mix(vec3(0.82, 0.89, 1.04), vec3(1.0), smoothstep(0.25, 0.7, m1)) * (1.0 + (d.a - 0.5) * 0.22) + step(0.975, d.a) * 0.35, snowy);
+  // (the grain lit by the sun: the little slopes of the pebbles, the tufts, the ridges of the sand)
+  { float e = 0.02; vec4 dx = texture2D(uDet, vGP.xz / 1.7 + vec2(e, 0.0)), dz = texture2D(uDet, vGP.xz / 1.7 + vec2(0.0, e));
+    float h0 = d.b * 0.6 + d.r * 0.4, hx = dx.b * 0.6 + dx.r * 0.4, hz = dz.b * 0.6 + dz.r * 0.4;
+    float rough = mix(mix(gRough(t00), gRough(t10), s.x), mix(gRough(t01), gRough(t11), s.x), s.y) * (1.0 - snowy * 0.6) * (1.0 - smoothstep(25.0, 70.0, length(cameraPosition - vGP)));
+    gBumpV = vec2(hx - h0, hz - h0) / e * 0.012 * rough; }
+#endif
   // (the kerb where a street meets the rest)
   float r = mix(mix(gRoad(t00), gRoad(t10), s.x), mix(gRoad(t01), gRoad(t11), s.x), s.y);
   c *= 1.0 - (1.0 - abs(r * 2.0 - 1.0)) * 0.32 * hard;
@@ -252,7 +270,8 @@ vec3 groundCol() {
     mat.onBeforeCompile = sh => {
       Object.assign(sh.uniforms, U);
       sh.vertexShader = 'varying vec3 vGP; varying vec3 vGN;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vGP = (modelMatrix * vec4(transformed, 1.0)).xyz; vGN = normalize(mat3(modelMatrix) * objectNormal);');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + FRAG).replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( groundCol(), opacity );');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + FRAG).replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( groundCol(), opacity );')
+        .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n normal = normalize(normal + (viewMatrix * vec4(-gBumpV.x, 0.0, -gBumpV.y, 0.0)).xyz);');
       mat.userData.shader = sh;
     };
     G3.quality();

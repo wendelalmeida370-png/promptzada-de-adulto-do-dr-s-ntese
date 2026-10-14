@@ -66,7 +66,7 @@
         float gy = hAt(tile) * 1.5;
         float dist = length(vec3(root.x, gy, root.y) - uEye);
         // (thinning toward the edge of the circle; and gone right at the eye, where a blade would fill the picture)
-        float fade = (1.0 - smoothstep(uR * 0.6, uR, dist)) * smoothstep(0.9, 2.4, dist);
+        float fade = (1.0 - smoothstep(uR * 0.6, uR, dist)) * smoothstep(1.3, 3.4, dist);
         float Hh = (0.1 + mk.g * 1.5) * (0.7 + r4 * 0.6) * step(r3, mk.r) * fade;
         float ang = r1 * 6.2832 + r3 * 2.0; float ca = cos(ang), sa = sin(ang);
         vec2 wd = uWind.xy; float ws = length(wd) + 1e-4; wd /= ws;

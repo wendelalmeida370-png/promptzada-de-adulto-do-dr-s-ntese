@@ -179,7 +179,13 @@
 #endif`;
     SC.tonemapping_fragment = `#if defined( TONE_MAPPING )
 	gl_FragColor.rgb = toneMapping( gl_FragColor.rgb );
-	{ float lum = dot( gl_FragColor.rgb, vec3( 0.2126, 0.7152, 0.0722 ) ); gl_FragColor.rgb = max( mix( vec3( lum ), gl_FragColor.rgb, 1.1 ), 0.0 ); }
+	{ vec3 c = gl_FragColor.rgb; float lum = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
+	  c = max( mix( vec3( lum ), c, 1.18 ), 0.0 );
+	  // (a gentle S in the eye's own scale: the shade deeper, the light brighter — not washed out)
+	  vec3 cp = sqrt( c ); cp = mix( cp, cp * cp * ( 3.0 - 2.0 * cp ), 0.3 ); c = cp * cp;
+	  // (the painter's split: the shadows a little cool, the lights a little warm)
+	  c *= mix( vec3( 0.95, 0.98, 1.05 ), vec3( 1.03, 1.0, 0.96 ), smoothstep( 0.04, 0.5, lum ) );
+	  gl_FragColor.rgb = c; }
 #endif`;
   }
   function init() {
@@ -204,6 +210,7 @@
     // world's wind — thin on a fair day, a grey ceiling in the rain (only seen: it reads the weather, it is not the weather)
     skyU = { top: { value: new THREE.Color(0x5a9ae0) }, hor: { value: new THREE.Color(0xcfe4f2) }, sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color(0xfff0c0) }, night: { value: 0 },
       cover: { value: 0.3 }, cloudCol: { value: new THREE.Color(0xffffff) }, uT: U.time, uWind: U.wind, uNoise: { value: G.Ground3D.cloudNoise() } };
+    R3.skyU = skyU; // (the sky's colours, for what reflects it: the water, the windows)
     skyMesh = new THREE.Mesh(new THREE.SphereGeometry(1400, 32, 16), new THREE.ShaderMaterial({
       uniforms: skyU, side: THREE.BackSide, depthWrite: false, fog: false,
       vertexShader: 'varying vec3 vd; void main(){ vd = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
@@ -850,7 +857,7 @@
     renderer.setClearColor(horC);
     sun.intensity = (0.5 + 2.6 * el) * (1 - night) * (1 - rain * 0.55);
     sun.color.setRGB(1, 0.84 + 0.16 * el, 0.66 + 0.34 * el).multiply(new THREE.Color(am[0], am[1], am[2]));
-    hemi.intensity = (0.6 + 0.75 * (1 - night)) * (1 + rain * 0.2);
+    hemi.intensity = (0.52 + 0.62 * (1 - night)) * (1 + rain * 0.2); // (the sky's light in the shade: enough to see, not so much it washes the shadows out)
     // (the light of the sky in the shade is blue, as a painter has it; the ground's bounce warm)
     hemi.color.setRGB(am[0] * 0.75 + 0.2, am[1] * 0.82 + 0.15, am[2] * 0.9 + 0.12).lerp(SKYB, 0.35 * (1 - night) * (1 - rain * 0.6));
     moonL.intensity = night * 0.55;
