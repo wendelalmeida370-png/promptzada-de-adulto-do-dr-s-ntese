@@ -1026,12 +1026,14 @@
   // fore), a trot in diagonal pairs, a gallop (the hind feet together, the fore feet together, a beat apart). Each leg's
   // offset in the stride, and how far it swings
   const GAIT = { walk: [0, 0.5, 0.75, 0.25], trot: [0, 0.5, 0.5, 0], gallop: [0, 0.08, 0.55, 0.62] };
+  const BFAR = new Set(['eye0', 'eye1', 'hoof0', 'hoof1', 'hoof2', 'hoof3']); // (the parts a far beast goes without)
   function beasts(focus, R2, dt) {
     const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; let idx = 0; mats(); P3.bculled = 0;
     const list = [];
     for (const a of S.animals.values()) { if (a.dead || a.held) continue; const X = a.x * TL, Z = a.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 < R2 * 0.7) list.push([d2, a]); }
     list.sort((p, q) => p[0] - q[0]);
-    for (const [, a] of list) {
+    let nNear = 0; // (the beasts near enough to the eye for their eyes and hooves: the nearest first, so the first rows)
+    for (const [d2, a] of list) {
       if (idx >= MAXA) break;
       const sp = G.Animals.DEF[a.kind]; if (!sp || sp.cls === 'water') continue;
       const X = a.x * TL, Z = a.y * TL; let s = bvis.get(a.id); if (!s) { s = { X, Z, Y: null, yaw: 0, ph: a.id % 5, t: 0, graze: 0, v: 0 }; bvis.set(a.id, s); }
@@ -1047,6 +1049,7 @@
       s.Y = s.Y === null || Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
       const Y = s.Y + (air ? Math.max(0.5, (a.z || 0) * 0.22) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
       if (!seen(X, Y, Z, Math.max(0.6, F.len * u))) { P3.bculled++; continue; } // (outside the eye's field: not drawn)
+      if (d2 < 576) nNear = idx + 1;
       const m = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-s.yaw); m.multiply(M.b);
       // (on a slope a beast of four legs lies along it: pitched by the ground under its fore and hind feet, rolled by the ground
       // at its sides — its feet neither in the air nor in the ground; eased, so it never snaps)
@@ -1130,7 +1133,8 @@
       }
       idx++;
     }
-    for (const m of beastMesh) { m.count = idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+    // (beyond 24 m the eyes and the hooves are a pixel: not drawn — a sixth of a beast's triangles)
+    beastMesh.forEach((m, k) => { m.count = BFAR.has(BP[k][0]) ? Math.min(nNear, idx) : idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
     P3.beasts = idx;
     if (bvis.size > 400) bvis.clear();
   }
