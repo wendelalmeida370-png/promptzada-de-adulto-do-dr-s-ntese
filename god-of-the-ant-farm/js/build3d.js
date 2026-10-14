@@ -1474,7 +1474,17 @@ float m3scale(float p) {
       for (let k = 0; k < 4; k++) { const f = k / 3 - 0.5; g.put(SH.cyl, R3.mat(K.x0 + x + (wd[0] ? f * sx : sx / 2) * 1, sea - 3, K.z0 + z + (wd[1] ? f * sz : sz / 2), 0, 0.3, 3.2, 0.3), K.c('#6a4a2c')); }
       house(g, gw, K, { h: 2.4, inset: Math.min(K.w, K.d) * 0.22, wall: '#9a7a50', pat: 'plankH', door: true });
     },
-    mina(g, gw, K) { const P = K.P; K.sph(K.w / 2, -0.5, K.d / 2, K.w * 0.42, '#8c867a', 1.8); K.box(K.w / 2, 0, K.d - 0.6, 2.2, 2.4, 0.4, '#6a4a2c'); K.box(K.w / 2, 0, K.d - 0.55, 1.4, 1.9, 0.42, '#141414'); void P; },
+    // the mine: a mound of rock over the shaft — only its cap, laid on the floor (a ball sunk 2.3 m in the ground drew the same
+    // cap: Build3D.check found it buried), its stones out or in by the mine's id, darker at its foot; the timbered mouth before it
+    mina(g, gw, K) {
+      const cx = K.w / 2, cz = K.d / 2, R = K.w * 0.4, H = 1.3, nu = 12, nv = 4; const pts = [];
+      for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) { const q = i % nu, a = q / nu * TAU, t = j / nv;
+        const jr = j === 0 ? 0.96 + K.hv(300 + q) * 0.08 : j === nv ? 1 : 0.86 + K.hv(300 + q + j * 17) * 0.28, jy = j === 0 || j === nv ? 1 : 0.94 + K.hv(340 + q + j * 13) * 0.12;
+        const r = Math.max(0.02, R * Math.pow(Math.cos(t * Math.PI / 2), 0.75) * jr); pts.push([cx + Math.cos(a) * r, j === 0 ? -0.05 : H * Math.sin(t * Math.PI / 2) * jy, cz + Math.sin(a) * r]); }
+      K.as('rock', () => K.sheet(pts, nu, nv, (X, Y) => mixc([104, 98, 86], [140, 134, 122], G.clamp((Y - K.y0) / H, 0, 1)), [0, 1, 0]));
+      K.as('beam', () => { for (const s of [-1, 1]) K.box(cx + s * 0.9, 0, K.d - 0.6, 0.4, 2.4, 0.4, '#6a4a2c'); K.box(cx, 1.9, K.d - 0.6, 1.4, 0.5, 0.4, '#5e4228'); });
+      K.box(cx, 0, K.d - 0.7, 1.4, 1.9, 0.42, '#141414');
+    },
     apiario(g, gw, K) { for (let k = 0; k < 4; k++) { const px = K.w * (0.25 + (k % 2) * 0.5), pz = K.d * (0.3 + Math.floor(k / 2) * 0.4); K.box(px, 0, pz, 0.15, 0.6, 0.15, '#6a4a2c'); K.box(px, 0.6, pz, 0.8, 0.7, 0.6, '#e8c870'); K.box(px, 1.3, pz, 0.95, 0.1, 0.75, '#8a6a44'); } },
     curral(g, gw, K) { fenceAround(K, 1.3, '#8a6a44', true); },
     estabulo(g, gw, K) { house(g, gw, K, { h: 3.4, inset: 0.6, wall: '#8a5a3a', pat: 'plankH' }); },

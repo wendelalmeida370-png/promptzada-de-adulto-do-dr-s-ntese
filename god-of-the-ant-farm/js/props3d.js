@@ -323,6 +323,8 @@
   // looked at — on its lot, never in front of its door, standing on its ground, numbers that are numbers
   P3.check = function (list) {
     const out = []; if (!G.Build3D || !G.Build3D.propsOf || !G.Realm.renderer || !G.Realm.renderer()) return out; const L = G.Space.TILE; // (only once the 3D is made)
+    // (called with nothing, as every X.check() may be: the buildings near the body, as Build3D.check takes them)
+    if (!list) { const f = G.Possess && G.Possess.body && G.Possess.body(); const cx = f ? f.x : G.N / 2, cy = f ? f.y : G.N / 2; list = [...G.S.buildings.values()].filter(b => G.dist(b.x + b.w / 2, b.y + b.h / 2, cx, cy) < 14); }
     for (const b of list) {
       rec = []; const B = G.Build3D.propsOf(b); const got = rec; rec = null;
       const tag = `${b.type}#${b.id} (enfeite)`;
