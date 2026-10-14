@@ -131,22 +131,61 @@ def beard(style):
 
 
 # ------------------------------ clothes that stand off the body ------------------------------
+SZ = -0.008          # (a skirt's axis: a little behind the body's middle, where the hips are)
+
+
+def skirt_hem(th):
+    """How far the hem of a skirt rises or falls round the body (metres; th from the front, + toward the body's left): a
+    cloth never hangs level — body3d paints the hem's band along the same line."""
+    return 0.011 * np.sin(th * 3.0 + 1.0) + 0.006 * np.sin(th * 7.0 + 0.4)
+
+
+_SKT = {}
+def drape_hips(gap=0.005):
+    """How far from the skirt's axis the body is at each angle round it and each height, from the belt down — the hips,
+    the buttocks, the thighs (a man's body or a woman's, the wider): what a skirt is tied on and falls from."""
+    if 'R' in _SKT: return _SKT['TH'], _SKT['YS'], _SKT['RB']
+    TH = np.linspace(-np.pi, np.pi, 181); YS = np.arange(1.06, 0.05, -0.01); RS = np.arange(0.0, 0.36, 0.004)
+    T, Yg, Rg = np.meshgrid(TH, YS, RS, indexing='ij')
+    P = np.stack([np.sin(T) * Rg, Yg, SZ + np.cos(T) * Rg], -1).reshape(-1, 3)
+    rb = np.zeros(T.shape[:2])
+    for fem in (0.0, 1.0):
+        F = _union([q for q in _torso(fem) if not _deltoid(q)], P).reshape(T.shape); ins = F < 0
+        last = len(RS) - 1 - np.argmax(ins[..., ::-1], axis=2); nxt = np.minimum(last + 1, len(RS) - 1)
+        fa = np.take_along_axis(F, last[..., None], 2)[..., 0]; fb = np.take_along_axis(F, nxt[..., None], 2)[..., 0]
+        rb = np.maximum(rb, np.where(ins.any(2), RS[last] + (RS[1] - RS[0]) * np.clip(fa / np.minimum(fa - fb, -1e-9), 0, 1), 0.0))
+    for _ in range(2):
+        Rp = np.pad(rb, 1, mode='edge'); rb = (4 * rb + Rp[:-2, 1:-1] + Rp[2:, 1:-1] + Rp[1:-1, :-2] + Rp[1:-1, 2:]) / 8
+    _SKT.update(TH=TH, YS=YS, RB=rb, R=1)
+    return TH, YS, rb
+
+
 def skirt(long):
-    """A tunic's skirt from the belt to the knee — or a dress, a robe, to the ankle: a thin shell round the hips that flares,
-    its folds deepening toward the hem."""
+    """A tunic's skirt from the belt to the knee — or a dress, a robe, to the ankle: tied snug at the belt, over the hips
+    as they are, then falling from their widest and opening toward the hem, in folds — round crests, the hollows between
+    them sharper, irregularly spaced, deeper below —; the hem never level (skirt_hem), its folds swinging (body3d)."""
     y0, y1 = 1.012, (0.12 if long else 0.5)
-    rx0, rz0 = 0.168, 0.124; rx1, rz1 = (0.29, 0.27) if long else (0.22, 0.185)
+    TH, YS, RB = drape_hips()
+    F = 0.13 if long else 0.1                                              # (how much it opens: metres out per metre down)
+    R = np.zeros_like(RB); R[:, 0] = RB[:, 0] + 0.007                      # (the cloth's inside off the skin)
+    for j in range(1, len(YS)):
+        fl = F * smooth01((0.93 - YS[j]) / 0.3) + 0.01
+        R[:, j] = np.maximum(RB[:, j] + 0.007, R[:, j - 1] + fl * 0.01)
+    # (the folds: about nine round it, not mirrored, from nothing at the hips to their depth at the hem)
+    u = TH[:, None] * (9.0 if long else 7.0) + 0.8 * np.sin(TH[:, None] * 2.3 + 0.4) + 0.4 * np.sin(TH[:, None] * 5.1 + 1.7)
+    fo = 2.0 * (0.5 + 0.5 * np.cos(u)) ** 0.6 - 1.0
+    t = np.clip((0.9 - YS[None, :]) / (0.9 - y1), 0, 1)
+    A = (0.028 if long else 0.017) * t ** 1.15
+    Rf = np.maximum(R + A * (fo + 0.15 * t * np.sin(TH[:, None] * 17.0 + 1.3)), RB + 0.008)
+    dRt = (np.roll(Rf, -1, axis=0) - np.roll(Rf, 1, axis=0)) / (2 * (TH[1] - TH[0])); dRy = np.gradient(Rf, -0.01, axis=1)
     def f(P):
-        y = P[:, 1]; t = np.clip((y0 - y) / (y0 - y1), 0, 1); e = t ** 0.8
-        rx = rx0 + (rx1 - rx0) * e; rz = rz0 + (rz1 - rz0) * e
-        th = np.arctan2(P[:, 0], P[:, 2])
-        rr = 1.0 + 0.035 * t * np.sin(th * 13 + 0.6 * np.sin(th * 3)) + 0.02 * t * np.sin(th * 5)
-        q = np.stack([P[:, 0] / (rx * rr), (P[:, 2] + 0.006) / (rz * rr)], 1); k0 = np.linalg.norm(q, axis=1)
-        d = (k0 - 1.0) * np.minimum(rx, rz)                       # (≈ the distance to the ellipse round the body)
-        shell = np.abs(d) - 0.006
-        return smax(shell, np.maximum(y - y0, y1 - y), 0.003)
-    ext = rx1 + 0.04
-    return [Custom(f, (np.array([-ext, y1 - 0.02, -ext]), np.array([ext, y0 + 0.02, ext]))).set(bone='pel')]
+        x, y, z = P[:, 0], P[:, 1], P[:, 2]
+        th = np.arctan2(x, z - SZ); rho = np.hypot(x, z - SZ)
+        Rr = _table(TH, YS, Rf, th, y); gt = _table(TH, YS, dRt, th, y) / np.maximum(rho, 0.05); gy = _table(TH, YS, dRy, th, y)
+        shell = np.abs((rho - Rr) / np.sqrt(1 + gt * gt + gy * gy)) - 0.006
+        return smax(shell, np.maximum(y - y0, (y1 + skirt_hem(th)) - y), 0.003)
+    ext = float(Rf.max()) + 0.03
+    return [Custom(f, (np.array([-ext, y1 - 0.04, SZ - ext]), np.array([ext, y0 + 0.02, SZ + ext]))).set(bone='pel')]
 
 
 # ------------------------------ the cape ------------------------------

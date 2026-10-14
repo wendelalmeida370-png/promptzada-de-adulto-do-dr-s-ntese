@@ -216,7 +216,8 @@ vec3 b3piece(vec3 p) {
   if (z == 5 || z == 6) {
     vec4 Bc = b3T(3); vec3 c = Bc.z > 0.5 && Bc.z < 1.5 ? b3T(13).rgb : b3T(5).rgb; c *= b3weave(p);
     if (Bc.z > 1.5 && p.z > 0.0 && abs(p.x) < 0.14) c = b3T(13).rgb * b3weave(p.zyx); // (the apron in front)
-    float hy = z == 5 ? B3_HEMC : B3_HEML; float hb = (p.y - hy) / 0.03;
+    // (the hem's band follows the hem, which is never level — arte/corpo_roupa.py, skirt_hem)
+    float sa = atan(p.x, p.z + 0.008); float hy = (z == 5 ? B3_HEMC : B3_HEML) + 0.011 * sin(sa * 3.0 + 1.0) + 0.006 * sin(sa * 7.0 + 0.4); float hb = (p.y - hy) / 0.03;
     if (b3T(19).x > 0.5 && hb < 1.0) c = b3band(b3T(6).rgb, ang * 9.0, clamp(hb, 0.0, 1.0), b3T(15).y);
     return c;
   }

@@ -272,8 +272,9 @@ def main(only):
         jobs[st] = (lambda st: lambda: piece_mesh(CR.hair(st), 'hair', 0.0032, 1400 if st in ('curto', 'careca') else 2200, body=body_occluder()))(st)
     for st in ('barba', 'curta', 'bigode'):
         jobs[st] = (lambda st: lambda: piece_mesh(CR.beard(st), 'beard', 0.003, 700 if st == 'bigode' else 1100, body=body_occluder(), lods=LODS[:2]))(st)
-    jobs['saiaC'] = lambda: piece_mesh(CR.skirt(False), 'saiaC', 0.004, 1300, rule='skirt', body=body_occluder())
-    jobs['saiaL'] = lambda: piece_mesh(CR.skirt(True), 'saiaL', 0.0045, 1900, rule='skirt', body=body_occluder())
+    # (the skirts: their folds need the triangles)
+    jobs['saiaC'] = lambda: piece_mesh(CR.skirt(False), 'saiaC', 0.004, 1600, rule='skirt', body=body_occluder())
+    jobs['saiaL'] = lambda: piece_mesh(CR.skirt(True), 'saiaL', 0.0045, 2400, rule='skirt', body=body_occluder())
     jobs['capa'] = lambda: piece_mesh(CR.cape(), 'cape', 0.0045, 2200, rule='cape', body=torso_occluder(), sym=False)
     jobs['toga'] = lambda: piece_mesh(CR.toga(), 'toga', 0.0038, 2600, rule='toga', body=torso_occluder(), sym=False)
     # (the hats; the south's crested helmet, the pharaoh's headcloth, the feathers of the jungle, the laurel)
