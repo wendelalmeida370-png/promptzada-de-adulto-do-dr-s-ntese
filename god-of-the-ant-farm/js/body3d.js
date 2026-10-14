@@ -18,7 +18,7 @@
 //  keeps drawing its old pieces.
 // ============================================================
 (function (G) {
-  const B3 = G.Body3D = { ready: false, failed: null, rows: 0, calls: 0 };
+  const B3 = G.Body3D = { ready: false, failed: null, rows: 0, calls: 0, lod: true }; // (lod: the far ones in the lighter bodies — off only to measure)
   let THREE = null, scene = null;
   const MAXR = 96; // (rows: People3D's MAX — the bodies drawn whole, the living and the dead)
   let D = null, NB = 0, PB = 0, TW = 0, buf = null, tex = null, mat = null, depth = null;
@@ -294,7 +294,9 @@ vec3 b3paint() {
     set(15, u.torso, u.motif, u.feetK, 0); lin(16, u.lin.hat); lin(17, u.lin.cloak); lin(18, u.lin.beads); set(19, u.hem, u.cloakTrim, 0, 0);
     function lin(k, c) { const j = p + k * 4; buf[j] = c[0]; buf[j + 1] = c[1]; buf[j + 2] = c[2]; buf[j + 3] = 1; }
     // (what this person wears: the body, the hair, the beard, the skirt or the robe, the cloak, the hat)
-    const bd = u.body || (L.fem ? 'corpoF' : 'corpoM'); use(MESH[bd] ? bd : 'corpoM', row);
+    // (far from the eye, the lighter body; its clothes and hair the same)
+    const bd0 = u.body || (L.fem ? 'corpoF' : 'corpoM'), bd = L.lod && B3.lod && MESH[bd0 + '_1'] ? bd0 + '_1' : bd0; use(MESH[bd] ? bd : 'corpoM', row);
+    AT[row][7] = bd !== bd0 ? 1 : 0;
     if (u.hairM) use(u.hairM, row); if (u.beard) use(u.beard, row); if (u.skirt) use(u.skirt, row); if (u.cloakM) use(u.cloakM, row); if (u.hatM) use(u.hatM, row);
     if (row + 1 > B3.rows) B3.rows = row + 1;
   };
@@ -326,6 +328,7 @@ vec3 b3paint() {
     return out;
   };
   B3.meshes = () => Object.keys(MESH).map(k => ({ name: k, n: MESH[k].n, tris: MESH[k].tris }));
+  B3.at = row => AT[row]; // (for the verifier: where row's person stands [X, Y, Z, size, hips X, Y, Z, the lighter body])
   B3._buf = () => buf; B3._tw = () => TW; // (for the tests: the rows of numbers, read only)
   // (a shader the graphics card refused when it first drew — no error to catch at the start: People3D asks after drawing,
   // and goes back to its pieces)

@@ -136,7 +136,7 @@ def skirt(long):
 
 def cape():
     """A cape over the back: from the shoulders (over their tops, pinned at the chest) to the knees, falling wider."""
-    yT, yB = 1.49, 0.55
+    yT, yB = 1.475, 0.55
     def f(P):
         y = P[:, 1]; t = np.clip((yT - y) / (yT - yB), 0, 1)
         rx = 0.25 + 0.08 * t ** 0.7; rz = 0.155 + 0.075 * t
@@ -146,7 +146,7 @@ def cape():
         shell = np.abs((k0 - 1.0) * np.minimum(rx, rz)) - 0.0055
         # (behind the body, wrapping the shoulders; the opening in front a little wider below)
         front = (P[:, 2] + 0.02) / rz - (0.55 - 0.45 * np.clip((1.36 - y) / 0.2, 0, 1))
-        top = smax(y - yT, yB - y, 0.004)
+        top = smax(y - (yT - 0.075 * np.clip(np.abs(P[:, 0]) / 0.25, 0, 1.3) ** 2), yB - y, 0.004)   # (its top edge down the shoulders' slope)
         # (over the shoulders the cape lies on them: near its top it narrows round the neck and the shoulder line)
         return smax(smax(shell, top, 0.003), front * 0.1, 0.004)
     def g(P):

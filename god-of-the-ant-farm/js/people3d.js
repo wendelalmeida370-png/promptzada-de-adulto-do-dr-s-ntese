@@ -39,7 +39,7 @@
   const vis = new Map(); // id → the view's own memory of someone: where they were, which way they face, their walk, their pose
   P3.clear = function () { vis.clear(); if (G.Body3D && G.Body3D.clear) G.Body3D.clear(); for (const sp of emoPool) sp.visible = false; if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
   let avFeet = null;
-  G.worldHooks.push(() => { vis.clear(); avFeet = null; });
+  G.worldHooks.push(() => { vis.clear(); avFeet = null; seenAt[0] = seenAt[1] = 0; });
 
   P3.init = function (three, realm) {
     THREE = three; R3 = realm; scene = realm.scene();
@@ -687,6 +687,8 @@
   P3.update = function (dt, focus) {
     if (!mesh || !focus) return;
     const S = G.S; const q = R3.Q(); const TL = G.Space.TILE, HM = G.Space.HM;
+    // (the eye: how far each one is from it picks the fine body or the lighter one — the camera, not the body it follows)
+    const cam = R3.camera ? R3.camera() : null; seenAt[0] = cam ? cam.position.x : focus.X; seenAt[1] = cam ? cam.position.z : focus.Z;
     const R = q.view * 0.22; const R2 = R * R; const RC = q.view * 0.55, RC2 = RC * RC; // (full bodies near; the crowd out to here)
     const av = P3.avatar;
     // the nearest people first, as many as the machine is told to carry
@@ -738,7 +740,9 @@
       s.pose.gazeX = G.clamp((look - s.pose.lookY) * 0.9, -0.42, 0.42); // (the eyes go first, the head follows)
       s.pose.blink = blinkAt(s.t, v.id); cloth(s, X, Z, s.yaw, dt, s.pose);
       s.st = st;
-      Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant || (s.plant = [{ on: 0 }, { on: 0 }]);
+      // (beyond 15 m the lighter body, back to the fine one inside 13 m: someone standing at the edge does not flicker between them)
+      { const de = (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2; s.lod = de > (s.lod ? 169 : 225) ? 1 : 0; }
+      Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant || (s.plant = [{ on: 0 }, { on: 0 }]); Lv.lod = s.lod;
       P3.body(idx++, X, Y, Z, s.yaw, s.pose, Lv, P3.highlight === v.id ? '#ffd76a' : null);
       if (P3.walkers.length < 40) P3.walkers.push([X, Y, Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise)
       if (v.emo && v.emo.k && emoN < emoPool.length) { const tx = emoMap(v.emo.k); if (tx) { const sp = emoPool[emoN++]; if (sp.material.map !== tx) { sp.material.map = tx; sp.material.needsUpdate = true; } const L2 = P3.look(v).s; sp.position.set(X, Y + 2.2 * L2 + Math.sin(s.t * 3) * 0.03, Z); sp.scale.set(0.42, 0.45, 1); sp.visible = true; } }
@@ -750,7 +754,7 @@
     if (Cg) for (const c of Cg.corpses) {
       if (idx >= MAX) break; const X = c.x * TL, Z = c.y * TL; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > R2) continue;
       const stg = G.Carnage.stage(c); if (stg === 'bones') continue;
-      const L = P3.look(c.look); if (stg !== 'fresh') L.skin = stg === 'rot' ? '#8a8a6a' : '#7a6a5a';
+      const L = P3.look(c.look); if (stg !== 'fresh') L.skin = stg === 'rot' ? '#8a8a6a' : '#7a6a5a'; L.lod = (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2 > 225 ? 1 : 0;
       P3.body(idx++, X, W.groundH(c.x, c.y) * HM, Z, G.hash(c.id) * TAU, DEAD[c.id % DEAD.length], L, null); P3.dead++;
     }
     // the crowd: everyone else in reach, simply (where the world has them; no animation of their own but a step's bob)
@@ -800,9 +804,14 @@
   P3.check = function () {
     const out = []; const scan = (list, n, what) => { for (const m of list || []) { const a = m.instanceMatrix.array; for (let k = 0; k < Math.min(n, m.count) * 16; k++) if (!Number.isFinite(a[k])) { out.push(`${what}: matriz inválida no desenho`); return; } } };
     scan(mesh, P3.count, 'pessoas'); scan(beastMesh, P3.beasts, 'bichos');
-    if (skin) for (const e of G.Body3D.check()) out.push(e);
+    if (skin) {
+      for (const e of G.Body3D.check()) out.push(e);
+      // (the lighter body only far from the eye: nobody within 12 m drawn with it)
+      for (let r = 0; r < G.Body3D.rows; r++) { const a = G.Body3D.at(r); if (a && a[7] && Math.hypot(a[0] - seenAt[0], a[2] - seenAt[1]) < 12) { out.push(`corpo ${r}: o corpo leve a ${Math.hypot(a[0] - seenAt[0], a[2] - seenAt[1]).toFixed(1)} m do olho`); break; } }
+    }
     return out;
   };
+  const seenAt = [0, 0]; // (where the eye was when the people were last drawn: what picks the lighter bodies, and the verifier's)
 
   // ------------------------------ the beasts ------------------------------
   // (each kind's build, in the god's units — the same numbers its picture is drawn with (Animals.DEF[kind].q) where it

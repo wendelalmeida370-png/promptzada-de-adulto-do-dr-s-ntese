@@ -233,7 +233,9 @@ def main(only):
     J = CF.joints()
     bind = {k: [round(float(x), 6) for x in v] for k, v in J.items()}
     meshes = load_old() if only else {}
-    jobs = {'corpoM': lambda: body_mesh(0.0, 0.0045, 7600), 'corpoF': lambda: body_mesh(1.0, 0.0045, 7600)}
+    jobs = {'corpoM': lambda: body_mesh(0.0, 0.0045, 7600), 'corpoF': lambda: body_mesh(1.0, 0.0045, 7600),
+            # (the far ones: the same body with a third of the triangles — beyond a few steps nobody sees the difference)
+            'corpoM_1': lambda: body_mesh(0.0, 0.006, 2400), 'corpoF_1': lambda: body_mesh(1.0, 0.006, 2400)}
     for st in ('curto', 'longo', 'trancas', 'coque', 'careca', 'rabo', 'chanel'):
         jobs[st] = (lambda st: lambda: piece_mesh(CR.hair(st), 'hair', 0.0032, 1400 if st in ('curto', 'careca') else 2200, body=body_occluder()))(st)
     for st in ('barba', 'curta', 'bigode'):
