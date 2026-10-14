@@ -20,11 +20,22 @@
   // (the panes that light up at night, for FX3D's light on the street: building id → [[X, Y, Z, out x, out z], ...] — kept by the
   // chunk that drew them, so a building gone takes its panes with it when its chunk is drawn again)
   B3.lamps = new Map(); const litOf = new Map(); G.worldHooks.push(() => { B3.lamps.clear(); litOf.clear(); });
-  let THREE = null, R3 = null, SH = null, glass = null, PM = null, IDM = null;
+  // (the trades of the people of each house — home id → roles: what lies about a home tells of who lives there, a fisher's nets,
+  // a hunter's hide. Only read; made again when the world's clock or its people have changed)
+  let rolesMap = null, rolesKey = ''; G.worldHooks.push(() => { rolesMap = null; rolesKey = ''; });
+  B3.roles = function () {
+    const S = G.S; const key = S.clock + ':' + S.villagers.size; if (rolesMap && key === rolesKey) return rolesMap;
+    rolesMap = new Map(); rolesKey = key;
+    for (const v of S.villagers.values()) { if (!v.home || !v.role) continue; let l = rolesMap.get(v.home); if (!l) rolesMap.set(v.home, l = []); if (!l.includes(v.role)) l.push(v.role); }
+    return rolesMap;
+  };
+  let THREE = null, R3 = null, SH = null, glass = null, PM = null, IDM = null, PEG = null;
   const TAU = Math.PI * 2;
   B3.init = function (three, realm) {
     THREE = three; R3 = realm; SH = realm.SH; glass = new THREE.MeshPhongMaterial({ color: 0x1c2630, specular: 0x8aa0b4, shininess: 90, emissive: 0xffb860, emissiveIntensity: 0 });
     PM = new THREE.Matrix4(); IDM = new THREE.Matrix4(); // (a slanted box's frame, and the frame of the sheets already in place)
+    // (a timber's end out of a gable: eight sides, its end chamfered — a purlin, a peg; open at its foot, in the wall)
+    PEG = new THREE.LatheGeometry([[0.5, 0], [0.5, 0.88], [0.4, 1], [0, 1]].map(([r, y]) => new THREE.Vector2(r, y)), 8);
     // (a window shows the sky it faces — pale low, deeper above — more as one looks along the wall; at night, its lamp)
     const sk = realm.skyU;
     if (sk) glass.onBeforeCompile = sh => {
@@ -439,13 +450,15 @@ float m3scale(float p) {
       // a board along the line from a to b (its middle), wv across it and tv through it (whole widths)
       bar(a, b2, wv, tv, col) { K.para([(a[0] + b2[0] - wv[0]) / 2, (a[1] + b2[1] - wv[1]) / 2, (a[2] + b2[2] - wv[2]) / 2], [b2[0] - a[0], b2[1] - a[1], b2[2] - a[2]], wv, tv, col); },
       // a log, a round post or a rail from a to b, r its radius (r2: squashed, the second way round)
-      log(a, b2, r, col, r2) {
+      log(a, b2, r, col, r2, geo) {
         const d = [b2[0] - a[0], b2[1] - a[1], b2[2] - a[2]]; const l = Math.hypot(d[0], d[1], d[2]) || 1;
         let e1 = Math.abs(d[1]) / l > 0.9 ? [1, 0, 0] : [-d[2], 0, d[0]]; const l1 = Math.hypot(e1[0], e1[1], e1[2]) || 1; e1 = [e1[0] / l1, e1[1] / l1, e1[2] / l1];
         let e2 = [(d[1] * e1[2] - d[2] * e1[1]) / l, (d[2] * e1[0] - d[0] * e1[2]) / l, (d[0] * e1[1] - d[1] * e1[0]) / l];
         if ((e1[1] * d[2] - e1[2] * d[1]) * e2[0] + (e1[2] * d[0] - e1[0] * d[2]) * e2[1] + (e1[0] * d[1] - e1[1] * d[0]) * e2[2] < 0) e2 = [-e2[0], -e2[1], -e2[2]];
-        const ra = r * 2, rb = (r2 || r) * 2; PM.set(e1[0] * ra, d[0], e2[0] * rb, x0 + a[0], e1[1] * ra, d[1], e2[1] * rb, y0 + a[1], e1[2] * ra, d[2], e2[2] * rb, z0 + a[2], 0, 0, 0, 1); g.put(SH.cyl, PM, c(col));
+        const ra = r * 2, rb = (r2 || r) * 2; PM.set(e1[0] * ra, d[0], e2[0] * rb, x0 + a[0], e1[1] * ra, d[1], e2[1] * rb, y0 + a[1], e1[2] * ra, d[2], e2[2] * rb, z0 + a[2], 0, 0, 0, 1); g.put(geo || SH.cyl, PM, c(col));
       },
+      // (a timber's end from a, in the wall, out to b: eight sides, chamfered at b)
+      peg(a, b2, r, col) { K.log(a, b2, r, col, r, PEG || SH.cyl); },
       // a smooth sheet: a grid of points (nu + 1 across, nv + 1 down, row after row), its normals rounded between them,
       // seen from 'out'; col a colour or a function of the point and its normal (patches of moss, a damp edge)
       sheet(Pp, nu, nv, col, out) {
@@ -490,6 +503,8 @@ float m3scale(float p) {
     const P = K.P; const base = P.base || ['#8a8478', '#6f6a60', '#a09a8e']; K.footed = true; // (dressed: squared blocks in even courses, as the classical lands lay them)
     K.as('stone', () => K.box(x, K.lo - K.y0 - 0.2, z, sx + 0.08, K.y0 - K.lo + 0.2, sz + 0.08, dim(base[1], 0.78)));
     if (!K.fine) return;
+    // (an old house on damp ground has moss on its stones — more on the lower courses, on some stones more than others)
+    const mossy = G.clamp((K.hv(3) + K.hv(4)) * 0.5 - 0.28, 0, 0.42) * (dressed ? 0.5 : 1);
     const sides = [[[x - sx / 2, z + sz / 2], [x + sx / 2, z + sz / 2], [0, 1]], [[x + sx / 2, z - sz / 2], [x - sx / 2, z - sz / 2], [0, -1]], [[x + sx / 2, z + sz / 2], [x + sx / 2, z - sz / 2], [1, 0]], [[x - sx / 2, z - sz / 2], [x - sx / 2, z + sz / 2], [-1, 0]]];
     let n = 0;
     K.as('rock', () => { for (const [A0, B, o] of sides) {
@@ -501,13 +516,27 @@ float m3scale(float p) {
           const h1 = K.hv(300 + n), h2 = K.hv(500 + n), h3 = K.hv(700 + n); n++;
           const l = Math.min(len - t, dressed ? 0.6 : 0.34 + h1 * 0.34); if (l < 0.12) break; const m = Math.max(0, t) + (Math.min(len, t + l) - Math.max(0, t)) / 2;
           const pr = dressed ? 0.05 : 0.05 + h2 * 0.035; const px = A[0] + dx * m + o[0] * pr, pz = A[1] + dz * m + o[1] * pr;
-          if (top - ch * 0.15 > K.gy(px, pz)) { any = true; const cc = dressed ? mixc(base[0], base[2], h1 * 0.6).map(v => v * (0.94 + h3 * 0.1)) : mixc(base[Math.floor(h1 * 3)], base[Math.floor(h3 * 2.99)], 0.5 * h2).map(v => v * (0.86 + h3 * 0.26));
+          if (top - ch * 0.15 > K.gy(px, pz)) { any = true; let cc = dressed ? mixc(base[0], base[2], h1 * 0.6).map(v => v * (0.94 + h3 * 0.1)) : mixc(base[Math.floor(h1 * 3)], base[Math.floor(h3 * 2.99)], 0.5 * h2).map(v => v * (0.86 + h3 * 0.26));
+            if (mossy) cc = mixc(cc, [84, 100, 60], mossy * (0.45 + row * 0.22) * (h2 > 0.45 ? 1 : 0.25));
             K.rbox(px, top - ch + 0.01, pz, Math.min(len, t + l) - Math.max(0, t) - (dressed ? 0.02 : 0.035), ch - (dressed ? 0.02 : 0.035), dressed ? 0.2 : 0.2 + h3 * 0.08, cc, Math.atan2(-dz, dx) + (dressed ? 0 : (h2 - 0.5) * 0.08), 0, dressed ? 0 : (h3 - 0.5) * 0.05); }
           t += l;
         }
         top -= ch; if (!any) break;
       }
     } });
+  }
+  // tall grass at the foot of the walls, where the ground round the house is grass and the snow does not lie (the rule of the
+  // ground's own grass: ground3d), none before the door: the house sits in the ground, not on it
+  function wallGrass(K, x, z, sx, sz, door) {
+    if (!K.fine) return; const S = G.S, T = G.T, L = K.L; let k = 0;
+    const grassy = (X, Z) => { const tx = Math.floor((K.x0 + X) / L), ty = Math.floor((K.z0 + Z) / L); if (!W.inb(tx, ty)) return false; const i = ty * N + tx;
+      const t = S.type[i]; const snow = S.temp ? G.clamp((0.235 - S.temp[i] / 255) / 0.07, 0, 1) : 0; return (t === T.GRASS || t === T.MEADOW) && snow < 0.45 && !(S.burnt[i] > 0) && !S.road[i]; };
+    for (const W2 of wallsOf(sx, sz)) { const n = Math.floor(W2.len / 0.24);
+      for (let q = 0; q < n; q++) { const h1 = K.hv(800 + k), h2 = K.hv(1000 + k); k++; const a = -W2.len / 2 + (q + 0.2 + h1 * 0.6) * W2.len / n;
+        if (door && door.side === W2.side && Math.abs(a - door.a) < door.w / 2 + 0.35) continue; if (h2 < 0.25) continue;
+        const out = 0.2 + h2 * 0.14; const px = x + (W2.ax ? a : W2.o[0] * (sx / 2 + out)), pz = z + (W2.ax ? W2.o[1] * (sz / 2 + out) : a); if (!grassy(px, pz)) continue;
+        const X = K.x0 + px, Z = K.z0 + pz, Y = K.y0 + K.gy(px, pz) - 0.02; const len = 0.22 + h1 * 0.3;
+        for (let b = 0; b < 2; b++) { const ang = h1 * 9 + b * 2.2; const lean = 0.08 + b * 0.05; K.gp.blade(X, Y, Z, 0.07, ang, X + W2.o[0] * lean + Math.cos(ang) * 0.05, Y + len * (1 - b * 0.25), Z + W2.o[1] * lean + Math.sin(ang) * 0.05, [74, 96, 48], mixc([128, 146, 78], [176, 168, 104], h2 * 0.7), 0.7); } } }
   }
   // (how far it is from a wall of a body (centre x, z, sx × sz) facing o to the edge of its lot)
   const stripOf = (K, x, z, sx, sz, o) => (o[0] > 0 ? K.w - (x + sx / 2) : o[0] < 0 ? x - sx / 2 : o[1] > 0 ? K.d - (z + sz / 2) : z - sz / 2);
@@ -645,7 +674,7 @@ float m3scale(float p) {
   // as the north builds — save now and then one entered by its gable)
   const ridgeX = (b, side) => (side === 'N' || side === 'S') !== (hvOf(b, 14) < 0.2);
   function turfTone(K) {
-    const age = K.hv(3), wet = K.hv(4); const base = calm((K.P.roof && K.P.roof[0]) || '#71903f', 0.58, 0.84);
+    const age = K.hv(3), wet = K.hv(4); const base = calm((K.P.roof && K.P.roof[0]) || '#71903f', 0.66, 0.86);
     const grass = mixc(base, [114, 108, 70], age * 0.42);
     return { age, wet, grass, moss: mixc(calm(base, 0.45, 0.68), [56, 78, 54], 0.4 + wet * 0.25), dry: mixc(base, [158, 138, 90], 0.62),
       soil: [64, 50, 38], tuft: mixc(grass, [66, 86, 44], 0.4), tip: mixc(grass, [172, 168, 106], 0.45) };
@@ -753,18 +782,34 @@ float m3scale(float p) {
     // the barge boards: crossed over the ridge in the north, their ends carved by how rich the house is; elsewhere a plain board
     if (!thatch) {
       const bw = turf ? 0.3 : T + 0.12, bt = 0.06, cross = nord; const cls = K.cls || 0; const hv = K.hv(5);
-      const style = !cross ? 0 : cls >= 3 ? 3 : cls === 2 ? (hv < 0.7 ? 3 : 2) : cls === 1 ? (hv < 0.5 ? 2 : 1) : (hv < 0.55 ? 1 : 0);
-      const bc = nord ? nordWood(K).dark : (P.trim || '#6b4a30'); const ext = cross ? 0.4 + Math.min(0.35, D * 0.06) : 0;
+      let style = !cross ? 0 : cls >= 3 ? 3 : cls === 2 ? (hv < 0.7 ? 3 : 2) : cls === 1 ? (hv < 0.5 ? 2 : 1) : (hv < 0.55 ? 1 : 0);
+      // (the dragon of a rich house carved whole — the model made in Blender, G.Mesh3D 'dragao' — standing where the boards cross
+      // at each end of the ridge, looking out along it, the boards' own ends then cut plain; where the machine carries no
+      // detail, the dragon cut in boards as before)
+      // (every hall has its dragons, most big houses; now and then a house or a cabin whose people carved theirs too, smaller)
+      const carved = cross && (style === 3 || (cls === 1 && K.hv(7) < 0.45) || (cls === 0 && K.hv(7) < 0.3));
+      const mesh = carved && K.fine && !!(G.Mesh3D && G.Mesh3D.has('dragao') && G.Mesh3D.part('dragao', 'madeira')); if (mesh) style = 0; // (the dragon rides the cross: the boards' ends plain)
+      const EMP = cross && K.fine && !!(G.Mesh3D && G.Mesh3D.has('empena') && G.Mesh3D.part('empena', 'cavalo') && G.Mesh3D.part('empena', 'voluta'));
+      const bc = nord ? nordWood(K).dark : (P.trim || '#6b4a30'); const ext = cross ? (mesh ? 0.2 : 0.4 + Math.min(0.35, D * 0.06)) : 0;
       const paint = cls >= 2 || (cls === 1 && K.hv(6) < 0.4) ? (P.trim || '#a23c2a') : null;
+      if (mesh) { const s = [0.68, 0.76, 0.84, 1][Math.min(3, cls)]; const wc = mixc(paint || bc, bc, 0.35); const ec = cls >= 2 ? (P.acc || '#d8b25a') : '#2a2016'; const M3 = G.Mesh3D;
+        for (const e of [-1, 1]) { const p = at(e * (eu + bt / 2 + 0.005), y + h + T / (2 * ca) + bw * 0.42, 0); const d = vec(e, 0, 0); const ry = Math.atan2(d[0], d[2]);
+          const m = R3.mat(K.x0 + p[0], K.y0 + p[1], K.z0 + p[2], ry, s, s, s);
+          K.as('jamb', () => K.g.put(M3.part('dragao', 'madeira'), m, K.c(wc))); const eye = M3.part('dragao', 'olho'); if (eye) K.g.put(eye, m, K.c(ec)); } }
       K.as('beam', () => { for (const e of [-1, 1]) for (const sd of [-1, 1]) {
         const ub = e * (eu + bt / 2 + 0.005); const sMid = -(T / 2) * sa / ca;
         const a = S(ub, run + (turf ? 0.06 : 0.03), T / 2, sd), b2 = S(ub, cross ? sMid - ext : sMid, T / 2, sd);
         K.bar(a, b2, sc(nN(sd), bw), sc(rU, bt), bc);
-        if (cross && style > 0) { const d = [b2[0] - a[0], b2[1] - a[1], b2[2] - a[2]]; const l = Math.hypot(d[0], d[1], d[2]); bargeEnd(K, b2, [d[0] / l, d[1] / l, d[2] / l], vec(0, 0, -sd), sc(rU, bt), bw * 0.8, style, bc, paint, cls >= 2 ? (P.acc || '#d8b25a') : '#1e1610'); }
+        if (cross && style > 0) {
+          // (the board's end cut in a horse's head or a scroll — the model made in Blender, G.Mesh3D 'empena': a board's thickness in
+          // the gable's plane, growing out from the ridge and up — where the machine carries detail; the boards' own cut elsewhere)
+          if (EMP && (style === 2 ? cls >= 1 : cls >= 2)) { const out = vec(0, 0, -sd); // (the horse on the houses, the scroll on the big ones: a cabin's own cut is boards) const s = 0.9 + cls * 0.07; const m = R3.mat(K.x0 + b2[0], K.y0 + b2[1], K.z0 + b2[2], Math.atan2(out[0], out[2]), s, s, s);
+            K.g.put(G.Mesh3D.part('empena', style === 2 ? 'cavalo' : 'voluta'), m, K.c(style === 2 ? (paint || bc) : bc)); const eye = style === 2 && G.Mesh3D.part('empena', 'olho'); if (eye) K.g.put(eye, m, K.c('#1e1610')); }
+          else { const d = [b2[0] - a[0], b2[1] - a[1], b2[2] - a[2]]; const l = Math.hypot(d[0], d[1], d[2]); bargeEnd(K, b2, [d[0] / l, d[1] / l, d[2] / l], vec(0, 0, -sd), sc(rU, bt), bw * 0.8, style, bc, paint, cls >= 2 ? (P.acc || '#d8b25a') : '#1e1610'); } }
       } });
       // (the purlins' ends under the gables, round logs past the boards)
-      if (nord) K.as('beam', () => { for (const e of [-1, 1]) { for (const sd of [-1, 1]) for (const f of [0.42, 0.8]) K.log(S(e * (L / 2 - 0.1), sw * f, -0.16, sd), S(e * (eu + 0.07), sw * f, -0.16, sd), 0.075, dim(bc, 0.95));
-        K.log(at(e * (L / 2 - 0.1), y + h - 0.17, 0), at(e * (eu + 0.08), y + h - 0.17, 0), 0.085, dim(bc, 0.95)); } });
+      if (nord) K.as('beam', () => { for (const e of [-1, 1]) { for (const sd of [-1, 1]) for (const f of [0.42, 0.8]) K.peg(S(e * (L / 2 - 0.1), sw * f, -0.16, sd), S(e * (eu + 0.07), sw * f, -0.16, sd), 0.075, dim(bc, 0.95));
+        K.peg(at(e * (L / 2 - 0.1), y + h - 0.17, 0), at(e * (eu + 0.08), y + h - 0.17, 0), 0.085, dim(bc, 0.95)); } });
     }
     // a turf roof's log along the eaves, on its hooks, that holds the turf from sliding; the grass growing over it all
     if (turf) {
@@ -933,6 +978,16 @@ float m3scale(float p) {
     if (o.yard) yardFence(K, o.yard);
     return top;
   }
+  // a rune stone (the model made in Blender, G.Mesh3D 'runa': its foot a quarter of a metre in the ground), at (x, z) of the lot,
+  // its carved face turned ry from +Z, s its size: granite, the serpent band painted red, the runes cut dark. False: no model
+  function runeStone(K, x, z, ry, s) {
+    const M3 = G.Mesh3D; if (!M3 || !M3.has('runa') || !M3.part('runa', 'pedra')) return false;
+    const y = K.footed || BASELESS[K.b.type] ? Math.min(K.gy(x - 0.4, z), K.gy(x + 0.4, z), K.gy(x, z)) : 0; const m = R3.mat(K.x0 + x, K.y0 + y, K.z0 + z, ry, s, s, s);
+    const P = K.P; const rock = mixc(P.base ? P.base[1] : '#6f6a60', [128, 124, 116], 0.5);
+    K.as('rock', () => K.g.put(M3.part('runa', 'pedra'), m, K.c(rock)));
+    for (const [part, col] of [['faixa', P.trim || '#a23c2a'], ['runas', dim(rock, 0.42)], ['olho', '#e8e0c8']]) { const pg = M3.part('runa', part); if (pg) K.g.put(pg, m, K.c(col)); }
+    return true;
+  }
   // the inn's sign beside its door: an iron arm out of the wall at the height of the lintel, the board hanging from it on two
   // chains, painted (a jug, the people's gold on it)
   function innSign(K) {
@@ -992,6 +1047,7 @@ float m3scale(float p) {
     if (floors > 1) K.as('beam', () => { for (let f = 1; f < floors; f++) K.box(x, f * hf - 0.12, z, sx + 0.12, 0.22, sz + 0.12, P.wr || '#5f4630'); });
     const door = o.door === false ? null : nordDoor(K, x, z, sx, sz, hf, side, cls, along);
     for (let f = 0; f < floors; f++) nordWindows(gw, K, x, z, sx, sz, hf, cls, along, door, f * hf);
+    if (K.footed) wallGrass(K, x, z, sx, sz, door);
     const top = roofOf(K, x, z, sx, sz, h, 'turf', null, !along);
     nordGables(gw, K, cls);
     if (o.chimney) {
@@ -1025,7 +1081,8 @@ float m3scale(float p) {
     K.as('beam', () => { for (let k = 0; k < np; k++) { const a = -wid / 2 + 0.12 + (wid - 0.24) * k / (np - 1); if (np === 3 && k === 1 && Math.abs(a - doorA) < 0.9) continue; const p = at(a, 0, nf1 - 0.14); K.box(p[0], fy, p[2], 0.2, ph - fy, 0.2, wc); }
       const p = at(0, 0, nf1 - 0.14); K.box(p[0], ph - 0.18, p[2], ax ? wid : 0.22, 0.2, ax ? 0.22 : wid, wc); });
     const rA = at(0, h - 0.06, nf0 - 0.04), rB = at(0, ph - 0.05, nf1 + 0.22);
-    K.as(nord ? 'turf' : (stuff(K.b).tile === 'mud' ? 'tile' : stuff(K.b).tile), () => K.bar(rA, rB, [0, 0.14, 0], ax ? [wid + 0.36, 0, 0] : [0, 0, wid + 0.36], nord ? turfTone(K).grass : ((P.roof && P.roof[1]) || '#94452d')));
+    const tt = nord ? turfTone(K) : null; const seed = K.b.id & 1023;
+    K.as(nord ? 'turf' : (stuff(K.b).tile === 'mud' ? 'tile' : stuff(K.b).tile), () => K.bar(rA, rB, [0, 0.14, 0], ax ? [wid + 0.36, 0, 0] : [0, 0, wid + 0.36], nord ? (X, Y, Z) => { const a = vnoise(X * 0.6, Z * 0.6, seed); return qc(mixc(mixc(tt.grass, tt.dry, G.clamp((a - 0.55) * 3, 0, 0.7)), tt.moss, G.clamp((0.45 - a) * 3, 0, 0.8))); } : ((P.roof && P.roof[1]) || '#94452d')));
     K.as('plankH', () => K.bar([rA[0], rA[1] - 0.09, rA[2]], [rB[0], rB[1] - 0.09, rB[2]], [0, 0.04, 0], ax ? [wid + 0.3, 0, 0] : [0, 0, wid + 0.3], dim(wc, 0.85)));
     // (the smith's hearth against the wall, away from the door, its hood and the chimney through the roof)
     let hearthA = null;
@@ -1071,7 +1128,7 @@ float m3scale(float p) {
     footing(K, x, z, lx, lz);
     nordWalls(K, x, z, lx, lz, h, cls, side);
     const door = nordDoor(K, x, z, lx, lz, h, side, cls, along);
-    nordWindows(gw, K, x, z, lx, lz, h, cls, along, door);
+    nordWindows(gw, K, x, z, lx, lz, h, cls, along, door); wallGrass(K, x, z, lx, lz, door);
     const top = roofOf(K, x, z, lx, lz, h, 'turf', null, !along);
     nordGables(gw, K, cls);
     smokeHole(K, cls);
@@ -1093,6 +1150,10 @@ float m3scale(float p) {
     const wall = wallCol ? calm(mixc(wallCol, [126, 94, 64], 0.08 + K.hv(11) * 0.1), 0.8, 0.88) : NW.wall;
     // (the wall, its top band in the shade of the eaves — the roof's volume where no shadow of contact is drawn)
     K.as('plankV', () => { K.box(x, 0, z, lx, h - 0.45, lz, wall); K.box(x, h - 0.45, z, lx, 0.45, lz, eaveShade(K, wall, h)); });
+    // (an old house mended: a plank or three replaced, fresher than the grey ones round them — where, by its id)
+    const age = K.hv(3); if (K.fine && age > 0.45) K.as('plankV', () => { const n = 1 + Math.floor((age - 0.45) * 5.5); let k = 0;
+      for (const W2 of wallsOf(lx, lz)) { if (k >= n) break; if (K.hv(230 + k * 3) < 0.35) continue; const a = (K.hv(231 + k * 3) - 0.5) * (W2.len - 0.9); const w2 = 0.2 + K.hv(232 + k * 3) * 0.08; k++;
+        K.box(x + (W2.ax ? a : W2.o[0] * (lx / 2 + 0.006)), 0.22, z + (W2.ax ? W2.o[1] * (lz / 2 + 0.006) : a), W2.ax ? w2 : 0.02, h - 0.44, W2.ax ? 0.02 : w2, mixc(wall, [168, 132, 92], 0.42)); } });
     K.as('beam', () => {
       K.box(x, 0, z, lx + 0.1, 0.2, lz + 0.1, dim(wd, 0.92)); K.box(x, h - 0.2, z, lx + 0.09, 0.2, lz + 0.09, wd);
       for (const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.box(x + px * (lx / 2 - 0.08), 0, z + pz * (lz / 2 - 0.08), 0.26, h, 0.26, wd);
@@ -1112,16 +1173,27 @@ float m3scale(float p) {
   function nordDoor(K, x, z, lx, lz, h, side, cls, along) {
     const P = K.P; const o = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[side]; const ax = o[1] !== 0;
     const len = ax ? lx : lz; const gable = along ? !ax : ax;
-    const dw = cls >= 3 ? 1.25 : cls >= 2 ? 1.05 : 0.92, dh = Math.min(cls >= 2 ? 2.05 : 1.8, gable ? h + 0.45 : h - 0.24);
+    const dw = cls >= 3 ? 1.25 : cls >= 2 ? 1.05 : 0.9; let dh = Math.min(cls >= 2 ? 2.05 : 1.8, gable ? h + 0.45 : h - 0.24); // (widths in steps of 5 cm: the door picture's own)
+    // (the carved portal — the model made in Blender, G.Mesh3D 'portal': two jambs and a heavy lintel round a door of 1.0 × 1.9 m,
+    // the interlace in relief, its threshold half in the ground — where the machine carries detail: scaled to this door, its
+    // lintel kept under the eaves, so a cabin's door is a low one, as the north's were)
+    const PT = K.fine && (cls >= 1 || K.hv(27) < 0.5) && !!(G.Mesh3D && G.Mesh3D.has('portal') && G.Mesh3D.part('portal', 'madeira')); let psy = 0; // (every house and hall; half the cabins)
+    if (PT) { psy = Math.min(dh / 1.9, (gable ? h + 0.7 : h - 0.04) / 2.3); dh = 1.9 * psy; }
     const nb = bays(len); const off = gable || nb < 3 ? 0 : (K.hv(6) < 0.5 ? -1 : 1) * (K.hv(6) < 0.25 || K.hv(6) > 0.75 ? len / nb : 0);
     const fx = x + o[0] * lx / 2 + (ax ? off : 0), fz = z + o[1] * lz / 2 + (ax ? 0 : off);
     // (in the door's frame: a along the wall, n out of it)
     const D = (a, y, n) => [fx + (ax ? a : 0) + o[0] * n, y, fz + (ax ? 0 : a) + o[1] * n];
     const bx = (a, y, n, wa, hy, wn, col) => { const p = D(a, y, n); K.box(p[0], p[1], p[2], ax ? wa : wn, hy, ax ? wn : wa, col); };
-    const hv = K.hv(12); const leaf = hv < 0.3 ? mixc(P.door || '#3a2616', [104, 98, 88], 0.38) : cls >= 2 && hv > 0.6 ? mixc(P.trim || '#a23c2a', P.door || '#3a2616', 0.5) : (P.door || '#3a2616');
-    K.as('plankV', () => bx(0, 0.06, 0.04, dw, dh - 0.06, 0.07, leaf));
+    const hv = K.hv(12); const leaf = hv < 0.3 ? mixc(P.door || '#3a2616', [104, 98, 88], 0.18) : cls >= 2 && hv > 0.6 ? mixc(P.trim || '#a23c2a', P.door || '#3a2616', 0.5) : (P.door || '#3a2616');
+    // (the leaf: planks with their iron straps, nails and ring — one leaf of the stack's door picture, hinged left or right by the
+    // house's id, across the leaf's own width from its foot)
+    const lf = K.hv(19) < 0.5 ? 0 : 1; const fp = D(0, 0.06, 0.04);
+    K.as(doorPat(K.x0 + fp[0], K.y0 + 0.06, K.z0 + fp[2], o, dw, lf), () => bx(0, 0.06, 0.04, dw, dh - 0.06, 0.07, leaf));
     const fc = nordWood(K).dark;
-    K.as('beam', () => {
+    if (PT) { const M3 = G.Mesh3D; const p = D(0, 0, 0); const m = R3.mat(K.x0 + p[0], K.y0 + p[1], K.z0 + p[2], Math.atan2(o[0], o[1]), dw, psy, 1);
+      K.as('beam', () => K.g.put(M3.part('portal', 'madeira'), m, K.c(fc))); const ent = M3.part('portal', 'entalhe');
+      if (ent) K.as('jamb', () => K.g.put(ent, m, K.c(cls >= 2 || (cls === 1 && K.hv(6) < 0.4) ? (P.trim || '#a23c2a') : mixc(fc, [150, 118, 82], 0.5)))); }
+    else K.as('beam', () => {
       for (const s of [-1, 1]) bx(s * (dw / 2 + 0.08), 0, 0.07, 0.16, dh + 0.02, 0.17, fc);
       bx(0, dh, 0.08, dw + 0.52, 0.2, 0.2, fc); bx(0, 0, 0.1, dw + 0.36, 0.07, 0.25, dim(fc, 0.85));
       if (cls >= 2) for (const s of [-1, 1]) bx(s * (dw / 2 + 0.08), 0.15, 0.16, 0.06, dh - 0.3, 0.02, P.trim || '#a23c2a');
@@ -1129,11 +1201,11 @@ float m3scale(float p) {
       if (cls >= 1 && (gable || h - dh > 0.62)) for (const s of [-1, 1]) { const a = D(s * (dw / 2 + 0.22), dh + 0.2, 0.09), b2 = D(0, dh + 0.42 + cls * 0.05, 0.09); const da = -s * (dw / 2 + 0.22), dy = b2[1] - a[1]; const l = Math.hypot(da, dy);
         K.bar(a, b2, [ax ? -dy / l * 0.1 : 0, da / l * 0.1, ax ? 0 : -dy / l * 0.1], [o[0] * 0.06, 0, o[1] * 0.06], cls >= 2 ? (P.trim || '#a23c2a') : fc); }
     });
-    // (the iron: two straps from the hinges with curled ends, a ring)
-    if (K.fine) K.as('iron', () => { const ir = '#2e2b28'; for (const fy of [0.26, 0.74]) { bx(-dw * 0.12, dh * fy, 0.085, dw * 0.66, 0.055, 0.015, ir); bx(dw * 0.22, dh * fy - 0.03, 0.085, 0.05, 0.11, 0.015, ir); }
-      const r = D(dw * 0.3, dh * 0.5, 0.075), r2 = D(dw * 0.3, dh * 0.5, 0.1); K.log(r, r2, 0.06, ir); });
+    // (the iron is the picture's; in relief only the pin the ring hangs from, on the latch side, where the picture has the ring —
+    // its leaf runs along the wall the way the shader reads it: su)
+    if (K.fine) K.as('iron', () => { const su = ax ? -o[1] : o[0]; const a = su * ((lf ? 0.16 : 0.84) - 0.5) * dw; const r = D(a, 1.12, 0.075), r2 = D(a, 1.12, 0.11); K.log(r, r2, 0.03, '#2e2b28'); });
     // (on a gable, a little roof over the door on two brackets)
-    if (gable && cls >= 1 && K.hv(13) < 0.7) { const yb = dh + 0.3, dep = 0.62, wdt = dw + 0.6;
+    if (gable && cls >= 1 && K.hv(13) < 0.7) { const yb = PT ? Math.max(dh + 0.3, 2.3 * psy + 0.08) : dh + 0.3, dep = 0.62, wdt = dw + 0.6;
       K.as('beam', () => { for (const s of [-1, 1]) K.bar(D(s * (wdt / 2 - 0.1), yb - 0.45, 0.03), D(s * (wdt / 2 - 0.1), yb + 0.02, dep - 0.08), [0, 0.07, 0], ax ? [0.06, 0, 0] : [0, 0, 0.06], fc); bx(0, yb - 0.03, dep / 2, wdt - 0.1, 0.03, dep, dim(fc, 0.8)); });
       const c0 = D(0, yb, dep / 2); K.as('shingle', () => K.gable(c0[0], c0[1], c0[2], ax ? wdt : dep + 0.1, 0.42, ax ? dep + 0.1 : wdt, dim(fc, 0.9), ax)); }
     // (the stone step before it, from the ground up to the floor — no further out than a hand past the lot)
@@ -1164,6 +1236,9 @@ float m3scale(float p) {
           bx(0, wy - 0.12, 0.09, ww + 0.22, 0.05, 0.16, dim(fc, 0.9)); if (cls >= 2) bx(0, wy + wh + 0.07, 0.07, ww + 0.3, 0.08, 0.1, P.trim || '#a23c2a'); });
         const sc2 = mixc(fc, P.wl || '#7e5e40', 0.4);
         K.as('plankV', () => { if (open) bx(s * (ww + 0.12), wy - 0.02, 0.05, ww + 0.02, wh + 0.04, 0.04, sc2); else bx(0, wy - 0.02, 0.1, ww + 0.04, wh + 0.04, 0.04, sc2); });
+        // (the shutter's two hinge straps, from its hinge side — toward the window when open, the side it swings to when shut)
+        if (K.fine) K.as('iron', () => { const sw = ww + 0.03, c0 = open ? s * (ww + 0.12) : 0, hin = open ? c0 - s * sw / 2 : c0 + s * sw / 2, dir = open ? s : -s;
+          for (const f of [0.2, 0.8]) bx(hin + dir * sw * 0.3, wy - 0.02 + (wh + 0.04) * f - 0.017, open ? 0.076 : 0.126, sw * 0.6, 0.034, 0.012, '#2e2b28'); });
       }
     }
   }
@@ -1307,6 +1382,8 @@ float m3scale(float p) {
     },
     monument(g, gw, K) {
       const P = K.P; if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, 3, 3, 6); return; }
+      // (the north raises rune stones, not needles: a tall one, two lesser ones turned toward it)
+      if (K.st === 'nordico' && runeStone(K, K.w / 2, K.d / 2 - 0.4, 0, 1.3)) { runeStone(K, K.w / 2 - 2.1, K.d / 2 + 1.3, 0.5, 0.8); runeStone(K, K.w / 2 + 2.1, K.d / 2 + 1.3, -0.5, 0.85); return; }
       K.box(K.w / 2, 0, K.d / 2, 3.4, 1, 3.4, P.base ? P.base[0] : '#8a8478');
       g.put(SH.cone, R3.mat(K.x0 + K.w / 2, K.y0 + 1, K.z0 + K.d / 2, Math.PI / 4, 2.2, 12, 2.2), K.c(P.wl)); // (an obelisk: a needle of stone)
     },
@@ -1386,10 +1463,15 @@ float m3scale(float p) {
       K.as('plankV', () => K.cyl(x + 0.05, 0.72, z, 0.13, 0.26, [120, 88, 56])); K.as('iron', () => K.cyl(x + 0.05, 0.9, z, 0.138, 0.03, '#3c3a36'));
       const rp = nord ? 'shingle' : stuff(K.b).tile === 'mud' ? 'thatch' : stuff(K.b).tile; const rc = nord ? dim(wc, 1.1) : rp === 'thatch' ? ((P.thatch && P.thatch[0]) || '#c8a85a') : (P.roof && P.roof[0]) || '#b85a3c';
       K.as(rp, () => K.gable(x, 2.2, z, 2, 0.6, 1.4, rc));
+      // (one rune stone to a town of the north, at its oldest well: in the well's lot — the body does not walk into it — behind the
+      // well from the side people come to it, its carved face to them)
+      if (nord && K.prog >= 1 && ![...G.S.buildings.values()].some(q => q.type === 'well' && q.set === K.b.set && q.id < K.b.id)) {
+        const o = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[doorSide(K.b)]; runeStone(K, x - o[0] * 1.48, z - o[1] * 1.48, Math.atan2(o[0], o[1]), 0.7); }
     },
     campfire(g, gw, K) { for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; K.sph(K.w / 2 + Math.cos(a) * 0.7, 0.1, K.d / 2 + Math.sin(a) * 0.7, 0.22, '#6a6a66'); } for (let k = 0; k < 3; k++) g.put(SH.cyl, R3.mat(K.x0 + K.w / 2, K.y0 + 0.2, K.z0 + K.d / 2, k * 1.05, 0.16, 1.1, 0.16, 0, Math.PI / 2), K.c('#5a3a24')); },
     cemetery(g, gw, K) {
       fenceAround(K, 1, '#5a4a3a', true);
+      if (K.st === 'nordico') runeStone(K, K.w / 2, 0.75, 0, 0.75); // (the north's memorial: a rune stone at the head of its graves)
       const n = Math.min(12, (K.b.graves || []).length);
       for (let k = 0; k < n; k++) { const px = 1 + (k % 4) * (K.w - 2) / 3.2, pz = 1.2 + Math.floor(k / 4) * (K.d - 2.4) / 2.5; K.box(px, 0, pz, 0.6, 0.8, 0.18, '#9a968e'); K.box(px, 0, pz + 0.7, 0.6, 0.06, 1.2, '#6a5a44'); }
     },
@@ -1457,8 +1539,19 @@ float m3scale(float p) {
   // stalls of a market: tables under coloured awnings, goods on them
   function stalls(K, n, cols) {
     const cl = cols || ['#c8483a', '#3f6fb0', '#e8b83a', '#4a9a5a'];
+    // (the stall made in Blender, G.Mesh3D 'banca' — a counter of planks on its legs, the striped awning of canvas falling to the
+    // front, baskets of what is sold, sacks — where the machine carries detail; facing the buyers: out to the street from a
+    // market one cannot walk into, in toward the middle of a fair one walks through)
+    const BM = K.fine && K.w > 7.9 && K.d > 7.9 && !!(G.Mesh3D && G.Mesh3D.has('banca') && G.Mesh3D.part('banca', 'madeira')); const inward = !(G.BDEF[K.b.type] || {}).blocks; // (2.7 m wide with its sacks: a lot of two tiles)
+    const FRUIT = [[176, 76, 54], [198, 152, 66], [120, 140, 70], [122, 86, 118]]; K.banca = BM; // (Props3D: its own baskets then not needed)
     for (let k = 0; k < n; k++) {
       const px = K.w * ((k % 2) * 0.5 + 0.25), pz = K.d * (Math.floor(k / 2) * 0.5 + 0.25);
+      if (BM) { const M3 = G.Mesh3D; const dx = px - K.w / 2, dz = pz - K.d / 2; const s = inward ? -1 : 1; // (the way it faces: the axis nearer its own from the middle)
+        const ry = Math.abs(dx) > Math.abs(dz) ? Math.atan2(s * Math.sign(dx), 0) : Math.atan2(0, s * Math.sign(dz || 1));
+        const m = R3.mat(K.x0 + px, K.y0, K.z0 + pz, ry, 1, 1, 1);
+        for (const [part, pat, col] of [['madeira', 'plankH', '#8a6a44'], ['lona', 'canvas', cl[k % cl.length]], ['lona2', 'canvas', [232, 222, 196]], ['vime', 'wicker', [168, 132, 76]], ['fruta', null, FRUIT[(k + K.b.id) % 4]], ['saco', 'linen', [196, 178, 136]]]) {
+          const pg = M3.part('banca', part); if (pg) K.as(pat, () => K.g.put(pg, m, K.c(col))); }
+        continue; }
       K.box(px, 0, pz, 1.8, 0.85, 1, '#8a6a44');
       for (const [sx, sz] of [[-0.85, -0.45], [0.85, -0.45], [-0.85, 0.45], [0.85, 0.45]]) K.box(px + sx, 0, pz + sz, 0.08, 2.3, 0.08, '#6a4a2c');
       K.gable(px, 2.2, pz, 2.2, 0.6, 1.4, cl[k % cl.length]);
@@ -1605,7 +1698,7 @@ float m3scale(float p) {
       const st = stuff(b); const flat = P.kind === 'flat';
       g.pat = PAT[st.wall === 'frame' ? 'plaster' : st.wall]; g.put(SH.box, R3.mat(X, Y - 0.3, Z, 0, b.w * L * 0.85, h * (flat ? 0.95 : 0.6), b.h * L * 0.85), P.wl || '#efe2c4');
       // (a turf roof in the same calm green as its near picture, its own by its age)
-      const rc = P.kind === 'thatch' ? ((P.thatch && P.thatch[0]) || '#c8a85a') : P.kind === 'turf' ? mixc(calm((P.roof && P.roof[0]) || '#71903f', 0.58, 0.84), [114, 108, 70], hvOf(b, 3) * 0.42) : (P.roof && P.roof[0]) || '#b85a3c';
+      const rc = P.kind === 'thatch' ? ((P.thatch && P.thatch[0]) || '#c8a85a') : P.kind === 'turf' ? mixc(calm((P.roof && P.roof[0]) || '#71903f', 0.66, 0.86), [114, 108, 70], hvOf(b, 3) * 0.42) : (P.roof && P.roof[0]) || '#b85a3c';
       // (the ridge the way the near picture turns it: a longhouse on a square lot along the wall with its door)
       let ax = b.w >= b.h; if (P.kind === 'turf' && b.w === b.h && b.built) ax = ridgeX(b, doorSide(b));
       if (!flat) { g.pat = PAT[P.kind === 'turf' ? 'turf' : P.kind === 'thatch' ? 'thatch' : st.tile]; g.put(SH.gable, R3.mat(X, Y + h * 0.6 - 0.3, Z, ax ? 0 : Math.PI / 2, (b.w >= b.h ? b.w : b.h) * L * 0.95, h * 0.5, (b.w >= b.h ? b.h : b.w) * L * 0.95), rc); }
