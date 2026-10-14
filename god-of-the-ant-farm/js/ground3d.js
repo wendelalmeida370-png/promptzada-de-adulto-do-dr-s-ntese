@@ -278,6 +278,7 @@ float gRough(vec4 t) { float k = floor(t.a * 255.0 + 0.5); return (k == 4.0 || k
 vec2 gBumpV = vec2(0.0);
 float gHgt = 0.0; // (the height of the stuff of the ground at this point, in metres: the light reads its slopes)
 float gHa = 0.5; // (and the same 0..1, as its pictures have it: where the snow fills the gaps first)
+float gDune = 0.0; // (how much of this point is dune)
 float gWL = 0.0; // (how much this point is the line of the water on a shore: the band the waves roll their stones in)
 // (the snow's own colour, linear: the god's white of the frozen land)
 #define GSNOW vec3(0.78, 0.835, 0.9)
@@ -383,6 +384,13 @@ vec3 gTint(vec3 c, float k, float mP) {
 vec3 gOwn(vec3 m, vec3 c, float k) { float lc = dot(c, vec3(0.3, 0.59, 0.11)), lm = dot(m, vec3(0.3, 0.59, 0.11)); return mix(m * (lc / max(lm, 1e-4)), c, 0.18) * k; }
 // (the stones of a shore: the sand's colour greyed and darker)
 vec3 gPeb(vec3 c) { float l = dot(c, vec3(0.3, 0.59, 0.11)); return mix(vec3(l) * vec3(0.98, 0.95, 0.9), c, 0.3) * 0.72; }
+// (the ripples the wind leaves on a dune: three quarters of a metre apart, bending over it as the wind turns round its
+// back — a long gentle slope to the wind, a short steep one away from it; 0..1, its height)
+float gRip(vec2 p) {
+  vec2 q = p + vec2(texture2D(uCN, p / 70.0).r, texture2D(uCN, p / 70.0 + 0.5).g) * 11.0;
+  float r = fract(dot(q, vec2(0.86, 0.51)) / 0.75 + texture2D(uCN, p / 9.0).g * 0.35);
+  return smoothstep(0.0, 0.72, r) * (1.0 - smoothstep(0.72, 1.0, r));
+}
 // (a steep face: the colour of the land there, greyed toward stone)
 vec3 gRockish(vec3 c) { float l = dot(c, vec3(0.3, 0.55, 0.15)); return mix(vec3(l) * vec3(1.05, 1.0, 0.93), c, 0.35) * 0.92; }
 // the stuffs at this point: a picture of the stack, its colour (summed by weight), its weight
@@ -412,6 +420,7 @@ vec3 gStack(vec4 t00, vec4 t10, vec4 t01, vec4 t11, vec2 s, float mP, float mB, 
   float w00 = (1.0 - s.x) * (1.0 - s.y), w10 = s.x * (1.0 - s.y), w01 = (1.0 - s.x) * s.y, w11 = s.x * s.y;
   vec3 c00 = gTint(t00.rgb, k00, mP), c10 = gTint(t10.rgb, k10, mP), c01 = gTint(t01.rgb, k01, mP), c11 = gTint(t11.rgb, k11, mP);
   gAdd(gLay(k00), c00, w00); gAdd(gLay(k10), c10, w10); gAdd(gLay(k01), c01, w01); gAdd(gLay(k11), c11, w11);
+  gDune = (k00 == 3.0 ? w00 : 0.0) + (k10 == 3.0 ? w10 : 0.0) + (k01 == 3.0 ? w01 : 0.0) + (k11 == 3.0 ? w11 : 0.0);
   vec3 cAll = c00 * w00 + c10 * w10 + c01 * w01 + c11 * w11;
   float g00 = gGrassy(k00) * w00, g10 = gGrassy(k10) * w10, g01 = gGrassy(k01) * w01, g11 = gGrassy(k11) * w11;
   float gs = g00 + g10 + g01 + g11;
@@ -441,7 +450,10 @@ vec3 gStack(vec4 t00, vec4 t10, vec4 t01, vec4 t11, vec2 s, float mP, float mB, 
   vec3 col = vec3(0.0); float sum = 0.0, hg = 0.0, ha = 0.0;
   for (int i = 0; i < GMX; i++) { if (i >= gN) break; float b = max(T[i].a + gW[i] * 2.0 - mx + 0.24, 0.0); col += gC[i] / gW[i] * m3col(T[i]) * b; hg += T[i].a * gAmp(gL[i]) * b; ha += T[i].a * b; sum += b; }
   gHgt = hg / max(sum, 1e-4); gHa = ha / max(sum, 1e-4);
-  return col / max(sum, 1e-4);
+  col /= max(sum, 1e-4);
+  // (the dunes: their ripples in the light, the crests a little paler, the hollows between them holding a shade)
+  if (gDune > 0.01) { float rp = gRip(vGP.xz) * gDune; gHgt = gHgt * (1.0 - gDune * 0.6) + rp * 0.03; col *= 1.0 + (rp - 0.35 * gDune) * 0.08; }
+  return col;
 }
 #endif
 vec3 groundCol() {

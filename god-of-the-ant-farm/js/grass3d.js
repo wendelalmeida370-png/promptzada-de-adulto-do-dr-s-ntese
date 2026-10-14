@@ -83,7 +83,7 @@
         float fade = (1.0 - smoothstep(uR * 0.6, uR, dist)) * smoothstep(1.3, 3.4, dist);
         // (and none where the snow lies over its root — a few blades poking out of the very edge of it)
         vec4 sfm = mk.r > 0.0 ? texture2D(uFMap, tile / uN) : vec4(0.0); float snowE = sfm.a > 0.004 ? gSnowE(sfm, gNy, root, uGust) : 0.0;
-        float Hh = (0.1 + mk.g * 1.5) * (0.7 + r4 * 0.6) * step(r3, mk.r) * fade * (1.0 - smoothstep(0.44, 0.52, snowE));
+        float Hh = (0.1 + mk.g * 1.5) * (0.7 + r4 * 0.6) * step(r3, mk.r * (kind == 3.0 ? 1.0 - sfm.r * 0.5 : 1.0)) * fade * (1.0 - smoothstep(0.44, 0.52, snowE)); // (the jungle's undergrowth thinner in the deep shade under the trees)
         float ang = r1 * 6.2832 + r3 * 2.0; float ca = cos(ang), sa = sin(ang);
         vec2 wd = uWind.xy; float ws = length(wd) + 1e-4; wd /= ws;
         float gust = smoothstep(0.42, 0.86, texture2D(uGust, (root - uWind.xy * uTime * 1.7) / 52.0).r);
@@ -97,15 +97,19 @@
         vec3 objectNormal = normalize(vec3(bn.x * 0.28, 1.0, bn.z * 0.28));`)
         .replace('#include <begin_vertex>', `
         vec3 transformed;
-        { vec2 pp = vec2(ca * position.x - sa * position.z, sa * position.x + ca * position.z) * (0.75 + r2 * 0.5) * (0.55 + 0.45 * fade);
-          float u2 = aU * aU; vec2 off = (bend * 0.55 + push * 0.65) * u2 * Hh;
-          transformed = vec3(root.x + pp.x + off.x, gy + aU * Hh * (1.0 - flt * 0.55) - 0.03 - u2 * length(bend) * 0.12 * Hh, root.y + pp.y + off.y); }
+        { vec2 lp = position.xz; float arch = 0.0;
+          // (the jungle's undergrowth: each blade of the clump a broad leaf, three times as wide, arching out from the root)
+          if (kind == 3.0) { float ab = aB / 5.0 * 6.2832 + 0.4 * aB; vec2 dr = vec2(cos(ab), sin(ab)), ac = vec2(-dr.y, dr.x);
+            lp = dr * (dot(lp, dr) * 1.9 + aU * 0.24) + ac * dot(lp, ac) * 3.2; arch = 0.38; }
+          vec2 pp = vec2(ca * lp.x - sa * lp.y, sa * lp.x + ca * lp.y) * (0.75 + r2 * 0.5) * (0.55 + 0.45 * fade);
+          float u2 = aU * aU; vec2 off = (bend * 0.55 + push * 0.65) * u2 * Hh * (1.0 - arch * 0.6);
+          transformed = vec3(root.x + pp.x + off.x, gy + aU * Hh * (1.0 - flt * 0.55 - aU * arch) - 0.03 - u2 * length(bend) * 0.12 * Hh, root.y + pp.y + off.y); }
         // (its colour: the god's colour of the tile, darker at the root, lighter and warmer at the tip, every blade its own
         // shade — one greener, one drier; brighter in a gust; the savanna's gold, the reeds' grey-green; a flower now and
         // then on the meadow)
         { vec3 tc = texelFetch(uGMap, ti, 0).rgb; float bv = fract(r2 * 13.7 + aB * 0.61 + r4 * 3.1);
           vec3 tip = tc * mix(vec3(0.98, 1.08, 0.84), vec3(1.1, 1.06, 0.74), bv) + vec3(0.015, 0.02, 0.0);
-          if (kind == 1.0) tip = mix(tip, vec3(0.74, 0.6, 0.28), 0.7); else if (kind == 2.0) tip = mix(tip, vec3(0.36, 0.42, 0.22), 0.6); else if (kind == 4.0) tip *= 0.88; else if (kind == 5.0) tip = mix(tip, vec3(0.62, 0.6, 0.36), 0.6);
+          if (kind == 1.0) tip = mix(tip, vec3(0.74, 0.6, 0.28), 0.7); else if (kind == 2.0) tip = mix(tip, vec3(0.36, 0.42, 0.22), 0.6); else if (kind == 4.0) tip *= 0.88; else if (kind == 3.0) tip *= 0.86; else if (kind == 5.0) tip = mix(tip, vec3(0.62, 0.6, 0.36), 0.6);
           vec3 c = mix(tc * mix(0.62, 0.78, bv), tip, smoothstep(0.0, 1.0, aU)) * (1.0 + gust * 0.22 * aU);
           if (aB > 2.5 && r4 < mk.b * 1.2 && aU > 0.66) { float fk = fract(r2 * 7.0); c = fk < 0.25 ? vec3(0.95, 0.88, 0.3) : fk < 0.5 ? vec3(0.95, 0.95, 0.92) : fk < 0.75 ? vec3(0.85, 0.42, 0.55) : vec3(0.5, 0.45, 0.9); }
           vGC = c; vGU = aU; }`);

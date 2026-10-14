@@ -780,6 +780,8 @@ vec3 gxHaze( vec3 d ) {
   // a bush among the trees, not a lamp; dry when burnt)
   const BPAL = [[[86, 160, 67], [63, 125, 52], [124, 195, 92]], [[79, 154, 80], [58, 122, 62], [116, 189, 106]], [[98, 164, 68], [74, 130, 51], [140, 203, 94]]]
     .map(p => p.map(c => { const l = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]; return c.map(v => (l + (v - l) * 0.85) * 0.78); }));
+  // (the tone each land gives its bushes, [base, dark, light]: none in the temperate wood — the god's own green)
+  const BTONE = [null, [[52, 84, 60], [34, 58, 42], [76, 110, 80]], [[56, 92, 58], [38, 64, 40], [82, 120, 78]], [[78, 104, 56], [54, 76, 40], [108, 132, 74]], [[42, 108, 46], [26, 76, 32], [66, 140, 64]], [[118, 124, 76], [86, 92, 56], [150, 152, 98]], [[124, 128, 88], [92, 96, 64], [156, 156, 112]]];
   // (the god's red of the berries, deeper: under the sun of the 3D the god's own would burn white)
   const BERRY = [[150, 22, 40], [128, 16, 34], [168, 34, 46]];
   const SNOW = [238, 244, 250];
@@ -1000,13 +1002,18 @@ vec3 gxHaze( vec3 d ) {
         break;
       }
       default: { // broad crowns: oak, birch, the fruit trees, the tall trees of the forests of the south
-        const { tall, r } = D; const birch = t.kind === 'birch'; const jung = k[0] === 'tall';
-        const r0 = 0.27 * sz + 0.1; const tc = birch ? (X2, Y2, Z2, nx, ny) => (Math.floor((Y2 - Y) * 2.6 + h * 5) % 4 === 0 ? [46, 42, 38] : bark) : bc;
-        g.put(FS.trunk, R3.mat(X, Y, Z, rot, r0 * 2, H * 0.58 * tall, r0 * 2), tc, BARK);
-        if (fine && sz > 0.5) rootsInto(g, t.id, X, Y, Z, r0, jung ? 5 : 4, bc);
+        const { tall, r } = D; const birch = t.kind === 'birch'; const jung = k[0] === 'tall'; const olive = t.kind === 'olive';
+        const r0 = (olive ? 0.36 : 0.27) * sz + 0.1; const tc = birch ? (X2, Y2, Z2, nx, ny) => (Math.floor((Y2 - Y) * 2.6 + h * 5) % 4 === 0 ? [46, 42, 38] : bark) : bc;
         const cy = Y + D.cy;
+        if (olive) {
+          // (an olive: a short thick trunk, leaning and twisting, that splits in two at a man's height into the crown)
+          const fx = X + Math.cos(rot) * H * 0.1, fz = Z + Math.sin(rot) * H * 0.1, fy = Y + H * 0.27;
+          limb(g, FS.trunk, X, Y, Z, fx, fy, fz, r0, bc, BARK);
+          for (let q = 0; q < 2; q++) { const a = rot + (q ? 2.3 : -0.9) + (h - 0.5) * 0.6; limb(g, FS.limb, fx, fy - 0.1, fz, X + Math.cos(a) * r * 0.42, cy - r * 0.1, Z + Math.sin(a) * r * 0.42, r0 * 0.62, bc, BARK - 0.04); }
+        } else g.put(FS.trunk, R3.mat(X, Y, Z, rot, r0 * 2, H * 0.58 * tall, r0 * 2), tc, BARK);
+        if (fine && sz > 0.5) rootsInto(g, t.id, X, Y, Z, r0, jung ? 5 : 4, bc);
         // (the boughs: forking from the trunk up into the crown, seen between its lumps)
-        const nb = birch ? 3 : 4;
+        const nb = birch ? 3 : olive ? 0 : 4;
         for (let q = 0; q < nb; q++) {
           const a = rot + q * TAU / nb + G.hash(t.id * 31 + q) * 0.7, fy = Y + H * (0.36 + G.hash(t.id + q * 3) * 0.12) * tall, e = r * (0.48 + G.hash(t.id * 37 + q) * 0.2);
           const ex = X + Math.cos(a) * e, ey = cy + r * (0.05 + G.hash(t.id * 41 + q) * 0.3), ez = Z + Math.sin(a) * e;
@@ -1014,7 +1021,8 @@ vec3 gxHaze( vec3 d ) {
           if (fine && !birch && q % 2 === 0) limb(g, FS.limb, ex, ey, ez, ex + Math.cos(a + 0.8) * r * 0.32, ey + r * 0.32, ez + Math.sin(a + 0.8) * r * 0.32, r0 * 0.24, bc, BARK - 0.12);
         }
         if (!burnt) {
-          crownInto(g, gl, t.id, X, cy, Z, r, birch ? 7 : 9, birch ? 1.12 : 1, pal, snow, 0.24, birch ? 1 : jung ? 3 : 0, 4);
+          // (the olive's crown wide and open, of small silver-green leaves)
+          crownInto(g, gl, t.id, X, cy, Z, olive ? r * 1.12 : r, birch ? 7 : olive ? 8 : 9, birch ? 1.12 : olive ? 0.72 : 1, pal, snow, 0.24, birch || olive ? 1 : jung ? 3 : 0, 4);
           if (k[3] && t.fruit !== 0) { for (let q = 0; q < 9; q++) { const a = rot + q * 0.9; const px = X + Math.cos(a) * r * 0.95, py = cy - r * 0.1 + (q % 3) * 0.3, pz = Z + Math.sin(a) * r * 0.95; g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, a, 0.3), k[3], 0.25); } g.sph = null; }
         } else for (let q = 0; q < 3; q++) { const a = rot + q * 2.1; limb(g, FS.limb, X, cy - r * 0.3, Z, X + Math.cos(a) * r * 0.7, cy + r * 0.4, Z + Math.sin(a) * r * 0.7, r0 * 0.25, bc, BARK - 0.05); }
       }
@@ -1057,7 +1065,10 @@ vec3 gxHaze( vec3 d ) {
       const b = S.bushes.get(oid);
       if (b) {
         const X = b.x * TL, Z = b.y * TL, Y = W.groundH(b.x, b.y) * HM; const dead = b.burnt > 0; fsh();
-        const pal = dead ? [[110, 92, 58], [80, 66, 42], [138, 116, 72]] : BPAL[(b.id % 3 + 3) % 3].map(c => { const f = 0.9 + G.hash(b.id * 3 + 1) * 0.2; return [c[0] * f, c[1] * f, c[2] * f]; });
+        // (the god's green, leaning to the land's own: grey-green and dry where it is hot and dry, the dark of a juniper in the
+        // snow, the deep green of the jungle, the swamp's olive — a bush of the place, among the trees of the place)
+        const bt = BTONE[G.Biome && G.Biome.of ? G.Biome.of(i) : 0];
+        const pal = dead ? [[110, 92, 58], [80, 66, 42], [138, 116, 72]] : BPAL[(b.id % 3 + 3) % 3].map((c, q) => { const f = 0.9 + G.hash(b.id * 3 + 1) * 0.2; const t = bt ? G.lerpColor(c, bt[q], 0.45) : c; return [t[0] * f, t[1] * f, t[2] * f]; });
         // (a bush: a few stems, lumps of leaves on them, sprays of small round leaves standing out of its edge; its berries
         // among them)
         for (let q = 0; q < 3; q++) { const a = G.hash(b.id) * TAU + q * 2.1; limb(g, FS.limb, X, Y - 0.05, Z, X + Math.cos(a) * 0.3, Y + 0.55, Z + Math.sin(a) * 0.3, 0.05, dead ? [60, 48, 36] : [92, 70, 46], BARK - 0.04); }
