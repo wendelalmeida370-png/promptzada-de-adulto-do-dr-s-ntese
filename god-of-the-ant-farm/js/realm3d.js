@@ -681,8 +681,14 @@ vec3 gxGrade( vec3 c ) {
         float foam = (edge * (0.55 + 0.45 * lace) + brk * lace * 0.75) * surf;
         foam = max(foam, smoothstep(0.06, 0.1, hw + (fn - 0.5) * 0.05) * smoothstep(0.9, 1.6, ws) * isSea * 0.7 * (0.5 + 0.5 * lace));
         col = mix(col, vec3(0.9, 0.94, 0.96) * (uKeyCol * clamp(uKeyDir.y, 0.0, 1.0) * 0.6 + uIrr) * 0.3183, clamp(foam, 0.0, 0.85)); al = max(al, foam * 0.9);
-        // (and where it thins to nothing it is gone — no sheen of a film of water over the sand, no flicker where the two meet)
-        al *= smoothstep(0.0, 0.04, wD) * step(-0.5, vShore) + step(vShore, -0.5);
+        // (and where it thins to nothing it is gone — no sheen of a film of water over the sand, no flicker where the two meet;
+        // the line wandering half a metre over the ground, as a wet edge does, not ruled along the slope of a bank)
+        #ifdef WCHEAP
+        float wE = wD;
+        #else
+        float wE = wD + (texture2D(uDet, vWW.xz / 2.7).g - 0.5) * min(0.14, bSl) * (1.0 - smoothstep(0.05, 0.2, wD));
+        #endif
+        al *= smoothstep(0.0, 0.04, wE) * step(-0.5, vShore) + step(vShore, -0.5);
         outgoingLight = col / max(al, 0.001); diffuseColor.a = al;
         #include <opaque_fragment>`);
     };
@@ -878,6 +884,36 @@ vec3 gxGrade( vec3 c ) {
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy; if ((dx || dy) && W.inb(nx, ny)) { const j = ny * N + nx; if (S.type[j] <= T.SEA && !(S.dry && S.dry[j])) return true; } }
     return false;
   }
+  const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  // (a tile of land whose lowest corner dips under the sea's face)
+  const lowShore = (x, y) => Math.min(W.vh(x, y), W.vh(x + 1, y), W.vh(x, y + 1), W.vh(x + 1, y + 1)) < G.SEA + 0.12;
+  // (whether the sea runs over a tile of land that dips under it: beside it, or across two more such tiles — a wide flat
+  // beach is wet as far as the sea goes over it, not to the side of its first tile)
+  function seaReaches(x, y) {
+    if (!lowShore(x, y)) return false; const S = G.S; let ring = [[x, y]]; const seen = new Set([y * N + x]);
+    for (let step = 0; step < 3 && ring.length; step++) {
+      const next = [];
+      for (const [cx, cy] of ring) {
+        if (seaBeside(cx, cy)) return true;
+        for (const [dx, dy] of D4) { const nx = cx + dx, ny = cy + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (seen.has(j)) continue; seen.add(j); if (S.type[j] > T.RIVER && lowShore(nx, ny)) next.push([nx, ny]); }
+      }
+      ring = next;
+    }
+    return false;
+  }
+  // (a corner one of whose four tiles is a river with its face at the height L, give or take 10 cm)
+  const riverCorner = (cx, cy, L) => { const S = G.S; for (const [dx, dy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]]) { const tx = cx + dx, ty = cy + dy; if (!W.inb(tx, ty)) continue; const j = ty * N + tx; if (S.type[j] === T.RIVER && Math.abs(S.wl[j] * G.Space.HM + 0.05 - L) <= 0.1) return true; } return false; };
+  // (a bank: a tile of land beside a river whose ground the river's face runs over before the land rises out of it — the
+  // water's edge is where the two meet inside the tile, not the tile's side, ruled straight. Only beside water lying level
+  // (a river falling past the tile would leave a step in its face) and where every corner off the river stands out of the
+  // water: no sheet of it left standing over a slope going down. The face's height, or null)
+  function bankLevel(x, y) {
+    const S = G.S, HM = G.Space.HM; let L = -Infinity, lo = Infinity;
+    for (const [dx, dy] of D4) { const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (S.type[j] === T.RIVER && !(S.ice && S.ice[j])) { const f = S.wl[j] * HM + 0.05; L = Math.max(L, f); lo = Math.min(lo, f); } }
+    if (L === -Infinity || L - lo > 0.1) return null; let under = false;
+    for (const [cx, cy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) { if (W.vh(cx, cy) * HM >= L) continue; if (!riverCorner(cx, cy, L)) return null; under = true; }
+    return under ? L : null;
+  }
   function waterGeo(x0, y0, w, h, far) {
     const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; const g = new WGeo(), ice = new Geo(), walls = new Geo();
     const sea = G.SEA * HM;
@@ -906,10 +942,15 @@ vec3 gxGrade( vec3 c ) {
         if (S.ice && S.ice[i]) { ice.quad([x * TL, wl + 0.05, y * TL], [x * TL, wl + 0.05, (y + 1) * TL], [(x + 1) * TL, wl + 0.05, (y + 1) * TL], [(x + 1) * TL, wl + 0.05, y * TL], '#dcecf6'); continue; }
         const C4 = [[x, y], [x, y + 1], [x + 1, y + 1], [x + 1, y]].map(([cx, cy]) => wetCorner(cx, cy, S.wl[i], true)[1] * 0.85);
         g.quad([[x * TL, wl, y * TL], [x * TL, wl, (y + 1) * TL], [(x + 1) * TL, wl, (y + 1) * TL], [(x + 1) * TL, wl, y * TL]], [SHALLOW, SHALLOW, SHALLOW, SHALLOW], [0, 0, 0, 0], C4);
-      } else if (!far && Math.min(W.vh(x, y), W.vh(x + 1, y), W.vh(x, y + 1), W.vh(x + 1, y + 1)) < G.SEA + 0.12 && seaBeside(x, y)) {
+      } else if (!far && seaReaches(x, y)) {
         // (the shore: over a tile of land that dips toward the sea, the sea goes on until the land rises out of it — the water's
         // edge is where the two meet, wherever that is in the tile, not the tile's own edge; the land hides the rest)
         g.quad([[x * TL, sea, y * TL], [x * TL, sea, (y + 1) * TL], [(x + 1) * TL, sea, (y + 1) * TL], [(x + 1) * TL, sea, y * TL]], [SHALLOW, SHALLOW, SHALLOW, SHALLOW], [0, 0, 0, 0], [1, 1, 1, 1]);
+      } else if (!far && !S.occ[i] && !S.road[i]) {
+        // (a river's bank, the same way: its face goes on over the low edge of the land beside it — not under a building,
+        // which has its own water if any, nor over the end of a road to a bridge)
+        const L = bankLevel(x, y);
+        if (L !== null) g.quad([[x * TL, L, y * TL], [x * TL, L, (y + 1) * TL], [(x + 1) * TL, L, (y + 1) * TL], [(x + 1) * TL, L, y * TL]], [SHALLOW, SHALLOW, SHALLOW, SHALLOW], [0, 0, 0, 0], [0.85, 0.85, 0.85, 0.85]);
       }
     }
     return { water: g.empty ? null : g.build(), ice: ice.empty ? null : ice.build(), walls: walls.empty ? null : walls.build() };
