@@ -11,7 +11,7 @@
 (function (G) {
   const W = G.W;
   const F3 = G.FX3D = { fires: 0, ships: 0, drops: 0 };
-  let THREE = null, R3 = null, scene = null, flame = null, glow = null, rain = null, rainP = null, hull = null, mast = null, sail = null, deck = null, light = null, light2 = null;
+  let THREE = null, R3 = null, scene = null, flame = null, glow = null, rain = null, rainP = null, hull = null, mast = null, sail = null, deck = null, streaks = null, rainL = null;
   const MAXF = 140, MAXS = 40, NR = 1600;
   const TAU = Math.PI * 2;
   const svis = new Map(); G.worldHooks.push(() => { svis.clear(); for (const pl of [PA, PG]) if (pl) pl.n = 0; emit.clear(); leafT = 0; ripN = 0; fpN = 0; steps.clear(); for (const f of falling.values()) R3.dropMesh(f.m); falling.clear(); });
@@ -53,14 +53,19 @@
   const PVERT = `attribute float aSize; attribute vec4 aCol; attribute float aShape; uniform float uScale; varying vec4 vCol; varying float vShape; varying float vRot; varying float vFog; uniform float uFogN; uniform float uFogF;
     void main() { vCol = aCol; vShape = aShape; vRot = position.x * 3.1 + position.z * 1.7 + position.y * 2.3; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv;
       gl_PointSize = clamp(aSize * uScale / max(0.2, -mv.z), 0.0, 220.0); vFog = smoothstep(uFogN, uFogF, -mv.z); }`;
+  // (the colours of the points are given as the eye sees them; drawn in the light of everything else — linear, through the
+  // same tone curve — so they are the same straight to the screen and through the post-processing)
   const PFRAG = `varying vec4 vCol; varying float vShape; varying float vRot; varying float vFog; uniform vec3 uFogC; uniform float uLit; uniform float uAdd;
     void main() { vec2 p = gl_PointCoord * 2.0 - 1.0; float a;
       if (vShape < 0.5) a = smoothstep(1.0, 0.15, dot(p, p)) * (0.75 + 0.25 * sin(vRot * 7.0 + p.x * 3.0) * sin(vRot * 5.0 + p.y * 3.0));
       else if (vShape < 1.5) a = smoothstep(1.0, 0.55, dot(p, p));
       else { float c = cos(vRot), s = sin(vRot); vec2 q = vec2(c * p.x - s * p.y, s * p.x + c * p.y); a = smoothstep(1.0, 0.75, q.x * q.x * 0.55 + q.y * q.y * 3.2); }
       a *= vCol.a; if (a < 0.01) discard;
-      vec3 col = uAdd > 0.5 ? vCol.rgb : vCol.rgb * uLit;
-      gl_FragColor = vec4(mix(col, uFogC, vFog * (uAdd > 0.5 ? 0.6 : 1.0)), a * (1.0 - vFog * uAdd * 0.5)); }`;
+      vec3 col = uAdd > 0.5 ? vCol.rgb * 1.6 : vCol.rgb * uLit; col *= col;
+      gl_FragColor = vec4(mix(col, uFogC, vFog * (uAdd > 0.5 ? 0.6 : 1.0)), a * (1.0 - vFog * uAdd * 0.5));
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`;
   let PU = null, ring = null, ringT = null;
   const NR2 = 60;
   function makePools() {
@@ -78,7 +83,7 @@
     ringT = new THREE.InstancedBufferAttribute(new Float32Array(NR2), 1); ringT.setUsage(THREE.DynamicDrawUsage); rg.setAttribute('aT', ringT);
     ring = new THREE.InstancedMesh(rg, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uLit: PU.uLit },
       vertexShader: 'attribute float aT; varying float vT; void main(){ vT = aT; float s = 0.25 + aT * 1.6; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position * vec3(s, 1.0, s), 1.0); }',
-      fragmentShader: 'varying float vT; uniform float uLit; void main(){ gl_FragColor = vec4(vec3(0.92, 0.96, 1.0) * uLit, (1.0 - vT) * 0.45); }' }), NR2);
+      fragmentShader: 'varying float vT; uniform float uLit; void main(){ vec3 c = vec3(0.92, 0.96, 1.0) * uLit; gl_FragColor = vec4(c * c, (1.0 - vT) * 0.45);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}' }), NR2);
     ring.count = 0; ring.frustumCulled = false; ring.renderOrder = 3; ring.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(ring); ring.userData.age = new Float32Array(NR2); ring.userData.max = new Float32Array(NR2); ring.userData.pos = new Float32Array(NR2 * 3);
     makeFeet();
   }
@@ -89,7 +94,7 @@
     const aT = new THREE.InstancedBufferAttribute(new Float32Array(NFP), 1); const aC = new THREE.InstancedBufferAttribute(new Float32Array(NFP), 1); aT.setUsage(THREE.DynamicDrawUsage); aC.setUsage(THREE.DynamicDrawUsage); g.setAttribute('aT', aT); g.setAttribute('aC', aC);
     fp = new THREE.InstancedMesh(g, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, uniforms: { uLit: PU.uLit },
       vertexShader: 'attribute float aT; attribute float aC; varying float vT; varying float vC; varying vec2 vUv; void main(){ vT = aT; vC = aC; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }',
-      fragmentShader: 'varying float vT; varying float vC; varying vec2 vUv; uniform float uLit; void main(){ vec2 p = vUv * 2.0 - 1.0; float a = smoothstep(1.0, 0.6, dot(p, p)) * (1.0 - vT) * 0.5; vec3 c = vC < 0.5 ? vec3(0.62, 0.7, 0.82) : vec3(0.32, 0.25, 0.18); gl_FragColor = vec4(c * uLit, a); }' }), NFP);
+      fragmentShader: 'varying float vT; varying float vC; varying vec2 vUv; uniform float uLit; void main(){ vec2 p = vUv * 2.0 - 1.0; float a = smoothstep(1.0, 0.6, dot(p, p)) * (1.0 - vT) * 0.5; vec3 c = (vC < 0.5 ? vec3(0.62, 0.7, 0.82) : vec3(0.32, 0.25, 0.18)) * uLit; gl_FragColor = vec4(c * c, a);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}' }), NFP);
     fp.count = 0; fp.frustumCulled = false; fp.renderOrder = 1; fp.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(fp); fp.userData = { age: new Float32Array(NFP), max: new Float32Array(NFP), aT, aC };
   }
   function footprint(x, y, z, yaw, kind, life) { if (!fp) return; const k = fpN < NFP ? fpN++ : (() => { let o = 0; for (let q = 1; q < fpN; q++) if (fp.userData.age[q] / fp.userData.max[q] > fp.userData.age[o] / fp.userData.max[o]) o = q; return o; })();
@@ -118,6 +123,11 @@
     if (ripN < 0 || ripN > NR2) out.push(`anéis na água: ${ripN}`);
     if (fpN < 0 || fpN > NFP) out.push(`pegadas: ${fpN}`);
     for (const id of falling.keys()) { const t = G.S.trees.get(id); if (!t || t.stage !== 'fall') out.push(`árvore#${id} desenhada caindo, mas no mundo ${t ? t.stage : 'não existe'}`); }
+    // (the lamps: as many as the quality has, each a number in its range)
+    if (R3 && scene) { const want = G.clamp((R3.Q().lights | 0) || 2, 1, 6); if (lamps.length !== want) out.push(`luzes das chamas: ${lamps.length}, a qualidade pede ${want}`); for (const l of lamps) if (!Number.isFinite(l.intensity) || l.intensity < 0 || l.intensity > 40) out.push(`luz de chama com intensidade ${l.intensity}`); }
+    // (and the light of the hour, the air, the water's bed, the post-processing: their own lists, with the drawing's)
+    if (R3 && R3.lightCheck) out.push(...R3.lightCheck());
+    if (G.Post3D && G.Post3D.check) out.push(...G.Post3D.check());
     return out;
   };
   F3.fallingN = () => falling.size;
@@ -135,13 +145,14 @@
     flame = new THREE.InstancedMesh(cone, new THREE.MeshBasicMaterial({ color: 0xff9a2a, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, fog: true }), MAXF);
     glow = new THREE.InstancedMesh(cone, new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending }), MAXF);
     for (const m of [flame, glow]) { m.count = 0; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); }
-    light = new THREE.PointLight(0xff8a3a, 0, 26, 1.6); scene.add(light);
-    // (the light of the nearest torch or lamp: a warm circle round whoever carries it at night)
-    light2 = new THREE.PointLight(0xffa04a, 0, 16, 1.5); scene.add(light2);
-    // rain: short streaks falling round the eye
+    F3.quality(realm.Q());
+    // snow: soft flakes falling round the eye (the rain, below, in streaks)
     rainP = new Float32Array(NR * 3); const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(rainP, 3));
     rain = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xc8d8e8, size: 0.09, transparent: true, opacity: 0, depthWrite: false })); rain.frustumCulled = false; scene.add(rain);
     for (let k = 0; k < NR; k++) { rainP[k * 3] = (G.VR() - 0.5) * 60; rainP[k * 3 + 1] = G.VR() * 30; rainP[k * 3 + 2] = (G.VR() - 0.5) * 60; }
+    // (rain falls in streaks, snow in flakes)
+    rainL = new Float32Array(NR * 6); const gs = new THREE.BufferGeometry(); gs.setAttribute('position', new THREE.BufferAttribute(rainL, 3).setUsage(THREE.DynamicDrawUsage)); gs.setDrawRange(0, 0);
+    streaks = new THREE.LineSegments(gs, new THREE.LineBasicMaterial({ color: 0xb8c6d4, transparent: true, opacity: 0, depthWrite: false })); streaks.frustumCulled = false; streaks.visible = false; scene.add(streaks);
     // ships: a hull, a deck house, a mast and a sail each (instanced, coloured by their people)
     const box = new THREE.BoxGeometry(1, 1, 1); box.translate(0, 0.5, 0);
     const cyl = new THREE.CylinderGeometry(0.5, 0.5, 1, 6); cyl.translate(0, 0.5, 0);
@@ -164,6 +175,35 @@
     for (const m of [hull, deck, mast, sail]) { m.count = 0; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); }
     makePools();
   };
+  // ------------------------------ the lights of the flames ------------------------------
+  // a few point lights — as many as the quality has (every material pays for each one, by day too) — given each frame to the
+  // strongest light round the body: a fire, the torches and lanterns in hands, the campfires, and at night the doors and
+  // windows of the houses near it; each eases out of one place before it goes to the next (no light jumps), and a flame's
+  // flickers. Only seen: what lights the drawing is what the world has burning or lit
+  let lamps = [];
+  const FIRE = [1, 0.54, 0.23], TORCH = [1, 0.63, 0.29], HEARTH = [1, 0.66, 0.36];
+  // (the houses whose windows the night lights, and how bright their doorways are)
+  const LIT = { hut: 0.8, house: 1, sobrado: 1, insula: 1, quarteirao: 1, barraco: 0.5, taverna: 1.5, workshop: 0.8, forja: 1.3, olaria: 0.8, temple: 1.1, palacio: 1.3, paco: 1.2, administracao: 0.8, biblioteca: 0.8, cadeia: 0.6, quartel: 0.8, banhos: 0.9 };
+  F3.quality = function (q) {
+    if (!scene) return; const n = G.clamp((q && q.lights) | 0 || 2, 1, 6);
+    while (lamps.length < n) { const l = new THREE.PointLight(0xffa04a, 0, 16, 1.5); l.userData = { key: '', cur: 0, want: 0, X: 0, Y: -1e4, Z: 0 }; l.position.set(0, -1e4, 0); scene.add(l); lamps.push(l); }
+    while (lamps.length > n) { const l = lamps.pop(); scene.remove(l); l.dispose(); }
+  };
+  F3.lamps = () => lamps.map(l => ({ key: l.userData.key, i: +l.intensity.toFixed(2), at: [+l.position.x.toFixed(1), +l.position.y.toFixed(1), +l.position.z.toFixed(1)] }));
+  // the sources of this frame ([score, key, X, Y, Z, intensity, reach, colour, flicker]) to the lamps
+  function lightUp(src, dt) {
+    src.sort((a, b) => b[0] - a[0]); const top = src.slice(0, lamps.length); const used = new Set();
+    // (a lamp keeps its source while it is still among the strongest — a torch that moved a little is the same torch)
+    for (const l of lamps) { const u = l.userData; if (!u.key) continue;
+      let m = top.find(s => !used.has(s) && s[1] === u.key); if (!m && u.key[0] === 't') m = top.find(s => !used.has(s) && s[1][0] === 't' && (s[2] - u.X) ** 2 + (s[4] - u.Z) ** 2 < 2.5);
+      if (m) { used.add(m); u.key = m[1]; u.X = m[2]; u.Y = m[3]; u.Z = m[4]; u.want = m[5]; u.fl = m[8]; l.distance = m[6]; l.color.setRGB(m[7][0], m[7][1], m[7][2]); } else u.want = 0; }
+    // (the new ones to the lamps that are free — a lamp still fading out of its old place waits)
+    for (const s of top) { if (used.has(s)) continue; const l = lamps.find(q => !q.userData.key || (q.userData.want === 0 && q.userData.cur < 0.05)); if (!l) break;
+      const u = l.userData; used.add(s); u.key = s[1]; u.X = s[2]; u.Y = s[3]; u.Z = s[4]; u.cur = 0; u.want = s[5]; u.fl = s[8]; l.distance = s[6]; l.color.setRGB(s[7][0], s[7][1], s[7][2]); }
+    const k = 1 - Math.exp(-9 * dt);
+    for (const l of lamps) { const u = l.userData; u.cur += (u.want - u.cur) * k; if (u.want === 0 && u.cur < 0.02) { u.cur = 0; u.key = ''; }
+      l.position.set(u.X, u.Y, u.Z); l.intensity = u.cur > 0.01 ? u.cur * (1 + (G.VR() - 0.5) * 2 * (u.fl || 0)) : 0; }
+  }
   const M = {}; const mats = () => { if (M.a) return; M.a = new THREE.Matrix4(); M.b = new THREE.Matrix4(); M.c = new THREE.Color(); M.z = new THREE.Matrix4().makeScale(0, 0, 0); };
   // (ship sizes, metres: [length, beam, mast])
   const SHIP = { pesca: [5, 1.8, 4], canoa: [4, 1.1, 0], jangada: [3.5, 2.4, 2], explorador: [11, 3.2, 9], mercante: [13, 3.8, 10], guerra: [15, 4, 12], transporte: [13, 4, 10] };
@@ -171,7 +211,8 @@
     if (!flame || !focus) return; mats();
     const S = G.S; const L = G.Space.TILE, H = G.Space.HM; const t = performance.now() / 1000;
     // ---- fire: the burning tiles near the eye
-    let n = 0, best = 0, bx = 0, by = 0, bz = 0;
+    let n = 0, best = 0, bx = 0, by = 0, bz = 0, bi = -1; const src = [];
+    const near2 = (X, Z) => (X - focus.X) ** 2 + (Z - focus.Z) ** 2;
     const x0 = Math.floor(focus.X / L), y0 = Math.floor(focus.Z / L), R = 16;
     if (G.Nature && G.Nature.fireSet && G.Nature.fireSet.size) {
       for (const i of G.Nature.fireSet) {
@@ -183,44 +224,54 @@
           M.a.makeScale(wd, hgt, wd); M.a.setPosition(px, gY, pz); flame.setMatrixAt(n, M.a);
           M.a.makeScale(wd * 0.5, hgt * 0.6, wd * 0.5); M.a.setPosition(px, gY, pz); glow.setMatrixAt(n, M.a); n++;
         }
-        if (f > best) { best = f; bx = (x + 0.5) * L; by = gY + 2; bz = (y + 0.5) * L; }
+        if (f > best) { best = f; bx = (x + 0.5) * L; by = gY + 2; bz = (y + 0.5) * L; bi = i; }
       }
     }
-    // (the campfires of the towns: always burning, as the god sees them — flames, sparks, a column of smoke, their light)
+    if (best > 0) src.push([18 * best / (1 + near2(bx, bz) / 900), 'f' + bi, bx, by, bz, 18 * best, 26, FIRE, 0.15]);
+    // (night: how much the windows are lit — as the realm lights them)
+    const nightK = G.clamp((G.Render.nightness() - 0.25) * 1.6, 0, 1);
+    // (the campfires of the towns: always burning, as the god sees them — flames, sparks, a column of smoke, their light;
+    // and at night the doorways of the houses round the body, where the light of the hearth comes out)
     for (const b of S.buildings.values()) {
+      if (nightK > 0.05 && b.built && LIT[b.type]) { const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; const d2 = near2(X, Z); if (d2 < 900) { const dr = G.Vg.door(b); const DX = dr[0] * L, DZ = dr[1] * L; const k = LIT[b.type] * nightK; src.push([2.6 * k / (1 + near2(DX, DZ) / 70), 'w' + b.id, DX + (DX - X) * 0.08, W.hAt(dr[0], dr[1]) * H + 1.7, DZ + (DZ - Z) * 0.08, 2.6 * k, 11, HEARTH, 0.03]); } }
       if (b.type !== 'campfire' || !b.built || n >= MAXF - 2) continue; const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > 3600) continue;
       const gY = W.hAt(b.x + b.w / 2, b.y + b.h / 2) * H + 0.55;
       for (let k = 0; k < 2; k++) { const fl = 0.8 + Math.sin(t * (8 + k * 3) + b.id) * 0.15 + G.VR() * 0.1; M.a.makeScale(0.75 - k * 0.25, (1.3 - k * 0.3) * fl, 0.75 - k * 0.25); M.a.setPosition(X + (k ? 0.15 : 0), gY, Z); flame.setMatrixAt(n, M.a); M.a.makeScale(0.35, 0.8 * fl, 0.35); M.a.setPosition(X, gY, Z); glow.setMatrixAt(n, M.a); n++; }
-      const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; const f = 0.75 * (1 - Math.min(0.6, d2 / 3600)); if (f > best) { best = f; bx = X; by = gY + 1.2; bz = Z; }
+      const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; src.push([13 / (1 + d2 / 300), 'c' + b.id, X, gY + 1.2, Z, 13, 22, FIRE, 0.14]);
       for (let k = every('cf' + b.id, 1.3, rdt); k > 0; k--) spawn(PA, { x: X, y: gY + 1.2, z: Z, vy: G.vrr(0.9, 1.4), life: G.vrr(3, 5), s0: 0.4, s1: 2.6, c: [0.6, 0.6, 0.6], a: 0.32, drag: 0.4, fade: 1 });
       for (let k = every('cs' + b.id, 3, rdt); k > 0; k--) spawn(PG, { x: X + G.vrr(-0.3, 0.3), y: gY + 0.4, z: Z + G.vrr(-0.3, 0.3), vx: G.vrr(-0.3, 0.3), vy: G.vrr(1.8, 3.4), vz: G.vrr(-0.3, 0.3), life: G.vrr(0.7, 1.4), s0: 0.12, s1: 0.03, c: [1, 0.72, 0.3], a: 1, sh: 1, drag: 0.6, wob: 1 });
     }
     // (the small flames the others hand over: torches and lanterns in people's hands, the lamps of carts and taverns, the
     // fires of camps and pyres — each a flame, a spark now and then, and the nearest one lights round it)
-    let tb = 0, tx = 0, ty = 0, tz = 0; F3.torches = 0;
-    for (const src of [G.People3D && G.People3D.flames, G.Things3D && G.Things3D.flames]) if (src) for (const q of src) {
+    F3.torches = 0; let ti = 0;
+    for (const fs of [G.People3D && G.People3D.flames, G.Things3D && G.Things3D.flames]) if (fs) for (const q of fs) {
       if (n >= MAXF) break; const k = q[3]; const fl = 0.8 + Math.sin(t * 11 + q[0] * 3.1) * 0.15 + G.VR() * 0.1;
       M.a.makeScale(0.22 * k, 0.5 * k * fl, 0.22 * k); M.a.setPosition(q[0], q[1], q[2]); flame.setMatrixAt(n, M.a);
       M.a.makeScale(0.11 * k, 0.32 * k * fl, 0.11 * k); M.a.setPosition(q[0], q[1], q[2]); glow.setMatrixAt(n, M.a); n++; F3.torches++;
-      const d2 = (q[0] - focus.X) ** 2 + (q[2] - focus.Z) ** 2; const w = k / (1 + d2 / 40); if (w > tb) { tb = w; tx = q[0]; ty = q[1] + 0.35; tz = q[2]; }
+      src.push([8 * k / (1 + near2(q[0], q[2]) / 40), 't' + (ti++), q[0], q[1] + 0.35, q[2], Math.min(8, 9 * k), 16, TORCH, 0.12]);
       if (G.VR() < rdt * 1.6 * k) spawn(PG, { x: q[0], y: q[1] + 0.3 * k, z: q[2], vx: G.vrr(-0.2, 0.2), vy: G.vrr(0.8, 1.6), vz: G.vrr(-0.2, 0.2), life: G.vrr(0.5, 0.9), s0: 0.06, s1: 0.02, c: [1, 0.7, 0.3], a: 1, sh: 1, drag: 0.5, wob: 1 });
     }
-    light2.intensity = tb > 0.02 ? Math.min(8, tb * 9) * (0.88 + G.VR() * 0.24) : 0; light2.position.set(tx, ty, tz);
     flame.count = glow.count = n; flame.instanceMatrix.needsUpdate = glow.instanceMatrix.needsUpdate = true; F3.fires = n;
-    light.intensity = best > 0 ? 18 * best * (0.85 + G.VR() * 0.3) : 0; light.position.set(bx, by, bz);
+    lightUp(src, rdt);
     // ---- rain (or snow on the cold lands): round the eye, as much as the world's weather pours
     // (the weather's rain, or the rain of a cloud of the world passing over the body — the god's rain clouds are local)
     const cam = R3.camera(); const wr = Math.max(S.weather ? S.weather.rain || 0 : 0, G.Nature && G.Nature.rainAt ? G.Nature.rainAt(focus.X / L, focus.Z / L) : 0);
     const cold = G.Biome && G.Biome.cold ? G.Biome.cold(W.idx(G.clamp(focus.X / L, 0, G.N - 1), G.clamp(focus.Z / L, 0, G.N - 1))) : false;
-    rain.material.opacity = G.clamp(wr * 1.4, 0, 0.75); rain.material.size = cold ? 0.16 : 0.08; rain.material.color.set(cold ? 0xf4f8ff : 0xc8d8e8);
+    rain.material.opacity = cold ? G.clamp(wr * 1.4, 0, 0.75) : 0; rain.material.size = 0.16; rain.material.color.set(0xf4f8ff);
+    streaks.material.opacity = cold ? 0 : G.clamp(wr * 0.9, 0, 0.5); rain.visible = cold; streaks.visible = !cold;
     if (wr > 0.05) {
       const sp = cold ? 2.2 : 16; const cnt = Math.floor(NR * G.clamp(wr * 1.5, 0.1, 1));
+      // (the wind carries the drops: they fall leaning, and drift)
+      const w = S.weather; const ws = G.clamp(w.windS || 0, 0, 2); const wx = Math.cos(w.windA || 0) * (0.4 + ws * 1.4), wz = Math.sin(w.windA || 0) * (0.4 + ws * 1.4);
       for (let k = 0; k < NR; k++) {
-        let y = rainP[k * 3 + 1] - sp * rdt; if (cold) rainP[k * 3] += Math.sin(t + k) * rdt * 0.4;
+        let y = rainP[k * 3 + 1] - sp * rdt; if (cold) rainP[k * 3] += Math.sin(t + k) * rdt * 0.4; else { rainP[k * 3] += wx * rdt; rainP[k * 3 + 2] += wz * rdt; }
         if (y < -2 || k >= cnt) { y = 26 + G.VR() * 6; rainP[k * 3] = (G.VR() - 0.5) * 60; rainP[k * 3 + 2] = (G.VR() - 0.5) * 60; if (k >= cnt) y = -50; }
         rainP[k * 3 + 1] = y;
+        // (a drop seen in the time of a glance: a streak from where it was a moment ago)
+        if (!cold) { const o = k * 6; rainL[o] = rainP[k * 3]; rainL[o + 1] = y; rainL[o + 2] = rainP[k * 3 + 2]; rainL[o + 3] = rainP[k * 3] - wx * 0.045; rainL[o + 4] = y + sp * 0.045; rainL[o + 5] = rainP[k * 3 + 2] - wz * 0.045; }
       }
       rain.position.set(cam.position.x, cam.position.y - 12, cam.position.z); rain.geometry.attributes.position.needsUpdate = true;
+      if (!cold) { streaks.position.copy(rain.position); streaks.geometry.attributes.position.needsUpdate = true; streaks.geometry.setDrawRange(0, cnt * 2); }
       F3.drops = cnt;
     } else F3.drops = 0;
     // ---- ships: where the world has them, heading the way they move, rocking on the water
@@ -261,7 +312,8 @@
     { const w = S.weather; const ws = G.clamp(w.windS || 0, 0, 2); const wx = Math.cos(w.windA || 0) * (0.4 + ws * 1.4), wz = Math.sin(w.windA || 0) * (0.4 + ws * 1.4);
       stepPool(PA, rdt, wx, wz, t); stepPool(PG, rdt, wx, wz, t); stepRings(rdt); stepFeet(rdt); }
     const cam2 = R3.camera(); const ren = R3.renderer(); PU.uScale.value = ren.domElement.height / (2 * Math.tan(cam2.fov * Math.PI / 360));
-    const fog = R3.scene().fog; PU.uFogC.value.copy(fog.color).convertLinearToSRGB(); PU.uFogN.value = fog.near; PU.uFogF.value = fog.far;
+    // (the points fade into the same haze as everything: where the air's haze is light and where it is thick)
+    const fog = R3.scene().fog; PU.uFogC.value.copy(fog.color); const A = R3.GX.gxAir.value, A2 = R3.GX.gxAir2.value; PU.uFogN.value = A2.x + 0.3 / A.x; PU.uFogF.value = A2.x + 1.7 / A.x;
     { const am = G.Render.ambient(); PU.uLit.value = G.clamp((am[0] + am[1] + am[2]) / 765, 0.3, 1); }
     F3.particles = PA.n + PG.n; F3.rings = ripN;
   };
