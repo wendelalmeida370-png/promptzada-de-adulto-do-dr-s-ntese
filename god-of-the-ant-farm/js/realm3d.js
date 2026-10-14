@@ -932,9 +932,13 @@ vec3 gxHaze( vec3 d ) {
   }
   // (the roots of a grown tree: wedges running out of its foot into the ground, bigger under the trees of the south)
   function rootsInto(g, id, X, Y, Z, rt, n, col) {
-    for (let k = 0; k < n; k++) { const a = k / n * TAU + G.hash(id * 23 + k) * 0.8, L = rt * (2.2 + G.hash(id * 29 + k) * 1.4);
-      limb(g, FS.root, X + Math.cos(a) * rt * 0.35, Y + rt * 0.9, Z + Math.sin(a) * rt * 0.35, X + Math.cos(a) * L, Y - 0.12, Z + Math.sin(a) * L, rt * 0.62, col, BARK); }
+    for (let k = 0; k < n; k++) { const a = k / n * TAU + G.hash(id * 23 + k) * 0.8, L = rt * (2.2 + G.hash(id * 29 + k) * 1.4); const ex = X + Math.cos(a) * L, ez = Z + Math.sin(a) * L;
+      // (each root running into the ground where it reaches: down the slope as far as up it)
+      limb(g, FS.root, X + Math.cos(a) * rt * 0.35, Y + rt * 0.9, Z + Math.sin(a) * rt * 0.35, ex, Math.min(Y, G.Space.floorY(ex, ez)) - 0.12, ez, rt * 0.62, col, BARK); }
   }
+  // (the lowest of the ground round a foot, in metres — on a slope a trunk goes down to it, no foot standing out of the
+  // hillside on its lower side)
+  function footY(x, y, r) { const TL = G.Space.TILE, HM = G.Space.HM; let lo = W.groundH(x, y) * HM; const d = r / TL; for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; lo = Math.min(lo, W.groundH(x + Math.cos(a) * d, y + Math.sin(a) * d) * HM); } return lo; }
   // a tree of the world as it stands: the god's shapes and tones in the round. A broad tree: a tapering trunk with roots at
   // its foot, boughs forking up into a crown of lumps and leaves, each tree its own shade; a conifer: tiers of ragged boughs
   // narrowing to the top; palms with drooping fronds; the snow on top where the land is cold. gp: the plants that bend
@@ -942,10 +946,11 @@ vec3 gxHaze( vec3 d ) {
   function treeInto(g, t, gp, gl) {
     const TL = G.Space.TILE, HM = G.Space.HM; fsh(); const fine = !!gl; // (roots and twigs only where the machine carries the leaves' cards too)
     const X = t.x * TL, Z = t.y * TL, Y = W.groundH(t.x, t.y) * HM; const D = treeDims(t); const { k, sz, h, H } = D;
+    const Yb = Math.min(Y, footY(t.x, t.y, 0.6) - 0.03), dY = Y - Yb; // (where the trunk starts: at the lowest ground round its foot)
     const rot = h * TAU;
     const snow = t.kind === 'snowpine' ? 0.85 : snowAt(W.idx(Math.floor(t.x), Math.floor(t.y))) * 0.85;
     const bark0 = G.hex2rgb(k[2] || '#6b4a2e');
-    if (t.stage === 'stump') { g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.6, 0.45, 0.6), (X2, Y2, Z2, nx, ny) => (ny > 0.9 ? [214, 180, 128] : bark0), BARK); return; }
+    if (t.stage === 'stump') { g.put(SH.cyl, R3.mat(X, Yb, Z, rot, 0.6, 0.45 + dY, 0.6), (X2, Y2, Z2, nx, ny) => (ny > 0.9 ? [214, 180, 128] : bark0), BARK); return; }
     if (t.stage === 'fall' && !t._standing) return; // (a tree falling is drawn moving, by FX3D, until it lies)
     if (t.stage === 'log' || t.stage === 'fall') { g.put(SH.cyl, R3.mat(X, Y + 0.3, Z, rot, 0.5, 4.5 * sz, 0.5, 0, Math.PI / 2), (X2, Y2, Z2, nx, ny) => (Math.abs(ny) < 0.2 && Math.abs(nx) < 0.3 ? [214, 180, 128] : bark0), BARK); return; }
     const burnt = t.stage === 'burnt';
@@ -955,7 +960,7 @@ vec3 gxHaze( vec3 d ) {
     switch (k[0]) {
       case 'cone': {
         // (a straight trunk, its foot showing; the tiers of boughs, each turned its own way, wide at the bottom, narrowing up)
-        const r0 = 0.15 * sz + 0.07; g.put(FS.trunk6, R3.mat(X, Y, Z, rot, r0 * 2, H * 0.7, r0 * 2), bc, BARK);
+        const r0 = 0.15 * sz + 0.07; g.put(FS.trunk6, R3.mat(X, Yb, Z, rot, r0 * 2, H * 0.7 + dY, r0 * 2), bc, BARK);
         if (fine && sz > 0.55) rootsInto(g, t.id, X, Y, Z, r0, 4, bc);
         if (!burnt) {
           const lc = leafCol(pal, snow, X, Z, 1.6 * sz + 0.6); const nt = 5;
@@ -976,7 +981,7 @@ vec3 gxHaze( vec3 d ) {
       }
       case 'palm': case 'banana': {
         // (a trunk that leans and curves, in rings; fronds drooping from its top)
-        const lean = (h - 0.5) * 0.5, segs = 4; let px = X, py = Y, pz = Z; const dx = Math.sin(rot), dz = Math.cos(rot);
+        const lean = (h - 0.5) * 0.5, segs = 4; let px = X, py = Yb, pz = Z; const dx = Math.sin(rot), dz = Math.cos(rot);
         for (let q = 0; q < segs; q++) { const a = lean * (q + 1) / segs; const len = H * 0.85 / segs; g.put(SH.cyl, R3.mat(px, py, pz, rot, 0.36 - q * 0.03, len + 0.05, 0.36 - q * 0.03, a, 0), (X2, Y2, Z2, nx, ny) => G.lerpColor(bark, [bark[0] * 0.75, bark[1] * 0.75, bark[2] * 0.75], ((Y2 - Y) * 2.2) % 1 > 0.5 ? 1 : 0), BARK - q * 0.04); px += dx * Math.sin(a) * len; pz += dz * Math.sin(a) * len; py += Math.cos(a) * len; }
         if (!burnt) {
           const fl = (3.6 * sz + 1) * (t.kind === 'banana' ? 0.8 : 1); const nf = t.kind === 'banana' ? 7 : 11;
@@ -997,7 +1002,7 @@ vec3 gxHaze( vec3 d ) {
       case 'cactus': {
         // (a column of a dozen ribs, its crown rounded and paler; its arms going out and turning up at an elbow)
         const c = (X2, Y2, Z2, nx, ny) => (ny > 0.75 ? G.lerpColor(pal[0], pal[2], 0.45) : pal[0]);
-        const hh = 2.5 * sz + 0.8; g.put(FS.cact, R3.mat(X, Y, Z, rot, 0.7, hh, 0.7), c, CACTUS); g.put(FS.cactTop, R3.mat(X, Y + hh, Z, rot, 0.7, 0.5, 0.7), c, CACTUS);
+        const hh = 2.5 * sz + 0.8; g.put(FS.cact, R3.mat(X, Yb, Z, rot, 0.7, hh + dY, 0.7), c, CACTUS); g.put(FS.cactTop, R3.mat(X, Y + hh, Z, rot, 0.7, 0.5, 0.7), c, CACTUS);
         for (const sd of [-1, 1]) { if ((t.v || 0) === (sd > 0 ? 1 : 2)) continue; const ax = X + Math.cos(rot) * 0.3 * sd, az = Z + Math.sin(rot) * 0.3 * sd, ay = Y + hh * (sd > 0 ? 0.42 : 0.32);
           const ex = X + Math.cos(rot) * 0.78 * sd, ez = Z + Math.sin(rot) * 0.78 * sd, ey = ay + 0.12;
           limb(g, FS.cactArm, ax, ay - 0.02, az, ex, ey, ez, 0.2, c, CACTUS); g.put(SH.sph, R3.mat(ex, ey, ez, 0, 0.4, 0.4, 0.4), c, CACTUS);
@@ -1007,7 +1012,7 @@ vec3 gxHaze( vec3 d ) {
       case 'bush': {
         // (a shrub of the fields: lumps of leaves on a few stems, its fruit among them)
         const r = sz + 0.45;
-        for (let q = 0; q < 3; q++) { const a = rot + q * 2.1; limb(g, FS.limb, X, Y - 0.05, Z, X + Math.cos(a) * r * 0.35, Y + 0.9, Z + Math.sin(a) * r * 0.35, 0.07, bc, BARK - 0.05); }
+        for (let q = 0; q < 3; q++) { const a = rot + q * 2.1; limb(g, FS.limb, X, Yb - 0.02, Z, X + Math.cos(a) * r * 0.35, Y + 0.9, Z + Math.sin(a) * r * 0.35, 0.07, bc, BARK - 0.05); }
         if (!burnt) crownInto(g, gl, t.id, X, Y + 0.6 + r * 0.35, Z, r, 6, 0.8, pal, snow, 0.15, 1, 2);
         // (its fruit, each round and lit as one)
         if (k[3] && !burnt) { for (let q = 0; q < 12; q++) { const a = q * 1.7 + G.hash(t.id * 5 + q) * 0.8, d = r * (0.62 + G.hash(t.id * 9 + q) * 0.28); const px = X + Math.cos(a) * d, py = Y + 0.62 + r * 0.2 + G.hash(t.id * 3 + q) * 0.5, pz = Z + Math.sin(a) * d; g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, q, 0.085), k[3], FRUIT + 0.15); } g.sph = null; }
@@ -1015,20 +1020,20 @@ vec3 gxHaze( vec3 d ) {
       }
       case 'flat': {
         // (the acacia: a trunk that forks, an umbrella of flat lumps, its small leaves at the rim)
-        g.put(FS.trunk, R3.mat(X, Y, Z, rot, 0.46, H * 0.47, 0.46), bc, BARK);
+        g.put(FS.trunk, R3.mat(X, Yb, Z, rot, 0.46, H * 0.47 + dY, 0.46), bc, BARK);
         const R = 3.5 * sz + 0.6;
         for (let q = 0; q < 4; q++) { const a = rot + q * 1.6 + G.hash(t.id + q) * 0.6; limb(g, FS.limb, X, Y + H * 0.42, Z, X + Math.cos(a) * R * 0.55, Y + H * 0.78, Z + Math.sin(a) * R * 0.55, 0.15, bc, BARK - 0.05); }
         if (!burnt) crownInto(g, gl, t.id, X, Y + H * 0.8, Z, R, 7, 0.32, pal, snow, 0.22, 1, 3);
         break;
       }
       case 'baobab': {
-        g.put(FS.trunk, R3.mat(X, Y, Z, rot, 2.2 * sz + 0.4, H * 0.62, 2.2 * sz + 0.4), bc, BARK);
+        g.put(FS.trunk, R3.mat(X, Yb, Z, rot, 2.2 * sz + 0.4, H * 0.62 + dY, 2.2 * sz + 0.4), bc, BARK);
         for (let q = 0; q < 5; q++) { const a = rot + q * 1.26; limb(g, FS.limb, X, Y + H * 0.56, Z, X + Math.sin(a) * H * 0.24, Y + H * 0.82, Z + Math.cos(a) * H * 0.24, 0.22, bc, BARK - 0.05);
           if (!burnt) lump(X + Math.sin(a) * H * 0.24, Y + H * 0.84, Z + Math.cos(a) * H * 0.24, 2.2 * sz + 0.6, 1.2, 2.2 * sz + 0.6, 2, 0.2); }
         break;
       }
       case 'willow': {
-        g.put(FS.trunk, R3.mat(X, Y, Z, rot, 0.7, H * 0.5, 0.7), bc, BARK);
+        g.put(FS.trunk, R3.mat(X, Yb, Z, rot, 0.7, H * 0.5 + dY, 0.7), bc, BARK);
         if (!burnt) {
           const R = 2.8 * sz + 0.9;
           for (let q = 0; q < 3; q++) { const a = rot + q * 2.1; limb(g, FS.limb, X, Y + H * 0.4, Z, X + Math.cos(a) * R * 0.5, Y + H * 0.66, Z + Math.sin(a) * R * 0.5, 0.2, bc, BARK - 0.05); }
@@ -1046,9 +1051,9 @@ vec3 gxHaze( vec3 d ) {
         if (olive) {
           // (an olive: a short thick trunk, leaning and twisting, that splits in two at a man's height into the crown)
           const fx = X + Math.cos(rot) * H * 0.1, fz = Z + Math.sin(rot) * H * 0.1, fy = Y + H * 0.27;
-          limb(g, FS.trunk, X, Y, Z, fx, fy, fz, r0, bc, BARK);
+          limb(g, FS.trunk, X, Yb, Z, fx, fy, fz, r0, bc, BARK);
           for (let q = 0; q < 2; q++) { const a = rot + (q ? 2.3 : -0.9) + (h - 0.5) * 0.6; limb(g, FS.limb, fx, fy - 0.1, fz, X + Math.cos(a) * r * 0.42, cy - r * 0.1, Z + Math.sin(a) * r * 0.42, r0 * 0.62, bc, BARK - 0.04); }
-        } else g.put(FS.trunk, R3.mat(X, Y, Z, rot, r0 * 2, H * 0.58 * tall, r0 * 2), tc, BARK);
+        } else g.put(FS.trunk, R3.mat(X, Yb, Z, rot, r0 * 2, H * 0.58 * tall + dY, r0 * 2), tc, BARK);
         if (fine && sz > 0.5) rootsInto(g, t.id, X, Y, Z, r0, jung ? 5 : 4, bc);
         // (the boughs: forking from the trunk up into the crown, seen between its lumps)
         const nb = birch ? 3 : olive ? 0 : 4;
@@ -1121,7 +1126,8 @@ vec3 gxHaze( vec3 d ) {
         const pal = dead ? [[110, 92, 58], [80, 66, 42], [138, 116, 72]] : BPAL[(b.id % 3 + 3) % 3].map((c, q) => { const f = 0.9 + G.hash(b.id * 3 + 1) * 0.2; const t = bt ? G.lerpColor(c, bt[q], 0.45) : c; return [t[0] * f, t[1] * f, t[2] * f]; });
         // (a bush: a few stems, lumps of leaves on them, sprays of small round leaves standing out of its edge; its berries
         // among them)
-        for (let q = 0; q < 3; q++) { const a = G.hash(b.id) * TAU + q * 2.1; limb(g, FS.limb, X, Y - 0.05, Z, X + Math.cos(a) * 0.3, Y + 0.55, Z + Math.sin(a) * 0.3, 0.05, dead ? [60, 48, 36] : [92, 70, 46], BARK - 0.04); }
+        const Yb = Math.min(Y, footY(b.x, b.y, 0.45)) - 0.05;
+        for (let q = 0; q < 3; q++) { const a = G.hash(b.id) * TAU + q * 2.1; limb(g, FS.limb, X, Yb, Z, X + Math.cos(a) * 0.3, Y + 0.55, Z + Math.sin(a) * 0.3, 0.05, dead ? [60, 48, 36] : [92, 70, 46], BARK - 0.04); }
         // (green in the snow too: a bush keeps its leaves — the god's view draws it green — and near, its lumps rounder)
         crownInto(g, gl, b.id, X, Y + 0.52, Z, 0.78, 5, 0.75, pal, 0, 0.12, 1, dead ? 1 : 5, gl ? SH.ico : SH.ico0);
         // (the berries in bunches of three on the outside of the bush, each a small round berry lit as one — the god's red,
