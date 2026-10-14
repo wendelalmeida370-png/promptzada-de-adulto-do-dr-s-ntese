@@ -115,7 +115,7 @@ const RAPIDO = ['hedeby-praca', 'hedeby-rua-alto', 'hedeby-noite', 'metropole-al
 const ONLY = (process.argv[4] || (process.env.RAPIDO ? RAPIDO.join(',') : '')).split(',').filter(Boolean);
 const VIEWS = views().filter(v => !ONLY.length || ONLY.includes(v.name));
 const FR = +process.env.FRAMES || 5;
-const commit = (() => { try { return execSync('git -C ' + JSON.stringify(ROOT) + ' log -1 --format=%h', { encoding: 'utf8' }).trim() + (execSync('git -C ' + JSON.stringify(ROOT) + ' status --porcelain -- js index.html', { encoding: 'utf8' }).trim() ? '+mudanças' : ''); } catch (e) { return '?'; } })();
+const commit = (() => { try { return execSync('git -C ' + JSON.stringify(ROOT) + ' log -1 --format=%h', { encoding: 'utf8' }).trim() + (execSync('git -C ' + JSON.stringify(ROOT) + ' status --porcelain -- js index.html', { encoding: 'utf8' }).trim() ? '+mudanças' : ''); } catch (e) { try { return fs.readFileSync(path.join(ROOT, 'COMMIT'), 'utf8').trim(); } catch (e2) { return '?'; } } })();
 (async () => {
   const t00 = Date.now();
   const worlds = [...new Set(VIEWS.map(v => v.world))];

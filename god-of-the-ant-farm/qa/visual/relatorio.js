@@ -7,7 +7,7 @@ const rj = f => { try { return JSON.parse(fs.readFileSync(path.join(OUT, f), 'ut
 const meta = rj('rodada.json') || {};
 const L = []; const fails = []; const look = [];
 const fail = (owner, what, why) => fails.push({ owner, what, why });
-const OWNF = { 'build3d.js': 'A2', 'props3d.js': 'A2', 'ground3d.js': 'A3', 'grass3d.js': 'A3', 'people3d.js': 'A4', 'body3d.js': 'A4', 'bodymesh.js': 'A4', 'fx3d.js': 'A5', 'post3d.js': 'A5', 'cam3d.js': 'A5', 'incui.js': 'A1', 'mesh3d.js': 'A1', 'tex3d.js': 'A1', 'css': 'A1' };
+const OWNF = { 'build3d.js': 'A2', 'props3d.js': 'A2', 'things3d.js': 'A2', 'ground3d.js': 'A3', 'grass3d.js': 'A3', 'people3d.js': 'A4', 'body3d.js': 'A4', 'bodymesh.js': 'A4', 'fx3d.js': 'A5', 'post3d.js': 'A5', 'cam3d.js': 'A5', 'incui.js': 'A1', 'mesh3d.js': 'A1', 'tex3d.js': 'A1', 'css': 'A1' };
 const ownerOfText = t => { const m = String(t).match(/\b([\w-]+\.js)\b/); return m ? OWNF[m[1]] || 'líder' : '?'; };
 L.push(`RODADA VISUAL — ${meta.game || '?'} @ ${meta.commit || '?'} · ${meta.start || ''} → ${meta.end || ''}${meta.rapido ? ' · rápida' : ''}`);
 L.push('');
@@ -20,7 +20,7 @@ const g3 = rd('guarda3d.txt'); if (g3 !== null) { const fl = g3.split('\n').filt
 // (who answers for each proof: its subject in the team's matrix — the body's controller and the camera's collision are the leader's)
 const ENC = [[/^e1 prédios/, 'A2'], [/^e1 o chão 3D/, 'A3'], [/^e1 /, 'líder'], [/^e6 terreno/, 'líder (A3 se o chão do 3D não bate)'], [/^e6 o mundo leva/, 'líder (câmera)'], [/^e6 /, 'líder'],
   [/^e10/, 'A1'], [/^e11 o chão/, 'A3'], [/^e11 plantas/, 'A2 (paredes, telhados) / A3 (plantas)'], [/^e11 o fogo/, 'A5'], [/^e11 a árvore/, 'A5 (queda, fx3d) / A3 (a árvore)'], [/^e11 quem está/, 'A4'], [/^e11 com o mundo parado/, '? (quem desenhando mexeu no mundo)'],
-  [/^e12 o dragão|^e12 o sopro/, 'líder (dragon3d)'], [/^e12 à noite/, 'A4 (tocha na mão) / A5 (luz)'], [/^e12 as carroças|^e12 os bichos|^e12 a chuva/, 'líder (things3d)'], [/^e12 os mortos/, 'A4'], [/^e12 o campo de capim/, 'A3'],
+  [/^e12 o dragão|^e12 o sopro/, 'líder (dragon3d)'], [/^e12 à noite/, 'A4 (tocha na mão) / A5 (luz)'], [/^e12 as carroças|^e12 os bichos|^e12 a chuva/, 'A2 (things3d)'], [/^e12 os mortos/, 'A4'], [/^e12 o campo de capim/, 'A3'],
   [/^e13|^e15/, 'A4 (animação) / líder (avatar.js)'], [/^e14/, 'líder (avatar.js) / A4 (pose) / A5 (água)'], [/verificador/, '? (ver a mensagem)'], [/sem erros de página/, '? (ver a mensagem)']];
 const enc = rd('encarna.txt');
 if (enc !== null) {

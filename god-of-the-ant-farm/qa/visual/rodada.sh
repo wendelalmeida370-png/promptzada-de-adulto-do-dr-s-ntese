@@ -5,6 +5,8 @@
 #   RAPIDO=1 a shorter round (the hunt in 5 places, 4 views measured, the main photos) · PARTES="guard encarna caca desempenho fotos"
 #   ANTES=folder of the 'before' photos · BASE=desempenho.json of the reference (default: qa/visual/base/desempenho.json)
 #   PARALELO=1 two browsers at once (each still through qa/navegador.sh) · ONLY=e1,e6,... the encarna parts · FOTOS=todas
+#   MUNDOS=cidade,metropole the worlds of the hunt (default: cidade, metropole and a new one) — a review of one colleague's
+#   change in Hedeby alone takes a third of the time
 #   VAGA=1 the round already holds a place in the turnstile — every step runs in it, one after another, without queueing
 #   again: bash qa/navegador.sh env VAGA=1 bash qa/visual/rodada.sh PASTA SAIDA
 # SAIDA/relatorio.txt: what failed and its probable owner (arte/ESTUDIO.md §3) · SAIDA/lado-a-lado/: before | after
@@ -23,7 +25,8 @@ BASE=${BASE:-$HERE/base/desempenho.json}
 PRINC=hedeby-praca,hedeby-casa,hedeby-rua-alto,hedeby-noite,hedeby-mata,corpo-frente,metropole-rua
 [ "${FOTOS:-}" = todas ] && LISTA="" || LISTA=${FOTOS:-$PRINC}
 has() { case " $PARTES " in *" $1 "*) return 0;; esac; return 1; }
-commit=$(git -C "$GAME" log -1 --format=%h 2>/dev/null || echo '?')
+# (a clean copy of a branch made with git archive is no repository: its commit written beside it, in COMMIT)
+commit=$(git -C "$GAME" log -1 --format=%h 2>/dev/null || cat "$GAME/COMMIT" 2>/dev/null || echo '?')
 [ -n "$(git -C "$GAME" status --porcelain -- js index.html 2>/dev/null)" ] && commit="$commit+mudanças"
 start=$(date '+%Y-%m-%d %H:%M')
 meta() { printf '{"game":"%s","commit":"%s","start":"%s","end":"%s","rapido":"%s","encarna":"%s"}\n' "$GAME" "$commit" "$start" "${1:-}" "${RAPIDO:-}" "$ENC" > "$OUT/rodada.json"; }
@@ -37,7 +40,7 @@ if has guard; then
 fi
 # (each test through the machine's turnstile: at most two browsers on it, whoever runs them)
 run_encarna() { ONLY=$ENC timeout 7200 $NAV node "$GAME/qa/encarna.js" "$OUT/encarna" > "$OUT/encarna.txt" 2>&1; say "encarna: $(grep -c '^PASSOU' "$OUT/encarna.txt") passaram, $(grep -c '^FALHOU' "$OUT/encarna.txt") falharam"; }
-run_caca() { timeout 7200 $NAV node "$HERE/caca.js" "$GAME" "$OUT/caca" > "$OUT/caca.log" 2>&1; say "caça: $(grep -m1 'problemas diferentes' "$OUT/caca/caca.txt" 2>/dev/null || tail -1 "$OUT/caca.log")"; }
+run_caca() { timeout 7200 $NAV node "$HERE/caca.js" "$GAME" "$OUT/caca" ${MUNDOS:-} > "$OUT/caca.log" 2>&1; say "caça: $(grep -m1 'problemas diferentes' "$OUT/caca/caca.txt" 2>/dev/null || tail -1 "$OUT/caca.log")"; }
 run_desempenho() {
   timeout 7200 $NAV node "$HERE/desempenho.js" "$GAME" "$OUT/desempenho" > "$OUT/desempenho.log" 2>&1
   if [ -f "$BASE" ] && [ -f "$OUT/desempenho/desempenho.json" ]; then node "$HERE/desempenho.js" --compara "$BASE" "$OUT/desempenho/desempenho.json" "$OUT/desempenho/compara.txt" > /dev/null; fi

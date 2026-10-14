@@ -55,7 +55,7 @@ function PAGE() {
     THREE.Object3D.prototype.__visAdd = 1;
   }
   // the team's matrix (arte/ESTUDIO.md §3): a file or a material of the 3D → who answers for it
-  const OWN_FILE = { 'build3d.js': 'A2', 'props3d.js': 'A2', 'ground3d.js': 'A3', 'grass3d.js': 'A3', 'people3d.js': 'A4', 'body3d.js': 'A4', 'bodymesh.js': 'A4', 'fx3d.js': 'A5', 'post3d.js': 'A5', 'cam3d.js': 'A5', 'incui.js': 'A1', 'mesh3d.js': 'A1', 'tex3d.js': 'A1', 'things3d.js': 'líder', 'dragon3d.js': 'líder', 'realm3d.js': 'líder', 'modes.js': 'líder', 'avatar.js': 'líder', 'space.js': 'líder' };
+  const OWN_FILE = { 'build3d.js': 'A2', 'props3d.js': 'A2', 'ground3d.js': 'A3', 'grass3d.js': 'A3', 'people3d.js': 'A4', 'body3d.js': 'A4', 'bodymesh.js': 'A4', 'fx3d.js': 'A5', 'post3d.js': 'A5', 'cam3d.js': 'A5', 'incui.js': 'A1', 'mesh3d.js': 'A1', 'tex3d.js': 'A1', 'things3d.js': 'A2', 'mesh-dragao.js': 'A1', 'dragon3d.js': 'líder', 'realm3d.js': 'líder', 'modes.js': 'líder', 'avatar.js': 'líder', 'space.js': 'líder' };
   const OWN_MAT = { solid: 'A2', glass: 'A2', land: 'A3', flora: 'A3', leaf: 'A3', plant: 'A3', grass: 'A3', water: 'A5', ice: 'A5', wallWater: 'A5', sky: 'A5', stars: 'A5' };
   let matName = null;
   const names = () => {
@@ -87,6 +87,8 @@ function PAGE() {
     if (isSky(o)) return { part: 'realm3d.js:céu', owner: 'A5' };
     if (o.isPoints && file === 'realm3d.js') return { part: 'realm3d.js:estrelas', owner: 'A5' };
     if (mk && file === 'realm3d.js') { const c = chunkPart(o, mk, nm); if (c) return { part: 'realm3d.js:' + c.part, owner: c.owner }; }
+    // (a thing that says its name — the things of the world: 'things:rock', 'things:lamp'... — is told by it, not by its material)
+    if (o.name && typeof o.name === 'string' && file && file !== 'realm3d.js') return { part: file + ':' + o.name, owner: OWN_FILE[file] || OWN_MAT[mk] || '?' };
     if (mk) return { part: (file || 'realm3d.js') + ':' + mk, owner: OWN_MAT[mk] || OWN_FILE[file] || 'líder' };
     return { part: (file || '?') + ':' + ((mats[0] && (mats[0].name || mats[0].type)) || '?'), owner: OWN_FILE[file] || '?' };
   };
