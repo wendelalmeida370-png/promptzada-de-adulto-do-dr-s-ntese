@@ -16,10 +16,12 @@
   G.mapHooks.push(n => { N = n; });
   const B3 = G.Build3D = {};
   B3.chim = new Map(); G.worldHooks.push(() => B3.chim.clear()); // (the tops of the chimneys drawn: building id → [X, Y, Z])
-  let THREE = null, R3 = null, SH = null, glass = null;
+  B3.tops = new Map(); G.worldHooks.push(() => B3.tops.clear()); // (how high each building's near picture reaches: id → Y)
+  let THREE = null, R3 = null, SH = null, glass = null, PM = null, IDM = null;
   const TAU = Math.PI * 2;
   B3.init = function (three, realm) {
     THREE = three; R3 = realm; SH = realm.SH; glass = new THREE.MeshPhongMaterial({ color: 0x1c2630, specular: 0x8aa0b4, shininess: 90, emissive: 0xffb860, emissiveIntensity: 0 });
+    PM = new THREE.Matrix4(); IDM = new THREE.Matrix4(); // (a slanted box's frame, and the frame of the sheets already in place)
     // (a window shows the sky it faces — pale low, deeper above — more as one looks along the wall; at night, its lamp)
     const sk = realm.skyU;
     if (sk) glass.onBeforeCompile = sh => {
@@ -37,7 +39,7 @@
   // (each point of a building carries a pattern — Geo.pat when it was put — and the solid material draws it on the
   // surface, in metres of the world: blocks of stone, planks, courses of tiles, straw, turf; the god's view draws the
   // same with its lines: the planks of a longhouse, the tile courses of a hip roof)
-  const PAT = B3.PAT = { plaster: 1, stone: 2, brick: 3, plankV: 4, plankH: 5, tile: 6, shingle: 7, thatch: 8, turf: 9, marble: 10, slab: 11, beam: 12, frame: 13, mud: 14, cloth: 15 };
+  const PAT = B3.PAT = { plaster: 1, stone: 2, brick: 3, plankV: 4, plankH: 5, tile: 6, shingle: 7, thatch: 8, turf: 9, marble: 10, slab: 11, beam: 12, frame: 13, mud: 14, cloth: 15, soil: 16, rock: 17, bark: 18, iron: 19 };
   // what each people builds with: the walls of a house, its base, its roofs
   const STUFF = {
     classico: { wall: 'frame', base: 'stone', tile: 'tile' }, grego: { wall: 'plaster', base: 'marble', tile: 'tile' }, romano: { wall: 'plaster', base: 'stone', tile: 'tile' },
@@ -132,6 +134,11 @@ vec3 pattern(float p, vec2 uv, vec3 wp, out vec2 bump) {
     return vec3((0.9 + (d.g - 0.5) * 0.24 + (big - 0.5) * 0.22) * mix(0.88, 1.0, smoothstep(0.004, 0.02, e))) * wthr;
   }
   if (p == 15.0) return vec3(0.9 + 0.1 * sin(uv.x * 5.0));
+  // (earth at the edge of a turf roof, a field stone, the bark of a log, iron: their grain only — the stack has the rest)
+  if (p == 16.0) return vec3(0.82 + d.g * 0.3 + (big - 0.5) * 0.2);
+  if (p == 17.0) return vec3(0.84 + d.r * 0.24 + (big - 0.5) * 0.24) * wthr;
+  if (p == 18.0) { float gr = texture2D(uDet, vec2(uv.x * 2.2, uv.y * 0.25)).r; return vec3(0.7 + smoothstep(0.35, 0.65, gr) * 0.45); }
+  if (p == 19.0) return vec3(0.9 + d.g * 0.2);
   return vec3(1.0);
 }
 // (the timbers of a framed wall: posts, rails and a brace now and then)
@@ -145,12 +152,33 @@ float frameMask(vec2 uv, vec3 wp) {
 float m3layer(float p) {
   if (p == 1.0 || p == 13.0 || p == 14.0) return M3_PLASTER; if (p == 2.0) return M3_STONE; if (p == 3.0) return M3_BRICK; if (p == 4.0) return M3_PLANKS;
   if (p == 5.0) return M3_PLANKSH; if (p == 6.0) return M3_TILE; if (p == 7.0) return M3_SHINGLE; if (p == 8.0) return M3_THATCH; if (p == 9.0) return M3_TURF;
-  if (p == 11.0) return M3_SLAB; if (p == 12.0) return M3_BEAM; return -1.0;
+  if (p == 11.0) return M3_SLAB; if (p == 12.0) return M3_BEAM;
+  // (the ground's own pictures lent to buildings — only if the stack has them: a stack without one draws the old way)
+  #ifdef M3_SOIL
+  if (p == 16.0) return M3_SOIL;
+  #endif
+  #ifdef M3_ROCK
+  if (p == 17.0) return M3_ROCK;
+  #endif
+  #ifdef M3_BARK
+  if (p == 18.0) return M3_BARK;
+  #endif
+  return -1.0;
 }
 float m3scale(float p) {
   if (p == 1.0 || p == 13.0 || p == 14.0) return M3S_PLASTER; if (p == 2.0) return M3S_STONE; if (p == 3.0) return M3S_BRICK; if (p == 4.0) return M3S_PLANKS;
   if (p == 5.0) return M3S_PLANKSH; if (p == 6.0) return M3S_TILE; if (p == 7.0) return M3S_SHINGLE; if (p == 8.0) return M3S_THATCH; if (p == 9.0) return M3S_TURF;
-  if (p == 11.0) return M3S_SLAB; if (p == 12.0) return M3S_BEAM; return 1.0;
+  if (p == 11.0) return M3S_SLAB; if (p == 12.0) return M3S_BEAM;
+  #ifdef M3S_SOIL
+  if (p == 16.0) return M3S_SOIL * 2.0;
+  #endif
+  #ifdef M3S_ROCK
+  if (p == 17.0) return M3S_ROCK * 3.0;
+  #endif
+  #ifdef M3S_BARK
+  if (p == 18.0) return M3S_BARK;
+  #endif
+  return 1.0;
 }
 `;
   // the solid material learns to draw the patterns (and fades them far away, where they would only shimmer)
@@ -190,24 +218,36 @@ float m3scale(float p) {
   const palOf = b => { const P = G.Arch && G.Arch.PAL || {}; const st = b.style || ((G.Fac.ofSet ? G.Fac.ofSet(b.set) : null) || {}).civ || 'classico'; return P[st] || P.classico || { wl: '#efe2c4', wr: '#d2c19e', base: ['#8a8478', '#6f6a60', '#a09a8e'], roof: ['#b85a3c', '#94452d', '#7a3826'], gable: '#dccba6', trim: '#6b4a30', win: '#2f3a48', door: '#5a3b25', kind: 'gable' }; };
   const styleOf = b => b.style || ((G.Fac.ofSet ? G.Fac.ofSet(b.set) : null) || {}).civ || 'classico';
   const dim = (c, f) => { const r = typeof c === 'string' ? G.hex2rgb(c) : c; return [r[0] * f, r[1] * f, r[2] * f]; };
+  const rgbOf = c => (typeof c === 'string' ? G.hex2rgb(c) : c);
+  const mixc = (a, b, t) => { a = rgbOf(a); b = rgbOf(b); return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; };
+  // (a colour calmed: less saturated (sat) and darker (val) — the palette's bright paint as weathered stuff has it)
+  const calm = (c, sat, val) => { c = rgbOf(c); const l = c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11; return [G.clamp((l + (c[0] - l) * sat) * val, 0, 255), G.clamp((l + (c[1] - l) * sat) * val, 0, 255), G.clamp((l + (c[2] - l) * sat) * val, 0, 255)]; };
+  // (a colour to a step of 3: the colours of a sheet repeat, and the colour cache keeps up)
+  const qc = c => [Math.round(G.clamp(c[0], 0, 255) / 3) * 3, Math.round(G.clamp(c[1], 0, 255) / 3) * 3, Math.round(G.clamp(c[2], 0, 255) / 3) * 3];
+  // soft noise over the world's metres: the patches of moss and dry turf, the damp, the stains — the same at every visit
+  function vnoise(x, z, s) {
+    const xi = Math.floor(x), zi = Math.floor(z), fx = x - xi, fz = z - zi; const u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
+    const h = (a, b) => G.hash((a * 73856093) ^ (b * 19349663) ^ (s * 83492791));
+    const a = h(xi, zi), b = h(xi + 1, zi), c = h(xi, zi + 1), d = h(xi + 1, zi + 1);
+    return (a + (b - a) * u) * (1 - v) + (c + (d - c) * u) * v;
+  }
   // (heights of the buildings, in metres: the camera and the far picture use them too)
   const HEIGHT = { hut: 4.4, house: 5.2, sobrado: 8.4, insula: 14, quarteirao: 15, barraco: 3, storehouse: 6.5, armazem: 7, celeiro: 7, workshop: 5.5, forja: 6, olaria: 5, tecelagem: 5.5, ourives: 5.5, perolaria: 5, sericultura: 5, acougue: 5, temple: 10, monument: 13, estatua: 7, maravilha: 26, palacio: 14, paco: 12, administracao: 9, coletoria: 7, biblioteca: 9, teatro: 7, banhos: 7, cadeia: 6, quartel: 6, torre: 12, taverna: 7.5, mercado: 3.2, feira: 3, mercado_negro: 3, doca: 1.2, mina: 4, apiario: 1.6, curral: 1.4, estabulo: 5, cercado: 1.5, farm: 1, horta: 0.8, plantacao: 1.2, vinhedo: 1.8, pomar: 4, well: 2.6, campfire: 0.6, cemetery: 1.2, praca: 3, aqueduto: 7, ruin: 2.5 };
   B3.height = b => HEIGHT[b.type] || 5;
 
   // ------------------------------ the kit ------------------------------
   // (everything in metres, from the corner of the footprint: a building is a little world of its own, then put in place)
-  function kit(g, b, gp, gq) {
+  function kit(g, b, gp, gq, fine) {
     const L = TL(); const x0 = b.x * L, z0 = b.y * L, w = b.w * L, d = b.h * L;
     // the ground under the footprint: the base stands on the lowest point and reaches the highest
     let lo = 1e9, hi = -1e9; for (let ty = b.y; ty <= b.y + b.h; ty++) for (let tx = b.x; tx <= b.x + b.w; tx++) { const h = W.hAt(Math.min(N, tx), Math.min(N, ty)) * HM(); lo = Math.min(lo, h); hi = Math.max(hi, h); }
     // (the floor: a house stands on a plinth, as the god's view draws it; a field, a fence, a square lies on the ground — L-105)
-    const BASELESS = { farm: 1, horta: 1, plantacao: 1, vinhedo: 1, doca: 1, praca: 1, cemetery: 1, curral: 1, cercado: 1, campfire: 1 };
     const y0 = hi + (BASELESS[b.type] ? 0.12 : 0.4);
     g.ao = () => lo; // (its walls darken toward the ground)
     const P = palOf(b); const hurt = b.maxHp ? G.clamp(b.hp / b.maxHp, 0, 1) : 1; const soot = hurt < 0.6 ? 0.55 + hurt * 0.75 : 1;
-    const c = cc => (soot < 1 ? dim(cc, soot) : cc);
+    const c = cc => (soot < 1 ? (typeof cc === 'function' ? (X, Y, Z, a, b2, d2) => dim(cc(X, Y, Z, a, b2, d2), soot) : dim(cc, soot)) : cc);
     const K = {
-      g, b, P, L, x0, z0, w, d, y0, lo, hi, cx: x0 + w / 2, cz: z0 + d / 2, c, built: b.built, prog: b.built ? 1 : G.clamp(b.progress || 0, 0, 1), hurt,
+      g, b, P, L, x0, z0, w, d, y0, lo, hi, st: styleOf(b), cx: x0 + w / 2, cz: z0 + d / 2, c, built: b.built, prog: b.built ? 1 : G.clamp(b.progress || 0, 0, 1), hurt,
       gp: gp || R3.Geo(), gq: gq || R3.WGeo(), // (the plants that sway, and the water of a paddy)
       box(x, y, z, sx, sy, sz, col, ry) { g.put(SH.box, R3.mat(x0 + x, y0 + y, z0 + z, ry || 0, sx, sy, sz), c(col)); },
       cyl(x, y, z, r, h, col, top) { g.put(SH.cyl, R3.mat(x0 + x, y0 + y, z0 + z, 0, r * 2, h, r * 2), c(col)); void top; },
@@ -222,61 +262,186 @@ float m3scale(float p) {
         const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], vx = D[0] - A[0], vy = D[1] - A[1], vz = D[2] - A[2]; const n = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
         if (out && n[0] * out[0] + n[1] * out[1] + n[2] * out[2] < 0) g.tri(A, D, B, c(col)); else g.tri(A, B, D, c(col)); },
       quad(a, b2, d2, e, col, out) { K.tri(a, b2, d2, col, out); K.tri(a, d2, e, col, out); },
+      // (a triangle with a colour at each corner)
+      tri3(a, b2, d2, ca, cb, cd, out) { const A = [x0 + a[0], y0 + a[1], z0 + a[2]], B = [x0 + b2[0], y0 + b2[1], z0 + b2[2]], D = [x0 + d2[0], y0 + d2[1], z0 + d2[2]];
+        const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], vx = D[0] - A[0], vy = D[1] - A[1], vz = D[2] - A[2];
+        if (out && (uy * vz - uz * vy) * out[0] + (uz * vx - ux * vz) * out[1] + (ux * vy - uy * vx) * out[2] < 0) g.tri(A, D, B, c(ca), c(cd), c(cb)); else g.tri(A, B, D, c(ca), c(cb), c(cd)); },
       // the pattern of what is put next (Build3D.PAT), and back to plain after fn
       as(pat, fn) { const o = g.pat; g.pat = PAT[pat] || 0; fn(); g.pat = o; },
+      // the house's own dice: the same house is always the same house (its id, never chance)
+      hv: k => hvOf(b, k),
+      // a slanted box: its base's middle at o, u its length, v its height, w its depth (vectors in metres) — boards that
+      // follow a slope, braces, rafters
+      para(o, u, v, w, col) {
+        const s = (u[1] * v[2] - u[2] * v[1]) * w[0] + (u[2] * v[0] - u[0] * v[2]) * w[1] + (u[0] * v[1] - u[1] * v[0]) * w[2] < 0 ? -1 : 1; // (never a mirror: its faces would turn inside out)
+        PM.set(u[0], v[0], w[0] * s, x0 + o[0], u[1], v[1], w[1] * s, y0 + o[1], u[2], v[2], w[2] * s, z0 + o[2], 0, 0, 0, 1); g.put(SH.box, PM, c(col));
+      },
+      // a board along the line from a to b (its middle), wv across it and tv through it (whole widths)
+      bar(a, b2, wv, tv, col) { K.para([(a[0] + b2[0] - wv[0]) / 2, (a[1] + b2[1] - wv[1]) / 2, (a[2] + b2[2] - wv[2]) / 2], [b2[0] - a[0], b2[1] - a[1], b2[2] - a[2]], wv, tv, col); },
+      // a log, a round post or a rail from a to b, r its radius (r2: squashed, the second way round)
+      log(a, b2, r, col, r2) {
+        const d = [b2[0] - a[0], b2[1] - a[1], b2[2] - a[2]]; const l = Math.hypot(d[0], d[1], d[2]) || 1;
+        let e1 = Math.abs(d[1]) / l > 0.9 ? [1, 0, 0] : [-d[2], 0, d[0]]; const l1 = Math.hypot(e1[0], e1[1], e1[2]) || 1; e1 = [e1[0] / l1, e1[1] / l1, e1[2] / l1];
+        let e2 = [(d[1] * e1[2] - d[2] * e1[1]) / l, (d[2] * e1[0] - d[0] * e1[2]) / l, (d[0] * e1[1] - d[1] * e1[0]) / l];
+        if ((e1[1] * d[2] - e1[2] * d[1]) * e2[0] + (e1[2] * d[0] - e1[0] * d[2]) * e2[1] + (e1[0] * d[1] - e1[1] * d[0]) * e2[2] < 0) e2 = [-e2[0], -e2[1], -e2[2]];
+        const ra = r * 2, rb = (r2 || r) * 2; PM.set(e1[0] * ra, d[0], e2[0] * rb, x0 + a[0], e1[1] * ra, d[1], e2[1] * rb, y0 + a[1], e1[2] * ra, d[2], e2[2] * rb, z0 + a[2], 0, 0, 0, 1); g.put(SH.cyl, PM, c(col));
+      },
+      // a smooth sheet: a grid of points (nu + 1 across, nv + 1 down, row after row), its normals rounded between them,
+      // seen from 'out'; col a colour or a function of the point and its normal (patches of moss, a damp edge)
+      sheet(Pp, nu, nv, col, out) {
+        const n1 = nu + 1; const NN = new Float32Array(n1 * (nv + 1) * 3);
+        for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) {
+          const a = Pp[j * n1 + Math.max(0, i - 1)], b2 = Pp[j * n1 + Math.min(nu, i + 1)], e = Pp[Math.max(0, j - 1) * n1 + i], f = Pp[Math.min(nv, j + 1) * n1 + i];
+          const ux = b2[0] - a[0], uy = b2[1] - a[1], uz = b2[2] - a[2], vx = f[0] - e[0], vy = f[1] - e[1], vz = f[2] - e[2];
+          const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; const l = Math.hypot(nx, ny, nz) || 1; const q = (j * n1 + i) * 3; NN[q] = nx / l; NN[q + 1] = ny / l; NN[q + 2] = nz / l;
+        }
+        const mq = ((nv >> 1) * n1 + (nu >> 1)) * 3; const flip = !!out && NN[mq] * out[0] + NN[mq + 1] * out[1] + NN[mq + 2] * out[2] < 0; const sg = flip ? -1 : 1;
+        const pos = new Float32Array(nu * nv * 18), nor = new Float32Array(nu * nv * 18); let k = 0;
+        const push = (i, j) => { const p = Pp[j * n1 + i], q = (j * n1 + i) * 3; pos[k] = x0 + p[0]; pos[k + 1] = y0 + p[1]; pos[k + 2] = z0 + p[2]; nor[k] = NN[q] * sg; nor[k + 1] = NN[q + 1] * sg; nor[k + 2] = NN[q + 2] * sg; k += 3; };
+        for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) {
+          if (!flip) { push(i, j); push(i + 1, j); push(i + 1, j + 1); push(i, j); push(i + 1, j + 1); push(i, j + 1); }
+          else { push(i, j); push(i + 1, j + 1); push(i + 1, j); push(i, j); push(i, j + 1); push(i + 1, j + 1); }
+        }
+        g.put({ attributes: { position: { array: pos }, normal: { array: nor } }, index: null }, IDM, typeof col === 'function' ? (X, Y, Z, a, b2, d2) => c(col(X, Y, Z, a, b2, d2)) : c(col));
+      },
+      // (detail that only the closer qualities carry: hinges, hooks, battens)
+      fine: fine !== undefined ? !!fine : !!(R3.Q && R3.Q().detail),
+      // the base: stone from the lowest ground up to the floor (on a slope it shows; on flat ground it is a step) — under
+      // the whole lot, unless the building laid its own footing of stones under its walls (footed)
+      footed: false,
+      plinth() { if (!BASELESS[b.type]) K.as(stuff(b).base, () => g.put(SH.box, R3.mat(x0 + w / 2, lo - 0.2, z0 + d / 2, 0, w - 0.2, y0 - lo + 0.2, d - 0.2), c(P.base ? P.base[0] : '#8a8478'))); },
+      // (the local height of the ground at a point of the lot: what stands outside the walls of a footed house stands on it)
+      gy: (x, z) => W.hAt(Math.min(N - 0.001, (x0 + x) / L), Math.min(N - 0.001, (z0 + z) / L)) * HM() - y0,
     };
-    // the base: stone from the lowest ground up to the floor (on a slope it shows; on flat ground it is a step)
-    if (!BASELESS[b.type])
-      K.as(stuff(b).base, () => g.put(SH.box, R3.mat(x0 + w / 2, lo - 0.2, z0 + d / 2, 0, w - 0.2, y0 - lo + 0.2, d - 0.2), c(P.base ? P.base[0] : '#8a8478')));
     return K;
   }
+  const BASELESS = { farm: 1, horta: 1, plantacao: 1, vinhedo: 1, doca: 1, praca: 1, cemetery: 1, curral: 1, cercado: 1, campfire: 1 };
+  // a building drawn whole: its type's shapes, then its base (the plinth under the lot, unless it stands on its own footing),
+  // then what lies about it (Props3D: only seen, and only where the machine carries detail)
+  function draw(g, gw, K, props) {
+    const f = KIT[K.b.type]; if (f) f(g, gw, K); else house(g, gw, K);
+    if (!K.footed) K.plinth();
+    if (props && K.fine && G.Props3D && K.prog >= 1) G.Props3D.into(K);
+  }
+  // (stones laid round a footing: courses from the floor down to the ground, each stone its own size and tone — the
+  // house's id, not chance; the core behind them reaches below the lowest ground)
+  function footing(K, x, z, sx, sz, dressed) {
+    const P = K.P; const base = P.base || ['#8a8478', '#6f6a60', '#a09a8e']; K.footed = true; // (dressed: squared blocks in even courses, as the classical lands lay them)
+    K.as('stone', () => K.box(x, K.lo - K.y0 - 0.2, z, sx + 0.08, K.y0 - K.lo + 0.2, sz + 0.08, dim(base[1], 0.78)));
+    if (!K.fine) return;
+    const sides = [[[x - sx / 2, z + sz / 2], [x + sx / 2, z + sz / 2], [0, 1]], [[x + sx / 2, z - sz / 2], [x - sx / 2, z - sz / 2], [0, -1]], [[x + sx / 2, z + sz / 2], [x + sx / 2, z - sz / 2], [1, 0]], [[x - sx / 2, z - sz / 2], [x - sx / 2, z + sz / 2], [-1, 0]]];
+    let n = 0;
+    K.as('rock', () => { for (const [A0, B, o] of sides) {
+      const len0 = Math.hypot(B[0] - A0[0], B[1] - A0[1]); const dx = (B[0] - A0[0]) / len0, dz = (B[1] - A0[1]) / len0;
+      const A = [A0[0] - dx * 0.17, A0[1] - dz * 0.17], len = len0 + 0.17; // (each side starts round its corner: no notch there)
+      for (let row = 0, top = 0; row < 6; row++) {
+        const ch = dressed ? 0.3 : 0.27 + K.hv(200 + row) * 0.1; let any = false;
+        for (let t = row % 2 ? (dressed ? -0.3 : -0.18) : 0; t < len;) {
+          const h1 = K.hv(300 + n), h2 = K.hv(500 + n), h3 = K.hv(700 + n); n++;
+          const l = Math.min(len - t, dressed ? 0.6 : 0.34 + h1 * 0.34); if (l < 0.12) break; const m = Math.max(0, t) + (Math.min(len, t + l) - Math.max(0, t)) / 2;
+          const pr = dressed ? 0.05 : 0.05 + h2 * 0.035; const px = A[0] + dx * m + o[0] * pr, pz = A[1] + dz * m + o[1] * pr;
+          if (top - ch * 0.15 > K.gy(px, pz)) { any = true; const cc = dressed ? mixc(base[0], base[2], h1 * 0.6).map(v => v * (0.94 + h3 * 0.1)) : mixc(base[Math.floor(h1 * 3)], base[Math.floor(h3 * 2.99)], 0.5 * h2).map(v => v * (0.86 + h3 * 0.26));
+            K.rbox(px, top - ch + 0.01, pz, Math.min(len, t + l) - Math.max(0, t) - (dressed ? 0.02 : 0.035), ch - (dressed ? 0.02 : 0.035), dressed ? 0.2 : 0.2 + h3 * 0.08, cc, Math.atan2(-dz, dx) + (dressed ? 0 : (h2 - 0.5) * 0.08), 0, dressed ? 0 : (h3 - 0.5) * 0.05); }
+          t += l;
+        }
+        top -= ch; if (!any) break;
+      }
+    } });
+  }
+  // (how far it is from a wall of a body (centre x, z, sx × sz) facing o to the edge of its lot)
+  const stripOf = (K, x, z, sx, sz, o) => (o[0] > 0 ? K.w - (x + sx / 2) : o[0] < 0 ? x - sx / 2 : o[1] > 0 ? K.d - (z + sz / 2) : z - sz / 2);
   // which side the door opens to (the side people come out of — the world's own door)
   function doorSide(b) {
     const dr = G.Vg.door(b); const cx = b.x + b.w / 2, cy = b.y + b.h / 2; const dx = dr[0] - cx, dy = dr[1] - cy;
     return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'E' : 'W') : (dy > 0 ? 'S' : 'N');
   }
   B3.doorSide = doorSide;
-  // windows and a door on the walls of a box-shaped house: panes (lit at night) in frames of the people's trim, a sill
-  // under each, shutters on the houses of the classical lands; the door of planks in its frame, a step before it
+  // windows and a door on the walls of a box-shaped house, as each people makes them: panes (lit at night) in frames of
+  // the people's trim, a sill of stone under each, a lintel over it; shutters in the classical and the Greek towns (open
+  // against the wall, or half shut: the house's id), a grille of wood high in an Egyptian wall, iron bars on a Roman
+  // street, a painted frame in the Aztec's. The door of planks with its panels, frame and lintel, its iron, the step before
+  // it down to the ground; a little pediment over a Roman door, a light over a Greek one, the stepped lintel of the Aztec
   function openings(g, gw, K, x, z, sx, sz, y, h, floors, door) {
     const side = doorSide(K.b); const P = K.P; const fh = h / floors; const st = styleOf(K.b);
-    const framed = st !== 'nordico' && st !== 'egipcio'; const shut = st === 'classico' && K.b.type !== 'insula'; const tc = st === 'asteca' ? (P.trim2 || P.trim) : (P.trim || '#6b4a30');
+    const framed = st !== 'nordico' && st !== 'egipcio'; const shut = (st === 'classico' || st === 'grego') && K.b.type !== 'insula'; const tc = st === 'asteca' ? (P.trim2 || P.trim) : (P.trim || '#6b4a30');
+    const stone = P.base ? P.base[2] : '#a09a8e'; const sh2 = st === 'grego' ? (P.trim || '#3f6fb0') : [[86, 104, 70], [104, 74, 50], [70, 92, 104]][Math.floor(K.hv(17) * 3)];
+    let wk = 0;
     // (a window on the face whose outward direction is (ox, oz), at (px, py, pz), ww wide and hh high)
     const win = (px, py, pz, ox, oz, ww, hh) => {
-      const ax = oz !== 0; // (the face runs along X)
+      const ax = oz !== 0; const k = wk++; // (the face runs along X)
       gw.put(SH.box, R3.mat(K.x0 + px + ox * 0.03, K.y0 + py, K.z0 + pz + oz * 0.03, ax ? 0 : Math.PI / 2, ww, hh, 0.06), '#2a3440');
-      const fx = (dx, dy, w2, h2, d2) => K.box(px + ox * 0.06 + (ax ? dx : 0), py + dy, pz + oz * 0.06 + (ax ? 0 : dx), ax ? w2 : d2, h2, ax ? d2 : w2, tc);
-      if (framed) { fx(0, -0.08, ww + 0.2, 0.08, 0.1); fx(0, hh, ww + 0.2, 0.09, 0.1); fx(-ww / 2 - 0.05, 0, 0.09, hh, 0.1); fx(ww / 2 + 0.05, 0, 0.09, hh, 0.1); fx(0, 0, 0.05, hh, 0.07); }
-      K.box(px + ox * 0.1, py - 0.14, pz + oz * 0.1, ax ? ww + 0.3 : 0.2, 0.08, ax ? 0.2 : ww + 0.3, P.base ? P.base[2] : '#a09a8e');
-      if (shut) K.as('plankV', () => { for (const s2 of [-1, 1]) fx(s2 * (ww / 2 + 0.3), 0, ww * 0.5, hh, 0.05); });
+      const fx = (dx, dy, w2, h2, d2, col) => K.box(px + ox * 0.06 + (ax ? dx : 0), py + dy, pz + oz * 0.06 + (ax ? 0 : dx), ax ? w2 : d2, h2, ax ? d2 : w2, col || tc);
+      if (framed) { const fc = tc; const fw = st === 'asteca' ? 0.13 : 0.09;
+        fx(0, -0.08, ww + 0.2, 0.08, 0.1, fc); fx(0, hh, ww + 0.2, 0.09, 0.1, fc); fx(-ww / 2 - 0.05, 0, fw, hh, 0.1, fc); fx(ww / 2 + 0.05, 0, fw, hh, 0.1, fc); if (st === 'classico' || st === 'grego') fx(0, 0, 0.05, hh, 0.07); }
+      K.as('stone', () => K.box(px + ox * 0.1, py - 0.14, pz + oz * 0.1, ax ? ww + 0.3 : 0.2, 0.08, ax ? 0.2 : ww + 0.3, stone));
+      // (a lintel of stone over it in the stone-building lands)
+      if (st === 'romano' || st === 'grego' || st === 'egipcio') K.as('stone', () => fx(0, hh + 0.09, ww + 0.34, 0.12, 0.08, st === 'egipcio' ? (P.trim || '#2f8f8a') : stone));
+      if (st === 'egipcio') K.as('beam', () => { for (const e of [-0.22, 0, 0.22]) fx(e * ww, 0, 0.035, hh, 0.04, '#5a4430'); });
+      if (st === 'romano' && K.fine) K.as('iron', () => { for (const e of [-0.25, 0.25]) fx(e * ww, 0, 0.025, hh, 0.04, '#2e2c2a'); });
+      if (shut) K.as('plankV', () => { const open = K.hv(110 + k) < 0.7; for (const s2 of [-1, 1]) { if (open) fx(s2 * (ww / 2 + 0.3), 0, ww * 0.5, hh, 0.05, sh2); else fx(s2 * ww * 0.25, 0, ww * 0.5, hh, 0.06, sh2); } });
     };
     for (let f = 0; f < floors; f++) {
       const wy = y + f * fh + fh * 0.36, wh = Math.min(1.15, fh * 0.38);
+      // (an Egyptian house opens little to the sun: its windows small and high)
+      const ww = st === 'egipcio' ? 0.5 : 0.72, wh2 = st === 'egipcio' ? wh * 0.6 : wh, wy2 = st === 'egipcio' ? wy + wh * 0.45 : wy;
       const nx = Math.max(1, Math.floor(sx / 2.3)), nz = Math.max(1, Math.floor(sz / 2.3));
-      for (let k = 0; k < nx; k++) { const px = x - sx / 2 + sx * (k + 0.5) / nx; if (!(f === 0 && side === 'S' && k === Math.floor(nx / 2))) win(px, wy, z + sz / 2, 0, 1, 0.72, wh); if (!(f === 0 && side === 'N' && k === Math.floor(nx / 2))) win(px, wy, z - sz / 2, 0, -1, 0.72, wh); }
-      for (let k = 0; k < nz; k++) { const pz = z - sz / 2 + sz * (k + 0.5) / nz; if (!(f === 0 && side === 'E' && k === Math.floor(nz / 2))) win(x + sx / 2, wy, pz, 1, 0, 0.72, wh); if (!(f === 0 && side === 'W' && k === Math.floor(nz / 2))) win(x - sx / 2, wy, pz, -1, 0, 0.72, wh); }
+      for (let k = 0; k < nx; k++) { const px = x - sx / 2 + sx * (k + 0.5) / nx; if (!(f === 0 && side === 'S' && k === Math.floor(nx / 2))) win(px, wy2, z + sz / 2, 0, 1, ww, wh2); if (!(f === 0 && side === 'N' && k === Math.floor(nx / 2))) win(px, wy2, z - sz / 2, 0, -1, ww, wh2); }
+      for (let k = 0; k < nz; k++) { const pz = z - sz / 2 + sz * (k + 0.5) / nz; if (!(f === 0 && side === 'E' && k === Math.floor(nz / 2))) win(x + sx / 2, wy2, pz, 1, 0, ww, wh2); if (!(f === 0 && side === 'W' && k === Math.floor(nz / 2))) win(x - sx / 2, wy2, pz, -1, 0, ww, wh2); }
     }
     if (door === false) return;
     const dc = P.door || '#5a3b25', dw = 1.0, dh = Math.min(2.1, fh * 0.82);
     const o = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[side]; const ax = o[1] !== 0;
     const dx = x + o[0] * (sx / 2), dz = z + o[1] * (sz / 2);
-    K.as('plankV', () => K.box(dx + o[0] * 0.03, y, dz + o[1] * 0.03, ax ? dw : 0.1, dh, ax ? 0.1 : dw, dc));
+    // (in the door's frame: a along the wall, n out of it)
+    const bx = (a, yy, n, wa, hy, wn, col) => K.box(dx + (ax ? a : 0) + o[0] * n, yy, dz + (ax ? 0 : a) + o[1] * n, ax ? wa : wn, hy, ax ? wn : wa, col);
+    K.as('plankV', () => bx(0, y, 0.03, dw, dh, 0.1, dc));
+    // (its panels: rails across the leaf and a stile down its middle)
+    K.as('beam', () => { for (const f of [0.2, 0.55, 0.88]) bx(0, y + dh * f - 0.04, 0.085, dw - 0.06, 0.08, 0.02, dim(dc, 0.82)); bx(0, y + 0.08, 0.085, 0.07, dh - 0.16, 0.02, dim(dc, 0.82)); });
     // (its frame and lintel, and the step)
-    const tr = P.trim || '#6b4a30';
-    K.as('beam', () => { for (const s2 of [-1, 1]) K.box(dx + o[0] * 0.07 + (ax ? s2 * (dw / 2 + 0.07) : 0), y, dz + o[1] * 0.07 + (ax ? 0 : s2 * (dw / 2 + 0.07)), ax ? 0.14 : 0.14, dh, 0.14, tr); K.box(dx + o[0] * 0.08, y + dh, dz + o[1] * 0.08, ax ? dw + 0.42 : 0.18, 0.2, ax ? 0.18 : dw + 0.42, tr); });
-    K.as('stone', () => K.box(dx + o[0] * 0.45, -0.4, dz + o[1] * 0.45, ax ? dw + 0.5 : 0.7, 0.42, ax ? 0.7 : dw + 0.5, P.base ? P.base[2] : '#a09a8e'));
+    const tr = P.trim || '#6b4a30'; const sl = st === 'romano' || st === 'grego' || st === 'egipcio' || st === 'asteca';
+    K.as('beam', () => { for (const s2 of [-1, 1]) bx(s2 * (dw / 2 + 0.07), y, 0.07, 0.14, dh, 0.14, tr); });
+    K.as(sl ? 'stone' : 'beam', () => bx(0, y + dh, 0.08, dw + 0.42, 0.2, 0.18, sl ? (st === 'asteca' ? (P.trim || '#b33a2a') : stone) : tr));
+    if (st === 'romano') K.as('stone', () => { for (const s2 of [-1, 1]) { const a = s2 * (dw / 2 + 0.28); const A = [dx + (ax ? a : 0) + o[0] * 0.13, y + dh + 0.22, dz + (ax ? 0 : a) + o[1] * 0.13], B = [dx + o[0] * 0.13, y + dh + 0.58, dz + o[1] * 0.13]; const da = -a, dy = 0.36, l = Math.hypot(da, dy); K.bar(A, B, [ax ? -dy / l * 0.12 : 0, da / l * 0.12, ax ? 0 : -dy / l * 0.12], [o[0] * 0.12, 0, o[1] * 0.12], stone); } });
+    if (st === 'grego') gw.put(SH.box, R3.mat(K.x0 + dx + o[0] * 0.03, K.y0 + y + dh + 0.22, K.z0 + dz + o[1] * 0.03, ax ? 0 : Math.PI / 2, dw * 0.8, 0.26, 0.05), '#2a3440');
+    if (st === 'asteca') K.as('plaster', () => { bx(0, y + dh + 0.2, 0.1, dw + 0.7, 0.14, 0.2, P.trim2 || '#2fae8f'); bx(0, y + dh + 0.34, 0.1, dw + 0.25, 0.1, 0.2, P.trim || '#b33a2a'); });
+    if (K.fine) K.as('iron', () => { for (const f of [0.22, 0.78]) bx(-dw * 0.3, y + dh * f, 0.09, dw * 0.36, 0.045, 0.012, '#2e2b28'); const r = [dx + (ax ? dw * 0.3 : 0) + o[0] * 0.09, y + dh * 0.5, dz + (ax ? 0 : dw * 0.3) + o[1] * 0.09]; K.log(r, [r[0] + o[0] * 0.03, r[1], r[2] + o[1] * 0.03], 0.055, st === 'grego' || st === 'romano' ? '#8a7440' : '#2e2b28'); });
+    // (the step: down to the ground before a footed house — no further out than a hand past the lot)
+    const sdp = Math.min(0.7, stripOf(K, x, z, sx, sz, o) + 0.15), sn = 0.1 + sdp / 2;
+    const sp = [dx + o[0] * sn, 0, dz + o[1] * sn]; const gy = K.footed ? Math.min(-0.4, K.gy(sp[0], sp[2]) - 0.04) : -0.4;
+    K.as('stone', () => bx(0, gy, sn, dw + 0.5, 0.42 + (-0.4 - gy), sdp, stone));
   }
   // a roof of the people's kind over a box of sx × sz (centre x, z) whose walls end at y: gable, hip, flat with its
   // parapet, thatch or turf — with the god's pitches (the roof of a cottage is as tall as its walls), eaves that stand
   // out, the ends of a gable closed in the wall's colour, a ridge; the pattern of its tiles, straw or grass
-  function roofOf(K, x, z, sx, sz, y, kind, cols) {
+  function roofOf(K, x, z, sx, sz, y, kind, cols, ridgeZ) {
     const P = K.P; const r = cols || P.roof || ['#b85a3c', '#94452d', '#7a3826']; kind = kind || P.kind || 'gable';
-    const st = stuff(K.b); const ov = 0.42, alongZ = sz > sx + 0.01 || (K.b.v === 1 && Math.abs(sx - sz) < 0.01);
+    const st = stuff(K.b); const ov = 0.42, alongZ = ridgeZ !== undefined ? ridgeZ : sz > sx + 0.01 || (K.b.v === 1 && Math.abs(sx - sz) < 0.01);
     if (kind === 'flat') {
       K.as(st.tile === 'mud' ? 'mud' : 'slab', () => K.box(x, y, z, sx + 0.12, 0.25, sz + 0.12, P.top || P.wl));
-      const pc = (P.par && P.par[0]) || P.wl;
+      const pc = (P.par && P.par[0]) || P.wl; const civ = K.st;
+      if (civ === 'egipcio') {
+        // (the Egyptian cornice: the wall's top curving out in a gorge, the round moulding under it, a flat band over it)
+        const yb = y + 0.08, H2 = 0.5, F = 0.26; const c2 = (P.par && P.par[1]) || dim(pc, 0.88);
+        K.as('plaster', () => { for (const W2 of wallsOf(sx, sz)) {
+          const a0 = -W2.len / 2, a1 = W2.len / 2; const p = (a, up, out) => [x + (W2.ax ? a * (1 + out * 2 / W2.len) : W2.o[0] * (sx / 2 + out)), yb + up, z + (W2.ax ? W2.o[1] * (sz / 2 + out) : a * (1 + out * 2 / W2.len))];
+          // (the gorge in three bands, flaring more as it rises)
+          const prof = [[0, 0], [0.18, 0.05], [0.34, 0.14], [H2, F]];
+          for (let k = 0; k < 3; k++) { const [u0, f0] = prof[k], [u1, f1] = prof[k + 1]; K.tri3(p(a0, u0, f0), p(a1, u0, f0), p(a1, u1, f1), k ? pc : c2, k ? pc : c2, pc, [W2.o[0], 0.3, W2.o[1]]); K.tri3(p(a0, u0, f0), p(a1, u1, f1), p(a0, u1, f1), k ? pc : c2, pc, pc, [W2.o[0], 0.3, W2.o[1]]); }
+          K.box(...(W2.ax ? [x, yb + H2, z + W2.o[1] * (sz / 2 + F / 2 - 0.02), sx + F * 2, 0.1, F + 0.04] : [x + W2.o[0] * (sx / 2 + F / 2 - 0.02), yb + H2, z, F + 0.04, 0.1, sz + F * 2]), dim(pc, 0.95));
+          K.box(...(W2.ax ? [x, yb + H2 + 0.1, z + W2.o[1] * (sz / 2 - 0.05), sx + 0.1, 0.32, 0.22] : [x + W2.o[0] * (sx / 2 - 0.05), yb + H2 + 0.1, z, 0.22, 0.32, sz + 0.1]), pc);
+        }
+        // (the torus: a round moulding along the top of the walls, under the gorge)
+        for (const W2 of wallsOf(sx, sz)) { const a = W2.len / 2 + 0.06; const A = W2.ax ? [x - a, yb - 0.02, z + W2.o[1] * (sz / 2 + 0.03)] : [x + W2.o[0] * (sx / 2 + 0.03), yb - 0.02, z - a], B = W2.ax ? [x + a, yb - 0.02, z + W2.o[1] * (sz / 2 + 0.03)] : [x + W2.o[0] * (sx / 2 + 0.03), yb - 0.02, z + a]; K.log(A, B, 0.07, dim(pc, 0.9)); } });
+        return y + H2 + 0.42;
+      }
+      // (a parapet round the terrace, its coping a little wider, spouts to throw the rain off; the Aztec's crowned with
+      // stepped merlons)
       K.as(st.wall, () => { for (const [px, pz, a, bb] of [[x, z - sz / 2, sx + 0.12, 0.25], [x, z + sz / 2, sx + 0.12, 0.25], [x - sx / 2, z, 0.25, sz], [x + sx / 2, z, 0.25, sz]]) K.box(px, y + 0.25, pz, a, 0.6, bb, pc); });
-      return y + 0.85;
+      K.as('slab', () => { for (const [px, pz, a, bb] of [[x, z - sz / 2, sx + 0.22, 0.34], [x, z + sz / 2, sx + 0.22, 0.34], [x - sx / 2, z, 0.34, sz], [x + sx / 2, z, 0.34, sz]]) K.box(px, y + 0.85, pz, a, 0.06, bb, (P.par && P.par[1]) || dim(pc, 0.9)); });
+      if (K.fine) K.as('stone', () => { for (const W2 of wallsOf(sx, sz)) { const n = Math.max(1, Math.floor(W2.len / 3)); for (let k = 0; k < n; k++) { const a = -W2.len / 2 + W2.len * (k + 0.5) / n; K.box(x + (W2.ax ? a : W2.o[0] * (sx / 2 + 0.2)), y + 0.3, z + (W2.ax ? W2.o[1] * (sz / 2 + 0.2) : a), W2.ax ? 0.12 : 0.36, 0.1, W2.ax ? 0.36 : 0.12, P.base ? P.base[1] : '#8a8478'); } } });
+      if (civ === 'asteca') K.as('plaster', () => { for (const W2 of wallsOf(sx, sz)) { const n = Math.max(2, Math.round(W2.len / 0.9)); for (let k = 0; k < n; k++) { const a = -W2.len / 2 + W2.len * (k + 0.5) / n; const px = x + (W2.ax ? a : W2.o[0] * sx / 2), pz = z + (W2.ax ? W2.o[1] * sz / 2 : a);
+        K.box(px, y + 0.91, pz, W2.ax ? 0.44 : 0.24, 0.16, W2.ax ? 0.24 : 0.44, pc); K.box(px, y + 1.07, pz, W2.ax ? 0.26 : 0.2, 0.14, W2.ax ? 0.2 : 0.26, k % 2 ? (P.trim || '#b33a2a') : pc); } } });
+      return y + 0.91;
     }
     const L = alongZ ? sz : sx, D = alongZ ? sx : sz; // (along the ridge, and across it)
     const pitch = kind === 'turf' ? 1.25 : kind === 'thatch' ? 1.05 : (P.pitch || 0.8);
@@ -286,59 +451,304 @@ float m3scale(float p) {
     // (a point in the roof's frame — u along the ridge, v across it — to the building's)
     const at = (u, yy, v) => alongZ ? [x + v, yy, z + u] : [x + u, yy, z + v];
     if (kind === 'hip') {
+      // (four slopes of tiles over the eaves all round: the edge of the tiles thick, the boards under the eaves, ridge tiles
+      // along the ridge and down the four hips, a course of round tiles at the eaves; each slope its own stains)
       const e = ov; const U = L / 2 + e, V = D / 2 + e; const ru = Math.max(0, U - V); const yt = y + h + 0.15, yb = y - e * (h / (D / 2)) + 0.15;
+      const seed = K.b.id & 1023; const base = rgbOf(col); const tone = k => { const f = 0.93 + K.hv(40 + k) * 0.12; return qc([base[0] * f, base[1] * f, base[2] * f]); };
+      const mossy = k => mixc(tone(k), [104, 112, 72], G.clamp((K.hv(3) - 0.35) * 0.5, 0, 0.3));
+      const C = [at(-U, yb, V), at(U, yb, V), at(U, yb, -V), at(-U, yb, -V)], Ra = at(-ru, yt, 0), Rb = at(ru, yt, 0);
       K.as(pat, () => {
-        K.quad(at(-U, yb, V), at(U, yb, V), at(ru, yt, 0), at(-ru, yt, 0), col, alongZ ? [1, 1, 0] : [0, 1, 1]);
-        K.quad(at(U, yb, -V), at(-U, yb, -V), at(-ru, yt, 0), at(ru, yt, 0), col, alongZ ? [-1, 1, 0] : [0, 1, -1]);
-        K.tri(at(U, yb, V), at(U, yb, -V), at(ru, yt, 0), col, alongZ ? [0, 1, 1] : [1, 1, 0]);
-        K.tri(at(-U, yb, -V), at(-U, yb, V), at(-ru, yt, 0), col, alongZ ? [0, 1, -1] : [-1, 1, 0]);
+        K.tri3(C[0], C[1], Rb, tone(0), tone(0), mossy(0), alongZ ? [1, 1, 0] : [0, 1, 1]); K.tri3(C[0], Rb, Ra, tone(0), mossy(0), mossy(0), alongZ ? [1, 1, 0] : [0, 1, 1]);
+        K.tri3(C[2], C[3], Ra, mossy(1), mossy(1), tone(1), alongZ ? [-1, 1, 0] : [0, 1, -1]); K.tri3(C[2], Ra, Rb, mossy(1), tone(1), tone(1), alongZ ? [-1, 1, 0] : [0, 1, -1]);
+        K.tri3(C[1], C[2], Rb, tone(2), tone(2), tone(2), alongZ ? [0, 1, 1] : [1, 1, 0]);
+        K.tri3(C[3], C[0], Ra, tone(3), tone(3), tone(3), alongZ ? [0, 1, -1] : [-1, 1, 0]);
+        // (the thick edge of the tiles all round the eaves)
+        const ed = dim(col, 0.62); for (let k = 0; k < 4; k++) { const a = C[k], b2 = C[(k + 1) % 4]; const lo = [a[0], a[1] - 0.16, a[2]], lo2 = [b2[0], b2[1] - 0.16, b2[2]]; const m = [(a[0] + b2[0]) / 2 - x, 0, (a[2] + b2[2]) / 2 - z]; K.quad(a, b2, lo2, lo, ed, m); }
       });
-      // (the underside of the eaves, dark)
-      K.box(x, yb - 0.06, z, (alongZ ? D : L) + e * 2, 0.06, (alongZ ? L : D) + e * 2, dim(col, 0.55));
-      if (ru > 0.1) K.as('beam', () => K.rbox(...at(0, yt - 0.06, 0), alongZ ? 0.22 : ru * 2 + 0.2, 0.16, alongZ ? ru * 2 + 0.2 : 0.22, r[2] || dim(col, 0.7)));
+      // (the underside of the eaves: the boards)
+      K.as('plankH', () => K.box(x, yb - 0.2, z, (alongZ ? D : L) + e * 2 - 0.04, 0.05, (alongZ ? L : D) + e * 2 - 0.04, dim('#6a5038', 0.8)));
+      // (ridge tiles on the ridge and down the hips, round tiles along the eaves)
+      K.as(pat, () => { const rc = r[1] || dim(col, 0.82);
+        if (ru > 0.1) K.log([Ra[0], Ra[1] + 0.02, Ra[2]], [Rb[0], Rb[1] + 0.02, Rb[2]], 0.12, rc, 0.1);
+        for (let k = 0; k < 4; k++) { const R0 = k === 1 || k === 2 ? Rb : Ra; K.log([C[k][0], C[k][1] + 0.01, C[k][2]], [R0[0], R0[1] + 0.03, R0[2]], 0.09, rc, 0.08); }
+        if (K.fine) for (let k = 0; k < 4; k++) { const a = C[k], b2 = C[(k + 1) % 4]; K.log([a[0], a[1] - 0.04, a[2]], [b2[0], b2[1] - 0.04, b2[2]], 0.075, dim(col, 0.9)); } });
+      void seed;
       return y + h;
     }
-    // a gable: two slabs from the ridge down past the walls, the two ends closed, a ridge beam
-    const half = D / 2, ang = Math.atan2(h, half), sl = Math.hypot(half, h), T = kind === 'thatch' ? 0.42 : kind === 'turf' ? 0.32 : 0.18;
-    const run = sl + ov / Math.cos(ang); const eu = L / 2 + ov * 0.8;
+    return gableRoof(K, x, z, sx, sz, y, kind, r, alongZ);
+  }
+  // the turf of one roof: the green of the people's palette calmed to a living roof's, and its age — fresh, greying,
+  // mossy, damp — by the house's id
+  const hvOf = (b, k) => G.hash(b.id * 7919 + k * 104729 + 13);
+  // (on a square lot a timber house of the north turns its ridge along the wall with its door — the door in the long side,
+  // as the north builds — save now and then one entered by its gable)
+  const ridgeX = (b, side) => (side === 'N' || side === 'S') !== (hvOf(b, 14) < 0.2);
+  function turfTone(K) {
+    const age = K.hv(3), wet = K.hv(4); const base = calm((K.P.roof && K.P.roof[0]) || '#71903f', 0.58, 0.84);
+    const grass = mixc(base, [114, 108, 70], age * 0.42);
+    return { age, wet, grass, moss: mixc(calm(base, 0.45, 0.68), [56, 78, 54], 0.4 + wet * 0.25), dry: mixc(base, [158, 138, 90], 0.62),
+      soil: [64, 50, 38], tuft: mixc(grass, [66, 86, 44], 0.4), tip: mixc(grass, [172, 168, 106], 0.45) };
+  }
+  // the carved end of a barge board past the ridge, as the north carves them: a scroll, a horse's head, a dragon's with
+  // its jaws open (tip: where the board ends; dir: the way it runs; out: level, away from the ridge; tv: through the board)
+  function bargeEnd(K, tip, dir, out, tv, wd, style, col, paint, eye) {
+    // (in the gable's own plane: a = along 'out', b = up)
+    const P2 = (p, a, b) => [p[0] + out[0] * a, p[1] + b, p[2] + out[2] * a];
+    const da = dir[0] * out[0] + dir[2] * out[2], db = dir[1];
+    const seg = (p, a, b, l, w, cc, th) => { const n = Math.hypot(a, b) || 1; a /= n; b /= n; const e = P2(p, a * l, b * l); K.bar(p, e, [-out[0] * b * w, a * w, -out[2] * b * w], [tv[0] * (th || 1), tv[1] * (th || 1), tv[2] * (th || 1)], cc); return e; };
+    if (style === 1) { const e = seg(tip, da + 1.1, db, 0.2, wd * 0.8, col); seg(e, 0.45, -0.9, 0.14, wd * 0.6, col); return; }
+    const head = paint || col;
+    if (style === 2) {
+      const n = seg(tip, da, db, 0.1, wd, col); const h = seg(n, 0.93, 0.36, 0.3, 0.15, head, 1.25);
+      seg(h, 0.6, -0.8, 0.1, 0.09, head, 1.25); seg(P2(n, 0.06, 0.05), -0.3, 0.95, 0.13, 0.05, head); return;
+    }
+    // (the dragon: the head, the open jaw, the crest curling back, the eye, the tongue)
+    const n = seg(tip, da, db, 0.08, wd, col); const h = seg(n, 0.9, 0.44, 0.36, 0.15, head, 1.3);
+    seg(P2(n, 0.08, -0.03), 0.85, -0.53, 0.26, 0.06, head, 1.2);
+    const c1 = seg(P2(n, -0.02, 0.06), -0.45, 0.9, 0.2, 0.05, head); seg(c1, -0.9, 0.1, 0.12, 0.04, head);
+    seg(P2(n, 0.12, -0.02), 0.98, -0.25, 0.22, 0.025, K.P.trim || '#a23c2a', 0.6);
+    if (eye) for (const s of [-1, 1]) { const m = P2(n, 0.2, 0.12); K.bar([m[0] + tv[0] * s * 0.68, m[1], m[2] + tv[2] * s * 0.68], [m[0] + tv[0] * s * 0.68 + out[0] * 0.05, m[1], m[2] + tv[2] * s * 0.68 + out[2] * 0.05], [0, 0.05, 0], [tv[0] * 0.2, 0, tv[2] * 0.2], eye); }
+    void h;
+  }
+  // a gable roof: two slopes of the roof's own thickness from the ridge down past the walls — turf in lumps on its boards,
+  // patches of moss and of dry grass, its grass hanging over the log that holds it at the eaves; straw thick and soft;
+  // tiles and shingles — the edges where the stuff shows, the roof boards under the eaves, the ridge (a roll of turf,
+  // ridge tiles, the ridge boards), the barge boards (crossed in the north, their ends carved), the purlins' ends
+  function gableRoof(K, x, z, sx, sz, y, kind, r, alongZ) {
+    const P = K.P; const st = stuff(K.b); const nord = styleOf(K.b) === 'nordico';
+    const L = alongZ ? sz : sx, D = alongZ ? sx : sz; // (along the ridge, and across it)
+    const turf = kind === 'turf', thatch = kind === 'thatch';
+    const pat = thatch ? 'thatch' : turf ? 'turf' : st.tile === 'mud' ? 'tile' : st.tile;
+    const col = thatch ? ((P.thatch && P.thatch[0]) || '#c8a85a') : r[0];
+    // (turf is laid at the pitch it holds on — about fifty degrees, not the god's steep stroke; straw and tiles as he draws them)
+    const pitch = turf ? 0.76 : thatch ? 1.05 : (P.pitch || 0.8);
+    const h = Math.min(4.6, D * pitch * 0.82);
+    const ov = turf ? 0.46 : thatch ? 0.5 : 0.42, T = thatch ? 0.4 : turf ? 0.26 : 0.16;
+    const half = D / 2, ang = Math.atan2(h, half), ca = Math.cos(ang), sa = Math.sin(ang);
+    const sw = Math.hypot(half, h), run = sw + ov / ca, eu = L / 2 + (turf ? 0.34 : thatch ? 0.38 : ov * 0.8), s0 = -T * sa / ca;
+    // (the roof's frame: u along the ridge, v across it, from the middle of the house; S: a point of the slope sd, s down it
+    // from the ridge along the boards, n out of it)
+    const vec = (u, yy, v) => (alongZ ? [v, yy, u] : [u, yy, v]);
+    const at = (u, yy, v) => (alongZ ? [x + v, yy, z + u] : [x + u, yy, z + v]);
+    const S = (u, s, n, sd) => at(u, y + h - sa * s + ca * n, sd * (ca * s + sa * n));
+    const nN = sd => vec(0, ca, sd * sa), tD = sd => vec(0, -sa, sd * ca), rU = vec(1, 0, 0);
+    const sc = (v, k) => [v[0] * k, v[1] * k, v[2] * k], add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+    const seed = K.b.id & 1023;
+    // (an old turf or straw roof sags a little between its gables)
+    const sag = (turf ? 0.07 : thatch ? 0.05 : 0) * K.hv(31) * (0.5 + K.hv(3));
+    const sagY = u => sag * Math.max(0, 1 - (u / eu) * (u / eu));
+    const amp = turf ? 0.055 : thatch ? 0.03 : 0;
+    const nu = Math.max(3, Math.round(2 * eu / (turf ? 0.5 : thatch ? 0.6 : 0.9))), ns = Math.max(2, Math.round((run - s0) / (turf ? 0.45 : thatch ? 0.55 : 0.9)));
+    const uOf = i => -eu + 2 * eu * i / nu, sOf = j => s0 + (run - s0) * j / ns;
+    // (the lumps of the turf, the swell of the straw: none at the gable edges or on the ridge, a bulge over the eave)
+    const lump = (i, j, sd) => { if (!amp) return 0; const fu = G.clamp((eu - Math.abs(uOf(i))) / 0.45, 0, 1), fs = G.clamp((sOf(j) - s0) / 0.4, 0, 1);
+      return (amp * (G.hash(seed * 977 + i * 131 + j * 31 + (sd > 0 ? 7 : 0)) - 0.5) * 2 * fs + (j === ns ? amp * 0.6 : 0)) * fu; };
+    const top = (i, j, sd) => { const u = uOf(i); const p = S(u, sOf(j), T + lump(i, j, sd), sd); p[1] -= sagY(u); return p; };
+    const bot = (u, s, sd) => { const p = S(u, s, 0, sd); p[1] -= sagY(u); return p; };
+    // the colours of the top: turf by patches (drier on the sunny side, mossy in the shade, damp at the eaves); tiles,
+    // shingles and straw by their stains and a little moss where the sun does not reach
+    const yR = K.y0 + y + h, drop = sa * run; let topCol;
+    if (turf) {
+      const tc = turfTone(K); K.turf = tc;
+      topCol = (X, Y, Z, nx, ny, nz) => {
+        const a = vnoise(X * 0.6, Z * 0.6, seed), q = vnoise(X * 2.1 + 3.1, Z * 2.1, seed + 7); const dn = G.clamp((yR - Y) / drop, 0, 1);
+        const dry = G.clamp((a - 0.55 + nz * 0.16 + (1 - dn) * 0.08 - tc.wet * 0.12) * 3.2, 0, 0.8), moss = G.clamp((0.45 - a - nz * 0.12 + tc.wet * 0.14 + tc.age * 0.12 + dn * 0.1) * 3, 0, 0.85);
+        const cc = mixc(mixc(tc.grass, tc.dry, dry), tc.moss, moss); const f = (0.88 + q * 0.24) * (1 - G.clamp((dn - 0.8) * 2.5, 0, 0.3));
+        return qc([cc[0] * f, cc[1] * f, cc[2] * f]);
+      };
+    } else {
+      const base = thatch ? mixc(col, [128, 118, 96], K.hv(3) * 0.35) : rgbOf(col); const moss = thatch ? [96, 100, 62] : [92, 108, 64];
+      topCol = (X, Y, Z, nx, ny, nz) => {
+        const a = vnoise(X * 0.5, Z * 0.5, seed + 3), q = vnoise(X * 1.6, Z * 1.6, seed + 5); const dn = G.clamp((yR - Y) / drop, 0, 1);
+        const m = G.clamp((0.42 - a - nz * 0.12 + K.hv(3) * 0.16 + dn * 0.08) * 2.4, 0, thatch ? 0.3 : 0.4);
+        const cc = mixc(base, moss, m); const f = 0.9 + q * 0.18; return qc([cc[0] * f, cc[1] * f, cc[2] * f]);
+      };
+    }
+    const eb = turf ? [K.turf.tuft, [84, 64, 46], K.turf.soil] : thatch ? [dim(col, 1.06), dim(col, 0.9), dim(col, 0.72)] : [dim(col, 0.78), dim(col, 0.62), dim(col, 0.5)];
+    const under = dim(nord ? P.wr || '#5f4630' : '#6a5038', 0.78);
     for (const sd of [-1, 1]) {
-      // (the slab's base runs from the ridge outwards and down; centre half-way)
-      const cv = sd * Math.cos(ang) * run / 2, cy = y + h - Math.sin(ang) * run / 2;
-      const p = at(0, cy, cv);
-      // (the slab's own frame: X along the ridge, Z down the slope — turned a quarter round when the ridge runs along Z)
-      K.as(pat, () => K.rbox(p[0], p[1], p[2], eu * 2, T, run, col, alongZ ? Math.PI / 2 : 0, sd * ang));
+      // (the top: a sheet of points following the slope, lumped and sagging)
+      const pts = []; for (let j = 0; j <= ns; j++) for (let i = 0; i <= nu; i++) pts.push(top(i, j, sd));
+      K.as(pat, () => K.sheet(pts, nu, ns, topCol, nN(sd)));
+      // (the roof boards seen under the eaves and the gables)
+      const und = []; for (let j = 0; j <= 1; j++) for (let i = 0; i <= nu; i++) und.push(bot(uOf(i), j ? run + (turf ? 0.17 : 0.02) : 0, sd));
+      K.as('plankH', () => K.sheet(und, nu, 1, under, sc(nN(sd), -1)));
+      // (the eave's edge — the earth and roots of the turf, the cut ends of the straw, the edge of the tiles — and the gables')
+      K.as(turf ? 'soil' : pat, () => {
+        for (let i = 0; i < nu; i++) { const a = top(i, ns, sd), b2 = top(i + 1, ns, sd), c2 = bot(uOf(i + 1), run, sd), d2 = bot(uOf(i), run, sd); K.tri3(a, b2, c2, eb[0], eb[0], eb[2], tD(sd)); K.tri3(a, c2, d2, eb[0], eb[2], eb[2], tD(sd)); }
+        for (const e of [-1, 1]) for (let j = 0; j < ns; j++) { const i = e < 0 ? 0 : nu; const a = top(i, j, sd), b2 = top(i, j + 1, sd), c2 = bot(uOf(i), Math.max(0, sOf(j + 1)), sd), d2 = bot(uOf(i), Math.max(0, sOf(j)), sd);
+          K.tri3(a, b2, c2, eb[1], eb[1], eb[2], sc(rU, e)); K.tri3(a, c2, d2, eb[1], eb[2], eb[2], sc(rU, e)); }
+      });
     }
     // (the gable ends: triangles of wall up to the ridge, in the people's gable colour)
-    const gc = kind === 'turf' || styleOf(K.b) === 'nordico' ? P.gable || P.wr : P.gable || P.wl;
-    K.as(stuff(K.b).wall === 'frame' ? 'plaster' : stuff(K.b).wall, () => { for (const e of [-1, 1]) K.tri(at(e * L / 2, y, -half), at(e * L / 2, y, half), at(e * L / 2, y + h, 0), gc, alongZ ? [0, 0, e] : [e, 0, 0]); });
-    K.as('beam', () => K.rbox(...at(0, y + h + T * 0.5, 0), alongZ ? 0.26 : eu * 2 + 0.1, 0.24, alongZ ? eu * 2 + 0.1 : 0.26, kind === 'turf' ? '#5a4430' : (r[2] || dim(col, 0.7))));
-    // (the barge boards along the ends of the slopes)
-    if (kind !== 'thatch') K.as('beam', () => { for (const e of [-1, 1]) for (const sd of [-1, 1]) { const p = at(e * eu, y + h - Math.sin(ang) * run / 2, sd * Math.cos(ang) * run / 2); K.rbox(p[0], p[1] + T * 0.6, p[2], 0.1, 0.2, run, P.trim || '#6b4a30', alongZ ? Math.PI / 2 : 0, sd * ang); } });
-    // (a turf roof: grass at its eaves and on its ridge; a longhouse's dragon heads at the ends of the ridge)
-    if (kind === 'turf') {
-      for (const sd of [-1, 1]) for (let k = 0; k <= 12; k++) { const u = -eu + 2 * eu * k / 12; const p = at(u, y - ov * Math.tan(ang) + T, sd * (half + ov * 0.95)); const q = K.x0 + p[0], qz = K.z0 + p[2], qy = K.y0 + p[1];
-        for (let b2 = 0; b2 < 3; b2++) { const a = G.hash(K.b.id * 31 + k * 7 + b2 + sd * 3) * TAU; K.gp.blade(q, qy, qz, 0.1, a, q + Math.cos(a) * 0.12, qy + 0.32, qz + Math.sin(a) * 0.12, [70, 96, 40], [136, 168, 82], 0.7); } }
-      for (let k = 0; k <= 10; k++) { const p = at(-eu + 2 * eu * k / 10, y + h + T, 0); for (let b2 = 0; b2 < 2; b2++) { const a = G.hash(K.b.id * 13 + k * 5 + b2) * TAU; K.gp.blade(K.x0 + p[0], K.y0 + p[1], K.z0 + p[2], 0.1, a, K.x0 + p[0] + Math.cos(a) * 0.1, K.y0 + p[1] + 0.34, K.z0 + p[2] + Math.sin(a) * 0.1, [80, 108, 46], [150, 180, 90], 0.7); } }
-      for (const e of [-1, 1]) { const p = at(e * (eu + 0.05), y + h + 0.1, 0); const dir = alongZ ? [0, e] : [e, 0];
-        K.rbox(p[0], p[1], p[2], 0.16, 1.0, 0.16, '#3a2616', 0, alongZ ? e * 0.5 : 0, alongZ ? 0 : -e * 0.5);
-        K.sph(p[0] + dir[0] * 0.55, p[1] + 0.95, p[2] + dir[1] * 0.55, 0.17, '#3a2616', 0.13); }
+    const gc = turf || nord ? P.gable || P.wr : P.gable || P.wl;
+    K.as(nord ? 'plankV' : st.wall === 'frame' ? 'plaster' : st.wall, () => { for (const e of [-1, 1]) K.tri(at(e * L / 2, y, -half), at(e * L / 2, y, half), at(e * L / 2, y + h, 0), gc, alongZ ? [0, 0, e] : [e, 0, 0]); });
+    const ridgeY = y + h + T / ca;
+    // the ridge: a roll of turf, ridge tiles, a thick cap of straw, two ridge boards over shingles
+    { const segs = turf || thatch ? 4 : 1; const rr = turf ? [0.2, 0.12, -0.05] : thatch ? [0.27, 0.19, -0.08] : st.tile === 'shingle' ? null : [0.13, 0.11, -0.03];
+      if (rr) K.as(pat, () => { for (let k = 0; k < segs; k++) { const u0 = -eu + 0.04 + (2 * eu - 0.08) * k / segs, u1 = -eu + 0.04 + (2 * eu - 0.08) * (k + 1) / segs; const um = (u0 + u1) / 2;
+        K.log(at(u0, ridgeY + rr[2] - sagY(um), 0), at(u1, ridgeY + rr[2] - sagY(um), 0), rr[0], turf || thatch ? topCol : (r[1] || dim(col, 0.85)), rr[1]); } });
+      else K.as('beam', () => { for (const sd of [-1, 1]) K.bar(S(-eu, s0 + 0.13, T + 0.025, sd), S(eu, s0 + 0.13, T + 0.025, sd), sc(tD(sd), 0.26), sc(nN(sd), 0.05), dim(col, 0.72)); }); }
+    // the barge boards: crossed over the ridge in the north, their ends carved by how rich the house is; elsewhere a plain board
+    if (!thatch) {
+      const bw = turf ? 0.3 : T + 0.12, bt = 0.06, cross = nord; const cls = K.cls || 0; const hv = K.hv(5);
+      const style = !cross ? 0 : cls >= 3 ? 3 : cls === 2 ? (hv < 0.7 ? 3 : 2) : cls === 1 ? (hv < 0.5 ? 2 : 1) : (hv < 0.55 ? 1 : 0);
+      const bc = nord ? nordWood(K).dark : (P.trim || '#6b4a30'); const ext = cross ? 0.4 + Math.min(0.35, D * 0.06) : 0;
+      const paint = cls >= 2 || (cls === 1 && K.hv(6) < 0.4) ? (P.trim || '#a23c2a') : null;
+      K.as('beam', () => { for (const e of [-1, 1]) for (const sd of [-1, 1]) {
+        const ub = e * (eu + bt / 2 + 0.005); const sMid = -(T / 2) * sa / ca;
+        const a = S(ub, run + (turf ? 0.06 : 0.03), T / 2, sd), b2 = S(ub, cross ? sMid - ext : sMid, T / 2, sd);
+        K.bar(a, b2, sc(nN(sd), bw), sc(rU, bt), bc);
+        if (cross && style > 0) { const d = [b2[0] - a[0], b2[1] - a[1], b2[2] - a[2]]; const l = Math.hypot(d[0], d[1], d[2]); bargeEnd(K, b2, [d[0] / l, d[1] / l, d[2] / l], vec(0, 0, -sd), sc(rU, bt), bw * 0.8, style, bc, paint, cls >= 2 ? (P.acc || '#d8b25a') : '#1e1610'); }
+      } });
+      // (the purlins' ends under the gables, round logs past the boards)
+      if (nord) K.as('beam', () => { for (const e of [-1, 1]) { for (const sd of [-1, 1]) for (const f of [0.42, 0.8]) K.log(S(e * (L / 2 - 0.1), sw * f, -0.16, sd), S(e * (eu + 0.07), sw * f, -0.16, sd), 0.075, dim(bc, 0.95));
+        K.log(at(e * (L / 2 - 0.1), y + h - 0.17, 0), at(e * (eu + 0.08), y + h - 0.17, 0), 0.085, dim(bc, 0.95)); } });
     }
+    // a turf roof's log along the eaves, on its hooks, that holds the turf from sliding; the grass growing over it all
+    if (turf) {
+      const tc = K.turf; const lc = mixc([104, 94, 80], tc.soil, 0.2);
+      K.as('bark', () => { for (const sd of [-1, 1]) for (let k = 0; k < 3; k++) { const u0 = -eu + 0.03 + (2 * eu - 0.06) * k / 3, u1 = -eu + 0.03 + (2 * eu - 0.06) * (k + 1) / 3, um = (u0 + u1) / 2;
+        const a = S(u0, run + 0.07, 0.09, sd), b2 = S(u1, run + 0.07, 0.09, sd); a[1] -= sagY(um); b2[1] -= sagY(um); K.log(a, b2, 0.085, lc); } });
+      if (K.fine) K.as('beam', () => { const n = Math.max(2, Math.round(2 * eu / 0.62)); const dk = dim(P.wr || '#5f4630', 0.8);
+        for (const sd of [-1, 1]) for (let k = 0; k < n; k++) { const u = -eu + 2 * eu * (k + 0.5) / n; const sy = -sagY(u);
+          const a = S(u, run - 0.12, -0.03, sd), b2 = S(u, run + 0.2, -0.03, sd), c2 = S(u, run + 0.19, -0.06, sd), d2 = S(u, run + 0.19, 0.16, sd); for (const p of [a, b2, c2, d2]) p[1] += sy;
+          K.bar(a, b2, sc(nN(sd), 0.045), sc(rU, 0.05), dk); K.bar(c2, d2, sc(tD(sd), 0.045), sc(rU, 0.05), dk); } });
+      // (tufts: hanging over the log, standing on the ridge and over the barge boards, scattered on the slopes; a flower now and then)
+      const gp = K.gp; const W0 = [K.x0, K.y0, K.z0]; let kk = 0;
+      const blade = (p, d, len, w, sw2, tip) => { const k = kk++; const l = Math.hypot(d[0], d[1], d[2]) || 1; const X = W0[0] + p[0], Y = W0[1] + p[1], Z = W0[2] + p[2]; const a = G.hash(seed * 613 + k) * TAU;
+        gp.blade(X, Y, Z, w, a, X + d[0] / l * len, Y + d[1] / l * len, Z + d[2] / l * len, tc.tuft, tip || mixc(tc.tip, tc.grass, G.hash(seed + k * 3) * 0.6), sw2); };
+      for (const sd of [-1, 1]) {
+        const ne = Math.round(2 * eu / 0.13);
+        for (let k = 0; k < ne; k++) { const hh = G.hash(seed * 31 + k * 7 + (sd > 0 ? 1 : 0)); const u = -eu + 0.08 + (2 * eu - 0.16) * (k + hh * 0.8) / ne; const p = S(u, run + 0.02, T * 0.9, sd); p[1] -= sagY(u);
+          blade(p, add(add(sc(tD(sd), 0.6), [0, -0.5 - hh * 0.4, 0]), sc(rU, (hh - 0.5) * 0.7)), 0.14 + 0.16 * G.hash(k * 5 + seed), 0.09, 0.8); }
+        const nsf = Math.round(2 * eu * run * 0.9);
+        for (let k = 0; k < nsf; k++) { const i = G.hash(seed * 17 + k * 11 + sd) * nu, j = 0.6 + G.hash(seed * 23 + k * 13 + sd) * (ns - 1.2); const i0 = Math.floor(i), j0 = Math.floor(j);
+          const p = top(Math.min(nu, i0), Math.min(ns, j0), sd); const lean = add(nN(sd), add(sc(tD(sd), 0.35), sc(rU, (G.hash(k + seed) - 0.5) * 0.8)));
+          for (let q = 0; q < 3; q++) blade([p[0] + (q - 1) * 0.04, p[1] - 0.02, p[2] + (q - 1) * 0.03], add(lean, [0, q * 0.2, 0]), 0.12 + 0.14 * G.hash(k * 3 + q), 0.07, 0.7); }
+        for (const e of [-1, 1]) for (let j = 1; j < ns; j++) { const p = top(e < 0 ? 0 : nu, j, sd); blade([p[0], p[1] + 0.02, p[2]], add(sc(rU, e * 0.5), add(nN(sd), [0, 0.3, 0])), 0.12 + 0.1 * G.hash(j * 7 + seed + e), 0.08, 0.7); }
+      }
+      const nr = Math.round(2 * eu / 0.11);
+      for (let k = 0; k < nr; k++) { const u = -eu + 0.1 + (2 * eu - 0.2) * k / nr; const p = at(u, ridgeY + 0.06 - sagY(u), (G.hash(k * 3 + seed) - 0.5) * 0.18); blade(p, [(G.hash(k + seed * 5) - 0.5) * 0.7, 1, (G.hash(k * 7 + seed) - 0.5) * 0.7], 0.16 + 0.18 * G.hash(k * 11 + seed), 0.09, 0.85); }
+      // (flowers on the old roofs: yellow, white, a pink thrift)
+      const nf = Math.round(tc.age * 10); const FL = [[236, 206, 84], [238, 234, 220], [214, 128, 168]];
+      for (let k = 0; k < nf; k++) { const sd = k % 2 ? 1 : -1; const p = top(Math.floor(G.hash(seed * 41 + k) * nu), 1 + Math.floor(G.hash(seed * 43 + k) * (ns - 2)), sd); const fc = FL[Math.floor(G.hash(k * 9 + seed) * 3)];
+        blade(p, add(nN(sd), [0, 0.6, 0]), 0.2, 0.03, 0.8, [90, 120, 60]); const tp = add(p, sc(add(nN(sd), [0, 0.6, 0]), 0.16)); for (let q = 0; q < 3; q++) blade(tp, [Math.cos(q * 2.1), 0.3, Math.sin(q * 2.1)], 0.06, 0.06, 0.8, fc); }
+    }
+    K.roof = { at, S, nN, tD, rU, vec, eu, run, T, h, ang, ridgeY, alongZ, L, D, sw, sagY, y };
     return y + h;
+  }
+  // (where the windows of a wall are, as openings() puts them: their middles along it, the door's place on the ground floor)
+  const winAt = (len, n) => { const out = []; for (let k = 0; k < n; k++) out.push(-len / 2 + len * (k + 0.5) / n); return out; };
+  // the walls of the classical and the warm lands, as each people builds them — the half-timber of the classical towns as
+  // timber standing out of the plaster (posts by the windows and at the corners, rails at the sills and the lintels, braces
+  // in the corner panels), the stone socle and the cornice of the Greek and the Roman house, the Egyptian's cornice curving
+  // out over its walls with the round moulding at its corners, the Aztec's painted socle and band
+  function warmWalls(K, x, z, sx, sz, h, floors, o) {
+    const P = K.P; const st = stuff(K.b); const civ = K.st; const fh = h / floors; const wc = o.wall || (K.b.v === 2 ? P.wr : P.wl);
+    const frame = st.wall === 'frame' && !o.wall && !o.pat;
+    // (the wall itself: plaster where the timber is geometry, the people's stuff otherwise)
+    K.as(o.pat || (frame || o.wall ? 'plaster' : st.wall), () => K.box(x, 0, z, sx, h, sz, frame ? mixc(wc, [244, 236, 214], 0.25) : wc));
+    const tr = P.trim || '#6b4a30';
+    if (frame) {
+      const side = doorSide(K.b); const wt = mixc(tr, [74, 52, 36], 0.25); const t = 0.15, pr = 0.035;
+      K.as('beam', () => {
+        for (const W2 of wallsOf(sx, sz)) {
+          const n = Math.max(1, Math.floor(W2.len / 2.3)); const ws = winAt(W2.len, n);
+          // (a timber on this face: a along it, from y0 up hy high, wa wide)
+          const tb = (a, y0, wa, hy) => K.box(x + (W2.ax ? a : W2.o[0] * (sx / 2 + pr / 2)), y0, z + (W2.ax ? W2.o[1] * (sz / 2 + pr / 2) : a), W2.ax ? wa : pr, hy, W2.ax ? pr : wa, wt);
+          const br = (a0, y0, a1, y1) => { const A = [x + (W2.ax ? a0 : W2.o[0] * (sx / 2 + pr / 2)), y0, z + (W2.ax ? W2.o[1] * (sz / 2 + pr / 2) : a0)], B = [x + (W2.ax ? a1 : W2.o[0] * (sx / 2 + pr / 2)), y1, z + (W2.ax ? W2.o[1] * (sz / 2 + pr / 2) : a1)];
+            const dx = a1 - a0, dy = y1 - y0, l = Math.hypot(dx, dy); K.bar(A, B, [W2.ax ? -dy / l * t : 0, dx / l * t, W2.ax ? 0 : -dy / l * t], [W2.o[0] * pr, 0, W2.o[1] * pr], wt); };
+          for (let f = 0; f < floors; f++) {
+            const yb = f * fh, wy = yb + fh * 0.36, wh = Math.min(1.15, fh * 0.38);
+            tb(0, yb + 0.02, W2.len, t); tb(0, wy - 0.12, W2.len, 0.1); tb(0, wy + wh + 0.02, W2.len, 0.1);
+            const posts = []; ws.forEach((a, k) => { if (f === 0 && W2.side === side && k === Math.floor(n / 2)) posts.push(a - 0.67, a + 0.67); else posts.push(a - 0.48, a + 0.48); });
+            for (const a of posts) tb(a, yb + 0.02, t, fh - 0.04);
+            // (a brace in each corner panel, leaning toward the corner)
+            const first = Math.min(...posts), last = Math.max(...posts);
+            if (first + W2.len / 2 > 0.55) { br(-W2.len / 2 + 0.12, yb + 0.12, first - 0.06, wy - 0.12); br(-W2.len / 2 + 0.12, wy + wh + 0.08, first - 0.06, yb + fh - 0.22); }
+            if (W2.len / 2 - last > 0.55) { br(W2.len / 2 - 0.12, yb + 0.12, last + 0.06, wy - 0.12); br(W2.len / 2 - 0.12, wy + wh + 0.08, last + 0.06, yb + fh - 0.22); }
+          }
+        }
+        for (const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.box(x + px * (sx / 2 - 0.06), 0, z + pz * (sz / 2 - 0.06), 0.2, h, 0.2, wt);
+      });
+    } else if (civ === 'grego' || civ === 'romano' || civ === 'classico') {
+      // (a socle of stone round the foot, a band at each floor, a cornice under the eaves)
+      K.as('stone', () => K.box(x, 0, z, sx + 0.06, 0.42, sz + 0.06, P.base ? P.base[1] : '#8a8478'));
+      for (let f = 1; f < floors; f++) K.as('plaster', () => K.box(x, f * fh - 0.1, z, sx + 0.08, 0.16, sz + 0.08, dim(wc, 0.86)));
+    } else if (civ === 'egipcio') {
+      // (the round moulding up the corners)
+      K.as('plaster', () => { for (const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.cyl(x + px * sx / 2, 0.1, z + pz * sz / 2, 0.09, h - 0.1, dim(wc, 0.92)); });
+    } else if (civ === 'asteca') {
+      K.as('plaster', () => { K.box(x, 0, z, sx + 0.05, 0.5, sz + 0.05, P.trim2 || '#2fae8f'); K.box(x, 0.5, z, sx + 0.04, 0.08, sz + 0.04, P.trim || '#b33a2a'); });
+    }
+    // (the floors between storeys and the band at the top: timber in the timber lands, a band of plaster elsewhere)
+    if (!frame) K.as(civ === 'grego' || civ === 'romano' || civ === 'egipcio' || civ === 'asteca' ? 'plaster' : 'beam', () => { for (let f = 1; f < floors; f++) if (civ !== 'grego' && civ !== 'romano') K.box(x, f * fh - 0.12, z, sx + 0.14, 0.24, sz + 0.14, civ === 'asteca' ? (P.trim || '#b33a2a') : tr); });
+  }
+  // the Aztec town house as the god's view draws it: storey on storey, each set back from the one under it, a terrace with its
+  // parapet and its pots of flowers at every step, the painted bands at each floor
+  function stepped(g, gw, K, o, x, z, sx, sz, h, floors) {
+    const P = K.P; const fh = h / floors; const back = Math.min(0.5, Math.min(sx, sz) * 0.12); let top = h;
+    for (let f = 0; f < floors; f++) {
+      const fx = sx - f * back * 2, fz = sz - f * back * 2, yb = f * fh;
+      K.as('plaster', () => K.box(x, yb, z, fx, fh, fz, f % 2 ? P.wr : P.wl));
+      if (!f) K.as('plaster', () => { K.box(x, 0, z, fx + 0.05, 0.5, fz + 0.05, P.trim2 || '#2fae8f'); K.box(x, 0.5, z, fx + 0.04, 0.08, fz + 0.04, P.trim || '#b33a2a'); });
+      K.as('plaster', () => K.box(x, yb + fh - 0.36, z, fx + 0.06, 0.3, fz + 0.06, f % 2 ? (P.trim2 || '#2fae8f') : (P.trim || '#b33a2a')));
+      openings(g, gw, K, x, z, fx, fz, yb, fh, 1, f === 0 ? o.door : false);
+      if (f < floors - 1) {
+        // (the terrace: the floor of the step, its low parapet, flowers along it)
+        const tx = fx + 0.1, tz = fz + 0.1, pc = (P.par && P.par[0]) || P.wl;
+        K.as('slab', () => K.box(x, yb + fh, z, tx, 0.12, tz, P.top || P.wl));
+        K.as('plaster', () => { for (const [px, pz, a2, b2] of [[x, z - tz / 2 + 0.07, tx, 0.14], [x, z + tz / 2 - 0.07, tx, 0.14], [x - tx / 2 + 0.07, z, 0.14, tz], [x + tx / 2 - 0.07, z, 0.14, tz]]) K.box(px, yb + fh + 0.12, pz, a2, 0.34, b2, pc); });
+        const n = Math.max(2, Math.round(fx / 1.2)); const side = doorSide(K.b); const so = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[side];
+        for (let k = 0; k < n; k++) { const a2 = -fx / 2 + fx * (k + 0.5) / n; const px = x + (so[1] ? a2 : so[0] * (tx / 2 - 0.22)), pz = z + (so[1] ? so[1] * (tz / 2 - 0.22) : a2); const py = yb + fh + 0.12;
+          K.as('mud', () => K.cyl(px, py, pz, 0.15, 0.26, '#b8683a'));
+          const fl = K.hv(130 + k + f * 9) < 0.5 ? [224, 90, 122] : K.hv(140 + k) < 0.5 ? [236, 196, 70] : [96, 164, 72];
+          for (let q = 0; q < 3; q++) { const a3 = q * 2.1 + k; K.gp.blade(K.x0 + px, K.y0 + py + 0.24, K.z0 + pz, 0.14, a3, K.x0 + px + Math.cos(a3) * 0.12, K.y0 + py + 0.62, K.z0 + pz + Math.sin(a3) * 0.12, [70, 120, 50], q ? [90, 156, 70] : fl, 0.5); } }
+      } else top = roofOf(K, x, z, fx, fz, yb + fh, 'flat');
+    }
+    K.body = { x, z, sx, sz, door: K.body && K.body.door };
+    return top;
+  }
+  // a balcony of planks on brackets along the wall with the door, on the top floor: its posts and its rail
+  function balcony(K, x, z, sx, sz, h, floors) {
+    const side = doorSide(K.b); const o = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[side]; const ax = o[1] !== 0;
+    const len = (ax ? sx : sz) * 0.72, dep = 0.62, yb = (floors - 1) * h / floors + 0.02; const wc = [118, 86, 58];
+    const fx = x + o[0] * sx / 2, fz = z + o[1] * sz / 2; const D = (a, y, n) => [fx + (ax ? a : 0) + o[0] * n, y, fz + (ax ? 0 : a) + o[1] * n];
+    const bx = (a, y, n, wa, hy, wn, col) => { const q = D(a, y, n); K.box(q[0], q[1], q[2], ax ? wa : wn, hy, ax ? wn : wa, col); };
+    K.as('plankH', () => bx(0, yb, dep / 2, len, 0.07, dep, wc));
+    K.as('beam', () => {
+      const n = Math.max(3, Math.round(len / 0.32)); for (let k = 0; k <= n; k++) bx(-len / 2 + 0.03 + (len - 0.06) * k / n, yb + 0.07, dep - 0.04, 0.045, 0.85, 0.045, dim(wc, 0.9));
+      for (const e of [-1, 1]) bx(e * (len / 2 - 0.03), yb + 0.07, dep / 2, 0.045, 0.85, dep, dim(wc, 0.9));
+      bx(0, yb + 0.92, dep - 0.04, len + 0.04, 0.06, 0.08, dim(wc, 0.82));
+      // (the brackets under it, into the wall)
+      for (const e of [-0.36, 0.36]) K.bar(D(e * len, yb - 0.55, 0.04), D(e * len, yb - 0.02, dep - 0.08), [0, 0.07, 0], ax ? [0.07, 0, 0] : [0, 0, 0.07], dim(wc, 0.85));
+    });
   }
   // a plain house body: walls, windows, door, roof — the base of most buildings; the walls of the people's stuff
   // (half-timber in the classical lands, plaster, mud brick, planks), floors between the storeys, a chimney
   function house(g, gw, K, o) {
-    o = o || {}; const P = K.P; const inset = o.inset === undefined ? 0.35 : o.inset;
-    const sx = K.w - inset * 2, sz = K.d - inset * 2, x = K.w / 2, z = K.d / 2; const floors = o.floors || 1; const h = (o.h || 2.6) * floors;
+    o = o || {}; const P = K.P; const inset = o.inset === undefined ? 0.35 : o.inset; const B0 = o.body; // (body: a box given — the shop of a smithy)
+    const sx = B0 ? B0.sx : K.w - inset * 2, sz = B0 ? B0.sz : K.d - inset * 2, x = B0 ? B0.x : K.w / 2, z = B0 ? B0.z : K.d / 2; const floors = o.floors || 1; const h = (o.h || 2.6) * floors;
     const built = K.prog; const st = stuff(K.b);
+    if (built >= 1 || o.body) { const sd = doorSide(K.b); K.body = { x, z, sx, sz, door: o.door === false ? null : { side: sd, o: { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[sd], a: 0, w: 1.42 } }; }
+    // (the north builds in timber whatever the house is for: its walls, door, windows and turf as the longhouse's)
+    if (styleOf(K.b) === 'nordico' && built >= 1 && (!o.pat || o.pat === 'plankV') && (o.roof || P.kind) === 'turf' && !o.noRoof) return nordHouse(g, gw, K, o, x, z, sx, sz, h, floors);
     const wallsH = h * (built < 1 ? G.clamp(built / 0.8, 0.08, 1) : 1);
-    K.as(o.pat || (o.wall ? 'plaster' : st.wall), () => K.box(x, 0, z, sx, wallsH, sz, o.wall || (K.b.v === 2 ? P.wr : P.wl)));
-    // (the posts at the corners of a timber frame; floors between the storeys, a band of trim)
-    if (st.wall === 'frame' && !o.wall && !o.pat) K.as('beam', () => { for (const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.box(x + px * (sx / 2 - 0.08), 0, z + pz * (sz / 2 - 0.08), 0.24, wallsH, 0.24, P.trim || '#6b4a30'); K.box(x, 0, z, sx + 0.06, 0.24, sz + 0.06, P.trim || '#6b4a30'); });
-    K.as('beam', () => { for (let f = 1; f < floors && wallsH > f * h / floors; f++) K.box(x, f * h / floors - 0.12, z, sx + 0.14, 0.24, sz + 0.14, P.trim || '#6b4a30'); });
-    if (built < 1) { scaffold(K, x, z, sx, sz, h); return h; }
-    K.as('beam', () => K.box(x, h - 0.2, z, sx + 0.1, 0.2, sz + 0.1, P.trim || '#6b4a30'));
+    if (built < 1) {
+      // (going up: its walls as high as the work has got, the scaffold round them)
+      K.as(o.pat || (o.wall ? 'plaster' : st.wall), () => K.box(x, 0, z, sx, wallsH, sz, o.wall || (K.b.v === 2 ? P.wr : P.wl)));
+      K.as('beam', () => { for (let f = 1; f < floors && wallsH > f * h / floors; f++) K.box(x, f * h / floors - 0.12, z, sx + 0.14, 0.24, sz + 0.14, P.trim || '#6b4a30'); });
+      scaffold(K, x, z, sx, sz, h); return h;
+    }
+    // (a house stands on its own footing of stones; the halls and the yards whose things stand round them keep the plinth)
+    if (!o.plinth) footing(K, x, z, sx, sz, K.st !== 'egipcio' && K.st !== 'asteca');
+    if (K.st === 'asteca' && floors > 1 && (o.roof || P.kind) === 'flat' && !o.noRoof && !o.wall) return stepped(g, gw, K, o, x, z, sx, sz, h, floors);
+    warmWalls(K, x, z, sx, sz, h, floors, o);
+    K.as(K.st === 'egipcio' ? 'plaster' : 'beam', () => K.box(x, h - 0.2, z, sx + 0.1, 0.2, sz + 0.1, K.st === 'egipcio' ? (P.trim || '#2f8f8a') : (P.trim || '#6b4a30')));
     openings(g, gw, K, x, z, sx, sz, 0, h, floors, o.door);
+    // (the wooden balcony of the classical and the southern town houses, on the floor under the roof, over the door)
+    if (floors >= 2 && (K.st === 'classico' || K.st === 'grego' || K.st === 'romano') && (K.b.type === 'sobrado' || K.b.type === 'insula') && K.hv(18) < 0.75) balcony(K, x, z, sx, sz, h, floors);
     const top = o.noRoof ? h : roofOf(K, x, z, sx, sz, h, o.roof, o.roofCols);
     // (the flat roofs of the south, as the god draws them: the Egyptian house with its awning of cloth and its wind-catcher,
     // the Aztec one with a band of colour under the parapet and pots of plants on the terrace)
@@ -357,23 +767,261 @@ float m3scale(float p) {
       B3.chim.set(K.b.id, [K.x0 + x + sx * 0.28, K.y0 + top + 0.95, K.z0 + z - sz * 0.18]); } // (where its smoke comes out: FX3D)
     return top;
   }
-  // the longhouse of the northern people (the god's view: low planked walls, a tall roof of turf on them, dragon
-  // heads at the ends of the ridge, the door in the long side); f: its length and walls grow with the storeys
-  function longhouse(g, gw, K, f) {
-    const P = K.P; f = f || 1; const sx = Math.min(K.w - 0.4, K.w * (0.84 + f * 0.04)), sz = K.d * 0.64, x = K.w / 2, z = K.d / 2; const h = 1.7 + f * 0.45;
-    const along = K.w >= K.d; const lx = along ? sx : sz, lz = along ? sz : sx;
-    if (K.prog < 1) { scaffold(K, x, z, lx, lz, h + 2); return; }
-    K.as('plankV', () => K.box(x, 0, z, lx, h, lz, P.wl));
-    K.as('beam', () => { K.box(x, h - 0.25, z, lx + 0.1, 0.25, lz + 0.1, P.trim || '#a23c2a'); for (const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.box(x + px * (lx / 2 - 0.1), 0, z + pz * (lz / 2 - 0.1), 0.26, h, 0.26, P.wr); });
-    openings(g, gw, K, x, z, lx, lz, 0, h + 0.3, 1);
-    const top = roofOf(K, x, z, lx, lz, h, 'turf');
+  // a timber building of the north that is not a home — the workshop, the store, the barn, the hall: the longhouse's walls,
+  // door, windows and turf over the body the house's kind asks for, a chimney of stone where a fire works, the smoke hole
+  // elsewhere; the hall-like ones (temple, chief's house, barracks, inn) carved as the rich carve theirs
+  function nordHouse(g, gw, K, o, x, z, sx, sz, h, floors) {
+    const P = K.P; const cls = K.cls = ({ temple: 2, palacio: 3, paco: 3, quartel: 2, taverna: 2, administracao: 2, coletoria: 1, biblioteca: 2 })[K.b.type] || 1;
+    const side = doorSide(K.b); const along = sx > sz + 0.01 ? true : sz > sx + 0.01 ? false : ridgeX(K.b, side); const hf = h / floors;
+    if (!o.plinth) footing(K, x, z, sx, sz);
+    nordWalls(K, x, z, sx, sz, h, cls, side, o.wall);
+    if (floors > 1) K.as('beam', () => { for (let f = 1; f < floors; f++) K.box(x, f * hf - 0.12, z, sx + 0.12, 0.22, sz + 0.12, P.wr || '#5f4630'); });
+    const door = o.door === false ? null : nordDoor(K, x, z, sx, sz, hf, side, cls, along);
+    for (let f = 0; f < floors; f++) nordWindows(gw, K, x, z, sx, sz, hf, cls, along, door, f * hf);
+    const top = roofOf(K, x, z, sx, sz, h, 'turf', null, !along);
+    nordGables(gw, K, cls);
+    if (o.chimney) {
+      // (a chimney of fieldstone through the turf, its cap a flat stone)
+      const R = K.roof; const u = R.L * 0.22, v = -R.D * 0.18; const c0 = R.at(u, 0, v); const yTop = top + 0.75;
+      K.as('rock', () => { K.box(c0[0], h * 0.6, c0[2], 0.7, yTop - h * 0.6, 0.7, P.base ? P.base[1] : '#6f6a60'); K.box(c0[0], yTop, c0[2], 0.86, 0.12, 0.86, P.base ? P.base[0] : '#8a8478'); });
+      B3.chim.set(K.b.id, [K.x0 + c0[0], K.y0 + yTop + 0.2, K.z0 + c0[2]]);
+    } else smokeHole(K, cls);
+    K.body = { x, z, sx, sz, door };
     return top;
   }
-  // a building going up: the poles of the scaffold, a pile of wood
+  // the smithy and the workshop, as the god's view draws the forge: the shop behind and, on the side of its door, the open
+  // work floor under a roof on posts — for the smith, the hearth of stone against the shop's wall with its hood and its tall
+  // chimney. What is worked there (the anvil, the tub, the coal and the tools; the bench, the trestle, the planks) is
+  // Props3D's, on the floor this leaves (K.body.floor)
+  function smithy(g, gw, K, o) {
+    if (K.prog < 1) return house(g, gw, K, o);
+    const P = K.P; const side = doorSide(K.b); const od = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[side]; const ax = od[1] !== 0;
+    // (the lot's frame: a along the door's wall, n from the back toward the door)
+    const hd = (ax ? K.d : K.w) / 2, inset = 0.35; const wid = (ax ? K.w : K.d) - inset * 2, dep = hd * 2 - inset * 2;
+    const at = (a, y, n) => [K.w / 2 + (ax ? a : od[0] * n), y, K.d / 2 + (ax ? od[1] * n : a)];
+    const fd = Math.min(2.7, dep * 0.36), bd = dep - fd, nb = -hd + inset + bd / 2, nf0 = -hd + inset + bd, nf1 = hd - 0.16;
+    const c = at(0, 0, nb); const top = house(g, gw, K, Object.assign({}, o, { body: { x: c[0], z: c[2], sx: ax ? wid : bd, sz: ax ? bd : wid }, chimney: o.kind === 'forge' ? false : o.chimney }));
+    const B = K.body; const doorA = B && B.door ? B.door.a : 0; const h = o.h || 3.2;
+    // (the floor: on a footing house, beaten earth a step over the ground, its edge of stones; on a plinth, the plinth)
+    const fy = K.footed ? -0.24 : 0; const nord = K.st === 'nordico';
+    if (K.footed) { const m = at(0, 0, (nf0 + nf1) / 2); K.as('soil', () => K.box(m[0], K.lo - K.y0 - 0.1, m[2], ax ? wid : nf1 - nf0, K.y0 - K.lo + 0.1 + fy, ax ? nf1 - nf0 : wid, [112, 94, 72]));
+      const e = at(0, 0, nf1 - 0.1); K.as('rock', () => K.box(e[0], fy - 0.18, e[2], ax ? wid + 0.06 : 0.2, 0.22, ax ? 0.2 : wid + 0.06, P.base ? P.base[2] : '#8e877b')); }
+    // (the posts and the beam along the front, the roof of the floor sloping down from the shop's wall)
+    const ph = Math.min(2.3, h - 0.5), wc = nord ? (P.wr || '#5f4630') : '#6a5038'; const np = wid > 5.5 ? 3 : 2;
+    K.as('beam', () => { for (let k = 0; k < np; k++) { const a = -wid / 2 + 0.12 + (wid - 0.24) * k / (np - 1); if (np === 3 && k === 1 && Math.abs(a - doorA) < 0.9) continue; const p = at(a, 0, nf1 - 0.14); K.box(p[0], fy, p[2], 0.2, ph - fy, 0.2, wc); }
+      const p = at(0, 0, nf1 - 0.14); K.box(p[0], ph - 0.18, p[2], ax ? wid : 0.22, 0.2, ax ? 0.22 : wid, wc); });
+    const rA = at(0, h - 0.06, nf0 - 0.04), rB = at(0, ph - 0.05, nf1 + 0.22);
+    K.as(nord ? 'turf' : (stuff(K.b).tile === 'mud' ? 'tile' : stuff(K.b).tile), () => K.bar(rA, rB, [0, 0.14, 0], ax ? [wid + 0.36, 0, 0] : [0, 0, wid + 0.36], nord ? turfTone(K).grass : ((P.roof && P.roof[1]) || '#94452d')));
+    K.as('plankH', () => K.bar([rA[0], rA[1] - 0.09, rA[2]], [rB[0], rB[1] - 0.09, rB[2]], [0, 0.04, 0], ax ? [wid + 0.3, 0, 0] : [0, 0, wid + 0.3], dim(wc, 0.85)));
+    // (the smith's hearth against the wall, away from the door, its hood and the chimney through the roof)
+    let hearthA = null;
+    if (o.kind === 'forge') {
+      hearthA = (doorA > 0.2 ? -1 : doorA < -0.2 ? 1 : K.hv(15) < 0.5 ? -1 : 1) * (wid / 2 - 0.95); const hc = P.base ? P.base[1] : '#6f6a60';
+      const p = at(hearthA, 0, nf0 + 0.5); K.as('rock', () => { K.box(p[0], fy, p[2], 1.3, 0.82 - fy, 1.0, hc); K.hip(p[0], 1.65, p[2], 1.3, 0.75, 1.0, dim(hc, 0.9)); });
+      K.box(p[0], 0.83, p[2], 0.95, 0.05, 0.62, '#2a1a14'); for (let k = 0; k < 4; k++) K.sph(p[0] + (K.hv(16 + k) - 0.5) * 0.6, 0.86, p[2] + (K.hv(20 + k) - 0.5) * 0.36, 0.07, k % 2 ? '#a8401c' : '#d06428', 0.04);
+      const R = K.roof; const q = at(hearthA, 0, nf0 - 0.36); let yT = top + 0.8;
+      if (R) { const v = R.alongZ ? q[0] - B.x : q[2] - B.z; yT = Math.max(R.y + 1.2, R.y + R.h - Math.tan(R.ang) * Math.abs(v) + R.T / Math.cos(R.ang) + 1.1); }
+      K.as('rock', () => { K.box(q[0], 1.6, q[2], 0.66, yT - 1.6, 0.66, hc); K.box(q[0], yT, q[2], 0.82, 0.12, 0.82, P.base ? P.base[0] : '#8a8478'); });
+      B3.chim.set(K.b.id, [K.x0 + q[0], K.y0 + yT + 0.2, K.z0 + q[2]]);
+    }
+    if (B) B.floor = { ax, od, a0: -wid / 2 + 0.2, a1: wid / 2 - 0.2, n0: nf0 + 0.08, n1: nf1 - 0.3, y: fy, doorA, hearthA, kind: o.kind, at };
+    return top;
+  }
+  // the longhouse of the northern people (the god's view: low planked walls, a roof of turf on them, the door in the long
+  // side; f: its length and walls grow with the storeys). It stands on a sill on a footing of stones — corner posts, posts
+  // between the planks, the wall plate under the eaves; a door in its portal, with its iron; a few small windows with
+  // shutters; the turf roof with its log and its crossed, carved barge boards; the smoke hole on the ridge. How rich it is
+  // (cls: 0 a cabin, 1 a house, 2 a big house, 3 a hall) shows in its size, its carving, its paint, its shields; its own id
+  // picks the rest — a woodshed at one end, the door off the middle, the windows and shutters, the age of its turf
+  function longhouse(g, gw, K, f) {
+    f = f || 1; const cls = f < 0.8 ? 0 : f < 1.5 ? 1 : f < 2.5 ? 2 : 3; K.cls = cls;
+    const side = doorSide(K.b); const od = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[side];
+    // (the ridge along the lot's long side; on a square lot along the wall with the door — the door in the long side, as
+    // the north builds — save now and then a house entered by its gable)
+    const along = K.w > K.d + 0.01 ? true : K.d > K.w + 0.01 ? false : ridgeX(K.b, side);
+    const Ll = along ? K.w : K.d, Dl = along ? K.d : K.w;
+    let ll = Math.min(Ll - 0.4, Ll * (0.84 + f * 0.04)); const dd = Dl * 0.64; const h = 1.7 + f * 0.45;
+    let x = K.w / 2, z = K.d / 2;
+    if (K.prog < 1) {
+      // (going up: the footing laid, the sill and the corner posts standing, the planks rising with the work; the scaffold round)
+      const lx = along ? ll : dd, lz = along ? dd : ll, k = K.prog; const wd = K.P.wr || '#5f4630';
+      if (k > 0.08) footing(K, x, z, lx, lz);
+      if (k > 0.2) K.as('beam', () => { K.box(x, 0, z, lx + 0.1, 0.2, lz + 0.1, dim(wd, 0.92)); const ph = h * G.clamp((k - 0.2) / 0.4, 0.1, 1); for (const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.box(x + px * (lx / 2 - 0.08), 0, z + pz * (lz / 2 - 0.08), 0.26, ph, 0.26, wd); });
+      if (k > 0.45) K.as('plankV', () => K.box(x, 0.2, z, lx - 0.06, h * G.clamp((k - 0.45) / 0.45, 0.05, 1) - 0.2, lz - 0.06, mixc(K.P.wl || '#7e5e40', [168, 132, 92], 0.35)));
+      scaffold(K, x, z, lx, lz, h + 2); return;
+    }
+    const gableDoor = along ? od[0] !== 0 : od[1] !== 0;
+    // (a woodshed against one gable — never the door's — the house itself that much shorter)
+    let lean = 0, lt = 0; if (cls <= 1 && K.hv(1) < 0.42) { lean = gableDoor ? -(along ? od[0] : od[1]) : (K.hv(2) < 0.5 ? -1 : 1); lt = Math.min(1.05, ll * 0.27); ll -= lt; if (along) x -= lean * lt / 2; else z -= lean * lt / 2; }
+    const lx = along ? ll : dd, lz = along ? dd : ll;
+    footing(K, x, z, lx, lz);
+    nordWalls(K, x, z, lx, lz, h, cls, side);
+    const door = nordDoor(K, x, z, lx, lz, h, side, cls, along);
+    nordWindows(gw, K, x, z, lx, lz, h, cls, along, door);
+    const top = roofOf(K, x, z, lx, lz, h, 'turf', null, !along);
+    nordGables(gw, K, cls);
+    smokeHole(K, cls);
+    if (lean) leanTo(K, x, z, lx, lz, h, lean, lt, along);
+    if (cls >= 3) shields(K, x, z, lx, lz, h, along, door);
+    // (the body's box and its door, for what lies about the house: Props3D; a woodshed's end is taken)
+    K.body = { x, z, sx: lx, sz: lz, door, lean: lean ? (along ? [lean, 0] : [0, lean]) : null, along };
+    return top;
+  }
+  // the walls of a timber house of the north: planks standing on a sill, corner posts, posts between the planks (not on the
+  // wall with the door), the wall plate under the eaves; a painted band on the houses of the rich
+  // (the timber of the north: dark and weathered, not the paint-box brown — each house its own shade of the years)
+  function nordWood(K) {
+    const P = K.P; const base = mixc(P.wl || '#7e5e40', K.hv(10) < 0.5 ? [92, 82, 70] : [120, 92, 66], 0.2 + K.hv(11) * 0.3);
+    return { wall: calm(base, 0.68, 0.86), dark: calm(P.wr || '#5f4630', 0.7, 0.88) };
+  }
+  function nordWalls(K, x, z, lx, lz, h, cls, side, wallCol) {
+    const P = K.P; const NW = nordWood(K); const wd = NW.dark;
+    const wall = wallCol ? calm(mixc(wallCol, [126, 94, 64], 0.08 + K.hv(11) * 0.1), 0.8, 0.88) : NW.wall;
+    K.as('plankV', () => K.box(x, 0, z, lx, h, lz, wall));
+    K.as('beam', () => {
+      K.box(x, 0, z, lx + 0.1, 0.2, lz + 0.1, dim(wd, 0.92)); K.box(x, h - 0.2, z, lx + 0.09, 0.2, lz + 0.09, wd);
+      for (const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.box(x + px * (lx / 2 - 0.08), 0, z + pz * (lz / 2 - 0.08), 0.26, h, 0.26, wd);
+      if (K.fine) for (const W2 of wallsOf(lx, lz)) { if (W2.side === side) continue; const nb = bays(W2.len);
+        for (let k = 1; k < nb; k++) { const a = -W2.len / 2 + W2.len * k / nb; K.box(x + (W2.ax ? a : W2.o[0] * (lx / 2 + 0.012)), 0.2, z + (W2.ax ? W2.o[1] * (lz / 2 + 0.012) : a), W2.ax ? 0.15 : 0.05, h - 0.4, W2.ax ? 0.05 : 0.15, dim(wd, 1.06)); } }
+    });
+    if (cls >= 2) K.as('beam', () => K.box(x, h - 0.31, z, lx + 0.03, 0.09, lz + 0.03, P.trim || '#a23c2a'));
+  }
+  // (the four walls of a box: the side each faces, its outward way, whether it runs along X, its length; and how many bays)
+  const wallsOf = (lx, lz) => [{ side: 'S', o: [0, 1], ax: true, len: lx }, { side: 'N', o: [0, -1], ax: true, len: lx }, { side: 'E', o: [1, 0], ax: false, len: lz }, { side: 'W', o: [-1, 0], ax: false, len: lz }];
+  const bays = len => Math.max(1, Math.round(len / 1.25));
+  // the door of a timber house of the north: planks in a portal of posts and a lintel, a threshold, the iron straps of its
+  // hinges and a ring; on the better houses a carved peak over it and paint, on a gable a little roof on brackets; the
+  // stone step before it, down to the ground. Gives back where it is (for the windows to keep clear of it)
+  function nordDoor(K, x, z, lx, lz, h, side, cls, along) {
+    const P = K.P; const o = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[side]; const ax = o[1] !== 0;
+    const len = ax ? lx : lz; const gable = along ? !ax : ax;
+    const dw = cls >= 3 ? 1.25 : cls >= 2 ? 1.05 : 0.92, dh = Math.min(cls >= 2 ? 2.05 : 1.8, gable ? h + 0.45 : h - 0.24);
+    const nb = bays(len); const off = gable || nb < 3 ? 0 : (K.hv(6) < 0.5 ? -1 : 1) * (K.hv(6) < 0.25 || K.hv(6) > 0.75 ? len / nb : 0);
+    const fx = x + o[0] * lx / 2 + (ax ? off : 0), fz = z + o[1] * lz / 2 + (ax ? 0 : off);
+    // (in the door's frame: a along the wall, n out of it)
+    const D = (a, y, n) => [fx + (ax ? a : 0) + o[0] * n, y, fz + (ax ? 0 : a) + o[1] * n];
+    const bx = (a, y, n, wa, hy, wn, col) => { const p = D(a, y, n); K.box(p[0], p[1], p[2], ax ? wa : wn, hy, ax ? wn : wa, col); };
+    const hv = K.hv(12); const leaf = hv < 0.3 ? mixc(P.door || '#3a2616', [104, 98, 88], 0.38) : cls >= 2 && hv > 0.6 ? mixc(P.trim || '#a23c2a', P.door || '#3a2616', 0.5) : (P.door || '#3a2616');
+    K.as('plankV', () => bx(0, 0.06, 0.04, dw, dh - 0.06, 0.07, leaf));
+    const fc = nordWood(K).dark;
+    K.as('beam', () => {
+      for (const s of [-1, 1]) bx(s * (dw / 2 + 0.08), 0, 0.07, 0.16, dh + 0.02, 0.17, fc);
+      bx(0, dh, 0.08, dw + 0.52, 0.2, 0.2, fc); bx(0, 0, 0.1, dw + 0.36, 0.07, 0.25, dim(fc, 0.85));
+      if (cls >= 2) for (const s of [-1, 1]) bx(s * (dw / 2 + 0.08), 0.15, 0.16, 0.06, dh - 0.3, 0.02, P.trim || '#a23c2a');
+      // (a carved peak over the lintel: two boards meeting)
+      if (cls >= 1 && (gable || h - dh > 0.62)) for (const s of [-1, 1]) { const a = D(s * (dw / 2 + 0.22), dh + 0.2, 0.09), b2 = D(0, dh + 0.42 + cls * 0.05, 0.09); const da = -s * (dw / 2 + 0.22), dy = b2[1] - a[1]; const l = Math.hypot(da, dy);
+        K.bar(a, b2, [ax ? -dy / l * 0.1 : 0, da / l * 0.1, ax ? 0 : -dy / l * 0.1], [o[0] * 0.06, 0, o[1] * 0.06], cls >= 2 ? (P.trim || '#a23c2a') : fc); }
+    });
+    // (the iron: two straps from the hinges with curled ends, a ring)
+    if (K.fine) K.as('iron', () => { const ir = '#2e2b28'; for (const fy of [0.26, 0.74]) { bx(-dw * 0.12, dh * fy, 0.085, dw * 0.66, 0.055, 0.015, ir); bx(dw * 0.22, dh * fy - 0.03, 0.085, 0.05, 0.11, 0.015, ir); }
+      const r = D(dw * 0.3, dh * 0.5, 0.075), r2 = D(dw * 0.3, dh * 0.5, 0.1); K.log(r, r2, 0.06, ir); });
+    // (on a gable, a little roof over the door on two brackets)
+    if (gable && cls >= 1 && K.hv(13) < 0.7) { const yb = dh + 0.3, dep = 0.62, wdt = dw + 0.6;
+      K.as('beam', () => { for (const s of [-1, 1]) K.bar(D(s * (wdt / 2 - 0.1), yb - 0.45, 0.03), D(s * (wdt / 2 - 0.1), yb + 0.02, dep - 0.08), [0, 0.07, 0], ax ? [0.06, 0, 0] : [0, 0, 0.06], fc); bx(0, yb - 0.03, dep / 2, wdt - 0.1, 0.03, dep, dim(fc, 0.8)); });
+      const c0 = D(0, yb, dep / 2); K.as('shingle', () => K.gable(c0[0], c0[1], c0[2], ax ? wdt : dep + 0.1, 0.42, ax ? dep + 0.1 : wdt, dim(fc, 0.9), ax)); }
+    // (the stone step before it, from the ground up to the floor — no further out than a hand past the lot)
+    const strip = stripOf(K, x, z, lx, lz, o); const sd = Math.min(0.36, strip + 0.12), sn = 0.06 + sd / 2;
+    const sp = D(0, 0, sn); const gy = Math.min(-0.36, K.gy(sp[0], sp[2]) - 0.04);
+    K.as('rock', () => bx(0, gy, sn, dw + 0.4, 0.04 - gy, sd, P.base ? P.base[2] : '#a09a8e'));
+    return { o, a: off, w: dw + 0.5, side };
+  }
+  // the windows of a timber house of the north: small and high in the bays between the posts of the long walls (and the
+  // gables of a hall), each in its frame with a sill and its shutter — open against the wall, or shut (no light in it)
+  function nordWindows(gw, K, x, z, lx, lz, h, cls, along, door, yb) {
+    const P = K.P; const fc = nordWood(K).dark; let k = yb ? 100 : 0; yb = yb || 0;
+    for (const W2 of wallsOf(lx, lz)) {
+      const long = along ? W2.ax : !W2.ax; if (!long && cls < 2) continue;
+      const nb = bays(W2.len); const ww = cls >= 2 ? 0.56 : 0.46, wh = cls >= 2 ? 0.46 : 0.38, wy = yb + Math.min(h - 0.34 - wh, h * 0.5);
+      if (yb) door = null; // (the upper floor: windows over the door too)
+      // (which bays have a window: every other one, shifted by the house's id; one fewer in a cabin)
+      const want = long ? Math.max(cls === 0 ? 0 : 1, Math.round(nb / 2) - (cls === 0 && K.hv(20 + k) < 0.5 ? 1 : 0)) : 1; let made = 0;
+      for (let q = 0; q < nb && made < want; q++) {
+        const bi = (q * 2 + Math.floor(K.hv(21 + k) * nb)) % nb; const a = -W2.len / 2 + W2.len * (bi + 0.5) / nb; k++;
+        if (door && door.side === W2.side && Math.abs(a - door.a) < door.w / 2 + ww / 2 + 0.2) continue;
+        if (Math.abs(a) > W2.len / 2 - ww / 2 - 0.25) continue; made++;
+        const o = W2.o, ax = W2.ax; const fx = x + o[0] * lx / 2 + (ax ? a : 0), fz = z + o[1] * lz / 2 + (ax ? 0 : a);
+        const bx = (da, y, n, wa, hy, wn, col) => K.box(fx + (ax ? da : 0) + o[0] * n, y, fz + (ax ? 0 : da) + o[1] * n, ax ? wa : wn, hy, ax ? wn : wa, col);
+        const open = K.hv(40 + k) < 0.62; const s = Math.abs(a) + ww * 1.5 + 0.25 > W2.len / 2 ? -Math.sign(a) || 1 : K.hv(60 + k) < 0.5 ? -1 : 1; // (the shutter swings toward the middle near a corner)
+        if (open) gw.put(SH.box, R3.mat(K.x0 + fx + o[0] * 0.03, K.y0 + wy, K.z0 + fz + o[1] * 0.03, ax ? 0 : Math.PI / 2, ww, wh, 0.05), '#28303a');
+        K.as('beam', () => { bx(0, wy - 0.07, 0.05, ww + 0.16, 0.07, 0.1, fc); bx(0, wy + wh, 0.05, ww + 0.16, 0.07, 0.1, fc); for (const e of [-1, 1]) bx(e * (ww / 2 + 0.04), wy, 0.05, 0.07, wh, 0.1, fc);
+          bx(0, wy - 0.12, 0.09, ww + 0.22, 0.05, 0.16, dim(fc, 0.9)); if (cls >= 2) bx(0, wy + wh + 0.07, 0.07, ww + 0.3, 0.08, 0.1, P.trim || '#a23c2a'); });
+        const sc2 = mixc(fc, P.wl || '#7e5e40', 0.4);
+        K.as('plankV', () => { if (open) bx(s * (ww + 0.12), wy - 0.02, 0.05, ww + 0.02, wh + 0.04, 0.04, sc2); else bx(0, wy - 0.02, 0.1, ww + 0.04, wh + 0.04, 0.04, sc2); });
+      }
+    }
+  }
+  // the gables of a timber house: a small vent high in each (dark: the smoke and the light go through it), lit at night
+  // in a hall
+  function nordGables(gw, K, cls) {
+    const R = K.roof; if (!R) return; const fc = nordWood(K).dark;
+    for (const e of [-1, 1]) { const c0 = R.at(e * (R.L / 2 + 0.02), R.y + R.h * 0.4, 0); const ax = R.alongZ; // (the gable faces along the ridge)
+      const w = cls >= 2 ? 0.42 : 0.3, hh = cls >= 2 ? 0.3 : 0.22;
+      (cls >= 3 ? gw : K.g).put(SH.box, R3.mat(K.x0 + c0[0], K.y0 + c0[1], K.z0 + c0[2], ax ? 0 : Math.PI / 2, w, hh, 0.05), cls >= 3 ? '#28303a' : K.c('#16110c'));
+      K.as('beam', () => { for (const dy of [-0.06, hh]) K.box(c0[0] + (ax ? 0 : e * 0.03), c0[1] + dy, c0[2] + (ax ? e * 0.03 : 0), ax ? w + 0.14 : 0.07, 0.06, ax ? 0.07 : w + 0.14, fc); });
+    }
+  }
+  // the smoke hole on the ridge: a box of boards over it and a little roof on four pegs; the house's smoke comes out there
+  function smokeHole(K, cls) {
+    const R = K.roof; if (!R) return; const fc = nordWood(K).dark;
+    const us = cls >= 3 ? [-0.22, 0.22] : [(K.hv(9) - 0.5) * 0.36];
+    us.forEach((f, k) => { const u = f * R.L; const yb = R.ridgeY - 0.08 - R.sagY(u); const c0 = R.at(u, yb, 0);
+      K.as('beam', () => { K.box(c0[0], c0[1], c0[2], 0.5, 0.28, 0.5, dim(fc, 0.86)); if (K.fine) for (const [a, b2] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.box(c0[0] + a * 0.2, c0[1] + 0.28, c0[2] + b2 * 0.2, 0.04, 0.12, 0.04, fc); });
+      K.as('shingle', () => K.gable(c0[0], c0[1] + 0.4, c0[2], 0.66, 0.22, 0.62, dim(fc, 0.95), R.alongZ));
+      if (!k) B3.chim.set(K.b.id, [K.x0 + c0[0], K.y0 + c0[1] + 0.3, K.z0 + c0[2]]); });
+  }
+  // a woodshed against a gable: posts at its open front, sides of planks, a roof of boards sloping away, firewood stacked in it
+  function leanTo(K, x, z, lx, lz, h, e, lt, along) {
+    const P = K.P; const fc = nordWood(K).dark; const wdt = (along ? lz : lx) * 0.84; const hHi = h * 0.9, hLo = h * 0.6;
+    // (in the shed's frame: a out from the gable wall, b across it)
+    const at = (a, y, b2) => (along ? [x + e * (lx / 2 + a), y, z + b2] : [x + b2, y, z + e * (lz / 2 + a)]);
+    const bx = (a, y, b2, sa, hy, sb, col) => { const p = at(a, y, b2); K.box(p[0], p[1], p[2], along ? sa : sb, hy, along ? sb : sa, col); };
+    footing(K, ...(along ? [x + e * (lx / 2 + lt / 2), z, lt, wdt] : [x, z + e * (lz / 2 + lt / 2), wdt, lt]));
+    K.as('beam', () => { for (const s of [-1, 1]) bx(lt - 0.08, 0, s * (wdt / 2 - 0.08), 0.14, hLo, 0.14, fc); bx(lt - 0.08, hLo - 0.14, 0, 0.16, 0.14, wdt, fc); });
+    K.as('plankV', () => { for (const s of [-1, 1]) bx(lt / 2 - 0.04, 0, s * (wdt / 2 - 0.03), lt - 0.08, hLo - 0.05, 0.05, dim(P.wl || '#7e5e40', 0.92)); });
+    const a = at(-0.05, hHi + 0.08, 0), b2 = at(lt + 0.22, hLo - 0.06, 0);
+    K.as('shingle', () => K.bar(a, b2, [0, 0.07, 0], along ? [0, 0, wdt + 0.3] : [wdt + 0.3, 0, 0], dim(fc, 0.9)));
+    if (G.Props3D && K.fine) { const c0 = at(lt / 2 - 0.05, 0, 0); G.Props3D.woodpile(K, c0[0], 0, c0[2], wdt - 0.24, lt - 0.3, hLo * 0.72, along ? Math.PI / 2 : 0); }
+  }
+  // the shields of a hall along its long walls, in the colours of the house (its id), each with its iron boss
+  function shields(K, x, z, lx, lz, h, along, door) {
+    const P = K.P; const cols = [P.trim || '#a23c2a', P.acc || '#d8b25a', '#3f6fb0', '#e8e0c8']; let k = 0;
+    for (const W2 of wallsOf(lx, lz)) { const long = along ? W2.ax : !W2.ax; if (!long) continue; const n = Math.floor(W2.len / 1.15);
+      for (let q = 0; q < n; q++) { const a = -W2.len / 2 + W2.len * (q + 0.5) / n; if (door && door.side === W2.side && Math.abs(a - door.a) < door.w / 2 + 0.4) continue;
+        const o = W2.o; const p = [x + o[0] * lx / 2 + (W2.ax ? a : 0), h * 0.6, z + o[1] * lz / 2 + (W2.ax ? 0 : a)];
+        K.log([p[0] + o[0] * 0.02, p[1], p[2] + o[1] * 0.02], [p[0] + o[0] * 0.07, p[1], p[2] + o[1] * 0.07], 0.34, cols[Math.floor(K.hv(80 + k++) * 4)]);
+        K.as('iron', () => K.sph(p[0] + o[0] * 0.08, p[1] - 0.06, p[2] + o[1] * 0.08, 0.08, '#6a6660', 0.06)); } }
+  }
+  // a building going up: the poles of the scaffold at its corners and along its long sides, the ledgers lashed across them
+  // at two heights, a deck of planks on one, braces, a ladder leaning on it; and in the lot what it is being made of — a
+  // pile of logs, a stack of planks, a heap of stones (by the house's id: never two sites alike)
   function scaffold(K, x, z, sx, sz, h) {
-    for (const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.box(x + px * (sx / 2 + 0.3), 0, z + pz * (sz / 2 + 0.3), 0.15, h + 0.6, 0.15, '#8a6a44');
-    K.box(x, h * 0.55, z + sz / 2 + 0.3, sx + 0.6, 0.1, 0.5, '#9a7a50');
-    K.box(x + sx / 2 + 0.9, 0, z, 1.2, 0.5, 0.8, '#a07a48');
+    const pc = '#8a6a44', lc = '#9a7a50'; const hv = k => K.hv(400 + k); const m = 0.3;
+    // (the poles: never out past the lot)
+    const X0 = Math.max(0.12, x - sx / 2 - m), X1 = Math.min(K.w - 0.12, x + sx / 2 + m), Z0 = Math.max(0.12, z - sz / 2 - m), Z1 = Math.min(K.d - 0.12, z + sz / 2 + m);
+    const along = X1 - X0 >= Z1 - Z0; const nP = Math.max(2, Math.round((along ? X1 - X0 : Z1 - Z0) / 2.4) + 1); const ph = h + 0.6;
+    K.as('bark', () => {
+      for (const s2 of [0, 1]) for (let k = 0; k < nP; k++) { const f = k / (nP - 1); const px = along ? X0 + (X1 - X0) * f : (s2 ? X1 : X0), pz = along ? (s2 ? Z1 : Z0) : Z0 + (Z1 - Z0) * f;
+        K.log([px, Math.min(0, K.gy(px, pz)) - 0.1, pz], [px + (hv(k + s2 * 7) - 0.5) * 0.08, ph, pz + (hv(k * 3 + s2) - 0.5) * 0.08], 0.065, pc); }
+      // (the ledgers lashed across the poles, at two heights, on both long sides; the end poles tied too)
+      for (const s2 of [0, 1]) for (const yy of [ph * 0.4, ph * 0.8]) { if (along) K.log([X0 - 0.05, yy, s2 ? Z1 : Z0], [X1 + 0.05, yy, s2 ? Z1 : Z0], 0.05, lc); else K.log([s2 ? X1 : X0, yy, Z0 - 0.05], [s2 ? X1 : X0, yy, Z1 + 0.05], 0.05, lc); }
+      for (const yy of [ph * 0.4, ph * 0.8]) { if (along) { K.log([X0, yy, Z0], [X0, yy, Z1], 0.045, lc); K.log([X1, yy, Z0], [X1, yy, Z1], 0.045, lc); } else { K.log([X0, yy, Z0], [X1, yy, Z0], 0.045, lc); K.log([X0, yy, Z1], [X1, yy, Z1], 0.045, lc); } }
+      // (a brace across the first bay)
+      if (along) K.log([X0, 0.1, Z1], [X0 + (X1 - X0) / (nP - 1), ph * 0.8, Z1], 0.04, lc); else K.log([X1, 0.1, Z0], [X1, ph * 0.8, Z0 + (Z1 - Z0) / (nP - 1)], 0.04, lc);
+    });
+    // (a deck of planks on the lower ledgers along one side, the ladder up to it)
+    const sd = hv(9) < 0.5 ? 0 : 1; const dy = ph * 0.4 + 0.05;
+    K.as('plankH', () => { if (along) K.box((X0 + X1) / 2, dy, sd ? Z1 - 0.2 : Z0 + 0.2, X1 - X0 - 0.1, 0.05, 0.42, lc); else K.box(sd ? X1 - 0.2 : X0 + 0.2, dy, (Z0 + Z1) / 2, 0.42, 0.05, Z1 - Z0 - 0.1, lc); });
+    if (K.fine) K.as('beam', () => { const lx = along ? X0 + (X1 - X0) * (0.25 + hv(10) * 0.5) : (sd ? X1 : X0), lz = along ? (sd ? Z1 : Z0) : Z0 + (Z1 - Z0) * (0.25 + hv(10) * 0.5); const o = along ? [0, sd ? 1 : -1] : [sd ? 1 : -1, 0];
+      const fx2 = G.clamp(lx + o[0] * 0.55, 0.06, K.w - 0.06), fz2 = G.clamp(lz + o[1] * 0.55, 0.06, K.d - 0.06); const foot = [fx2, Math.min(0, K.gy(fx2, fz2)), fz2], topP = [lx + o[0] * 0.02, dy + 0.9, lz + o[1] * 0.02];
+      const side = along ? [0.22, 0, 0] : [0, 0, 0.22];
+      for (const e of [-1, 1]) K.log([foot[0] + side[0] * e, foot[1], foot[2] + side[2] * e], [topP[0] + side[0] * e, topP[1], topP[2] + side[2] * e], 0.03, pc);
+      for (let k = 1; k < 7; k++) { const f = k / 7; const a = [foot[0] + (topP[0] - foot[0]) * f, foot[1] + (topP[1] - foot[1]) * f, foot[2] + (topP[2] - foot[2]) * f]; K.log([a[0] - side[0], a[1], a[2] - side[2]], [a[0] + side[0], a[1], a[2] + side[2]], 0.022, pc); } });
+    // (what it is being made of, in a corner of the lot: logs, planks, stones)
+    const cx = hv(11) < 0.5 ? Math.min(K.w - 0.9, X1 - 0.6) : Math.max(0.9, X0 + 0.6), cz = hv(12) < 0.5 ? Math.min(K.d - 0.7, Z1 - 0.45) : Math.max(0.7, Z0 + 0.45);
+    const gy = Math.min(0, K.gy(cx, cz)) - 0.03;
+    K.as('bark', () => { for (let k = 0; k < 5; k++) { const row = k < 3 ? 0 : 1; const off = row ? (k - 3.5) * 0.24 : (k - 1) * 0.24; K.log([cx - 0.75, gy + 0.12 + row * 0.2, cz + off], [cx + 0.75, gy + 0.12 + row * 0.2, cz + off], 0.11, k % 2 ? [128, 98, 66] : [112, 86, 58]); } });
+    if (K.fine) { const pz = cz + (cz > z ? -1 : 1) * 0.6; K.as('plankH', () => { for (let k = 0; k < 4; k++) K.box(cx, gy + k * 0.05, pz, 1.4, 0.045, 0.3, [168, 134, 92], 0); });
+      const R3r = G.Realm; const bs = K.P.base || ['#8a8478']; K.as('rock', () => { for (let k = 0; k < 4; k++) { const sx2 = cx + (cx > x ? -1 : 1) * (0.95 + (k % 2) * 0.32), sz2 = cz + (k < 2 ? -0.18 : 0.18); K.g.put(R3r.SH.ico0, R3r.mat(K.x0 + sx2, K.y0 + gy + 0.12, K.z0 + sz2, k, 0.4, 0.28, 0.34), K.c(bs[k % bs.length])); } }); }
   }
   // columns in a row
   function colonnade(K, x0, z0, x1, z1, n, h, r, col) { for (let k = 0; k < n; k++) { const f = n === 1 ? 0.5 : k / (n - 1); K.cyl(x0 + (x1 - x0) * f, 0, z0 + (z1 - z0) * f, r, h, col); } }
@@ -391,13 +1039,10 @@ float m3scale(float p) {
   // ------------------------------ the types ------------------------------
   const KIT = {
     hut(g, gw, K) {
-      const P = K.P; const r = K.w * 0.36;
       if (styleOf(K.b) === 'nordico') return longhouse(g, gw, K, 0.6);
+      const r = K.w * 0.36;
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, r * 2, r * 2, 2.4); return; }
-      // (the round hut: a wall of plaster or mud, a cone of straw over it)
-      K.as(stuff(K.b).wall === 'frame' ? 'plaster' : stuff(K.b).wall, () => K.cyl(K.w / 2, 0, K.d / 2, r, 2.3, P.wl));
-      K.as('thatch', () => g.put(SH.cone, R3.mat(K.x0 + K.w / 2, K.y0 + 2.1, K.z0 + K.d / 2, 0, r * 2.7, 2.6, r * 2.7), K.c((P.thatch && P.thatch[0]) || '#c8a85a')));
-      openings(g, gw, K, K.w / 2, K.d / 2, r * 1.9, r * 1.9, 0, 2.3, 1);
+      roundHut(g, gw, K, r);
     },
     house(g, gw, K) { if (styleOf(K.b) === 'nordico') return longhouse(g, gw, K, 1); const st = styleOf(K.b); house(g, gw, K, { chimney: st === 'classico' || st === 'romano' || K.b.v === 1 }); },
     sobrado(g, gw, K) { if (styleOf(K.b) === 'nordico') return longhouse(g, gw, K, 2); house(g, gw, K, { floors: 2, h: 2.7, roof: K.P.kind === 'flat' ? 'flat' : K.P.kind === 'hip' ? 'hip' : undefined, inset: 0.25, chimney: styleOf(K.b) === 'classico' }); },
@@ -412,15 +1057,15 @@ float m3scale(float p) {
     storehouse(g, gw, K) { const t = house(g, gw, K, { h: 3.8, inset: 0.4 }); void t; if (K.prog >= 1) for (let k = 0; k < 3; k++) K.box(K.w * 0.15, 0, K.d * (0.25 + k * 0.25), 0.9, 0.9, 0.9, '#9a7a4a'); },
     armazem(g, gw, K) { KIT.storehouse(g, gw, K); },
     celeiro(g, gw, K) { house(g, gw, K, { h: 4, inset: 0.4, wall: '#9a4a32', pat: 'plankV' }); },
-    workshop(g, gw, K) { house(g, gw, K, { h: 3.2, chimney: true }); if (K.prog >= 1) { K.box(K.w * 0.8, 0, K.d - 0.6, 1.6, 0.9, 0.8, '#8a6a44'); } },
-    forja(g, gw, K) { house(g, gw, K, { h: 3.3, chimney: true, wall: K.P.base ? K.P.base[2] : '#a09a8e', pat: 'stone' }); if (K.prog >= 1) { K.box(K.w * 0.2, 0, K.d - 0.6, 0.8, 0.8, 0.6, '#3a3a3e'); K.box(K.w * 0.2, 0.8, K.d - 0.6, 1, 0.15, 0.4, '#4a4a50'); } },
+    workshop(g, gw, K) { smithy(g, gw, K, { h: 3.2, chimney: true, kind: 'wood' }); },
+    forja(g, gw, K) { smithy(g, gw, K, { h: 3.3, wall: K.P.base ? K.P.base[2] : '#a09a8e', pat: 'stone', kind: 'forge' }); },
     olaria(g, gw, K) { house(g, gw, K, { h: 3 }); if (K.prog >= 1) K.sph(K.w * 0.25, 0.2, K.d * 0.75, 1.1, '#b86a44', 0.9); },
     tecelagem(g, gw, K) { house(g, gw, K, { h: 3.2 }); if (K.prog >= 1) for (const [cc, k] of [['#c8483a', 0], ['#3f6fb0', 1], ['#e8b83a', 2]]) K.box(K.w * (0.25 + k * 0.25), 2.2, K.d - 0.3, 0.9, 1.4, 0.05, cc); },
     ourives(g, gw, K) { house(g, gw, K, { h: 3.2, wall: K.P.wr }); },
     perolaria(g, gw, K) { house(g, gw, K, { h: 3 }); },
     sericultura(g, gw, K) { house(g, gw, K, { h: 3 }); },
     acougue(g, gw, K) { house(g, gw, K, { h: 3 }); if (K.prog >= 1) K.box(K.w * 0.75, 1.6, K.d - 0.3, 1.2, 0.08, 0.08, '#6a4a30'); },
-    taverna(g, gw, K) { house(g, gw, K, { floors: 2, h: 2.9, chimney: true }); if (K.prog >= 1) { for (let k = 0; k < 2; k++) K.cyl(K.w * (0.2 + k * 0.18), 0, K.d - 0.5, 0.42, 0.95, '#7a5030'); K.box(K.w * 0.82, 2.6, K.d - 0.15, 0.9, 0.6, 0.06, '#c89a4a'); } },
+    taverna(g, gw, K) { house(g, gw, K, { floors: 2, h: 2.9, chimney: true, plinth: true }); if (K.prog >= 1) { for (let k = 0; k < 2; k++) K.cyl(K.w * (0.2 + k * 0.18), 0, K.d - 0.5, 0.42, 0.95, '#7a5030'); K.box(K.w * 0.82, 2.6, K.d - 0.15, 0.9, 0.6, 0.06, '#c89a4a'); } },
     temple(g, gw, K) {
       const st = styleOf(K.b); const P = K.P;
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 5); return; }
@@ -454,12 +1099,12 @@ float m3scale(float p) {
     palacio(g, gw, K) {
       const P = K.P; if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 8); return; }
       if (styleOf(K.b) === 'nordico') { longhouse(g, gw, K, 3); return; }
-      const t = house(g, gw, K, { floors: 2, h: 4, roof: P.kind === 'flat' ? 'flat' : 'hip', inset: 1.2 }); void t;
+      const t = house(g, gw, K, { floors: 2, h: 4, roof: P.kind === 'flat' ? 'flat' : 'hip', inset: 1.2, plinth: true }); void t;
       for (const [px, pz] of [[0.9, 0.9], [K.w - 0.9, 0.9], [0.9, K.d - 0.9], [K.w - 0.9, K.d - 0.9]]) { K.as('stone', () => K.box(px, 0, pz, 1.8, 11, 1.8, P.wr)); K.as(stuff(K.b).tile === 'mud' ? 'slab' : stuff(K.b).tile, () => g.put(SH.cone, R3.mat(K.x0 + px, K.y0 + 11, K.z0 + pz, Math.PI / 4, 2.6, 3, 2.6), K.c((P.roof && P.roof[1]) || '#94452d'))); }
       K.box(K.w / 2, 8.6, K.d / 2, 0.1, 4, 0.1, '#5a4a3a'); K.box(K.w / 2 + 0.6, 11.4, K.d / 2, 1.2, 0.7, 0.05, '#c8483a');
     },
     paco(g, gw, K) { KIT.palacio(g, gw, K); },
-    administracao(g, gw, K) { const P = K.P; house(g, gw, K, { floors: 2, h: 3.4, roof: P.kind === 'flat' ? 'flat' : 'hip', inset: 0.6 }); if (K.prog >= 1) colonnade(K, 0.6, K.d - 0.25, K.w - 0.6, K.d - 0.25, 4, 6.6, 0.25, (P.col && P.col[0]) || P.wl); },
+    administracao(g, gw, K) { const P = K.P; house(g, gw, K, { floors: 2, h: 3.4, roof: P.kind === 'flat' ? 'flat' : 'hip', inset: 0.6, plinth: true }); if (K.prog >= 1) colonnade(K, 0.6, K.d - 0.25, K.w - 0.6, K.d - 0.25, 4, 6.6, 0.25, (P.col && P.col[0]) || P.wl); },
     coletoria(g, gw, K) { house(g, gw, K, { h: 3.6, inset: 0.5 }); },
     biblioteca(g, gw, K) { KIT.administracao(g, gw, K); },
     teatro(g, gw, K) {
@@ -469,7 +1114,7 @@ float m3scale(float p) {
     },
     banhos(g, gw, K) { house(g, gw, K, { h: 3.4, noRoof: true, inset: 0.5 }); if (K.prog >= 1) { K.sph(K.w * 0.35, 3.4, K.d * 0.5, K.w * 0.24, '#d8d0c0', K.w * 0.18); K.sph(K.w * 0.72, 3.4, K.d * 0.5, K.w * 0.16, '#d8d0c0', K.w * 0.12); } },
     cadeia(g, gw, K) { const P = K.P; house(g, gw, K, { h: 3.6, wall: P.base ? P.base[1] : '#6f6a60', pat: 'stone', roof: 'flat' }); },
-    quartel(g, gw, K) { house(g, gw, K, { h: 3.4 }); if (K.prog >= 1) { K.box(K.w - 0.4, 0, 0.4, 0.12, 7, 0.12, '#5a4a3a'); K.box(K.w - 0.4 + 0.6, 6.2, 0.4, 1.2, 0.7, 0.05, G.Fac.hex(G.Village.facOfSet(K.b.set))); } },
+    quartel(g, gw, K) { house(g, gw, K, { h: 3.4, plinth: true }); if (K.prog >= 1) { K.box(K.w - 0.4, 0, 0.4, 0.12, 7, 0.12, '#5a4a3a'); K.box(K.w - 0.4 + 0.6, 6.2, 0.4, 1.2, 0.7, 0.05, G.Fac.hex(G.Village.facOfSet(K.b.set))); } },
     torre(g, gw, K) {
       const P = K.P; const s = K.w - 0.8; const h = K.prog < 1 ? 10 * K.prog + 1 : 10;
       K.as('stone', () => K.box(K.w / 2, 0, K.d / 2, s, h, s, P.base ? P.base[2] : '#a09a8e'));
@@ -527,6 +1172,41 @@ float m3scale(float p) {
     aqueduto(g, gw, K) { const P = K.P; K.box(K.w / 2, 0, K.d / 2, K.w - 0.6, 4.5, K.d - 0.6, P.base ? P.base[2] : '#a09a8e'); K.box(K.w / 2, 4.5, K.d / 2, K.w - 0.2, 0.4, K.d - 0.2, '#3a8ab0'); },
     ruin(g, gw, K) { const P = K.P; for (let k = 0; k < 5; k++) { const h = 0.6 + G.hash(K.b.id * 7 + k) * 2.4; const px = 0.6 + G.hash(K.b.id + k * 3) * (K.w - 1.2), pz = 0.6 + G.hash(K.b.id * 3 + k) * (K.d - 1.2); K.box(px, 0, pz, 1.2, h, 0.5, dim(P.wl || '#efe2c4', 0.7), G.hash(k) * 3); } },
   };
+  // the round hut, as the god's view draws it: a round wall of plaster or mud on a ring of stones (a painted band on the
+  // Aztec's), a deep cone of straw over it — thick at its eaves, in courses, knotted at the top — the door in its frame on
+  // the side people come out of, a small window
+  function roundHut(g, gw, K, r) {
+    const P = K.P; const cx = K.w / 2, cz = K.d / 2; const H = 2.3, N2 = 18; const wallPat = stuff(K.b).wall === 'frame' ? 'plaster' : stuff(K.b).wall;
+    // (the ring of stones under it, and its core down to the ground)
+    K.footed = true; const base = P.base || ['#8a8478', '#6f6a60', '#a09a8e'];
+    K.as('stone', () => K.cyl(cx, K.lo - K.y0 - 0.2, cz, r + 0.04, K.y0 - K.lo + 0.2, dim(base[1], 0.78)));
+    if (K.fine) K.as('rock', () => { const n = Math.round(TAU * r / 0.42); for (let k = 0; k < n; k++) { const a = k / n * TAU; const h1 = K.hv(300 + k), h2 = K.hv(500 + k); const px = cx + Math.cos(a) * (r + 0.1), pz = cz + Math.sin(a) * (r + 0.1);
+      const gy = K.gy(px, pz); const ht = Math.max(0.3, -gy + 0.05); K.rbox(px, -ht + 0.01, pz, 0.4, ht - 0.02, 0.24 + h2 * 0.06, mixc(base[Math.floor(h1 * 3)], base[Math.floor(h2 * 2.99)], 0.5).map(v => v * (0.88 + h1 * 0.2)), -a + Math.PI / 2, 0, (h2 - 0.5) * 0.06); } });
+    // (the wall: a smooth ring, darker where the rain splashes at its foot; the Aztec's painted band under the eaves)
+    // (a ring's middle point faces -X: what 'out' is told for the rings)
+    const wc = rgbOf(P.wl || '#efe2c4'); const ring = (rr, y0, y1, f0, f1) => { const pts = []; for (let j = 0; j <= 1; j++) for (let i = 0; i <= N2; i++) { const a = i / N2 * TAU; pts.push([cx + Math.cos(a) * rr, j ? y1 : y0, cz + Math.sin(a) * rr]); } return pts; };
+    K.as(wallPat, () => K.sheet(ring(r, 0, H), N2, 1, (X, Y) => { const f = 0.78 + 0.22 * G.clamp((Y - K.y0) / 0.7, 0, 1); return qc([wc[0] * f, wc[1] * f, wc[2] * f]); }, [-1, 0, 0]));
+    if (K.st === 'asteca') K.as('plaster', () => { K.sheet(ring(r + 0.015, H - 0.5, H - 0.3), N2, 1, P.trim || '#b33a2a', [-1, 0, 0]); K.sheet(ring(r + 0.015, 0.06, 0.42), N2, 1, P.trim2 || '#2fae8f', [-1, 0, 0]); });
+    // (the straw: a cone in three courses swelling a little, its eaves thick, the underside, the knot at the top)
+    const th = rgbOf((P.thatch && P.thatch[0]) || '#c8a85a'), th2 = rgbOf((P.thatch && P.thatch[1]) || '#a3843f'); const R0 = r * 1.36, Y0 = H - 0.25, HT = 2.6;
+    const cone = []; const rows = 4; for (let j = 0; j <= rows; j++) for (let i = 0; i <= N2; i++) { const a = i / N2 * TAU, f = j / rows; const rr = R0 * (1 - f) + (f > 0 && f < 1 ? 0.05 : 0) + 0.02; cone.push([cx + Math.cos(a) * rr, Y0 + HT * f, cz + Math.sin(a) * rr]); }
+    const seed = K.b.id & 1023; const thCol = (X, Y, Z) => { const q = vnoise(X * 1.3, Z * 1.3 + Y, seed); const c2 = mixc(th, th2, q * 0.6 + K.hv(3) * 0.25); const f = 0.9 + vnoise(X * 3, Y * 3 + Z, seed + 2) * 0.18; return qc([c2[0] * f, c2[1] * f, c2[2] * f]); };
+    K.as('thatch', () => { K.sheet(cone, N2, rows, thCol, [0, 1, 0]); K.sheet(ring(R0 + 0.02, Y0 - 0.32, Y0 + 0.01), N2, 1, (X, Y, Z) => mixc(thCol(X, Y, Z), [70, 56, 36], 0.25), [-1, 0, 0]); });
+    { const und = []; for (let j = 0; j <= 1; j++) for (let i = 0; i <= N2; i++) { const a = i / N2 * TAU, rr = j ? r : R0; und.push([cx + Math.cos(a) * rr, j ? H - 0.05 : Y0 - 0.32, cz + Math.sin(a) * rr]); }
+      K.as('thatch', () => K.sheet(und, N2, 1, dim(th2, 0.6), [0, -1, 0])); }
+    K.as('thatch', () => { K.cyl(cx, Y0 + HT - 0.42, cz, 0.16, 0.32, dim(th2, 0.85)); K.cone(cx, Y0 + HT - 0.12, cz, 0.15, 0.32, dim(th2, 0.75)); });
+    // (the door in its frame on its side, a step before it, a window on another side)
+    const side = doorSide(K.b); const od = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[side]; const ax = od[1] !== 0; const dw = 0.84, dh = 1.75;
+    const D = (a, y, n) => [cx + (ax ? a : od[0] * (r + n)), y, cz + (ax ? od[1] * (r + n) : a)];
+    const bx = (a, y, n, wa, hy, wn, col) => { const q = D(a, y, n); K.box(q[0], q[1], q[2], ax ? wa : wn, hy, ax ? wn : wa, col); };
+    K.as('plankV', () => bx(0, 0, -0.02, dw, dh, 0.1, P.door || '#3a2a1c'));
+    K.as('beam', () => { for (const e of [-1, 1]) bx(e * (dw / 2 + 0.06), 0, 0.02, 0.12, dh + 0.04, 0.14, P.trim || '#6b4a30'); bx(0, dh, 0.02, dw + 0.34, 0.16, 0.16, P.trim || '#6b4a30'); });
+    const sp = D(0, 0, 0.35); const gy = Math.min(-0.36, K.gy(sp[0], sp[2]) - 0.04); K.as('stone', () => bx(0, gy, 0.33, dw + 0.3, 0.04 - gy, 0.42, base[2]));
+    const wo = [-od[1], od[0]]; const wq = [cx + wo[0] * (r - 0.02), 1.2, cz + wo[1] * (r - 0.02)];
+    gw.put(SH.box, R3.mat(K.x0 + wq[0], K.y0 + wq[1], K.z0 + wq[2], wo[1] !== 0 ? 0 : Math.PI / 2, 0.42, 0.4, 0.12), '#2a3440');
+    K.as('beam', () => { K.box(wq[0] + wo[0] * 0.04, wq[1] - 0.07, wq[2] + wo[1] * 0.04, wo[1] !== 0 ? 0.6 : 0.12, 0.07, wo[1] !== 0 ? 0.12 : 0.6, P.trim || '#6b4a30'); K.box(wq[0] + wo[0] * 0.04, wq[1] + 0.4, wq[2] + wo[1] * 0.04, wo[1] !== 0 ? 0.6 : 0.12, 0.07, wo[1] !== 0 ? 0.12 : 0.6, P.trim || '#6b4a30'); });
+    K.body = { x: cx, z: cz, sx: r * 2, sz: r * 2, door: { side, o: od, a: 0, w: dw + 0.5 } };
+  }
   // stalls of a market: tables under coloured awnings, goods on them
   function stalls(K, n, cols) {
     const cl = cols || ['#c8483a', '#3f6fb0', '#e8b83a', '#4a9a5a'];
@@ -653,8 +1333,10 @@ float m3scale(float p) {
     const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(), gq = R3.WGeo();
     for (const b of G.S.buildings.values()) {
       if (!inChunk(b, x0, y0, n)) continue;
-      const K = kit(g, b, gp, gq); const f = KIT[b.type];
-      if (f) f(g, gw, K); else house(g, gw, K);
+      const K = kit(g, b, gp, gq); const n0 = g.p.length;
+      draw(g, gw, K, true);
+      // (how high it really stands, for the eye that must not go into its roof)
+      let top = -1e9; for (let k = n0 + 1; k < g.p.length; k += 3) if (g.p[k] > top) top = g.p[k]; if (top > -1e9) B3.tops.set(b.id, top);
     }
     g.ao = (X, Z) => W.hAt(X / TL(), Z / TL()) * HM();
     wallsInto(g, x0, y0, n);
@@ -669,28 +1351,68 @@ float m3scale(float p) {
       const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L, Y = W.maxH(b.x, b.y, b.w, b.h) * HM();
       const st = stuff(b); const flat = P.kind === 'flat';
       g.pat = PAT[st.wall === 'frame' ? 'plaster' : st.wall]; g.put(SH.box, R3.mat(X, Y - 0.3, Z, 0, b.w * L * 0.85, h * (flat ? 0.95 : 0.6), b.h * L * 0.85), P.wl || '#efe2c4');
-      if (!flat) { g.pat = PAT[P.kind === 'turf' ? 'turf' : P.kind === 'thatch' ? 'thatch' : st.tile]; g.put(SH.gable, R3.mat(X, Y + h * 0.6 - 0.3, Z, b.w >= b.h ? 0 : Math.PI / 2, (b.w >= b.h ? b.w : b.h) * L * 0.95, h * 0.5, (b.w >= b.h ? b.h : b.w) * L * 0.95), P.kind === 'thatch' ? ((P.thatch && P.thatch[0]) || '#c8a85a') : (P.roof && P.roof[0]) || '#b85a3c'); }
+      // (a turf roof in the same calm green as its near picture, its own by its age)
+      const rc = P.kind === 'thatch' ? ((P.thatch && P.thatch[0]) || '#c8a85a') : P.kind === 'turf' ? mixc(calm((P.roof && P.roof[0]) || '#71903f', 0.58, 0.84), [114, 108, 70], hvOf(b, 3) * 0.42) : (P.roof && P.roof[0]) || '#b85a3c';
+      // (the ridge the way the near picture turns it: a longhouse on a square lot along the wall with its door)
+      let ax = b.w >= b.h; if (P.kind === 'turf' && b.w === b.h && b.built) ax = ridgeX(b, doorSide(b));
+      if (!flat) { g.pat = PAT[P.kind === 'turf' ? 'turf' : P.kind === 'thatch' ? 'thatch' : st.tile]; g.put(SH.gable, R3.mat(X, Y + h * 0.6 - 0.3, Z, ax ? 0 : Math.PI / 2, (b.w >= b.h ? b.w : b.h) * L * 0.95, h * 0.5, (b.w >= b.h ? b.h : b.w) * L * 0.95), rc); }
       g.pat = 0;
     }
     return g.empty ? null : g.build(true);
   };
   // the box a building's 3D body fills, in metres (the tests ask: does it stand where the world says, on the ground?)
+  // — the building itself; what lies about it is Props3D's, asked by its own check
   B3.bounds = function (b) {
-    const g = R3.Geo(), gw = R3.Geo(); const K = kit(g, b); const f = KIT[b.type]; if (f) f(g, gw, K); else house(g, gw, K);
+    const g = R3.Geo(), gw = R3.Geo(); const K = kit(g, b); draw(g, gw, K, false);
     const P = g.p; if (!P.length) return null; const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
     for (let k = 0; k < P.length; k += 3) for (let a = 0; a < 3; a++) { lo[a] = Math.min(lo[a], P[k + a]); hi[a] = Math.max(hi[a], P[k + a]); }
     return { lo, hi, floor: K.y0, ground: [K.lo, K.hi] };
   };
+  // (what a building costs to draw: its triangles — the solid body, the panes, the swaying grass — with what lies about it)
+  B3.cost = function (b) {
+    const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(); const K = kit(g, b, gp); draw(g, gw, K, true);
+    return { solid: g.p.length / 9, glass: gw.p.length / 9, plants: gp.p.length / 9 };
+  };
+  // the drawing's own proof (for the tests): every building near the body (or the ones given) drawn again — no number that
+  // is not a number, nothing far out of its lot, nothing deep in the ground, a floor on its ground; and what lies about
+  // them (Props3D.check). Gives back the list of what is wrong
+  B3.check = function (list) {
+    const S = G.S; const out = []; const L = TL(); if (!SH) return out; // (only once the 3D is made)
+    if (!list) { const f = G.Possess && G.Possess.body && G.Possess.body(); const cx = f ? f.x : N / 2, cy = f ? f.y : N / 2; list = [...S.buildings.values()].filter(b => G.dist(b.x + b.w / 2, b.y + b.h / 2, cx, cy) < 14); }
+    for (const b of list) {
+      const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(); const K = kit(g, b, gp); draw(g, gw, K, false);
+      const P = g.p; let bad = 0, lo = 1e9, x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+      for (const arr of [P, g.n, gw.p, gp.p]) for (let k = 0; k < arr.length; k++) if (!Number.isFinite(arr[k])) bad++;
+      for (let k = 0; k < P.length; k += 3) { x0 = Math.min(x0, P[k]); x1 = Math.max(x1, P[k]); lo = Math.min(lo, P[k + 1]); z0 = Math.min(z0, P[k + 2]); z1 = Math.max(z1, P[k + 2]); }
+      const tag = `${b.type}#${b.id}`;
+      if (bad) out.push(`${tag}: ${bad} números que não são números`);
+      const over = Math.max(b.x * L - x0, x1 - (b.x + b.w) * L, b.y * L - z0, z1 - (b.y + b.h) * L);
+      if (b.type !== 'doca' && P.length && over > 1.6) out.push(`${tag}: ${over.toFixed(2)} m fora do lote`);
+      if (P.length && lo < K.lo - 1.2 && b.type !== 'doca') out.push(`${tag}: enterrado ${(K.lo - lo).toFixed(2)} m`); // (a quay's posts go down into the sea)
+      if (P.length && lo > K.hi + 0.35) out.push(`${tag}: flutua ${(lo - K.hi).toFixed(2)} m`);
+      if (K.y0 < K.lo - 0.05) out.push(`${tag}: piso abaixo do chão`);
+    }
+    if (G.Props3D && G.Props3D.check) for (const p of G.Props3D.check(list)) out.push(p);
+    return out;
+  };
+  // (for Props3D's proof: the building drawn again, with what lies about it, at full detail; its body's box and its door)
+  B3.propsOf = function (b) { const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(); const K = kit(g, b, gp, undefined, true); draw(g, gw, K, true); return K.body || null; };
   // (for the tests: the patterns a building's body is drawn with — {pattern code: points} — and the ones its people's
   // walls and roofs should have)
   B3.patsOf = function (b) {
-    const g = R3.Geo(), gw = R3.Geo(); const K = kit(g, b); const f = KIT[b.type]; if (f) f(g, gw, K); else house(g, gw, K);
+    const g = R3.Geo(), gw = R3.Geo(); const K = kit(g, b); draw(g, gw, K, false);
     const out = {}; for (const q of g.q || []) out[q] = (out[q] || 0) + 1; const st = stuff(b); const P = palOf(b);
     const roof = P.kind === 'flat' ? (st.tile === 'mud' ? 'mud' : 'slab') : P.kind === 'turf' || styleOf(b) === 'nordico' ? 'turf' : P.kind === 'thatch' ? 'thatch' : st.tile;
-    return { pats: out, wall: PAT[styleOf(b) === 'nordico' ? 'plankV' : st.wall], roof: PAT[roof] };
+    // (the half-timber of the classical lands is timber standing out of plaster now: its wall is the plaster between)
+    return { pats: out, wall: PAT[styleOf(b) === 'nordico' ? 'plankV' : st.wall === 'frame' ? 'plaster' : st.wall], roof: PAT[roof] };
   };
-  // what stands on a tile, and how high (for the camera, so it does not go through roofs)
-  B3.heightAt = function (i) { const S = G.S; const b = S.occ[i] && S.buildings.get(S.occ[i]); if (b && b.blocks) return HEIGHT[b.type] || 5; const w = S.wall[i]; return w === 1 || w === 2 || w === 4 ? 6 : 0; };
+  // what stands on a tile, and how high (for the camera, so it does not go through roofs): the top its near picture really
+  // reaches, once drawn; the type's height before that
+  B3.heightAt = function (i) {
+    const S = G.S; const b = S.occ[i] && S.buildings.get(S.occ[i]);
+    if (b && b.blocks) { const t = B3.tops.get(b.id); return t === undefined ? HEIGHT[b.type] || 5 : Math.max(1, t - W.maxH(i % N, (i / N) | 0, 1, 1) * HM()); }
+    const w = S.wall[i]; return w === 1 || w === 2 || w === 4 ? 6 : 0;
+  };
   // is a point (metres) in the stones of a wall or a gate, give or take m? (no wall here: false)
   B3.wallSolid = function (X, Y, Z, m) {
     const x = Math.floor(X / TL()), y = Math.floor(Z / TL()); if (!W.inb(x, y)) return false; const bs = wallBoxes(x, y); if (!bs) return false;
