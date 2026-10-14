@@ -1730,11 +1730,12 @@ float m3scale(float p) {
     const now = fineOf.get(key) ? d < D + 8 : d < D; fineOf.set(key, now); return now;
   }
   B3.sig = function (x0, y0, n) {
-    let s = fineAt(x0, y0, n) ? 1 : 0; // (a chunk the body comes near is drawn again, finer)
+    let s = 0;
     for (const b of G.S.buildings.values()) { if (!inChunk(b, x0, y0, n)) continue; s = (s * 31 + b.id * 7 + (b.built ? 1 : 0) + Math.floor((b.progress || 0) * 5) * 3 + Math.floor((b.hp / (b.maxHp || 1)) * 4) * 11 + (b.crops ? b.crops.reduce((a, c) => a + c.s + Math.floor((c.g || 0) * 3), 0) : 0) * 13 + (b.graves ? b.graves.length : 0) * 17) | 0; }
     // (the arches standing in this chunk: one built across the map does not change it)
     for (const a of G.S.aqueducts || []) for (let k = 0; k < a.built; k++) { const t = a.tiles[k]; if (t[0] >= x0 && t[1] >= y0 && t[0] < x0 + n && t[1] < y0 + n) s = (s + (k + 1) * 23 + (a.dead ? 5 : 0)) | 0; }
-    return s;
+    // (a chunk with buildings the body comes near is drawn again, finer; one without has nothing to make finer)
+    return s ? (s * 3 + (fineAt(x0, y0, n) ? 1 : 0)) | 0 : 0;
   };
   B3.nearGeo = function (x0, y0, n) {
     const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(), gq = R3.WGeo();
