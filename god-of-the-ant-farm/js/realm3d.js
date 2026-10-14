@@ -431,7 +431,7 @@ vec3 gxGrade( vec3 c ) {
             float tw = 1.0 + sin(uT * (2.3 + aM.y * 3.1) + aM.y * 61.0) * mix(0.12, 0.4, 1.0 - smoothstep(0.05, 0.45, h));
             vA = uStars * (0.22 + aM.x * 1.6) * tw * (1.0 - cl * 0.97) * smoothstep(0.0, 0.18, h);
             vC = aM.y < 0.12 ? vec3(1.0, 0.78, 0.55) : aM.y < 0.45 ? vec3(0.78, 0.86, 1.0) : vec3(1.0);
-            gl_PointSize = (1.4 + aM.x * 2.6) * uPx; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+            gl_PointSize = max(1.0, (1.4 + aM.x * 2.6) * uPx); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`, // (never under a pixel: the lightest quality draws a smaller picture)
         fragmentShader: `varying vec3 vC; varying float vA; void main() { vec2 p = gl_PointCoord * 2.0 - 1.0; float a = exp(-dot(p, p) * 3.0) * vA; if (a < 0.004) discard; gl_FragColor = vec4(vC * a, 1.0);
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
