@@ -1034,7 +1034,7 @@
     for (const [, a] of list) {
       if (idx >= MAXA) break;
       const sp = G.Animals.DEF[a.kind]; if (!sp || sp.cls === 'water') continue;
-      const X = a.x * TL, Z = a.y * TL; let s = bvis.get(a.id); if (!s) { s = { X, Z, Y: 0, yaw: 0, ph: a.id % 5, t: 0, graze: 0, v: 0 }; bvis.set(a.id, s); }
+      const X = a.x * TL, Z = a.y * TL; let s = bvis.get(a.id); if (!s) { s = { X, Z, Y: null, yaw: 0, ph: a.id % 5, t: 0, graze: 0, v: 0 }; bvis.set(a.id, s); }
       const dx = X - s.X, dz = Z - s.Z; const dist = Math.hypot(dx, dz); if (dist > 0.002 && dist < 6) { const want = Math.atan2(dz, dx); let da = want - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * (1 - Math.exp(-8 * dt)); }
       const v = dt > 0 && dist < 6 ? dist / dt : 0; s.v += (v - s.v) * (1 - Math.exp(-6 * dt)); s.t += dt; s.X = X; s.Z = Z;
       const F = formOf(sp, a.kind); const air = sp.cls === 'air' && (a.z || 0) > 0.3;
@@ -1042,7 +1042,9 @@
       const run = G.clamp(s.v / 3, 0, 1.4); s.ph += dt * (F.biped ? (s.v * 6 / Math.max(0.4, F.leg * u * 2) + 0.4) : (s.v * 0.55 / Math.max(0.4, F.leg * u * 2) + 0.06)); // (four legs: strides; two: radians)
       const col = F.col, dark = darker(col, 0.78), bel = F.belly || darker(col, 1.12);
       // (over a boulder's tile the feet go up onto the stone, as the people's do)
-      const Yf = sp.cls === 'water' || air || a.swim ? W.groundH(a.x, a.y) * HM : Math.max(groundY(a.x, a.y), G.Space.stoneTop(X, Z)); s.Y = Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
+      const Yf = sp.cls === 'water' || air || a.swim ? W.groundH(a.x, a.y) * HM : Math.max(groundY(a.x, a.y), G.Space.stoneTop(X, Z));
+      // (a beast first seen stands where the ground is — not rising to it from the height 0, out of the ground, as before)
+      s.Y = s.Y === null || Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
       const Y = s.Y + (air ? Math.max(0.5, (a.z || 0) * 0.22) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
       if (!seen(X, Y, Z, Math.max(0.6, F.len * u))) { P3.bculled++; continue; } // (outside the eye's field: not drawn)
       const m = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-s.yaw); m.multiply(M.b);
