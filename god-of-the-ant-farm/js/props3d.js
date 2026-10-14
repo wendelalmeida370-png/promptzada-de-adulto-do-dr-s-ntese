@@ -42,6 +42,9 @@
   // ground under it; the strip's room taken. null: no room. (at: 'start', 'end' or a fraction of the strip)
   function take(K, s, l, dp, at) {
     if (dp > s.depth || s.a1 - s.cur < l) return null;
+    // (the preset's share of the decoration — Realm.Q().props, all of it where the preset has none: each piece kept or left out
+    // by the house's id and its turn among the pieces, so the same house always has the same things)
+    if (K.props < 1 && K.hv(2100 + (K.nTake = (K.nTake || 0) + 1)) >= K.props) return null;
     let a; if (at === 'end') { a = s.a1 - l / 2; s.a1 -= l + 0.08; } else if (typeof at === 'number') { a = Math.max(s.cur + l / 2, Math.min(s.a1 - l / 2, s.a0 + (s.a1 - s.a0) * at)); s.cur = a + l / 2 + 0.08; } else { a = s.cur + l / 2; s.cur += l + 0.08; }
     const w = s.wall + (s.o[0] + s.o[1]) * (dp / 2 + 0.02); const cx = s.ax ? a : w, cz = s.ax ? w : a;
     // (on a footed house the ground of the yard, its lowest corner; on a plinth its top)
@@ -318,7 +321,8 @@
       if (px > K.w - 0.4 || pz > K.d - 0.4) continue; const y = K.footed ? K.gy(px, pz) - 0.03 : 0; basket(K, px, y, pz, k + K.b.id); if (rec) rec.push({ b: K.b, x0: px - 0.24, x1: px + 0.24, z0: pz - 0.24, z1: pz + 0.24, y, ground: y, footed: true }); } }
   const KIND = { hut: home, house: home, sobrado: home, insula: home, barraco: home, storehouse: store, armazem: store, celeiro: store, workshop: smithy, forja: smithy, doca: quay, olaria: potter, mercado: market, feira: market, mercado_negro: market, taverna: tavern };
   // what a built building has about it (build3d calls this after drawing it, with its kit)
-  P3.into = function (K) { const f = KIND[K.b.type]; if (!f) return; const S = slots(K); if (!S.length && f !== market) return; f(K, S); };
+  P3.into = function (K) { const f = KIND[K.b.type]; if (!f) return; const S = slots(K); if (!S.length && f !== market) return;
+    const q = G.Realm && G.Realm.Q ? G.Realm.Q() : null; K.props = q && q.props !== undefined ? q.props : 1; K.nTake = 0; f(K, S); };
   // the drawing's own proof: the pieces of the buildings given (Build3D.check passes the ones near the body) drawn again and
   // looked at — on its lot, never in front of its door, standing on its ground, numbers that are numbers
   P3.check = function (list) {

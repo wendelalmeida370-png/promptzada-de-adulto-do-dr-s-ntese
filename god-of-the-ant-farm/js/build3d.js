@@ -1718,8 +1718,19 @@ float m3scale(float p) {
 
   // ------------------------------ a chunk's buildings ------------------------------
   const inChunk = (b, x0, y0, n) => b.x >= x0 && b.y >= y0 && b.x < x0 + n && b.y < y0 + n;
+  // (how far round the body the near houses keep their finest form — the iron, the pieces made in Blender, what lies about
+  // them: 35 m × the preset's lod (Realm.Q().lod; 1 where the preset has none), a chunk at a time by its nearest edge. Once
+  // fine it stays so until the body is 8 m further: walking along a chunk's edge does not draw it again and again. Only seen)
+  const fineOf = new Map(); G.worldHooks.push(() => fineOf.clear());
+  function fineAt(x0, y0, n) {
+    const q = R3 && R3.Q ? R3.Q() : null; if (!q || !q.detail) return false;
+    const f = G.Possess && G.Possess.body && G.Possess.body(); if (!f) return true; // (no body: every near picture fine, as before)
+    const L = TL(), X = f.x * L, Z = f.y * L, D = 35 * (q.lod === undefined ? 1 : q.lod); const key = x0 + ',' + y0;
+    const d = Math.hypot(Math.max(x0 * L - X, 0, X - (x0 + n) * L), Math.max(y0 * L - Z, 0, Z - (y0 + n) * L));
+    const now = fineOf.get(key) ? d < D + 8 : d < D; fineOf.set(key, now); return now;
+  }
   B3.sig = function (x0, y0, n) {
-    let s = 0;
+    let s = fineAt(x0, y0, n) ? 1 : 0; // (a chunk the body comes near is drawn again, finer)
     for (const b of G.S.buildings.values()) { if (!inChunk(b, x0, y0, n)) continue; s = (s * 31 + b.id * 7 + (b.built ? 1 : 0) + Math.floor((b.progress || 0) * 5) * 3 + Math.floor((b.hp / (b.maxHp || 1)) * 4) * 11 + (b.crops ? b.crops.reduce((a, c) => a + c.s + Math.floor((c.g || 0) * 3), 0) : 0) * 13 + (b.graves ? b.graves.length : 0) * 17) | 0; }
     // (the arches standing in this chunk: one built across the map does not change it)
     for (const a of G.S.aqueducts || []) for (let k = 0; k < a.built; k++) { const t = a.tiles[k]; if (t[0] >= x0 && t[1] >= y0 && t[0] < x0 + n && t[1] < y0 + n) s = (s + (k + 1) * 23 + (a.dead ? 5 : 0)) | 0; }
@@ -1727,10 +1738,10 @@ float m3scale(float p) {
   };
   B3.nearGeo = function (x0, y0, n) {
     const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(), gq = R3.WGeo();
-    const ck = x0 + ',' + y0; for (const id of litOf.get(ck) || []) B3.lamps.delete(id); const lit = []; litOf.set(ck, lit);
+    const ck = x0 + ',' + y0; for (const id of litOf.get(ck) || []) B3.lamps.delete(id); const lit = []; litOf.set(ck, lit); const fine = fineAt(x0, y0, n);
     for (const b of G.S.buildings.values()) {
       if (!inChunk(b, x0, y0, n)) continue;
-      const K = kit(g, b, gp, gq); const n0 = g.p.length; K.lit = [];
+      const K = kit(g, b, gp, gq, fine); const n0 = g.p.length; K.lit = [];
       draw(g, gw, K, true);
       if (K.lit.length) { const L = K.lit, m = Math.min(8, L.length); B3.lamps.set(b.id, Array.from({ length: m }, (_, i) => L[Math.floor(i * L.length / m)])); lit.push(b.id); } // (eight at most, spread round it)
       // (how high it really stands, for the eye that must not go into its roof)
