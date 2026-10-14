@@ -116,15 +116,16 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       const near = [...S.buildings.values()].filter(b => G.dist(b.x + b.w / 2, b.y + b.h / 2, v.x, v.y) < 12);
       const PART = { farm: 1, horta: 1, plantacao: 1, vinhedo: 1, pomar: 1, cemetery: 1, apiario: 1, mercado: 1, feira: 1, mercado_negro: 1, campfire: 1, curral: 1, cercado: 1, ruin: 1 };
       let bad = []; for (const b of near) { const f = __E.fits(b); if (!f) continue; if (b.type !== 'doca' && ((!PART[b.type] && f.off > 1.2) || f.out > 1.6)) bad.push(`${b.type}#${b.id} fora ${f.off.toFixed(1)}/${f.out.toFixed(1)}m`); if (f.floats > 0.35) bad.push(`${b.type}#${b.id} flutua ${f.floats.toFixed(2)}m`); if (f.sunk > 0.05) bad.push(`${b.type}#${b.id} afundado`); }
-      // the ground of the near chunks is the world's own heights, vertex by vertex
-      const st = G.Avatar.state(); const ms = G.Realm.nearOf(st.X, st.Z); let err = 0, nv = 0;
-      if (ms && ms[0]) { const P = ms[0].geometry.attributes.position.array; for (let k = 0; k < P.length; k += 3) { const h = G.W.hAt(P[k] / 4, P[k + 2] / 4) * 1.5; err = Math.max(err, Math.abs(P[k + 1] - h)); nv++; } }
+      // the ground of the near chunks is the world's own heights, vertex by vertex — carved only inside a river, by the one
+      // bed the feet stand on too (Space.bedDrop, v35); nowhere else a step of difference (T-037)
+      const st = G.Avatar.state(); const ms = G.Realm.nearOf(st.X, st.Z); let err = 0, nv = 0, carved = 0;
+      if (ms && ms[0]) { const P = ms[0].geometry.attributes.position.array; for (let k = 0; k < P.length; k += 3) { const x = P[k] / 4, y = P[k + 2] / 4; const bed = G.Space.bedDrop(x, y); if (bed > 0) carved++; const h = G.W.hAt(x, y) * 1.5 - bed; err = Math.max(err, Math.abs(P[k + 1] - h)); nv++; } }
       const roads = (() => { let n = 0; for (let y = 0; y < G.N; y++) for (let x = 0; x < G.N; x++) if (S.road[y * G.N + x] && G.dist(x, y, v.x, v.y) < 10) n++; return n; })();
-      return { town: s.name, pop: G.Village.pop(s.id), v: v.name, inn, near: near.length, bad, err, nv, market: market ? market.type : 'storehouse', dock: !!dock, roads, chunks: G.Realm.chunkCount() };
+      return { town: s.name, pop: G.Village.pop(s.id), v: v.name, inn, near: near.length, bad, err, nv, carved, market: market ? market.type : 'storehouse', dock: !!dock, roads, chunks: G.Realm.chunkCount() };
     });
     ok('e1 entra na metrópole', r.inn, `${r.v} em ${r.town} (${r.pop} hab.) · chunks ${JSON.stringify(r.chunks)}`);
     ok('e1 prédios no lugar e no chão', r.near >= 8 && !r.bad.length, `${r.near} prédios a menos de 48 m; problemas: ${r.bad.slice(0, 4).join('; ') || 'nenhum'}`);
-    ok('e1 o chão 3D é a altura do mundo', r.nv > 500 && r.err < 0.02, `${r.nv} vértices, erro máximo ${r.err.toFixed(4)} m`);
+    ok('e1 o chão 3D é a altura do mundo', r.nv > 500 && r.err < 0.02, `${r.nv} vértices (${r.carved} no leito de um rio), erro máximo ${r.err.toFixed(4)} m`);
     await shot('e1-mercado');
     const w = await E(() => { const m = window.__m; const d = G.Vg.door(m); return { w: __E.walkTo(d[0], d[1], 1800), qa: __E.qa() }; });
     ok('e1 anda pelas ruas até o mercado', w.w.ok && !w.w.bad && !w.w.under && !w.w.camIn, `${JSON.stringify(w.w)} · roads perto: ${r.roads}`);
@@ -271,7 +272,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     for (const k in places) {
       const p = places[k]; if (!p) { out[k] = null; continue; }
       G.Avatar.place(p[0], p[1]); __E.f(6);
-      let bad = 0, under = 0, high = 0, camIn = 0, camLow = 0, jumps = 0, maxUp = 0, wet = 0;
+      let bad = 0, under = 0, high = 0, camIn = 0, camLow = 0, jumps = 0, maxUp = 0, wet = 0, inWater = 0, marked = 0;
       const dirs = k === 'costa' ? (() => { const x = Math.floor(p[0]), y = Math.floor(p[1]); for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (W.inb(x + a, y + b) && S.type[(y + b) * N + x + a] <= T.SEA) return [Math.atan2(b, a), Math.atan2(b, a) + 0.4, Math.atan2(b, a) - 0.4]; return [0]; })() : [0, Math.PI / 2, Math.PI, -Math.PI / 2];
       for (const yaw of dirs) {
         G.Cam3D.yaw = yaw; G.Input3D.down.frente = true;
@@ -279,13 +280,15 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
           if (i === 20) { G.Avatar.input.jump = true; jumps++; }
           G.Main.frameFor(33);
           const fl = G.Avatar.floorAt(st.X, st.Z); maxUp = Math.max(maxUp, st.Y - fl);
-          if (!W.walkableXY(v.x, v.y)) bad++; if (st.Y < fl - 0.05) under++; if (st.Y > fl + 1.6) high++;
-          if (S.type[W.idx(v.x, v.y)] <= T.SEA && !(S.dry && S.dry[W.idx(v.x, v.y)])) wet++;
+          // (in the sea the world knows the body is there — its mark 'afloat', D-026 — whether it swims, wades or stands on the
+          // shore's slope inside a sea tile; the feet never under the bed, never in the air but swimming)
+          const inSea = S.type[W.idx(v.x, v.y)] <= T.SEA && !(S.dry && S.dry[W.idx(v.x, v.y)]); const swim = G.Avatar.swimming(), known = G.Possess.afloat(v);
+          if (inSea) { wet++; if (swim || G.Avatar.wade() > 0) inWater++; if (known) marked++; } if (!W.walkableXY(v.x, v.y) && !(inSea && known)) bad++; if (st.Y < fl - 0.05) under++; if (st.Y > fl + 1.6 && !swim) high++;
           const c = G.Realm.camera().position; if (G.Cam3D.solid(c.x, c.y, c.z)) camIn++; if (c.y < G.W.hAt(c.x / 4, c.z / 4) * 1.5) camLow++;
         }
       }
       G.Input3D.down.frente = false; __E.f(10);
-      out[k] = { at: p.map(n => +n.toFixed(1)), bad, under, high, camIn, camLow, maxUp: +maxUp.toFixed(2), wet, still: st.speed };
+      out[k] = { at: p.map(n => +n.toFixed(1)), bad, under, high, camIn, camLow, maxUp: +maxUp.toFixed(2), wet, inWater, marked, still: st.speed };
     }
     // pressed against a wall: never stuck — turning away, the body walks
     const pb = places['entre prédios']; let unstuck = null;
@@ -312,7 +315,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     }
     return { out, unstuck, warp, qa: __E.qa() };
   });
-  for (const k in e6.out) { const r = e6.out[k]; if (!r) { ok(`e6 terreno: ${k}`, true, 'não há este tipo de lugar por perto (nada a provar)'); continue; } ok(`e6 terreno: ${k}`, !r.bad && !r.under && !r.high && !r.camIn && !r.camLow && !r.wet && r.maxUp > 0.4, JSON.stringify(r)); }
+  for (const k in e6.out) { const r = e6.out[k]; if (!r) { ok(`e6 terreno: ${k}`, true, 'não há este tipo de lugar por perto (nada a provar)'); continue; } ok(`e6 terreno: ${k}`, !r.bad && !r.under && !r.high && !r.camIn && !r.camLow && (k === 'costa' ? r.wet === r.marked : !r.wet) && r.maxUp > 0.4, JSON.stringify(r)); }
   ok('e6 encostado num prédio, nunca preso', e6.unstuck && !e6.unstuck.inWall && e6.unstuck.away > 1.5, JSON.stringify(e6.unstuck));
   ok('e6 o mundo leva o corpo longe: a câmera vai junto, sem atravessar casas', !e6.warp || (!e6.warp.camIn && !e6.warp.inside && e6.warp.gap < 1), e6.warp ? JSON.stringify(e6.warp) : 'não há prédios por perto (nada a provar)');
   ok('e6 verificador', !e6.qa.length, e6.qa.slice(0, 3).join(' · ') || 'limpo');
@@ -470,7 +473,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   if (await need('e10')) {
   // ================================ e10: the interface ================================
   const e10 = await E(() => {
-    const S = G.S; const s = __E.town(); const out = {};
+    const S = G.S; const s = __E.town(); const out = {}; __E.leave(); // (from the god's view, whatever the part before left)
     // (at night everyone is in bed: the god waits for the morning, at 8×)
     if (!__E.adults(s, o => o.mother).length) { G.UI.setSpeed(8); __E.until(() => __E.adults(s, o => o.mother).length > 0, 2000, 100); G.UI.setSpeed(1); }
     const v = __E.adults(s, o => o.mother)[0]; G.UI.select(v); __E.f(4);
