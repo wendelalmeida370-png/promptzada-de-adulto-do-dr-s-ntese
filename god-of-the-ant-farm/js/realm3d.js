@@ -776,11 +776,16 @@ vec3 gxHaze( vec3 d ) {
     apple: [['#5aa040', '#3e7a2e', '#88c860'], ['#64a646', '#447e30', '#94ce6a'], ['#58983c', '#3a722a', '#82be5a']],
     mulberry: [['#3e7e36', '#2a5a26', '#5e9e4a'], ['#448238', '#2e5e28', '#64a250'], ['#3a7632', '#285624', '#5a9646']],
   };
-  // (the god's bushes: art.js, [base, dark, light]; dry when burnt)
-  const BPAL = [[[86, 160, 67], [63, 125, 52], [124, 195, 92]], [[79, 154, 80], [58, 122, 62], [116, 189, 106]], [[98, 164, 68], [74, 130, 51], [140, 203, 94]]];
+  // (the god's bushes: art.js, [base, dark, light] — in the round a little deeper and quieter, as the trees round them are:
+  // a bush among the trees, not a lamp; dry when burnt)
+  const BPAL = [[[86, 160, 67], [63, 125, 52], [124, 195, 92]], [[79, 154, 80], [58, 122, 62], [116, 189, 106]], [[98, 164, 68], [74, 130, 51], [140, 203, 94]]]
+    .map(p => p.map(c => { const l = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]; return c.map(v => (l + (v - l) * 0.85) * 0.78); }));
+  // (the god's red of the berries, deeper: under the sun of the 3D the god's own would burn white)
+  const BERRY = [[150, 22, 40], [128, 16, 34], [168, 34, 46]];
   const SNOW = [238, 244, 250];
-  // (how much snow lies on a tile: where the land is cold enough that the god's view paints its ground white)
-  const snowAt = i => (G.S.temp ? G.clamp((0.235 - G.S.temp[i] / 255) / 0.07, 0, 1) : 0);
+  // (how much snow lies on a tile: as white as the god's view paints its ground there — the Ground3D's rule, the same snow the
+  // land's shader lays)
+  const snowAt = i => (G.Ground3D && G.Ground3D.snowAt ? G.Ground3D.snowAt(i) : G.S.temp ? G.clamp((0.235 - G.S.temp[i] / 255) / 0.07, 0, 1) : 0);
   R3.snowAt = snowAt;
   // (each tree its own shade of its kind's green — a little lighter or darker, warmer or cooler — by its id: the same tree
   // the same every time, from the hill and from under it)
@@ -868,14 +873,15 @@ vec3 gxHaze( vec3 d ) {
   }
   // a crown of leaves: lumps round its heart, lit as one soft volume, and near the body the cards of leaves standing out
   // of their edges (a crown is leaves, not the smooth side of a lump). Returns its lumps [x, y, z, radius]
-  function crownInto(g, gl, id, X, cy, Z, r, n, fl, pal, snow, sw, q, cards) {
-    const lc = leafCol(pal, snow, X, Z, r * 1.4); const lumps = [[X, cy + r * 0.42 * fl, Z, r * 0.92]];
+  function crownInto(g, gl, id, X, cy, Z, r, n, fl, pal, snow, sw, q, cards, shape) {
+    // (the snow lies on the crown's lumps; the leaves standing out of its edge keep their green, a little frosted)
+    const lc = leafCol(pal, snow, X, Z, r * 1.4), lcc = snow > 0 ? leafCol(pal, snow * 0.3, X, Z, r * 1.4) : lc; const lumps = [[X, cy + r * 0.42 * fl, Z, r * 0.92]];
     for (let k = 0; k < n - 1; k++) {
       const a = k / (n - 1) * TAU + G.hash(id * 3 + k) * 0.9, up = (k % 2 ? 0.3 : -0.14) * fl, ring = (k % 2 ? 0.52 : 0.8) * (0.86 + G.hash(id * 7 + k) * 0.28);
       lumps.push([X + Math.cos(a) * r * ring, cy + r * up, Z + Math.sin(a) * r * ring, r * (0.6 + G.hash(id * 5 + k) * 0.3)]);
     }
     g.sph = [X, cy + r * 0.12, Z, 0.75];
-    for (let k = 0; k < lumps.length; k++) { const [x, y, z, s] = lumps[k]; const h = G.hash(id * 11 + k * 5); g.put(SH.ico0, R3.mat(x, y, z, h * TAU, s * (1.05 + h * 0.2), s * 0.92 * fl, s * (1.15 - h * 0.2), (h - 0.5) * 0.6), lc, sw + (y - cy) / r * 0.06); }
+    for (let k = 0; k < lumps.length; k++) { const [x, y, z, s] = lumps[k]; const h = G.hash(id * 11 + k * 5); g.put(shape || SH.ico0, R3.mat(x, y, z, h * TAU, s * (1.05 + h * 0.2), s * 0.92 * fl, s * (1.15 - h * 0.2), (h - 0.5) * 0.6), lc, sw + (y - cy) / r * 0.06); }
     g.sph = null;
     if (gl && cards) for (let k = 0; k < lumps.length; k++) {
       const [x, y, z, s] = lumps[k]; let ox = x - X, oy = (y - cy) / Math.max(0.3, fl), oz = z - Z; const ol = Math.hypot(ox, oy, oz); if (ol < 0.2) { ox = 0; oy = 1; oz = 0; } else { ox /= ol; oy /= ol; oz /= ol; }
@@ -883,7 +889,7 @@ vec3 gxHaze( vec3 d ) {
         const a = Math.atan2(oz, ox) + (G.hash(id * 17 + k * 7 + j) - 0.5) * 2.4, e = Math.asin(G.clamp(oy, -1, 1)) * 0.6 + (G.hash(id * 19 + k * 3 + j * 5) - 0.35) * 1.3;
         const dx = Math.cos(a) * Math.cos(e), dy = Math.sin(e), dz = Math.sin(a) * Math.cos(e);
         const px = x + dx * s * 0.86, py = y + dy * s * 0.8 * fl, pz = z + dz * s * 0.86;
-        card4(gl, px, py, pz, s * (1.0 + G.hash(id + k * 13 + j) * 0.35), a, (G.hash(j * 31 + k + id) - 0.5) * 1.1, [dx, dy, dz], lc(px, py, pz, dx, dy, dz), sw + 0.08, q);
+        card4(gl, px, py, pz, s * (1.0 + G.hash(id + k * 13 + j) * 0.35), a, (G.hash(j * 31 + k + id) - 0.5) * 1.1, [dx, dy, dz], lcc(px, py, pz, dx, dy, dz), sw + 0.08, q);
       }
     }
     return lumps;
@@ -963,7 +969,8 @@ vec3 gxHaze( vec3 d ) {
         const r = sz + 0.45;
         for (let q = 0; q < 3; q++) { const a = rot + q * 2.1; limb(g, FS.limb, X, Y - 0.05, Z, X + Math.cos(a) * r * 0.35, Y + 0.9, Z + Math.sin(a) * r * 0.35, 0.07, bc, BARK - 0.05); }
         if (!burnt) crownInto(g, gl, t.id, X, Y + 0.6 + r * 0.35, Z, r, 6, 0.8, pal, snow, 0.15, 1, 2);
-        if (k[3] && !burnt) for (let q = 0; q < 7; q++) g.put(SH.ico0, R3.mat(X + Math.cos(q * 1.7) * r * 0.8, Y + 0.7 + r * 0.25 + (q % 2) * 0.35, Z + Math.sin(q * 1.7) * r * 0.8, q, 0.18), k[3], 0.15);
+        // (its fruit, each round and lit as one)
+        if (k[3] && !burnt) { for (let q = 0; q < 7; q++) { const px = X + Math.cos(q * 1.7) * r * 0.82, py = Y + 0.7 + r * 0.25 + (q % 2) * 0.35, pz = Z + Math.sin(q * 1.7) * r * 0.82; g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, q, 0.14), k[3], 0.15); } g.sph = null; }
         break;
       }
       case 'flat': {
@@ -1008,7 +1015,7 @@ vec3 gxHaze( vec3 d ) {
         }
         if (!burnt) {
           crownInto(g, gl, t.id, X, cy, Z, r, birch ? 7 : 9, birch ? 1.12 : 1, pal, snow, 0.24, birch ? 1 : jung ? 3 : 0, 4);
-          if (k[3] && t.fruit !== 0) for (let q = 0; q < 9; q++) { const a = rot + q * 0.9; g.put(SH.ico0, R3.mat(X + Math.cos(a) * r * 0.95, cy - r * 0.1 + (q % 3) * 0.3, Z + Math.sin(a) * r * 0.95, a, 0.3), k[3], 0.25); }
+          if (k[3] && t.fruit !== 0) { for (let q = 0; q < 9; q++) { const a = rot + q * 0.9; const px = X + Math.cos(a) * r * 0.95, py = cy - r * 0.1 + (q % 3) * 0.3, pz = Z + Math.sin(a) * r * 0.95; g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, a, 0.3), k[3], 0.25); } g.sph = null; }
         } else for (let q = 0; q < 3; q++) { const a = rot + q * 2.1; limb(g, FS.limb, X, cy - r * 0.3, Z, X + Math.cos(a) * r * 0.7, cy + r * 0.4, Z + Math.sin(a) * r * 0.7, r0 * 0.25, bc, BARK - 0.05); }
       }
     }
@@ -1051,10 +1058,23 @@ vec3 gxHaze( vec3 d ) {
       if (b) {
         const X = b.x * TL, Z = b.y * TL, Y = W.groundH(b.x, b.y) * HM; const dead = b.burnt > 0; fsh();
         const pal = dead ? [[110, 92, 58], [80, 66, 42], [138, 116, 72]] : BPAL[(b.id % 3 + 3) % 3].map(c => { const f = 0.9 + G.hash(b.id * 3 + 1) * 0.2; return [c[0] * f, c[1] * f, c[2] * f]; });
-        // (a bush: a few stems, lumps of leaves on them, the leaves standing out of its edge; its berries among them)
+        // (a bush: a few stems, lumps of leaves on them, sprays of small round leaves standing out of its edge; its berries
+        // among them)
         for (let q = 0; q < 3; q++) { const a = G.hash(b.id) * TAU + q * 2.1; limb(g, FS.limb, X, Y - 0.05, Z, X + Math.cos(a) * 0.3, Y + 0.55, Z + Math.sin(a) * 0.3, 0.05, dead ? [60, 48, 36] : [92, 70, 46], BARK - 0.04); }
-        crownInto(g, gl, b.id, X, Y + 0.52, Z, 0.78, 5, 0.75, pal, snowAt(i) * 0.7, 0.12, 0, dead ? 1 : 3);
-        if (b.berries > 0 && !dead) for (let q = 0; q < Math.min(6, b.berries); q++) g.put(SH.ico0, R3.mat(X + Math.cos(q * 1.9) * 0.62, Y + 0.55 + (q % 2) * 0.28, Z + Math.sin(q * 1.9) * 0.62, q, 0.16), '#c8283a', 0.12);
+        // (green in the snow too: a bush keeps its leaves — the god's view draws it green — and near, its lumps rounder)
+        crownInto(g, gl, b.id, X, Y + 0.52, Z, 0.78, 5, 0.75, pal, 0, 0.12, 1, dead ? 1 : 5, gl ? SH.ico : SH.ico0);
+        // (the berries in bunches of three on the outside of the bush, each a small round berry lit as one — the god's red,
+        // deeper; a bunch the same every time, by the bush's id)
+        if (b.berries > 0 && !dead) {
+          const bc = BERRY[(b.id % 3 + 3) % 3];
+          for (let q = 0; q < Math.min(6, b.berries); q++) {
+            const a = G.hash(b.id * 7 + q) * 0.9 + q * 1.05, d = 0.66 + G.hash(b.id * 11 + q) * 0.12, hy = Y + 0.42 + G.hash(b.id * 13 + q) * 0.42;
+            const cx = X + Math.cos(a) * d, cz = Z + Math.sin(a) * d;
+            for (let j = 0; j < 3; j++) { const aj = a + j * 2.09 + q, px = cx + Math.cos(aj) * 0.045, pz = cz + Math.sin(aj) * 0.045, py = hy + (j === 2 ? 0.05 : -0.01);
+              g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, j + q, 0.072), j ? bc : G.lerpColor(bc, [190, 60, 70], 0.25), 0.12); }
+          }
+          g.sph = null;
+        }
       }
     }
     return { flora: g.empty ? null : g.build(false, true), plants: gp.empty ? null : gp.build(), leaves: gl && !gl.empty ? gl.build(false, true) : null };

@@ -31,9 +31,13 @@
   G.worldHooks.push(() => { hFor = null; });
   // (a hash of a cell of the world, the same in every shader that reads it)
   const GH = `float gh(vec2 c, uint s) { uvec2 q = uvec2(ivec2(c) + 65536) * uvec2(1597334673u, 3812015801u); uint n = (q.x ^ q.y ^ (s * 2654435761u)) * 1597334673u; n ^= n >> 15; n *= 2246822519u; n ^= n >> 13; return float(n & 0xffffffu) / 16777216.0; }
+        float gNy = 1.0; // (the up of the land's normal at the last point hAt read: its slope, from the same four corners)
         float hAt(vec2 t) { t = clamp(t, vec2(0.0), vec2(uN - 0.001)); ivec2 i = ivec2(floor(t)); vec2 f = t - vec2(i);
           float a = texelFetch(uH, i, 0).r, b = texelFetch(uH, i + ivec2(1, 0), 0).r, c = texelFetch(uH, i + ivec2(0, 1), 0).r, d = texelFetch(uH, i + ivec2(1, 1), 0).r;
-          return mix(mix(a, b, f.x), mix(c, d, f.x), f.y); }`;
+          vec2 gr = vec2(mix(b - a, d - c, f.y), mix(c - a, d - b, f.x)) * (1.5 / 4.0); gNy = inversesqrt(1.0 + dot(gr, gr));
+          return mix(mix(a, b, f.x), mix(c, d, f.x), f.y); }
+        // (the snow the land's shader lays at a point of the ground: Ground3D's own rule, the floor read as smoothly)
+        ${G.Ground3D && G.Ground3D.snowGLSL ? G.Ground3D.snowGLSL() : 'float gSnowE(vec4 fm, float ny, vec2 xz, sampler2D nz) { return 0.0; }'}`;
 
   GR.init = function (three, realm) {
     THREE = three; R3 = realm;
@@ -61,7 +65,7 @@
     mat.onBeforeCompile = sh => {
       Object.assign(sh.uniforms, U, { uTime: R3.U.time, uWind: R3.U.wind, uBody: R3.U.body });
       sh.vertexShader = `attribute vec2 aCell; attribute float aU; attribute float aB;
-        uniform sampler2D uMask; uniform sampler2D uGMap; uniform sampler2D uH; uniform sampler2D uGust;
+        uniform sampler2D uMask; uniform sampler2D uGMap; uniform sampler2D uH; uniform sampler2D uGust; uniform sampler2D uFMap;
         uniform float uN; uniform vec2 uOrigin; uniform vec3 uEye; uniform float uR; uniform float uTime; uniform vec3 uWind; uniform vec4 uBody; uniform vec4 uPush[${PUSH}];
         varying vec3 vGC; varying float vGU;
         ${GH}
@@ -77,7 +81,9 @@
         float dist = length(vec3(root.x, gy, root.y) - uEye);
         // (thinning toward the edge of the circle; and gone right at the eye, where a blade would fill the picture)
         float fade = (1.0 - smoothstep(uR * 0.6, uR, dist)) * smoothstep(1.3, 3.4, dist);
-        float Hh = (0.1 + mk.g * 1.5) * (0.7 + r4 * 0.6) * step(r3, mk.r) * fade;
+        // (and none where the snow lies over its root — a few blades poking out of the very edge of it)
+        vec4 sfm = mk.r > 0.0 ? texture2D(uFMap, tile / uN) : vec4(0.0); float snowE = sfm.a > 0.004 ? gSnowE(sfm, gNy, root, uGust) : 0.0;
+        float Hh = (0.1 + mk.g * 1.5) * (0.7 + r4 * 0.6) * step(r3, mk.r) * fade * (1.0 - smoothstep(0.44, 0.52, snowE));
         float ang = r1 * 6.2832 + r3 * 2.0; float ca = cos(ang), sa = sin(ang);
         vec2 wd = uWind.xy; float ws = length(wd) + 1e-4; wd /= ws;
         float gust = smoothstep(0.42, 0.86, texture2D(uGust, (root - uWind.xy * uTime * 1.7) / 52.0).r);
@@ -165,7 +171,7 @@
     lmat.onBeforeCompile = sh => {
       Object.assign(sh.uniforms, U, { uTime: R3.U.time, uWind: R3.U.wind });
       sh.vertexShader = `attribute vec2 aCell; attribute float aS; attribute float aY;
-        uniform sampler2D uMask; uniform sampler2D uGMap; uniform sampler2D uFMap; uniform sampler2D uH;
+        uniform sampler2D uMask; uniform sampler2D uGMap; uniform sampler2D uFMap; uniform sampler2D uH; uniform sampler2D uGust;
         uniform float uN; uniform vec2 uLOrigin; uniform vec3 uEye; uniform float uLR; uniform float uTime; uniform vec3 uWind;
         varying vec3 vLC;
         ${GH}
@@ -190,6 +196,8 @@
           else if (kind == 7.0 && q3 > 0.84) pick = 3.0;                                                 // (dry twigs in the savanna)
         }
         float gy = hAt(tile) * 1.5;
+        // (nothing loose lying on the snow: under it)
+        { vec4 sfm = pick > -0.5 ? texture2D(uFMap, tile / uN) : vec4(0.0); if (sfm.a > 0.004 && gSnowE(sfm, gNy, root, uGust) > 0.47) pick = -1.0; }
         float dist = length(vec3(root.x, gy, root.y) - uEye);
         float fade = 1.0 - smoothstep(uLR * 0.7, uLR, dist);
         float on = step(abs(aS - pick), 0.5) * fade;
