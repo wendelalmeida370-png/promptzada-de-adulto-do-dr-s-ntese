@@ -17,6 +17,9 @@
   const B3 = G.Build3D = {};
   B3.chim = new Map(); G.worldHooks.push(() => B3.chim.clear()); // (the tops of the chimneys drawn: building id → [X, Y, Z])
   B3.tops = new Map(); G.worldHooks.push(() => B3.tops.clear()); // (how high each building's near picture reaches: id → Y)
+  // (the panes that light up at night, for FX3D's light on the street: building id → [[X, Y, Z, out x, out z], ...] — kept by the
+  // chunk that drew them, so a building gone takes its panes with it when its chunk is drawn again)
+  B3.lamps = new Map(); const litOf = new Map(); G.worldHooks.push(() => { B3.lamps.clear(); litOf.clear(); });
   let THREE = null, R3 = null, SH = null, glass = null, PM = null, IDM = null;
   const TAU = Math.PI * 2;
   B3.init = function (three, realm) {
@@ -463,6 +466,7 @@ float m3scale(float p) {
       },
       // (detail that only the closer qualities carry: hinges, hooks, battens)
       fine: fine !== undefined ? !!fine : !!(R3.Q && R3.Q().detail),
+      lit: null, // (while a chunk is drawn near: the panes that light up at night — B3.lamps)
       // the base: stone from the lowest ground up to the floor (on a slope it shows; on flat ground it is a step) — under
       // the whole lot, unless the building laid its own footing of stones under its walls (footed)
       footed: false,
@@ -804,8 +808,9 @@ float m3scale(float p) {
   function warmWalls(K, x, z, sx, sz, h, floors, o) {
     const P = K.P; const st = stuff(K.b); const civ = K.st; const fh = h / floors; const wc = o.wall || (K.b.v === 2 ? P.wr : P.wl);
     const frame = st.wall === 'frame' && !o.wall && !o.pat;
-    // (the wall itself: plaster where the timber is geometry, the people's stuff otherwise)
-    K.as(o.pat || (frame || o.wall ? 'plaster' : st.wall), () => K.box(x, 0, z, sx, h, sz, frame ? mixc(wc, [244, 236, 214], 0.25) : wc));
+    // (the wall itself: plaster where the timber is geometry, the people's stuff otherwise; under eaves, its top band in their shade)
+    const w0 = frame ? mixc(wc, [244, 236, 214], 0.25) : wc; const eave = !o.noRoof && (o.roof || P.kind) !== 'flat';
+    K.as(o.pat || (frame || o.wall ? 'plaster' : st.wall), () => { if (eave) { K.box(x, 0, z, sx, h - 0.45, sz, w0); K.box(x, h - 0.45, z, sx, 0.45, sz, eaveShade(K, w0, h)); } else K.box(x, 0, z, sx, h, sz, w0); });
     const tr = P.trim || '#6b4a30';
     if (frame) {
       const side = doorSide(K.b); const wt = mixc(tr, [74, 52, 36], 0.25); const t = 0.15, pr = 0.035;
@@ -1034,7 +1039,8 @@ float m3scale(float p) {
   function nordWalls(K, x, z, lx, lz, h, cls, side, wallCol) {
     const P = K.P; const NW = nordWood(K); const wd = NW.dark;
     const wall = wallCol ? calm(mixc(wallCol, [126, 94, 64], 0.08 + K.hv(11) * 0.1), 0.8, 0.88) : NW.wall;
-    K.as('plankV', () => K.box(x, 0, z, lx, h, lz, wall));
+    // (the wall, its top band in the shade of the eaves — the roof's volume where no shadow of contact is drawn)
+    K.as('plankV', () => { K.box(x, 0, z, lx, h - 0.45, lz, wall); K.box(x, h - 0.45, z, lx, 0.45, lz, eaveShade(K, wall, h)); });
     K.as('beam', () => {
       K.box(x, 0, z, lx + 0.1, 0.2, lz + 0.1, dim(wd, 0.92)); K.box(x, h - 0.2, z, lx + 0.09, 0.2, lz + 0.09, wd);
       for (const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.box(x + px * (lx / 2 - 0.08), 0, z + pz * (lz / 2 - 0.08), 0.26, h, 0.26, wd);
@@ -1043,6 +1049,8 @@ float m3scale(float p) {
     });
     if (cls >= 2) K.as('beam', () => K.box(x, h - 0.31, z, lx + 0.03, 0.09, lz + 0.03, P.trim || '#a23c2a'));
   }
+  // (a wall's colour darkening up to the eaves over it: ×0.78 at the top h — a colour of the point, for the band's box)
+  const eaveShade = (K, col, h) => { const top = K.y0 + h - 0.02, lo = dim(col, 0.78); return (X, Y) => (Y > top ? lo : col); };
   // (the four walls of a box: the side each faces, its outward way, whether it runs along X, its length; and how many bays)
   const wallsOf = (lx, lz) => [{ side: 'S', o: [0, 1], ax: true, len: lx }, { side: 'N', o: [0, -1], ax: true, len: lx }, { side: 'E', o: [1, 0], ax: false, len: lz }, { side: 'W', o: [-1, 0], ax: false, len: lz }];
   const bays = len => Math.max(1, Math.round(len / 1.25));
@@ -1099,7 +1107,7 @@ float m3scale(float p) {
         const o = W2.o, ax = W2.ax; const fx = x + o[0] * lx / 2 + (ax ? a : 0), fz = z + o[1] * lz / 2 + (ax ? 0 : a);
         const bx = (da, y, n, wa, hy, wn, col) => K.box(fx + (ax ? da : 0) + o[0] * n, y, fz + (ax ? 0 : da) + o[1] * n, ax ? wa : wn, hy, ax ? wn : wa, col);
         const open = K.hv(40 + k) < 0.62; const s = Math.abs(a) + ww * 1.5 + 0.25 > W2.len / 2 ? -Math.sign(a) || 1 : K.hv(60 + k) < 0.5 ? -1 : 1; // (the shutter swings toward the middle near a corner)
-        if (open) gw.put(SH.box, R3.mat(K.x0 + fx + o[0] * 0.03, K.y0 + wy, K.z0 + fz + o[1] * 0.03, ax ? 0 : Math.PI / 2, ww, wh, 0.05), '#28303a');
+        if (open) { gw.put(SH.box, R3.mat(K.x0 + fx + o[0] * 0.03, K.y0 + wy, K.z0 + fz + o[1] * 0.03, ax ? 0 : Math.PI / 2, ww, wh, 0.05), '#28303a'); if (K.lit) K.lit.push([K.x0 + fx + o[0] * 0.07, K.y0 + wy + wh / 2, K.z0 + fz + o[1] * 0.07, o[0], o[1]]); }
         K.as('beam', () => { bx(0, wy - 0.07, 0.05, ww + 0.16, 0.07, 0.1, fc); bx(0, wy + wh, 0.05, ww + 0.16, 0.07, 0.1, fc); for (const e of [-1, 1]) bx(e * (ww / 2 + 0.04), wy, 0.05, 0.07, wh, 0.1, fc);
           bx(0, wy - 0.12, 0.09, ww + 0.22, 0.05, 0.16, dim(fc, 0.9)); if (cls >= 2) bx(0, wy + wh + 0.07, 0.07, ww + 0.3, 0.08, 0.1, P.trim || '#a23c2a'); });
         const sc2 = mixc(fc, P.wl || '#7e5e40', 0.4);
@@ -1114,6 +1122,7 @@ float m3scale(float p) {
     for (const e of [-1, 1]) { const c0 = R.at(e * (R.L / 2 + 0.02), R.y + R.h * 0.4, 0); const ax = R.alongZ; // (the gable faces along the ridge)
       const w = cls >= 2 ? 0.42 : 0.3, hh = cls >= 2 ? 0.3 : 0.22;
       (cls >= 3 ? gw : K.g).put(SH.box, R3.mat(K.x0 + c0[0], K.y0 + c0[1], K.z0 + c0[2], ax ? 0 : Math.PI / 2, w, hh, 0.05), cls >= 3 ? '#28303a' : K.c('#16110c'));
+      if (cls >= 3 && K.lit) K.lit.push([K.x0 + c0[0] + (ax ? 0 : e * 0.08), K.y0 + c0[1] + hh / 2, K.z0 + c0[2] + (ax ? e * 0.08 : 0), ax ? 0 : e, ax ? e : 0]);
       K.as('beam', () => { for (const dy of [-0.06, hh]) K.box(c0[0] + (ax ? 0 : e * 0.03), c0[1] + dy, c0[2] + (ax ? e * 0.03 : 0), ax ? w + 0.14 : 0.07, 0.06, ax ? 0.07 : w + 0.14, fc); });
     }
   }
@@ -1278,7 +1287,7 @@ float m3scale(float p) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, s, s, 10); return; }
       K.as('stone', () => { K.box(K.w / 2, h, K.d / 2, s + 0.5, 0.4, s + 0.5, P.base ? P.base[1] : '#6f6a60');
         for (const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1], [0, -1], [0, 1], [-1, 0], [1, 0]]) K.box(K.w / 2 + px * (s / 2), h + 0.4, K.d / 2 + pz * (s / 2), 0.5, 0.7, 0.5, P.base ? P.base[2] : '#a09a8e'); });
-      gw.put(SH.box, R3.mat(K.x0 + K.w / 2, K.y0 + h * 0.65, K.z0 + K.d / 2 + s / 2 + 0.04, 0, 0.3, 0.9, 0.08), '#2a3440');
+      gw.put(SH.box, R3.mat(K.x0 + K.w / 2, K.y0 + h * 0.65, K.z0 + K.d / 2 + s / 2 + 0.04, 0, 0.3, 0.9, 0.08), '#2a3440'); if (K.lit) K.lit.push([K.x0 + K.w / 2, K.y0 + h * 0.65 + 0.45, K.z0 + K.d / 2 + s / 2 + 0.1, 0, 1]);
     },
     mercado(g, gw, K) { stalls(K, 4); },
     feira(g, gw, K) { stalls(K, 3); },
@@ -1302,11 +1311,22 @@ float m3scale(float p) {
     plantacao(g, gw, K) { fields(K, '#c8b84a', '#5a8a2a'); },
     vinhedo(g, gw, K) { for (let r = 0; r < K.b.h * 2; r++) { const z = (r + 0.5) * K.d / (K.b.h * 2); K.box(K.w / 2, 0, z, K.w - 0.8, 1.5, 0.35, '#4a7a2a'); K.box(0.4, 0, z, 0.12, 1.8, 0.12, '#6a4a2c'); K.box(K.w - 0.4, 0, z, 0.12, 1.8, 0.12, '#6a4a2c'); } },
     pomar(g, gw, K) { for (let k = 0; k < K.b.w * K.b.h; k++) { const px = ((k % K.b.w) + 0.5) * K.L, pz = (Math.floor(k / K.b.w) + 0.5) * K.L; K.cyl(px, 0, pz, 0.18, 1.6, '#6a4a2c'); K.sph(px, 2.6, pz, 1.2, '#4f8f36', 1.0); K.sph(px + 0.6, 2.3, pz + 0.3, 0.2, '#d23a2a'); } },
+    // the well: a ring of stones round the shaft, dark inside, its water deep down; two posts, the windlass across them with its
+    // rope and bucket, a little roof of the people's kind (the same place and size as the god's: x, z, 0.8 m round)
     well(g, gw, K) {
-      const P = K.P; const x = K.w / 2, z = K.d / 2;
-      K.cyl(x, 0, z, 0.8, 0.85, P.base ? P.base[2] : '#a09a8e'); K.cyl(x, 0.82, z, 0.62, 0.05, '#2a5a7a');
-      for (const s of [-1, 1]) K.box(x + s * 0.75, 0.8, z, 0.12, 1.5, 0.12, '#6a4a2c');
-      K.gable(x, 2.2, z, 2, 0.6, 1.4, (P.roof && P.roof[0]) || '#b85a3c');
+      const P = K.P; const x = K.w / 2, z = K.d / 2; const bs = P.base || ['#8a8478', '#6f6a60', '#a09a8e']; const nord = K.st === 'nordico';
+      K.cyl(x, 0, z, 0.6, 0.35, dim(bs[1], 0.45)); // (the shaft's dark)
+      K.as('stone', () => { const n = 11; for (let k = 0; k < n; k++) { const a = (k + 0.5) / n * TAU; K.rbox(x + Math.cos(a) * 0.68, 0, z + Math.sin(a) * 0.68, 0.43, 0.8, 0.24, mixc(bs[k % 3], bs[(k + 1) % 3], K.hv(170 + k) * 0.6), -a - Math.PI / 2); } });
+      K.as('slab', () => { for (let k = 0; k < 11; k++) { const a = (k + 0.5) / 11 * TAU; K.rbox(x + Math.cos(a) * 0.68, 0.8, z + Math.sin(a) * 0.68, 0.45, 0.07, 0.28, dim(bs[2], 0.95 + K.hv(190 + k) * 0.08), -a - Math.PI / 2); } });
+      K.gq.disc(K.x0 + x, K.y0 + 0.36, K.z0 + z, 0.57, [34, 62, 70], 0.85, 12);
+      const wc = nord ? nordWood(K).dark : [104, 78, 52];
+      K.as('beam', () => { for (const s of [-1, 1]) K.box(x + s * 0.82, 0, z, 0.13, 2.25, 0.13, wc); });
+      K.as('bark', () => K.log([x - 0.84, 1.45, z], [x + 0.84, 1.45, z], 0.075, [118, 94, 66]));
+      K.as('beam', () => K.bar([x + 0.88, 1.45, z], [x + 1.02, 1.28, z], [0, 0, 0.04], [0, 0.04, 0], wc)); // (the crank)
+      K.as('rope', () => K.log([x + 0.05, 1.42, z], [x + 0.05, 0.98, z], 0.012, [176, 156, 118]));
+      K.as('plankV', () => K.cyl(x + 0.05, 0.72, z, 0.13, 0.26, [120, 88, 56])); K.as('iron', () => K.cyl(x + 0.05, 0.9, z, 0.138, 0.03, '#3c3a36'));
+      const rp = nord ? 'shingle' : stuff(K.b).tile === 'mud' ? 'thatch' : stuff(K.b).tile; const rc = nord ? dim(wc, 1.1) : rp === 'thatch' ? ((P.thatch && P.thatch[0]) || '#c8a85a') : (P.roof && P.roof[0]) || '#b85a3c';
+      K.as(rp, () => K.gable(x, 2.2, z, 2, 0.6, 1.4, rc));
     },
     campfire(g, gw, K) { for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; K.sph(K.w / 2 + Math.cos(a) * 0.7, 0.1, K.d / 2 + Math.sin(a) * 0.7, 0.22, '#6a6a66'); } for (let k = 0; k < 3; k++) g.put(SH.cyl, R3.mat(K.x0 + K.w / 2, K.y0 + 0.2, K.z0 + K.d / 2, k * 1.05, 0.16, 1.1, 0.16, 0, Math.PI / 2), K.c('#5a3a24')); },
     cemetery(g, gw, K) {
@@ -1320,13 +1340,24 @@ float m3scale(float p) {
       const P = K.P; const st = P.base ? P.base[2] : '#a09a8e', dk = P.base ? P.base[0] : '#8a8478'; const cx = K.w / 2, cz = K.d / 2;
       K.as('slab', () => K.box(cx, -0.05, cz, K.w - 0.2, 0.15, K.d - 0.2, st));
       K.as('stone', () => { for (const [x, z, w, d] of [[cx, 0.25, K.w - 0.2, 0.32], [cx, K.d - 0.25, K.w - 0.2, 0.32], [0.25, cz, 0.32, K.d - 0.84], [K.w - 0.25, cz, 0.32, K.d - 0.84]]) K.box(x, -0.05, z, w, 0.25, d, dk);
-        K.cyl(cx, 0.1, cz, 1.4, 0.6, dk); K.cyl(cx, 0.1, cz, 0.2, 1.5, st); K.cyl(cx, 1.58, cz, 0.5, 0.16, st); });
-      K.cyl(cx, 0.68, cz, 1.22, 0.04, '#3a8ab0'); K.cyl(cx, 1.72, cz, 0.42, 0.03, '#3a8ab0');
+        // (the basin: its floor, a rim of dressed blocks round it — each its own tone — the column, the bowl on it with its lip)
+        // (inside the 1.4 m the body walks round: avatar.js)
+        K.cyl(cx, 0.1, cz, 1.2, 0.3, dim(dk, 0.8)); const n = 14;
+        for (let k = 0; k < n; k++) { const a = (k + 0.5) / n * TAU; K.rbox(cx + Math.cos(a) * 1.27, 0.1, cz + Math.sin(a) * 1.27, 0.59, 0.62, 0.26, dim(dk, 0.92 + K.hv(160 + k) * 0.14), -a - Math.PI / 2); }
+        K.cyl(cx, 0.4, cz, 0.17, 1.18, st); K.cyl(cx, 1.5, cz, 0.24, 0.08, st); K.cyl(cx, 1.56, cz, 0.5, 0.12, st); });
+      K.as('slab', () => { for (let k = 0; k < 14; k++) { const a = (k + 0.5) / 14 * TAU; K.rbox(cx + Math.cos(a) * 1.27, 0.72, cz + Math.sin(a) * 1.27, 0.61, 0.07, 0.27, dim(st, 0.96 + K.hv(180 + k) * 0.08), -a - Math.PI / 2); } });
+      { const lip = []; for (let j = 0; j <= 1; j++) for (let i = 0; i <= 12; i++) { const a = i / 12 * TAU; lip.push([cx + Math.cos(a) * 0.5, j ? 1.75 : 1.67, cz + Math.sin(a) * 0.5]); } K.as('stone', () => K.sheet(lip, 12, 1, st, [-1, 0, 0])); }
+      // (still water, not a blue lid: the sky in it, the light of the hour — the water of the chunk, A5's material)
+      K.gq.disc(K.x0 + cx, K.y0 + 0.6, K.z0 + cz, 1.15, [70, 150, 165], 0.55); K.gq.disc(K.x0 + cx, K.y0 + 1.72, K.z0 + cz, 0.47, [70, 150, 165], 0.55, 12);
       const bz = Math.min(2.7, K.d / 2 - 1.1);
       K.as('plankH', () => { for (const s of [-1, 1]) K.box(cx, 0.4, cz + s * bz, 1.8, 0.08, 0.44, '#8a6a44'); });
       for (const s of [-1, 1]) for (const e of [-0.72, 0.72]) K.box(cx + e, 0.1, cz + s * bz, 0.14, 0.3, 0.38, dk);
     },
-    aqueduto(g, gw, K) { const P = K.P; K.box(K.w / 2, 0, K.d / 2, K.w - 0.6, 4.5, K.d - 0.6, P.base ? P.base[2] : '#a09a8e'); K.box(K.w / 2, 4.5, K.d / 2, K.w - 0.2, 0.4, K.d - 0.2, '#3a8ab0'); },
+    // the cistern an aqueduct fills: a block of stone, a parapet round its top, the still water in it (the chunk's water)
+    aqueduto(g, gw, K) { const P = K.P; const c = P.base ? P.base[2] : '#a09a8e'; const sx = K.w - 0.6, sz = K.d - 0.6, cx = K.w / 2, cz = K.d / 2;
+      K.as('stone', () => { K.box(cx, 0, cz, sx, 4.5, sz, c); for (const [px, pz, a, b2] of [[cx, cz - sz / 2 + 0.15, sx, 0.3], [cx, cz + sz / 2 - 0.15, sx, 0.3], [cx - sx / 2 + 0.15, cz, 0.3, sz - 0.6], [cx + sx / 2 - 0.15, cz, 0.3, sz - 0.6]]) K.box(px, 4.5, pz, a, 0.55, b2, dim(c, 0.92)); });
+      const x0 = K.x0 + cx - sx / 2 + 0.29, x1 = K.x0 + cx + sx / 2 - 0.29, z0 = K.z0 + cz - sz / 2 + 0.29, z1 = K.z0 + cz + sz / 2 - 0.29, wy = K.y0 + 4.85, cw = [66, 140, 160];
+      K.gq.quad([[x0, wy, z0], [x0, wy, z1], [x1, wy, z1], [x1, wy, z0]], [cw, cw, cw, cw], [0.6, 0.6, 0.6, 0.6], [2, 2, 2, 2]); },
     ruin(g, gw, K) { const P = K.P; for (let k = 0; k < 5; k++) { const h = 0.6 + G.hash(K.b.id * 7 + k) * 2.4; const px = 0.6 + G.hash(K.b.id + k * 3) * (K.w - 1.2), pz = 0.6 + G.hash(K.b.id * 3 + k) * (K.d - 1.2); K.box(px, 0, pz, 1.2, h, 0.5, dim(P.wl || '#efe2c4', 0.7), G.hash(k) * 3); } },
   };
   // the round hut, as the god's view draws it: a round wall of plaster or mud on a ring of stones (a painted band on the
@@ -1360,7 +1391,7 @@ float m3scale(float p) {
     K.as('beam', () => { for (const e of [-1, 1]) bx(e * (dw / 2 + 0.06), 0, 0.02, 0.12, dh + 0.04, 0.14, P.trim || '#6b4a30'); bx(0, dh, 0.02, dw + 0.34, 0.16, 0.16, P.trim || '#6b4a30'); });
     const sp = D(0, 0, 0.35); const gy = Math.min(-0.36, K.gy(sp[0], sp[2]) - 0.04); K.as('stone', () => bx(0, gy, 0.33, dw + 0.3, 0.04 - gy, 0.42, base[2]));
     const wo = [-od[1], od[0]]; const wq = [cx + wo[0] * (r - 0.02), 1.2, cz + wo[1] * (r - 0.02)];
-    gw.put(SH.box, R3.mat(K.x0 + wq[0], K.y0 + wq[1], K.z0 + wq[2], wo[1] !== 0 ? 0 : Math.PI / 2, 0.42, 0.4, 0.12), '#2a3440');
+    gw.put(SH.box, R3.mat(K.x0 + wq[0], K.y0 + wq[1], K.z0 + wq[2], wo[1] !== 0 ? 0 : Math.PI / 2, 0.42, 0.4, 0.12), '#2a3440'); if (K.lit) K.lit.push([K.x0 + wq[0] + wo[0] * 0.08, K.y0 + wq[1] + 0.2, K.z0 + wq[2] + wo[1] * 0.08, wo[0], wo[1]]);
     K.as('beam', () => { K.box(wq[0] + wo[0] * 0.04, wq[1] - 0.07, wq[2] + wo[1] * 0.04, wo[1] !== 0 ? 0.6 : 0.12, 0.07, wo[1] !== 0 ? 0.12 : 0.6, P.trim || '#6b4a30'); K.box(wq[0] + wo[0] * 0.04, wq[1] + 0.4, wq[2] + wo[1] * 0.04, wo[1] !== 0 ? 0.6 : 0.12, 0.07, wo[1] !== 0 ? 0.12 : 0.6, P.trim || '#6b4a30'); });
     K.body = { x: cx, z: cz, sx: r * 2, sz: r * 2, door: { side, o: od, a: 0, w: dw + 0.5 } };
   }
@@ -1450,7 +1481,7 @@ float m3scale(float p) {
     for (let k = 0; k < 2; k++) out.push([cx + (k ? 0.5 : -0.5), gy + 5, cz, 0.5, 0.7, 1.7, '#8a847a']);
     return out;
   }
-  function wallsInto(g, x0, y0, n) {
+  function wallsInto(g, x0, y0, n, gq) { // (gq: the water of the chunk, for the aqueducts' channels)
     const S = G.S; const L = TL(); const H = HM();
     for (let y = y0; y < y0 + n; y++) for (let x = x0; x < x0 + n; x++) {
       if (!W.inb(x, y)) continue; const bs = wallBoxes(x, y); if (!bs) continue;
@@ -1471,7 +1502,11 @@ float m3scale(float p) {
         // (the spandrels over the piers, then the deck)
         for (const sd of [-1, 1]) { const p = at(sd * (L / 2 - 0.5), gy + spring); g.put(SH.box, R3.mat(p[0], p[1], p[2], ry, 1.0, top - spring, 1.3), col); }
         const d = at(0, gy + top); g.put(SH.box, R3.mat(d[0], d[1], d[2], ry, L, 1.1, 1.4), deck);
-        g.pat = 0; const w = at(0, gy + top + 1.1); g.put(SH.box, R3.mat(w[0], w[1], w[2], ry, L, 0.12, 0.8), '#3a8ab0');
+        // (the water running in the channel between its two kerbs: the water of the chunk, flowing — a quad over the channel's floor)
+        g.pat = 0; if (gq) { const wy = gy + top + 1.1 + 0.16, e = 0.43, h0 = L / 2; const A = at(-h0, wy), B = at(h0, wy); const cw = [62, 136, 156], al = 0.6;
+          gq.quad(ax ? [[A[0], wy, A[2] - e], [A[0], wy, A[2] + e], [B[0], wy, B[2] + e], [B[0], wy, B[2] - e]] : [[A[0] - e, wy, A[2]], [A[0] - e, wy, B[2]], [A[0] + e, wy, B[2]], [A[0] + e, wy, A[2]]], [cw, cw, cw, cw], [al, al, al, al], [0, 0, 0, 0]);
+          g.pat = PAT.slab; const f = at(0, gy + top + 1.1); g.put(SH.box, R3.mat(f[0], f[1], f[2], ry, L, 0.02, 0.86), dim(deck, 0.7)); g.pat = 0; }
+        else { const w = at(0, gy + top + 1.1); g.put(SH.box, R3.mat(w[0], w[1], w[2], ry, L, 0.12, 0.8), '#3a8ab0'); }
         g.pat = PAT.stone; for (const sd of [-1, 1]) { const q = at(0, gy + top + 1.1); g.put(SH.box, R3.mat(q[0] + (ax ? 0 : sd * 0.55), q[1], q[2] + (ax ? sd * 0.55 : 0), ry, L, 0.3, 0.25), deck); }
         g.pat = 0;
       } }
@@ -1488,15 +1523,17 @@ float m3scale(float p) {
   };
   B3.nearGeo = function (x0, y0, n) {
     const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(), gq = R3.WGeo();
+    const ck = x0 + ',' + y0; for (const id of litOf.get(ck) || []) B3.lamps.delete(id); const lit = []; litOf.set(ck, lit);
     for (const b of G.S.buildings.values()) {
       if (!inChunk(b, x0, y0, n)) continue;
-      const K = kit(g, b, gp, gq); const n0 = g.p.length;
+      const K = kit(g, b, gp, gq); const n0 = g.p.length; K.lit = [];
       draw(g, gw, K, true);
+      if (K.lit.length) { const L = K.lit, m = Math.min(8, L.length); B3.lamps.set(b.id, Array.from({ length: m }, (_, i) => L[Math.floor(i * L.length / m)])); lit.push(b.id); } // (eight at most, spread round it)
       // (how high it really stands, for the eye that must not go into its roof)
       let top = -1e9; for (let k = n0 + 1; k < g.p.length; k += 3) if (g.p[k] > top) top = g.p[k]; if (top > -1e9) B3.tops.set(b.id, top);
     }
     g.ao = (X, Z) => W.hAt(X / TL(), Z / TL()) * HM();
-    wallsInto(g, x0, y0, n);
+    wallsInto(g, x0, y0, n, gq);
     return { solid: g.empty ? null : g.build(true), glass: gw.empty ? null : gw.build(), plants: gp.empty ? null : gp.build(), water: gq.empty ? null : gq.build() };
   };
   // the far picture: a block and a roof for each house, the height of what it is
