@@ -26,7 +26,7 @@ BI = {b: i for i, b in enumerate(BONES)}
 HALF = [('pel', 'chest', 'spine'), ('chest', 'head', 'neck'),
         ('chest', 'shL', 'shHL'), ('chest', 'shR', 'shHR'), ('shL', 'faL', 'elHL'), ('shR', 'faR', 'elHR'),
         ('pel', 'thL', 'hpHL'), ('pel', 'thR', 'hpHR'), ('thL', 'snL', 'knHL'), ('thR', 'snR', 'knHR')]
-ZONE = {'body': 0, 'eyeL': 1, 'eyeR': 2, 'hair': 3, 'beard': 4, 'saiaC': 5, 'saiaL': 6, 'cape': 7, 'metal': 8, 'hat': 9, 'straw': 10, 'hood': 11, 'scarf': 12, 'gold': 13, 'fur': 14}
+ZONE = {'body': 0, 'eyeL': 1, 'eyeR': 2, 'hair': 3, 'beard': 4, 'saiaC': 5, 'saiaL': 6, 'cape': 7, 'metal': 8, 'hat': 9, 'straw': 10, 'hood': 11, 'scarf': 12, 'gold': 13, 'fur': 14, 'toga': 15, 'nemes': 16, 'crista': 17, 'plumas': 18, 'tanga': 19, 'folha': 20}
 
 
 # ------------------------------ Blender: the decimator ------------------------------
@@ -134,7 +134,7 @@ def weld(V, T, eps=1e-7):
     return V[first], T2[ok], first
 
 
-def body_mesh(fem, h, tris):
+def body_mesh(fem, h, tris, eyes=(14, 10)):
     t0 = time.time()
     P = CF.body(fem)
     V, Q = mesh_of(P, h)
@@ -145,9 +145,10 @@ def body_mesh(fem, h, tris):
     zone = np.zeros(len(V), np.uint8)
     ao = occlusion(V, T, N)
     print('  decimated to %d points, %d triangles; weights, occlusion: %.0f s' % (len(V), len(T), time.time() - t0)); sys.stdout.flush()
-    # the eyes: their own spheres, the head's, with no occlusion of their own (the lids are painted)
-    for k, (c, r) in enumerate(CF.eyes(fem)):
-        ev, et, en = uvsphere(c, r)
+    # the eyes: their own spheres, the head's, with no occlusion of their own (the lids are painted); none on the farthest
+    # body — its sockets painted (body3d)
+    for k, (c, r) in enumerate(CF.eyes(fem) if eyes else []):
+        ev, et, en = uvsphere(c, r, *eyes)
         ev, et, keep = weld(ev, et); en = en[keep]
         n0 = len(V); V = np.vstack([V, ev]); T = np.vstack([T, et + n0]); N = np.vstack([N, en])
         bi = np.vstack([bi, np.tile(np.array([[BI['head'], 0, 0, 0]], np.uint8), (len(ev), 1))])
@@ -177,16 +178,35 @@ def w_rule(V, rule):
         front = smooth(-0.06, 0.0, z)
         top = np.maximum(smooth(1.36, 1.44, y), front * smooth(1.3, 1.36, y)); low = smooth(1.05, 0.85, y)
         W[:, BI['chest']] = top; W[:, BI['clk1']] = (1 - top) * (1 - low); W[:, BI['clk2']] = (1 - top) * low
+    elif rule == 'toga':
+        # (the band and the ends above the hips with the chest; below, as a skirt: the front with the leg most forward, the
+        # back with the one behind, the sides with their own — blended round the body)
+        th = np.arctan2(x, z); f = np.maximum(0, np.cos(th)) ** 2; b = np.maximum(0, -np.cos(th)) ** 2; l = np.maximum(0, np.sin(th)) ** 2; r = np.maximum(0, -np.sin(th)) ** 2
+        up = smooth(0.9, 1.06, y); W[:, BI['chest']] = up
+        down = (1 - up) * smooth(0.95, 0.75, y); W[:, BI['pel']] = (1 - up) - down
+        for k, w in (('skF', f), ('skB', b), ('skL', l), ('skR', r)): W[:, BI[k]] = down * w
     elif rule == 'hood':
         c = smooth(1.5, 1.6, y); W[:, BI['head']] = c; W[:, BI['chest']] = 1 - c
     W /= np.maximum(W.sum(1, keepdims=True), 1e-9)
     return pack(W)
 
 
-def piece_mesh(prims, zone, h, tris, rule=None, body=None, sym=True):
+LODS = (1.0, 0.35, 0.12)   # (each piece in three: near, a few steps off, far — the share of its triangles)
+
+
+def piece_mesh(prims, zone, h, tris, rule=None, body=None, sym=True, lods=LODS):
+    """A piece, decimated from the same fine mesh to each level of detail: a list, the nearest first."""
     t0 = time.time()
-    V, Q = mesh_of(prims, h, maxstep=1.5 * h)
-    V, T = decimate(V, Q, tris, sym)
+    V0, Q = mesh_of(prims, h, maxstep=1.5 * h)
+    out = []
+    for f in lods:
+        V, T = decimate(V0, Q, max(60, int(tris * f)), sym)
+        out.append(piece_of(prims, zone, V, T, rule, body))
+    print('  %s: %s triangles, %.0f s' % (zone, '/'.join(str(len(m['T'])) for m in out), time.time() - t0)); sys.stdout.flush()
+    return out
+
+
+def piece_of(prims, zone, V, T, rule, body):
     N = normals_of(prims, V)
     if rule: bi, bw = w_rule(V, rule)
     else: bi, bw = weights(prims, V)
@@ -200,7 +220,6 @@ def piece_mesh(prims, zone, h, tris, rule=None, body=None, sym=True):
             d = np.abs(p.sdf(V)); m = d < best; best[m] = d[m]; bz[m] = ZONE[p.tag] if p.tag else ZONE[zone]
         zn = bz
     ao = occlusion(V, T, N, extra=body)
-    print('  %s: %d points, %d triangles, %.0f s' % (zone, len(V), len(T), time.time() - t0)); sys.stdout.flush()
     return dict(V=V, N=N, T=T, bi=bi, bw=bw, zone=zn, ao=ao)
 
 
@@ -246,21 +265,38 @@ def main(only):
     bind = {k: [round(float(x), 6) for x in v] for k, v in J.items()}
     meshes = load_old() if only else {}
     jobs = {'corpoM': lambda: body_mesh(0.0, 0.0045, 7600), 'corpoF': lambda: body_mesh(1.0, 0.0045, 7600),
-            # (the far ones: the same body with a third of the triangles — beyond a few steps nobody sees the difference)
-            'corpoM_1': lambda: body_mesh(0.0, 0.006, 2400), 'corpoF_1': lambda: body_mesh(1.0, 0.006, 2400)}
-    for st in ('curto', 'longo', 'trancas', 'coque', 'careca', 'rabo', 'chanel'):
+            # (a few steps off: the same body with a third of the triangles, lighter eyes; far: a few hundred, no eyeballs)
+            'corpoM_1': lambda: body_mesh(0.0, 0.006, 2400, (8, 6)), 'corpoF_1': lambda: body_mesh(1.0, 0.006, 2400, (8, 6)),
+            'corpoM_2': lambda: body_mesh(0.0, 0.008, 480, None), 'corpoF_2': lambda: body_mesh(1.0, 0.008, 480, None)}
+    for st in ('curto', 'longo', 'trancas', 'coque', 'careca', 'rabo', 'chanel', 'peruca'):
         jobs[st] = (lambda st: lambda: piece_mesh(CR.hair(st), 'hair', 0.0032, 1400 if st in ('curto', 'careca') else 2200, body=body_occluder()))(st)
     for st in ('barba', 'curta', 'bigode'):
-        jobs[st] = (lambda st: lambda: piece_mesh(CR.beard(st), 'beard', 0.003, 700 if st == 'bigode' else 1100, body=body_occluder()))(st)
+        jobs[st] = (lambda st: lambda: piece_mesh(CR.beard(st), 'beard', 0.003, 700 if st == 'bigode' else 1100, body=body_occluder(), lods=LODS[:2]))(st)
     jobs['saiaC'] = lambda: piece_mesh(CR.skirt(False), 'saiaC', 0.004, 1300, rule='skirt', body=body_occluder())
     jobs['saiaL'] = lambda: piece_mesh(CR.skirt(True), 'saiaL', 0.0045, 1900, rule='skirt', body=body_occluder())
     jobs['capa'] = lambda: piece_mesh(CR.cape(), 'cape', 0.0045, 2200, rule='cape', body=torso_occluder(), sym=False)
-    for st, z in (('gorro', 'hat'), ('elmo', 'metal'), ('chapeu', 'straw'), ('capuz', 'hood'), ('lenco', 'scarf'), ('coroa', 'gold')):
-        jobs[st] = (lambda st, z: lambda: piece_mesh(CR.hat(st), z, 0.0035, 1300 if st != 'coroa' else 600, rule='hood' if st == 'capuz' else None, body=body_occluder()))(st, z)
+    jobs['toga'] = lambda: piece_mesh(CR.toga(), 'toga', 0.0038, 2600, rule='toga', body=torso_occluder(), sym=False)
+    # (the hats; the south's crested helmet, the pharaoh's headcloth, the feathers of the jungle, the laurel)
+    for st, z, n in (('gorro', 'hat', 1300), ('elmo', 'metal', 1300), ('chapeu', 'straw', 1300), ('capuz', 'hood', 1300), ('lenco', 'scarf', 1300), ('coroa', 'gold', 600),
+                     ('galea', 'metal', 1400), ('nemes', 'nemes', 1600), ('penacho', 'plumas', 1400), ('louro', 'folha', 700)):
+        jobs[st] = (lambda st, z, n: lambda: piece_mesh(CR.hat(st), z, 0.0035, n, rule='hood' if st == 'capuz' else None, body=body_occluder(), lods=LODS[:2] if st in ('coroa', 'louro') else LODS))(st, z, n)
+    jobs['tanga'] = lambda: piece_mesh(CR.piece('tanga'), 'tanga', 0.004, 900, rule='skirt', body=body_occluder())
     for name, f in jobs.items():
         if only and name not in only: continue
         print(name); sys.stdout.flush()
-        meshes[name] = encode(f())
+        m = f()
+        # (a piece in its levels of detail: name, name_1, name_2 — the farther ones lighter; for a piece with fewer levels
+        # its lightest stands in farther off: body3d)
+        if isinstance(m, list):
+            # (a level the decimator could not make much lighter than the one before — a piece too thin for it to simplify —
+            # is left out: the one before stands in)
+            keep = [m[0]]
+            for mk in m[1:]:
+                if len(mk['T']) >= 0.85 * len(keep[-1]['T']): break
+                keep.append(mk)
+            for k, mk in enumerate(keep): meshes[name + ('_%d' % k if k else '')] = encode(mk)
+            for k in range(len(keep), len(LODS)): meshes.pop(name + '_%d' % k, None)
+        else: meshes[name] = encode(m)
     data = {'v': 1, 'bones': BONES, 'bind': bind, 'roll': CF.BIND_ROLL, 'shin': CF.SHIN, 'knuckle': CF.KNUCKLE, 'toe': CF.TOE_Z, 'toeY': CF.TOE_Y,
             'zones': ZONE, 'hem': {'saiaC': 0.5, 'saiaL': 0.12, 'cape': 0.55}, 'meshes': meshes}
     with open(OUT, 'w') as f:

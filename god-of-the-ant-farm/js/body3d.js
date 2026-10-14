@@ -76,13 +76,19 @@ vec3 b3off(vec3 P, vec3 a, vec3 b, float r) {
   vec3 ab = b - a; float t = clamp(dot(P - a, ab) / max(dot(ab, ab), 1e-8), 0.0, 1.0); vec3 d = P - (a + ab * t); float l = length(d);
   return l < r && l > 1e-5 ? P + d * ((r - l) / l) : P;
 }
+// (kept off a limb toward the outside only: along u, away from the body — a heel kicked up behind a skirt pushes its cloth
+// back, never through to the front of the shin, whichever side of it the point happens to be)
+vec3 b3out(vec3 P, vec3 a, vec3 b, float r, vec3 u) {
+  vec3 ab = b - a; float t = clamp(dot(P - a, ab) / max(dot(ab, ab), 1e-8), 0.0, 1.0); vec3 d = P - (a + ab * t); float l2 = dot(d, d);
+  if (l2 >= r * r) return P; float du = dot(d, u); return P + u * (-du + sqrt(max(du * du - l2 + r * r, 0.0)));
+}
 vec3 b3cloth(vec3 P, vec3 p) {
-  int z = int(aZone + 0.5); bool cape = z == 7; if (!cape && z != 5 && z != 6) return P;
+  int z = int(aZone + 0.5); bool cape = z == 7 || z == 15; if (!cape && z != 5 && z != 6) return P; // (a cape, a toga; a skirt)
   vec4 m = b3V(20), gs = b3V(21); float s = gs.y;
   vec3 pel = b3V(22).xyz, nk = b3V(23).xyz, ex = b3V(24).xyz, ez = b3V(25).xyz;
   vec3 up = normalize(nk - pel); float L = dot(nk - pel, up);
   // (how free the point is: 0 where it is held — the yoke, the waist —, 1 at the hem)
-  float w = cape ? clamp((1.40 - p.y) / 0.85, 0.0, 1.0) : clamp((0.98 - p.y) / 0.85, 0.0, 1.0); w = w * w * (3.0 - 2.0 * w);
+  float w = z == 7 ? clamp((1.40 - p.y) / 0.85, 0.0, 1.0) : clamp((0.98 - p.y) / 0.85, 0.0, 1.0); w = w * w * (3.0 - 2.0 * w);
   float t = uTime + m.z, sp = min(m.y, 6.0);
   vec3 rd = P - pel - up * clamp(dot(P - pel, up), 0.0, L); rd = length(rd) > 1e-4 ? normalize(rd) : -ez;
   P += up * (m.x * w * (cape ? 1.0 : 0.5));
@@ -105,17 +111,17 @@ vec3 b3cloth(vec3 P, vec3 p) {
     vec2 qa = abs(vec2(qx / rx, qz / rz)); float k = pow(qa.x * qa.x * qa.x + qa.y * qa.y * qa.y, 1.0 / 3.0); // (a back fuller at its corners: the shoulder blades)
     if (k < 1.0 && k > 1e-4) P += (ex * qx + ez * qz) * ((1.0 / k - 1.0) * kk);
     // (the legs, from a little under the hips)
-    float lr = (1.0 - smoothstep(0.82, 0.97, p.y)) * s;
-    P = b3off(P, b3V(32).xyz, b3V(33).xyz, 0.092 * lr); P = b3off(P, b3V(33).xyz, b3V(34).xyz, 0.07 * lr);
-    P = b3off(P, b3V(35).xyz, b3V(36).xyz, 0.092 * lr); P = b3off(P, b3V(36).xyz, b3V(37).xyz, 0.07 * lr);
+    float lr = (z == 15 ? 1.0 : 1.0 - smoothstep(0.82, 0.97, p.y)) * s; // (a toga is held by nothing at the waist: the thighs push it anywhere)
+    P = b3off(P, b3V(32).xyz, b3V(33).xyz, 0.092 * lr); P = b3out(P, b3V(33).xyz, b3V(34).xyz, 0.07 * lr, rd);
+    P = b3off(P, b3V(35).xyz, b3V(36).xyz, 0.092 * lr); P = b3out(P, b3V(36).xyz, b3V(37).xyz, 0.07 * lr, rd); // (the shins, outward only)
   } else {
     // (a skirt: its waist kept off the belly as the trunk bows over it, a little inside where it sits at rest; the thighs
     // from a tenth of their length — standing they never reach the waist, raised they carry the cloth over them)
     if (p.y > 0.86) { float h = dot(P - pel, up); vec3 q = P - pel - up * clamp(h, 0.0, L); float qx = dot(q, ex), qz = dot(q, ez);
       float k = length(vec2(qx / (0.155 * s), qz / (0.112 * s))); if (k < 1.0 && k > 1e-4) P += (ex * qx + ez * qz) * (1.0 / k - 1.0); }
     vec3 hL = b3V(32).xyz, kL = b3V(33).xyz, hR = b3V(35).xyz, kR = b3V(36).xyz;
-    P = b3off(P, mix(hL, kL, 0.1), kL, 0.09 * s); P = b3off(P, kL, b3V(34).xyz, 0.068 * s);
-    P = b3off(P, mix(hR, kR, 0.1), kR, 0.09 * s); P = b3off(P, kR, b3V(37).xyz, 0.068 * s);
+    P = b3off(P, mix(hL, kL, 0.1), kL, 0.09 * s); P = b3out(P, kL, b3V(34).xyz, 0.068 * s, rd);
+    P = b3off(P, mix(hR, kR, 0.1), kR, 0.09 * s); P = b3out(P, kR, b3V(37).xyz, 0.068 * s, rd); // (the shins, outward only)
   }
   if (gs.z > 0.5) P.y = max(P.y, gs.x + 0.012 * s);
   return P;

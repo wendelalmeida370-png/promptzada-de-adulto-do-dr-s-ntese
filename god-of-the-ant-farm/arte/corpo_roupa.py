@@ -3,7 +3,7 @@
 # it) and how its points are weighted to the rig's bones (rules of where they are: hair from the head down the back,
 # a skirt following the legs, a cape the shoulders then its own bones).
 import numpy as np
-from corpo_sdf import Sphere, Ellipsoid, RoundCone, RBox, Plane, Custom, Torus, smin, smax, rot_x, rot_y, rot_z
+from corpo_sdf import Sphere, Ellipsoid, RoundCone, RBox, Plane, Custom, Torus, smin, smax, rot_x, rot_y, rot_z, frame_from as frame_rot
 import corpo_forma as CF
 
 # the grown head (corpo_forma.body grows the head by 1.06 about this point)
@@ -77,9 +77,24 @@ def hair(style):
         def bob(P):
             q = P - CRAN_C; d = ell_sdf(P, CRAN_C + np.array([0, -0.02, -0.004]), CRAN_R + np.array([0.022, 0.04, 0.02]))
             d = smax(d, (H([0, 1.585, 0])[1] - P[:, 1]), 0.006)            # (cut straight at the jaw)
-            face = np.maximum.reduce([0.075 * HK - np.abs(q[:, 0]), q[:, 2] - 0.03, H([0, 1.748, 0])[1] - P[:, 1]])
+            face = np.minimum.reduce([0.075 * HK - np.abs(q[:, 0]), q[:, 2] - 0.03, H([0, 1.748, 0])[1] - P[:, 1]])   # (the face: inside all three)
             return smax(d, face, 0.004)
         P = [Custom(bob, (CRAN_C - 0.16, CRAN_C + 0.16)).set(bone='head')]
+    elif style == 'peruca':
+        # (the wig of the Nile: black, full, falling straight from the crown to the shoulders, a fringe straight over the brow,
+        # two locks in front of the shoulders — its strands the hair's own paint)
+        def wig(P):
+            q = P - CRAN_C; y = P[:, 1]
+            d = ell_sdf(P, CRAN_C + np.array([0, -0.01, -0.006]), CRAN_R + np.array([0.03, 0.045, 0.028]))
+            fl = 1.0 + 0.1 * np.clip((1.62 - y) / 0.15, 0, 1)                             # (falling a little wider to the shoulders)
+            col = np.hypot(q[:, 0] / (0.122 * fl), (q[:, 2] + 0.008) / (0.118 * fl)) - 1.0      # (the fall: a column round the head)
+            col = smax(col * 0.12, np.maximum(1.465 - y, y - (CRAN_C[1] + 0.02)), 0.01)
+            d = smin(d, col, 0.03)
+            face = np.minimum.reduce([0.072 * HK - np.abs(q[:, 0]), q[:, 2] - 0.025, H([0, 1.75, 0])[1] - y])
+            return smax(d, face, 0.004)
+        P = [Custom(wig, (CRAN_C - np.array([0.17, 0.3, 0.17]), CRAN_C + np.array([0.17, 0.16, 0.17]))).set(bone='head')]
+        for sd in (1, -1):
+            P.append(RBox(np.array([0.088 * sd, 1.5, 0.045]), [0.028, 0.085, 0.01], 0.008, rot_z(0.06 * sd)).set(op='u', k=0.02, bone='chest', tau=0.03))
     else:
         raise ValueError(style)
     return P
@@ -332,6 +347,67 @@ def smooth01(x):
     t = np.clip(x, 0, 1); return t * t * (3 - 2 * t)
 
 
+# ------------------------------ the mantle of the south: a toga, a himation ------------------------------
+TOGA_N = np.array([0.856, -0.517, 0.0]); TOGA_C = np.array([-0.025, 1.26, 0.0]); TOGA_W = 0.11
+
+
+def toga():
+    """The draped mantle of the south — a Roman's toga, a Greek's himation (worn over a long robe, saiaL): a broad band of
+    it round the body from the right hip up across the chest and the back to the left shoulder, lying on them, thick with
+    the rolls of its folds; its two ends falling from the left shoulder — down the front to the knee, down the back to the
+    calf — in folds of their own. The left arm hangs beside the ends, not inside them."""
+    TH, YS, R0, RB = drape()
+    torso = _torso(0.0)
+    th_ = 0.012                                              # (a thick wool, two cells of the grid at least: no torn sheet)
+    def band(P):
+        x, y, z = P[:, 0], P[:, 1], P[:, 2]
+        sb = (P - TOGA_C) @ TOGA_N                                    # (across the band: 0 along its middle)
+        # (its rolls: four across it, round, the hollows between them deeper; a little crooked along the body)
+        ph = sb / 0.055 * 2 * np.pi + 0.6 + 1.1 * np.sin(y * 9.0 + z * 6.0)
+        off = 0.016 + 0.016 * (0.5 + 0.5 * np.cos(ph)) ** 0.7 + 0.004 * np.sin(y * 23.0 + x * 17.0)
+        shell = np.abs(_union(torso, P) - off) - th_ * 0.5
+        across = np.abs(sb) - TOGA_W
+        low = 0.93 - y                                                 # (from the hip up: the thighs move under it)
+        return smax(smax(shell, across, 0.01), low, 0.02)
+    # (the two ends: hanging as a cape hangs, from under the band at the left — in front, toward the middle of the chest;
+    # behind, over the left shoulder blade — their folds narrower)
+    PL = np.stack([0.8 * pleat(t * 1.6 + 0.3, YS)[0] for t in TH]); Rf = np.maximum(R0 + PL, RB + 0.01)
+    dRt = np.gradient(Rf, TH, axis=0); dRy = np.gradient(Rf, -0.01, axis=1)
+    def ends(P):
+        x, y, z = P[:, 0], P[:, 1], P[:, 2]
+        th = np.arctan2(x, -(z - CZ)); rho = np.hypot(x, z - CZ)
+        Rr = _table(TH, YS, Rf, th, y); gt = _table(TH, YS, dRt, th, y) / np.maximum(rho, 0.05); gy = _table(TH, YS, dRy, th, y)
+        shell = np.abs((rho - Rr) / np.sqrt(1 + gt * gt + gy * gy)) - th_ * 0.5
+        # (in front: between 22° and 58° from the middle toward the left, from the band to the knee; behind: from 10° to 52°
+        # from the middle toward the left, from the band to the calf)
+        fr = np.maximum(np.maximum((1.92 - th) * rho, (th - 2.86) * rho), np.maximum(0.45 - y, y - 1.40))   # (arcs, in metres)
+        bk = np.maximum(np.maximum((-0.05 - th) * rho, (th - 1.05) * rho), np.maximum(0.32 - y, y - 1.47))
+        return smax(shell, np.minimum(fr, bk), 0.006)
+    def f(P): return smin(band(P), ends(P), 0.02)
+    return [Custom(f, (np.array([-0.32, 0.28, -0.3]), np.array([0.36, 1.68, 0.26]))).set(bone='chest')]
+
+
+def tanga():
+    """The loincloth of the jungle, the maxtlatl: a band of cotton round the waist; its ends hanging in front and behind to
+    above the knees, a hand and a half wide, standing a little off the thighs."""
+    y0, y1 = 1.0, 0.6
+    def f(P):
+        x, y, z = P[:, 0], P[:, 1], P[:, 2]
+        t = np.clip((y0 - y) / (y0 - y1), 0, 1)
+        rx = 0.168 + 0.03 * t; rz = 0.126 + 0.05 * t
+        k0 = np.hypot(x / rx, (z + 0.006) / rz); shell = np.abs((k0 - 1.0) * np.minimum(rx, rz)) - 0.0055
+        band = np.maximum(y - y0, 0.935 - y)                                  # (all round the waist)
+        flap = np.maximum(np.abs(x) - (0.08 + 0.012 * t), np.maximum(y1 - y, y - 0.97))   # (in front and behind)
+        return smax(shell, np.minimum(band, flap), 0.004)
+    return [Custom(f, (np.array([-0.24, y1 - 0.03, -0.24]), np.array([0.24, y0 + 0.02, 0.24]))).set(bone='pel')]
+
+
+def piece(name):
+    """The pieces made by a function of their own (not a hair, a beard, a skirt, a hat), by name — or None."""
+    f = {'toga': toga, 'tanga': tanga}.get(name)
+    return f() if f else None
+
+
 # ------------------------------ hats ------------------------------
 def hat(kind):
     c = CRAN_C
@@ -384,6 +460,69 @@ def hat(kind):
             ends = RoundCone(H([0, 1.64, -0.115]), np.array([0, 1.5, -0.105]), 0.022, 0.03).sdf(P)
             return smin(smin(shell, knot, 0.01), np.maximum(ends, np.abs(P[:, 2] + 0.105) - 0.006), 0.01)
         return [Custom(f, (c - 0.16, c + np.array([0.16, 0.16, 0.16]))).set(bone='head', tag='scarf'), ]
+    if kind == 'galea':
+        # (the helmet of the south — a legionary's, a hoplite's: a dome, a brim round the brow, a guard flaring over the nape,
+        # cheek-pieces down the face; a crest of dyed horsehair along its top, front to back)
+        def f(P):
+            d = ell_sdf(P, c + np.array([0, 0.012, -0.004]), CRAN_R + np.array([0.03, 0.038, 0.03]))
+            q = P - c; a = np.arctan2(q[:, 0], q[:, 2]); rim = 1.733 + 0.012 * np.cos(a)
+            d = smax(d, rim - 0.02 - P[:, 1], 0.004)
+            # (the nape guard: a flared shell behind, from the rim down and out)
+            neck = np.abs(ell_sdf(P, c + np.array([0, -0.03, -0.02]), CRAN_R + np.array([0.045, 0.02, 0.05]))) - 0.004
+            neck = smax(smax(neck, q[:, 2] + 0.035, 0.01), np.maximum(1.645 - P[:, 1], P[:, 1] - 1.735), 0.008)
+            return smin(d, neck, 0.012)
+        P = [Custom(f, (c - np.array([0.19, 0.19, 0.19]), c + np.array([0.19, 0.2, 0.19]))).set(bone='head', tag='metal')]
+        for sd in (1, -1):
+            P.append(E(H([0.09 * sd, 1.66, 0.04]), [0.008, 0.042, 0.03], rot_y(-0.45 * sd) @ rot_x(0.1), op='u', k=0.01, bone='head', tag='metal'))
+        # (the crest: a brush of horsehair, an arch from over the brow to the nape, standing a hand high, thinning at its ends)
+        cc = c + np.array([0, 0.012, -0.004]); r0 = CRAN_R[1] + 0.034
+        def crest(Q):
+            q = Q - cc; rho = np.hypot(q[:, 1], q[:, 2]); a = np.arctan2(q[:, 2], q[:, 1])
+            h = 0.075 * (1 - (a / 1.2) ** 2).clip(0.15, 1)
+            return np.maximum.reduce([np.abs(q[:, 0]) - 0.012, np.abs(rho - r0 - h / 2) - h / 2, np.abs(a) - 1.2])
+        P.append(Custom(crest, (cc - np.array([0.02, 0.0, 0.25]), cc + np.array([0.02, 0.25, 0.25]))).set(op='u', k=0.008, bone='head', tag='crista'))
+        P.append(RoundCone(c + np.array([0, 0.1, 0.075]), c + np.array([0, 0.135, 0.02]), 0.01, 0.008).set(op='u', k=0.01, bone='head', tag='metal'))
+        return P
+    if kind == 'nemes':
+        # (the striped headcloth of a pharaoh: close over the skull, a band across the brow; flaring behind the ears into two
+        # lappets that fall in front of the shoulders to the chest; gathered behind into a tail; the cobra over the brow)
+        def f(P):
+            q = P - c; y = P[:, 1]
+            d = ell_sdf(P, c + np.array([0, 0.008, -0.01]), CRAN_R + np.array([0.022, 0.024, 0.026]))
+            front = (1.752 + 0.004 * np.cos(np.arctan2(q[:, 0], q[:, 2]))) - y
+            d = smax(d, front * smooth01(q[:, 2] / 0.04 + 0.5) - (1 - smooth01(q[:, 2] / 0.04 + 0.5)) * 0.05, 0.004)
+            return d
+        P = [Custom(f, (c - np.array([0.21, 0.32, 0.19]), c + np.array([0.21, 0.16, 0.19]))).set(bone='head', tag='nemes')]
+        for sd in (1, -1):
+            # (the flap: a plate from the temple behind the ear, leaning out as it falls to the shoulder — then the lappet in
+            # front of the shoulder, to the chest)
+            P.append(RBox(np.array([0.12 * sd, 1.6, -0.012]), [0.006, 0.11, 0.092], 0.006, rot_z(0.3 * sd) @ rot_y(0.12 * sd)).set(op='u', k=0.045, bone='head', tag='nemes', tau=0.03))
+            P.append(RBox(np.array([0.148 * sd, 1.43, 0.05]), [0.034, 0.07, 0.008], 0.006, rot_z(0.1 * sd)).set(op='u', k=0.035, bone='chest', tag='nemes', tau=0.03))
+        P.append(RoundCone(H([0, 1.655, -0.105]), np.array([0, 1.47, -0.13]), 0.03, 0.02).set(op='u', k=0.03, bone='chest', tag='nemes', tau=0.03))
+        P.append(RoundCone(H([0, 1.752, 0.112]), H([0, 1.79, 0.118]), 0.008, 0.012).set(op='u', k=0.006, bone='head', tag='gold'))
+        return P
+    if kind == 'penacho':
+        # (the feathers of a lord of the jungle: a band round the head, of gold, and a fan of long quetzal feathers rising
+        # from it behind, from ear to ear, curving back)
+        P = [Torus(c + np.array([0, 0.04, -0.008]), 0.1, 0.011, rot_x(0.18), sy=1.4).set(bone='head', tag='gold')]
+        for k in range(9):
+            a = (k / 8 - 0.5) * 2.5                                     # (from beside one ear round the back to the other)
+            base = c + np.array([np.sin(a) * 0.098, 0.045 + 0.02 * np.cos(a), -np.cos(a) * 0.098 - 0.01])
+            L = 0.36 + 0.14 * np.cos(a * 0.9)
+            d = np.array([np.sin(a) * 1.0, 1.0, -np.cos(a) * 0.75 - 0.45]); d /= np.linalg.norm(d)
+            tip = base + d * L
+            P.append(E((base + tip) / 2, [0.045, L / 2, 0.007], frame_rot(d, np.array([np.sin(a), 0, -np.cos(a)])), op='u', k=0.008, bone='head', tag='plumas'))
+        return P
+    if kind == 'louro':
+        # (a wreath of laurel: a ring a little higher behind, its leaves along it in pairs, pointing back)
+        P = [Torus(c + np.array([0, 0.045, -0.01]), 0.1, 0.0055, rot_x(0.22)).set(bone='head', tag='folha')]
+        for k in range(22):
+            a = (k / 22) * 2 * np.pi; sd = 1 if k % 2 else -1
+            if abs(np.sin(a / 2)) < 0.17: continue                     # (open over the brow)
+            p0 = c + np.array([np.sin(a) * 0.101, 0.045 + 0.022 * (0.5 - 0.5 * np.cos(a)) + 0.007 * sd, np.cos(a) * 0.101 - 0.01])
+            tg = np.array([np.cos(a), 0.15, -np.sin(a)]); out = np.array([np.sin(a), 0.4 * sd, np.cos(a)])
+            P.append(E(p0 + tg * 0.016 * np.sign(np.sin(a)) + out * 0.008, [0.01, 0.003, 0.024], frame_rot(out, tg), op='u', k=0.004, bone='head', tag='folha'))
+        return P
     if kind == 'coroa':
         P = [Torus(c + np.array([0, 1.762 - c[1], -0.006]), 0.094, 0.009, sy=1.6).set(bone='head', tag='gold')]
         for k in range(5):
