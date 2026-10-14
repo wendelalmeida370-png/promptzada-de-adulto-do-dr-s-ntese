@@ -198,10 +198,11 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
   construtor de pedaço aceita, uma cor e um padrão por parte:
 
 ```js
-// dentro do kit de um prédio (build3d.js): a cabeça de dragão na ponta da cumeeira, olhando para fora (dir = ±X ou ±Z)
-const ry = Math.atan2(dir[0], dir[1]);                          // (a frente +Z do modelo virada para dir)
-K.as('beam', () => g.put(G.Mesh3D.part('dragao', 'madeira'), R3.mat(K.x0 + p[0], K.y0 + p[1], K.z0 + p[2], ry, s, s, s), '#3a2616'));
-g.put(G.Mesh3D.part('dragao', 'olho'), R3.mat(K.x0 + p[0], K.y0 + p[1], K.z0 + p[2], ry, s, s, s), K.P.acc);
+// no roofOf do build3d.js (telhado de turfa), no lugar da caixa + esfera de hoje: em cada ponta da cumeeira,
+// p = at(e * (eu + 0.05), y + h + 0.1, 0) e dir = alongZ ? [0, e] : [e, 0], a cabeça olhando para fora
+const ry = Math.atan2(dir[0], dir[1]), s = 1;                   // (a frente +Z do modelo virada para dir; s: escala)
+K.as('beam', () => K.g.put(G.Mesh3D.part('dragao', 'madeira'), R3.mat(K.x0 + p[0], K.y0 + p[1], K.z0 + p[2], ry, s, s, s), K.c('#3a2616')));
+K.g.put(G.Mesh3D.part('dragao', 'olho'), R3.mat(K.x0 + p[0], K.y0 + p[1], K.z0 + p[2], ry, s, s, s), K.c(K.P.acc || '#d8b25a'));
 ```
   A geometria é **compartilhada** (não a descarte); para mudar, `clone()`. `G.Mesh3D.info(nome)` dá pontos, triângulos,
   caixa e partes; `G.Mesh3D.check()` é a prova do módulo (contagens, índices, NaN, normais, caixa, partes) — vazia é bom.
@@ -220,7 +221,20 @@ g.put(G.Mesh3D.part('dragao', 'olho'), R3.mat(K.x0 + p[0], K.y0 + p[1], K.z0 + p
   esmaece (notícias, avisos, teclas).
 - As letras vêm com o jogo (Nunito e Cinzel embutidas no CSS): aberto do disco, sem internet, a interface é a mesma.
 
-## 10. Lista de aceite de um asset
+## 10. Hedeby, o piloto: o que a cidade pede
+
+| Elemento | Forma | Material da pilha | Quem |
+|---|---|---|---|
+| Casa longa | parede baixa de tábua em pé ou trançado com barro, telhado de turfa alto, pontas de cumeeira com dragão, porta no lado comprido, fumeiro | `planks` / `wicker` (+`daub` se A2 fizer), `turf`, `beam`, malha `dragao` | A2 |
+| Porta e batente | pranchas com cintas de ferro, verga grossa, soleira de pedra ou tronco | `door`, `frame`, `iron`, `slab` | A2 |
+| Rua | passarela de tábuas sobre o barro (as ruas de Hedeby eram de madeira), terra batida nas bordas | `planksH`, `dirt` | A2/A3 |
+| Cerca e quintal | trançado de vime em estacas, ~1 m | `wicker` (em escala 3×) | A2 |
+| Cais e estaleiro | estacas, tábuas, cordas, redes secando | `planks`, `beam`, `rope` | A2 |
+| Feira | bancas com toldo de lona listrada, barris, caixotes, sacos, cestos | `canvas`, `planks`, `iron` (aros), `linen`, `wicker` | A2 |
+| Gente | túnica de lã, camisa de linho, capa de pele, cinto e sapato de couro, broche dourado | `wool`, `linen`, `fur`, `leather` (+ acento do povo) | A4 |
+| Chão e mata | capim, terra, cascalho, chão de folhas, rochas da costa, casca das árvores | `grass`, `dirt`, `gravel`, `forest`, `rock`, `bark`, `sand` | A3 |
+
+## 11. Lista de aceite de um asset
 
 Antes de dizer "pronto", olhe de verdade (fotos de `qa/visual/fotos.js` ou `arte/blender/foto.py`, antes | depois):
 - [ ] **frente, fundos, de cima, de perto (1 m) e de longe (50 m)** — e a silhueta preenchida;

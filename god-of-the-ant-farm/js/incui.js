@@ -11,8 +11,9 @@
 //  pause menu holds the way back up, saving, the keys and the
 //  picture's quality. Built once, the first time the body is
 //  entered, and only shown or hidden after (nothing piles up).
-//  Its look is the god's interface: the same panels, the same
-//  gold, the same letters.
+//  Its look is the god's gold and letters, quieter: small type,
+//  dark glass that reads over snow and a white sky, the compass
+//  across the top, words that fade out (arte/BIBLIA.md, a HUD).
 // ============================================================
 (function (G) {
   const IU = G.IncUI = {};
@@ -32,7 +33,8 @@
       <div id="inc-hud" class="hidden">
         <div class="ih-who panel"><div class="ih-name"></div><div class="ih-sub"></div>
           <div class="ih-bars">${bar('hp', 'Vida')}${bar('st', 'Fôlego')}${bar('fo', 'Fome')}${bar('en', 'Sono')}</div><div class="ih-carry"></div></div>
-        <div class="ih-clock panel"><div class="ih-time"></div><div class="ih-place"></div><div class="ih-compass"><div class="ih-strip"></div><i></i></div></div>
+        <div class="ih-clock panel"><div class="ih-time"></div><div class="ih-place"></div></div>
+        <div class="ih-compass"><div class="ih-strip"></div><i></i></div>
         <div class="ih-news"></div>
         <div class="ih-calls"></div>
         <div class="ih-prompt hidden"><kbd>E</kbd><span></span></div>
@@ -88,10 +90,13 @@
   G.Possess.onLog.push((e, v) => {
     if (!root || !G.Modes.inc()) return;
     const near = v && Number.isFinite(e.x) && G.dist(e.x, e.y, v.x, v.y) < 30;
-    news.push({ txt: (near ? '' : 'Notícia: ') + e.txt, t: 9 }); if (news.length > 3) news.shift();
+    news.push({ txt: e.txt, far: !near, t: 9 }); if (news.length > 3) news.shift();
     renderNews();
   });
-  function renderNews() { $('.ih-news', hud).innerHTML = news.map(n => `<div>${esc(n.txt)}</div>`).join(''); }
+  // (what comes from afar carries a small label instead of a word in front of it: the eye reads the news, not the label)
+  function renderNews() { $('.ih-news', hud).innerHTML = news.map(n => `<div>${n.far ? '<b>Notícia</b>' : ''}${esc(n.txt)}</div>`).join(''); }
+  // (words that go away fade out over their last moments instead of blinking off)
+  const fadeOut = (el, t, d) => { const o = t < d ? (Math.max(0, t) / d).toFixed(2) : ''; if (el._o !== o) { el._o = o; el.style.opacity = o; } };
 
   // ------------------------------ the frame ------------------------------
   const hourOf = t => { const h = t >= 0.02 && t <= 0.73 ? 6 + (t - 0.02) / 0.71 * 13 : (19 + (((t - 0.73) + 1) % 1) / 0.29 * 11) % 24; const hh = Math.floor(h), mm = Math.floor((h - hh) * 60 / 10) * 10; return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`; };
@@ -102,9 +107,11 @@
     // fades, banners, toasts, news
     if (fade) { fade.t += rdt; const k = Math.min(1, fade.t / fade.d); fadeEl.style.opacity = G.lerp(fade.a, fade.b, k); if (k >= 1) { const d = fade.done; fade = null; d && d(); } }
     if (bannerT > 0) { bannerT -= rdt; if (bannerT <= 0) banner.classList.add('hidden'); }
-    for (let k = toasts.length - 1; k >= 0; k--) { toasts[k].t -= rdt; if (toasts[k].t <= 0) { toasts[k].el.remove(); toasts.splice(k, 1); } }
+    for (let k = toasts.length - 1; k >= 0; k--) { const o = toasts[k]; o.t -= rdt; if (o.t <= 0) { o.el.remove(); toasts.splice(k, 1); } else fadeOut(o.el, o.t, 0.5); }
     let nd = false; for (let k = news.length - 1; k >= 0; k--) { news[k].t -= rdt; if (news[k].t <= 0) { news.splice(k, 1); nd = true; } } if (nd) renderNews();
+    { const els = $('.ih-news', hud).children; for (let k = 0; k < news.length && k < els.length; k++) fadeOut(els[k], news[k].t, 0.8); }
     if (hintT > 0) { hintT -= rdt; }
+    fadeOut($('.ih-hint', hud), hintT, 1.2);
     if (!G.Modes.inc()) { label.classList.add('hidden'); return; }
     const v = G.Possess.body(); if (!v) return;
     // the best thing to do, a few times a second (the world is asked, not the picture)
@@ -141,9 +148,18 @@
     $('.ih-place', hud).textContent = w.district ? `${w.district}, ${w.town || w.near}` : w.town ? w.town : w.near ? `${w.ground === 'estrada' ? 'Na estrada' : w.ground === 'bosque' ? 'No bosque' : w.ground === 'mar' ? 'No mar' : w.ground === 'rio' ? 'Na água' : 'No campo'}, ${w.nearD > 2 ? w.nearD * 4 + ' m de ' : 'perto de '}${w.near}` : 'Terras selvagens';
     // the compass: the strip turns with the eye
     const yaw = G.Cam3D.yaw; const deg = ((yaw * 180 / Math.PI) % 360 + 360) % 360;
-    const strip = $('.ih-strip', hud); let html = ''; for (let k = -2; k <= 10; k++) { const a = k * 45; html += `<span style="left:${(a - deg) * 1.4 + 90}px">${DIRS[((k % 8) + 8) % 8]}</span>`; } strip.innerHTML = html;
+    // (a tick every 15°, the eight winds at every 45° — the four great ones bigger, the north in gold —, 1.4 px a degree)
+    const strip = $('.ih-strip', hud); const half = (strip.parentNode.clientWidth || 260) / 2, ppd = 1.4; let html = '';
+    for (let a = Math.ceil((deg - half / ppd) / 15) * 15; a <= deg + half / ppd; a += 15) {
+      const x = ((a - deg) * ppd + half).toFixed(1);
+      if (a % 45) { html += `<u style="left:${x}px"></u>`; continue; }
+      const d = DIRS[(((a / 45) % 8) + 8) % 8]; html += `<span class="${d.length > 1 ? 'mn' : ''}${d === 'N' ? ' n' : ''}" style="left:${x}px">${d}</span>`;
+    }
+    strip.innerHTML = html;
     // the calls of the world
-    const calls = G.Possess.calls(); $('.ih-calls', hud).innerHTML = calls.slice(-3).map(q => `<div>${esc(q.txt)}${q.n > 1 ? ` <small>×${q.n}</small>` : ''}</div>`).join('');
+    // (drawn again only when they change: a call that comes in fades in once, the others stay still)
+    const calls = G.Possess.calls(); const ch = calls.slice(-3).map(q => `<div>${esc(q.txt)}${q.n > 1 ? ` <small>×${q.n}</small>` : ''}</div>`).join('');
+    const ce = $('.ih-calls', hud); if (ce._h !== ch) { ce._h = ch; ce.innerHTML = ch; }
     $('.ih-sleep', hud).classList.toggle('hidden', !v.sleeping);
     hud.classList.toggle('asleep', !!v.sleeping);
     const h = $('.ih-hint', hud); h.classList.toggle('hidden', hintT <= 0);
