@@ -292,4 +292,52 @@ vec3 groundCol() {
     return cloudTx;
   };
   G3.detail = () => det;
+
+  // ------------------------------ the materials (arte/texturas.py → G.TEX3D) ------------------------------
+  // every material of the 3D in one stack of pictures the graphics card reads at once (a texture array): wood, stone,
+  // turf, thatch, tiles, plaster, the kinds of ground, bark. Each layer is the material's colour over its own mean (×0.5)
+  // and its height in alpha: what a thing is multiplied by — the world's colour stays the world's colour, with the grain,
+  // the joints and the tufts of the material round it. Until the pictures are decoded (a moment after the 3D opens) the
+  // stack is one plain grey layer, and everything looks as it did before
+  const TEXN = G.TEX3D ? Object.keys(G.TEX3D) : [];
+  G3.TEXL = {}; TEXN.forEach((n, k) => { G3.TEXL[n] = k; });
+  let texArr = null, texReady = false;
+  G3.texReady = () => texReady;
+  // (the uniforms every material shares by reference: the stack, and whether it is in yet)
+  const U3 = { uTex3: { value: null }, uTexOn: { value: 0 } };
+  G3.U3 = () => { U3.uTex3.value = G3.tex(); return U3; };
+  // (decoded as soon as the game opens, quietly, into one buffer; the stack for the graphics card is made from it when the
+  // 3D first asks, and sent again when the last picture is in)
+  const TS = 512, TL3 = Math.max(1, TEXN.length);
+  let texData = null;
+  function decode() {
+    if (texData) return; texData = new Uint8Array(TS * TS * 4 * TL3).fill(128);
+    let left = TEXN.length; if (!left) { texReady = true; U3.uTexOn.value = 1; return; }
+    const cv = document.createElement('canvas'); cv.width = cv.height = TS; const cx = cv.getContext('2d', { willReadFrequently: true });
+    const done = () => { if (--left > 0) return; texReady = true; U3.uTexOn.value = 1; if (texArr) texArr.needsUpdate = true; };
+    TEXN.forEach((n, k) => {
+      const im = new Image();
+      im.onload = () => { cx.clearRect(0, 0, TS, TS); cx.drawImage(im, 0, 0, TS, TS); texData.set(cx.getImageData(0, 0, TS, TS).data, k * TS * TS * 4); done(); };
+      im.onerror = done; im.src = G.TEX3D[n].src;
+    });
+  }
+  if (typeof document !== 'undefined') setTimeout(decode, 300);
+  G3.tex = function () {
+    if (texArr || !THREE) return texArr;
+    decode();
+    texArr = new THREE.DataArrayTexture(texData, TS, TS, TL3); texArr.format = THREE.RGBAFormat; texArr.type = THREE.UnsignedByteType;
+    texArr.wrapS = texArr.wrapT = THREE.RepeatWrapping; texArr.magFilter = THREE.LinearFilter; texArr.minFilter = THREE.LinearMipmapLinearFilter; texArr.generateMipmaps = true; texArr.anisotropy = 4; texArr.needsUpdate = true;
+    return texArr;
+  };
+  // the GLSL every material of the 3D includes to read the stack: m3(layer, uv in metres) — the colour factor (linear,
+  // 1 on average) and the height; m3b — the slope of the height, for the light (finite differences over a few cm)
+  G3.texGLSL = function () {
+    let defs = ''; TEXN.forEach((n, k) => { defs += `#define M3_${n.toUpperCase()} ${k}.0\n#define M3S_${n.toUpperCase()} ${(1 / G.TEX3D[n].m).toFixed(5)}\n`; });
+    return defs + `
+uniform highp sampler2DArray uTex3; uniform float uTexOn;
+vec4 m3raw(float L, vec2 uv) { return texture(uTex3, vec3(uv, L)); }
+vec3 m3col(vec4 t) { return pow(max(t.rgb * 2.0, vec3(0.0)), vec3(2.2)); }
+vec2 m3slope(float L, vec2 uv, float h0) { float e = 0.006; return vec2(texture(uTex3, vec3(uv + vec2(e, 0.0), L)).a - h0, texture(uTex3, vec3(uv + vec2(0.0, e), L)).a - h0) / e; }
+`;
+  };
 })(window.G);

@@ -41,7 +41,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   // (every listener put on the page is counted: going up and down a hundred times must not pile them up)
   await page.addInitScript(() => { window.requestAnimationFrame = () => 0; try { localStorage.clear(); } catch (e) { } window.__L = 0; const a = EventTarget.prototype.addEventListener; EventTarget.prototype.addEventListener = function () { window.__L++; return a.apply(this, arguments); }; });
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
-  await page.goto('file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(900);
+  await page.goto('file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(900); await page.waitForFunction(() => !(window.G && G.Ground3D && G.Ground3D.texReady) || G.Ground3D.texReady(), null, { timeout: 120000 });
   await page.addScriptTag({ path: __dirname + '/qa.js' });
   for (const w of ['cidade', 'metropole']) await page.addScriptTag({ path: path.join(ROOT, 'worlds', w + '.js') });
   const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASSOU' : 'FALHOU'} | encarna ${name} | ${info}`); if (!cond) fails.push(name); };

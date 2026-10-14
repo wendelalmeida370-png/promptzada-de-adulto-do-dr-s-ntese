@@ -134,22 +134,50 @@ vec3 pattern(float p, vec2 uv, vec3 wp, out vec2 bump) {
   if (p == 15.0) return vec3(0.9 + 0.1 * sin(uv.x * 5.0));
   return vec3(1.0);
 }
+// (the timbers of a framed wall: posts, rails and a brace now and then)
+float frameMask(vec2 uv, vec3 wp) {
+  float px = fract(uv.x / 1.35); float py = fract(wp.y / 1.25);
+  float post = 1.0 - smoothstep(0.075, 0.1, min(px, 1.0 - px) * 1.35); float beam = 1.0 - smoothstep(0.06, 0.085, min(py, 1.0 - py) * 1.25);
+  float br = 1.0 - smoothstep(0.05, 0.075, abs(px - py) * 1.2);
+  return max(max(post, beam), br * step(0.5, pHash(vec2(floor(uv.x / 1.35), floor(wp.y / 1.25)))));
+}
+// (which picture of the stack each pattern reads: -1 keeps the drawn one — marble, cloth)
+float m3layer(float p) {
+  if (p == 1.0 || p == 13.0 || p == 14.0) return M3_PLASTER; if (p == 2.0) return M3_STONE; if (p == 3.0) return M3_BRICK; if (p == 4.0) return M3_PLANKS;
+  if (p == 5.0) return M3_PLANKSH; if (p == 6.0) return M3_TILE; if (p == 7.0) return M3_SHINGLE; if (p == 8.0) return M3_THATCH; if (p == 9.0) return M3_TURF;
+  if (p == 11.0) return M3_SLAB; if (p == 12.0) return M3_BEAM; return -1.0;
+}
+float m3scale(float p) {
+  if (p == 1.0 || p == 13.0 || p == 14.0) return M3S_PLASTER; if (p == 2.0) return M3S_STONE; if (p == 3.0) return M3S_BRICK; if (p == 4.0) return M3S_PLANKS;
+  if (p == 5.0) return M3S_PLANKSH; if (p == 6.0) return M3S_TILE; if (p == 7.0) return M3S_SHINGLE; if (p == 8.0) return M3S_THATCH; if (p == 9.0) return M3S_TURF;
+  if (p == 11.0) return M3S_SLAB; if (p == 12.0) return M3S_BEAM; return 1.0;
+}
 `;
   // the solid material learns to draw the patterns (and fades them far away, where they would only shimmer)
   B3.dress = function (mat) {
     mat.onBeforeCompile = sh => {
-      sh.uniforms.uDet = { value: G.Ground3D.detail() };
+      sh.uniforms.uDet = { value: G.Ground3D.detail() }; Object.assign(sh.uniforms, G.Ground3D.U3());
       sh.vertexShader = 'attribute float aP; varying vec3 vPP; varying vec3 vPN; varying float vPat;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vPP = (modelMatrix * vec4(transformed, 1.0)).xyz; vPN = normalize(mat3(modelMatrix) * objectNormal); vPat = aP;');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + PFRAG).replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G.Ground3D.texGLSL() + PFRAG).replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         float pp = floor(vPat + 0.5);
         #ifdef NOPAT
         pp = 0.0;
         #endif
         if (pp > 0.5) {
           vec3 pn = normalize(vPN); vec3 pt = abs(pn.y) > 0.92 ? vec3(1.0, 0.0, 0.0) : normalize(vec3(-pn.z, 0.0, pn.x)); vec3 pb = normalize(cross(pn, pt)); if (pb.y < 0.0) pb = -pb;
-          vec2 bump; vec3 pk = pattern(pp, vec2(dot(vPP, pt), dot(vPP, pb)), vPP, bump);
+          vec2 puv = vec2(dot(vPP, pt), dot(vPP, pb));
+          vec2 bump; vec3 pk = pattern(pp, puv, vPP, bump);
           float fade = 1.0 - smoothstep(30.0, 90.0, length(vViewPosition));
-          diffuseColor.rgb *= mix(vec3(0.88), pk, fade);
+          // (the material's picture once the stack is in — mipmapped, so it never shimmers far off; roofs read down the slope)
+          float L = m3layer(pp);
+          if (uTexOn > 0.5 && L >= 0.0) {
+            vec2 tu = puv * m3scale(pp); if (pp > 5.5 && pp < 9.5) tu.y = -tu.y;
+            vec4 tx = m3raw(L, tu); pk = m3col(tx) * 0.94;
+            if (pp == 13.0) { vec4 tb = m3raw(M3_BEAM, puv * M3S_BEAM); pk = mix(pk, m3col(tb) * 0.34, frameMask(puv, vPP)); }
+            vec2 sl = m3slope(L, tu, tx.a); if (pp > 5.5 && pp < 9.5) sl.y = -sl.y;
+            bump = -sl * m3scale(pp) * 0.03;
+            diffuseColor.rgb *= pk;
+          } else diffuseColor.rgb *= mix(vec3(0.88), pk, fade);
           normal = normalize(normal + (viewMatrix * vec4(pt * bump.x + pb * bump.y, 0.0)).xyz * fade);
         }`);
     };
