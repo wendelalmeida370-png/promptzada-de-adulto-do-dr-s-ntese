@@ -855,7 +855,7 @@
       if (P3.walkers.length < 40) P3.walkers.push([X, Y, Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise, the grass they part)
       // (outside the eye's field, their shadow too: not drawn this frame — their steps go on; a torch they hold still burns
       // and lights round it, about where their hand is)
-      s.cull = seen(X, Y, Z, Lv.s) ? 0 : 1;
+      s.cull = inField(X, Y, Z, Lv.s) ? 0 : 1;
       if (s.cull) { culled++; if ((Lv.torch || Lv.lantern) && P3.flames.length < 40) { const c = Math.cos(s.yaw), n = Math.sin(s.yaw), k = Lv.s; P3.flames.push([X + (c * 0.28 + n * 0.2) * k, Y + (Lv.lantern ? 0.85 : 1.6) * k, Z + (n * 0.28 - c * 0.2) * k, Lv.lantern ? 0.5 : 0.85]); } continue; }
       P3.body(idx++, X, Y, Z, s.yaw, s.pose, Lv, P3.highlight === v.id ? '#ffd76a' : null);
       if (v.emo && v.emo.k && emoN < emoPool.length) { const tx = emoMap(v.emo.k); if (tx) { const sp = emoPool[emoN++]; if (sp.material.map !== tx) { sp.material.map = tx; sp.material.needsUpdate = true; } const L2 = P3.look(v).s; sp.position.set(X, Y + 2.2 * L2 + Math.sin(s.t * 3) * 0.03, Z); sp.scale.set(0.42, 0.45, 1); sp.visible = true; } }
@@ -867,7 +867,7 @@
     if (Cg) for (const c of Cg.corpses) {
       if (idx >= MAX) break; const X = c.x * TL, Z = c.y * TL; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > R2) continue;
       const stg = G.Carnage.stage(c); if (stg === 'bones') continue;
-      P3.dead++; const Y = W.groundH(c.x, c.y) * HM; if (!seen(X, Y, Z, 1)) { culled++; continue; } // (in reach: counted, drawn where seen)
+      P3.dead++; const Y = W.groundH(c.x, c.y) * HM; if (!inField(X, Y, Z, 1)) { culled++; continue; } // (in reach: counted, drawn where seen)
       const L = P3.look(c.look); if (stg !== 'fresh') L.skin = stg === 'rot' ? '#8a8a6a' : '#7a6a5a'; L.lod = lodAt(cLod.get(c.id) || 0, (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2); cLod.set(c.id, L.lod);
       P3.body(idx++, X, Y, Z, G.hash(c.id) * TAU, DEAD[c.id % DEAD.length], L, null);
     }
@@ -875,7 +875,7 @@
     // the crowd: everyone else in reach, simply (where the world has them; no animation of their own but a step's bob)
     mats(); let c = 0; const tnow = performance.now() / 1000;
     for (let k = n; k < near.length && c < MAXC; k++) {
-      const v = near[k][1]; const X = v.x * TL, Z = v.y * TL; const Y0 = W.groundH(v.x, v.y) * HM; if (!seen(X, Y0, Z, 1)) continue;
+      const v = near[k][1]; const X = v.x * TL, Z = v.y * TL; const Y0 = W.groundH(v.x, v.y) * HM; if (!inField(X, Y0, Z, 1)) continue;
       const L = P3.look(v); const s = L.s; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const Y = Y0 + Math.abs(st) * 0.04;
       const pp = v.path && v.pi < v.path.length ? v.path[v.pi] : null; const yaw = pp ? Math.atan2(pp[1] - v.y, pp[0] - v.x) : (v.face > 0 ? 0 : Math.PI);
       M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); M.root.multiply(M.b); M.b.makeScale(s, s, s); M.root.multiply(M.b);
@@ -953,7 +953,7 @@
     FR.sh = sd && sd.y > 0.02 && hz > 1e-4 ? Math.min(12, 1.9 * hz / sd.y) : 0; FR.ux = FR.sh ? sd.x / hz : 0; FR.uz = FR.sh ? sd.z / hz : 0;
   }
   // (someone r metres tall standing at X, Y, Z: in the eye's field, or right by the eye, or their shadow in the field)
-  function seen(X, Y, Z, r) {
+  function inField(X, Y, Z, r) { // (not 'seen': P3.update has a set of that name)
     if (!FR.on || (X - FR.cx) ** 2 + (Z - FR.cz) ** 2 < 36) return true;
     FR.s.center.set(X, Y + r * 0.8, Z); FR.s.radius = r + 0.5; if (FR.f.intersectsSphere(FR.s)) return true;
     if (!FR.sh) return false;
@@ -1048,7 +1048,7 @@
       // (a beast first seen stands where the ground is — not rising to it from the height 0, out of the ground, as before)
       s.Y = s.Y === null || Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
       const Y = s.Y + (air ? Math.max(0.5, (a.z || 0) * 0.22) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
-      if (!seen(X, Y, Z, Math.max(0.6, F.len * u))) { P3.bculled++; continue; } // (outside the eye's field: not drawn)
+      if (!inField(X, Y, Z, Math.max(0.6, F.len * u))) { P3.bculled++; continue; } // (outside the eye's field: not drawn)
       if (d2 < 576) nNear = idx + 1;
       const m = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-s.yaw); m.multiply(M.b);
       // (on a slope a beast of four legs lies along it: pitched by the ground under its fore and hind feet, rolled by the ground

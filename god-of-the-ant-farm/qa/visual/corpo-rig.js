@@ -22,7 +22,8 @@ try { run('js/civs.js'); } catch (e) { } // (the peoples' colours, for the cloth
 run('js/bodymesh.js'); run('js/body3d.js'); run('js/people3d.js');
 // (the realm the modules are given: a scene and the quality — enough to make their meshes)
 const scene = new THREE.Scene();
-G.People3D.init(THREE, { scene: () => scene, Q: () => ({ view: 420, npcs: 36, detail: 1 }) });
+const realm = { scene: () => scene, Q: () => ({ view: 420, npcs: 36, detail: 1 }) };
+G.People3D.init(THREE, realm);
 const P3 = G.People3D, B3 = G.Body3D, A = G.Anim3D;
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | corpo-rig ${name} | ${info}`); if (!c) fails.push(name); };
 
@@ -208,6 +209,34 @@ const inside = (cm, bm) => {
   const o2 = Object.assign({}, o, { torso: 0, lin: Object.assign({}, o.lin, { cloth: [0.39, 0.18, 0.073] }) });
   const caught = !!B3.bare(o, '#a8744c'), caught2 = !!B3.bare(o2, '#a8744c');
   ok('ninguém desenhado nu (sexo, idade, ofício, povo, cativo, governante, rico, nadando, dormindo); o verificador acusa quem está', !bad.length && caught && caught2, `${n} pessoas desenhadas, ${bad.length} sem roupa${bad.length ? ': ' + bad.slice(0, 2).join(' · ') : ''}; o despido de propósito: ${caught ? 'acusado' : 'NÃO acusado'}; o pano da cor da pele: ${caught2 ? 'acusado' : 'NÃO acusado'}`); }
+// the frame (People3D.update) in a world of its own: a flat meadow, people and beasts in rings round the body, the eye at
+// the body looking one way. It runs; the verifier says nothing; each one's level follows their distance from the eye; who is
+// behind the eye (and whose shadow is too) is left out, nobody in its field is — and with the field off, nobody is
+{ const N = 96, TL = G.Space ? G.Space.TILE : 4; let err = null; const info = [];
+  G.T = G.T || { DEEP: 0, SEA: 1, RIVER: 2, SAND: 3, GRASS: 4, MEADOW: 5, ROCKY: 6 };
+  G.Space = Object.assign(G.Space || {}, { TILE: 4, HM: 1.5, stoneTop: () => -Infinity, bedAt: () => 0.3 });
+  Object.assign(G.W, { idx: (x, y) => (y | 0) * N + (x | 0), hAt: () => 1, groundH: () => 1, waterH: () => 0.5, inb: (x, y) => x >= 0 && y >= 0 && x < N && y < N });
+  G.Animals = G.Animals || { DEF: {} }; G.Animals.DEF.cervo = G.Animals.DEF.cervo || { cls: 'land', size: 1, diet: 'herb', art: 'quad' };
+  const S = G.S = { clock: 0, villagers: new Map(), animals: new Map(), type: new Uint8Array(N * N).fill(4), road: new Uint8Array(N * N), ice: null };
+  const fx = 48, fy = 48; let id = 1;
+  for (const d of [1.5, 2.5, 4, 8, 11, 14, 18, 24, 30, 40]) for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2 + d; // (rings of people, metres off)
+    S.villagers.set(id, { id, x: fx + Math.cos(a) * d / 4, y: fy + Math.sin(a) * d / 4, age: 30, g: k % 2 ? 'f' : 'm', role: null, civ: 'nordico', skin: '#d8a888', hair: '#3a2a1a', face: 1 }); id++; }
+  for (const d of [6, 15, 30]) for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + 0.3; S.animals.set(id, { id, kind: 'cervo', x: fx + Math.cos(a) * d / 4, y: fy + Math.sin(a) * d / 4 }); id++; }
+  const cam = new THREE.PerspectiveCamera(55, 1000 / 620, 0.1, 1600); const focus = { X: fx * 4, Y: 1.5, Z: fy * 4 };
+  realm.camera = () => cam; realm.Q = () => ({ view: 420, npcs: 96, detail: 1, shadows: 1024 }); realm.GX = { gxSunW: { value: new THREE.Vector4(0.4, 0.8, 0.2, 0) } };
+  const look = yaw => { cam.position.set(focus.X - Math.cos(yaw) * 0.5, 1.5 + 1.7, focus.Z - Math.sin(yaw) * 0.5); cam.lookAt(focus.X + Math.cos(yaw) * 10, 1.5 + 1.2, focus.Z + Math.sin(yaw) * 10); cam.updateMatrixWorld(); };
+  const frame = (yaw, cull) => { look(yaw); P3.cull = cull; for (let k = 0; k < 3; k++) P3.update(k ? 0.03 : 0, focus); return { count: P3.count, culled: P3.culled, beasts: P3.beasts, bculled: P3.bculled, check: P3.check() }; };
+  let a, b, c, lv = 'none';
+  try {
+    a = frame(0, true); b = frame(Math.PI, true); c = frame(0, false);
+    // (each row's level against its distance from the eye)
+    const bad = []; for (let r = 0; r < B3.rows; r++) { const q = B3.at(r); if (!q) continue; const d = Math.hypot(q[0] - cam.position.x, q[2] - cam.position.z); const want = d < 11 ? 0 : d > 13 && d < 25 ? 1 : d > 27 ? 2 : q[7]; if (q[7] !== want) bad.push(`${d.toFixed(1)} m: ${q[7]}`); }
+    lv = bad.length ? bad.slice(0, 4).join(', ') : 'certos';
+  } catch (e) { err = String(e && e.stack || e).split('\n').slice(0, 3).join(' | '); }
+  P3.cull = true;
+  const okF = !err && !a.check.length && !b.check.length && !c.check.length && a.culled > 0 && b.culled > 0 && c.culled === 0 && c.count > a.count && a.bculled > 0 && lv === 'certos';
+  ok('o quadro das pessoas roda: os níveis pela distância do olho, quem está atrás do olho fica de fora, ninguém à vista', okF,
+    err ? 'ERRO ' + err : `olhando +X: ${a.count} desenhadas, ${a.culled} fora, bichos ${a.beasts}/${a.bculled} fora · olhando −X: ${b.count}/${b.culled} · sem recorte: ${c.count}/${c.culled} · níveis ${lv} · verificador ${[...a.check, ...b.check, ...c.check].slice(0, 2).join('; ') || 'limpo'}`); }
 if (process.env.V) console.log(JSON.stringify(res));
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');
 process.exit(fails.length ? 1 : 0);
