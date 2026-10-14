@@ -382,6 +382,9 @@ vec3 gxHaze( vec3 d ) {
           // (a stone: its grain from the three sides; moss on its top where the land is wet, in the low of its grain first;
           // the white the cold leaves on it, snow)
           vec3 n = normalize(vFN); float moss = clamp(-vFK - 3.0, 0.0, 1.0); float top = smoothstep(0.25, 0.85, n.y);
+          // (each face of the stone its own tone, as a stone broken along its planes: the face's own normal, from the slopes of
+          // the point across the screen — the light keeps the stone's soft volume)
+          { vec3 fn = normalize(cross(dFdx(vFP), dFdy(vFP))); float fh = fract(sin(dot(floor(fn * 3.0 + 0.5), vec3(12.9898, 78.233, 37.719))) * 43758.5453); diffuseColor.rgb *= 0.86 + fh * 0.26; }
           float sn = smoothstep(0.6, 0.8, min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b)));
           if (uTexOn > 0.5) {
             vec3 w = pow(abs(n), vec3(4.0)); w /= w.x + w.y + w.z + 1e-4;
