@@ -1,0 +1,141 @@
+# Revisão de arte — o Modo Encarnado depois da onda 1 (A1, direção de arte)
+
+O que foi olhado: a **integração** (`integracao` @ f163fcd, a mesma imagem do worktree do A1 depois do merge), contra o
+**jogo original** (`SP/visual/antes`). Cada imagem foi aberta e olhada de verdade; as regiões citadas estão entre
+colchetes. A cor foi medida com `SP/a1/cor.py` (neon = saturação > 70% onde há luz; a faixa do alto e do rodapé, onde
+fica a HUD, fica de fora). Critério: a direção da `arte/BIBLIA.md` — *stylized high-fidelity fantasy*, silhueta, material
+com grão e uso, cor natural, detalhe onde o olho para.
+
+Fontes desta versão (rascunho 1, 13:30):
+- `SP/rodada-integra/caca/caca-01..05` (os quadros do caçador, 900 × 560: Hedeby, metrópole, um mundo novo);
+- `SP/rodada-integra/encarna/e1-mercado`, `e1-no-mercado`, `e1-porto`, `e1-atravessou` (Birka, na metrópole) e
+  `e6-terreno` (Hedeby) — quadros do Modo Encarnado, qualidade média;
+- as fotos fixas da integração em qualidade alta (`SP/a1/fotos-alta`, as 13 vistas) estão na fila do navegador: quando
+  saírem, esta revisão ganha o lado a lado de cada vista (antes | depois) e é atualizada.
+
+## O veredito em uma linha
+
+**A cidade já mudou de jogo; a natureza e as pessoas ainda não.** A casa nórdica de perto, o muro de pedra, a água do
+porto e a luz da madrugada já são *stylized high-fidelity*; ao lado delas, árvores frutíferas, arbustos, pedras e
+cactos em poliedros chapados, frutas-cubo vermelhas e roupas que colam no corpo como tinta puxam o quadro de volta para
+2000. O salto visível agora está na **natureza (A3)** e nas **roupas e rostos (A4)** — e em ligar as peças-herói que já
+existem (A2).
+
+## O que já está bom — manter e copiar
+
+- **A casa nórdica de perto** [caca-01, à direita; e6-terreno, ao centro]: tábua em pé com veio, nó e prego, a porta de
+  pranchas com cinta de ferro e argola, a mão-francesa, a base de pedra de campo, o beiral de turfa com tufos de capim
+  pendurados. É a régua de qualidade do estúdio.
+- **O muro de pedra de campo** [e1-mercado, à esquerda]: a pedra na escala certa, argamassa clara, musgo nas juntas.
+- **A telha romana** [caca-04 e o recorte `SP/a1/crop-romanas.png`]: o telhado de quatro águas com a figura de telha e
+  a cumeeira lê como romano a 10 m.
+- **A água do porto** [e1-porto, à direita]: o reflexo do céu, as ondinhas do canal, a areia molhada escurecendo na
+  beira — bonita e calma.
+- **A luz da madrugada** [e1-mercado, e1-porto]: a hora quente e baixa, a névoa que separa o fundo.
+- **O capim alto** [e1-atravessou]: a densidade é a de um prado de verdade.
+- **A HUD** [todas]: discreta, legível sobre neve e céu claro, a bússola no alto.
+
+## O que ainda lê como "MMORPG de 2000" (em ordem de dano)
+
+1. **Árvores frutíferas e arbustos de poliedros chapados**, verde forte, com frutas-cubo vermelhas de ~30 cm
+   [e6-terreno, à esquerda embaixo; caca-01, à esquerda embaixo; recorte `SP/a1/crop-casa-arbusto.png`, à direita]. É o
+   sinal mais forte de "jogo antigo" em todas as imagens — e aparece ao lado da melhor coisa do jogo (a parede de tábuas).
+2. **Roupas que colam no corpo** [caca-04, a mulher asteca: o vestido creme é um maiô; caca-02 e e6-terreno: o avental
+   amarelo é um cone rígido] — o corpo contínuo do A4 está bom; o que falta é o pano.
+3. **Pinheiros em cones empilhados** e **pedras-bloco** [caca-02, à direita; caca-03, à esquerda e ao centro].
+4. **As bancas do mercado** [e1-no-mercado]: caixas amarelo-oliva lisas com tampo escuro e frutas em bolas de cor pura —
+   brinquedo.
+5. **Os bichos** [e1-mercado, ao centro: o cervo/lhama laranja; e6-terreno: as galinhas]: corpos facetados de brinquedo.
+6. **Os navios** (fx3d): casco facetado de 6 seções, caixa de convés, mastro e vela simples.
+
+## A2 — arquitetura (build3d, props3d, things3d)
+
+1. **Ligar as peças-herói que já existem.** A cabeça de dragão (onda 1), a pedra rúnica, o portal entalhado e as pontas
+   de empena (onda 2) estão no `index.html` e, na integração, nenhuma é desenhada (nenhum `G.Mesh3D.part` no código). As
+   pontas da cumeeira ainda são os segmentos do `bargeEnd` (a conferir de perto na vista `hedeby-casa`): trocar pelo
+   `dragao` (casa longa, salão) e pela `empena` (`cavalo` ou `voluta` pelo `G.hash(b.id)`), e o portal na porta de frente
+   da casa longa. O como está em `SP/a1/pedidos.md` e na BIBLIA §8. De passagem: as pontas das terças saindo da empena são
+   prismas de 6 lados [e6-terreno, no alto; `SP/a1/crop-confere.png`, à esquerda] — 8 a 10 lados e um chanfro na ponta.
+2. **Janelas dos povos quentes rentes à parede, de moldura vermelho-vivo** [crop-romanas, à direita: as quatro janelas]:
+   recuar o vidro na espessura da parede (15–25 cm de vão, a parede mostrando a grossura), acalmar a moldura (o
+   acabamento do povo × `calm(…, 0.75, 0.9)` — vermelho-vivo só em área pequena, BIBLIA §2.2), e um postigo ou grade em
+   algumas (variação pelo id).
+3. **A parede lisa de caixa** [crop-romanas: a casa romana lê como caixa de reboco perfeita]: com os materiais novos
+   ligados (caiação, estuque, adobe), a parede ganha calombo e pincel; falta quebrar a caixa — base de cantaria/arenito
+   (`ashlar`, `sandstone`), cunhais de pedra nos cantos, uma cornija sob o beiral (a faixa escura sob o beiral, que você já
+   fez no trabalho em andamento, ajuda). Uma coisa-herói por casa (porta com arco ou alpendre, um balcão).
+4. **As bancas do mercado** [e1-no-mercado]: tampo de tábuas (`planksH`) com pernas, toldo de lona listrada (`canvas`),
+   cestos (`wicker`) e caixotes, a fruta em montinhos de muitas bolinhas pequenas e cores calmas — a feira de Hedeby da
+   BIBLIA §10.
+5. **Os nove materiais das outras culturas** já estão ligados no seu trabalho em andamento (o seu pedido ao líder): a
+   conferir nas vistas `metropole-*` quando entregar — o grego branco e azul, o romano de tégula e cantaria, o egípcio de
+   adobe e arenito, o asteca de estuque e tezontle.
+6. **Detalhe menor**: na casa nórdica a porta e a parede ficam do mesmo marrom [caca-01, à direita]; a porta nórdica do
+   povo é bem mais escura (`#3a2616` contra `#7e5e40`) — confira se a porta usa `P.door`.
+
+## A3 — terreno e natureza (ground3d, grass3d, árvores e plantas do realm3d)
+
+1. **Árvores frutíferas e arbustos**: trocar os poliedros chapados por cartões de folha (como o arbusto de folhas
+   desenhadas já faz [crop-casa-arbusto, à direita, no alto]) ou, no mínimo, massas suaves com a folha na textura e luz
+   que atravessa; frutas de 6–10 cm, muitas e meio escondidas, cor dentro da BIBLIA (S ≤ 60 numa área tão grande).
+2. **Coníferas** [caca-02, à direita]: camadas irregulares de galhos (cartões com agulha), pontas caídas, cada árvore com
+   o seu tom (pelo id).
+3. **Pedras e rochedos** [caca-03]: o bloco de poucas faces lê como 2000; a forma com facetas partidas e o material
+   `crag`/`rock`, o pé enterrado com terra e capim em volta (BIBLIA §5: tudo encosta no chão).
+4. **O capim de lança** [e1-porto, embaixo]: as folhas amarelas em ponta de flecha estão grandes demais (cada uma ~0,4 m)
+   e iguais; mais finas, mais numerosas, cor variada. No prado [e1-atravessou] a densidade é ótima, mas o verde satura
+   (31% do quadro em verde saturado): puxe para o capim da BIBLIA (S 50–62).
+5. **Cactos** [caca-03]: cilindros lisos; 8–12 costelas, braços curvados para cima, espinho na figura.
+6. **A neve em manchas no chão** [e6-terreno, em volta da casa]: lê como tinta branca derramada; a borda macia e a neve
+   com volume (a sua camada nova de neve no chão deve resolver — conferir).
+7. **Orçamento**: `needles` tem 295 KB na pilha (o teto da BIBLIA é 200 KB por material); um `hblur`/`q` resolve.
+
+## A4 — personagens e animação (people3d, body3d)
+
+1. **O pano**: a roupa é a cor pintada no corpo — o vestido da asteca colado como maiô [crop-romanas, à esquerda], o
+   avental nórdico um cone rígido [e6-terreno]. Volume e caimento: o *huipil* asteca solto, com decote e costura; a saia
+   abrindo do quadril; dobras e barra irregular; um pouco de balanço no andar.
+2. **Os tecidos da pilha não são usados**: `wool`, `linen`, `leather`, `fur` (feitos na onda 1 para as pessoas) não
+   aparecem em nenhum lugar do `people3d.js`/`body3d.js`. Ao lado de uma parede com veio e prego, a roupa lisa de cor única
+   destoa. `G.Ground3D.texGLSL()` + `m3raw(M3_WOOL, uv)` no shader do corpo, por parte (a túnica de lã, a camisa de linho,
+   o cinto e o sapato de couro, a capa de pele) — a escala está no `M3S_<NOME>`.
+3. **Os olhos encaram** [crop-romanas, o rosto; caca-01]: esferas grandes de pupila escura; olho menor, pálpebra de cima
+   fazendo sombra, sobrancelha; a pele com um pouco de calor nas bochechas e no nariz.
+4. **Uma mancha escura de bordas serrilhadas na barriga** da mulher asteca [`SP/a1/crop-confere.png`, à direita], como
+   algo de baixo atravessando o vestido (a ponta de uma trança? o cinto?) — conferir com o `People3D.check()`.
+5. **Os bichos** [e1-mercado, e6-terreno]: corpos facetados; a mesma passagem do corpo contínuo das pessoas (formas
+   suaves, pernas de verdade, pelagem calma).
+6. **Manter**: o corpo contínuo (nenhuma junta aparecendo), as tranças e os cabelos, os acessórios (colar, braceletes, a
+   barra da capa).
+
+## A5 — luz, água, céu (realm3d luz, fx3d, post3d)
+
+1. **Os navios** (fx3d): o casco facetado vira o `casco` do Blender trocando uma linha (no mesmo quadro unitário que o
+   seu `hg`); o pedido está em `SP/a1/pedidos.md`.
+2. **O mar raso perto da praia de dia** [caca-02, embaixo à esquerda]: leitoso, quase branco, se confundindo com o céu —
+   conferir na vista `hedeby-praia` (a névoa sobre a água ao meio-dia, a cor da água rasa).
+3. **A sombra profunda** [e1-atravessou, o muro à esquerda]: o lado na sombra fica quase preto; falta o céu enchendo a
+   sombra (a luz do céu azulada). BIBLIA §11: nada some no escuro.
+4. **Manter**: a água do porto, a madrugada, a névoa de profundidade.
+
+## O que destoa entre as áreas
+
+1. **Duas fidelidades no mesmo quadro**: a parede tem figura de 512 px com veio, prego e nó a 1 cm; a árvore, o arbusto,
+   a pedra e o bicho ao lado são poliedros sem figura [e6-terreno: a parede × a macieira]. O olho lê dois jogos. A
+   natureza e as pessoas precisam do mesmo grau de material que a arquitetura já tem.
+2. **Verde que briga**: a turfa dos telhados é um verde de musgo calmo (S ~50%); a folhagem e o capim ao lado são verde
+   forte, puxando para o lima [caca-01: o arbusto × o telhado; e1-atravessou: o prado × a turfa]. Acalmar na origem (A3),
+   não na correção de cor.
+3. **Vermelho demais**: a moldura das janelas romanas, as frutas-cubo, os acabamentos — cada um saturado, juntos viram
+   ruído [crop-romanas; e6-terreno]. Vermelho só em acento pequeno.
+4. **Pano liso ao lado de madeira com veio**: as pessoas são as únicas coisas sem material [caca-01: Liv × a parede].
+
+## A1 — o que a própria revisão mudou na coluna do A1
+
+- O letreiro de chegada ficava por cima das notícias em tela de até 900 px [caca-04, caca-05-novo: a notícia apagada
+  atrás do nome] — corrigido (66e06a2).
+- As notícias ocupavam o centro do alto com três caixas, e eram a mesma notícia em três cidades [e1-atravessou,
+  e1-no-mercado] — agora vira uma linha "— e em mais 2 lugares", no máximo duas na tela (77d85a0).
+- Os tecidos da pilha (onda 1) não chegaram às pessoas: o pedido vai ao A4 (acima).
+- Na pilha, `turf` (281 KB), `forest` (258), `grass` (239) e `canvas` (202) — do A1 — também passam do teto de 200 KB por
+  material: o total ainda cabe (5,33 de 6 MB); se apertar, são os primeiros a ganhar `hblur`/`q`.
