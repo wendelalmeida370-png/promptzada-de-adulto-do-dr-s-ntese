@@ -178,7 +178,9 @@ function PAGE() {
       const out = {};
       scene.traverseVisible(o => {
         if (!(o.isMesh || o.isPoints || o.isLine || o.isSprite)) return;
-        const inst = o.isInstancedMesh ? o.count : 1; if (!inst) return;
+        // (instances: an InstancedMesh's count, or — a mesh drawing an InstancedBufferGeometry, as the continuous body does — the
+        // geometry's own instanceCount: counted as one, the bodies of 19 people weighed as one each mesh, 193 thousand short)
+        const gi = o.geometry; const inst = o.isInstancedMesh ? o.count : gi && gi.isInstancedBufferGeometry && Number.isFinite(gi.instanceCount) ? gi.instanceCount : 1; if (!inst) return;
         if (o.frustumCulled !== false && !(o.isSprite ? fr.intersectsSprite(o) : fr.intersectsObject(o))) return;
         const g = o.geometry; if (!g || !g.attributes || !g.attributes.position) return;
         const n = Math.min(g.index ? g.index.count : g.attributes.position.count, g.drawRange ? g.drawRange.count : Infinity);
