@@ -238,6 +238,15 @@ function CACA() {
         const X = (_b.min.x + _b.max.x) / 2, Z = (_b.min.z + _b.max.z) / 2; const i = tileOf(X, Z); if (i < 0 || wet(i) || s.wall[i] || s.occ[i] || s.treeAt[i]) continue;
         const floor = G.Avatar.floorAt(X, Z);
         const lab = `${w.part}${o.userData && o.userData.max ? ' (cap. ' + o.userData.max + ')' : ''} instância ${k}`; const deep = floor - _b.max.y;
+        // (a stain laid on the ground — blood, ash, wine, the dark of a pit: its rim must lie on the ground all round; a flat
+        // one kept level on a slope stands in the air on the low side and sinks on the high one)
+        if (/things[.:]decal$/.test(w.part)) {
+          let up = 0, down = 0; const q = new THREE.Vector3();
+          for (let j = 0; j < 12; j++) { const a = j / 12 * TAU, f = j % 2 ? 0.5 : 0.25; q.set(Math.cos(a) * f, 0, Math.sin(a) * f).applyMatrix4(m); const gi = tileOf(q.x, q.z); if (gi < 0 || wet(gi)) continue; const g = G.Avatar.floorAt(q.x, q.z); up = Math.max(up, q.y - g); down = Math.max(down, g - q.y); }
+          if (up > 0.25) { bad++; add(2, 'mancha no chão flutuando', w.owner, `${lab}: a borda ${up.toFixed(2)} m acima do chão em ${where(X, Z)}${down > 0.25 ? `, e ${down.toFixed(2)} m dentro dele do outro lado` : ''}`, where(X, Z)); }
+          else if (down > 0.25) { bad++; add(3, 'mancha no chão enterrada de um lado', w.owner, `${lab}: a borda ${down.toFixed(2)} m dentro do chão em ${where(X, Z)}`, where(X, Z)); }
+          continue;
+        }
         if (deep > 0.05) { bad++; add(deep > 0.25 ? 2 : 3, deep > 0.25 ? 'coisa enterrada no chão' : 'coisa quase enterrada no chão', w.owner, `${lab}: o topo ${deep.toFixed(2)} m abaixo do chão em ${where(X, Z)}`, where(X, Z)); }
         else if (f === 'props3d.js' && _b.min.y > floor + 0.3) { bad++; add(2, 'decoração flutuando', w.owner, `${w.part} instância ${k}: ${(_b.min.y - floor).toFixed(2)} m acima do chão em ${where(X, Z)}`, where(X, Z)); }
       }
