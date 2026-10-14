@@ -287,9 +287,13 @@
         <div class="im-col"><button data-m="resetkeys">Restaurar teclas</button></div>`;
     } else {
       const Q = G.Realm.Q();
-      h += `<div class="im-title">Gráficos</div><div class="im-seg">${[['baixa', 'Leve'], ['media', 'Média'], ['alta', 'Alta']].map(([k, t]) => `<button data-m="q" data-q="${k}" class="${q === k ? 'on' : ''}">${t}</button>`).join('')}</div>
-        <div class="im-row"><label>Distância de visão <input type="range" min="180" max="800" step="20" value="${Q.view}" data-g="view"></label></div>
-        <div class="im-row"><label>Pessoas desenhadas por perto <input type="range" min="8" max="90" step="2" value="${Q.npcs}" data-g="npcs"></label></div>
+      // (the presets come from the realm, in its order and with its names — the Ultra among them; the sliders reach the
+      // farthest of them, so a preset's own value is never cut by the slider)
+      const QN = G.Realm.QNAMES || [['baixa', 'Leve'], ['media', 'Média'], ['alta', 'Alta']];
+      const most = k => Math.max(...Object.values(G.Realm.QUAL || {}).map(p => p[k] || 0), Q[k] || 0);
+      h += `<div class="im-title">Gráficos</div><div class="im-seg">${QN.map(([k, t]) => `<button data-m="q" data-q="${k}" class="${q === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+        <div class="im-row"><label>Distância de visão <input type="range" min="180" max="${Math.max(800, most('view'))}" step="20" value="${Q.view}" data-g="view"></label></div>
+        <div class="im-row"><label>Pessoas desenhadas por perto <input type="range" min="8" max="${Math.max(90, most('npcs'))}" step="2" value="${Q.npcs}" data-g="npcs"></label></div>
         <div class="im-row"><label>Resolução <input type="range" min="0.5" max="1" step="0.05" value="${Q.scale}" data-g="scale"></label></div>
         <div class="im-row"><label><input type="checkbox" data-g="shadows" ${Q.shadows ? 'checked' : ''}> Sombras</label> <label><input type="checkbox" data-g="grass" ${Q.grass ? 'checked' : ''}> Capim e flores</label></div>
         <div class="im-note">Agora: ${G.Realm.fps ? Math.round(G.Realm.fps) + ' quadros por segundo · ' : ''}${G.Realm.memory() ? G.Realm.memory().calls + ' chamadas de desenho' : ''}</div>`;
@@ -309,6 +313,8 @@
   function onMenuInput(e) {
     const t = e.target; const O = G.Cam3D.OPT;
     if (t.dataset.o) { const k = t.dataset.o; O[k] = t.type === 'checkbox' ? t.checked : +t.value; G.Cam3D.saveOpt(); }
-    if (t.dataset.g) { const k = t.dataset.g; G.Realm.setOver(k, t.type === 'checkbox' ? (t.checked ? (k === 'shadows' ? 1024 : 1) : 0) : +t.value); }
+    // (a box turned back on returns to what the preset itself has — the Ultra's shadows are 4096, not 1024; a preset that
+    // has none, the Leve, gets the middle size)
+    if (t.dataset.g) { const k = t.dataset.g; const P = (G.Realm.QUAL || {})[G.Realm.q] || {}; G.Realm.setOver(k, t.type === 'checkbox' ? (t.checked ? (P[k] || (k === 'shadows' ? 1024 : 1)) : 0) : +t.value); }
   }
 })(window.G);
