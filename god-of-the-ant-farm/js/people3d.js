@@ -39,7 +39,7 @@
   const vis = new Map(); // id → the view's own memory of someone: where they were, which way they face, their walk, their pose
   P3.clear = function () { vis.clear(); if (G.Body3D && G.Body3D.clear) G.Body3D.clear(); for (const sp of emoPool) sp.visible = false; if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
   let avFeet = null;
-  G.worldHooks.push(() => { vis.clear(); avFeet = null; seenAt[0] = seenAt[1] = 0; });
+  G.worldHooks.push(() => { vis.clear(); avFeet = null; seenAt[0] = seenAt[1] = 0; cLod.clear(); });
 
   P3.init = function (three, realm) {
     THREE = three; R3 = realm; scene = realm.scene();
@@ -779,7 +779,7 @@
     if (!mesh || !focus) return;
     const S = G.S; const q = R3.Q(); const TL = G.Space.TILE, HM = G.Space.HM;
     // (the eye: how far each one is from it picks the fine body or the lighter one — the camera, not the body it follows)
-    const cam = R3.camera ? R3.camera() : null; seenAt[0] = cam ? cam.position.x : focus.X; seenAt[1] = cam ? cam.position.z : focus.Z;
+    const cam = R3.camera ? R3.camera() : null; seenAt[0] = cam ? cam.position.x : focus.X; seenAt[1] = cam ? cam.position.z : focus.Z; field(cam, q);
     { const sk = R3.LT && R3.LT.sky; if (sk) RIM.value = 0.2 * G.clamp((0.3 * sk[0] + 0.6 * sk[1] + 0.1 * sk[2]) / 1.2, 0.15, 1); }
     const R = q.view * 0.22; const R2 = R * R; const RC = q.view * 0.55, RC2 = RC * RC; // (full bodies near; the crowd out to here)
     const av = P3.avatar;
@@ -793,7 +793,7 @@
     }
     near.sort((a, b) => a[0] - b[0]);
     let n = Math.min(near.length, q.npcs, MAX - 1); while (n > 0 && near[n - 1][0] > R2) n--;
-    let idx = 0, emoN = 0; P3.walkers.length = 0; P3.flames.length = 0;
+    let idx = 0, emoN = 0, culled = 0; P3.walkers.length = 0; P3.flames.length = 0;
     if (skin && G.Body3D.broken(R3.renderer && R3.renderer())) { skin = false; G.Body3D.clear(); PARTS.forEach((p, k) => { mesh[k].visible = true; }); }
     if (skin) G.Body3D.begin(); toolsBegin();
     if (av) {
@@ -832,11 +832,14 @@
       s.pose.gazeX = G.clamp((look - s.pose.lookY) * 0.9, -0.42, 0.42); // (the eyes go first, the head follows)
       s.pose.blink = blinkAt(s.t, v.id); cloth(s, X, Z, s.yaw, dt, s.pose); if (Lv.mood) Lv.mood = easeMood(s, Lv.mood, dt);
       s.st = st;
-      // (beyond 15 m the lighter body, back to the fine one inside 13 m: someone standing at the edge does not flicker between them)
-      { const de = (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2; s.lod = de > (s.lod ? 169 : 225) ? 1 : 0; }
+      s.lod = lodAt(s.lod, (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2);
       Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant || (s.plant = [{ on: 0 }, { on: 0 }]); Lv.lod = s.lod;
+      if (P3.walkers.length < 40) P3.walkers.push([X, Y, Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise, the grass they part)
+      // (outside the eye's field, their shadow too: not drawn this frame — their steps go on; a torch they hold still burns
+      // and lights round it, about where their hand is)
+      s.cull = seen(X, Y, Z, Lv.s) ? 0 : 1;
+      if (s.cull) { culled++; if ((Lv.torch || Lv.lantern) && P3.flames.length < 40) { const c = Math.cos(s.yaw), n = Math.sin(s.yaw), k = Lv.s; P3.flames.push([X + (c * 0.28 + n * 0.2) * k, Y + (Lv.lantern ? 0.85 : 1.6) * k, Z + (n * 0.28 - c * 0.2) * k, Lv.lantern ? 0.5 : 0.85]); } continue; }
       P3.body(idx++, X, Y, Z, s.yaw, s.pose, Lv, P3.highlight === v.id ? '#ffd76a' : null);
-      if (P3.walkers.length < 40) P3.walkers.push([X, Y, Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise)
       if (v.emo && v.emo.k && emoN < emoPool.length) { const tx = emoMap(v.emo.k); if (tx) { const sp = emoPool[emoN++]; if (sp.material.map !== tx) { sp.material.map = tx; sp.material.needsUpdate = true; } const L2 = P3.look(v).s; sp.position.set(X, Y + 2.2 * L2 + Math.sin(s.t * 3) * 0.03, Z); sp.scale.set(0.42, 0.45, 1); sp.visible = true; } }
     }
     for (const id of vis.keys()) if (!seen.has(id) && !(av && id === av.id)) vis.delete(id);
@@ -846,13 +849,16 @@
     if (Cg) for (const c of Cg.corpses) {
       if (idx >= MAX) break; const X = c.x * TL, Z = c.y * TL; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > R2) continue;
       const stg = G.Carnage.stage(c); if (stg === 'bones') continue;
-      const L = P3.look(c.look); if (stg !== 'fresh') L.skin = stg === 'rot' ? '#8a8a6a' : '#7a6a5a'; L.lod = (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2 > 225 ? 1 : 0;
-      P3.body(idx++, X, W.groundH(c.x, c.y) * HM, Z, G.hash(c.id) * TAU, DEAD[c.id % DEAD.length], L, null); P3.dead++;
+      P3.dead++; const Y = W.groundH(c.x, c.y) * HM; if (!seen(X, Y, Z, 1)) { culled++; continue; } // (in reach: counted, drawn where seen)
+      const L = P3.look(c.look); if (stg !== 'fresh') L.skin = stg === 'rot' ? '#8a8a6a' : '#7a6a5a'; L.lod = lodAt(cLod.get(c.id) || 0, (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2); cLod.set(c.id, L.lod);
+      P3.body(idx++, X, Y, Z, G.hash(c.id) * TAU, DEAD[c.id % DEAD.length], L, null);
     }
+    if (cLod.size > 400) cLod.clear();
     // the crowd: everyone else in reach, simply (where the world has them; no animation of their own but a step's bob)
     mats(); let c = 0; const tnow = performance.now() / 1000;
     for (let k = n; k < near.length && c < MAXC; k++) {
-      const v = near[k][1]; const L = P3.look(v); const s = L.s; const X = v.x * TL, Z = v.y * TL; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const Y = W.groundH(v.x, v.y) * HM + Math.abs(st) * 0.04;
+      const v = near[k][1]; const X = v.x * TL, Z = v.y * TL; const Y0 = W.groundH(v.x, v.y) * HM; if (!seen(X, Y0, Z, 1)) continue;
+      const L = P3.look(v); const s = L.s; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const Y = Y0 + Math.abs(st) * 0.04;
       const pp = v.path && v.pi < v.path.length ? v.path[v.pi] : null; const yaw = pp ? Math.atan2(pp[1] - v.y, pp[0] - v.x) : (v.face > 0 ? 0 : Math.PI);
       M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); M.root.multiply(M.b); M.b.makeScale(s, s, s); M.root.multiply(M.b);
       M.a.copy(M.root); M.b.makeTranslation(0, 0.72, 0); M.a.multiply(M.b); M.c.makeScale(1, 0.92, 0.72); M.a.multiply(M.c); crowd.setMatrixAt(c, M.a); crowd.setColorAt(c, color(L.cloth));
@@ -864,7 +870,7 @@
     crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = c; for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
     P3.crowd = c;
     for (const m of mesh) { m.count = idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
-    P3.count = idx;
+    P3.count = idx; P3.culled = culled;
     if (skin) G.Body3D.end(); toolsEnd();
     beasts(focus, R2, dt);
   };
@@ -903,12 +909,38 @@
     scan(mesh, P3.count, 'pessoas'); scan(beastMesh, P3.beasts, 'bichos');
     if (skin) {
       for (const e of G.Body3D.check()) out.push(e);
-      // (the lighter body only far from the eye: nobody within 12 m drawn with it)
-      for (let r = 0; r < G.Body3D.rows; r++) { const a = G.Body3D.at(r); if (a && a[7] && Math.hypot(a[0] - seenAt[0], a[2] - seenAt[1]) < 12) { out.push(`corpo ${r}: o corpo leve a ${Math.hypot(a[0] - seenAt[0], a[2] - seenAt[1]).toFixed(1)} m do olho`); break; } }
+      // (the lighter bodies only far from the eye: nobody inside a level's edge, less its margin, drawn lighter)
+      for (let r = 0; r < G.Body3D.rows; r++) { const a = G.Body3D.at(r); if (!a || !a[7]) continue; const d = Math.hypot(a[0] - seenAt[0], a[2] - seenAt[1]); if (d < LODD[a[7] - 1] - 1.5) { out.push(`corpo ${r}: o corpo de nível ${a[7]} a ${d.toFixed(1)} m do olho`); break; } }
     }
+    // (who was left undrawn this frame was outside the eye's field: nobody standing in it)
+    if (FR.on) for (const [id, s] of vis) if (s.cull) { FR.s.center.set(s.X, s.Y + 0.9, s.Z); FR.s.radius = 0.3; if (FR.f.intersectsSphere(FR.s)) { out.push(`pessoa ${id}: fora do desenho, mas à vista`); break; } }
     return out;
   };
   const seenAt = [0, 0]; // (where the eye was when the people were last drawn: what picks the lighter bodies, and the verifier's)
+  // the levels of detail by the distance from the eye: the fine body near, a lighter one from LODD[0] metres, the lightest
+  // (a few hundred triangles) from LODD[1] — a metre either side of each edge, so nobody standing on it flickers between two
+  const LODD = [12, 26];
+  function lodAt(prev, d2) { let l = 0; for (let k = 0; k < LODD.length; k++) { const e = LODD[k] + (prev > k ? -1 : 1); if (d2 > e * e) l = k + 1; } return l; }
+  const cLod = new Map(); // (the corpses' levels: id → level)
+  P3.LODD = LODD; P3.cull = true; P3.culled = 0; // (cull: off only to measure what it saves)
+  // the eye's field this frame: who is outside it — and whose shadow is too — is not drawn (only seen: the world is the same)
+  const FR = { on: false };
+  function field(cam, q) {
+    FR.on = !!cam && !!THREE && P3.cull; if (!FR.on) return;
+    if (!FR.f) { FR.f = new THREE.Frustum(); FR.m = new THREE.Matrix4(); FR.s = new THREE.Sphere(); }
+    cam.updateMatrixWorld(); FR.m.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse); FR.f.setFromProjectionMatrix(FR.m);
+    FR.cx = cam.position.x; FR.cz = cam.position.z;
+    // (the shadows, where there are: how long a body's falls on the ground — up to 12 m when the light is low — and which way)
+    const sd = q.shadows > 0 && R3.GX && R3.GX.gxSunW ? R3.GX.gxSunW.value : null; const hz = sd ? Math.hypot(sd.x, sd.z) : 0;
+    FR.sh = sd && sd.y > 0.02 && hz > 1e-4 ? Math.min(12, 1.9 * hz / sd.y) : 0; FR.ux = FR.sh ? sd.x / hz : 0; FR.uz = FR.sh ? sd.z / hz : 0;
+  }
+  // (someone r metres tall standing at X, Y, Z: in the eye's field, or right by the eye, or their shadow in the field)
+  function seen(X, Y, Z, r) {
+    if (!FR.on || (X - FR.cx) ** 2 + (Z - FR.cz) ** 2 < 36) return true;
+    FR.s.center.set(X, Y + r * 0.8, Z); FR.s.radius = r + 0.5; if (FR.f.intersectsSphere(FR.s)) return true;
+    if (!FR.sh) return false;
+    FR.s.center.set(X - FR.ux * FR.sh * 0.5, Y, Z - FR.uz * FR.sh * 0.5); FR.s.radius = FR.sh * 0.5 + r * 0.5; return FR.f.intersectsSphere(FR.s);
+  }
   const RIM = (G.Body3D && G.Body3D.rim) || { value: 0.2 }; // (the edge light, shared by the skin and the pieces)
 
   // ------------------------------ the beasts ------------------------------
@@ -977,7 +1009,7 @@
   // offset in the stride, and how far it swings
   const GAIT = { walk: [0, 0.5, 0.75, 0.25], trot: [0, 0.5, 0.5, 0], gallop: [0, 0.08, 0.55, 0.62] };
   function beasts(focus, R2, dt) {
-    const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; let idx = 0; mats();
+    const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; let idx = 0; mats(); P3.bculled = 0;
     const list = [];
     for (const a of S.animals.values()) { if (a.dead || a.held) continue; const X = a.x * TL, Z = a.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 < R2 * 0.7) list.push([d2, a]); }
     list.sort((p, q) => p[0] - q[0]);
@@ -994,6 +1026,7 @@
       // (over a boulder's tile the feet go up onto the stone, as the people's do)
       const Yf = sp.cls === 'water' || air || a.swim ? W.groundH(a.x, a.y) * HM : Math.max(groundY(a.x, a.y), G.Space.stoneTop(X, Z)); s.Y = Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
       const Y = s.Y + (air ? Math.max(0.5, (a.z || 0) * 0.22) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
+      if (!seen(X, Y, Z, Math.max(0.6, F.len * u))) { P3.bculled++; continue; } // (outside the eye's field: not drawn)
       const m = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-s.yaw); m.multiply(M.b);
       // (grazing: a beast that eats grass lowers its head now and then while it stands)
       const grazer = sp.diet === 'herb' || sp.diet === 'browse'; const wantG = grazer && s.v < 0.15 && Math.sin(s.t * 0.35 + a.id) > 0.1 ? 1 : 0; s.graze += (wantG - s.graze) * (1 - Math.exp(-2 * dt));

@@ -18,7 +18,7 @@
 //  keeps drawing its old pieces.
 // ============================================================
 (function (G) {
-  const B3 = G.Body3D = { ready: false, failed: null, rows: 0, calls: 0, lod: true }; // (lod: the far ones in the lighter bodies — off only to measure)
+  const B3 = G.Body3D = { ready: false, failed: null, rows: 0, calls: 0, lod: true }; // (lod: the far ones in the lighter meshes — off only to measure)
   let THREE = null, scene = null;
   const MAXR = 96; // (rows: People3D's MAX — the bodies drawn whole, the living and the dead)
   let D = null, NB = 0, PB = 0, TW = 0, buf = null, tex = null, mat = null, depth = null, TU = null, JIDX = null;
@@ -356,6 +356,8 @@ vec3 b3paint() {
         const m = new THREE.Mesh(o.g, mat); m.frustumCulled = false; m.castShadow = true; m.customDepthMaterial = depth; m.matrixAutoUpdate = false; m.visible = false;
         scene.add(m); MESH[name] = { mesh: m, geo: o.g, rows: o.rows, ra: o.ra, n: 0, tris: o.tris };
       }
+      // (each mesh in its levels of detail — name, name_1, name_2 —, the lightest it has standing in for the ones it lacks)
+      for (const name in MESH) if (!/_\d$/.test(name)) { const a = [name], l = [0]; for (let k = 1; k < 3; k++) { const ok = !!MESH[name + '_' + k]; a.push(ok ? name + '_' + k : a[k - 1]); l.push(ok ? k : l[k - 1]); } LVL[name] = a; LVN[name] = l; }
       bind();
       B3.ready = true; return true;
     } catch (e) { B3.failed = String((e && e.message) || e); B3.ready = false; return false; }
@@ -408,11 +410,12 @@ vec3 b3paint() {
     }
     for (let k = 0; k < 2; k++) { const e = R[JIDX[4 + k * 3]].elements, j = p + (38 + k) * 4, x = (k ? -1 : 1) * CAP[0], y = CAP[1];
       buf[j] = e[0] * x + e[4] * y + e[12]; buf[j + 1] = e[1] * x + e[5] * y + e[13]; buf[j + 2] = e[2] * x + e[6] * y + e[14]; buf[j + 3] = 1; }
-    // (what this person wears: the body, the hair, the beard, the skirt or the robe, the cloak, the hat)
-    // (far from the eye, the lighter body; its clothes and hair the same)
-    const bd0 = u.body || (L.fem ? 'corpoF' : 'corpoM'), bd = L.lod && B3.lod && MESH[bd0 + '_1'] ? bd0 + '_1' : bd0; use(MESH[bd] ? bd : 'corpoM', row);
-    AT[row][7] = bd !== bd0 ? 1 : 0;
-    if (u.hairM) use(u.hairM, row); if (u.beard) use(u.beard, row); if (u.skirt) use(u.skirt, row); if (u.cloakM) use(u.cloakM, row); if (u.hatM) use(u.hatM, row);
+    // (what this person wears: the body, the hair, the beard, the skirt or the robe, the cloak, the hat — each in the level of
+    // detail the eye's distance asks (People3D: 0 near, 1 a few steps off, 2 far))
+    const lv = B3.lod ? Math.max(0, Math.min(2, L.lod | 0)) : 0;
+    const bd = u.body && MESH[u.body] ? u.body : L.fem ? 'corpoF' : 'corpoM';
+    AT[row][7] = useL(MESH[bd] ? bd : 'corpoM', lv, row);
+    if (u.hairM) useL(u.hairM, lv, row); if (u.beard) useL(u.beard, lv, row); if (u.skirt) useL(u.skirt, lv, row); if (u.cloakM) useL(u.cloakM, lv, row); if (u.hatM) useL(u.hatM, lv, row);
     if (row + 1 > B3.rows) B3.rows = row + 1;
   };
   // (who has no clothes of their own yet — the fallback's look: a plain tunic)
@@ -420,7 +423,9 @@ vec3 b3paint() {
     lin: { cloth: [0.4, 0.25, 0.12], trim: [0.4, 0.06, 0.04], pants: [0.07, 0.05, 0.04], boots: [0.1, 0.05, 0.03], belt: [0.05, 0.03, 0.02], iris: [0.07, 0.04, 0.02], lips: [0.5, 0.2, 0.18], over: [0.4, 0.25, 0.12], metal: [0.45, 0.25, 0.07], hat: [0.4, 0.25, 0.12], cloak: [0.2, 0.12, 0.06], beads: [0.6, 0.2, 0.03] } };
   function col(j, hex) { K.c.set(hex || '#888888'); buf[j] = K.c.r; buf[j + 1] = K.c.g; buf[j + 2] = K.c.b; buf[j + 3] = 1; }
   function use(name, row) { const M = MESH[name]; if (M && M.n < MAXR) M.rows[M.n++] = row; }
-  B3.use = use;
+  const LVL = {}, LVN = {}; // (a mesh's name → its levels' meshes, and which level each one really is)
+  function useL(name, lv, row) { const a = LVL[name]; if (!a) { use(name, row); return 0; } use(a[lv], row); return LVN[name][lv]; } // (the level used)
+  B3.use = use; B3.levels = name => (LVL[name] ? LVL[name].slice() : null);
   B3.end = function () {
     let calls = 0, tris = 0;
     for (const k in MESH) { const M = MESH[k]; M.geo.instanceCount = M.n; M.mesh.visible = M.n > 0; if (M.n) { M.ra.needsUpdate = true; calls++; tris += M.n * M.tris; } }
@@ -461,7 +466,7 @@ vec3 b3paint() {
     return [116 * Y - 16, 500 * (X - Y), 200 * (Y - Z)];
   }
   B3.meshes = () => Object.keys(MESH).map(k => ({ name: k, n: MESH[k].n, tris: MESH[k].tris }));
-  B3.at = row => AT[row]; // (for the verifier: where row's person stands [X, Y, Z, size, hips X, Y, Z, the lighter body])
+  B3.at = row => AT[row]; // (for the verifier: where row's person stands [X, Y, Z, size, hips X, Y, Z, the body's level of detail])
   B3._buf = () => buf; B3._tw = () => TW; // (for the tests: the rows of numbers, read only)
   // (a shader the graphics card refused when it first drew — no error to catch at the start: People3D asks after drawing,
   // and goes back to its pieces)
