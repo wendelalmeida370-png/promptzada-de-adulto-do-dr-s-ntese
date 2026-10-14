@@ -276,6 +276,9 @@
       else if (civ === 'egipcio') { o.hatM = 'nemes'; o.cloakM = null; if (!fem) o.torso = 2; }
       else if (civ === 'asteca') { o.hatM = 'penacho'; o.cloak = '#2f7a8a'; } }
     if (v.captive) { o.cloakM = null; o.hatM = null; o.motif = 0; o.overK = 0; o.feetK = 1; o.trim = o.cloth; o.belt = '#6a5a4a'; o.cloakTrim = 0; }
+    // (what the clothes are made of: wool in the north and on soldiers, linen and cotton in the south, on the Nile and in the
+    // jungle — a northern woman's dress of linen under her apron-dress of wool; an apron of leather on the smith)
+    o.fab = (civ === 'nordico' && !(fem && o.overK === 1)) || role === 'guerreiro' ? 1 : 2; o.fabO = o.overK === 2 ? (role === 'ferreiro' ? 3 : 2) : o.overK === 3 ? 2 : 1;
     // (a northern cloak has a collar of fur — white on a ruler's —; every other cloak, a collar of its own cloth)
     o.fur = o.cloakM === 'capa' && civ === 'nordico' && !v.robe ? (ruler ? 2 : 1) : 0;
     // (nobody naked: the hips always under a skirt, a kilt or trousers — and no cloth the colour of its wearer's skin: a linen
