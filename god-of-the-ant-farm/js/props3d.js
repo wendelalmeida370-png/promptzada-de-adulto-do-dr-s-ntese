@@ -113,8 +113,47 @@
     if (ds.length && h(6) < 0.7) { const s = ds[0]; const dp = Math.min(0.52, s.depth); if (dp >= 0.38) { const f = take(K, s, dp + 0.06, dp, s.a1 <= s.da ? 'end' : 'start'); if (f) barrel(K, f.cx, f.y, f.cz, dp / 2 - 0.02, 0.62 + dp * 0.12, h(7) < 0.5 ? [112, 80, 50] : [130, 96, 60]); } }
     if (ds.length > 1 || (ds.length && h(8) < 0.5)) { const s = ds[ds.length - 1]; const f = take(K, s, 1.1, Math.min(0.36, s.depth)); if (f && f.dp >= 0.3) bench(K, f); }
   }
-  function store(K, S) { // (sacks, crates and barrels along the walls of a store, a barn, a warehouse)
-    let k = 0; for (const s of S) { if (s.depth < 0.42) continue; const n = Math.floor((s.a1 - s.cur) / 0.75);
+  // (the ground under a small piece at (x, z) of the lot, r its half size: its lowest point, on a footed house; the plinth's top)
+  const gyAt = (K, x, z, r) => (K.footed ? Math.min(K.gy(x - r, z - r), K.gy(x + r, z - r), K.gy(x - r, z + r), K.gy(x + r, z + r)) - 0.03 : 0);
+  // (the room a yard leaves out from the wall: up to the fence Build3D put a hand inside the lot — K.body.yard)
+  const yardRoom = (K, s) => { const Y = K.body && K.body.yard; return Y && s.door && Y.side === s.side ? Math.min(s.depth, Y.n1 - (K.footed ? 0.2 : 0.02) - 0.3) : 0; };
+  // a heap of sacks against the wall, three in a row, two before them, two on top (f: the room it is given)
+  function sackHeap(K, f, k) {
+    const h = q => K.hv(1300 + k * 11 + q);
+    for (let i = 0; i < 3; i++) { const p = pt(f, (i - 1) * 0.4 + (h(i) - 0.5) * 0.06, -f.dp / 2 + 0.25); sack(K, p[0], gyAt(K, p[0], p[1], 0.2), p[1], 0.46 + h(3 + i) * 0.06, k + i); }
+    if (f.dp > 0.85) for (let i = 0; i < 2; i++) { const p = pt(f, (i - 0.5) * 0.44 + (h(6 + i) - 0.5) * 0.08, -f.dp / 2 + 0.68); sack(K, p[0], gyAt(K, p[0], p[1], 0.2), p[1], 0.42, k + 4 + i); }
+    for (let i = 0; i < 2; i++) { if (h(9 + i) < 0.3) continue; const p = pt(f, (i - 0.5) * 0.4, -f.dp / 2 + 0.3); sack(K, p[0], gyAt(K, p[0], p[1], 0.2) + 0.41, p[1], 0.4, k + 7 + i); }
+  }
+  // crates stacked: two against the wall, one on them turned a little, a small one before them
+  function crateStack(K, f, k) {
+    const h = q => K.hv(1400 + k * 11 + q); const box = (lx, lz, y, s, col, dr) => { const p = pt(f, lx, lz); const y0 = y === null ? gyAt(K, p[0], p[1], s / 2) : y;
+      K.as('plankH', () => K.rbox(p[0], y0, p[1], s, s * 0.8, s * 0.86, col, f.ry + dr)); K.as('beam', () => K.rbox(p[0], y0 + s * 0.8, p[1], s * 1.02, 0.03, s * 0.88, dim(col, 0.78), f.ry + dr)); return y0 + s * 0.8 + 0.03; };
+    const a = box(-0.29, -f.dp / 2 + 0.3, null, 0.56, [150, 116, 76], (h(0) - 0.5) * 0.12), b = box(0.3, -f.dp / 2 + 0.29, null, 0.52, [136, 104, 70], (h(1) - 0.5) * 0.12);
+    if (h(2) < 0.75) box((h(3) - 0.5) * 0.2, -f.dp / 2 + 0.3, Math.max(a, b), 0.46, [158, 124, 84], 0.25 + h(4) * 0.3);
+    if (f.dp > 0.8) box(-0.1 + h(5) * 0.2, -f.dp / 2 + 0.72, null, 0.38, [142, 110, 72], (h(6) - 0.5) * 0.6);
+  }
+  // barrels: two or three standing against the wall, one on its side before them, chocked
+  function barrels(K, f, k) {
+    const h = q => K.hv(1500 + k * 11 + q); const n = h(0) < 0.5 ? 2 : 3;
+    for (let i = 0; i < n; i++) { const lx = (i - (n - 1) / 2) * 0.58; const p = pt(f, lx, -f.dp / 2 + 0.3); barrel(K, p[0], gyAt(K, p[0], p[1], 0.26), p[1], 0.27, 0.74 + h(1 + i) * 0.1, h(5 + i) < 0.5 ? [112, 80, 50] : [130, 96, 60]); }
+    if (f.dp > 0.75) { const r = 0.25, A = pt(f, -0.36, f.dp / 2 - 0.27), B = pt(f, 0.36, f.dp / 2 - 0.27); const y = Math.min(gyAt(K, A[0], A[1], 0.2), gyAt(K, B[0], B[1], 0.2)) + r;
+      K.as('plankV', () => K.log([A[0], y, A[1]], [B[0], y, B[1]], r, [122, 88, 56]));
+      K.as('iron', () => { for (const t of [0.16, 0.84]) { const a = [A[0] + (B[0] - A[0]) * (t - 0.03), y, A[1] + (B[1] - A[1]) * (t - 0.03)], b = [A[0] + (B[0] - A[0]) * (t + 0.03), y, A[1] + (B[1] - A[1]) * (t + 0.03)]; K.log(a, b, r + 0.012, '#3c3a36'); } }); }
+  }
+  // hay in a heap, a fork stuck in it
+  function hayHeap(K, f, k) {
+    const h = q => K.hv(1600 + k * 11 + q); const p = pt(f, 0, -f.dp / 2 + Math.min(0.62, f.dp / 2)); const y = gyAt(K, p[0], p[1], 0.4) + 0.05; const r = Math.min(0.72, f.l / 2 - 0.05, f.dp / 2);
+    K.as('thatch', () => { K.sph(p[0], y, p[1], r, [200, 170, 96], 0.85 + h(0) * 0.25); const q = pt(f, (h(1) - 0.5) * 0.4, -f.dp / 2 + 0.4); K.sph(q[0], y, q[1], r * 0.62, [188, 160, 90], 0.6); });
+    if (h(2) < 0.7) { const a = [p[0] + 0.12, y + 0.55, p[1]], e = [p[0] + 0.32, y + 1.65, p[1] - 0.18]; K.bar(a, e, [0, 0, 0.04], [0.04, 0, 0], [126, 98, 64]); }
+  }
+  function store(K, S) { // (sacks, crates and barrels: the goods of a store or a barn heaped in its yard, and along its other walls)
+    let k = 0; for (const s of S) { const room = yardRoom(K, s);
+      if (room >= 0.6) { // (the yard: a heap on each side of the way to the door, the farther from the door first)
+        const kinds = K.b.type === 'celeiro' ? [[hayHeap, 1.55], [sackHeap, 1.3], [crateStack, 1.2]] : [[sackHeap, 1.3], [crateStack, 1.2], [barrels, 1.35]];
+        const j = Math.floor(K.hv(1290 + (s.a1 <= s.da ? 0 : 1)) * kinds.length); const far = s.a1 <= s.da; // (a strip before the door: its far end is a0)
+        for (let q = 0; q < 2; q++) { const [fn, l] = kinds[(j + q) % kinds.length]; const f = take(K, s, l, room, far ? 'start' : 'end'); if (!f) break; fn(K, f, k++); }
+        continue; }
+      if (s.depth < 0.42) continue; const n = Math.floor((s.a1 - s.cur) / 0.75);
       for (let q = 0; q < n; q++) { const r = K.hv(950 + k); const f = take(K, s, 0.62, Math.min(0.62, s.depth)); if (!f) break; k++;
         if (r < 0.4) { sack(K, f.cx, f.y, f.cz, 0.42, k); if (r < 0.2) sack(K, f.cx + 0.08, f.y + 0.4, f.cz + 0.05, 0.36, k + 3); }
         else if (r < 0.75) { crate(K, f, 0, 0, 0.56); if (r < 0.55) crate(K, f, 0.02, 0.01, 0.4, [136, 104, 70]); }
@@ -172,12 +211,31 @@
       if (r < 0.35) { K.cyl(f.cx, f.y, f.cz, 0.24, 0.12, [190, 166, 120]); K.cyl(f.cx, f.y + 0.12, f.cz, 0.12, 0.01, [92, 78, 58]); }
       else if (r < 0.7) crate(K, f, 0, 0, 0.55, [140, 112, 80]); else barrel(K, f.cx, f.y, f.cz, 0.26, 0.7); }
   }
-  function potter(K, S) { let k = 0; for (const s of S) { if (s.depth < 0.4) continue; const f = take(K, s, 1.2, Math.min(0.5, s.depth)); if (!f) continue;
-    for (let q = 0; q < 3; q++) { const p = pt(f, -0.4 + q * 0.4, 0); pot(K, p[0], f.y, p[1], 0.32 + K.hv(990 + k++) * 0.16, [[176, 98, 64], [160, 110, 76], [196, 132, 90]][q]); } } }
+  // the potter's pots set out to dry: a row against the wall, in the yard a second row before it (and never by the kiln, which
+  // Build3D put in the yard: K.body.kiln); each pot its size and clay by the house's id, on its own ground
+  function potter(K, S) { const kl = K.body && K.body.kiln; let k = 0; const CL = [[176, 98, 64], [160, 110, 76], [196, 132, 90], [150, 92, 62]];
+    for (const s of S) { if (s.depth < 0.4 || (kl && kl.side === s.side && kl.at > s.a0 - 0.8 && kl.at < s.a1 + 0.8)) continue; const room = yardRoom(K, s); const rows = room >= 0.8 ? 2 : 1;
+      const f = take(K, s, 1.2, rows > 1 ? Math.min(0.95, room) : Math.min(0.5, s.depth)); if (!f) continue;
+      for (let r = 0; r < rows; r++) for (let q = 0; q < 3 - r; q++) { const h = K.hv(990 + k); const p = pt(f, -0.4 + q * 0.4 + r * 0.2 + (h - 0.5) * 0.08, rows > 1 ? -f.dp / 2 + 0.24 + r * 0.44 : 0); const s2 = (0.32 + h * 0.16) * (r ? 0.8 : 1);
+        pot(K, p[0], gyAt(K, p[0], p[1], s2 * 0.4), p[1], s2, CL[(k++ + K.b.id) % 4]); } } }
+  // the inn's yard: barrels on one side of the way to the door, a trestle table with its two benches on the other
+  function tavern(K, S) {
+    const ds = S.filter(q => q.door && yardRoom(K, q) >= 0.6); if (!ds.length) return home(K, S);
+    const first = Math.floor(K.hv(1800) * ds.length) % ds.length;
+    ds.forEach((s, i) => { const room = yardRoom(K, s); const far = s.a1 <= s.da;
+      if (i === first) { const f = take(K, s, 1.35, Math.min(0.85, room), far ? 'start' : 'end'); if (f) barrels(K, f, 40); return; }
+      const f = take(K, s, 1.9, Math.min(1.3, room), far ? 'start' : 'end'); if (!f) return;
+      const P = (lx, lz) => pt(f, lx, lz); const y = gyAt(K, f.cx, f.cz, 0.6); const wc = [118, 90, 60];
+      // (the table: a top of planks on two trestles; a bench along each long side)
+      const tz = f.dp >= 1.15 ? 0 : -0.1; K.as('plankH', () => K.rbox(...xyz(f, 0, 0.74, tz), 1.5, 0.05, 0.62, [136, 104, 70], f.ry));
+      K.as('beam', () => { for (const e of [-0.6, 0.6]) for (const t of [-0.22, 0.22]) { const a = P(e, tz + t), b = P(e, tz); K.bar([a[0], y, a[1]], [b[0], f.y + 0.74, b[1]], [0, 0, 0.05], [0.05, 0, 0], wc); } });
+      if (f.dp >= 1.15) for (const sd of [-1, 1]) { const g = { cx: P(0, sd * 0.5)[0], cz: P(0, sd * 0.5)[1], ry: f.ry, y: f.y, l: 1.4, dp: 0.3 }; bench(K, g); } else bench(K, { cx: P(0, 0.38)[0], cz: P(0, 0.38)[1], ry: f.ry, y: f.y, l: 1.4, dp: 0.3 });
+    });
+  }
   function market(K, S) { void S; // (baskets of what is sold beside the stalls)
     const n = K.b.type === 'mercado_negro' ? 2 : 4; for (let k = 0; k < n; k++) { const px = K.w * ((k % 2) * 0.5 + 0.25) + 1.25, pz = K.d * (Math.floor(k / 2) * 0.5 + 0.25) + 0.3;
       if (px > K.w - 0.4 || pz > K.d - 0.4) continue; const y = K.footed ? K.gy(px, pz) - 0.03 : 0; basket(K, px, y, pz, k + K.b.id); if (rec) rec.push({ b: K.b, x0: px - 0.24, x1: px + 0.24, z0: pz - 0.24, z1: pz + 0.24, y, ground: y, footed: true }); } }
-  const KIND = { hut: home, house: home, sobrado: home, insula: home, barraco: home, storehouse: store, armazem: store, celeiro: store, workshop: smithy, forja: smithy, doca: quay, olaria: potter, mercado: market, feira: market, mercado_negro: market };
+  const KIND = { hut: home, house: home, sobrado: home, insula: home, barraco: home, storehouse: store, armazem: store, celeiro: store, workshop: smithy, forja: smithy, doca: quay, olaria: potter, mercado: market, feira: market, mercado_negro: market, taverna: tavern };
   // what a built building has about it (build3d calls this after drawing it, with its kit)
   P3.into = function (K) { const f = KIND[K.b.type]; if (!f) return; const S = slots(K); if (!S.length && f !== market) return; f(K, S); };
   // the drawing's own proof: the pieces of the buildings given (Build3D.check passes the ones near the body) drawn again and

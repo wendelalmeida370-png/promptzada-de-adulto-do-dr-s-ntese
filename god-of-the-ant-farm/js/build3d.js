@@ -891,11 +891,14 @@ float m3scale(float p) {
   // (half-timber in the classical lands, plaster, mud brick, planks), floors between the storeys, a chimney
   function house(g, gw, K, o) {
     o = o || {}; const P = K.P; const inset = o.inset === undefined ? 0.35 : o.inset; const B0 = o.body; // (body: a box given — the shop of a smithy)
-    const sx = B0 ? B0.sx : K.w - inset * 2, sz = B0 ? B0.sz : K.d - inset * 2, x = B0 ? B0.x : K.w / 2, z = B0 ? B0.z : K.d / 2; const floors = o.floors || 1; const h = (o.h || 2.6) * floors;
+    let sx = B0 ? B0.sx : K.w - inset * 2, sz = B0 ? B0.sz : K.d - inset * 2, x = B0 ? B0.x : K.w / 2, z = B0 ? B0.z : K.d / 2; const floors = o.floors || 1; const h = (o.h || 2.6) * floors;
+    // (a yard before the door, where a store's goods and a potter's pots stand: the body that much shallower, pushed back)
+    if (o.yard && !B0 && K.prog >= 1) { const od0 = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[doorSide(K.b)]; if ((od0[1] ? sz : sx) - o.yard < 3) o = Object.assign({}, o, { yard: 0 }); // (a lot too shallow keeps its whole body)
+      else if (od0[1]) { sz -= o.yard; z -= od0[1] * o.yard / 2; } else { sx -= o.yard; x -= od0[0] * o.yard / 2; } }
     const built = K.prog; const st = stuff(K.b);
     if (built >= 1 || o.body) { const sd = doorSide(K.b); K.body = { x, z, sx, sz, door: o.door === false ? null : { side: sd, o: { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[sd], a: 0, w: 1.42 } }; }
     // (the north builds in timber whatever the house is for: its walls, door, windows and turf as the longhouse's)
-    if (styleOf(K.b) === 'nordico' && built >= 1 && (!o.pat || o.pat === 'plankV') && (o.roof || P.kind) === 'turf' && !o.noRoof) return nordHouse(g, gw, K, o, x, z, sx, sz, h, floors);
+    if (styleOf(K.b) === 'nordico' && built >= 1 && (!o.pat || o.pat === 'plankV') && (o.roof || P.kind) === 'turf' && !o.noRoof) { const t = nordHouse(g, gw, K, o, x, z, sx, sz, h, floors); if (o.yard) yardFence(K, o.yard); return t; }
     const wallsH = h * (built < 1 ? G.clamp(built / 0.8, 0.08, 1) : 1);
     if (built < 1) {
       // (going up: its walls as high as the work has got, the scaffold round them)
@@ -927,7 +930,56 @@ float m3scale(float p) {
     }
     if (o.chimney) { K.as('stone', () => { const cx = x + sx * 0.28, cz = z - sz * 0.18; K.box(cx, h * 0.6, cz, 0.62, top - h * 0.6 + 0.8, 0.62, P.base ? P.base[1] : '#6f6a60'); K.box(cx, top + 0.8, cz, 0.78, 0.14, 0.78, P.base ? P.base[0] : '#8a8478'); });
       B3.chim.set(K.b.id, [K.x0 + x + sx * 0.28, K.y0 + top + 0.95, K.z0 + z - sz * 0.18]); } // (where its smoke comes out: FX3D)
+    if (o.yard) yardFence(K, o.yard);
     return top;
+  }
+  // the inn's sign beside its door: an iron arm out of the wall at the height of the lintel, the board hanging from it on two
+  // chains, painted (a jug, the people's gold on it)
+  function innSign(K) {
+    const B = K.body; if (!B || !B.door) return; const d = B.door, o = d.o, ax = o[1] !== 0; const P = K.P;
+    const wall = ax ? B.z + o[1] * B.sz / 2 : B.x + o[0] * B.sx / 2; const side = K.hv(23) < 0.5 ? -1 : 1; const a = (ax ? B.x : B.z) + d.a + side * (d.w / 2 + 0.35);
+    const at = (aa, y, n) => (ax ? [aa, y, wall + o[1] * n] : [wall + o[0] * n, y, aa]); const y = 2.45;
+    K.as('iron', () => { K.bar(at(a, y, 0), at(a, y, 0.82), [0, 0.04, 0], ax ? [0.03, 0, 0] : [0, 0, 0.03], '#2e2b28'); K.bar(at(a, y - 0.35, 0), at(a, y - 0.02, 0.5), [0, 0.03, 0], ax ? [0.02, 0, 0] : [0, 0, 0.02], '#2e2b28');
+      for (const n of [0.22, 0.68]) K.log(at(a, y - 0.2, n), at(a, y, n), 0.008, '#3a3632'); });
+    const c = at(a, y - 0.66, 0.45); K.as('jamb', () => K.box(c[0], c[1], c[2], ax ? 0.05 : 0.62, 0.46, ax ? 0.62 : 0.05, P.trim || '#6b4a30'));
+    K.as('jamb', () => { for (const s2 of [-1, 1]) { const q = at(a + s2 * 0.032, y - 0.6, 0.45); K.box(q[0], q[1], q[2], ax ? 0.012 : 0.4, 0.3, ax ? 0.4 : 0.012, P.acc || '#d8b25a'); } });
+  }
+  // the yard before the door of a store, a barn, a potter's (house's o.yard): fenced from the body's front corners to the edge
+  // of the lot, the gate open before the door — in the north stakes and wattle and a walk of planks over the mud to the door,
+  // elsewhere a low wall of the people's stuff with its cap. What stands in it is Props3D's (K.body.yard: how deep it is)
+  function yardFence(K, deep) {
+    const B = K.body; if (!B || !B.door || K.prog < 1) return; const P = K.P; const d = B.door; const o = d.o; const ax = o[1] !== 0; const sg = o[0] + o[1];
+    const len = ax ? B.sx : B.sz, mid = ax ? B.x : B.z, wall = ax ? B.z + o[1] * B.sz / 2 : B.x + o[0] * B.sx / 2;
+    const n1 = Math.abs((sg > 0 ? (ax ? K.d : K.w) : 0) - wall) - 0.16; if (n1 < 0.8) return; B.yard = { deep, n1, side: d.side };
+    // (a point of the yard: a along the wall, n out from it; the ground there)
+    const at = (a, n) => (ax ? [a, wall + o[1] * n] : [wall + o[0] * n, a]); const gyA = (a, n) => { const p = at(a, n); return K.footed ? K.gy(p[0], p[1]) : 0; };
+    const a0 = mid - len / 2 + 0.06, a1 = mid + len / 2 - 0.06, ga = mid + d.a, gh = 0.72; // (the gate: its half width, before the door)
+    const runs = [[a0, n1, ga - gh, n1], [ga + gh, n1, a1, n1], [a0, 0.32, a0, n1], [a1, 0.32, a1, n1]].filter(r => Math.hypot(r[2] - r[0], r[3] - r[1]) > 0.3); // (the sides from clear of the footing's stones)
+    const nord = K.st === 'nordico'; const hv = k => K.hv(600 + k);
+    if (nord) {
+      // (stakes driven in a little crooked, wattle woven between them, its top uneven; the gate's posts taller)
+      const stake = [96, 78, 58], wat = mixc([142, 118, 84], [118, 104, 82], hv(1) * 0.6); let q = 0;
+      for (const [aA, nA, aB, nB] of runs) {
+        const L = Math.hypot(aB - aA, nB - nA), n = Math.max(1, Math.round(L / 0.9));
+        for (let k = 0; k <= n; k++) { const f = k / n, a = aA + (aB - aA) * f, nn = nA + (nB - nA) * f; const p = at(a, nn), y = gyA(a, nn), lean = (hv(10 + q++) - 0.5) * 0.06;
+          K.as('bark', () => K.log([p[0], y - 0.2, p[1]], [p[0] + lean, y + 0.92 + hv(40 + q) * 0.1, p[1] - lean], 0.042, stake)); }
+        for (let k = 0; k < n; k++) { const fa = k / n, fb = (k + 1) / n; const A = at(aA + (aB - aA) * fa, nA + (nB - nA) * fa), Bp = at(aA + (aB - aA) * fb, nA + (nB - nA) * fb);
+          const yA = gyA(aA + (aB - aA) * fa, nA + (nB - nA) * fa), yB = gyA(aA + (aB - aA) * fb, nA + (nB - nA) * fb); const y = Math.min(yA, yB) - 0.06, top = Math.max(yA, yB) + 0.74 + hv(70 + q++) * 0.08;
+          const l = Math.hypot(Bp[0] - A[0], Bp[1] - A[1]); K.as('wattle', () => K.rbox((A[0] + Bp[0]) / 2, y, (A[1] + Bp[1]) / 2, l, top - y, 0.07, wat, -Math.atan2(Bp[1] - A[1], Bp[0] - A[0]))); }
+      }
+      K.as('beam', () => { for (const s of [-1, 1]) { const a = ga + s * gh; const p = at(a, n1), y = gyA(a, n1); K.box(p[0], y - 0.25, p[1], 0.15, 1.42, 0.15, nordWood(K).dark); } });
+      // (the walk of planks laid across the mud from the step to the gate)
+      const nP = Math.floor((n1 - 0.42) / 0.27);
+      K.as('plankH', () => { for (let k = 0; k < nP; k++) { const nn = 0.5 + k * 0.27, p = at(ga + (hv(90 + k) - 0.5) * 0.06, nn); const y = Math.min(gyA(ga - 0.5, nn), gyA(ga + 0.5, nn)) - 0.01;
+        K.rbox(p[0], y, p[1], ax ? 1.05 + hv(110 + k) * 0.1 : 0.24, 0.05, ax ? 0.24 : 1.05 + hv(110 + k) * 0.1, mixc([128, 104, 74], [104, 92, 78], hv(130 + k)), (hv(150 + k) - 0.5) * 0.08); } });
+    } else {
+      // (a low wall of stone, mud brick or plastered, its cap of slabs; the gate between two piers)
+      const pat = K.st === 'egipcio' ? 'mud' : K.st === 'grego' ? 'whitewash' : K.st === 'asteca' ? 'stucco' : 'stone'; const wc = pat === 'stone' ? (P.base ? P.base[1] : '#8a8478') : (P.wl || '#efe2c4');
+      for (const [aA, nA, aB, nB] of runs) { const A = at(aA, nA), Bp = at(aB, nB); const l = Math.hypot(Bp[0] - A[0], Bp[1] - A[1]); const yA = gyA(aA, nA), yB = gyA(aB, nB), y = Math.min(yA, yB) - 0.1, top = Math.max(yA, yB) + 0.78; const ry = -Math.atan2(Bp[1] - A[1], Bp[0] - A[0]);
+        K.as(pat, () => K.rbox((A[0] + Bp[0]) / 2, y, (A[1] + Bp[1]) / 2, l + 0.24, top - y, 0.24, wc, ry));
+        K.as('slab', () => K.rbox((A[0] + Bp[0]) / 2, top, (A[1] + Bp[1]) / 2, l + 0.3, 0.07, 0.32, K.st === 'asteca' ? (P.trim || '#b33a2a') : dim(P.base ? P.base[2] : '#a09a8e', 0.95), ry)); }
+      K.as(pat, () => { for (const s of [-1, 1]) { const a = ga + s * (gh + 0.1); const p = at(a, n1), y = gyA(a, n1); K.box(p[0], y - 0.1, p[1], 0.38, 1.12, 0.38, dim(pat === 'stone' ? wc : P.wl || '#efe2c4', 0.94)); } });
+    }
   }
   // a timber building of the north that is not a home — the workshop, the store, the barn, the hall: the longhouse's walls,
   // door, windows and turf over the body the house's kind asks for, a chimney of stone where a fire works, the smoke hole
@@ -1220,18 +1272,25 @@ float m3scale(float p) {
       g.put(SH.box, R3.mat(K.x0 + K.w / 2, K.y0 + 2.1, K.z0 + K.d / 2, 0, sx + 0.4, 0.12, sz + 0.5, 0.18), '#6a6a6a');
       openings(g, gw, K, K.w / 2, K.d / 2, sx, sz, 0, 2.1, 1);
     },
-    storehouse(g, gw, K) { const t = house(g, gw, K, { h: 3.8, inset: 0.4 }); void t; if (K.prog >= 1) for (let k = 0; k < 3; k++) K.box(K.w * 0.15, 0, K.d * (0.25 + k * 0.25), 0.9, 0.9, 0.9, '#9a7a4a'); },
+    storehouse(g, gw, K) { house(g, gw, K, { h: 3.8, inset: 0.4, yard: 1.3 }); }, // (its sacks, crates and barrels: Props3D, in the yard)
     armazem(g, gw, K) { KIT.storehouse(g, gw, K); },
-    celeiro(g, gw, K) { house(g, gw, K, { h: 4, inset: 0.4, wall: '#9a4a32', pat: 'plankV' }); },
+    celeiro(g, gw, K) { house(g, gw, K, { h: 4, inset: 0.4, wall: '#9a4a32', pat: 'plankV', yard: 1.1 }); },
     workshop(g, gw, K) { smithy(g, gw, K, { h: 3.2, chimney: true, kind: 'wood' }); },
     forja(g, gw, K) { smithy(g, gw, K, { h: 3.3, wall: K.P.base ? K.P.base[2] : '#a09a8e', pat: 'stone', kind: 'forge' }); },
-    olaria(g, gw, K) { house(g, gw, K, { h: 3 }); if (K.prog >= 1) K.sph(K.w * 0.25, 0.2, K.d * 0.75, 1.1, '#b86a44', 0.9); },
+    olaria(g, gw, K) {
+      house(g, gw, K, { h: 3, yard: 1.4 });
+      // (the kiln: a dome of clay in the yard, on the ground, away from the door; its smoke)
+      if (K.prog >= 1 && K.body) { const B = K.body; const d = B.door; const o = d ? d.o : [0, 1]; const ax = o[1] !== 0; const a = (d && d.a > 0 ? -1 : 1) * ((ax ? B.sx : B.sz) / 2 - 0.9);
+        const px = ax ? B.x + a : B.x + o[0] * (B.sx / 2 + 0.75), pz = ax ? B.z + o[1] * (B.sz / 2 + 0.75) : B.z + a; const gy = K.footed ? Math.min(0, K.gy(px, pz)) - 0.05 : 0;
+        K.as('mud', () => { K.sph(px, gy, pz, 0.62, '#b86a44', 0.66); K.box(px + o[0] * 0.5, gy, pz + o[1] * 0.5, ax ? 0.34 : 0.3, 0.32, ax ? 0.3 : 0.34, '#2a1a12'); });
+        B3.chim.set(K.b.id, [K.x0 + px, K.y0 + gy + 0.7, K.z0 + pz]); B.kiln = { side: d ? d.side : 'S', at: ax ? px : pz }; } },
     tecelagem(g, gw, K) { house(g, gw, K, { h: 3.2 }); if (K.prog >= 1) for (const [cc, k] of [['#c8483a', 0], ['#3f6fb0', 1], ['#e8b83a', 2]]) K.box(K.w * (0.25 + k * 0.25), 2.2, K.d - 0.3, 0.9, 1.4, 0.05, cc); },
     ourives(g, gw, K) { house(g, gw, K, { h: 3.2, wall: K.P.wr }); },
     perolaria(g, gw, K) { house(g, gw, K, { h: 3 }); },
     sericultura(g, gw, K) { house(g, gw, K, { h: 3 }); },
     acougue(g, gw, K) { house(g, gw, K, { h: 3 }); if (K.prog >= 1) K.box(K.w * 0.75, 1.6, K.d - 0.3, 1.2, 0.08, 0.08, '#6a4a30'); },
-    taverna(g, gw, K) { house(g, gw, K, { floors: 2, h: 2.9, chimney: true, plinth: true }); if (K.prog >= 1) { for (let k = 0; k < 2; k++) K.cyl(K.w * (0.2 + k * 0.18), 0, K.d - 0.5, 0.42, 0.95, '#7a5030'); K.box(K.w * 0.82, 2.6, K.d - 0.15, 0.9, 0.6, 0.06, '#c89a4a'); } },
+    // the inn: its yard before the door (barrels, a table and its benches: Props3D), its sign hung from an iron arm by the door
+    taverna(g, gw, K) { house(g, gw, K, { floors: 2, h: 2.9, chimney: true, plinth: true, yard: 1.2 }); if (K.prog >= 1) innSign(K); },
     temple(g, gw, K) {
       const st = styleOf(K.b); const P = K.P;
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 5); return; }
