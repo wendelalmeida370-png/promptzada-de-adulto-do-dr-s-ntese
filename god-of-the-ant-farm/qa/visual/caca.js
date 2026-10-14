@@ -12,7 +12,10 @@
 //   texture stack not loaded (a grey layer, a material with uTexOn off, a texture with no picture); shaders that do not
 //   compile (page errors, console warnings, program diagnostics); G.modErr; draw calls exploding; the modules' own X.check();
 //   the quality presets not kept; a frame black or blown out; geometry piling up; the drawing changing the world (the save
-//   before and after frames with the world paused); and the world's invariants (QA.check) after it all.
+//   before and after frames with the world paused); and the world's invariants (QA.check) after it all. And what flickers
+//   or shows through: flat faces glued to the drawn ground or crossed by it (z-fighting: a paving, a walkway, a field);
+//   people going back and forth between the whole body and the simple figure, chunks between near and far (LOD); the
+//   body through the cape or a skirt (the skin bent as the graphics card bends it); leaves blown out to white in the sun.
 // Output: SAIDA/caca.json (every problem, grouped) and SAIDA/caca.txt; photos SAIDA/caca-*.png. Exit 1 if S0–S2 found.
 const path = require('path'); const fs = require('fs'); const os = require('os'); const { execSync } = require('child_process');
 const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..')); const OUT = path.resolve(process.argv[3] || path.join(os.tmpdir(), 'caca'));
@@ -25,7 +28,7 @@ const QH = process.env.Q || 'media';
 const NOVO = (process.env.NOVO || 'continente,96,3,arido,7707,10,egipcio+asteca+grego').split(',');
 const MAXF = +process.env.FOTOS || 12;
 const BASE = process.env.BASE && fs.existsSync(process.env.BASE) ? JSON.parse(fs.readFileSync(process.env.BASE, 'utf8')) : null;
-const commit = (() => { try { return execSync('git -C ' + JSON.stringify(ROOT) + ' log -1 --format=%h', { encoding: 'utf8' }).trim() + (execSync('git -C ' + JSON.stringify(ROOT) + ' status --porcelain -- js index.html', { encoding: 'utf8' }).trim() ? '+mudanças' : ''); } catch (e) { return '?'; } })();
+const commit = (() => { try { return execSync('git -C ' + JSON.stringify(ROOT) + ' log -1 --format=%h', { encoding: 'utf8' }).trim() + (execSync('git -C ' + JSON.stringify(ROOT) + ' status --porcelain -- js index.html', { encoding: 'utf8' }).trim() ? '+mudanças' : ''); } catch (e) { try { return fs.readFileSync(path.join(ROOT, 'COMMIT'), 'utf8').trim(); } catch (e2) { return '?'; } } })();
 
 // ------------------------------ in the page ------------------------------
 function CACA() {
@@ -76,6 +79,10 @@ function CACA() {
       out.grey = grey.length;
     } else if (names.length) add(1, 'a pilha de texturas não existe', 'A1', 'G.Ground3D.tex() sem imagem');
     const who = matWho(); let mats = 0, linked = 0;
+    // (what the eye can be drawing now: a material of something hidden, or of a sprite out of the frustum, keeps a picture
+    // the card never needed — a speech bubble used a moment ago — and that is not on the screen)
+    const cam = G.Realm.camera(); cam.updateMatrixWorld(); const fr = new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    const shown = new Set(); G.Realm.scene().traverseVisible(o => { if (!o.material || (o.isSprite && o.frustumCulled !== false && !fr.intersectsSprite(o))) return; for (const x of [].concat(o.material)) shown.add(x); });
     for (const [m, w] of who) {
       const pr = r.properties.get(m); if (!pr.currentProgram) continue; mats++; const u = pr.uniforms || {};
       if (u.uTexOn) { linked++; if (out.ready && u.uTexOn.value !== 1) add(1, 'material não liga a pilha de texturas (uTexOn desligado)', w.owner, `${w.part}: uTexOn = ${u.uTexOn.value}`); }
@@ -85,7 +92,7 @@ function CACA() {
         if (tx.isRenderTargetTexture || tx.isDepthTexture || tx.isFramebufferTexture) continue;
         const img = tx.image; const ok = img && (Array.isArray(img) ? img.length : (img.width || (img.data && img.data.length) || img.videoWidth));
         if (!ok) add(1, 'textura sem figura', w.owner, `${w.part}.${k} (${tx.name || tx.constructor.name})`);
-        else if (!r.properties.get(tx).__webglTexture && tx.version > 0) add(2, 'textura que não subiu para a placa', w.owner, `${w.part}.${k} (${tx.name || tx.constructor.name})`);
+        else if (shown.has(m) && !r.properties.get(tx).__webglTexture && tx.version > 0) add(2, 'textura que não subiu para a placa', w.owner, `${w.part}.${k} (${tx.name || tx.constructor.name})`);
       }
     }
     out.mats = mats; out.linked = linked; return out;
@@ -187,11 +194,24 @@ function CACA() {
       if (!o.isInstancedMesh || !o.count || !owners[V.byOf(o)]) return; const g = o.geometry; const bb = boxOf(g); if (!fin(bb.min.x)) return;
       for (let k = 0; k < o.count; k++) { o.getMatrixAt(k, m); const e = m.elements; if (Math.abs(e[0]) + Math.abs(e[1]) + Math.abs(e[2]) + Math.abs(e[4]) + Math.abs(e[5]) + Math.abs(e[6]) + Math.abs(e[8]) + Math.abs(e[9]) + Math.abs(e[10]) < 1e-6) continue; m.premultiply(o.matrixWorld); _b.copy(bb).applyMatrix4(m); if (!fin(_b.min.x)) continue; bx.push([_b.min.x, _b.min.y, _b.min.z, _b.max.x, _b.max.y, _b.max.z]); }
     });
+    // (the continuous body — Body3D: one skinned mesh for everyone, not pieces — each row drawn this frame put back in the world
+    // by its bones: its joints, and under the feet the soles, the lowest of it. Without it a torch or a tool in the hand looked
+    // like a piece alone in the air, and the bodies themselves went unchecked)
+    const B3 = G.Body3D, BD = G.BODYMESH;
+    if (B3 && B3.ready && B3._buf && B3._tw && BD && BD.bind && B3.rows > 0) {
+      const buf = B3._buf(), TW = B3._tw(), bn = B3.bones(); const J = Object.keys(BD.bind).map(k => [bn.indexOf(k), BD.bind[k], /^(ft|toe)/.test(k)]).filter(j => j[0] >= 0);
+      for (let r = 0; r < B3.rows; r++) {
+        const o = r * TW * 4; let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+        for (const [b, p, foot] of J) { const j = o + b * 12, py = foot ? 0 : p[1]; const X = buf[j] * p[0] + buf[j + 1] * py + buf[j + 2] * p[2] + buf[j + 3], Y = buf[j + 4] * p[0] + buf[j + 5] * py + buf[j + 6] * p[2] + buf[j + 7], Z = buf[j + 8] * p[0] + buf[j + 9] * py + buf[j + 10] * p[2] + buf[j + 11];
+          if (!fin(X) || !fin(Y) || !fin(Z)) continue; x0 = Math.min(x0, X); x1 = Math.max(x1, X); y0 = Math.min(y0, Y); y1 = Math.max(y1, Y); z0 = Math.min(z0, Z); z1 = Math.max(z1, Z); }
+        if (fin(x0)) bx.push([x0 - 0.15, y0, z0 - 0.15, x1 + 0.15, y1 + 0.12, z1 + 0.15, 1]);
+      }
+    }
     // (union of the boxes that touch, within a hand)
     const par = bx.map((_, i) => i); const find = i => { while (par[i] !== i) i = par[i] = par[par[i]]; return i; }; const E = 0.1; const cell = new Map(); const ck = (x, z) => x + ',' + z;
     bx.forEach((b, i) => { for (let x = Math.floor(b[0] - E); x <= Math.floor(b[3] + E); x++) for (let z = Math.floor(b[2] - E); z <= Math.floor(b[5] + E); z++) { const k = ck(x, z); const l = cell.get(k); if (l) l.push(i); else cell.set(k, [i]); } });
     for (const l of cell.values()) for (let a = 0; a < l.length; a++) for (let c = a + 1; c < l.length; c++) { const p = bx[l[a]], q = bx[l[c]]; if (p[0] - E <= q[3] && q[0] - E <= p[3] && p[1] - E <= q[4] && q[1] - E <= p[4] && p[2] - E <= q[5] && q[2] - E <= p[5]) par[find(l[a])] = find(l[c]); }
-    const comp = new Map(); bx.forEach((b, i) => { const r = find(i); const c = comp.get(r); if (!c) comp.set(r, { lo: b[1], hi: b[4], fx: (b[0] + b[3]) / 2, fz: (b[2] + b[5]) / 2, n: 1, x0: b[0], x1: b[3], z0: b[2], z1: b[5] }); else { if (b[1] < c.lo) { c.lo = b[1]; c.fx = (b[0] + b[3]) / 2; c.fz = (b[2] + b[5]) / 2; } c.hi = Math.max(c.hi, b[4]); c.n++; c.x0 = Math.min(c.x0, b[0]); c.x1 = Math.max(c.x1, b[3]); c.z0 = Math.min(c.z0, b[2]); c.z1 = Math.max(c.z1, b[5]); } });
+    const comp = new Map(); bx.forEach((b, i) => { const r = find(i); const c = comp.get(r); if (!c) comp.set(r, { lo: b[1], hi: b[4], fx: (b[0] + b[3]) / 2, fz: (b[2] + b[5]) / 2, n: 1, x0: b[0], x1: b[3], z0: b[2], z1: b[5], skin: !!b[6] }); else { if (b[1] < c.lo) { c.lo = b[1]; c.fx = (b[0] + b[3]) / 2; c.fz = (b[2] + b[5]) / 2; } c.hi = Math.max(c.hi, b[4]); c.n++; c.x0 = Math.min(c.x0, b[0]); c.x1 = Math.max(c.x1, b[3]); c.z0 = Math.min(c.z0, b[2]); c.z1 = Math.max(c.z1, b[5]); if (b[6]) c.skin = true; } });
     // (what is rightly off the ground: a bird in flight, someone the god's hand lifts, a dragon; the water and the walls)
     const flyers = []; for (const a of s.animals.values()) { const D = G.Animals.DEF[a.kind]; if (D && D.cls === 'air' && (a.z || 0) > 0.3) flyers.push([a.x * 4, a.y * 4]); } for (const d of s.dragons || []) flyers.push([d.x * 4, d.y * 4]);
     for (const v of s.villagers.values()) if ((v.z || 0) > 0.05 || v.held || v.air) flyers.push([v.x * 4, v.y * 4]);
@@ -201,7 +221,7 @@ function CACA() {
       n++; const i = tileOf(c.fx, c.fz); if (i < 0 || wet(i) || s.wall[i] || (s.occ[i] && (S().buildings.get(s.occ[i]) || {}).blocks)) continue;
       const cx = (c.x0 + c.x1) / 2, cz = (c.z0 + c.z1) / 2; if (flyers.some(([x, z]) => Math.hypot(x - cx, z - cz) < 2.5)) continue;
       const floor = G.Avatar.floorAt(c.fx, c.fz); const lift = c.lo - floor;
-      if (lift > 0.35) { fl++; add(2, c.n <= 2 ? 'peça de pessoa ou bicho solta no ar' : 'pessoa ou bicho flutuando', 'A4', `${c.n} peças, ${lift.toFixed(2)} m acima do chão em ${where(c.fx, c.fz)}`, where(c.fx, c.fz)); }
+      if (lift > 0.35) { fl++; add(2, c.n <= 2 && !c.skin ? 'peça de pessoa ou bicho solta no ar' : 'pessoa ou bicho flutuando', 'A4', `${c.n} peças${c.skin ? ' (corpo contínuo)' : ''}, ${lift.toFixed(2)} m acima do chão em ${where(c.fx, c.fz)}`, where(c.fx, c.fz)); }
       else if (c.hi < floor - 0.05) { sk++; add(2, 'pessoa ou bicho enterrado', 'A4', `${c.n} peças, todo abaixo do chão em ${where(c.fx, c.fz)}`, where(c.fx, c.fz)); }
       else if (lift < -0.45) { sk++; add(2, 'pessoa ou bicho afundado no chão', 'A4', `${c.n} peças, os pés ${(-lift).toFixed(2)} m dentro do chão em ${where(c.fx, c.fz)}`, where(c.fx, c.fz)); }
     }
@@ -241,14 +261,174 @@ function CACA() {
     return { n, bad };
   };
 
+  // ---- what lies on the ground (a lot's paving, a field, a walkway, a bridge's end): a flat face within a centimetre of the
+  // drawn ground fights it for the same pixels (z-fighting: it flickers as the eye moves), one the ground crosses shows the
+  // ground through it in patches — each flat face of the near pictures against the land mesh under it
+  const ZEPS = 0.012, ZMIN = 0.3;
+  C.zfight = function (X0, Z0, R) {
+    const s = S(); const out = { faces: 0, parts: {} }; const seen = new Set(), lands = [], over = [];
+    for (const dz of [-R, 0, R]) for (const dx of [-R, 0, R]) for (const o of G.Realm.nearOf(X0 + dx, Z0 + dz) || []) {
+      if (seen.has(o) || o.isInstancedMesh || !o.visible || !o.geometry || !o.geometry.attributes.position) continue; seen.add(o);
+      // (what lies on it: anything of the near pictures but the ground itself, the water and the wild plants — a new part, a
+      // walkway or a road of its own, counts too)
+      const p = V.who(o).part; if (p === 'realm3d.js:perto:chão') lands.push(o); else if (!/perto:(água|gelo|parede-dágua|árvores-pedras|folhas|plantas|água-dos-prédios)$/.test(p)) over.push(o);
+    }
+    if (!lands.length) return out;
+    // (every triangle of a mesh near the point, in the world)
+    const v = new THREE.Vector3(), P = new Float64Array(9), RR = (R + 6) * (R + 6);
+    const tris = (o, f) => { const g = o.geometry, pa = g.attributes.position, ix = g.index, n = ix ? ix.count : pa.count, m = o.matrixWorld;
+      for (let t = 0; t + 2 < n; t += 3) { for (let j = 0; j < 3; j++) { v.fromBufferAttribute(pa, ix ? ix.getX(t + j) : t + j).applyMatrix4(m); P[j * 3] = v.x; P[j * 3 + 1] = v.y; P[j * 3 + 2] = v.z; } if ((P[0] - X0) ** 2 + (P[2] - Z0) ** 2 > RR) continue; f(P); } };
+    // (the drawn ground: its triangles in cells of a metre, its height at a point the triangle's own plane there)
+    const T = [], cell = new Map();
+    for (const o of lands) tris(o, P => { const k = T.length; for (let j = 0; j < 9; j++) T.push(P[j]); for (let z = Math.floor(Math.min(P[2], P[5], P[8])); z <= Math.floor(Math.max(P[2], P[5], P[8])); z++) for (let x = Math.floor(Math.min(P[0], P[3], P[6])); x <= Math.floor(Math.max(P[0], P[3], P[6])); x++) { const c = x * 65536 + z; const l = cell.get(c); if (l) l.push(k); else cell.set(c, [k]); } });
+    const landAt = (x, z) => { const l = cell.get(Math.floor(x) * 65536 + Math.floor(z)); let best = NaN; if (!l) return best;
+      for (const k of l) { const ax = T[k], az = T[k + 2], bx = T[k + 3], bz = T[k + 5], cx = T[k + 6], cz = T[k + 8]; const d = (bz - cz) * (ax - cx) + (cx - bx) * (az - cz); if (Math.abs(d) < 1e-9) continue;
+        const u = ((bz - cz) * (x - cx) + (cx - bx) * (z - cz)) / d, w = ((cz - az) * (x - cx) + (ax - cx) * (z - cz)) / d, t = 1 - u - w; if (u < -1e-6 || w < -1e-6 || t < -1e-6) continue;
+        const y = u * T[k + 1] + w * T[k + 4] + t * T[k + 7]; if (!(y <= best)) best = y; }
+      return best; };
+    // (inside a house's walls — its floor, its plinth — nobody sees it: the body of each building near as Build3D draws it,
+    // a hand round it for the footing; the yard, the walk to the door, the lot's edge are looked at)
+    const TLm = G.Space.TILE, bodies = [];
+    for (const b of s.buildings.values()) {
+      if (!b.blocks) continue; const cx = (b.x + b.w / 2) * TLm, cz = (b.y + b.h / 2) * TLm; if ((cx - X0) ** 2 + (cz - Z0) ** 2 > (R + 16) ** 2) continue;
+      let B = null; try { B = G.Build3D && G.Build3D.propsOf ? G.Build3D.propsOf(b) : null; } catch (e) { B = null; }
+      if (B && fin(B.x) && fin(B.z) && fin(B.sx) && fin(B.sz)) bodies.push([b.x * TLm + B.x - B.sx / 2 - 0.25, b.y * TLm + B.z - B.sz / 2 - 0.25, b.x * TLm + B.x + B.sx / 2 + 0.25, b.y * TLm + B.z + B.sz / 2 + 0.25]);
+      else bodies.push([b.x * TLm, b.y * TLm, (b.x + b.w) * TLm, (b.y + b.h) * TLm]);
+    }
+    const inBody = (x, z) => bodies.some(q => x > q[0] && x < q[2] && z > q[1] && z < q[3]);
+    for (const o of over) {
+      const w = V.who(o);
+      tris(o, P => {
+        // (flat and facing up; its corners pulled a little in, and its middle, against the ground there)
+        const ux = P[3] - P[0], uy = P[4] - P[1], uz = P[5] - P[2], wx = P[6] - P[0], wy = P[7] - P[1], wz = P[8] - P[2];
+        const ny = uz * wx - ux * wz, nl = Math.hypot(uy * wz - uz * wy, ny, ux * wy - uy * wx); if (nl < 1e-9 || ny / nl < 0.8) return;
+        const cx = (P[0] + P[3] + P[6]) / 3, cy = (P[1] + P[4] + P[7]) / 3, cz = (P[2] + P[5] + P[8]) / 3;
+        if (tileOf(cx, cz) < 0 || inBody(cx, cz)) return;
+        let lo = Infinity, hi = -Infinity;
+        for (let j = 0; j < 4; j++) { const x = j < 3 ? P[j * 3] + (cx - P[j * 3]) * 0.1 : cx, y = j < 3 ? P[j * 3 + 1] + (cy - P[j * 3 + 1]) * 0.1 : cy, z = j < 3 ? P[j * 3 + 2] + (cz - P[j * 3 + 2]) * 0.1 : cz; const g = landAt(x, z); if (!fin(g)) return; const d = y - g; if (d < lo) lo = d; if (d > hi) hi = d; }
+        out.faces++; const area = Math.abs(ny) / 2;
+        const e = out.parts[w.part] || (out.parts[w.part] = { owner: w.owner, flat: 0, cross: 0, atF: null, atC: null });
+        if (lo > -ZEPS && hi < ZEPS) { e.flat += area; if (!e.atF) e.atF = where(cx, cz); }
+        else if (lo < -ZEPS && hi > ZEPS) { e.cross += area; if (!e.atC) e.atC = where(cx, cz); }
+      });
+    }
+    for (const [part, e] of Object.entries(out.parts)) {
+      if (e.flat >= ZMIN) add(3, 'superfície colada no chão desenhado (z-fighting: pisca com o olho andando)', e.owner, `${part}: ${e.flat.toFixed(1)} m² a menos de ${ZEPS * 100} cm do chão, perto de ${e.atF}`, e.atF);
+      if (e.cross >= ZMIN) add(3, 'o chão desenhado atravessa uma superfície deitada', e.owner, `${part}: ${e.cross.toFixed(1)} m² cortados pelo chão, perto de ${e.atC}`, e.atC);
+    }
+    return out;
+  };
+
+  // ---- how things are drawn as the people walk and the eye stands: a person drawn whole near the body and as a simple
+  // figure further off, a chunk's near and far pictures — one going back and forth between the two, frame after frame,
+  // flickers. n frames of the world going on, the picture itself not made (only who is drawn how is looked at)
+  C.lod = function (n) {
+    const s = S(), P3 = G.People3D, TL = G.Space.TILE, CH = G.Space.TILE * (G.Space.CHUNK || 16); const r = G.Realm.renderer(); const r0 = r.render; const PO = G.Post3D, p0 = PO && PO.render;
+    if (!P3 || typeof P3.body !== 'function') return { none: 'sem People3D.body' };
+    const body0 = P3.body; let whole = [];
+    P3.body = function (idx, X, Y, Z) { whole.push(X, Z); return body0.apply(this, arguments); };
+    r.render = function () { }; if (p0) PO.render = () => true;
+    const st = new Map(), ch = new Map(), lt = new Map(); const key = (X, Z) => Math.round(X * 1000) + ',' + Math.round(Z * 1000);
+    const flip = (m, k, w) => { const e = m.get(k); if (!e) m.set(k, { last: w, flips: 0 }); else { if (e.last !== w) e.flips++; e.last = w; } };
+    const B3 = G.Body3D; // (the fine body near the eye, the lighter one further: Body3D.at(row)[7], where it has one)
+    try {
+      for (let f = 0; f < n; f++) {
+        whole = []; G.Main.frameFor(33); const fo = G.Avatar.state(); if (!fo) break;
+        const RC = G.Realm.Q().view * 0.55; const W2 = new Set(); for (let k = 0; k < whole.length; k += 2) W2.add(key(whole[k], whole[k + 1]));
+        const LK = new Map(); if (B3 && B3.ready && typeof B3.at === 'function') for (let r = 0; r < B3.rows; r++) { const a = B3.at(r); if (a && a.length > 7) LK.set(key(a[0], a[2]), a[7] ? 1 : 0); }
+        for (const v of s.villagers.values()) { const X = v.x * TL, Z = v.y * TL; if ((X - fo.X) ** 2 + (Z - fo.Z) ** 2 >= RC * RC) continue; const k = key(X, Z); flip(st, v.id, W2.has(k) ? 1 : 0); if (LK.has(k)) flip(lt, v.id, LK.get(k)); }
+        const cx0 = Math.floor(fo.X / CH), cz0 = Math.floor(fo.Z / CH);
+        for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) flip(ch, (cx0 + dx) + ',' + (cz0 + dz), G.Realm.nearOf((cx0 + dx + 0.5) * CH, (cz0 + dz + 0.5) * CH) ? 1 : 0);
+      }
+    } finally { P3.body = body0; r.render = r0; if (p0) PO.render = p0; }
+    const fl = [...st.entries()].filter(([, e]) => e.flips >= 3), cf = [...ch.entries()].filter(([, e]) => e.flips >= 3), lf = [...lt.entries()].filter(([, e]) => e.flips >= 3);
+    if (fl.length) add(3, 'pessoa piscando entre o corpo inteiro e a figura simples (troca de LOD sem folga)', 'A4', `${fl.length} de ${st.size} pessoas por perto trocaram até ${Math.max(...fl.map(([, e]) => e.flips))}× em ${n} quadros (ex.: #${fl[0][0]})`);
+    if (lf.length) add(3, 'pessoa piscando entre o corpo fino e o corpo leve (troca de LOD do corpo sem folga)', 'A4', `${lf.length} de ${lt.size} pessoas desenhadas inteiras trocaram até ${Math.max(...lf.map(([, e]) => e.flips))}× em ${n} quadros (ex.: #${lf[0][0]})`);
+    if (cf.length) add(3, 'pedaço do mundo piscando entre o desenho de perto e o de longe', 'líder', `${cf.length} pedaços trocaram ≥ 3× em ${n} quadros (ex.: ${cf[0][0]})`);
+    return { people: st.size, changed: [...st.values()].filter(e => e.flips > 0).length, flick: fl.length + lf.length, light: lt.size, lightFlick: lf.length, chunks: ch.size, chunkFlick: cf.length };
+  };
+
+  // ---- the clothes over the body: in the frame of the bone a garment hangs from (the cape the chest, a skirt the pelvis),
+  // round the body's own axis, the garment's outer surface must be outside the body wherever it covers it — an arm swung
+  // back under the cape, a knee through the front of a skirt. The skin the graphics card bends, bent here the same way from
+  // Body3D's rows (B3._buf), cell by cell (15° round the axis, 4 cm up it): the body's outermost point in a cell the garment
+  // covers all round must be inside the garment's outermost
+  // [the bone it hangs from, its name, how many cells round each side it must cover, the arms counted only that far behind
+  // the side (°): beside a cape or a skirt they are not through it — an arm swung back under the cape is; on the meshes as
+  // modelled, nothing pokes out; drawn 20% inside, they all do (SP/a6/roupa-bind.js)]
+  const CLOTH = { capa: ['chest', 'a capa', 2, 125], saiaC: ['pel', 'a saia curta', 1, 999], saiaL: ['pel', 'a saia longa', 1, 999] }; const ARMS = /^(sh|fa|el|hd|fg|tb)/;
+  C.cloth = function (only) {
+    const B = G.Body3D, D = G.BODYMESH; if (!B || !B.ready || !B._buf || !B._tw || !D || !D.meshes) return { none: 'sem o corpo contínuo' };
+    const buf = B._buf(), TW = B._tw(), bones = B.bones(); const names = Object.keys(D.meshes);
+    const ms = []; G.Realm.scene().traverse(o => { if (o.isMesh && o.geometry && o.geometry.attributes && o.geometry.attributes.aRow && V.byOf(o) === 'body3d.js') ms.push(o); });
+    if (ms.length !== names.length || ms.some((o, j) => o.geometry.attributes.position.count !== D.meshes[names[j]].n)) return { none: `as ${ms.length} malhas do corpo na cena não batem com as ${names.length} de G.BODYMESH` };
+    const MS = {}; names.forEach((k, j) => { MS[k] = ms[j]; });
+    const rowsOf = k => { const g = MS[k] && MS[k].geometry; return g && g.instanceCount ? Array.from(g.attributes.aRow.array.slice(0, g.instanceCount), x => Math.round(x)) : []; };
+    const bodyOf = new Map(); for (const k of names) if (/^corpo/.test(k)) for (const r of rowsOf(k)) bodyOf.set(r, k);
+    const inv = new THREE.Matrix4(); const NT = 24, DY = 0.04; const out = { checked: 0, bad: 0 };
+    // (each point of a mesh bent by its four bones for a row, then put in the frame of the bone the garment hangs from:
+    // into the cells round the axis through that bone's place in the bind)
+    const arm = bones.map(b => ARMS.test(b));
+    const cells = (k, r, e, ax, put, armBack) => {
+      const g = MS[k].geometry, pa = g.attributes.position.array, bi = g.attributes.aBone.array, bw = g.attributes.aWt.array, n = g.attributes.position.count, o = r * TW * 4;
+      for (let i = 0; i < n; i++) {
+        const px = pa[i * 3], py = pa[i * 3 + 1], pz = pa[i * 3 + 2]; let x = 0, y = 0, z = 0, hw = -1, hb = 0;
+        for (let q = 0; q < 4; q++) { const w = bw[i * 4 + q] / 255; if (w > hw) { hw = w; hb = bi[i * 4 + q]; } if (w <= 0) continue; const j = o + bi[i * 4 + q] * 12; x += w * (buf[j] * px + buf[j + 1] * py + buf[j + 2] * pz + buf[j + 3]); y += w * (buf[j + 4] * px + buf[j + 5] * py + buf[j + 6] * pz + buf[j + 7]); z += w * (buf[j + 8] * px + buf[j + 9] * py + buf[j + 10] * pz + buf[j + 11]); }
+        const lx = e[0] * x + e[4] * y + e[8] * z + e[12] - ax[0], ly = e[1] * x + e[5] * y + e[9] * z + e[13], lz = e[2] * x + e[6] * y + e[10] * z + e[14] - ax[2];
+        const th = Math.atan2(lx, lz); if (armBack !== undefined && arm[hb] && Math.abs(th) * 180 / Math.PI < armBack) continue;
+        const t = Math.floor((th + Math.PI) / (2 * Math.PI) * NT) % NT, yb = Math.floor(ly / DY); put(t + ',' + yb, Math.hypot(lx, lz));
+      }
+    };
+    for (const [gk, [bk, label, ring, armBack]] of Object.entries(CLOTH)) {
+      const bi = bones.indexOf(bk); if (bi < 0 || !MS[gk] || (only && !only.includes(gk))) continue; const ax = D.bind && D.bind[bk] ? D.bind[bk] : [0, 0, 0];
+      for (const r of rowsOf(gk)) {
+        const bm = bodyOf.get(r); if (!bm) continue; out.checked++;
+        const j = r * TW * 4 + bi * 12; inv.set(buf[j], buf[j + 1], buf[j + 2], buf[j + 3], buf[j + 4], buf[j + 5], buf[j + 6], buf[j + 7], buf[j + 8], buf[j + 9], buf[j + 10], buf[j + 11], 0, 0, 0, 1);
+        if (!fin(inv.determinant()) || Math.abs(inv.determinant()) < 1e-9) continue; inv.invert(); const e = inv.elements;
+        const gar = new Map(), bod = new Map(); const mx = m => (c, rr) => { if (!(m.get(c) >= rr)) m.set(c, rr); };
+        cells(gk, r, e, ax, mx(gar)); cells(bm, r, e, ax, mx(bod), armBack);
+        // (a cell the garment covers all round — above, below and that many to each side — where the body reaches further out)
+        let inner = 0, poke = 0, worst = 0;
+        for (const [c, rg] of gar) { const [t, yb] = c.split(',').map(Number); const nb = [[t, yb + 1], [t, yb - 1]]; for (let d = 1; d <= ring; d++) nb.push([(t + d) % NT, yb], [(t + NT - d) % NT, yb]); if (!nb.every(([a, b]) => gar.has(a + ',' + b))) continue; inner++; const rb = bod.get(c); if (rb !== undefined && rb > rg + 0.012) { poke++; worst = Math.max(worst, rb - rg); } }
+        if (inner >= 12 && poke >= 3 && poke / inner > 0.04) { out.bad++; add(3, `o corpo atravessa ${label}`, 'A4', `pessoa da linha ${r} (${bm}): ${poke} de ${inner} pedaços cobertos com o corpo até ${(worst * 100).toFixed(1)} cm para fora de ${label}`); }
+      }
+    }
+    return out;
+  };
+
+  // ---- the leaves in the light: a crown's leaves blown out to white in the sun (or crushed to black by day) — the leaf
+  // pixels found by drawing the frame again with them in one flat colour, their light read in the frame as it was
+  C.leaves = function (at, groups) {
+    const r = G.Realm.renderer(), sc = G.Realm.scene(), cam = G.Realm.camera(), M = G.Realm.mats(); const out = {};
+    const draw = () => { if (!(G.Post3D && G.Post3D.render && G.Post3D.render(sc, cam))) r.render(sc, cam); const gl = r.getContext(); const px = new Uint8Array(gl.drawingBufferWidth * gl.drawingBufferHeight * 4); gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, px); return px; };
+    let A = null;
+    for (const [name, mat] of Object.entries(groups || { folhas: M.leaf, plantas: M.plant })) {
+      if (!mat) continue; const ms = []; sc.traverseVisible(o => { if (o.isMesh && o.material === mat) ms.push(o); }); if (!ms.length) continue;
+      if (!A) A = draw();
+      const flat = new THREE.MeshBasicMaterial({ color: 0xffffff, map: mat.map || null, alphaTest: mat.alphaTest || 0, side: mat.side, toneMapped: false, fog: false });
+      flat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);'); };
+      let B; for (const o of ms) o.material = flat; try { B = draw(); } finally { for (const o of ms) o.material = mat; flat.dispose(); }
+      let n = 0, wh = 0, bl = 0, sum = 0;
+      for (let k = 0; k < B.length; k += 4) { if (!(B[k] > 190 && B[k + 1] < 80 && B[k + 2] > 190)) continue; const L = 0.2126 * A[k] + 0.7152 * A[k + 1] + 0.0722 * A[k + 2]; n++; sum += L; if (L >= 250) wh++; if (L <= 6) bl++; }
+      const day = G.S.time > 0.2 && G.S.time < 0.62; out[name] = { px: n, mean: n ? +(sum / n).toFixed(1) : null, white: n ? +(wh / n * 100).toFixed(1) : 0, black: n ? +(bl / n * 100).toFixed(1) : 0 };
+      if (n >= 300 && wh / n > 0.05) add(3, `${name} estourando em branco`, 'A3', `${(wh / n * 100).toFixed(0)}% dos ${n} pixels de ${name} em branco puro (luz média ${(sum / n).toFixed(0)}, hora ${(+G.S.time).toFixed(2)}; a luz é do A5)`, at);
+      else if (n >= 300 && day && bl / n > 0.3) add(3, `${name} pretas de dia`, 'A3', `${(bl / n * 100).toFixed(0)}% dos ${n} pixels de ${name} quase pretos (hora ${(+G.S.time).toFixed(2)}; a luz é do A5)`, at);
+    }
+    // (the screen as it was: drawn again with everything in its own colours)
+    if (A) draw();
+    return out;
+  };
+
   // ---- the modules' own proofs (every module of the 3D with a check(): the known ones, and any new one)
   C.modules = function () {
     const b = G.Possess.body(); const out = {};
     for (const k of Object.keys(G)) {
       const M = G[k]; if (!(/3D$/.test(k)) || !M || typeof M.check !== 'function') continue;
-      let r; try { r = k === 'Ground3D' ? (b ? M.check(b.x, b.y, 30, 400) : null) : M.check(); } catch (e) { add(1, `${k}.check() quebra`, '?', e.message); continue; }
+      // (Props3D.check(list) looks at the buildings it is given — Build3D.check gives it the ones near the body: the same here)
+      const near = () => (b ? [...S().buildings.values()].filter(q => G.dist(q.x + q.w / 2, q.y + q.h / 2, b.x, b.y) < 14) : []);
+      let r; try { r = k === 'Ground3D' ? (b ? M.check(b.x, b.y, 30, 400) : null) : M.check.length >= 1 ? M.check(near()) : M.check(); } catch (e) { add(1, `${k}.check() quebra`, '?', e.message); continue; }
       out[k] = r;
-      const own = { People3D: 'A4', Body3D: 'A4', Things3D: 'líder', Dragon3D: 'líder', FX3D: 'A5', Post3D: 'A5', Ground3D: 'A3', Grass3D: 'A3', Build3D: 'A2', Props3D: 'A2' }[k] || '?';
+      const own = { People3D: 'A4', Body3D: 'A4', Things3D: 'A2', Dragon3D: 'líder', Mesh3D: 'A1', FX3D: 'A5', Post3D: 'A5', Ground3D: 'A3', Grass3D: 'A3', Build3D: 'A2', Props3D: 'A2' }[k] || '?';
       if (Array.isArray(r)) for (const e of r) add(2, `${k}.check()`, own, String(e));
       else if (r && typeof r === 'object' && 'bad' in r && r.bad > 2) add(2, `${k}.check()`, own, `${r.bad} de ${r.n} casas pintadas diferente do mundo`);
     }
@@ -392,18 +572,23 @@ if (require.main !== module) return;
         for (const [j, [yaw, pitch, dist]] of eyes.entries()) {
           if (st) st.yaw = 0.3; G.Cam3D.OPT.follow = false; G.Cam3D.yaw = yaw; G.Cam3D.pitch = pitch; G.Cam3D.dist = dist; G.Cam3D.cur = dist; G.Main.frameFor(33);
           const c = __VIS.count(); const e = __CACA.eye(j === 0); __CACA.light(c.pix, [sp.x, sp.y]);
+          // (the leaves in the light: by day, from the first eye, at the first places and in the wood)
+          if (j === 0 && G.S.time < 0.7 && (k < 4 || sp.kind === 'mata densa')) out.leaves = __CACA.leaves([sp.x, sp.y]);
           out.eyes.push({ yaw: +yaw.toFixed(2), pitch, dist, calls: c.calls, tris: c.tris, passes: c.passes, pix: c.pix, inside: e.inside, rays: e.rays });
         }
         out.scan = __CACA.scan(); out.bodies = __CACA.bodies(); out.things = __CACA.things(); const b = G.Possess.body(); out.trees = b ? __CACA.trees(b.x, b.y, 12, rap ? 10 : 24) : null;
+        const zf = st ? __CACA.zfight(st.X, st.Z, 24) : null; out.zfight = zf ? { faces: zf.faces, parts: Object.keys(zf.parts).length } : null; out.cloth = __CACA.cloth();
         out.modules = Object.keys(__CACA.modules()); out.programs = __CACA.programs(); out.drawn = __VIS.drawn(); out.mem = __VIS.memory(); out.modErr = JSON.stringify(G.modErr);
         if (out.modErr !== '{}') __CACA.P.push({ sev: 1, kind: 'erro de módulo (G.modErr)', owner: '?', msg: out.modErr.slice(0, 300), at: [sp.x, sp.y] });
+        // (last: frames of the world going on, who is drawn how — it moves the people)
+        out.lod = __CACA.lod(rap ? 24 : 40);
         return out;
       }, [sp, k, RAPIDO]).catch(e => ({ err: e.message.slice(0, 300) }));
       const ps = await take({ world: w, spot: `${k + 1} ${sp.kind} ${sp.x},${sp.y}`, cam: 0 });
       if (r.eyes) for (const e of r.eyes) calls.push(e.calls);
       if (!first && r.mem) first = r.mem;
       (W.visits = W.visits || []).push(Object.assign(r, { problems: ps.length, s: Math.round((Date.now() - t0) / 1000) }));
-      console.log(`${k + 1}. ${sp.kind} ${sp.x},${sp.y}: ${r.err ? 'ERRO ' + r.err : r.skip ? r.skip : `chamadas ${r.eyes.map(e => e.calls).join('/')}, luz ${r.eyes.map(e => e.pix.mean).join('/')}, corpos ${r.bodies.bodies} (${r.bodies.parts} peças), árvores ${r.trees && r.trees.n}`} · ${ps.length} problema(s) · ${Math.round((Date.now() - t0) / 1000)} s`);
+      console.log(`${k + 1}. ${sp.kind} ${sp.x},${sp.y}: ${r.err ? 'ERRO ' + r.err : r.skip ? r.skip : `chamadas ${r.eyes.map(e => e.calls).join('/')}, luz ${r.eyes.map(e => e.pix.mean).join('/')}, corpos ${r.bodies.bodies} (${r.bodies.parts} peças), árvores ${r.trees && r.trees.n}, faces no chão ${r.zfight ? r.zfight.faces : '-'}, roupas ${r.cloth && r.cloth.checked !== undefined ? r.cloth.checked : '-'}, LOD ${r.lod && r.lod.people !== undefined ? `${r.lod.flick} piscando de ${r.lod.people}` : '-'}${r.leaves ? ', folhas ' + Object.entries(r.leaves).map(([k, x]) => `${k} ${x.px}px ${x.white}% branco`).join(' ') : ''}`} · ${ps.length} problema(s) · ${Math.round((Date.now() - t0) / 1000)} s`);
     }
     // draw calls exploding: far above the others of this world, or above the reference run
     if (calls.length >= 4) {
