@@ -14,7 +14,7 @@
   let THREE = null, R3 = null, scene = null, flame = null, glow = null, rain = null, rainP = null, hull = null, mast = null, sail = null, deck = null, streaks = null, rainL = null;
   const MAXF = 140, MAXS = 40, NR = 1600;
   const TAU = Math.PI * 2;
-  const svis = new Map(); G.worldHooks.push(() => { svis.clear(); for (const pl of [PA, PG]) if (pl) pl.n = 0; emit.clear(); leafT = 0; ripN = 0; fpN = 0; steps.clear(); for (const f of falling.values()) R3.dropMesh(f.m); falling.clear(); });
+  const svis = new Map(); G.worldHooks.push(() => { svis.clear(); for (const pl of [PA, PG]) if (pl) pl.n = 0; emit.clear(); leafT = 0; ripN = 0; fpN = 0; steps.clear(); for (const f of falling.values()) R3.dropMesh(f.m); falling.clear(); lmOn = false; F3.lmSources = 0; if (R3 && R3.GX) R3.GX.gxLMB.value.w = 0; if (blob) blob.count = 0; });
   // ------------------------------ particles ------------------------------
   // (two pools of soft points: smoke, dust, leaves, chips, splashes, drawn over what is behind them; sparks and
   // fireflies, glowing. Each point: where, how fast, how long it lives, its size from birth to death, its colour, its
@@ -69,7 +69,7 @@
   let PU = null, ring = null, ringT = null;
   const NR2 = 60;
   function makePools() {
-    PU = { uScale: { value: 600 }, uFogC: { value: new THREE.Color() }, uFogN: { value: 100 }, uFogF: { value: 500 }, uLit: { value: 1 } };
+    PU = { uScale: { value: 600 }, uFogC: { value: new THREE.Color() }, uFogN: { value: 100 }, uFogF: { value: 500 }, uLit: { value: 1 }, gxGr: R3.GX.gxGr, gxTn: R3.GX.gxTn }; // (gxGr, gxTn: the grade's and the curve's dials, shared with every material)
     for (const add of [false, true]) {
       const P = pool(add); const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(P.pos, 3).setUsage(THREE.DynamicDrawUsage)); g.setAttribute('aCol', new THREE.BufferAttribute(P.col, 4).setUsage(THREE.DynamicDrawUsage));
@@ -81,7 +81,7 @@
     // ripples on the water: flat rings that open and fade (each ring's age in aT)
     const rg = new THREE.RingGeometry(0.82, 1, 24); rg.rotateX(-Math.PI / 2);
     ringT = new THREE.InstancedBufferAttribute(new Float32Array(NR2), 1); ringT.setUsage(THREE.DynamicDrawUsage); rg.setAttribute('aT', ringT);
-    ring = new THREE.InstancedMesh(rg, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uLit: PU.uLit },
+    ring = new THREE.InstancedMesh(rg, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uLit: PU.uLit, gxGr: PU.gxGr, gxTn: PU.gxTn },
       vertexShader: 'attribute float aT; varying float vT; void main(){ vT = aT; float s = 0.25 + aT * 1.6; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position * vec3(s, 1.0, s), 1.0); }',
       fragmentShader: 'varying float vT; uniform float uLit; void main(){ vec3 c = vec3(0.92, 0.96, 1.0) * uLit; gl_FragColor = vec4(c * c, (1.0 - vT) * 0.45);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}' }), NR2);
     ring.count = 0; ring.frustumCulled = false; ring.renderOrder = 3; ring.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(ring); ring.userData.age = new Float32Array(NR2); ring.userData.max = new Float32Array(NR2); ring.userData.pos = new Float32Array(NR2 * 3);
@@ -92,7 +92,7 @@
   function makeFeet() {
     const g = new THREE.PlaneGeometry(0.15, 0.3); g.rotateX(-Math.PI / 2);
     const aT = new THREE.InstancedBufferAttribute(new Float32Array(NFP), 1); const aC = new THREE.InstancedBufferAttribute(new Float32Array(NFP), 1); aT.setUsage(THREE.DynamicDrawUsage); aC.setUsage(THREE.DynamicDrawUsage); g.setAttribute('aT', aT); g.setAttribute('aC', aC);
-    fp = new THREE.InstancedMesh(g, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, uniforms: { uLit: PU.uLit },
+    fp = new THREE.InstancedMesh(g, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, uniforms: { uLit: PU.uLit, gxGr: PU.gxGr, gxTn: PU.gxTn },
       vertexShader: 'attribute float aT; attribute float aC; varying float vT; varying float vC; varying vec2 vUv; void main(){ vT = aT; vC = aC; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }',
       fragmentShader: 'varying float vT; varying float vC; varying vec2 vUv; uniform float uLit; void main(){ vec2 p = vUv * 2.0 - 1.0; float a = smoothstep(1.0, 0.6, dot(p, p)) * (1.0 - vT) * 0.5; vec3 c = (vC < 0.5 ? vec3(0.62, 0.7, 0.82) : vec3(0.32, 0.25, 0.18)) * uLit; gl_FragColor = vec4(c * c, a);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}' }), NFP);
     fp.count = 0; fp.frustumCulled = false; fp.renderOrder = 1; fp.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(fp); fp.userData = { age: new Float32Array(NFP), max: new Float32Array(NFP), aT, aC };
@@ -105,14 +105,18 @@
     fp.count = fpN; fp.instanceMatrix.needsUpdate = true; u.aT.needsUpdate = true; u.aC.needsUpdate = true;
     if (steps.size > 400) steps.clear(); // (the memory of who walked where, kept small)
   }
-  // (a step: every 0.72 m a walker goes on soft ground, a print — left, right — beside the line of the walk)
+  // (whether snow lies where a foot comes down: the snow the land's shader lays — trodden off the paths, none on a road —
+  // or, where the land cannot say, the cold's)
+  const snowUnder = (X, Z, snow) => (G.Ground3D && G.Ground3D.snowXZ ? G.Ground3D.snowXZ(X, Z) > 0.5 : snow > 0.4);
+  // (a step: every 0.72 m a walker goes on soft ground, a print — left, right — beside the line of the walk: a blue hollow
+  // in the snow, a dark one in the earth beside it, where the cold land's paths are trodden bare)
   function walkPrints(id, X, Y, Z, yaw) {
     const S = G.S; const L = G.Space.TILE; const x = Math.floor(X / L), y = Math.floor(Z / L); if (!W.inb(x, y)) return; const i = y * G.N + x; const ty = S.type[i];
     let st = steps.get(id); if (!st) { st = { X, Z, side: 1 }; steps.set(id, st); return; }
     const d = Math.hypot(X - st.X, Z - st.Z); if (d < 0.72) return; if (d > 4) { st.X = X; st.Z = Z; return; } st.X = X; st.Z = Z; st.side = -st.side;
     if (ty <= G.T.RIVER || S.road[i]) return; const snow = R3.snowAt ? R3.snowAt(i) : 0; const b = S.occ[i] && S.buildings.get(S.occ[i]);
-    const soft = snow > 0.4 ? 0 : ty === G.T.SAND || G.pathLevel(S.wear[i]) >= 2 || (b && (b.type === 'farm' || b.type === 'horta' || b.type === 'plantacao')) ? 1 : -1; if (soft < 0) return;
     const ox = -Math.sin(yaw) * 0.12 * st.side, oz = Math.cos(yaw) * 0.12 * st.side;
+    const soft = snowUnder(X + ox, Z + oz, snow) ? 0 : snow > 0.4 || ty === G.T.SAND || G.pathLevel(S.wear[i]) >= 2 || (b && (b.type === 'farm' || b.type === 'horta' || b.type === 'plantacao')) ? 1 : -1; if (soft < 0) return;
     footprint(X + ox, W.hAt((X + ox) / L, (Z + oz) / L) * G.Space.HM + 0.03, Z + oz, yaw, soft, soft === 0 ? 30 : 14);
   }
   function ripple(x, y, z, life) { if (!ring) return; const k = ripN < NR2 ? ripN++ : G.vri(0, NR2 - 1); const u = ring.userData; u.age[k] = 0; u.max[k] = life || 1.2; u.pos[k * 3] = x; u.pos[k * 3 + 1] = y; u.pos[k * 3 + 2] = z; }
@@ -124,9 +128,12 @@
     if (fpN < 0 || fpN > NFP) out.push(`pegadas: ${fpN}`);
     for (const id of falling.keys()) { const t = G.S.trees.get(id); if (!t || t.stage !== 'fall') out.push(`árvore#${id} desenhada caindo, mas no mundo ${t ? t.stage : 'não existe'}`); }
     // (the lamps: as many as the quality has, each a number in its range)
-    if (R3 && scene) { const want = G.clamp((R3.Q().lights | 0) || 2, 1, 6); if (lamps.length !== want) out.push(`luzes das chamas: ${lamps.length}, a qualidade pede ${want}`); for (const l of lamps) if (!Number.isFinite(l.intensity) || l.intensity < 0 || l.intensity > 40) out.push(`luz de chama com intensidade ${l.intensity}`); }
+    if (R3 && scene) { const want = lampsOf(R3.Q()); if (lamps.length !== want) out.push(`luzes das chamas: ${lamps.length}, a qualidade pede ${want}`); for (const l of lamps) if (!Number.isFinite(l.intensity) || l.intensity < 0 || l.intensity > 40) out.push(`luz de chama com intensidade ${l.intensity}`); }
     // (and the light of the hour, the air, the water's bed, the post-processing: their own lists, with the drawing's)
     if (R3 && R3.lightCheck) out.push(...R3.lightCheck());
+    if (R3 && R3.GX) out.push(...lightCheck());
+    if (blob && (blob.count < 0 || blob.count > NBL)) out.push(`sombras sob os pés: ${blob.count}`);
+    if (hN < 0 || hN > MAXF) out.push(`halos das chamas: ${hN}`);
     if (G.Post3D && G.Post3D.check) out.push(...G.Post3D.check());
     return out;
   };
@@ -157,9 +164,11 @@
     const box = new THREE.BoxGeometry(1, 1, 1); box.translate(0, 0.5, 0);
     const cyl = new THREE.CylinderGeometry(0.5, 0.5, 1, 6); cyl.translate(0, 0.5, 0);
     const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-    // (a hull with a bow and a stern: wide amidships, drawn to a point forward, rounder aft, narrower at the keel than at
-    // the gunwale — one unit long, one wide, one high, its base on the water line's floor)
-    const hg = (() => {
+    // (a hull with a bow and a stern: the clinker-built one made in the Blender (G.MESH3D.casco: strakes overlapping down
+    // the sides, the stem and the sternpost rising in scrolls) in the same unit frame — one long, one wide, the keel on the
+    // frame's floor, the bow toward +x — and until it is loaded, the faceted one: wide amidships, drawn to a point forward,
+    // rounder aft, narrower at the keel than at the gunwale)
+    const hg = (G.Mesh3D && G.Mesh3D.geo && G.Mesh3D.geo('casco')) || (() => {
       const g = new THREE.BufferGeometry(); const P = [];
       const sec = [[-0.5, 0.32, 0.18], [-0.32, 0.46, 0.3], [0, 0.5, 0.34], [0.28, 0.44, 0.26], [0.42, 0.26, 0.1], [0.52, 0.02, 0.0]]; // [x, half-width at the gunwale, half-width at the keel]
       for (let k = 0; k < sec.length - 1; k++) { const a = sec[k], b = sec[k + 1];
@@ -173,7 +182,7 @@
     const sg = new THREE.CylinderGeometry(1.6, 1.6, 1, 10, 1, true, -0.32, 0.64); sg.translate(0, 0.5, -1.6); sg.rotateY(Math.PI / 2); sg.scale(1, 1, 1);
     hull = new THREE.InstancedMesh(hg, new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide }), MAXS); deck = new THREE.InstancedMesh(box, mat, MAXS); mast = new THREE.InstancedMesh(cyl, mat, MAXS); sail = new THREE.InstancedMesh(sg, new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide }), MAXS);
     for (const m of [hull, deck, mast, sail]) { m.count = 0; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); }
-    makePools();
+    makePools(); makeBlobs(); makeHalos();
   };
   // ------------------------------ the lights of the flames ------------------------------
   // a few point lights — as many as the quality has (every material pays for each one, by day too) — given each frame to the
@@ -181,11 +190,13 @@
   // windows of the houses near it; each eases out of one place before it goes to the next (no light jumps), and a flame's
   // flickers. Only seen: what lights the drawing is what the world has burning or lit
   let lamps = [];
+  // (how many real lights the quality gives the flames: none in the lightest — the painted light carries them all there)
+  const lampsOf = q => G.clamp(q && Number.isFinite(q.lights) ? q.lights | 0 : 2, 0, 6);
   const FIRE = [1, 0.54, 0.23], TORCH = [1, 0.63, 0.29], HEARTH = [1, 0.66, 0.36];
   // (the houses whose windows the night lights, and how bright their doorways are)
   const LIT = { hut: 0.8, house: 1, sobrado: 1, insula: 1, quarteirao: 1, barraco: 0.5, taverna: 1.5, workshop: 0.8, forja: 1.3, olaria: 0.8, temple: 1.1, palacio: 1.3, paco: 1.2, administracao: 0.8, biblioteca: 0.8, cadeia: 0.6, quartel: 0.8, banhos: 0.9 };
   F3.quality = function (q) {
-    if (!scene) return; const n = G.clamp((q && q.lights) | 0 || 2, 1, 6);
+    if (!scene) return; const n = lampsOf(q);
     while (lamps.length < n) { const l = new THREE.PointLight(0xffa04a, 0, 16, 1.5); l.userData = { key: '', cur: 0, want: 0, X: 0, Y: -1e4, Z: 0 }; l.position.set(0, -1e4, 0); scene.add(l); lamps.push(l); }
     while (lamps.length > n) { const l = lamps.pop(); scene.remove(l); l.dispose(); }
   };
@@ -204,6 +215,99 @@
     for (const l of lamps) { const u = l.userData; u.cur += (u.want - u.cur) * k; if (u.want === 0 && u.cur < 0.02) { u.cur = 0; u.key = ''; }
       l.position.set(u.X, u.Y, u.Z); l.intensity = u.cur > 0.01 ? u.cur * (1 + (G.VR() - 0.5) * 2 * (u.fl || 0)) : 0; }
   }
+  // ------------------------------ the light of every flame, painted ------------------------------
+  // (every flame and lit doorway round the body lights what is round it — the pool of warm light round a campfire, the
+  // street before a lit door, the wall by a torch — without a light of its own, which every material would pay for: their
+  // light is painted here each frame into the realm's picture of it (R3.LM: a texel a metre over the land round the body;
+  // its colour, and the light-weighted place it comes from) and every lit material reads it (realm3d: gxLM). The few real
+  // lights still take the strongest and nearest — their flicker, their true direction on a face — and what a lamp holds is
+  // taken out of the picture as it eases in: nothing is lit twice, nothing jumps)
+  const LMAX = 16, LSPAN = 32; let lmAcc = null, lmOn = false;
+  F3.lmOn = true; // (for the tests: the painted light can be switched off)
+  function paintLight(src, focus) {
+    const LM = R3.LM; if (!LM) return; const n = LM.n, s = LM.m, GX = R3.GX; const B = GX.gxLMB.value, Y = GX.gxLMY.value;
+    if (!lmAcc || lmAcc.length !== n * n * 7) lmAcc = new Float32Array(n * n * 7);
+    // (the picture follows the body a whole texel at a time: walking, the pools of light do not crawl)
+    const x0 = (Math.round(focus.X / s) - n / 2) * s, z0 = (Math.round(focus.Z / s) - n / 2) * s, yr = (focus.Y || 0) + 1; // (heights kept from a little over the body's: LSPAN/2 above and below)
+    let any = 0; const A = lmAcc;
+    if (F3.lmOn && R3.scene().scale.y > 0.98) for (const q of src) {
+      let I = q[5]; for (const l of lamps) if (l.userData.key === q[1]) I -= l.userData.cur;
+      I *= 1 + (G.VR() - 0.5) * 2 * q[8] * 0.6; if (I < 0.03) continue;
+      const X = q[2], Z = q[4], c = q[7], R = q[6] * 0.85, R2 = R * R, dy = q[3] - yr;
+      const i0 = Math.max(0, Math.floor((X - R - x0) / s)), i1 = Math.min(n - 1, Math.ceil((X + R - x0) / s)), j0 = Math.max(0, Math.floor((Z - R - z0) / s)), j1 = Math.min(n - 1, Math.ceil((Z + R - z0) / s));
+      if (i0 > i1 || j0 > j1) continue;
+      if (!any) A.fill(0); any++;
+      const cl = c[0] * 0.3 + c[1] * 0.6 + c[2] * 0.1;
+      for (let j = j0; j <= j1; j++) { const dz = Z - (z0 + (j + 0.5) * s);
+        for (let i = i0; i <= i1; i++) { const dx = X - (x0 + (i + 0.5) * s); const d2 = dx * dx + dz * dz; if (d2 >= R2) continue;
+          let w = 1 - d2 / R2; w *= w * I; const o = (j * n + i) * 7; const wl = w * cl;
+          A[o] += c[0] * w; A[o + 1] += c[1] * w; A[o + 2] += c[2] * w; A[o + 3] += wl; A[o + 4] += wl * dx; A[o + 5] += wl * dy; A[o + 6] += wl * dz; } }
+    }
+    if (!any) { if (lmOn) { lmOn = false; B.w = 0; } return; }
+    const D1 = LM.tex.image.data, D2 = LM.tex2.image.data; const enc = v => (v <= -0.5 ? 0 : v >= 0.5 ? 255 : Math.round((v + 0.5) * 255));
+    for (let k = 0, o = 0, p = 0; k < n * n; k++, o += 7, p += 4) {
+      const wl = A[o + 3];
+      if (wl < 1e-5) { D1[p] = D1[p + 1] = D1[p + 2] = 0; D2[p] = D2[p + 1] = D2[p + 2] = 128; continue; }
+      D1[p] = Math.min(255, Math.round(Math.sqrt(A[o] / LMAX) * 255)); D1[p + 1] = Math.min(255, Math.round(Math.sqrt(A[o + 1] / LMAX) * 255)); D1[p + 2] = Math.min(255, Math.round(Math.sqrt(A[o + 2] / LMAX) * 255));
+      D2[p] = enc(A[o + 4] / wl / LSPAN); D2[p + 1] = enc(A[o + 6] / wl / LSPAN); D2[p + 2] = enc(A[o + 5] / wl / LSPAN);
+    }
+    LM.tex.needsUpdate = true; LM.tex2.needsUpdate = true; lmOn = true;
+    B.x = x0; B.y = z0; B.z = 1 / (n * s); B.w = R3.scene().scale.y; Y.x = yr; Y.y = LMAX; Y.z = LSPAN;
+    F3.lmSources = any;
+  }
+  // (for the verifier: the painted light where the body is, its numbers numbers)
+  function lightCheck() {
+    const out = []; const B = R3.GX.gxLMB.value, Y = R3.GX.gxLMY.value;
+    for (const v of [B.x, B.y, B.z, B.w, Y.x, Y.y, Y.z]) if (!Number.isFinite(v)) { out.push('luz pintada: um número que não é número'); break; }
+    const LM = R3.LM; if (LM && B.w > 0 && Math.abs(B.z * LM.n * LM.m - 1) > 1e-6) out.push(`luz pintada com o tamanho errado: 1/${(1 / B.z).toFixed(1)} m, a imagem tem ${LM.n * LM.m} m`);
+    return out;
+  }
+  // ------------------------------ the glow round a flame ------------------------------
+  // (the air round a flame glows — a soft warm halo, strong at night, faint by day; where the post-processing makes its own
+  // glow of what is brighter than white, only a little: a torch carried down a dark street reads from far off)
+  let haloPts = null, hN = 0; const hP = new Float32Array(MAXF * 3), hA = new Float32Array(MAXF * 4);
+  function halo(X, Y, Z, size, k, seed) { if (hN >= MAXF) return; hP[hN * 3] = X; hP[hN * 3 + 1] = Y; hP[hN * 3 + 2] = Z; hA[hN * 4] = size; hA[hN * 4 + 1] = k; hA[hN * 4 + 2] = G.hash(seed * 7 + 1); hA[hN * 4 + 3] = 0; hN++; }
+  function makeHalos() {
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(hP, 3).setUsage(THREE.DynamicDrawUsage)); g.setAttribute('aH', new THREE.BufferAttribute(hA, 4).setUsage(THREE.DynamicDrawUsage)); g.setDrawRange(0, 0);
+    haloPts = new THREE.Points(g, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      uniforms: { uScale: PU.uScale, uFogN: PU.uFogN, uFogF: PU.uFogF, uT: R3.U.time, uK: { value: 1 }, uCol: { value: new THREE.Color(1, 0.5, 0.2) }, gxGr: PU.gxGr, gxTn: PU.gxTn },
+      vertexShader: `attribute vec4 aH; uniform float uScale; uniform float uFogN; uniform float uFogF; uniform float uT; uniform float uK; varying float vI;
+        void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv;
+          gl_PointSize = clamp(aH.x * uScale / max(0.4, -mv.z), 0.0, 420.0);
+          vI = aH.y * uK * (0.88 + 0.12 * sin(uT * 13.0 + aH.z * 40.0)) * (1.0 - smoothstep(uFogN, uFogF, -mv.z)); }`,
+      fragmentShader: `uniform vec3 uCol; varying float vI; void main() { vec2 p = gl_PointCoord * 2.0 - 1.0; float r2 = dot(p, p); if (r2 > 1.0) discard;
+        float a = (exp(-r2 * 4.5) - 0.011) * vI; gl_FragColor = vec4(uCol * max(a, 0.0), 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+        }` }));
+    haloPts.frustumCulled = false; haloPts.renderOrder = 5; scene.add(haloPts);
+  }
+  function stepHalos(nightK) {
+    if (!haloPts) return; const q = R3.Q();
+    haloPts.material.uniforms.uK.value = (0.12 + 0.88 * nightK) * (q.bloom ? 0.45 : 1);
+    haloPts.geometry.setDrawRange(0, hN); haloPts.geometry.attributes.position.needsUpdate = true; haloPts.geometry.attributes.aH.needsUpdate = true;
+  }
+  // ------------------------------ the shade under the feet ------------------------------
+  // (the ground right under a body is where neither the sky nor the sun reaches: a soft dark patch under the feet of each one
+  // drawn whole — the sun's shadow says where the light comes from, this one that the feet stand on the ground. Darker where
+  // the quality draws no shadows, as the people would float on the land without it)
+  const NBL = 48; let blob = null;
+  function makeBlobs() {
+    const g = new THREE.PlaneGeometry(1, 1); g.rotateX(-Math.PI / 2);
+    blob = new THREE.InstancedMesh(g, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3, uniforms: { uK: { value: 0.3 } },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'varying vec2 vUv; uniform float uK; void main(){ vec2 p = vUv * 2.0 - 1.0; float a = exp(-dot(p, p) * 3.4) * uK * (1.0 - smoothstep(0.85, 1.0, length(p))); gl_FragColor = vec4(0.0, 0.0, 0.0, a); }' }), NBL);
+    blob.count = 0; blob.frustumCulled = false; blob.renderOrder = 1; blob.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(blob);
+  }
+  function stepBlobs() {
+    if (!blob) return; const sh = R3.renderer().shadowMap.enabled; let n = 0;
+    blob.material.uniforms.uK.value = sh ? (R3.Q().ao ? 0.16 : 0.26) : 0.5; const sz = sh ? 0.95 : 1.25; // (lighter where the post's shade already gathers under them)
+    const put = (X, Y, Z, k) => { if (n >= NBL || k <= 0.02) return; M.a.makeScale(sz * k, 1, sz * k); M.a.setPosition(X, Y + 0.03, Z); blob.setMatrixAt(n++, M.a); };
+    const av = G.People3D && G.People3D.avatar;
+    if (av && !av.swim && Number.isFinite(av.X)) { const g = W.hAt(av.X / G.Space.TILE, av.Z / G.Space.TILE) * G.Space.HM; const up = av.ground === false ? Math.max(0, (av.Y || 0) - g) : 0; put(av.X, av.ground === false ? g : av.Y || g, av.Z, 1 - up / 1.2); }
+    if (G.People3D && G.People3D.walkers) for (const p of G.People3D.walkers) put(p[0], p[1], p[2], 1);
+    blob.count = n; blob.instanceMatrix.needsUpdate = true;
+  }
   const M = {}; const mats = () => { if (M.a) return; M.a = new THREE.Matrix4(); M.b = new THREE.Matrix4(); M.c = new THREE.Color(); M.z = new THREE.Matrix4().makeScale(0, 0, 0); };
   // (ship sizes, metres: [length, beam, mast])
   const SHIP = { pesca: [5, 1.8, 4], canoa: [4, 1.1, 0], jangada: [3.5, 2.4, 2], explorador: [11, 3.2, 9], mercante: [13, 3.8, 10], guerra: [15, 4, 12], transporte: [13, 4, 10] };
@@ -211,7 +315,7 @@
     if (!flame || !focus) return; mats();
     const S = G.S; const L = G.Space.TILE, H = G.Space.HM; const t = performance.now() / 1000;
     // ---- fire: the burning tiles near the eye
-    let n = 0, best = 0, bx = 0, by = 0, bz = 0, bi = -1; const src = [];
+    let n = 0, best = 0, bx = 0, by = 0, bz = 0, bi = -1; const src = []; hN = 0;
     const near2 = (X, Z) => (X - focus.X) ** 2 + (Z - focus.Z) ** 2;
     const x0 = Math.floor(focus.X / L), y0 = Math.floor(focus.Z / L), R = 16;
     if (G.Nature && G.Nature.fireSet && G.Nature.fireSet.size) {
@@ -223,6 +327,7 @@
           const hgt = (1.2 + f * 2.6) * fl, wd = 0.7 + f * 1.2;
           M.a.makeScale(wd, hgt, wd); M.a.setPosition(px, gY, pz); flame.setMatrixAt(n, M.a);
           M.a.makeScale(wd * 0.5, hgt * 0.6, wd * 0.5); M.a.setPosition(px, gY, pz); glow.setMatrixAt(n, M.a); n++;
+          if (k === 0) halo(px, gY + hgt * 0.45, pz, 2.6 + f * 3, 0.55, i);
         }
         if (f > best) { best = f; bx = (x + 0.5) * L; by = gY + 2; bz = (y + 0.5) * L; bi = i; }
       }
@@ -233,10 +338,13 @@
     // (the campfires of the towns: always burning, as the god sees them — flames, sparks, a column of smoke, their light;
     // and at night the doorways of the houses round the body, where the light of the hearth comes out)
     for (const b of S.buildings.values()) {
-      if (nightK > 0.05 && b.built && LIT[b.type]) { const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; const d2 = near2(X, Z); if (d2 < 900) { const dr = G.Vg.door(b); const DX = dr[0] * L, DZ = dr[1] * L; const k = LIT[b.type] * nightK; src.push([2.6 * k / (1 + near2(DX, DZ) / 70), 'w' + b.id, DX + (DX - X) * 0.08, W.hAt(dr[0], dr[1]) * H + 1.7, DZ + (DZ - Z) * 0.08, 2.6 * k, 11, HEARTH, 0.03]); } }
+      if (nightK > 0.05 && b.built && LIT[b.type]) { const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; const d2 = near2(X, Z); if (d2 < 2100) { const dr = G.Vg.door(b); const DX = dr[0] * L, DZ = dr[1] * L; const k = LIT[b.type] * nightK; src.push([2.6 * k / (1 + near2(DX, DZ) / 70), 'w' + b.id, DX + (DX - X) * 0.08, W.hAt(dr[0], dr[1]) * H + 1.7, DZ + (DZ - Z) * 0.08, 2.6 * k, 11, HEARTH, 0.03]);
+        // (and its lit windows, where the drawing of the houses says they are: [X, Y, Z, out x, out z] of each pane)
+        const ps = G.Build3D && G.Build3D.lamps && G.Build3D.lamps.get(b.id); if (ps) for (let q = 0; q < ps.length && q < 8; q++) { const p = ps[q]; src.push([0.9 * k / (1 + near2(p[0], p[2]) / 40), 'p' + b.id + ':' + q, p[0] + p[3] * 0.35, p[1], p[2] + p[4] * 0.35, 0.9 * k, 7, HEARTH, 0.02]); halo(p[0] + p[3] * 0.08, p[1], p[2] + p[4] * 0.08, 1.1, 0.28 * k, b.id * 13 + q); } } }
       if (b.type !== 'campfire' || !b.built || n >= MAXF - 2) continue; const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > 3600) continue;
       const gY = W.hAt(b.x + b.w / 2, b.y + b.h / 2) * H + 0.55;
       for (let k = 0; k < 2; k++) { const fl = 0.8 + Math.sin(t * (8 + k * 3) + b.id) * 0.15 + G.VR() * 0.1; M.a.makeScale(0.75 - k * 0.25, (1.3 - k * 0.3) * fl, 0.75 - k * 0.25); M.a.setPosition(X + (k ? 0.15 : 0), gY, Z); flame.setMatrixAt(n, M.a); M.a.makeScale(0.35, 0.8 * fl, 0.35); M.a.setPosition(X, gY, Z); glow.setMatrixAt(n, M.a); n++; }
+      halo(X, gY + 0.55, Z, 2.8, 0.7, b.id);
       const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; src.push([13 / (1 + d2 / 300), 'c' + b.id, X, gY + 1.2, Z, 13, 22, FIRE, 0.14]);
       for (let k = every('cf' + b.id, 1.3, rdt); k > 0; k--) spawn(PA, { x: X, y: gY + 1.2, z: Z, vy: G.vrr(0.9, 1.4), life: G.vrr(3, 5), s0: 0.4, s1: 2.6, c: [0.6, 0.6, 0.6], a: 0.32, drag: 0.4, fade: 1 });
       for (let k = every('cs' + b.id, 3, rdt); k > 0; k--) spawn(PG, { x: X + G.vrr(-0.3, 0.3), y: gY + 0.4, z: Z + G.vrr(-0.3, 0.3), vx: G.vrr(-0.3, 0.3), vy: G.vrr(1.8, 3.4), vz: G.vrr(-0.3, 0.3), life: G.vrr(0.7, 1.4), s0: 0.12, s1: 0.03, c: [1, 0.72, 0.3], a: 1, sh: 1, drag: 0.6, wob: 1 });
@@ -248,11 +356,16 @@
       if (n >= MAXF) break; const k = q[3]; const fl = 0.8 + Math.sin(t * 11 + q[0] * 3.1) * 0.15 + G.VR() * 0.1;
       M.a.makeScale(0.22 * k, 0.5 * k * fl, 0.22 * k); M.a.setPosition(q[0], q[1], q[2]); flame.setMatrixAt(n, M.a);
       M.a.makeScale(0.11 * k, 0.32 * k * fl, 0.11 * k); M.a.setPosition(q[0], q[1], q[2]); glow.setMatrixAt(n, M.a); n++; F3.torches++;
+      halo(q[0], q[1] + 0.18 * k, q[2], 1.5 * k, 0.75, ti);
       src.push([8 * k / (1 + near2(q[0], q[2]) / 40), 't' + (ti++), q[0], q[1] + 0.35, q[2], Math.min(8, 9 * k), 16, TORCH, 0.12]);
       if (G.VR() < rdt * 1.6 * k) spawn(PG, { x: q[0], y: q[1] + 0.3 * k, z: q[2], vx: G.vrr(-0.2, 0.2), vy: G.vrr(0.8, 1.6), vz: G.vrr(-0.2, 0.2), life: G.vrr(0.5, 0.9), s0: 0.06, s1: 0.02, c: [1, 0.7, 0.3], a: 1, sh: 1, drag: 0.5, wob: 1 });
     }
     flame.count = glow.count = n; flame.instanceMatrix.needsUpdate = glow.instanceMatrix.needsUpdate = true; F3.fires = n;
+    stepHalos(nightK);
     lightUp(src, rdt);
+    // (the painted light of every flame round the body: at night, and by day where a fire burns)
+    if (nightK > 0.02 || best > 0) paintLight(src, focus); else if (lmOn) { lmOn = false; R3.GX.gxLMB.value.w = 0; F3.lmSources = 0; }
+    stepBlobs();
     // ---- rain (or snow on the cold lands): round the eye, as much as the world's weather pours
     // (the weather's rain, or the rain of a cloud of the world passing over the body — the god's rain clouds are local)
     const cam = R3.camera(); const wr = Math.max(S.weather ? S.weather.rain || 0 : 0, G.Nature && G.Nature.rainAt ? G.Nature.rainAt(focus.X / L, focus.Z / L) : 0);
@@ -353,11 +466,11 @@
         return;
       }
       if (sp < 2.4 && !(id === 'av' && sp > 0.9)) return;
-      const snow = snowAt(i); const soft = (ty === G.T.GRASS || ty === G.T.MEADOW) && !S.road[i] && G.pathLevel(S.wear[i]) < 2 && snow < 0.4;
+      const snow = snowUnder(X, Z, snowAt(i)); const soft = (ty === G.T.GRASS || ty === G.T.MEADOW) && !S.road[i] && G.pathLevel(S.wear[i]) < 2 && !snow;
       if (soft && sp < 4) return; // (soft grass raises little)
-      let c; if (snow > 0.4) c = [0.94, 0.96, 1]; else { const g = G.Ground3D.tileCol(i, x, y); c = [Math.min(1, g[0] / 255 * 1.15), Math.min(1, g[1] / 255 * 1.12), Math.min(1, g[2] / 255 * 1.1)]; }
+      let c; if (snow) c = [0.94, 0.96, 1]; else { const g = G.Ground3D.tileCol(i, x, y); c = [Math.min(1, g[0] / 255 * 1.15), Math.min(1, g[1] / 255 * 1.12), Math.min(1, g[2] / 255 * 1.1)]; }
       // (a little puff at each stride, not a trail: low, quick, faint)
-      for (let k = every('d' + id, sp > 2.4 ? sp * 0.8 : 1, dt); k > 0; k--) spawn(PA, { x: X + G.vrr(-0.15, 0.15), y: Y + 0.06, z: Z + G.vrr(-0.15, 0.15), vx: G.vrr(-0.3, 0.3), vy: G.vrr(0.15, 0.4), vz: G.vrr(-0.3, 0.3), life: G.vrr(0.5, 0.8), s0: 0.2, s1: G.vrr(0.55, 0.85), c, a: snow > 0.4 ? 0.42 : 0.2, drag: 2 });
+      for (let k = every('d' + id, sp > 2.4 ? sp * 0.8 : 1, dt); k > 0; k--) spawn(PA, { x: X + G.vrr(-0.15, 0.15), y: Y + 0.06, z: Z + G.vrr(-0.15, 0.15), vx: G.vrr(-0.3, 0.3), vy: G.vrr(0.15, 0.4), vz: G.vrr(-0.3, 0.3), life: G.vrr(0.5, 0.8), s0: 0.2, s1: G.vrr(0.55, 0.85), c, a: snow ? 0.42 : 0.2, drag: 2 });
     };
     if (av && !av.swim) { feet(av.X, av.Y, av.Z, av.sp || 0, 'av', av.wade || 0); if (av.ground !== false) walkPrints('av', av.X, av.Y, av.Z, av.yaw); }
     // (the swimmer: rings round the shoulders even when still, the arms' splashes at each stroke, a trail of foam behind;
