@@ -167,19 +167,20 @@ vec3 b3eye(vec3 skin) {
   vec3 c = mix(vec3(0.93, 0.91, 0.87), vec3(0.7, 0.66, 0.62), smoothstep(0.25, -0.55, d.y) * 0.8 + smoothstep(0.3, 0.75, abs(d.x)) * 0.35);
   // (the iris: a dark ring at its edge, brighter toward the middle and below, where the light comes through it; fine
   // streaks round the pupil, only when close enough to see them; the pupil)
-  float ir = smoothstep(0.80 - aw, 0.80 + aw, a);
-  vec3 ic = mix(iris * 0.32, iris * 1.25, smoothstep(0.80, 0.9, a)) * (1.0 + 0.25 * smoothstep(0.0, -0.5, dot(d - g * a, vec3(0.0, 1.0, 0.0))));
+  float ir = smoothstep(0.845 - aw, 0.845 + aw, a); // (half the eyeball across, as a real one: the eyes do not stare)
+  vec3 ic = mix(iris * 0.32, iris * 1.25, smoothstep(0.845, 0.93, a)) * (1.0 + 0.25 * smoothstep(0.0, -0.5, dot(d - g * a, vec3(0.0, 1.0, 0.0))));
   float fib = 1.0 - smoothstep(0.0, 0.06, fwidth(a) * 30.0); ic *= 1.0 + 0.12 * fib * sin(atan(d.x - g.x, d.y - g.y) * 22.0);
-  c = mix(c, ic, ir); c = mix(c, vec3(0.02, 0.016, 0.015), smoothstep(0.948 - aw, 0.948 + aw, a));
+  c = mix(c, ic, ir); c = mix(c, vec3(0.02, 0.016, 0.015), smoothstep(0.968 - aw, 0.968 + aw, a));
   // (the glints: the sky in a wet eye — a big one high on one side, a small one below on the other)
   float hl = dot(d, normalize(g + vec3(-0.26, 0.34, 0.0))), h2 = dot(d, normalize(g + vec3(0.2, -0.24, 0.0)));
   float gl = smoothstep(0.972, 0.982, hl) + smoothstep(0.993, 0.996, h2) * 0.6;
   // (the lids: the upper one comes down with the blink; it opens wide in fear and awe, lowers in a glare, droops at the
   // outer corner in grief; the lower one rises as the cheeks do in a smile; their edges a dark line of lashes)
-  float up = 0.5 + 0.24 * x.y - 0.16 * m.z - 0.1 * x.z - 0.2 * x.x * max(0.0, outer + 0.2);
-  up = mix(up, -0.8, f.x); float lo = -0.62 + f.x * 0.3 + 0.28 * x.z - 0.1 * x.y;
+  float up = 0.42 + 0.24 * x.y - 0.16 * m.z - 0.1 * x.z - 0.2 * x.x * max(0.0, outer + 0.2);
+  up = mix(up, -0.8, f.x); float lo = -0.47 + f.x * 0.3 + 0.28 * x.z - 0.1 * x.y;
   float e = fwidth(d.y) + 0.01;
   float lid = max(smoothstep(up - e, up + e, d.y), smoothstep(lo + e, lo - e, d.y));
+  c *= 1.0 - 0.3 * smoothstep(up - 0.3, up - 0.02, d.y); // (the upper lid's shadow on the eye)
   vec3 lidc = skin * 0.84; float lash = smoothstep(up - 0.2 - e, up - 0.03, d.y) * (0.75 + 0.25 * smoothstep(-0.2, 0.6, outer));
   c = mix(c, vec3(0.05, 0.035, 0.03), lash * (1.0 - lid) * 0.92);
   c = mix(c, vec3(1.0), gl * (1.0 - lid) * 0.85); b3gl = gl * (1.0 - lid) * (1.0 - lash * 0.7);
