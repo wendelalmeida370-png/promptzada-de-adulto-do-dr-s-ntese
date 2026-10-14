@@ -72,7 +72,8 @@
     $('.ih-toasts', hud).appendChild(el); toasts.push({ el, t: dur || 3.6 });
     while (toasts.length > 4) { const o = toasts.shift(); o.el.remove(); }
   };
-  IU.banner = function (txt, dur) { if (!root) return; banner.textContent = txt; banner.classList.remove('hidden'); bannerT = dur || 2.6; };
+  // (while the banner speaks the news step back: on a narrow screen they sit right behind it)
+  IU.banner = function (txt, dur) { if (!root) return; banner.textContent = txt; banner.classList.remove('hidden'); root.classList.add('ib-on'); bannerT = dur || 2.6; };
   IU.hello = function (v) {
     const id = G.Possess.identity(v); const w = G.Possess.where(v);
     IU.banner(`${id.name} · ${id.age} ${id.age === 1 ? 'ano' : 'anos'} · ${id.role}${w.town || w.near ? ' · ' + (w.town || 'perto de ' + w.near) : ''}`, 3.4);
@@ -106,7 +107,7 @@
     const S = G.S;
     // fades, banners, toasts, news
     if (fade) { fade.t += rdt; const k = Math.min(1, fade.t / fade.d); fadeEl.style.opacity = G.lerp(fade.a, fade.b, k); if (k >= 1) { const d = fade.done; fade = null; d && d(); } }
-    if (bannerT > 0) { bannerT -= rdt; if (bannerT <= 0) banner.classList.add('hidden'); }
+    if (bannerT > 0) { bannerT -= rdt; if (bannerT <= 0) { banner.classList.add('hidden'); root.classList.remove('ib-on'); } }
     for (let k = toasts.length - 1; k >= 0; k--) { const o = toasts[k]; o.t -= rdt; if (o.t <= 0) { o.el.remove(); toasts.splice(k, 1); } else fadeOut(o.el, o.t, 0.5); }
     let nd = false; for (let k = news.length - 1; k >= 0; k--) { news[k].t -= rdt; if (news[k].t <= 0) { news.splice(k, 1); nd = true; } } if (nd) renderNews();
     { const els = $('.ih-news', hud).children; for (let k = 0; k < news.length && k < els.length; k++) fadeOut(els[k], news[k].t, 0.8); }
