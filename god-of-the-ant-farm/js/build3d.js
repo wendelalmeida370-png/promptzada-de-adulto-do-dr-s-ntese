@@ -816,14 +816,16 @@ float m3scale(float p) {
       // detail, the dragon cut in boards as before)
       // (every hall has its dragons, most big houses; now and then a house or a cabin whose people carved theirs too, smaller)
       const carved = cross && (style === 3 || (cls === 1 && K.hv(7) < 0.45) || (cls === 0 && K.hv(7) < 0.3));
-      const mesh = carved && K.fine && !!(G.Mesh3D && G.Mesh3D.has('dragao') && G.Mesh3D.part('dragao', 'madeira')); if (mesh) style = 0; // (the dragon rides the cross: the boards' ends plain)
+      // (A1's two heads — 'dragao2' the deeper S of the neck, the long snout, lower: 0.88 m to 1.1 — one or the other by the house's id)
+      const DRG = G.Mesh3D && K.hv(8) < 0.5 && G.Mesh3D.has('dragao2') && G.Mesh3D.part('dragao2', 'madeira') ? 'dragao2' : 'dragao';
+      const mesh = carved && K.fine && !!(G.Mesh3D && G.Mesh3D.has(DRG) && G.Mesh3D.part(DRG, 'madeira')); if (mesh) style = 0; // (the dragon rides the cross: the boards' ends plain)
       const EMP = cross && K.fine && !!(G.Mesh3D && G.Mesh3D.has('empena') && G.Mesh3D.part('empena', 'cavalo') && G.Mesh3D.part('empena', 'voluta'));
       const bc = nord ? nordWood(K).dark : (P.trim || '#6b4a30'); const ext = cross ? (mesh ? 0.2 : 0.4 + Math.min(0.35, D * 0.06)) : 0;
       const paint = cls >= 2 || (cls === 1 && K.hv(6) < 0.4) ? (P.trim || '#a23c2a') : null;
       if (mesh) { const s = [0.68, 0.76, 0.84, 1][Math.min(3, cls)]; const wc = mixc(paint || bc, bc, 0.35); const ec = cls >= 2 ? (P.acc || '#d8b25a') : '#2a2016'; const M3 = G.Mesh3D;
         for (const e of [-1, 1]) { const p = at(e * (eu + bt / 2 + 0.005), y + h + T / (2 * ca) + bw * 0.42, 0); const d = vec(e, 0, 0); const ry = Math.atan2(d[0], d[2]);
           const m = R3.mat(K.x0 + p[0], K.y0 + p[1], K.z0 + p[2], ry, s, s, s);
-          K.as('jamb', () => K.g.put(M3.part('dragao', 'madeira'), m, K.c(wc))); const eye = M3.part('dragao', 'olho'); if (eye) K.g.put(eye, m, K.c(ec)); } }
+          K.as('jamb', () => K.g.put(M3.part(DRG, 'madeira'), m, K.c(wc))); const eye = M3.part(DRG, 'olho'); if (eye) K.g.put(eye, m, K.c(ec)); } }
       K.as('beam', () => { for (const e of [-1, 1]) for (const sd of [-1, 1]) {
         const ub = e * (eu + bt / 2 + 0.005); const sMid = -(T / 2) * sa / ca;
         const a = S(ub, run + (turf ? 0.06 : 0.03), T / 2, sd), b2 = S(ub, cross ? sMid - ext : sMid, T / 2, sd);
