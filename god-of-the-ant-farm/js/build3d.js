@@ -39,7 +39,26 @@
   // (each point of a building carries a pattern — Geo.pat when it was put — and the solid material draws it on the
   // surface, in metres of the world: blocks of stone, planks, courses of tiles, straw, turf; the god's view draws the
   // same with its lines: the planks of a longhouse, the tile courses of a hip roof)
-  const PAT = B3.PAT = { plaster: 1, stone: 2, brick: 3, plankV: 4, plankH: 5, tile: 6, shingle: 7, thatch: 8, turf: 9, marble: 10, slab: 11, beam: 12, frame: 13, mud: 14, cloth: 15, soil: 16, rock: 17, bark: 18, iron: 19 };
+  // (13 'frame' is the half-timbered wall — plaster with its timbers; 'jamb' is the planed wood of a door's or a window's
+  // frame. The stack's materials of the things of a town: a door's leaf (anchored: doorPat), wicker (a basket; 'wattle' the
+  // same three times bigger: the fences and woven walls of the north), canvas, rope, linen. 30–33: the beam and the jamb lying
+  // along X or Z, the picture turned so their grain runs with them — kit.box picks them for a lying piece)
+  const PAT = B3.PAT = { plaster: 1, stone: 2, brick: 3, plankV: 4, plankH: 5, tile: 6, shingle: 7, thatch: 8, turf: 9, marble: 10, slab: 11, beam: 12, frame: 13, mud: 14, cloth: 15, soil: 16, rock: 17, bark: 18, iron: 19,
+    door: 20, jamb: 21, wicker: 22, wattle: 23, canvas: 24, rope: 25, linen: 26, leather: 27, fur: 28, wool: 29, beamX: 30, beamZ: 31, jambX: 32, jambZ: 33,
+    // (the other peoples' own stuff — A1's arte/mat_culturas.py: dressed stone, Roman roof tiles, Greek whitewash, painted wood,
+    // sandstone, the Aztec's stucco and red volcanic stone; the Egyptian's mud brick is 'mud'. Until the stack has them, each draws
+    // as the nearest it has)
+    ashlar: 34, tegula: 35, whitewash: 36, painted: 37, sandstone: 38, stucco: 39, tezontle: 40 };
+  // a door's leaf with one leaf of the stack's door picture across its own width and from its own foot up (the patterns are
+  // drawn in the world's metres: the shader is told where the leaf starts along the wall and up — each to 2 cm, modulo 4 m —
+  // how wide it is, to 5 cm, and which of the picture's two leaves, hinged left or right; a flat varying keeps it exact).
+  // X, Y0, Z: the middle of its foot in the world; o: the way it faces
+  const DOORQ = 4194304;
+  const doorPat = (X, Y0, Z, o, dw, leaf) => {
+    const q = v => Math.round((((v % 4) + 4) % 4) / 0.02) % 200; const u0 = -o[1] * X + o[0] * Z - dw / 2;
+    return DOORQ + q(u0) + 256 * (q(Y0) + 256 * (G.clamp(Math.round((dw - 0.6) / 0.05), 0, 15) + 16 * (leaf ? 1 : 0)));
+  };
+  B3.doorPat = doorPat;
   // what each people builds with: the walls of a house, its base, its roofs
   const STUFF = {
     classico: { wall: 'frame', base: 'stone', tile: 'tile' }, grego: { wall: 'plaster', base: 'marble', tile: 'tile' }, romano: { wall: 'plaster', base: 'stone', tile: 'tile' },
@@ -47,10 +66,12 @@
   };
   const stuff = b => STUFF[styleOf(b)] || STUFF.classico;
   const PFRAG = `
-uniform sampler2D uDet; varying vec3 vPP; varying vec3 vPN; varying float vPat;
+uniform sampler2D uDet; varying vec3 vPP; varying vec3 vPN; flat varying float vPat;
 float pHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 vec3 pattern(float p, vec2 uv, vec3 wp, out vec2 bump) {
   bump = vec2(0.0);
+  // (the other peoples' stuff, before the stack is in: drawn as its nearest — stone, tiles, plaster, planks)
+  if (p == 34.0 || p == 38.0 || p == 40.0) p = 2.0; else if (p == 35.0) p = 6.0; else if (p == 36.0 || p == 39.0) p = 1.0; else if (p == 37.0) p = 4.0;
   vec4 d = texture2D(uDet, uv / 1.7); float big = texture2D(uDet, uv / 11.0).r; float huge = texture2D(uDet, uv / 31.0 + 0.3).r;
   // (the weather on every wall and roof: broad stains, a warmer or cooler patch, streaks the rain ran down)
   float streak = texture2D(uDet, vec2(uv.x * 0.45, uv.y * 0.035) + 0.17).r;
@@ -139,6 +160,12 @@ vec3 pattern(float p, vec2 uv, vec3 wp, out vec2 bump) {
   if (p == 17.0) return vec3(0.84 + d.r * 0.24 + (big - 0.5) * 0.24) * wthr;
   if (p == 18.0) { float gr = texture2D(uDet, vec2(uv.x * 2.2, uv.y * 0.25)).r; return vec3(0.7 + smoothstep(0.35, 0.65, gr) * 0.45); }
   if (p == 19.0) return vec3(0.9 + d.g * 0.2);
+  // (the things' materials before the stack is in: a door, a jamb and lying timber as planed wood; wicker woven; cloth; rope)
+  if (p == 20.0 || p == 21.0 || (p > 29.5 && p < 33.5)) return vec3(0.88 + 0.07 * sin(uv.x * 26.0 + d.g * 5.0) + (d.g - 0.5) * 0.1) * wthr;
+  if (p == 22.0 || p == 23.0) { vec2 q = uv / (p == 22.0 ? 0.05 : 0.15); return vec3(0.8 + 0.2 * abs(sin(q.x * 3.14159 + step(0.5, fract(q.y)) * 1.57)) * (0.85 + 0.15 * sin(q.y * 6.28318))); }
+  if (p == 24.0 || p == 26.0 || p == 29.0) return vec3(0.92 + 0.08 * sin(uv.x * 5.0) + (d.g - 0.5) * 0.08);
+  if (p == 27.0 || p == 28.0) return vec3(0.86 + (d.g - 0.5) * 0.22 + (big - 0.5) * 0.12);
+  if (p == 25.0) return vec3(0.82 + 0.18 * sin((uv.x + uv.y) * 40.0));
   return vec3(1.0);
 }
 // (the timbers of a framed wall: posts, rails and a brace now and then)
@@ -150,6 +177,9 @@ float frameMask(vec2 uv, vec3 wp) {
 }
 // (which picture of the stack each pattern reads: -1 keeps the drawn one — marble, cloth)
 float m3layer(float p) {
+  #ifdef M3_ADOBE
+  if (p == 14.0) return M3_ADOBE;
+  #endif
   if (p == 1.0 || p == 13.0 || p == 14.0) return M3_PLASTER; if (p == 2.0) return M3_STONE; if (p == 3.0) return M3_BRICK; if (p == 4.0) return M3_PLANKS;
   if (p == 5.0) return M3_PLANKSH; if (p == 6.0) return M3_TILE; if (p == 7.0) return M3_SHINGLE; if (p == 8.0) return M3_THATCH; if (p == 9.0) return M3_TURF;
   if (p == 11.0) return M3_SLAB; if (p == 12.0) return M3_BEAM;
@@ -163,12 +193,72 @@ float m3layer(float p) {
   #ifdef M3_BARK
   if (p == 18.0) return M3_BARK;
   #endif
+  if (p == 30.0 || p == 31.0) return M3_BEAM;
+  // (the things' materials — each only if the stack has it)
+  #ifdef M3_IRON
+  if (p == 19.0) return M3_IRON;
+  #endif
+  #ifdef M3_DOOR
+  if (p == 20.0) return M3_DOOR;
+  #endif
+  #ifdef M3_FRAME
+  if (p == 21.0 || p == 32.0 || p == 33.0) return M3_FRAME;
+  #endif
+  #ifdef M3_WICKER
+  if (p == 22.0 || p == 23.0) return M3_WICKER;
+  #endif
+  #ifdef M3_CANVAS
+  if (p == 15.0 || p == 24.0) return M3_CANVAS;
+  #endif
+  #ifdef M3_ROPE
+  if (p == 25.0) return M3_ROPE;
+  #endif
+  #ifdef M3_LINEN
+  if (p == 26.0) return M3_LINEN;
+  #endif
+  #ifdef M3_LEATHER
+  if (p == 27.0) return M3_LEATHER;
+  #endif
+  #ifdef M3_FUR
+  if (p == 28.0) return M3_FUR;
+  #endif
+  #ifdef M3_WOOL
+  if (p == 29.0) return M3_WOOL;
+  #endif
+  #ifdef M3_MARBLE
+  if (p == 10.0) return M3_MARBLE;
+  #endif
+  #ifdef M3_ASHLAR
+  if (p == 34.0) return M3_ASHLAR;
+  #endif
+  #ifdef M3_TEGULA
+  if (p == 35.0) return M3_TEGULA;
+  #endif
+  #ifdef M3_WHITEWASH
+  if (p == 36.0) return M3_WHITEWASH;
+  #endif
+  #ifdef M3_PAINTED
+  if (p == 37.0) return M3_PAINTED;
+  #endif
+  #ifdef M3_SANDSTONE
+  if (p == 38.0) return M3_SANDSTONE;
+  #endif
+  #ifdef M3_STUCCO
+  if (p == 39.0) return M3_STUCCO;
+  #endif
+  #ifdef M3_TEZONTLE
+  if (p == 40.0) return M3_TEZONTLE;
+  #endif
+  if (p == 34.0 || p == 38.0 || p == 40.0) return M3_STONE; if (p == 35.0) return M3_TILE; if (p == 36.0 || p == 39.0) return M3_PLASTER; if (p == 37.0) return M3_PLANKS;
   return -1.0;
 }
 float m3scale(float p) {
+  #ifdef M3S_ADOBE
+  if (p == 14.0) return M3S_ADOBE;
+  #endif
   if (p == 1.0 || p == 13.0 || p == 14.0) return M3S_PLASTER; if (p == 2.0) return M3S_STONE; if (p == 3.0) return M3S_BRICK; if (p == 4.0) return M3S_PLANKS;
   if (p == 5.0) return M3S_PLANKSH; if (p == 6.0) return M3S_TILE; if (p == 7.0) return M3S_SHINGLE; if (p == 8.0) return M3S_THATCH; if (p == 9.0) return M3S_TURF;
-  if (p == 11.0) return M3S_SLAB; if (p == 12.0) return M3S_BEAM;
+  if (p == 11.0) return M3S_SLAB; if (p == 12.0 || p == 30.0 || p == 31.0) return M3S_BEAM;
   #ifdef M3S_SOIL
   if (p == 16.0) return M3S_SOIL * 2.0;
   #endif
@@ -178,6 +268,61 @@ float m3scale(float p) {
   #ifdef M3S_BARK
   if (p == 18.0) return M3S_BARK;
   #endif
+  #ifdef M3S_IRON
+  if (p == 19.0) return M3S_IRON;
+  #endif
+  #ifdef M3S_DOOR
+  if (p == 20.0) return M3S_DOOR;
+  #endif
+  #ifdef M3S_FRAME
+  if (p == 21.0 || p == 32.0 || p == 33.0) return M3S_FRAME;
+  #endif
+  #ifdef M3S_WICKER
+  if (p == 22.0) return M3S_WICKER; if (p == 23.0) return M3S_WICKER / 3.0;
+  #endif
+  #ifdef M3S_CANVAS
+  if (p == 15.0 || p == 24.0) return M3S_CANVAS;
+  #endif
+  #ifdef M3S_ROPE
+  if (p == 25.0) return M3S_ROPE;
+  #endif
+  #ifdef M3S_LINEN
+  if (p == 26.0) return M3S_LINEN;
+  #endif
+  #ifdef M3S_LEATHER
+  if (p == 27.0) return M3S_LEATHER;
+  #endif
+  #ifdef M3S_FUR
+  if (p == 28.0) return M3S_FUR;
+  #endif
+  #ifdef M3S_WOOL
+  if (p == 29.0) return M3S_WOOL;
+  #endif
+  #ifdef M3S_MARBLE
+  if (p == 10.0) return M3S_MARBLE;
+  #endif
+  #ifdef M3S_ASHLAR
+  if (p == 34.0) return M3S_ASHLAR;
+  #endif
+  #ifdef M3S_TEGULA
+  if (p == 35.0) return M3S_TEGULA;
+  #endif
+  #ifdef M3S_WHITEWASH
+  if (p == 36.0) return M3S_WHITEWASH;
+  #endif
+  #ifdef M3S_PAINTED
+  if (p == 37.0) return M3S_PAINTED;
+  #endif
+  #ifdef M3S_SANDSTONE
+  if (p == 38.0) return M3S_SANDSTONE;
+  #endif
+  #ifdef M3S_STUCCO
+  if (p == 39.0) return M3S_STUCCO;
+  #endif
+  #ifdef M3S_TEZONTLE
+  if (p == 40.0) return M3S_TEZONTLE;
+  #endif
+  if (p == 34.0 || p == 38.0 || p == 40.0) return M3S_STONE; if (p == 35.0) return M3S_TILE; if (p == 36.0 || p == 39.0) return M3S_PLASTER; if (p == 37.0) return M3S_PLANKS;
   return 1.0;
 }
 `;
@@ -185,9 +330,12 @@ float m3scale(float p) {
   B3.dress = function (mat) {
     mat.onBeforeCompile = sh => {
       sh.uniforms.uDet = { value: G.Ground3D.detail() }; Object.assign(sh.uniforms, G.Ground3D.U3());
-      sh.vertexShader = 'attribute float aP; varying vec3 vPP; varying vec3 vPN; varying float vPat;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vPP = (modelMatrix * vec4(transformed, 1.0)).xyz; vPN = normalize(mat3(modelMatrix) * objectNormal); vPat = aP;');
+      sh.vertexShader = 'attribute float aP; varying vec3 vPP; varying vec3 vPN; flat varying float vPat;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vPP = (modelMatrix * vec4(transformed, 1.0)).xyz; vPN = normalize(mat3(modelMatrix) * objectNormal); vPat = aP;');
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G.Ground3D.texGLSL() + PFRAG).replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         float pp = floor(vPat + 0.5);
+        // (an anchored door — Build3D.doorPat: where its leaf starts along the wall and up, its width, which leaf of the picture)
+        vec4 dA = vec4(0.0);
+        if (pp > ${DOORQ - 0.5}) { float q = pp - ${DOORQ}.0; dA.x = mod(q, 256.0) * 0.02; q = floor(q / 256.0); dA.y = mod(q, 256.0) * 0.02; q = floor(q / 256.0); dA.z = 0.6 + mod(q, 16.0) * 0.05; dA.w = floor(q / 16.0); pp = 20.0; }
         #ifdef NOPAT
         pp = 0.0;
         #endif
@@ -199,11 +347,18 @@ float m3scale(float p) {
           // (the material's picture once the stack is in — mipmapped, so it never shimmers far off; roofs read down the slope)
           float L = m3layer(pp);
           if (uTexOn > 0.5 && L >= 0.0) {
-            vec2 tu = puv * m3scale(pp); if (pp > 5.5 && pp < 9.5) tu.y = -tu.y;
+            bool roof = (pp > 5.5 && pp < 9.5) || pp == 35.0; vec2 tu = puv * m3scale(pp); if (roof) tu.y = -tu.y;
+            // (a lying beam or jamb — along X: 30, 32; along Z: 31, 33 — its grain level on every upright face, and along it on top)
+            bool turn = pp > 29.5 && pp < 33.5 && (abs(pn.y) < 0.92 || mod(pp, 2.0) < 0.5);
+            if (turn) tu = tu.yx;
+            // (an anchored door: one leaf of the picture across its own width, from its foot up)
+            vec2 ts = vec2(m3scale(pp));
+            // (half a metre of slack before the start: the 2 cm the anchor is rounded to never wraps round to the far edge)
+            if (dA.z > 0.0) { tu = vec2((dA.w + clamp((mod(puv.x - dA.x + 0.5, 4.0) - 0.5) / dA.z, 0.004, 0.996)) * 0.5, (mod(puv.y - dA.y + 0.5, 4.0) - 0.5) * ts.y); ts.x = 0.5 / dA.z; }
             vec4 tx = m3raw(L, tu); pk = m3col(tx) * 0.94;
             if (pp == 13.0) { vec4 tb = m3raw(M3_BEAM, puv * M3S_BEAM); pk = mix(pk, m3col(tb) * 0.34, frameMask(puv, vPP)); }
-            vec2 sl = m3slope(L, tu, tx.a); if (pp > 5.5 && pp < 9.5) sl.y = -sl.y;
-            bump = -sl * m3scale(pp) * 0.03;
+            vec2 sl = m3slope(L, tu, tx.a); if (roof) sl.y = -sl.y; if (turn) sl = sl.yx;
+            bump = -sl * ts * 0.03;
             diffuseColor.rgb *= pk;
           } else diffuseColor.rgb *= mix(vec3(0.88), pk, fade);
           normal = normalize(normal + (viewMatrix * vec4(pt * bump.x + pb * bump.y, 0.0)).xyz * fade);
@@ -249,7 +404,9 @@ float m3scale(float p) {
     const K = {
       g, b, P, L, x0, z0, w, d, y0, lo, hi, st: styleOf(b), cx: x0 + w / 2, cz: z0 + d / 2, c, built: b.built, prog: b.built ? 1 : G.clamp(b.progress || 0, 0, 1), hurt,
       gp: gp || R3.Geo(), gq: gq || R3.WGeo(), // (the plants that sway, and the water of a paddy)
-      box(x, y, z, sx, sy, sz, col, ry) { g.put(SH.box, R3.mat(x0 + x, y0 + y, z0 + z, ry || 0, sx, sy, sz), c(col)); },
+      // (a beam or a jamb lying down — longer across than up — takes its turned picture, the grain along it)
+      box(x, y, z, sx, sy, sz, col, ry) { const p = g.pat; if (!ry && (p === 12 || p === 21) && Math.max(sx, sz) > sy * 1.3) g.pat = (p === 12 ? 30 : 32) + (sz > sx ? 1 : 0);
+        g.put(SH.box, R3.mat(x0 + x, y0 + y, z0 + z, ry || 0, sx, sy, sz), c(col)); g.pat = p; },
       cyl(x, y, z, r, h, col, top) { g.put(SH.cyl, R3.mat(x0 + x, y0 + y, z0 + z, 0, r * 2, h, r * 2), c(col)); void top; },
       cone(x, y, z, r, h, col) { g.put(SH.cone, R3.mat(x0 + x, y0 + y, z0 + z, 0, r * 2, h, r * 2), c(col)); },
       sph(x, y, z, r, col, sy) { g.put(SH.sph, R3.mat(x0 + x, y0 + y, z0 + z, 0, r * 2, (sy || r) * 2, r * 2), c(col)); },
@@ -266,8 +423,8 @@ float m3scale(float p) {
       tri3(a, b2, d2, ca, cb, cd, out) { const A = [x0 + a[0], y0 + a[1], z0 + a[2]], B = [x0 + b2[0], y0 + b2[1], z0 + b2[2]], D = [x0 + d2[0], y0 + d2[1], z0 + d2[2]];
         const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], vx = D[0] - A[0], vy = D[1] - A[1], vz = D[2] - A[2];
         if (out && (uy * vz - uz * vy) * out[0] + (uz * vx - ux * vz) * out[1] + (ux * vy - uy * vx) * out[2] < 0) g.tri(A, D, B, c(ca), c(cd), c(cb)); else g.tri(A, B, D, c(ca), c(cb), c(cd)); },
-      // the pattern of what is put next (Build3D.PAT), and back to plain after fn
-      as(pat, fn) { const o = g.pat; g.pat = PAT[pat] || 0; fn(); g.pat = o; },
+      // the pattern of what is put next (Build3D.PAT, or a code: an anchored door), and back to plain after fn
+      as(pat, fn) { const o = g.pat; g.pat = typeof pat === 'number' ? pat : PAT[pat] || 0; fn(); g.pat = o; },
       // the house's own dice: the same house is always the same house (its id, never chance)
       hv: k => hvOf(b, k),
       // a slanted box: its base's middle at o, u its length, v its height, w its depth (vectors in metres) — boards that
