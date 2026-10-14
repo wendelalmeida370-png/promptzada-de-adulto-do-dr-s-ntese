@@ -103,7 +103,8 @@
     C3.inside = solid(P.X, P.Y, P.Z);
     // the running body: the lens opens a little (a sense of speed)
     fovNow += (OPT.fov + (body.speed > 4 ? 5 : 0) - fovNow) * (1 - Math.exp(-3 * rdt));
-    cam.fov = fovNow; cam.near = 0.12; cam.far = 1600; cam.updateProjectionMatrix();
+    // (the far end of the view where the haze of the quality has already hidden everything: nothing past it is drawn)
+    cam.fov = fovNow; cam.near = 0.12; cam.far = G.Realm && G.Realm.viewFar ? G.Realm.viewFar() : 1600; cam.updateProjectionMatrix();
     cam.position.set(P.X, P.Y, P.Z);
     cam.lookAt(piv.X + rx * sh, piv.Y, piv.Z + rz * sh);
     C3.last = { pos: [P.X, P.Y, P.Z], at: [piv.X + rx * sh, piv.Y, piv.Z + rz * sh], fov: fovNow };
