@@ -27,13 +27,16 @@
   // surroundings anyway, painted: FX3D); soft: the shadows sharp at the foot of what casts them and soft farther off (0: the
   // plain filter); rays: the shafts of a low sun through the gaps, toward the eye (with the post-processing); lod: how far
   // each drawing keeps its finest form before it simplifies — a multiplier of every module's own distances (bodies, trees,
-  // houses, things); props: how much of the decoration about the houses and the streets is drawn (0..1). The lightest two
-  // must cost no more than the game did before the studio: every module reads these to scale its own drawing
+  // houses, things); props: how much of the decoration about the houses and the streets is drawn (0..1); shadowEvery: the
+  // sun's picture of the shadows made again every n frames (the picture and its own frame go together: only what moves
+  // trails a frame). The lightest two must cost no more than the game did before the studio (measured: the shadows are
+  // a third of the medium's triangles, the far people and the near ring of chunks the next): every module reads these to
+  // scale its own drawing
   const QUAL = {
-    baixa: { scale: 0.75, near: 2, shadows: 0, npcs: 18, grass: 0, view: 260, detail: 0, field: 0, sbox: 36, ao: 0, bloom: 0, lights: 0, soft: 0, rays: 0, lod: 0.5, props: 0.25 },
-    media: { scale: 1, near: 3, shadows: 1024, npcs: 36, grass: 1, view: 420, detail: 1, field: 20, sbox: 40, ao: 0, bloom: 0, lights: 2, soft: 0, rays: 0, lod: 0.75, props: 0.6 },
-    alta: { scale: 1, near: 4, shadows: 2048, npcs: 60, grass: 1, view: 640, detail: 1, field: 30, sbox: 52, ao: 1, bloom: 1, lights: 3, soft: 1, rays: 1, lod: 1, props: 1 },
-    ultra: { scale: 1, near: 5, shadows: 4096, npcs: 90, grass: 1, view: 900, detail: 1, field: 40, sbox: 68, ao: 2, bloom: 1, lights: 4, soft: 1, rays: 1, lod: 1.4, props: 1 },
+    baixa: { scale: 0.6, near: 1, shadows: 0, npcs: 12, grass: 0, view: 200, detail: 0, field: 0, sbox: 36, ao: 0, bloom: 0, lights: 0, soft: 0, rays: 0, lod: 0.5, props: 0.25, shadowEvery: 1 },
+    media: { scale: 0.9, near: 2, shadows: 1024, npcs: 30, grass: 1, view: 360, detail: 1, field: 15, sbox: 40, ao: 0, bloom: 0, lights: 2, soft: 0, rays: 0, lod: 0.75, props: 0.6, shadowEvery: 2 },
+    alta: { scale: 1, near: 4, shadows: 2048, npcs: 60, grass: 1, view: 640, detail: 1, field: 30, sbox: 52, ao: 1, bloom: 1, lights: 3, soft: 1, rays: 1, lod: 1, props: 1, shadowEvery: 1 },
+    ultra: { scale: 1, near: 5, shadows: 4096, npcs: 90, grass: 1, view: 900, detail: 1, field: 40, sbox: 68, ao: 2, bloom: 1, lights: 4, soft: 1, rays: 1, lod: 1.4, props: 1, shadowEvery: 1 },
   };
   // (the presets in the order the menu shows them, with their names)
   R3.QNAMES = [['baixa', 'Leve'], ['media', 'Média'], ['alta', 'Alta'], ['ultra', 'Ultra']];
@@ -729,6 +732,7 @@ vec3 gxGrade( vec3 c ) {
     const q = R3.Q();
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2) * q.scale);
     renderer.shadowMap.enabled = !!q.shadows; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.autoUpdate = (q.shadowEvery | 0) <= 1; renderer.shadowMap.needsUpdate = true; // (light() asks for it every n frames)
     sun.castShadow = !!q.shadows;
     // (the side of the sun's picture: never more than the graphics card can hold)
     if (q.shadows) { const n = Math.min(q.shadows, renderer.capabilities.maxTextureSize || 4096); sun.shadow.mapSize.set(n, n); shadowKey = ''; if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
@@ -1431,7 +1435,7 @@ vec3 gxGrade( vec3 c ) {
   const TUNE = R3.TUNE = { exp: 1, sun: 1, sky: 1, skySat: 1, bounce: 1, zen: 1, haze: 1, moon: 1, nf: 1, gsat: 0.09, gs: 0.25, gsplit: 1, toeD: 0.5, toeN: 0.65 };
   const LT = { air: [1, 1, 1], sun: [0, 0, 0], zen: [0, 0, 0], hor: [0, 0, 0], glow: [0, 0, 0], belt: [0, 0, 0], fill: [0, 0, 0], sky: [0, 0, 0], bounce: [0, 0, 0], key: [0, 0, 0] };
   R3.LT = LT; // (the light of this hour, read only: for the tests and for what wants to match it)
-  let _sd = null, _md = null, _cf = null, shadowKey = '';
+  let _sd = null, _md = null, _cf = null, shadowKey = '', shadowTick = 0;
   function light(focus) {
     if (!_sd) { _sd = new THREE.Vector3(); _md = new THREE.Vector3(); _cf = new THREE.Vector3(); }
     const S = G.S; const w = S.weather; const t = S.time; const night = G.clamp(G.Render.nightness(), 0, 1);
@@ -1505,6 +1509,9 @@ vec3 gxGrade( vec3 c ) {
     // the dome and the stars go with the eye; the key light's picture of the shadows over the ground round the body
     skyMesh.position.copy(camera.position); stars.position.copy(camera.position);
     if (focus) placeKey(kd, focus, q);
+    // (the sun's picture of the shadows made again every n frames where the quality says so: three.js keeps the frame it
+    // was drawn in with it, so the shadows stay where they are; only the shadow of what moves trails a frame)
+    if (!renderer.shadowMap.autoUpdate) { shadowTick = (shadowTick + 1) % Math.max(1, q.shadowEvery | 0); if (shadowTick === 0) renderer.shadowMap.needsUpdate = true; }
     return kd;
   }
   // (for the verifier: the light of the hour is numbers in their range; the key light is the sun by day and the moon by night,
@@ -1515,7 +1522,7 @@ vec3 gxGrade( vec3 c ) {
     const out = []; if (!renderer || !R3.on) return out;
     const bad = v => !Number.isFinite(v);
     for (const k in LT) if (LT[k].some(bad)) out.push(`luz: ${k} não é número`);
-    for (const k in GX) { const v = GX[k].value; if (bad(v.x) || bad(v.y) || bad(v.z) || bad(v.w)) out.push(`ar: ${k} não é número`); }
+    for (const k in GX) { const v = GX[k].value; if (!v || v.isTexture) continue; if (bad(v.x) || bad(v.y) || bad(v.z) || bad(v.w)) out.push(`ar: ${k} não é número`); } // (the pictures of the flames' light are pictures, not numbers)
     const e = renderer.toneMappingExposure; if (bad(e) || e < 0.5 || e > 3) out.push(`exposição fora do lugar: ${e}`);
     if (bad(sun.intensity) || sun.intensity < 0 || sun.intensity > 4) out.push(`luz principal com intensidade ${sun.intensity}`);
     const s = skyU.sunDir.value.y; if (s > 0.1 && skyU.keyDir.value.dot(skyU.sunDir.value) < 0.999) out.push('de dia, a luz principal não é o sol');
@@ -1544,6 +1551,7 @@ vec3 gxGrade( vec3 c ) {
       // (the soft shadows: the penumbra a shade makes per metre between it and what casts it — a little wider than the sun's
       // own half a degree, as a painter softens them — in texels of the picture per unit of its depth)
       sun.shadow.radius = q.soft ? (c.far - c.near) * 0.03 / tx : 0;
+      renderer.shadowMap.needsUpdate = true;
     }
   }
 
