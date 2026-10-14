@@ -194,7 +194,9 @@
       if (c.stories.length) h += `<div class="ic-stories"><label>Histórias em andamento</label>${c.stories.map(s => `<div>${esc(s)}</div>`).join('')}</div>`;
       if (c.bio.length) h += `<div class="ic-bio"><label>Memórias</label>${c.bio.map(e => `<div><em>${e.age} ${e.age === 1 ? 'ano' : 'anos'}</em> ${esc(e.txt)}</div>`).join('')}</div>`;
       const can = o ? G.Possess.can(o) : { ok: false };
-      h += `<div class="btns">${can.ok ? `<button data-c="swap" data-id="${c.id}">${(G.ICON && G.ICON.eye) || ''} Encarnar ${esc(o.name)}</button>` : ''}<button data-c="close">Fechar <kbd>E</kbd></button></div>`;
+      // (one's own, or anyone in mourning: a hug)
+      const hug = o ? G.Interact.canHug(G.Possess.body(), o) : { ok: false };
+      h += `<div class="btns">${hug.label ? `<button data-c="hug" data-id="${c.id}"${hug.ok ? '' : ` disabled title="${esc(hug.why)}"`}>${esc(hug.label)}</button>` : ''}${can.ok ? `<button data-c="swap" data-id="${c.id}">${(G.ICON && G.ICON.eye) || ''} Encarnar ${esc(o.name)}</button>` : ''}<button data-c="close">Fechar <kbd>E</kbd></button></div>`;
     } else {
       h += `<div class="ic-head"><div><h3>${esc(c.name)}</h3><div class="sub">${esc(c.sub || '')}</div></div></div>`;
       if (c.desc) h += `<div class="ic-desc">${esc(c.desc)}</div>`;
@@ -228,6 +230,7 @@
   function onCardClick(e) {
     const b = e.target.closest('[data-c]'); if (!b) return; const c = b.dataset.c;
     if (c === 'close') { IU.closeAll(); G.Modes.setPanel(null); }
+    else if (c === 'hug') { const o = G.S.villagers.get(+b.dataset.id); IU.closeAll(); G.Modes.setPanel(null); const r = o ? G.Interact.hug(o) : null; if (r) IU.toast(r.ok ? r.msg : r.msg || 'Agora não dá.', 2.4); }
     else if (c === 'swap') { const o = G.S.villagers.get(+b.dataset.id); IU.closeAll(); G.Modes.setPanel(null); if (o) G.Modes.switchTo(o); }
     else if (c === 'sleep') { const v = G.Possess.body(); IU.closeAll(); G.Modes.setPanel(null); if (v && G.Possess.sleep(v)) { G.Possess.deed('sono'); IU.toast('Você se deita no chão e dorme.'); } }
   }

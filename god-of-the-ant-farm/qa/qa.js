@@ -54,6 +54,10 @@
       if (v.x < 0 || v.y < 0 || v.x >= N || v.y >= N) add('pop', 1, `${nm}: fora do mapa`, v.id);
       for (const k of ['age', 'hp', 'hunger', 'energy']) if (!fin(v[k])) add('pop', 1, `${nm}: ${k} = ${v[k]}`, v.id);
       if (v.hp <= 0) add('pop', 1, `${nm}: vivo com hp ${v.hp}`, v.id);
+      // (a talk, a hug, a dance with someone: a moment, never forever — a wait that is not a number never runs out)
+      if (v.task && v.task.type === 'talk' && (!fin(v.task.wait) || v.task.wait > (v.task.hug ? 3.01 : v.task.dance ? 10.01 : 4.01))) add('ai', 2, `${nm}: ${v.task.hug ? 'abraço' : v.task.dance ? 'dança' : 'conversa'} que não acaba (espera ${v.task.wait})`, v.id);
+      // (a fish in the hands is a fish of the world's waters, carried as its food or as its good)
+      if (v.carry && typeof v.carry.fish === 'string') { const F = G.Waters && G.Waters.FISH[v.carry.fish]; if (!F) add('eco', 3, `${nm}: carrega um peixe que não existe (${v.carry.fish})`, v.id); else if (v.carry.k !== 'food' && v.carry.k !== F.good) add('eco', 3, `${nm}: carrega ${F.name} como ${v.carry.k}`, v.id); if (!fin(v.carry.n) || v.carry.n <= 0) add('eco', 3, `${nm}: carga de peixe ${v.carry.n}`, v.id); }
       if (!s.settlements.has(v.set)) add('pop', 2, `${nm}: povoado ${v.set} não existe (captive=${!!v.captive})`, v.id);
       { const set = s.settlements.get(v.set); if (set && !v.captive && !v.aboard && !v.ug && !v.wrecked && v.age >= 3 && !(G.Expe && G.Expe.memberOf(v.id)) && !(v.task && (v.task.type === 'band' || v.task.type === 'swim' || v.task.type === 'naufrago' || v.task.type === 'muster')) && !(G.W.reachesTown ? G.W.reachesTown(v, set) : G.W.sameLand(v.x, v.y, set.cx, set.cy))) add('pop', v._stray && s.day - v._stray >= 2 ? 2 : 3, `${nm}: mora em ${set.name}, numa terra aonde não chega a pé${v._stray && s.day - v._stray >= 2 ? ' há ' + (s.day - v._stray) + ' dias' : ' (recente)'} (${v.task ? v.task.type : '-'})`, v.id); }
       const f = G.Fac.ofV(v); if (f && !f.alive) add('pop', 1, `${nm}: pertence a povo extinto ${f.name}`, v.id);

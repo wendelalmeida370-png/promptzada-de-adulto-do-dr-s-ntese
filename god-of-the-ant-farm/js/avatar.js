@@ -103,14 +103,15 @@
     for (const [dx, dz] of RIM) { if (dx * mx + dz * mz <= 0.05) continue; const k = solidAt(X + dx * r, Z + dz * r, feet); if (k) return k; }
     return null;
   }
-  // round things one walks around: the trunks of grown trees (a boulder is ground one climbs: floorAt)
+  // round things one walks around: the trunks of grown trees, the fountain of a square (a boulder is ground one climbs: floorAt)
   function pushRound(X, Z) {
-    const S = G.S; const L = TL(); const x0 = Math.floor(X / L), y0 = Math.floor(Z / L); let ox = 0, oz = 0;
+    const S = G.S; const L = TL(); const x0 = Math.floor(X / L), y0 = Math.floor(Z / L); let ox = 0, oz = 0; let sq = 0;
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
       const x = x0 + dx, y = y0 + dy; if (!W.inb(x, y)) continue; const i = y * G.N + x;
       let cx = 0, cz = 0, rr = 0;
       const tid = S.treeAt[i]; const t = tid && S.trees.get(tid);
       if (t && t.stage !== 'stump' && t.stage !== 'log' && t.stage !== 'fall' && t.size >= 0.3) { cx = t.x * L; cz = t.y * L; rr = 0.28 + 0.32 * Math.min(1.2, t.size); }
+      else if (S.occ[i] && S.occ[i] !== sq) { const B = S.buildings.get(S.occ[i]); if (B && B.type === 'praca' && B.built) { sq = B.id; cx = (B.x + B.w / 2) * L; cz = (B.y + B.h / 2) * L; rr = 1.4; } }
       if (!rr) continue;
       const ddx = X + ox - cx, ddz = Z + oz - cz; const d = Math.hypot(ddx, ddz); const m = rr + TUNE.radius;
       if (d < m && d > 1e-4) { ox += ddx / d * (m - d); oz += ddz / d * (m - d); }
@@ -151,8 +152,15 @@
       step(v, h, caps) { swim(v, h, caps); },
     },
     // busy with the hands (chopping, picking, eating): the feet keep still until it is done
+    // (an act with a place to be — the arms round someone — first takes the step or two to it, by the feet's own rules)
     busy: {
-      step(v, h, caps) { b.vx *= Math.exp(-12 * h); b.vz *= Math.exp(-12 * h); settle(h); if (!b.act) b.loco = 'ground'; void caps; },
+      step(v, h, caps) {
+        const a = b.act; let went = false;
+        if (a && a.to && a.t < a.toT) { const dx = a.to[0] - b.X, dz = a.to[1] - b.Z, d = Math.hypot(dx, dz);
+          if (d > 0.04) { const s = Math.min(d, caps.walk * 1.1 * h); const nx = b.X + dx / d * s, nz = b.Z + dz / d * s; if (!blocked(nx, nz, b.Y, Math.sign(dx), Math.sign(dz))) { b.X = nx; b.Z = nz; went = true; } } }
+        if (!went) { b.vx *= Math.exp(-12 * h); b.vz *= Math.exp(-12 * h); }
+        settle(h); if (!b.act) b.loco = 'ground';
+      },
     },
   };
   Av.addLoco = (name, def) => { LOCO[name] = def; };
@@ -305,10 +313,11 @@
   }
 
   // ------------------------------ the body's act (an interaction's hands) ------------------------------
-  // Av.act({ anim, dur, lock, at, done }) — the animation plays, the feet keep still if lock, done() runs at the end
+  // Av.act({ anim, dur, lock, at, done, keep }) — the animation plays, the feet keep still if lock, done() runs at the end;
+  // keep(), when given, is asked every step: false, and the act stops there, undone (the one in the arms walked away)
   Av.act = function (o) {
     if (!b) return false;
-    b.act = { anim: o.anim || 'interact', dur: o.dur || 1, t: 0, lock: o.lock !== false, done: o.done || null, at: o.at || null, face: o.face };
+    b.act = { anim: o.anim || 'interact', dur: o.dur || 1, t: 0, lock: o.lock !== false, done: o.done || null, at: o.at || null, face: o.face, to: o.to || null, toT: o.toT || 0.7, free: !!o.free, keep: o.keep || null };
     if (b.act.lock) b.loco = 'busy';
     if (o.face !== undefined) b.faceTo = o.face;
     return true;
@@ -317,6 +326,11 @@
   // sitting down where the body stands (until the player walks); and a wave of the hand to those around
   Av.sit = function () { if (!b) return false; if (b.act && b.act.sit) { b.act = null; b.loco = 'ground'; return true; } if (!b.ground || b.loco !== 'ground' || b.act) return false; Av.act({ anim: 'rest', dur: 1e9, lock: true }); b.act.sit = true; return true; };
   Av.wave = function () { if (!b || b.loco !== 'ground') return false; return Av.act({ anim: 'wave', dur: 1.6, lock: false }); };
+  // a dance where the body stands, until the player walks (or presses the key again)
+  Av.dance = function () { if (!b) return false; if (b.act && b.act.anim === 'dance') { b.act = null; b.loco = 'ground'; return false; } if (!b.ground || b.loco !== 'ground' || b.act) return false; return Av.act({ anim: 'dance', dur: 1e9, lock: true, free: true }); };
+  Av.dancing = () => !!(b && b.act && b.act.anim === 'dance');
+  // how deep the water is round the legs (metres; 0 on dry ground)
+  Av.wade = () => (b && b.loco !== 'swim' ? b.wade : 0);
   Av.climbing = () => !!(b && b.climb);
   Av.rest = () => { if (b && b.caps) b.stamina = b.caps.stamina; }; // (a drink of water: the breath comes back)
   Av.cancelAct = () => { if (b && b.act) { b.act = null; b.loco = 'ground'; } };
@@ -324,12 +338,14 @@
   // ------------------------------ the step and the frame ------------------------------
   function step(v, h) {
     // the world moved the body (a building rose where it stood, a load, the world's own push): the world is right
-    if (Math.abs(v.x - b.wx) > 1e-6 || Math.abs(v.y - b.wy) > 1e-6) { b.X = b.pX = v.x * TL(); b.Z = b.pZ = v.y * TL(); b.Y = b.pY = floorAt(b.X, b.Z); b.vx = b.vz = b.vy = 0; b.ground = true; b.loco = 'ground'; b.climb = null; }
+    // (and what the hands were doing there is left undone: the fish in that water, the hug of the one left behind)
+    if (Math.abs(v.x - b.wx) > 1e-6 || Math.abs(v.y - b.wy) > 1e-6) { b.X = b.pX = v.x * TL(); b.Z = b.pZ = v.y * TL(); b.Y = b.pY = floorAt(b.X, b.Z); b.vx = b.vz = b.vy = 0; b.ground = true; b.loco = 'ground'; b.climb = null; b.act = null; b.faceTo = undefined; }
     b.pX = b.X; b.pY = b.Y; b.pZ = b.Z;
     if ((b.capsT -= h) <= 0 || !b.caps) { b.caps = G.Possess.caps(v); b.capsT = 0.5; b.h = 1.75 * (G.People3D ? G.People3D.look(v).s : 1); }
     if (v.sleeping && b.loco !== 'sleep') { b.loco = 'sleep'; b.act = null; }
     // (sitting, the body gets up as soon as the player walks or jumps)
-    if (b.act && b.act.sit && (Math.abs(IN.mx) + Math.abs(IN.mz) > 0.2 || b.buffer > 0 || IN.jump)) { b.act = null; b.loco = 'ground'; }
+    if (b.act && (b.act.sit || b.act.free) && (Math.abs(IN.mx) + Math.abs(IN.mz) > 0.2 || b.buffer > 0 || IN.jump)) { b.act = null; b.loco = 'ground'; }
+    if (b.act && b.act.keep && !b.act.keep()) { b.act = null; b.faceTo = undefined; if (b.loco === 'busy') b.loco = 'ground'; }
     if (b.act) {
       b.act.t += h;
       if (b.faceTo !== undefined) { let da = b.faceTo - b.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; b.yaw += da * (1 - Math.exp(-8 * h)); }
@@ -347,7 +363,9 @@
     // (in the water where the world does not walk, the world is told the body is the player's swimmer — it leaves it there;
     // the god sees it swim)
     const afl = !W.walkableXY(v.x, v.y) && waterAt(b.X, b.Z) > -Infinity; if (afl !== G.Possess.afloat(v)) G.Possess.setAfloat(afl);
-    if (b.loco === 'swim') v.act = 'swim'; else if (v.act === 'swim') v.act = '';
+    // (and what it does that the world's people answer: swimming, dancing — the dancers round it stop when it stops)
+    const va = b.loco === 'swim' ? 'swim' : b.act && b.act.anim === 'dance' ? 'dance' : '';
+    if (va) v.act = va; else if (v.act === 'swim' || v.act === 'dance') v.act = '';
     if (d > 0.001) { v.walkPh += (d / TL()) * 8.5; G.faceTo(v, dX, dZ); }
     // (feet wear the paths, as everybody's do)
     if (v.moving) { const i = W.idx(v.x, v.y); if (S.type[i] >= T.SAND) { const lv = G.pathLevel(S.wear[i]); S.wear[i] = Math.min(G.WEAR_MAX, S.wear[i] + (d / TL()) * 1.3); if (G.pathLevel(S.wear[i]) !== lv) G.Nature.markDirty(i); } }
@@ -363,6 +381,7 @@
     if (b.loco === 'sleep') st = 'sleep';
     else if (b.loco === 'climb') st = 'climb';
     else if (b.loco === 'swim') st = b.stamina <= 0 ? 'drown' : b.swimK > 0.5 ? 'swim' : 'tread';
+    else if (b.act && b.act.to && b.act.t < b.act.toT && b.speed > 0.22) st = 'walk';
     else if (b.act && (b.act.lock || b.speed < 0.22)) st = b.act.anim;
     else if (!b.ground) st = b.vy > 0.4 ? 'jump' : 'fall';
     else if (b.landT > 0) st = 'land';

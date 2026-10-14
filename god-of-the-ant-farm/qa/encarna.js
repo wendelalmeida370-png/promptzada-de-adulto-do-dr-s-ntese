@@ -26,6 +26,9 @@
 //  e14 o corpo na água — a água sobe pelas pernas (mais lento), funda ele nada (o mundo o deixa lá, o deus o vê nadar),
 //      o fôlego acaba nadando, a ordem do mundo de nadar não tira o corpo, salvar no meio do mar, voltar à praia, o vau
 //      do rio, e sem fôlego se afoga de verdade (morte do mundo, crônica, o deus volta)
+//  e15 os braços e o coração — de dia (a noite passa antes: T-036): acenar e ser respondido; a conversa faz a pessoa parar; o abraço na família (o corpo chega perto, os dois se abraçam),
+//      consolar quem está de luto (o luto diminui), a pessoa morrendo no meio do abraço, salvar no meio; dançar e quem entra
+//      na dança; pescar com as mãos no vau (só na água, mãos livres, levado para longe no meio, o peixe daquela água)
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'); const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
@@ -757,6 +760,106 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     ok('e14 e se afoga de verdade: a morte do mundo (afogado), na crônica, sem corpo na praia, e o deus volta', d.dead && d.cause === 'drown' && d.mode === 'GOD' && !d.avatar && !d.corpse && d.told, JSON.stringify(d));
   }
   ok('e14 verificador', !e14.qa.length && e14.err === '{}', `${e14.qa.slice(0, 3).join(' · ') || 'limpo'} · ${e14.err}`);
+  }
+  if (await need('e15')) {
+  // ================================ e15: the arms and the heart: a hug, comfort, a dance, a fish caught by hand ================================
+  const e15 = await E(() => {
+    __E.fresh('cidade'); let S = G.S; const N = G.N, T = G.T, TL = G.Space.TILE; const out = {};
+    // (the saved town opens in the small hours, everyone asleep: the god lets the night pass first, until the town is up)
+    G.UI.setSpeed(4); const up = () => S.time > 0.25 && S.time < 0.6 && [...S.villagers.values()].filter(q => !q.sleeping && !q.inside).length > S.villagers.size * 0.4;
+    out.morning = __E.until(up, 3000); G.UI.setSpeed(1); out.time = +S.time.toFixed(2);
+    const free = q => !q.sleeping && !q.inside && !q.aboard && !q.jail && !q.held && !q.air && !q.ug && q.age >= 2 && q.fear <= 40 && G.W.walkableXY(q.x, q.y);
+    const kinOf = o => [...S.villagers.values()].filter(q => q !== o && G.Possess.kin(o, q) && free(q) && q.age >= 6 && (!q.task || q.task.pri <= 1));
+    const s = __E.town(); const v = __E.adults(s, o => kinOf(o).length > 0)[0] || __E.adults(s)[0];
+    out.inn = __E.enter(v); __E.f(10); let st = G.Avatar.state(); const id = v.id; const body = () => S.villagers.get(id); const A = () => S.avatar.deeds;
+    // (the body set down beside someone, on the ground the world walks, facing them)
+    const beside = o => { for (const [dx, dy] of [[0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5], [0.4, 0.4], [-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4]]) if (G.Avatar.place(o.x + dx, o.y + dy)) { __E.f(2); st.yaw = Math.atan2(o.y - body().y, o.x - body().x); __E.f(1); return true; } return false; };
+    const watch = (o, r) => { const b = body(); if (!b) return; if (!G.W.walkableXY(b.x, b.y)) r.bad++; if (st.Y < G.Avatar.floorAt(st.X, st.Z) - 0.05) r.under++; if (o && S.villagers.has(o.id)) { r.minD = Math.min(r.minD, +(G.dist(b.x, b.y, o.x, o.y) * TL).toFixed(2)); if (o.act === 'hug') r.held++; const vs = G.People3D.visOf(o.id); if (vs && vs.st === 'hug') r.drawn++; } if (st.anim === 'hug') r.arms++; };
+    // 1. one's own: a word first — they stop to talk — then, on their card, the hug: the body steps up, both hold each other
+    // (the world may call them away in the middle — the day's festival, a fire: then the arms let go and nothing counts; the
+    // next of the family is tried, up to three)
+    out.hug = null; out.called = [];
+    for (const k of kinOf(body()).slice(0, 3)) {
+      if (!S.villagers.has(k.id) || !beside(k)) continue;
+      const r0 = G.Interact.run({ id: 'pessoa', t: { o: k, X: k.x * TL, Z: k.y * TL } }); __E.f(2);
+      const talk = { ok: !!(r0 && r0.ok), task: k.task && k.task.type, toBody: !!(k.task && k.task.id === id), wait: k.task && k.task.wait, pri: k.task && k.task.pri };
+      G.IncUI.card(r0.card, r0.said); const btn = document.querySelector('#inc-card [data-c="hug"]'); const can = G.Interact.canHug(body(), k); const d0 = A().abraco || 0;
+      const r = { bad: 0, under: 0, minD: 99, held: 0, drawn: 0, arms: 0 };
+      if (btn && !btn.disabled) btn.click();
+      // (who let go first: they, called away while the body still held them — or the body, at the end of the hug)
+      let away = null; const fr = __E.until(() => { watch(k, r); if (!away && G.Avatar.busy() && S.villagers.has(k.id) && !(k.task && k.task.hug)) away = k.task ? k.task.type : 'nenhuma'; return !G.Avatar.busy(); }, 400); const panel = G.Modes.panel();
+      if (panel) { G.IncUI.closeAll(); G.Modes.setPanel(null); }
+      __E.f(4); Object.assign(r, { talk, label: can.label, can: can.ok, btn: !!btn, frames: fr, deed: (A().abraco || 0) - d0, kin: G.Possess.kin(body(), k), panel, after: k.task ? k.task.type + (k.task.hug ? '+hug' : '') : null });
+      // (called away before the hug was over: the body let go at once, the hug did not count)
+      // (the hug that never closed — called away before or while the arms were round them — is the world's call, not a hug)
+      if (!r.deed) { out.called.push(Object.assign(r, { away: away || r.after })); continue; }
+      out.hug = r; break;
+    }
+    // 2. a stranger in mourning: the hug consoles — the grief eases; and a stranger who grieves nothing is offered no hug
+    const strangers = [...S.villagers.values()].filter(q => q !== body() && !G.Possess.kin(body(), q) && free(q) && q.age >= 14 && (!q.task || q.task.pri <= 1) && G.W.reaches(body(), q.x, q.y));
+    strangers.sort((p, q) => G.dist(p.x, p.y, body().x, body().y) - G.dist(q.x, q.y, body().x, body().y));
+    const o = strangers[0]; out.comfort = null; out.cold = null;
+    if (o) {
+      out.cold = G.Interact.canHug(body(), o); o.mourn = G.DAY_LEN;
+      if (beside(o)) { const c = G.Interact.canHug(body(), o); const m0 = o.mourn; const d0 = A().consolo || 0; const r = { bad: 0, under: 0, minD: 99, held: 0, drawn: 0, arms: 0 };
+        const h = G.Interact.hug(o); __E.until(() => { watch(o, r); return !G.Avatar.busy(); }, 400); __E.f(2);
+        out.comfort = Object.assign(r, { label: c.label, ok: !!(h && h.ok), eased: +(m0 - o.mourn).toFixed(1), want: +(G.DAY_LEN * 0.35).toFixed(1), deed: (A().consolo || 0) - d0 }); }
+    }
+    // 3. the bad cases: the other dies in the arms (no deed, no error); a save and a load in the middle of a hug
+    const k2 = kinOf(body())[0] || strangers[1]; out.dies = null;
+    if (k2) { if (!k2.mourn && !G.Possess.kin(body(), k2)) k2.mourn = G.DAY_LEN; if (beside(k2)) { const d0 = (A().abraco || 0) + (A().consolo || 0); const h = G.Interact.hug(k2); __E.f(20); G.Vg.damage(k2, 9999, 'war', true); const fr = __E.until(() => !G.Avatar.busy(), 400); __E.f(10);
+      out.dies = { ok: !!(h && h.ok), gone: !S.villagers.has(k2.id), frames: fr, deed: (A().abraco || 0) + (A().consolo || 0) - d0, avatar: !!S.avatar && S.avatar.id === id, mode: G.Modes.state }; } }
+    const k3 = strangers.find(q => S.villagers.has(q.id) && q !== o && q !== k2); out.saved = null;
+    if (k3 && beside(k3)) { k3.mourn = G.DAY_LEN; const d0 = A().consolo || 0; const h = G.Interact.hug(k3); __E.f(15); const str = G.Save.serialize(); G.Save.apply(JSON.parse(str)); S = G.S; __E.f(150); st = G.Avatar.state(); const q = S.villagers.get(k3.id);
+      out.saved = { ok: !!(h && h.ok), avatar: !!S.avatar && S.avatar.id === id, mode: G.Modes.state, busy: G.Avatar.busy(), deed: (S.avatar ? S.avatar.deeds.consolo || 0 : -1) - d0, task: q && q.task ? q.task.type + (q.task.hug ? '+hug' : '') : null }; }
+    // 4. a dance (B): whoever is free and merry near the body joins in; walking stops it; the others go back to their lives
+    const merry = [...S.villagers.values()].filter(q => q !== body() && free(q) && q.age >= 3 && q.hunger < 90 && !(q.sick > 0) && (!q.task || q.task.pri <= 0.6) && (q.age < 14 || (q.traits || []).includes('Sociável') || q.id % 3 === 0 || G.Possess.kin(body(), q)) && G.W.reaches(body(), q.x, q.y));
+    merry.sort((p, q) => G.dist(p.x, p.y, body().x, body().y) - G.dist(q.x, q.y, body().x, body().y));
+    out.dance = { near: merry.length }; out.wave = null;
+    // (a wave in the daylight, beside someone: they wave back — e13 waves in the night, with no one about: T-036)
+    if (merry[0] && beside(merry[0])) { G.Input3D.onAction('acenar'); let most = 0; for (let k = 0; k < 60; k++) { G.Main.frameFor(33); let n = 0; for (const q of S.villagers.values()) { const vs = G.People3D.visOf(q.id); if (q !== body() && vs && vs.st === 'wave') n++; } most = Math.max(most, n); } out.wave = { most, deed: A().aceno || 0 }; __E.f(10); }
+    if (merry[0] && beside(merry[0])) {
+      const d0 = A().danca || 0; G.Input3D.onAction('dancar'); __E.f(20);
+      const joined = [...S.villagers.values()].filter(q => q.task && q.task.type === 'talk' && q.task.dance && q.task.id === id);
+      const drawn = joined.filter(q => { const vs = G.People3D.visOf(q.id); return vs && vs.st === 'dance'; }).length;
+      Object.assign(out.dance, { on: G.Avatar.dancing(), anim: st.anim, joined: joined.length, acts: joined.filter(q => q.act === 'dance').length, drawn, deed: (A().danca || 0) - d0 });
+      const x0 = body().x, y0 = body().y; G.Input3D.down.frente = true; __E.f(20); G.Input3D.down.frente = false; __E.f(4);
+      out.dance.stopped = !G.Avatar.dancing(); out.dance.walked = +(G.dist(x0, y0, body().x, body().y) * TL).toFixed(2);
+      __E.f(400); out.dance.still = joined.filter(q => S.villagers.has(q.id) && q.task && q.task.dance).length;
+    }
+    // 5. a fish by hand, in a ford: offered only with the feet in the water; the hands full, not; the world's dice and the water's own fish
+    let ford = null; for (let y = 2; y < N - 2 && !ford; y++) for (let x = 2; x < N - 2 && !ford; x++) { const i = y * N + x; if (S.type[i] !== T.RIVER || S.deep[i] || S.road[i] || (S.ice && S.ice[i]) || !G.W.walkable(i) || !G.W.reaches(body(), x + 0.5, y + 0.5)) continue; ford = [x + 0.5, y + 0.5, i]; }
+    out.fish = null; out.dry = null;
+    { const b = body(); let dry = null; for (let r = 1; r < 12 && !dry; r++) for (const [dx, dy] of [[r, 0], [-r, 0], [0, r], [0, -r]]) { const x = b.x + dx, y = b.y + dy; if (G.W.inb(x, y) && G.W.walkableXY(x, y) && S.type[G.W.idx(x, y)] !== T.RIVER) { dry = [x, y]; break; } }
+      if (dry) { G.Avatar.place(dry[0], dry[1]); __E.f(6); const ctx = G.Interact.ctx(); out.dry = { wade: +G.Avatar.wade().toFixed(2), found: G.Interact.list.find(q => q.id === 'peixe').find(ctx).length, at: dry }; } }
+    if (ford) {
+      G.Avatar.place(ford[0], ford[1]); __E.f(12); const b = body(); b.carry = null; const pr = G.Interact.list.find(q => q.id === 'peixe');
+      const f = { wade: +G.Avatar.wade().toFixed(2), tries: 0, caught: null, deed0: A().pesca || 0 };
+      // (hands already full of wood: not)
+      b.carry = { k: 'wood', n: 2 }; { const ctx = G.Interact.ctx(); const t = pr.find(ctx)[0]; f.full = t ? pr.can(ctx, t) : null; } b.carry = null;
+      // (the world carries the body off while the hands are in the water — to the dry ground: the fishing is left undone)
+      if (out.dry) { const ctx = G.Interact.ctx(); const t = pr.find(ctx)[0]; if (t) { const r = G.Interact.run({ id: 'peixe', t }); __E.f(10); G.Avatar.place(out.dry.at[0], out.dry.at[1]); const fr = __E.until(() => !G.Avatar.busy(), 300); __E.f(4); f.moved = { ran: !!(r && r.ok), frames: fr, carry: !!(b.carry && b.carry.n > 0), deed: (A().pesca || 0) - f.deed0 }; G.Avatar.place(ford[0], ford[1]); __E.f(12); } }
+      for (let k = 0; k < 20 && !(b.carry && b.carry.fish); k++) { const ctx = G.Interact.ctx(); const t = pr.find(ctx)[0]; if (!t) break; const best = G.Interact.best(); if (k === 0) f.best = best && best.id; const r = G.Interact.run({ id: 'peixe', t }); f.tries++; if (!r || !r.ok) { f.fail = r && r.msg; break; } __E.until(() => !G.Avatar.busy(), 300); }
+      if (b.carry && b.carry.fish) { const F = G.Waters.FISH[b.carry.fish]; f.caught = { fish: b.carry.fish, k: b.carry.k, n: b.carry.n, known: !!F, river: !!F && (F.where.includes('river') || F.where.includes('lake') || F.where.includes('mud')) }; }
+      f.deed = (A().pesca || 0) - f.deed0;
+      // (carried to the store as any fisher's load: the store's door offers to put it away)
+      out.fish = f;
+    }
+    out.qa = __E.qa(); out.err = JSON.stringify(G.modErr);
+    return out;
+  });
+  const H = e15.hug;
+  ok('e15 com a família: a conversa faz a pessoa parar; no cartão dela, Abraçar — o corpo chega perto e os dois se abraçam (no mundo e no 3D)', H && H.talk.ok && H.talk.task === 'talk' && H.talk.toBody && H.btn && H.can && /^Abraçar/.test(H.label) && H.minD < 1 && H.arms > 20 && H.held > 5 && H.drawn > 5 && H.deed === 1 && !H.panel && !H.bad && !H.under && H.after !== 'talk+hug', JSON.stringify(H));
+  ok('e15 chamada pelo mundo no meio do abraço (uma festa, um incêndio): o corpo solta na hora e o abraço não conta', e15.called.every(c => c.deed === 0 && c.arms < 70 && !c.bad && c.away !== 'talk+hug'), JSON.stringify(e15.called));
+  ok('e15 consolar quem está de luto: o luto diminui; um estranho sem luto não recebe abraço', e15.comfort && e15.comfort.ok && /^Consolar/.test(e15.comfort.label) && e15.comfort.eased > e15.comfort.want * 0.8 && e15.comfort.deed === 1 && !e15.comfort.bad && e15.cold && !e15.cold.ok && !e15.cold.label, JSON.stringify({ comfort: e15.comfort, cold: e15.cold }));
+  ok('e15 a pessoa morre no meio do abraço: nada quebra, o feito não conta, o corpo segue', !e15.dies || (e15.dies.ok && e15.dies.gone && e15.dies.frames >= 0 && e15.dies.deed === 0 && e15.dies.avatar && e15.dies.mode === 'INC'), JSON.stringify(e15.dies));
+  ok('e15 salvar e carregar no meio de um abraço: volta encarnado, sem o feito em dobro', !e15.saved || (e15.saved.ok && e15.saved.avatar && e15.saved.mode === 'INC' && !e15.saved.busy && e15.saved.deed <= 1), JSON.stringify(e15.saved));
+  const Dn = e15.dance;
+  ok('e15 dançar (B): o corpo dança, quem está livre por perto entra na dança, andar para, e depois todos voltam à vida', Dn.near === 0 || (Dn.on && Dn.anim === 'dance' && Dn.joined >= 1 && Dn.acts >= 1 && Dn.drawn >= 1 && Dn.deed === 1 && Dn.stopped && Dn.walked > 0.5 && Dn.still === 0), JSON.stringify(Dn));
+  ok('e15 acenar de dia, ao lado de alguém: quem está perto acena de volta', !e15.wave || (e15.wave.most >= 1 && e15.wave.deed >= 1), JSON.stringify(e15.wave));
+  ok('e15 pescar com as mãos: só com os pés na água; com as mãos cheias, não; levado para longe no meio, não pesca; o peixe é o daquela água e entra na biografia', e15.dry && e15.dry.found === 0 && (!e15.fish || (e15.fish.wade > 0.12 && e15.fish.full && !e15.fish.full.ok && (!e15.fish.moved || (e15.fish.moved.ran && e15.fish.moved.frames <= 3 && !e15.fish.moved.carry && e15.fish.moved.deed === 0)) && e15.fish.best === 'peixe' && e15.fish.caught && e15.fish.caught.known && e15.fish.caught.river && e15.fish.deed >= 1)), JSON.stringify({ dry: e15.dry, fish: e15.fish }));
+  ok('e15 verificador', !e15.qa.length && e15.err === '{}', `${e15.qa.slice(0, 3).join(' · ') || 'limpo'} · ${e15.err}`);
+  await shot('e15-abraco-danca-pesca');
   }
   if (await need('e8')) {
   // ================================ e8: stress (last: it is the longest) ================================

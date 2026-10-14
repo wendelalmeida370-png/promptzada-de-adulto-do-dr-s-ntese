@@ -124,6 +124,10 @@
       const txt = line(me, o);
       // (the other turns to the one speaking, and answers: a line over their head, in both views)
       G.faceTo(o, me.x - o.x, me.y - o.y);
+      // (and stops a moment to talk, as the world's people stop for each other — the day's work too, as for a courtship; not
+      // a meal, sleep, the watch or anything urgent. The moments here are the body's seconds, in the world's slower time of
+      // the body: G.Space.TIME)
+      if (txt && (!o.task || o.task.pri <= 1)) G.Vg.setTask(o, { type: 'talk', id: me.id, pri: 0.9, wait: 5 * G.Space.TIME, kind: 'talk' });
       if (txt && G.Talk) G.Talk.say(o, txt, { dur: 4 });
       const k = G.Possess.kin(me, o); if (k) G.Vg.emote(o, 'heart', 2);
       if (G.Possess.meet(o.id)) G.Possess.deed('conversa');
@@ -131,6 +135,58 @@
       return { ok: true, card: I.personCard(o, me), said: txt };
     },
   });
+
+  // a hug: for one's own (the family, the partner) and for anyone in mourning — offered on their card, after a word.
+  // The other stops and holds the body too (their talk, with the arms); a grieving one is comforted: the mourning eases
+  I.canHug = function (me, o) {
+    if (!me || !o || !G.S.villagers.has(o.id) || o.id === me.id) return { ok: false, why: 'Não está mais aqui.' };
+    const k = G.Possess.kin(me, o); const grief = o.mourn > 0;
+    if (!k && !grief) return { ok: false, why: '' };
+    const label = grief && !k ? `Consolar ${o.name}` : `Abraçar ${o.name}`;
+    if (o.sleeping) return { ok: false, label, why: `${o.name} está dormindo.` };
+    if (o.inside || o.aboard || o.held || o.air || o.jail || o.age < 2) return { ok: false, label, why: `Não dá para abraçar ${o.name} agora.` };
+    if (o.fear > 60) return { ok: false, label, why: `${o.name} está assustad${oa(o)} demais.` };
+    if (o.task && o.task.pri > 1) return { ok: false, label, why: `${o.name} está ocupad${oa(o)} com algo que não pode esperar.` };
+    if (G.dist(me.x, me.y, o.x, o.y) * L() > 3.8) return { ok: false, label, why: 'Longe demais.' };
+    if (G.Avatar.swimming()) return { ok: false, label, why: 'Agora não dá.' };
+    return { ok: true, label, kin: k, grief };
+  };
+  I.hug = function (o) {
+    const ctx = I.ctx(); if (!ctx) return { ok: false, msg: 'Agora não dá.' };
+    const me = ctx.v; const c = I.canHug(me, o); if (!c.ok) return { ok: false, msg: c.why || 'Agora não dá.' };
+    if (G.Avatar.busy()) G.Avatar.cancelAct(); // (the word just said, or sitting: the arms are free for this)
+    const X = o.x * L(), Z = o.y * L(); const f = face(ctx, X, Z); const d = Math.hypot(X - ctx.X, Z - ctx.Z);
+    // (the body steps up to arm's length; the other turns to it and holds it)
+    const to = d > 0.62 ? [X - Math.cos(f) * 0.55, Z - Math.sin(f) * 0.55] : null;
+    // (a moment's hug outweighs a meal or a nap that can wait three seconds — the world's needs take over at 1.2 — never a fire)
+    G.Vg.setTask(o, { type: 'talk', id: me.id, pri: 1.25, wait: 4.2 * G.Space.TIME, hug: 1 });
+    // (both hold on while both are there: called away by the world — a festival, a fire — or gone, the arms let go, nothing counts)
+    const holds = () => G.S.villagers.has(o.id) && !!o.task && !!o.task.hug && o.task.id === me.id;
+    G.Avatar.act({ anim: 'hug', dur: 2.6, face: f, to, toT: 0.8, keep: holds, at: [1, () => { G.Vg.emote(o, 'heart', 2); G.Vg.emote(me, 'heart', 2); }], done: () => {
+      if (!holds()) return;
+      const grief = o.mourn > 0; if (grief) o.mourn = Math.max(0, o.mourn - G.DAY_LEN * 0.35);
+      G.Vg.endTask(o); // (and they go back to their day)
+      G.Possess.deed(grief ? 'consolo' : 'abraco');
+    } });
+    G.Stories && G.Stories.signal('avatarDeed', { id: me.id, what: 'abraco', x: ctx.x, y: ctx.y, set: me.set });
+    const k = c.kin; const said = c.grief ? (o.age < 14 ? 'Eu sinto tanta falta…' : 'Obrigad' + oa(o) + '. Eu precisava disso.') : k === 'mãe' || k === 'pai' ? `Ah, ${me.name}…` : k === 'filho' || k === 'filha' ? (o.age < 10 ? 'Mais forte!' : 'Eu também te amo.') : k === 'companheiro' || k === 'companheira' ? 'Fica mais um pouco.' : 'Que saudade!';
+    G.Talk && G.Talk.say(o, said, { dur: 3 });
+    return { ok: true, msg: c.grief ? `Você abraça ${o.name}, que chora no seu ombro.` : `Você abraça ${o.name}.`, said };
+  };
+  // the dance: whoever is free near the body joins it a while (the children, the merry, the family first)
+  I.danceJoin = function () {
+    const ctx = I.ctx(); if (!ctx) return 0; const me = ctx.v; const R = 9 / L(); const out = [];
+    for (const o of G.S.villagers.values()) {
+      if (o.id === me.id || o.sleeping || o.inside || o.aboard || o.held || o.air || o.jail || o.ug || o.age < 3 || o.fear > 40 || o.hunger >= 90 || o.sick > 0) continue;
+      if (Math.abs(o.x - ctx.x) > R || Math.abs(o.y - ctx.y) > R || (o.task && o.task.pri > 0.6)) continue;
+      const k = G.Possess.kin(me, o); const merry = o.age < 14 || (o.traits || []).includes('Sociável') || o.id % 3 === 0;
+      if (!k && !merry) continue;
+      out.push([o, (k ? 2 : 0) + (o.age < 14 ? 1 : 0) - G.dist(o.x, o.y, ctx.x, ctx.y) * 0.1]);
+    }
+    out.sort((a, b) => b[1] - a[1]); let n = 0;
+    for (const [o] of out.slice(0, 6)) { G.Vg.setTask(o, { type: 'talk', id: me.id, pri: 0.8, wait: (6 + (o.id % 4)) * G.Space.TIME, dance: 1 }); if (o.task && o.task.dance) { G.Vg.emote(o, 'happy', 1.5); n++; } }
+    return n;
+  };
 
   // ============================== buildings: doors, the store, the temple ==============================
   // (the people's stores are where the world's people bring their loads and eat: every drop-off — storehouse, barn, dock,
@@ -395,6 +451,46 @@
       G.Avatar.act({ anim: 'low', dur: 2, face: f, at: [0.8, () => { const p = G.Avatar.pos(); if (p && G.FX3D) for (let k = 0; k < 6; k++) G.FX3D.spawn({ x: p.X + Math.cos(f) * 0.6, y: p.Y + 0.1, z: p.Z + Math.sin(f) * 0.6, vx: G.vrr(-0.4, 0.4), vy: G.vrr(0.6, 1.4), vz: G.vrr(-0.4, 0.4), life: 0.6, s0: 0.06, s1: 0.03, c: [0.85, 0.93, 0.98], a: 0.8, sh: 1, grav: 8 }); }],
         done: () => { G.Avatar.rest(); G.Possess.deed('agua'); } });
       return { ok: true, msg: 'Você bebe da água fresca.' };
+    },
+  });
+  // a fish caught by hand, standing in the shallows (a ford, a lake's edge, the sea at the beach): the world's own catch
+  // of that water — a trout in a cold river, sardines in a mild sea, a piranha's bite in the jungle's — into the hands,
+  // to be taken to the store like any fisher's. It slips away as often as not
+  I.add({
+    id: 'peixe', prio: 3.2, reach: 1.6,
+    find(ctx) {
+      const w = G.Avatar.wade(); if (w < 0.12) return [];
+      const X = ctx.X + Math.cos(ctx.yaw) * 0.7, Z = ctx.Z + Math.sin(ctx.yaw) * 0.7; const S = G.S, T = G.T; const x = X / L(), y = Z / L();
+      if (!W.inb(x, y)) return []; const i = W.idx(x, y); const t = S.type[i];
+      if (!(t === T.RIVER || t <= T.SEA) || (S.ice && S.ice[i]) || (S.dry && S.dry[i])) return [];
+      return [{ X, Z, x, y, sea: t <= T.SEA }];
+    },
+    label() { return 'Pescar com as mãos'; },
+    can(ctx, t) {
+      const v = ctx.v; if (!hands(v)) return { ok: false, why: 'Você não tem mãos para isso.' };
+      if (v.carry && v.carry.n > 0 && !v.carry.fish) return { ok: false, why: 'Suas mãos já estão cheias.' };
+      if (v.carry && v.carry.n >= 8) return { ok: false, why: 'Não cabe mais peixe nas mãos: leve ao armazém.' };
+      void t; return { ok: true };
+    },
+    run(ctx, t) {
+      const v = ctx.v; const f = ctx.yaw;
+      const splash = () => { const p = G.Avatar.pos(); if (p && G.FX3D) for (let k = 0; k < 10; k++) G.FX3D.spawn({ x: t.X + G.vrr(-0.2, 0.2), y: G.Avatar.waterAt(t.X, t.Z) + 0.05, z: t.Z + G.vrr(-0.2, 0.2), vx: G.vrr(-0.8, 0.8), vy: G.vrr(1, 2.2), vz: G.vrr(-0.8, 0.8), life: 0.7, s0: 0.07, s1: 0.03, c: [0.86, 0.94, 1], a: 0.8, sh: 1, grav: 9 }); G.Audio && G.Audio.play && G.Audio.play('splash'); };
+      G.Avatar.act({ anim: 'low', dur: 2.6, face: f, at: [1.4, splash], done: () => {
+        if (!G.S.villagers.has(v.id) || (v.carry && v.carry.n > 0 && !v.carry.fish)) return;
+        // (the water may have frozen or gone meanwhile — the god's winter, the sea opened)
+        { const S = G.S, i = W.idx(t.x, t.y); if (!(S.type[i] === G.T.RIVER || S.type[i] <= G.T.SEA) || (S.ice && S.ice[i]) || (S.dry && S.dry[i])) { G.IncUI && G.IncUI.toast && G.IncUI.toast('A água não está mais ali.', 2); return; } }
+        // (the world's dice: the hands are slower than a line; and what bites is that water's own fish)
+        if (G.R() < 0.55) { G.IncUI && G.IncUI.toast && G.IncUI.toast('Escapou entre os dedos…', 2); return; }
+        const c = G.Waters ? G.Waters.catchCarry(v, t.x, t.y, 1) : { k: 'food', n: 1, fish: 'carpa' };
+        if (!G.S.villagers.has(v.id)) return;
+        const F = G.Waters && G.Waters.FISH[c.fish]; const nm = F ? (/a$/.test(F.name) ? 'uma ' : 'um ') + F.name : 'um peixe';
+        // (one load in the hands: the same catch piles up; another kind of fish has no hand left, and goes back to the water)
+        if (v.carry && v.carry.n > 0 && v.carry.k !== c.k) { G.IncUI && G.IncUI.toast && G.IncUI.toast(`Você pegou ${nm}, mas não tem mão para ele: solta de volta.`, 3); return; }
+        if (v.carry && v.carry.n > 0) v.carry.n += c.n; else v.carry = c;
+        G.Possess.deed('pesca');
+        G.IncUI && G.IncUI.toast && G.IncUI.toast(`Você pegou ${nm}! Leve ao armazém.`, 3);
+      } });
+      return { ok: true, msg: t.sea ? 'Você se abaixa e espera um peixe passar entre as pernas…' : 'Você se abaixa na água rasa, as mãos em concha…' };
     },
   });
   // a tame beast near (a dog, a cat, a hen, the herd): stroked — it leans into the hand, a little heart over it

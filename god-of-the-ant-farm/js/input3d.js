@@ -15,7 +15,7 @@
   // the actions and their default keys (e.key, lower case)
   const ACTIONS = In.ACTIONS = [
     ['frente', 'Andar para a frente', ['w', 'arrowup']], ['tras', 'Andar para trás', ['s', 'arrowdown']], ['esquerda', 'Andar para a esquerda', ['a', 'arrowleft']], ['direita', 'Andar para a direita', ['d', 'arrowright']],
-    ['correr', 'Correr (segurar)', ['shift']], ['pular', 'Pular', [' ']], ['interagir', 'Interagir', ['e']], ['agachar', 'Andar agachado (segurar)', ['c']], ['sentar', 'Sentar no chão / levantar', ['x']], ['acenar', 'Acenar', ['v']],
+    ['correr', 'Correr (segurar)', ['shift']], ['pular', 'Pular', [' ']], ['interagir', 'Interagir', ['e']], ['agachar', 'Andar agachado (segurar)', ['c']], ['sentar', 'Sentar no chão / levantar', ['x']], ['acenar', 'Acenar', ['v']], ['dancar', 'Dançar / parar', ['b']],
     ['ficha', 'Quem sou eu', ['tab']], ['deus', 'Voltar ao Modo Deus', ['g']], ['menu', 'Menu / pausa', ['escape']],
   ];
   const DEF = {}; for (const [a, , k] of ACTIONS) DEF[a] = k.slice();

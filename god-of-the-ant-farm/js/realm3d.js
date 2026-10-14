@@ -182,7 +182,7 @@
 	{ vec3 c = gl_FragColor.rgb; float lum = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
 	  c = max( mix( vec3( lum ), c, 1.18 ), 0.0 );
 	  // (a gentle S in the eye's own scale: the shade deeper, the light brighter — not washed out)
-	  vec3 cp = sqrt( c ); cp = mix( cp, cp * cp * ( 3.0 - 2.0 * cp ), 0.3 ); c = cp * cp;
+	  vec3 cp = sqrt( c ); cp = mix( cp, cp * cp * ( 3.0 - 2.0 * cp ), 0.26 * smoothstep( 0.18, 0.5, cp ) ); c = cp * cp; // (the darks kept: a shade is never black)
 	  // (the painter's split: the shadows a little cool, the lights a little warm)
 	  c *= mix( vec3( 0.95, 0.98, 1.05 ), vec3( 1.03, 1.0, 0.96 ), smoothstep( 0.04, 0.5, lum ) );
 	  gl_FragColor.rgb = c; }
@@ -248,12 +248,19 @@
     MAT.flora.onBeforeCompile = sh => {
       Object.assign(sh.uniforms, { uTime: U.time, uWind: U.wind, uDet: { value: G.Ground3D.detail() } });
       sh.vertexShader = 'attribute float aK; uniform float uTime; uniform vec3 uWind; varying vec3 vFP; varying float vFK;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-        vec4 wq = modelMatrix * vec4(transformed, 1.0); vFP = wq.xyz; vFK = aK;
+        vec4 wq = modelMatrix * vec4(transformed, 1.0); vFP = wq.xyz; vFK = aK; float sk = aK < -0.5 ? -aK - 1.0 : aK;
         float ph = uTime * (0.9 + uWind.z) + wq.x * 0.11 + wq.z * 0.07;
-        transformed.xz += uWind.xy * (sin(ph) * 0.6 + sin(ph * 2.7 + 1.3) * 0.25 + 0.3) * aK * (0.25 + uWind.z * 0.6);`);
+        transformed.xz += uWind.xy * (sin(ph) * 0.6 + sin(ph * 2.7 + 1.3) * 0.25 + 0.3) * sk * (0.25 + uWind.z * 0.6);`);
       sh.fragmentShader = 'uniform sampler2D uDet; varying vec3 vFP; varying float vFK;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
         #ifndef NOPAT
         if (vFK > 0.07) { float lf = texture2D(uDet, (vFP.xz + vFP.y * 0.73) / 1.3).r * 0.6 + texture2D(uDet, (vFP.zy + vFP.x * 0.4) / 1.1).r * 0.4; diffuseColor.rgb *= 0.78 + lf * 0.44; }
+        // (bark: deep grooves running up the wood, ridges between them, darker and greener patches — moss, lichen, the wet side)
+        else if (vFK < -0.5) {
+          float ga = texture2D(uDet, vec2(vFP.x * 1.5 + vFP.z * 0.4, vFP.y * 0.16)).r, gb = texture2D(uDet, vec2(vFP.z * 1.5 - vFP.x * 0.4, vFP.y * 0.16 + 0.5)).r;
+          float gr = smoothstep(0.32, 0.68, (ga + gb) * 0.5); float pt = texture2D(uDet, vFP.xy * 0.35 + vFP.z * 0.21).a;
+          diffuseColor.rgb *= mix(0.56, 1.14, gr) * (0.9 + pt * 0.2);
+          diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.78, 1.02, 0.66), smoothstep(0.55, 0.75, pt) * 0.55);
+        }
         #endif`);
     };
     // the leaves at the edge of the crowns: a picture of a cluster of small leaves with gaps between them (dabbed as a painter
@@ -541,6 +548,9 @@
     const TL = G.Space.TILE, HM = G.Space.HM; const sz = G.clamp(t.size, 0.15, 1.4); const h = G.hash(t.id * 7); const tall = k[0] === 'tall' ? 1.35 : 1; const H = (5 + 7 * sz) * (0.85 + h * 0.3);
     const c = tpal(t)[0]; return [t.x * TL, W.groundH(t.x, t.y) * HM + H * 0.62 * tall, t.y * TL, (2.6 * sz + 0.8) * tall, [c[0] / 255, c[1] / 255, c[2] / 255]];
   };
+  // (the bark's mark: a sway below -0.5 is wood — trunks, branches, stumps, logs — read back as -1 - sway: the crown's own sway
+  // for a branch, none for a trunk; the drawing paints it with bark)
+  const BARK = -1;
   const barkCol = (bark, snow) => (X, Y, Z, nx, ny) => (snow > 0 && ny > 0.6 ? G.lerpColor(bark, SNOW, snow) : bark);
   // a tree of the world as it stands: the god's shapes and tones in the round — a crown of many lumps, faceted, lit from
   // above, swaying a little in the wind (its sway grows with height); pines in tiers; palms with drooping fronds; the
@@ -551,9 +561,9 @@
     const h = G.hash(t.id * 7); const rot = h * TAU; const s = 0.85 + h * 0.3;
     const snow = t.kind === 'snowpine' ? 0.85 : snowAt(W.idx(Math.floor(t.x), Math.floor(t.y))) * 0.85;
     const bark0 = G.hex2rgb(k[2] || '#6b4a2e');
-    if (t.stage === 'stump') { g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.6, 0.45, 0.6), (X2, Y2, Z2, nx, ny) => (ny > 0.9 ? [214, 180, 128] : bark0)); return; }
+    if (t.stage === 'stump') { g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.6, 0.45, 0.6), (X2, Y2, Z2, nx, ny) => (ny > 0.9 ? [214, 180, 128] : bark0), BARK); return; }
     if (t.stage === 'fall' && !t._standing) return; // (a tree falling is drawn moving, by FX3D, until it lies)
-    if (t.stage === 'log' || t.stage === 'fall') { g.put(SH.cyl, R3.mat(X, Y + 0.3, Z, rot, 0.5, 4.5 * sz, 0.5, 0, Math.PI / 2), (X2, Y2, Z2, nx, ny) => (Math.abs(ny) < 0.2 && Math.abs(nx) < 0.3 ? [214, 180, 128] : bark0)); return; }
+    if (t.stage === 'log' || t.stage === 'fall') { g.put(SH.cyl, R3.mat(X, Y + 0.3, Z, rot, 0.5, 4.5 * sz, 0.5, 0, Math.PI / 2), (X2, Y2, Z2, nx, ny) => (Math.abs(ny) < 0.2 && Math.abs(nx) < 0.3 ? [214, 180, 128] : bark0), BARK); return; }
     const burnt = t.stage === 'burnt';
     const pal = burnt ? [[42, 36, 32], [26, 22, 20], [58, 50, 44]] : tpal(t); const bark = burnt ? [30, 26, 24] : bark0;
     const H = (5 + 7 * sz) * s; // (a grown oak, 11 m; a sapling, a little more than a person)
@@ -561,7 +571,7 @@
     const lump = (x, y, z, sx, sy, sz2, cr, sw) => g.put(SH.ico0, R3.mat(x, y, z, rot + x * 0.7 + z * 0.3, sx, sy, sz2), leafCol(pal, snow, X, Z, cr), sw);
     switch (k[0]) {
       case 'cone': {
-        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.45 * sz + 0.15, H * 0.3, 0.45 * sz + 0.15), bc);
+        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.45 * sz + 0.15, H * 0.3, 0.45 * sz + 0.15), bc, BARK);
         if (!burnt) for (let q = 0; q < 4; q++) {
           const w2 = (3.6 - q * 0.8) * sz + 0.6, y = Y + H * (0.2 + q * 0.17); g.sph = [X, Y + H * 0.45, Z, 0.45];
           g.put(SH.cone, R3.mat(X + Math.cos(rot + q) * 0.12, y, Z + Math.sin(rot + q) * 0.12, rot + q * 0.9, w2, H * 0.36, w2), leafCol(pal, snow, X, Z, w2 * 0.5), 0.08 + q * 0.05);
@@ -571,7 +581,7 @@
       case 'palm': case 'banana': {
         // (a trunk that leans and curves, in rings; fronds drooping from its top)
         const lean = (h - 0.5) * 0.5, segs = 4; let px = X, py = Y, pz = Z; const dx = Math.sin(rot), dz = Math.cos(rot);
-        for (let q = 0; q < segs; q++) { const a = lean * (q + 1) / segs; const len = H * 0.85 / segs; g.put(SH.cyl, R3.mat(px, py, pz, rot, 0.36 - q * 0.03, len + 0.05, 0.36 - q * 0.03, a, 0), (X2, Y2, Z2, nx, ny) => G.lerpColor(bark, [bark[0] * 0.75, bark[1] * 0.75, bark[2] * 0.75], ((Y2 - Y) * 2.2) % 1 > 0.5 ? 1 : 0), q * 0.04); px += dx * Math.sin(a) * len; pz += dz * Math.sin(a) * len; py += Math.cos(a) * len; }
+        for (let q = 0; q < segs; q++) { const a = lean * (q + 1) / segs; const len = H * 0.85 / segs; g.put(SH.cyl, R3.mat(px, py, pz, rot, 0.36 - q * 0.03, len + 0.05, 0.36 - q * 0.03, a, 0), (X2, Y2, Z2, nx, ny) => G.lerpColor(bark, [bark[0] * 0.75, bark[1] * 0.75, bark[2] * 0.75], ((Y2 - Y) * 2.2) % 1 > 0.5 ? 1 : 0), BARK - q * 0.04); px += dx * Math.sin(a) * len; pz += dz * Math.sin(a) * len; py += Math.cos(a) * len; }
         if (!burnt) {
           const fl = (3.6 * sz + 1) * (t.kind === 'banana' ? 0.8 : 1); const nf = t.kind === 'banana' ? 6 : 9;
           for (let q = 0; q < nf; q++) {
@@ -598,23 +608,25 @@
         g.sph = [X, Y + 0.8, Z, 0.7];
         for (let q = 0; q < 4; q++) { const a = rot + q * 1.7, d = q ? 0.55 : 0; lump(X + Math.cos(a) * d, Y + 0.7 + (q ? 0 : 0.35), Z + Math.sin(a) * d, (2 * sz + 0.6) * (q ? 0.8 : 1), (1.6 * sz + 0.5) * (q ? 0.8 : 1), (2 * sz + 0.6) * (q ? 0.8 : 1), 1.4, 0.15); }
         if (k[3] && !burnt) for (let q = 0; q < 6; q++) g.put(SH.sph, R3.mat(X + Math.cos(q * 1.7) * 0.85, Y + 1.0 + (q % 2) * 0.4, Z + Math.sin(q * 1.7) * 0.85, 0, 0.2), k[3], 0.15);
+        // (its edge of leaves, as the crowns have)
+        if (gl && !burnt) { const r = sz + 0.35; const lc = leafCol(pal, snow, X, Z, r * 1.4); for (let q = 0; q < 12; q++) { const a = G.hash(t.id * 11 + q) * TAU, e = (G.hash(t.id * 17 + q * 3) - 0.2) * 1.2; const dx = Math.cos(a) * Math.cos(e), dy = Math.sin(e), dz = Math.sin(a) * Math.cos(e); const px = X + dx * r * 1.15, py = Y + 0.85 + dy * r * 0.8, pz = Z + dz * r * 1.15; gl.card(px, py, pz, r * 0.8, a, (G.hash(q + t.id) - 0.5) * 0.9, [dx, dy, dz], lc(px, py, pz, dx, dy, dz), 0.22); } }
         break;
       }
       case 'flat': {
         // (the acacia: a trunk that forks, an umbrella of flat lumps)
-        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.38, H * 0.45, 0.38), bc);
-        for (const sd of [-1, 1]) g.put(SH.cyl, R3.mat(X, Y + H * 0.42, Z, rot, 0.22, H * 0.4, 0.22, 0, sd * 0.55), bc, 0.05);
+        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.38, H * 0.45, 0.38), bc, BARK);
+        for (const sd of [-1, 1]) g.put(SH.cyl, R3.mat(X, Y + H * 0.42, Z, rot, 0.22, H * 0.4, 0.22, 0, sd * 0.55), bc, BARK - 0.05);
         if (!burnt) { const R = 3.5 * sz + 0.6; g.sph = [X, Y + H * 0.7, Z, 0.6]; for (let q = 0; q < 6; q++) { const a = rot + q * 1.05, d = q ? R * 0.55 : 0; lump(X + Math.cos(a) * d, Y + H * 0.8 + (q ? -0.1 : 0.2), Z + Math.sin(a) * d, R * (q ? 0.9 : 1.1), 1.1, R * (q ? 0.9 : 1.1), R * 1.5, 0.22); } }
         break;
       }
       case 'baobab': {
-        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 2.2 * sz + 0.4, H * 0.62, 2.2 * sz + 0.4), bc);
-        for (let q = 0; q < 5; q++) { const a = rot + q * 1.26; g.put(SH.cyl, R3.mat(X, Y + H * 0.58, Z, a, 0.3, H * 0.3, 0.3, 0.8, 0), bc, 0.05);
+        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 2.2 * sz + 0.4, H * 0.62, 2.2 * sz + 0.4), bc, BARK);
+        for (let q = 0; q < 5; q++) { const a = rot + q * 1.26; g.put(SH.cyl, R3.mat(X, Y + H * 0.58, Z, a, 0.3, H * 0.3, 0.3, 0.8, 0), bc, BARK - 0.05);
           if (!burnt) lump(X + Math.sin(a) * H * 0.22, Y + H * 0.8, Z + Math.cos(a) * H * 0.22, 2.2 * sz + 0.6, 1.2, 2.2 * sz + 0.6, 2, 0.2); }
         break;
       }
       case 'willow': {
-        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.55, H * 0.5, 0.55), bc);
+        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.55, H * 0.5, 0.55), bc, BARK);
         if (!burnt) {
           const R = 2.8 * sz + 0.9; g.sph = [X, Y + H * 0.6, Z, 0.7];
           for (let q = 0; q < 6; q++) { const a = rot + q * 1.05, d = q ? R * 0.5 : 0; lump(X + Math.cos(a) * d, Y + H * 0.6 + (q ? 0 : R * 0.3), Z + Math.sin(a) * d, R * 1.1, R * 0.8, R * 1.1, R, 0.25); }
@@ -627,9 +639,9 @@
       default: { // round crowns: oak, birch, the fruit trees, the tall trees of the forests of the south
         const tall = k[0] === 'tall' ? 1.35 : 1;
         const birch = t.kind === 'birch';
-        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.45 * sz + 0.15, H * 0.55 * tall, 0.45 * sz + 0.15), birch ? (X2, Y2, Z2, nx, ny) => (Math.floor((Y2 - Y) * 2.6 + h * 5) % 4 === 0 ? [46, 42, 38] : bark) : bc);
+        g.put(SH.cyl, R3.mat(X, Y, Z, rot, 0.45 * sz + 0.15, H * 0.55 * tall, 0.45 * sz + 0.15), birch ? (X2, Y2, Z2, nx, ny) => (Math.floor((Y2 - Y) * 2.6 + h * 5) % 4 === 0 ? [46, 42, 38] : bark) : bc, BARK);
         // (two branches into the crown)
-        for (const sd of [-1, 1]) g.put(SH.cyl, R3.mat(X, Y + H * 0.38 * tall, Z, rot + sd * 1.2, 0.18 * sz + 0.08, H * 0.28, 0.18 * sz + 0.08, 0.7, 0), bc, 0.05);
+        for (const sd of [-1, 1]) g.put(SH.cyl, R3.mat(X, Y + H * 0.38 * tall, Z, rot + sd * 1.2, 0.18 * sz + 0.08, H * 0.28, 0.18 * sz + 0.08, 0.7, 0), bc, BARK - 0.05);
         if (!burnt) {
           const r = (2.6 * sz + 0.8) * tall; const cy = Y + H * 0.66 * tall; const n = birch ? 6 : 8;
           g.sph = [X, cy + r * 0.2, Z, 0.75];
@@ -678,6 +690,8 @@
         const X = b.x * TL, Z = b.y * TL, Y = W.groundH(b.x, b.y) * HM; const dead = b.burnt > 0; const pal = dead ? [[58, 48, 40], [40, 34, 28], [70, 60, 50]] : [[63, 122, 52], [42, 88, 36], [96, 156, 70]];
         g.sph = [X, Y + 0.5, Z, 0.7];
         for (let q = 0; q < 3; q++) { const a = G.hash(b.id) * TAU + q * 2.1, d = q ? 0.4 : 0; g.put(SH.ico0, R3.mat(X + Math.cos(a) * d, Y + 0.45 + (q ? 0 : 0.15), Z + Math.sin(a) * d, a, 1.3 - q * 0.15, 0.95, 1.3 - q * 0.15), leafCol(pal, 0, X, Z, 1), 0.12); }
+        // (and, near, the leaves standing out of its edge as on the crowns: a bush is leaves, not a smooth lump)
+        if (gl && !dead) { const lc = leafCol(pal, 0, X, Z, 0.9); for (let q = 0; q < 9; q++) { const a = G.hash(b.id * 13 + q) * TAU, e = (G.hash(b.id * 7 + q * 5) - 0.15) * 1.1; const dx = Math.cos(a) * Math.cos(e), dy = Math.sin(e), dz = Math.sin(a) * Math.cos(e); const px = X + dx * 0.72, py = Y + 0.62 + dy * 0.5, pz = Z + dz * 0.72; gl.card(px, py, pz, 0.62, a, (G.hash(q + b.id) - 0.5) * 0.9, [dx, dy, dz], lc(px, py, pz, dx, dy, dz), 0.18); } }
         g.sph = null;
         if (b.berries > 0 && !dead) for (let q = 0; q < Math.min(6, b.berries); q++) g.put(SH.sph, R3.mat(X + Math.cos(q * 1.9) * 0.55, Y + 0.6 + (q % 2) * 0.25, Z + Math.sin(q * 1.9) * 0.55, 0, 0.16), '#c8283a', 0.12);
       }
@@ -857,7 +871,7 @@
     renderer.setClearColor(horC);
     sun.intensity = (0.5 + 2.6 * el) * (1 - night) * (1 - rain * 0.55);
     sun.color.setRGB(1, 0.84 + 0.16 * el, 0.66 + 0.34 * el).multiply(new THREE.Color(am[0], am[1], am[2]));
-    hemi.intensity = (0.52 + 0.62 * (1 - night)) * (1 + rain * 0.2); // (the sky's light in the shade: enough to see, not so much it washes the shadows out)
+    hemi.intensity = (0.55 + 0.66 * (1 - night)) * (1 + rain * 0.2); // (the sky's light in the shade: enough to see, not so much it washes the shadows out)
     // (the light of the sky in the shade is blue, as a painter has it; the ground's bounce warm)
     hemi.color.setRGB(am[0] * 0.75 + 0.2, am[1] * 0.82 + 0.15, am[2] * 0.9 + 0.12).lerp(SKYB, 0.35 * (1 - night) * (1 - rain * 0.6));
     moonL.intensity = night * 0.55;

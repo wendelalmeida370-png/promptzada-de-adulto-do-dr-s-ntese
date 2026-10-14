@@ -1068,8 +1068,11 @@
       case 'talk': {
         const o = S.villagers.get(t.id);
         if (!o) return end(v);
-        v.act = 'talk'; v.path = null; G.faceTo(v, o.x - v.x, o.y - v.y);
-        if (v.actT > 1.4 && (!v.emo || v.emo.t < 0.2)) emote(v, t.court ? 'heart' : 'chat', 1.2);
+        // (a talk, or the body's hug or dance answered: arms round it, dancing with it)
+        v.act = t.hug ? 'hug' : t.dance ? 'dance' : 'talk'; v.path = null; G.faceTo(v, o.x - v.x, o.y - v.y);
+        if (v.actT > 1.4 && (!v.emo || v.emo.t < 0.2)) emote(v, t.court || t.hug ? 'heart' : t.dance ? 'happy' : 'chat', 1.2);
+        // (dancing with someone who has stopped dancing: a last turn, and back to one's life)
+        if (t.dance && o.act !== 'dance' && v.actT > 0.4) t.wait = Math.min(t.wait, 0.3);
         t.wait -= dt; if (t.wait <= 0) end(v);
         break;
       }
@@ -1651,7 +1654,7 @@
       case 'flee': return t.why === 'play' ? 'Correndo do eco da caverna, rindo' : t.why === 'meteor' ? 'Fugindo do céu em chamas!' : t.why === 'fire' ? 'Fugindo do incêndio!' : t.why === 'wolf' ? 'Fugindo de uma fera!' : t.why === 'war' ? 'Fugindo dos invasores!' : t.why === 'ghost' ? 'Fugindo de um fantasma!' : t.why === 'dragon' ? 'Fugindo do dragão!' : 'Correndo em pânico!';
       case 'fire': return t.st === 2 ? 'Enchendo o balde' : t.beat ? 'Abafando as chamas' : 'Combatendo o incêndio!';
       case 'social': return `Conversando com ${pname(t.id)}`;
-      case 'talk': return t.court ? `Flertando com ${pname(t.id)}` : `Conversando com ${pname(t.id)}`;
+      case 'talk': return t.hug ? `Abraçando ${pname(t.id)}` : t.dance ? `Dançando com ${pname(t.id)}` : t.court ? `Flertando com ${pname(t.id)}` : `Conversando com ${pname(t.id)}`;
       case 'court': return `Cortejando ${pname(t.id)}`;
       case 'visit': { const o = S.villagers.get(t.id); if (!o) return 'Visitando a família'; const rel = o.id === v.mother ? 'a mãe' : o.id === v.father ? 'o pai' : o.id === v.partner ? (o.g === 'f' ? 'a parceira' : 'o parceiro') : (o.g === 'f' ? 'a filha' : 'o filho'); return `Visitando ${rel}, ${o.name}`; }
       case 'pray': return t.priest ? 'Conduzindo orações' : v.captive ? 'Rezando por liberdade' : 'Rezando para você';

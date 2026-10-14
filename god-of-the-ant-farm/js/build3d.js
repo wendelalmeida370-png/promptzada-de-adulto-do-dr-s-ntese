@@ -102,7 +102,18 @@ vec3 pattern(float p, vec2 uv, vec3 wp, out vec2 bump) {
     bump = vec2(0.0, (fr - 0.5) * 0.4);
     return vec3((0.68 + 0.32 * (1.0 - smoothstep(0.45, 1.0, fr))) * (0.76 + st * 0.48)) * mix(vec3(1.05, 1.0, 0.9), vec3(0.84, 0.84, 0.8), big) * wthr;
   }
-  if (p == 9.0) { bump = vec2(d.r - 0.5, big - 0.5) * 0.5; return vec3(0.84 + (d.r - 0.5) * 0.55 + (big - 0.5) * 0.3) * mix(vec3(1.0), vec3(0.92, 0.98, 0.8), huge); }
+  if (p == 9.0) {
+    // (turf: tufts in rows down the slope, dark in the hollows between them, patches gone straw-brown or mossy, a flower now
+    // and then — never one flat green)
+    float tuft = texture2D(uDet, vec2(uv.x / 2.4, uv.y / 6.0) + 0.31).r; float fine = texture2D(uDet, uv / 1.2 + 0.6).r;
+    float blade = 0.58 + 0.5 * smoothstep(0.32, 0.7, tuft) + (fine - 0.5) * 0.3;
+    float dry = smoothstep(0.52, 0.72, texture2D(uDet, uv / 7.0 + 0.13).a) * 0.8; float moss = smoothstep(0.5, 0.72, texture2D(uDet, uv / 5.0 + 0.77).a) * 0.6;
+    vec3 c = mix(mix(vec3(0.8, 0.9, 0.64), vec3(1.1, 0.88, 0.56), dry), vec3(0.62, 0.78, 0.6), moss) * blade;
+    vec2 fq = floor(uv * 3.0); float fl = step(0.97, pHash(fq)) * (1.0 - smoothstep(0.12, 0.26, length(fract(uv * 3.0) - 0.5)));
+    c = mix(c, pHash(fq + 2.0) > 0.5 ? vec3(1.9, 1.75, 1.2) : vec3(1.7, 1.0, 1.45), fl);
+    bump = vec2(tuft - 0.5, fine - 0.5) * 0.7;
+    return c;
+  }
   if (p == 10.0) { float v = sin(uv.x * 2.6 + uv.y * 1.3 + big * 9.0); return vec3(0.97 + 0.03 * v - smoothstep(0.95, 1.0, abs(v)) * 0.09) * mix(vec3(1.0), wthr, 0.5); }
   if (p == 11.0) {
     vec2 q = wp.xz / 1.1; q.x += 0.5 * mod(floor(q.y), 2.0); vec2 f = fract(q); float e = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
@@ -473,9 +484,17 @@ vec3 pattern(float p, vec2 uv, vec3 wp, out vec2 bump) {
       const n = Math.min(12, (K.b.graves || []).length);
       for (let k = 0; k < n; k++) { const px = 1 + (k % 4) * (K.w - 2) / 3.2, pz = 1.2 + Math.floor(k / 4) * (K.d - 2.4) / 2.5; K.box(px, 0, pz, 0.6, 0.8, 0.18, '#9a968e'); K.box(px, 0, pz + 0.7, 0.6, 0.06, 1.2, '#6a5a44'); }
     },
+    // the square: paved, a kerb of bigger stones round it, the fountain in the middle (a basin, a column, a bowl spilling
+    // into it), two benches facing it
     praca(g, gw, K) {
-      const P = K.P; K.box(K.w / 2, -0.05, K.d / 2, K.w - 0.2, 0.15, K.d - 0.2, P.base ? P.base[2] : '#a09a8e');
-      K.cyl(K.w / 2, 0.1, K.d / 2, 1.4, 0.6, P.base ? P.base[0] : '#8a8478'); K.cyl(K.w / 2, 0.68, K.d / 2, 1.1, 0.04, '#3a8ab0'); K.cyl(K.w / 2, 0.1, K.d / 2, 0.25, 1.8, P.wl);
+      const P = K.P; const st = P.base ? P.base[2] : '#a09a8e', dk = P.base ? P.base[0] : '#8a8478'; const cx = K.w / 2, cz = K.d / 2;
+      K.as('slab', () => K.box(cx, -0.05, cz, K.w - 0.2, 0.15, K.d - 0.2, st));
+      K.as('stone', () => { for (const [x, z, w, d] of [[cx, 0.25, K.w - 0.2, 0.32], [cx, K.d - 0.25, K.w - 0.2, 0.32], [0.25, cz, 0.32, K.d - 0.84], [K.w - 0.25, cz, 0.32, K.d - 0.84]]) K.box(x, -0.05, z, w, 0.25, d, dk);
+        K.cyl(cx, 0.1, cz, 1.4, 0.6, dk); K.cyl(cx, 0.1, cz, 0.2, 1.5, st); K.cyl(cx, 1.58, cz, 0.5, 0.16, st); });
+      K.cyl(cx, 0.68, cz, 1.22, 0.04, '#3a8ab0'); K.cyl(cx, 1.72, cz, 0.42, 0.03, '#3a8ab0');
+      const bz = Math.min(2.7, K.d / 2 - 1.1);
+      K.as('plankH', () => { for (const s of [-1, 1]) K.box(cx, 0.4, cz + s * bz, 1.8, 0.08, 0.44, '#8a6a44'); });
+      for (const s of [-1, 1]) for (const e of [-0.72, 0.72]) K.box(cx + e, 0.1, cz + s * bz, 0.14, 0.3, 0.38, dk);
     },
     aqueduto(g, gw, K) { const P = K.P; K.box(K.w / 2, 0, K.d / 2, K.w - 0.6, 4.5, K.d - 0.6, P.base ? P.base[2] : '#a09a8e'); K.box(K.w / 2, 4.5, K.d / 2, K.w - 0.2, 0.4, K.d - 0.2, '#3a8ab0'); },
     ruin(g, gw, K) { const P = K.P; for (let k = 0; k < 5; k++) { const h = 0.6 + G.hash(K.b.id * 7 + k) * 2.4; const px = 0.6 + G.hash(K.b.id + k * 3) * (K.w - 1.2), pz = 0.6 + G.hash(K.b.id * 3 + k) * (K.d - 1.2); K.box(px, 0, pz, 1.2, h, 0.5, dim(P.wl || '#efe2c4', 0.7), G.hash(k) * 3); } },
