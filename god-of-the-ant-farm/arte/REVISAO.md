@@ -72,6 +72,9 @@ existem (A2).
    adobe e arenito, o asteca de estuque e tezontle.
 6. **Detalhe menor**: na casa nórdica a porta e a parede ficam do mesmo marrom [caca-01, à direita]; a porta nórdica do
    povo é bem mais escura (`#3a2616` contra `#7e5e40`) — confira se a porta usa `P.door`.
+7. **O arroz maduro do arrozal** [e1-porto, embaixo — que eu tinha chamado de capim; correção do A3]: as folhas amarelas
+   em ponta de flecha estão grandes demais (cada uma ~0,4 m) e todas iguais; mais finas, mais numerosas, de altura e cor
+   variadas, as espigas caídas de maduras (`fields()` do `build3d.js`).
 
 ## A3 — terreno e natureza (ground3d, grass3d, árvores e plantas do realm3d)
 
@@ -87,16 +90,16 @@ existem (A2).
    o seu tom (pelo id).
 3. **Pedras e rochedos** [caca-03]: o bloco de poucas faces lê como 2000; a forma com facetas partidas e o material
    `crag`/`rock`, o pé enterrado com terra e capim em volta (BIBLIA §5: tudo encosta no chão).
-4. **O capim de lança** [e1-porto, embaixo]: as folhas amarelas em ponta de flecha estão grandes demais (cada uma ~0,4 m)
-   e iguais; mais finas, mais numerosas, cor variada. No prado [e1-atravessou] a densidade é ótima, mas o verde satura
-   (31% do quadro em verde saturado): puxe para o capim da BIBLIA (S 50–62).
+4. **O capim do prado** [e1-atravessou]: a densidade é ótima, mas o verde satura (31% do quadro em verde saturado): puxe
+   para o capim da BIBLIA (S 50–62). (As "lanças" amarelas de e1-porto não são capim seu: são o arroz maduro do arrozal,
+   do `build3d.js` — a nota foi para o A2, item 7; correção do A3.)
 5. **Cactos** [caca-03]: cilindros lisos; 8–12 costelas, braços curvados para cima, espinho na figura.
 6. **A neve em manchas no chão** [e6-terreno, em volta da casa]: lê como tinta branca derramada; a borda macia e a neve
    com volume (a sua camada nova de neve no chão deve resolver — conferir).
 7. **A grama em mancha de borda dura sobre a terra** [e1-mercado, embaixo à esquerda]: um retângulo verde chapado,
    recortado — a transição grama/terra precisa da borda esfiapada (tufos, terra aparecendo) que o chão do Modo Deus já
    insinua.
-8. **Orçamento**: `needles` tem 295 KB na pilha (o teto da BIBLIA é 200 KB por material); um `hblur`/`q` resolve.
+8. **Orçamento**: `needles` tinha 295 KB na pilha — **resolvido** pelo A3 na onda 2 (139 KB).
 
 ## A4 — personagens e animação (people3d, body3d)
 
@@ -137,6 +140,25 @@ existem (A2).
 3. **Vermelho demais**: a moldura das janelas romanas, as frutas-cubo, os acabamentos — cada um saturado, juntos viram
    ruído [crop-romanas; e6-terreno]. Vermelho só em acento pequeno.
 4. **Pano liso ao lado de madeira com veio**: as pessoas são as únicas coisas sem material [caca-01: Liv × a parede].
+
+## Depois da onda 2 — o que as fotos já mostram
+
+As fotos fixas da integração da onda 2 (`integracao` @ 1ca7583) estão na fila da catraca (`SP/a1/fotos-integ2`). Até lá,
+as fotos que cada um tirou do próprio branch:
+
+**A5** (`SP/a5/onda2/depois2/`, o branch do A5 sobre a integração da onda 1):
+- **A noite virou noite** [noite-alta.png]: a tocha acende uma poça de luz quente no chão e na neve, a janela da casa do
+  fundo brilha, o céu tem estrelas, e o lado das tábuas no escuro ainda se lê. No jogo original a noite era um laranja
+  chapado (35% do quadro em laranja saturado, `cor.py`). É a melhor mudança de luz do estúdio até aqui.
+- **A praia** [praia.png]: a areia com ondulação, a água rasa num gradiente turquesa que escurece com a fundura, a linha
+  das ondas acompanhando a margem — a borda reta da casa sumiu (a nota 2 do A5 respondida).
+- **O dia** [praca-alta.png, casa-alta.png]: luz limpa, sombras macias, o céu calmo.
+- **Ainda 2000: a chama da fogueira** [casa-alta.png, ao centro]: um cone laranja de 6 lados com brilho aditivo — lê como
+  cone de trânsito. Línguas de fogo em cartões cruzados com o gradiente da chama, tremendo e mudando de altura (pelo
+  `G.VR`), umas brasas subindo; o cone só como núcleo de brilho.
+- E do A2, no mesmo quadro: **as pedras da fogueira** são oito esferas cinza de 22 cm (na sombra, bolas pretas) e as
+  toras, três cilindros lisos (`campfire()` do `build3d.js`): pedras partidas do material `rock` meio enterradas, toras com
+  casca e a ponta carbonizada.
 
 ## O que a caça do A6 achou e também é de arte
 
