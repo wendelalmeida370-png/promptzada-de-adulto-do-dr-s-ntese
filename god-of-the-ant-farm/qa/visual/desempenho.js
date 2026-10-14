@@ -97,6 +97,10 @@ function compare(A, B) {
   return L.join('\n') + '\n';
 }
 
+// (the table and the comparison, for the other tools: required, nothing is measured)
+module.exports = { table, compare, sceneT, busy };
+if (require.main !== module) return;
+
 if (process.argv[2] === '--compara') {
   const A = JSON.parse(fs.readFileSync(process.argv[3], 'utf8')), B = JSON.parse(fs.readFileSync(process.argv[4], 'utf8'));
   const t = compare(A, B); process.stdout.write(t); if (process.argv[5]) fs.writeFileSync(process.argv[5], t);
