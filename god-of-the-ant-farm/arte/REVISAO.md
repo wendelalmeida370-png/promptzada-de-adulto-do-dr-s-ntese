@@ -138,6 +138,22 @@ existem (A2).
    ruído [crop-romanas; e6-terreno]. Vermelho só em acento pequeno.
 4. **Pano liso ao lado de madeira com veio**: as pessoas são as únicas coisas sem material [caca-01: Liv × a parede].
 
+## O que a caça do A6 achou e também é de arte
+
+Do relatório do A6 sobre a integração (`SP/a6/integracao-relatorio.md`), o que se vê e quebra a imagem:
+- **Bichos flutuando ou afundando** (A4 / líder): corpos inteiros 0,4–1,75 m no ar com os pés 0,5 m dentro do chão, outros
+  inteiros debaixo dele [caca-02, caca-03, caca-05-novo]. Nenhum detalhe salva uma coisa que flutua (BIBLIA §5).
+- **As pedras e o disco escuro das bocas de caverna** na altura do meio da boca: numa encosta, enterrados de um lado e no
+  ar do outro (A2, `things3d.js` — já corrigido no trabalho em andamento dele).
+- A blusa colada da mulher asteca (A4) — a mesma nota 1 do A4 aqui.
+
+## As entregas da onda 2 (acompanhamento)
+
+| Quem | O que entregou (commits) | Fotos depois | Revisto |
+|---|---|---|---|
+| A3 | neve como camada com bordas orgânicas; arbusto de frutinhas; linha d'água; biomas dos outros povos (dunas, oliveira, sub-bosque); copas de folhas, pinheiros de ramos, frutas pequenas, cactos com costelas, capim no pé das pedras; pé das árvores nas encostas; copas num verde mais calmo, perto do musgo da turfa; pedras com um tom por faceta (7 commits até 18:40) | a rodada dele está na fila | a ver nas fotos — pelos títulos, responde aos itens 1–6 do A3 e ao "verde que briga" |
+| A2, A4, A5 | ainda sem commit da onda 2 (o trabalho em andamento do A2 já liga materiais e malhas) | — | — |
+
 ## A1 — o que a própria revisão mudou na coluna do A1
 
 - O letreiro de chegada ficava por cima das notícias em tela de até 900 px [caca-04, caca-05-novo: a notícia apagada
