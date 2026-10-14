@@ -173,7 +173,7 @@
   // grade: the colours going out in the dark, -, -, -) · gxAmb: (the sky's light now against noon's, 0.1 at night to 1; -, -, -:
   // for a light a material makes of its own — a rim, a glow — that must go down with the day's)
   const GX = { gxSunW: v4(0, 1, 0, 0), gxHor: v4(0.6, 0.7, 0.85, 0), gxGlow: v4(0, 0, 0, 0), gxBelt: v4(0, 0, 0, 0), gxAir: v4(0.003, 0.001, 0.11, 3), gxAir2: v4(0, 1250, 1520, 1),
-    gxLM: { value: null }, gxLM2: { value: null }, gxLMB: v4(0, 0, 0, 0), gxLMY: v4(0, 16, 32, 0), gxGr: v4(0, 0.12, 0.22, 1), gxTn: v4(0, 0, 0, 0), gxAmb: v4(1, 0, 0, 0) };
+    gxLM: { value: null }, gxLM2: { value: null }, gxLMB: v4(0, 0, 0, 0), gxLMY: v4(0, 16, 32, 0), gxGr: v4(0, 0.09, 0.25, 1), gxTn: v4(0.5, 0, 0, 0), gxAmb: v4(1, 0, 0, 0) };
   R3.GX = GX;
   // (the haze of the horizon in a direction: shared by the sky's dome and the air in front of everything, so the far land
   // melts into exactly the sky behind it)
@@ -636,7 +636,8 @@ vec3 gxGrade( vec3 c ) {
         #else
         vec3 skyR = mix(uSky, uSkyTop, pow(rel, 0.42));
         #endif
-        float fr = 0.02 + 0.98 * pow(1.0 - clamp(dot(nW, Vw), 0.0, 1.0), 5.0);
+        // (the shallows show the sand and the clear water more than the sky: broken by the swash, their face mirrors less)
+        float fr = (0.02 + 0.98 * pow(1.0 - clamp(dot(nW, Vw), 0.0, 1.0), 5.0)) * mix(0.62, 1.0, smoothstep(0.15, 1.6, wD));
         // (the key light on the slopes of the waves: a hard glitter and a soft sheen round it — the sun's, or the moon's road)
         float rs = max(dot(Rw, uKeyDir), 0.0);
         vec3 col = lit * a * (1.0 - fr) + skyR * fr + uKeyCol * (pow(rs, 900.0) * 1.7 + pow(rs, 90.0) * 0.075) * step(0.0, uKeyDir.y);
@@ -1425,7 +1426,9 @@ vec3 gxGrade( vec3 c ) {
   const lum = c => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
   // (the light's own dials, for the tests and the eye: 1 is the light as it is made — the exposure, the sun, the sky's light
   // and how blue it is, the bounce of the land, the deep of the sky overhead, the haze; the grade's richness, its S, its split)
-  const TUNE = R3.TUNE = { exp: 1, sun: 1, sky: 1, skySat: 1, bounce: 1, zen: 1, haze: 1, moon: 1, nf: 1, gsat: 0.12, gs: 0.22, gsplit: 1, toeD: 0, toeN: 0 };
+  // (toeD, toeN: the darks of the curve's toe given back by day and under the moon — the dark wood in the shade keeps its
+  // planks, the moonlit shade stays legible; gsat: the grade's richness in the middle tones, calm: green stays moss)
+  const TUNE = R3.TUNE = { exp: 1, sun: 1, sky: 1, skySat: 1, bounce: 1, zen: 1, haze: 1, moon: 1, nf: 1, gsat: 0.09, gs: 0.25, gsplit: 1, toeD: 0.5, toeN: 0.65 };
   const LT = { air: [1, 1, 1], sun: [0, 0, 0], zen: [0, 0, 0], hor: [0, 0, 0], glow: [0, 0, 0], belt: [0, 0, 0], fill: [0, 0, 0], sky: [0, 0, 0], bounce: [0, 0, 0], key: [0, 0, 0] };
   R3.LT = LT; // (the light of this hour, read only: for the tests and for what wants to match it)
   let _sd = null, _md = null, _cf = null, shadowKey = '';
