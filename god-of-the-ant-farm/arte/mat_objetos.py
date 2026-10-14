@@ -26,7 +26,7 @@ def door(seed=301):
     wood = mix(hexc('#8a6644'), hexc('#6e5034'), tone)
     wood = wood * (0.84 + gr[..., None] * 0.28)
     gap = smooth(0.0, 0.035, np.minimum(bu, 1 - bu)); edge = smooth(0.0, 0.01, np.minimum(lx, 1 - lx))
-    col = wood * (0.42 + 0.58 * gap[..., None]) * (0.5 + 0.5 * edge[..., None])
+    col = wood * (0.52 + 0.48 * gap[..., None]) * (0.74 + 0.26 * edge[..., None])   # (gaps and leaf edges in shade, not black)
     h = (0.55 + 0.1 * np.sin(np.pi * bu) + (gr - 0.5) * 0.06) * (0.4 + 0.6 * gap)
     # the straps (from the hinge: the left leaf's from the left, the right leaf's from the right)
     hx = np.where(leaf == 0, lx, 1 - lx)     # (0 at the hinge)
@@ -247,11 +247,11 @@ def wicker(seed=391):
     behind = (~over) & (np.abs(fx - 0.5) < 0.2)       # (where the rod goes behind the stake, the stake shows)
     h = np.where(behind, np.maximum(stake_p * 0.85, rod_h * 0.5), rod_h)
     rid = ri % nr; tone = hash01(rid, seed + 1); peeled = hash01(rid, seed + 2) > 0.6
-    rcol = np.where(peeled[..., None], mix(hexc('#c8a878'), hexc('#b8966a'), tone), mix(hexc('#8a6440'), hexc('#74522e'), tone))
+    rcol = np.where(peeled[..., None], mix(hexc('#b2946a'), hexc('#a2845c'), tone), mix(hexc('#8e6a46'), hexc('#7a5834'), tone))   # (peeled paler, not glaring)
     scol = mix(hexc('#7a5a3a'), hexc('#6a4c30'), hash01(si % ns, seed + 3))
     fib = value_noise(S, 6, seed + 4, 300) * 0.5 + 0.5
     col = np.where(behind[..., None], scol, rcol) * (0.9 + fib[..., None] * 0.15)
-    col = col * (0.45 + 0.55 * np.clip(h / 0.8, 0, 1))[..., None]
+    col = col * (0.56 + 0.44 * np.clip(h / 0.8, 0, 1))[..., None]
     col *= (0.8 + 0.2 * ao(h, 2, 2.5))[..., None]
     return col, 0.12 + h * 0.75
 
