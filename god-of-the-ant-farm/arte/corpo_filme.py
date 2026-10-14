@@ -1,5 +1,5 @@
 # corpo_filme: draws the frames qa/visual/corpo-filme.js wrote — the skin in motion, side by side, with the ground line
-#   python arte/corpo_filme.py filme.bin saida.png [yaw: 1.5708 = from the side] [width of a frame in px]
+#   python arte/corpo_filme.py filme.bin saida.png [yaw: 1.5708 = from the side] [width of a frame in px] [half height, m]
 import sys, os
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -9,6 +9,7 @@ from PIL import Image, ImageDraw
 src, out = sys.argv[1], sys.argv[2]
 yaw = float(sys.argv[3]) if len(sys.argv) > 3 else 1.5708
 fw = int(sys.argv[4]) if len(sys.argv) > 4 else 220
+hh = float(sys.argv[5]) if len(sys.argv) > 5 else 1.0   # (half the height the frame shows, metres)
 b = open(src, 'rb').read()
 n, nt, nf = np.frombuffer(b[:12], np.uint32)
 T = np.frombuffer(b[12:12 + nt * 12], np.uint32).reshape(-1, 3).astype(np.int64)
@@ -22,8 +23,8 @@ imgs = []
 for V in frames:
     c = V.mean(0)
     # (each frame centred on the body; the ground at y = 0 drawn as a line)
-    im = render(V - np.array([c[0], 0, c[2]]), T, col, None, yaw=yaw, pitch=0.0, size=(fw, 400), box=(0.0, 0.92, 1.0))
-    d = ImageDraw.Draw(im); gy = 400 / 2 + (0.92) * 400 / 2.0
+    im = render(V - np.array([c[0], 0, c[2]]), T, col, None, yaw=yaw, pitch=0.0, size=(fw, 400), box=(0.0, 0.92 * hh, hh))
+    d = ImageDraw.Draw(im); gy = 400 / 2 + (0.92 * hh) * 400 / (2.0 * hh)
     d.line([(0, gy), (fw, gy)], fill=(90, 110, 90), width=1)
     imgs.append(im)
 W = Image.new('RGB', (fw * len(imgs), 400))

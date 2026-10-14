@@ -25,7 +25,7 @@
   B3.rim = { value: 0.2 }; // (the edge light's strength: People3D sets it from the sky of the hour)
   const MESH = {}; // name → { mesh, geo, rows (Float32Array), n }
   let inv = null; // the bones' inverse bind matrices (the rig in its bind pose, inverted)
-  const NP = 40; // texels of params and colours a row (20), then the cloth's state and the joints it is kept off (20)
+  const NP = 41; // texels of params and colours a row (20), the cloth's state and the joints it is kept off (20), more of the face (1)
   B3.MAXR = MAXR;
   // (the joints a cape and a skirt are kept off, in the order of their texels from 22: the hips and the neck — the trunk's
   // axis —, the chest's side and front axes, then shoulder, elbow, wrist of each arm, hip, knee, ankle of each leg)
@@ -135,47 +135,66 @@ float b3aa(float d) { float w = fwidth(d) * 0.8 + 1e-5; return clamp(0.5 - d / w
 float b3weave(vec3 p) { float f = fwidth(p.y) + fwidth(p.x); float k = 1.0 - smoothstep(0.0008, 0.0025, f); return 1.0 + (sin(p.x * 1400.0 + p.z * 600.0) * sin(p.y * 1400.0)) * 0.035 * k; }
 // (a woven band: diamonds of a lighter thread along it — u along the band, v across, 0..1)
 vec3 b3band(vec3 c, float u, float v, float motif) { if (motif < 0.5) return c; float d = abs(fract(u) - 0.5) * 2.0 + abs(v - 0.5) * 2.0; return mix(c, mix(c, vec3(0.95, 0.88, 0.62), 0.6), smoothstep(0.62, 0.52, d) * step(0.25, v) * step(v, 0.75) + 0.0); }
+float b3gl = 0.0; // (the eyes' glint: a light of its own, added after the lighting — it shines in the shade too)
 vec3 b3eye(vec3 skin) {
-  vec4 f = b3T(0); vec3 d = normalize(vBindN);
+  vec4 f = b3T(0), m = b3T(1), x = b3T(40); vec3 d = normalize(vBindN);
+  float outer = d.x * (vZoneI == 1 ? 1.0 : -1.0); // (toward the eye's outer corner)
   vec3 g = normalize(vec3(f.y, f.z, 1.0)); float a = dot(d, g);
   float aw = fwidth(a) * 1.5 + 0.004;
   vec3 iris = b3T(11).rgb;
-  vec3 c = mix(vec3(0.9, 0.88, 0.84), vec3(0.74, 0.7, 0.66), smoothstep(0.3, -0.5, d.y));
+  // (the white, a little grey toward its corners and under the upper lid's shadow)
+  vec3 c = mix(vec3(0.93, 0.91, 0.87), vec3(0.7, 0.66, 0.62), smoothstep(0.25, -0.55, d.y) * 0.8 + smoothstep(0.3, 0.75, abs(d.x)) * 0.35);
+  // (the iris: a dark ring at its edge, brighter toward the middle and below, where the light comes through it; fine
+  // streaks round the pupil, only when close enough to see them; the pupil)
   float ir = smoothstep(0.80 - aw, 0.80 + aw, a);
-  vec3 ic = mix(iris * 0.5, iris * 1.2, smoothstep(0.83, 0.94, a));
-  c = mix(c, ic, ir); c = mix(c, vec3(0.025, 0.02, 0.02), smoothstep(0.952 - aw, 0.952 + aw, a));
-  float hl = dot(d, normalize(g + vec3(-0.24, 0.32, 0.0))); c = mix(c, vec3(1.0), smoothstep(0.985, 0.99, hl) * 0.9);
-  // (the lids: the upper one comes down with the blink, its edge a dark line of lashes)
-  float up = mix(0.5, -0.8, f.x), lo = -0.62 + f.x * 0.3; float e = fwidth(d.y) + 0.01;
+  vec3 ic = mix(iris * 0.32, iris * 1.25, smoothstep(0.80, 0.9, a)) * (1.0 + 0.25 * smoothstep(0.0, -0.5, dot(d - g * a, vec3(0.0, 1.0, 0.0))));
+  float fib = 1.0 - smoothstep(0.0, 0.06, fwidth(a) * 30.0); ic *= 1.0 + 0.12 * fib * sin(atan(d.x - g.x, d.y - g.y) * 22.0);
+  c = mix(c, ic, ir); c = mix(c, vec3(0.02, 0.016, 0.015), smoothstep(0.948 - aw, 0.948 + aw, a));
+  // (the glints: the sky in a wet eye — a big one high on one side, a small one below on the other)
+  float hl = dot(d, normalize(g + vec3(-0.26, 0.34, 0.0))), h2 = dot(d, normalize(g + vec3(0.2, -0.24, 0.0)));
+  float gl = smoothstep(0.972, 0.982, hl) + smoothstep(0.993, 0.996, h2) * 0.6;
+  // (the lids: the upper one comes down with the blink; it opens wide in fear and awe, lowers in a glare, droops at the
+  // outer corner in grief; the lower one rises as the cheeks do in a smile; their edges a dark line of lashes)
+  float up = 0.5 + 0.24 * x.y - 0.16 * m.z - 0.1 * x.z - 0.2 * x.x * max(0.0, outer + 0.2);
+  up = mix(up, -0.8, f.x); float lo = -0.62 + f.x * 0.3 + 0.28 * x.z - 0.1 * x.y;
+  float e = fwidth(d.y) + 0.01;
   float lid = max(smoothstep(up - e, up + e, d.y), smoothstep(lo + e, lo - e, d.y));
-  vec3 lidc = skin * 0.84; float lash = smoothstep(up - 0.16 - e, up - 0.03, d.y);
-  c = mix(c, vec3(0.07, 0.05, 0.04), lash * (1.0 - lid) * 0.9);
-  return mix(c, lidc, lid);
+  vec3 lidc = skin * 0.84; float lash = smoothstep(up - 0.2 - e, up - 0.03, d.y) * (0.75 + 0.25 * smoothstep(-0.2, 0.6, outer));
+  c = mix(c, vec3(0.05, 0.035, 0.03), lash * (1.0 - lid) * 0.92);
+  c = mix(c, vec3(1.0), gl * (1.0 - lid) * 0.85); b3gl = gl * (1.0 - lid) * (1.0 - lash * 0.7);
+  return mix(c, lidc * (1.0 - 0.25 * smoothstep(up + 0.25, up + e, d.y)), lid); // (the lid darker at its edge: its crease)
 }
-// the face: brows, lips, the mouth (open, smiling), the cheeks
+// the face: brows, lips, the mouth (open, smiling, laughing, shouting), the cheeks. Its moods: texel 1 (smile, brows up,
+// anger, blush) and 40 (grief, eyes wide, eyes smiling, the jaw open)
 vec3 b3face(vec3 p, vec3 skin) {
-  vec3 c = skin; vec4 m = b3T(1); vec3 hair = b3T(10).rgb; float ax = abs(p.x);
+  vec3 c = skin; vec4 m = b3T(1), x = b3T(40); vec3 hair = b3T(10).rgb; float ax = abs(p.x);
   if (p.z > 0.06) {
-    // (the brows: an arc over each eye, thick at the inner end; raised in fear, drawn in and down in anger)
-    float u = clamp((ax - 0.016) / 0.052, 0.0, 1.0);
-    float yc = 1.733 + 0.0045 * sin(u * 3.1416) + m.y * 0.006 + u * 0.0015 - m.z * 0.007 * (1.0 - u) + m.y * 0.004 * (1.0 - u);
-    float th = mix(0.0052, 0.0028, u);
-    float br = b3aa(abs(p.y - yc) - th) * smoothstep(0.013, 0.017, ax) * smoothstep(0.072, 0.066, ax);
-    c = mix(c, hair * 0.75, br * 0.92);
-    // (the lips and the mouth)
-    float mx = ax / 0.0262;
-    if (mx < 1.25 && p.y > 1.59 && p.y < 1.64) {
-      float cy = 1.6145 + m.x * 0.0045 * mx * mx; float open = b3T(0).w * 0.009 * max(0.0, 1.0 - mx * mx);
+    // (the brows: an arc over each eye, thick at the inner end, darker than the skin whatever the hair — raised in fear and
+    // awe, drawn in and down in anger, their inner ends up and the outer down in grief)
+    float bx = ax + m.z * 0.0035;
+    float u = clamp((bx - 0.016) / 0.054, 0.0, 1.0);
+    float yc = 1.734 + 0.005 * sin(u * 3.1416) + u * 0.0015 + m.y * (0.008 + 0.004 * (1.0 - u)) - m.z * 0.009 * (1.0 - u) + x.x * (0.008 * (1.0 - u) - 0.004 * u);
+    float th = mix(0.0074, 0.0036, u * u);
+    float br = b3aa(abs(p.y - yc) - th) * smoothstep(0.012, 0.0165, bx) * smoothstep(0.075, 0.068, bx);
+    vec3 bc = min(hair * 0.55, skin * 0.42);
+    c = mix(c, bc, br * 0.95 * (0.85 + 0.15 * sin(p.x * 900.0 + p.y * 300.0) * (1.0 - smoothstep(0.0, 0.002, fwidth(p.x)))));
+    // (the lips and the mouth: the corners up in a smile, down in grief and anger; open as it talks, laughs, gasps — the
+    // teeth showing in a laugh)
+    float mx = ax / (0.0262 + 0.003 * max(m.x, 0.0));
+    if (mx < 1.25 && p.y > 1.585 && p.y < 1.64) {
+      float cy = 1.6145 + m.x * 0.006 * mx * mx; float open = b3T(0).w * 0.011 * max(0.0, 1.0 - mx * mx);
       float up = 0.0078 * (1.0 - mx * mx * 0.75), dn = 0.0092 * (1.0 - mx * mx * 0.85);
       vec3 lips = b3T(12).rgb;
-      float lu = b3aa(p.y - (cy + up)) * b3aa(cy + open * 0.5 - p.y), ld = b3aa((cy - open * 0.5) - p.y) * b3aa(p.y - (cy - dn));
+      float lu = b3aa(p.y - (cy + up + open * 0.3)) * b3aa(cy + open * 0.5 - p.y), ld = b3aa((cy - open * 0.5) - p.y) * b3aa(p.y - (cy - dn - open * 0.5));
       float lip = max(lu * 0.9, ld) * b3aa(mx - 1.0);
       c = mix(c, lips, lip * 0.85);
       float line = b3aa(abs(p.y - cy) - (0.0007 + open * 0.5)) * b3aa(mx - 1.04);
-      c = mix(c, mix(lips * 0.35, vec3(0.12, 0.04, 0.04), step(0.001, open)), line * 0.9);
+      vec3 inside = mix(vec3(0.1, 0.03, 0.03), vec3(0.86, 0.82, 0.74), b3aa(cy + open * 0.5 - 0.0028 - p.y) * step(0.004, open) * b3aa(mx - 0.75) * step(0.2, m.x));
+      c = mix(c, mix(lips * 0.35, inside, step(0.001, open)), line * 0.9);
     }
-    // (a blush on the cheeks)
+    // (a blush on the cheeks — and the cheeks lifted in a smile catch the light)
     float ch = length(vec2(ax - 0.054, p.y - 1.652)) / 0.022; c = mix(c, c * vec3(1.06, 0.86, 0.84), (1.0 - smoothstep(0.3, 1.0, ch)) * m.w);
+    c *= 1.0 + 0.05 * x.z * (1.0 - smoothstep(0.2, 1.1, ch));
   }
   return c;
 }
@@ -302,7 +321,7 @@ vec3 b3paint() {
         .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = b3paint() * mix(1.0, vAO, 0.75);')
         // (a soft light on the edges, as the old figures had: the people read against the ground — as bright as the sky of
         // the hour: at night it does not glow)
-        .replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim;\n#include <opaque_fragment>');
+        .replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim + vec3(0.92, 0.94, 1.0) * b3gl * 0.45;\n#include <opaque_fragment>');
     };
     mat.customProgramCacheKey = () => 'body3d-v2';
     depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
@@ -367,7 +386,7 @@ vec3 b3paint() {
     const f = L.face || {}, u = L.out || DEF;
     const set = (k, a, b, c, d) => { const j = p + k * 4; buf[j] = a; buf[j + 1] = b; buf[j + 2] = c; buf[j + 3] = d; };
     set(0, f.closed || 0, f.gx || 0, f.gy || 0, f.mouth || 0);
-    set(1, f.smile || 0, f.up || 0, f.angry || 0, u.blush || 0);
+    set(1, f.smile || 0, f.up || 0, f.angry || 0, (u.blush || 0) + (f.blush || 0)); set(40, f.sad || 0, f.wide || 0, f.squint || 0, 0);
     set(2, u.sleeve, u.neck, u.bootTop, u.legs); set(3, u.beltY, u.beltH, u.overK, u.strap);
     col(p + 4 * 4, L.skin); lin(5, u.lin.cloth); lin(6, u.lin.trim); lin(7, u.lin.pants); lin(8, u.lin.boots); lin(9, u.lin.belt);
     col(p + 10 * 4, L.hair); lin(11, u.lin.iris); lin(12, u.lin.lips); lin(13, u.lin.over); lin(14, u.lin.metal);

@@ -83,10 +83,69 @@
     // (a feeling over a head: the god's little bubble with its sign — fear, joy, love, anger, a question)
     emoPool = []; for (let k = 0; k < 20; k++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); sp.visible = false; sp.renderOrder = 4; scene.add(sp); emoPool.push(sp); }
 
+    // (what the hands hold: one instanced mesh a kind of tool, its wood and iron in the vertex colours)
+    tools = makeTools(mat);
     // (the body as one skin, if it starts; the pieces of old stay for the props — and for everything, if it does not)
     skin = !!(G.Body3D && G.Body3D.init(THREE, R3));
     if (skin) PARTS.forEach((p, k) => { if (!PROPS.has(p[0])) mesh[k].visible = false; });
   };
+  // ------------------------------ what the hands hold ------------------------------
+  // Each kind a geometry of its own, made once — the grip at the origin, along +Y the way its head points (People3D.rig's
+  // 'tool' frame is the hole of the closed fist, its +Y the fist's axis) — the wood and the iron in the vertex colours; one
+  // instanced mesh a kind, drawn only for those who hold one.
+  let tools = null; const toolN = {};
+  const TOOL_OF = { chop: 'machado', cut: 'machado', mine: 'picareta', dig: 'pa', hammer: 'martelo', build: 'martelo', forge: 'martelo', beat: 'martelo', rake: 'enxada', butcher: 'faca', skin: 'faca', stab: 'espada', fight: 'espada', brandish: 'espada', fish: 'vara', reel: 'vara' };
+  function makeTools(baseMat) {
+    const WOOD = [0.36, 0.25, 0.15], DARK = [0.26, 0.17, 0.1], IRON = [0.42, 0.43, 0.45], EDGE = [0.66, 0.67, 0.7], ROPE = [0.6, 0.52, 0.36];
+    const cyl = (r0, r1, y0, y1, n, col) => { const g = new THREE.CylinderGeometry(r1, r0, y1 - y0, n || 7, 1); g.translate(0, (y0 + y1) / 2, 0); return [g, col]; };
+    const box = (sx, sy, sz, x, y, z, col, rz, rx) => { const g = new THREE.BoxGeometry(sx, sy, sz); if (rx) g.rotateX(rx); if (rz) g.rotateZ(rz); g.translate(x, y, z); return [g, col]; };
+    const merge = list => {
+      let nv = 0, ni = 0; for (const [g] of list) { nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
+      const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), cl = new Float32Array(nv * 3), idx = new Uint16Array(ni); let o = 0, oi = 0;
+      for (const [g, col] of list) {
+        const P = g.attributes.position, N = g.attributes.normal;
+        for (let i = 0; i < P.count; i++) { pos[(o + i) * 3] = P.getX(i); pos[(o + i) * 3 + 1] = P.getY(i); pos[(o + i) * 3 + 2] = P.getZ(i); nor[(o + i) * 3] = N.getX(i); nor[(o + i) * 3 + 1] = N.getY(i); nor[(o + i) * 3 + 2] = N.getZ(i); cl[(o + i) * 3] = col[0]; cl[(o + i) * 3 + 1] = col[1]; cl[(o + i) * 3 + 2] = col[2]; }
+        if (g.index) for (let i = 0; i < g.index.count; i++) idx[oi + i] = g.index.getX(i) + o; else for (let i = 0; i < P.count; i++) idx[oi + i] = o + i;
+        oi += g.index ? g.index.count : P.count; o += P.count; g.dispose();
+      }
+      const out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.BufferAttribute(cl, 3)); out.setIndex(new THREE.BufferAttribute(idx, 1)); return out;
+    };
+    const oct = (sx, sy, sz, y, col) => { const g = new THREE.OctahedronGeometry(1, 0); g.scale(sx, sy, sz); g.translate(0, y, 0); return [g, col]; };
+    const ball = (r, y, col) => { const g = new THREE.SphereGeometry(r, 7, 5); g.translate(0, y, 0); return [g, col]; };
+    const G0 = {
+      // (a spear: an ash shaft of two metres gripped a little under its middle, a binding where the hand holds it, a leaf of iron)
+      lanca: merge([cyl(0.015, 0.014, -1.02, 0.86, 7, WOOD), cyl(0.017, 0.016, 0.86, 0.95, 7, IRON), oct(0.028, 0.15, 0.008, 1.08, EDGE), cyl(0.0165, 0.0165, -0.05, 0.06, 7, ROPE)]),
+      // (an axe: a haft, a bearded head of iron, its edge brighter)
+      machado: merge([cyl(0.016, 0.014, -0.16, 0.56, 7, WOOD), box(0.024, 0.07, 0.11, 0, 0.53, 0.045, IRON), box(0.026, 0.12, 0.03, 0, 0.51, 0.1, EDGE), box(0.03, 0.05, 0.04, 0, 0.53, -0.03, IRON)]), // (its edge the way it strikes: +Z)
+      // (a hammer: a short haft, a square head across it)
+      martelo: merge([cyl(0.014, 0.012, -0.1, 0.34, 7, WOOD), box(0.05, 0.05, 0.13, 0, 0.34, 0, IRON)]),
+      // (a pick: a long haft, a head of iron pointed at both ends, curving)
+      picareta: merge([cyl(0.016, 0.014, -0.14, 0.62, 7, WOOD), box(0.03, 0.034, 0.2, 0, 0.6, 0.06, IRON, 0, 0.12), box(0.028, 0.03, 0.16, 0, 0.6, -0.07, IRON, 0, -0.14), box(0.04, 0.05, 0.05, 0, 0.6, 0, IRON)]),
+      // (a spade: gripped at the top of the haft, the blade below)
+      pa: merge([cyl(0.015, 0.015, -0.86, 0.08, 7, WOOD), box(0.08, 0.03, 0.03, 0, 0.08, 0, DARK), box(0.19, 0.26, 0.016, 0, -0.98, 0, IRON), box(0.19, 0.03, 0.02, 0, -0.84, 0, IRON)]),
+      // (a hoe: a long haft, its blade turned down at the end)
+      enxada: merge([cyl(0.015, 0.014, -0.25, 0.95, 7, WOOD), box(0.17, 0.11, 0.012, 0, 0.92, 0.05, IRON, 0, 1.2)]),
+      // (an elder's staff: as tall as the shoulder, gripped near its top, a knob)
+      cajado: merge([cyl(0.019, 0.016, -0.97, 0.2, 7, DARK), ball(0.03, 0.22, DARK)]),
+      // (a fishing rod: long, thin)
+      vara: merge([cyl(0.014, 0.011, -0.2, 0.7, 6, WOOD), cyl(0.011, 0.006, 0.7, 1.6, 5, WOOD), cyl(0.006, 0.003, 1.6, 2.3, 4, WOOD)]),
+      // (a knife: a short blade on a handle)
+      faca: merge([cyl(0.013, 0.012, -0.05, 0.07, 6, DARK), box(0.03, 0.17, 0.006, 0.006, 0.155, 0, EDGE)]),
+      // (a sword: the grip and its pommel, the guard, a long blade)
+      espada: merge([cyl(0.014, 0.013, -0.06, 0.07, 6, DARK), ball(0.022, -0.08, IRON), box(0.16, 0.022, 0.03, 0, 0.08, 0, IRON), box(0.045, 0.62, 0.009, 0, 0.4, 0, EDGE), oct(0.0225, 0.07, 0.0045, 0.74, EDGE)]),
+    };
+    const tm = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }); tm.onBeforeCompile = baseMat.onBeforeCompile; tm.customProgramCacheKey = () => 'people3d-tool';
+    const out = {}; for (const k in G0) { const m = new THREE.InstancedMesh(G0[k], tm, MAX); m.count = 0; m.visible = false; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); out[k] = m; toolN[k] = 0; }
+    return out;
+  }
+  // (which tool someone holds: the one their work takes, as they swing it; or the one they carry — a spear, a staff)
+  function toolKind(L, pose) { if (pose.tool) return TOOL_OF[L.act] || (L.toolK === 'lanca' && L.tool ? 'lanca' : 'machado'); return L.tool ? (L.toolK || 'lanca') : null; }
+  function toolPut(R, L, pose) { const k = toolKind(L, pose); const m = k && tools && tools[k]; if (!m || toolN[k] >= MAX) return false; m.setMatrixAt(toolN[k]++, R[B.tool]); return true; }
+  function toolsBegin() { if (tools) for (const k in tools) toolN[k] = 0; }
+  function toolsEnd() { if (tools) for (const k in tools) { const m = tools[k]; m.count = toolN[k]; m.visible = toolN[k] > 0; m.instanceMatrix.needsUpdate = true; } }
+  P3.tools = () => (tools ? Object.keys(tools).filter(k => toolN[k]).map(k => [k, toolN[k]]) : []); // (for the tests: who holds what this frame)
+  P3.toolGeo = k => (tools && tools[k] ? tools[k].geometry : null); // (for the tests: a tool's shape, read only)
+
   let emoPool = []; const emoTex = new Map();
   function emoMap(k) { let t = emoTex.get(k); if (t === undefined) { const s = G.Art && G.Art.icon ? G.Art.icon(k) : null; t = s && s.c ? new THREE.CanvasTexture(s.c) : null; if (t) t.colorSpace = THREE.SRGBColorSpace; emoTex.set(k, t); } return t; }
 
@@ -104,17 +163,28 @@
     const s = (h / 1.75) * (v.g === 'f' && ad >= 14 ? 0.95 : 1);
     const robe = v.role === 'sacerdote' || v.role === 'anciao' || v.role === 'escriba' || (v.g === 'f' && ad >= 12 && (v.id % 3 !== 0));
     const hair = ad >= 62 ? G.lerpColor(G.hex2rgb(v.hair || '#3a2a1a'), [214, 210, 204], G.clamp((ad - 62) / 18, 0, 0.85)) : null;
-    const L = { s, skin: v.skin || '#d8a888', hair: hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', belt: darker(cloth, 0.38), brow: darker(v.hair || '#3a2a1a', 0.8), nose: darker(v.skin || '#d8a888', 0.88), lips: darker(v.skin || '#d8a888', 0.62), robe, fem: v.g === 'f' && ad >= 13, bun: v.g === 'f' && ad >= 16 && v.id % 3 === 1, beard: v.g === 'm' && ad >= 26 && v.id % 3 === 0, long: v.g === 'f' && ad >= 8 && v.id % 3 !== 1, bald: v.g === 'm' && ad >= 55 && v.id % 4 === 0, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia', torch: torchOf(v), lantern: !!v.lantern && !v.inside, strap: ad >= 14 && (v.role === 'cacador' || v.role === 'guerreiro' || v.role === 'mercador' || v.role === 'explorador' || (G.Possess && G.Possess.body && G.Possess.body() === v)) };
+    const L = { s, skin: v.skin || '#d8a888', hair: hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', belt: darker(cloth, 0.38), brow: darker(v.hair || '#3a2a1a', 0.8), nose: darker(v.skin || '#d8a888', 0.88), lips: darker(v.skin || '#d8a888', 0.62), robe, fem: v.g === 'f' && ad >= 13, bun: v.g === 'f' && ad >= 16 && v.id % 3 === 1, beard: v.g === 'm' && ad >= 26 && v.id % 3 === 0, long: v.g === 'f' && ad >= 8 && v.id % 3 !== 1, bald: v.g === 'm' && ad >= 55 && v.id % 4 === 0, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia' || (v.role === 'anciao' && ad >= 60), toolK: v.role === 'anciao' ? 'cajado' : 'lanca', act: v.act, torch: torchOf(v), lantern: !!v.lantern && !v.inside, strap: ad >= 14 && (v.role === 'cacador' || v.role === 'guerreiro' || v.role === 'mercador' || v.role === 'explorador' || (G.Possess && G.Possess.body && G.Possess.body() === v)) };
     L.id = v.id || 0; // (only for the drawing's own clocks: each one's cloth moves on its own beat)
     if (skin) {
       L.out = outfitOf(v, L, fac); L.headK = L.out.headK; L.armOut = L.out.skirt === 'saiaL' || L.out.cloakM ? 0.07 : 0;
-      // (the face's mood, from the world's: joy smiles, grief and sadness frown with the brows raised inside, fear opens the
-      // eyes wide, anger draws the brows down; a calm face a little warm)
-      const e = v.emo && v.emo.k; const grief = v.mourn > 0 || e === 'sad';
-      L.mood = { smile: e === 'happy' || e === 'joy' || e === 'heart' ? 0.85 : grief ? -0.55 : e === 'angry' ? -0.25 : e === 'fear' ? -0.2 : 0.12, up: e === 'fear' || e === 'awe' ? 1 : grief ? 0.5 : e === 'question' ? 0.6 : 0, angry: e === 'angry' ? 1 : 0 };
+      // (the face's mood, from the world's feeling: joy smiles with the eyes, love too and blushes; grief frowns with the
+      // brows' inner ends raised and the lids drooping; fear and awe open the eyes wide and the mouth; anger draws the brows
+      // down and in and glares; a question lifts the brows; sickness and sleep half close the eyes; a calm face a little warm)
+      const e = v.emo && v.emo.k; const grief = v.mourn > 0 || e === 'sad'; L.mood = MOOD[grief ? 'sad' : e] || MOOD.calm;
     }
     return L;
   };
+
+  // (the faces of the feelings: smile (−1 frown .. 1), brows up, anger, grief, eyes wide, eyes smiling, the jaw open, blush)
+  const MOOD = {
+    calm: { smile: 0.12 }, chat: { smile: 0.3 }, food: { smile: 0.3 }, fish: { smile: 0.35 }, wood: { smile: 0.2 }, star: { smile: 0.7, wide: 0.35, up: 0.3 },
+    happy: { smile: 0.9, squint: 0.55, jaw: 0.25 }, joy: { smile: 1, squint: 0.6, jaw: 0.4 }, heart: { smile: 0.65, squint: 0.35, blush: 0.4 },
+    sad: { smile: -0.6, up: 0.15, sad: 1 }, angry: { smile: -0.45, angry: 1, squint: 0.3, jaw: 0.08 }, fear: { smile: -0.3, up: 1, wide: 1, jaw: 0.45 }, fire: { smile: -0.3, up: 1, wide: 1, jaw: 0.4 },
+    awe: { smile: 0.1, up: 0.9, wide: 0.6, jaw: 0.35 }, question: { up: 0.65, smile: -0.05 }, sick: { smile: -0.35, sad: 0.6, squint: 0.45 }, zzz: { squint: 0.75 }, pray: { squint: 0.8, smile: 0.1 },
+  };
+  const FACE = ['smile', 'up', 'angry', 'sad', 'wide', 'squint', 'jaw', 'blush'];
+  // (a face moves from one feeling to the next in a third of a second or so, never at once — the view's own memory)
+  function easeMood(s, md, dt) { const m = s.mood || (s.mood = {}); const k = 1 - Math.exp(-6 * (dt || 0)); for (const f of FACE) { const w = md[f] || 0; m[f] = m[f] === undefined ? w : m[f] + (w - m[f]) * k; } return m; }
 
   // ------------------------------ clothes ------------------------------
   // What a person wears, from who they are: their people (the north's tunic and wrapped legs, the apron-dress with its
@@ -215,7 +285,7 @@
   // ------------------------------ poses ------------------------------
   // a pose: the angles of the joints, and the hips' height and lean (radians, metres)
   // (and for the skin: the stance of each foot, the grip of the hands, the mouth, the eyes' look, the cloth's swing)
-  const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, anL: 0, anR: 0, pelY: 0, pelR: 0, pelP: 0, shift: 0, sway: 0, breath: 0, lie: 0, tool: 0, stL: 0, stR: 0, pitL: 0, pitR: 0, grip: 0, talk: 0, gazeX: 0, gazeY: 0, cloth: 0, clothS: 0 });
+  const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, anL: 0, anR: 0, pelY: 0, pelR: 0, pelP: 0, shift: 0, sway: 0, breath: 0, lie: 0, tool: 0, stL: 0, stR: 0, pitL: 0, pitR: 0, grip: 0, talk: 0, gazeX: 0, gazeY: 0, cloth: 0, clothS: 0, clothB: 0, clothV: 0, wrist: 0 });
   Anim.POSE0 = POSE0;
   // (the dead lie as they fell: on the back or face down, the limbs thrown out)
   const DEAD = [
@@ -242,7 +312,8 @@
     jump: () => ({ hipL: -0.9, hipR: -0.3, knL: 1.4, knR: 0.6, shLp: -2.4, shRp: -2.2, shLr: 0.3, shRr: -0.3, elL: 0.3, elR: 0.3, lean: -0.05 }),
     fall: (t) => ({ hipL: -0.25, hipR: 0.15, knL: 0.5, knR: 0.35, shLp: -0.4, shRp: -0.4, shLr: 1.1 + Math.sin(t * 9) * 0.1, shRr: -1.1 - Math.sin(t * 9) * 0.1, elL: 0.4, elR: 0.4, neck: -0.15 }),
     land: () => ({ crouch: 0.28, lean: 0.35, hipL: -0.8, hipR: -0.8, knL: 1.5, knR: 1.5, shLp: -0.6, shRp: -0.6, elL: 0.6, elR: 0.6 }),
-    swing: (t) => { const k = (Math.sin(t * 5.5) + 1) / 2; return { shRp: -2.7 + k * 2.2, shLp: -2.4 + k * 2, elR: 0.3, elL: 0.4, lean: k * 0.35, hipL: -0.15, hipR: 0.2, knL: 0.2, knR: 0.1, tool: 1 }; },
+    // (a swing: the tool raised over the head, the wrist cocked back; brought down, the wrist turning it forward to strike)
+    swing: (t) => { const k = (Math.sin(t * 5.5) + 1) / 2; return { shRp: -2.7 + k * 2.2, shLp: -2.4 + k * 2, elR: 0.3, elL: 0.4, lean: k * 0.35, hipL: -0.15, hipR: 0.2, knL: 0.2, knR: 0.1, tool: 1, wrist: -0.5 + 2.0 * Math.pow(k, 1.5), grip: 1 }; },
     low: (t) => ({ crouch: 0.32, lean: 0.95, hipL: -1.0, hipR: -0.8, knL: 1.3, knR: 1.1, shLp: -1.0 + Math.sin(t * 3) * 0.25, shRp: -1.1 - Math.sin(t * 3) * 0.25, elL: 0.3, elR: 0.3, neck: 0.3 }),
     carry: (t) => ({ ...ST.idle(t), shLp: -0.95, shRp: -0.95, shLr: 0.25, shRr: -0.25, elL: 0.95, elR: 0.95 }),
     carryWalk: (t, sp) => ({ ...ST.walk(t, sp), shLp: -0.95, shRp: -0.95, shLr: 0.25, shRr: -0.25, elL: 0.95, elR: 0.95 }),
@@ -639,12 +710,14 @@
       const sd = k ? -1 : 1;
       let sp = k ? pose.shRp : pose.shLp, sr = k ? pose.shRr : pose.shLr, el = k ? pose.elR : pose.elL;
       if (hold && sd > 0) { sp = -1.05; sr = 0.12; el = 1.25; }
+      // (a spear or a staff carried — not swung —: the upper arm by the side, the forearm forward, the shaft upright)
+      if (k && L.tool && !pose.tool && !lie && !L.bind && upright(pose)) { sp = 0.05; sr = -0.08; el = 1.05; }
       const jz = G.clamp(-sp, -1, 1) * 0.03, roll = sr + sd * (0.05 + (L.armOut || 0)); // (a wide skirt or a cape: the arms a little out)
       fr(R[B.shL + k], R[B.chest], sd * 0.235, 0.46, jz, sp, 0, roll);
       frHalf(R[B.shHL + k], R[B.chest], sd * 0.235, 0.46, jz * 0.5, 0, 0, sd * RIG.roll, sp, 0, roll);
       fr(R[B.faL + k], R[B.shL + k], 0, -0.3, 0, -el, 0, 0); fr(R[B.elHL + k], R[B.shL + k], 0, -0.3, 0, -el / 2, 0, 0);
       fr(R[B.hdL + k], R[B.faL + k], 0, -0.29, 0, 0, 0, 0);
-      const g = (hold && sd > 0) || (k && (pose.tool || L.tool)) || (L.carry && !lie) ? 1 : grip;
+      const g = (hold && sd > 0) || (k && (pose.tool || L.tool)) || (L.carry && !lie) ? 1 : grip; // (both hands close on a swung haft: the swing's own grip)
       fr(R[B.fgL + k], R[B.hdL + k], 0, -RIG.knuckle, 0, 0, 0, -sd * g * 0.95);
       fr(R[B.tbL + k], R[B.hdL + k], -sd * 0.0076, -0.0238, 0.0324, 0, -sd * g * 0.55, -sd * g * 0.25);
     }
@@ -660,10 +733,15 @@
     fr(R[B.clk1], R[B.chest], 0, 0.46, -0.11, Math.max(0, cl) * 0.6, 0, cs * 0.3); fr(R[B.clk2], R[B.clk1], 0, -0.45, 0, Math.max(0, cl) * 0.5, 0, cs * 0.3);
     // (what is held: the torch upright in the left hand whatever the arm does; the tool in the right; the load at the chest)
     M.v.setFromMatrixPosition(R[B.hdL]); R[B.torch].makeRotationY(-yaw + Math.PI / 2); R[B.torch].setPosition(M.v.x, M.v.y, M.v.z); M.b.makeScale(s, s, s); R[B.torch].multiply(M.b);
-    fr(R[B.tool], R[B.hdR], 0, 0, 0, pose.tool ? -Math.PI / 2 : 0, 0, 0);
+    // (the tool: through the hole of the closed fist — toward the palm, under the knuckles — along the fist's axis; a shaft
+    // carried kept upright by the wrist; a swung tool bent down by the wrist as it strikes)
+    const carried = L.tool && !pose.tool && !lie && upright(pose);
+    fr(R[B.tool], R[B.hdR], 0.027, -0.076, 0, Math.PI / 2 + (carried ? -Math.PI / 2 + 1.0 : pose.tool ? (pose.wrist || 0) : 0), 0, 0);
     fr(R[B.carry], R[B.chest], 0, 0.3, 0.26, 0, 0, 0);
     return R;
   };
+  // (standing, walking, talking, turning: a shaft can be carried upright — not lying, swimming, sitting, crouching)
+  function upright(pose) { return !(pose.lie > 0.05) && !(pose.crouch > 0.25); }
   // the body as one skin: the rig's bones and the look to Body3D; the things held and the marker as before
   let skin = false;
   function bodySkin(idx, X, Y, Z, yaw, pose, L, marker) {
@@ -675,15 +753,16 @@
       put('torch', idx, R[B.torch], 0, 0, 0, 0.12, 0, 0, 0, L.lantern ? -0.1 : 0.18, 0, 0.045, L.lantern ? 0.2 : 0.55, 0.045, L.lantern ? '#3a2a1a' : '#5a3c22');
       M.v.setFromMatrixPosition(R[B.torch]); if (P3.flames.length < 40) P3.flames.push([M.v.x, M.v.y + (L.lantern ? -0.18 : 0.47) * s, M.v.z, L.lantern ? 0.5 : 0.85]);
     } else hide('torch', idx);
-    if (pose.tool || L.tool) put('tool', idx, R[B.hdR], 0, 0, 0, pose.tool ? -Math.PI / 2 : 0, 0, 0, 0, pose.tool ? 0.3 : -0.25, 0, 0.04, 0.95, 0.04, '#7a5a3a'); else hide('tool', idx);
+    if ((pose.tool || L.tool) && !toolPut(R, L, pose)) put('tool', idx, R[B.hdR], 0, 0, 0, pose.tool ? -Math.PI / 2 : 0, 0, 0, 0, pose.tool ? 0.3 : -0.25, 0, 0.04, 0.95, 0.04, '#7a5a3a'); else hide('tool', idx);
     if (L.carry) put('carry', idx, R[B.chest], 0, 0.3, 0.26, 0, 0, 0, 0, 0, 0, 0.34, 0.26, 0.3, '#9a7a4a'); else hide('carry', idx);
     if (marker) put('marker', idx, M.root, 0, 2.15 + Math.sin(performance.now() / 300) * 0.04, 0, 0, performance.now() / 600, 0, 0, 0, 0, 0.16, 0.22, 0.16, marker); else hide('marker', idx); // (M.root: the rig's root)
   }
   // the face: the blink (0 open .. 1 shut), where the eyes look (they go ahead of the head), the mouth
   function faceOf(pose, L) {
-    const f = L.face || {}; const b = pose.blink === undefined ? 1 : pose.blink;
-    f.closed = G.clamp((1 - b) / 0.88, 0, 1); f.gx = G.clamp(pose.gazeX || 0, -0.45, 0.45); f.gy = G.clamp(pose.gazeY || 0, -0.3, 0.3); f.mouth = pose.talk || 0;
-    const md = L.mood; f.smile = md ? md.smile : 0.1; f.up = md ? md.up : 0; f.angry = md ? md.angry : 0;
+    const f = L.face || {}; const b = pose.blink === undefined ? 1 : pose.blink; const md = L.mood || MOOD.calm;
+    f.closed = G.clamp((1 - b) / 0.88, 0, 1); f.gx = G.clamp(pose.gazeX || 0, -0.45, 0.45); f.gy = G.clamp(pose.gazeY || 0, -0.3, 0.3);
+    f.mouth = Math.max(pose.talk || 0, md.jaw || 0);
+    f.smile = md.smile || 0; f.up = md.up || 0; f.angry = md.angry || 0; f.sad = md.sad || 0; f.wide = md.wide || 0; f.squint = md.squint || 0; f.blush = md.blush || 0;
     return f;
   }
   // the parts the skin replaces (the props stay: the torch, the tool, the load, the marker over a head)
@@ -716,12 +795,12 @@
     let n = Math.min(near.length, q.npcs, MAX - 1); while (n > 0 && near[n - 1][0] > R2) n--;
     let idx = 0, emoN = 0; P3.walkers.length = 0; P3.flames.length = 0;
     if (skin && G.Body3D.broken(R3.renderer && R3.renderer())) { skin = false; G.Body3D.clear(); PARTS.forEach((p, k) => { mesh[k].visible = true; }); }
-    if (skin) G.Body3D.begin();
+    if (skin) G.Body3D.begin(); toolsBegin();
     if (av) {
       // (the body's feet: where they stand in its stride — the view's own memory, a new one for a new body or after a jump)
       if (!avFeet || avFeet.id !== av.id || Math.hypot(av.X - avFeet.X, av.Z - avFeet.Z) > 4) avFeet = { id: av.id, f: [{ on: 0 }, { on: 0 }] }; avFeet.X = av.X; avFeet.Z = av.Z;
       av.look.ground = av.ground === false || av.swim ? undefined : av.Y; av.look.plant = avFeet.f;
-      avFeet.t = (avFeet.t || 0) + dt; av.pose.blink = blinkAt(avFeet.t, av.id); cloth(avFeet, av.X, av.Z, av.yaw, dt, av.pose);
+      avFeet.t = (avFeet.t || 0) + dt; av.pose.blink = blinkAt(avFeet.t, av.id); cloth(avFeet, av.X, av.Z, av.yaw, dt, av.pose); if (av.look.mood) av.look.mood = easeMood(avFeet, av.look.mood, dt);
       P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null);
     }
     const seen = new Set();
@@ -751,7 +830,7 @@
       const look = P3.lookFor(s.yaw, X, Z, av, st);
       s.pose.lookY = (s.pose.lookY || 0) + (look - (s.pose.lookY || 0)) * (1 - Math.exp(-4 * dt));
       s.pose.gazeX = G.clamp((look - s.pose.lookY) * 0.9, -0.42, 0.42); // (the eyes go first, the head follows)
-      s.pose.blink = blinkAt(s.t, v.id); cloth(s, X, Z, s.yaw, dt, s.pose);
+      s.pose.blink = blinkAt(s.t, v.id); cloth(s, X, Z, s.yaw, dt, s.pose); if (Lv.mood) Lv.mood = easeMood(s, Lv.mood, dt);
       s.st = st;
       // (beyond 15 m the lighter body, back to the fine one inside 13 m: someone standing at the edge does not flicker between them)
       { const de = (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2; s.lod = de > (s.lod ? 169 : 225) ? 1 : 0; }
@@ -786,7 +865,7 @@
     P3.crowd = c;
     for (const m of mesh) { m.count = idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
     P3.count = idx;
-    if (skin) G.Body3D.end();
+    if (skin) G.Body3D.end(); toolsEnd();
     beasts(focus, R2, dt);
   };
   // (a blink: the lids down and up in a sixth of a second, every four seconds or so — each person on their own beat)
