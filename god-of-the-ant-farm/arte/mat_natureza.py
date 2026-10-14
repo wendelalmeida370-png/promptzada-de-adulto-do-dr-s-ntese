@@ -146,12 +146,63 @@ def crag(seed=361):
     col *= (0.78 + 0.34 * light(h, 4))[..., None] * ao(h, 4, 1.8)[..., None]
     return col, h
 
+def foliage(seed=371):
+    # the outside of a broad crown, for the lumps of the trees and the bushes: leaves crowding over one another in three
+    # layers — the far ones darker and lower, the near ones lighter and higher —, each leaf an oval with a tip and its
+    # midrib, its own green (a little yellower, a little bluer), the deep of the crown dark between them but never black
+    r = rng(seed)
+    col = mix(hexc('#2e3c24'), hexc('#3a4a2c'), fbm(S, 8, 3, seed)); h = 0.1 + fbm(S, 6, 3, seed + 1) * 0.08
+    for (n, lv) in ((1250, 0.3), (1250, 0.6), (950, 0.92)):
+        leaves = []; ribs = []
+        for k in range(n):
+            cx, cy = r.random(), r.random(); L = r.uniform(0.022, 0.042); W = L * r.uniform(0.42, 0.6); a = r.uniform(0, 2 * np.pi)
+            ca, sa = np.cos(a), np.sin(a); pts = []
+            for t in np.linspace(0, 2 * np.pi, 16, endpoint=False):
+                px = np.cos(t) * L * (1 + 0.22 * max(0.0, np.cos(t)) ** 6); py = np.sin(t) * W * (1 - 0.3 * np.cos(t))
+                pts.append((cx + px * ca - py * sa, cy + px * sa + py * ca))
+            leaves.append((pts, r.random()))
+            ribs.append((cx - ca * L * 0.8, cy - sa * L * 0.8, cx + ca * L * 0.85, cy + sa * L * 0.85, 1.0, 0.6))
+        v, c = stamp_polys(S, leaves); rb = strokes(S, ribs, 0.7)
+        tone = ramp(v, [(0, '#56703c'), (0.3, '#6a8444'), (0.6, '#7a9250'), (0.82, '#8a9652'), (1, '#5e7a50')]) * (0.72 + lv * 0.36)
+        tone = tone * (1 - rb[..., None] * 0.1)
+        col = mix(col, tone, c[..., None] if c.ndim == 2 else c)
+        h = np.where(c > 0.5, 0.18 + lv * 0.72 + (v - 0.5) * 0.06, h)
+    k = curv(h, 1.2, 5.0)
+    col *= (0.9 + 0.14 * k)[..., None] * (0.72 + 0.28 * ao(h, 2.5, 2.0))[..., None]
+    return col, h
+
+def boughs(seed=381):
+    # the outside of a conifer's tier of boughs: sprays of needles on their twigs, in three layers, each spray its own
+    # dark green, the dark of the tree's inside between them
+    r = rng(seed)
+    col = mix(hexc('#1c2a20'), hexc('#26342a'), fbm(S, 8, 3, seed)); h = 0.1 + fbm(S, 6, 3, seed + 1) * 0.08
+    for (n, lv) in ((420, 0.3), (420, 0.6), (330, 0.92)):
+        items = []; twigs = []; tones = []
+        for k in range(n):
+            x0, y0 = r.random(), r.random(); a = r.uniform(0, 2 * np.pi); L = r.uniform(0.055, 0.1); tv = r.random()
+            twigs.append((x0, y0, x0 + np.cos(a) * L, y0 + np.sin(a) * L, 1.0, 1.0))
+            for j in range(16):
+                f = (j + 0.5) / 16; px = x0 + np.cos(a) * L * f; py = y0 + np.sin(a) * L * f
+                for sd in (-1, 1):
+                    na = a + sd * (0.75 + r.normal(0, 0.12)); nl = r.uniform(0.013, 0.022) * (1.1 - f * 0.4)
+                    items.append((px, py, px + np.cos(na) * nl, py + np.sin(na) * nl, 0.35 + tv * 0.65, 0.6))
+        nd = strokes(S, items, 1.1); tw = strokes(S, twigs, 1.3)
+        cov = smooth(0.0, 0.22, blur(np.maximum(nd, tw * 0.6), 0.5))
+        tone = ramp(np.clip(nd / max(nd.max(), 1e-4), 0, 1), [(0, '#3a5a3c'), (0.45, '#4c6c44'), (0.75, '#5c7a4a'), (1, '#6a8452')]) * (0.7 + lv * 0.38)
+        tone = mix(tone, hexc('#4a3a2a'), np.clip(tw, 0, 1)[..., None] * 0.5)
+        col = mix(col, tone, cov[..., None]); h = np.where(cov > 0.5, 0.18 + lv * 0.72 + nd * 0.04, h)
+    k = curv(h, 1.0, 5.0)
+    col *= (0.9 + 0.14 * k)[..., None] * (0.72 + 0.28 * ao(h, 2.0, 2.0))[..., None]
+    return col, h
+
 MATS = [
     ('moss', moss, 1.2, 'musgo em almofadas, pontas amareladas, rachas escuras'),
-    ('needles', needles, 3.0, 'chão de pinheiral: agulhas caídas, pinhas, um pouco de musgo'),
+    ('needles', needles, 3.0, 'chão de pinheiral: agulhas caídas, pinhas, um pouco de musgo', {'hblur': 1.2, 'q': 68}),
     ('mud', mud, 3.0, 'lama: terra molhada, poças nas baixas, pegadas, capim'),
     ('pebbles', pebbles, 2.4, 'leito de rio: seixos rolados com areia entre eles'),
     ('stony', stony, 3.0, 'chão pedregoso: pedras de todo tamanho meio enterradas na terra seca'),
     ('trail', trail, 4.0, 'trilha: terra batida pelos pés e rodas, rachas finas, pedrinhas'),
     ('crag', crag, 5.0, 'rocha de penhasco e rochedo: camadas dobradas, rachas que vagueiam, líquen'),
+    ('foliage', foliage, 2.0, 'copa de folhas largas: folhas sobrepostas em três camadas, nervura, o fundo escuro da copa'),
+    ('boughs', boughs, 1.6, 'ramo de conífera: tufos de agulhas nos raminhos, o escuro de dentro da árvore', {'px': 256, 'hblur': 1.1}),
 ]
