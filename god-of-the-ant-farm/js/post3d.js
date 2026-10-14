@@ -17,7 +17,7 @@
 (function (G) {
   const P3 = G.Post3D = { on: false, failed: null, passes: 0, ms: 0 };
   let THREE = null, R3 = null, ren = null;
-  let rtS = null, rtA = null, rtB = null, BL = [], quad = null, qcam = null, M = null, size = [0, 0], want = { ao: 0, bloom: 0 };
+  let rtS = null, rtA = null, rtB = null, BL = [], rtR = [], quad = null, qcam = null, M = null, size = [0, 0], want = { ao: 0, bloom: 0, rays: 0 }, _sp = null;
   const NB = 5; // (the glow's ladder of ever smaller pictures)
 
   // ------------------------------ the shaders ------------------------------
@@ -83,18 +83,25 @@ void main() { vec2 h = uTexel; gl_FragColor = vec4((texture2D(tSrc, vUv).rgb * 4
 void main() { vec2 h = uTexel; vec3 c = (texture2D(tSrc, vUv + vec2(-h.x * 2.0, 0.0)).rgb + texture2D(tSrc, vUv + vec2(h.x * 2.0, 0.0)).rgb + texture2D(tSrc, vUv + vec2(0.0, -h.y * 2.0)).rgb + texture2D(tSrc, vUv + vec2(0.0, h.y * 2.0)).rgb) / 6.0
   + (texture2D(tSrc, vUv + vec2(-h.x, -h.y)).rgb + texture2D(tSrc, vUv + vec2(h.x, -h.y)).rgb + texture2D(tSrc, vUv + vec2(-h.x, h.y)).rgb + texture2D(tSrc, vUv + vec2(h.x, h.y)).rgb) / 12.0;
   gl_FragColor = vec4(c * uK, 1.0); }`;
+  // the light streaming toward the eye through the gaps round a low sun (crepuscular rays): the sky near the sun, where nothing
+  // stands in front of it, smeared toward the sun's place on the screen — shafts between the crowns and the houses when one
+  // looks toward the sun (only when it is up and in front of the eye; a quarter of the picture's size: the shafts are soft)
+  const RMASKFS = `varying vec2 vUv; uniform sampler2D tScene; uniform sampler2D tDepth; uniform vec2 uSun; uniform float uAsp;
+void main() {
+  float sky = step(0.99995, texture2D(tDepth, vUv).r);
+  vec2 v = (vUv - uSun) * vec2(uAsp, 1.0);
+  gl_FragColor = vec4(min(texture2D(tScene, vUv).rgb, vec3(6.0)) * sky * exp(-dot(v, v) * 5.0), 1.0);
+}`;
+  const RBLURFS = `varying vec2 vUv; uniform sampler2D tSrc; uniform vec2 uSun; uniform float uLen;
+void main() {
+  vec2 d = (uSun - vUv) * uLen / 20.0; vec2 uv = vUv; vec3 s = vec3(0.0); float w = 1.0, ws = 0.0;
+  for (int i = 0; i < 20; i++) { s += texture2D(tSrc, uv).rgb * w; ws += w; w *= 0.94; uv += d; }
+  gl_FragColor = vec4(s / ws, 1.0);
+}`;
   // the last pass: the picture, its shade, its glow; the exposure of the hour, the tone curve, the grade, to the screen's colours
-  const COMPFS = () => `varying vec2 vUv; uniform sampler2D tScene; uniform sampler2D tAOt; uniform sampler2D tBloom; uniform vec2 uAOTexel; uniform float uAOK; uniform float uBloomK; uniform float uExp;
+  const COMPFS = () => `varying vec2 vUv; uniform sampler2D tScene; uniform sampler2D tAOt; uniform sampler2D tBloom; uniform sampler2D tRays; uniform vec2 uAOTexel; uniform float uAOK; uniform float uBloomK; uniform float uRayK; uniform float uExp;
 ${VIEW}
 ${R3.GLSL.grade}
-// (three.js's neutral curve, the one the materials use straight to the screen — Khronos PBR Neutral)
-vec3 neutral(vec3 color) {
-  const float startCompression = 0.8 - 0.04; const float desaturation = 0.15;
-  float x = min(color.r, min(color.g, color.b)); float offset = x < 0.08 ? x - 6.25 * x * x : 0.04; color -= offset;
-  float peak = max(color.r, max(color.g, color.b)); if (peak < startCompression) return color;
-  float d = 1.0 - startCompression; float newPeak = 1.0 - d * d / (peak + d - startCompression); color *= newPeak / peak;
-  float g = 1.0 - 1.0 / (desaturation * (peak - newPeak) + 1.0); return mix(color, vec3(newPeak), g);
-}
 vec3 toSRGB(vec3 c) { return mix(c * 12.92, pow(c, vec3(0.41666)) * 1.055 - 0.055, step(0.0031308, c)); }
 void main() {
   vec3 c = texture2D(tScene, vUv).rgb;
@@ -110,7 +117,10 @@ void main() {
 #ifdef BLOOM
   c += texture2D(tBloom, vUv).rgb * uBloomK;
 #endif
-  c = gxGrade(neutral(c * uExp));
+#ifdef RAYS
+  c += texture2D(tRays, vUv).rgb * uRayK;
+#endif
+  c = gxGrade(gxTone(c * uExp)); // (the curve and the grade the materials use straight to the screen: R3.GLSL.grade)
   c = toSRGB(clamp(c, 0.0, 1.0));
   c += (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0;
   gl_FragColor = vec4(c, 1.0);
@@ -131,7 +141,9 @@ void main() {
       pre: mk(PREFS, { tSrc: { value: null }, uTexel: { value: new THREE.Vector2() }, uExp: { value: 1 }, uTh: { value: 1.1 } }),
       down: mk(DOWNFS, { tSrc: { value: null }, uTexel: { value: new THREE.Vector2() } }),
       up: mk(UPFS, { tSrc: { value: null }, uTexel: { value: new THREE.Vector2() }, uK: { value: 1 } }),
-      comp: null, compU: Object.assign(view(), { tScene: { value: null }, tAOt: { value: null }, tBloom: { value: null }, uAOTexel: { value: new THREE.Vector2() }, uAOK: { value: 0.85 }, uBloomK: { value: 0.12 }, uExp: { value: 1 } }),
+      rmask: mk(RMASKFS, { tScene: { value: null }, tDepth: { value: null }, uSun: { value: new THREE.Vector2() }, uAsp: { value: 1 } }),
+      rblur: mk(RBLURFS, { tSrc: { value: null }, uSun: { value: new THREE.Vector2() }, uLen: { value: 0.5 } }),
+      comp: null, compU: Object.assign(view(), { tScene: { value: null }, tAOt: { value: null }, tBloom: { value: null }, tRays: { value: null }, uAOTexel: { value: new THREE.Vector2() }, uAOK: { value: 0.85 }, uBloomK: { value: 0.12 }, uRayK: { value: 0 }, uExp: { value: 1 }, gxGr: R3.GX.gxGr, gxTn: R3.GX.gxTn }),
     };
     M.up.blending = THREE.AdditiveBlending; M.up.transparent = true;
     quad = new THREE.Mesh(g, M.blur); quad.frustumCulled = false;
@@ -141,17 +153,17 @@ void main() {
   function shaders() {
     if (M.ao) M.ao.dispose(); if (M.comp) M.comp.dispose();
     M.ao = mk(AOFS, M.aoU, { NS: want.ao >= 2 ? 12 : 8 });
-    const d = {}; if (want.ao) d.AO = 1; if (want.bloom) d.BLOOM = 1; M.comp = mk(COMPFS(), M.compU, d);
+    const d = {}; if (want.ao) d.AO = 1; if (want.bloom) d.BLOOM = 1; if (want.rays) d.RAYS = 1; M.comp = mk(COMPFS(), M.compU, d);
   }
   P3.quality = function (q) {
-    if (!M) return; const nw = { ao: q.ao | 0, bloom: q.bloom | 0 };
-    const changed = nw.ao !== want.ao || nw.bloom !== want.bloom; want = nw;
+    if (!M) return; const nw = { ao: q.ao | 0, bloom: q.bloom | 0, rays: q.rays | 0 };
+    const changed = nw.ao !== want.ao || nw.bloom !== want.bloom || nw.rays !== want.rays; want = nw;
     P3.on = !P3.failed && (want.ao > 0 || want.bloom > 0);
     if (!P3.on) { free(); return; }
     if (changed || !M.comp) { shaders(); size = [0, 0]; }
     P3.resize();
   };
-  function free() { for (const r of [rtS, rtA, rtB, ...BL]) if (r) r.dispose(); rtS = rtA = rtB = null; BL = []; size = [0, 0]; }
+  function free() { for (const r of [rtS, rtA, rtB, ...BL, ...rtR]) if (r) r.dispose(); rtS = rtA = rtB = null; BL = []; rtR = []; size = [0, 0]; }
   P3.release = free;
   P3.resize = function () {
     if (!P3.on || !ren) return; const v = ren.getDrawingBufferSize(new THREE.Vector2()); const w = Math.max(1, v.x | 0), h = Math.max(1, v.y | 0);
@@ -164,7 +176,19 @@ void main() {
       for (const n of ['A', 'B']) { const r = new THREE.WebGLRenderTarget(aw, ah, { type: HF, depthBuffer: false, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter }); if (n === 'A') rtA = r; else rtB = r; }
     }
     if (want.bloom) { let bw = w, bh = h; for (let k = 0; k < NB; k++) { bw = Math.max(1, bw >> 1); bh = Math.max(1, bh >> 1); BL.push(new THREE.WebGLRenderTarget(bw, bh, { type: HF, depthBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter })); } }
+    if (want.rays) for (let k = 0; k < 2; k++) rtR.push(new THREE.WebGLRenderTarget(Math.max(1, w >> 2), Math.max(1, h >> 2), { type: HF, depthBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }));
   };
+  // (where the sun is on the screen, and how strong its shafts are: up, in front of the eye, low in the sky the most, none in the rain)
+  function sunOnScreen(camera) {
+    const sk = R3.skyU; if (!sk) return 0; const sd = sk.sunDir.value; const s = sd.y;
+    if (!_sp) _sp = { v: new THREE.Vector3(), f: new THREE.Vector3() };
+    camera.getWorldDirection(_sp.f); const facing = _sp.f.dot(sd); if (facing < 0.05) return 0;
+    _sp.v.copy(camera.position).addScaledVector(sd, 500).project(camera); const u = (_sp.v.x + 1) / 2, v = (_sp.v.y + 1) / 2;
+    const out = Math.max(Math.max(-u, u - 1), Math.max(-v, v - 1), 0);
+    const w = G.S.weather || {}; const k = G.smooth(-0.02, 0.06, s) * (0.35 + 0.65 * (1 - G.smooth(0.12, 0.6, s))) * G.smooth(0.05, 0.45, facing) * (1 - G.smooth(0.05, 0.45, out)) * (1 - G.clamp(w.rain || 0, 0, 1));
+    M.rmask.uniforms.uSun.value.set(u, v); M.rblur.uniforms.uSun.value.set(u, v);
+    return k;
+  }
   function pass(mat, target) { quad.material = mat; ren.setRenderTarget(target); ren.render(quad, qcam); P3.passes++; }
   // the frame through the passes (false: not on — the picture goes straight to the screen)
   P3.render = function (scene, camera) {
@@ -193,6 +217,15 @@ void main() {
         ren.autoClear = ac;
         M.compU.tBloom.value = BL[0].texture;
       }
+      if (want.rays && rtR.length) {
+        const k = sunOnScreen(camera); M.compU.uRayK.value = k * 0.55;
+        if (k > 0.01) {
+          M.rmask.uniforms.tScene.value = rtS.texture; M.rmask.uniforms.tDepth.value = rtS.depthTexture; M.rmask.uniforms.uAsp.value = size[0] / Math.max(1, size[1]); pass(M.rmask, rtR[0]);
+          M.rblur.uniforms.tSrc.value = rtR[0].texture; M.rblur.uniforms.uLen.value = 0.55; pass(M.rblur, rtR[1]);
+          M.rblur.uniforms.tSrc.value = rtR[1].texture; M.rblur.uniforms.uLen.value = 0.22; pass(M.rblur, rtR[0]);
+        }
+        M.compU.tRays.value = rtR[0].texture;
+      }
       M.compU.tScene.value = rtS.texture; M.compU.uExp.value = exp;
       pass(M.comp, prevT);
     } finally { ren.autoClear = ac; info.autoReset = true; ren.setRenderTarget(prevT); }
@@ -203,10 +236,10 @@ void main() {
   P3.check = function () {
     const out = []; if (!M || P3.failed) return out; const q = R3.Q();
     if (P3.on !== (q.ao > 0 || q.bloom > 0)) out.push(`pós-processamento ${P3.on ? 'ligado' : 'desligado'} numa qualidade que ${P3.on ? 'não' : ''} o pede`);
-    if (P3.on && rtS) { const v = ren.getDrawingBufferSize(new THREE.Vector2()); if (rtS.width !== v.x || rtS.height !== v.y) out.push(`imagem do pós ${rtS.width}×${rtS.height}, a tela ${v.x}×${v.y}`); if (want.ao && !rtA) out.push('sombra de contato sem imagem'); if (want.bloom && BL.length !== NB) out.push(`brilho com ${BL.length} degraus`); }
-    for (const k of ['uExp', 'uAOK', 'uBloomK']) if (!Number.isFinite(M.compU[k].value)) out.push(`pós: ${k} não é número`);
+    if (P3.on && rtS) { const v = ren.getDrawingBufferSize(new THREE.Vector2()); if (rtS.width !== v.x || rtS.height !== v.y) out.push(`imagem do pós ${rtS.width}×${rtS.height}, a tela ${v.x}×${v.y}`); if (want.ao && !rtA) out.push('sombra de contato sem imagem'); if (want.bloom && BL.length !== NB) out.push(`brilho com ${BL.length} degraus`); if (want.rays && rtR.length !== 2) out.push(`raios de sol com ${rtR.length} imagens`); }
+    for (const k of ['uExp', 'uAOK', 'uBloomK', 'uRayK']) if (!Number.isFinite(M.compU[k].value)) out.push(`pós: ${k} não é número`);
     return out;
   };
   // (what it holds: for the measures)
-  P3.info = () => ({ on: P3.on, failed: P3.failed, ao: want.ao, bloom: want.bloom, size: size.slice(), targets: [rtS, rtA, rtB, ...BL].filter(Boolean).length, passes: P3.passes, sceneCalls: P3.sceneCalls || 0, ms: +P3.ms.toFixed(1) });
+  P3.info = () => ({ on: P3.on, failed: P3.failed, ao: want.ao, bloom: want.bloom, rays: want.rays, rayK: +M.compU.uRayK.value.toFixed(2), size: size.slice(), targets: [rtS, rtA, rtB, ...BL, ...rtR].filter(Boolean).length, passes: P3.passes, sceneCalls: P3.sceneCalls || 0, ms: +P3.ms.toFixed(1) });
 })(window.G);
