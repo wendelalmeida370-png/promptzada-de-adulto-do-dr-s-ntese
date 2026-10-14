@@ -37,8 +37,9 @@
   let mesh = null; // InstancedMesh per part
   let beastMesh = null, crowd = null, crowdHead = null, crowdHair = null, crowdLegs = null;
   const vis = new Map(); // id → the view's own memory of someone: where they were, which way they face, their walk, their pose
-  P3.clear = function () { vis.clear(); for (const sp of emoPool) sp.visible = false; if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
-  G.worldHooks.push(() => vis.clear());
+  P3.clear = function () { vis.clear(); if (G.Body3D && G.Body3D.clear) G.Body3D.clear(); for (const sp of emoPool) sp.visible = false; if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
+  let avFeet = null;
+  G.worldHooks.push(() => { vis.clear(); avFeet = null; });
 
   P3.init = function (three, realm) {
     THREE = three; R3 = realm; scene = realm.scene();
@@ -79,6 +80,10 @@
     for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs]) { m.count = 0; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); }
     // (a feeling over a head: the god's little bubble with its sign — fear, joy, love, anger, a question)
     emoPool = []; for (let k = 0; k < 20; k++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); sp.visible = false; sp.renderOrder = 4; scene.add(sp); emoPool.push(sp); }
+
+    // (the body as one skin, if it starts; the pieces of old stay for the props — and for everything, if it does not)
+    skin = !!(G.Body3D && G.Body3D.init(THREE, R3));
+    if (skin) PARTS.forEach((p, k) => { if (!PROPS.has(p[0])) mesh[k].visible = false; });
   };
   let emoPool = []; const emoTex = new Map();
   function emoMap(k) { let t = emoTex.get(k); if (t === undefined) { const s = G.Art && G.Art.icon ? G.Art.icon(k) : null; t = s && s.c ? new THREE.CanvasTexture(s.c) : null; if (t) t.colorSpace = THREE.SRGBColorSpace; emoTex.set(k, t); } return t; }
@@ -97,8 +102,97 @@
     const s = (h / 1.75) * (v.g === 'f' && ad >= 14 ? 0.95 : 1);
     const robe = v.role === 'sacerdote' || v.role === 'anciao' || v.role === 'escriba' || (v.g === 'f' && ad >= 12 && (v.id % 3 !== 0));
     const hair = ad >= 62 ? G.lerpColor(G.hex2rgb(v.hair || '#3a2a1a'), [214, 210, 204], G.clamp((ad - 62) / 18, 0, 0.85)) : null;
-    return { s, skin: v.skin || '#d8a888', hair: hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', belt: darker(cloth, 0.38), brow: darker(v.hair || '#3a2a1a', 0.8), nose: darker(v.skin || '#d8a888', 0.88), lips: darker(v.skin || '#d8a888', 0.62), robe, fem: v.g === 'f' && ad >= 13, bun: v.g === 'f' && ad >= 16 && v.id % 3 === 1, beard: v.g === 'm' && ad >= 26 && v.id % 3 === 0, long: v.g === 'f' && ad >= 8 && v.id % 3 !== 1, bald: v.g === 'm' && ad >= 55 && v.id % 4 === 0, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia', torch: torchOf(v), lantern: !!v.lantern && !v.inside, strap: ad >= 14 && (v.role === 'cacador' || v.role === 'guerreiro' || v.role === 'mercador' || v.role === 'explorador' || (G.Possess && G.Possess.body && G.Possess.body() === v)) };
+    const L = { s, skin: v.skin || '#d8a888', hair: hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', belt: darker(cloth, 0.38), brow: darker(v.hair || '#3a2a1a', 0.8), nose: darker(v.skin || '#d8a888', 0.88), lips: darker(v.skin || '#d8a888', 0.62), robe, fem: v.g === 'f' && ad >= 13, bun: v.g === 'f' && ad >= 16 && v.id % 3 === 1, beard: v.g === 'm' && ad >= 26 && v.id % 3 === 0, long: v.g === 'f' && ad >= 8 && v.id % 3 !== 1, bald: v.g === 'm' && ad >= 55 && v.id % 4 === 0, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia', torch: torchOf(v), lantern: !!v.lantern && !v.inside, strap: ad >= 14 && (v.role === 'cacador' || v.role === 'guerreiro' || v.role === 'mercador' || v.role === 'explorador' || (G.Possess && G.Possess.body && G.Possess.body() === v)) };
+    if (skin) {
+      L.out = outfitOf(v, L, fac);
+      // (the face's mood, from the world's: joy smiles, grief and sadness frown with the brows raised inside, fear opens the
+      // eyes wide, anger draws the brows down; a calm face a little warm)
+      const e = v.emo && v.emo.k; const grief = v.mourn > 0 || e === 'sad';
+      L.mood = { smile: e === 'happy' || e === 'joy' || e === 'heart' ? 0.85 : grief ? -0.55 : e === 'angry' ? -0.25 : e === 'fear' ? -0.2 : 0.12, up: e === 'fear' || e === 'awe' ? 1 : grief ? 0.5 : e === 'question' ? 0.6 : 0, angry: e === 'angry' ? 1 : 0 };
+    }
+    return L;
   };
+
+  // ------------------------------ clothes ------------------------------
+  // What a person wears, from who they are: their people (the north's tunic and wrapped legs, the apron-dress with its
+  // brooches; the Greek and Roman chiton and sandals; the Egyptian kilt and broad collar; the Aztec cloak and huipil),
+  // their trade (the smith's leather apron, the farmer's straw hat, the priest's robe, the warrior's helmet), their sex
+  // and age, their wealth (a cloak, a brooch of gold, trims of a dyed thread), the ruler's crown, the captive's undyed
+  // rags. The colour of their trade is the god's (Art.CLOTH), only softened to a dyed wool's. Every choice by the
+  // person's id (G.hash): the same person always the same — never a roll. Kept a while per person (only seen).
+  const OUT = new Map(); G.worldHooks.push(() => OUT.clear());
+  const mixHex = (a, b, t) => { const p = G.hex2rgb(a), q = G.hex2rgb(b); return '#' + p.map((v, i) => Math.round(v + (q[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
+  const wool = hex => mixHex(hex, '#8a7d6a', 0.28); // (a trade's colour, as a dyed wool would show it: never a neon)
+  const LEATHER = ['#5a3e28', '#6b4a2e', '#4a3322', '#7a5634'], METAL = { bronze: '#b08a4a', gold: '#d8b04a', iron: '#8a8e96', silver: '#c8ccd2' };
+  const IRIS = ['#4a3020', '#5a3a22', '#3a2a1a', '#4a6a8a', '#5a7a9a', '#6a7a5a', '#7a6a3a'];
+  const HAIRS = { m: ['curto', 'curto', 'rabo', 'longo', 'curto'], f: ['trancas', 'coque', 'longo', 'trancas', 'coque'] };
+  function outfitOf(v, L, fac) {
+    const S = G.S; const id = v.id || 0; const now = S ? S.clock : 0;
+    const civ = (fac && fac.civ) || v._civ || v.civ || 'nordico'; const CV = (G.CIVS && G.CIVS[civ]) || {};
+    const home = G.Eco && G.Eco.homeOf && v.home ? G.Eco.homeOf(v) : null;
+    const ruler = !!(fac && fac.leader && fac.leader === v.id);
+    const wealth = v.captive ? 0 : ruler ? 3 : !home ? (v.home ? 1 : 0) : home.type === 'barraco' ? 0 : home.type === 'hut' ? 1 + ((home.coin || 0) > 25 ? 1 : 0) : 2 + ((home.coin || 0) > 40 || home.type === 'sobrado' ? 1 : 0);
+    const sig = `${v.role}|${Math.floor(v.age)}|${civ}|${v.captive ? 1 : 0}|${ruler ? 1 : 0}|${wealth}|${v.robe || ''}|${v.unmask ? 1 : 0}|${v.g}|${L.cloth}|${L.hair}`;
+    let o = OUT.get(id); if (o && o.sig === sig) return o;
+    o = { sig, t: now };
+    const hh = k => G.hash(id * 13 + k * 7919); // (this person's own coin flips, always the same)
+    const ad = v.age, fem = v.g === 'f', kid = ad < 13, role = v.role || '';
+    o.body = fem && ad >= 11 ? 'corpoF' : 'corpoM';
+    o.headK = kid ? 1 + 0.32 * G.clamp(1 - ad / 13, 0, 1) : 1;
+    // (the colours: the trade's, softened; the people's trim; the trousers and boots of leather and wool)
+    const base = v.captive ? '#8b8478' : kid ? (v.kidCloth || '#4fa0d8') : role === 'guerreiro' ? (L.cloth) : L.cloth;
+    o.cloth = wool(base); o.trim = CV.trim ? mixHex(CV.trim, ['#b33a2a', '#3f6fb0', '#c8a040', '#2f7a5a'][Math.floor(hh(1) * 4)], hh(2) * 0.5) : '#9a3a2a';
+    o.pants = v.captive ? '#6a645a' : ['#4a4038', '#3e3a34', '#5a4a3a', '#4a4a44'][Math.floor(hh(3) * 4)];
+    o.boots = LEATHER[Math.floor(hh(4) * LEATHER.length)]; o.belt = darker(LEATHER[Math.floor(hh(5) * LEATHER.length)], 0.8);
+    o.metal = ruler ? METAL.gold : wealth >= 3 ? (hh(6) < 0.5 ? METAL.gold : METAL.silver) : METAL.bronze;
+    o.over = o.cloth; o.beads = ['#c87a2a', '#d89a3a', '#b8582a'][Math.floor(hh(7) * 3)]; o.cloak = wool(darker(base, 0.75)); o.hat = o.cloth;
+    o.iris = IRIS[(Math.floor(hh(8) * 7) + (G.hex2rgb(L.skin)[0] < 170 ? 0 : 0)) % IRIS.length];
+    if (G.hex2rgb(L.skin)[0] < 175) o.iris = IRIS[Math.floor(hh(8) * 3)]; // (dark skin, dark eyes)
+    o.lips = mixHex(L.skin, '#a8524a', fem ? 0.42 : 0.28);
+    // (the cut: sleeves to the wrist, the round neckline, shoes to the ankle, trousers, the belt at the waist)
+    o.sleeve = 0.585; o.neck = 0; o.bootTop = 0.11; o.legs = 1; o.beltY = 1.01; o.beltH = 0.017; o.overK = 0; o.strap = L.strap ? 1 : 0;
+    o.torso = 0; o.motif = wealth >= 2 && hh(9) < 0.7 ? 1 : 0; o.feetK = 0; o.hem = 1; o.cloakTrim = wealth >= 2 ? 1 : 0;
+    o.skirt = null; o.cloakM = null; o.hatM = null; o.beard = null;
+    o.hairM = ad >= 55 && !fem && hh(10) < 0.35 ? 'careca' : HAIRS[fem ? 'f' : 'm'][Math.floor(hh(11) * 5)];
+    if (!fem && ad >= 22 && hh(12) < (civ === 'nordico' ? 0.62 : civ === 'grego' ? 0.5 : 0.22)) o.beard = hh(13) < 0.55 ? 'barba' : hh(13) < 0.8 ? 'curta' : 'bigode';
+    o.blush = fem || kid ? 0.25 : 0.06;
+    if (kid) { o.skirt = fem ? 'saiaL' : 'saiaC'; o.legs = fem ? 0 : 1; o.feetK = hh(14) < 0.45 ? 1 : 0; o.hairM = fem ? (hh(15) < 0.5 ? 'trancas' : 'longo') : 'curto'; o.motif = 0; o.sleeve = 0.45; }
+    else if (civ === 'nordico') {
+      if (fem) { o.skirt = 'saiaL'; o.over = wool(base); o.cloth = ['#e8e0cc', '#d8cfb8', '#c8b898'][Math.floor(hh(16) * 3)]; o.overK = 1; o.legs = 0; if (hh(17) < 0.38 && ad >= 18) o.hatM = 'lenco', o.hat = ['#e8e2d0', '#c8b898', '#9a3a2a'][Math.floor(hh(18) * 3)]; }
+      else { o.skirt = 'saiaC'; o.legs = hh(19) < 0.7 ? 2 : 1; if (hh(20) < 0.3) o.hatM = 'gorro', o.hat = wool(['#7a3a2a', '#3a4a6a', '#5a5a3a', '#6a4a3a'][Math.floor(hh(21) * 4)]); }
+      if (wealth >= 2 && hh(22) < 0.6 || ad >= 50 && hh(22) < 0.5) o.cloakM = 'capa';
+      o.bootTop = hh(23) < 0.4 ? 0.2 : 0.11;
+    } else if (civ === 'grego' || civ === 'romano' || civ === 'classico') {
+      o.cloth = mixHex(CV.cloth || '#efe9dc', o.cloth, kid ? 0.6 : 0.35); o.sleeve = 0.16; o.legs = 0; o.feetK = 2; o.skirt = fem ? 'saiaL' : 'saiaC'; o.bootTop = 0.0;
+      if (fem) o.hairM = hh(24) < 0.7 ? 'coque' : 'longo'; else o.hairM = 'curto';
+      if (wealth >= 2) o.cloakM = 'capa', o.cloak = wool(darker(base, 0.9));
+    } else if (civ === 'egipcio') {
+      o.cloth = '#f1ead6'; o.legs = 0; o.feetK = hh(25) < 0.5 ? 1 : 2; o.bootTop = 0; o.skirt = fem ? 'saiaL' : 'saiaC';
+      if (!fem) { o.torso = wealth >= 2 || role === 'sacerdote' ? 2 : 1; o.beltY = 0.98; } else { o.sleeve = 0.04; o.torso = wealth >= 2 ? 0 : 0; }
+      o.hairM = role === 'sacerdote' ? 'careca' : 'chanel'; o.trim = CV.trim || '#2f8f8a'; o.beard = null;
+    } else if (civ === 'asteca') {
+      o.cloth = mixHex('#e8dcc0', o.cloth, 0.3); o.legs = 0; o.feetK = 2; o.bootTop = 0; o.trim = CV.trim || '#2fae8f'; o.motif = 1;
+      if (fem) { o.skirt = 'saiaL'; o.sleeve = 0.18; o.hairM = hh(26) < 0.6 ? 'trancas' : 'longo'; } else { o.skirt = 'saiaC'; o.torso = 1; o.cloakM = 'capa'; o.cloak = mixHex('#e8dcc0', base, 0.5); o.hairM = 'chanel'; }
+    }
+    // (the trades: the robe of the priest and the elder, the scribe's; aprons; the hats)
+    if (!kid) {
+      if (role === 'sacerdote' || role === 'anciao' || role === 'escriba') { o.skirt = 'saiaL'; o.legs = 0; o.overK = 0; o.sleeve = 0.585; if (role === 'anciao') o.cloakM = 'capa'; if (role === 'sacerdote' && civ !== 'egipcio') o.hatM = hh(27) < 0.5 ? 'capuz' : null, o.cloak = o.cloth; }
+      if (role === 'ferreiro' || role === 'acougueiro' || role === 'taverneiro' || role === 'oleiro' || role === 'feirante') { o.overK = 2; o.over = role === 'ferreiro' ? '#5a3a24' : role === 'oleiro' ? '#b8946a' : '#e8e0cc'; o.sleeve = role === 'ferreiro' ? 0.2 : 0.42; }
+      if (role === 'agricultor' || role === 'pastor' || role === 'vinhateiro' || role === 'lavrador') { o.hatM = 'chapeu'; o.hat = '#d8b86a'; o.sleeve = 0.4; }
+      if (role === 'cacador' && hh(28) < 0.5) { o.hatM = 'capuz'; o.cloak = wool('#5a4a2a'); }
+      if (role === 'guerreiro') { o.hatM = 'elmo'; o.hat = METAL.iron; o.cloth = wool(base); o.cloakM = wealth >= 2 || hh(29) < 0.4 ? 'capa' : o.cloakM; o.bootTop = 0.22; }
+      if (role === 'contrabandista') { o.cloakM = 'capa'; o.hatM = 'capuz'; o.cloak = '#2a2430'; }
+      if (role === 'mercador' || role === 'ourives') { o.cloakM = 'capa'; o.motif = 1; }
+    }
+    if (v.robe && !v.hood) { o.cloakM = 'capa'; o.cloak = v.robe; o.hatM = v.unmask ? o.hatM : 'capuz'; }
+    if (ruler && ad >= 10) { o.hatM = 'coroa'; o.cloakM = 'capa'; o.cloak = wool(darker(fac && G.Fac.hex ? G.Fac.hex(fac.id) : '#8a2a2a', 0.85)); o.metal = METAL.gold; o.motif = 1; o.cloakTrim = 1; }
+    if (v.captive) { o.cloakM = null; o.hatM = null; o.motif = 0; o.overK = 0; o.feetK = 1; o.trim = o.cloth; o.belt = '#6a5a4a'; o.cloakTrim = 0; }
+    // (the colours once, as the graphics card wants them: linear)
+    o.lin = {}; for (const k of ['cloth', 'trim', 'pants', 'boots', 'belt', 'metal', 'over', 'beads', 'cloak', 'hat', 'iris', 'lips']) { const c = color(o[k]); o.lin[k] = [c.r, c.g, c.b]; }
+    OUT.set(id, o); if (OUT.size > 2000) OUT.clear();
+    return o;
+  }
+  P3.outfit = v => outfitOf(v, P3.look(v), G.Fac.ofV ? G.Fac.ofV(v) : null);
   // (who carries a torch: the god's own rule — at night, walking, one in three grown people, those whose errand asks for one,
   // and those the scenes hand one to; and the body, at night, always: the player has to see)
   function torchOf(v) {
@@ -110,7 +204,8 @@
 
   // ------------------------------ poses ------------------------------
   // a pose: the angles of the joints, and the hips' height and lean (radians, metres)
-  const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, anL: 0, anR: 0, pelY: 0, pelR: 0, pelP: 0, shift: 0, sway: 0, breath: 0, lie: 0, tool: 0 });
+  // (and for the skin: the stance of each foot, the grip of the hands, the mouth, the eyes' look, the cloth's swing)
+  const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, anL: 0, anR: 0, pelY: 0, pelR: 0, pelP: 0, shift: 0, sway: 0, breath: 0, lie: 0, tool: 0, stL: 0, stR: 0, pitL: 0, pitR: 0, grip: 0, talk: 0, gazeX: 0, gazeY: 0, cloth: 0, clothS: 0 });
   Anim.POSE0 = POSE0;
   // (the dead lie as they fell: on the back or face down, the limbs thrown out)
   const DEAD = [
@@ -168,26 +263,82 @@
     // (wading through a ford: arms out for balance, the steps high)
     wade: (t, sp) => ({ ...ST.walk(t, sp), shLr: 0.5, shRr: -0.5, elL: 0.55, elR: 0.55, lean: 0.12, knL: Math.max(0, -Math.cos(t)) * 0.9 + 0.15, knR: Math.max(0, Math.cos(t)) * 0.9 + 0.15 }),
   };
+  // The stride, from how people really walk and run: one leg's cycle u from the heel striking the ground (0) — the foot
+  // planted, the body going over it, the heel rising, the toes pushing off — through the swing (the knee folding to clear
+  // the ground, the leg reaching forward, the knee straightening only at the end) to the next strike. The other leg half
+  // a cycle behind. Keys in degrees (the hip: minus is forward; the knee: its bend; the foot: its pitch to the ground,
+  // plus is the toes down — the ankle is what makes it), smoothly joined round the cycle. A walk stands 60% of its cycle,
+  // a run 38% and flies between its steps. A slower step is a shorter one (the angles scale), never a slower slide.
+  const GK = {
+    walk: { hip: [[0, -27], [0.15, -20], [0.3, -7], [0.45, 7], [0.58, 15], [0.66, 10], [0.78, -12], [0.9, -29], [1, -27]],
+      knee: [[0, 3], [0.12, 16], [0.27, 9], [0.42, 4], [0.52, 13], [0.62, 36], [0.71, 60], [0.79, 56], [0.9, 24], [0.97, 4], [1, 3]],
+      foot: [[0, -16], [0.06, -4], [0.12, 0], [0.42, 0], [0.52, 9], [0.6, 30], [0.66, 30], [0.74, 4], [0.86, -6], [0.95, -14], [1, -16]] },
+    run: { hip: [[0, -30], [0.12, -15], [0.26, 4], [0.38, 19], [0.5, 10], [0.66, -26], [0.82, -44], [0.93, -36], [1, -30]],
+      knee: [[0, 22], [0.11, 40], [0.25, 26], [0.38, 14], [0.5, 62], [0.62, 104], [0.74, 96], [0.86, 52], [0.95, 26], [1, 22]],
+      foot: [[0, -6], [0.08, 0], [0.22, 4], [0.32, 18], [0.4, 44], [0.5, 32], [0.66, 6], [0.84, -8], [1, -6]] },
+  };
+  const GT = {}; // (each curve sampled round its cycle, radians)
+  for (const g in GK) { GT[g] = {}; for (const c in GK[g]) { const K = GK[g][c]; const T = new Float32Array(129);
+    for (let i = 0; i <= 128; i++) { const u = i / 128; let k = 0; while (k < K.length - 2 && K[k + 1][0] <= u) k++;
+      const P = j => K[(j + K.length - 1) % (K.length - 1)]; const p0 = P(k - 1), p1 = K[k], p2 = K[k + 1], p3 = P(k + 2);
+      const t = (u - p1[0]) / Math.max(1e-6, p2[0] - p1[0]); const t2 = t * t, t3 = t2 * t;
+      T[i] = (0.5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)) * Math.PI / 180; }
+    GT[g][c] = T; } }
+  const gcur = (T, u) => { u = (u % 1 + 1) % 1; const x = u * 128, i = Math.floor(x), f = x - i; return T[i] + (T[i + 1] - T[i]) * f; };
   function gait(ph, sp, run) {
-    const s = Math.sin(ph), c = Math.cos(ph), A = run ? G.clamp(sp / 5, 0.62, 1.05) * 0.85 : G.clamp(sp / 1.9, 0.3, 1) * 0.5;
-    const sa = Math.sin(ph - 0.3); // (the arms a beat behind the legs)
-    const leg = (sg) => { // (one leg: sg 1 for the left, -1 for the right — the same stride half a turn apart)
-      const ls = s * sg, lc = c * sg; // (ls > 0: this leg is behind; lc > 0: it stands, lc < 0: it swings)
-      const swing = Math.pow(Math.max(0, -lc), 1.3) * (run ? 2.0 * A : 0.45 + A);
-      const give = run ? 0.42 * Math.max(0, lc) : 0.2 * Math.max(0, lc) * Math.max(0, -ls) * 2;
-      const push = (run ? 0.6 : 0.45) * Math.pow(Math.max(0, ls), 3) * G.clamp(lc * 3 + 1, 0, 1);
-      const heel = -(run ? 0.12 : 0.28) * Math.pow(Math.max(0, -ls), 3) * G.clamp(1 - lc * 3, 0, 1);
-      return { hip: ls * A - (run ? 0.12 : 0.03), kn: 0.07 + swing + give, an: push + heel - 0.1 * Math.max(0, -lc) };
-    };
-    const L = leg(1), R = leg(-1);
-    return {
-      bob: run ? 0.055 * (0.5 - c * c) - 0.04 : 0.045 * (c * c - 0.5) - 0.01, hipL: L.hip, hipR: R.hip, knL: L.kn, knR: R.kn, anL: L.an, anR: R.an,
-      pelY: 0.11 * s * (run ? 1.2 : 0.7 + A), pelR: 0.05 * c * (run ? 0.6 : 1), shift: 0.025 * c * (run ? 0.5 : 1), sway: 0, twist: -0.05 * s,
-      shLp: -sa * A * (run ? 1.0 : 1.1), shRp: sa * A * (run ? 1.0 : 1.1), shLr: run ? 0.12 : 0.08, shRr: run ? -0.12 : -0.08,
-      elL: run ? 1.3 + Math.max(0, sa) * 0.25 : 0.25 + Math.max(0, sa) * 0.5, elR: run ? 1.3 + Math.max(0, -sa) * 0.25 : 0.25 + Math.max(0, -sa) * 0.5,
-      lean: run ? 0.36 : 0.085 + 0.02 * (c * c - 0.5), pelP: run ? 0.12 : 0.03, neck: run ? -0.2 : 0.03 + 0.02 * (c * c - 0.5), breath: Math.sin(ph * 0.5) * (run ? 1 : 0.4),
-    };
+    const T = run ? GT.run : GT.walk;
+    // (how long the stride is: a slow walk short and low, a fast run long; the swing's fold never below what clears the ground)
+    const A = run ? G.clamp(0.62 + (sp - 3) * 0.1, 0.62, 1.0) : G.clamp(0.2 + sp * 0.45, 0.34, 0.95);
+    const u0 = ph / TAU; const out = {};
+    for (let k = 0; k < 2; k++) {
+      const u = u0 + k * 0.5; const hip = gcur(T.hip, u) * A, kn = gcur(T.knee, u) * (0.45 + 0.55 * A), pitch = gcur(T.foot, u) * (0.6 + 0.4 * A);
+      // (the stance weight: 1 while the foot is on the ground — for the skin's feet; it eases at the strike and at the push-off)
+      const uu = (u % 1 + 1) % 1, st = run ? (uu < 0.38 ? 1 : 0) : (uu < 0.62 ? 1 : 0);
+      if (k) { out.hipR = hip; out.knR = kn; out.anR = pitch - hip - kn; out.stR = st; out.pitR = pitch; } else { out.hipL = hip; out.knL = kn; out.anL = pitch - hip - kn; out.stL = st; out.pitL = pitch; }
+    }
+    // (the hips: as high as the standing foot lets them be — measured from the legs themselves, so the standing foot is on
+    // the ground and no lower: highest over it, lowest as the weight passes from one foot to the other; in a run's flight a
+    // leap's arc — then turning with the swinging leg, dropping a little on its side, moving over the standing foot)
+    const c2 = Math.cos(TAU * 2 * (u0 - (run ? 0.42 : 0.27))), cs = Math.cos(TAU * u0), sn = Math.sin(TAU * u0 + 0.3);
+    out.bob = gaitBob ? gaitBob(run ? 'run' : 'walk', u0, sp) : 0;
+    out.pelY = -(run ? 0.1 : 0.075) * cs * A; out.pelR = 0.035 * sn * (run ? 0.6 : 1) * A; out.shift = 0.02 * sn * (run ? 0.4 : 1) * A; out.sway = 0; out.twist = 0;
+    // (the arms against the legs, a beat behind; the elbow bending as the arm comes forward; a run's elbows bent and pumping)
+    const aL = Math.cos(TAU * (u0 - 0.06)), aw = (run ? 0.62 : 0.34) * A;
+    out.shLp = aL * aw; out.shRp = -aL * aw; out.shLr = run ? 0.14 : 0.09; out.shRr = run ? -0.14 : -0.09;
+    out.elL = run ? 1.35 + Math.max(0, -aL) * 0.25 : 0.22 + Math.max(0, -aL) * 0.45 * A; out.elR = run ? 1.35 + Math.max(0, aL) * 0.25 : 0.22 + Math.max(0, aL) * 0.45 * A;
+    out.lean = run ? 0.22 + 0.05 * A : 0.06 + 0.012 * c2; out.pelP = run ? 0.1 : 0.03; out.neck = run ? -0.14 : 0.03; out.breath = Math.sin(ph * 0.5) * (run ? 1 : 0.4);
+    out.grip = run ? 0.55 : 0.12;
+    return out;
   }
+  // the hips' height through a stride, for each speed: in each moment of it, the height at which the standing foot (the
+  // lower of the two, when both stand) touches the ground — the legs' own reach; smoothed round the cycle (a table made
+  // once, from the rig: the legs are what they are, the hips follow)
+  const BOBT = {}; let gaitBob = null;
+  function bobTable(g, sp) {
+    const N = 64, out = new Float32Array(N + 1), need = new Float32Array(N), has = new Uint8Array(N); const p = POSE0(); const run = g === 'run';
+    const save = gaitBob; gaitBob = null;
+    for (let i = 0; i < N; i++) {
+      Object.assign(p, gait(i / N * TAU, sp, run)); const R = P3.rig(0, 0, 0, Math.PI / 2, p, { s: 1 });
+      let lift = 1e9;
+      for (let k = 0; k < 2; k++) { if (!(k ? p.stR : p.stL)) continue; const F = R[B.ftL + k]; const lo = Math.min(ptY(F, 0, -LEG.sole, -LEG.heel), ptY(F, 0, -LEG.sole, LEG.ball)); lift = Math.min(lift, -lo); has[i] = 1; }
+      need[i] = lift;
+    }
+    gaitBob = save;
+    // (no foot on the ground — a run's flight: an arc from the push-off's height to the next strike's, rising over it)
+    for (let i = 0; i < N; i++) if (!has[i]) {
+      let a = i, b = i; while (!has[(a + N - 1) % N] && a > i - N) a--; while (!has[(b + 1) % N] && b < i + N) b++;
+      const ha = need[(a - 1 + N) % N], hb = need[(b + 1) % N], t = (i - a + 1) / (b - a + 2);
+      need[i] = G.lerp(ha, hb, t) + 0.035 * Math.sin(Math.PI * t) * G.clamp(sp / 4, 0.5, 1.4);
+    }
+    for (let i = 0; i < N; i++) { let v = 0; for (let d = -2; d <= 2; d++) v += need[(i + d + N) % N] * [0.1, 0.2, 0.4, 0.2, 0.1][d + 2]; out[i] = v; }
+    out[N] = out[0]; return out;
+  }
+  gaitBob = function (g, u, sp) {
+    const X = RATE_SP[g]; let T = BOBT[g]; if (!T) { if (!THREE) return 0; T = BOBT[g] = X.map(v => bobTable(g, v)); }
+    let j = 0; while (j < X.length - 2 && X[j + 1] < sp) j++; const f = G.clamp((sp - X[j]) / (X[j + 1] - X[j]), 0, 1);
+    u = (u % 1 + 1) % 1; const x = u * 64, i = Math.floor(x), q = x - i; const at = t => t[i] + (t[i + 1] - t[i]) * q;
+    return G.lerp(at(T[j]), at(T[j + 1]), f);
+  };
   Anim.STATES = Object.keys(ST);
   // what someone of the world is doing, as an animation (their act, their move, their burden)
   const ACT = {
@@ -217,6 +368,27 @@
     if (!('tool' in want)) pose.tool = 0;
   };
   Anim.pose = (state, t, sp) => (ST[state] || ST.idle)(t, sp || 0);
+  // the gait's rate: radians of its phase per metre walked, so that the standing foot keeps still on the ground at any
+  // speed. Measured once from the rig itself (how far back the lower foot goes per radian of the stride, the legs' own
+  // angles at each speed): a change to a gait stays in step without a number to retune
+  const RATE = {}; const RATE_SP = { walk: [0.3, 0.6, 0.9, 1.2, 1.5, 1.9, 2.4, 3.1], run: [2.4, 3.1, 4, 5, 6, 7.5, 9], sneak: [0.3, 0.6, 1, 1.5, 2.2] };
+  const GAIT_OF = { walk: 'walk', carryWalk: 'walk', wade: 'walk', run: 'run' };
+  // (metres walked per radian of the stride: the heel strikes at the start of the stance and the foot rolls onto its
+  // ball, which leaves the ground at its end — the body must have gone, meanwhile, from over the one to over the other)
+  const STANCE = { walk: 0.62, run: 0.38, sneak: 0.62 };
+  function strideOf(st, sp) {
+    const p = POSE0(); const zAt = (u, heel) => { Object.assign(p, ST[st](u * TAU, sp)); const e = P3.rig(0, 0, 0, Math.PI / 2, p, { s: 1 })[B.ftL].elements; return heel ? e[14] - e[6] * LEG.sole - e[10] * LEG.heel : e[14] - e[6] * LEG.sole + e[10] * LEG.ball; };
+    const f = STANCE[st] || 0.6; const went = zAt(0, true) + LEG.heel + LEG.ball - zAt(f, false);
+    return went > 0.05 ? went / (f * TAU) : 0.2;
+  }
+  Anim.rate = function (st, sp, s) {
+    const g = GAIT_OF[st]; if (!g || !THREE) return 2.6;
+    let T = RATE[g]; if (!T) { T = RATE[g] = RATE_SP[g].map(v => strideOf(g, v)); }
+    const X = RATE_SP[g]; let per;
+    if (sp <= X[0]) per = T[0]; else if (sp >= X[X.length - 1]) per = T[T.length - 1];
+    else { let k = 1; while (X[k] < sp) k++; per = G.lerp(T[k - 1], T[k], (sp - X[k - 1]) / (X[k] - X[k - 1])); }
+    return 1 / Math.max(0.03, per * (s || 1));
+  };
 
   // ------------------------------ putting a body together ------------------------------
   // (the body's local frame: +Z forward, +Y up, +X its left. The signs: a negative pitch swings an arm or a leg
@@ -240,8 +412,13 @@
     return out;
   }
   function hide(part, idx) { mesh[PI[part]].setMatrixAt(idx, M.z); }
-  // a whole body at a place, facing yaw (0 = east, π/2 = south), in a pose, with a look
+  // a whole body at a place, facing yaw (0 = east, π/2 = south), in a pose, with a look — one continuous skin over the
+  // rig (Body3D), or, where it could not start, the pieces of old
   P3.body = function (idx, X, Y, Z, yaw, pose, L, marker) {
+    if (skin) return bodySkin(idx, X, Y, Z, yaw, pose, L, marker);
+    return bodyParts(idx, X, Y, Z, yaw, pose, L, marker);
+  };
+  function bodyParts(idx, X, Y, Z, yaw, pose, L, marker) {
     mats();
     const s = L.s; const lie = pose.lie || 0;
     const root = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); root.multiply(M.b);
@@ -303,7 +480,200 @@
     if (L.strap) put('strap', idx, F.trunk, 0, 0.28, 0, 0, 0, 0.72, 0, 0, 0, 0.05, 0.62, 0.27, L.belt); else hide('strap', idx);
     if (L.carry) put('carry', idx, F.trunk, 0, 0.3, 0.26, 0, 0, 0, 0, 0, 0, 0.34, 0.26, 0.3, '#9a7a4a'); else hide('carry', idx);
     if (marker) put('marker', idx, root, 0, 2.15 + Math.sin(performance.now() / 300) * 0.04, 0, 0, performance.now() / 600, 0, 0, 0, 0, 0.16, 0.22, 0.16, marker); else hide('marker', idx);
+  }
+
+  // ------------------------------ the rig: every bone's frame ------------------------------
+  // The same chain P3.body always made — pelvis → trunk → head; shoulder → forearm → hand; hip → shin → foot — and the
+  // bones the skin needs besides: the half joints (a bone turning half as much as the one below it: the waist, the neck,
+  // the shoulders, the elbows, the hips, the knees bend without the skin collapsing), the fingers and the thumb (the
+  // grip), the toes (flat on the ground as the heel lifts), the skirt (front, back and sides following the legs), the
+  // cloak, and what the hands hold (the torch upright, the tool, the load). Frames in the world, metres.
+  const BONES = (G.BODYMESH && G.BODYMESH.bones) || ['pel', 'spine', 'chest', 'neck', 'head', 'shL', 'shR', 'shHL', 'shHR', 'faL', 'faR', 'elHL', 'elHR', 'hdL', 'hdR', 'fgL', 'fgR', 'tbL', 'tbR', 'thL', 'thR', 'hpHL', 'hpHR', 'snL', 'snR', 'knHL', 'knHR', 'ftL', 'ftR', 'toeL', 'toeR', 'skF', 'skB', 'skL', 'skR', 'clk1', 'clk2', 'torch', 'tool', 'carry'];
+  const B = {}; BONES.forEach((b, i) => { B[b] = i; });
+  const RIG = { shin: (G.BODYMESH && G.BODYMESH.shin) || 0.4, knuckle: (G.BODYMESH && G.BODYMESH.knuckle) || 0.092, toe: (G.BODYMESH && G.BODYMESH.toe) || 0.118, toeY: (G.BODYMESH && G.BODYMESH.toeY) || -0.035, roll: (G.BODYMESH && G.BODYMESH.roll) || 0.6 };
+  let RF = null; const Q = {};
+  // (a frame: parent × (to the joint) × (its turn, YXZ as everywhere in the rig))
+  function fr(out, parent, jx, jy, jz, rx, ry, rz) {
+    out.copy(parent); M.b.makeTranslation(jx, jy, jz); out.multiply(M.b);
+    if (rx || ry || rz) { M.eu.set(rx, ry, rz, 'YXZ'); M.c.makeRotationFromEuler(M.eu); out.multiply(M.c); }
+    return out;
+  }
+  // (the height in the world of a point given in a frame)
+  function ptY(F, x, y, z) { const e = F.elements; return e[1] * x + e[5] * y + e[9] * z + e[13]; }
+  // (a half joint: halfway — a spherical blend — between the turn the bone was modelled in and the turn it has now)
+  function frHalf(out, parent, jx, jy, jz, b0, b1, b2, rx, ry, rz) {
+    out.copy(parent); M.b.makeTranslation(jx, jy, jz); out.multiply(M.b);
+    M.eu.set(b0, b1, b2, 'YXZ'); Q.a.setFromEuler(M.eu); M.eu.set(rx, ry, rz, 'YXZ'); Q.b.setFromEuler(M.eu); Q.a.slerp(Q.b, 0.5);
+    M.c.makeRotationFromQuaternion(Q.a); out.multiply(M.c); return out;
+  }
+  // (the legs' measures: thigh, the sole under the ankle, the heel behind it and the ball in front)
+  const LEG = { L1: 0.44, sole: 0.044, heel: 0.062, ball: 0.122 };
+  // where a foot must be. A foot in a stride is in one of three states: swinging (where the pose has it — kept out of the
+  // ground), standing (from the moment it strikes: it stays where its heel struck, and rolls on it — on the heel while
+  // the toes come down, flat, then on the ball as the heel rises and the toes push off — the ankle where that roll puts
+  // it), or leaving (pushed off: from where it stood it goes after the swing the pose has, as it lifts)
+  function footFK(R, pose, k, out) {
+    const sd = k ? -1 : 1; const hp = k ? pose.hipR : pose.hipL, kn = k ? pose.knR : pose.knL, an = (k ? pose.anR : pose.anL) || 0;
+    fr(M.a, R[B.pel], sd * 0.095, -0.04, 0, hp, 0, 0); fr(M.c2, M.a, 0, -LEG.L1, 0, kn, 0, 0); return fr(out, M.c2, 0, -RIG.shin, 0.02, an, 0, 0);
+  }
+  function strike(ft, e) { ft.on = 1; ft.x = e[12] - (e[4] * LEG.sole + e[8] * LEG.heel); ft.z = e[14] - (e[6] * LEG.sole + e[10] * LEG.heel); const l = Math.hypot(e[8], e[10]) || 1; ft.dx = e[8] / l; ft.dz = e[10] / l; ft.off = 0; }
+  function footWant(R, pose, L, k, s) {
+    const ft = L.plant ? L.plant[k] : null; if (!ft) return null; const stw = (k ? pose.stR : pose.stL) || 0;
+    const e = footFK(R, pose, k, M.a).elements; const p = (k ? pose.pitR : pose.pitL) || 0; const T = M.t[k];
+    if (ft.on) {
+      if (stw > 0.5) ft.early = 0;
+      // (the push-off: the stride's stance is over — unless the strike came early, before it began)
+      if (stw <= 0.5 && !ft.early) { ft.on = 0; ft.off = 1; ft.rx = ft.ax; ft.ry = ft.ay; ft.rz = ft.az; ft.rp = ft.ap; }
+    } else if (stw > 0.5 && !ft.off) strike(ft, e);
+    if (ft.on) {
+      const c = Math.cos(p), sn = Math.sin(p); let px = ft.x, pz = ft.z, oy, oz;
+      if (p <= 0) { oy = LEG.sole * c - LEG.heel * sn; oz = LEG.sole * sn + LEG.heel * c; }
+      else { const bl = (LEG.heel + LEG.ball) * s; px += ft.dx * bl; pz += ft.dz * bl; oy = LEG.sole * c + LEG.ball * sn; oz = LEG.sole * sn - LEG.ball * c; }
+      T.set(px + ft.dx * oz * s, L.ground + oy * s, pz + ft.dz * oz * s);
+      // (the body went too far from it — a turn on the spot, a push of the world: the foot lifts where it is)
+      if ((T.x - e[12]) ** 2 + (T.z - e[14]) ** 2 > 0.36 * s * s) { ft.on = 0; ft.off = 0; return null; }
+      ft.ax = T.x; ft.ay = T.y; ft.az = T.z; ft.ap = p;
+      return { T, p, w: 1 };
+    }
+    if (ft.off) {
+      // (leaving: from the push-off's place toward the swing, as the stance weight runs out)
+      const r = G.smooth(0, 1, 1 - stw / 0.5); if (r >= 0.999 || stw > 0.5) { ft.off = 0; return null; }
+      T.set(G.lerp(ft.rx, e[12], r), Math.max(G.lerp(ft.ry, e[13], r), L.ground + LEG.sole * s), G.lerp(ft.rz, e[14], r));
+      return { T, p: G.lerp(ft.rp, p, r), w: 1, leaving: 1 };
+    }
+    return null;
+  }
+  // (how much lower the hips must be for the leg to reach T: 0 if it does; -1 if no lowering would do)
+  function dropFor(R, T) {
+    M.k.copy(R[B.pel]).invert(); M.v.copy(T).applyMatrix4(M.k);
+    const vy = M.v.y + 0.04, vz = M.v.z, Lm = (LEG.L1 + Math.hypot(RIG.shin, 0.02)) * 0.995;
+    if (vy * vy + vz * vz <= Lm * Lm) return 0;
+    if (vz * vz >= Lm * Lm) return -1;
+    return -Math.sqrt(Lm * Lm - vz * vz) - vy;
+  }
+  // a leg: from the pose, then reaching where its foot must be (two bones in the leg's own plane, in the pelvis's frame),
+  // the foot set to its pitch on the ground, the toes flat as the heel lifts
+  function leg(R, pose, L, k, s, grounded, want) {
+    const sd = k ? -1 : 1; let hp = k ? pose.hipR : pose.hipL, kn = k ? pose.knR : pose.knL; let an = (k ? pose.anR : pose.anL) || 0;
+    fr(R[B.thL + k], R[B.pel], sd * 0.095, -0.04, 0, hp, 0, 0); fr(R[B.snL + k], R[B.thL + k], 0, -LEG.L1, 0, kn, 0, 0); fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin, 0.02, an, 0, 0);
+    let toe = -Math.max(0, an) * 0.8;
+    if (grounded) {
+      const amin = L.ground + (LEG.sole + 0.003) * s; const e = R[B.ftL + k].elements;
+      let T = null;
+      if (want) T = want.T; else if (e[13] < amin) T = M.t[k].set(e[12], amin, e[14]);
+      // (the swing's end: the heel coming down in front reaches the ground — that is the strike; next frame it stands)
+      const ft = L.plant ? L.plant[k] : null;
+      if (!want && ft && !ft.on && !ft.off && ((k ? pose.pitR : pose.pitL) || 0) < 0) {
+        const hh = ptY(R[B.ftL + k], 0, -LEG.sole, -LEG.heel); M.k.copy(R[B.pel]).invert(); M.v.set(e[12], e[13], e[14]).applyMatrix4(M.k);
+        if (hh < L.ground + 0.006 && M.v.z > -0.01) { strike(ft, e); ft.early = 1; }
+      }
+      if (T) {
+        M.k.copy(R[B.pel]).invert(); M.v.copy(T).applyMatrix4(M.k);
+        const dy = M.v.y + 0.04, dz = M.v.z, L1 = LEG.L1, L2 = Math.hypot(RIG.shin, 0.02), dl = Math.atan2(0.02, RIG.shin);
+        const d = Math.min(Math.hypot(dy, dz), L1 + L2 - 1e-4);
+        const ke = Math.acos(G.clamp((d * d - L1 * L1 - L2 * L2) / (2 * L1 * L2), -1, 1));
+        const phi = Math.atan2(-dz, -dy), beta = Math.atan2(L2 * Math.sin(ke), L1 + L2 * Math.cos(ke));
+        const hp2 = phi - beta, kn2 = ke + dl;
+        an += (hp + kn) - (hp2 + kn2); hp = hp2; kn = kn2; // (the foot keeps its pitch in the world)
+        fr(R[B.thL + k], R[B.pel], sd * 0.095, -0.04, 0, hp, 0, 0); fr(R[B.snL + k], R[B.thL + k], 0, -LEG.L1, 0, kn, 0, 0); fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin, 0.02, an, 0, 0);
+      }
+      if (want) {
+        // (planted: the foot at the stride's pitch to the ground — its forward axis measured, the ankle turned by the difference)
+        const f = R[B.ftL + k].elements; const cur = Math.atan2(-f[9], Math.hypot(f[8], f[10])); const p = G.lerp(cur, want.p, want.w);
+        an += p - cur; fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin, 0.02, an, 0, 0); toe = -Math.max(0, p);
+      } else {
+        // (free: where the heel or the ball would go into the ground, the ankle turns to set it on it instead)
+        for (let it = 0; it < 2; it++) {
+          const hh = ptY(R[B.ftL + k], 0, -LEG.sole, -LEG.heel), hb = ptY(R[B.ftL + k], 0, -LEG.sole, LEG.ball);
+          const lo = Math.min(hh, hb); if (lo >= L.ground - 0.004) break;
+          const a = Math.asin(G.clamp((L.ground - lo) / s / (hh < hb ? 0.075 : 0.13), 0, 0.8));
+          an += hh < hb ? a : -a; an = G.clamp(an, -0.9, 1.1); fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin, 0.02, an, 0, 0);
+        }
+        toe = -Math.max(0, an) * 0.8;
+        fr(R[B.toeL + k], R[B.ftL + k], 0, RIG.toeY, RIG.toe, toe, 0, 0);
+        const tt = ptY(R[B.toeL + k], 0, -0.004, 0.07); if (tt < L.ground) toe -= Math.asin(G.clamp((L.ground - tt) / s / 0.07, 0, 0.9));
+      }
+    }
+    fr(R[B.toeL + k], R[B.ftL + k], 0, RIG.toeY, RIG.toe, toe, 0, 0);
+    fr(R[B.hpHL + k], R[B.pel], sd * 0.095, -0.04, 0, hp / 2, 0, 0); fr(R[B.knHL + k], R[B.thL + k], 0, -LEG.L1, 0, kn / 2, 0, 0);
+  }
+  P3.rig = function (X, Y, Z, yaw, pose, L) {
+    mats(); if (!RF) { RF = BONES.map(() => new THREE.Matrix4()); Q.a = new THREE.Quaternion(); Q.b = new THREE.Quaternion(); M.k = M.k || new THREE.Matrix4(); M.c2 = new THREE.Matrix4(); M.t = [new THREE.Vector3(), new THREE.Vector3()]; }
+    const R = RF; const s = L.s; const lie = pose.lie || 0;
+    const root = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); root.multiply(M.b);
+    if (lie > 0.01) { const pr = pose.prone ? 1 : -1; M.b.makeTranslation(0, 0.16 * s * lie, 0); root.multiply(M.b); M.b.makeRotationX(pr * lie * Math.PI / 2); root.multiply(M.b); M.b.makeTranslation(0, -0.92 * s * lie, 0); root.multiply(M.b); }
+    M.b.makeScale(s, s, s); root.multiply(M.b);
+    let hipY = 0.92 - pose.crouch * 0.92 + pose.bob;
+    const pel = pose.pelY || 0, prl = pose.pelR || 0;
+    const pelvis = () => fr(R[B.pel], root, pose.shift || 0, hipY, 0, pose.pelP || 0, pose.twist * 0.3 + pel, (pose.sway || 0) + prl);
+    pelvis();
+    // the feet first: where each must be (planted in a stride, or kept out of the ground) — and the hips lowered as much as
+    // a planted foot needs to be reached
+    const grounded = L.ground !== undefined && !lie;
+    const want = [null, null];
+    if (grounded) {
+      let drop = 0;
+      for (let k = 0; k < 2; k++) { want[k] = footWant(R, pose, L, k, s); if (want[k] && !want[k].leaving) { const d = dropFor(R, want[k].T); if (d < 0) { L.plant[k].on = 0; want[k] = null; } else drop = Math.max(drop, d); } }
+      if (drop > 0) { hipY -= Math.min(0.08, drop); pelvis(); }
+    }
+    const tx = pose.lean, ty = pose.twist * 0.7 - pel * 1.7, tz = -(pose.sway || 0) * 0.6 - prl * 0.8;
+    fr(R[B.chest], R[B.pel], 0, 0.06, 0, tx, ty, tz); fr(R[B.spine], R[B.pel], 0, 0.06, 0, tx / 2, ty / 2, tz / 2);
+    const nx = pose.neck, ny = (pose.lookY || 0) - (pose.twist - pel * 0.7) * 0.85;
+    fr(R[B.head], R[B.chest], 0, 0.56, 0, nx, ny, 0); fr(R[B.neck], R[B.chest], 0, 0.56, 0, nx / 2, ny / 2, 0);
+    // (a child's head is big for the body; the grip of the hands: what they hold, the run's fists, the wave's open palm)
+    if (L.headK && L.headK !== 1) { M.b.makeScale(L.headK, L.headK, L.headK); R[B.head].multiply(M.b); }
+    const hold = (L.torch || L.lantern) && !lie && !L.bind;
+    const grip = pose.grip || 0;
+    for (let k = 0; k < 2; k++) {
+      const sd = k ? -1 : 1;
+      let sp = k ? pose.shRp : pose.shLp, sr = k ? pose.shRr : pose.shLr, el = k ? pose.elR : pose.elL;
+      if (hold && sd > 0) { sp = -1.05; sr = 0.12; el = 1.25; }
+      const jz = G.clamp(-sp, -1, 1) * 0.03, roll = sr + sd * 0.05;
+      fr(R[B.shL + k], R[B.chest], sd * 0.235, 0.46, jz, sp, 0, roll);
+      frHalf(R[B.shHL + k], R[B.chest], sd * 0.235, 0.46, jz * 0.5, 0, 0, sd * RIG.roll, sp, 0, roll);
+      fr(R[B.faL + k], R[B.shL + k], 0, -0.3, 0, -el, 0, 0); fr(R[B.elHL + k], R[B.shL + k], 0, -0.3, 0, -el / 2, 0, 0);
+      fr(R[B.hdL + k], R[B.faL + k], 0, -0.29, 0, 0, 0, 0);
+      const g = (hold && sd > 0) || (k && (pose.tool || L.tool)) || (L.carry && !lie) ? 1 : grip;
+      fr(R[B.fgL + k], R[B.hdL + k], 0, -RIG.knuckle, 0, 0, 0, -sd * g * 0.95);
+      fr(R[B.tbL + k], R[B.hdL + k], -sd * 0.0076, -0.0238, 0.0324, 0, -sd * g * 0.55, -sd * g * 0.25);
+    }
+    for (let k = 0; k < 2; k++) leg(R, pose, L, k, s, grounded, want[k]);
+    // (the skirt: its front follows the leg that is most forward, its back the one most behind, its sides their own leg)
+    const hl = pose.hipL, hr = pose.hipR, cl = pose.cloth || 0, cs = pose.clothS || 0;
+    fr(R[B.skF], R[B.pel], 0, -0.04, 0, Math.min(hl, hr, 0) * 0.8 + Math.min(0, cl) * 0.5, 0, cs * 0.3);
+    fr(R[B.skB], R[B.pel], 0, -0.04, 0, Math.max(hl, hr, 0) * 0.8 + Math.max(0, cl) * 0.5, 0, cs * 0.3);
+    fr(R[B.skL], R[B.pel], 0.095, -0.04, 0, hl * 0.75 + cl * 0.3, 0, cs * 0.4); fr(R[B.skR], R[B.pel], -0.095, -0.04, 0, hr * 0.75 + cl * 0.3, 0, cs * 0.4);
+    fr(R[B.clk1], R[B.chest], 0, 0.46, -0.11, Math.max(0, cl) * 0.6, 0, cs * 0.3); fr(R[B.clk2], R[B.clk1], 0, -0.45, 0, Math.max(0, cl) * 0.5, 0, cs * 0.3);
+    // (what is held: the torch upright in the left hand whatever the arm does; the tool in the right; the load at the chest)
+    M.v.setFromMatrixPosition(R[B.hdL]); R[B.torch].makeRotationY(-yaw + Math.PI / 2); R[B.torch].setPosition(M.v.x, M.v.y, M.v.z); M.b.makeScale(s, s, s); R[B.torch].multiply(M.b);
+    fr(R[B.tool], R[B.hdR], 0, 0, 0, pose.tool ? -Math.PI / 2 : 0, 0, 0);
+    fr(R[B.carry], R[B.chest], 0, 0.3, 0.26, 0, 0, 0);
+    return R;
   };
+  // the body as one skin: the rig's bones and the look to Body3D; the things held and the marker as before
+  let skin = false;
+  function bodySkin(idx, X, Y, Z, yaw, pose, L, marker) {
+    const R = P3.rig(X, Y, Z, yaw, pose, L);
+    L.face = faceOf(pose, L);
+    G.Body3D.put(idx, R, pose, L);
+    const s = L.s, lie = pose.lie || 0;
+    if ((L.torch || L.lantern) && !lie) {
+      put('torch', idx, R[B.torch], 0, 0, 0, 0.12, 0, 0, 0, L.lantern ? -0.1 : 0.18, 0, 0.045, L.lantern ? 0.2 : 0.55, 0.045, L.lantern ? '#3a2a1a' : '#5a3c22');
+      M.v.setFromMatrixPosition(R[B.torch]); if (P3.flames.length < 40) P3.flames.push([M.v.x, M.v.y + (L.lantern ? -0.18 : 0.47) * s, M.v.z, L.lantern ? 0.5 : 0.85]);
+    } else hide('torch', idx);
+    if (pose.tool || L.tool) put('tool', idx, R[B.hdR], 0, 0, 0, pose.tool ? -Math.PI / 2 : 0, 0, 0, 0, pose.tool ? 0.3 : -0.25, 0, 0.04, 0.95, 0.04, '#7a5a3a'); else hide('tool', idx);
+    if (L.carry) put('carry', idx, R[B.chest], 0, 0.3, 0.26, 0, 0, 0, 0, 0, 0, 0.34, 0.26, 0.3, '#9a7a4a'); else hide('carry', idx);
+    if (marker) put('marker', idx, M.root, 0, 2.15 + Math.sin(performance.now() / 300) * 0.04, 0, 0, performance.now() / 600, 0, 0, 0, 0, 0.16, 0.22, 0.16, marker); else hide('marker', idx); // (M.root: the rig's root)
+  }
+  // the face: the blink (0 open .. 1 shut), where the eyes look (they go ahead of the head), the mouth
+  function faceOf(pose, L) {
+    const f = L.face || {}; const b = pose.blink === undefined ? 1 : pose.blink;
+    f.closed = G.clamp((1 - b) / 0.88, 0, 1); f.gx = G.clamp(pose.gazeX || 0, -0.45, 0.45); f.gy = G.clamp(pose.gazeY || 0, -0.3, 0.3); f.mouth = pose.talk || 0;
+    const md = L.mood; f.smile = md ? md.smile : 0.1; f.up = md ? md.up : 0; f.angry = md ? md.angry : 0;
+    return f;
+  }
+  // the parts the skin replaces (the props stay: the torch, the tool, the load, the marker over a head)
+  const PROPS = new Set(['torch', 'tool', 'carry', 'marker']);
 
   // (where the feet of someone walking stand: the ground — and, crossing a ford, the bed under the water, not its face)
   function groundY(x, y) { const S = G.S; const i = W.idx(x, y); if (S.type[i] === G.T.RIVER && !S.road[i] && !(S.ice && S.ice[i])) return W.hAt(x, y) * G.Space.HM - G.Space.bedAt(x, y); return W.groundH(x, y) * G.Space.HM; }
@@ -328,7 +698,12 @@
     near.sort((a, b) => a[0] - b[0]);
     let n = Math.min(near.length, q.npcs, MAX - 1); while (n > 0 && near[n - 1][0] > R2) n--;
     let idx = 0, emoN = 0; P3.walkers.length = 0; P3.flames.length = 0;
-    if (av) { P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null); }
+    if (skin) G.Body3D.begin();
+    if (av) {
+      // (the body's feet: where they stand in its stride — the view's own memory, a new one for a new body or after a jump)
+      if (!avFeet || avFeet.id !== av.id || Math.hypot(av.X - avFeet.X, av.Z - avFeet.Z) > 4) avFeet = { id: av.id, f: [{ on: 0 }, { on: 0 }] }; avFeet.X = av.X; avFeet.Z = av.Z;
+      av.look.ground = av.ground === false || av.swim ? undefined : av.Y; av.look.plant = avFeet.f; P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null);
+    }
     const seen = new Set();
     for (let k = 0; k < n; k++) {
       const v = near[k][1]; seen.add(v.id);
@@ -343,19 +718,22 @@
       const dx = X - s.X, dz = Z - s.Z; const dist = Math.hypot(dx, dz);
       const sp = dt > 0 ? dist / dt : 0; s.sp += (Math.min(sp, 9) - s.sp) * (1 - Math.exp(-8 * dt));
       if (dist > 0.002) { const want = Math.atan2(dz, dx); let da = want - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * (1 - Math.exp(-10 * dt)); }
-      if (dist > 6) s.sp = 0; // (a jump of the world — a teleport, a load — is not a step)
+      if (dist > 6) { s.sp = 0; if (s.plant) s.plant[0].on = s.plant[1].on = 0; } // (a jump of the world — a teleport, a load — is not a step)
       s.X = X; s.Z = Z; s.t += dt;
       let st = Anim.stateOf(v, s.sp);
       // (waved at by the body: those standing or strolling near wave back, a moment later — only seen)
       if (s.greetT > 0) { if ((s.greetD -= dt) <= 0) { s.greetT -= dt; if (st === 'idle' || st === 'walk' || st === 'talk') st = 'wave'; } }
-      if (st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak') s.ph += dt * s.sp * (st === 'run' ? 1.9 : 2.6); else s.ph += dt * 4;
+      const Lv = P3.look(v);
+      // (the stride in step with the ground: the phase at the rate the rig's own legs need for this speed and this size)
+      if (st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak') s.ph += dt * s.sp * Anim.rate(st, s.sp, Lv.s); else s.ph += dt * 4;
       Anim.blend(s.pose, Anim.pose(st, st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak' ? s.ph : s.t, s.sp), dt, 10);
       // (someone standing near the body turns their head to it — and back when it goes; a blink now and then)
       const look = P3.lookFor(s.yaw, X, Z, av, st);
       s.pose.lookY = (s.pose.lookY || 0) + (look - (s.pose.lookY || 0)) * (1 - Math.exp(-4 * dt));
       s.pose.blink = (s.t + (v.id % 13) * 0.37) % 4.1 < 0.12 ? 0.12 : 1;
       s.st = st;
-      P3.body(idx++, X, Y, Z, s.yaw, s.pose, P3.look(v), P3.highlight === v.id ? '#ffd76a' : null);
+      Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant || (s.plant = [{ on: 0 }, { on: 0 }]);
+      P3.body(idx++, X, Y, Z, s.yaw, s.pose, Lv, P3.highlight === v.id ? '#ffd76a' : null);
       if (P3.walkers.length < 40) P3.walkers.push([X, Y, Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise)
       if (v.emo && v.emo.k && emoN < emoPool.length) { const tx = emoMap(v.emo.k); if (tx) { const sp = emoPool[emoN++]; if (sp.material.map !== tx) { sp.material.map = tx; sp.material.needsUpdate = true; } const L2 = P3.look(v).s; sp.position.set(X, Y + 2.2 * L2 + Math.sin(s.t * 3) * 0.03, Z); sp.scale.set(0.42, 0.45, 1); sp.visible = true; } }
     }
@@ -385,9 +763,11 @@
     P3.crowd = c;
     for (const m of mesh) { m.count = idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
     P3.count = idx;
+    if (skin) G.Body3D.end();
     beasts(focus, R2, dt);
   };
   P3.visOf = id => vis.get(id);
+  P3.skin = () => skin; // (the bodies drawn as one skin — Body3D — or as the pieces of old)
   P3.greet = function (X, Z) { let n = 0; for (const [id, s] of vis) if ((s.X - X) ** 2 + (s.Z - Z) ** 2 < 81) { s.greetT = 1.3 + (id % 5) * 0.15; s.greetD = 0.25 + (id % 7) * 0.08; n++; } return n; };
   // the turn of the head someone wants toward the body: facing yaw at (X, Z), the body av, their state — only when they
   // stand, talk, carry or walk, the body within 6 m and somewhere in front of them (not behind their back)
@@ -400,7 +780,9 @@
   // (for the verifier: every matrix of a body or a beast drawn this frame is made of numbers)
   P3.check = function () {
     const out = []; const scan = (list, n, what) => { for (const m of list || []) { const a = m.instanceMatrix.array; for (let k = 0; k < Math.min(n, m.count) * 16; k++) if (!Number.isFinite(a[k])) { out.push(`${what}: matriz inválida no desenho`); return; } } };
-    scan(mesh, P3.count, 'pessoas'); scan(beastMesh, P3.beasts, 'bichos'); return out;
+    scan(mesh, P3.count, 'pessoas'); scan(beastMesh, P3.beasts, 'bichos');
+    if (skin) for (const e of G.Body3D.check()) out.push(e);
+    return out;
   };
 
   // ------------------------------ the beasts ------------------------------

@@ -391,7 +391,8 @@
     if (st !== b.anim) { b.anim = st; b.animT = 0; }
     b.animT += h;
     const loc = st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak' || st === 'wade' || st === 'turn';
-    if (loc) b.ph += h * Math.max(b.speed, st === 'turn' ? 1.2 : 0) * (st === 'run' ? 1.9 : 2.6);
+    // (the stride in step with the ground: the rate the rig's own legs need for this speed and this body's size)
+    if (loc) b.ph += h * (st === 'turn' ? 1.2 * 2.6 : b.speed * G.Anim3D.rate(st, b.speed, b.h / 1.75));
     else if (st === 'swim' || st === 'tread' || st === 'drown') { b.ph += h * (st === 'swim' ? 2.2 + b.speed * 1.4 + (b.stroke > 0 ? 3 : 0) : st === 'drown' ? 5 : 1.6); }
     const wet = st === 'swim' || st === 'tread' || st === 'drown';
     const want = G.Anim3D.pose(st, loc || wet ? b.ph : st === 'climb' && b.climb ? b.climb.t / b.climb.dur : b.animT, b.speed);
