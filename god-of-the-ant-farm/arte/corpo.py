@@ -30,11 +30,14 @@ ZONE = {'body': 0, 'eyeL': 1, 'eyeR': 2, 'hair': 3, 'beard': 4, 'saiaC': 5, 'sai
 
 
 # ------------------------------ Blender: the decimator ------------------------------
-def decimate(V, F, tris, sym=True):
+def decimate(V, F, tris, sym=True, split=False):
     import bpy, bmesh
     bpy.ops.wm.read_factory_settings(use_empty=True)
     me = bpy.data.meshes.new('m'); me.from_pydata(V.tolist(), [], F.tolist()); me.update()
-    bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-7); bm.to_mesh(me); bm.free()
+    bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-7)
+    # (split: the edges three faces or more share — where thin parts of a piece touch — cut apart, or the decimator stops there)
+    if split: bmesh.ops.split_edges(bm, edges=[e for e in bm.edges if len(e.link_faces) > 2])
+    bm.to_mesh(me); bm.free()
     ob = bpy.data.objects.new('m', me); bpy.context.scene.collection.objects.link(ob)
     n0 = sum(len(p.vertices) - 2 for p in me.polygons)
     mod = ob.modifiers.new('d', 'DECIMATE'); mod.decimate_type = 'COLLAPSE'; mod.ratio = min(1.0, tris / max(1, n0))
@@ -203,7 +206,8 @@ def piece_mesh(prims, zone, h, tris, rule=None, body=None, sym=True, lods=LODS):
     V0, Q = mesh_of(prims, h, maxstep=1.5 * h)
     out = []
     for f in lods:
-        V, T = decimate(V0, Q, max(60, int(tris * f)), sym)
+        n = max(60, int(tris * f)); V, T = decimate(V0, Q, n, sym)
+        if len(T) > 1.25 * n: V, T = decimate(V0, Q, n, sym, split=True)   # (stuck short of it: thin parts touching)
         out.append(piece_of(prims, zone, V, T, rule, body))
     print('  %s: %s triangles, %.0f s' % (zone, '/'.join(str(len(m['T'])) for m in out), time.time() - t0)); sys.stdout.flush()
     return out
