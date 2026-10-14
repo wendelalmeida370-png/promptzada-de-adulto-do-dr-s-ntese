@@ -41,7 +41,7 @@ function bend(mesh, row, clock) {
     let x = 0, y = 0, z = 0; const px = mesh.pos[i * 3], py = mesh.pos[i * 3 + 1], pz = mesh.pos[i * 3 + 2];
     for (let k = 0; k < 4; k++) { const w = mesh.bw[i * 4 + k] / 255; if (!w) continue; const j = o + mesh.bi[i * 4 + k] * 12;
       x += w * (buf[j] * px + buf[j + 1] * py + buf[j + 2] * pz + buf[j + 3]); y += w * (buf[j + 4] * px + buf[j + 5] * py + buf[j + 6] * pz + buf[j + 7]); z += w * (buf[j + 8] * px + buf[j + 9] * py + buf[j + 10] * pz + buf[j + 11]); }
-    const zn = mesh.zone[i]; if ((zn === 5 || zn === 6 || zn === 7 || zn === 15) && !process.env.SEMPANO) [x, y, z] = cloth([x, y, z], [px, py, pz], zn, buf, o + G.BODYMESH.bones.length * 12, clock || { t: 0, wind: [0, 0, 0] });
+    const zn = mesh.zone[i]; if ((zn === 5 || zn === 6 || zn === 7 || zn === 15 || zn === 21) && !process.env.SEMPANO) [x, y, z] = cloth([x, y, z], [px, py, pz], zn, buf, o + G.BODYMESH.bones.length * 12, clock || { t: 0, wind: [0, 0, 0] });
     out[i * 3] = x; out[i * 3 + 1] = y; out[i * 3 + 2] = z;
   }
   return out;
@@ -53,7 +53,7 @@ function cloth(P, p, zn, buf, pb, clock) {
   const cl = (v, a, b) => Math.min(b, Math.max(a, v)), ss = (a, b, x) => { const t = cl((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
   const off = (P, a, b, r) => { const ab = sub(b, a); const t = cl(dot(sub(P, a), ab) / Math.max(dot(ab, ab), 1e-8), 0, 1); const d = sub(P, add(a, ab, t)); const l = len(d); return l < r && l > 1e-5 ? add(P, d, (r - l) / l) : P; };
   const out = (P, a, b, r, u) => { const ab = sub(b, a); const t = cl(dot(sub(P, a), ab) / Math.max(dot(ab, ab), 1e-8), 0, 1); const d = sub(P, add(a, ab, t)); const l2 = dot(d, d); if (l2 >= r * r) return P; const du = dot(d, u); return add(P, u, -du + Math.sqrt(Math.max(du * du - l2 + r * r, 0))); };
-  const cape = zn === 7 || zn === 15; const m = V(20), gs = V(21), s = gs[1];
+  const cape = zn === 7 || zn === 15 || zn === 21; const m = V(20), gs = V(21), s = gs[1];
   const pel = V(22), nk = V(23), ex = V(24), ez = V(25); const L = len(sub(nk, pel)), up = sub(nk, pel).map(q => q / L);
   let w = zn === 7 ? cl((1.40 - p[1]) / 0.85, 0, 1) : cl((0.98 - p[1]) / 0.85, 0, 1); w = w * w * (3 - 2 * w);
   const t = clock.t + m[2], sp = Math.min(m[1], 6), W = clock.wind;
@@ -64,14 +64,14 @@ function cloth(P, p, zn, buf, pb, clock) {
   P = add(P, rd, Math.sin(t * (5 + W[2] * 2) + p[0] * 17 - p[1] * 11) * 0.006 * W[2] * w * (cape ? 1 : 0.4) * s);
   if (cape) {
     const sL = V(26), eL = V(27), wL = V(28), sR = V(29), eR = V(30), wR = V(31);
-    P = off(P, V(38), V(38), 0.078 * s); P = off(P, V(39), V(39), 0.078 * s);
+    if (zn !== 21) { P = off(P, V(38), V(38), 0.078 * s); P = off(P, V(39), V(39), 0.078 * s); }
     P = off(P, add(sL, sub(eL, sL), 0.15), eL, 0.072 * s); P = off(P, eL, wL, 0.056 * s); P = off(P, wL, add(wL, sub(wL, eL), 0.62), 0.052 * s);
     P = off(P, add(sR, sub(eR, sR), 0.15), eR, 0.072 * s); P = off(P, eR, wR, 0.056 * s); P = off(P, wR, add(wR, sub(wR, eR), 0.62), 0.052 * s);
     const h = dot(sub(P, pel), up); const q = sub(sub(P, pel), up.map(v => v * cl(h, 0, L))); const qx = dot(q, ex), qz = dot(q, ez);
     const u = cl(h / L, 0, 1); const rx = (0.17 + 0.03 * u) * s, rz = (0.135 - 0.013 * u) * s; const k = Math.cbrt(Math.abs(qx / rx) ** 3 + Math.abs(qz / rz) ** 3);
-    const kk = cl((1.40 - p[1]) / 0.1, 0, 1); if (k < 1 && k > 1e-4) P = add(add(P, ex, qx * (1 / k - 1) * kk), ez, qz * (1 / k - 1) * kk);
+    const kk = cl((1.40 - p[1]) / 0.1, 0, 1); if (k < 1 && k > 1e-4 && zn !== 21) P = add(add(P, ex, qx * (1 / k - 1) * kk), ez, qz * (1 / k - 1) * kk);
   }
-  if (cape) { const lr = (zn === 15 ? 1 : ss(0.97, 0.82, p[1])) * s;
+  if (cape) { const lr = (zn === 15 || zn === 21 ? 1 : ss(0.97, 0.82, p[1])) * s;
     P = off(P, V(32), V(33), 0.092 * lr); P = out(P, V(33), V(34), 0.07 * lr, rd); P = off(P, V(35), V(36), 0.092 * lr); P = out(P, V(36), V(37), 0.07 * lr, rd); }
   else { if (p[1] > 0.86) { const h = dot(sub(P, pel), up); const q = sub(sub(P, pel), up.map(v => v * cl(h, 0, L))); const qx = dot(q, ex), qz = dot(q, ez);
       const k = Math.hypot(qx / (0.155 * s), qz / (0.112 * s)); if (k < 1 && k > 1e-4) P = add(add(P, ex, qx * (1 / k - 1)), ez, qz * (1 / k - 1)); }
@@ -177,14 +177,14 @@ const inside = (cm, bm) => {
 // (a cape: in every state. A skirt: in every state but the deep seats — sitting, on the ground, crouching, lying —, where a
 // skin bent by bones cannot lay a skirt over thighs raised to the belly: there at most 6% of it, never deeper than 3 cm, and
 // the numbers said every run — the limit of this test, not of the look: wave 1 had 12% there)
-{ const out = []; let fail = 0; const SEAT = new Set(['sit', 'rest', 'sneak', 'sleep']);
-  for (const nm of ['capa', 'toga', 'saiaC', 'saiaL']) { if (!MESH[nm]) continue; const row = [];
+{ const out = []; let fail = 0; const SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low']); // (low: bent double, gathering from the ground)
+  for (const nm of ['capa', 'toga', 'bata', 'saiaC', 'saiaL']) { if (!MESH[nm]) continue; const row = [];
     for (const st of A.STATES) { let fr = 0, wo = 0;
-      for (let k = 0; k < 6; k++) { pose(st, k / 6 * Math.PI * 2, st === 'run' ? 4.5 : 1.4); const r = inside(MESH[nm], MESH.corpoM); fr = Math.max(fr, r.frac); wo = Math.max(wo, r.worst); }
+      for (let k = 0; k < 6; k++) { pose(st, k / 6 * Math.PI * 2, st === 'run' ? 4.5 : 1.4); const r = inside(MESH[nm], nm === 'bata' ? MESH.corpoF : MESH.corpoM); fr = Math.max(fr, r.frac); wo = Math.max(wo, r.worst); }
       const seat = nm !== 'capa' && nm !== 'toga' && SEAT.has(st), bad = seat ? fr > 0.06 || wo > 0.03 : fr > 0.01;
       if (bad || (seat && fr > 0.01)) row.push(`${st} ${(fr * 100).toFixed(1)}% (${(wo * 100).toFixed(1)} cm)${bad ? ' FALHA' : ''}`); if (bad) fail++; }
     out.push(`${nm}: ${row.length ? row.join(', ') : 'limpa'}`); }
-  ok('a capa e as saias não atravessam o corpo (capa: em todos os estados ≤1% do pano a mais de 8 mm dentro da pele; saias: ≤1%, sentadas ≤6% e ≤3 cm)', !fail, out.join(' · ')); }
+  ok('a capa, a toga, a blusa e as saias não atravessam o corpo (capa e toga: em todos os estados ≤1% do pano a mais de 8 mm dentro da pele; blusa e saias: ≤1%, sentadas ≤6% e ≤3 cm)', !fail, out.join(' · ')); }
 // nobody naked: every sex, age, trade, people, class, the captive, the ruler, the rich, swimming and asleep — drawn, and
 // the verifier (Body3D.check) says nothing; and an outfit made bare on purpose, which it must catch
 { const ROLES = [null, 'lenhador', 'coletor', 'agricultor', 'construtor', 'mineiro', 'cacador', 'sacerdote', 'anciao', 'pastor', 'cavalarico', 'acougueiro', 'tecelao', 'ferreiro', 'ourives', 'oleiro', 'mercador', 'feirante', 'taverneiro', 'escriba', 'cobrador', 'contrabandista', 'guerreiro', 'pescador', 'vigia', 'explorador', 'estivador', 'curandeiro', 'carcereiro', 'vinhateiro', 'lavrador'];

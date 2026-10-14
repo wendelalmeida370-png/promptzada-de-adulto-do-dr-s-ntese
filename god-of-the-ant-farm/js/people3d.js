@@ -166,7 +166,7 @@
     const L = { s, skin: v.skin || '#d8a888', hair: hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', belt: darker(cloth, 0.38), brow: darker(v.hair || '#3a2a1a', 0.8), nose: darker(v.skin || '#d8a888', 0.88), lips: darker(v.skin || '#d8a888', 0.62), robe, fem: v.g === 'f' && ad >= 13, bun: v.g === 'f' && ad >= 16 && v.id % 3 === 1, beard: v.g === 'm' && ad >= 26 && v.id % 3 === 0, long: v.g === 'f' && ad >= 8 && v.id % 3 !== 1, bald: v.g === 'm' && ad >= 55 && v.id % 4 === 0, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia' || (v.role === 'anciao' && ad >= 60), toolK: v.role === 'anciao' ? 'cajado' : 'lanca', act: v.act, torch: torchOf(v), lantern: !!v.lantern && !v.inside, strap: ad >= 14 && (v.role === 'cacador' || v.role === 'guerreiro' || v.role === 'mercador' || v.role === 'explorador' || (G.Possess && G.Possess.body && G.Possess.body() === v)) };
     L.id = v.id || 0; // (only for the drawing's own clocks: each one's cloth moves on its own beat)
     if (skin) {
-      L.out = outfitOf(v, L, fac); L.headK = L.out.headK; L.armOut = L.out.skirt === 'saiaL' || L.out.cloakM ? 0.07 : 0;
+      L.out = outfitOf(v, L, fac); L.headK = L.out.headK; L.armOut = L.out.skirt === 'saiaL' || L.out.cloakM || L.out.topM ? 0.07 : 0;
       // (the face's mood, from the world's feeling: joy smiles with the eyes, love too and blushes; grief frowns with the
       // brows' inner ends raised and the lids drooping; fear and awe open the eyes wide and the mouth; anger draws the brows
       // down and in and glares; a question lifts the brows; sickness and sleep half close the eyes; a calm face a little warm)
@@ -225,7 +225,7 @@
     // (the cut: sleeves to the wrist, the round neckline, shoes to the ankle, trousers, the belt at the waist)
     o.sleeve = 0.585; o.neck = 0; o.bootTop = 0.11; o.legs = 1; o.beltY = 1.01; o.beltH = 0.017; o.overK = 0; o.strap = L.strap ? 1 : 0;
     o.torso = 0; o.motif = wealth >= 2 && hh(9) < 0.7 ? 1 : 0; o.feetK = 0; o.hem = 1; o.cloakTrim = wealth >= 2 ? 1 : 0;
-    o.skirt = null; o.cloakM = null; o.hatM = null; o.beard = null;
+    o.skirt = null; o.cloakM = null; o.hatM = null; o.beard = null; o.topM = null;
     o.hairM = ad >= 55 && !fem && hh(10) < 0.35 ? 'careca' : HAIRS[fem ? 'f' : 'm'][Math.floor(hh(11) * 5)];
     if (!fem && ad >= 22 && hh(12) < (civ === 'nordico' ? 0.62 : civ === 'grego' ? 0.5 : 0.22)) o.beard = hh(13) < 0.55 ? 'barba' : hh(13) < 0.8 ? 'curta' : 'bigode';
     o.blush = fem || kid ? 0.25 : 0.06;
@@ -238,28 +238,43 @@
     } else if (civ === 'grego' || civ === 'romano' || civ === 'classico') {
       o.cloth = mixHex(CV.cloth || '#efe9dc', o.cloth, kid ? 0.6 : 0.35); o.sleeve = 0.16; o.legs = 0; o.feetK = 2; o.skirt = fem ? 'saiaL' : 'saiaC'; o.bootTop = 0.0;
       if (fem) o.hairM = hh(24) < 0.7 ? 'coque' : 'longo'; else o.hairM = 'curto';
-      if (wealth >= 2) o.cloakM = 'capa', o.cloak = wool(darker(base, 0.9));
+      // (a Greek woman's chiton falls doubled at the top: its overfold, a loose blouse; a rich man's mantle is a toga — of
+      // white wool for a Roman — or a himation of colour; a rich woman's, a palla over the shoulders)
+      if (fem && civ === 'grego' && ad >= 13) o.topM = 'bata';
+      if (wealth >= 2) { if (fem) o.cloakM = 'capa', o.cloak = wool(darker(base, 0.9)); else o.cloakM = 'toga', o.cloak = civ === 'romano' ? '#ebe5d5' : wool(darker(base, 0.9)); }
     } else if (civ === 'egipcio') {
       o.cloth = '#f1ead6'; o.legs = 0; o.feetK = hh(25) < 0.5 ? 1 : 2; o.bootTop = 0; o.skirt = fem ? 'saiaL' : 'saiaC';
       if (!fem) { o.torso = wealth >= 2 || role === 'sacerdote' ? 2 : 1; o.beltY = 0.98; } else { o.sleeve = 0.04; o.torso = wealth >= 2 ? 0 : 0; }
-      o.hairM = role === 'sacerdote' ? 'careca' : 'chanel'; o.trim = CV.trim || '#2f8f8a'; o.beard = null;
+      o.hairM = role === 'sacerdote' ? 'careca' : wealth >= 2 || (fem && hh(30) < 0.5) ? 'peruca' : 'chanel'; o.trim = CV.trim || '#2f8f8a'; o.beard = null;
     } else if (civ === 'asteca') {
       o.cloth = mixHex('#e8dcc0', o.cloth, 0.3); o.legs = 0; o.feetK = 2; o.bootTop = 0; o.trim = CV.trim || '#2fae8f'; o.motif = 1;
-      if (fem) { o.skirt = 'saiaL'; o.sleeve = 0.18; o.hairM = hh(26) < 0.6 ? 'trancas' : 'longo'; } else { o.skirt = 'saiaC'; o.torso = 1; o.cloakM = 'capa'; o.cloak = mixHex('#e8dcc0', base, 0.5); o.hairM = 'chanel'; }
+      // (a woman: the huipil — a loose blouse with its woven panel — over the cueitl, a wrapped skirt of a dyed cotton; a man:
+      // the maxtlatl, the loincloth, and the tilmatli knotted over the shoulder)
+      if (fem) { o.skirt = 'saiaL'; o.topM = 'bata'; o.overK = 3; o.over = ['#3a5a7a', '#8a3a2a', '#e8dcc0', '#4a6a3a', '#6a4a7a'][Math.floor(hh(31) * 5)]; o.sleeve = 0.18; o.hairM = hh(26) < 0.6 ? 'trancas' : 'longo'; }
+      else { o.skirt = 'tanga'; o.torso = 1; o.cloakM = 'capa'; o.cloak = mixHex('#e8dcc0', base, 0.5); o.hairM = 'chanel'; }
     }
     // (the trades: the robe of the priest and the elder, the scribe's; aprons; the hats)
     if (!kid) {
       // (the robe is of the trade's wool — a woman of the north takes off her apron-dress for it, not down to her linen)
-      if (role === 'sacerdote' || role === 'anciao' || role === 'escriba') { if (o.overK === 1) o.cloth = o.over; o.skirt = 'saiaL'; o.legs = 0; o.overK = 0; o.sleeve = 0.585; if (role === 'anciao') o.cloakM = 'capa'; if (role === 'sacerdote' && civ !== 'egipcio') o.hatM = hh(27) < 0.5 ? 'capuz' : null, o.cloak = o.cloth; }
+      const south = civ === 'romano' || civ === 'grego';
+      if (role === 'sacerdote' || role === 'anciao' || role === 'escriba') { if (o.overK === 1) o.cloth = o.over; o.skirt = 'saiaL'; o.legs = 0; o.overK = 0; o.topM = null; o.sleeve = 0.585; if (role === 'anciao') o.cloakM = south && !fem ? 'toga' : 'capa'; if (role === 'sacerdote' && civ !== 'egipcio') { if (south) o.hatM = 'louro', o.hat = '#4a6a2a'; else o.hatM = hh(27) < 0.5 ? 'capuz' : null, o.cloak = o.cloth; } }
       if (role === 'ferreiro' || role === 'acougueiro' || role === 'taverneiro' || role === 'oleiro' || role === 'feirante') { o.overK = 2; o.over = role === 'ferreiro' ? '#5a3a24' : role === 'oleiro' ? '#b8946a' : '#e8e0cc'; o.sleeve = role === 'ferreiro' ? 0.2 : 0.42; }
       if (role === 'agricultor' || role === 'pastor' || role === 'vinhateiro' || role === 'lavrador') { o.hatM = 'chapeu'; o.hat = '#d8b86a'; o.sleeve = 0.4; }
       if (role === 'cacador' && hh(28) < 0.5) { o.hatM = 'capuz'; o.cloak = wool('#5a4a2a'); }
-      if (role === 'guerreiro') { o.hatM = 'elmo'; o.hat = METAL.iron; o.cloth = wool(base); o.cloakM = wealth >= 2 || hh(29) < 0.4 ? 'capa' : o.cloakM; o.bootTop = 0.22; }
+      // (the warriors' helmets: the crested galea of the south — its crest of red horsehair —, a lord's feathers in the jungle,
+      // none on the Nile, the iron helmet of the north)
+      if (role === 'guerreiro') { o.hatM = south || civ === 'classico' ? 'galea' : civ === 'asteca' ? (wealth >= 2 ? 'penacho' : null) : civ === 'egipcio' ? null : 'elmo'; o.hat = civ === 'grego' ? METAL.bronze : METAL.iron; if (o.hatM === 'galea') o.trim = '#8a2418'; o.cloth = wool(base); o.cloakM = civ === 'asteca' ? o.cloakM : wealth >= 2 || hh(29) < 0.4 ? 'capa' : o.cloakM; o.bootTop = south || civ === 'asteca' || civ === 'egipcio' ? 0 : 0.22; }
+      if (role === 'pescador') { o.hatM = civ === 'nordico' ? 'gorro' : 'chapeu'; o.hat = civ === 'nordico' ? wool('#5a5a4a') : '#d8b86a'; o.sleeve = 0.3; }
       if (role === 'contrabandista') { o.cloakM = 'capa'; o.hatM = 'capuz'; o.cloak = '#2a2430'; }
       if (role === 'mercador' || role === 'ourives') { o.cloakM = 'capa'; o.motif = 1; }
     }
     if (v.robe && !v.hood) { o.cloakM = 'capa'; o.cloak = v.robe; o.hatM = v.unmask ? o.hatM : 'capuz'; }
-    if (ruler && ad >= 10) { o.hatM = 'coroa'; o.cloakM = 'capa'; o.cloak = wool(darker(fac && G.Fac.hex ? G.Fac.hex(fac.id) : '#8a2a2a', 0.85)); o.metal = METAL.gold; o.motif = 1; o.cloakTrim = 1; }
+    // (a ruler: the crown and the cloak of the people's colour — the laurel of gold and a toga of purple in the south, the nemes
+    // on the Nile with the bare chest and its collar, the feathers and the turquoise cloak of the jungle)
+    if (ruler && ad >= 10) { o.hatM = 'coroa'; o.cloakM = 'capa'; o.cloak = wool(darker(fac && G.Fac.hex ? G.Fac.hex(fac.id) : '#8a2a2a', 0.85)); o.metal = METAL.gold; o.motif = 1; o.cloakTrim = 1;
+      if (civ === 'romano' || civ === 'grego') { o.hatM = 'louro'; o.hat = '#c8a040'; if (!fem) o.cloakM = 'toga', o.cloak = civ === 'romano' ? '#5a2048' : o.cloak; }
+      else if (civ === 'egipcio') { o.hatM = 'nemes'; o.cloakM = null; if (!fem) o.torso = 2; }
+      else if (civ === 'asteca') { o.hatM = 'penacho'; o.cloak = '#2f7a8a'; } }
     if (v.captive) { o.cloakM = null; o.hatM = null; o.motif = 0; o.overK = 0; o.feetK = 1; o.trim = o.cloth; o.belt = '#6a5a4a'; o.cloakTrim = 0; }
     // (a northern cloak has a collar of fur — white on a ruler's —; every other cloak, a collar of its own cloth)
     o.fur = o.cloakM === 'capa' && civ === 'nordico' && !v.robe ? (ruler ? 2 : 1) : 0;

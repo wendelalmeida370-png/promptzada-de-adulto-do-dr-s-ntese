@@ -26,7 +26,7 @@ BI = {b: i for i, b in enumerate(BONES)}
 HALF = [('pel', 'chest', 'spine'), ('chest', 'head', 'neck'),
         ('chest', 'shL', 'shHL'), ('chest', 'shR', 'shHR'), ('shL', 'faL', 'elHL'), ('shR', 'faR', 'elHR'),
         ('pel', 'thL', 'hpHL'), ('pel', 'thR', 'hpHR'), ('thL', 'snL', 'knHL'), ('thR', 'snR', 'knHR')]
-ZONE = {'body': 0, 'eyeL': 1, 'eyeR': 2, 'hair': 3, 'beard': 4, 'saiaC': 5, 'saiaL': 6, 'cape': 7, 'metal': 8, 'hat': 9, 'straw': 10, 'hood': 11, 'scarf': 12, 'gold': 13, 'fur': 14, 'toga': 15, 'nemes': 16, 'crista': 17, 'plumas': 18, 'tanga': 19, 'folha': 20}
+ZONE = {'body': 0, 'eyeL': 1, 'eyeR': 2, 'hair': 3, 'beard': 4, 'saiaC': 5, 'saiaL': 6, 'cape': 7, 'metal': 8, 'hat': 9, 'straw': 10, 'hood': 11, 'scarf': 12, 'gold': 13, 'fur': 14, 'toga': 15, 'nemes': 16, 'crista': 17, 'plumas': 18, 'tanga': 19, 'folha': 20, 'bata': 21}
 
 
 # ------------------------------ Blender: the decimator ------------------------------
@@ -185,6 +185,9 @@ def w_rule(V, rule):
         up = smooth(0.9, 1.06, y); W[:, BI['chest']] = up
         down = (1 - up) * smooth(0.95, 0.75, y); W[:, BI['pel']] = (1 - up) - down
         for k, w in (('skF', f), ('skB', b), ('skL', l), ('skR', r)): W[:, BI[k]] = down * w
+    elif rule == 'bata':
+        # (a loose blouse: with the chest above the waist, with the hips below it — it bends at the waist as the body does)
+        up = smooth(0.92, 1.12, y); W[:, BI['chest']] = up; W[:, BI['pel']] = 1 - up
     elif rule == 'hood':
         c = smooth(1.5, 1.6, y); W[:, BI['head']] = c; W[:, BI['chest']] = 1 - c
     W /= np.maximum(W.sum(1, keepdims=True), 1e-9)
@@ -282,6 +285,7 @@ def main(only):
                      ('galea', 'metal', 1400), ('nemes', 'nemes', 1600), ('penacho', 'plumas', 1400), ('louro', 'folha', 700)):
         jobs[st] = (lambda st, z, n: lambda: piece_mesh(CR.hat(st), z, 0.0035, n, rule='hood' if st == 'capuz' else None, body=body_occluder(), lods=LODS[:2] if st in ('coroa', 'louro') else LODS))(st, z, n)
     jobs['tanga'] = lambda: piece_mesh(CR.piece('tanga'), 'tanga', 0.004, 900, rule='skirt', body=body_occluder())
+    jobs['bata'] = lambda: piece_mesh(CR.piece('bata'), 'bata', 0.004, 1800, rule='bata', body=torso_occluder(), sym=False)
     for name, f in jobs.items():
         if only and name not in only: continue
         print(name); sys.stdout.flush()

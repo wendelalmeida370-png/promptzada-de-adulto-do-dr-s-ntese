@@ -83,7 +83,7 @@ vec3 b3out(vec3 P, vec3 a, vec3 b, float r, vec3 u) {
   if (l2 >= r * r) return P; float du = dot(d, u); return P + u * (-du + sqrt(max(du * du - l2 + r * r, 0.0)));
 }
 vec3 b3cloth(vec3 P, vec3 p) {
-  int z = int(aZone + 0.5); bool cape = z == 7 || z == 15; if (!cape && z != 5 && z != 6) return P; // (a cape, a toga; a skirt)
+  int z = int(aZone + 0.5); bool cape = z == 7 || z == 15 || z == 21; if (!cape && z != 5 && z != 6) return P; // (a cape, a toga, a blouse; a skirt)
   vec4 m = b3V(20), gs = b3V(21); float s = gs.y;
   vec3 pel = b3V(22).xyz, nk = b3V(23).xyz, ex = b3V(24).xyz, ez = b3V(25).xyz;
   vec3 up = normalize(nk - pel); float L = dot(nk - pel, up);
@@ -100,7 +100,7 @@ vec3 b3cloth(vec3 P, vec3 p) {
     // (the arms: the shoulder caps, the upper arm from a little under the shoulder — the yoke is made for the shoulder as it
     // hangs —, the forearm, the hand)
     vec3 sL = b3V(26).xyz, eL = b3V(27).xyz, wL = b3V(28).xyz, sR = b3V(29).xyz, eR = b3V(30).xyz, wR = b3V(31).xyz;
-    P = b3off(P, b3V(38).xyz, b3V(38).xyz, 0.078 * s); P = b3off(P, b3V(39).xyz, b3V(39).xyz, 0.078 * s);
+    if (z != 21) { P = b3off(P, b3V(38).xyz, b3V(38).xyz, 0.078 * s); P = b3off(P, b3V(39).xyz, b3V(39).xyz, 0.078 * s); } // (a blouse has no yoke on them)
     P = b3off(P, mix(sL, eL, 0.15), eL, 0.072 * s); P = b3off(P, eL, wL, 0.056 * s); P = b3off(P, wL, wL + (wL - eL) * 0.62, 0.052 * s);
     P = b3off(P, mix(sR, eR, 0.15), eR, 0.072 * s); P = b3off(P, eR, wR, 0.056 * s); P = b3off(P, wR, wR + (wR - eR) * 0.62, 0.052 * s);
     // (then the trunk, last — nothing pushes the cloth into it: an elliptic cylinder round the hips-to-neck axis, a little
@@ -109,9 +109,9 @@ vec3 b3cloth(vec3 P, vec3 p) {
     float u = clamp(h / L, 0.0, 1.0); float rx = mix(0.17, 0.2, u) * s, rz = mix(0.135, 0.122, u) * s;
     float kk = clamp((1.40 - p.y) / 0.1, 0.0, 1.0);
     vec2 qa = abs(vec2(qx / rx, qz / rz)); float k = pow(qa.x * qa.x * qa.x + qa.y * qa.y * qa.y, 1.0 / 3.0); // (a back fuller at its corners: the shoulder blades)
-    if (k < 1.0 && k > 1e-4) P += (ex * qx + ez * qz) * ((1.0 / k - 1.0) * kk);
+    if (k < 1.0 && k > 1e-4 && z != 21) P += (ex * qx + ez * qz) * ((1.0 / k - 1.0) * kk); // (a blouse goes with the trunk's bones)
     // (the legs, from a little under the hips)
-    float lr = (z == 15 ? 1.0 : 1.0 - smoothstep(0.82, 0.97, p.y)) * s; // (a toga is held by nothing at the waist: the thighs push it anywhere)
+    float lr = (z == 15 || z == 21 ? 1.0 : 1.0 - smoothstep(0.82, 0.97, p.y)) * s; // (a toga, a blouse are held by nothing at the waist: the thighs push them anywhere)
     P = b3off(P, b3V(32).xyz, b3V(33).xyz, 0.092 * lr); P = b3out(P, b3V(33).xyz, b3V(34).xyz, 0.07 * lr, rd);
     P = b3off(P, b3V(35).xyz, b3V(36).xyz, 0.092 * lr); P = b3out(P, b3V(36).xyz, b3V(37).xyz, 0.07 * lr, rd); // (the shins, outward only)
   } else {
@@ -131,7 +131,7 @@ vec3 b3cloth(vec3 P, vec3 p) {
   // the paint of a body: from where the point is on the body as modelled (vBind) — the eyes from their own normal.
   // The row's texels after the bones: 0 face (shut, gaze x, gaze y, mouth open) · 1 mood (smile, brows up, brows in, blush)
   // · 2 cut (sleeve end down the arm, neckline, boot top, legs: 0 bare 1 trousers 2 wrapped) · 3 cut (belt height, belt
-  // half-width, over: 0 none 1 the northern apron-dress 2 an apron, strap) · 4 skin · 5 cloth · 6 trim · 7 trousers ·
+  // half-width, over: 0 none 1 the northern apron-dress 2 an apron 3 the skirt of its own colour, strap) · 4 skin · 5 cloth · 6 trim · 7 trousers ·
   // 8 boots · 9 belt · 10 hair · 11 iris · 12 lips · 13 over · 14 metal · 15 style (torso: 0 dressed 1 bare 2 bare with a
   // collar; trim motif; feet: 0 shoes 1 bare 2 sandals; stubble) · 16 hat · 17 cloak · 18 beads · 19 (hem trim, cloak trim, the collar: 0 cloth 1 fur 2 white fur, -) · 20, 21 and the joints: the cloth (CLOTH)
   const PAINT = `
@@ -214,8 +214,8 @@ vec3 b3piece(vec3 p) {
     return h * mix(1.0, 0.8 + 0.32 * st, k) * (z == 4 ? 0.92 : 1.0);
   }
   if (z == 5 || z == 6) {
-    vec4 Bc = b3T(3); vec3 c = Bc.z > 0.5 && Bc.z < 1.5 ? b3T(13).rgb : b3T(5).rgb; c *= b3weave(p);
-    if (Bc.z > 1.5 && p.z > 0.0 && abs(p.x) < 0.14) c = b3T(13).rgb * b3weave(p.zyx); // (the apron in front)
+    vec4 Bc = b3T(3); vec3 c = (Bc.z > 0.5 && Bc.z < 1.5) || Bc.z > 2.5 ? b3T(13).rgb : b3T(5).rgb; c *= b3weave(p);
+    if (Bc.z > 1.5 && Bc.z < 2.5 && p.z > 0.0 && abs(p.x) < 0.14) c = b3T(13).rgb * b3weave(p.zyx); // (the apron in front)
     // (the hem's band follows the hem, which is never level — arte/corpo_roupa.py, skirt_hem)
     float sa = atan(p.x, p.z + 0.008); float hy = (z == 5 ? B3_HEMC : B3_HEML) + 0.011 * sin(sa * 3.0 + 1.0) + 0.006 * sin(sa * 7.0 + 0.4); float hb = (p.y - hy) / 0.03;
     if (b3T(19).x > 0.5 && hb < 1.0) c = b3band(b3T(6).rgb, ang * 9.0, clamp(hb, 0.0, 1.0), b3T(15).y);
@@ -240,6 +240,31 @@ vec3 b3piece(vec3 p) {
     return fur * mix(1.0, 0.72 + 0.5 * st, k);
   }
   if (z == 8 || z == 13) { vec3 m = z == 13 ? b3T(14).rgb : b3T(16).rgb; float rv = step(0.5, fract(ang * 2.546)) * 0.0; return m * (0.92 + 0.12 * sin(ang * 4.0 + p.y * 30.0)) + rv; }
+  if (z == 15) return b3T(17).rgb * b3weave(p.yxz) * (0.96 + 0.06 * sin(p.y * 40.0 + p.x * 25.0)); // (the toga, the himation: the mantle's wool)
+  if (z == 16) {
+    // the nemes: stripes of gold and blue round the head and down the lappets
+    float st = smoothstep(0.3, 0.7, abs(fract(p.y * 30.0) - 0.5) * 2.0); float k = 1.0 - smoothstep(0.0, 0.03, fwidth(p.y) * 30.0);
+    return mix(mix(b3T(14).rgb, vec3(0.05, 0.1, 0.32), 0.5), mix(b3T(14).rgb * 1.08, vec3(0.04, 0.08, 0.3), st), k);
+  }
+  if (z == 17) { float st = sin(p.z * 260.0 + sin(p.y * 90.0) * 2.0) * 0.5 + 0.5; float k = 1.0 - smoothstep(0.0, 0.02, fwidth(p.z) * 260.0); return b3T(6).rgb * mix(1.0, 0.75 + 0.4 * st, k); } // (a crest of dyed horsehair, its strands)
+  if (z == 18) {
+    // the feathers of the jungle: quetzal green, bluer toward the tips, the barbs catching the light
+    float r = length(p - vec3(0.0, 1.72, -0.01)); vec3 g = mix(vec3(0.03, 0.3, 0.15), vec3(0.02, 0.12, 0.22), smoothstep(0.22, 0.48, r));
+    float st = sin(ang * 70.0 + r * 40.0) * 0.5 + 0.5; float k = 1.0 - smoothstep(0.0, 0.03, fwidth(ang) * 70.0); return g * mix(1.0, 0.8 + 0.4 * st, k);
+  }
+  if (z == 19) {
+    // the loincloth: the cloth, its two ends with the people's band
+    vec3 c = b3T(5).rgb * b3weave(p); if (p.y < 0.65) c = b3band(b3T(6).rgb, p.x * 40.0, clamp((p.y - 0.6) / 0.05, 0.0, 1.0), 1.0); return c;
+  }
+  if (z == 20) { float lf = sin(ang * 44.0 + p.y * 180.0) * 0.5 + 0.5; return b3T(16).rgb * (0.82 + 0.3 * lf); } // (the laurel: green leaves — of gold for a ruler)
+  if (z == 21) {
+    // a blouse — a huipil, the overfold of a chiton: the tunic's cloth; its hem a woven band and, down its front, the middle
+    // panel of a huipil with the people's motif (where the people have one)
+    vec3 c = b3T(5).rgb * b3weave(p); vec4 St = b3T(15);
+    float hb = (p.y - 0.84) / 0.035; if (hb < 1.0) c = b3band(b3T(6).rgb, atan(p.x, p.z + 0.008) * 9.0, clamp(hb, 0.0, 1.0), St.y);
+    if (St.y > 0.5 && p.z > 0.0 && abs(p.x) < 0.045 && p.y > 0.88) c = b3band(b3T(6).rgb, p.y * 16.0, abs(p.x) / 0.045 * 0.5 + 0.5, 1.0);
+    return c;
+  }
   if (z == 10) { float w = step(0.5, fract(ang * 16.0 + p.y * 45.0)) * 0.5 + step(0.5, fract(ang * 16.0 - p.y * 45.0)) * 0.5; float k = 1.0 - smoothstep(0.0, 0.03, fwidth(ang) * 16.0); return b3T(16).rgb * mix(1.0, 0.82 + 0.3 * w, k); }
   return b3T(16).rgb * b3weave(p);
 }
@@ -286,7 +311,7 @@ vec3 b3paint() {
       float bd = length(vec2((fract(p.x / 0.011) - 0.5) * 0.011, p.y - by));
       if (abs(p.x) < 0.075 && bd < 0.0042) { float k = floor(p.x / 0.011); vec3 bc = mod(k, 3.0) < 1.0 ? b3T(18).rgb : mod(k, 3.0) < 2.0 ? vec3(0.2, 0.35, 0.6) : vec3(0.85, 0.8, 0.7); c = bc * (0.8 + 0.4 * smoothstep(0.0042, 0.0, bd)); }
     }
-    if (Bc.z > 1.5 && p.z > 0.0 && abs(p.x) < 0.13 && p.y < 1.33) c = b3T(13).rgb * b3weave(p.zyx); // (an apron)
+    if (Bc.z > 1.5 && Bc.z < 2.5 && p.z > 0.0 && abs(p.x) < 0.13 && p.y < 1.33) c = b3T(13).rgb * b3weave(p.zyx); // (an apron)
     // (a strap across the chest, left shoulder to right hip, for the bag)
     if (Bc.w > 0.5) { float sdst = abs(dot(vec2(p.x - 0.12, p.y - 1.43), normalize(vec2(0.44, 0.27)))); if (sdst < 0.016) c = b3T(9).rgb * 0.92; }
     float bl = abs(p.y - bY) - bH;
@@ -416,7 +441,7 @@ vec3 b3paint() {
     const lv = B3.lod ? Math.max(0, Math.min(2, L.lod | 0)) : 0;
     const bd = u.body && MESH[u.body] ? u.body : L.fem ? 'corpoF' : 'corpoM';
     AT[row][7] = useL(MESH[bd] ? bd : 'corpoM', lv, row);
-    if (u.hairM) useL(u.hairM, lv, row); if (u.beard) useL(u.beard, lv, row); if (u.skirt) useL(u.skirt, lv, row); if (u.cloakM) useL(u.cloakM, lv, row); if (u.hatM) useL(u.hatM, lv, row);
+    if (u.hairM) useL(u.hairM, lv, row); if (u.beard) useL(u.beard, lv, row); if (u.skirt) useL(u.skirt, lv, row); if (u.cloakM) useL(u.cloakM, lv, row); if (u.hatM) useL(u.hatM, lv, row); if (u.topM) useL(u.topM, lv, row);
     if (row + 1 > B3.rows) B3.rows = row + 1;
   };
   // (who has no clothes of their own yet — the fallback's look: a plain tunic)
@@ -456,8 +481,8 @@ vec3 b3paint() {
     if (!K.c) K.c = new THREE.Color();
     K.c.set(skin || '#888888'); const sk = lab(K.c.r, K.c.g, K.c.b);
     const far = c => { const q = lab(c[0], c[1], c[2]); return Math.hypot(q[0] - sk[0], q[1] - sk[1], q[2] - sk[2]) >= 10; }; // (a cloth the colour of the skin is no cloth)
-    const trunk = (u.torso === 0 && far(u.lin.cloth)) || (u.overK === 1 && far(u.lin.over));
-    const skirtC = u.overK === 1 ? u.lin.over : u.lin.cloth;
+    const trunk = ((u.torso === 0 || !!u.topM) && far(u.lin.cloth)) || (u.overK === 1 && far(u.lin.over));
+    const skirtC = u.overK === 1 || u.overK === 3 ? u.lin.over : u.lin.cloth;
     const hips = (!!u.skirt && far(skirtC)) || (u.legs >= 1 && far(u.lin.pants));
     return !trunk && !hips ? 'sem roupa no tronco e nos quadris' : '';
   };

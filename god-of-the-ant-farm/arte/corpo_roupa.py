@@ -441,9 +441,56 @@ def tanga():
     return [Custom(f, (np.array([-0.24, y1 - 0.03, -0.24]), np.array([0.24, y0 + 0.02, 0.24]))).set(bone='pel')]
 
 
+_DRAPE2 = {}
+def drape_fit(gap=0.012, flare=0.035):
+    """The drape round all of the body's trunk (not the shoulder caps): a loose garment falls from the bust and the shoulder
+    blades straight down, a little wider below — and its slopes."""
+    if 'R' in _DRAPE2: return _DRAPE2['TH'], _DRAPE2['YS'], _DRAPE2['R'], _DRAPE2['RB']
+    TH = np.linspace(-np.pi, np.pi, 181); YS = np.arange(1.56, 0.70, -0.01); RS = np.arange(0.0, 0.36, 0.004)
+    T, Yg, Rg = np.meshgrid(TH, YS, RS, indexing='ij')
+    P = np.stack([np.sin(T) * Rg, Yg, CZ - np.cos(T) * Rg], -1).reshape(-1, 3)
+    rb = np.zeros(T.shape[:2])
+    for fem in (0.0, 1.0):
+        F = _union([p for p in _torso(fem) if isinstance(p, Ellipsoid) and not _deltoid(p) and _bones(p) & {'pel', 'chest'} and not (p.c[1] > 1.35 and p.r[0] > 0.19)], P).reshape(T.shape); ins = F < 0   # (the trunk's own: no shoulder, no trapezius, not the girdle of the shoulders)
+        last = len(RS) - 1 - np.argmax(ins[..., ::-1], axis=2); nxt = np.minimum(last + 1, len(RS) - 1)
+        fa = np.take_along_axis(F, last[..., None], 2)[..., 0]; fb = np.take_along_axis(F, nxt[..., None], 2)[..., 0]
+        rb = np.maximum(rb, np.where(ins.any(2), RS[last] + (RS[1] - RS[0]) * np.clip(fa / np.minimum(fa - fb, -1e-9), 0, 1), 0.0))
+    for _ in range(2):
+        Rp = np.pad(rb, 1, mode='edge'); rb = (4 * rb + Rp[:-2, 1:-1] + Rp[2:, 1:-1] + Rp[1:-1, :-2] + Rp[1:-1, 2:]) / 8
+    R = np.zeros_like(rb); R[:, 0] = rb[:, 0] + gap
+    for j in range(1, len(YS)): R[:, j] = np.maximum(rb[:, j] + gap, R[:, j - 1] + flare * 0.01)
+    _DRAPE2.update(TH=TH, YS=YS, R=R, RB=rb)
+    return TH, YS, R, rb
+
+
+def bata(hem=0.84):
+    """A loose blouse — a huipil, the overfold of a chiton, a woman's tunic: on the shoulders as a yoke, then falling straight
+    from the bust and the shoulder blades to the hips, standing off the waist (no body to read under it); a round neck;
+    open at the sides for the arms; its hem a little wider, waving with soft folds."""
+    TH, YS, R0, RB = drape_fit()
+    th_ = 0.01
+    FL = np.stack([0.006 * np.sin(t * 9.0 + 0.7) * np.clip((1.3 - YS) / 0.4, 0, 1) for t in TH]); Rf = np.maximum(R0 + FL, RB + 0.008)
+    dRt = (np.roll(Rf, -1, axis=0) - np.roll(Rf, 1, axis=0)) / (2 * (TH[1] - TH[0])); dRy = np.gradient(Rf, -0.01, axis=1)   # (round the body: periodic)
+    trunk = [q for q in _torso(1.0) if not _deltoid(q)]          # (a woman's: where it comes out of her body, its edge)
+    def f(P):
+        x, y, z = P[:, 0], P[:, 1], P[:, 2]; ax = np.abs(x)
+        th = np.arctan2(x, -(z - CZ)); rho = np.hypot(x, z - CZ)
+        Rr = _table(TH, YS, Rf, th, y); gt = _table(TH, YS, dRt, th, y) / np.maximum(rho, 0.05); gy = _table(TH, YS, dRy, th, y)
+        hang = np.abs((rho - Rr) / np.sqrt(1 + gt * gt + gy * gy)) - th_ * 0.5
+        d = smax(hang, np.maximum(hem - y, y - 1.47), 0.006)   # (from the shoulders' line — the tunic painted under it covers their tops)
+        # (the neck: round, lower in front; the sides open for the arms down to under the armpit)
+        neck = 0.088 - np.hypot(x, (z + 0.012) * 0.85)
+        # (the armholes: slits down the sides from the shoulder to a hand under the armpit, their bottom rounded)
+        sa = np.abs(np.abs(th) - np.pi / 2); arm = 0.42 - np.hypot(sa, np.maximum(1.33 - y, 0) * 4.0)
+        d = smax(smax(d, neck, 0.006), arm, 0.01)
+        # (none of it inside her: its top edge is where it comes out of the body — over the bust, the shoulder blades)
+        return smax(d, 0.005 - _union(trunk, P), 0.003)
+    return [Custom(f, (np.array([-0.36, hem - 0.04, -0.3]), np.array([0.36, 1.6, 0.26]))).set(bone='chest')]
+
+
 def piece(name):
     """The pieces made by a function of their own (not a hair, a beard, a skirt, a hat), by name — or None."""
-    f = {'toga': toga, 'tanga': tanga}.get(name)
+    f = {'toga': toga, 'tanga': tanga, 'bata': bata}.get(name)
     return f() if f else None
 
 
