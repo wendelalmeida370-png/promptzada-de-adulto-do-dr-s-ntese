@@ -26,16 +26,17 @@ def hairline(P):
 
 
 # ------------------------------ hair ------------------------------
-def cap(lift=0.0, back=0.0, front=0.0, vol=0.014, top=0.018, tufts=1.0):
+def cap(lift=0.0, back=0.0, front=0.0, vol=0.015, top=0.024, tufts=1.0):
     """The hair on the skull: a shell of the skull's shape grown by vol (more on the top), above the hairline (raised by
     lift; at the back lowered by back), its locks in soft ridges."""
     c = CRAN_C + np.array([0, 0.004, -0.003])
     r = CRAN_R + np.array([vol, top, vol])
+    nape_c = H([0, 1.655, -0.072]); nape_r = np.array([0.084, 0.07, 0.056]) + vol * 0.6
     def f(P):
-        d = ell_sdf(P, c, r)
+        d = smin(ell_sdf(P, c, r), ell_sdf(P, nape_c, nape_r), 0.03)   # (the hair goes down the back of the head to the nape)
         q = P - CRAN_C; th = np.arctan2(q[:, 0], q[:, 2]); ph = np.arctan2(q[:, 1], np.hypot(q[:, 0], q[:, 2]))
         # (locks: soft ridges running back from the crown, broken so they read as clumps, not as a pattern)
-        d += tufts * 0.0026 * (np.sin(th * 11 + np.sin(ph * 5) * 1.3) * 0.7 + np.sin(th * 23 + ph * 9) * 0.3) * np.clip((ph + 0.3) * 1.4, 0, 1)
+        d += tufts * 0.0036 * (np.sin(th * 9 + np.sin(ph * 4) * 1.6) * 0.65 + np.sin(th * 19 + ph * 7) * 0.35) * np.clip((ph + 0.5) * 1.2, 0, 1)
         hl = hairline(P) - lift + back * np.clip(-q[:, 2] / 0.09, 0, 1) - front * np.clip(q[:, 2] / 0.08, 0, 1)
         return smax(d, hl, 0.006)
     lo = c - r - 0.03; hi = c + r + 0.03
@@ -47,18 +48,20 @@ def hair(style):
     if style == 'curto':
         P = [cap().set(bone='head'), E(H([0, 1.775, 0.062]), [0.05, 0.02, 0.035], rot_x(-0.4), op='u', k=0.02, bone='head')]
     elif style == 'longo':
-        P = [cap(back=0.06).set(bone='head'),
-             RBox(H([0, 1.585, -0.088]) + [0, -0.06, -0.004], [0.072, 0.13, 0.02], 0.026).set(op='u', k=0.05, bone='chest'),
-             RoundCone(H([0.078, 1.66, -0.025]), [0.092, 1.42, -0.055], 0.03, 0.022).set(op='u', k=0.035, bone='chest'),
-             RoundCone(H([-0.078, 1.66, -0.025]), [-0.092, 1.42, -0.055], 0.03, 0.022).set(op='u', k=0.035, bone='chest')]
+        P = [cap(back=0.06).set(bone='head')]
+        # (locks from the back of the head down over the shoulder blades, a little apart, thinning to their ends)
+        for x, zl, yl, r in [(0.0, -0.11, 1.36, 0.034), (0.045, -0.105, 1.37, 0.031), (-0.045, -0.105, 1.37, 0.031), (0.082, -0.085, 1.39, 0.027), (-0.082, -0.085, 1.39, 0.027)]:
+            P.append(RoundCone(H([x * 0.8, 1.66, -0.085]), [x, yl, zl], r, r * 0.55).set(op='u', k=0.03, bone='chest', tau=0.03))
+        for sd in (1, -1):
+            P.append(RoundCone(H([0.078 * sd, 1.668, -0.03]), [0.098 * sd, 1.43, -0.045], 0.028, 0.016).set(op='u', k=0.03, bone='chest', tau=0.03))
     elif style == 'trancas':
         P = [cap(back=0.02, tufts=0.6).set(bone='head')]
         for sd in (1, -1):
             # (a braid: knots of hair one after another, turning left and right, from behind the ear down over the shoulder)
-            a = H([0.07 * sd, 1.655, -0.045]); b = np.array([0.105 * sd, 1.3, 0.075]); n = 11
+            a = H([0.07 * sd, 1.655, -0.045]); b = np.array([0.105 * sd, 1.3, 0.075]); n = 17
             for i in range(n):
-                t = i / (n - 1); c = a + (b - a) * t + np.array([0, 0, 0.03]) * np.sin(t * np.pi); r = 0.02 - 0.007 * t
-                P.append(E(c + np.array([0.004 * sd * (1 if i % 2 else -1), 0, 0]), [r * 1.05, r * 1.2, r * 0.9], rot_z(0.5 * (1 if i % 2 else -1)), op='u', k=0.008, bone='chest' if t > 0.25 else 'head'))
+                t = i / (n - 1); c = a + (b - a) * t + np.array([0, 0, 0.03]) * np.sin(t * np.pi); r = 0.019 - 0.0065 * t
+                P.append(E(c + np.array([0.005 * sd * (1 if i % 2 else -1), 0, 0]), [r * 1.1, r * 1.35, r * 0.95], rot_z(0.55 * (1 if i % 2 else -1)), op='u', k=0.012, bone='chest' if t > 0.25 else 'head'))
             P.append(E(b + np.array([0, -0.025, 0.005]), [0.011, 0.02, 0.011], op='u', k=0.006, bone='chest'))
     elif style == 'coque':
         P = [cap(lift=-0.004, tufts=0.5).set(bone='head'), Sphere(H([0, 1.74, -0.118]), 0.043).set(op='u', k=0.02, bone='head'),
@@ -96,19 +99,19 @@ def beard(style):
     def f(P):
         d = face(P) - th
         ax = np.abs(P[:, 0]); y = P[:, 1]; z = P[:, 2]
-        line = 1.642 + 0.03 * np.clip((ax - 0.04) / 0.045, 0, 1)                    # (the cheek's line, up to the sideburn)
-        reg = np.maximum.reduce([y - line, -0.002 - z + 0.0 * ax, H([0, 1.6, 0])[1] - 0.12 - y])
-        mouth = ell_sdf(P, H([0, 1.613, 0.108]), np.array([0.027, 0.0115, 0.03]))
-        d = smax(smax(d, reg, 0.006), -mouth, 0.004)
+        line = 1.628 + 0.05 * np.clip((ax - 0.025) / 0.065, 0, 1) ** 1.3          # (the cheek's line, rising to the sideburn)
+        reg = smax(smax(y - line, -0.004 - z, 0.012), H([0, 1.6, 0])[1] - 0.14 - y, 0.01)
+        mouth = ell_sdf(P, H([0, 1.613, 0.108]), np.array([0.026, 0.011, 0.03]))
+        d = smax(smax(d, reg, 0.01), -mouth, 0.005)
         return d
     P = []
     if style != 'bigode':
         P.append(Custom(f, (H([-0.12, 1.5, -0.08]), H([0.12, 1.7, 0.16]))).set(bone='head'))
         if style == 'barba':
-            P.append(E(H([0, 1.548, 0.078]), [0.05, 0.05, 0.04], op='u', k=0.03, bone='head'))
+            P.append(E(H([0, 1.545, 0.074]), [0.054, 0.058, 0.044], op='u', k=0.035, bone='head'))
     # (the moustache over the upper lip, down at the corners)
     for sd in (1, -1):
-        P.append(RoundCone(H([0.004 * sd, 1.633, 0.112]), H([0.03 * sd, 1.618, 0.1]), 0.0075, 0.005).set(op='u', k=0.006, bone='head'))
+        P.append(RoundCone(H([0.003 * sd, 1.634, 0.113]), H([0.031 * sd, 1.617, 0.102]), 0.009, 0.006).set(op='u', k=0.008, bone='head'))
     return P
 
 
@@ -117,7 +120,7 @@ def skirt(long):
     """A tunic's skirt from the belt to the knee — or a dress, a robe, to the ankle: a thin shell round the hips that flares,
     its folds deepening toward the hem."""
     y0, y1 = 1.012, (0.12 if long else 0.5)
-    rx0, rz0 = 0.168, 0.124; rx1, rz1 = (0.27, 0.235) if long else (0.215, 0.18)
+    rx0, rz0 = 0.168, 0.124; rx1, rz1 = (0.29, 0.27) if long else (0.22, 0.185)
     def f(P):
         y = P[:, 1]; t = np.clip((y0 - y) / (y0 - y1), 0, 1); e = t ** 0.8
         rx = rx0 + (rx1 - rx0) * e; rz = rz0 + (rz1 - rz0) * e
@@ -133,10 +136,10 @@ def skirt(long):
 
 def cape():
     """A cape over the back: from the shoulders (over their tops, pinned at the chest) to the knees, falling wider."""
-    yT, yB = 1.475, 0.55
+    yT, yB = 1.49, 0.55
     def f(P):
         y = P[:, 1]; t = np.clip((yT - y) / (yT - yB), 0, 1)
-        rx = 0.245 + 0.085 * t ** 0.7; rz = 0.15 + 0.08 * t
+        rx = 0.25 + 0.08 * t ** 0.7; rz = 0.155 + 0.075 * t
         th = np.arctan2(P[:, 0], P[:, 2] + 0.02)
         rr = 1.0 + 0.03 * t * np.sin(th * 9)
         q = np.stack([P[:, 0] / (rx * rr), (P[:, 2] + 0.02) / (rz * rr)], 1); k0 = np.linalg.norm(q, axis=1)
@@ -144,11 +147,13 @@ def cape():
         # (behind the body, wrapping the shoulders; the opening in front a little wider below)
         front = (P[:, 2] + 0.02) / rz - (0.55 - 0.45 * np.clip((1.36 - y) / 0.2, 0, 1))
         top = smax(y - yT, yB - y, 0.004)
-        # (over the shoulders the cape lies on them: its top rounds over the shoulder line)
+        # (over the shoulders the cape lies on them: near its top it narrows round the neck and the shoulder line)
         return smax(smax(shell, top, 0.003), front * 0.1, 0.004)
-    P = [Custom(f, (np.array([-0.36, yB - 0.02, -0.26]), np.array([0.36, yT + 0.03, 0.2]))).set(bone='clk1')]
-    # (the pin that holds it, at the right of the chest)
-    P.append(Torus([-0.095, 1.385, 0.125], 0.017, 0.006, rot_x(np.pi / 2 - 0.25)).set(op='u', k=0.0, bone='chest', tag='metal'))
+    def g(P):
+        # (the narrowing: at the top the cape's ellipse shrinks toward the neck, so it rests on the shoulders, not over the air)
+        y = P[:, 1]; k = np.clip((y - 1.36) / (yT - 1.36), 0, 1); Q = P.copy(); Q[:, 0] = P[:, 0] * (1 + 0.32 * k); Q[:, 2] = (P[:, 2] + 0.02) * (1 + 0.5 * k) - 0.02
+        return f(Q) / (1 + 0.4 * k)
+    P = [Custom(g, (np.array([-0.36, yB - 0.02, -0.26]), np.array([0.36, yT + 0.03, 0.2]))).set(bone='clk1')]
     return P
 
 

@@ -104,7 +104,7 @@
     const hair = ad >= 62 ? G.lerpColor(G.hex2rgb(v.hair || '#3a2a1a'), [214, 210, 204], G.clamp((ad - 62) / 18, 0, 0.85)) : null;
     const L = { s, skin: v.skin || '#d8a888', hair: hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', belt: darker(cloth, 0.38), brow: darker(v.hair || '#3a2a1a', 0.8), nose: darker(v.skin || '#d8a888', 0.88), lips: darker(v.skin || '#d8a888', 0.62), robe, fem: v.g === 'f' && ad >= 13, bun: v.g === 'f' && ad >= 16 && v.id % 3 === 1, beard: v.g === 'm' && ad >= 26 && v.id % 3 === 0, long: v.g === 'f' && ad >= 8 && v.id % 3 !== 1, bald: v.g === 'm' && ad >= 55 && v.id % 4 === 0, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia', torch: torchOf(v), lantern: !!v.lantern && !v.inside, strap: ad >= 14 && (v.role === 'cacador' || v.role === 'guerreiro' || v.role === 'mercador' || v.role === 'explorador' || (G.Possess && G.Possess.body && G.Possess.body() === v)) };
     if (skin) {
-      L.out = outfitOf(v, L, fac);
+      L.out = outfitOf(v, L, fac); L.headK = L.out.headK; L.armOut = L.out.skirt === 'saiaL' || L.out.cloakM ? 0.07 : 0;
       // (the face's mood, from the world's: joy smiles, grief and sadness frown with the brows raised inside, fear opens the
       // eyes wide, anger draws the brows down; a calm face a little warm)
       const e = v.emo && v.emo.k; const grief = v.mourn > 0 || e === 'sad';
@@ -238,7 +238,7 @@
     carryWalk: (t, sp) => ({ ...ST.walk(t, sp), shLp: -0.95, shRp: -0.95, shLr: 0.25, shRr: -0.25, elL: 0.95, elR: 0.95 }),
     pray: (t) => ({ crouch: 0.45, hipL: -0.1, hipR: -0.1, knL: 1.65, knR: 1.65, shLp: -2.6 + Math.sin(t * 1.2) * 0.15, shRp: -2.6 + Math.sin(t * 1.2) * 0.15, shLr: 0.3, shRr: -0.3, elL: 0.2, elR: 0.2, neck: -0.3, lean: -0.05 }),
     sit: (t) => ({ crouch: 0.46, hipL: -1.5, hipR: -1.5, knL: 1.5, knR: 1.5, shLp: -0.5, shRp: -0.5 + Math.sin(t * 2) * 0.1, elL: 0.8, elR: 0.9, lean: 0.1 }),
-    talk: (t) => ({ ...ST.idle(t), shRp: -0.5 - Math.max(0, Math.sin(t * 2.6)) * 0.6, shRr: -0.25, elR: 0.9 + Math.sin(t * 3.3) * 0.3, twist: Math.sin(t * 1.1) * 0.08, neck: Math.sin(t * 2.2) * 0.08 }),
+    talk: (t) => ({ ...ST.idle(t), shRp: -0.5 - Math.max(0, Math.sin(t * 2.6)) * 0.6, shRr: -0.25, elR: 0.9 + Math.sin(t * 3.3) * 0.3, twist: Math.sin(t * 1.1) * 0.08, neck: Math.sin(t * 2.2) * 0.08, talk: Math.max(0, Math.sin(t * 9.0) * Math.sin(t * 2.3 + 1)) * 0.8 }),
     dance: (t) => ({ bob: Math.abs(Math.sin(t * 4)) * 0.09, twist: Math.sin(t * 2) * 0.35, shLp: -2.4 + Math.sin(t * 4) * 0.5, shRp: -2.4 - Math.sin(t * 4) * 0.5, shLr: 0.5, shRr: -0.5, elL: 0.6, elR: 0.6, hipL: Math.sin(t * 4) * 0.3, hipR: -Math.sin(t * 4) * 0.3, knL: 0.3, knR: 0.3 }),
     mourn: (t) => ({ neck: 0.65, lean: 0.25, shLp: -0.6, shRp: -0.6, shLr: 0.35, shRr: -0.35, elL: 1.7, elR: 1.7, bob: Math.sin(t * 5) * 0.006 }),
     hug: () => ({ shLp: -1.35, shRp: -1.35, shLr: -0.5, shRr: 0.5, elL: 1.0, elR: 1.0, lean: 0.12 }),
@@ -304,7 +304,8 @@
     out.pelY = -(run ? 0.1 : 0.075) * cs * A; out.pelR = 0.035 * sn * (run ? 0.6 : 1) * A; out.shift = 0.02 * sn * (run ? 0.4 : 1) * A; out.sway = 0; out.twist = 0;
     // (the arms against the legs, a beat behind; the elbow bending as the arm comes forward; a run's elbows bent and pumping)
     const aL = Math.cos(TAU * (u0 - 0.06)), aw = (run ? 0.62 : 0.34) * A;
-    out.shLp = aL * aw; out.shRp = -aL * aw; out.shLr = run ? 0.14 : 0.09; out.shRr = run ? -0.14 : -0.09;
+    const ab = run ? 0.3 : 0.06; // (the swing centred a little behind: the trunk leans, the arms still hang from the shoulders)
+    out.shLp = aL * aw + ab; out.shRp = -aL * aw + ab; out.shLr = run ? 0.14 : 0.09; out.shRr = run ? -0.14 : -0.09;
     out.elL = run ? 1.35 + Math.max(0, -aL) * 0.25 : 0.22 + Math.max(0, -aL) * 0.45 * A; out.elR = run ? 1.35 + Math.max(0, aL) * 0.25 : 0.22 + Math.max(0, aL) * 0.45 * A;
     out.lean = run ? 0.22 + 0.05 * A : 0.06 + 0.012 * c2; out.pelP = run ? 0.1 : 0.03; out.neck = run ? -0.14 : 0.03; out.breath = Math.sin(ph * 0.5) * (run ? 1 : 0.4);
     out.grip = run ? 0.55 : 0.12;
@@ -628,7 +629,7 @@
       const sd = k ? -1 : 1;
       let sp = k ? pose.shRp : pose.shLp, sr = k ? pose.shRr : pose.shLr, el = k ? pose.elR : pose.elL;
       if (hold && sd > 0) { sp = -1.05; sr = 0.12; el = 1.25; }
-      const jz = G.clamp(-sp, -1, 1) * 0.03, roll = sr + sd * 0.05;
+      const jz = G.clamp(-sp, -1, 1) * 0.03, roll = sr + sd * (0.05 + (L.armOut || 0)); // (a wide skirt or a cape: the arms a little out)
       fr(R[B.shL + k], R[B.chest], sd * 0.235, 0.46, jz, sp, 0, roll);
       frHalf(R[B.shHL + k], R[B.chest], sd * 0.235, 0.46, jz * 0.5, 0, 0, sd * RIG.roll, sp, 0, roll);
       fr(R[B.faL + k], R[B.shL + k], 0, -0.3, 0, -el, 0, 0); fr(R[B.elHL + k], R[B.shL + k], 0, -0.3, 0, -el / 2, 0, 0);
@@ -641,7 +642,8 @@
     // (the skirt: its front follows the leg that is most forward, its back the one most behind, its sides their own leg)
     const hl = pose.hipL, hr = pose.hipR, cl = pose.cloth || 0, cs = pose.clothS || 0;
     fr(R[B.skF], R[B.pel], 0, -0.04, 0, Math.min(hl, hr, 0) * 0.8 + Math.min(0, cl) * 0.5, 0, cs * 0.3);
-    fr(R[B.skB], R[B.pel], 0, -0.04, 0, Math.max(hl, hr, 0) * 0.8 + Math.max(0, cl) * 0.5, 0, cs * 0.3);
+    // (its back: the foot most behind — the thigh and half the knee's fold: the heel kicked up in the swing stays inside)
+    fr(R[B.skB], R[B.pel], 0, -0.04, 0, Math.max(hl + pose.knL * 0.5, hr + pose.knR * 0.5, 0) * 0.85 + Math.max(0, cl) * 0.5, 0, cs * 0.3);
     fr(R[B.skL], R[B.pel], 0.095, -0.04, 0, hl * 0.75 + cl * 0.3, 0, cs * 0.4); fr(R[B.skR], R[B.pel], -0.095, -0.04, 0, hr * 0.75 + cl * 0.3, 0, cs * 0.4);
     fr(R[B.clk1], R[B.chest], 0, 0.46, -0.11, Math.max(0, cl) * 0.6, 0, cs * 0.3); fr(R[B.clk2], R[B.clk1], 0, -0.45, 0, Math.max(0, cl) * 0.5, 0, cs * 0.3);
     // (what is held: the torch upright in the left hand whatever the arm does; the tool in the right; the load at the chest)
@@ -655,7 +657,7 @@
   function bodySkin(idx, X, Y, Z, yaw, pose, L, marker) {
     const R = P3.rig(X, Y, Z, yaw, pose, L);
     L.face = faceOf(pose, L);
-    G.Body3D.put(idx, R, pose, L);
+    G.Body3D.put(idx, R, pose, L, X, Y, Z);
     const s = L.s, lie = pose.lie || 0;
     if ((L.torch || L.lantern) && !lie) {
       put('torch', idx, R[B.torch], 0, 0, 0, 0.12, 0, 0, 0, L.lantern ? -0.1 : 0.18, 0, 0.045, L.lantern ? 0.2 : 0.55, 0.045, L.lantern ? '#3a2a1a' : '#5a3c22');
@@ -698,11 +700,14 @@
     near.sort((a, b) => a[0] - b[0]);
     let n = Math.min(near.length, q.npcs, MAX - 1); while (n > 0 && near[n - 1][0] > R2) n--;
     let idx = 0, emoN = 0; P3.walkers.length = 0; P3.flames.length = 0;
+    if (skin && G.Body3D.broken(R3.renderer && R3.renderer())) { skin = false; G.Body3D.clear(); PARTS.forEach((p, k) => { mesh[k].visible = true; }); }
     if (skin) G.Body3D.begin();
     if (av) {
       // (the body's feet: where they stand in its stride — the view's own memory, a new one for a new body or after a jump)
       if (!avFeet || avFeet.id !== av.id || Math.hypot(av.X - avFeet.X, av.Z - avFeet.Z) > 4) avFeet = { id: av.id, f: [{ on: 0 }, { on: 0 }] }; avFeet.X = av.X; avFeet.Z = av.Z;
-      av.look.ground = av.ground === false || av.swim ? undefined : av.Y; av.look.plant = avFeet.f; P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null);
+      av.look.ground = av.ground === false || av.swim ? undefined : av.Y; av.look.plant = avFeet.f;
+      avFeet.t = (avFeet.t || 0) + dt; av.pose.blink = blinkAt(avFeet.t, av.id); cloth(avFeet, av.X, av.Z, av.yaw, dt, av.pose);
+      P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null);
     }
     const seen = new Set();
     for (let k = 0; k < n; k++) {
@@ -730,7 +735,8 @@
       // (someone standing near the body turns their head to it — and back when it goes; a blink now and then)
       const look = P3.lookFor(s.yaw, X, Z, av, st);
       s.pose.lookY = (s.pose.lookY || 0) + (look - (s.pose.lookY || 0)) * (1 - Math.exp(-4 * dt));
-      s.pose.blink = (s.t + (v.id % 13) * 0.37) % 4.1 < 0.12 ? 0.12 : 1;
+      s.pose.gazeX = G.clamp((look - s.pose.lookY) * 0.9, -0.42, 0.42); // (the eyes go first, the head follows)
+      s.pose.blink = blinkAt(s.t, v.id); cloth(s, X, Z, s.yaw, dt, s.pose);
       s.st = st;
       Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant || (s.plant = [{ on: 0 }, { on: 0 }]);
       P3.body(idx++, X, Y, Z, s.yaw, s.pose, Lv, P3.highlight === v.id ? '#ffd76a' : null);
@@ -766,6 +772,19 @@
     if (skin) G.Body3D.end();
     beasts(focus, R2, dt);
   };
+  // (a blink: the lids down and up in a sixth of a second, every four seconds or so — each person on their own beat)
+  function blinkAt(t, id) { const q = (t + (id % 13) * 0.37) % (3.4 + (id % 5) * 0.3); return q < 0.16 ? 1 - Math.sin(q / 0.16 * Math.PI) * 0.92 : 1; }
+  // (the cloth's swing: a cape and a skirt lag behind the body — lifted back by the speed, flung by a start or a stop,
+  // swung out in a turn — a spring, only seen)
+  function cloth(s, X, Z, yaw, dt, pose) {
+    if (!(dt > 0)) return; if (s.cx === undefined) { s.cx = X; s.cz = Z; s.cv = 0; s.ca = 0; s.cw = 0; s.cs = 0; s.cy = yaw; }
+    const vx = (X - s.cx) / dt, vz = (Z - s.cz) / dt; s.cx = X; s.cz = Z; if (Math.hypot(vx, vz) > 20) return;
+    const fw = vx * Math.cos(yaw) + vz * Math.sin(yaw); const acc = (fw - (s.cv || 0)) / dt; s.cv = fw;
+    let dy = yaw - s.cy; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; s.cy = yaw;
+    const want = G.clamp(Math.max(0, fw) * 0.1 + G.clamp(acc * 0.025, -0.25, 0.25), -0.2, 0.75), side = G.clamp(-dy / dt * Math.max(0.3, fw) * 0.06, -0.35, 0.35);
+    const k = 40, c = 7; s.cw += ((want - s.ca) * k - s.cw * c) * dt; s.ca += s.cw * dt; s.cs += (side - s.cs) * (1 - Math.exp(-5 * dt));
+    pose.cloth = G.clamp(s.ca, -0.3, 0.9); pose.clothS = s.cs;
+  }
   P3.visOf = id => vis.get(id);
   P3.skin = () => skin; // (the bodies drawn as one skin — Body3D — or as the pieces of old)
   P3.greet = function (X, Z) { let n = 0; for (const [id, s] of vis) if ((s.X - X) ** 2 + (s.Z - Z) ** 2 < 81) { s.greetT = 1.3 + (id % 5) * 0.15; s.greetD = 0.25 + (id % 7) * 0.08; n++; } return n; };

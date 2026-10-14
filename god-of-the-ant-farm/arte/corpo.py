@@ -12,6 +12,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 from corpo_sdf import mesh_of, normals_of, field_at
 import corpo_forma as CF
+import corpo_roupa as CR
 
 OUT = os.path.join(HERE, '..', 'js', 'bodymesh.js')
 
@@ -25,7 +26,7 @@ BI = {b: i for i, b in enumerate(BONES)}
 HALF = [('pel', 'chest', 'spine'), ('chest', 'head', 'neck'),
         ('chest', 'shL', 'shHL'), ('chest', 'shR', 'shHR'), ('shL', 'faL', 'elHL'), ('shR', 'faR', 'elHR'),
         ('pel', 'thL', 'hpHL'), ('pel', 'thR', 'hpHR'), ('thL', 'snL', 'knHL'), ('thR', 'snR', 'knHR')]
-ZONE = {'body': 0, 'eyeL': 1, 'eyeR': 2}
+ZONE = {'body': 0, 'eyeL': 1, 'eyeR': 2, 'hair': 3, 'beard': 4, 'saiaC': 5, 'saiaL': 6, 'cape': 7, 'metal': 8, 'hat': 9, 'straw': 10, 'hood': 11, 'scarf': 12, 'gold': 13}
 
 
 # ------------------------------ Blender: the decimator ------------------------------
@@ -48,11 +49,15 @@ def decimate(V, F, tris, sym=True):
     return V2, np.array(T2, dtype=np.int64)
 
 
-def occlusion(V, T, N, dist=0.22, n=40):
-    """How much of the sky each point sees, from rays against the mesh itself (a fixed set of directions)."""
+def occlusion(V, T, N, dist=0.22, n=40, extra=None):
+    """How much of the sky each point sees, from rays against the mesh itself (a fixed set of directions) — and against
+    what it sits on (extra: the body under a hair, a skirt)."""
     from mathutils.bvhtree import BVHTree
     from mathutils import Vector
-    bvh = BVHTree.FromPolygons([tuple(v) for v in V], [tuple(int(i) for i in t) for t in T])
+    if extra is not None:
+        V2, T2 = extra; T = np.vstack([T, T2 + len(V)]); Vb = np.vstack([V, V2])
+    else: Vb = V
+    bvh = BVHTree.FromPolygons([tuple(v) for v in Vb], [tuple(int(i) for i in t) for t in T])
     k = np.arange(n) + 0.5; z = 1 - k / n; r = np.sqrt(1 - z * z); a = k * np.pi * (3 - np.sqrt(5))
     H = np.stack([r * np.cos(a), r * np.sin(a), z], 1)  # (a hemisphere round +Z, denser toward the top)
     out = np.ones(len(V))
@@ -152,6 +157,57 @@ def body_mesh(fem, h, tris):
     return dict(V=V, N=N, T=T, bi=bi, bw=bw, zone=zone, ao=ao)
 
 
+# ------------------------------ the pieces worn over the body ------------------------------
+def smooth(a, b, x): t = np.clip((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t)
+
+
+def w_rule(V, rule):
+    """Weights from where a point is (for the pieces whose clay has no bones of its own: a skirt, a cape, a hood)."""
+    W = np.zeros((len(V), len(BONES))); x, y, z = V[:, 0], V[:, 1], V[:, 2]
+    if rule == 'skirt':
+        # (the waist with the pelvis; below, the front with the leg most forward, the back with the one behind, the sides
+        # with their own — blended round the body)
+        th = np.arctan2(x, z); f = np.maximum(0, np.cos(th)) ** 2; b = np.maximum(0, -np.cos(th)) ** 2; l = np.maximum(0, np.sin(th)) ** 2; r = np.maximum(0, -np.sin(th)) ** 2
+        down = smooth(1.0, 0.8, y); W[:, BI['pel']] = 1 - down
+        for k, w in (('skF', f), ('skB', b), ('skL', l), ('skR', r)): W[:, BI[k]] = down * w
+    elif rule == 'cape':
+        top = smooth(1.36, 1.44, y); low = smooth(1.05, 0.85, y)
+        W[:, BI['chest']] = top; W[:, BI['clk1']] = (1 - top) * (1 - low); W[:, BI['clk2']] = (1 - top) * low
+    elif rule == 'hood':
+        c = smooth(1.5, 1.6, y); W[:, BI['head']] = c; W[:, BI['chest']] = 1 - c
+    W /= np.maximum(W.sum(1, keepdims=True), 1e-9)
+    return pack(W)
+
+
+def piece_mesh(prims, zone, h, tris, rule=None, body=None, sym=True):
+    t0 = time.time()
+    V, Q = mesh_of(prims, h)
+    V, T = decimate(V, Q, tris, sym)
+    N = normals_of(prims, V)
+    if rule: bi, bw = w_rule(V, rule)
+    else: bi, bw = weights(prims, V)
+    # (the zone of each point: the piece's own, or the tag of the piece of clay it lies on — the cape's pin is metal)
+    zn = np.full(len(V), ZONE[zone], np.uint8)
+    tagged = [p for p in prims if p.tag and p.op == 'u']
+    if tagged:
+        best = np.full(len(V), 1e9); bz = zn.copy()
+        for p in prims:
+            if p.op != 'u': continue
+            d = np.abs(p.sdf(V)); m = d < best; best[m] = d[m]; bz[m] = ZONE[p.tag] if p.tag else ZONE[zone]
+        zn = bz
+    ao = occlusion(V, T, N, extra=body)
+    print('  %s: %d points, %d triangles, %.0f s' % (zone, len(V), len(T), time.time() - t0)); sys.stdout.flush()
+    return dict(V=V, N=N, T=T, bi=bi, bw=bw, zone=zn, ao=ao)
+
+
+_BODY = {}
+def body_occluder():
+    # (the man's body as the eyes of the occlusion see it: what the pieces sit on)
+    if 'm' not in _BODY:
+        P = CF.body(0.0); V, Q = mesh_of(P, 0.012); _BODY['m'] = (V, np.concatenate([Q[:, [0, 1, 2]], Q[:, [0, 2, 3]]]))
+    return _BODY['m']
+
+
 # ------------------------------ export ------------------------------
 def b64(a): return base64.b64encode(np.ascontiguousarray(a).tobytes()).decode('ascii')
 
@@ -178,12 +234,21 @@ def main(only):
     bind = {k: [round(float(x), 6) for x in v] for k, v in J.items()}
     meshes = load_old() if only else {}
     jobs = {'corpoM': lambda: body_mesh(0.0, 0.0045, 7600), 'corpoF': lambda: body_mesh(1.0, 0.0045, 7600)}
+    for st in ('curto', 'longo', 'trancas', 'coque', 'careca', 'rabo', 'chanel'):
+        jobs[st] = (lambda st: lambda: piece_mesh(CR.hair(st), 'hair', 0.0032, 1400 if st in ('curto', 'careca') else 2200, body=body_occluder()))(st)
+    for st in ('barba', 'curta', 'bigode'):
+        jobs[st] = (lambda st: lambda: piece_mesh(CR.beard(st), 'beard', 0.003, 700 if st == 'bigode' else 1100, body=body_occluder()))(st)
+    jobs['saiaC'] = lambda: piece_mesh(CR.skirt(False), 'saiaC', 0.004, 1300, rule='skirt', body=body_occluder())
+    jobs['saiaL'] = lambda: piece_mesh(CR.skirt(True), 'saiaL', 0.0045, 1900, rule='skirt', body=body_occluder())
+    jobs['capa'] = lambda: piece_mesh(CR.cape(), 'cape', 0.0045, 1500, rule='cape', body=body_occluder())
+    for st, z in (('gorro', 'hat'), ('elmo', 'metal'), ('chapeu', 'straw'), ('capuz', 'hood'), ('lenco', 'scarf'), ('coroa', 'gold')):
+        jobs[st] = (lambda st, z: lambda: piece_mesh(CR.hat(st), z, 0.0035, 1300 if st != 'coroa' else 600, rule='hood' if st == 'capuz' else None, body=body_occluder()))(st, z)
     for name, f in jobs.items():
         if only and name not in only: continue
         print(name); sys.stdout.flush()
         meshes[name] = encode(f())
     data = {'v': 1, 'bones': BONES, 'bind': bind, 'roll': CF.BIND_ROLL, 'shin': CF.SHIN, 'knuckle': CF.KNUCKLE, 'toe': CF.TOE_Z, 'toeY': CF.TOE_Y,
-            'zones': ZONE, 'meshes': meshes}
+            'zones': ZONE, 'hem': {'saiaC': 0.5, 'saiaL': 0.12, 'cape': 0.55}, 'meshes': meshes}
     with open(OUT, 'w') as f:
         f.write("'use strict';\n// GENERATED by arte/corpo.py — do not edit by hand. The people's meshes: bodies, eyes, hair, clothes, with their\n"
                 "// bones (positions quantized to 16 bits over each mesh's box, normals 8 bits, four bones and weights a point, an\n"

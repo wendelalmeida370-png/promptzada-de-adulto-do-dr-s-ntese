@@ -78,17 +78,18 @@ const M0 = MESH.corpoM; let edge0 = 0; const E = [];
 for (let i = 0; i < M0.idx.length; i += 3) for (const [a, b] of [[0, 1], [1, 2], [2, 0]]) { const u = M0.idx[i + a], v = M0.idx[i + b]; E.push([u, v]); const d = Math.hypot(M0.pos[u * 3] - M0.pos[v * 3], M0.pos[u * 3 + 1] - M0.pos[v * 3 + 1], M0.pos[u * 3 + 2] - M0.pos[v * 3 + 2]); edge0 = Math.max(edge0, d); }
 const FOOT = new Set(['ftL', 'ftR', 'toeL', 'toeR'].map(b => G.BODYMESH.bones.indexOf(b)));
 const footV = []; for (let i = 0; i < M0.n; i++) if (FOOT.has(M0.bi[i * 4]) && M0.bw[i * 4] > 128) footV.push(i);
-const res = {};
+const res = {}; const chk = new Set();
 for (const st of A.STATES) {
   let nan = 0, stretch = 0, minY = 1e9, maxY = -1e9;
   for (let k = 0; k < 8; k++) {
-    const t = k / 8 * Math.PI * 2; pose(st, t, st === 'run' ? 4.5 : 1.4); const P = bend(M0, 0);
+    const t = k / 8 * Math.PI * 2; pose(st, t, st === 'run' ? 4.5 : 1.4); const P = bend(M0, 0); for (const e of B3.check()) chk.add(st + ': ' + e);
     for (let i = 0; i < P.length; i++) if (!Number.isFinite(P[i])) nan++;
     for (const [u, v] of E) { const d = Math.hypot(P[u * 3] - P[v * 3], P[u * 3 + 1] - P[v * 3 + 1], P[u * 3 + 2] - P[v * 3 + 2]); stretch = Math.max(stretch, d / edge0); }
     let lo = 1e9; for (const i of footV) lo = Math.min(lo, P[i * 3 + 1]); minY = Math.min(minY, lo); maxY = Math.max(maxY, lo);
   }
   res[st] = { nan, stretch: +stretch.toFixed(2), feet: [+minY.toFixed(3), +maxY.toFixed(3)] };
 }
+ok('o verificador do desenho (Body3D.check) limpo em todas as poses', !chk.size, [...chk].slice(0, 3).join(' · ') || 'limpo');
 const bad = Object.entries(res).filter(([, r]) => r.nan || r.stretch > 2.6);
 ok('todas as animações: números, nada esticado', !bad.length, bad.length ? JSON.stringify(Object.fromEntries(bad)) : `${A.STATES.length} estados, 8 momentos cada; maior aresta ${Math.max(...Object.values(res).map(r => r.stretch))}× a da malha`);
 const stand = ['idle', 'walk', 'talk', 'carry', 'wave', 'interact', 'turn'];

@@ -116,9 +116,35 @@ vec3 b3face(vec3 p, vec3 skin) {
   }
   return c;
 }
+// the pieces worn over the body: hair in locks, a beard, a skirt with its hem's band (an apron over it, or the northern
+// apron-dress), a cape with its band, a hat of wool, straw, iron, a hood, a scarf, a crown
+vec3 b3piece(vec3 p) {
+  int z = vZoneI; float ang = atan(p.x, p.z + 0.015);
+  if (z == 3 || z == 4) {
+    vec3 h = b3T(10).rgb; float st = sin(ang * (z == 3 ? 46.0 : 30.0) + p.y * 30.0 + sin(ang * 7.0) * 2.0) * 0.5 + 0.5;
+    float k = 1.0 - smoothstep(0.0, 0.02, fwidth(ang) * 46.0);
+    return h * mix(1.0, 0.8 + 0.32 * st, k) * (z == 4 ? 0.92 : 1.0);
+  }
+  if (z == 5 || z == 6) {
+    vec4 Bc = b3T(3); vec3 c = Bc.z > 0.5 && Bc.z < 1.5 ? b3T(13).rgb : b3T(5).rgb; c *= b3weave(p);
+    if (Bc.z > 1.5 && p.z > 0.0 && abs(p.x) < 0.14) c = b3T(13).rgb * b3weave(p.zyx); // (the apron in front)
+    float hy = z == 5 ? B3_HEMC : B3_HEML; float hb = (p.y - hy) / 0.03;
+    if (b3T(19).x > 0.5 && hb < 1.0) c = b3band(b3T(6).rgb, ang * 9.0, clamp(hb, 0.0, 1.0), b3T(15).y);
+    return c;
+  }
+  if (z == 7 || z == 11) {
+    vec3 c = b3T(17).rgb * b3weave(p.yxz);
+    if (z == 7 && b3T(19).y > 0.5 && p.y < B3_HEMK + 0.035) c = b3band(b3T(6).rgb, ang * 7.0, (p.y - B3_HEMK) / 0.035, b3T(15).y);
+    return c;
+  }
+  if (z == 8 || z == 13) { vec3 m = z == 13 ? b3T(14).rgb : b3T(16).rgb; float rv = step(0.5, fract(ang * 2.546)) * 0.0; return m * (0.92 + 0.12 * sin(ang * 4.0 + p.y * 30.0)) + rv; }
+  if (z == 10) { float w = step(0.5, fract(ang * 16.0 + p.y * 45.0)) * 0.5 + step(0.5, fract(ang * 16.0 - p.y * 45.0)) * 0.5; float k = 1.0 - smoothstep(0.0, 0.03, fwidth(ang) * 16.0); return b3T(16).rgb * mix(1.0, 0.82 + 0.3 * w, k); }
+  return b3T(16).rgb * b3weave(p);
+}
 vec3 b3paint() {
   vec3 p = vBind; vec3 skin = b3T(4).rgb;
   if (vZoneI == 1 || vZoneI == 2) return b3eye(skin);
+  if (vZoneI >= 3) return b3piece(p);
   vec4 A = b3T(2), Bc = b3T(3), St = b3T(15);
   vec3 cloth = b3T(5).rgb * b3weave(p), trim = b3T(6).rgb;
   float sd = p.x < 0.0 ? -1.0 : 1.0;
@@ -183,7 +209,8 @@ vec3 b3paint() {
 }
 `;
   function shaders() {
-    const pb = '#define PB ' + PB + '\n#define B3_SR ' + Math.sin(D.roll).toFixed(6) + '\n#define B3_CR ' + Math.cos(D.roll).toFixed(6) + '\n';
+    const hem = D.hem || { saiaC: 0.5, saiaL: 0.12, cape: 0.55 };
+    const pb = '#define PB ' + PB + '\n#define B3_SR ' + Math.sin(D.roll).toFixed(6) + '\n#define B3_CR ' + Math.cos(D.roll).toFixed(6) + '\n#define B3_HEMC ' + hem.saiaC.toFixed(4) + '\n#define B3_HEML ' + hem.saiaL.toFixed(4) + '\n#define B3_HEMK ' + hem.cape.toFixed(4) + '\n';
     mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
     mat.onBeforeCompile = sh => {
       sh.uniforms.uBody = B3.U;
@@ -245,8 +272,10 @@ vec3 b3paint() {
   const K = { m: null, c: null };
   B3.begin = function () { for (const k in MESH) MESH[k].n = 0; B3.rows = 0; };
   // a person in row `row`: R the rig's frames (world), pose and look; which meshes they wear
-  B3.put = function (row, R, pose, L) {
+  const AT = []; // (where each row's person stands, for the verifier: X, Y, Z, size)
+  B3.put = function (row, R, pose, L, X, Y, Z) {
     if (!K.m) { K.m = new THREE.Matrix4(); K.c = new THREE.Color(); }
+    AT[row] = [X, Y, Z, L.s || 1, R[0].elements[12], R[0].elements[13], R[0].elements[14]];
     const o = row * TW * 4;
     for (let b = 0; b < NB; b++) {
       const e = K.m.multiplyMatrices(R[b], inv[b]).elements; const j = o + b * 12;
@@ -287,8 +316,22 @@ vec3 b3paint() {
     const out = []; if (!B3.ready) return out;
     for (let r = 0; r < B3.rows; r++) { const o = r * TW * 4; for (let k = 0; k < TW * 4; k++) if (!Number.isFinite(buf[o + k])) { out.push(`corpo ${r}: número inválido nos ossos`); return out; } }
     for (const k in MESH) { const M = MESH[k]; for (let i = 0; i < M.n; i++) if (!(M.rows[i] >= 0 && M.rows[i] < B3.rows)) { out.push(`malha ${k}: linha ${M.rows[i]} não desenhada`); break; } }
+    // (every row drawn has one body, and only one; nobody's hips far from where the world has them)
+    const bodies = new Array(B3.rows).fill(0); for (const k in MESH) if (/^corpo/.test(k)) for (let i = 0; i < MESH[k].n; i++) bodies[MESH[k].rows[i]]++;
+    for (let r = 0; r < B3.rows; r++) {
+      if (bodies[r] !== 1) { out.push(`corpo ${r}: ${bodies[r]} corpos na mesma linha`); break; }
+      const a = AT[r]; if (!a) continue; const dh = Math.hypot(a[4] - a[0], a[6] - a[2]), dv = a[5] - a[1];
+      if (dh > 1.2 * a[3] || dv < -0.4 || dv > 1.4 * a[3]) { out.push(`corpo ${r}: a pelve a ${dh.toFixed(2)} m de onde a pessoa está (altura ${dv.toFixed(2)})`); break; }
+    }
     return out;
   };
   B3.meshes = () => Object.keys(MESH).map(k => ({ name: k, n: MESH[k].n, tris: MESH[k].tris }));
   B3._buf = () => buf; B3._tw = () => TW; // (for the tests: the rows of numbers, read only)
+  // (a shader the graphics card refused when it first drew — no error to catch at the start: People3D asks after drawing,
+  // and goes back to its pieces)
+  B3.broken = function (renderer) {
+    if (!B3.ready || !renderer || !renderer.properties) return false;
+    for (const m of [mat, depth]) { const pr = renderer.properties.get(m); const prog = pr && pr.currentProgram; if (prog && prog.diagnostics && prog.diagnostics.runnable === false) return true; }
+    return false;
+  };
 })(window.G);
