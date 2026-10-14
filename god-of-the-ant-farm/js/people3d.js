@@ -39,7 +39,7 @@
   const vis = new Map(); // id → the view's own memory of someone: where they were, which way they face, their walk, their pose
   P3.clear = function () { vis.clear(); if (G.Body3D && G.Body3D.clear) G.Body3D.clear(); for (const sp of emoPool) sp.visible = false; if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
   let avFeet = null;
-  G.worldHooks.push(() => { vis.clear(); avFeet = null; });
+  G.worldHooks.push(() => { vis.clear(); avFeet = null; seenAt[0] = seenAt[1] = 0; cLod.clear(); });
 
   P3.init = function (three, realm) {
     THREE = three; R3 = realm; scene = realm.scene();
@@ -64,7 +64,9 @@
     geo.torsoF = new THREE.LatheGeometry([[0.0, 0], [0.45, 0.0], [0.47, 0.17], [0.39, 0.46], [0.45, 0.66], [0.46, 0.78], [0.4, 0.93], [0.18, 1.0], [0.0, 1.0]].map(([r, y]) => new THREE.Vector2(r, y)), 14); geo.torsoF.translate(0, -0.5, 0);
     const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
     // (a soft light on the edges of a body, as the god's view outlines its little people: they read against the ground)
-    mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * 0.2;\n#include <opaque_fragment>'); };
+    // (its strength the sky's light of the hour: at night the outlines do not glow — G.Body3D.rim, set every frame)
+    mat.onBeforeCompile = sh => { sh.uniforms.uRim = RIM; sh.fragmentShader = 'uniform float uRim;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim;\n#include <opaque_fragment>'); };
+    mat.customProgramCacheKey = () => 'people3d-rim';
     mesh = PARTS.map(p => { const m = new THREE.InstancedMesh(geo[SHAPE[p[0]] || p[1]], p[0] === 'marker' ? new THREE.MeshBasicMaterial({ color: 0xffffff }) : mat, MAX); m.count = 0; m.castShadow = p[0] !== 'marker' && p[0] !== 'eyeL' && p[0] !== 'eyeR' && p[0] !== 'brow' && p[0] !== 'nose'; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); return m; });
     // the beasts: a round body, a neck, a head with its snout and ears and eyes, four legs (or two), a tail, wings, horns,
     // a mane — each part one instanced mesh (BP names them)
@@ -81,10 +83,69 @@
     // (a feeling over a head: the god's little bubble with its sign — fear, joy, love, anger, a question)
     emoPool = []; for (let k = 0; k < 20; k++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); sp.visible = false; sp.renderOrder = 4; scene.add(sp); emoPool.push(sp); }
 
+    // (what the hands hold: one instanced mesh a kind of tool, its wood and iron in the vertex colours)
+    tools = makeTools(mat);
     // (the body as one skin, if it starts; the pieces of old stay for the props — and for everything, if it does not)
     skin = !!(G.Body3D && G.Body3D.init(THREE, R3));
     if (skin) PARTS.forEach((p, k) => { if (!PROPS.has(p[0])) mesh[k].visible = false; });
   };
+  // ------------------------------ what the hands hold ------------------------------
+  // Each kind a geometry of its own, made once — the grip at the origin, along +Y the way its head points (People3D.rig's
+  // 'tool' frame is the hole of the closed fist, its +Y the fist's axis) — the wood and the iron in the vertex colours; one
+  // instanced mesh a kind, drawn only for those who hold one.
+  let tools = null; const toolN = {};
+  const TOOL_OF = { chop: 'machado', cut: 'machado', mine: 'picareta', dig: 'pa', hammer: 'martelo', build: 'martelo', forge: 'martelo', beat: 'martelo', rake: 'enxada', butcher: 'faca', skin: 'faca', stab: 'espada', fight: 'espada', brandish: 'espada', fish: 'vara', reel: 'vara' };
+  function makeTools(baseMat) {
+    const WOOD = [0.36, 0.25, 0.15], DARK = [0.26, 0.17, 0.1], IRON = [0.42, 0.43, 0.45], EDGE = [0.66, 0.67, 0.7], ROPE = [0.6, 0.52, 0.36];
+    const cyl = (r0, r1, y0, y1, n, col) => { const g = new THREE.CylinderGeometry(r1, r0, y1 - y0, n || 7, 1); g.translate(0, (y0 + y1) / 2, 0); return [g, col]; };
+    const box = (sx, sy, sz, x, y, z, col, rz, rx) => { const g = new THREE.BoxGeometry(sx, sy, sz); if (rx) g.rotateX(rx); if (rz) g.rotateZ(rz); g.translate(x, y, z); return [g, col]; };
+    const merge = list => {
+      let nv = 0, ni = 0; for (const [g] of list) { nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
+      const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), cl = new Float32Array(nv * 3), idx = new Uint16Array(ni); let o = 0, oi = 0;
+      for (const [g, col] of list) {
+        const P = g.attributes.position, N = g.attributes.normal;
+        for (let i = 0; i < P.count; i++) { pos[(o + i) * 3] = P.getX(i); pos[(o + i) * 3 + 1] = P.getY(i); pos[(o + i) * 3 + 2] = P.getZ(i); nor[(o + i) * 3] = N.getX(i); nor[(o + i) * 3 + 1] = N.getY(i); nor[(o + i) * 3 + 2] = N.getZ(i); cl[(o + i) * 3] = col[0]; cl[(o + i) * 3 + 1] = col[1]; cl[(o + i) * 3 + 2] = col[2]; }
+        if (g.index) for (let i = 0; i < g.index.count; i++) idx[oi + i] = g.index.getX(i) + o; else for (let i = 0; i < P.count; i++) idx[oi + i] = o + i;
+        oi += g.index ? g.index.count : P.count; o += P.count; g.dispose();
+      }
+      const out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.BufferAttribute(cl, 3)); out.setIndex(new THREE.BufferAttribute(idx, 1)); return out;
+    };
+    const oct = (sx, sy, sz, y, col) => { const g = new THREE.OctahedronGeometry(1, 0); g.scale(sx, sy, sz); g.translate(0, y, 0); return [g, col]; };
+    const ball = (r, y, col) => { const g = new THREE.SphereGeometry(r, 7, 5); g.translate(0, y, 0); return [g, col]; };
+    const G0 = {
+      // (a spear: an ash shaft of two metres gripped a little under its middle, a binding where the hand holds it, a leaf of iron)
+      lanca: merge([cyl(0.015, 0.014, -1.02, 0.86, 7, WOOD), cyl(0.017, 0.016, 0.86, 0.95, 7, IRON), oct(0.028, 0.15, 0.008, 1.08, EDGE), cyl(0.0165, 0.0165, -0.05, 0.06, 7, ROPE)]),
+      // (an axe: a haft, a bearded head of iron, its edge brighter)
+      machado: merge([cyl(0.016, 0.014, -0.16, 0.56, 7, WOOD), box(0.024, 0.07, 0.11, 0, 0.53, 0.045, IRON), box(0.026, 0.12, 0.03, 0, 0.51, 0.1, EDGE), box(0.03, 0.05, 0.04, 0, 0.53, -0.03, IRON)]), // (its edge the way it strikes: +Z)
+      // (a hammer: a short haft, a square head across it)
+      martelo: merge([cyl(0.014, 0.012, -0.1, 0.34, 7, WOOD), box(0.05, 0.05, 0.13, 0, 0.34, 0, IRON)]),
+      // (a pick: a long haft, a head of iron pointed at both ends, curving)
+      picareta: merge([cyl(0.016, 0.014, -0.14, 0.62, 7, WOOD), box(0.03, 0.034, 0.2, 0, 0.6, 0.06, IRON, 0, 0.12), box(0.028, 0.03, 0.16, 0, 0.6, -0.07, IRON, 0, -0.14), box(0.04, 0.05, 0.05, 0, 0.6, 0, IRON)]),
+      // (a spade: gripped at the top of the haft, the blade below)
+      pa: merge([cyl(0.015, 0.015, -0.86, 0.08, 7, WOOD), box(0.08, 0.03, 0.03, 0, 0.08, 0, DARK), box(0.19, 0.26, 0.016, 0, -0.98, 0, IRON), box(0.19, 0.03, 0.02, 0, -0.84, 0, IRON)]),
+      // (a hoe: a long haft, its blade turned down at the end)
+      enxada: merge([cyl(0.015, 0.014, -0.25, 0.95, 7, WOOD), box(0.17, 0.11, 0.012, 0, 0.92, 0.05, IRON, 0, 1.2)]),
+      // (an elder's staff: as tall as the shoulder, gripped near its top, a knob)
+      cajado: merge([cyl(0.019, 0.016, -0.97, 0.2, 7, DARK), ball(0.03, 0.22, DARK)]),
+      // (a fishing rod: long, thin)
+      vara: merge([cyl(0.014, 0.011, -0.2, 0.7, 6, WOOD), cyl(0.011, 0.006, 0.7, 1.6, 5, WOOD), cyl(0.006, 0.003, 1.6, 2.3, 4, WOOD)]),
+      // (a knife: a short blade on a handle)
+      faca: merge([cyl(0.013, 0.012, -0.05, 0.07, 6, DARK), box(0.03, 0.17, 0.006, 0.006, 0.155, 0, EDGE)]),
+      // (a sword: the grip and its pommel, the guard, a long blade)
+      espada: merge([cyl(0.014, 0.013, -0.06, 0.07, 6, DARK), ball(0.022, -0.08, IRON), box(0.16, 0.022, 0.03, 0, 0.08, 0, IRON), box(0.045, 0.62, 0.009, 0, 0.4, 0, EDGE), oct(0.0225, 0.07, 0.0045, 0.74, EDGE)]),
+    };
+    const tm = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }); tm.onBeforeCompile = baseMat.onBeforeCompile; tm.customProgramCacheKey = () => 'people3d-tool';
+    const out = {}; for (const k in G0) { const m = new THREE.InstancedMesh(G0[k], tm, MAX); m.count = 0; m.visible = false; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); out[k] = m; toolN[k] = 0; }
+    return out;
+  }
+  // (which tool someone holds: the one their work takes, as they swing it; or the one they carry — a spear, a staff)
+  function toolKind(L, pose) { if (pose.tool) return TOOL_OF[L.act] || (L.toolK === 'lanca' && L.tool ? 'lanca' : 'machado'); return L.tool ? (L.toolK || 'lanca') : null; }
+  function toolPut(R, L, pose) { const k = toolKind(L, pose); const m = k && tools && tools[k]; if (!m || toolN[k] >= MAX) return false; m.setMatrixAt(toolN[k]++, R[B.tool]); return true; }
+  function toolsBegin() { if (tools) for (const k in tools) toolN[k] = 0; }
+  function toolsEnd() { if (tools) for (const k in tools) { const m = tools[k]; m.count = toolN[k]; m.visible = toolN[k] > 0; m.instanceMatrix.needsUpdate = true; } }
+  P3.tools = () => (tools ? Object.keys(tools).filter(k => toolN[k]).map(k => [k, toolN[k]]) : []); // (for the tests: who holds what this frame)
+  P3.toolGeo = k => (tools && tools[k] ? tools[k].geometry : null); // (for the tests: a tool's shape, read only)
+
   let emoPool = []; const emoTex = new Map();
   function emoMap(k) { let t = emoTex.get(k); if (t === undefined) { const s = G.Art && G.Art.icon ? G.Art.icon(k) : null; t = s && s.c ? new THREE.CanvasTexture(s.c) : null; if (t) t.colorSpace = THREE.SRGBColorSpace; emoTex.set(k, t); } return t; }
 
@@ -102,16 +163,28 @@
     const s = (h / 1.75) * (v.g === 'f' && ad >= 14 ? 0.95 : 1);
     const robe = v.role === 'sacerdote' || v.role === 'anciao' || v.role === 'escriba' || (v.g === 'f' && ad >= 12 && (v.id % 3 !== 0));
     const hair = ad >= 62 ? G.lerpColor(G.hex2rgb(v.hair || '#3a2a1a'), [214, 210, 204], G.clamp((ad - 62) / 18, 0, 0.85)) : null;
-    const L = { s, skin: v.skin || '#d8a888', hair: hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', belt: darker(cloth, 0.38), brow: darker(v.hair || '#3a2a1a', 0.8), nose: darker(v.skin || '#d8a888', 0.88), lips: darker(v.skin || '#d8a888', 0.62), robe, fem: v.g === 'f' && ad >= 13, bun: v.g === 'f' && ad >= 16 && v.id % 3 === 1, beard: v.g === 'm' && ad >= 26 && v.id % 3 === 0, long: v.g === 'f' && ad >= 8 && v.id % 3 !== 1, bald: v.g === 'm' && ad >= 55 && v.id % 4 === 0, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia', torch: torchOf(v), lantern: !!v.lantern && !v.inside, strap: ad >= 14 && (v.role === 'cacador' || v.role === 'guerreiro' || v.role === 'mercador' || v.role === 'explorador' || (G.Possess && G.Possess.body && G.Possess.body() === v)) };
+    const L = { s, skin: v.skin || '#d8a888', hair: hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', belt: darker(cloth, 0.38), brow: darker(v.hair || '#3a2a1a', 0.8), nose: darker(v.skin || '#d8a888', 0.88), lips: darker(v.skin || '#d8a888', 0.62), robe, fem: v.g === 'f' && ad >= 13, bun: v.g === 'f' && ad >= 16 && v.id % 3 === 1, beard: v.g === 'm' && ad >= 26 && v.id % 3 === 0, long: v.g === 'f' && ad >= 8 && v.id % 3 !== 1, bald: v.g === 'm' && ad >= 55 && v.id % 4 === 0, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia' || (v.role === 'anciao' && ad >= 60), toolK: v.role === 'anciao' ? 'cajado' : 'lanca', act: v.act, torch: torchOf(v), lantern: !!v.lantern && !v.inside, strap: ad >= 14 && (v.role === 'cacador' || v.role === 'guerreiro' || v.role === 'mercador' || v.role === 'explorador' || (G.Possess && G.Possess.body && G.Possess.body() === v)) };
+    L.id = v.id || 0; // (only for the drawing's own clocks: each one's cloth moves on its own beat)
     if (skin) {
-      L.out = outfitOf(v, L, fac); L.headK = L.out.headK; L.armOut = L.out.skirt === 'saiaL' || L.out.cloakM ? 0.07 : 0;
-      // (the face's mood, from the world's: joy smiles, grief and sadness frown with the brows raised inside, fear opens the
-      // eyes wide, anger draws the brows down; a calm face a little warm)
-      const e = v.emo && v.emo.k; const grief = v.mourn > 0 || e === 'sad';
-      L.mood = { smile: e === 'happy' || e === 'joy' || e === 'heart' ? 0.85 : grief ? -0.55 : e === 'angry' ? -0.25 : e === 'fear' ? -0.2 : 0.12, up: e === 'fear' || e === 'awe' ? 1 : grief ? 0.5 : e === 'question' ? 0.6 : 0, angry: e === 'angry' ? 1 : 0 };
+      L.out = outfitOf(v, L, fac); L.headK = L.out.headK; L.armOut = L.out.skirt === 'saiaL' || L.out.cloakM || L.out.topM ? 0.07 : 0;
+      // (the face's mood, from the world's feeling: joy smiles with the eyes, love too and blushes; grief frowns with the
+      // brows' inner ends raised and the lids drooping; fear and awe open the eyes wide and the mouth; anger draws the brows
+      // down and in and glares; a question lifts the brows; sickness and sleep half close the eyes; a calm face a little warm)
+      const e = v.emo && v.emo.k; const grief = v.mourn > 0 || e === 'sad'; L.mood = MOOD[grief ? 'sad' : e] || MOOD.calm;
     }
     return L;
   };
+
+  // (the faces of the feelings: smile (−1 frown .. 1), brows up, anger, grief, eyes wide, eyes smiling, the jaw open, blush)
+  const MOOD = {
+    calm: { smile: 0.12 }, chat: { smile: 0.3 }, food: { smile: 0.3 }, fish: { smile: 0.35 }, wood: { smile: 0.2 }, star: { smile: 0.7, wide: 0.35, up: 0.3 },
+    happy: { smile: 0.9, squint: 0.55, jaw: 0.25 }, joy: { smile: 1, squint: 0.6, jaw: 0.4 }, heart: { smile: 0.65, squint: 0.35, blush: 0.4 },
+    sad: { smile: -0.6, up: 0.15, sad: 1 }, angry: { smile: -0.45, angry: 1, squint: 0.3, jaw: 0.08 }, fear: { smile: -0.3, up: 1, wide: 1, jaw: 0.45 }, fire: { smile: -0.3, up: 1, wide: 1, jaw: 0.4 },
+    awe: { smile: 0.1, up: 0.9, wide: 0.6, jaw: 0.35 }, question: { up: 0.65, smile: -0.05 }, sick: { smile: -0.35, sad: 0.6, squint: 0.45 }, zzz: { squint: 0.75 }, pray: { squint: 0.8, smile: 0.1 },
+  };
+  const FACE = ['smile', 'up', 'angry', 'sad', 'wide', 'squint', 'jaw', 'blush'];
+  // (a face moves from one feeling to the next in a third of a second or so, never at once — the view's own memory)
+  function easeMood(s, md, dt) { const m = s.mood || (s.mood = {}); const k = 1 - Math.exp(-6 * (dt || 0)); for (const f of FACE) { const w = md[f] || 0; m[f] = m[f] === undefined ? w : m[f] + (w - m[f]) * k; } return m; }
 
   // ------------------------------ clothes ------------------------------
   // What a person wears, from who they are: their people (the north's tunic and wrapped legs, the apron-dress with its
@@ -152,7 +225,7 @@
     // (the cut: sleeves to the wrist, the round neckline, shoes to the ankle, trousers, the belt at the waist)
     o.sleeve = 0.585; o.neck = 0; o.bootTop = 0.11; o.legs = 1; o.beltY = 1.01; o.beltH = 0.017; o.overK = 0; o.strap = L.strap ? 1 : 0;
     o.torso = 0; o.motif = wealth >= 2 && hh(9) < 0.7 ? 1 : 0; o.feetK = 0; o.hem = 1; o.cloakTrim = wealth >= 2 ? 1 : 0;
-    o.skirt = null; o.cloakM = null; o.hatM = null; o.beard = null;
+    o.skirt = null; o.cloakM = null; o.hatM = null; o.beard = null; o.topM = null;
     o.hairM = ad >= 55 && !fem && hh(10) < 0.35 ? 'careca' : HAIRS[fem ? 'f' : 'm'][Math.floor(hh(11) * 5)];
     if (!fem && ad >= 22 && hh(12) < (civ === 'nordico' ? 0.62 : civ === 'grego' ? 0.5 : 0.22)) o.beard = hh(13) < 0.55 ? 'barba' : hh(13) < 0.8 ? 'curta' : 'bigode';
     o.blush = fem || kid ? 0.25 : 0.06;
@@ -165,30 +238,55 @@
     } else if (civ === 'grego' || civ === 'romano' || civ === 'classico') {
       o.cloth = mixHex(CV.cloth || '#efe9dc', o.cloth, kid ? 0.6 : 0.35); o.sleeve = 0.16; o.legs = 0; o.feetK = 2; o.skirt = fem ? 'saiaL' : 'saiaC'; o.bootTop = 0.0;
       if (fem) o.hairM = hh(24) < 0.7 ? 'coque' : 'longo'; else o.hairM = 'curto';
-      if (wealth >= 2) o.cloakM = 'capa', o.cloak = wool(darker(base, 0.9));
+      // (a Greek woman's chiton falls doubled at the top: its overfold, a loose blouse; a rich man's mantle is a toga — of
+      // white wool for a Roman — or a himation of colour; a rich woman's, a palla over the shoulders)
+      if (fem && civ === 'grego' && ad >= 13) o.topM = 'bata';
+      if (wealth >= 2) { if (fem) o.cloakM = 'capa', o.cloak = wool(darker(base, 0.9)); else o.cloakM = 'toga', o.cloak = civ === 'romano' ? '#ebe5d5' : wool(darker(base, 0.9)); }
     } else if (civ === 'egipcio') {
       o.cloth = '#f1ead6'; o.legs = 0; o.feetK = hh(25) < 0.5 ? 1 : 2; o.bootTop = 0; o.skirt = fem ? 'saiaL' : 'saiaC';
       if (!fem) { o.torso = wealth >= 2 || role === 'sacerdote' ? 2 : 1; o.beltY = 0.98; } else { o.sleeve = 0.04; o.torso = wealth >= 2 ? 0 : 0; }
-      o.hairM = role === 'sacerdote' ? 'careca' : 'chanel'; o.trim = CV.trim || '#2f8f8a'; o.beard = null;
+      o.hairM = role === 'sacerdote' ? 'careca' : wealth >= 2 || (fem && hh(30) < 0.5) ? 'peruca' : 'chanel'; o.trim = CV.trim || '#2f8f8a'; o.beard = null;
     } else if (civ === 'asteca') {
       o.cloth = mixHex('#e8dcc0', o.cloth, 0.3); o.legs = 0; o.feetK = 2; o.bootTop = 0; o.trim = CV.trim || '#2fae8f'; o.motif = 1;
-      if (fem) { o.skirt = 'saiaL'; o.sleeve = 0.18; o.hairM = hh(26) < 0.6 ? 'trancas' : 'longo'; } else { o.skirt = 'saiaC'; o.torso = 1; o.cloakM = 'capa'; o.cloak = mixHex('#e8dcc0', base, 0.5); o.hairM = 'chanel'; }
+      // (a woman: the huipil — a loose blouse with its woven panel — over the cueitl, a wrapped skirt of a dyed cotton; a man:
+      // the maxtlatl, the loincloth, and the tilmatli knotted over the shoulder)
+      if (fem) { o.skirt = 'saiaL'; o.topM = 'bata'; o.overK = 3; o.over = ['#3a5a7a', '#8a3a2a', '#e8dcc0', '#4a6a3a', '#6a4a7a'][Math.floor(hh(31) * 5)]; o.sleeve = 0.18; o.hairM = hh(26) < 0.6 ? 'trancas' : 'longo'; }
+      else { o.skirt = 'tanga'; o.torso = 1; o.cloakM = 'capa'; o.cloak = mixHex('#e8dcc0', base, 0.5); o.hairM = 'chanel'; }
     }
     // (the trades: the robe of the priest and the elder, the scribe's; aprons; the hats)
     if (!kid) {
-      if (role === 'sacerdote' || role === 'anciao' || role === 'escriba') { o.skirt = 'saiaL'; o.legs = 0; o.overK = 0; o.sleeve = 0.585; if (role === 'anciao') o.cloakM = 'capa'; if (role === 'sacerdote' && civ !== 'egipcio') o.hatM = hh(27) < 0.5 ? 'capuz' : null, o.cloak = o.cloth; }
+      // (the robe is of the trade's wool — a woman of the north takes off her apron-dress for it, not down to her linen)
+      const south = civ === 'romano' || civ === 'grego';
+      if (role === 'sacerdote' || role === 'anciao' || role === 'escriba') { if (o.overK === 1) o.cloth = o.over; o.skirt = 'saiaL'; o.legs = 0; o.overK = 0; o.topM = null; o.sleeve = 0.585; if (role === 'anciao') o.cloakM = south && !fem ? 'toga' : 'capa'; if (role === 'sacerdote' && civ !== 'egipcio') { if (south) o.hatM = 'louro', o.hat = '#4a6a2a'; else o.hatM = hh(27) < 0.5 ? 'capuz' : null, o.cloak = o.cloth; } }
       if (role === 'ferreiro' || role === 'acougueiro' || role === 'taverneiro' || role === 'oleiro' || role === 'feirante') { o.overK = 2; o.over = role === 'ferreiro' ? '#5a3a24' : role === 'oleiro' ? '#b8946a' : '#e8e0cc'; o.sleeve = role === 'ferreiro' ? 0.2 : 0.42; }
       if (role === 'agricultor' || role === 'pastor' || role === 'vinhateiro' || role === 'lavrador') { o.hatM = 'chapeu'; o.hat = '#d8b86a'; o.sleeve = 0.4; }
       if (role === 'cacador' && hh(28) < 0.5) { o.hatM = 'capuz'; o.cloak = wool('#5a4a2a'); }
-      if (role === 'guerreiro') { o.hatM = 'elmo'; o.hat = METAL.iron; o.cloth = wool(base); o.cloakM = wealth >= 2 || hh(29) < 0.4 ? 'capa' : o.cloakM; o.bootTop = 0.22; }
+      // (the warriors' helmets: the crested galea of the south — its crest of red horsehair —, a lord's feathers in the jungle,
+      // none on the Nile, the iron helmet of the north)
+      if (role === 'guerreiro') { o.hatM = south || civ === 'classico' ? 'galea' : civ === 'asteca' ? (wealth >= 2 ? 'penacho' : null) : civ === 'egipcio' ? null : 'elmo'; o.hat = civ === 'grego' ? METAL.bronze : METAL.iron; if (o.hatM === 'galea') o.trim = '#8a2418'; o.cloth = wool(base); o.cloakM = civ === 'asteca' ? o.cloakM : wealth >= 2 || hh(29) < 0.4 ? 'capa' : o.cloakM; o.bootTop = south || civ === 'asteca' || civ === 'egipcio' ? 0 : 0.22; }
+      if (role === 'pescador') { o.hatM = civ === 'nordico' ? 'gorro' : 'chapeu'; o.hat = civ === 'nordico' ? wool('#5a5a4a') : '#d8b86a'; o.sleeve = 0.3; }
       if (role === 'contrabandista') { o.cloakM = 'capa'; o.hatM = 'capuz'; o.cloak = '#2a2430'; }
       if (role === 'mercador' || role === 'ourives') { o.cloakM = 'capa'; o.motif = 1; }
     }
     if (v.robe && !v.hood) { o.cloakM = 'capa'; o.cloak = v.robe; o.hatM = v.unmask ? o.hatM : 'capuz'; }
-    if (ruler && ad >= 10) { o.hatM = 'coroa'; o.cloakM = 'capa'; o.cloak = wool(darker(fac && G.Fac.hex ? G.Fac.hex(fac.id) : '#8a2a2a', 0.85)); o.metal = METAL.gold; o.motif = 1; o.cloakTrim = 1; }
+    // (a ruler: the crown and the cloak of the people's colour — the laurel of gold and a toga of purple in the south, the nemes
+    // on the Nile with the bare chest and its collar, the feathers and the turquoise cloak of the jungle)
+    if (ruler && ad >= 10) { o.hatM = 'coroa'; o.cloakM = 'capa'; o.cloak = wool(darker(fac && G.Fac.hex ? G.Fac.hex(fac.id) : '#8a2a2a', 0.85)); o.metal = METAL.gold; o.motif = 1; o.cloakTrim = 1;
+      if (civ === 'romano' || civ === 'grego') { o.hatM = 'louro'; o.hat = '#c8a040'; if (!fem) o.cloakM = 'toga', o.cloak = civ === 'romano' ? '#5a2048' : o.cloak; }
+      else if (civ === 'egipcio') { o.hatM = 'nemes'; o.cloakM = null; if (!fem) o.torso = 2; }
+      else if (civ === 'asteca') { o.hatM = 'penacho'; o.cloak = '#2f7a8a'; } }
     if (v.captive) { o.cloakM = null; o.hatM = null; o.motif = 0; o.overK = 0; o.feetK = 1; o.trim = o.cloth; o.belt = '#6a5a4a'; o.cloakTrim = 0; }
-    // (the colours once, as the graphics card wants them: linear)
-    o.lin = {}; for (const k of ['cloth', 'trim', 'pants', 'boots', 'belt', 'metal', 'over', 'beads', 'cloak', 'hat', 'iris', 'lips']) { const c = color(o[k]); o.lin[k] = [c.r, c.g, c.b]; }
+    // (what the clothes are made of: wool in the north and on soldiers, linen and cotton in the south, on the Nile and in the
+    // jungle — a northern woman's dress of linen under her apron-dress of wool; an apron of leather on the smith)
+    o.fab = (civ === 'nordico' && !(fem && o.overK === 1)) || role === 'guerreiro' ? 1 : 2; o.fabO = o.overK === 2 ? (role === 'ferreiro' ? 3 : 2) : o.overK === 3 ? 2 : 1;
+    // (a northern cloak has a collar of fur — white on a ruler's —; every other cloak, a collar of its own cloth)
+    o.fur = o.cloakM === 'capa' && civ === 'nordico' && !v.robe ? (ruler ? 2 : 1) : 0;
+    // (nobody naked: the hips always under a skirt, a kilt or trousers — and no cloth the colour of its wearer's skin: a linen
+    // as pale as the skin is dyed a little darker, until it reads as cloth; Body3D.bare is the verifier's own rule)
+    if (!o.skirt && !(o.legs >= 1)) o.skirt = 'saiaC';
+    const linOf = () => { o.lin = {}; for (const k of ['cloth', 'trim', 'pants', 'boots', 'belt', 'metal', 'over', 'beads', 'cloak', 'hat', 'iris', 'lips']) { const c = color(o[k]); o.lin[k] = [c.r, c.g, c.b]; } };
+    linOf(); // (the colours once, as the graphics card wants them: linear)
+    for (let k = 0; k < 3 && G.Body3D && G.Body3D.bare && G.Body3D.bare(o, L.skin); k++) { for (const q of ['cloth', 'over', 'pants']) o[q] = mixHex(o[q], '#5a4030', 0.3); linOf(); }
     OUT.set(id, o); if (OUT.size > 2000) OUT.clear();
     return o;
   }
@@ -205,7 +303,7 @@
   // ------------------------------ poses ------------------------------
   // a pose: the angles of the joints, and the hips' height and lean (radians, metres)
   // (and for the skin: the stance of each foot, the grip of the hands, the mouth, the eyes' look, the cloth's swing)
-  const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, anL: 0, anR: 0, pelY: 0, pelR: 0, pelP: 0, shift: 0, sway: 0, breath: 0, lie: 0, tool: 0, stL: 0, stR: 0, pitL: 0, pitR: 0, grip: 0, talk: 0, gazeX: 0, gazeY: 0, cloth: 0, clothS: 0 });
+  const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, anL: 0, anR: 0, pelY: 0, pelR: 0, pelP: 0, shift: 0, sway: 0, breath: 0, lie: 0, tool: 0, stL: 0, stR: 0, pitL: 0, pitR: 0, grip: 0, talk: 0, gazeX: 0, gazeY: 0, cloth: 0, clothS: 0, clothB: 0, clothV: 0, wrist: 0 });
   Anim.POSE0 = POSE0;
   // (the dead lie as they fell: on the back or face down, the limbs thrown out)
   const DEAD = [
@@ -232,7 +330,8 @@
     jump: () => ({ hipL: -0.9, hipR: -0.3, knL: 1.4, knR: 0.6, shLp: -2.4, shRp: -2.2, shLr: 0.3, shRr: -0.3, elL: 0.3, elR: 0.3, lean: -0.05 }),
     fall: (t) => ({ hipL: -0.25, hipR: 0.15, knL: 0.5, knR: 0.35, shLp: -0.4, shRp: -0.4, shLr: 1.1 + Math.sin(t * 9) * 0.1, shRr: -1.1 - Math.sin(t * 9) * 0.1, elL: 0.4, elR: 0.4, neck: -0.15 }),
     land: () => ({ crouch: 0.28, lean: 0.35, hipL: -0.8, hipR: -0.8, knL: 1.5, knR: 1.5, shLp: -0.6, shRp: -0.6, elL: 0.6, elR: 0.6 }),
-    swing: (t) => { const k = (Math.sin(t * 5.5) + 1) / 2; return { shRp: -2.7 + k * 2.2, shLp: -2.4 + k * 2, elR: 0.3, elL: 0.4, lean: k * 0.35, hipL: -0.15, hipR: 0.2, knL: 0.2, knR: 0.1, tool: 1 }; },
+    // (a swing: the tool raised over the head, the wrist cocked back; brought down, the wrist turning it forward to strike)
+    swing: (t) => { const k = (Math.sin(t * 5.5) + 1) / 2; return { shRp: -2.7 + k * 2.2, shLp: -2.4 + k * 2, elR: 0.3, elL: 0.4, lean: k * 0.35, hipL: -0.15, hipR: 0.2, knL: 0.2, knR: 0.1, tool: 1, wrist: -0.5 + 2.0 * Math.pow(k, 1.5), grip: 1 }; },
     low: (t) => ({ crouch: 0.32, lean: 0.95, hipL: -1.0, hipR: -0.8, knL: 1.3, knR: 1.1, shLp: -1.0 + Math.sin(t * 3) * 0.25, shRp: -1.1 - Math.sin(t * 3) * 0.25, elL: 0.3, elR: 0.3, neck: 0.3 }),
     carry: (t) => ({ ...ST.idle(t), shLp: -0.95, shRp: -0.95, shLr: 0.25, shRr: -0.25, elL: 0.95, elR: 0.95 }),
     carryWalk: (t, sp) => ({ ...ST.walk(t, sp), shLp: -0.95, shRp: -0.95, shLr: 0.25, shRr: -0.25, elL: 0.95, elR: 0.95 }),
@@ -629,29 +728,38 @@
       const sd = k ? -1 : 1;
       let sp = k ? pose.shRp : pose.shLp, sr = k ? pose.shRr : pose.shLr, el = k ? pose.elR : pose.elL;
       if (hold && sd > 0) { sp = -1.05; sr = 0.12; el = 1.25; }
+      // (a spear or a staff carried — not swung —: the upper arm by the side, the forearm forward, the shaft upright)
+      if (k && L.tool && !pose.tool && !lie && !L.bind && upright(pose)) { sp = 0.05; sr = -0.08; el = 1.05; }
       const jz = G.clamp(-sp, -1, 1) * 0.03, roll = sr + sd * (0.05 + (L.armOut || 0)); // (a wide skirt or a cape: the arms a little out)
       fr(R[B.shL + k], R[B.chest], sd * 0.235, 0.46, jz, sp, 0, roll);
       frHalf(R[B.shHL + k], R[B.chest], sd * 0.235, 0.46, jz * 0.5, 0, 0, sd * RIG.roll, sp, 0, roll);
       fr(R[B.faL + k], R[B.shL + k], 0, -0.3, 0, -el, 0, 0); fr(R[B.elHL + k], R[B.shL + k], 0, -0.3, 0, -el / 2, 0, 0);
       fr(R[B.hdL + k], R[B.faL + k], 0, -0.29, 0, 0, 0, 0);
-      const g = (hold && sd > 0) || (k && (pose.tool || L.tool)) || (L.carry && !lie) ? 1 : grip;
+      const g = (hold && sd > 0) || (k && (pose.tool || L.tool)) || (L.carry && !lie) ? 1 : grip; // (both hands close on a swung haft: the swing's own grip)
       fr(R[B.fgL + k], R[B.hdL + k], 0, -RIG.knuckle, 0, 0, 0, -sd * g * 0.95);
       fr(R[B.tbL + k], R[B.hdL + k], -sd * 0.0076, -0.0238, 0.0324, 0, -sd * g * 0.55, -sd * g * 0.25);
     }
     for (let k = 0; k < 2; k++) leg(R, pose, L, k, s, grounded, want[k]);
     // (the skirt: its front follows the leg that is most forward, its back the one most behind, its sides their own leg)
     const hl = pose.hipL, hr = pose.hipR, cl = pose.cloth || 0, cs = pose.clothS || 0;
-    fr(R[B.skF], R[B.pel], 0, -0.04, 0, Math.min(hl, hr, 0) * 0.8 + Math.min(0, cl) * 0.5, 0, cs * 0.3);
+    // (a thigh raised far — sitting, crouching — carries the cloth over it nearly all the way: in a step, four fifths)
+    const fk = a => a * (0.8 + 0.17 * G.clamp(-a - 0.6, 0, 1)), sk = a => a * (0.75 + 0.2 * G.clamp(-a - 0.6, 0, 1));
+    fr(R[B.skF], R[B.pel], 0, -0.04, 0, fk(Math.min(hl, hr, 0)) + Math.min(0, cl) * 0.5, 0, cs * 0.3);
     // (its back: the foot most behind — the thigh and half the knee's fold: the heel kicked up in the swing stays inside)
-    fr(R[B.skB], R[B.pel], 0, -0.04, 0, Math.max(hl + pose.knL * 0.5, hr + pose.knR * 0.5, 0) * 0.85 + Math.max(0, cl) * 0.5, 0, cs * 0.3);
-    fr(R[B.skL], R[B.pel], 0.095, -0.04, 0, hl * 0.75 + cl * 0.3, 0, cs * 0.4); fr(R[B.skR], R[B.pel], -0.095, -0.04, 0, hr * 0.75 + cl * 0.3, 0, cs * 0.4);
+    fr(R[B.skB], R[B.pel], 0, -0.04, 0, Math.max(hl + pose.knL * 0.5, hr + pose.knR * 0.5, 0) * 0.85 + Math.max(0, cl) * 0.5 - Math.min(hl, hr, 0) * 0.12, 0, cs * 0.3); // (seated, drawn back over the buttocks)
+    fr(R[B.skL], R[B.pel], 0.095, -0.04, 0, sk(hl) + cl * 0.3, 0, cs * 0.4); fr(R[B.skR], R[B.pel], -0.095, -0.04, 0, sk(hr) + cl * 0.3, 0, cs * 0.4);
     fr(R[B.clk1], R[B.chest], 0, 0.46, -0.11, Math.max(0, cl) * 0.6, 0, cs * 0.3); fr(R[B.clk2], R[B.clk1], 0, -0.45, 0, Math.max(0, cl) * 0.5, 0, cs * 0.3);
     // (what is held: the torch upright in the left hand whatever the arm does; the tool in the right; the load at the chest)
     M.v.setFromMatrixPosition(R[B.hdL]); R[B.torch].makeRotationY(-yaw + Math.PI / 2); R[B.torch].setPosition(M.v.x, M.v.y, M.v.z); M.b.makeScale(s, s, s); R[B.torch].multiply(M.b);
-    fr(R[B.tool], R[B.hdR], 0, 0, 0, pose.tool ? -Math.PI / 2 : 0, 0, 0);
+    // (the tool: through the hole of the closed fist — toward the palm, under the knuckles — along the fist's axis; a shaft
+    // carried kept upright by the wrist; a swung tool bent down by the wrist as it strikes)
+    const carried = L.tool && !pose.tool && !lie && upright(pose);
+    fr(R[B.tool], R[B.hdR], 0.027, -0.076, 0, Math.PI / 2 + (carried ? -Math.PI / 2 + 1.0 : pose.tool ? (pose.wrist || 0) : 0), 0, 0);
     fr(R[B.carry], R[B.chest], 0, 0.3, 0.26, 0, 0, 0);
     return R;
   };
+  // (standing, walking, talking, turning: a shaft can be carried upright — not lying, swimming, sitting, crouching)
+  function upright(pose) { return !(pose.lie > 0.05) && !(pose.crouch > 0.25); }
   // the body as one skin: the rig's bones and the look to Body3D; the things held and the marker as before
   let skin = false;
   function bodySkin(idx, X, Y, Z, yaw, pose, L, marker) {
@@ -663,15 +771,16 @@
       put('torch', idx, R[B.torch], 0, 0, 0, 0.12, 0, 0, 0, L.lantern ? -0.1 : 0.18, 0, 0.045, L.lantern ? 0.2 : 0.55, 0.045, L.lantern ? '#3a2a1a' : '#5a3c22');
       M.v.setFromMatrixPosition(R[B.torch]); if (P3.flames.length < 40) P3.flames.push([M.v.x, M.v.y + (L.lantern ? -0.18 : 0.47) * s, M.v.z, L.lantern ? 0.5 : 0.85]);
     } else hide('torch', idx);
-    if (pose.tool || L.tool) put('tool', idx, R[B.hdR], 0, 0, 0, pose.tool ? -Math.PI / 2 : 0, 0, 0, 0, pose.tool ? 0.3 : -0.25, 0, 0.04, 0.95, 0.04, '#7a5a3a'); else hide('tool', idx);
+    if ((pose.tool || L.tool) && !toolPut(R, L, pose)) put('tool', idx, R[B.hdR], 0, 0, 0, pose.tool ? -Math.PI / 2 : 0, 0, 0, 0, pose.tool ? 0.3 : -0.25, 0, 0.04, 0.95, 0.04, '#7a5a3a'); else hide('tool', idx);
     if (L.carry) put('carry', idx, R[B.chest], 0, 0.3, 0.26, 0, 0, 0, 0, 0, 0, 0.34, 0.26, 0.3, '#9a7a4a'); else hide('carry', idx);
     if (marker) put('marker', idx, M.root, 0, 2.15 + Math.sin(performance.now() / 300) * 0.04, 0, 0, performance.now() / 600, 0, 0, 0, 0, 0.16, 0.22, 0.16, marker); else hide('marker', idx); // (M.root: the rig's root)
   }
   // the face: the blink (0 open .. 1 shut), where the eyes look (they go ahead of the head), the mouth
   function faceOf(pose, L) {
-    const f = L.face || {}; const b = pose.blink === undefined ? 1 : pose.blink;
-    f.closed = G.clamp((1 - b) / 0.88, 0, 1); f.gx = G.clamp(pose.gazeX || 0, -0.45, 0.45); f.gy = G.clamp(pose.gazeY || 0, -0.3, 0.3); f.mouth = pose.talk || 0;
-    const md = L.mood; f.smile = md ? md.smile : 0.1; f.up = md ? md.up : 0; f.angry = md ? md.angry : 0;
+    const f = L.face || {}; const b = pose.blink === undefined ? 1 : pose.blink; const md = L.mood || MOOD.calm;
+    f.closed = G.clamp((1 - b) / 0.88, 0, 1); f.gx = G.clamp(pose.gazeX || 0, -0.45, 0.45); f.gy = G.clamp(pose.gazeY || 0, -0.3, 0.3);
+    f.mouth = Math.max(pose.talk || 0, md.jaw || 0);
+    f.smile = md.smile || 0; f.up = md.up || 0; f.angry = md.angry || 0; f.sad = md.sad || 0; f.wide = md.wide || 0; f.squint = md.squint || 0; f.blush = md.blush || 0;
     return f;
   }
   // the parts the skin replaces (the props stay: the torch, the tool, the load, the marker over a head)
@@ -687,6 +796,9 @@
   P3.update = function (dt, focus) {
     if (!mesh || !focus) return;
     const S = G.S; const q = R3.Q(); const TL = G.Space.TILE, HM = G.Space.HM;
+    // (the eye: how far each one is from it picks the fine body or the lighter one — the camera, not the body it follows)
+    const cam = R3.camera ? R3.camera() : null; seenAt[0] = cam ? cam.position.x : focus.X; seenAt[1] = cam ? cam.position.z : focus.Z; field(cam, q);
+    { const sk = R3.LT && R3.LT.sky; if (sk) RIM.value = 0.2 * G.clamp((0.3 * sk[0] + 0.6 * sk[1] + 0.1 * sk[2]) / 1.2, 0.15, 1); }
     const R = q.view * 0.22; const R2 = R * R; const RC = q.view * 0.55, RC2 = RC * RC; // (full bodies near; the crowd out to here)
     const av = P3.avatar;
     // the nearest people first, as many as the machine is told to carry
@@ -699,14 +811,14 @@
     }
     near.sort((a, b) => a[0] - b[0]);
     let n = Math.min(near.length, q.npcs, MAX - 1); while (n > 0 && near[n - 1][0] > R2) n--;
-    let idx = 0, emoN = 0; P3.walkers.length = 0; P3.flames.length = 0;
+    let idx = 0, emoN = 0, culled = 0; P3.walkers.length = 0; P3.flames.length = 0;
     if (skin && G.Body3D.broken(R3.renderer && R3.renderer())) { skin = false; G.Body3D.clear(); PARTS.forEach((p, k) => { mesh[k].visible = true; }); }
-    if (skin) G.Body3D.begin();
+    if (skin) G.Body3D.begin(); toolsBegin();
     if (av) {
       // (the body's feet: where they stand in its stride — the view's own memory, a new one for a new body or after a jump)
       if (!avFeet || avFeet.id !== av.id || Math.hypot(av.X - avFeet.X, av.Z - avFeet.Z) > 4) avFeet = { id: av.id, f: [{ on: 0 }, { on: 0 }] }; avFeet.X = av.X; avFeet.Z = av.Z;
       av.look.ground = av.ground === false || av.swim ? undefined : av.Y; av.look.plant = avFeet.f;
-      avFeet.t = (avFeet.t || 0) + dt; av.pose.blink = blinkAt(avFeet.t, av.id); cloth(avFeet, av.X, av.Z, av.yaw, dt, av.pose);
+      avFeet.t = (avFeet.t || 0) + dt; av.pose.blink = blinkAt(avFeet.t, av.id); cloth(avFeet, av.X, av.Z, av.yaw, dt, av.pose); if (av.look.mood) av.look.mood = easeMood(avFeet, av.look.mood, dt);
       P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null);
     }
     const seen = new Set();
@@ -736,11 +848,16 @@
       const look = P3.lookFor(s.yaw, X, Z, av, st);
       s.pose.lookY = (s.pose.lookY || 0) + (look - (s.pose.lookY || 0)) * (1 - Math.exp(-4 * dt));
       s.pose.gazeX = G.clamp((look - s.pose.lookY) * 0.9, -0.42, 0.42); // (the eyes go first, the head follows)
-      s.pose.blink = blinkAt(s.t, v.id); cloth(s, X, Z, s.yaw, dt, s.pose);
+      s.pose.blink = blinkAt(s.t, v.id); cloth(s, X, Z, s.yaw, dt, s.pose); if (Lv.mood) Lv.mood = easeMood(s, Lv.mood, dt);
       s.st = st;
-      Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant || (s.plant = [{ on: 0 }, { on: 0 }]);
+      s.lod = lodAt(s.lod, (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2);
+      Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant || (s.plant = [{ on: 0 }, { on: 0 }]); Lv.lod = s.lod;
+      if (P3.walkers.length < 40) P3.walkers.push([X, Y, Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise, the grass they part)
+      // (outside the eye's field, their shadow too: not drawn this frame — their steps go on; a torch they hold still burns
+      // and lights round it, about where their hand is)
+      s.cull = seen(X, Y, Z, Lv.s) ? 0 : 1;
+      if (s.cull) { culled++; if ((Lv.torch || Lv.lantern) && P3.flames.length < 40) { const c = Math.cos(s.yaw), n = Math.sin(s.yaw), k = Lv.s; P3.flames.push([X + (c * 0.28 + n * 0.2) * k, Y + (Lv.lantern ? 0.85 : 1.6) * k, Z + (n * 0.28 - c * 0.2) * k, Lv.lantern ? 0.5 : 0.85]); } continue; }
       P3.body(idx++, X, Y, Z, s.yaw, s.pose, Lv, P3.highlight === v.id ? '#ffd76a' : null);
-      if (P3.walkers.length < 40) P3.walkers.push([X, Y, Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise)
       if (v.emo && v.emo.k && emoN < emoPool.length) { const tx = emoMap(v.emo.k); if (tx) { const sp = emoPool[emoN++]; if (sp.material.map !== tx) { sp.material.map = tx; sp.material.needsUpdate = true; } const L2 = P3.look(v).s; sp.position.set(X, Y + 2.2 * L2 + Math.sin(s.t * 3) * 0.03, Z); sp.scale.set(0.42, 0.45, 1); sp.visible = true; } }
     }
     for (const id of vis.keys()) if (!seen.has(id) && !(av && id === av.id)) vis.delete(id);
@@ -750,13 +867,16 @@
     if (Cg) for (const c of Cg.corpses) {
       if (idx >= MAX) break; const X = c.x * TL, Z = c.y * TL; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > R2) continue;
       const stg = G.Carnage.stage(c); if (stg === 'bones') continue;
-      const L = P3.look(c.look); if (stg !== 'fresh') L.skin = stg === 'rot' ? '#8a8a6a' : '#7a6a5a';
-      P3.body(idx++, X, W.groundH(c.x, c.y) * HM, Z, G.hash(c.id) * TAU, DEAD[c.id % DEAD.length], L, null); P3.dead++;
+      P3.dead++; const Y = W.groundH(c.x, c.y) * HM; if (!seen(X, Y, Z, 1)) { culled++; continue; } // (in reach: counted, drawn where seen)
+      const L = P3.look(c.look); if (stg !== 'fresh') L.skin = stg === 'rot' ? '#8a8a6a' : '#7a6a5a'; L.lod = lodAt(cLod.get(c.id) || 0, (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2); cLod.set(c.id, L.lod);
+      P3.body(idx++, X, Y, Z, G.hash(c.id) * TAU, DEAD[c.id % DEAD.length], L, null);
     }
+    if (cLod.size > 400) cLod.clear();
     // the crowd: everyone else in reach, simply (where the world has them; no animation of their own but a step's bob)
     mats(); let c = 0; const tnow = performance.now() / 1000;
     for (let k = n; k < near.length && c < MAXC; k++) {
-      const v = near[k][1]; const L = P3.look(v); const s = L.s; const X = v.x * TL, Z = v.y * TL; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const Y = W.groundH(v.x, v.y) * HM + Math.abs(st) * 0.04;
+      const v = near[k][1]; const X = v.x * TL, Z = v.y * TL; const Y0 = W.groundH(v.x, v.y) * HM; if (!seen(X, Y0, Z, 1)) continue;
+      const L = P3.look(v); const s = L.s; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const Y = Y0 + Math.abs(st) * 0.04;
       const pp = v.path && v.pi < v.path.length ? v.path[v.pi] : null; const yaw = pp ? Math.atan2(pp[1] - v.y, pp[0] - v.x) : (v.face > 0 ? 0 : Math.PI);
       M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); M.root.multiply(M.b); M.b.makeScale(s, s, s); M.root.multiply(M.b);
       M.a.copy(M.root); M.b.makeTranslation(0, 0.72, 0); M.a.multiply(M.b); M.c.makeScale(1, 0.92, 0.72); M.a.multiply(M.c); crowd.setMatrixAt(c, M.a); crowd.setColorAt(c, color(L.cloth));
@@ -768,8 +888,8 @@
     crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = c; for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
     P3.crowd = c;
     for (const m of mesh) { m.count = idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
-    P3.count = idx;
-    if (skin) G.Body3D.end();
+    P3.count = idx; P3.culled = culled;
+    if (skin) G.Body3D.end(); toolsEnd();
     beasts(focus, R2, dt);
   };
   // (a blink: the lids down and up in a sixth of a second, every four seconds or so — each person on their own beat)
@@ -784,6 +904,11 @@
     const want = G.clamp(Math.max(0, fw) * 0.1 + G.clamp(acc * 0.025, -0.25, 0.25), -0.2, 0.75), side = G.clamp(-dy / dt * Math.max(0.3, fw) * 0.06, -0.35, 0.35);
     const k = 40, c = 7; s.cw += ((want - s.ca) * k - s.cw * c) * dt; s.ca += s.cw * dt; s.cs += (side - s.cs) * (1 - Math.exp(-5 * dt));
     pose.cloth = G.clamp(s.ca, -0.3, 0.9); pose.clothS = s.cs;
+    // (the rise and fall of the steps: the cloth's free part lags the hips — a spring of its own; and how fast it goes)
+    const hy = (pose.bob || 0) + (pose.pelY || 0) - (pose.crouch || 0) * 0.92;
+    if (s.cb === undefined || Math.abs(hy - s.cb) > 0.3) { s.cb = hy; s.cbv = 0; }
+    s.cbv += ((hy - s.cb) * 90 - s.cbv * 9) * dt; s.cb += s.cbv * dt;
+    pose.clothB = G.clamp(s.cb - hy, -0.06, 0.06); pose.clothV = Math.max(0, fw);
   }
   P3.visOf = id => vis.get(id);
   P3.skin = () => skin; // (the bodies drawn as one skin — Body3D — or as the pieces of old)
@@ -800,9 +925,41 @@
   P3.check = function () {
     const out = []; const scan = (list, n, what) => { for (const m of list || []) { const a = m.instanceMatrix.array; for (let k = 0; k < Math.min(n, m.count) * 16; k++) if (!Number.isFinite(a[k])) { out.push(`${what}: matriz inválida no desenho`); return; } } };
     scan(mesh, P3.count, 'pessoas'); scan(beastMesh, P3.beasts, 'bichos');
-    if (skin) for (const e of G.Body3D.check()) out.push(e);
+    if (skin) {
+      for (const e of G.Body3D.check()) out.push(e);
+      // (the lighter bodies only far from the eye: nobody inside a level's edge, less its margin, drawn lighter)
+      for (let r = 0; r < G.Body3D.rows; r++) { const a = G.Body3D.at(r); if (!a || !a[7]) continue; const d = Math.hypot(a[0] - seenAt[0], a[2] - seenAt[1]); if (d < LODD[a[7] - 1] - 1.5) { out.push(`corpo ${r}: o corpo de nível ${a[7]} a ${d.toFixed(1)} m do olho`); break; } }
+    }
+    // (who was left undrawn this frame was outside the eye's field: nobody standing in it)
+    if (FR.on) for (const [id, s] of vis) if (s.cull) { FR.s.center.set(s.X, s.Y + 0.9, s.Z); FR.s.radius = 0.3; if (FR.f.intersectsSphere(FR.s)) { out.push(`pessoa ${id}: fora do desenho, mas à vista`); break; } }
     return out;
   };
+  const seenAt = [0, 0]; // (where the eye was when the people were last drawn: what picks the lighter bodies, and the verifier's)
+  // the levels of detail by the distance from the eye: the fine body near, a lighter one from LODD[0] metres, the lightest
+  // (a few hundred triangles) from LODD[1] — a metre either side of each edge, so nobody standing on it flickers between two
+  const LODD = [12, 26];
+  function lodAt(prev, d2) { let l = 0; for (let k = 0; k < LODD.length; k++) { const e = LODD[k] + (prev > k ? -1 : 1); if (d2 > e * e) l = k + 1; } return l; }
+  const cLod = new Map(); // (the corpses' levels: id → level)
+  P3.LODD = LODD; P3.cull = true; P3.culled = 0; // (cull: off only to measure what it saves)
+  // the eye's field this frame: who is outside it — and whose shadow is too — is not drawn (only seen: the world is the same)
+  const FR = { on: false };
+  function field(cam, q) {
+    FR.on = !!cam && !!THREE && P3.cull; if (!FR.on) return;
+    if (!FR.f) { FR.f = new THREE.Frustum(); FR.m = new THREE.Matrix4(); FR.s = new THREE.Sphere(); }
+    cam.updateMatrixWorld(); FR.m.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse); FR.f.setFromProjectionMatrix(FR.m);
+    FR.cx = cam.position.x; FR.cz = cam.position.z;
+    // (the shadows, where there are: how long a body's falls on the ground — up to 12 m when the light is low — and which way)
+    const sd = q.shadows > 0 && R3.GX && R3.GX.gxSunW ? R3.GX.gxSunW.value : null; const hz = sd ? Math.hypot(sd.x, sd.z) : 0;
+    FR.sh = sd && sd.y > 0.02 && hz > 1e-4 ? Math.min(12, 1.9 * hz / sd.y) : 0; FR.ux = FR.sh ? sd.x / hz : 0; FR.uz = FR.sh ? sd.z / hz : 0;
+  }
+  // (someone r metres tall standing at X, Y, Z: in the eye's field, or right by the eye, or their shadow in the field)
+  function seen(X, Y, Z, r) {
+    if (!FR.on || (X - FR.cx) ** 2 + (Z - FR.cz) ** 2 < 36) return true;
+    FR.s.center.set(X, Y + r * 0.8, Z); FR.s.radius = r + 0.5; if (FR.f.intersectsSphere(FR.s)) return true;
+    if (!FR.sh) return false;
+    FR.s.center.set(X - FR.ux * FR.sh * 0.5, Y, Z - FR.uz * FR.sh * 0.5); FR.s.radius = FR.sh * 0.5 + r * 0.5; return FR.f.intersectsSphere(FR.s);
+  }
+  const RIM = (G.Body3D && G.Body3D.rim) || { value: 0.2 }; // (the edge light, shared by the skin and the pieces)
 
   // ------------------------------ the beasts ------------------------------
   // (each kind's build, in the god's units — the same numbers its picture is drawn with (Animals.DEF[kind].q) where it
@@ -869,15 +1026,17 @@
   // fore), a trot in diagonal pairs, a gallop (the hind feet together, the fore feet together, a beat apart). Each leg's
   // offset in the stride, and how far it swings
   const GAIT = { walk: [0, 0.5, 0.75, 0.25], trot: [0, 0.5, 0.5, 0], gallop: [0, 0.08, 0.55, 0.62] };
+  const BFAR = new Set(['eye0', 'eye1', 'hoof0', 'hoof1', 'hoof2', 'hoof3']); // (the parts a far beast goes without)
   function beasts(focus, R2, dt) {
-    const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; let idx = 0; mats();
+    const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; let idx = 0; mats(); P3.bculled = 0;
     const list = [];
     for (const a of S.animals.values()) { if (a.dead || a.held) continue; const X = a.x * TL, Z = a.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 < R2 * 0.7) list.push([d2, a]); }
     list.sort((p, q) => p[0] - q[0]);
-    for (const [, a] of list) {
+    let nNear = 0; // (the beasts near enough to the eye for their eyes and hooves: the nearest first, so the first rows)
+    for (const [d2, a] of list) {
       if (idx >= MAXA) break;
       const sp = G.Animals.DEF[a.kind]; if (!sp || sp.cls === 'water') continue;
-      const X = a.x * TL, Z = a.y * TL; let s = bvis.get(a.id); if (!s) { s = { X, Z, Y: 0, yaw: 0, ph: a.id % 5, t: 0, graze: 0, v: 0 }; bvis.set(a.id, s); }
+      const X = a.x * TL, Z = a.y * TL; let s = bvis.get(a.id); if (!s) { s = { X, Z, Y: null, yaw: 0, ph: a.id % 5, t: 0, graze: 0, v: 0 }; bvis.set(a.id, s); }
       const dx = X - s.X, dz = Z - s.Z; const dist = Math.hypot(dx, dz); if (dist > 0.002 && dist < 6) { const want = Math.atan2(dz, dx); let da = want - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * (1 - Math.exp(-8 * dt)); }
       const v = dt > 0 && dist < 6 ? dist / dt : 0; s.v += (v - s.v) * (1 - Math.exp(-6 * dt)); s.t += dt; s.X = X; s.Z = Z;
       const F = formOf(sp, a.kind); const air = sp.cls === 'air' && (a.z || 0) > 0.3;
@@ -885,9 +1044,22 @@
       const run = G.clamp(s.v / 3, 0, 1.4); s.ph += dt * (F.biped ? (s.v * 6 / Math.max(0.4, F.leg * u * 2) + 0.4) : (s.v * 0.55 / Math.max(0.4, F.leg * u * 2) + 0.06)); // (four legs: strides; two: radians)
       const col = F.col, dark = darker(col, 0.78), bel = F.belly || darker(col, 1.12);
       // (over a boulder's tile the feet go up onto the stone, as the people's do)
-      const Yf = sp.cls === 'water' || air || a.swim ? W.groundH(a.x, a.y) * HM : Math.max(groundY(a.x, a.y), G.Space.stoneTop(X, Z)); s.Y = Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
+      const Yf = sp.cls === 'water' || air || a.swim ? W.groundH(a.x, a.y) * HM : Math.max(groundY(a.x, a.y), G.Space.stoneTop(X, Z));
+      // (a beast first seen stands where the ground is — not rising to it from the height 0, out of the ground, as before)
+      s.Y = s.Y === null || Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
       const Y = s.Y + (air ? Math.max(0.5, (a.z || 0) * 0.22) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
+      if (!seen(X, Y, Z, Math.max(0.6, F.len * u))) { P3.bculled++; continue; } // (outside the eye's field: not drawn)
+      if (d2 < 576) nNear = idx + 1;
       const m = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-s.yaw); m.multiply(M.b);
+      // (on a slope a beast of four legs lies along it: pitched by the ground under its fore and hind feet, rolled by the ground
+      // at its sides — its feet neither in the air nor in the ground; eased, so it never snaps)
+      if (!air && !a.swim && !F.biped) {
+        const hl = F.len * u * 0.42, hw = hl * 0.45, c = Math.cos(s.yaw), n = Math.sin(s.yaw), k = 1 / TL;
+        const gf = groundY(a.x + c * hl * k, a.y + n * hl * k), gb = groundY(a.x - c * hl * k, a.y - n * hl * k), gl = groundY(a.x - n * hw * k, a.y + c * hw * k), gr = groundY(a.x + n * hw * k, a.y - c * hw * k);
+        const wp = G.clamp(Math.atan2(gf - gb, 2 * hl), -0.5, 0.5), wr = G.clamp(Math.atan2(gl - gr, 2 * hw), -0.4, 0.4), e = 1 - Math.exp(-8 * dt);
+        s.tp = s.tp === undefined || dt <= 0 ? wp : s.tp + (wp - s.tp) * e; s.tr = s.tr === undefined || dt <= 0 ? wr : s.tr + (wr - s.tr) * e;
+        M.c.makeRotationZ(s.tp); m.multiply(M.c); M.c.makeRotationX(-s.tr); m.multiply(M.c);
+      }
       // (grazing: a beast that eats grass lowers its head now and then while it stands)
       const grazer = sp.diet === 'herb' || sp.diet === 'browse'; const wantG = grazer && s.v < 0.15 && Math.sin(s.t * 0.35 + a.id) > 0.1 ? 1 : 0; s.graze += (wantG - s.graze) * (1 - Math.exp(-2 * dt));
       for (const n of BP) bhide(n[0], idx);
@@ -961,7 +1133,8 @@
       }
       idx++;
     }
-    for (const m of beastMesh) { m.count = idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+    // (beyond 24 m the eyes and the hooves are a pixel: not drawn — a sixth of a beast's triangles)
+    beastMesh.forEach((m, k) => { m.count = BFAR.has(BP[k][0]) ? Math.min(nNear, idx) : idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
     P3.beasts = idx;
     if (bvis.size > 400) bvis.clear();
   }
