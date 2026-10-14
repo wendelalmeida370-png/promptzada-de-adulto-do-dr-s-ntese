@@ -22,6 +22,7 @@
   let THREE = null, scene = null;
   const MAXR = 96; // (rows: People3D's MAX — the bodies drawn whole, the living and the dead)
   let D = null, NB = 0, PB = 0, TW = 0, buf = null, tex = null, mat = null, depth = null;
+  B3.rim = { value: 0.2 }; // (the edge light's strength: People3D sets it from the sky of the hour)
   const MESH = {}; // name → { mesh, geo, rows (Float32Array), n }
   let inv = null; // the bones' inverse bind matrices (the rig in its bind pose, inverted)
   const NP = 20; // texels of params and colours a row
@@ -213,7 +214,7 @@ vec3 b3paint() {
     const pb = '#define PB ' + PB + '\n#define B3_SR ' + Math.sin(D.roll).toFixed(6) + '\n#define B3_CR ' + Math.cos(D.roll).toFixed(6) + '\n#define B3_HEMC ' + hem.saiaC.toFixed(4) + '\n#define B3_HEML ' + hem.saiaL.toFixed(4) + '\n#define B3_HEMK ' + hem.cape.toFixed(4) + '\n';
     mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
     mat.onBeforeCompile = sh => {
-      sh.uniforms.uBody = B3.U;
+      sh.uniforms.uBody = B3.U; sh.uniforms.uRim = B3.rim;
       sh.vertexShader = pb + SKIN + VARY + sh.vertexShader
         .replace('#include <beginnormal_vertex>', `vec3 b3P, b3N; b3skin(position, normal, b3P, b3N);
           vec3 objectNormal = b3N;
@@ -222,10 +223,11 @@ vec3 b3paint() {
           #endif
           vBind = position; vBindN = normal; vAO = aAO; vRowI = int(aRow + 0.5); vZoneI = int(aZone + 0.5);`)
         .replace('#include <begin_vertex>', 'vec3 transformed = b3P;');
-      sh.fragmentShader = pb + 'uniform highp sampler2D uBody;\n' + VARY + PAINT + sh.fragmentShader
+      sh.fragmentShader = pb + 'uniform highp sampler2D uBody; uniform float uRim;\n' + VARY + PAINT + sh.fragmentShader
         .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = b3paint() * mix(1.0, vAO, 0.75);')
-        // (a soft light on the edges, as the old figures had: the people read against the ground)
-        .replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * 0.2;\n#include <opaque_fragment>');
+        // (a soft light on the edges, as the old figures had: the people read against the ground — as bright as the sky of
+        // the hour: at night it does not glow)
+        .replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim;\n#include <opaque_fragment>');
     };
     mat.customProgramCacheKey = () => 'body3d-v1';
     depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });

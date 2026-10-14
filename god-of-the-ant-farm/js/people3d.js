@@ -64,7 +64,9 @@
     geo.torsoF = new THREE.LatheGeometry([[0.0, 0], [0.45, 0.0], [0.47, 0.17], [0.39, 0.46], [0.45, 0.66], [0.46, 0.78], [0.4, 0.93], [0.18, 1.0], [0.0, 1.0]].map(([r, y]) => new THREE.Vector2(r, y)), 14); geo.torsoF.translate(0, -0.5, 0);
     const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
     // (a soft light on the edges of a body, as the god's view outlines its little people: they read against the ground)
-    mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * 0.2;\n#include <opaque_fragment>'); };
+    // (its strength the sky's light of the hour: at night the outlines do not glow — G.Body3D.rim, set every frame)
+    mat.onBeforeCompile = sh => { sh.uniforms.uRim = RIM; sh.fragmentShader = 'uniform float uRim;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim;\n#include <opaque_fragment>'); };
+    mat.customProgramCacheKey = () => 'people3d-rim';
     mesh = PARTS.map(p => { const m = new THREE.InstancedMesh(geo[SHAPE[p[0]] || p[1]], p[0] === 'marker' ? new THREE.MeshBasicMaterial({ color: 0xffffff }) : mat, MAX); m.count = 0; m.castShadow = p[0] !== 'marker' && p[0] !== 'eyeL' && p[0] !== 'eyeR' && p[0] !== 'brow' && p[0] !== 'nose'; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); return m; });
     // the beasts: a round body, a neck, a head with its snout and ears and eyes, four legs (or two), a tail, wings, horns,
     // a mane — each part one instanced mesh (BP names them)
@@ -689,6 +691,7 @@
     const S = G.S; const q = R3.Q(); const TL = G.Space.TILE, HM = G.Space.HM;
     // (the eye: how far each one is from it picks the fine body or the lighter one — the camera, not the body it follows)
     const cam = R3.camera ? R3.camera() : null; seenAt[0] = cam ? cam.position.x : focus.X; seenAt[1] = cam ? cam.position.z : focus.Z;
+    { const sk = R3.LT && R3.LT.sky; if (sk) RIM.value = 0.2 * G.clamp((0.3 * sk[0] + 0.6 * sk[1] + 0.1 * sk[2]) / 1.2, 0.15, 1); }
     const R = q.view * 0.22; const R2 = R * R; const RC = q.view * 0.55, RC2 = RC * RC; // (full bodies near; the crowd out to here)
     const av = P3.avatar;
     // the nearest people first, as many as the machine is told to carry
@@ -812,6 +815,7 @@
     return out;
   };
   const seenAt = [0, 0]; // (where the eye was when the people were last drawn: what picks the lighter bodies, and the verifier's)
+  const RIM = (G.Body3D && G.Body3D.rim) || { value: 0.2 }; // (the edge light, shared by the skin and the pieces)
 
   // ------------------------------ the beasts ------------------------------
   // (each kind's build, in the god's units — the same numbers its picture is drawn with (Animals.DEF[kind].q) where it
