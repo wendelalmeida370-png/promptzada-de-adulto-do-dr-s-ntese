@@ -101,5 +101,6 @@ branco e azul; egípcio: adobe; asteca: reboco pintado e terraços). Hedeby (nó
   segura a vaga sem precisar. Quatro núcleos para seis agentes: gere texturas/malhas uma vez, não em laço.
 - **Revisão cruzada**: o A1 revisa a imagem de todos (arte/REVISAO.md); o A6 roda a rodada nos branches de cada um e
   escreve o que achou em `scratchpad/a6/achados-<agente>.md`. Leia o que é para você antes de cada entrega.
+- **A porta da integração** (o líder, antes de levar o `integracao` ao branch principal): `qa/guard.js`, `qa/visual/guarda3d.js`, `qa/visual/corpo-rig.js` (Node, segundos), a parte e11 do `qa/encarna.js` (o 3D desenha sem erro de módulo) e a vida curta (`qa/soak.js`). Só guard + soak não bastam: eles não abrem o 3D (L-109, T-043).
 - Onda 5 (generalizar): o que ficou bom em Hedeby (nórdico) passa às outras culturas — clássico (romano), grego,
   egípcio, asteca —, cada uma com a sua linguagem (§5). Fotos: as vistas `metropole-*` e mundos com as outras culturas.
