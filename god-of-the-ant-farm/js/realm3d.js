@@ -1146,9 +1146,13 @@ vec3 gxHaze( vec3 d ) {
           if (!W.inb(px / TL, pz / TL) || S.road[W.idx(px / TL, pz / TL)]) continue; g.put(SH.dode, R3.mat(px, G.Space.floorY(px, pz) - s * 0.3, pz, a * 3, s * 1.3, s * 0.8, s), col, ROCK - moss * 0.5); }
         // (and, where the land is green, the grass growing up round its foot: the stone sits in the ground, not on it)
         if (gl && moss > 0 && !S.road[i]) { const tc = tileCol(i, x, y); const root = [tc[0] * 0.62, tc[1] * 0.72, tc[2] * 0.55], tip = [Math.min(255, tc[0] * 0.92 + 16), Math.min(255, tc[1] * 1.02 + 10), tc[2] * 0.82];
-          for (let q = 0; q < 9; q++) { const a = G.hash(oid * 23 + q) * TAU, d = big.sx * 0.5 * (0.9 + G.hash(oid * 29 + q) * 0.32); const px = big.X + Math.cos(a) * d, pz = big.Z + Math.sin(a) * d;
+          // (a ring of tufts hugging its foot — round the stone's own outline, just outside it —, their blades leaning out
+          // from it: the stone sits in a ring of grass, not among a few spikes)
+          const cr = Math.cos(big.ry), sr = Math.sin(big.ry);
+          for (let q = 0; q < 18; q++) { const a = (q + G.hash(oid * 23 + q) * 0.8) / 18 * TAU, f = 1.0 + G.hash(oid * 29 + q) * 0.22; const lx = Math.cos(a) * big.sx * 0.5 * f, lz = Math.sin(a) * big.sz * 0.5 * f;
+            const px = big.X + lx * cr + lz * sr, pz = big.Z - lx * sr + lz * cr, oa = Math.atan2(pz - big.Z, px - big.X);
             if (!W.inb(px / TL, pz / TL) || S.road[W.idx(px / TL, pz / TL)] || S.occ[W.idx(px / TL, pz / TL)]) continue; const py = G.Space.floorY(px, pz) - 0.02;
-            for (let k = 0; k < 4; k++) { const ba = a + k * 1.6 + G.hash(oid + q * 3 + k), hh = 0.16 + G.hash(oid * 31 + q * 5 + k) * 0.22; gp.blade(px, py, pz, 0.055, ba + Math.PI / 2, px + Math.cos(ba) * hh * 0.32, py + hh, pz + Math.sin(ba) * hh * 0.32, root, G.lerpColor(root, tip, 0.8), 1); } } }
+            for (let k = 0; k < 5; k++) { const ba = oa + (k - 2) * 0.5 + (G.hash(oid + q * 3 + k) - 0.5) * 0.6, hh = 0.16 + G.hash(oid * 31 + q * 5 + k) * 0.24; gp.blade(px, py, pz, 0.08, ba + Math.PI / 2, px + Math.cos(ba) * hh * 0.42, py + hh, pz + Math.sin(ba) * hh * 0.42, root, G.lerpColor(root, tip, 0.8), 1); } } }
         continue;
       }
       const b = S.bushes.get(oid);
