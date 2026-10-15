@@ -991,10 +991,12 @@ vec3 gxHaze( vec3 d ) {
           g.put(SH.cone, R3.mat(X, Y + H * 0.8, Z, rot, 0.7 * sz + 0.35, H * 0.24, 0.7 * sz + 0.35), lc, CONIF + 0.22);
           g.sph = null;
           // (the boughs' sprays of needles standing out of every tier, drooping at their tips, each its own way — the tier's
-          // rim broken into boughs)
+          // rim broken into boughs; in the snow, the green of their needles under a frost — the snow lies on the tiers, a spray
+          // standing out of it all white would be a feather)
+          const lcn = snow > 0 ? leafCol(pal, snow * 0.3, X, Z, 1.6 * sz + 0.6) : lc;
           if (gl) for (let q = 0; q < nt; q++) { const u = q / (nt - 1); const w2 = ((3.5 - u * 2.7) * sz + 0.6) * 0.5; const y = Y + H * (0.15 + u * 0.63); const nc = q < nt - 1 ? 7 : 4;
             for (let j = 0; j < nc; j++) { const a = rot + q * 1.7 + j * TAU / nc + (G.hash(t.id + q * 5 + j) - 0.5) * 0.7; const dx = Math.cos(a), dz = Math.sin(a); const rr = w2 * (0.78 + G.hash(t.id * 3 + q * 7 + j) * 0.2); const px = X + dx * rr, pz = Z + dz * rr;
-              card4(gl, px, y - w2 * 0.08, pz, w2 * 0.66 + 0.3, a, 0.55 + G.hash(q + j * 3 + t.id) * 0.4, [dx * 0.6, 0.8, dz * 0.6], lc(px, y, pz, dx * 0.6, 0.8, dz * 0.6), 0.12 + u * 0.12, 2); } }
+              card4(gl, px, y - w2 * 0.08, pz, w2 * 0.66 + 0.3, a, 0.55 + G.hash(q + j * 3 + t.id) * 0.4, [dx * 0.6, 0.8, dz * 0.6], lcn(px, y, pz, dx * 0.6, 0.8, dz * 0.6), 0.12 + u * 0.12, 2); } }
         }
         break;
       }
