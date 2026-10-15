@@ -472,7 +472,11 @@ vec3 groundCol() {
   vec2 u = vGP.xz / uTL - 0.5; vec2 i0 = floor(u); vec2 f = u - i0;
   ivec2 a = ivec2(i0); ivec2 hi = ivec2(int(uN) - 1);
 #ifdef GDETAIL
-  vec4 d = texture2D(uDet, vGP.xz / 1.7); float m1 = texture2D(uDet, vGP.xz / 37.0).r; float m2 = texture2D(uDet, vGP.xz / 9.0).g; float m3 = texture2D(uDet, vGP.xz / 91.0 + 0.4).g;
+  // (the drawn grain, read only where it is drawn: before the pictures are in — once they are, only the warm and the cool
+  // of a hundred metres; three reads a point fewer over all the land)
+  vec4 d = vec4(0.5); float m1 = 0.5, m2 = 0.5;
+  if (uTexOn < 0.5) { d = texture2D(uDet, vGP.xz / 1.7); m1 = texture2D(uDet, vGP.xz / 37.0).r; m2 = texture2D(uDet, vGP.xz / 9.0).g; }
+  float m3 = texture2D(uDet, vGP.xz / 91.0 + 0.4).g;
 #else
   vec4 d = vec4(0.5); float m1 = 0.5; float m2 = 0.5; float m3 = 0.5;
 #endif
@@ -553,8 +557,8 @@ vec3 groundCol() {
   c *= 1.0 - (1.0 - abs(r * 2.0 - 1.0)) * mix(0.32, 0.16, tex) * hard;
   // (the shadows of the clouds sliding over the land, as the god sees them pass)
 #ifdef GDETAIL
-  vec2 cu = vGP.xz / 520.0 + uCO; float cn = texture2D(uCN, cu).r * 0.68 + texture2D(uCN, cu * 3.1 + 0.37).g * 0.32;
-  c *= 1.0 - smoothstep(0.98 - uCC, 1.18 - uCC, cn) * uCS;
+  if (uCS > 0.0) { vec2 cu = vGP.xz / 520.0 + uCO; float cn = texture2D(uCN, cu).r * 0.68 + texture2D(uCN, cu * 3.1 + 0.37).g * 0.32;
+    c *= 1.0 - smoothstep(0.98 - uCC, 1.18 - uCC, cn) * uCS; } // (none read when the clouds cast no shadow)
 #endif
 #ifdef GDETAIL
   // (a steep face shows its layers of rock, whatever the tiles say — drawn, until the pictures are in)
@@ -582,7 +586,7 @@ vec3 groundCol() {
       float wy = uSeaY + 0.46 + (mB - 0.5) * 0.14;
       float wk = (1.0 - smoothstep(0.025, 0.085, abs(vGP.y - wy))) * near * (1.0 - wb);
       if (wk > 0.001) { wk *= smoothstep(0.42, 0.58, texture2D(uCN, vGP.xz / 19.0 + 0.4).g + 0.04); float wst = smoothstep(0.5, 0.64, texture2D(uDet, vGP.xz / 0.85 + 0.31).r) * wk;
-        c = mix(c, vec3(0.05, 0.052, 0.026) * (0.8 + d.g * 0.5), wst * 0.85); gHgt += wst * 0.012; }
+        c = mix(c, vec3(0.05, 0.052, 0.026) * (0.8 + texture2D(uDet, vGP.xz / 1.7).g * 0.5), wst * 0.85); gHgt += wst * 0.012; }
     }
   }
 #endif

@@ -77,6 +77,9 @@
         vec2 root = (gcell + vec2(r1, r2) * 0.92) * ${CELL.toFixed(2)};
         vec2 tile = root / 4.0; ivec2 ti = clamp(ivec2(floor(tile)), ivec2(0), ivec2(int(uN) - 1));
         vec4 mk = texelFetch(uMask, ti, 0); float kind = floor(mk.a * 255.0 + 0.5);
+        // (no grass on this tile — a road, a roof, the snow, the water, most of a town: the clump is left out at once, nothing
+        // more read for it; it would be drawn flat and out of sight anyway)
+        if (mk.r <= 0.0) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
         float gy = hAt(tile) * 1.5;
         float dist = length(vec3(root.x, gy, root.y) - uEye);
         // (thinning toward the edge of the circle; and gone right at the eye, where a blade would fill the picture)
@@ -87,6 +90,7 @@
         // earth showing between them — never spilling over it; the jungle's undergrowth thinner in the deep shade of the trees)
         float th = mk.r > 0.0 ? min(mk.r, texture2D(uMask, tile / uN).r + (texture2D(uGust, root / 7.0 + 0.3).g - 0.5) * 0.7 + (r2 - 0.5) * 0.18) : 0.0;
         float Hh = (0.1 + mk.g * 1.5) * (0.7 + r4 * 0.6) * step(r3, th * (kind == 3.0 ? 1.0 - sfm.r * 0.5 : 1.0)) * fade * (1.0 - smoothstep(0.44, 0.52, snowE));
+        if (Hh <= 0.0) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; } // (thinned out, out of the circle, under the snow: the same)
         float ang = r1 * 6.2832 + r3 * 2.0; float ca = cos(ang), sa = sin(ang);
         vec2 wd = uWind.xy; float ws = length(wd) + 1e-4; wd /= ws;
         float gust = smoothstep(0.42, 0.86, texture2D(uGust, (root - uWind.xy * uTime * 1.7) / 52.0).r);
@@ -207,12 +211,16 @@
           else if (kind != 5.0 && kind != 13.0 && q3 > 0.9 - (kind == 9.0 || kind == 16.0 ? 0.12 : 0.0)) pick = q4 < 0.25 ? 1.0 : 0.0; // (a pebble anywhere)
           else if (kind == 7.0 && q3 > 0.84) pick = 3.0;                                                 // (dry twigs in the savanna)
         }
+        // (nothing lies here, or this point is of another of the shapes than the one that lies here: left out at once — each
+        // cell holds every shape, and all but one would be drawn as a point)
+        if (pick < -0.5 || abs(aS - pick) > 0.5) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
         float gy = hAt(tile) * 1.5;
         // (nothing loose lying on the snow: under it)
         { vec4 sfm = pick > -0.5 ? texture2D(uFMap, tile / uN) : vec4(0.0); if (sfm.a > 0.004 && gSnowE(sfm, gNy, root, uGust) > 0.47) pick = -1.0; }
         float dist = length(vec3(root.x, gy, root.y) - uEye);
         float fade = 1.0 - smoothstep(uLR * 0.7, uLR, dist);
         float on = step(abs(aS - pick), 0.5) * fade;
+        if (on <= 0.0) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; } // (under the snow, or out of the circle: the same)
         // (how big: a pebble of five to twelve centimetres, a leaf of eight, a twig of a forearm, a flower to the knee)
         float sz = pick == 0.0 ? 0.05 + q5 * 0.07 : pick == 1.0 ? 0.07 + q5 * 0.06 : pick == 2.0 ? 0.07 + q5 * 0.05 : pick == 3.0 ? 0.25 + q5 * 0.2 : pick == 4.0 ? 0.22 + q5 * 0.2 : pick == 5.0 ? 0.06 + q5 * 0.03 : pick == 6.0 ? 0.035 + q5 * 0.025 : 0.06 + q5 * 0.07;
         float ang = q4 * 6.2832 + q5 * 3.0; float ca = cos(ang), sa = sin(ang);
