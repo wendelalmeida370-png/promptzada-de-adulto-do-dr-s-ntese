@@ -144,7 +144,27 @@ existem (A2).
 ## Depois da onda 2 — o que as fotos já mostram
 
 As fotos fixas da integração da onda 2 (`integracao` @ 1ca7583) estão na fila da catraca (`SP/a1/fotos-integ2`). Até lá,
-as fotos que cada um tirou do próprio branch:
+as fotos que já existem.
+
+**A integração (a primeira imagem do conjunto: `SP/a6/poco-integra/`, do A6, 23:30, contra `SP/a6/poco-antes/`):**
+- **Defeito novo — a neve com manchas ciano e roxas** [poco-0.png, todo o chão; poco-1.png, à direita no meio;
+  recorte `SP/a1/crop-neve-rosa.png`]: onde a neve cobre o capim, o chão fica ciano-menta e o escuro da figura do capim
+  vira roxo, como se o verde fosse tirado em vez de coberto (61% do recorte puxa para o ciano). No jogo original a mesma
+  neve é branco-azulada — e na mesma integração, **sobre o chão de agulhas** [poco-2.png], a neve está branca e azulada
+  como deve: o defeito é só onde a neve cobre capim. Para o A3 (a camada de neve do `ground3d.js`) e o A5 (a curva e o
+  grade novos) acharem juntos:
+  a mistura `c = mix(c, sc, snow)` em si parece certa — desconfio da figura que entra no `sc` ou da borda esfiapada do
+  capim (3543c20). Prioridade alta: Hedeby é toda de neve.
+- O capim sob as árvores ficou azul-acinzentado sobre o chão de folhas [poco-1.png, à esquerda]: conferir se é a geada de
+  propósito.
+- Melhor: os pinheiros com ramos e franja de agulhas, a pedra com um tom por faceta, o chão de mata de folha seca e a
+  borda da neve esfiapada [poco-1.png].
+- Igual ao original: o urso-polar ainda é um boneco de cápsulas [poco-1.png, ao centro] (A4, bichos).
+- De dentro da copa, os ramos do pinheiro são folhas verdes planas e enormes [poco-2.png, no alto] (A3): perto do olho,
+  esmaecer ou recortar o ramo, ou dar espessura de agulha à borda; e a pedra grande ainda é um bloco com uma racha
+  [poco-2.png, à esquerda] — o tom por faceta ajuda, falta a forma partida.
+
+**Os branches de cada um:**
 
 **A5** (`SP/a5/onda2/depois2/`, o branch do A5 sobre a integração da onda 1):
 - **A noite virou noite** [noite-alta.png]: a tocha acende uma poça de luz quente no chão e na neve, a janela da casa do
