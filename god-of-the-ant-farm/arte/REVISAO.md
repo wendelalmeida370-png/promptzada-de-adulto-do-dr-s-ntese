@@ -205,5 +205,7 @@ Do relatório do A6 sobre a integração (`SP/a6/integracao-relatorio.md`), o qu
 - As notícias ocupavam o centro do alto com três caixas, e eram a mesma notícia em três cidades [e1-atravessou,
   e1-no-mercado] — agora vira uma linha "— e em mais 2 lugares", no máximo duas na tela (77d85a0).
 - Os tecidos da pilha (onda 1) não chegaram às pessoas: o pedido vai ao A4 (acima).
-- Na pilha, `turf` (281 KB), `forest` (258), `grass` (239) e `canvas` (202) — do A1 — também passam do teto de 200 KB por
-  material: o total ainda cabe (5,33 de 6 MB); se apertar, são os primeiros a ganhar `hblur`/`q`.
+- Na pilha, contando como a BIBLIA conta (o WebP, antes do base64), só a `turf` do A1 passa do teto de 200 KB por
+  material (211 KB; `forest` 194, `grass` 179, `canvas` 152) — e a BIBLIA admite os chãos e a turfa vistos de perto até
+  300. O total cabe: na integração, 49 materiais, 5,19 de 6 MiB de base64. Se apertar, a `turf` é a primeira a ganhar
+  `hblur`/`q`. (Antes eu tinha escrito os números do base64, 4/3 maiores — corrigido.)
