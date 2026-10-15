@@ -1084,7 +1084,7 @@ vec3 gxHaze( vec3 d ) {
           // (its fruit: small — an apple of eight centimetres —, many, hanging on the sides and under the crown's lumps, some
           // of them half among the leaves; the god's colour, a little deeper)
           if (k[3] && t.fruit !== 0) { const fc = G.lerpColor(G.hex2rgb(k[3]), [70, 40, 30], 0.18);
-            for (let q = 0; q < lumps.length; q++) { const [lx, ly, lz, ls] = lumps[q]; for (let j = 0; j < 3; j++) {
+            for (let q = 0; q < lumps.length; q++) { const [lx, ly, lz, ls] = lumps[q]; for (let j = 0; j < (fine ? 3 : 1); j++) {
               const a = G.hash(t.id * 13 + q * 7 + j) * TAU, e = -0.65 + G.hash(t.id * 17 + q * 3 + j) * 1.0, rf = 0.5 * ls * (0.84 + G.hash(t.id * 19 + q + j * 5) * 0.24);
               const px = lx + Math.cos(a) * Math.cos(e) * rf * 1.1, py = ly + Math.sin(e) * rf * 0.92, pz = lz + Math.sin(a) * Math.cos(e) * rf * 1.1;
               g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, a, 0.08 + G.hash(q + j * 11 + t.id) * 0.03), fc, FRUIT + 0.25); } }
@@ -1096,8 +1096,21 @@ vec3 gxHaze( vec3 d ) {
   }
   // (a boulder's colour, the god's grey; the sandstone of the dry lands, the dark stone of the forests of the south)
   function rockBase(r, i) { if (r.meteor) return [74, 58, 52]; const b = G.Biome && G.Biome.of ? G.Biome.of(i) : 0; return b === 5 || b === 6 ? [178, 136, 102] : b === 4 ? [124, 122, 108] : [154, 149, 140]; }
+  // (which near chunks draw the finest of their plants — the leaves' cards, roots and twigs, every fruit, the stones round a
+  // boulder's foot, the rounder lumps of a bush: those the body is within 40 m × the preset's lod of, by the chunk's nearest
+  // edge; once fine, until the body is 8 m further off. Asked by the chunks' signature, so a chunk is drawn again when it
+  // changes; a chunk never asked — a preset without lod, a test's stretch of land — keeps it all, as before. Only seen)
+  const fineOf = new Map(); G.worldHooks.push(() => fineOf.clear());
+  R3.floraFine = function (x0, y0, n) {
+    const q = R3.Q(); const key = x0 + ',' + y0; const f = G.Possess && G.Possess.body ? G.Possess.body() : null;
+    if (!Number.isFinite(q.lod) || !f) { fineOf.delete(key); return 1; }
+    const L = G.Space.TILE, X = f.x * L, Z = f.y * L, D = 40 * q.lod;
+    const d = Math.hypot(Math.max(x0 * L - X, 0, X - (x0 + n) * L), Math.max(y0 * L - Z, 0, Z - (y0 + n) * L));
+    const now = fineOf.get(key) ? d < D + 8 : d < D; fineOf.set(key, now); return now ? 1 : 0;
+  };
   function floraGeo(x0, y0, w, h, far) {
-    const S = G.S; const g = new Geo(), gp = new Geo(), gl = far || !R3.Q().detail ? null : new Geo(); const TL = G.Space.TILE, HM = G.Space.HM;
+    const fine = !fineOf.has(x0 + ',' + y0) || fineOf.get(x0 + ',' + y0);
+    const S = G.S; const g = new Geo(), gp = new Geo(), gl = far || !fine || !R3.Q().detail ? null : new Geo(); const TL = G.Space.TILE, HM = G.Space.HM;
     for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {
       if (!W.inb(x, y)) continue; const i = y * N + x;
       const tid = S.treeAt[i]; const t = tid && S.trees.get(tid);
@@ -1152,7 +1165,7 @@ vec3 gxHaze( vec3 d ) {
           for (let q = 0; q < Math.min(6, b.berries); q++) {
             const a = G.hash(b.id * 7 + q) * 0.9 + q * 1.05, d = 0.66 + G.hash(b.id * 11 + q) * 0.12, hy = Y + 0.42 + G.hash(b.id * 13 + q) * 0.42;
             const cx = X + Math.cos(a) * d, cz = Z + Math.sin(a) * d;
-            for (let j = 0; j < 3; j++) { const aj = a + j * 2.09 + q, px = cx + Math.cos(aj) * 0.045, pz = cz + Math.sin(aj) * 0.045, py = hy + (j === 2 ? 0.05 : -0.01);
+            for (let j = 0; j < (gl ? 3 : 1); j++) { const aj = a + j * 2.09 + q, px = cx + Math.cos(aj) * 0.045, pz = cz + Math.sin(aj) * 0.045, py = hy + (j === 2 ? 0.05 : -0.01);
               g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, j + q, 0.072), j ? bc : G.lerpColor(bc, [190, 60, 70], 0.25), FRUIT + 0.12); }
           }
           g.sph = null;
