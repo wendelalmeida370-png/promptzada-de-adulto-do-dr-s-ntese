@@ -202,7 +202,7 @@ bichos no ar e as pedras das cavernas sumiram), o que é de arte:
   a copa calma que já se fez para o norte (8d99e59) precisa valer para a selva e o sub-bosque também.
 - **O corpo saindo pela saia** (A4): na porta de Hedeby, a saia longa deixa o corpo passar até 7 cm em 16 de 206 pedaços,
   a curta até 9,5 cm — de perto, a perna aparece através do pano.
-- **O chão atravessando uma superfície deitada** entre os prédios de Hedeby (A2, 1 m²): o z-fighting que pisca.
+- **O chão atravessando uma superfície deitada** entre os prédios de Hedeby (A2): 1 m² dela cortado pelo chão desenhado.
 
 ## As entregas da onda 2 (acompanhamento)
 
