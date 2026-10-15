@@ -151,10 +151,16 @@ as fotos que já existem.
   recorte `SP/a1/crop-neve-rosa.png`]: onde a neve cobre o capim, o chão fica ciano-menta e o escuro da figura do capim
   vira roxo, como se o verde fosse tirado em vez de coberto (61% do recorte puxa para o ciano). No jogo original a mesma
   neve é branco-azulada — e na mesma integração, **sobre o chão de agulhas** [poco-2.png], a neve está branca e azulada
-  como deve: o defeito é só onde a neve cobre capim. Para o A3 (a camada de neve do `ground3d.js`) e o A5 (a curva e o
-  grade novos) acharem juntos:
-  a mistura `c = mix(c, sc, snow)` em si parece certa — desconfio da figura que entra no `sc` ou da borda esfiapada do
-  capim (3543c20). Prioridade alta: Hedeby é toda de neve.
+  como deve: o defeito é só onde a neve cobre capim. Prioridade alta: Hedeby é toda de neve.
+  **A causa (achada fora do navegador):** não é a neve, é a **figura do capim sobre uma base clara**. O chão é a cor da
+  casa × a razão da figura; a razão do capim tem matiz própria (o fio puxa ao verde-azulado, a terra entre os fios ao
+  vermelho), que sobre o verde é variedade e sobre o branco do frio — onde a camada de neve é fina e o chão de baixo
+  (`bareOf`) só entrou pela metade — vira fio menta e buraco roxo. A folha `SP/a1/neve-razao.png` põe a figura `grass` da
+  pilha sobre três bases como o shader põe: a base clara reproduz o recorte (7% ciano, 24% roxo, `SP/a1/razao.py`); `turf`,
+  `forest` e `needles` fazem o mesmo, terra, areia, pedra e neve não. O conserto é do A3 (`ground3d.js`): a matiz da
+  figura só na medida em que a base tem matiz (a função `m3tint` em `SP/a1/pedidos.md` — sobre o verde quase nada muda,
+  sobre o branco frio sobra uma geada cinza: 0% ciano, 3% roxo) e, onde o deus pinta o branco do frio, o chão de baixo
+  inteiro, não meio branco. A curva e o grade do A5 não são precisos para o defeito.
 - O capim sob as árvores ficou azul-acinzentado sobre o chão de folhas [poco-1.png, à esquerda]: conferir se é a geada de
   propósito.
 - Melhor: os pinheiros com ramos e franja de agulhas, a pedra com um tom por faceta, o chão de mata de folha seca e a
