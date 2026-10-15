@@ -208,16 +208,23 @@
   // lag a moment behind, the rows are made again a few a frame; fbad: the same for the floor — the leaves where the trees
   // are, nothing loose on a road, a house or the water, the snow where the cold lays it; snowBad: snow in the picture on
   // the water, or where it is warm and no winter lies — never: the climate does not change from frame to frame, and a
-  // winter's circle is made again every frame (only the god's Change of Climate lags a moment, as the rest of the picture))
+  // winter's circle is made again every frame (only the god's Change of Climate lags a moment, as the rest of the picture));
+  // paleBad: a pale, hueless texel (the god's white of the cold) under the kinds the grass's picture is laid on — never: the
+  // green of that picture over a white turns mint and purple (the snow of the first wave); under the snow lies the bare ground
   G3.check = function (fx, fy, R, n) {
-    if (!data || size !== N) return { n: 0, bad: 0, fbad: 0, snowBad: 0 }; let bad = 0, fbad = 0, snowBad = 0, k = 0; const x0 = Math.floor(fx), y0 = Math.floor(fy);
+    if (!data || size !== N) return { n: 0, bad: 0, fbad: 0, snowBad: 0, paleBad: 0 }; let bad = 0, fbad = 0, snowBad = 0, paleBad = 0, k = 0; const x0 = Math.floor(fx), y0 = Math.floor(fy);
     const S = G.S; const winter = !!(S.winters && S.winters.length);
     for (let q = 0; q < n; q++) { const x = x0 + Math.floor((G.hash(q * 7 + 1) - 0.5) * 2 * R), y = y0 + Math.floor((G.hash(q * 13 + 5) - 0.5) * 2 * R); if (!W.inb(x, y)) continue; k++;
       const i = y * N + x; paint(i, x, y, px); const o = i * 4; if (data[o] !== px[0] || data[o + 1] !== px[1] || data[o + 2] !== px[2] || data[o + 3] !== px[3]) bad++;
+      if (GRASSY[data[o + 3]] && G3.pale(data[o], data[o + 1], data[o + 2])) paleBad++;
       if (fdata) { floorOf(i, x, y, fx4); if (fdata[o] !== fx4[0] || fdata[o + 1] !== fx4[1] || fdata[o + 2] !== fx4[2] || fdata[o + 3] !== fx4[3]) fbad++;
         if (fdata[o + 3] > 0 && (S.type[i] <= T.RIVER || (!winter && G3.snowAt(i) <= 0))) snowBad++; } }
-    return { n: k, bad, fbad, snowBad };
+    return { n: k, bad, fbad, snowBad, paleBad };
   };
+  // (the kinds the land's shader lays the grass's picture on — gLay's last line; and a colour too pale to carry its green:
+  // bright and nearly grey, as the god's white of the frozen land)
+  const GRASSY = { [K.grass]: 1, [K.meadow]: 1, [K.snow]: 1, [K.swamp]: 1, [K.savanna]: 1, [K.jungle]: 1, [K.taiga]: 1 };
+  G3.pale = (r, g, b) => { const hi = Math.max(r, g, b), lo = Math.min(r, g, b); return hi > 166 && hi - lo < hi * 0.15; };
   // (for the tests: the texel of a tile as the shader reads it)
   G3.texel = (x, y) => (data && W.inb(x, y) ? Array.from(data.subarray((y * N + x) * 4, (y * N + x) * 4 + 4)) : null);
 
