@@ -158,7 +158,7 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
 | `door` | 2,0 | porta de pranchas: duas folhas de 1 m lado a lado (u 0–0,5 e 0,5–1), três cintas de ferro a 0,3/1,0/1,7 m com pontas em voluta, pregos, argola — simétrica em altura | A1 |
 | `stone` | 2,4 | parede de pedra de campo em fiadas, argamassa de cal clara, calços, líquen | A1 |
 | `brick` | 1,6 | tijolo em amarração | A1 |
-| `plaster` | 3,0 | reboco de cal em demãos (também o adobe egípcio, `mud`) | A1 |
+| `plaster` | 3,0 | reboco de cal em demãos: a parede romana (o adobe egípcio, `mud` no `PAT`, tem o seu: `adobe`; enquanto a pilha não o tinha, caía aqui) | A1 |
 | `turf` `thatch` `tile` `shingle` | 2,0 | turfa; palha em fiadas; telha de canal (capa e bica); telha de madeira de ponta redonda | A1 |
 | `slab` `cobble` | 3,0 / 2,6 | lajes de bordas gastas; paralelepípedo assentado | A1 |
 | `bark` | 1,4 | casca em placas entrelaçadas, sulcos sem preto, musgo nos sulcos | A1 |
