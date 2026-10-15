@@ -30,7 +30,7 @@ ZONE = {'body': 0, 'eyeL': 1, 'eyeR': 2, 'hair': 3, 'beard': 4, 'saiaC': 5, 'sai
 
 
 # ------------------------------ Blender: the decimator ------------------------------
-def decimate(V, F, tris, sym=True, split=False):
+def decimate(V, F, tris, sym=True, split=False, keep=None):
     import bpy, bmesh
     bpy.ops.wm.read_factory_settings(use_empty=True)
     me = bpy.data.meshes.new('m'); me.from_pydata(V.tolist(), [], F.tolist()); me.update()
@@ -42,6 +42,12 @@ def decimate(V, F, tris, sym=True, split=False):
     n0 = sum(len(p.vertices) - 2 for p in me.polygons)
     mod = ob.modifiers.new('d', 'DECIMATE'); mod.decimate_type = 'COLLAPSE'; mod.ratio = min(1.0, tris / max(1, n0))
     mod.use_symmetry = sym; mod.symmetry_axis = 'X'
+    # (keep: (weight of each point, strength) — a point weighted under 1 costs more to collapse, so where it is the mesh keeps
+    # more of its triangles: the face)
+    if keep is not None:
+        co = np.array([v.co[:] for v in me.vertices]); w = keep[0](co); vg = ob.vertex_groups.new(name='k')
+        for i in range(len(w)): vg.add([i], float(w[i]), 'REPLACE')
+        mod.vertex_group = 'k'; mod.vertex_group_factor = keep[1]
     dg = bpy.context.evaluated_depsgraph_get(); oe = ob.evaluated_get(dg); m2 = oe.to_mesh()
     V2 = np.array([v.co[:] for v in m2.vertices], dtype=np.float64)
     T2 = []
@@ -137,12 +143,19 @@ def weld(V, T, eps=1e-7):
     return V[first], T2[ok], first
 
 
-def body_mesh(fem, h, tris, eyes=(14, 10)):
+def face_weight(co):
+    """A little under 1 on the head, less on the face: the triangles the decimator keeps there (the eyes, the mouth, the nose
+    are what the eye reads first)."""
+    head = np.clip((co[:, 1] - 1.56) / 0.04, 0, 1); face = head * np.clip((co[:, 2] + 0.01) / 0.05, 0, 1)
+    return 1.0 - 0.05 * head - 0.05 * face
+
+
+def body_mesh(fem, h, tris, eyes=(14, 10), face=None):
     t0 = time.time()
     P = CF.body(fem)
     V, Q = mesh_of(P, h)
     print('  surface nets: %d points, %.0f s' % (len(V), time.time() - t0)); sys.stdout.flush()
-    V, T = decimate(V, Q, tris)
+    V, T = decimate(V, Q, tris, keep=(face_weight, face) if face else None)
     N = normals_of(P, V)
     bi, bw = weights(P, V)
     zone = np.zeros(len(V), np.uint8)
@@ -271,7 +284,8 @@ def main(only):
     J = CF.joints()
     bind = {k: [round(float(x), 6) for x in v] for k, v in J.items()}
     meshes = load_old() if only else {}
-    jobs = {'corpoM': lambda: body_mesh(0.0, 0.0045, 7600), 'corpoF': lambda: body_mesh(1.0, 0.0045, 7600),
+    # (the near body with its face kept: 1700 triangles more, all of them on the head — the face has three times the detail)
+    jobs = {'corpoM': lambda: body_mesh(0.0, 0.0045, 9300, face=0.1), 'corpoF': lambda: body_mesh(1.0, 0.0045, 9300, face=0.1),
             # (a few steps off: the same body with a third of the triangles, lighter eyes; far: a few hundred, no eyeballs)
             'corpoM_1': lambda: body_mesh(0.0, 0.006, 2400, (8, 6)), 'corpoF_1': lambda: body_mesh(1.0, 0.006, 2400, (8, 6)),
             'corpoM_2': lambda: body_mesh(0.0, 0.008, 480, None), 'corpoF_2': lambda: body_mesh(1.0, 0.008, 480, None)}
