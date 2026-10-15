@@ -931,8 +931,12 @@ vec3 gxHaze( vec3 d ) {
       const a = k / (n - 1) * TAU + G.hash(id * 3 + k) * 0.9, up = (k % 2 ? 0.3 : -0.14) * fl, ring = (k % 2 ? 0.52 : 0.8) * (0.86 + G.hash(id * 7 + k) * 0.28);
       lumps.push([X + Math.cos(a) * r * ring, cy + r * up, Z + Math.sin(a) * r * ring, r * (0.6 + G.hash(id * 5 + k) * 0.3)]);
     }
-    g.sph = [X, cy + r * 0.12, Z, 0.75];
-    for (let k = 0; k < lumps.length; k++) { const [x, y, z, s] = lumps[k]; const h = G.hash(id * 11 + k * 5); g.put(shape || SH.ico0, R3.mat(x, y, z, h * TAU, s * (1.05 + h * 0.2), s * 0.92 * fl, s * (1.15 - h * 0.2), (h - 0.5) * 0.6), lc, sw + (y - cy) / r * 0.06); }
+    // (each lump a soft mass of leaves, no flat face left on it: its light bent all the way round, from a point between its own
+    // heart and the crown's — it still swells out of the crown, and the crown is still one volume in the sun; and where the
+    // leaves' cards are drawn, near the body, a rounder lump under them, no box in its outline)
+    const hy = cy + r * 0.12, sh = shape || (gl ? SH.dode : SH.ico0);
+    for (let k = 0; k < lumps.length; k++) { const [x, y, z, s] = lumps[k]; const h = G.hash(id * 11 + k * 5); g.sph = [x + (X - x) * 0.45, y + (hy - y) * 0.45, z + (Z - z) * 0.45, 1];
+      g.put(sh, R3.mat(x, y, z, h * TAU, s * (1.05 + h * 0.2), s * 0.92 * fl, s * (1.15 - h * 0.2), (h - 0.5) * 0.6), lc, sw + (y - cy) / r * 0.06); }
     g.sph = null;
     if (gl && cards) for (let k = 0; k < lumps.length; k++) {
       const [x, y, z, s] = lumps[k]; let ox = x - X, oy = (y - cy) / Math.max(0.3, fl), oz = z - Z; const ol = Math.hypot(ox, oy, oz); if (ol < 0.2) { ox = 0; oy = 1; oz = 0; } else { ox /= ol; oy /= ol; oz /= ol; }
