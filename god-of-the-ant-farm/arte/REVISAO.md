@@ -195,6 +195,15 @@ Do relatório do A6 sobre a integração (`SP/a6/integracao-relatorio.md`), o qu
   ar do outro (A2, `things3d.js` — já corrigido no trabalho em andamento dele).
 - A blusa colada da mulher asteca (A4) — a mesma nota 1 do A4 aqui.
 
+E na caça sobre a integração da onda 2 (`SP/a6/rodada-cdd464f/caca/caca.txt`, o código de cdd464f; 0 S1 e 0 S2 — os
+bichos no ar e as pedras das cavernas sumiram), o que é de arte:
+- **A selva neon** (A3): em Tenochtitlan, 84% dos pixels de planta iluminados e 48% dos de folha na mata densa acima de
+  S 70 — a BIBLIA §2.2 chama de neon superfície grande acima de 70. É o "verde que briga" (abaixo) na terra dos astecas:
+  a copa calma que já se fez para o norte (8d99e59) precisa valer para a selva e o sub-bosque também.
+- **O corpo saindo pela saia** (A4): na porta de Hedeby, a saia longa deixa o corpo passar até 7 cm em 16 de 206 pedaços,
+  a curta até 9,5 cm — de perto, a perna aparece através do pano.
+- **O chão atravessando uma superfície deitada** entre os prédios de Hedeby (A2, 1 m²): o z-fighting que pisca.
+
 ## As entregas da onda 2 (acompanhamento)
 
 | Quem | O que entregou (commits) | Fotos depois | Revisto |
