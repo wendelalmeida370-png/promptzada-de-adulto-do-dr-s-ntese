@@ -77,7 +77,8 @@ function cloth(P, p, zn, buf, pb, clock) {
   else { if (p[1] > 0.86) { const h = dot(sub(P, pel), up); const q = sub(sub(P, pel), up.map(v => v * cl(h, 0, L))); const qx = dot(q, ex), qz = dot(q, ez);
       const k = Math.hypot(qx / (0.155 * s), qz / (0.112 * s)); if (k < 1 && k > 1e-4) P = add(add(P, ex, qx * (1 / k - 1)), ez, qz * (1 / k - 1)); }
     const hL = add(V(32), sub(V(33), V(32)), 0.1), hR = add(V(35), sub(V(36), V(35)), 0.1);
-    P = off(P, hL, V(33), 0.09 * s); P = out(P, V(33), V(34), 0.068 * s, rd); P = off(P, hR, V(36), 0.09 * s); P = out(P, V(36), V(37), 0.068 * s, rd); }
+    P = off(P, hL, V(33), 0.09 * s); P = out(P, V(33), V(34), 0.068 * s, rd); P = off(P, hR, V(36), 0.09 * s); P = out(P, V(36), V(37), 0.068 * s, rd);
+    P = off(P, V(27), V(28), 0.05 * s); P = off(P, V(28), add(V(28), sub(V(28), V(27)), 0.62), 0.048 * s); P = off(P, V(30), V(31), 0.05 * s); P = off(P, V(31), add(V(31), sub(V(31), V(30)), 0.62), 0.048 * s); }
   if (gs[2] > 0.5) P[1] = Math.max(P[1], gs[0] + 0.012 * s);
   return P;
 }
