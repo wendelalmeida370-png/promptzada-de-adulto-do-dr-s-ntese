@@ -529,12 +529,12 @@ float m3scale(float p) {
       }
     } });
   }
-  // tall grass at the foot of the walls, where the ground round the house is grass and the snow does not lie (the rule of the
-  // ground's own grass: ground3d), none before the door: the house sits in the ground, not on it
+  // tall grass at the foot of the walls, where the ground round the house is grass and the snow does not lie (the ground's own
+  // snow: Realm.snowAt, the one the land, the trees and the grass read), none before the door: the house sits in the ground
   function wallGrass(K, x, z, sx, sz, door) {
     if (!K.fine) return; const S = G.S, T = G.T, L = K.L; let k = 0;
     const grassy = (X, Z) => { const tx = Math.floor((K.x0 + X) / L), ty = Math.floor((K.z0 + Z) / L); if (!W.inb(tx, ty)) return false; const i = ty * N + tx;
-      const t = S.type[i]; const snow = S.temp ? G.clamp((0.235 - S.temp[i] / 255) / 0.07, 0, 1) : 0; return (t === T.GRASS || t === T.MEADOW) && snow < 0.45 && !(S.burnt[i] > 0) && !S.road[i]; };
+      const t = S.type[i]; const snow = R3.snowAt ? R3.snowAt(i) : S.temp ? G.clamp((0.235 - S.temp[i] / 255) / 0.07, 0, 1) : 0; return (t === T.GRASS || t === T.MEADOW) && snow < 0.45 && !(S.burnt[i] > 0) && !S.road[i]; };
     for (const W2 of wallsOf(sx, sz)) { const n = Math.floor(W2.len / 0.24);
       for (let q = 0; q < n; q++) { const h1 = K.hv(800 + k), h2 = K.hv(1000 + k); k++; const a = -W2.len / 2 + (q + 0.2 + h1 * 0.6) * W2.len / n;
         if (door && door.side === W2.side && Math.abs(a - door.a) < door.w / 2 + 0.35) continue; if (h2 < 0.25) continue;
