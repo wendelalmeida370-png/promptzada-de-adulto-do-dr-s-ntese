@@ -234,7 +234,8 @@ vec3 b3face(vec3 p, vec3 skin) {
       c = mix(c, mix(lips * 0.35, inside, step(0.001, open)), line * 0.9);
     }
     // (a blush on the cheeks — and the cheeks lifted in a smile catch the light)
-    float ch = length(vec2(ax - 0.054, p.y - 1.652)) / 0.022; c = mix(c, c * vec3(1.06, 0.86, 0.84), (1.0 - smoothstep(0.3, 1.0, ch)) * m.w);
+    float ch = length(vec2(ax - 0.054, p.y - 1.652)) / 0.022; c = mix(c, c * vec3(1.06, 0.86, 0.84), (1.0 - smoothstep(0.3, 1.0, ch)) * min(0.35 + m.w, 1.0));
+    float nz = length(vec2(ax / 0.016, (p.y - 1.662) / 0.02)); c = mix(c, c * vec3(1.05, 0.88, 0.86), (1.0 - smoothstep(0.35, 1.0, nz)) * 0.4 * step(0.1, p.z)); // (the nose's tip)
     c *= 1.0 + 0.05 * x.z * (1.0 - smoothstep(0.2, 1.1, ch));
   }
   return c;
@@ -309,7 +310,7 @@ vec3 b3piece(vec3 p) {
   return b3T(16).rgb * b3weave(p);
 }
 vec3 b3paint() {
-  vec3 p = vBind; vec3 skin = b3T(4).rgb;
+  vec3 p = vBind; vec3 skin = b3T(4).rgb * vec3(1.0, 0.93, 0.87); // (warm: a pale skin read white under the sun)
   if (vZoneI == 1 || vZoneI == 2) return b3eye(skin);
   if (vZoneI >= 3) return b3piece(p);
   vec4 A = b3T(2), Bc = b3T(3), St = b3T(15);
@@ -396,7 +397,7 @@ vec3 b3paint() {
           vBind = position; vBindN = normal; vAO = aAO; vRowI = int(aRow + 0.5); vZoneI = int(aZone + 0.5);`)
         .replace('#include <begin_vertex>', 'vec3 transformed = b3cloth(b3P, position);');
       sh.fragmentShader = pb + (TEX ? G.Ground3D.texGLSL() : '#define B3_NOTEX\n') + 'uniform highp sampler2D uBody; uniform float uRim;\n' + VARY + PAINT + sh.fragmentShader
-        .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = b3paint(); diffuseColor.rgb *= mix(1.0, b3fk > 0.5 ? max(vAO, 0.8) : vAO, 0.75);')
+        .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = b3paint(); diffuseColor.rgb *= mix(1.0, max(vAO, b3fk > 0.5 ? 0.8 : 0.6), 0.75);')
         // (a soft light on the edges, as the old figures had: the people read against the ground — as bright as the sky of
         // the hour: at night it does not glow)
         .replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim + vec3(0.92, 0.94, 1.0) * b3gl * 0.45;\n#include <opaque_fragment>');
