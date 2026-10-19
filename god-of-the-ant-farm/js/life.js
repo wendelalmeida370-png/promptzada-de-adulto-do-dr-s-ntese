@@ -235,6 +235,7 @@
     }
     if (t.st === 5) { if (!H.move(v, dt)) return; t.st = 2; v.actT = 0; return; }
     if (t.st === 2) { // draw the water
+      if (v.carry && v.carry.n > 0 && v.carry.k !== 'water') { L.leaveQueue(v); return H.end(v); } // (the hands are full: no jar)
       v.act = 'fill';
       if (G.R() < dt * 1.5) G.FX && G.FX.splash(v.x + 0.2, v.y - 0.2, 0.2);
       if (v.actT < (v._q && L.queueLen(v._q) > 1 ? 1.1 : 1.8)) return;
@@ -561,7 +562,8 @@
       if (list.some(v => v.task && v.task.type === 'water')) continue;
       let best = null, bs = -1;
       for (const v of list) {
-        if (v.age < 10 || v.age >= 70 || v.inside || v.sleeping || v.aboard || v.held || v.hp < 40) continue;
+        // (hands that carry something — wood to the store, a crate, a purchase — do not go for water: the jar would take their place)
+        if (v.age < 10 || v.age >= 70 || v.inside || v.sleeping || v.aboard || v.held || v.hp < 40 || (v.carry && v.carry.n > 0)) continue;
         if (v.task && v.task.pri >= 1.05) continue;
         const s = (v.task ? 1 - v.task.pri : 2) + (v.age < 16 ? 0.6 : 0) + G.R();
         if (s > bs) { bs = s; best = v; }

@@ -49,6 +49,7 @@
     'ord', 'palace', 'pe', 'prophet', 'purse', 'rebel', 'reigned', 'revolt', 'rioted', 'robe', 'robeMark', 'rua',
     'ruaEnd', 'ruaWhy', 'saw', 'sceneHold', 'secret', 'seekT', 'seen', 'shackTry', 'skill', 'stagT', 'thefts',
     'torch', 'traits', 'ug', 'unit', 'unmask', 'unpaid', 'vet', 'voyages', 'wound', 'wrecked',
+    'diary',
   ];
   const SHAPED = new Set(SHAPE);
   Vg.shape = function (o) {
@@ -145,6 +146,7 @@
     if (v.task && v.task.pri >= (t.pri || 0) + 0.01 && v.task.pri >= 2) return false; if (v.sleeping || v.inside || v.air || v.held || v.age < 3) return false; setTask(v, t); return true; };
   Vg.emote = emote;
 
+  // (o.keepLoad: the errand ends but the hands keep what they carry — the god taking the body goes on carrying it)
   Vg.endTask = function (v) {
     const S = G.S; const t = v.task; if (!t) return;
     G.Life && G.Life.onEndTask(v);
@@ -168,7 +170,11 @@
     v.sleeping = false;
     v.task = null; v.path = null; v.act = '';
   };
+  // the door of a building's plan, when the interiors give one (G.Vg.planDoor = b => [x, y] | null, in tiles, outside the
+  // door): where people stand to go in is where the plan has its door; with no plan, the first walkable side of the front
+  Vg.planDoor = null;
   function V_door(b) {
+    if (Vg.planDoor) { let d = null; try { d = Vg.planDoor(b); } catch (e) { d = null; } if (d && W.walkableXY(d[0], d[1])) return d; }
     // find a walkable tile next to the building front
     const cands = [[b.x + b.w - 0.5, b.y + b.h + 0.4], [b.x + b.w + 0.4, b.y + b.h - 0.5], [b.x - 0.4, b.y + 0.5], [b.x + 0.5, b.y - 0.4]];
     for (const c of cands) if (W.walkableXY(c[0], c[1])) return c;
@@ -488,7 +494,7 @@
   // ------------------------------ task factories ------------------------------
   function eatTask(v) {
     const S = G.S;
-    if (v.carry && v.carry.k === 'food') { // eat what you carry
+    if (v.carry && v.carry.k === 'food' && !v.carry.op && !v.carry.to) { // eat what you carry (not a load that is someone's errand)
       v.carry.n -= 1; v.hunger = Math.max(0, v.hunger - 55); if (v.carry.n <= 0) v.carry = null; emote(v, 'food', 1.5); return setTask(v, { type: 'idle', pri: 0, wait: 1 });
     }
     if (((G.Army && G.Army.larder(v)) || G.Fac.stockV(v)).food >= 1 && !(v._noStore > S.clock)) return setTask(v, { type: 'eat', pri: v.hunger > 85 ? 2.5 : 1.2 });
@@ -721,6 +727,8 @@
     const S = G.S; const fac = G.Fac.ofV(v); if (!fac) return null;
     const st = fac.stock; const capS = G.Village.cap(fac.id);
     if (v.carry && v.carry.k !== 'water') {
+      // (a crate of an operation, a purchase on its way home: it goes where it belongs, never into the common store — L-c)
+      if ((v.carry.op || v.carry.to) && G.Act) { const t = G.Act.resumeCarry(v, H); if (t) return t; }
       if (v.role === 'construtor') { const t = buildTask(v); if (t) return t; }
       return deliverTask(v);
     }
@@ -771,6 +779,7 @@
         break;
       case 'deliver': {
         if (!v.carry) return end(v);
+        if (t.st === 0 && (v.carry.op || v.carry.to) && G.Act) { if (G.Act.resumeCarry(v, H)) return; }
         if (t.st === 0) {
           const d = G.Village.nearestDropoff(v.x, v.y, v.set);
           if (!d) return end(v);
@@ -1223,7 +1232,7 @@
       default: if (!(G.Scene && G.Scene.run(v, t, dt, H)) && !(G.Caves && G.Caves.run(v, t, dt, H)) && !G.War.run(v, t, dt, H) && !(G.Wars && G.Wars.run(v, t, dt, H)) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Urban && G.Urban.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Carnage && G.Carnage.run(v, t, dt, H)) && !(G.Flora && G.Flora.run(v, t, dt, H)) && !(G.Nests && G.Nests.run(v, t, dt, H)) && !(G.Polity && G.Polity.run(v, t, dt, H)) && !(G.Justice && G.Justice.run(v, t, dt, H)) && !(G.Riots && G.Riots.run(v, t, dt, H)) && !(G.Secrets && G.Secrets.run(v, t, dt, H)) && !(G.Stories && G.Stories.party && G.Stories.party.run(v, t, dt, H)) && !(G.Riches && G.Riches.run(v, t, dt, H))) end(v);
     }
   }
-  const LONG = { praia: 1, muster: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, embark: 1, boardBack: 1, scene: 1, saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1 };
+  const LONG = { praia: 1, muster: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, embark: 1, boardBack: 1, scene: 1, saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1, carga: 1 };
 
   function runBuild(v, t, dt) {
     const S = G.S;
@@ -1567,6 +1576,8 @@
       if (v.emo) { v.emo.t -= vdt; if (v.emo.t <= 0) v.emo = null; }
       if (v.preg > 0 && G.R() < vdt * 0.02) emote(v, 'heart', 1.5);
     }
+    // (the operations of the world: each looks at its people, its places and its goods, and hands out the next steps)
+    if (G.Act) G.tryRun('Atividades', d => G.Act.update(d), dt);
   };
   // ------------------------------ the stuck: someone who has not moved for a long while ------------------------------
   // (a pocket between cliffs, a ledge, a gap between houses and a fence: every errand fails, or the feet keep walking
