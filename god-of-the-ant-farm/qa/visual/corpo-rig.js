@@ -186,17 +186,18 @@ const inside = (cm, bm) => {
   }
   return { frac: bad / cm.n, worst };
 };
-// (a cape: in every state. A skirt: in every state but the deep seats — sitting, on the ground, crouching, lying —, where a
-// skin bent by bones cannot lay a skirt over thighs raised to the belly: there at most 6% of it, never deeper than 3 cm, and
-// the numbers said every run — the limit of this test, not of the look: wave 1 had 12% there)
+// (a cape, a toga, a skirt: in every state — the skirts too since they follow the thighs as the ground bent them, keep
+// their distance from the hips' line and fall from the knees. A blouse: in every state but the deep seats — sitting, on the
+// ground, crouching, lying —, where a skin bent by bones cannot lay it over the belly folded on the thighs: there at most
+// 6% of it, never deeper than 3 cm, and the numbers said every run — the limit of this test, not of the look)
 { const out = []; let fail = 0; const SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low']); // (low: bent double, gathering from the ground)
   for (const nm of ['capa', 'toga', 'bata', 'saiaC', 'saiaL']) { if (!MESH[nm]) continue; const row = [];
     for (const st of A.STATES) { let fr = 0, wo = 0;
       for (let k = 0; k < 6; k++) for (const bd of nm === 'bata' ? ['corpoF'] : nm === 'capa' || nm === 'toga' ? ['corpoM'] : ['corpoM', 'corpoF']) { pose(st, k / 6 * Math.PI * 2, st === 'run' ? 4.5 : 1.4, bd === 'corpoF' ? { fem: true } : null); const r = inside(MESH[nm], MESH[bd]); fr = Math.max(fr, r.frac); wo = Math.max(wo, r.worst); } // (a skirt on both bodies: the woman's hips and thighs are her own)
-      const seat = nm !== 'capa' && nm !== 'toga' && SEAT.has(st), bad = seat ? fr > 0.06 || wo > 0.03 : fr > 0.01;
+      const seat = nm === 'bata' && SEAT.has(st), bad = seat ? fr > 0.06 || wo > 0.03 : fr > 0.01;
       if (bad || (seat && fr > 0.01)) row.push(`${st} ${(fr * 100).toFixed(1)}% (${(wo * 100).toFixed(1)} cm)${bad ? ' FALHA' : ''}`); if (bad) fail++; }
     out.push(`${nm}: ${row.length ? row.join(', ') : 'limpa'}`); }
-  ok('a capa, a toga, a blusa e as saias não atravessam o corpo (capa e toga: em todos os estados ≤1% do pano a mais de 8 mm dentro da pele; blusa e saias: ≤1%, sentadas ≤6% e ≤3 cm)', !fail, out.join(' · ')); }
+  ok('a capa, a toga, a blusa e as saias não atravessam o corpo (capa, toga e saias: em todos os estados ≤1% do pano a mais de 8 mm dentro da pele; blusa: ≤1%, sentada ≤6% e ≤3 cm)', !fail, out.join(' · ')); }
 // the body out through a skirt — what A6's hunt saw at the door of Hedeby (the thighs through the long skirt), counted with
 // the cloth as the shader lays it: from each point of the hips and the legs, the segment from its bone's axis (inside the
 // pelvis, the thigh, the shin) out to it; if the skirt's outer surface crosses it more than 3 mm short of the point, the
