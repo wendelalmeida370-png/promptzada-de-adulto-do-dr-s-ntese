@@ -89,6 +89,11 @@ vec3 b3cloth(vec3 P, vec3 p) {
   vec4 m = b3V(20), gs = b3V(21); float s = gs.y;
   vec3 pel = b3V(22).xyz, nk = b3V(23).xyz, ex = b3V(24).xyz, ez = b3V(25).xyz;
   vec3 up = normalize(nk - pel); float L = dot(nk - pel, up);
+  // (a skirt's panels turn about the line of the hips: a point blended between two of them keeps its distance from that
+  // line — two frames far apart, blended, drew it in toward the hips: sitting, the cloth sank into the lap and the seat)
+  if (!cape) { int row = int(aRow + 0.5); vec4 q0 = texelFetch(uBody, ivec2(0, row), 0), q1 = texelFetch(uBody, ivec2(1, row), 0), q2 = texelFetch(uBody, ivec2(2, row), 0);
+    vec3 hc = vec3(q0.y, q1.y, q2.y) * 0.88 + vec3(q0.w, q1.w, q2.w), hx = normalize(vec3(q0.x, q1.x, q2.x)), hr = P - hc; float hp = dot(hr, hx); vec3 hq = hr - hx * hp;
+    float hl = length(hq), hw = length(vec2(p.y - 0.88, p.z)) * s; if (hl > 1e-4 && hl < hw) P = hc + hx * hp + hq * (hw / hl); }
   // (how free the point is: 0 where it is held — the yoke, the waist —, 1 at the hem)
   float w = z == 7 ? clamp((1.40 - p.y) / 0.85, 0.0, 1.0) : clamp((0.98 - p.y) / 0.85, 0.0, 1.0); w = w * w * (3.0 - 2.0 * w);
   float t = uTime + m.z, sp = min(m.y, 6.0);

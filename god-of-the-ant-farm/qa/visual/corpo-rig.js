@@ -57,6 +57,11 @@ function cloth(P, p, zn, buf, pb, clock, U) {
   const out = (P, a, b, r, u) => { const ab = sub(b, a); const t = cl(dot(sub(P, a), ab) / Math.max(dot(ab, ab), 1e-8), 0, 1); const d = sub(P, add(a, ab, t)); const l2 = dot(d, d); if (l2 >= r * r) return P; const du = dot(d, u); return add(P, u, -du + Math.sqrt(Math.max(du * du - l2 + r * r, 0))); };
   const cape = zn === 7 || zn === 15 || zn === 21; const m = V(20), gs = V(21), s = gs[1];
   const pel = V(22), nk = V(23), ex = V(24), ez = V(25); const L = len(sub(nk, pel)), up = sub(nk, pel).map(q => q / L);
+  // (the skirt: a point blended between two panels keeps its distance from the hips' line)
+  if (!cape) { const ob = pb - G.BODYMESH.bones.length * 12; const q0 = buf.slice(ob, ob + 4), q1 = buf.slice(ob + 4, ob + 8), q2 = buf.slice(ob + 8, ob + 12);
+    const hc = [q0[1] * 0.88 + q0[3], q1[1] * 0.88 + q1[3], q2[1] * 0.88 + q2[3]], hx0 = [q0[0], q1[0], q2[0]], hx = hx0.map(q => q / (len(hx0) || 1));
+    const hr = sub(P, hc), hp = dot(hr, hx), hq = add(hr, hx, -hp), hl = len(hq), hw = Math.hypot(p[1] - 0.88, p[2]) * s;
+    if (hl > 1e-4 && hl < hw) P = add(add(hc, hx, hp), hq, hw / hl); }
   let w = zn === 7 ? cl((1.40 - p[1]) / 0.85, 0, 1) : cl((0.98 - p[1]) / 0.85, 0, 1); w = w * w * (3 - 2 * w);
   const t = clock.t + m[2], sp = Math.min(m[1], 6), W = clock.wind;
   let rd = sub(sub(P, pel), up.map(q => q * cl(dot(sub(P, pel), up), 0, L))); rd = len(rd) > 1e-4 ? rd.map(q => q / len(rd)) : ez.map(q => -q);
@@ -197,8 +202,8 @@ const inside = (cm, bm) => {
 // pelvis, the thigh, the shin) out to it; if the skirt's outer surface crosses it more than 3 mm short of the point, the
 // point is out through the cloth (a leg out under the hem crosses nothing: it is not through). Where the body is painted as
 // the skirt — from the belt down to a little above the hem, body3d's b3paint — a point through shows as the cloth; below,
-// as skin or trousers: that never, in any state on land. And walking, standing and working the cloth lies over the body
-// within a centimetre (the seats, the water and lying down: their numbers said, every run)
+// as skin or trousers: that never, in any state on land. And walking, standing and working nothing at all comes through
+// (the seats, the water and lying down: their numbers said, every run)
 const HEM = G.BODYMESH.hem || { saiaC: 0.5, saiaL: 0.12 };
 const AXB = new Int8Array(G.BODYMESH.bones.length).fill(-1);
 for (const [n, k] of [['pel', 0], ['spine', 0], ['thL', 1], ['hpHL', 1], ['knHL', 1], ['thR', 2], ['hpHR', 2], ['knHR', 2], ['snL', 3], ['snR', 4]]) { const i = G.BODYMESH.bones.indexOf(n); if (i >= 0) AXB[i] = k; }
@@ -234,10 +239,10 @@ const through = (cm, bm, hem) => {
   for (const nm of ['saiaC', 'saiaL']) for (const bd of ['corpoM', 'corpoF']) { const row = [];
     for (const st of A.STATES) { let o = 0, sh = 0, wo = 0;
       for (let k = 0; k < 6; k++) { pose(st, k / 6 * Math.PI * 2, st === 'run' ? 4.5 : 1.4, bd === 'corpoF' ? { fem: true } : null); const r = through(MESH[nm], MESH[bd], HEM[nm]); o = Math.max(o, r.out); sh = Math.max(sh, r.shown); wo = Math.max(wo, r.worst); }
-      const bad = !WET.test(st) && (sh > 0 || (!SEAT.has(st) && wo > 0.01));
+      const bad = !WET.test(st) && (sh > 0 || (!SEAT.has(st) && o > 0));
       if (o) row.push(`${st} ${o}${sh ? ' (' + sh + ' à mostra)' : ''} até ${(wo * 100).toFixed(1)} cm${bad ? ' FALHA' : ''}`); if (bad) fail++; }
     rows.push(`${nm} em ${bd}: ${row.join(', ') || 'nada'}`); }
-  ok('o corpo não sai pela saia (o que passa do pano, na cor do pano; nada à mostra em terra; andando, parado e trabalhando o pano a até 1 cm do corpo)', !fail, rows.join(' · ')); }
+  ok('o corpo não sai pela saia (andando, parado e trabalhando nada passa do pano; sentado, o que passa tem a cor do pano: nada à mostra em terra)', !fail, rows.join(' · ')); }
 
 // nobody naked: every sex, age, trade, people, class, the captive, the ruler, the rich, swimming and asleep — drawn, and
 // the verifier (Body3D.check) says nothing; and an outfit made bare on purpose, which it must catch
