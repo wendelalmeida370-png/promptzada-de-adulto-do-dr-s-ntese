@@ -521,7 +521,10 @@ float m3scale(float p) {
           const h1 = K.hv(300 + n), h2 = K.hv(500 + n), h3 = K.hv(700 + n); n++;
           const l = Math.min(len - t, dressed ? 0.6 : 0.34 + h1 * 0.34); if (l < 0.12) break; const m = Math.max(0, t) + (Math.min(len, t + l) - Math.max(0, t)) / 2;
           const pr = dressed ? 0.05 : 0.05 + h2 * 0.035; const px = A[0] + dx * m + o[0] * pr, pz = A[1] + dz * m + o[1] * pr;
-          if (top - ch * 0.15 > K.gy(px, pz)) { any = true; let cc = dressed ? mixc(base[0], base[2], h1 * 0.6).map(v => v * (0.94 + h3 * 0.1)) : mixc(base[Math.floor(h1 * 3)], base[Math.floor(h3 * 2.99)], 0.5 * h2).map(v => v * (0.86 + h3 * 0.26));
+          // (a stone shows where its top clears the ground at both its ends and its face — on a slope the ground came through
+          // the top of the stones at the ground's line: Build3D.check, lying faces cut by the ground; the core shows there)
+          const hl = (Math.min(len, t + l) - Math.max(0, t)) / 2, gHi = Math.max(K.gy(px - dx * hl, pz - dz * hl), K.gy(px + dx * hl, pz + dz * hl), K.gy(px + o[0] * 0.2, pz + o[1] * 0.2));
+          if (top - ch * 0.15 > K.gy(px, pz) && top - 0.03 > gHi) { any = true; let cc = dressed ? mixc(base[0], base[2], h1 * 0.6).map(v => v * (0.94 + h3 * 0.1)) : mixc(base[Math.floor(h1 * 3)], base[Math.floor(h3 * 2.99)], 0.5 * h2).map(v => v * (0.86 + h3 * 0.26));
             if (mossy) cc = mixc(cc, [84, 100, 60], mossy * (0.45 + row * 0.22) * (h2 > 0.45 ? 1 : 0.25));
             K.rbox(px, top - ch + 0.01, pz, Math.min(len, t + l) - Math.max(0, t) - (dressed ? 0.02 : 0.035), ch - (dressed ? 0.02 : 0.035), dressed ? 0.2 : 0.2 + h3 * 0.08, cc, Math.atan2(-dz, dx) + (dressed ? 0 : (h2 - 0.5) * 0.08), 0, dressed ? 0 : (h3 - 0.5) * 0.05); }
           t += l;
