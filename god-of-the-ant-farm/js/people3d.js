@@ -195,7 +195,10 @@
     fardo: 'fardo', lenha: 'fardo', rolo: 'fardo', carne: 'fardo', marfim: 'fardo', ferramentas: 'fardo', pedra: 'fardo', pedras: 'fardo', queijo: 'fardo', rede: 'fardo', remo: 'fardo' };
   const GRIP_OF = { caixa: 'peito', saco: 'ombro', barril: 'abraco', anfora: 'ombro', cesta: 'peito', fardo: 'ombro', jarro: 'peito', peixe: 'lado', bolsa: 'lado' };
   P3.CLASS = CLASS; P3.GRIP_OF = GRIP_OF; // (when C1's depot is in the game, its packaging — Depot.form — picks the form through these)
-  const lc = hex => { const c = new THREE.Color(); c.set(hex); return [c.r, c.g, c.b]; };
+  // (a colour of the sRGB hex as the graphics card wants it, linear — the conversion three.js makes, without three.js: the
+  // load is read before the 3D is made)
+  const s2l = c => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  const lc = hex => G.hex2rgb(hex).map(q => s2l(q / 255));
   // (the colour of what shows of a load: the fish in a crate and in the hand, the fruit in a basket, a cloth's bolt)
   const TINT = { berries: '#b8303a', shell: '#d8c8b0', leaves: '#5a8a3a', must: '#5a2a4a', grain: '#c8b07a', hay: '#d8b862', fruit: '#d8902a', meat: '#8a3a2a' };
   const heldMemo = new Map(); G.worldHooks.push(() => heldMemo.clear());

@@ -61,10 +61,41 @@
     if (score(ctx, t.X, t.Z, p.reach + 0.6) < 0) return { ok: false, msg: 'Longe demais.' };
     const c = p.can(ctx, t); if (!c.ok) return { ok: false, msg: c.why };
     const r = p.run(ctx, t) || { ok: true };
-    G.Stories && G.Stories.signal('avatarDeed', { id: ctx.v.id, what: p.id, x: ctx.x, y: ctx.y, set: ctx.v.set });
+    // (the stories hear of the deed in the world's own step, as of everything the world does)
+    { const sig = { id: ctx.v.id, what: p.id, x: ctx.x, y: ctx.y, set: ctx.v.set }; G.Possess.apply(() => { G.Stories && G.Stories.signal('avatarDeed', sig); return { ok: true }; }); }
     return r;
   };
   const face = (ctx, X, Z) => Math.atan2(Z - ctx.Z, X - ctx.X);
+  // The hands of the body change the world as anyone's do: what an act does is asked at its contact and done by the world in
+  // its own step (Avatar.act's op, through Possess.apply), and it lasts the world seconds the same work lasts for anyone of the
+  // world — the woodcutter's stroke and the dt × workMul it adds to the tree, the quarryman's load of stone in 3.8 s, a load of
+  // berries in 2.2 s, a meal at the store in 1.6 s, a prayer at the temple in 5 s (villagers.js), a try of the hands in the
+  // shallows slower than the fisher's line (5 to 9 s for one to three fish): the player's presence gives no work for free. Only
+  // the hands' own gestures — a word, a wave, a hug's arms, the lift and the setting down the world's people do in no time —
+  // keep the body's own seconds
+  const WT = { chop: 0.55, mine: 0.6, mineLoad: 3.8, gather: 2.2, eat: 1.6, pray: 5, fish: 2.2, lift: 1.1, liftAt: 0.6, put: 1.1, putAt: 0.65 };
+  I.WT = WT;
+  const wm = v => G.Vg.workMul(v);
+  // (the body's own count of the work at a rock, as the quarryman keeps his in his errand — nothing of the world, nothing saved)
+  let mineW = null; G.worldHooks.push(() => { mineW = null; });
+  // the hands' way to a point of the world through an act (only seen): reaching it in the body's own half second, holding there
+  // until the world has answered, coming back after — with the load the world put in them, or without the one it took; on a
+  // refusal, back as they were. P: the point (metres), or a function of the act giving it
+  const reachTo = (P, wid, back) => a => {
+    const dt = a.rwT === undefined ? 0 : Math.max(0, a.tr - a.rwT); a.rwT = a.tr;
+    a.rw = G.clamp((a.rw || 0) + (a.res ? -dt / (a.res.ok ? back || 0.45 : 0.35) : dt / 0.55), 0, 1);
+    const p = typeof P === 'function' ? P(a) : P; return { X: p[0], Y: p[1], Z: p[2], w: a.rw, wid: wid || 0.32 };
+  };
+  I.reachTo = reachTo;
+  // (the ground under a point of the world, metres)
+  const gY = (X, Z) => G.Avatar.floorAt(X, Z);
+  // (a point before the body, toward a thing of the world and in reach of the arms: at most a stride ahead, up metres over the ground)
+  const toward = (ctx, X, Z, up, most) => { const d = Math.hypot(X - ctx.X, Z - ctx.Z), k = d > 1e-6 ? Math.min(most || 0.55, Math.max(0.3, d - 0.3)) / d : 0; const x = ctx.X + (X - ctx.X) * k, z = ctx.Z + (Z - ctx.Z) * k; return [x, gY(x, z) + up, z]; };
+  // (a word the world says back to the hands: shown when the world has answered)
+  const say = (txt, d) => { if (txt && G.IncUI && G.IncUI.toast) G.IncUI.toast(txt, d || 2.4); };
+  const deny = r => { if (r && r.why) say(r.why); G.Audio && G.Audio.play && G.Audio.play('deny'); };
+  // (a deed that only says what was done — a look, a knock: counted by the world in its step)
+  const deed = (k, n) => G.Possess.apply(() => { G.Possess.deed(k, n); return { ok: true }; });
 
   // ============================== people ==============================
   // what someone says when spoken to: from what is true of them now (their errand, their body, their family, their past)
@@ -122,15 +153,19 @@
     run(ctx, t) {
       const o = t.o; const me = ctx.v;
       const txt = line(me, o);
-      // (the other turns to the one speaking, and answers: a line over their head, in both views)
-      G.faceTo(o, me.x - o.x, me.y - o.y);
-      // (and stops a moment to talk, as the world's people stop for each other — the day's work too, as for a courtship; not
-      // a meal, sleep, the watch or anything urgent. The moments here are the body's seconds, in the world's slower time of
-      // the body: G.Space.TIME)
-      if (txt && (!o.task || o.task.pri <= 1)) G.Vg.setTask(o, { type: 'talk', id: me.id, pri: 0.9, wait: 5 * G.Space.TIME, kind: 'talk' });
-      if (txt && G.Talk) G.Talk.say(o, txt, { dur: 4 });
-      const k = G.Possess.kin(me, o); if (k) G.Vg.emote(o, 'heart', 2);
-      if (G.Possess.meet(o.id)) G.Possess.deed('conversa');
+      // (the other turns to the one speaking, and answers: a line over their head, in both views — and stops a moment to talk,
+      // as the world's people stop for each other — the day's work too, as for a courtship; not a meal, sleep, the watch or
+      // anything urgent. The moments here are the body's seconds, in the world's slower time of the body: G.Space.TIME. All of
+      // it done by the world in its step)
+      G.Possess.apply(() => {
+        if (!G.S.villagers.has(o.id)) return { ok: false, why: '' };
+        G.faceTo(o, me.x - o.x, me.y - o.y);
+        if (txt && (!o.task || o.task.pri <= 1)) G.Vg.setTask(o, { type: 'talk', id: me.id, pri: 0.9, wait: 5 * G.Space.TIME, kind: 'talk' });
+        if (txt && G.Talk) G.Talk.say(o, txt, { dur: 4 });
+        if (G.Possess.kin(me, o)) G.Vg.emote(o, 'heart', 2);
+        if (G.Possess.meet(o.id)) G.Possess.deed('conversa');
+        return { ok: true };
+      });
       G.Avatar.act({ anim: 'talk', dur: 1.4, lock: false, face: face(ctx, t.X, t.Z) });
       return { ok: true, card: I.personCard(o, me), said: txt };
     },
@@ -158,22 +193,27 @@
     const X = o.x * L(), Z = o.y * L(); const f = face(ctx, X, Z); const d = Math.hypot(X - ctx.X, Z - ctx.Z);
     // (the body steps up to arm's length; the other turns to it and holds it)
     const to = d > 0.62 ? [X - Math.cos(f) * 0.55, Z - Math.sin(f) * 0.55] : null;
-    // (a moment's hug outweighs a meal or a nap that can wait three seconds — the world's needs take over at 1.2 — never a fire)
-    G.Vg.setTask(o, { type: 'talk', id: me.id, pri: 1.25, wait: 4.2 * G.Space.TIME, hug: 1 });
+    // (a moment's hug outweighs a meal or a nap that can wait three seconds — the world's needs take over at 1.2 — never a fire;
+    // and the one hugged answers — asked of the world now, done in its step)
+    const k = c.kin; const said = c.grief ? (o.age < 14 ? 'Eu sinto tanta falta…' : 'Obrigad' + oa(o) + '. Eu precisava disso.') : k === 'mãe' || k === 'pai' ? `Ah, ${me.name}…` : k === 'filho' || k === 'filha' ? (o.age < 10 ? 'Mais forte!' : 'Eu também te amo.') : k === 'companheiro' || k === 'companheira' ? 'Fica mais um pouco.' : 'Que saudade!';
+    const sig = { id: me.id, what: 'abraco', x: ctx.x, y: ctx.y, set: me.set };
+    const ask = G.Possess.apply(() => { if (!G.S.villagers.has(o.id)) return { ok: false, why: '' }; G.Vg.setTask(o, { type: 'talk', id: me.id, pri: 1.25, wait: 4.2 * G.Space.TIME, hug: 1 }); G.Stories && G.Stories.signal('avatarDeed', sig); G.Talk && G.Talk.say(o, said, { dur: 3 }); return { ok: !!(o.task && o.task.hug) }; });
     // (both hold on while both are there: called away by the world — a festival, a fire — or gone, the arms let go, nothing counts)
     const holds = () => G.S.villagers.has(o.id) && !!o.task && !!o.task.hug && o.task.id === me.id;
-    G.Avatar.act({ anim: 'hug', dur: 2.6, face: f, to, toT: 0.8, keep: holds, at: [1, () => { G.Vg.emote(o, 'heart', 2); G.Vg.emote(me, 'heart', 2); }], done: () => {
-      if (!holds()) return;
-      const grief = o.mourn > 0; if (grief) o.mourn = Math.max(0, o.mourn - G.DAY_LEN * 0.35);
-      G.Vg.endTask(o); // (and they go back to their day)
-      G.Possess.deed(grief ? 'consolo' : 'abraco');
-    } });
-    G.Stories && G.Stories.signal('avatarDeed', { id: me.id, what: 'abraco', x: ctx.x, y: ctx.y, set: me.set });
-    const k = c.kin; const said = c.grief ? (o.age < 14 ? 'Eu sinto tanta falta…' : 'Obrigad' + oa(o) + '. Eu precisava disso.') : k === 'mãe' || k === 'pai' ? `Ah, ${me.name}…` : k === 'filho' || k === 'filha' ? (o.age < 10 ? 'Mais forte!' : 'Eu também te amo.') : k === 'companheiro' || k === 'companheira' ? 'Fica mais um pouco.' : 'Que saudade!';
-    G.Talk && G.Talk.say(o, said, { dur: 3 });
-    return { ok: true, msg: c.grief ? `Você abraça ${o.name}, que chora no seu ombro.` : `Você abraça ${o.name}.`, said };
+    G.Avatar.act({ anim: 'hug', dur: 2.6, face: f, to, toT: 0.8, keep: () => !ask.res || (ask.res.ok && holds()), contact: 2.6,
+      at: [1, () => G.Possess.apply(() => { if (holds()) { G.Vg.emote(o, 'heart', 2); G.Vg.emote(me, 'heart', 2); } return { ok: true }; })],
+      op: () => {
+        if (!holds()) return { ok: false, why: '' };
+        const grief = o.mourn > 0; if (grief) o.mourn = Math.max(0, o.mourn - G.DAY_LEN * 0.35);
+        G.Vg.endTask(o); // (and they go back to their day)
+        G.Possess.deed(grief ? 'consolo' : 'abraco');
+        return { ok: true };
+      } });
+    // (what is said of it is said once the one hugged has answered: ask, for the card that asked)
+    return { ok: true, ask, msg: c.grief ? `Você abraça ${o.name}, que chora no seu ombro.` : `Você abraça ${o.name}.`, said };
   };
-  // the dance: whoever is free near the body joins it a while (the children, the merry, the family first)
+  // the dance: whoever is free near the body joins it a while (the children, the merry, the family first) — the world's doing, asked
+  // of it in its step (Possess.apply)
   I.danceJoin = function () {
     const ctx = I.ctx(); if (!ctx) return 0; const me = ctx.v; const R = 9 / L(); const out = [];
     for (const o of G.S.villagers.values()) {
@@ -225,43 +265,73 @@
       return { ok: true };
     },
     run(ctx, t) {
-      const b = t.b; const S = G.S; const v = ctx.v; const P = G.Possess;
+      const b = t.b; const v = ctx.v; const P = G.Possess;
       const f = face(ctx, t.X, t.Z);
-      if (!b.built) { P.deed('exame'); return { ok: true, card: buildingCard(b, v) }; }
+      if (!b.built) { deed('exame'); return { ok: true, card: buildingCard(b, v) }; }
       if (b.id === v.home && v.energy < 85) {
-        // (to bed at home: the body goes in through its own door, and the world's sleep gives the strength back)
-        G.Avatar.act({ anim: 'interact', dur: 0.8, face: f, done: () => { if (P.is(v) && P.sleep(v)) { v.inside = b.id; P.deed('sono'); } } });
-        return { ok: true, msg: 'Você entra em casa e se deita.', sleep: true };
+        // (to bed at home: the body goes in through its own door, and the world's sleep gives the strength back — laid down by
+        // the world in its step)
+        G.Avatar.act({ anim: 'interact', dur: 0.8, face: f, contact: 0.6,
+          op: w => { if (!G.S.buildings.has(b.id) || w.home !== b.id || !P.sleep(w)) return { ok: false, why: 'Agora não dá para dormir.' }; w.inside = b.id; P.deed('sono'); return { ok: true }; },
+          then: () => say('Você entra em casa e se deita.'), fail: deny });
+        return { ok: true, sleep: true };
       }
       if (isStore(b)) {
         const stk = G.Fac.stockV(v);
         if (v.carry && v.carry.n > 0) {
-          const k = v.carry.k, n = v.carry.n;
-          G.Avatar.act({ anim: 'carry', dur: 0.9, face: f, done: () => {
-            if (!v.carry) return;
-            const add = G.Village.addStock(k, n, G.Fac.idOfV(v)); v.st[k] = (v.st[k] || 0) + n;
-            if (add > 0) G.FX && G.FX.deposit(v.x, v.y, k, add);
-            G.Riches && G.Riches.delivered && G.Riches.delivered(v, v.carry, add);
-            v.carry = null; P.deed('entrega');
-          } });
-          return { ok: true, msg: `Você guarda ${n} de ${G.Eco ? G.Eco.name(k) : k} ${at(b)}.` };
+          // (the load set down at the door — a step up to it first —, and into the people's stock as anyone's: the world's delivery)
+          const D = G.Vg.door(b); const DX = D[0] * L(), DZ = D[1] * L(); const d = Math.hypot(DX - ctx.X, DZ - ctx.Z);
+          const to = d > 1.1 ? [DX - Math.cos(f) * 0.9, DZ - Math.sin(f) * 0.9] : null; const go = to ? G.clamp((d - 0.9) / (G.Possess.caps(v).walk * 1.1), 0.3, 1.5) : 0;
+          // (the point where the load goes down: before the body where it stands when the hands go, toward the door)
+          const put = a => { if (!a.P) { const H = G.People3D && G.People3D.look(v).held; a.P = toward(G.Avatar.pos(), DX, DZ, (H ? H.size[1] / 2 : 0.15) + 0.02); } return a.P; };
+          const hands = reachTo(put, 0.34, 0.4);
+          G.Avatar.act({ anim: 'carry', dur: WT.put + go, contact: WT.putAt + go, face: f, to, toT: go, vact: 'pousar', reach: a => (a.tr < go ? null : hands(a)),
+            op: w => deliver(w, b), then: r => say(`Você guarda ${r.n} de ${G.Eco ? G.Eco.name(r.k) : r.k} ${at(b)}.`), fail: deny });
+          return { ok: true };
         }
         if (v.hunger > 25 && stk.food >= 1) {
-          G.Avatar.act({ anim: 'sit', dur: 2.2, face: f, done: () => { const s2 = G.Fac.stockV(v); const got = Math.min(v.hunger > 80 ? 2 : 1, Math.floor(s2.food)); if (got <= 0) return; s2.food -= got; v.hunger = Math.max(0, v.hunger - 58 * got); G.Vg.emote(v, 'food', 1.5); P.deed('refeicao'); } });
-          return { ok: true, msg: `Você come ${at(b)}, do estoque do seu povo.` };
+          // (a meal at the store: the time anyone of the world eats there, and the same share of the stock; getting up leaves it)
+          G.Avatar.act({ world: true, anim: 'sit', dur: WT.eat, face: f, free: true, vact: 'eat',
+            op: w => {
+              const s2 = (G.Army && G.Army.larder(w)) || G.Fac.stockV(w); const got = Math.min(w.hunger > 80 ? 2 : 1, Math.floor(s2.food));
+              if (got <= 0) return { ok: false, why: 'O estoque do seu povo está sem comida.' };
+              s2.food -= got; w.hunger = Math.max(0, w.hunger - 58 * got); G.Vg.emote(w, 'food', 1.5); P.deed('refeicao'); return { ok: true };
+            }, then: () => say(`Você come ${at(b)}, do estoque do seu povo.`), fail: deny });
+          return { ok: true, msg: `Você se senta para comer ${at(b)}.` };
         }
         return { ok: true, card: buildingCard(b, v) };
       }
       if (b.type === 'temple') {
-        G.Avatar.act({ anim: 'pray', dur: 3.2, face: f, done: () => { v.devotion = Math.min(100, (v.devotion || 0) + 6); G.Vg.emote(v, 'pray', 2); P.deed('reza'); } });
+        // (a prayer: the faithful's five seconds of the world before the temple, and what they give the god — the faith, the
+        // devotion; getting up leaves it unsaid)
+        G.Avatar.act({ world: true, anim: 'pray', dur: WT.pray, face: f, free: true, vact: 'pray',
+          op: w => {
+            if (!G.S.buildings.has(b.id) || !b.built) return { ok: false, why: 'O templo não está mais aqui.' };
+            const gain = 0.8 * (0.5 + (w.devotion || 0) / 60); G.S.faith = Math.min(999, G.S.faith + gain); w.devotion = Math.min(100, (w.devotion || 0) + 1.2);
+            G.FX && G.FX.faithText && G.FX.faithText(w.x, w.y, gain); G.Vg.emote(w, 'pray', 2); P.deed('reza'); return { ok: true };
+          }, then: () => say('Você termina a sua reza.'), fail: deny });
         return { ok: true, msg: 'Você se ajoelha e reza.' };
       }
-      if (b.type === 'cemetery') { P.deed('exame'); return { ok: true, card: graveCard(b) }; }
-      const def = G.BDEF[b.type]; if (def && def.housing && b.id !== v.home) { P.deed('porta'); G.Avatar.act({ anim: 'interact', dur: 0.9, face: f }); return { ok: true, card: buildingCard(b, v), knock: true }; }
-      P.deed('exame');
+      if (b.type === 'cemetery') { deed('exame'); return { ok: true, card: graveCard(b) }; }
+      const def = G.BDEF[b.type]; if (def && def.housing && b.id !== v.home) { deed('porta'); G.Avatar.act({ anim: 'interact', dur: 0.9, face: f }); return { ok: true, card: buildingCard(b, v), knock: true }; }
+      deed('exame');
       return { ok: true, card: buildingCard(b, v) };
     },
   });
+  // a load brought to a store: the world's own count of a delivery (villagers.js 'deliver') for the body as for anyone — a year of
+  // plenty doubles the stone and the wood, what came along with the load goes in too. Done in the world's step
+  function deliver(w, b) {
+    const S = G.S; const c = w.carry; if (!c || !(c.n > 0)) return { ok: false, why: 'Suas mãos estão vazias.' };
+    if (!S.buildings.has(b.id) || !b.built) return { ok: false, why: 'Não existe mais.' };
+    if (G.Village.facOfSet(b.set) !== G.Fac.idOfV(w)) return { ok: false, why: 'Isto é de outro povo: o estoque daqui não é do seu.' };
+    const k = c.k, n = c.n * (S.blessed && (k === 'stone' || k === 'wood') ? 2 : 1);
+    const add = G.Village.addStock(k, n, G.Fac.idOfV(w)); w.st[k] = (w.st[k] || 0) + c.n;
+    if (add > 0) G.FX && G.FX.deposit(w.x, w.y, k, add);
+    if (c.extra) G.Riches && G.Riches.unload(w, c.extra);
+    G.Riches && G.Riches.delivered && G.Riches.delivered(w, c, add);
+    w.carry = null; G.Possess.deed('entrega');
+    return { ok: true, k, n: c.n };
+  }
   // a building's card: what it is, whose it is, who lives or works there, what it holds — the world's own numbers
   function buildingCard(b, me) {
     const S = G.S; const def = G.BDEF[b.type] || {}; const set = S.settlements.get(b.set); const fac = G.Fac.get(G.Village.facOfSet(b.set));
@@ -305,20 +375,35 @@
     },
     run(ctx, t) {
       const tr = t.tr; const v = ctx.v; const P = G.Possess; const f = face(ctx, t.X, t.Z);
-      if (!G.Nature.isChoppable(tr)) { P.deed('exame'); return { ok: true, card: treeCard(tr) }; }
+      if (!G.Nature.isChoppable(tr)) { deed('exame'); return { ok: true, card: treeCard(tr) }; }
       if (tr.stage === 'log') {
-        G.Avatar.act({ anim: 'low', dur: 1.4, face: f, done: () => { if (!G.S.trees.has(tr.id) || tr.stage !== 'log') return; const room = G.Vg.cap(v) - (v.carry && v.carry.k === 'wood' ? v.carry.n : 0); const n = Math.min(room, tr.wood); if (n <= 0) return; tr.wood -= n; if (tr.wood <= 0) { tr.stage = 'stump'; tr.t = 0; tr.claim = 0; } v.carry = { k: 'wood', n: (v.carry && v.carry.k === 'wood' ? v.carry.n : 0) + n }; G.Vg.emote(v, 'wood', 1.5); } });
-        return { ok: true, msg: 'Você junta a lenha nos braços.' };
+        // (the wood off the trunk into the arms, as the woodcutter takes his load: the empty hands go down to it, the world puts
+        // the load in them, and it comes up with the body)
+        G.Avatar.act({ anim: 'carry', dur: WT.lift, contact: WT.liftAt, face: f, vact: 'levantar', reach: reachTo(toward(ctx, t.X, t.Z, 0.16), 0.5, 0.45),
+          op: w => {
+            if (!G.S.trees.has(tr.id) || tr.stage !== 'log') return { ok: false, why: 'A lenha não está mais aqui.' };
+            if (w.carry && w.carry.n > 0 && w.carry.k !== 'wood') return { ok: false, why: 'Suas mãos já estão cheias.' };
+            const had = w.carry && w.carry.k === 'wood' ? w.carry.n : 0; const n = Math.min(G.Vg.cap(w) - had, tr.wood);
+            if (n <= 0) return { ok: false, why: 'Não cabe mais lenha nos seus braços: leve-a ao armazém.' };
+            tr.wood -= n; if (tr.wood <= 0) { tr.stage = 'stump'; tr.t = 0; tr.claim = 0; }
+            w.carry = { k: 'wood', n: had + n }; G.Vg.emote(w, 'wood', 1.5); return { ok: true };
+          }, then: () => say('Você junta a lenha nos braços.'), fail: deny });
+        return { ok: true };
       }
-      // (the strokes: each one is work on the same counter the woodcutters fill; the tree falls when it is full)
-      const need = 3 * Math.max(0.5, tr.size); const per = 0.9 * (v.work || 1);
-      tr.claim = v.id; v.act = 'chop';
-      G.Avatar.act({ anim: 'swing', dur: 1.15, face: f, at: [0.62, () => { G.Audio && G.Audio.at(tr.x, tr.y, 'chop'); G.FX && G.FX.chips(tr.x, tr.y, '#c9a26b'); }], done: () => {
-        v.act = ''; if (!G.S.trees.has(tr.id) || !G.Nature.isChoppable(tr) || tr.stage === 'log') { tr.claim = 0; return; }
-        tr.chop += per;
-        if (tr.chop >= need) { G.Nature.fellTree(tr, v.face); P.deed('lenha'); tr.claim = 0; }
-      } });
-      return { ok: true, msg: tr.chop + per >= need ? 'Madeira! A árvore cai.' : `Golpe no tronco (${Math.min(100, Math.round((tr.chop + per) / need * 100))}%)` };
+      // (the strokes: each one is the woodcutter's work of its time — dt × workMul — on the same counter the woodcutters fill, done
+      // by the world at the blow; the tree falls when it is full)
+      G.Avatar.act({ world: true, anim: 'swing', dur: WT.chop, contact: WT.chop * 0.62, face: f, vact: 'chop',
+        op: w => {
+          if (!G.S.trees.has(tr.id) || (tr.stage !== 'grow' && tr.stage !== 'burnt') || !G.Nature.isChoppable(tr)) return { ok: false, why: 'A árvore não está mais de pé.' };
+          if (tr.claim && tr.claim !== w.id) { const o = G.S.villagers.get(tr.claim); if (o && o.task && o.task.id === tr.id) return { ok: false, why: `${o.name} já está cortando esta árvore.` }; }
+          if (G.S.fire[W.idx(tr.x, tr.y)] > 0) return { ok: false, why: 'Está pegando fogo!' };
+          const need = 3 * Math.max(0.5, tr.size); tr.claim = w.id; tr.chop += WT.chop * wm(w);
+          if (tr.chop >= need) { G.Nature.fellTree(tr, w.face); P.deed('lenha'); tr.claim = 0; return { ok: true, fell: true }; }
+          return { ok: true, pct: Math.min(99, Math.round(tr.chop / need * 100)) };
+        },
+        then: r => { G.Audio && G.Audio.at(tr.x, tr.y, 'chop'); G.FX && G.FX.chips(tr.x, tr.y, '#c9a26b'); say(r.fell ? 'Madeira! A árvore cai.' : `Golpe no tronco (${r.pct}%)`, 1.4); },
+        fail: deny });
+      return { ok: true };
     },
   });
   function treeCard(tr) {
@@ -344,15 +429,19 @@
     },
     run(ctx, t) {
       const b = t.bu; const v = ctx.v; const P = G.Possess; const f = face(ctx, t.X, t.Z);
-      if (b.berries < 1) { P.deed('exame'); return { ok: true, card: { kind: 'thing', name: 'Arbusto', sub: b.burnt > 0 ? 'queimado' : 'sem frutas agora', rows: [] } }; }
-      const eat = v.hunger > 40;
-      G.Avatar.act({ anim: 'low', dur: 1.8, face: f, done: () => {
-        if (!G.S.bushes.has(b.id) || b.berries < 1) return;
-        if (eat) { const n = Math.min(b.berries, 2); b.berries -= n; v.hunger = Math.max(0, v.hunger - 32 * n); G.Vg.emote(v, 'food', 1.5); }
-        else { const room = G.Vg.cap(v) - (v.carry && v.carry.k === 'food' ? v.carry.n : 0); const n = Math.min(room, b.berries); if (n <= 0) return; b.berries -= n; v.carry = { k: 'food', n: (v.carry && v.carry.k === 'food' ? v.carry.n : 0) + n, berries: 1 }; }
-        P.deed('frutas');
-      } });
-      return { ok: true, msg: eat ? 'Você come as frutas.' : 'Você colhe as frutas.' };
+      if (b.berries < 1) { deed('exame'); return { ok: true, card: { kind: 'thing', name: 'Arbusto', sub: b.burnt > 0 ? 'queimado' : 'sem frutas agora', rows: [] } }; }
+      // (the picker's time for a load — 2.2 s of the world ÷ workMul —, and the picker's load; hungry, two eaten off the bush)
+      const eat = v.hunger > 40; const dur = WT.gather / wm(v);
+      G.Avatar.act({ world: true, anim: 'low', dur, face: f, vact: 'gather',
+        op: w => {
+          if (!G.S.bushes.has(b.id) || b.berries < 1) return { ok: false, why: 'Não sobrou fruta neste arbusto.' };
+          if (b.claim && b.claim !== w.id) { const o = G.S.villagers.get(b.claim); if (o && o.task && o.task.id === b.id) return { ok: false, why: `${o.name} está colhendo aqui.` }; }
+          if (eat) { const n = Math.min(b.berries, 2); b.berries -= n; w.hunger = Math.max(0, w.hunger - 32 * n); G.Vg.emote(w, 'food', 1.5); P.deed('frutas'); return { ok: true, ate: n }; }
+          const had = w.carry && w.carry.k === 'food' ? w.carry.n : 0; if (w.carry && w.carry.n > 0 && w.carry.k !== 'food') return { ok: false, why: 'Suas mãos já estão cheias.' };
+          const n = Math.min(G.Vg.cap(w) - had, b.berries); if (n <= 0) return { ok: false, why: 'Suas mãos já estão cheias.' };
+          b.berries -= n; w.carry = { k: 'food', n: had + n, berries: 1 }; P.deed('frutas'); return { ok: true, n };
+        }, then: r => say(r.ate ? 'Você come as frutas.' : 'Você colhe as frutas.'), fail: deny });
+      return { ok: true };
     },
   });
   // a rock: broken the quarrymen's way (its stone leaves it; the last stone takes the rock away)
@@ -372,15 +461,24 @@
       return { ok: true };
     },
     run(ctx, t) {
-      const r = t.r; const v = ctx.v; const P = G.Possess; const f = face(ctx, t.X, t.Z);
-      v.act = 'mine';
-      G.Avatar.act({ anim: 'swing', dur: 2.6, face: f, at: [0.6, () => { G.Audio && G.Audio.at(r.x, r.y, 'mine'); G.FX && G.FX.chips(r.x, r.y, '#a9a9a9'); }], done: () => {
-        v.act = ''; if (!G.S.rocks.has(r.id) || r.stone < 1) return;
-        const room = G.Vg.cap(v) - (v.carry && v.carry.k === 'stone' ? v.carry.n : 0); const n = Math.min(room, r.stone, 2); if (n <= 0) return;
-        r.stone -= n; if (r.stone <= 0) G.Nature.removeRock(r);
-        v.carry = { k: 'stone', n: (v.carry && v.carry.k === 'stone' ? v.carry.n : 0) + n }; P.deed('pedra', n);
-      } });
-      return { ok: true, msg: 'Você golpeia a pedra.' };
+      const r = t.r; const P = G.Possess; const f = face(ctx, t.X, t.Z);
+      // (the strokes of the pick: each one the quarryman's work of its time — dt × workMul —, counted by the body at this rock as
+      // the quarryman counts his; at his 3.8 the rock gives the load the hands can hold. Done by the world at the blow)
+      G.Avatar.act({ world: true, anim: 'swing', dur: WT.mine, contact: WT.mine * 0.62, face: f, vact: 'mine',
+        op: w => {
+          if (!G.S.rocks.has(r.id) || r.stone < 1) { mineW = null; return { ok: false, why: 'Não sobrou pedra aqui.' }; }
+          if (r.claim && r.claim !== w.id) { const o = G.S.villagers.get(r.claim); if (o && o.task && o.task.id === r.id) return { ok: false, why: `${o.name} está trabalhando nesta pedra.` }; }
+          const had = w.carry && w.carry.k === 'stone' ? w.carry.n : 0; if ((w.carry && w.carry.n > 0 && w.carry.k !== 'stone') || had >= G.Vg.cap(w)) return { ok: false, why: 'Suas mãos já estão cheias.' };
+          if (!mineW || mineW.id !== r.id || mineW.v !== w.id) mineW = { id: r.id, v: w.id, w: 0 };
+          mineW.w += WT.mine * wm(w);
+          if (mineW.w <= WT.mineLoad) return { ok: true, pct: Math.min(99, Math.round(mineW.w / WT.mineLoad * 100)) };
+          mineW.w -= WT.mineLoad; const n = Math.min(G.Vg.cap(w) - had, r.stone); // (the stroke's work past the load goes to the next)
+          r.stone -= n; if (r.stone <= 0) G.Nature.removeRock(r);
+          w.carry = { k: 'stone', n: had + n }; P.deed('pedra', n); return { ok: true, got: n };
+        },
+        then: res => { G.Audio && G.Audio.at(r.x, r.y, 'mine'); G.FX && G.FX.chips(r.x, r.y, '#a9a9a9'); say(res.got ? `Você solta ${res.got} ${res.got > 1 ? 'pedras' : 'pedra'} da rocha.` : `Golpe na pedra (${res.pct}%)`, 1.4); },
+        fail: deny });
+      return { ok: true };
     },
   });
   // gold on the ground (the god's Chuva de Ouro, a dragon's hoard): picked up before the others get to it
@@ -395,9 +493,11 @@
       return { ok: true };
     },
     run(ctx, t) {
-      const v = ctx.v; const f = face(ctx, t.X, t.Z); const id = t.q.id;
-      G.Avatar.act({ anim: 'low', dur: 1.1, face: f, at: [0.5, () => { G.Audio && G.Audio.play && G.Audio.play('coin'); }], done: () => { const r = G.Powers.takeGold(v, id); if (r) G.Possess.deed('ouro', r.n); } });
-      return { ok: true, msg: G.Powers.coinage(v) ? 'Você cata as moedas: vão para a sua casa.' : 'Você cata o ouro: leve-o ao armazém.' };
+      const f = face(ctx, t.X, t.Z); const id = t.q.id;
+      G.Avatar.act({ anim: 'low', dur: 1.1, face: f, contact: 0.5,
+        op: w => { const r = G.Powers.takeGold(w, id); if (!r) return { ok: false, why: 'Alguém catou primeiro.' }; G.Possess.deed('ouro', r.n); return { ok: true, home: G.Powers.coinage(w) }; },
+        then: r => { G.Audio && G.Audio.play && G.Audio.play('coin'); say(r.home ? 'Você cata as moedas: vão para a sua casa.' : 'Você cata o ouro: leve-o ao armazém.'); }, fail: deny });
+      return { ok: true };
     },
   });
   // a building going up: what one carries goes into it, as the builders' loads do (Vg's build: need, then the stock)
@@ -412,14 +512,17 @@
     can(ctx, t) { const b = t.b; const v = ctx.v; if (!G.S.buildings.has(b.id) || b.built) return { ok: false, why: 'A obra já terminou.' }; if (G.Village.facOfSet(b.set) !== G.Fac.idOfV(v)) return { ok: false, why: 'Esta obra é de outro povo.' }; return v.carry && b.need[v.carry.k] > 0 ? { ok: true } : { ok: false, why: 'A obra não precisa disso.' }; },
     run(ctx, t) {
       const b = t.b; const v = ctx.v; const P = G.Possess; const f = face(ctx, t.X, t.Z);
-      G.Avatar.act({ anim: 'carry', dur: 1.1, face: f, done: () => {
-        if (!v.carry || !G.S.buildings.has(b.id) || b.built) return;
-        const n = v.carry.n, k = v.carry.k; const used = Math.min(n, b.need[k] || 0); b.need[k] -= used;
-        v.carry = null; if (n - used > 0) G.Village.addStock(k, n - used, G.Village.facOfSet(b.set));
-        G.FX && G.FX.chips(b.x + b.w / 2, b.y + b.h / 2, k === 'wood' ? '#a67c4e' : '#9a9a9a');
-        P.deed('obra'); // (one load brought, whatever it held)
-      } });
-      return { ok: true, msg: 'Você entrega o material aos construtores.' };
+      // (the load set down at the works, and into them as the builders' loads go: what the works need, the rest to the stock)
+      const put = a => { if (!a.P) { const H = G.People3D && G.People3D.look(v).held; a.P = toward(G.Avatar.pos(), t.X, t.Z, (H ? H.size[1] / 2 : 0.15) + 0.02); } return a.P; };
+      G.Avatar.act({ anim: 'carry', dur: WT.put, contact: WT.putAt, face: f, vact: 'pousar', reach: reachTo(put, 0.34, 0.4),
+        op: w => {
+          if (!w.carry || !(w.carry.n > 0) || !G.S.buildings.has(b.id) || b.built) return { ok: false, why: 'A obra já terminou.' };
+          const n = w.carry.n, k = w.carry.k; const used = Math.min(n, b.need[k] || 0); if (used <= 0) return { ok: false, why: 'A obra não precisa disso.' };
+          b.need[k] -= used; w.carry = null; if (n - used > 0) G.Village.addStock(k, n - used, G.Village.facOfSet(b.set));
+          G.FX && G.FX.chips(b.x + b.w / 2, b.y + b.h / 2, k === 'wood' ? '#a67c4e' : '#9a9a9a');
+          P.deed('obra'); return { ok: true }; // (one load brought, whatever it held)
+        }, then: () => say('Você entrega o material aos construtores.'), fail: deny });
+      return { ok: true };
     },
   });
   // a beast: looked at (what the world knows of it)
@@ -429,7 +532,7 @@
     label(ctx, t) { const d = G.Animals.DEF[t.a.kind]; return `Observar ${d ? d.nameA || d.name : 'o bicho'}`; },
     can(ctx, t) { return G.S.animals.has(t.a.id) ? { ok: true } : { ok: false, why: 'Foi embora.' }; },
     run(ctx, t) {
-      const a = t.a; const d = G.Animals.DEF[a.kind] || {}; G.Possess.deed('exame');
+      const a = t.a; const d = G.Animals.DEF[a.kind] || {}; deed('exame');
       const rows = []; if (a.named) rows.push(['Nome', a.named + (a.epithet ? ', ' + a.epithet : '')]); if (a.tamed || a.dom) rows.push(['', 'Animal de criação']); if (a.legend) rows.push(['', 'Uma fera lendária']); if (a.kills) rows.push(['Matou', a.kills + (a.kills > 1 ? ' pessoas' : ' pessoa')]);
       return { ok: true, card: { kind: 'thing', name: G.cap ? G.cap(d.name || a.kind) : (d.name || a.kind), sub: a.grown < 1 ? 'um filhote' : 'adulto', rows } };
     },
@@ -449,7 +552,7 @@
     run(ctx, t) {
       const f = face(ctx, t.X, t.Z);
       G.Avatar.act({ anim: 'low', dur: 2, face: f, at: [0.8, () => { const p = G.Avatar.pos(); if (p && G.FX3D) for (let k = 0; k < 6; k++) G.FX3D.spawn({ x: p.X + Math.cos(f) * 0.6, y: p.Y + 0.1, z: p.Z + Math.sin(f) * 0.6, vx: G.vrr(-0.4, 0.4), vy: G.vrr(0.6, 1.4), vz: G.vrr(-0.4, 0.4), life: 0.6, s0: 0.06, s1: 0.03, c: [0.85, 0.93, 0.98], a: 0.8, sh: 1, grav: 8 }); }],
-        done: () => { G.Avatar.rest(); G.Possess.deed('agua'); } });
+        done: () => { G.Avatar.rest(); deed('agua'); } });
       return { ok: true, msg: 'Você bebe da água fresca.' };
     },
   });
@@ -475,21 +578,24 @@
     run(ctx, t) {
       const v = ctx.v; const f = ctx.yaw;
       const splash = () => { const p = G.Avatar.pos(); if (p && G.FX3D) for (let k = 0; k < 10; k++) G.FX3D.spawn({ x: t.X + G.vrr(-0.2, 0.2), y: G.Avatar.waterAt(t.X, t.Z) + 0.05, z: t.Z + G.vrr(-0.2, 0.2), vx: G.vrr(-0.8, 0.8), vy: G.vrr(1, 2.2), vz: G.vrr(-0.8, 0.8), life: 0.7, s0: 0.07, s1: 0.03, c: [0.86, 0.94, 1], a: 0.8, sh: 1, grav: 9 }); G.Audio && G.Audio.play && G.Audio.play('splash'); };
-      G.Avatar.act({ anim: 'low', dur: 2.6, face: f, at: [1.4, splash], done: () => {
-        if (!G.S.villagers.has(v.id) || (v.carry && v.carry.n > 0 && !v.carry.fish)) return;
-        // (the water may have frozen or gone meanwhile — the god's winter, the sea opened)
-        { const S = G.S, i = W.idx(t.x, t.y); if (!(S.type[i] === G.T.RIVER || S.type[i] <= G.T.SEA) || (S.ice && S.ice[i]) || (S.dry && S.dry[i])) { G.IncUI && G.IncUI.toast && G.IncUI.toast('A água não está mais ali.', 2); return; } }
-        // (the world's dice: the hands are slower than a line; and what bites is that water's own fish)
-        if (G.R() < 0.55) { G.IncUI && G.IncUI.toast && G.IncUI.toast('Escapou entre os dedos…', 2); return; }
-        const c = G.Waters ? G.Waters.catchCarry(v, t.x, t.y, 1) : { k: 'food', n: 1, fish: 'carpa' };
-        if (!G.S.villagers.has(v.id)) return;
-        const F = G.Waters && G.Waters.FISH[c.fish]; const nm = F ? (/a$/.test(F.name) ? 'uma ' : 'um ') + F.name : 'um peixe';
-        // (one load in the hands: the same catch piles up; another kind of fish has no hand left, and goes back to the water)
-        if (v.carry && v.carry.n > 0 && v.carry.k !== c.k) { G.IncUI && G.IncUI.toast && G.IncUI.toast(`Você pegou ${nm}, mas não tem mão para ele: solta de volta.`, 3); return; }
-        if (v.carry && v.carry.n > 0) v.carry.n += c.n; else v.carry = c;
-        G.Possess.deed('pesca');
-        G.IncUI && G.IncUI.toast && G.IncUI.toast(`Você pegou ${nm}! Leve ao armazém.`, 3);
-      } });
+      // (a try of the world's time — slower than the line —, its luck and its fish the world's, drawn by the world at the grab)
+      const dur = WT.fish / wm(v);
+      G.Avatar.act({ world: true, anim: 'low', dur, contact: dur * 0.55, face: f, vact: 'fish',
+        op: w => {
+          if (w.carry && w.carry.n > 0 && !w.carry.fish) return { ok: false, why: 'Suas mãos já estão cheias.' };
+          // (the water may have frozen or gone meanwhile — the god's winter, the sea opened)
+          { const S = G.S, i = W.idx(t.x, t.y); if (!(S.type[i] === G.T.RIVER || S.type[i] <= G.T.SEA) || (S.ice && S.ice[i]) || (S.dry && S.dry[i])) return { ok: false, why: 'A água não está mais ali.' }; }
+          // (the world's dice: the hands are slower than a line; and what bites is that water's own fish)
+          if (G.R() < 0.55) return { ok: false, why: 'Escapou entre os dedos…', slip: 1 };
+          const c = G.Waters ? G.Waters.catchCarry(w, t.x, t.y, 1) : { k: 'food', n: 1, fish: 'carpa' };
+          if (!G.S.villagers.has(w.id)) return { ok: false, why: '' };
+          const F = G.Waters && G.Waters.FISH[c.fish]; const nm = F ? (/a$/.test(F.name) ? 'uma ' : 'um ') + F.name : 'um peixe';
+          // (one load in the hands: the same catch piles up; another kind of fish has no hand left, and goes back to the water)
+          if (w.carry && w.carry.n > 0 && w.carry.k !== c.k) return { ok: false, why: `Você pegou ${nm}, mas não tem mão para ele: solta de volta.` };
+          if (w.carry && w.carry.n > 0) w.carry.n += c.n; else w.carry = c;
+          G.Possess.deed('pesca'); return { ok: true, nm };
+        },
+        then: r => { splash(); say(`Você pegou ${r.nm}! Leve ao armazém.`, 3); }, fail: r => { if (r.slip) splash(); deny(r); } });
       return { ok: true, msg: t.sea ? 'Você se abaixa e espera um peixe passar entre as pernas…' : 'Você se abaixa na água rasa, as mãos em concha…' };
     },
   });
@@ -501,7 +607,7 @@
     can(ctx, t) { return G.S.animals.has(t.a.id) ? { ok: true } : { ok: false, why: 'Foi embora.' }; },
     run(ctx, t) {
       const f = face(ctx, t.X, t.Z); const a = t.a;
-      G.Avatar.act({ anim: 'low', dur: 1.6, face: f, at: [0.6, () => { if (G.FX3D) G.FX3D.spawn({ x: a.x * L(), y: (W.groundH(a.x, a.y) * G.Space.HM) + 1.2, z: a.y * L(), vx: 0, vy: 0.5, vz: 0, life: 1.2, s0: 0.25, s1: 0.4, c: [1, 0.45, 0.6], a: 0.9, fade: 1 }, true); }], done: () => G.Possess.deed('carinho') });
+      G.Avatar.act({ anim: 'low', dur: 1.6, face: f, at: [0.6, () => { if (G.FX3D) G.FX3D.spawn({ x: a.x * L(), y: (W.groundH(a.x, a.y) * G.Space.HM) + 1.2, z: a.y * L(), vx: 0, vy: 0.5, vz: 0, life: 1.2, s0: 0.25, s1: 0.4, c: [1, 0.45, 0.6], a: 0.9, fade: 1 }, true); }], done: () => deed('carinho') });
       return { ok: true, msg: 'Ele se encosta na sua mão.' };
     },
   });
