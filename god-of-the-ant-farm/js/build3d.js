@@ -488,8 +488,9 @@ float m3scale(float p) {
       // the whole lot, unless the building laid its own footing of stones under its walls (footed)
       footed: false,
       plinth() { if (!BASELESS[b.type]) K.as(stuff(b).base, () => g.put(SH.box, R3.mat(x0 + w / 2, lo - 0.2, z0 + d / 2, 0, w - 0.2, y0 - lo + 0.2, d - 0.2), c(P.base ? P.base[0] : '#8a8478'))); },
-      // (the local height of the ground at a point of the lot: what stands outside the walls of a footed house stands on it)
-      gy: (x, z) => W.hAt(Math.min(N - 0.001, (x0 + x) / L), Math.min(N - 0.001, (z0 + z) / L)) * HM() - y0,
+      // (the local height of the ground at a point of the lot: what stands outside the walls of a footed house stands on it —
+      // the ground as its mesh draws it, so what lies on it lies on what is seen: drawnAt)
+      gy: (x, z) => drawnAt(Math.min(N - 0.001, (x0 + x) / L), Math.min(N - 0.001, (z0 + z) / L)) - y0,
     };
     return K;
   }
@@ -553,9 +554,12 @@ float m3scale(float p) {
   // from the door's middle — nothing else is put there), or null
   function doorSteps(K, D, bx, w, room, n0, top, sd1, col, pat, free) {
     const gAt = (a, n) => { if (!K.footed) return -0.4; const p = D(a, 0, n); return K.gy(p[0], p[2]); };
+    // (the highest ground under a tread a along the wall and n out, ta × tn: a step it would come through is not laid — the
+    // ground is reached there)
+    const under = (a, n, ta, tn) => Math.max(gAt(a, n), gAt(a - ta / 2, n), gAt(a + ta / 2, n), gAt(a, n - tn / 2), gAt(a, n + tn / 2), gAt(a - ta / 2, n + tn / 2), gAt(a + ta / 2, n + tn / 2));
     const tone = k => dim(col, 0.94 + K.hv(260 + k) * 0.1);
     const drop = top - gAt(0, n0 + 0.3), need = Math.min(8, Math.ceil(drop / 0.26)), nOut = Math.floor(room / 0.22);
-    const out = (n, rise) => { const t = Math.min(0.32, room / n); K.as(pat, () => { for (let k = 0; k < n; k++) { const sn = n0 + (k + 0.5) * t, yt = top - k * rise; const gy = Math.min(yt - rise, gAt(0, sn)) - 0.04;
+    const out = (n, rise) => { const t = Math.min(0.32, room / n); K.as(pat, () => { for (let k = 0; k < n; k++) { const sn = n0 + (k + 0.5) * t, yt = top - k * rise; if (k && yt < under(0, sn, w, t) + 0.03) break; const gy = Math.min(yt - rise, gAt(0, sn)) - 0.04;
       bx((K.hv(262 + k) - 0.5) * 0.04, gy, sn, w - k * 0.02, yt - gy, t + 0.02, tone(k)); } }); };
     if (drop <= 0.5 || need < 2 || (nOut < 2 && !free)) { const sd = Math.min(sd1, room), sn = n0 + sd / 2; const gy = Math.min(top - 0.4, gAt(0, sn) - 0.04); K.as(pat, () => bx(0, gy, sn, w, top - gy, sd, col)); return null; }
     if (nOut >= need) { out(need, drop / need); return null; }
@@ -565,7 +569,7 @@ float m3scale(float p) {
     if (sg) {
       const rise = G.clamp((top - hi) / need, 0.12, 0.26), t = Math.min(0.32, run / (need - 1));
       K.as(pat, () => { const gy = Math.min(top - rise, gAt(0, sn)) - 0.04; bx(0, gy, sn, w, top - gy, dp, col); // (the landing)
-        for (let k = 1; k < need; k++) { const a = sg * (w / 2 + (k - 0.5) * t), yt = top - k * rise; const gk = Math.min(yt - rise, gAt(a, sn)) - 0.04; bx(a, gk, sn, t + 0.02, yt - gk, dp - k * 0.01, tone(k)); } });
+        for (let k = 1; k < need; k++) { const a = sg * (w / 2 + (k - 0.5) * t), yt = top - k * rise; if (yt < under(a, sn, t, dp) + 0.03) break; const gk = Math.min(yt - rise, gAt(a, sn)) - 0.04; bx(a, gk, sn, t + 0.02, yt - gk, dp - k * 0.01, tone(k)); } });
       return [sg * (need - 1) * t / 2, w + (need - 1) * t];
     }
     if (nOut < 2) { const sd = Math.min(sd1, room), sn = n0 + sd / 2; const gy = Math.min(top - 0.4, gAt(0, sn) - 0.04); K.as(pat, () => bx(0, gy, sn, w, top - gy, sd, col)); return null; }
@@ -1095,8 +1099,9 @@ float m3scale(float p) {
       K.as('beam', () => { for (const s of [-1, 1]) { const a = ga + s * gh; const p = at(a, n1), y = gyA(a, n1); K.box(p[0], y - 0.25, p[1], 0.15, 1.42, 0.15, nordWood(K).dark); } });
       // (the walk of planks laid across the mud from the step to the gate)
       const nP = Math.floor((n1 - 0.42) / 0.27);
-      K.as('plankH', () => { for (let k = 0; k < nP; k++) { const nn = 0.5 + k * 0.27, p = at(ga + (hv(90 + k) - 0.5) * 0.06, nn); const y = Math.min(gyA(ga - 0.5, nn), gyA(ga + 0.5, nn)) - 0.01;
-        K.rbox(p[0], y, p[1], ax ? 1.05 + hv(110 + k) * 0.1 : 0.24, 0.05, ax ? 0.24 : 1.05 + hv(110 + k) * 0.1, mixc([128, 104, 74], [104, 92, 78], hv(130 + k)), (hv(150 + k) - 0.5) * 0.08); } });
+      // (each plank on the ground as it is drawn — on a slope a plank laid flat went into the ground at its high end)
+      K.as(ax ? 'beamX' : 'beamZ', () => { for (let k = 0; k < nP; k++) { const nn = 0.5 + k * 0.27, a0 = ga + (hv(90 + k) - 0.5) * 0.06, hl = (1.05 + hv(110 + k) * 0.1) / 2, sk = (hv(150 + k) - 0.5) * 0.08;
+        const pa = at(a0 - hl, nn - sk), pb = at(a0 + hl, nn + sk); laid(K.g, [K.x0 + pa[0], K.z0 + pa[1]], [K.x0 + pb[0], K.z0 + pb[1]], 0.24, 0.05, K.c(mixc([128, 104, 74], [104, 92, 78], hv(130 + k)))); } });
     } else {
       // (a low wall of stone, mud brick or plastered, its cap of slabs; the gate between two piers)
       const pat = K.st === 'egipcio' ? 'mud' : K.st === 'grego' ? 'whitewash' : K.st === 'asteca' ? 'stucco' : 'stone'; const wc = pat === 'stone' ? (P.base ? P.base[1] : '#8a8478') : (P.wl || '#efe2c4');
@@ -1768,8 +1773,16 @@ float m3scale(float p) {
     const s = (u[1] * v[2] - u[2] * v[1]) * w[0] + (u[2] * v[0] - u[0] * v[2]) * w[1] + (u[0] * v[1] - u[1] * v[0]) * w[2] < 0 ? -1 : 1;
     PM.set(u[0], v[0], w[0] * s, (A[0] + B[0]) / 2, u[1], v[1], w[1] * s, (A[1] + B[1]) / 2 - t, u[2], v[2], w[2] * s, (A[2] + B[2]) / 2, 0, 0, 0, 1); g.put(PLANK || SH.box, PM, col);
   }
-  function walksInto(g, x0, y0, n) {
-    const S = G.S, T = G.T, L = TL(); const mine = []; deckOf.set(x0 + ',' + y0, mine);
+  // (a plank laid on the ground as it is drawn: A, B the middles of its ends (world metres, x and z), wd its width, t its
+  // thickness — its top DUP over the highest ground under each end, lifted where the ground bulges between them)
+  function laid(g, A, B, wd, t, col) {
+    const L = TL(), dx = B[0] - A[0], dz = B[1] - A[1], l = Math.hypot(dx, dz) || 1; const wv = [-dz / l * wd, 0, dx / l * wd];
+    const top = (X, Z) => Math.max(drawnAt(X / L, Z / L), drawnAt((X - wv[0] / 2) / L, (Z - wv[2] / 2) / L), drawnAt((X + wv[0] / 2) / L, (Z + wv[2] / 2) / L)) + DUP;
+    let yA = top(A[0], A[1]), yB = top(B[0], B[1]); const lift = Math.max(0, top((A[0] + B[0]) / 2, (A[1] + B[1]) / 2) - (yA + yB) / 2); yA += lift; yB += lift;
+    plank(g, [A[0], yA, A[1]], [B[0], yB, B[1]], wv, t, col);
+  }
+  function walksInto(g, x0, y0, n, reg) {
+    const S = G.S, T = G.T, L = TL(); const mine = []; if (reg !== false) deckOf.set(x0 + ',' + y0, mine); // (reg false: the proof's own drawing, nothing kept)
     const near = []; for (const b of S.buildings.values()) { const cx = b.x + b.w / 2, cy = b.y + b.h / 2; if (cx > x0 - 10 && cx < x0 + n + 10 && cy > y0 - 10 && cy < y0 + n + 10) near.push([cx, cy, styleOf(b) === 'nordico']); }
     if (!near.some(q => q[2])) return;
     const road = (x, y) => W.inb(x, y) && S.road[y * N + x] > 0;
@@ -1777,15 +1790,14 @@ float m3scale(float p) {
       if (!W.inb(x, y)) continue; const i = y * N + x; const r = S.road[i]; if (!r || r > 2 || S.type[i] <= T.RIVER || S.occ[i] || S.wall[i]) continue;
       let best = null, bd = 100; for (const q of near) { const d = (q[0] - x - 0.5) ** 2 + (q[1] - y - 0.5) ** 2; if (d < bd) { bd = d; best = q; } } if (!best || !best[2]) continue;
       const E = road(x + 1, y), Wt = road(x - 1, y), So = road(x, y + 1), No = road(x, y - 1);
-      decks.set(i, (E ? 1 : 0) | (Wt ? 2 : 0) | (So ? 4 : 0) | (No ? 8 : 0)); mine.push(i);
+      if (reg !== false) { decks.set(i, (E ? 1 : 0) | (Wt ? 2 : 0) | (So ? 4 : 0) | (No ? 8 : 0)); mine.push(i); }
       const cx = (x + 0.5) * L, cz = (y + 0.5) * L; const alongX = (E || Wt) && !(So || No) ? true : (So || No) && !(E || Wt) ? false : G.hash(i * 7 + 1) < 0.5;
       // (a run of planks across the way, from a0 to a1 along it from the tile's middle; ax: the way runs along X)
       const run = (ax, a0, a1, k0) => { const m = Math.max(1, Math.round((a1 - a0) / 0.34)), p = (a1 - a0) / m; g.pat = ax ? PAT.beamZ : PAT.beamX;
         for (let k = 0; k < m; k++) { const h = G.hash(i * 131 + k0 + k), h2 = G.hash(i * 37 + k0 + k * 3); const a = a0 + (k + 0.5) * p + (h - 0.5) * 0.03;
           const e0 = -DW - h2 * 0.08, e1 = DW + G.hash(i * 53 + k0 + k) * 0.08; // (each a little longer or shorter at its ends)
           const A = ax ? [cx + a, cz + e0] : [cx + e0, cz + a], B = ax ? [cx + a, cz + e1] : [cx + e1, cz + a];
-          const yA = drawnAt(A[0] / L, A[1] / L) + DUP, yB = drawnAt(B[0] / L, B[1] / L) + DUP; const wv = ax ? [p - 0.035, 0, 0] : [0, 0, p - 0.035];
-          plank(g, [A[0], yA, A[1]], [B[0], yB, B[1]], wv, DT, mixc([128, 106, 80], [112, 106, 98], h2 * 0.8).map(c => c * (0.88 + h * 0.2))); } };
+          laid(g, A, B, p - 0.035, DT, mixc([128, 106, 80], [112, 106, 98], h2 * 0.8).map(c => c * (0.88 + h * 0.2))); } };
       run(alongX, -DW, DW, 0);
       if (E) run(true, DW, L / 2, 20); if (Wt) run(true, -L / 2, -DW, 40); if (So) run(false, DW, L / 2, 60); if (No) run(false, -L / 2, -DW, 80);
     }
@@ -1869,6 +1881,18 @@ float m3scale(float p) {
   // the drawing's own proof (for the tests): every building near the body (or the ones given) drawn again — no number that
   // is not a number, nothing far out of its lot, nothing deep in the ground, a floor on its ground; and what lies about
   // them (Props3D.check). Gives back the list of what is wrong
+  // (how much of the lying surfaces of a drawing — the faces turned up: a step, a plank, a slab — the ground as it is drawn
+  // comes through: part of the face over the ground, part under it, in square metres; the faces all under it are hidden)
+  function cutByGround(P, Nn) {
+    const L = TL(); let area = 0, at = null, worst = 0;
+    for (let k = 0; k + 8 < P.length; k += 9) {
+      if (Nn[k + 1] < 0.85 || Nn[k + 4] < 0.85 || Nn[k + 7] < 0.85) continue;
+      let lo = 1e9, hi = -1e9; const cx = (P[k] + P[k + 3] + P[k + 6]) / 3, cy = (P[k + 1] + P[k + 4] + P[k + 7]) / 3, cz = (P[k + 2] + P[k + 5] + P[k + 8]) / 3;
+      for (const [X, Y, Z] of [[P[k], P[k + 1], P[k + 2]], [P[k + 3], P[k + 4], P[k + 5]], [P[k + 6], P[k + 7], P[k + 8]], [cx, cy, cz]]) { const d = Y - drawnAt(X / L, Z / L); if (d < lo) lo = d; if (d > hi) hi = d; }
+      if (lo < -0.015 && hi > 0.005) { const ux = P[k + 3] - P[k], uz = P[k + 5] - P[k + 2], vx = P[k + 6] - P[k], vz = P[k + 8] - P[k + 2]; const a = Math.abs(ux * vz - uz * vx) / 2; area += a; if (-lo > worst) { worst = -lo; at = [+(cx / L).toFixed(1), +(cz / L).toFixed(1)]; } }
+    }
+    return { area, at, worst };
+  }
   B3.check = function (list) {
     const S = G.S; const out = []; const L = TL(); if (!SH) return out; // (only once the 3D is made)
     if (!list) { const f = G.Possess && G.Possess.body && G.Possess.body(); const cx = f ? f.x : N / 2, cy = f ? f.y : N / 2; list = [...S.buildings.values()].filter(b => G.dist(b.x + b.w / 2, b.y + b.h / 2, cx, cy) < 14); }
@@ -1884,7 +1908,12 @@ float m3scale(float p) {
       if (P.length && lo < K.lo - 1.2 && b.type !== 'doca') out.push(`${tag}: enterrado ${(K.lo - lo).toFixed(2)} m`); // (a quay's posts go down into the sea)
       if (P.length && lo > K.hi + 0.35) out.push(`${tag}: flutua ${(lo - K.hi).toFixed(2)} m`);
       if (K.y0 < K.lo - 0.05) out.push(`${tag}: piso abaixo do chão`);
+      const cut = cutByGround(P, g.n); if (cut.area > 0.2) out.push(`${tag}: ${cut.area.toFixed(2)} m² de superfície deitada cortada pelo chão (até ${(cut.worst * 100).toFixed(0)} cm), perto de ${cut.at}`);
     }
+    // (the walks of planks of the chunks of these buildings, drawn again for the proof alone: none cut by the ground)
+    const C = 16, seen = new Set(); for (const b of list) { const cx = Math.floor(b.x / C), cy = Math.floor(b.y / C); const key = cx + ',' + cy; if (seen.has(key)) continue; seen.add(key);
+      const g = R3.Geo(); walksInto(g, cx * C, cy * C, C, false); if (!g.p.length) continue; const cut = cutByGround(g.p, g.n);
+      if (cut.area > 0.2) out.push(`passarelas do pedaço ${key}: ${cut.area.toFixed(2)} m² cortados pelo chão (até ${(cut.worst * 100).toFixed(0)} cm), perto de ${cut.at}`); }
     if (G.Props3D && G.Props3D.check) for (const p of G.Props3D.check(list)) out.push(p);
     return out;
   };
