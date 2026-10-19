@@ -92,3 +92,44 @@ comercial. Nada é baixado em tempo de execução. O inventário completo está 
   - o corpo: `bodymesh.js`, 1,8 MB;
   - as sete peças: 200 KB.
 - **O desempenho, medido** (a medida e a máquina estão na seção seguinte).
+
+## O desempenho, medido
+
+**Como se mediu:**
+- A ferramenta: `qa/visual/desempenho.js`, nas vistas da praça e da noite de Hedeby.
+- A máquina: 4 núcleos, sem placa de vídeo (o 3D desenhado por software, no navegador de testes). Durante a medida, só o
+  navegador que media estava aberto; a carga perto de 4 é dele mesmo, e a calibração do JavaScript ficou estável
+  (62 a 75 ms).
+- A comparação: o jogo de antes da reforma (a v35) contra a versão nova, uma logo depois da outra, em duas voltas.
+- Os números são o tempo do 3D por quadro. Por software eles são muito maiores que numa placa de vídeo; o que vale é a
+  diferença entre as duas versões na mesma máquina.
+
+**1. A medida oficial**, pelo quadro do meio de cinco, nas três qualidades:
+
+| Qualidade | Chamadas de desenho | Triângulos da cena | Tempo do 3D, praça | Tempo do 3D, noite |
+|---|---|---|---|---|
+| Leve | −17% | −32% a −38% | +13%, +13% | −16%, −12% |
+| Média | −41% | −38% a −41% | +14%, +19% | +18%, +6% |
+| Alta | −13% | −11% a −14% | +79%, +96% | +102%, +89% |
+
+**2. A Média, de novo, pela média de doze quadros.** Na versão nova a sombra é refeita um quadro sim, outro não, e o
+quadro do meio de cinco caía num tipo ou no outro por acaso. O especialista da luz tinha pedido esta medida antes da
+primeira (T-051).
+
+| A Média | Praça (volta 1, volta 2) | Noite (volta 1, volta 2) | Ao todo |
+|---|---|---|---|
+| Como estava | +10%, +15% | +7%, +9% | **+10%** |
+| Com o corte de reserva | +1%, +5% | 0%, 0% | **+1,5%** |
+
+**A decisão:** a regra do estúdio para a Média era não custar mais de 10% a mais que antes (D-032). Ela ficou no limite,
+então entrou o corte de reserva que já estava medido e fotografado: a imagem um pouco menor (0,75) e a sombra refeita a
+cada três quadros. Na foto lado a lado a diferença quase não se vê; a imagem fica um pouco mais macia.
+
+**O que isso quer dizer para quem joga:**
+- **Leve:** custa o mesmo que antes (à noite, menos).
+- **Média:** custa praticamente o mesmo que antes, com 40% menos chamadas de desenho e de triângulos.
+- **Alta e Ultra:** o pós-processamento (sombras suaves, oclusão, brilho) quase dobra o custo por software. Elas são
+  para máquina com placa de vídeo.
+
+**A memória, na Média:** as geometrias passaram de 40 para 46 MB, as texturas de 0,6 para 67 MB (a pilha de texturas
+nova) e o heap do JavaScript de 26 para 28 MB.
