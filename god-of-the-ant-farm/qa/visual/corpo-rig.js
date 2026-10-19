@@ -277,7 +277,7 @@ const through = (cm, bm, hem) => {
   G.Space = Object.assign(G.Space || {}, { TILE: 4, HM: 1.5, stoneTop: () => -Infinity, bedAt: () => 0.3 });
   Object.assign(G.W, { idx: (x, y) => (y | 0) * N + (x | 0), hAt: () => 1, groundH: () => 1, waterH: () => 0.5, inb: (x, y) => x >= 0 && y >= 0 && x < N && y < N });
   G.Animals = G.Animals || { DEF: {} }; G.Animals.DEF.cervo = G.Animals.DEF.cervo || { cls: 'land', size: 1, diet: 'herb', art: 'quad' };
-  const S = G.S = { clock: 0, villagers: new Map(), animals: new Map(), type: new Uint8Array(N * N).fill(4), road: new Uint8Array(N * N), ice: null };
+  const S = G.S = { clock: 0, villagers: new Map(), animals: new Map(), buildings: new Map(), loose: [], type: new Uint8Array(N * N).fill(4), road: new Uint8Array(N * N), ice: null }; // (a world has buildings and things lying about, even none)
   const fx = 48, fy = 48; let id = 1;
   for (const d of [1.5, 2.5, 4, 8, 11, 14, 18, 24, 30, 40]) for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2 + d; // (rings of people, metres off)
     S.villagers.set(id, { id, x: fx + Math.cos(a) * d / 4, y: fy + Math.sin(a) * d / 4, age: 30, g: k % 2 ? 'f' : 'm', role: null, civ: 'nordico', skin: '#d8a888', hair: '#3a2a1a', face: 1 }); id++; }

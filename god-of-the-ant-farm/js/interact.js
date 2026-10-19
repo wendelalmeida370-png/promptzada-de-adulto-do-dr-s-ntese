@@ -569,7 +569,8 @@
       const o = t.o; const v = ctx.v; const g = AN(o.anim); const f = face(ctx, t.X, t.Z);
       const { to, go } = walkUp(ctx, v, t.X, t.Z, 0.7); const goW = go * G.Space.TIME; const hand = g.act === 'lift' || g.act === 'arrange';
       // (where the hands go: with a load, down before the feet; empty, to the thing — on the ground, or on the counter)
-      const hands = reachTo(a => { if (!a.P) { const H = G.People3D && G.People3D.look(v).held; a.P = H ? putAt(v, t.X, t.Z)(a) : toward(G.Avatar.pos(), t.X, t.Z, g.act === 'arrange' ? 0.9 : 0.2); } return a.P; }, 0.36, 0.45);
+      // (the thing drawn there when there is one — the crate of the quay the world hands out next: People3D.nearLoad)
+      const hands = reachTo(a => { if (!a.P) { const P3 = G.People3D; const H = P3 && P3.look(v).held; const src = !H && P3 && P3.nearLoad ? P3.nearLoad(t.X, t.Z, 0.9) : null; a.P = H ? putAt(v, t.X, t.Z)(a) : src || toward(G.Avatar.pos(), t.X, t.Z, g.act === 'arrange' ? 0.9 : 0.2); } return a.P; }, 0.36, 0.45);
       G.Avatar.act({ world: true, anim: GEST[g.act] || 'interact', dur: Math.max(g.dur, g.contact + 0.2) + goW, contact: g.contact + goW, face: f, to, toT: go, vact: g.act,
         reach: hand ? a => (a.tr < go ? null : hands(a)) : null, op: w => G.Act.perform(w, o), then: r => say(r.msg), fail: deny });
       return { ok: true };

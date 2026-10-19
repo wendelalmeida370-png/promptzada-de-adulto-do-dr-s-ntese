@@ -330,12 +330,35 @@ vec3 gxGrade( vec3 c ) {
     for (const k in THREE.ShaderLib) { const u = THREE.ShaderLib[k].uniforms; if (u && u.fogColor) Object.assign(u, GX); }
     Object.assign(THREE.UniformsLib.fog, GX);
   }
+  // the shapes every builder puts, and the frames reused to put them — made once, before anything is drawn (and without a
+  // graphics card: the geometry is only numbers — the tests in Node build the same chunks the game does)
+  R3.shapes = function () {
+    THREE = window.THREE; if (R3.SH) return R3.SH;
+    R3._m = new THREE.Matrix4(); R3._m2 = new THREE.Matrix4(); R3._v = new THREE.Vector3(); R3._nm = new THREE.Matrix3();
+    SH.box = new THREE.BoxGeometry(1, 1, 1); SH.box.translate(0, 0.5, 0); // (standing on its base)
+    SH.cyl = new THREE.CylinderGeometry(0.5, 0.5, 1, 7); SH.cyl.translate(0, 0.5, 0);
+    SH.cone = new THREE.ConeGeometry(0.5, 1, 8); SH.cone.translate(0, 0.5, 0);
+    SH.ico = new THREE.IcosahedronGeometry(0.5, 1);
+    SH.ico0 = new THREE.IcosahedronGeometry(0.5, 0);
+    SH.dode = new THREE.DodecahedronGeometry(0.5, 0);
+    SH.sph = new THREE.SphereGeometry(0.5, 8, 6);
+    // a gable: a triangular prism, ridge along X, base 1×1 at y = 0, peak at y = 1
+    { const g = new THREE.BufferGeometry(); const v = [
+      -0.5, 0, -0.5, 0.5, 0, -0.5, 0.5, 1, 0, -0.5, 0, -0.5, 0.5, 1, 0, -0.5, 1, 0, // north slope
+      -0.5, 0, 0.5, -0.5, 1, 0, 0.5, 1, 0, -0.5, 0, 0.5, 0.5, 1, 0, 0.5, 0, 0.5, // south slope
+      -0.5, 0, -0.5, -0.5, 1, 0, -0.5, 0, 0.5, 0.5, 0, -0.5, 0.5, 0, 0.5, 0.5, 1, 0, // the two gable ends
+    ]; g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); g.computeVertexNormals(); SH.gable = g; }
+    // a hip roof: a pyramid of four slopes on a 1×1 base
+    { const g = new THREE.ConeGeometry(0.7071, 1, 4, 1); g.rotateY(Math.PI / 4); g.translate(0, 0.5, 0); SH.hip = g; }
+    R3.SH = SH;
+    return SH;
+  };
   function init() {
     THREE = window.THREE; if (!THREE) throw new Error('three.js não carregou');
     toon();
     U.wind.value = new THREE.Vector3(); U.body.value = new THREE.Vector4(); U.sky.value = new THREE.Color(0xbfd8ea);
     G.Ground3D.init(THREE);
-    R3._m = new THREE.Matrix4(); R3._m2 = new THREE.Matrix4(); R3._v = new THREE.Vector3(); R3._nm = new THREE.Matrix3();
+    R3.shapes();
     canvas = document.createElement('canvas'); canvas.id = 'game3d';
     canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;display:none;z-index:1;opacity:0;outline:none;';
     document.body.insertBefore(canvas, document.getElementById('game').nextSibling);
@@ -757,23 +780,6 @@ vec3 gxGrade( vec3 c ) {
         #include <opaque_fragment>`);
     };
     MAT.wallWater = new THREE.MeshPhongMaterial({ color: 0x3f9cbc, transparent: true, opacity: 0.6, shininess: 100, side: THREE.DoubleSide, depthWrite: false });
-    // the shapes
-    SH.box = new THREE.BoxGeometry(1, 1, 1); SH.box.translate(0, 0.5, 0); // (standing on its base)
-    SH.cyl = new THREE.CylinderGeometry(0.5, 0.5, 1, 7); SH.cyl.translate(0, 0.5, 0);
-    SH.cone = new THREE.ConeGeometry(0.5, 1, 8); SH.cone.translate(0, 0.5, 0);
-    SH.ico = new THREE.IcosahedronGeometry(0.5, 1);
-    SH.ico0 = new THREE.IcosahedronGeometry(0.5, 0);
-    SH.dode = new THREE.DodecahedronGeometry(0.5, 0);
-    SH.sph = new THREE.SphereGeometry(0.5, 8, 6);
-    // a gable: a triangular prism, ridge along X, base 1×1 at y = 0, peak at y = 1
-    { const g = new THREE.BufferGeometry(); const v = [
-      -0.5, 0, -0.5, 0.5, 0, -0.5, 0.5, 1, 0, -0.5, 0, -0.5, 0.5, 1, 0, -0.5, 1, 0, // north slope
-      -0.5, 0, 0.5, -0.5, 1, 0, 0.5, 1, 0, -0.5, 0, 0.5, 0.5, 1, 0, 0.5, 0, 0.5, // south slope
-      -0.5, 0, -0.5, -0.5, 1, 0, -0.5, 0, 0.5, 0.5, 0, -0.5, 0.5, 0, 0.5, 0.5, 1, 0, // the two gable ends
-    ]; g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); g.computeVertexNormals(); SH.gable = g; }
-    // a hip roof: a pyramid of four slopes on a 1×1 base
-    { const g = new THREE.ConeGeometry(0.7071, 1, 4, 1); g.rotateY(Math.PI / 4); g.translate(0, 0.5, 0); SH.hip = g; }
-    R3.SH = SH;
     applyQuality();
     window.addEventListener('resize', resize);
     resize();

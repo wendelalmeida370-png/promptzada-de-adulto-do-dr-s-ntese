@@ -209,12 +209,19 @@
     if (!c && !gear) return null;
     const key = c ? c : gear; const m = heldMemo.get(v.id);
     if (m && m.key === key && m.n === (c ? c.n : 0) && m.civ === civ) return m.out;
+    const out = loadForm(c, gear, civ);
+    heldMemo.set(v.id, { key, n: c ? c.n : 0, civ, out }); if (heldMemo.size > 3000) heldMemo.clear();
+    return out;
+  };
+  // (a load — or the gear — as the thing it is, by the people who carry it)
+  function loadForm(c, gear, civ) {
     let form = 'caixa', grip = 'peito', kg = 8, tint = null; const n = c ? c.n : 1;
     if (gear) { if (gear === 'rede') { form = 'rede'; grip = 'ombro'; kg = 6; } else if (gear === 'remo') { form = 'remo'; grip = 'ombro'; kg = 3; } else { form = 'caixa'; kg = 10; } }
     else {
       const g = GOOD[c.k] || GOOD.food; form = g[0]; grip = g[1]; kg = g[3] + g[2] * n;
       // (the marks the world put on the load say what it came in)
-      if (c.crate) { form = c.fish || c.fishCol ? 'caixaPeixe' : 'caixa'; grip = 'peito'; kg = 4 + 3 * n; if (c.fishCol) tint = c.fishCol; else if (c.fish && G.Waters && G.Waters.FISH[c.fish]) tint = G.Waters.FISH[c.fish].col; }
+      // (a crate of fish open, its fish showing; any other crate — the cargo a ship brought — shut: a quay's crate always has a colour)
+      if (c.crate) { form = c.fish ? 'caixaPeixe' : 'caixa'; grip = 'peito'; kg = 4 + 3 * n; if (c.fish) tint = c.fishCol || (G.Waters && G.Waters.FISH[c.fish] ? G.Waters.FISH[c.fish].col : null); }
       else if (c.jar) { form = 'jarro'; grip = 'cabeca'; kg = 4 + 9 * n; }
       else if (c.honey) { form = 'jarro'; grip = 'peito'; kg = 1 + 2.5 * n; }
       else if (c.meat) { form = 'carne'; grip = 'ombro'; kg = 3 * n + 2; tint = TINT.meat; }
@@ -229,10 +236,8 @@
     // (the people's own ways)
     const Wy = WAYS[civ]; if (Wy) { if (Wy.form && Wy.form[form]) form = Wy.form[form]; if (Wy.grip && !(Wy.keep && Wy.keep[form])) grip = (Wy.grip[form] || Wy.grip[grip] || grip); }
     if (form === 'barril' && grip === 'ombro') grip = 'abraco';
-    const out = { form, grip, kg: +kg.toFixed(1), tint: tint ? lc(tint) : null, n, hands: HANDS[grip] || '', size: FORM[form].sz, gear: !!gear };
-    heldMemo.set(v.id, { key, n: c ? c.n : 0, civ, out }); if (heldMemo.size > 3000) heldMemo.clear();
-    return out;
-  };
+    return { form, grip, kg: +kg.toFixed(1), tint: tint ? lc(tint) : null, n, hands: HANDS[grip] || '', size: FORM[form].sz, gear: !!gear };
+  }
   // the forms' shapes, made once — each in its own frame: its middle at the origin, +Y up, +Z away from the one who holds it,
   // +X to their left; the wood, the clay, the iron in the vertex colours (a part that shows what it holds — the fish, the
   // fruit, the cloth — white, to be painted by the instance's colour)
@@ -341,6 +346,73 @@
   function heldEnd() { if (held) for (const k in held) { const f = held[k]; for (const m of [f.a, f.t]) { if (!m) continue; m.count = heldN[k]; m.visible = heldN[k] > 0; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } } }
   P3.helds = () => (held ? Object.keys(held).filter(k => heldN[k]).map(k => [k, heldN[k]]) : []); // (for the tests: what is held this frame)
   P3.heldGeo = k => (held && held[k] ? [held[k].a && held[k].a.geometry, held[k].t && held[k].t.geometry].filter(Boolean) : null); // (for the tests: a form's shape, read only)
+
+  // ------------------------------ the loads lying in the world ------------------------------
+  // The crates set down on a quay — the world's own, b.crates (G.Depot's 'q:'), the same the god's view draws by the water
+  // (fishers.js crateSpot) — and what someone dropped where they fell (S.loose, G.Depot's 'g:'): drawn as the forms carried, so
+  // the crate a docker lifts is the crate that lay there, and the one set down lies there after. A crate keeps its place while
+  // it is there (the view's memory of each quay, by the crate's name); a new one takes the first free place. Only seen: the
+  // world is only read here
+  const QSLOT = []; for (let r = 0; r < 2; r++) for (let a = 0; a < 5; a++) QSLOT.push([(a - 2) * 0.56, r * 0.5]); // (two rows of five, the first by the water)
+  P3.QSLOT = QSLOT;
+  P3.lying = []; // ([X, Y, Z, form, crate's name, quay's id, its place in the quay's list] drawn this frame: for the hands and the tests)
+  let quays = new Map(), dockList = [], dockKey = '';
+  G.worldHooks.push(() => { quays = new Map(); dockList = []; dockKey = ''; P3.lying.length = 0; });
+  // (the quays: looked for again when a building comes or goes, and every few seconds of the world)
+  const docksNow = () => { const S = G.S; const key = S.buildings.size + ':' + Math.floor(S.clock / 4); if (dockKey !== key) { dockKey = key; dockList = []; for (const b of S.buildings.values()) if (b.type === 'doca') dockList.push(b); } return dockList; };
+  // (where the god's view lays a quay's crates — fishers.js crateSpot —, from the quay's own record, only read: none made yet,
+  // none drawn)
+  P3.crateSpot = function (b) { const di = b._dock; const q = di && di.quay; if (!q) return null; const wd = b.wd || [1, 0]; const p = [q[0] - wd[0] * 0.9 + wd[1] * 0.8, q[1] - wd[1] * 0.9 - wd[0] * 0.8]; return W.walkableXY(p[0], p[1]) ? p : q; };
+  const LM = { m: null, c: null }; const lcMemo = new Map();
+  const lcOf = hex => { let c = lcMemo.get(hex); if (!c) { c = lc(hex); lcMemo.set(hex, c); } return c; };
+  // (a form put down: its middle at X, Y, Z, its width along (ax, az), upright — or lying on its side, flat)
+  function lyingPut(form, X, Y, Z, ax, az, tint, flat) {
+    const f = held && held[form]; if (!f || heldN[form] >= MAX) return false;
+    if (!LM.m) { LM.m = new THREE.Matrix4(); LM.c = new THREE.Color(); }
+    if (flat) LM.m.set(ax, -az, 0, X, 0, 0, -1, Y, az, ax, 0, Z, 0, 0, 0, 1); else LM.m.set(ax, 0, -az, X, 0, 1, 0, Y, az, 0, ax, Z, 0, 0, 0, 1);
+    const i = heldN[form]++; if (f.a) f.a.setMatrixAt(i, LM.m);
+    if (f.t) { f.t.setMatrixAt(i, LM.m); const t = tint || [0.8, 0.75, 0.6]; LM.c.setRGB(t[0], t[1], t[2]); f.t.setColorAt(i, LM.c); }
+    return true;
+  }
+  const FLAT = { peixe: 1, cambada: 1, remo: 1, ferramentas: 1, marfim: 1 }; // (what lies flat on the ground: it hangs or rides along in the hands)
+  // (water one would stand in: a river not bridged nor frozen, the sea not parted)
+  const wet = (x, y) => { const S = G.S; if (!W.inb(x, y)) return false; const i = W.idx(x, y); const t = S.type[i]; return (t === G.T.RIVER && !S.road[i] && !(S.ice && S.ice[i])) || (t <= G.T.SEA && !(S.dry && S.dry[i])); };
+  function lyingDraw(focus, R2) {
+    const S = G.S; const TL = G.Space.TILE; P3.lying.length = 0; if (!held) return;
+    for (const b of docksNow()) {
+      const L = b.crates; if (!b.built || !L || !L.length) { quays.delete(b.id); continue; }
+      const p = P3.crateSpot(b); if (!p) continue; const wd = b.wd || [1, 0]; const ax = -wd[1], az = wd[0]; // (along the water's edge; the rows step back from it)
+      // (on dry ground: where the god's view's spot falls in a ford, the crates stand back from the water, never under it)
+      let X0 = p[0] * TL, Z0 = p[1] * TL; for (let q = 0; q < 6 && wet(X0 / TL, Z0 / TL); q++) { X0 -= wd[0] * 0.5; Z0 -= wd[1] * 0.5; }
+      if ((X0 - focus.X) ** 2 + (Z0 - focus.Z) ** 2 > R2) continue;
+      let mem = quays.get(b.id); if (!mem) quays.set(b.id, mem = new Map());
+      // (the places of the crates gone are free again; a new crate takes the first free one)
+      const here = new Set(); for (let i = 0; i < L.length; i++) here.add(L[i].id !== undefined ? L[i].id : 'i' + i);
+      for (const id of [...mem.keys()]) if (!here.has(id)) mem.delete(id);
+      const used = new Set(mem.values());
+      for (let i = 0; i < L.length; i++) {
+        const c = L[i]; const id = c.id !== undefined ? c.id : 'i' + i; let k = mem.get(id);
+        if (k === undefined) { k = 0; while (used.has(k)) k++; if (k >= QSLOT.length) continue; mem.set(id, k); used.add(k); }
+        const [a, n] = QSLOT[k]; let X = X0 + ax * a - wd[0] * n, Z = Z0 + az * a - wd[1] * n; for (let q = 0; q < 4 && wet(X / TL, Z / TL); q++) { X -= wd[0] * 0.5; Z -= wd[1] * 0.5; }
+        const form = c.fish ? 'caixaPeixe' : 'caixa'; const Y = groundY(X / TL, Z / TL) + FORM[form].sz[1] / 2 + 0.005;
+        if (lyingPut(form, X, Y, Z, ax, az, c.fish && c.col ? lcOf(c.col) : null)) P3.lying.push([X, Y, Z, form, id, b.id, i]);
+      }
+    }
+    // (what fell from someone's arms: the load as it was carried, its form by the people who carried it)
+    for (const o of S.loose || []) {
+      const X = o.x * TL, Z = o.y * TL; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > R2) continue;
+      const f = G.Fac.get(o.fac); const H = loadForm({ k: o.k, n: o.n, crate: o.cid ? 1 : 0, fish: o.fish || null, fishCol: o.col || null }, null, f ? f.civ : null); if (!H) continue;
+      const a = G.hash(o.id * 7 + 3) * TAU; const flat = !!FLAT[H.form]; const Y = groundY(o.x, o.y) + (flat ? H.size[2] : H.size[1]) / 2 + 0.005;
+      if (lyingPut(H.form, X, Y, Z, Math.cos(a), Math.sin(a), H.tint, flat)) P3.lying.push([X, Y, Z, H.form, o.id, 0, -1]);
+    }
+  }
+  // the load the hands of someone at X, Z would take next (metres; r: how far): on the nearest quay with crates in reach, the
+  // crate the world hands out first — the first of its list —; otherwise the nearest thing lying there. Its middle, or null
+  P3.nearLoad = function (X, Z, r) {
+    let best = null, bd = r * r, bq = null, bqd = r * r;
+    for (const e of P3.lying) { const d = (e[0] - X) ** 2 + (e[2] - Z) ** 2; if (e[5] && e[6] === 0 && d < bqd) { bqd = d; bq = e; } if (d < bd) { bd = d; best = e; } }
+    const e = bq || best; return e ? [e[0], e[1], e[2]] : null;
+  };
 
   let emoPool = []; const emoTex = new Map();
   function emoMap(k) { let t = emoTex.get(k); if (t === undefined) { const s = G.Art && G.Art.icon ? G.Art.icon(k) : null; t = s && s.c ? new THREE.CanvasTexture(s.c) : null; if (t) t.colorSpace = THREE.SRGBColorSpace; emoTex.set(k, t); } return t; }
@@ -1172,7 +1244,7 @@
     if (!LIFT_ACTS.has(v.act) && !PUT_ACTS.has(v.act)) s.ga = null; else if (!H && LIFT_ACTS.has(v.act)) s.ga = v.act;
     let want = 0;
     if (!H && LIFT_ACTS.has(v.act)) {
-      want = 1; const P = s.rP || (s.rP = [0, 0, 0]); const src = G.Things3D && G.Things3D.nearLoad ? G.Things3D.nearLoad(X, Z, 1.8) : null;
+      want = 1; const P = s.rP || (s.rP = [0, 0, 0]); const src = P3.nearLoad(X, Z, 1.8);
       if (src) { P[0] = src[0]; P[1] = src[1]; P[2] = src[2]; } else { P[0] = X + c * 0.55; P[1] = Y + 0.2; P[2] = Z + n * 0.55; }
     } else if (H && PUT_ACTS.has(v.act) && s.ga !== v.act) { want = 1; const P = s.rP || (s.rP = [0, 0, 0]); P[0] = X + c * 0.55; P[1] = Y + H.size[1] / 2 + 0.02; P[2] = Z + n * 0.55; }
     s.rw = G.clamp((s.rw || 0) + (want ? 1 : -1) * dt / 0.45, 0, 1);
@@ -1286,6 +1358,7 @@
     P3.crowd = c;
     for (const m of mesh) { m.count = idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
     P3.count = idx; P3.culled = culled;
+    lyingDraw(focus, RC2);
     if (skin) G.Body3D.end(); toolsEnd(); heldEnd();
     beasts(focus, R2, dt);
   };
