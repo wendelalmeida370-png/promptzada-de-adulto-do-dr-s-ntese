@@ -1384,10 +1384,15 @@ float m3scale(float p) {
       for (let k = 1; k < 7; k++) { const f = k / 7; const a = [foot[0] + (topP[0] - foot[0]) * f, foot[1] + (topP[1] - foot[1]) * f, foot[2] + (topP[2] - foot[2]) * f]; K.log([a[0] - side[0], a[1], a[2] - side[2]], [a[0] + side[0], a[1], a[2] + side[2]], 0.022, pc); } });
     // (what it is being made of, in a corner of the lot: logs, planks, stones)
     const cx = hv(11) < 0.5 ? Math.min(K.w - 0.9, X1 - 0.6) : Math.max(0.9, X0 + 0.6), cz = hv(12) < 0.5 ? Math.min(K.d - 0.7, Z1 - 0.45) : Math.max(0.7, Z0 + 0.45);
-    const gy = Math.min(0, K.gy(cx, cz)) - 0.03;
-    K.as('bark', () => { for (let k = 0; k < 5; k++) { const row = k < 3 ? 0 : 1; const off = row ? (k - 3.5) * 0.24 : (k - 1) * 0.24; K.log([cx - 0.75, gy + 0.12 + row * 0.2, cz + off], [cx + 0.75, gy + 0.12 + row * 0.2, cz + off], 0.11, k % 2 ? [128, 98, 66] : [112, 86, 58]); } });
-    if (K.fine) { const pz = cz + (cz > z ? -1 : 1) * 0.6; K.as('plankH', () => { for (let k = 0; k < 4; k++) K.box(cx, gy + k * 0.05, pz, 1.4, 0.045, 0.3, [168, 134, 92], 0); });
-      const R3r = G.Realm; const bs = K.P.base || ['#8a8478']; K.as('rock', () => { for (let k = 0; k < 4; k++) { const sx2 = cx + (cx > x ? -1 : 1) * (0.95 + (k % 2) * 0.32), sz2 = cz + (k < 2 ? -0.18 : 0.18); K.g.put(R3r.SH.ico0, R3r.mat(K.x0 + sx2, K.y0 + gy + 0.12, K.z0 + sz2, k, 0.4, 0.28, 0.34), K.c(bs[k % bs.length])); } }); }
+    // (on the top of the plinth where the lot has one — the work stands on it; on the ground as it is drawn on a footed lot,
+    // each piece on its own ground: laid flat at the height of the pile's middle, a slope put the high end of the planks under
+    // the ground, inside the plinth where there was one — Build3D.check: lying faces cut by the ground)
+    const on = (x2, z2) => (K.footed ? K.gy(x2, z2) : 0);
+    K.as('bark', () => { for (let k = 0; k < 5; k++) { const row = k < 3 ? 0 : 1; const off = row ? (k - 3.5) * 0.24 : (k - 1) * 0.24; const xa = cx - 0.75, xb = cx + 0.75, zz = cz + off;
+      K.log([xa, on(xa, zz) + 0.1 + row * 0.2, zz], [xb, on(xb, zz) + 0.1 + row * 0.2, zz], 0.11, k % 2 ? [128, 98, 66] : [112, 86, 58]); } });
+    if (K.fine) { const pz = cz + (cz > z ? -1 : 1) * 0.6;
+      K.as('plankH', () => { for (let k = 0; k < 4; k++) { if (K.footed) laid(K.g, [K.x0 + cx - 0.7, K.z0 + pz], [K.x0 + cx + 0.7, K.z0 + pz], 0.3, 0.045, K.c([168, 134, 92]), k * 0.05); else K.box(cx, k * 0.05, pz, 1.4, 0.045, 0.3, [168, 134, 92], 0); } });
+      const R3r = G.Realm; const bs = K.P.base || ['#8a8478']; K.as('rock', () => { for (let k = 0; k < 4; k++) { const sx2 = cx + (cx > x ? -1 : 1) * (0.95 + (k % 2) * 0.32), sz2 = cz + (k < 2 ? -0.18 : 0.18); K.g.put(R3r.SH.ico0, R3r.mat(K.x0 + sx2, K.y0 + on(sx2, sz2) + 0.1, K.z0 + sz2, k, 0.4, 0.28, 0.34), K.c(bs[k % bs.length])); } }); }
   }
   // columns in a row
   function colonnade(K, x0, z0, x1, z1, n, h, r, col) { for (let k = 0; k < n; k++) { const f = n === 1 ? 0.5 : k / (n - 1); K.cyl(x0 + (x1 - x0) * f, 0, z0 + (z1 - z0) * f, r, h, col); } }
@@ -1810,9 +1815,9 @@ float m3scale(float p) {
   }
   // (a plank laid on the ground as it is drawn: A, B the middles of its ends (world metres, x and z), wd its width, t its
   // thickness — its top DUP over the highest ground under each end, lifted where the ground bulges between them)
-  function laid(g, A, B, wd, t, col) {
+  function laid(g, A, B, wd, t, col, up) { // (up: how much higher than that its top stands — a plank on others)
     const L = TL(), dx = B[0] - A[0], dz = B[1] - A[1], l = Math.hypot(dx, dz) || 1; const wv = [-dz / l * wd, 0, dx / l * wd];
-    const top = (X, Z) => Math.max(drawnAt(X / L, Z / L), drawnAt((X - wv[0] / 2) / L, (Z - wv[2] / 2) / L), drawnAt((X + wv[0] / 2) / L, (Z + wv[2] / 2) / L)) + DUP;
+    const top = (X, Z) => Math.max(drawnAt(X / L, Z / L), drawnAt((X - wv[0] / 2) / L, (Z - wv[2] / 2) / L), drawnAt((X + wv[0] / 2) / L, (Z + wv[2] / 2) / L)) + DUP + (up || 0);
     let yA = top(A[0], A[1]), yB = top(B[0], B[1]); const lift = Math.max(0, top((A[0] + B[0]) / 2, (A[1] + B[1]) / 2) - (yA + yB) / 2); yA += lift; yB += lift;
     plank(g, [A[0], yA, A[1]], [B[0], yB, B[1]], wv, t, col);
   }
