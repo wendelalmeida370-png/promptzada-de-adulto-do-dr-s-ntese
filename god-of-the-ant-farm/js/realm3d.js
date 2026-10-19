@@ -1029,10 +1029,10 @@ vec3 gxGrade( vec3 c ) {
   // ------------------------------ trees, rocks, bushes ------------------------------
   const KIND = {
     oak: ['round', '#4f8f36', '#6b4a2e'], apple: ['round', '#5a9a3a', '#6b4a2e', '#d23a2a'], mulberry: ['round', '#4a7f32', '#5a3e28', '#4a1a3a'], olive: ['round', '#8a9a6a', '#7a6a5a'],
-    cacao: ['round', '#3f7a2c', '#5a3e28', '#c87a2a'], coffee: ['bush', '#356a2a', '#5a3e28', '#b82a2a'], pepper: ['bush', '#3f7a2c', '#5a3e28', '#c82a1a'],
+    cacao: ['round', '#4b763b', '#5a3e28', '#c87a2a'], coffee: ['bush', '#3e6733', '#5a3e28', '#b82a2a'], pepper: ['bush', '#4b763b', '#5a3e28', '#c82a1a'],
     birch: ['round', '#8ab84a', '#e8e4d8'], willow: ['willow', '#7aa84a', '#6b5a3e'], pine: ['cone', '#2f6a3a', '#5a3e28'], snowpine: ['cone', '#2a5a3e', '#5a3e28', '#f4f8fc'],
-    jungle: ['tall', '#2f7a2a', '#6b5038'], acacia: ['flat', '#7a9a3a', '#6b5038'], baobab: ['baobab', '#6a8a3a', '#9a8068'], cactus: ['cactus', '#5a8a3a'], incense: ['bush', '#8a9a5a', '#7a6a5a'],
-    palm: ['palm', '#4a8a2a', '#8a6a44'], date: ['palm', '#5a8a3a', '#8a6a44', '#a8642a'], acai: ['palm', '#3f7a2a', '#6a5038', '#4a2a5a'], banana: ['banana', '#6aa83a', '#7a6a44', '#e8d04a'],
+    jungle: ['tall', '#43763b', '#6b5038'], acacia: ['flat', '#7a9a3a', '#6b5038'], baobab: ['baobab', '#6a8a3a', '#9a8068'], cactus: ['cactus', '#5a8a3a'], incense: ['bush', '#8a9a5a', '#7a6a5a'],
+    palm: ['palm', '#598643', '#8a6a44'], date: ['palm', '#5d8643', '#8a6a44', '#a8642a'], acai: ['palm', '#4c763b', '#6a5038', '#4a2a5a'], banana: ['banana', '#73a351', '#7a6a44', '#e8d04a'],
   };
   // the god's three tones of each crown: [base, dark, light] by kind and variant (art.js canopies)
   const TPAL = {
@@ -1040,7 +1040,9 @@ vec3 gxGrade( vec3 c ) {
     pine: [['#2f6e4a', '#224f36', '#4d9063'], ['#2c6a52', '#1f4d3c', '#4a8a6e'], ['#3a7445', '#2a5733', '#5b9660']],
     snowpine: [['#2e5e48', '#1f4234', '#4a7a60'], ['#2a5a4e', '#1c3e36', '#467666'], ['#35644a', '#244634', '#507e62']],
     birch: [['#8cc05a', '#679a3e', '#b4dc7a'], ['#9cc85a', '#76a23e', '#c4e27e'], ['#d0b44a', '#a88e30', '#e8d070']],
-    jungle: [['#2f8a3a', '#1e6228', '#4fae4a'], ['#3a9440', '#246a2c', '#5cbc52'], ['#28803e', '#18582a', '#44a452']],
+    // (the jungle's deep green: dark and full, not bright — S about half, as the moss of the roofs; under the hot sun the
+    // grading lifts it, and the old greens of the south burned neon — the A6's proof in Tenochtitlan)
+    jungle: [['#408441', '#295e2c', '#60a559'], ['#458e44', '#2d662e', '#6bb360'], ['#3b7b42', '#25542c', '#549c57']],
     acacia: [['#7a9a3a', '#5a7a28', '#9aba50'], ['#869e40', '#667e2c', '#a8c05a'], ['#8a9234', '#6a7226', '#aab04a']],
     willow: [['#6a8a42', '#4c6a30', '#8aa858'], ['#72904a', '#526e34', '#94b060'], ['#62823e', '#46642c', '#80a052']],
     apple: [['#5aa040', '#3e7a2e', '#88c860'], ['#64a646', '#447e30', '#94ce6a'], ['#58983c', '#3a722a', '#82be5a']],
@@ -1051,7 +1053,7 @@ vec3 gxGrade( vec3 c ) {
   const BPAL = [[[86, 160, 67], [63, 125, 52], [124, 195, 92]], [[79, 154, 80], [58, 122, 62], [116, 189, 106]], [[98, 164, 68], [74, 130, 51], [140, 203, 94]]]
     .map(p => p.map(c => { const l = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]; return c.map(v => (l + (v - l) * 0.85) * 0.78); }));
   // (the tone each land gives its bushes, [base, dark, light]: none in the temperate wood — the god's own green)
-  const BTONE = [null, [[52, 84, 60], [34, 58, 42], [76, 110, 80]], [[56, 92, 58], [38, 64, 40], [82, 120, 78]], [[78, 104, 56], [54, 76, 40], [108, 132, 74]], [[42, 108, 46], [26, 76, 32], [66, 140, 64]], [[118, 124, 76], [86, 92, 56], [150, 152, 98]], [[124, 128, 88], [92, 96, 64], [156, 156, 112]]];
+  const BTONE = [null, [[52, 84, 60], [34, 58, 42], [76, 110, 80]], [[56, 92, 58], [38, 64, 40], [82, 120, 78]], [[78, 104, 56], [54, 76, 40], [108, 132, 74]], [[53, 105, 52], [34, 74, 35], [80, 136, 75]], [[118, 124, 76], [86, 92, 56], [150, 152, 98]], [[124, 128, 88], [92, 96, 64], [156, 156, 112]]];
   // (the god's red of the berries, deeper: under the sun of the 3D the god's own would burn white)
   const BERRY = [[150, 22, 40], [128, 16, 34], [168, 34, 46]];
   const SNOW = [238, 244, 250];
@@ -1079,6 +1081,9 @@ vec3 gxGrade( vec3 c ) {
   // (the leaves' cards and the blades at the foot of the stones a fifth quieter than the crown they stand out of: the sun
   // through a leaf and the grading of the picture saturate them — under a hot sun they were neon, the A6's proof)
   const calm = (c, k) => { const l = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]; return [l + (c[0] - l) * (1 - k), l + (c[1] - l) * (1 - k), l + (c[2] - l) * (1 - k)]; };
+  // (how much quieter: the cards and the fronds, the large surfaces of green the sun shines through — under the warm sun of
+  // the afternoon a fifth was not enough, the BIBLE's neon line is S 70 on the screen)
+  const LCALM = 0.3;
   const calmCol = (f, k) => (X, Y, Z, nx, ny, nz) => calm(f(X, Y, Z, nx, ny, nz), k);
   // (the measures of a standing tree, the same for its drawing and for the leaves it lets fall: height, crown's heart and radius)
   function treeDims(t) {
@@ -1158,7 +1163,7 @@ vec3 gxGrade( vec3 c ) {
   // of their edges (a crown is leaves, not the smooth side of a lump). Returns its lumps [x, y, z, radius]
   function crownInto(g, gl, id, X, cy, Z, r, n, fl, pal, snow, sw, q, cards, shape) {
     // (the snow lies on the crown's lumps; the leaves standing out of its edge keep their green, a little frosted)
-    const lc = leafCol(pal, snow, X, Z, r * 1.4), lcc = calmCol(snow > 0 ? leafCol(pal, snow * 0.3, X, Z, r * 1.4) : lc, 0.2); const lumps = [[X, cy + r * 0.42 * fl, Z, r * 0.92]];
+    const lc = leafCol(pal, snow, X, Z, r * 1.4), lcc = calmCol(snow > 0 ? leafCol(pal, snow * 0.3, X, Z, r * 1.4) : lc, LCALM); const lumps = [[X, cy + r * 0.42 * fl, Z, r * 0.92]];
     for (let k = 0; k < n - 1; k++) {
       const a = k / (n - 1) * TAU + G.hash(id * 3 + k) * 0.9, up = (k % 2 ? 0.3 : -0.14) * fl, ring = (k % 2 ? 0.52 : 0.8) * (0.86 + G.hash(id * 7 + k) * 0.28);
       lumps.push([X + Math.cos(a) * r * ring, cy + r * up, Z + Math.sin(a) * r * ring, r * (0.6 + G.hash(id * 5 + k) * 0.3)]);
@@ -1225,7 +1230,7 @@ vec3 gxGrade( vec3 c ) {
           // (the boughs' sprays of needles standing out of every tier, drooping at their tips, each its own way — the tier's
           // rim broken into boughs; in the snow, the green of their needles under a frost — the snow lies on the tiers, a spray
           // standing out of it all white would be a feather)
-          const lcn = calmCol(snow > 0 ? leafCol(pal, snow * 0.3, X, Z, 1.6 * sz + 0.6) : lc, 0.2);
+          const lcn = calmCol(snow > 0 ? leafCol(pal, snow * 0.3, X, Z, 1.6 * sz + 0.6) : lc, LCALM);
           if (gl) for (let q = 0; q < nt; q++) { const u = q / (nt - 1); const w2 = ((3.5 - u * 2.7) * sz + 0.6) * 0.5; const y = Y + H * (0.15 + u * 0.63); const nc = q < nt - 1 ? 7 : 4;
             for (let j = 0; j < nc; j++) { const a = rot + q * 1.7 + j * TAU / nc + (G.hash(t.id + q * 5 + j) - 0.5) * 0.7; const dx = Math.cos(a), dz = Math.sin(a); const rr = w2 * (0.78 + G.hash(t.id * 3 + q * 7 + j) * 0.2); const px = X + dx * rr, pz = Z + dz * rr;
               card4(gl, px, y - w2 * 0.08, pz, w2 * 0.66 + 0.3, a, 0.55 + G.hash(q + j * 3 + t.id) * 0.4, [dx * 0.6, 0.8, dz * 0.6], lcn(px, y, pz, dx * 0.6, 0.8, dz * 0.6), 0.12 + u * 0.12, 2); } }
@@ -1242,7 +1247,7 @@ vec3 gxGrade( vec3 c ) {
             const a = q / nf * TAU + rot + (G.hash(t.id + q) - 0.5) * 0.3, cs = Math.cos(a), sn = Math.sin(a); const wd = t.kind === 'banana' ? 0.9 : 0.55; const dr = 0.8 + G.hash(t.id * 3 + q) * 0.5;
             // (each frond in three pieces, rising a little, then falling; and its leaflets either side)
             const P0 = [px, py, pz], P1 = [px + cs * fl * 0.35, py + 0.45 * dr, pz + sn * fl * 0.35], P2 = [px + cs * fl * 0.7, py + 0.1, pz + sn * fl * 0.7], P3 = [px + cs * fl, py - 0.9 * dr, pz + sn * fl];
-            const c0 = calm(pal[1], 0.2), c1 = calm(pal[0], 0.2), c2 = calm(pal[2], 0.2); // (the fronds in the sun as quiet as the cards)
+            const c0 = calm(pal[1], LCALM), c1 = calm(pal[0], LCALM), c2 = calm(pal[2], LCALM); // (the fronds in the sun as quiet as the cards)
             gp.blade(P0[0], P0[1], P0[2], wd * 0.6, a + Math.PI / 2, P1[0], P1[1], P1[2], c0, c1, 0.25);
             gp.blade(P1[0], P1[1], P1[2], wd, a + Math.PI / 2, P2[0], P2[1], P2[2], c1, c2, 0.4);
             gp.blade(P2[0], P2[1], P2[2], wd * 0.8, a + Math.PI / 2, P3[0], P3[1], P3[2], c2, c1, 0.6);

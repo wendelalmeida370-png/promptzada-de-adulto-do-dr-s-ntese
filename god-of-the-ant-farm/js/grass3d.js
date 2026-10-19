@@ -124,8 +124,9 @@
           if (kind == 1.0) tip = mix(tip, vec3(0.74, 0.6, 0.28), 0.7); else if (kind == 2.0) tip = mix(tip, vec3(0.36, 0.42, 0.22), 0.6); else if (kind == 4.0) tip *= 0.88; else if (kind == 3.0) tip *= 0.86; else if (kind == 5.0) tip = mix(tip, mix(vec3(0.62, 0.6, 0.36), vec3(0.42, 0.48, 0.3), bv), 0.6);
           vec3 c = mix(tc * mix(0.62, 0.78, bv), tip, smoothstep(0.0, 1.0, aU)) * (1.0 + gust * 0.22 * aU);
           if (aB > 2.5 && r4 < mk.b * 1.2 && aU > 0.66) { float fk = fract(r2 * 7.0); c = fk < 0.25 ? vec3(0.95, 0.88, 0.3) : fk < 0.5 ? vec3(0.95, 0.95, 0.92) : fk < 0.75 ? vec3(0.85, 0.42, 0.55) : vec3(0.5, 0.45, 0.9); }
-          // (a little quieter than the god's flat green: moss and meadow, not lime — the tone curve lifts it again)
-          c = mix(vec3(dot(c, vec3(0.3, 0.59, 0.11))), c, 0.86);
+          // (a little quieter than the god's flat green: moss and meadow, not lime — the tone curve lifts it again; the jungle's
+          // broad leaves the most, the god's tropical green is the brightest of all: a deep undergrowth, not a lamp)
+          c = mix(vec3(dot(c, vec3(0.3, 0.59, 0.11))), c, kind == 3.0 ? 0.7 : 0.86);
           vGC = c; vGU = aU; }`);
       sh.fragmentShader = 'varying vec3 vGC; varying float vGU;\n' + sh.fragmentShader
         .replace('#include <color_fragment>', '#include <color_fragment>\n diffuseColor.rgb = vGC;')
