@@ -195,9 +195,13 @@
   const FIRE = [1, 0.54, 0.23], TORCH = [1, 0.63, 0.29], HEARTH = [1, 0.66, 0.36];
   // (the houses whose windows the night lights, and how bright their doorways are)
   const LIT = { hut: 0.8, house: 1, sobrado: 1, insula: 1, quarteirao: 1, barraco: 0.5, taverna: 1.5, workshop: 0.8, forja: 1.3, olaria: 0.8, temple: 1.1, palacio: 1.3, paco: 1.2, administracao: 0.8, biblioteca: 0.8, cadeia: 0.6, quartel: 0.8, banhos: 0.9 };
+  // (a real light falls off as the painted one does — with the square of the distance — and is as bright as it two metres
+  // off: a flame handed from the painted light to a lamp, or back, keeps the size of its pool; a campfire lights the ring
+  // round it, not the square beyond)
+  const LAMP = F3.LAMP = { decay: 2, k: 1.4 }; // (dials, for the photos that compare)
   F3.quality = function (q) {
     if (!scene) return; const n = lampsOf(q);
-    while (lamps.length < n) { const l = new THREE.PointLight(0xffa04a, 0, 16, 1.5); l.userData = { key: '', cur: 0, want: 0, X: 0, Y: -1e4, Z: 0 }; l.position.set(0, -1e4, 0); scene.add(l); lamps.push(l); }
+    while (lamps.length < n) { const l = new THREE.PointLight(0xffa04a, 0, 16, LAMP.decay); l.userData = { key: '', cur: 0, want: 0, X: 0, Y: -1e4, Z: 0 }; l.position.set(0, -1e4, 0); scene.add(l); lamps.push(l); }
     while (lamps.length > n) { const l = lamps.pop(); scene.remove(l); l.dispose(); }
   };
   F3.lamps = () => lamps.map(l => ({ key: l.userData.key, i: +l.intensity.toFixed(2), at: [+l.position.x.toFixed(1), +l.position.y.toFixed(1), +l.position.z.toFixed(1)] }));
@@ -213,7 +217,7 @@
       const u = l.userData; used.add(s); u.key = s[1]; u.X = s[2]; u.Y = s[3]; u.Z = s[4]; u.cur = 0; u.want = s[5]; u.fl = s[8]; l.distance = s[6]; l.color.setRGB(s[7][0], s[7][1], s[7][2]); }
     const k = 1 - Math.exp(-9 * dt);
     for (const l of lamps) { const u = l.userData; u.cur += (u.want - u.cur) * k; if (u.want === 0 && u.cur < 0.02) { u.cur = 0; u.key = ''; }
-      l.position.set(u.X, u.Y, u.Z); l.intensity = u.cur > 0.01 ? u.cur * (1 + (G.VR() - 0.5) * 2 * (u.fl || 0)) : 0; }
+      l.position.set(u.X, u.Y, u.Z); l.decay = LAMP.decay; l.intensity = u.cur > 0.01 ? u.cur * LAMP.k * (1 + (G.VR() - 0.5) * 2 * (u.fl || 0)) : 0; }
   }
   // ------------------------------ the light of every flame, painted ------------------------------
   // (every flame and lit doorway round the body lights what is round it — the pool of warm light round a campfire, the

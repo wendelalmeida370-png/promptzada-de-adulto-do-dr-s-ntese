@@ -29,14 +29,16 @@
   // each drawing keeps its finest form before it simplifies — a multiplier of every module's own distances (bodies, trees,
   // houses, things); props: how much of the decoration about the houses and the streets is drawn (0..1); shadowEvery: the
   // sun's picture of the shadows made again every n frames (the picture and its own frame go together: only what moves
-  // trails a frame). The lightest two must cost no more than the game did before the studio (measured: the shadows are
-  // a third of the medium's triangles, the far people and the near ring of chunks the next): every module reads these to
-  // scale its own drawing
+  // trails a frame); aniso: how many samples a picture seen at a slant is read with (the stack of materials, the ground's
+  // detail, the leaves — a graphics card does it nearly free, a machine drawing by itself pays each one: a fifth of the
+  // medium's frame, measured). The lightest two must cost no more than the game did before the studio (measured: the
+  // shadows are a third of the medium's triangles, the far people and the near ring of chunks the next; in time, the
+  // slanted samples and the pixels): every module reads these to scale its own drawing
   const QUAL = {
-    baixa: { scale: 0.6, near: 1, shadows: 0, npcs: 12, grass: 0, view: 200, detail: 0, field: 0, sbox: 36, ao: 0, bloom: 0, lights: 0, soft: 0, rays: 0, lod: 0.5, props: 0.25, shadowEvery: 1 },
-    media: { scale: 0.9, near: 2, shadows: 1024, npcs: 30, grass: 1, view: 360, detail: 1, field: 15, sbox: 40, ao: 0, bloom: 0, lights: 2, soft: 0, rays: 0, lod: 0.75, props: 0.6, shadowEvery: 2 },
-    alta: { scale: 1, near: 4, shadows: 2048, npcs: 60, grass: 1, view: 640, detail: 1, field: 30, sbox: 52, ao: 1, bloom: 1, lights: 3, soft: 1, rays: 1, lod: 1, props: 1, shadowEvery: 1 },
-    ultra: { scale: 1, near: 5, shadows: 4096, npcs: 90, grass: 1, view: 900, detail: 1, field: 40, sbox: 68, ao: 2, bloom: 1, lights: 4, soft: 1, rays: 1, lod: 1.4, props: 1, shadowEvery: 1 },
+    baixa: { scale: 0.6, near: 1, shadows: 0, npcs: 12, grass: 0, view: 200, detail: 0, field: 0, sbox: 36, ao: 0, bloom: 0, lights: 0, soft: 0, rays: 0, lod: 0.5, props: 0.25, shadowEvery: 1, aniso: 1 },
+    media: { scale: 0.8, near: 2, shadows: 1024, npcs: 30, grass: 1, view: 360, detail: 1, field: 12, sbox: 40, ao: 0, bloom: 0, lights: 2, soft: 0, rays: 0, lod: 0.75, props: 0.6, shadowEvery: 2, aniso: 1 },
+    alta: { scale: 1, near: 4, shadows: 2048, npcs: 60, grass: 1, view: 640, detail: 1, field: 30, sbox: 52, ao: 1, bloom: 1, lights: 3, soft: 1, rays: 1, lod: 1, props: 1, shadowEvery: 1, aniso: 4 },
+    ultra: { scale: 1, near: 5, shadows: 4096, npcs: 90, grass: 1, view: 900, detail: 1, field: 40, sbox: 68, ao: 2, bloom: 1, lights: 4, soft: 1, rays: 1, lod: 1.4, props: 1, shadowEvery: 1, aniso: 8 },
   };
   // (the presets in the order the menu shows them, with their names)
   R3.QNAMES = [['baixa', 'Leve'], ['media', 'Média'], ['alta', 'Alta'], ['ultra', 'Ultra']];
@@ -1660,7 +1662,28 @@ vec3 gxGrade( vec3 c ) {
     const s = skyU.sunDir.value.y; if (s > 0.1 && skyU.keyDir.value.dot(skyU.sunDir.value) < 0.999) out.push('de dia, a luz principal não é o sol');
     if (sun.castShadow && U.body.value && U.body.value.w) { const b = U.body.value; const c = sun.target.position; const h = sun.shadow.camera.right; if (Math.abs(b.x - c.x) > h || Math.abs(b.z - c.z) > h) out.push('a imagem das sombras não cobre o corpo'); }
     const bc = R3.bedCheck(48); if (bc.bad > 2) out.push(`leito da água: ${bc.bad} de ${bc.n} pontos fora da altura do chão`);
+    const wc = R3.waterCheck(); if (wc.bad) out.push(`água desenhada sobre a terra fora do lugar: ${wc.bad} de ${wc.n} (${wc.ex})`);
     return out;
+  };
+  // (for the verifier: in the near pictures, the water laid over a tile of land — the shore, a river's bank — only where the
+  // land dips under its face, and a river's never over a building or the end of a road; how many quads, how many break it)
+  R3.waterCheck = function () {
+    const S = G.S, TL = G.Space.TILE, HM = G.Space.HM; let n = 0, bad = 0, ex = '';
+    for (const ch of chunks.values()) {
+      const g = ch.parts && ch.parts.ground; if (!g) continue;
+      for (const m of g.children) {
+        if (m.material !== MAT.water) continue; const P = m.geometry.attributes.position.array;
+        for (let k = 0; k + 17 < P.length; k += 18) { // (a quad: two triangles, six points, square on its tile)
+          let x0 = Infinity, z0 = Infinity; for (let q = 0; q < 6; q++) { x0 = Math.min(x0, P[k + q * 3]); z0 = Math.min(z0, P[k + q * 3 + 2]); }
+          const x = Math.round(x0 / TL), y = Math.round(z0 / TL); if (!W.inb(x, y)) continue; const i = y * N + x; if (S.type[i] <= T.RIVER) continue;
+          n++; const face = P[k + 1], sea = Math.abs(face - G.SEA * HM) < 1e-3;
+          const lo = Math.min(W.vh(x, y), W.vh(x + 1, y), W.vh(x, y + 1), W.vh(x + 1, y + 1)) * HM;
+          const why = lo > face + 0.12 * HM + 1e-3 ? 'sobre terra seca' : !sea && (S.occ[i] || S.road[i]) ? 'de rio sob prédio ou estrada' : '';
+          if (why) { bad++; if (!ex) ex = `casa ${x},${y} ${why}`; }
+        }
+      }
+    }
+    return { n, bad, ex };
   };
   // the key light's picture of what is near the body (its shadows): a square of ground round the body, pushed a little ahead
   // of the eye (what one looks at gets the texels), its texels fixed on the land (walking, the shadows do not crawl), and only
