@@ -84,6 +84,7 @@
       need: Object.assign({ wood: 0, stone: 0 }, built ? {} : def.cost), incoming: Object.fromEntries(Object.keys(Object.assign({ wood: 0, stone: 0 }, def.cost)).map(k => [k, 0])),
       hp: def.hp, maxHp: def.hp, set: setId, blocks: def.blocks, v: Math.floor(G.R() * 3), born: S.day, burnHp: 0,
       style: G.Civ.idOfFac(V.facOfSet(setId)) || null, // architecture of the people who built it
+      ip: null, // (the record of its plan: what its builders knew and where they built, and the facts of its life — interiors.js)
     };
     if (type === 'farm') b.crops = Array.from({ length: 9 }, () => ({ s: 0, g: 0, c: 0 }));
     if (type === 'cemetery') b.graves = [];
@@ -95,6 +96,7 @@
       const oid = S.objAt[i]; if (oid) { const bu = S.bushes.get(oid); if (bu) G.Nature.removeBush(bu); }
     }
     W.touchWalk();
+    G.Interiors && G.Interiors.found(b); // (the plan's record, frozen the day it is placed)
     return b;
   };
   V.center = b => [b.x + b.w / 2, b.y + b.h / 2];
@@ -119,6 +121,7 @@
 
   V.completeBuilding = function (b) {
     const S = G.S; b.built = true; b.progress = 1; b.need.wood = 0; b.need.stone = 0; b.upgradeFrom = null;
+    G.Interiors && G.Interiors.complete(b); // (a fact of its life; a type made over — a hut become a house — a new plan)
     S.stats.built++;
     const [cx, cy] = V.center(b);
     G.FX && G.FX.complete(cx, cy, b);
@@ -170,6 +173,7 @@
     } else {
       // turn into ruins in place (non-blocking); what stands now is the ruin, finished or not what it was going to be (L-081)
       b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.progress = 1; b.upgradeFrom = null; b.ruinT = G.DAY_LEN * 3; b.hp = 1; W.touchWalk();
+      G.Interiors && G.Interiors.ruin(b, cause); // (its plan becomes the ruin of itself)
     }
     G.FX && G.FX.collapse(cx, cy, b);
     G.Audio && G.Audio.at(cx, cy, 'collapse', true);
@@ -949,7 +953,7 @@
       if (b.set !== s.id) continue;
       if (b.type === 'cemetery') { b.set = 0; continue; }
       if (b.type === 'farm' || b.type === 'campfire' || !b.built) { V.removeBuilding(b); continue; }
-      if (b.type !== 'ruin') { b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.ruinT = G.DAY_LEN * (2 + G.R() * 3); b.hp = 1; W.touchWalk(); }
+      if (b.type !== 'ruin') { b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.ruinT = G.DAY_LEN * (2 + G.R() * 3); b.hp = 1; W.touchWalk(); G.Interiors && G.Interiors.abandon(b); }
       b.set = 0;
     }
     const f = G.Fac.get(s.fac);
@@ -1050,5 +1054,6 @@
     checkExpansion();
     V.updateEra();
     G.Politics.onNewDay();
+    G.Interiors && G.Interiors.onNewDay(); // (the doors back to their rule, a door moved, a type made over, who heads each house)
   };
 })(window.G);
