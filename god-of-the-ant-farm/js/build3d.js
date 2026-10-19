@@ -1920,6 +1920,392 @@ float m3scale(float p) {
   };
   // the box a building's 3D body fills, in metres (the tests ask: does it stand where the world says, on the ground?)
   // — the building itself; what lies about it is Props3D's, asked by its own check
+  // ------------------------------ the inside: the plan of G.Interiors, drawn ------------------------------
+  // the inside of a building from its plan — the storeys' floors and ceilings, the walls' inner faces with their doors and
+  // windows cut through them (and the reveals), the partitions whole, the stairs, the ladders and the steps, the roof seen
+  // from under it, the furniture by its kind — in the plan's own metres (from the lot's corner; y = 0 the plinth's top: the
+  // kit's frame), so the body walks on what it sees. Only the inside: the outer faces are the outside's (its chunk draws
+  // them), and what is drawn here faces in. Pure: the plan in, the geometry out — it never changes the world nor draws on
+  // the dice (the same plan, the same picture). The doors' leaves come apart, each to turn on its hinge as the world has it.
+  //   → { lv: {storey: Geo}, roof: Geo, leaf: [{ id, lv, at: the hinge's foot [X, Y, Z], yaw: shut, swing: ±1 the turn that
+  //     opens it into its room, w, h, g: Geo in its own frame }], hatch: [{ id: the stair's, lv, at: the hinge [X, Y, Z], yaw,
+  //     w, d, g }] (the lids over the stairs' holes: shut, they are floor — Interiors' HATCH —; one opens a lid by turning it
+  //     up about its hinge, rotation.x = −angle after yaw), item: {id: [storey, from, to] its points in the storey's Geo},
+  //     light: [[X, Y, Z, k]] its fires, cut: the inner room where the outside's own faces are not drawn while the inside
+  //     is, box: all of it, tris }
+  const INMAT = { tabua: ['plankH', [146, 114, 80]], taipa: ['mud', [178, 146, 110]], adobe: ['mud', [192, 164, 124]], 'adobe-caiado': ['whitewash', [236, 230, 216]],
+    'adobe-estuque': ['stucco', [222, 208, 180]], reboco: ['plaster', [222, 213, 196]], 'pau-a-pique': ['mud', [170, 144, 110]], pedra: ['stone', [158, 152, 142]], enxaimel: ['frame', [230, 222, 205]] };
+  const inMat = m => INMAT[m] || INMAT.reboco;
+  const IWOOD = [132, 98, 66], IDARK = [98, 72, 48], ILINEN = [224, 216, 198], ISTRAW = [198, 174, 112], IIRON = [54, 52, 50], ICLAY = [178, 106, 68], ISTONE = [152, 146, 136], IASH = [72, 66, 62], IEMBER = [226, 98, 40], IWOOL = [160, 116, 82];
+  const UP = [0, 1, 0], DOWN = [0, -1, 0];
+  const FLOOR_UP = 0.012; // (a floor a hair over the plinth's top it lies on: the two faces never fight)
+  // (what a storey's floor is: boards over a room below and in a loft, flags in the stone towns, beaten earth on the ground)
+  function floorMat(K, l) {
+    if (l.kind === 'terraco') return ['slab', [204, 190, 164]];
+    if (l.lv > 0 || l.kind === 'jirau' || l.kind === 'elevado') return ['plankH', [146, 112, 78]];
+    if (l.kind !== 'porao' && (K.st === 'grego' || K.st === 'romano')) return ['slab', [170, 158, 140]];
+    return ['soil', K.st === 'nordico' ? [112, 94, 72] : [140, 118, 90]];
+  }
+  // (a rectangle less the holes in it: the pieces left, cut along the holes' edges, each row's run of pieces joined)
+  function cutRect(R, holes) {
+    const hs = holes.filter(h => h[0] < R[2] - 1e-4 && h[2] > R[0] + 1e-4 && h[1] < R[3] - 1e-4 && h[3] > R[1] + 1e-4); if (!hs.length) return [R];
+    const xs = [R[0], R[2]], zs = [R[1], R[3]];
+    for (const h of hs) { for (const x of [h[0], h[2]]) if (x > R[0] && x < R[2]) xs.push(x); for (const z of [h[1], h[3]]) if (z > R[1] && z < R[3]) zs.push(z); }
+    xs.sort((a, b) => a - b); zs.sort((a, b) => a - b); const out = [];
+    for (let j = 0; j + 1 < zs.length; j++) {
+      if (zs[j + 1] - zs[j] < 1e-4) continue; let run = null;
+      for (let i = 0; i + 1 < xs.length; i++) {
+        if (xs[i + 1] - xs[i] < 1e-4) continue; const cx = (xs[i] + xs[i + 1]) / 2, cz = (zs[j] + zs[j + 1]) / 2;
+        if (hs.some(h => cx > h[0] && cx < h[2] && cz > h[1] && cz < h[3])) { run = null; continue; }
+        if (run) run[2] = xs[i + 1]; else out.push(run = [xs[i], zs[j], xs[i + 1], zs[j + 1]]);
+      }
+    }
+    return out;
+  }
+  const clipR = (r, A) => { const o = [Math.max(r[0], A[0]), Math.max(r[1], A[1]), Math.min(r[2], A[2]), Math.min(r[3], A[3])]; return o[2] - o[0] > 1e-3 && o[3] - o[1] > 1e-3 ? o : null; };
+  // (a level face over a rectangle at height y, seen from above (1) or from under it (-1))
+  const flatQ = (K, R, y, col, dir) => K.quad([R[0], y, R[1]], [R[2], y, R[1]], [R[2], y, R[3]], [R[0], y, R[3]], col, dir > 0 ? UP : DOWN);
+  // (the side of an outer wall that is in: toward a room of its storey — or toward the middle of the storey)
+  function sideIn(plan, w, l) {
+    const ax = w.b[0] - w.a[0], az = w.b[1] - w.a[1]; const L = Math.hypot(ax, az) || 1; const nx = -az / L, nz = ax / L; const mx = (w.a[0] + w.b[0]) / 2, mz = (w.a[1] + w.b[1]) / 2; const d = w.t / 2 + 0.12;
+    for (const sg of [1, -1]) { const px = mx + nx * d * sg, pz = mz + nz * d * sg; if (plan.rooms.some(m => m.lv === w.lv && px > m.r[0] && px < m.r[2] && pz > m.r[1] && pz < m.r[3])) return sg; }
+    const A = l.area; return ((A[0] + A[2]) / 2 - mx) * nx + ((A[1] + A[3]) / 2 - mz) * nz >= 0 ? 1 : -1;
+  }
+  // (an outer wall with a room of its storey on each side: the one between the hall and its annex)
+  function roomsBoth(plan, w) {
+    const ax = w.b[0] - w.a[0], az = w.b[1] - w.a[1]; const L = Math.hypot(ax, az) || 1; const nx = -az / L, nz = ax / L; const mx = (w.a[0] + w.b[0]) / 2, mz = (w.a[1] + w.b[1]) / 2; const d = w.t / 2 + 0.12;
+    const has = sg => { const px = mx + nx * d * sg, pz = mz + nz * d * sg; return plan.rooms.some(m => m.lv === w.lv && px > m.r[0] && px < m.r[2] && pz > m.r[1] && pz < m.r[3]); };
+    return has(1) && has(-1);
+  }
+  // a wall of the plan on its storey: its faces between the openings (an outer wall's inner face; a partition whole), the
+  // reveals of the openings through it and its top; a rail is posts and rails
+  function inWall(K, plan, w, l) {
+    const ax = w.b[0] - w.a[0], az = w.b[1] - w.a[1]; const L = Math.hypot(ax, az); if (L < 0.02) return;
+    const tx = ax / L, tz = az / L, nx = -tz, nz = tx; const H = w.h, t = w.t; const ry = Math.atan2(-tz, tx);
+    const P = (s, y, o) => [w.a[0] + tx * s + nx * o, l.y + y, w.a[1] + tz * s + nz * o];
+    const holes = plan.holes.filter(h => h.wall === w.id).sort((p, q) => p.at - q.at);
+    if (w.kind === 'guarda-corpo') {
+      const runs = []; let s = 0; for (const h of holes) { const h0 = h.at - h.w / 2, h1 = h.at + h.w / 2; if (h0 > s + 0.05) runs.push([s, h0]); s = Math.max(s, h1); } if (s < L - 0.05) runs.push([s, L]);
+      K.as('beam', () => { for (const [s0, s1] of runs) { const n = Math.max(1, Math.ceil((s1 - s0) / 0.9)); for (let k = 0; k <= n; k++) { const c = P(s0 + (s1 - s0) * k / n, 0, 0); K.box(c[0], c[1], c[2], 0.07, H, 0.07, IDARK, ry); }
+        for (const yy of [H - 0.07, H * 0.45]) { const c = P((s0 + s1) / 2, yy, 0); K.box(c[0], c[1], c[2], s1 - s0, 0.07, 0.07, IWOOD, ry); } } });
+      return;
+    }
+    const [pat, col] = inMat(w.mat || plan.shell.mat); const sg = w.outer && !roomsBoth(plan, w) ? sideIn(plan, w, l) : 0;
+    // (the niches cut into it: a blind opening of the inner face, its recess as deep as the niche)
+    const nich = sg ? plan.items.filter(it => it.niche && it.lv === w.lv).map(it => { const s0 = (it.x - w.a[0]) * tx + (it.z - w.a[1]) * tz, o0 = (it.x - w.a[0]) * nx + (it.z - w.a[1]) * nz; return Math.abs(o0) <= t / 2 + 0.02 && s0 > -0.01 && s0 < L + 0.01 ? { at: s0, w: it.w, h: it.h, sill: it.y || 0, d: it.d } : null; }).filter(Boolean) : [];
+    // (the face's spans: [from, to along it, foot, top] — round the openings)
+    const sp = []; let s = 0;
+    const gaps = holes.concat(nich).sort((p, q) => p.at - q.at);
+    for (const h of gaps) { const h0 = G.clamp(h.at - h.w / 2, 0, L), h1 = G.clamp(h.at + h.w / 2, 0, L); if (h0 > s) sp.push([s, h0, 0, H]); if (h.sill > 0) sp.push([h0, h1, 0, Math.min(H, h.sill)]); if (h.sill + h.h < H) sp.push([h0, h1, h.sill + h.h, H]); s = Math.max(s, h1); }
+    if (s < L) sp.push([s, L, 0, H]);
+    K.as(pat, () => {
+      if (!sg) { for (const [s0, s1, ya, yb] of sp) { if (s1 - s0 < 1e-3 || yb - ya < 1e-3) continue; const c = P((s0 + s1) / 2, ya, 0); K.box(c[0], c[1], c[2], s1 - s0, yb - ya, t, col, ry); }
+        // (the floor through a partition's door: a board over the gap between the two rooms)
+        for (const h of holes) if (h.sill <= 0.001) { const c = P(h.at, 0, 0); K.as('plankH', () => K.box(c[0], c[1], c[2], h.w, FLOOR_UP + 0.008, t + 0.02, IDARK, ry)); }
+        return; }
+      const o = sg * t / 2, out = [nx * sg, 0, nz * sg];
+      for (const [s0, s1, ya, yb] of sp) if (s1 - s0 > 1e-3 && yb - ya > 1e-3) K.quad(P(s0, ya, o), P(s1, ya, o), P(s1, yb, o), P(s0, yb, o), col, out);
+      // (the reveals: the opening's sides through the wall, its sill, its lintel — a door's threshold a board on the floor)
+      for (const h of holes) {
+        const h0 = G.clamp(h.at - h.w / 2, 0, L), h1 = G.clamp(h.at + h.w / 2, 0, L), ya = h.sill, yb = Math.min(H, h.sill + h.h);
+        K.quad(P(h0, ya, -t / 2), P(h0, ya, t / 2), P(h0, yb, t / 2), P(h0, yb, -t / 2), col, [tx, 0, tz]); K.quad(P(h1, ya, -t / 2), P(h1, ya, t / 2), P(h1, yb, t / 2), P(h1, yb, -t / 2), col, [-tx, 0, -tz]);
+        if (yb < H) K.quad(P(h0, yb, -t / 2), P(h1, yb, -t / 2), P(h1, yb, t / 2), P(h0, yb, t / 2), col, DOWN);
+        if (ya > 0) K.quad(P(h0, ya, -t / 2), P(h1, ya, -t / 2), P(h1, ya, t / 2), P(h0, ya, t / 2), col, UP);
+      }
+      // (a niche: its back, its sides, its floor and its top, into the wall from the inner face)
+      for (const h of nich) { const h0 = h.at - h.w / 2, h1 = h.at + h.w / 2, ya = h.sill, yb = h.sill + h.h, ob = o - sg * h.d;
+        K.quad(P(h0, ya, ob), P(h1, ya, ob), P(h1, yb, ob), P(h0, yb, ob), dim(col, 0.9), out);
+        K.quad(P(h0, ya, o), P(h0, ya, ob), P(h0, yb, ob), P(h0, yb, o), dim(col, 0.94), [tx, 0, tz]); K.quad(P(h1, ya, o), P(h1, ya, ob), P(h1, yb, ob), P(h1, yb, o), dim(col, 0.94), [-tx, 0, -tz]);
+        K.quad(P(h0, ya, o), P(h1, ya, o), P(h1, ya, ob), P(h0, ya, ob), col, UP); K.quad(P(h0, yb, o), P(h1, yb, o), P(h1, yb, ob), P(h0, yb, ob), dim(col, 0.85), DOWN); }
+      K.quad(P(0, H, -t / 2), P(L, H, -t / 2), P(L, H, t / 2), P(0, H, t / 2), col, UP);
+    });
+    // (the frames round the openings, on the inside: jambs and a lintel of the people's wood; a door's threshold)
+    if (sg) K.as('jamb', () => { const o = sg * (t / 2 + 0.02);
+      for (const h of holes) { const h0 = h.at - h.w / 2, h1 = h.at + h.w / 2, ya = h.sill, yb = h.sill + h.h;
+        for (const e of [h0 - 0.04, h1 + 0.04]) { const c = P(e, ya, o); K.box(c[0], c[1], c[2], 0.08, yb - ya + 0.08, 0.04, IDARK, ry); }
+        if (yb + 0.08 < H) { const c = P(h.at, yb, o); K.box(c[0], c[1], c[2], h1 - h0 + 0.16, 0.08, 0.04, IDARK, ry); }
+        if (ya <= 0.001) { const c = P(h.at, FLOOR_UP, 0); K.box(c[0], c[1], c[2], h1 - h0, 0.02, t, IDARK, ry); } else { const c = P(h.at, ya - 0.04, o); K.box(c[0], c[1], c[2], h1 - h0 + 0.12, 0.04, 0.08, IWOOD, ry); } } });
+  }
+  // the ring of a round hut: its inner face from the floor to the eaves, open where the straight piece with the door stands
+  function inRing(K, plan, l) {
+    const sh = plan.shell; const ri = sh.r - sh.t; const [pat, col] = inMat(sh.mat); const H = sh.eave - l.y; if (H <= 0) return;
+    const seg = plan.walls.find(w => w.kind === 'anel' && w.lv === l.lv); const n = 22; const pts = [];
+    const ang = p => Math.atan2(p[1] - sh.cz, p[0] - sh.cx); const on = a => [sh.cx + Math.cos(a) * ri, sh.cz + Math.sin(a) * ri];
+    if (seg) {
+      // (from the piece's one inner corner round the long way to its other)
+      const ax = seg.b[0] - seg.a[0], az = seg.b[1] - seg.a[1]; const L = Math.hypot(ax, az) || 1; const o = sideIn(plan, seg, l) * seg.t / 2;
+      const A = [seg.a[0] - az / L * o, seg.a[1] + ax / L * o], B = [seg.b[0] - az / L * o, seg.b[1] + ax / L * o];
+      const aB = ang(B), aA = ang(A), e = ang([(A[0] + B[0]) / 2, (A[1] + B[1]) / 2]); const md = x => ((x % TAU) + TAU) % TAU;
+      const d = md(aA - aB); const sw = md(e - aB) < d ? d - TAU : d;
+      pts.push(B); for (let k = 1; k < n; k++) pts.push(on(aB + sw * k / n)); pts.push(A);
+    } else for (let k = 0; k <= n; k++) pts.push(on(TAU * k / n));
+    K.as(pat, () => { for (let k = 0; k + 1 < pts.length; k++) { const p = pts[k], q = pts[k + 1]; const mx = (p[0] + q[0]) / 2, mz = (p[1] + q[1]) / 2;
+      K.quad([p[0], l.y, p[1]], [q[0], l.y, q[1]], [q[0], l.y + H, q[1]], [p[0], l.y + H, p[1]], col, [sh.cx - mx, 0, sh.cz - mz]); } });
+  }
+  // a storey's floor over its area less the holes of the ladders and stairs that come up through it; where another storey
+  // is under it, its slab — the underside (the ceiling of the room below), the edges (a loft's front, a hatch's sides), the
+  // joists under it
+  function inFloor(K, plan, l, below) {
+    const holes = plan.stairs.filter(s => s.lv1 === l.lv && s.hole).map(s => s.hole);
+    const [pat, col] = floorMat(K, l); const y = l.y + FLOOR_UP;
+    if (plan.shell.kind === 'round' && l.lv === Math.min(...plan.levels.map(q => q.lv))) {
+      const sh = plan.shell, ri = sh.r - sh.t + 0.02, n = 22; K.as(pat, () => { for (let k = 0; k < n; k++) { const a0 = TAU * k / n, a1 = TAU * (k + 1) / n; K.tri([sh.cx, y, sh.cz], [sh.cx + Math.cos(a0) * ri, y, sh.cz + Math.sin(a0) * ri], [sh.cx + Math.cos(a1) * ri, y, sh.cz + Math.sin(a1) * ri], col, UP); } });
+      return;
+    }
+    const pieces = cutRect(l.area, holes);
+    // (and the rooms beyond the storey's own area — an annex against its side)
+    const A0 = l.area; const extra = plan.rooms.filter(m => m.lv === l.lv && (m.r[0] < A0[0] - 0.05 || m.r[1] < A0[1] - 0.05 || m.r[2] > A0[2] + 0.05 || m.r[3] > A0[3] + 0.05) && !clipR(m.r, A0));
+    K.as(pat, () => { for (const r of pieces) flatQ(K, r, y, col, 1); for (const m of extra) for (const r of cutRect(m.r, holes)) flatQ(K, r, y, col, 1); });
+    if (!below) return;
+    // (the joists within the slab, their feet at the ceiling the plan gives the room below — the boards between them a hand
+    // higher: the headroom drawn is the plan's)
+    const th = G.clamp(l.y - (below.y + below.h), 0.1, 0.3), yb = l.y - th; const A = below.area; const wd = l.kind === 'jirau' ? IWOOD : dim(IWOOD, 0.92); const jh = K.fine ? Math.min(0.07, th - 0.03) : 0;
+    K.as(l.kind === 'jirau' ? 'plankH' : 'beam', () => {
+      for (const r of pieces) { const q = clipR(r, A); if (q) flatQ(K, q, yb + jh, wd, -1); }
+      // (the edges: of the storey's own area where it stands free over the room, and round each hole)
+      const R = l.area; const edge = (x0, z0, x1, z1, out) => K.quad([x0, yb, z0], [x1, yb, z1], [x1, y, z1], [x0, y, z0], wd, out);
+      edge(R[0], R[1], R[2], R[1], [0, 0, -1]); edge(R[2], R[1], R[2], R[3], [1, 0, 0]); edge(R[2], R[3], R[0], R[3], [0, 0, 1]); edge(R[0], R[3], R[0], R[1], [-1, 0, 0]);
+      for (const h of holes) { edge(h[0], h[1], h[2], h[1], [0, 0, 1]); edge(h[2], h[1], h[2], h[3], [-1, 0, 0]); edge(h[2], h[3], h[0], h[3], [0, 0, -1]); edge(h[0], h[3], h[0], h[1], [1, 0, 0]); }
+    });
+    // (the joists, across the short way, every 60 cm: cut where a hole is)
+    if (!K.fine) return;
+    const R = clipR(l.area, A); if (!R) return; const alongX = R[2] - R[0] <= R[3] - R[1];
+    K.as('beam', () => { const len = alongX ? R[3] - R[1] : R[2] - R[0]; const n = Math.max(1, Math.floor(len / 0.6));
+      for (let k = 1; k <= n; k++) { const c = (alongX ? R[1] : R[0]) + len * (k - 0.5) / n; const strip = alongX ? [R[0], c - 0.045, R[2], c + 0.045] : [c - 0.045, R[1], c + 0.045, R[3]];
+        for (const q of cutRect(strip, holes)) K.box((q[0] + q[2]) / 2, yb, (q[1] + q[3]) / 2, q[2] - q[0], jh, q[3] - q[1], IDARK); } });
+  }
+  // the roof seen from under it: the gable's two slopes and its ends, the hip's four, the hut's cone, the flat ceiling — a
+  // little under the outside's roof (its slopes from the walls' inner faces at the eaves), with the rafters and the ridge beam
+  function inRoof(K, plan) {
+    const sh = plan.shell, R = sh.roof || { kind: 'plano' }; const eave = sh.eave; const wall = inMat(sh.mat); const wood = IWOOD;
+    // (the roof's underside as Interiors measures a loft's headroom under it — Interiors.roofY, a hand under the outside's
+    // slopes: from the eaves at the shell's outer edge to the ridge; so the room the plan gives a loft is the room drawn)
+    const rise = R.h || 0, DN = 0.25;
+    if (sh.kind === 'round') {
+      const ri = sh.r - sh.t; const yAt = d => eave + rise * Math.max(0, 1 - d / sh.r) - DN; const yk = Math.max(eave, yAt(ri)), yr = yAt(0); const n = 22; const C = [sh.cx, yr, sh.cz];
+      const on = (a, y) => [sh.cx + Math.cos(a) * ri, y, sh.cz + Math.sin(a) * ri];
+      K.as(R.kind === 'palha-conica' || R.kind === 'palha' ? 'thatch' : 'beam', () => { for (let k = 0; k < n; k++) { const a0 = TAU * k / n, a1 = TAU * (k + 1) / n; K.tri(on(a0, yk), on(a1, yk), C, ISTRAW, DOWN); } });
+      if (yk > eave + 0.005) K.as(wall[0], () => { for (let k = 0; k < n; k++) { const a0 = TAU * k / n, a1 = TAU * (k + 1) / n, am = (a0 + a1) / 2; K.quad(on(a0, eave), on(a1, eave), on(a1, yk), on(a0, yk), wall[1], [-Math.cos(am), 0, -Math.sin(am)]); } });
+      if (K.fine) K.as('beam', () => { for (let k = 0; k < 8; k++) { const a = TAU * k / 8; K.log(on(a, yk - 0.06), [sh.cx, yr - 0.08, sh.cz], 0.04, IDARK); } });
+      return;
+    }
+    // (under the roof: the widest of the storeys under it — the upper storeys' walls are thinner than the ground's)
+    const I = [9, 9, -9, -9]; for (const l of plan.levels) { if (l.kind === 'porao') continue; I[0] = Math.min(I[0], l.area[0]); I[1] = Math.min(I[1], l.area[1]); I[2] = Math.max(I[2], l.area[2]); I[3] = Math.max(I[3], l.area[3]); }
+    if (rise <= DN || R.kind === 'plano') {
+      // (a flat roof: the ceiling under it — unless a terrace's floor is the ceiling)
+      if (!plan.levels.some(l => l.kind === 'terraco')) K.as('beam', () => flatQ(K, I, eave, dim(wood, 0.95), -1));
+      if (K.fine && !plan.levels.some(l => l.kind === 'terraco')) { const alongX = I[2] - I[0] <= I[3] - I[1]; const len = alongX ? I[3] - I[1] : I[2] - I[0]; const n = Math.max(1, Math.floor(len / 0.55));
+        K.as('beam', () => { for (let k = 1; k <= n; k++) { const c = (alongX ? I[1] : I[0]) + len * (k - 0.5) / n; if (alongX) K.log([I[0], eave - 0.07, c], [I[2], eave - 0.07, c], 0.06, IDARK); else K.log([c, eave - 0.07, I[1]], [c, eave - 0.07, I[3]], 0.06, IDARK); } }); }
+      return;
+    }
+    const pat = R.kind === 'palha' ? 'thatch' : R.kind === 'turfa' ? 'beam' : 'plankH'; const cl = R.kind === 'palha' ? ISTRAW : dim(wood, 0.9);
+    const ax = R.along !== 'z'; // (the ridge along X: the slopes go down to the walls at the low and high Z)
+    const O = sh.r; const [ou0, ov0, ou1, ov1] = ax ? O : [O[1], O[0], O[3], O[2]]; const um = (ou0 + ou1) / 2, vm = (ov0 + ov1) / 2, hu = (ou1 - ou0) / 2, hv = (ov1 - ov0) / 2;
+    const [u0, v0, u1, v1] = ax ? I : [I[1], I[0], I[3], I[2]];
+    const Pt = (u, y, v) => (ax ? [u, y, v] : [v, y, u]);
+    const hip = R.kind === 'quatro-aguas';
+    const yAt = (u, v) => { const across = Math.abs(v - vm) / hv; const end = hip ? (Math.abs(u - um) - (hu - hv)) / hv : -1; return eave + rise * Math.max(0, 1 - Math.max(across, end)) - DN; };
+    const r0 = hip ? G.clamp(um - (hu - hv), u0, um) : u0, r1 = hip ? G.clamp(um + (hu - hv), um, u1) : u1; const yr = yAt((r0 + r1) / 2, vm);
+    const P2 = (u, v) => Pt(u, Math.max(eave, yAt(u, v)), v);
+    K.as(pat, () => {
+      K.quad(P2(u0, v0), P2(u1, v0), P2(r1, vm), P2(r0, vm), cl, DOWN); K.quad(P2(u0, v1), P2(u1, v1), P2(r1, vm), P2(r0, vm), cl, DOWN);
+      if (hip) { K.tri(P2(u0, v0), P2(u0, v1), P2(r0, vm), cl, DOWN); K.tri(P2(u1, v0), P2(u1, v1), P2(r1, vm), cl, DOWN); }
+    });
+    // (the walls' inner faces from the eaves up to the underside — the knee walls under the slopes — and the gable ends,
+    // of the wall's own stuff)
+    K.as(wall[0], () => {
+      const knee = (a, b2, out) => { const ya = yAt(a[0], a[1]), yb = yAt(b2[0], b2[1]); if (Math.max(ya, yb) < eave + 0.005) return; K.quad(Pt(a[0], eave, a[1]), Pt(b2[0], eave, b2[1]), Pt(b2[0], Math.max(eave, yb), b2[1]), Pt(a[0], Math.max(eave, ya), a[1]), wall[1], out); };
+      const Vin = ax ? [0, 0, 1] : [1, 0, 0], Uin = ax ? [1, 0, 0] : [0, 0, 1];
+      knee([u0, v0], [u1, v0], Vin); knee([u0, v1], [u1, v1], Vin.map(q => -q));
+      if (hip) { knee([u0, v0], [u0, v1], Uin); knee([u1, v0], [u1, v1], Uin.map(q => -q)); }
+      else for (const [u, o] of [[u0, Uin], [u1, Uin.map(q => -q)]]) { knee([u, v0], [u, v1], o); K.tri(P2(u, v0), P2(u, v1), Pt(u, yr, vm), wall[1], o); }
+    });
+    if (!K.fine) return;
+    // (the rafters from the walls to the ridge, a hand under the slope; the ridge beam)
+    K.as('beam', () => { const n = Math.max(2, Math.round((u1 - u0) / 0.6)); const dn = 0.06;
+      for (let k = 0; k <= n; k++) { const u = u0 + 0.05 + (u1 - u0 - 0.1) * k / n; if (u < r0 - 0.01 || u > r1 + 0.01) continue; for (const v of [v0, v1]) { const p = P2(u, v); K.log([p[0], p[1] - dn, p[2]], Pt(u, yr - dn, vm), 0.04, IDARK); } }
+      if (r1 - r0 > 0.05) K.log(Pt(r0, yr - 0.1, vm), Pt(r1, yr - 0.1, vm), 0.07, IDARK); });
+  }
+  // the stairs between the storeys, the ladders up to a loft and down to a cellar, the steps from the ground to the door
+  // (into a sunken floor, up to a house on stilts): each over its footprint, from its foot to its top as Interiors.floorY has it
+  function inStair(K, plan, s) {
+    const lv = lv => plan.levels.find(l => l.lv === lv); const r = s.r; const dx = s.dir[0], dz = s.dir[1];
+    const len = dx ? r[2] - r[0] : r[3] - r[1], wid = dx ? r[3] - r[1] : r[2] - r[0];
+    // (a point along it — from the end it starts at — and across it, at a height)
+    const at = (t, a, y) => { const sx0 = dx > 0 ? r[0] : r[2], sz0 = dz > 0 ? r[1] : r[3]; return dx ? [sx0 + dx * t, y, (r[1] + r[3]) / 2 + a] : [(r[0] + r[2]) / 2 + a, y, sz0 + dz * t]; };
+    const ry = dx ? 0 : Math.PI / 2; // (a box along it: X along, as the flight runs)
+    const y0 = s.kind === 'degraus' ? 0 : (lv(s.lv0) || { y: 0 }).y, y1 = s.kind === 'degraus' ? (lv(s.lv1) || { y: 0 }).y : (lv(s.lv1) || { y: y0 + 2.4 }).y;
+    if (s.kind === 'escada-de-mao') {
+      // (a ladder: its feet at the start, leaning to the far end — up through a hatch to its floor, under the lid; against a
+      // loft's edge, a hand-hold over it)
+      const top = s.hole ? Math.max(y0, y1) - 0.02 : Math.max(y0, y1) + 0.9, bot = Math.min(y0, y1); const tb = len - 0.08, ta = 0.08;
+      K.as('beam', () => { for (const a of [-wid / 2 + 0.06, wid / 2 - 0.06]) K.log(at(ta, a, bot + FLOOR_UP), at(tb, a, top), 0.03, IWOOD);
+        const n = Math.max(2, Math.round((top - bot) / 0.28)); for (let k = 1; k < n; k++) { const f = k / n; const p = at(ta + (tb - ta) * f, -wid / 2 + 0.06, bot + (top - bot) * f), q = at(ta + (tb - ta) * f, wid / 2 - 0.06, bot + (top - bot) * f); K.log(p, q, 0.02, IDARK); } });
+      return;
+    }
+    // (steps: solid, each from the lower floor up to its tread — the last one the floor it reaches)
+    const rise = y1 - y0; const n = Math.max(2, Math.round(Math.abs(rise) / 0.19)); const run = len / n; const lo = Math.min(y0, y1);
+    const stone = s.kind === 'degraus' && !(y1 > 0.6); const [pat, col] = stone ? ['stone', ISTONE] : ['plankH', IWOOD];
+    K.as(pat, () => { for (let k = 0; k < n; k++) { const tr = y0 + rise * (k + 1) / n; const hh = tr - lo; if (hh < 0.01) continue; const c = at(run * (k + 0.5), 0, lo); K.box(c[0], c[1], c[2], run + 0.002, hh + FLOOR_UP, wid, col, ry); } });
+  }
+  // a piece of furniture in its own frame: a across its front, n out of it (its users stand at +n), y up from its foot
+  function piece(K, it, y0) {
+    const c = Math.cos(it.ry || 0), s = Math.sin(it.ry || 0); const P = (a, n) => [it.x + a * c + n * s, it.z - a * s + n * c];
+    const F = {
+      box(a, y, n, sa, sy, sn, col, pat, ry2) { const p = P(a, n); K.as(pat || 0, () => K.box(p[0], y0 + y, p[1], sa, sy, sn, col, (it.ry || 0) + (ry2 || 0))); },
+      cyl(a, y, n, r, h, col, pat) { const p = P(a, n); K.as(pat || 0, () => K.cyl(p[0], y0 + y, p[1], r, h, col)); },
+      sph(a, y, n, r, col, sy, pat) { const p = P(a, n); K.as(pat || 0, () => K.sph(p[0], y0 + y, p[1], r, col, sy)); },
+      log(a0, ya, n0, a1, yb, n1, r, col, pat) { const p = P(a0, n0), q = P(a1, n1); K.as(pat || 0, () => K.log([p[0], y0 + ya, p[1]], [q[0], y0 + yb, q[1]], r, col)); },
+      legs(w, d, h, r, col) { for (const ea of [-1, 1]) for (const en of [-1, 1]) F.box(ea * (w / 2 - r), 0, en * (d / 2 - r), r * 2, h, r * 2, col, 'beam'); },
+      hv: k => K.hv(9000 + (it.k | 0) * 37 + k),
+    };
+    return F;
+  }
+  // the furniture by its kind (Interiors' catalogue, int-moveis.js): w across its front, d deep, h high — what each is made of
+  const FURN = {
+    cama(F, it) { const { w, d } = it; F.legs(w, d, 0.3, 0.035, IDARK); F.box(0, 0.25, 0, w, 0.12, d, IWOOD, 'plankH'); F.box(0, 0.37, 0.02, w - 0.08, 0.13, d - 0.1, ILINEN, 'linen'); F.box(0, 0.25, -d / 2 + 0.025, w, 0.55, 0.05, IDARK, 'plankV');
+      const k = it.places >= 2 || w > 1.2 ? 2 : 1; for (let q = 0; q < k; q++) F.box(k === 2 ? (q ? 1 : -1) * w / 4 : 0, 0.5, -d / 2 + 0.25, k === 2 ? w / 2 - 0.12 : w - 0.3, 0.08, 0.32, ILINEN, 'linen');
+      F.box(0, 0.5, d * 0.16, w - 0.04, 0.03, d * 0.6, F.hv(1) < 0.5 ? IWOOL : [128, 92, 70], 'wool'); },
+    'cama-casal'(F, it) { FURN.cama(F, it); },
+    esteira(F, it) { const { w, d } = it; F.box(0, 0, 0, w, 0.03, d, ISTRAW, 'wicker'); F.log(-w / 2 + 0.08, 0.1, -d / 2 + 0.16, w / 2 - 0.08, 0.1, -d / 2 + 0.16, 0.07, IWOOL, 'wool'); },
+    'esteira-casal'(F, it) { const { w, d } = it; F.box(0, 0, 0, w, 0.04, d, ISTRAW, 'wicker'); for (const e of [-1, 1]) F.log(e * w / 4 - w / 5, 0.11, -d / 2 + 0.16, e * w / 4 + w / 5, 0.11, -d / 2 + 0.16, 0.07, IWOOL, 'wool');
+      F.box(0, 0.04, d * 0.12, w - 0.06, 0.025, d * 0.55, F.hv(2) < 0.5 ? IWOOL : [128, 92, 70], 'wool'); },
+    fogareiro(F, it) { const { w, h } = it; F.cyl(0, 0, 0, w / 2 - 0.05, h - 0.06, ICLAY, 'mud'); F.box(0, 0.08, w / 2 - 0.1, 0.18, 0.14, 0.1, [40, 32, 28]); F.cyl(0, h - 0.06, 0, w / 2 - 0.12, 0.05, IEMBER); F.cyl(0.03, h - 0.03, 0, 0.12, 0.14, IIRON, 'iron'); },
+    nicho(F, it) { const { w, d } = it; F.cyl(-w * 0.22, 0, 0, Math.min(0.08, d / 2 - 0.02), 0.22, ICLAY, 'mud'); F.box(w * 0.18, 0, 0, w * 0.34, 0.12, d - 0.06, IWOOD, 'plankH'); F.cyl(w * 0.18, 0.12, 0, 0.04, 0.05, [168, 136, 70]); },
+    'banco-cama'(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, h - 0.05, d, dim(IWOOD, 0.9), 'plankH'); F.box(0, h - 0.05, 0, w, 0.05, d, IWOOD, 'plankH');
+      const k = Math.max(1, Math.floor(w / 0.7 + 1e-6)); for (let q = 0; q < k; q++) F.box(-w / 2 + w * (q + 0.5) / k, h, -0.04, Math.min(0.62, w / k - 0.06), 0.05, d - 0.18, q % 2 ? [120, 96, 70] : [150, 126, 92], 'fur'); },
+    berco(F, it) { const { w, d } = it; F.box(0, 0.12, 0, w, 0.3, d, IWOOD, 'plankH'); F.box(0, 0.3, 0, w - 0.08, 0.1, d - 0.08, ILINEN, 'linen'); for (const e of [-1, 1]) F.box(0, 0, e * (d / 2 - 0.1), w + 0.06, 0.12, 0.06, IDARK, 'beam'); },
+    lar(F, it) { const { w, d } = it; F.box(0, 0, -d / 2 + 0.06, w, 0.25, 0.12, ISTONE, 'stone'); F.box(0, 0, d / 2 - 0.06, w, 0.25, 0.12, ISTONE, 'stone'); F.box(-w / 2 + 0.06, 0, 0, 0.12, 0.25, d - 0.24, ISTONE, 'stone'); F.box(w / 2 - 0.06, 0, 0, 0.12, 0.25, d - 0.24, ISTONE, 'stone');
+      F.box(0, 0, 0, w - 0.24, 0.06, d - 0.24, IASH, 'soil'); F.box(0, 0.06, 0, w * 0.35, 0.05, d * 0.3, IEMBER); F.log(-w * 0.2, 0.1, -d * 0.2, w * 0.2, 0.12, d * 0.2, 0.045, IDARK, 'bark'); F.log(w * 0.2, 0.1, -d * 0.2, -w * 0.2, 0.12, d * 0.2, 0.045, IDARK, 'bark'); },
+    fogao(F, it, cx) { const { w, d, h } = it; F.box(0, 0, 0, w, h, d, ISTONE, 'stone'); F.box(0, 0.15, d / 2, w * 0.42, 0.3, 0.02, [36, 30, 28]); F.box(0, 0.17, d / 2 - 0.02, w * 0.3, 0.08, 0.04, IEMBER);
+      F.cyl(-w * 0.22, h, 0, 0.13, 0.18, IIRON, 'iron'); const hy = Math.min(cx.ceil - 0.25, h + 0.75); F.box(0, hy, -0.04, w * 0.9, 0.35, d * 0.7, dim(ISTONE, 0.9), 'stone'); if (cx.ceil > hy + 0.36) F.box(0, hy + 0.35, -d / 2 + 0.18, 0.34, cx.ceil - hy - 0.35, 0.32, dim(ISTONE, 0.85), 'stone'); },
+    forno(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, h * 0.45, d, ISTONE, 'stone'); F.sph(0, h * 0.5, 0, w / 2 - 0.04, ICLAY, h * 0.5, 'mud'); F.box(0, h * 0.45, d / 2 - 0.08, 0.3, 0.22, 0.12, [40, 32, 28]); },
+    braseiro(F, it) { const { h } = it; for (let k = 0; k < 3; k++) { const a = k * TAU / 3; F.log(Math.cos(a) * 0.2, 0, Math.sin(a) * 0.2, Math.cos(a) * 0.08, h - 0.1, Math.sin(a) * 0.08, 0.015, IIRON, 'iron'); }
+      F.cyl(0, h - 0.14, 0, 0.22, 0.12, IIRON, 'iron'); F.cyl(0, h - 0.03, 0, 0.17, 0.03, IEMBER); },
+    mesa(F, it) { const { w, d, h } = it; F.legs(w, d, h - 0.05, 0.035, IDARK); F.box(0, h - 0.05, 0, w, 0.05, d, IWOOD, 'plankH'); F.cyl(w * 0.2, h, 0, 0.09, 0.05, ICLAY); F.cyl(-w * 0.25, h, d * 0.1, 0.05, 0.16, ICLAY); },
+    'mesa-baixa'(F, it) { FURN.mesa(F, it); },
+    banco(F, it) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.12), 0, 0, 0.05, h - 0.05, d - 0.04, IDARK, 'plankV'); F.box(0, h - 0.05, 0, w, 0.05, d, IWOOD, 'plankH'); },
+    arca(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, h - 0.06, d, IWOOD, 'plankH'); F.box(0, h - 0.06, 0, w + 0.02, 0.06, d + 0.02, IDARK, 'plankH'); for (const e of [-1, 1]) F.box(e * w / 4, 0, 0, 0.04, h + 0.005, d + 0.025, IIRON, 'iron'); },
+    despensa(F, it) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.02), 0, 0, 0.04, h, d, IDARK, 'plankV'); for (const y of [0.04, 0.6, 1.12, h - 0.04]) F.box(0, y, 0, w - 0.08, 0.03, d, IWOOD, 'plankH');
+      for (const y of [0.07, 0.63, 1.15]) for (let k = 0; k < 3; k++) { const a = -w / 2 + 0.2 + (w - 0.4) * k / 2; if (F.hv(k + y * 10) < 0.7) F.cyl(a, y, 0, 0.08 + F.hv(k + 5) * 0.04, 0.2 + F.hv(k + 7) * 0.12, ICLAY); } },
+    jarros(F, it) { const { w, d, h } = it; const n = w > 0.8 ? 3 : 2; for (let k = 0; k < n; k++) { const a = -w / 2 + w * (k + 0.5) / n, r = Math.min(d / 2 - 0.03, w / n / 2 - 0.02) * (0.85 + F.hv(k) * 0.15), hh = h * (0.75 + F.hv(k + 3) * 0.25);
+      F.sph(a, hh / 2 - 0.02, 0, r, dim(ICLAY, 0.85 + F.hv(k + 6) * 0.2), hh / 2 - 0.04, 'mud'); F.cyl(a, hh - 0.12, 0, r * 0.45, 0.12, dim(ICLAY, 0.8)); } },
+    cesto(F, it) { const { w, d, h } = it; F.cyl(-w * 0.22, 0, 0, Math.min(d / 2, w / 4) - 0.02, h * 0.7, ISTRAW, 'wicker'); F.cyl(w * 0.24, 0, 0.03, Math.min(d / 2, w / 4) - 0.06, h * 0.5, dim(ISTRAW, 0.9), 'wicker'); },
+    lenha(F, it) { const { w, d, h } = it; const rows = Math.max(2, Math.round(h / 0.15)), per = Math.max(2, Math.round(d / 0.15)); for (let j = 0; j < rows; j++) for (let k = 0; k < per; k++) { const n = -d / 2 + d * (k + 0.5) / per + (j % 2 ? 0.035 : 0); if (Math.abs(n) > d / 2 - 0.05) continue;
+      F.log(-w / 2 + 0.02, 0.07 + j * 0.13, n, w / 2 - 0.02, 0.07 + j * 0.13, n, 0.065, dim(IWOOD, 0.85 + F.hv(j * 7 + k) * 0.25), 'bark'); } },
+    tear(F, it) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.05), 0, -d / 2 + 0.1, 0.08, h, 0.08, IDARK, 'beam'); for (const y of [0.3, h - 0.1]) F.box(0, y, -d / 2 + 0.1, w, 0.08, 0.1, IWOOD, 'beam');
+      F.box(0, 0.42, -d / 2 + 0.1, w - 0.22, h - 0.6, 0.015, F.hv(2) < 0.5 ? [176, 70, 54] : [72, 104, 150], 'linen'); F.box(0, 0, d / 2 - 0.18, w * 0.6, 0.45, 0.3, IWOOD, 'plankH'); },
+    baia(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, 0.04, d, dim(IWOOD, 0.8), 'plankH'); F.box(0, 0, -d / 2 + 0.03, w, Math.min(1, h), 0.06, IWOOD, 'plankH'); for (const e of [-1, 1]) F.box(e * (w / 2 - 0.03), 0, 0, 0.06, Math.min(1, h), d, IWOOD, 'plankH'); },
+    prateleira(F, it) { FURN.despensa(F, it); },
+    tulha(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, h - 0.05, d, IWOOD, 'plankV'); F.box(0, h - 0.05, 0, w + 0.04, 0.05, d + 0.04, IDARK, 'plankH'); F.box(0, h - 0.06, 0, w - 0.1, 0.02, d - 0.1, [214, 186, 120]); },
+    pipas(F, it) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(0, 0, e * (d / 2 - 0.08), w, 0.12, 0.08, IDARK, 'beam'); const r = Math.min(h / 2 - 0.08, w / 4 - 0.02);
+      for (const e of [-1, 1]) F.log(e * w / 4, 0.12 + r, -d / 2 + 0.04, e * w / 4, 0.12 + r, d / 2 - 0.04, r, IWOOD, 'plankV'); },
+    'mesa-conferencia'(F, it) { const { w, d, h } = it; FURN.mesa(F, it); F.box(w * 0.25, h, -0.05, 0.03, 0.4, 0.03, IIRON, 'iron'); F.box(w * 0.25, h + 0.38, -0.05, 0.4, 0.02, 0.02, IIRON, 'iron'); for (const e of [-1, 1]) F.cyl(w * 0.25 + e * 0.18, h + 0.18, -0.05, 0.07, 0.02, [168, 136, 70]);
+      F.box(-w * 0.2, h, 0.02, 0.3, 0.02, 0.22, [200, 184, 150]); },
+    banca(F, it) { const { w, d, h } = it; F.box(0, 0, d / 2 - 0.025, w, h - 0.05, 0.05, IWOOD, 'plankV'); F.legs(w, d, h - 0.05, 0.035, IDARK); F.box(0, h - 0.05, 0, w, 0.05, d, IWOOD, 'plankH');
+      for (let k = 0; k < 3; k++) F.cyl(-w / 2 + w * (k + 0.5) / 3, h, 0, 0.16, 0.1, k === 1 ? ISTRAW : dim(ISTRAW, 0.85), 'wicker'); },
+    balcao(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, h - 0.05, d - 0.06, IWOOD, 'plankV'); F.box(0, h - 0.05, 0, w + 0.06, 0.05, d, IDARK, 'plankH'); },
+    bancada(F, it) { const { w, d, h } = it; F.legs(w, d, h - 0.08, 0.045, IDARK); F.box(0, h - 0.08, 0, w, 0.08, d, IWOOD, 'plankH'); F.box(0, 0.15, 0, w - 0.1, 0.03, d - 0.1, dim(IWOOD, 0.85), 'plankH');
+      F.log(-w * 0.25, h + 0.03, 0.05, -w * 0.25 + 0.28, h + 0.03, 0.05, 0.02, IDARK); F.box(-w * 0.25 + 0.3, h, 0.05, 0.12, 0.07, 0.07, IWOOD); F.box(w * 0.3, h, -0.05, 0.22, 0.1, 0.12, IIRON, 'iron'); },
+    'forja-fogo'(F, it, cx) { const { w, d, h } = it; F.box(0, 0, 0, w, h - 0.1, d, ISTONE, 'stone'); F.box(0, h - 0.1, 0, w * 0.55, 0.06, d * 0.55, IEMBER); F.box(0, h - 0.1, -d / 2 + 0.1, w, 0.25, 0.2, dim(ISTONE, 0.9), 'stone');
+      const hy = Math.min(cx.ceil - 0.3, h + 0.8); F.box(0, hy, -0.05, w * 0.85, 0.3, d * 0.8, dim(ISTONE, 0.85), 'stone'); if (cx.ceil > hy + 0.31) F.box(0, hy + 0.3, -d / 2 + 0.2, 0.4, cx.ceil - hy - 0.3, 0.4, dim(ISTONE, 0.8), 'stone');
+      F.box(-w / 2 + 0.2, h - 0.1, d / 2 - 0.14, 0.3, 0.14, 0.24, [112, 82, 60], 'leather'); },
+    bigorna(F, it) { F.cyl(0, 0, 0, 0.2, 0.5, IWOOD, 'bark'); F.box(0, 0.5, 0, 0.42, 0.17, 0.16, IIRON, 'iron'); F.box(0.2, 0.58, 0, 0.14, 0.07, 0.09, IIRON, 'iron'); },
+    tina(F, it) { const { w, h } = it; F.cyl(0, 0, 0, w / 2 - 0.02, h, IWOOD, 'plankV'); F.cyl(0, h - 0.08, 0, w / 2 - 0.05, 0.01, [52, 70, 82]); },
+    'roda-oleiro'(F, it) { F.cyl(0, 0.04, 0, 0.32, 0.07, IWOOD, 'plankH'); F.cyl(0, 0.1, 0, 0.03, 0.52, IDARK); F.cyl(0, 0.62, 0, 0.18, 0.04, IWOOD); F.cyl(0, 0.66, 0, 0.09, 0.12, ICLAY, 'mud'); },
+    'forno-olaria'(F, it) { const { w, h } = it; F.cyl(0, 0, 0, w / 2 - 0.02, h * 0.32, ISTONE, 'stone'); F.sph(0, h * 0.5, 0, w / 2 - 0.05, ICLAY, h * 0.5, 'mud'); F.box(0, 0.1, w / 2 - 0.12, 0.36, 0.34, 0.2, [40, 32, 28]); },
+    secador(F, it) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.03), 0, 0, 0.05, h, d, IDARK, 'beam'); for (const y of [0.3, 0.75, 1.2]) { F.box(0, y, 0, w - 0.06, 0.03, d, IWOOD, 'plankH'); for (let k = 0; k < 4; k++) F.cyl(-w / 2 + 0.22 + (w - 0.44) * k / 3, y + 0.03, 0, 0.08, 0.16, ICLAY, 'mud'); } },
+    'bancada-ourives'(F, it) { FURN.bancada(F, it); },
+    fornalha(F, it) { const { w, h } = it; F.cyl(0, 0, 0, w / 2 - 0.02, h, ISTONE, 'stone'); F.box(0, 0.12, w / 2 - 0.08, 0.2, 0.22, 0.12, IEMBER); },
+    cepo(F, it) { const { w, h } = it; F.cyl(0, 0, 0, w / 2 - 0.04, h, dim(IWOOD, 0.85), 'bark'); F.box(0.05, h, 0, 0.26, 0.02, 0.12, IIRON, 'iron', 0.4); },
+    ganchos(F, it) { const { w, d, h } = it; F.box(0, h - 0.08, -d / 2 + 0.1, w, 0.08, 0.08, IDARK, 'beam'); for (let k = 0; k < 4; k++) { const a = -w / 2 + w * (k + 0.5) / 4; F.box(a, h - 0.3, -d / 2 + 0.1, 0.015, 0.22, 0.015, IIRON, 'iron');
+      if (F.hv(k) < 0.75) F.sph(a, h - 0.62, -d / 2 + 0.12, 0.13, [150, 70, 60], 0.32, 'leather'); } },
+    'mesa-escriba'(F, it) { const { w, d, h } = it; FURN.mesa(F, it); for (let k = 0; k < 3; k++) F.log(-w * 0.3 + k * 0.12, h + 0.03, -0.1, -w * 0.3 + k * 0.12, h + 0.03, 0.14, 0.025, [214, 200, 164]); F.cyl(w * 0.3, h, -0.12, 0.04, 0.06, [40, 34, 30]); },
+    cofre(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, h, d, IDARK, 'plankH'); for (const e of [-1, 0, 1]) F.box(e * w * 0.35, 0, 0, 0.05, h + 0.01, d + 0.015, IIRON, 'iron'); F.box(0, h * 0.55, d / 2, 0.1, 0.12, 0.03, [168, 136, 70]); },
+    redes(F, it) { const { w, d, h } = it; F.box(0, h - 0.06, -d / 2 + 0.06, w, 0.06, 0.06, IDARK, 'beam'); F.box(0, 0.5, -d / 2 + 0.08, w - 0.1, h - 0.6, 0.03, [150, 140, 110], 'rope'); F.cyl(-w * 0.25, 0, 0.05, 0.18, 0.4, ISTRAW, 'wicker'); F.cyl(w * 0.25, 0, 0.05, 0.16, 0.32, ISTRAW, 'wicker'); },
+    entulho(F, it) { const { w, d, h } = it; for (let k = 0; k < 6; k++) F.box((F.hv(k) - 0.5) * w * 0.8, 0, (F.hv(k + 9) - 0.5) * d * 0.8, 0.2 + F.hv(k + 3) * 0.3, h * (0.3 + F.hv(k + 5) * 0.7), 0.2 + F.hv(k + 7) * 0.3, dim(ISTONE, 0.75 + F.hv(k + 11) * 0.3), 'rock', F.hv(k + 13) * 3); },
+  };
+  B3.FURN = FURN; // (for the tests: the kinds the 3D knows how to draw)
+  const FIRE_K = { lar: 1, fogao: 0.7, forno: 0.5, fogareiro: 0.45, braseiro: 0.6, 'forja-fogo': 1, 'forno-olaria': 0.6, fornalha: 0.5 };
+  // the door's leaf, apart, in its own frame: from its hinge (the origin) across the opening along +X, its foot at 0 — planks
+  // with their battens on the room's side, the iron straps
+  function leafGeo(w, h, col) {
+    const g = R3.Geo(); const put = (x, y, z, sx, sy, sz, c, pat) => { g.pat = PAT[pat] || 0; g.put(SH.box, R3.mat(x, y, z, 0, sx, sy, sz), c); };
+    const lw = w - 0.03, lh = h - 0.02; put(lw / 2 + 0.015, 0.01, 0, lw, lh, 0.05, col, 'plankV');
+    for (const y of [0.25, lh / 2, lh - 0.35]) put(lw / 2 + 0.015, y, 0.04, lw - 0.1, 0.1, 0.03, dim(col, 0.85), 'plankH');
+    for (const y of [0.3, lh - 0.3]) put(lw * 0.36, y, -0.03, lw * 0.62, 0.04, 0.012, IIRON, 'iron');
+    g.pat = 0; return g;
+  }
+  // a lid over a stair's hole, apart, in its own frame: its hinge along X at the origin, the lid out along +Z, its top at 0 —
+  // boards across, two battens under them
+  function lidGeo(w, d) {
+    const g = R3.Geo(); const put = (x, y, z, sx, sy, sz, c, pat) => { g.pat = PAT[pat] || 0; g.put(SH.box, R3.mat(x, y, z, 0, sx, sy, sz), c); };
+    put(0, -0.05, d / 2, w, 0.05, d, [140, 108, 74], 'plankH'); for (const e of [-0.3, 0.3]) put(e * w, -0.09, d / 2, 0.08, 0.04, d - 0.1, IDARK, 'beam'); put(0, 0, d - 0.12, 0.12, 0.008, 0.05, IIRON, 'iron');
+    g.pat = 0; return g;
+  }
+  B3.interior = function (plan, b, o) {
+    o = o || {}; if (!plan || !plan.levels || !plan.levels.length || !plan.shell) return null;
+    const levels = plan.levels.slice().sort((p, q) => p.y - q.y); const fine = o.fine !== undefined ? !!o.fine : undefined;
+    const out = { lv: {}, roof: null, leaf: [], hatch: [], item: {}, light: [], cut: null, box: null, tris: 0 };
+    const Ks = {}; let K0 = null;
+    for (const l of levels) { const g = R3.Geo(); const K = kit(g, b, undefined, undefined, fine); g.ao = null; Ks[l.lv] = K; out.lv[l.lv] = g; if (!K0) K0 = K; }
+    out.at = [K0.x0, K0.y0, K0.z0]; // (the plan's origin in the world: the lot's corner, the plinth's top)
+    const sh = plan.shell; const round = sh.kind === 'round';
+    // (the storey under another: the one whose area its own lies over, highest first)
+    const under = l => { let best = null; for (const q of levels) if (q.y < l.y - 0.01 && clipR(q.area, l.area) && (!best || q.y > best.y)) best = q; return best; };
+    for (const l of levels) {
+      const K = Ks[l.lv]; const g = out.lv[l.lv];
+      inFloor(K, plan, l, under(l));
+      for (const w of plan.walls) if (w.lv === l.lv) inWall(K, plan, w, l);
+      if (round && l.lv === levels[0].lv) inRing(K, plan, l);
+      for (const s of plan.stairs) if ((s.kind === 'degraus' ? s.lv1 : s.lv0) === l.lv) inStair(K, plan, s);
+      for (const it of plan.items) {
+        if (it.lv !== l.lv) continue; const from = g.p.length / 3; const foot = l.y + (it.y || 0) + FLOOR_UP; const F = piece(K, it, foot);
+        // (the ceiling a piece reaches up to from its foot — a hood, a flue: the storey's own, or the eaves)
+        const ceil = Math.min(l.y + l.h, sh.eave) - foot;
+        const f = FURN[it.kind]; if (f) f(F, it, { ceil }); else F.box(0, 0, 0, it.w, it.h, it.d, IWOOD, 'plankH');
+        out.item[it.id] = [l.lv, from, g.p.length / 3];
+        if (it.fire) out.light.push([K.x0 + it.x, K.y0 + l.y + (it.y || 0) + Math.min(it.h, 0.6), K.z0 + it.z, FIRE_K[it.kind] || 0.5]);
+      }
+    }
+    { const g = R3.Geo(); const K = kit(g, b, undefined, undefined, fine); g.ao = null; inRoof(K, plan);
+      // (an annex's lean-to, its ceiling at its own height; the room on a terrace, its roof of reed whole — the outside has none)
+      K.as('beam', () => { for (const a of sh.annex || []) { const l = levels.find(q => q.lv === (a.lv || 0)) || levels[0]; flatQ(K, a.r, l.y + a.h, dim(IWOOD, 0.9), -1); } });
+      const rm = sh.roof && sh.roof.room; const tl = levels.find(q => q.kind === 'terraco');
+      if (rm && rm.r && tl) K.as('thatch', () => K.box((rm.r[0] + rm.r[2]) / 2, tl.y + rm.h, (rm.r[1] + rm.r[3]) / 2, rm.r[2] - rm.r[0] + 0.2, 0.14, rm.r[3] - rm.r[1] + 0.2, ISTRAW));
+      out.roof = g; }
+    // the leaves of the doors, shut where the plan has them, to turn as the world has them
+    const TLm = TL();
+    for (const d of plan.doors) {
+      if (d.kind === 'vao') continue; const w = plan.walls[d.wall]; const l = w && levels.find(q => q.lv === w.lv); if (!l) continue;
+      const ax = w.b[0] - w.a[0], az = w.b[1] - w.a[1]; const L = Math.hypot(ax, az) || 1; const tx = ax / L, tz = az / L, nx = -tz, nz = tx;
+      // (it swings into its first room: the house's for a street door, the hall's for the door into an annex)
+      let sg = w.outer ? sideIn(plan, w, l) : 1;
+      { const m = plan.rooms.find(q => q.id === d.rooms[0]); if (m) { const cx = (m.r[0] + m.r[2]) / 2 - (w.a[0] + w.b[0]) / 2, cz = (m.r[1] + m.r[3]) / 2 - (w.a[1] + w.b[1]) / 2; sg = cx * nx + cz * nz >= 0 ? 1 : -1; } }
+      const ds = d.hinge === 'b' ? -1 : 1; const sH = d.at - ds * d.w / 2; const off = sg * Math.max(0, w.t / 2 - 0.04);
+      const hx = w.a[0] + tx * sH + nx * off, hz = w.a[1] + tz * sH + nz * off;
+      const ux = tx * ds, uz = tz * ds; const yaw = Math.atan2(-uz, ux);
+      // (turning by +θ carries the free end along (uz, −ux): toward the room, or the other way)
+      const swing = (uz * nx * sg - ux * nz * sg) >= 0 ? 1 : -1;
+      out.leaf.push({ id: d.id, lv: w.lv, at: [b.x * TLm + hx, K0.y0 + l.y + FLOOR_UP, b.y * TLm + hz], yaw, swing, w: d.w, h: d.h, g: leafGeo(d.w, d.h, (K0.P && K0.P.door) || '#5a3b25') });
+    }
+    // the lids over the holes the stairs come up through, shut — hinged along the hole's edge at the stair's top
+    for (const s of plan.stairs) {
+      const l = s.hole && levels.find(q => q.lv === s.lv1); if (!l) continue; const r = s.hole, dx = s.dir[0], dz = s.dir[1];
+      const w = dx ? r[3] - r[1] : r[2] - r[0], d = dx ? r[2] - r[0] : r[3] - r[1];
+      // (the hinge: the middle of the far edge along the climb; the lid lies back from it, against the climb)
+      const hx = dx ? (dx > 0 ? r[2] : r[0]) : (r[0] + r[2]) / 2, hz = dz ? (dz > 0 ? r[3] : r[1]) : (r[1] + r[3]) / 2;
+      out.hatch.push({ id: s.id, lv: s.lv1, at: [b.x * TL() + hx, K0.y0 + l.y + FLOOR_UP, b.y * TL() + hz], yaw: Math.atan2(-dx, -dz), w, d, g: lidGeo(w, d) });
+    }
+    // (the room inside the outer walls, where the outside's own faces give way to these; and all of it)
+    const ylo = levels[0].y - 0.3; let yhi = sh.eave + Math.max(0.3, ((sh.roof && sh.roof.h) || 0) + 0.3);
+    for (const l of levels) yhi = Math.max(yhi, l.y + l.h + 0.3);
+    const X0 = b.x * TLm, Z0 = b.y * TLm, Y0 = K0.y0;
+    if (round) { const ri = sh.r - sh.t; out.cut = { round: 1, at: [X0 + sh.cx, Z0 + sh.cz], r: ri - 0.02, y: [Y0 + ylo, Y0 + sh.eave + 0.05] }; out.box = [X0 + sh.cx - sh.r, Y0 + ylo, Z0 + sh.cz - sh.r, X0 + sh.cx + sh.r, Y0 + yhi, Z0 + sh.cz + sh.r]; }
+    else { const I = [sh.r[0] + sh.t, sh.r[1] + sh.t, sh.r[2] - sh.t, sh.r[3] - sh.t]; out.cut = { at: [X0 + I[0] + 0.02, Y0 + ylo, Z0 + I[1] + 0.02, X0 + I[2] - 0.02, Y0 + sh.eave + 0.05, Z0 + I[3] - 0.02] }; out.box = [X0 + sh.r[0], Y0 + ylo, Z0 + sh.r[1], X0 + sh.r[2], Y0 + yhi, Z0 + sh.r[3]]; }
+    for (const k in out.lv) out.tris += out.lv[k].p.length / 9; out.tris += out.roof.p.length / 9; for (const f of out.leaf.concat(out.hatch)) out.tris += f.g.p.length / 9;
+    return out;
+  };
   B3.bounds = function (b) {
     const g = R3.Geo(), gw = R3.Geo(); const K = kit(g, b); draw(g, gw, K, false);
     const P = g.p; if (!P.length) return null; const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
