@@ -122,6 +122,10 @@ vec3 b3cloth(vec3 P, vec3 p) {
     vec3 hL = b3V(32).xyz, kL = b3V(33).xyz, hR = b3V(35).xyz, kR = b3V(36).xyz;
     P = b3off(P, mix(hL, kL, 0.1), kL, 0.09 * s); P = b3out(P, kL, b3V(34).xyz, 0.068 * s, rd);
     P = b3off(P, mix(hR, kR, 0.1), kR, 0.09 * s); P = b3out(P, kR, b3V(37).xyz, 0.068 * s, rd); // (the shins, outward only)
+    // (and the forearms and the hands, where they rest on it: on the hips, tied behind the back)
+    vec3 eL = b3V(27).xyz, wL = b3V(28).xyz, eR = b3V(30).xyz, wR = b3V(31).xyz;
+    P = b3off(P, eL, wL, 0.05 * s); P = b3off(P, wL, wL + (wL - eL) * 0.62, 0.048 * s);
+    P = b3off(P, eR, wR, 0.05 * s); P = b3off(P, wR, wR + (wR - eR) * 0.62, 0.048 * s);
   }
   if (gs.z > 0.5) P.y = max(P.y, gs.x + 0.012 * s);
   return P;
