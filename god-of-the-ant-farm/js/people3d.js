@@ -37,7 +37,7 @@
   let mesh = null; // InstancedMesh per part
   let beastMesh = null, crowd = null, crowdHead = null, crowdHair = null, crowdLegs = null;
   const vis = new Map(); // id → the view's own memory of someone: where they were, which way they face, their walk, their pose
-  P3.clear = function () { vis.clear(); if (G.Body3D && G.Body3D.clear) G.Body3D.clear(); for (const sp of emoPool) sp.visible = false; if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
+  P3.clear = function () { vis.clear(); if (G.Body3D && G.Body3D.clear) G.Body3D.clear(); for (const sp of emoPool) sp.visible = false; if (held) for (const k in held) for (const m of [held[k].a, held[k].t]) if (m) { m.count = 0; m.visible = false; } if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
   let avFeet = null;
   G.worldHooks.push(() => { vis.clear(); avFeet = null; seenAt[0] = seenAt[1] = 0; cLod.clear(); });
 
@@ -83,8 +83,8 @@
     // (a feeling over a head: the god's little bubble with its sign — fear, joy, love, anger, a question)
     emoPool = []; for (let k = 0; k < 20; k++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); sp.visible = false; sp.renderOrder = 4; scene.add(sp); emoPool.push(sp); }
 
-    // (what the hands hold: one instanced mesh a kind of tool, its wood and iron in the vertex colours)
-    tools = makeTools(mat);
+    // (what the hands hold: one instanced mesh a kind of tool, its wood and iron in the vertex colours; and a mesh a form of load)
+    tools = makeTools(mat); held = makeHeld(mat);
     // (the body as one skin, if it starts; the pieces of old stay for the props — and for everything, if it does not)
     skin = !!(G.Body3D && G.Body3D.init(THREE, R3));
     if (skin) PARTS.forEach((p, k) => { if (!PROPS.has(p[0])) mesh[k].visible = false; });
@@ -146,6 +146,199 @@
   P3.tools = () => (tools ? Object.keys(tools).filter(k => toolN[k]).map(k => [k, toolN[k]]) : []); // (for the tests: who holds what this frame)
   P3.toolGeo = k => (tools && tools[k] ? tools[k].geometry : null); // (for the tests: a tool's shape, read only)
 
+  // ------------------------------ what is carried ------------------------------
+  // The load in someone's hands is the world's own — v.carry (the good, how much, what it came in: a crate off the boat with
+  // its fish, a jar, a basket of berries, a haunch of meat) and v.gear (the fisher's net, an oar) — drawn as the thing it is.
+  // Each good has a form (a crate, a sack, a cask, an amphora…), a grip (at the chest with both hands, low and heavy, hugged,
+  // cradled in the arms, on the shoulder, on the head, hanging from one hand, on the back by a strap over the brow) and a
+  // weight the body's pose shows. What a people carries in, and how, is theirs: wine in amphorae where the amphora is how wine
+  // travels and in casks in the north, loads on the back by the tumpline among the Aztecs, baskets on the head on the Nile —
+  // the table's rule for every town, never a town's name. Only seen: the load is the world's, the hands only show it.
+  // (a form: its size in metres — width across the carrier, height, depth away from them — and where the hands take it)
+  const FORM = {
+    caixa: { sz: [0.5, 0.38, 0.4] }, caixaPeixe: { sz: [0.5, 0.41, 0.4], tint: 1 }, saco: { sz: [0.36, 0.29, 0.62], tint: 1 }, barril: { sz: [0.44, 0.6, 0.44] },
+    anfora: { sz: [0.36, 0.72, 0.36] }, jarro: { sz: [0.31, 0.41, 0.31] }, balde: { sz: [0.3, 0.43, 0.3] }, cesta: { sz: [0.48, 0.35, 0.48], tint: 1 },
+    lenha: { sz: [0.86, 0.24, 0.24] }, pedra: { sz: [0.4, 0.26, 0.3] }, pedras: { sz: [0.5, 0.26, 0.32] }, peixe: { sz: [0.08, 0.58, 0.14], tint: 1 }, cambada: { sz: [0.2, 0.62, 0.16], tint: 1 },
+    rede: { sz: [0.6, 0.34, 0.4] }, remo: { sz: [0.15, 0.06, 2.1] }, rolo: { sz: [0.18, 0.18, 0.76], tint: 1 }, potes: { sz: [0.42, 0.27, 0.21] },
+    bolsa: { sz: [0.15, 0.17, 0.15] }, caixinha: { sz: [0.28, 0.17, 0.2] }, fardo: { sz: [0.62, 0.4, 0.42], tint: 1 }, queijo: { sz: [0.34, 0.13, 0.34] },
+    carne: { sz: [0.22, 0.54, 0.2] }, marfim: { sz: [0.12, 0.3, 0.9] }, ferramentas: { sz: [0.16, 0.12, 1.0] },
+  };
+  P3.FORM = FORM;
+  // the goods: [form, grip, kg a unit, kg of the vessel] — a unit of the world's stock is a load's share, not a kilogram, so
+  // the weights are what a load of that good feels like in the arms
+  const GOOD = {
+    wood: ['lenha', 'bracos', 5.5, 0], stone: ['pedra', 'baixo', 9, 0], food: ['cesta', 'peito', 2, 1.2], water: ['balde', 'lado', 9, 1.5],
+    sal: ['saco', 'ombro', 7, 0.5], guano: ['saco', 'ombro', 6, 0.5], cafe: ['saco', 'ombro', 6, 0.5], especiarias: ['saco', 'ombro', 3, 0.5], incenso: ['saco', 'ombro', 3, 0.5],
+    minerio: ['cesta', 'baixo', 8, 1.5], argila: ['cesta', 'baixo', 7, 1.5], cacau: ['cesta', 'peito', 2, 1.2], tamaras: ['cesta', 'peito', 2, 1.2], camarao: ['cesta', 'peito', 2, 1.2],
+    la: ['fardo', 'ombro', 2.5, 0], plumas: ['fardo', 'peito', 0.5, 0], carne_seca: ['fardo', 'ombro', 2, 0],
+    tecido: ['rolo', 'ombro', 2.5, 0], seda: ['rolo', 'ombro', 1.5, 0], couro: ['rolo', 'ombro', 3, 0], peles: ['rolo', 'ombro', 3, 0], pele_rara: ['rolo', 'ombro', 3, 0], couro_exotico: ['rolo', 'ombro', 3, 0],
+    ceramica: ['potes', 'peito', 2.5, 0], joias: ['caixinha', 'peito', 0.6, 0.8], perolas: ['caixinha', 'peito', 0.3, 0.8], cera: ['caixinha', 'peito', 2, 0.8],
+    ouro: ['bolsa', 'lado', 1.5, 0.1], moedas: ['bolsa', 'lado', 0.25, 0.1], mel: ['jarro', 'peito', 2.5, 0.8],
+    azeite: ['anfora', 'ombro', 9, 5], vinho: ['anfora', 'ombro', 9, 5], oleo: ['barril', 'abraco', 8, 4], queijo: ['queijo', 'peito', 3, 0],
+    bacalhau: ['peixe', 'lado', 3, 0], atum: ['peixe', 'lado', 6, 0], marfim: ['marfim', 'ombro', 12, 0], chifre: ['marfim', 'ombro', 3, 0],
+    ferramentas: ['ferramentas', 'ombro', 2.5, 0], armas: ['ferramentas', 'ombro', 3, 0],
+  };
+  P3.GOOD = GOOD;
+  // the peoples' own ways (a form replaced, a grip): the north keeps its wine and oil in casks; the Aztecs carry the heavy loads
+  // on the back by the strap across the brow; on the Nile a basket rides on the head
+  const WAYS = {
+    nordico: { form: { anfora: 'barril' } }, classico: { form: { anfora: 'barril' } },
+    asteca: { grip: { peito: 'costas', baixo: 'costas', bracos: 'costas', ombro: 'costas', abraco: 'costas' }, keep: { caixinha: 1, bolsa: 1, potes: 1, rede: 1, remo: 1, ferramentas: 1, rolo: 1, marfim: 1 } },
+    egipcio: { grip: { cesta: 'cabeca' } },
+  };
+  // (the grips: which hands hold the thing)
+  const HANDS = { peito: 'LR', baixo: 'LR', abraco: 'LR', bracos: 'LR', ombro: 'R', cabeca: 'L', lado: 'R', costas: 'LR', chao: '' };
+  P3.HANDS = HANDS;
+  // (the world's packaging — C1's Depot.form: caixa, saco, barril, anfora, cesta, fardo, pote, peixe, bolsa — and the form
+  // here that is of that kind: where the world names the kind and the table a finer form of it, the finer one is drawn)
+  const CLASS = { caixa: 'caixa', caixaPeixe: 'caixa', caixinha: 'caixa', saco: 'saco', barril: 'barril', anfora: 'anfora', jarro: 'pote', potes: 'pote', balde: 'pote', cesta: 'cesta', peixe: 'peixe', cambada: 'peixe', bolsa: 'bolsa',
+    fardo: 'fardo', lenha: 'fardo', rolo: 'fardo', carne: 'fardo', marfim: 'fardo', ferramentas: 'fardo', pedra: 'fardo', pedras: 'fardo', queijo: 'fardo', rede: 'fardo', remo: 'fardo' };
+  const GRIP_OF = { caixa: 'peito', saco: 'ombro', barril: 'abraco', anfora: 'ombro', cesta: 'peito', fardo: 'ombro', jarro: 'peito', peixe: 'lado', bolsa: 'lado' };
+  P3.CLASS = CLASS; P3.GRIP_OF = GRIP_OF; // (when C1's depot is in the game, its packaging — Depot.form — picks the form through these)
+  const lc = hex => { const c = new THREE.Color(); c.set(hex); return [c.r, c.g, c.b]; };
+  // (the colour of what shows of a load: the fish in a crate and in the hand, the fruit in a basket, a cloth's bolt)
+  const TINT = { berries: '#b8303a', shell: '#d8c8b0', leaves: '#5a8a3a', must: '#5a2a4a', grain: '#c8b07a', hay: '#d8b862', fruit: '#d8902a', meat: '#8a3a2a' };
+  const heldMemo = new Map(); G.worldHooks.push(() => heldMemo.clear());
+  // what someone holds: { form, grip, kg, tint, n, hands, size } — or null. From the world's record only (the load, its marks,
+  // the gear, the people's ways); the same load always the same thing
+  P3.held = function (v, civ) {
+    const c = v.carry && v.carry.n > 0 ? v.carry : null; const gear = !c && v.gear ? v.gear : null;
+    if (!c && !gear) return null;
+    const key = c ? c : gear; const m = heldMemo.get(v.id);
+    if (m && m.key === key && m.n === (c ? c.n : 0) && m.civ === civ) return m.out;
+    let form = 'caixa', grip = 'peito', kg = 8, tint = null; const n = c ? c.n : 1;
+    if (gear) { if (gear === 'rede') { form = 'rede'; grip = 'ombro'; kg = 6; } else if (gear === 'remo') { form = 'remo'; grip = 'ombro'; kg = 3; } else { form = 'caixa'; kg = 10; } }
+    else {
+      const g = GOOD[c.k] || GOOD.food; form = g[0]; grip = g[1]; kg = g[3] + g[2] * n;
+      // (the marks the world put on the load say what it came in)
+      if (c.crate) { form = c.fish || c.fishCol ? 'caixaPeixe' : 'caixa'; grip = 'peito'; kg = 4 + 3 * n; if (c.fishCol) tint = c.fishCol; else if (c.fish && G.Waters && G.Waters.FISH[c.fish]) tint = G.Waters.FISH[c.fish].col; }
+      else if (c.jar) { form = 'jarro'; grip = 'cabeca'; kg = 4 + 9 * n; }
+      else if (c.honey) { form = 'jarro'; grip = 'peito'; kg = 1 + 2.5 * n; }
+      else if (c.meat) { form = 'carne'; grip = 'ombro'; kg = 3 * n + 2; tint = TINT.meat; }
+      else if (c.hay) { form = 'fardo'; grip = 'ombro'; kg = 2.5 * n; tint = TINT.hay; }
+      else if (c.grain) { form = 'saco'; grip = 'ombro'; kg = 4 * n + 0.5; tint = TINT.grain; }
+      else if (c.fish) { const F = G.Waters && G.Waters.FISH[c.fish]; form = n >= 3 ? 'cambada' : 'peixe'; grip = 'lado'; kg = 1.2 * n; tint = F ? F.col : '#a8c0d0'; }
+      else if (c.basket || c.berries || c.shell || c.leaves || c.must) { form = 'cesta'; grip = 'peito'; tint = typeof c.basket === 'string' ? c.basket : c.berries ? TINT.berries : c.shell ? TINT.shell : c.leaves ? TINT.leaves : c.must ? TINT.must : TINT.fruit; }
+      else if (form === 'cesta') tint = TINT.fruit;
+      if (c.k === 'stone' && n >= 3) form = 'pedras';
+      if (!tint && FORM[form].tint) tint = (G.Eco && G.Eco.GOODS && G.Eco.GOODS[c.k] && G.Eco.GOODS[c.k].col) || (c.k === 'sal' ? '#ece8de' : '#c8b48a');
+    }
+    // (the people's own ways)
+    const Wy = WAYS[civ]; if (Wy) { if (Wy.form && Wy.form[form]) form = Wy.form[form]; if (Wy.grip && !(Wy.keep && Wy.keep[form])) grip = (Wy.grip[form] || Wy.grip[grip] || grip); }
+    if (form === 'barril' && grip === 'ombro') grip = 'abraco';
+    const out = { form, grip, kg: +kg.toFixed(1), tint: tint ? lc(tint) : null, n, hands: HANDS[grip] || '', size: FORM[form].sz, gear: !!gear };
+    heldMemo.set(v.id, { key, n: c ? c.n : 0, civ, out }); if (heldMemo.size > 3000) heldMemo.clear();
+    return out;
+  };
+  // the forms' shapes, made once — each in its own frame: its middle at the origin, +Y up, +Z away from the one who holds it,
+  // +X to their left; the wood, the clay, the iron in the vertex colours (a part that shows what it holds — the fish, the
+  // fruit, the cloth — white, to be painted by the instance's colour)
+  let held = null; const heldN = {};
+  function mergeParts(list) {
+    let nv = 0, ni = 0; for (const [g] of list) { nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
+    const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), cl = new Float32Array(nv * 3), idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni); let o = 0, oi = 0;
+    for (const [g, col] of list) {
+      const P = g.attributes.position, N = g.attributes.normal;
+      for (let i = 0; i < P.count; i++) { pos[(o + i) * 3] = P.getX(i); pos[(o + i) * 3 + 1] = P.getY(i); pos[(o + i) * 3 + 2] = P.getZ(i); nor[(o + i) * 3] = N.getX(i); nor[(o + i) * 3 + 1] = N.getY(i); nor[(o + i) * 3 + 2] = N.getZ(i); cl[(o + i) * 3] = col[0]; cl[(o + i) * 3 + 1] = col[1]; cl[(o + i) * 3 + 2] = col[2]; }
+      if (g.index) for (let i = 0; i < g.index.count; i++) idx[oi + i] = g.index.getX(i) + o; else for (let i = 0; i < P.count; i++) idx[oi + i] = o + i;
+      oi += g.index ? g.index.count : P.count; o += P.count; g.dispose();
+    }
+    const out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.BufferAttribute(cl, 3)); out.setIndex(new THREE.BufferAttribute(idx, 1));
+    out.computeBoundingBox(); return out;
+  }
+  function makeHeld(baseMat) {
+    const WOOD = lc('#8a6a44'), DARK = lc('#5a4028'), OAK = lc('#6b4a2e'), IRON = lc('#4a4a4e'), CLAY = lc('#b8704a'), CLAYD = lc('#8a4a2a'), WICK = lc('#a8844c'), ROPE = lc('#b8a070'), BARK = lc('#6b4a2e'), PALE = lc('#d6b27a'),
+      STONE = lc('#9a958c'), LEATH = lc('#7a5634'), GOLD = lc('#d8b04a'), WHITE = [0.92, 0.92, 0.92], CHEESE = lc('#e0b24a'), RIND = lc('#c8902a'), BONE = lc('#ece4d0'), IVORY = lc('#efe6cf'), NET = lc('#c8b88a'), RED = lc('#c8483a'), WATER = lc('#5a8ab8');
+    // (the kit: a box, a cylinder — along Y, or turned to X or Z —, a lathe of [radius, height] points, an ellipsoid, a ring)
+    const tr = (g, x, y, z, rx, ry, rz) => { if (rx) g.rotateX(rx); if (ry) g.rotateY(ry); if (rz) g.rotateZ(rz); g.translate(x || 0, y || 0, z || 0); return g; };
+    const box = (sx, sy, sz, x, y, z, col, rx, ry, rz) => [tr(new THREE.BoxGeometry(sx, sy, sz), x, y, z, rx, ry, rz), col];
+    const cyl = (r0, r1, h, n, x, y, z, col, ax, open) => { const g = new THREE.CylinderGeometry(r1, r0, h, n || 8, 1, !!open); if (ax === 'x') g.rotateZ(-Math.PI / 2); else if (ax === 'z') g.rotateX(Math.PI / 2); return [tr(g, x, y, z), col]; };
+    const lathe = (pts, n, col, x, y, z, rx, ry, rz) => [tr(new THREE.LatheGeometry(pts.map(([r, h]) => new THREE.Vector2(r, h)), n || 10), x, y, z, rx, ry, rz), col];
+    const ell = (rx0, ry0, rz0, x, y, z, col, ws, hs, ax, ay, az) => { const g = new THREE.SphereGeometry(1, ws || 8, hs || 6); g.scale(rx0, ry0, rz0); return [tr(g, x, y, z, ax, ay, az), col]; };
+    const ring = (r, t, x, y, z, col, rx, ry, rz, arc) => [tr(new THREE.TorusGeometry(r, t, 4, 12, arc || Math.PI * 2), x, y, z, rx, ry, rz), col];
+    const disc = (r, n, x, y, z, col, ax) => { const g = new THREE.CircleGeometry(r, n || 8); if (ax === 'x') g.rotateY(Math.PI / 2); else if (ax === '-x') g.rotateY(-Math.PI / 2); else if (ax === 'y') g.rotateX(-Math.PI / 2); return [tr(g, x, y, z), col]; };
+    const fishShape = (y, s, rz) => { const L = [[0, -0.25], [0.04, -0.15], [0.064, 0.0], [0.045, 0.15], [0, 0.25]]; const g = new THREE.LatheGeometry(L.map(([r, h]) => new THREE.Vector2(r * s, h * s)), 6); g.scale(0.55, 1, 1);
+      const fin = box(0.006, 0.07 * s, 0.12 * s, 0, -0.28 * s, 0, WHITE); tr(fin[0], 0, y, 0, 0, 0, rz || 0); return [[tr(g, 0, y, 0, 0, 0, rz || 0), WHITE], fin]; };
+    const G0 = {};
+    // a crate of planks: its corner posts, the rims round its top and its foot, the joints of the planks; shut with its lid
+    const crate = lid => { const L = [box(0.47, 0.35, 0.37, 0, 0, 0, WOOD), box(0.472, 0.012, 0.372, 0, 0.06, 0, DARK), box(0.472, 0.012, 0.372, 0, -0.06, 0, DARK)];
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) L.push(box(0.04, 0.38, 0.04, sx * 0.23, 0, sz * 0.18, DARK));
+      for (const y of [-0.17, 0.17]) { for (const s of [-1, 1]) { L.push(box(0.5, 0.035, 0.04, 0, y, s * 0.18, OAK)); L.push(box(0.04, 0.035, 0.4, s * 0.23, y, 0, OAK)); } }
+      if (lid) { L.push(box(0.48, 0.03, 0.38, 0, 0.19, 0, WOOD)); L.push(box(0.04, 0.032, 0.38, 0, 0.205, 0, DARK)); } else L.push(box(0.44, 0.02, 0.34, 0, 0.12, 0, DARK)); // (open: the fish lie on the planks inside)
+      return L; };
+    G0.caixa = [crate(true)]; G0.caixaPeixe = [crate(false), [...fishShape(0.165, 0.85, Math.PI / 2 - 0.1).map(p => (tr(p[0], 0.02, 0, -0.07), p)), ...fishShape(0.17, 0.8, Math.PI / 2 + 0.25).map(p => (tr(p[0], -0.03, 0.01, 0.07), p)), ...fishShape(0.2, 0.75, Math.PI / 2 - 0.6).map(p => (tr(p[0], 0.06, 0.02, 0.01), p))]];
+    // a sack lying along the shoulder: its belly, the neck tied
+    G0.saco = [[], [(() => { const g = new THREE.LatheGeometry([[0, -0.31], [0.12, -0.3], [0.17, -0.25], [0.18, -0.1], [0.175, 0.08], [0.15, 0.2], [0.08, 0.27], [0.05, 0.29], [0.07, 0.31], [0.0, 0.33]].map(([r, h]) => new THREE.Vector2(r, h)), 10); g.rotateX(Math.PI / 2); g.scale(1, 0.8, 1); return [g, WHITE]; })(), box(0.12, 0.03, 0.03, 0, 0, 0.29, WHITE)]];
+    // a cask of staves on its hoops
+    { const prof = [[0, -0.3], [0.19, -0.3], [0.205, -0.2], [0.22, 0], [0.205, 0.2], [0.19, 0.3], [0, 0.3]]; const L = [lathe(prof, 12, OAK)];
+      for (const [y, r] of [[-0.26, 0.198], [-0.12, 0.214], [0.12, 0.214], [0.26, 0.198]]) L.push(cyl(r + 0.006, r + 0.006, 0.03, 12, 0, y, 0, IRON, null, true));
+      L.push(disc(0.19, 10, 0, 0.301, 0, PALE, 'y')); G0.barril = [L]; }
+    // an amphora: its toe, the belly, the shoulder, the neck and its rim, two handles
+    G0.anfora = [[lathe([[0, -0.36], [0.03, -0.35], [0.05, -0.3], [0.13, -0.18], [0.18, -0.02], [0.18, 0.08], [0.14, 0.18], [0.07, 0.24], [0.055, 0.3], [0.065, 0.34], [0.07, 0.36], [0.05, 0.36], [0, 0.35]], 10, CLAY),
+      ring(0.055, 0.012, 0.085, 0.27, 0, CLAYD, 0, 0, Math.PI / 2, Math.PI), ring(0.055, 0.012, -0.085, 0.27, 0, CLAYD, 0, 0, -Math.PI / 2, Math.PI)]];
+    // a water jar (and the small pot of honey: the same, smaller)
+    G0.jarro = [[lathe([[0, -0.2], [0.09, -0.19], [0.14, -0.12], [0.155, 0], [0.13, 0.1], [0.075, 0.16], [0.065, 0.19], [0.08, 0.205], [0.06, 0.21], [0, 0.2]], 12, CLAY), ring(0.07, 0.008, 0, 0.2, 0, CLAYD, Math.PI / 2)]];
+    // a bucket of staves, the water in it, its handle
+    G0.balde = [[lathe([[0, -0.14], [0.12, -0.14], [0.15, 0.14], [0.138, 0.14], [0.11, -0.12], [0, -0.12]], 12, OAK), cyl(0.127, 0.127, 0.025, 12, 0, -0.1, 0, IRON, null, true), cyl(0.15, 0.15, 0.025, 12, 0, 0.11, 0, IRON, null, true),
+      disc(0.13, 12, 0, 0.09, 0, WATER, 'y'), ring(0.15, 0.007, 0, 0.14, 0, IRON, 0, 0, 0, Math.PI)]];
+    // a basket of wicker, its rim, and what is in it heaped in its mouth
+    G0.cesta = [[lathe([[0, -0.12], [0.16, -0.12], [0.21, -0.02], [0.23, 0.12], [0.215, 0.12], [0.195, -0.0], [0.15, -0.1], [0, -0.1]], 12, WICK), ring(0.225, 0.016, 0, 0.12, 0, DARK, Math.PI / 2)],
+      [ell(0.075, 0.07, 0.075, -0.08, 0.1, -0.05, WHITE, 6, 4), ell(0.07, 0.065, 0.07, 0.08, 0.1, -0.06, WHITE, 6, 4), ell(0.075, 0.07, 0.07, 0.0, 0.11, 0.07, WHITE, 6, 4), ell(0.065, 0.06, 0.065, -0.1, 0.09, 0.08, WHITE, 6, 4), ell(0.07, 0.07, 0.07, 0.03, 0.16, 0.0, WHITE, 6, 4)]];
+    // firewood: four split logs across the arms, the pale of their ends, two ties
+    { const L = []; for (const [y, z, x] of [[-0.055, -0.06, 0.02], [-0.055, 0.06, -0.02], [0.055, 0, 0.03], [0.05, 0.11, -0.04]]) { L.push(cyl(0.06, 0.06, 0.84, 7, x, y, z, BARK, 'x', true)); L.push(disc(0.058, 7, x + 0.42, y, z, PALE, 'x')); L.push(disc(0.058, 7, x - 0.42, y, z, PALE, '-x')); }
+      for (const s of [-1, 1]) L.push(ring(0.13, 0.008, s * 0.24, 0, 0.03, ROPE, 0, Math.PI / 2, 0)); G0.lenha = [L]; }
+    // a stone block (and two)
+    const rock = (sx, sy, sz, x, y, z, ry) => { const g = new THREE.DodecahedronGeometry(1, 0); g.scale(sx, sy, sz); return [tr(g, x, y, z, 0, ry || 0), STONE]; };
+    G0.pedra = [[rock(0.2, 0.13, 0.15, 0, 0, 0, 0.3)]]; G0.pedras = [[rock(0.14, 0.12, 0.15, -0.12, -0.01, 0, 0.2), rock(0.13, 0.11, 0.14, 0.13, 0, 0.01, 1.1)]];
+    // a fish held by the gills, hanging; three on a cord
+    G0.peixe = [[], fishShape(-0.02, 1, 0)]; // (head up, held by the gills: its middle under the fist)
+    G0.cambada = [[cyl(0.004, 0.004, 0.12, 4, 0, 0.26, 0, ROPE)], [...fishShape(-0.04, 0.9, 0).map(p => (tr(p[0], -0.05, 0, 0), p)), ...fishShape(-0.08, 0.85, 0).map(p => (tr(p[0], 0.05, 0, 0.03), p)), ...fishShape(-0.02, 0.8, 0).map(p => (tr(p[0], 0, 0, -0.04), p))]];
+    // a net bundled for the shoulder, its floats
+    G0.rede = [[ell(0.3, 0.17, 0.2, 0, 0, 0, NET, 10, 6), ell(0.035, 0.035, 0.035, 0.18, 0.1, 0.1, RED, 6, 4), ell(0.035, 0.035, 0.035, -0.1, 0.13, -0.08, RED, 6, 4), ell(0.035, 0.035, 0.035, 0.05, 0.15, 0.12, PALE, 6, 4)]];
+    // an oar: its loom forward of the shoulder, the blade behind
+    G0.remo = [[cyl(0.022, 0.02, 1.6, 6, 0, 0, 0.25, WOOD, 'z'), box(0.15, 0.016, 0.5, 0, 0, -0.8, WOOD), cyl(0.026, 0.026, 0.12, 6, 0, 0, 1.02, DARK, 'z')]];
+    // a bolt of cloth, a rolled hide (the colour of the good), its ties
+    G0.rolo = [[ring(0.092, 0.006, 0, 0, 0.26, ROPE), ring(0.092, 0.006, 0, 0, -0.26, ROPE)], [cyl(0.09, 0.09, 0.76, 10, 0, 0, 0, WHITE, 'z'), disc(0.088, 10, 0, 0, 0.381, WHITE), disc(0.088, 10, 0, 0, -0.381, WHITE)]];
+    // two pots against the chest
+    { const pot = x => lathe([[0, -0.13], [0.07, -0.12], [0.1, -0.05], [0.105, 0.02], [0.08, 0.09], [0.055, 0.11], [0.065, 0.13], [0, 0.125]], 8, CLAY, x, 0, 0); G0.potes = [[pot(-0.11), pot(0.11), cyl(0.066, 0.066, 0.016, 8, -0.11, 0.124, 0, CLAYD, null, true), cyl(0.066, 0.066, 0.016, 8, 0.11, 0.124, 0, CLAYD, null, true)]]; }
+    // a purse of coins hanging from the fist
+    G0.bolsa = [[lathe([[0, -0.08], [0.06, -0.07], [0.075, -0.03], [0.062, 0.02], [0.025, 0.05], [0.035, 0.07], [0, 0.075]], 8, LEATH), ring(0.027, 0.006, 0, 0.05, 0, ROPE, Math.PI / 2)]];
+    // a little chest bound in metal
+    G0.caixinha = [[box(0.28, 0.12, 0.2, 0, -0.025, 0, DARK), cyl(0.1, 0.1, 0.28, 8, 0, 0.035, 0, OAK, 'x'), box(0.02, 0.17, 0.205, -0.1, 0, 0, GOLD), box(0.02, 0.17, 0.205, 0.1, 0, 0, GOLD), box(0.04, 0.04, 0.01, 0, 0.0, 0.105, GOLD)]];
+    // a bale (wool, hay, feathers: the colour of the good)
+    G0.fardo = [[ring(0.21, 0.01, -0.18, 0, 0, ROPE, 0, Math.PI / 2, 0), ring(0.21, 0.01, 0.18, 0, 0, ROPE, 0, Math.PI / 2, 0)], [(() => { const g = new THREE.CapsuleGeometry(0.2, 0.22, 3, 9); g.rotateZ(Math.PI / 2); g.scale(1, 0.95, 1.05); return [g, WHITE]; })()]];
+    // a wheel of cheese
+    G0.queijo = [[cyl(0.17, 0.17, 0.11, 14, 0, 0, 0, CHEESE), cyl(0.165, 0.165, 0.012, 14, 0, 0.06, 0, RIND), cyl(0.165, 0.165, 0.012, 14, 0, -0.06, 0, RIND)]];
+    // a haunch with its bone
+    G0.carne = [[cyl(0.02, 0.018, 0.13, 6, 0, 0.24, 0, BONE), ell(0.035, 0.03, 0.035, 0, 0.31, 0, BONE, 6, 4)], [ell(0.11, 0.19, 0.095, 0, 0, 0, WHITE, 8, 6)]];
+    // a tusk, curved, over the shoulder
+    G0.marfim = [[cyl(0.06, 0.05, 0.36, 8, 0, -0.06, -0.26, IVORY, 'z'), (() => { const g = new THREE.CylinderGeometry(0.03, 0.05, 0.34, 8); g.rotateX(Math.PI / 2 - 0.35); g.translate(0, 0.03, 0.06); return [g, IVORY]; })(), (() => { const g = new THREE.ConeGeometry(0.03, 0.26, 8); g.rotateX(Math.PI / 2 - 0.8); g.translate(0, 0.14, 0.3); return [g, IVORY]; })()]];
+    // the hafts of a bundle of tools, their iron
+    G0.ferramentas = [[cyl(0.016, 0.016, 1.0, 6, -0.03, 0, 0, WOOD, 'z'), cyl(0.016, 0.016, 0.95, 6, 0.03, 0.01, 0.02, WOOD, 'z'), cyl(0.016, 0.016, 0.9, 6, 0, 0.04, -0.03, OAK, 'z'), box(0.12, 0.05, 0.03, -0.03, 0, 0.5, IRON), box(0.03, 0.12, 0.05, 0.03, 0.02, 0.47, IRON), box(0.08, 0.02, 0.1, 0, 0.04, 0.44, IRON)]];
+    // (one instanced mesh a form — its part of plain stuff, and its part painted the colour of what it holds)
+    const tm = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }); tm.onBeforeCompile = baseMat.onBeforeCompile; tm.customProgramCacheKey = () => 'people3d-held';
+    const out = {};
+    for (const k in G0) {
+      const [plain, tinted] = G0[k]; out[k] = {};
+      if (plain && plain.length) { const m = new THREE.InstancedMesh(mergeParts(plain), tm, MAX); m.count = 0; m.visible = false; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); out[k].a = m; }
+      if (tinted && tinted.length) { const m = new THREE.InstancedMesh(mergeParts(tinted), tm, MAX); m.count = 0; m.visible = false; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); out[k].t = m; }
+      heldN[k] = 0;
+    }
+    return out;
+  }
+  const HC = { c: null }; // (a colour, reused)
+  // (one held thing drawn: its frame — the rig's 'carry' bone, unscaled — and its colour)
+  function heldPut(R, L) {
+    const H = L.held; const f = H && held && held[H.form]; if (!f || heldN[H.form] >= MAX) return false;
+    const i = heldN[H.form]++; if (f.a) f.a.setMatrixAt(i, R[B.carry]);
+    if (f.t) { f.t.setMatrixAt(i, R[B.carry]); if (!HC.c) HC.c = new THREE.Color(); const t = H.tint || [0.8, 0.75, 0.6]; HC.c.setRGB(t[0], t[1], t[2]); f.t.setColorAt(i, HC.c); }
+    return true;
+  }
+  function heldBegin() { if (held) for (const k in held) heldN[k] = 0; }
+  function heldEnd() { if (held) for (const k in held) { const f = held[k]; for (const m of [f.a, f.t]) { if (!m) continue; m.count = heldN[k]; m.visible = heldN[k] > 0; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } } }
+  P3.helds = () => (held ? Object.keys(held).filter(k => heldN[k]).map(k => [k, heldN[k]]) : []); // (for the tests: what is held this frame)
+  P3.heldGeo = k => (held && held[k] ? [held[k].a && held[k].a.geometry, held[k].t && held[k].t.geometry].filter(Boolean) : null); // (for the tests: a form's shape, read only)
+
   let emoPool = []; const emoTex = new Map();
   function emoMap(k) { let t = emoTex.get(k); if (t === undefined) { const s = G.Art && G.Art.icon ? G.Art.icon(k) : null; t = s && s.c ? new THREE.CanvasTexture(s.c) : null; if (t) t.colorSpace = THREE.SRGBColorSpace; emoTex.set(k, t); } return t; }
 
@@ -165,6 +358,12 @@
     const hair = ad >= 62 ? G.lerpColor(G.hex2rgb(v.hair || '#3a2a1a'), [214, 210, 204], G.clamp((ad - 62) / 18, 0, 0.85)) : null;
     const L = { s, skin: v.skin || '#d8a888', hair: hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', belt: darker(cloth, 0.38), brow: darker(v.hair || '#3a2a1a', 0.8), nose: darker(v.skin || '#d8a888', 0.88), lips: darker(v.skin || '#d8a888', 0.62), robe, fem: v.g === 'f' && ad >= 13, bun: v.g === 'f' && ad >= 16 && v.id % 3 === 1, beard: v.g === 'm' && ad >= 26 && v.id % 3 === 0, long: v.g === 'f' && ad >= 8 && v.id % 3 !== 1, bald: v.g === 'm' && ad >= 55 && v.id % 4 === 0, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia' || (v.role === 'anciao' && ad >= 60), toolK: v.role === 'anciao' ? 'cajado' : 'lanca', act: v.act, torch: torchOf(v), lantern: !!v.lantern && !v.inside, strap: ad >= 14 && (v.role === 'cacador' || v.role === 'guerreiro' || v.role === 'mercador' || v.role === 'explorador' || (G.Possess && G.Possess.body && G.Possess.body() === v)) };
     L.id = v.id || 0; // (only for the drawing's own clocks: each one's cloth moves on its own beat)
+    // (what the hands hold — the world's load, as the thing it is — and the strength that carries it: a child's, an elder's;
+    // the work of the hands sets it down beside them; a load on both hands leaves none for the torch, one on the right none
+    // for the spear — the god's view puts the spear away under a load too)
+    L.held = P3.held(v, (fac && fac.civ) || v._civ || v.civ || 'nordico'); L.carry = !!L.held;
+    L.str = (ad < 12 ? 0.35 : ad < 16 ? 0.7 : ad >= 70 ? 0.6 : ad >= 55 ? 0.8 : 1) * (v.g === 'f' ? 0.85 : 1);
+    if (L.held) { if (BUSY_HANDS.has(v.act) || v.sleeping) L.held = setDown(L.held); if (L.held.hands.includes('L')) { L.torch = false; L.lantern = false; } if (L.held.hands.includes('R')) L.tool = false; }
     if (skin) {
       L.out = outfitOf(v, L, fac); L.headK = L.out.headK; L.armOut = L.out.skirt === 'saiaL' || L.out.cloakM || L.out.topM ? 0.07 : 0;
       // (the face's mood, from the world's feeling: joy smiles with the eyes, love too and blushes; grief frowns with the
@@ -303,7 +502,7 @@
   // ------------------------------ poses ------------------------------
   // a pose: the angles of the joints, and the hips' height and lean (radians, metres)
   // (and for the skin: the stance of each foot, the grip of the hands, the mouth, the eyes' look, the cloth's swing)
-  const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, anL: 0, anR: 0, pelY: 0, pelR: 0, pelP: 0, shift: 0, sway: 0, breath: 0, lie: 0, tool: 0, stL: 0, stR: 0, pitL: 0, pitR: 0, grip: 0, talk: 0, gazeX: 0, gazeY: 0, cloth: 0, clothS: 0, clothB: 0, clothV: 0, wrist: 0 });
+  const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, anL: 0, anR: 0, pelY: 0, pelR: 0, pelP: 0, shift: 0, sway: 0, breath: 0, lie: 0, tool: 0, stL: 0, stR: 0, pitL: 0, pitR: 0, grip: 0, talk: 0, gazeX: 0, gazeY: 0, cloth: 0, clothS: 0, clothB: 0, clothV: 0, wrist: 0, holdW: 0 });
   Anim.POSE0 = POSE0;
   // (the dead lie as they fell: on the back or face down, the limbs thrown out)
   const DEAD = [
@@ -468,6 +667,42 @@
     if (!('tool' in want)) pose.tool = 0;
   };
   Anim.pose = (state, t, sp) => (ST[state] || ST.idle)(t, sp || 0);
+  // the weight of what is held, in the body — by the load's weight against the body's strength, not by the good's name: under a
+  // load before the chest the trunk leans back over the hips and the knees give; carried low and heavy, more; under a load on
+  // the back the trunk bends forward and the strap pulls the head back; a bucket at the side tips the trunk away from it and
+  // stills that arm; a jar on the head keeps the head and the trunk upright; on the shoulder the trunk leans a little from it.
+  // The hand on the load reaches it in the rig (holdW: how much); the free hand goes on with the step. And to reach a point low
+  // before the feet — a crate on the ground, the shelf — the body bends at the knees and the hips as deep as the point is low
+  // (want: the pose the state wants, changed here before it is blended; t, sp: the state's clock and speed)
+  // (how deep a body goes for a point hy metres over its feet: the squat, the bow; a heavy thing is lifted with the legs, a light
+  // one with a bow — the same numbers for the pose and for the path of the thing held)
+  function reachDepth(H, L, hy, w) { const q = G.clamp((1.05 - hy) / 0.85, 0, 1) * G.smooth(0, 1, w); const hv = H ? G.clamp(H.kg / (28 * (L.str || 1)), 0, 1) : 0; return { q, sq: q * (0.75 + 0.25 * hv), bw: q * (1 - 0.35 * hv) }; }
+  Anim.reachDepth = reachDepth;
+  Anim.hold = function (want, L, st, t, sp) {
+    const H = L.held, r = L.reach && L.reach.w > 0.001 ? L.reach : null; if (!H && !r) return want;
+    const walk = st === 'walk' || st === 'carryWalk' || st === 'run' || st === 'sneak' || st === 'wade';
+    if (H && H.grip !== 'chao') {
+      const k = G.clamp(H.kg / (28 * (L.str || 1)), 0, 1.6), g = H.grip; want.holdW = 1;
+      // (the free arm: the step's own swing, not the 'carry' state's arms held out)
+      if (st === 'carry' || st === 'carryWalk') { const base = (st === 'carryWalk' ? ST.walk : ST.idle)(t, sp || 0); for (const q of H.hands.includes('L') ? [] : ['shLp', 'shLr', 'elL']) want[q] = base[q]; for (const q of H.hands.includes('R') ? [] : ['shRp', 'shRr', 'elR']) want[q] = base[q]; }
+      const add = (j, v) => { want[j] = (want[j] || 0) + v; };
+      if (g === 'peito' || g === 'abraco' || g === 'bracos') { add('lean', -0.06 - 0.11 * k); add('knL', 0.07 * k); add('knR', 0.07 * k); add('neck', -0.05); add('crouch', 0.015 * k); }
+      else if (g === 'baixo') { add('lean', -0.1 - 0.14 * k); add('knL', 0.14 * k); add('knR', 0.14 * k); add('crouch', 0.04 * k); }
+      else if (g === 'costas') { add('lean', 0.16 + 0.2 * k); add('neck', -0.12); add('knL', 0.1 * k); add('knR', 0.1 * k); }
+      else if (g === 'ombro') { add('sway', -0.05 * k); add('lean', 0.02 + 0.03 * k); add('knL', 0.04 * k); add('knR', 0.04 * k); }
+      else if (g === 'cabeca') { want.lean = (want.lean || 0) * 0.3; want.neck = 0; want.twist = (want.twist || 0) * 0.4; want.lookY = 0; }
+      else if (g === 'lado') { want.shRp = 0.04 + (walk ? Math.sin((t || 0)) * 0.03 : 0); want.shRr = -0.2 - 0.07 * k; want.elR = 0.1; add('sway', -0.1 * k); }
+      if (walk) want.bob = (want.bob || 0) * (1 - 0.32 * Math.min(1, k));
+    }
+    if (r) {
+      // (how low the point is under the hips of a standing body: a squat and a bow as deep as it needs)
+      const hy = r.Y - (L.ground !== undefined ? L.ground : r.Y - 1); const { q, sq, bw } = reachDepth(H, L, hy, r.w);
+      const add = (j, v) => { want[j] = (want[j] || 0) + v; };
+      add('crouch', 0.72 * sq); add('lean', 1.05 * bw + (want.lean < 0 ? -want.lean * q : 0)); add('hipL', -1.3 * sq); add('hipR', -1.2 * sq); add('knL', 1.85 * sq); add('knR', 1.7 * sq); add('neck', 0.3 * q);
+      want.bob = (want.bob || 0) * (1 - q);
+    }
+    return want;
+  };
   // the gait's rate: radians of its phase per metre walked, so that the standing foot keeps still on the ground at any
   // speed. Measured once from the rig itself (how far back the lower foot goes per radian of the stride, the legs' own
   // angles at each speed): a change to a gait stays in step without a number to retune
@@ -578,7 +813,7 @@
     // (a tunic falls from the belt to the middle of the thigh, flaring a little; a strap across the chest for the bag)
     if (!L.robe && L.s > 0.8) put('hem', idx, F.pel, 0, -0.02, 0, 0, 0, 0, 0, -0.1, 0, 0.42 + Math.abs(pose.hipL - pose.hipR) * 0.08, 0.24, 0.33, L.cloth); else hide('hem', idx);
     if (L.strap) put('strap', idx, F.trunk, 0, 0.28, 0, 0, 0, 0.72, 0, 0, 0, 0.05, 0.62, 0.27, L.belt); else hide('strap', idx);
-    if (L.carry) put('carry', idx, F.trunk, 0, 0.3, 0.26, 0, 0, 0, 0, 0, 0, 0.34, 0.26, 0.3, '#9a7a4a'); else hide('carry', idx);
+    if (L.held && heldPut(P3.rig(X, Y, Z, yaw, pose, L), L)) hide('carry', idx); else if (L.carry) put('carry', idx, F.trunk, 0, 0.3, 0.26, 0, 0, 0, 0, 0, 0, 0.34, 0.26, 0.3, '#9a7a4a'); else hide('carry', idx);
     if (marker) put('marker', idx, root, 0, 2.15 + Math.sin(performance.now() / 300) * 0.04, 0, 0, performance.now() / 600, 0, 0, 0, 0, 0.16, 0.22, 0.16, marker); else hide('marker', idx);
   }
 
@@ -699,8 +934,109 @@
     fr(R[B.hpHL + k], R[B.pel], sd * 0.095, -0.04, 0, hp / 2, 0, 0); fr(R[B.knHL + k], R[B.thL + k], 0, -LEG.L1, 0, kn / 2, 0, 0);
     LG[k * 2] = hp; LG[k * 2 + 1] = kn;
   }
+  // ------------------------------ the hands on what they hold ------------------------------
+  // The arm is two bones and a hand: from the shoulder 0.30 m to the elbow, then 0.29 m to the wrist and 0.076 m more to the
+  // middle of the palm (a hair to the thumb's side of the forearm's line — the elbow's hinge carries it). armIK turns the
+  // shoulder three ways and bends the elbow so the palm reaches a point, the elbow falling toward its pole (down and out, as a
+  // real one goes): the shoulder's turn in the rig's own order (YXZ) and the elbow's bend. Points in the trunk's frame (body units)
+  const AU = 0.3, AF = 0.366, AX = 0.027; // (the upper arm; the forearm to the palm; the palm off the elbow's plane, along its hinge)
+  const IKO = { rx: 0, ry: 0, rz: 0, el: 0, ok: false, reach: 0 };
+  function armIK(sd, S, T, pole) {
+    // (the palm is off the arm's plane by AX along the hinge: reach for the point the plane must hold — twice, the hinge from
+    // the turn found the first time)
+    let hx = 1, hy = 0, hz = 0; // (the upper arm's own X: the hinge — for both arms the body's left as they hang)
+    const ex = -sd * AX; let d1x = 0, d1y = -1, d1z = 0, d2x = 0, d2y = -1, d2z = 0, el = 0, ok = true, reach = 0;
+    for (let it = 0; it < 2; it++) {
+      const tx = T[0] - ex * hx - S[0], ty = T[1] - ex * hy - S[1], tz = T[2] - ex * hz - S[2]; let c = Math.hypot(tx, ty, tz); reach = c;
+      if (c < 1e-5) { ok = false; break; }
+      const ux = tx / c, uy = ty / c, uz = tz / c; const cmax = (AU + AF) * 0.998, cmin = Math.abs(AF - AU) + 0.02; if (c > cmax) { c = cmax; ok = false; } else if (c < cmin) c = cmin;
+      const al = Math.acos(G.clamp((AU * AU + c * c - AF * AF) / (2 * AU * c), -1, 1)); el = Math.PI - Math.acos(G.clamp((AU * AU + AF * AF - c * c) / (2 * AU * AF), -1, 1));
+      // (the elbow toward the pole: the pole's part across the shoulder-to-palm line)
+      let px = pole[0], py = pole[1], pz = pole[2]; const pd = px * ux + py * uy + pz * uz; px -= pd * ux; py -= pd * uy; pz -= pd * uz; let pl = Math.hypot(px, py, pz);
+      if (pl < 1e-5) { px = -uy; py = ux; pz = 0; pl = Math.hypot(px, py) || 1; } px /= pl; py /= pl; pz /= pl;
+      const ca = Math.cos(al), sa = Math.sin(al); d1x = ca * ux + sa * px; d1y = ca * uy + sa * py; d1z = ca * uz + sa * pz;
+      const Ex = d1x * AU, Ey = d1y * AU, Ez = d1z * AU; d2x = ux * c - Ex; d2y = uy * c - Ey; d2z = uz * c - Ez; const l2 = Math.hypot(d2x, d2y, d2z) || 1; d2x /= l2; d2y /= l2; d2z /= l2;
+      // (the hinge, as the frame below has it: its X = Y × Z = −(d1 × d2) — the way that makes the bend a forward one)
+      hx = d1z * d2y - d1y * d2z; hy = d1x * d2z - d1z * d2x; hz = d1y * d2x - d1x * d2y; const hl = Math.hypot(hx, hy, hz);
+      if (hl < 1e-5) { hx = 1; hy = 0; hz = 0; } else { hx /= hl; hy /= hl; hz /= hl; }
+    }
+    // the upper arm's frame: Y up its bone (−d1), Z the way the forearm bends (d2 across d1), X their cross; then YXZ
+    const Yx = -d1x, Yy = -d1y, Yz = -d1z; let Zx = d2x - (d2x * d1x + d2y * d1y + d2z * d1z) * d1x, Zy = d2y - (d2x * d1x + d2y * d1y + d2z * d1z) * d1y, Zz = d2z - (d2x * d1x + d2y * d1y + d2z * d1z) * d1z;
+    let zl = Math.hypot(Zx, Zy, Zz); if (zl < 1e-4) { Zx = hy * Yz - hz * Yy; Zy = hz * Yx - hx * Yz; Zz = hx * Yy - hy * Yx; zl = Math.hypot(Zx, Zy, Zz) || 1; } Zx /= zl; Zy /= zl; Zz /= zl;
+    const Xx = Yy * Zz - Yz * Zy, Xy = Yz * Zx - Yx * Zz;
+    IKO.rx = Math.asin(-G.clamp(Zy, -1, 1)); IKO.ry = Math.atan2(Zx, Zz); IKO.rz = Math.atan2(Xy, Yy); IKO.el = el; IKO.ok = ok; IKO.reach = reach;
+    return IKO;
+  }
+  P3.armIK = armIK; // (for the tests)
+  // where a held thing sits, by its grip (the trunk's frame, body units: its middle, its tilt) and where the palms take it
+  // (its own frame, metres); the elbows' poles
+  const HOLDS = {
+    peito: { at: (w, h, d, k) => [0, 0.2 - 0.06 * k, 0.135 + d / 2], palm: (w, h, d) => [[w / 2 + 0.012, -h * 0.15, 0.02], [-(w / 2 + 0.012), -h * 0.15, 0.02]], pole: [0.75, -1, -0.35] },
+    baixo: { at: (w, h, d, k) => [0, -0.01 - 0.03 * k, 0.13 + d / 2], palm: (w, h, d) => [[w / 2 + 0.012, -h * 0.3, 0], [-(w / 2 + 0.012), -h * 0.3, 0]], pole: [0.8, -1, -0.4] },
+    abraco: { at: (w, h, d, k) => [0, 0.1 - 0.04 * k, 0.13 + d / 2], palm: (w, h, d) => [[w * 0.33, 0.02, d * 0.4], [-w * 0.33, 0.02, d * 0.4]], pole: [0.9, -0.9, -0.2] },
+    bracos: { at: (w, h, d, k) => [0, 0.16 - 0.04 * k, 0.15 + d / 2], palm: (w, h, d) => [[0.22, -h * 0.5 - 0.01, 0.03], [-0.22, -h * 0.5 - 0.01, 0.03]], pole: [0.8, -1, -0.3] },
+    ombro: { at: (w, h, d, k) => [-0.15, 0.5 + h / 2 + 0.01, -0.02], tilt: 0.12, palm: (w, h, d, f) => [null, f === 'remo' ? [0, -0.03, 0.34] : f === 'marfim' ? [0, -0.06, 0.2] : f === 'ferramentas' ? [0, -0.04, 0.3] : [0.02, -h * 0.42, Math.min(0.3, d * 0.32)]], pole: [0.35, -1, 0.35] },
+    cabeca: { at: (w, h, d, k) => [0, 0.86 + h / 2, 0.03], up: 1, palm: (w, h, d, f, k) => [[w * 0.47 + 0.01, -h * 0.05, 0], k > 0.55 ? [-(w * 0.47 + 0.01), -h * 0.05, 0] : null], pole: [1, -0.15, 0.25] },
+    costas: { at: (w, h, d, k) => [0, 0.26, -(0.14 + d / 2)], strap: 1, palm: () => [null, null], pole: [0.8, -1, -0.2] },
+  };
+  const HANG = { balde: 0.29, peixe: 0.17, cambada: 0.31, bolsa: 0.07 }; // (a thing hanging from the fist: how far above its middle the fist is)
+  const HP = { p: [0, 0, 0], t: [null, null], tw: [[0, 0, 0], [0, 0, 0]], pole: null, mode: '', up: 0 };
+  const PL = [0, 0, 0], SH0 = [0, 0, 0]; // (the elbow's pole and the shoulder's joint, for one arm: reused)
+  // (a point of the trunk's frame into the world and back; the trunk's inverse kept for the frame)
+  const V3 = { a: null, b: null };
+  function holdTargets(R, L, s) {
+    const H = L.held; HP.t[0] = HP.t[1] = null; HP.mode = '';
+    if (!H) { if (L.reach && L.reach.w > 0.001) reachEmpty(R, L, s); return; }
+    const g = H.grip; const k = G.clamp(H.kg / (28 * (L.str || 1)), 0, 1.6);
+    if (g === 'lado') { HP.mode = 'hand'; return; }
+    if (g === 'chao') { HP.mode = 'ground'; return; }
+    const D = HOLDS[g] || HOLDS.peito; const w = H.size[0] / s, h = H.size[1] / s, d = H.size[2] / s;
+    const at = D.at(w, h, d, k); HP.p[0] = at[0]; HP.p[1] = at[1]; HP.p[2] = at[2]; HP.mode = D.up ? 'up' : 'trunk'; HP.tilt = D.tilt || 0;
+    HP.pole = D.pole;
+    // (the object's frame: in the trunk, or — reaching for a point of the world — on its way between there and that point)
+    objFrame(R, L, s, H);
+    if (D.strap) { HP.t[0] = [0.07, 0.4, 0.15]; HP.t[1] = [-0.07, 0.4, 0.15]; return; }
+    const P = D.palm(H.size[0], H.size[1], H.size[2], H.form, k);
+    for (let q = 0; q < 2; q++) { if (!P[q]) continue; V3.a.set(P[q][0], P[q][1], P[q][2]).applyMatrix4(R[B.carry]).applyMatrix4(M.ci); HP.t[q] = HP.tw[q]; HP.t[q][0] = V3.a.x; HP.t[q][1] = V3.a.y; HP.t[q][2] = V3.a.z; }
+  }
+  // (the held thing's frame in the world, unscaled: the rig's 'carry' bone)
+  function objFrame(R, L, s, H) {
+    const C = R[B.carry]; const r = L.reach; const up = HP.mode === 'up';
+    // its place in the trunk, tilted with it (on the head and in a reach, upright)
+    C.copy(R[B.chest]); M.b.makeTranslation(HP.p[0], HP.p[1], HP.p[2]); C.multiply(M.b); if (HP.tilt) { M.b.makeRotationX(HP.tilt); C.multiply(M.b); } M.b.makeScale(1 / s, 1 / s, 1 / s); C.multiply(M.b);
+    if (up || (r && r.w > 0.001)) {
+      const w = r && r.w > 0.001 ? G.smooth(0, 1, r.w) : 0;
+      // (toward the point: in the trunk's own frame — the place in the trunk and the point are both in the arms' reach, and so
+      // is all the way between them; the world sees the thing come up with the body that lifts it)
+      if (w > 0) {
+        // (where the point lies in the trunk of the body bent all the way down to it — the squat and the bow of reachDepth, from
+        // the feet's own frame —, then, at the very end, the point itself in the trunk as it is)
+        const ground = L.ground !== undefined ? L.ground : r.Y; const D = reachDepth(H, L, r.Y - ground, 1); const hipF = 0.92 - 0.72 * D.sq * 0.92 + 0.06, ln = 1.05 * D.bw;
+        V3.b.set(r.X, r.Y, r.Z).applyMatrix4(M.k.copy(M.root).invert()); V3.b.y -= hipF; { const c = Math.cos(-ln), sn = Math.sin(-ln), y = V3.b.y, z = V3.b.z; V3.b.y = c * y - sn * z; V3.b.z = sn * y + c * z; }
+        V3.a.set(HP.p[0], HP.p[1], HP.p[2]).lerp(V3.b, w);
+        const e = G.smooth(0.88, 1, r.w); if (e > 0) { V3.b.set(r.X, r.Y, r.Z).applyMatrix4(M.ci); V3.a.lerp(V3.b, e); }
+        V3.a.applyMatrix4(R[B.chest]);
+      } else V3.a.setFromMatrixPosition(C);
+      // (upright, facing as the body faces — or the trunk's tilt, eased out as it goes toward the point)
+      Q.a.setFromRotationMatrix(M.b.extractRotation(C)); Q.b.setFromAxisAngle(M.yAx || (M.yAx = new THREE.Vector3(0, 1, 0)), L.yaw0 === undefined ? 0 : L.yaw0);
+      if (!up) Q.a.slerp(Q.b, w); else Q.a.copy(Q.b);
+      C.makeRotationFromQuaternion(Q.a); C.setPosition(V3.a);
+    }
+  }
+  // (the empty hands reaching for a point of the world: each palm a hand's width to its side)
+  function reachEmpty(R, L, s) {
+    const r = L.reach; HP.mode = 'reach'; HP.pole = [0.7, -0.5, -0.45];
+    V3.a.set(r.X, r.Y, r.Z).applyMatrix4(M.ci); const half = (r.wid || 0.3) / 2 / s;
+    for (let q = 0; q < 2; q++) { HP.t[q] = HP.tw[q]; HP.t[q][0] = V3.a.x + (q ? -half : half); HP.t[q][1] = V3.a.y; HP.t[q][2] = V3.a.z; }
+  }
+  // a held thing set down beside its holder while the hands work (the god's view draws it so too): on the ground at the right front
+  const DOWN = new WeakMap();
+  function setDown(H) { let d = DOWN.get(H); if (!d) { d = Object.assign({}, H, { grip: 'chao', hands: '' }); DOWN.set(H, d); } return d; }
+  // (the acts that take the hands: what was held waits on the ground)
+  const BUSY_HANDS = new Set(['chop', 'mine', 'build', 'fight', 'fish', 'mend', 'hammer', 'forge', 'dig', 'beat', 'cut', 'butcher', 'skin', 'craft', 'shear', 'stab', 'brandish', 'rake', 'reel', 'pick', 'gather', 'plant', 'harvest', 'milk', 'salt', 'sweep', 'feed', 'fill', 'weave', 'pottery', 'throw', 'climb', 'swim', 'dive', 'pray', 'kneel', 'dance', 'hug', 'embrace', 'sit', 'sleep', 'eat', 'drink']);
+  P3.setDown = setDown; P3.BUSY_HANDS = BUSY_HANDS;
   P3.rig = function (X, Y, Z, yaw, pose, L) {
-    mats(); if (!RF) { RF = BONES.map(() => new THREE.Matrix4()); Q.a = new THREE.Quaternion(); Q.b = new THREE.Quaternion(); M.k = M.k || new THREE.Matrix4(); M.c2 = new THREE.Matrix4(); M.t = [new THREE.Vector3(), new THREE.Vector3()]; }
+    mats(); if (!RF) { RF = BONES.map(() => new THREE.Matrix4()); Q.a = new THREE.Quaternion(); Q.b = new THREE.Quaternion(); M.k = M.k || new THREE.Matrix4(); M.c2 = new THREE.Matrix4(); M.t = [new THREE.Vector3(), new THREE.Vector3()]; M.ci = new THREE.Matrix4(); V3.a = new THREE.Vector3(); V3.b = new THREE.Vector3(); Q.c = new THREE.Quaternion(); Q.d = new THREE.Quaternion(); M.eu2 = new THREE.Euler(); }
     const R = RF; const s = L.s; const lie = pose.lie || 0;
     const root = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); root.multiply(M.b);
     if (lie > 0.01) { const pr = pose.prone ? 1 : -1; M.b.makeTranslation(0, 0.16 * s * lie, 0); root.multiply(M.b); M.b.makeRotationX(pr * lie * Math.PI / 2); root.multiply(M.b); M.b.makeTranslation(0, -0.92 * s * lie, 0); root.multiply(M.b); }
@@ -726,18 +1062,33 @@
     if (L.headK && L.headK !== 1) { M.b.makeScale(L.headK, L.headK, L.headK); R[B.head].multiply(M.b); }
     const hold = (L.torch || L.lantern) && !lie && !L.bind;
     const grip = pose.grip || 0;
+    // (what is held — or the empty hands reaching for a point —: where the thing sits and where the palms must be)
+    const H = !lie && !L.bind ? L.held || null : null; const rch = !lie && !L.bind && L.reach && L.reach.w > 0.001 ? L.reach : null;
+    if (H || rch) { L.yaw0 = -yaw + Math.PI / 2; M.ci.copy(R[B.chest]).invert(); holdTargets(R, L, s); if (hold && !H) HP.t[0] = null; }
+    else HP.t[0] = HP.t[1] = null;
+    const hw = H ? (rch ? 1 : G.clamp(pose.holdW || 0, 0, 1)) : rch ? G.clamp(rch.w, 0, 1) : 0;
     for (let k = 0; k < 2; k++) {
       const sd = k ? -1 : 1;
       let sp = k ? pose.shRp : pose.shLp, sr = k ? pose.shRr : pose.shLr, el = k ? pose.elR : pose.elL;
       if (hold && sd > 0) { sp = -1.05; sr = 0.12; el = 1.25; }
       // (a spear or a staff carried — not swung —: the upper arm by the side, the forearm forward, the shaft upright)
       if (k && L.tool && !pose.tool && !lie && !L.bind && upright(pose)) { sp = 0.05; sr = -0.08; el = 1.05; }
-      const jz = G.clamp(-sp, -1, 1) * 0.03, roll = sr + sd * (0.05 + (L.armOut || 0)); // (a wide skirt or a cape: the arms a little out)
-      fr(R[B.shL + k], R[B.chest], sd * 0.235, 0.46, jz, sp, 0, roll);
-      frHalf(R[B.shHL + k], R[B.chest], sd * 0.235, 0.46, jz * 0.5, 0, 0, sd * RIG.roll, sp, 0, roll);
+      let jz = G.clamp(-sp, -1, 1) * 0.03, roll = sr + sd * (0.05 + (L.armOut || 0)), ry = 0; // (a wide skirt or a cape: the arms a little out)
+      // (the hand on what it holds: the arm that reaches it, eased in from the pose's own by the hold's weight)
+      const T = hw > 0.001 ? HP.t[k] : null;
+      if (T) {
+        const pole = PL; pole[0] = HP.pole[0] * sd; pole[1] = HP.pole[1]; pole[2] = HP.pole[2]; SH0[0] = sd * 0.235; SH0[1] = 0.46; SH0[2] = jz;
+        let o = armIK(sd, SH0, T, pole); const jz2 = G.clamp(-o.rx, -1, 1) * 0.03; if (Math.abs(jz2 - jz) > 0.004) { SH0[2] = jz2; o = armIK(sd, SH0, T, pole); }
+        if (hw >= 0.999) { sp = o.rx; ry = o.ry; roll = o.rz; el = o.el; }
+        else { M.eu.set(sp, 0, roll, 'YXZ'); Q.c.setFromEuler(M.eu); M.eu.set(o.rx, o.ry, o.rz, 'YXZ'); Q.d.setFromEuler(M.eu); Q.c.slerp(Q.d, hw); M.eu2.setFromQuaternion(Q.c, 'YXZ'); sp = M.eu2.x; ry = M.eu2.y; roll = M.eu2.z; el = G.lerp(el, o.el, hw); }
+        jz = G.clamp(-sp, -1, 1) * 0.03;
+      }
+      fr(R[B.shL + k], R[B.chest], sd * 0.235, 0.46, jz, sp, ry, roll);
+      frHalf(R[B.shHL + k], R[B.chest], sd * 0.235, 0.46, jz * 0.5, 0, 0, sd * RIG.roll, sp, ry, roll);
       fr(R[B.faL + k], R[B.shL + k], 0, -0.3, 0, -el, 0, 0); fr(R[B.elHL + k], R[B.shL + k], 0, -0.3, 0, -el / 2, 0, 0);
       fr(R[B.hdL + k], R[B.faL + k], 0, -0.29, 0, 0, 0, 0);
-      const g = (hold && sd > 0) || (k && (pose.tool || L.tool)) || (L.carry && !lie) ? 1 : grip; // (both hands close on a swung haft: the swing's own grip)
+      const onIt = H && H.hands.includes(k ? 'R' : 'L');
+      const g = (hold && sd > 0) || (k && (pose.tool || L.tool)) || onIt ? 1 : grip; // (both hands close on a swung haft: the swing's own grip)
       fr(R[B.fgL + k], R[B.hdL + k], 0, -RIG.knuckle, 0, 0, 0, -sd * g * 0.95);
       fr(R[B.tbL + k], R[B.hdL + k], -sd * 0.0076, -0.0238, 0.0324, 0, -sd * g * 0.55, -sd * g * 0.25);
     }
@@ -759,9 +1110,18 @@
     // carried kept upright by the wrist; a swung tool bent down by the wrist as it strikes)
     const carried = L.tool && !pose.tool && !lie && upright(pose);
     fr(R[B.tool], R[B.hdR], 0.027, -0.076, 0, Math.PI / 2 + (carried ? -Math.PI / 2 + 1.0 : pose.tool ? (pose.wrist || 0) : 0), 0, 0);
-    fr(R[B.carry], R[B.chest], 0, 0.3, 0.26, 0, 0, 0);
+    // (the held thing that hangs from the fist — upright, its handle in the palm —, or waits on the ground at the right front)
+    if (H && (HP.mode === 'hand' || HP.mode === 'ground')) {
+      const C = R[B.carry];
+      if (HP.mode === 'hand') { V3.a.set(0.027, -0.076, 0).applyMatrix4(R[B.hdR]); V3.a.y -= HANG[H.form] || H.size[1] * 0.5; }
+      else { V3.a.set(-0.42, 0, 0.3).applyMatrix4(root); V3.a.y = (L.ground !== undefined ? L.ground : Y) + H.size[1] / 2; }
+      C.makeRotationY(-yaw + Math.PI / 2); C.setPosition(V3.a);
+    } else if (!H) fr(R[B.carry], R[B.chest], 0, 0.3, 0.26, 0, 0, 0);
     return R;
   };
+  // (for the tests: where the palms of the hands are, in the world, from the rig's last frame)
+  P3.palms = R => [V3.a ? new THREE.Vector3(-0.027, -0.076, 0).applyMatrix4(R[B.hdL]) : null, V3.a ? new THREE.Vector3(0.027, -0.076, 0).applyMatrix4(R[B.hdR]) : null];
+  P3.B = B;
   // (standing, walking, talking, turning: a shaft can be carried upright — not lying, swimming, sitting, crouching)
   function upright(pose) { return !(pose.lie > 0.05) && !(pose.crouch > 0.25); }
   // the body as one skin: the rig's bones and the look to Body3D; the things held and the marker as before
@@ -776,7 +1136,8 @@
       M.v.setFromMatrixPosition(R[B.torch]); if (P3.flames.length < 40) P3.flames.push([M.v.x, M.v.y + (L.lantern ? -0.18 : 0.47) * s, M.v.z, L.lantern ? 0.5 : 0.85]);
     } else hide('torch', idx);
     if ((pose.tool || L.tool) && !toolPut(R, L, pose)) put('tool', idx, R[B.hdR], 0, 0, 0, pose.tool ? -Math.PI / 2 : 0, 0, 0, 0, pose.tool ? 0.3 : -0.25, 0, 0.04, 0.95, 0.04, '#7a5a3a'); else hide('tool', idx);
-    if (L.carry) put('carry', idx, R[B.chest], 0, 0.3, 0.26, 0, 0, 0, 0, 0, 0, 0.34, 0.26, 0.3, '#9a7a4a'); else hide('carry', idx);
+    // (the load: the thing it is, where the rig put it — the old box only if its form could not be drawn)
+    if (L.held && heldPut(R, L)) hide('carry', idx); else if (L.carry) put('carry', idx, R[B.chest], 0, 0.3, 0.26, 0, 0, 0, 0, 0, 0, 0.34, 0.26, 0.3, '#9a7a4a'); else hide('carry', idx);
     if (marker) put('marker', idx, M.root, 0, 2.15 + Math.sin(performance.now() / 300) * 0.04, 0, 0, performance.now() / 600, 0, 0, 0, 0, 0.16, 0.22, 0.16, marker); else hide('marker', idx); // (M.root: the rig's root)
   }
   // the face: the blink (0 open .. 1 shut), where the eyes look (they go ahead of the head), the mouth
@@ -792,6 +1153,31 @@
 
   // (where the feet of someone walking stand: the ground — and, crossing a ford, the bed under the water, not its face)
   function groundY(x, y) { const S = G.S; const i = W.idx(x, y); if (S.type[i] === G.T.RIVER && !S.road[i] && !(S.ice && S.ice[i])) return W.hAt(x, y) * G.Space.HM - G.Space.bedAt(x, y); return W.groundH(x, y) * G.Space.HM; }
+  // the hands of the world's people, as the view remembers them: while the act of lifting lasts (the world's 'lift' — C1's
+  // 'levantar', 'tirarDaBanca') the empty hands reach down for the load — the crate drawn there, or before the feet —; when the
+  // world puts the load in the hands it rises from where the hands held it; while the act of setting down lasts ('pousar',
+  // 'empilhar', 'porNaBanca', 'entregar') the load goes down before the feet, and leaves the hands where the world takes it.
+  // Never ahead of the world: the load is drawn in the hands only while the world has it there (only seen)
+  const LIFT_ACTS = new Set(['lift', 'levantar', 'tirarDaBanca']), PUT_ACTS = new Set(['pousar', 'empilhar', 'porNaBanca', 'entregar']);
+  P3.LIFT_ACTS = LIFT_ACTS; P3.PUT_ACTS = PUT_ACTS;
+  function reachOf(s, v, L, X, Y, Z, dt) {
+    const H = L.held && L.held.grip !== 'chao' && L.held.grip !== 'lado' ? L.held : null; const c = Math.cos(s.yaw), n = Math.sin(s.yaw);
+    // (a load just come to the hands, where they were reaching: lifted from there)
+    if (H && !s.hk && s.rw > 0.25 && s.rP) s.lift = { X: s.rP[0], Y: s.rP[1], Z: s.rP[2], w: 1 };
+    s.hk = H ? H.form : null;
+    let want = 0;
+    if (!H && LIFT_ACTS.has(v.act)) {
+      want = 1; const P = s.rP || (s.rP = [0, 0, 0]); const src = G.Things3D && G.Things3D.nearLoad ? G.Things3D.nearLoad(X, Z, 1.8) : null;
+      if (src) { P[0] = src[0]; P[1] = src[1]; P[2] = src[2]; } else { P[0] = X + c * 0.55; P[1] = Y + 0.2; P[2] = Z + n * 0.55; }
+    } else if (H && PUT_ACTS.has(v.act)) { want = 1; const P = s.rP || (s.rP = [0, 0, 0]); P[0] = X + c * 0.55; P[1] = Y + H.size[1] / 2 + 0.02; P[2] = Z + n * 0.55; }
+    s.rw = G.clamp((s.rw || 0) + (want ? 1 : -1) * dt / 0.45, 0, 1);
+    if (s.lift) { s.lift.w -= dt / 0.5; if (s.lift.w <= 0 || !H) s.lift = null; }
+    const r = s.lift || (s.rw > 0.001 && s.rP ? (s.rq || (s.rq = {})) : null);
+    if (r && r !== s.lift) { r.X = s.rP[0]; r.Y = s.rP[1]; r.Z = s.rP[2]; r.w = s.rw; }
+    if (r) r.wid = H ? H.size[0] : 0.32;
+    L.reach = r;
+  }
+  P3.reachOf = reachOf; // (for the tests)
   // ------------------------------ the frame ------------------------------
   P3.avatar = null; // (set by the body's controller: { X, Y, Z, yaw, pose, look })
   P3.flames = []; // (the flames of the torches and lanterns in the hands drawn this frame: [X, Y, Z, size] — for FX3D)
@@ -817,7 +1203,7 @@
     let n = Math.min(near.length, q.npcs, MAX - 1); while (n > 0 && near[n - 1][0] > R2) n--;
     let idx = 0, emoN = 0, culled = 0; P3.walkers.length = 0; P3.flames.length = 0;
     if (skin && G.Body3D.broken(R3.renderer && R3.renderer())) { skin = false; G.Body3D.clear(); PARTS.forEach((p, k) => { mesh[k].visible = true; }); }
-    if (skin) G.Body3D.begin(); toolsBegin();
+    if (skin) G.Body3D.begin(); toolsBegin(); heldBegin();
     if (av) {
       // (the body's feet: where they stand in its stride — the view's own memory, a new one for a new body or after a jump)
       if (!avFeet || avFeet.id !== av.id || Math.hypot(av.X - avFeet.X, av.Z - avFeet.Z) > 4) avFeet = { id: av.id, f: [{ on: 0 }, { on: 0 }] }; avFeet.X = av.X; avFeet.Z = av.Z;
@@ -847,7 +1233,9 @@
       const Lv = P3.look(v);
       // (the stride in step with the ground: the phase at the rate the rig's own legs need for this speed and this size)
       if (st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak') s.ph += dt * s.sp * Anim.rate(st, s.sp, Lv.s); else s.ph += dt * 4;
-      Anim.blend(s.pose, Anim.pose(st, st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak' ? s.ph : s.t, s.sp), dt, 10);
+      // (the load in the hands and the hands reaching: the view's own memory of the lift and the setting down — reachOf)
+      Lv.ground = swim || v.z > 0.05 ? undefined : Y; reachOf(s, v, Lv, X, Y, Z, dt);
+      { const tt = st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak' ? s.ph : s.t; Anim.blend(s.pose, Anim.hold(Anim.pose(st, tt, s.sp), Lv, st, tt, s.sp), dt, 10); }
       // (someone standing near the body turns their head to it — and back when it goes; a blink now and then)
       const look = P3.lookFor(s.yaw, X, Z, av, st);
       s.pose.lookY = (s.pose.lookY || 0) + (look - (s.pose.lookY || 0)) * (1 - Math.exp(-4 * dt));
@@ -893,7 +1281,7 @@
     P3.crowd = c;
     for (const m of mesh) { m.count = idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
     P3.count = idx; P3.culled = culled;
-    if (skin) G.Body3D.end(); toolsEnd();
+    if (skin) G.Body3D.end(); toolsEnd(); heldEnd();
     beasts(focus, R2, dt);
   };
   // (a blink: the lids down and up in a sixth of a second, every four seconds or so — each person on their own beat)
