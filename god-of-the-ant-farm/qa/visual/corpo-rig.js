@@ -244,7 +244,7 @@ const through = (cm, bm, hem) => {
 { const ROLES = [null, 'lenhador', 'coletor', 'agricultor', 'construtor', 'mineiro', 'cacador', 'sacerdote', 'anciao', 'pastor', 'cavalarico', 'acougueiro', 'tecelao', 'ferreiro', 'ourives', 'oleiro', 'mercador', 'feirante', 'taverneiro', 'escriba', 'cobrador', 'contrabandista', 'guerreiro', 'pescador', 'vigia', 'explorador', 'estivador', 'curandeiro', 'carcereiro', 'vinhateiro', 'lavrador'];
   const CIV = ['nordico', 'romano', 'grego', 'egipcio', 'asteca', 'classico'];
   const keepFac = G.Fac.ofV, keepEco = G.Eco; G.Fac.ofV = v => v._fac || null; G.Eco = { homeOf: v => v._home || null };
-  const bad = []; let n = 0, row = 0; const st = ['idle', 'swim', 'sleep', 'walk'];
+  const bad = [], nofab = []; let n = 0, row = 0; const st = ['idle', 'swim', 'sleep', 'walk'];
   const flush = () => { B3.end(); for (const e of B3.check()) if (/sem roupa/.test(e)) bad.push(e); B3.begin(); row = 0; };
   B3.begin();
   for (const civ of CIV) for (const g of ['m', 'f']) for (const age of [1, 5, 11, 15, 30, 75]) for (const role of ROLES) for (const k of [0, 1, 2, 3]) {
@@ -253,6 +253,7 @@ const through = (cm, bm, hem) => {
     if (k === 2) v._home = { type: 'sobrado', coin: 100 };
     if (k === 3) v._fac = { id: 1, civ, leader: id };
     const L = P3.look(v); const p = A.POSE0(); Object.assign(p, A.pose(st[n % 4], 0.5, 0));
+    const u = L.out || {}; if (!(u.fab >= 1 && u.fab <= 3 && u.fabO >= 1 && u.fabO <= 3)) nofab.push(`${civ} ${g}${age} ${v.role || ''}`); // (the cloth of the stack: wool, linen, leather)
     P3.body(row++, 0, 0, 0, 0, p, Object.assign(L, { ground: st[n % 4] === 'swim' ? undefined : 0 }), null); n++;
     if (row >= B3.MAXR - 1) flush();
   }
@@ -261,7 +262,7 @@ const through = (cm, bm, hem) => {
   const o = Object.assign({}, P3.outfit({ id: 7, g: 'm', age: 30, role: 'lenhador', civ: 'egipcio', skin: '#a8744c' })); o.torso = 1; o.skirt = null; o.legs = 0;
   const o2 = Object.assign({}, o, { torso: 0, lin: Object.assign({}, o.lin, { cloth: [0.39, 0.18, 0.073] }) });
   const caught = !!B3.bare(o, '#a8744c'), caught2 = !!B3.bare(o2, '#a8744c');
-  ok('ninguém desenhado nu (sexo, idade, ofício, povo, cativo, governante, rico, nadando, dormindo); o verificador acusa quem está', !bad.length && caught && caught2, `${n} pessoas desenhadas, ${bad.length} sem roupa${bad.length ? ': ' + bad.slice(0, 2).join(' · ') : ''}; o despido de propósito: ${caught ? 'acusado' : 'NÃO acusado'}; o pano da cor da pele: ${caught2 ? 'acusado' : 'NÃO acusado'}`); }
+  ok('ninguém desenhado nu e toda roupa com um tecido da pilha (os seis povos, sexo, criança a velho, ofício, cativo, governante, rico, nadando, dormindo); o verificador acusa quem está nu', !bad.length && !nofab.length && caught && caught2, `${n} pessoas desenhadas, ${bad.length} sem roupa${bad.length ? ': ' + bad.slice(0, 2).join(' · ') : ''}, ${nofab.length} sem tecido${nofab.length ? ': ' + nofab.slice(0, 2).join(' · ') : ''}; o despido de propósito: ${caught ? 'acusado' : 'NÃO acusado'}; o pano da cor da pele: ${caught2 ? 'acusado' : 'NÃO acusado'}`); }
 // the frame (People3D.update) in a world of its own: a flat meadow, people and beasts in rings round the body, the eye at
 // the body looking one way. It runs; the verifier says nothing; each one's level follows their distance from the eye; who is
 // behind the eye (and whose shadow is too) is left out, nobody in its field is — and with the field off, nobody is
