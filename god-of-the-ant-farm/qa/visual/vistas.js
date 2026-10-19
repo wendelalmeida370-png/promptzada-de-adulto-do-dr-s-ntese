@@ -169,7 +169,10 @@ function PAGE() {
       try { for (let k = 0; k < n; k++) { t3 = 0; const t0 = performance.now(); G.Main.frameFor(33); V.sync(); all.push(performance.now() - t0); d3.push(t3); } } finally { R.frame = f0; }
       const med = a => { const b = a.slice().sort((p, q) => p - q); return b.length ? b[Math.floor(b.length / 2)] : null; };
       const p95 = a => { const b = a.slice().sort((p, q) => p - q); return b.length ? b[Math.min(b.length - 1, Math.floor(b.length * 0.95))] : null; };
-      return { ms: +med(all).toFixed(1), msP95: +p95(all).toFixed(1), ms3d: +med(d3).toFixed(1), ms3dP95: +p95(d3).toFixed(1), n };
+      // (and the mean: a shadow redrawn every other frame makes two kinds of frame, and the median of an odd count falls on
+      // one kind or the other by chance — the mean of an even count is what the frames cost)
+      const mean = a => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
+      return { ms: +med(all).toFixed(1), msP95: +p95(all).toFixed(1), ms3d: +med(d3).toFixed(1), ms3dP95: +p95(d3).toFixed(1), msMean: +mean(all).toFixed(1), ms3dMean: +mean(d3).toFixed(1), n };
     },
     // what is drawn, by who answers for it: the objects in the eye's frustum, their draw calls and triangles (the main pass)
     census() {

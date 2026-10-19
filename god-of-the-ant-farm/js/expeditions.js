@@ -1324,6 +1324,12 @@
   // a stranger washes up in a foreign town: taken in, or taken
   function strangerAt(v, set) {
     const S = G.S; const B = F(set.fac); const A = F(v.wrecked ? v.wrecked.fac : G.Fac.idOfV(v)); if (!B || !A) return;
+    // (a captive washed up at a town of the people they were taken from is not a stranger there: home, and free — L-131)
+    if (v.captive && v.captive.from === B.id) {
+      const w = v.wrecked; v.wrecked = null; G.War.freeCaptive(v, set, 'naufragio'); G.Life && G.Life.bio(v, 'wrecked', w ? w.name : 'o barco');
+      log(`${v.name}, cativ${oa(v)} de ${A.name}, se salvou do naufrágio ${ofN(w ? w.name : 'o barco')} e chegou a ${set.name}: estava em casa, e livre.`, 'free', set.cx, set.cy);
+      return;
+    }
     const pb = G.Politics.leaderPe(B); const kind = pb.cru > 0.55 || G.Fac.atWar(A.id, B.id) ? 'cativo' : 'hospede';
     K.of(B.id).f[A.id] = K.of(B.id).f[A.id] || { d: S.day, via: 'náufrago' };
     K.rumor({ kind: 'povo', fac: A.id, x: set.cx, y: set.cy, conf: 0.95, claim: `${v.name}, um náufrago, fala de uma terra chamada ${G.Fac.capitalOf(A.id) ? G.Fac.capitalOf(A.id).name : A.name}`, origin: { what: 'naufrago', who: v.id, set: set.id, fac: B.id }, first: B.id, quiet: true });

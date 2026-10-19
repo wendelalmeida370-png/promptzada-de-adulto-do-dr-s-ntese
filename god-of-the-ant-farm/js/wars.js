@@ -811,14 +811,16 @@
       const pop = G.Village.pop(s.id);
       if (from && from.alive && (s.loyalty ?? 50) < 26 && garr < pop * 0.12 && G.R() < dDays * 0.35) {
         const by = F(s.fac); s.fac = from.id; s.occ = null; s.origFac = by ? by.id : s.origFac; s.loyalty = 45;
-        const w = Wz.get(o.war);
-        const txt = `${s.name} se levantou contra os ocupantes de ${by ? by.name : 'fora'} e voltou para ${from.name}.`;
+        const w = Wz.get(o.war); const freed = G.War.homecoming(s);
+        const txt = `${s.name} se levantou contra os ocupantes de ${by ? by.name : 'fora'} e voltou para ${from.name}.${G.War.homeNews(freed)}`;
         if (w && !w.end) event(w, txt, s.cx, s.cy, 'war'); else log(txt, 'war', s.cx, s.cy);
         G.Fac.updateTerritory();
         G.Stories && G.Stories.signal('cityRose', { set: s.id, from: o.by, to: from.id, x: s.cx, y: s.cy });
       }
     }
   }
+  // (a long stretch of it at once, for the tests that provoke a rising: qa/cativos.js)
+  Wz._occupationTick = occupationTick;
 
   // ====================================================================================
   //  STRATEGY: what each people does with its war
@@ -943,7 +945,7 @@
       if (![from.id, to.id].includes(o.by) || ![from.id, to.id].includes(o.from)) continue;
       // (a white peace is the world as it was: every occupied city goes back)
       const occupierLost = !winner || sideOf(w, o.by) === loserSide;
-      if (occupierLost && F(o.from) && F(o.from).alive) { s.fac = o.from; s.occ = null; s.loyalty = 55; lines.push(`${s.name} foi devolvida a ${F(o.from).name}`); }
+      if (occupierLost && F(o.from) && F(o.from).alive) { s.fac = o.from; s.occ = null; s.loyalty = 55; const freed = G.War.homecoming(s); lines.push(`${s.name} foi devolvida a ${F(o.from).name}${!freed ? '' : freed > 1 ? ` (e ${freed} dos seus, cativos lá, ficaram livres)` : ' (e um dos seus, cativo lá, ficou livre)'}`); }
       else lines.push(`${s.name} ficou com ${(F(o.by) || {}).name}`);
     }
     if (lines.length) G.Fac.updateTerritory();

@@ -72,15 +72,15 @@ function compare(A, B) {
   for (const [k, R] of [['antes', A], ['depois', B]]) { const bz = busy(R); if (bz) L.push(`ATENÇÃO (${k}): ${bz}`); }
   L.push('(▲ chamadas ou triângulos da cena vista +15%, ms 3D +25%, memória +20%; ▼ o mesmo para menos — os triângulos do quadro inteiro contam as sombras, refeitas só em alguns quadros: ficam ao lado, sem marcar)');
   L.push('');
-  const H = ['vista', 'qual.', 'chamadas', 'Δ', 'cena(mil)', 'Δ', 'quadro(mil)', 'progr.', 'text.', 'geoMB', 'Δ', 'texMB', 'heapMB', 'Δ', 'ms3D', 'Δ', ''];
-  const W = [18, 6, 13, 6, 13, 6, 13, 9, 9, 13, 6, 11, 13, 6, 13, 6, 3];
+  const H = ['vista', 'qual.', 'chamadas', 'Δ', 'cena(mil)', 'Δ', 'quadro(mil)', 'progr.', 'text.', 'geoMB', 'Δ', 'texMB', 'heapMB', 'Δ', 'ms3D', 'Δ', 'média 3D', 'Δ', ''];
+  const W = [18, 6, 13, 6, 13, 6, 13, 9, 9, 13, 6, 11, 13, 6, 13, 6, 13, 6, 3];
   L.push(H.map((h, k) => pad(h, W[k], k < 2)).join(' '));
   const sums = {};
   for (const m of B.rows) {
     if (m.err) continue; const o = a.get(key(m)); if (!o) { L.push(pad(m.view, W[0], 1) + ' ' + pad(m.preset, W[1], 1) + ' (sem medida antes)'); continue; }
-    const d = { calls: pct(o.calls, m.calls), tris: pct(sceneT(o), sceneT(m)), geo: pct(o.mem.geoMB, m.mem.geoMB), heap: pct(o.heap, m.heap), ms: pct(o.t.ms3d, m.t.ms3d) };
+    const d = { calls: pct(o.calls, m.calls), tris: pct(sceneT(o), sceneT(m)), geo: pct(o.mem.geoMB, m.mem.geoMB), heap: pct(o.heap, m.heap), ms: pct(o.t.ms3d, m.t.ms3d), mean: o.t.ms3dMean && m.t.ms3dMean ? pct(o.t.ms3dMean, m.t.ms3dMean) : null };
     const flag = (d.calls > 15 || d.tris > 15 || d.ms > 25 || d.geo > 20 || d.heap > 20) ? '▲' : (d.calls < -15 || d.tris < -15 || d.ms < -25) ? '▼' : '';
-    const c = [m.view, m.preset, `${o.calls}→${m.calls}`, fmtPct(d.calls), `${(sceneT(o) / 1000).toFixed(0)}→${(sceneT(m) / 1000).toFixed(0)}`, fmtPct(d.tris), `${(o.tris / 1000).toFixed(0)}→${(m.tris / 1000).toFixed(0)}`, `${o.mem.programs}→${m.mem.programs}`, `${o.mem.textures}→${m.mem.textures}`, `${o.mem.geoMB}→${m.mem.geoMB}`, fmtPct(d.geo), `${o.mem.texMB}→${m.mem.texMB}`, `${o.heap}→${m.heap}`, fmtPct(d.heap), `${o.t.ms3d}→${m.t.ms3d}`, fmtPct(d.ms), flag];
+    const c = [m.view, m.preset, `${o.calls}→${m.calls}`, fmtPct(d.calls), `${(sceneT(o) / 1000).toFixed(0)}→${(sceneT(m) / 1000).toFixed(0)}`, fmtPct(d.tris), `${(o.tris / 1000).toFixed(0)}→${(m.tris / 1000).toFixed(0)}`, `${o.mem.programs}→${m.mem.programs}`, `${o.mem.textures}→${m.mem.textures}`, `${o.mem.geoMB}→${m.mem.geoMB}`, fmtPct(d.geo), `${o.mem.texMB}→${m.mem.texMB}`, `${o.heap}→${m.heap}`, fmtPct(d.heap), `${o.t.ms3d}→${m.t.ms3d}`, fmtPct(d.ms), d.mean === null ? '-' : `${o.t.ms3dMean}→${m.t.ms3dMean}`, d.mean === null ? '' : fmtPct(d.mean), flag];
     L.push(c.map((v, k) => pad(v, W[k], k < 2)).join(' '));
     const s = sums[m.preset] || (sums[m.preset] = { a: {}, b: {}, n: 0 }); s.n++;
     for (const [side, r] of [['a', o], ['b', m]]) for (const k in r.census) { const e = s[side][k] || (s[side][k] = { owner: r.census[k].owner, calls: 0, tris: 0 }); e.calls += r.census[k].calls; e.tris += r.census[k].tris; }

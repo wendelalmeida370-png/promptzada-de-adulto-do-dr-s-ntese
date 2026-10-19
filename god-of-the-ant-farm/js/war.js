@@ -378,6 +378,20 @@
       log(`${v.name} escapou do cativeiro${captor ? ' de ' + captor.name : ''} e voltou para ${dest ? dest.name : 'casa'}.`, 'free', v.x, v.y);
     }
   };
+  // a town gone back to a people (risen against its masters, given back at the peace): the captives taken from that
+  // people who live there are home, and free — never "a captive of one's own people" (L-131)
+  Wr.homecoming = function (set) {
+    const S = G.S; let n = 0;
+    for (const v of S.villagers.values()) {
+      if (v.set !== set.id || !v.captive || v.captive.from !== set.fac) continue;
+      if (v.task && (v.task.type === 'escorted' || v.task.type === 'escape')) G.Vg.endTask(v);
+      v.captive = null; v.role = null; G.Life && G.Life.bio(v, 'freed'); n++;
+    }
+    if (n) { const f = G.Fac.get(set.fac); if (f) f.st.freed = (f.st.freed || 0) + n; S.stats.freed = (S.stats.freed || 0) + n; }
+    return n;
+  };
+  // (the line for the chronicle: "3 dos seus, que eram cativos lá, ficaram livres")
+  Wr.homeNews = n => (!n ? '' : n > 1 ? ` ${n} dos seus, que eram cativos lá, ficaram livres.` : ' Um dos seus, que era cativo lá, ficou livre.');
   function destFor(v) {
     const S = G.S; const c = v.captive; if (!c) return null;
     const from = G.Fac.get(c.from);

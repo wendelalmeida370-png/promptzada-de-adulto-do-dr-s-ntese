@@ -649,7 +649,8 @@
     if (!back || !back.alive || !cur) { s.origFac = 0; return; }
     for (const v of S.villagers.values()) if (v.set === s.id && !v.captive && G.R() < 0.5 && v.role === 'guerreiro') { /* the garrison flees home */ const home = G.Fac.capitalOf(cur.id); if (home && home !== s) { v.set = home.id; v.home = 0; G.Vg.setTask(v, { type: 'migrate', pri: 1.6 }); } }
     s.fac = back.id; s.origFac = cur.id; s.conq = 0; s.loyalty = 65;
-    log(`${s.name} se rebelou contra ${cur.name} e voltou para ${back.name}.`, 'split', s.cx, s.cy);
+    const freed = G.War ? G.War.homecoming(s) : 0;
+    log(`${s.name} se rebelou contra ${cur.name} e voltou para ${back.name}.${G.War ? G.War.homeNews(freed) : ''}`, 'split', s.cx, s.cy);
     G.UI && G.UI.notice(`${s.name} se libertou de ${cur.name}!`, 'split');
     cur.st.lost++;
     G.Fac.updateTerritory();
