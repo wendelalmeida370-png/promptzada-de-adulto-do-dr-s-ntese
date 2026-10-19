@@ -224,3 +224,30 @@ bichos no ar e as pedras das cavernas sumiram), o que é de arte:
   material (211 KB; `forest` 194, `grass` 179, `canvas` 152) — e a BIBLIA admite os chãos e a turfa vistos de perto até
   300. O total cabe: na integração, 49 materiais, 5,19 de 6 MiB de base64. Se apertar, a `turf` é a primeira a ganhar
   `hblur`/`q`. (Antes eu tinha escrito os números do base64, 4/3 maiores — corrigido.)
+
+## A revisão final — a versão publicada (19/10/2026, `integracao` 1e3559d)
+
+As 7 vistas fixas em Média tiradas pelo A6 (`SP/a6/final-1e3559d/`, lado a lado com o jogo original), e as casas de cada
+povo de perto (`SP/a1/casas-integ3/`). O texto inteiro, com os recortes: `SP/onda2/revisao-final-a1.md`.
+
+**Visivelmente melhor que o jogo original nas 7 vistas; nenhuma igual ou pior.** Praça e rua de Hedeby: a casa de tábua e
+turfa, a neve branca e azulada (o ciano de 15/10 sumiu com o `m3tint`), os pinheiros com neve. Casa: a madeira e a água.
+Noite: a maior diferença (de um laranja chapado a uma noite com estrelas e a poça quente da tocha). Mata: o chão de folha,
+a casca, o verde calmo. Corpo: de boneco de cápsulas a mulher de vestido de alça com broches. Tenochtitlan: estuque com
+faixas e ameias, huipil e saia longa. As casas dos povos: os cunhais romanos de cantaria, a cal grega sobre a pedra.
+
+**Os cinco consertos obrigatórios** (cada um ≤ 1 h; o lugar no código e a foto no texto inteiro e no `pedidos.md` de
+cada dono):
+1. **A4** — a perna aparece pela saia (duas manchas brancas nas coxas, `corpo-frente`): `js/body3d.js:344`, pintar a perna
+   acima da barra com a cor da saia.
+2. **A4** — a pele branca de vincos escuros, rosto de caveira na sombra (`hedeby-mata`): `js/body3d.js:376`, um piso na
+   oclusão da pele como o da roupa.
+3. **A2** — a fogueira de bolas e cilindros (`hedeby-casa`): `js/build3d.js:1549`, pedra partida (`rock`) e lenha com
+   casca (`bark`) e ponta queimada.
+4. **A5** — a chama da fogueira é um cone de 6 lados (`hedeby-casa`): `js/fx3d.js:151`, uma chama de perfil com a cor da
+   base à ponta.
+5. **A3** — a borda da neve que derrete vira mancha marrom borrada (`hedeby-praca`, `hedeby-rua-alto`, `hedeby-noite`):
+   `js/ground3d.js:85`, `:538`, `:550`, `:552` — o chão sob a neve fina menos marrom, a borda mais recortada.
+
+Depois: os bichos (o que mais fica abaixo da BÍBLIA), os braços de manequim, as placas e bandeiras lisas, a selva neon, a
+fumaça em bolas, os pontinhos brancos na areia, a caiação um pouco cinza. O estado de cada área: BÍBLIA §12.
