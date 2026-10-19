@@ -463,7 +463,7 @@ vec3 gxGrade( vec3 c ) {
         // (a crown right at the eye — the eye behind the body passing through a pine's tiers, under a low bough — thins out and
         // goes within a metre and a half: never a flat wall of green across the view)
         .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
-        if (vFK > 3.5 || (vFK > 0.07 && vFK < 1.5)) { float ed = length(vViewPosition); if (ed < 1.5 && fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) > smoothstep(0.45, 1.5, ed)) discard; }`)
+        if (vFK > 0.07) { float ed = length(vViewPosition); if (ed < 1.5 && fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) > smoothstep(0.45, 1.5, ed)) discard; } // (its fruit with it)`)
         .replace('#include <common>', '#include <common>\n' + G.Ground3D.texGLSL() + `
         #ifdef M3_MOSS
         #define FMOSS M3_MOSS
