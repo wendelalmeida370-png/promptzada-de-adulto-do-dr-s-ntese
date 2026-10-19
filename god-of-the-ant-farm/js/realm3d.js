@@ -460,6 +460,10 @@ vec3 gxGrade( vec3 c ) {
         float ph = uTime * (0.9 + uWind.z) + wq.x * 0.11 + wq.z * 0.07;
         transformed.xz += uWind.xy * (sin(ph) * 0.6 + sin(ph * 2.7 + 1.3) * 0.25 + 0.3) * sk * (0.25 + uWind.z * 0.6);`);
       sh.fragmentShader = 'uniform sampler2D uDet; uniform float uFine; varying vec3 vFP; varying float vFK; varying vec3 vFN; float fHgt = 0.0; float fCrown = 0.0; float fFine = 0.0;\n' + sh.fragmentShader
+        // (a crown right at the eye — the eye behind the body passing through a pine's tiers, under a low bough — thins out and
+        // goes within a metre and a half: never a flat wall of green across the view)
+        .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+        if (vFK > 3.5 || (vFK > 0.07 && vFK < 1.5)) { float ed = length(vViewPosition); if (ed < 1.5 && fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) > smoothstep(0.45, 1.5, ed)) discard; }`)
         .replace('#include <common>', '#include <common>\n' + G.Ground3D.texGLSL() + `
         #ifdef M3_MOSS
         #define FMOSS M3_MOSS
@@ -594,7 +598,8 @@ vec3 gxGrade( vec3 c ) {
         // (the cards only as near as the machine carries them: past three quarters of the preset's distance they thin out and
         // go — the crown's lumps and their picture of leaves stand alone, as in the far pictures)
         sh.fragmentShader = 'uniform float uFine;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
-          { float fd = length(vViewPosition) / uFine; if (fd > 0.75 && fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) < (fd - 0.75) * 4.0) discard; }`)
+          { float ed = length(vViewPosition), fd = ed / uFine, hz = fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453);
+            if ((fd > 0.75 && hz < (fd - 0.75) * 4.0) || (ed < 1.5 && hz > smoothstep(0.45, 1.5, ed))) discard; } // (and right at the eye: a bough of needles, a spray of leaves crossing the view goes — no green card a metre wide)`)
           .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n normal = normal * faceDirection;').replace('#include <opaque_fragment>', `
           #if NUM_DIR_LIGHTS > 0
           // (the sun behind the leaves shines through them)
