@@ -32,13 +32,13 @@
   // trails a frame); aniso: how many samples a picture seen at a slant is read with (the stack of materials, the ground's
   // detail, the leaves — a graphics card does it nearly free, a machine drawing by itself pays each one: a fifth of the
   // medium's frame, measured); grassDen: the share of the meadow's tufts drawn (the A3's grass3d: fewer, each the fuller —
-  // the Leve draws no grass). The lightest two must cost no more than the game did before the studio (measured: the
+  // the A3's numbers, measured on the meadow: 0,5 a third cheaper; the Leve draws no grass). The lightest two must cost no more than the game did before the studio (measured: the
   // shadows are a third of the medium's triangles, the far people and the near ring of chunks the next; in time, the
   // slanted samples and the pixels): every module reads these to scale its own drawing
   const QUAL = {
-    baixa: { scale: 0.6, near: 1, shadows: 0, npcs: 12, grass: 0, view: 200, detail: 0, field: 0, sbox: 36, ao: 0, bloom: 0, lights: 0, soft: 0, rays: 0, lod: 0.5, props: 0.25, shadowEvery: 1, aniso: 1, grassDen: 1 },
-    media: { scale: 0.8, near: 2, shadows: 1024, npcs: 30, grass: 1, view: 360, detail: 1, field: 12, sbox: 40, ao: 0, bloom: 0, lights: 2, soft: 0, rays: 0, lod: 0.75, props: 0.6, shadowEvery: 2, aniso: 1, grassDen: 0.6 },
-    alta: { scale: 1, near: 4, shadows: 2048, npcs: 60, grass: 1, view: 640, detail: 1, field: 30, sbox: 52, ao: 1, bloom: 1, lights: 3, soft: 1, rays: 1, lod: 1, props: 1, shadowEvery: 1, aniso: 4, grassDen: 0.85 },
+    baixa: { scale: 0.6, near: 1, shadows: 0, npcs: 12, grass: 0, view: 200, detail: 0, field: 0, sbox: 36, ao: 0, bloom: 0, lights: 0, soft: 0, rays: 0, lod: 0.5, props: 0.25, shadowEvery: 1, aniso: 1, grassDen: 0.5 },
+    media: { scale: 0.8, near: 2, shadows: 1024, npcs: 30, grass: 1, view: 360, detail: 1, field: 12, sbox: 40, ao: 0, bloom: 0, lights: 2, soft: 0, rays: 0, lod: 0.75, props: 0.6, shadowEvery: 2, aniso: 1, grassDen: 0.5 },
+    alta: { scale: 1, near: 4, shadows: 2048, npcs: 60, grass: 1, view: 640, detail: 1, field: 30, sbox: 52, ao: 1, bloom: 1, lights: 3, soft: 1, rays: 1, lod: 1, props: 1, shadowEvery: 1, aniso: 4, grassDen: 0.7 },
     ultra: { scale: 1, near: 5, shadows: 4096, npcs: 90, grass: 1, view: 900, detail: 1, field: 40, sbox: 68, ao: 2, bloom: 1, lights: 4, soft: 1, rays: 1, lod: 1.4, props: 1, shadowEvery: 1, aniso: 8, grassDen: 1 },
   };
   // (the presets in the order the menu shows them, with their names)
