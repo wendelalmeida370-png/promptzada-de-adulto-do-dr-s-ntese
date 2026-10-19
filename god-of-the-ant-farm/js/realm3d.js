@@ -582,7 +582,7 @@ vec3 gxGrade( vec3 c ) {
           leaf(cx + Math.cos(a) * o, cy + Math.sin(a) * o, a + (hs(k + 93) - 0.5) * 0.5, L, L * (0.24 + hs(k + 95) * 0.08), 170 + hs(k + 99) * 65, true); }
         c.restore();
       }
-      const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;
+      const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = R3.Q().aniso || 4; // (the preset's: 1 at Leve and Média, by software every sample costs — A5)
       MAT.leaf = new THREE.MeshLambertMaterial({ map: tx, alphaTest: 0.5, side: THREE.DoubleSide, vertexColors: true }); MAT.leaf.defines = { RIM: 0.28 };
       MAT.leaf.onBeforeCompile = sh => {
         Object.assign(sh.uniforms, { uTime: U.time, uWind: U.wind, uFine: UFINE });
@@ -1473,6 +1473,7 @@ vec3 gxGrade( vec3 c ) {
       c = (c * 7 + S.road[i] + (S.burnt[i] > 0 ? 3 : 0) + (S.ice && S.ice[i] ? 5 : 0) + (S.dry && S.dry[i] ? 11 : 0) + S.wall[i] * 13 + S.occ[i] * 19 + S.type[i] * 23 + (S.cliff[i] ? 29 : 0)) | 0;
       if (S.type[i] === T.RIVER) a = (a * 7 + Math.round(S.wl[i] * 8)) | 0;
     }
+    b = (b * 3 + (R3.floraFine ? R3.floraFine(x0, y0, C) : 1)) | 0; // (the near plants finer where the body comes: the preset's lod — A3)
     const bs = G.Build3D ? G.Build3D.sig(x0, y0, C) : 0;
     return { a, b, c, d: bs };
   }

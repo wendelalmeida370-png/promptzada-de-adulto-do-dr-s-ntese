@@ -264,7 +264,7 @@
     const out = new Uint8Array(S * S * 4);
     for (let i = 0; i < S * S; i++) { out[i * 4] = G.clamp(R[i] * 255, 0, 255); out[i * 4 + 1] = G.clamp(Gc[i] * 255, 0, 255); out[i * 4 + 2] = G.clamp(B[i] * 255, 0, 255); out[i * 4 + 3] = G.clamp(A[i] * 255, 0, 255); }
     const tx = new THREE.DataTexture(out, S, S, THREE.RGBAFormat, THREE.UnsignedByteType);
-    tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.magFilter = THREE.LinearFilter; tx.minFilter = THREE.LinearMipmapLinearFilter; tx.generateMipmaps = true; tx.anisotropy = 4; tx.needsUpdate = true;
+    tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.magFilter = THREE.LinearFilter; tx.minFilter = THREE.LinearMipmapLinearFilter; tx.generateMipmaps = true; tx.anisotropy = (G.Realm && G.Realm.Q ? G.Realm.Q().aniso : 0) || 4; tx.needsUpdate = true;
     return tx;
   }
 
@@ -630,7 +630,10 @@ vec3 groundCol() {
     dirtyAll = true;
   };
   // (the grain only where the machine can carry it)
-  G3.quality = function () { if (!mat) return; const q = G.Realm.Q(); const want = q.detail !== 0; const has = !!(mat.defines && mat.defines.GDETAIL); if (want !== has) { mat.defines = want ? { GDETAIL: 1 } : {}; mat.needsUpdate = true; } };
+  G3.quality = function () { if (!mat) return; const q = G.Realm.Q();
+    // (the samples of the pictures read at a slant, by the preset — sent again to the card only when the quality changes, never per frame)
+    { const an = q.aniso || 4; for (const t of [texArr, det]) if (t && t.anisotropy !== an) { t.anisotropy = an; t.needsUpdate = true; } }
+    const want = q.detail !== 0; const has = !!(mat.defines && mat.defines.GDETAIL); if (want !== has) { mat.defines = want ? { GDETAIL: 1 } : {}; mat.needsUpdate = true; } };
   G3.material = () => mat;
   // (the clouds over the land: their offset as the wind carries them, how much of the sky they cover, how dark their shadow)
   G3.clouds = function (ox, oz, cover, k) { if (!U.uCO.value) U.uCO.value = new THREE.Vector2(); U.uCN.value = G3.cloudNoise(); U.uCO.value.set(ox, oz); U.uCC.value = cover; U.uCS.value = k; };
@@ -695,7 +698,7 @@ vec3 groundCol() {
     if (texArr || !THREE) return texArr;
     decode();
     texArr = new THREE.DataArrayTexture(texData, TS, TS, TL3); texArr.format = THREE.RGBAFormat; texArr.type = THREE.UnsignedByteType;
-    texArr.wrapS = texArr.wrapT = THREE.RepeatWrapping; texArr.magFilter = THREE.LinearFilter; texArr.minFilter = THREE.LinearMipmapLinearFilter; texArr.generateMipmaps = true; texArr.anisotropy = 4; texArr.needsUpdate = true;
+    texArr.wrapS = texArr.wrapT = THREE.RepeatWrapping; texArr.magFilter = THREE.LinearFilter; texArr.minFilter = THREE.LinearMipmapLinearFilter; texArr.generateMipmaps = true; texArr.anisotropy = (G.Realm && G.Realm.Q ? G.Realm.Q().aniso : 0) || 4; texArr.needsUpdate = true;
     return texArr;
   };
   // the GLSL every material of the 3D includes to read the stack: m3(layer, uv in metres) — the colour factor (linear,
