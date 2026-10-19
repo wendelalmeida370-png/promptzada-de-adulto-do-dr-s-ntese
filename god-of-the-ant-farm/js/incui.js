@@ -22,7 +22,8 @@
   let root = null, hud = null, card = null, menu = null, fadeEl = null, banner = null, deathEl = null, label = null, stickEl = null;
   let best = null, bestT = 0, upT = 0, toasts = [], news = [], fade = null, hintT = 0, bannerT = 0, repeatT = 0, slowT = 0, slowSaid = false;
   let swimTold = false, lowTold = false, drownTold = false; // (the water's words: said once, and again each time it comes back)
-  G.worldHooks.push(() => { swimTold = lowTold = drownTold = false; news = []; if (root) renderNews(); });   // (the old world's news go with it)
+  let waits = []; // (what was asked of the world from here — a click, a key —, waiting for its answer to be told)
+  G.worldHooks.push(() => { swimTold = lowTold = drownTold = false; news = []; waits = []; if (root) renderNews(); });   // (the old world's news go with it)
   IU.best = () => best;
   const bar = (k, txt) => `<div class="ih-bar ${k}"><span class="ih-bl">${txt}</span><i><b></b></i></div>`;
 
@@ -72,6 +73,8 @@
     $('.ih-toasts', hud).appendChild(el); toasts.push({ el, t: dur || 3.6 });
     while (toasts.length > 4) { const o = toasts.shift(); o.el.remove(); }
   };
+  // (what the world answers to something asked of it here — Possess.apply's ask —, told when it has answered: ok(res), or no(res))
+  IU.when = function (ask, ok, no) { if (ask) waits.push({ ask, ok, no }); };
   // (while the banner speaks the news step back: on a narrow screen they sit right behind it)
   IU.banner = function (txt, dur) { if (!root) return; banner.textContent = txt; banner.classList.remove('hidden'); root.classList.add('ib-on'); bannerT = dur || 2.6; };
   IU.hello = function (v) {
@@ -116,6 +119,8 @@
   IU.frame = function (rdt) {
     if (!root) return;
     const S = G.S;
+    // the world's answers to what was asked of it
+    for (let k = waits.length - 1; k >= 0; k--) { const w = waits[k]; const r = w.ask.res; if (!r) continue; waits.splice(k, 1); if (r.dropped) continue; if (r.ok) { if (w.ok) w.ok(r); } else if (w.no) w.no(r); }
     // fades, banners, toasts, news
     if (fade) { fade.t += rdt; const k = Math.min(1, fade.t / fade.d); fadeEl.style.opacity = G.lerp(fade.a, fade.b, k); if (k >= 1) { const d = fade.done; fade = null; d && d(); } }
     if (bannerT > 0) { bannerT -= rdt; if (bannerT <= 0) { banner.classList.add('hidden'); root.classList.remove('ib-on'); } }
@@ -258,9 +263,10 @@
   function onCardClick(e) {
     const b = e.target.closest('[data-c]'); if (!b) return; const c = b.dataset.c;
     if (c === 'close') { IU.closeAll(); G.Modes.setPanel(null); }
-    else if (c === 'hug') { const o = G.S.villagers.get(+b.dataset.id); IU.closeAll(); G.Modes.setPanel(null); const r = o ? G.Interact.hug(o) : null; if (r) IU.toast(r.ok ? r.msg : r.msg || 'Agora não dá.', 2.4); }
+    else if (c === 'hug') { const o = G.S.villagers.get(+b.dataset.id); IU.closeAll(); G.Modes.setPanel(null); const r = o ? G.Interact.hug(o) : null; if (r && r.ok) IU.when(r.ask, () => IU.toast(r.msg, 2.4)); else if (r) IU.toast(r.msg || 'Agora não dá.', 2.4); }
     else if (c === 'swap') { const o = G.S.villagers.get(+b.dataset.id); IU.closeAll(); G.Modes.setPanel(null); if (o) G.Modes.switchTo(o); }
-    else if (c === 'sleep') { const v = G.Possess.body(); IU.closeAll(); G.Modes.setPanel(null); if (v && G.Possess.sleep(v)) { G.Possess.deed('sono'); IU.toast('Você se deita no chão e dorme.'); } }
+    // (lying down where one stands: the world lays the body down in its step, and it is said once it has)
+    else if (c === 'sleep') { IU.closeAll(); G.Modes.setPanel(null); IU.when(G.Possess.apply(w => { if (!G.Possess.sleep(w)) return { ok: false, why: '' }; G.Possess.deed('sono'); return { ok: true }; }), () => IU.toast('Você se deita no chão e dorme.')); }
   }
   IU.closeAll = function () { if (!root) return; card.classList.add('hidden'); menu.classList.add('hidden'); };
   // (keys while a card or the menu is open: E and Esc close it)
