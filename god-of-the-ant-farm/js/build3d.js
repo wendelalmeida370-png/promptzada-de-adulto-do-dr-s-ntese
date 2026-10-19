@@ -558,10 +558,15 @@ float m3scale(float p) {
     // ground is reached there)
     const under = (a, n, ta, tn) => Math.max(gAt(a, n), gAt(a - ta / 2, n), gAt(a + ta / 2, n), gAt(a, n - tn / 2), gAt(a, n + tn / 2), gAt(a - ta / 2, n + tn / 2), gAt(a + ta / 2, n + tn / 2));
     const tone = k => dim(col, 0.94 + K.hv(260 + k) * 0.1);
+    // (how deep a tread of ta at a, from n, may go before the ground as it is drawn — on a plinth too: beyond the lot it may
+    // rise — comes up to its top yt: a step stops where the ground meets it)
+    const gT = (a, n) => { const p = D(a, 0, n); return K.gy(p[0], p[2]); };
+    const reach = (a, ta, n, sd, yt) => { let d = 0; for (let j = 1; j <= 4; j++) { const q = n + sd * j / 4; if (Math.max(gT(a, q), gT(a - ta / 2, q), gT(a + ta / 2, q)) > yt - 0.025) break; d = sd * j / 4; } return d; };
     const drop = top - gAt(0, n0 + 0.3), need = Math.min(8, Math.ceil(drop / 0.26)), nOut = Math.floor(room / 0.22);
     const out = (n, rise) => { const t = Math.min(0.32, room / n); K.as(pat, () => { for (let k = 0; k < n; k++) { const sn = n0 + (k + 0.5) * t, yt = top - k * rise; if (k && yt < under(0, sn, w, t) + 0.03) break; const gy = Math.min(yt - rise, gAt(0, sn)) - 0.04;
       bx((K.hv(262 + k) - 0.5) * 0.04, gy, sn, w - k * 0.02, yt - gy, t + 0.02, tone(k)); } }); };
-    if (drop <= 0.5 || need < 2 || (nOut < 2 && !free)) { const sd = Math.min(sd1, room), sn = n0 + sd / 2; const gy = Math.min(top - 0.4, gAt(0, sn) - 0.04); K.as(pat, () => bx(0, gy, sn, w, top - gy, sd, col)); return null; }
+    const one = () => { const sd = reach(0, w, n0, Math.min(sd1, room), top); if (sd < 0.1) return null; const sn = n0 + sd / 2; const gy = Math.min(top - 0.4, gAt(0, sn) - 0.04); K.as(pat, () => bx(0, gy, sn, w, top - gy, sd, col)); return null; };
+    if (drop <= 0.5 || need < 2 || (nOut < 2 && !free)) return one();
     if (nOut >= need) { out(need, drop / need); return null; }
     // (the side with room for it; of two, the one whose ground is higher where the flight would end — the shorter way down)
     const dp = Math.min(room, 0.6), sn = n0 + dp / 2; let sg = 0, run = 0, hi = -1e9;
@@ -572,7 +577,7 @@ float m3scale(float p) {
         for (let k = 1; k < need; k++) { const a = sg * (w / 2 + (k - 0.5) * t), yt = top - k * rise; if (yt < under(a, sn, t, dp) + 0.03) break; const gk = Math.min(yt - rise, gAt(a, sn)) - 0.04; bx(a, gk, sn, t + 0.02, yt - gk, dp - k * 0.01, tone(k)); } });
       return [sg * (need - 1) * t / 2, w + (need - 1) * t];
     }
-    if (nOut < 2) { const sd = Math.min(sd1, room), sn = n0 + sd / 2; const gy = Math.min(top - 0.4, gAt(0, sn) - 0.04); K.as(pat, () => bx(0, gy, sn, w, top - gy, sd, col)); return null; }
+    if (nOut < 2) return one();
     out(nOut, 0.26); return null;
   }
   // which side the door opens to (the side people come out of — the world's own door)
@@ -1511,7 +1516,10 @@ float m3scale(float p) {
       const b = K.b; const wd = b.wd || [0, 1]; const L = K.L; const sea = G.SEA * HM() + 0.5;
       const len = 2.6 * L; const x = K.w / 2 + wd[0] * (K.w / 2 + len / 2 - L * 0.3), z = K.d / 2 + wd[1] * (K.d / 2 + len / 2 - L * 0.3);
       const sx = wd[0] ? len : K.w * 0.6, sz = wd[1] ? len : K.d * 0.6;
-      K.as('plankH', () => g.put(SH.box, R3.mat(K.x0 + x, sea, K.z0 + z, 0, sx, 0.3, sz), K.c('#8a6a44')));
+      // (the deck starts where the bank comes below its top: its land end does not go into the ground as it is drawn)
+      const half = (wd[0] ? sz : sx) / 2, P = u => [x + wd[0] * (u - len / 2), z + wd[1] * (u - len / 2)], over = u => { const p = P(u); return Math.max(K.gy(p[0], p[1]), K.gy(p[0] + wd[1] * half, p[1] + wd[0] * half), K.gy(p[0] - wd[1] * half, p[1] - wd[0] * half)) + K.y0; };
+      let u0 = 0; while (u0 < len && over(u0) > sea + 0.27) u0 += len / 40;
+      if (u0 < len) { const c = P((u0 + len) / 2), ln = len - u0; K.as('plankH', () => g.put(SH.box, R3.mat(K.x0 + c[0], sea, K.z0 + c[1], 0, wd[0] ? ln : sx, 0.3, wd[1] ? ln : sz), K.c('#8a6a44'))); }
       for (let k = 0; k < 4; k++) { const f = k / 3 - 0.5; g.put(SH.cyl, R3.mat(K.x0 + x + (wd[0] ? f * sx : sx / 2) * 1, sea - 3, K.z0 + z + (wd[1] ? f * sz : sz / 2), 0, 0.3, 3.2, 0.3), K.c('#6a4a2c')); }
       house(g, gw, K, { h: 2.4, inset: Math.min(K.w, K.d) * 0.22, wall: '#9a7a50', pat: 'plankH', door: true });
     },
