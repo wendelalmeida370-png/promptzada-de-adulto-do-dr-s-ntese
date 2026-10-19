@@ -139,11 +139,13 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
 - Um pedaço do mundo perto (64 × 64 m) tem **uma geometria por material** (sólido, flora, folhas, plantas, água, vidro):
   coisa nova entra na geometria do pedaço (`Geo.put`), não ganha malha própria nem chamada de desenho própria.
 - Cena inteira, qualidade média: alvo ≤ 500 mil triângulos e ≤ 200 chamadas de desenho; a `alta` pode dobrar triângulos.
-- Pilha de texturas: 512 × 512 por material, **≤ 6 MB** de base64 no total (hoje: 47 materiais, 5,33 MB — sobra pouco: material novo de outra área, avise o A1). Cada material
-  ≤ 200 KB; os chãos e a turfa vistos de perto podem ir a 300 KB (o peso deles é o capim e a folha que se vê: `turf`,
+- Pilha de texturas: 512 × 512 por material, **≤ 6 MiB** de base64 no total (a conta do `qa/visual/guarda3d.js`; hoje, na
+  integração: 49 materiais, 5,19 MiB — o arquivo `tex3d.js` tem 5,45 MB; sobra 0,8 MiB: material novo de outra área, avise o A1). Cada material
+  ≤ 200 KB de WebP (o número que o `texturas.py` imprime; no base64, × 4/3); os chãos e a turfa vistos de perto podem ir a 300 KB (o peso deles é o capim e a folha que se vê: `turf`,
   `forest`, `grass`, `needles` passam de 200 — baixar a qualidade só tira 12% e borra o que importa); tecido e couro em
   256 px (o fio nunca chega à tela). O limite que manda é o total.
-- Arquivo de malha: ≤ 60 KB cada (a cabeça de dragão: 25,6 KB; a pedra rúnica: 36,7 KB; o portal: 34,3 KB); todas juntas ≤ 1 MB.
+- Arquivo de malha: ≤ 60 KB cada (a cabeça de dragão: 25,6 KB; a pedra rúnica: 36,7 KB; o portal: 34,3 KB; a maior, a banca:
+  40,4 KB); todas juntas ≤ 1 MB (hoje sete, 203 KB — a conta do `qa/visual/malhas.js`).
 - Decoração só com `G.Realm.Q().detail`; densidade lida dos campos do preset, nunca fixa.
 
 ## 7. Materiais (a pilha: `arte/texturas.py` + `arte/mat_<área>.py` → `js/tex3d.js`)
@@ -156,7 +158,7 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
 | `door` | 2,0 | porta de pranchas: duas folhas de 1 m lado a lado (u 0–0,5 e 0,5–1), três cintas de ferro a 0,3/1,0/1,7 m com pontas em voluta, pregos, argola — simétrica em altura | A1 |
 | `stone` | 2,4 | parede de pedra de campo em fiadas, argamassa de cal clara, calços, líquen | A1 |
 | `brick` | 1,6 | tijolo em amarração | A1 |
-| `plaster` | 3,0 | reboco de cal em demãos (também o adobe egípcio, `mud`) | A1 |
+| `plaster` | 3,0 | reboco de cal em demãos: a parede romana (o adobe egípcio, `mud` no `PAT`, tem o seu: `adobe`; enquanto a pilha não o tinha, caía aqui) | A1 |
 | `turf` `thatch` `tile` `shingle` | 2,0 | turfa; palha em fiadas; telha de canal (capa e bica); telha de madeira de ponta redonda | A1 |
 | `slab` `cobble` | 3,0 / 2,6 | lajes de bordas gastas; paralelepípedo assentado | A1 |
 | `bark` | 1,4 | casca em placas entrelaçadas, sulcos sem preto, musgo nos sulcos | A1 |

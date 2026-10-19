@@ -72,6 +72,9 @@ existem (A2).
    adobe e arenito, o asteca de estuque e tezontle.
 6. **Detalhe menor**: na casa nórdica a porta e a parede ficam do mesmo marrom [caca-01, à direita]; a porta nórdica do
    povo é bem mais escura (`#3a2616` contra `#7e5e40`) — confira se a porta usa `P.door`.
+7. **O arroz maduro do arrozal** [e1-porto, embaixo — que eu tinha chamado de capim; correção do A3]: as folhas amarelas
+   em ponta de flecha estão grandes demais (cada uma ~0,4 m) e todas iguais; mais finas, mais numerosas, de altura e cor
+   variadas, as espigas caídas de maduras (`fields()` do `build3d.js`).
 
 ## A3 — terreno e natureza (ground3d, grass3d, árvores e plantas do realm3d)
 
@@ -87,16 +90,16 @@ existem (A2).
    o seu tom (pelo id).
 3. **Pedras e rochedos** [caca-03]: o bloco de poucas faces lê como 2000; a forma com facetas partidas e o material
    `crag`/`rock`, o pé enterrado com terra e capim em volta (BIBLIA §5: tudo encosta no chão).
-4. **O capim de lança** [e1-porto, embaixo]: as folhas amarelas em ponta de flecha estão grandes demais (cada uma ~0,4 m)
-   e iguais; mais finas, mais numerosas, cor variada. No prado [e1-atravessou] a densidade é ótima, mas o verde satura
-   (31% do quadro em verde saturado): puxe para o capim da BIBLIA (S 50–62).
+4. **O capim do prado** [e1-atravessou]: a densidade é ótima, mas o verde satura (31% do quadro em verde saturado): puxe
+   para o capim da BIBLIA (S 50–62). (As "lanças" amarelas de e1-porto não são capim seu: são o arroz maduro do arrozal,
+   do `build3d.js` — a nota foi para o A2, item 7; correção do A3.)
 5. **Cactos** [caca-03]: cilindros lisos; 8–12 costelas, braços curvados para cima, espinho na figura.
 6. **A neve em manchas no chão** [e6-terreno, em volta da casa]: lê como tinta branca derramada; a borda macia e a neve
    com volume (a sua camada nova de neve no chão deve resolver — conferir).
 7. **A grama em mancha de borda dura sobre a terra** [e1-mercado, embaixo à esquerda]: um retângulo verde chapado,
    recortado — a transição grama/terra precisa da borda esfiapada (tufos, terra aparecendo) que o chão do Modo Deus já
    insinua.
-8. **Orçamento**: `needles` tem 295 KB na pilha (o teto da BIBLIA é 200 KB por material); um `hblur`/`q` resolve.
+8. **Orçamento**: `needles` tinha 295 KB na pilha — **resolvido** pelo A3 na onda 2 (139 KB).
 
 ## A4 — personagens e animação (people3d, body3d)
 
@@ -138,6 +141,51 @@ existem (A2).
    ruído [crop-romanas; e6-terreno]. Vermelho só em acento pequeno.
 4. **Pano liso ao lado de madeira com veio**: as pessoas são as únicas coisas sem material [caca-01: Liv × a parede].
 
+## Depois da onda 2 — o que as fotos já mostram
+
+As fotos fixas da integração da onda 2 (`integracao` @ 1ca7583) estão na fila da catraca (`SP/a1/fotos-integ2`). Até lá,
+as fotos que já existem.
+
+**A integração (a primeira imagem do conjunto: `SP/a6/poco-integra/`, do A6, 23:30, contra `SP/a6/poco-antes/`):**
+- **Defeito novo — a neve com manchas ciano e roxas** [poco-0.png, todo o chão; poco-1.png, à direita no meio;
+  recorte `SP/a1/crop-neve-rosa.png`]: onde a neve cobre o capim, o chão fica ciano-menta e o escuro da figura do capim
+  vira roxo, como se o verde fosse tirado em vez de coberto (61% do recorte puxa para o ciano). No jogo original a mesma
+  neve é branco-azulada — e na mesma integração, **sobre o chão de agulhas** [poco-2.png], a neve está branca e azulada
+  como deve: o defeito é só onde a neve cobre capim. Prioridade alta: Hedeby é toda de neve.
+  **A causa (achada fora do navegador):** não é a neve, é a **figura do capim sobre uma base clara**. O chão é a cor da
+  casa × a razão da figura; a razão do capim tem matiz própria (o fio puxa ao verde-azulado, a terra entre os fios ao
+  vermelho), que sobre o verde é variedade e sobre o branco do frio — onde a camada de neve é fina e o chão de baixo
+  (`bareOf`) só entrou pela metade — vira fio menta e buraco roxo. A folha `SP/a1/neve-razao.png` põe a figura `grass` da
+  pilha sobre três bases como o shader põe: a base clara reproduz o recorte (7% ciano, 24% roxo, `SP/a1/razao.py`); `turf`,
+  `forest` e `needles` fazem o mesmo, terra, areia, pedra e neve não. O conserto é do A3 (`ground3d.js`): a matiz da
+  figura só na medida em que a base tem matiz (a função `m3tint` em `SP/a1/pedidos.md` — sobre o verde quase nada muda,
+  sobre o branco frio sobra uma geada cinza: 0% ciano, 3% roxo) e, onde o deus pinta o branco do frio, o chão de baixo
+  inteiro, não meio branco. A curva e o grade do A5 não são precisos para o defeito.
+- O capim sob as árvores ficou azul-acinzentado sobre o chão de folhas [poco-1.png, à esquerda]: conferir se é a geada de
+  propósito.
+- Melhor: os pinheiros com ramos e franja de agulhas, a pedra com um tom por faceta, o chão de mata de folha seca e a
+  borda da neve esfiapada [poco-1.png].
+- Igual ao original: o urso-polar ainda é um boneco de cápsulas [poco-1.png, ao centro] (A4, bichos).
+- De dentro da copa, os ramos do pinheiro são folhas verdes planas e enormes [poco-2.png, no alto] (A3): perto do olho,
+  esmaecer ou recortar o ramo, ou dar espessura de agulha à borda; e a pedra grande ainda é um bloco com uma racha
+  [poco-2.png, à esquerda] — o tom por faceta ajuda, falta a forma partida.
+
+**Os branches de cada um:**
+
+**A5** (`SP/a5/onda2/depois2/`, o branch do A5 sobre a integração da onda 1):
+- **A noite virou noite** [noite-alta.png]: a tocha acende uma poça de luz quente no chão e na neve, a janela da casa do
+  fundo brilha, o céu tem estrelas, e o lado das tábuas no escuro ainda se lê. No jogo original a noite era um laranja
+  chapado (35% do quadro em laranja saturado, `cor.py`). É a melhor mudança de luz do estúdio até aqui.
+- **A praia** [praia.png]: a areia com ondulação, a água rasa num gradiente turquesa que escurece com a fundura, a linha
+  das ondas acompanhando a margem — a borda reta da casa sumiu (a nota 2 do A5 respondida).
+- **O dia** [praca-alta.png, casa-alta.png]: luz limpa, sombras macias, o céu calmo.
+- **Ainda 2000: a chama da fogueira** [casa-alta.png, ao centro]: um cone laranja de 6 lados com brilho aditivo — lê como
+  cone de trânsito. Línguas de fogo em cartões cruzados com o gradiente da chama, tremendo e mudando de altura (pelo
+  `G.VR`), umas brasas subindo; o cone só como núcleo de brilho.
+- E do A2, no mesmo quadro: **as pedras da fogueira** são oito esferas cinza de 22 cm (na sombra, bolas pretas) e as
+  toras, três cilindros lisos (`campfire()` do `build3d.js`): pedras partidas do material `rock` meio enterradas, toras com
+  casca e a ponta carbonizada.
+
 ## O que a caça do A6 achou e também é de arte
 
 Do relatório do A6 sobre a integração (`SP/a6/integracao-relatorio.md`), o que se vê e quebra a imagem:
@@ -147,13 +195,23 @@ Do relatório do A6 sobre a integração (`SP/a6/integracao-relatorio.md`), o qu
   ar do outro (A2, `things3d.js` — já corrigido no trabalho em andamento dele).
 - A blusa colada da mulher asteca (A4) — a mesma nota 1 do A4 aqui.
 
+E na caça sobre a integração da onda 2 (`SP/a6/rodada-cdd464f/caca/caca.txt`, o código de cdd464f; 0 S1 e 0 S2 — os
+bichos no ar e as pedras das cavernas sumiram), o que é de arte:
+- **A selva neon** (A3): em Tenochtitlan, 84% dos pixels de planta iluminados e 48% dos de folha na mata densa acima de
+  S 70 — a BIBLIA §2.2 chama de neon superfície grande acima de 70. É o "verde que briga" (abaixo) na terra dos astecas:
+  a copa calma que já se fez para o norte (8d99e59) precisa valer para a selva e o sub-bosque também.
+- **O corpo saindo pela saia** (A4): na porta de Hedeby, a saia longa deixa o corpo passar até 7 cm em 16 de 206 pedaços,
+  a curta até 9,5 cm — de perto, a perna aparece através do pano.
+- **O chão atravessando uma superfície deitada** entre os prédios de Hedeby (A2): 1 m² dela cortado pelo chão desenhado.
+
 ## As entregas da onda 2 (acompanhamento)
 
 | Quem | O que entregou (commits) | Fotos depois | Revisto |
 |---|---|---|---|
-| A3 | neve como camada com bordas orgânicas; arbusto de frutinhas; linha d'água; biomas dos outros povos (dunas, oliveira, sub-bosque); copas de folhas, pinheiros de ramos, frutas pequenas, cactos com costelas, capim no pé das pedras; pé das árvores nas encostas; copas num verde mais calmo, perto do musgo da turfa; pedras com um tom por faceta (7 commits até 18:40) | a rodada dele está na fila | no código (d68aec0): as frutas com 8–11 cm, três por massa da copa, lisas e de cor mais funda — a nota 1 atendida; o resto pelos títulos responde aos itens 2–6 e ao "verde que briga". Conferir nas fotos dele |
-| A2 | 12 commits até 18:58: os materiais novos por padrão (os nove dos povos com `#ifdef`); as peças do Blender (as duas cabeças de dragão pelo id da casa, a empena, o portal, a banca, as pedras rúnicas); a onda 5 dos outros povos (vão das janelas de 16/22 cm, venezianas, grades, cornija, cunhais, soco, alpendre, templos); os pátios com mercadoria; as pedras das bocas de caverna no chão; o orçamento da Leve e da Média | as provas dele estão na fila | pelos títulos e pelo relatório, responde aos itens 1–6 do A2; conferir nas fotos (com a pilha de 47 materiais: o branch dele ainda tem a de 38, e sem ela os materiais novos caem no desenho antigo) |
-| A4, A5 | ainda sem commit da onda 2 | — | — |
+| A3 | neve como camada com bordas orgânicas; arbusto de frutinhas; linha d'água; biomas dos outros povos (dunas, oliveira, sub-bosque); copas de folhas, pinheiros de ramos, frutas pequenas, cactos com costelas, capim no pé das pedras; pé das árvores nas encostas; copas num verde mais calmo, perto do musgo da turfa; pedras com um tom por faceta; as poças do pântano com o céu; a borda esfiapada do capim (9 commits até 19:14) | na integração do líder (em andamento) | no código (d68aec0): as frutas com 8–11 cm, três por massa da copa, lisas e de cor mais funda — a nota 1 atendida; o resto pelos títulos responde aos itens 2–6 e ao "verde que briga". Conferir nas fotos dele |
+| A2 | 12 commits até 18:58: os materiais novos por padrão (os nove dos povos com `#ifdef`); as peças do Blender (as duas cabeças de dragão pelo id da casa, a empena, o portal, a banca, as pedras rúnicas); a onda 5 dos outros povos (vão das janelas de 16/22 cm, venezianas, grades, cornija, cunhais, soco, alpendre, templos); os pátios com mercadoria; as pedras das bocas de caverna no chão; o orçamento da Leve e da Média; a escada da porta nas encostas (19:24) | na integração do líder (em andamento) | pelos títulos e pelo relatório, responde aos itens 1–6 do A2; conferir nas fotos (com a pilha de 47 materiais: o branch dele ainda tem a de 38, e sem ela os materiais novos caem no desenho antigo) |
+| A4 | 15 commits até 19:16: as roupas com os tecidos da pilha (lã, linho, couro — o pedido do A1); a blusa solta (o huipil, a dobra do quíton) e as roupas de cada povo; saias presas no quadril abrindo em pregas, barra irregular; capa e saias com caimento e sem atravessar o corpo; rostos com olhos de brilho, sobrancelhas, humor e piscar; os olhos do tamanho de olho de verdade ("revisão do A1"); ninguém nu (com verificador); os bichos deitados na encosta, nascendo no chão; três níveis de detalhe pela distância; a luz da borda seguindo o céu da hora (pedido do A5) | na integração do líder (em andamento) | pelos títulos, responde às notas 1–5 do A4; conferir nas fotos da integração |
+| A5 | 10 commits até 19:06: os navios com o casco trincado do Blender (o pedido do A1), a caixa facetada de reserva; a beira da água acompanhando o chão (a praia larga, a margem do rio sem a borda reta da casa); a luz pintada das chamas, sombras suaves, a curva que não esmaga os escuros; toda chama e porta acesa iluminando o redor, a sombra de contato sob os pés; a água rasa menos espelho; raios de sol no pós; as pegadas só na neve (pedido do A3); o orçamento da Leve e da Média | na integração do líder (em andamento) | pelos títulos, responde às notas 1–3 do A5 (o navio, o mar raso, a sombra que esmagava os escuros); conferir nas fotos |
 
 ## A1 — o que a própria revisão mudou na coluna do A1
 
@@ -162,5 +220,7 @@ Do relatório do A6 sobre a integração (`SP/a6/integracao-relatorio.md`), o qu
 - As notícias ocupavam o centro do alto com três caixas, e eram a mesma notícia em três cidades [e1-atravessou,
   e1-no-mercado] — agora vira uma linha "— e em mais 2 lugares", no máximo duas na tela (77d85a0).
 - Os tecidos da pilha (onda 1) não chegaram às pessoas: o pedido vai ao A4 (acima).
-- Na pilha, `turf` (281 KB), `forest` (258), `grass` (239) e `canvas` (202) — do A1 — também passam do teto de 200 KB por
-  material: o total ainda cabe (5,33 de 6 MB); se apertar, são os primeiros a ganhar `hblur`/`q`.
+- Na pilha, contando como a BIBLIA conta (o WebP, antes do base64), só a `turf` do A1 passa do teto de 200 KB por
+  material (211 KB; `forest` 194, `grass` 179, `canvas` 152) — e a BIBLIA admite os chãos e a turfa vistos de perto até
+  300. O total cabe: na integração, 49 materiais, 5,19 de 6 MiB de base64. Se apertar, a `turf` é a primeira a ganhar
+  `hblur`/`q`. (Antes eu tinha escrito os números do base64, 4/3 maiores — corrigido.)
