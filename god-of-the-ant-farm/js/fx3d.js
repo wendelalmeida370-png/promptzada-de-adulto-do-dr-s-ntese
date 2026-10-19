@@ -148,10 +148,10 @@
   function every(key, rate, dt) { let t = (emit.get(key) || 0) + dt * rate; let n = 0; while (t >= 1) { t -= 1; n++; } emit.set(key, t); return n; }
   F3.init = function (three, realm) {
     THREE = three; R3 = realm; scene = realm.scene();
+    // (the hot core inside each flame: a small cone glowing — the tongues round it are made with the pools, below)
     const cone = new THREE.ConeGeometry(0.5, 1, 6); cone.translate(0, 0.5, 0);
-    flame = new THREE.InstancedMesh(cone, new THREE.MeshBasicMaterial({ color: 0xff9a2a, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, fog: true }), MAXF);
-    glow = new THREE.InstancedMesh(cone, new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending }), MAXF);
-    for (const m of [flame, glow]) { m.count = 0; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); }
+    glow = new THREE.InstancedMesh(cone, new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }), MAXF);
+    glow.count = 0; glow.frustumCulled = false; glow.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(glow);
     F3.quality(realm.Q());
     // snow: soft flakes falling round the eye (the rain, below, in streaks)
     rainP = new Float32Array(NR * 3); const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(rainP, 3));
@@ -182,8 +182,54 @@
     const sg = new THREE.CylinderGeometry(1.6, 1.6, 1, 10, 1, true, -0.32, 0.64); sg.translate(0, 0.5, -1.6); sg.rotateY(Math.PI / 2); sg.scale(1, 1, 1);
     hull = new THREE.InstancedMesh(hg, new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide }), MAXS); deck = new THREE.InstancedMesh(box, mat, MAXS); mast = new THREE.InstancedMesh(cyl, mat, MAXS); sail = new THREE.InstancedMesh(sg, new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide }), MAXS);
     for (const m of [hull, deck, mast, sail]) { m.count = 0; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); }
-    makePools(); makeBlobs(); makeHalos();
+    makePools(); makeBlobs(); makeHalos(); makeFlames();
   };
+  // ------------------------------ the flames ------------------------------
+  // (a flame: tongues of fire on three crossed cards — torn at the edge by a noise rising through them, white-gold at the
+  // heart and the foot, orange, then red where they thin out at the tips — each tongue its own seed, height and sway, the
+  // hot core glowing inside; the campfire's embers drift up out of it. Lit by nothing: it is the light)
+  let fSeed = null;
+  function makeFlames() {
+    const P = [], UV = [];
+    for (let k = 0; k < 3; k++) { const a = k / 3 * Math.PI, c = Math.cos(a) * 0.5, s = Math.sin(a) * 0.5;
+      const q = [[-c, 0, -s, 0, 0], [c, 0, s, 1, 0], [c, 1, s, 1, 1], [-c, 1, -s, 0, 1]];
+      for (const i of [0, 1, 2, 0, 2, 3]) { P.push(q[i][0], q[i][1], q[i][2]); UV.push(q[i][3], q[i][4]); } }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2));
+    const sd = new THREE.InstancedBufferAttribute(fSeed = new Float32Array(MAXF), 1); sd.setUsage(THREE.DynamicDrawUsage); g.setAttribute('aSeed', sd);
+    flame = new THREE.InstancedMesh(g, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, // (it adds its light and hides a little of what is behind it: seen by day, glowing by night)
+      uniforms: { uT: R3.U.time, uFogN: PU.uFogN, uFogF: PU.uFogF, uFogC: PU.uFogC, gxGr: PU.gxGr, gxTn: PU.gxTn },
+      vertexShader: `attribute float aSeed; uniform float uFogN; uniform float uFogF; varying vec2 vUv; varying float vSeed; varying float vFog;
+        void main() { vUv = uv; vSeed = aSeed; vec4 mv = modelViewMatrix * instanceMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; vFog = smoothstep(uFogN, uFogF, -mv.z); }`,
+      fragmentShader: `uniform float uT; uniform vec3 uFogC; varying vec2 vUv; varying float vSeed; varying float vFog;
+        float fh(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float fn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(fh(i), fh(i + vec2(1.0, 0.0)), f.x), mix(fh(i + vec2(0.0, 1.0)), fh(i + vec2(1.0, 1.0)), f.x), f.y); }
+        void main() {
+          float x = vUv.x - 0.5, y = vUv.y, t = uT * 2.4 + vSeed * 31.0;
+          // (the noise rising through it, at two sizes; the tongue swaying more toward its tip, widest a little above its foot, to a point)
+          float n = fn(vec2(x * 3.5 + vSeed * 7.0, y * 2.6 - t)) * 0.65 + fn(vec2(x * 8.0 - vSeed * 3.0, y * 5.5 - t * 1.6)) * 0.35;
+          float sw = (fn(vec2(vSeed * 5.0, t * 0.35)) - 0.5) * 0.3 * y * y;
+          float hw = 0.46 * pow(max(1.0 - y, 0.0), 0.75) * smoothstep(0.0, 0.12, y + 0.02);
+          float e = abs(x - sw) / max(hw, 1e-3) + (n - 0.5) * (0.35 + y * 1.4);
+          float a = (1.0 - smoothstep(0.6, 1.0, e)) * (1.0 - smoothstep(0.62, 1.0, y + (n - 0.5) * 0.45));
+          if (a < 0.02) discard;
+          // (its heat: white-gold at the heart and the foot, then orange, red at the thinning edges and the tips — brighter than
+          // white only at the very heart, so the gradient shows and the glow of the high qualities still catches it)
+          float h = clamp((1.0 - e) * 1.2 * (1.0 - y * 0.8) + (n - 0.5) * 0.35, 0.0, 1.0);
+          vec3 c = mix(vec3(0.5, 0.05, 0.01), vec3(1.0, 0.34, 0.04), smoothstep(0.05, 0.45, h));
+          c = mix(c, vec3(1.0, 0.8, 0.4), smoothstep(0.55, 0.95, h)) * (1.15 + h * 1.5);
+          c = mix(c, uFogC, vFog * 0.6);
+          gl_FragColor = vec4(c * a, a * (0.45 + 0.35 * h));
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }` }), MAXF);
+    flame.count = 0; flame.frustumCulled = false; flame.renderOrder = 4; flame.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(flame);
+  }
+  // (one tongue of a flame: its foot, its width, its height, turned by its seed — and the core glowing inside the first)
+  function tongue(n, X, Y, Z, w, h, seed, core) {
+    M.a.makeRotationY(seed * TAU); M.a.scale(M.v.set(w, h, w)); M.a.setPosition(X, Y, Z); flame.setMatrixAt(n, M.a); fSeed[n] = seed;
+    if (core) { M.a.makeScale(w * 0.42, h * 0.55, w * 0.42); M.a.setPosition(X, Y, Z); glow.setMatrixAt(n, M.a); } else glow.setMatrixAt(n, M.z);
+  }
   // ------------------------------ the lights of the flames ------------------------------
   // a few point lights — as many as the quality has (every material pays for each one, by day too) — given each frame to the
   // strongest light round the body: a fire, the torches and lanterns in hands, the campfires, and at night the doors and
@@ -312,7 +358,7 @@
     if (G.People3D && G.People3D.walkers) for (const p of G.People3D.walkers) put(p[0], p[1], p[2], 1);
     blob.count = n; blob.instanceMatrix.needsUpdate = true;
   }
-  const M = {}; const mats = () => { if (M.a) return; M.a = new THREE.Matrix4(); M.b = new THREE.Matrix4(); M.c = new THREE.Color(); M.z = new THREE.Matrix4().makeScale(0, 0, 0); };
+  const M = {}; const mats = () => { if (M.a) return; M.a = new THREE.Matrix4(); M.b = new THREE.Matrix4(); M.c = new THREE.Color(); M.v = new THREE.Vector3(); M.z = new THREE.Matrix4().makeScale(0, 0, 0); };
   // (ship sizes, metres: [length, beam, mast])
   const SHIP = { pesca: [5, 1.8, 4], canoa: [4, 1.1, 0], jangada: [3.5, 2.4, 2], explorador: [11, 3.2, 9], mercante: [13, 3.8, 10], guerra: [15, 4, 12], transporte: [13, 4, 10] };
   F3.update = function (rdt, focus) {
@@ -329,8 +375,7 @@
         for (let k = 0; k < 3 && n < MAXF; k++) {
           const px = (x + 0.25 + G.hash(i * 3 + k) * 0.5) * L, pz = (y + 0.25 + G.hash(i * 5 + k) * 0.5) * L; const fl = 0.75 + Math.sin(t * (7 + k) + i) * 0.18 + G.VR() * 0.12;
           const hgt = (1.2 + f * 2.6) * fl, wd = 0.7 + f * 1.2;
-          M.a.makeScale(wd, hgt, wd); M.a.setPosition(px, gY, pz); flame.setMatrixAt(n, M.a);
-          M.a.makeScale(wd * 0.5, hgt * 0.6, wd * 0.5); M.a.setPosition(px, gY, pz); glow.setMatrixAt(n, M.a); n++;
+          tongue(n, px, gY, pz, wd * 1.1, hgt * 1.15, G.hash(i * 3 + k), k === 0); n++;
           if (k === 0) halo(px, gY + hgt * 0.45, pz, 2.6 + f * 3, 0.55, i);
         }
         if (f > best) { best = f; bx = (x + 0.5) * L; by = gY + 2; bz = (y + 0.5) * L; bi = i; }
@@ -347,24 +392,28 @@
         const ps = G.Build3D && G.Build3D.lamps && G.Build3D.lamps.get(b.id); if (ps) for (let q = 0; q < ps.length && q < 8; q++) { const p = ps[q]; src.push([0.9 * k / (1 + near2(p[0], p[2]) / 40), 'p' + b.id + ':' + q, p[0] + p[3] * 0.35, p[1], p[2] + p[4] * 0.35, 0.9 * k, 7, HEARTH, 0.02]); halo(p[0] + p[3] * 0.08, p[1], p[2] + p[4] * 0.08, 1.1, 0.28 * k, b.id * 13 + q); } } }
       if (b.type !== 'campfire' || !b.built || n >= MAXF - 2) continue; const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > 3600) continue;
       const gY = W.hAt(b.x + b.w / 2, b.y + b.h / 2) * H + 0.55;
-      for (let k = 0; k < 2; k++) { const fl = 0.8 + Math.sin(t * (8 + k * 3) + b.id) * 0.15 + G.VR() * 0.1; M.a.makeScale(0.75 - k * 0.25, (1.3 - k * 0.3) * fl, 0.75 - k * 0.25); M.a.setPosition(X + (k ? 0.15 : 0), gY, Z); flame.setMatrixAt(n, M.a); M.a.makeScale(0.35, 0.8 * fl, 0.35); M.a.setPosition(X, gY, Z); glow.setMatrixAt(n, M.a); n++; }
+      // (four tongues: the tall one in the middle with the core, three lower round it — each trembling, now taller, now shorter)
+      for (let k = 0; k < 4 && n < MAXF; k++) { const s = G.hash(b.id * 7 + k); const fl = 0.78 + Math.sin(t * (7 + k * 2.3) + b.id + k) * 0.14 + G.VR() * 0.12;
+        const ox = k ? Math.cos(s * TAU) * 0.18 : 0, oz = k ? Math.sin(s * TAU) * 0.18 : 0;
+        tongue(n, X + ox, gY - 0.05, Z + oz, (k ? 0.55 : 0.8) * (0.9 + s * 0.2), (k ? 0.85 + s * 0.35 : 1.35) * fl, s + k * 0.37, k === 0); n++; }
       halo(X, gY + 0.55, Z, 2.8, 0.7, b.id);
       const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; src.push([13 / (1 + d2 / 300), 'c' + b.id, X, gY + 1.2, Z, 13, 22, FIRE, 0.14]);
       for (let k = every('cf' + b.id, 1.3, rdt); k > 0; k--) spawn(PA, { x: X, y: gY + 1.2, z: Z, vy: G.vrr(0.9, 1.4), life: G.vrr(3, 5), s0: 0.4, s1: 2.6, c: [0.6, 0.6, 0.6], a: 0.32, drag: 0.4, fade: 1 });
       for (let k = every('cs' + b.id, 3, rdt); k > 0; k--) spawn(PG, { x: X + G.vrr(-0.3, 0.3), y: gY + 0.4, z: Z + G.vrr(-0.3, 0.3), vx: G.vrr(-0.3, 0.3), vy: G.vrr(1.8, 3.4), vz: G.vrr(-0.3, 0.3), life: G.vrr(0.7, 1.4), s0: 0.12, s1: 0.03, c: [1, 0.72, 0.3], a: 1, sh: 1, drag: 0.6, wob: 1 });
+      // (and embers: slower, redder, drifting up high on the warm air before they go out)
+      for (let k = every('ce' + b.id, 1.6, rdt); k > 0; k--) spawn(PG, { x: X + G.vrr(-0.25, 0.25), y: gY + 0.2, z: Z + G.vrr(-0.25, 0.25), vx: G.vrr(-0.15, 0.15), vy: G.vrr(0.6, 1.2), vz: G.vrr(-0.15, 0.15), life: G.vrr(1.8, 3.2), s0: 0.06, s1: 0.025, c: [1, 0.42, 0.1], a: 1, sh: 1, drag: 0.25, wob: 0.7 });
     }
     // (the small flames the others hand over: torches and lanterns in people's hands, the lamps of carts and taverns, the
     // fires of camps and pyres — each a flame, a spark now and then, and the nearest one lights round it)
     F3.torches = 0; let ti = 0;
     for (const fs of [G.People3D && G.People3D.flames, G.Things3D && G.Things3D.flames]) if (fs) for (const q of fs) {
       if (n >= MAXF) break; const k = q[3]; const fl = 0.8 + Math.sin(t * 11 + q[0] * 3.1) * 0.15 + G.VR() * 0.1;
-      M.a.makeScale(0.22 * k, 0.5 * k * fl, 0.22 * k); M.a.setPosition(q[0], q[1], q[2]); flame.setMatrixAt(n, M.a);
-      M.a.makeScale(0.11 * k, 0.32 * k * fl, 0.11 * k); M.a.setPosition(q[0], q[1], q[2]); glow.setMatrixAt(n, M.a); n++; F3.torches++;
+      tongue(n, q[0], q[1], q[2], 0.26 * k, 0.55 * k * fl, G.hash(ti * 13 + 5), true); n++; F3.torches++;
       halo(q[0], q[1] + 0.18 * k, q[2], 1.5 * k, 0.75, ti);
       src.push([8 * k / (1 + near2(q[0], q[2]) / 40), 't' + (ti++), q[0], q[1] + 0.35, q[2], Math.min(8, 9 * k), 16, TORCH, 0.12]);
       if (G.VR() < rdt * 1.6 * k) spawn(PG, { x: q[0], y: q[1] + 0.3 * k, z: q[2], vx: G.vrr(-0.2, 0.2), vy: G.vrr(0.8, 1.6), vz: G.vrr(-0.2, 0.2), life: G.vrr(0.5, 0.9), s0: 0.06, s1: 0.02, c: [1, 0.7, 0.3], a: 1, sh: 1, drag: 0.5, wob: 1 });
     }
-    flame.count = glow.count = n; flame.instanceMatrix.needsUpdate = glow.instanceMatrix.needsUpdate = true; F3.fires = n;
+    flame.count = glow.count = n; flame.instanceMatrix.needsUpdate = glow.instanceMatrix.needsUpdate = true; flame.geometry.attributes.aSeed.needsUpdate = true; F3.fires = n;
     stepHalos(nightK);
     lightUp(src, rdt);
     // (the painted light of every flame round the body: at night, and by day where a fire burns)
