@@ -25,13 +25,14 @@
   B3.rim = { value: 0.2 }; // (the edge light's strength: People3D sets it from the sky of the hour)
   const MESH = {}; // name → { mesh, geo, rows (Float32Array), n }
   let inv = null; // the bones' inverse bind matrices (the rig in its bind pose, inverted)
-  const NP = 41; // texels of params and colours a row (20), the cloth's state and the joints it is kept off (20), more of the face (1)
+  const NP = 43; // texels of params and colours a row (20), the cloth's state and the joints it is kept off (20), more of the face (1), the buttocks (2)
   B3.MAXR = MAXR;
   // (the joints a cape and a skirt are kept off, in the order of their texels from 22: the hips and the neck — the trunk's
   // axis —, the chest's side and front axes, then shoulder, elbow, wrist of each arm, hip, knee, ankle of each leg)
   const JOINTS = ['pel', 'head', null, null, 'shL', 'faL', 'hdL', 'shR', 'faR', 'hdR', 'thL', 'snL', 'ftL', 'thR', 'snR', 'ftR'];
-  // (and, at 38 and 39, the shoulder caps' middles — the deltoids, which turn with the arms under a cloak's yoke)
-  const CAP = [0.016, -0.05, 0];
+  // (and, at 38 and 39, the shoulder caps' middles — the deltoids, which turn with the arms under a cloak's yoke; at 41 and
+  // 42 the buttocks' middles, which a seat pushes back and out under a skirt — they go half as the thigh goes, as the skin)
+  const CAP = [0.016, -0.05, 0], SEAT = [0.072, 0.873, -0.052];
 
   // ------------------------------ the data ------------------------------
   function bytes(s) { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
@@ -57,11 +58,12 @@
   const SKIN = `
 uniform highp sampler2D uBody;
 attribute vec4 aBone; attribute vec4 aWt; attribute float aRow; attribute float aZone; attribute float aAO;
+vec3 b3U; // (the point's own up as its bones carry it — a skirt's panel lifted with the thighs: what hangs from it)
 void b3skin(in vec3 p, in vec3 n, out vec3 P, out vec3 N) {
   int row = int(aRow + 0.5); vec4 r0 = vec4(0.0), r1 = vec4(0.0), r2 = vec4(0.0);
   for (int i = 0; i < 4; i++) { float w = aWt[i]; if (w > 0.0) { int b = int(aBone[i] + 0.5) * 3;
     r0 += w * texelFetch(uBody, ivec2(b, row), 0); r1 += w * texelFetch(uBody, ivec2(b + 1, row), 0); r2 += w * texelFetch(uBody, ivec2(b + 2, row), 0); } }
-  vec4 q = vec4(p, 1.0); P = vec3(dot(r0, q), dot(r1, q), dot(r2, q)); N = vec3(dot(r0.xyz, n), dot(r1.xyz, n), dot(r2.xyz, n));
+  vec4 q = vec4(p, 1.0); P = vec3(dot(r0, q), dot(r1, q), dot(r2, q)); N = vec3(dot(r0.xyz, n), dot(r1.xyz, n), dot(r2.xyz, n)); b3U = vec3(r0.y, r1.y, r2.y);
 }
 `;
   // the cloth's own motion and its collisions (a cape, a skirt), after the skin, in the world: its free part (from under the
@@ -117,11 +119,24 @@ vec3 b3cloth(vec3 P, vec3 p) {
   } else {
     // (a skirt: its waist kept off the belly as the trunk bows over it, a little inside where it sits at rest; the thighs
     // from a tenth of their length — standing they never reach the waist, raised they carry the cloth over them)
-    if (p.y > 0.86) { float h = dot(P - pel, up); vec3 q = P - pel - up * clamp(h, 0.0, L); float qx = dot(q, ex), qz = dot(q, ez);
-      float k = length(vec2(qx / (0.155 * s), qz / (0.112 * s))); if (k < 1.0 && k > 1e-4) P += (ex * qx + ez * qz) * (1.0 / k - 1.0); }
+    float fm = b3V(19).w; // (a woman: her hips, her buttocks and her thighs are fuller)
+    // (below the knees a skirt the thighs have lifted hangs: past the fold at the knee's line of a panel raised toward the
+    // level — sitting, crouching — it falls straight down from the fold, as cloth does; standing and walking nothing moves,
+    // and lying down it rests on the legs)
+    float hk = max(0.0, 0.38 - p.y);
+    if (hk > 0.0) { float ul = length(b3U); P += (b3U - vec3(0.0, ul, 0.0)) * hk * (1.0 - smoothstep(0.55, 0.85, b3U.y / max(ul, 1e-5))) * smoothstep(0.45, 0.75, up.y); }
+    // (the waist and the hips under it, down to the top of the thighs: a seat folds the cloth there, and it must not fold in;
+    // and above the waist the trunk, fuller up to the chest: sitting on the ground the knees bring the cloth up against it)
+    { float h = dot(P - pel, up); if (p.y > 0.45 && h > -0.25 * s) { vec3 q = P - pel - up * clamp(h, 0.0, L); float qx = dot(q, ex), qz = dot(q, ez); float g = smoothstep(0.05, 0.3, h / s);
+      float k = length(vec2(qx / ((0.155 + 0.017 * fm + 0.02 * g) * s), qz / ((0.112 + 0.012 * fm + 0.025 * g) * s))); if (k < 1.0 && k > 1e-4) P += (ex * qx + ez * qz) * (1.0 / k - 1.0); } }
+    // (standing, from a tenth of their length — they never reach the waist —; raised toward the belly, sitting or crouching,
+    // from the hip itself and fuller — a woman's the more —: they carry the cloth over them)
     vec3 hL = b3V(32).xyz, kL = b3V(33).xyz, hR = b3V(35).xyz, kR = b3V(36).xyz;
-    P = b3off(P, mix(hL, kL, 0.1), kL, 0.09 * s); P = b3out(P, kL, b3V(34).xyz, 0.068 * s, rd);
-    P = b3off(P, mix(hR, kR, 0.1), kR, 0.09 * s); P = b3out(P, kR, b3V(37).xyz, 0.068 * s, rd); // (the shins, outward only)
+    float uL = smoothstep(-0.8, -0.3, dot(normalize(kL - hL), up)), uR = smoothstep(-0.8, -0.3, dot(normalize(kR - hR), up));
+    P = b3off(P, mix(hL, kL, 0.1 - 0.1 * uL), kL, mix(0.1 + 0.004 * fm, 0.105 + 0.012 * fm, uL) * s); P = b3out(P, kL, b3V(34).xyz, 0.068 * s, rd);
+    P = b3off(P, mix(hR, kR, 0.1 - 0.1 * uR), kR, mix(0.1 + 0.004 * fm, 0.105 + 0.012 * fm, uR) * s); P = b3out(P, kR, b3V(37).xyz, 0.068 * s, rd); // (the shins, outward only)
+    // (the buttocks: a seat pushes them back and out, and the cloth over them)
+    P = b3off(P, b3V(41).xyz, b3V(41).xyz, (0.075 + 0.016 * fm) * s); P = b3off(P, b3V(42).xyz, b3V(42).xyz, (0.075 + 0.016 * fm) * s);
     // (and the forearms and the hands, where they rest on it: on the hips, tied behind the back)
     vec3 eL = b3V(27).xyz, wL = b3V(28).xyz, eR = b3V(30).xyz, wR = b3V(31).xyz;
     P = b3off(P, eL, wL, 0.05 * s); P = b3off(P, wL, wL + (wL - eL) * 0.62, 0.048 * s);
@@ -226,6 +241,12 @@ vec3 b3face(vec3 p, vec3 skin) {
 }
 // the pieces worn over the body: hair in locks, a beard, a skirt with its hem's band (an apron over it, or the northern
 // apron-dress), a cape with its band, a hat of wool, straw, iron, a hood, a scarf, a crown
+// (a skirt's cloth: the dress's, or the apron-dress's over it — and an apron in front)
+vec3 b3skirtc(vec3 p) {
+  vec4 Bc = b3T(3); bool ov = (Bc.z > 0.5 && Bc.z < 1.5) || Bc.z > 2.5; vec3 c = b3cl(ov ? b3T(13).rgb : b3T(5).rgb, ov ? b3T(20).w : b3T(21).w, p);
+  if (Bc.z > 1.5 && Bc.z < 2.5 && p.z > 0.0 && abs(p.x) < 0.14) c = b3cl(b3T(13).rgb, b3T(20).w, p.zyx); // (the apron in front)
+  return c;
+}
 vec3 b3piece(vec3 p) {
   int z = vZoneI; float ang = atan(p.x, p.z + 0.015);
   if (z == 3 || z == 4) {
@@ -234,8 +255,7 @@ vec3 b3piece(vec3 p) {
     return h * mix(1.0, 0.8 + 0.32 * st, k) * (z == 4 ? 0.92 : 1.0);
   }
   if (z == 5 || z == 6) {
-    vec4 Bc = b3T(3); bool ov = (Bc.z > 0.5 && Bc.z < 1.5) || Bc.z > 2.5; vec3 c = b3cl(ov ? b3T(13).rgb : b3T(5).rgb, ov ? b3T(20).w : b3T(21).w, p);
-    if (Bc.z > 1.5 && Bc.z < 2.5 && p.z > 0.0 && abs(p.x) < 0.14) c = b3cl(b3T(13).rgb, b3T(20).w, p.zyx); // (the apron in front)
+    vec3 c = b3skirtc(p);
     // (the hem's band follows the hem, which is never level — arte/corpo_roupa.py, skirt_hem)
     float sa = atan(p.x, p.z + 0.008); float hy = (z == 5 ? B3_HEMC : B3_HEML) + 0.011 * sin(sa * 3.0 + 1.0) + 0.006 * sin(sa * 7.0 + 0.4); float hb = (p.y - hy) / 0.03;
     if (b3T(19).x > 0.5 && hb < 1.0) c = b3band(b3T(6).rgb, ang * 9.0, clamp(hb, 0.0, 1.0), b3T(15).y);
@@ -336,11 +356,14 @@ vec3 b3paint() {
     if (Bc.w > 0.5) { float sdst = abs(dot(vec2(p.x - 0.12, p.y - 1.43), normalize(vec2(0.44, 0.27)))); if (sdst < 0.016) c = b3T(9).rgb * 0.92; }
     float bl = abs(p.y - bY) - bH;
     if (bl < 0.0) { c = b3cl(b3T(9).rgb, 3.0, p); if (p.z > 0.06 && abs(p.x) < 0.016 + 0.0 && abs(p.y - bY) < bH * 0.85) c = b3T(14).rgb; }
-    if (p.y < bY - bH) c = b3cl(b3T(7).rgb, 1.0, p);
+    if (p.y < bY - bH) c = St.w > 0.5 ? b3skirtc(p) : b3cl(b3T(7).rgb, 1.0, p);
     if (!bare || p.y < bY + bH) b3fk = 1.0;
     return c;
   }
-  // the legs: trousers (wrapped below the knee in the north) down to the boots; the feet: shoes, sandals or bare
+  // the legs: under a skirt, its cloth down to a little above its hem (texel 15.w: 1 a short one, 2 a long one) — what the
+  // cloth lets through shows as the cloth —; then trousers (wrapped below the knee in the north) down to the boots; the
+  // feet: shoes, sandals or bare
+  if (St.w > 0.5 && p.y > (St.w > 1.5 ? B3_HEML : B3_HEMC) + 0.03) { b3fk = 1.0; return b3skirtc(p); }
   vec3 c = A.w > 0.5 ? b3cl(b3T(7).rgb, 1.0, p) : skin; b3fk = A.w > 0.5 ? 1.0 : 0.0;
   if (A.w > 1.5 && p.y < 0.43 && p.y > A.z) { float lx = p.x - sd * 0.095; float ang = atan(p.z, lx); float w = fract(p.y * 34.0 + ang * 0.42); c = mix(trim * 0.85, trim * 1.1, step(0.5, w)) * (0.86 + 0.14 * smoothstep(0.0, 0.18, abs(w - 0.5))); }
   if (p.y < A.z) {
@@ -394,7 +417,7 @@ vec3 b3paint() {
       D = G.BODYMESH; if (!D || !D.meshes || !D.meshes.corpoM) throw new Error('sem malhas (js/bodymesh.js)');
       NB = D.bones.length; PB = NB * 3; TW = PB + NP;
       TU = realm.U && realm.U.time && realm.U.wind ? realm.U : { time: { value: 0 }, wind: { value: new THREE.Vector3() } }; // (the view's clock and the world's wind)
-      JIDX = JOINTS.map(n => (n ? D.bones.indexOf(n) : -1)); B3.CHEST = D.bones.indexOf('chest');
+      JIDX = JOINTS.map(n => (n ? D.bones.indexOf(n) : -1)); B3.CHEST = D.bones.indexOf('chest'); B3.HIPH = [D.bones.indexOf('hpHL'), D.bones.indexOf('hpHR')];
       buf = new Float32Array(TW * MAXR * 4);
       tex = new THREE.DataTexture(buf, TW, MAXR, THREE.RGBAFormat, THREE.FloatType);
       tex.minFilter = tex.magFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.needsUpdate = true;
@@ -447,7 +470,7 @@ vec3 b3paint() {
     set(2, u.sleeve, u.neck, u.bootTop, u.legs); set(3, u.beltY, u.beltH, u.overK, u.strap);
     col(p + 4 * 4, L.skin); lin(5, u.lin.cloth); lin(6, u.lin.trim); lin(7, u.lin.pants); lin(8, u.lin.boots); lin(9, u.lin.belt);
     col(p + 10 * 4, L.hair); lin(11, u.lin.iris); lin(12, u.lin.lips); lin(13, u.lin.over); lin(14, u.lin.metal);
-    set(15, u.torso, u.motif, u.feetK, 0); lin(16, u.lin.hat); lin(17, u.lin.cloak); lin(18, u.lin.beads); set(19, u.hem, u.cloakTrim, u.fur || 0, 0);
+    set(15, u.torso, u.motif, u.feetK, u.skirt === 'saiaL' ? 2 : u.skirt === 'saiaC' ? 1 : 0); lin(16, u.lin.hat); lin(17, u.lin.cloak); lin(18, u.lin.beads); set(19, u.hem, u.cloakTrim, u.fur || 0, L.fem ? 1 : 0);
     function lin(k, c) { const j = p + k * 4; buf[j] = c[0]; buf[j + 1] = c[1]; buf[j + 2] = c[2]; buf[j + 3] = 1; }
     // (the cloth: the lag of the steps, the speed, its own clock; the ground under it; the joints it is kept off)
     const gr = L.ground !== undefined && Number.isFinite(L.ground);
@@ -459,6 +482,8 @@ vec3 b3paint() {
     }
     for (let k = 0; k < 2; k++) { const e = R[JIDX[4 + k * 3]].elements, j = p + (38 + k) * 4, x = (k ? -1 : 1) * CAP[0], y = CAP[1];
       buf[j] = e[0] * x + e[4] * y + e[12]; buf[j + 1] = e[1] * x + e[5] * y + e[13]; buf[j + 2] = e[2] * x + e[6] * y + e[14]; buf[j + 3] = 1; }
+    for (let k = 0; k < 2; k++) { const b = B3.HIPH[k], e = K.m.multiplyMatrices(R[b], inv[b]).elements, j = p + (41 + k) * 4, x = (k ? -1 : 1) * SEAT[0], y = SEAT[1], z = SEAT[2];
+      buf[j] = e[0] * x + e[4] * y + e[8] * z + e[12]; buf[j + 1] = e[1] * x + e[5] * y + e[9] * z + e[13]; buf[j + 2] = e[2] * x + e[6] * y + e[10] * z + e[14]; buf[j + 3] = 1; }
     // (what this person wears: the body, the hair, the beard, the skirt or the robe, the cloak, the hat — each in the level of
     // detail the eye's distance asks (People3D: 0 near, 1 a few steps off, 2 far))
     const lv = B3.lod ? Math.max(0, Math.min(2, L.lod | 0)) : 0;
