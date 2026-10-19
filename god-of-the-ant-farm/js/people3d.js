@@ -653,6 +653,7 @@
   }
   // a leg: from the pose, then reaching where its foot must be (two bones in the leg's own plane, in the pelvis's frame),
   // the foot set to its pitch on the ground, the toes flat as the heel lifts
+  const LG = [0, 0, 0, 0]; // (each leg's hip and knee as the ground left them — the skirt follows the thighs as they are)
   function leg(R, pose, L, k, s, grounded, want) {
     const sd = k ? -1 : 1; let hp = k ? pose.hipR : pose.hipL, kn = k ? pose.knR : pose.knL; let an = (k ? pose.anR : pose.anL) || 0;
     fr(R[B.thL + k], R[B.pel], sd * 0.095, -0.04, 0, hp, 0, 0); fr(R[B.snL + k], R[B.thL + k], 0, -LEG.L1, 0, kn, 0, 0); fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin, 0.02, an, 0, 0);
@@ -696,6 +697,7 @@
     }
     fr(R[B.toeL + k], R[B.ftL + k], 0, RIG.toeY, RIG.toe, toe, 0, 0);
     fr(R[B.hpHL + k], R[B.pel], sd * 0.095, -0.04, 0, hp / 2, 0, 0); fr(R[B.knHL + k], R[B.thL + k], 0, -LEG.L1, 0, kn / 2, 0, 0);
+    LG[k * 2] = hp; LG[k * 2 + 1] = kn;
   }
   P3.rig = function (X, Y, Z, yaw, pose, L) {
     mats(); if (!RF) { RF = BONES.map(() => new THREE.Matrix4()); Q.a = new THREE.Quaternion(); Q.b = new THREE.Quaternion(); M.k = M.k || new THREE.Matrix4(); M.c2 = new THREE.Matrix4(); M.t = [new THREE.Vector3(), new THREE.Vector3()]; }
@@ -740,13 +742,15 @@
       fr(R[B.tbL + k], R[B.hdL + k], -sd * 0.0076, -0.0238, 0.0324, 0, -sd * g * 0.55, -sd * g * 0.25);
     }
     for (let k = 0; k < 2; k++) leg(R, pose, L, k, s, grounded, want[k]);
-    // (the skirt: its front follows the leg that is most forward, its back the one most behind, its sides their own leg)
-    const hl = pose.hipL, hr = pose.hipR, cl = pose.cloth || 0, cs = pose.clothS || 0;
-    // (a thigh raised far — sitting, crouching — carries the cloth over it nearly all the way: in a step, four fifths)
-    const fk = a => a * (0.8 + 0.17 * G.clamp(-a - 0.6, 0, 1)), sk = a => a * (0.75 + 0.2 * G.clamp(-a - 0.6, 0, 1));
+    // (the skirt: its front follows the leg that is most forward, its back the one most behind, its sides their own leg —
+    // the legs as the ground bent them: sitting on the ground the thighs rise far past what the pose asked)
+    const hl = LG[0], hr = LG[2], cl = pose.cloth || 0, cs = pose.clothS || 0;
+    // (a thigh raised far — sitting, crouching, bent over the ground — carries the cloth over it all the way: in a step,
+    // four fifths)
+    const fk = a => a * (0.8 + 0.2 * G.clamp((-a - 0.5) * 2, 0, 1)), sk = a => a * (0.75 + 0.25 * G.clamp((-a - 0.5) * 2, 0, 1));
     fr(R[B.skF], R[B.pel], 0, -0.04, 0, fk(Math.min(hl, hr, 0)) + Math.min(0, cl) * 0.5, 0, cs * 0.3);
     // (its back: the foot most behind — the thigh and half the knee's fold: the heel kicked up in the swing stays inside)
-    fr(R[B.skB], R[B.pel], 0, -0.04, 0, Math.max(hl + pose.knL * 0.5, hr + pose.knR * 0.5, 0) * 0.85 + Math.max(0, cl) * 0.5 - Math.min(hl, hr, 0) * 0.12, 0, cs * 0.3); // (seated, drawn back over the buttocks)
+    fr(R[B.skB], R[B.pel], 0, -0.04, 0, Math.max(hl + LG[1] * 0.5, hr + LG[3] * 0.5, 0) * 0.85 + Math.max(0, cl) * 0.5 - Math.min(hl, hr, 0) * (L.fem ? 0.2 : 0.12), 0, cs * 0.3); // (seated, drawn back over the buttocks — a woman's the fuller)
     fr(R[B.skL], R[B.pel], 0.095, -0.04, 0, sk(hl) + cl * 0.3, 0, cs * 0.4); fr(R[B.skR], R[B.pel], -0.095, -0.04, 0, sk(hr) + cl * 0.3, 0, cs * 0.4);
     fr(R[B.clk1], R[B.chest], 0, 0.46, -0.11, Math.max(0, cl) * 0.6, 0, cs * 0.3); fr(R[B.clk2], R[B.clk1], 0, -0.45, 0, Math.max(0, cl) * 0.5, 0, cs * 0.3);
     // (what is held: the torch upright in the left hand whatever the arm does; the tool in the right; the load at the chest)
