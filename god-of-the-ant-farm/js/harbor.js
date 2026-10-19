@@ -82,16 +82,17 @@
 
   // a crate is never lost: called away while carrying one, the carrier sets it back on the quay for another hand
   const oldEnd = G.Vg.endTask;
-  G.Vg.endTask = function (v) {
+  G.Vg.endTask = function (v, o) {
     const t = v.task;
-    if (t && t.type === 'descarga' && v.carry && v.carry.crate) {
+    // (o.keepLoad: the hands keep it — the god takes the body with the crate in its arms, and the unloading goes on with it)
+    if (t && t.type === 'descarga' && v.carry && v.carry.crate && !v.carry.op && !(o && o.keepLoad)) {
       const d = G.S.buildings.get(t.dock);
       // (on a quay that filled up meanwhile it goes straight in, as cargo does when the quay is full: L-078)
-      if (d && (d.crates || []).length < 10) (d.crates || (d.crates = [])).unshift({ k: v.carry.k, n: v.carry.n, col: v.carry.fishCol, fish: v.carry.fish, boat: v.carry.catchOf, imp: v.carry.imp });
+      if (d && (d.crates || []).length < 10) (d.crates || (d.crates = [])).unshift({ id: v.carry.cid || G.S.nextId++, k: v.carry.k, n: v.carry.n, col: v.carry.fishCol, fish: v.carry.fish, boat: v.carry.catchOf, imp: v.carry.imp, op: 0 });
       else G.Village.addStock(v.carry.k, v.carry.n, d ? G.Village.facOfSet(d.set) : G.Fac.idOfV(v));
       v.carry = null;
     }
-    return oldEnd(v);
+    return oldEnd(v, o);
   };
 
   // ------------------------------ what the ships bring ------------------------------
@@ -103,7 +104,7 @@
     const L = dock.crates || (dock.crates = []);
     let n = Math.round(goods.n);
     const col = COL[goods.k] || (E.GOODS[goods.k] && E.GOODS[goods.k].col) || '#c8a878';
-    while (n > 0 && L.length < 10) { const m = Math.min(4, n); L.push({ k: goods.k, n: m, col, imp: 1, ship: ship ? ship.id : 0 }); n -= m; }
+    while (n > 0 && L.length < 10) { const m = Math.min(4, n); L.push({ id: G.S.nextId++, k: goods.k, n: m, col, imp: 1, ship: ship ? ship.id : 0, op: 0 }); n -= m; }
     if (n > 0) G.Village.addStock(goods.k, n, fid);
     dock.lastCargo = G.S.day;
   };

@@ -144,7 +144,7 @@
     if (t.st === 1) {
       v.act = 'lift'; if (v.actT < 1) return;
       v.act = ''; const c = b.crates && b.crates.shift(); if (!c) return H.end(v);
-      v.carry = { k: c.k, n: c.n, crate: 1, fish: c.fish, fishCol: c.col, catchOf: c.boat, imp: c.imp };
+      v.carry = { k: c.k, n: c.n, crate: 1, cid: c.id, fish: c.fish, fishCol: c.col, catchOf: c.boat, imp: c.imp };
       t.st = 2; return;
     }
     if (t.st === 2) {
@@ -239,7 +239,8 @@
     if (f.good) { good = Math.max(1, Math.round(s.cargo * 0.45)); food = s.cargo - good; }
     else food = Math.max(1, Math.round(food * f.n / 2.2));
     const L = b.crates || (b.crates = []);
-    const put = (kk, n) => { while (n > 0 && L.length < 10) { const m = Math.min(4, n); L.push({ k: kk, n: m, fish: k, col: f.col, boat: s.id }); n -= m; } if (n > 0 && L.length) L[L.length - 1].n += n; };
+    // (a crate is a thing with a name from the moment it is set down: id from the world's count)
+    const put = (kk, n) => { while (n > 0 && L.length < 10) { const m = Math.min(4, n); L.push({ id: G.S.nextId++, k: kk, n: m, fish: k, col: f.col, boat: s.id, op: 0 }); n -= m; } if (n > 0 && L.length) L[L.length - 1].n += n; };
     if (good) put(f.good, good); if (food > 0) put('food', food);
     G.Waters && G.Waters.noteCatch({ fac: s.fac }, k, s.x, s.y, s.cargo);
     G.FX && G.FX.floater(s.x, s.y, `+${s.cargo} ${f.name}`, '#b8e070', 1.6);
