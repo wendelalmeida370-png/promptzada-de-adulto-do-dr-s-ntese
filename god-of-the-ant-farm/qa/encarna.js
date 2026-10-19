@@ -558,7 +558,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     out.people = G.People3D.check(); __E.leave(); out.qa = __E.qa(); out.err = JSON.stringify(G.modErr);
     return out;
   });
-  ok('e11 o chão do 3D pinta o que o mundo tem (perto do corpo, ruas, roças, mar)', e11.inn && e11.near.n > 300 && e11.near.bad <= 2 && e11.map.road[0] === e11.map.road[1] && e11.map.road[1] > 0 && e11.map.farm[0] === e11.map.farm[1] && e11.map.sea[0] === e11.map.sea[1], JSON.stringify({ near: e11.near, map: e11.map }));
+  ok('e11 o chão do 3D pinta o que o mundo tem (perto do corpo, ruas, roças, mar; nenhuma neve na água ou no quente, nenhum branco do frio sob o capim)', e11.inn && e11.near.n > 300 && e11.near.bad <= 2 && e11.near.snowBad === 0 && e11.near.paleBad === 0 && e11.map.road[0] === e11.map.road[1] && e11.map.road[1] > 0 && e11.map.farm[0] === e11.map.farm[1] && e11.map.sea[0] === e11.map.sea[1], JSON.stringify({ near: e11.near, map: e11.map }));
   ok('e11 o chão segue o mundo: a casa queimada vira cinza', e11.burn && e11.burn.frames >= 0 && e11.burn.after === e11.burn.burnt, JSON.stringify(e11.burn));
   ok('e11 plantas que balançam, paredes e telhados com o material do povo', e11.geo.plants > 0 && e11.geo.swayed === e11.geo.plants && e11.geo.solid > 0 && !e11.geo.noAP && e11.houses.length > 0 && e11.houses.every(h => h.ok), JSON.stringify(e11.geo) + ' · casas: ' + e11.houses.map(h => `#${h.id} ${h.ok ? 'ok' : 'parede ' + h.wall + '/telhado ' + h.roof + ' em ' + JSON.stringify(h.pats)}`).join(', '));
   ok('e11 o fogo solta fumaça e faíscas', e11.fire && e11.fire.lit && e11.fire.after > e11.fire.before + 10 && !e11.fire.check.length, e11.fire ? JSON.stringify(e11.fire) : 'nada que queime perto');

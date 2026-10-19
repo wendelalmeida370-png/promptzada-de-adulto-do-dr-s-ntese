@@ -360,7 +360,10 @@
     // picture painted from the tiles the world has now, the particles in their bounds, the trees falling only while they fall
     if (G.Realm && G.Realm.on && G.Ground3D && G.Ground3D.check) {
       const b = (G.Possess && G.Possess.body()) || null;
-      if (b) { const c = G.Ground3D.check(b.x, b.y, 30, 200); if (c.n > 50 && c.bad > c.n * 0.25) add('vista3d', 3, `o chão do 3D não bate com o mundo em ${c.bad} de ${c.n} casas perto do corpo`); }
+      if (b) { const c = G.Ground3D.check(b.x, b.y, 30, 200); if (c.n > 50 && c.bad > c.n * 0.25) add('vista3d', 3, `o chão do 3D não bate com o mundo em ${c.bad} de ${c.n} casas perto do corpo`);
+        // (the white of the cold under the grass's picture turns mint and purple — L-125; the snow on the water or in the
+        // warm is left to e11, which owns a quiet world: the god's Change of Climate may lag the picture a moment)
+        if (c.paleBad) add('vista3d', 3, `o branco do frio debaixo da figura do capim em ${c.paleBad} de ${c.n} casas perto do corpo (a neve ciano e roxa)`); }
       if (G.FX3D && G.FX3D.check) for (const m of G.FX3D.check()) add('vista3d', 2, m);
       if (G.People3D && G.People3D.check) for (const m of G.People3D.check()) add('vista3d', 2, m);
       if (G.Dragon3D && G.Dragon3D.check) for (const m of G.Dragon3D.check()) add('vista3d', 2, m);
