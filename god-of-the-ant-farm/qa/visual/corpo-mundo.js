@@ -112,6 +112,28 @@ const freshTree = () => [...S.trees.values()].filter(t => G.Nature.isChoppable(t
     ok('guardar no armazém: a entrega conta como a de qualquer morador (o estoque do povo, a conta da pessoa)', !v.carry && got === want && (v.st.wood || 0) === t0 + 3, `estoque +${got} (a entrega de um morador: +${want}), a conta da pessoa +${(v.st.wood || 0) - t0}, ${v.carry ? 'a carga ainda nas mãos' : 'as mãos vazias'}`);
   } }
 
+// a load that belongs somewhere (an operation's sack on its way to a house) is not put in the people's store — refused before the
+// hands go, as the world's own carriers never put it there —; one bound to this store goes in by the depot, in the ledger
+G.Act.def('prova-levar', {});
+{ const st = [...S.buildings.values()].filter(b => b.built && G.BDEF[b.type] && G.BDEF[b.type].dropoff).sort((a, b) => a.id - b.id).find(b => { const d = G.Vg.door(b); return bodyAt(d[0] + 0.0001, d[1] + 0.0001, 0.3); });
+  const v = G.Possess.body(); const fid = v && G.Fac.idOfV(v); const f = fid && G.Fac.get(fid); const house = [...S.buildings.values()].find(b => b.built && G.BDEF[b.type] && G.BDEF[b.type].housing);
+  if (!st || !v || !f || !house || G.Village.facOfSet(st.set) !== fid) ok('a carga que tem destino não vai para o estoque comum', false, 'nenhum armazém do povo ao lado');
+  else {
+    const d = G.Vg.door(st); const b = G.Avatar.state(); b.yaw = Math.atan2(d[1] * L - b.Z, d[0] * L - b.X); v.hunger = 5;
+    let op = null; G.Possess.apply(() => { op = G.Act.start('prova-levar', { to: 'h:' + house.id, why: 'prova' }); return { ok: true }; }); frame();
+    v.carry = { k: 'sal', n: 2, op: op ? op.id : 0 }; const s0 = f.stock.sal || 0;
+    const b1 = G.Interact.best(); for (let k = 0; k < 60; k++) { holdE('porta'); frame(); }
+    const refused = !!b1 && b1.id === 'porta' && !b1.ok && /destino/.test(b1.why) && (f.stock.sal || 0) === s0 && v.carry && v.carry.n === 2;
+    v.carry = { k: 'sal', n: 2, to: 'f:' + fid }; const led0 = S.ledgerN || 0; const c2 = holdE('porta');
+    for (let k = 0; k < 300 && G.Avatar.busy(); k++) frame();
+    const e = (S.ledger || []).filter(q => q[0] > led0).find(q => q[8] === 'entrega' && q[3] === 'v:' + v.id);
+    const went = !v.carry && (f.stock.sal || 0) === s0 + 2 && !!e;
+    G.Possess.apply(() => { if (op) G.Act.end(op, 'cancel', 'prova'); return { ok: true }; }); frame(); v.carry = null;
+    const bad = vbad();
+    ok('a carga que tem destino não vai para o estoque comum; a que é dele entra pelo depósito, no livro-razão', refused && !!(c2 && c2.ok) && went && !bad.length,
+      `a saca de um trabalho para ${G.Village.buildName(house).toLowerCase()}: ${b1 ? b1.label + (b1.ok ? '' : ' — ' + b1.why) : 'nada'} (estoque ${(f.stock.sal || 0) === s0 + 2 ? 'depois +2' : 'igual'}); a saca para o armazém: ${went ? 'entrou (' + (e ? e[3] + ' → ' + e[4] : '') + ')' : 'não entrou'}; ${vtxt(bad)}`);
+  } }
+
 // what the world's activities offer: a definition made here for the proof (a sack left on the ground, picked up — C1's door)
 G.Act.def('prova-pegar', {
   offers(v, x, y, r) { return (G.S.loose || []).filter(o => o.prova && G.dist(o.x, o.y, x, y) <= r).map(o => ({ id: 'pegar:' + o.id, act: 'pegar', label: 'Pegar o saco do chão', at: [o.x, o.y], ref: 'g:' + o.id, anim: 'levantar', hands: 1, ok: !(v.carry && v.carry.n > 0), why: 'Suas mãos já estão cheias.' })); },

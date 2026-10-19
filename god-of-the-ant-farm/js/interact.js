@@ -272,8 +272,9 @@
       const b = t.b; const S = G.S; const v = ctx.v;
       if (!S.buildings.has(b.id)) return { ok: false, why: 'Não existe mais.' };
       if (b.built && isStore(b)) {
-        if (G.Village.facOfSet(b.set) !== G.Fac.idOfV(v)) return { ok: false, why: 'Isto é de outro povo: o estoque daqui não é do seu.' };
-        if (!(v.carry && v.carry.n > 0) && v.hunger > 25 && (G.Fac.stockV(v).food || 0) < 1) return { ok: false, why: 'O estoque do seu povo está sem comida.' };
+        const fid = G.Fac.idOfV(v); if (G.Village.facOfSet(b.set) !== fid) return { ok: false, why: 'Isto é de outro povo: o estoque daqui não é do seu.' };
+        if (v.carry && v.carry.n > 0) { const bd = boundOf(v.carry); if (bd && bd !== 'f:' + fid) return { ok: false, why: whyBound(bd) }; }
+        else if (v.hunger > 25 && (G.Fac.stockV(v).food || 0) < 1) return { ok: false, why: 'O estoque do seu povo está sem comida.' };
       }
       return { ok: true };
     },
@@ -329,17 +330,26 @@
       return { ok: true, card: buildingCard(b, v) };
     },
   });
+  // (where a load belongs, if anywhere — as activity.js resumeCarry reads it: an operation's crate goes to the operation's
+  // destination, or back to its source; a purchase to where it was bought for; a load of nobody's is just a load. 'op': an
+  // operation's, with no place of its own)
+  function boundOf(c) {
+    if (!c || !G.Act || !G.Depot) return null; const op = c.op ? G.Act.get(c.op) : null;
+    if (op && G.Act.live(op)) return op.to && G.Depot.exists(op.to) ? op.to : op.from && G.Depot.exists(op.from) ? op.from : 'op';
+    return c.to && G.Depot.exists(c.to) ? c.to : null;
+  }
+  const whyBound = bd => { if (bd === 'op') return 'Esta carga é de um trabalho em andamento: leve-a aonde ele pede.'; const pl = G.Act.placeOf(bd); return `Esta carga tem destino: ${pl ? G.Village.buildName(pl).toLowerCase() : 'outro lugar'}.`; };
   // a load brought to a store: the world's own count of a delivery (villagers.js 'deliver') for the body as for anyone — a year of
   // plenty doubles the stone and the wood, what came along with the load goes in too. Done in the world's step
   function deliver(w, b) {
     const S = G.S; const c = w.carry; if (!c || !(c.n > 0)) return { ok: false, why: 'Suas mãos estão vazias.' };
     if (!S.buildings.has(b.id) || !b.built) return { ok: false, why: 'Não existe mais.' };
     const fid = G.Fac.idOfV(w); if (G.Village.facOfSet(b.set) !== fid) return { ok: false, why: 'Isto é de outro povo: o estoque daqui não é do seu.' };
-    // (a load that belongs somewhere — an operation's crate, a purchase on its way home — goes only there, by the depot, as the
-    // world's people take theirs (activity.js runCarga): never into the people's store by mistake; what does not fit stays in the arms)
-    const op = c.op && G.Act ? G.Act.get(c.op) : null; const bound = op && G.Act.live(op) ? op.to : c.to && G.Depot && G.Depot.exists(c.to) ? c.to : null;
+    // (a load that belongs somewhere goes only there, by the depot, as the world's people take theirs (activity.js runCarga): never
+    // into the people's store by mistake; what does not fit stays in the arms)
+    const bound = boundOf(c);
     if (bound) {
-      if (bound !== 'f:' + fid) { const pl = G.Act.placeOf(bound); return { ok: false, why: `Esta carga tem destino: ${pl ? G.Village.buildName(pl).toLowerCase() : 'outro lugar'}.` }; }
+      if (bound !== 'f:' + fid) return { ok: false, why: whyBound(bound) };
       const r = G.Depot.move('v:' + w.id, bound, c.k, c.n, { op: c.op || 0, code: 'entrega', by: w.id, part: true });
       if (!r.ok) return { ok: false, why: 'Não cabe mais nada no estoque do seu povo.' };
       G.FX && G.FX.deposit(w.x, w.y, c.k, r.n); G.Possess.deed('entrega'); return { ok: true, k: c.k, n: r.n };
@@ -525,7 +535,7 @@
   I.add({
     id: 'obra', prio: 4.5, reach: 3.4,
     find(ctx) {
-      const v = ctx.v; if (!v.carry || !(v.carry.n > 0) || v.carry.k === 'food') return [];
+      const v = ctx.v; if (!v.carry || !(v.carry.n > 0) || v.carry.k === 'food' || boundOf(v.carry)) return []; // (a load that belongs somewhere is not the builders')
       const out = []; for (const b of G.S.buildings.values()) { if (b.built || !b.need || !(b.need[v.carry.k] > 0)) continue; if (b.x > ctx.x + 5 || b.x + b.w < ctx.x - 5 || b.y > ctx.y + 5 || b.y + b.h < ctx.y - 5) continue; const cx = G.clamp(ctx.x, b.x, b.x + b.w), cy = G.clamp(ctx.y, b.y, b.y + b.h); out.push({ b, X: cx * L(), Z: cy * L() }); }
       return out;
     },
