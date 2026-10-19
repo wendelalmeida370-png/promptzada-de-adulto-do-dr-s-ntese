@@ -209,15 +209,15 @@
           // (the noise rising through it, at two sizes; the tongue swaying more toward its tip, widest a little above its foot, to a point)
           float n = fn(vec2(x * 3.5 + vSeed * 7.0, y * 2.6 - t)) * 0.65 + fn(vec2(x * 8.0 - vSeed * 3.0, y * 5.5 - t * 1.6)) * 0.35;
           float sw = (fn(vec2(vSeed * 5.0, t * 0.35)) - 0.5) * 0.3 * y * y;
-          float hw = 0.46 * sqrt(max(1.0 - y, 0.0)) * smoothstep(0.0, 0.12, y + 0.02);
-          float e = abs(x - sw) / max(hw, 1e-3) + (n - 0.5) * (0.35 + y * 1.1);
+          float hw = 0.46 * pow(max(1.0 - y, 0.0), 0.75) * smoothstep(0.0, 0.12, y + 0.02);
+          float e = abs(x - sw) / max(hw, 1e-3) + (n - 0.5) * (0.35 + y * 1.4);
           float a = (1.0 - smoothstep(0.6, 1.0, e)) * (1.0 - smoothstep(0.62, 1.0, y + (n - 0.5) * 0.45));
           if (a < 0.02) discard;
           // (its heat: white-gold at the heart and the foot, then orange, red at the thinning edges and the tips — brighter than
-          // white where it is hottest, for the curve and the glow of the high qualities to catch)
-          float h = clamp((1.0 - e) * 1.3 * (1.0 - y * 0.7) + (n - 0.5) * 0.3, 0.0, 1.0);
-          vec3 c = mix(vec3(0.55, 0.06, 0.01), vec3(1.0, 0.36, 0.04), smoothstep(0.05, 0.45, h));
-          c = mix(c, vec3(1.0, 0.82, 0.42), smoothstep(0.5, 0.9, h)) * (1.6 + h * 2.2);
+          // white only at the very heart, so the gradient shows and the glow of the high qualities still catches it)
+          float h = clamp((1.0 - e) * 1.2 * (1.0 - y * 0.8) + (n - 0.5) * 0.35, 0.0, 1.0);
+          vec3 c = mix(vec3(0.5, 0.05, 0.01), vec3(1.0, 0.34, 0.04), smoothstep(0.05, 0.45, h));
+          c = mix(c, vec3(1.0, 0.8, 0.4), smoothstep(0.55, 0.95, h)) * (1.15 + h * 1.5);
           c = mix(c, uFogC, vFog * 0.6);
           gl_FragColor = vec4(c * a, a * (0.45 + 0.35 * h));
           #include <tonemapping_fragment>
