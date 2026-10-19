@@ -1687,6 +1687,19 @@ float m3scale(float p) {
         const hh = G.hash(i * 37 + r * 11 + q * 3); const px = x * L + 0.22 + q * 0.44 + (hh - 0.5) * 0.16, pz = y * L + 0.5 + r + (G.hash(i * 7 + r * 5 + q) - 0.5) * 0.12;
         const Y = W.hAt(px / L, pz / L) * HM() - 0.02; const h = hgt * (0.85 + hh * 0.3);
         if (c.s === 1) { for (let s = 0; s < 3; s++) { const a = s * 2.1 + hh * 6; gp.blade(px, Y, pz, 0.05, a + 1.57, px + Math.cos(a) * 0.07, Y + h, pz + Math.sin(a) * 0.07, [70, 120, 50], [126, 196, 90], 0.3); } continue; }
+        // (a hill of rice: narrow leaves fanning out, each its own height, lean and shade; when it is ripe, two stems whose heavy
+        // heads hang over — 8 triangles a hill against the 9 of the three stalks with their two crossed heads it had)
+        if (GR.flood) {
+          const hr = q => G.hash(i * 131 + r * 29 + q * 7 + 3);
+          const nl = ripeNow || g >= 0.75 ? 4 : 3; // (three leaves while it grows: never more triangles than the stalks it had)
+          for (let s = 0; s < nl; s++) { const a = hh * 9 + s * TAU / nl + (hr(s) - 0.5) * 0.7, lh = h * (0.62 + hr(s + 4) * 0.4), le = lh * (0.16 + hr(s + 8) * 0.16);
+            const tip = G.lerpColor(stalk, ripeNow ? [150, 152, 74] : [96, 150, 62], hr(s + 12) * 0.45); gp.blade(px, Y, pz, 0.022 + hr(s + 16) * 0.012, a + 1.57, px + Math.cos(a) * le, Y + lh, pz + Math.sin(a) * le, foot, tip); }
+          if (ripeNow || g >= 0.75) for (let s = 0; s < 2; s++) { const a = hh * 5 + s * 3.1 + hr(s + 20); const sh = h * (0.86 + hr(s + 22) * 0.16), dr = 0.1 + hr(s + 24) * 0.08;
+            const top = [px + Math.cos(a) * 0.05, Y + sh, pz + Math.sin(a) * 0.05], hc = ripeNow ? G.lerpColor(head, [172, 140, 62], hr(s + 26) * 0.5) : G.lerpColor(stalk, head, 0.5);
+            gp.blade(px, Y, pz, 0.016, a + 1.57, top[0], top[1], top[2], foot, stalk, 0.6); // (the stem)
+            gp.blade(top[0], top[1], top[2], 0.045, a + 1.57, top[0] + Math.cos(a) * dr * 1.4, top[1] - dr - 0.04, top[2] + Math.sin(a) * dr * 1.4, hc, dim(hc, 0.9), 0.9); } // (the head, hanging)
+          continue;
+        }
         // (a clump: three stalks, a little apart, leaning their own ways)
         for (let s = 0; s < 3; s++) {
           const a = hh * 9 + s * 2.1; const lx = Math.cos(a) * h * 0.12, lz = Math.sin(a) * h * 0.12; const sx = px + Math.cos(a + 1) * 0.04, sz = pz + Math.sin(a + 1) * 0.04;
