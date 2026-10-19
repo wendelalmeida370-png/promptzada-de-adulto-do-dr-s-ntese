@@ -1223,12 +1223,18 @@
     for (const v of S.villagers.values()) {
       if (!v.wrecked || v.aboard || (v.task && (v.task.type === 'swim' || v.task.type === 'naufrago' || v.task.type === 'scene'))) continue;
       const i = W.idx(v.x, v.y); if (S.type[i] <= T.SEA) continue;
-      const r = K.at(v.x, v.y); const fid = v.wrecked.fac;
+      // (their people — or, if it was gone while they were away, the people that took its last in)
+      const r = K.at(v.x, v.y); const wf = F(v.wrecked.fac); const fid = wf && wf.alive ? v.wrecked.fac : G.Fac.idOfV(v); v.wrecked.fac = fid;
       if (G.S.day - v.wrecked.d > 40) { v.wrecked = null; continue; }
-      // home ground: walk home, and tell it there
-      const homes = r ? G.Fac.settlementsOf(fid).filter(s => K.at(s.cx, s.cy) === r) : [];
+      // home ground: a town of their own they can walk to — the map of where one walks, not "the same land" (a quay the god
+      // cut off from its town is the same land and no way home: they came home there every day without moving a step)
+      // (a pocket beside home: they climb out where home is reached, as the stuck are)
+      G.Vg.unstick(v);
+      const homes = G.Fac.settlementsOf(fid).filter(s => W.reachesTown(v, s));
       if (homes.length) { const h = homes.sort((a, b) => G.dist(a.cx, a.cy, v.x, v.y) - G.dist(b.cx, b.cy, v.x, v.y))[0]; if (G.dist(h.cx, h.cy, v.x, v.y) < (h.radius || 8) + 4) survivorHome(v, r); else G.Vg.setTask(v, { type: 'naufrago', st: 'home', set: h.id, pri: 3.4 }); continue; }
-      const town = r && [...S.settlements.values()].find(s => K.at(s.cx, s.cy) === r && s.fac !== fid);
+      // (a ruler is not taken in by strangers: they wait in the camp for a way home)
+      const ruler = F(fid) && F(fid).leader === v.id;
+      const town = !ruler && [...S.settlements.values()].find(s => s.fac !== fid && W.reachesTown(v, s));
       if (town) { G.Vg.setTask(v, { type: 'naufrago', st: 'native', set: town.id, pri: 3.4 }); G.Stories && G.Stories.signal('castaway', { v: v.id, camp: 0, exp: v.wrecked.exp || 0, fac: fid, ship: v.wrecked.name || '', x: v.x, y: v.y }); continue; }
       // a beach where nobody lives: a camp of the shipwrecked
       let c = L.find(q => q.key === (r ? r.key : -1) && q.fac === fid && !q.done);
@@ -1244,7 +1250,8 @@
       // stuck for good, with no way home: they make a home of it
       if (S.day - c.d > 2.2 && c.raft < 1 && (!trees || !homeWater(c))) {
         const adults = c.ids.map(P).filter(v => v && v.age >= 16);
-        if (adults.length >= 2 && adults.some(v => v.g === 'f') && adults.some(v => v.g === 'm')) {
+        // (a hamlet is founded for a people that lives: never a town for one that is gone)
+        if (adults.length >= 2 && adults.some(v => v.g === 'f') && adults.some(v => v.g === 'm') && F(c.fac) && F(c.fac).alive) {
           const ns = G.Village.addSettlement(G.Village.newSettlementName(c.fac), c.x, c.y, c.fac);
           for (const v of c.ids.map(P).filter(Boolean)) { G.Vg.endTask(v); v.set = ns.id; v.home = 0; v.wrecked = null; }
           c.done = S.day; log(`Os náufragos ${ofN(c.title || 'o barco')} desistiram de esperar: fizeram casas de galhos e chamaram aquilo de ${ns.name}. Uma aldeia nascida de um naufrágio.`, 'settle', c.x, c.y);

@@ -39,9 +39,10 @@ if ! skip estado; then
 (timeout 1700 node corrupt.js 7 > "$OUT/corrupt.txt" 2>&1) &
 (timeout 900 node ev.js 31 mar 160 4 3 reach.js > "$OUT/alcance.txt" 2>&1) &
 (timeout 900 node ev.js 31 mar 160 4 8 aboard.js > "$OUT/bordo.txt" 2>&1) &
+(timeout 900 node ev.js 5 continente 128 4 2 ilhado.js > "$OUT/ilhado.txt" 2>&1) &
 (timeout 1700 node det3.js 77 arquipelago 96 3 2 > "$OUT/determinismo.txt" 2>&1) &
 (timeout 2400 node salto.js 41 > "$OUT/salto.txt" 2>&1) &
-wait; echo "== saves danificados, alcance, a bordo, determinismo, o salto em dois ritmos"
+wait; echo "== saves danificados, alcance, a bordo, isolados, determinismo, o salto em dois ritmos"
 fi
 # 5. o que o jogador vê: painéis, desenho, o macaco, o fim do mundo
 if ! skip tela; then
@@ -82,6 +83,7 @@ skip perf || m17 perf 7; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/m
   for f in "$OUT"/*.txt; do e=$(grep -h "erros: \|^erros " "$f" | grep -v "erros: nenhum\|erros nenhum" | head -1); [ -n "$e" ] && echo "FALHOU | $(basename "$f" .txt) com erros: ${e:0:120}"; done
   grep -q '"fails": \[\]' "$OUT/alcance.txt" && echo "PASSOU | alcance" || echo "FALHOU | alcance"
   grep -q '"fails": \[\]' "$OUT/bordo.txt" && echo "PASSOU | a bordo" || echo "FALHOU | a bordo"
+  grep -q '"fails": \[\]' "$OUT/ilhado.txt" && echo "PASSOU | isolados (bolsão, náufrago, governante)" || echo "FALHOU | isolados (bolsão, náufrago, governante)"
   grep -q "falhas: nenhuma" "$OUT/corrupt.txt" && echo "PASSOU | saves danificados" || echo "FALHOU | saves danificados"
   grep -q '"fails": \[\]' "$OUT/memoria.txt" && echo "PASSOU | memória dos mortos" || echo "FALHOU | memória dos mortos"
   grep -q "^MUNDOS: ok" "$OUT/mundos.txt" && echo "PASSOU | mundos prontos" || echo "FALHOU | mundos prontos"

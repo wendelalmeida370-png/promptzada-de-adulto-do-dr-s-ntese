@@ -969,14 +969,20 @@
     for (const v of S.villagers.values()) {
       if (v.captive || v.aboard || v.ug || v.wrecked || v.held || v.air || v.age < 3 || (v.task && IN_TRANSIT[v.task.type]) || (G.Expe && G.Expe.memberOf(v.id))) { v._stray = 0; continue; }
       const set = S.settlements.get(v.set); if (!set || W.reachesTown(v, set)) { v._stray = 0; continue; }
-      const f = G.Fac.get(set.fac); if (f && f.leader === v.id) continue;
+      const f = G.Fac.get(set.fac); const ruler = !!(f && f.leader === v.id);
       if (!v._stray) { v._stray = S.day; continue; }
+      // (a pocket beside home — a quay the god sank around, a gap between houses: set down where home is reached on foot,
+      // as the stuck are; only farther than that another town, a castaway's camp)
+      if (G.Vg.unstick(v)) { v._stray = 0; continue; }
       let best = null, bd = 1e18, own = false, foe = null, fd = 1e18;
       for (const o of S.settlements.values()) {
         if (!W.reachesTown(v, o)) continue; const mine = o.fac === set.fac; const d = G.dist2(v.x, v.y, o.cx, o.cy);
         if (!mine && G.Fac.atWar(o.fac, set.fac)) { if (d < fd) { fd = d; foe = o; } continue; }
         if (d + (mine ? 0 : 1e9) < bd) { bd = d + (mine ? 0 : 1e9); best = o; own = mine; }
       }
+      // (a ruler is never made a guest or a captive for being cut off: they rule from a town of their own on this land,
+      // or wait as a castaway for a way home — the camp, the raft, the hamlet of the shipwrecked)
+      if (ruler && !(best && own)) { v.wrecked = { ship: 0, name: 'o barco', d: S.day, fac: set.fac, exp: 0, x: +v.x.toFixed(1), y: +v.y.toFixed(1) }; v._stray = 0; continue; }
       // (only enemies on this land: like a castaway on a hostile shore, they are taken)
       if (!best && foe && G.War && G.War.enslave) { G.Vg.endTask(v); G.War.enslave(v, set.fac, set.id); v.set = foe.id; v.home = 0; v._stray = 0; continue; }
       // (nobody at all on this land: stranded like a castaway — the camp, the raft, the hamlet of the shipwrecked)
