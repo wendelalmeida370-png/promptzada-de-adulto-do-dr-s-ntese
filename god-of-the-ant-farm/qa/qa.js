@@ -473,11 +473,16 @@
       for (const [k, n] of bad) add('nan', 1, `valor não finito em ${k} (×${n})`);
     }
     // dedupe identical messages
+    // (the checks of a new system in the making, from its own qa file loaded after this one — inlined here when it lands)
+    for (const fn of QA.more) fn(add, s, opts);
     const seen = new Map(); for (const q of out) { const k = q.sys + q.msg; if (!seen.has(k)) seen.set(k, q); }
     return [...seen.values()].sort((a, b) => a.sev - b.sev);
   };
+  QA.more = [];
 
   // ---------------- canonical state (for save/load comparison) ----------------
+  // (the canonical state of a new system in the making: [name, fn] — inlined into canon when it lands)
+  QA.canonMore = [];
   QA.canon = function () {
     const s = S(); const r = x => Math.round(x * 100) / 100;
     const vs = [...s.villagers.values()].sort((a, b) => a.id - b.id).map(v => [v.id, v.name, v.set, v.home, v.partner, v.mother, v.father, (G.Save.ageR ? G.Save.ageR(v.age) : Math.round(v.age * 1000) / 1000), v.captive ? 'c' + v.captive.from : '', v.aboard || 0, v.role || '', v.job || 0, (v.kids || []).length, v.g, v.secret || 0, v.grp || '', v.reigned || 0]);
@@ -497,7 +502,7 @@
       day: s.day, nextId: s.nextId, villagers: vs, dead: s.dead.size, factions: fs, settlements: ss, buildings: bs, ships: sh, wars, armies: arm, stories: st, seeds: sd, exps: ex, fleets: fl,
       history: s.history.length, logN: s.logN || 0, animals: an, trees: s.trees.size, rocks: s.rocks.size, bushes: s.bushes.size,
       riots: (s.riots || []).length, execs: (s.execs || []).length, secrets: s.secrets ? s.secrets.socs.length : 0, ww: s.worldWar ? [s.worldWar.name, s.worldWar.end] : null,
-      walls: (s.walls || []).length, stats: [s.stats.births, s.stats.deaths, s.stats.wars || 0],
+      walls: (s.walls || []).length, stats: [s.stats.births, s.stats.deaths, s.stats.wars || 0], more: QA.canonMore.map(([k, f]) => [k, f()]),
     };
   };
   // the differences between two canonical states, by section
