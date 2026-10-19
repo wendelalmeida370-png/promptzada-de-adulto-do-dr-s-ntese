@@ -272,3 +272,44 @@ Antes de dizer "pronto", olhe de verdade (fotos de `qa/visual/fotos.js` ou `arte
 - [ ] a mesma coisa vista de novo é a mesma (variação pelo id, nunca sorteio);
 - [ ] orçamento (§6) e `check()` do módulo limpos; `node qa/guard.js`; as partes do `qa/encarna.js` da sua área;
 - [ ] **visivelmente melhor** que antes — se não ficou, não está pronto.
+
+## 12. O estado na versão publicada (19/10/2026, `integracao` 1e3559d)
+
+Visto nas fotos fixas da versão final contra o jogo original (`SP/a6/final-1e3559d/lado-a-lado/`, as 7 vistas em
+Média) e nas casas de cada povo de perto (`SP/a1/casas-integ3/`). A revisão por vista está em `SP/onda2/revisao-final-a1.md`.
+
+**Arquitetura (A2).** *Cumpre:* a casa nórdica de perto — tábua com veio e prego, base de pedra, turfa com tufos, as
+pontas da empena e as cabeças de dragão do Blender — e as passarelas de tábua de Hedeby; cada povo com a sua linguagem
+(o romano de reboco ocre com cunhais de cantaria e tégula; o grego caiado com postigos azuis; o egípcio de adobe e arenito
+com terraço; o asteca de estuque com faixas vermelha e turquesa e ameias). *Abaixo:* a fogueira (oito bolas de pedra e
+toras de cilindro); as placas de loja e as bandeiras lisas, sem desenho nem pano; o vermelho forte das molduras romanas.
+*Próximo:* a fogueira de pedra partida e lenha com casca; placa pintada e bandeira de `canvas`; o vermelho só em acento.
+
+**Terreno e natureza (A3).** *Cumpre:* a neve como camada, de borda orgânica e — desde o `m3tint` (7ffbd0f) — branca e
+azulada sobre qualquer chão; os pinheiros de ramos com neve; o chão da mata de folha seca; a casca nos troncos; as pedras
+facetadas; o verde calmo do norte; o arbusto de frutinhas pequenas. *Abaixo:* a borda da neve que derrete vira manchas
+marrons borradas, como sujeira (praça e rua de Hedeby); a selva dos astecas neon (84% dos pixels de planta acima de S 70,
+caça do A6); os lóbulos do arbusto lidos de cima como bolas lisas. *Próximo:* a borda da neve com a terra e o capim
+aparecendo em recorte, sem a mancha; o verde calmo do norte levado à selva.
+
+**Pessoas e bichos (A4).** *Cumpre:* o corpo contínuo com a roupa de cada povo — o huipil solto de barra bordada e a saia
+longa asteca, o vestido de alça nórdico, a tanga —, tranças e cabelos, olhos do tamanho de olho, os tecidos da pilha.
+*Abaixo:* **os bichos** — cão, lhama, cervo, aves — ainda são brinquedos facetados de pernas de palito (um cão cinza visto
+de trás, em Mênfis, lê como formiga gigante); o corpo atravessa a saia (duas manchas brancas nas coxas, de frente); as mangas de linho
+e os braços leem como manequim cinza de juntas (à noite, boneco de madeira); a pele pálida e acinzentada, que na sombra
+da mata faz o rosto parecer caveira. *Próximo:* os bichos com a passagem que as pessoas tiveram (corpo contínuo, pelagem,
+pata de verdade); a saia sem o corpo passando; pele mais quente e manga com dobra.
+
+**Luz, água e céu (A5).** *Cumpre:* a noite de verdade (estrelas, a poça quente da tocha, janela acesa, as tábuas lidas no
+escuro); o dia sem preto esmagado nem branco estourado, de sombra macia; a água com fundo e a beira acompanhando o chão;
+o casco do Blender nos navios. *Abaixo:* a chama da fogueira, um cone; a fumaça das chaminés em bolas de algodão; o custo
+da Média por software (na integração de 15/10, 1ca7583, o quadro da Média custava +75% de tempo que antes do estúdio; a
+Leve, +11% — a medida final da 1e3559d é do A6). *Próximo:* a chama em cartões cruzados que tremem; o orçamento da Média.
+
+**Materiais, peças e HUD (A1).** *Cumpre:* a pilha de 49 materiais com grão e uso (5,19 de 6 MiB), os nove das outras
+culturas lidos nas casas (a cantaria fez os cunhais romanos virarem pedra lavrada; a caiação mostra a pedra sob a cal), as
+sete peças do Blender no jogo sem chamada de desenho nova, a HUD (letreiro que não cobre a notícia, notícias juntas, o menu
+Gráficos com a Ultra) e o jogo sem nenhum pedido à rede (`arte/LICENCAS.md`). *Abaixo:* a caiação grega um pouco cinza (a
+pedra por baixo aparece demais); o tezontle (a pedra vulcânica vermelha) sai bege-cinza, porque a cor da base asteca na
+paleta (`js/arch.js`, `asteca.base`, `#b9ad93`) é de calcário — a pedra com bolhas aparece, o vermelho não. *Próximo:* a
+caiação mais branca e a figura da pedra mais leve; a base asteca num vermelho de tezontle (com o A2, dono da paleta).
