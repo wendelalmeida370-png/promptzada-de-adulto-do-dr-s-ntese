@@ -38,6 +38,11 @@
   Av.saveTune = () => { try { localStorage.setItem('gotaf-tune', JSON.stringify(TUNE)); } catch (e) { } };
 
   let b = null; // the body's motion (the view's memory of a moving body; the person's place is the world's)
+  // (the acts whose hands are at something else: what was held waits on the ground beside the body)
+  const HANDS_AT = new Set(['swing', 'fight', 'low', 'pray', 'sit', 'rest', 'hug', 'dance', 'sleep', 'climb', 'throw', 'eat', 'drink']);
+  // (the body's doings the controller writes — v.act — and so takes back when the act ends; another's — a fight's — stays. An act's
+  // vact is one of these)
+  const VACT = new Set(['swim', 'dance', 'chop', 'mine', 'gather', 'eat', 'pray', 'fish', 'lift', 'arrange', 'give']);
   G.worldHooks.push(() => { b = null; Av.on = false; });
   Av.state = () => b;
   // the player's wishes, filled by the input each frame (axes relative to the camera)
@@ -73,7 +78,7 @@
       id: v.id, X, Y, Z, pX: X, pY: Y, pZ: Z, vx: 0, vy: 0, vz: 0, yaw: yaw === undefined ? (v.face > 0 ? 0 : Math.PI) : yaw, ground: true, coyote: 0, buffer: 0,
       loco: 'ground', anim: 'idle', animT: 0, ph: 0, pose: G.Anim3D.POSE0(), landT: 0, fallFrom: Y, hurt: 0, stamina: 100, acc: 0, wx: v.x, wy: v.y,
       act: null, speed: 0, turnT: 0, block: null, blockT: 0, capsT: 0, caps: null, wade: 0, climb: null, ledgeT: 0, yawP: 0, spP: 0, bank: 0,
-      h: 1.75, swimK: 0, stroke: 0, drown: 0, drownHurt: 0,
+      h: 1.75, swimK: 0, stroke: 0, drown: 0, drownHurt: 0, wear: [],
     };
     Av.on = true;
     return b;
@@ -156,7 +161,7 @@
     busy: {
       step(v, h, caps) {
         const a = b.act; let went = false;
-        if (a && a.to && a.t < a.toT) { const dx = a.to[0] - b.X, dz = a.to[1] - b.Z, d = Math.hypot(dx, dz);
+        if (a && a.to && a.tr < a.toT) { const dx = a.to[0] - b.X, dz = a.to[1] - b.Z, d = Math.hypot(dx, dz);
           if (d > 0.04) { const s = Math.min(d, caps.walk * 1.1 * h); const nx = b.X + dx / d * s, nz = b.Z + dz / d * s; if (!blocked(nx, nz, b.Y, Math.sign(dx), Math.sign(dz))) { b.X = nx; b.Z = nz; went = true; } } }
         if (!went) { b.vx *= Math.exp(-12 * h); b.vz *= Math.exp(-12 * h); }
         settle(h); if (!b.act) b.loco = 'ground';
@@ -313,44 +318,70 @@
   }
 
   // ------------------------------ the body's act (an interaction's hands) ------------------------------
-  // Av.act({ anim, dur, lock, at, done, keep }) — the animation plays, the feet keep still if lock, done() runs at the end;
-  // keep(), when given, is asked every step: false, and the act stops there, undone (the one in the arms walked away)
+  // Av.act({ anim, dur, lock, at, done, keep, face, to, toT, free, world, op, contact, then, fail, reach }) — the animation
+  // plays, the feet keep still if lock, done() runs at the end; keep(), when given, is asked every step: false, and the act stops
+  // there, undone (the one in the arms walked away).
+  //  · world: its clock is the world's own (S.clock): with the world stopped — the menu — it waits; and it lasts the world
+  //    seconds the same act lasts for anyone of the world (the stroke of an axe, the berries of a load, a meal at the store)
+  //  · op(v): what it does to the world — asked at its contact (contact, or at[0]), done by the world in its own step
+  //    (Possess.apply), its answer { ok, why, … } read back: ok → then(res), not → fail(res); the act ends only once the world
+  //    has answered, and done(res) has the answer. Before the contact nothing has happened: an act cut short changes nothing
+  //  · reach(a) → { X, Y, Z, w, wid }: where the hands go meanwhile (a point of the world, how far) — only seen
+  //  · vact: what the world sees the body doing meanwhile (v.act: the axe at the tree, the hands in the bush — the god's view
+  //    draws it, and the people round it see it), as the body's place is the world's (written by the controller, as v.x)
   Av.act = function (o) {
     if (!b) return false;
-    b.act = { anim: o.anim || 'interact', dur: o.dur || 1, t: 0, lock: o.lock !== false, done: o.done || null, at: o.at || null, face: o.face, to: o.to || null, toT: o.toT || 0.7, free: !!o.free, keep: o.keep || null };
+    b.act = { anim: o.anim || 'interact', dur: o.dur || 1, t: 0, tr: 0, lock: o.lock !== false, done: o.done || null, at: o.at || null, face: o.face, to: o.to || null, toT: o.toT || 0.7, free: !!o.free, keep: o.keep || null,
+      world: !!o.world, op: o.op || null, contact: o.contact !== undefined ? o.contact : o.at ? o.at[0] : o.dur || 1, then: o.then || null, fail: o.fail || null, reach: o.reach || null, asked: null, res: null, vact: o.vact || '' };
     if (b.act.lock) b.loco = 'busy';
     if (o.face !== undefined) b.faceTo = o.face;
+    b.wc = G.S.clock;
     return true;
   };
+  Av.actNow = () => (b && b.act ? b.act : null); // (for the tests and the HUD: the act in course, read only)
+  // the act's time, once a frame: the world's seconds for an act of the world, the body's own for the rest; the contact asks the
+  // world (and plays its beat), the answer is read when the world has given it, and the act ends after its time and its answer
+  function tickAct(v, dr, dw) {
+    const a = b.act; if (!a) return;
+    a.t += a.world ? dw : dr;
+    if (a.at && !a.atDone && a.t >= a.at[0]) { a.atDone = true; if (a.at[1]) a.at[1](); }
+    // (asked from where the body stands: if the world moves it before doing it — a building rising there, a push —, what the
+    // hands meant there is not done)
+    if (a.op && !a.asked && a.t >= a.contact) { const op = a.op, x0 = v.x, y0 = v.y, lock = a.lock; a.asked = G.Possess.apply(w => (lock && (w.x !== x0 || w.y !== y0) ? { ok: false, why: '' } : op(w))); }
+    if (a.asked && !a.res && a.asked.res) { a.res = a.asked.res; if (a.res.dropped) { b.act = null; b.faceTo = undefined; if (b.loco === 'busy') b.loco = 'ground'; return; } if (a.res.ok) { if (a.then) a.then(a.res); } else if (a.fail) a.fail(a.res); }
+    if (a.t >= a.dur && (!a.asked || a.res)) { const d = a.done, r = a.res; b.act = null; b.faceTo = undefined; if (b.loco === 'busy') b.loco = 'ground'; if (d) d(r); }
+  }
   Av.busy = () => !!(b && b.act);
   // sitting down where the body stands (until the player walks); and a wave of the hand to those around
-  Av.sit = function () { if (!b) return false; if (b.act && b.act.sit) { b.act = null; b.loco = 'ground'; return true; } if (!b.ground || b.loco !== 'ground' || b.act) return false; Av.act({ anim: 'rest', dur: 1e9, lock: true }); b.act.sit = true; return true; };
+  Av.sit = function () { if (!b) return false; if (b.act && b.act.sit) { cutAct(); b.loco = 'ground'; return true; } if (!b.ground || b.loco !== 'ground' || b.act) return false; Av.act({ anim: 'rest', dur: 1e9, lock: true }); b.act.sit = true; return true; };
   Av.wave = function () { if (!b || b.loco !== 'ground') return false; return Av.act({ anim: 'wave', dur: 1.6, lock: false }); };
   // a dance where the body stands, until the player walks (or presses the key again)
-  Av.dance = function () { if (!b) return false; if (b.act && b.act.anim === 'dance') { b.act = null; b.loco = 'ground'; return false; } if (!b.ground || b.loco !== 'ground' || b.act) return false; return Av.act({ anim: 'dance', dur: 1e9, lock: true, free: true }); };
+  Av.dance = function () { if (!b) return false; if (b.act && b.act.anim === 'dance') { cutAct(); b.loco = 'ground'; return false; } if (!b.ground || b.loco !== 'ground' || b.act) return false; return Av.act({ anim: 'dance', dur: 1e9, lock: true, free: true }); };
   Av.dancing = () => !!(b && b.act && b.act.anim === 'dance');
   // how deep the water is round the legs (metres; 0 on dry ground)
   Av.wade = () => (b && b.loco !== 'swim' ? b.wade : 0);
   Av.climbing = () => !!(b && b.climb);
   Av.rest = () => { if (b && b.caps) b.stamina = b.caps.stamina; }; // (a drink of water: the breath comes back)
-  Av.cancelAct = () => { if (b && b.act) { b.act = null; b.loco = 'ground'; } };
+  Av.cancelAct = () => { if (b && b.act) { cutAct(); b.loco = 'ground'; } };
+  // (an act cut short: what it had asked of the world and the world has not yet done is let go — it never happens)
+  function cutAct() { const a = b.act; if (a && a.asked && !a.asked.res) a.asked.cancel = true; b.act = null; b.faceTo = undefined; if (b.loco === 'busy') b.loco = 'ground'; }
 
   // ------------------------------ the step and the frame ------------------------------
   function step(v, h) {
     // the world moved the body (a building rose where it stood, a load, the world's own push): the world is right
     // (and what the hands were doing there is left undone: the fish in that water, the hug of the one left behind)
-    if (Math.abs(v.x - b.wx) > 1e-6 || Math.abs(v.y - b.wy) > 1e-6) { b.X = b.pX = v.x * TL(); b.Z = b.pZ = v.y * TL(); b.Y = b.pY = floorAt(b.X, b.Z); b.vx = b.vz = b.vy = 0; b.ground = true; b.loco = 'ground'; b.climb = null; b.act = null; b.faceTo = undefined; }
+    if (Math.abs(v.x - b.wx) > 1e-6 || Math.abs(v.y - b.wy) > 1e-6) { b.X = b.pX = v.x * TL(); b.Z = b.pZ = v.y * TL(); b.Y = b.pY = floorAt(b.X, b.Z); b.vx = b.vz = b.vy = 0; b.ground = true; b.loco = 'ground'; b.climb = null; cutAct(); }
     b.pX = b.X; b.pY = b.Y; b.pZ = b.Z;
     if ((b.capsT -= h) <= 0 || !b.caps) { b.caps = G.Possess.caps(v); b.capsT = 0.5; b.h = 1.75 * (G.People3D ? G.People3D.look(v).s : 1); }
-    if (v.sleeping && b.loco !== 'sleep') { b.loco = 'sleep'; b.act = null; }
+    if (v.sleeping && b.loco !== 'sleep') { cutAct(); b.loco = 'sleep'; }
     // (sitting, the body gets up as soon as the player walks or jumps)
-    if (b.act && (b.act.sit || b.act.free) && (Math.abs(IN.mx) + Math.abs(IN.mz) > 0.2 || b.buffer > 0 || IN.jump)) { b.act = null; b.loco = 'ground'; }
-    if (b.act && b.act.keep && !b.act.keep()) { b.act = null; b.faceTo = undefined; if (b.loco === 'busy') b.loco = 'ground'; }
+    // (and a free act — a prayer, a meal — is left there: what it had asked of the world and the world had not yet done never happens)
+    if (b.act && (b.act.sit || b.act.free) && (Math.abs(IN.mx) + Math.abs(IN.mz) > 0.2 || b.buffer > 0 || IN.jump)) { cutAct(); b.loco = 'ground'; }
+    if (b.act && b.act.keep && !b.act.keep()) cutAct();
+    // (the act's own time is counted once a frame — tickAct: the world's or the body's; here only the feet's and the turn)
     if (b.act) {
-      b.act.t += h;
+      b.act.tr += h;
       if (b.faceTo !== undefined) { let da = b.faceTo - b.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; b.yaw += da * (1 - Math.exp(-8 * h)); }
-      if (b.act.at && b.act.t >= b.act.at[0] && !b.act.atDone) { b.act.atDone = true; b.act.at[1](); }
-      if (b.act.t >= b.act.dur) { const d = b.act.done; b.act = null; b.faceTo = undefined; if (b.loco === 'busy') b.loco = 'ground'; if (d) d(); if (!b) return; }
     }
     (LOCO[b.loco] || LOCO.ground).step(v, h, b.caps);
     if (b.landT > 0) b.landT -= h;
@@ -363,16 +394,14 @@
     // (in the water where the world does not walk, the world is told the body is the player's swimmer — it leaves it there;
     // the god sees it swim)
     const afl = !W.walkableXY(v.x, v.y) && waterAt(b.X, b.Z) > -Infinity; if (afl !== G.Possess.afloat(v)) G.Possess.setAfloat(afl);
-    // (and what it does that the world's people answer: swimming, dancing — the dancers round it stop when it stops)
-    const va = b.loco === 'swim' ? 'swim' : b.act && b.act.anim === 'dance' ? 'dance' : '';
-    if (va) v.act = va; else if (v.act === 'swim' || v.act === 'dance') v.act = '';
+    // (and what it does that the world's people answer: swimming, dancing — the dancers round it stop when it stops —, the axe
+    // at the tree, the hands in the bush: the act's own vact, until it ends)
+    const va = b.loco === 'swim' ? 'swim' : b.act ? b.act.vact || (b.act.anim === 'dance' ? 'dance' : '') : '';
+    if (va) v.act = va; else if (VACT.has(v.act)) v.act = '';
     if (d > 0.001) { v.walkPh += (d / TL()) * 8.5; G.faceTo(v, dX, dZ); }
-    // (feet wear the paths, as everybody's do)
-    if (v.moving) { const i = W.idx(v.x, v.y); if (S.type[i] >= T.SAND) { const lv = G.pathLevel(S.wear[i]); S.wear[i] = Math.min(G.WEAR_MAX, S.wear[i] + (d / TL()) * 1.3); if (G.pathLevel(S.wear[i]) !== lv) G.Nature.markDirty(i); } }
+    // (feet wear the paths, as everybody's do — counted here, worn by the world in its step: Av.frame)
+    if (v.moving) { const i = W.idx(v.x, v.y); if (S.type[i] >= T.SAND) { const k = b.wear.length; if (k && b.wear[k - 2] === i) b.wear[k - 1] += (d / TL()) * 1.3; else b.wear.push(i, (d / TL()) * 1.3); } }
     animate(v, h);
-    if (b.hurt > 0) { const hh = b.hurt; b.hurt = 0; G.Vg.damage(v, hh, 'queda', false); if (!b) return; }
-    // (out of breath under the water: the world's drowning, dealt at the end of the step like a fall)
-    if (b.drownHurt > 0) { const hh = b.drownHurt; b.drownHurt = 0; G.Vg.damage(v, hh, 'drown', false); }
   }
   // the animation the body is in: from what it really does (Part 25: no walking in place, no sliding in idle)
   function animate(v, h) {
@@ -381,7 +410,7 @@
     if (b.loco === 'sleep') st = 'sleep';
     else if (b.loco === 'climb') st = 'climb';
     else if (b.loco === 'swim') st = b.stamina <= 0 ? 'drown' : b.swimK > 0.5 ? 'swim' : 'tread';
-    else if (b.act && b.act.to && b.act.t < b.act.toT && b.speed > 0.22) st = 'walk';
+    else if (b.act && b.act.to && b.act.tr < b.act.toT && b.speed > 0.22) st = 'walk';
     else if (b.act && (b.act.lock || b.speed < 0.22)) st = b.act.anim;
     else if (!b.ground) st = b.vy > 0.4 ? 'jump' : 'fall';
     else if (b.landT > 0) st = 'land';
@@ -395,7 +424,12 @@
     if (loc) b.ph += h * (st === 'turn' ? 1.2 * 2.6 : b.speed * G.Anim3D.rate(st, b.speed, b.h / 1.75));
     else if (st === 'swim' || st === 'tread' || st === 'drown') { b.ph += h * (st === 'swim' ? 2.2 + b.speed * 1.4 + (b.stroke > 0 ? 3 : 0) : st === 'drown' ? 5 : 1.6); }
     const wet = st === 'swim' || st === 'tread' || st === 'drown';
-    const want = G.Anim3D.pose(st, loc || wet ? b.ph : st === 'climb' && b.climb ? b.climb.t / b.climb.dur : b.animT, b.speed);
+    // (a stroke of the world's time: one swing a stroke, the blow landing at the stroke's contact — when the world counts it)
+    let tc = loc || wet ? b.ph : st === 'climb' && b.climb ? b.climb.t / b.climb.dur : b.animT;
+    if ((st === 'swing' || st === 'fight') && b.act && b.act.world && b.act.dur > 0) { const u = G.clamp(b.act.t / b.act.dur, 0, 1), c = G.clamp(b.act.contact / b.act.dur, 0.2, 0.95); tc = (u <= c ? -Math.PI / 2 + Math.PI * u / c : Math.PI / 2 + Math.PI * (u - c) / (1 - c)) / 5.5; }
+    const want = G.Anim3D.pose(st, tc, b.speed);
+    // (the weight of what the hands hold, and the hands reaching — the same layer as for everyone drawn)
+    if (b.L && G.Anim3D.hold) G.Anim3D.hold(want, b.L, st, tc, b.speed);
     // (moving, the body leans into its turns and forward as it speeds up, back as it stops; standing, the head follows the
     // eye of the camera a little, as a person looks where they mean to go)
     let dy = b.yaw - b.yawP; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; b.yawP = b.yaw;
@@ -410,10 +444,24 @@
     const v = G.Possess.body(); if (!b || !v || v.id !== b.id) return;
     b.acc = Math.min(0.25, b.acc + rdt);
     while (b && b.acc >= TUNE.step) { b.acc -= TUNE.step; step(v, TUNE.step); }
-    if (!b) return; // (the step ended the body: a fall killed it, the world took it)
+    if (!b) return; // (the step ended the body: the world took it)
+    // (a real fall hurts as the world hurts, out of breath under the water the world drowns: the world's damage and the world's
+    // death, dealt by the world in its own step — Possess.apply — as every other change the body makes to the world)
+    if (b.hurt > 0 || b.drownHurt > 0) { const f = b.hurt, d = b.drownHurt; b.hurt = b.drownHurt = 0; G.Possess.apply(w => { if (f > 0) G.Vg.damage(w, f, 'queda', false); if (d > 0 && G.S.villagers.has(w.id)) G.Vg.damage(w, d, 'drown', false); return { ok: true }; }); }
+    // (the paths the feet wore since the last frame: worn by the world in its step, as everybody's)
+    if (b.wear.length) { const m = b.wear.slice(); b.wear.length = 0; G.Possess.apply(() => { const S = G.S; for (let k = 0; k < m.length; k += 2) { const i = m[k]; const lv = G.pathLevel(S.wear[i]); S.wear[i] = Math.min(G.WEAR_MAX, S.wear[i] + m[k + 1]); if (G.pathLevel(S.wear[i]) !== lv) G.Nature.markDirty(i); } return { ok: true }; }); }
+    // (the act's time: the world's seconds since the last frame — none with the world stopped — or the body's own)
+    { const dw = Math.max(0, G.S.clock - (b.wc === undefined ? G.S.clock : b.wc)); b.wc = G.S.clock; tickAct(v, rdt, dw); if (!b) return; }
     // the picture between two steps (interpolated: smooth at any frame rate)
     const f = b.acc / TUNE.step;
-    const P3 = G.People3D; if (P3) { const L = P3.look(v); P3.avatar = { id: v.id, X: G.lerp(b.pX, b.X, f), Y: G.lerp(b.pY, b.Y, f) - (b.wade > 0 ? 0 : 0), Z: G.lerp(b.pZ, b.Z, f), yaw: b.yaw, pose: b.pose, look: L, sp: b.speed, wade: b.wade, ground: b.ground, act: b.act, swim: b.loco === 'swim', swimK: b.swimK, drown: b.drown, stroke: b.stroke > 0 }; } // (its speed, its wading and footing: for the dust and the splashes it raises)
+    const P3 = G.People3D; if (P3) {
+      const L = P3.look(v);
+      // (the hands: an act's own reach for a point of the world; a load waiting on the ground while the hands work at something)
+      const a = b.act; L.reach = a && a.reach ? a.reach(a) : null;
+      if (L.held && a && HANDS_AT.has(a.anim)) L.held = P3.setDown(L.held);
+      b.L = L;
+      P3.avatar = { id: v.id, X: G.lerp(b.pX, b.X, f), Y: G.lerp(b.pY, b.Y, f) - (b.wade > 0 ? 0 : 0), Z: G.lerp(b.pZ, b.Z, f), yaw: b.yaw, pose: b.pose, look: L, sp: b.speed, wade: b.wade, ground: b.ground, act: b.act, swim: b.loco === 'swim', swimK: b.swimK, drown: b.drown, stroke: b.stroke > 0 };
+    } // (its speed, its wading and footing: for the dust and the splashes it raises)
   };
   // where the body is, for the camera (interpolated)
   // (in the water the eye looks at the head over the face of the water, wherever the body floats)

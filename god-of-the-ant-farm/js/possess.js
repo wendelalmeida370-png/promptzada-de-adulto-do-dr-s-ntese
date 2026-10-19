@@ -80,8 +80,9 @@
   Po.take = function (v, kind) {
     const S = G.S; const c = Po.can(v); if (!c.ok) return c;
     if (S.avatar) Po.release('troca');
-    // (the errand stops where it is; one inside is let out at the door)
-    G.Vg.endTask(v);
+    // (the errand stops where it is — the load in the hands stays in them: it is the same person, and what they were doing goes
+    // on with the player's hands (keepLoad: C1's endTask leaves the carry where it is); one inside is let out at the door)
+    G.Vg.endTask(v, { keepLoad: true });
     v.sleeping = false; v.path = null; v.act = ''; v.actT = 0; v.moving = false; v.z = 0;
     S.avatar = { id: v.id, kind: KINDS[kind] ? kind : 'humano', since: S.day, t0: S.clock, x0: +v.x.toFixed(2), y0: +v.y.toFixed(2), asks: [], deeds: {}, seen: [], met: [] };
     G.Vg.setTask(v, mark());
@@ -93,7 +94,7 @@
   Po.release = function (why, detail, keepTask) {
     const S = G.S; const a = S.avatar; if (!a) return null;
     const v = S.villagers.get(a.id);
-    S.avatar = null; cur = null;
+    S.avatar = null; cur = null; drop();
     if (v) {
       if (!keepTask && v.task && v.task.type === 'avatar') { v.task = null; }
       if (!keepTask) { v.path = null; v.act = ''; v.sleeping = false; }
@@ -105,7 +106,7 @@
   };
   function died(rec, cause, a) {
     const S = G.S; if (!a) return;
-    S.avatar = null; cur = null;
+    S.avatar = null; cur = null; drop();
     record(rec, a, 'morte', cause);
     for (const f of Po.onEnd) f('morte', rec, cause, a);
   }
@@ -168,6 +169,17 @@
   Po.afloat = v => !!(v && v.task && v.task.type === 'avatar' && v.task.afloat);
   Po.setAfloat = function (on) { const v = Po.body(); if (!v || !v.task || v.task.type !== 'avatar') return; v.task.afloat = on ? 1 : 0; };
 
+  // ------------------------------ the body's hands on the world ------------------------------
+  // What the player's hands do to the world is asked from the frame (the input: a key, a click) and done by the world in its
+  // own step — inside G.inSim, by the world's rules and with the world's chance —, like what anyone of the world does: Po.apply
+  // keeps the asking, Po.update does it and keeps the answer ({ ok, why, … }) for the act that asked to read. A body given back
+  // drops what it had asked and the world had not yet done: it never happened (nothing of it goes in a save either)
+  let queue = []; G.worldHooks.push(() => { queue = []; });
+  Po.apply = function (fn) { const it = { fn, res: null, id: Po.id() }; if (!it.id) it.res = { ok: false, why: '', dropped: 1 }; else queue.push(it); return it; };
+  const drop = () => { for (const it of queue) it.res = { ok: false, why: '', dropped: 1 }; queue = []; };
+  Po.pending = () => queue.length; // (for the tests)
+  Po.queued = () => queue.map(it => it.id); // (for the verifier: whose hands asked what is waiting for the world's step)
+
   // ------------------------------ the body's own step ------------------------------
   // (villagers.js calls this instead of emergency/decide/runTask: the will is the player's)
   Po.live = function (v, dt) {
@@ -194,6 +206,10 @@
     // (inside only to sleep in one's own bed; anything else that put the body indoors lets it out at the door)
     if (v.inside && !(v.sleeping && v.inside === v.home)) { const b = S.buildings.get(v.inside); if (b) { const d = G.Vg.door(b); v.x = d[0]; v.y = d[1]; } v.inside = 0; }
     for (let k = a.asks.length - 1; k >= 0; k--) if (S.clock - a.asks[k].t > 90) a.asks.splice(k, 1);
+    // (what the hands asked since the last step: done now, in the world's own step, in the order asked — each sees the world
+    // the one before left; one asked by a body no longer lived is dropped. Each is answered "not done" until it is done: one
+    // that breaks — counted in G.modErr, as any module's error — leaves the rest answered, never a body waiting forever)
+    if (queue.length) { const q = queue; queue = []; for (const it of q) it.res = { ok: false, why: '', dropped: 1 }; for (const it of q) { if (it.cancel || it.id !== a.id || S.avatar !== a || !S.villagers.has(v.id)) continue; it.res = it.fn(v) || { ok: true }; } }
     void dt;
   };
   // the death of the body (Village.kill is the only door out of the world: the incarnation follows it at once)

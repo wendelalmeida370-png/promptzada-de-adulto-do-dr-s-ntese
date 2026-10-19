@@ -203,7 +203,8 @@
     // the hands: only in the body, with no panel open
     if (M3.state === 'INC' && !M3.panel()) { const a = G.Input3D.axes(); IN.mx = a.mx; IN.mz = a.mz; IN.run = a.run; IN.sneak = a.sneak; IN.camYaw = G.Cam3D.yaw; }
     else { IN.mx = IN.mz = 0; IN.run = IN.sneak = false; IN.jump = false; IN.camYaw = G.Cam3D.yaw; }
-    G.Avatar.frame(rdt);
+    // (the menu open, the world stands still — and the body with it: no fall, no swim, no breath spent while nobody plays)
+    if (!menuOpen) G.Avatar.frame(rdt);
     let focus = null;
     const body = G.Avatar.pos();
     if (M3.state === 'TO_INC') {
@@ -299,11 +300,12 @@
     if (a === 'sentar') { G.Avatar.sit(); return; }
     // (a wave of the hand: those standing near turn to it and wave back — the hello of the people, only seen)
     // (a dance: whoever is free and merry near the body joins in — the world's people, stopping a while to dance with it)
-    if (a === 'dancar') { if (G.Avatar.dance()) { G.Possess.deed('danca'); G.Interact.danceJoin(); } return; }
-    if (a === 'acenar') { if (G.Avatar.wave()) { G.Possess.deed('aceno'); const p = G.Avatar.pos(); if (p && G.People3D.greet) G.People3D.greet(p.X, p.Z); } return; }
+    // (what the world does about it — the deed counted, the people joining — the world does in its step: Possess.apply)
+    if (a === 'dancar') { if (G.Avatar.dance()) G.Possess.apply(() => { G.Possess.deed('danca'); G.Interact.danceJoin(); return { ok: true }; }); return; }
+    if (a === 'acenar') { if (G.Avatar.wave()) { G.Possess.apply(() => { G.Possess.deed('aceno'); return { ok: true }; }); const p = G.Avatar.pos(); if (p && G.People3D.greet) G.People3D.greet(p.X, p.Z); } return; }
     if (a === 'interagir') {
       if (panel) { G.IncUI.closeAll(); panel = null; return; }
-      const v = G.Possess.body(); if (v && v.sleeping) { G.Possess.wake(v); return; }
+      const v = G.Possess.body(); if (v && v.sleeping) { G.Possess.apply(w => { G.Possess.wake(w); return { ok: true }; }); return; }
       G.IncUI.use();
     }
   };
