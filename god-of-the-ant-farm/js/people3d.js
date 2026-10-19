@@ -745,8 +745,9 @@
     // (the skirt: its front follows the leg that is most forward, its back the one most behind, its sides their own leg —
     // the legs as the ground bent them: sitting on the ground the thighs rise far past what the pose asked)
     const hl = LG[0], hr = LG[2], cl = pose.cloth || 0, cs = pose.clothS || 0;
-    // (a thigh raised far — sitting, crouching — carries the cloth over it nearly all the way: in a step, four fifths)
-    const fk = a => a * (0.8 + 0.17 * G.clamp(-a - 0.6, 0, 1)), sk = a => a * (0.75 + 0.2 * G.clamp(-a - 0.6, 0, 1));
+    // (a thigh raised far — sitting, crouching, bent over the ground — carries the cloth over it all the way: in a step,
+    // four fifths)
+    const fk = a => a * (0.8 + 0.2 * G.clamp((-a - 0.5) * 2, 0, 1)), sk = a => a * (0.75 + 0.25 * G.clamp((-a - 0.5) * 2, 0, 1));
     fr(R[B.skF], R[B.pel], 0, -0.04, 0, fk(Math.min(hl, hr, 0)) + Math.min(0, cl) * 0.5, 0, cs * 0.3);
     // (its back: the foot most behind — the thigh and half the knee's fold: the heel kicked up in the swing stays inside)
     fr(R[B.skB], R[B.pel], 0, -0.04, 0, Math.max(hl + LG[1] * 0.5, hr + LG[3] * 0.5, 0) * 0.85 + Math.max(0, cl) * 0.5 - Math.min(hl, hr, 0) * (L.fem ? 0.2 : 0.12), 0, cs * 0.3); // (seated, drawn back over the buttocks — a woman's the fuller)
