@@ -613,9 +613,13 @@ if (require.main !== module) return;
     const end = await E(([sp, QH]) => {
       const out = {}; G.Avatar.place(sp.x, sp.y); G.S.time = 0.42; G.Cam3D.yaw = 0.5; G.Cam3D.pitch = 0.22; G.Cam3D.dist = G.Cam3D.cur = 4.8;
       __VIS.warm(2); __VIS.f(2); out.back = __VIS.memory();
-      // (a quality switched in the game keeps what is already made until it changes: how much the near pictures differ)
-      G.Realm.setQuality('baixa'); G.Realm.rebuildAll(); __VIS.warm(2); __VIS.f(1); G.Realm.setQuality('media'); __VIS.warm(1); __VIS.f(1); const t0 = __VIS.count().tris; G.Realm.rebuildAll(); __VIS.warm(1); __VIS.f(1); const t1 = __VIS.count().tris;
-      out.switch = { kept: t0, rebuilt: t1 };
+      // (a quality switched in the game keeps what is already made until it changes: how much the near pictures differ —
+      // counted in the eye's own pass: the whole frame's count has the sun's picture only in the frames that remake it, one
+      // in two at Média since the second wave)
+      const seen = () => Object.values(__VIS.census()).reduce((s, e) => s + e.tris, 0);
+      G.Realm.setQuality('baixa'); G.Realm.rebuildAll(); __VIS.warm(2); __VIS.f(1); G.Realm.setQuality('media'); __VIS.warm(1); __VIS.f(1); const t0 = seen(); const c0 = __VIS.count(); G.Realm.rebuildAll(); __VIS.warm(1); __VIS.f(1); const t1 = seen(); const c1 = __VIS.count();
+      // (the whole frame's counts kept beside, for the record: what the check used to compare)
+      out.switch = { kept: t0, rebuilt: t1, frame: [c0.tris, c1.tris], passes: [c0.passes, c1.passes] };
       if (t1 && Math.abs(t1 - t0) / t1 > 0.05) __CACA.P.push({ sev: 4, kind: 'trocar a qualidade no jogo não refaz o que já está perto', owner: 'A5', msg: `baixa → média: ${(t0 / 1000).toFixed(0)} mil triângulos; refeito: ${(t1 / 1000).toFixed(0)} mil (o que está perto só muda quando o pedaço é refeito)` });
       out.presets = []; for (const p of Object.keys(G.Realm.QUAL)) { __VIS.fresh(p); out.presets.push(__CACA.preset(p)); }
       __VIS.fresh(QH); out.after = __VIS.memory();

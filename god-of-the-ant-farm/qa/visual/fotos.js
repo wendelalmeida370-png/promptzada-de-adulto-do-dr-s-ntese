@@ -31,12 +31,21 @@ const VIEWS = [
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   await page.goto('file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(900); await page.waitForFunction(() => !(window.G && G.Ground3D && G.Ground3D.texReady) || G.Ground3D.texReady(), null, { timeout: 120000 });
   for (const w of ['cidade', 'metropole']) await page.addScriptTag({ path: path.join(ROOT, 'worlds', w + '.js') });
-  let world = null; const log = [];
+  let world = null; const log = []; let pageShots = true;
   for (const [name, w, place, yaw, pitch, dist, hour] of VIEWS) {
     if (ONLY.length && !ONLY.includes(name)) continue;
     const t0 = Date.now();
-    const info = await page.evaluate(([w, place, yaw, pitch, dist, hour, fresh, Q]) => {
-      const f = n => { for (let k = 0; k < n; k++) G.Main.frameFor(33); }; const until = (c, m) => { for (let k = 0; k < m; k++) { if (c()) return k; G.Main.frameFor(33); } return -1; };
+    const { png, ...info } = await page.evaluate(([w, place, yaw, pitch, dist, hour, fresh, Q]) => {
+      // (the frames that only let the world settle — the body set down, the near pictures streamed in, the eye moved — are
+      // stepped without being drawn: the 3D is drawn by software, 4–6 s a frame at Média on this machine in the second wave,
+      // and sent faster than it draws they piled up for the photo to wait on, past its four minutes; nothing in the picture
+      // is carried from one frame to the next. The last two and the photo's are drawn, each waited for: the same world)
+      let r0 = null, rq = null, quiet = true;
+      const hush = on => { quiet = on; const r = G.Realm.renderer(); if (!r || r0) return; rq = r; r0 = r.render; r.render = function () { return quiet ? undefined : r0.apply(this, arguments); }; };
+      const sync = () => { const r = G.Realm.renderer(); if (!r) return; const gl = r.getContext(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4)); };
+      const step = () => { hush(true); G.Main.frameFor(33); }, drawn = ms => { hush(false); G.Main.frameFor(ms); sync(); };
+      const f = n => { for (let k = 0; k < n; k++) step(); }; const until = (c, m) => { for (let k = 0; k < m; k++) { if (c()) return k; step(); } return -1; };
+      try {
       if (fresh) {
         if (G.Modes.state !== 'GOD') { G.Modes.leave('deus'); until(() => G.Modes.state === 'GOD', 400); }
         G.Realm.setQuality(Q); G.Save.apply(JSON.parse(G.Ready.data[w])); G.Main.mode = 'game'; document.querySelector('#menu').classList.add('hidden'); G.UI.showHUD(true); G.UI.setSpeed(1); if (G.Audio) G.Audio.mute = true;
@@ -62,12 +71,17 @@ const VIEWS = [
       document.querySelectorAll('#inc-hud, #hud, #inc-label').forEach(e => e.style.visibility = 'hidden');
       const st = G.Avatar.state(); st.yaw = 0.3;
       const cy = yaw === null ? st.yaw + Math.PI : yaw === 'side' ? st.yaw + Math.PI / 2 : yaw;
-      G.Cam3D.OPT.follow = false; G.Cam3D.yaw = cy; G.Cam3D.pitch = pitch; G.Cam3D.dist = dist; G.Cam3D.cur = dist; f(40); st.yaw = 0.3; G.Cam3D.yaw = cy; G.Cam3D.pitch = pitch; G.Cam3D.cur = dist; G.Main.frameFor(1);
-      return { at: at.map(q => +q.toFixed(2)), err: JSON.stringify(G.modErr), fps: G.Realm.stats && G.Realm.stats.ms };
+      G.Cam3D.OPT.follow = false; G.Cam3D.yaw = cy; G.Cam3D.pitch = pitch; G.Cam3D.dist = dist; G.Cam3D.cur = dist; f(38); drawn(33); drawn(33); st.yaw = 0.3; G.Cam3D.yaw = cy; G.Cam3D.pitch = pitch; G.Cam3D.cur = dist; drawn(1);
+      // (the canvas's own picture kept from the same moment, at the page's size: if the page's photo does not come, the view
+      // still has one — the 3D alone, without what the page draws over it)
+      const c = G.Realm.renderer().domElement, o = document.createElement('canvas'); o.width = c.clientWidth || c.width; o.height = c.clientHeight || c.height; o.getContext('2d').drawImage(c, 0, 0, o.width, o.height);
+      return { at: at.map(q => +q.toFixed(2)), err: JSON.stringify(G.modErr), fps: G.Realm.stats && G.Realm.stats.ms, png: o.toDataURL('image/png') };
+      } finally { if (rq) rq.render = r0; }
     }, [w, place, yaw, pitch, dist, hour, world !== w, process.env.Q || 'media']);
-    world = w;
-    await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: 240000 });
-    log.push(`${name}: ${JSON.stringify(info)} (${((Date.now() - t0) / 1000).toFixed(0)} s)`); console.log(log[log.length - 1]);
+    world = w; const t1 = Date.now(); const file = path.join(OUT, name + '.png');
+    const shot = !pageShots ? 'a página já não fotografava' : await page.screenshot({ path: file, timeout: 240000 }).then(() => null, e => e.message.split('\n')[0]);
+    if (shot) { fs.writeFileSync(file, Buffer.from(png.split(',')[1], 'base64')); if (pageShots) console.log(`AVISO ${name}: a foto da página não veio (${shot}): esta e as seguintes são do canvas`); pageShots = false; }
+    log.push(`${name}: ${JSON.stringify(info)} (${((t1 - t0) / 1000).toFixed(0)} s + a foto ${((Date.now() - t1) / 1000).toFixed(0)} s${shot ? ', do canvas' : ''})`); console.log(log[log.length - 1]);
   }
   console.log('erros: ' + (errs.slice(0, 5).join(' || ') || 'nenhum'));
   await browser.close();
