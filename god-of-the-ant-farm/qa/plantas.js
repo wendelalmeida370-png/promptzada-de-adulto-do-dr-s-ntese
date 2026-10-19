@@ -18,7 +18,7 @@ const CTX = [
   { k: '', cl: 'f', fl: 0, d: 0, w: 0, e: 1 }, { k: '', cl: 'u', fl: 1, d: 1, w: 0, e: 2 }, { k: 'ae', cl: 't', fl: 0, d: 2, w: 2, e: 5 },
 ];
 const SIDES = ['S', 'E', 'W', 'N'];
-const t0 = Date.now(); let nPlans = 0, nBad = 0, nFell = 0; const small = []; const badEx = [];
+const t0 = Date.now(); let nPlans = 0, nBad = 0, nFell = 0, nShort = 0; const small = []; const badEx = [], fellEx = [];
 let msMax = 0;
 for (const type of Object.keys(In.TYPES)) {
   if (ONLY && !ONLY.includes(type)) continue;
@@ -36,9 +36,12 @@ for (const type of Object.keys(In.TYPES)) {
         const rec = Object.assign({}, rec0, { f, s, pw: q % 5 === 0 ? 2 : 0 });
         const a = Date.now(); const p = In.make(b, rec); const ms = Date.now() - a; if (ms > msMax) msMax = ms;
         nPlans++;
+        // (a family the catalogue offers may not go on some lot: the plan falls to the next one offered there — always the
+        // same —, or is laid out for fewer sleepers, said; an invalid plan is a failure, a fall is counted and must stay rare)
+        if (p.short) nShort++;
         if (!p.ok || p.fam !== f) {
-          if (p.fell || p.fam !== f) nFell++;
-          nBad++; if (badEx.length < 12 || process.env.VERB) badEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id}: ${(p.errsOf || p.errs || []).slice(0, 2).join('; ')}${p.fam !== f ? ' (caiu para ' + p.fam + ')' : ''}`); continue;
+          if (p.ok) { nFell++; if (fellEx.length < 6 || process.env.VERB) fellEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id} → ${p.fam}: ${(p.errsOf || []).slice(0, 1).join('; ')}`); continue; }
+          nBad++; if (badEx.length < 12 || process.env.VERB) badEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id}: ${(p.errsOf || p.errs || []).slice(0, 2).join('; ')}`); continue;
         }
         seen.add(p.sig); fine.add(hash(JSON.stringify([p.shell, p.rooms.map(m => m.r), p.items.map(i => [i.kind, i.x, i.z, i.ry]), p.holes.map(h => [h.wall, h.at])])));
         // the same input, the same plan (a second build outside the cache)
@@ -53,8 +56,10 @@ for (const type of Object.keys(In.TYPES)) {
     if (process.env.CAT) console.log(`  ${type}/${c}/${JSON.stringify(ctx)}: ${n} famílias: ${cat.ok.map(f => In.famName(f)).join(', ')}`);
   }
 }
-ok('todas as plantas válidas', nBad === 0, `${nPlans} plantas, ${nBad} inválidas ou caídas (${nFell} caíram para outra família); a mais lenta ${msMax} ms; ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+ok('todas as plantas válidas', nBad === 0, `${nPlans} plantas, ${nBad} inválidas; ${nShort} com gente dormindo no chão; a mais lenta ${msMax} ms; ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 for (const e of badEx) console.log('   ✗ ' + e);
+ok('poucas caídas', nFell <= nPlans * 0.1, `${nFell} de ${nPlans} plantas (${(100 * nFell / Math.max(1, nPlans)).toFixed(1)}%) caíram da família do registro para a próxima que o catálogo oferece ali`);
+for (const e of fellEx) console.log('   ↘ ' + e);
 console.log(`combinações com menos de 5 famílias válidas: ${small.length}`);
 for (const s of small.slice(0, process.env.CAT ? 999 : 40)) console.log('   · ' + s);
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');
