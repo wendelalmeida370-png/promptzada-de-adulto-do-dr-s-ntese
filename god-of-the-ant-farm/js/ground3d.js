@@ -82,7 +82,7 @@
     const S = G.S; const t = S.type[i]; let c;
     if (t === T.SAND) c = [214, 205, 173];
     else if (t === T.ROCKY) c = [150, 146, 132];
-    else { c = G.Biome && G.Biome.grassColor ? G.Biome.grassColor(0.34, S.moist ? S.moist[i] / 255 : 0.5) : [106, 138, 100]; c = G.lerpColor(c, [128, 116, 88], 0.55); }
+    else { c = G.Biome && G.Biome.grassColor ? G.Biome.grassColor(0.34, S.moist ? S.moist[i] / 255 : 0.5) : [106, 138, 100]; c = G.lerpColor(c, [128, 116, 88], 0.25); }
     const lv = G.pathLevel(S.wear[i]); if (lv) c = G.lerpColor(c, DIRT, WEARF[lv]);
     if (S.cliff[i] || S.slope[i] > 2.6) {
       const bi = S.biome ? S.biome[i] : -1; let r = bi === 4 ? [118, 116, 100] : [140, 134, 124];
@@ -529,13 +529,18 @@ vec3 groundCol() {
   // ---- the snow, laid over the ground: as much as the floor says lies here (the cold of the place, its hollows, the feet
   // that tread it, the god's sudden winter), less on a slope, none on a steep face; its edge wandering and fraying, filling
   // the gaps between the stones and the tufts first; never under the water nor where the waves run, swept off a street to
-  // its kerb. The earth just outside it dark with the melt; at its very edge thin, the ground showing through ----
+  // its kerb. The earth just outside it a little dark with the melt; at its very edge thin, the ground showing through ----
   float snow = 0.0, eS = 0.0;
   if (fm.a > 0.004) {
 #ifdef GDETAIL
-    // (the grain of the ground's own picture only near: farther off it would only glitter)
-    eS = gSnowE(fm, vGN.y, vGP.xz, uCN) + (0.5 - gHa) * 0.16 * tex * (1.0 - smoothstep(9.0, 30.0, length(cameraPosition - vGP))) - clamp((uSeaY - vGP.y) / 3.5, 0.0, 1.0) * 4.0 - (1.0 - smoothstep(uSeaY + 0.25, uSeaY + 0.6, vGP.y)) * near;
-    float fw = max(fwidth(eS) * 0.6, 0.065); snow = smoothstep(0.5 - fw, 0.5 + fw, eS);
+    // (the snow's own picture — its drifts, how high it stands —, read before its edge: the edge follows it)
+    vec4 sT = vec4(0.5);
+    if (tex > 0.5) sT = mix(m3raw(M3_SNOW, gP * M3S_SNOW), m3raw(M3_SNOW, gP2 * M3S_SNOW), smoothstep(0.3, 0.7, gAT));
+    // (near, the edge breaks round the tufts and the stones of the ground's own picture and along the snow's drifts: the snow
+    // lying in the gaps and in its drifts, the grass and the earth standing out of it clean — a thaw, not a smear; farther
+    // off it would only glitter. The edge itself sharp: a few centimetres, not a metre of grey)
+    eS = gSnowE(fm, vGN.y, vGP.xz, uCN) + ((0.5 - gHa) * 0.28 + (sT.a - 0.5) * 0.14) * tex * (1.0 - smoothstep(9.0, 30.0, length(cameraPosition - vGP))) - clamp((uSeaY - vGP.y) / 3.5, 0.0, 1.0) * 4.0 - (1.0 - smoothstep(uSeaY + 0.25, uSeaY + 0.6, vGP.y)) * near;
+    float fw = max(fwidth(eS) * 0.6, 0.03); snow = smoothstep(0.5 - fw, 0.5 + fw, eS);
 #else
     eS = fm.a * mix(0.25, 1.0, smoothstep(0.62, 0.9, vGN.y)) - fm.b * 0.45; snow = smoothstep(0.38, 0.62, eS);
 #endif
@@ -543,13 +548,12 @@ vec3 groundCol() {
     vec3 sc = GSNOW;
 #ifdef GDETAIL
     if (tex > 0.5) {
-      vec4 sT = mix(m3raw(M3_SNOW, gP * M3S_SNOW), m3raw(M3_SNOW, gP2 * M3S_SNOW), smoothstep(0.3, 0.7, gAT));
       sc *= m3col(sT) * mix(vec3(0.87, 0.92, 1.04), vec3(1.0), smoothstep(0.3, 0.62, mP)); // (blue in its wide hollows)
       gHgt = mix(gHgt, sT.a * 0.025 + 0.035, snow); // (a few centimetres thick: its edge catches the light)
     } else { sc *= (1.0 + (d.a - 0.5) * 0.22) * mix(vec3(0.84, 0.9, 1.04), vec3(1.0), smoothstep(0.25, 0.7, m1)); sc += step(0.975, d.a) * 0.3; }
-    sc = mix(sc, c * 1.25 + 0.05, (1.0 - smoothstep(0.5, 0.64, eS)) * 0.35);
+    sc = mix(sc, c * 1.25 + 0.05, (1.0 - smoothstep(0.5, 0.64, eS)) * 0.12); // (at its very edge thin, the ground just showing through)
 #endif
-    c *= 1.0 - 0.18 * smoothstep(0.3, 0.5, eS) * (1.0 - snow);
+    c *= 1.0 - 0.08 * smoothstep(0.3, 0.5, eS) * (1.0 - snow); // (the earth just outside it a little darker with the melt)
     c = mix(c, sc, snow);
   }
 #ifdef GDETAIL
