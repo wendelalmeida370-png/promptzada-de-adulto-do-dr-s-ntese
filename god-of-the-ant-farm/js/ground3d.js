@@ -467,7 +467,7 @@ vec3 gStack(vec4 t00, vec4 t10, vec4 t01, vec4 t11, vec2 s, float mP, float mB, 
   vec4 T[GMX]; float mx = -9.0;
   for (int i = 0; i < GMX; i++) { if (i >= gN) break; T[i] = gTex(gL[i]); mx = max(mx, T[i].a + gW[i] * 2.0); }
   vec3 col = vec3(0.0); float sum = 0.0, hg = 0.0, ha = 0.0;
-  for (int i = 0; i < GMX; i++) { if (i >= gN) break; float b = max(T[i].a + gW[i] * 2.0 - mx + 0.24, 0.0); col += gC[i] / gW[i] * m3col(T[i]) * b; hg += T[i].a * gAmp(gL[i]) * b; ha += T[i].a * b; sum += b; }
+  for (int i = 0; i < GMX; i++) { if (i >= gN) break; float b = max(T[i].a + gW[i] * 2.0 - mx + 0.24, 0.0); vec3 bc = gC[i] / gW[i]; col += bc * m3tint(m3col(T[i]), bc) * b; hg += T[i].a * gAmp(gL[i]) * b; ha += T[i].a * b; sum += b; }
   gHgt = hg / max(sum, 1e-4); gHa = ha / max(sum, 1e-4);
   col /= max(sum, 1e-4);
   // (the dunes: their ripples in the light, the crests a little paler, the hollows between them holding a shade)
@@ -706,6 +706,9 @@ vec3 groundCol() {
 uniform highp sampler2DArray uTex3; uniform float uTexOn;
 vec4 m3raw(float L, vec2 uv) { return texture(uTex3, vec3(uv, L)); }
 vec3 m3col(vec4 t) { return pow(max(t.rgb * 2.0, vec3(0.0)), vec3(2.2)); }
+// (a picture's own hue only as much as the colour under it has one: on a pale, grey ground — the cold's white under a
+// thin snow — the green of the grass's picture turned mint and its dark purple; on a green ground it stays as it is)
+vec3 m3tint(vec3 t, vec3 base) { float hi = max(base.r, max(base.g, base.b)), lo = min(base.r, min(base.g, base.b)); float l = dot(t, vec3(0.2126, 0.7152, 0.0722)); return l + (t - l) * clamp((hi - lo) / max(hi, 1e-3) / 0.6, 0.0, 1.0); }
 vec2 m3slope(float L, vec2 uv, float h0) { float e = 0.006; return vec2(texture(uTex3, vec3(uv + vec2(e, 0.0), L)).a - h0, texture(uTex3, vec3(uv + vec2(0.0, e), L)).a - h0) / e; }
 `;
   };
