@@ -1551,7 +1551,29 @@ float m3scale(float p) {
       if (nord && K.prog >= 1 && ![...G.S.buildings.values()].some(q => q.type === 'well' && q.set === K.b.set && q.id < K.b.id)) {
         const o = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[doorSide(K.b)]; runeStone(K, x - o[0] * 1.48, z - o[1] * 1.48, Math.atan2(o[0], o[1]), 0.7); }
     },
-    campfire(g, gw, K) { for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; K.sph(K.w / 2 + Math.cos(a) * 0.7, 0.1, K.d / 2 + Math.sin(a) * 0.7, 0.22, '#6a6a66'); } for (let k = 0; k < 3; k++) g.put(SH.cyl, R3.mat(K.x0 + K.w / 2, K.y0 + 0.2, K.z0 + K.d / 2, k * 1.05, 0.16, 1.1, 0.16, 0, Math.PI / 2), K.c('#5a3a24')); },
+    // the campfire: a ring of broken stones half sunk in the ground — each its size, its tilt and its grey by the fire's id,
+    // sooted on the side the fire is — round a bed of ash and embers, and the logs leaning in on one another, their bark on,
+    // their upper ends burnt to charcoal (where they meet, 0.6 m over the ground, FX3D's flames rise)
+    campfire(g, gw, K) {
+      const cx = K.w / 2, cz = K.d / 2, gc = K.gy(cx, cz), X0 = K.x0 + cx, Z0 = K.z0 + cz; const n = 9 + Math.floor(K.hv(40) * 3);
+      const stone = (X, Y, Z, nx, ny, nz) => { const dx = X0 - X, dz = Z0 - Z, l = Math.hypot(dx, dz) || 1; const s = G.clamp((nx * dx + nz * dz) / l, 0, 1) * 0.55 + G.clamp(1 - (Y - K.y0 - gc) * 3, 0, 1) * 0.15; return mixc([118, 114, 106], [40, 36, 32], s); };
+      K.as('rock', () => { for (let k = 0; k < n; k++) { const h = q => K.hv(50 + k * 7 + q); const a = (k + (h(0) - 0.5) * 0.5) / n * TAU, r = 0.68 + (h(1) - 0.5) * 0.1;
+        const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r, s = 0.62 + h(2) * 0.55; const sy = (0.2 + h(3) * 0.12) * s;
+        const m = R3.mat(K.x0 + x, K.y0 + K.gy(x, z) + sy * 0.12, K.z0 + z, a + h(4) * 1.4, (0.3 + h(5) * 0.14) * s, sy, (0.26 + h(6) * 0.12) * s, (h(3) - 0.5) * 0.5, (h(5) - 0.5) * 0.5);
+        g.put(h(0) < 0.5 ? SH.dode : SH.ico0, m, K.c(stone)); } });
+      // (the bed of ash on the ground as it is drawn, a hand over it; the embers in it)
+      { const nu = 12, RR = [0.52, 0.28, 0.06], UP = [0.02, 0.026, 0.045], pts = []; for (let j = 0; j <= 2; j++) for (let i = 0; i <= nu; i++) { const a = i / nu * TAU; const x = cx + Math.cos(a) * RR[j], z = cz + Math.sin(a) * RR[j]; pts.push([x, K.gy(x, z) + UP[j], z]); }
+        K.as('soil', () => K.sheet(pts, nu, 2, (X, Y, Z) => mixc([92, 88, 82], [44, 40, 36], G.clamp(1 - Math.hypot(X - X0, Z - Z0) / 0.5, 0, 1)), [0, 1, 0])); }
+      for (let k = 0; k < 5; k++) { const a = K.hv(90 + k) * TAU, r = K.hv(95 + k) * 0.26; const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
+        g.put(SH.ico0, R3.mat(K.x0 + x, K.y0 + K.gy(x, z) + 0.03, K.z0 + z, a, 0.1, 0.06, 0.08), K.c(k % 2 ? [150, 62, 28] : [96, 40, 22])); }
+      // (the logs: five or six leaning in, their feet on the ground, their bark below and the charcoal above)
+      const nl = 5 + (K.hv(41) < 0.5 ? 1 : 0); const top = [X0 - K.x0, gc + 0.62, Z0 - K.z0];
+      for (let k = 0; k < nl; k++) { const a = (k + K.hv(60 + k) * 0.4) / nl * TAU, rr = 0.07 + K.hv(70 + k) * 0.03; const fx = cx + Math.cos(a) * 0.48, fz = cz + Math.sin(a) * 0.48;
+        const foot = [fx, K.gy(fx, fz) + rr * 0.6, fz], tip = [top[0] + Math.cos(a) * 0.06, top[1] - K.hv(80 + k) * 0.12, top[2] + Math.sin(a) * 0.06];
+        const mid = [foot[0] + (tip[0] - foot[0]) * 0.62, foot[1] + (tip[1] - foot[1]) * 0.62, foot[2] + (tip[2] - foot[2]) * 0.62];
+        K.as('bark', () => K.log(foot, mid, rr, mixc([112, 86, 58], [92, 78, 62], K.hv(85 + k))));
+        K.as('bark', () => K.log(mid, tip, rr * 0.92, mixc([46, 38, 32], [26, 22, 20], K.hv(86 + k)), rr * 0.85)); }
+    },
     cemetery(g, gw, K) {
       fenceAround(K, 1, '#5a4a3a', true);
       if (K.st === 'nordico') runeStone(K, K.w / 2, 0.75, 0, 0.75); // (the north's memorial: a rune stone at the head of its graves)
