@@ -603,7 +603,8 @@
     run(ctx, t) {
       const f = face(ctx, t.X, t.Z);
       G.Avatar.act({ anim: 'low', dur: 2, face: f, at: [0.8, () => { const p = G.Avatar.pos(); if (p && G.FX3D) for (let k = 0; k < 6; k++) G.FX3D.spawn({ x: p.X + Math.cos(f) * 0.6, y: p.Y + 0.1, z: p.Z + Math.sin(f) * 0.6, vx: G.vrr(-0.4, 0.4), vy: G.vrr(0.6, 1.4), vz: G.vrr(-0.4, 0.4), life: 0.6, s0: 0.06, s1: 0.03, c: [0.85, 0.93, 0.98], a: 0.8, sh: 1, grav: 8 }); }],
-        done: () => { G.Avatar.rest(); deed('agua'); } });
+        // (the world counts the drink at the mouth — the contact —; the breath comes back with it)
+        contact: 1.2, op: () => { G.Possess.deed('agua'); return { ok: true }; }, then: () => G.Avatar.rest() });
       return { ok: true, msg: 'Você bebe da água fresca.' };
     },
   });
@@ -658,7 +659,7 @@
     can(ctx, t) { return G.S.animals.has(t.a.id) ? { ok: true } : { ok: false, why: 'Foi embora.' }; },
     run(ctx, t) {
       const f = face(ctx, t.X, t.Z); const a = t.a;
-      G.Avatar.act({ anim: 'low', dur: 1.6, face: f, at: [0.6, () => { if (G.FX3D) G.FX3D.spawn({ x: a.x * L(), y: (W.groundH(a.x, a.y) * G.Space.HM) + 1.2, z: a.y * L(), vx: 0, vy: 0.5, vz: 0, life: 1.2, s0: 0.25, s1: 0.4, c: [1, 0.45, 0.6], a: 0.9, fade: 1 }, true); }], done: () => deed('carinho') });
+      G.Avatar.act({ anim: 'low', dur: 1.6, face: f, at: [0.6, () => { if (G.FX3D) G.FX3D.spawn({ x: a.x * L(), y: (W.groundH(a.x, a.y) * G.Space.HM) + 1.2, z: a.y * L(), vx: 0, vy: 0.5, vz: 0, life: 1.2, s0: 0.25, s1: 0.4, c: [1, 0.45, 0.6], a: 0.9, fade: 1 }, true); }], contact: 0.9, op: () => { if (!G.S.animals.has(a.id)) return { ok: false, why: '' }; G.Possess.deed('carinho'); return { ok: true }; } });
       return { ok: true, msg: 'Ele se encosta na sua mão.' };
     },
   });
