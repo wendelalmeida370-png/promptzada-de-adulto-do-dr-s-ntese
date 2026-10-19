@@ -27,7 +27,8 @@
   let THREE = null, R3 = null, mesh = null, geo = null, mat = null, hTex = null, hFor = null, hT = 0, side = 0;
   let lmesh = null, lgeo = null, lmat = null, lside = 0;
   const CELL = 0.5, PUSH = 6, LCELL = 1, LR = 13;
-  const U = { uMask: { value: null }, uGMap: { value: null }, uFMap: { value: null }, uH: { value: null }, uGust: { value: null }, uN: { value: 1 }, uOrigin: { value: null }, uLOrigin: { value: null }, uEye: { value: null }, uR: { value: 20 }, uLR: { value: LR }, uPush: { value: [] } };
+  let cell = CELL; // (the spacing of the clumps now: the preset's density of grass, grassDen, spaces them wider — fewer, fuller tufts)
+  const U = { uMask: { value: null }, uGMap: { value: null }, uFMap: { value: null }, uH: { value: null }, uGust: { value: null }, uN: { value: 1 }, uOrigin: { value: null }, uLOrigin: { value: null }, uEye: { value: null }, uR: { value: 20 }, uLR: { value: LR }, uPush: { value: [] }, uCell: { value: CELL } };
   G.worldHooks.push(() => { hFor = null; });
   // (a hash of a cell of the world, the same in every shader that reads it)
   const GH = `float gh(vec2 c, uint s) { uvec2 q = uvec2(ivec2(c) + 65536) * uvec2(1597334673u, 3812015801u); uint n = (q.x ^ q.y ^ (s * 2654435761u)) * 1597334673u; n ^= n >> 15; n *= 2246822519u; n ^= n >> 13; return float(n & 0xffffffu) / 16777216.0; }
@@ -66,7 +67,7 @@
       Object.assign(sh.uniforms, U, { uTime: R3.U.time, uWind: R3.U.wind, uBody: R3.U.body });
       sh.vertexShader = `attribute vec2 aCell; attribute float aU; attribute float aB;
         uniform sampler2D uMask; uniform sampler2D uGMap; uniform sampler2D uH; uniform sampler2D uGust; uniform sampler2D uFMap;
-        uniform float uN; uniform vec2 uOrigin; uniform vec3 uEye; uniform float uR; uniform float uTime; uniform vec3 uWind; uniform vec4 uBody; uniform vec4 uPush[${PUSH}];
+        uniform float uN; uniform vec2 uOrigin; uniform vec3 uEye; uniform float uR; uniform float uTime; uniform vec3 uWind; uniform vec4 uBody; uniform vec4 uPush[${PUSH}]; uniform float uCell;
         varying vec3 vGC; varying float vGU;
         ${GH}
         ` + sh.vertexShader
@@ -74,9 +75,12 @@
         // (one clump: where it stands in the world, what grows there, how the wind and the walkers bend it)
         vec2 gcell = uOrigin + aCell;
         float r1 = gh(gcell, 1u), r2 = gh(gcell, 2u), r3 = gh(gcell, 3u), r4 = gh(gcell, 4u);
-        vec2 root = (gcell + vec2(r1, r2) * 0.92) * ${CELL.toFixed(2)};
+        vec2 root = (gcell + vec2(r1, r2) * 0.92) * uCell;
         vec2 tile = root / 4.0; ivec2 ti = clamp(ivec2(floor(tile)), ivec2(0), ivec2(int(uN) - 1));
         vec4 mk = texelFetch(uMask, ti, 0); float kind = floor(mk.a * 255.0 + 0.5);
+        // (no grass on this tile — a road, a roof, the snow, the water, most of a town: the clump is left out at once, nothing
+        // more read for it; it would be drawn flat and out of sight anyway)
+        if (mk.r <= 0.0) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
         float gy = hAt(tile) * 1.5;
         float dist = length(vec3(root.x, gy, root.y) - uEye);
         // (thinning toward the edge of the circle; and gone right at the eye, where a blade would fill the picture)
@@ -87,6 +91,7 @@
         // earth showing between them — never spilling over it; the jungle's undergrowth thinner in the deep shade of the trees)
         float th = mk.r > 0.0 ? min(mk.r, texture2D(uMask, tile / uN).r + (texture2D(uGust, root / 7.0 + 0.3).g - 0.5) * 0.7 + (r2 - 0.5) * 0.18) : 0.0;
         float Hh = (0.1 + mk.g * 1.5) * (0.7 + r4 * 0.6) * step(r3, th * (kind == 3.0 ? 1.0 - sfm.r * 0.5 : 1.0)) * fade * (1.0 - smoothstep(0.44, 0.52, snowE));
+        if (Hh <= 0.0) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; } // (thinned out, out of the circle, under the snow: the same)
         float ang = r1 * 6.2832 + r3 * 2.0; float ca = cos(ang), sa = sin(ang);
         vec2 wd = uWind.xy; float ws = length(wd) + 1e-4; wd /= ws;
         float gust = smoothstep(0.42, 0.86, texture2D(uGust, (root - uWind.xy * uTime * 1.7) / 52.0).r);
@@ -107,7 +112,8 @@
           // (the dunes' and the beach's grass: thin blades, a few leaning far)
           else if (kind == 5.0) { float ab = aB / 5.0 * 6.2832 + 0.4 * aB; vec2 dr = vec2(cos(ab), sin(ab)), ac = vec2(-dr.y, dr.x);
             lp = dr * (dot(lp, dr) * (1.0 + r1 * 1.4)) + ac * dot(lp, ac) * 0.42; arch = 0.12 + r2 * 0.2; }
-          vec2 pp = vec2(ca * lp.x - sa * lp.y, sa * lp.x + ca * lp.y) * (0.75 + r2 * 0.5) * (0.55 + 0.45 * fade);
+          // (the clump as wide as its cell is: fewer clumps, each fuller — the blades wider and spread farther, the meadow as green)
+          vec2 pp = vec2(ca * lp.x - sa * lp.y, sa * lp.x + ca * lp.y) * (0.75 + r2 * 0.5) * (0.55 + 0.45 * fade) * (uCell / ${CELL.toFixed(2)});
           float u2 = aU * aU; vec2 off = (bend * 0.55 + push * 0.65) * u2 * Hh * (1.0 - arch * 0.6);
           transformed = vec3(root.x + pp.x + off.x, gy + aU * Hh * (1.0 - flt * 0.55 - aU * arch) - 0.03 - u2 * length(bend) * 0.12 * Hh, root.y + pp.y + off.y); }
         // (its colour: the god's colour of the tile, darker at the root, lighter and warmer at the tip, every blade its own
@@ -207,12 +213,16 @@
           else if (kind != 5.0 && kind != 13.0 && q3 > 0.9 - (kind == 9.0 || kind == 16.0 ? 0.12 : 0.0)) pick = q4 < 0.25 ? 1.0 : 0.0; // (a pebble anywhere)
           else if (kind == 7.0 && q3 > 0.84) pick = 3.0;                                                 // (dry twigs in the savanna)
         }
+        // (nothing lies here, or this point is of another of the shapes than the one that lies here: left out at once — each
+        // cell holds every shape, and all but one would be drawn as a point)
+        if (pick < -0.5 || abs(aS - pick) > 0.5) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
         float gy = hAt(tile) * 1.5;
         // (nothing loose lying on the snow: under it)
         { vec4 sfm = pick > -0.5 ? texture2D(uFMap, tile / uN) : vec4(0.0); if (sfm.a > 0.004 && gSnowE(sfm, gNy, root, uGust) > 0.47) pick = -1.0; }
         float dist = length(vec3(root.x, gy, root.y) - uEye);
         float fade = 1.0 - smoothstep(uLR * 0.7, uLR, dist);
         float on = step(abs(aS - pick), 0.5) * fade;
+        if (on <= 0.0) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; } // (under the snow, or out of the circle: the same)
         // (how big: a pebble of five to twelve centimetres, a leaf of eight, a twig of a forearm, a flower to the knee)
         float sz = pick == 0.0 ? 0.05 + q5 * 0.07 : pick == 1.0 ? 0.07 + q5 * 0.06 : pick == 2.0 ? 0.07 + q5 * 0.05 : pick == 3.0 ? 0.25 + q5 * 0.2 : pick == 4.0 ? 0.22 + q5 * 0.2 : pick == 5.0 ? 0.06 + q5 * 0.03 : pick == 6.0 ? 0.035 + q5 * 0.025 : 0.06 + q5 * 0.07;
         float ang = q4 * 6.2832 + q5 * 3.0; float ca = cos(ang), sa = sin(ang);
@@ -242,13 +252,15 @@
   }
   // the grid of clumps round the eye: side × side cells of half a metre
   function layout(R) {
-    const n = Math.ceil(R * 2 / CELL); if (n === side) return; side = n;
+    const n = Math.ceil(R * 2 / cell); if (n === side) return; side = n;
     const a = new Float32Array(n * n * 2); let k = 0; for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { a[k++] = i; a[k++] = j; }
     geo.setAttribute('aCell', new THREE.InstancedBufferAttribute(a, 2)); geo.instanceCount = n * n;
   }
-  // (the grid of the small things: cells of a metre, round the body, a little nearer than the grass)
-  function layoutLittle() {
-    const n = Math.ceil(LR * 2 / LCELL); if (n === lside) return; lside = n;
+  // (the grid of the small things: cells of a metre, round the body, a little nearer than the grass — its circle as wide as
+  // the preset's share of the decoration (props) has it: the same things in the same places, the far ones left out)
+  const littleR = q => LR * (Number.isFinite(q.props) ? Math.sqrt(G.clamp(q.props, 0.1, 1)) : 1);
+  function layoutLittle(R) {
+    const n = Math.ceil(R * 2 / LCELL); if (n === lside) return; lside = n;
     const a = new Float32Array(n * n * 2); let k = 0; for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { a[k++] = i; a[k++] = j; }
     lgeo.setAttribute('aCell', new THREE.InstancedBufferAttribute(a, 2)); lgeo.instanceCount = n * n;
   }
@@ -267,11 +279,15 @@
     mesh.visible = GR.on; if (lmesh) lmesh.visible = GR.on && !!G.Ground3D.floorMap();
     if (!GR.on) { GR.clumps = 0; GR.bits = 0; return; }
     heights(); if ((hT += dt) > 3) { hT = 0; hTex.needsUpdate = true; } // (a change of the land — an earthquake, a reshaping — reaches it within seconds)
+    // (the preset's density of the meadow — grassDen, the A5's: the share of the clumps drawn, each the fuller for it; a preset
+    // without it draws them all, as before. What the grass costs goes with the count of its clumps, not with what each draws)
+    const den = Number.isFinite(q.grassDen) ? G.clamp(q.grassDen, 0.25, 1) : 1; if (CELL / Math.sqrt(den) !== cell) { cell = CELL / Math.sqrt(den); side = 0; }
+    U.uCell.value = cell;
     layout(R);
     U.uMask.value = G.Ground3D.grassMap(); U.uGMap.value = G.Ground3D.map(); U.uFMap.value = G.Ground3D.floorMap(); U.uN.value = G.N; U.uR.value = R;
     const e = cam ? cam.position : { x: focus.X, y: focus.Y, z: focus.Z }; U.uEye.value.set(e.x, e.y, e.z);
-    U.uOrigin.value.set(Math.floor(e.x / CELL) - side / 2, Math.floor(e.z / CELL) - side / 2);
-    if (lmesh && lmesh.visible) { layoutLittle(); U.uLOrigin.value.set(Math.floor(e.x / LCELL) - lside / 2, Math.floor(e.z / LCELL) - lside / 2); GR.bits = lside * lside; } else GR.bits = 0;
+    U.uOrigin.value.set(Math.floor(e.x / cell) - side / 2, Math.floor(e.z / cell) - side / 2);
+    if (lmesh && lmesh.visible) { const lr = littleR(q); U.uLR.value = lr; layoutLittle(lr); U.uLOrigin.value.set(Math.floor(e.x / LCELL) - lside / 2, Math.floor(e.z / LCELL) - lside / 2); GR.bits = lside * lside; } else GR.bits = 0;
     // (the people walking nearest part it too)
     const W3 = (G.People3D && G.People3D.walkers) || []; let j = 0;
     for (const w of W3) { if (j >= PUSH) break; if ((w[0] - e.x) ** 2 + (w[2] - e.z) ** 2 > R * R) continue; U.uPush.value[j++].set(w[0], w[1], w[2], 1); }
@@ -282,10 +298,10 @@
   // things drawn without the floor picture that says where they may lie)
   GR.check = function () {
     const out = []; if (!mesh || !GR.on) return out;
-    if (side * CELL < U.uR.value * 2) out.push(`capim: a grade de ${side} casas não cobre o raio ${U.uR.value}`);
+    if (side * cell < U.uR.value * 2) out.push(`capim: a grade de ${side} casas não cobre o raio ${U.uR.value}`);
     for (const k of ['uOrigin', 'uLOrigin']) { const v = U[k].value; if (!Number.isFinite(v.x) || !Number.isFinite(v.y)) out.push(`capim: ${k} não é número`); }
     if (lmesh && lmesh.visible && !U.uFMap.value) out.push('miudezas: desenhadas sem a pintura do chão');
-    if (lmesh && lmesh.visible && lside * LCELL < LR * 2) out.push(`miudezas: a grade de ${lside} não cobre o raio ${LR}`);
+    if (lmesh && lmesh.visible && lside * LCELL < U.uLR.value * 2) out.push(`miudezas: a grade de ${lside} não cobre o raio ${U.uLR.value}`);
     return out;
   };
 })(window.G);

@@ -448,15 +448,18 @@ vec3 gxGrade( vec3 c ) {
     // the trees, the bushes and the stones: crowns swaying with the wind (aK: how much each point moves), leaves speckled with
     // light and shade; wood in its bark and stone in its grain once the pictures of the stack are in (wrapped from the sides
     // round a trunk, from all three round a boulder), moss on the tops of the stones of the wet lands, snow on the cold ones
+    // (how near the plants keep their finest form — the leaves' cards at the edge of the crowns, the grain and the relief of
+    // stone and bark: 40 m times the preset's lod, read every frame; a preset without lod keeps it everywhere, as before)
+    const UFINE = { get value() { const q = R3.Q(); return Number.isFinite(q.lod) ? 40 * q.lod : 1e5; } };
     MAT.flora = new THREE.MeshLambertMaterial({ vertexColors: true });
     MAT.flora.onBeforeCompile = sh => {
-      Object.assign(sh.uniforms, { uTime: U.time, uWind: U.wind, uDet: { value: G.Ground3D.detail() } }, G.Ground3D.U3());
+      Object.assign(sh.uniforms, { uTime: U.time, uWind: U.wind, uDet: { value: G.Ground3D.detail() }, uFine: UFINE }, G.Ground3D.U3());
       sh.vertexShader = 'attribute float aK; uniform float uTime; uniform vec3 uWind; varying vec3 vFP; varying float vFK; varying vec3 vFN;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
         vec4 wq = modelMatrix * vec4(transformed, 1.0); vFP = wq.xyz; vFK = aK; vFN = normalize(mat3(modelMatrix) * objectNormal);
         float sk = aK < -2.5 ? 0.0 : aK < -0.5 ? -aK - 1.0 : aK > 3.5 ? aK - 4.0 : aK > 1.5 ? aK - 2.0 : aK; // (a conifer's crown +4, a fruit +2)
         float ph = uTime * (0.9 + uWind.z) + wq.x * 0.11 + wq.z * 0.07;
         transformed.xz += uWind.xy * (sin(ph) * 0.6 + sin(ph * 2.7 + 1.3) * 0.25 + 0.3) * sk * (0.25 + uWind.z * 0.6);`);
-      sh.fragmentShader = 'uniform sampler2D uDet; varying vec3 vFP; varying float vFK; varying vec3 vFN; float fHgt = 0.0; float fCrown = 0.0;\n' + sh.fragmentShader
+      sh.fragmentShader = 'uniform sampler2D uDet; uniform float uFine; varying vec3 vFP; varying float vFK; varying vec3 vFN; float fHgt = 0.0; float fCrown = 0.0; float fFine = 0.0;\n' + sh.fragmentShader
         .replace('#include <common>', '#include <common>\n' + G.Ground3D.texGLSL() + `
         #ifdef M3_MOSS
         #define FMOSS M3_MOSS
@@ -477,6 +480,9 @@ vec3 gxGrade( vec3 c ) {
         #endif`)
         .replace('#include <color_fragment>', `#include <color_fragment>
         #ifndef NOPAT
+        // (the grain of stone and bark and the relief of all three only as near as the machine carries them; beyond, fading
+        // over the last quarter, the plain colours — the crowns keep their leaves' picture)
+        fFine = uTexOn > 0.5 ? 1.0 - smoothstep(uFine * 0.75, uFine, length(vViewPosition)) : 0.0;
         if (vFK > 3.5 || (vFK > 0.07 && vFK < 1.5)) {
           // (a crown: leaves, not the smooth side of a lump — the picture of the broad leaves, or of the sprays of needles of a
           // conifer, laid on it from the three sides by its own soft normal, with their relief; before the pictures are in,
@@ -487,7 +493,7 @@ vec3 gxGrade( vec3 c ) {
             vec3 n = normalize(vFN); vec3 w = pow(abs(n), vec3(3.0)); w /= w.x + w.y + w.z + 1e-4; bool cf = vFK > 3.5;
             float L = cf ? M3_BOUGHS : M3_FOLIAGE, sc = cf ? M3S_BOUGHS : M3S_FOLIAGE;
             vec4 f = m3raw(L, vFP.zy * sc) * w.x + m3raw(L, vFP.xz * sc + 0.31) * w.y + m3raw(L, vFP.xy * sc + 0.57) * w.z;
-            diffuseColor.rgb *= m3col(f); fHgt = f.a * 0.05;
+            diffuseColor.rgb *= m3col(f); fHgt = f.a * 0.05 * fFine;
           } else
           #endif
           { float lf = texture2D(uDet, (vFP.xz + vFP.y * 0.73) / 1.3).r * 0.6 + texture2D(uDet, (vFP.zy + vFP.x * 0.4) / 1.1).r * 0.4; diffuseColor.rgb *= 0.78 + lf * 0.44; }
@@ -505,25 +511,26 @@ vec3 gxGrade( vec3 c ) {
           // the point across the screen — the light keeps the stone's soft volume)
           { vec3 fn = normalize(cross(dFdx(vFP), dFdy(vFP))); float fh = fract(sin(dot(floor(fn * 3.0 + 0.5), vec3(12.9898, 78.233, 37.719))) * 43758.5453); diffuseColor.rgb *= 0.86 + fh * 0.26; }
           float sn = smoothstep(0.6, 0.8, min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b)));
-          if (uTexOn > 0.5) {
+          vec3 plain = mix(diffuseColor.rgb, vec3(0.12, 0.19, 0.055), top * moss * 0.55 * (1.0 - sn));
+          if (fFine > 0.0) {
             vec3 w = pow(abs(n), vec3(4.0)); w /= w.x + w.y + w.z + 1e-4;
             vec4 r = m3raw(FROCK, vFP.zy * FROCK_S * 1.6) * w.x + m3raw(FROCK, vFP.xz * FROCK_S * 1.6 + 0.31) * w.y + m3raw(FROCK, vFP.xy * FROCK_S * 1.6 + 0.57) * w.z;
             vec3 rc = diffuseColor.rgb * m3col(r);
             if (sn > 0.01) rc = mix(rc, diffuseColor.rgb * m3col(m3raw(M3_SNOW, vFP.xz * M3S_SNOW)), sn);
             float mm = 0.0;
             if (moss > 0.01) { vec4 mt = m3raw(FMOSS, vFP.xz * FMOSS_S * 1.5); mm = smoothstep(0.38, 0.6, top * moss + (mt.a - r.a) * 0.5 - 0.06) * (1.0 - sn); rc = mix(rc, vec3(0.12, 0.19, 0.055) * m3col(mt) * 1.2, mm); fHgt = mt.a * 0.02 * mm; }
-            diffuseColor.rgb = rc; fHgt += r.a * 0.08 * (1.0 - mm);
-          } else diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.12, 0.19, 0.055), top * moss * 0.55 * (1.0 - sn));
+            diffuseColor.rgb = mix(plain, rc, fFine); fHgt = (fHgt + r.a * 0.08 * (1.0 - mm)) * fFine;
+          } else diffuseColor.rgb = plain;
         }
         // (bark: the picture of the stack running up the wood — before it is in, deep grooves drawn up it, ridges between
         // them, darker and greener patches: moss, lichen, the wet side)
         else if (vFK < -0.5) {
-          if (uTexOn > 0.5) {
-            vec3 n = normalize(vFN); float wx = smoothstep(0.25, 0.75, abs(n.x) / (abs(n.x) + abs(n.z) + 1e-4)); float side = 1.0 - smoothstep(0.65, 0.9, abs(n.y));
+          if (fFine > 0.0) {
+            vec3 n = normalize(vFN); float wx = smoothstep(0.25, 0.75, abs(n.x) / (abs(n.x) + abs(n.z) + 1e-4)); float side = (1.0 - smoothstep(0.65, 0.9, abs(n.y))) * fFine;
             vec4 tb = mix(m3raw(M3_BARK, vec2(vFP.x, vFP.y * 0.7) * M3S_BARK + 0.5), m3raw(M3_BARK, vec2(vFP.z, vFP.y * 0.7) * M3S_BARK), wx);
             diffuseColor.rgb *= mix(vec3(1.0), m3col(tb), side);
             fHgt = tb.a * 0.03 * side;
-          } else {
+          } else if (uTexOn < 0.5) {
             float ga = texture2D(uDet, vec2(vFP.x * 1.5 + vFP.z * 0.4, vFP.y * 0.16)).r, gb = texture2D(uDet, vec2(vFP.z * 1.5 - vFP.x * 0.4, vFP.y * 0.16 + 0.5)).r;
             float gr = smoothstep(0.32, 0.68, (ga + gb) * 0.5); float pt = texture2D(uDet, vFP.xy * 0.35 + vFP.z * 0.21).a;
             diffuseColor.rgb *= mix(0.56, 1.14, gr) * (0.9 + pt * 0.2);
@@ -535,7 +542,7 @@ vec3 gxGrade( vec3 c ) {
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         #ifndef NOPAT
         { vec3 dpx = dFdx(vFP), dpy = dFdy(vFP); float hx = dFdx(fHgt), hy = dFdy(fHgt);
-          if (uTexOn > 0.5 && (vFK < -0.5 || fCrown > 0.5)) { vec3 nw = normalize(vFN); vec3 r1 = cross(dpy, nw), r2 = cross(nw, dpx); float det = dot(dpx, r1); vec3 gr = sign(det) * (hx * r1 + hy * r2); normal = normalize((viewMatrix * vec4(normalize(abs(det) * nw - gr), 0.0)).xyz); } }
+          if (fFine > 0.0 && (vFK < -0.5 || fCrown > 0.5)) { vec3 nw = normalize(vFN); vec3 r1 = cross(dpy, nw), r2 = cross(nw, dpx); float det = dot(dpx, r1); vec3 gr = sign(det) * (hx * r1 + hy * r2); normal = normalize((viewMatrix * vec4(normalize(abs(det) * nw - gr), 0.0)).xyz); } }
         #endif`)
         // (the sun behind a crown shines through its edge, as through the leaves)
         .replace('#include <opaque_fragment>', `
@@ -578,13 +585,17 @@ vec3 gxGrade( vec3 c ) {
       const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;
       MAT.leaf = new THREE.MeshLambertMaterial({ map: tx, alphaTest: 0.5, side: THREE.DoubleSide, vertexColors: true }); MAT.leaf.defines = { RIM: 0.28 };
       MAT.leaf.onBeforeCompile = sh => {
-        Object.assign(sh.uniforms, { uTime: U.time, uWind: U.wind });
+        Object.assign(sh.uniforms, { uTime: U.time, uWind: U.wind, uFine: UFINE });
         sh.vertexShader = 'attribute float aK; uniform float uTime; uniform vec3 uWind;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
           vec4 wq = modelMatrix * vec4(transformed, 1.0);
           float ph = uTime * (0.9 + uWind.z) + wq.x * 0.11 + wq.z * 0.07;
           transformed.xz += uWind.xy * (sin(ph) * 0.6 + sin(ph * 2.7 + 1.3) * 0.25 + 0.3) * aK * (0.25 + uWind.z * 0.6) + vec2(sin(uTime * 3.1 + wq.y * 2.0), cos(uTime * 2.7 + wq.x)) * 0.04 * aK;`);
         // (a card is lit by the crown's own normal on both its faces: three.js would turn a back face's into the crown's dark)
-        sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n normal = normal * faceDirection;').replace('#include <opaque_fragment>', `
+        // (the cards only as near as the machine carries them: past three quarters of the preset's distance they thin out and
+        // go — the crown's lumps and their picture of leaves stand alone, as in the far pictures)
+        sh.fragmentShader = 'uniform float uFine;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+          { float fd = length(vViewPosition) / uFine; if (fd > 0.75 && fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) < (fd - 0.75) * 4.0) discard; }`)
+          .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n normal = normal * faceDirection;').replace('#include <opaque_fragment>', `
           #if NUM_DIR_LIGHTS > 0
           // (the sun behind the leaves shines through them)
           { float bl = saturate(dot(-normalize(vViewPosition), directionalLights[0].direction)); outgoingLight += diffuseColor.rgb * directionalLights[0].color * pow(bl, 4.0) * 0.28; }
@@ -1065,6 +1076,10 @@ vec3 gxGrade( vec3 c ) {
     if (snow > 0 && ny > 0.3) c = G.lerpColor(c, SNOW, snow * G.clamp((ny - 0.3) / 0.35, 0, 1));
     return c;
   };
+  // (the leaves' cards and the blades at the foot of the stones a fifth quieter than the crown they stand out of: the sun
+  // through a leaf and the grading of the picture saturate them — under a hot sun they were neon, the A6's proof)
+  const calm = (c, k) => { const l = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]; return [l + (c[0] - l) * (1 - k), l + (c[1] - l) * (1 - k), l + (c[2] - l) * (1 - k)]; };
+  const calmCol = (f, k) => (X, Y, Z, nx, ny, nz) => calm(f(X, Y, Z, nx, ny, nz), k);
   // (the measures of a standing tree, the same for its drawing and for the leaves it lets fall: height, crown's heart and radius)
   function treeDims(t) {
     const k = KIND[t.kind] || KIND.oak; const sz = G.clamp(t.size, 0.15, 1.4); const h = G.hash(t.id * 7); const s = 0.85 + h * 0.3;
@@ -1143,13 +1158,17 @@ vec3 gxGrade( vec3 c ) {
   // of their edges (a crown is leaves, not the smooth side of a lump). Returns its lumps [x, y, z, radius]
   function crownInto(g, gl, id, X, cy, Z, r, n, fl, pal, snow, sw, q, cards, shape) {
     // (the snow lies on the crown's lumps; the leaves standing out of its edge keep their green, a little frosted)
-    const lc = leafCol(pal, snow, X, Z, r * 1.4), lcc = snow > 0 ? leafCol(pal, snow * 0.3, X, Z, r * 1.4) : lc; const lumps = [[X, cy + r * 0.42 * fl, Z, r * 0.92]];
+    const lc = leafCol(pal, snow, X, Z, r * 1.4), lcc = calmCol(snow > 0 ? leafCol(pal, snow * 0.3, X, Z, r * 1.4) : lc, 0.2); const lumps = [[X, cy + r * 0.42 * fl, Z, r * 0.92]];
     for (let k = 0; k < n - 1; k++) {
       const a = k / (n - 1) * TAU + G.hash(id * 3 + k) * 0.9, up = (k % 2 ? 0.3 : -0.14) * fl, ring = (k % 2 ? 0.52 : 0.8) * (0.86 + G.hash(id * 7 + k) * 0.28);
       lumps.push([X + Math.cos(a) * r * ring, cy + r * up, Z + Math.sin(a) * r * ring, r * (0.6 + G.hash(id * 5 + k) * 0.3)]);
     }
-    g.sph = [X, cy + r * 0.12, Z, 0.75];
-    for (let k = 0; k < lumps.length; k++) { const [x, y, z, s] = lumps[k]; const h = G.hash(id * 11 + k * 5); g.put(shape || SH.ico0, R3.mat(x, y, z, h * TAU, s * (1.05 + h * 0.2), s * 0.92 * fl, s * (1.15 - h * 0.2), (h - 0.5) * 0.6), lc, sw + (y - cy) / r * 0.06); }
+    // (each lump a soft mass of leaves, no flat face left on it: its light bent all the way round, from a point between its own
+    // heart and the crown's — it still swells out of the crown, and the crown is still one volume in the sun; and where the
+    // leaves' cards are drawn, near the body, a rounder lump under them, no box in its outline)
+    const hy = cy + r * 0.12, sh = shape || (gl ? SH.dode : SH.ico0);
+    for (let k = 0; k < lumps.length; k++) { const [x, y, z, s] = lumps[k]; const h = G.hash(id * 11 + k * 5); g.sph = [x + (X - x) * 0.45, y + (hy - y) * 0.45, z + (Z - z) * 0.45, 1];
+      g.put(sh, R3.mat(x, y, z, h * TAU, s * (1.05 + h * 0.2), s * 0.92 * fl, s * (1.15 - h * 0.2), (h - 0.5) * 0.6), lc, sw + (y - cy) / r * 0.06); }
     g.sph = null;
     if (gl && cards) for (let k = 0; k < lumps.length; k++) {
       const [x, y, z, s] = lumps[k]; let ox = x - X, oy = (y - cy) / Math.max(0.3, fl), oz = z - Z; const ol = Math.hypot(ox, oy, oz); if (ol < 0.2) { ox = 0; oy = 1; oz = 0; } else { ox /= ol; oy /= ol; oz /= ol; }
@@ -1204,10 +1223,12 @@ vec3 gxGrade( vec3 c ) {
           g.put(SH.cone, R3.mat(X, Y + H * 0.8, Z, rot, 0.7 * sz + 0.35, H * 0.24, 0.7 * sz + 0.35), lc, CONIF + 0.22);
           g.sph = null;
           // (the boughs' sprays of needles standing out of every tier, drooping at their tips, each its own way — the tier's
-          // rim broken into boughs)
+          // rim broken into boughs; in the snow, the green of their needles under a frost — the snow lies on the tiers, a spray
+          // standing out of it all white would be a feather)
+          const lcn = calmCol(snow > 0 ? leafCol(pal, snow * 0.3, X, Z, 1.6 * sz + 0.6) : lc, 0.2);
           if (gl) for (let q = 0; q < nt; q++) { const u = q / (nt - 1); const w2 = ((3.5 - u * 2.7) * sz + 0.6) * 0.5; const y = Y + H * (0.15 + u * 0.63); const nc = q < nt - 1 ? 7 : 4;
             for (let j = 0; j < nc; j++) { const a = rot + q * 1.7 + j * TAU / nc + (G.hash(t.id + q * 5 + j) - 0.5) * 0.7; const dx = Math.cos(a), dz = Math.sin(a); const rr = w2 * (0.78 + G.hash(t.id * 3 + q * 7 + j) * 0.2); const px = X + dx * rr, pz = Z + dz * rr;
-              card4(gl, px, y - w2 * 0.08, pz, w2 * 0.66 + 0.3, a, 0.55 + G.hash(q + j * 3 + t.id) * 0.4, [dx * 0.6, 0.8, dz * 0.6], lc(px, y, pz, dx * 0.6, 0.8, dz * 0.6), 0.12 + u * 0.12, 2); } }
+              card4(gl, px, y - w2 * 0.08, pz, w2 * 0.66 + 0.3, a, 0.55 + G.hash(q + j * 3 + t.id) * 0.4, [dx * 0.6, 0.8, dz * 0.6], lcn(px, y, pz, dx * 0.6, 0.8, dz * 0.6), 0.12 + u * 0.12, 2); } }
         }
         break;
       }
@@ -1221,7 +1242,7 @@ vec3 gxGrade( vec3 c ) {
             const a = q / nf * TAU + rot + (G.hash(t.id + q) - 0.5) * 0.3, cs = Math.cos(a), sn = Math.sin(a); const wd = t.kind === 'banana' ? 0.9 : 0.55; const dr = 0.8 + G.hash(t.id * 3 + q) * 0.5;
             // (each frond in three pieces, rising a little, then falling; and its leaflets either side)
             const P0 = [px, py, pz], P1 = [px + cs * fl * 0.35, py + 0.45 * dr, pz + sn * fl * 0.35], P2 = [px + cs * fl * 0.7, py + 0.1, pz + sn * fl * 0.7], P3 = [px + cs * fl, py - 0.9 * dr, pz + sn * fl];
-            const c0 = pal[1], c1 = pal[0], c2 = pal[2];
+            const c0 = calm(pal[1], 0.2), c1 = calm(pal[0], 0.2), c2 = calm(pal[2], 0.2); // (the fronds in the sun as quiet as the cards)
             gp.blade(P0[0], P0[1], P0[2], wd * 0.6, a + Math.PI / 2, P1[0], P1[1], P1[2], c0, c1, 0.25);
             gp.blade(P1[0], P1[1], P1[2], wd, a + Math.PI / 2, P2[0], P2[1], P2[2], c1, c2, 0.4);
             gp.blade(P2[0], P2[1], P2[2], wd * 0.8, a + Math.PI / 2, P3[0], P3[1], P3[2], c2, c1, 0.6);
@@ -1301,7 +1322,7 @@ vec3 gxGrade( vec3 c ) {
           // (its fruit: small — an apple of eight centimetres —, many, hanging on the sides and under the crown's lumps, some
           // of them half among the leaves; the god's colour, a little deeper)
           if (k[3] && t.fruit !== 0) { const fc = G.lerpColor(G.hex2rgb(k[3]), [70, 40, 30], 0.18);
-            for (let q = 0; q < lumps.length; q++) { const [lx, ly, lz, ls] = lumps[q]; for (let j = 0; j < 3; j++) {
+            for (let q = 0; q < lumps.length; q++) { const [lx, ly, lz, ls] = lumps[q]; for (let j = 0; j < (fine ? 3 : 1); j++) {
               const a = G.hash(t.id * 13 + q * 7 + j) * TAU, e = -0.65 + G.hash(t.id * 17 + q * 3 + j) * 1.0, rf = 0.5 * ls * (0.84 + G.hash(t.id * 19 + q + j * 5) * 0.24);
               const px = lx + Math.cos(a) * Math.cos(e) * rf * 1.1, py = ly + Math.sin(e) * rf * 0.92, pz = lz + Math.sin(a) * Math.cos(e) * rf * 1.1;
               g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, a, 0.08 + G.hash(q + j * 11 + t.id) * 0.03), fc, FRUIT + 0.25); } }
@@ -1313,8 +1334,21 @@ vec3 gxGrade( vec3 c ) {
   }
   // (a boulder's colour, the god's grey; the sandstone of the dry lands, the dark stone of the forests of the south)
   function rockBase(r, i) { if (r.meteor) return [74, 58, 52]; const b = G.Biome && G.Biome.of ? G.Biome.of(i) : 0; return b === 5 || b === 6 ? [178, 136, 102] : b === 4 ? [124, 122, 108] : [154, 149, 140]; }
+  // (which near chunks draw the finest of their plants — the leaves' cards, roots and twigs, every fruit, the stones round a
+  // boulder's foot, the rounder lumps of a bush: those the body is within 40 m × the preset's lod of, by the chunk's nearest
+  // edge; once fine, until the body is 8 m further off. Asked by the chunks' signature, so a chunk is drawn again when it
+  // changes; a chunk never asked — a preset without lod, a test's stretch of land — keeps it all, as before. Only seen)
+  const fineOf = new Map(); G.worldHooks.push(() => fineOf.clear());
+  R3.floraFine = function (x0, y0, n) {
+    const q = R3.Q(); const key = x0 + ',' + y0; const f = G.Possess && G.Possess.body ? G.Possess.body() : null;
+    if (!Number.isFinite(q.lod) || !f) { fineOf.delete(key); return 1; }
+    const L = G.Space.TILE, X = f.x * L, Z = f.y * L, D = 40 * q.lod;
+    const d = Math.hypot(Math.max(x0 * L - X, 0, X - (x0 + n) * L), Math.max(y0 * L - Z, 0, Z - (y0 + n) * L));
+    const now = fineOf.get(key) ? d < D + 8 : d < D; fineOf.set(key, now); return now ? 1 : 0;
+  };
   function floraGeo(x0, y0, w, h, far) {
-    const S = G.S; const g = new Geo(), gp = new Geo(), gl = far || !R3.Q().detail ? null : new Geo(); const TL = G.Space.TILE, HM = G.Space.HM;
+    const fine = !fineOf.has(x0 + ',' + y0) || fineOf.get(x0 + ',' + y0);
+    const S = G.S; const g = new Geo(), gp = new Geo(), gl = far || !fine || !R3.Q().detail ? null : new Geo(); const TL = G.Space.TILE, HM = G.Space.HM;
     for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {
       if (!W.inb(x, y)) continue; const i = y * N + x;
       const tid = S.treeAt[i]; const t = tid && S.trees.get(tid);
@@ -1343,10 +1377,14 @@ vec3 gxGrade( vec3 c ) {
         if (gl) for (let q = 0; q < 5; q++) { const a = G.hash(oid * 7 + q) * TAU, d = big.sx * (0.55 + G.hash(oid * 11 + q) * 0.5), s = 0.08 + G.hash(oid * 13 + q) * 0.12; const px = big.X + Math.cos(a) * d, pz = big.Z + Math.sin(a) * d;
           if (!W.inb(px / TL, pz / TL) || S.road[W.idx(px / TL, pz / TL)]) continue; g.put(SH.dode, R3.mat(px, G.Space.floorY(px, pz) - s * 0.3, pz, a * 3, s * 1.3, s * 0.8, s), col, ROCK - moss * 0.5); }
         // (and, where the land is green, the grass growing up round its foot: the stone sits in the ground, not on it)
-        if (gl && moss > 0 && !S.road[i]) { const tc = tileCol(i, x, y); const root = [tc[0] * 0.62, tc[1] * 0.72, tc[2] * 0.55], tip = [Math.min(255, tc[0] * 0.92 + 16), Math.min(255, tc[1] * 1.02 + 10), tc[2] * 0.82];
-          for (let q = 0; q < 9; q++) { const a = G.hash(oid * 23 + q) * TAU, d = big.sx * 0.5 * (0.9 + G.hash(oid * 29 + q) * 0.32); const px = big.X + Math.cos(a) * d, pz = big.Z + Math.sin(a) * d;
+        if (gl && moss > 0 && !S.road[i]) { const tc = tileCol(i, x, y); const root = calm([tc[0] * 0.62, tc[1] * 0.72, tc[2] * 0.55], 0.2), tip = calm([Math.min(255, tc[0] * 0.92 + 16), Math.min(255, tc[1] * 1.02 + 10), tc[2] * 0.82], 0.2);
+          // (a ring of tufts hugging its foot — round the stone's own outline, just outside it —, their blades leaning out
+          // from it: the stone sits in a ring of grass, not among a few spikes)
+          const cr = Math.cos(big.ry), sr = Math.sin(big.ry);
+          for (let q = 0; q < 18; q++) { const a = (q + G.hash(oid * 23 + q) * 0.8) / 18 * TAU, f = 1.0 + G.hash(oid * 29 + q) * 0.22; const lx = Math.cos(a) * big.sx * 0.5 * f, lz = Math.sin(a) * big.sz * 0.5 * f;
+            const px = big.X + lx * cr + lz * sr, pz = big.Z - lx * sr + lz * cr, oa = Math.atan2(pz - big.Z, px - big.X);
             if (!W.inb(px / TL, pz / TL) || S.road[W.idx(px / TL, pz / TL)] || S.occ[W.idx(px / TL, pz / TL)]) continue; const py = G.Space.floorY(px, pz) - 0.02;
-            for (let k = 0; k < 4; k++) { const ba = a + k * 1.6 + G.hash(oid + q * 3 + k), hh = 0.16 + G.hash(oid * 31 + q * 5 + k) * 0.22; gp.blade(px, py, pz, 0.055, ba + Math.PI / 2, px + Math.cos(ba) * hh * 0.32, py + hh, pz + Math.sin(ba) * hh * 0.32, root, G.lerpColor(root, tip, 0.8), 1); } } }
+            for (let k = 0; k < 5; k++) { const ba = oa + (k - 2) * 0.5 + (G.hash(oid + q * 3 + k) - 0.5) * 0.6, hh = 0.16 + G.hash(oid * 31 + q * 5 + k) * 0.24; gp.blade(px, py, pz, 0.08, ba + Math.PI / 2, px + Math.cos(ba) * hh * 0.42, py + hh, pz + Math.sin(ba) * hh * 0.42, root, G.lerpColor(root, tip, 0.8), 1); } } }
         continue;
       }
       const b = S.bushes.get(oid);
@@ -1369,7 +1407,7 @@ vec3 gxGrade( vec3 c ) {
           for (let q = 0; q < Math.min(6, b.berries); q++) {
             const a = G.hash(b.id * 7 + q) * 0.9 + q * 1.05, d = 0.66 + G.hash(b.id * 11 + q) * 0.12, hy = Y + 0.42 + G.hash(b.id * 13 + q) * 0.42;
             const cx = X + Math.cos(a) * d, cz = Z + Math.sin(a) * d;
-            for (let j = 0; j < 3; j++) { const aj = a + j * 2.09 + q, px = cx + Math.cos(aj) * 0.045, pz = cz + Math.sin(aj) * 0.045, py = hy + (j === 2 ? 0.05 : -0.01);
+            for (let j = 0; j < (gl ? 3 : 1); j++) { const aj = a + j * 2.09 + q, px = cx + Math.cos(aj) * 0.045, pz = cz + Math.sin(aj) * 0.045, py = hy + (j === 2 ? 0.05 : -0.01);
               g.sph = [px, py, pz, 1]; g.put(SH.ico0, R3.mat(px, py, pz, j + q, 0.072), j ? bc : G.lerpColor(bc, [190, 60, 70], 0.25), FRUIT + 0.12); }
           }
           g.sph = null;

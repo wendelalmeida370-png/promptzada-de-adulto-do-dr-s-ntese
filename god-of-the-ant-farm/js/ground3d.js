@@ -26,7 +26,7 @@
   // the kinds of ground (the alpha of a tile's texel)
   const K = G3.K = { grass: 0, meadow: 1, sand: 2, dune: 3, rocky: 4, snow: 5, swamp: 6, savanna: 7, jungle: 8, path: 9, gravel: 10, paved: 11, highway: 12, burnt: 13, field: 14, bed: 15, rock: 16, taiga: 17, wet: 18, river: 19 };
   let THREE = null, map = null, data = null, det = null, mat = null, size = 0, dirtyAll = true, row = 0, gmap = null, gdata = null, fmap = null, fdata = null;
-  G.worldHooks.push(() => { dirtyAll = true; row = 0; sweep = 0; });
+  G.worldHooks.push(() => { dirtyAll = true; row = 0; sweep = 0; wBox = []; });
   // (the god's road colours: the same streets from both heights)
   const ROADC = [null, [184, 164, 128], [190, 182, 164], [146, 142, 134]];
   const FARM = { farm: 1, horta: 1, plantacao: 1, vinhedo: 1 };
@@ -189,26 +189,42 @@
   };
   // every frame: a few rows of the land round the body made again (the paths worn, the fields growing, the fire, the snow),
   // and one row of the whole map (the far land changes too: a town grows on the horizon)
-  let sweep = 0;
+  // — and the circle of each sudden winter of the god's, whole, every frame while it lasts, wherever it is: its snow fades in
+  // and melts away smoothly, and is gone with it the frame it ends (the frame after, for the circle of one just ended)
+  let sweep = 0, wBox = [];
   G3.tick = function (focus) {
     if (!THREE) return; if (dirtyAll || !map) { G3.full(); return; }
     let ch = rows(sweep, sweep + 1, 0, N); sweep = (sweep + 1) % N;
+    const L = G.S.winters; if (wBox.length || (L && L.length)) {
+      const now = L && L.length ? L.map(q => [q.x, q.y, q.r]) : [];
+      for (const b of wBox) if (!now.some(q => q[0] === b[0] && q[1] === b[1])) now.push(b);
+      for (const [x, y, r] of now) if (rows(Math.floor(y - r) - 1, Math.ceil(y + r) + 2, Math.floor(x - r) - 1, Math.ceil(x + r) + 2)) ch = true;
+      wBox = L && L.length ? L.map(q => [q.x, q.y, q.r]) : [];
+    }
     if (focus) { const L = G.Space.TILE; const cx = Math.floor(focus.X / L), cy = Math.floor(focus.Z / L); const R = 40; const y = cy - R + row; row = (row + 4) % (R * 2); if (rows(y, y + 4, cx - R, cx + R)) ch = true; }
     if (ch) map.needsUpdate = true;
   };
   // (for the verifier: of n tiles round a point, how many the picture paints otherwise than the world is now — a few may
   // lag a moment behind, the rows are made again a few a frame; fbad: the same for the floor — the leaves where the trees
   // are, nothing loose on a road, a house or the water, the snow where the cold lays it; snowBad: snow in the picture on
-  // the water, or where it is warm and no winter fell — never, whatever lags: the climate does not change in a frame)
+  // the water, or where it is warm and no winter lies — never: the climate does not change from frame to frame, and a
+  // winter's circle is made again every frame (only the god's Change of Climate lags a moment, as the rest of the picture));
+  // paleBad: a pale, hueless texel (the god's white of the cold) under the kinds the grass's picture is laid on — never: the
+  // green of that picture over a white turns mint and purple (the snow of the first wave); under the snow lies the bare ground
   G3.check = function (fx, fy, R, n) {
-    if (!data || size !== N) return { n: 0, bad: 0, fbad: 0, snowBad: 0 }; let bad = 0, fbad = 0, snowBad = 0, k = 0; const x0 = Math.floor(fx), y0 = Math.floor(fy);
+    if (!data || size !== N) return { n: 0, bad: 0, fbad: 0, snowBad: 0, paleBad: 0 }; let bad = 0, fbad = 0, snowBad = 0, paleBad = 0, k = 0; const x0 = Math.floor(fx), y0 = Math.floor(fy);
     const S = G.S; const winter = !!(S.winters && S.winters.length);
     for (let q = 0; q < n; q++) { const x = x0 + Math.floor((G.hash(q * 7 + 1) - 0.5) * 2 * R), y = y0 + Math.floor((G.hash(q * 13 + 5) - 0.5) * 2 * R); if (!W.inb(x, y)) continue; k++;
       const i = y * N + x; paint(i, x, y, px); const o = i * 4; if (data[o] !== px[0] || data[o + 1] !== px[1] || data[o + 2] !== px[2] || data[o + 3] !== px[3]) bad++;
+      if (GRASSY[data[o + 3]] && G3.pale(data[o], data[o + 1], data[o + 2])) paleBad++;
       if (fdata) { floorOf(i, x, y, fx4); if (fdata[o] !== fx4[0] || fdata[o + 1] !== fx4[1] || fdata[o + 2] !== fx4[2] || fdata[o + 3] !== fx4[3]) fbad++;
         if (fdata[o + 3] > 0 && (S.type[i] <= T.RIVER || (!winter && G3.snowAt(i) <= 0))) snowBad++; } }
-    return { n: k, bad, fbad, snowBad };
+    return { n: k, bad, fbad, snowBad, paleBad };
   };
+  // (the kinds the land's shader lays the grass's picture on — gLay's last line; and a colour too pale to carry its green:
+  // bright and nearly grey, as the god's white of the frozen land)
+  const GRASSY = { [K.grass]: 1, [K.meadow]: 1, [K.snow]: 1, [K.swamp]: 1, [K.savanna]: 1, [K.jungle]: 1, [K.taiga]: 1 };
+  G3.pale = (r, g, b) => { const hi = Math.max(r, g, b), lo = Math.min(r, g, b); return hi > 166 && hi - lo < hi * 0.15; };
   // (for the tests: the texel of a tile as the shader reads it)
   G3.texel = (x, y) => (data && W.inb(x, y) ? Array.from(data.subarray((y * N + x) * 4, (y * N + x) * 4 + 4)) : null);
 
@@ -463,7 +479,11 @@ vec3 groundCol() {
   vec2 u = vGP.xz / uTL - 0.5; vec2 i0 = floor(u); vec2 f = u - i0;
   ivec2 a = ivec2(i0); ivec2 hi = ivec2(int(uN) - 1);
 #ifdef GDETAIL
-  vec4 d = texture2D(uDet, vGP.xz / 1.7); float m1 = texture2D(uDet, vGP.xz / 37.0).r; float m2 = texture2D(uDet, vGP.xz / 9.0).g; float m3 = texture2D(uDet, vGP.xz / 91.0 + 0.4).g;
+  // (the drawn grain, read only where it is drawn: before the pictures are in — once they are, only the warm and the cool
+  // of a hundred metres; three reads a point fewer over all the land)
+  vec4 d = vec4(0.5); float m1 = 0.5, m2 = 0.5;
+  if (uTexOn < 0.5) { d = texture2D(uDet, vGP.xz / 1.7); m1 = texture2D(uDet, vGP.xz / 37.0).r; m2 = texture2D(uDet, vGP.xz / 9.0).g; }
+  float m3 = texture2D(uDet, vGP.xz / 91.0 + 0.4).g;
 #else
   vec4 d = vec4(0.5); float m1 = 0.5; float m2 = 0.5; float m3 = 0.5;
 #endif
@@ -544,8 +564,8 @@ vec3 groundCol() {
   c *= 1.0 - (1.0 - abs(r * 2.0 - 1.0)) * mix(0.32, 0.16, tex) * hard;
   // (the shadows of the clouds sliding over the land, as the god sees them pass)
 #ifdef GDETAIL
-  vec2 cu = vGP.xz / 520.0 + uCO; float cn = texture2D(uCN, cu).r * 0.68 + texture2D(uCN, cu * 3.1 + 0.37).g * 0.32;
-  c *= 1.0 - smoothstep(0.98 - uCC, 1.18 - uCC, cn) * uCS;
+  if (uCS > 0.0) { vec2 cu = vGP.xz / 520.0 + uCO; float cn = texture2D(uCN, cu).r * 0.68 + texture2D(uCN, cu * 3.1 + 0.37).g * 0.32;
+    c *= 1.0 - smoothstep(0.98 - uCC, 1.18 - uCC, cn) * uCS; } // (none read when the clouds cast no shadow)
 #endif
 #ifdef GDETAIL
   // (a steep face shows its layers of rock, whatever the tiles say — drawn, until the pictures are in)
@@ -573,7 +593,7 @@ vec3 groundCol() {
       float wy = uSeaY + 0.46 + (mB - 0.5) * 0.14;
       float wk = (1.0 - smoothstep(0.025, 0.085, abs(vGP.y - wy))) * near * (1.0 - wb);
       if (wk > 0.001) { wk *= smoothstep(0.42, 0.58, texture2D(uCN, vGP.xz / 19.0 + 0.4).g + 0.04); float wst = smoothstep(0.5, 0.64, texture2D(uDet, vGP.xz / 0.85 + 0.31).r) * wk;
-        c = mix(c, vec3(0.05, 0.052, 0.026) * (0.8 + d.g * 0.5), wst * 0.85); gHgt += wst * 0.012; }
+        c = mix(c, vec3(0.05, 0.052, 0.026) * (0.8 + texture2D(uDet, vGP.xz / 1.7).g * 0.5), wst * 0.85); gHgt += wst * 0.012; }
     }
   }
 #endif
