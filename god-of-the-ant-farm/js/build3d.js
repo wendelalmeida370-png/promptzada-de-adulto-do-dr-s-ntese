@@ -29,13 +29,17 @@
     for (const v of S.villagers.values()) { if (!v.home || !v.role) continue; let l = rolesMap.get(v.home); if (!l) rolesMap.set(v.home, l = []); if (!l.includes(v.role)) l.push(v.role); }
     return rolesMap;
   };
-  let THREE = null, R3 = null, SH = null, glass = null, PM = null, IDM = null, PEG = null;
+  let THREE = null, R3 = null, SH = null, glass = null, PM = null, IDM = null, PEG = null, PLANK = null;
   const TAU = Math.PI * 2;
   B3.init = function (three, realm) {
     THREE = three; R3 = realm; SH = realm.SH; glass = new THREE.MeshPhongMaterial({ color: 0x1c2630, specular: 0x8aa0b4, shininess: 90, emissive: 0xffb860, emissiveIntensity: 0 });
     PM = new THREE.Matrix4(); IDM = new THREE.Matrix4(); // (a slanted box's frame, and the frame of the sheets already in place)
     // (a timber's end out of a gable: eight sides, its end chamfered — a purlin, a peg; open at its foot, in the wall)
     PEG = new THREE.LatheGeometry([[0.5, 0], [0.5, 0.88], [0.4, 1], [0, 1]].map(([r, y]) => new THREE.Vector2(r, y)), 8);
+    // (a plank lying on the ground: a box standing on its base, without the underside nobody sees)
+    { const bx = new THREE.BoxGeometry(1, 1, 1).toNonIndexed(); bx.translate(0, 0.5, 0); const p = bx.attributes.position.array, nn = bx.attributes.normal.array; const P = [], Nn = [];
+      for (let k = 0; k < p.length; k += 9) { if (nn[k + 1] < -0.5) continue; for (let q = 0; q < 9; q++) { P.push(p[k + q]); Nn.push(nn[k + q]); } }
+      PLANK = new THREE.BufferGeometry(); PLANK.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); PLANK.setAttribute('normal', new THREE.Float32BufferAttribute(Nn, 3)); bx.dispose(); }
     // (a window shows the sky it faces — pale low, deeper above — more as one looks along the wall; at night, its lamp)
     const sk = realm.skyU;
     if (sk) glass.onBeforeCompile = sh => {
@@ -525,12 +529,12 @@ float m3scale(float p) {
       }
     } });
   }
-  // tall grass at the foot of the walls, where the ground round the house is grass and the snow does not lie (the rule of the
-  // ground's own grass: ground3d), none before the door: the house sits in the ground, not on it
+  // tall grass at the foot of the walls, where the ground round the house is grass and the snow does not lie (the ground's own
+  // snow: Realm.snowAt, the one the land, the trees and the grass read), none before the door: the house sits in the ground
   function wallGrass(K, x, z, sx, sz, door) {
     if (!K.fine) return; const S = G.S, T = G.T, L = K.L; let k = 0;
     const grassy = (X, Z) => { const tx = Math.floor((K.x0 + X) / L), ty = Math.floor((K.z0 + Z) / L); if (!W.inb(tx, ty)) return false; const i = ty * N + tx;
-      const t = S.type[i]; const snow = S.temp ? G.clamp((0.235 - S.temp[i] / 255) / 0.07, 0, 1) : 0; return (t === T.GRASS || t === T.MEADOW) && snow < 0.45 && !(S.burnt[i] > 0) && !S.road[i]; };
+      const t = S.type[i]; const snow = R3.snowAt ? R3.snowAt(i) : S.temp ? G.clamp((0.235 - S.temp[i] / 255) / 0.07, 0, 1) : 0; return (t === T.GRASS || t === T.MEADOW) && snow < 0.45 && !(S.burnt[i] > 0) && !S.road[i]; };
     for (const W2 of wallsOf(sx, sz)) { const n = Math.floor(W2.len / 0.24);
       for (let q = 0; q < n; q++) { const h1 = K.hv(800 + k), h2 = K.hv(1000 + k); k++; const a = -W2.len / 2 + (q + 0.2 + h1 * 0.6) * W2.len / n;
         if (door && door.side === W2.side && Math.abs(a - door.a) < door.w / 2 + 0.35) continue; if (h2 < 0.25) continue;
@@ -1742,6 +1746,58 @@ float m3scale(float p) {
 
   // ------------------------------ a chunk's buildings ------------------------------
   const inChunk = (b, x0, y0, n) => b.x >= x0 && b.y >= y0 && b.x < x0 + n && b.y < y0 + n;
+  // ------------------------------ the walks of planks over the mud ------------------------------
+  // the streets of the north are walks of planks laid across the way over the mud, as Hedeby's were: on the trodden and the
+  // paved ways of a town of the north (the people of the nearest house, within ten tiles), a deck two metres wide down the
+  // middle of the tile and out to each road beside it, its planks across the way, each its own width and grey of old oak, a
+  // little longer or shorter at its ends, three centimetres over the ground as its mesh is drawn — no flicker, no plank lost
+  // under it. Only where the machine carries detail; the bridges are the realm's. Only seen: deckAt gives their top
+  const decks = new Map(), deckOf = new Map(); G.worldHooks.push(() => { decks.clear(); deckOf.clear(); });
+  const vH = (x, y) => W.hAt(Math.min(N, x), Math.min(N, y)) * HM() - (G.Space.bedDrop ? G.Space.bedDrop(x, y) : 0);
+  // (the near ground as its mesh draws it — realm3d's terrainGeo: a point every half tile, each cell cut from its +x corner
+  // to its +y corner — so what lies on it lies on what is seen)
+  function drawnAt(x, y) {
+    const i = Math.floor(x * 2), j = Math.floor(y * 2), u = x * 2 - i, v = y * 2 - j; const xa = i / 2, ya = j / 2, xb = xa + 0.5, yb = ya + 0.5;
+    if (u + v <= 1) { const ha = vH(xa, ya); return ha + (vH(xb, ya) - ha) * u + (vH(xa, yb) - ha) * v; }
+    const hd = vH(xb, yb); return hd + (vH(xa, yb) - hd) * (1 - u) + (vH(xb, ya) - hd) * (1 - v);
+  }
+  const DW = 1.0, DT = 0.06, DUP = 0.03; // (the deck's half width, a plank's thickness, how far its top stands over the ground)
+  // (a plank from A to B — the middles of its two ends, on its top — wv across it, t thick under its top)
+  function plank(g, A, B, wv, t, col) {
+    const v = [0, t, 0], w = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], u = wv;
+    const s = (u[1] * v[2] - u[2] * v[1]) * w[0] + (u[2] * v[0] - u[0] * v[2]) * w[1] + (u[0] * v[1] - u[1] * v[0]) * w[2] < 0 ? -1 : 1;
+    PM.set(u[0], v[0], w[0] * s, (A[0] + B[0]) / 2, u[1], v[1], w[1] * s, (A[1] + B[1]) / 2 - t, u[2], v[2], w[2] * s, (A[2] + B[2]) / 2, 0, 0, 0, 1); g.put(PLANK || SH.box, PM, col);
+  }
+  function walksInto(g, x0, y0, n) {
+    const S = G.S, T = G.T, L = TL(); const mine = []; deckOf.set(x0 + ',' + y0, mine);
+    const near = []; for (const b of S.buildings.values()) { const cx = b.x + b.w / 2, cy = b.y + b.h / 2; if (cx > x0 - 10 && cx < x0 + n + 10 && cy > y0 - 10 && cy < y0 + n + 10) near.push([cx, cy, styleOf(b) === 'nordico']); }
+    if (!near.some(q => q[2])) return;
+    const road = (x, y) => W.inb(x, y) && S.road[y * N + x] > 0;
+    for (let y = y0; y < y0 + n; y++) for (let x = x0; x < x0 + n; x++) {
+      if (!W.inb(x, y)) continue; const i = y * N + x; const r = S.road[i]; if (!r || r > 2 || S.type[i] <= T.RIVER || S.occ[i] || S.wall[i]) continue;
+      let best = null, bd = 100; for (const q of near) { const d = (q[0] - x - 0.5) ** 2 + (q[1] - y - 0.5) ** 2; if (d < bd) { bd = d; best = q; } } if (!best || !best[2]) continue;
+      const E = road(x + 1, y), Wt = road(x - 1, y), So = road(x, y + 1), No = road(x, y - 1);
+      decks.set(i, (E ? 1 : 0) | (Wt ? 2 : 0) | (So ? 4 : 0) | (No ? 8 : 0)); mine.push(i);
+      const cx = (x + 0.5) * L, cz = (y + 0.5) * L; const alongX = (E || Wt) && !(So || No) ? true : (So || No) && !(E || Wt) ? false : G.hash(i * 7 + 1) < 0.5;
+      // (a run of planks across the way, from a0 to a1 along it from the tile's middle; ax: the way runs along X)
+      const run = (ax, a0, a1, k0) => { const m = Math.max(1, Math.round((a1 - a0) / 0.34)), p = (a1 - a0) / m; g.pat = ax ? PAT.beamZ : PAT.beamX;
+        for (let k = 0; k < m; k++) { const h = G.hash(i * 131 + k0 + k), h2 = G.hash(i * 37 + k0 + k * 3); const a = a0 + (k + 0.5) * p + (h - 0.5) * 0.03;
+          const e0 = -DW - h2 * 0.08, e1 = DW + G.hash(i * 53 + k0 + k) * 0.08; // (each a little longer or shorter at its ends)
+          const A = ax ? [cx + a, cz + e0] : [cx + e0, cz + a], B = ax ? [cx + a, cz + e1] : [cx + e1, cz + a];
+          const yA = drawnAt(A[0] / L, A[1] / L) + DUP, yB = drawnAt(B[0] / L, B[1] / L) + DUP; const wv = ax ? [p - 0.035, 0, 0] : [0, 0, p - 0.035];
+          plank(g, [A[0], yA, A[1]], [B[0], yB, B[1]], wv, DT, mixc([128, 106, 80], [112, 106, 98], h2 * 0.8).map(c => c * (0.88 + h * 0.2))); } };
+      run(alongX, -DW, DW, 0);
+      if (E) run(true, DW, L / 2, 20); if (Wt) run(true, -L / 2, -DW, 40); if (So) run(false, DW, L / 2, 60); if (No) run(false, -L / 2, -DW, 80);
+    }
+    g.pat = 0;
+  }
+  // (the top of a walk's planks under a point of the world, in metres, or null — for the feet, Space.surface, to stand on)
+  B3.deckAt = function (X, Z) {
+    const L = TL(), x = X / L, z = Z / L, tx = Math.floor(x), ty = Math.floor(z); if (!W.inb(tx, ty)) return null; const m = decks.get(ty * N + tx); if (m === undefined) return null;
+    const lx = X - (tx + 0.5) * L, lz = Z - (ty + 0.5) * L; const inC = Math.abs(lx) <= DW && Math.abs(lz) <= DW;
+    const inArm = (Math.abs(lz) <= DW && ((lx > DW && (m & 1)) || (lx < -DW && (m & 2)))) || (Math.abs(lx) <= DW && ((lz > DW && (m & 4)) || (lz < -DW && (m & 8))));
+    return inC || inArm ? drawnAt(x, z) + DUP : null;
+  };
   // (how far round the body the near houses keep their finest form — the iron, the pieces made in Blender, what lies about
   // them: 35 m × the preset's lod (Realm.Q().lod; all the near ones where the preset has none), a chunk at a time by its nearest edge. Once
   // fine it stays so until the body is 8 m further: walking along a chunk's edge does not draw it again and again. Only seen)
@@ -1758,8 +1814,10 @@ float m3scale(float p) {
     for (const b of G.S.buildings.values()) { if (!inChunk(b, x0, y0, n)) continue; s = (s * 31 + b.id * 7 + (b.built ? 1 : 0) + Math.floor((b.progress || 0) * 5) * 3 + Math.floor((b.hp / (b.maxHp || 1)) * 4) * 11 + (b.crops ? b.crops.reduce((a, c) => a + c.s + Math.floor((c.g || 0) * 3), 0) : 0) * 13 + (b.graves ? b.graves.length : 0) * 17) | 0; }
     // (the arches standing in this chunk: one built across the map does not change it)
     for (const a of G.S.aqueducts || []) for (let k = 0; k < a.built; k++) { const t = a.tiles[k]; if (t[0] >= x0 && t[1] >= y0 && t[0] < x0 + n && t[1] < y0 + n) s = (s + (k + 1) * 23 + (a.dead ? 5 : 0)) | 0; }
-    // (a chunk with buildings the body comes near is drawn again, finer; one without has nothing to make finer)
-    return s ? (s * 3 + (fineAt(x0, y0, n) ? 1 : 0)) | 0 : 0;
+    // (a chunk with buildings or ways the body comes near is drawn again, finer — its walks of planks too; one without has
+    // nothing to make finer)
+    let rd = s !== 0; if (!rd) { const S = G.S; for (let y = y0; y < y0 + n && !rd; y++) for (let x = x0; x < x0 + n; x++) if (W.inb(x, y) && S.road[y * N + x]) { rd = true; break; } }
+    return rd ? (s * 3 + (fineAt(x0, y0, n) ? 1 : 0)) | 0 : 0;
   };
   B3.nearGeo = function (x0, y0, n) {
     const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(), gq = R3.WGeo();
@@ -1772,6 +1830,7 @@ float m3scale(float p) {
       // (how high it really stands, for the eye that must not go into its roof)
       let top = -1e9; for (let k = n0 + 1; k < g.p.length; k += 3) if (g.p[k] > top) top = g.p[k]; if (top > -1e9) B3.tops.set(b.id, top);
     }
+    for (const i of deckOf.get(ck) || []) decks.delete(i); deckOf.delete(ck); if (fine) walksInto(g, x0, y0, n);
     g.ao = (X, Z) => W.hAt(X / TL(), Z / TL()) * HM();
     wallsInto(g, x0, y0, n, gq);
     return { solid: g.empty ? null : g.build(true), glass: gw.empty ? null : gw.build(), plants: gp.empty ? null : gp.build(), water: gq.empty ? null : gq.build() };

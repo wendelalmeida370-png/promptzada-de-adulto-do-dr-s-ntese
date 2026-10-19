@@ -270,9 +270,12 @@
       // (each stone sits on the ground where it is, not at the height of the mouth's middle: round a pit on a hillside, or at
       // the foot of an arch cut into a slope, the ground there is higher or lower: the visual hunt found them buried)
       const floor = (x, z) => W.hAt(x / TL(), z / TL()) * HM;
+      // (a stone's seat: the lowest ground under it, so its downhill edge does not stand in the air — sunk into the slope above,
+      // and never with its top under the ground of its middle)
+      const seat = (x, z, r) => Math.max(Math.min(floor(x, z), floor(x - r, z), floor(x + r, z), floor(x, z - r), floor(x, z + r)) + 0.1, floor(x, z) - 0.2);
       if (pit) {
         lay('decal', X, Y + 0.05, Z, 0, 3.4, 3.4, '#07080a'); // (the dark of the pit on the slope round it)
-        for (let k = 0; k < 9; k++) { const a = k / 9 * TAU; const x = X + Math.cos(a) * 1.9, z = Z + Math.sin(a) * 1.9; put('rock', x, floor(x, z) + 0.1, z, a, 0.9 + G.hash(k + m.x) * 0.5, 0.6, 0.8, '#7a746a'); }
+        for (let k = 0; k < 9; k++) { const a = k / 9 * TAU; const x = X + Math.cos(a) * 1.9, z = Z + Math.sin(a) * 1.9; const s = 0.9 + G.hash(k + m.x) * 0.5; put('rock', x, seat(x, z, 0.4 * s), z, a, s, 0.6, 0.8, '#7a746a'); }
         continue;
       }
       const w = kind === 'fenda' ? 1.4 : kind === 'abrigo' ? 4.2 : 2.8, h = kind === 'fenda' ? 3.4 : kind === 'abrigo' ? 2 : 2.6;
@@ -280,8 +283,8 @@
       const P = at(X, Y, Z, yaw, 0.6, 0.02, 0); const im = I.mouth; const k = im.userData.n;
       if (k < im.userData.max) { M.e.set(0, -yaw - Math.PI / 2, 0, 'YXZ'); M.q.setFromEuler(M.e); M.a.compose(M.v.set(P[0], P[1], P[2]), M.q, M.s.set(w, h * 2, 1)); im.setMatrixAt(k, M.a); im.setColorAt(k, M.c.set('#07080a')); im.userData.n = k + 1; }
       // (the stones round its lip: the two at its feet on their own ground, the ones up the arch never under it)
-      for (let j = 0; j < 7; j++) { const a = j / 6 * Math.PI; const r = at(X, Y, Z, yaw, 0.4, Math.sin(a) * h * 0.95, Math.cos(a) * w * 0.55); const g = floor(r[0], r[2]);
-        put('rock', r[0], j === 0 || j === 6 ? g + 0.1 : Math.max(r[1], g + 0.05), r[2], a + m.x, 0.8 + G.hash(j * 3 + m.y) * 0.6, 0.7, 0.7, '#8a8478'); }
+      for (let j = 0; j < 7; j++) { const a = j / 6 * Math.PI; const r = at(X, Y, Z, yaw, 0.4, Math.sin(a) * h * 0.95, Math.cos(a) * w * 0.55); const g = floor(r[0], r[2]); const s = 0.8 + G.hash(j * 3 + m.y) * 0.6;
+        put('rock', r[0], j === 0 || j === 6 ? seat(r[0], r[2], 0.35 * s) : Math.max(r[1], g + 0.05), r[2], a + m.x, s, 0.7, 0.7, '#8a8478'); }
     }
   }
 
