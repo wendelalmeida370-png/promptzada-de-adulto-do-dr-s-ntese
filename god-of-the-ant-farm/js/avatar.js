@@ -42,7 +42,7 @@
   const HANDS_AT = new Set(['swing', 'fight', 'low', 'pray', 'sit', 'rest', 'hug', 'dance', 'sleep', 'climb', 'throw', 'eat', 'drink']);
   // (the body's doings the controller writes — v.act — and so takes back when the act ends; another's — a fight's — stays. An act's
   // vact is one of these)
-  const VACT = new Set(['swim', 'dance', 'chop', 'mine', 'gather', 'eat', 'pray', 'fish', 'levantar', 'pousar']);
+  const VACT = new Set(['swim', 'dance', 'chop', 'mine', 'gather', 'eat', 'pray', 'fish', 'lift', 'arrange', 'give']);
   G.worldHooks.push(() => { b = null; Av.on = false; });
   Av.state = () => b;
   // the player's wishes, filled by the input each frame (axes relative to the camera)

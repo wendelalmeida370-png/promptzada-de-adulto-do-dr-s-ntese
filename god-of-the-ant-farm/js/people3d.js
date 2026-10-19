@@ -1156,23 +1156,25 @@
 
   // (where the feet of someone walking stand: the ground — and, crossing a ford, the bed under the water, not its face)
   function groundY(x, y) { const S = G.S; const i = W.idx(x, y); if (S.type[i] === G.T.RIVER && !S.road[i] && !(S.ice && S.ice[i])) return W.hAt(x, y) * G.Space.HM - G.Space.bedAt(x, y); return W.groundH(x, y) * G.Space.HM; }
-  // the hands of the world's people, as the view remembers them: while the act of lifting lasts (the world's 'lift' — C1's
-  // 'levantar', 'tirarDaBanca') the empty hands reach down for the load — the crate drawn there, or before the feet —; when the
-  // world puts the load in the hands it rises from where the hands held it; while the act of setting down lasts ('pousar',
-  // 'empilhar', 'porNaBanca', 'entregar') the load goes down before the feet, and leaves the hands where the world takes it.
-  // Never ahead of the world: the load is drawn in the hands only while the world has it there (only seen)
-  const LIFT_ACTS = new Set(['lift', 'levantar', 'tirarDaBanca']), PUT_ACTS = new Set(['pousar', 'empilhar', 'porNaBanca', 'entregar']);
+  // the hands of the world's people, as the view remembers them: while a gesture of the hands lasts (G.Act.ANIM's acts: 'lift'
+  // — levantar, pousar, empilhar —, 'arrange' — porNaBanca, tirarDaBanca —, 'give' — entregar) the empty hands reach down for
+  // the load — the crate drawn there, or before the feet —; when the world puts the load in the hands it rises from where the
+  // hands held it; with the load in the hands the same gesture sets it down before the feet, and it leaves the hands where the
+  // world takes it. Never ahead of the world: the load is drawn in the hands only while the world has it there (only seen)
+  const LIFT_ACTS = new Set(['lift', 'arrange']), PUT_ACTS = new Set(['lift', 'arrange', 'give']);
   P3.LIFT_ACTS = LIFT_ACTS; P3.PUT_ACTS = PUT_ACTS;
   function reachOf(s, v, L, X, Y, Z, dt) {
     const H = L.held && L.held.grip !== 'chao' && L.held.grip !== 'lado' ? L.held : null; const c = Math.cos(s.yaw), n = Math.sin(s.yaw);
     // (a load just come to the hands, where they were reaching: lifted from there)
     if (H && !s.hk && s.rw > 0.25 && s.rP) s.lift = { X: s.rP[0], Y: s.rP[1], Z: s.rP[2], w: 1 };
     s.hk = H ? H.form : null;
+    // (a gesture begun with empty hands is a lift to its end: the load it brought is not set down by it — 'lift' is both)
+    if (!LIFT_ACTS.has(v.act) && !PUT_ACTS.has(v.act)) s.ga = null; else if (!H && LIFT_ACTS.has(v.act)) s.ga = v.act;
     let want = 0;
     if (!H && LIFT_ACTS.has(v.act)) {
       want = 1; const P = s.rP || (s.rP = [0, 0, 0]); const src = G.Things3D && G.Things3D.nearLoad ? G.Things3D.nearLoad(X, Z, 1.8) : null;
       if (src) { P[0] = src[0]; P[1] = src[1]; P[2] = src[2]; } else { P[0] = X + c * 0.55; P[1] = Y + 0.2; P[2] = Z + n * 0.55; }
-    } else if (H && PUT_ACTS.has(v.act)) { want = 1; const P = s.rP || (s.rP = [0, 0, 0]); P[0] = X + c * 0.55; P[1] = Y + H.size[1] / 2 + 0.02; P[2] = Z + n * 0.55; }
+    } else if (H && PUT_ACTS.has(v.act) && s.ga !== v.act) { want = 1; const P = s.rP || (s.rP = [0, 0, 0]); P[0] = X + c * 0.55; P[1] = Y + H.size[1] / 2 + 0.02; P[2] = Z + n * 0.55; }
     s.rw = G.clamp((s.rw || 0) + (want ? 1 : -1) * dt / 0.45, 0, 1);
     if (s.lift) { s.lift.w -= dt / 0.5; if (s.lift.w <= 0 || !H) s.lift = null; }
     const r = s.lift || (s.rw > 0.001 && s.rP ? (s.rq || (s.rq = {})) : null);

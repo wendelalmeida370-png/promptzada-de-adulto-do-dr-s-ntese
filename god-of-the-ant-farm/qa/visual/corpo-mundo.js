@@ -9,14 +9,16 @@
 //   3. what the hands do to the world happens inside the world's step (G.inSim): the world's chance (G.R) is never drawn in
 //      the frame — the hand-fishing's luck, the berries' and the stone's counts
 //   4. a load put down at the store is the world's delivery (the stock, the person's tally) and nothing of it happens before the
-//      hands put it down: with the world stopped the hands wait at the door with the load
+//      hands put it down: with the world stopped the hands wait at the door with the load; the wood of a felled tree comes to
+//      the arms at the docker's contact (G.Act.ANIM.levantar), not before; and what the world's activities offer (G.Act.offers)
+//      is done through their own door (Act.perform), in the same gesture's time, in the world's step (the ledger written there)
 //   5. the bad cases, between the moment the hands ask and the moment the world does it: the body dies, the god takes the rock
 //      away, the game is saved and loaded, the god gives the body back, the world moves the body — nothing asked is done, nothing
 //      hangs (the verifier: qa.js and qa/visual/corpo-qa.js)
 // The frame here is the game's own (main.js frame): the world's step of rdt × Space.TIME, then the body's frame of rdt.
 const path = require('path');
 const M = require(path.join(__dirname, '..', 'nodemundo.js'));
-const G = M.load({ qa: true, extra: ['js/space.js', 'js/people3d.js', 'js/possess.js', 'js/interact.js', 'js/avatar.js', 'qa/visual/corpo-qa.js'] });
+const G = M.load({ qa: true, extra: ['js/space.js', 'js/people3d.js', 'js/possess.js', 'js/interact.js', 'js/avatar.js', 'qa/visual/corpo-qa.js', 'qa/atividades-inv.js'] });
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | corpo-mundo ${name} | ${info}`); if (!c) fails.push(name); };
 M.pronto(process.argv[2] || 'cidade');
 let S = G.S; const W = G.W, L = G.Space.TILE; // (S: the world now — a load makes a new one)
@@ -35,7 +37,9 @@ function bodyAt(tx, ty, r) {
   return null;
 }
 // (holding E: the best act, again and again, as the HUD does)
-function holdE(id) { if (G.Avatar.busy()) return null; const b = G.Interact.best(); if (!b || b.id !== id || !b.ok) return b; G.Interact.run(b); return b; }
+let lastBest = null; // (what was in front of the body the last time E was pressed: for the words of a failure)
+function holdE(id) { if (G.Avatar.busy()) return null; const b = G.Interact.best(); lastBest = b; if (!b || b.id !== id || !b.ok) return b; G.Interact.run(b); return b; }
+const front = () => (lastBest ? lastBest.label + (lastBest.ok ? '' : ' — ' + lastBest.why) : 'nada');
 // (frames until the act in course has asked the world and the world has not yet answered: the moment between the two)
 function untilAsked(id) { for (let k = 0; k < 3000; k++) { holdE(id); frame(); const a = G.Avatar.actNow(); if (a && a.asked && !a.asked.res) return a; } return null; }
 // (the verifier: nothing wrong of weight — S0 to S2)
@@ -52,6 +56,14 @@ const freshTree = () => [...S.trees.values()].filter(t => G.Nature.isChoppable(t
     for (; k < 3000 && !felled; k++) { holdE('arvore'); frame(); if (tree.stage !== 'grow') felled = true; }
     const dw = S.clock - t0, done = (felled ? 3 * Math.max(0.5, tree.size) : tree.chop) - c0; const rate = done / dw / wm;
     ok('derrubar: o corpo rende o mesmo que o lenhador por segundo do mundo (dt × trabalho)', rate > 0.8 && rate < 1.2, `${done.toFixed(2)} de trabalho em ${dw.toFixed(2)} s do mundo (${k} quadros): ${rate.toFixed(2)}× o lenhador${felled ? '; a árvore caiu' : ''}`);
+    // the wood of the fallen tree into the arms: the docker's gesture — the load passes to the hands at its contact, not before
+    for (let q = 0; q < 3000 && tree.stage !== 'log'; q++) frame();
+    v.carry = null; const g = G.Act.ANIM.levantar; let tStart = null, tGot = null, early = false; const w0 = tree.wood;
+    for (let q = 0; q < 1200 && tGot === null; q++) { if (tStart === null) { const b = holdE('arvore'); if (b && b.ok && G.Avatar.busy()) tStart = S.clock; } frame(); if (tStart !== null && v.carry) tGot = S.clock; }
+    if (tGot !== null && tGot - tStart < g.contact - 1e-6) early = true;
+    const want = Math.min(G.Vg.cap(v), w0);
+    ok('levantar a lenha do tronco: no contato do gesto do estivador (G.Act.ANIM.levantar), a carga que cabe nas mãos', tree.stage === 'log' || tree.stage === 'stump' ? tGot !== null && !early && v.carry && v.carry.k === 'wood' && v.carry.n === want : false, `o tronco: ${tree.stage}; a lenha nas mãos ${tGot !== null ? (tGot - tStart).toFixed(2) + ' s do mundo depois de pedir (o contato: ' + g.contact + ' s)' : 'nunca'}; ${v.carry ? v.carry.n + ' de ' + v.carry.k : 'nada'} (cabe ${want})`);
+    v.carry = null;
   } }
 // picking berries: a load in 2.2 s / workMul of the world
 { const bush = [...S.bushes.values()].filter(b => b.berries >= 3 && !b.claim && !b.burnt).sort((a, b) => a.id - b.id).find(b => bodyAt(b.x, b.y, 0.4));
@@ -100,6 +112,32 @@ const freshTree = () => [...S.trees.values()].filter(t => G.Nature.isChoppable(t
     ok('guardar no armazém: a entrega conta como a de qualquer morador (o estoque do povo, a conta da pessoa)', !v.carry && got === want && (v.st.wood || 0) === t0 + 3, `estoque +${got} (a entrega de um morador: +${want}), a conta da pessoa +${(v.st.wood || 0) - t0}, ${v.carry ? 'a carga ainda nas mãos' : 'as mãos vazias'}`);
   } }
 
+// what the world's activities offer: a definition made here for the proof (a sack left on the ground, picked up — C1's door)
+G.Act.def('prova-pegar', {
+  offers(v, x, y, r) { return (G.S.loose || []).filter(o => o.prova && G.dist(o.x, o.y, x, y) <= r).map(o => ({ id: 'pegar:' + o.id, act: 'pegar', label: 'Pegar o saco do chão', at: [o.x, o.y], ref: 'g:' + o.id, anim: 'levantar', hands: 1, ok: !(v.carry && v.carry.n > 0), why: 'Suas mãos já estão cheias.' })); },
+  acts: { pegar: {
+    can: (v, o) => (G.Depot.exists(o.ref) ? { ok: true } : { ok: false, why: 'Não está mais aqui.' }),
+    run: (v, o) => { const it = G.Depot.items(o.ref)[0]; const r = it ? G.Depot.move(o.ref, 'v:' + v.id, it.k, it.n, { code: 'pegar', by: v.id }) : { ok: false, why: 'Não está mais aqui.' }; return r.ok ? { ok: true, msg: 'Você pega o saco.', n: r.n } : { ok: false, why: r.why }; },
+  } },
+});
+{ const p = [...S.villagers.values()].filter(o => o.age >= 20 && o.age < 50 && !o.inside && G.Possess.can(o).ok).sort((a, b) => a.id - b.id)[0];
+  const v = p && bodyAt(p.x, p.y, 0.3); const b = G.Avatar.state();
+  if (!v) ok('o que as atividades oferecem: pela porta delas', false, 'sem corpo');
+  else {
+    v.carry = null; const x = v.x + Math.cos(b.yaw) * 0.3, y = v.y + Math.sin(b.yaw) * 0.3; const out0 = G.Depot.outside || 0, led0 = S.ledgerN || 0;
+    // (the sack put on the ground by the world, in its step)
+    G.Possess.apply(() => { (G.S.loose || (G.S.loose = [])).push({ id: G.S.nextId++, k: 'sal', n: 2, x, y, op: 0, cid: 0, fac: G.Fac.idOfV(v), day: G.S.day, prova: 1 }); return { ok: true }; }); frame();
+    const c = holdE('atividade'); const t0 = S.clock;
+    for (let k = 0; k < 90; k++) frame(false);
+    const still = !v.carry && (S.loose || []).some(o => o.prova);
+    let tGot = null; for (let k = 0; k < 600 && tGot === null; k++) { frame(); if (v.carry) tGot = S.clock; }
+    const e = (S.ledger || []).slice(-3).find(q => q[8] === 'pegar');
+    const g = G.Act.ANIM.levantar; const bad = vbad();
+    ok('o que as atividades oferecem é feito pela porta delas (Act.perform), no tempo do gesto, no passo do mundo', !!(c && c.ok) && still && tGot !== null && tGot - t0 >= g.contact - 1e-6 && !!e && (G.Depot.outside || 0) === out0 && !bad.length,
+      `${c ? c.label : 'nada oferecido'}; com o mundo parado ${still ? 'o saco no chão' : 'o saco foi'}; nas mãos ${tGot !== null ? (tGot - t0).toFixed(2) + ' s do mundo depois (o contato: ' + g.contact + ' s)' : 'nunca'}; no livro-razão: ${e ? e[3] + ' → ' + e[4] + ', ' + e[6] + ' de ' + e[5] : 'nada'} (${(S.ledgerN || 0) - led0} lançamento); fora do passo: ${(G.Depot.outside || 0) - out0}; ${vtxt(bad)}`);
+    v.carry = null;
+  } }
+
 // ------------------------------ 2. the world stopped: the act waits ------------------------------
 { const tree = [...S.trees.values()].filter(t => G.Nature.isChoppable(t) && t.stage === 'grow' && t.size >= 0.8 && !t.claim).sort((a, b) => b.id - a.id).find(t => bodyAt(t.x, t.y, 0.42));
   if (!tree) ok('com o mundo parado o ato não termina', false, 'nenhuma árvore');
@@ -124,9 +162,9 @@ const freshTree = () => [...S.trees.values()].filter(t => G.Nature.isChoppable(t
 { const tree = freshTree(); const v = G.Possess.body();
   if (!tree || !v) ok('o corpo morre entre o pedido e o passo: nada feito', false, 'nenhuma árvore');
   else {
-    const a = untilAsked('arvore'); const c0 = tree.chop; G.Village.kill(v, 'old'); frame(); G.Avatar.detach();
+    v.carry = null; const a = untilAsked('arvore'); const c0 = tree.chop; G.Village.kill(v, 'old'); frame(); G.Avatar.detach();
     const bad = vbad();
-    ok('o corpo morre entre o golpe e o passo do mundo: o golpe não é dado, nada fica esperando', !!a && tree.chop === c0 && !S.avatar && G.Possess.pending() === 0 && !bad.length, `${a ? 'golpe pedido' : 'sem golpe'}; a árvore ${tree.chop === c0 ? 'igual' : 'cortada'}; ${S.avatar ? 'ainda encarnado' : 'o deus de volta'}; ${G.Possess.pending()} pedidos; ${vtxt(bad)}`);
+    ok('o corpo morre entre o golpe e o passo do mundo: o golpe não é dado, nada fica esperando', !!a && tree.chop === c0 && !S.avatar && G.Possess.pending() === 0 && !bad.length, `${a ? 'golpe pedido' : 'sem golpe (diante do corpo: ' + front() + ')'}; a árvore ${tree.chop === c0 ? 'igual' : 'cortada'}; ${S.avatar ? 'ainda encarnado' : 'o deus de volta'}; ${G.Possess.pending()} pedidos; ${vtxt(bad)}`);
   } }
 // the god takes the rock away: the world says no, the hands come back empty
 { const rock = [...S.rocks.values()].filter(r => r.stone >= 4 && !r.claim).sort((a, b) => a.id - b.id).find(r => bodyAt(r.x, r.y, 0.62)); const v = G.Possess.body();
@@ -134,31 +172,31 @@ const freshTree = () => [...S.trees.values()].filter(t => G.Nature.isChoppable(t
   else {
     v.carry = null; const a = untilAsked('pedra'); G.Nature.removeRock(rock); let k = 0; for (; k < 120 && G.Avatar.busy(); k++) frame();
     const bad = vbad();
-    ok('o deus tira a pedra entre o golpe e o passo do mundo: o mundo diz não, nenhuma pedra nas mãos, o ato acaba', !!a && a.res && !a.res.ok && !v.carry && !G.Avatar.busy() && !bad.length, `${a ? 'golpe pedido' : 'sem golpe'}; resposta: ${a && a.res ? (a.res.ok ? 'feito' : 'não — ' + a.res.why) : '-'}; ${v.carry ? 'pedra nas mãos' : 'mãos vazias'}; ${G.Avatar.busy() ? 'ainda ocupado' : 'livre'} em ${k} quadros; ${vtxt(bad)}`);
+    ok('o deus tira a pedra entre o golpe e o passo do mundo: o mundo diz não, nenhuma pedra nas mãos, o ato acaba', !!a && a.res && !a.res.ok && !v.carry && !G.Avatar.busy() && !bad.length, `${a ? 'golpe pedido' : 'sem golpe (diante do corpo: ' + front() + ')'}; resposta: ${a && a.res ? (a.res.ok ? 'feito' : 'não — ' + a.res.why) : '-'}; ${v.carry ? 'pedra nas mãos' : 'mãos vazias'}; ${G.Avatar.busy() ? 'ainda ocupado' : 'livre'} em ${k} quadros; ${vtxt(bad)}`);
   } }
 // the game saved and loaded between the two: the world saved is the world loaded — the stroke was never given
 { const tree = freshTree(); const v = G.Possess.body();
   if (!tree || !v) ok('salvar e carregar entre o pedido e o passo', false, 'nenhuma árvore');
   else {
-    const a = untilAsked('arvore'); const c0 = tree.chop, id = tree.id; M.salvarCarregar(); S = G.S;
+    v.carry = null; const a = untilAsked('arvore'); const c0 = tree.chop, id = tree.id; M.salvarCarregar(); S = G.S;
     const t2 = S.trees.get(id); const v2 = G.Possess.body(); const pend = G.Possess.pending(); if (v2) G.Avatar.attach(v2);
     for (let k = 0; k < 60; k++) frame();
     const bad = vbad();
-    ok('salvar e carregar entre o golpe e o passo do mundo: o mundo carregado é o salvo, nada pendurado, o corpo segue', !!a && !!t2 && t2.chop === c0 && pend === 0 && !!v2 && !bad.length && M.limpo(), `${a ? 'golpe pedido' : 'sem golpe'}; a árvore ${t2 ? (t2.chop === c0 ? 'igual' : 'cortada') : 'sumiu'}; ${pend} pedidos depois de carregar; ${v2 ? 'o corpo de volta' : 'sem corpo'}; ${vtxt(bad)}`);
+    ok('salvar e carregar entre o golpe e o passo do mundo: o mundo carregado é o salvo, nada pendurado, o corpo segue', !!a && !!t2 && t2.chop === c0 && pend === 0 && !!v2 && !bad.length && M.limpo(), `${a ? 'golpe pedido' : 'sem golpe (diante do corpo: ' + front() + ')'}; a árvore ${t2 ? (t2.chop === c0 ? 'igual' : 'cortada') : 'sumiu'}; ${pend} pedidos depois de carregar; ${v2 ? 'o corpo de volta' : 'sem corpo'}; ${vtxt(bad)}`);
   } }
 // the god gives the body back between the two: the stroke is not given, the person goes back to their life
 { const tree = freshTree(); const v = G.Possess.body();
   if (!tree || !v) ok('devolver o corpo entre o pedido e o passo', false, 'nenhuma árvore');
   else {
-    const a = untilAsked('arvore'); const c0 = tree.chop; G.Possess.release('deus'); G.Avatar.detach(); frame();
+    v.carry = null; const a = untilAsked('arvore'); const c0 = tree.chop; G.Possess.release('deus'); G.Avatar.detach(); frame();
     const bad = vbad();
-    ok('o deus devolve o corpo entre o golpe e o passo do mundo: o golpe não é dado, a pessoa volta à sua vida', !!a && tree.chop === c0 && (!v.task || v.task.type !== 'avatar') && G.Possess.pending() === 0 && !bad.length, `${a ? 'golpe pedido' : 'sem golpe'}; a árvore ${tree.chop === c0 ? 'igual' : 'cortada'}; a tarefa: ${v.task ? v.task.type : 'nenhuma'}; ${vtxt(bad)}`);
+    ok('o deus devolve o corpo entre o golpe e o passo do mundo: o golpe não é dado, a pessoa volta à sua vida', !!a && tree.chop === c0 && (!v.task || v.task.type !== 'avatar') && G.Possess.pending() === 0 && !bad.length, `${a ? 'golpe pedido' : 'sem golpe (diante do corpo: ' + front() + ')'}; a árvore ${tree.chop === c0 ? 'igual' : 'cortada'}; a tarefa: ${v.task ? v.task.type : 'nenhuma'}; ${vtxt(bad)}`);
   } }
 // the world moves the body between the two (a building rising where it stood, a push): what the hands meant there is not done
 { const tree = freshTree(); const v = G.Possess.body();
   if (!tree || !v) ok('o mundo move o corpo entre o pedido e o passo', false, 'nenhuma árvore');
   else {
-    const b0 = G.Interact.best(); const a = untilAsked('arvore'); const c0 = tree.chop; const x0 = v.x; v.x += 0.35; frame(); frame();
+    v.carry = null; const b0 = G.Interact.best(); const a = untilAsked('arvore'); const c0 = tree.chop; const x0 = v.x; v.x += 0.35; frame(); frame();
     const bad = vbad();
     ok('o mundo move o corpo entre o golpe e o passo do mundo: o golpe não é dado lá, o ato acaba', !!a && tree.chop === c0 && a.asked.res && !a.asked.res.ok && !G.Avatar.busy() && !bad.length, `${a ? 'golpe pedido, o mundo: ' + (a.asked.res ? (a.asked.res.ok ? 'feito' : 'não feito') : 'sem resposta') : 'sem golpe (diante do corpo: ' + (b0 ? b0.label + (b0.ok ? '' : ' — ' + b0.why) : 'nada') + ')'}; movido ${((v.x - x0) * L).toFixed(1)} m; a árvore ${tree.chop === c0 ? 'igual' : 'cortada'}; ${G.Avatar.busy() ? 'ainda ocupado' : 'livre'}; ${vtxt(bad)}`);
   } }

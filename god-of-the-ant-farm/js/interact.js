@@ -70,11 +70,14 @@
   // its own step (Avatar.act's op, through Possess.apply), and it lasts the world seconds the same work lasts for anyone of the
   // world — the woodcutter's stroke and the dt × workMul it adds to the tree, the quarryman's load of stone in 3.8 s, a load of
   // berries in 2.2 s, a meal at the store in 1.6 s, a prayer at the temple in 5 s (villagers.js), a try of the hands in the
-  // shallows slower than the fisher's line (5 to 9 s for one to three fish): the player's presence gives no work for free. Only
-  // the hands' own gestures — a word, a wave, a hug's arms, the lift and the setting down the world's people do in no time —
-  // keep the body's own seconds
-  const WT = { chop: 0.55, mine: 0.6, mineLoad: 3.8, gather: 2.2, eat: 1.6, pray: 5, fish: 2.2, lift: 1.1, liftAt: 0.6, put: 1.1, putAt: 0.65 };
+  // shallows slower than the fisher's line (5 to 9 s for one to three fish), a lift and a setting down in the docker's own
+  // gestures (G.Act.ANIM): the player's presence gives no work for free. Only the hands' own gestures — a word, a wave, a hug's
+  // arms — keep the body's own seconds
+  const WT = { chop: 0.55, mine: 0.6, mineLoad: 3.8, gather: 2.2, eat: 1.6, pray: 5, fish: 2.2 };
   I.WT = WT;
+  // (the gestures of the hands as the world's people make them — seconds of the world, the contact where the world passes the
+  // thing: C1's Act.ANIM —, for the body too: it never lifts a load faster than the docker)
+  const AN = k => (G.Act && G.Act.ANIM && G.Act.ANIM[k]) || { act: 'lift', dur: 1, contact: 0.6 };
   const wm = v => G.Vg.workMul(v);
   // (the body's own count of the work at a rock, as the quarryman keeps his in his errand — nothing of the world, nothing saved)
   let mineW = null; G.worldHooks.push(() => { mineW = null; });
@@ -82,8 +85,10 @@
   // until the world has answered, coming back after — with the load the world put in them, or without the one it took; on a
   // refusal, back as they were. P: the point (metres), or a function of the act giving it
   const reachTo = (P, wid, back) => a => {
-    const dt = a.rwT === undefined ? 0 : Math.max(0, a.tr - a.rwT); a.rwT = a.tr;
-    a.rw = G.clamp((a.rw || 0) + (a.res ? -dt / (a.res.ok ? back || 0.45 : 0.35) : dt / 0.55), 0, 1);
+    const dt = a.rwT === undefined ? 0 : Math.max(0, a.tr - a.rwT); a.rwT = a.tr; if (a.rs === undefined) a.rs = a.tr;
+    // (the hands get there just before the contact: the world's contact is a while away in the body's own seconds)
+    const up = G.clamp(((a.world ? a.contact / G.Space.TIME : a.contact) - a.rs) * 0.85, 0.25, 1.2);
+    a.rw = G.clamp((a.rw || 0) + (a.res ? -dt / (a.res.ok ? back || 0.45 : 0.35) : dt / up), 0, 1);
     const p = typeof P === 'function' ? P(a) : P; return { X: p[0], Y: p[1], Z: p[2], w: a.rw, wid: wid || 0.32 };
   };
   I.reachTo = reachTo;
@@ -91,6 +96,14 @@
   const gY = (X, Z) => G.Avatar.floorAt(X, Z);
   // (a point before the body, toward a thing of the world and in reach of the arms: at most a stride ahead, up metres over the ground)
   const toward = (ctx, X, Z, up, most) => { const d = Math.hypot(X - ctx.X, Z - ctx.Z), k = d > 1e-6 ? Math.min(most || 0.55, Math.max(0.3, d - 0.3)) / d : 0; const x = ctx.X + (X - ctx.X) * k, z = ctx.Z + (Z - ctx.Z) * k; return [x, gY(x, z) + up, z]; };
+  // (a step or two up to a thing before the hands go to it: where the feet stop — near metres short of it — and how long the walk
+  // takes, in the body's own seconds; none when it is in reach)
+  const walkUp = (ctx, v, X, Z, near) => {
+    const d = Math.hypot(X - ctx.X, Z - ctx.Z); if (d <= near + 0.25) return { to: null, go: 0 };
+    const f = Math.atan2(Z - ctx.Z, X - ctx.X); return { to: [X - Math.cos(f) * near, Z - Math.sin(f) * near], go: G.clamp((d - near) / (G.Possess.caps(v).walk * 1.1), 0.25, 1.6) };
+  };
+  // (the point where a load in the hands goes down: before the feet where they stand when the hands go, toward X, Z)
+  const putAt = (v, X, Z) => a => { if (!a.P) { const H = G.People3D && G.People3D.look(v).held; a.P = toward(G.Avatar.pos(), X, Z, (H ? H.size[1] / 2 : 0.15) + 0.02); } return a.P; };
   // (a word the world says back to the hands: shown when the world has answered)
   const say = (txt, d) => { if (txt && G.IncUI && G.IncUI.toast) G.IncUI.toast(txt, d || 2.4); };
   const deny = r => { if (r && r.why) say(r.why); G.Audio && G.Audio.play && G.Audio.play('deny'); };
@@ -279,13 +292,11 @@
       if (isStore(b)) {
         const stk = G.Fac.stockV(v);
         if (v.carry && v.carry.n > 0) {
-          // (the load set down at the door — a step up to it first —, and into the people's stock as anyone's: the world's delivery)
-          const D = G.Vg.door(b); const DX = D[0] * L(), DZ = D[1] * L(); const d = Math.hypot(DX - ctx.X, DZ - ctx.Z);
-          const to = d > 1.1 ? [DX - Math.cos(f) * 0.9, DZ - Math.sin(f) * 0.9] : null; const go = to ? G.clamp((d - 0.9) / (G.Possess.caps(v).walk * 1.1), 0.3, 1.5) : 0;
-          // (the point where the load goes down: before the body where it stands when the hands go, toward the door)
-          const put = a => { if (!a.P) { const H = G.People3D && G.People3D.look(v).held; a.P = toward(G.Avatar.pos(), DX, DZ, (H ? H.size[1] / 2 : 0.15) + 0.02); } return a.P; };
-          const hands = reachTo(put, 0.34, 0.4);
-          G.Avatar.act({ anim: 'carry', dur: WT.put + go, contact: WT.putAt + go, face: f, to, toT: go, vact: 'pousar', reach: a => (a.tr < go ? null : hands(a)),
+          // (the load set down at the door — a step up to it first —, and into the people's stock as anyone's: the world's delivery,
+          // in the docker's gesture of setting down)
+          const D = G.Vg.door(b); const DX = D[0] * L(), DZ = D[1] * L(); const { to, go } = walkUp(ctx, v, DX, DZ, 0.9); const g = AN('pousar'), goW = go * G.Space.TIME;
+          const hands = reachTo(putAt(v, DX, DZ), 0.34, 0.4);
+          G.Avatar.act({ world: true, anim: 'carry', dur: g.dur + goW, contact: g.contact + goW, face: f, to, toT: go, vact: g.act, reach: a => (a.tr < go ? null : hands(a)),
             op: w => deliver(w, b), then: r => say(`Você guarda ${r.n} de ${G.Eco ? G.Eco.name(r.k) : r.k} ${at(b)}.`), fail: deny });
           return { ok: true };
         }
@@ -323,7 +334,16 @@
   function deliver(w, b) {
     const S = G.S; const c = w.carry; if (!c || !(c.n > 0)) return { ok: false, why: 'Suas mãos estão vazias.' };
     if (!S.buildings.has(b.id) || !b.built) return { ok: false, why: 'Não existe mais.' };
-    if (G.Village.facOfSet(b.set) !== G.Fac.idOfV(w)) return { ok: false, why: 'Isto é de outro povo: o estoque daqui não é do seu.' };
+    const fid = G.Fac.idOfV(w); if (G.Village.facOfSet(b.set) !== fid) return { ok: false, why: 'Isto é de outro povo: o estoque daqui não é do seu.' };
+    // (a load that belongs somewhere — an operation's crate, a purchase on its way home — goes only there, by the depot, as the
+    // world's people take theirs (activity.js runCarga): never into the people's store by mistake; what does not fit stays in the arms)
+    const op = c.op && G.Act ? G.Act.get(c.op) : null; const bound = op && G.Act.live(op) ? op.to : c.to && G.Depot && G.Depot.exists(c.to) ? c.to : null;
+    if (bound) {
+      if (bound !== 'f:' + fid) { const pl = G.Act.placeOf(bound); return { ok: false, why: `Esta carga tem destino: ${pl ? G.Village.buildName(pl).toLowerCase() : 'outro lugar'}.` }; }
+      const r = G.Depot.move('v:' + w.id, bound, c.k, c.n, { op: c.op || 0, code: 'entrega', by: w.id, part: true });
+      if (!r.ok) return { ok: false, why: 'Não cabe mais nada no estoque do seu povo.' };
+      G.FX && G.FX.deposit(w.x, w.y, c.k, r.n); G.Possess.deed('entrega'); return { ok: true, k: c.k, n: r.n };
+    }
     const k = c.k, n = c.n * (S.blessed && (k === 'stone' || k === 'wood') ? 2 : 1);
     const add = G.Village.addStock(k, n, G.Fac.idOfV(w)); w.st[k] = (w.st[k] || 0) + c.n;
     if (add > 0) G.FX && G.FX.deposit(w.x, w.y, k, add);
@@ -379,7 +399,8 @@
       if (tr.stage === 'log') {
         // (the wood off the trunk into the arms, as the woodcutter takes his load: the empty hands go down to it, the world puts
         // the load in them, and it comes up with the body)
-        G.Avatar.act({ anim: 'carry', dur: WT.lift, contact: WT.liftAt, face: f, vact: 'levantar', reach: reachTo(toward(ctx, t.X, t.Z, 0.16), 0.5, 0.45),
+        const g = AN('levantar');
+        G.Avatar.act({ world: true, anim: 'carry', dur: g.dur, contact: g.contact, face: f, vact: g.act, reach: reachTo(toward(ctx, t.X, t.Z, 0.16), 0.5, 0.45),
           op: w => {
             if (!G.S.trees.has(tr.id) || tr.stage !== 'log') return { ok: false, why: 'A lenha não está mais aqui.' };
             if (w.carry && w.carry.n > 0 && w.carry.k !== 'wood') return { ok: false, why: 'Suas mãos já estão cheias.' };
@@ -513,8 +534,8 @@
     run(ctx, t) {
       const b = t.b; const v = ctx.v; const P = G.Possess; const f = face(ctx, t.X, t.Z);
       // (the load set down at the works, and into them as the builders' loads go: what the works need, the rest to the stock)
-      const put = a => { if (!a.P) { const H = G.People3D && G.People3D.look(v).held; a.P = toward(G.Avatar.pos(), t.X, t.Z, (H ? H.size[1] / 2 : 0.15) + 0.02); } return a.P; };
-      G.Avatar.act({ anim: 'carry', dur: WT.put, contact: WT.putAt, face: f, vact: 'pousar', reach: reachTo(put, 0.34, 0.4),
+      const { to, go } = walkUp(ctx, v, t.X, t.Z, 0.8); const g = AN('pousar'), goW = go * G.Space.TIME; const hands = reachTo(putAt(v, t.X, t.Z), 0.34, 0.4);
+      G.Avatar.act({ world: true, anim: 'carry', dur: g.dur + goW, contact: g.contact + goW, face: f, to, toT: go, vact: g.act, reach: a => (a.tr < go ? null : hands(a)),
         op: w => {
           if (!w.carry || !(w.carry.n > 0) || !G.S.buildings.has(b.id) || b.built) return { ok: false, why: 'A obra já terminou.' };
           const n = w.carry.n, k = w.carry.k; const used = Math.min(n, b.need[k] || 0); if (used <= 0) return { ok: false, why: 'A obra não precisa disso.' };
@@ -522,6 +543,25 @@
           G.FX && G.FX.chips(b.x + b.w / 2, b.y + b.h / 2, k === 'wood' ? '#a67c4e' : '#9a9a9a');
           P.deed('obra'); return { ok: true }; // (one load brought, whatever it held)
         }, then: () => say('Você entrega o material aos construtores.'), fail: deny });
+      return { ok: true };
+    },
+  });
+  // what the world's activities offer the hands here (G.Act.offers — a crate on the quay, the stall, a hand to lend: C1's
+  // operations): done through the door the world's people use (Act.perform: the same checks, the same transfer), at the contact
+  // of the same gesture, in the same seconds of the world (Act.ANIM). Its words are the world's answer
+  const GEST = { lift: 'carry', arrange: 'carry', give: 'interact', pay: 'interact', haggle: 'talk', examine: 'interact', count: 'interact', call: 'wave', point: 'interact' };
+  I.add({
+    id: 'atividade', prio: 4.2, reach: 2.6,
+    find(ctx) { if (!G.Act || !G.Act.offers) return []; return G.Act.offers(ctx.v, ctx.x, ctx.y, 2.6 / L()).filter(o => o && o.at).map(o => ({ o, X: o.at[0] * L(), Z: o.at[1] * L() })); },
+    label(ctx, t) { return t.o.label || 'Ajudar'; },
+    can(ctx, t) { return t.o.ok === false ? { ok: false, why: t.o.why || 'Agora não dá.' } : { ok: true }; },
+    run(ctx, t) {
+      const o = t.o; const v = ctx.v; const g = AN(o.anim); const f = face(ctx, t.X, t.Z);
+      const { to, go } = walkUp(ctx, v, t.X, t.Z, 0.7); const goW = go * G.Space.TIME; const hand = g.act === 'lift' || g.act === 'arrange';
+      // (where the hands go: with a load, down before the feet; empty, to the thing — on the ground, or on the counter)
+      const hands = reachTo(a => { if (!a.P) { const H = G.People3D && G.People3D.look(v).held; a.P = H ? putAt(v, t.X, t.Z)(a) : toward(G.Avatar.pos(), t.X, t.Z, g.act === 'arrange' ? 0.9 : 0.2); } return a.P; }, 0.36, 0.45);
+      G.Avatar.act({ world: true, anim: GEST[g.act] || 'interact', dur: Math.max(g.dur, g.contact + 0.2) + goW, contact: g.contact + goW, face: f, to, toT: go, vact: g.act,
+        reach: hand ? a => (a.tr < go ? null : hands(a)) : null, op: w => G.Act.perform(w, o), then: r => say(r.msg), fail: deny });
       return { ok: true };
     },
   });

@@ -162,8 +162,8 @@ function measure(H, R) {
   const L0 = () => { const L = P3.look(v); L.ground = 0; return L; };
   for (let k = 0; k < 24; k++) { const L = L0(); P3.reachOf(s, v, L, 0, 0, 0, dt); steps.push(['alcança', L.reach ? +L.reach.w.toFixed(2) : 0, !!L.held]); }
   v.carry = { k: 'food', n: 2, crate: 1, fish: 'arenque', fishCol: '#a8c0d0' }; // (the world's contact: the crate passes to the hands)
-  let liftY = []; for (let k = 0; k < 20; k++) { const L = L0(); P3.reachOf(s, v, L, 0, 0, 0, dt); const pose = Object.assign(A.POSE0(), A.hold(A.pose('carry', k * dt, 0), L, 'carry', k * dt, 0)); pose.holdW = 1; L.plant = [{ on: 0 }, { on: 0 }]; const R = P3.rig(0, 0, 0, Math.PI / 2, pose, L); liftY.push(+R[B.carry].elements[13].toFixed(2)); if (k === 6) v.act = 'carregar'; }
-  v.act = 'pousar'; let put = []; for (let k = 0; k < 20; k++) { const L = L0(); P3.reachOf(s, v, L, 0, 0, 0, dt); put.push(L.reach ? +L.reach.w.toFixed(2) : 0); }
+  let liftY = []; for (let k = 0; k < 20; k++) { const L = L0(); P3.reachOf(s, v, L, 0, 0, 0, dt); const pose = Object.assign(A.POSE0(), A.hold(A.pose('carry', k * dt, 0), L, 'carry', k * dt, 0)); pose.holdW = 1; L.plant = [{ on: 0 }, { on: 0 }]; const R = P3.rig(0, 0, 0, Math.PI / 2, pose, L); liftY.push(+R[B.carry].elements[13].toFixed(2)); if (k === 6) v.act = ''; } // (G.Act.ANIM.carregar.act: walking with it)
+  v.act = 'lift'; let put = []; for (let k = 0; k < 20; k++) { const L = L0(); P3.reachOf(s, v, L, 0, 0, 0, dt); put.push(L.reach ? +L.reach.w.toFixed(2) : 0); } // (G.Act.ANIM.pousar.act: the same gesture, with the load in the hands)
   v.carry = null; v.act = ''; const L = L0(); P3.reachOf(s, v, L, 0, 0, 0, dt); const after = L.held === null;
   const reached = steps[steps.length - 1][1] > 0.95 && !steps.some(q => q[2]);
   const lifted = liftY[0] < 0.35 && liftY[liftY.length - 1] > 0.9 && liftY.every((y, i) => !i || y >= liftY[i - 1] - 0.01);
