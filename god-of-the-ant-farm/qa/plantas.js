@@ -21,7 +21,13 @@ const SIDES = ['S', 'E', 'W', 'N'];
 // (the harness stands Date.now still, as the browser tests do: the time is the process's own clock)
 const clock = () => Number(process.hrtime.bigint() / 1000n) / 1000;
 const t0 = clock(); let nPlans = 0, nBad = 0, nFell = 0, nShort = 0, nGen = 0, nCombo = 0; const small = [], byGen = []; const badEx = [], fellEx = [];
-let msMax = 0, msWho = ''; let nCells = 0, nFloorBad = 0; const floorEx = []; let nShell = 0, nShellBad = 0; const shellEx = [];
+const shortBy = new Map(); const shortEx = [];
+// (the dearest plans and attempts as the round measured them — on a busy machine a cheap one is now and then measured a
+// hundred times dearer: the candidates, made again at the end, are the ones the round put on top and each type's own)
+const TOP = { plan: [], att: [], planBy: new Map(), attBy: new Map() };
+const note = (L, w, n) => { if (L.length >= n && w.ms <= L[L.length - 1].ms) return; L.push(w); L.sort((x, y) => y.ms - x.ms); if (L.length > n) L.pop(); };
+const noteBy = (M, k, w, n) => { let L = M.get(k); if (!L) M.set(k, L = []); note(L, w, n); };
+const low = (L, ms) => L.length >= 40 && ms <= L[L.length - 1].ms; let nCells = 0, nFloorBad = 0; const floorEx = []; let nShell = 0, nShellBad = 0; const shellEx = [];
 for (const type of Object.keys(In.TYPES)) {
   if (ONLY && !ONLY.includes(type)) continue;
   const def = G.BDEF[type]; if (!def) { ok('tipo ' + type, false, 'tipo sem BDEF'); continue; }
@@ -36,11 +42,15 @@ for (const type of Object.keys(In.TYPES)) {
         const id = 1000 + q * 7919 + c.length * 31;
         const s = SIDES[q % 4]; const b = { id, type, x: 10, y: 10, w: def.w, h: def.h };
         const rec = Object.assign({}, rec0, { f, s, pw: q % 5 === 0 ? 2 : 0 });
-        const a = clock(); const p = In.make(b, rec); const ms = clock() - a; if (ms > msMax) { msMax = ms; msWho = `${type}/${c}/${f} #${id}`; }
+        // (each attempt timed too: a plan made a little at a time stops between two of them)
+        const a = clock(); let tA = a, nA = 0; const tag = `${type}/${c}/${f} #${id}`;
+        In.trace = () => { const t = clock(), ms = t - tA; if (!low(TOP.att, ms)) note(TOP.att, { b, rec, n: nA, tag, ms }, 40); noteBy(TOP.attBy, type, { b, rec, n: nA, tag, ms }, 2); tA = t; nA++; };
+        const p = In.make(b, rec); const ms = clock() - a; In.trace = null;
+        if (!low(TOP.plan, ms)) note(TOP.plan, { b, rec, n: nA, tag, ms }, 40); noteBy(TOP.planBy, type, { b, rec, n: nA, tag, ms }, 2);
         nPlans++;
         // (a family the catalogue offers may not go on some lot: the plan falls to the next one offered there — always the
         // same —, or is laid out for fewer sleepers, said; an invalid plan is a failure, a fall is counted and must stay rare)
-        if (p.short) nShort++;
+        if (p.short) { nShort++; const k = `${type}/${p.fam}`; shortBy.set(k, (shortBy.get(k) || 0) + 1); if (process.env.VERB) shortEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id} → ${p.fam}: ${p.short} no chão`); }
         // (the shell seen from afar, alone, is the whole plan's — the same family, shell, storeys, holes, way in)
         if (q < 2) { In.uncache(); const s1 = In.shellOf(Object.assign({}, b, { ip: rec })); const strip = o => { const x = Object.assign({}, o); delete x.key; return JSON.stringify(x); }; nShell++; if (!s1 || strip(s1) !== strip(In.shellOfPlan(p))) { nShellBad++; if (shellEx.length < 4) shellEx.push(`${type}/${c}/${f} #${id}`); } }
         if (!p.ok || p.fam !== f) {
@@ -75,8 +85,18 @@ for (const type of Object.keys(In.TYPES)) {
     if (process.env.CAT) console.log(`  ${type}/${c}/${JSON.stringify(ctx)}: ${n} famílias: ${cat.ok.map(f => In.famName(f)).join(', ')}`);
   }
 }
-ok('todas as plantas válidas', nBad === 0, `${nPlans} plantas, ${nBad} inválidas; ${nShort} com gente dormindo no chão; a mais lenta ${msMax.toFixed(0)} ms (${msWho}, sem cache); ${((clock() - t0) / 1000).toFixed(1)} s`);
+const secs = (clock() - t0) / 1000;
+// (the candidates made again three times each: the least of the three is the cost; a plan made a little at a time, by the
+// god's view or the 3D, stops between two attempts — the dearest attempt is what one frame may have to wait for)
+const again = (w, one) => { let best = Infinity; for (let r = 0; r < 3; r++) { let n = 0, tA = clock(), mine = Infinity; const a = tA; In.trace = () => { const t = clock(); if (one && n === w.n) mine = t - tA; n++; tA = t; }; In.make(w.b, w.rec); In.trace = null; if (!one) mine = clock() - a; best = Math.min(best, mine); } return best; };
+const dearest = (L, M, one) => { let top = null; const raw = L.length ? L[0].ms : 0; for (const w of new Set(L.concat(...M.values()))) { w.min = again(w, one); if (!top || w.min > top.min) top = w; } return { top, raw }; };
+const DP = dearest(TOP.plan, TOP.planBy, false), DA = dearest(TOP.att, TOP.attBy, true);
+ok('todas as plantas válidas', nBad === 0, `${nPlans} plantas, ${nBad} inválidas; ${nShort} com gente dormindo no chão; a mais cara ${DP.top ? DP.top.min.toFixed(1) : 0} ms (${DP.top ? DP.top.tag + ', ' + DP.top.n + ' tentativas' : '-'}, sem cache; na rodada, com o ruído da máquina, até ${DP.raw.toFixed(0)} ms); ${secs.toFixed(1)} s`);
 for (const e of badEx) console.log('   ✗ ' + e);
+// (the ones laid out for fewer sleepers than the house holds, by type and family: each class explained or brought down)
+if (nShort) console.log('   com gente no chão, por tipo e família: ' + [...shortBy.entries()].sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k}: ${n}`).join(' · '));
+for (const e of shortEx) console.log('   ~ ' + e);
+if (DA.top) console.log(`   a tentativa mais cara: ${DA.top.min.toFixed(1)} ms (${DA.top.tag}, a ${DA.top.n + 1}ª; na rodada, até ${DA.raw.toFixed(0)} ms)`);
 ok('a casca de longe', nShellBad === 0, `${nShell} cascas pedidas sozinhas: ${nShellBad} diferentes da planta inteira${shellEx.length ? ' (' + shellEx.join(', ') + ')' : ''}`);
 ok('o chão fora das escadas', nFloorBad === 0, `${nCells} células de chão fora das escadas e dos degraus; em ${nFloorBad} a altura não é a do piso`);
 for (const e of floorEx) console.log('   ✗ ' + e);
@@ -87,7 +107,7 @@ console.log(`combinações abaixo de 5 só porque a arquitetura não permite mai
 for (const s of small.slice(0, process.env.CAT ? 999 : 12)) console.log('   · ' + s);
 // (a ratchet: the count the grammar has reached — it may only go down; brought down, the ceiling comes down with it, and the
 // goal is zero. Raised by a change, the change is wrong — unless the leader agrees and the commit says why)
-const GERADOR_TETO = 87;
+const GERADOR_TETO = 80;
 ok('abaixo de 5 pelo gerador', byGen.length <= GERADOR_TETO, `${byGen.length} combinações ficam abaixo de 5 só porque o gerador não armou famílias que a arquitetura permite (teto ${GERADOR_TETO}, a meta é zero)${byGen.length < GERADOR_TETO ? ' — baixou: desça o teto' : ''}`);
 for (const s of byGen.slice(0, process.env.CAT ? 999 : 30)) console.log('   ✗ ' + s);
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');

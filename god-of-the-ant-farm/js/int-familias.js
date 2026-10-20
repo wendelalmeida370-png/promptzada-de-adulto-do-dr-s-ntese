@@ -143,7 +143,8 @@
       const ai = annexIn = [ar[0] + (side === 'esquerda' ? at2 : 0), ar[1] + at2, ar[2] - (side === 'direita' ? at2 : 0), ar[3] - at2];
       const c = at2 / 2; P.walls4(0, [ar[0] + c, ar[1] + c, ar[2] - c, ar[3] - c], at2, ah, 1, 'parede', side === 'esquerda' ? { direita: 1 } : { esquerda: 1 });
       const wid = side === 'esquerda' ? P.outer.esquerda : P.outer.direita; const lenW = P.wlen(wid);
-      const vm = Math.max(ai[1] + 0.55, Math.min(ai[3] - 0.55, P.chance(0.5) ? (ai[1] + ai[3]) / 2 : ai[3] - 0.6));
+      // (in a hut with a loft, at the annex's front end: its back left whole for a mat — the loft's low roof sleeps fewer)
+      const mid = P.chance(0.5) && !(hut && upV === 'jirau'); const vm = Math.max(ai[1] + 0.55, Math.min(ai[3] - 0.55, mid ? (ai[1] + ai[3]) / 2 : ai[3] - 0.6));
       P.door(wid, Math.max(0.55, Math.min(lenW - 0.55, P.atOf(wid, [side === 'esquerda' ? sh[0] : sh[2], vm]))), 0.8, Math.min(1.85, ah - 0.1), -1, -1, 0, 'porta'); // (its rooms: the house's and the annex's, by where it falls)
     }
     // ---- the entrance: the front wall, before an open tile of the street ----
@@ -154,6 +155,9 @@
     if (cellar) P.level(-1, -2.1, 1.9, 'porao', I); // (under a corner of the house: the inside chooses which)
     if (topK === 'jirau') loftShell(P, top, lvT);
     if (topK === 'terraco' || topK === 'quarto') terraceShell(P, top, topK === 'quarto', lvT);
+    // ---- the steps from the ground: up to the porch on stilts, down into the sunken floor (seen from the street) ----
+    if (V === 'esteios') { const fv = round ? P.shell.cv + P.shell.rad : P.shell.r[3]; const e = P.entrance; const w = 0.95; P.stair('degraus', -1, 0, [e.u - w / 2, fv + 0.02, e.u + w / 2, fv + porch], 0, -1); }
+    if (V === 'funda') { const e = P.entrance; const w = Math.max(0.9, e.w + 0.05); const v1 = I[3]; const r = [e.u - w / 2, v1 - 0.8, e.u + w / 2, v1]; P.stair('degraus', -1, 0, r, 0, -1); P.zones.push({ lv: 0, r: [r[0] - 0.1, r[1] - 0.25, r[2] + 0.1, r[3]] }); }
     windows(P, round);
     if (P.inside()) return;
     // ======== the inside: each attempt's own dice ========
@@ -188,8 +192,6 @@
     if (cellar) porao(P, rooms, I);
     if (topK === 'jirau') loft(P, rooms, top, lvT);
     if (topK === 'terraco' || topK === 'quarto') terrace(P, rooms, top, lvT);
-    if (V === 'esteios') { const fv = round ? P.shell.cv + P.shell.rad : P.shell.r[3]; const e = P.entrance; const w = 0.95; P.stair('degraus', -1, 0, [e.u - w / 2, fv + 0.02, e.u + w / 2, fv + porch], 0, -1); }
-    if (V === 'funda') { const e = P.entrance; const w = Math.max(0.9, e.w + 0.05); const v1 = I[3]; const r = [e.u - w / 2, v1 - 0.8, e.u + w / 2, v1]; P.stair('degraus', -1, 0, r, 0, -1); P.zones.push({ lv: 0, r: [r[0] - 0.1, r[1] - 0.25, r[2] + 0.1, r[3]] }); }
     furnishHome(P, rooms, need);
   }
   const touches = (r, w) => { const vert = Math.abs(w.a[0] - w.b[0]) < 1e-6; const e = w.t / 2 + 0.02; if (vert) { const x = w.a[0]; return (Math.abs(r[0] - x) <= e || Math.abs(r[2] - x) <= e) && r[1] < Math.max(w.a[1], w.b[1]) && r[3] > Math.min(w.a[1], w.b[1]); } const z = w.a[1]; return (Math.abs(r[1] - z) <= e || Math.abs(r[3] - z) <= e) && r[0] < Math.max(w.a[0], w.b[0]) && r[2] > Math.min(w.a[0], w.b[0]); };
@@ -293,7 +295,7 @@
     for (let k = 1; k < n; k++) {
       let id = P.room(k, 'quarto', I1); const ids = [id];
       if (two) {
-        const id1 = I1[3] - I1[1]; const at = I1[1] + id1 * P.rr(0.47, 0.53);
+        const id1 = I1[3] - I1[1]; const sp = P.rr(0.47, 0.53); const at = I1[1] + id1 * (P.attempt >= 4 && P.attempt % 2 ? (P.attempt % 4 === 1 ? 0.38 : 0.62) + sp - 0.5 : sp);
         const [back, front, w] = P.split(id, 'v', at, 0.1, h1); ids.splice(0, 1, back, front);
         const len = P.wlen(w); P.door(w, Math.max(0.6, Math.min(len - 0.6, len * P.pick([0.3, 0.5, 0.7]))), 0.8, Math.min(1.95, h1 - 0.15), back, front, 0, 'porta');
       }
@@ -371,6 +373,44 @@
     }
   }
 
+  // ------------------------------ the row of beds ------------------------------
+  // a row of beds along one wall of a room: as many sleepers as the wall's free stretches take — between the corners, the
+  // ways the doors and the stairs keep and what stands there already —, each stretch filled with the mix of the household's
+  // beds (the couple's, the single, the mat two share) that sleeps most there; head to the wall where the room is deep
+  // enough for a bed and the way along its foot, along the wall where it is not. Each bed is placed as any piece (it must
+  // fit and leave every way open): the first that does not go ends the row. The sleepers it added
+  function rowOf(P, id, side, kinds, upto) {
+    const R = P.rooms[id]; if (!R || R.circ) return 0; const r = R.r, lv = R.lv; const n0 = P.places();
+    const across = side === 'fundo' || side === 'frente'; const deep = across ? r[3] - r[1] : r[2] - r[0];
+    const a0 = across ? r[0] : r[1], a1 = across ? r[2] : r[3];
+    for (const head of [true, false]) {
+      const ks = [];
+      for (const k of kinds) { const D = IT[k]; if (!D || !D.places || D.per || ks.some(o => o.k === k)) continue; const W = head ? D.w : D.d, Dp = head ? D.d : D.w; if (Dp + 0.7 <= deep + 1e-6) ks.push({ k, W, Dp, pl: D.places }); }
+      if (!ks.length) continue;
+      const Dm = Math.max(...ks.map(o => o.Dp));
+      const strip = side === 'fundo' ? [r[0], r[1], r[2], r[1] + Dm] : side === 'frente' ? [r[0], r[3] - Dm, r[2], r[3]] : side === 'esquerda' ? [r[0], r[1], r[0] + Dm, r[3]] : [r[2] - Dm, r[1], r[2], r[3]];
+      const F = P.floorOf(lv); const cut = [];
+      for (const z of F.solid.map(q => q.r).concat(F.zones)) if (P.ovr(z, strip)) cut.push(across ? [z[0], z[2]] : [z[1], z[3]]);
+      cut.sort((x, y) => x[0] - y[0]); const free = []; let at = a0;
+      for (const [x0, x1] of cut) { if (x0 > at + 0.3) free.push(x0 - at); at = Math.max(at, x1); }
+      if (a1 > at + 0.3) free.push(a1 - at);
+      // (each stretch: the mix that sleeps most in its length, a hand's gap between two beds — the widest first)
+      const plan = [];
+      for (const Lf of free) {
+        const U = 0.05, n = Math.floor(Lf / U + 1e-6); const best = new Array(n + 1).fill(0), pick = new Array(n + 1).fill(-1);
+        for (let x = 1; x <= n; x++) { best[x] = best[x - 1]; pick[x] = -2; for (let q = 0; q < ks.length; q++) { const w = Math.ceil((ks[q].W + 0.03) / U); if (w <= x && best[x - w] + ks[q].pl > best[x]) { best[x] = best[x - w] + ks[q].pl; pick[x] = q; } } }
+        for (let x = n; x > 0;) { const q = pick[x]; if (q === -2) { x--; continue; } if (q < 0) break; plan.push(ks[q]); x -= Math.ceil((ks[q].W + 0.03) / U); }
+      }
+      plan.sort((x, y) => y.W - x.W);
+      for (const o of plan) {
+        if (P.places() >= upto) break; const D = IT[o.k];
+        if (!P.place(o.k, lv, id, head ? { sides: [side], fixed: true } : { sides: [side], fixed: true, w: D.d, d: D.w })) break;
+      }
+      if (P.places() > n0) break;
+    }
+    return P.places() - n0;
+  }
+
   // ------------------------------ the furniture of a home ------------------------------
   function furnishHome(P, rooms, need) {
     const tr = P.tr, rec = P.rec; const rich = rec.w >= 2; const shack = rec.t === 'barraco';
@@ -396,7 +436,16 @@
     // the household's beds, room by room (the north's benches along its walls)
     // (a crowded house, every other attempt: the mats two share first — they take less floor for each sleeper)
     const dense = need >= 5 && (P.attempt % 2 === 1 || need >= 9);
+    // (every third attempt of a house of three and more, the beds in rows along the walls first, room by room, the longest
+    // walls first: the mix of the household's beds that sleeps most there)
+    const rows = need >= 3 && !shack && P.attempt % 3 === 1;
+    const rowKinds = [couple].concat(kinds, ['esteira-casal', 'esteira']).filter(k => k && IT[k] && !IT[k].per);
+    const wallLen = (R, s) => (s === 'fundo' || s === 'frente' ? R.r[2] - R.r[0] : R.r[3] - R.r[1]);
     const beds = () => {
+      if (rows) for (const id of order) {
+        const R = P.rooms[id]; if (!R || R.circ || P.places() >= need) continue;
+        for (const s of ['fundo', 'esquerda', 'direita', 'frente'].sort((a, b) => wallLen(R, b) - wallLen(R, a))) { if (P.places() >= need) break; rowOf(P, id, s, rowKinds, need); }
+      }
       if (dense) for (const id of order) { if (P.places() >= need - 1) break; fill('esteira-casal', id); }
       for (const id of order) { for (const k of kinds) { if (P.places() >= need) break; fill(k, id); } if (P.places() >= need) break; }
       // (what is still short: the mat two share — children, most often —, then the single mat, wherever they go)
@@ -416,19 +465,26 @@
     const keep = () => {
       const keepAt = [rooms.despensa, rooms.anexo, rooms.lar, rooms.leitos, rooms.quarto].concat(rooms.up || []).filter(x => x !== undefined);
       const pantry = tr.keep.find(k => k !== 'arca') || 'cesto';
-      let gotP = false; for (const id of keepAt) { const lv = P.rooms[id].lv; if (P.place(pantry, lv, id) || P.place('cesto', lv, id)) { gotP = true; break; } }
+      // (every fourth attempt of a full house, its things up on the walls first — baskets from the beams, the shelf on pegs,
+      // the niche —, the floor left to the sleepers)
+      const up = need >= 4 && P.attempt % 4 === 3;
+      let gotP = false; if (up) for (const id of keepAt) { if (P.niche('cesto-pendurado', P.rooms[id].lv, id)) { gotP = true; break; } }
+      if (!gotP) for (const id of keepAt) { const lv = P.rooms[id].lv; if (P.place(pantry, lv, id) || P.place('cesto', lv, id)) { gotP = true; break; } }
       // (no floor for the jars: the food hung in baskets from the beams)
       if (!gotP) for (const id of keepAt) { if (P.niche('cesto-pendurado', P.rooms[id].lv, id)) { gotP = true; break; } }
       if (!gotP) P.errs.push('sem lugar para a despensa');
       if (rooms.despensa !== undefined) P.place('jarros', -1, rooms.despensa);
       const chestAt = [rooms.leitos, rooms.quarto].concat(rooms.up || [], [rooms.lar, rooms.anexo, rooms.jirau]).filter(x => x !== undefined);
-      let gotC = false; for (const id of chestAt) { if (P.place('arca', P.rooms[id].lv, id)) { gotC = true; break; } }
+      let gotC = false; if (up) for (const id of chestAt) { if (P.niche('nicho', P.rooms[id].lv, id) || P.niche('prateleira-parede', P.rooms[id].lv, id)) { gotC = true; break; } }
+      if (!gotC) for (const id of chestAt) { if (P.place('arca', P.rooms[id].lv, id)) { gotC = true; break; } }
       // (no floor for a chest: a niche in a thick wall keeps the household's few goods)
       if (!gotC) for (const id of chestAt) { if (P.niche('nicho', P.rooms[id].lv, id) || P.niche('prateleira-parede', P.rooms[id].lv, id)) { gotC = true; break; } }
       if (!gotC && !shack) P.errs.push('sem lugar para a arca');
     };
     // (each attempt lays the house out in its own order: where the beds go first, or the things kept, or the fire)
-    const plans = [[coupleBed, beds, fireUp, keep], [fireUp, coupleBed, beds, keep], [coupleBed, keep, beds, fireUp], [keep, fireUp, coupleBed, beds], [fireUp, keep, coupleBed, beds], [coupleBed, fireUp, beds, keep]];
+    // (a house of five and more: its beds always before the things it keeps — these go up on the walls when the floor is
+    // taken)
+    const plans = need >= 5 ? [[coupleBed, beds, fireUp, keep], [fireUp, coupleBed, beds, keep], [coupleBed, fireUp, beds, keep]] : [[coupleBed, beds, fireUp, keep], [fireUp, coupleBed, beds, keep], [coupleBed, keep, beds, fireUp], [keep, fireUp, coupleBed, beds], [fireUp, keep, coupleBed, beds], [coupleBed, fireUp, beds, keep]];
     for (const step of plans[P.attempt % plans.length]) step();
     // the work front: the bench (or the counter) facing the door
     if (rooms.oficina !== undefined && !P.place('bancada', 0, rooms.oficina, { sides: ['fundo', 'esquerda', 'direita'] }) && !P.place('balcao', 0, rooms.oficina, { sides: ['livre'] })) P.errs.push('sem lugar para a bancada');
@@ -437,5 +493,5 @@
     P.opt(() => { if (!shack && tr.fire === 'lar' && rooms.anexo !== undefined) P.place('lenha', 0, rooms.anexo); });
   }
   // (what the other recipes — the block round a court, the buildings of work — lay out with)
-  In.HOME = { ladderAt, loft, porao, terrace, windows, roofOf, pitched, wet, flatOK, cellarOK, touches, roomHolding, ptInR, parseV, NUM, TOPN };
+  In.HOME = { ladderAt, loft, porao, terrace, windows, roofOf, pitched, wet, flatOK, cellarOK, touches, roomHolding, ptInR, parseV, NUM, TOPN, rowOf };
 })(window.G);
