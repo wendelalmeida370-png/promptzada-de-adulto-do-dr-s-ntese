@@ -19,12 +19,14 @@
   const IU = G.IncUI = {};
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const $ = (sel, r) => (r || document).querySelector(sel);
-  let root = null, hud = null, card = null, menu = null, fadeEl = null, banner = null, deathEl = null, label = null, stickEl = null;
+  let root = null, hud = null, card = null, menu = null, fadeEl = null, banner = null, deathEl = null, label = null, stickEl = null, leadEl = null, markEl = null;
   let best = null, bestT = 0, upT = 0, toasts = [], news = [], fade = null, hintT = 0, bannerT = 0, repeatT = 0, slowT = 0, slowSaid = false;
   let swimTold = false, lowTold = false, drownTold = false; // (the water's words: said once, and again each time it comes back)
   let waits = []; // (what was asked of the world from here — a click, a key —, waiting for its answer to be told)
-  G.worldHooks.push(() => { swimTold = lowTold = drownTold = false; news = []; waits = []; if (root) renderNews(); });   // (the old world's news go with it)
+  let lead = null, leadT = 0; // (the lead to the work near: Interact.lead, asked a few times a second)
+  G.worldHooks.push(() => { swimTold = lowTold = drownTold = false; news = []; waits = []; lead = null; leadT = 0; if (root) renderNews(); });   // (the old world's news go with it)
   IU.best = () => best;
+  IU.lead = () => lead; // (for the tests: the lead shown, and where its mark is — IU.markAt)
   const bar = (k, txt) => `<div class="ih-bar ${k}"><span class="ih-bl">${txt}</span><i><b></b></i></div>`;
 
   IU.init = function () {
@@ -38,6 +40,8 @@
         <div class="ih-compass"><div class="ih-strip"></div><i></i></div>
         <div class="ih-news"></div>
         <div class="ih-calls"></div>
+        <div class="ih-lead hidden"><i></i><span></span></div>
+        <div class="ih-mark hidden"><i></i><u></u><b></b></div>
         <div class="ih-prompt hidden"><kbd>E</kbd><span></span></div>
         <div class="ih-reticle"></div>
         <div class="ih-hint panel"></div>
@@ -54,6 +58,7 @@
       <div id="inc-fade"></div>`;
     document.body.appendChild(root);
     hud = $('#inc-hud'); card = $('#inc-card'); menu = $('#inc-menu'); fadeEl = $('#inc-fade'); banner = $('#inc-banner'); deathEl = $('#inc-death'); label = $('#inc-label'); stickEl = $('.ih-stick', hud);
+    leadEl = $('.ih-lead', hud); markEl = $('.ih-mark', hud);
     $('.ih-god', hud).onclick = () => G.Modes.leave('deus');
     for (const b of hud.querySelectorAll('.ih-touch button')) {
       const k = b.dataset.k;
@@ -129,7 +134,7 @@
     { const els = $('.ih-news', hud).children; for (let k = 0; k < news.length && k < els.length; k++) fadeOut(els[k], news[k].t, 0.8); }
     if (hintT > 0) { hintT -= rdt; }
     fadeOut($('.ih-hint', hud), hintT, 1.2);
-    if (!G.Modes.inc()) { label.classList.add('hidden'); return; }
+    if (!G.Modes.inc()) { label.classList.add('hidden'); markEl.classList.add('hidden'); return; }
     const v = G.Possess.body(); if (!v) return;
     // the best thing to do, a few times a second (the world is asked, not the picture)
     bestT -= rdt;
@@ -145,6 +150,10 @@
     if (G.Input3D.down.interagir && best && best.ok && !G.Avatar.busy() && !G.Modes.panel() && (best.id === 'arvore' || best.id === 'pedra')) { repeatT -= rdt; if (repeatT <= 0) { repeatT = 0.15; IU.use(); } } else repeatT = 0.3;
     // the name over the one the body faces
     placeLabel();
+    // the lead to the work near (only read from the world, a few times a second), and its mark over the place, every frame
+    leadT -= rdt;
+    if (leadT <= 0) { leadT = 0.25; const p = G.Avatar.pos(); lead = G.Modes.panel() || v.sleeping || !p ? null : G.Interact.lead(v, p.X, p.Z, lead && lead.op); renderLead(); }
+    placeMark();
     // (a machine that cannot keep up: said once, with the way out — the lighter picture in the menu)
     if (G.Realm.fps && G.Realm.fps < 22 && G.Realm.q !== 'baixa') { slowT += rdt; if (slowT > 8 && !slowSaid) { slowSaid = true; IU.toast(`O 3D está pesado neste computador (${Math.round(G.Realm.fps)} quadros por segundo): no menu (${G.Input3D.label('menu')}) → Gráficos → Leve.`, 7); } } else slowT = 0;
     upT -= rdt; if (upT > 0) return; upT = 0.1;
@@ -191,6 +200,35 @@
     const k = G.Possess.kin(G.Possess.body(), o);
     label.textContent = o.name + (k ? ' · ' + k : ''); label.classList.remove('hidden');
     label.style.transform = `translate(${(p.x * 0.5 + 0.5) * window.innerWidth}px, ${(-p.y * 0.5 + 0.5) * window.innerHeight}px) translate(-50%, -100%)`;
+  }
+
+  // the lead's line: what the work near asks, and how far it is
+  function renderLead() {
+    hud.classList.toggle('has-lead', !!lead);
+    if (!lead) { leadEl.classList.add('hidden'); leadEl._h = ''; return; }
+    const h = `${esc(lead.txt)} <small>· ${Math.max(1, Math.round(lead.d))} m</small>`;
+    if (leadEl._h !== h) { leadEl._h = h; leadEl.querySelector('span').innerHTML = h; }
+    leadEl.classList.remove('hidden');
+  }
+  // the lead's mark: over the place, with how far it is; out of sight, an arrow on the edge of the picture toward it (behind the
+  // eye, the way to turn); at arm's length the prompt speaks for it
+  const EDGE = { x: 34, top: 66, bottom: 74 };
+  IU.markAt = null; // (for the tests: where the mark was put — { x, y, off, angle } — or null)
+  function placeMark() {
+    const p = G.Avatar.pos(); const cam = G.Realm.camera && G.Realm.camera(); const d = lead && p ? Math.hypot(lead.X - p.X, lead.Z - p.Z) : 0;
+    if (!lead || !p || !cam || d < 2.6) { markEl.classList.add('hidden'); IU.markAt = null; return; }
+    const q = IU._mv || (IU._mv = new window.THREE.Vector3()); q.set(lead.X, lead.Y, lead.Z); q.project(cam);
+    const Wd = window.innerWidth, Ht = window.innerHeight; let x = (q.x * 0.5 + 0.5) * Wd, y = (-q.y * 0.5 + 0.5) * Ht; const behind = q.z > 1;
+    const off = behind || x < EDGE.x || x > Wd - EDGE.x || y < EDGE.top || y > Ht - EDGE.bottom; let ang = 0;
+    if (off) {
+      let dx = x - Wd / 2, dy = y - Ht / 2; if (behind) { dx = -dx; dy = -dy; } if (Math.abs(dx) + Math.abs(dy) < 1e-3) dy = 1;
+      const k = Math.min(dx > 0 ? (Wd / 2 - EDGE.x) / dx : dx < 0 ? (Wd / 2 - EDGE.x) / -dx : 1e9, dy > 0 ? (Ht / 2 - EDGE.bottom) / dy : dy < 0 ? (Ht / 2 - EDGE.top) / -dy : 1e9);
+      x = Wd / 2 + dx * k; y = Ht / 2 + dy * k; ang = Math.atan2(dy, dx); markEl.querySelector('u').style.transform = `rotate(${ang.toFixed(3)}rad)`;
+    }
+    markEl.classList.toggle('off', off); markEl.classList.remove('hidden');
+    markEl.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, ${off ? '-50%' : '-100%'})`;
+    const t = `${Math.max(1, Math.round(d))} m`; const b = markEl.querySelector('b'); if (b.textContent !== t) b.textContent = t;
+    IU.markAt = { x, y, off, angle: ang };
   }
 
   // ------------------------------ doing ------------------------------

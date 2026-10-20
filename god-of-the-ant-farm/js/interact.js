@@ -45,7 +45,7 @@
     for (const p of I.list) {
       for (const t of p.find(ctx)) {
         const s = score(ctx, t.X, t.Z, p.reach) ; if (s < 0) continue;
-        const sc = s + p.prio * 0.6;
+        const sc = s + p.prio * 0.6 + (t.pref || 0); // (pref: a target meant more, or less, than the others in the same reach)
         if (sc > bs) { bs = sc; best = { p, t }; }
       }
     }
@@ -329,9 +329,12 @@
     id: 'porta', prio: 4, reach: 2.6,
     find(ctx) {
       const out = []; const S = G.S;
+      // (the store a crate of an unloading goes to takes it by the unloading's own act — the docker's gesture, the docker's pay —:
+      // its door is that act's, not this one's)
+      const wl = workLoad(ctx.v.carry); const dest = wl ? G.Possess.storeOf(wl) : null;
       for (const b of S.buildings.values()) {
         if (b.x > ctx.x + 6 || b.x + b.w < ctx.x - 6 || b.y > ctx.y + 6 || b.y + b.h < ctx.y - 6) continue;
-        if (b.type === 'ruin' || b.type === 'farm' || b.type === 'horta' || b.type === 'plantacao' || b.type === 'vinhedo') continue;
+        if (b.type === 'ruin' || b.type === 'farm' || b.type === 'horta' || b.type === 'plantacao' || b.type === 'vinhedo' || b === dest) continue;
         if (G.Space.plan && G.Space.plan(b)) continue; // (its plan's own doors: portaPlanta)
         const d = G.Vg.door(b); out.push({ b, X: d[0] * L(), Z: d[1] * L() });
       }
@@ -352,7 +355,7 @@
       if (!S.buildings.has(b.id)) return { ok: false, why: 'Não existe mais.' };
       if (b.built && isStore(b)) {
         const fid = G.Fac.idOfV(v); if (G.Village.facOfSet(b.set) !== fid) return { ok: false, why: 'Isto é de outro povo: o estoque daqui não é do seu.' };
-        if (v.carry && v.carry.n > 0) { const bd = boundOf(v.carry); if (bd && bd !== 'f:' + fid) return { ok: false, why: whyBound(bd) }; }
+        if (v.carry && v.carry.n > 0) { const wl = workLoad(v.carry); if (wl) return { ok: false, why: whyWork(wl) }; const bd = boundOf(v.carry); if (bd && bd !== 'f:' + fid) return { ok: false, why: whyBound(bd) }; }
         else if (v.hunger > 25 && (G.Fac.stockV(v).food || 0) < 1) return { ok: false, why: 'O estoque do seu povo está sem comida.' };
       }
       return { ok: true };
@@ -418,6 +421,11 @@
     return c.to && G.Depot.exists(c.to) ? c.to : null;
   }
   const whyBound = bd => { if (bd === 'op') return 'Esta carga é de um trabalho em andamento: leve-a aonde ele pede.'; const pl = G.Act.placeOf(bd); return `Esta carga tem destino: ${pl ? G.Village.buildName(pl).toLowerCase() : 'outro lugar'}.`; };
+  // (a load of a work under way that the work takes in by its own act — a crate of an unloading, set down in its store with the
+  // docker's pay: activity.js's def acts.depositar —: the work's, never a plain store's)
+  function workLoad(c) { if (!c || !(c.n > 0) || !c.op || !G.Act) return null; const op = G.Act.get(c.op); const def = op && G.Act.live(op) ? G.Act.DEFS[op.def] : null; return def && def.acts && def.acts.depositar ? op : null; }
+  I.workLoad = workLoad;
+  const whyWork = op => { const dest = op.def === 'descarga' ? G.Possess.storeOf(op) : null; const nm = G.Act.DEFS[op.def].name || 'Trabalho'; return `Esta carga é d${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm.toLowerCase()}: ${dest ? 'leve-a ' + G.Possess.toB(dest) : 'leve-a aonde ela pede'}.`; };
   // a load brought to a store: the world's own count of a delivery (villagers.js 'deliver') for the body as for anyone — a year of
   // plenty doubles the stone and the wood, what came along with the load goes in too. Done in the world's step
   function deliver(w, b) {
@@ -639,22 +647,76 @@
   // operations): done through the door the world's people use (Act.perform: the same checks, the same transfer), at the contact
   // of the same gesture, in the same seconds of the world (Act.ANIM). Its words are the world's answer
   const GEST = { lift: 'carry', arrange: 'carry', give: 'interact', pay: 'interact', haggle: 'talk', examine: 'interact', count: 'interact', call: 'wave', point: 'interact' };
+  // (where an offer is, for the reach and for the hands: a crate of a quay where the 3D draws it — the pile reached from any of
+  // its sides, by its crate nearest the body; the hands to the very crate the world offers —; a crate set down in its store at
+  // the door the store's people go in by; a crate put on the ground at the feet — what one means least, when the store is in
+  // reach. The world's offers are asked a stride wider than the arms: which of them is in reach is asked of where it is)
+  function placed(ctx, o) {
+    const t = { o, X: o.at[0] * L(), Z: o.at[1] * L() }; const P3 = G.People3D;
+    if (o.cid && typeof o.ref === 'string' && o.ref.slice(0, 2) === 'q:' && P3 && P3.lyingOf) {
+      let nb = null, nd = 1e9;
+      for (const e of P3.lyingOf(+o.ref.slice(2))) { if (e[4] === o.cid) t.hand = [e[0], e[1], e[2]]; const d = (e[0] - ctx.X) ** 2 + (e[2] - ctx.Z) ** 2; if (d < nd) { nd = d; nb = e; } }
+      if (nb) { t.X = nb[0]; t.Z = nb[2]; }
+    } else if (o.act === 'depositar' && o.def === 'descarga') { const dest = G.Possess.storeOf(G.Act.get(o.op)); if (dest) { const d = G.Vg.door(dest); t.X = d[0] * L(); t.Z = d[1] * L(); } }
+    else if (o.act === 'pousar') t.pref = -3;
+    // (the work in reach, possible now, is what one means at the pile or at the door, more than a word with someone beside it —
+    // unless face to face with them, a step away)
+    if (o.ok !== false && (o.act === 'pegar' || o.act === 'pegarChao' || o.act === 'depositar')) t.pref = 1.6;
+    return t;
+  }
+  I.placed = placed; // (for the tests)
   I.add({
     id: 'atividade', prio: 4.2, reach: 2.6,
-    find(ctx) { if (!G.Act || !G.Act.offers) return []; return G.Act.offers(ctx.v, ctx.x, ctx.y, 2.6 / L()).filter(o => o && o.at).map(o => ({ o, X: o.at[0] * L(), Z: o.at[1] * L() })); },
+    find(ctx) { if (!G.Act || !G.Act.offers) return []; return G.Act.offers(ctx.v, ctx.x, ctx.y, 2.6 / L() + 2).filter(o => o && o.at).map(o => placed(ctx, o)); },
     label(ctx, t) { return t.o.label || 'Ajudar'; },
     can(ctx, t) { return t.o.ok === false ? { ok: false, why: t.o.why || 'Agora não dá.' } : { ok: true }; },
     run(ctx, t) {
-      const o = t.o; const v = ctx.v; const g = AN(o.anim); const f = face(ctx, t.X, t.Z);
-      const { to, go } = walkUp(ctx, v, t.X, t.Z, 0.7); const goW = go * G.Space.TIME; const hand = g.act === 'lift' || g.act === 'arrange';
+      const o = t.o; const v = ctx.v; const g = AN(o.anim); const gx = t.hand ? t.hand[0] : t.X, gz = t.hand ? t.hand[2] : t.Z; const f = face(ctx, gx, gz);
+      const { to, go } = walkUp(ctx, v, gx, gz, 0.7); const goW = go * G.Space.TIME; const hand = g.act === 'lift' || g.act === 'arrange';
       // (where the hands go: with a load, down before the feet; empty, to the thing — on the ground, or on the counter)
-      // (the thing drawn there when there is one — the crate of the quay the world hands out next: People3D.nearLoad)
-      const hands = reachTo(a => { if (!a.P) { const P3 = G.People3D; const H = P3 && P3.look(v).held; const src = !H && P3 && P3.nearLoad ? P3.nearLoad(t.X, t.Z, 0.9) : null; a.P = H ? putAt(v, t.X, t.Z)(a) : src || toward(G.Avatar.pos(), t.X, t.Z, g.act === 'arrange' ? 0.9 : 0.2); } return a.P; }, 0.36, 0.45);
+      // (the thing drawn there when there is one — the crate offered, where the 3D draws it; or the crate of the quay the world
+      // hands out next: People3D.nearLoad)
+      const hands = reachTo(a => { if (!a.P) { const P3 = G.People3D; const H = P3 && P3.look(v).held; const src = !H && t.hand ? t.hand : !H && P3 && P3.nearLoad ? P3.nearLoad(gx, gz, 0.9) : null; a.P = H ? putAt(v, gx, gz)(a) : src || toward(G.Avatar.pos(), gx, gz, g.act === 'arrange' ? 0.9 : 0.2); } return a.P; }, 0.36, 0.45);
       G.Avatar.act({ world: true, anim: GEST[g.act] || 'interact', dur: Math.max(g.dur, g.contact + 0.2) + goW, contact: g.contact + goW, face: f, to, toT: go, vact: g.act,
         reach: hand ? a => (a.tr < go ? null : hands(a)) : null, op: w => G.Act.perform(w, o), then: r => say(r.msg), fail: deny });
       return { ok: true };
     },
   });
+  // the lead to the world's work near the body (what the HUD shows of it: a quiet line, a mark over the place, an arrow at the
+  // edge when the place is out of sight), only read from the world: an unloading under way, by day, a stone's throw away — its
+  // crates where the 3D draws them on the quay, or one lying where it fell —; with a crate of it in the hands, the door of the
+  // store the unloading's overseer chose for it (Porto.destOf), by night too. No unloading, no crates, no store: no lead.
+  // (X, Z: the body, metres; keep: the work shown now, kept a few metres farther, so that the line does not blink at the edge)
+  I.LEAD = 25;
+  I.lead = function (v, X, Z, keep) {
+    const A = G.Act, P = G.Porto; if (!v || !A || !P || !A.able(v)) return null;
+    const S = G.S, TL = L(), P3 = G.People3D; if (X === undefined) { X = v.x * TL; Z = v.y * TL; }
+    const gY = (x, y) => W.groundH(x, y) * G.Space.HM;
+    const c = v.carry;
+    if (c && c.n > 0) {
+      const op = c.op ? A.get(c.op) : null; if (!op || !A.live(op) || op.def !== 'descarga') return null;
+      const dest = G.Possess.storeOf(op); if (!dest) return null; const d = G.Vg.door(dest);
+      return { step: 'levar', op: op.id, b: dest.id, X: d[0] * TL, Y: gY(d[0], d[1]) + 2.4, Z: d[1] * TL, d: Math.hypot(d[0] * TL - X, d[1] * TL - Z), txt: `Levar ${G.Possess.toB(dest)}` };
+    }
+    if (G.isNight()) return null;
+    let best = null;
+    const take = (op, at, txt, b) => { const d = Math.hypot(at[0] - X, at[2] - Z); if (d <= (keep === op.id ? I.LEAD + 5 : I.LEAD) && (!best || d < best.d)) best = { step: 'pegar', op: op.id, b, X: at[0], Y: at[1], Z: at[2], d, txt }; };
+    for (const op of A.all()) {
+      if (op.def !== 'descarga' || !A.live(op) || op.st !== 'on') continue;
+      const dock = S.buildings.get(op.at); const mine = dock && dock.crates ? dock.crates.filter(q => q.op === op.id) : [];
+      if (mine.length) {
+        // (the pile: the middle of its crates as drawn, over the highest; not drawn, over the world's spot for them)
+        const ids = new Set(mine.map(q => q.id)); const L3 = P3 && P3.lyingOf ? P3.lyingOf(dock.id).filter(e => ids.has(e[4])) : [];
+        let at = null;
+        if (L3.length) { let x = 0, y = -1e9, z = 0; for (const e of L3) { x += e[0]; y = Math.max(y, e[1]); z += e[2]; } at = [x / L3.length, y + 1.1, z / L3.length]; }
+        else { const sp = P3 && P3.crateSpot ? P3.crateSpot(dock) : null; if (sp) at = [sp[0] * TL, gY(sp[0], sp[1]) + 1.4, sp[1] * TL]; }
+        if (at) take(op, at, `Descarga no cais: caixas de ${G.Possess.cargo(op)} esperando`, dock.id);
+      }
+      // (a crate of it set down on the ground — by a porter called away, or by the god's body)
+      for (const o of S.loose || []) if (o.op === op.id) take(op, [o.x * TL, gY(o.x, o.y) + 1, o.y * TL], `Descarga: uma caixa de ${o.fish ? 'peixe' : G.Eco.name(o.k)} no chão, esperando`, 0);
+    }
+    return best;
+  };
   // a beast: looked at (what the world knows of it)
   I.add({
     id: 'bicho', prio: 2, reach: 4,

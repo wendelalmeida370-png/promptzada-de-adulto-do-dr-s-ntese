@@ -360,9 +360,12 @@
   G.worldHooks.push(() => { quays = new Map(); dockList = []; dockKey = ''; P3.lying.length = 0; });
   // (the quays: looked for again when a building comes or goes, and every few seconds of the world)
   const docksNow = () => { const S = G.S; const key = S.buildings.size + ':' + Math.floor(S.clock / 4); if (dockKey !== key) { dockKey = key; dockList = []; for (const b of S.buildings.values()) if (b.type === 'doca') dockList.push(b); } return dockList; };
-  // (where the god's view lays a quay's crates — fishers.js crateSpot —, from the quay's own record, only read: none made yet,
-  // none drawn)
-  P3.crateSpot = function (b) { const di = b._dock; const q = di && di.quay; if (!q) return null; const wd = b.wd || [1, 0]; const p = [q[0] - wd[0] * 0.9 + wd[1] * 0.8, q[1] - wd[1] * 0.9 - wd[0] * 0.8]; return W.walkableXY(p[0], p[1]) ? p : q; };
+  // (where the god's view lays a quay's crates — fishers.js crateSpot —, from the quay's own record, only read: the spot the
+  // world chose in its step (b.cs, by the quay's own ground b.qs — L-138: a quay in a pocket keeps them on the town's side);
+  // none chosen yet, the same rule from the quay's record; no record, none drawn)
+  P3.crateSpot = function (b) { if (b.cs) return b.cs; const di = b._dock; const q = b.qs || (di && di.quay); if (!q) return null; const wd = b.wd || [1, 0]; const p = [q[0] - wd[0] * 0.9 + wd[1] * 0.8, q[1] - wd[1] * 0.9 - wd[0] * 0.8]; return W.walkableXY(p[0], p[1]) ? p : q; };
+  // (the crates of a quay drawn this frame: for the hands, and for the lead to them)
+  P3.lyingOf = id => P3.lying.filter(e => e[5] === id);
   const LM = { m: null, c: null }; const lcMemo = new Map();
   const lcOf = hex => { let c = lcMemo.get(hex); if (!c) { c = lc(hex); lcMemo.set(hex, c); } return c; };
   // (a form put down: its middle at X, Y, Z, its width along (ax, az), upright — or lying on its side, flat)

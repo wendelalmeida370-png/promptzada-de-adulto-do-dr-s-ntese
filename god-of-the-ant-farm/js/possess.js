@@ -158,9 +158,24 @@
     fest: 'Há festa na praça.', assembly: 'Chamam todos para a assembleia.', migrate: 'Seu povo vai partir em migração.', refugio: 'Chamam todos para o refúgio.', pray: 'Hora de rezar no templo.',
     dragao: 'Chamam todos para enfrentar o dragão!', sair: 'O mar vai voltar! Saia do fundo do mar!', hide: 'Mandam você se esconder.', saga: 'Uma história te chama.',
   };
+  // (the store an unloading takes its crates to, as its overseer chose it — Porto.destOf —, while it is a store: pulled down a
+  // moment ago, a ruin is no store, until the overseer chooses again)
+  Po.storeOf = op => { const b = op && G.Porto ? G.Porto.destOf(op) : null; return b && G.BDEF[b.type] && G.BDEF[b.type].dropoff ? b : null; };
+  // (the words of a cargo: what the crates of an unloading on its quay hold — the fish of a catch is fish —, the most first)
+  Po.cargo = function (op) {
+    const E = G.Eco; const dock = op && G.S.buildings.get(op.at); const n = {};
+    for (const q of (dock && dock.crates) || []) if (q.op === op.id) { const w = q.fish ? 'peixe' : E.name(q.k); n[w] = (n[w] || 0) + 1; }
+    let ks = Object.keys(n).sort((a, b) => n[b] - n[a] || (a < b ? -1 : 1));
+    if (!ks.length && op) ks = Object.keys(op.goods || {}).filter(k => op.goods[k] > 1e-6).sort().map(k => E.name(k));
+    return ks.slice(0, 2).join(' e ') || 'carga';
+  };
+  // (to a building, in words: "ao armazém do porto", "à praça")
+  Po.toB = b => { const nm = G.Village.buildName(b); return (G.gen(nm) === 'a' ? 'à ' : 'ao ') + nm.toLowerCase(); };
+  // (a call that says what it is from the world: the unloading — the crates its quay has, the store they go to)
+  CALL.descarga = (v, t) => { const op = G.Act && G.Act.get(t.op); const dest = Po.storeOf(op); return op ? `O cais precisa de braços: há caixas de ${Po.cargo(op)} para levar ${dest ? Po.toB(dest) : 'ao armazém'}.` : null; };
   function call(v, t) {
     const S = G.S; const a = S.avatar; if (!a) return;
-    const txt = CALL[t.type] || (() => { const tt = G.Vg.taskText(Object.assign({}, v, { task: t, held: false, air: false })); return tt ? 'Esperam que você: ' + tt.charAt(0).toLowerCase() + tt.slice(1) + '.' : null; })();
+    const c = CALL[t.type]; const txt = typeof c === 'function' ? c(v, t) : c || (() => { const tt = G.Vg.taskText(Object.assign({}, v, { task: t, held: false, air: false })); return tt ? 'Esperam que você: ' + tt.charAt(0).toLowerCase() + tt.slice(1) + '.' : null; })();
     if (!txt) return;
     const q = a.asks.find(o => o.type === t.type);
     if (q) { q.t = S.clock; q.n++; return; }
@@ -191,6 +206,7 @@
     // (a task ended by someone else without another given: the body is still the player's)
     if (!v.task) v.task = mark();
     if (v.sleeping && (v.energy >= 99.5 || (v.energy > 70 && G.S.time > 0.05 && G.S.time < 0.3))) Po.wake(v);
+    duty(v);
     void dt;
   };
   // the storey of a building the body is on, indoors (undefined outdoors): the body's record, with its place (v.x, v.y) —
@@ -204,6 +220,27 @@
     return !!(ins && ins.b === B && (ins.shell || ins.walk));
   }
   Po.indoorOK = v => indoorOK(v, G.S.avatar);
+  // the trade's call: a docker lived by the god — or a fisherman of a quay — is called to the crates of an unloading under way
+  // as the world sends its own (harbor.js jobTask: the town's quays, by day, a warehouse to work for; the fisherman, his own
+  // quay's), since the body never goes through the world's choosing of a task. The call stays while there is that work and the
+  // hands are free, and goes when it is done, at night, or while the body carries one of its crates. Only the call: the will is
+  // the player's (no crate is kept for the body, nobody is put in the team)
+  function duty(v) {
+    const S = G.S; const a = S.avatar; if (!a || !G.Act || !G.Porto) return;
+    let op = null;
+    const w = v.job && S.buildings.get(v.job);
+    const mine = v.role === 'estivador' ? !!(w && w.built && w.type === 'armazem') : v.role === 'pescador' && !!(w && w.type === 'doca');
+    if (mine && !G.isNight() && G.Act.able(v) && !(v.carry && v.carry.n > 0)) {
+      for (const o of G.Act.all()) {
+        if (o.def !== 'descarga' || !G.Act.live(o) || o.st !== 'on' || (v.role === 'estivador' ? o.set !== v.set : o.at !== v.job)) continue;
+        const d = S.buildings.get(o.at); if (d && d.type === 'doca' && d.crates && d.crates.some(c => c.op === o.id)) { op = o; break; }
+      }
+    }
+    const k = a.asks.findIndex(q => q.type === 'descarga');
+    if (!op) { if (k >= 0) a.asks.splice(k, 1); return; }
+    const txt = CALL.descarga(v, { op: op.id }); if (!txt) return;
+    if (k >= 0) { a.asks[k].t = S.clock; a.asks[k].txt = txt; } else call(v, { type: 'descarga', op: op.id });
+  }
   Po.sleep = function (v) { if (!Po.is(v) || v.sleeping) return false; v.sleeping = true; v.act = ''; v.moving = false; return true; };
   // waking: out of bed, and out of the house by its door if it slept at home
   Po.wake = function (v) { if (!v || !v.sleeping) return; v.sleeping = false; if (v.inside && !indoorOK(v, G.S.avatar)) { const b = G.S.buildings.get(v.inside); if (b) { const d = G.Vg.door(b); v.x = d[0]; v.y = d[1]; } v.inside = 0; Po.setLevel(null); } };
