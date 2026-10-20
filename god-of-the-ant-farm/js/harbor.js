@@ -44,8 +44,8 @@
     const S = G.S; const w = v.job && S.buildings.get(v.job); if (!w || !w.built || w.type !== 'armazem') return null;
     // the crates on the nearest quay first (the fishermen unload their own catch; the stevedores, everything)
     let best = null, bd = 1e9;
-    for (const d of docksOf(v.set)) if (d.crates && d.crates.length) { const dd = G.dist2(w.x, w.y, d.x, d.y); if (dd < bd) { bd = dd; best = d; } }
-    if (best && !G.isNight()) return H.setTask(v, { type: 'descarga', dock: best.id, pri: 1.1, st: 0, trips: 0 });
+    for (const d of docksOf(v.set)) if ((d.crates && d.crates.length) || G.Porto.opAt(d)) { const dd = G.dist2(w.x, w.y, d.x, d.y); if (dd < bd) { bd = dd; best = d; } }
+    if (best && !G.isNight()) { const t = G.Porto.work(v, best, H); if (t) return t; }
     if (G.isNight()) return null;
     return H.setTask(v, { type: 'arrumar', id: w.id, pri: 0.8, st: 0, dur: G.rr(8, 14) });
   };
@@ -63,9 +63,6 @@
   const oldText = E.taskText;
   E.taskText = function (v, t) {
     if (t.type === 'arrumar') return 'Empilhando caixas no armazém do porto';
-    // (the crates of the quay: fish for the fishermen, any cargo for the stevedores)
-    if (t.type === 'descarga' && v.carry && !v.carry.fish) return `Levando uma caixa de ${E.name(v.carry.k)} ao armazém`;
-    if (t.type === 'descarga' && !v.carry && v.role === 'estivador') return 'Pegando uma caixa no cais';
     return oldText(v, t);
   };
 
@@ -80,32 +77,7 @@
     } };
   }
 
-  // a crate is never lost: called away while carrying one, the carrier sets it back on the quay for another hand
-  const oldEnd = G.Vg.endTask;
-  G.Vg.endTask = function (v, o) {
-    const t = v.task;
-    // (o.keepLoad: the hands keep it — the god takes the body with the crate in its arms, and the unloading goes on with it)
-    if (t && t.type === 'descarga' && v.carry && v.carry.crate && !v.carry.op && !(o && o.keepLoad)) {
-      const d = G.S.buildings.get(t.dock);
-      // (on a quay that filled up meanwhile it goes straight in, as cargo does when the quay is full: L-078)
-      if (d && (d.crates || []).length < 10) (d.crates || (d.crates = [])).unshift({ id: v.carry.cid || G.S.nextId++, k: v.carry.k, n: v.carry.n, col: v.carry.fishCol, fish: v.carry.fish, boat: v.carry.catchOf, imp: v.carry.imp, op: 0 });
-      else G.Village.addStock(v.carry.k, v.carry.n, d ? G.Village.facOfSet(d.set) : G.Fac.idOfV(v));
-      v.carry = null;
-    }
-    return oldEnd(v, o);
-  };
-
   // ------------------------------ what the ships bring ------------------------------
-  // the cargo comes ashore in crates of four on the quay; what does not fit on a full quay goes straight in
-  const COL = { food: '#b8a060', wood: '#8a6440', stone: '#a8a49a' };
-  Hb.land = function (dock, goods, ship) {
-    if (!dock || !goods || !(goods.n > 0)) return;
-    const fid = G.Village.facOfSet(dock.set);
-    const L = dock.crates || (dock.crates = []);
-    let n = Math.round(goods.n);
-    const col = COL[goods.k] || (E.GOODS[goods.k] && E.GOODS[goods.k].col) || '#c8a878';
-    while (n > 0 && L.length < 10) { const m = Math.min(4, n); L.push({ id: G.S.nextId++, k: goods.k, n: m, col, imp: 1, ship: ship ? ship.id : 0, op: 0 }); n -= m; }
-    if (n > 0) G.Village.addStock(goods.k, n, fid);
-    dock.lastCargo = G.S.day;
-  };
+  // the cargo comes ashore as the work of an unloading (act-porto.js: crates on the quay, the rest into the store, nothing lost)
+  Hb.land = function (dock, goods, ship) { return G.Porto.land(dock, goods, ship); };
 })(window.G);

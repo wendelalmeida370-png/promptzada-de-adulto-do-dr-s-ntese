@@ -174,7 +174,7 @@
   // door): where people stand to go in is where the plan has its door; with no plan, the first walkable side of the front
   Vg.planDoor = null;
   function V_door(b) {
-    if (Vg.planDoor) { let d = null; try { d = Vg.planDoor(b); } catch (e) { d = null; } if (d && W.walkableXY(d[0], d[1])) return d; }
+    if (Vg.planDoor) { const d = Vg.planDoor(b); if (d && W.walkableXY(d[0], d[1])) return d; }
     // find a walkable tile next to the building front
     const cands = [[b.x + b.w - 0.5, b.y + b.h + 0.4], [b.x + b.w + 0.4, b.y + b.h - 0.5], [b.x - 0.4, b.y + 0.5], [b.x + 0.5, b.y - 0.4]];
     for (const c of cands) if (W.walkableXY(c[0], c[1])) return c;
@@ -431,6 +431,9 @@
   function start(v, kind, pri) {
     const S = G.S;
     let t = null;
+    // (a load that knows where it goes — a purchase for the house, a crate of an unloading, goods for a stall — goes there
+    // before the free time; hunger, sleep and a storm come first)
+    if (v.carry && (v.carry.to || v.carry.op) && G.Act && kind !== 'eat' && kind !== 'sleep' && kind !== 'shelter' && kind !== 'watch') { t = G.Act.resumeCarry(v, H); if (t) { t.kind = kind; return; } }
     switch (kind) {
       case 'eat': t = eatTask(v); break;
       case 'sleep': t = setTask(v, { type: 'sleep', pri: Math.max(pri, 1.2) }); break;
@@ -726,9 +729,10 @@
   function workTask(v) {
     const S = G.S; const fac = G.Fac.ofV(v); if (!fac) return null;
     const st = fac.stock; const capS = G.Village.cap(fac.id);
+    // (a crate of an operation, a purchase on its way home: it goes where it belongs, never into the common store — and
+    // with the way there cut, as its rule says: G.Act.holdCarry)
+    if (v.carry && v.carry.k !== 'water' && (v.carry.op || v.carry.to) && G.Act) { const t = G.Act.resumeCarry(v, H) || G.Act.holdCarry(v, H); if (t) return t; }
     if (v.carry && v.carry.k !== 'water') {
-      // (a crate of an operation, a purchase on its way home: it goes where it belongs, never into the common store — L-c)
-      if ((v.carry.op || v.carry.to) && G.Act) { const t = G.Act.resumeCarry(v, H); if (t) return t; }
       if (v.role === 'construtor') { const t = buildTask(v); if (t) return t; }
       return deliverTask(v);
     }
@@ -779,7 +783,7 @@
         break;
       case 'deliver': {
         if (!v.carry) return end(v);
-        if (t.st === 0 && (v.carry.op || v.carry.to) && G.Act) { if (G.Act.resumeCarry(v, H)) return; }
+        if (t.st === 0 && (v.carry.op || v.carry.to) && G.Act) { if (G.Act.resumeCarry(v, H) || G.Act.holdCarry(v, H)) return; if (!v.carry) return end(v); }
         if (t.st === 0) {
           const d = G.Village.nearestDropoff(v.x, v.y, v.set);
           if (!d) return end(v);
@@ -1232,7 +1236,7 @@
       default: if (!(G.Scene && G.Scene.run(v, t, dt, H)) && !(G.Caves && G.Caves.run(v, t, dt, H)) && !G.War.run(v, t, dt, H) && !(G.Wars && G.Wars.run(v, t, dt, H)) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Urban && G.Urban.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Carnage && G.Carnage.run(v, t, dt, H)) && !(G.Flora && G.Flora.run(v, t, dt, H)) && !(G.Nests && G.Nests.run(v, t, dt, H)) && !(G.Polity && G.Polity.run(v, t, dt, H)) && !(G.Justice && G.Justice.run(v, t, dt, H)) && !(G.Riots && G.Riots.run(v, t, dt, H)) && !(G.Secrets && G.Secrets.run(v, t, dt, H)) && !(G.Stories && G.Stories.party && G.Stories.party.run(v, t, dt, H)) && !(G.Riches && G.Riches.run(v, t, dt, H))) end(v);
     }
   }
-  const LONG = { praia: 1, muster: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, embark: 1, boardBack: 1, scene: 1, saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1, carga: 1 };
+  const LONG = { praia: 1, muster: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, embark: 1, boardBack: 1, scene: 1, saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1, carga: 1, ajudar: 1, banca: 1, compra: 1, atacado: 1, devolver: 1 };
 
   function runBuild(v, t, dt) {
     const S = G.S;
@@ -1582,7 +1586,7 @@
   // ------------------------------ the stuck: someone who has not moved for a long while ------------------------------
   // (a pocket between cliffs, a ledge, a gap between houses and a fence: every errand fails, or the feet keep walking
   // in place. Twenty seconds of that and they are set down on the nearest spot from which home can be reached)
-  const STILL = { praia: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, scene: 1, jail: 1, condemned: 1, escorted: 1, hide: 1, sleep: 1, pray: 1, aboard: 1, swim: 1, dive: 1, mariscar: 1, pocas: 1, fest: 1, assembly: 1, avatar: 1 };
+  const STILL = { praia: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, scene: 1, jail: 1, condemned: 1, escorted: 1, hide: 1, sleep: 1, pray: 1, aboard: 1, swim: 1, dive: 1, mariscar: 1, pocas: 1, fest: 1, assembly: 1, avatar: 1, ajudar: 1, conferir: 1, banca: 1 };
   function watch(v) {
     if (v.sleeping || v.captive && !(v.task && v.task.type === 'escape')) { v._wd = null; return false; }
     const wd = v._wd || (v._wd = { x: v.x, y: v.y, t: 0, mv: 0 });

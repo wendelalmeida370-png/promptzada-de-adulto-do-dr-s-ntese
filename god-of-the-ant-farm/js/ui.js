@@ -239,6 +239,7 @@
       if (b.dataset.act === 'close') UI.select(null);
       else if (b.dataset.act === 'follow') { const s = UI.selected; if (s && !s.dead) { G.Render.cam.follow = G.Render.cam.follow === s.id ? 0 : s.id; renderInspector(true); } }
       else if (b.dataset.act === 'urbgo') { const s = UI.selected; if (s && (s.urbD || s.urbS)) { G.Render.cam.follow = 0; G.Render.panTo(s.x, s.y); } }
+      else if (b.dataset.act.indexOf('plan') === 0 && G.PlanView) { G.PlanView.act(b.dataset.act, UI.selected); renderInspector(true); } // (C2: the plan)
       else if (b.dataset.act === 'urb') { const d = G.Urban && G.Urban.byId(+b.dataset.id); if (d) UI.select(G.Urban.select(d)); }
       else if (b.dataset.act === 'incarnate') { const s = UI.selected; if (s && !s.dead && G.Modes) G.Modes.enter(s); }
       else if (b.dataset.act === 'tree') UI.openTree(UI.selected.id);
@@ -649,6 +650,7 @@
       if (b.type === 'storehouse' || b.type === 'campfire' || b.type === 'celeiro') body += `<div class="doing">Capacidade de estoque: <b>${G.Village.cap(G.Village.facOfSet(b.set))}</b> de cada recurso.</div>`;
       if (b.type === 'temple') body += `<div class="doing">Gera fé continuamente. Os sacerdotes rezam aqui.</div>`;
       if (G.Eco) body += G.Eco.buildingHTML(b, plink, esc);
+      if (G.PlanView) body += G.PlanView.panelHTML(b, esc); // (C2: the building's plan, open over it)
       if (b.type === 'aqueduto') { const a = S.aqueducts.find(q => q.b === b.id); body += `<div class="doing">${a ? (a.done ? 'Água corrente: colheitas +20%, mais gente cabe na cidade.' : `Arcos erguidos: <b>${a.built}/${a.tiles.length}</b> (consome pedra).`) : set && set.aqua ? 'Cisterna cheia.' : ''}</div>`; }
       if (b.type === 'mercado' || b.type === 'praca') { const rs = S.routes.filter(r => r.ok && (r.a === b.set || r.b === b.set)); if (rs.length) body += `<div class="doing">${rs.length} ${rs.length > 1 ? 'rotas' : 'rota'} de carroças passando por aqui.</div>`; }
       if (b.type === 'cemetery') {
