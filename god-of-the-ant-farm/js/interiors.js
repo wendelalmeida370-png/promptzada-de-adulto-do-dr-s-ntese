@@ -343,6 +343,18 @@
       const wins = []; for (const h of this.holes) { if (h.kind !== 'janela') continue; if (this.walls[h.wall].lv === lv) wins.push(this.ptOn(h.wall, h.at)); }
       return { lv, items, own, solid, zones: this.keepClear(lv), wins };
     },
+    // what of a storey stands near a room, for the pieces placed in it: the pieces, the ways kept clear and the windows within
+    // a reach of its walls, and the pieces with a place of use in it or at its edge. Nothing farther can touch a piece in the
+    // room nor the places one stands to use it (no place is that far from its piece), so the proofs see the same — on a big
+    // storey, with far less to look at
+    nearOf(F, R) {
+      const memo = F.near || (F.near = new Map()); const key = R.join(','); let N = memo.get(key); if (N) return N;
+      const M = 1.6; const near = r => r[0] < R[2] + M && R[0] - M < r[2] && r[1] < R[3] + M && R[1] - M < r[3];
+      const items = [], own = [];
+      for (let i = 0; i < F.items.length; i++) if (F.own[i].some(sp => pt2(sp.u, sp.v, R, 0.2))) { items.push(F.items[i]); own.push(F.own[i]); }
+      N = { lv: F.lv, items, own, solid: F.solid.filter(it => near(it.r)), zones: F.zones.filter(near), wins: F.wins.filter(p => pt2(p[0], p[1], R, 0.4)) };
+      memo.set(key, N); return N;
+    },
     // can a rectangle take a piece here? (inside the room, off the other pieces, the doors' and stairs' ways, the windows if tall)
     // false, or what the piece costs: its own spots lost there (covered by another piece, out of the room) and the spots of
     // the pieces already standing that it covers — each piece keeps one place at least for each of its uses
@@ -471,7 +483,7 @@
     // the middle (by chance a little, unless it is the middle one wants), never closer to a wall than the margin
     place(kind, lv, room, o) {
       o = o || {}; const D = ITEMS[kind]; const R = this.rooms[room]; if (!R) return null; const r = R.r;
-      const w = o.w || D.w, d = o.d || D.d; const F = this.floorOf(lv);
+      const w = o.w || D.w, d = o.d || D.d; const F = this.nearOf(this.floorOf(lv), r);
       // (a free-standing piece stands away from the walls where there is room for it; where not, against one)
       const sides = o.sides || (D.free && !o.wall ? ['livre', 'fundo', 'esquerda', 'direita', 'frente'] : ['fundo', 'esquerda', 'direita', 'frente']);
       const all = []; let tries = 0;
