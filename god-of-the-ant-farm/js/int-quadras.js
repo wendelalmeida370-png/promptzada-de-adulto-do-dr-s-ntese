@@ -229,4 +229,5 @@
     // (a brazier for each storey above, and a chest, where they still go)
     P.opt(() => { for (const id of rooms.up) P.place('braseiro', lvOf(id), id); });
   }
+  K.blockWindows = blockWindows; // (for the palace's wings: int-palacio.js)
 })(window.G);

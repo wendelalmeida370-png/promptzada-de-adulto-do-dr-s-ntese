@@ -51,6 +51,8 @@
     lar: '#d8c39a', salao: '#d8c39a', leitos: '#9fb6c8', quarto: '#9fb6c8', oficina: '#d9a86c', frente: '#d9b07a', cela: '#cfb48a', ala: '#cdbb95',
     corredor: '#e6dcc4', passagem: '#e6dcc4', nave: '#e2d6bb', 'nave-lateral': '#d6c7a6', despensa: '#a9a197', anexo: '#c9ab80', telheiro: '#c9ab80',
     galeria: '#b7a9c9', sobrado: '#b7a9c9', patio: '#a9c58e', terraco: '#b9cf9a',
+    guarda: '#c9a27a', vestiario: '#d9cbb0', frio: '#9cc3d1', quente: '#d79a7a', trono: '#d8b56a', aposento: '#9fb6c8', cozinha: '#d9a86c',
+    banquete: '#dcc08f', vestibulo: '#e6dcc4', ruas: '#cdbf98', praca: '#cdbf98',
   };
   function drawPlan(ctx, b, p, lv) {
     const R = G.Render; const gh = G.W.groundH(b.x + b.w / 2, b.y + b.h / 2) + 0.02;

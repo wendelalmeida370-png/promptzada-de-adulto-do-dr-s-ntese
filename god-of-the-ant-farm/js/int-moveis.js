@@ -26,6 +26,7 @@
     else { out.push({ use: 'acesso', a: 0, n: it.d / 2 + 0.35 }); out.push({ use: 'acesso', a: -(it.w / 2 + 0.35), n: 0.25 }); out.push({ use: 'acesso', a: it.w / 2 + 0.35, n: 0.25 }); }
     return out;
   };
+  In.SPOTS = { front, lie }; // (for the pieces other files add: int-civicos.js)
   In.addItems({
     // ---- sleeping ----
     'cama-casal': { name: 'Cama de casal', w: 1.4, d: 1.95, h: 0.55, low: 1, wall: 1, rot: 1, places: 2, spots: lie(2) },
