@@ -333,7 +333,7 @@
       case 'pastor': case 'cavalarico': return pastorTask(v, b, f, H);
       case 'acougueiro': return butcherTask(v, b, f, H);
       case 'mineiro': return H.setTask(v, { type: 'minejob', id: b.id, pri: 1 });
-      case 'mercador': return merchantTask(v, b, f, H);
+      case 'mercador': return G.Biz && b.type === 'mercado' ? G.Biz.task(v, b, f, H) : merchantTask(v, b, f, H); // (a stall of one's own: act-negocio.js)
       case 'feirante': return fairTask(v, b, f, H);
       case 'taverneiro': return tavernTask(v, b, f, H);
       case 'escriba': return H.setTask(v, { type: 'desk', id: b.id, pri: 1, dur: G.rr(14, 24) });
@@ -737,8 +737,8 @@
     if (t.st === 1) {
       const n = Math.min(t.k === 'food' ? 8 : 4, Math.floor(f.stock[t.k] || 0));
       if (n <= 0) return H.end(v);
-      // merchants buy wholesale from the state stores
-      if (E.coinage(f.id) && b.type !== 'feira' && b.type !== 'taverna') { const cost = Math.round(E.PRICE[t.k] * n * 0.6 * 100) / 100; if (spend(v, cost)) { f.stock.moedas += cost; f.eco.sales += cost; } }
+      // merchants buy wholesale from the state stores (no coin, no goods: the store gives nothing away)
+      if (E.coinage(f.id) && b.type !== 'feira' && b.type !== 'taverna') { const cost = Math.round(E.PRICE[t.k] * n * 0.6 * 100) / 100; if (!spend(v, cost)) return H.end(v); f.stock.moedas += cost; f.eco.sales += cost; }
       f.stock[t.k] -= n; v.carry = { k: t.k, n }; t.st = 2; return;
     }
     const r = walkB(v, t, b, dt, H);
@@ -804,6 +804,8 @@
   const HOUSE_WANTS = E.HOUSE_WANTS = { tecido: 0.3, ceramica: 0.15, joias: 0.03, couro: 0.05 };
   E.shopTask = function (v, H) {
     const S = G.S; const h = homeOf(v); if (!h || v.captive) return null;
+    // (the market's stalls first: each merchant's own, with its price and its talk — act-negocio.js)
+    if (G.Biz) { const t = G.Biz.shop(v, H); if (t) return t; }
     const I = inv(h); const res = h.res || 1;
     const need = Object.keys(HOUSE_WANTS).filter(k => (I[k] || 0) < Math.max(1, res * HOUSE_WANTS[k] * 2));
     if (E.wishes) for (const k of E.wishes(h, v)) need.push(k);
@@ -862,13 +864,15 @@
         else { const sh = homeOf(seller); if (sh) sh.coin = (sh.coin || 0) + price; else seller.purse = (seller.purse || 0) + price; }
         if (shady) f.eco.lostTax = (f.eco.lostTax || 0) + price * E.taxRate(f);
       }
-      I[k] -= n; v.carry = { k, n, bought: true }; G.Life && G.Life.leaveQueue(v);
+      // (what was bought is the house's from here: it knows where it goes, and gets there after a save or a lost way)
+      I[k] -= n; v.carry = { k, n, bought: true }; if (h) v.carry.to = 'h:' + h.id; G.Life && G.Life.leaveQueue(v);
       G.Vg.emote(v, 'happy', 1.2);
       if (!h) { v.carry = null; return H.end(v); }
       t.st = 2; return;
     }
+    if (!h) return H.end(v); // (the house is gone: what was bought is a load like any other now)
     const r = walkB(v, t, h, dt, H);
-    if (r < 0) { v.carry = null; return H.end(v); }
+    if (r < 0) return H.end(v); // (the way home was lost: the purchase stays in the arms, marked for the house, and goes there later)
     if (r > 0) { const I = inv(h); if (v.carry.k === 'food') h.pantry = (h.pantry || 0) + v.carry.n; else I[v.carry.k] = (I[v.carry.k] || 0) + v.carry.n; v.carry = null; H.end(v); }
   }
   E.tavernTask = function (v, H) {

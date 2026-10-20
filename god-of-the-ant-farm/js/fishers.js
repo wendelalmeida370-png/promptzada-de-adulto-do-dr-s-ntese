@@ -105,7 +105,7 @@
     return 0;
   }
   // the quay's own ground, where its people stand: the spot by the water when the town walks to it; when it does not (a
-  // pocket between the quay, a neighbour's quay and the sea, or a strip outside the town wall — L-136), the nearest tile around
+  // pocket between the quay, a neighbour's quay and the sea, or a strip outside the town wall — L-138), the nearest tile around
   // the quay that the town's streets reach. Decided in the world's step and kept on the quay with the ground it was decided
   // for (b.qs, b.cs, b.qsK), so that the drawing shows the crates where the porters go for them.
   const groundKey = () => (G.S.walkVer || 0) + '/' + (G.S.typeVer || 0);
