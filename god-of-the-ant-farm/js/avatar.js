@@ -326,13 +326,15 @@
   //  · op(v): what it does to the world — asked at its contact (contact, or at[0]), done by the world in its own step
   //    (Possess.apply), its answer { ok, why, … } read back: ok → then(res), not → fail(res); the act ends only once the world
   //    has answered, and done(res) has the answer. Before the contact nothing has happened: an act cut short changes nothing
+  //  · cut(): the act cut short before the world answered its contact (a step away, the world's push, sleep, keep false): what
+  //    it had begun in the world at its start is let go there (the crate held for the hands from the key: Act.abort)
   //  · reach(a) → { X, Y, Z, w, wid }: where the hands go meanwhile (a point of the world, how far) — only seen
   //  · vact: what the world sees the body doing meanwhile (v.act: the axe at the tree, the hands in the bush — the god's view
   //    draws it, and the people round it see it), as the body's place is the world's (written by the controller, as v.x)
   Av.act = function (o) {
     if (!b) return false;
     b.act = { anim: o.anim || 'interact', dur: o.dur || 1, t: 0, tr: 0, lock: o.lock !== false, done: o.done || null, at: o.at || null, face: o.face, to: o.to || null, toT: o.toT || 0.7, free: !!o.free, keep: o.keep || null,
-      world: !!o.world, op: o.op || null, contact: o.contact !== undefined ? o.contact : o.at ? o.at[0] : o.dur || 1, then: o.then || null, fail: o.fail || null, reach: o.reach || null, asked: null, res: null, vact: o.vact || '' };
+      world: !!o.world, op: o.op || null, contact: o.contact !== undefined ? o.contact : o.at ? o.at[0] : o.dur || 1, then: o.then || null, fail: o.fail || null, cut: o.cut || null, reach: o.reach || null, asked: null, res: null, vact: o.vact || '' };
     if (b.act.lock) b.loco = 'busy';
     if (o.face !== undefined) b.faceTo = o.face;
     b.wc = G.S.clock;
@@ -364,7 +366,7 @@
   Av.rest = () => { if (b && b.caps) b.stamina = b.caps.stamina; }; // (a drink of water: the breath comes back)
   Av.cancelAct = () => { if (b && b.act) { cutAct(); b.loco = 'ground'; } };
   // (an act cut short: what it had asked of the world and the world has not yet done is let go — it never happens)
-  function cutAct() { const a = b.act; if (a && a.asked && !a.asked.res) a.asked.cancel = true; b.act = null; b.faceTo = undefined; if (b.loco === 'busy') b.loco = 'ground'; }
+  function cutAct() { const a = b.act; if (a && a.asked && !a.asked.res) a.asked.cancel = true; b.act = null; b.faceTo = undefined; if (b.loco === 'busy') b.loco = 'ground'; if (a && a.cut && !a.res) a.cut(); }
 
   // ------------------------------ the step and the frame ------------------------------
   function step(v, h) {

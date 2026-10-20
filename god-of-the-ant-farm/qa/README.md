@@ -70,6 +70,14 @@ O mundo tem o seu próprio acaso, semeado pela semente do mundo e guardado no sa
 | `casca.js` | `node casca.js` | A casca vista de longe (`G.Interiors.shellOf`) igual à da planta inteira em todos os prédios dos mundos prontos (D-038). |
 | `interiores.js` | `node interiores.js` | O registro e a planta de um prédio atravessando o salto, o save (duas vezes), a reforma, a ruína e um save antigo: o teste D do adendo. |
 | `planta-ver.js` | `node planta-ver.js tipo povo família [id] [lado] [contexto]` | Uma planta desenhada em texto, piso por piso. |
+| `muros.js` | `node muros.js [mundo,mundo...]` | Os portões de um muro (L-140): planejados de novo em toda cidade dos mundos prontos, um em cada lado (ou o do lado vizinho a um passo de onde o povo daquele lado sai), onde se anda, nunca lado a lado, quatro no máximo; o muro de Jelling; save no meio da obra. |
+| `civicos.js` | `node civicos.js [mundo,mundo...]` | Os prédios da vida comum (v37) nos mundos prontos: templo, quartel, cadeia, banhos, paço, palácios e feira — registro e planta válida, as peças de cada um, a casca de longe, save e load duas vezes, um ano de salto, a ruína, o save antigo. |
+| `visual/tres-node.js` | biblioteca (`T.load({ extra })`) | O 3D do jogo em Node, sem placa de vídeo: o mundo do `nodemundo.js` com o three.js e os arquivos do 3D depois (só a geometria), para provar com números o que se desenha. |
+| `visual/corpo-mundo.js` | `node visual/corpo-mundo.js [mundo]` | O corpo do Modo Encarnado contra as regras do mundo, em Node: trabalha no ritmo de quem faz o mesmo, espera com o mundo parado, muda o mundo só dentro do passo, entrega pelo depósito. |
+| `visual/maos.js` | `node visual/maos.js` | O que as mãos seguram: cada forma no orçamento e no tamanho da tabela, a carga lida do mundo, as palmas na coisa, o peso na pose, pegar do chão e pôr. |
+| `visual/estiva.js` | `node visual/estiva.js [mundo]` | O estivador achado e feito pelo corpo (L-151): a descarga do mundo, o chamado do ofício, a pista na tela, o "E — Pegar a caixa" ao alcance das caixas desenhadas, a entrega no armazém. |
+| `visual/carga-mundo.js` | `node visual/carga-mundo.js [mundo]` | O que o 3D mostra dos bens é o do mundo: os montes do armazém, as caixas do cais onde o mundo as põe, a caixa nas mãos fora do cais, o que caiu no chão. |
+| `visual/disputa.js` | `node visual/disputa.js [mundo]` | Uma caixa do cais entre o corpo e os carregadores, uma regra para os dois (L-157): o E começa o ato no passo do mundo, o contato o faz, o gesto cortado solta; save no meio, o deus no meio, o corpo morre no meio. |
 | `junta-inv.js` | `node junta-inv.js [confere]` | Copia as invariantes dos sistemas em construção (`atividades-inv.js`, `interiores-inv.js`, `visual/corpo-qa.js`) para dentro do `qa.js`, para que a soak e a regressão as confiram (o `guard.js` cobra, regra 21). |
 
 Qualquer erro de página, aviso no console ou erro capturado por um módulo (`G.modErr`) conta como falha.
