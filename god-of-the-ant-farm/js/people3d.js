@@ -1273,12 +1273,14 @@
     const av = P3.avatar;
     // the nearest people first, as many as the machine is told to carry
     const near = [];
-    // (who the world has inside a building is drawn only where its inside is drawn, where Interiors puts them: Build3D.openPlace)
+    // (who the world has inside a building is drawn only where its inside is drawn, where Interiors puts them: Build3D.openPlace;
+    // in one open to the sky — a fair —, always: where its plan puts them, or where the world has them before its plan is made)
     const placeOf = v => (v.inside && G.Build3D && G.Build3D.openPlace ? G.Build3D.openPlace(v) : null);
+    const openSky = id => !!(G.Build3D && G.Build3D.openShell && G.Build3D.openShell(id));
     for (const v of S.villagers.values()) {
       if (av && v.id === av.id) continue;
       if (v.aboard || v.ug || v.held || (v.age < 2 && v.carried)) continue;
-      const pl = v.inside ? placeOf(v) : null; if (v.inside && !pl) continue;
+      const pl = v.inside ? placeOf(v) : null; if (v.inside && !pl && !openSky(v.inside)) continue;
       const X = pl ? pl.X : v.x * TL, Z = pl ? pl.Z : v.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 > RC2) continue;
       near.push([d2, v]);
     }

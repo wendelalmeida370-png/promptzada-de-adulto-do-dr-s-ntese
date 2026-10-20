@@ -1905,8 +1905,9 @@ float m3scale(float p) {
   B3.sig = function (x0, y0, n) {
     let s = 0; const fine = fineAt(x0, y0, n);
     for (const b of G.S.buildings.values()) { if (!inChunk(b, x0, y0, n)) continue; s = (s * 31 + b.id * 7 + (b.built ? 1 : 0) + Math.floor((b.progress || 0) * 5) * 3 + Math.floor((b.hp / (b.maxHp || 1)) * 4) * 11 + (b.crops ? b.crops.reduce((a, c) => a + c.s + Math.floor((c.g || 0) * 3), 0) : 0) * 13 + (b.graves ? b.graves.length : 0) * 17 + B3.shellSig(b) * 19) | 0;
-      // (a store's heaps are its people's stock: drawn again, where they are drawn — fine —, when a count of them changes)
-      if (fine && b.built && G.Props3D && G.Props3D.shows && G.Props3D.shows(b)) { const p = G.Props3D.piles(b); s = (s * 7 + p[0] * 19 + p[1] * 23 + p[2] * 29) | 0; } }
+      // (a store's heaps are its people's stock: drawn again, where they are drawn — fine, in its yard —, when a count of them
+      // changes; a store drawn from its plan has no yard: it shows its stock inside, in its keeping pieces — Build3D.fillOf)
+      if (fine && b.built && G.Props3D && G.Props3D.shows && G.Props3D.shows(b) && !B3.shellOf(b)) { const p = G.Props3D.piles(b); s = (s * 7 + p[0] * 19 + p[1] * 23 + p[2] * 29) | 0; } }
     // (the arches standing in this chunk: one built across the map does not change it)
     for (const a of G.S.aqueducts || []) for (let k = 0; k < a.built; k++) { const t = a.tiles[k]; if (t[0] >= x0 && t[1] >= y0 && t[0] < x0 + n && t[1] < y0 + n) s = (s + (k + 1) * 23 + (a.dead ? 5 : 0)) | 0; }
     // (a chunk with buildings or ways the body comes near is drawn again, finer — its walks of planks too; one without has
@@ -1973,6 +1974,7 @@ float m3scale(float p) {
     'adobe-estuque': ['stucco', [222, 208, 180]], reboco: ['plaster', [222, 213, 196]], 'pau-a-pique': ['mud', [170, 144, 110]], pedra: ['stone', [158, 152, 142]], enxaimel: ['frame', [230, 222, 205]] };
   const inMat = m => INMAT[m] || INMAT.reboco;
   const IWOOD = [132, 98, 66], IDARK = [98, 72, 48], ILINEN = [224, 216, 198], ISTRAW = [198, 174, 112], IIRON = [54, 52, 50], ICLAY = [178, 106, 68], ISTONE = [152, 146, 136], IASH = [72, 66, 62], IEMBER = [226, 98, 40], IWOOL = [160, 116, 82];
+  const IGOLD = [196, 160, 78], IRUG = [146, 64, 50], IWATER = [72, 126, 144]; // (the god's image and the chief's seat; a prayer mat; the water of a pool, a tub, a fountain)
   const UP = [0, 1, 0], DOWN = [0, -1, 0];
   const FLOOR_UP = 0.012; // (a floor a hair over the plinth's top it lies on: the two faces never fight)
   // (what a storey's floor is: boards over a room below and in a loft, flags in the stone towns, beaten earth on the ground)
@@ -2085,6 +2087,8 @@ float m3scale(float p) {
   // joists under it
   function inFloor(K, plan, l, below) {
     const holes = plan.stairs.filter(s => s.lv1 === l.lv && s.hole).map(s => s.hole);
+    // (over a court open to the sky a storey has no floor — its grid has none there: the court's own storey has its paving)
+    const court = plan.shell.court; if (court && courtOpenOn(plan, l, court)) holes.push(court);
     const [pat, col] = floorMat(K, l); const y = l.y + FLOOR_UP;
     if (plan.shell.kind === 'round' && l.lv === Math.min(...plan.levels.map(q => q.lv))) {
       const sh = plan.shell, ri = sh.r - sh.t + 0.02, n = 22; K.as(pat, () => { for (let k = 0; k < n; k++) { const a0 = TAU * k / n, a1 = TAU * (k + 1) / n; K.tri([sh.cx, y, sh.cz], [sh.cx + Math.cos(a0) * ri, y, sh.cz + Math.sin(a0) * ri], [sh.cx + Math.cos(a1) * ri, y, sh.cz + Math.sin(a1) * ri], col, UP); } });
@@ -2176,6 +2180,14 @@ float m3scale(float p) {
       for (let k = 0; k <= n; k++) { const u = u0 + 0.05 + (u1 - u0 - 0.1) * k / n; if (u < r0 - 0.01 || u > r1 + 0.01) continue; for (const v of [v0, v1]) { const p = P2(u, v); K.log([p[0], p[1] - dn, p[2]], Pt(u, yr - dn, vm), 0.04, IDARK); } }
       if (r1 - r0 > 0.05) K.log(Pt(r0, yr - 0.1, vm), Pt(r1, yr - 0.1, vm), 0.07, IDARK); });
   }
+  // (a storey whose grid has nothing to stand on over the court — no floor, stair nor hatch there: the court is open through it)
+  function courtOpenOn(plan, l, c) {
+    const g = plan.grid && plan.grid.lv[l.lv]; if (!g) return false; const n = plan.grid.n, cs = plan.grid.cs, C = G.Interiors.CELL; let inner = 0;
+    for (let z = Math.max(0, Math.floor(c[1] / cs)); z < Math.min(n, Math.ceil(c[3] / cs)); z++) for (let x = Math.max(0, Math.floor(c[0] / cs)); x < Math.min(n, Math.ceil(c[2] / cs)); x++) {
+      const px = (x + 0.5) * cs, pz = (z + 0.5) * cs; if (!(px > c[0] && px < c[2] && pz > c[1] && pz < c[3])) continue; inner++; const k = g[z * n + x];
+      if (k === C.FLOOR || k === C.STAIR || k === C.HATCH || k === C.DOOR) return false; }
+    return inner > 0;
+  }
   // (a court a storey over the ground has floor over — the grid's: where the body walks there, nothing of the court's stands)
   function courtCovered(plan, c) {
     const n = plan.grid.n, cs = plan.grid.cs, F = G.Interiors.CELL.FLOOR;
@@ -2258,8 +2270,11 @@ float m3scale(float p) {
     'mesa-baixa'(F, it) { FURN.mesa(F, it); },
     banco(F, it) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.12), 0, 0, 0.05, h - 0.05, d - 0.04, IDARK, 'plankV'); F.box(0, h - 0.05, 0, w, 0.05, d, IWOOD, 'plankH'); },
     arca(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, h - 0.06, d, IWOOD, 'plankH'); F.box(0, h - 0.06, 0, w + 0.02, 0.06, d + 0.02, IDARK, 'plankH'); for (const e of [-1, 1]) F.box(e * w / 4, 0, 0, 0.04, h + 0.005, d + 0.025, IIRON, 'iron'); },
-    despensa(F, it) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.02), 0, 0, 0.04, h, d, IDARK, 'plankV'); for (const y of [0.04, 0.6, 1.12, h - 0.04]) F.box(0, y, 0, w - 0.08, 0.03, d, IWOOD, 'plankH');
-      for (const y of [0.07, 0.63, 1.15]) for (let k = 0; k < 3; k++) { const a = -w / 2 + 0.2 + (w - 0.4) * k / 2; if (F.hv(k + y * 10) < 0.7) F.cyl(a, y, 0, 0.08 + F.hv(k + 5) * 0.04, 0.2 + F.hv(k + 7) * 0.12, ICLAY); } },
+    // (a keeping piece shows how full it is when the world says — cx.fill, Interiors.state: its share of the store it holds —, the
+    // shelves filled from the bottom up; told nothing, as a piece of furniture is)
+    despensa(F, it, cx) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.02), 0, 0, 0.04, h, d, IDARK, 'plankV'); for (const y of [0.04, 0.6, 1.12, h - 0.04]) F.box(0, y, 0, w - 0.08, 0.03, d, IWOOD, 'plankH');
+      const told = cx && Number.isFinite(cx.fill); const shown = told ? Math.round(G.clamp(cx.fill, 0, 1) * 9) : 9; let q = 0;
+      for (const y of [0.07, 0.63, 1.15]) for (let k = 0; k < 3; k++) { const a = -w / 2 + 0.2 + (w - 0.4) * k / 2; if (told ? q++ < shown : F.hv(k + y * 10) < 0.7) F.cyl(a, y, 0, 0.08 + F.hv(k + 5) * 0.04, 0.2 + F.hv(k + 7) * 0.12, ICLAY); } },
     jarros(F, it) { const { w, d, h } = it; const n = w > 0.8 ? 3 : 2; for (let k = 0; k < n; k++) { const a = -w / 2 + w * (k + 0.5) / n, r = Math.min(d / 2 - 0.03, w / n / 2 - 0.02) * (0.85 + F.hv(k) * 0.15), hh = h * (0.75 + F.hv(k + 3) * 0.25);
       F.sph(a, hh / 2 - 0.02, 0, r, dim(ICLAY, 0.85 + F.hv(k + 6) * 0.2), hh / 2 - 0.04, 'mud'); F.cyl(a, hh - 0.12, 0, r * 0.45, 0.12, dim(ICLAY, 0.8)); } },
     cesto(F, it) { const { w, d, h } = it; F.cyl(-w * 0.22, 0, 0, Math.min(d / 2, w / 4) - 0.02, h * 0.7, ISTRAW, 'wicker'); F.cyl(w * 0.24, 0, 0.03, Math.min(d / 2, w / 4) - 0.06, h * 0.5, dim(ISTRAW, 0.9), 'wicker'); },
@@ -2267,9 +2282,14 @@ float m3scale(float p) {
       F.log(-w / 2 + 0.02, 0.07 + j * 0.13, n, w / 2 - 0.02, 0.07 + j * 0.13, n, 0.065, dim(IWOOD, 0.85 + F.hv(j * 7 + k) * 0.25), 'bark'); } },
     tear(F, it) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.05), 0, -d / 2 + 0.1, 0.08, h, 0.08, IDARK, 'beam'); for (const y of [0.3, h - 0.1]) F.box(0, y, -d / 2 + 0.1, w, 0.08, 0.1, IWOOD, 'beam');
       F.box(0, 0.42, -d / 2 + 0.1, w - 0.22, h - 0.6, 0.015, F.hv(2) < 0.5 ? [176, 70, 54] : [72, 104, 150], 'linen'); F.box(0, 0, d / 2 - 0.18, w * 0.6, 0.45, 0.3, IWOOD, 'plankH'); },
-    baia(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, 0.04, d, dim(IWOOD, 0.8), 'plankH'); F.box(0, 0, -d / 2 + 0.03, w, Math.min(1, h), 0.06, IWOOD, 'plankH'); for (const e of [-1, 1]) F.box(e * (w / 2 - 0.03), 0, 0, 0.06, Math.min(1, h), d, IWOOD, 'plankH'); },
-    prateleira(F, it) { FURN.despensa(F, it); },
-    tulha(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, h - 0.05, d, IWOOD, 'plankV'); F.box(0, h - 0.05, 0, w + 0.04, 0.05, d + 0.04, IDARK, 'plankH'); F.box(0, h - 0.06, 0, w - 0.1, 0.02, d - 0.1, [214, 186, 120]); },
+    baia(F, it, cx) { const { w, d, h } = it; F.box(0, 0, 0, w, 0.04, d, dim(IWOOD, 0.8), 'plankH'); F.box(0, 0, -d / 2 + 0.03, w, Math.min(1, h), 0.06, IWOOD, 'plankH'); for (const e of [-1, 1]) F.box(e * (w / 2 - 0.03), 0, 0, 0.06, Math.min(1, h), d, IWOOD, 'plankH');
+      // (the sacks heaped in the bay, as many as it holds: rows of three, a second layer over the first)
+      const n = cx && Number.isFinite(cx.fill) ? Math.round(G.clamp(cx.fill, 0, 1) * 6) : 0;
+      for (let q = 0; q < n; q++) { const row = Math.floor(q / 3) % 2, i = q % 3; F.sph(-w / 2 + 0.36 + (w - 0.72) * i / 2, 0.24 + row * 0.36, -d / 2 + 0.38 + row * 0.12, 0.26, dim(ILINEN, 0.82 + F.hv(q) * 0.12), 0.2, 'linen'); } },
+    prateleira(F, it, cx) { FURN.despensa(F, it, cx); },
+    tulha(F, it, cx) { const { w, d, h } = it; F.box(0, 0, 0, w, h - 0.05, d, IWOOD, 'plankV'); F.box(0, h - 0.05, 0, w + 0.04, 0.05, d + 0.04, IDARK, 'plankH');
+      // (the grain up to how full it is — a bin of the people's stock shows its share —; told nothing, near the top)
+      const f = cx && Number.isFinite(cx.fill) ? G.clamp(cx.fill, 0, 1) : 1; if (f > 0.01) F.box(0, 0.06 + (h - 0.14) * f, 0, w - 0.1, 0.02, d - 0.1, [214, 186, 120]); },
     pipas(F, it) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(0, 0, e * (d / 2 - 0.08), w, 0.12, 0.08, IDARK, 'beam'); const r = Math.min(h / 2 - 0.08, w / 4 - 0.02);
       for (const e of [-1, 1]) F.log(e * w / 4, 0.12 + r, -d / 2 + 0.04, e * w / 4, 0.12 + r, d / 2 - 0.04, r, IWOOD, 'plankV'); },
     'mesa-conferencia'(F, it) { const { w, d, h } = it; FURN.mesa(F, it); F.box(w * 0.25, h, -0.05, 0.03, 0.4, 0.03, IIRON, 'iron'); F.box(w * 0.25, h + 0.38, -0.05, 0.4, 0.02, 0.02, IIRON, 'iron'); for (const e of [-1, 1]) F.cyl(w * 0.25 + e * 0.18, h + 0.18, -0.05, 0.07, 0.02, [168, 136, 70]);
@@ -2308,9 +2328,45 @@ float m3scale(float p) {
     cofre(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, h, d, IDARK, 'plankH'); for (const e of [-1, 0, 1]) F.box(e * w * 0.35, 0, 0, 0.05, h + 0.01, d + 0.015, IIRON, 'iron'); F.box(0, h * 0.55, d / 2, 0.1, 0.12, 0.03, [168, 136, 70]); },
     redes(F, it) { const { w, d, h } = it; F.box(0, h - 0.06, -d / 2 + 0.06, w, 0.06, 0.06, IDARK, 'beam'); F.box(0, 0.5, -d / 2 + 0.08, w - 0.1, h - 0.6, 0.03, [150, 140, 110], 'rope'); F.cyl(-w * 0.25, 0, 0.05, 0.18, 0.4, ISTRAW, 'wicker'); F.cyl(w * 0.25, 0, 0.05, 0.16, 0.32, ISTRAW, 'wicker'); },
     entulho(F, it) { const { w, d, h } = it; for (let k = 0; k < 6; k++) F.box((F.hv(k) - 0.5) * w * 0.8, 0, (F.hv(k + 9) - 0.5) * d * 0.8, 0.2 + F.hv(k + 3) * 0.3, h * (0.3 + F.hv(k + 5) * 0.7), 0.2 + F.hv(k + 7) * 0.3, dim(ISTONE, 0.75 + F.hv(k + 11) * 0.3), 'rock', F.hv(k + 13) * 3); },
+    // ---- the temple (int-civicos.js): the god's image on its plinth, the altar, the benches and the mats of the faithful, a lamp
+    idolo(F, it) { const { w, d, h } = it; const ph = Math.min(0.7, h * 0.3); F.box(0, 0, 0, w, ph, d, ISTONE, 'stone'); F.box(0, ph - 0.06, 0, w + 0.04, 0.06, d + 0.04, dim(ISTONE, 0.9), 'stone');
+      const s = h - ph; F.cyl(0, ph, -0.02, Math.min(w, d) * 0.3, s * 0.62, IGOLD); F.box(0, ph + s * 0.5, -0.02, Math.min(w * 0.7, 0.56), s * 0.14, Math.min(d * 0.5, 0.3), IGOLD);
+      F.sph(0, ph + s * 0.74, -0.02, Math.min(w, d) * 0.2, IGOLD, Math.min(w, d) * 0.22); F.cyl(0, ph + s * 0.86, -0.02, Math.min(w, d) * 0.12, s * 0.12, dim(IGOLD, 0.85)); },
+    altar(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w - 0.06, h - 0.07, d - 0.06, ISTONE, 'stone'); F.box(0, h - 0.07, 0, w, 0.07, d, dim(ISTONE, 1.06), 'stone');
+      F.cyl(0, h, 0.04, 0.12, 0.06, dim(IGOLD, 0.9)); for (const e of [-1, 1]) { F.cyl(e * (w / 2 - 0.12), h, -0.1, 0.03, 0.14, ILINEN); F.cyl(e * (w / 2 - 0.12), h + 0.14, -0.1, 0.012, 0.03, IEMBER); } },
+    'banco-fieis'(F, it) { FURN.banco(F, it); },
+    'esteira-oracao'(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, Math.max(0.015, h - 0.01), d, IRUG, 'wool'); F.box(0, 0.002, 0, w - 0.12, Math.max(0.016, h - 0.008), d - 0.12, dim(IRUG, 1.25), 'wool'); },
+    lampadario(F, it) { const { w, h } = it; F.cyl(0, 0, 0, w * 0.38, 0.05, IIRON, 'iron'); F.cyl(0, 0.05, 0, 0.022, h - 0.16, IIRON, 'iron'); F.cyl(0, h - 0.11, 0, w * 0.28, 0.05, IIRON, 'iron'); F.cyl(0, h - 0.06, 0, 0.03, 0.05, IEMBER); },
+    // ---- the barracks: the cots, the weapons' rack, the training post
+    catre(F, it) { const { w, d } = it; F.legs(w, d, 0.3, 0.03, IDARK); F.box(0, 0.3, 0, w, 0.05, d, IWOOD, 'plankH'); F.box(0, 0.35, 0.02, w - 0.08, 0.07, d - 0.12, ILINEN, 'linen');
+      F.box(0, 0.42, d / 2 - 0.32, w - 0.1, 0.03, 0.4, F.hv(1) < 0.5 ? IWOOL : [118, 98, 72], 'wool'); },
+    armeiro(F, it) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.04), 0, -d / 2 + 0.06, 0.07, h, 0.07, IDARK, 'beam'); for (const y of [0.25, h * 0.55, h - 0.12]) F.box(0, y, -d / 2 + 0.06, w, 0.06, 0.06, IWOOD, 'beam');
+      const n = Math.max(3, Math.floor(w / 0.22)); for (let k = 0; k < n; k++) { const a = -w / 2 + 0.16 + (w - 0.32) * k / (n - 1); F.log(a, 0.05, -d / 2 + 0.2, a, h - 0.16, -d / 2 + 0.1, 0.015, IDARK); F.box(a, h - 0.16, -d / 2 + 0.1, 0.03, 0.12, 0.012, IIRON, 'iron'); } },
+    manequim(F, it) { const { w, h } = it; for (const r of [0, Math.PI / 2]) F.box(0, 0, 0, w, 0.08, 0.1, IDARK, 'beam', r); F.cyl(0, 0.08, 0, 0.06, h - 0.1, IWOOD, 'bark'); F.box(0, h * 0.72, 0, w * 0.95, 0.07, 0.08, IWOOD, 'beam');
+      F.sph(0, h * 0.42, 0, 0.17, ISTRAW, 0.24, 'wicker'); F.sph(0, h - 0.12, 0, 0.11, ISTRAW, 0.11, 'wicker'); },
+    // ---- the jail: the straw to sleep on, the bucket, the board of the keys
+    palha(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, Math.max(0.03, h - 0.04), d, ISTRAW, 'wicker');
+      for (let k = 0; k < 4; k++) { const r = Math.min(w, d) * (0.16 + F.hv(k + 8) * 0.06); F.sph((F.hv(k) - 0.5) * (w - 2 * r - 0.04), h * 0.5, (F.hv(k + 4) - 0.5) * (d - 2 * r - 0.04), r, dim(ISTRAW, 0.9 + F.hv(k + 2) * 0.15), h * 0.45, 'wicker'); } },
+    balde(F, it) { const { w, h } = it; const r = w / 2 - 0.03; F.cyl(0, 0, 0, r, h - 0.08, IWOOD, 'plankV'); for (const y of [0.05, h - 0.16]) F.cyl(0, y, 0, r + 0.006, 0.02, IIRON, 'iron');
+      F.log(-r, h - 0.08, 0, 0, h - 0.01, 0, 0.008, IIRON); F.log(0, h - 0.01, 0, r, h - 0.08, 0, 0.008, IIRON); },
+    chaves(F, it) { const { w, d, h } = it; F.box(0, 0, -d / 2 + 0.02, w, h, 0.03, IWOOD, 'plankH'); for (let k = 0; k < 4; k++) { const a = -w / 2 + 0.1 + (w - 0.2) * k / 3; F.box(a, h * 0.7, -d / 2 + 0.05, 0.015, 0.015, 0.04, IIRON, 'iron'); if (F.hv(k) < 0.8) F.box(a, h * 0.38, -d / 2 + 0.06, 0.035, 0.16, 0.012, dim(IGOLD, 0.7), 'iron'); } },
+    // ---- the baths: the pool one goes down into, the tub, the furnace, the pegs for the clothes
+    piscina(F, it) { const { w, d, h } = it; const t = 0.16; F.box(0, 0, 0, w - 2 * t, 0.03, d - 2 * t, dim(ISTONE, 1.1), 'tile');
+      for (const e of [-1, 1]) { F.box(0, 0, e * (d / 2 - t / 2), w, h, t, ISTONE, 'stone'); F.box(e * (w / 2 - t / 2), 0, 0, t, h, d - 2 * t, ISTONE, 'stone'); } F.box(0, h - 0.14, 0, w - 2 * t, 0.02, d - 2 * t, IWATER); },
+    'tina-banho'(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, h - 0.04, d, IWOOD, 'plankV'); for (const y of [0.08, h - 0.16]) F.box(0, y, 0, w + 0.012, 0.03, d + 0.012, IIRON, 'iron'); F.box(0, h - 0.12, 0, w - 0.1, 0.02, d - 0.1, IWATER); },
+    'fornalha-banho'(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, h, d, ISTONE, 'stone'); F.box(0, 0.1, d / 2 - 0.02, w * 0.45, 0.32, 0.03, [36, 30, 28]); F.box(0, 0.12, d / 2 - 0.04, w * 0.32, 0.12, 0.04, IEMBER);
+      F.box(0, h - 0.04, 0, w + 0.04, 0.04, d + 0.04, dim(ISTONE, 0.9), 'stone'); },
+    cabide(F, it) { const { w, d, h } = it; F.box(0, h - 0.08, -d / 2 + 0.03, w, 0.07, 0.05, IDARK, 'beam'); const n = Math.max(2, Math.round(w / 0.3));
+      for (let k = 0; k < n; k++) { const a = -w / 2 + w * (k + 0.5) / n; F.box(a, h - 0.1, -d / 2 + 0.08, 0.02, 0.02, 0.07, IWOOD); if (F.hv(k) < 0.7) F.box(a, 0, -d / 2 + 0.1, w / n - 0.06, h - 0.12, 0.03, F.hv(k + 3) < 0.5 ? ILINEN : [156, 92, 70], 'linen'); } },
+    // ---- the tavern's vat, the chief's seat, the court's fountain
+    cuba(F, it) { const { w, h } = it; const r = w / 2 - 0.03; F.cyl(0, 0, 0, r, h - 0.05, IWOOD, 'plankV'); for (const y of [0.1, h * 0.5, h - 0.2]) F.cyl(0, y, 0, r + 0.008, 0.035, IIRON, 'iron'); F.cyl(0, h - 0.08, 0, r - 0.04, 0.02, [118, 72, 46]); },
+    trono(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, 0.12, d, IDARK, 'plankH'); F.box(0, 0.12, 0.04, w - 0.12, 0.36, d - 0.14, IWOOD, 'plankV'); F.box(0, 0.48, 0.05, w - 0.16, 0.08, d - 0.2, IRUG, 'wool');
+      F.box(0, 0.12, -d / 2 + 0.07, w, h - 0.12, 0.12, IWOOD, 'plankV'); F.box(0, h - 0.1, -d / 2 + 0.07, w + 0.06, 0.1, 0.16, dim(IGOLD, 0.85)); for (const e of [-1, 1]) F.box(e * (w / 2 - 0.05), 0.48, 0.02, 0.1, 0.32, d - 0.1, IDARK, 'beam'); },
+    fonte(F, it) { const { w, h } = it; const r = w / 2 - 0.02; F.cyl(0, 0, 0, r, h - 0.1, ISTONE, 'stone'); F.cyl(0, h - 0.1, 0, r + 0.02, 0.06, dim(ISTONE, 1.08), 'stone'); F.cyl(0, h - 0.12, 0, r - 0.1, 0.02, IWATER);
+      F.cyl(0, h - 0.1, 0, 0.09, 0.45, dim(ISTONE, 0.95), 'stone'); F.sph(0, h + 0.38, 0, 0.13, dim(ISTONE, 0.95), 0.07, 'stone'); },
   };
   B3.FURN = FURN; // (for the tests: the kinds the 3D knows how to draw)
-  const FIRE_K = { lar: 1, fogao: 0.7, forno: 0.5, fogareiro: 0.45, braseiro: 0.6, 'forja-fogo': 1, 'forno-olaria': 0.6, fornalha: 0.5 };
+  const FIRE_K = { lar: 1, fogao: 0.7, forno: 0.5, fogareiro: 0.45, braseiro: 0.6, 'forja-fogo': 1, 'forno-olaria': 0.6, fornalha: 0.5, 'fornalha-banho': 0.55 };
   // the door's leaf, apart, in its own frame: from its hinge (the origin) across the opening along +X, its foot at 0 — planks
   // with their battens on the room's side, the iron straps
   function leafParts(w, h, col) {
@@ -2323,6 +2379,13 @@ float m3scale(float p) {
     const g = R3.Geo(); for (const [x, y, z, sx, sy, sz, c, pat] of leafParts(w, h, col)) { g.pat = PAT[pat] || 0; g.put(SH.box, R3.mat(x, y, z, 0, sx, sy, sz), c); }
     g.pat = 0; return g;
   }
+  // (a grate — a cell's door: iron bars in a frame, in the same frame as a leaf)
+  function gradeGeo(w, h) {
+    const g = R3.Geo(); g.pat = PAT.iron; const lw = w - 0.03, lh = h - 0.02; const put = (x, y, sx, sy, sz) => g.put(SH.box, R3.mat(x, y, 0, 0, sx, sy, sz), IIRON);
+    for (const x of [0.04, lw - 0.01]) put(x, 0.01, 0.05, lh, 0.05); for (const y of [0.04, lh * 0.5, lh - 0.05]) put(lw / 2 + 0.015, y, lw, 0.05, 0.04);
+    const n = Math.max(3, Math.round(lw / 0.12)); for (let k = 1; k < n; k++) put(0.015 + lw * k / n, 0.01, 0.022, lh, 0.022);
+    g.pat = 0; return g;
+  }
   // a lid over a stair's hole, apart, in its own frame: its hinge along X at the origin, the lid out along +Z, its top at 0 —
   // boards across, two battens under them
   function lidGeo(w, d) {
@@ -2332,7 +2395,7 @@ float m3scale(float p) {
   }
   B3.interior = function (plan, b, o) {
     o = o || {}; if (!plan || !plan.levels || !plan.levels.length || !plan.shell) return null;
-    const levels = plan.levels.slice().sort((p, q) => p.y - q.y); const fine = o.fine !== undefined ? !!o.fine : undefined;
+    const levels = plan.levels.slice().sort((p, q) => p.y - q.y); const fine = o.fine !== undefined ? !!o.fine : undefined; const fill = o.fill || null;
     const out = { lv: {}, roof: null, leaf: [], hatch: [], item: {}, light: [], cut: null, box: null, tris: 0 };
     const Ks = {}; let K0 = null;
     for (const l of levels) { const g = R3.Geo(); const K = kit(g, b, undefined, undefined, fine); g.ao = null; Ks[l.lv] = K; out.lv[l.lv] = g; if (!K0) K0 = K; }
@@ -2352,7 +2415,7 @@ float m3scale(float p) {
         if (it.lv !== l.lv) continue; const from = g.p.length / 3; const foot = l.y + (it.y || 0) + FLOOR_UP; const F = piece(K, it, foot);
         // (the ceiling a piece reaches up to from its foot — a hood, a flue: the storey's own, or the eaves)
         const ceil = Math.min(l.y + l.h, sh.eave) - foot;
-        const f = FURN[it.kind]; if (f) f(F, it, { ceil }); else F.box(0, 0, 0, it.w, it.h, it.d, IWOOD, 'plankH');
+        const f = FURN[it.kind]; if (f) f(F, it, { ceil, fill: fill ? fill[it.id] : undefined }); else F.box(0, 0, 0, it.w, it.h, it.d, IWOOD, 'plankH');
         out.item[it.id] = [l.lv, from, g.p.length / 3];
         if (it.fire) out.light.push([K.x0 + it.x, K.y0 + l.y + (it.y || 0) + Math.min(it.h, 0.6), K.z0 + it.z, FIRE_K[it.kind] || 0.5]);
       }
@@ -2371,7 +2434,7 @@ float m3scale(float p) {
       { const m = plan.rooms.find(q => q.id === d.rooms[0]); if (m) { const cx = (m.r[0] + m.r[2]) / 2 - (w.a[0] + w.b[0]) / 2, cz = (m.r[1] + m.r[3]) / 2 - (w.a[1] + w.b[1]) / 2; sg = cx * nx + cz * nz >= 0 ? 1 : -1; } }
       // (turning by +θ carries the free end along (uz, −ux): toward the room, or the other way — leafPose; the foot at the sill)
       const hole = plan.holes.find(h => h.door === d.id); const ps = leafPose(w, Object.assign({}, d, { sill: hole ? hole.sill || 0 : d.sill || 0 }), l, sg);
-      out.leaf.push({ id: d.id, lv: w.lv, at: [b.x * TLm + ps.hx, K0.y0 + ps.y, b.y * TLm + ps.hz], yaw: ps.yaw, swing: ps.swing, w: d.w, h: d.h, g: leafGeo(d.w, d.h, (K0.P && K0.P.door) || '#5a3b25') });
+      out.leaf.push({ id: d.id, lv: w.lv, at: [b.x * TLm + ps.hx, K0.y0 + ps.y, b.y * TLm + ps.hz], yaw: ps.yaw, swing: ps.swing, w: d.w, h: d.h, g: d.kind === 'grade' ? gradeGeo(d.w, d.h) : leafGeo(d.w, d.h, (K0.P && K0.P.door) || '#5a3b25') });
     }
     // the lids over the holes the stairs come up through, shut — hinged along the hole's edge at the stair's top
     for (const s of plan.stairs) {
@@ -2418,7 +2481,7 @@ float m3scale(float p) {
     const walls = p.walls.filter(w => kindOf.get(w.lv) !== 'porao' && (marked ? w.shell : w.outer || kindOf.get(w.lv) === 'terraco'));
     const ids = new Set(walls.map(w => w.id)); const sh = p.shell;
     S = { shell: sh, levels: p.levels, walls, holes: p.holes.filter(h => ids.has(h.wall)), doors: p.doors, rooms: p.rooms, entrance: p.entrance,
-      steps: p.stairs.filter(s => s.kind === 'degraus' && outsideShell(sh, s)), items: [] };
+      steps: p.stairs.filter(s => s.kind === 'degraus' && outsideShell(sh, s)), items: [], p };
     S.byId = new Map(p.walls.map(w => [w.id, w])); outMemo.set(p, S); return S;
   }
   function outOfShell(s, p) {
@@ -2449,7 +2512,10 @@ float m3scale(float p) {
     const In = G.Interiors; if (!In || !In.has || !b.built || b.type === 'ruin' || !In.has(b)) return 0;
     if (!In.shellOf && !(G.Space.planMade ? G.Space.planMade(b) : In.ready && In.ready(b))) return 0;
     const k = In.keyOf ? In.keyOf(b) : (b.ip ? b.ip.r + ':' + b.ip.f + ':' + b.ip.s + ':' + (b.ip.fx || []).length : ''); let h = 7;
-    for (let i = 0; i < k.length; i++) h = (Math.imul(h, 31) + k.charCodeAt(i)) | 0; return h || 1;
+    for (let i = 0; i < k.length; i++) h = (Math.imul(h, 31) + k.charCodeAt(i)) | 0;
+    // (an open shell shows its plan's pieces: drawn again once they are there)
+    const S = B3.shellOf(b); if (S && S.shell.kind === 'aberta' && S.p) h = (Math.imul(h, 31) + 1) | 0;
+    return h || 1;
   };
   // (a side of a rectangle: its line, the way out of it, its run — u from its west or north end — and a point on it: u along,
   // y up, n out of its line)
@@ -2505,7 +2571,7 @@ float m3scale(float p) {
   }
   // the outside of a building from its shell (rect; round: shellRound)
   function shellHouse(g, gw, K, S) {
-    const sh = S.shell, P = K.P; if (sh.kind === 'round') return shellRound(g, gw, K, S);
+    const sh = S.shell, P = K.P; if (sh.kind === 'round') return shellRound(g, gw, K, S); if (sh.kind === 'aberta') return shellOpen(K, S);
     const R = sh.r, x = (R[0] + R[2]) / 2, z = (R[1] + R[3]) / 2, sx = R[2] - R[0], sz = R[3] - R[1];
     const byLv = new Map(S.levels.map(l => [l.lv, l]));
     const body = S.levels.filter(l => l.kind !== 'porao' && l.kind !== 'terraco' && l.kind !== 'jirau').sort((a, c) => a.y - c.y);
@@ -2526,7 +2592,8 @@ float m3scale(float p) {
     if (sh.court) courtSides(K, ctx, sh.court);
     // the roof: the people's, as steep as the shell says, its ridge where it says; a flat one with its terrace; open over a court
     let top;
-    if (flat) top = flatTop(g, gw, K, ctx, x, z, sx, sz);
+    if (!sh.roof) top = wallTops(K, S, R, eave); // (no roof at all — a shell open above, as a ruin's: the tops of its walls)
+    else if (flat) top = flatTop(g, gw, K, ctx, x, z, sx, sz);
     else if (sh.court) top = courtRoof(K, ctx, rk);
     else top = roofOf(K, x, z, sx, sz, eave, rk, null, sh.roof.along === 'z', sh.roof.h, true, new Set(leans.map(ln => ln.on)));
     if (K.st === 'nordico' && rk === 'turf' && K.roof && !sh.court) nordGables(gw, K, K.cls);
@@ -2536,6 +2603,44 @@ float m3scale(float p) {
     if (K.footed && !raised && K.body.door) wallGrass(K, x, z, sx, sz, { side, a: K.body.door.a, w: K.body.door.w });
     return top;
   }
+  // (the tops of a shell's walls with no roof over them: each side's wall, its thickness, at the eaves)
+  function wallTops(K, S, R, eave) {
+    const t = S.shell.t || 0.3; const st = outStuff(K, S, null);
+    K.as(st.pat, () => { for (const q of [[R[0], R[1], R[2], R[1] + t], [R[0], R[3] - t, R[2], R[3]], [R[0], R[1] + t, R[0] + t, R[3] - t], [R[2] - t, R[1] + t, R[2], R[3] - t]])
+      K.quad([q[0], eave, q[1]], [q[2], eave, q[1]], [q[2], eave, q[3]], [q[0], eave, q[3]], st.col, UP); });
+    return eave;
+  }
+  // an open shell (a fair): no sides and no roof — the lot's own ground —; under awnings, their cloths over the lot at the eaves'
+  // height, in strips along the way the shell says, on posts at their ends; and what stands there, seen from the street as
+  // from inside — there is no inside to it —: the plan's own pieces (the stalls, the fountain), once the plan is made (asked
+  // for here: Space.plan; the frame's pump makes it, and the chunk is drawn again with them)
+  const AWN = [[196, 84, 62], [222, 192, 118], [88, 120, 162], [234, 226, 204], [160, 104, 64]];
+  function shellOpen(K, S) {
+    const sh = S.shell, R = sh.r, x = (R[0] + R[2]) / 2, z = (R[1] + R[3]) / 2, sx = R[2] - R[0], sz = R[3] - R[1];
+    K.body = { x, z, sx, sz, door: null, shell: true, open: true };
+    if (sh.roof && sh.roof.kind === 'toldo' && sh.eave > 0.5) {
+      const az = sh.roof.along === 'z'; const len = (az ? sz : sx) - 0.2, wide = az ? sx : sz; const sw = 2.1, gap = 0.55;
+      const n = Math.max(1, Math.floor((wide + gap) / (sw + gap))); const off = (wide - (n * sw + (n - 1) * gap)) / 2;
+      const P = (u, y, w) => (az ? [R[0] + w, y, R[1] + 0.1 + u] : [R[0] + 0.1 + u, y, R[1] + w]); const sag = Math.min(0.28, len * 0.025);
+      for (let k = 0; k < n; k++) {
+        const w0 = off + k * (sw + gap), w1 = w0 + sw, e = sh.eave; const col = AWN[Math.floor(K.hv(40 + k) * AWN.length) % AWN.length];
+        // (the cloth: two slopes down to its middle, seen from above and from under it)
+        for (const [ua, ub, ya, yb] of [[0, len / 2, e, e - sag], [len / 2, len, e - sag, e]]) {
+          K.as('linen', () => { K.quad(P(ua, ya, w0), P(ub, yb, w0), P(ub, yb, w1), P(ua, ya, w1), col, [0, 1, 0]); K.quad(P(ua, ya - 0.012, w0), P(ub, yb - 0.012, w0), P(ub, yb - 0.012, w1), P(ua, ya - 0.012, w1), dim(col, 0.8), [0, -1, 0]); });
+        }
+        // (its posts, at its four corners — and in the middle, when it runs long)
+        const us = len > 7 ? [0.05, len / 2, len - 0.05] : [0.05, len - 0.05];
+        K.as('beam', () => { for (const u of us) for (const w of [w0 + 0.05, w1 - 0.05]) { const q = P(u, 0, w); const top = u === len / 2 ? e - sag : e; K.box(q[0], 0, q[2], 0.08, top + 0.04, 0.08, IDARK); } });
+      }
+    }
+    // (what stands on the ground of the fair: the plan's own pieces, as the inside draws them)
+    const p = S.p && S.p.ok ? S.p : null;
+    if (!p && G.Space.plan) G.Space.plan(K.b);
+    if (p) for (const it of p.items) { const l = p.levels.find(q => q.lv === it.lv) || p.levels[0]; const foot = l.y + (it.y || 0) + FLOOR_UP; const F = piece(K, it, foot); const f = FURN[it.kind]; if (f) f(F, it, { ceil: (sh.eave || 3) - foot }); else F.box(0, 0, 0, it.w, it.h, it.d, IWOOD, 'plankH'); }
+    return sh.eave || 0.3;
+  }
+  // (a building of the world drawn open to the sky, with nothing to open — a fair: its people are seen where they are)
+  B3.openShell = id => { const b = G.S.buildings.get(id); const S = b && B3.shellOf(b); return !!(S && S.shell.kind === 'aberta'); };
   // one side of the outside: its face round its openings, the openings, its dressing
   function sideFace(g, gw, K, ctx, F, ya, yb, covers, main) {
     if (yb <= ya + 0.01 || F.u1 - F.u0 < 0.02) return; const S = ctx.S;
@@ -2915,16 +3020,21 @@ float m3scale(float p) {
     const X = focus.X, Z = focus.Z; const dRect = b => Math.hypot(Math.max(b.x * L - X, 0, X - (b.x + b.w) * L), Math.max(b.y * L - Z, 0, Z - (b.y + b.h) * L));
     // (the candidates: the building the body is in, first; those whose lot is within reach — a plan asked for, the made ones)
     const want = []; const seen = new Set(); const inB = v0 && v0.inside ? S.buildings.get(v0.inside) : null;
-    if (inB) { seen.add(inB.id); const p = G.Space.plan(inB); if (p) want.push([-1, inB, p]); }
+    // (an open shell — a fair — has nothing to open: its outside shows its pieces, and its people where the plan puts them; a ruin
+    // is drawn as a ruin, the old way, its plan's rubble not over it)
+    const opens = (b, p) => !!p && b.type !== 'ruin' && !(p.shell && p.shell.kind === 'aberta');
+    if (inB) { seen.add(inB.id); const p = inB.type === 'ruin' ? null : G.Space.plan(inB); if (opens(inB, p)) want.push([-1, inB, p]); }
     const tx = Math.floor(X / L), ty = Math.floor(Z / L), r = Math.ceil(OPEN_R / L) + 1;
     for (let y = ty - r; y <= ty + r; y++) for (let x = tx - r; x <= tx + r; x++) {
       if (!W.inb(x, y)) continue; const id = S.occ[y * N + x]; if (!id || seen.has(id)) continue; seen.add(id);
-      const b = S.buildings.get(id); if (!b || dRect(b) > OPEN_R) continue; const p = G.Space.plan(b); if (p) want.push([dRect(b), b, p]);
+      const b = S.buildings.get(id); if (!b || b.type === 'ruin' || dRect(b) > OPEN_R) continue; const p = G.Space.plan(b); if (opens(b, p)) want.push([dRect(b), b, p]);
     }
     want.sort((a, c) => a[0] - c[0]); const keep = new Set(want.slice(0, OPEN_MAX).map(w => w[1].id));
-    // (those gone far, gone, or with another plan now: given back)
+    // (those gone far, gone, or with another plan now: given back; those whose keeping pieces hold another share now — a second of
+    // the world apart —: drawn again)
     for (const [id, o] of opened) { const b = S.buildings.get(id); const p = b && G.Space.planMade(b);
-      if (!b || p !== o.p || (!keep.has(id) && (dRect(b) > CLOSE_R || opened.size > OPEN_MAX))) { dropOpen(o); opened.delete(id); } }
+      let refill = false; if (b && S.clock - o.fillT >= 1) { o.fillT = S.clock; refill = B3.fillSig(b) !== o.fill; }
+      if (!b || p !== o.p || refill || (!keep.has(id) && (dRect(b) > CLOSE_R || opened.size > OPEN_MAX))) { dropOpen(o); opened.delete(id); } }
     // (one made a frame, at most: a few milliseconds)
     for (const [, b, p] of want.slice(0, OPEN_MAX)) if (!opened.has(b.id) && opened.size < OPEN_MAX) { const o = makeOpen(b, p); if (o) opened.set(b.id, o); break; }
     B3.flames.length = 0; const boxes = []; let ns = 0;
@@ -2932,8 +3042,13 @@ float m3scale(float p) {
       for (const c of o.sunk) if (ns < 4) { SUNKU.a.value[ns].set(c[0], c[1], c[2]); SUNKU.b.value[ns].set(c[3], c[4], c[5]); ns++; } }
     setCut(boxes); SUNKU.n.value = ns;
   };
+  // (how full each keeping piece of a building is, as the world says — Interiors.state —, and its signature by the ninth: what is
+  // shown on its shelves, in its bays and bins; drawn again when a ninth changes, and only then)
+  B3.fillOf = function (b) { const In = G.Interiors; const st = In && In.state ? In.state(b) : null; const out = {}; if (st) for (const id in st.items) if (Number.isFinite(st.items[id].fill)) out[id] = st.items[id].fill; return out; };
+  const fillSig = f => Object.keys(f).sort().map(id => id + ':' + Math.round(f[id] * 9)).join(',');
+  B3.fillSig = b => fillSig(B3.fillOf(b));
   function makeOpen(b, p) {
-    const MI = R3.mats().inner; const q = R3.Q(); const out = B3.interior(p, b, { fine: q.detail ? undefined : false }); if (!out) return null;
+    const MI = R3.mats().inner; const q = R3.Q(); const fill = B3.fillOf(b); const out = B3.interior(p, b, { fine: q.detail ? undefined : false, fill }); if (!out) return null;
     const grp = new THREE.Group(); grp.matrixAutoUpdate = false; const geos = [];
     const add = g => { if (!g || g.empty) return; const geo = g.build(true); geos.push(geo); const m = new THREE.Mesh(geo, MI); m.receiveShadow = true; m.matrixAutoUpdate = false; grp.add(m); };
     for (const k in out.lv) add(out.lv[k]); add(out.roof);
@@ -2944,7 +3059,7 @@ float m3scale(float p) {
     // (the floors under the street — a sunken one, a cellar: the ground over them given way, from their floor to the plinth's top)
     const L = TL(), X0 = b.x * L, Z0 = b.y * L, Y0 = G.Space.plinth(b).y0; const sunk = [];
     for (const l of p.levels) if (l.y < -0.05 && l.area) sunk.push([X0 + l.area[0] + 0.02, Y0 + l.y - 0.1, Z0 + l.area[1] + 0.02, X0 + l.area[2] - 0.02, Y0 - 0.01, Z0 + l.area[3] - 0.02]);
-    return { b, p, out, grp, geos, leaves, lids, cuts: B3.cuts(b, B3.shellOf(b)), sunk, homeT: -1, home: false };
+    return { b, p, out, grp, geos, leaves, lids, cuts: B3.cuts(b, B3.shellOf(b)), sunk, homeT: -1, home: false, fill: fillSig(fill), fillT: G.S.clock };
   }
   function dropOpen(o) { if (o.grp.parent) o.grp.parent.remove(o.grp); for (const g of o.geos) g.dispose(); }
   function stepOpen(o, rdt, focus) {
@@ -2973,7 +3088,9 @@ float m3scale(float p) {
   // metres — { X, Y, Z, yaw, st } — or null (not open: not drawn); the same for a step of the world
   const placeMemo = new Map(); let placeT = -1;
   B3.openPlace = function (v) {
-    const o = v && v.inside > 0 && opened.get(v.inside); if (!o) return null;
+    if (!v || !(v.inside > 0)) return null; let o = opened.get(v.inside);
+    // (an open shell — a fair —, its plan made: the same, without opening it)
+    if (!o) { const b = G.S.buildings.get(v.inside); const S = b && B3.shellOf(b); if (!S || S.shell.kind !== 'aberta' || !S.p || !S.p.ok) return null; o = { b, p: S.p }; }
     if (placeT !== G.S.clock) { placeMemo.clear(); placeT = G.S.clock; }
     let pl = placeMemo.get(v.id); if (pl !== undefined) return pl; pl = null;
     const q = G.Interiors.placeOf(v);

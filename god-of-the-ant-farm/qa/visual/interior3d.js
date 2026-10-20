@@ -71,7 +71,8 @@ function placed(g, at, yaw, pitch) {
 }
 
 // ------------------------------ the buildings ------------------------------
-const list = [...S.buildings.values()].filter(b => b.built && In.has(b)).sort((a, b) => a.id - b.id);
+// (a ruin keeps its old drawing: its plan's rubble is not drawn — Build3D.shellOf and the inside drawn round the body leave it)
+const list = [...S.buildings.values()].filter(b => b.built && b.type !== 'ruin' && In.has(b)).sort((a, b) => a.id - b.id);
 // (a round hut: the hut of a people that builds them round, laid out in that family — the world's huts are square)
 const roundPlans = [];
 // (the record of a lot of the world, as a hut of a people that builds round huts: the plan of that family on it)
@@ -138,6 +139,11 @@ for (const [b, plan, own] of jobs) {
     const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const px = w.a[0] + (w.b[0] - w.a[0]) * h.at / L, pz = w.a[1] + (w.b[1] - w.a[1]) * h.at / L;
     const q = plan.levels.find(q2 => q2.y > l.y + 0.5 && q2.y - 0.12 < l.y + h.sill + h.h && q2.y > l.y + h.sill && px > q2.area[0] - 0.5 && px < q2.area[2] + 0.5 && pz > q2.area[1] - 0.5 && pz < q2.area[3] + 0.5);
     if (q) found.push(`${tag} janela na parede ${w.id} (${(l.y + h.sill).toFixed(2)}–${(l.y + h.sill + h.h).toFixed(2)} m) sob o piso ${q.lv} (${q.kind}, a ${q.y} m)`); }
+  // (the plan's own: two beds or mats on the same floor, one over the other)
+  { const beds = plan.items.filter(it => it.places > 0 && !(it.y > 0.5));
+    for (let i = 0; i < beds.length; i++) for (let j = i + 1; j < beds.length; j++) { const A = beds[i], B = beds[j]; if (A.lv !== B.lv) continue;
+      const ox = Math.min(A.r[2], B.r[2]) - Math.max(A.r[0], B.r[0]), oz = Math.min(A.r[3], B.r[3]) - Math.max(A.r[1], B.r[1]);
+      if (ox > 0.05 && oz > 0.05) found.push(`${tag} ${A.kind} #${A.id} e ${B.kind} #${B.id} um sobre o outro (piso ${A.lv}, ${(ox * 100).toFixed(0)} × ${(oz * 100).toFixed(0)} cm)`); } }
   // 2 and 3. the walls and their openings
   for (const w of plan.walls) {
     if (w.kind === 'guarda-corpo') continue; const l = lvOf(w.lv); if (!l) continue;
@@ -183,6 +189,9 @@ for (const [b, plan, own] of jobs) {
       // floor; the plan's own ambiguity, counted apart)
       if (!st && !deg && plan.stairs.some(s => s.kind !== 'degraus' && s.lv0 === l.lv && x > s.r[0] - 0.02 && x < s.r[2] + 0.02 && z > s.r[1] - 0.02 && z < s.r[3] + 0.02) && Math.abs(Q.floorY(l.lv, x, z) - l.y) > 0.02) { edgeY++; continue; }
       const walk = Q.walk(l.lv, x, z); if ((st || deg) && !walk) continue; // (a flight by a wall: a window's frame may hang over its edge; the body walks its middle)
+      // (the floor is seen where nothing stands on it: under a piece of furniture — a mat the grid has as floor — the piece is)
+      const over = plan.items.find(it => it.lv === l.lv && x > it.r[0] - 0.01 && x < it.r[2] + 0.01 && z > it.r[1] - 0.01 && z < it.r[3] + 0.01);
+      if (over && !(over.y > 0.5)) continue;
       const fy = walk || st || deg ? Q.floorY(l.lv, x, z) : l.y; const up = st || deg ? 0.3 : 0.05;
       nFloor++; const hit = cast(c === CELL.HATCH ? TA : TA0, W3([x, fy + up, z]), [0, -1, 0], up + 0.6, cutAt);
       const y = hit ? fy + up - hit.t : null; const step = st || deg ? Math.abs((st ? lvOf(st.lv1).y - l.y : l.y)) / Math.max(2, Math.round(Math.abs(st ? lvOf(st.lv1).y - l.y : l.y) / 0.19)) + 0.01 : 0;
@@ -195,6 +204,7 @@ for (const [b, plan, own] of jobs) {
       // (a loft is crawled, under the slopes down to the eaves: there a ceiling, however low; elsewhere one stands)
       const low = l.kind === 'jirau' || c === CELL.LOWROOF, from = low ? 0.06 : 0.3;
       if (covered && x > sh0.court[0] - 0.3 && x < sh0.court[2] + 0.3 && z > sh0.court[1] - 0.3 && z < sh0.court[3] + 0.3) continue; // (the plan's: counted apart)
+      if (over && over.y > 0.5) continue; // (under a piece hung on the wall — a shelf, the pegs, the keys —: the piece, not the ceiling)
       nCeil++; const top = cast(TA, W3([x, fy + from, z]), [0, 1, 0], 14, cutAt);
       const need = low ? 0.1 : 1.75;
       if (!top || !top.front || top.t + from < need) bad.ceil.push(`${tag} piso ${l.lv} (${l.kind}) em ${x.toFixed(2)},${z.toFixed(2)}: ${top ? 'teto a ' + (top.t + 0.3).toFixed(2) + ' m' + (top.front ? '' : ' (avesso)') : 'céu aberto'}`);
@@ -240,6 +250,23 @@ for (const [b, plan, own] of jobs) {
     const rf = sh.roof || {}; const under = (x, z) => { if (!rf.h || rf.kind === 'plano' || sh.kind === 'round') return sh.eave; const R = sh.r; const az = rf.along === 'z';
       const um = az ? (R[1] + R[3]) / 2 : (R[0] + R[2]) / 2, vm = az ? (R[0] + R[2]) / 2 : (R[1] + R[3]) / 2, hu = az ? (R[3] - R[1]) / 2 : (R[2] - R[0]) / 2, hv = az ? (R[2] - R[0]) / 2 : (R[3] - R[1]) / 2;
       const u = az ? z : x, v = az ? x : z; const across = Math.abs(v - vm) / hv, end = rf.kind === 'quatro-aguas' ? (Math.abs(u - um) - (hu - hv)) / hv : -1; return Math.max(sh.eave, sh.eave + rf.h * (1 - Math.max(across, end)) - 0.25); };
+    // 9–11 for a shell open to the sky (a fair): no sides and no roof — nothing over the eaves but what stands there —; its pieces
+    // drawn in the outside (there is no inside to it: what is seen is the outside); never opened; over its lanes the sky, or —
+    // under awnings — their cloth at the eaves
+    const openChecks = () => {
+      const P = ex.solid.p; let hi = -1e9; for (let k = 1; k < P.length; k += 3) hi = Math.max(hi, P[k] - Y0);
+      const lim = Math.max(sh.eave || 0, ...plan.items.map(it => (it.y || 0) + it.h)) + 0.5; nOut++;
+      if (hi > lim) bad.out.push(`${tag}: algo a ${hi.toFixed(2)} m, acima do beiral e das peças (${lim.toFixed(2)} m)`);
+      for (const it of plan.items) { nOut++; let has = false; for (let k = 0; k < P.length && !has; k += 3) { const x = P[k] - X0, z = P[k + 2] - Z0; if (x > it.r[0] + 0.02 && x < it.r[2] - 0.02 && z > it.r[1] + 0.02 && z < it.r[3] - 0.02) has = true; } if (!has) bad.out.push(`${tag} ${it.kind}: não desenhada no lado de fora`); }
+      nIn++; if (!B3.openShell(b.id)) bad.inside.push(`${tag}: casca aberta que o 3D abriria (desenharia o dentro por cima)`);
+      const toldo = sh.roof && sh.roof.kind === 'toldo'; let hits = 0;
+      for (const fx of [0.2, 0.4, 0.6, 0.8]) for (const fz of [0.2, 0.4, 0.6, 0.8]) { const x = sh.r[0] + (sh.r[2] - sh.r[0]) * fx, z = sh.r[1] + (sh.r[3] - sh.r[1]) * fz;
+        if (plan.items.some(it => x > it.r[0] - 0.15 && x < it.r[2] + 0.15 && z > it.r[1] - 0.15 && z < it.r[3] + 0.15)) continue; nSky++;
+        const hit = cast(TX, W3([x, 0.3, z]), [0, 1, 0], 30); const y = hit ? hit.t + 0.3 : null; if (hit) hits++;
+        if (hit && (!toldo || y > sh.eave + 0.05 || y < sh.eave - 0.4)) bad.sky.push(`${tag} em ${x.toFixed(2)},${z.toFixed(2)}: ${toldo ? 'algo fora do toldo' : 'algo'} a ${y.toFixed(2)} m${toldo ? ' (beiral ' + sh.eave + ')' : ''}`); }
+      if (toldo && !hits) bad.sky.push(`${tag}: nenhum toldo sobre as ruas da feira`);
+    };
+    if (sh.kind === 'aberta') openChecks(); else {
     // 9. the faces of the sides, from the street, between the openings and the annexes
     if (sh.kind !== 'round') { const R = sh.r;
       for (const sd of ['N', 'E', 'S', 'W']) {
@@ -276,6 +303,7 @@ for (const [b, plan, own] of jobs) {
           if (rm && rm.r && x > rm.r[0] - 0.4 && x < rm.r[2] + 0.4 && z > rm.r[1] - 0.4 && z < rm.r[3] + 0.4) continue;
           if (plan.items.some(it => it.lv === r.lv && x > it.r[0] - 0.1 && x < it.r[2] + 0.1 && z > it.r[1] - 0.1 && z < it.r[3] + 0.1)) continue; nSky++; // (a stall of the market in the court)
           const hit = cast(TA, W3([x, l.y + 0.3, z]), [0, 1, 0], 30, cutAt); if (hit) bad.sky.push(`${tag} ${r.fn} (piso ${r.lv}) em ${x.toFixed(2)},${z.toFixed(2)}: algo a ${hit.t.toFixed(2)} m`); } } }
+    }
     // 12. the doors and arches of the outside, from the street: shut, the leaf in the opening; with the inside drawn, free
     for (const h of S2.holes) {
       if (h.kind === 'janela') continue; const w = S2.byId.get(h.wall); const l = w && lvOf(w.lv); if (!w || !l || l.kind === 'terraco') continue;

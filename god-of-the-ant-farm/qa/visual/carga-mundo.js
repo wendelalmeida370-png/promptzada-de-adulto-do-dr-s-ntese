@@ -3,7 +3,8 @@
 //   node qa/visual/carga-mundo.js [mundo]       (default: the ready world «cidade»)
 // The proofs (the adendo's §5 in the 3D: the presentation never ahead of reality):
 //   1. a store's heaps are its people's stock, by the god's view's rule (render.js drawPiles): as many heaps as goods it has,
-//      none when the stock is empty, and drawn again — the chunk's signature — only when a count changes
+//      none when the stock is empty, and drawn again — the chunk's signature — only when a count changes; a store drawn from its
+//      plan (no yard: its walls fill its lot) shows it inside, in its keeping pieces, by the share of the store each holds
 //   2. the crates on a quay are the world's own (b.crates): each drawn once, on the ground, by the god's view's crate spot; a
 //      crate taken leaves the others where they were, a new one takes a free place
 //   3. the hands of a docker go to the crate the world hands out next, and the crate in the hands is no longer on the quay
@@ -17,7 +18,12 @@ const S = G.S, L = G.Space.TILE, C = 16; const P3 = G.People3D, PR = G.Props3D, 
 const chunkOf = b => [Math.floor(b.x / C) * C, Math.floor(b.y / C) * C];
 
 // ------------------------------ 1. a store's heaps are its people's stock ------------------------------
-{ const stores = [...S.buildings.values()].filter(b => b.built && PR.shows(b)).sort((a, b) => a.id - b.id);
+// (a store drawn the old way shows it in its yard, by the god's view's rule; one drawn from its plan — its walls fill its lot,
+// there is no yard — inside, in its keeping pieces: the share of the people's store each holds, Interiors.state's fill)
+const In = G.Interiors;
+{ const all = [...S.buildings.values()].filter(b => b.built && PR.shows(b)).sort((a, b) => a.id - b.id);
+  const stores = all.filter(b => !B3.shellOf(b)), planned = all.filter(b => B3.shellOf(b) && In.plan(b) && In.plan(b).ok);
+  if (stores.length) {
   let n = 0, bad = []; for (const b of stores) { const want = PR.piles(b); const got = { wood: 0, stone: 0, food: 0 }; for (const p of PR.pieces(b)) if (p.pile) got[p.pile[0]] = p.pile[1];
     n++; if (got.wood !== want[0] || got.stone !== want[1] || got.food !== want[2]) bad.push(`${b.type}#${b.id}: ${JSON.stringify(got)} para [${want}]`); }
   ok('o pátio de cada armazém mostra o estoque do povo pela regra do Modo Deus (lenha até 8, pedra até 6, comida até 6)', n > 0 && !bad.length, `${n} armazéns${bad.length ? '; ' + bad.slice(0, 3).join(' · ') : ': cada monte com a conta certa'}`);
@@ -32,6 +38,22 @@ const chunkOf = b => [Math.floor(b.x / C) * C, Math.floor(b.y / C) * C];
     Object.assign(f.stock, keep);
     ok('o armazém vazio não mostra nada; o desenho é refeito quando a conta muda, e só então', empty === 0 && s1 !== s0 && s2 === s1 && s3 !== s1 && w1 === 3 && w3 === 8, `vazio: ${empty} montes · lenha 30%: ${w1} (assinatura ${s1 !== s0 ? 'mudou' : 'igual'}) · +1%: ${s2 === s1 ? 'igual' : 'mudou'} · 90%: ${w3} (${s3 !== s1 ? 'mudou' : 'igual'})`);
   } }
+  if (planned.length) {
+    // (each keeping piece's share is the world's — Interiors.state —; what its shelves, bays and bins show follows it: an empty
+    // store shows nothing in them, more stock more; drawn again when a ninth of a share changes, and only then; the yard of a
+    // store with no yard changes nothing of its chunk)
+    let bad = [], kp = 0; for (const b of planned) { const st = In.state(b); const F = B3.fillOf(b); for (const id in st.items) if (Number.isFinite(st.items[id].fill)) { kp++; if (F[id] !== st.items[id].fill) bad.push(`${b.type}#${b.id} peça ${id}: ${F[id]} para ${st.items[id].fill}`); } }
+    ok('o armazém de planta: a parte de cada peça de guardar é a do mundo (Interiors.state)', kp > 0 && !bad.length, `${planned.length} armazéns, ${kp} peças${bad.length ? '; ' + bad.slice(0, 3).join(' · ') : ''}`);
+    const b = planned[0]; const f = G.Fac.ofSet(b.set); const p = In.plan(b); const keep = Object.assign({}, f.stock); const cap = G.Village.cap(f.id); const [cx, cy] = chunkOf(b);
+    const shown = () => { const out = B3.interior(p, b, { fine: true, fill: B3.fillOf(b) }); let n = 0; for (const it of p.items) if (it.store && it.store.dep === 'povo') { const R = out.item[it.id]; n += R ? R[2] - R[1] : 0; } return n; };
+    const set = q => { f.stock.wood = cap * q; f.stock.stone = cap * q; f.stock.food = cap * q; };
+    set(0); const n0 = shown(), s0 = B3.fillSig(b), c0 = B3.sig(cx, cy, C); set(0.3); const n1 = shown(), s1 = B3.fillSig(b), c1 = B3.sig(cx, cy, C);
+    f.stock.wood += cap * 0.005; const s2 = B3.fillSig(b); set(0.9); const n3 = shown(), s3 = B3.fillSig(b);
+    Object.assign(f.stock, keep);
+    ok('o armazém de planta mostra o estoque dentro: vazio, nada nas peças; mais estoque, mais; desenhado de novo quando a parte muda, e só então', n1 > n0 && n3 > n1 && s1 !== s0 && s2 === s1 && s3 !== s1 && c1 === c0,
+      `${b.type}#${b.id}: vértices das peças de guardar ${n0} (vazio) → ${n1} (30%) → ${n3} (90%); assinatura ${s1 !== s0 ? 'mudou' : 'igual'} · +0,5%: ${s2 === s1 ? 'igual' : 'mudou'} · 90%: ${s3 !== s1 ? 'mudou' : 'igual'}; o pedaço de fora ${c1 === c0 ? 'igual' : 'refeito'}`);
+  }
+}
 
 // ------------------------------ 2. the crates on a quay are the world's ------------------------------
 const docks = [...S.buildings.values()].filter(b => b.type === 'doca' && b.built).sort((a, b) => a.id - b.id);
