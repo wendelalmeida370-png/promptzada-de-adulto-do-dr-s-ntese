@@ -26,6 +26,10 @@ let S = G.S; const W = G.W, L = G.Space.TILE; // (S: the world now — a load ma
 let outside = 0; { const R0 = G.R; G.R = function () { if (!G.inSim) outside++; return R0.apply(this, arguments); }; }
 const RDT = 1 / 30;
 const frame = (world) => { if (world !== false) G.debug.step(RDT * G.Space.TIME); G.Avatar.frame(RDT); };
+// (a load that belongs somewhere, put in the hands and taken from them by the test as the god's hand: by the depot, in the
+// world's step and in the ledger — a marked load never vanishes from hands unwritten, qa.js rule of the activities)
+const god = f => { G.inSim++; const r = f(); G.inSim--; return r; };
+const clearHands = v => { if (v.carry && v.carry.n > 0) god(() => G.Depot.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true })); v.carry = null; };
 // a grown person who can be lived, put next to a thing (a walkable point r tiles from it, facing it), lived
 function bodyAt(tx, ty, r) {
   const cand = [...S.villagers.values()].filter(o => o.age >= 20 && o.age < 50 && !o.inside && G.Possess.can(o).ok).sort((a, b) => a.id - b.id);
@@ -121,14 +125,14 @@ G.Act.def('prova-levar', {});
   else {
     const d = G.Vg.door(st); const b = G.Avatar.state(); b.yaw = Math.atan2(d[1] * L - b.Z, d[0] * L - b.X); v.hunger = 5;
     let op = null; G.Possess.apply(() => { op = G.Act.start('prova-levar', { to: 'h:' + house.id, why: 'prova' }); return { ok: true }; }); frame();
-    v.carry = { k: 'sal', n: 2, op: op ? op.id : 0 }; const s0 = f.stock.sal || 0;
+    clearHands(v); god(() => G.Depot.make('v:' + v.id, 'sal', 2, { code: 'teste', op: op ? op.id : 0 })); const s0 = f.stock.sal || 0;
     const b1 = G.Interact.best(); for (let k = 0; k < 60; k++) { holdE('porta'); frame(); }
     const refused = !!b1 && b1.id === 'porta' && !b1.ok && /destino/.test(b1.why) && (f.stock.sal || 0) === s0 && v.carry && v.carry.n === 2;
-    v.carry = { k: 'sal', n: 2, to: 'f:' + fid }; const led0 = S.ledgerN || 0; const c2 = holdE('porta');
+    clearHands(v); god(() => G.Depot.make('v:' + v.id, 'sal', 2, { code: 'teste', to: 'f:' + fid })); const led0 = S.ledgerN || 0; const c2 = holdE('porta');
     for (let k = 0; k < 300 && G.Avatar.busy(); k++) frame();
     const e = (S.ledger || []).filter(q => q[0] > led0).find(q => q[8] === 'entrega' && q[3] === 'v:' + v.id);
     const went = !v.carry && (f.stock.sal || 0) === s0 + 2 && !!e;
-    G.Possess.apply(() => { if (op) G.Act.end(op, 'cancel', 'prova'); return { ok: true }; }); frame(); v.carry = null;
+    clearHands(v); G.Possess.apply(() => { if (op) G.Act.end(op, 'cancel', 'prova'); return { ok: true }; }); frame();
     const bad = vbad();
     ok('a carga que tem destino não vai para o estoque comum; a que é dele entra pelo depósito, no livro-razão', refused && !!(c2 && c2.ok) && went && !bad.length,
       `a saca de um trabalho para ${G.Village.buildName(house).toLowerCase()}: ${b1 ? b1.label + (b1.ok ? '' : ' — ' + b1.why) : 'nada'} (estoque ${(f.stock.sal || 0) === s0 + 2 ? 'depois +2' : 'igual'}); a saca para o armazém: ${went ? 'entrou (' + (e ? e[3] + ' → ' + e[4] : '') + ')' : 'não entrou'}; ${vtxt(bad)}`);
