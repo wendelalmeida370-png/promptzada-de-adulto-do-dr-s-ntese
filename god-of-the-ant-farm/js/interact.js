@@ -604,9 +604,11 @@
     },
   });
   // the lead to the world's work near the body (what the HUD shows of it: a quiet line, a mark over the place, an arrow at the
-  // edge when the place is out of sight), only read from the world: an unloading under way, by day, a stone's throw away — its
-  // crates where the 3D draws them on the quay, or one lying where it fell —; with a crate of it in the hands, the door of the
-  // store the unloading's overseer chose for it (Porto.destOf), by night too. No unloading, no crates, no store: no lead.
+  // edge when the place is out of sight), only read from the world: an unloading under way of the body's own people, by day, a
+  // stone's throw away and where its feet reach (Possess.workable: asked of the map in the world's step) — its crates where
+  // the 3D draws them on the quay, or one lying where it fell —; with a crate of it in the hands, the door of the store the
+  // unloading's overseer chose for it (Porto.destOf), when the feet reach it, by night too. No unloading, no crates, no store,
+  // no way there: no lead.
   // (X, Z: the body, metres; keep: the work shown now, kept a few metres farther, so that the line does not blink at the edge)
   I.LEAD = 25;
   I.lead = function (v, X, Z, keep) {
@@ -616,14 +618,14 @@
     const c = v.carry;
     if (c && c.n > 0) {
       const op = c.op ? A.get(c.op) : null; if (!op || !A.live(op) || op.def !== 'descarga') return null;
-      const dest = G.Possess.storeOf(op); if (!dest) return null; const d = G.Vg.door(dest);
+      const dest = G.Possess.storeOf(op); if (!dest || !G.Possess.destOK(op.id)) return null; const d = G.Vg.door(dest);
       return { step: 'levar', op: op.id, b: dest.id, X: d[0] * TL, Y: gY(d[0], d[1]) + 2.4, Z: d[1] * TL, d: Math.hypot(d[0] * TL - X, d[1] * TL - Z), txt: `Levar ${G.Possess.toB(dest)}` };
     }
     if (G.isNight()) return null;
     let best = null;
     const take = (op, at, txt, b) => { const d = Math.hypot(at[0] - X, at[2] - Z); if (d <= (keep === op.id ? I.LEAD + 5 : I.LEAD) && (!best || d < best.d)) best = { step: 'pegar', op: op.id, b, X: at[0], Y: at[1], Z: at[2], d, txt }; };
     for (const op of A.all()) {
-      if (op.def !== 'descarga' || !A.live(op) || op.st !== 'on') continue;
+      if (op.def !== 'descarga' || !A.live(op) || op.st !== 'on' || !G.Possess.workable(op.id)) continue;
       const dock = S.buildings.get(op.at); const mine = dock && dock.crates ? dock.crates.filter(q => q.op === op.id) : [];
       if (mine.length) {
         // (the pile: the middle of its crates as drawn, over the highest; not drawn, over the world's spot for them)

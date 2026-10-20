@@ -201,9 +201,29 @@
     // (a task ended by someone else without another given: the body is still the player's)
     if (!v.task) v.task = mark();
     if (v.sleeping && (v.energy >= 99.5 || (v.energy > 70 && G.S.time > 0.05 && G.S.time < 0.3))) Po.wake(v);
-    duty(v);
+    reach(v); duty(v);
     void dt;
   };
+  // the unloadings the body could lend a hand to, as the world gives its own porters theirs (Porto.claim): of the body's own
+  // people, with crates of it — on the quay or on the ground — where its feet reach (the map of regions, asked here in the
+  // world's step), and whether they are near (for the lead); with a crate of one in the hands, whether the feet reach the door
+  // of its store. Kept for the frame (the lead, Interact.lead) to read: the frame never asks the map
+  let work = new Map(), destOK = new Set(); G.worldHooks.push(() => { work = new Map(); destOK = new Set(); });
+  Po.workable = id => { const w = work.get(id); return !!(w && w.near); };
+  Po.destOK = id => destOK.has(id);
+  function reach(v) {
+    const S = G.S; const wk = new Map(), dk = new Set(); work = wk; destOK = dk; if (!G.Act || !G.Porto || !G.Fishers) return;
+    const fid = G.Fac.idOfV(v);
+    for (const o of G.Act.all()) {
+      if (o.def !== 'descarga' || !G.Act.live(o) || o.fac !== fid) continue;
+      const d = S.buildings.get(o.at); let r = false, nr = false; const at = (x, y) => { if (nr || !G.W.reaches(v, x, y)) return; r = true; if (G.dist(x, y, v.x, v.y) < 12) nr = true; };
+      if (d && d.type === 'doca' && d.crates && d.crates.some(c => c.op === o.id)) { const p = G.Fishers.crateSpot(d); at(p[0], p[1]); }
+      for (const g of S.loose || []) if (g.op === o.id) at(g.x, g.y);
+      if (r) wk.set(o.id, { reach: r, near: nr });
+    }
+    const c = v.carry; const op = c && c.n > 0 && c.op ? G.Act.get(c.op) : null; const st = op && G.Act.live(op) ? Po.storeOf(op) : null;
+    if (st) { const dr = G.Vg.door(st); if (G.W.reaches(v, dr[0], dr[1])) dk.add(op.id); }
+  }
   // the trade's call: a docker lived by the god — or a fisherman of a quay — is called to the crates of an unloading under way
   // as the world sends its own (harbor.js jobTask: the town's quays, by day, a warehouse to work for; the fisherman, his own
   // quay's), since the body never goes through the world's choosing of a task. The call stays while there is that work and the
@@ -216,7 +236,7 @@
     const mine = v.role === 'estivador' ? !!(w && w.built && w.type === 'armazem') : v.role === 'pescador' && !!(w && w.type === 'doca');
     if (mine && !G.isNight() && G.Act.able(v) && !(v.carry && v.carry.n > 0)) {
       for (const o of G.Act.all()) {
-        if (o.def !== 'descarga' || !G.Act.live(o) || o.st !== 'on' || (v.role === 'estivador' ? o.set !== v.set : o.at !== v.job)) continue;
+        if (o.def !== 'descarga' || !G.Act.live(o) || o.st !== 'on' || !work.has(o.id) || (v.role === 'estivador' ? o.set !== v.set : o.at !== v.job)) continue;
         const d = S.buildings.get(o.at); if (d && d.type === 'doca' && d.crates && d.crates.some(c => c.op === o.id)) { op = o; break; }
       }
     }
