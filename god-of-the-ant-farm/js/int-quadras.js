@@ -26,13 +26,18 @@
   }
   In.addTypes({ quarteirao: { use: 'casa', fams } });
 
+  // (the shell — from the record and the family alone, the same in every attempt — is the outside: the court, the wings'
+  // outer walls storey by storey, the way in, the terrace's parapets, the windows; the inside lays out the rooms, the court's
+  // walls and the doors between them, the stair and the things)
   function block(P) {
     const F = P.fam, rec = P.rec, tr = P.tr, L = P.L; const need = (G.BDEF[rec.t] || {}).housing || 0;
     const H = F.H.slice(7); const SV = K.parseV(F.V); const N = SV.n;
     const t = tr.t, ti = Math.min(t, 0.22); const h0 = tr.h0, h1 = tr.h1 || 2.4;
+    // ======== the shell ========
     const m = P.rr(0.1, 0.2); const sh = [m, m, L - m, L - m];
     P.shell = { kind: 'rect', r: sh, t, mat: tr.mat, base: 'pedra', floors: N, eave: h0 + (N - 1) * (0.2 + h1) };
-    const I = P.inner(); const dW = H === 'barras' ? P.rr(2.45, 2.65) : P.rr(2.5, 2.85); // (the depth of a wing: a room and a row of beds)
+    // (the depth of a wing: a room and a row of beds — as deep as the court lets it, for the forty who sleep there)
+    const I = P.inner(); const cap = H === 'patio' || H === 'u' ? (I[2] - I[0] - 1.8) / 2 : H === 'barras' ? (I[3] - I[1] - 1.8) / 2 : 9; const dW = Math.min(cap, H === 'barras' ? P.rr(2.58, 2.65) : P.rr(2.75, 2.85));
     // ---- the court (open to the sky), and the wings round it ----
     const C = H === 'patio' ? [I[0] + dW, I[1] + dW, I[2] - dW, I[3] - dW] : H === 'u' ? [I[0] + dW, I[1] + dW, I[2] - dW, I[3]] : H === 'barras' ? [I[0], I[1] + dW, I[2], I[3] - dW] : [I[0] + dW, I[1] + dW, I[2], I[3]];
     if (C[2] - C[0] < 1.6 || C[3] - C[1] < 1.6) { P.errs.push('o pátio não cabe'); return; }
@@ -44,32 +49,17 @@
     // the roof: the people's own over the wings (flat, or pitched down to the court and to the street)
     const kind = K.roofOf(rec, tr); const rise = kind === 'plano' ? 0 : Math.min(2.6, dW * (kind === 'turfa' ? 0.76 : 0.8) * 0.82);
     P.roof = { kind, along: null, h: r2(rise), over: kind === 'plano' ? 0 : 0.42, court: C.slice() };
-    P.entryLv = 0; const rooms = { up: [], ground: [] };
-    P.outers = [];
-    // ---- the storeys ----
-    let y = 0; let pass = null;
+    P.entryLv = 0; P.outers = [];
+    // ---- the storeys: each one's floor, and the outside walls round the wings (on the ground round the court too, where it
+    // meets the edge of the lot: a wall with the gate in it) ----
+    const c = t / 2;
+    const span = (side, r) => (side === 'fundo' || side === 'frente' ? [r[0], r[2]] : [r[1], r[3]]);
+    const onEdge = (side, r) => (side === 'fundo' ? r[1] <= I[1] + 1e-6 : side === 'frente' ? r[3] >= I[3] - 1e-6 : side === 'esquerda' ? r[0] <= I[0] + 1e-6 : r[2] >= I[2] - 1e-6);
+    let y = 0;
     for (let k = 0; k < N; k++) {
       const h = k ? h1 : h0;
       P.level(k, y, h, k ? 'andar' : 'piso', I);
-      const ids = {};
-      for (const w in W) {
-        if (k === 0 && w === 'front' && !pass) {
-          // (the way in: a covered passage through the front wing, from the street to the court)
-          // (between the bars, the front bar keeps its right end for its own stair)
-          const pw = 1.2; const lo = (H === 'patio' ? C[0] : I[0] + 1.0), hi = H === 'patio' ? C[2] - pw : I[0] + 1.8; if (hi < lo) { P.errs.push('não cabe a passagem'); return; }
-          const pu0 = P.rr(lo, hi); pass = { u0: pu0, w: pw };
-          const fr = W.front;
-          ids.frontL = P.room(0, 'ala', [fr[0], fr[1], pu0 - ti, fr[3]]); ids.pass = P.room(0, 'passagem', [pu0, fr[1], pu0 + pw, fr[3]]); ids.frontR = P.room(0, 'ala', [pu0 + pw + ti, fr[1], fr[2], fr[3]]);
-          continue;
-        }
-        ids[w] = P.room(k, 'ala', W[w]);
-      }
-      if (k === 0) ids.court = P.room(0, 'patio', C, 1);
-      // the outside walls: round the wings, and on the ground round the court where it meets the edge of the lot (a wall
-      // with the gate in it)
-      const O = {}; const c = t / 2;
-      const span = (side, r) => (side === 'fundo' || side === 'frente' ? [r[0], r[2]] : [r[1], r[3]]);
-      const onEdge = (side, r) => (side === 'fundo' ? r[1] <= I[1] + 1e-6 : side === 'frente' ? r[3] >= I[3] - 1e-6 : side === 'esquerda' ? r[0] <= I[0] + 1e-6 : r[2] >= I[2] - 1e-6);
+      const O = {};
       for (const side of ['fundo', 'frente', 'esquerda', 'direita']) {
         const across = side === 'fundo' || side === 'frente'; const segs = [];
         for (const w in W) if (onEdge(side, W[w])) segs.push(span(side, W[w]));
@@ -88,7 +78,47 @@
         });
       }
       P.outers.push(O);
-      const wallAt = (side, p) => (O[side] || []).find(id => { const w = P.walls[id]; const q = side === 'fundo' || side === 'frente' ? 0 : 1; return p >= Math.min(w.a[q], w.b[q]) && p <= Math.max(w.a[q], w.b[q]); });
+      y += h + 0.2;
+    }
+    const wallAt = (side, p) => (P.outers[0][side] || []).find(id => { const w = P.walls[id]; const q = side === 'fundo' || side === 'frente' ? 0 : 1; return p >= Math.min(w.a[q], w.b[q]) && p <= Math.max(w.a[q], w.b[q]); });
+    // ---- the way in: a covered passage through the front wing, from the street to the court (between the bars, the front
+    // bar keeps its right end for its own stair); or, with no front wing, the gate in the court's wall ----
+    let pass = null;
+    if (W.front) {
+      const pw = 1.2; const lo = (H === 'patio' ? C[0] : I[0] + 1.0), hi = H === 'patio' ? C[2] - pw : I[0] + 1.8; if (hi < lo) { P.errs.push('não cabe a passagem'); return; }
+      pass = { u0: P.rr(lo, hi), w: pw };
+      const ew = 1.1; const fw = wallAt('frente', pass.u0 + pass.w / 2); const d = P.door(fw, P.atOf(fw, [pass.u0 + pass.w / 2, sh[3] - c]), ew, Math.min(2.3, h0 - 0.2), -1, 'rua', 1, 'porta');
+      P.entrance = { door: d, u: pass.u0 + pass.w / 2, v: sh[3], w: ew, lv: 0 };
+    } else {
+      const gw = Math.min(1.8, C[2] - C[0] - 0.6); const gu = P.rr(C[0] + gw / 2 + 0.3, C[2] - gw / 2 - 0.3);
+      const fw = wallAt('frente', gu); const d = P.door(fw, P.atOf(fw, [gu, sh[3] - c]), gw, Math.min(2.4, h0 - 0.2), -1, 'rua', 1, 'portao');
+      P.entrance = { door: d, u: gu, v: sh[3], w: gw, lv: 0 };
+    }
+    const lvT = N - 1; const lvR = N;
+    // ---- the roof terrace of the flat roofs: a parapet round the block and round the court ----
+    if (SV.top === 'terraco') {
+      P.level(lvR, P.shell.eave + 0.25, 2.2, 'terraco', I);
+      P.walls4(lvR, [sh[0] + 0.07, sh[1] + 0.07, sh[2] - 0.07, sh[3] - 0.07], 0.14, 0.9, 1, 'parapeito');
+      P.walls4(lvR, [C[0] - 0.07, C[1] - 0.07, C[2] + 0.07, C[3] + 0.07], 0.14, 0.9, 0, 'parapeito', { frente: C[3] >= I[3] - 1e-6 ? 1 : 0, esquerda: C[0] <= I[0] + 1e-6 ? 1 : 0, direita: C[2] >= I[2] - 1e-6 ? 1 : 0 });
+    }
+    blockWindows(P);
+    if (P.inside()) return;
+    // ======== the inside: each attempt's own dice ========
+    const rooms = { up: [], ground: [] };
+    // (a door somewhere along a stretch of wall, its way clear of the stair's corner — the flights come later, but where they
+    // go is known: the column at the end of the back wing, and of the front bar between bars)
+    const keep = [colOf(W.back, 'back')].concat(H === 'barras' && W.front ? [colOf(W.front, 'front')] : []);
+    for (let k = 0; k < N; k++) {
+      const h = k ? h1 : h0; const ids = {};
+      for (const w in W) {
+        if (k === 0 && w === 'front' && pass) {
+          const fr = W.front; const pu0 = pass.u0, pw = pass.w;
+          ids.frontL = P.room(0, 'ala', [fr[0], fr[1], pu0 - ti, fr[3]]); ids.pass = P.room(0, 'passagem', [pu0, fr[1], pu0 + pw, fr[3]]); ids.frontR = P.room(0, 'ala', [pu0 + pw + ti, fr[1], fr[2], fr[3]]);
+          continue;
+        }
+        ids[w] = P.room(k, 'ala', W[w]);
+      }
+      if (k === 0) ids.court = P.room(0, 'patio', C, 1);
       // the court's walls (and, at the corners, the partitions between the wings)
       const cw = (a, b) => P.wall(k, a, b, ti, h, 0, 'parede');
       const backW = cw([I[0], C[1] - ti / 2], [I[2], C[1] - ti / 2]);
@@ -96,9 +126,6 @@
       const leftW = W.left ? cw([C[0] - ti / 2, C[1]], [C[0] - ti / 2, W.left[3]]) : null;
       const rightW = W.right ? cw([C[2] + ti / 2, W.right[3]], [C[2] + ti / 2, C[1]]) : null;
       const dh = Math.min(2.05, h - 0.2);
-      // (a door somewhere along a stretch of wall, its way clear of the stair's corner — the flights come later, but where
-      // they go is known: the column at the end of the back wing, and of the front bar between bars)
-      const keep = [colOf(W.back, 'back')].concat(H === 'barras' && W.front ? [colOf(W.front, 'front')] : []);
       const doorAt = (wall, lo, hi, ra, rb, kind, dw) => {
         dw = dw || 0.85; if (hi - lo < dw + 0.3) return false; const w = P.walls[wall]; const hz = Math.abs(w.a[1] - w.b[1]) < 1e-6;
         const ps = []; for (let p = lo + dw / 2 + 0.15; p <= hi - dw / 2 - 0.15 + 1e-6; p += 0.1) ps.push(p);
@@ -110,8 +137,7 @@
         return false;
       };
       if (k === 0) {
-        // the ground: every wing opens on the court; the front rooms on the passage; the street comes in by the passage or
-        // by the gate in the court's wall
+        // the ground: every wing opens on the court; the front rooms on the passage, the passage on the court
         const need1 = (ok) => { if (!ok) P.errs.push('não cabe a porta para o pátio'); };
         need1(doorAt(backW, C[0], C[2], ids.back, ids.court));
         if (leftW) need1(doorAt(leftW, C[1], W.left[3], ids.left, ids.court));
@@ -120,12 +146,6 @@
           const fr = W.front; const pL = P.wall(0, [pass.u0 - ti / 2, fr[1]], [pass.u0 - ti / 2, fr[3]], ti, h, 0, 'divisoria'), pR = P.wall(0, [pass.u0 + pass.w + ti / 2, fr[3]], [pass.u0 + pass.w + ti / 2, fr[1]], ti, h, 0, 'divisoria');
           if (!doorAt(pL, fr[1], fr[3], ids.frontL, ids.pass) || !doorAt(pR, fr[1], fr[3], ids.frontR, ids.pass)) { P.errs.push('a ala da frente é rasa demais para as portas'); return; }
           P.door(frontW, P.atOf(frontW, [pass.u0 + pass.w / 2, C[3] + ti / 2]), pass.w - 0.1, dh, ids.pass, ids.court, 0, 'vao');
-          const ew = 1.1; const fw = wallAt('frente', pass.u0 + pass.w / 2); const d = P.door(fw, P.atOf(fw, [pass.u0 + pass.w / 2, sh[3] - c]), ew, Math.min(2.3, h - 0.2), ids.pass, 'rua', 1, 'porta');
-          P.entrance = { door: d, u: pass.u0 + pass.w / 2, v: sh[3], w: ew, lv: 0 };
-        } else {
-          const gw = Math.min(1.8, C[2] - C[0] - 0.6); const gu = P.rr(C[0] + gw / 2 + 0.3, C[2] - gw / 2 - 0.3);
-          const fw = wallAt('frente', gu); const d = P.door(fw, P.atOf(fw, [gu, sh[3] - c]), gw, Math.min(2.4, h - 0.2), ids.court, 'rua', 1, 'portao');
-          P.entrance = { door: d, u: gu, v: sh[3], w: gw, lv: 0 };
         }
         rooms.ground = ['back', 'left', 'right', 'frontL', 'frontR'].map(q => ids[q]).filter(x => x !== undefined);
       } else {
@@ -137,25 +157,20 @@
         if (ids.front !== undefined && ids.right !== undefined) need2(doorAt(frontW, C[2] + ti, I[2], ids.right, ids.front));
         rooms.up.push(...['back', 'left', 'right', 'front'].map(q => ids[q]).filter(x => x !== undefined));
       }
-      // the way up to this storey: the stacked stair in the back wing's corner (and in the front bar's, between bars)
-      if (k > 0) { flight(P, k - 1, k, W.back, 'back'); if (H === 'barras') flight(P, k - 1, k, W.front, 'front'); }
-      y += h + 0.2;
     }
-    const lvT = N - 1;
-    // ---- the roof terrace of the flat roofs: over each wing, a parapet round it, the stair going on up ----
+    // the terrace over each wing (the wings' tops meet at the corners: one walk round the court)
     if (SV.top === 'terraco') {
-      const lvR = N; P.level(lvR, P.shell.eave + 0.25, 2.2, 'terraco', I); const e = 0.14; const tops = [];
+      const e = 0.14; const tops = [];
       tops.push([I[0], I[1], I[2], C[1] - e]);
       if (W.front) tops.push([I[0], C[3] + e, I[2], I[3]]);
       if (W.left) tops.push([I[0], C[1] - e, C[0] - e, W.front ? C[3] + e : I[3]]);
       if (W.right) tops.push([C[2] + e, C[1] - e, I[2], W.front ? C[3] + e : I[3]]);
       rooms.terr = tops.map(r => P.room(lvR, 'terraco', r, 1));
-      P.walls4(lvR, [sh[0] + 0.07, sh[1] + 0.07, sh[2] - 0.07, sh[3] - 0.07], 0.14, 0.9, 1, 'parapeito');
-      P.walls4(lvR, [C[0] - 0.07, C[1] - 0.07, C[2] + 0.07, C[3] + 0.07], 0.14, 0.9, 0, 'parapeito', { frente: C[3] >= I[3] - 1e-6 ? 1 : 0, esquerda: C[0] <= I[0] + 1e-6 ? 1 : 0, direita: C[2] >= I[2] - 1e-6 ? 1 : 0 });
-      // (the wings' tops meet at the corners: the terrace is one walk round the court)
-      flight(P, lvT, lvR, W.back, 'back'); if (H === 'barras') flight(P, lvT, lvR, W.front, 'front');
     }
-    blockWindows(P);
+    // the way up to each storey: the stacked stair in the back wing's corner (and in the front bar's, between bars), on up to
+    // the terrace
+    for (let k = 1; k < N; k++) { flight(P, k - 1, k, W.back, 'back'); if (H === 'barras') flight(P, k - 1, k, W.front, 'front'); }
+    if (SV.top === 'terraco') { flight(P, lvT, lvR, W.back, 'back'); if (H === 'barras') flight(P, lvT, lvR, W.front, 'front'); }
     furnishBlock(P, rooms, need);
   }
   // the corner a wing's stair column takes (both lanes, their feet and tops)
