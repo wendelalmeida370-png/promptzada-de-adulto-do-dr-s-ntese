@@ -120,7 +120,9 @@
   };
   function newRecord(b, ctx, migrated) {
     const T = TYPES[ctx.t];
-    const rec = { v: 1, f: '', r: 0, t: ctx.t, u: T ? T.use : '', s: ctx.s, o: ctx.o, c: ctx.c, e: ctx.e, k: ctx.k, cl: ctx.cl, fl: ctx.fl, d: ctx.d, w: ctx.w, pw: ctx.pw, h: [], m: migrated ? 1 : 0, fx: [], dr: {} };
+    // (hh: who heads the house; nm: how many lived there at the last turn of the day; vz: the day the last of them left;
+    // ab: the day the house was given up — the house left behind)
+    const rec = { v: 1, f: '', r: 0, t: ctx.t, u: T ? T.use : '', s: ctx.s, o: ctx.o, c: ctx.c, e: ctx.e, k: ctx.k, cl: ctx.cl, fl: ctx.fl, d: ctx.d, w: ctx.w, pw: ctx.pw, h: [], m: migrated ? 1 : 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 };
     rec.f = chooseFamily(b, rec);
     return rec;
   }
@@ -744,6 +746,7 @@
     p.shellFam = f;
     if (p.fam !== rec.f) { p.fell = rec.f; if (!p.errsOf) p.errsOf = fo.why || []; }
     if (b.type === 'ruin') p = ruinOf(p, b);
+    else if (rec.ab) p = leftOf(p, b);
     return p;
   }
   function build(b, rec) { return run(buildG(b, rec)); }
@@ -1081,6 +1084,23 @@
   }
   In.signature = signature;
 
+  // ------------------------------ the house left behind ------------------------------
+  // a house its household gave up (empty since In.LEFT days): the same walls and rooms, the same doors; what the family takes
+  // with it gone (its mats, the cradle, the clay stove, the brazier: the pieces marked leva), what is built
+  // in or too heavy to carry left where it stood — the beds' frames, the hearth, the shelves, the table. A family that moves
+  // in brings its own things again: the plan is the house's own once more
+  In.LEFT = 2;
+  function leftOf(p, b) {
+    if (!p || !p.shell || !p.ok) return p;
+    const o = Object.assign({}, p); o.left = 1; o.ver = p.ver + '.abandonada';
+    o.items = p.items.filter(it => !ITEMS[it.kind].leva);
+    let places = 0; for (const it of o.items) places += it.places || 0;
+    o.cap = Object.assign({}, p.cap, { places });
+    o.ok = true; o.errs = [];
+    Object.defineProperty(o, '_P', { enumerable: false, value: p._P });
+    grid(o);
+    return o;
+  }
   // ------------------------------ the ruin of a plan ------------------------------
   // what stands of a house when it falls: the walls of its ground storey, broken low (stepped over), no roof, no storey
   // above, its things gone but the rubble; the way through it open, as the world has a ruin
@@ -1130,10 +1150,12 @@
     return y0;
   };
   // the world's door of a building (tiles): the point before the plan's entrance — or, when that is not open ground now, the
-  // first open corner (the old rule), until the turn of the day records that the door moved
+  // first open corner (the old rule), until the turn of the day records that the door moved. Read from the shell: the same
+  // way in as the whole plan's (the shell from afar is the plan's), at a small part of its cost — the door is asked by the
+  // world's step and by every frame, for every building
+  const doorOf = b => { const s = In.shellOf(b); const e = s && s.entrance; if (!e || !e.out) return null; return [b.x + e.out[0] / TILE, b.y + e.out[1] / TILE]; };
   In.door = function (b) {
-    const p = In.plan(b);
-    if (p && p.entrance) { const o = p.entrance.out; const x = b.x + o[0] / TILE, y = b.y + o[1] / TILE; if (G.W.walkableXY(x, y)) return [x, y]; }
+    const d = doorOf(b); if (d && G.W.walkableXY(d[0], d[1])) return d;
     return oldDoor(b);
   };
   function oldDoor(b) {
@@ -1147,17 +1169,47 @@
   const KEYS = { pantry: ['food'], inv: '*', stock: '*' };
   // (the pieces sold across — a stall, a shop's stall, a counter —, in the plan's order: the number is the merchant's slot)
   const sellsOf = p => p.items.filter(it => it.spots.some(sp => sp.use === 'vender') && it.spots.some(sp => sp.use === 'comprar'));
+  // (kept by the record's key, like the shell: the plan may leave its cache — a city has more buildings than it holds —
+  // without the world's step making it again at every delivery; read-only, the same list for the same record)
+  const stores = new Map();
+  G.worldHooks.push(() => stores.clear());
   In.depotStores = function (b) {
-    const p = In.plan(b); if (!p || !p.ok) return null; const sells = sellsOf(p);
-    const out = [];
-    for (const it of p.items) {
-      if (!it.store) continue; const st = it.store; const keys = st.goods ? st.goods.slice() : KEYS[st.key] || '*'; const sale = sells.indexOf(it);
-      out.push({ id: it.id, kind: it.kind, keys, cap: st.cap, slot: it.k, dep: st.dep, sale: sale < 0 ? null : sale });
+    if (!b || !b.ip || !TYPES[b.ip.t]) return null;
+    const key = planKey(b, b.ip); const c = stores.get(b.id); if (c && c.key === key) return c.out;
+    const p = In.plan(b); let out = null;
+    if (p && p.ok) {
+      const sells = sellsOf(p); out = [];
+      for (const it of p.items) {
+        if (!it.store) continue; const st = it.store; const keys = st.goods ? Object.freeze(st.goods.slice()) : KEYS[st.key] || '*'; const sale = sells.indexOf(it);
+        out.push(Object.freeze({ id: it.id, kind: it.kind, keys, cap: st.cap, slot: it.k, dep: st.dep, sale: sale < 0 ? null : sale }));
+      }
+      Object.freeze(out);
     }
+    stores.set(b.id, { key, out }); if (stores.size > In.SHELLS) stores.delete(stores.keys().next().value);
     return out;
   };
-  // the door the world's people use (tiles, before the plan's own door, on open ground), or null
-  In.planDoor = function (b) { const p = In.plan(b); if (!p || !p.ok || !p.entrance) return null; const o = p.entrance.out; const x = b.x + o[0] / TILE, y = b.y + o[1] / TILE; return G.W.walkableXY(x, y) ? [x, y] : null; };
+  // the door the world's people use (tiles, before the plan's own door, on open ground), or null. Never a door onto a pocket
+  // of ground shut in between walls and buildings, smaller than the ground the old corner opens to: whoever came out there
+  // would be shut in (a court's door that faced a single tile between two buildings). Judged in the world's step by the map
+  // of reach; what is drawn reads the step's last answer for the same record and the same ground — a drawing never rebuilds
+  // the map (the world is the same with or without anyone looking)
+  let regN = null, regAt = -1;
+  const regSize = (L, r) => { if (!regN || regAt !== G.W.reachBuilds) { regN = new Map(); regAt = G.W.reachBuilds; for (let i = 0; i < L.length; i++) { const k = L[i]; if (k >= 0) regN.set(k, (regN.get(k) || 0) + 1); } } return regN.get(r) || 0; };
+  const doorSaid = new Map();
+  G.worldHooks.push(() => { doorSaid.clear(); regN = null; regAt = -1; });
+  In.planDoor = function (b) {
+    const d = doorOf(b); if (!d || !G.W.walkableXY(d[0], d[1])) return null;
+    const o = oldDoor(b); if (!o || !G.W.walkableXY(o[0], o[1])) return d;
+    const S = G.S; const key = planKey(b, b.ip) + ':' + (S.walkVer || 0) + ':' + (S.typeVer || 0);
+    if (!G.inSim) { const m = doorSaid.get(b.id); return m && m.key === key ? m.d : d; }
+    const L = G.W.reachIds(); const rd = L[G.W.idx(d[0], d[1])], ro = L[G.W.idx(o[0], o[1])];
+    const out = rd === ro || regSize(L, rd) >= regSize(L, ro) ? d : null;
+    doorSaid.set(b.id, { key, d: out }); if (doorSaid.size > In.SHELLS) doorSaid.delete(doorSaid.keys().next().value);
+    return out;
+  };
+  // (the step's last answer for a building, while its record and the ground are the same — for the checker; undefined when
+  // the step has not asked since)
+  In.doorSaid = function (b) { const m = b && b.ip && doorSaid.get(b.id); const S = G.S; return m && m.key === planKey(b, b.ip) + ':' + (S.walkVer || 0) + ':' + (S.typeVer || 0) ? m.d : undefined; };
   // where the one who sells and the one who buys stand at a building's slot-th selling piece (a stall, a shop's stall, a
   // counter): tiles of the world, the storey, the piece — for C1's G.Biz.spot; null when the building has no such piece
   // (a slot beyond the pieces the plan has gets none: that merchant keeps the place he has today, before the building)
@@ -1231,7 +1283,7 @@
     const items = {}; const inn = []; for (const v of S.villagers.values()) if (v.inside === b.id) inn.push(v.id);
     if (TYPES[b.ip.t] && TYPES[b.ip.t].use === 'casa') { const r = In.beds(b); for (const [vid, pl] of r.by) { const v = S.villagers.get(vid); if (v && v.sleeping && v.inside === b.id) (items[pl.it.id] = items[pl.it.id] || { occ: [] }).occ.push(vid); } }
     for (const it of p.items) if (it.store) { const f = fillOf(b, it); if (f !== null) (items[it.id] = items[it.id] || { occ: [] }).fill = f; }
-    return { doors, items, inside: inn, dmg: b.maxHp ? r2(1 - G.clamp(b.hp / b.maxHp, 0, 1)) : 0, ruin: b.type === 'ruin' ? 1 : 0 };
+    return { doors, items, inside: inn, dmg: b.maxHp ? r2(1 - G.clamp(b.hp / b.maxHp, 0, 1)) : 0, ruin: b.type === 'ruin' ? 1 : 0, left: b.ip.ab ? 1 : 0 };
   };
   // how full a keeping piece is: its share of the store it shows (a view of the world's own numbers, never a number of its own)
   function fillOf(b, it) {
@@ -1275,6 +1327,41 @@
     if (o.side && SIDES.includes(o.side)) { const m = openTiles(b, o.side); if (!m) return { ok: false, why: 'esse lado não dá para a rua' }; rec.s = o.side; rec.o = m; }
     rec.r++; fact(b, 'reforma', o.fam || o.side || ''); return { ok: true };
   };
+  // where a house grows when its household no longer fits in it: of the families its record can take there (the catalogue,
+  // the record's own frozen context), those whose shell stands on the lot and is bigger than the one it has — a storey more, a
+  // loft, a lean-to, a terrace —, the least of them whose plan beds the whole household (want: how many; the ones who live
+  // there now, if not said), else the one of them that beds the most, if more than today; with what the work costs (by the
+  // floor it adds: the building's own cost and work, in the share of floor that is new). Null where the house has nowhere to
+  // grow. Asked by whoever does the work (C1's act-casa.js), who calls In.renovate(b, { fam }) once it is done
+  const floorOfShell = P => { let a = 0; for (const l of P.levels) if (l.kind !== 'porao' && l.kind !== 'terraco' && l.area) a += (l.area[2] - l.area[0]) * (l.area[3] - l.area[1]); for (const x of P.annex) a += (x.r[2] - x.r[0]) * (x.r[3] - x.r[1]); return a; };
+  const shape = P => ({ floors: P.levels.filter(l => l.kind !== 'porao' && l.kind !== 'terraco' && l.kind !== 'jirau').length, loft: P.levels.some(l => l.kind === 'jirau'), annex: P.annex.length, roof: P.levels.some(l => l.kind === 'terraco') });
+  In.growFam = function (b, want) {
+    if (!b || !b.ip || !TYPES[b.type] || TYPES[b.type].use !== 'casa' || b.type === 'ruin') return null;
+    const rec = b.ip; const now = In.plan(b); if (!now || !now.ok) return null;
+    if (!(want > 0)) { want = 0; for (const v of G.S.villagers.values()) if (v.home === b.id) want++; }
+    const P0 = shellPlan(b, rec, now.shellFam || rec.f); if (!P0 || P0.errs.length) return null; const a0 = floorOfShell(P0), s0 = shape(P0);
+    const cands = [];
+    for (const g of In.familiesFor(rec).ok) {
+      if (g === rec.f || shellOfFam(g) === shellOfFam(rec.f)) continue;
+      const P = shellPlan(b, rec, g); if (!P || P.errs.length) continue; const a = floorOfShell(P); if (a <= a0 + 0.5) continue;
+      cands.push({ g, a, sh: shape(P) });
+    }
+    cands.sort((x, y) => x.a - y.a || (x.g < y.g ? -1 : 1));
+    let best = null;
+    for (const c of cands.slice(0, 6)) {
+      const p = build(b, Object.assign({}, rec, { f: c.g })); if (!p.ok || p.fam !== c.g || p.short || p.cap.places <= now.cap.places) continue;
+      if (!best || p.cap.places > best.p.cap.places) best = { c, p };
+      if (p.cap.places >= want) break;
+    }
+    if (best) {
+      const { c, p } = best;
+      const k = Math.max(0.25, (c.a - a0) / a0) * 0.6; const def = G.BDEF[b.type] || {}; const cost = {};
+      for (const m in def.cost || {}) cost[m] = Math.ceil(def.cost[m] * k);
+      const why = c.sh.floors > s0.floors ? (c.sh.floors - s0.floors > 1 ? (c.sh.floors - s0.floors) + ' andares' : 'um andar') : c.sh.annex > s0.annex ? 'um anexo' : c.sh.loft && !s0.loft ? 'um jirau' : c.sh.roof && !s0.roof ? 'um terraço' : 'mais chão';
+      return { fam: c.g, from: rec.f, now: now.cap.places, places: p.cap.places, want, floor0: r2(a0), floor: r2(c.a), cost, work: Math.ceil((def.work || 20) * k), why };
+    }
+    return null;
+  };
   // a new use for the same walls (a house become a shop, a hall become a temple): the shell stays, the inside follows the use
   In.reuse = function (b, use) {
     if (!b || !b.ip || !G.inSim) return { ok: false, why: 'fora do passo do mundo' };
@@ -1295,9 +1382,12 @@
   const rec_dr = b => b.ip.dr || (b.ip.dr = {});
   // the turn of the day: the doors back to their rule; a door that no longer opens on open ground moves (a renovation);
   // a type changed by someone else becomes a renovation; the households that moved in, a fact
+  // (who takes a house its head left by dying: the partner, a child, a grandchild — the heir; anyone else moved in)
+  const kinOf = (dead, v) => !!(dead && v && (dead.partner === v.id || v.mother === dead.id || v.father === dead.id || (dead.kids || []).includes(v.id) || [v.mother, v.father].some(pid => { const pa = G.S.villagers.get(pid) || G.S.dead.get(pid); return pa && (pa.mother === dead.id || pa.father === dead.id); })));
   In.onNewDay = function () {
     const S = G.S;
-    const heads = new Map(); for (const v of S.villagers.values()) { if (!v.home || v.age < 16) continue; const h = heads.get(v.home); if (!h || v.age > h.age || (v.age === h.age && v.id < h.id)) heads.set(v.home, v); }
+    const heads = new Map(), dwell = new Map();
+    for (const v of S.villagers.values()) { if (!v.home) continue; dwell.set(v.home, (dwell.get(v.home) || 0) + 1); if (v.age < 16) continue; const h = heads.get(v.home); if (!h || v.age > h.age || (v.age === h.age && v.id < h.id)) heads.set(v.home, v); }
     for (const b of S.buildings.values()) {
       if (!TYPES[b.type] && !(b.ip && b.type === 'ruin')) continue;
       if (!b.ip) { In.found(b); continue; }
@@ -1308,13 +1398,26 @@
       if (!b.built) continue;
       // (the street the door opens to is closed now — a wall, a building, the water: the door moves to a side still open)
       const m0 = openTiles(b, rec.s); if (!(m0 & (rec.o || m0)) || !m0) { for (const s of SIDES) { const m = openTiles(b, s); if (m) { if (s !== rec.s || m !== rec.o) { rec.s = s; rec.o = m; rec.r++; fact(b, 'reforma', 'porta ' + s); } break; } } }
-      if (TYPES[b.type].use === 'casa') { const head = heads.get(b.id) || null; const hid = head ? head.id : 0; if ((rec.hh || 0) !== hid) { rec.hh = hid; if (hid) fact(b, 'morada', head.name); } }
+      if (TYPES[b.type].use === 'casa') {
+        const head = heads.get(b.id) || null; const hid = head ? head.id : 0; const n = dwell.get(b.id) || 0;
+        // (the last of the household gone: empty from today — a house nobody lived in yet is only new —; given up after
+        // In.LEFT days empty, and the plan shows the house left behind; lived in again, the house is its own once more)
+        if (n) { rec.vz = 0; if (rec.ab) { rec.ab = 0; rec.r++; } }
+        else if (rec.nm) rec.vz = S.day;
+        else if (rec.vz && !rec.ab && S.day - rec.vz >= In.LEFT) { rec.ab = S.day; rec.r++; fact(b, 'abandono'); }
+        rec.nm = n;
+        // (a new head: the heir of the one who died there, or a household that moved in)
+        if ((rec.hh || 0) !== hid) {
+          const was = rec.hh ? S.dead.get(rec.hh) : null; rec.hh = hid;
+          if (hid) { if (was && kinOf(was, head)) fact(b, 'heranca', head.name + ' de ' + was.name); else fact(b, 'morada', head.name); }
+        }
+      }
     }
   };
   // a record broken or lost (a damaged save, a building of an older world): made again from the building as it stands
   function repair(b) {
     const r = b.ip; const ok = r && typeof r === 'object' && typeof r.f === 'string' && FAMS[r.f] && Number.isInteger(r.r) && typeof r.t === 'string' && SIDES.includes(r.s) && Array.isArray(r.h);
-    if (ok) { if (!Array.isArray(r.fx)) r.fx = []; if (!r.dr || typeof r.dr !== 'object') r.dr = {}; return false; }
+    if (ok) { if (!Array.isArray(r.fx)) r.fx = []; if (!r.dr || typeof r.dr !== 'object') r.dr = {}; for (const k of ['hh', 'nm', 'vz', 'ab']) if (!Number.isFinite(r[k])) r[k] = 0; return false; }
     const t = TYPES[b.type] ? b.type : TYPES[b.origType] ? b.origType : null; if (!t) { delete b.ip; return false; }
     const ctx = In.contextOf(b); ctx.t = t; b.ip = newRecord(b, ctx, true); b.ip.h.push([G.S.day, 'migrado']); return true;
   }
@@ -1330,5 +1433,5 @@
     return { ok: c.ok.map(id => ({ id, name: FAMS[id].name })), arch: of(c.arch, 'arquitetura'), gen: of(c.gen, 'gerador'), no: of(c.arch, 'arquitetura').concat(of(c.gen, 'gerador')) };
   };
   In.famName = id => (FAMS[id] ? FAMS[id].name : id);
-  In.uncache = () => { cache.clear(); shells.clear(); job = null; }; // (for the proofs)
+  In.uncache = () => { cache.clear(); shells.clear(); stores.clear(); job = null; }; // (for the proofs)
 })(window.G);
