@@ -26,12 +26,14 @@
   const AN = A.ANIM;
   const WHOLE = 0.6;        // the wholesale price, of the town's price
   const MARGIN0 = 0.25;     // a new stall's margin over the town's price
+  const OWE_MAX = 12;       // a people without coin: what the store gives a stall on account before it is paid
   const all = () => G.S.biz || (G.S.biz = []);
   const live = z => !!z && z.st !== 'fim';
   B.all = () => all().filter(live);
   B.get = id => D.zOf(id);
   B.of = v => { const id = v && (v.id || v); for (const z of all()) if (live(z) && z.st === 'on' && z.owner === id) return z; return null; };
   B.at = (b, slot) => { const id = b && (b.id || b); for (const z of all()) if (live(z) && z.b === id && z.slot === slot) return z; return null; };
+  B.hasStalls = b => { const id = b && (b.id || b); for (const z of all()) if (z.st === 'on' && z.b === id) return true; return false; };
   // the hours of a market: from the morning to dusk
   B.hours = () => { const t = G.S.time; return t > 0.06 && t < 0.62; };
   const coin = z => E.coinage(z.fac);
@@ -147,6 +149,7 @@
     z.open = 0; if (z.st === 'on') { z.st = 'saindo'; z.why = why || ''; }
     const S = G.S;
     const home = z.home && D.exists('h:' + z.home) ? 'h:' + z.home : null;
+    if (!coin(z) && oweTotal(z) > EPS) settle(z, home);
     for (const k of Object.keys(z.inv)) {
       let q = z.inv[k] || 0; if (!(q > EPS)) continue;
       if (home) { const r = D.move('z:' + z.id, home, k, q, { code: 'fechou', part: true, by: z.owner }); if (r.ok) q = r2(q - r.n); }
@@ -157,6 +160,28 @@
     if (!Object.keys(z.inv).some(k => z.inv[k] > EPS)) { z.st = 'fim'; z.end = S.day; D.zVer++; }
   };
 
+  // (a people without coin: a stall that closes owing the store pays first — its stock back, at what it cost, then what it
+  // earned in kind that the house still has — and only the rest goes home; what nothing pays is forgiven, and remembered.
+  // Without this, what was taken on account became the family's when the merchant changed trade)
+  function settle(z, home) {
+    const f = 'f:' + z.fac; if (!D.exists(f)) return;
+    let owe = oweTotal(z);
+    for (const k of Object.keys(z.inv).sort()) {
+      if (owe <= EPS) break; const unit = Math.max(0.01, z.cost[k] || r2((E.PRICE[k] || 0.3) * WHOLE));
+      const q = Math.min(z.inv[k] || 0, owe / unit); if (!(q > EPS)) continue;
+      const r = D.move('z:' + z.id, f, k, q, { code: 'acerto', part: true, by: z.owner }); if (r.ok) owe = r2(owe - r.n * unit);
+    }
+    if (home) for (const k of Object.keys(z.got).sort()) {
+      if (owe <= EPS) break; const val = Math.max(0.01, E.PRICE[k] || 0.3);
+      const hb = G.S.buildings.get(+home.slice(2)); const keep = k === 'food' ? ((hb && hb.res) || 1) : 0;
+      const q = Math.min(z.got[k] || 0, Math.max(0, D.get(home, k) - keep), owe / val); if (!(q > EPS)) continue;
+      const r = D.move(home, f, k, q, { code: 'acerto', part: true, by: z.owner }); if (r.ok) owe = r2(owe - r.n * val);
+    }
+    z.owe = {}; z.got = {};
+    const o = G.S.villagers.get(z.owner);
+    if (owe > EPS && o) A.note(o, 'memory', `A banca fechou devendo ${String(owe).replace('.', ',')} ao armazém do povo; ficou perdoado.`);
+  }
+
   // ------------------------------ the merchant's day ------------------------------
   // the stall stocked from the people's store — paid for — and open from the morning to dusk
   B.task = function (v, b, f, H) {
@@ -165,27 +190,38 @@
     if (!z) z = B.open(v, b); if (!z) return null;
     if (!B.hours()) return null; // (the market is shut: another errand, home)
     // (a people without coin: what the stall got in exchange goes to the store, as payment of what it took on account)
-    if (!coin(z) && oweTotal(z) > 0) { const k = Object.keys(z.got).find(q => (z.got[q] || 0) >= 2 && (z.inv[q] || 0) >= 2); if (k) return H.setTask(v, { type: 'devolver', biz: z.id, k, pri: 1, st: 0, id: b.id }); }
+    if (!coin(z) && oweTotal(z) > 0) { const k = Object.keys(z.got).sort().find(q => (z.got[q] || 0) >= 2 && spare(z, q) >= 2); if (k) return H.setTask(v, { type: 'devolver', biz: z.id, k, pri: 1, st: 0, id: b.id }); }
     const want = restockPick(z, v, f);
     if (want) return H.setTask(v, { type: 'atacado', biz: z.id, k: want.k, n: want.n, pri: 1, st: 0, id: b.id });
     if (!Object.keys(z.inv).some(k => z.inv[k] >= 1)) return null; // (nothing to sell and nothing to buy: another errand)
     return H.setTask(v, { type: 'banca', biz: z.id, pri: 1, st: 0, dur: G.rr(30, 50), id: b.id });
   };
   const oweTotal = z => { let n = 0; for (const k in z.owe) n += z.owe[k] || 0; return r2(n); };
+  // (a people without coin: the payment in kind goes where the coins go in a people with coin — the seller's house, the
+  // family's income; with no house, the stall keeps it. What the stall took on account is paid from there)
+  const kindTo = z => { const o = G.S.villagers.get(z.owner); return o && E.homeOf(o) ? 'h:' + o.home : 'z:' + z.id; };
+  // (what of it can go to the store: the house keeps a day of food for the family)
+  function spare(z, k) {
+    const ref = kindTo(z); const n = D.get(ref, k);
+    if (ref[0] !== 'h' || k !== 'food') return n;
+    const h = G.S.buildings.get(+ref.slice(2)); return Math.max(0, n - ((h && h.res) || 1));
+  }
   // what the stall lacks most that the store has (and the family can pay for): more of what sold yesterday
   function restockPick(z, v, f) {
-    const cash = coin(z) ? D.get(payer(v), 'moedas') : Infinity;
+    const cash = coin(z) ? D.get(payer(v), 'moedas') : Math.max(0, OWE_MAX - oweTotal(z)); // (on account: up to the limit)
     let best = null, bs = 0;
     for (const k of E.MARKET_GOODS) {
       const sold = (z.prev && z.prev.sold[k]) || 0;
-      const target = (k === 'food' ? 8 : 3) + Math.min(6, Math.round(sold)) + (z.want[k] || 0);
+      // (what the town's houses lack: a market hears it — act-compras.js)
+      const need = G.Compras ? G.Compras.townNeed(z.set)[k] || 0 : 0;
+      const target = (k === 'food' ? 8 : 3) + Math.min(6, Math.round(sold)) + (z.want[k] || 0) + Math.min(6, Math.ceil(need / 3));
       const have = z.inv[k] || 0; if (have >= target) continue;
       const minStore = k === 'food' ? 12 : 2; const inStore = D.free('f:' + f.id, k); if (inStore < minStore) continue;
       const unit = r2((E.PRICE[k] || 0.3) * WHOLE);
       const can = Math.floor((cash + EPS) / Math.max(0.01, unit));
       const n = Math.min(target - have, Math.floor(inStore - minStore / 2), can, k === 'food' ? 8 : 4, Math.floor(D.room('z:' + z.id, k)));
       if (n < 1) continue;
-      const sc = ((target - have) / target) * (1 + sold * 0.3) * (1 + (E.PRICE[k] || 0.3));
+      const sc = ((target - have) / target) * (1 + sold * 0.3 + Math.min(3, need / 4)) * (1 + (E.PRICE[k] || 0.3));
       if (sc > bs + EPS) { bs = sc; best = { k, n }; }
     }
     return best;
@@ -224,8 +260,11 @@
   // treasury at once — no coin, no goods; a people without coin takes them on account, and the stall pays in kind later
   function wholesale(v, z, k, want) {
     const f = G.Fac.get(z.fac); if (!f) return { ok: false, why: 'O povo não existe mais.' };
-    const n = Math.min(want, Math.floor(D.free('f:' + f.id, k)), Math.floor(D.room('v:' + v.id, k, { to: 'z:' + z.id })));
-    if (n < 1) return { ok: false, why: D.free('f:' + f.id, k) < 1 ? 'O armazém não tem.' : 'Suas mãos estão ocupadas.' };
+    // (no more than fits on the stall's sales furniture, counting what the hands already take there)
+    const onWay = v.carry && v.carry.to === 'z:' + z.id && v.carry.k === k ? v.carry.n : 0;
+    const fits = Math.floor(D.room('z:' + z.id, k) - onWay + EPS);
+    const n = Math.min(want, Math.floor(D.free('f:' + f.id, k)), Math.floor(D.room('v:' + v.id, k, { to: 'z:' + z.id })), fits);
+    if (n < 1) return { ok: false, why: D.free('f:' + f.id, k) < 1 ? 'O armazém não tem.' : fits < 1 ? 'Não cabe mais nada disso na banca.' : 'Suas mãos estão ocupadas.' };
     const cost = r2((E.PRICE[k] || 0.3) * n * WHOLE);
     let r;
     if (coin(z)) {
@@ -233,6 +272,7 @@
       r = D.swap(['f:' + f.id, 'v:' + v.id, k, n], [from, 'f:' + f.id, 'moedas', cost], { code: 'atacado', by: v.id, to: 'z:' + z.id });
       if (r.ok) { E.ensure(f); f.eco.sales += cost; }
     } else {
+      if (oweTotal(z) + cost > OWE_MAX + EPS) return { ok: false, why: 'O armazém não fia mais: primeiro pague o que deve.' };
       r = D.move('f:' + f.id, 'v:' + v.id, k, n, { code: 'fiado', by: v.id, to: 'z:' + z.id });
       if (r.ok) z.owe[k] = r2((z.owe[k] || 0) + cost);
     }
@@ -241,15 +281,19 @@
     z.day.cost = r2(z.day.cost + cost);
     return { ok: true, n, cost };
   }
-  // a people without coin: the exchange goods of the stall carried to the people's store, paying what it took on account
+  // a people without coin: the exchange goods the stall earned carried from where they went (the family's house, or the
+  // stall itself) to the people's store, paying what it took on account
   function runDevolver(v, t, dt, H) {
     const z = B.get(t.biz); if (!z || z.st !== 'on') return H.end(v);
-    const sp = spots(z); if (!sp) return H.end(v);
-    if (t.st === 0) { const r = walkTo(v, t, 'banca', sp.seller[0], sp.seller[1], dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return; }
+    const from = kindTo(z); const home = from[0] === 'h' ? G.S.buildings.get(+from.slice(2)) : null;
+    if (t.st === 0) {
+      let r; if (home) r = walkB(v, t, home, dt, H); else { const sp = spots(z); if (!sp) return H.end(v); r = walkTo(v, t, 'banca', sp.seller[0], sp.seller[1], dt, H); }
+      if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return;
+    }
     v.act = AN.tirarDaBanca.act; if (v.actT < AN.tirarDaBanca.contact) return;
-    const n = Math.min(z.inv[t.k] || 0, z.got[t.k] || 0, Math.floor(D.room('v:' + v.id, t.k, { to: 'f:' + z.fac })));
+    const n = Math.min(Math.floor(spare(z, t.k) + EPS), z.got[t.k] || 0, Math.floor(D.room('v:' + v.id, t.k, { to: 'f:' + z.fac })));
     if (n < 1) return H.end(v);
-    const r = D.move('z:' + z.id, 'v:' + v.id, t.k, n, { code: 'troca', by: v.id, to: 'f:' + z.fac });
+    const r = D.move(from, 'v:' + v.id, t.k, n, { code: 'troca', by: v.id, to: 'f:' + z.fac });
     if (!r.ok) return H.end(v);
     z.got[t.k] = r2((z.got[t.k] || 0) - r.n); if (z.got[t.k] <= EPS) delete z.got[t.k];
     // (the debt goes down by what it is worth, good by good from the oldest)
@@ -283,14 +327,16 @@
     if ((h.pantry || 0) < res) need.push('food');
     return need;
   }
-  // the stall for it: one open, with someone at the counter and the thing on it; the best deal near at hand
-  B.shop = function (v, H) {
+  // the stall for it: one open, with someone at the counter and the thing on it; the best deal near at hand (want: the
+  // house's own list, when the house sends someone for it — act-compras.js)
+  B.shop = function (v, H, want) {
     const S = G.S; const h = E.homeOf(v); if (!h || v.captive || v.age < 14 || !B.hours()) return null;
     let any = false; for (const z of all()) if (live(z) && z.set === v.set && z.open) { any = true; break; } if (!any) return null;
-    const need = needsOf(h, v); if (!need.length) return null;
+    const need = want || needsOf(h, v); if (!need.length) return null;
     let best = null, bs = 0;
     for (const z of all()) {
       if (!live(z) || z.st !== 'on' || z.set !== v.set || !z.open || !B.manned(z)) continue;
+      if (z.owner === v.id || (z.home && z.home === h.id)) continue; // (the family's own stall: nothing to buy from oneself)
       const sp = spots(z); if (!sp || !G.W.reaches(v, sp.buyer[0], sp.buyer[1])) continue;
       for (const k of need) {
         if ((z.inv[k] || 0) < 1) continue;
@@ -353,18 +399,29 @@
       if (t.talk === 5) {
         if (t.sayAcc && t.said !== 5) { t.said = 5; say(seller, 'aceitar', {}); }
         if (v.actT < AN.pagar.contact) return;
-        // the deal: the goods into the buyer's arms and the payment to the seller's house, both or neither
-        const n = qty(z, k); if (n < 1) return done(v, H);
+        // the deal: the goods into the buyer's arms and the payment to the seller's house, both or neither — as many as the
+        // house sent for (t.n), as the stall has and as the purse pays, at the price agreed
+        // (and as the two hands carry: a load already in them, or more than they hold, is no deal)
+        const arms = Math.floor(D.room('v:' + v.id, k, { to: 'h:' + h.id }) + EPS);
+        if (arms < 1) { t.talk = 10; v.actT = 0; return; }
+        const n = Math.min(Math.max(t.n || 0, qty(z, k)), k === 'food' ? 6 : 3, Math.floor((z.inv[k] || 0) + EPS), Math.max(1, Math.floor((means(v, h, z, k) + EPS) / Math.max(0.01, t.p))), arms);
+        if (n < 1) return done(v, H);
         const total = r2(t.p * n);
         let r;
         if (coin(z)) r = D.swap(['z:' + z.id, 'v:' + v.id, k, n], [payer(v), payee(z), 'moedas', total], { code: 'venda', by: v.id, to: 'h:' + h.id, tag: { bought: 1 } });
-        else { const pg = payGood(h, k); const q = pg ? r2(total / (E.PRICE[pg] || 0.3)) : 0; r = pg && q > EPS ? D.swap(['z:' + z.id, 'v:' + v.id, k, n], ['h:' + h.id, 'z:' + z.id, pg, q], { code: 'venda', by: v.id, to: 'h:' + h.id, tag: { bought: 1 } }) : { ok: false, why: 'nada com que trocar' }; if (r.ok) z.got[pg] = r2((z.got[pg] || 0) + q); }
+        else {
+          const pg = payGood(h, k); const q = pg ? r2(total / (E.PRICE[pg] || 0.3)) : 0;
+          if (pg && q > EPS && D.room(kindTo(z), pg) + EPS < q) { t.talk = 6; v.actT = 0; return; } // (nowhere to keep the payment)
+          r = pg && q > EPS ? D.swap(['z:' + z.id, 'v:' + v.id, k, n], ['h:' + h.id, kindTo(z), pg, q], { code: 'venda', by: v.id, to: 'h:' + h.id, tag: { bought: 1 } }) : { ok: false, why: 'nada com que trocar' }; if (r.ok) z.got[pg] = r2((z.got[pg] || 0) + q);
+        }
         if (!r.ok) { t.talk = 8; v.actT = 0; return; }
         const d = z.day; d.rev = r2(d.rev + total); d.sold[k] = (d.sold[k] || 0) + n; d.cust++; d.n++;
         say(seller, 'agradecer', {});
         G.Vg.emote(v, 'happy', 1.2); G.Life && G.Life.leaveQueue(v);
         return H.setTask(v, { type: 'carga', to: 'h:' + h.id, pri: 0.5, st: 0 });
       }
+      if (t.talk === 6) { if (t.said !== 6) { t.said = 6; say(seller, 'sem_lugar', {}); } if (v.actT < STEP) return; z.day.ref[k] = (z.day.ref[k] || 0) + 1; z.day.refus++; return done(v, H); }
+      if (t.talk === 10) { if (t.said !== 10) { t.said = 10; say(v, 'maos_cheias', {}); } if (v.actT < STEP) return; return done(v, H); }
       if (t.talk === 7) { if (t.said !== 7) { t.said = 7; say(seller, 'recusar_oferta', {}); } if (v.actT < STEP) return; t.talk = 9; v.actT = 0; return; }
       if (t.talk === 8) { if (t.said !== 8) { t.said = 8; say(v, 'sem_dinheiro', {}); } if (v.actT < STEP) return; z.day.ref[k] = (z.day.ref[k] || 0) + 1; z.day.refus++; return done(v, H); }
       if (t.talk === 9) { if (t.said !== 9) { t.said = 9; say(v, 'recusar_caro', { k }); } if (v.actT < STEP) return; z.day.ref[k] = (z.day.ref[k] || 0) + 1; z.day.refus++; return done(v, H); }
@@ -492,7 +549,9 @@
         if (d && G.Village.facOfSet(d.set) === mine.fac) { const [fx, fy] = G.Village.frontTile(d); if (G.dist(x, y, fx, fy) < r + 1) {
           const f = G.Fac.get(mine.fac);
           const ks = E.MARKET_GOODS.filter(k => D.free('f:' + f.id, k) >= 1).sort((a, b) => (D.free('f:' + f.id, b) - D.free('f:' + f.id, a)) || (a < b ? -1 : 1)).slice(0, 4);
-          for (const k of ks) { const n = Math.min(k === 'food' ? 8 : 4, Math.floor(D.free('f:' + f.id, k)), Math.floor(D.room('v:' + v.id, k, { to: 'z:' + mine.id }))); if (n < 1) continue; const cost = r2((E.PRICE[k] || 0.3) * n * WHOLE); out.push({ id: 'negocio.atacado:' + mine.id + ':' + k, act: 'atacado', biz: mine.id, k, n, label: `Comprar ${n} de ${E.name(k)} no atacado para a banca (${coin(mine) ? String(cost).replace('.', ',') + ' ' + B.money(mine.fac).plural : 'fiado, a pagar em troca'})`, at: [fx, fy], ref: 'f:' + f.id, anim: 'examinar', hands: 2 }); }
+          // (a stall whose furniture is full buys nothing: one offer that says so, not four)
+          if (ks.length && ks.every(k => D.room('z:' + mine.id, k) < 1)) out.push({ id: 'negocio.atacado:' + mine.id, act: 'atacado', biz: mine.id, k: ks[0], n: 0, label: 'Comprar no atacado para a banca', at: [fx, fy], ref: 'f:' + f.id, anim: 'examinar', hands: 2, ok: false, why: 'A banca está cheia: venda antes de comprar mais.' });
+          else for (const k of ks) { const n = Math.min(k === 'food' ? 8 : 4, Math.floor(D.free('f:' + f.id, k)), Math.floor(D.room('v:' + v.id, k, { to: 'z:' + mine.id })), Math.floor(D.room('z:' + mine.id, k) + EPS)); if (n < 1) continue; const cost = r2((E.PRICE[k] || 0.3) * n * WHOLE); out.push({ id: 'negocio.atacado:' + mine.id + ':' + k, act: 'atacado', biz: mine.id, k, n, label: `Comprar ${n} de ${E.name(k)} no atacado para a banca (${coin(mine) ? String(cost).replace('.', ',') + ' ' + B.money(mine.fac).plural : 'fiado, a pagar em troca'})`, at: [fx, fy], ref: 'f:' + f.id, anim: 'examinar', hands: 2 }); }
         } }
       }
       return out;
@@ -550,10 +609,14 @@
   }
   // a sale at a price: the same deal as the people's (the goods into the arms, the payment to the seller's house)
   function sell(z, v, k, p) {
-    const h = E.homeOf(v); const n = qty(z, k); if (n < 1) return { ok: false, why: 'Acabou.' };
+    const h = E.homeOf(v); const n = Math.min(qty(z, k), Math.floor(D.room('v:' + v.id, k, { to: 'h:' + h.id }) + EPS)); if (n < 1) return { ok: false, why: qty(z, k) < 1 ? 'Acabou.' : 'Suas mãos não levam mais nada.' };
     const total = r2(p * n); let r;
     if (coin(z)) r = D.swap(['z:' + z.id, 'v:' + v.id, k, n], [payer(v), payee(z), 'moedas', total], { code: 'venda', by: v.id, to: 'h:' + h.id, tag: { bought: 1 } });
-    else { const pg = payGood(h, k); const q = pg ? r2(total / (E.PRICE[pg] || 0.3)) : 0; r = pg && q > EPS ? D.swap(['z:' + z.id, 'v:' + v.id, k, n], ['h:' + h.id, 'z:' + z.id, pg, q], { code: 'venda', by: v.id, to: 'h:' + h.id, tag: { bought: 1 } }) : { ok: false, why: 'Você não tem com que trocar.' }; if (r.ok) z.got[pg] = r2((z.got[pg] || 0) + q); }
+    else {
+      const pg = payGood(h, k); const q = pg ? r2(total / (E.PRICE[pg] || 0.3)) : 0;
+      if (pg && q > EPS && D.room(kindTo(z), pg) + EPS < q) { const txt = say(G.S.villagers.get(z.owner), 'sem_lugar', {}); return { ok: false, why: txt || 'Não há onde guardar a troca.' }; }
+      r = pg && q > EPS ? D.swap(['z:' + z.id, 'v:' + v.id, k, n], ['h:' + h.id, kindTo(z), pg, q], { code: 'venda', by: v.id, to: 'h:' + h.id, tag: { bought: 1 } }) : { ok: false, why: 'Você não tem com que trocar.' }; if (r.ok) z.got[pg] = r2((z.got[pg] || 0) + q);
+    }
     if (!r.ok) { const txt = say(v, 'sem_dinheiro', {}); return { ok: false, why: txt || r.why }; }
     const d = z.day; d.rev = r2(d.rev + total); d.sold[k] = (d.sold[k] || 0) + n; d.cust++; d.n++;
     say(G.S.villagers.get(z.owner), 'agradecer', {});

@@ -66,6 +66,26 @@
     if (G.Act.outside) add('act', 1, `${G.Act.outside} operação(ões) criada(s) fora do passo do mundo`);
     // ---- the businesses
     if (G.Biz && G.Biz.audit) G.Biz.audit(add, s);
+    // ---- the houses' coins, and their shopping: one of a house out for it at a time
+    const out = new Map();
+    for (const b of s.buildings.values()) if (b.coin !== undefined) neg(`${b.type}#${b.id}`, 'moedas', b.coin);
+    for (const v of s.villagers.values()) if (v.task && v.task.casa) { out.set(v.task.casa, (out.get(v.task.casa) || 0) + 1); if (v.home !== v.task.casa) add('act', 4, `${v.name} #${v.id} faz compras para uma casa que não é mais a sua (${v.task.casa}): mudou no caminho`); }
+    for (const [h, n] of out) if (n > 1) add('act', 3, `casa #${h}: ${n} pessoas fazendo as compras dela ao mesmo tempo`);
+    // ---- a marked load (an operation's crate, a purchase on its way home, goods for a stall) never leaves the hands
+    // without a line in the ledger: what was in them at the last look = what is in them now + what the ledger moved out
+    // (the guard's rule 20, read in the world instead of in the code)
+    const now = new Map();
+    for (const v of s.villagers.values()) { const c = v.carry; if (c && fin(c.n) && c.n > EPS && (c.op || c.to || c.cid)) now.set(v.id, { k: c.k, n: c.n, name: v.name }); }
+    if (marked && markedS === s) for (const [id, p] of marked) {
+      const c = now.get(id); const left = c && c.k === p.k ? c.n : (() => { const v = s.villagers.get(id); return v && v.carry && v.carry.k === p.k && fin(v.carry.n) ? v.carry.n : 0; })();
+      const went = (movedOut.get(id + '|' + p.k) || 0);
+      if (p.n - left - went > 0.01) { const v = s.villagers.get(id); add('act', 1, `${p.name} #${id}: ${Math.round((p.n - left - went) * 100) / 100} de ${p.k} de uma carga marcada sumiram sem lançamento no livro (${v ? `agora ${v.task ? v.task.type : 'sem tarefa'}, nas mãos ${v.carry ? v.carry.n + ' de ' + v.carry.k : 'nada'}` : 'a pessoa saiu do mundo'})`); }
+    }
+    marked = now; markedS = s; movedOut.clear();
   });
+  // (the ledger's lines out of hands since the last look, for the rule above; a new world, or a save loaded, starts over)
+  let marked = null, markedS = null; const movedOut = new Map();
+  if (G.Depot) G.Depot.onMove.push(e => { if (typeof e[3] === 'string' && e[3][0] === 'v' && e[3][1] === ':') { const key = e[3].slice(2) + '|' + e[5]; movedOut.set(key, (movedOut.get(key) || 0) + e[6]); } });
+  if (G.worldHooks) G.worldHooks.push(() => { marked = null; markedS = null; movedOut.clear(); });
   QA.canonMore.push(['acts', () => (G.Act ? G.Act.canon() : null)]);
 })();

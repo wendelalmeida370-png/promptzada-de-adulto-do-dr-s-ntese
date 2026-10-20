@@ -64,9 +64,11 @@
       if (!m && (v.role === 'coletor' || v.role === 'lenhador' || v.role === 'feirante')) m = v;
     }
     if (!m) return;
-    a.stock[d.k] -= d.n; d.r.luxDay = S.day + 0.6 + G.R() * 0.6;
+    d.r.luxDay = S.day + 0.6 + G.R() * 0.6;
     G.Vg.endTask(m); m.merchant = (m.merchant || 0) + 1;
-    m.carry = { k: d.k, n: d.n, from: d.k === 'peles' ? G.pick(['wolf', 'bear', 'fox']) : undefined };
+    // (the goods out of the people's store onto the pack horse, in the ledger; a fur keeps the beast it came from)
+    const beast = d.k === 'peles' ? G.pick(['wolf', 'bear', 'fox']) : undefined;
+    if (!G.Depot.move('f:' + a.id, 'v:' + m.id, d.k, d.n, { code: 'caravana', by: m.id, pack: true, tag: beast ? { from: beast } : undefined }).ok) return;
     const t = G.Vg.setTask(m, { type: 'trade', to: d.b.id, from: a.id, give: d.k, n: d.n, want: 'moedas', lux: 1, pri: 1.8, kind: 'trade' });
     // a pack horse with saddlebags (the Aztec trader carries the load himself)
     if (a.civ !== 'asteca' && G.Animals.DEF.cavalo) {
@@ -83,29 +85,34 @@
     if (!t.lux) return oldArrive(v, t);
     const S = G.S; const a = G.Fac.get(t.from), b = G.Fac.get(t.to); if (!a || !b || !b.alive) return false;
     const r = G.Fac.rel(a.id, b.id); if (!r || r.st === 'guerra') return false;
+    // (who brings it: a merchant's hands, or a ship's hold — shipArrive below; what it fetches goes back the same way)
+    const D = G.Depot; const src = v.ship ? 'l:' + v.shipId : 'v:' + v.id, dst = v.ship ? 'y:' + v.shipId : src;
     const k = t.give, n = v.carry && v.carry.k === k ? v.carry.n : t.n;
-    if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, b.id); v.carry = null; }
+    // the goods into the buyers' store, in the ledger (up to its room, as always)
+    if (v.ship) { if (D.get(src, k) > 0) D.store(src, b.id, k, D.get(src, k), { code: 'caravana', by: 0 }); }
+    else if (v.carry) G.Vg.toStore(v, b.id, 'caravana');
     // the price: dearer for a monopoly, better for a people of traders
     const mono = Tr.monopolyOf(k) === a.id ? 1.5 : 1;
     const value = (E.PRICE[k] || 1) * n * 1.15 * G.Civ.t(a.id, 'trade') * mono;
-    let back = null;
-    if (E.coinage(b.id) && b.stock.moedas >= value * 0.6) { const c = Math.round(Math.min(value, b.stock.moedas * 0.5)); b.stock.moedas -= c; back = { k: 'moedas', n: c }; }
+    // what they pay: coin, or something of theirs worth as much — out of their store into the merchant's pack, in the ledger
+    let back = null; const pay = (q, m) => { if (m > 0 && D.move('f:' + b.id, dst, q, m, { code: 'caravana-paga', by: v.id || 0, pack: true }).ok) back = { k: q, n: m }; };
+    if (E.coinage(b.id) && b.stock.moedas >= value * 0.6) pay('moedas', Math.round(Math.min(value, b.stock.moedas * 0.5)));
     else {
       // barter: something of theirs worth as much (their own fine things first)
       const opts = TRADE.filter(q => q !== k && surplus(b, q) >= 1 && (a.stock[q] || 0) < 4).sort((x, y) => (E.PRICE[y] || 0) - (E.PRICE[x] || 0));
       const q = opts[0];
-      if (q) { const m = Math.max(1, Math.min(surplus(b, q), Math.round(value / (E.PRICE[q] || 1)))); b.stock[q] -= m; back = { k: q, n: m }; }
-      else { const g = ['food', 'wood', 'stone'].sort((x, y) => b.stock[y] - b.stock[x])[0]; const m = Math.min(Math.floor(b.stock[g] * 0.3), Math.round(value / (E.PRICE[g] || 0.3))); if (m > 0) { b.stock[g] -= m; back = { k: g, n: m }; } }
+      if (q) pay(q, Math.max(1, Math.min(surplus(b, q), Math.round(value / (E.PRICE[q] || 1)))));
+      else { const g = ['food', 'wood', 'stone'].sort((x, y) => b.stock[y] - b.stock[x])[0]; pay(g, Math.min(Math.floor(b.stock[g] * 0.3), Math.round(value / (E.PRICE[g] || 0.3)))); }
     }
-    if (back) v.carry = back;
     r.op = Math.min(100, r.op + 4); r.friend = Math.min(100, (r.friend || 0) + 3); r.trade = (r.trade || 0) + 1;
     a.exports = (a.exports || 0) + value; b.imports = (b.imports || 0) + value;
     const im = b.dep || (b.dep = {}); im[k] = { from: a.id, n: ((im[k] && im[k].from === a.id ? im[k].n : 0) + n), day: S.day };
-    // the merchant's house takes its share
-    const h = E.homeOf(v); const cut = Math.round(value * 0.18 * 10) / 10;
+    // the merchant's house takes its share (the trade's own gain: born of the deal, with its cause in the ledger)
+    const h = v.ship ? null : E.homeOf(v); const cut = Math.round(value * 0.18 * 10) / 10;
     const seized = G.Polity && (G.Polity.econOf(a) === 'estatal' || G.Polity.econOf(a) === 'comunal');
-    if (seized) { a.stock.moedas = (a.stock.moedas || 0) + cut; if (h) h.trade = (h.trade || 0) + value * 0.3; }
-    else if (h) { h.coin = (h.coin || 0) + cut; h.trade = (h.trade || 0) + value; h.tradeGood = k; checkElite(h, v, a, k); } else v.purse = (v.purse || 0) + cut;
+    const gain = ref => D.make(ref, 'moedas', cut, { code: 'comissao', by: v.id || 0 });
+    if (seized) { gain('f:' + a.id); if (h) h.trade = (h.trade || 0) + value * 0.3; }
+    else if (h) { gain('h:' + h.id); h.trade = (h.trade || 0) + value; h.tradeGood = k; checkElite(h, v, a, k); } else if (!v.ship) gain('p:' + v.id);
     // the road gets a name when it is walked again and again
     const rt = routes(); const key = rkey(a.id, b.id, k); const ro = rt[key] || (rt[key] = { a: a.id, b: b.id, k, n: 0, since: S.day, val: 0 });
     ro.n++; ro.val += value; ro.last = S.day;
@@ -202,7 +209,7 @@
       const pe = P.leaderPe(o); const hostile = r.st === 'guerra' || (r.op < -10 && pe.agg > 0.5) || (pe.cru > 0.7 && pe.agg > 0.6);
       if (!hostile || G.R() > 0.06) continue;
       const a = G.Fac.get(t.from); const k = v.carry.k, n = v.carry.n;
-      G.Village.addStock(k, n, own); v.carry = null; G.Vg.emote(v, 'fear', 3);
+      G.Vg.toStore(v, own, 'roubo'); G.Vg.emote(v, 'fear', 3);
       r.grudge = Math.min(100, (r.grudge || 0) + 25); r.op = Math.max(-100, r.op - 15);
       const ro = routes()[rkey(t.from, t.to, k)]; if (ro) ro.robbed = (ro.robbed || 0) + 1;
       log(`Guerreiros de ${o.name} cercaram a caravana de ${a ? a.name : 'mercadores'} e levaram ${n} de ${E.name(k)}. ${v.name} escapou de mãos vazias.`, 'war', v.x, v.y);
@@ -218,15 +225,17 @@
     const S = G.S; const ob = S.buildings.get(route.a === s.dock ? route.b : route.a); if (!ob) return;
     const fb = G.Fac.get(G.Village.facOfSet(ob.set)); if (!fb || fb.id === f.id || !partnerOK(f, fb)) return;
     const k = TRADE.filter(q => surplus(f, q) >= 2 && (fb.stock[q] || 0) < 4).sort((x, y) => (E.PRICE[y] || 0) - (E.PRICE[x] || 0))[0]; if (!k) return;
-    const n = Math.min(surplus(f, k), 10); f.stock[k] -= n; s.lux = { k, n };
+    // (the fine things out of the store into the ship's hold of them, in the ledger)
+    const n = Math.min(surplus(f, k), 10); G.Depot.move('f:' + f.id, 'l:' + s.id, k, n, { code: 'navio-luxo' });
   };
+  // the ship sells as a merchant does (P.tradeArrive below): from its hold of fine things, what they fetch into another hold
   Tr.shipArrive = function (s, fa, fb) {
     if (!s.lux || fa === fb) return;
-    const fake = { name: 'Um navio', g: 'm', x: s.x, y: s.y, carry: { k: s.lux.k, n: s.lux.n }, id: 0, ship: 1 };
+    const fake = { name: 'Um navio', g: 'm', x: s.x, y: s.y, carry: { k: s.lux.k, n: s.lux.n }, id: 0, ship: 1, shipId: s.id };
     P.tradeArrive(fake, { lux: 1, from: fa.id, to: fb.id, give: s.lux.k, n: s.lux.n });
-    if (fake.carry) s.ret2 = fake.carry; s.lux = null;
+    if (s.lux) G.Depot.move('l:' + s.id, 'y:' + s.id, s.lux.k, s.lux.n, { code: 'navio-recusado' }); // (no deal: what was aboard sails home)
   };
-  Tr.shipHome = function (s) { if (s.ret2) { G.Village.addStock(s.ret2.k, s.ret2.n, s.fac); s.ret2 = null; } };
+  Tr.shipHome = function (s) { if (s.ret2) G.Depot.store('y:' + s.id, s.fac, s.ret2.k, s.ret2.n, { code: 'navio-volta' }); };
 
   // ------------------------------ update ------------------------------
   let tL = 0, tR = 0, tE = 0;

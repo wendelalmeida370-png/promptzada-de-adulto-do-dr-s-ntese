@@ -945,7 +945,7 @@
   }
   function runTrade(v, t, dt, H) {
     const S = G.S; const to = G.Fac.get(t.to), from = G.Fac.get(t.from);
-    if (!to || !from || !to.alive || !from.alive || hostile(t.to, t.from)) { if (v.carry && from) { G.Village.addStock(v.carry.k, v.carry.n, from.id); v.carry = null; } return H.end(v); }
+    if (!to || !from || !to.alive || !from.alive || hostile(t.to, t.from)) { if (v.carry && from) G.Vg.toStore(v, from.id, 'caravana-volta'); return H.end(v); }
     if (t.st === 0) {
       const dest = G.Fac.capitalOf(to.id); if (!dest) return H.end(v);
       const drop = G.Village.nearestDropoff(dest.cx, dest.cy, dest.id) || S.buildings.get(dest.campfire);
@@ -954,12 +954,12 @@
         const r = G.Politics.tradeArrive(v, t);
         if (r === 'stay') return H.end(v);
         t.st = 1; t.dest = null;
-      } else if (!t.dest || t.age > 180) { if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, from.id); v.carry = null; } return H.end(v); }
+      } else if (!t.dest || t.age > 180) { if (v.carry) G.Vg.toStore(v, from.id, 'caravana-volta'); return H.end(v); }
     } else {
       const home = G.Fac.capitalOf(from.id); if (!home) return H.end(v);
       const drop = G.Village.nearestDropoff(home.cx, home.cy, home.id) || S.buildings.get(home.campfire);
       if (!drop) return H.end(v);
-      if (goFront(v, t, drop, dt, H) || t.age > 360) { if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, from.id); G.FX && G.FX.deposit(v.x, v.y, v.carry.k, v.carry.n); v.carry = null; } H.end(v); }
+      if (goFront(v, t, drop, dt, H) || t.age > 360) { if (v.carry) { const k = v.carry.k, n = v.carry.n; G.Vg.toStore(v, from.id, 'caravana-volta'); G.FX && G.FX.deposit(v.x, v.y, k, n); } H.end(v); }
     }
   }
   function runDrill(v, t, dt, H) {

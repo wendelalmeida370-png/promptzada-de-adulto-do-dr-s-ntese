@@ -143,7 +143,17 @@
   Vg.give = function (v, t) {
     // (the body the player lives: a request is a call it may answer; a force of the world goes through setTask and takes it)
     if (G.S.avatar && G.S.avatar.id === v.id && G.Possess) { if (!G.Possess.FORCE[t.type]) { G.Possess.ask(v, t); return false; } setTask(v, t); return true; }
-    if (v.task && v.task.pri >= (t.pri || 0) + 0.01 && v.task.pri >= 2) return false; if (v.sleeping || v.inside || v.air || v.held || v.age < 3) return false; setTask(v, t); return true; };
+    if (v.task && v.task.pri >= (t.pri || 0) + 0.01 && v.task.pri >= 2) return false; if (v.sleeping || v.inside || v.air || v.held || v.age < 3) return false;
+    if (busyHands(v, t)) return false;
+    setTask(v, t); return true; };
+  // (hands busy with a load that has somewhere to go — an operation's crate, a purchase on its way home, goods for a stall:
+  // an errand from outside waits until it is there, unless it is about that load or cannot wait; an errand that takes the
+  // hands — a cave, a whale, a theft — would put its own things in them over it, and the load would be gone unwritten)
+  function busyHands(v, t) {
+    const c = v.carry; if (!c || !(c.n > 1e-6) || !(c.op || c.to || c.cid)) return false;
+    if ((t.pri || 0) >= 3 || t.type === 'carga' || t.type === 'deliver') return false;
+    return !(c.op && t.op === c.op);
+  }
   Vg.emote = emote;
 
   // (o.keepLoad: the errand ends but the hands keep what they carry — the god taking the body goes on carrying it)
@@ -181,6 +191,45 @@
     const n = W.nearestLand(b.x + b.w / 2, b.y + b.h / 2, 4); return n || cands[0];
   }
   Vg.door = V_door;
+
+  // ------------------------------ a delivery: one door for everyone ------------------------------
+  // what is in the hands into a people's store, as the world has always counted it (up to the store's room; what does not
+  // fit is lost, now with its cause) — through the depot, in the ledger: the caravans, the robbers, the deliveries
+  Vg.toStore = function (v, fid, code) {
+    const c = v.carry; if (!c || !(c.n > 0)) { v.carry = null; return 0; }
+    const add = G.Depot.store('v:' + v.id, fid, c.k, c.n, { op: c.op || 0, code: code || 'entrega', by: v.id });
+    v.carry = null; return add;
+  };
+  // a plain load brought to a store (the world's delivery, villagers' and the god's body's alike): into the people's store;
+  // a year of plenty doubles the stone and the wood (born of the world, with its cause), what came along with the load goes
+  // in too, and the person's tally counts it
+  function deliverPlain(v, fid) {
+    const S = G.S; const c = Object.assign({}, v.carry); const k = c.k, n = c.n;
+    let add = Vg.toStore(v, fid, 'entrega');
+    if (S.blessed && (k === 'stone' || k === 'wood') && add > 0) { const r = G.Depot.make('f:' + fid, k, n, { code: 'fartura', by: v.id, part: true }); if (r.ok) { add += r.n; if (k === 'wood') S.stats.woodProduced += r.n; else S.stats.stoneProduced += r.n; } }
+    v.st[k] = (v.st[k] || 0) + n;
+    if (add > 0) G.FX && G.FX.deposit(v.x, v.y, k, add);
+    // what came along with it: the hide off the deer's back, the tusks, a second sack
+    if (c.extra) G.Riches && G.Riches.unload(v, c.extra);
+    G.Riches && G.Riches.delivered && G.Riches.delivered(v, c, add);
+    return { ok: true, k, n, add };
+  }
+  // the door of a delivery at a store (the god's body calls it too: interact.js): a load that belongs somewhere goes only
+  // there (G.Act.boundOf: an operation's crate, a purchase), and what does not fit stays in the arms; a plain load as above.
+  // → { ok, k, n } or { ok: false, why }
+  Vg.deliver = function (v, b) {
+    const S = G.S; const c = v.carry; if (!c || !(c.n > 0)) return { ok: false, why: 'Suas mãos estão vazias.' };
+    if (!b || !S.buildings.has(b.id) || !b.built) return { ok: false, why: 'Não existe mais.' };
+    const fid = G.Fac.idOfV(v); if (G.Village.facOfSet(b.set) !== fid) return { ok: false, why: 'Isto é de outro povo: o estoque daqui não é do seu.' };
+    const bound = G.Act ? G.Act.boundOf(c) : null;
+    if (bound) {
+      if (bound !== 'f:' + fid) return { ok: false, why: G.Act.whyBound(bound) };
+      const k = c.k; const r = G.Depot.move('v:' + v.id, bound, k, c.n, { op: c.op || 0, code: 'entrega', by: v.id, part: true });
+      if (!r.ok) return { ok: false, why: 'Não cabe mais nada no estoque do seu povo.' };
+      G.FX && G.FX.deposit(v.x, v.y, k, r.n); return { ok: true, k, n: r.n };
+    }
+    const r = deliverPlain(v, fid); return { ok: true, k: r.k, n: r.n };
+  };
 
   Vg.damage = function (v, amt, cause, byGod, by) {
     if (!G.S.villagers.has(v.id)) return;
@@ -418,6 +467,8 @@
       if (eve && v.home) opt(0.55 + G.R() * 0.4, 0.45, 'home');
       if (eve && G.Eco && G.Eco.byType(v.set, 'taverna').length) opt((v.traits.includes('Sociável') ? 0.62 : 0.4) + G.R() * 0.5 + (v.mourn > 0 ? 0.15 : 0) - (v.traits.includes('Devoto') ? 0.2 : 0), 0.4, 'tavern');
       if (G.Eco && !eve) opt(0.16 * G.R() * 1.6, 0.35, 'shop');
+      // (the house lacks something it uses up, and can pay: one of the family goes to buy it — act-compras.js)
+      if (G.Compras) { const u = G.Compras.urge(v); if (u > 0) opt(u, 0.6, 'compras'); }
       if (G.Urban && v.home && G.Urban.gardenDue(v)) opt(((elder ? 0.6 : 0.3) + G.R() * 0.4) * (eve ? 1.4 : S.time < 0.16 ? 1.25 : 0.8), 0.4, 'garden');
     }
     opt(0.04, 0, 'wander');
@@ -449,6 +500,7 @@
       case 'home': t = (G.Urban && G.R() < (G.Urban.gardenDue(v) ? 0.75 : 0) && G.Urban.gardenTask(v, H)) || (G.Life && G.Life.familyTask(v, H)) || (G.Eco && G.Eco.goHomeTask(v, H)); break;
       case 'tavern': t = G.Eco && G.Eco.tavernTask(v, H); break;
       case 'shop': t = G.Eco && G.Eco.shopTask(v, H); break;
+      case 'compras': t = G.Compras && G.Compras.task(v, H); break;
       case 'garden': t = G.Urban && G.Urban.gardenTask(v, H); break;
       case 'saga': t = G.Stories && G.Stories.task(v, H); break;
     }
@@ -497,7 +549,7 @@
   // ------------------------------ task factories ------------------------------
   function eatTask(v) {
     const S = G.S;
-    if (v.carry && v.carry.k === 'food' && !v.carry.op && !v.carry.to) { // eat what you carry (not a load that is someone's errand)
+    if (v.carry && v.carry.k === 'food' && !v.carry.op && !v.carry.to && !v.carry.cid) { // eat what you carry (not a load that is someone's errand, not a crate)
       v.carry.n -= 1; v.hunger = Math.max(0, v.hunger - 55); if (v.carry.n <= 0) v.carry = null; emote(v, 'food', 1.5); return setTask(v, { type: 'idle', pri: 0, wait: 1 });
     }
     if (((G.Army && G.Army.larder(v)) || G.Fac.stockV(v)).food >= 1 && !(v._noStore > S.clock)) return setTask(v, { type: 'eat', pri: v.hunger > 85 ? 2.5 : 1.2 });
@@ -790,17 +842,7 @@
           t.drop = d.id; const [fx, fy] = G.Village.frontTile(d);
           if (!Vg.goto(v, fx, fy, true)) return end(v);
           t.st = 1;
-        } else if (move(v, dt)) {
-          // years of plenty: the quarries and the woods give twice what they cost
-          const n = v.carry.n * (S.blessed && (v.carry.k === 'stone' || v.carry.k === 'wood') ? 2 : 1);
-          const add = G.Village.addStock(v.carry.k, n, G.Fac.idOfV(v));
-          v.st[v.carry.k] = (v.st[v.carry.k] || 0) + v.carry.n;
-          if (add > 0) G.FX && G.FX.deposit(v.x, v.y, v.carry.k, add);
-          // what came along with it: the hide off the deer's back, the tusks, a second sack
-          if (v.carry.extra) G.Riches && G.Riches.unload(v, v.carry.extra);
-          G.Riches && G.Riches.delivered(v, v.carry, add);
-          v.carry = null; end(v);
-        }
+        } else if (move(v, dt)) { deliverPlain(v, G.Fac.idOfV(v)); end(v); }
         break;
       }
       case 'chop': {
@@ -1236,7 +1278,7 @@
       default: if (!(G.Scene && G.Scene.run(v, t, dt, H)) && !(G.Caves && G.Caves.run(v, t, dt, H)) && !G.War.run(v, t, dt, H) && !(G.Wars && G.Wars.run(v, t, dt, H)) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Urban && G.Urban.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Carnage && G.Carnage.run(v, t, dt, H)) && !(G.Flora && G.Flora.run(v, t, dt, H)) && !(G.Nests && G.Nests.run(v, t, dt, H)) && !(G.Polity && G.Polity.run(v, t, dt, H)) && !(G.Justice && G.Justice.run(v, t, dt, H)) && !(G.Riots && G.Riots.run(v, t, dt, H)) && !(G.Secrets && G.Secrets.run(v, t, dt, H)) && !(G.Stories && G.Stories.party && G.Stories.party.run(v, t, dt, H)) && !(G.Riches && G.Riches.run(v, t, dt, H))) end(v);
     }
   }
-  const LONG = { praia: 1, muster: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, embark: 1, boardBack: 1, scene: 1, saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1, carga: 1, ajudar: 1, banca: 1, compra: 1, atacado: 1, devolver: 1 };
+  const LONG = { praia: 1, muster: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, embark: 1, boardBack: 1, scene: 1, saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1, carga: 1, ajudar: 1, banca: 1, compra: 1, atacado: 1, devolver: 1, shop: 1 };
 
   function runBuild(v, t, dt) {
     const S = G.S;
@@ -1374,6 +1416,8 @@
     };
     if (t.st === 0) {
       if (nearestFire() < 0) return end(v);
+      // (hands that carry something — a crate, a purchase, wood — keep it and beat the flames: the bucket would take its place)
+      if (v.carry && v.carry.n > 0 && v.carry.k !== 'water') { t.beat = true; t.st = 3; t.target = -1; return; }
       // water source: well of the settlement, or any water tile nearby
       let src = null, bd = 1e9;
       for (const b of S.buildings.values()) if (b.type === 'well' && b.built) { const d = G.dist2(v.x, v.y, b.x, b.y); if (d < bd && d < 200) { bd = d; src = { well: b }; } }
@@ -1395,9 +1439,10 @@
     if (t.st === 1) { if (move(v, dt, 1.3)) { t.st = 2; v.actT = 0; } return; }
     if (t.st === 2) { v.act = 'fill'; if (v.actT > 0.8) { v.carry = { k: 'water', n: 1 }; t.st = 3; t.target = -1; } return; }
     if (t.st === 3) {
-      const i = nearestFire(); if (i < 0) { v.carry = null; return end(v); }
+      // (the bucket is poured out or set down; a load that was in the hands stays in them)
+      const i = nearestFire(); if (i < 0) { if (v.carry && v.carry.k === 'water') v.carry = null; return end(v); }
       t.target = i; const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
-      if (!Vg.goto(v, x, y, true)) { v.carry = null; return end(v); }
+      if (!Vg.goto(v, x, y, true)) { if (v.carry && v.carry.k === 'water') v.carry = null; return end(v); }
       t.st = 4; return;
     }
     if (t.st === 4) {

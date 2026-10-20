@@ -86,19 +86,24 @@ ok('p2 o manifesto', !!op && op.goods.sal === 14 && op.from === 's:' + sh.id && 
 {
   const op4 = land('stone', 8); let pair = null; let twice = false;
   const done = live(400, () => { for (const v of S.villagers.values()) { const p = A.pair(v); if (p && !pair) pair = p; if (v.carry && v.carry.op === op4.id && v.task && v.task.type === 'ajudar') twice = true; } if (watch()) return true; return !A.live(op4); });
-  ok('p4 a caixa pesada vai a dois', done && op4.st === 'ok' && op4.done.stone === 8 && !!pair && !twice && !bad().length, pair ? `${nm(pair.lead)} na frente e ${nm(pair.help)} atrás, uma caixa de pedra só (no livro, nas mãos de quem vai na frente); chegou ${op4.done.stone} de 8` : `ninguém levou a dois (caixas de 4 pedras = ${D.weight('stone', 4)} de peso; um adulto aguenta ${D.strength([...S.villagers.values()].find(v => v.set === set.id && v.role === 'estivador'))}) — chegou ${op4.done.stone} de 8`);
+  // (what arrived is what the unloading took — the 8 of the test's ship, and whatever else came ashore into it meanwhile: a
+  // merchant ship home with its return cargo lands it into the unloading under way)
+  const want4 = op4.taken.stone || 0;
+  ok('p4 a caixa pesada vai a dois', done && op4.st === 'ok' && want4 >= 8 && Math.abs(op4.done.stone - want4) < 1e-6 && !!pair && !twice && !bad().length, pair ? `${nm(pair.lead)} na frente e ${nm(pair.help)} atrás, uma caixa de pedra só (no livro, nas mãos de quem vai na frente); chegou ${op4.done.stone} de ${want4}${want4 > 8 ? ' (as 8 do teste e ' + r2(want4 - 8) + ' que outro navio desembarcou na mesma descarga)' : ''}` : `ninguém levou a dois (caixas de 4 pedras = ${D.weight('stone', 4)} de peso; um adulto aguenta ${D.strength([...S.villagers.values()].find(v => v.set === set.id && v.role === 'estivador'))}) — chegou ${op4.done.stone} de ${want4}`);
 }
 // ---------------- p5: the warehouse fills while a crate is on its way: the porter waits at the door with it, nobody lifts
 // another, the unloading stops, nothing is lost; with room again, on to the end
 {
   // (coral: a good nobody in town takes out of the store while the test runs — the warehouse stays full)
-  const op5 = land('coral', 14); const cap = G.Village.cap(fac.id); fac.stock.coral = Math.min(fac.stock.coral || 0, cap - 40);
+  // (the store's room is asked every second: it grows when the town builds — the test keeps it full of coral all along)
+  const cap = () => G.Village.cap(fac.id);
+  const op5 = land('coral', 14); fac.stock.coral = Math.min(fac.stock.coral || 0, cap() - 40);
   live(120, () => !!carrierOf(op5) || watch());
-  fac.stock.coral = cap; // (the store is full now: others filled it)
+  fac.stock.coral = cap(); // (the store is full now: others filled it)
   let stopped = false; const waited = new Set();
-  live(300, () => { fac.stock.coral = Math.max(fac.stock.coral, cap); for (const v of S.villagers.values()) if (v.task && v.task.op === op5.id && v.task.st === 4) waited.add(v.id); if (op5.st === 'wait' && op5.wait === 'cheio') stopped = true; return (stopped && !carrierOf(op5)) || watch(); });
+  live(300, () => { fac.stock.coral = Math.max(fac.stock.coral, cap()); for (const v of S.villagers.values()) if (v.task && v.task.op === op5.id && v.task.st === 4) waited.add(v.id); if (op5.st === 'wait' && op5.wait === 'cheio') stopped = true; return (stopped && !carrierOf(op5)) || watch(); });
   const kept = r2(P.custody(op5) + (op5.done.coral || 0)); const atDoor = (S.loose || []).filter(o => o.op === op5.id).length;
-  const quiet = live(15, () => { fac.stock.coral = Math.max(fac.stock.coral, cap); return book(op5, 'pegar').some(e => e[2] > S.clock - 1 && op5.st === 'wait'); });
+  const quiet = live(15, () => { fac.stock.coral = Math.max(fac.stock.coral, cap()); return book(op5, 'pegar').some(e => e[2] > S.clock - 1 && op5.st === 'wait'); });
   D.use('f:' + fac.id, 'coral', 30, { code: 'teste' }); // (room again: some went away in a caravan)
   const done = live(400, () => watch() || !A.live(op5));
   ok('p5 o armazém cheio', stopped && waited.size >= 1 && Math.abs(kept - 14) < 1e-6 && !quiet && done && op5.st === 'ok' && op5.done.coral === 14 && !(op5.lost && op5.lost.coral) && !bad().length,
