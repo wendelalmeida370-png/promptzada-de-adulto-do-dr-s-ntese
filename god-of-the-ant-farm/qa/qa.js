@@ -569,12 +569,21 @@
       if (p.n - left - went > 0.01) { const v = s.villagers.get(id); add('act', 1, `${p.name} #${id}: ${Math.round((p.n - left - went) * 100) / 100} de ${p.k} de uma carga marcada sumiram sem lançamento no livro (${v ? `agora ${v.task ? v.task.type : 'sem tarefa'}, nas mãos ${v.carry ? v.carry.n + ' de ' + v.carry.k : 'nada'}` : 'a pessoa saiu do mundo'})`); }
     }
     marked = now; markedS = s; movedOut.clear();
+    // ---- the fishing grounds (act-pesca.js): what a ground holds is a number, never below nothing, never fished in the
+    // future, and only where there is water
+    if (G.Pesca && s.pesca) for (const id in s.pesca) {
+      const g = s.pesca[id];
+      if (!Array.isArray(g) || !fin(g[0]) || !fin(g[1]) || g[0] < -EPS) { add('act', 1, `pesqueiro ${id}: ${JSON.stringify(g)}`); continue; }
+      if (g[1] > s.clock + 1) add('act', 2, `pesqueiro ${id}: pescado no futuro (${g[1]} > ${Math.round(s.clock)})`);
+      if (!(G.Pesca.cap(+id) > 0)) add('act', 3, `pesqueiro ${id}: pescado numa quadra sem água`);
+    }
   });
   // (the ledger's lines out of hands since the last look, for the rule above; a new world, or a save loaded, starts over)
   let marked = null, markedS = null; const movedOut = new Map();
   if (G.Depot) G.Depot.onMove.push(e => { if (typeof e[3] === 'string' && e[3][0] === 'v' && e[3][1] === ':') { const key = e[3].slice(2) + '|' + e[5]; movedOut.set(key, (movedOut.get(key) || 0) + e[6]); } });
   if (G.worldHooks) G.worldHooks.push(() => { marked = null; markedS = null; movedOut.clear(); });
   QA.canonMore.push(['acts', () => (G.Act ? G.Act.canon() : null)]);
+  QA.canonMore.push(['pesca', () => (G.S && G.S.pesca ? Object.keys(G.S.pesca).sort((a, b) => a - b).map(id => [+id, G.S.pesca[id][0], G.S.pesca[id][1]]) : null)]);
 })();
   // ---- qa/interiores-inv.js ----
 // interiores-inv: as regras do verificador para os interiores (C2) — o registro de cada prédio (b.ip) e a planta que sai

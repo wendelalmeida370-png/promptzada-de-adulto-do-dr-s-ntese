@@ -641,19 +641,25 @@
   };
   function fishTask(v) {
     const S = G.S; const set = S.settlements.get(v.set);
+    // (the people's way of fishing — act-pesca.js —, and only a water that still has fish worth the walk: a water fished out
+    // is left alone until it comes back; in a storm, nobody goes)
+    const Pe = G.Pesca; const how = Pe ? Pe.how(G.Fac.idOfV(v)) : null;
+    if (Pe && S.weather.storm > 0) return null;
     const spot = nearestInGrid(v, 16, i => {
       if (Vg.fishSpots.has(i)) return null;
       if (!W.walkable(i) || S.type[i] === T.RIVER || S.type[i] < T.SAND) return null;
       const x = i % N, y = (i / N) | 0;
       for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
         const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue;
-        if (S.type[ny * N + nx] <= T.RIVER) return { x: x + 0.5 + dx * 0.3, y: y + 0.5 + dy * 0.3, i, wx: dx, wy: dy };
+        if (S.type[ny * N + nx] > T.RIVER) continue;
+        if (Pe && (Pe.abundance(nx + 0.5, ny + 0.5) < Pe.WORTH || !Pe.can(v, nx + 0.5, ny + 0.5, how).ok)) continue;
+        return { x: x + 0.5 + dx * 0.3, y: y + 0.5 + dy * 0.3, i, wx: dx, wy: dy };
       }
       return null;
     });
     if (!spot) return null;
     Vg.fishSpots.set(spot.i, v.id);
-    return setTask(v, { type: 'fish', spot: spot.i, x: spot.x, y: spot.y, wx: spot.wx, wy: spot.wy, pri: 1 });
+    return setTask(v, { type: 'fish', spot: spot.i, x: spot.x, y: spot.y, wx: spot.wx, wy: spot.wy, how, pri: 1 });
   }
   function huntTask(v, maxD) {
     const S = G.S; const set = S.settlements.get(v.set);
@@ -984,8 +990,17 @@
         else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; t.dur = G.rr(5, 9) / workMul(v); } }
         else {
           v.act = 'fish'; G.faceTo(v, t.wx, t.wy);
+          if (G.Pesca && !v.gear) v.gear = G.Pesca.gearOf(t.how || G.Pesca.how(G.Fac.idOfV(v)));
           if (v.actT > t.dur) {
-            if (G.R() < 0.8 * Math.min(1.2, G.Civ.tV(v, 'fish'))) { const n = Math.min(cap(v), Math.round(G.ri(1, 3) * G.Civ.tV(v, 'fish'))); v.carry = G.Waters ? G.Waters.catchCarry(v, t.x + t.wx * 0.8, t.y + t.wy * 0.8, n) : { k: 'food', n, fish: 1 }; emote(v, 'fish', 1.8); G.FX && G.FX.splash(t.x + t.wx * 0.8, t.y + t.wy * 0.8, 0.5); deliverTask(v); }
+            // (one cast through the fishing's door — the same as the god's body: that water's fish, out of its ground, into the
+            // hands through the ledger; a water with no fish, ice or a storm ends it)
+            const wx = t.x + t.wx * 0.8, wy = t.y + t.wy * 0.8;
+            if (G.Pesca) {
+              const r = G.Pesca.cast(v, wx, wy, { how: t.how });
+              if (r.ok) { v.gear = null; emote(v, 'fish', 1.8); G.FX && G.FX.splash(wx, wy, 0.5); deliverTask(v); }
+              else if (r.miss) { v.actT = 0; t.dur = G.rr(4, 7); t.miss = (t.miss || 0) + 1; if (t.miss > 6) { v.gear = null; end(v); } }
+              else { v.gear = null; end(v); }
+            } else if (G.R() < 0.8 * Math.min(1.2, G.Civ.tV(v, 'fish'))) { const n = Math.min(cap(v), Math.round(G.ri(1, 3) * G.Civ.tV(v, 'fish'))); v.carry = G.Waters ? G.Waters.catchCarry(v, wx, wy, n) : { k: 'food', n, fish: 1 }; emote(v, 'fish', 1.8); G.FX && G.FX.splash(wx, wy, 0.5); deliverTask(v); }
             else { v.actT = 0; t.dur = G.rr(4, 7); }
           }
         }

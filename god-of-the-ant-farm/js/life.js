@@ -447,8 +447,11 @@
 
   // ============================== apprentices ==============================
   // from nine years on, children go with a parent to work, and copy what they do
-  const TEACH = { agricultor: 1, lenhador: 1, coletor: 1, mineiro: 1, construtor: 1, sacerdote: 1, guerreiro: 1, pastor: 1, cavalarico: 1, ferreiro: 1, tecelao: 1, oleiro: 1, ourives: 1, acougueiro: 1, mercador: 1, feirante: 1, taverneiro: 1, escriba: 1, cacador: 1 };
-  const WORKING = { chop: 1, gather: 1, mine: 1, farm: 1, build: 1, fish: 1, quarry: 1, herd: 1, fodder: 1, penwork: 1, craft: 1, dig: 1, desk: 1, sell: 1, stay: 1, serve: 1, pray: 1, drill: 1, guard: 1, pave: 1, tend: 1, forage: 1, mint: 1, patrol: 1, deliver: 1, haul: 1, fetch: 1 };
+  const TEACH = { agricultor: 1, lenhador: 1, coletor: 1, mineiro: 1, construtor: 1, sacerdote: 1, guerreiro: 1, pastor: 1, cavalarico: 1, ferreiro: 1, tecelao: 1, oleiro: 1, ourives: 1, acougueiro: 1, mercador: 1, feirante: 1, taverneiro: 1, escriba: 1, cacador: 1, pescador: 1 };
+  const WORKING = { chop: 1, gather: 1, mine: 1, farm: 1, build: 1, fish: 1, quarry: 1, herd: 1, fodder: 1, penwork: 1, craft: 1, dig: 1, desk: 1, sell: 1, stay: 1, serve: 1, pray: 1, drill: 1, guard: 1, pave: 1, tend: 1, forage: 1, mint: 1, patrol: 1, deliver: 1, haul: 1, fetch: 1, redes: 1 };
+  // (beside one who fishes — at the shore, or mending the nets on the quay —, the hand for fishing comes too: by watching,
+  // up to a fair hand; the master's own comes from his catches)
+  const FISHING = { fish: 1, redes: 1 };
   const LEARN_AT = 0.8;
   function master(v) {
     const S = G.S;
@@ -486,6 +489,7 @@
       v.act = m.act === 'fight' ? 'drill' : m.act; v.actT = Math.max(0, m.actT - 0.18); G.faceAs(v, m);
       v.learn = v.learn || {};
       const before = v.learn[m.role] || 0; v.learn[m.role] = before + dt * 4 / DAY();
+      if (FISHING[m.task.type]) v.fishXp = Math.min(60, (v.fishXp || 0) + dt * 0.12);
       if (before < LEARN_AT && v.learn[m.role] >= LEARN_AT) { v.skill = m.role; L.bio(v, 'learned', m.role); G.Vg.emote(v, 'happy', 2); G.Vg.emote(m, 'heart', 2); }
       if (G.R() < dt * 0.06) G.Vg.emote(m, G.R() < 0.5 ? 'chat' : 'happy', 1.2);
       if (G.R() < dt * 0.05) G.Vg.emote(v, 'question', 1.1);
