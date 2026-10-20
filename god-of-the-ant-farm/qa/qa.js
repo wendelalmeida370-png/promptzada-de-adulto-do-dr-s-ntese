@@ -612,8 +612,8 @@
 //   · what the hands asked of the world and the world has not yet done belongs to the body lived now: a body given back, or
 //     dead, leaves nothing waiting (it never happened — Possess.release and the death drop it)
 //   · the lead to the work near (Interact.lead: the HUD's line and mark) points only at what the world has — an unloading under
-//     way, by day, with crates of it on its quay or on the ground; with a crate of it in the hands, the door of a store that is
-//     a store (never a ruin, never a place the crate does not go)
+//     way of the body's own people, by day, with crates of it on its quay or on the ground; with a crate of it in the hands, the
+//     door of a store that is a store (never a ruin, never a place the crate does not go)
 (function (G) {
   QA.more.push(function (add, s) {
     if (!G.Possess || !G.Possess.queued) return;
@@ -626,6 +626,7 @@
     const v = s.villagers.get(a.id); const L = v ? G.Interact.lead(v) : null; if (!L) return;
     const op = G.Act.get(L.op);
     if (!op || !G.Act.live(op)) { add('pista', 2, `a pista do corpo aponta uma descarga que não existe mais (#${L.op})`); return; }
+    if (op.fac !== G.Fac.idOfV(v)) add('pista', 2, `a pista do corpo aponta a descarga #${op.id}, de outro povo`);
     if (L.step === 'pegar') {
       const d = s.buildings.get(op.at);
       if (!((d && d.crates) || []).some(c => c.op === op.id) && !(s.loose || []).some(o => o.op === op.id)) add('pista', 2, `a pista do corpo chama para a descarga #${op.id}, que não tem caixa no cais nem no chão`);

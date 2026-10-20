@@ -127,6 +127,15 @@ const snap = () => JSON.stringify([dock.crates, op, S.loose, v.carry, S.avatar.a
   ok('3. longe do cais, nenhuma pista; de noite, nem pista nem chamado', !!far && !Lf && !Ln && !cn && !!callOf() && !!I.lead(v), `a ${far ? (G.dist(far[0], far[1], sp0[0], sp0[1]) * TL).toFixed(0) : '?'} m: ${Lf ? Lf.txt : 'nada'}; de noite: ${Ln ? Ln.txt : 'nada'}, ${cn ? cn.txt : 'sem chamado'}; de dia de novo: ${callOf() ? 'chamado' : 'sem chamado'}`);
 }
 
+// ------------------------------ 3. only the body's own people's work, where its feet reach ------------------------------
+{ const p0 = G.Avatar.pos(); const L0 = I.lead(v, p0.X, p0.Z);
+  // (a place a stone's throw from the pile that the feet do not reach from there — across the water, a pocket —, with the body put
+  // there by the world: the world's step finds the crates out of reach)
+  let cut = null; for (let r = 2; r <= 6 && !cut; r += 0.5) for (let k = 0; k < 32; k++) { const a = k / 32 * Math.PI * 2; const x = sp0[0] + Math.cos(a) * r, y = sp0[1] + Math.sin(a) * r; if (dry(x, y) && !W.canWalk(x, y, sp0[0], sp0[1], true)) { cut = [x, y]; break; } }
+  let Lc = null, cc = null; const home = [v.x, v.y];
+  if (cut) { god(() => { v.x = cut[0]; v.y = cut[1]; }); for (let k = 0; k < 6; k++) frame(); Lc = I.lead(v); cc = callOf(); god(() => { v.x = home[0]; v.y = home[1]; }); for (let k = 0; k < 6; k++) frame(); }
+  ok('3. de um lugar perto da pilha de onde os pés não chegam a ela, nenhuma pista e nenhum chamado', !!L0 && !!cut && !Lc && !cc && !!I.lead(v), cut ? `em ${cut.map(n => n.toFixed(1))}, a ${(G.dist(cut[0], cut[1], sp0[0], sp0[1]) * TL).toFixed(0)} m das caixas: ${Lc ? '«' + Lc.txt + '»' : 'sem pista'}, ${cc ? 'chamado' : 'sem chamado'}; de volta: ${I.lead(v) ? 'a pista' : 'nada'}` : 'nenhum lugar assim perto deste cais');
+}
 // ------------------------------ 4. following the lead to the pile: the prompt comes at arm's length of the crates ------------------------------
 { const p0 = G.Avatar.pos(); const L = I.lead(v, p0.X, p0.Z); const st = G.Avatar.state();
   // (along the world's path to the quay's spot for the crates — the pile is drawn around it —, as a player walks up to it: the
@@ -227,6 +236,14 @@ function liftAgain() {
   for (let k = 0; k < 60; k++) frame();
   const L3 = v ? I.lead(v) : null;
   ok('8. o cais esvaziado por outros: a pista some', !L3 || L3.op !== op.id, L3 ? `ainda: «${L3.txt}»` : 'nenhuma pista');
+}
+{ // someone of another people, a stone's throw from the quay: the unloading is not their people's work — no lead, no call
+  if (G.Possess.body()) G.Possess.release('deus'); G.Avatar.detach();
+  const sp = god(() => G.Fishers.crateSpot(dock)); god(() => P.landCatch(dock, 'food', 16, 'arenque', '#a8c0d0', 0));
+  const o = [...S.villagers.values()].filter(q => G.Fac.idOfV(q) !== fac.id && q.age >= 18 && !(q.carry && q.carry.n > 0) && G.Possess.can(q).ok && A.able(q)).sort((a, b) => a.id - b.id)[0];
+  let L = null, c = null;
+  if (o) { god(() => { G.Vg.endTask(o); o.x = start[0]; o.y = start[1]; o.path = null; }); G.Possess.take(o); G.Avatar.attach(o, 0); for (let k = 0; k < 10; k++) frame(); L = I.lead(o); c = callOf(); }
+  ok('2. alguém de outro povo, perto do cais: a descarga não é do povo dele — nem pista nem chamado', !!o && !c && !L && !!P.opAt(dock), o ? `${o.name}, ${G.roleName(o)} de ${(G.Fac.get(G.Fac.idOfV(o)) || {}).name}: ${L ? '«' + L.txt + '»' : 'sem pista'}, ${c ? 'chamado' : 'sem chamado'}` : 'ninguém de outro povo');
 }
 { // anyone else lived by the god is not called to the quay — the call is the trade's —, but sees the lead to it as anyone would
   if (G.Possess.body()) G.Possess.release('deus'); G.Avatar.detach();
