@@ -19,6 +19,8 @@
       if (!In.TYPES[r.t].fams.includes(r.f)) add('int', 1, `${nm}: a família ${r.f} não é de ${r.t}`);
       // ---- a building standing and finished is of the type its record says (a rebuilding is a renovation of the record)
       if (b.built && b.type !== 'ruin' && T && r.t !== b.type) add('int', 2, `${nm}: o registro diz ${r.t}`);
+      // ---- a house given up was empty for In.LEFT days at least, and nobody lived in it at the last turn of the day
+      if (r.ab && (!(r.vz > 0) || r.ab - r.vz < In.LEFT || r.nm)) add('int', 3, `${nm}: abandonada no dia ${r.ab} sem ter ficado vazia ${In.LEFT} dias (vazia desde ${r.vz}, ${r.nm} moradores)`);
     }
     // ---- a prisoner in his jail is on the straw of one of its cells, behind the grating (where the drawing puts him: the
     // jail's plan has its cells, each with its bed — an invalid plan is said below)
@@ -33,6 +35,8 @@
     for (let k = 0; k < 3; k++) {
       const b = withIp[(turn++ * 7919) % withIp.length]; const p = In.plan(b); if (!p) { add('int', 1, `${b.type}#${b.id}: sem planta`); continue; }
       if (!p.ok) add('int', 2, `${b.type}#${b.id}: planta inválida (${(p.errs || []).slice(0, 2).join('; ')})`);
+      // (the plan of a house given up: what the household takes with it is gone)
+      if (p.left && p.items.some(it => In.ITEMS[it.kind] && In.ITEMS[it.kind].leva)) add('int', 3, `${b.type}#${b.id}: a casa abandonada ainda tem as coisas que a família leva`);
       const s1 = In.shellOf(b), s2 = In.shellOfPlan(p); const strip = o => { const x = Object.assign({}, o); delete x.key; return JSON.stringify(x); };
       if (!s1 || strip(s1) !== strip(s2)) add('int', 1, `${b.type}#${b.id}: a casca de longe não é a da planta`);
     }
