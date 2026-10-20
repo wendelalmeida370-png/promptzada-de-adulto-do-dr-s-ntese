@@ -847,7 +847,7 @@
           Nv.arrived(s);
           const people = disembark(s, h ? h.quay : [s.x, s.y]);
           const f = G.Fac.get(s.fac);
-          for (const v of people) { if (v.carry && f) { G.Village.addStock(v.carry.k, v.carry.n, f.id); v.carry = null; } }
+          for (const v of people) if (v.carry && f) G.Vg.spoils(v, f.id);
           removeShip(s);
         }
         break;

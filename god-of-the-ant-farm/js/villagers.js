@@ -200,6 +200,15 @@
     const add = G.Depot.store('v:' + v.id, fid, c.k, c.n, { op: c.op || 0, code: code || 'entrega', by: v.id });
     v.carry = null; return add;
   };
+  // the hands at the end of an errand of war (a band let go, raiders home, a soldier routed home, a ship back from a raid):
+  // what was taken — the loot, a plain load — goes into the people's store, in the ledger ('saque'); a load that belongs
+  // somewhere (a purchase on its way home, an operation's crate, goods for a stall) is nobody's loot: it stays in the arms,
+  // and the next errand takes it on to its place (start → G.Act.resumeCarry; with the way cut, holdCarry)
+  Vg.spoils = function (v, fid) {
+    const c = v.carry; if (!c) return 0;
+    if (c.n > 0 && (c.op || c.to || c.cid)) return 0;
+    return fid ? Vg.toStore(v, fid, 'saque') : 0;
+  };
   // a plain load brought to a store (the world's delivery, villagers' and the god's body's alike): into the people's store;
   // a year of plenty doubles the stone and the wood (born of the world, with its cause), what came along with the load goes
   // in too, and the person's tally counts it

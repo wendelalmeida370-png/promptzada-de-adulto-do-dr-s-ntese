@@ -9,9 +9,10 @@
 // continuam contados; p12 o jeito de cada povo (as mãos, o arpão, a linha, a rede); e o verificador limpo.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/atividades-inv.js'] });
-const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | pesca ${name} | ${info}`); if (!c) fails.push(name); };
+const fails = []; const mid = []; // (what the checker saw in the middle of a case: the case fails, even if the end looks clean)
+const ok = (name, c, info) => { const m = mid.splice(0); const pass = c && !m.length; console.log(`${pass ? 'PASSOU' : 'FALHOU'} | pesca ${name} | ${info}${m.length ? ' — o verificador, no meio do caso: ' + m.slice(0, 2).join(' · ') : ''}`); if (!pass) fails.push(name); };
 const bad = () => QA.check().filter(q => q.sev <= 2 && (q.sys === 'act' || q.sys === 'nan'));
-const watch = () => { const bb = bad(); if (bb.length) { console.log('   verificador no meio:', bb.slice(0, 2).map(q => q.msg).join(' · ')); return true; } return false; };
+const watch = () => { const bb = bad(); if (bb.length) { console.log('   verificador no meio:', bb.slice(0, 2).map(q => q.msg).join(' · ')); for (const q of bb) if (!mid.includes(q.msg)) mid.push(q.msg); return true; } return false; };
 const D = G.Depot, A = G.Act, P = G.Pesca, W = G.W, T = G.T;
 const r2 = x => Math.round(x * 100) / 100;
 let S;

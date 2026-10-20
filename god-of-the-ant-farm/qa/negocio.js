@@ -15,10 +15,11 @@
 const M = require('./nodemundo.js');
 const townName = process.argv[2] || 'Argos';
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/atividades-inv.js'] });
-const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | negocio ${name} | ${info}`); if (!c) fails.push(name); };
+const fails = []; const mid = []; // (what the checker saw in the middle of a case: the case fails, even if the end looks clean)
+const ok = (name, c, info) => { const m = mid.splice(0); const pass = c && !m.length; console.log(`${pass ? 'PASSOU' : 'FALHOU'} | negocio ${name} | ${info}${m.length ? ' — o verificador, no meio do caso: ' + m.slice(0, 2).join(' · ') : ''}`); if (!pass) fails.push(name); };
 const others = new Map();
 const bad = () => QA.check().filter(q => q.sev <= 2).filter(q => { if (q.sys === 'act' || q.sys === 'nan') return true; others.set(q.msg, (others.get(q.msg) || 0) + 1); return false; });
-const watch = () => { const bb = bad(); if (bb.length) { console.log('   verificador no meio:', bb.slice(0, 2).map(q => q.msg).join(' · ')); return true; } return false; };
+const watch = () => { const bb = bad(); if (bb.length) { console.log('   verificador no meio:', bb.slice(0, 2).map(q => q.msg).join(' · ')); for (const q of bb) if (!mid.includes(q.msg)) mid.push(q.msg); return true; } return false; };
 const D = G.Depot, A = G.Act, B = G.Biz, E = G.Eco;
 const r2 = x => Math.round(x * 100) / 100;
 let S;
@@ -150,8 +151,13 @@ function buyerFor(k, coins) {
 }
 // the merchant at the counter
 // (and the clock of the test back to the morning: the purchase that follows must not cross into the night, when buyers sleep)
+// (the test's hand: a fresh day at the counter, that a caravan or an errand does not take him from while the case runs —
+// a stall attended at this instant may be at the end of its own day there —, and something on it: a stall sold out
+// closes at once, and its merchant goes for more: T-c)
 const man = () => {
-  const t0 = S.time; if (!B.manned(z1)) G.Vg.setTask(m1, { type: 'banca', biz: z1.id, pri: 1.2, st: 0, dur: 200, id: mk.id });
+  const t0 = S.time;
+  if (!Object.keys(z1.inv).some(k => z1.inv[k] >= 1)) D.make('z:' + z1.id, 'tecido', 3, { code: 'teste', part: true });
+  G.Vg.setTask(m1, { type: 'banca', biz: z1.id, pri: 2, st: 0, dur: 200, id: mk.id });
   const r = fine(60, () => B.manned(z1));
   if (!r) console.log(`   (o mercador ${m1.name} não chegou à banca: ${m1.task ? m1.task.type + '.' + m1.task.st : 'sem tarefa'}, a ${r2(G.dist(m1.x, m1.y, B.spots(z1).seller[0], B.spots(z1).seller[1]))} do lugar, mãos ${JSON.stringify(m1.carry)}, banca ${z1.st} aberta ${z1.open}, hora ${S.time.toFixed(3)})`);
   S.time = t0; return r;
@@ -245,7 +251,8 @@ let z = B.get(z1.id); let m = S.villagers.get(z.owner); const mkb = () => S.buil
   if (kq) z.margin[kq] = 0.8;
   const ks = Object.keys(z.inv).filter(k => z.inv[k] >= 1).sort();
   const day0 = z.day.d, hist0 = z.hist.length; const mBefore = Object.assign({}, z.margin);
-  S.time = 0.61; live(3); const shut = !z.open; const why9 = `hora ${S.time.toFixed(3)}, banca ${z.st} aberta ${z.open}, na lista ${B.all().includes(z)}, o dono ${m.task ? m.task.type : 'sem tarefa'}`;
+  // (the stall shuts at the first look of the businesses after the hours)
+  S.time = 0.61; live(8, () => !z.open); const shut = !z.open; const why9 = `hora ${S.time.toFixed(3)}, banca ${z.st} aberta ${z.open}, na lista ${B.all().includes(z)}, o dono ${m.task ? m.task.type : 'sem tarefa'}`;
   S.time = 0.995; live(4);
   const rolled = z.day.d !== day0 && !!z.prev && z.prev.d === day0 && z.hist.length === hist0 + 1;
   const moved = ks.filter(k => (z.margin[k] || 0) !== (mBefore[k] === undefined ? 0.25 : mBefore[k]));

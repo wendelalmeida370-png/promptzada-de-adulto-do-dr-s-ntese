@@ -179,7 +179,7 @@
         if (b.fleet && G.Fleets && G.Fleets.onDisband(b, v)) continue;
         // raiders who came by sea walk back to their ship
         if (ship && ship.st === 'wait') { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'boardBack', ship: ship.id, pri: 3.1, kind: 'boardBack' }); continue; }
-        if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, fid(v)); v.carry = null; } G.Vg.endTask(v);
+        if (v.carry) G.Vg.spoils(v, fid(v)); G.Vg.endTask(v);
       }
     }
     const f = G.Fac.get(b.fac), en = G.Fac.get(b.enemy), set = S.settlements.get(b.set);
@@ -777,7 +777,7 @@
         if (!home || home.fac !== b.fac) home = G.Fac.capitalOf(b.fac);
         if (!home) return H.end(v);
         if (goPoint(v, t, home.cx, home.cy, 2.5, dt, H, 1)) {
-          if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, b.fac); G.FX && G.FX.deposit(v.x, v.y, v.carry.k, v.carry.n); v.carry = null; }
+          if (v.carry) { const k = v.carry.k, n = G.Vg.spoils(v, b.fac); if (n > 0) G.FX && G.FX.deposit(v.x, v.y, k, n); }
           H.end(v);
         } else if (t.fail > 4) H.end(v);
         break;

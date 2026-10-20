@@ -12,7 +12,8 @@
 const M = require('./nodemundo.js');
 const world = process.argv[2] || 'metropole', townName = process.argv[3] || '';
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/atividades-inv.js'] });
-const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | porto ${name} | ${info}`); if (!c) fails.push(name); };
+const fails = []; const mid = []; // (what the checker saw in the middle of a case: the case fails, even if the end looks clean)
+const ok = (name, c, info) => { const m = mid.splice(0); const pass = c && !m.length; console.log(`${pass ? 'PASSOU' : 'FALHOU'} | porto ${name} | ${info}${m.length ? ' — o verificador, no meio do caso: ' + m.slice(0, 2).join(' · ') : ''}`); if (!pass) fails.push(name); };
 // (the checker: the activities' own rules and the world's numbers stop the scenario; what it finds in other systems on the
 // way — a war broke out, a band lost a man — is told at the end, for their owners, and does not hide a fault of ours)
 const others = new Map();
@@ -46,7 +47,7 @@ const carrierOf = op => [...S.villagers.values()].find(v => v.carry && v.carry.o
 const book = (op, code) => D.ledger().filter(e => e[7] === op.id && (!code || e[8] === code));
 const r2 = x => Math.round(x * 100) / 100;
 const nm = id => (S.villagers.get(id) || {}).name || '#' + id;
-const watch = () => { const bb = bad(); if (bb.length) { console.log('   verificador no meio:', bb.slice(0, 2).map(q => q.msg).join(' · ')); return true; } return false; };
+const watch = () => { const bb = bad(); if (bb.length) { console.log('   verificador no meio:', bb.slice(0, 2).map(q => q.msg).join(' · ')); for (const q of bb) if (!mid.includes(q.msg)) mid.push(q.msg); return true; } return false; };
 // (a case that fails tells where things are: the operation, the crates, what lies on the ground, the quay's people)
 function tell(name, o) {
   const qs = G.Fishers.crateSpot(dock); const L = (S.loose || []).filter(x => x.op === o.id);
