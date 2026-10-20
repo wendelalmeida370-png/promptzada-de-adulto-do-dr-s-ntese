@@ -1014,14 +1014,17 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       out.prompt = prompt();
       const n0 = dock.crates.filter(c => c.op === X.op).length;
       // (a porter may take the crate offered between the key and the contact — the world says so —: E again, as a player does)
-      out.tries = 0; for (; out.tries < 3 && /^Pegar /.test(prompt()) && !(v.carry && v.carry.n > 0); out.tries++) { G.IncUI.use(); __E.until(() => !G.Avatar.busy(), 600); __E.f(6); }
+      // (each E told: the world's answer to it, and what the HUD said)
+      out.tries = 0; out.said = []; const t0 = G.IncUI.toast; G.IncUI.toast = (t, d) => { out.said.push(t); return t0(t, d); };
+      for (; out.tries < 3 && /^Pegar /.test(prompt()) && !(v.carry && v.carry.n > 0); out.tries++) { let res = null; G.IncUI.use(); __E.until(() => { const a = G.Avatar.actNow(); if (a && a.res) res = a.res; return !G.Avatar.busy(); }, 600); __E.f(6); out.said.push('#' + (out.tries + 1) + ' ' + (res ? (res.ok ? 'ok' : 'não: ' + (res.why || '(calado)')) : 'sem resposta')); }
+      G.IncUI.toast = t0;
       out.carry = v.carry ? { k: v.carry.k, n: v.carry.n, op: v.carry.op } : null; out.n = [n0, dock.crates.filter(c => c.op === X.op).length];
       out.held = (G.People3D.look(v).held || {}).form || null;
       __E.f(12); const L = G.IncUI.lead(); out.lead = L ? { step: L.step, txt: L.txt, b: L.b } : null; out.line = document.querySelector('#inc-hud .ih-lead').textContent;
       const dest = G.Porto.destOf(op); out.dest = dest ? dest.id : null; out.want = `Levar ${G.Possess.toB(dest)}`;
       return out;
     });
-    ok('e17 seguindo o marcador até a pilha, «E — Pegar a caixa…» aparece ao chegar a uns 2,5 m das caixas desenhadas', /^Pegar a caixa/.test(e17c.prompt) && e17c.dist <= 2.7 && e17c.dist >= 1.5, `«${e17c.prompt}» a ${e17c.dist.toFixed(2)} m da caixa mais perto (${e17c.steps} passos do caminho); E ${e17c.tries} vez(es)`);
+    ok('e17 seguindo o marcador até a pilha, «E — Pegar a caixa…» aparece ao chegar a uns 2,5 m das caixas desenhadas', /^Pegar a caixa/.test(e17c.prompt) && e17c.dist <= 2.7 && e17c.dist >= 1.5, `«${e17c.prompt}» a ${e17c.dist.toFixed(2)} m da caixa mais perto (${e17c.steps} passos do caminho); E ${e17c.tries} vez(es): ${e17c.said.join(' / ')}`);
     ok('e17 pega: a caixa de peixe nas mãos (do mundo e desenhada), uma a menos no cais', !!e17c.carry && e17c.carry.op === e17a.op && e17c.n[1] === e17c.n[0] - 1 && e17c.held === 'caixaPeixe', JSON.stringify({ carry: e17c.carry, n: e17c.n, held: e17c.held }));
     ok('e17 com a caixa nas mãos, o marcador passa à porta do armazém: «Levar ao armazém do porto»', !!e17c.lead && e17c.lead.step === 'levar' && e17c.lead.b === e17c.dest && e17c.lead.txt === e17c.want && e17c.line.startsWith(e17c.want), `«${e17c.line}»`);
     await shot('e17-levar');
