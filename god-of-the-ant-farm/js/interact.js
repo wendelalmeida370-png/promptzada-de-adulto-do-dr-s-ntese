@@ -335,8 +335,13 @@
       for (const b of S.buildings.values()) {
         if (b.x > ctx.x + 6 || b.x + b.w < ctx.x - 6 || b.y > ctx.y + 6 || b.y + b.h < ctx.y - 6) continue;
         if (b.type === 'ruin' || b.type === 'farm' || b.type === 'horta' || b.type === 'plantacao' || b.type === 'vinhedo' || b === dest) continue;
-        if (G.Space.plan && G.Space.plan(b)) continue; // (its plan's own doors: portaPlanta)
-        const d = G.Vg.door(b); out.push({ b, X: d[0] * L(), Z: d[1] * L() });
+        // (a home with a plan is its plan's: its door opened and knocked by portaPlanta, its bed inside; any other building keeps
+        // what is done before it — a load set down at the store, a meal, a prayer, a look —, a step back from its door, where its
+        // plan's door is opened; a load set down at the store means more than opening it)
+        const def = G.BDEF[b.type]; if (def && def.housing && G.Space.plan && G.Space.plan(b)) continue;
+        const d = G.Vg.door(b); const t = { b, X: d[0] * L(), Z: d[1] * L() };
+        if (b.built && isStore(b) && ctx.v.carry && ctx.v.carry.n > 0 && G.Space.planMade && G.Space.planMade(b)) t.pref = 1.6;
+        out.push(t);
       }
       return out;
     },
