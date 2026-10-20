@@ -31,25 +31,33 @@
     const v = G.Possess.body(); const p = G.Avatar.pos(); if (!v || !p) return null;
     return { v, X: p.X, Y: p.Y, Z: p.Z, yaw: p.yaw, x: p.X / L(), y: p.Z / L() };
   };
-  // how good a target is: near, and in front of the body
+  // how good a target is: near, and in front of the body (aim: how far, and how far round from where the body faces)
+  const aim = (ctx, X, Z) => { const dx = X - ctx.X, dz = Z - ctx.Z; return { d: Math.hypot(dx, dz), ang: Math.abs(Math.atan2(Math.sin(Math.atan2(dz, dx) - ctx.yaw), Math.cos(Math.atan2(dz, dx) - ctx.yaw))) }; };
   function score(ctx, X, Z, reach) {
-    const dx = X - ctx.X, dz = Z - ctx.Z; const d = Math.hypot(dx, dz); if (d > reach) return -1;
-    const ang = Math.abs(Math.atan2(Math.sin(Math.atan2(dz, dx) - ctx.yaw), Math.cos(Math.atan2(dz, dx) - ctx.yaw)));
+    const { d, ang } = aim(ctx, X, Z); if (d > reach) return -1;
     if (d > 1.1 && ang > 1.6) return -1; // (behind the back: not what one means)
     return (reach - d) / reach * 2 + (1 - ang / Math.PI);
   }
   // the best thing to do right now (what the prompt shows: "E — …")
+  I.AHEAD = 0.05; // (radians: how much more before the body an animal must be than a door to be what one means there)
   I.best = function () {
     const ctx = I.ctx(); if (!ctx || G.Avatar.swimming()) return null; // (the hands are swimming)
-    let best = null, bs = -1;
+    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1;
     for (const p of I.list) {
       for (const t of p.find(ctx)) {
-        const s = score(ctx, t.X, t.Z, p.reach) ; if (s < 0) continue;
+        // (t.reach: a target reached from farther than its kind — the door of a house from its doorstep)
+        const s = score(ctx, t.X, t.Z, t.reach || p.reach); if (s < 0) continue;
         const sc = s + p.prio * 0.6 + (t.pref || 0); // (pref: a target meant more, or less, than the others in the same reach)
-        if (sc > bs) { bs = sc; best = { p, t }; }
+        const c = { p, t };
+        if (sc > bs) { bs = sc; best = c; }
+        if (p.door && sc > ds) { ds = sc; door = c; }
+        if (p.passing && sc > ps) { ps = sc; pass = c; }
       }
     }
     if (!best) return null;
+    // (at a door it is the door one means, not an animal going by — unless the body faces the animal more than the door, by more
+    // than a few degrees, and the animal is the nearer: then the animal. In line with the door, the door)
+    if (door && pass && (best === door || best === pass)) { const a = aim(ctx, pass.t.X, pass.t.Z), b = aim(ctx, door.t.X, door.t.Z); best = a.d < b.d && a.ang + I.AHEAD < b.ang ? pass : door; }
     const c = best.p.can(ctx, best.t);
     return { id: best.p.id, t: best.t, label: best.p.label(ctx, best.t), ok: c.ok, why: c.why || '', p: best.p };
   };
@@ -58,7 +66,7 @@
     const ctx = I.ctx(); if (!ctx || !choice || G.Avatar.busy() || G.Avatar.swimming()) return null;
     const p = choice.p || I.list.find(q => q.id === choice.id); if (!p) return null;
     const t = choice.t;
-    if (score(ctx, t.X, t.Z, p.reach + 0.6) < 0) return { ok: false, msg: 'Longe demais.' };
+    if (score(ctx, t.X, t.Z, (t.reach || p.reach) + 0.6) < 0) return { ok: false, msg: 'Longe demais.' };
     const c = p.can(ctx, t); if (!c.ok) return { ok: false, msg: c.why };
     const r = p.run(ctx, t) || { ok: true };
     // (the stories hear of the deed in the world's own step, as of everything the world does)
@@ -245,8 +253,10 @@
   // (a door of the plan as the world has it — Interiors.doorState: shut, open, locked, blocked by a fire —; turned by the hands
   // as anyone turns it, the world doing it in its step — Interiors.useDoor, the keys only for who lives or works there)
   const own = (v, b) => v.home === b.id || v.job === b.id;
+  // (the door the street goes in by is reached from its doorstep — Interiors' entrance.out, where the world's people stand to go
+  // in, up to two metres out —: the body steps up to it before the hands go to it)
   I.add({
-    id: 'portaPlanta', prio: 4.6, reach: 1.8,
+    id: 'portaPlanta', prio: 4.6, reach: 1.8, door: true,
     find(ctx) {
       const out = []; const S = G.S; const seen = new Set(); const ind = G.Avatar.indoors();
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
@@ -254,9 +264,12 @@
         const b = S.buildings.get(id); const p = b && G.Space.plan(b); if (!p) continue;
         // (the storey the body is on there: its own indoors, the entrance's from the street)
         const lv = ind && ind.b === b ? ind.lv : p.entryLv || 0;
+        const e = !(ind && ind.b === b) && p.entrance && p.entrance.out ? p.entrance : null;
         for (const d of p.doors) {
           if (d.kind === 'vao') continue; const w = p.walls[d.wall]; if (!w || w.lv !== lv) continue; const len = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1;
-          out.push({ b, p, d, lv, X: b.x * L() + w.a[0] + (w.b[0] - w.a[0]) * d.at / len, Z: b.y * L() + w.a[1] + (w.b[1] - w.a[1]) * d.at / len });
+          const t = { b, p, d, lv, X: b.x * L() + w.a[0] + (w.b[0] - w.a[0]) * d.at / len, Z: b.y * L() + w.a[1] + (w.b[1] - w.a[1]) * d.at / len };
+          if (e && e.door === d.id) t.reach = Math.max(1.8, Math.hypot(b.x * L() + e.out[0] - t.X, b.y * L() + e.out[1] - t.Z) + 0.35);
+          out.push(t);
         }
       }
       return out;
@@ -273,10 +286,11 @@
     },
     run(ctx, t) {
       const b = t.b, d = t.d, v = ctx.v; const f = face(ctx, t.X, t.Z); const st = G.Interiors.doorState(b, d.id).state;
+      const { to, go } = walkUp(ctx, v, t.X, t.Z, 0.7); const goW = go * G.Space.TIME; // (a step up to it, from its doorstep)
       // (someone else's locked door: a knock — the house hears it)
-      if (st === 'trancada' && !own(v, b)) { deed('porta'); say('Você bate à porta. Ninguém abre.'); G.Avatar.act({ anim: 'interact', dur: 0.9, face: f }); return { ok: true }; }
+      if (st === 'trancada' && !own(v, b)) { deed('porta'); G.Avatar.act({ anim: 'interact', dur: 0.9 + go, face: f, to, toT: go, at: [go + 0.3, () => say('Você bate à porta. Ninguém abre.')] }); return { ok: true }; }
       const want = st === 'aberta' ? 'fechar' : 'abrir';
-      G.Avatar.act({ world: true, anim: 'interact', dur: 0.5, contact: 0.25, face: f,
+      G.Avatar.act({ world: true, anim: 'interact', dur: 0.5 + goW, contact: 0.25 + goW, face: f, to, toT: go,
         op: w => {
           if (!G.S.buildings.has(b.id)) return { ok: false, why: 'Não existe mais.' };
           if (want === 'abrir' && G.Interiors.doorState(b, d.id).state === 'trancada') { const u = G.Interiors.useDoor(b, d.id, 'destrancar', w); if (!u.ok) return u; }
@@ -326,7 +340,7 @@
   const AT = { campfire: 'junto à fogueira', doca: 'na doca', celeiro: 'no celeiro' };
   const at = b => AT[b.type] || 'no armazém';
   I.add({
-    id: 'porta', prio: 4, reach: 2.6,
+    id: 'porta', prio: 4, reach: 2.6, door: true,
     find(ctx) {
       const out = []; const S = G.S;
       // (the store a crate of an unloading goes to takes it by the unloading's own act — the docker's gesture, the docker's pay —:
@@ -735,7 +749,7 @@
   };
   // a beast: looked at (what the world knows of it)
   I.add({
-    id: 'bicho', prio: 2, reach: 4,
+    id: 'bicho', prio: 2, reach: 4, passing: true,
     find(ctx) { const out = []; const R = 4.5 / L(); for (const a of G.S.animals.values()) { if (a.dead || a.held || Math.abs(a.x - ctx.x) > R || Math.abs(a.y - ctx.y) > R) continue; const d = G.Animals.DEF[a.kind]; if (!d || d.cls === 'water') continue; out.push({ a, X: a.x * L(), Z: a.y * L() }); } return out; },
     label(ctx, t) { const d = G.Animals.DEF[t.a.kind]; return `Observar ${d ? d.nameA || d.name : 'o bicho'}`; },
     can(ctx, t) { return G.S.animals.has(t.a.id) ? { ok: true } : { ok: false, why: 'Foi embora.' }; },
@@ -810,7 +824,7 @@
   });
   // a tame beast near (a dog, a cat, a hen, the herd): stroked — it leans into the hand, a little heart over it
   I.add({
-    id: 'carinho', prio: 2.5, reach: 2.4,
+    id: 'carinho', prio: 2.5, reach: 2.4, passing: true,
     find(ctx) { const out = []; const R = 2.6 / L(); for (const a of G.S.animals.values()) { if (a.dead || a.held || Math.abs(a.x - ctx.x) > R || Math.abs(a.y - ctx.y) > R) continue; const d = G.Animals.DEF[a.kind]; if (!d || d.cls === 'water' || d.cls === 'air' || !(a.dom || a.tamed || d.dom || d.pet)) continue; out.push({ a, X: a.x * L(), Z: a.y * L() }); } return out; },
     label(ctx, t) { const d = G.Animals.DEF[t.a.kind]; return `Fazer carinho ${d ? 'n' + (d.g === 'f' ? 'a ' : 'o ') + (d.name || '').toLowerCase() : 'no bicho'}`; },
     can(ctx, t) { return G.S.animals.has(t.a.id) ? { ok: true } : { ok: false, why: 'Foi embora.' }; },
