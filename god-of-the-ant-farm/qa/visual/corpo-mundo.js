@@ -161,7 +161,7 @@ G.Act.def('prova-pegar', {
     const g = G.Act.ANIM.levantar; const bad = vbad();
     ok('o que as atividades oferecem é feito pela porta delas (Act.perform), no tempo do gesto, no passo do mundo', !!(c && c.ok) && still && tGot !== null && tGot - t0 >= g.contact - 1e-6 && !!e && (G.Depot.outside || 0) === out0 && !bad.length,
       `${c ? c.label : 'nada oferecido'}; com o mundo parado ${still ? 'o saco no chão' : 'o saco foi'}; nas mãos ${tGot !== null ? (tGot - t0).toFixed(2) + ' s do mundo depois (o contato: ' + g.contact + ' s)' : 'nunca'}; no livro-razão: ${e ? e[3] + ' → ' + e[4] + ', ' + e[6] + ' de ' + e[5] : 'nada'} (${(S.ledgerN || 0) - led0} lançamento); fora do passo: ${(G.Depot.outside || 0) - out0}; ${vtxt(bad)}`);
-    v.carry = null;
+    clearHands(v); // (the sack came in by the depot, with its name: it goes by the depot too)
   } }
 
 // ------------------------------ 2. the world stopped: the act waits ------------------------------
