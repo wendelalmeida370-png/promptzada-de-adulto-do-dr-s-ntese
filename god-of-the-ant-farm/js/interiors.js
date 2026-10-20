@@ -640,7 +640,8 @@
     if (!p || !p.shell) return null; const walls = [], holes = [];
     for (const w of p.walls) if (w.shell) walls.push({ id: w.id, lv: w.lv, a: w.a, b: w.b, t: w.t, h: w.h, kind: w.kind, mat: w.mat, outer: w.outer });
     for (const h of p.holes) { const w = p.walls[h.wall]; if (!w || !w.shell) continue; holes.push({ wall: h.wall, at: h.at, w: h.w, h: h.h, sill: h.sill, kind: h.kind, door: h.door }); }
-    return { shell: p.shell, levels: p.levels.map(l => ({ lv: l.lv, y: l.y, h: l.h, kind: l.kind, slab: l.slab || 0 })), walls, holes, entrance: p.entrance || null, entryLv: p.entryLv || 0, fam: p.shellFam || p.fam };
+    const steps = p.stairs.filter(st => st.kind === 'degraus').map(st => ({ id: st.id, kind: st.kind, lv0: st.lv0, lv1: st.lv1, r: st.r, dir: st.dir, w: st.w }));
+    return { shell: p.shell, levels: p.levels.map(l => ({ lv: l.lv, y: l.y, h: l.h, kind: l.kind, slab: l.slab || 0 })), walls, holes, steps, entrance: p.entrance || null, entryLv: p.entryLv || 0, fam: p.shellFam || p.fam };
   };
   // ---- plans asked for without stopping the frame (the 3D, the god's view): a plan is made in one go (from a few ms to a
   // tenth of a second in a tall block), so whoever draws asks with want(b) — the plan if it is made, else null and the
@@ -712,11 +713,13 @@
     for (const w of P.walls) if (w.shell) walls.push({ id: w.id, lv: w.lv, a: loc(w.a[0], w.a[1]), b: loc(w.b[0], w.b[1]), t: w.t, h: r2(w.h), kind: w.kind, mat: w.mat, outer: w.outer });
     for (const h of P.holes) { const w = P.walls[h.wall]; if (!w || !w.shell) continue; holes.push({ wall: h.wall, at: r2(h.at), w: r2(h.w), h: r2(h.h), sill: r2(h.sill), kind: h.kind, door: h.door }); }
     let entrance = null; if (P.entrance) { const e = P.entrance; const p = loc(e.u, e.v); entrance = { door: e.door, side: s, x: p[0], z: p[1], w: e.w, lv: e.lv, out: loc(e.u, L + 1.6) }; }
-    return { shell, levels, walls, holes, entrance, entryLv: P.entryLv || 0 };
+    // (the steps from the ground the shell has: up to the porch on stilts, down into a sunken floor)
+    const steps = P.stairs.filter(st => st.kind === 'degraus').map(st => ({ id: st.id, kind: st.kind, lv0: st.lv0, lv1: st.lv1, r: R(st.r), dir: dirLoc(s, st.dir[0], st.dir[1]), w: r2(st.w) }));
+    return { shell, levels, walls, holes, steps, entrance, entryLv: P.entryLv || 0 };
   }
   // (a ruin's shell, as ruinOf makes a ruin of the plan: the ground storey, no roof, nothing open in walls broken low)
   const ruinWall = (b, w) => Object.assign({}, w, { h: r2(0.15 + G.hash(Math.imul(b.id, 31) + w.id) * 0.3), kind: 'ruina' });
-  const ruinShell = (s, b) => Object.assign({}, s, { shell: Object.assign({}, s.shell, { roof: null, eave: 0.45, floors: 1 }), levels: s.levels.filter(l => l.lv === s.entryLv), walls: s.walls.filter(w => w.lv === s.entryLv).map(w => ruinWall(b, w)), holes: [] });
+  const ruinShell = (s, b) => Object.assign({}, s, { shell: Object.assign({}, s.shell, { roof: null, eave: 0.45, floors: 1 }), levels: s.levels.filter(l => l.lv === s.entryLv), walls: s.walls.filter(w => w.lv === s.entryLv).map(w => ruinWall(b, w)), holes: [], steps: [] });
   function finish(P) {
     const s = P.rec.s, L = P.L; const loc = (u, v) => toLoc(s, L, u, v).map(r2); const R = r => rectLoc(s, L, r).map(r2);
     const plan = { id: P.b.id, hot: P.rec.cl === 'q' ? 1 : 0, ver: P.rec.r + '.' + P.rec.t, type: P.rec.t, use: P.rec.u, fam: P.famId, famName: P.fam ? P.fam.name : P.famId, style: P.rec.c, side: s, lot: { w: L, d: L }, errs: P.errs.slice(), notes: P.notes };

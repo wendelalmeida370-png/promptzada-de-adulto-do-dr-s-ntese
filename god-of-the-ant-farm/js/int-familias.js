@@ -154,6 +154,9 @@
     if (cellar) P.level(-1, -2.1, 1.9, 'porao', I); // (under a corner of the house: the inside chooses which)
     if (topK === 'jirau') loftShell(P, top, lvT);
     if (topK === 'terraco' || topK === 'quarto') terraceShell(P, top, topK === 'quarto', lvT);
+    // ---- the steps from the ground: up to the porch on stilts, down into the sunken floor (seen from the street) ----
+    if (V === 'esteios') { const fv = round ? P.shell.cv + P.shell.rad : P.shell.r[3]; const e = P.entrance; const w = 0.95; P.stair('degraus', -1, 0, [e.u - w / 2, fv + 0.02, e.u + w / 2, fv + porch], 0, -1); }
+    if (V === 'funda') { const e = P.entrance; const w = Math.max(0.9, e.w + 0.05); const v1 = I[3]; const r = [e.u - w / 2, v1 - 0.8, e.u + w / 2, v1]; P.stair('degraus', -1, 0, r, 0, -1); P.zones.push({ lv: 0, r: [r[0] - 0.1, r[1] - 0.25, r[2] + 0.1, r[3]] }); }
     windows(P, round);
     if (P.inside()) return;
     // ======== the inside: each attempt's own dice ========
@@ -188,8 +191,6 @@
     if (cellar) porao(P, rooms, I);
     if (topK === 'jirau') loft(P, rooms, top, lvT);
     if (topK === 'terraco' || topK === 'quarto') terrace(P, rooms, top, lvT);
-    if (V === 'esteios') { const fv = round ? P.shell.cv + P.shell.rad : P.shell.r[3]; const e = P.entrance; const w = 0.95; P.stair('degraus', -1, 0, [e.u - w / 2, fv + 0.02, e.u + w / 2, fv + porch], 0, -1); }
-    if (V === 'funda') { const e = P.entrance; const w = Math.max(0.9, e.w + 0.05); const v1 = I[3]; const r = [e.u - w / 2, v1 - 0.8, e.u + w / 2, v1]; P.stair('degraus', -1, 0, r, 0, -1); P.zones.push({ lv: 0, r: [r[0] - 0.1, r[1] - 0.25, r[2] + 0.1, r[3]] }); }
     furnishHome(P, rooms, need);
   }
   const touches = (r, w) => { const vert = Math.abs(w.a[0] - w.b[0]) < 1e-6; const e = w.t / 2 + 0.02; if (vert) { const x = w.a[0]; return (Math.abs(r[0] - x) <= e || Math.abs(r[2] - x) <= e) && r[1] < Math.max(w.a[1], w.b[1]) && r[3] > Math.min(w.a[1], w.b[1]); } const z = w.a[1]; return (Math.abs(r[1] - z) <= e || Math.abs(r[3] - z) <= e) && r[0] < Math.max(w.a[0], w.b[0]) && r[2] > Math.min(w.a[0], w.b[0]); };

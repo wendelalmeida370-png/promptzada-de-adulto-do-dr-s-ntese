@@ -125,6 +125,8 @@
     if (V === 'galeria') { P.level(1, y0 + h0 + 0.2, h1, 'galeria', I); P.walls4(1, [sh[0] + t / 2, sh[1] + t / 2, sh[2] - t / 2, sh[3] - t / 2], t, h1, 1, 'parede', { frente: 1 }); }
     if (V === 'andar') loftFloorShell(P, y0 + h0 + 0.2, h1);
     if (V === 'porao') P.level(-1, -2.1, 1.9, 'porao', I);
+    // (the steps up to the porch of a floor on stilts, seen from the street)
+    if (V === 'esteios') { const e = P.entrance; const w = Math.max(1.0, e.w + 0.1); P.stair('degraus', -1, 0, [e.u - w / 2, sh[3] + 0.02, e.u + w / 2, sh[3] + porch], 0, -1); }
     workWindows(P);
     if (P.inside()) return;
     // ======== the inside: each attempt's own dice ========
@@ -182,7 +184,6 @@
       const pick = rooms.all.filter(i2 => !P.rooms[i2].open && P.rooms[i2].lv === 0).sort((a, b) => area(P.rooms[b].r) - area(P.rooms[a].r))[0];
       const hold = {}; K.porao(P, hold, P.rooms[pick].r); rooms.cellar = hold.despensa;
     }
-    if (V === 'esteios') { const w = Math.max(1.0, e.w + 0.1); P.stair('degraus', -1, 0, [e.u - w / 2, sh[3] + 0.02, e.u + w / 2, sh[3] + porch], 0, -1); }
     P._rooms = rooms; // (the programme reads the rooms the recipe made)
     PR.furnish(P, rooms);
   }
