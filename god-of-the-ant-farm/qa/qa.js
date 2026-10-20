@@ -608,6 +608,13 @@
       // ---- a building standing and finished is of the type its record says (a rebuilding is a renovation of the record)
       if (b.built && b.type !== 'ruin' && T && r.t !== b.type) add('int', 2, `${nm}: o registro diz ${r.t}`);
     }
+    // ---- a prisoner in his jail is on the straw of one of its cells, behind the grating (where the drawing puts him: the
+    // jail's plan has its cells, each with its bed — an invalid plan is said below)
+    for (const v of s.villagers.values()) {
+      if (!v.jail || v.inside !== v.jail) continue; const b = s.buildings.get(v.jail); const T = b && In.TYPES[b.type];
+      if (!b || !b.ip || !T || !T.cells) continue; const cs = In.cells(b); if (!cs.length) continue;
+      const at = In.placeOf(v); if (!at || !cs.some(c => c.bed === at.item)) add('int', 3, `pessoa #${v.id}: presa na cadeia #${b.id} fora das celas`);
+    }
     // ---- a few plans each round: valid, and the shell seen from afar the whole plan's (the 3D draws the one far, the
     // other near: the same building, always)
     if (!withIp.length) return;
