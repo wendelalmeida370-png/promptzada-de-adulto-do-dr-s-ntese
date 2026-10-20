@@ -45,6 +45,22 @@
     let cap = 0; for (const m of L) if (m && (m.keys === '*' || (Array.isArray(m.keys) && m.keys.includes(k)))) cap += m.cap || 0;
     return Math.max(0, cap - have);
   };
+  // a business by its id (G.S.biz is G.Biz's; the index follows the list and its version, bumped when one opens or ends)
+  let zIdx = null, zArr = null, zV = -1;
+  D.zVer = 0;
+  function zOf(id) {
+    const L = G.S.biz || [];
+    if (!zIdx || zArr !== L || zV !== D.zVer) { zIdx = new Map(); for (const z of L) zIdx.set(z.id, z); zArr = L; zV = D.zVer; }
+    const z = zIdx.get(id); return z && z.st !== 'fim' ? z : null;
+  }
+  D.zOf = zOf;
+  // what a stall's counter holds of a good: the counters of its place in the market (the interiors say, by slot), or 24
+  const ZCAP = 24;
+  function zRoom(z, k) {
+    const b = G.S.buildings.get(z.b); const L = storesOf(b); let cap = ZCAP;
+    if (L && L.length) { const mine = L.filter(m => m && m.slot === z.slot); if (mine.length) { cap = 0; for (const m of mine) if (m.keys === '*' || (Array.isArray(m.keys) && m.keys.includes(k))) cap += m.cap || 0; } }
+    return Math.max(0, cap - ((z.inv && z.inv[k]) || 0));
+  }
   // each kind of holder: the object, how much of a good it has, how much more fits, taking and putting (items keep their marks)
   const AD = {
     f: { // a people's store (the storehouses, barns, docks and fires are its doors)
@@ -74,24 +90,24 @@
       list: b => b.inv || {},
       owner: b => ({ fac: G.Village.facOfSet(b.set), bld: b.id }),
     },
-    q: { // a quay: the crates set down by the water (ten of up to four)
-      obj: id => { const b = G.S.buildings.get(id); return b && b.type === 'doca' ? b : null; },
+    q: { // a quay: the crates set down by the water (ten of up to four) — and what is left of one that burnt, with its crates
+      obj: id => { const b = G.S.buildings.get(id); return b && (b.type === 'doca' || (b.type === 'ruin' && b.origType === 'doca' && b.crates)) ? b : null; },
       get: (b, k, c) => { let n = 0; for (const x of b.crates || []) if (x.k === k && (!c || !c.cid || x.id === c.cid)) n += x.n; return n; },
-      room: (b, k, c) => { const L = b.crates || []; const per = c && c.crate ? c.crate : 4; return Math.max(0, 10 - L.length) * per; },
+      room: (b, k, c) => { if (b.type !== 'doca') return 0; const L = b.crates || []; const per = c && c.crate ? c.crate : 4; return Math.max(0, 10 - L.length) * per; },
       take: (b, k, n, c) => {
         const L = b.crates || []; let left = n; const rec = { k, n: 0 };
         for (let i = 0; i < L.length && left > EPS; i++) {
           const x = L[i]; if (x.k !== k || (c && c.cid && x.id !== c.cid)) continue;
           const m = Math.min(left, x.n); x.n = r4(x.n - m); left = r4(left - m); rec.n = r4(rec.n + m);
-          if (!rec.cid) Object.assign(rec, { cid: x.id, crate: 1, fish: x.fish, fishCol: x.col, catchOf: x.boat, imp: x.imp, op: x.op || 0, ship: x.ship || 0 });
+          if (!rec.cid) Object.assign(rec, { cid: x.id, crate: 1, fish: x.fish, fishCol: x.col, catchOf: x.boat, imp: x.imp, op: x.op || 0, ship: x.ship || 0, gen: x.gen || 0 });
           if (x.n <= EPS) { L.splice(i, 1); i--; }
         }
         return rec;
       },
       put: (b, rec, c) => {
         const L = b.crates || (b.crates = []); let n = rec.n; const per = c && c.crate ? c.crate : 4;
-        // (one crate keeps its name: set back whole on the quay it is the same crate)
-        if (rec.cid && n <= per) { L.unshift({ id: rec.cid, k: rec.k, n, col: rec.fishCol || colOf(rec.k), fish: rec.fish, boat: rec.catchOf, imp: rec.imp, op: (c && c.op) || rec.op || 0, ship: rec.ship || 0 }); return; }
+        // (one crate keeps its name: set back whole on the quay it is the same crate — once more set down: its generation)
+        if (rec.cid && n <= per) { L.unshift({ id: rec.cid, k: rec.k, n, col: rec.fishCol || colOf(rec.k), fish: rec.fish, boat: rec.catchOf, imp: rec.imp, op: (c && c.op) || rec.op || 0, ship: rec.ship || 0, gen: (rec.gen || 0) + 1 }); return; }
         while (n > EPS) { const m = Math.min(per, n); L.push({ id: G.S.nextId++, k: rec.k, n: r4(m), col: rec.fishCol || colOf(rec.k), fish: rec.fish, boat: rec.catchOf, imp: rec.imp, op: (c && c.op) || 0, ship: rec.ship || 0 }); n = r4(n - m); }
       },
       list: b => { const o = {}; for (const x of b.crates || []) o[x.k] = r4((o[x.k] || 0) + x.n); return o; },
@@ -102,7 +118,7 @@
       obj: id => G.S.ships.find(o => o.id === id) || null,
       get: (s, k) => (s.goods && s.goods.k === k ? s.goods.n : 0),
       room: (s, k) => (s.goods && s.goods.k !== k && s.goods.n > EPS ? 0 : Math.max(0, 40 - (s.goods ? s.goods.n : 0))),
-      take: (s, k, n) => { s.goods.n = r4(s.goods.n - n); const rec = { k, n }; if (s.goods.n <= EPS) s.goods = null; return rec; },
+      take: (s, k, n) => { s.goods.n = r4(s.goods.n - n); const rec = { k, n, imp: 1, ship: s.id }; if (s.goods.n <= EPS) s.goods = null; return rec; },
       put: (s, rec) => { if (s.goods && s.goods.k === rec.k) s.goods.n = r4(s.goods.n + rec.n); else s.goods = { k: rec.k, n: rec.n }; },
       list: s => (s.goods ? { [s.goods.k]: s.goods.n } : {}),
       owner: s => ({ fac: s.fac }),
@@ -111,7 +127,8 @@
       obj: id => G.S.villagers.get(id) || null,
       get: (v, k, c) => (v.carry && v.carry.k === k && (!c || !c.cid || v.carry.cid === c.cid) ? v.carry.n : 0),
       room: (v, k, c) => {
-        const cur = v.carry; if (cur && cur.n > EPS && (cur.k !== k || cur.cid || (c && c.cid))) return 0;
+        // (loads of different errands never mix in the hands: a crate is its own, a purchase is the house's)
+        const cur = v.carry; if (cur && cur.n > EPS && (cur.k !== k || cur.cid || (c && c.cid) || (cur.op || 0) !== ((c && c.op) || 0) || (cur.to || null) !== ((c && c.to) || null))) return 0;
         const each = D.weight(k, 1); const str = D.strength(v) * ((c && c.pair) ? 1.8 : 1);
         return Math.max(0, Math.floor((str + EPS) / each) - (cur && cur.n > EPS ? cur.n : 0));
       },
@@ -119,7 +136,7 @@
       put: (v, rec, c) => {
         if (v.carry && v.carry.n > EPS && v.carry.k === rec.k && !rec.cid) { v.carry.n = r4(v.carry.n + rec.n); return; }
         const o = { k: rec.k, n: rec.n };
-        for (const q of ['crate', 'cid', 'fish', 'fishCol', 'catchOf', 'imp', 'ship', 'bought', 'stolen', 'meat', 'berries', 'jar']) if (rec[q] !== undefined && rec[q] !== null && rec[q] !== 0) o[q] = rec[q];
+        for (const q of ['crate', 'cid', 'gen', 'fish', 'fishCol', 'catchOf', 'imp', 'ship', 'bought', 'stolen', 'meat', 'berries', 'jar']) if (rec[q] !== undefined && rec[q] !== null && rec[q] !== 0) o[q] = rec[q];
         if (c && c.op) o.op = c.op; else if (rec.op) o.op = rec.op;
         if (c && c.to) o.to = c.to; if (c && c.tag) Object.assign(o, c.tag);
         v.carry = o;
@@ -136,6 +153,16 @@
       put: (v, rec) => { v.purse = r4((v.purse || 0) + rec.n); },
       list: v => (v.purse ? { moedas: v.purse } : {}),
       owner: v => ({ fac: G.Fac.idOfV(v), who: v.id }),
+    },
+    z: { // a business's stall: the merchant's own stock on the counter (the businesses live in G.S.biz; G.Biz runs them)
+      obj: id => zOf(id),
+      get: (z, k) => (z.inv && z.inv[k]) || 0,
+      room: (z, k) => (k === 'water' || k === 'moedas' ? 0 : zRoom(z, k)),
+      take: (z, k, n) => { z.inv[k] = r4((z.inv[k] || 0) - n); if (z.inv[k] <= EPS) delete z.inv[k]; },
+      put: (z, rec) => { const I = z.inv || (z.inv = {}); I[rec.k] = r4((I[rec.k] || 0) + rec.n); },
+      list: z => z.inv || {},
+      owner: z => ({ fac: z.fac, biz: z.id, home: z.home, who: z.owner }),
+      place: z => G.S.buildings.get(z.b) || null,
     },
     g: { // a thing left on the ground (who fell with a crate in the arms)
       obj: id => loose().find(o => o.id === id) || null,
@@ -247,21 +274,25 @@
     if (c.op) account(A.get(c.op), from, to, k, m, c);
     return { ok: true, n: m, e };
   };
-  // an operation's own books, from its transfers: what left its source, what reached its destination, what went back,
-  // what was lost — so that what left = what arrived + lost + back + what is still in hands or on the ground (the checker)
-  const custody = ref => !!ref && (ref[0] === 'v' || ref[0] === 'g');
+  // an operation's own books, from its transfers: what came into its hands (from its source, or born of the world), what
+  // reached its destination, what went back, what was lost — so that what came in = what arrived + lost + back + what is
+  // still in its custody: in hands, on the ground, or in its yard (op.stage: the quay of an unloading) — the checker
   function account(op, from, to, k, m, c) {
     if (!op) return; op.upd = G.S.clock;
     const mv = op.moved || (op.moved = {}); mv[k] = r4((mv[k] || 0) + m);
     if (!op.goods || op.goods[k] === undefined || (c && c.code === 'paga')) return;
     const add = (f, q) => { const o = op[f] || (op[f] = {}); o[k] = r4((o[k] || 0) + q); };
-    const src = op.from, dst = op.to;
-    if (from === src && to !== src) add('taken', m);
-    else if (to === src && custody(from)) add('back', m);
+    const dst = op.to;
+    // (an operation may draw from more than one source: the holds of two ships unloading at the same quay)
+    const isSrc = ref => !!ref && (ref === op.from || (!!op.srcs && op.srcs.includes(ref)));
+    const inside = ref => !!ref && (ref[0] === 'v' || ref[0] === 'g' || (!!op.stage && ref === op.stage));
+    if ((isSrc(from) && !isSrc(to)) || from === '@mundo') add('taken', m);
+    else if (isSrc(to) && inside(from)) add('back', m);
     if (to === dst && from !== dst) add('done', m);
-    else if (from === dst && to !== dst && custody(to)) add('done', -m); // (taken back out of the destination: it is no longer arrived)
-    if (to === '@uso') add('lost', m);
+    else if (from === dst && to !== dst && inside(to)) add('done', -m); // (taken back out of the destination: it is no longer arrived)
+    if (to === '@uso' && from !== dst) add('lost', m);
   }
+  A.account = account;
   // a good born of the world (a fish from its water, wood from a felled tree) or gone from it with a cause (eaten, burnt)
   D.make = function (to, k, n, c) {
     c = c || {}; if (!(n > EPS) || !fin(n) || !k) return { ok: false, n: 0, why: 'nada' };
@@ -271,7 +302,9 @@
     if (room + EPS < m) { if (!c.part) return { ok: false, n: 0, why: 'não cabe' }; m = room; }
     m = r4(m); if (!(m > EPS)) return { ok: false, n: 0, why: 'não cabe' };
     b.ad.put(b.o, Object.assign({ k, n: m }, c.rec || {}), c); remember(c, m);
-    return { ok: true, n: m, e: note('@mundo', to, k, m, c) };
+    const e = note('@mundo', to, k, m, c);
+    if (c.op) account(A.get(c.op), '@mundo', to, k, m, c);
+    return { ok: true, n: m, e };
   };
   D.use = function (from, k, n, c) {
     c = c || {}; if (!(n > EPS) || !fin(n) || !k) return { ok: false, n: 0, why: 'nada' };
@@ -284,6 +317,19 @@
     const e = note(from, '@uso', k, m, c);
     if (c.op) account(A.get(c.op), from, '@uso', k, m, c);
     return { ok: true, n: m, e };
+  };
+  // a load set down on the ground (a porter called away between the quay and the store, a ship's cargo with no room on the
+  // quay): a thing that lies there, marked with its operation, until a hand picks it up
+  D.drop = function (from, k, n, x, y, c) {
+    c = c || {}; const a = hold(from); if (!a) return { ok: false, n: 0, why: 'a origem não existe mais' };
+    if (!fin(x) || !fin(y)) return { ok: false, n: 0, why: 'sem lugar' };
+    const m = r4(Math.min(n, a.ad.get(a.o, k, c))); if (!(m > EPS)) return { ok: false, n: 0, why: 'não há' };
+    const rec = a.ad.take(a.o, k, m, c) || { k, n: m };
+    const S = G.S; const o = { id: S.nextId++, k, n: m, x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100, op: c.op || rec.op || 0, cid: rec.cid || 0, crate: rec.crate ? 1 : 0, fac: c.fac || 0, day: S.day, fish: rec.fish || null };
+    loose().push(o); remember(c, m);
+    const e = note(from, 'g:' + o.id, k, m, c);
+    if (c.op) account(A.get(c.op), from, 'g:' + o.id, k, m, c);
+    return { ok: true, n: m, g: o.id, e };
   };
   // two transfers that are one deal (goods for coin): both or neither
   D.swap = function (x, y, c) {
@@ -370,7 +416,7 @@
 
   // ============================== operations ==============================
   // (the modules of the activities hang their parts here: a body taken or given back, the diary, the canon, the checker)
-  A.hooks = { possess: [], diary: [], canon: [] };
+  A.hooks = { possess: [], diary: [], canon: [], tick: [], gone: [] }; // (tick: once a second of the world; gone: (v, why) when one leaves for good or is taken)
   const ops = () => G.S.acts || (G.S.acts = []);
   const LIVE = { plan: 1, rsv: 1, on: 1, wait: 1 };
   const live = op => !!(op && LIVE[op.st]);
@@ -392,7 +438,7 @@
     o = o || {};
     const op = {
       id: S.nextId++, def: id, st: o.st || 'on', born: S.day, t0: Math.round(S.clock * 10) / 10, upd: S.clock,
-      set: o.set || 0, fac: o.fac || 0, at: o.at || 0, from: o.from || null, to: o.to || null, refs: o.refs || [],
+      set: o.set || 0, fac: o.fac || 0, at: o.at || 0, from: o.from || null, srcs: o.srcs || [], to: o.to || null, stage: o.stage || null, refs: o.refs || [],
       goods: Object.assign({}, o.goods || {}), done: {}, lost: {}, moved: {}, taken: {}, back: {}, roles: {}, rsv: [], pay: o.pay || null, keys: [], log: [],
       why: o.why || '', by: o.by || 0, end: null, x: o.x || 0, y: o.y || 0, data: o.data || {},
     };
@@ -409,7 +455,8 @@
     op.st = st || 'ok'; op.end = { day: S.day, t: Math.round(S.clock * 10) / 10, why: why || '' };
     op.rsv = []; A._rv++;
     // (crates of this operation still on the quay are nobody's errand now: free for the next one)
-    if (op.at) { const b = S.buildings.get(op.at); if (b && b.crates) for (const c of b.crates) if (c.op === op.id) c.by = 0; }
+    if (op.at) { const b = S.buildings.get(op.at); if (b && b.crates) for (const c of b.crates) if (c.op === op.id) { c.by = 0; c.op = 0; } }
+    for (const o of loose()) if (o.op === op.id) o.op = 0;
     A.log(op, st || 'ok', why || '');
     if (def && def.onEnd) try { def.onEnd(op, st, why); } catch (e) { console.error('[Atividades] fim', e); }
     byP = null;
@@ -451,18 +498,23 @@
     // (the god took a body or gave one back: the person stays in what they were doing)
     const body = S.avatar ? S.avatar.id : 0;
     if (body !== lastBody) { if (lastBody) A.possessed(lastBody, false); if (body) A.possessed(body, true); lastBody = body; }
-    tick += dt; if (tick < 1) return; const step = tick; tick = 0;
+    // the people, every step: whoever died, was taken, jailed or carried off leaves the operation (what they carried stays
+    // where it fell) — the doors of those fates let go at once (below); this catches any other way
     for (const op of ops()) {
       if (!live(op)) continue;
-      const def = A.DEFS[op.def]; if (!def) { A.end(op, 'cancel', 'sem definição'); continue; }
-      // the people: whoever died, was taken, jailed or carried off leaves the operation (what they carried stays where it fell)
       for (const id in op.roles || {}) {
         const v = S.villagers.get(+id);
         if (!v) { A.leave(op, +id, 'morte'); continue; }
         if (!A.able(v) && !(op.roles[id].body)) A.leave(op, v, v.captive ? 'cativo' : v.jail ? 'preso' : v.aboard ? 'embarcou' : 'incapaz');
       }
+    }
+    tick += dt; if (tick < 1) return; const step = tick; tick = 0;
+    for (const op of ops()) {
+      if (!live(op)) continue;
+      const def = A.DEFS[op.def]; if (!def) { A.end(op, 'cancel', 'sem definição'); continue; }
       try { if (def.tick) def.tick(op, step); } catch (e) { G.modErr.Atividades = (G.modErr.Atividades || 0) + 1; if (G.modErr.Atividades <= 3) console.error('[Atividades]', op.def, e); }
     }
+    for (const f of A.hooks.tick) { try { f(step); } catch (e) { G.modErr.Atividades = (G.modErr.Atividades || 0) + 1; if (G.modErr.Atividades <= 3) console.error('[Atividades]', e); } }
     // the ended ones are kept a day for the diary, the summaries and the checker, then let go
     tPrune += step; if (tPrune >= 20) { tPrune = 0; const L = ops(); const keep = L.filter(op => live(op) || (op.end && S.day - op.end.day < 1.5)); if (keep.length !== L.length) { S.acts = keep; idxN = -1; byP = null; A._rv++; } }
   };
@@ -492,12 +544,38 @@
         const def = A.DEFS[op.def]; if (def && def.resume) { const t = def.resume(op, v, H); if (t) return t; }
         // (an operation with no rule of its own for it: the load goes on to the operation's destination, or back to its source)
         const to = op.to && D.exists(op.to) ? op.to : op.from && D.exists(op.from) ? op.from : null;
-        if (to) return H.setTask(v, { type: 'carga', to, op: op.id, pri: 1, st: 0 });
+        if (to && reachable(v, to)) return H.setTask(v, { type: 'carga', to, op: op.id, pri: 1, st: 0 });
       } else c.op = 0; // (its operation is over: the load is simply a load now)
     }
-    if (c.to && D.exists(c.to)) return H.setTask(v, { type: 'carga', to: c.to, pri: 1, st: 0 });
+    if (c.to && D.exists(c.to) && reachable(v, c.to)) return H.setTask(v, { type: 'carga', to: c.to, pri: 1, st: 0 });
     return null;
   };
+  // ... and when it cannot get there now (the way cut): a load of an operation is set down where its porter stands, by its
+  // rule, for a hand that can reach it; a load for a place — a purchase for the house, goods for a stall — stays in the
+  // arms, the day's work waiting, and goes when the way opens; after a whole day of it, or with its place gone, the
+  // people's store keeps it, written in the ledger (never the common store in silence, never lost)
+  A.holdCarry = function (v, H) {
+    const c = v.carry; if (!c || !(c.n > EPS)) return null;
+    if (c.op) {
+      const op = A.get(c.op); const def = op && A.DEFS[op.def];
+      if (op && live(op)) { if (def && def.drop) def.drop(op, v, 'sem caminho'); else D.drop('v:' + v.id, c.k, c.n, v.x, v.y, { op: op.id, code: 'pousou', by: v.id, fac: G.Fac.idOfV(v) }); return null; }
+      c.op = 0;
+    }
+    if (!c.to) return null;
+    const S = G.S;
+    if (D.exists(c.to)) { if (!c.held) c.held = S.clock; if (S.clock - c.held < G.DAY_LEN) return H.setTask(v, { type: 'idle', wait: 8, pri: 0.3 }); }
+    const f = 'f:' + G.Fac.idOfV(v);
+    if (D.exists(f)) D.move('v:' + v.id, f, c.k, c.n, { code: D.exists(c.to) ? 'sem-caminho' : 'sem-destino', by: v.id, part: true });
+    if (v.carry) { v.carry.to = null; v.carry.held = 0; } // (what the store had no room for: a plain load now)
+    return null;
+  };
+  // (a place one cannot walk to now is no errand now — a wall went up, the bridge fell: the load stays in the arms,
+  // still the house's, and goes there when the way opens; asked of the map of regions)
+  function reachable(v, ref) {
+    const [kind] = D.parse(ref); const b = kind === 'f' ? G.Village.nearestDropoff(v.x, v.y, v.set) : placeOf(ref);
+    if (!b) return true; // (gone: the errand itself finds another place)
+    const d = G.Vg.door(b); return G.W.reaches(v, d[0], d[1]);
+  }
   // carrying a load to where it belongs (home, a stall, a store): the walk, then the transfer
   function placeOf(ref) {
     const [kind, id] = D.parse(ref); const S = G.S;
@@ -515,8 +593,10 @@
       const alt = v.home && G.S.buildings.get(v.home) ? 'h:' + v.home : 'f:' + G.Fac.idOfV(v);
       if (alt === to) return H.end(v); t.to = alt; c.to = alt; t.wk = null; return;
     }
-    if (t.st === 0) { if (!G.Vg.gotoB(v, b, 0.2)) { t.fail = (t.fail || 0) + 1; if (t.fail > 2) { c.to = null; return H.end(v); } return; } t.st = 1; return; }
-    if (t.st === 1) { if (!H.move(v, dt)) return; t.st = 2; v.actT = 0; v.act = A.ANIM.pousar.act; return; }
+    // (no way there now: the errand ends and the load keeps where it belongs — it goes when the way opens, never elsewhere)
+    if (t.st === 0) { if (!G.Vg.gotoB(v, b, 0.2)) return H.end(v); t.st = 1; return; }
+    // (the walk ends when the path does; a path cut on the way is no arrival: one puts things away only at the door)
+    if (t.st === 1) { if (!H.move(v, dt)) return; if (G.dist(v.x, v.y, b.x + b.w / 2, b.y + b.h / 2) > Math.max(b.w, b.h) + 1.2) { t.rt = (t.rt || 0) + 1; if (t.rt > 3) return H.end(v); t.st = 0; return; } t.st = 2; v.actT = 0; v.act = A.ANIM.pousar.act; return; }
     v.act = A.ANIM.pousar.act; G.Village.center && G.faceTo(v, b.x + b.w / 2 - v.x, b.y + b.h / 2 - v.y);
     if (v.actT < A.ANIM.pousar.contact) return;
     const r = D.move('v:' + v.id, to, c.k, c.n, { op: c.op || 0, code: c.bought ? 'compra-em-casa' : 'entrega', by: v.id, part: true });
@@ -648,19 +728,36 @@
       const op = A.get(v.carry.op); const def = op && A.DEFS[op.def];
       if (op && live(op) && def && def.drop) def.drop(op, v, 'chamado');
     }
-    return end0(v, o);
+    const r = end0(v, o);
+    // (an errand ended because the person was led to a cell, or taken: out of the operations at once)
+    if (v && !A.able(v) && G.S.villagers.has(v.id) && A.roleOf(v) && !A.isBody(v)) letGo(v, v.jail ? 'preso' : v.captive ? 'cativo' : 'incapaz');
+    return r;
   };
+  // whoever can no longer work — taken captive, carried off to sea, led to a cell — leaves every operation at once, and a
+  // load of an operation in the arms stays where they stood (a thing on the ground, for another hand)
+  function letGo(v, why) {
+    if (!v || !G.S.villagers.has(v.id)) return;
+    const c = v.carry;
+    if (c && c.n > EPS && c.op && !v.aboard) { const op = A.get(c.op); if (op && live(op)) { D.drop('v:' + v.id, c.k, c.n, v.x, v.y, { op: op.id, code: 'pousou', by: v.id, fac: G.Fac.idOfV(v) }); A.log(op, 'pousou', v.id, why); } }
+    for (const op of ops()) if (live(op) && op.roles && op.roles[v.id]) A.leave(op, v, why);
+    for (const f of A.hooks.gone) f(v, why);
+  }
+  A.letGo = letGo;
+  const enslave0 = G.War && G.War.enslave;
+  if (enslave0) G.War.enslave = function (v) { if (v) letGo(v, 'cativo'); return enslave0.apply(this, arguments); };
+  const board0 = G.Naval && G.Naval.board;
+  if (board0) G.Naval.board = function (v) { if (v) letGo(v, 'embarcou'); return board0.apply(this, arguments); };
   // who dies with a load of an operation in the arms drops it where they fell (a thing on the ground, for another hand)
   const kill0 = G.Village.kill;
   G.Village.kill = function (v, cause, byGod) {
     const c = v && v.carry;
     if (c && c.n > EPS && (c.op || c.cid) && G.S.villagers.has(v.id) && !v.aboard) {
-      const S = G.S; const o = { id: S.nextId++, k: c.k, n: c.n, x: Math.round(v.x * 100) / 100, y: Math.round(v.y * 100) / 100, op: c.op || 0, cid: c.cid || 0, fac: G.Fac.idOfV(v), day: S.day, fish: c.fish || null };
-      loose().push(o); note('v:' + v.id, 'g:' + o.id, c.k, c.n, { op: c.op || 0, code: 'caiu', by: v.id }); v.carry = null;
-      const op = c.op && A.get(c.op); if (op) A.log(op, 'caiu', v.id, cause || '');
+      const op = c.op && A.get(c.op);
+      D.drop('v:' + v.id, c.k, c.n, v.x, v.y, { op: op && live(op) ? op.id : 0, code: 'caiu', by: v.id, fac: G.Fac.idOfV(v) });
+      if (op) A.log(op, 'caiu', v.id, cause || '');
     }
-    // (death is the one door out of the world: the dead leave every operation at once)
-    if (v && G.S.villagers.has(v.id)) for (const op of ops()) if (live(op) && op.roles && op.roles[v.id]) A.leave(op, v, 'morte');
+    // (death is the one door out of the world: the dead leave every operation, and what they ran, at once)
+    if (v && G.S.villagers.has(v.id)) { for (const op of ops()) if (live(op) && op.roles && op.roles[v.id]) A.leave(op, v, 'morte'); for (const f of A.hooks.gone) f(v, 'morte'); }
     return kill0.apply(this, arguments);
   };
 
@@ -697,6 +794,7 @@
         goods: cleanMap(op.goods), done: cleanMap(op.done), lost: cleanMap(op.lost), moved: cleanMap(op.moved), taken: cleanMap(op.taken), back: cleanMap(op.back), roles: op.roles && typeof op.roles === 'object' ? op.roles : {},
         rsv: Array.isArray(op.rsv) ? op.rsv.filter(r => Array.isArray(r) && typeof r[0] === 'string' && fin(r[2])) : [], keys: Array.isArray(op.keys) ? op.keys : [], log: Array.isArray(op.log) ? op.log : [],
         data: op.data && typeof op.data === 'object' ? op.data : {}, upd: num(op.upd, S.clock), born: num(op.born, S.day),
+        srcs: Array.isArray(op.srcs) ? op.srcs.filter(x => typeof x === 'string') : [], stage: typeof op.stage === 'string' ? op.stage : null,
       })) : [];
       S.loose = Array.isArray(o.loose) ? o.loose.filter(x => x && Number.isInteger(x.id) && fin(x.n) && x.n > 0 && fin(x.x) && fin(x.y)) : [];
       S.ledger = Array.isArray(o.ledger) ? o.ledger.filter(Array.isArray) : []; S.ledgerN = num(o.ledgerN, S.ledger.length ? S.ledger[S.ledger.length - 1][0] : 0);
