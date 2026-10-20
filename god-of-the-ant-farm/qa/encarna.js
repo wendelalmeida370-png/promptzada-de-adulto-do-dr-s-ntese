@@ -32,6 +32,9 @@
 //  e16 a apresentação nunca à frente do mundo (adendo §5) — as caixas desenhadas no cais são as do mundo, e o estivador que
 //      as descarrega só tem uma nas mãos quando o mundo a pôs lá; com o menu aberto o 3D desenha sem mexer no cais nem no
 //      relógio, e o golpe pedido espera; o que o corpo leva ao armazém está desenhado nas mãos enquanto o mundo o tem nelas
+//  e18 entrar e sair de casa de verdade (Etapa 2) — a porta fechada desenhada no vão, as mãos a abrem e a folha gira como o
+//      mundo a tem, o corpo entra (o mundo o tem dentro), o olho num cômodo e nunca numa parede, quem está em casa onde a
+//      planta põe, a escada inteira com o alçapão abrindo, salvar e carregar dentro, o deus tira a casa com o corpo nela
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'); const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
@@ -935,6 +938,76 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   }
   ok('e16 verificador', !e16.qa || (!e16.qa.length && e16.err === '{}'), `${(e16.qa || []).slice(0, 3).join(' · ') || 'limpo'} · ${e16.err}`);
   await shot('e16-cais');
+  }
+  if (await need('e18')) {
+  // ================================ e18: into a house for real — its inside drawn (Etapa 2) ================================
+  const e18 = await E(() => {
+    __E.fresh('metropole'); const S = G.S, In = G.Interiors, Sp = G.Space, TL = Sp.TILE, B3 = G.Build3D; const out = {};
+    // (a house with a plan, its door on a street, a stair up from its ground floor, a grown-up of it who can be lived)
+    let H = null;
+    for (const b of [...S.buildings.values()].filter(q => q.built && In.has(q) && (q.type === 'house' || q.type === 'sobrado') && In.planDoor(q)).sort((a, c) => a.id - c.id)) {
+      const p = Sp.planNow(b); if (!p || !p.entrance || !p.stairs.some(s => s.kind === 'escada' && s.lv0 === (p.entrance.lv || 0))) continue;
+      const v = __E.adults(null, o => o.home === b.id && !o.sleeping).sort((a, c) => a.id - c.id)[0]; if (v) { H = { b, p, v }; break; } }
+    if (!H) return { none: true };
+    const { b, p, v } = H; const d = In.planDoor(b); G.Vg.endTask(v); v.inside = 0; v.x = d[0]; v.y = d[1]; v.path = null;
+    if (!__E.enter(v)) return { none: 'não encarnou' }; __E.f(8);
+    out.house = `${b.type}#${b.id} ${b.style} ${p.fam}`; window.__h = H;
+    const st = G.Avatar.state(); const e = p.entrance; const D = [b.x * TL + e.x, b.y * TL + e.z];
+    const lf = () => { const o = B3.opened().find(q => q.id === b.id); const k = o ? p.doors.filter(q => q.kind !== 'vao').findIndex(q => q.id === e.door) : -1; return o ? { open: true, leaf: k >= 0 ? o.leaves[k] : null, cuts: o.cuts } : { open: false }; };
+    // 1. the door shut by the world: the house drawn open by its door, the leaf in the opening
+    G.Possess.apply(w => { In.useDoor(b, e.door, 'fechar', w); return { ok: true }; }); __E.f(40);
+    out.shut = Object.assign(lf(), { state: In.doorState(b, e.door).state });
+    // 2. the hands open it (E, the world in its step): the leaf turns into the room, the opening free — the cut
+    let best = null; for (let k = 0; k < 30 && !(best && best.id === 'portaPlanta'); k++) { G.Cam3D.yaw = Math.atan2(D[1] - st.Z, D[0] - st.X); best = G.Interact.best(); G.Main.frameFor(33); }
+    if (best && best.id === 'portaPlanta') G.Interact.run(best); __E.until(() => !G.Avatar.busy(), 120); __E.f(40);
+    out.open = Object.assign(lf(), { state: In.doorState(b, e.door).state, label: best && best.label });
+    // 3. in through it, square to its wall: the world has it inside; the eye in a room, never in a wall
+    const dd = p.doors[e.door], w = p.walls[dd.wall]; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; let nx = -(w.b[1] - w.a[1]) / L, nz = (w.b[0] - w.a[0]) / L;
+    if ((p.lot.w / 2 - e.x) * nx + (p.lot.w / 2 - e.z) * nz < 0) { nx = -nx; nz = -nz; }
+    let camIn = 0; const go = (x, z, max) => { for (let k = 0; k < max; k++) { const X = b.x * TL + x, Z = b.y * TL + z; const dx = X - st.X, dz = Z - st.Z; if (Math.hypot(dx, dz) < 0.12) break; G.Cam3D.yaw = Math.atan2(dz, dx); G.Input3D.down.frente = true; G.Main.frameFor(33); const c = G.Realm.camera().position; if (G.Cam3D.solid(c.x, c.y, c.z)) camIn++; } G.Input3D.down.frente = false; __E.f(6); };
+    go(e.x - nx * 0.6, e.z - nz * 0.6, 200); go(e.x + nx * 1.3, e.z + nz * 1.3, 300); __E.f(30);
+    const c = G.Realm.camera().position; const cx = c.x - b.x * TL, cz = c.z - b.y * TL; const R = p.shell.r;
+    out.inside = { v: v.inside === b.id, lv: G.Possess.level(), camIn, camRoom: cx > R[0] && cx < R[2] && cz > R[1] && cz < R[3] && !G.Cam3D.solid(c.x, c.y, c.z), open: B3.isOpen(b.id) };
+    // 4. who is at home stands, sits, lies where Interiors puts them — drawn there
+    const home = [...S.villagers.values()].filter(o => o.inside === b.id && o !== v);
+    out.people = { n: home.length, placed: home.filter(o => { const q = B3.openPlace(o); return q && q.X > b.x * TL && q.X < (b.x + b.w) * TL && q.Z > b.y * TL && q.Z < (b.y + b.h) * TL; }).length };
+    // 5. up the stair from its foot (the flight whole): its lid, where it has one, lifts while the body goes through
+    const s = p.stairs.find(q => q.kind === 'escada' && q.lv0 === G.Possess.level());
+    if (s) { const n = p.grid.n, cs = p.grid.cs; const fits = (x, z) => { for (const [ax, az] of [[0, 0], [0.32, 0], [-0.32, 0], [0, 0.32], [0, -0.32]]) { const q = Sp.indoor(b.x * TL + x + ax, b.y * TL + z + az, G.Possess.level(), b.id); if (!q || !q.walk) return false; } return true; };
+      const cell = (x, z) => [Math.floor(x / cs), Math.floor(z / cs)]; const [sx, sz] = cell(st.X - b.x * TL, st.Z - b.y * TL), [tx, tz] = cell(s.a[0], s.a[1]); const prev = new Map(); const key = (x, z) => z * n + x; const q = [[sx, sz]]; prev.set(key(sx, sz), null);
+      for (let i = 0; i < q.length; i++) { const [x, z] = q[i]; if (x === tx && z === tz) break; for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + ax, Z = z + az; if (X < 0 || Z < 0 || X >= n || Z >= n || prev.has(key(X, Z))) continue; if (!(X === tx && Z === tz) && !fits((X + 0.5) * cs, (Z + 0.5) * cs)) continue; prev.set(key(X, Z), [x, z]); q.push([X, Z]); } }
+      const path = []; if (prev.has(key(tx, tz))) { let cur = [tx, tz]; while (cur) { path.unshift([(cur[0] + 0.5) * cs, (cur[1] + 0.5) * cs]); cur = prev.get(key(cur[0], cur[1])); } }
+      for (const pt of path) go(pt[0], pt[1], 120);
+      // (up: the stick held along the flight from its foot)
+      let lid = 0, flown = 0; const dir = Math.atan2(s.dir[1], s.dir[0]);
+      for (let k = 0; k < 400 && G.Possess.level() === s.lv0; k++) { G.Cam3D.yaw = dir; G.Input3D.down.frente = true; G.Main.frameFor(33); const f = G.Avatar.flight(); if (f) flown++; const o = B3.opened().find(qq => qq.id === b.id); if (o && o.lids.some(x => x > 0.3)) lid++; }
+      G.Input3D.down.frente = false; __E.f(20);
+      out.up = { path: path.length, lv: G.Possess.level(), want: s.lv1, flown, lid, hole: !!s.hole, camIn }; }
+    // 6. saved and loaded in the house: inside still, drawn open again
+    { const sv = G.Save.serialize(); G.Save.apply(JSON.parse(sv)); __E.until(() => G.Modes.state === 'INC', 400); __E.until(() => B3.isOpen(b.id), 200); __E.f(10);
+      const v2 = G.Possess.body(); out.load = { body: !!v2, inside: !!v2 && v2.inside === b.id, lv: G.Possess.level(), open: B3.isOpen(b.id), err: JSON.stringify(G.modErr) }; }
+    out.qa = __E.qa(); out.err = JSON.stringify(G.modErr); out.sounds = G.Audio ? !!G.Audio.play : false;
+    return out;
+  });
+  if (e18.none) ok('e18 há uma casa com planta, escada e morador', false, String(e18.none));
+  else {
+    ok('e18 a casa e o morador', true, e18.house);
+    ok('e18 a porta fechada: a casa desenhada aberta pela porta, a folha no vão', e18.shut.open && e18.shut.state !== 'aberta' && e18.shut.leaf !== null && Math.abs(e18.shut.leaf) < 0.05 && e18.shut.cuts > 0, JSON.stringify(e18.shut));
+    ok('e18 as mãos abrem a porta: a folha gira para dentro como o mundo a tem', e18.open.state === 'aberta' && e18.open.leaf !== null && Math.abs(e18.open.leaf) > 1.2, JSON.stringify(e18.open));
+    ok('e18 entra: o mundo o tem dentro; o olho num cômodo, nunca numa parede', e18.inside.v && e18.inside.open && e18.inside.camRoom && e18.inside.camIn === 0, JSON.stringify(e18.inside));
+    ok('e18 quem está em casa está onde a planta põe (desenhado)', e18.people.placed === e18.people.n, JSON.stringify(e18.people));
+    if (e18.up) ok('e18 sobe a escada inteira; o alçapão abre enquanto passa', e18.up.lv === e18.up.want && e18.up.flown > 5 && (!e18.up.hole || e18.up.lid > 0), JSON.stringify(e18.up));
+    if (e18.load) ok('e18 salvar e carregar dentro de casa: dentro ainda, desenhada aberta', e18.load.body && e18.load.inside && e18.load.open && e18.load.err === '{}', JSON.stringify(e18.load));
+  }
+  await shot('e18-dentro');
+  // 7. the god takes the house away with the body in it: the inside given back, the body out on firm ground, nothing broken
+  const e17b = await E(() => {
+    const H = window.__h; const v = G.Possess.body(); if (!H || !v) return null; const b = G.S.buildings.get(H.b.id); if (!b) return null; const was = v.inside === b.id;
+    G.Village.destroyBuilding(b, 'deus'); __E.f(60);
+    return { was, inside: v.inside, open: G.Build3D.isOpen(b.id), opened: G.Build3D.opened().length, ground: G.W.walkableXY(v.x, v.y) || G.Possess.afloat(v), err: JSON.stringify(G.modErr), qa: __E.qa() };
+  });
+  if (e17b) ok('e18 o deus tira a casa com o corpo dentro: o interior some, o corpo fora em chão firme', !e17b.open && !e17b.inside && e17b.ground && e17b.err === '{}', JSON.stringify(e17b));
+  ok('e18 verificador', !e18.qa || (!e18.qa.length && e18.err === '{}'), `${(e18.qa || []).slice(0, 3).join(' · ') || 'limpo'} · ${e18.err}`);
   }
   if (await need('e8')) {
   // ================================ e8: stress (last: it is the longest) ================================

@@ -129,6 +129,8 @@
     G.Possess.setLevel(ins && ins.shell && v.inside === ins.b.id ? ins.lv : null); // (once the world has it indoors)
   }
   Av.indoors = () => (b && b.inB && b.inShell ? { b: b.inB, p: b.inP, lv: b.lv, crawl: !!b.crawl } : null); // (for the camera and the 3D)
+  // (the flight the body is going up or down now — the stair's id, its building's, how far along: the 3D lifts its lid)
+  Av.flight = () => (b && b.loco === 'stair' && b.flight && b.inB ? { s: b.flight.s, b: b.inB.id, k: b.flight.T > 0 ? b.flight.t / b.flight.T : 1, up: !!b.flight.up } : null);
   // lying down on a bed of the plan (the world has the body asleep: Possess.sleep): on its sleeping place, the head to its wall
   Av.lieAt = function (B, it, sp) {
     const v = G.Possess.body(); const e = B && G.Space.planEntry(B.id); if (!b || !v || !e || !e.p) return false;

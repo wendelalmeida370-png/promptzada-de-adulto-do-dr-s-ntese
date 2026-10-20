@@ -34,6 +34,8 @@
   B3.init = function (three, realm) {
     THREE = three; R3 = realm; SH = realm.SH; glass = new THREE.MeshPhongMaterial({ color: 0x1c2630, specular: 0x8aa0b4, shininess: 90, emissive: 0xffb860, emissiveIntensity: 0 });
     PM = new THREE.Matrix4(); IDM = new THREE.Matrix4(); // (a slanted box's frame, and the frame of the sheets already in place)
+    for (let k = 0; k < 16; k++) { CUTU.a.value.push(new THREE.Vector3()); CUTU.b.value.push(new THREE.Vector3()); } CUTU.lo.value = new THREE.Vector3(); CUTU.hi.value = new THREE.Vector3();
+    for (let k = 0; k < 4; k++) { SUNKU.a.value.push(new THREE.Vector3()); SUNKU.b.value.push(new THREE.Vector3()); }
     // (a timber's end out of a gable: eight sides, its end chamfered — a purlin, a peg; open at its foot, in the wall)
     PEG = new THREE.LatheGeometry([[0.5, 0], [0.5, 0.88], [0.4, 1], [0, 1]].map(([r, y]) => new THREE.Vector2(r, y)), 8);
     // (a plank lying on the ground: a box standing on its base, without the underside nobody sees)
@@ -345,11 +347,21 @@ float m3scale(float p) {
 }
 `;
   // the solid material learns to draw the patterns (and fades them far away, where they would only shimmer)
+  // (the cut — M3CUT, the town's solid material: what stands in the boxes the inside drawn takes is not drawn; the box round
+  // them all first, so the rest of the town pays one test)
+  const CUTFRAG = `#ifdef M3CUT
+  if (uCutN > 0 && vPP.x > uCutLo.x && vPP.y > uCutLo.y && vPP.z > uCutLo.z && vPP.x < uCutHi.x && vPP.y < uCutHi.y && vPP.z < uCutHi.z) {
+    for (int i = 0; i < 16; i++) { if (i >= uCutN) break; vec3 ca = uCutA[i], cb = uCutB[i]; if (vPP.x > ca.x && vPP.y > ca.y && vPP.z > ca.z && vPP.x < cb.x && vPP.y < cb.y && vPP.z < cb.z) discard; }
+  }
+  #endif
+  `;
   B3.dress = function (mat) {
     mat.onBeforeCompile = sh => {
       sh.uniforms.uDet = { value: G.Ground3D.detail() }; Object.assign(sh.uniforms, G.Ground3D.U3());
+      Object.assign(sh.uniforms, { uCutA: CUTU.a, uCutB: CUTU.b, uCutN: CUTU.n, uCutLo: CUTU.lo, uCutHi: CUTU.hi });
       sh.vertexShader = 'attribute float aP; varying vec3 vPP; varying vec3 vPN; flat varying float vPat;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vPP = (modelMatrix * vec4(transformed, 1.0)).xyz; vPN = normalize(mat3(modelMatrix) * objectNormal); vPat = aP;');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G.Ground3D.texGLSL() + PFRAG).replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n#ifdef M3CUT\nuniform vec3 uCutA[16]; uniform vec3 uCutB[16]; uniform int uCutN; uniform vec3 uCutLo; uniform vec3 uCutHi;\n#endif\n' + G.Ground3D.texGLSL() + PFRAG)
+        .replace('#include <clipping_planes_fragment>', CUTFRAG + '#include <clipping_planes_fragment>').replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         float pp = floor(vPat + 0.5);
         // (an anchored door — Build3D.doorPat: where its leaf starts along the wall and up, its width, which leaf of the picture)
         vec4 dA = vec4(0.0);
@@ -2420,12 +2432,17 @@ float m3scale(float p) {
   }
   // the shell a building is drawn from outside — Interiors.shellOf (cheap, from afar), else its plan once made (Space's, or
   // Interiors' cache: nothing is made here) — or null: the old drawing (a building going up, a ruin, a type without plans)
+  // (kept by building while its record is the same and its plan as it was: a chunk drawn again does not ask again)
+  let shellMemo = new Map(); G.worldHooks.push(() => { shellMemo = new Map(); });
   B3.shellOf = function (b) {
     const In = G.Interiors; if (!In || !In.has || !b || !b.built || b.type === 'ruin' || !In.has(b)) return null;
     const p = G.Space.planMade ? G.Space.planMade(b) : In.ready && In.ready(b) ? In.plan(b) : null;
+    const k = (In.keyOf ? In.keyOf(b) : b.type + ':' + (b.ip ? b.ip.r + ':' + b.ip.f + ':' + b.ip.s + ':' + (b.ip.fx || []).length : '')); const m = shellMemo.get(b.id);
+    if (m && m.k === k && m.p === p) return m.S;
     const s = In.shellOf ? In.shellOf(b) : p && p.ok && In.shellOfPlan ? In.shellOfPlan(p) : null;
-    if (s && s.shell && s.levels && s.levels.length) return outOfShell(s, p);
-    return p && p.ok && p.shell && p.levels && p.levels.length ? outOfPlan(p) : null;
+    const S = s && s.shell && s.levels && s.levels.length ? outOfShell(s, p) : p && p.ok && p.shell && p.levels && p.levels.length ? outOfPlan(p) : null;
+    shellMemo.set(b.id, { k, p, S }); if (shellMemo.size > 4000) shellMemo.delete(shellMemo.keys().next().value);
+    return S;
   };
   // (what makes a building's outside change: its shell's record — a number for the chunk's signature)
   B3.shellSig = function (b) {
@@ -2874,6 +2891,95 @@ float m3scale(float p) {
     o = o || {}; const In = G.Interiors; const S = plan ? (In.shellOfPlan ? outOfShell(In.shellOfPlan(plan), plan) : outOfPlan(plan)) : B3.shellOf(b); if (!S) return null;
     const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(); const K = kit(g, b, gp, undefined, o.fine); shellHouse(g, gw, K, S); if (!K.footed) K.plinth();
     return { solid: g, glass: gw, S, cuts: B3.cuts(b, S), at: [K.x0, K.y0, K.z0], body: K.body };
+  };
+  // ------------------------------ the inside drawn round the body ------------------------------
+  // The buildings with a plan made nearest the body — the one it is in, the ones by whose doors it stands: three at most —
+  // have their inside drawn in the scene (Build3D.interior), its doors' leaves turning as the world has its doors, the lids
+  // over the stairs' holes lifting while the body goes up through them, the fires of the hearths while someone is home; the
+  // outside's own door openings and court put aside where the inside is (the cut: the solid material drops what stands in
+  // those boxes). The people the world has inside stand where Interiors.placeOf puts them (People3D asks openPlace). Only
+  // seen: nothing here writes the world nor makes a plan (Space.plan asks for one; the frame's pump makes it)
+  const OPEN_R = 8, CLOSE_R = 12, OPEN_MAX = 3, CUT_MAX = 16;
+  let opened = new Map(); const CUTU = { a: { value: [] }, b: { value: [] }, n: { value: 0 }, lo: { value: null }, hi: { value: null } };
+  // (the ground over a sunken floor or a cellar of an inside drawn: given way — the realm's ground shader reads these)
+  const SUNKU = B3.sunkU = { a: { value: [] }, b: { value: [] }, n: { value: 0 } };
+  G.worldHooks.push(() => { B3.insideClear(); });
+  B3.cutU = CUTU; B3.flames = [];
+  B3.isOpen = id => opened.has(id);
+  // (for the tests: what is drawn open — its leaves' and lids' turns, its cuts)
+  B3.opened = () => [...opened.values()].map(o => ({ id: o.b.id, leaves: o.leaves.map(l => +l.cur.toFixed(2)), lids: o.lids.map(l => +l.cur.toFixed(2)), cuts: o.cuts.length, people: o.people || 0 }));
+  B3.insideClear = function () { for (const o of opened.values()) dropOpen(o); opened = new Map(); CUTU.n.value = 0; SUNKU.n.value = 0; B3.flames.length = 0; placeMemo.clear(); };
+  B3.insideTick = function (rdt, focus) {
+    if (!THREE || !focus || !R3.scene || !R3.mats().inner || !G.Space.plan) return;
+    const S = G.S, L = TL(); const v0 = G.Possess && G.Possess.body && G.Possess.body();
+    const X = focus.X, Z = focus.Z; const dRect = b => Math.hypot(Math.max(b.x * L - X, 0, X - (b.x + b.w) * L), Math.max(b.y * L - Z, 0, Z - (b.y + b.h) * L));
+    // (the candidates: the building the body is in, first; those whose lot is within reach — a plan asked for, the made ones)
+    const want = []; const seen = new Set(); const inB = v0 && v0.inside ? S.buildings.get(v0.inside) : null;
+    if (inB) { seen.add(inB.id); const p = G.Space.plan(inB); if (p) want.push([-1, inB, p]); }
+    const tx = Math.floor(X / L), ty = Math.floor(Z / L), r = Math.ceil(OPEN_R / L) + 1;
+    for (let y = ty - r; y <= ty + r; y++) for (let x = tx - r; x <= tx + r; x++) {
+      if (!W.inb(x, y)) continue; const id = S.occ[y * N + x]; if (!id || seen.has(id)) continue; seen.add(id);
+      const b = S.buildings.get(id); if (!b || dRect(b) > OPEN_R) continue; const p = G.Space.plan(b); if (p) want.push([dRect(b), b, p]);
+    }
+    want.sort((a, c) => a[0] - c[0]); const keep = new Set(want.slice(0, OPEN_MAX).map(w => w[1].id));
+    // (those gone far, gone, or with another plan now: given back)
+    for (const [id, o] of opened) { const b = S.buildings.get(id); const p = b && G.Space.planMade(b);
+      if (!b || p !== o.p || (!keep.has(id) && (dRect(b) > CLOSE_R || opened.size > OPEN_MAX))) { dropOpen(o); opened.delete(id); } }
+    // (one made a frame, at most: a few milliseconds)
+    for (const [, b, p] of want.slice(0, OPEN_MAX)) if (!opened.has(b.id) && opened.size < OPEN_MAX) { const o = makeOpen(b, p); if (o) opened.set(b.id, o); break; }
+    B3.flames.length = 0; const boxes = []; let ns = 0;
+    for (const o of opened.values()) { stepOpen(o, rdt, focus); for (const c of o.cuts) if (boxes.length < CUT_MAX) boxes.push(c);
+      for (const c of o.sunk) if (ns < 4) { SUNKU.a.value[ns].set(c[0], c[1], c[2]); SUNKU.b.value[ns].set(c[3], c[4], c[5]); ns++; } }
+    setCut(boxes); SUNKU.n.value = ns;
+  };
+  function makeOpen(b, p) {
+    const MI = R3.mats().inner; const q = R3.Q(); const out = B3.interior(p, b, { fine: q.detail ? undefined : false }); if (!out) return null;
+    const grp = new THREE.Group(); grp.matrixAutoUpdate = false; const geos = [];
+    const add = g => { if (!g || g.empty) return; const geo = g.build(true); geos.push(geo); const m = new THREE.Mesh(geo, MI); m.receiveShadow = true; m.matrixAutoUpdate = false; grp.add(m); };
+    for (const k in out.lv) add(out.lv[k]); add(out.roof);
+    const piece = (f, order) => { const geo = f.g.build(true); geos.push(geo); const m = new THREE.Mesh(geo, MI); m.receiveShadow = true; m.rotation.order = order || 'XYZ'; m.position.set(f.at[0], f.at[1], f.at[2]); m.rotation.y = f.yaw; grp.add(m); return m; };
+    const leaves = out.leaf.map(f => ({ f, m: piece(f), cur: 0, was: undefined }));
+    const lids = out.hatch.map(f => ({ f, m: piece(f, 'YXZ'), cur: 0 }));
+    R3.scene().add(grp);
+    // (the floors under the street — a sunken one, a cellar: the ground over them given way, from their floor to the plinth's top)
+    const L = TL(), X0 = b.x * L, Z0 = b.y * L, Y0 = G.Space.plinth(b).y0; const sunk = [];
+    for (const l of p.levels) if (l.y < -0.05 && l.area) sunk.push([X0 + l.area[0] + 0.02, Y0 + l.y - 0.1, Z0 + l.area[1] + 0.02, X0 + l.area[2] - 0.02, Y0 - 0.01, Z0 + l.area[3] - 0.02]);
+    return { b, p, out, grp, geos, leaves, lids, cuts: B3.cuts(b, B3.shellOf(b)), sunk, homeT: -1, home: false };
+  }
+  function dropOpen(o) { if (o.grp.parent) o.grp.parent.remove(o.grp); for (const g of o.geos) g.dispose(); }
+  function stepOpen(o, rdt, focus) {
+    const In = G.Interiors, b = o.b; const k = 1 - Math.exp(-7 * rdt);
+    // (the leaves: open as the world has its doors; a creak and a knock as one turns, as loud as it is near)
+    for (const l of o.leaves) {
+      const st = In.doorState(b, l.f.id); const open = !!st && st.state === 'aberta'; const w = open ? l.f.swing * 1.45 : 0;
+      if (l.was !== undefined && open !== l.was && G.Audio && G.Audio.play) { const d = Math.hypot(l.f.at[0] - focus.X, l.f.at[2] - focus.Z); const v = G.clamp(1 - d / 14, 0, 1); if (v > 0.05) G.Audio.play(open ? 'door' : 'doorShut', v); }
+      l.was = open; l.cur += (w - l.cur) * k; l.m.rotation.y = l.f.yaw + l.cur;
+    }
+    // (a lid lifts while the body goes through its hole: the flight it climbs on the stair the lid closes)
+    const fl = G.Avatar && G.Avatar.flight ? G.Avatar.flight() : null;
+    for (const l of o.lids) { const up = fl && fl.b === b.id && fl.s === l.f.id ? 1.35 : 0; l.cur += (up - l.cur) * k; l.m.rotation.x = -l.cur; }
+    // (the hearths burn while someone is home — the body too —, a little lower by day)
+    if (o.homeT !== G.S.clock) { o.homeT = G.S.clock; let n = 0; for (const v of G.S.villagers.values()) if (v.inside === b.id) n++; o.people = n; o.home = n > 0; }
+    if (o.home && o.out.light.length) { const day = G.Render && G.Render.nightness ? 1 - G.clamp(G.Render.nightness() * 1.4, 0, 1) : 0;
+      for (const Lt of o.out.light) B3.flames.push([Lt[0], Lt[1] - 0.3, Lt[2], (0.45 + Lt[3] * 0.45) * (1 - day * 0.35)]); }
+  }
+  // (the boxes of the cut, to the solid material: the box round them all first — most of the town is outside it)
+  function setCut(boxes) {
+    const n = Math.min(boxes.length, CUT_MAX); CUTU.n.value = n; if (!n) return;
+    const lo = CUTU.lo.value, hi = CUTU.hi.value; lo.set(1e9, 1e9, 1e9); hi.set(-1e9, -1e9, -1e9);
+    for (let k = 0; k < n; k++) { const c = boxes[k]; CUTU.a.value[k].set(c[0], c[1], c[2]); CUTU.b.value[k].set(c[3], c[4], c[5]); lo.min(CUTU.a.value[k]); hi.max(CUTU.b.value[k]); }
+  }
+  // where someone the world has inside a building drawn open stands, sits, lies or works: Interiors.placeOf, in the world's
+  // metres — { X, Y, Z, yaw, st } — or null (not open: not drawn); the same for a step of the world
+  const placeMemo = new Map(); let placeT = -1;
+  B3.openPlace = function (v) {
+    const o = v && v.inside > 0 && opened.get(v.inside); if (!o) return null;
+    if (placeT !== G.S.clock) { placeMemo.clear(); placeT = G.S.clock; }
+    let pl = placeMemo.get(v.id); if (pl !== undefined) return pl; pl = null;
+    const q = G.Interiors.placeOf(v);
+    if (q && q.b === o.b) { const l = o.p.levels.find(x => x.lv === q.lv); const L = TL(); const y0 = G.Space.plinth(o.b).y0;
+      pl = { X: o.b.x * L + q.x, Z: o.b.y * L + q.z, Y: y0 + (l ? l.y : 0) + (q.y || 0) + FLOOR_UP, yaw: Math.PI / 2 - (q.ry || 0), st: { deitado: 'sleep', sentado: 'sit', trabalhando: 'interact' }[q.pose] || 'idle' }; }
+    placeMemo.set(v.id, pl); return pl;
   };
   B3.bounds = function (b) {
     const g = R3.Geo(), gw = R3.Geo(); const K = kit(g, b); draw(g, gw, K, false);

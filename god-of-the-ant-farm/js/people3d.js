@@ -1270,10 +1270,13 @@
     const av = P3.avatar;
     // the nearest people first, as many as the machine is told to carry
     const near = [];
+    // (who the world has inside a building is drawn only where its inside is drawn, where Interiors puts them: Build3D.openPlace)
+    const placeOf = v => (v.inside && G.Build3D && G.Build3D.openPlace ? G.Build3D.openPlace(v) : null);
     for (const v of S.villagers.values()) {
       if (av && v.id === av.id) continue;
-      if (v.inside || v.aboard || v.ug || v.held || (v.age < 2 && v.carried)) continue;
-      const X = v.x * TL, Z = v.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 > RC2) continue;
+      if (v.aboard || v.ug || v.held || (v.age < 2 && v.carried)) continue;
+      const pl = v.inside ? placeOf(v) : null; if (v.inside && !pl) continue;
+      const X = pl ? pl.X : v.x * TL, Z = pl ? pl.Z : v.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 > RC2) continue;
       near.push([d2, v]);
     }
     near.sort((a, b) => a[0] - b[0]);
@@ -1291,10 +1294,11 @@
     const seen = new Set();
     for (let k = 0; k < n; k++) {
       const v = near[k][1]; seen.add(v.id);
-      let s = vis.get(v.id);
-      const X = v.x * TL, Z = v.y * TL; const swim = v.task && v.task.type === 'swim';
-      // (the world walks them over a boulder's tile: the feet go up onto the stone and down again, a quick step — never through it)
-      const Yf = swim ? W.waterH(v.x, v.y) * HM - 0.32 : Math.max(groundY(v.x, v.y), G.Space.stoneTop(X, Z));
+      let s = vis.get(v.id); const pl = placeOf(v);
+      const X = pl ? pl.X : v.x * TL, Z = pl ? pl.Z : v.y * TL; const swim = v.task && v.task.type === 'swim';
+      // (the world walks them over a boulder's tile: the feet go up onto the stone and down again, a quick step — never through it;
+      // inside, on the floor, the bed, the bench the plan has there)
+      const Yf = pl ? pl.Y : swim ? W.waterH(v.x, v.y) * HM - 0.32 : Math.max(groundY(v.x, v.y), G.Space.stoneTop(X, Z));
       if (!s) { s = { X, Z, Y: Yf, yaw: v.face > 0 ? 0 : Math.PI, ph: (v.id % 7), pose: POSE0(), t: 0, sp: 0, st: 'idle' }; vis.set(v.id, s); }
       s.Y = Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
       const Y = s.Y + (v.z ? v.z * 0.22 : 0);
@@ -1303,8 +1307,10 @@
       const sp = dt > 0 ? dist / dt : 0; s.sp += (Math.min(sp, 9) - s.sp) * (1 - Math.exp(-8 * dt));
       if (dist > 0.002) { const want = Math.atan2(dz, dx); let da = want - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * (1 - Math.exp(-10 * dt)); }
       if (dist > 6) { s.sp = 0; if (s.plant) s.plant[0].on = s.plant[1].on = 0; } // (a jump of the world — a teleport, a load — is not a step)
+      // (inside, they keep to their place: turned as it is, at rest there — from the fire to the bed is a change of place, not a walk)
+      if (pl) { s.sp = 0; s.yaw = pl.yaw; s.Y = Yf; if (s.plant) s.plant[0].on = s.plant[1].on = 0; }
       s.X = X; s.Z = Z; s.t += dt;
-      let st = Anim.stateOf(v, s.sp);
+      let st = pl ? pl.st : Anim.stateOf(v, s.sp);
       // (waved at by the body: those standing or strolling near wave back, a moment later — only seen)
       if (s.greetT > 0) { if ((s.greetD -= dt) <= 0) { s.greetT -= dt; if (st === 'idle' || st === 'walk' || st === 'talk') st = 'wave'; } }
       const Lv = P3.look(v);
@@ -1344,7 +1350,7 @@
     // the crowd: everyone else in reach, simply (where the world has them; no animation of their own but a step's bob)
     mats(); let c = 0; const tnow = performance.now() / 1000;
     for (let k = n; k < near.length && c < MAXC; k++) {
-      const v = near[k][1]; const X = v.x * TL, Z = v.y * TL; const Y0 = W.groundH(v.x, v.y) * HM; if (!inField(X, Y0, Z, 1)) continue;
+      const v = near[k][1]; if (v.inside) continue; const X = v.x * TL, Z = v.y * TL; const Y0 = W.groundH(v.x, v.y) * HM; if (!inField(X, Y0, Z, 1)) continue;
       const L = P3.look(v); const s = L.s; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const Y = Y0 + Math.abs(st) * 0.04;
       const pp = v.path && v.pi < v.path.length ? v.path[v.pi] : null; const yaw = pp ? Math.atan2(pp[1] - v.y, pp[0] - v.x) : (v.face > 0 ? 0 : Math.PI);
       M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); M.root.multiply(M.b); M.b.makeScale(s, s, s); M.root.multiply(M.b);
