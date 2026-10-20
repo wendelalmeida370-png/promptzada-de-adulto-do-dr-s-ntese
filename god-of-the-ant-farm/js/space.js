@@ -152,6 +152,12 @@
     const k = recKey(b); const m = kept.get(b.id); if (m && m.k === k) return m.p;
     const p = In.want(b); return p ? keep(b, p, k) : null;
   };
+  // (the plan if it is made — kept here, or in Interiors' cache —, never asked for: what the drawing of the outside reads)
+  Sp.planMade = function (b) {
+    const In = G.Interiors; if (!b || !b.built || !In || !In.has(b)) return null;
+    const m = kept.get(b.id); if (m && m.k === recKey(b)) return m.p;
+    return In.ready && In.ready(b) ? In.plan(b) : null;
+  };
   // (what is kept with it: the plan and its doors' cells; the plinth it stands on, as the ground is now)
   Sp.planEntry = id => { const m = kept.get(id); const b = m && G.S.buildings.get(id); if (!b) return null; m.y0 = Sp.plinth(b).y0; return m; };
   // (made now, whatever it costs: the body is in it already — a game loaded with the body indoors)

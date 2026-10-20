@@ -255,7 +255,8 @@
         if (k >= TOUT[2]) finish(v);
       }
     }
-    if (M3.state !== 'GOD') { R3.frame(rdt, focus, M3.state === 'INC' ? 6 : 12); G.IncUI.frame(rdt); }
+    // (the plans asked for round the body made, a few ms a frame — Interiors' own line: the frame never makes a whole one)
+    if (M3.state !== 'GOD') { G.Space.pump(M3.state === 'INC' ? 3 : 2); R3.frame(rdt, focus, M3.state === 'INC' ? 6 : 12); G.IncUI.frame(rdt); }
   };
   function finish(v) {
     M3._zoomed = false;
