@@ -31,7 +31,8 @@
     // ---- sleeping ----
     'cama-casal': { name: 'Cama de casal', w: 1.4, d: 1.95, h: 0.55, low: 1, wall: 1, rot: 1, places: 2, spots: lie(2) },
     cama: { name: 'Cama', w: 0.9, d: 1.95, h: 0.5, low: 1, wall: 1, rot: 1, places: 1, spots: lie(1) },
-    // (leva: what a household takes with it when it leaves — the house left behind keeps the rest)
+    // (leva: what a household takes with it when it leaves — its mats, the cradle, the stove and the brazier; the house left
+    // behind keeps the rest, its chests, baskets and jars among them: what the world left in them is still there)
     esteira: { name: 'Esteira', w: 0.72, d: 1.8, h: 0.06, low: 1, wall: 1, rot: 1, places: 1, leva: 1, spots: lie(1) },
     // (the couple's mat, or the pallet two share where there are no beds)
     'esteira-casal': { name: 'Esteira de casal', w: 1.25, d: 1.85, h: 0.08, low: 1, wall: 1, rot: 1, places: 2, leva: 1, spots: lie(2) },
@@ -50,16 +51,16 @@
     'mesa-baixa': { name: 'Mesa baixa', w: 0.9, d: 0.6, h: 0.35, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
     banco: { name: 'Banco', w: 1.1, d: 0.35, h: 0.45, low: 1, wall: 1, spots: it => [{ use: 'sentar', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: it.d / 2 + 0.35 }] },
     // ---- what keeps the house's things (the world's own: h.pantry, h.coin, h.inv) ----
-    arca: { name: 'Arca', w: 0.9, d: 0.5, h: 0.55, solid: 1, wall: 1, rot: 1, leva: 1, store: { dep: 'casa', key: 'inv', cap: 12, coin: 1 }, spots: front('guardar') },
+    arca: { name: 'Arca', w: 0.9, d: 0.5, h: 0.55, solid: 1, wall: 1, rot: 1, store: { dep: 'casa', key: 'inv', cap: 12, coin: 1 }, spots: front('guardar') },
     despensa: { name: 'Prateleiras da despensa', w: 1.0, d: 0.4, h: 1.7, solid: 1, wall: 1, tall: 1, store: { dep: 'casa', key: 'pantry', cap: 30 }, spots: front('guardar') },
     // (a niche cut into a thick wall: a house of adobe or stone keeps there its box, its lamp, its few goods)
     nicho: { name: 'Nicho na parede', w: 0.6, d: 0.2, h: 0.5, y: 1.1, solid: 1, wall: 1, mount: 'nicho', store: { dep: 'casa', key: 'inv', cap: 6, coin: 1 }, spots: front('guardar', 0.35) },
     // (hung on a wall above head height: no floor taken — the shelf on pegs, the baskets of food from the beams)
     'prateleira-parede': { name: 'Prateleira na parede', w: 0.8, d: 0.25, h: 0.3, y: 1.45, solid: 1, wall: 1, mount: 'parede', store: { dep: 'casa', key: 'inv', cap: 6, coin: 1 }, spots: front('guardar', 0.35) },
-    'cesto-pendurado': { name: 'Cestos pendurados', w: 0.7, d: 0.35, h: 0.5, y: 1.5, solid: 1, wall: 1, mount: 'parede', leva: 1, store: { dep: 'casa', key: 'pantry', cap: 8 }, spots: front('guardar', 0.35) },
-    jarros: { name: 'Jarros', w: 0.9, d: 0.5, h: 0.75, solid: 1, wall: 1, rot: 1, leva: 1, store: { dep: 'casa', key: 'pantry', cap: 24 }, spots: front('guardar') },
-    cesto: { name: 'Cestos', w: 0.7, d: 0.5, h: 0.5, solid: 1, wall: 1, rot: 1, leva: 1, store: { dep: 'casa', key: 'pantry', cap: 12 }, spots: front('guardar') },
-    lenha: { name: 'Pilha de lenha', w: 1.0, d: 0.5, h: 0.9, solid: 1, wall: 1, leva: 1, spots: front('pegar') },
+    'cesto-pendurado': { name: 'Cestos pendurados', w: 0.7, d: 0.35, h: 0.5, y: 1.5, solid: 1, wall: 1, mount: 'parede', store: { dep: 'casa', key: 'pantry', cap: 8 }, spots: front('guardar', 0.35) },
+    jarros: { name: 'Jarros', w: 0.9, d: 0.5, h: 0.75, solid: 1, wall: 1, rot: 1, store: { dep: 'casa', key: 'pantry', cap: 24 }, spots: front('guardar') },
+    cesto: { name: 'Cestos', w: 0.7, d: 0.5, h: 0.5, solid: 1, wall: 1, rot: 1, store: { dep: 'casa', key: 'pantry', cap: 12 }, spots: front('guardar') },
+    lenha: { name: 'Pilha de lenha', w: 1.0, d: 0.5, h: 0.9, solid: 1, wall: 1, spots: front('pegar') },
     tear: { name: 'Tear', w: 1.3, d: 0.8, h: 1.6, solid: 1, wall: 1, tall: 1, job: 1, spots: front('tecer', 0.5) },
     // ---- the storehouse: bays of the people's stock, shared among its stores ----
     baia: { name: 'Baia', w: 1.8, d: 1.4, h: 1.4, solid: 1, wall: 1, store: { dep: 'povo', key: 'stock', cap: 30 }, spots: front('guardar', 0.5) },

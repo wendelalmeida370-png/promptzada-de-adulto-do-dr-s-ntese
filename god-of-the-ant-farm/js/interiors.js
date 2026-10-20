@@ -1086,7 +1086,7 @@
 
   // ------------------------------ the house left behind ------------------------------
   // a house its household gave up (empty since In.LEFT days): the same walls and rooms, the same doors; what the family takes
-  // with it gone (the mats, the chests, the jars and baskets, the brazier, the cradle: the pieces marked leva), what is built
+  // with it gone (its mats, the cradle, the clay stove, the brazier: the pieces marked leva), what is built
   // in or too heavy to carry left where it stood — the beds' frames, the hearth, the shelves, the table. A family that moves
   // in brings its own things again: the plan is the house's own once more
   In.LEFT = 2;
@@ -1150,10 +1150,12 @@
     return y0;
   };
   // the world's door of a building (tiles): the point before the plan's entrance — or, when that is not open ground now, the
-  // first open corner (the old rule), until the turn of the day records that the door moved
+  // first open corner (the old rule), until the turn of the day records that the door moved. Read from the shell: the same
+  // way in as the whole plan's (the shell from afar is the plan's), at a small part of its cost — the door is asked by the
+  // world's step and by every frame, for every building
+  const doorOf = b => { const s = In.shellOf(b); const e = s && s.entrance; if (!e || !e.out) return null; return [b.x + e.out[0] / TILE, b.y + e.out[1] / TILE]; };
   In.door = function (b) {
-    const p = In.plan(b);
-    if (p && p.entrance) { const o = p.entrance.out; const x = b.x + o[0] / TILE, y = b.y + o[1] / TILE; if (G.W.walkableXY(x, y)) return [x, y]; }
+    const d = doorOf(b); if (d && G.W.walkableXY(d[0], d[1])) return d;
     return oldDoor(b);
   };
   function oldDoor(b) {
@@ -1167,17 +1169,47 @@
   const KEYS = { pantry: ['food'], inv: '*', stock: '*' };
   // (the pieces sold across — a stall, a shop's stall, a counter —, in the plan's order: the number is the merchant's slot)
   const sellsOf = p => p.items.filter(it => it.spots.some(sp => sp.use === 'vender') && it.spots.some(sp => sp.use === 'comprar'));
+  // (kept by the record's key, like the shell: the plan may leave its cache — a city has more buildings than it holds —
+  // without the world's step making it again at every delivery; read-only, the same list for the same record)
+  const stores = new Map();
+  G.worldHooks.push(() => stores.clear());
   In.depotStores = function (b) {
-    const p = In.plan(b); if (!p || !p.ok) return null; const sells = sellsOf(p);
-    const out = [];
-    for (const it of p.items) {
-      if (!it.store) continue; const st = it.store; const keys = st.goods ? st.goods.slice() : KEYS[st.key] || '*'; const sale = sells.indexOf(it);
-      out.push({ id: it.id, kind: it.kind, keys, cap: st.cap, slot: it.k, dep: st.dep, sale: sale < 0 ? null : sale });
+    if (!b || !b.ip || !TYPES[b.ip.t]) return null;
+    const key = planKey(b, b.ip); const c = stores.get(b.id); if (c && c.key === key) return c.out;
+    const p = In.plan(b); let out = null;
+    if (p && p.ok) {
+      const sells = sellsOf(p); out = [];
+      for (const it of p.items) {
+        if (!it.store) continue; const st = it.store; const keys = st.goods ? Object.freeze(st.goods.slice()) : KEYS[st.key] || '*'; const sale = sells.indexOf(it);
+        out.push(Object.freeze({ id: it.id, kind: it.kind, keys, cap: st.cap, slot: it.k, dep: st.dep, sale: sale < 0 ? null : sale }));
+      }
+      Object.freeze(out);
     }
+    stores.set(b.id, { key, out }); if (stores.size > In.SHELLS) stores.delete(stores.keys().next().value);
     return out;
   };
-  // the door the world's people use (tiles, before the plan's own door, on open ground), or null
-  In.planDoor = function (b) { const p = In.plan(b); if (!p || !p.ok || !p.entrance) return null; const o = p.entrance.out; const x = b.x + o[0] / TILE, y = b.y + o[1] / TILE; return G.W.walkableXY(x, y) ? [x, y] : null; };
+  // the door the world's people use (tiles, before the plan's own door, on open ground), or null. Never a door onto a pocket
+  // of ground shut in between walls and buildings, smaller than the ground the old corner opens to: whoever came out there
+  // would be shut in (a court's door that faced a single tile between two buildings). Judged in the world's step by the map
+  // of reach; what is drawn reads the step's last answer for the same record and the same ground — a drawing never rebuilds
+  // the map (the world is the same with or without anyone looking)
+  let regN = null, regAt = -1;
+  const regSize = (L, r) => { if (!regN || regAt !== G.W.reachBuilds) { regN = new Map(); regAt = G.W.reachBuilds; for (let i = 0; i < L.length; i++) { const k = L[i]; if (k >= 0) regN.set(k, (regN.get(k) || 0) + 1); } } return regN.get(r) || 0; };
+  const doorSaid = new Map();
+  G.worldHooks.push(() => { doorSaid.clear(); regN = null; regAt = -1; });
+  In.planDoor = function (b) {
+    const d = doorOf(b); if (!d || !G.W.walkableXY(d[0], d[1])) return null;
+    const o = oldDoor(b); if (!o || !G.W.walkableXY(o[0], o[1])) return d;
+    const S = G.S; const key = planKey(b, b.ip) + ':' + (S.walkVer || 0) + ':' + (S.typeVer || 0);
+    if (!G.inSim) { const m = doorSaid.get(b.id); return m && m.key === key ? m.d : d; }
+    const L = G.W.reachIds(); const rd = L[G.W.idx(d[0], d[1])], ro = L[G.W.idx(o[0], o[1])];
+    const out = rd === ro || regSize(L, rd) >= regSize(L, ro) ? d : null;
+    doorSaid.set(b.id, { key, d: out }); if (doorSaid.size > In.SHELLS) doorSaid.delete(doorSaid.keys().next().value);
+    return out;
+  };
+  // (the step's last answer for a building, while its record and the ground are the same — for the checker; undefined when
+  // the step has not asked since)
+  In.doorSaid = function (b) { const m = b && b.ip && doorSaid.get(b.id); const S = G.S; return m && m.key === planKey(b, b.ip) + ':' + (S.walkVer || 0) + ':' + (S.typeVer || 0) ? m.d : undefined; };
   // where the one who sells and the one who buys stand at a building's slot-th selling piece (a stall, a shop's stall, a
   // counter): tiles of the world, the storey, the piece — for C1's G.Biz.spot; null when the building has no such piece
   // (a slot beyond the pieces the plan has gets none: that merchant keeps the place he has today, before the building)
@@ -1401,5 +1433,5 @@
     return { ok: c.ok.map(id => ({ id, name: FAMS[id].name })), arch: of(c.arch, 'arquitetura'), gen: of(c.gen, 'gerador'), no: of(c.arch, 'arquitetura').concat(of(c.gen, 'gerador')) };
   };
   In.famName = id => (FAMS[id] ? FAMS[id].name : id);
-  In.uncache = () => { cache.clear(); shells.clear(); job = null; }; // (for the proofs)
+  In.uncache = () => { cache.clear(); shells.clear(); stores.clear(); job = null; }; // (for the proofs)
 })(window.G);

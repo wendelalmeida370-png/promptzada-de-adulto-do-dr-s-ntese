@@ -598,6 +598,17 @@
       if (p.left && p.items.some(it => In.ITEMS[it.kind] && In.ITEMS[it.kind].leva)) add('int', 3, `${b.type}#${b.id}: a casa abandonada ainda tem as coisas que a família leva`);
       const s1 = In.shellOf(b), s2 = In.shellOfPlan(p); const strip = o => { const x = Object.assign({}, o); delete x.key; return JSON.stringify(x); };
       if (!s1 || strip(s1) !== strip(s2)) add('int', 1, `${b.type}#${b.id}: a casca de longe não é a da planta`);
+      // (the door the world's people use, with the port on: the plan's own wherever the step took it — and the step never
+      // took a door onto ground smaller than the old corner's: a pocket shut in all round shuts in whoever comes out)
+      if (G.Vg && G.Vg.planDoor === In.planDoor && b.built && b.blocks) {
+        const pd = In.planDoor(b);
+        if (pd) { const d = G.Vg.door(b); if (Math.abs(d[0] - pd[0]) > 1e-6 || Math.abs(d[1] - pd[1]) > 1e-6) add('int', 2, `${b.type}#${b.id}: quem sai não sai pela porta da planta`); }
+        const said = In.doorSaid(b); const corner = [[b.x + b.w - 0.5, b.y + b.h + 0.4], [b.x + b.w + 0.4, b.y + b.h - 0.5], [b.x - 0.4, b.y + 0.5], [b.x + 0.5, b.y - 0.4]].find(c => G.W.walkableXY(c[0], c[1]));
+        if (said && corner) {
+          const L = G.W.reachIds(true); const rd = L[G.W.idx(said[0], said[1])], ro = L[G.W.idx(corner[0], corner[1])];
+          if (rd !== ro) { let nd = 0, no = 0; for (let i = 0; i < L.length; i++) { if (L[i] === rd) nd++; else if (L[i] === ro) no++; } if (nd < no) add('int', 2, `${b.type}#${b.id}: a porta de quem sai dá para um chão fechado de ${nd} casas (o canto de antes, para ${no})`); }
+        }
+      }
     }
   });
   // (the records go into the save with their buildings: the canonical state carries them, so a round trip that loses one is seen)
