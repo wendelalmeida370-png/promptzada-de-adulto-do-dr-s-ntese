@@ -21,14 +21,15 @@
   // mat/t: the wall and its thickness (m) — hutT for a hut; roof: its kind (the god's steep pitches: a roof about 0.8 of
   // its span high); h0/h1: the ground storey's height and the ones above; bed/rich: how the poor and the well-off sleep;
   // couple: the couple's bed; fire: the hearth; eat: the table; keep: the chest and the jars; win: how much it opens to
-  // the street; round: its huts are round; sunk: it digs its floors; cellar: it keeps a cellar; long: its houses are long
+  // the street; round: its huts are round; sunk: it digs its floors; cellar: it keeps a cellar; long: its houses are long;
+  // roofSleep: it sleeps on its flat roofs (out of the cold lands) when the house is full
   In.addTraditions({
     nordico: { mat: 'tabua', t: 0.14, hutT: 0.12, roof: 'turfa', h0: 2.2, h1: 2.3, bed: ['banco-cama'], rich: ['banco-cama'], couple: 'cama-casal', coupleRich: 'cama-casal', fire: 'lar', eat: 'mesa', keep: ['arca', 'cesto'], win: 0.3, sunk: 1, long: 1, taste: { 'integrado.terreo': 3, 'integrado.funda': 1.6, 'anexo.terreo': 2.2, 'setores.terreo': 1.2, 'integrado.jirau': 1.4 } },
     classico: { mat: 'taipa', t: 0.2, hutT: 0.15, roof: 'duas-aguas', hutRoof: 'palha', h0: 2.4, h1: 2.4, bed: ['esteira'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'lar', eat: 'mesa', keep: ['arca', 'cesto'], win: 0.5, round: 1, sunk: 1, cellar: 1, taste: { 'redonda.terreo': 3, 'integrado.jirau': 2 } },
     grego: { mat: 'adobe-caiado', t: 0.3, hutT: 0.18, roof: 'duas-aguas', hutRoof: 'palha', h0: 2.6, h1: 2.5, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'fogao', hutFire: 'fogareiro', eat: 'mesa', keep: ['jarros', 'arca'], win: 0.6, round: 1, cellar: 1, taste: { 'setores.jirau': 1.8, 'redonda.terreo': 1.5 } },
     romano: { mat: 'reboco', t: 0.28, hutT: 0.15, roof: 'quatro-aguas', hutRoof: 'palha', flatTall: 1, h0: 2.8, h1: 2.6, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'fogao', hutFire: 'fogareiro', eat: 'mesa', keep: ['jarros', 'arca'], win: 0.5, round: 1, cellar: 1, taberna: 1, taste: { 'produtiva.jirau': 2.2 } },
-    egipcio: { mat: 'adobe', t: 0.34, hutT: 0.25, roof: 'plano', h0: 2.6, h1: 2.5, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama', fire: 'forno', hutFire: 'fogareiro', eat: 'mesa-baixa', keep: ['jarros', 'cesto'], win: 0.3, cellar: 1, taste: { 'integrado.quarto': 3, 'integrado.terraco': 2, 'produtiva.quarto': 1.4 } },
-    asteca: { mat: 'adobe-estuque', t: 0.3, hutT: 0.15, roof: 'plano', hutRoof: 'palha', h0: 2.5, h1: 2.4, bed: ['esteira'], rich: ['esteira', 'cama'], couple: 'esteira-casal', coupleRich: 'esteira-casal', fire: 'lar', eat: 'mesa-baixa', keep: ['jarros', 'cesto'], win: 0.4, round: 1, taste: { 'integrado.terraco': 2.5, 'redonda.terreo': 1.4, 'setores.quarto': 1.6 } },
+    egipcio: { mat: 'adobe', t: 0.34, hutT: 0.25, roof: 'plano', roofSleep: 1, h0: 2.6, h1: 2.5, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama', fire: 'forno', hutFire: 'fogareiro', eat: 'mesa-baixa', keep: ['jarros', 'cesto'], win: 0.3, cellar: 1, taste: { 'integrado.quarto': 3, 'integrado.terraco': 2, 'produtiva.quarto': 1.4 } },
+    asteca: { mat: 'adobe-estuque', t: 0.3, hutT: 0.15, roof: 'plano', hutRoof: 'palha', roofSleep: 1, h0: 2.5, h1: 2.4, bed: ['esteira'], rich: ['esteira', 'cama'], couple: 'esteira-casal', coupleRich: 'esteira-casal', fire: 'lar', eat: 'mesa-baixa', keep: ['jarros', 'cesto'], win: 0.4, round: 1, taste: { 'integrado.terraco': 2.5, 'redonda.terreo': 1.4, 'setores.quarto': 1.6 } },
   });
   const PITCHED = { turfa: 1, 'duas-aguas': 1, 'quatro-aguas': 1, palha: 1, 'palha-conica': 1 };
   const roofOf = (rec, tr) => (rec.t === 'hut' && tr.hutRoof ? tr.hutRoof : rec.t === 'barraco' ? 'alpendre' : rec.t === 'insula' && tr.flatTall ? 'plano' : tr.roof);
@@ -486,6 +487,15 @@
     // taken)
     const plans = need >= 5 ? [[coupleBed, beds, fireUp, keep], [fireUp, coupleBed, beds, keep], [coupleBed, fireUp, beds, keep]] : [[coupleBed, beds, fireUp, keep], [fireUp, coupleBed, beds, keep], [coupleBed, keep, beds, fireUp], [keep, fireUp, coupleBed, beds], [fireUp, keep, coupleBed, beds], [coupleBed, fireUp, beds, keep]];
     for (const step of plans[P.attempt % plans.length]) step();
+    // (still short after all of it: the free stretches left along the walls filled with beds in rows — rowOf: the mix that
+    // sleeps most in each —, room by room, the longest walls first; and the last of all, where the people sleeps on its flat
+    // roofs and the land is not cold, the roof: who does not fit inside sleeps under the stars rather than on the floor. A
+    // house that holds its household already is not touched)
+    const roofTo = !hot && tr.roofSleep && rec.cl !== 'f' ? [rooms.terraco, rooms.terracoFrente].filter(x => x !== undefined) : [];
+    if (P.places() < need && !shack) for (const id of order.concat(roofTo)) {
+      const R = P.rooms[id]; if (!R || R.circ || P.places() >= need) continue;
+      for (const s of ['fundo', 'esquerda', 'direita', 'frente'].sort((a, b) => wallLen(R, b) - wallLen(R, a))) { if (P.places() >= need) break; rowOf(P, id, s, rowKinds, need); }
+    }
     // the work front: the bench (or the counter) facing the door
     if (rooms.oficina !== undefined && !P.place('bancada', 0, rooms.oficina, { sides: ['fundo', 'esquerda', 'direita'] }) && !P.place('balcao', 0, rooms.oficina, { sides: ['livre'] })) P.errs.push('sem lugar para a bancada');
     // the table and its bench, if there is room (a poor hall goes without); the wood in the annex of a house with an open fire

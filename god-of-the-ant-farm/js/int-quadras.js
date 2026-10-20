@@ -226,6 +226,16 @@
     };
     const plans = [[fire, keep, beds], [beds, fire, keep], [fire, beds, keep], [keep, fire, beds]];
     for (const step of plans[P.attempt % plans.length]) step();
+    // (still short: the free stretches left along the walls filled with beds in rows — K.rowOf —, wing by wing, the longest
+    // walls first; and the last of all, in the hot lands and where the people sleeps on its flat roofs out of the cold ones,
+    // the roof terrace: who does not fit inside sleeps under the stars rather than on the floor. A block that holds its
+    // households already is not touched)
+    if (P.places() < need) {
+      const rk = [tr.couple || 'esteira-casal'].concat(kinds, ['esteira-casal', 'esteira']).filter(k => k && In.ITEMS[k] && !In.ITEMS[k].per);
+      const wl = (R, s) => (s === 'fundo' || s === 'frente' ? R.r[2] - R.r[0] : R.r[3] - R.r[1]);
+      const roofTo = rooms.terr && (P.rec.cl === 'q' || (tr.roofSleep && P.rec.cl !== 'f')) ? rooms.terr : [];
+      for (const id of order.concat(roofTo)) { const R = P.rooms[id]; if (!R || R.circ || P.places() >= need) continue; for (const s of ['fundo', 'esquerda', 'direita', 'frente'].sort((a, b) => wl(R, b) - wl(R, a))) { if (P.places() >= need) break; K.rowOf(P, id, s, rk, need); } }
+    }
     // (a brazier for each storey above, and a chest, where they still go)
     P.opt(() => { for (const id of rooms.up) P.place('braseiro', lvOf(id), id); });
   }
