@@ -51,7 +51,10 @@
     arca: { name: 'Arca', w: 0.9, d: 0.5, h: 0.55, solid: 1, wall: 1, rot: 1, store: { dep: 'casa', key: 'inv', cap: 12, coin: 1 }, spots: front('guardar') },
     despensa: { name: 'Prateleiras da despensa', w: 1.0, d: 0.4, h: 1.7, solid: 1, wall: 1, tall: 1, store: { dep: 'casa', key: 'pantry', cap: 30 }, spots: front('guardar') },
     // (a niche cut into a thick wall: a house of adobe or stone keeps there its box, its lamp, its few goods)
-    nicho: { name: 'Nicho na parede', w: 0.6, d: 0.2, h: 0.5, y: 1.1, solid: 1, wall: 1, store: { dep: 'casa', key: 'inv', cap: 6, coin: 1 }, spots: front('guardar', 0.35) },
+    nicho: { name: 'Nicho na parede', w: 0.6, d: 0.2, h: 0.5, y: 1.1, solid: 1, wall: 1, mount: 'nicho', store: { dep: 'casa', key: 'inv', cap: 6, coin: 1 }, spots: front('guardar', 0.35) },
+    // (hung on a wall above head height: no floor taken — the shelf on pegs, the baskets of food from the beams)
+    'prateleira-parede': { name: 'Prateleira na parede', w: 0.8, d: 0.25, h: 0.3, y: 1.45, solid: 1, wall: 1, mount: 'parede', store: { dep: 'casa', key: 'inv', cap: 6, coin: 1 }, spots: front('guardar', 0.35) },
+    'cesto-pendurado': { name: 'Cestos pendurados', w: 0.7, d: 0.35, h: 0.5, y: 1.5, solid: 1, wall: 1, mount: 'parede', store: { dep: 'casa', key: 'pantry', cap: 8 }, spots: front('guardar', 0.35) },
     jarros: { name: 'Jarros', w: 0.9, d: 0.5, h: 0.75, solid: 1, wall: 1, rot: 1, store: { dep: 'casa', key: 'pantry', cap: 24 }, spots: front('guardar') },
     cesto: { name: 'Cestos', w: 0.7, d: 0.5, h: 0.5, solid: 1, wall: 1, rot: 1, store: { dep: 'casa', key: 'pantry', cap: 12 }, spots: front('guardar') },
     lenha: { name: 'Pilha de lenha', w: 1.0, d: 0.5, h: 0.9, solid: 1, wall: 1, spots: front('pegar') },
@@ -61,10 +64,14 @@
     prateleira: { name: 'Prateleira', w: 1.6, d: 0.6, h: 2.0, solid: 1, wall: 1, tall: 1, store: { dep: 'povo', key: 'stock', cap: 14 }, spots: front('guardar') },
     tulha: { name: 'Tulha de grão', w: 1.6, d: 1.2, h: 1.5, solid: 1, wall: 1, store: { dep: 'povo', key: 'stock', cap: 28, goods: ['food'] }, spots: front('guardar', 0.5) },
     pipas: { name: 'Pipas', w: 1.4, d: 0.8, h: 1.0, solid: 1, wall: 1, store: { dep: 'povo', key: 'stock', cap: 16 }, spots: front('guardar') },
+    // (the harbour's loading floor by the big door: a low platform where the stevedore sets the crate down to be counted)
+    estrado: { name: 'Estrado de carga', w: 1.2, d: 0.8, h: 0.2, solid: 1, low: 1, wall: 1, job: 1, spots: it => [{ use: 'entregar', a: 0, n: it.d / 2 + 0.45 }] },
     'mesa-conferencia': { name: 'Mesa de conferência', w: 1.2, d: 0.7, h: 0.8, solid: 1, free: 1, job: 1, spots: it => [{ use: 'conferir', a: 0, n: -(it.d / 2 + 0.4) }, { use: 'entregar', a: 0, n: it.d / 2 + 0.45 }] },
     // ---- the market: a stall shows the stock of its business (C1's), a counter between the seller and the buyer ----
-    banca: { name: 'Banca', w: 1.6, d: 0.8, h: 0.9, solid: 1, free: 1, job: 1, show: 1, store: { dep: 'predio', key: 'inv', cap: 20 }, spots: it => [{ use: 'vender', a: 0, n: -(it.d / 2 + 0.45) }, { use: 'comprar', a: 0, n: it.d / 2 + 0.5 }] },
-    balcao: { name: 'Balcão', w: 1.8, d: 0.6, h: 1.0, solid: 1, wall: 0, free: 1, job: 1, show: 1, store: { dep: 'predio', key: 'inv', cap: 16 }, spots: it => [{ use: 'vender', a: 0, n: -(it.d / 2 + 0.45) }, { use: 'comprar', a: 0, n: it.d / 2 + 0.5 }] },
+    banca: { name: 'Banca', w: 1.6, d: 0.8, h: 0.9, solid: 1, free: 1, job: 1, show: 1, across: 'comprar', store: { dep: 'predio', key: 'inv', cap: 20 }, spots: it => [{ use: 'vender', a: 0, n: -(it.d / 2 + 0.45) }, { use: 'comprar', a: 0, n: it.d / 2 + 0.5 }] },
+    // (the small stall of a shop cell: room behind it for the one who sells)
+    banquinha: { name: 'Banca da loja', w: 1.1, d: 0.6, h: 0.9, solid: 1, free: 1, job: 1, show: 1, across: 'comprar', store: { dep: 'predio', key: 'inv', cap: 12 }, spots: it => [{ use: 'vender', a: 0, n: -(it.d / 2 + 0.45) }, { use: 'comprar', a: 0, n: it.d / 2 + 0.5 }] },
+    balcao: { name: 'Balcão', w: 1.8, d: 0.6, h: 1.0, solid: 1, wall: 0, free: 1, job: 1, show: 1, across: 'comprar', store: { dep: 'predio', key: 'inv', cap: 16 }, spots: it => [{ use: 'vender', a: 0, n: -(it.d / 2 + 0.45) }, { use: 'comprar', a: 0, n: it.d / 2 + 0.5 }] },
     // ---- the trades ----
     bancada: { name: 'Bancada', w: 1.5, d: 0.7, h: 0.85, solid: 1, wall: 1, job: 1, store: { dep: 'predio', key: 'inv', cap: 8 }, spots: front('trabalhar', 0.5) },
     'forja-fogo': { name: 'Forja', w: 1.3, d: 1.0, h: 0.85, solid: 1, fire: 1, wall: 1, tall: 1, job: 1, spots: front('forjar', 0.55) },
