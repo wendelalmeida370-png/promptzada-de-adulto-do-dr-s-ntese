@@ -649,8 +649,12 @@
     },
   });
   // what the world's activities offer the hands here (G.Act.offers — a crate on the quay, the stall, a hand to lend: C1's
-  // operations): done through the door the world's people use (Act.perform: the same checks, the same transfer), at the contact
-  // of the same gesture, in the same seconds of the world (Act.ANIM). Its words are the world's answer
+  // operations): done through the door the world's people use (the same checks, the same transfer), at the contact of the same
+  // gesture, in the same seconds of the world (Act.ANIM). Its words are the world's answer
+  // (begun at the key — Act.begin, in the world's step: a crate of the quay is the hands' from then on, as a porter's is from
+  // the moment he goes for it, by the same rule: a hand acting on it —; done at the contact — Act.commit —; let go if the
+  // gesture is cut short — Act.abort. Refused at the key — another hand acting on it —, the gesture stops there, with the
+  // world's words)
   const GEST = { lift: 'carry', arrange: 'carry', give: 'interact', pay: 'interact', haggle: 'talk', examine: 'interact', count: 'interact', call: 'wave', point: 'interact' };
   // (where an offer is, for the reach and for the hands: a crate of a quay where the 3D draws it — the pile reached from any of
   // its sides, by its crate nearest the body; the hands to the very crate the world offers —; a crate set down in its store at
@@ -682,8 +686,13 @@
       // (the thing drawn there when there is one — the crate offered, where the 3D draws it; or the crate of the quay the world
       // hands out next: People3D.nearLoad)
       const hands = reachTo(a => { if (!a.P) { const P3 = G.People3D; const H = P3 && P3.look(v).held; const src = !H && t.hand ? t.hand : !H && P3 && P3.nearLoad ? P3.nearLoad(gx, gz, 0.9) : null; a.P = H ? putAt(v, gx, gz)(a) : src || toward(G.Avatar.pos(), gx, gz, g.act === 'arrange' ? 0.9 : 0.2); } return a.P; }, 0.36, 0.45);
+      const pre = G.Possess.apply(w => G.Act.begin(w, o));
+      const free = () => G.Possess.apply(() => { const r = pre.res; if (r && r.ok) G.Act.abort(r.h, 'cortado'); return { ok: true }; }); // (once done or refused, nothing to let go)
       G.Avatar.act({ world: true, anim: GEST[g.act] || 'interact', dur: Math.max(g.dur, g.contact + 0.2) + goW, contact: g.contact + goW, face: f, to, toT: go, vact: g.act,
-        reach: hand ? a => (a.tr < go ? null : hands(a)) : null, op: w => G.Act.perform(w, o), then: r => say(r.msg), fail: deny });
+        reach: hand ? a => (a.tr < go ? null : hands(a)) : null,
+        keep: () => { const r = pre.res; if (!r || r.ok) return true; if (!r.dropped) deny(r); return false; },
+        op: () => { const r = pre.res; return r && r.ok ? G.Act.commit(r.h) : r || { ok: false, why: '' }; },
+        cut: free, then: r => say(r.msg), fail: r => { free(); deny(r); } });
       return { ok: true };
     },
   });
