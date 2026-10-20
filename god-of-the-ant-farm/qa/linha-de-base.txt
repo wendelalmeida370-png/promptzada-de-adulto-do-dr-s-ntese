@@ -1,0 +1,207 @@
+PASSOU | mar 12 grande batalha naval 
+PASSOU | mar 10 colônia: fundação e sobrevivência 
+PASSOU | mar 9 expedição toda morta → sem telepatia 
+PASSOU | mar 5 rotina do pescador 
+PASSOU | mar 7 grande expedição do Estado 
+PASSOU | mar 11 guerra entre ilhas: frota + transporte + desembarque 
+PASSOU | mar 2 ilha sem ferro busca solução no mar 
+PASSOU | mar 8 ilha conhecida só por quem soube 
+PASSOU | mar 17 desempenho com muitos barcos 
+PASSOU | mar 1 ilha rica não coloniza tudo 
+PASSOU | mar 14 salvar/carregar durante uma expedição 
+PASSOU | mar 15 salvar/carregar durante batalha naval 
+PASSOU | mar 13 navio afundado: consequências para a tripulação 
+PASSOU | mar 16 avanço no tempo 
+PASSOU | mar 6 expedição individual 
+PASSOU | mar 3 cultura aventureira explora mais 
+PASSOU | mar 4 cultura não marítima explora menos 
+PASSOU | cidade 1 bairros nascem do que a cidade tem 
+PASSOU | cidade 2 nomes únicos e guardados no save 
+PASSOU | cidade 3 a terra vale mais no bairro nobre 
+PASSOU | cidade 4 a cidade cresce de vários núcleos 
+PASSOU | cidade 5 avenidas ligam os núcleos e são calçadas primeiro 
+PASSOU | cidade 6 o centro é denso, a borda tem espaço 
+PASSOU | cidade 7 o verificador não vê nada errado nos bairros 
+PASSOU | cidade 8 as hortas da borda foram cuidadas e colhidas 
+PASSOU | cidade 9 as tavernas serviram bebida 
+PASSOU | cidade 10 a carga dos navios entrou pelo armazém 
+PASSOU | cidade 11 os roubos tiveram resposta 
+PASSOU | cidade 12 os ricos moram em terra mais cara 
+PASSOU | cidade 4 um save no meio da obra 
+PASSOU | cidade 1 cada quarteirão em terra cara, derrubando só o que pode 
+PASSOU | cidade 2 os desalojados sem casa, as moedas guardadas 
+PASSOU | cidade 3 o verificador todo ano (o anel dos quarteirões livre) 
+PASSOU | cidade 5 um desalojado morre, um raio cai na obra 
+PASSOU | cidade 6 os anos passam: quarteirões prontos e morados 
+PASSOU | cidade 1 a carga do navio desce no cais e vai a pé ao armazém 
+PASSOU | cidade 2 a taverna faz a bebida do seu povo e cobra cada rodada 
+PASSOU | cidade 3 a horta do quintal: cuidada, colhida, comida na despensa 
+PASSOU | cidade 4 a casa queima: a família vai para a rua (por isso), levanta um barraco e depois sai dele 
+PASSOU | cidade 5 o roubo: a moeda muda de casa, o guarda vê, prende e leva à cadeia 
+PASSOU | cidade 6 o preso continua na cela depois do save e sai quando a lei manda 
+PASSOU | cidade 7 o verificador não vê nada errado 
+PASSOU | salto 1 quinze anos com o verificador todo ano 
+PASSOU | salto 2 a mesma semente, o mesmo mundo 
+PASSOU | salto 3 um save carregado duas vezes salta o mesmo futuro 
+PASSOU | salto 4 parar no meio e continuar 
+PASSOU | salto 5 um terremoto e depois o salto 
+PASSOU | salto 6 bichos fora do lugar: o salto como a tela 
+PASSOU | salto 7 num mundo grande, o salto «até» para no ponto 
+PASSOU | guerra guerreiro que muda de povo sai do bando 
+PASSOU | guerra a última alma morre e o povo acaba junto 
+PASSOU | guerra a última alma livre morre e os cativos herdam a cidade 
+PASSOU | guerra sem erros 
+PASSOU | poderes o1 chuva de ouro: o povo corre e cata 
+PASSOU | poderes o1 toda moeda contada 
+PASSOU | poderes o1 a corrida termina com crônica e biografia 
+PASSOU | poderes o1 verificador 
+PASSOU | poderes o2 save no meio da chuva: o mesmo futuro 
+PASSOU | poderes o3 morte, raio e mar no meio da corrida 
+PASSOU | poderes o4 povo sem moeda: o ouro vai ao armazém 
+PASSOU | poderes v1 vinho nos poços: bebem, dançam, cambaleiam 
+PASSOU | poderes v1 um vinho por cidade 
+PASSOU | poderes v1 verificador 
+PASSOU | poderes v2 save no meio da festa: o mesmo futuro 
+PASSOU | poderes v3 morte no poço e poços derrubados 
+PASSOU | poderes v4 o dia seguinte: ressaca 
+PASSOU | poderes r1 ressurreição de um corpo: volta igual e casado de novo 
+PASSOU | poderes r2 ressurreição da cova: a cova fica vazia; a viúva casada de novo não volta 
+PASSOU | poderes r3 volta, morre de novo, volta de novo 
+PASSOU | poderes f1 fantasmas: andam à noite, o povo vê e foge 
+PASSOU | poderes f1 o fantasma aponta o ladrão 
+PASSOU | poderes f1 o fantasma vai atrás de quem o matou 
+PASSOU | poderes f2 save no meio da assombração: o mesmo futuro 
+PASSOU | poderes f2 o morto que volta deixa de assombrar; cemitério derrubado acaba com tudo 
+PASSOU | poderes a1 amor divino na mesma cidade 
+PASSOU | poderes a2 amor entre povos: vão morar juntos e os povos se estimam 
+PASSOU | poderes a3 save no meio da corrida do amor: o mesmo futuro 
+PASSOU | poderes a3 o amado morre no caminho 
+PASSOU | poderes d1 duelo de campeões: um vence, o nome fica 
+PASSOU | poderes d1 um duelo por vez 
+PASSOU | poderes d2 save no meio do duelo: o mesmo futuro 
+PASSOU | poderes d2 o raio do deus num campeão: o duelo acaba limpo 
+PASSOU | poderes s1 sonho dos deuses: o povo acorda devoto; não sonha duas vezes seguidas 
+PASSOU | poderes s1 sonho da grande obra: um monumento começa 
+PASSOU | poderes s1 sonho da terra além do mar 
+PASSOU | poderes s1 sonho da paz numa guerra 
+PASSOU | poderes s1 verificador 
+PASSOU | poderes i1 o gelo vira caminho 
+PASSOU | poderes i2 save no meio do inverno: o gelo volta igual, o mesmo futuro 
+PASSOU | poderes i3 terra erguida sob o gelo; no degelo, quem está no gelo cai na água 
+PASSOU | poderes g1 o dragão ataca: rasantes de fogo, o povo foge, as flechas acertam 
+PASSOU | poderes g1 o ouro levado: o que a cidade perde é o que vai para o tesouro 
+PASSOU | poderes g1 verificador 
+PASSOU | poderes g2 save no meio do rasante: o mesmo futuro 
+PASSOU | poderes g3 os bravos sobem ao covil, um cai na luta, o dragão morre: o Matador de Dragões 
+PASSOU | poderes g3 o tesouro se esparrama: toda moeda contada 
+PASSOU | poderes g4 a mão do deus: raio e meteoro derrubam o dragão em pleno voo 
+PASSOU | poderes g4 o covil afunda no mar: outro covil; depois parte levando o tesouro 
+PASSOU | poderes g4 save danificado: o dragão quebrado fica de fora, o mundo carrega 
+PASSOU | poderes p1 o mar se abre entre duas terras: o fundo vira caminho 
+PASSOU | poderes p1 o povo desce para catar peixes e atravessa a pé 
+PASSOU | poderes p1 verificador 
+PASSOU | poderes p2 save com o mar aberto: o fundo volta igual, o mesmo futuro 
+PASSOU | poderes p3 o mar se fecha: quem está lá embaixo corre; quem não sai é levado 
+PASSOU | poderes p4 um navio no caminho é empurrado para a água; terra erguida no fundo deixa de ser fundo 
+PASSOU | poderes p4 save danificado: o mar aberto quebrado fica de fora, o mundo carrega 
+PASSOU | poderes sem erros de página 
+PASSOU | poderes sem erros de módulo 
+PASSOU | encarna e1 entra na metrópole 
+PASSOU | encarna e1 prédios no lugar e no chão 
+PASSOU | encarna e1 o chão 3D é a altura do mundo 
+PASSOU | encarna e1 anda pelas ruas até o mercado 
+PASSOU | encarna e1 o porto fica na costa e se chega a ele a pé 
+PASSOU | encarna e1 atravessa a cidade a pé, entre os prédios reais 
+PASSOU | encarna e1 verificador 
+PASSOU | encarna e2 encarna uma pessoa real 
+PASSOU | encarna e2 anda com ela 
+PASSOU | encarna e2 a mesma pessoa depois (id, família, casa, povo) 
+PASSOU | encarna e2 volta ao Modo Deus: exatamente onde foi deixada, selecionada; depois a IA de novo 
+PASSOU | encarna e2 a biografia lembra 
+PASSOU | encarna e2 verificador 
+PASSOU | encarna e3 o tempo passa no corpo (dormir acelera) 
+PASSOU | encarna e3 longe dali o mundo acontece 
+PASSOU | encarna e3 de volta a Deus, nada desfeito 
+PASSOU | encarna e3 verificador 
+PASSOU | encarna e4 A, Deus, B: os dois existem, a IA de A voltou, B tem o corpo 
+PASSOU | encarna e4 de dentro, B → C: a IA de B volta, C tem o corpo 
+PASSOU | encarna e4 ninguém duplicado, nenhuma marca sobrando, histórias intactas 
+PASSOU | encarna e4 verificador 
+PASSOU | encarna e5 morte pelo fogo: morre de verdade, o deus volta 
+PASSOU | encarna e5 morte pelo fogo: biografia e crônica contam; o save carrega 
+PASSOU | encarna e5 morte pela fome: morre de verdade, o deus volta 
+PASSOU | encarna e5 morte pela fome: biografia e crônica contam; o save carrega 
+PASSOU | encarna e5 morte numa queda: morre de verdade, o deus volta 
+PASSOU | encarna e5 morte numa queda: biografia e crônica contam; o save carrega 
+PASSOU | encarna e5 verificador 
+PASSOU | encarna e6 terreno: plano 
+PASSOU | encarna e6 terreno: ladeira 
+PASSOU | encarna e6 terreno: estrada 
+PASSOU | encarna e6 terreno: bosque 
+PASSOU | encarna e6 terreno: costa 
+PASSOU | encarna e6 terreno: entre prédios 
+PASSOU | encarna e6 encostado num prédio, nunca preso 
+PASSOU | encarna e6 o mundo leva o corpo longe: a câmera vai junto, sem atravessar casas 
+PASSOU | encarna e6 verificador 
+PASSOU | encarna e7 A: save antes de encarnar 
+PASSOU | encarna e7 B: save encarnado volta encarnado, no mesmo lugar 
+PASSOU | encarna e7 C: save depois de desencarnar 
+PASSOU | encarna e7 D: depois de andar muito, a pessoa está onde ficou 
+PASSOU | encarna e7 E: depois da morte do corpo 
+PASSOU | encarna e7 save danificado: carrega limpo 
+PASSOU | encarna e7 verificador 
+PASSOU | encarna e9 capturado por inimigos: o corpo vai com o mundo 
+PASSOU | encarna e9 levado a um navio: a encarnação acaba 
+PASSOU | encarna e9 um prédio nasce em cima: o mundo move o corpo, o corpo segue 
+PASSOU | encarna e9 a terra afunda sob os pés: a água leva o corpo, o deus volta 
+PASSOU | encarna e9 a guerra e o fogo chamam: viram chamados, o corpo fica 
+PASSOU | encarna e9 mãos: a árvore cai pelo corte, a lenha vai para os braços 
+PASSOU | encarna e9 mãos: a lenha entra no estoque do povo 
+PASSOU | encarna e9 mãos: comer no armazém tira do estoque e mata a fome 
+PASSOU | encarna e9 mãos: as frutas saem do arbusto 
+PASSOU | encarna e9 mãos: a pedra quebrada vai para os braços 
+PASSOU | encarna e9 mãos: a pedra levada à obra entra nela 
+PASSOU | encarna e9 mãos: rezar no templo 
+PASSOU | encarna e9 mãos: em casa pela porta, dorme; acorda e sai pela porta 
+PASSOU | encarna e9 conversar: a ficha é da pessoa, ela responde (o balão também no Modo Deus) 
+PASSOU | encarna e9 uma cena não toma o corpo 
+PASSOU | encarna e9 os feitos entram na biografia 
+PASSOU | encarna e9 verificador 
+PASSOU | encarna e10 o botão Encarnar no painel da pessoa (e o motivo quando não pode) 
+PASSOU | encarna e10 a ficha diz quem são os pais (dos registros do mundo) 
+PASSOU | encarna e10 Esc abre o menu e pausa; as teclas mudam; G volta; I encarna 
+PASSOU | encarna e10 no toque: o polegar à esquerda anda, os botões aparecem 
+PASSOU | encarna e11 o chão do 3D pinta o que o mundo tem (perto do corpo, ruas, roças, mar) 
+PASSOU | encarna e11 o chão segue o mundo: a casa queimada vira cinza 
+PASSOU | encarna e11 plantas que balançam, paredes e telhados com o material do povo 
+PASSOU | encarna e11 o fogo solta fumaça e faíscas 
+PASSOU | encarna e11 a árvore derrubada cai e deita 
+PASSOU | encarna e11 quem está na frente vira a cabeça para o corpo 
+PASSOU | encarna e11 com o mundo parado, o desenho não mexe no mundo 
+PASSOU | encarna e11 verificador 
+PASSOU | encarna e8 30 idas e voltas (6 com save no meio): sem acúmulo 
+PASSOU | encarna e8 sem ouvintes acumulados 
+PASSOU | encarna e8 caminhada longa: chunks vêm e vão, a memória fica 
+PASSOU | encarna e8 uma casa erguida longe não refaz os pedaços perto do corpo (L-099) 
+PASSOU | encarna e8 salto de 10 anos depois, e encarna de novo 
+PASSOU | encarna e8 verificador 
+PASSOU | encarna sem erros de página 
+PASSOU | caos sem violações S0–S2
+PASSOU | caos_13 sem violações S0–S2
+PASSOU | guerra 2 reinos médios: dezenas
+PASSOU | guerra 5 guerra longa: economia, suprimento, desgaste
+PASSOU | guerra 6 derrota: retirada/fuga/rendição
+PASSOU | guerra 7 paz: volta dos soldados e consequências
+PASSOU | guerra 8 save/load
+PASSOU | guerra 1 aldeias pequenas
+PASSOU | guerra 10 causalidade
+PASSOU | guerra 4 cidade murada: cerco
+PASSOU | vigia
+PASSOU | determinismo
+PASSOU | vida_103 sem violações S0–S2
+PASSOU | vida_107 sem violações S0–S2
+PASSOU | alcance
+PASSOU | a bordo
+PASSOU | saves danificados
+PASSOU | memória dos mortos
+PASSOU | mundos prontos

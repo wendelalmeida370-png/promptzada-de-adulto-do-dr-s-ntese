@@ -1,0 +1,1034 @@
+'use strict';
+// ============================================================
+//  UI: HUD, power bar, inspector, chronicle, family tree,
+//  statistics, menus, toasts & notices
+// ============================================================
+(function (G) {
+  const UI = G.UI = {};
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const svg = (inner, vb) => `<svg viewBox="${vb || '0 0 24 24'}" aria-hidden="true">${inner}</svg>`;
+  const ST = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+  const ICON = G.ICON = {
+    incarnate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="2.4"/><path d="M8.5 22c.4-2.6 1.7-4 3.5-4s3.1 1.4 3.5 4"/><path d="M12 2v7"/><path d="M8.8 6l3.2 3.2L15.2 6"/></svg>',
+    pop: svg('<circle cx="9" cy="7.5" r="3.4" fill="currentColor"/><path d="M2.5 20.5c0-3.8 2.9-6.6 6.5-6.6s6.5 2.8 6.5 6.6z" fill="currentColor"/><circle cx="17.3" cy="8.6" r="2.6" fill="currentColor" opacity=".75"/><path d="M16.2 13.6c3.3 0 5.6 2.4 5.6 6.2h-4.6" fill="currentColor" opacity=".75"/>'),
+    food: svg('<path d="M12 22V8" ' + ST + '/><path d="M12 9c-2.6-.4-4-2.2-4-4.8 2.6.4 4 2.2 4 4.8zm0 0c2.6-.4 4-2.2 4-4.8-2.6.4-4 2.2-4 4.8zm0 5c-2.6-.4-4-2.2-4-4.8 2.6.4 4 2.2 4 4.8zm0 0c2.6-.4 4-2.2 4-4.8-2.6.4-4 2.2-4 4.8zm0 5c-2.6-.4-4-2.2-4-4.8 2.6.4 4 2.2 4 4.8zm0 0c2.6-.4 4-2.2 4-4.8-2.6.4-4 2.2-4 4.8z" fill="currentColor"/>'),
+    wood: svg('<rect x="2.5" y="7.5" width="15" height="9" rx="4.5" fill="currentColor"/><ellipse cx="18" cy="12" rx="3.5" ry="4.5" fill="currentColor" opacity=".55"/><ellipse cx="18" cy="12" rx="1.5" ry="2" fill="none" stroke="currentColor" stroke-width="1.2"/>'),
+    stone: svg('<path d="M3 18.5l2.8-7.5 5.2-3.6 6.2 2.2 3.8 8.9z" fill="currentColor"/><path d="M11 7.4l1.6 5.2 7.6 5.9M5.8 11l6.8 1.6" stroke="rgba(0,0,0,.25)" stroke-width="1.2" fill="none"/>'),
+    faith: svg('<circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" ' + ST + '/>'),
+    pause: svg('<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>'),
+    // a quill over an open page: the stories
+    saga: svg('<path d="M20.5 3.5c-4.8.6-8.6 3.6-10.6 8.3L8.4 15.6l1.9.8 1.4-3.6c2.4-.3 4.5-1.6 5.6-3.7-1.5.4-2.6.4-3.6.1 1.7-.8 3.2-2.2 4-3.9-.9.4-1.7.5-2.5.4 2.1-.5 4.2-1.2 5.3-2.2z" fill="currentColor"/><path d="M3 20.5c2.8-1.4 5.6-1.4 8.4 0M3 17.5c1.9-.9 3.8-1.1 5.6-.6" ' + ST + '/>'),
+    scroll: svg('<path d="M6 3h11a2 2 0 0 1 2 2v12M6 3a2 2 0 0 0-2 2v2h4M6 3a2 2 0 0 1 2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-2h-11v2a2 2 0 0 1-2 2" ' + ST + '/><path d="M12 8h4M12 12h4" ' + ST + '/>'),
+    stats: svg('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" ' + ST + '/>'),
+    skip: svg('<path d="M3.5 6.5l7 5.5-7 5.5z M11.5 6.5l7 5.5-7 5.5z" fill="currentColor"/><path d="M20.5 6v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'),
+    photo: svg('<path d="M4 8h3l2-2.5h6L17 8h3a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 19H4a1.5 1.5 0 0 1-1.5-1.5v-8A1.5 1.5 0 0 1 4 8z" ' + ST + '/><circle cx="12" cy="13" r="3.4" ' + ST + '/>'),
+    film: svg('<rect x="2.5" y="6.5" width="13" height="11" rx="2" ' + ST + '/><path d="M15.5 10.5l6-3.5v10l-6-3.5" ' + ST + '/><circle cx="6.5" cy="10.5" r="1.3" fill="currentColor"/>'),
+    sound: svg('<path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" ' + ST + '/>'),
+    mute: svg('<path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M17 9l5 6M22 9l-5 6" ' + ST + '/>'),
+    menu: svg('<path d="M4 6h16M4 12h16M4 18h16" ' + ST + '/>'),
+    close: svg('<path d="M6 6l12 12M18 6L6 18" ' + ST + '/>'),
+    eye: svg('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" ' + ST + '/><circle cx="12" cy="12" r="3" fill="currentColor"/>'),
+    tree: svg('<rect x="9" y="2.5" width="6" height="4.5" rx="1" fill="currentColor"/><rect x="2.5" y="16" width="6" height="4.5" rx="1" fill="currentColor"/><rect x="15.5" y="16" width="6" height="4.5" rx="1" fill="currentColor"/><path d="M12 7v4.5M5.5 16v-4.5h13V16" ' + ST + '/>'),
+    rain: svg('<path d="M7 15.5a4.2 4.2 0 0 1 .3-8.4A5.8 5.8 0 0 1 18.4 8a3.8 3.8 0 0 1-.4 7.5z" fill="currentColor"/><path d="M8 18.5l-1 2.5M12 18.5l-1 2.5M16 18.5l-1 2.5" ' + ST + '/>'),
+    growth: svg('<path d="M12 21.5v-9" ' + ST + '/><path d="M12 13C12 8.6 9 6 4 6c0 4.4 3 7 8 7zM12 10.5c0-4.4 3-7 8-7 0 4.4-3 7-8 7z" fill="currentColor"/>'),
+    heal: svg('<path d="M12 21s-8-4.9-8-11a4.6 4.6 0 0 1 8-3 4.6 4.6 0 0 1 8 3c0 6.1-8 11-8 11z" fill="currentColor"/><path d="M12 8.5v6M9 11.5h6" stroke="#1a1410" stroke-width="2" stroke-linecap="round"/>'),
+    fertility: svg('<circle cx="12" cy="6.5" r="3.4" fill="currentColor"/><circle cx="17.2" cy="10.3" r="3.4" fill="currentColor"/><circle cx="15.2" cy="16.4" r="3.4" fill="currentColor"/><circle cx="8.8" cy="16.4" r="3.4" fill="currentColor"/><circle cx="6.8" cy="10.3" r="3.4" fill="currentColor"/><circle cx="12" cy="11.8" r="2.6" fill="#1a1410"/>'),
+    lightning: svg('<path d="M13.5 2L4.5 13.5h6.2L9.5 22l9.5-12.2h-6.4z" fill="currentColor"/>'),
+    meteor: svg('<circle cx="15.5" cy="15.5" r="5.5" fill="currentColor"/><path d="M2.5 3.5l8 8M6.5 2.5l6.5 6.5M2.5 7.5L9 14" ' + ST + '/>'),
+    wolves: svg('<ellipse cx="12" cy="16.2" rx="4.6" ry="3.9" fill="currentColor"/><ellipse cx="5.6" cy="10.8" rx="2.1" ry="2.7" fill="currentColor"/><ellipse cx="18.4" cy="10.8" rx="2.1" ry="2.7" fill="currentColor"/><ellipse cx="9.2" cy="6.4" rx="2.1" ry="2.8" fill="currentColor"/><ellipse cx="14.8" cy="6.4" rx="2.1" ry="2.8" fill="currentColor"/>'),
+    hand: svg('<path d="M8 11.5V5a1.6 1.6 0 0 1 3.2 0v6M11.2 5V3.9a1.6 1.6 0 0 1 3.2 0V11M14.4 5.4a1.6 1.6 0 0 1 3.2 0V12.5c0 5-2.9 8.5-7 8.5-3.1 0-5.1-1.9-6-4.8l-1.2-4a1.6 1.6 0 0 1 3-1l1.4 3.2" ' + ST + '/>'),
+    hammer: svg('<path d="M14.5 5.5l4 4-2.5 2.5-4-4z" fill="currentColor"/><path d="M13 10.5L4.5 19" ' + ST + '/><path d="M12 6.5l3-3 3.5 1" ' + ST + '/>'),
+    flame: svg('<path d="M12 22c-4.2 0-7-2.8-7-6.6 0-3.6 2.6-5.4 3.4-9.4 2 1.2 3.2 3 3.4 5.4 1-1 1.6-2.4 1.6-4.4 3 2.2 5.6 5 5.6 8.6 0 3.8-2.8 6.4-7 6.4z" fill="currentColor"/>'),
+    heart: svg('<path d="M12 21s-8.5-5-8.5-11.2A4.8 4.8 0 0 1 12 7a4.8 4.8 0 0 1 8.5 2.8C20.5 16 12 21 12 21z" fill="currentColor"/>'),
+    cross: svg('<path d="M10 3h4v5h5v4h-5v9h-4v-9H5V8h5z" fill="currentColor"/>'),
+    fest: svg('<path d="M12 2.5c-2 2.6-2.6 4.4-1.3 6.4.5-1.1 1.3-1.5 1.3-1.5s.8.4 1.3 1.5c1.3-2 .7-3.8-1.3-6.4z" fill="#f2a23a"/><path d="M10.4 10h3.2l-.6 11.5h-2z" fill="currentColor"/><circle cx="5" cy="6" r="1.3" fill="#e85a7a"/><circle cx="19" cy="5" r="1.2" fill="#6ab8e8"/><circle cx="18" cy="12" r="1.1" fill="#8ad04a"/><circle cx="5.5" cy="13" r="1.1" fill="#f2c14e"/>'),
+    star: svg('<path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.2 1.3-6.6-4.9-4.6 6.6-.8z" fill="currentColor"/>'),
+    cloud: svg('<path d="M7 18.5a4.6 4.6 0 0 1 .3-9.2A6 6 0 0 1 18.7 10a4.3 4.3 0 0 1-.5 8.5z" fill="currentColor"/>'),
+    sun: svg('<circle cx="12" cy="12" r="4.6" fill="currentColor"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" ' + ST + '/>'),
+    leaf: svg('<path d="M5 19c0-8 5-14 15-14 0 10-6 15-14 15" fill="currentColor"/><path d="M5 19c3-4 6-7 10-9" stroke="#1a1410" stroke-width="1.5" fill="none"/>'),
+    boat: svg('<path d="M3 15h18l-3 5H6z" fill="currentColor"/><path d="M12 3v11" ' + ST + '/><path d="M12.8 4c4 2.6 5.2 6 4.6 9h-4.6z" fill="currentColor"/>'),
+    save: svg('<path d="M5 3h11l3 3v15H5z" ' + ST + '/><path d="M8 3v5h7V3M8 21v-6h8v6" ' + ST + '/>'),
+    home: svg('<path d="M3 11l9-7 9 7v10H3z" fill="currentColor"/>'),
+    sword: svg('<path d="M14.5 3H21v6.5L10 20.5 3.5 14z" fill="currentColor"/><path d="M5 15.5l3.5 3.5M3 21l3-3M7.5 13l3.5 3.5" stroke="#1a1410" stroke-width="1.6" stroke-linecap="round"/><path d="M2.5 19.5l2 2" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>'),
+    crown: svg('<path d="M3 18l1.5-10 4.5 4 3-7 3 7 4.5-4L21 18z" fill="currentColor"/><rect x="3" y="19" width="18" height="2" rx="1" fill="currentColor"/>'),
+    chain: svg('<rect x="2.5" y="8.5" width="10" height="7" rx="3.5" ' + ST + '/><rect x="11.5" y="8.5" width="10" height="7" rx="3.5" ' + ST + '/>'),
+    dove: svg('<path d="M3 13c3 0 5-1 7-4 1-1.6 2.6-3 5-3 1.4 0 2.4.6 3 1.4L21 7l-2 2c0 5-4 9-10 9-2 0-4-.6-5-1.5L7 15c-2 0-3.2-.8-4-2z" fill="currentColor"/>'),
+    shield: svg('<path d="M12 2.5l8 3v6c0 5-3.5 8.6-8 10-4.5-1.4-8-5-8-10v-6z" fill="currentColor"/>'),
+    split: svg('<path d="M12 21v-7M12 14L5 5M12 14l7-9M5 5v4M5 5h4M19 5v4M19 5h-4" ' + ST + '/>'),
+    scale: svg('<path d="M12 3v18M7 21h10M4 7h16" ' + ST + '/><path d="M4 7l-2.5 6h5zM20 7l-2.5 6h5z" fill="currentColor"/>'),
+    skullx: svg('<path d="M12 2.5c-5 0-8 3.3-8 7.6 0 2.7 1.3 4.4 3 5.4V19h10v-3.5c1.7-1 3-2.7 3-5.4 0-4.3-3-7.6-8-7.6z" fill="currentColor"/><circle cx="9" cy="10.5" r="1.8" fill="#1a1410"/><circle cx="15" cy="10.5" r="1.8" fill="#1a1410"/><path d="M9 19v2.5M12 19v2.5M15 19v2.5" stroke="currentColor" stroke-width="1.6"/>'),
+    quake: svg('<path d="M2 17h5l2-4 3 6 2-8 2 6h6" ' + ST + '/><path d="M4 21h16" ' + ST + ' opacity=".5"/><path d="M8 4l2 3-2 2M15 3l-1 3 2 2" ' + ST + '/>'),
+    plague: svg('<circle cx="12" cy="12" r="5.2" fill="currentColor"/><path d="M12 2.5v3.2M12 18.3v3.2M2.5 12h3.2M18.3 12h3.2M5.3 5.3l2.3 2.3M16.4 16.4l2.3 2.3M5.3 18.7l2.3-2.3M16.4 7.6l2.3-2.3" ' + ST + '/><circle cx="10.4" cy="10.6" r="1.2" fill="#1a1410"/><circle cx="13.8" cy="13.2" r="1" fill="#1a1410"/>'),
+    anoint: svg('<path d="M4 15l1.4-7 4 3.4L12 5l2.6 6.4 4-3.4L20 15z" fill="currentColor"/><rect x="4" y="16.2" width="16" height="2.2" rx="1" fill="currentColor"/><path d="M12 19.5c-1 1.4-1 2.4 0 2.5 1-.1 1-1.1 0-2.5z" fill="currentColor"/>'),
+    liberate: svg('<rect x="2" y="9" width="8.5" height="6" rx="3" ' + ST + '/><path d="M13.5 9h5.5a3 3 0 0 1 0 6h-5.5" ' + ST + '/><path d="M11.2 6.5l1.2 2M12.8 17.5l-1.2-2M11.9 12h1.2" ' + ST + '/>'),
+    fury: svg('<path d="M4 20l6-6M20 20l-6-6" ' + ST + '/><path d="M14.5 3H21v6.5L13 17.5 6.5 11zM9.5 3H3v6.5l8 8 6.5-6.5z" fill="currentColor" opacity=".9"/>'),
+    discord: svg('<path d="M12 21s-8.5-5-8.5-11.2A4.8 4.8 0 0 1 12 7a4.8 4.8 0 0 1 8.5 2.8C20.5 16 12 21 12 21z" fill="currentColor"/><path d="M12 7l-1.5 4 3 2-2 3.5 1 2.5" stroke="#1a1410" stroke-width="1.8" fill="none" stroke-linejoin="round"/>'),
+    peace: svg('<path d="M3 13c3 0 5-1 7-4 1-1.6 2.6-3 5-3 1.4 0 2.4.6 3 1.4L21 7l-2 2c0 5-4 9-10 9-2 0-4-.6-5-1.5L7 15c-2 0-3.2-.8-4-2z" fill="currentColor"/><path d="M8 13.5c2 .5 4-.5 5.5-2.5" stroke="#1a1410" stroke-width="1.2" fill="none" opacity=".45"/>'),
+    grave: svg('<path d="M6 21v-10a6 6 0 0 1 12 0v10z" fill="currentColor"/><path d="M12 9v6M9.5 11.5h5" stroke="#1a1410" stroke-width="1.6"/>'),
+    tech: svg('<path d="M2.5 5c3.2-1.2 6.4-1 9.5 1 3.1-2 6.3-2.2 9.5-1v14c-3.2-1.2-6.4-1-9.5 1-3.1-2-6.3-2.2-9.5-1z" fill="currentColor"/><path d="M12 6v14M5 9c1.6-.4 3.2-.3 4.6.3M5 12.5c1.6-.4 3.2-.3 4.6.3M14.4 9.3c1.4-.6 3-.7 4.6-.3M14.4 12.8c1.4-.6 3-.7 4.6-.3" stroke="#1a1410" stroke-width="1.2" fill="none"/>'),
+    cave: svg('<path d="M2.5 20c0-8.5 4.3-14.5 9.5-14.5s9.5 6 9.5 14.5z" fill="currentColor" opacity=".3"/><path d="M2.5 20c0-8.5 4.3-14.5 9.5-14.5s9.5 6 9.5 14.5M7.8 20c0-5.2 1.9-8.8 4.2-8.8s4.2 3.6 4.2 8.8M2 20h20" ' + ST + '/>'),
+    gruta: svg('<path d="M2 21c0-9 4.5-15.5 10-15.5S22 12 22 21z" fill="currentColor" opacity=".35"/><path d="M7.5 21c0-5.5 2-9.5 4.5-9.5s4.5 4 4.5 9.5" fill="currentColor"/><path d="M12 2v2.5M5.5 4.5l1.6 1.8M18.5 4.5l-1.6 1.8" ' + ST + '/>'),
+    desabar: svg('<path d="M2 21c0-9 4.5-15.5 10-15.5S22 12 22 21z" fill="currentColor" opacity=".35"/><path d="M7 21l2-5 3 2 2-4 3 7" fill="currentColor"/><path d="M6 9l2 1.5M15 7l1.8-1.5M11 10.5l1.5-2" ' + ST + '/>'),
+    map: svg('<path d="M3 6.5l5.5-2.5 7 2.5 5.5-2.5v13.5l-5.5 2.5-7-2.5L3 20z" fill="currentColor" opacity=".35"/><path d="M3 6.5l5.5-2.5 7 2.5 5.5-2.5v13.5l-5.5 2.5-7-2.5L3 20zM8.5 4v13.5M15.5 6.5V20" ' + ST + '/>'),
+    summon: svg('<path d="M7 3.5c0 2 1 3 2.5 3.5M5 5.5c1 .8 2.4 1.3 3.8 1.2M17 3.5c0 2-1 3-2.5 3.5M19 5.5c-1 .8-2.4 1.3-3.8 1.2" ' + ST + '/><path d="M8.5 9c0-1.4 1.6-2.4 3.5-2.4s3.5 1 3.5 2.4l-.6 5.6c-.3 2.4-1.5 4.4-2.9 4.4s-2.6-2-2.9-4.4z" fill="currentColor"/><circle cx="10.4" cy="11.2" r=".9" fill="#1a1410"/><circle cx="13.6" cy="11.2" r=".9" fill="#1a1410"/><path d="M4 16l1 1.6L6.6 18 5 19l-.6 1.6L3.4 19 2 18l1.6-.4zM20 13l.7 1.1 1.3.4-1.3.5-.7 1.1-.6-1.1-1.3-.5 1.3-.4z" fill="currentColor"/>'),
+    spring: svg('<path d="M12 22v-9" ' + ST + '/><path d="M12 17c-3 0-5-2-5.5-4.5 3 0 5 1.5 5.5 4.5zM12 15c2.5 0 4.5-1.6 5-4 -2.6 0-4.6 1.4-5 4z" fill="currentColor" opacity=".6"/><circle cx="12" cy="7" r="2.2" fill="currentColor"/><circle cx="12" cy="3.4" r="2" fill="currentColor"/><circle cx="15.4" cy="6" r="2" fill="currentColor"/><circle cx="8.6" cy="6" r="2" fill="currentColor"/><circle cx="14.2" cy="9.6" r="2" fill="currentColor"/><circle cx="9.8" cy="9.6" r="2" fill="currentColor"/><circle cx="12" cy="7" r="1.4" fill="#f2c23a"/>'),
+    migrate: svg('<path d="M3 7l4 5-4 5M9 7l4 5-4 5M15 7l4 5-4 5" ' + ST + '/><circle cx="21" cy="12" r="1.3" fill="currentColor"/>'),
+    tame: svg('<ellipse cx="12" cy="15.4" rx="4.2" ry="3.6" fill="currentColor"/><ellipse cx="6.2" cy="10.6" rx="1.9" ry="2.5" fill="currentColor"/><ellipse cx="17.8" cy="10.6" rx="1.9" ry="2.5" fill="currentColor"/><ellipse cx="9.4" cy="6.6" rx="1.9" ry="2.5" fill="currentColor"/><ellipse cx="14.6" cy="6.6" rx="1.9" ry="2.5" fill="currentColor"/><path d="M3 20.5c3 1.6 15 1.6 18 0" stroke="#f2c23a" stroke-width="2" fill="none" stroke-linecap="round"/>'),
+    climate: svg('<path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/><path d="M12 5v14" ' + ST + '/><path d="M16 8v8M13.6 9.4l4.8 5.2M18.4 9.4l-4.8 5.2" stroke="#bfe0ff" stroke-width="1.6" stroke-linecap="round" fill="none"/><path d="M5 12h-2.5M6 8L4.2 6.2M6 16l-1.8 1.8" stroke="#f2c23a" stroke-width="1.6" stroke-linecap="round" fill="none"/>'),
+    locusts: svg('<ellipse cx="12" cy="13" rx="2.2" ry="5.5" fill="currentColor"/><circle cx="12" cy="6.3" r="2" fill="currentColor"/><path d="M11 5l-2.5-3M13 5l2.5-3" ' + ST + '/><path d="M10 11c-4-2-7-1-8 1 2 1.4 5 1.4 8 0zM14 11c4-2 7-1 8 1-2 1.4-5 1.4-8 0z" fill="currentColor" opacity=".55"/><path d="M10 15.5l-3 4M14 15.5l3 4M10.2 13l-3.4 1M13.8 13l3.4 1" ' + ST + '/>'),
+    beast: svg('<path d="M5 3c2 4 2.5 9 1 15M10.5 2.5c1.6 4.4 1.8 10.4.3 17M16 3c1.8 4.2 2 9.6.6 15.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"/><path d="M3.5 21c5.5-1.5 11.5-1.5 17 0" stroke="#e8562a" stroke-width="1.8" stroke-linecap="round" fill="none"/>'),
+    book: svg('<path d="M5 3h12.5a1.5 1.5 0 0 1 1.5 1.5V21H6.5A2.5 2.5 0 0 1 4 18.5V4a1 1 0 0 1 1-1z" fill="currentColor"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H19" stroke="#1a1410" stroke-width="1.4" fill="none"/><path d="M9 7h6M9 10h4" stroke="#1a1410" stroke-width="1.4"/>'),
+    city: svg('<path d="M2 21V11l4-3 4 3v10zM10 21V6l5-3.2L20 6v15zM20 21v-7h2.5v7z" fill="currentColor"/><path d="M4.5 14h3M4.5 17.5h3M13 9h4M13 12.5h4M13 16h4" stroke="#1a1410" stroke-width="1.4"/>'),
+    ship: svg('<path d="M1.5 14h21l-3.5 5H5z" fill="currentColor"/><path d="M12 2v11" stroke="currentColor" stroke-width="1.8"/><path d="M12.8 3c3.6 1.2 5.4 3.4 5.4 5.4 0 1.6-.8 2.8-1.8 3.6h-3.6z" fill="currentColor"/><path d="M6 19.5l-1.6 2.5M10 19.5l-1.2 2.5M14 19.5l-.8 2.5M18 19.5l-.4 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>'),
+    cart: svg('<path d="M2.5 7.5h14l-1 7.5h-12z" fill="currentColor"/><circle cx="6.5" cy="18" r="2.8" fill="currentColor"/><circle cx="13.5" cy="18" r="2.8" fill="currentColor"/><circle cx="6.5" cy="18" r="1" fill="#1a1410"/><circle cx="13.5" cy="18" r="1" fill="#1a1410"/><path d="M16.5 11h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'),
+    wall: svg('<path d="M2 21V8.5h3.2v2.2h2.4V8.5h3.2v2.2h2.4V8.5h3.2v2.2h2.4V8.5H22V21z" fill="currentColor"/><path d="M9.5 21v-4.5a2.5 2.5 0 0 1 5 0V21z" fill="#1a1410"/><path d="M2 14.5h7M15 14.5h7" stroke="#1a1410" stroke-width="1" opacity=".4"/>'),
+    road: svg('<path d="M9 2.5L4 21.5M15 2.5l5 19" ' + ST + '/><path d="M12 4v3M12 10v3.5M12 17v3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'),
+    aqueduct: svg('<path d="M1.5 5h21v3h-21z" fill="currentColor"/><path d="M1.5 8v13h3v-6a2.5 2.5 0 0 1 5 0v6h5v-6a2.5 2.5 0 0 1 5 0v6h2.5V8z" fill="currentColor" opacity=".85"/><path d="M3 6.5h18" stroke="#3ab7d8" stroke-width="1.4"/>'),
+    wonder: svg('<path d="M12 3l10 18H2z" fill="currentColor"/><path d="M12 3l2.6 18M7 12h10M4.8 16.5h14.4" stroke="#1a1410" stroke-width="1.1" opacity=".45"/>'),
+    wave: svg('<path d="M2 15c3-4 5-4 8 0s5 4 8 0 4-2 4-2v6c-2 1.6-4 1.6-4 1.6-3 0-5-3.6-8-3.6s-5 3.6-8 3.6z" fill="currentColor"/><path d="M2 9c3-4 5-4 8 0s5 4 8 0 4-2 4-2" ' + ST + '/>'),
+    mountain: svg('<path d="M1.5 20.5L9 7l4 6.5 2.6-3.5 6.9 10.5z" fill="currentColor"/><path d="M9 7l-2 3.6 2 -1 1.8 1.4z" fill="#fff" opacity=".7"/>'),
+    word: svg('<path d="M4 3.5h16a1.5 1.5 0 0 1 1.5 1.5v10a1.5 1.5 0 0 1-1.5 1.5H10l-5.5 4.5v-4.5H4A1.5 1.5 0 0 1 2.5 15V5A1.5 1.5 0 0 1 4 3.5z" fill="currentColor"/><path d="M7 8h10M7 11.5h6" stroke="#1a1410" stroke-width="1.5" stroke-linecap="round"/>'),
+    ram: svg('<rect x="2" y="9" width="16" height="4.5" rx="1.5" fill="currentColor"/><path d="M18 8h3.5v6.5H18z" fill="currentColor"/><circle cx="6" cy="18" r="2.5" fill="currentColor"/><circle cx="14" cy="18" r="2.5" fill="currentColor"/><path d="M4 9l3-5h6l3 5" ' + ST + '/>'),
+    bow: svg('<path d="M6 3c8 3 11 8 9 18" ' + ST + '/><path d="M6 3l9 18" stroke="currentColor" stroke-width="1.2"/><path d="M3 13h14.5M15 10.5l3 2.5-3 2.5" ' + ST + '/>'),
+    sacrifice: svg('<path d="M4 21h16l-2-5H6z" fill="currentColor"/><path d="M6.5 15.5h11l-1.5-4h-8z" fill="currentColor" opacity=".85"/><path d="M12 2.5c-2.6 3-3.4 5-1.6 7.4.6-1.4 1.6-1.8 1.6-1.8s1 .4 1.6 1.8c1.8-2.4 1-4.4-1.6-7.4z" fill="#e85a3a"/>'),
+    // miracles: dádivas, ira, terra, mar, palavra, destino
+    goldrain: svg('<path d="M6.5 9.5a3.6 3.6 0 0 1 .3-7.1A5 5 0 0 1 16.4 3a3.3 3.3 0 0 1-.4 6.5z" fill="currentColor" opacity=".55"/><ellipse cx="7" cy="14" rx="2.3" ry="2.3" fill="currentColor"/><ellipse cx="14.5" cy="12.5" rx="1.2" ry="2.3" fill="currentColor"/><ellipse cx="11" cy="19.5" rx="2.3" ry="2.3" fill="currentColor"/><ellipse cx="18" cy="18" rx="2" ry="1" fill="currentColor"/><path d="M6.2 13.2h1.6M10.2 18.7h1.6" stroke="#1a1410" stroke-width="1" opacity=".5"/>'),
+    winewell: svg('<path d="M5 13h14v8H5z" fill="currentColor"/><path d="M5 16h14M9 13v8M15 13v8" stroke="#1a1410" stroke-width="1" opacity=".4"/><path d="M12 11c0-3 0-5 0-6.5M12 5c-2 0-4.5 1-5.5 3.5M12 5c2 0 4.5 1 5.5 3.5" stroke="#b0306a" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="6.3" cy="10.2" r="1.2" fill="#b0306a"/><circle cx="17.7" cy="10.2" r="1.2" fill="#b0306a"/><circle cx="12" cy="3" r="1.3" fill="#b0306a"/>'),
+    resurrect: svg('<path d="M5 21h14" ' + ST + '/><path d="M8 21v-6.5a4 4 0 0 1 8 0V21" fill="currentColor" opacity=".45"/><circle cx="12" cy="6.2" r="2.4" fill="currentColor"/><path d="M12 9v6M9 11.5l3-1.5 3 1.5" ' + ST + '/><path d="M12 1.5v1.6M7.6 3.2l.9 1.2M16.4 3.2l-.9 1.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>'),
+    ghosts: svg('<path d="M6 21V10a6 6 0 0 1 12 0v11l-2-1.6-2 1.6-2-1.6-2 1.6-2-1.6z" fill="currentColor"/><circle cx="9.6" cy="10.5" r="1.3" fill="#1a1410"/><circle cx="14.4" cy="10.5" r="1.3" fill="#1a1410"/><path d="M10.5 14.5c.9.7 2.1.7 3 0" stroke="#1a1410" stroke-width="1.2" fill="none" stroke-linecap="round"/>'),
+    love: svg('<path d="M10 20s-7-4.2-7-9.4A4 4 0 0 1 10 8.3a4 4 0 0 1 7 2.3C17 15.8 10 20 10 20z" fill="currentColor"/><path d="M3 21L21 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M21 3l-4.2.6 3.6 3.6z" fill="currentColor"/><path d="M3 21l1.4-3.6 2.2 2.2z" fill="currentColor" opacity=".7"/>'),
+    duel: svg('<path d="M4 4l9.5 9.5M20 4l-9.5 9.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M12.2 14.8l-3 3M11.8 14.8l3 3M6.5 17.5l-2 2.5M17.5 17.5l2 2.5" ' + ST + '/><circle cx="12" cy="3.4" r="1.3" fill="currentColor"/>'),
+    dream: svg('<path d="M16.5 3.5a8 8 0 1 0 4 12.5 6.8 6.8 0 0 1-4-12.5z" fill="currentColor"/><path d="M9 7.2l.6 1.5 1.6.5-1.6.6L9 11.3l-.6-1.5-1.6-.6 1.6-.5zM6.4 13.4l.4 1 1 .3-1 .4-.4 1-.4-1-1-.4 1-.3z" fill="#1a1410"/>'),
+    winter: svg('<path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9.5 3.5L12 6l2.5-2.5M9.5 20.5L12 18l2.5 2.5M3.6 10.4L7 9.5 6.1 6.1M17.9 17.9L17 14.5l3.4-.9M3.6 13.6L7 14.5l-.9 3.4M17.9 6.1L17 9.5l3.4.9" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'),
+    dragon: svg('<path d="M3 13c3-1 5-4 6-8 1.5 2.5 2 4.5 1.8 6.5L14 9l-.6 3.4 4.2-1.6-2 3.4 5.4.3-6 2.6c-1.6.7-3.4 1-5 .6L6 21l.6-4.2C5 16.3 3.8 15 3 13z" fill="currentColor"/><circle cx="7.6" cy="12.6" r=".9" fill="#1a1410"/>'),
+    seapart: svg('<path d="M2 6c2-1.2 3.5-1.2 5 0M2 10c2-1.2 3.5-1.2 5 0M17 6c1.5-1.2 3-1.2 5 0M17 10c1.5-1.2 3-1.2 5 0" ' + ST + '/><path d="M2 14c2.2 0 4-.6 6-3v10H2zM22 14c-2.2 0-4-.6-6-3v10h6z" fill="currentColor"/><path d="M10.5 21l1.5-9 1.5 9" stroke="currentColor" stroke-width="1.4" fill="none" stroke-dasharray="1.6 1.6"/>'),
+    golden: svg('<circle cx="12" cy="12" r="5.2" fill="currentColor"/><path d="M12 1.8v3.4M12 18.8v3.4M1.8 12h3.4M18.8 12h3.4M4.8 4.8l2.4 2.4M16.8 16.8l2.4 2.4M4.8 19.2l2.4-2.4M16.8 7.2l2.4-2.4" ' + ST + '/><path d="M9.3 12.6l1.8 1.8 3.8-4.2" stroke="#1a1410" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'),
+    curse: svg('<circle cx="12" cy="10" r="7.5" fill="currentColor"/><path d="M8.2 9.2l2.4 1.4M15.8 9.2l-2.4 1.4M9 14.6c1.8-1.4 4.2-1.4 6 0" stroke="#1a1410" stroke-width="1.7" fill="none" stroke-linecap="round"/><path d="M6.5 17.5L4 22M12 18v4M17.5 17.5L20 22" ' + ST + '/>'),
+    raise: svg('<path d="M1.5 20.5c2.5-1.2 4.5-1.2 7 0s4.5 1.2 7 0 4.5-1.2 7 0" ' + ST + '/><path d="M4 17l4.5-7 3 3.5 2.5-3 5.5 6.5z" fill="currentColor"/><path d="M12 8V2.5M9.5 5L12 2.5 14.5 5" ' + ST + '/>'),
+    sink: svg('<path d="M1.5 12.5c2.5-1.2 4.5-1.2 7 0s4.5 1.2 7 0 4.5-1.2 7 0" ' + ST + '/><path d="M5 21l3-5 2.5 2 2.5-3.5 4 6.5z" fill="currentColor" opacity=".7"/><path d="M12 2.5V9M9.5 6.5L12 9l2.5-2.5" ' + ST + '/>'),
+    forest: svg('<path d="M7 2.5l4.5 7H9l3.5 5.5h-11L5 9.5H2.5z" fill="currentColor"/><path d="M16.5 5l4.5 7h-2.5l3 5h-10l3-5H12z" fill="currentColor" opacity=".8"/><path d="M7 15v6.5M16.5 17v4.5" ' + ST + '/>'),
+    vein: svg('<path d="M2.5 19l3.5-9 6-4.5 6.5 3 3 10.5z" fill="currentColor"/><path d="M8 10.5l3 3.5-1 4M12 5.5l1.5 5 4 2.5" stroke="#1a1410" stroke-width="1.5" fill="none" stroke-linejoin="round"/><path d="M11 14l2.5 1" stroke="#fff" stroke-width="1.2" opacity=".6"/>'),
+    volcano: svg('<path d="M1.5 21.5l6.5-11h8l6.5 11z" fill="currentColor"/><path d="M8 10.5l2 2.5 2-2 2 2 2-2.5" stroke="#e8562a" stroke-width="1.8" fill="none"/><path d="M12 8.5c-.6-2 .4-3.2 1.4-4.2M9.5 8c-1-1.5-1-3 0-4.5M14.5 8.5c1-1 2.5-1.3 3.5-.8" stroke="#e8562a" stroke-width="1.6" fill="none" stroke-linecap="round"/>'),
+    shoal: svg('<path d="M3 9c2.4-2.6 6-2.6 8.5 0-2.5 2.6-6.1 2.6-8.5 0zM11.5 9l2.5-2v4z" fill="currentColor"/><path d="M9 16.5c2.4-2.6 6-2.6 8.5 0-2.5 2.6-6.1 2.6-8.5 0zM17.5 16.5l2.5-2v4z" fill="currentColor" opacity=".8"/><circle cx="5.3" cy="8.6" r=".8" fill="#1a1410"/><circle cx="11.3" cy="16.1" r=".8" fill="#1a1410"/>'),
+    wind: svg('<path d="M2.5 8.5h11a3 3 0 1 0-3-3M2.5 12.5h16a3 3 0 1 1-3 3M2.5 16.5h7" ' + ST + '/>'),
+    seastorm: svg('<path d="M6.5 11a4 4 0 0 1 .4-8A5.5 5.5 0 0 1 17.6 3.8a3.6 3.6 0 0 1-.4 7.2z" fill="currentColor"/><path d="M12.5 11.5l-2.5 4h3l-2 4" stroke="#ffd24a" stroke-width="1.8" fill="none" stroke-linejoin="round"/><path d="M1.5 20c2-1.4 3.6-1.4 5.6 0M16.5 20c2-1.4 3.6-1.4 5.6 0" ' + ST + '/>'),
+    tsunami: svg('<path d="M2 21.5c0-9 5-15.5 13-15.5 3.5 0 6 1.8 7 4.2-2.8-1.6-6.4-.6-7.2 2.3-.8 2.8 1.2 5 4.2 5-2 2.6-6 4-9.5 4H2z" fill="currentColor"/><path d="M15 6c-2.6.6-4.6 2.6-5.4 5.6" stroke="#1a1410" stroke-width="1.2" fill="none" opacity=".45"/>'),
+    kraken: svg('<path d="M12 2.5c-3.8 0-6.5 3-6.5 7 0 2 .7 3.5 1.8 4.5h9.4c1.1-1 1.8-2.5 1.8-4.5 0-4-2.7-7-6.5-7z" fill="currentColor"/><circle cx="9.5" cy="10" r="1.3" fill="#1a1410"/><circle cx="14.5" cy="10" r="1.3" fill="#1a1410"/><path d="M7.5 14c-1 3-3.5 4-5 3.5M10 14.5c-.4 3-1.4 5.5-3 6.5M14 14.5c.4 3 1.4 5.5 3 6.5M16.5 14c1 3 3.5 4 5 3.5" ' + ST + '/>'),
+    prophecy: svg('<path d="M12 2.5l1.8 4.5 4.7.4-3.6 3 1.1 4.6L12 12.5l-4 2.5 1.1-4.6-3.6-3 4.7-.4z" fill="currentColor"/><path d="M3.5 21.5c2.5-3.5 5.3-5 8.5-5s6 1.5 8.5 5" ' + ST + '/>'),
+    commandment: svg('<path d="M3 21V7.5A4.5 4.5 0 0 1 12 7.5V21zM12 21V7.5a4.5 4.5 0 0 1 9 0V21z" fill="currentColor"/><path d="M5.5 10h4M5.5 13h4M5.5 16h4M14.5 10h4M14.5 13h4M14.5 16h4" stroke="#1a1410" stroke-width="1.3"/>'),
+    inspire: svg('<path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.6.5.9 1.2.9 2V17h5.8v-.7c0-.8.3-1.5.9-2A6.5 6.5 0 0 0 12 2.5z" fill="currentColor"/><path d="M9.3 19.3h5.4M10.2 21.5h3.6" ' + ST + '/><path d="M12 6.5v5M10 9.5l2 2 2-2" stroke="#1a1410" stroke-width="1.4" fill="none"/>'),
+    sign: svg('<circle cx="16.5" cy="7.5" r="3.4" fill="currentColor"/><path d="M13.8 9.5L3 20.5M15 10.8L7 21M12.2 8.2L2.5 15.5" ' + ST + ' opacity=".75"/><path d="M5 4l.6 1.6 1.6.6-1.6.6L5 8.4l-.6-1.6-1.6-.6 1.6-.6z" fill="currentColor"/>'),
+    vision: svg('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="currentColor"/><circle cx="12" cy="12" r="3.6" fill="#1a1410"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><path d="M12 1.5v2M4.5 4l1.2 1.6M19.5 4l-1.2 1.6" ' + ST + '/>'),
+    hero: svg('<path d="M12 2.5l8 3v6c0 5-3.5 8.6-8 10-4.5-1.4-8-5-8-10v-6z" fill="currentColor"/><path d="M12 6.5l1.4 3 3.2.3-2.4 2.1.7 3.2-2.9-1.7-2.9 1.7.7-3.2-2.4-2.1 3.2-.3z" fill="#1a1410"/>'),
+    divwall: svg('<path d="M2 21V10h3v2h2.5v-2h3v2H13v-2h3v2h2.5v-2H22v11z" fill="currentColor"/><path d="M12 1.5l1 2.3 2.4.2-1.8 1.6.6 2.4L12 6.7 9.8 8l.6-2.4-1.8-1.6 2.4-.2z" fill="currentColor"/><path d="M9.5 21v-3.5a2.5 2.5 0 0 1 5 0V21z" fill="#1a1410"/>'),
+  };
+  // civilization emblems
+  const CIVICON = {
+    grego: '<path d="M12 2.5L21.5 7.5h-19z" fill="currentColor"/><rect x="3" y="8.5" width="18" height="1.8" fill="currentColor"/><path d="M6 11.5v7M10 11.5v7M14 11.5v7M18 11.5v7" stroke="currentColor" stroke-width="2.3"/><rect x="2.5" y="19" width="19" height="2.5" fill="currentColor"/>',
+    nordico: '<path d="M1.5 13.5h17.8c1.6 0 2.6-1.2 2.6-2.8V5l-2.4 1.4L18 4.2v7.1H3z" fill="currentColor"/><path d="M1.8 13.5c1 3.6 3.6 5.2 6.2 5.2h8.6c2.2 0 3.8-1.5 4.4-5.2z" fill="currentColor"/><circle cx="6" cy="15.6" r="1.4" fill="#1a1410" opacity=".55"/><circle cx="10" cy="15.6" r="1.4" fill="#1a1410" opacity=".55"/><circle cx="14" cy="15.6" r="1.4" fill="#1a1410" opacity=".55"/><path d="M10 2.5v10" stroke="currentColor" stroke-width="1.7"/><path d="M10.7 3h6.3v6.8h-6.3z" fill="currentColor" opacity=".7"/>',
+    egipcio: '<ellipse cx="12" cy="6.6" rx="3.6" ry="4.2" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M12 10.8V22M5.5 12.8h13" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"/>',
+    asteca: '<path d="M9.2 2.5h5.6v3.3H9.2zM7 6.5h10v3.6H7zM5 10.8h14v3.6H5zM3 15.1h18v3.6H3zM1.5 19.4h21v2.3h-21z" fill="currentColor"/><path d="M11 7v14.7h2V7z" fill="#1a1410" opacity=".45"/>',
+    romano: '<path d="M12 21c-5-1.3-8.2-5.2-8.2-10.3 0-2.3.6-4.3 1.8-6.2M12 21c5-1.3 8.2-5.2 8.2-10.3 0-2.3-.6-4.3-1.8-6.2" stroke="currentColor" stroke-width="1.6" fill="none"/><g fill="currentColor"><ellipse cx="4.3" cy="7.6" rx="1.1" ry="2.3" transform="rotate(-25 4.3 7.6)"/><ellipse cx="3.9" cy="12" rx="1.1" ry="2.3" transform="rotate(-5 3.9 12)"/><ellipse cx="5.4" cy="16.2" rx="1.1" ry="2.3" transform="rotate(25 5.4 16.2)"/><ellipse cx="8.4" cy="19.2" rx="1.1" ry="2.3" transform="rotate(55 8.4 19.2)"/><ellipse cx="19.7" cy="7.6" rx="1.1" ry="2.3" transform="rotate(25 19.7 7.6)"/><ellipse cx="20.1" cy="12" rx="1.1" ry="2.3" transform="rotate(5 20.1 12)"/><ellipse cx="18.6" cy="16.2" rx="1.1" ry="2.3" transform="rotate(-25 18.6 16.2)"/><ellipse cx="15.6" cy="19.2" rx="1.1" ry="2.3" transform="rotate(-55 15.6 19.2)"/></g><path d="M9.5 8.5h5M12 8.5v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  };
+  UI.civIcon = id => svg(CIVICON[id] || '<circle cx="12" cy="12" r="5" fill="currentColor"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke="currentColor" stroke-width="2"/>');
+  const LOGICON = {
+    hut: ['hammer', 'gold'], house: ['hammer', 'gold'], storehouse: ['hammer', 'gold'], farm: ['food', 'gold'], well: ['hammer', 'gold'], workshop: ['hammer', 'gold'],
+    temple: ['faith', 'gold'], monument: ['star', 'gold'], campfire: ['flame', 'orange'], fire: ['flame', 'red'], bolt: ['lightning', 'blue'], meteor: ['meteor', 'red'],
+    baby: ['heart', 'pink'], heart: ['heart', 'pink'], grave: ['grave', 'grey'], skull: ['grave', 'red'], era: ['star', 'gold'], pop: ['pop', 'gold'], settle: ['home', 'gold'],
+    war: ['sword', 'red'], peace: ['dove', 'blue'], ally: ['shield', 'blue'], crown: ['crown', 'gold'], chain: ['chain', 'grey'], split: ['split', 'orange'], massacre: ['skullx', 'red'], trade: ['scale', 'gold'], tyrant: ['crown', 'red'], free: ['chain', 'gold'], envoy: ['scroll', 'gold'],
+    eye: ['eye', 'gold'], rain: ['rain', 'blue'], storm: ['cloud', 'blue'], sun: ['sun', 'orange'], wolf: ['wolves', 'brown'], deer: ['wolves', 'green'], sick: ['heal', 'green'],
+    heal: ['heal', 'green'], food: ['leaf', 'green'], stone: ['stone', 'grey'], boat: ['boat', 'blue'], flower: ['fertility', 'pink'], info: ['leaf', 'green'],
+    tech: ['tech', 'blue'], city: ['city', 'gold'], ship: ['ship', 'blue'], naval: ['ship', 'red'], cart: ['cart', 'gold'], wall: ['wall', 'grey'], road: ['road', 'gold'],
+    aqueduct: ['aqueduct', 'blue'], wonder: ['wonder', 'gold'], siege: ['ram', 'red'], sacrifice: ['sacrifice', 'red'], lore: ['book', 'gold'], prophecy: ['word', 'gold'], cave: ['cave', 'orange'], paint: ['cave', 'red'],
+    mountain: ['mountain', 'brown'], wave: ['wave', 'blue'], sea: ['wave', 'blue'], saga: ['saga', 'gold'], secret: ['eye', 'purple'], scroll: ['book', 'gold'], rumor: ['word', 'grey'],
+    fest: ['fest', 'gold'], coin: ['scale', 'gold'], gold: ['goldrain', 'gold'], wine: ['winewell', 'purple'], rise: ['resurrect', 'gold'], ghost: ['ghosts', 'purple'], theft: ['chain', 'red'], army: ['sword', 'red'], battle: ['sword', 'red'], tension: ['eye', 'orange'], flee: ['migrate', 'orange'], general: ['crown', 'red'], plague: ['heal', 'red'],
+    curral: ['wolves', 'green'], estabulo: ['wolves', 'green'], acougue: ['hammer', 'gold'], tecelagem: ['hammer', 'gold'], mina: ['stone', 'grey'], forja: ['hammer', 'gold'], ourives: ['hammer', 'gold'],
+    olaria: ['hammer', 'gold'], feira: ['scale', 'gold'], taverna: ['hammer', 'gold'], administracao: ['scroll', 'gold'], coletoria: ['scale', 'gold'], mercado_negro: ['chain', 'grey'], estatua: ['star', 'gold'],
+  };
+  const SYMP = {
+    sol: '<circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    lua: '<path d="M15 3.5a8.5 8.5 0 1 0 5.5 14.9A7 7 0 0 1 15 3.5z" fill="currentColor"/>',
+    arvore: '<path d="M12 3l6 8h-3l4 5H5l4-5H6z" fill="currentColor"/><rect x="11" y="16" width="2" height="5" fill="currentColor"/>',
+    onda: '<path d="M2 15c3-4 5-4 8 0s5 4 8 0 4-2 4-2v5c-2 2-4 2-4 2-3 0-5-4-8-4s-5 4-8 4z" fill="currentColor"/><path d="M2 9c3-4 5-4 8 0s5 4 8 0" stroke="currentColor" stroke-width="2" fill="none"/>',
+    montanha: '<path d="M2 20l7-12 4 6 3-4 6 10z" fill="currentColor"/>',
+    olho: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" fill="currentColor"/><circle cx="12" cy="12" r="3" fill="#1a1410"/>',
+    estrela: '<path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.2 1.3-6.6-4.9-4.6 6.6-.8z" fill="currentColor"/>',
+    chama: '<path d="M12 22c-4.2 0-7-2.8-7-6.6 0-3.6 2.6-5.4 3.4-9.4 2 1.2 3.2 3 3.4 5.4 1-1 1.6-2.4 1.6-4.4 3 2.2 5.6 5 5.6 8.6 0 3.8-2.8 6.4-7 6.4z" fill="currentColor"/>',
+    lobo: '<path d="M4 4l4 5h8l4-5v9l-3 3-5 5-5-5-3-3z" fill="currentColor"/><circle cx="9" cy="12" r="1.2" fill="#1a1410"/><circle cx="15" cy="12" r="1.2" fill="#1a1410"/>',
+    coroa: '<path d="M3 18l1.5-10 4.5 4 3-7 3 7 4.5-4L21 18z" fill="currentColor"/><rect x="3" y="19" width="18" height="2" fill="currentColor"/>',
+  };
+  UI.symbolSVG = k => svg(SYMP[G.Fac.SYMBOLS[(k | 0) % G.Fac.SYMBOLS.length]] || SYMP.sol);
+  // 'a, b ou c' — long lists end with 'ou outro'
+  UI.orList = l => { const L = l.length > 4 ? l.slice(0, 3).concat(['outro dom']) : l; return L.length < 2 ? L.join('') : L.slice(0, -1).join(', ') + ' ou ' + L[L.length - 1]; };
+  UI.flag = (fid, cls) => { const f = G.Fac.get(fid); return f ? `<span class="fc-flag ${cls || ''}" style="--fc:${G.Fac.hex(fid)}">${UI.symbolSVG(f.sym)}</span>` : ''; };
+  UI.selected = null;
+  UI.viewFac = 0;
+  let hudBuilt = false, tUpd = 0, tInsp = 0, lastLogCount = 0;
+
+  // ------------------------------ setup ------------------------------
+  UI.init = function () {
+    $('#ic-pop').innerHTML = ICON.pop; $('#ic-food').innerHTML = ICON.food; $('#ic-wood').innerHTML = ICON.wood; $('#ic-stone').innerHTML = ICON.stone; $('#ic-faith').innerHTML = ICON.faith;
+    $('#btn-pause').innerHTML = ICON.pause;
+    $('#btn-chron').innerHTML = ICON.scroll; $('#btn-stats').innerHTML = ICON.stats; $('#btn-menu').innerHTML = ICON.menu; $('#btn-realms').innerHTML = ICON.crown; $('#btn-lore').innerHTML = ICON.book; if ($('#btn-saga')) $('#btn-saga').innerHTML = ICON.saga;
+    $('#btn-sound').innerHTML = G.Audio.sfxOn || G.Audio.musicOn ? ICON.sound : ICON.mute;
+    // powers
+    const bar = $('#powerbar');
+    UI.buildPowerBar();
+    $('#powertabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; G.Audio.play('click'); UI.setTab(b.dataset.tab); });
+    bar.addEventListener('click', e => { const b = e.target.closest('.pw'); if (!b) return; G.Audio.init(); UI.setPower(G.Input.power === b.dataset.power ? null : b.dataset.power); });
+    bar.addEventListener('mouseover', e => { const b = e.target.closest('.pw'); if (!b) return; showPowerTip(b); G.Audio.play('hover'); });
+    bar.addEventListener('mouseout', e => { const b = e.target.closest('.pw'); if (b && !b.contains(e.relatedTarget)) hideTip(); });
+    // speed
+    $('#speed').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.dataset.speed === undefined) return; G.Audio.play('click'); UI.setSpeed(+b.dataset.speed); });
+    $('#btn-chron').onclick = () => { G.Audio.play('click'); UI.toggleChronicle(); };
+    $('#chron-toggle').onclick = () => { G.Audio.play('click'); if (phone()) UI.toggleChronicle(false); else $('#chronicle').classList.toggle('collapsed'); };
+    $('#btn-stats').onclick = () => { G.Audio.play('click'); UI.openStats(); };
+    $('#btn-photo').innerHTML = ICON.photo; $('#btn-photo').onclick = () => { G.Audio.play('click'); G.Photo.start(); };
+    $('#btn-skip').innerHTML = ICON.skip; $('#btn-skip').onclick = () => { G.Audio.play('click'); G.Skip.open(); };
+    // the compass: turn the world a quarter at a time; the needle shows where the north went
+    const turnL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 3v5h5"/></svg>';
+    const cps = document.querySelectorAll('#compass button');
+    cps.forEach(b => { b.innerHTML = +b.dataset.rot < 0 ? turnL : turnL.replace('<svg ', '<svg style="transform:scaleX(-1)" '); b.onclick = () => G.Render.rotate(+b.dataset.rot); });
+    // the needle follows the turning world, degree by degree
+    const needle = document.querySelector('#compass .cp-rose i');
+    G.Render.angleHooks.push(phi => { if (needle) needle.style.transform = `rotate(${(phi * 180 / Math.PI).toFixed(1)}deg)`; });
+    // the rose itself turns under a finger or the mouse, and the world turns with it
+    const rose = document.querySelector('#compass .cp-rose');
+    if (rose) {
+      let rd = null;
+      const angAt = e => { const r = rose.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)); };
+      rose.addEventListener('pointerdown', e => { if (!G.S) return; e.preventDefault(); try { rose.setPointerCapture(e.pointerId); } catch (_) {} rd = { a: angAt(e), t: performance.now(), vel: 0, moved: false }; });
+      rose.addEventListener('pointermove', e => {
+        if (!rd) return;
+        const a = angAt(e), da = Math.atan2(Math.sin(a - rd.a), Math.cos(a - rd.a)); rd.a = a;
+        if (!rd.moved) { if (Math.abs(da) < 0.02) return; rd.moved = true; G.Render.spinBegin(); G.Cinema && G.Cinema.manual && G.Cinema.manual(); }
+        const tn = performance.now(), dt = Math.max(1, tn - rd.t) / 1000; rd.t = tn;
+        G.Render.spinBy(da); rd.vel = rd.vel ? rd.vel * 0.5 + (da / dt) * 0.5 : da / dt;
+      });
+      const up = () => { if (!rd) return; if (rd.moved) G.Render.spinRelease(rd.vel * Math.max(0, 1 - (performance.now() - rd.t) / 180)); rd = null; };
+      rose.addEventListener('pointerup', up); rose.addEventListener('pointercancel', up);
+    }
+    $('#btn-cinema').innerHTML = ICON.film; $('#btn-cinema').onclick = () => { G.Audio.play('click'); G.Cinema.start(); };
+    $('#btn-war').innerHTML = ICON.sword + '<i class="wb">0</i>'; $('#btn-war').onclick = () => { G.Audio.play('click'); G.Cinema.start({ war: 1 }); };
+    $('#btn-realms').onclick = () => { G.Audio.play('click'); UI.openRealms(); };
+    $('#btn-lore').onclick = () => { G.Audio.play('click'); G.Lore.openBook(); };
+    if ($('#btn-saga')) $('#btn-saga').onclick = () => { G.Audio.play('click'); G.Stories.open(); };
+    if ($('#btn-sea')) { $('#btn-sea').innerHTML = ICON.compass || ICON.ship; $('#btn-sea').onclick = () => { G.Audio.play('click'); G.SeaUI && G.SeaUI.open(); }; }
+    $('#btn-under').innerHTML = ICON.cave; $('#btn-under').onclick = () => { G.Audio.play('click'); G.Render.setUnder(!G.Render.under); };
+    G.Render.underHooks.push(on => { $('#btn-under').classList.toggle('on', !!on); });
+    $('#btn-map').innerHTML = ICON.map; $('#btn-map').onclick = () => { G.Audio.play('click'); G.Minimap.toggle(); };
+    $('#fac-chip').onclick = () => { G.Audio.play('click'); UI.openRealms(); };
+    $('#prayer').onclick = () => {
+      const p = G.S && G.S.prayer; if (!p) return;
+      G.Audio.play('click'); G.Render.cam.follow = 0; G.Render.panTo(p.x, p.y);
+      UI.setPower(G.Events.PRAYER[p.kind].powers[0]);
+    };
+    $('#btn-menu').onclick = () => { G.Audio.play('click'); UI.openPause(); };
+    $('#btn-sound').onclick = () => { G.Audio.play('click'); UI.openSound(); };
+    $('#chron-list').addEventListener('click', e => {
+      const it = e.target.closest('.ch-item'); if (!it || it.dataset.x === undefined || it.dataset.x === '') return;
+      G.Render.cam.follow = 0; G.Render.panTo(+it.dataset.x, +it.dataset.y); G.Audio.play('click');
+    });
+    $('#inspector').addEventListener('click', e => {
+      const a = e.target.closest('[data-pid]');
+      if (a) { const p = G.person(+a.dataset.pid); if (p) { UI.select(p); if (!p.dead) { if (!!p.ug !== !!G.Render.under) G.Render.setUnder(p.ug ? 1 : 0); G.Render.cam.follow = 0; G.Render.panTo(p.x, p.y); } } return; }
+      const sm = e.target.closest('[data-m]'); if (sm && sm.dataset.m.startsWith('sea-') && G.SeaUI) { G.Audio.play('click'); G.SeaUI.click(sm.dataset.m, sm); return; }
+      const b = e.target.closest('[data-act]'); if (!b) return;
+      G.Audio.play('click');
+      if (b.dataset.act === 'close') UI.select(null);
+      else if (b.dataset.act === 'follow') { const s = UI.selected; if (s && !s.dead) { G.Render.cam.follow = G.Render.cam.follow === s.id ? 0 : s.id; renderInspector(true); } }
+      else if (b.dataset.act === 'urbgo') { const s = UI.selected; if (s && (s.urbD || s.urbS)) { G.Render.cam.follow = 0; G.Render.panTo(s.x, s.y); } }
+      else if (b.dataset.act.indexOf('plan') === 0 && G.PlanView) { G.PlanView.act(b.dataset.act, UI.selected); renderInspector(true); } // (C2: the plan)
+      else if (b.dataset.act === 'urb') { const d = G.Urban && G.Urban.byId(+b.dataset.id); if (d) UI.select(G.Urban.select(d)); }
+      else if (b.dataset.act === 'incarnate') { const s = UI.selected; if (s && !s.dead && G.Modes) G.Modes.enter(s); }
+      else if (b.dataset.act === 'tree') UI.openTree(UI.selected.id);
+      else if (b.dataset.act === 'bio') UI.openBio(UI.selected.id);
+      else if (b.dataset.act === 'cave-view') G.Caves.view(+b.dataset.id);
+      else if (b.dataset.act === 'cave-panel') { const cv = G.Caves.get(+b.dataset.id); if (cv) UI.select(G.Caves.selectCave(cv)); }
+      else if (b.dataset.act === 'saga') G.Stories.openStory(+b.dataset.id);
+      else if (b.dataset.act === 'wz-army' && G.WarsUI) G.WarsUI.openArmy(+b.dataset.id);
+    });
+    $('#modal-bg').addEventListener('click', e => { if (e.target.id === 'modal-bg') UI.closeModal(); });
+    $('#modal').addEventListener('click', e => {
+      const c = e.target.closest('[data-tree]'); if (c) { G.Audio.play('click'); UI.openTree(+c.dataset.tree); return; }
+      const so = e.target.closest('[data-so]'); if (so) { G.Audio.play('click'); const o = UI._setup.opts; o[so.dataset.so] = isNaN(+so.dataset.v) ? so.dataset.v : +so.dataset.v; UI.openSetup(UI._setup.fromGame, true); return; }
+      const cv = e.target.closest('[data-civ]'); if (cv) { G.Audio.play('click'); const o = UI._setup.opts; const k = +cv.dataset.civ; o.civs = (o.civs || []).slice(); while (o.civs.length <= k) o.civs.push(null); o.civs[k] = cv.dataset.v === 'rand' ? null : cv.dataset.v; UI._setup.focus = k; UI.openSetup(UI._setup.fromGame, true); return; }
+      const ch = e.target.closest('[data-choice]');
+      if (ch) {
+        G.Audio.play('click'); const c = UI._choice; UI.closeModal(); if (!c) return;
+        if (G.Powers.castChoice(c.id, c.x, c.y, ch.dataset.choice)) { UI.update(1, true); if (G.S.faith < G.Powers.byId(c.id).cost) UI.setPower(null); }
+        else UI.notice(G.S.faith < G.Powers.byId(c.id).cost ? 'Fé insuficiente para este poder.' : (G.Powers.why || 'Não é possível usar isso aí.'), 'eye');
+        return;
+      }
+      const b = e.target.closest('[data-m]'); if (!b) return;
+      G.Audio.play('click');
+      const m = b.dataset.m;
+      if (m === 'close' || m === 'resume') UI.closeModal();
+      else if (m === 'save') { G.Save.save(); UI.closeModal(); }
+      else if (m === 'load') { UI.closeModal(); G.Main.continueGame(); }
+      else if (m === 'new') UI.openSetup(true);
+      else if (m === 'ready') G.Ready.open(G.Main.mode === 'game');
+      else if (m === 'ready-go') { const k = b.dataset.k; if (G.Ready.fromGame) UI.confirm('Abrir este mundo pronto? O mundo atual será substituído.', () => G.Ready.load(k)); else G.Ready.load(k); }
+      else if (m === 'setup-go') {
+        const o = UI._setup; UI.closeModal();
+        if (o.fromGame) UI.confirm('Criar um novo mundo? O mundo atual será substituído.', () => G.Main.newGame(o.opts));
+        else G.Main.newGame(o.opts);
+      }
+      else if (m === 'realm') { UI.viewFac = +b.dataset.id; const c = G.Fac.capitalOf(UI.viewFac); if (c) { G.Render.cam.follow = 0; G.Render.panTo(c.cx, c.cy); } UI.update(1, true); UI.openRealms(); }
+      else if (m === 'realm-go') { const c = G.Fac.capitalOf(+b.dataset.id); if (c) { G.Render.cam.follow = 0; G.Render.panTo(c.cx, c.cy); UI.viewFac = +b.dataset.id; UI.closeModal(); UI.update(1, true); } }
+      else if (m === 'leader') { const p = G.person(+b.dataset.id); if (p) { UI.closeModal(); UI.select(p); if (!p.dead) { G.Render.cam.follow = 0; G.Render.panTo(p.x, p.y); } } }
+      else if (m === 'mainmenu') { G.Save.save(true); UI.closeModal(); G.Main.toMenu(); }
+      else if (m === 'help') UI.openHelp();
+      else if (m === 'dev') { UI.closeModal(); G.Dev && G.Dev.toggle(true); }
+      else if (m === 'lore') G.Lore.openBook(b.dataset.tab);
+      else if (m === 'skip-goal' || m === 'skip-course') { const p = G.Skip.pick; if (m === 'skip-goal') p.goal = b.dataset.k; else p.course = b.dataset.k; G.Audio.play('click'); G.Skip.open(); }
+      else if (m === 'skip-go') { const p = G.Skip.pick; if (G.Skip.reached(p.goal)) return; UI.closeModal(); G.Skip.start(p.goal, p.course); }
+      else if (m === 'skip-more') { UI.closeModal(); G.Skip.open(); }
+      else if (m === 'cave-go') { UI.closeModal(); G.Caves.view(+b.dataset.id, true); }
+      else if (m === 'geo-go') { UI.closeModal(); G.Render.cam.follow = 0; G.Render.panTo(+b.dataset.x, +b.dataset.y); G.Render.cam.tz = Math.max(G.Render.cam.tz, 1.4); }
+      else if (m === 'best') { G.Lore.bestSel = G.Lore.bestSel === b.dataset.k ? null : b.dataset.k; G.Lore.openBook('bestiario'); }
+      else if (m === 'sfx') { G.Audio.setSfx(!G.Audio.sfxOn); UI.openSound(); }
+      else if (m === 'music') { G.Audio.init(); G.Audio.setMusic(!G.Audio.musicOn); UI.openSound(); }
+      else if (m === 'amb') { G.Audio.setAmb(!G.Audio.ambOn); UI.openSound(); }
+      else if (m === 'yes') { const f = UI._confirm; UI.closeModal(); f && f(); }
+      else if (m === 'bio') UI.openBio(+b.dataset.id);
+      else if (m === 'tree') UI.openTree(+b.dataset.id);
+      else if (m.startsWith('wz-') && G.WarsUI) G.WarsUI.click(m, b);
+      else if (m.startsWith('sea-') && G.SeaUI) G.SeaUI.click(m, b);
+      else if (m.startsWith('saga-')) G.Stories.uiAct(m, b);
+      else if (m === 'person') { const p = G.person(+b.dataset.id); if (p) { UI.closeModal(); UI.select(p); if (!p.dead) G.Render.panTo(p.x, p.y); } }
+    });
+    document.querySelectorAll('button').forEach(b => b.addEventListener('mouseenter', () => G.Audio.play('hover')));
+    hudBuilt = true;
+  };
+  UI.showHUD = function (on) { $('#hud').classList.toggle('hidden', !on); if (on) { rebuildChronicle(); UI.update(1, true); } };
+
+  UI.setSpeed = function (s) {
+    G.speed = s; G.Main.realSpeed = s;
+    document.querySelectorAll('#speed button').forEach(b => b.classList.toggle('on', +b.dataset.speed === s));
+    $('#paused-badge').classList.toggle('hidden', s !== 0);
+  };
+  UI.powerTab = 'dadivas';
+  UI.tabPowers = () => G.POWERS.filter(p => p.tab === UI.powerTab);
+  UI.buildPowerBar = function () {
+    $('#powertabs').innerHTML = G.POWER_TABS.map(t => `<button data-tab="${t.id}" class="${t.id === UI.powerTab ? 'on' : ''}">${t.name}</button>`).join('') + '<span class="pt-hint"><kbd>Tab</kbd></span>';
+    $('#powerbar').innerHTML = UI.tabPowers().map(p => `<button class="pw ${p.good === true ? 'good' : p.good === false ? 'bad' : 'neutral'}" data-power="${p.id}"><span class="key">${p.key}</span><span class="pic">${ICON[p.id]}</span><span class="cost">${p.cost ? p.cost : 'grátis'}</span></button>`).join('');
+    document.querySelectorAll('.pw').forEach(b => b.classList.toggle('sel', b.dataset.power === G.Input.power));
+    if (G.S) UI.update(1, true);
+  };
+  UI.setTab = function (id) { if (UI.powerTab === id) return; UI.powerTab = id; UI.buildPowerBar(); hideTip(); };
+  UI.nextTab = function (d) { const k = G.POWER_TABS.findIndex(t => t.id === UI.powerTab); UI.setTab(G.POWER_TABS[(k + d + G.POWER_TABS.length) % G.POWER_TABS.length].id); G.Audio.play('click'); };
+  UI.setPower = function (id) {
+    if (id) { const p = G.Powers.byId(id); if (p && p.tab !== UI.powerTab) UI.setTab(p.tab); }
+    G.Input.power = id;
+    document.querySelectorAll('.pw').forEach(b => b.classList.toggle('sel', b.dataset.power === id));
+    const hint = $('#power-hint');
+    if (id) {
+      const p = G.Powers.byId(id);
+      hint.innerHTML = id === 'hand' ? `<b>${p.name}</b> — clique e segure sobre alguém; solte para largar, arraste rápido para arremessar · <kbd>Esc</kbd> cancela`
+        : id === 'anoint' ? `<b>${p.name}</b> — clique sobre um habitante adulto · <kbd>Esc</kbd> cancela`
+        : id === 'peace' ? `<b>${p.name}</b> — clique em qualquer lugar do mapa · <kbd>Esc</kbd> cancela`
+        : `<b>${p.name}</b> — clique no mapa para lançar · <kbd>botão direito</kbd> ou <kbd>Esc</kbd> cancela`;
+      hint.classList.remove('hidden');
+      G.Audio.play('power');
+    } else { hint.classList.add('hidden'); G.Render.preview = null; }
+    document.body.classList.toggle('casting', !!id && id !== 'hand');
+    document.body.classList.toggle('handmode', id === 'hand');
+  };
+
+  // ------------------------------ tooltips ------------------------------
+  function showPowerTip(b) {
+    const p = G.Powers.byId(b.dataset.power);
+    const tip = $('#tooltip');
+    const afford = G.S && G.S.faith >= p.cost;
+    tip.innerHTML = `<div class="tt-title">${ICON[p.id]}<b>${p.name}</b><span class="tt-key">${p.key}</span></div><div class="tt-desc">${p.desc}</div><div class="tt-cost ${afford ? '' : 'no'}">${ICON.faith}${p.cost ? p.cost + ' de fé' : 'Grátis'}${afford ? '' : ' — fé insuficiente'}</div>`;
+    tip.classList.remove('hidden');
+    const r = b.getBoundingClientRect();
+    const tw = tip.offsetWidth;
+    tip.style.left = Math.max(8, Math.min(innerWidth - tw - 8, r.left + r.width / 2 - tw / 2)) + 'px';
+    tip.style.top = (r.top - tip.offsetHeight - 12) + 'px';
+  }
+  function hideTip() { $('#tooltip').classList.add('hidden'); }
+  UI.hideTip = hideTip;
+
+  // ------------------------------ per-frame ------------------------------
+  UI.update = function (dt, force) {
+    if (!hudBuilt || !G.S) return;
+    tUpd -= dt; tInsp -= dt;
+    if (tUpd > 0 && !force) return;
+    tUpd = 0.2;
+    const S = G.S;
+    // at 8x/16x: show the speed the machine is really keeping up, when it falls short
+    const rs = G.Main.realSpeed || G.speed; const lag = G.speed >= 8 && rs < G.speed * 0.85;
+    const sr = $('#speed-real'); if (sr) { sr.classList.toggle('hidden', !lag); if (lag) sr.textContent = '≈' + Math.max(1, Math.round(rs)) + 'x'; }
+    let vf = G.Fac.get(UI.viewFac);
+    if (!vf || !vf.alive) { vf = G.Fac.all().sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id))[0]; UI.viewFac = vf ? vf.id : 0; }
+    const nf = G.Fac.all().length;
+    const pop = vf ? G.Fac.pop(vf.id) : 0; const cap = vf ? G.Village.cap(vf.id) : 0; const stk = vf ? vf.stock : { food: 0, wood: 0, stone: 0 };
+    const chip = $('#fac-chip');
+    if (vf) {
+      chip.classList.remove('hidden');
+      const gov = G.Politics ? G.Politics.govName(vf) : '';
+      const key = vf.id + '|' + vf.name + '|' + vf.ci + '|' + nf + '|' + gov + '|' + (vf.atWarN || 0);
+      if (chip.dataset.k !== key) {
+        chip.dataset.k = key;
+        chip.innerHTML = `<span class="fc-flag" style="--fc:${G.Fac.hex(vf.id)}">${UI.symbolSVG(vf.sym)}</span><span class="fc-txt"><span class="fc-name">${esc(vf.name)}</span>${gov ? '<span class="fc-gov">' + esc(gov) + '</span>' : ''}</span>${vf.atWarN ? '<span class="fc-war" title="Em guerra">' + ICON.sword + '</span>' : ''}${nf > 1 ? '<span class="fc-more">' + nf + ' povos</span>' : ''}`;
+      }
+    } else chip.classList.add('hidden');
+    setText('#v-pop', nf > 1 ? pop + '·' + S.villagers.size : pop);
+    setText('#v-food', Math.floor(stk.food)); setText('#c-food', '/' + cap);
+    setText('#v-wood', Math.floor(stk.wood)); setText('#c-wood', '/' + cap);
+    setText('#v-stone', Math.floor(stk.stone)); setText('#c-stone', '/' + cap);
+    setText('#v-faith', Math.floor(S.faith));
+    setText('#r-faith', '+' + G.Village.faithRate.toFixed(2) + '/s');
+    $('#res-food').classList.toggle('warn', stk.food < pop * 0.8);
+    setText('#day', 'Dia ' + S.day);
+    setText('#era', G.ERAS[vf ? vf.era : S.era] || '');
+    const [pt, pk] = G.Village.perception(nf > 1 && vf ? vf.id : 0);
+    const ptxt = `${nf > 1 && vf ? esc(vf.name) + ' te vê' : 'Eles te veem'} como <b class="pc-${pk}">${pt}</b>`;
+    const pe = $('#perception'); if (pe.dataset.k !== ptxt) { pe.dataset.k = ptxt; pe.innerHTML = ptxt; }
+    drawDial();
+    document.querySelectorAll('.pw').forEach(b => { const p = G.Powers.byId(b.dataset.power); b.classList.toggle('poor', S.faith < p.cost); });
+    const pr = $('#prayer');
+    if (S.prayer) {
+      const P = G.Events.PRAYER[S.prayer.kind]; const set = S.settlements.get(S.prayer.set);
+      const pw = G.Powers.byId(P.powers[0]);
+      const html = `<i class="ci gold">${ICON.eye}</i><span>${P.ask}${set ? ' em <b>' + esc(set.name) + '</b>' : ''} — use <b>${UI.orList(P.powers.map(k => G.Powers.byId(k).name))}</b></span><span class="pr-bar"><span style="width:${Math.max(0, S.prayer.t / S.prayer.max * 100)}%"></span></span>`;
+      if (pr.dataset.k !== S.prayer.kind + S.prayer.set) { pr.dataset.k = S.prayer.kind + S.prayer.set; pr.innerHTML = html; pr.classList.remove('hidden'); }
+      else pr.querySelector('.pr-bar span').style.width = Math.max(0, S.prayer.t / S.prayer.max * 100) + '%';
+      document.querySelectorAll('.pw').forEach(b => b.classList.toggle('asked', P.powers.includes(b.dataset.power)));
+      document.querySelectorAll('#powertabs [data-tab]').forEach(b => b.classList.toggle('asked', b.dataset.tab !== UI.powerTab && P.powers.some(k => G.Powers.byId(k).tab === b.dataset.tab)));
+    } else if (!pr.classList.contains('hidden')) { pr.classList.add('hidden'); pr.dataset.k = ''; document.querySelectorAll('.pw, #powertabs [data-tab]').forEach(b => b.classList.remove('asked')); }
+    const w = S.weather;
+    const wl = $('#weather'); const txt = w.storm > 0 ? 'Tempestade' : w.drought > 0 ? 'Seca' : S.clouds.some(c => c.kind === 'natural') ? 'Chuvisco' : '';
+    wl.textContent = txt; wl.classList.toggle('hidden', !txt);
+    if (S.history.length !== lastLogCount) rebuildChronicle();
+    if (UI.selected && tInsp <= 0) { tInsp = 0.25; renderInspector(); }
+  };
+  function setText(sel, v) { const e = $(sel); if (e && e.textContent !== String(v)) e.textContent = v; }
+  function drawDial() {
+    const c = $('#dial'); if (!c) return; const x = c.getContext('2d');
+    const S = G.S; const d = 2; const W = 36 * d;
+    if (c.width !== W) { c.width = W; c.height = W; }
+    x.setTransform(d, 0, 0, d, 0, 0); x.clearRect(0, 0, 36, 36);
+    const nf = G.Render.nightness();
+    const g = x.createLinearGradient(0, 0, 0, 36);
+    g.addColorStop(0, G.rgb(G.lerpColor([120, 190, 235], [20, 30, 70], nf))); g.addColorStop(1, G.rgb(G.lerpColor([240, 210, 160], [40, 40, 90], nf)));
+    x.fillStyle = g; x.beginPath(); x.arc(18, 18, 16, 0, Math.PI * 2); x.fill();
+    const a = S.time * Math.PI * 2 - Math.PI * 0.62;
+    const sx = 18 + Math.cos(a - Math.PI / 2) * 10, sy = 22 + Math.sin(a - Math.PI / 2) * 10;
+    const night = G.isNight();
+    x.fillStyle = night ? '#f2f0e0' : '#ffd24a';
+    x.beginPath(); x.arc(sx, sy, 4, 0, Math.PI * 2); x.fill();
+    if (night) { x.fillStyle = G.rgb(G.lerpColor([120, 190, 235], [20, 30, 70], nf)); x.beginPath(); x.arc(sx + 1.8, sy - 1.2, 3.4, 0, Math.PI * 2); x.fill(); }
+    x.fillStyle = 'rgba(40,60,30,0.85)'; x.fillRect(2, 24, 32, 12);
+    x.strokeStyle = 'rgba(255,255,255,0.35)'; x.lineWidth = 1.2; x.beginPath(); x.arc(18, 18, 16.4, 0, Math.PI * 2); x.stroke();
+  }
+
+  // ------------------------------ chronicle ------------------------------
+  function logItem(e) {
+    const [ic, col] = LOGICON[e.ic] || LOGICON.info;
+    return `<div class="ch-item ${e.x !== undefined ? 'loc' : ''}" data-x="${e.x !== undefined ? e.x : ''}" data-y="${e.y !== undefined ? e.y : ''}"><span class="ch-day">Dia ${e.d}</span><i class="ci ${col}">${ICON[ic]}</i><span class="ch-txt">${esc(e.txt)}</span></div>`;
+  }
+  function rebuildChronicle() {
+    const S = G.S; if (!S) return;
+    lastLogCount = S.history.length;
+    const list = S.history.slice(-90).reverse();
+    $('#chron-list').innerHTML = list.map(logItem).join('') || '<div class="ch-empty">A história ainda não começou.</div>';
+    $('#chron-count').textContent = S.history.length;
+  }
+  UI.onLog = function (e) { /* rebuilt lazily in update */ if (G.Main && G.Main.mode === 'game') { const el = $('#chronicle'); if (el.classList.contains('collapsed')) { el.classList.add('ping'); setTimeout(() => el.classList.remove('ping'), 900); } } };
+
+  // ------------------------------ notices & toasts ------------------------------
+  UI.notice = function (text, icon) {
+    if (!G.Main || G.Main.mode === 'menu') return;
+    if (G.Skip && G.Skip.on) return;
+    const box = $('#notices');
+    const [ic, col] = LOGICON[icon] || LOGICON.info;
+    const d = document.createElement('div'); d.className = 'notice';
+    d.innerHTML = `<i class="ci ${col}">${ICON[ic] || ICON.leaf}</i><span>${esc(text)}</span>`;
+    box.appendChild(d);
+    while (box.children.length > 4) box.removeChild(box.firstChild);
+    setTimeout(() => d.classList.add('out'), 6500);
+    setTimeout(() => d.remove(), 7400);
+  };
+  const toastQ = []; let toastBusy = false;
+  UI.toast = function (title, sub, icon) {
+    if (!G.Main || G.Main.mode === 'menu') return;
+    if (G.Skip && G.Skip.on) { G.Skip.news(title, sub); return; }
+    toastQ.push([title, sub, icon]); while (toastQ.length > 3) toastQ.shift(); if (!toastBusy) nextToast();
+  };
+  function nextToast() {
+    const t = toastQ.shift(); if (!t) { toastBusy = false; return; }
+    toastBusy = true;
+    const [ic, col] = LOGICON[t[2]] || ['star', 'gold'];
+    const el = $('#toast');
+    el.innerHTML = `<i class="ci ${col}">${ICON[ic] || ICON.star}</i><div><div class="t-title">${esc(t[0])}</div><div class="t-sub">${esc(t[1])}</div></div>`;
+    el.classList.remove('hidden', 'out'); void el.offsetWidth; el.classList.add('in');
+    setTimeout(() => { el.classList.add('out'); el.classList.remove('in'); }, 4200);
+    setTimeout(() => { el.classList.add('hidden'); nextToast(); }, 4900);
+  }
+
+  // ------------------------------ inspector ------------------------------
+  // on a phone the chronicle is a sheet that opens over the map; on a big screen it folds
+  const phone = () => window.matchMedia('(max-width: 600px)').matches;
+  UI.toggleChronicle = function (on) {
+    const el = $('#chronicle');
+    if (phone()) {
+      const open = on === undefined ? !el.classList.contains('m-open') : on;
+      el.classList.toggle('m-open', open); if (open) { el.classList.remove('collapsed'); UI.select(null); }
+    } else el.classList.toggle('collapsed', on === undefined ? undefined : !on);
+    $('#btn-chron').classList.toggle('on', phone() ? el.classList.contains('m-open') : !el.classList.contains('collapsed'));
+  };
+  UI.select = function (o) {
+    if (o && phone()) { $('#chronicle').classList.remove('m-open'); $('#btn-chron').classList.remove('on'); }
+    UI.selected = o;
+    if (o && !o.dead && o.set) { const fid = G.Village.facOfSet(o.set); if (fid) UI.viewFac = fid; }
+    if (!o && G.Render.cam.follow) G.Render.cam.follow = 0;
+    $('#inspector').classList.toggle('hidden', !o);
+    if (o) { G.Audio.play('select'); renderInspector(true); }
+  };
+  function bar(label, v, cls, txt) {
+    return `<div class="bar"><span class="bl">${label}</span><span class="bt"><span class="bf ${cls}" style="width:${G.clamp(v, 0, 100)}%"></span></span><span class="bv">${txt !== undefined ? txt : Math.round(v) + '%'}</span></div>`;
+  }
+  const plink = id => { const p = G.person(id); return p ? `<a data-pid="${p.id}" class="${p.dead ? 'dead' : ''}">${esc(p.name)}${p.dead ? ' †' : ''}</a>` : null; };
+  function portrait(v) {
+    const c = document.createElement('canvas'); const d = 2; c.width = 64 * d; c.height = 64 * d;
+    const x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0);
+    const g = x.createRadialGradient(32, 28, 4, 32, 32, 34); g.addColorStop(0, '#f4e6c8'); g.addColorStop(1, '#b89a6a');
+    x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+    x.save(); x.translate(32, 50); x.scale(3.4, 3.4);
+    const pv = Object.assign({}, v, { act: '', moving: false, face: 1, sleeping: false, inside: 0, hurt: 0, torch: false, emo: null });
+    if (v.dead) { pv.role = v.role; pv.skin = '#c8c0b0'; pv.hair = '#9a948a'; pv.kidCloth = '#8a8a8a'; }
+    if (pv.age >= 2) G.Art.villager(x, pv, 0, 0, 0, false);
+    x.restore();
+    return c;
+  }
+  let lastPortraitKey = '';
+  function renderInspector(full) {
+    const o = UI.selected; const el = $('#inspector'); if (!o) return;
+    const S = G.S;
+    let html = '';
+    if (G.Urban && G.Urban.owns(o)) html = G.Urban.inspectorHTML(o, esc);
+    else if (G.Caves && G.Caves.owns(o)) html = G.Caves.inspectorHTML(o);
+    else if (G.Sea && G.Sea.owns(o)) html = G.Sea.inspectorHTML(o);
+    else if (o.type && G.BDEF[o.type]) html = buildingHTML(o);
+    else if (o.kind && o.dock !== undefined && G.Naval && G.Naval.SHIP[o.kind]) html = shipHTML(o);
+    else if (o.kind) {
+      if (!S.animals.has(o.id)) { UI.select(null); return; }
+      const A = G.Animals; const d = A.DEF[o.kind];
+      const tg = o.target && (S.animals.get(o.target) || S.villagers.get(o.target));
+      const tgName = tg ? (tg.kind ? A.DEF[tg.kind].nameA : tg.name) : '';
+      const st = d.town && G.Pets && !o.dead ? G.Pets.stateText(o) : o.dead ? (o.meat > 0 ? 'Carcaça — alimento para carniceiros' : 'Só ossos') : o.state === 'flee' ? 'Fugindo' : o.state === 'lunge' ? 'De tocaia, esperando a presa' : o.state === 'chase' ? (o.carc ? 'Indo até uma carcaça' : 'Caçando ' + (tgName || 'uma presa') + '!') : o.state === 'eat' ? 'Comendo' : o.state === 'leave' ? 'Indo embora' : o.state === 'graze' ? (d.diet === 'browse' ? 'Comendo folhas e frutos' : 'Pastando') : o.state === 'fish' || o.state === 'fishdive' ? 'Pescando' : o.state === 'circle' ? 'Circulando sobre uma carcaça' : o.state === 'dive' ? 'Mergulhando sobre ' + (tgName || 'uma presa') : o.state === 'perch' ? 'Pousado' : o.state === 'fly' ? 'Voando' : o.state === 'wade' ? 'Andando na água rasa' : o.angry > 0 ? 'Furioso!' : o.state === 'wander' ? 'Vagando' : 'Descansando';
+      const eats = (d.prey || []).map(k => A.DEF[k].name.toLowerCase());
+      const food = d.diet === 'herb' ? 'capim' : d.diet === 'browse' ? 'folhas e frutos' : d.diet === 'insect' ? 'insetos' : d.diet === 'fish' ? 'peixes' : d.diet === 'filter' ? 'plâncton' : d.diet === 'scav' ? 'carniça' : d.diet === 'omni' ? 'frutos e raízes' : '';
+      const menu = [food].concat(eats).filter(Boolean);
+      const by = (A.eatenBy[o.kind] || []).map(k => A.DEF[k].name.toLowerCase());
+      const role = d.town ? (o.kind === 'cao' ? 'Cão da casa' : o.kind === 'gato' ? 'Gato da vizinhança' : o.kind === 'galinha' ? (o.rooster ? 'Galo do quintal' : 'Galinha do quintal') : 'Pombo da praça') : d.apex ? 'Predador de topo' : A.predator(o.kind) ? (d.diet === 'scav' ? 'Carniceiro' : 'Predador') : 'Presa';
+      const hab = d.cls === 'water' ? ({ cold: 'mares frios', warm: 'mares quentes', mild: 'mares temperados e quentes', any: 'todos os mares' })[d.sea] : (d.hab || []).map(b => G.BIOMES[b].name.toLowerCase()).join(', ');
+      html = `<div class="insp-head"><div class="insp-title"><h3>${o.named ? esc(o.named) + ', ' + (o.epithet ? esc(o.epithet) : d.name.toLowerCase()) : d.name}${o.summoned ? ' (invocado)' : ''}</h3><div class="sub">${o.legend ? 'Fera lendária · ' : ''}${role} · ${A.dietName(o.kind)}${o.grown < 1 ? ' · filhote' : ''} · ${Math.floor(o.age || 0)} ${Math.floor(o.age || 0) === 1 ? 'ano' : 'anos'}</div></div><button class="x" data-act="close">${ICON.close}</button></div>
+        ${o.dead ? '' : bar('Vida', o.hp / o.maxHp * 100, 'hp') + bar('Fome', (o.hunger || 0) * 100, 'hunger')}<div class="doing">Atualmente: <b>${o.tamed && o.gt && o.state === 'chase' ? 'Defendendo a cidade de ' + esc(tgName || 'um inimigo') + '!' : o.mig && o.state === 'wander' ? 'Migrando' : st}</b></div>
+        ${o.tamed ? `<div class="doing">${UI.flag(o.tamed, 'mini')} Guardi${d.g === 'f' ? 'ã' : 'ão'} de <b>${esc((S.settlements.get(o.guardSet) || {}).name || (G.Fac.get(o.tamed) || {}).name || '?')}</b> — domad${d.g === 'f' ? 'a' : 'o'} pelos céus</div>` : ''}
+        ${d.town ? (() => { const ow = S.villagers.get(o.owner); const st2 = S.settlements.get(o.set); return `<div class="doing">${ow ? `Dono: <a data-pid="${ow.id}">${esc(ow.name)}</a> · ` : ''}Vive em ${esc(st2 ? st2.name : '?')}${o.kind === 'galinha' && !o.rooster ? ' · seus ovos vão para a despensa da casa' : o.kind === 'cao' ? ' · late e expulsa raposas e lobos' : ''}</div>`; })() : `<div class="food-chain"><div><span>Come</span>${menu.map(esc).join(', ') || '—'}</div><div><span>Caçado por</span>${by.length ? by.map(esc).join(', ') : 'ninguém — além das pessoas'}</div><div><span>Vive em</span>${esc(hab || '—')}</div>${o.kills ? `<div><span>Vítimas</span>${o.kills} pessoas</div>` : ''}</div>`}`;
+    } else {
+      const p = o.dead ? o : S.villagers.get(o.id);
+      if (!p) { const d = S.dead.get(o.id); if (d) { UI.selected = d; return renderInspector(true); } UI.select(null); return; }
+      html = personHTML(p);
+    }
+    el.innerHTML = html;
+    if (!o.type && !o.kind) {
+      const holder = el.querySelector('.portrait');
+      if (holder) holder.appendChild(portrait(o.dead ? o : S.villagers.get(o.id)));
+    }
+  }
+  function personHTML(v) {
+    const S = G.S;
+    const f = v.g === 'f';
+    const age = Math.floor(v.age);
+    let fam = [];
+    const parents = [plink(v.mother), plink(v.father)].filter(Boolean);
+    if (parents.length) fam.push(`${f ? 'Filha' : 'Filho'} de ${parents.join(' e ')}`);
+    if (v.partner) { const l = plink(v.partner); if (l) fam.push(`${f ? 'Parceira' : 'Parceiro'} de ${l}`); }
+    else if (v.widow) { const l = plink(v.widow); if (l) fam.push(`${f ? 'Viúva' : 'Viúvo'} de ${l}`); }
+    const kids = (v.kids || []).map(plink).filter(Boolean);
+    if (kids.length) fam.push(`${kids.length > 1 ? 'Filhos' : (G.person(v.kids[0]) && G.person(v.kids[0]).g === 'f' ? 'Filha' : 'Filho')}: ${kids.join(', ')}`);
+    const traits = (v.traits || []).map(t => `<span class="trait">${G.traitName(v, t)}</span>`).join('');
+    if (v.dead) {
+      const cause = { old: 'Velhice', hunger: 'Fome', wolf: 'Atacad' + (f ? 'a' : 'o') + ' por lobos', boar: 'Atacad' + (f ? 'a' : 'o') + ' por um javali', fire: 'Incêndio', lightning: 'Raio', meteor: 'Meteoro', sick: 'Doença', fall: 'Queda', drown: 'Afogamento', war: 'Morte em combate', arrow: 'Flecha', massacre: 'Massacre', execution: 'Execução', riot: 'Morte num motim', coup: 'Assassinato', quake: 'Terremoto', sacrifice: 'Sacrifício aos deuses', plague: 'Peste', oil: 'Óleo fervente', arrow: 'Flecha' }[v.cause] || 'Desconhecida';
+      const df = G.Fac.get(v.fac); const killer = v.by ? G.person(v.by) : null;
+      const deadName = v.reigned ? esc(G.Politics.fullName(v)) : esc(v.name) + (v.ep ? ', ' + esc(G.Politics.epithet(v)) : '');
+      return `<div class="insp-head"><div class="portrait dead"></div><div class="insp-title"><h3>${deadName} †</h3><div class="sub">Viveu ${age} anos · Dia ${Math.max(1, Math.round(v.born))} – Dia ${v.died}</div><div class="traits">${traits}</div></div><button class="x" data-act="close">${ICON.close}</button></div>
+        ${df ? `<div class="fline">${UI.flag(df.id, 'mini')}${esc(df.name)}${v.reigned ? ' · governou' : ''}${v.captive ? ' · morreu no cativeiro' : ''}</div>` : ''}
+        <div class="doing">Causa da morte: <b>${cause}</b>${killer && killer.id !== v.id ? ` — por <a data-pid="${killer.id}">${esc(killer.name)}</a>` : ''}${v.kills ? `<br>Derrubou ${v.kills} ${v.kills > 1 ? 'inimigos' : 'inimigo'} em vida.` : ''}</div>
+        ${G.Stories ? G.Stories.personLine(v) : ''}
+      ${G.Secrets ? G.Secrets.personLine(v) : ''}
+        <div class="family">${fam.map(x => `<div>${x}</div>`).join('') || '<div class="muted">Sem família conhecida.</div>'}</div>
+        ${(() => { const body = G.Carnage && G.Carnage.list().find(c => c.vid === v.id); const t = body ? `O corpo ainda está no chão — ${G.Carnage.STAGE[G.Carnage.stage(body)]}${body.claim ? '; alguém está indo buscá-lo' : ''}.` : v.buried === 'pyre' ? 'O corpo foi queimado na pira dos inimigos.' : v.grave ? `Sepultad${f ? 'a' : 'o'} no cemitério.` : v.buried === 'ossuario' ? 'Os ossos foram para o ossuário: o túmulo deu lugar a outro.' : v.buried === 'vala' ? 'Enterrad' + (f ? 'a' : 'o') + ' numa vala comum.' : ''; return t ? `<div class="meta">${t}</div>` : ''; })()}
+        <div class="btns"><button data-act="tree">${ICON.tree} Árvore genealógica</button><button data-act="bio">${ICON.book} Biografia</button></div>`;
+    }
+    const role = G.roleName(v);
+    const set = S.settlements.get(v.set);
+    const home = S.buildings.get(v.home);
+    const status = [];
+    if (v.preg > 0) status.push('<span class="st pink">Grávida</span>');
+    if (v.sick > 0) status.push('<span class="st green">Doente</span>');
+    if (v.mourn > 0) status.push('<span class="st grey">De luto</span>');
+    if (v.fear > 55) status.push('<span class="st red">Aterrorizad' + (f ? 'a' : 'o') + '</span>');
+    if (v.hunger >= 95) status.push('<span class="st red">Faminto</span>');
+    if (!v.home && v.age >= 16) status.push(`<span class="st grey" title="${G.Social && G.Social.whyText(v) ? esc(G.Social.whyText(v)) : ''}">Sem casa${v.rua ? ' há ' + Math.max(0, G.S.day - v.rua) + (G.S.day - v.rua === 1 ? ' ano' : ' anos') : ''}</span>`);
+    else if (v.home && (G.S.buildings.get(v.home) || {}).type === 'barraco') status.push('<span class="st grey">Mora num barraco</span>');
+    const feats = [];
+    if (v.st.wood) feats.push(`${v.st.wood} de madeira`); if (v.st.food) feats.push(`${v.st.food} de comida`); if (v.st.stone) feats.push(`${v.st.stone} de pedra`); if (v.st.built) feats.push(`${v.st.built} ${v.st.built > 1 ? 'obras concluídas' : 'obra concluída'}`);
+    const following = G.Render.cam.follow === v.id;
+    const P = G.Politics; const fac = G.Fac.ofV(v); const ruler = fac && fac.leader === v.id;
+    if (v.captive) { const from = G.Fac.get(v.captive.from); status.unshift(`<span class="st red">Cativ${f ? 'a' : 'o'}${from ? ' — de ' + esc(from.name) : ''}</span>`); }
+    if (v.chosen) status.push(`<span class="st gold">${v.g === 'f' ? 'Escolhida' : 'Escolhido'} dos céus · ${v.kills || 0} vitórias</span>`);
+    else if (v.hero) status.push(`<span class="st gold">Herói${f ? 'na' : ''} · ${v.kills} vitórias</span>`);
+    if (v.prophet) status.push(`<span class="st gold">${v.g === 'f' ? 'Profetisa' : 'Profeta'}</span>`);
+    else if (v.kills) status.push(`<span class="st grey">${v.kills} ${v.kills > 1 ? 'inimigos derrubados' : 'inimigo derrubado'}</span>`);
+    if (v.fury > 0) status.push('<span class="st red">Em fúria</span>');
+    if (v.lost) status.push(`<span class="st grey">${v.lost.armL ? 'Sem o braço esquerdo' : v.lost.armR ? 'Sem o braço direito' : 'Sem uma perna'}</span>`);
+    if (v.coup) status.push('<span class="st red">Conspirador' + (f ? 'a' : '') + '</span>');
+    if (v.rebel || v.revolt) status.push('<span class="st red">Rebelde</span>');
+    const title = ruler ? esc(P.styled(fac, v)) : esc(v.name) + (v.ep ? ', ' + esc(P.epithet(v)) : '');
+    const rulerLine = ruler ? `<div class="doing">Governa ${esc(fac.name)} (${P.govName(fac).toLowerCase()}) desde o dia ${(fac.rulers[fac.rulers.length - 1] || {}).from}. Legitimidade <b>${Math.round(fac.legit)}%</b>${P.personaWords(v).length ? ' · ' + P.personaWords(v).join(', ') : ''}.</div>` : '';
+    const facLine = fac ? `<div class="fline">${UI.flag(fac.id, 'mini')}${esc(fac.name)}${ruler ? ' · ' + ICON.crown : ''}</div>` : '';
+    return `<div class="insp-head"><div class="portrait"></div><div class="insp-title"><h3 class="${ruler ? 'royal' : ''}">${title}</h3><div class="sub">${age} ${age === 1 ? 'ano' : 'anos'} · ${ruler ? P.title(fac, v) : role}</div><div class="traits">${traits}</div></div><button class="x" data-act="close">${ICON.close}</button></div>
+      ${facLine}${rulerLine}
+      <div class="bars">${bar('Vida', v.hp, 'hp')}${bar('Fome', v.hunger, 'hunger')}${bar('Energia', v.energy, 'energy')}${bar('Devoção', v.devotion, 'dev')}${bar('Medo', v.fear, 'fear')}</div>
+      ${status.length ? `<div class="status">${status.join('')}</div>` : ''}
+      ${G.Stories ? G.Stories.personLine(v) : ''}
+      <div class="family">${fam.map(x => `<div>${x}</div>`).join('') || '<div class="muted">Sem laços familiares ainda.</div>'}</div>
+      ${(() => { const mem = G.Life ? G.Life.bioList(v).slice(-3).reverse() : []; return mem.length ? `<div class="memories"><label>Memórias</label>${mem.map(e => `<div><em>${e.age} ${e.age === 1 ? 'ano' : 'anos'}</em>${esc(e.txt)}</div>`).join('')}</div>` : ''; })()}
+      <div class="doing">Atualmente: <b>${esc(G.Vg.taskText(v))}</b></div>${G.WarsUI ? G.WarsUI.personLine(v) : ''}${G.SeaUI ? G.SeaUI.personLine(v) : ''}
+      <div class="meta">${set ? esc(set.name) : ''}${v.skill ? ` · aprendeu o ofício de ${esc((G.ROLE[v.skill] || [v.skill])[0].toLowerCase())} ainda criança` : ''}${(() => { const d = G.Pets && G.Pets.dogOf(v); return d ? ` · cão: ${esc(d.named || 'sem nome')}` : ''; })()}${G.Eco && G.Eco.personLine(v) ? ' · ' + esc(G.Eco.personLine(v)) : ''}${home ? (() => { const hn = G.Village.buildName(home).toLowerCase(); return ' · mora n' + (G.gen(hn) === 'a' ? 'uma ' : 'um ') + esc(hn); })() : ''}${feats.length ? '<br>Contribuiu com ' + feats.join(', ') : ''}</div>
+      <div class="btns"><button data-act="follow" class="${following ? 'on' : ''}">${ICON.eye} ${following ? 'Seguindo' : 'Seguir'}</button><button data-act="tree">${ICON.tree} Família</button><button data-act="bio">${ICON.book} Biografia</button>${G.Modes ? (() => { const c = G.Modes.can(v); return `<button data-act="incarnate" class="incarnate"${c.ok ? '' : ` disabled title="${esc(c.why || '')}"`}>${ICON.incarnate || ICON.eye} Encarnar</button>`; })() : ''}</div>`;
+  }
+  function shipHTML(s) {
+    const S = G.S; if (!S.ships.includes(s)) { UI.select(null); return ''; }
+    const f = G.Fac.get(s.fac); const nm = G.Naval.title ? G.Naval.title(s) : G.Naval.shipName(s);
+    const KIND = { pesca: 'Barco de pesca', canoa: 'Canoa', jangada: 'Jangada de náufragos', explorador: 'Navio de exploração', mercante: 'Navio mercante', guerra: 'Navio de guerra', transporte: 'Navio de transporte' };
+    const ST = { idle: 'Atracado no porto', board: 'Esperando a tripulação embarcar', out: s.kind === 'pesca' ? 'Rumo ao pesqueiro' : 'Navegando', fish: 'Pescando: a rede está na água', adrift: 'Arrastado pela tempestade', unload: 'Descarregando no cais', back: 'Voltando ao porto', go: 'Navegando para o porto estrangeiro', back2: 'Voltando ao porto', patrol: 'Patrulhando a costa', hunt: 'Caçando navios inimigos!', repair: 'Voltando para reparos', embark: 'Esperando a tripulação embarcar', sail: s.purpose === 'colony' ? 'Levando colonos a uma nova terra' : 'Navegando para a batalha', land: 'Desembarcando', wait: 'Esperando os guerreiros na praia', return: 'Voltando para casa', build: 'No estaleiro', prep: 'Carregando provisões', fleet: 'Na frota', deriva: 'À deriva, sem ninguém a bordo', casa: 'Voltando ao porto' };
+    const aboard = G.Naval.aboardOf ? G.Naval.aboardOf(s).map(v => v.id) : [];
+    const cargo = s.goods || s.ret || (s.cargo ? { k: 'food', n: s.cargo } : null);
+    const MAT = { food: 'comida', wood: 'madeira', stone: 'pedra' };
+    const doing = (G.Expe && s.exp && (() => { const e = G.Expe.get(s.exp); const v = aboard.length && G.S.villagers.get(aboard[0]); return v ? G.Expe.aboardText(v, s) : null; })()) || ST[s.st] || 'Navegando';
+    return `<div class="insp-head"><div class="insp-title"><h3>${esc(G.cap(nm.replace(/^(um|uma|a|o) /, '')))}</h3><div class="sub">${KIND[s.kind] || ''}</div></div><button class="x" data-act="close">${ICON.close}</button></div>
+      ${f ? `<div class="fline">${UI.flag(f.id, 'mini')}${esc(f.name)}</div>` : ''}
+      ${bar('Casco', s.hp / s.maxHp * 100, 'hp')}
+      <div class="doing">Atualmente: <b>${esc(doing)}</b></div>
+      ${G.SeaUI ? G.SeaUI.shipHTML(s) : ''}
+      ${aboard.length ? `<div class="family"><div>A bordo (${aboard.length}):</div><div>${aboard.slice(0, 14).map(id => plink(id)).join(', ')}${aboard.length > 14 ? ' …' : ''}</div></div>` : s.kind === 'guerra' && s.st === 'idle' ? '<div class="meta">Ancorado sem tripulação: em tempo de paz, os navios de guerra esperam no porto.</div>' : ''}
+      ${cargo && MAT[cargo.k] ? `<div class="doing">Carga: <b>${cargo.n} de ${MAT[cargo.k]}</b></div>` : ''}
+      <div class="btns"><button data-act="follow" class="${G.Render.cam.follow === s.id ? 'on' : ''}">${ICON.eye} ${G.Render.cam.follow === s.id ? 'Seguindo' : 'Seguir'}</button></div>`;
+  }
+  function buildingHTML(b) {
+    const S = G.S; const def = G.BDEF[b.type];
+    if (!S.buildings.has(b.id)) { UI.select(null); return ''; }
+    const set = S.settlements.get(b.set);
+    let body = '';
+    let title = G.Village.buildName(b);
+    if (b.type === 'ruin') { title = 'Ruínas'; const on = G.BDEF[b.origType] ? G.Village.nameOf(b.origType, b) : null; body = `<div class="doing">Restos d${on ? G.gen(on) + ' ' + esc(on.toLowerCase()) : 'e uma construção'}. O mato vai tomar conta.</div>`; }
+    else if (!b.built) {
+      const al = G.Vg.allowedProgress(b);
+      const miss = [];
+      for (const k in b.need) if (b.need[k] > 0) miss.push(`${Math.ceil(b.need[k])} ${G.Eco ? G.Eco.name(k) : k}`);
+      let builders = 0; for (const v of S.villagers.values()) if (v.task && v.task.type === 'build' && v.task.id === b.id) builders++;
+      body = `${bar('Obra', b.progress * 100, 'energy')}${bar('Material', al * 100, 'dev')}<div class="doing">${miss.length ? 'Faltam: <b>' + miss.join(', ') + '</b>' : 'Materiais completos.'}<br>${builders ? builders + (builders > 1 ? ' pessoas trabalhando' : ' pessoa trabalhando') : 'Ninguém trabalhando agora.'}</div>`;
+    } else {
+      body = `<div class="desc">${G.BDESC[b.type] || ''}</div>`;
+      if (b.hp < b.maxHp && b.type !== 'cemetery') body += bar('Estrutura', b.hp / b.maxHp * 100, 'hp');
+      if (def.housing) {
+        const res = [...S.villagers.values()].filter(v => v.home === b.id);
+        body += `<div class="family"><div>Moradores (${res.length}/${def.housing}):</div><div>${res.map(v => plink(v.id)).join(', ') || '<span class="muted">vazia</span>'}</div></div>`;
+      }
+      if (b.type === 'farm') {
+        const st = [0, 0, 0, 0]; for (const c of b.crops) st[c.s]++;
+        body += `<div class="doing">${st[3]} prontos para colher · ${st[1] + st[2]} crescendo · ${st[0]} por plantar</div>`;
+      }
+      if (b.type === 'storehouse' || b.type === 'campfire' || b.type === 'celeiro') body += `<div class="doing">Capacidade de estoque: <b>${G.Village.cap(G.Village.facOfSet(b.set))}</b> de cada recurso.</div>`;
+      if (b.type === 'temple') body += `<div class="doing">Gera fé continuamente. Os sacerdotes rezam aqui.</div>`;
+      if (G.Eco) body += G.Eco.buildingHTML(b, plink, esc);
+      if (G.PlanView) body += G.PlanView.panelHTML(b, esc); // (C2: the building's plan, open over it)
+      if (b.type === 'aqueduto') { const a = S.aqueducts.find(q => q.b === b.id); body += `<div class="doing">${a ? (a.done ? 'Água corrente: colheitas +20%, mais gente cabe na cidade.' : `Arcos erguidos: <b>${a.built}/${a.tiles.length}</b> (consome pedra).`) : set && set.aqua ? 'Cisterna cheia.' : ''}</div>`; }
+      if (b.type === 'mercado' || b.type === 'praca') { const rs = S.routes.filter(r => r.ok && (r.a === b.set || r.b === b.set)); if (rs.length) body += `<div class="doing">${rs.length} ${rs.length > 1 ? 'rotas' : 'rota'} de carroças passando por aqui.</div>`; }
+      if (b.type === 'cemetery') {
+        const gs = b.graves.map(id => S.dead.get(id)).filter(Boolean);
+        const old = b.graves.length - gs.length; // (the forgotten: stones nobody can read anymore)
+        body += `<div class="graves">${gs.map(p => `<a data-pid="${p.id}" class="dead">${esc(p.name)} <span>${Math.floor(p.age)} anos · dia ${p.died}</span></a>`).join('') || (old ? '' : '<span class="muted">Ninguém ainda.</span>')}${old ? `<span class="muted">${old === 1 ? 'Um túmulo antigo' : old + ' túmulos antigos'}, de nomes que ninguém mais lembra.</span>` : ''}</div>`;
+      }
+    }
+    const bf = set ? G.Fac.get(set.fac) : null;
+    { const qd = G.Urban && b.set && G.Urban.districtAt(b.x + b.w / 2, b.y + b.h / 2); if (qd && qd.set === b.set) body += `<div class="doing">Bairro: <a data-act="urb" data-id="${qd.id}">${esc(qd.name)}</a> <span class="muted">(${esc(G.Urban.kindName(qd.k).toLowerCase())})</span></div>`; }
+    if (b.type === 'cercado' && b.built) { const n = [...S.villagers.values()].filter(v => v.captive && v.set === b.set).length; body += `<div class="doing">${n ? n + (n > 1 ? ' cativos vivem' : ' cativo vive') + ' nesta vila.' : 'Vazio, por enquanto.'}</div>`; }
+    if (b.type === 'quartel' && b.built && bf) body += `<div class="doing">${G.War.warriorsOf(bf.id)} guerreiros em ${esc(bf.name)}.</div>`;
+    return `<div class="insp-head"><div class="insp-title"><h3>${esc(title)}</h3><div class="sub">${set ? esc(set.name) + ' · ' + G.City.tierName(set).toLowerCase() : ''}${!b.built && b.type !== 'ruin' ? ' · em construção' : ''}${b.style && G.CIVS[b.style] ? ' · arquitetura ' + G.CIVS[b.style].adj : ''}</div></div><button class="x" data-act="close">${ICON.close}</button></div>${bf ? `<div class="fline">${UI.flag(bf.id, 'mini')}${esc(bf.name)}${set && G.Fac.capitalOf(bf.id) === set ? ' · capital' : ''}${set ? ' · lealdade ' + Math.round(set.loyalty) + '%' : ''}</div>` : ''}${body}`;
+  }
+
+  // ------------------------------ modals ------------------------------
+  UI.openModal = function (html, cls) {
+    $('#modal').className = 'panel ' + (cls || '');
+    $('#modal').innerHTML = html;
+    $('#modal-bg').classList.remove('hidden');
+    G.Main.modalOpen = true;
+  };
+  UI.closeModal = function () { $('#modal-bg').classList.add('hidden'); G.Main.modalOpen = false; };
+  // some miracles ask the god to choose: the law, the secret, the sign, the prophecy
+  UI.choosePower = function (p, x, y, opts) {
+    UI._choice = { id: p.id, x, y };
+    UI.openModal(`<h2>${ICON[p.id] || ''}${esc(p.name)}</h2><p class="muted">${esc(G.Powers.optionsTitle(p.id, x, y))}</p>
+      <div class="choices">${opts.map(o => `<button data-choice="${esc(o.k)}"><b>${esc(o.name)}</b><span>${esc(o.desc)}</span></button>`).join('')}</div>
+      <div class="mbtns"><span class="cost">${ICON.faith}${p.cost} de fé</span><button data-m="close">Cancelar</button></div>`, 'choose');
+  };
+  UI.confirm = function (text, yes) {
+    UI._confirm = yes;
+    UI.openModal(`<h2>Tem certeza?</h2><p>${esc(text)}</p><div class="mbtns"><button data-m="close">Cancelar</button><button class="primary" data-m="yes">Confirmar</button></div>`, 'small');
+  };
+  UI.openPause = function () {
+    UI.openModal(`<h2>Pausa divina</h2><p class="muted">O mundo é salvo automaticamente.</p>
+      <div class="mlist"><button class="primary" data-m="resume">Continuar</button><button data-m="save">${ICON.save} Salvar agora</button><button data-m="load">Carregar último save</button><button data-m="new">Novo mundo</button><button data-m="ready">Mundos prontos</button><button data-m="help">Como jogar</button><button data-m="dev">Modo desenvolvedor <kbd>F2</kbd></button><button data-m="mainmenu">Menu principal</button></div>
+      <div class="keys"><span><kbd>Espaço</kbd> pausar</span><span><kbd>1</kbd>–<kbd>8</kbd> poderes</span><span><kbd>Tab</kbd> aba de poderes</span><span><kbd>R</kbd> reinos</span><span><kbd>X</kbd> guerras</span><span><kbd>L</kbd> livro do mundo</span><span><kbd>WASD</kbd> mover</span><span><kbd>F</kbd> seguir</span><span><kbd>H</kbd> crônica</span><span><kbd>C</kbd> modo cinema</span><span><kbd>P</kbd> modo foto</span><span><kbd>+</kbd>/<kbd>−</kbd> velocidade</span></div>`, 'small');
+  };
+  UI.openSound = function () {
+    const A = G.Audio;
+    UI.openModal(`<h2>Som</h2><div class="mlist">
+      <button data-m="sfx" class="${A.sfxOn ? 'on' : ''}">Efeitos: <b>${A.sfxOn ? 'ligados' : 'desligados'}</b></button>
+      <button data-m="amb" class="${A.ambOn ? 'on' : ''}">Ambiente: <b>${A.ambOn ? 'ligado' : 'desligado'}</b></button>
+      <button data-m="music" class="${A.musicOn ? 'on' : ''}">Música: <b>${A.musicOn ? 'ligada' : 'desligada'}</b></button>
+      <button class="primary" data-m="close">Fechar</button></div>`, 'small');
+    $('#btn-sound').innerHTML = A.sfxOn || A.musicOn || A.ambOn ? ICON.sound : ICON.mute;
+  };
+  UI.openHelp = function () {
+    UI.openModal(`<h2>Como jogar</h2>
+      <div class="help">
+      <p class="lead">Você é o deus de uma pequena ilha. Os habitantes vivem por conta própria: coletam, constroem, se apaixonam, têm filhos, envelhecem e morrem. <b>Você não dá ordens</b> — você interfere.</p>
+      <h4>Câmera</h4><ul><li><b>Arrastar</b> com o mouse (ou botão direito) move o mapa · <b>WASD</b>/setas também</li><li><b>Girar</b>: dois dedos girando na tela, ou o <b>botão do meio</b> do mouse (ou <kbd>Shift</kbd> + arrastar), ou arraste a agulha da bússola — ao soltar, o mundo assenta no lado mais próximo · <kbd>Q</kbd>/<kbd>E</kbd> dão um quarto de volta</li><li><b>Roda do mouse</b> dá zoom · <b>clique</b> num habitante, animal ou construção para ver detalhes · <b>duplo clique</b> segue alguém</li><li><b>Minimapa</b> (<kbd>M</kbd> ou o ícone do mapa): o mundo inteiro num canto, com fronteiras e cidades — clique ou arraste nele para voar até lá</li><li><b>Modo foto</b> (<kbd>P</kbd> ou o ícone da máquina fotográfica): o mundo congela e a interface some; enquadre com a câmera, escolha filtro (dourado, sépia, preto e branco, vivo, luar), miniatura, vinheta, moldura com o lugar e a data, e até a hora do dia — e salve a imagem</li><li><b>Modo cinema</b> (<kbd>C</kbd> ou o ícone da câmera): a interface some e a câmera passeia sozinha pelo que está acontecendo — uma festa começando, um exército em marcha, um nascimento, um incêndio, um pastor com o rebanho — com legendas contando o que você vê. <kbd>N</kbd> pula para a próxima cena; mexer a câmera assume o controle por alguns segundos; <kbd>Esc</kbd> ou um clique sai</li><li><b>Câmera de guerra</b> (<kbd>G</kbd>, o ícone da espada que aparece durante uma guerra, ou <b>Assistir</b> no alerta de batalha): o cinema filma só a guerra — a coluna em marcha, as defesas se organizando, o flanco, a emboscada escondida na mata, os arqueiros, o aríete. Na barra do topo, escolha uma frente para seguir só aquela batalha</li></ul>
+      <h4>Encarnar — descer ao mundo</h4><p>Selecione um habitante e clique em <b>Encarnar</b> (ou aperte <kbd>I</kbd>; sem ninguém selecionado, <kbd>I</kbd> escolhe alguém perto do meio da tela). A câmera desce até a pessoa e você passa a viver a vida dela <b>em terceira pessoa, em 3D</b> — a mesma pessoa (nome, idade, família, casa, povo, saúde), no mesmo lugar, no mesmo mundo: as ruas, as casas, as árvores, o rio e as pessoas em volta são os de verdade, e o mundo continua vivendo enquanto você anda (no passo de uma pessoa: o tempo corre a 0,35× do Modo Deus). <kbd>WASD</kbd> anda (relativo à câmera), <b>mouse</b> olha (clique para prender o mouse; <kbd>Esc</kbd> solta), <kbd>Shift</kbd> corre (gasta fôlego), <kbd>Espaço</kbd> pula, <kbd>E</kbd> interage — conversar (a ficha da pessoa vem dos registros do mundo), bater à porta, comer no armazém, guardar o que carrega, rezar, cortar lenha, colher frutas, quebrar pedra, levar material para uma obra —, <kbd>Tab</kbd> mostra quem você é, <kbd>G</kbd> volta ao Modo Deus e <kbd>Esc</kbd> abre o menu (teclas, sensibilidade, gráficos). A fome, o sono e os perigos continuam valendo: <b>o corpo pode morrer</b> — e a morte é de verdade. Chamados do mundo (a guerra, um incêndio) aparecem como avisos: você atende se quiser. Prisão, captura, um navio ou a água tomam o corpo de volta. Ainda não existem: nadar, escalar, interiores, combate.</p>
+      <h4>Poderes divinos — sete abas (<kbd>Tab</kbd> troca, <kbd>1</kbd>–<kbd>8</kbd> escolhe)</h4><ul>
+        <li><b>Dádivas</b> — Chuva, Crescimento, Cura, Fertilidade, <b>Era de Ouro</b> (três dias de prosperidade para um povo) e a <b>Mão Divina</b></li>
+        <li><b>Ira</b> — Raio, Meteoro, Matilha, Terremoto, Praga, <b>Maldição</b> (colheitas murcham, filhos não vêm, a lealdade apodrece) e o <b>Dragão</b>: desce do céu, faz o covil nas alturas, queima as ruas em rasantes e leva o ouro das casas ricas; arqueiros e torres atiram, e enquanto ele dorme os mais bravos sobem para matá-lo — quem conseguir vira o Matador de Dragões e o tesouro se esparrama pelo chão</li>
+        <li><b>Terra</b> — <b>Erguer</b> ilhas ou pontes de terra entre povos isolados, <b>Afundar</b> o chão (e engolir cidades), <b>Floresta Sagrada</b>, <b>Veio de Pedra</b> e o <b>Vulcão</b>: lava, bombas de fogo, cinzas férteis — e às vezes ele desperta de novo</li>
+        <li><b>Mar</b> — <b>Cardume</b>, <b>Ventos Favoráveis</b> para os navios, <b>Tempestade</b> no mar, <b>Maremoto</b> que varre a costa, o <b>Kraken</b>, que caça navios até ser morto ou voltar às profundezas, e <b>Abrir o Mar</b>: clique no mar entre duas margens e as águas se erguem em paredes — o fundo vira caminho de uma terra à outra, o povo desce para catar peixes e atravessa a pé; quase um dia depois o mar se fecha, e quem estiver lá embaixo é levado</li>
+        <li><b>Natureza</b> — <b>Chamar Animais</b> (a espécie que você escolher, dentre as que vivem ali), <b>Primavera Sagrada</b> (capim alto, frutos e filhotes), <b>Grande Migração</b> (rebanhos atravessam o mapa — e os predadores vão atrás), <b>Domar Fera</b> (um predador vira guardião de uma cidade), <b>Mudar o Clima</b> (neve eterna, selva, pântano, deserto…), <b>Gafanhotos</b>, a <b>Fera Lendária</b>, um monstro gigante que caça gente, e o <b>Inverno Súbito</b> (os lagos congelam e viram caminho por um dia; no degelo, quem está no gelo cai na água)</li>
+        <li><b>Cidade</b> — <b>Chuva de Ouro</b> (moedas caem sobre um bairro: o telhado guarda as suas, a rua é de quem pegar primeiro — e rua rica atrai ladrão) e <b>Vinho nos Poços</b> (por meio dia os poços dão vinho: a cidade bebe, dança, cambaleia e acorda de ressaca)</li>
+        <li><b>Palavra</b> — <b>Profecia</b> sobre uma cidade (se ela se cumprir, a fé explode), <b>Mandamento</b> (uma lei divina que muda o jeito de viver de um povo), <b>Inspiração</b> (revele a tecnologia que quiser), <b>Sinal nos Céus</b> (cometa, eclipse, aurora, chuva de estrelas — cada povo interpreta a seu modo) e <b>Visão</b> (crie um profeta), e o <b>Sonho Coletivo</b> (um povo inteiro sonha com uma grande obra, a paz, os deuses ou uma terra além do mar — e acorda para ela)</li>
+        <li><b>Destino</b> — Ungir, <b>Herói</b> (um campeão escolhido que luta como dez), Libertação, Fúria, Discórdia, <b>Muralha Divina</b> e Paz Divina, <b>Amor Divino</b> (escolha quem alguém vai amar — até de outro povo) e <b>Duelo de Campeões</b> (os melhores de cada lado lutam sozinhos: quem cair, perde o campo)</li>
+        <li><b>Além</b> — <b>Ressurreição</b> (alguém que morreu há poucos anos se levanta do chão ou da cova — e reencontra a família, ou descobre que a viúva já casou de novo) e <b>Fantasmas</b> (por duas noites os mortos de um cemitério andam entre as casas, e apontam o ladrão que ninguém pegou ou quem os matou)</li></ul>
+      <h4>Biomas e clima</h4><p>O mundo tem <b>tundra gelada, taiga, floresta temperada, pântano, floresta tropical, savana e deserto</b>: neve ao norte, trópicos ao sul, pântanos nas terras baixas e úmidas, desertos onde a chuva não chega. Cada bioma tem suas árvores, seu chão, sua fertilidade, a velocidade de quem anda por ele — e seus animais. No <b>Novo mundo</b> dá para escolher o clima.</p>
+      <h4>Animais e cadeias alimentares</h4><p>Mais de 70 espécies na terra, no mar e no céu. O <b>capim</b> cresce e é pastado; <b>herbívoros</b> comem plantas, <b>predadores</b> caçam herbívoros, <b>predadores de topo</b> (urso, leão, onça, crocodilo, orca, tubarão, águia) não têm quem os cace; <b>carniceiros</b> limpam as carcaças e a carniça volta a adubar a terra. Cada espécie tem habitat, fome, idade, filhotes e um limite que a terra aguenta — se os predadores somem, as presas explodem e depois passam fome. Clique num animal para ver o que ele come e quem o caça. O <b>Bestiário</b>, no Livro do Mundo, mostra a teia inteira com as populações de verdade.</p>
+      <h4>Bichos, raros, migrações e ninhos</h4><p>Os felinos se esgueiram rente ao capim antes do <b>bote</b>, lobos e leões <b>cercam pelos flancos</b>, o leopardo sobe a caça na árvore, o crocodilo arrasta para o fundo, a sucuri aperta; <b>macacos</b> passam de copa em copa num <b>cipó</b>, e elefantes velam os seus mortos. Às vezes nasce um bicho de <b>pelagem rara</b> — o tigre branco, a pantera-negra — que vale uma fortuna. As manadas da savana <b>migram</b> atrás do capim verde e cruzam os rios onde os crocodilos esperam; as renas sobem e descem a montanha; gansos e cegonhas voam em <b>V</b>; os <b>salmões</b> sobem os rios e os ursos pescam nas cachoeiras. Há <b>ninhos</b> nas árvores, nos paredões e nos <b>telhados</b> (cegonha no telhado traz filho, dizem), e os <b>castores</b> represam os riachos.</p>
+      <h4>Riquezas, propriedades e comércio</h4><p>O mundo dá <b>25 riquezas</b>: marfim, peles (e a <b>pele rara</b>), couro de cobra e crocodilo, chifre, plumas, óleo de baleia, mel, cera, <b>seda</b>, cacau, café, especiarias, azeite, vinho, tâmaras, incenso, sal, bacalhau, atum, camarão, <b>pérolas</b> e coral. O caçador esfola a caça e volta com a carne e a pele; as frutas amadurecem no galho; o mel é tirado com fumaça. Cada povo planta o que cresce ali e o que conhece: <b>pomares, plantações</b> de café e cacau, <b>vinhedos, apiários, salinas</b>, a <b>casa da seda</b> e a <b>salga</b> do peixe — e os grãos mudam com a terra (trigal, arrozal, milharal). Cada água tem seus <b>peixes</b> (bacalhau só no frio, atum no mar quente, pirarucu e piranhas na selva) e os <b>mergulhadores</b> descem ao recife atrás de pérolas.</p><p>O <b>palácio</b> depende da vaidade do governante: um paço modesto, um palácio, um grande palácio — ou o <b>palácio colossal</b>, que leva metade dos construtores e sobe os impostos. Antes da moeda, os <b>cobradores</b> recolhem tributo de porta em porta; à noite a <b>taverna</b> tem música, bêbados e brigas. Mercadores com <b>cavalo de carga</b> levam o que sobra a quem não tem: a estrada repetida vira a <b>Rota do Marfim</b> ou a <b>Rota da Seda</b>, as famílias de mercadores enriquecem (e podem governar como conselho), quem é o único a vender tem o <b>monopólio</b>, e quem compra caro pode ir à <b>guerra</b> pelos cafezais do vizinho — ou porque roubaram a sua caravana.</p>
+      <h4>Fé</h4><p>Poderes custam <b>fé</b>. A fé nasce da <b>devoção</b> (quando você ajuda) e do <b>medo</b> (quando você castiga). Medo também rende fé, mas deixa o povo lento, triste e menos fértil — e quem perde parentes para a sua fúria perde a devoção. Templos e sacerdotes geram fé constante.</p>
+      <h4>Preces</h4><p>Em momentos difíceis — seca, incêndio, doença, fome, lobos — a vila <b>reza pedindo algo específico</b>. Um aviso dourado aparece acima da barra de poderes: clique nele para ir até lá. Atender as preces faz a devoção disparar; ignorá-las tem um preço.</p>
+      <h4>Civilizações</h4><p>Cada povo pode ser <b>Grego</b> (pesquisa e colônias), <b>Nórdico</b> (mar, saques, berserkers), <b>Egípcio</b> (rio, fé, pirâmides), <b>Asteca</b> (guerras floridas, sacrifícios, Templo Mayor) ou <b>Romano</b> (estradas, aquedutos, legiões) — ou um povo clássico sem nome. Cada um tem arquitetura, nomes, governos, unidades, tecnologias e traços próprios.</p>
+      <h4>Cidades que crescem</h4><p>Acampamento → aldeia → vila → cidade → metrópole → <b>megalópole</b>. Nos mapas <b>Enorme, Colossal e Titânico</b> (128, 160 e 192) há espaço para cidades de centenas de habitantes, com quarteirões inteiros de prédios. Uma vila põe a pedra primeiro nas casas de pedra, na praça e no templo — os extras esperam a cidade. Casas viram sobrados e ínsulas; uma metrópole que já subiu refaz o seu centro em <b>quarteirões</b>, derrubando casas baixas, sobrados e hortas (nunca um prédio público) — é assim que ela vira megalópole. Surgem praças, mercados, celeiros, bibliotecas, teatros, termas, palácios, portos e uma <b>maravilha</b>. Cada cidade traça suas <b>ruas</b> — duas principais que se cruzam na praça (uma grade de quarteirões entre romanos e gregos) e vielas até a porta de cada casa —, ninguém constrói em cima delas, e com o tempo são calçadas; estradas ligam cidades, <b>carroças</b> levam bens pelas rotas internas e de comércio, e <b>aquedutos</b> trazem água dos rios.</p>
+      <h4>O mar</h4><p>Com Navegação vêm portos, barcos de pesca, exploradores que descobrem outros povos, navios mercantes, frotas de guerra, invasões pelo mar e colônias em outras ilhas.</p><p>Quem pesca é <b>gente de verdade</b>: pega a rede no galpão, embarca, joga a rede no pesqueiro e volta com o peixe em caixas, que são levadas nas costas até o armazém. Cada povo <b>só sabe o que viu</b> (ou ouviu de quem voltou): ilhas desconhecidas, boatos que mudam de boca em boca, terras avistadas, exploradas, mapeadas. Ninguém se lança ao mar sem motivo — falta de ferro, gente demais, um boato, um governante ambicioso, alguém que não voltou — e cada <b>expedição</b> tem despedida no cais, dias de mar, descobertas, primeiro contato, volta ou naufrágio, tudo no seu <b>livro da viagem</b>. Na guerra, as <b>frotas</b> lutam com abordagens, bloqueiam portos e levam exércitos em transportes até a praia inimiga. Veja tudo no painel <b>O mar</b> (tecla <b>O</b> ou a bússola no topo).</p><p>Perto da praia a água é <b>transparente</b>: dá para ver o fundo — areia, pedras, <b>recifes de coral</b> com cardumes nos mares quentes, <b>florestas de kelp</b> nos frios — e longe da costa o mar escurece até o <b>abismo</b>. Diante dos paredões ficam <b>pilares</b> e <b>arcos</b> de pedra, há <b>grutas marinhas</b>, <b>buracos azuis</b> e <b>gelo à deriva</b>; toque neles para saber o que são. Duas vezes por dia vem a <b>maré baixa</b>: o povo cata mariscos, as crianças brincam nas poças. E às vezes o mar <b>brilha à noite</b>, <b>tartarugas</b> desovam e os filhotes correm para o mar, <b>golfinhos</b> seguem os barcos — ou uma <b>baleia encalha</b> na praia.</p>
+      <h4>Povos, reinos e guerras</h4><p>No <b>Novo mundo</b> você escolhe o mapa (ilha, continente, arquipélago, istmo), o tamanho e quantos povos despertam. Cada povo tem cor, bandeira, estoque, território e um <b>líder</b> com personalidade própria (belicoso, cruel, devoto, ambicioso…). Governos mudam: tribo → chefia → reino, ou teocracia, tirania, conselho.</p>
+      <h4>Política</h4><p>Cada povo tem um <b>regime</b> — reino, monarquia com conselho, feudalismo, república com eleições, democracia, oligarquia dos mais ricos, ditadura do general, comuna, anarquia, teocracia — e uma <b>ordem econômica</b> (livre comércio, tudo do governante, terras dos senhores, tudo de todos, os celeiros do templo). Dentro dele vivem <b>nobreza, mercadores, sacerdotes, militares, artesãos e povo</b>, cada grupo com influência, satisfação, líder e o que quer. O governante <b>sobe ou baixa impostos</b>, <b>estatiza</b> as casas ricas, reparte terras, abre um conselho, abre os celeiros. Os infelizes levam uma <b>petição</b> ao palácio; se nada muda, a cidade vira um <b>motim</b> de tochas — que queima a casa dos impostos ou o celeiro, saqueia, enfrenta a guarda e termina esmagado, atendido, disperso ou em <b>revolução</b>. Veja tudo no painel <b>Reinos</b>.</p>
+      <h4>Execuções e sacrifícios</h4><p>Uma sentença tem dia e hora — o meio-dia — e o arauto grita pelas ruas. Na praça sobe o <b>cadafalso</b>, o carrasco de capuz espera e a cidade para para ver: <b>forca</b>, machado ou <b>espada</b> no cepo, <b>fogueira</b> para hereges, <b>cruz</b> entre os romanos, <b>pedras</b> atiradas pela multidão grega, a <b>guilhotina</b> das repúblicas e comunas revolucionárias, e o <b>sacrifício no alto da pirâmide</b> asteca. Uns aplaudem, outros gritam "assassinos", a família chora. Os enforcados ficam expostos um tempo, com os corvos. Uma praça furiosa pode invadir o cadafalso.</p>
+      <h4>Sociedades secretas</h4><p>Gente poderosa de vários reinos jura em segredo a uma <b>ordem</b> — que quer governar por trás do trono, controlar o comércio, despertar um deus antigo, derrubar tiranos ou guardar um saber proibido. Nas noites sem lua, de <b>manto e capuz</b>, se reúnem numa caverna, num bosque ou no porão de uma casa comum; há cânticos, velas, às vezes sangue. Quem vê é comprado, iniciado ou <b>silenciado</b>. A cidade espalha <b>boatos</b> — uns verdadeiros, outros inventados —, e um governante desconfiado manda <b>investigar</b>: a ordem pode ser descoberta e queimada, quem pergunta demais pode sumir, e inocentes podem pagar por uma seita que nunca existiu. Só você vê a verdade: ◉ nos boatos que são reais, e na ficha de cada pessoa o que ela esconde.</p>
+      <ul><li>Quando se encontram, os povos trocam emissários, fazem comércio, casamentos e alianças — ou declaram <b>guerra</b>: exércitos marcham, saqueiam, fazem <b>cativos</b>, conquistam vilas e, sob líderes cruéis, <b>massacram</b>.</li>
+      <li>Vilas distantes e infelizes podem <b>rachar</b> e virar povos novos. Ambiciosos tramam <b>golpes</b>; tiranos executam em praça pública; o povo pode se levantar numa <b>revolução</b>.</li>
+      <li>Cativos trabalham à força, tentam fugir, se revoltam — e às vezes fundam um povo livre.</li>
+      <li><b>Exércitos</b> de dezenas ou centenas: lanceiros, espadachins, arqueiros, cavalaria e milícia em companhias com capitães, coronéis e um general, em falange, parede de escudos, cunha ou tartaruga. O general escolhe o plano: cerco e fome, vários portões, pinça, guerrilha — e quem defende escolhe muralha, emboscada na floresta, colina ou vau do rio.</li>
+      <li><b>A guerra pesa</b>: golpes que jogam o corpo para trás, sangue no chão, braços que voam e cabeças que rolam; quem sobrevive sem um braço ou uma perna fica assim — trabalha mais devagar, luta pior. Os mortos <b>ficam onde caíram</b>: incham, os corvos chegam, ressecam e viram ossos, a não ser que alguém os arraste — os nossos para o cemitério, os inimigos para a pira. Corpos apodrecendo perto das casas trazem <b>doença</b>.</li>
+      <li><b>Cercos</b>: trincheiras, aríetes, catapultas, torres de cerco, escadas, sapadores, óleo fervente, cadáveres catapultados para espalhar a peste e cidades que se rendem de fome. No mar: esporões, abordagem, brulotes e bloqueio de portos.</li>
+      <li><b>Guerra mundial</b> (muito rara): quando quase todos se conhecem e as rixas se acumulam, o mundo se divide em blocos — pelo ouro, por uma coroa, pela fé, por sangue antigo, pela fome, contra um império forte demais, ou todos contra todos. Aliados não fazem paz separada; só a queda de um bloco ou o cansaço de todos traz a paz geral.</li>
+      <li>Ninguém festeja com o inimigo às portas: em cidade sitiada ou em batalha a festa do ano não acontece — mas depois de uma defesa vencida vem a <b>noite da vitória</b>.</li>
+      <li>Abra o painel <b>Reinos</b> (<kbd>R</kbd> ou o chip do povo no topo) para ver líderes, relações, exércitos, saberes e o mapa político. <kbd>B</kbd> mostra as fronteiras.</li>
+      <li>O <b>mar</b> é gente: o <b>pescador</b> sai de casa, pega a rede, embarca, pesca, volta, descarrega as caixas no cais e leva ao armazém. Cada povo <b>sabe só o que os seus viram e voltaram para contar</b>: ilhas desconhecidas, boatos, avistadas, exploradas, mapeadas. Ninguém explora por relógio: <b>falta de ferro</b>, gente demais, um <b>boato</b>, um governante ambicioso ou um aventureiro mandam <b>expedições</b> (sozinho numa canoa, com um patrono, ou a grande expedição do Estado), que preparam o cais, partem, enfrentam o mar, descobrem, dão nome, encontram outros povos — e às vezes nunca voltam. Na guerra, <b>frotas</b> com almirante, formação e moral bloqueiam portos, travam <b>batalhas navais</b> com abordagem e fogo, e levam o exército pelo mar até a praia inimiga. Painel <b>O Mar</b>: <kbd>O</kbd>.</li>
+      <li>As <b>guerras</b> têm causa, nome e etapas: a <b>tensão</b> sobe antes (patrulhas, ferreiros de noite, celeiros cheios), o reino <b>convoca</b> e reúne o exército, que marcha com carroças, <b>acampa</b> à noite, luta <b>batalhas com nome</b>, <b>cerca</b> cidades muradas e volta para casa; o cansaço leva à <b>paz</b>, com tratado. Painel <b>Guerras</b>: <kbd>X</kbd> (ou o botão no painel Reinos). Quando dois exércitos formam as linhas, o aviso <b>Batalha iminente — Assistir</b> aparece.</li>
+      </ul><h4>Vida na cidade e festas</h4><ul>
+      <li>A cidade cresce de <b>vários núcleos</b> (o velho fogo, praças, mercados, porto, templo, palácio, estradas) e forma <b>bairros</b> com nome e história — o centro antigo, o comércio, os nobres, o popular, os ofícios, o porto, o militar, o sagrado, os campos, os barracos. A terra vale mais perto do palácio e da praça, no alto, junto à água; prédio alto só onde ela é cara. <kbd>V</kbd> pinta os bairros (de novo: o valor da terra); clique no nome de uma cidade ou de um bairro no mapa para o painel.</li>
+      <li>O navio mercante descarrega <b>caixas no cais</b> que os estivadores levam ao armazém; a <b>taverna</b> faz a bebida do seu povo e cobra cada rodada; as casas da borda têm <b>horta</b>; quem perde a casa (e sabe por quê) levanta um <b>barraco</b>; o <b>ladrão</b> rouba moedas de verdade, a testemunha conta ao guarda, o guarda procura, prende e leva à <b>cadeia</b> pelo tempo que a lei do povo manda.</li>
+      <li>Cada pessoa tem ofício e local de trabalho: pastores, tecelões, ferreiros, mineiros, ourives, oleiros, mercadores, feirantes, taverneiros, escribas, coletores de impostos — e contrabandistas. Clique num edifício para ver quem trabalha nele e o que produz.</li>
+      <li>No <b>fim da tarde</b> as famílias se sentam à porta de casa em volta de um foguinho, jantam, se abraçam, e os pais jogam os pequenos para o alto. Os <b>velhos contam histórias</b> às crianças junto à fogueira — histórias que aconteceram de verdade: estão na Crônica, nas lendas ou na vida de quem conta.</li>
+      <li>Dos nove anos em diante, os filhos vão com o pai ou a mãe para o trabalho e <b>imitam o ofício</b>; quem aprende tende a seguir a mesma profissão e trabalha melhor nela.</li>
+      <li>Cada casa precisa de <b>água</b>: todo dia alguém vai ao poço (ou ao rio), espera na <b>fila</b> e volta com o jarro na cabeça. Casa sem água adoece mais. Há fila também nas barracas, <b>fileiras</b> de fiéis diante do templo, soldados treinando <b>em formação</b> e, nas cidades grandes, a trompa ou o tambor que <b>chama ao trabalho</b> ao amanhecer.</li>
+      <li><b>Animais da cidade</b>: cães com nome que seguem o dono, tocam o rebanho com o pastor e expulsam raposas e lobos; gatos nas portas; galinhas no quintal (os ovos vão para a despensa); pombos na praça que voam quando alguém passa.</li>
+      <li><b>Biografia viva</b>: cada pessoa guarda os marcos reais da sua vida — onde nasceu, com quem aprendeu, quem amou, os filhos, as guerras, as feridas, as perdas, as histórias que ouviu. Veja as memórias no painel da pessoa e a vida inteira no botão <b>Biografia</b>.</li>
+      <li>Cada civilização tem suas <b>festividades</b>: Panateneias e Jogos Olímpicos, Saturnália e Triunfo, Opet e a Festa do Vale, Toxcatl e o Fogo Novo, Jól e Midsommar. Acompanhe pela Crônica e vá até lá.</li></ul>
+      <h4>Cavernas: o mundo de baixo</h4><p>Sob os morros há galerias, salões, rios e lagos subterrâneos, cristais, vaga-lumes e veios de minério. O botão da <b>caverna</b> no topo (ou <kbd>U</kbd>) mostra o mundo de baixo, iluminado só pela luz que entra pelas bocas, pelas tochas e pelas fogueiras. Os povos <b>descobrem</b> as cavernas, <b>pintam</b> nelas a sua história (os idosos contam o que está pintado), <b>enterram os reis</b>, sobem para ouvir o <b>oráculo</b>, <b>se escondem</b> ali durante os ataques, <b>mineram</b> os veios e recolhem o <b>guano</b> dos morcegos para adubar as roças. Morcegos saem ao entardecer, ursos dormem no fundo — e às vezes <b>bandidos</b> fazem de uma caverna o seu covil. Toque a boca de uma caverna para ver a sua história.</p><p>As bocas nascem do lugar: num <b>paredão</b> de montanha, num <b>abrigo</b> sob a rocha da encosta, numa <b>dolina</b> onde o chão afundou, numa <b>fenda</b> entre pedras ou num <b>poço</b> — com a pedra do bioma (calcário, gelo, arenito, musgo, basalto) e, se um rio passa por dentro, uma <b>nascente</b>. Dentro, o chão desce, tem beirais, bacias e <b>abismos</b>; toque qualquer coisa lá embaixo (uma coluna, o lago, a aranha) para saber o que é. As <b>minas</b> também são galerias: o botão <b>Ver as galerias</b> na ficha da mina mostra os túneis. Na tempestade os bichos se abrigam lá dentro em trégua; as crianças se desafiam a entrar e gritar pelo <b>eco</b>.</p>
+      <h4>Montanhas, rios e a câmera que gira</h4><p>Cordilheiras com neve no alto, colinas, planaltos e mesas cercados de paredões, falésias sobre o mar, rios que descem das montanhas com <b>cachoeiras</b>, lagos nas bacias — tudo escolhido no <b>Novo mundo</b> (relevo plano, suave, montanhoso ou alpino). Subir custa caro, paredões não se escalam (os bichos dão a volta neles), os caminhos procuram os <b>passos</b>, e na guerra quem está no alto bate mais forte. Picos, passos, cachoeiras e lagos têm nome: veja no mapa e na aba <b>Geografia</b> do Livro do Mundo. <b>A câmera gira livre</b> (dois dedos, botão do meio, <kbd>Shift</kbd> + arrastar, a bússola ou <kbd>Q</kbd>/<kbd>E</kbd>): montanhas escondem o que está atrás delas, então gire para ver o outro lado. Na beira dos rios e lagos a água é rasa; no meio, funda — só quem nada entra.</p>
+      <h4>Avançar no tempo</h4><p>O botão ⏭ ao lado das velocidades (ou <kbd>J</kbd>) pula anos de história: o mundo vive de verdade, só que sem desenhar, e você vê os anos passarem num mapa, com as grandes notícias da crônica. Escolha até quando (anos, a primeira cidade, metrópole ou megalópole, a próxima guerra) e como: <b>anos de paz e fartura</b> (os povos crescem até virar impérios) ou <b>deixar o mundo seguir</b>. <kbd>Esc</kbd> para no meio do caminho. No Novo mundo, "Começar" já chega mais tarde.</p>
+      <h4>Mundos prontos</h4><p>No menu: mundos que o próprio jogo já viveu, com as mesmas regras — a primeira cidade, a metrópole, a megalópole, a guerra mundial, e o mesmo mundo depois de 100, 500 e 1000 anos. Abrem na hora, sem esperar os anos passarem, e viram o seu mundo salvo.</p>
+      <h4>O céu e os sons</h4><p>Névoa nos baixios ao amanhecer, raios de sol nas horas douradas, sombras de nuvens deslizando sobre os campos, <b>arco-íris</b> depois da chuva, vaga-lumes nas noites quentes, folhas no vento, redemoinhos de poeira no deserto, relâmpagos dentro das tempestades. O som acompanha o que a câmera mostra: ondas e gaivotas na costa, o rio correndo, folhas e pássaros na mata, o murmúrio da cidade, a forja, cães e galinhas, corujas e sapos à noite, o estrondo de uma batalha.</p>
+      <h4>Histórias</h4><p>Um <b>diretor de histórias</b> acompanha o que acontece e escolhe, entre os fatos reais do mundo, poucos que valem uma história: uma morte vista de perto vira <b>vingança</b>, alguém levado acorrentado vira <b>resgate</b>, uma fuga vira <b>volta para casa</b>, uma cidade perdida vira a <b>obsessão de um governante</b>, um conto junto à fogueira vira o <b>sonho</b> de uma criança, um luto vira <b>peregrinação</b>, uma fera que matou um pai vira <b>caçada</b>; e do mundo vivo vêm a <b>fera rara</b> vista perto da cidade, a <b>caravana</b> do mercador cuja estrada ganhou nome, o <b>palácio</b> do governante vaidoso, a <b>pérola negra</b> do mergulhador, a <b>cegonha</b> no telhado de quem espera um filho, a <b>travessia</b> da manada que um jovem anda até o rio para ver e a <b>guerra pela riqueza</b>; e do poder, <b>o cadafalso</b> (salvar alguém antes do meio-dia — ou ser pego junto), <b>a insurreição</b> (reuniões à noite e o dia do levante), <b>a testemunha</b> dos capuzes, <b>o inquérito</b>, <b>a causa dos mercadores</b> e <b>a conspiração</b>. Ninguém precisa ir sozinho: quem carrega uma história <b>chama companheiros</b> — que aceitam ou recusam pelo que são (medo, filhos pequenos, "não é assunto meu") —, alguém às vezes se oferece, e o grupo anda, acampa e luta junto. Ninguém as escreveu: só o que o mundo faz decide como terminam — cumpridas, fracassadas, roubadas pelo destino, abandonadas, transformadas ou herdadas por um filho. Quem carrega uma história usa um pouco do tempo livre nela (treinar, vigiar, viajar, rezar, seguir um rastro) e se alista contra o povo do inimigo. As premissas são verdadeiras: só sonha com o mar quem mora longe e nunca o viu, e peregrinação é estrada de verdade. As viagens têm despedida, pão na trouxa, capítulos do caminho (um passo, um vau, outro povo, a chuva), noites ao relento junto a um foguinho, a chegada e a volta. Os corajosos vão buscar um cativo de noite; quem vê o assassino acorrentado na própria cidade fica frente a frente com ele — e pode matar ou perdoar. Abra o painel com <kbd>K</kbd> ou a pena no topo: cada história tem retrato, trilha de etapas, mapa da jornada e capítulos; um cartão avisa quando uma começa, e um losango colorido marca quem carrega uma história.</p>
+      <h4>Cenas e acompanhar uma missão</h4><p>Os momentos decisivos de uma história são <b>encenados</b> pelas próprias pessoas do mundo: elas caminham até o lugar, falam em balões que se escrevem letra a letra, se ajoelham, correm, gritam, se escondem — e o mundo decide o resto. Na tela, a cena ganha <b>faixas de cinema</b>, cartão de título, legendas com o rosto de quem fala, nomes sobre as pessoas e <b>câmera lenta</b> no instante que importa (a corda cortada, o capuz que cai, a faca que hesita). Clique em <b>Seguir</b> numa história: as cenas dela abrem sozinhas; um <b>cartão no canto</b> mostra a etapa, conta o tempo até o <b>próximo momento</b> (com marcador no mapa e uma seta na borda da tela) e tem ⏩ para <b>avançar o mundo até lá</b>. Se algo forte acontece numa história que você não está vendo, aparece <b>AGORA</b> com o botão Assistir; uma cena perdida fica guardada para rever, com as falas e quadros. Há cenas para todas as histórias: a ordem, as pistas, a <b>vigília da reunião da seita</b> (as figuras chegando uma a uma, o graveto que estala, a perseguição no escuro, o rosto sob o capuz); o juramento sobre o corpo e o assassino acorrentado frente a frente; a noite no meio da cidade inimiga para cortar as correntes; o rastro e a fera saindo do mato; a vela da insurreição; a mesa dos mercadores; o golpe e a coroa; a pérola dada, devolvida ao mar ou vendida; a partida, a fogueira da estrada, a chegada e a volta. Enquanto uma cena está na tela, o sol anda mais devagar: uma noite de vigília não amanhece no meio dela. <kbd>Esc</kbd> sai da cena (ela continua no mundo).</p>
+      <h4>O Livro do Mundo</h4><p>Cada mundo nasce com nome, mito da criação, lendas de origem de cada povo e <b>duas profecias antigas</b>. Depois o livro se escreve sozinho: um capítulo a cada sete anos, lendas de heróis, profetas, monstros, vulcões e cidades afogadas. Abra com <kbd>L</kbd> ou pelo ícone do livro.</p>
+      <h4>Modo desenvolvedor</h4><p><kbd>F2</kbd> (ou <b>Modo desenvolvedor</b> no menu) abre uma bancada ao lado do mundo, que continua vivo: avançar anos, guardar e voltar a um momento, forçar guerras, golpes, revoltas, festivais, a <b>Guerra Mundial</b>, expedições e naufrágios, <b>criar histórias</b> fazendo acontecer o fato que as origina, <b>esperar até acontecer</b> qualquer coisa rara, mudar as chances do mundo e caçar bugs (erros engolidos, gente presa, histórias paradas, tempo de cada sistema, relatório para copiar).</p>
+      <h4>Dicas</h4><ul><li>Clique nos eventos da <b>Crônica</b> para ir até onde aconteceram.</li><li>Na seca, a chuva vale ouro. Num incêndio, também.</li><li>Tudo é salvo automaticamente no navegador.</li></ul>
+      </div><div class="mbtns"><button class="primary" data-m="close">Entendi</button></div>`, 'wide');
+  };
+  UI.openStats = function () {
+    const S = G.S; const st = S.stats;
+    let homes = 0, bld = 0; for (const b of S.buildings.values()) { if (b.built && G.BDEF[b.type].housing) homes++; if (b.built && b.type !== 'cemetery' && b.type !== 'ruin') bld++; }
+    const pw = st.powers || {};
+    const card = (l, v, s) => `<div class="stat"><div class="sv">${v}</div><div class="sl">${l}</div>${s ? `<div class="ss">${s}</div>` : ''}</div>`;
+    UI.openModal(`<h2>Estatísticas da civilização</h2>
+      <canvas id="pop-chart" width="720" height="140"></canvas>
+      <div class="stats">
+      ${card('População atual', S.villagers.size)}${card('Máxima histórica', st.maxPop)}${card('Idade da civilização', (S.day - 1) + ' anos')}
+      ${card('Nascimentos', st.births)}${card('Mortes', st.deaths)}${card('Mortos por você', st.godKills, st.godKills ? 'mortes por ações divinas' : 'mãos limpas… por enquanto')}
+      ${card('Casas', homes)}${card('Construções', bld)}${card('Assentamentos', S.settlements.size)}
+      ${card('Comida produzida', Math.floor(st.foodProduced))}${card('Madeira coletada', Math.floor(st.woodProduced))}${card('Pedra extraída', Math.floor(st.stoneProduced))}
+      ${card('Maior idade', Math.floor(st.oldest) + ' anos', esc(st.oldestName || ''))}${card('Árvores cortadas', st.treesFelled)}${card('Imigrantes', st.immigrants)}
+      ${card('Fé gasta', Math.floor(st.faithSpent))}${card('Poderes usados', Object.values(pw).reduce((a, b) => a + b, 0), Object.entries(pw).map(([k, n]) => (G.Powers.byId(k) || { name: k }).name + ' ' + n).join(' · '))}${card('Era', G.ERAS[S.era])}
+      ${S.factions.size > 1 || st.wars ? `${card('Povos vivos', G.Fac.all().length, (st.fallen || 0) + ' caídos')}${card('Guerras', st.wars || 0, (st.battles || 0) + ' batalhas')}${card('Mortos em combate', st.warDeaths || 0, (st.massacres || 0) + ' massacres')}
+      ${card('Cativos feitos', st.captives || 0, (st.freed || 0) + ' libertados · ' + (st.escapes || 0) + ' fugas')}${card('Rachas', st.secessions || 0, (st.coups || 0) + ' golpes · ' + (st.revolutions || 0) + ' revoluções')}${card('Execuções', st.executions || 0, (st.conquests || 0) + ' vilas conquistadas')}` : ''}
+      </div><div class="mbtns"><button class="primary" data-m="close">Fechar</button></div>`, 'wide');
+    drawPopChart();
+  };
+  function drawPopChart() {
+    const c = $('#pop-chart'); if (!c) return; const x = c.getContext('2d');
+    const S = G.S; const h = (S.popHist || []).concat([S.villagers.size]);
+    const W = c.width, H = c.height;
+    x.clearRect(0, 0, W, H);
+    x.fillStyle = 'rgba(255,255,255,0.04)'; x.fillRect(0, 0, W, H);
+    const max = Math.max(10, ...h);
+    x.strokeStyle = 'rgba(255,255,255,0.08)'; x.lineWidth = 1;
+    for (let k = 1; k < 4; k++) { x.beginPath(); x.moveTo(0, H * k / 4); x.lineTo(W, H * k / 4); x.stroke(); }
+    if (h.length < 2) { x.fillStyle = 'rgba(255,255,255,0.5)'; x.font = '14px Nunito, sans-serif'; x.fillText('O gráfico aparece a partir do segundo dia.', 20, H / 2); return; }
+    const px = k => 10 + (W - 20) * k / (h.length - 1), py = v => H - 12 - (H - 30) * v / max;
+    const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(245,200,107,0.45)'); g.addColorStop(1, 'rgba(245,200,107,0)');
+    x.beginPath(); x.moveTo(px(0), H); h.forEach((v, k) => x.lineTo(px(k), py(v))); x.lineTo(px(h.length - 1), H); x.closePath(); x.fillStyle = g; x.fill();
+    x.beginPath(); h.forEach((v, k) => k ? x.lineTo(px(k), py(v)) : x.moveTo(px(k), py(v))); x.strokeStyle = '#f5c86b'; x.lineWidth = 2; x.stroke();
+    x.fillStyle = 'rgba(255,240,210,0.8)'; x.font = '12px Nunito, sans-serif'; x.fillText('População por dia · pico ' + Math.max(...h), 14, 18);
+  }
+  // the whole life, as it happened
+  UI.openBio = function (id) {
+    const p = G.person(id); if (!p || !G.Life) return;
+    const list = G.Life.bioList(p);
+    const end = p.dead ? `<li class="bio-end"><span>Dia ${p.died} · ${Math.floor(p.age)} anos</span>${esc(G.cap(G.Village.deathText(p)))}.${p.buried === 'pyre' ? ' Seu corpo foi queimado numa pira.' : p.grave ? ' Está enterrad' + (p.g === 'f' ? 'a' : 'o') + ' no cemitério.' : p.buried === 'ossuario' ? ' Seus ossos descansam no ossuário.' : p.buried === 'vala' ? ' Foi enterrad' + (p.g === 'f' ? 'a' : 'o') + ' numa vala comum.' : ''}</li>` : '';
+    UI.openModal(`<h2>A vida de ${esc(p.name)}</h2><p class="muted center">${p.dead ? `Viveu ${Math.floor(p.age)} anos` : `${Math.floor(p.age)} anos · ${esc(G.roleName(p))}`} · tudo o que está escrito aqui aconteceu</p>
+      ${list.length || end ? `<ol class="bio">${list.map(e => `<li><span>Dia ${e.d} · ${e.age} ${e.age === 1 ? 'ano' : 'anos'}</span>${esc(e.txt)}</li>`).join('')}${end}</ol>` : '<p class="muted center">Uma vida ainda sem histórias.</p>'}
+      <div class="mbtns"><button data-m="person" data-id="${p.id}">Ver ${esc(p.name)}</button><button data-m="tree" data-id="${p.id}">Família</button><button class="primary" data-m="close">Fechar</button></div>`, 'wide');
+  };
+  UI.openTree = function (id) {
+    const S = G.S; const p = G.person(id); if (!p) return;
+    const card = (q, big) => {
+      if (!q) return '';
+      const f = q.g === 'f';
+      const sub = q.dead ? `† aos ${Math.floor(q.age)} · dia ${q.died}` : `${Math.floor(q.age)} anos · ${G.roleName(q)}`;
+      return `<button class="ft-card ${f ? 'f' : 'm'} ${q.dead ? 'dead' : ''} ${big ? 'big' : ''}" data-tree="${q.id}"><b>${esc(q.name)}</b><span>${sub}</span></button>`;
+    };
+    const P = i => G.person(i);
+    const parents = [P(p.mother), P(p.father)].filter(Boolean);
+    const gp = []; for (const q of parents) { if (P(q.mother)) gp.push(P(q.mother)); if (P(q.father)) gp.push(P(q.father)); }
+    const kids = (p.kids || []).map(P).filter(Boolean);
+    const gk = []; for (const k of kids) for (const i of (k.kids || [])) { const q = P(i); if (q) gk.push(q); }
+    const sibs = [];
+    const all = [...S.villagers.values(), ...S.dead.values()];
+    for (const q of all) if (q.id !== p.id && ((p.mother && q.mother === p.mother) || (p.father && q.father === p.father))) sibs.push(q);
+    const partner = P(p.partner) || P(p.widow);
+    const row = (label, list) => list.length ? `<div class="ft-row"><label>${label}</label><div class="ft-cards">${list.map(q => card(q)).join('')}</div></div>` : '';
+    UI.openModal(`<h2>Família de ${esc(p.name)}</h2>
+      <div class="ft">
+      ${row('Avós', gp)}${row('Pais', parents)}
+      <div class="ft-row main"><label>${p.dead ? 'Em memória' : 'Hoje'}</label><div class="ft-cards">${card(p, true)}${partner ? '<span class="ft-heart">' + ICON.heart + '</span>' + card(partner, true) : ''}</div></div>
+      ${row('Irmãos', sibs)}${row('Filhos', kids)}${row('Netos', gk)}
+      ${!gp.length && !parents.length && !kids.length && !sibs.length ? '<p class="muted center">Uma árvore ainda sem galhos. Talvez um dia.</p>' : ''}
+      </div><div class="mbtns"><button data-m="person" data-id="${p.id}">Ver ${esc(p.name)}</button><button data-m="bio" data-id="${p.id}">Biografia</button><button class="primary" data-m="close">Fechar</button></div>`, 'wide');
+  };
+  // ------------------------------ world setup ------------------------------
+  const MAPSVG = {
+    ilha: '<path d="M14 30c-6-6-3-16 6-19 7-3 16-2 21 3 6 6 4 15-2 20-6 5-18 3-25-4z" fill="currentColor"/><path d="M24 18c3 4 5 9 11 12" stroke="#3a7ab8" stroke-width="1.6" fill="none"/>',
+    continente: '<path d="M6 34c-2-9 1-20 10-25 9-4 22-5 30 1 7 6 9 15 5 23-4 8-15 10-26 9-9-1-17-1-19-8z" fill="currentColor"/><path d="M20 20l4-6 4 6M32 26l3-5 3 5" stroke="#6a5a4a" stroke-width="1.4" fill="none"/>',
+    mar: '<path d="M6 12c1-4 6-5 9-3 2 2 1 6-2 7-4 1-8-1-7-4zM36 8c2-3 8-3 9 1 1 4-3 6-6 5-3 0-4-3-3-6zM20 30c1-4 8-5 10-2 3 3 0 7-4 7-4 1-7-2-6-5zM42 32c1-2 5-2 6 1 0 3-3 4-5 3-1-1-2-2-1-4z" fill="currentColor"/><path d="M13 18c5 3 9 7 9 10M30 12c4 2 7 6 10 17" stroke="#8ec8e8" stroke-width="1.2" stroke-dasharray="1.5 2.5" fill="none"/><path d="M24 20l2-4 2 4z" fill="#f4ecd8"/>',
+    arquipelago: '<path d="M8 17c1-5 8-7 12-4 3 3 1 8-3 9-5 1-10-1-9-5zM30 12c2-4 9-4 11 0 2 5-3 8-7 7-3-1-5-4-4-7zM18 33c1-5 9-6 12-2 3 4-1 9-6 8-4 0-7-2-6-6zM40 29c2-3 8-2 8 2s-5 6-8 4c-1-1-1-4 0-6z" fill="currentColor"/><path d="M19 22l5 8M34 19l6 9" stroke="#8ec8e8" stroke-width="1.4" stroke-dasharray="2 2" fill="none"/>',
+    istmo: '<path d="M4 20c0-8 8-13 15-11 5 2 6 6 9 7 3 1 5-5 11-5 7 0 12 6 11 13-1 7-8 11-15 9-4-1-5-5-8-5s-5 5-11 5C9 33 4 28 4 20z" fill="currentColor"/>',
+  };
+  UI.SIZES = [
+    [64, 'Pequeno', 'Uma ilha íntima: tudo cabe na tela, as vilas logo se esbarram.'],
+    [80, 'Médio', 'O tamanho clássico: espaço para dois ou três reinos crescerem.'],
+    [96, 'Grande', 'Terras largas, vários climas, viagens longas entre os povos.'],
+    [128, 'Enorme', 'Continentes de verdade: cidades podem virar metrópoles, e cabem até 6 povos.'],
+    [160, 'Colossal', 'Um mundo vasto, com espaço para megalópoles de centenas de almas e muitos reinos.'],
+    [192, 'Titânico', 'O maior de todos: megacidades, impérios e ecossistemas inteiros. Exige um computador mais forte.'],
+  ];
+  const START_TIP = {
+    inicio: 'Onze almas ao redor de uma fogueira, e você assiste a tudo desde o primeiro dia.',
+    anos30: 'O mundo vive 30 anos sozinho antes de você chegar: aldeias, vilas, talvez as primeiras guerras. Leva alguns segundos.',
+    cidades: 'Os povos crescem sob anos de paz e fartura até surgir a primeira cidade. Quando você chega, a bênção acaba — e os vizinhos se olham.',
+    imperios: 'Paz e fartura até nascer a primeira metrópole: reinos grandes, prontos para as grandes guerras. Pode levar um ou dois minutos — ou abra um mundo pronto, no menu, e chegue na hora.',
+  };
+  const RELIEF_TIP = {
+    plano: 'Planícies, colinas baixas e rios mansos: o mundo de antes, fácil de andar e de plantar.',
+    suave: 'Serras e colinas, alguns morros de pedra; rios descem das terras altas até o mar.',
+    montanhoso: 'Cordilheiras de verdade, com neve no alto, passos entre os vales, cachoeiras e desfiladeiros. Os caminhos contornam as montanhas.',
+    alpino: 'Picos gigantes de neve eterna, paredões de rocha, vales fundos. Um mundo bonito e difícil — passos viram pontos de guerra.',
+    aleatorio: 'O mundo decide o próprio relevo.',
+  };
+  UI.openSetup = function (fromGame, keep) {
+    if (!keep || !UI._setup) UI._setup = { fromGame: !!fromGame, opts: Object.assign({}, G.Main.lastOpts) };
+    const o = UI._setup.opts; if (!o.clima) o.clima = 'variado';
+    for (const k in G.Relief.OPTS) if (!o[k]) o[k] = G.Relief.OPTS[k].def;
+    if (!o.start) o.start = 'inicio';
+    if (!UI.SIZES.some(z => z[0] === o.size)) o.size = 80;
+    const maxT = o.size >= 128 ? 6 : 4; o.tribes = G.clamp(o.tribes || 1, 1, maxT);
+    const sizeTip = (UI.SIZES.find(z => z[0] === o.size) || UI.SIZES[1])[2];
+    const opt = (k, v, label, sub) => `<button class="st-opt ${o[k] === v ? 'on' : ''}" data-so="${k}" data-v="${v}"><b>${label}</b>${sub ? '<span>' + sub + '</span>' : ''}</button>`;
+    const maps = Object.entries(G.MAP_TYPES).map(([id, m]) => `<button class="st-map ${o.type === id ? 'on' : ''}" data-so="type" data-v="${id}"><span class="st-pic">${svg(MAPSVG[id] || MAPSVG.ilha, '0 0 54 44')}</span><b>${m.name}</b><span>${m.desc}</span></button>`).join('');
+    const tip = o.tribes === 1 ? 'Um único povo. Com o tempo, suas próprias vilas podem se rebelar e virar novos reinos.'
+      : `${o.tribes} povos começam em cantos distantes, sem saber uns dos outros. Quando se encontrarem, virão comércio, alianças, guerras — e talvez correntes.`;
+    // civilization per people
+    o.civs = (o.civs || []).slice(0, 6);
+    const focus = Math.min(UI._setup.focus || 0, o.tribes - 1);
+    const civChip = (k, id) => { const c = G.CIVS[id]; const on = (o.civs[k] || 'rand') === id; return `<button class="st-civ ${on ? 'on' : ''}" data-civ="${k}" data-v="${id}" title="${c ? esc(c.blurb) : 'Sorteada ao criar o mundo'}"><i>${id === 'rand' ? ICON.star : UI.civIcon(id)}</i><b>${c ? c.name : 'Aleatória'}</b></button>`; };
+    const rows = o.classic ? '' : Array.from({ length: o.tribes }, (_, k) => `<div class="st-civrow ${k === focus ? 'focus' : ''}"><span class="st-civn">${o.tribes > 1 ? 'Povo ' + (k + 1) : 'Seu povo'}</span><div class="st-civopts">${['rand'].concat(G.Civ.IDS).map(id => civChip(k, id)).join('')}</div></div>`).join('');
+    const fc = G.CIVS[o.civs[focus]];
+    const civTip = o.classic ? 'Tribos sem nome, como no começo de tudo: sem culturas históricas, sem traços especiais.'
+      : fc ? `<b>${fc.name}.</b> ${esc(fc.blurb)}` : 'Aleatória: cada povo sorteia uma civilização diferente — gregos, nórdicos, egípcios, astecas ou romanos.';
+    UI.openModal(`<h2>Novo mundo</h2>
+      <div class="setup">
+        <div class="st-label">Mapa</div><div class="st-maps">${maps}</div>
+        <div class="st-grid">
+          <div class="st-wide"><div class="st-label">Tamanho</div><div class="st-row st-sizes">${UI.SIZES.map(([n, l]) => opt('size', n, l, n + '×' + n)).join('')}</div>
+            <p class="st-hint">${sizeTip}</p></div>
+          <div class="st-wide"><div class="st-label">Povos</div><div class="st-row">${Array.from({ length: maxT }, (_, k) => opt('tribes', k + 1, String(k + 1))).join('')}</div></div>
+        </div>
+        <div class="st-label">Clima</div>
+        <div class="st-row st-clima">${Object.entries(G.Biome.CLIMAS).map(([k, c]) => opt('clima', k, c.name)).join('')}</div>
+        <p class="st-hint">${esc((G.Biome.CLIMAS[o.clima || 'variado'] || G.Biome.CLIMAS.variado).desc)}</p>
+        <div class="st-label">Relevo</div>
+        <div class="st-row">${G.Relief.OPTS.relevo.v.map(([k, n, sub]) => opt('relevo', k, n, sub)).join('')}</div>
+        <div class="st-relief">${['cordilheiras', 'planaltos', 'costa', 'lagos', 'cavernas'].map(k => `<div class="st-rr"><span>${G.Relief.OPTS[k].label}</span><div class="st-row">${G.Relief.OPTS[k].v.map(([v, n]) => opt(k, v, n)).join('')}</div></div>`).join('')}</div>
+        <p class="st-hint">${RELIEF_TIP[o.relevo] || ''}</p>
+        <div class="st-label">Civilizações</div>
+        <div class="st-row">${opt('classic', 0, 'Históricas', 'cada povo com sua cultura')}${opt('classic', 1, 'Tribos sem nome', 'o modo clássico')}</div>
+        <div class="st-civs">${rows}</div>
+        <p class="st-hint civ">${civTip}</p>
+        <div class="st-label">Começar</div>
+        <div class="st-row st-start">${[['inicio', 'No princípio', 'a primeira fogueira'], ['anos30', '30 anos depois', 'aldeias e vilas'], ['cidades', 'Na era das cidades', 'praças e casas de pedra'], ['imperios', 'Na era dos impérios', 'metrópoles']].map(([k, n, sub]) => opt('start', k, n, sub)).join('')}</div>
+        <p class="st-hint">${START_TIP[o.start || 'inicio']}</p>
+        <div class="st-label">Temperamento dos povos</div>
+        <div class="st-row">${opt('temper', 'pacifico', 'Pacíficos', 'guerras raras e tardias')}${opt('temper', 'normal', 'Imprevisíveis', 'depende de quem governa')}${opt('temper', 'belicoso', 'Belicosos', 'sangue cedo e muitas vezes')}</div>
+        <p class="st-hint">${tip}</p>
+      </div>
+      <div class="mbtns"><button data-m="close">Cancelar</button><button class="primary" data-m="setup-go">Criar mundo</button></div>`, 'wide setup-modal');
+  };
+
+  // ------------------------------ kingdoms panel ------------------------------
+  const REL = { paz: ['Paz', 'grey'], guerra: ['Guerra', 'red'], tregua: ['Trégua', 'blue'], alianca: ['Aliança', 'green'], vassalo: ['Vassalagem', 'gold'] };
+  function relChip(a, b) {
+    const r = G.Fac.rel(a.id, b.id); if (!r) return '';
+    if (!r.met) return `<span class="rel unk">${UI.flag(b.id, 'mini')} desconhecido</span>`;
+    let [txt, cls] = REL[r.st] || REL.paz;
+    if (r.st === 'vassalo') txt = r.over === a.id ? 'Suserano' : 'Vassalo';
+    const op = Math.round(r.op);
+    return `<span class="rel ${cls}" title="Opinião ${op > 0 ? '+' : ''}${op}${r.grudge > 5 ? ' · rancor ' + Math.round(r.grudge) : ''}">${UI.flag(b.id, 'mini')}${txt}<em class="${op >= 0 ? 'pos' : 'neg'}">${op > 0 ? '+' : ''}${op}</em></span>`;
+  }
+  function realmCard(f) {
+    const S = G.S; const P = G.Politics;
+    const ruler = P.ruler(f);
+    const sets = G.Fac.settlementsOf(f.id);
+    const pop = G.Fac.pop(f.id), caps = G.Fac.captives(f.id), army = G.War.warriorsOf(f.id);
+    const cap = G.Fac.capitalOf(f.id);
+    const others = G.Fac.all().filter(o => o.id !== f.id);
+    const words = ruler ? P.personaWords(ruler) : [];
+    const past = f.rulers.slice(0, -1).slice(-4).reverse();
+    const stab = Math.round(f.stab || 0);
+    const status = [];
+    if (f.coup) status.push('<span class="st red">Conspiração</span>');
+    if (f.rev) status.push('<span class="st red">Revolução</span>');
+    if (f.revolt) status.push('<span class="st red">Revolta de cativos</span>');
+    if (f.exec) status.push('<span class="st red">Execução</span>');
+    if (f.weariness > 60) status.push('<span class="st grey">Cansado da guerra</span>');
+    if (f.stock.food < pop * 0.5) status.push('<span class="st red">Fome</span>');
+    if (f.golden > 0) status.push(`<span class="st gold">Era de Ouro · ${Math.ceil(f.golden / G.DAY_LEN)}d</span>`);
+    if (f.curse > 0) status.push(`<span class="st red">Amaldiçoado · ${Math.ceil(f.curse / G.DAY_LEN)}d</span>`);
+    if (f.law && G.Powers.LAWS && G.Powers.LAWS[f.law]) status.push(`<span class="st gold" title="Mandamento divino">“${esc(G.Powers.LAWS[f.law].name)}”</span>`);
+    const known = f.tech ? Object.keys(f.tech.known) : [];
+    const cur = f.tech && f.tech.cur ? `${G.TECH[f.tech.cur].name} ${Math.min(99, Math.floor(f.tech.pts / G.Civ.techCost(f, f.tech.cur) * 100))}%` : '';
+    const ships = S.ships.filter(s => s.fac === f.id); const warships = ships.filter(s => s.kind === 'guerra').length;
+    return `<div class="realm ${f.id === UI.viewFac ? 'on' : ''}" style="--fc:${G.Fac.hex(f.id)}">
+      <div class="rm-head">${UI.flag(f.id, 'big')}<div class="rm-title"><h3>${esc(f.name)}</h3><div class="sub">${f.civ && G.CIVS[f.civ] ? `<span class="rm-civ">${UI.civIcon(f.civ)}${G.CIVS[f.civ].name}</span> · ` : ''}${P.govName(f)} · ${G.ERAS[f.era] || ''}${f.parent && G.Fac.get(f.parent) ? ' · rompeu com ' + esc(G.Fac.get(f.parent).name) : ''}</div></div>
+      <button class="rm-go" data-m="realm-go" data-id="${f.id}" title="Ir até a capital">${ICON.eye}</button></div>
+      <div class="rm-ruler">${ICON.crown}${ruler ? `<a data-m="leader" data-id="${ruler.id}">${esc(P.styled(f, ruler))}</a>` : '<span class="muted">sem líder</span>'}</div>
+      ${ruler ? `<div class="rm-pers">${Math.floor(ruler.age)} anos${words.length ? ' · ' + words.join(', ') : ''} · legitimidade ${Math.round(f.legit)}%</div>` : ''}
+      <div class="rm-stats">
+        <span title="População livre">${ICON.pop}<b>${pop}</b></span>
+        <span title="Guerreiros">${ICON.sword}<b>${army}</b></span>
+        ${caps ? `<span title="Cativos mantidos">${ICON.chain}<b>${caps}</b></span>` : ''}
+        <span title="Vilas">${ICON.home}<b>${sets.length}</b></span>
+        <span title="Comida">${ICON.food}<b>${Math.floor(f.stock.food)}</b></span>
+        <span title="Madeira">${ICON.wood}<b>${Math.floor(f.stock.wood)}</b></span>
+        <span title="Pedra">${ICON.stone}<b>${Math.floor(f.stock.stone)}</b></span>
+        ${ships.length ? `<span title="Navios (${warships} de guerra)">${ICON.ship}<b>${ships.length}</b></span>` : ''}
+      </div>
+      ${G.Eco ? G.Eco.realmHTML(f, esc) : ''}
+      ${f.tech ? `<div class="rm-tech">${ICON.tech}<span>${known.length ? known.map(t => G.TECH[t].name).join(' · ') : 'Nenhum saber ainda'}${cur ? ` <em>pesquisando ${esc(cur)}</em>` : ''}</span></div>` : ''}
+      ${bar('Estabilidade', stab, stab < 35 ? 'hp' : 'energy', stab + '%')}
+      ${status.length ? `<div class="status">${status.join('')}</div>` : ''}
+      <div class="rm-sets">${sets.map(s => `<span class="${s === cap ? 'cap' : ''}" title="Lealdade ${Math.round(s.loyalty)}%">${s === cap ? ICON.crown : ''}${esc(s.name)} <small>${G.City.tierName(s).toLowerCase()}</small> <em class="${s.loyalty < 30 ? 'neg' : ''}">${Math.round(s.loyalty)}%</em></span>`).join('')}</div>
+      ${others.length ? `<div class="rm-rels">${others.map(o => relChip(f, o)).join('')}</div>` : ''}
+      <div class="rm-foot">${f.st.kills || f.st.deaths ? `${f.st.kills} mortes causadas · ${f.st.deaths} baixas` : G.Fac.enemiesOf(f.id).length ? 'Em guerra, ainda sem batalhas' : 'Nunca lutou uma batalha'}${f.st.conquests ? ' · ' + f.st.conquests + (f.st.conquests > 1 ? ' conquistas' : ' conquista') : ''}${f.st.massacres ? ' · ' + f.st.massacres + (f.st.massacres > 1 ? ' massacres' : ' massacre') : ''}${f.st.captives ? ' · ' + f.st.captives + ' capturados' : ''}${f.st.executions ? ' · ' + f.st.executions + (f.st.executions > 1 ? ' execuções' : ' execução') : ''}</div>
+      ${past.length ? `<div class="rm-hist">${past.map(r => `<span>${esc(r.title || '')} ${esc(r.name)}${r.ord > 1 ? ' ' + ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][r.ord] : ''}${r.ep ? ', ' + esc(r.ep) : ''} <em>dia ${r.from}–${r.to !== undefined ? r.to : '?'}${END_TXT[r.end] ? ' · ' + END_TXT[r.end] : ''}</em></span>`).join('')}</div>` : ''}
+      <button class="rm-view" data-m="realm" data-id="${f.id}">${f.id === UI.viewFac ? 'Acompanhando' : 'Acompanhar este povo'}</button>
+    </div>`;
+  }
+  const END_TXT = { morte: 'morte', old: 'velhice', batalha: 'caiu em batalha', golpe: 'derrubado num golpe', revolucao: 'derrubado pelo povo', executado: 'executado', capturado: 'capturado', deposto: 'deposto por deus', queda: 'o povo caiu', partiu: 'partiu', war: 'batalha', lightning: 'raio', meteor: 'meteoro', sick: 'doença', hunger: 'fome', fire: 'fogo' };
+  UI.openRealms = function () {
+    const S = G.S; if (!S) return;
+    const all = G.Fac.all();
+    const dead = [...S.factions.values()].filter(f => !f.alive);
+    const st = S.stats;
+    all.sort((a, b) => (b.id === UI.viewFac) - (a.id === UI.viewFac) || G.Fac.pop(b.id) - G.Fac.pop(a.id));
+    UI.openModal(`<h2>Reinos</h2>
+      <div class="realms-top"><canvas id="realm-map" width="320" height="200"></canvas>
+      <div class="realms-sum">${G.WorldWar ? G.WorldWar.summary() : ''}
+        <div><b>${all.length}</b> ${all.length === 1 ? 'povo vivo' : 'povos vivos'}${dead.length ? ` · <b>${dead.length}</b> ${dead.length > 1 ? 'caídos' : 'caído'}` : ''}</div>
+        <div><b>${st.wars || 0}</b> guerras · <b>${st.battles || 0}</b> batalhas · <b>${st.warDeaths || 0}</b> mortos em combate${G.Wars ? ` <button class="wz-open" data-m="wz-open">${ICON.sword} Guerras${G.Wars.active().length ? ' <b>' + G.Wars.active().length + '</b>' : ''}</button>` : ''}</div>
+        <div><b>${st.conquests || 0}</b> conquistas · <b>${st.massacres || 0}</b> massacres · <b>${st.captives || 0}</b> capturados · <b>${st.freed || 0}</b> libertados</div>
+        <div><b>${st.secessions || 0}</b> rachas · <b>${st.coups || 0}</b> golpes · <b>${st.revolutions || 0}</b> revoluções · <b>${st.executions || 0}</b> execuções</div>
+        <div class="muted">Clique num povo para acompanhá-lo no HUD. <kbd>R</kbd> abre este painel, <kbd>B</kbd> mostra/oculta as fronteiras.</div>
+      </div></div>
+      <div class="realms">${all.map(realmCard).join('')}</div>
+      ${dead.length ? `<h4 class="rm-deadh">Povos caídos</h4><div class="rm-dead">${dead.map(f => `<span>${UI.flag(f.id, 'mini')}<b>${esc(f.name)}</b> <em>dia ${f.founded}–${f.died} · ${esc(f.fate || '')}</em></span>`).join('')}</div>` : ''}
+      <div class="mbtns"><button class="primary" data-m="close">Fechar</button></div>`, 'wide realms-modal');
+    drawRealmMap();
+  };
+  function drawRealmMap() {
+    const c = $('#realm-map'); if (!c) return; const x = c.getContext('2d');
+    const S = G.S; const N = S.N || G.N; const W = c.width, H = c.height;
+    x.clearRect(0, 0, W, H);
+    // fit the land (not the whole ocean) into the canvas
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (let ty = 0; ty < N; ty++) for (let tx = 0; tx < N; tx++) if (S.type[ty * N + tx] > G.T.SEA) { const u = tx - ty, w = (tx + ty) * 0.5; if (u < x0) x0 = u; if (u > x1) x1 = u; if (w < y0) y0 = w; if (w > y1) y1 = w; }
+    if (x0 > x1) { x0 = -N; x1 = N; y0 = 0; y1 = N; }
+    const sc = Math.min((W - 16) / (x1 - x0 + 2), (H - 16) / (y1 - y0 + 2));
+    const ox = W / 2 - (x0 + x1) / 2 * sc, oy = H / 2 - (y0 + y1 + 1) / 2 * sc;
+    const P = (tx, ty) => [ox + (tx - ty) * sc, oy + (tx + ty) * sc * 0.5];
+    const terr = G.Fac.terrFac;
+    for (let ty = 0; ty < N; ty++) for (let tx = 0; tx < N; tx++) {
+      const i = ty * N + tx; const t = S.type[i];
+      let col = t <= G.T.SEA ? null : t === G.T.RIVER ? '#6aa8c8' : t === G.T.SAND ? '#d8c890' : t === G.T.ROCKY ? '#9a948a' : '#6e9a52';
+      if (!col) continue;
+      if (terr && terr[i]) { const rgb = G.hex2rgb(G.Fac.hex(terr[i])); const base = G.hex2rgb(col); col = G.rgb(G.lerpColor(base, rgb, 0.55)); }
+      const [px, py] = P(tx, ty);
+      x.fillStyle = col; x.beginPath(); x.moveTo(px, py); x.lineTo(px + sc, py + sc * 0.5); x.lineTo(px, py + sc); x.lineTo(px - sc, py + sc * 0.5); x.closePath(); x.fill();
+    }
+    // wars & alliances between capitals
+    const fs = G.Fac.all();
+    for (let i = 0; i < fs.length; i++) for (let j = i + 1; j < fs.length; j++) {
+      const r = G.Fac.rel(fs[i].id, fs[j].id); if (!r || !r.met || r.st === 'paz' || r.st === 'tregua') continue;
+      const a = G.Fac.capitalOf(fs[i].id), b = G.Fac.capitalOf(fs[j].id); if (!a || !b) continue;
+      const [ax, ay] = P(a.cx, a.cy), [bx, by] = P(b.cx, b.cy);
+      x.strokeStyle = r.st === 'guerra' ? 'rgba(255,70,60,0.9)' : r.st === 'alianca' ? 'rgba(120,200,255,0.9)' : 'rgba(240,200,90,0.9)';
+      x.lineWidth = 2; x.setLineDash(r.st === 'guerra' ? [5, 3] : []); x.beginPath(); x.moveTo(ax, ay); x.lineTo(bx, by); x.stroke(); x.setLineDash([]);
+    }
+    for (const b of G.War.bands.values()) {
+      const f = G.Fac.get(b.fac); const v = S.villagers.get(b.members[0]); if (!f || !v) continue;
+      const [px, py] = P(v.x, v.y); x.fillStyle = G.Fac.hex(f.id); x.strokeStyle = '#fff'; x.lineWidth = 1;
+      x.beginPath(); x.moveTo(px, py - 5); x.lineTo(px + 4, py + 3); x.lineTo(px - 4, py + 3); x.closePath(); x.fill(); x.stroke();
+    }
+    for (const s of S.settlements.values()) {
+      const [px, py] = P(s.cx, s.cy); const f = G.Fac.get(s.fac);
+      const capital = f && G.Fac.capitalOf(f.id) === s;
+      x.fillStyle = f ? G.Fac.hex(f.id) : '#999'; x.strokeStyle = '#1a1410'; x.lineWidth = 1.5;
+      x.beginPath(); x.arc(px, py, capital ? 4.5 : 3, 0, Math.PI * 2); x.fill(); x.stroke();
+      if (capital) { x.fillStyle = '#ffe08a'; x.beginPath(); x.arc(px, py, 1.6, 0, Math.PI * 2); x.fill(); }
+    }
+  }
+})(window.G);

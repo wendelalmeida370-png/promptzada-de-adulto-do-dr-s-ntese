@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>God of the Ant Farm</title>
+  <meta name="description" content="Um pequeno ecossistema vivo numa ilha. Observe, ajude — ou lembre-os de quem é o deus deles.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- ================= HUD ================= -->
+  <div id="hud" class="hidden">
+    <div id="topbar">
+      <button class="tb-group hidden" id="fac-chip" title="Reinos — clique para ver todos os povos"></button>
+      <div class="tb-group" id="res">
+        <div class="res" id="res-pop" title="População"><i id="ic-pop" class="ri pop"></i><b id="v-pop">0</b></div>
+        <div class="res" id="res-food" title="Comida"><i id="ic-food" class="ri food"></i><b id="v-food">0</b><small id="c-food"></small></div>
+        <div class="res" id="res-wood" title="Madeira"><i id="ic-wood" class="ri wood"></i><b id="v-wood">0</b><small id="c-wood"></small></div>
+        <div class="res" id="res-stone" title="Pedra"><i id="ic-stone" class="ri stone"></i><b id="v-stone">0</b><small id="c-stone"></small></div>
+        <div class="res faith" id="res-faith" title="Fé — usada para lançar poderes"><i id="ic-faith" class="ri faith"></i><b id="v-faith">0</b><small id="r-faith"></small></div>
+      </div>
+      <div class="tb-group" id="clock">
+        <canvas id="dial" width="72" height="72"></canvas>
+        <div class="clock-txt"><div id="day">Dia 1</div><div id="era">Acampamento</div></div>
+        <span id="weather" class="hidden"></span>
+      </div>
+      <div class="tb-group" id="speed">
+        <button data-speed="0" id="btn-pause" title="Pausar (Espaço)"></button>
+        <button data-speed="1" class="on" title="Velocidade normal">1x</button>
+        <button data-speed="2" title="Rápido">2x</button>
+        <button data-speed="4" title="Muito rápido">4x</button>
+        <button data-speed="8" title="Acelerado (8x)">8x</button>
+        <button data-speed="16" title="Turbo (16x)">16x</button>
+        <button id="btn-skip" title="Avançar no tempo (J) — pular anos de história e chegar às cidades, aos impérios e às grandes guerras"></button>
+        <small id="speed-real" class="hidden" title="Velocidade que o seu computador está conseguindo manter"></small>
+      </div>
+      <div class="tb-group" id="tb-btns">
+        <button id="btn-realms" title="Reinos e diplomacia (R)"></button>
+        <button id="btn-lore" title="O Livro do Mundo (L)"></button>
+        <button id="btn-saga" title="Histórias (K) — as histórias que o mundo está contando"></button>
+        <button id="btn-sea" title="O Mar (O) — expedições, frotas de guerra e o que cada povo conhece do mundo"></button>
+        <button id="btn-map" title="Minimapa (M)"></button>
+        <button id="btn-under" title="Subterrâneo: ver as cavernas (U)"></button>
+        <button id="btn-chron" title="Crônica (H)"></button>
+        <button id="btn-stats" title="Estatísticas"></button>
+        <button id="btn-war" class="hidden" title="Câmera de guerra (G) — seguir só a guerra: os exércitos em marcha, as defesas, os flancos, as emboscadas"></button>
+        <button id="btn-cinema" title="Modo cinema (C) — a câmera passeia sozinha pelo que acontece no mundo"></button>
+        <button id="btn-photo" title="Modo foto (P) — congela o mundo para você fotografar"></button>
+        <button id="btn-sound" title="Som"></button>
+        <button id="btn-menu" title="Menu (Esc)"></button>
+      </div>
+    </div>
+    <div id="paused-badge" class="hidden">PAUSADO</div>
+
+    <div id="inspector" class="panel hidden"></div>
+
+    <div id="chronicle" class="panel">
+      <div class="ch-head"><span>Crônica <em id="chron-count">0</em></span><button id="chron-toggle" title="Recolher">−</button></div>
+      <div id="chron-list"></div>
+    </div>
+
+    <div id="bottom">
+      <div id="power-hint" class="hidden"></div>
+      <button id="prayer" class="hidden"></button>
+      <div id="perception"></div>
+      <div id="powertabs"></div>
+      <div id="powerbar" class="panel"></div>
+    </div>
+
+    <div id="compass" class="panel"><button data-rot="-1" title="Girar a câmera (Q)"></button><div class="cp-rose" title="O norte do mundo — arraste para girar"><i></i><b>N</b></div><button data-rot="1" title="Girar a câmera (E)"></button></div>
+    <div id="minimap" class="panel hidden"><canvas></canvas><button class="mm-x" title="Fechar minimapa (M)">×</button></div>
+    <div id="notices"></div>
+    <div id="toast" class="hidden"></div>
+  </div>
+  <div id="tooltip" class="hidden"></div>
+
+  <!-- ================= INTRO ================= -->
+  <div id="intro" class="hidden">
+    <p>They do not need your commands.</p>
+    <p>They only need a world to live in.</p>
+    <p class="big">Whether you become their guardian or their catastrophe is up to you.</p>
+    <div class="skip">clique para pular</div>
+  </div>
+
+  <!-- ================= MAIN MENU ================= -->
+  <div id="menu">
+    <div class="menu-inner">
+      <div class="crest"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="11" fill="currentColor"/><g stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M32 6v9M32 49v9M6 32h9M49 32h9M13.6 13.6l6.4 6.4M44 44l6.4 6.4M13.6 50.4l6.4-6.4M44 20l6.4-6.4"/></g></svg></div>
+      <h1>GOD OF THE<br><span>ANT FARM</span></h1>
+      <p class="subtitle">Watch them live. Help them prosper. Or remind them who their god is.</p>
+      <div class="menu-btns">
+        <button id="btn-new" class="primary">NEW WORLD</button>
+        <button id="btn-continue">CONTINUE<small id="continue-info"></small></button>
+        <button id="btn-ready">MUNDOS PRONTOS<small>cidades, guerra mundial, mil anos</small></button>
+        <button id="btn-howto">HOW TO PLAY</button>
+      </div>
+      <p class="foot">Ilhas, continentes e arquipélagos gerados proceduralmente · vários povos, reinos e guerras · tudo salvo no seu navegador</p>
+    </div>
+  </div>
+
+  <!-- ================= MODAL ================= -->
+  <div id="modal-bg" class="hidden"><div id="modal" class="panel"></div></div>
+
+  <script src="js/util.js"></script>
+  <script src="js/civs.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/relief.js"></script>
+  <script src="js/biomes.js"></script>
+  <script src="js/nature.js"></script>
+  <script src="js/village.js"></script>
+  <script src="js/factions.js"></script>
+  <script src="js/politics.js"></script>
+  <script src="js/war.js"></script>
+  <script src="js/worldwar.js"></script>
+  <script src="js/city.js"></script>
+  <script src="js/sea.js"></script>
+  <script src="js/naval.js"></script>
+  <script src="js/siege.js"></script>
+  <script src="js/economy.js"></script>
+  <script src="js/festivals.js"></script>
+  <script src="js/army.js"></script>
+  <script src="js/wars.js"></script>
+  <script src="js/wars-ui.js"></script>
+  <script src="js/life.js"></script>
+  <script src="js/carnage.js"></script>
+  <script src="js/villagers.js"></script>
+  <script src="js/animals.js"></script>
+  <script src="js/flora.js"></script>
+  <script src="js/riches.js"></script>
+  <script src="js/pets.js"></script>
+  <script src="js/powers.js"></script>
+  <script src="js/miracles.js"></script>
+  <script src="js/wild.js"></script>
+  <script src="js/caves.js"></script>
+  <script src="js/lore.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/talk.js"></script>
+  <script src="js/scene.js"></script>
+  <script src="js/stories.js"></script>
+  <script src="js/story-world.js"></script>
+  <script src="js/story-lib.js"></script>
+  <script src="js/story-riches.js"></script>
+  <script src="js/story-party.js"></script>
+  <script src="js/story-politics.js"></script>
+  <script src="js/story-cadafalso.js"></script>
+  <script src="js/story-secrets.js"></script>
+  <script src="js/story-roads.js"></script>
+  <script src="js/story-deeds.js"></script>
+  <script src="js/story-fortunes.js"></script>
+  <script src="js/story-war.js"></script>
+  <script src="js/story-ui.js"></script>
+  <script src="js/story-track.js"></script>
+  <script src="js/fx.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/arch.js"></script>
+  <script src="js/fauna-art.js"></script>
+  <script src="js/cityart.js"></script>
+  <script src="js/estates.js"></script>
+  <script src="js/court.js"></script>
+  <script src="js/tavern.js"></script>
+  <script src="js/urban.js"></script>
+  <script src="js/social.js"></script>
+  <script src="js/waters.js"></script>
+  <script src="js/trade.js"></script>
+  <script src="js/seaknow.js"></script>
+  <script src="js/fishers.js"></script>
+  <script src="js/harbor.js"></script>
+  <script src="js/activity.js"></script>
+  <script src="js/act-falas.js"></script>
+  <script src="js/act-porto.js"></script>
+  <script src="js/act-negocio.js"></script>
+  <script src="js/expeditions.js"></script>
+  <script src="js/fleets.js"></script>
+  <script src="js/sea-ui.js"></script>
+  <script src="js/story-sea.js"></script>
+  <script src="js/migrate.js"></script>
+  <script src="js/nests.js"></script>
+  <script src="js/polity.js"></script>
+  <script src="js/justice.js"></script>
+  <script src="js/crime.js"></script>
+  <script src="js/riots.js"></script>
+  <script src="js/secrets.js"></script>
+  <script src="js/citygifts.js"></script>
+  <script src="js/beyond.js"></script>
+  <script src="js/fates.js"></script>
+  <script src="js/winter.js"></script>
+  <script src="js/dragon.js"></script>
+  <script src="js/seapart.js"></script>
+  <!-- the inside of the buildings: the plan of each one, one truth for the god, the body and the people (C2) -->
+  <script src="js/interiors.js"></script>
+  <script src="js/int-moveis.js"></script>
+  <script src="js/int-familias.js"></script>
+  <script src="js/int-quadras.js"></script>
+  <script src="js/int-trabalho.js"></script>
+  <script src="js/int-civicos.js"></script>
+  <script src="js/int-palacio.js"></script>
+  <script src="js/int-catalogo.js"></script>
+  <script src="js/cave-art.js"></script>
+  <script src="js/sky.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/int-planta.js"></script>
+  <script src="js/minimap.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/save.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/cinema.js"></script>
+  <script src="js/photo.js"></script>
+  <script src="js/timeskip.js"></script>
+  <script src="js/ready.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/devmode.js"></script>
+  <!-- Modo Encarnado (ENCARNACAO.md): Three.js r170 embutido (MIT), o espaço canônico, o mundo em 3D, a posse, o corpo -->
+  <script src="js/lib/three.min.js"></script>
+  <script src="js/space.js"></script>
+  <script src="js/tex3d.js"></script>
+  <script src="js/mesh3d.js"></script>
+  <script src="js/mesh-dragao.js"></script>
+  <script src="js/mesh-dragao2.js"></script>
+  <script src="js/mesh-runa.js"></script>
+  <script src="js/mesh-portal.js"></script>
+  <script src="js/mesh-empena.js"></script>
+  <script src="js/mesh-casco.js"></script>
+  <script src="js/mesh-banca.js"></script>
+  <script src="js/ground3d.js"></script>
+  <script src="js/realm3d.js"></script>
+  <script src="js/build3d.js"></script>
+  <script src="js/props3d.js"></script>
+  <script src="js/bodymesh.js"></script>
+  <script src="js/body3d.js"></script>
+  <script src="js/people3d.js"></script>
+  <script src="js/fx3d.js"></script>
+  <script src="js/dragon3d.js"></script>
+  <script src="js/things3d.js"></script>
+  <script src="js/grass3d.js"></script>
+  <script src="js/post3d.js"></script>
+  <script src="js/possess.js"></script>
+  <script src="js/interact.js"></script>
+  <script src="js/avatar.js"></script>
+  <script src="js/cam3d.js"></script>
+  <script src="js/input3d.js"></script>
+  <script src="js/incui.js"></script>
+  <script src="js/modes.js"></script>
+</body>
+</html>

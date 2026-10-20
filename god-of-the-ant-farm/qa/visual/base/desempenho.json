@@ -1,0 +1,9083 @@
+{
+ "root": "/home/user/promptzada-de-adulto-do-dr-s-ntese/.claude/worktrees/agent-a4e1fdd8d882c8f82/god-of-the-ant-farm",
+ "commit": "2ba9b5b",
+ "date": "2026-10-14 11:08",
+ "viewport": "1000×620",
+ "frames": 5,
+ "load": [
+  "9.3"
+ ],
+ "calib": [
+  57
+ ],
+ "presets": [
+  "baixa",
+  "media",
+  "alta"
+ ],
+ "rows": [
+  {
+   "view": "hedeby-praca",
+   "world": "cidade",
+   "preset": "baixa",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 30.4,
+   "load1": 9.8,
+   "calls": 223,
+   "tris": 442038,
+   "points": 2318,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 143.8,
+    "sd": 71.8,
+    "black": 0,
+    "white": 0,
+    "w": 750,
+    "h": 465
+   },
+   "t": {
+    "ms": 1068.9,
+    "msP95": 1206.1,
+    "ms3d": 1062.9,
+    "ms3dP95": 1171.8,
+    "n": 5
+   },
+   "drawn": {
+    "people": 19,
+    "crowd": 4,
+    "beasts": 29,
+    "dead": 0,
+    "near": 21,
+    "chunks": 64,
+    "grass": 0,
+    "particles": 18,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "sea": 2,
+     "fin": 4,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 244480,
+     "inst": 1477
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 152,
+     "inst": 19
+    },
+    "people3d.js:SpriteMaterial": {
+     "owner": "A4",
+     "objs": 2,
+     "calls": 2,
+     "tris": 0,
+     "inst": 2
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 132,
+     "inst": 68
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 4,
+     "calls": 4,
+     "tris": 1516,
+     "inst": 33
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 30,
+     "calls": 30,
+     "tris": 3840,
+     "inst": 30
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 28,
+     "calls": 28,
+     "tris": 8066,
+     "inst": 28
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 21,
+     "calls": 21,
+     "tris": 14928,
+     "inst": 21
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 348,
+     "inst": 4
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 11,
+     "calls": 11,
+     "tris": 22528,
+     "inst": 11
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 11,
+     "calls": 11,
+     "tris": 119088,
+     "inst": 11
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 14280,
+     "inst": 7
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 1176,
+     "inst": 4
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 5,
+     "calls": 5,
+     "tris": 8144,
+     "inst": 5
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 7,
+     "calls": 7,
+     "tris": 524,
+     "inst": 7
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 5,
+     "calls": 5,
+     "tris": 1192,
+     "inst": 5
+    }
+   },
+   "mem": {
+    "programs": 22,
+    "textures": 5,
+    "geometries": 175,
+    "live": 324,
+    "materials": 52,
+    "geoMB": 28.5,
+    "texMB": 28.4,
+    "heapMB": 107.9
+   },
+   "realm": {
+    "geometries": 175,
+    "textures": 5,
+    "calls": 223,
+    "tris": 442040,
+    "live": 324
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-praca",
+   "world": "cidade",
+   "preset": "media",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 30.7,
+   "load1": 9.8,
+   "calls": 351,
+   "tris": 1376933,
+   "points": 2319,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 136.8,
+    "sd": 74.4,
+    "black": 0.4,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 3523.6,
+    "msP95": 3566.5,
+    "ms3d": 3492.8,
+    "ms3dP95": 3560.4,
+    "n": 5
+   },
+   "drawn": {
+    "people": 23,
+    "crowd": 70,
+    "beasts": 60,
+    "dead": 0,
+    "near": 31,
+    "chunks": 64,
+    "grass": 6400,
+    "particles": 20,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 8,
+     "fin": 16,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 437814,
+     "inst": 2761
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 184,
+     "inst": 23
+    },
+    "people3d.js:SpriteMaterial": {
+     "owner": "A4",
+     "objs": 2,
+     "calls": 2,
+     "tris": 0,
+     "inst": 2
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 142,
+     "inst": 73
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 12,
+     "calls": 12,
+     "tris": 3768,
+     "inst": 65
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 24,
+     "calls": 24,
+     "tris": 3072,
+     "inst": 24
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 23,
+     "calls": 23,
+     "tris": 7856,
+     "inst": 23
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 16,
+     "calls": 16,
+     "tris": 11336,
+     "inst": 16
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 12,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 17,
+     "calls": 17,
+     "tris": 34816,
+     "inst": 17
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 16,
+     "calls": 16,
+     "tris": 167688,
+     "inst": 16
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 15,
+     "calls": 15,
+     "tris": 9216,
+     "inst": 15
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 10,
+     "calls": 10,
+     "tris": 25042,
+     "inst": 10
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 2112,
+     "inst": 7
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 6,
+     "calls": 6,
+     "tris": 11060,
+     "inst": 6
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 12,
+     "calls": 12,
+     "tris": 734,
+     "inst": 12
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 2037,
+     "inst": 9
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 26,
+     "inst": 2
+    }
+   },
+   "mem": {
+    "programs": 40,
+    "textures": 9,
+    "geometries": 210,
+    "live": 389,
+    "materials": 53,
+    "geoMB": 40,
+    "texMB": 28.6,
+    "heapMB": 110.4
+   },
+   "realm": {
+    "geometries": 210,
+    "textures": 9,
+    "calls": 257,
+    "tris": 910561,
+    "live": 389
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-praca",
+   "world": "cidade",
+   "preset": "alta",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 31.5,
+   "load1": 9.7,
+   "calls": 373,
+   "tris": 1553324,
+   "points": 2320,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 136,
+    "sd": 75.1,
+    "black": 0.5,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 4412.4,
+    "msP95": 4665.4,
+    "ms3d": 4403.1,
+    "ms3dP95": 4653.9,
+    "n": 5
+   },
+   "drawn": {
+    "people": 23,
+    "crowd": 70,
+    "beasts": 64,
+    "dead": 0,
+    "near": 46,
+    "chunks": 64,
+    "grass": 14400,
+    "particles": 23,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 14,
+     "fin": 28,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "pole": 4,
+     "flag": 4,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 454222,
+     "inst": 2865
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 184,
+     "inst": 23
+    },
+    "people3d.js:SpriteMaterial": {
+     "owner": "A4",
+     "objs": 2,
+     "calls": 2,
+     "tris": 0,
+     "inst": 2
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 156,
+     "inst": 80
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 13,
+     "calls": 13,
+     "tris": 5144,
+     "inst": 87
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 128,
+     "inst": 4
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 15,
+     "calls": 15,
+     "tris": 1920,
+     "inst": 15
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 15,
+     "calls": 15,
+     "tris": 6476,
+     "inst": 15
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 7,
+     "calls": 7,
+     "tris": 3268,
+     "inst": 7
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 26,
+     "calls": 26,
+     "tris": 53248,
+     "inst": 26
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 25,
+     "calls": 25,
+     "tris": 289824,
+     "inst": 25
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 24,
+     "calls": 24,
+     "tris": 16886,
+     "inst": 24
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 11,
+     "calls": 11,
+     "tris": 25126,
+     "inst": 11
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 2112,
+     "inst": 7
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 6,
+     "calls": 6,
+     "tris": 11060,
+     "inst": 6
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 20,
+     "calls": 20,
+     "tris": 2114,
+     "inst": 20
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 18,
+     "calls": 18,
+     "tris": 4622,
+     "inst": 18
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 26,
+     "inst": 2
+    }
+   },
+   "mem": {
+    "programs": 41,
+    "textures": 9,
+    "geometries": 230,
+    "live": 451,
+    "materials": 53,
+    "geoMB": 58.5,
+    "texMB": 28.6,
+    "heapMB": 218.9
+   },
+   "realm": {
+    "geometries": 230,
+    "textures": 9,
+    "calls": 277,
+    "tris": 1070162,
+    "live": 451
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-casa",
+   "world": "cidade",
+   "preset": "baixa",
+   "at": [
+    33.4,
+    36.4
+   ],
+   "heap": 31.1,
+   "load1": 9.2,
+   "calls": 128,
+   "tris": 326904,
+   "points": 2325,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 146,
+    "sd": 56.1,
+    "black": 0,
+    "white": 0,
+    "w": 750,
+    "h": 465
+   },
+   "t": {
+    "ms": 823.9,
+    "msP95": 849,
+    "ms3d": 815.4,
+    "ms3dP95": 844.7,
+    "n": 5
+   },
+   "drawn": {
+    "people": 19,
+    "crowd": 4,
+    "beasts": 35,
+    "dead": 0,
+    "near": 21,
+    "chunks": 64,
+    "grass": 0,
+    "particles": 26,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "sea": 4,
+     "fin": 8,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 269092,
+     "inst": 1633
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 152,
+     "inst": 19
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 180,
+     "inst": 92
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 4,
+     "calls": 4,
+     "tris": 1932,
+     "inst": 39
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 6,
+     "calls": 6,
+     "tris": 768,
+     "inst": 6
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 6,
+     "calls": 6,
+     "tris": 2858,
+     "inst": 6
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 16384,
+     "inst": 8
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 8,
+     "calls": 8,
+     "tris": 2576,
+     "inst": 8
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 4,
+     "calls": 4,
+     "tris": 13916,
+     "inst": 4
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 13794,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 456,
+     "inst": 2
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 3160,
+     "inst": 2
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 89,
+    "live": 324,
+    "materials": 52,
+    "geoMB": 28.6,
+    "texMB": 28.5,
+    "heapMB": 171.6
+   },
+   "realm": {
+    "geometries": 89,
+    "textures": 9,
+    "calls": 128,
+    "tris": 326910,
+    "live": 324
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-casa",
+   "world": "cidade",
+   "preset": "media",
+   "at": [
+    33.4,
+    36.4
+   ],
+   "heap": 31.3,
+   "load1": 9.5,
+   "calls": 233,
+   "tris": 1184400,
+   "points": 2326,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 137.3,
+    "sd": 59.2,
+    "black": 0.1,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 2492.5,
+    "msP95": 2679.2,
+    "ms3d": 2482.9,
+    "ms3dP95": 2667.6,
+    "n": 5
+   },
+   "drawn": {
+    "people": 23,
+    "crowd": 69,
+    "beasts": 64,
+    "dead": 0,
+    "near": 31,
+    "chunks": 64,
+    "grass": 6400,
+    "particles": 28,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 8,
+     "fin": 16,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 453612,
+     "inst": 2860
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 184,
+     "inst": 23
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 204,
+     "inst": 104
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 12,
+     "calls": 12,
+     "tris": 3768,
+     "inst": 65
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 4,
+     "calls": 4,
+     "tris": 512,
+     "inst": 4
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 1990,
+     "inst": 4
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 10,
+     "calls": 10,
+     "tris": 20480,
+     "inst": 10
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 10,
+     "calls": 10,
+     "tris": 3444,
+     "inst": 10
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 4,
+     "calls": 4,
+     "tris": 13916,
+     "inst": 4
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 4,
+     "calls": 4,
+     "tris": 456,
+     "inst": 4
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 13794,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 456,
+     "inst": 2
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 3160,
+     "inst": 2
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 99,
+    "live": 389,
+    "materials": 53,
+    "geoMB": 40,
+    "texMB": 28.6,
+    "heapMB": 195.8
+   },
+   "realm": {
+    "geometries": 99,
+    "textures": 9,
+    "calls": 141,
+    "tris": 709618,
+    "live": 389
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-casa",
+   "world": "cidade",
+   "preset": "alta",
+   "at": [
+    33.4,
+    36.4
+   ],
+   "heap": 31.1,
+   "load1": 9.5,
+   "calls": 237,
+   "tris": 1194278,
+   "points": 2326,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 138.9,
+    "sd": 58.7,
+    "black": 0.1,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 2455.8,
+    "msP95": 2566.6,
+    "ms3d": 2442.6,
+    "ms3dP95": 2553.7,
+    "n": 5
+   },
+   "drawn": {
+    "people": 23,
+    "crowd": 70,
+    "beasts": 64,
+    "dead": 0,
+    "near": 46,
+    "chunks": 64,
+    "grass": 14400,
+    "particles": 25,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 14,
+     "fin": 28,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "pole": 3,
+     "flag": 3,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 454222,
+     "inst": 2865
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 184,
+     "inst": 23
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 224,
+     "inst": 114
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 13,
+     "calls": 13,
+     "tris": 5112,
+     "inst": 86
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 96,
+     "inst": 3
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 128,
+     "inst": 1
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 512,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 13,
+     "calls": 13,
+     "tris": 26624,
+     "inst": 13
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 13,
+     "calls": 13,
+     "tris": 4922,
+     "inst": 13
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 4,
+     "calls": 4,
+     "tris": 13916,
+     "inst": 4
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 4,
+     "calls": 4,
+     "tris": 456,
+     "inst": 4
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 13794,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 456,
+     "inst": 2
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 3160,
+     "inst": 2
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 99,
+    "live": 451,
+    "materials": 53,
+    "geoMB": 58.5,
+    "texMB": 28.6,
+    "heapMB": 205.6
+   },
+   "realm": {
+    "geometries": 99,
+    "textures": 9,
+    "calls": 143,
+    "tris": 717448,
+    "live": 451
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-casa-fundos",
+   "world": "cidade",
+   "preset": "baixa",
+   "at": [
+    33.4,
+    36.4
+   ],
+   "heap": 30.7,
+   "load1": 9.5,
+   "calls": 161,
+   "tris": 365972,
+   "points": 2377,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 144.8,
+    "sd": 53.3,
+    "black": 0.1,
+    "white": 0,
+    "w": 750,
+    "h": 465
+   },
+   "t": {
+    "ms": 760.7,
+    "msP95": 880.4,
+    "ms3d": 755.8,
+    "ms3dP95": 875.1,
+    "n": 5
+   },
+   "drawn": {
+    "people": 19,
+    "crowd": 3,
+    "beasts": 35,
+    "dead": 0,
+    "near": 21,
+    "chunks": 64,
+    "grass": 0,
+    "particles": 80,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "sea": 4,
+     "fin": 8,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 268482,
+     "inst": 1628
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 152,
+     "inst": 19
+    },
+    "people3d.js:SpriteMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 246,
+     "inst": 125
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 4,
+     "calls": 4,
+     "tris": 1932,
+     "inst": 39
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 13,
+     "calls": 13,
+     "tris": 1664,
+     "inst": 13
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 12,
+     "calls": 12,
+     "tris": 4558,
+     "inst": 12
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 6,
+     "calls": 6,
+     "tris": 2500,
+     "inst": 6
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 3,
+     "calls": 3,
+     "tris": 204,
+     "inst": 3
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 18432,
+     "inst": 9
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 6,
+     "calls": 6,
+     "tris": 46520,
+     "inst": 6
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 5,
+     "calls": 5,
+     "tris": 9982,
+     "inst": 5
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 852,
+     "inst": 4
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 6276,
+     "inst": 4
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 8,
+     "calls": 8,
+     "tris": 1830,
+     "inst": 8
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 2,
+     "calls": 2,
+     "tris": 704,
+     "inst": 2
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 121,
+    "live": 324,
+    "materials": 52,
+    "geoMB": 28.6,
+    "texMB": 28.5,
+    "heapMB": 149.6
+   },
+   "realm": {
+    "geometries": 121,
+    "textures": 9,
+    "calls": 161,
+    "tris": 365978,
+    "live": 324
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-casa-fundos",
+   "world": "cidade",
+   "preset": "media",
+   "at": [
+    33.4,
+    36.4
+   ],
+   "heap": 31,
+   "load1": 9.5,
+   "calls": 276,
+   "tris": 1238012,
+   "points": 2378,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 138.8,
+    "sd": 57.3,
+    "black": 0.1,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 2854.3,
+    "msP95": 3090.6,
+    "ms3d": 2825.6,
+    "ms3dP95": 3080.8,
+    "n": 5
+   },
+   "drawn": {
+    "people": 22,
+    "crowd": 70,
+    "beasts": 63,
+    "dead": 0,
+    "near": 31,
+    "chunks": 64,
+    "grass": 6400,
+    "particles": 78,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 8,
+     "fin": 16,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 443642,
+     "inst": 2802
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 176,
+     "inst": 22
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 258,
+     "inst": 131
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 12,
+     "calls": 12,
+     "tris": 3768,
+     "inst": 65
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 1152,
+     "inst": 9
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 9,
+     "calls": 9,
+     "tris": 3874,
+     "inst": 9
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 3,
+     "calls": 3,
+     "tris": 1040,
+     "inst": 3
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 12,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 13,
+     "calls": 13,
+     "tris": 26624,
+     "inst": 13
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 64860,
+     "inst": 9
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 2316,
+     "inst": 8
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 16678,
+     "inst": 7
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 6,
+     "calls": 6,
+     "tris": 1572,
+     "inst": 6
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 5,
+     "calls": 5,
+     "tris": 9192,
+     "inst": 5
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 11,
+     "calls": 11,
+     "tris": 2514,
+     "inst": 11
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 4,
+     "calls": 4,
+     "tris": 1144,
+     "inst": 4
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 22,
+     "inst": 1
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 142,
+    "live": 389,
+    "materials": 53,
+    "geoMB": 40,
+    "texMB": 28.6,
+    "heapMB": 110.2
+   },
+   "realm": {
+    "geometries": 142,
+    "textures": 9,
+    "calls": 183,
+    "tris": 772486,
+    "live": 389
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-casa-fundos",
+   "world": "cidade",
+   "preset": "alta",
+   "at": [
+    33.4,
+    36.4
+   ],
+   "heap": 31.4,
+   "load1": 9.4,
+   "calls": 283,
+   "tris": 1273192,
+   "points": 2378,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 139.4,
+    "sd": 57.6,
+    "black": 0.1,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 2578.2,
+    "msP95": 2871.6,
+    "ms3d": 2569.9,
+    "ms3dP95": 2866.3,
+    "n": 5
+   },
+   "drawn": {
+    "people": 22,
+    "crowd": 70,
+    "beasts": 64,
+    "dead": 0,
+    "near": 46,
+    "chunks": 64,
+    "grass": 14400,
+    "particles": 69,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 14,
+     "fin": 28,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "pole": 3,
+     "flag": 3,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 447744,
+     "inst": 2828
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 176,
+     "inst": 22
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 268,
+     "inst": 136
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 13,
+     "calls": 13,
+     "tris": 5112,
+     "inst": 86
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 96,
+     "inst": 3
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 4,
+     "calls": 4,
+     "tris": 512,
+     "inst": 4
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 2026,
+     "inst": 4
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 18,
+     "calls": 18,
+     "tris": 36864,
+     "inst": 18
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 12,
+     "calls": 12,
+     "tris": 80432,
+     "inst": 12
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 10,
+     "calls": 10,
+     "tris": 2422,
+     "inst": 10
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 8,
+     "calls": 8,
+     "tris": 16762,
+     "inst": 8
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 6,
+     "calls": 6,
+     "tris": 1572,
+     "inst": 6
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 5,
+     "calls": 5,
+     "tris": 9192,
+     "inst": 5
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 16,
+     "calls": 16,
+     "tris": 4362,
+     "inst": 16
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 6,
+     "calls": 6,
+     "tris": 1198,
+     "inst": 6
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 22,
+     "inst": 1
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 146,
+    "live": 451,
+    "materials": 53,
+    "geoMB": 58.5,
+    "texMB": 28.6,
+    "heapMB": 189
+   },
+   "realm": {
+    "geometries": 146,
+    "textures": 9,
+    "calls": 189,
+    "tris": 802402,
+    "live": 451
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-rua-alto",
+   "world": "cidade",
+   "preset": "baixa",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 30.8,
+   "load1": 9.5,
+   "calls": 118,
+   "tris": 280884,
+   "points": 2326,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 142.8,
+    "sd": 77.7,
+    "black": 0,
+    "white": 0,
+    "w": 750,
+    "h": 465
+   },
+   "t": {
+    "ms": 913.8,
+    "msP95": 974.9,
+    "ms3d": 908.4,
+    "ms3dP95": 969.8,
+    "n": 5
+   },
+   "drawn": {
+    "people": 19,
+    "crowd": 3,
+    "beasts": 27,
+    "dead": 0,
+    "near": 21,
+    "chunks": 64,
+    "grass": 0,
+    "particles": 25,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 235666,
+     "inst": 1420
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 152,
+     "inst": 19
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 284,
+     "inst": 144
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 2,
+     "calls": 2,
+     "tris": 1100,
+     "inst": 27
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 128,
+     "inst": 1
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 512,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 16384,
+     "inst": 8
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 3,
+     "calls": 3,
+     "tris": 4812,
+     "inst": 3
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 10118,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 888,
+     "inst": 4
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 6368,
+     "inst": 4
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 7,
+     "calls": 7,
+     "tris": 2832,
+     "inst": 7
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 81,
+    "live": 324,
+    "materials": 52,
+    "geoMB": 28.5,
+    "texMB": 28.5,
+    "heapMB": 163.3
+   },
+   "realm": {
+    "geometries": 81,
+    "textures": 9,
+    "calls": 118,
+    "tris": 280886,
+    "live": 324
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-rua-alto",
+   "world": "cidade",
+   "preset": "media",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 31.1,
+   "load1": 9.6,
+   "calls": 224,
+   "tris": 1133616,
+   "points": 2333,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 132.6,
+    "sd": 79.9,
+    "black": 0.7,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 2841.8,
+    "msP95": 3146.2,
+    "ms3d": 2829.1,
+    "ms3dP95": 3139.8,
+    "n": 5
+   },
+   "drawn": {
+    "people": 22,
+    "crowd": 70,
+    "beasts": 60,
+    "dead": 0,
+    "near": 31,
+    "chunks": 64,
+    "grass": 6400,
+    "particles": 36,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 8,
+     "fin": 16,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 431336,
+     "inst": 2724
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 176,
+     "inst": 22
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 300,
+     "inst": 152
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 12,
+     "calls": 12,
+     "tris": 3768,
+     "inst": 65
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 18432,
+     "inst": 9
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 3,
+     "calls": 3,
+     "tris": 4812,
+     "inst": 3
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 102,
+     "inst": 1
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 10118,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 888,
+     "inst": 4
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 6368,
+     "inst": 4
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 8,
+     "calls": 8,
+     "tris": 3344,
+     "inst": 8
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 90,
+    "live": 389,
+    "materials": 53,
+    "geoMB": 39.9,
+    "texMB": 28.6,
+    "heapMB": 115.5
+   },
+   "realm": {
+    "geometries": 90,
+    "textures": 9,
+    "calls": 130,
+    "tris": 673286,
+    "live": 389
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-rua-alto",
+   "world": "cidade",
+   "preset": "alta",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 31.4,
+   "load1": 9.7,
+   "calls": 228,
+   "tris": 1168334,
+   "points": 2336,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 132.1,
+    "sd": 79.8,
+    "black": 0.7,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 2784.8,
+    "msP95": 3038.5,
+    "ms3d": 2775.1,
+    "ms3dP95": 3032.8,
+    "n": 5
+   },
+   "drawn": {
+    "people": 22,
+    "crowd": 70,
+    "beasts": 64,
+    "dead": 0,
+    "near": 46,
+    "chunks": 64,
+    "grass": 14400,
+    "particles": 36,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 14,
+     "fin": 28,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "pole": 4,
+     "flag": 4,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 447744,
+     "inst": 2828
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 176,
+     "inst": 22
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 314,
+     "inst": 159
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 13,
+     "calls": 13,
+     "tris": 5144,
+     "inst": 87
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 128,
+     "inst": 4
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 18432,
+     "inst": 9
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 3,
+     "calls": 3,
+     "tris": 4812,
+     "inst": 3
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 102,
+     "inst": 1
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 10118,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 888,
+     "inst": 4
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 6368,
+     "inst": 4
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 8,
+     "calls": 8,
+     "tris": 3344,
+     "inst": 8
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 90,
+    "live": 451,
+    "materials": 53,
+    "geoMB": 58.4,
+    "texMB": 28.6,
+    "heapMB": 211
+   },
+   "realm": {
+    "geometries": 90,
+    "textures": 9,
+    "calls": 132,
+    "tris": 691212,
+    "live": 451
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-tarde",
+   "world": "cidade",
+   "preset": "baixa",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 31,
+   "load1": 9.9,
+   "calls": 219,
+   "tris": 432994,
+   "points": 2327,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 80.1,
+    "sd": 34.9,
+    "black": 0,
+    "white": 0,
+    "w": 750,
+    "h": 465
+   },
+   "t": {
+    "ms": 1039.6,
+    "msP95": 1069.1,
+    "ms3d": 1033.6,
+    "ms3dP95": 1064.2,
+    "n": 5
+   },
+   "drawn": {
+    "people": 19,
+    "crowd": 3,
+    "beasts": 26,
+    "dead": 0,
+    "near": 21,
+    "chunks": 64,
+    "grass": 0,
+    "particles": 25,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 231564,
+     "inst": 1394
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 152,
+     "inst": 19
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 2,
+     "calls": 2,
+     "tris": 1100,
+     "inst": 27
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 30,
+     "calls": 30,
+     "tris": 3840,
+     "inst": 30
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 28,
+     "calls": 28,
+     "tris": 8066,
+     "inst": 28
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 21,
+     "calls": 21,
+     "tris": 14928,
+     "inst": 21
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 348,
+     "inst": 4
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 11,
+     "calls": 11,
+     "tris": 22528,
+     "inst": 11
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 11,
+     "calls": 11,
+     "tris": 119088,
+     "inst": 11
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 14280,
+     "inst": 7
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 1176,
+     "inst": 4
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 5,
+     "calls": 5,
+     "tris": 8144,
+     "inst": 5
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 7,
+     "calls": 7,
+     "tris": 524,
+     "inst": 7
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 5,
+     "calls": 5,
+     "tris": 1192,
+     "inst": 5
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 182,
+    "live": 324,
+    "materials": 52,
+    "geoMB": 28.5,
+    "texMB": 28.6,
+    "heapMB": 145.8
+   },
+   "realm": {
+    "geometries": 182,
+    "textures": 9,
+    "calls": 219,
+    "tris": 428892,
+    "live": 324
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-tarde",
+   "world": "cidade",
+   "preset": "media",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 31.3,
+   "load1": 10,
+   "calls": 352,
+   "tris": 1384401,
+   "points": 2324,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 74.4,
+    "sd": 35,
+    "black": 0.4,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 4033.6,
+    "msP95": 4158.8,
+    "ms3d": 4026.5,
+    "ms3dP95": 4152.7,
+    "n": 5
+   },
+   "drawn": {
+    "people": 22,
+    "crowd": 69,
+    "beasts": 61,
+    "dead": 0,
+    "near": 31,
+    "chunks": 64,
+    "grass": 6400,
+    "particles": 25,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 8,
+     "fin": 16,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 434828,
+     "inst": 2745
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 176,
+     "inst": 22
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 12,
+     "calls": 12,
+     "tris": 3768,
+     "inst": 65
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 24,
+     "calls": 24,
+     "tris": 3072,
+     "inst": 24
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 23,
+     "calls": 23,
+     "tris": 7856,
+     "inst": 23
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 16,
+     "calls": 16,
+     "tris": 11336,
+     "inst": 16
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 12,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 17,
+     "calls": 17,
+     "tris": 34816,
+     "inst": 17
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 16,
+     "calls": 16,
+     "tris": 167688,
+     "inst": 16
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 15,
+     "calls": 15,
+     "tris": 9216,
+     "inst": 15
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 10,
+     "calls": 10,
+     "tris": 25042,
+     "inst": 10
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 2112,
+     "inst": 7
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 6,
+     "calls": 6,
+     "tris": 10736,
+     "inst": 6
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 12,
+     "calls": 12,
+     "tris": 734,
+     "inst": 12
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 2037,
+     "inst": 9
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 26,
+     "inst": 2
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 214,
+    "live": 389,
+    "materials": 53,
+    "geoMB": 39.9,
+    "texMB": 28.6,
+    "heapMB": 187.1
+   },
+   "realm": {
+    "geometries": 214,
+    "textures": 9,
+    "calls": 255,
+    "tris": 907417,
+    "live": 389
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-tarde",
+   "world": "cidade",
+   "preset": "alta",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 31.7,
+   "load1": 9.9,
+   "calls": 374,
+   "tris": 1540324,
+   "points": 2327,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 74.1,
+    "sd": 34.9,
+    "black": 0.4,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 4138.3,
+    "msP95": 4337.3,
+    "ms3d": 4131.9,
+    "ms3dP95": 4329.4,
+    "n": 5
+   },
+   "drawn": {
+    "people": 21,
+    "crowd": 69,
+    "beasts": 64,
+    "dead": 0,
+    "near": 46,
+    "chunks": 64,
+    "grass": 14400,
+    "particles": 27,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 14,
+     "fin": 28,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "pole": 4,
+     "flag": 4,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 440656,
+     "inst": 2786
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 168,
+     "inst": 21
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 13,
+     "calls": 13,
+     "tris": 5144,
+     "inst": 87
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 128,
+     "inst": 4
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 15,
+     "calls": 15,
+     "tris": 1920,
+     "inst": 15
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 15,
+     "calls": 15,
+     "tris": 6476,
+     "inst": 15
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 7,
+     "calls": 7,
+     "tris": 3268,
+     "inst": 7
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 26,
+     "calls": 26,
+     "tris": 53248,
+     "inst": 26
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 25,
+     "calls": 25,
+     "tris": 289824,
+     "inst": 25
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 24,
+     "calls": 24,
+     "tris": 16886,
+     "inst": 24
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 11,
+     "calls": 11,
+     "tris": 25126,
+     "inst": 11
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 2112,
+     "inst": 7
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 6,
+     "calls": 6,
+     "tris": 10736,
+     "inst": 6
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 20,
+     "calls": 20,
+     "tris": 2114,
+     "inst": 20
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 18,
+     "calls": 18,
+     "tris": 4622,
+     "inst": 18
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 26,
+     "inst": 2
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 232,
+    "live": 451,
+    "materials": 53,
+    "geoMB": 58.4,
+    "texMB": 28.6,
+    "heapMB": 209.3
+   },
+   "realm": {
+    "geometries": 232,
+    "textures": 9,
+    "calls": 275,
+    "tris": 1056416,
+    "live": 451
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-manha",
+   "world": "cidade",
+   "preset": "baixa",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 31.1,
+   "load1": 9.7,
+   "calls": 118,
+   "tris": 275600,
+   "points": 2322,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 158.3,
+    "sd": 60.9,
+    "black": 0.1,
+    "white": 0,
+    "w": 750,
+    "h": 465
+   },
+   "t": {
+    "ms": 775,
+    "msP95": 863.5,
+    "ms3d": 769,
+    "ms3dP95": 794.9,
+    "n": 5
+   },
+   "drawn": {
+    "people": 19,
+    "crowd": 1,
+    "beasts": 26,
+    "dead": 0,
+    "near": 21,
+    "chunks": 64,
+    "grass": 0,
+    "particles": 23,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 230344,
+     "inst": 1384
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 152,
+     "inst": 19
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 2,
+     "calls": 2,
+     "tris": 1100,
+     "inst": 27
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 128,
+     "inst": 1
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 512,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 16384,
+     "inst": 8
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 3,
+     "calls": 3,
+     "tris": 4812,
+     "inst": 3
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 10118,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 888,
+     "inst": 4
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 6368,
+     "inst": 4
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 7,
+     "calls": 7,
+     "tris": 2832,
+     "inst": 7
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 81,
+    "live": 324,
+    "materials": 52,
+    "geoMB": 28.5,
+    "texMB": 28.6,
+    "heapMB": 137.6
+   },
+   "realm": {
+    "geometries": 81,
+    "textures": 9,
+    "calls": 118,
+    "tris": 275600,
+    "live": 324
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-manha",
+   "world": "cidade",
+   "preset": "media",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 31.3,
+   "load1": 9.4,
+   "calls": 225,
+   "tris": 1125954,
+   "points": 2324,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 146.9,
+    "sd": 67.3,
+    "black": 0.1,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 2652.7,
+    "msP95": 2709.9,
+    "ms3d": 2640.1,
+    "ms3dP95": 2699.2,
+    "n": 5
+   },
+   "drawn": {
+    "people": 24,
+    "crowd": 69,
+    "beasts": 60,
+    "dead": 0,
+    "near": 31,
+    "chunks": 64,
+    "grass": 6400,
+    "particles": 24,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 8,
+     "fin": 16,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 443682,
+     "inst": 2793
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 192,
+     "inst": 24
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 12,
+     "calls": 12,
+     "tris": 3768,
+     "inst": 65
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 18432,
+     "inst": 9
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 3,
+     "calls": 3,
+     "tris": 4812,
+     "inst": 3
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 102,
+     "inst": 1
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 10118,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 888,
+     "inst": 4
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 6368,
+     "inst": 4
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 8,
+     "calls": 8,
+     "tris": 3344,
+     "inst": 8
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 91,
+    "live": 389,
+    "materials": 53,
+    "geoMB": 39.9,
+    "texMB": 28.6,
+    "heapMB": 166.1
+   },
+   "realm": {
+    "geometries": 91,
+    "textures": 9,
+    "calls": 130,
+    "tris": 685668,
+    "live": 389
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-manha",
+   "world": "cidade",
+   "preset": "alta",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 31.7,
+   "load1": 9.4,
+   "calls": 229,
+   "tris": 1210786,
+   "points": 2324,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 146.8,
+    "sd": 67.6,
+    "black": 0.1,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 2588.6,
+    "msP95": 2981.6,
+    "ms3d": 2583.3,
+    "ms3dP95": 2977.4,
+    "n": 5
+   },
+   "drawn": {
+    "people": 24,
+    "crowd": 69,
+    "beasts": 64,
+    "dead": 0,
+    "near": 46,
+    "chunks": 64,
+    "grass": 14400,
+    "particles": 25,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 14,
+     "fin": 28,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "pole": 4,
+     "flag": 4,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 460090,
+     "inst": 2897
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 192,
+     "inst": 24
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 13,
+     "calls": 13,
+     "tris": 5144,
+     "inst": 87
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 128,
+     "inst": 4
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 18432,
+     "inst": 9
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 3,
+     "calls": 3,
+     "tris": 4812,
+     "inst": 3
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 102,
+     "inst": 1
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 10118,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 888,
+     "inst": 4
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 6368,
+     "inst": 4
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 8,
+     "calls": 8,
+     "tris": 3344,
+     "inst": 8
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 91,
+    "live": 451,
+    "materials": 53,
+    "geoMB": 58.4,
+    "texMB": 28.6,
+    "heapMB": 194.1
+   },
+   "realm": {
+    "geometries": 91,
+    "textures": 9,
+    "calls": 132,
+    "tris": 703580,
+    "live": 451
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-noite",
+   "world": "cidade",
+   "preset": "baixa",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 31.4,
+   "load1": 9.6,
+   "calls": 219,
+   "tris": 430136,
+   "points": 2332,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 60.5,
+    "sd": 36.6,
+    "black": 1.1,
+    "white": 0,
+    "w": 750,
+    "h": 465
+   },
+   "t": {
+    "ms": 1087,
+    "msP95": 1226.6,
+    "ms3d": 1082.6,
+    "ms3dP95": 1220.9,
+    "n": 5
+   },
+   "drawn": {
+    "people": 19,
+    "crowd": 5,
+    "beasts": 25,
+    "dead": 0,
+    "near": 21,
+    "chunks": 64,
+    "grass": 0,
+    "particles": 30,
+    "fires": 3,
+    "torches": 1,
+    "dragons": 0,
+    "things": {
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 228682,
+     "inst": 1378
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 152,
+     "inst": 19
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 72,
+     "inst": 6
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 2,
+     "calls": 2,
+     "tris": 1100,
+     "inst": 27
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 30,
+     "calls": 30,
+     "tris": 3840,
+     "inst": 30
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 28,
+     "calls": 28,
+     "tris": 8066,
+     "inst": 28
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 21,
+     "calls": 21,
+     "tris": 14928,
+     "inst": 21
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 348,
+     "inst": 4
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 11,
+     "calls": 11,
+     "tris": 22528,
+     "inst": 11
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 11,
+     "calls": 11,
+     "tris": 119088,
+     "inst": 11
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 14280,
+     "inst": 7
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 1176,
+     "inst": 4
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 5,
+     "calls": 5,
+     "tris": 8144,
+     "inst": 5
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 7,
+     "calls": 7,
+     "tris": 524,
+     "inst": 7
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 5,
+     "calls": 5,
+     "tris": 1192,
+     "inst": 5
+    }
+   },
+   "mem": {
+    "programs": 42,
+    "textures": 9,
+    "geometries": 182,
+    "live": 324,
+    "materials": 52,
+    "geoMB": 28.5,
+    "texMB": 28.6,
+    "heapMB": 210.4
+   },
+   "realm": {
+    "geometries": 182,
+    "textures": 9,
+    "calls": 219,
+    "tris": 426034,
+    "live": 324
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-noite",
+   "world": "cidade",
+   "preset": "media",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 31.7,
+   "load1": 9.6,
+   "calls": 352,
+   "tris": 1393509,
+   "points": 2330,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 58.2,
+    "sd": 36.5,
+    "black": 1.4,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 3750,
+    "msP95": 4115.2,
+    "ms3d": 3742.4,
+    "ms3dP95": 4105.8,
+    "n": 5
+   },
+   "drawn": {
+    "people": 24,
+    "crowd": 69,
+    "beasts": 58,
+    "dead": 0,
+    "near": 31,
+    "chunks": 64,
+    "grass": 6400,
+    "particles": 27,
+    "fires": 4,
+    "torches": 2,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 8,
+     "fin": 16,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "lamp": 1,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 435478,
+     "inst": 2741
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 192,
+     "inst": 24
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 96,
+     "inst": 8
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 12,
+     "calls": 12,
+     "tris": 3768,
+     "inst": 65
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.glow": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 12,
+     "inst": 1
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 24,
+     "calls": 24,
+     "tris": 3072,
+     "inst": 24
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 23,
+     "calls": 23,
+     "tris": 7856,
+     "inst": 23
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 16,
+     "calls": 16,
+     "tris": 11336,
+     "inst": 16
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 12,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 17,
+     "calls": 17,
+     "tris": 34816,
+     "inst": 17
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 16,
+     "calls": 16,
+     "tris": 167688,
+     "inst": 16
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 15,
+     "calls": 15,
+     "tris": 9216,
+     "inst": 15
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 10,
+     "calls": 10,
+     "tris": 25042,
+     "inst": 10
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 2112,
+     "inst": 7
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 6,
+     "calls": 6,
+     "tris": 10736,
+     "inst": 6
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 12,
+     "calls": 12,
+     "tris": 734,
+     "inst": 12
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 2037,
+     "inst": 9
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 26,
+     "inst": 2
+    }
+   },
+   "mem": {
+    "programs": 43,
+    "textures": 9,
+    "geometries": 213,
+    "live": 389,
+    "materials": 53,
+    "geoMB": 39.9,
+    "texMB": 28.6,
+    "heapMB": 189.5
+   },
+   "realm": {
+    "geometries": 213,
+    "textures": 9,
+    "calls": 256,
+    "tris": 908143,
+    "live": 389
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-noite",
+   "world": "cidade",
+   "preset": "alta",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 32.1,
+   "load1": 10,
+   "calls": 374,
+   "tris": 1575372,
+   "points": 2327,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 59.8,
+    "sd": 37.8,
+    "black": 1.4,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 4053.4,
+    "msP95": 4613.5,
+    "ms3d": 4049.2,
+    "ms3dP95": 4605.3,
+    "n": 5
+   },
+   "drawn": {
+    "people": 24,
+    "crowd": 65,
+    "beasts": 64,
+    "dead": 0,
+    "near": 46,
+    "chunks": 64,
+    "grass": 14400,
+    "particles": 27,
+    "fires": 4,
+    "torches": 2,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 14,
+     "fin": 28,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "pole": 4,
+     "flag": 4,
+     "lamp": 1,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 457650,
+     "inst": 2877
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 192,
+     "inst": 24
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 96,
+     "inst": 8
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 13,
+     "calls": 13,
+     "tris": 5144,
+     "inst": 87
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 128,
+     "inst": 4
+    },
+    "things3d.js:things.glow": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 12,
+     "inst": 1
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 15,
+     "calls": 15,
+     "tris": 1920,
+     "inst": 15
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 15,
+     "calls": 15,
+     "tris": 6476,
+     "inst": 15
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 7,
+     "calls": 7,
+     "tris": 3268,
+     "inst": 7
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 26,
+     "calls": 26,
+     "tris": 53248,
+     "inst": 26
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 25,
+     "calls": 25,
+     "tris": 289824,
+     "inst": 25
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 24,
+     "calls": 24,
+     "tris": 16886,
+     "inst": 24
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 11,
+     "calls": 11,
+     "tris": 25126,
+     "inst": 11
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 2112,
+     "inst": 7
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 6,
+     "calls": 6,
+     "tris": 10736,
+     "inst": 6
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 20,
+     "calls": 20,
+     "tris": 2114,
+     "inst": 20
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 18,
+     "calls": 18,
+     "tris": 4622,
+     "inst": 18
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 26,
+     "inst": 2
+    }
+   },
+   "mem": {
+    "programs": 43,
+    "textures": 9,
+    "geometries": 231,
+    "live": 451,
+    "materials": 53,
+    "geoMB": 58.4,
+    "texMB": 28.6,
+    "heapMB": 195.3
+   },
+   "realm": {
+    "geometries": 231,
+    "textures": 9,
+    "calls": 276,
+    "tris": 1073494,
+    "live": 451
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-mata",
+   "world": "cidade",
+   "preset": "baixa",
+   "at": [
+    101.5,
+    96.5
+   ],
+   "heap": 31.8,
+   "load1": 10,
+   "calls": 215,
+   "tris": 379943,
+   "points": 2321,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 99.8,
+    "sd": 43.2,
+    "black": 0,
+    "white": 0,
+    "w": 750,
+    "h": 465
+   },
+   "t": {
+    "ms": 1077.5,
+    "msP95": 1261.9,
+    "ms3d": 1071.7,
+    "ms3dP95": 1251.2,
+    "n": 5
+   },
+   "drawn": {
+    "people": 1,
+    "crowd": 0,
+    "beasts": 43,
+    "dead": 0,
+    "near": 15,
+    "chunks": 64,
+    "grass": 0,
+    "particles": 19,
+    "fires": 0,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "sea": 13,
+     "fin": 26,
+     "decal": 1,
+     "mouth": 1,
+     "rock": 16,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 63,
+     "calls": 63,
+     "tris": 182864,
+     "inst": 1155
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 8,
+     "inst": 1
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 4,
+     "calls": 4,
+     "tris": 3480,
+     "inst": 57
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 14,
+     "inst": 1
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 39,
+     "calls": 39,
+     "tris": 4992,
+     "inst": 39
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 37,
+     "calls": 37,
+     "tris": 10660,
+     "inst": 37
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 11,
+     "calls": 11,
+     "tris": 990,
+     "inst": 11
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 23,
+     "calls": 23,
+     "tris": 19060,
+     "inst": 23
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 16384,
+     "inst": 8
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 6,
+     "calls": 6,
+     "tris": 848,
+     "inst": 6
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 137184,
+     "inst": 8
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 6,
+     "calls": 6,
+     "tris": 2161,
+     "inst": 6
+    }
+   },
+   "mem": {
+    "programs": 43,
+    "textures": 9,
+    "geometries": 187,
+    "live": 283,
+    "materials": 51,
+    "geoMB": 24.9,
+    "texMB": 28.6,
+    "heapMB": 188.5
+   },
+   "realm": {
+    "geometries": 187,
+    "textures": 9,
+    "calls": 215,
+    "tris": 379943,
+    "live": 283
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-mata",
+   "world": "cidade",
+   "preset": "media",
+   "at": [
+    101.5,
+    96.5
+   ],
+   "heap": 31.6,
+   "load1": 9.9,
+   "calls": 320,
+   "tris": 1097930,
+   "points": 2321,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 49.1,
+    "sd": 30.5,
+    "black": 0,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 3421.4,
+    "msP95": 3647.9,
+    "ms3d": 3416.8,
+    "ms3dP95": 3643,
+    "n": 5
+   },
+   "drawn": {
+    "people": 1,
+    "crowd": 25,
+    "beasts": 61,
+    "dead": 0,
+    "near": 22,
+    "chunks": 64,
+    "grass": 6400,
+    "particles": 22,
+    "fires": 0,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "sea": 19,
+     "fin": 38,
+     "decal": 1,
+     "mouth": 2,
+     "rock": 23,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 271950,
+     "inst": 1748
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 8,
+     "inst": 1
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 4,
+     "calls": 4,
+     "tris": 4980,
+     "inst": 82
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 14,
+     "inst": 1
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 32,
+     "inst": 2
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 34,
+     "calls": 34,
+     "tris": 4352,
+     "inst": 34
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 33,
+     "calls": 33,
+     "tris": 10046,
+     "inst": 33
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 10,
+     "calls": 10,
+     "tris": 846,
+     "inst": 10
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 19,
+     "calls": 19,
+     "tris": 15188,
+     "inst": 19
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 13,
+     "calls": 13,
+     "tris": 26624,
+     "inst": 13
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 10,
+     "calls": 10,
+     "tris": 1462,
+     "inst": 10
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 12,
+     "calls": 12,
+     "tris": 192480,
+     "inst": 12
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 2916,
+     "inst": 9
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 12,
+     "calls": 12,
+     "tris": 11956,
+     "inst": 12
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 4066,
+     "inst": 1
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 216,
+     "inst": 1
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 4,
+     "inst": 1
+    }
+   },
+   "mem": {
+    "programs": 43,
+    "textures": 9,
+    "geometries": 205,
+    "live": 328,
+    "materials": 53,
+    "geoMB": 35.7,
+    "texMB": 28.6,
+    "heapMB": 195
+   },
+   "realm": {
+    "geometries": 205,
+    "textures": 9,
+    "calls": 238,
+    "tris": 740422,
+    "live": 328
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-mata",
+   "world": "cidade",
+   "preset": "alta",
+   "at": [
+    101.5,
+    96.5
+   ],
+   "heap": 32.2,
+   "load1": 9.7,
+   "calls": 362,
+   "tris": 1319901,
+   "points": 2324,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 51,
+    "sd": 29.9,
+    "black": 0,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 4158.6,
+    "msP95": 4765.8,
+    "ms3d": 4152.8,
+    "ms3dP95": 4750.2,
+    "n": 5
+   },
+   "drawn": {
+    "people": 1,
+    "crowd": 70,
+    "beasts": 64,
+    "dead": 0,
+    "near": 33,
+    "chunks": 64,
+    "grass": 14400,
+    "particles": 33,
+    "fires": 0,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 27,
+     "fin": 54,
+     "decal": 1,
+     "mouth": 2,
+     "rock": 23,
+     "pole": 1,
+     "flag": 1,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 311706,
+     "inst": 2051
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 8,
+     "inst": 1
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 13,
+     "calls": 13,
+     "tris": 7680,
+     "inst": 121
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 14,
+     "inst": 1
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 32,
+     "inst": 2
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 32,
+     "inst": 1
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 25,
+     "calls": 25,
+     "tris": 3200,
+     "inst": 25
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 25,
+     "calls": 25,
+     "tris": 8996,
+     "inst": 25
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 6,
+     "calls": 6,
+     "tris": 486,
+     "inst": 6
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 11,
+     "calls": 11,
+     "tris": 6940,
+     "inst": 11
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 22,
+     "calls": 22,
+     "tris": 45056,
+     "inst": 22
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 18,
+     "calls": 18,
+     "tris": 2512,
+     "inst": 18
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 20,
+     "calls": 20,
+     "tris": 294968,
+     "inst": 20
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 15,
+     "calls": 15,
+     "tris": 5097,
+     "inst": 15
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 19,
+     "calls": 19,
+     "tris": 17648,
+     "inst": 19
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 16498,
+     "inst": 7
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 3,
+     "calls": 3,
+     "tris": 1152,
+     "inst": 3
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 6,
+     "inst": 2
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 4212,
+     "inst": 4
+    }
+   },
+   "mem": {
+    "programs": 43,
+    "textures": 9,
+    "geometries": 227,
+    "live": 394,
+    "materials": 53,
+    "geoMB": 52.3,
+    "texMB": 28.6,
+    "heapMB": 221.6
+   },
+   "realm": {
+    "geometries": 227,
+    "textures": 9,
+    "calls": 270,
+    "tris": 919525,
+    "live": 394
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-praia",
+   "world": "cidade",
+   "preset": "baixa",
+   "at": [
+    20.5,
+    66.5
+   ],
+   "heap": 31.8,
+   "load1": 9.8,
+   "calls": 171,
+   "tris": 357323,
+   "points": 2333,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 170.7,
+    "sd": 55.8,
+    "black": 0,
+    "white": 0,
+    "w": 750,
+    "h": 465
+   },
+   "t": {
+    "ms": 914.8,
+    "msP95": 1013.4,
+    "ms3d": 905.7,
+    "ms3dP95": 1002.2,
+    "n": 5
+   },
+   "drawn": {
+    "people": 11,
+    "crowd": 32,
+    "beasts": 34,
+    "dead": 0,
+    "near": 18,
+    "chunks": 64,
+    "grass": 0,
+    "particles": 25,
+    "fires": 0,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "sea": 4,
+     "fin": 8,
+     "mouth": 1,
+     "rock": 7,
+     "pole": 2,
+     "flag": 2,
+     "nest": 1
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 230246,
+     "inst": 1451
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 88,
+     "inst": 11
+    },
+    "people3d.js:SpriteMaterial": {
+     "owner": "A4",
+     "objs": 4,
+     "calls": 4,
+     "tris": 0,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 490,
+     "inst": 20
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 5,
+     "calls": 5,
+     "tris": 1248,
+     "inst": 22
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 64,
+     "inst": 2
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 14,
+     "calls": 14,
+     "tris": 1792,
+     "inst": 14
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 13,
+     "calls": 13,
+     "tris": 4766,
+     "inst": 13
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 7,
+     "calls": 7,
+     "tris": 6072,
+     "inst": 7
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 12,
+     "calls": 12,
+     "tris": 24576,
+     "inst": 12
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 12,
+     "calls": 12,
+     "tris": 3174,
+     "inst": 12
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 66860,
+     "inst": 8
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 12100,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 3,
+     "calls": 3,
+     "tris": 948,
+     "inst": 3
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 2268,
+     "inst": 2
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 4,
+     "calls": 4,
+     "tris": 1323,
+     "inst": 4
+    }
+   },
+   "mem": {
+    "programs": 44,
+    "textures": 10,
+    "geometries": 129,
+    "live": 311,
+    "materials": 52,
+    "geoMB": 25.9,
+    "texMB": 28.5,
+    "heapMB": 165.2
+   },
+   "realm": {
+    "geometries": 129,
+    "textures": 10,
+    "calls": 171,
+    "tris": 357323,
+    "live": 311
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-praia",
+   "world": "cidade",
+   "preset": "media",
+   "at": [
+    20.5,
+    66.5
+   ],
+   "heap": 31.9,
+   "load1": 9.5,
+   "calls": 283,
+   "tris": 1180452,
+   "points": 2329,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 159.2,
+    "sd": 51.1,
+    "black": 0,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 2880.3,
+    "msP95": 3319.2,
+    "ms3d": 2872.5,
+    "ms3dP95": 3314,
+    "n": 5
+   },
+   "drawn": {
+    "people": 20,
+    "crowd": 48,
+    "beasts": 56,
+    "dead": 0,
+    "near": 29,
+    "chunks": 64,
+    "grass": 6400,
+    "particles": 31,
+    "fires": 0,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 8,
+     "fin": 16,
+     "mouth": 1,
+     "rock": 7,
+     "pole": 2,
+     "flag": 2,
+     "nest": 1
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 388552,
+     "inst": 2436
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 160,
+     "inst": 20
+    },
+    "people3d.js:SpriteMaterial": {
+     "owner": "A4",
+     "objs": 5,
+     "calls": 5,
+     "tris": 0,
+     "inst": 5
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 490,
+     "inst": 20
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 368,
+     "inst": 163
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 13,
+     "calls": 13,
+     "tris": 3084,
+     "inst": 48
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 64,
+     "inst": 2
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 1152,
+     "inst": 9
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 8,
+     "calls": 8,
+     "tris": 2924,
+     "inst": 8
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 5,
+     "calls": 5,
+     "tris": 3484,
+     "inst": 5
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 17,
+     "calls": 17,
+     "tris": 34816,
+     "inst": 17
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 17,
+     "calls": 17,
+     "tris": 5016,
+     "inst": 17
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 10,
+     "calls": 10,
+     "tris": 105180,
+     "inst": 10
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 6640,
+     "inst": 9
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 12100,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 3,
+     "calls": 3,
+     "tris": 948,
+     "inst": 3
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 1944,
+     "inst": 2
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 6,
+     "calls": 6,
+     "tris": 2142,
+     "inst": 6
+    }
+   },
+   "mem": {
+    "programs": 45,
+    "textures": 11,
+    "geometries": 144,
+    "live": 370,
+    "materials": 53,
+    "geoMB": 38.8,
+    "texMB": 28.6,
+    "heapMB": 194.4
+   },
+   "realm": {
+    "geometries": 144,
+    "textures": 11,
+    "calls": 193,
+    "tris": 762054,
+    "live": 370
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "hedeby-praia",
+   "world": "cidade",
+   "preset": "alta",
+   "at": [
+    20.5,
+    66.5
+   ],
+   "heap": 32.1,
+   "load1": 9.3,
+   "calls": 289,
+   "tris": 1571753,
+   "points": 2340,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 160,
+    "sd": 51.3,
+    "black": 0,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 3117,
+    "msP95": 3275.1,
+    "ms3d": 3109.1,
+    "ms3dP95": 3269.8,
+    "n": 5
+   },
+   "drawn": {
+    "people": 42,
+    "crowd": 51,
+    "beasts": 64,
+    "dead": 0,
+    "near": 44,
+    "chunks": 64,
+    "grass": 14400,
+    "particles": 40,
+    "fires": 0,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 23,
+     "fin": 46,
+     "mouth": 1,
+     "rock": 7,
+     "pole": 3,
+     "flag": 3,
+     "nest": 1
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 565714,
+     "inst": 3473
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 336,
+     "inst": 42
+    },
+    "people3d.js:SpriteMaterial": {
+     "owner": "A4",
+     "objs": 5,
+     "calls": 5,
+     "tris": 0,
+     "inst": 5
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 490,
+     "inst": 20
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 512,
+     "inst": 166
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 13,
+     "calls": 13,
+     "tris": 6236,
+     "inst": 94
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 96,
+     "inst": 3
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 4,
+     "calls": 4,
+     "tris": 512,
+     "inst": 4
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 1814,
+     "inst": 4
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 2,
+     "calls": 2,
+     "tris": 1416,
+     "inst": 2
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 22,
+     "calls": 22,
+     "tris": 45056,
+     "inst": 22
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 21,
+     "calls": 21,
+     "tris": 6126,
+     "inst": 21
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 13,
+     "calls": 13,
+     "tris": 136896,
+     "inst": 13
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 11,
+     "calls": 11,
+     "tris": 8844,
+     "inst": 11
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 12100,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 3,
+     "calls": 3,
+     "tris": 948,
+     "inst": 3
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 1944,
+     "inst": 2
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 2721,
+     "inst": 8
+    }
+   },
+   "mem": {
+    "programs": 45,
+    "textures": 11,
+    "geometries": 148,
+    "live": 434,
+    "materials": 53,
+    "geoMB": 53,
+    "texMB": 28.6,
+    "heapMB": 186.9
+   },
+   "realm": {
+    "geometries": 148,
+    "textures": 11,
+    "calls": 197,
+    "tris": 984751,
+    "live": 434
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "corpo-frente",
+   "world": "cidade",
+   "preset": "baixa",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 31.8,
+   "load1": 9.8,
+   "calls": 121,
+   "tris": 279732,
+   "points": 2327,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 142.4,
+    "sd": 61.6,
+    "black": 0.1,
+    "white": 0,
+    "w": 750,
+    "h": 465
+   },
+   "t": {
+    "ms": 757.1,
+    "msP95": 924.2,
+    "ms3d": 752.5,
+    "ms3dP95": 920.2,
+    "n": 5
+   },
+   "drawn": {
+    "people": 19,
+    "crowd": 5,
+    "beasts": 26,
+    "dead": 0,
+    "near": 21,
+    "chunks": 64,
+    "grass": 0,
+    "particles": 28,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 232784,
+     "inst": 1404
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 152,
+     "inst": 19
+    },
+    "people3d.js:SpriteMaterial": {
+     "owner": "A4",
+     "objs": 2,
+     "calls": 2,
+     "tris": 0,
+     "inst": 2
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 512,
+     "inst": 166
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 2,
+     "calls": 2,
+     "tris": 1100,
+     "inst": 27
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 128,
+     "inst": 1
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 512,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 16384,
+     "inst": 8
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 4,
+     "calls": 4,
+     "tris": 6244,
+     "inst": 4
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 10118,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 888,
+     "inst": 4
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 6584,
+     "inst": 4
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 6,
+     "calls": 6,
+     "tris": 2680,
+     "inst": 6
+    }
+   },
+   "mem": {
+    "programs": 45,
+    "textures": 11,
+    "geometries": 81,
+    "live": 324,
+    "materials": 52,
+    "geoMB": 28.5,
+    "texMB": 28.6,
+    "heapMB": 179.7
+   },
+   "realm": {
+    "geometries": 81,
+    "textures": 11,
+    "calls": 121,
+    "tris": 279732,
+    "live": 324
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "corpo-frente",
+   "world": "cidade",
+   "preset": "media",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 32.1,
+   "load1": 9.9,
+   "calls": 227,
+   "tris": 1136512,
+   "points": 2337,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 138.1,
+    "sd": 63.3,
+    "black": 0.2,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 2201.7,
+    "msP95": 2389.3,
+    "ms3d": 2195.9,
+    "ms3dP95": 2382.1,
+    "n": 5
+   },
+   "drawn": {
+    "people": 24,
+    "crowd": 70,
+    "beasts": 57,
+    "dead": 0,
+    "near": 31,
+    "chunks": 64,
+    "grass": 6400,
+    "particles": 52,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 8,
+     "fin": 16,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 431986,
+     "inst": 2720
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 192,
+     "inst": 24
+    },
+    "people3d.js:SpriteMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 12,
+     "calls": 12,
+     "tris": 3768,
+     "inst": 65
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 18432,
+     "inst": 9
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 4,
+     "calls": 4,
+     "tris": 6244,
+     "inst": 4
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 2,
+     "calls": 2,
+     "tris": 138,
+     "inst": 2
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 10118,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 888,
+     "inst": 4
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 6584,
+     "inst": 4
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 7,
+     "calls": 7,
+     "tris": 3192,
+     "inst": 7
+    }
+   },
+   "mem": {
+    "programs": 45,
+    "textures": 11,
+    "geometries": 89,
+    "live": 389,
+    "materials": 53,
+    "geoMB": 39.8,
+    "texMB": 28.6,
+    "heapMB": 192.3
+   },
+   "realm": {
+    "geometries": 89,
+    "textures": 11,
+    "calls": 132,
+    "tris": 675506,
+    "live": 389
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "corpo-frente",
+   "world": "cidade",
+   "preset": "alta",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 32.4,
+   "load1": 10.1,
+   "calls": 230,
+   "tris": 1194940,
+   "points": 2378,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 138,
+    "sd": 63.3,
+    "black": 0.2,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 2425,
+    "msP95": 2554.9,
+    "ms3d": 2419.8,
+    "ms3dP95": 2544.6,
+    "n": 5
+   },
+   "drawn": {
+    "people": 24,
+    "crowd": 70,
+    "beasts": 64,
+    "dead": 0,
+    "near": 46,
+    "chunks": 64,
+    "grass": 14400,
+    "particles": 89,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 14,
+     "fin": 28,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "pole": 4,
+     "flag": 4,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 460700,
+     "inst": 2902
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 192,
+     "inst": 24
+    },
+    "people3d.js:SpriteMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 13,
+     "calls": 13,
+     "tris": 5144,
+     "inst": 87
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 128,
+     "inst": 4
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 18432,
+     "inst": 9
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 4,
+     "calls": 4,
+     "tris": 6244,
+     "inst": 4
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 2,
+     "calls": 2,
+     "tris": 138,
+     "inst": 2
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 10118,
+     "inst": 4
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 888,
+     "inst": 4
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 6584,
+     "inst": 4
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 7,
+     "calls": 7,
+     "tris": 3192,
+     "inst": 7
+    }
+   },
+   "mem": {
+    "programs": 45,
+    "textures": 11,
+    "geometries": 89,
+    "live": 451,
+    "materials": 53,
+    "geoMB": 58.4,
+    "texMB": 28.6,
+    "heapMB": 190.3
+   },
+   "realm": {
+    "geometries": 89,
+    "textures": 11,
+    "calls": 134,
+    "tris": 705724,
+    "live": 451
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "corpo-lado",
+   "world": "cidade",
+   "preset": "baixa",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 32,
+   "load1": 10.2,
+   "calls": 181,
+   "tris": 381113,
+   "points": 2387,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 123.7,
+    "sd": 67.8,
+    "black": 0,
+    "white": 0,
+    "w": 750,
+    "h": 465
+   },
+   "t": {
+    "ms": 1005.4,
+    "msP95": 1056.3,
+    "ms3d": 993.6,
+    "ms3dP95": 1050.4,
+    "n": 5
+   },
+   "drawn": {
+    "people": 19,
+    "crowd": 5,
+    "beasts": 26,
+    "dead": 0,
+    "near": 21,
+    "chunks": 64,
+    "grass": 0,
+    "particles": 80,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "sea": 2,
+     "fin": 4,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 232784,
+     "inst": 1404
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 152,
+     "inst": 19
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 4,
+     "calls": 4,
+     "tris": 1516,
+     "inst": 33
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 17,
+     "calls": 17,
+     "tris": 2176,
+     "inst": 17
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 17,
+     "calls": 17,
+     "tris": 6036,
+     "inst": 17
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 7812,
+     "inst": 9
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 2,
+     "calls": 2,
+     "tris": 162,
+     "inst": 2
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 11,
+     "calls": 11,
+     "tris": 22528,
+     "inst": 11
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 9,
+     "calls": 9,
+     "tris": 1826,
+     "inst": 9
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 73404,
+     "inst": 8
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 6,
+     "calls": 6,
+     "tris": 23168,
+     "inst": 6
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 6,
+     "calls": 6,
+     "tris": 1896,
+     "inst": 6
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 5196,
+     "inst": 4
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 3,
+     "calls": 3,
+     "tris": 493,
+     "inst": 3
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    }
+   },
+   "mem": {
+    "programs": 45,
+    "textures": 11,
+    "geometries": 142,
+    "live": 324,
+    "materials": 52,
+    "geoMB": 28.5,
+    "texMB": 28.6,
+    "heapMB": 146.4
+   },
+   "realm": {
+    "geometries": 142,
+    "textures": 11,
+    "calls": 181,
+    "tris": 381113,
+    "live": 324
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "corpo-lado",
+   "world": "cidade",
+   "preset": "media",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 32.3,
+   "load1": 10.4,
+   "calls": 299,
+   "tris": 1276721,
+   "points": 2363,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 118.7,
+    "sd": 67.7,
+    "black": 0.3,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 3103.2,
+    "msP95": 3325.6,
+    "ms3d": 3093.3,
+    "ms3dP95": 3311.8,
+    "n": 5
+   },
+   "drawn": {
+    "people": 24,
+    "crowd": 70,
+    "beasts": 57,
+    "dead": 0,
+    "near": 31,
+    "chunks": 64,
+    "grass": 6400,
+    "particles": 48,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 8,
+     "fin": 16,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 431986,
+     "inst": 2720
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 192,
+     "inst": 24
+    },
+    "people3d.js:SpriteMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 12,
+     "calls": 12,
+     "tris": 3768,
+     "inst": 65
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 13,
+     "calls": 13,
+     "tris": 1664,
+     "inst": 13
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 13,
+     "calls": 13,
+     "tris": 5030,
+     "inst": 13
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 6,
+     "calls": 6,
+     "tris": 5868,
+     "inst": 6
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 15,
+     "calls": 15,
+     "tris": 30720,
+     "inst": 15
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 13,
+     "calls": 13,
+     "tris": 2832,
+     "inst": 13
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 11,
+     "calls": 11,
+     "tris": 97796,
+     "inst": 11
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 11,
+     "calls": 11,
+     "tris": 6160,
+     "inst": 11
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 8,
+     "calls": 8,
+     "tris": 27430,
+     "inst": 8
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 2232,
+     "inst": 7
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 5,
+     "calls": 5,
+     "tris": 5520,
+     "inst": 5
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 5,
+     "calls": 5,
+     "tris": 601,
+     "inst": 5
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    }
+   },
+   "mem": {
+    "programs": 45,
+    "textures": 11,
+    "geometries": 164,
+    "live": 389,
+    "materials": 53,
+    "geoMB": 39.8,
+    "texMB": 28.6,
+    "heapMB": 161.3
+   },
+   "realm": {
+    "geometries": 164,
+    "textures": 11,
+    "calls": 206,
+    "tris": 815765,
+    "live": 389
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "corpo-lado",
+   "world": "cidade",
+   "preset": "alta",
+   "at": [
+    35.8,
+    34
+   ],
+   "heap": 32.6,
+   "load1": 10,
+   "calls": 313,
+   "tris": 1432337,
+   "points": 2360,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 118.1,
+    "sd": 67.8,
+    "black": 0.3,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 3374.1,
+    "msP95": 3914.7,
+    "ms3d": 3367.1,
+    "ms3dP95": 3902.7,
+    "n": 5
+   },
+   "drawn": {
+    "people": 24,
+    "crowd": 70,
+    "beasts": 64,
+    "dead": 0,
+    "near": 46,
+    "chunks": 64,
+    "grass": 14400,
+    "particles": 77,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 1,
+     "wheel": 2,
+     "shaft": 2,
+     "load": 1,
+     "ox": 1,
+     "oxHead": 1,
+     "oxLeg": 4,
+     "horn": 2,
+     "sea": 14,
+     "fin": 28,
+     "decal": 2,
+     "mouth": 1,
+     "rock": 25,
+     "pole": 4,
+     "flag": 4,
+     "nest": 2
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 460700,
+     "inst": 2902
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 192,
+     "inst": 24
+    },
+    "people3d.js:SpriteMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 588,
+     "inst": 24
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 320,
+     "inst": 162
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 13,
+     "calls": 13,
+     "tris": 5144,
+     "inst": 87
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 28,
+     "inst": 2
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 16,
+     "inst": 1
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 128,
+     "inst": 4
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 6,
+     "calls": 6,
+     "tris": 768,
+     "inst": 6
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 6,
+     "calls": 6,
+     "tris": 3008,
+     "inst": 6
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 100,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 22,
+     "calls": 22,
+     "tris": 45056,
+     "inst": 22
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 20,
+     "calls": 20,
+     "tris": 4854,
+     "inst": 20
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 16,
+     "calls": 16,
+     "tris": 179040,
+     "inst": 16
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 15,
+     "calls": 15,
+     "tris": 11586,
+     "inst": 15
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 8,
+     "calls": 8,
+     "tris": 27430,
+     "inst": 8
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 2232,
+     "inst": 7
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 5,
+     "calls": 5,
+     "tris": 5520,
+     "inst": 5
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 10,
+     "calls": 10,
+     "tris": 3169,
+     "inst": 10
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    }
+   },
+   "mem": {
+    "programs": 45,
+    "textures": 11,
+    "geometries": 173,
+    "live": 451,
+    "materials": 53,
+    "geoMB": 58.4,
+    "texMB": 28.6,
+    "heapMB": 224.7
+   },
+   "realm": {
+    "geometries": 173,
+    "textures": 11,
+    "calls": 217,
+    "tris": 942893,
+    "live": 451
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "metropole-rua",
+   "world": "metropole",
+   "preset": "baixa",
+   "at": [
+    104.4,
+    74.4
+   ],
+   "heap": 45.5,
+   "load1": 8.7,
+   "calls": 180,
+   "tris": 557239,
+   "points": 2499,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 136.5,
+    "sd": 52.4,
+    "black": 0.3,
+    "white": 0,
+    "w": 750,
+    "h": 465
+   },
+   "t": {
+    "ms": 1180,
+    "msP95": 1259,
+    "ms3d": 1167.7,
+    "ms3dP95": 1237.2,
+    "n": 5
+   },
+   "drawn": {
+    "people": 19,
+    "crowd": 296,
+    "beasts": 19,
+    "dead": 0,
+    "near": 21,
+    "chunks": 100,
+    "grass": 0,
+    "particles": 203,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 13,
+     "wheel": 26,
+     "shaft": 26,
+     "load": 9,
+     "ox": 13,
+     "oxHead": 13,
+     "oxLeg": 52,
+     "horn": 26,
+     "decal": 1,
+     "mouth": 2,
+     "rock": 23,
+     "pole": 5,
+     "flag": 5,
+     "hive": 1
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 381580,
+     "inst": 2677
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 152,
+     "inst": 19
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 3626,
+     "inst": 148
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 3,
+     "calls": 3,
+     "tris": 20,
+     "inst": 12
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 11,
+     "calls": 11,
+     "tris": 14184,
+     "inst": 207
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 14,
+     "inst": 1
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 32,
+     "inst": 2
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 160,
+     "inst": 5
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 16,
+     "calls": 16,
+     "tris": 2048,
+     "inst": 16
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 15,
+     "calls": 15,
+     "tris": 7232,
+     "inst": 15
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 2,
+     "calls": 2,
+     "tris": 1240,
+     "inst": 2
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 3,
+     "calls": 3,
+     "tris": 234,
+     "inst": 3
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 16384,
+     "inst": 8
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 8,
+     "calls": 8,
+     "tris": 970,
+     "inst": 8
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 8,
+     "calls": 8,
+     "tris": 79836,
+     "inst": 8
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 7056,
+     "inst": 7
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 6,
+     "calls": 6,
+     "tris": 14334,
+     "inst": 6
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 6,
+     "calls": 6,
+     "tris": 26576,
+     "inst": 6
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 377,
+     "inst": 1
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 3,
+     "calls": 3,
+     "tris": 8,
+     "inst": 3
+    },
+    "realm3d.js:perto:estradas": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 168,
+     "inst": 1
+    }
+   },
+   "mem": {
+    "programs": 45,
+    "textures": 11,
+    "geometries": 133,
+    "live": 475,
+    "materials": 52,
+    "geoMB": 54.4,
+    "texMB": 28.7,
+    "heapMB": 142.9
+   },
+   "realm": {
+    "geometries": 133,
+    "textures": 11,
+    "calls": 180,
+    "tris": 557241,
+    "live": 475
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "metropole-rua",
+   "world": "metropole",
+   "preset": "media",
+   "at": [
+    104.4,
+    74.4
+   ],
+   "heap": 45.6,
+   "load1": 9.3,
+   "calls": 308,
+   "tris": 1961756,
+   "points": 2508,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 126,
+    "sd": 54.8,
+    "black": 0.3,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 3568.4,
+    "msP95": 3876.7,
+    "ms3d": 3548.9,
+    "ms3dP95": 3864.7,
+    "n": 5
+   },
+   "drawn": {
+    "people": 37,
+    "crowd": 320,
+    "beasts": 64,
+    "dead": 0,
+    "near": 37,
+    "chunks": 100,
+    "grass": 6400,
+    "particles": 229,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 26,
+     "wheel": 52,
+     "shaft": 52,
+     "load": 16,
+     "ox": 26,
+     "oxHead": 26,
+     "oxLeg": 104,
+     "horn": 52,
+     "sea": 6,
+     "fin": 12,
+     "decal": 1,
+     "mouth": 4,
+     "rock": 37,
+     "pole": 6,
+     "flag": 6,
+     "plank": 7,
+     "rope": 1,
+     "hive": 1
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 697414,
+     "inst": 4633
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 296,
+     "inst": 37
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 3626,
+     "inst": 148
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 226,
+     "inst": 23
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 15,
+     "calls": 15,
+     "tris": 29064,
+     "inst": 424
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 14,
+     "inst": 1
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 64,
+     "inst": 4
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 192,
+     "inst": 6
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 11,
+     "calls": 11,
+     "tris": 1408,
+     "inst": 11
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 11,
+     "calls": 11,
+     "tris": 5472,
+     "inst": 11
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 640,
+     "inst": 1
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 12,
+     "inst": 1
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 13,
+     "calls": 13,
+     "tris": 26624,
+     "inst": 13
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 12,
+     "calls": 12,
+     "tris": 2730,
+     "inst": 12
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 11,
+     "calls": 11,
+     "tris": 92508,
+     "inst": 11
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 9,
+     "calls": 9,
+     "tris": 8232,
+     "inst": 9
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 19518,
+     "inst": 7
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 37708,
+     "inst": 8
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 2,
+     "calls": 2,
+     "tris": 615,
+     "inst": 2
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 7,
+     "calls": 7,
+     "tris": 2104,
+     "inst": 7
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 46,
+     "inst": 4
+    },
+    "realm3d.js:perto:estradas": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 168,
+     "inst": 1
+    }
+   },
+   "mem": {
+    "programs": 45,
+    "textures": 12,
+    "geometries": 166,
+    "live": 583,
+    "materials": 53,
+    "geoMB": 74.3,
+    "texMB": 28.7,
+    "heapMB": 238.4
+   },
+   "realm": {
+    "geometries": 166,
+    "textures": 12,
+    "calls": 200,
+    "tris": 1121691,
+    "live": 583
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "metropole-rua",
+   "world": "metropole",
+   "preset": "alta",
+   "at": [
+    104.4,
+    74.4
+   ],
+   "heap": 46.2,
+   "load1": 9.3,
+   "calls": 312,
+   "tris": 2306166,
+   "points": 2548,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 126.3,
+    "sd": 55.1,
+    "black": 0.4,
+    "white": 0,
+    "w": 1000,
+    "h": 620
+   },
+   "t": {
+    "ms": 3914.5,
+    "msP95": 4317.8,
+    "ms3d": 3903.2,
+    "ms3dP95": 4303.4,
+    "n": 5
+   },
+   "drawn": {
+    "people": 61,
+    "crowd": 320,
+    "beasts": 64,
+    "dead": 0,
+    "near": 64,
+    "chunks": 100,
+    "grass": 14400,
+    "particles": 266,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 32,
+     "wheel": 64,
+     "shaft": 64,
+     "load": 20,
+     "ox": 32,
+     "oxHead": 32,
+     "oxLeg": 128,
+     "horn": 64,
+     "sea": 26,
+     "fin": 52,
+     "decal": 1,
+     "mouth": 4,
+     "rock": 37,
+     "pole": 16,
+     "flag": 16,
+     "plank": 7,
+     "rope": 1,
+     "hive": 1
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 852886,
+     "inst": 5521
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 488,
+     "inst": 61
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 3626,
+     "inst": 148
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 674,
+     "inst": 40
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 15,
+     "calls": 15,
+     "tris": 39544,
+     "inst": 576
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 14,
+     "inst": 1
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 64,
+     "inst": 4
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 512,
+     "inst": 16
+    },
+    "grass3d.js:MeshLambertMaterial": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 30,
+     "inst": 1
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 5,
+     "calls": 5,
+     "tris": 640,
+     "inst": 5
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 5,
+     "calls": 5,
+     "tris": 2560,
+     "inst": 5
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 19,
+     "calls": 19,
+     "tris": 38912,
+     "inst": 19
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 18,
+     "calls": 18,
+     "tris": 5642,
+     "inst": 18
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 13,
+     "calls": 13,
+     "tris": 92640,
+     "inst": 13
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 9,
+     "calls": 9,
+     "tris": 8232,
+     "inst": 9
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 19518,
+     "inst": 7
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 9,
+     "calls": 9,
+     "tris": 47448,
+     "inst": 9
+    },
+    "realm3d.js:perto:plantas": {
+     "owner": "A3",
+     "objs": 3,
+     "calls": 3,
+     "tris": 1013,
+     "inst": 3
+    },
+    "realm3d.js:perto:folhas": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 2608,
+     "inst": 8
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 4,
+     "calls": 4,
+     "tris": 46,
+     "inst": 4
+    },
+    "realm3d.js:perto:estradas": {
+     "owner": "A3",
+     "objs": 1,
+     "calls": 1,
+     "tris": 168,
+     "inst": 1
+    }
+   },
+   "mem": {
+    "programs": 45,
+    "textures": 12,
+    "geometries": 169,
+    "live": 700,
+    "materials": 53,
+    "geoMB": 102,
+    "texMB": 28.7,
+    "heapMB": 283.7
+   },
+   "realm": {
+    "geometries": 169,
+    "textures": 12,
+    "calls": 203,
+    "tris": 1310245,
+    "live": 700
+   },
+   "modErr": "{}"
+  },
+  {
+   "view": "metropole-alto",
+   "world": "metropole",
+   "preset": "baixa",
+   "at": [
+    104.4,
+    74.4
+   ],
+   "heap": 45.3,
+   "load1": 9.3,
+   "calls": 236,
+   "tris": 615234,
+   "points": 2551,
+   "lines": 0,
+   "passes": 1,
+   "pix": {
+    "mean": 116.5,
+    "sd": 56.1,
+    "black": 0.3,
+    "white": 0,
+    "w": 750,
+    "h": 465
+   },
+   "t": {
+    "ms": 1242.8,
+    "msP95": 1345.7,
+    "ms3d": 1231.7,
+    "ms3dP95": 1333.8,
+    "n": 5
+   },
+   "drawn": {
+    "people": 19,
+    "crowd": 294,
+    "beasts": 18,
+    "dead": 0,
+    "near": 21,
+    "chunks": 100,
+    "grass": 0,
+    "particles": 257,
+    "fires": 2,
+    "torches": 0,
+    "dragons": 0,
+    "things": {
+     "bed": 13,
+     "wheel": 26,
+     "shaft": 26,
+     "load": 9,
+     "ox": 13,
+     "oxHead": 13,
+     "oxLeg": 52,
+     "horn": 26,
+     "decal": 1,
+     "mouth": 2,
+     "rock": 23,
+     "pole": 5,
+     "flag": 5,
+     "hive": 1
+    }
+   },
+   "census": {
+    "realm3d.js:céu": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 960,
+     "inst": 1
+    },
+    "realm3d.js:estrelas": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "people3d.js:MeshLambertMaterial": {
+     "owner": "A4",
+     "objs": 68,
+     "calls": 68,
+     "tris": 376258,
+     "inst": 2641
+    },
+    "people3d.js:MeshBasicMaterial": {
+     "owner": "A4",
+     "objs": 1,
+     "calls": 1,
+     "tris": 152,
+     "inst": 19
+    },
+    "fx3d.js:MeshBasicMaterial": {
+     "owner": "A5",
+     "objs": 2,
+     "calls": 2,
+     "tris": 48,
+     "inst": 4
+    },
+    "fx3d.js:PointsMaterial": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 0,
+     "inst": 1
+    },
+    "fx3d.js:MeshLambertMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 3626,
+     "inst": 148
+    },
+    "fx3d.js:ShaderMaterial": {
+     "owner": "A5",
+     "objs": 4,
+     "calls": 4,
+     "tris": 682,
+     "inst": 44
+    },
+    "things3d.js:things.lam": {
+     "owner": "líder",
+     "objs": 11,
+     "calls": 11,
+     "tris": 14184,
+     "inst": 207
+    },
+    "things3d.js:things.decal": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 14,
+     "inst": 1
+    },
+    "things3d.js:things.dark": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 32,
+     "inst": 2
+    },
+    "things3d.js:things.flag": {
+     "owner": "líder",
+     "objs": 1,
+     "calls": 1,
+     "tris": 160,
+     "inst": 5
+    },
+    "realm3d.js:water": {
+     "owner": "A5",
+     "objs": 1,
+     "calls": 1,
+     "tris": 2,
+     "inst": 1
+    },
+    "realm3d.js:longe:chão": {
+     "owner": "A3",
+     "objs": 32,
+     "calls": 32,
+     "tris": 4096,
+     "inst": 32
+    },
+    "realm3d.js:longe:água": {
+     "owner": "A5",
+     "objs": 30,
+     "calls": 30,
+     "tris": 11010,
+     "inst": 30
+    },
+    "realm3d.js:longe:árvores": {
+     "owner": "A3",
+     "objs": 15,
+     "calls": 15,
+     "tris": 13568,
+     "inst": 15
+    },
+    "realm3d.js:longe:prédios": {
+     "owner": "A2",
+     "objs": 13,
+     "calls": 13,
+     "tris": 1890,
+     "inst": 13
+    },
+    "realm3d.js:perto:chão": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 16384,
+     "inst": 8
+    },
+    "realm3d.js:perto:água": {
+     "owner": "A5",
+     "objs": 6,
+     "calls": 6,
+     "tris": 562,
+     "inst": 6
+    },
+    "realm3d.js:perto:estradas": {
+     "owner": "A3",
+     "objs": 2,
+     "calls": 2,
+     "tris": 1176,
+     "inst": 2
+    },
+    "realm3d.js:perto:árvores-pedras": {
+     "owner": "A3",
+     "objs": 8,
+     "calls": 8,
+     "tris": 39428,
+     "inst": 8
+    },
+    "realm3d.js:perto:prédios": {
+     "owner": "A2",
+     "objs": 8,
+     "calls": 8,
+     "tris": 99198,
+     "inst": 8
+    },
+    "realm3d.js:perto:vidro": {
+     "owner": "A2",
+     "objs": 8,
+     "calls": 8,
+     "tris": 8568,
+     "inst": 8
+    },
+    "realm3d.js:perto:plantas-dos-prédios": {
+     "owner": "A2",
+     "objs": 7,
+     "calls": 7,
+     "tris": 23070,
+     "inst": 7
+    },
+    "realm3d.js:perto:água-dos-prédios": {
+     "owner": "A2",
+     "objs": 1,
+     "calls": 1,
+     "tris": 24,
+     "inst": 1
+    }
+   },
+   "mem": {
+    "programs": 45,
+    "textures": 12,
+    "geometries": 187,
+    "live": 475,
+    "materials": 52,
+    "geoMB": 54.4,
+    "texMB": 28.7,
+    "heapMB": 144
+   },
+   "realm": {
+    "geometries": 187,
+    "textures": 12,
+    "calls": 235,
+    "tris": 615092,
+    "live": 475
+   },
+   "modErr": "{}"
+  }
+ ],
+ "worlds": {
+  "cidade": {
+   "ok": true,
+   "town": "Hedeby",
+   "pop": 31,
+   "person": "Liv",
+   "id": 1693,
+   "civ": "nordico"
+  },
+  "metropole": {
+   "ok": true,
+   "town": "Tenochtitlan",
+   "pop": 127,
+   "person": "Xiuhtonal",
+   "id": 4171,
+   "civ": "asteca"
+  }
+ },
+ "machine": {
+  "cores": 4,
+  "start": {
+   "browsers": 2,
+   "load": 9.8
+  },
+  "end": {
+   "browsers": 2,
+   "load": 9.3
+  },
+  "note": "medida com a máquina OCUPADA: carga de 8.7 a 10.4 em 4 núcleos, dois navegadores (a rodada do líder sobre a integração, no encarna, na outra vaga) e seis agentes trabalhando — os ms valem pouco; chamadas e triângulos da cena valem"
+ },
+ "referencia": {
+  "jogo": "915f5b0 (o jogo antes do estúdio; a medida rodou no branch do A6 da onda 1, 2ba9b5b, que só acrescenta qa/visual)",
+  "quando": "2026-10-14 11:08–11:36 (desempenho.js da onda 1, 5 quadros por medida, janela 1000×620)",
+  "falta": "metropole-alto media e alta (a sessão parou antes): 37 das 39 medidas",
+  "como": "bash qa/navegador.sh env VAGA=1 bash qa/visual/rodada.sh PASTA SAIDA (a parte desempenho) — o rodada.sh compara cada rodada com este arquivo"
+ },
+ "secs": null
+}
