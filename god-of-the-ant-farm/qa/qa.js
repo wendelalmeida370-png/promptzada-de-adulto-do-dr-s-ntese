@@ -483,6 +483,136 @@
   // ---------------- canonical state (for save/load comparison) ----------------
   // (the canonical state of a new system in the making: [name, fn] — inlined into canon when it lands)
   QA.canonMore = [];
+  // ==== as invariantes dos sistemas novos (geradas por qa/junta-inv.js; não edite aqui: edite o arquivo e rode o junta) ====
+  // ---- qa/atividades-inv.js ----
+// atividades-inv: the checker's rules for the activities (C1) — the holders, the operations, the ledger, the businesses.
+// Loaded after qa/qa.js (QA.more / QA.canonMore); the leader moves it into QA.check when the activities reach integracao.
+// It reads the world's fields directly (the same ones G.Depot reads): a fault in the activities' own code is not hidden
+// by the code it checks.
+(function () {
+  if (!window.QA || !QA.more) return;
+  const fin = x => typeof x === 'number' && isFinite(x);
+  const EPS = 1e-4;
+  QA.more.push(function (add, s) {
+    if (!G.Act || !G.Depot) return;
+    const ops = s.acts || [];
+    const LIVE = { plan: 1, rsv: 1, on: 1, wait: 1 }; const ST = { plan: 1, rsv: 1, on: 1, wait: 1, ok: 1, int: 1, cancel: 1, fail: 1 };
+    const byId = new Map(); for (const op of ops) byId.set(op.id, op);
+    // ---- no holder with a negative or non-number amount
+    const neg = (where, k, n) => { if (!fin(n)) add('act', 1, `${where}: ${k} = ${n}`); else if (n < -EPS) add('act', 1, `${where}: ${k} negativo (${n})`); };
+    for (const f of s.factions.values()) for (const k in f.stock) neg(`estoque de ${f.name}`, k, f.stock[k]);
+    for (const b of s.buildings.values()) {
+      if (b.inv) for (const k in b.inv) neg(`${b.type}#${b.id}`, k, b.inv[k]);
+      if (b.pantry !== undefined) neg(`${b.type}#${b.id}`, 'despensa', b.pantry);
+      if (b.crates) { for (const c of b.crates) { if (!c || !Number.isInteger(c.id)) { add('act', 2, `${b.type}#${b.id}: caixa sem nome no cais`); break; } if (c.op && !(byId.has(c.op) && LIVE[byId.get(c.op).st])) add('act', 2, `${b.type}#${b.id}: caixa ${c.id} de uma operação que acabou (${c.op})`); } }
+    }
+    for (const v of s.villagers.values()) if (v.carry) { if (!fin(v.carry.n)) add('act', 1, `${v.name} #${v.id}: carga ${v.carry.n}`); else if (v.carry.n < -EPS) add('act', 1, `${v.name} #${v.id}: carga negativa`); }
+    for (const x of s.loose || []) if (!fin(x.n) || x.n <= 0 || !fin(x.x) || !fin(x.y)) add('act', 1, `coisa no chão #${x.id} inválida`);
+    // ---- the operations
+    const ids = new Set();
+    for (const op of ops) {
+      const nm = `operação ${op.def}#${op.id}`;
+      if (ids.has(op.id)) add('act', 1, `${nm}: id repetido`); ids.add(op.id);
+      if (!ST[op.st]) add('act', 1, `${nm}: estado inválido ${op.st}`);
+      if (!LIVE[op.st]) continue;
+      if (!G.Act.DEFS[op.def]) add('act', 1, `${nm}: definição desconhecida`);
+      for (const k of ['goods', 'done', 'lost', 'moved']) for (const g in op[k] || {}) if (!fin(op[k][g]) || op[k][g] < -EPS) add('act', 1, `${nm}: ${k}.${g} = ${op[k][g]}`);
+      // a key applied twice (the same step twice)
+      const seen = new Set(); for (const e of op.keys || []) { if (seen.has(e[0])) { add('act', 1, `${nm}: o passo ${e[0]} aplicado duas vezes`); break; } seen.add(e[0]); }
+      // the people: alive, free, not at sea, not in a cell (unless the god's body: it keeps its role)
+      for (const id in op.roles || {}) {
+        const v = s.villagers.get(+id);
+        if (!v) { add('act', 2, `${nm}: participante #${id} não existe (morto?) e continua com papel`); continue; }
+        if (!op.roles[id].body && (v.captive || v.jail)) add('act', 2, `${nm}: ${v.name} #${v.id} ${v.captive ? 'cativo' : 'preso'} com papel`);
+      }
+      // its place
+      if (op.at && !s.buildings.has(op.at)) add('act', 2, `${nm}: o lugar ${op.at} não existe e a operação segue`);
+      // conservation, good by good: what left the source = what arrived + what was lost with a cause + what is in hands or on the ground, marked with it
+      if (G.Act.DEFS[op.def] && G.Act.DEFS[op.def].conserve) {
+        const inHands = {}; for (const v of s.villagers.values()) if (v.carry && v.carry.op === op.id && fin(v.carry.n)) inHands[v.carry.k] = (inHands[v.carry.k] || 0) + v.carry.n;
+        for (const x of s.loose || []) if (x.op === op.id) inHands[x.k] = (inHands[x.k] || 0) + x.n;
+        for (const b of s.buildings.values()) if (b.crates) for (const c of b.crates) if (c.op === op.id && fin(c.n)) inHands[c.k] = (inHands[c.k] || 0) + c.n;
+        const taken = op.taken || {};
+        for (const k of new Set(Object.keys(taken).concat(Object.keys(op.done || {}), Object.keys(inHands)))) {
+          const a = taken[k] || 0, b = (op.done || {})[k] || 0, c = (op.lost || {})[k] || 0, d = inHands[k] || 0, back = (op.back || {})[k] || 0;
+          if (Math.abs(a - (b + c + d + back)) > 0.01) add('act', 1, `${nm}: ${k} não fecha — saiu ${a}, chegou ${b}, perdido ${c}, sob a guarda dela (mãos, chão, cais) ${d}, devolvido ${back}`);
+        }
+      }
+      // reservations within what the holder has
+      for (const r of op.rsv || []) if (!Array.isArray(r) || typeof r[0] !== 'string' || !fin(r[2]) || r[2] < 0) add('act', 1, `${nm}: reserva inválida`);
+    }
+    // the reservations of all the operations together never more than what is there
+    const R = new Map(); for (const op of ops) if (LIVE[op.st]) for (const r of op.rsv || []) { const key = r[0] + '|' + r[1]; R.set(key, (R.get(key) || 0) + r[2]); }
+    for (const [key, n] of R) { const [ref, k] = key.split('|'); const has = G.Depot.get(ref, k); if (n > has + 0.01) add('act', 2, `reservas de ${k} em ${ref}: ${n} para ${has}`); }
+    // a load marked with an operation that is gone (two seconds after its end: the hands let go at the next step)
+    for (const v of s.villagers.values()) if (v.carry && v.carry.op) { const op = byId.get(v.carry.op); if (!op) add('act', 2, `${v.name} #${v.id}: carrega ${v.carry.k} de uma operação que não existe (${v.carry.op})`); }
+    // ---- the ledger
+    const L = s.ledger || []; for (let i = 1; i < L.length; i++) if (!(L[i][0] > L[i - 1][0])) { add('act', 2, `livro-razão fora de ordem em ${L[i][0]}`); break; }
+    for (const e of L.slice(-200)) if (!fin(e[6]) || e[6] <= 0) { add('act', 2, `livro-razão: lançamento ${e[0]} com quantidade ${e[6]}`); break; }
+    // ---- writes from outside the world's step (a frame, a panel): the activities never do that
+    if (G.Act.outside) add('act', 1, `${G.Act.outside} operação(ões) criada(s) fora do passo do mundo`);
+    // ---- the businesses
+    if (G.Biz && G.Biz.audit) G.Biz.audit(add, s);
+  });
+  QA.canonMore.push(['acts', () => (G.Act ? G.Act.canon() : null)]);
+})();
+  // ---- qa/interiores-inv.js ----
+// interiores-inv: as regras do verificador para os interiores (C2) — o registro de cada prédio (b.ip) e a planta que sai
+// dele. Carregado depois do qa/qa.js (QA.more / QA.canonMore); o líder o leva para o QA.check quando os interiores chegam
+// ao integracao. Lê os campos do mundo direto; a planta, pelas portas do G.Interiors (fazer uma planta não muda o mundo).
+(function () {
+  if (!window.QA || !QA.more) return;
+  const SIDES = { N: 1, E: 1, S: 1, W: 1 };
+  let turn = 0; // (which few plans this round builds: a different few each time, so a long life sees them all)
+  QA.more.push(function (add, s) {
+    const In = G.Interiors; if (!In) return;
+    const withIp = [];
+    for (const b of s.buildings.values()) {
+      const T = In.TYPES[b.type]; const nm = `${b.type}#${b.id}`;
+      // ---- every building of a type with a plan has its record (a ruin keeps the one it had)
+      if (T && !b.ip) { add('int', 2, `${nm}: prédio com planta sem registro (b.ip)`); continue; }
+      if (!b.ip) continue;
+      const r = b.ip; withIp.push(b);
+      // ---- the record is whole: its family is one its type has, its side a side, its counters numbers
+      if (r.v !== 1 || !In.TYPES[r.t] || !In.FAMS[r.f] || !SIDES[r.s] || !Number.isInteger(r.r) || r.r < 0 || !Array.isArray(r.h) || !Array.isArray(r.fx) || !r.dr || typeof r.dr !== 'object') { add('int', 1, `${nm}: registro danificado (${JSON.stringify(r).slice(0, 120)})`); continue; }
+      if (!In.TYPES[r.t].fams.includes(r.f)) add('int', 1, `${nm}: a família ${r.f} não é de ${r.t}`);
+      // ---- a building standing and finished is of the type its record says (a rebuilding is a renovation of the record)
+      if (b.built && b.type !== 'ruin' && T && r.t !== b.type) add('int', 2, `${nm}: o registro diz ${r.t}`);
+    }
+    // ---- a few plans each round: valid, and the shell seen from afar the whole plan's (the 3D draws the one far, the
+    // other near: the same building, always)
+    if (!withIp.length) return;
+    for (let k = 0; k < 3; k++) {
+      const b = withIp[(turn++ * 7919) % withIp.length]; const p = In.plan(b); if (!p) { add('int', 1, `${b.type}#${b.id}: sem planta`); continue; }
+      if (!p.ok) add('int', 2, `${b.type}#${b.id}: planta inválida (${(p.errs || []).slice(0, 2).join('; ')})`);
+      const s1 = In.shellOf(b), s2 = In.shellOfPlan(p); const strip = o => { const x = Object.assign({}, o); delete x.key; return JSON.stringify(x); };
+      if (!s1 || strip(s1) !== strip(s2)) add('int', 1, `${b.type}#${b.id}: a casca de longe não é a da planta`);
+    }
+  });
+  // (the records go into the save with their buildings: the canonical state carries them, so a round trip that loses one is seen)
+  QA.canonMore.push(['interiores', () => {
+    const In = G.Interiors; if (!In) return null; let h = 2166136261; let n = 0;
+    for (const b of [...G.S.buildings.values()].sort((a, c) => a.id - c.id)) {
+      if (!b.ip) continue; n++; const r = b.ip; const str = [b.id, r.t, r.f, r.r, r.s, r.o, r.c, r.h.length, (r.fx || []).length].join('|');
+      for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    }
+    return [n, (h >>> 0).toString(16)];
+  }]);
+})();
+  // ---- qa/visual/corpo-qa.js ----
+// corpo-qa: what must always be true of the body's hands on the world (QA.more, loaded after qa/qa.js by the tests of the
+// body — inlined into qa.js when the Modo Encarnado's foundation lands):
+//   · what the hands asked of the world and the world has not yet done belongs to the body lived now: a body given back, or
+//     dead, leaves nothing waiting (it never happened — Possess.release and the death drop it)
+(function (G) {
+  QA.more.push(function (add, s) {
+    if (!G.Possess || !G.Possess.queued) return;
+    const q = G.Possess.queued(); const a = s.avatar;
+    if (!a && q.length) add('maos', 1, `${q.length} pedido(s) das mãos esperando o passo do mundo sem ninguém encarnado: o corpo devolvido deixou o que pediu`);
+    if (a) { const o = q.filter(id => id !== a.id); if (o.length) add('maos', 1, `${o.length} pedido(s) das mãos de outro corpo (#${o[0]}) esperando o passo do mundo, com #${a.id} encarnado`); }
+  });
+})(window.G);
+  // ==== fim das invariantes dos sistemas novos ====
   QA.canon = function () {
     const s = S(); const r = x => Math.round(x * 100) / 100;
     const vs = [...s.villagers.values()].sort((a, b) => a.id - b.id).map(v => [v.id, v.name, v.set, v.home, v.partner, v.mother, v.father, (G.Save.ageR ? G.Save.ageR(v.age) : Math.round(v.age * 1000) / 1000), v.captive ? 'c' + v.captive.from : '', v.aboard || 0, v.role || '', v.job || 0, (v.kids || []).length, v.g, v.secret || 0, v.grp || '', v.reigned || 0]);

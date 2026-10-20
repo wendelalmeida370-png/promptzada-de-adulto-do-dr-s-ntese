@@ -21,7 +21,7 @@ const SIDES = ['S', 'E', 'W', 'N'];
 // (the harness stands Date.now still, as the browser tests do: the time is the process's own clock)
 const clock = () => Number(process.hrtime.bigint() / 1000n) / 1000;
 const t0 = clock(); let nPlans = 0, nBad = 0, nFell = 0, nShort = 0, nGen = 0, nCombo = 0; const small = [], byGen = []; const badEx = [], fellEx = [];
-let msMax = 0, msWho = ''; let nCells = 0, nFloorBad = 0; const floorEx = [];
+let msMax = 0, msWho = ''; let nCells = 0, nFloorBad = 0; const floorEx = []; let nShell = 0, nShellBad = 0; const shellEx = [];
 for (const type of Object.keys(In.TYPES)) {
   if (ONLY && !ONLY.includes(type)) continue;
   const def = G.BDEF[type]; if (!def) { ok('tipo ' + type, false, 'tipo sem BDEF'); continue; }
@@ -41,6 +41,8 @@ for (const type of Object.keys(In.TYPES)) {
         // (a family the catalogue offers may not go on some lot: the plan falls to the next one offered there — always the
         // same —, or is laid out for fewer sleepers, said; an invalid plan is a failure, a fall is counted and must stay rare)
         if (p.short) nShort++;
+        // (the shell seen from afar, alone, is the whole plan's — the same family, shell, storeys, holes, way in)
+        if (q < 2) { In.uncache(); const s1 = In.shellOf(Object.assign({}, b, { ip: rec })); const strip = o => { const x = Object.assign({}, o); delete x.key; return JSON.stringify(x); }; nShell++; if (!s1 || strip(s1) !== strip(In.shellOfPlan(p))) { nShellBad++; if (shellEx.length < 4) shellEx.push(`${type}/${c}/${f} #${id}`); } }
         if (!p.ok || p.fam !== f) {
           if (p.ok) { nFell++; if (fellEx.length < 6 || process.env.VERB) fellEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id} → ${p.fam}: ${(p.errsOf || []).slice(0, 1).join('; ')}`); continue; }
           nBad++; if (badEx.length < 12 || process.env.VERB) badEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id}: ${(p.errsOf || p.errs || []).slice(0, 2).join('; ')}`); continue;
@@ -75,6 +77,7 @@ for (const type of Object.keys(In.TYPES)) {
 }
 ok('todas as plantas válidas', nBad === 0, `${nPlans} plantas, ${nBad} inválidas; ${nShort} com gente dormindo no chão; a mais lenta ${msMax.toFixed(0)} ms (${msWho}, sem cache); ${((clock() - t0) / 1000).toFixed(1)} s`);
 for (const e of badEx) console.log('   ✗ ' + e);
+ok('a casca de longe', nShellBad === 0, `${nShell} cascas pedidas sozinhas: ${nShellBad} diferentes da planta inteira${shellEx.length ? ' (' + shellEx.join(', ') + ')' : ''}`);
 ok('o chão fora das escadas', nFloorBad === 0, `${nCells} células de chão fora das escadas e dos degraus; em ${nFloorBad} a altura não é a do piso`);
 for (const e of floorEx) console.log('   ✗ ' + e);
 ok('poucas caídas', nFell <= nPlans * 0.1, `${nFell} de ${nPlans} plantas (${(100 * nFell / Math.max(1, nPlans)).toFixed(1)}%) caíram da família do registro para a próxima que o catálogo oferece ali`);
@@ -84,7 +87,7 @@ console.log(`combinações abaixo de 5 só porque a arquitetura não permite mai
 for (const s of small.slice(0, process.env.CAT ? 999 : 12)) console.log('   · ' + s);
 // (a ratchet: the count the grammar has reached — it may only go down; brought down, the ceiling comes down with it, and the
 // goal is zero. Raised by a change, the change is wrong — unless the leader agrees and the commit says why)
-const GERADOR_TETO = 103;
+const GERADOR_TETO = 87;
 ok('abaixo de 5 pelo gerador', byGen.length <= GERADOR_TETO, `${byGen.length} combinações ficam abaixo de 5 só porque o gerador não armou famílias que a arquitetura permite (teto ${GERADOR_TETO}, a meta é zero)${byGen.length < GERADOR_TETO ? ' — baixou: desça o teto' : ''}`);
 for (const s of byGen.slice(0, process.env.CAT ? 999 : 30)) console.log('   ✗ ' + s);
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');

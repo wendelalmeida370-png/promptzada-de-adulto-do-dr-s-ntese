@@ -337,7 +337,7 @@
       case 'harvest': case 'tend': {
         const p = b.pl && b.pl[t.k]; const c = CR[b.crop]; if (!c || (!p && t.st !== 2)) { v.carry = v.carry && v.carry.must !== undefined ? null : v.carry; return done(v, b, t, H); }
         if (!t.st) { const r = walk(v, t, t.x, t.y, dt, H); if (r < 0) return done(v, b, t, H); if (r > 0) { t.st = 1; v.actT = 0; } return; }
-        // with the basket to the vat: no plant to face on the way (t.k is 'vat' now: its place was NaN — L-135); the walk turns the picker
+        // with the basket to the vat: no plant to face on the way (t.k is 'vat' now: its place was NaN — L-137); the walk turns the picker
         if (t.st === 2) {
           const r = walk(v, t, t.x, t.y, dt, H); if (r < 0) { v.carry = null; return done(v, b, t, H); }
           if (r > 0) { b.must = (b.must || 0) + ((v.carry && v.carry.must) || 0); v.carry = null; H.end(v); }

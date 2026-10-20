@@ -174,7 +174,7 @@
   // door): where people stand to go in is where the plan has its door; with no plan, the first walkable side of the front
   Vg.planDoor = null;
   function V_door(b) {
-    if (Vg.planDoor) { let d = null; try { d = Vg.planDoor(b); } catch (e) { d = null; } if (d && W.walkableXY(d[0], d[1])) return d; }
+    if (Vg.planDoor) { const d = Vg.planDoor(b); if (d && W.walkableXY(d[0], d[1])) return d; }
     // find a walkable tile next to the building front
     const cands = [[b.x + b.w - 0.5, b.y + b.h + 0.4], [b.x + b.w + 0.4, b.y + b.h - 0.5], [b.x - 0.4, b.y + 0.5], [b.x + 0.5, b.y - 0.4]];
     for (const c of cands) if (W.walkableXY(c[0], c[1])) return c;

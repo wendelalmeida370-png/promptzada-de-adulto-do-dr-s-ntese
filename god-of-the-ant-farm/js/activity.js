@@ -26,6 +26,9 @@
   const EPS = 1e-6;
   const fin = x => typeof x === 'number' && isFinite(x);
   const r4 = x => Math.round(x * 1e4) / 1e4;
+  // an error in a part (a listener of the ledger, an offer, the diary, the end of an operation) is counted like a module's
+  // — G.modErr fails every test — and the rest goes on: never swallowed
+  const oops = (where, e) => { G.modErr.Atividades = (G.modErr.Atividades || 0) + 1; if (G.modErr.Atividades <= 3) console.error('[Atividades] ' + where, e); };
 
   // ============================== the holders ==============================
   // a holder is a short text, the same everywhere: 'f:12' a people's store, 'h:345' a house, 'b:345' a building's shelf,
@@ -36,15 +39,41 @@
   const housing = b => !!(b && G.BDEF[b.type] && G.BDEF[b.type].housing);
   const loose = () => G.S.loose || (G.S.loose = []);
   // the furniture that keeps things inside a building: a port the interiors fill (G.Depot.stores = b => [{ id, kind, keys:
-  // [goods] | '*', cap, slot }]); with nothing there, the room of today (no limit)
+  // [goods] | '*', cap, slot, dep: 'casa'|'povo'|'predio', sale? }]); with nothing there, the room of today (no limit)
   D.stores = null;
-  const storesOf = b => { if (!D.stores || !b) return null; try { return D.stores(b) || null; } catch (e) { return null; } };
-  const furnRoom = (b, k, have) => {
-    const L = storesOf(b);
-    if (!L || !L.length) return Infinity;
-    let cap = 0; for (const m of L) if (m && (m.keys === '*' || (Array.isArray(m.keys) && m.keys.includes(k)))) cap += m.cap || 0;
-    return Math.max(0, cap - have);
-  };
+  const storesOf = b => (D.stores && b ? D.stores(b) || null : null);
+  const takes = (m, k) => m.keys === '*' || (Array.isArray(m.keys) && m.keys.includes(k));
+  // the pieces that keep a holder's things: a house's own (dep 'casa'), a building's shelf (dep 'predio', less the sales
+  // furniture: that is the stalls'), a stall's own sales furniture (sale: its number; null on the other pieces); none where
+  // the building has no plan
+  function piecesOf(kind, o) {
+    const b = kind === 'z' ? G.S.buildings.get(o.b) : kind === 'h' || kind === 'b' ? o : null;
+    const L = storesOf(b); if (!L || !L.length) return null;
+    const forSale = m => m.sale !== null && m.sale !== undefined;
+    const mine = L.filter(m => m && (m.cap || 0) > 0 && (kind === 'z' ? forSale(m) && m.sale === o.slot : kind === 'h' ? !m.dep || m.dep === 'casa' : (!m.dep || m.dep === 'predio') && !forSale(m)));
+    return mine.length ? mine : null;
+  }
+  // what is held, put away the same way every time: each good in the pieces made for it first, then in those that take
+  // anything (coins take no room); what fits nowhere lies in a pile on the floor (m: 0)
+  function stow(P, list) {
+    const ents = P.map(m => ({ m, left: m.cap })); const out = [];
+    for (const k of Object.keys(list).sort()) {
+      let n = list[k] || 0; if (!(n > EPS) || k === 'moedas') continue;
+      for (const pass of [0, 1]) for (const e of ents) {
+        if (n <= EPS) break;
+        if (pass === 0 ? !(Array.isArray(e.m.keys) && e.m.keys.includes(k)) : e.m.keys !== '*') continue;
+        const t = Math.min(e.left, n); if (t <= EPS) continue; e.left -= t; n -= t; out.push({ m: e.m.id, k, n: r4(t) });
+      }
+      if (n > EPS) out.push({ m: 0, k, n: r4(n) });
+    }
+    return { ents, out };
+  }
+  // what more of a good fits: the room left in the pieces that take it (a chest of 12 holds 12 in all, not 12 of each)
+  function furnRoom(kind, o, k, list, none) {
+    const P = piecesOf(kind, o); if (!P) return none;
+    let room = 0; for (const e of stow(P, list).ents) if (takes(e.m, k)) room += e.left;
+    return Math.max(0, room);
+  }
   // a business by its id (G.S.biz is G.Biz's; the index follows the list and its version, bumped when one opens or ends)
   let zIdx = null, zArr = null, zV = -1;
   D.zVer = 0;
@@ -54,13 +83,9 @@
     const z = zIdx.get(id); return z && z.st !== 'fim' ? z : null;
   }
   D.zOf = zOf;
-  // what a stall's counter holds of a good: the counters of its place in the market (the interiors say, by slot), or 24
+  // what a stall holds: its own sales furniture in the market, or 24 of each good where the market has no plan
   const ZCAP = 24;
-  function zRoom(z, k) {
-    const b = G.S.buildings.get(z.b); const L = storesOf(b); let cap = ZCAP;
-    if (L && L.length) { const mine = L.filter(m => m && m.slot === z.slot); if (mine.length) { cap = 0; for (const m of mine) if (m.keys === '*' || (Array.isArray(m.keys) && m.keys.includes(k))) cap += m.cap || 0; } }
-    return Math.max(0, cap - ((z.inv && z.inv[k]) || 0));
-  }
+  const zRoom = (z, k) => furnRoom('z', z, k, z.inv || {}, Math.max(0, ZCAP - ((z.inv && z.inv[k]) || 0)));
   // each kind of holder: the object, how much of a good it has, how much more fits, taking and putting (items keep their marks)
   const AD = {
     f: { // a people's store (the storehouses, barns, docks and fires are its doors)
@@ -75,7 +100,7 @@
     h: { // a house: the pantry, the family's coins, the goods
       obj: id => { const b = G.S.buildings.get(id); return housing(b) ? b : null; },
       get: (b, k) => (k === 'food' ? b.pantry || 0 : k === 'moedas' ? b.coin || 0 : (b.inv && b.inv[k]) || 0),
-      room: (b, k) => (k === 'moedas' ? Infinity : k === 'water' ? 0 : furnRoom(b, k, AD.h.get(b, k))),
+      room: (b, k) => (k === 'moedas' ? Infinity : k === 'water' ? 0 : furnRoom('h', b, k, AD.h.list(b), Infinity)),
       take: (b, k, n) => { if (k === 'food') b.pantry = r4((b.pantry || 0) - n); else if (k === 'moedas') b.coin = r4((b.coin || 0) - n); else b.inv[k] = r4((b.inv[k] || 0) - n); },
       put: (b, rec) => { const k = rec.k; if (k === 'food') b.pantry = r4((b.pantry || 0) + rec.n); else if (k === 'moedas') b.coin = r4((b.coin || 0) + rec.n); else { const I = b.inv || (b.inv = {}); I[k] = r4((I[k] || 0) + rec.n); } },
       list: b => { const o = Object.assign({}, b.inv || {}); if (b.pantry) o.food = b.pantry; if (b.coin) o.moedas = b.coin; return o; },
@@ -84,7 +109,7 @@
     b: { // a building's own shelf (a fair, a tavern, a workshop, a court)
       obj: id => { const b = G.S.buildings.get(id); return b && !housing(b) ? b : null; },
       get: (b, k) => (b.inv && b.inv[k]) || 0,
-      room: (b, k) => (k === 'water' ? 0 : k === 'moedas' ? Infinity : furnRoom(b, k, AD.b.get(b, k))),
+      room: (b, k) => (k === 'water' ? 0 : k === 'moedas' ? Infinity : furnRoom('b', b, k, AD.b.list(b), Infinity)),
       take: (b, k, n) => { b.inv[k] = r4((b.inv[k] || 0) - n); },
       put: (b, rec) => { const I = b.inv || (b.inv = {}); I[rec.k] = r4((I[rec.k] || 0) + rec.n); },
       list: b => b.inv || {},
@@ -240,7 +265,7 @@
     const e = [S.ledgerN, S.day, Math.round(S.clock * 100) / 100, from, to, k, r4(n), (c && c.op) || 0, (c && c.code) || '', (c && c.by) || 0];
     const L = ledger(); L.push(e); if (L.length > LEDGER_MAX) L.splice(0, L.length - LEDGER_MAX * 0.75);
     if (!G.inSim) D.outside = (D.outside || 0) + 1; // (a world change from outside the world's step: the checker counts it)
-    for (const f of D.onMove) { try { f(e); } catch (er) { /* a listener is never worth an error of the world */ } }
+    for (const f of D.onMove) { try { f(e); } catch (er) { oops('ouvinte do livro', er); } } // (the transfer stands)
     return e;
   }
   D.ledger = () => ledger();
@@ -386,21 +411,13 @@
     for (const k in f.stock) { const n = (f.stock[k] || 0) * part; if (k !== 'moedas' && n >= 0.5) out[k] = Math.round(n * 10) / 10; }
     return out;
   };
-  // what each piece of furniture of C2 holds of its owner's goods: always the same split for the same goods (a view, not a store)
+  // what each piece of furniture holds of its holder's goods: the same split the room is counted by, always the same for the
+  // same goods (a view, not a store: { m: the piece's id, or 0 for the pile on the floor, k, n })
   D.slots = function (ref) {
     const h = hold(ref); if (!h) return [];
-    const b = h.ad.place ? h.ad.place(h.o) : (h.kind === 'h' || h.kind === 'b') ? h.o : null;
-    const L = storesOf(b); const slot = h.ad.slot ? h.ad.slot(h.o) : undefined;
-    const goods = Object.entries(D.list(ref)).filter(([k]) => k !== 'moedas').sort((x, y) => (x[0] < y[0] ? -1 : 1));
-    if (!L || !L.length) return goods.map(([k, n]) => ({ m: 0, k, n }));
-    const left = L.map(m => ({ m, room: m.cap || 0 }));
-    const out = [];
-    for (const [k, n0] of goods) {
-      let n = n0;
-      for (const s of left) { if (n <= EPS) break; if (slot !== undefined && s.m.slot !== undefined && s.m.slot !== slot) continue; if (!(s.m.keys === '*' || (Array.isArray(s.m.keys) && s.m.keys.includes(k)))) continue; const q = Math.min(n, s.room); if (q <= EPS) continue; out.push({ m: s.m.id, k, n: r4(q) }); s.room -= q; n -= q; }
-      if (n > EPS) out.push({ m: 0, k, n: r4(n) }); // (what does not fit on a shelf lies in a pile on the floor)
-    }
-    return out;
+    const list = D.list(ref); const P = piecesOf(h.kind, h.o);
+    if (!P) return Object.keys(list).filter(k => k !== 'moedas').sort().map(k => ({ m: 0, k, n: list[k] }));
+    return stow(P, list).out;
   };
   // the sum of a good over every holder of the world (for the tests of conservation)
   D.total = function (k) {
@@ -454,11 +471,17 @@
     const S = G.S; const def = A.DEFS[op.def];
     op.st = st || 'ok'; op.end = { day: S.day, t: Math.round(S.clock * 10) / 10, why: why || '' };
     op.rsv = []; A._rv++;
+    // (what it still held when it ended — on its yard, on the ground, in hands — is written down: its books close with it)
+    const left = {}; const keep = (k, n) => { left[k] = r4((left[k] || 0) + n); };
+    if (op.at) { const b = S.buildings.get(op.at); if (b && b.crates) for (const c of b.crates) if (c.op === op.id) keep(c.k, c.n); }
+    for (const o of loose()) if (o.op === op.id) keep(o.k, o.n);
+    for (const v of S.villagers.values()) if (v.carry && v.carry.op === op.id && v.carry.n > EPS) keep(v.carry.k, v.carry.n);
+    if (Object.keys(left).length) op.left = left;
     // (crates of this operation still on the quay are nobody's errand now: free for the next one)
     if (op.at) { const b = S.buildings.get(op.at); if (b && b.crates) for (const c of b.crates) if (c.op === op.id) { c.by = 0; c.op = 0; } }
     for (const o of loose()) if (o.op === op.id) o.op = 0;
     A.log(op, st || 'ok', why || '');
-    if (def && def.onEnd) try { def.onEnd(op, st, why); } catch (e) { console.error('[Atividades] fim', e); }
+    if (def && def.onEnd) try { def.onEnd(op, st, why); } catch (e) { oops('fim de ' + op.def, e); }
     byP = null;
   };
   A.pause = function (op, why) { if (!op || !live(op) || op.st === 'wait' && op.wait === why) return; op.st = 'wait'; op.wait = why; A.log(op, 'parou', why); };
@@ -468,7 +491,7 @@
     if (!op || !v || !live(op)) return false;
     const cur = A.roleOf(v); if (cur && cur.op !== op && cur.op.def === op.def && !A.DEFS[op.def].many) A.leave(cur.op, v, 'outra');
     const R = op.roles || (op.roles = {});
-    if (!R[v.id]) { R[v.id] = { r: role || 'mao', t: Math.round(G.S.clock * 10) / 10, n: 0, body: G.Possess && G.Possess.is(v) ? 1 : 0 }; A.log(op, 'entrou', v.id, role || 'mao'); }
+    if (!R[v.id]) { R[v.id] = { r: role || 'mao', t: Math.round(G.S.clock * 10) / 10, n: 0, body: A.isBody(v) ? 1 : 0 }; A.log(op, 'entrou', v.id, role || 'mao'); }
     byP = null; return true;
   };
   A.leave = function (op, v, why) {
@@ -512,9 +535,9 @@
     for (const op of ops()) {
       if (!live(op)) continue;
       const def = A.DEFS[op.def]; if (!def) { A.end(op, 'cancel', 'sem definição'); continue; }
-      try { if (def.tick) def.tick(op, step); } catch (e) { G.modErr.Atividades = (G.modErr.Atividades || 0) + 1; if (G.modErr.Atividades <= 3) console.error('[Atividades]', op.def, e); }
+      try { if (def.tick) def.tick(op, step); } catch (e) { oops(op.def, e); }
     }
-    for (const f of A.hooks.tick) { try { f(step); } catch (e) { G.modErr.Atividades = (G.modErr.Atividades || 0) + 1; if (G.modErr.Atividades <= 3) console.error('[Atividades]', e); } }
+    for (const f of A.hooks.tick) { try { f(step); } catch (e) { oops('gancho do segundo', e); } }
     // the ended ones are kept a day for the diary, the summaries and the checker, then let go
     tPrune += step; if (tPrune >= 20) { tPrune = 0; const L = ops(); const keep = L.filter(op => live(op) || (op.end && S.day - op.end.day < 1.5)); if (keep.length !== L.length) { S.acts = keep; idxN = -1; byP = null; A._rv++; } }
   };
@@ -633,7 +656,7 @@
   // begin/commit/abort change the world and belong in the world's step: the body's queue of intentions)
   A.offers = function (v, x, y, r) {
     const out = []; if (!v) return out;
-    for (const id in A.DEFS) { const def = A.DEFS[id]; if (!def.offers) continue; try { for (const o of def.offers(v, x, y, r || 2.5) || []) { o.def = id; out.push(o); } } catch (e) { /* an offer that fails to be read is not offered */ } }
+    for (const id in A.DEFS) { const def = A.DEFS[id]; if (!def.offers) continue; try { for (const o of def.offers(v, x, y, r || 2.5) || []) { o.def = id; out.push(o); } } catch (e) { oops('ofertas de ' + id, e); } }
     return out;
   };
   const hands = new Map(); let handN = 0;
@@ -686,7 +709,7 @@
   // what this person could take up here and now (what has no ground in the world is not offered at all)
   A.avail = function (v) {
     const out = []; const set = v && G.S.settlements.get(v.set); if (!set) return out; const c = A.caps(set);
-    for (const id in A.DEFS) { const def = A.DEFS[id]; if (!def.avail) continue; let r = null; try { r = def.avail(c, v, set); } catch (e) { r = null; } if (r && (r.ok || r.why)) out.push(Object.assign({ def: id, name: def.name || id }, r)); }
+    for (const id in A.DEFS) { const def = A.DEFS[id]; if (!def.avail) continue; let r = null; try { r = def.avail(c, v, set); } catch (e) { oops('o que pode ' + id, e); r = null; } if (r && (r.ok || r.why)) out.push(Object.assign({ def: id, name: def.name || id }, r)); }
     return out;
   };
 
@@ -701,11 +724,11 @@
   A.diary = function (v) {
     const S = G.S; const out = { doing: [], goals: [], promises: [], found: [], rumors: [], memories: [], options: [] }; if (!v) return out;
     for (const op of A.of(v)) { if (!live(op)) continue; const def = A.DEFS[op.def]; out.doing.push({ id: op.id, kind: 'doing', txt: def && def.title ? def.title(op, v) : op.def, day: op.born, st: op.st, op: op.id }); }
-    for (const f of A.hooks.diary) { try { f(v, out); } catch (e) { /* a part of the diary that fails is left out */ } }
+    for (const f of A.hooks.diary) { try { f(v, out); } catch (e) { oops('diário', e); } }
     for (const e of v.diary || []) { const k = e.kind === 'goal' ? 'goals' : e.kind === 'promise' ? 'promises' : e.kind === 'found' ? 'found' : e.kind === 'rumor' ? 'rumors' : e.kind === 'option' ? 'options' : 'memories'; out[k].push(Object.assign({ id: 0 }, e)); }
     if (G.Life) for (const e of G.Life.bioList(v).slice(-8)) out.memories.push({ id: 0, kind: 'memory', txt: e.txt, day: e.d });
     // (rumours: what the person's people heard, with how sure it is — a rumour is not a fact)
-    if (G.Know && G.Know.rumorsOf) { try { for (const r of G.Know.rumorsOf(G.Fac.idOfV(v)) || []) out.rumors.push({ id: r.id || 0, kind: 'rumor', txt: r.claim || r.text || '', day: r.day || 0, conf: r.conf }); } catch (e) { /* a people without rumours */ } }
+    if (G.Know && G.Know.rumorsOf) { try { for (const r of G.Know.rumorsOf(G.Fac.idOfV(v)) || []) out.rumors.push({ id: r.id || 0, kind: 'rumor', txt: r.claim || r.text || '', day: r.day || 0, conf: r.conf }); } catch (e) { oops('rumores', e); } }
     for (const a of A.avail(v)) if (a.ok && a.known !== false) out.options.push({ id: 0, kind: 'option', txt: a.txt || a.name, day: S.day, def: a.def });
     return out;
   };
@@ -791,7 +814,7 @@
       const S = G.S;
       // (a save from before the activities has none of this: the world simply starts without operations)
       S.acts = Array.isArray(o.acts) ? o.acts.filter(op => op && Number.isInteger(op.id) && typeof op.def === 'string').map(op => Object.assign(op, {
-        goods: cleanMap(op.goods), done: cleanMap(op.done), lost: cleanMap(op.lost), moved: cleanMap(op.moved), taken: cleanMap(op.taken), back: cleanMap(op.back), roles: op.roles && typeof op.roles === 'object' ? op.roles : {},
+        goods: cleanMap(op.goods), done: cleanMap(op.done), lost: cleanMap(op.lost), moved: cleanMap(op.moved), taken: cleanMap(op.taken), back: cleanMap(op.back), left: op.left ? cleanMap(op.left) : undefined, roles: op.roles && typeof op.roles === 'object' ? op.roles : {},
         rsv: Array.isArray(op.rsv) ? op.rsv.filter(r => Array.isArray(r) && typeof r[0] === 'string' && fin(r[2])) : [], keys: Array.isArray(op.keys) ? op.keys : [], log: Array.isArray(op.log) ? op.log : [],
         data: op.data && typeof op.data === 'object' ? op.data : {}, upd: num(op.upd, S.clock), born: num(op.born, S.day),
         srcs: Array.isArray(op.srcs) ? op.srcs.filter(x => typeof x === 'string') : [], stage: typeof op.stage === 'string' ? op.stage : null,
