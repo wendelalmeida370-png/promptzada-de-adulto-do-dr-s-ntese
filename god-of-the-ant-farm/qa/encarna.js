@@ -1071,14 +1071,19 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // 1. the door shut by the world: the house drawn open by its door, the leaf in the opening
     G.Possess.apply(w => { In.useDoor(b, e.door, 'fechar', w); return { ok: true }; }); __E.f(40);
     out.shut = Object.assign(lf(), { state: In.doorState(b, e.door).state });
-    // 2. the hands open it (E, the world in its step): the leaf turns into the room, the opening free — the cut
-    let best = null; for (let k = 0; k < 30 && !(best && best.id === 'portaPlanta'); k++) { G.Cam3D.yaw = Math.atan2(D[1] - st.Z, D[0] - st.X); best = G.Interact.best(); G.Main.frameFor(33); }
-    if (best && best.id === 'portaPlanta') G.Interact.run(best); __E.until(() => !G.Avatar.busy(), 120); __E.f(40);
-    out.open = Object.assign(lf(), { state: In.doorState(b, e.door).state, label: best && best.label });
-    // 3. in through it, square to its wall: the world has it inside; the eye in a room, never in a wall
+    // (the door's wall, and the way into the house square to it; the body walked as a player holds the stick, the frames with the
+    // eye inside a wall counted)
     const dd = p.doors[e.door], w = p.walls[dd.wall]; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; let nx = -(w.b[1] - w.a[1]) / L, nz = (w.b[0] - w.a[0]) / L;
     if ((p.lot.w / 2 - e.x) * nx + (p.lot.w / 2 - e.z) * nz < 0) { nx = -nx; nz = -nz; }
     let camIn = 0; const go = (x, z, max) => { for (let k = 0; k < max; k++) { const X = b.x * TL + x, Z = b.y * TL + z; const dx = X - st.X, dz = Z - st.Z; if (Math.hypot(dx, dz) < 0.12) break; G.Cam3D.yaw = Math.atan2(dz, dx); G.Input3D.down.frente = true; G.Main.frameFor(33); const c = G.Realm.camera().position; if (G.Cam3D.solid(c.x, c.y, c.z)) camIn++; } G.Input3D.down.frente = false; __E.f(6); };
+    // 2. up to the door, as a player walks up to it — from the plan's doorstep (Interiors.planDoor: where the world's people stand
+    // to go in, up to two metres out) to a step from it, facing it —; the hands open it (E, the world in its step): the leaf
+    // turns into the room, the opening free — the cut
+    go(e.x - nx * 0.6, e.z - nz * 0.6, 200); camIn = 0;
+    let best = null; for (let k = 0; k < 30 && !(best && best.id === 'portaPlanta'); k++) { G.Cam3D.yaw = Math.atan2(D[1] - st.Z, D[0] - st.X); best = G.Interact.best(); G.Main.frameFor(33); }
+    if (best && best.id === 'portaPlanta') G.Interact.run(best); __E.until(() => !G.Avatar.busy(), 120); __E.f(40);
+    out.open = Object.assign(lf(), { state: In.doorState(b, e.door).state, label: best && best.label, d: +Math.hypot(D[0] - st.X, D[1] - st.Z).toFixed(2) });
+    // 3. in through it, square to its wall: the world has it inside; the eye in a room, never in a wall
     go(e.x - nx * 0.6, e.z - nz * 0.6, 200); go(e.x + nx * 1.3, e.z + nz * 1.3, 300); __E.f(30);
     const c = G.Realm.camera().position; const cx = c.x - b.x * TL, cz = c.z - b.y * TL; const R = p.shell.r;
     out.inside = { v: v.inside === b.id, lv: G.Possess.level(), camIn, camRoom: cx > R[0] && cx < R[2] && cz > R[1] && cz < R[3] && !G.Cam3D.solid(c.x, c.y, c.z), open: B3.isOpen(b.id) };
