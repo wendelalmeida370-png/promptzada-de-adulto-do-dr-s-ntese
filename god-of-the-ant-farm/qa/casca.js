@@ -22,8 +22,10 @@ for (const key of list) {
     const s2 = In.shellOfPlan(p);
     if (!s1 || strip(s1) !== strip(s2)) { bad++; if (ex.length < 3) ex.push(`#${b.id} ${b.type}/${b.ip.f}`); }
   }
-  // (the shells again, the code warm — as when the 3D asks for every building of the view once the first ones were drawn)
-  In.uncache(); const tw = []; for (const b of G.S.buildings.values()) { if (!b.ip || !In.TYPES[b.ip.t]) continue; const a = clock(); In.shellOf(b); tw.push(clock() - a); }
+  // (the shells again, the code warm — as when the 3D asks for every building of the view once the first ones were drawn —,
+  // three times each: the least of the three is the shell's cost; a pause of the collector or of a busy machine is not — in a
+  // world of 56 buildings, two such pauses were a third of the mean)
+  const tw = []; for (const b of G.S.buildings.values()) { if (!b.ip || !In.TYPES[b.ip.t]) continue; let best = Infinity; for (let r = 0; r < 3; r++) { In.uncache(); const a = clock(); In.shellOf(b); best = Math.min(best, clock() - a); } tw.push(best); }
   all += n; ts.sort((x, y) => x - y); tp.sort((x, y) => x - y); tw.sort((x, y) => x - y);
   const avg = a => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length); const pc = (a, q) => a[Math.min(a.length - 1, Math.floor(a.length * q))] || 0;
   ok(`${key} igual`, bad === 0, `${n} prédios com planta: a casca de longe difere da planta em ${bad}${ex.length ? ' (' + ex.join(', ') + ')' : ''}`);

@@ -640,7 +640,8 @@
     if (!p || !p.shell) return null; const walls = [], holes = [];
     for (const w of p.walls) if (w.shell) walls.push({ id: w.id, lv: w.lv, a: w.a, b: w.b, t: w.t, h: w.h, kind: w.kind, mat: w.mat, outer: w.outer });
     for (const h of p.holes) { const w = p.walls[h.wall]; if (!w || !w.shell) continue; holes.push({ wall: h.wall, at: h.at, w: h.w, h: h.h, sill: h.sill, kind: h.kind, door: h.door }); }
-    return { shell: p.shell, levels: p.levels.map(l => ({ lv: l.lv, y: l.y, h: l.h, kind: l.kind, slab: l.slab || 0 })), walls, holes, entrance: p.entrance || null, entryLv: p.entryLv || 0, fam: p.shellFam || p.fam };
+    const steps = p.stairs.filter(st => st.kind === 'degraus').map(st => ({ id: st.id, kind: st.kind, lv0: st.lv0, lv1: st.lv1, r: st.r, dir: st.dir, w: st.w }));
+    return { shell: p.shell, levels: p.levels.map(l => ({ lv: l.lv, y: l.y, h: l.h, kind: l.kind, slab: l.slab || 0 })), walls, holes, steps, entrance: p.entrance || null, entryLv: p.entryLv || 0, fam: p.shellFam || p.fam };
   };
   // ---- plans asked for without stopping the frame (the 3D, the god's view): a plan is made in one go (from a few ms to a
   // tenth of a second in a tall block), so whoever draws asks with want(b) — the plan if it is made, else null and the
@@ -712,11 +713,13 @@
     for (const w of P.walls) if (w.shell) walls.push({ id: w.id, lv: w.lv, a: loc(w.a[0], w.a[1]), b: loc(w.b[0], w.b[1]), t: w.t, h: r2(w.h), kind: w.kind, mat: w.mat, outer: w.outer });
     for (const h of P.holes) { const w = P.walls[h.wall]; if (!w || !w.shell) continue; holes.push({ wall: h.wall, at: r2(h.at), w: r2(h.w), h: r2(h.h), sill: r2(h.sill), kind: h.kind, door: h.door }); }
     let entrance = null; if (P.entrance) { const e = P.entrance; const p = loc(e.u, e.v); entrance = { door: e.door, side: s, x: p[0], z: p[1], w: e.w, lv: e.lv, out: loc(e.u, L + 1.6) }; }
-    return { shell, levels, walls, holes, entrance, entryLv: P.entryLv || 0 };
+    // (the steps from the ground the shell has: up to the porch on stilts, down into a sunken floor)
+    const steps = P.stairs.filter(st => st.kind === 'degraus').map(st => ({ id: st.id, kind: st.kind, lv0: st.lv0, lv1: st.lv1, r: R(st.r), dir: dirLoc(s, st.dir[0], st.dir[1]), w: r2(st.w) }));
+    return { shell, levels, walls, holes, steps, entrance, entryLv: P.entryLv || 0 };
   }
   // (a ruin's shell, as ruinOf makes a ruin of the plan: the ground storey, no roof, nothing open in walls broken low)
   const ruinWall = (b, w) => Object.assign({}, w, { h: r2(0.15 + G.hash(Math.imul(b.id, 31) + w.id) * 0.3), kind: 'ruina' });
-  const ruinShell = (s, b) => Object.assign({}, s, { shell: Object.assign({}, s.shell, { roof: null, eave: 0.45, floors: 1 }), levels: s.levels.filter(l => l.lv === s.entryLv), walls: s.walls.filter(w => w.lv === s.entryLv).map(w => ruinWall(b, w)), holes: [] });
+  const ruinShell = (s, b) => Object.assign({}, s, { shell: Object.assign({}, s.shell, { roof: null, eave: 0.45, floors: 1 }), levels: s.levels.filter(l => l.lv === s.entryLv), walls: s.walls.filter(w => w.lv === s.entryLv).map(w => ruinWall(b, w)), holes: [], steps: [] });
   function finish(P) {
     const s = P.rec.s, L = P.L; const loc = (u, v) => toLoc(s, L, u, v).map(r2); const R = r => rectLoc(s, L, r).map(r2);
     const plan = { id: P.b.id, hot: P.rec.cl === 'q' ? 1 : 0, ver: P.rec.r + '.' + P.rec.t, type: P.rec.t, use: P.rec.u, fam: P.famId, famName: P.fam ? P.fam.name : P.famId, style: P.rec.c, side: s, lot: { w: L, d: L }, errs: P.errs.slice(), notes: P.notes };
@@ -750,7 +753,7 @@
     plan.head = P.headAt ? P.headAt : null; void plan.head; delete plan.head;
     plan.roofGeo = P.roofGeo || null; // (canonical: what the loft's headroom is measured under)
     plan._P = P; // (the canonical builder kept for the grid's headroom; not part of the contract)
-    grid(plan);
+    gridOf(plan, P);
     validate(plan);
     plan.sig = signature(plan);
     Object.defineProperty(plan, '_P', { enumerable: false, value: P }); // (out of any JSON)
@@ -829,6 +832,27 @@
     stampItems({ items }, lv, g, n);
     return { g, n, crawl: base.crawl };
   }
+  // the grid of a plan made: the very one its pieces were laid out on (the canonical frame's), turned to the lot — never a
+  // second rasterising of the plan in centimetres, whose rounding puts an edge now and then on the other side of a cell's
+  // middle: a passage of three cells the arranging kept would be one of two for the walk that proves it
+  const turns = new Map();
+  function turnOf(s, L) {
+    const key = s + L; let m = turns.get(key); if (m) return m; const n = Math.round(L / CS); m = new Int32Array(n * n);
+    for (let Z = 0; Z < n; Z++) for (let X = 0; X < n; X++) { const c = toCan(s, L, (X + 0.5) * CS, (Z + 0.5) * CS); m[Z * n + X] = Math.floor(c[1] / CS) * n + Math.floor(c[0] / CS); }
+    turns.set(key, m); return m;
+  }
+  const turn = (g, m) => { const o = new Uint8Array(m.length); for (let k = 0; k < m.length; k++) o[k] = g[m[k]]; return o; };
+  function gridOf(plan, P) {
+    const L = plan.lot.w; const n = Math.round(L / CS); const m = turnOf(plan.side, L);
+    plan.grid = { cs: CS, n, lv: {} };
+    for (const l of P.levels) { const dr = draft(P, l.lv); if (dr) plan.grid.lv[l.lv] = turn(dr.g, m); }
+  }
+  // the walk from the entrance in the plan's own frame, on those same cells, from its own door and stairs
+  function reachCan(P) {
+    const n = Math.round(P.L / CS); const grid = { n, lv: {} }; for (const l of P.levels) { const dr = draft(P, l.lv); if (dr) grid.lv[l.lv] = dr.g; }
+    const e = P.entrance; const pc = { grid, levels: P.levels, entrance: e ? { x: e.u, z: e.v, lv: e.lv || 0 } : null, stairs: P.stairs.map(st => ({ kind: st.kind, lv0: st.lv0, lv1: st.lv1, a: st.foot, b: st.top })) };
+    return { pc, seen: reach(pc) };
+  }
   const PASS = c => c === C.FLOOR || c === C.DOOR || c === C.HATCH;
   const NEAR = c => c === C.FLOOR || c === C.DOOR || c === C.STAIR || c === C.HATCH;
   // a loft is crawled, not walked: there a cell is enough (under the low roof too)
@@ -881,6 +905,33 @@
   }
   In.slabsOn = slabsOn;
   const P0 = plan => plan._P || {};
+  // where the outside of a rectangular shell is open between the ground storey's floor and the eaves: along each side, at
+  // every quarter metre, the heights its outside walls (their outer face on the shell's edge) and the slabs between storeys
+  // that reach it cover — over a court open to the street the building stops at its ground storey, and the sky is above it
+  function facadeGap(plan) {
+    const sh = plan.shell; if (sh.kind !== 'rect') return null; const R = sh.r; const C = sh.court;
+    const L0 = plan.levels.find(l => l.lv === (plan.entryLv || 0)); if (!L0) return null; const base = L0.y, top = sh.eave;
+    const yOf = lv => { const l = plan.levels.find(q => q.lv === lv); return l ? l.y : 0; };
+    const sides = [['x', R[0], 0], ['x', R[2], 2], ['z', R[1], 1], ['z', R[3], 3]];
+    for (const [ax, at, k] of sides) {
+      const lo = ax === 'x' ? R[1] : R[0], hi = ax === 'x' ? R[3] : R[2]; const q = ax === 'x' ? 1 : 0;
+      const ws = plan.walls.filter(w => w.outer && w.shell && w.kind !== 'parapeito' && w.kind !== 'guarda-corpo' && Math.abs(w.a[1 - q] - w.b[1 - q]) < 1e-3 && Math.abs(Math.abs(w.a[1 - q] - at) - w.t / 2) < 0.03);
+      // (the court meets this side: open above the ground storey along it — to the corner, when it meets the side across that
+      // end too)
+      const open = C && Math.abs(C[k] - at) < 0.7; const o0 = open && (Math.abs(C[q] - R[q]) < 0.7 ? -1e9 : C[q]), o1 = open && (Math.abs(C[q + 2] - R[q + 2]) < 0.7 ? 1e9 : C[q + 2]);
+      for (let p = lo + 0.3; p <= hi - 0.3 + 1e-6; p += CS) {
+        if (open && p > o0 && p < o1) continue;
+        const cov = [];
+        for (const w of ws) if (p >= Math.min(w.a[q], w.b[q]) - 0.02 && p <= Math.max(w.a[q], w.b[q]) + 0.02) { const y = yOf(w.lv); cov.push([y, y + w.h]); }
+        for (const l of plan.levels) { const A = l.area; if (!l.slab || !A) continue; if (Math.abs(A[k] - at) > 0.4 || p < A[q] - 0.4 || p > A[q + 2] + 0.4) continue; cov.push([l.y - l.slab, l.y]); }
+        cov.sort((a, b) => a[0] - b[0]); let y = base;
+        for (const [a, b] of cov) { if (a > y + 0.05) break; y = Math.max(y, b); }
+        if (y < top - 0.05) return `a fachada aberta de ${y.toFixed(2)} a ${top.toFixed(2)} m (lado ${ax}=${at.toFixed(2)}, em ${p.toFixed(2)})`;
+      }
+    }
+    return null;
+  }
+  In.facadeGap = facadeGap; // (for the proofs)
   function validate(plan) {
     const E = plan.errs; const T = TYPES[plan.type] || {}; const def = G.BDEF[plan.type] || {}; const L = plan.lot.w;
     const lotR = [0, 0, L, L]; const sh = plan.shell;
@@ -913,6 +964,10 @@
         if (d && d.rooms.includes('rua')) { const yo = Math.max(0, base); if (y1 - yo < In.DOOR_MIN - 1e-3 || y0 < yo - 0.05 || y0 > yo + 0.35) E.push(`a entrada vista de fora: o vão de ${y0.toFixed(2)} a ${y1.toFixed(2)} m sobre o chão a ${yo.toFixed(2)} m`); }
       }
     }
+    // the court open to the sky, as the shell has it: no floor over it on the storeys above; the outside closed from the
+    // ground storey's floor to the eaves
+    if (sh.court) { const m = plan.rooms.find(q => q.lv > (plan.entryLv || 0) && ov(q.r, sh.court, 0.02)); if (m) E.push(`um piso sobre o pátio aberto (${m.fn}, piso ${m.lv})`); }
+    { const g = facadeGap(plan); if (g) E.push(g); }
     // what the building is for, in numbers the world uses
     if (def.housing && plan.cap.places < def.housing) { if (P0(plan).relax && plan.cap.places >= Math.ceil(def.housing / 2)) plan.short = def.housing - plan.cap.places; else E.push(`só ${plan.cap.places} lugares para dormir (a casa abriga ${def.housing})`); }
     if ((T.jobs === undefined ? def.jobs : T.jobs) && plan.cap.jobs < (T.jobs === undefined ? def.jobs : T.jobs)) E.push(`só ${plan.cap.jobs} postos de trabalho (o prédio emprega ${def.jobs})`);
@@ -921,19 +976,20 @@
     if (def.housing) { let a = 0; for (const m of plan.rooms) a += (m.circ ? Math.PI * m.circ[2] * m.circ[2] : (m.r[2] - m.r[0]) * (m.r[3] - m.r[1])) * (m.open ? (plan.hot ? 0.5 : 0) : 1); if (a / def.housing < 1.5 && !plan.short) E.push(`${(a / def.housing).toFixed(2)} m² por pessoa (menos que 1,5)`); }
     if (T.need) for (const k in T.need) { const have = plan.items.filter(i => i.kind === k || (ITEMS[i.kind].as === k)).length; if (have < T.need[k]) E.push(`falta ${k}`); }
     // the walk: every room, every place of use, from the door
+    // (in the plan's own frame, on the cells its pieces were laid out on: what is proved is what the arranging saw)
     if (!E.length) {
-      const seen = reach(plan);
-      for (const m of plan.rooms) {
-        const cx = (m.r[0] + m.r[2]) / 2, cz = (m.r[1] + m.r[3]) / 2; let ok = false; const n = plan.grid.n; const s = seen[m.lv];
-        if (s) { const [x0, z0] = cellAt(plan, [m.r[0] + 0.01, m.r[1] + 0.01]), [x1, z1] = cellAt(plan, [m.r[2] - 0.01, m.r[3] - 0.01]); for (let z = Math.max(0, z0); z <= Math.min(n - 1, z1) && !ok; z++) for (let x = Math.max(0, x0); x <= Math.min(n - 1, x1); x++) if (s[z * n + x]) { ok = true; break; } }
-        if (!ok) E.push(`não se chega ao cômodo ${m.fn} (piso ${m.lv})`); void cx; void cz;
+      const P = P0(plan); const { pc, seen } = reachCan(P); const n = pc.grid.n;
+      for (const m of P.rooms) {
+        let ok = false; const s = seen[m.lv];
+        if (s) { const [x0, z0] = cellAt(pc, [m.r[0] + 0.01, m.r[1] + 0.01]), [x1, z1] = cellAt(pc, [m.r[2] - 0.01, m.r[3] - 0.01]); for (let z = Math.max(0, z0); z <= Math.min(n - 1, z1) && !ok; z++) for (let x = Math.max(0, x0); x <= Math.min(n - 1, x1); x++) if (s[z * n + x]) { ok = true; break; } }
+        if (!ok) E.push(`não se chega ao cômodo ${m.fn} (piso ${m.lv})`);
       }
       // (every use of every piece: one of its places for that use is enough — a long bench is reached at one of its ends)
-      for (const it of plan.items) {
-        const uses = new Map(); for (const sp of it.spots) { if (sp.on) continue; const ok = reachedNear(plan, seen, it.lv, [sp.x, sp.z], 0.3) || (crawl(plan, it.lv) && reachedNear(plan, seen, it.lv, [sp.x, sp.z], 0.45)); uses.set(sp.use, (uses.get(sp.use) || false) || ok); }
+      for (const it of P.items) {
+        const uses = new Map(); for (const sp of P.spotsOf(it)) { if (sp.on) continue; const ok = reachedNear(pc, seen, it.lv, [sp.u, sp.v], 0.3) || (crawl(pc, it.lv) && reachedNear(pc, seen, it.lv, [sp.u, sp.v], 0.45)); uses.set(sp.use, (uses.get(sp.use) || false) || ok); }
         for (const [use, ok] of uses) if (!ok) { E.push(`não se chega a ${ITEMS[it.kind].name.toLowerCase()} (${use}, piso ${it.lv})`); break; }
       }
-      plan.reach = seen;
+      const m = turnOf(plan.side, plan.lot.w); plan.reach = {}; for (const lv in seen) plan.reach[lv] = turn(seen[lv], m);
     }
     plan.ok = !E.length;
   }

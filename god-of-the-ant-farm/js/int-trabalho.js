@@ -96,7 +96,9 @@
     // (what of the inside the shell must know: the room the way in opens into — for the aisle and the nave, the narrowest
     // the inside may make them —, and the court open to the sky behind the gate)
     let er = I, entryU = cu; const lay = {};
-    if (H === 'corredor') { lay.cu = entryU = cu + P.rr(-0.3, 0.3); er = [entryU - 0.9, I[1], entryU + 0.9, I[3]]; } // (the aisle's middle; its width, at least 1.8 m, the inside's)
+    // (the aisle's middle; its width, at least 1.8 m, the inside's — in a store, down the middle: the bays on either side the
+    // same, each cell as wide as a bay and the way in to it; off the middle, one side's cells hold no bay)
+    if (H === 'corredor') { const off = P.rr(-0.3, 0.3); lay.cu = entryU = cu + (PR.storeAll ? 0 : off); er = [entryU - 0.9, I[1], entryU + 0.9, I[3]]; }
     else if (H === 'naves') er = [cu - 1.3 + 0.175, I[1], cu + 1.3 - 0.175, I[3]];
     else if (H === 'patio') {
       const bd = P.rr(2.4, 3.0), sw = P.rr(1.9, 2.3);
@@ -122,9 +124,13 @@
     }
     // ---- the storeys: a gallery over the back of the hall, a storey above it all, a cellar under it — their floors (how far a
     // gallery comes, and where the cellar goes, the inside says), the walls going on up ----
-    if (V === 'galeria') { P.level(1, y0 + h0 + 0.2, h1, 'galeria', I); P.walls4(1, [sh[0] + t / 2, sh[1] + t / 2, sh[2] - t / 2, sh[3] - t / 2], t, h1, 1, 'parede', { frente: 1 }); }
-    if (V === 'andar') loftFloorShell(P, y0 + h0 + 0.2, h1);
+    // (a gallery leaves the front of the hall two storeys high: its front wall goes up to the eaves — no storey above has a
+    // front wall there —, its other walls up to the gallery's floor, where no floor's edge closes them)
+    if (V === 'galeria') { P.level(1, y0 + h0 + 0.2, h1, 'galeria', I); P.walls4(1, [sh[0] + t / 2, sh[1] + t / 2, sh[2] - t / 2, sh[3] - t / 2], t, h1, 1, 'parede', { frente: 1 }); P.walls[P.outer.frente].h = h0 + 0.2 + h1; for (const k of ['fundo', 'esquerda', 'direita']) P.walls[P.outer[k]].h = h0 + 0.2; }
+    if (V === 'andar') loftFloorShell(P, y0 + h0 + 0.2, h1, lay.C);
     if (V === 'porao') P.level(-1, -2.1, 1.9, 'porao', I);
+    // (the steps up to the porch of a floor on stilts, seen from the street)
+    if (V === 'esteios') { const e = P.entrance; const w = Math.max(1.0, e.w + 0.1); P.stair('degraus', -1, 0, [e.u - w / 2, sh[3] + 0.02, e.u + w / 2, sh[3] + porch], 0, -1); }
     workWindows(P);
     if (P.inside()) return;
     // ======== the inside: each attempt's own dice ========
@@ -140,7 +146,7 @@
       door(w, P.atOf(w, [P.rr(I[0] + dw / 2 + 0.4, I[2] - dw / 2 - 0.4), at]), dw, rooms.front, rooms.main, big ? 'vao' : 'porta');
     } else if (H === 'corredor') {
       // (an aisle from the door to the back wall, the cells opening on it to either side; the door within it)
-      const awd = P.rr(1.8, 2.2); const ac = lay.cu;
+      const awd = PR.storeAll ? P.rr(1.8, 1.9) : P.rr(1.8, 2.2); const ac = lay.cu;
       const a0 = ac - awd / 2, a1 = ac + awd / 2;
       rooms.main = room('corredor', [a0, I[1], a1, I[3]]);
       // (two cells to a side, or three in a deep hall — a store keeps two, big enough for its bays)
@@ -176,13 +182,12 @@
     if (H === 'anexo') { rooms.lean = P.room(0, 'telheiro', lay.ai); rooms.all.push(rooms.lean); }
     // ---- the storeys: what is on them, the ways up and down ----
     if (V === 'galeria') gallery(P, rooms, I);
-    if (V === 'andar') loftFloor(P, rooms);
+    if (V === 'andar') loftFloor(P, rooms, lay.C, ti);
     if (V === 'porao') {
       // (under the roomiest closed room of the ground: a cell of the aisle, the nave's side, the hall)
       const pick = rooms.all.filter(i2 => !P.rooms[i2].open && P.rooms[i2].lv === 0).sort((a, b) => area(P.rooms[b].r) - area(P.rooms[a].r))[0];
       const hold = {}; K.porao(P, hold, P.rooms[pick].r); rooms.cellar = hold.despensa;
     }
-    if (V === 'esteios') { const w = Math.max(1.0, e.w + 0.1); P.stair('degraus', -1, 0, [e.u - w / 2, sh[3] + 0.02, e.u + w / 2, sh[3] + porch], 0, -1); }
     P._rooms = rooms; // (the programme reads the rooms the recipe made)
     PR.furnish(P, rooms);
   }
@@ -204,15 +209,27 @@
     const st = K.ladderAt(P, 0, 1, cands.filter(c => !c.ladder), null, 'escada') || K.ladderAt(P, 0, 1, cands.filter(c => c.ladder)); if (!st) { P.errs.push('não cabe a escada da galeria'); return; }
     P.hole(rail, P.atOf(rail, [(st.r[0] + st.r[2]) / 2, area[3]]), sw + 0.1, 1.0, 0, 'vao');
   }
-  // the storey above (a store, the master's rooms), as the shell has it: its floor, the walls going on up
-  function loftFloorShell(P, y1, h1) {
+  // the storey above (a store, the master's rooms), as the shell has it: its floor, the walls going on up — round a court
+  // open to the street, over the wings and the hall behind it only, its front wall over the wings (the court open to the sky
+  // from the ground up)
+  function loftFloorShell(P, y1, h1, C) {
     const S = P.shell; const sh = S.r; const t = Math.min(S.t, 0.22); const I1 = [sh[0] + t, sh[1] + t, sh[2] - t, sh[3] - t];
     P.level(1, y1, h1, 'andar', I1);
-    const c = t / 2; P.outers.push(P.walls4(1, [sh[0] + c, sh[1] + c, sh[2] - c, sh[3] - c], t, h1, 1, 'parede'));
+    const c = t / 2; const R = [sh[0] + c, sh[1] + c, sh[2] - c, sh[3] - c];
+    if (!C) { P.outers.push(P.walls4(1, R, t, h1, 1, 'parede')); return; }
+    const O = P.walls4(1, R, t, h1, 1, 'parede', { frente: 1 });
+    O.frente = P.wall(1, [R[2], R[3]], [C[2], R[3]], t, h1, 1, 'parede'); P.outers.push(O, { frente: P.wall(1, [C[0], R[3]], [R[0], R[3]], t, h1, 1, 'parede') });
   }
-  // its inside: one room, a stair from the hall through a trapdoor (or a ladder)
-  function loftFloor(P, rooms) {
-    const I1 = P.lvl(1).area.slice(); rooms.up = [P.room(1, 'sobrado', I1)];
+  // its inside: one room — or, round a court, three: the wings' and the hall's, their walls on the court, the wings' doors
+  // into the hall's —, a stair from the hall through a trapdoor (or a ladder)
+  function loftFloor(P, rooms, C, ti) {
+    const L1 = P.lvl(1); const I1 = L1.area.slice();
+    if (C) {
+      const ib = P.room(1, 'sobrado', [I1[0], I1[1], I1[2], C[1] - ti]), il = P.room(1, 'sobrado', [I1[0], C[1], C[0] - ti, I1[3]]), ir = P.room(1, 'sobrado', [C[2] + ti, C[1], I1[2], I1[3]]); rooms.up = [ib, il, ir];
+      const wb = P.wall(1, [I1[0], C[1] - ti / 2], [I1[2], C[1] - ti / 2], ti, L1.h, 0, 'parede');
+      P.wall(1, [C[0] - ti / 2, C[1]], [C[0] - ti / 2, I1[3]], ti, L1.h, 0, 'parede'); P.wall(1, [C[2] + ti / 2, I1[3]], [C[2] + ti / 2, C[1]], ti, L1.h, 0, 'parede');
+      for (const id of [il, ir]) { const r = P.rooms[id].r; P.door(wb, P.atOf(wb, [P.rr(r[0] + 0.55, r[2] - 0.55), C[1] - ti / 2]), 0.85, Math.min(2.05, L1.h - 0.15), ib, id, 0, 'porta'); }
+    } else rooms.up = [P.room(1, 'sobrado', I1)];
     const sw = 0.75, run = P.rr(1.5, 1.8); const cands = [], lc = [];
     for (const id of [rooms.main].concat(rooms.cells, rooms.front !== undefined && rooms.front !== null ? [rooms.front] : [])) {
       const M = P.rooms[id].r; if (P.rooms[id].open) continue;

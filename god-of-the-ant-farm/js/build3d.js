@@ -1433,7 +1433,7 @@ float m3scale(float p) {
       g.put(SH.box, R3.mat(K.x0 + K.w / 2, K.y0 + 2.1, K.z0 + K.d / 2, 0, sx + 0.4, 0.12, sz + 0.5, 0.18), '#6a6a6a');
       openings(g, gw, K, K.w / 2, K.d / 2, sx, sz, 0, 2.1, 1);
     },
-    storehouse(g, gw, K) { house(g, gw, K, { h: 3.8, inset: 0.4, yard: 1.3 }); }, // (its sacks, crates and barrels: Props3D, in the yard)
+    storehouse(g, gw, K) { house(g, gw, K, { h: 3.8, inset: 0.4, yard: 1.3 }); }, // (its people's stock, heaped in the yard: Props3D.piles)
     armazem(g, gw, K) { KIT.storehouse(g, gw, K); },
     celeiro(g, gw, K) { house(g, gw, K, { h: 4, inset: 0.4, wall: '#9a4a32', pat: 'plankV', yard: 1.1 }); },
     workshop(g, gw, K) { smithy(g, gw, K, { h: 3.2, chimney: true, kind: 'wood' }); },
@@ -1873,14 +1873,16 @@ float m3scale(float p) {
     const now = fineOf.get(key) ? d < D + 8 : d < D; fineOf.set(key, now); return now;
   }
   B3.sig = function (x0, y0, n) {
-    let s = 0;
-    for (const b of G.S.buildings.values()) { if (!inChunk(b, x0, y0, n)) continue; s = (s * 31 + b.id * 7 + (b.built ? 1 : 0) + Math.floor((b.progress || 0) * 5) * 3 + Math.floor((b.hp / (b.maxHp || 1)) * 4) * 11 + (b.crops ? b.crops.reduce((a, c) => a + c.s + Math.floor((c.g || 0) * 3), 0) : 0) * 13 + (b.graves ? b.graves.length : 0) * 17) | 0; }
+    let s = 0; const fine = fineAt(x0, y0, n);
+    for (const b of G.S.buildings.values()) { if (!inChunk(b, x0, y0, n)) continue; s = (s * 31 + b.id * 7 + (b.built ? 1 : 0) + Math.floor((b.progress || 0) * 5) * 3 + Math.floor((b.hp / (b.maxHp || 1)) * 4) * 11 + (b.crops ? b.crops.reduce((a, c) => a + c.s + Math.floor((c.g || 0) * 3), 0) : 0) * 13 + (b.graves ? b.graves.length : 0) * 17) | 0;
+      // (a store's heaps are its people's stock: drawn again, where they are drawn — fine —, when a count of them changes)
+      if (fine && b.built && G.Props3D && G.Props3D.shows && G.Props3D.shows(b)) { const p = G.Props3D.piles(b); s = (s * 7 + p[0] * 19 + p[1] * 23 + p[2] * 29) | 0; } }
     // (the arches standing in this chunk: one built across the map does not change it)
     for (const a of G.S.aqueducts || []) for (let k = 0; k < a.built; k++) { const t = a.tiles[k]; if (t[0] >= x0 && t[1] >= y0 && t[0] < x0 + n && t[1] < y0 + n) s = (s + (k + 1) * 23 + (a.dead ? 5 : 0)) | 0; }
     // (a chunk with buildings or ways the body comes near is drawn again, finer — its walks of planks too; one without has
     // nothing to make finer)
     let rd = s !== 0; if (!rd) { const S = G.S; for (let y = y0; y < y0 + n && !rd; y++) for (let x = x0; x < x0 + n; x++) if (W.inb(x, y) && S.road[y * N + x]) { rd = true; break; } }
-    return rd ? (s * 3 + (fineAt(x0, y0, n) ? 1 : 0)) | 0 : 0;
+    return rd ? (s * 3 + (fine ? 1 : 0)) | 0 : 0;
   };
   B3.nearGeo = function (x0, y0, n) {
     const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(), gq = R3.WGeo();
