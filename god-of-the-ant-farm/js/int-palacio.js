@@ -3,12 +3,14 @@
 //  The palace (palácio, grande palácio, palácio colossal: lots of
 //  12 to 20 m): the court in the middle and its wings round it —
 //  four round a court of columns, or three round the court of
-//  honour open to the street behind its gate —; across the back
+//  honour open to the street behind its gate, or two in an L with
+//  the court walled on its two open sides —; across the back
 //  the throne hall, at its ends the chambers; the kitchen, the
 //  store, the banquet and the guard in the wings; a storey of
 //  chambers over the wings, or the roof made a terrace. And the
 //  fair (feira): no walls and no roof — an open shell, the lot's
-//  ground —, its stalls in rows along the lanes, or round a square.
+//  ground —, its stalls in rows along the lanes, round a square,
+//  or along the edges of the lot round the open middle.
 //  Laid out with the engine's kit and proved the same way.
 // ============================================================
 (function (G) {
@@ -20,7 +22,7 @@
   });
 
   // ------------------------------ the palace ------------------------------
-  const HP = { peristilo: 'Quatro alas em volta do pátio de colunas', honra: 'Três alas e o pátio de honra' };
+  const HP = { peristilo: 'Quatro alas em volta do pátio de colunas', honra: 'Três alas e o pátio de honra', ala: 'Duas alas em L e o pátio murado' };
   const VP = { terreo: '', andar: 'com andar de aposentos', terraco: 'com terraço' };
   const PT = ['palacio', 'grande_palacio', 'palacio_colossal'];
   const pfams = [];
@@ -44,11 +46,14 @@
     const I = P.inner();
     // (the wings: the side and front ones a room and its way deep; the back one deeper — the throne hall is there)
     const dW = Math.max(3.0, Math.min(5.0, L * 0.24)), dB = Math.max(3.6, Math.min(6.0, L * 0.3));
-    const peri = H === 'peristilo';
-    const C = [I[0] + dW + ti, I[1] + dB + ti, I[2] - dW - ti, peri ? I[3] - dW - ti : I[3]];
+    // (the court: in the middle of four wings; open to the front between three; with two in an L, open to the front and to
+    // the right, walled where it meets the lot's edge on the ground)
+    const peri = H === 'peristilo', ell = H === 'ala';
+    const C = [I[0] + dW + ti, I[1] + dB + ti, ell ? I[2] : I[2] - dW - ti, peri ? I[3] - dW - ti : I[3]];
     if (C[2] - C[0] < 2.4 || C[3] - C[1] < 2.4) { P.errs.push('o pátio não cabe'); return; }
     P.shell.court = C.slice();
-    const W = { back: [I[0], I[1], I[2], C[1] - ti], left: [I[0], C[1], C[0] - ti, peri ? C[3] : I[3]], right: [C[2] + ti, C[1], I[2], peri ? C[3] : I[3]] };
+    const W = { back: [I[0], I[1], I[2], C[1] - ti], left: [I[0], C[1], C[0] - ti, peri ? C[3] : I[3]] };
+    if (!ell) W.right = [C[2] + ti, C[1], I[2], peri ? C[3] : I[3]];
     if (peri) W.front = [I[0], C[3] + ti, I[2], I[3]];
     const kind = K.roofOf({ t: 'house' }, tr); const rise = kind === 'plano' ? 0 : Math.min(3.2, dW * 0.8 * 0.82);
     P.roof = { kind, along: null, h: r2(rise), over: kind === 'plano' ? 0 : 0.5, court: C.slice() };
@@ -90,7 +95,7 @@
     if (V === 'terraco') {
       P.level(lvR, P.shell.eave + 0.25, 2.2, 'terraco', I);
       P.walls4(lvR, [sh[0] + 0.07, sh[1] + 0.07, sh[2] - 0.07, sh[3] - 0.07], 0.14, 0.9, 1, 'parapeito');
-      P.walls4(lvR, [C[0] - 0.07, C[1] - 0.07, C[2] + 0.07, C[3] + 0.07], 0.14, 0.9, 0, 'parapeito', { frente: C[3] >= I[3] - 1e-6 ? 1 : 0 });
+      P.walls4(lvR, [C[0] - 0.07, C[1] - 0.07, C[2] + 0.07, C[3] + 0.07], 0.14, 0.9, 0, 'parapeito', { frente: C[3] >= I[3] - 1e-6 ? 1 : 0, direita: C[2] >= I[2] - 1e-6 ? 1 : 0 });
     }
     K.blockWindows(P);
     if (P.inside()) return;
@@ -126,7 +131,7 @@
       // the court's walls on this storey (on the ground they part the wings from the court; above, from the court's air)
       const cw = (a, b) => P.wall(k, a, b, ti, h, 0, 'parede');
       const backW = cw([I[0], C[1] - ti / 2], [I[2], C[1] - ti / 2]);
-      const leftW = cw([C[0] - ti / 2, C[1]], [C[0] - ti / 2, W.left[3]]), rightW = cw([C[2] + ti / 2, W.right[3]], [C[2] + ti / 2, C[1]]);
+      const leftW = cw([C[0] - ti / 2, C[1]], [C[0] - ti / 2, W.left[3]]), rightW = W.right ? cw([C[2] + ti / 2, W.right[3]], [C[2] + ti / 2, C[1]]) : null;
       const frontW = peri ? cw([I[2], C[3] + ti / 2], [I[0], C[3] + ti / 2]) : null;
       if (k === 0) rooms.court = P.room(0, 'patio', C, 1);
       // ---- the wings' rooms ----
@@ -149,7 +154,7 @@
         });
         if (k === 0) { const thr = backIds[1]; const cl = Math.max(tu0, C[0]), ch = Math.min(tu0 + tw, C[2]); if (ch - cl < 2.0) { P.errs.push('o salão do trono não dá para o pátio'); return; } need(doorAt(backW, cl, ch, thr, rooms.court, 'vao', 1.8)); rooms.roles.trono = thr; } }
       const leftIds = wing(W.left, 'v', 1, (q, n) => (k ? 'aposento' : q === 0 ? 'cozinha' : q === n - 1 && n > 2 ? 'despensa' : 'banquete'), k === 0, leftW);
-      const rightIds = wing(W.right, 'v', 1, () => 'aposento', k === 0, rightW);
+      const rightIds = W.right ? wing(W.right, 'v', 1, () => 'aposento', k === 0, rightW) : [];
       let frontIds = [];
       if (peri) {
         const Fr = W.front;
@@ -170,13 +175,14 @@
         rooms.up.push(...backIds, ...leftIds, ...rightIds, ...frontIds);
         // (above, the wings meet at the corners: a door through each corner from the back wing's end rooms)
         need(doorAt(backW, I[0], C[0] - ti, backIds[0], leftIds[0]));
-        need(doorAt(backW, C[2] + ti, I[2], backIds[2], rightIds[0]));
+        if (W.right) need(doorAt(backW, C[2] + ti, I[2], backIds[2], rightIds[0]));
         if (peri) { need(doorAt(frontW, I[0], C[0] - ti, leftIds[leftIds.length - 1], frontIds[0])); need(doorAt(frontW, C[2] + ti, I[2], rightIds[rightIds.length - 1], frontIds[frontIds.length - 1])); }
       }
     }
     // the terrace over each wing (the wings' tops meet at the corners: one walk round the court)
     if (V === 'terraco') {
-      const e = 0.14; const tops = [[I[0], I[1], I[2], C[1] - e], [I[0], C[1] - e, C[0] - e, peri ? C[3] + e : I[3]], [C[2] + e, C[1] - e, I[2], peri ? C[3] + e : I[3]]];
+      const e = 0.14; const tops = [[I[0], I[1], I[2], C[1] - e], [I[0], C[1] - e, C[0] - e, peri ? C[3] + e : I[3]]];
+      if (W.right) tops.push([C[2] + e, C[1] - e, I[2], peri ? C[3] + e : I[3]]);
       if (peri) tops.push([I[0], C[3] + e, I[2], I[3]]);
       rooms.terr = tops.map(r => P.room(lvR, 'terraco', r, 1));
     }
@@ -215,9 +221,9 @@
 
   // ------------------------------ the fair ------------------------------
   // no walls and no roof: the lot's own ground, open on every side (its shell 'aberta'); the stalls in rows along the lanes
-  // — or round the square in the middle —, each with its seller behind it and its buyers before it; the stalls of a fair are
-  // its work stations (BDEF.jobs)
-  const HF = { ruas: 'Bancas em fileiras', praca: 'Bancas em volta da praça' };
+  // — or round the square in the middle, or along the edges of the lot round the open middle —, each with its seller behind
+  // it and its buyers before it; the stalls of a fair are its work stations (BDEF.jobs)
+  const HF = { ruas: 'Bancas em fileiras', praca: 'Bancas em volta da praça', bordas: 'Bancas nas bordas, o largo no meio' };
   const VF = { chao: '', toldos: 'sob toldos' };
   const ffams = [];
   for (const h in HF) for (const v in VF) { const id = 'feira-' + h + '.' + v; ffams.push(id); In.addFamilies([{ id, H: 'feira-' + h, V: v, name: HF[h] + (VF[v] ? ' ' + VF[v] : ''), can: () => null, build: P => fair(P) }]); }
@@ -232,7 +238,7 @@
     const e = { door: -1, u: L / 2 + P.rr(-1, 1), v: sh[3], w: P.rr(2.4, 3.2), lv: 0 }; P.entrance = e;
     if (P.inside()) return;
     // ======== the inside ========
-    const id = P.room(0, H === 'ruas' ? 'ruas' : 'praca', sh, 1); const D = In.ITEMS.banca; let n = 0;
+    const id = P.room(0, H === 'ruas' ? 'ruas' : H === 'praca' ? 'praca' : 'largo', sh, 1); const D = In.ITEMS.banca; let n = 0;
     const lane = P.rr(1.9, 2.3), back = 0.95; // (the lane the buyers walk; behind a stall, the seller's room)
     const stall = (r, fu, fv) => { if (P.at('banca', 0, id, r, fu, fv)) n++; };
     if (H === 'ruas') {
@@ -242,6 +248,14 @@
         for (let u = sh[0] + 0.6; u + D.w <= sh[2] - 0.6 + 1e-6; u += D.w + P.rr(0.6, 0.9)) { stall([u, v, u + D.w, v + D.d], 0, -1); stall([u, v + D.d + back, u + D.w, v + 2 * D.d + back], 0, 1); }
         v += 2 * D.d + back + lane;
       }
+    } else if (H === 'bordas') {
+      // (along the four edges of the lot, facing in — the lot's edge at the sellers' backs —, the middle left open; the corners
+      // kept clear, where the sellers' ways meet; the way in keeps its gap in the front row)
+      const gap = () => P.rr(0.6, 0.9); const a0 = back + D.d + 0.4; const e0 = e.u - e.w / 2 - 0.5, e1 = e.u + e.w / 2 + 0.5;
+      for (let u = sh[0] + a0; u + D.w <= sh[2] - a0 + 1e-6; u += D.w + gap()) stall([u, sh[1] + back, u + D.w, sh[1] + back + D.d], 0, 1);
+      for (let v = sh[1] + a0; v + D.w <= sh[3] - a0 + 1e-6; v += D.w + gap()) { stall([sh[0] + back, v, sh[0] + back + D.d, v + D.w], 1, 0); stall([sh[2] - back - D.d, v, sh[2] - back, v + D.w], -1, 0); }
+      for (let u = sh[0] + a0; u + D.w <= sh[2] - a0 + 1e-6; u += D.w + gap()) if (u + D.w <= e0 || u >= e1) stall([u, sh[3] - back - D.d, u + D.w, sh[3] - back], 0, -1);
+      P.opt(() => P.place('fonte', 0, id, { sides: ['centro'], margin: 0.5 }));
     } else {
       // (round a square in the middle: the stalls along its four sides, facing in, the sellers' room behind them)
       const sq = [sh[0] + lane + D.d + back, sh[1] + lane + D.d + back, sh[2] - lane - D.d - back, sh[3] - lane - D.d - back];

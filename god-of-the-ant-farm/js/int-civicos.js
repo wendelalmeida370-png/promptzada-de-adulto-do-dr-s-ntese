@@ -150,11 +150,14 @@
   }
 
   // ------------------------------ the programmes ------------------------------
-  W.add('temple', { use: 'templo', H: ['salao', 'frente', 'naves', 'patio'], V: ['terreo', 'porao'], open: 1, lockNight: 1, jobs: 1, apse: 2.4, need: { altar: 1, idolo: 1 }, door: [1.2, 1.6], furnish: templeFurnish });
+  // (the temple of a town: the priests' rooms over it, where the people does not dig a cellar too)
+  W.add('temple', { use: 'templo', H: ['salao', 'frente', 'naves', 'patio'], V: ['terreo', 'porao', 'andar'], open: 1, lockNight: 1, jobs: 1, apse: 2.4, need: { altar: 1, idolo: 1 }, door: [1.2, 1.6], furnish: templeFurnish });
   W.add('quartel', { use: 'quartel', H: ['salao', 'frente', 'corredor', 'patio'], V: ['terreo', 'andar'], lockNight: 0, need: { catre: 4, armeiro: 1 }, door: [1.1, 1.5], furnish: barracksFurnish });
-  // (an aisle between cells has no stair nor trapdoor: its walls are the cells' gratings — the storey above and the cellar
-  // are the guard room's. As many cells as the world fills: crime.js jails up to BDEF.cells)
-  W.add('cadeia', { use: 'cadeia', H: ['corredor', 'celas'], V: ['terreo', 'andar', 'porao'], skip: { 'corredor.andar': 1, 'corredor.porao': 1 }, lockNight: 1, cells: (G.BDEF.cadeia && G.BDEF.cadeia.cells) || 4, cellDoor: 'grade', door: [0.9, 1.1], furnish: jailFurnish });
+  // (the cells along an aisle, in a row behind the guard room, or round the yard; an aisle between cells has no stair nor
+  // trapdoor: its walls are the cells' gratings — the storey above and the cellar are the guard room's —, and the guard's
+  // hall behind a yard is too shallow for a cellar's trapdoor. As many cells as the world fills: crime.js jails up to
+  // BDEF.cells)
+  W.add('cadeia', { use: 'cadeia', H: ['corredor', 'celas', 'patio'], V: ['terreo', 'andar', 'porao'], skip: { 'corredor.andar': 1, 'corredor.porao': 1, 'patio.porao': 1 }, lockNight: 1, cells: (G.BDEF.cadeia && G.BDEF.cadeia.cells) || 4, cellDoor: 'grade', door: [0.9, 1.1], furnish: jailFurnish });
   W.add('banhos', { use: 'banhos', H: ['enfiada', 'salao', 'patio', 'anexo'], V: ['terreo', 'andar'], open: 1, lockNight: 1, jobs: 1, door: [1.0, 1.3], seq: ['vestiario', 'frio', 'quente'], share: [0.26, 0.37, 0.37], furnish: bathsFurnish });
   W.add('paco', { use: 'paco', H: ['salao', 'frente', 'naves', 'patio'], V: ['terreo', 'andar', 'galeria'], lockNight: 1, apse: 2.0, need: { trono: 1 }, door: [1.2, 1.6], furnish: hallFurnish });
 })(window.G);
