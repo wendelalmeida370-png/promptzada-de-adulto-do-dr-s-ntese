@@ -206,9 +206,16 @@ let dest = P.destOf(op);
 // (another crate in the hands, to the bad cases: picked up as before, by the pile)
 function liftAgain() {
   for (let k = 0; k < 30 && !opCrates().length; k++) frame(); if (!opCrates().length) return false;
-  const p = god(() => G.Fishers.crateSpot(dock)); walkPath(p[0], p[1], 1.2); const dr = drawnOf(); if (!dr.length) return false; faceTo(dr[0][0], dr[0][2]); still(2);
-  let b = I.best(); for (let k = 0; k < 20 && !(b && b.id === 'atividade' && /^Pegar /.test(b.label)); k++) { walkTo(dr[0][0], dr[0][2], 30, 1.4); faceTo(dr[0][0], dr[0][2]); still(1); b = I.best(); }
-  for (let t = 0; t < 3 && b && b.id === 'atividade' && /^Pegar /.test(b.label) && !(v.carry && v.carry.n > 0); t++) { doIt(b); b = I.best(); }
+  const p = god(() => G.Fishers.crateSpot(dock)); walkPath(p[0], p[1], 1.2);
+  // (a crate nobody else holds: the quay's own carriers work this unloading too, and a crate one of them took is theirs —
+  // "Outro carregador já pegou esta caixa"; with none free, a while of the world for one to be — C1, with C3's word)
+  const freeOne = () => drawnOf().find(e => { const c = opCrates().find(q => q.id === e[4]); return c && (!c.by || c.by === v.id); });
+  let e = freeOne(); for (let k = 0; k < 600 && !e && opCrates().length; k++) { frame(); e = freeOne(); }
+  if (!e) return false;
+  faceTo(e[0], e[2]); still(2);
+  const pegar = q => q && q.id === 'atividade' && /^Pegar /.test(q.label) && q.ok;
+  let b = I.best(); for (let k = 0; k < 20 && !pegar(b); k++) { e = freeOne() || e; walkTo(e[0], e[2], 30, 1.4); faceTo(e[0], e[2]); still(1); b = I.best(); }
+  for (let t = 0; t < 3 && pegar(b) && !(v.carry && v.carry.n > 0); t++) { doIt(b); b = I.best(); }
   return !!(v.carry && v.carry.op === op.id);
 }
 { // saved and loaded with a crate in the hands
