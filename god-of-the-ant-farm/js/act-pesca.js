@@ -63,6 +63,12 @@
   // a catch out of a ground (in the world's step only), in whole fish: the ground grows to now, then the catch leaves it
   // (never more than half of what is there in one go). The caller says how many came up — by what is left: fewer fish,
   // fewer bites and smaller hauls
+  // (a catch let go: back into its ground, never above what the ground holds)
+  function untake(x, y, n) {
+    if (!(n > EPS) || !G.inSim) return;
+    const id = P.idAt(x, y); const s = now(id); if (!(s.K > 0)) return;
+    store()[id] = [r4(Math.min(s.K, s.n + n)), Math.round(G.S.clock * 100) / 100];
+  }
   P.take = function (x, y, n) {
     if (!(n >= 0.5) || !G.inSim) return 0;
     const id = P.idAt(x, y); const s = now(id); if (!(s.K > 0)) return 0;
@@ -132,10 +138,14 @@
     if (n < 1) return { ok: false, why: 'Nada mordeu.', miss: 1 };
     const fish = G.Waters.catchCarry(v, x, y, n); // (the kind, the chronicle's firsts, a piranha's bite)
     if (!G.S.villagers.has(v.id)) return { ok: false, why: '' };
+    const F0 = G.Waters.FISH[fish.fish]; const nm0 = F0 ? F0.name : 'peixe';
     const room = D.room('v:' + v.id, fish.k, {}); const m = Math.min(fish.n, Math.floor(room + EPS));
-    if (m < 1) return { ok: false, why: 'Não cabe mais peixe nas mãos: leve ao armazém.', full: 1 };
+    // (what does not fit in the hands goes back to the water — and to its ground: another kind in the hands, or hands full)
+    if (m < fish.n) untake(x, y, fish.n - Math.max(0, m));
+    const other = !!(v.carry && v.carry.n > EPS && v.carry.k !== fish.k);
+    if (m < 1) return { ok: false, why: other ? 'Não há mão para outro peixe.' : 'Não cabe mais peixe nas mãos: leve ao armazém.', full: 1, other: other ? 1 : 0, name: nm0 };
     const r = D.make('v:' + v.id, fish.k, m, { code: 'pesca', by: v.id, rec: { fish: fish.fish } });
-    if (!r.ok) return { ok: false, why: 'Não cabe mais peixe nas mãos.', full: 1 };
+    if (!r.ok) { untake(x, y, m); return { ok: false, why: 'Não cabe mais peixe nas mãos.', full: 1, name: nm0 }; }
     v.fishXp = Math.min(240, (v.fishXp || 0) + 1);
     const F = G.Waters.FISH[fish.fish]; const nm = F ? F.name : 'peixe';
     return { ok: true, n: r.n, took: n, k: fish.k, fish: fish.fish, name: nm, how };
@@ -154,29 +164,14 @@
   });
 
   // ------------------------------ the god's body at the water ------------------------------
+  // (the body fishes by the hands' own door — interact.js 'peixe', wading in the shallows —, which casts through
+  // G.Pesca.cast with the hands' way: the same water, the same fish counted, the same chance of the world, the same line in
+  // the ledger. No offer of its own here: an offer at every water's edge, among the activities' offers, came before the
+  // bush, the crate on the quay and the fish in the hands — T-e)
   A.def('pesca', {
     name: 'Pescaria', conserve: false,
     purpose: 'Pescar o peixe daquela água, do jeito do seu povo, e levá-lo ao armazém (ou para casa).',
     needs: 'água com peixe ao alcance (um rio, um lago, o mar), sem gelo e sem tempestade',
-    offers(v, x, y, r) {
-      if (!v || v.aboard || v.ug) return [];
-      const e = P.edge(x, y, Math.min(2, r || 1.6)); if (!e) return [];
-      const how = P.how(G.Fac.idOfV(v)); const g = GEAR[how];
-      const c = P.can(v, e.x, e.y, how);
-      // (where the feet stand to fish: the edge of that water nearest the body)
-      const at = [G.clamp(x, e.x - 0.75, e.x + 0.75), G.clamp(y, e.y - 0.75, e.y + 0.75)];
-      return [{ id: 'pesca.pescar:' + e.i, act: 'pescar', how, x: e.x, y: e.y, label: g.label, at, anim: g.anim, hands: 2, ok: c.ok, why: c.ok ? '' : c.why }];
-    },
-    acts: {
-      pescar: {
-        deed: 'pesca',
-        can(v, o) { return P.can(v, o.x, o.y, o.how); },
-        run(v, o) {
-          const r = P.cast(v, o.x, o.y, { how: o.how });
-          if (!r.ok) return r;
-          return { ok: true, n: r.n, msg: `Você pegou ${r.n > 1 ? r.n + ' de ' : ''}${r.name}! ${r.k === 'food' ? 'É comida: leve ao armazém ou para casa.' : 'Vale troca: leve ao armazém.'}` };
-        },
-      },
-    },
+    offers() { return []; },
   });
 })(window.G);

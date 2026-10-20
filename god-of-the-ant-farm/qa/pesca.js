@@ -55,12 +55,12 @@ console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'águ
 {
   const keep = S.pesca; S.pesca = null; // (the test's hand: a world where nobody fished yet)
   const v = person(town); atEdge(v, sp);
-  const offs = A.offers(v, v.x, v.y).filter(o => o.def === 'pesca'); const ab = P.abundance(sp.wx, sp.wy); P.stock(sp.wx, sp.wy);
+  const can = P.can(v, sp.wx, sp.wy, P.how(town.fac)); A.diary(v); A.offers(v, v.x, v.y); const ab = P.abundance(sp.wx, sp.wy); P.stock(sp.wx, sp.wy);
   const looked = S.pesca;
   const rt = QA.roundTrip(); S = G.S; G.Main.mode = 'game';
   const loaded = S.pesca;
-  ok('p0 olhar não escreve', looked === null && !loaded && !rt.diff.length && ab === 1 && offs.length >= 1,
-    `${offs.length} oferta(s) de pesca e a água a ${Math.round(ab * 100)}%: o livro dos pesqueiros ${looked === null ? 'continuou sem existir' : 'NASCEU de uma leitura: ' + JSON.stringify(looked)}; depois do save, ${!loaded ? 'sem livro' : 'COM LIVRO: ' + JSON.stringify(loaded)}; a ida e volta: ${rt.diff.length ? rt.diff.slice(0, 2).join(' · ') : 'sem diferença'}`);
+  ok('p0 olhar não escreve', looked === null && !loaded && !rt.diff.length && ab === 1 && can.ok,
+    `a pergunta "pode pescar aqui?" (${can.ok ? 'pode' : can.why}), o diário, as ofertas e a água a ${Math.round(ab * 100)}%: o livro dos pesqueiros ${looked === null ? 'continuou sem existir' : 'NASCEU de uma leitura: ' + JSON.stringify(looked)}; depois do save, ${!loaded ? 'sem livro' : 'COM LIVRO: ' + JSON.stringify(loaded)}; a ida e volta: ${rt.diff.length ? rt.diff.slice(0, 2).join(' · ') : 'sem diferença'}`);
   if (keep) S.pesca = keep; // (the grounds the world had fished come back)
 }
 // ---------------- p1: every fish caught leaves the ground of that water, through the ledger
@@ -86,12 +86,12 @@ console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'águ
     yields.push(n);
   }
   const ab = P.abundance(sp.wx, sp.wy);
-  // (the body's offer there says so; the people's fishers look elsewhere)
-  const offer = A.offers(v, sp.lx, sp.ly, 1.6).find(o => o.def === 'pesca');
+  // (the question every fisher asks there — the people's, and the body's hands through the same door — says so)
+  const offer = P.can(v, sp.wx, sp.wy, P.how(town.fac));
   const half = Math.max(1, Math.floor(yields.length / 2)); const sum = L => L.reduce((a, b) => a + b, 0);
   const falling = yields.length >= 3 && sum(yields.slice(-half)) < sum(yields.slice(0, half));
-  ok('p2 pescar demais esvazia', !!empty && ab < P.EMPTY && falling && !!offer && offer.ok === false && /sem peixe/.test(offer.why) && !bad().length,
-    `${casts} lançamentos no mesmo pesqueiro: o que se pegou a cada 10 — ${yields.join(', ')}; ${empty ? `vazio ("${empty.why}")` : 'NÃO esvaziou'}, ${Math.round(ab * 100)}% do peixe; a oferta do corpo ali: ${offer ? (offer.ok ? 'ainda pesca' : `não (${offer.why})`) : 'nenhuma'}`);
+  ok('p2 pescar demais esvazia', !!empty && ab < P.EMPTY && falling && offer.ok === false && /sem peixe/.test(offer.why) && !bad().length,
+    `${casts} lançamentos no mesmo pesqueiro: o que se pegou a cada 10 — ${yields.join(', ')}; ${empty ? `vazio ("${empty.why}")` : 'NÃO esvaziou'}, ${Math.round(ab * 100)}% do peixe; quem pergunta ali se pode pescar: ${offer.ok ? 'ainda pode' : `não (${offer.why})`}`);
 }
 // ---------------- p3: the fish come back, by the logistic — the same number whenever one looks
 {
@@ -167,22 +167,24 @@ console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'águ
   }
   ok('p6 o aprendiz', ok6 && !bad().length, info);
 }
-// ---------------- p7: the god's body fishes through the same door
+// ---------------- p7: the god's body fishes through the same door — the hands' (interact.js 'peixe' casts through
+// G.Pesca.cast): the same water, the same fish counted, the same line in the ledger; no offer of its own among the
+// activities' offers (T-e: at every water's edge it came before the bush and the crate on the quay)
 {
   S.weather.storm = 0;
-  const sp3 = fresh();
+  const sp3 = shore(town, ['river', 'lake', 'mud', 'rock', 'reef', 'sea'], used) || fresh(); used.push(sp3.id);
   const v = person(town); atEdge(v, sp3); v.fishXp = 60;
   const tk = G.Possess.take(v); M.viver(0.2); v.x = sp3.lx; v.y = sp3.ly;
-  const o = A.offers(v, v.x, v.y, 1.6).find(q => q.def === 'pesca');
-  const s0 = P.stock(o ? o.x : sp3.wx, o ? o.y : sp3.wy).n; const L0 = S.ledgerN;
-  let r = { ok: false, why: 'sem oferta' }, tries = 0;
-  if (o && o.ok) for (; tries < 30 && !r.ok; tries++) { r = A.perform(v, o); M.viver(0.1); }
+  const offs = A.offers(v, v.x, v.y, 1.6).filter(q => q.def === 'pesca');
+  const s0 = P.stock(sp3.wx, sp3.wy).n; const L0 = S.ledgerN;
+  let r = { ok: false, why: '—' }, tries = 0;
+  for (; tries < 40 && !r.ok; tries++) { r = P.cast(v, sp3.wx, sp3.wy, { how: 'maos' }); M.viver(0.1); }
   const line = book(e => e[0] > L0 && e[8] === 'pesca' && e[4] === 'v:' + v.id)[0];
-  const s1 = P.stock(o ? o.x : sp3.wx, o ? o.y : sp3.wy).n;
+  const s1 = P.stock(sp3.wx, sp3.wy).n;
   const held = !!(v.carry && v.carry.n >= 1 && v.carry.fish);
   G.Possess.release('deus'); M.viver(0.2);
-  ok('p7 o corpo pesca pela mesma porta', tk.ok && !!o && o.label === P.GEAR[P.how(town.fac)].label && r.ok && !!line && held && s1 < s0 - 0.5 && !bad().length,
-    `${v.name} pelo deus: a oferta "${o ? o.label : '—'}"${o && !o.ok ? ` (${o.why})` : ''}; ${tries} lançamento(s): ${r.ok ? r.msg : r.why}; nas mãos ${held ? v.carry.n + ' de ' + (v.carry.k === 'food' ? 'comida' : v.carry.k) + ' (' + v.carry.fish + ')' : 'NADA'}; no livro ${line ? `'pesca' ${line[6]} para ${line[4]}` : 'NADA'}; o pesqueiro ${r2(s0)} → ${r2(s1)}`);
+  ok('p7 o corpo pesca pela mesma porta', tk.ok && !offs.length && r.ok && !!line && held && s1 < s0 - 0.5 && !bad().length,
+    `${v.name} pelo deus, com as mãos na água (${sp3.kind}): ${tries} tentativa(s): ${r.ok ? `pegou ${r.n} de ${r.name}` : r.why}; nas mãos ${held ? v.carry.n + ' de ' + (v.carry.k === 'food' ? 'comida' : v.carry.k) + ' (' + v.carry.fish + ')' : 'NADA'}; o pesqueiro ${r2(s0)} → ${r2(s1)}; no livro ${line ? 'pesca #' + line[0] : 'NADA'}; ofertas próprias de pesca entre as das atividades: ${offs.length}`);
   if (v.carry) D.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true });
 }
 // ---------------- p8: no water, ice, a water too deep for the people's way: no fishing
@@ -190,7 +192,7 @@ console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'águ
   const v = person(town);
   // (inland: the town's centre, or the driest tile near it)
   let inland = null; for (let r = 0; r < 20 && !inland; r++) for (let dy = -r; dy <= r && !inland; dy++) for (let dx = -r; dx <= r; dx++) { const x = Math.floor(town.cx) + dx, y = Math.floor(town.cy) + dy; if (W.inb(x, y) && W.walkable(y * N + x) && !P.edge(x + 0.5, y + 0.5, 2.5)) { inland = [x + 0.5, y + 0.5]; break; } }
-  const none = inland ? !A.offers(v, inland[0], inland[1], 1.6).some(q => q.def === 'pesca') : false;
+  const dryQ = inland ? P.can(v, inland[0], inland[1], P.how(town.fac)) : null; const none = !!dryQ && !dryQ.ok;
   // (ice on the water at the edge — the god's winter: the test's hand on S.ice)
   const sp4 = fresh(); const j = W.idx(sp4.wx, sp4.wy);
   const ice0 = S.ice; S.ice = S.ice || new Uint8Array(N * N); const was = S.ice[j]; S.ice[j] = 1;
@@ -199,7 +201,7 @@ console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'águ
   let deep = null; for (let i = 0; i < N * N && !deep; i++) if (S.type[i] === T.DEEP) deep = [(i % N) + 0.5, Math.floor(i / N) + 0.5];
   const hands = deep ? P.can(v, deep[0], deep[1], 'maos') : { ok: false, why: 'sem água funda no mapa' };
   ok('p8 sem água, sem pesca', none && !iced.ok && /congelada/.test(iced.why) && !hands.ok && !bad().length,
-    `no meio da terra ${inland ? (none ? 'nenhuma oferta de pesca' : 'HÁ oferta de pesca') : 'nenhum lugar seco'}; na água congelada: ${iced.ok ? 'PESCA' : iced.why}; com as mãos na água funda: ${hands.ok ? 'PESCA' : hands.why}`);
+    `no meio da terra ${inland ? (none ? dryQ.why : 'PESCA') : 'nenhum lugar seco'}; na água congelada: ${iced.ok ? 'PESCA' : iced.why}; com as mãos na água funda: ${hands.ok ? 'PESCA' : hands.why}`);
 }
 // ---------------- p9: a storm takes everyone off the water's edge
 {
