@@ -90,7 +90,7 @@
   E.jobTask = function (v, H) {
     if (v.role !== 'pescador') return oldJob(v, H);
     const S = G.S; const b = v.job && S.buildings.get(v.job); if (!b || !b.built || b.type !== 'doca') return null;
-    if (b.crates && b.crates.length) return H.setTask(v, { type: 'descarga', dock: b.id, pri: 1.1, st: 0, trips: 0 });
+    if (((b.crates && b.crates.length) || G.Porto.opAt(b)) && !G.isNight()) { const t = G.Porto.work(v, b, H); if (t) return t; }
     const s = v.boat && ship(v.boat);
     if (s && (s.st === 'idle' || s.st === 'board') && goodDay() && !Nv.blockaded(b) && s.hp > s.maxHp * 0.35) return H.setTask(v, { type: 'barco', ship: s.id, dock: b.id, pri: 1.05, st: 0 });
     // a hull on the slip, or a boat to caulk: every free hand to the shipwrights
@@ -104,14 +104,44 @@
     if (H.move(v, dt)) { t.wk = null; return 1; }
     return 0;
   }
+  // the quay's own ground, where its people stand: the spot by the water when the town walks to it; when it does not (a
+  // pocket between the quay, a neighbour's quay and the sea, or a strip outside the town wall — L-138), the nearest tile around
+  // the quay that the town's streets reach. Decided in the world's step and kept on the quay with the ground it was decided
+  // for (b.qs, b.cs, b.qsK), so that the drawing shows the crates where the porters go for them.
+  const groundKey = () => (G.S.walkVer || 0) + '/' + (G.S.typeVer || 0);
+  function landing(b) {
+    const di = Nv.dockInfo(b); const q = di.quay || G.Vg.door(b);
+    if (!G.inSim) return b.qs || q;
+    const key = groundKey(); if (b.qsK === key) return b.qs || q;
+    b.qsK = key; b.qs = null; b.cs = null;
+    const set = G.S.settlements.get(b.set); const tr = set ? W.townRegion(set) : -1; if (tr < 0) return q;
+    const L = W.reachIds(); const reg = (x, y) => (W.inb(x, y) ? L[W.idx(x, y)] : -1);
+    if (reg(q[0], q[1]) === tr) return q;
+    let best = null, bd = 1e9;
+    for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) {
+      if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) continue;
+      if (reg(x + 0.5, y + 0.5) !== tr) continue;
+      const d = G.dist2(x + 0.5, y + 0.5, q[0], q[1]); if (d < bd) { bd = d; best = [x + 0.5, y + 0.5]; }
+    }
+    b.qs = best; return best || q;
+  }
+  Fi.landing = landing;
+  // (a spot a little off the quay's ground, kept only when one walks from one to the other: a pocket beside it is no place)
+  const near = (q, p) => W.walkableXY(p[0], p[1]) && (!G.inSim || W.canWalk(q[0], q[1], p[0], p[1], false));
   // where things stand on a quay: the crates by the water, the net rack behind
   Fi.quaySpot = function (b, k) {
-    const di = Nv.dockInfo(b); const q = di.quay || G.Vg.door(b); const wd = b.wd || [1, 0];
+    const q = landing(b); const wd = b.wd || [1, 0];
     const side = [-wd[1], wd[0]]; const off = (k % 5 - 2) * 0.45;
     const p = [q[0] + side[0] * off - wd[0] * (0.3 + Math.floor(k / 5) * 0.4), q[1] + side[1] * off - wd[1] * (0.3 + Math.floor(k / 5) * 0.4)];
-    return W.walkableXY(p[0], p[1]) ? p : q;
+    return near(q, p) ? p : q;
   };
-  function crateSpot(b) { const di = Nv.dockInfo(b); const q = di.quay || G.Vg.door(b); const wd = b.wd || [1, 0]; const p = [q[0] - wd[0] * 0.9 + wd[1] * 0.8, q[1] - wd[1] * 0.9 - wd[0] * 0.8]; return W.walkableXY(p[0], p[1]) ? p : q; }
+  function crateSpot(b) {
+    const q = landing(b); if (!G.inSim && b.cs) return b.cs;
+    if (G.inSim && b.cs && b.qsK === groundKey()) return b.cs;
+    const wd = b.wd || [1, 0]; const p = [q[0] - wd[0] * 0.9 + wd[1] * 0.8, q[1] - wd[1] * 0.9 - wd[0] * 0.8];
+    const c = near(q, p) ? p : q; if (G.inSim) b.cs = c;
+    return c;
+  }
   Fi.crateSpot = crateSpot;
   function runBarco(v, t, dt, H) {
     const S = G.S; const s = ship(t.ship); const b = S.buildings.get(t.dock);
@@ -132,40 +162,6 @@
       const k = Math.min(1, v.actT / 0.6); v.x = G.lerp(t.bx, s.x, k); v.y = G.lerp(t.by, s.y, k); v.z = Math.sin(k * Math.PI) * 0.4;
       if (k >= 1) { v.z = 0; Nv.board(v, s); if (s.st === 'idle') { s.st = 'board'; s.t = 0; } G.FX && G.FX.splash(s.x, s.y, 0.25); }
     }
-  }
-  // the catch, crate by crate, up to the storehouse
-  function runDescarga(v, t, dt, H) {
-    const S = G.S; const b = S.buildings.get(t.dock); if (!b) return H.end(v);
-    if (t.st === 0) {
-      if (v.carry && v.carry.crate) { t.st = 2; return; }
-      if (!b.crates || !b.crates.length) return H.end(v);
-      const p = t.alt ? G.Vg.door(b) : crateSpot(b); const r = walk(v, t, t.alt ? 'crates2' : 'crates', p[0], p[1], dt, H); if (r < 0) { if (!t.alt) { t.alt = 1; return; } return H.end(v); } if (r > 0) { t.st = 1; v.actT = 0; } return;
-    }
-    if (t.st === 1) {
-      v.act = 'lift'; if (v.actT < 1) return;
-      v.act = ''; const c = b.crates && b.crates.shift(); if (!c) return H.end(v);
-      v.carry = { k: c.k, n: c.n, crate: 1, cid: c.id, fish: c.fish, fishCol: c.col, catchOf: c.boat, imp: c.imp };
-      t.st = 2; return;
-    }
-    if (t.st === 2) {
-      const d = G.Village.nearestDropoff(v.x, v.y, v.set); if (!d) { if (v.carry) { delivered(v, v.carry); v.carry = null; } return H.end(v); }
-      const ft = G.Village.frontTile(d); const r = walk(v, t, 'store' + d.id, ft[0], ft[1], dt, H); if (r < 0) { if (v.carry) { delivered(v, v.carry); v.carry = null; } return H.end(v); }
-      if (r > 0) {
-        if (v.carry) delivered(v, v.carry);
-        v.carry = null; t.trips++;
-        if (b.crates && b.crates.length && t.trips < 4) { t.st = 0; t.wk = null; } else H.end(v);
-      }
-    }
-  }
-  function delivered(v, c) {
-    const fid = G.Fac.idOfV(v); const fa = G.Fac.get(fid); if (!fa) return;
-    const add = G.Village.addStock(c.k, c.n, fid);
-    if (c.k !== 'food' && !c.imp) E.made(fa, c.k, c.n);
-    if (c.imp) { E.ensure(fa); fa.eco.imp = (fa.eco.imp || 0) + c.n; }
-    G.FX && G.FX.deposit(v.x, v.y, c.k, add || c.n);
-    v.st[c.k] = (v.st[c.k] || 0) + c.n;
-    if (c.fish) { G.Riches && G.Riches.noteFood(fid, 'peixe:' + c.fish, c.n); }
-    v.fishXp = (v.fishXp || 0) + 1;
   }
   // mending the nets on the quay (and keeping an eye on the sea)
   function runRedes(v, t, dt, H) {
@@ -189,7 +185,6 @@
   E.run = function (v, t, dt, H) {
     switch (t.type) {
       case 'barco': runBarco(v, t, dt, H); return true;
-      case 'descarga': runDescarga(v, t, dt, H); return true;
       case 'redes': runRedes(v, t, dt, H); return true;
       case 'estaleiro': runEstaleiro(v, t, dt, H); return true;
     }
@@ -199,7 +194,6 @@
   E.taskText = function (v, t) {
     switch (t.type) {
       case 'barco': return ['Buscando a rede no galpão', 'Pegando a rede', 'Descendo para o cais', 'Esperando o barco no cais', 'Embarcando'][t.st] || 'Indo pescar';
-      case 'descarga': return v.carry ? 'Levando uma caixa de peixe ao armazém' : 'Descarregando o barco';
       case 'redes': return t.st ? 'Remendando redes no cais' : 'Indo remendar as redes';
       case 'estaleiro': { const s = ship(t.ship); return s && s.st === 'build' ? `Construindo ${Nv.title(s)} no estaleiro` : 'Calafetando o casco de um barco'; }
     }
@@ -233,23 +227,25 @@
     return n;
   }
   // the hold, in crates on the quay
+  // (the catch is born of the sea — the shoal already gave it — and comes ashore as an unloading: crates on the quay, the
+  // rest into the store; what has no room even there stays in the boat for the next landing. It used to be added to the
+  // last crate on a full quay, whatever that crate held: fish became wood, or wine)
   function crates(b, s) {
     const F = G.Waters ? G.Waters.FISH : null; const k = s.catchKind || 'sardinha'; const f = (F && F[k]) || { n: 2, name: 'peixe' };
-    let food = s.cargo, good = 0; const out = [];
+    let food = s.cargo, good = 0;
     if (f.good) { good = Math.max(1, Math.round(s.cargo * 0.45)); food = s.cargo - good; }
     else food = Math.max(1, Math.round(food * f.n / 2.2));
-    const L = b.crates || (b.crates = []);
-    // (a crate is a thing with a name from the moment it is set down: id from the world's count)
-    const put = (kk, n) => { while (n > 0 && L.length < 10) { const m = Math.min(4, n); L.push({ id: G.S.nextId++, k: kk, n: m, fish: k, col: f.col, boat: s.id, op: 0 }); n -= m; } if (n > 0 && L.length) L[L.length - 1].n += n; };
-    if (good) put(f.good, good); if (food > 0) put('food', food);
-    G.Waters && G.Waters.noteCatch({ fac: s.fac }, k, s.x, s.y, s.cargo);
-    G.FX && G.FX.floater(s.x, s.y, `+${s.cargo} ${f.name}`, '#b8e070', 1.6);
-    return out;
+    if (!s.landed) { G.Waters && G.Waters.noteCatch({ fac: s.fac }, k, s.x, s.y, s.cargo); G.FX && G.FX.floater(s.x, s.y, `+${s.cargo} ${f.name}`, '#b8e070', 1.6); }
+    const restG = good ? G.Porto.landCatch(b, f.good, good, k, f.col, s.id) : 0;
+    const restF = food > 0 ? G.Porto.landCatch(b, 'food', food, k, f.col, s.id) : 0;
+    // (what stays aboard is the boat's cargo still, in the same proportion)
+    const left = restG + restF; s.landed = left > 0 ? 1 : 0;
+    return left > 0 ? Math.max(1, Math.round(s.cargo * left / Math.max(1, good + food))) : 0;
   }
   // a fisherman steps off onto the quay (and goes for the crates)
   function ashore(v, s, b, k) {
     const q = Fi.quaySpot(b, k); Nv.unboard(v); v.x = q[0]; v.y = q[1]; v.path = null; v.gear = null;
-    G.Vg.setTask(v, b.crates && b.crates.length ? { type: 'descarga', dock: b.id, pri: 1.1, st: 0, trips: 0 } : { type: 'redes', dock: b.id, pri: 0.8, st: 0, dur: G.rr(6, 12) });
+    if (!(((b.crates && b.crates.length) || G.Porto.opAt(b)) && G.Porto.work(v, b, G.Vg.H))) G.Vg.setTask(v, { type: 'redes', dock: b.id, pri: 0.8, st: 0, dur: G.rr(6, 12) });
   }
   function drift(s) {
     const S = G.S; const wa = S.weather.windA || G.R() * TAU; const c = Nv.compAt(s.x, s.y);
@@ -275,7 +271,7 @@
       else if (Nv._sailTo(s, h.moor[0], h.moor[1])) s.st = 'back';
     }
     switch (s.st) {
-      case 'idle': if (crew.length) { s.st = 'board'; s.t = 0; } s.ghost = 0; break;
+      case 'idle': if (crew.length) { s.st = 'board'; s.t = 0; } s.ghost = 0; if (s.cargo > 0 && s.t > 4) { s.t = 0; s.cargo = crates(b, s); } break;
       case 'board': {
         if (!crew.length) { s.st = 'idle'; break; }
         const coming = (s.crew || []).filter(id => { const v = P(id); return v && !v.aboard && v.task && v.task.type === 'barco' && v.task.ship === s.id; }).length;
@@ -291,15 +287,16 @@
       case 'fish': {
         if (G.R() < dt * 0.6) G.FX && G.FX.splash(s.x + G.rr(-0.5, 0.5), s.y + G.rr(-0.5, 0.5), 0.3);
         if (s.t > s.dur || S.time > 0.64) {
-          s.cargo = catchOf(s, crew, b); s.catchKind = G.Waters ? G.Waters.fishAt(s.x, s.y, true) : null;
+          s.cargo = (s.cargo || 0) + catchOf(s, crew, b); s.catchKind = G.Waters ? G.Waters.fishAt(s.x, s.y, true) : null;
           if (Nv._sailTo(s, h.moor[0], h.moor[1])) s.st = 'back'; else Nv._remove(s);
         }
         break;
       }
       case 'adrift': if (Nv._move(s, dt) || s.t > 40) { s.lookout = 1; if (Nv._sailTo(s, h.moor[0], h.moor[1])) s.st = 'back'; else { s.st = 'adrift'; if (!drift(s)) Nv._remove(s); } } break;
-      case 'back': if (Nv._move(s, dt)) { s.st = 'unload'; s.t = 0; s.uq = 0.4; Fi.landNews(s, crew); Nv.arrived(s); if (s.cargo) crates(b, s); s.cargo = 0; } break;
+      case 'back': if (Nv._move(s, dt)) { s.st = 'unload'; s.t = 0; s.uq = 0.4; Fi.landNews(s, crew); Nv.arrived(s); s.cargo = s.cargo ? crates(b, s) : 0; } break;
       case 'unload': {
         s.uq -= dt; if (s.uq > 0) break;
+        if (s.cargo > 0) s.cargo = crates(b, s); // (what had no room yet: the quay and the store may have some now)
         if (crew.length) { const v = crew[0]; ashore(v, s, b, (s.crew.indexOf(v.id) + 1) % 5); s.uq = 0.75; break; }
         s.st = 'idle'; s.t = 0; s.ghost = 0;
         if (s.hp < s.maxHp) s.hp = Math.min(s.maxHp, s.hp + 8);

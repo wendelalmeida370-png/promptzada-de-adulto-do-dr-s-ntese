@@ -562,7 +562,7 @@
       if (list.some(v => v.task && v.task.type === 'water')) continue;
       let best = null, bs = -1;
       for (const v of list) {
-        // (hands that carry something — wood to the store, a crate, a purchase — do not go for water: the jar would take their place)
+        // (hands that carry something — wood to the store, a crate, a purchase — do not go for water: the jar would take their place — L-136)
         if (v.age < 10 || v.age >= 70 || v.inside || v.sleeping || v.aboard || v.held || v.hp < 40 || (v.carry && v.carry.n > 0)) continue;
         if (v.task && v.task.pri >= 1.05) continue;
         const s = (v.task ? 1 - v.task.pri : 2) + (v.age < 16 ? 0.6 : 0) + G.R();
