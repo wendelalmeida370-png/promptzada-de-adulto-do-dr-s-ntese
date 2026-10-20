@@ -123,4 +123,116 @@
   // where a person is, in metres (the 3D view draws the person here; the body is placed from here)
   // (which way someone faces is the view's own business: it follows their steps, the world keeps no such field)
   Sp.of = v => ({ X: v.x * TILE, Y: W.groundH(v.x, v.y) * HM, Z: v.y * TILE });
+  // ------------------------------ the floor of a building ------------------------------
+  // (a house stands on a plinth over the highest of its ground, as the god's view draws it; a field, a fence, a square lies on
+  // the ground: the 3D's drawing and the body's feet read it here, one rule)
+  Sp.BASELESS = { farm: 1, horta: 1, plantacao: 1, vinhedo: 1, doca: 1, praca: 1, cemetery: 1, curral: 1, cercado: 1, campfire: 1 };
+  Sp.plinth = function (b) {
+    let lo = 1e9, hi = -1e9; for (let ty = b.y; ty <= b.y + b.h; ty++) for (let tx = b.x; tx <= b.x + b.w; tx++) { const h = W.hAt(Math.min(N, tx), Math.min(N, ty)) * HM; lo = Math.min(lo, h); hi = Math.max(hi, h); }
+    return { lo, hi, y0: hi + (Sp.BASELESS[b.type] ? 0.12 : 0.4) };
+  };
+  Sp.FLOOR_UP = 0.012; // (a drawn floor stands a hair over the plinth's top it lies on)
+
+  // ------------------------------ the insides: the plans of G.Interiors ------------------------------
+  // A plan is made a few at a time: Interiors.plan costs 5–50 ms (an insula's up to 0.7 s) and keeps a cache of its own that
+  // may let one go. Asked here (Space.plan), a building is queued; Space.planTick — once a frame, while the body is lived —
+  // makes the nearest one queued; what was made is kept here with the record it was made from, and read from here (never
+  // Interiors.plan in the frame). A plan changes only when its record does — a renovation, a ruin, a new use: asked again.
+  // Only read: a plan never changes the world, and neither does keeping it.
+  let made = new Map(), asked = new Map();
+  G.worldHooks.push(() => { made = new Map(); asked = new Map(); });
+  const recKey = b => { const r = b.ip; return r ? b.type + ':' + r.r + ':' + r.f + ':' + r.s + ':' + (r.fx ? r.fx.length : 0) : ''; };
+  const MADE_MAX = 500;
+  // the plan of a building, made — or null (and asked for: a building without one is drawn and walked as before)
+  Sp.plan = function (b) {
+    const In = G.Interiors; if (!b || !b.built || !In || !In.has(b)) return null;
+    const k = recKey(b); const m = made.get(b.id); if (m && m.k === k) { m.t = tick; return m.p; }
+    asked.set(b.id, k); return null;
+  };
+  Sp.planEntry = id => made.get(id) || null; // (with its doors' cells: for the body's feet)
+  // (made now, whatever it costs: the body is in it already — a game loaded with the body indoors)
+  Sp.planNow = function (b) { return Sp.plan(b) || (b && b.built && G.Interiors && G.Interiors.has(b) ? make(b) : null); };
+  let tick = 0;
+  function make(b) {
+    const p0 = G.Interiors.plan(b); const p = p0 && p0.ok && p0.shell && p0.grid ? p0 : null;
+    made.set(b.id, { k: recKey(b), p, doors: p ? doorCells(p) : null, t: tick, y0: Sp.plinth(b).y0 }); asked.delete(b.id);
+    if (made.size > MADE_MAX) { let old = null; for (const [id, m] of made) if (!old || m.t < old[1].t) old = [id, m]; if (old) made.delete(old[0]); }
+    return p;
+  }
+  // once a frame: the nearest building asked for, made — one at most (what is far from the eye is forgotten)
+  Sp.planTick = function (X, Z) {
+    tick++; if (!asked.size) return null; const S = G.S; let best = null, bd = Infinity;
+    for (const id of asked.keys()) { const b = S.buildings.get(id); if (!b) { asked.delete(id); continue; } const d = (b.x * TILE + b.w * TILE / 2 - X) ** 2 + (b.y * TILE + b.h * TILE / 2 - Z) ** 2; if (d > 160 * 160) { asked.delete(id); continue; } if (d < bd) { bd = d; best = b; } }
+    return best ? (make(best), best.id) : null;
+  };
+  Sp.plansAsked = () => asked.size; // (for the tests)
+  // (the cells of each door's opening, storey by storey: the door's id + 1 — as the grid marks a door's opening)
+  function doorCells(p) {
+    const n = p.grid.n, cs = p.grid.cs, out = {};
+    const cellsOf = r => [Math.max(0, Math.ceil(r[0] / cs - 0.5)), Math.max(0, Math.ceil(r[1] / cs - 0.5)), Math.min(n - 1, Math.floor(r[2] / cs - 0.5)), Math.min(n - 1, Math.floor(r[3] / cs - 0.5))];
+    for (const h of p.holes) {
+      if (!(h.door >= 0) || h.kind === 'janela') continue; const d = p.doors[h.door]; const w = p.walls[h.wall]; if (!d || !w || d.kind === 'vao') continue;
+      const arr = out[w.lv] || (out[w.lv] = new Int16Array(n * n));
+      const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const tx = (w.b[0] - w.a[0]) / L, tz = (w.b[1] - w.a[1]) / L; const ht = Math.max(w.t / 2, cs / 2 + 1e-3); const vert = Math.abs(w.a[0] - w.b[0]) < 1e-6;
+      const c0 = [w.a[0] + tx * (h.at - h.w / 2), w.a[1] + tz * (h.at - h.w / 2)], c1 = [w.a[0] + tx * (h.at + h.w / 2), w.a[1] + tz * (h.at + h.w / 2)];
+      const hr = vert ? [c0[0] - ht, Math.min(c0[1], c1[1]), c0[0] + ht, Math.max(c0[1], c1[1])] : [Math.min(c0[0], c1[0]), c0[1] - ht, Math.max(c0[0], c1[0]), c0[1] + ht];
+      const [x0, z0, x1, z1] = cellsOf(hr); for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) arr[z * n + x] = h.door + 1;
+    }
+    return out;
+  }
+  // what is at a point of a storey of a plan (metres of the lot): one of Interiors.CELL
+  Sp.cellIn = function (p, lv, x, z) { const g = p.grid.lv[lv]; if (!g) return 0; const n = p.grid.n, cs = p.grid.cs; const cx = Math.floor(x / cs), cz = Math.floor(z / cs); return cx < 0 || cz < 0 || cx >= n || cz >= n ? 0 : g[cz * n + cx]; };
+  // the storey's floor at a point: on a flight, between its foot and its top (strictly over the flight: by its edge the
+  // storey's own, as the grid has it)
+  Sp.floorIn = function (p, lv, x, z) {
+    const l = p.levels.find(q => q.lv === lv); const y0 = l ? l.y : 0;
+    for (const s of p.stairs) {
+      const r = s.r; if (!(x > r[0] && x < r[2] && z > r[1] && z < r[3])) continue;
+      const len = s.dir[0] ? r[2] - r[0] : r[3] - r[1]; const t = s.dir[0] ? (s.dir[0] > 0 ? x - r[0] : r[2] - x) : (s.dir[1] > 0 ? z - r[1] : r[3] - z); const f = G.clamp(t / (len || 1), 0, 1);
+      if (s.kind === 'degraus') { if (s.lv1 === lv) return y0 * f; continue; }
+      if (s.lv0 !== lv) continue; const l1 = p.levels.find(q => q.lv === s.lv1); return y0 + ((l1 ? l1.y : y0) - y0) * f;
+    }
+    return y0;
+  };
+  // the stair a point of a storey is on (its flight, from that storey), or null
+  Sp.stairIn = function (p, lv, x, z) { for (const s of p.stairs) { const r = s.r; if ((s.kind === 'degraus' ? s.lv1 : s.lv0) === lv && x > r[0] && x < r[2] && z > r[1] && z < r[3]) return s; } return null; };
+  // a point of the world, for a body on storey lv of building 'of' (its own storey indoors; in another building, or coming in, the
+  // entrance's):
+  // null away from any building whose plan is made; else { b, p, lv, x, z (metres of the lot), code, walk, y (the floor drawn
+  // there, metres), shell (inside the outer walls), door (the id of a door's opening, or -1) } — walk as the plan has it: the
+  // floor, the opening of a door the world has open, the stairs, a shut hatch, and on a loft, under its slopes, what one crawls;
+  // out of the walls only the doorstep before an outer door and the steps up to it
+  Sp.indoor = function (X, Z, lv, of) {
+    const S = G.S; const tx = Math.floor(X / TILE), ty = Math.floor(Z / TILE); if (tx < 0 || ty < 0 || tx >= N || ty >= N) return null;
+    const id = S.occ[ty * N + tx]; const b = id && S.buildings.get(id); if (!b) return null; const p = Sp.plan(b); if (!p) return null;
+    const m = made.get(b.id); const x = X - b.x * TILE, z = Z - b.y * TILE; const sh = p.shell;
+    const shell = sh.kind === 'round' ? Math.hypot(x - sh.cx, z - sh.cz) < sh.r : x > sh.r[0] && x < sh.r[2] && z > sh.r[1] && z < sh.r[3];
+    const L = of === b.id && lv !== undefined && lv !== null && p.levels.some(q => q.lv === lv) ? lv : p.entryLv || 0;
+    const C = G.Interiors.CELL; let code = Sp.cellIn(p, L, x, z), walk = false, door = -1;
+    if (shell) {
+      const crawl = (p.levels.find(q => q.lv === L) || {}).kind === 'jirau';
+      walk = code === C.FLOOR || code === C.STAIR || code === C.HATCH || (crawl && code === C.LOWROOF);
+      if (code === C.DOOR) { const a = m.doors && m.doors[L]; const n = p.grid.n, cs = p.grid.cs; const k = a ? a[Math.floor(z / cs) * n + Math.floor(x / cs)] : 0;
+        door = k - 1; walk = k === 0 || G.Interiors.doorState(b, k - 1).state === 'aberta'; }
+    } else {
+      // (the doorstep: from an outer door out to the lot's edge, as wide as the door — and the steps up a house on stilts)
+      walk = !!Sp.stairIn(p, L, x, z) || stepOf(p, L, x, z);
+    }
+    // (the floor: the storey's, the flight's; in an outer door's opening and on the doorstep the street's — a sunken floor's
+    // steps go down inside it, a house on stilts has its own up to its door)
+    let fy = Sp.floorIn(p, L, x, z); if (!shell) { if (!Sp.stairIn(p, L, x, z)) fy = 0; } else if (door >= 0 && p.doors[door] && p.doors[door].outer) fy = Math.max(fy, 0);
+    return { b, p, lv: L, x, z, code, walk, shell, door, y: m.y0 + fy + Sp.FLOOR_UP };
+  };
+  function stepOf(p, lv, x, z) {
+    const lot = p.lot.w;
+    for (const d of p.doors) {
+      if (!d.outer) continue; const w = p.walls[d.wall]; if (!w || w.lv !== lv) continue;
+      const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const tx = (w.b[0] - w.a[0]) / L, tz = (w.b[1] - w.a[1]) / L;
+      const s = (x - w.a[0]) * tx + (z - w.a[1]) * tz, o = (x - w.a[0]) * -tz + (z - w.a[1]) * tx;
+      // (out of the wall on the street's side — the side away from the middle of the lot — as far as the lot goes)
+      const out = ((lot / 2 - w.a[0]) * -tz + (lot / 2 - w.a[1]) * tx) > 0 ? -1 : 1;
+      if (Math.abs(s - d.at) < d.w / 2 + 0.05 && o * out > w.t / 2 - 0.02 && o * out < w.t / 2 + 1.2) return true;
+    }
+    return false;
+  }
 })(window.G);

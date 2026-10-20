@@ -413,9 +413,9 @@ float m3scale(float p) {
   function kit(g, b, gp, gq, fine) {
     const L = TL(); const x0 = b.x * L, z0 = b.y * L, w = b.w * L, d = b.h * L;
     // the ground under the footprint: the base stands on the lowest point and reaches the highest
-    let lo = 1e9, hi = -1e9; for (let ty = b.y; ty <= b.y + b.h; ty++) for (let tx = b.x; tx <= b.x + b.w; tx++) { const h = W.hAt(Math.min(N, tx), Math.min(N, ty)) * HM(); lo = Math.min(lo, h); hi = Math.max(hi, h); }
-    // (the floor: a house stands on a plinth, as the god's view draws it; a field, a fence, a square lies on the ground — L-105)
-    const y0 = hi + (BASELESS[b.type] ? 0.12 : 0.4);
+    // (the floor: a house stands on a plinth, as the god's view draws it; a field, a fence, a square lies on the ground — L-105;
+    // the body's feet read the same: Space.plinth)
+    const { lo, hi, y0 } = G.Space.plinth(b);
     g.ao = () => lo; // (its walls darken toward the ground)
     const P = palOf(b); const hurt = b.maxHp ? G.clamp(b.hp / b.maxHp, 0, 1) : 1; const soot = hurt < 0.6 ? 0.55 + hurt * 0.75 : 1;
     const c = cc => (soot < 1 ? (typeof cc === 'function' ? (X, Y, Z, a, b2, d2) => dim(cc(X, Y, Z, a, b2, d2), soot) : dim(cc, soot)) : cc);
@@ -494,7 +494,7 @@ float m3scale(float p) {
     };
     return K;
   }
-  const BASELESS = { farm: 1, horta: 1, plantacao: 1, vinhedo: 1, doca: 1, praca: 1, cemetery: 1, curral: 1, cercado: 1, campfire: 1 };
+  const BASELESS = G.Space.BASELESS;
   // a building drawn whole: its type's shapes, then its base (the plinth under the lot, unless it stands on its own footing),
   // then what lies about it (Props3D: only seen, and only where the machine carries detail)
   function draw(g, gw, K, props) {

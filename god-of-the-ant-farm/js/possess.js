@@ -84,7 +84,12 @@
     // on with the player's hands (keepLoad: C1's endTask leaves the carry where it is); one inside is let out at the door)
     G.Vg.endTask(v, { keepLoad: true });
     v.sleeping = false; v.path = null; v.act = ''; v.actT = 0; v.moving = false; v.z = 0;
-    S.avatar = { id: v.id, kind: KINDS[kind] ? kind : 'humano', since: S.day, t0: S.clock, x0: +v.x.toFixed(2), y0: +v.y.toFixed(2), asks: [], deeds: {}, seen: [], met: [] };
+    S.avatar = { id: v.id, kind: KINDS[kind] ? kind : 'humano', since: S.day, t0: S.clock, x0: +v.x.toFixed(2), y0: +v.y.toFixed(2), asks: [], deeds: {}, seen: [], met: [], lv: null };
+    // (someone indoors in a building whose plan is made is taken where they are in it — by the plan's own place for them —, on
+    // their feet in the room: the world's rule lets the body out at the door otherwise)
+    { const B = v.inside && S.buildings.get(v.inside); const pl = B && G.Space.planNow && G.Space.planNow(B) && G.Interiors.placeOf ? G.Interiors.placeOf(v) : null;
+      if (pl && pl.b === B) { const p = G.Space.plan(B); const TL = G.Space.TILE; const tries = [[pl.x, pl.z]].concat(p.entrance ? [[p.entrance.x + (p.lot.w / 2 - p.entrance.x) * 0.15, p.entrance.z + (p.lot.w / 2 - p.entrance.z) * 0.15]] : []);
+        for (const [x, z] of tries) { const ins = G.Space.indoor(B.x * TL + x, B.y * TL + z, pl.lv, B.id); if (ins && ins.walk && ins.shell) { v.x = B.x + x / TL; v.y = B.y + z / TL; S.avatar.lv = ins.lv; break; } } } }
     G.Vg.setTask(v, mark());
     cur = v;
     return { ok: true };
@@ -188,9 +193,20 @@
     if (v.sleeping && (v.energy >= 99.5 || (v.energy > 70 && G.S.time > 0.05 && G.S.time < 0.3))) Po.wake(v);
     void dt;
   };
+  // the storey of a building the body is on, indoors (undefined outdoors): the body's record, with its place (v.x, v.y) —
+  // written by its controller as it walks, saved with it
+  Po.level = () => { const a = G.S.avatar; return a && Number.isFinite(a.lv) ? a.lv : undefined; };
+  Po.setLevel = lv => { const a = G.S.avatar; if (a) a.lv = Number.isFinite(lv) ? lv : null; };
+  // (the body is in the rooms of a building whose plan is made — within its walls, or on its doorstep going in or out —, or not)
+  function indoorOK(v, a) {
+    const B = G.S.buildings.get(v.inside); if (!B || !G.Space.planNow || !G.Space.planNow(B)) return false;
+    const ins = G.Space.indoor(v.x * G.Space.TILE, v.y * G.Space.TILE, a && Number.isFinite(a.lv) ? a.lv : undefined, B.id);
+    return !!(ins && ins.b === B && (ins.shell || ins.walk));
+  }
+  Po.indoorOK = v => indoorOK(v, G.S.avatar);
   Po.sleep = function (v) { if (!Po.is(v) || v.sleeping) return false; v.sleeping = true; v.act = ''; v.moving = false; return true; };
   // waking: out of bed, and out of the house by its door if it slept at home
-  Po.wake = function (v) { if (!v || !v.sleeping) return; v.sleeping = false; if (v.inside) { const b = G.S.buildings.get(v.inside); if (b) { const d = G.Vg.door(b); v.x = d[0]; v.y = d[1]; } v.inside = 0; } };
+  Po.wake = function (v) { if (!v || !v.sleeping) return; v.sleeping = false; if (v.inside && !indoorOK(v, G.S.avatar)) { const b = G.S.buildings.get(v.inside); if (b) { const d = G.Vg.door(b); v.x = d[0]; v.y = d[1]; } v.inside = 0; Po.setLevel(null); } };
   // the world's step for the incarnation: is the body still the player's?
   Po.update = function (dt) {
     const S = G.S; const a = S.avatar; if (!a) return;
@@ -203,8 +219,10 @@
     if (v.held || v.air || v.ug) { Po.release('forca', v.held ? 'held' : v.air ? 'air' : 'ug', true); return; }
     if (!v.task) v.task = mark();
     else if (v.task.type !== 'avatar') { Po.release('forca', v.task.type, true); return; }
-    // (inside only to sleep in one's own bed; anything else that put the body indoors lets it out at the door)
-    if (v.inside && !(v.sleeping && v.inside === v.home)) { const b = S.buildings.get(v.inside); if (b) { const d = G.Vg.door(b); v.x = d[0]; v.y = d[1]; } v.inside = 0; }
+    // (indoors: in the rooms of a building whose plan is made, where its plan lets one be — its storey kept with the body —, or
+    // asleep in one's own bed; anything else that put the body indoors lets it out at the door)
+    if (v.inside && !(v.sleeping && v.inside === v.home) && !indoorOK(v, a)) { const b = S.buildings.get(v.inside); if (b) { const d = G.Vg.door(b); v.x = d[0]; v.y = d[1]; } v.inside = 0; a.lv = null; }
+    if (!v.inside && a.lv !== null && a.lv !== undefined && !(G.Space.indoor && G.Space.indoor(v.x * G.Space.TILE, v.y * G.Space.TILE))) a.lv = null;
     for (let k = a.asks.length - 1; k >= 0; k--) if (S.clock - a.asks[k].t > 90) a.asks.splice(k, 1);
     // (what the hands asked since the last step: done now, in the world's own step, in the order asked — each sees the world
     // the one before left; one asked by a body no longer lived is dropped. Each is answered "not done" until it is done: one
@@ -302,7 +320,9 @@
   G.saveHooks.push({
     save(out) {
       const a = G.S.avatar; if (!a) return;
-      out.avatar = { id: a.id, kind: a.kind, since: a.since, t0: a.t0, x0: a.x0, y0: a.y0, asks: a.asks.slice(-6), deeds: Object.assign({}, a.deeds), seen: a.seen.slice(-20), met: a.met.slice(-60) };
+      out.avatar = { id: a.id, kind: a.kind, since: a.since, t0: a.t0, x0: a.x0, y0: a.y0, asks: a.asks.slice(-6), deeds: Object.assign({}, a.deeds), seen: a.seen.slice(-20), met: a.met.slice(-60), lv: Number.isFinite(a.lv) ? a.lv : null };
+      // (the body in a room of a building's plan: where it is in it — the save lets everyone else out at the door)
+      const v = G.S.villagers.get(a.id); if (v && v.inside && indoorOK(v, a)) out.avatar.in = { b: v.inside, x: +v.x.toFixed(4), y: +v.y.toFixed(4), sleeping: v.sleeping ? 1 : 0 };
     },
     load(o) {
       const S = G.S; S.avatar = null; cur = null;
@@ -315,8 +335,13 @@
         id: v.id, kind: KINDS[a.kind] ? a.kind : 'humano', since: num(a.since, S.day), t0: num(a.t0, S.clock), x0: num(a.x0, v.x), y0: num(a.y0, v.y),
         asks: Array.isArray(a.asks) ? a.asks.filter(q => q && typeof q.txt === 'string').map(q => ({ type: String(q.type), txt: q.txt, t: num(q.t, S.clock), t0: num(q.t0, S.clock), n: num(q.n, 1) })) : [],
         deeds, seen: Array.isArray(a.seen) ? a.seen.filter(e => e && typeof e.txt === 'string') : [], met: Array.isArray(a.met) ? a.met.filter(Number.isFinite) : [],
+        lv: Number.isFinite(a.lv) ? a.lv : null,
       };
-      v.task = mark(); v.sleeping = false; v.path = null; v.inside = 0;
+      // (saved in a room of a building's plan: back in it, where it was — the world's step checks it stands where the plan lets it)
+      { const I = a.in, B = I && Number.isFinite(I.b) && S.buildings.get(I.b);
+        if (B && G.Interiors && G.Interiors.has(B) && Number.isFinite(I.x) && Number.isFinite(I.y) && Number.isFinite(S.avatar.lv) && Math.abs(I.x - (B.x + B.w / 2)) < B.w && Math.abs(I.y - (B.y + B.h / 2)) < B.h) { v.inside = B.id; v.x = I.x; v.y = I.y; }
+        else { v.inside = 0; S.avatar.lv = null; } }
+      v.task = mark(); v.sleeping = false; v.path = null;
       if (!v.inside && !W.walkableXY(v.x, v.y)) v.task.afloat = 1; // (saved swimming: it swims on)
       cur = v;
     },

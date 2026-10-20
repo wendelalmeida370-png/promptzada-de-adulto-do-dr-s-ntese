@@ -52,6 +52,8 @@
   // the ground the feet stand on at a point: a bridge's deck over the water, the bed of a ford, the land
   function floorAt(X, Z) {
     const S = G.S; const x = X / TL(), y = Z / TL();
+    // (in a building whose plan is made — and on its doorstep: the plan's floor, on the storey the body would be on there)
+    const ins = indoorAt(X, Z); if (ins) return ins.y;
     if (!W.inb(x, y)) return W.hAt(G.clamp(x, 0, G.N), G.clamp(y, 0, G.N)) * HM();
     const i = W.idx(x, y); let h = W.hAt(x, y) * HM();
     if (S.type[i] === T.RIVER && (S.road[i] || (S.ice && S.ice[i]))) return Math.max(h, S.wl[i] * HM() + (S.road[i] ? 0.17 : 0.1));
@@ -61,6 +63,94 @@
     return st > h ? st : h;
   }
   Av.floorAt = floorAt;
+  // ------------------------------ indoors: a building's plan (G.Interiors, through Space) ------------------------------
+  // (a point of a building whose plan is made, as this body meets it: on the storey it would be on there — Space.indoor)
+  function indoorAt(X, Z) { return G.Space.indoor ? G.Space.indoor(X, Z, b ? lvTo(X, Z) : undefined, b && b.inB ? b.inB.id : 0) : null; }
+  // the storey a point is reached on from where the body is (b.lv, the one it stands on): off the top of the flight it climbs,
+  // the storey above; from a landing onto the flight that comes up to it, down that flight; else its own
+  function lvTo(X, Z) {
+    void X; void Z; return b.lv;
+  }
+  // down a flight by hand (the hatch opened over it): from near its landing, on the storey it comes up to — its id; false when
+  // the body is not there
+  Av.down = function (id) { if (!b || !b.inP) return false; const s = b.inP.stairs.find(q => q.id === id); if (!s || s.lv1 !== b.lv) return false; b.stairHit = s; return takeFlight(0, 0); };
+  // up a flight by hand, from its foot
+  Av.up = function (id) { if (!b || !b.inP) return false; const s = b.inP.stairs.find(q => q.id === id); if (!s || s.lv0 !== b.lv || !atFoot(s)) return false; b.stairHit = s; return takeFlight(s.dir[0], s.dir[1]); };
+  Av.ups = function () { if (!b || !b.inP || !b.inB || b.loco !== 'ground') return []; return b.inP.stairs.filter(q => q.kind !== 'degraus' && q.lv0 === b.lv && atFoot(q)); };
+  // (the flights the body could go down from where it stands: on their upper storey, by their landing)
+  Av.downs = function () { if (!b || !b.inP || !b.inB || b.loco !== 'ground') return []; const L = TL(); const x = b.X - b.inB.x * L, z = b.Z - b.inB.y * L; return b.inP.stairs.filter(q => q.kind !== 'degraus' && q.lv1 === b.lv && past(q, x, z, 1.4)); };
+  // (a point past a flight's top end — beyond its far edge along the climb, across its width — within d of it)
+  function past(s, x, z, d) {
+    const r = s.r, dx = s.dir[0], dz = s.dir[1];
+    if (dx) { const e = dx > 0 ? x - r[2] : r[0] - x; return e >= -0.02 && e < d && z > r[1] - 0.12 && z < r[3] + 0.12; }
+    const e = dz > 0 ? z - r[3] : r[1] - z; return e >= -0.02 && e < d && x > r[0] - 0.12 && x < r[2] + 0.12;
+  }
+  // the flight the body pushes into, taken: from its foot along its climb, up; from its landing against it, down — the path
+  // (the foot, the top, the landing — Interiors' a and b) and its time: a stair at a walk, a ladder hand over hand
+  function takeFlight(wx, wz) {
+    const B = b.inB, p = b.inP; if (!B || !p || b.loco !== 'ground') return false; const L = TL(); const x = b.X - B.x * L, z = b.Z - B.y * L; const e = G.Space.planEntry(B.id); if (!e) return false;
+    const lvY = lv => e.y0 + (p.levels.find(q => q.lv === lv) || { y: 0 }).y + G.Space.FLOOR_UP;
+    // (the flight the body ran into, only: up from its foot along its climb, or down from its landing)
+    for (const s of p.stairs) {
+      if (s.kind === 'degraus' || s !== b.stairHit) continue; const along = wx * s.dir[0] + wz * s.dir[1]; const r = s.r, dx = s.dir[0], dz = s.dir[1];
+      const mid = dx ? [(r[1] + r[3]) / 2] : [(r[0] + r[2]) / 2]; const at = t => (dx ? [(dx > 0 ? r[0] : r[2]) + dx * t, mid[0]] : [mid[0], (dz > 0 ? r[1] : r[3]) + dz * t]);
+      const len = dx ? r[2] - r[0] : r[3] - r[1]; const lad = s.kind === 'escada-de-mao'; const y0 = lvY(s.lv0), y1 = lvY(s.lv1);
+      const T = lad ? Math.abs(y1 - y0) / 0.55 : Math.hypot(len, y1 - y0) / Math.max(0.6, b.caps.walk * 0.55);
+      const foot = at(0), top = at(len), land = [s.b[0], s.b[1]]; const W3 = (q, y) => [B.x * L + q[0], B.y * L + q[1], y];
+      let P = null, lv = s.lv0;
+      if (b.lv === s.lv0 && atFoot(s) && along > 0.4) { P = [[b.X, b.Z, b.Y], W3(foot, y0), W3(top, y1), W3(land, y1)]; lv = s.lv1; }
+      else if (b.lv === s.lv1 && wx === 0 && wz === 0 && past(s, x, z, 1.4)) { P = [[b.X, b.Z, b.Y], W3(land, y1), W3(top, y1), W3(foot, y0), W3(s.a, y0)]; lv = s.lv0; }
+      if (!P) continue;
+      // (the times along it: steps on the level at a walk, the flight in its own time)
+      const wk = Math.max(0.5, b.caps.walk * 0.6); P[0][3] = 0;
+      for (let k = 1; k < P.length; k++) { const flat = Math.abs(P[k][2] - P[k - 1][2]) < 0.05; P[k][3] = P[k - 1][3] + (flat ? Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]) / wk : T); }
+      b.flight = { P, T: P[P.length - 1][3], t: 0, lv, s: s.id, lad, up: lv === s.lv1, along: +along.toFixed(2), from: [+x.toFixed(2), +z.toFixed(2)] }; b.loco = 'stair'; Av.lastFlight = b.flight; b.yaw = Math.atan2(dz * (lv === s.lv1 ? 1 : -1), dx * (lv === s.lv1 ? 1 : -1)); b.vx = b.vz = 0;
+      return true;
+    }
+    return false;
+  }
+  // (the body at the foot of a flight, before its first step, across its width)
+  function atFoot(s) {
+    const B = b.inB; if (!B || s.kind === 'degraus') return false; const L = TL(); const x = b.X - B.x * L, z = b.Z - B.y * L; const r = s.r, dx = s.dir[0], dz = s.dir[1];
+    if (dx) { const e = dx > 0 ? r[0] - x : x - r[2]; return e >= -0.05 && e < 0.7 && z > r[1] - 0.05 && z < r[3] + 0.05; }
+    const e = dz > 0 ? r[1] - z : z - r[3]; return e >= -0.05 && e < 0.7 && x > r[0] - 0.05 && x < r[2] + 0.05;
+  }
+  // (how far up its flight a point is: 0 at its foot, 1 at its top)
+  function stairF(s, x, z) { const r = s.r; const len = s.dir[0] ? r[2] - r[0] : r[3] - r[1]; const t = s.dir[0] ? (s.dir[0] > 0 ? x - r[0] : r[2] - x) : (s.dir[1] > 0 ? z - r[1] : r[3] - z); return G.clamp(t / (len || 1), 0, 1); }
+  // after each step: the building the body is in (or on the doorstep of), its storey, the flight under it; the world's record
+  // of it — v.inside while within its walls, asked of the world in its step; the storey, with the body's record (Possess.level)
+  function indoorAfter(v) {
+    const ins = indoorAt(b.X, b.Z);
+    if (!ins) { b.inB = null; b.inP = null; b.lv = undefined; b.stair = null; b.stairF = 0; b.inShell = false; }
+    else { b.inB = ins.b; b.inP = ins.p; b.lv = ins.lv; b.inShell = ins.shell; b.stair = G.Space.stairIn(ins.p, ins.lv, ins.x, ins.z); b.stairF = b.stair ? stairF(b.stair, ins.x, ins.z) : 0; b.crawl = (ins.p.levels.find(q => q.lv === ins.lv) || {}).kind === 'jirau'; }
+    const want = ins && ins.shell ? ins.b.id : 0;
+    if (b.inAsk && b.inAsk.res) b.inAsk = null;
+    if (!b.inAsk && want !== (v.inside || 0)) { const id = want; b.inAsk = G.Possess.apply(w => { if (id && !G.S.buildings.has(id)) return { ok: false, why: '' }; w.inside = id; return { ok: true }; }); }
+    G.Possess.setLevel(ins && ins.shell && v.inside === ins.b.id ? ins.lv : null); // (once the world has it indoors)
+  }
+  Av.indoors = () => (b && b.inB && b.inShell ? { b: b.inB, p: b.inP, lv: b.lv, crawl: !!b.crawl } : null); // (for the camera and the 3D)
+  // lying down on a bed of the plan (the world has the body asleep: Possess.sleep): on its sleeping place, the head to its wall
+  Av.lieAt = function (B, it, sp) {
+    const v = G.Possess.body(); const e = B && G.Space.planEntry(B.id); if (!b || !v || !e || !e.p) return false;
+    const L = TL(); b.X = b.pX = B.x * L + sp.x; b.Z = b.pZ = B.y * L + sp.z; b.Y = b.pY = e.y0 + (e.p.levels.find(q => q.lv === it.lv) || { y: 0 }).y + sp.y + G.Space.FLOOR_UP;
+    b.yaw = sp.ry + Math.PI / 2; b.bed = { b: B.id, it: it.id }; b.loco = 'sleep'; b.vx = b.vz = b.vy = 0; b.ground = true;
+    v.x = b.wx = b.X / L; v.y = b.wy = b.Z / L; return true;
+  };
+  // (up from the bed: the nearest point of the room the body can stand on, all round it — one the house's door reaches on foot,
+  // Interiors' own walk from the entrance: never a nook shut in by the furniture)
+  function offBed() {
+    const reached = (q) => { const R = q.p.reach && q.p.reach[q.lv]; if (!R) return true; const n = q.p.grid.n, cs = q.p.grid.cs; return !!R[Math.floor(q.z / cs) * n + Math.floor(q.x / cs)]; };
+    const fits = (X, Z) => { const c = indoorAt(X, Z); if (!c || !c.walk || !c.shell || !reached(c)) return false; return RIM.every(([dx, dz]) => { const q = indoorAt(X + dx * TUNE.radius, Z + dz * TUNE.radius); return q && q.walk && q.shell; }); };
+    for (let r = 0.3; r <= 1.8; r += 0.15) for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; const X = b.X + Math.cos(a) * r, Z = b.Z + Math.sin(a) * r;
+      if (fits(X, Z)) { b.X = b.pX = X; b.Z = b.pZ = Z; b.Y = b.pY = indoorAt(X, Z).y; return true; } }
+    return false;
+  }
+  // (the world laid the body to sleep indoors, in its own house: into its own bed, if it is there by it)
+  function toBed(v) {
+    const bd = G.Interiors && G.Interiors.bedOf ? G.Interiors.bedOf(v) : null; if (!bd || !b.inB || bd.b !== b.inB) return false;
+    const L = TL(); if (Math.hypot(b.X - (bd.b.x * L + bd.spot.x), b.Z - (bd.b.y * L + bd.spot.z)) > 2.6) return false;
+    return Av.lieAt(bd.b, bd.item, bd.spot);
+  }
   // the face of the water at a point (metres) — the sea, a lake, a river — or -Infinity where there is none to be in
   // (dry land, a bridge's deck, the ice, the bed of a parted sea)
   function waterAt(X, Z) {
@@ -73,13 +163,19 @@
 
   // ------------------------------ attach / detach ------------------------------
   Av.attach = function (v, yaw) {
-    const X = v.x * TL(), Z = v.y * TL(); const Y = floorAt(X, Z);
+    const X = v.x * TL(), Z = v.y * TL();
+    if (v.inside && G.Space.planNow) G.Space.planNow(G.S.buildings.get(v.inside));
+    b = null; const Y = floorAt(X, Z);
     b = {
       id: v.id, X, Y, Z, pX: X, pY: Y, pZ: Z, vx: 0, vy: 0, vz: 0, yaw: yaw === undefined ? (v.face > 0 ? 0 : Math.PI) : yaw, ground: true, coyote: 0, buffer: 0,
       loco: 'ground', anim: 'idle', animT: 0, ph: 0, pose: G.Anim3D.POSE0(), landT: 0, fallFrom: Y, hurt: 0, stamina: 100, acc: 0, wx: v.x, wy: v.y,
       act: null, speed: 0, turnT: 0, block: null, blockT: 0, capsT: 0, caps: null, wade: 0, climb: null, ledgeT: 0, yawP: 0, spP: 0, bank: 0,
       h: 1.75, swimK: 0, stroke: 0, drown: 0, drownHurt: 0, wear: [],
+      lv: G.Possess.level(), inB: null, inP: null, inShell: false, stair: null, stairF: 0, crawl: false, inAsk: null,
     };
+    { const B = v.inside && G.S.buildings.get(v.inside); if (B && G.Space.plan(B)) { b.inB = B; b.inP = G.Space.plan(B); } b.Y = b.pY = floorAt(X, Z); indoorAfter(v);
+      // (indoors on a piece of furniture — a game loaded with the body in its bed —: up beside it)
+      if (b.inShell && !v.sleeping) { const q = indoorAt(b.X, b.Z); if (!q || !q.walk) offBed(); } }
     Av.on = true;
     return b;
   };
@@ -88,6 +184,14 @@
   // ------------------------------ collisions ------------------------------
   // (a point is solid for the body if the world says nobody stands there, or if the ground there rises above a step)
   function solidAt(X, Z, feet) {
+    // (indoors the plan says: its walls, its furniture, a door the world has shut, the edge of a loft; along the flight the
+    // body is on, its steps; onto one from the side, as high as it is there, a ledge)
+    // (a flight's footprint on the storey it goes up from is taken whole, from its foot: takeFlight; on the storey it comes up
+    // to, its hatch shut is floor — one goes down it by hand: Avatar.down)
+    if (b && b.inB && b.inP) { const L = TL(); const x = X - b.inB.x * L, z = Z - b.inB.y * L;
+      for (const q of b.inP.stairs) { if (q.kind === 'degraus' || q.lv0 !== b.lv) continue; const r = q.r; if (x > r[0] && x < r[2] && z > r[1] && z < r[3]) { b.stairHit = q; return 'stair'; } } }
+    const ins = indoorAt(X, Z);
+    if (ins) { if (!ins.walk) return ins.shell ? 'wall' : 'building'; return ins.y > feet + TUNE.stepUp ? 'ledge' : null; }
     const s = G.Space.surface(X, Z);
     // (water the world does not walk — the sea, a lake, a deep river — is no wall to a body that swims: in it goes)
     if (!s.walk && !(s.kind === 'deep' && b && b.caps && b.caps.swim)) return s.kind;
@@ -135,9 +239,10 @@
     air: {
       step(v, h, caps) { move(v, h, caps, false); },
     },
-    // asleep: the body lies where it lay down; the world's needs (villagers.js) give the strength back
+    // asleep: the body lies where it lay down — in its bed, indoors —; the world's needs (villagers.js) give the strength back;
+    // awake, it gets up beside the bed (the nearest open floor of the room)
     sleep: {
-      step(v, h) { b.vx = b.vz = 0; b.speed = 0; if (!v.sleeping) b.loco = 'ground'; void h; },
+      step(v, h) { b.vx = b.vz = 0; b.speed = 0; if (!v.sleeping) { b.loco = 'ground'; if (b.bed) { b.bed = null; offBed(); } } void h; },
     },
     // climbing a ledge (Breath of the Wild's way: pushing against it, the hands take the edge and the body pulls itself
     // up and over). From one tile the world walks to the next one the world walks on: the world sees a step
@@ -155,6 +260,17 @@
     // world — the sea, a lake, a deep river; out again where the bed comes up under the feet, or up a bank with the hands
     swim: {
       step(v, h, caps) { swim(v, h, caps); },
+    },
+    // up or down a flight of the plan, whole (as one goes up a stair, a hand on a ladder's rungs): from its foot to its landing
+    // above, or back — the feet on the steps, the storey changing at the top; what the world sees is the body's place on it
+    stair: {
+      step(v, h) {
+        const c = b.flight; if (!c) { b.loco = 'ground'; return; }
+        c.t = Math.min(c.T, c.t + h); let k = 0; while (k < c.P.length - 2 && c.t > c.P[k + 1][3]) k++;
+        const A = c.P[k], B = c.P[k + 1]; const u = B[3] > A[3] ? G.clamp((c.t - A[3]) / (B[3] - A[3]), 0, 1) : 1;
+        b.X = G.lerp(A[0], B[0], u); b.Z = G.lerp(A[1], B[1], u); b.Y = G.lerp(A[2], B[2], u); b.vx = b.vz = b.vy = 0; b.ground = true;
+        if (c.t >= c.T) { b.lv = c.lv; b.loco = 'ground'; b.flight = null; b.fallFrom = b.Y; }
+      },
     },
     // busy with the hands (chopping, picking, eating): the feet keep still until it is done
     // (an act with a place to be — the arms round someone — first takes the step or two to it, by the feet's own rules)
@@ -185,7 +301,8 @@
     let sp = caps.walk;
     const running = IN.run && caps.run > 1 && b.stamina > 1 && wl > 0.2 && !IN.sneak;
     if (running) sp *= caps.run;
-    if (IN.sneak) sp *= TUNE.sneak;
+    if (IN.sneak || b.crawl) sp *= TUNE.sneak;
+    if (b.inShell && b.stair && b.stair.kind === 'escada-de-mao') sp *= 0.55; // (a ladder: hand over hand)
     // (water to the shins slows a little, to the thighs a lot)
     if (b.wade > 0.05) sp *= Math.max(0.4, 1 - b.wade * TUNE.wadeDrag); else if (here.road) sp *= TUNE.road;
     if (v.energy < 8) sp *= 0.7; if (v.hunger >= 100) sp *= 0.8; if (v.carry && v.carry.n >= 4) sp *= 0.9;
@@ -207,7 +324,7 @@
     else b.stamina = Math.min(caps.stamina, b.stamina + TUNE.staminaRegen * h * (wl > 0.1 ? 0.6 : 1));
     // the jump: pressed a moment early (the buffer) or a moment after the ground went away (coyote) still counts
     if (IN.jump) { b.buffer = TUNE.buffer; IN.jump = false; } else b.buffer = Math.max(0, b.buffer - h);
-    if (b.buffer > 0 && (b.ground || b.coyote > 0) && caps.jump > 0 && b.stamina >= TUNE.jumpCost * 0.5 && !v.sleeping) {
+    if (b.buffer > 0 && (b.ground || b.coyote > 0) && caps.jump > 0 && b.stamina >= TUNE.jumpCost * 0.5 && !v.sleeping && !b.inShell) {
       b.vy = Math.sqrt(2 * TUNE.gravity * caps.jump); b.ground = false; b.coyote = 0; b.buffer = 0; b.loco = 'air'; b.fallFrom = b.Y; b.stamina = Math.max(0, b.stamina - TUNE.jumpCost);
       G.Audio && G.Audio.play && G.Audio.play('swish');
     }
@@ -224,7 +341,9 @@
     const L = TL(); b.X = G.clamp(b.X, 0.5 * L, (G.N - 0.5) * L); b.Z = G.clamp(b.Z, 0.5 * L, (G.N - 0.5) * L);
     if (b.blockT > 0) b.blockT -= h; else b.block = null;
     // (pushing against a ledge too high to step on: after a moment — or at once with the jump — the body climbs it)
-    if (onGround && (hit === 'ledge' || hz === 'ledge') && wl > 0.3) { b.ledgeT += h; if (b.ledgeT > TUNE.climbWait || b.buffer > 0) tryClimb(wx, wz); } else b.ledgeT = 0;
+    if (onGround && (hit === 'stair' || hz === 'stair') && wl > 0.3 && takeFlight(wx, wz)) return;
+    b.stairHit = null;
+    if (onGround && !b.inShell && (hit === 'ledge' || hz === 'ledge') && wl > 0.3) { b.ledgeT += h; if (b.ledgeT > TUNE.climbWait || b.buffer > 0) tryClimb(wx, wz); } else b.ledgeT = 0;
     if (b.loco === 'climb') return;
     settle(h);
     // (how deep the water is round the legs; deep enough, the feet leave the bed and the body swims)
@@ -370,10 +489,10 @@
   function step(v, h) {
     // the world moved the body (a building rose where it stood, a load, the world's own push): the world is right
     // (and what the hands were doing there is left undone: the fish in that water, the hug of the one left behind)
-    if (Math.abs(v.x - b.wx) > 1e-6 || Math.abs(v.y - b.wy) > 1e-6) { b.X = b.pX = v.x * TL(); b.Z = b.pZ = v.y * TL(); b.Y = b.pY = floorAt(b.X, b.Z); b.vx = b.vz = b.vy = 0; b.ground = true; b.loco = 'ground'; b.climb = null; cutAct(); }
+    if (Math.abs(v.x - b.wx) > 1e-6 || Math.abs(v.y - b.wy) > 1e-6) { b.X = b.pX = v.x * TL(); b.Z = b.pZ = v.y * TL(); b.lv = G.Possess.level(); b.inB = null; b.inP = null; b.stair = null; b.Y = b.pY = floorAt(b.X, b.Z); indoorAfter(v); b.vx = b.vz = b.vy = 0; b.ground = true; b.loco = 'ground'; b.climb = null; cutAct(); }
     b.pX = b.X; b.pY = b.Y; b.pZ = b.Z;
     if ((b.capsT -= h) <= 0 || !b.caps) { b.caps = G.Possess.caps(v); b.capsT = 0.5; b.h = 1.75 * (G.People3D ? G.People3D.look(v).s : 1); }
-    if (v.sleeping && b.loco !== 'sleep') { cutAct(); b.loco = 'sleep'; }
+    if (v.sleeping && b.loco !== 'sleep') { cutAct(); b.loco = 'sleep'; if (b.inShell) toBed(v); }
     // (sitting, the body gets up as soon as the player walks or jumps)
     // (and a free act — a prayer, a meal — is left there: what it had asked of the world and the world had not yet done never happens)
     if (b.act && (b.act.sit || b.act.free) && (Math.abs(IN.mx) + Math.abs(IN.mz) > 0.2 || b.buffer > 0 || IN.jump)) { cutAct(); b.loco = 'ground'; }
@@ -384,6 +503,7 @@
       if (b.faceTo !== undefined) { let da = b.faceTo - b.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; b.yaw += da * (1 - Math.exp(-8 * h)); }
     }
     (LOCO[b.loco] || LOCO.ground).step(v, h, b.caps);
+    indoorAfter(v);
     if (b.landT > 0) b.landT -= h;
     const dX = b.X - b.pX, dZ = b.Z - b.pZ; const d = Math.hypot(dX, dZ);
     b.speed = d / h;
@@ -409,12 +529,13 @@
     let st;
     if (b.loco === 'sleep') st = 'sleep';
     else if (b.loco === 'climb') st = 'climb';
+    else if (b.loco === 'stair') st = b.flight && b.flight.lad ? 'climb' : 'walk';
     else if (b.loco === 'swim') st = b.stamina <= 0 ? 'drown' : b.swimK > 0.5 ? 'swim' : 'tread';
     else if (b.act && b.act.to && b.act.tr < b.act.toT && b.speed > 0.22) st = 'walk';
     else if (b.act && (b.act.lock || b.speed < 0.22)) st = b.act.anim;
     else if (!b.ground) st = b.vy > 0.4 ? 'jump' : 'fall';
     else if (b.landT > 0) st = 'land';
-    else if (b.speed > 0.22) st = IN.sneak ? 'sneak' : b.speed > caps.walk * 1.3 ? 'run' : carry ? 'carryWalk' : (b.wade > 0.35 ? 'wade' : 'walk');
+    else if (b.speed > 0.22) st = IN.sneak || b.crawl ? 'sneak' : b.speed > caps.walk * 1.3 ? 'run' : carry ? 'carryWalk' : (b.wade > 0.35 ? 'wade' : 'walk');
     else if (b.turnT > 0) st = 'turn';
     else st = carry ? 'carry' : 'idle';
     if (st !== b.anim) { b.anim = st; b.animT = 0; }
@@ -425,7 +546,8 @@
     else if (st === 'swim' || st === 'tread' || st === 'drown') { b.ph += h * (st === 'swim' ? 2.2 + b.speed * 1.4 + (b.stroke > 0 ? 3 : 0) : st === 'drown' ? 5 : 1.6); }
     const wet = st === 'swim' || st === 'tread' || st === 'drown';
     // (a stroke of the world's time: one swing a stroke, the blow landing at the stroke's contact — when the world counts it)
-    let tc = loc || wet ? b.ph : st === 'climb' && b.climb ? b.climb.t / b.climb.dur : b.animT;
+    if (b.loco === 'stair' && b.flight && !b.flight.lad) b.ph += h * 2.4 * G.Anim3D.rate('walk', 1, b.h / 1.75);
+    let tc = loc || wet || (b.loco === 'stair' && b.flight && !b.flight.lad) ? b.ph : st === 'climb' && b.climb ? b.climb.t / b.climb.dur : st === 'climb' && b.flight ? (b.flight.t * 1.6) % 1 : b.animT;
     if ((st === 'swing' || st === 'fight') && b.act && b.act.world && b.act.dur > 0) { const u = G.clamp(b.act.t / b.act.dur, 0, 1), c = G.clamp(b.act.contact / b.act.dur, 0.2, 0.95); tc = (u <= c ? -Math.PI / 2 + Math.PI * u / c : Math.PI / 2 + Math.PI * (u - c) / (1 - c)) / 5.5; }
     const want = G.Anim3D.pose(st, tc, b.speed);
     // (the weight of what the hands hold, and the hands reaching — the same layer as for everyone drawn)

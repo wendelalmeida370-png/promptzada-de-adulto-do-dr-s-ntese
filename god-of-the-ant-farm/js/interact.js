@@ -241,6 +241,84 @@
     return n;
   };
 
+  // ============================== the doors and the beds of a building's plan (G.Interiors) ==============================
+  // (a door of the plan as the world has it — Interiors.doorState: shut, open, locked, blocked by a fire —; turned by the hands
+  // as anyone turns it, the world doing it in its step — Interiors.useDoor, the keys only for who lives or works there)
+  const own = (v, b) => v.home === b.id || v.job === b.id;
+  I.add({
+    id: 'portaPlanta', prio: 4.6, reach: 1.8,
+    find(ctx) {
+      const out = []; const S = G.S; const seen = new Set(); const ind = G.Avatar.indoors();
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const x = Math.floor(ctx.x) + dx, y = Math.floor(ctx.y) + dy; if (!G.W.inb(x, y)) continue; const id = S.occ[G.W.idx(x, y)]; if (!id || seen.has(id)) continue; seen.add(id);
+        const b = S.buildings.get(id); const p = b && G.Space.plan(b); if (!p) continue;
+        // (the storey the body is on there: its own indoors, the entrance's from the street)
+        const lv = ind && ind.b === b ? ind.lv : p.entryLv || 0;
+        for (const d of p.doors) {
+          if (d.kind === 'vao') continue; const w = p.walls[d.wall]; if (!w || w.lv !== lv) continue; const len = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1;
+          out.push({ b, p, d, lv, X: b.x * L() + w.a[0] + (w.b[0] - w.a[0]) * d.at / len, Z: b.y * L() + w.a[1] + (w.b[1] - w.a[1]) * d.at / len });
+        }
+      }
+      return out;
+    },
+    label(ctx, t) {
+      const st = G.Interiors.doorState(t.b, t.d.id); const s2 = st ? st.state : 'fechada';
+      return s2 === 'aberta' ? 'Fechar a porta' : s2 === 'trancada' ? (own(ctx.v, t.b) ? 'Destrancar e abrir a porta' : 'Bater à porta') : s2 === 'bloqueada' ? 'A porta está bloqueada' : 'Abrir a porta';
+    },
+    can(ctx, t) {
+      if (!G.S.buildings.has(t.b.id)) return { ok: false, why: 'Não existe mais.' };
+      const st = G.Interiors.doorState(t.b, t.d.id); if (!st) return { ok: false, why: '' };
+      if (st.state === 'bloqueada') return { ok: false, why: st.by === 'fogo' ? 'O fogo tomou a porta!' : 'A porta está bloqueada.' };
+      return { ok: true };
+    },
+    run(ctx, t) {
+      const b = t.b, d = t.d, v = ctx.v; const f = face(ctx, t.X, t.Z); const st = G.Interiors.doorState(b, d.id).state;
+      // (someone else's locked door: a knock — the house hears it)
+      if (st === 'trancada' && !own(v, b)) { deed('porta'); say('Você bate à porta. Ninguém abre.'); G.Avatar.act({ anim: 'interact', dur: 0.9, face: f }); return { ok: true }; }
+      const want = st === 'aberta' ? 'fechar' : 'abrir';
+      G.Avatar.act({ world: true, anim: 'interact', dur: 0.5, contact: 0.25, face: f,
+        op: w => {
+          if (!G.S.buildings.has(b.id)) return { ok: false, why: 'Não existe mais.' };
+          if (want === 'abrir' && G.Interiors.doorState(b, d.id).state === 'trancada') { const u = G.Interiors.useDoor(b, d.id, 'destrancar', w); if (!u.ok) return u; }
+          return G.Interiors.useDoor(b, d.id, want, w);
+        },
+        then: () => G.Audio && G.Audio.at && G.Audio.at(b.x + b.w / 2, b.y + b.h / 2, want === 'abrir' ? 'door' : 'doorShut'), fail: deny });
+      return { ok: true };
+    },
+  });
+  // the stairs of the plan: up from the foot of a flight, down from its landing (the hatch opened over it, by hand) — moving in
+  // the house, the body's own place: nothing of the world to ask
+  I.add({
+    id: 'escada', prio: 4.4, reach: 1.7,
+    find(ctx) {
+      const ind = G.Avatar.indoors(); if (!ind) return []; const out = [];
+      const at = (s, t) => { const r = s.r, dx = s.dir[0], dz = s.dir[1]; const len = dx ? r[2] - r[0] : r[3] - r[1]; const m = dx ? (r[1] + r[3]) / 2 : (r[0] + r[2]) / 2; const u = dx ? (dx > 0 ? r[0] : r[2]) + dx * len * t : m, w = dz ? (dz > 0 ? r[1] : r[3]) + dz * len * t : m; return [ind.b.x * L() + u, ind.b.y * L() + w]; };
+      for (const s of G.Avatar.ups()) { const p = at(s, 0.1); out.push({ s, up: true, X: p[0], Z: p[1] }); }
+      for (const s of G.Avatar.downs()) { const p = at(s, 0.9); out.push({ s, up: false, X: p[0], Z: p[1] }); }
+      return out;
+    },
+    label(ctx, t) { const lad = t.s.kind === 'escada-de-mao'; return t.up ? (lad ? 'Subir pela escada de mão' : 'Subir a escada') : (lad ? 'Descer pela escada de mão' : 'Descer a escada'); },
+    can() { return { ok: true }; },
+    run(ctx, t) { return (t.up ? G.Avatar.up(t.s.id) : G.Avatar.down(t.s.id)) ? { ok: true } : { ok: false, msg: 'Daqui não dá.' }; },
+  });
+  // the body's own bed in the house it is in: to sleep in it, as the house's people sleep (the world's sleep, in its step)
+  I.add({
+    id: 'cama', prio: 4.8, reach: 1.9,
+    find(ctx) {
+      const ind = G.Avatar.indoors(); if (!ind || !G.Interiors.bedOf) return [];
+      const bd = G.Interiors.bedOf(ctx.v); if (!bd || bd.b !== ind.b || bd.item.lv !== ind.lv) return [];
+      return [{ b: bd.b, it: bd.item, sp: bd.spot, X: bd.b.x * L() + bd.item.x, Z: bd.b.y * L() + bd.item.z }];
+    },
+    label(ctx, t) { return `Deitar ${t.it.kind === 'esteira' || t.it.kind === 'esteira-casal' ? 'na esteira' : 'na cama'} e dormir`; },
+    can(ctx) { return ctx.v.energy >= 85 ? { ok: false, why: 'Você não está com sono.' } : { ok: true }; },
+    run(ctx, t) {
+      const b = t.b, P = G.Possess; const f = face(ctx, t.X, t.Z);
+      G.Avatar.act({ anim: 'interact', dur: 0.7, face: f, contact: 0.5,
+        op: w => { if (!G.S.buildings.has(b.id) || w.home !== b.id || w.inside !== b.id || !P.sleep(w)) return { ok: false, why: 'Agora não dá para dormir.' }; P.deed('sono'); return { ok: true }; },
+        fail: deny }); // (asleep, the body is laid in its bed by its controller: the world has it sleeping)
+      return { ok: true };
+    },
+  });
   // ============================== buildings: doors, the store, the temple ==============================
   // (the people's stores are where the world's people bring their loads and eat: every drop-off — storehouse, barn, dock,
   // harbour store, the first camp's fire — one rule for them and for the body)
@@ -254,6 +332,7 @@
       for (const b of S.buildings.values()) {
         if (b.x > ctx.x + 6 || b.x + b.w < ctx.x - 6 || b.y > ctx.y + 6 || b.y + b.h < ctx.y - 6) continue;
         if (b.type === 'ruin' || b.type === 'farm' || b.type === 'horta' || b.type === 'plantacao' || b.type === 'vinhedo') continue;
+        if (G.Space.plan && G.Space.plan(b)) continue; // (its plan's own doors: portaPlanta)
         const d = G.Vg.door(b); out.push({ b, X: d[0] * L(), Z: d[1] * L() });
       }
       return out;
