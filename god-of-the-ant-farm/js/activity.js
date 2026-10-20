@@ -562,7 +562,10 @@
         if (!A.able(v) && !(op.roles[id].body)) A.leave(op, v, v.captive ? 'cativo' : v.jail ? 'preso' : v.aboard ? 'embarcou' : 'incapaz');
       }
     }
-    tick += dt; if (tick < 1) return; const step = tick; tick = 0;
+    // (an epsilon: ten steps of 0.1 add up to 0.9999999999999999, and "once a second" came every 1.1 s in the step while
+    // the skip's half steps of 0.5 make 1 exactly — the step and the skip in two rhythms, T-d; the step handed to the hooks
+    // rounded to the millionth, so their own sums close exactly too)
+    tick += dt; if (tick + 1e-9 < 1) return; const step = Math.round(tick * 1e6) / 1e6; tick = 0;
     for (const op of ops()) {
       if (!live(op)) continue;
       const def = A.DEFS[op.def]; if (!def) { A.end(op, 'cancel', 'sem definição'); continue; }

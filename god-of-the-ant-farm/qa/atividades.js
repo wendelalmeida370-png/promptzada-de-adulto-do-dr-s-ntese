@@ -4,7 +4,8 @@
 // d3 reservas, d4 dinheiro (casa, bolso, tesouro) e a troca de duas mãos (swap), o1 uma operação do começo ao fim com
 // os livros fechando, o2 a sabotagem (o verificador acusa uma escrita por fora), o3 save e load no meio (duas vezes: o
 // mesmo futuro), o4 a pessoa morre com a carga (fica no chão; outro pega), o5 o fim solta as reservas, o6 o corpo do deus
-// fica com o papel (keepLoad), o7 o salto e o passo; e o verificador limpo, sem erro de módulo.
+// fica com o papel (keepLoad), o7 o salto e o passo, o8 um segundo é um segundo (a olhada das atividades no passo e no
+// salto no mesmo ritmo); e o verificador limpo, sem erro de módulo.
 const M = require('./nodemundo.js');
 const seed = +(process.argv[2] || 7);
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/atividades-inv.js'] });
@@ -175,6 +176,19 @@ A.def('teste', { name: 'Teste', conserve: true, title: () => 'Uma operação de 
   M.saltar(1); M.viver(20);
   const e = M.erros(); const bad = QA.check().filter(q => q.sev <= 2);
   ok('o7 salto e passo', !Object.keys(e.mod).length && !bad.length, `um ano de salto e 20 s de passo: erros de módulo ${JSON.stringify(e.mod)}, verificador ${bad.length ? bad.slice(0, 3).map(q => q.sys + ': ' + q.msg).join(' · ') : 'limpo'}`);
+}
+// ---------------- o8: the second of the activities is a second — one look of the operations a second of the world, in the
+// step (0.1 s) and in the skip (half steps of 0.5 s) alike (T-d: ten steps of 0.1 add up to 0.9999999999999999, and the
+// look came every 1.1 s in the step)
+{
+  let n = 0; const hook = () => { n++; }; A.hooks.tick.push(hook);
+  const c0 = G.S.clock; M.viver(60); const inStep = n, dS = G.S.clock - c0; // (G.S: after the loads of o3 the world is a new object)
+  n = 0; const c1 = G.S.clock; const W = G.W;
+  G.Skip.on = true; G.FX.off = true; W.pathGreed = 1.3;
+  try { for (let k = 0; k < 60; k++) G.Main.skipStep(1); } finally { G.Skip.on = false; G.FX.off = false; W.pathGreed = W.PATH_EXACT; }
+  const inSkip = n, dK = G.S.clock - c1;
+  A.hooks.tick.splice(A.hooks.tick.indexOf(hook), 1);
+  ok('o8 um segundo é um segundo', Math.abs(inStep - dS) <= 1 && Math.abs(inSkip - dK) <= 1, `em ${Math.round(dS)} s do mundo pelo passo de 0,1 s: ${inStep} olhadas das atividades; em ${Math.round(dK)} s pelo salto (meios passos de 0,5 s): ${inSkip}`);
 }
 const e = M.erros();
 ok('limpo', M.limpo(), e.console.length ? e.console.slice(0, 4).join(' | ') : 'sem erro de módulo nem aviso no console');
