@@ -2057,9 +2057,9 @@ float m3scale(float p) {
     const A0 = l.area; const extra = plan.rooms.filter(m => m.lv === l.lv && (m.r[0] < A0[0] - 0.05 || m.r[1] < A0[1] - 0.05 || m.r[2] > A0[2] + 0.05 || m.r[3] > A0[3] + 0.05) && !clipR(m.r, A0));
     K.as(pat, () => { for (const r of pieces) flatQ(K, r, y, col, 1); for (const m of extra) for (const r of cutRect(m.r, holes)) flatQ(K, r, y, col, 1); });
     if (!below) return;
-    // (the joists within the slab, their feet at the ceiling the plan gives the room below — the boards between them a hand
-    // higher: the headroom drawn is the plan's)
-    const th = G.clamp(l.y - (below.y + below.h), 0.1, 0.3), yb = l.y - th; const A = below.area; const wd = l.kind === 'jirau' ? IWOOD : dim(IWOOD, 0.92); const jh = K.fine ? Math.min(0.07, th - 0.03) : 0;
+    // (the slab the plan gives the storey — from y − slab to y —, the joists within it, their feet at the ceiling of the room
+    // below — the boards between them a hand higher: the headroom drawn is the plan's)
+    const th = l.slab > 0 ? l.slab : G.clamp(l.y - (below.y + below.h), 0.1, 0.3), yb = l.y - th; const A = below.area; const wd = l.kind === 'jirau' ? IWOOD : dim(IWOOD, 0.92); const jh = K.fine ? Math.min(0.07, th - 0.03) : 0;
     K.as(l.kind === 'jirau' ? 'plankH' : 'beam', () => {
       for (const r of pieces) { const q = clipR(r, A); if (q) flatQ(K, q, yb + jh, wd, -1); }
       // (the edges: of the storey's own area where it stands free over the room, and round each hole)
@@ -2205,6 +2205,18 @@ float m3scale(float p) {
     banca(F, it) { const { w, d, h } = it; F.box(0, 0, d / 2 - 0.025, w, h - 0.05, 0.05, IWOOD, 'plankV'); F.legs(w, d, h - 0.05, 0.035, IDARK); F.box(0, h - 0.05, 0, w, 0.05, d, IWOOD, 'plankH');
       for (let k = 0; k < 3; k++) F.cyl(-w / 2 + w * (k + 0.5) / 3, h, 0, 0.16, 0.1, k === 1 ? ISTRAW : dim(ISTRAW, 0.85), 'wicker'); },
     balcao(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, h - 0.05, d - 0.06, IWOOD, 'plankV'); F.box(0, h - 0.05, 0, w + 0.06, 0.05, d, IDARK, 'plankH'); },
+    // (a shop's little stall: a banca of its own size)
+    banquinha(F, it) { FURN.banca(F, it); },
+    // (a board on two brackets against the wall, a hand and a half up: a pot, a bowl on it)
+    'prateleira-parede'(F, it) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.1), 0, -d / 2 + 0.03, 0.035, 0.11, 0.06, IDARK, 'beam'); F.box(0, 0.11, 0, w, 0.03, d, IWOOD, 'plankH');
+      F.cyl(-w * 0.22, 0.14, 0, 0.07, Math.min(0.14, h - 0.16), ICLAY, 'mud'); F.cyl(w * 0.18, 0.14, 0.01, 0.1, 0.05, dim(ICLAY, 0.85), 'mud'); },
+    // (a rail of pegs high on the wall, the baskets hung from it on their cords)
+    'cesto-pendurado'(F, it) { const { w, d, h } = it; F.box(0, h - 0.06, -d / 2 + 0.03, w, 0.06, 0.06, IDARK, 'beam'); const n = w > 0.6 ? 2 : 1;
+      for (let k = 0; k < n; k++) { const a = n === 1 ? 0 : (k ? 1 : -1) * w / 4; const r = Math.min(d / 2 - 0.02, w / n / 2 - 0.03); const hb = h * (0.5 + F.hv(k) * 0.12);
+        F.cyl(a, 0.02, 0.02, r, hb, dim(ISTRAW, 0.9 + F.hv(k + 2) * 0.15), 'wicker'); F.box(a, hb, -d / 2 + 0.06, 0.012, h - 0.06 - hb, 0.012, [120, 104, 76], 'rope'); } },
+    // (a loading pallet: planks laid on three battens, a hand off the floor)
+    estrado(F, it) { const { w, d, h } = it; for (const e of [-1, 0, 1]) F.box(e * (w / 2 - 0.06), 0, 0, 0.09, h - 0.05, d, IDARK, 'beam'); const n = Math.max(3, Math.round(d / 0.16));
+      for (let k = 0; k < n; k++) F.box(0, h - 0.05, -d / 2 + d * (k + 0.5) / n, w, 0.05, d / n - 0.02, dim(IWOOD, 0.88 + F.hv(k) * 0.18), 'plankH'); },
     bancada(F, it) { const { w, d, h } = it; F.legs(w, d, h - 0.08, 0.045, IDARK); F.box(0, h - 0.08, 0, w, 0.08, d, IWOOD, 'plankH'); F.box(0, 0.15, 0, w - 0.1, 0.03, d - 0.1, dim(IWOOD, 0.85), 'plankH');
       F.log(-w * 0.25, h + 0.03, 0.05, -w * 0.25 + 0.28, h + 0.03, 0.05, 0.02, IDARK); F.box(-w * 0.25 + 0.3, h, 0.05, 0.12, 0.07, 0.07, IWOOD); F.box(w * 0.3, h, -0.05, 0.22, 0.1, 0.12, IIRON, 'iron'); },
     'forja-fogo'(F, it, cx) { const { w, d, h } = it; F.box(0, 0, 0, w, h - 0.1, d, ISTONE, 'stone'); F.box(0, h - 0.1, 0, w * 0.55, 0.06, d * 0.55, IEMBER); F.box(0, h - 0.1, -d / 2 + 0.1, w, 0.25, 0.2, dim(ISTONE, 0.9), 'stone');
