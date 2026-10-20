@@ -2323,7 +2323,7 @@
         if (!o.burnt && o.berries > 0) Art.berries(ctx, sx, sy, o.berries, 1);
         break;
       }
-      case 4: if (spin) drawSpinBuilding(o, sx, sy, t, nightF); else drawBuilding(o, sx, sy, t, nightF); break;
+      case 4: if (G.PlanView && G.PlanView.drawn(o)) break; /* (C2: its plan, open, is drawn in its place) */ if (spin) drawSpinBuilding(o, sx, sy, t, nightF); else drawBuilding(o, sx, sy, t, nightF); break;
       case 5: {
         const v = o;
         const night = nightF > 0.5;

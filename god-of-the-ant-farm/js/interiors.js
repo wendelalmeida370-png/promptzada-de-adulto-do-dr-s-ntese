@@ -159,7 +159,9 @@
     const housing = (G.BDEF[rec.t] || {}).housing || 0;
     for (const pid of PROBES) {
       const pb = { id: pid, type: rec.t, x: 8, y: 8, w: (G.BDEF[rec.t] || {}).w || 1, h: (G.BDEF[rec.t] || {}).h || 1 };
-      const p = make(pb, Object.assign({}, rec, { f: id }), id, true);
+      // (as the plan is made: the attempts, and as many again)
+      const r1 = Object.assign({}, rec, { f: id }); let p = make(pb, r1, id, true);
+      if (!p.ok && !p.shellFailed && p.maxArea !== undefined) { const q = make(pb, r1, id, true, false, In.TRIES); q.maxArea = Math.max(q.maxArea || 0, p.maxArea); p = q; }
       if (p.ok) continue;
       const need = In.floorNeed(housing);
       if (housing && p.maxArea !== undefined && p.maxArea < need) return `arquitetura: ${p.maxArea.toFixed(1)} m² de piso não dormem ${housing} pessoas (precisam de ${need.toFixed(1)})`;
@@ -203,15 +205,24 @@
 
   // ------------------------------ the plan under construction (canonical) ------------------------------
   function seedOf(id, fam, attempt) { return (Math.imul(id | 0, 0x9E3779B1) ^ Math.imul(famIndex(fam) + 7, 0x85EBCA6B) ^ Math.imul(attempt + 3, 0xC2B2AE35)) | 0; }
+  // (two sets of dice: the shell's — one for the building and its family, the same in every attempt: the shell, its roof, its
+  // floors, its outside walls and what opens in them are what is seen from afar, and never change with how the inside went
+  // — and each attempt's own for the inside, from P.inside() on)
+  // (the shell's dice come from the shell a family raises, S: the families of one shell raise it the same on a building)
+  const strHash = s => { let h = 5381; for (let i = 0; i < s.length; i++) h = (Math.imul(h, 33) + s.charCodeAt(i)) | 0; return h; };
+  const shellSeed = (id, F) => (Math.imul(id | 0, 0x9E3779B1) ^ Math.imul(strHash(F ? F.S || F.id : '') | 0, 0x85EBCA6B) ^ 0x2545F491) | 0;
+  const shellOfFam = f => (FAMS[f] ? FAMS[f].S || f : f);
   function Plan(b, rec, fam, attempt) {
-    const L = b.w * TILE; const rnd = G.mulberry32(seedOf(b.id, fam, attempt));
+    const L = b.w * TILE;
     const P = {
-      b, rec, fam: FAMS[fam], famId: fam, L, rnd, T: TYPES[rec.t], tr: TRAD[rec.c] || TRAD.classico || {}, attempt,
+      b, rec, fam: FAMS[fam], famId: fam, L, rnd: G.mulberry32(shellSeed(b.id, FAMS[fam])), phase: 'casca', T: TYPES[rec.t], tr: TRAD[rec.c] || TRAD.classico || {}, attempt,
+      // (how far a place's score is shaken: little at first, more as the attempts on the same shell go on failing)
+      jit: attempt < 4 ? 0.1 : attempt < In.TRIES ? 0.6 : 1.4,
       levels: [], rooms: [], walls: [], holes: [], doors: [], stairs: [], items: [], annex: [], zones: [], errs: [], shell: null, roof: null, entrance: null, need: {}, notes: [],
     };
-    P.rr = (a, c) => a + rnd() * (c - a);
-    P.pick = arr => arr[Math.floor(rnd() * arr.length)];
-    P.chance = p => rnd() < p;
+    P.rr = (a, c) => a + P.rnd() * (c - a);
+    P.pick = arr => arr[Math.floor(P.rnd() * arr.length)];
+    P.chance = p => P.rnd() < p;
     Object.assign(P, KIT);
     return P;
   }
@@ -220,7 +231,26 @@
     level(lv, y, h, kind, area) { const o = { lv, y, h, kind, area: area.slice(), slab: SLABS[kind] || 0 }; this.levels.push(o); this.levels.sort((a, b) => a.lv - b.lv); return o; },
     lvl(lv) { return this.levels.find(l => l.lv === lv); },
     room(lv, fn, r, open, circ) { const id = this.rooms.length; this.rooms.push({ id, lv, fn, r: r.slice(), open: open ? 1 : 0, circ: circ ? circ.slice() : null }); return id; },
-    wall(lv, a, b, t, h, outer, kind, mat) { const id = this.walls.length; this.walls.push({ id, lv, a: a.slice(), b: b.slice(), t, h, outer: outer ? 1 : 0, kind: kind || 'parede', mat: mat || (this.shell && this.shell.mat) || '' }); return id; },
+    wall(lv, a, b, t, h, outer, kind, mat) { const id = this.walls.length; this.walls.push({ id, lv, a: a.slice(), b: b.slice(), t, h, outer: outer ? 1 : 0, kind: kind || 'parede', mat: mat || (this.shell && this.shell.mat) || '', shell: this.phase === 'casca' ? 1 : 0 }); return id; },
+    // the turn from the shell to the inside: the shell is written down as it stands (the inside may not change it) and the
+    // dice become this attempt's own; true when only the shell was asked for — the recipe stops there
+    inside() {
+      if (this.phase !== 'casca') return false;
+      if (this.shellOnly) return true;
+      this.shellPrint = JSON.stringify(shellOut(this));
+      this.rnd = G.mulberry32(seedOf(this.b.id, this.famId, this.attempt)); this.phase = 'dentro'; return false;
+    },
+    // the doors the shell opened before there were rooms (-1): their rooms, by where they fall — the room on either side
+    bindDoors() {
+      for (const d of this.doors) {
+        if (d.rooms[0] !== -1 && d.rooms[1] !== -1) continue;
+        const w = this.walls[d.wall]; const p = this.ptOn(d.wall, d.at); const L = this.wlen(d.wall) || 1;
+        const nx = -(w.b[1] - w.a[1]) / L, nz = (w.b[0] - w.a[0]) / L; const off = w.t / 2 + 0.12;
+        const at = q => { const m = this.rooms.find(R => R.lv === w.lv && (R.circ ? Math.hypot(q[0] - R.circ[0], q[1] - R.circ[1]) <= R.circ[2] + 0.02 : ptIn(q, R.r, 0.02))); return m ? m.id : -1; };
+        const s1 = at([p[0] + nx * off, p[1] + nz * off]), s2 = at([p[0] - nx * off, p[1] - nz * off]);
+        if (d.rooms[1] === 'rua') d.rooms[0] = s1 !== -1 ? s1 : s2; else { d.rooms[0] = s1; d.rooms[1] = s2; }
+      }
+    },
     // the four walls round a rectangle given by its centre lines: back, right, front, left (each a → b round it)
     walls4(lv, R, t, h, outer, kind, skip) {
       const ids = {}; const [u0, v0, u1, v1] = R;
@@ -407,7 +437,8 @@
     place(kind, lv, room, o) {
       o = o || {}; const D = ITEMS[kind]; const R = this.rooms[room]; if (!R) return null; const r = R.r;
       const w = o.w || D.w, d = o.d || D.d; const F = this.floorOf(lv);
-      const sides = o.sides || (D.free && !o.wall ? ['livre'] : ['fundo', 'esquerda', 'direita', 'frente']);
+      // (a free-standing piece stands away from the walls where there is room for it; where not, against one)
+      const sides = o.sides || (D.free && !o.wall ? ['livre', 'fundo', 'esquerda', 'direita', 'frente'] : ['fundo', 'esquerda', 'direita', 'frente']);
       const all = []; let tries = 0;
       const tryAll = () => { all.sort((a, b) => b.sc - a.sc); for (const c of all) { if (++tries > 14) return null; const it = this.put(kind, lv, room, c.rr, c.fu, c.fv, c.f, Object.assign(c.s ? { side: c.s } : {}, o.extra || {})); if (it) return it; } all.length = 0; return null; };
       for (let si = 0; si < sides.length; si++) {
@@ -453,7 +484,7 @@
             if (!quick(rr, R, F)) continue;
             const f = this.fits(rr, lv, room, kind, this.spotsAll({ r: rr, face: [fu, fv], kind, w: W, d: Dp, h: D.h }), s, F); if (!f) continue;
             const pl = D.places || 0; const spend = pl ? 1.0 * W / pl : 0; // (a bed: how much of the wall it takes for each sleeper)
-            all.push({ sc: (o.center ? -Math.abs(p - len / 2) : touch(rr, R, F)) - spend - 0.25 * si + 0.1 * this.rnd(), rr, fu, fv, s, f });
+            all.push({ sc: (o.center ? -Math.abs(p - len / 2) : touch(rr, R, F)) - spend - 0.25 * si + this.jit * this.rnd(), rr, fu, fv, s, f });
           }
         }
         // (the free sides come after the walls: the walls' places are tried first, all of them together)
@@ -526,9 +557,11 @@
   // the family's recipe, tried a few times with its own dice; a family that cannot be laid out gives way to the next one
   // the type allows (always the same way: the plan stays a function of the record)
   const cache = new Map();
-  function make(b, rec, famId, probe, relax) {
-    const F = FAMS[famId]; let last = null;
-    if (F) for (let a = 0; a < In.TRIES; a++) {
+  // (made as a generator: between two attempts whoever makes plans a little at a time — the line below — may stop)
+  function* makeG(b, rec, famId, probe, relax, from) {
+    const F = FAMS[famId]; let last = null; from = from || 0;
+    if (F) for (let a = from; a < from + In.TRIES; a++) {
+      if (a > from) yield;
       const P = Plan(b, rec, famId, a); if (relax) P.relax = 1;
       try { F.build(P); } catch (e) { P.errs.push('receita: ' + (e && e.message)); }
       let plan = finish(P);
@@ -543,9 +576,28 @@
       if (plan.ok) return plan;
       if (probe) { const fa = floorArea(plan); plan.maxArea = Math.max(fa, last ? last.maxArea || 0 : 0); }
       last = plan;
+      if (P.phase === 'casca') { plan.shellFailed = 1; break; } // (the shell itself does not stand: it is the same in every attempt)
     }
     return last || { id: b.id, ok: false, errs: ['família desconhecida: ' + famId] };
   }
+  const run = g => { for (;;) { const r = g.next(); if (r.done) return r.value; } };
+  function make(b, rec, famId, probe, relax) { return run(makeG(b, rec, famId, probe, relax)); }
+  // the shell alone of a family on a building (the recipe up to P.inside())
+  function shellPlan(b, rec, f) {
+    const F = FAMS[f]; if (!F) return null; const P = Plan(b, rec.f === f ? rec : Object.assign({}, rec, { f }), f, 0); P.shellOnly = 1;
+    try { F.build(P); } catch (e) { P.errs.push('receita: ' + (e && e.message)); }
+    return P;
+  }
+  // the family a building is laid out in: the record's, unless its shell does not stand on this lot — then the next one the
+  // catalogue offers there whose shell does. Decided by the shells alone (cheap), so what is drawn from afar and the whole
+  // plan are always of one family; an inside that does not go in never changes it
+  function famOf(b, rec) {
+    const P0 = shellPlan(b, rec, rec.f); if (P0 && !P0.errs.length) return { f: rec.f, P: P0 }; // (the record's: nearly always)
+    let first = P0 ? { f: rec.f, P: P0 } : null;
+    for (const f of In.familiesFor(rec).ok) { if (f === rec.f) continue; const P = shellPlan(b, rec, f); if (!P) continue; if (!first) first = { f, P }; if (!P.errs.length) return { f, P, why: first.P.errs }; }
+    return first || { f: rec.f, P: null };
+  }
+  In.famOf = (b, rec) => famOf(b, rec || b.ip).f;
   // the floor a household can sleep on: the closed rooms (the hot lands' open roof at half), less the flights' feet
   function floorArea(plan) {
     if (!plan.rooms) return 0; let a = 0;
@@ -557,20 +609,45 @@
   // and the fire, the way in and what keeps the house's things (2.5 m²) — less than this, no arrangement holds them
   In.floorNeed = housing => housing * 1.38 + 2.5;
   const planKey = (b, rec) => b.id + ':' + rec.r + ':' + rec.f + ':' + b.type + ':' + rec.s + ':' + (rec.fx || []).length;
+  // (the key of a building's plan, as the cache keeps it: the same key, the same plan — for whoever keeps a plan of its own)
+  In.keyOf = b => (b && b.ip && TYPES[b.ip.t] ? planKey(b, b.ip) : null);
+  const keep = (id, key, p) => { p.key = key; cache.set(id, p); if (cache.size > In.CACHE) cache.delete(cache.keys().next().value); return p; }; // (a plan is a function of its record: made again when asked)
   In.plan = function (b) {
     if (!b || !b.ip || !TYPES[b.ip.t]) return null;
     const rec = b.ip; const key = planKey(b, rec);
     let p = cache.get(b.id); if (p && p.key === key) { cache.delete(b.id); cache.set(b.id, p); return p; }
-    p = build(b, rec); p.key = key; cache.set(b.id, p);
-    if (cache.size > In.CACHE) cache.delete(cache.keys().next().value); // (a plan is a function of its record: made again when asked)
-    return p;
+    // (the one being made a little at a time: finished now)
+    if (job && job.id === b.id && job.key === key) { p = run(job.g); job = null; return keep(b.id, key, p); }
+    return keep(b.id, key, build(b, rec));
+  };
+  // ---- the shell alone (what the 3D draws of every building, near or far): the same, always, as the whole plan's — the shell
+  // with its roof, annex and court, the storeys' floors, the holes in the shell's walls, the way in — at a small part of its
+  // cost; kept by the record like the plan ----
+  const shells = new Map(); In.SHELLS = 6000;
+  In.shellOf = function (b) {
+    if (!b || !b.ip || !TYPES[b.ip.t]) return null;
+    const rec = b.ip; const key = planKey(b, rec);
+    const c = shells.get(b.id); if (c && c.key === key) return c;
+    const p = cache.get(b.id); let s;
+    if (p && p.key === key) s = In.shellOfPlan(p);
+    else { const fo = famOf(b, rec); s = fo.P ? shellOut(fo.P) : null; if (s) { s.fam = fo.f; if (b.type === 'ruin') s = ruinShell(s, b); } }
+    if (!s) return null;
+    s.key = key; shells.set(b.id, s); if (shells.size > In.SHELLS) shells.delete(shells.keys().next().value);
+    return s;
+  };
+  // the shell part of a plan already made (for the proofs, and the shell of one in the cache)
+  In.shellOfPlan = function (p) {
+    if (!p || !p.shell) return null; const walls = [], holes = [];
+    for (const w of p.walls) if (w.shell) walls.push({ id: w.id, lv: w.lv, a: w.a, b: w.b, t: w.t, h: w.h, kind: w.kind, mat: w.mat, outer: w.outer });
+    for (const h of p.holes) { const w = p.walls[h.wall]; if (!w || !w.shell) continue; holes.push({ wall: h.wall, at: h.at, w: h.w, h: h.h, sill: h.sill, kind: h.kind, door: h.door }); }
+    return { shell: p.shell, levels: p.levels.map(l => ({ lv: l.lv, y: l.y, h: l.h, kind: l.kind, slab: l.slab || 0 })), walls, holes, entrance: p.entrance || null, entryLv: p.entryLv || 0, fam: p.shellFam || p.fam };
   };
   // ---- plans asked for without stopping the frame (the 3D, the god's view): a plan is made in one go (from a few ms to a
   // tenth of a second in a tall block), so whoever draws asks with want(b) — the plan if it is made, else null and the
   // building goes in line — and once a frame lets pump(ms) make the ones in line within its share of the frame. When a
   // plan is made changes nothing of what it is: the same record, the same plan ----
-  const line = []; const inLine = new Set();
-  G.worldHooks.push(() => { line.length = 0; inLine.clear(); });
+  const line = []; const inLine = new Set(); let job = null; // (job: the plan being made a little at a time — its building, its record's key, where it stands)
+  G.worldHooks.push(() => { line.length = 0; inLine.clear(); job = null; shells.clear(); });
   In.ready = b => { if (!b || !b.ip || !TYPES[b.ip.t]) return false; const p = cache.get(b.id); return !!(p && p.key === planKey(b, b.ip)); };
   In.want = function (b) {
     if (!b || !b.ip || !TYPES[b.ip.t]) return null;
@@ -579,45 +656,78 @@
     return null;
   };
   const clock = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
+  // (a step is one attempt of one plan — a few ms, at worst tens: the line goes on the next frame where it stopped)
   In.pump = function (ms) {
     const t0 = clock(); let made = 0;
-    while (line.length) {
-      const id = line.shift(); inLine.delete(id); const b = G.S && G.S.buildings.get(id); if (!b || In.ready(b)) continue;
-      In.plan(b); made++;
-      if (clock() - t0 >= (ms || 4)) break; // (one plan at least each frame: the line always moves)
+    for (;;) {
+      if (!job) {
+        let b = null; while (line.length && !b) { const id = line.shift(); inLine.delete(id); const c = G.S && G.S.buildings.get(id); if (c && c.ip && TYPES[c.ip.t] && !In.ready(c)) b = c; }
+        if (!b) break;
+        job = { id: b.id, key: planKey(b, b.ip), g: buildG(b, b.ip) };
+      }
+      const r = job.g.next();
+      if (r.done) { const b = G.S && G.S.buildings.get(job.id); if (b && b.ip && planKey(b, b.ip) === job.key) keep(b.id, job.key, r.value); made++; job = null; }
+      if (clock() - t0 >= (ms || 4)) break; // (one step at least each frame: the line always moves)
     }
     return made;
   };
   In.waiting = () => line.length;
-  function build(b, rec) {
-    const T = TYPES[rec.t];
-    let p = make(b, rec, rec.f);
-    if (!p.ok) {
-      // (the family the record chose does not go on this lot: the next one the catalogue offers there that does — always
-      // the same one; and if none does, the record's own laid out for fewer sleepers than the house holds: the ones left
-      // over sleep on the floor, and the plan says so)
-      const offered = In.familiesFor(rec).ok;
-      for (const f of offered) { if (f === rec.f) continue; const q = make(b, Object.assign({}, rec, { f }), f); if (q.ok) { q.fell = rec.f; q.errsOf = p.errs; p = q; break; } }
-      if (!p.ok) { const q = make(b, rec, rec.f, false, true); if (q.ok) { q.errsOf = p.errs; p = q; } }
+  function* buildG(b, rec) {
+    // (the family by its shell; when the inside does not go in on this lot, the same shell laid out for fewer sleepers than
+    // the house holds — the ones left over sleep on the floor, and the plan says so —, never another shell)
+    const fo = famOf(b, rec); const f = fo.f; const r1 = f === rec.f ? rec : Object.assign({}, rec, { f });
+    let p = yield* makeG(b, r1, f); const stands = fo.P && !fo.P.errs.length;
+    // (the shell stands and the inside did not go in: as many attempts again; then the other families the catalogue offers
+    // there that raise the same shell — the same outside, another inside —; then the fewer sleepers)
+    if (!p.ok && stands) { yield; const q = yield* makeG(b, r1, f, false, false, In.TRIES); if (q.ok) { q.errsOf = p.errs; p = q; } }
+    if (!p.ok && stands) for (const g of In.familiesFor(rec).ok) {
+      if (g === f || shellOfFam(g) !== shellOfFam(f)) continue;
+      yield; const q = yield* makeG(b, Object.assign({}, rec, { f: g }), g); if (q.ok) { q.errsOf = p.errs; p = q; break; }
     }
+    if (!p.ok && stands) { yield; const q = yield* makeG(b, r1, f, false, true); if (q.ok) { q.errsOf = p.errs; p = q; } }
+    p.shellFam = f;
+    if (p.fam !== rec.f) { p.fell = rec.f; if (!p.errsOf) p.errsOf = fo.why || []; }
     if (b.type === 'ruin') p = ruinOf(p, b);
     return p;
   }
+  function build(b, rec) { return run(buildG(b, rec)); }
   In.make = (b, rec) => build(b, rec); // (for the proofs: a plan from a record given by hand, outside the cache)
   In.makeFam = (b, rec, f) => make(b, Object.assign({}, rec, { f }), f); // (for the proofs: that family only, no fallback)
 
   // ------------------------------ from the canonical plan to the lot (metres from its corner) ------------------------------
+  // the shell of a plan as the lot has it: the shell (with its roof, annex and court), the storeys' floors, the holes in the
+  // walls the shell raised (the outside walls; in a block, the court's too), the way in — what the shell alone gives, and
+  // what the whole plan has, from this one function
+  function shellOut(P) {
+    const s = P.rec.s, L = P.L; const loc = (u, v) => toLoc(s, L, u, v).map(r2); const R = r => rectLoc(s, L, r).map(r2);
+    const sh = P.shell; if (!sh) return null; let shell;
+    if (sh.kind === 'round') { const c = loc(sh.cu, sh.cv); shell = { kind: 'round', cx: c[0], cz: c[1], r: r2(sh.rad), t: sh.t, mat: sh.mat, eave: r2(sh.eave), base: sh.base, floors: sh.floors, roof: P.roof ? Object.assign({}, P.roof) : null }; }
+    else { const r = R(sh.r); shell = { kind: 'rect', x: r2((r[0] + r[2]) / 2), z: r2((r[1] + r[3]) / 2), sx: r2(r[2] - r[0]), sz: r2(r[3] - r[1]), r, t: sh.t, mat: sh.mat, eave: r2(sh.eave), base: sh.base, floors: sh.floors, roof: P.roof ? Object.assign({}, P.roof, { along: P.roof.along ? (dirLoc(s, P.roof.along === 'u' ? 1 : 0, P.roof.along === 'v' ? 1 : 0)[0] ? 'x' : 'z') : null }, P.roof.room ? { room: Object.assign({}, P.roof.room, { r: R(P.roof.room.r) }) } : {}) : null }; }
+    shell.annex = P.annex.map(a => Object.assign({}, a, { r: R(a.r) }));
+    if (sh.court) { shell.court = R(sh.court); if (shell.roof) shell.roof = Object.assign({}, shell.roof, { court: R(sh.court) }); } // (a block: the court open to the sky in the middle)
+    const levels = P.levels.map(l => ({ lv: l.lv, y: r2(l.y), h: r2(l.h), kind: l.kind, slab: l.slab || 0 }));
+    // (the walls the shell raised — the outside ones of every storey, the annex's, the terrace's parapet and its room's; in a
+    // block, all of its outside — with the plan's own ids, and what opens in them)
+    const walls = [], holes = [];
+    for (const w of P.walls) if (w.shell) walls.push({ id: w.id, lv: w.lv, a: loc(w.a[0], w.a[1]), b: loc(w.b[0], w.b[1]), t: w.t, h: r2(w.h), kind: w.kind, mat: w.mat, outer: w.outer });
+    for (const h of P.holes) { const w = P.walls[h.wall]; if (!w || !w.shell) continue; holes.push({ wall: h.wall, at: r2(h.at), w: r2(h.w), h: r2(h.h), sill: r2(h.sill), kind: h.kind, door: h.door }); }
+    let entrance = null; if (P.entrance) { const e = P.entrance; const p = loc(e.u, e.v); entrance = { door: e.door, side: s, x: p[0], z: p[1], w: e.w, lv: e.lv, out: loc(e.u, L + 1.6) }; }
+    return { shell, levels, walls, holes, entrance, entryLv: P.entryLv || 0 };
+  }
+  // (a ruin's shell, as ruinOf makes a ruin of the plan: the ground storey, no roof, nothing open in walls broken low)
+  const ruinWall = (b, w) => Object.assign({}, w, { h: r2(0.15 + G.hash(Math.imul(b.id, 31) + w.id) * 0.3), kind: 'ruina' });
+  const ruinShell = (s, b) => Object.assign({}, s, { shell: Object.assign({}, s.shell, { roof: null, eave: 0.45, floors: 1 }), levels: s.levels.filter(l => l.lv === s.entryLv), walls: s.walls.filter(w => w.lv === s.entryLv).map(w => ruinWall(b, w)), holes: [] });
   function finish(P) {
     const s = P.rec.s, L = P.L; const loc = (u, v) => toLoc(s, L, u, v).map(r2); const R = r => rectLoc(s, L, r).map(r2);
     const plan = { id: P.b.id, hot: P.rec.cl === 'q' ? 1 : 0, ver: P.rec.r + '.' + P.rec.t, type: P.rec.t, use: P.rec.u, fam: P.famId, famName: P.fam ? P.fam.name : P.famId, style: P.rec.c, side: s, lot: { w: L, d: L }, errs: P.errs.slice(), notes: P.notes };
     if (!P.shell) { plan.ok = false; plan.errs.push('sem casca'); return plan; }
-    const sh = P.shell;
-    if (sh.kind === 'round') { const c = loc(sh.cu, sh.cv); plan.shell = { kind: 'round', cx: c[0], cz: c[1], r: r2(sh.rad), t: sh.t, mat: sh.mat, eave: r2(sh.eave), base: sh.base, floors: sh.floors, roof: P.roof }; }
-    else { const r = R(sh.r); plan.shell = { kind: 'rect', x: r2((r[0] + r[2]) / 2), z: r2((r[1] + r[3]) / 2), sx: r2(r[2] - r[0]), sz: r2(r[3] - r[1]), r, t: sh.t, mat: sh.mat, eave: r2(sh.eave), base: sh.base, floors: sh.floors, roof: P.roof ? Object.assign({}, P.roof, { along: P.roof.along ? (dirLoc(s, P.roof.along === 'u' ? 1 : 0, P.roof.along === 'v' ? 1 : 0)[0] ? 'x' : 'z') : null }, P.roof.room ? { room: Object.assign({}, P.roof.room, { r: R(P.roof.room.r) }) } : {}) : null }; }
-    plan.shell.annex = P.annex.map(a => Object.assign({}, a, { r: R(a.r) }));
-    if (sh.court) { plan.shell.court = R(sh.court); if (plan.shell.roof) plan.shell.roof = Object.assign({}, plan.shell.roof, { court: R(sh.court) }); } // (a block: the court open to the sky in the middle)
-    plan.levels = P.levels.map(l => ({ lv: l.lv, y: r2(l.y), h: r2(l.h), kind: l.kind, area: R(l.area), slab: l.slab || 0 }));
-    plan.walls = P.walls.map(w => ({ id: w.id, lv: w.lv, a: loc(w.a[0], w.a[1]), b: loc(w.b[0], w.b[1]), t: w.t, h: r2(w.h), outer: w.outer, kind: w.kind, mat: w.mat }));
+    P.bindDoors();
+    const so = shellOut(P);
+    // (the inside may not change the shell: what it was when the inside began, it still is — or the plan is refused)
+    if (P.shellPrint && JSON.stringify(so) !== P.shellPrint) plan.errs.push('o interior mexeu na casca');
+    plan.shell = so.shell;
+    plan.levels = so.levels.map((l, i) => Object.assign({}, l, { area: R(P.levels[i].area) }));
+    plan.walls = P.walls.map(w => ({ id: w.id, lv: w.lv, a: loc(w.a[0], w.a[1]), b: loc(w.b[0], w.b[1]), t: w.t, h: r2(w.h), outer: w.outer, kind: w.kind, mat: w.mat, shell: w.shell ? 1 : 0 }));
     plan.holes = P.holes.map(h => ({ wall: h.wall, at: r2(h.at), w: r2(h.w), h: r2(h.h), sill: r2(h.sill), kind: h.kind, door: h.door }));
     plan.doors = P.doors.map(d => ({ id: d.id, wall: d.wall, at: r2(d.at), w: r2(d.w), h: r2(d.h), sill: r2(d.sill || 0), hinge: d.hinge, into: d.into, outer: d.outer, rooms: d.rooms.slice(), kind: d.kind }));
     plan.rooms = P.rooms.map(m => {
@@ -634,8 +744,8 @@
       o.spots = P.spotsOf(it).map(sp => { const p = loc(sp.u, sp.v); const fd = dirLoc(s, sp.f[0], sp.f[1]); return { use: sp.use, on: sp.on, x: p[0], z: p[1], ry: r2(Math.atan2(fd[0], fd[1])), y: r2(it.y || 0) + (sp.on ? r2(D.h) : 0) }; });
       return o;
     });
-    if (P.entrance) { const e = P.entrance; const p = loc(e.u, e.v); plan.entrance = { door: e.door, side: s, x: p[0], z: p[1], w: e.w, lv: e.lv, out: loc(e.u, L + 1.6) }; }
-    plan.entryLv = P.entryLv || 0;
+    if (so.entrance) plan.entrance = so.entrance;
+    plan.entryLv = so.entryLv;
     plan.cap = { places: P.places(), jobs: plan.items.filter(i => i.job).length, store: plan.items.reduce((n, i) => n + (i.store && i.store.dep === 'povo' ? i.store.cap : 0), 0), seats: plan.items.filter(i => i.spots.some(q => q.use === 'sentar' || q.use === 'comer')).length };
     plan.head = P.headAt ? P.headAt : null; void plan.head; delete plan.head;
     plan.roofGeo = P.roofGeo || null; // (canonical: what the loft's headroom is measured under)
@@ -861,7 +971,7 @@
     if (!p || !p.shell) return p;
     const o = Object.assign({}, p); o.ruin = 1; o.ver = p.ver + '.ruina';
     o.levels = p.levels.filter(l => l.lv === (p.entryLv || 0)).map(l => Object.assign({}, l));
-    o.walls = p.walls.filter(w => w.lv === (p.entryLv || 0)).map(w => Object.assign({}, w, { h: r2(0.15 + G.hash(Math.imul(b.id, 31) + w.id) * 0.3), kind: 'ruina' }));
+    o.walls = p.walls.filter(w => w.lv === (p.entryLv || 0)).map(w => ruinWall(b, w));
     o.holes = []; o.doors = []; o.stairs = []; o.shell = Object.assign({}, p.shell, { roof: null, eave: 0.45, floors: 1 });
     o.items = p.items.filter(it => it.lv === (p.entryLv || 0) && G.hash(Math.imul(b.id, 17) + it.k) < 0.35).map(it => Object.assign({}, it, { id: it.id, kind: 'entulho', name: 'Entulho', solid: 0, low: 1, h: 0.4, spots: [], store: undefined, places: 0, job: 0, fire: 0 }));
     o.rooms = p.rooms.filter(m => m.lv === (p.entryLv || 0));
@@ -1095,5 +1205,5 @@
     return { ok: c.ok.map(id => ({ id, name: FAMS[id].name })), arch: of(c.arch, 'arquitetura'), gen: of(c.gen, 'gerador'), no: of(c.arch, 'arquitetura').concat(of(c.gen, 'gerador')) };
   };
   In.famName = id => (FAMS[id] ? FAMS[id].name : id);
-  In.uncache = () => cache.clear(); // (for the proofs)
+  In.uncache = () => { cache.clear(); shells.clear(); job = null; }; // (for the proofs)
 })(window.G);
