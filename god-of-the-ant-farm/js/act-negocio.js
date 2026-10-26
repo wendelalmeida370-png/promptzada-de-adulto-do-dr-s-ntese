@@ -59,6 +59,15 @@
     return { seller: sel, buyer: buy, dx: fx, dy: fy };
   }
   B.spots = spots;
+  // the line of a stall: the place at the counter and seven behind it (the ninth who comes finds it full and goes, as
+  // ever), from the market's door, by the line's rule (life.js) — and never on a merchant at his counter, his own or
+  // another's of the market (a body's room around him): along a narrow front, a line passes before the other counters
+  B.LINE = 8;
+  B.lineOf = function (z) {
+    const av = []; for (const o of all()) if (live(o) && o.b === z.b && o.id !== z.id) { const s = spots(o); if (s) av.push([s.seller[0], s.seller[1], 0.3]); }
+    const own = spots(z); if (own) av.push([own.seller[0], own.seller[1], 0.3]);
+    return { n: B.LINE, own: z.b, avoid: av };
+  };
   // someone sells there now: the merchant at the counter (or the god's body standing by it)
   B.manned = function (z) {
     if (!live(z) || !z.open) return false; const v = G.S.villagers.get(z.owner); if (!v) return false;
@@ -361,7 +370,7 @@
       if (!B.manned(z)) { v.act = AN.esperar.act; t.wt = (t.wt || 0) + dt; if (t.wt > 12) { z.day.ref[t.k] = (z.day.ref[t.k] || 0) + 1; return done(v, H); } return; }
       const key = 'biz:' + z.id;
       if (v._q !== key && G.Life && G.Life.queueFull(key)) { G.Vg.emote(v, 'sad', 1); return done(v, H); }
-      if (G.Life && !G.Life.inLine(v, t, key, sp.buyer[0], sp.buyer[1], sp.dx, sp.dy, dt, H)) { if (t.waited > 40) return done(v, H); return; }
+      if (G.Life && !G.Life.inLine(v, t, key, sp.buyer[0], sp.buyer[1], sp.dx, sp.dy, dt, H, () => B.lineOf(z))) { if (t.waited > 40) return done(v, H); return; }
       t.st = 2; v.actT = 0; t.talk = 0; t.said = -1; return;
     }
     if (t.st === 2) {

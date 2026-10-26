@@ -618,6 +618,28 @@
         if (where.length) add('fome', 2, `${v.name} #${v.id} (${set.name}) morre de fome com comida ao alcance: ${where.join(', ')}; ${t ? 'tarefa ' + t.type : 'sem tarefa'}, vida ${Math.round(v.hp)}`, v.id);
       }
     }
+    // ---- the lines (life.js): a line's places are where people can stand in a line — on the ground of its front place (its
+    // region of the map), dry, not before another building's door nor on a merchant at his counter, a step from the one
+    // before —, no more of them than it asks; read from the world's fields (the ground, the doors), on a line whose ground
+    // has not changed since its places were drawn (a line draws them again at its next step, life.js)
+    if (G.Life && G.Life.queues && G.Vg && G.Vg.door) {
+      const T = G.T; const wet = i => (s.type[i] <= T.SEA || s.type[i] === T.RIVER) && !s.road[i] && !(s.dry && s.dry[i]);
+      for (const q of G.Life.queues()) {
+        if (!q.fresh || !q.slots || !q.slots.length) continue;
+        const nm = `a fila ${q.key}`; const [x0, y0] = q.slots[0];
+        if (q.slots.length > q.places) add('fila', 2, `${nm}: ${q.slots.length} lugares, mais que os ${q.places} dela`);
+        const near = []; for (const b of s.buildings.values()) if (b.id !== q.own && b.built && b.blocks && b.type !== 'ruin' && Math.abs(b.x + b.w / 2 - x0) < q.places + 4 && Math.abs(b.y + b.h / 2 - y0) < q.places + 4) { const d = G.Vg.door(b); if (d) near.push([b, d]); }
+        for (let k = 1; k < q.slots.length; k++) {
+          const [x, y] = q.slots[k]; const [px, py] = q.slots[k - 1]; const where = `${nm}, lugar ${k + 1} (${Math.round(x * 10) / 10}, ${Math.round(y * 10) / 10})`;
+          if (!G.W.walkableXY(x, y)) { add('fila', 3, `${where}: onde não se pisa`); break; }
+          if (wet(G.W.idx(x, y))) { add('fila', 3, `${where}: na água`); break; }
+          if (!G.W.canWalk(x0, y0, x, y, false)) { add('fila', 3, `${where}: fora do chão do balcão (outra região)`); break; }
+          const dr = near.find(([, d]) => Math.hypot(d[0] - x, d[1] - y) < 0.8 - 0.08); if (dr) { add('fila', 3, `${where}: diante da porta de ${dr[0].type}#${dr[0].id}`); break; }
+          if (q.avoid.some(p => Math.hypot(p[0] - x, p[1] - y) < (p[2] || 0.5) - 0.08)) { add('fila', 3, `${where}: em cima de um vendedor`); break; }
+          if (Math.hypot(x - px, y - py) > 0.6 + 0.15) { add('fila', 3, `${where}: longe do lugar de antes (${Math.round(Math.hypot(x - px, y - py) * 100) / 100})`); break; }
+        }
+      }
+    }
   });
   // (the ledger's lines out of hands since the last look, for the rule above; a new world, or a save loaded, starts over)
   let marked = null, markedS = null; const movedOut = new Map();

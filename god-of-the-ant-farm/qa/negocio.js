@@ -11,12 +11,15 @@
 // casa), cada elo no livro-razão; n15 um povo sem moeda: fiado no atacado, a venda em troca, a troca devolvida ao armazém;
 // n16 os móveis dos interiores como o lugar da casa, da prateleira e da banca (a porta desligada no jogo; aqui um plano feito
 // à mão); n17 a banca sem moeda fecha devendo: paga primeiro (o estoque pelo custo, depois a troca guardada na casa), o fiado
-// nunca vira presente; e o verificador limpo, sem erro de módulo, durante e depois.
+// nunca vira presente; n18 a fila cheia (oito na fila, nos oito lugares dela, e o nono vai embora triste, sem nada mudar de
+// mãos). Cada caso de balcão começa pelas portas do mundo: o mercador de volta do que fazia, a fila de antes servida (a
+// partida vai escrita no caso). E o verificador limpo, sem erro de módulo, durante e depois.
 const M = require('./nodemundo.js');
 const townName = process.argv[2] || 'Argos';
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/atividades-inv.js'] });
 const fails = []; const mid = []; // (what the checker saw in the middle of a case: the case fails, even if the end looks clean)
-const ok = (name, c, info) => { const m = mid.splice(0); const pass = c && !m.length; console.log(`${pass ? 'PASSOU' : 'FALHOU'} | negocio ${name} | ${info}${m.length ? ' — o verificador, no meio do caso: ' + m.slice(0, 2).join(' · ') : ''}`); if (!pass) fails.push(name); };
+let start = ''; // (how the case's start was prepared — the merchant back, the line served —: told with the case)
+const ok = (name, c, info) => { info += start; start = ''; const m = mid.splice(0); const pass = c && !m.length; console.log(`${pass ? 'PASSOU' : 'FALHOU'} | negocio ${name} | ${info}${m.length ? ' — o verificador, no meio do caso: ' + m.slice(0, 2).join(' · ') : ''}`); if (!pass) fails.push(name); };
 const others = new Map();
 const bad = () => QA.check().filter(q => q.sev <= 2).filter(q => { if (q.sys === 'act' || q.sys === 'nan') return true; others.set(q.msg, (others.get(q.msg) || 0) + 1); return false; });
 const watch = () => { const bb = bad(); if (bb.length) { console.log('   verificador no meio:', bb.slice(0, 2).map(q => q.msg).join(' · ')); for (const q of bb) if (!mid.includes(q.msg)) mid.push(q.msg); return true; } return false; };
@@ -103,8 +106,10 @@ const z1 = B.of(merchants()[0]); const m1 = S.villagers.get(z1.owner);
   G.Vg.setTask(m1, { type: 'atacado', biz: z1.id, k, n: 3, pri: 1, st: 0, id: mk.id });
   live(60, () => !m1.task || m1.task.type !== 'atacado');
   const free = book('atacado', e => e[0] > L1 && e[9] === m1.id).length + book('fiado', e => e[0] > L1 && e[9] === m1.id).length;
-  ok('n2 o atacado é pago', got && paidOk && arrived && !free && Math.abs(D.get('f:' + fac.id, k) - s1) < 1e-6 && !bad().length,
-    goods ? `${m1.name} comprou ${goods[6]} de ${E.name(k)} no armazém e pagou ${coin ? coin[6] : '?'} ${B.money(fac.id).plural} da casa ao tesouro, no mesmo instante (livro ${goods[0]} e ${coin ? coin[0] : '?'}); ${arrived ? 'levou à banca' : 'NÃO chegou à banca'}; com a bolsa vazia, o armazém não deu nada (${free ? free + ' lançamento(s)!' : 'nenhum lançamento'}, ${E.name(k)} no armazém ${s1} → ${D.get('f:' + fac.id, k)})` : `nenhum atacado (${E.name(k)}: armazém ${s0}, casa ${c0}, tesouro ${t0})`);
+  // (nothing of the store to his hands, by the ledger: the store's own count moves with the town's other errands meanwhile)
+  const handed = D.ledger().filter(e => e[0] > L1 && e[3] === 'f:' + fac.id && e[4] === 'v:' + m1.id && e[5] === k).length;
+  ok('n2 o atacado é pago', got && paidOk && arrived && !free && !handed && !bad().length,
+    goods ? `${m1.name} comprou ${goods[6]} de ${E.name(k)} no armazém e pagou ${coin ? coin[6] : '?'} ${B.money(fac.id).plural} da casa ao tesouro, no mesmo instante (livro ${goods[0]} e ${coin ? coin[0] : '?'}); ${arrived ? 'levou à banca' : 'NÃO chegou à banca'}; com a bolsa vazia, o armazém não deu nada (${free || handed ? (free + handed) + ' lançamento(s)!' : 'nenhum lançamento do armazém às mãos dele'}; ${E.name(k)} no armazém ${s1} → ${D.get('f:' + fac.id, k)}, com os outros afazeres da cidade)` : `nenhum atacado (${E.name(k)}: armazém ${s0}, casa ${c0}, tesouro ${t0})`);
 }
 // ---------------- n3: the stall shows what it holds
 {
@@ -149,19 +154,48 @@ function buyerFor(k, coins) {
   if (coins !== undefined) { const have = D.get('h:' + h.id, 'moedas'); if (have < coins) D.make('h:' + h.id, 'moedas', coins - have, { code: 'teste' }); else if (have > coins) D.use('h:' + h.id, 'moedas', have - coins, { code: 'teste' }); }
   return v;
 }
+// the start of a case at a stall, by the world's doors: the merchant back from an errand of his own or of the world (the
+// wholesale, a load, a trade, a fright, a meal: the test waits for it, never takes him from it — «nobody at the counter» is
+// the world at work); then the errand of the counter; then the line of the world's buyers before the case served, the stall
+// attended (the case is about the counter, not the line: n18 is the line full). What it took is told in the case
+const OWN = { atacado: 1, carga: 1, devolver: 1, entrega: 1, trade: 1 };
+const busyWith = o => !!(o && o.task && o.task.type !== 'banca' && (OWN[o.task.type] || (o.task.pri || 0) >= 1.5));
+// (while the case waits for its start, the clock stays at the hour of the case — the test's hand on it, as in every case
+// here: a wait that ran into the evening would shut the stall it waits for)
+const held = (t0, f) => () => { if (S.time > t0) S.time = t0; return f(); };
+function waitFree(mer) {
+  if (!busyWith(mer)) return ''; const was = mer.task.type, c0 = S.clock;
+  live(240, held(S.time, () => !busyWith(mer)));
+  return busyWith(mer) ? `${mer.name} ainda em ${mer.task.type}` : `${mer.name} voltou de ${was} em ${Math.round(S.clock - c0)} s`;
+}
+function quiet(zz) {
+  const key = 'biz:' + zz.id; const n = G.Life.queueLen(key); if (!n) return ''; const c0 = S.clock;
+  live(90, held(S.time, () => !G.Life.queueLen(key)));
+  return G.Life.queueLen(key) ? `a fila ainda com ${G.Life.queueLen(key)}` : `a fila de ${n} servida em ${Math.round(S.clock - c0)} s`;
+}
+const told = (...l) => { const s = l.filter(Boolean).join(', '); return s ? ` (a partida: ${s})` : ''; };
+// a stall attended: its merchant free, at the counter, the line served (for the cases past n8, any stall and merchant)
+// (a fresh day at the counter — a stall attended at this instant may be at the end of its own day there —, and something
+// on it: a stall sold out closes at once, and its merchant goes for more: T-c. Again after the line of before is served:
+// it may have sold the stall out)
+function prep(zz, mer, pri) {
+  const t0 = S.time; const w = waitFree(mer);
+  const sit = () => {
+    if (!Object.keys(zz.inv).some(k => zz.inv[k] >= 1)) D.make('z:' + zz.id, 'tecido', 3, { code: 'teste', part: true });
+    G.Vg.setTask(mer, { type: 'banca', biz: zz.id, pri: pri || 1.2, st: 0, dur: 200, id: zz.b });
+    return fine(60, held(t0, () => B.manned(zz)));
+  };
+  let r = sit(); const q = r ? quiet(zz) : '';
+  if (q || !B.manned(zz)) r = sit();
+  if (!r) console.log(`   (o mercador ${mer.name} não chegou à banca: ${mer.task ? mer.task.type + '.' + mer.task.st : 'sem tarefa'}, a ${r2(G.dist(mer.x, mer.y, B.spots(zz).seller[0], B.spots(zz).seller[1]))} do lugar, mãos ${JSON.stringify(mer.carry)}, banca ${zz.st} aberta ${zz.open}, hora ${S.time.toFixed(3)})`);
+  S.time = t0; return told(w, q);
+}
 // the merchant at the counter
 // (and the clock of the test back to the morning: the purchase that follows must not cross into the night, when buyers sleep)
 // (the test's hand: a fresh day at the counter, that a caravan or an errand does not take him from while the case runs —
 // a stall attended at this instant may be at the end of its own day there —, and something on it: a stall sold out
 // closes at once, and its merchant goes for more: T-c)
-const man = () => {
-  const t0 = S.time;
-  if (!Object.keys(z1.inv).some(k => z1.inv[k] >= 1)) D.make('z:' + z1.id, 'tecido', 3, { code: 'teste', part: true });
-  G.Vg.setTask(m1, { type: 'banca', biz: z1.id, pri: 2, st: 0, dur: 200, id: mk.id });
-  const r = fine(60, () => B.manned(z1));
-  if (!r) console.log(`   (o mercador ${m1.name} não chegou à banca: ${m1.task ? m1.task.type + '.' + m1.task.st : 'sem tarefa'}, a ${r2(G.dist(m1.x, m1.y, B.spots(z1).seller[0], B.spots(z1).seller[1]))} do lugar, mãos ${JSON.stringify(m1.carry)}, banca ${z1.st} aberta ${z1.open}, hora ${S.time.toFixed(3)})`);
-  S.time = t0; return r;
-};
+const man = () => { start = prep(z1, m1, 2); return B.manned(z1); };
 const goodOf = () => Object.keys(z1.inv).filter(k => z1.inv[k] >= 1 && k !== 'food').sort()[0] || Object.keys(z1.inv).find(k => z1.inv[k] >= 1);
 // ---------------- n4: a buyer comes, asks, buys, pays the seller's house, carries it home
 {
@@ -241,9 +275,7 @@ function priceAt(k, v, f) { const h = E.homeOf(v); const w = B.wtp(v, h, z1, k);
 let z = B.get(z1.id); let m = S.villagers.get(z.owner); const mkb = () => S.buildings.get(z.b);
 // ---------------- n9: the end of the day: the stall shuts, its book closes, its margins move
 {
-  S.time = 0.4;
-  if (!B.manned(z)) G.Vg.setTask(m, { type: 'banca', biz: z.id, pri: 1.2, st: 0, dur: 200, id: z.b });
-  fine(60, () => B.manned(z));
+  S.time = 0.4; start = prep(z, m);
   // (a good that nobody takes today: dear, at the top margin — the test's hand puts two from the store on the stall if it
   // has none; tomorrow it is cheaper)
   let kq = Object.keys(z.inv).filter(k => z.inv[k] >= 1 && !(z.day.sold[k] > 0)).sort()[0];
@@ -278,27 +310,31 @@ let z = B.get(z1.id); let m = S.villagers.get(z.owner); const mkb = () => S.buil
   const r3 = z.open ? { ok: true, msg: 'já aberta' } : oo ? A.perform(m, oo) : { ok: false, why: 'sem oferta de abrir' };
   // (a buyer at the god's stall: the same deal, the coin to the body's house)
   const k = ow ? ow.k : goodOf(); z.margin[k] = -0.1;
-  const v = pickBuyer(set, sp, [m.id]);
-  D.make('h:' + E.homeOf(v).id, 'moedas', 20, { code: 'teste' });
   // (the coin of the sale, by its own line in the ledger: the house's total moves with other things meanwhile — with the
-  // houses of act-casa.js the world took another course, and the tax collector, who still takes by hand, outside the
-  // ledger, came by in this very window)
+  // houses of act-casa.js the world took another course, and the tax collector came by in this very window)
   const c0 = D.get(payer, 'moedas'), n0 = z.day.n; const L12 = S.ledgerN || 0;
-  const tb = G.Vg.setTask(v, { type: 'compra', biz: z.id, k, pri: 1.3, st: 0 });
-  const sold = fine(120, () => { m.x = sp.seller[0]; m.y = sp.seller[1]; return z.day.n > n0 || !v.task || v.task.type !== 'compra' || watch(); });
-  const why12 = `a compra parou em st ${tb.st} fala ${tb.talk}, agora ${v.task ? v.task.type : 'sem tarefa'}; ${E.name(k)} na banca ${r2(z.inv[k] || 0)} a ${B.price(z, k)}, daria ${B.wtp(v, E.homeOf(v), z, k)}; banca ${B.manned(z) ? 'atendida' : 'sem ninguém'}`;
+  // (a buyer the world calls away on the way — an assembly, a fire —: another one, as sendBuyer does)
+  let v = null, tb = null, sold = false; const tried = [m.id];
+  for (let i = 0; i < 3 && !(z.day.n > n0); i++) {
+    v = pickBuyer(set, sp, tried); if (!v) break; tried.push(v.id);
+    D.make('h:' + E.homeOf(v).id, 'moedas', 20, { code: 'teste' });
+    tb = G.Vg.setTask(v, { type: 'compra', biz: z.id, k, pri: 1.3, st: 0 });
+    sold = fine(120, () => { m.x = sp.seller[0]; m.y = sp.seller[1]; return z.day.n > n0 || !v.task || v.task.type !== 'compra' || watch(); });
+    if (z.day.n > n0 || (v.carry && v.carry.bought)) break;
+    console.log(`   (n12: ${v.name} foi chamado para ${v.task ? v.task.type : 'nada'} no caminho da banca: outro comprador)`);
+  }
+  const why12 = !v ? 'nenhum comprador' : `a compra parou em st ${tb.st} fala ${tb.talk}, agora ${v.task ? v.task.type : 'sem tarefa'}; ${E.name(k)} na banca ${r2(z.inv[k] || 0)} a ${B.price(z, k)}, daria ${B.wtp(v, E.homeOf(v), z, k)}; banca ${B.manned(z) ? 'atendida' : 'sem ninguém'}`;
   const c1 = D.get(payer, 'moedas');
   const paid = D.ledger().filter(e => e[0] > L12 && e[4] === payer && e[5] === 'moedas' && e[8] === 'venda').reduce((s, e) => s + e[6], 0);
   G.Possess.release('deus'); M.viver(0.2);
   ok('n12 o corpo é o mercador', tk.ok && r1.ok && r2_.ok && r3.ok && sold && z.day.n > n0 && paid > 0 && !bad().length,
-    `${m.name} pelo deus: ${r1.ok ? r1.msg : r1.why} · ${r2_.ok ? r2_.msg : r2_.why} · ${r3.ok ? r3.msg : r3.why}; ${v.name} veio e ${z.day.n > n0 ? `comprou: ${r2(paid)} ${B.money(fac.id).plural} da venda na casa do corpo, pelo livro (a casa: ${r2(c0)} → ${r2(c1)})` : 'NÃO comprou (' + why12 + ')'}`);
+    `${m.name} pelo deus: ${r1.ok ? r1.msg : r1.why} · ${r2_.ok ? r2_.msg : r2_.why} · ${r3.ok ? r3.msg : r3.why}; ${v ? v.name : 'ninguém'} veio e ${z.day.n > n0 ? `comprou: ${r2(paid)} ${B.money(fac.id).plural} da venda na casa do corpo, pelo livro (a casa: ${r2(c0)} → ${r2(c1)})` : 'NÃO comprou (' + why12 + ')'}`);
 }
 // ---------------- n13: the god's body buys at someone else's stall, and haggles
 {
   S.time = 0.15; live(1);
   z = B.get(z1.id); m = S.villagers.get(z.owner);
-  if (!B.manned(z)) G.Vg.setTask(m, { type: 'banca', biz: z.id, pri: 1.2, st: 0, dur: 200, id: z.b });
-  fine(60, () => B.manned(z)); S.time = 0.15;
+  start = prep(z, m); S.time = 0.15;
   const sp = B.spots(z);
   const v = pickBuyer(set, sp, [m.id], true);
   const h = E.homeOf(v); D.make('h:' + h.id, 'moedas', 30, { code: 'teste' });
@@ -315,6 +351,37 @@ let z = B.get(z1.id); let m = S.villagers.get(z.owner); const mkb = () => S.buil
   const home = live(120, () => !v.carry || watch());
   ok('n13 o corpo compra e pechincha', tk.ok && r1.ok && (r1.counter ? r2_.ok : true) && holding && home && !bad().length,
     `${v.name} pelo deus ofereceu menos: ${r1.ok ? r1.msg : r1.why}${r1.counter ? ` · aceitou a contraproposta: ${r2_.ok ? r2_.msg : r2_.why}` : ''}; a compra ${holding ? 'nas mãos, marcada para a casa' : 'NÃO estava nas mãos'}; devolvido, ${home ? 'levou para casa' : 'NÃO levou para casa'}`);
+}
+// ---------------- n18: the line full — eight at the stall, the one at the counter and seven behind it, on the line's own
+// places (life.js: on the counter's ground, dry, before no other door); the ninth who comes finds it full and goes, sad,
+// without a word, and nothing moves for him
+{
+  S.time = 0.15; z = B.get(z1.id); m = S.villagers.get(z.owner);
+  start = prep(z, m); S.time = 0.15;
+  const key = 'biz:' + z.id; const sp = B.spots(z);
+  const k = Object.keys(z.inv).filter(q => z.inv[q] >= 1).sort((a, b) => z.inv[b] - z.inv[a] || (a < b ? -1 : 1))[0] || goodOf();
+  if ((z.inv[k] || 0) < 12) { roomOn(z, k, 12); D.make('z:' + z.id, k, 12, { code: 'teste', part: true }); }
+  // (eight of the town sent to the stall at once — an errand each, the world's door —, brought to the market's door as the
+  // other cases bring their buyer, with the coins for it)
+  const nx = sp.buyer[0] + (sp.dx || 0) * 1.5, ny = sp.buyer[1] + (sp.dy || 0) * 1.5; const atDoor = G.W.walkableXY(nx, ny) && G.W.canWalk(nx, ny, sp.buyer[0], sp.buyer[1], false);
+  const send = v => { G.Vg.endTask(v); if (atDoor) { v.x = nx; v.y = ny; } else { v.x = sp.buyer[0]; v.y = sp.buyer[1]; } v.path = null; v.energy = Math.max(v.energy, 70); v.hunger = Math.min(v.hunger, 30); D.make('h:' + E.homeOf(v).id, 'moedas', 20, { code: 'teste' }); return G.Vg.setTask(v, { type: 'compra', biz: z.id, k, pri: 1.3, st: 0 }); };
+  const eight = []; for (let i = 0; i < B.LINE; i++) { const v = pickBuyer(set, sp, [m.id].concat(eight.map(o => o.id))); if (!v) break; eight.push(v); }
+  for (const v of eight) send(v);
+  let most = 0; fine(20, () => { most = Math.max(most, G.Life.queueLen(key)); return most >= B.LINE || watch(); });
+  // (the ninth, while the first of the eight is at the counter)
+  const ninth = pickBuyer(set, sp, [m.id].concat(eight.map(o => o.id)));
+  let sad = false, inLineAtAsk = G.Life.queueLen(key); const L0 = S.ledgerN, t0 = S.clock;
+  const t9 = ninth ? send(ninth) : null;
+  if (ninth) fine(10, () => { if (ninth.emo && ninth.emo.k === 'sad') sad = true; return !ninth.task || ninth.task !== t9 || watch(); });
+  const q = G.Life.queues().find(o => o.key === key);
+  const places = q ? q.slots.length : 0;
+  const bought9 = ninth && book('venda', e => e[0] > L0 && e[4] === 'v:' + ninth.id).length;
+  const talk9 = ninth ? saidBy(ninth.id, t0).map(e => e[1]) : [];
+  const off = q ? QA.check().filter(c => c.sys === 'fila' && c.msg.startsWith('a fila ' + key)).map(c => c.msg) : [];
+  ok('n18 a fila cheia', most >= B.LINE && places === B.LINE && !!ninth && sad && !bought9 && !talk9.length && (!ninth.task || ninth.task !== t9) && !off.length && !bad().length,
+    `${eight.length} da cidade mandados à banca de ${m.name}: até ${most} na fila ao mesmo tempo, nos ${places} lugares dela${q && q.why ? ` (${q.why})` : ''}; ${ninth ? `o nono, ${ninth.name}, chegou com ${inLineAtAsk} na fila e ${sad ? 'foi embora triste' : 'NÃO se entristeceu'}${talk9.length ? `, MAS falou: ${talk9.join(', ')}` : ', sem dizer nada'}; ${bought9 ? 'COMPROU' : 'nada mudou de mãos'}` : 'NENHUM nono comprador'}${off.length ? `; a regra da fila: ${off[0]}` : ''}`);
+  // (the eight are served or go: the next cases start with the line as the world leaves it)
+  for (const v of eight) if (v.task && v.task.type === 'compra' && v.task.biz === z.id && v.task.st < 2) G.Vg.endTask(v);
 }
 // ---------------- n16: the interiors' furniture as the room of a house, a shelf and a stall (the port is off in the game:
 // here a plan made by hand) — a piece holds its cap in all, each good first in the piece made for it; the people's furniture
@@ -400,26 +467,35 @@ let z = B.get(z1.id); let m = S.villagers.get(z.owner); const mkb = () => S.buil
     dock.crates = [];
     D.use('f:' + f.id, K, D.get('f:' + f.id, K), { code: 'teste' }); // (the store had none: all that comes is the ship's)
     const L0 = S.ledgerN;
+    // (the spices' lines kept as they are written: a long case outlives the ledger's window of the last lines)
+    const linesK = []; const onK = e => { if (e[5] === K) linesK.push(e); }; D.onMove.push(onK);
     const sh = S.ships.find(s => s.kind === 'mercante') || S.ships[0]; sh.goods = { k: K, n: 8 }; G.Harbor.land(dock, sh.goods, sh);
     const opd = G.Porto.opAt(dock);
-    live(300, () => !A.live(opd) || watch());
-    // the merchant, in the morning: a stall, the spices on it (the test's hand on the clock, as in qa/porto.js)
-    S.time = 0.15;
-    let zz = B.of(mer); if (!zz) zz = B.open(mer, mkt);
-    D.make(E.homeOf(mer) ? 'h:' + mer.home : 'p:' + mer.id, 'moedas', 30, { code: 'teste' }); // (where the family keeps its coins: its house, or the purse)
-    zz.want[K] = 4; roomOn(zz, K, 4);
-    G.Vg.setTask(mer, { type: 'atacado', biz: zz.id, k: K, n: 4, pri: 1.2, st: 0, id: mkt.id });
-    live(150, () => (zz.inv[K] || 0) >= 1 || watch());
-    S.time = 0.2;
-    G.Vg.setTask(mer, { type: 'banca', biz: zz.id, pri: 1.2, st: 0, dur: 200, id: mkt.id });
-    fine(60, () => B.manned(zz));
-    // a rich house that fancies spices
-    zz.margin[K] = -0.1;
-    const buyer = sendBuyer(port, zz, K, [mer.id], v => D.make('h:' + E.homeOf(v).id, 'moedas', 40, { code: 'teste' }), v => D.get('h:' + E.homeOf(v).id, K) >= 1, 200);
-    if (!buyer) info = `${port.name}: ninguém da cidade alcança a banca para comprar`; else {
+    // (the unloading in the day's hours — the test's hand on the clock, as in qa/porto.js: the porters work by day)
+    live(300, held(S.time, () => !A.live(opd) || watch()));
+    // the merchant, in the morning: a stall, the spices on it. The world may take him from the stall in the middle — the
+    // planner names another merchant, a fright sends him to a cave: the stall closes, its goods go home —: then the
+    // merchant the town has now, once more, with the spices still in the store
+    let zz = null, buyer = null, again = '';
+    for (let att = 0; att < 2 && !buyer; att++) {
+      if (att) { const m2 = wantMerchant(port, mkt); again = ` (${zz.st === 'on' ? 'a primeira vez ninguém comprou' : `a banca #${zz.id} fechou no meio: ${zz.why || zz.st}`}; outra vez com ${m2 ? m2.name : 'ninguém'})`; if (!m2) break; mer = m2; }
+      S.time = 0.15;
+      zz = B.of(mer); if (!zz) zz = B.open(mer, mkt);
+      D.make(E.homeOf(mer) ? 'h:' + mer.home : 'p:' + mer.id, 'moedas', 30, { code: 'teste' }); // (where the family keeps its coins: its house, or the purse)
+      zz.want[K] = 4; roomOn(zz, K, 4);
+      G.Vg.setTask(mer, { type: 'atacado', biz: zz.id, k: K, n: 4, pri: 1.2, st: 0, id: mkt.id });
+      live(150, held(S.time, () => (zz.inv[K] || 0) >= 1 || watch()));
+      S.time = 0.2; start = prep(zz, mer);
+      // a rich house that fancies spices
+      zz.margin[K] = -0.1;
+      if (zz.st === 'on') buyer = sendBuyer(port, zz, K, [mer.id], v => D.make('h:' + E.homeOf(v).id, 'moedas', 40, { code: 'teste' }), v => D.get('h:' + E.homeOf(v).id, K) >= 1, 200);
+      if (buyer && !(D.get('h:' + E.homeOf(buyer).id, K) >= 1) && zz.st !== 'on') buyer = null;
+    }
+    start += again;
+    if (!buyer) info = `${port.name}: ninguém da cidade alcança a banca para comprar (a banca #${zz.id} ${zz.st}${zz.why ? ' — ' + zz.why : ''}, ${B.get(zz.id) ? 'no registro' : 'fora do registro'}, ${B.manned(zz) ? 'atendida' : 'sem ninguém'}; ${mer.name}: ${mer.role}, ofício no #${mer.job} (o mercado #${mkt.id}), a banca dele ${B.of(mer) ? '#' + B.of(mer).id : 'nenhuma'}, ${mer.task ? mer.task.type + '.' + mer.task.st : 'sem tarefa'})`; else {
     const hb = E.homeOf(buyer);
     // the links, in the ledger, in order
-    const Lk = D.ledger().filter(e => e[0] > L0 && e[5] === K);
+    const Lk = linesK.filter(e => e[0] > L0);
     const step = (code, from, to) => Lk.find(e => e[8] === code && (!from || e[3] === from || (from.endsWith(':') && e[3].startsWith(from))) && (!to || e[4] === to || (to.endsWith(':') && e[4].startsWith(to))));
     const opTo = opd.to;
     const links = [['desembarque', 's:' + sh.id, 'q:' + dock.id], ['pegar', 'q:' + dock.id, 'v:'], ['depositar', 'v:', opTo], ['atacado', 'f:' + zz.fac, 'v:' + mer.id], ['entrega', 'v:' + mer.id, 'z:' + zz.id], ['venda', 'z:' + zz.id, 'v:' + buyer.id], ['compra-em-casa', 'v:' + buyer.id, 'h:' + hb.id]].map(([c, a, b]) => [c, step(c, a, b)]);
@@ -427,7 +503,8 @@ let z = B.get(z1.id); let m = S.villagers.get(z.owner); const mkb = () => S.buil
     const order = links.every((l, i) => l[1] && (i === 0 || l[1][0] > links[i - 1][1][0]));
     fine14 = links.every(l => l[1]) && order && D.get('h:' + hb.id, K) >= 1 && !bad().length;
     info = `${port.name}: ${links.map(([c, e]) => `${c} ${e ? e[3] + '→' + e[4] : 'FALTA'}`).join(' · ')}; ${order ? 'na ordem' : 'FORA DE ORDEM'}; ${E.name(K)} na casa de ${buyer.name}: ${D.get('h:' + hb.id, K)}`;
-    } }
+    }
+    D.onMove.splice(D.onMove.indexOf(onK), 1); }
     wantNone();
   }
   ok('n14 a cadeia do navio à casa', fine14, info);
@@ -450,9 +527,7 @@ let z = B.get(z1.id); let m = S.villagers.get(z.owner); const mkb = () => S.buil
     G.Vg.setTask(mer, { type: 'atacado', biz: zz.id, k: K, n: 3, pri: 1.2, st: 0, id: mkt.id });
     live(150, () => (zz.inv[K] || 0) >= 1 || watch());
     const onAccount = (zz.owe[K] || 0) > 0 && !!book('fiado', e => e[0] > L0 && e[5] === K && e[9] === mer.id).length;
-    S.time = 0.2; // (the market's hours: the test's hand on the clock)
-    G.Vg.setTask(mer, { type: 'banca', biz: zz.id, pri: 1.2, st: 0, dur: 200, id: mkt.id });
-    fine(60, () => B.manned(zz));
+    S.time = 0.2; start = prep(zz, mer); // (the market's hours: the test's hand on the clock)
     zz.margin[K] = -0.1;
     const t0 = S.clock; const n0 = zz.day.n;
     const buyer = sendBuyer(tw, zz, K, [mer.id], v => D.make('h:' + E.homeOf(v).id, 'food', 12, { code: 'teste' }), () => zz.day.n > n0, 120);

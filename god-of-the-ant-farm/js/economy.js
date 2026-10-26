@@ -872,7 +872,7 @@
         else { fx = t.spot[0]; fy = t.spot[1]; dx = 0.72; dy = 0.63; }
         const key = t.qkey = 'shop:' + b.id + ':' + (b.type === 'feira' ? t.si : 0);
         if (v._q !== key && G.Life.queueFull(key)) { G.Vg.emote(v, 'sad', 1); return H.end(v); } // too long: another time
-        if (!G.Life.inLine(v, t, key, fx, fy, dx, dy, dt, H)) { if (t.waited > 30) { G.Life.leaveQueue(v); return H.end(v); } return; }
+        if (!G.Life.inLine(v, t, key, fx, fy, dx, dy, dt, H, { own: b.id })) { if (t.waited > 30) { G.Life.leaveQueue(v); return H.end(v); } return; }
         t.served = true; v.actT = 0;
       }
       v.act = 'buy'; if (b.blocks) faceB(v, b); else if (b.type === 'feira') G.faceTo(v, -1, 1);
