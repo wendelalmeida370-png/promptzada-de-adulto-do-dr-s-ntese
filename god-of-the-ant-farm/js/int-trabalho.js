@@ -277,12 +277,14 @@
       for (const id of [il, ir]) { const r = P.rooms[id].r; P.door(wb, P.atOf(wb, [P.rr(r[0] + 0.55, r[2] - 0.55), C[1] - ti / 2]), 0.85, Math.min(2.05, L1.h - 0.15), ib, id, 0, 'porta'); }
     } else rooms.up = [P.room(1, 'sobrado', I1)];
     const sw = 0.75, run = P.rr(1.5, 1.8); const cands = [], lc = [];
-    for (const id of [rooms.main].concat(P.T.cells ? [] : rooms.cells, rooms.front !== undefined && rooms.front !== null ? [rooms.front] : [])) {
+    const downs = [rooms.main].concat(P.T.cells ? [] : rooms.cells, rooms.front !== undefined && rooms.front !== null ? [rooms.front] : []);
+    for (const id of downs) {
       const M = P.rooms[id].r; if (P.rooms[id].open) continue;
       for (const u0 of P.shuffle([M[0] + 0.03, M[2] - 0.03 - sw])) for (const v0 of [M[1] + 0.6, M[1] + 1.2, M[3] - run - 0.7]) { const r = [u0, v0, u0 + sw, v0 + run]; cands.push({ r, du: 0, dv: -1, hole: r }); }
       for (const u0 of [M[0] + 0.03, M[2] - 0.63]) for (const v0 of [M[1] + 0.6, M[1] + 1.4]) { const r = [u0, v0, u0 + 0.6, v0 + 0.65]; lc.push({ r, du: 0, dv: -1, hole: r }); }
     }
-    if (!K.ladderAt(P, 0, 1, cands, null, 'escada') && !K.ladderAt(P, 0, 1, lc)) P.errs.push('não cabe a escada do sobrado');
+    // (the last try, in a shop cut in two shallow rooms: a ladder along a wall in a corner of one of them)
+    if (!K.ladderAt(P, 0, 1, cands, null, 'escada') && !K.ladderAt(P, 0, 1, lc) && !K.ladderAt(P, 0, 1, K.sideLadders(P, downs))) P.errs.push('não cabe a escada do sobrado');
   }
   // windows high in the walls of a store (light, not thieves), lower in a shop or a workshop
   const WORLD = { S: { frente: 4, fundo: 1, direita: 2, esquerda: 8 }, N: { frente: 1, fundo: 4, direita: 8, esquerda: 2 }, E: { frente: 2, fundo: 8, direita: 1, esquerda: 4 }, W: { frente: 8, fundo: 2, direita: 4, esquerda: 1 } };
