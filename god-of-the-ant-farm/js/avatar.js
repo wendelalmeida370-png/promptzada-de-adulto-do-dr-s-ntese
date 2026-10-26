@@ -394,8 +394,8 @@
     v.x = nxT; v.y = nyT; b.wx = nxT; b.wy = nyT;
     v.moving = b.speed > 0.2 && (b.ground || b.loco === 'swim');
     // (in the water where the world does not walk, the world is told the body is the player's swimmer — it leaves it there;
-    // the god sees it swim)
-    const afl = !W.walkableXY(v.x, v.y) && waterAt(b.X, b.Z) > -Infinity; if (afl !== G.Possess.afloat(v)) G.Possess.setAfloat(afl);
+    // the god sees it swim. A building that rose on the water is no water to swim in: the world moves the body out — L-150)
+    const afl = !W.walkableXY(v.x, v.y) && !(W.inb(v.x, v.y) && W.blocked(W.idx(v.x, v.y))) && waterAt(b.X, b.Z) > -Infinity; if (afl !== G.Possess.afloat(v)) G.Possess.setAfloat(afl);
     // (and what it does that the world's people answer: swimming, dancing — the dancers round it stop when it stops —, the axe
     // at the tree, the hands in the bush: the act's own vact, until it ends)
     const va = b.loco === 'swim' ? 'swim' : b.act ? b.act.vact || (b.act.anim === 'dance' ? 'dance' : '') : '';

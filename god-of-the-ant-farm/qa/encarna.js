@@ -385,6 +385,18 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     { const v = __E.adults(s, o => !o.aboard && !o.inside && G.W.walkableXY(o.x, o.y))[0] || __E.adults(s)[0]; __E.enter(v); __E.f(4); const x = Math.floor(v.x), y = Math.floor(v.y);
       const b = G.Village.addBuilding('house', x, y, v.set, true); if (b) G.W.touchWalk && G.W.touchWalk(); __E.f(60, 50);
       out.building = { made: !!b, onIt: b ? (v.x >= b.x && v.x < b.x + b.w && v.y >= b.y && v.y < b.y + b.h && b.blocks) : null, walk: G.W.walkableXY(v.x, v.y), avatar: S.avatar && S.avatar.id === v.id };
+      // the same on a ford (L-150): the water under the new building is no water to swim in — the building stops the feet, so
+      // the world moves the body out like anyone (the swimmer's mark is for open water, which the world leaves alone, D-026)
+      { const T = G.T, N = G.N; let at = null;
+        for (let r = 1; r < 60 && !at; r++) for (let dy = -r; dy <= r && !at; dy++) for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const x = Math.floor(v.x) + dx, y = Math.floor(v.y) + dy; if (!G.W.inb(x, y)) continue;
+          const i = y * N + x; if (S.type[i] === T.RIVER && G.W.walkable(i) && !S.road[i] && !S.occ[i] && G.W.reaches(v, x + 0.5, y + 0.5)) { at = [x, y]; break; } }
+        if (at && G.Avatar.place(at[0] + 0.5, at[1] + 0.5)) { __E.f(6); const a0 = G.Possess.afloat(v);
+          const f = G.Village.addBuilding('house', at[0], at[1], v.set, true); if (f) G.W.touchWalk && G.W.touchWalk();
+          const on = () => !!f && v.x >= f.x && v.x < f.x + f.w && v.y >= f.y && v.y < f.y + f.h && f.blocks;
+          const k = __E.until(() => !on(), 120, 50);
+          out.ford = { at, made: !!f, before: a0, frames: k, onIt: on(), walk: G.W.walkableXY(v.x, v.y), afloat: G.Possess.afloat(v), avatar: S.avatar && S.avatar.id === v.id };
+        } else out.ford = null; }
       // the ground sinks into the sea under the feet (the god's own reshaping): the water takes the body
       // (since v35 the player swims — D-026: who can swim stays in the body, afloat; who cannot, the water takes, and the god returns)
       const L = G.Powers.reshape; let sank = false; if (L) { L(Math.floor(v.x), Math.floor(v.y), 2.5, -1); sank = true; }
@@ -471,6 +483,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   ok('e9 capturado por inimigos: o corpo vai com o mundo', e9.capture && !e9.capture.avatar && e9.capture.captive && e9.capture.mode === 'GOD', JSON.stringify(e9.capture));
   ok('e9 levado a um navio: a encarnação acaba', !e9.ship || (e9.ship.released && !e9.ship.avatar && e9.ship.aboard && e9.ship.mode === 'GOD'), JSON.stringify(e9.ship));
   ok('e9 um prédio nasce em cima: o mundo move o corpo, o corpo segue', e9.building.made && !e9.building.onIt && e9.building.walk && e9.building.avatar, JSON.stringify(e9.building));
+  ok('e9 um prédio nasce em cima de um vau: não é água de nadar, o mundo tira o corpo de lá (L-150)', !e9.ford || (e9.ford.made && !e9.ford.before && !e9.ford.onIt && e9.ford.walk && !e9.ford.afloat && e9.ford.avatar), JSON.stringify(e9.ford));
   ok('e9 a terra afunda sob os pés: quem sabe nadar nada, encarnado (D-026); quem não sabe, a água leva e o deus volta', e9.sink.sank && e9.sink.alive && (e9.sink.swims ? e9.sink.avatar && e9.sink.afloat : !e9.sink.avatar && e9.sink.mode === 'GOD'), JSON.stringify(e9.sink));
   ok('e9 a guerra e o fogo chamam: viram chamados, o corpo fica', e9.calls.kept && e9.calls.asks.includes('muster') && e9.calls.asks.includes('fire') && /armas/.test(e9.calls.hud || ''), JSON.stringify(e9.calls));
   const H = e9.hands;
