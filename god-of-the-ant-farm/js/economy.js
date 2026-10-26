@@ -829,7 +829,9 @@
     // (the market's stalls first: each merchant's own, with its price and its talk — act-negocio.js)
     if (G.Biz) { const t = G.Biz.shop(v, H, want); if (t) return t; }
     const I = inv(h); const res = h.res || 1;
-    const need = want ? want.slice() : Object.keys(HOUSE_WANTS).filter(k => (I[k] || 0) < Math.max(1, res * HOUSE_WANTS[k] * 2));
+    // (what has no room in the house is no need: a full house feels no lack — D-059)
+    const fits = k => G.Depot.room('h:' + h.id, k) + 1e-6 >= 1;
+    const need = want ? want.filter(fits) : Object.keys(HOUSE_WANTS).filter(k => (I[k] || 0) < Math.max(1, res * HOUSE_WANTS[k] * 2) && fits(k));
     if (!want && E.wishes) for (const k of E.wishes(h, v)) need.push(k);
     if (!need.length && G.R() > 0.15) return null;
     const f = G.Fac.ofV(v); if (!f) return null;
@@ -840,7 +842,7 @@
       // (a market whose merchants keep stalls sells at the stalls: its shelf is the building's store, not a counter)
       if (b.type === 'mercado' && G.Biz && G.Biz.hasStalls(b)) continue;
       {
-        const bi = inv(b); const k = need.find(q => (bi[q] || 0) >= 1) || (bi.food >= 2 && h.pantry < res ? 'food' : null);
+        const bi = inv(b); const k = need.find(q => (bi[q] || 0) >= 1) || (bi.food >= 2 && h.pantry < res && fits('food') ? 'food' : null);
         if (!k) continue;
         let w = 1;
         if (b.type === 'mercado_negro') w = (set && set.loyalty < 45 ? 1.5 : 0.3) + (E.taxRate(f) > 0.2 ? 1 : 0);
@@ -885,7 +887,10 @@
       // (and as the two hands carry: what does not fit is not bought — the deal would fail in the depot and buy nothing)
       const arms = Math.floor(G.Depot.room('v:' + v.id, k, { to: 'h:' + h.id }) + 1e-6);
       if (arms < 1) { G.Life && G.Life.leaveQueue(v); return H.end(v); }
-      const n = Math.max(1, Math.min(Math.max(t.n || 0, k === 'food' ? 3 : 1), k === 'food' ? 6 : 3, Math.floor(I[k] + 1e-6), afford, arms));
+      // (and as the house has room for: who has nowhere to keep it does not buy it — D-059)
+      const room = Math.floor(G.Depot.room('h:' + h.id, k) + 1e-6);
+      if (room < 1) { G.Life && G.Life.leaveQueue(v); G.Falas && G.Falas.say(v, 'casa_cheia', { k }); return H.end(v); }
+      const n = Math.max(1, Math.min(Math.max(t.n || 0, k === 'food' ? 3 : 1), k === 'food' ? 6 : 3, Math.floor(I[k] + 1e-6), afford, arms, room));
       const price = Math.round(unit * n * 100) / 100;
       // the goods into the arms, marked for the house, and the coins from the house to the seller's — the state's at the
       // fair — both or neither, in the ledger; a people without coin: the fair gives what it has

@@ -29,9 +29,10 @@ const qa = name => { const bad = QA.check().filter(q => q.sev <= 2 || q.sys === 
 const outside = (b, s, k) => s === 'S' ? [b.x + k + 0.5, b.y + b.h + 0.4] : s === 'N' ? [b.x + b.w - 1 - k + 0.5, b.y - 0.4] : s === 'E' ? [b.x + b.w + 0.4, b.y + b.h - 1 - k + 0.5] : [b.x - 0.4, b.y + k + 0.5];
 M.pronto(KEY); In.uncache();
 // (the game turns them on in interiors.js; until it does, the scenario turns them on itself, as qa/portas.js measures them)
-const byGame = D.stores === In.depotStores && G.Vg.planDoor === In.planDoor;
-if (!byGame) { D.stores = In.depotStores; G.Vg.planDoor = In.planDoor; }
-ok('ligadas', D.stores === In.depotStores && G.Vg.planDoor === In.planDoor, `G.Depot.stores pelos móveis, a porta pela planta (${byGame ? 'pelo jogo' : 'pelo cenário: o jogo ainda as tem desligadas'})`);
+const byGame = { stores: D.stores === In.depotStores, door: G.Vg.planDoor === In.planDoor };
+D.stores = In.depotStores; G.Vg.planDoor = In.planDoor;
+const who = on => (on ? 'pelo jogo' : 'pelo cenário: o jogo ainda a tem desligada');
+ok('ligadas', D.stores === In.depotStores && G.Vg.planDoor === In.planDoor, `G.Depot.stores pelos móveis (${who(byGame.stores)}), a porta pela planta (${who(byGame.door)})`);
 // ---- every door the world's people use: the plan's, on open ground, where the old door's region is ----
 // (asked as the world's step asks it: a door onto ground smaller than the old corner's is none)
 const sizes = () => { const L = W.reachIds(true); const m = new Map(); for (let i = 0; i < L.length; i++) if (L[i] >= 0) m.set(L[i], (m.get(L[i]) || 0) + 1); return r => m.get(r) || 0; };

@@ -6,7 +6,10 @@
 // compra nas mãos: ela vai para a casa, pelo livro; c9 um povo sem moeda compra em espécie; c10 o salto: as casas compram
 // também no salto; c11 o volume de um dia (antes da Etapa 4: nenhuma compra no dia que começa às 0,10); c13 com uma compra
 // nas mãos, um afazer de fora espera (a caverna punha as suas coisas por cima dela), um chamado urgente leva; c12 o corpo do
-// deus não é mandado: a casa aparece no diário dele como um objetivo; e o verificador limpo, sem erro de módulo.
+// deus não é mandado: a casa aparece no diário dele como um objetivo; c14 a casa cheia não compra (com os móveis dos
+// interiores, a casa guarda o que eles comportam — D-053, D-059); c15 com pouco lugar, compra só o que cabe; c16 nada pago
+// se perde: o que não coube no caminho fica no chão da casa, nunca no estoque do povo; e o verificador limpo, sem erro de
+// módulo.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/atividades-inv.js'] });
 const fails = []; const mid = []; // (what the checker saw in the middle of a case: the case fails, even if the end looks clean)
@@ -19,6 +22,8 @@ const r2 = x => Math.round(x * 100) / 100;
 let S;
 const nm = id => (S.villagers.get(id) || {}).name || '#' + id;
 const fine = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); if (until && until()) return true; } return false; };
+// (the clock held at the case's hour while it waits — the test's hand: a wait that ran into the evening would shut the fair)
+const atHour = (t0, f) => () => { if (S.time > t0) S.time = t0; return f(); };
 const members = h => [...S.villagers.values()].filter(v => v.home === h.id);
 const adults = h => members(h).filter(v => v.age >= 14 && !v.captive && !v.jail && !v.aboard);
 const errandOf = h => [...S.villagers.values()].find(v => v.task && v.task.casa === h.id) || null;
@@ -80,10 +85,11 @@ const fair = stockFair(set);
 // ---------------- c4: nothing lacking, nobody goes
 {
   const h = houseIn(set, 2); lacking(h, 30);
-  for (const q of C.list(h)) D.make('h:' + h.id, q.k, q.n + 1, { code: 'teste' });
+  // (what it lacks put in — up to what its furniture holds, with the interiors' furniture: a full house lacks nothing, D-059)
+  for (const q of C.list(h)) D.make('h:' + h.id, q.k, q.n + 1, { code: 'teste', part: true });
   const u = adults(h).map(v => C.urge(v));
   const went = fine(60, () => !!errandOf(h) || watch());
-  ok('c4 nada faltando, ninguém sai', !C.list(h).length || (u.every(x => x === 0) && !went), `a casa #${h.id} com tudo o que usa (${C.list(h).length} falta(s)): vontade ${u.join(', ')}; ${went ? 'ALGUÉM saiu' : 'ninguém saiu'}`);
+  ok('c4 nada faltando, ninguém sai', !C.list(h).length || (u.every(x => x === 0) && !went), `a casa #${h.id} com tudo o que usa, ou sem lugar para mais (${C.list(h).length} falta(s)): vontade ${u.join(', ')}; ${went ? 'ALGUÉM saiu' : 'ninguém saiu'}`);
 }
 // ---------------- c6: out of the market's hours, nobody goes
 {
@@ -129,6 +135,71 @@ const fair = stockFair(set);
   G.Vg.endTask(v);
   ok('c13 as mãos ocupadas com uma compra', !feast && !cave && keptTask && urgent && held && !bad().length,
     `${v.name} levando 2 de tecido para casa: a festa ${feast ? 'LEVOU' : 'esperou'}, a caverna ${cave ? 'LEVOU' : 'esperou'} (a tarefa ${keptTask ? 'continuou a de levar' : 'MUDOU'}); um chamado urgente (o dragão) ${urgent ? 'levou' : 'NÃO levou'} — e a compra ${held ? 'continua nas mãos, marcada para casa' : 'SUMIU das mãos'}`);
+}
+// ---------------- c14/c15/c16: the room of the house (D-059). With the interiors' furniture a house keeps what its pieces
+// hold (D-053): a full house does not buy; one with little room buys only what fits; what was paid is never lost — what the
+// furniture has no room for when it gets home (the room taken meanwhile) lies on the floor, the house's, never in the
+// people's store. The furniture is the test's own plan for this house (the shape G.Interiors.depotStores gives, as in
+// negocio n16): one chest that takes anything, the other buildings as the game has them. The chest's size follows the case:
+// as full as the house («cheia»: the family eats from the pantry meanwhile, and stays full), room for one more thing
+// («um»), or fixed at the moment the purchase is on its way («fixa»)
+{
+  S.time = 0.15; stockFair(set);
+  const h = houseIn(set, 2); lacking(h, 30); const H = 'h:' + h.id;
+  if (D.get(H, 'food') < 2) D.make(H, 'food', 2, { code: 'teste' }); // (something in the chest: a chest of nothing is no plan)
+  const held = () => Object.entries(D.list(H)).filter(([k]) => k !== 'moedas').reduce((a, [, n]) => a + n, 0);
+  const was = D.stores; let mode = 'cheia', cap = 0;
+  const capNow = () => (mode === 'cheia' ? held() : mode === 'um' ? held() + 1 : cap);
+  D.stores = b => (b && b.id === h.id ? [{ id: h.id + ':arca', kind: 'arca', keys: '*', cap: capNow(), dep: 'casa', sale: null }] : was ? was(b) : null);
+  // (the house's errand of before, if one of it was out for it, let go — the test's hand, as lacking() forgets the mark —, and
+  // what its people carry home put away first, with the chest already full — on the floor —: the case starts with nothing on
+  // the way; and once more after it, for an errand that started while it waited)
+  const letGo = () => { for (const o of S.villagers.values()) if (o.task && o.task.casa === h.id) G.Vg.endTask(o); h.shopOut = 0; };
+  letGo(); fine(60, () => !members(h).some(o => o.carry && o.carry.to === H) || watch()); letGo();
+  // c14: the chest full — no room for one more thing: nobody goes; one sent to the fair's table all the same (a stroll's
+  // whim) finds no room at home and buys nothing
+  S.time = 0.15;
+  const u = adults(h).map(v => C.urge(v)); const L14 = C.list(h).length;
+  const went = fine(60, atHour(0.15, () => !!errandOf(h) || watch())); const goer = errandOf(h);
+  // (the one sent: hands free, rested and fed — a tired one would go to bed on the way —, brought to the fair — the deal is
+  // the subject, not the walk across town —, in the morning: the test's hand, as negocio's buyers)
+  const v14 = adults(h).filter(o => !(o.carry && o.carry.n > 0)).sort((a, b) => b.energy - a.energy || a.id - b.id)[0] || adults(h)[0]; const L0 = S.ledgerN; const c0 = D.get(H, 'moedas');
+  v14.energy = Math.max(v14.energy, 70); v14.hunger = Math.min(v14.hunger, 30);
+  if (v14.carry && v14.carry.n > 0) D.use('v:' + v14.id, v14.carry.k, v14.carry.n, { code: 'teste', mine: true });
+  if (fair) { const [fx, fy] = G.Village.frontTile(fair); if (G.W.walkableXY(fx, fy)) { v14.x = fx; v14.y = fy; v14.path = null; } }
+  const said = []; const say0 = G.Falas.say; G.Falas.say = function (o, key) { const t = say0.apply(this, arguments); if (o && o.id === v14.id) said.push(key); return t; };
+  G.Vg.endTask(v14); const t14 = fair ? G.Vg.setTask(v14, { type: 'shop', id: fair.id, k: 'tecido', pri: 1.3 }) : null;
+  fine(150, atHour(0.2, () => !(v14.task && v14.task === t14) || watch()));
+  G.Falas.say = say0;
+  const bought14 = book(e => e[0] > L0 && e[4] === 'v:' + v14.id && (e[8] === 'compra' || e[8] === 'feira')).length;
+  ok('c14 a casa cheia não compra', L14 === 0 && u.every(x => x === 0) && !went && !bought14 && (!fair || said.includes('casa_cheia')) && Math.abs(D.get(H, 'moedas') - c0) < 1e-6 && !bad().length,
+    `a casa #${h.id} com a arca cheia (${r2(held())} de ${r2(capNow())}): ${L14} falta(s), vontade ${u.join(', ')}; ${went ? `ALGUÉM saiu (${goer ? goer.name + ', ' + goer.task.type + (goer.home !== h.id ? ', de outra casa' : '') : '?'})` : 'ninguém saiu em 60 s'}; ${v14.name}, mandado à feira por tecido, ${bought14 ? 'COMPROU' : 'não comprou'} (falas: ${said.join(', ') || 'nenhuma'}${t14 && v14.task === t14 ? '' : `; agora ${v14.task ? v14.task.type : 'sem tarefa'}`}; moedas da casa ${r2(c0)} → ${r2(D.get(H, 'moedas'))})`);
+  // c15: room for one thing — the house sends for what it lacks, and buys only what fits (the fair's tables stocked again —
+  // the town bought from them while the case waited —, and the clock held in the market's hours: a gathering at the square,
+  // an execution, may take the house's people first, as it took them in the doors' world)
+  mode = 'um'; h.shopT = undefined; h.shopOut = 0; S.time = 0.15; stockFair(set);
+  const lack15 = C.list(h).map(q => `${q.n} de ${E.name(q.k)}`); const L1 = S.ledgerN;
+  let carrier = null;
+  fine(360, atHour(0.3, () => { carrier = carrier || members(h).find(o => o.carry && o.carry.bought && o.carry.to === H) || null; return !!carrier || watch(); }));
+  const buy = book(e => e[0] > L1 && (e[8] === 'compra' || e[8] === 'venda' || e[8] === 'feira') && /^v:/.test(e[4]) && (S.villagers.get(+e[4].slice(2)) || {}).home === h.id && e[5] !== 'moedas')[0];
+  ok('c15 com pouco lugar, compra só o que cabe', !!carrier && !!buy && buy[6] <= 1 + 1e-6 && !bad().length,
+    buy ? `a casa #${h.id} com lugar para 1 (faltava ${lack15.join(', ')}): ${nm(+buy[4].slice(2))} comprou ${buy[6]} de ${E.name(buy[5])}` : `ninguém da casa comprou em 360 s (faltava ${lack15.join(', ') || 'nada'})`);
+  // c16: the room taken while the purchase is on its way (the chest fixed as full as the house is now) — at home, what does
+  // not fit in it lies on the floor: the house's, with its line in the ledger, never in the people's store (the family may
+  // eat from the pantry meanwhile: what lies on the floor is what the chest does not hold when it gets there)
+  if (carrier) {
+    const k = carrier.carry.k, n = carrier.carry.n; const L2 = S.ledgerN;
+    mode = 'fixa'; cap = held(); const room0 = D.room(H, k);
+    const home = fine(240, () => book(e => e[0] > L2 && e[3] === 'v:' + carrier.id && e[5] === k).length > 0 || watch());
+    const lines = book(e => e[0] > L2 && e[3] === 'v:' + carrier.id && e[5] === k);
+    const inHouse = lines.filter(e => e[4] === H && e[8] === 'compra-em-casa').reduce((a, e) => a + e[6], 0);
+    const toStore = lines.filter(e => e[4][0] === 'f');
+    // (the floor: what the chest does not hold — the goods are put away in their order, so the pile is what comes last)
+    const pile = D.slots(H).filter(q => q.m === 0); const floor = pile.reduce((a, q) => a + q.n, 0); const over = held() - cap;
+    ok('c16 nada pago se perde', home && room0 < 1e-6 && Math.abs(inHouse - n) < 1e-6 && !toStore.length && floor > 1e-6 && Math.abs(floor - over) < 1e-4 && !bad().length,
+      `${carrier.name} levava ${n} de ${E.name(k)}; a arca cheia no caminho (lugar ${r2(room0)}): ${home ? `chegou em casa ${r2(inHouse)}; no chão, ${pile.map(q => `${r2(q.n)} de ${E.name(q.k)}`).join(', ') || 'nada'} (a casa com ${r2(over)} além da arca)` : 'NÃO chegou em casa'}${toStore.length ? `; ${toStore.length} lançamento(s) ao ESTOQUE DO POVO` : '; nada ao estoque do povo'}`);
+  } else ok('c16 nada pago se perde', false, 'sem compra a caminho de casa (o c15 não comprou)');
+  D.stores = was;
 }
 // ---------------- c7: a save in the middle of the errand: the errand lost does not hold the house; it buys again, one at a time
 {
