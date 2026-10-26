@@ -224,7 +224,7 @@ const calmOne = (skip) => {
 
 // ---------------- h9 with nothing to eat in reach, a sleeper is not woken at every step ----------------
 {
-  const v = calmOne(); let wakes = 0, asleep = 0, looks = 0; let f = null, food0 = 0; const seen = [];
+  const v = calmOne(); let wakes = 0, asleep = 0, looks = 0, walk = 0; let f = null, food0 = 0; const seen = [];
   if (v) {
     f = G.Fac.get(S.settlements.get(v.set).fac); food0 = f.stock.food;
     const h = S.buildings.get(v.home); const pan0 = h ? h.pantry || 0 : 0;
@@ -236,11 +236,14 @@ const calmOne = (skip) => {
     const bushes = new Map(); const pick = () => { for (const b of S.bushes.values()) if (b.berries > 0 && (G.dist(b.x, b.y, v.x, v.y) < 26 || (h && G.dist(b.x, b.y, h.x, h.y) < 26))) { if (!bushes.has(b)) bushes.set(b, b.berries); b.berries = 0; } };
     S.time = 0.86; Vg.endTask(v); v.hunger = 100; v.hp = 55; v.energy = 5; v._hungerT = 0;
     Vg.setTask(v, { type: 'sleep', pri: 2.5, kind: 'sleep' });
+    // (counted from when she lies down: the way to her bed is the world's own — 3.5 s of it once the plan's door was on —,
+    // and the case is about not being woken at every step once asleep: T-076)
+    while (walk < 60 && !(v.task && v.task.type === 'sleep' && v.sleeping)) { v._noStore = S.clock + 5; pick(); M.viver(0.5); walk++; }
     for (let k = 0; k < 40; k++) { v._noStore = S.clock + 5; pick(); const was = v.task && v.task.type === 'sleep'; M.viver(0.5); looks++; if (v.task && v.task.type === 'sleep' && v.sleeping) asleep++; if (was && !(v.task && v.task.type === 'sleep')) { wakes++; seen.push(v.task ? v.task.type : '-'); } }
     v._noStore = 0; void pan0; void food0;
     for (const [b, n] of bushes) b.berries = n;
   }
-  ok('h9 sem comida ao alcance, quem dorme com fome não fica acordando a cada passo', !!v && wakes === 0 && asleep >= looks - 2, v ? `${v.name}: ${asleep} de ${looks} olhadas dormindo, ${wakes} vezes acordado sem ter o que comer${seen.length ? ' (' + seen.join(', ') + ')' : ''}` : 'ninguém');
+  ok('h9 sem comida ao alcance, quem dorme com fome não fica acordando a cada passo', !!v && wakes === 0 && asleep >= looks - 2, v ? `${v.name}: ${(walk * 0.5).toFixed(1)} s até deitar; depois, ${asleep} de ${looks} olhadas dormindo, ${wakes} vezes acordado sem ter o que comer${seen.length ? ' (' + seen.join(', ') + ')' : ''}` : 'ninguém');
 }
 
 // ---------------- h10 the condemned are fed while they wait for their hour, as the jail feeds its prisoners (L-170) ----------------
