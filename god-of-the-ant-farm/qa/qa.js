@@ -601,7 +601,10 @@
     // with no errand at all, only if the last choice gave none (v.think set by a decision that found nothing) — one whose
     // errand just ended chooses the next at the coming step. (Dying: hunger at the top and under 40 of life.)
     {
-      const dying = v => v.hunger >= 99.9 && v.hp < 40 && v.age >= 2;
+      // (the body the player lives is not the world's to feed: it eats when the player says — the world does not even wake it,
+      // L-171 —, and starving in it is the player's choice, not a fault of the world: L-177)
+      const body = s.avatar ? s.avatar.id : 0;
+      const dying = v => v.hunger >= 99.9 && v.hp < 40 && v.age >= 2 && v.id !== body;
       const dyingIn = new Map();
       for (const v of s.villagers.values()) if (dying(v) && !v.captive && !v.aboard && !v.ug) dyingIn.set(v.set, (dyingIn.get(v.set) || 0) + 1);
       for (const [sid, n] of dyingIn) {
