@@ -3,9 +3,10 @@
 // cenário —, cada caso provocado de propósito, com um save no meio: toda porta que a
 // gente usa é a da planta, no chão aberto e na mesma região do mapa de alcance que a porta de antes; quem sai de dentro sai
 // por ela; a porta tapada por um muro cai para o canto aberto e, na virada do dia, muda de lado (a reforma), e a nova é a
-// da planta outra vez; o deus que alaga a porta; a casa cheia que não aceita mais (o que não cabe fica onde estava, nada se
-// perde); a casa deixada guarda o lugar dos seus guardados; salvar e carregar: as mesmas portas e os mesmos móveis. O
-// verificador limpo, nenhum erro de módulo.
+// da planta outra vez; o deus que alaga a porta; a porta diante de um bolsão (num mundo sem um prédio que sirva a estes
+// dois, o caso faz o seu: a porta alagada que é também o canto, o bolsão que toma também o canto ao lado — nunca passa
+// vazio); a casa cheia que não aceita mais (o que não cabe fica onde estava, nada se perde); a casa deixada guarda o lugar
+// dos seus guardados; salvar e carregar: as mesmas portas e os mesmos móveis. O verificador limpo, nenhum erro de módulo.
 //   node qa/portas-casos.js [mundo] [sem-viradas]
 // (sem-viradas: sem os casos que viram o dia — a virada do cenário anda o relógio sem o mundo, e num mundo com gente longe
 // de casa ao abrir, como a metrópole, o verificador a veria "longe há dias"; a metrópole roda assim, pelo bolsão)
@@ -15,8 +16,9 @@ const KEY = process.argv[2] || 'cidade'; const TURNS = process.argv[3] !== 'sem-
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | portas-casos ${name} | ${info}`); if (!c) fails.push(name); };
 const near = (a, b) => !!a && !!b && Math.abs(a[0] - b[0]) < 1e-6 && Math.abs(a[1] - b[1]) < 1e-6;
 const f2 = p => (p ? p.map(n => n.toFixed(2)).join(',') : '-');
-// (the door of before the plans: the first open corner of the front)
-const oldDoor = b => { for (const c of [[b.x + b.w - 0.5, b.y + b.h + 0.4], [b.x + b.w + 0.4, b.y + b.h - 0.5], [b.x - 0.4, b.y + 0.5], [b.x + 0.5, b.y - 0.4]]) if (W.walkableXY(c[0], c[1])) return c; return null; };
+// (the door of before the plans: the first open corner of the front, in the world's order)
+const cornersOf = b => [[b.x + b.w - 0.5, b.y + b.h + 0.4], [b.x + b.w + 0.4, b.y + b.h - 0.5], [b.x - 0.4, b.y + 0.5], [b.x + 0.5, b.y - 0.4]];
+const oldDoor = b => cornersOf(b).find(c => W.walkableXY(c[0], c[1])) || null;
 const regOf = p => (p && W.inb(p[0], p[1]) ? W.reachIds(true)[W.idx(p[0], p[1])] : -9);
 const doors = () => [...G.S.buildings.values()].filter(b => b.built && b.blocks && b.ip && In.TYPES[b.ip.t]);
 const homes = () => doors().filter(b => In.TYPES[b.type].use === 'casa');
@@ -63,30 +65,43 @@ if (TURNS) {
   shut = { id: b.id, s: b.ip.s, door: d1 };
 }
 // ---- the god floods a door: the first open corner meanwhile, never the water ----
+// (a building whose plan door is not its old corner: the door in use is then the plan's, told apart from the corner's. A
+// world with none still has the case: the god floods a door that is its old corner too, and the next corner still open
+// takes its place — never an empty pass)
 {
   const tile = p => W.idx(p[0], p[1]);
-  const b = doors().find(h => (!shut || h.id !== shut.id) && In.planDoor(h) && oldDoor(h) && tile(oldDoor(h)) !== tile(In.planDoor(h)));
-  if (!b) ok('o deus alaga a porta', true, 'nenhum prédio com a porta da planta longe da de antes neste mundo');
+  const cand = doors().filter(h => (!shut || h.id !== shut.id) && In.planDoor(h) && oldDoor(h));
+  let b = cand.find(h => tile(oldDoor(h)) !== tile(In.planDoor(h))), made = '';
+  if (!b) { b = cand.find(h => { const i = tile(In.planDoor(h)); return cornersOf(h).some(c => W.walkableXY(c[0], c[1]) && tile(c) !== i); }); if (b) made = ' (neste mundo nenhuma porta da planta fica longe do canto de antes: a porta alagada era também o canto)'; }
+  if (!b) ok('o deus alaga a porta', false, 'nenhum prédio com a porta da planta e outro canto aberto neste mundo');
   else {
     const pd = In.planDoor(b); const i = W.idx(pd[0], pd[1]); const t0 = G.S.type[i];
     sim(() => { G.S.type[i] = T.SEA; G.S.typeVer = (G.S.typeVer || 0) + 1; W.invalidateLand(); W.touchWalk(); });
-    const d = G.Vg.door(b);
-    ok('o deus alaga a porta', !In.planDoor(b) && d && W.walkableXY(d[0], d[1]), `#${b.id} ${b.type}: a porta ${f2(pd)} virou mar; quem sai sai em ${f2(d)}`);
+    const d = G.Vg.door(b), od = oldDoor(b);
+    ok('o deus alaga a porta', !In.planDoor(b) && d && W.walkableXY(d[0], d[1]) && near(d, od), `#${b.id} ${b.type}: a porta ${f2(pd)} virou mar; quem sai sai em ${f2(d)}, o primeiro canto aberto${made}`);
     sim(() => { G.S.type[i] = t0; G.S.typeVer++; W.invalidateLand(); W.touchWalk(); });
     ok('a terra volta', near(G.Vg.door(b), In.planDoor(b)), `a porta da planta de novo: ${f2(G.Vg.door(b))}`);
   }
 }
 // ---- a door onto a pocket: the tile before the plan's door shut in all round (walls on its open sides) — whoever came out
 // there would be shut in: the step gives the old corner, on the street, and what is drawn says the same ----
+// (a building whose plan door is apart from its old corner, on the same ground. A world with none still has the case: the
+// god's pocket takes in the corner beside the door too — walled with it —, and the step gives the first corner still open,
+// on the ground the door opened to — never an empty pass)
 {
-  const N = G.N; const nb = i => [i - 1, i + 1, i - N, i + N].filter(j => j >= 0 && j < N * N);
-  const b = doors().find(h => { if (shut && h.id === shut.id) return false; const pd = In.planDoor(h), od = oldDoor(h); if (!pd || !od) return false; const i = W.idx(pd[0], pd[1]), j = W.idx(od[0], od[1]); return i !== j && !nb(i).includes(j) && regOf(pd) === regOf(od); });
-  if (!b) ok('a porta para um bolsão', true, 'nenhum prédio com a porta da planta longe do canto de antes neste mundo');
+  const N = G.N; const nb = i => [i - 1, i + 1, i - N, i + N].filter(j => j >= 0 && j < N * N); const tile = p => W.idx(p[0], p[1]);
+  // (the first corner still open once the door's tile is walled in)
+  const outer = (h, i) => cornersOf(h).find(c => W.walkableXY(c[0], c[1]) && !nb(i).includes(tile(c))) || null;
+  const fits = apart => h => { if (shut && h.id === shut.id) return false; const pd = In.planDoor(h); if (!pd) return false; const i = tile(pd), od = outer(h, i); return !!od && tile(od) !== i && regOf(pd) === regOf(od) && (!apart || near(od, oldDoor(h))); };
+  let b = doors().find(fits(true)), made = '';
+  if (!b) { b = doors().find(fits(false)); if (b) made = ' (neste mundo nenhuma porta da planta fica longe do canto de antes: o bolsão do deus tomou também o canto ao lado da porta)'; }
+  if (!b) ok('a porta para um bolsão', false, 'nenhum prédio com a porta da planta e um canto aberto fora do bolsão neste mundo');
   else {
-    const pd = In.planDoor(b), od = oldDoor(b); const i = W.idx(pd[0], pd[1]); const walled = [];
+    const pd = In.planDoor(b); const i = W.idx(pd[0], pd[1]); const walled = [];
     sim(() => { for (const j of nb(i)) if (W.walkable(j)) { G.S.wall[j] = 1; walled.push(j); } W.touchWalk(); });
+    const od = oldDoor(b); // (the old corner — or, when the pocket took it, the next one still open)
     const inStep = sim(() => [In.planDoor(b), G.Vg.door(b)]); const drawn = [In.planDoor(b), G.Vg.door(b)];
-    ok('a porta para um bolsão', W.walkable(i) && !inStep[0] && near(inStep[1], od) && !drawn[0] && near(drawn[1], od), `#${b.id} ${b.type}: a casa ${f2(pd)} fechada em volta (${walled.length} muros); no passo, quem sai sai em ${f2(inStep[1])} — o canto de antes ${f2(od)}; no desenho, ${f2(drawn[1])}`);
+    ok('a porta para um bolsão', W.walkable(i) && !!od && !inStep[0] && near(inStep[1], od) && !drawn[0] && near(drawn[1], od), `#${b.id} ${b.type}: a casa ${f2(pd)} fechada em volta (${walled.length} muros); no passo, quem sai sai em ${f2(inStep[1])} — o primeiro canto aberto ${f2(od)}; no desenho, ${f2(drawn[1])}${made}`);
     sim(() => { for (const j of walled) G.S.wall[j] = 0; W.touchWalk(); });
     const back = sim(() => In.planDoor(b));
     ok('o bolsão aberto de novo', near(back, pd) && near(G.Vg.door(b), pd), `a porta da planta de novo: ${f2(back)}`);
