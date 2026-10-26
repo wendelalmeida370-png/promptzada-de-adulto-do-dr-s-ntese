@@ -110,8 +110,9 @@ else {
     }
   }
   back(); god(() => { pet.x = pet0[0]; pet.y = pet0[1]; });
-  ok(`3. a regra, em volta da porta: o bicho (${petName}) só quando o corpo está mais de frente para ele que para a porta e ele está mais perto; senão, a porta`, n >= 150 && !bad.length && nPet > 10 && nDoor > 60,
-    `${n} lugares do bicho: ${nDoor} vezes a porta, ${nPet} o bicho${bad.length ? `; ${bad.length} ERRADOS: ${bad.slice(0, 3).join(' · ')}` : ''}`);
+  // (the kind of the animal in the detail, not in the name: the name is the regression's line, the same in any world)
+  ok('3. a regra, em volta da porta: o bicho só quando o corpo está mais de frente para ele que para a porta e ele está mais perto; senão, a porta', n >= 150 && !bad.length && nPet > 10 && nDoor > 60,
+    `o bicho: ${petName}; ${n} lugares dele: ${nDoor} vezes a porta, ${nPet} o bicho${bad.length ? `; ${bad.length} ERRADOS: ${bad.slice(0, 3).join(' · ')}` : ''}`);
 }
 
 // ------------------------------ 4. away from any door, an animal to pet ------------------------------
