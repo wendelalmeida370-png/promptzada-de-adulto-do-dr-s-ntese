@@ -373,14 +373,19 @@ function stallNow() {
 }
 // ---------------- n12: the god's body is the merchant: buys wholesale, sets out the stall, opens, and a buyer buys from it
 {
-  S.time = 0.12; live(1);
-  start = stallNow() + told(calmTown(set));
+  S.time = 0.12; live(1); const t12 = S.time;
+  const sw12 = stallNow(), calm12 = calmTown(set);
   const payer = E.homeOf(m) ? 'h:' + m.home : 'p:' + m.id; D.make(payer, 'moedas', 20, { code: 'teste' });
-  fine(90, () => !m.carry || watch()); // (a load already in the merchant's arms goes where it was going first)
+  // (the start's waits keep the clock at the case's hour, as in every case here: unheld, the merchant the cases before
+  // wore out went to bed at 0.57 with his load, and the god took him at 0.02 of the next day, the market shut — T-078)
+  fine(90, held(t12, () => !m.carry || watch())); // (a load already in the merchant's arms goes where it was going first)
   // (still in his arms — he went to bed with it, and a sleeper keeps what he carries; the god's body would go on carrying
   // it, and buys wholesale only with empty hands —: what he would do awake, the world's delivery to where the load belongs,
-  // before the god takes him: T-075)
-  if (m.carry) { const bd = A.boundOf(m.carry); G.Vg.endTask(m); G.Vg.setTask(m, { type: 'carga', to: bd && bd !== 'op' ? bd : 'f:' + G.Fac.idOfV(m), pri: 1, st: 0 }); fine(90, () => !m.carry || watch()); }
+  // before the god takes him: T-075. Worn out, he would only go back to bed with it: his bed and his meal first, the
+  // world's own, as body() gives them: T-078)
+  const rest12 = m.carry ? body(m) : '';
+  if (m.carry) { const bd = A.boundOf(m.carry); G.Vg.endTask(m); G.Vg.setTask(m, { type: 'carga', to: bd && bd !== 'op' ? bd : 'f:' + G.Fac.idOfV(m), pri: 1, st: 0 }); fine(90, held(t12, () => !m.carry || watch())); }
+  start = sw12 + told(calm12, rest12);
   roomOn(z, 'food', 8); // (room on the stall for what the body buys)
   const tk = G.Possess.take(m); M.viver(0.2);
   // (to the store's door, wholesale; to the stall, set it out; open)
