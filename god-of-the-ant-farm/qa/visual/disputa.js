@@ -89,6 +89,9 @@ const opCrates = () => (op && dock.crates ? dock.crates.filter(c => c.op === op.
 const drawnOf = () => { const s = new Set(opCrates().map(c => c.id)); return P3.lyingOf(dock.id).filter(e => s.has(e[4])); };
 // (crates on the quay, as many as asked: a boat's catch lands — added to the unloading under way, or a new one)
 function fresh(n, force) {
+  // (an unloading needs room in the people's store — the porters carry nothing to a full one —: the god makes room for a catch
+  // and some, so the proof does not hang on how full the store is — T-070)
+  god(() => { const f = G.Fac.get(ids.fac); const room = G.Village.cap(f.id) - (f.stock.food || 0); if (room < 80) D.use('f:' + f.id, 'food', 80 - room, { code: 'teste', part: true }); });
   if (!force && opCrates().length >= n) return;
   god(() => { S.time = 0.15; P.landCatch(dock, 'food', 32, 'arenque', '#a8c0d0', 0); op = P.opAt(dock); });
   for (let k = 0; k < 6; k++) frame();
@@ -146,7 +149,9 @@ const offeredFree = cid => { const o = offerOf(cid); return !!o && o.ok !== fals
 const first = () => opCrates()[0] || null;
 const offerOf = cid => A.offers(v, v.x, v.y, 2.6 / TL + 2).find(q => q.act === 'pegar' && q.cid === cid) || null;
 const hold = c => (c ? `#${c.id} de ${c.by ? (c.by === v.id ? 'corpo' : (S.villagers.get(c.by) || { name: c.by }).name) : 'ninguém'}` : 'fora do cais');
-const clearHands = o => { if (o.carry && o.carry.n > 0) god(() => D.move('v:' + o.id, 'f:' + fac.id, o.carry.k, o.carry.n, { op: o.carry.op || 0, code: 'teste', part: true })); };
+// (the hands emptied into the people's store as the world stores a delivery — Depot.store: what does not fit is lost, with its
+// line 'sem-lugar' in the ledger —, so they are empty whatever room the store has: T-070)
+const clearHands = o => { if (o.carry && o.carry.n > 0) god(() => D.store('v:' + o.id, fac.id, o.carry.k, o.carry.n, { op: o.carry.op || 0, code: 'teste', by: o.id })); };
 const rest = o => god(() => { if (o.task && o.task.type !== 'avatar') G.Vg.endTask(o); clearHands(o); });
 
 fresh(6);
