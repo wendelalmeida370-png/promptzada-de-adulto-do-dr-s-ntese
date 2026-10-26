@@ -120,6 +120,9 @@
     flap: (t, v) => { for (let k = 0; k < 5; k++) nz(t + k * 0.05, 0.04, 0.05 * v, 'bandpass', 1800, 1, amb); },
     whoosh: (t, v) => { nz(t, 0.34, 0.16 * v, 'bandpass', 520, 0.8); nz(t + 0.06, 0.26, 0.1 * v, 'bandpass', 1300, 1.2); },
     shutter: (t, v) => { nz(t, 0.03, 0.4 * v, 'highpass', 3000); nz(t + 0.07, 0.04, 0.3 * v, 'bandpass', 2200, 2); osc('square', 1800, t, 0.02, 0.05 * v); },
+    // a door of planks: the latch lifted, the hinges' creak as it swings; shut, the thud of the leaf on its frame and the latch
+    door: (t, v) => { osc('square', 1400, t, 0.02, 0.03 * v, sfx, 900); nz(t + 0.05, 0.45, 0.07 * v, 'bandpass', 520, 9, sfx, 340, 0.08); nz(t + 0.12, 0.3, 0.04 * v, 'bandpass', 760, 12, sfx, 610, 0.05); },
+    doorShut: (t, v) => { osc('sine', 115, t, 0.16, 0.32 * v, sfx, 60); nz(t, 0.09, 0.22 * v, 'lowpass', 650); osc('square', 1700, t + 0.1, 0.02, 0.04 * v, sfx, 1100); },
     gull: (t, v) => { for (let k = 0; k < 3; k++) { osc('sine', 1350, t + k * 0.2, 0.16, 0.018 * v, amb, 820, 0.01); nz(t + k * 0.2, 0.12, 0.01 * v, 'bandpass', 2400, 4, amb); } },
     owl: (t, v) => { for (const [d, f, l] of [[0, 390, 0.35], [0.5, 330, 0.6]]) { const n = osc('sine', f, t + d, l, 0.03 * v, amb, f * 0.94, 0.05); n.g.connect(revIn); } },
     bees: (t, v) => { for (let k = 0; k < 3; k++) osc('sawtooth', 210 + k * 37 + G.VR() * 20, t + k * 0.05, 0.9, 0.006 * v, amb, 230 + k * 30, 0.15); },

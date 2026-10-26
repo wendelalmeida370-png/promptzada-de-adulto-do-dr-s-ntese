@@ -404,9 +404,10 @@
       for (let k = every('ce' + b.id, 1.6, rdt); k > 0; k--) spawn(PG, { x: X + G.vrr(-0.25, 0.25), y: gY + 0.2, z: Z + G.vrr(-0.25, 0.25), vx: G.vrr(-0.15, 0.15), vy: G.vrr(0.6, 1.2), vz: G.vrr(-0.15, 0.15), life: G.vrr(1.8, 3.2), s0: 0.06, s1: 0.025, c: [1, 0.42, 0.1], a: 1, sh: 1, drag: 0.25, wob: 0.7 });
     }
     // (the small flames the others hand over: torches and lanterns in people's hands, the lamps of carts and taverns, the
-    // fires of camps and pyres — each a flame, a spark now and then, and the nearest one lights round it)
+    // fires of camps and pyres, the hearths of the houses drawn open round the body — each a flame, a spark now and then,
+    // and the nearest one lights round it)
     F3.torches = 0; let ti = 0;
-    for (const fs of [G.People3D && G.People3D.flames, G.Things3D && G.Things3D.flames]) if (fs) for (const q of fs) {
+    for (const fs of [G.People3D && G.People3D.flames, G.Things3D && G.Things3D.flames, G.Build3D && G.Build3D.flames]) if (fs) for (const q of fs) {
       if (n >= MAXF) break; const k = q[3]; const fl = 0.8 + Math.sin(t * 11 + q[0] * 3.1) * 0.15 + G.VR() * 0.1;
       tongue(n, q[0], q[1], q[2], 0.26 * k, 0.55 * k * fl, G.hash(ti * 13 + 5), true); n++; F3.torches++;
       halo(q[0], q[1] + 0.18 * k, q[2], 1.5 * k, 0.75, ti);

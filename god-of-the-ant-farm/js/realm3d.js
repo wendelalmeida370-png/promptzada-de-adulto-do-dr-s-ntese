@@ -470,7 +470,15 @@ vec3 gxGrade( vec3 c ) {
     // (the ground: painted tile by tile with the god's colours, by the Ground3D; its vertex colour is only the shade of
     // the hollows and of the foot of the walls)
     MAT.land = G.Ground3D.material();
+    // (the ground's own shader, and one thing more: where an inside is drawn under the street — a sunken floor, a cellar — the
+    // ground over its floor is not drawn: Build3D.sunk, four boxes at most)
+    { const g0 = MAT.land.onBeforeCompile; const SU = G.Build3D && G.Build3D.sunkU;
+      if (SU) MAT.land.onBeforeCompile = (sh, rn) => { if (g0) g0(sh, rn); Object.assign(sh.uniforms, { uSunkA: SU.a, uSunkB: SU.b, uSunkN: SU.n });
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uSunkA[4]; uniform vec3 uSunkB[4]; uniform int uSunkN;\n')
+          .replace('#include <clipping_planes_fragment>', 'for (int i = 0; i < 4; i++) { if (i >= uSunkN) break; vec3 ca = uSunkA[i], cb = uSunkB[i]; if (vGP.x > ca.x && vGP.y > ca.y && vGP.z > ca.z && vGP.x < cb.x && vGP.y < cb.y && vGP.z < cb.z) discard; }\n#include <clipping_planes_fragment>'); }; }
     MAT.solid = new THREE.MeshLambertMaterial({ vertexColors: true });
+    // (the inside of a building drawn round the body: the same stuff, never cut — Build3D's insides)
+    MAT.inner = new THREE.MeshLambertMaterial({ vertexColors: true });
     // the trees, the bushes and the stones: crowns swaying with the wind (aK: how much each point moves), leaves speckled with
     // light and shade; wood in its bark and stone in its grain once the pictures of the stack are in (wrapped from the sides
     // round a trunk, from all three round a boulder), moss on the tops of the stones of the wet lands, snow on the cold ones
@@ -785,6 +793,7 @@ vec3 gxGrade( vec3 c ) {
     resize();
     G.Build3D && G.Build3D.init && G.Build3D.init(THREE, R3);
     G.Build3D && G.Build3D.dress && G.Build3D.dress(MAT.solid); // (the solid material learns the patterns of the walls and roofs)
+    G.Build3D && G.Build3D.dress && G.Build3D.dress(MAT.inner); // (and the inside's: the cut is the town's only — M3CUT)
     G.People3D && G.People3D.init && G.People3D.init(THREE, R3);
     G.FX3D && G.FX3D.init && G.FX3D.init(THREE, R3);
     G.Dragon3D && G.Dragon3D.init && G.Dragon3D.init(THREE, R3);
@@ -801,10 +810,11 @@ vec3 gxGrade( vec3 c ) {
     // (the side of the sun's picture: never more than the graphics card can hold)
     if (q.shadows) { const n = Math.min(q.shadows, renderer.capabilities.maxTextureSize || 4096); sun.shadow.mapSize.set(n, n); shadowKey = ''; if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
     // (the patterns of walls and roofs and the speckle of the leaves only where the machine carries the ground's grain too)
-    for (const m of [MAT.solid, MAT.flora]) if (m) m.defines = q.detail === 0 ? { NOPAT: 1 } : {};
+    for (const m of [MAT.solid, MAT.flora, MAT.inner]) if (m) m.defines = q.detail === 0 ? { NOPAT: 1 } : {};
+    if (MAT.solid) MAT.solid.defines.M3CUT = 1; // (the town's solid gives way where an inside is drawn: Build3D.cuts)
     // (the water and the sky in their cheap ways where the quality draws no grain: the lightest is for the weak machines)
     { const ch = q.detail === 0; MAT.water.defines = ch ? { WCHEAP: 1 } : {}; MAT.water.needsUpdate = true; skyMesh.material.defines = ch ? { SKYCHEAP: 1 } : {}; skyMesh.material.needsUpdate = true; }
-    for (const m of [MAT.land, MAT.solid, MAT.flora, MAT.plant]) if (m) m.needsUpdate = true;
+    for (const m of [MAT.land, MAT.solid, MAT.flora, MAT.plant, MAT.inner]) if (m) m.needsUpdate = true;
     G.Ground3D.quality();
     G.FX3D && G.FX3D.quality && G.FX3D.quality(q);
     G.Post3D && G.Post3D.quality && G.Post3D.quality(q);
@@ -1791,6 +1801,7 @@ vec3 gxGrade( vec3 c ) {
     G.People3D && G.People3D.clear && G.People3D.clear();
     G.Dragon3D && G.Dragon3D.clear && G.Dragon3D.clear();
     G.Things3D && G.Things3D.clear && G.Things3D.clear();
+    G.Build3D && G.Build3D.insideClear && G.Build3D.insideClear();
   };
   // a new world, or a save loaded: every picture of the old one goes
   G.worldHooks.push(() => { if (!renderer) return; for (const ch of chunks.values()) { disposeGroup(ch.far); disposeGroup(ch.near); } chunks.clear(); clist = []; R3.built = null; if (ocean) { ocean.geometry.dispose(); scene.remove(ocean); ocean = null; } G.People3D && G.People3D.clear && G.People3D.clear(); });
@@ -1810,6 +1821,7 @@ vec3 gxGrade( vec3 c ) {
     // (the clouds' shadows move as the sky's clouds do; darker under a bright sun, none at night)
     { const w = U.wind.value; const T = U.time.value; G.Ground3D.clouds(w.x * T * 0.0016 * 4.7, w.y * T * 0.0016 * 4.7, skyU.cover.value, G.clamp(sun.intensity / 3, 0, 1) * 0.3); }
     if (focus) stream(focus.X, focus.Z, budget === undefined ? 6 : budget);
+    G.Build3D && G.Build3D.insideTick && G.Build3D.insideTick(rdt, focus); // (the insides round the body: before the people who stand in them)
     G.People3D && G.People3D.update && G.People3D.update(rdt, focus);
     G.Things3D && G.Things3D.update && G.Things3D.update(rdt, focus); // (before the fire's drawing: it hands over its flames)
     G.FX3D && G.FX3D.update && G.FX3D.update(rdt, focus);

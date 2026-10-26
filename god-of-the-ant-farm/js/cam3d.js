@@ -47,6 +47,9 @@
     if ((S.type[i] <= G.T.SEA || S.type[i] === G.T.RIVER) && !(S.dry && S.dry[i]) && Y < W.waterH(x, y) * H + 0.25) return true;
     // (a wall is its own stones, a gate has its passage: the shape the drawing puts there)
     if (S.wall[i] && S.wall[i] !== 3 && G.Build3D) return G.Build3D.wallSolid(X, Y, Z, 0.2);
+    // (a building whose plan is made: its walls, floors, roof and shut doors as the plan has them — the eye comes in by an
+    // open door and stands in its rooms)
+    { const b = S.occ[i] && S.buildings.get(S.occ[i]); const r = b ? planSolid(b, X, Y, Z) : null; if (r !== null) return r; }
     const top = G.Build3D ? G.Build3D.heightAt(i) : 0;
     if (top > 0 && Y < W.maxH(Math.floor(x), Math.floor(y), 1, 1) * H + top + 0.6) {
       const b = S.occ[i] && S.buildings.get(S.occ[i]);
@@ -57,6 +60,40 @@
     return false;
   }
   C3.solid = solid;
+  // a point in a building with a plan made: null (no plan: the old box), else solid or not — in the walls, a piece of
+  // furniture, a shut door, a storey's slab, the roof, under a floor, over the ground inside a cellar; free in its rooms, its
+  // open doors, the hall's height where no storey is, the sky over its roof
+  function planSolid(b, X, Y, Z) {
+    const Sp = G.Space; const p = Sp.planMade ? Sp.planMade(b) : null; if (!p || !p.ok || !p.grid) return null;
+    const L = Sp.TILE, x = X - b.x * L, z = Z - b.y * L, y = Y - Sp.plinth(b).y0; const sh = p.shell;
+    const inShell = sh.kind === 'round' ? Math.hypot(x - sh.cx, z - sh.cz) < sh.r : x > sh.r[0] && x < sh.r[2] && z > sh.r[1] && z < sh.r[3];
+    const annex = !inShell && (sh.annex || []).find(a => x > a.r[0] && x < a.r[2] && z > a.r[1] && z < a.r[3]);
+    if (!inShell && !annex) return false; // (the yard, the street: open)
+    if (annex) return y > (annex.h || 2.2) - 0.05 && y < (annex.h || 2.2) + 0.6; // (an annex's room under its lean-to)
+    const lv = p.levels.slice().sort((a, c) => a.y - c.y); let l = null; for (const q of lv) if (y >= q.y - 0.02) l = q;
+    if (!l || y < l.y + 0.06) return true; // (in a floor, under the lowest)
+    // (over a cellar's ground the earth: the eye stays under it)
+    if (l.y < 0 && y < 0 && Y > W.hAt(X / L, Z / L) * G.Space.HM - 0.05) return true;
+    const up = lv.find(q => q.y > l.y + 0.05); const C = G.Interiors.CELL;
+    // (over the storey's rooms: a storey above — its slab —, or the roof)
+    if (y > l.y + l.h + 0.02) { if (up && y > up.y - (up.slab || 0.2) - 0.02) return true; if (!up) { const r = roofIn(p, x, z); return y > r - 0.3 && y < r + 0.7; } }
+    const c = Sp.cellIn(p, l.lv, x, z);
+    if (c === C.WALL) return true;
+    if (c === C.SOLID) return y < l.y + 1.0;
+    if (c === C.LOW) return y < l.y + 0.5;
+    if (c === C.DOOR) { const e = Sp.planEntry && Sp.planEntry(b.id); const n = p.grid.n, cs = p.grid.cs; const a = e && e.doors && e.doors[l.lv]; const k = a ? a[Math.floor(z / cs) * n + Math.floor(x / cs)] : 0;
+      return k > 0 && !(G.Interiors.doorState(b, k - 1) && G.Interiors.doorState(b, k - 1).state === 'aberta') && y < l.y + 2.1; }
+    if (!up) { const r = roofIn(p, x, z); if (y > r - 0.3) return y < r + 0.7; }
+    return false;
+  }
+  // (the roof's underside over a point of a plan — Interiors' roofY in the lot's frame, a hand under the outside's slopes)
+  function roofIn(p, x, z) {
+    const sh = p.shell, R = sh.roof || {}; if (!R.h || R.kind === 'plano') return sh.eave;
+    if (sh.kind === 'round') return sh.eave + R.h * Math.max(0, 1 - Math.hypot(x - sh.cx, z - sh.cz) / sh.r) - 0.25;
+    const O = sh.r; const az = R.along === 'z'; const um = az ? (O[1] + O[3]) / 2 : (O[0] + O[2]) / 2, vm = az ? (O[0] + O[2]) / 2 : (O[1] + O[3]) / 2, hu = az ? (O[3] - O[1]) / 2 : (O[2] - O[0]) / 2, hv = az ? (O[2] - O[0]) / 2 : (O[3] - O[1]) / 2;
+    const u = az ? z : x, v = az ? x : z; const across = Math.abs(v - vm) / hv, end = R.kind === 'quatro-aguas' ? (Math.abs(u - um) - (hu - hv)) / hv : -1;
+    return Math.max(sh.eave, sh.eave + R.h * (1 - Math.max(across, end)) - 0.25);
+  }
   // how far the eye can go from the pivot along a direction before something solid
   function reach(p, d, want) {
     const stepL = 0.2; let s = 0.3;
