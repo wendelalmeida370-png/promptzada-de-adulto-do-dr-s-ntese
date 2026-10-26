@@ -554,8 +554,25 @@
     // (or a piece hung on any wall of the room above head height — a shelf on pegs, baskets from the beams: mount 'parede' —,
     // over the beds if need be, never over a tall piece, a door or a window)
     niche(kind, lv, room, o) {
-      o = o || {}; const D = ITEMS[kind]; const R = this.rooms[room]; if (!R || R.circ) return null; const r = R.r; const F = this.floorOf(lv);
+      o = o || {}; const D = ITEMS[kind]; const R = this.rooms[room]; if (!R) return null; const r = R.r; const F = this.floorOf(lv);
       const W = D.w, dep = D.d; const all = []; const hung = D.mount === 'parede';
+      // (a round room has no wall to cut a niche in, but what hangs goes up by the ring, from the beams — over the beds if need
+      // be, away from the door —: tried in a fixed order, so the dice stay as they were)
+      if (R.circ) {
+        if (!hung) return null;
+        const [cu, cv, rad] = R.circ; const e = this.entrance;
+        for (const [fu, fv] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) for (const a of [0, -0.55, 0.55]) {
+          const half = Math.abs(a) + W / 2; if (half >= rad - 0.1) continue; const ex = Math.sqrt(rad * rad - half * half) - 0.03; // (its outer corners on the ring)
+          const rr = fv ? [cu + a - W / 2, fv > 0 ? cv - ex : cv + ex - dep, cu + a + W / 2, fv > 0 ? cv - ex + dep : cv + ex] : [fu > 0 ? cu - ex : cu + ex - dep, cv + a - W / 2, fu > 0 ? cu - ex + dep : cu + ex, cv + a + W / 2];
+          if (e && Math.hypot((rr[0] + rr[2]) / 2 - e.u, (rr[1] + rr[3]) / 2 - e.v) < W / 2 + 0.75) continue;
+          if (F.items.some(it => it.niche && ov(rr, it.r, -0.3))) continue;
+          if (F.solid.some(it => (it.h || 0) >= (D.y || 1.4) - 0.1 && ov(rr, it.r, -0.02))) continue;
+          const sps = this.spotsAll({ r: rr, face: [fu, fv], kind, w: W, d: dep, h: D.h });
+          if (sps.some(sp => !sp.on && (Math.hypot(sp.u - cu, sp.v - cv) > rad - 0.2 || F.solid.some(it => ptIn([sp.u, sp.v], it.r, 0.12))))) continue;
+          const it = this.put(kind, lv, room, rr, fu, fv, { drop: [], steal: [] }, { side: fv > 0 ? 'fundo' : fv < 0 ? 'frente' : fu > 0 ? 'esquerda' : 'direita', niche: 1, y: D.y || 1 }); if (it) return it;
+        }
+        return null;
+      }
       for (const s of this.shuffle(['fundo', 'esquerda', 'direita', 'frente'])) {
         const across = s === 'fundo' || s === 'frente'; const edge = s === 'fundo' ? r[1] : s === 'frente' ? r[3] : s === 'esquerda' ? r[0] : r[2];
         const wl = this.walls.find(w => {
