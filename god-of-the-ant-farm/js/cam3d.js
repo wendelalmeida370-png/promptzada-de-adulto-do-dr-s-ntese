@@ -38,8 +38,14 @@
   C3.fwd = () => fwd(C3.yaw, C3.pitch);
 
   // (the building the body is in — its rooms: the eye stays in them, never out through an open door to the street, where the
-  // walls would stand between it and the body; set each frame from the body, Avatar.indoors)
+  // walls would stand between it and the body; set each frame from the body, Avatar.indoors. Not while the body is in an outer
+  // door's opening or a stride from it, its back to the street: there is no room behind it yet, and the eye stays out — L-179)
   let room = null;
+  const byOuterDoor = (inn, body) => { const p = inn.p, b = inn.b, L = G.Space.TILE;
+    for (const h of p.holes) { const d = h.door >= 0 ? p.doors[h.door] : null; if (!d || !d.outer || h.kind === 'janela') continue; const w = p.walls[h.wall]; if (!w) continue;
+      const len = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const X = b.x * L + w.a[0] + (w.b[0] - w.a[0]) * h.at / len, Z = b.y * L + w.a[1] + (w.b[1] - w.a[1]) * h.at / len;
+      if (Math.hypot(body.X - X, body.Z - Z) < Math.max(0.7, h.w / 2 + 0.2)) return true; }
+    return false; };
   G.worldHooks.push(() => { room = null; });
   function outRoom(X, Z) {
     const b = room.b, sh = room.p.shell, L = G.Space.TILE; const x = X - b.x * L, z = Z - b.y * L;
@@ -113,7 +119,7 @@
   }
   // every frame: follow the body, keep clear of the world, place the camera
   C3.update = function (rdt, body, cam) {
-    clock += rdt; room = G.Avatar && G.Avatar.indoors ? G.Avatar.indoors() : null;
+    clock += rdt; room = G.Avatar && G.Avatar.indoors ? G.Avatar.indoors() : null; if (room && byOuterDoor(room, body)) room = null;
     const head = body.head !== undefined ? body.head : (body.h || 1.75) * 0.86;
     // (the world moved the body — a building rose where it stood, a scene, a load: the eye goes with it at once;
     // easing after it would fly through the houses on the way, and a pivot inside a house leaves the eye there — L-106)
