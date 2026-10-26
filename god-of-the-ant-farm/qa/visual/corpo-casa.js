@@ -50,8 +50,10 @@ function check() {
 }
 // a path over a storey of a plan (cells of 25 cm where the body fits), from a point to another (metres of the lot)
 function pathIn(b, p, lv, from, to) {
-  // (round a shut hatch, not over it: from its landing, straight over it is the way down)
-  const n = p.grid.n, cs = p.grid.cs; const fits = (x, z) => { const r = 0.34; for (const [dx, dz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r * 0.7, r * 0.7], [-r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, -r * 0.7]]) { const q = Sp.indoor(b.x * TL + x + dx, b.y * TL + z + dz, lv, b.id); if (!q || !q.walk) return false; } return true; };
+  // (round a shut hatch, not over it: from its landing, straight over it is the way down; and round a flight that goes up from
+  // this storey — a ladder along the wall too —: it is taken from its foot, never walked across, Avatar's takeFlight)
+  const ups = p.stairs.filter(s => s.kind !== 'degraus' && s.lv0 === lv); const onUp = (x, z) => ups.some(s => x > s.r[0] - 0.02 && x < s.r[2] + 0.02 && z > s.r[1] - 0.02 && z < s.r[3] + 0.02);
+  const n = p.grid.n, cs = p.grid.cs; const fits = (x, z) => { const r = 0.34; for (const [dx, dz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r * 0.7, r * 0.7], [-r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, -r * 0.7]]) { const q = Sp.indoor(b.x * TL + x + dx, b.y * TL + z + dz, lv, b.id); if (!q || !q.walk || onUp(x + dx, z + dz)) return false; } return true; };
   const c = (x, z) => [Math.floor(x / cs), Math.floor(z / cs)]; const [sx, sz] = c(from[0], from[1]), [tx, tz] = c(to[0], to[1]);
   const prev = new Map(); const key = (x, z) => z * n + x; const q = [[sx, sz]]; prev.set(key(sx, sz), null);
   for (let i = 0; i < q.length; i++) { const [x, z] = q[i]; if (x === tx && z === tz) break;
@@ -59,21 +61,26 @@ function pathIn(b, p, lv, from, to) {
   if (!prev.has(key(tx, tz))) return null; const out = []; let cur = [tx, tz]; while (cur) { out.unshift([(cur[0] + 0.5) * cs, (cur[1] + 0.5) * cs]); cur = prev.get(key(cur[0], cur[1])); }
   return out;
 }
-const follow = (b, pts) => { for (const pt of pts) { const r = walkTo(b.x * TL + pt[0], b.y * TL + pt[1], 200, 0.12); if (r.d > 0.3) return false; } return true; };
+let followAt = ''; // (where the last follow stopped short: the body's point, the one it did not reach, what blocked it)
+const follow = (b, pts) => { followAt = ''; for (const pt of pts) { const r = walkTo(b.x * TL + pt[0], b.y * TL + pt[1], 200, 0.12); if (r.d > 0.3) { const st = G.Avatar.state();
+  const q = Sp.indoor(st.X, st.Z, G.Possess.level(), b.id); followAt = `parado em ${(st.X - b.x * TL).toFixed(2)},${(st.Z - b.y * TL).toFixed(2)} (célula ${q ? q.code : '-'}), a ${r.d.toFixed(2)} m de ${pt[0].toFixed(2)},${pt[1].toFixed(2)}; barrado por ${st.block || 'nada'}`; return false; } } return true; };
 // to a point of a storey of the house, by its stairs, storey by storey (up or down the flight between each two)
+// (why the last goTo stopped short, for the proof's line)
+let goWhy = '';
 function goTo(b, p, lv, to) {
-  const st = G.Avatar.state();
+  const st = G.Avatar.state(); goWhy = '';
   for (let k = 0; k < 8 && G.Possess.level() !== lv; k++) {
     const cur = G.Possess.level(); const up = lv > cur; const s = p.stairs.find(q => q.kind !== 'degraus' && (up ? q.lv0 === cur : q.lv1 === cur));
-    if (!s) return false; const from = up ? s.a : s.b, dest = up ? s.b : s.a;
-    const pa = pathIn(b, p, cur, [st.X - b.x * TL, st.Z - b.y * TL], from); if (!pa || !follow(b, pa)) return false;
+    if (!s) { goWhy = `nenhuma escada do piso ${cur}`; return false; } const from = up ? s.a : s.b, dest = up ? s.b : s.a;
+    const pa = pathIn(b, p, cur, [st.X - b.x * TL, st.Z - b.y * TL], from); if (!pa || !follow(b, pa)) { goWhy = `${pa ? 'não chegou' : 'nenhum caminho'} à escada ${s.kind} do piso ${cur}${followAt ? ': ' + followAt : ''}`; return false; }
     if (up) walkTo(b.x * TL + dest[0], b.y * TL + dest[1], 600, 0.2);
     else { // (down: E at its landing — the hatch opened by hand)
       let best = null; for (let k = 0; k < 20 && !(best && best.id === 'escada' && !best.t.up); k++) { const r = s.r; IN.camYaw = Math.atan2(b.y * TL + (r[1] + r[3]) / 2 - st.Z, b.x * TL + (r[0] + r[2]) / 2 - st.X); best = G.Interact.best(); frame(); }
-      if (best && best.id === 'escada') G.Interact.run(best); for (let k = 0; k < 600 && st.loco === 'stair'; k++) { frame(); check(); } }
-    if (G.Possess.level() === cur) return false;
+      if (best && best.id === 'escada') G.Interact.run(best); else goWhy = `no alto da escada ${s.kind}, o E oferece ${best ? `«${best.label}»` : 'nada'}`;
+      for (let k = 0; k < 600 && st.loco === 'stair'; k++) { frame(); check(); } }
+    if (G.Possess.level() === cur) { goWhy = goWhy || `a escada ${s.kind} não levou ao piso seguinte`; return false; }
   }
-  const pa = pathIn(b, p, lv, [st.X - b.x * TL, st.Z - b.y * TL], to); return !!pa && follow(b, pa);
+  const pa = pathIn(b, p, lv, [st.X - b.x * TL, st.Z - b.y * TL], to); if (!pa) goWhy = `nenhum caminho no piso ${lv}`; return !!pa && follow(b, pa);
 }
 // a house of the world with a plan, its door on a street, a grown-up living in it who can be lived; and the body by its door
 function houseAndBody() {
@@ -159,11 +166,11 @@ else {
   { const b2 = S.buildings.get(b.id), p2 = Sp.planNow(b2); v = G.Possess.body();
     if (p2 && v) {
       // (down to the entrance's storey first, by the stairs, and to the door)
-      goTo(b2, p2, p2.entryLv || 0, inward(p2, 0.7));
+      const went = goTo(b2, p2, p2.entryLv || 0, inward(p2, 0.7)); const why5 = went ? '' : goWhy;
       // (the door: open, or opened)
       if (In.doorState(b2, p2.entrance.door).state !== 'aberta') { G.Possess.apply(w => In.useDoor(b2, p2.entrance.door, 'abrir', w)); frame(); }
       const o2 = inward(p2, -0.6); bad = []; walkTo(b2.x * TL + o2[0], b2.y * TL + o2[1], 300, 0.08); const out = In.planDoor(b2); const r6 = walkTo(out[0] * TL, out[1] * TL, 300); frame(); frame();
-      ok('5. sai pela porta: o mundo o tem fora, sem piso guardado', v.inside === 0 && G.Possess.level() === undefined && r6.d < 0.4 && !bad.length, `dentro ${v.inside}; piso ${G.Possess.level()}; na rua a ${r6.d.toFixed(2)} m${bad.length ? '; ' + bad[0] : ''}`);
+      ok('5. sai pela porta: o mundo o tem fora, sem piso guardado', v.inside === 0 && G.Possess.level() === undefined && r6.d < 0.4 && !bad.length, `dentro ${v.inside}; piso ${G.Possess.level()}; na rua a ${r6.d.toFixed(2)} m${why5 ? ` (${why5})` : ''}${bad.length ? '; ' + bad[0] : ''}`);
     } else ok('5. sai pela porta', false, 'a casa ou o corpo sumiram');
   }
   ok('verificador (S0 a S2) durante tudo isso', !vbad().length, vtxt(vbad()));
