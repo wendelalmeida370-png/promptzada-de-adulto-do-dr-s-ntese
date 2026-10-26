@@ -379,6 +379,10 @@ function stallNow() {
   start = stallNow() + told(calmTown(set));
   const payer = E.homeOf(m) ? 'h:' + m.home : 'p:' + m.id; D.make(payer, 'moedas', 20, { code: 'teste' });
   fine(90, () => !m.carry || watch()); // (a load already in the merchant's arms goes where it was going first)
+  // (still in his arms — he went to bed with it, and a sleeper keeps what he carries; the god's body would go on carrying
+  // it, and buys wholesale only with empty hands —: what he would do awake, the world's delivery to where the load belongs,
+  // before the god takes him: T-075)
+  if (m.carry) { const bd = A.boundOf(m.carry); G.Vg.endTask(m); G.Vg.setTask(m, { type: 'carga', to: bd && bd !== 'op' ? bd : 'f:' + G.Fac.idOfV(m), pri: 1, st: 0 }); fine(90, () => !m.carry || watch()); }
   roomOn(z, 'food', 8); // (room on the stall for what the body buys)
   const tk = G.Possess.take(m); M.viver(0.2);
   // (to the store's door, wholesale; to the stall, set it out; open)

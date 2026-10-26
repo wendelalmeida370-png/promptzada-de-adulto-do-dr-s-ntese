@@ -219,9 +219,14 @@ const fateOf = (op, v, n0) => { const e = D.ledger().filter(q => q[7] === op.id 
   } else info = 'ninguém carregou uma caixa';
   ok('p9 chamado no meio', fine, info);
 }
+// (the boat's catch and the cases of the bad days start from the ready world again: what the days before brought to the
+// town — a raid that took its porters, a band at the gates, the nights — is another story, and would decide them instead;
+// with the plan's doors on, the world's chance brought a band to the quay's town in the middle of the boat's unloading:
+// T-074)
+const fresh = () => { M.pronto(world); M.viver(2); G.inSim = Math.max(G.inSim || 0, 1); refresh(); };
 // ---------------- p11: the catch of a boat comes up as an unloading of its own
 {
-  clearQuay(); day(0.2); refresh();
+  fresh(); clearQuay(); day(0.2);
   fac.stock.food = Math.min(fac.stock.food || 0, G.Village.cap(fac.id) - 60);
   // (the boats go out in the morning and come back heavy in the afternoon: the catch comes up on its own)
   let boat = null;
@@ -243,9 +248,6 @@ const fateOf = (op, v, n0) => { const e = D.ledger().filter(q => q[7] === op.id 
   }
   ok('p11 a pesca de um barco', fine, info);
 }
-// (the cases of the bad days start from the ready world again: what the days before brought to the town — a raid that
-// took its porters, a band at the gates, the nights — is another story, and would decide them instead)
-const fresh = () => { M.pronto(world); M.viver(2); G.inSim = Math.max(G.inSim || 0, 1); refresh(); };
 // ---------------- p12: a quay cut off in the middle (a wall with no gate between it and the store): no one stuck trying,
 // nothing lost; the next ship's cargo goes up by the way there is; with the way open again, the crates come up
 {
