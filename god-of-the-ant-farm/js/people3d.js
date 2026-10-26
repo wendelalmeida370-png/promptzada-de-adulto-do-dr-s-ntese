@@ -1303,7 +1303,7 @@
       const X = pl ? pl.X : v.x * TL, Z = pl ? pl.Z : v.y * TL; const swim = v.task && v.task.type === 'swim';
       // (the world walks them over a boulder's tile: the feet go up onto the stone and down again, a quick step — never through it;
       // inside, on the floor, the bed, the bench the plan has there)
-      const Yf = pl ? pl.Y : swim ? W.waterH(v.x, v.y) * HM - 0.32 : Math.max(groundY(v.x, v.y), G.Space.stoneTop(X, Z));
+      const Yf = pl ? pl.Y : swim ? W.waterH(v.x, v.y) * HM - 0.32 : Math.max(groundY(v.x, v.y), G.Space.stoneTop(X, Z), G.Space.stepTop(X, Z));
       if (!s) { s = { X, Z, Y: Yf, yaw: v.face > 0 ? 0 : Math.PI, ph: (v.id % 7), pose: POSE0(), t: 0, sp: 0, st: 'idle' }; vis.set(v.id, s); }
       s.Y = Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
       const Y = s.Y + (v.z ? v.z * 0.22 : 0);

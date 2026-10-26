@@ -1839,14 +1839,10 @@ float m3scale(float p) {
   // little longer or shorter at its ends, three centimetres over the ground as its mesh is drawn — no flicker, no plank lost
   // under it. Only where the machine carries detail; the bridges are the realm's. Only seen: deckAt gives their top
   const decks = new Map(), deckOf = new Map(); G.worldHooks.push(() => { decks.clear(); deckOf.clear(); });
-  const vH = (x, y) => W.hAt(Math.min(N, x), Math.min(N, y)) * HM() - (G.Space.bedDrop ? G.Space.bedDrop(x, y) : 0);
   // (the near ground as its mesh draws it — realm3d's terrainGeo: a point every half tile, each cell cut from its +x corner
-  // to its +y corner — so what lies on it lies on what is seen)
-  function drawnAt(x, y) {
-    const i = Math.floor(x * 2), j = Math.floor(y * 2), u = x * 2 - i, v = y * 2 - j; const xa = i / 2, ya = j / 2, xb = xa + 0.5, yb = ya + 0.5;
-    if (u + v <= 1) { const ha = vH(xa, ya); return ha + (vH(xb, ya) - ha) * u + (vH(xa, yb) - ha) * v; }
-    const hd = vH(xb, yb); return hd + (vH(xa, yb) - hd) * (1 - u) + (vH(xb, ya) - hd) * (1 - v);
-  }
+  // to its +y corner — so what lies on it lies on what is seen; Space's, so that the steps before a door and the feet on them
+  // read the same)
+  const drawnAt = (x, y) => G.Space.drawnAt(x, y);
   const DW = 1.0, DT = 0.06, DUP = 0.03; // (the deck's half width, a plank's thickness, how far its top stands over the ground)
   // (a plank from A to B — the middles of its two ends, on its top — wv across it, t thick under its top)
   function plank(g, A, B, wv, t, col) {
@@ -2597,7 +2593,8 @@ float m3scale(float p) {
     else if (sh.court) top = courtRoof(K, ctx, rk);
     else top = roofOf(K, x, z, sx, sz, eave, rk, null, sh.roof.along === 'z', sh.roof.h, true, new Set(leans.map(ln => ln.on)));
     if (K.st === 'nordico' && rk === 'turf' && K.roof && !sh.court) nordGables(gw, K, K.cls);
-    for (const s of S.steps || []) inStair(K, S, s);
+    // (an outside flight, and the steps before its foot down to the ground — Space.feet; L-163)
+    for (const s of S.steps || []) { inStair(K, S, s); const f = G.Space.feet(s); const fl = G.Space.doorFlight(K.b, sh, { w: K.w, d: K.d }, f.w, f.h, 0, false, f.F, f.uc); if (fl) layFlight(K, fl, (K.P.base || [])[2] || '#a09a8e'); }
     smokeOf(K, ctx, top);
     if (K.b.type === 'taverna') innSign(K);
     if (K.footed && !raised && K.body.door) wallGrass(K, x, z, sx, sz, { side, a: K.body.door.a, w: K.body.door.w });
@@ -2659,6 +2656,13 @@ float m3scale(float p) {
     for (const [b0, b1, st] of stuffBands(K, ctx, ws, ya, yb)) faceRects(K, F, cutRect([F.u0, b0, F.u1, b1], cuts), st, 0, b1 >= yb - 1e-3 ? shade : undefined);
     for (const q of ops) opening(gw, K, ctx, F, q);
     dressSide(K, ctx, F, ws, ops, ya, yb, main, covers);
+  }
+  // (a flight of steps of Space's reckoning laid in stone — before a door, before the foot of an outside flight: Space.doorFlight)
+  function layFlight(K, fl, stone) {
+    const tone = k => dim(stone, 0.94 + K.hv(260 + k) * 0.1); const F = fl.F;
+    K.as('stone', () => { for (const t of fl.treads) { const a = t.a + (t.kind === 'out' ? (K.hv(262 + t.k) - 0.5) * 0.04 : 0); const p = fl.P(a, t.n); const sx = F.ax ? t.wa : t.wn, sz = F.ax ? t.wn : t.wa;
+      K.box(p[0], t.gy, p[1], sx, t.y - t.gy, sz, t.kind === 'one' || t.kind === 'landing' ? stone : tone(t.k));
+      (K.steps || (K.steps = [])).push([K.x0 + p[0] - sx / 2, K.x0 + p[0] + sx / 2, K.z0 + p[1] - sz / 2, K.z0 + p[1] + sz / 2]); } }); // (where they stand, for the proof: Build3D.check)
   }
   // (the way along a side, +1 toward its u1 end)
   const alongV = (F, s) => (F.ax ? [s, 0, 0] : [0, 0, s]);
@@ -2754,13 +2758,10 @@ float m3scale(float p) {
       if (st === 'grego' && ctx.gw && q.y1 + 0.5 < ctx.eave) { const c = F.P(q.uc, y + dh + 0.22, 0.03); ctx.gw.put(SH.box, R3.mat(K.x0 + c[0], K.y0 + c[1], K.z0 + c[2], F.ax ? 0 : Math.PI / 2, dw * 0.8, 0.26, 0.05), '#2a3440'); }
       if (st === 'asteca') K.as('stucco', () => { bx(0, y + dh + 0.2, 0.1, dw + 0.7, 0.14, 0.2, P.trim2 || '#2fae8f'); bx(0, y + dh + 0.34, 0.1, dw + 0.25, 0.1, 0.2, P.trim || '#b33a2a'); });
     }
-    // (the step: down to the ground before the door — no further out than a hand past the lot)
-    if (!ctx.raised && y < 0.3) {
-      const room = F.o[1] > 0 ? K.d - F.line : F.o[1] < 0 ? F.line : F.o[0] > 0 ? K.w - F.line : F.line;
-      const D = (a, yy, n) => F.P(q.uc + a, yy, n);
-      const cutS = doorSteps(K, D, bx, dw + 0.5, room + 0.15, 0.1, y + 0.02, 0.7, stone, 'stone', [q.uc - F.u0, F.u1 - q.uc]);
-      if (cutS && K.body && K.body.door && K.body.door.side === F.sd) K.body.door.cut = cutS;
-    }
+    // (the step: down to the ground before the door — no further out than a hand past the lot): Space's reckoning, the one the
+    // feet go up (Space.doorFlight; L-163)
+    const fl = G.Space.doorFlight(K.b, ctx.S.shell, { w: K.w, d: K.d }, q.w, q.h, q.l.y, ctx.raised);
+    if (fl) { layFlight(K, fl, stone); if (fl.cut && K.body && K.body.door && K.body.door.side === fl.F.sd) K.body.door.cut = fl.cut; }
   }
   // the people's dressing of a side: the socle at its foot, the bands of its storeys, the cornice under the eaves (none under
   // a flat roof: its own top), the timbers of a half-timbered storey, the north's corner posts, sill and plate — all of it a
@@ -3131,7 +3132,9 @@ float m3scale(float p) {
       const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(); const K = kit(g, b, gp); draw(g, gw, K, false);
       const P = g.p; let bad = 0, lo = 1e9, x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
       for (const arr of [P, g.n, gw.p, gp.p]) for (let k = 0; k < arr.length; k++) if (!Number.isFinite(arr[k])) bad++;
-      for (let k = 0; k < P.length; k += 3) { x0 = Math.min(x0, P[k]); x1 = Math.max(x1, P[k]); lo = Math.min(lo, P[k + 1]); z0 = Math.min(z0, P[k + 2]); z1 = Math.max(z1, P[k + 2]); }
+      // (the steps before a door that come down into the street stand out of the lot by rights: not counted in how far it goes)
+      const onStep = (X, Z) => !!K.steps && K.steps.some(r => X >= r[0] - 0.02 && X <= r[1] + 0.02 && Z >= r[2] - 0.02 && Z <= r[3] + 0.02);
+      for (let k = 0; k < P.length; k += 3) { lo = Math.min(lo, P[k + 1]); if (onStep(P[k], P[k + 2])) continue; x0 = Math.min(x0, P[k]); x1 = Math.max(x1, P[k]); z0 = Math.min(z0, P[k + 2]); z1 = Math.max(z1, P[k + 2]); }
       const tag = `${b.type}#${b.id}`;
       if (bad) out.push(`${tag}: ${bad} números que não são números`);
       const over = Math.max(b.x * L - x0, x1 - (b.x + b.w) * L, b.y * L - z0, z1 - (b.y + b.h) * L);

@@ -61,7 +61,8 @@
     const t = v.task;
     if (t && (t.type === 'scene')) return { ok: false, why: `${v.name} está no meio de uma cena da história.` };
     if (t && (t.type === 'condemned' || t.type === 'escorted' || t.type === 'swim' || t.type === 'cela')) return { ok: false, why: `${v.name} não está em condições agora.` };
-    if (!v.inside) { const s = G.Space.surface(v.x * G.Space.TILE, v.y * G.Space.TILE); if (!s.walk && !(water && s.kind === 'deep' && KINDS.humano.swim)) return { ok: false, why: `${v.name} não está em chão firme.` }; }
+    // (on a doorstep — the plan's own ground, that the world's map has blocked — one stands: L-162)
+    if (!v.inside) { const s = G.Space.surface(v.x * G.Space.TILE, v.y * G.Space.TILE); if (!s.walk && !(water && s.kind === 'deep' && KINDS.humano.swim) && !onPlan(v)) return { ok: false, why: `${v.name} não está em chão firme.` }; }
     return { ok: true };
   };
   // what the body can do, from the person (age, a lost leg, sickness, tiredness) and the kind of incarnation
@@ -220,6 +221,17 @@
     return !!(ins && ins.b === B && (ins.shell || ins.walk));
   }
   Po.indoorOK = v => indoorOK(v, G.S.avatar);
+  // where a plan lets the body stand — the one rule of the world's step, of the push of the stuck (villagers.js) and of the
+  // verifier: indoors, indoorOK; out of the walls, on the plan's own ground that the world's map has blocked (the building's
+  // lot): the doorstep before an outer door, the steps up a house on stilts. The plan made now if it is not yet (Space.planNow),
+  // never the frame's queue: the world's step is the same with or without anyone looking
+  function onPlan(v, a) {
+    if (!v) return false; if (v.inside) return indoorOK(v, a);
+    const S = G.S; if (!W.inb(v.x, v.y)) return false; const B = S.buildings.get(S.occ[W.idx(v.x, v.y)]);
+    if (!B || !G.Space.planNow || !G.Space.planNow(B)) return false;
+    const ins = G.Space.indoor(v.x * G.Space.TILE, v.y * G.Space.TILE); return !!(ins && ins.b === B && ins.walk && !ins.shell);
+  }
+  Po.onPlan = v => { const a = G.S.avatar; return !!(v && a && a.id === v.id) && onPlan(v, a); };
   // the unloadings the body could lend a hand to, as the world gives its own porters theirs (Porto.claim): of the body's own
   // people, with crates of it — on the quay or on the ground — where its feet reach (the map of regions, asked here in the
   // world's step), and whether they are near (for the lead); with a crate of one in the hands, whether the feet reach the door
@@ -279,7 +291,7 @@
     // (indoors: in the rooms of a building whose plan is made, where its plan lets one be — its storey kept with the body —, or
     // asleep in one's own bed; anything else that put the body indoors lets it out at the door)
     if (v.inside && !(v.sleeping && v.inside === v.home) && !indoorOK(v, a)) { const b = S.buildings.get(v.inside); if (b) { const d = G.Vg.door(b); v.x = d[0]; v.y = d[1]; } v.inside = 0; a.lv = null; }
-    if (!v.inside && a.lv !== null && a.lv !== undefined && !(G.Space.indoor && G.Space.indoor(v.x * G.Space.TILE, v.y * G.Space.TILE))) a.lv = null;
+    if (!v.inside && a.lv !== null && a.lv !== undefined && !onPlan(v, a)) a.lv = null; // (out, and off any plan: no storey)
     for (let k = a.asks.length - 1; k >= 0; k--) if (S.clock - a.asks[k].t > 90) a.asks.splice(k, 1);
     // (what the hands asked since the last step: done now, in the world's own step, in the order asked — each sees the world
     // the one before left; one asked by a body no longer lived is dropped. Each is answered "not done" until it is done: one
@@ -399,7 +411,7 @@
         if (B && G.Interiors && G.Interiors.has(B) && Number.isFinite(I.x) && Number.isFinite(I.y) && Number.isFinite(S.avatar.lv) && Math.abs(I.x - (B.x + B.w / 2)) < B.w && Math.abs(I.y - (B.y + B.h / 2)) < B.h) { v.inside = B.id; v.x = I.x; v.y = I.y; }
         else { v.inside = 0; S.avatar.lv = null; } }
       v.task = mark(); v.sleeping = false; v.path = null;
-      if (!v.inside && !W.walkableXY(v.x, v.y)) v.task.afloat = 1; // (saved swimming: it swims on)
+      if (!v.inside && !W.walkableXY(v.x, v.y) && !onPlan(v, S.avatar)) v.task.afloat = 1; // (saved swimming: it swims on — on a doorstep it stands)
       cur = v;
     },
   });

@@ -1537,6 +1537,7 @@
       for (const v of S.villagers.values()) {
         if (v.inside || v.air || v.held || v.age < 2 || v.aboard || (v.task && (v.task.perch || (v.task.type === 'barco' && v.task.st === 4)))) continue;
         if (G.Possess && G.Possess.afloat(v)) continue; // (the body swimming by the player's will: not pulled out — it swims or drowns)
+        if (G.Possess && G.Possess.onPlan && G.Possess.onPlan(v)) continue; // (the body where a plan lets it stand: a doorstep the map has blocked)
         const i = W.idx(v.x, v.y);
         if (!W.walkable(i) && S.type[i] !== T.SEA && S.type[i] !== T.DEEP) {
           const n = W.nearestLand(v.x, v.y, 5); if (n) { const e = v.path && v.pi < v.path.length ? v.path[v.path.length - 1] : null; v.x = n[0]; v.y = n[1]; v.path = null; if (v.task && e && !Vg.goto(v, e[0], e[1], false)) v.task.st = 0; }

@@ -51,15 +51,17 @@
   const TL = () => G.Space.TILE, HM = () => G.Space.HM;
   // the ground the feet stand on at a point: a bridge's deck over the water, the bed of a ford, the land
   function floorAt(X, Z) {
-    const S = G.S; const x = X / TL(), y = Z / TL();
+    const x = X / TL(), y = Z / TL();
     // (in a building whose plan is made — and on its doorstep: the plan's floor, on the storey the body would be on there)
     const ins = indoorAt(X, Z); if (ins) return ins.y;
     if (!W.inb(x, y)) return W.hAt(G.clamp(x, 0, G.N), G.clamp(y, 0, G.N)) * HM();
-    const i = W.idx(x, y); let h = W.hAt(x, y) * HM();
-    if (S.type[i] === T.RIVER && (S.road[i] || (S.ice && S.ice[i]))) return Math.max(h, S.wl[i] * HM() + (S.road[i] ? 0.17 : 0.1));
+    let h = W.hAt(x, y) * HM();
+    // (the steps before a door that come down into the street are ground the feet stand on — L-163 —, on a bridge's deck too)
+    const sp = G.Space.stepTop(X, Z);
+    const dk = G.Space.deckAt(x, y); if (dk > -Infinity) return Math.max(h, dk, sp); // (a bridge's deck, the ice)
     h -= G.Space.bedAt(x, y); // (the bed of a river or a lake, under its water)
     // (a boulder is ground too: the feet stand on its faces)
-    const st = G.Space.stoneTop(X, Z);
+    const st = Math.max(G.Space.stoneTop(X, Z), sp);
     return st > h ? st : h;
   }
   Av.floorAt = floorAt;
