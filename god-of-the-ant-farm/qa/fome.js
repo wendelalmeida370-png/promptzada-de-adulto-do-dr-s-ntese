@@ -13,8 +13,9 @@
 //    mãos a pousam no chão (L-169); quem a levanta morre no meio e outro termina; um dia inteiro pelo salto sem ninguém
 //    morrer de fome
 // h5 a regra S1 do verificador: uma cidade cujo povo morre de fome com comida no estoque e nenhum armazém
-// h6 a regra S2: alguém morrendo de fome com comida ao alcance, livre, numa cidade calma, preso a outra coisa — e não quem
-//    vai comer, foge, luta, está condenado ou cativo, nem quem está numa cidade atacada ou em fogo
+// h6 a regra S2: alguém morrendo de fome com comida ao alcance, livre, numa cidade calma, preso a outra coisa ou sem afazer
+//    depois de escolher — e não quem vai comer, foge, luta, está entre dois afazeres, condenado ou cativo, nem quem está
+//    numa cidade atacada ou em fogo
 // h7 o ferido (vida 40) com a fome no máximo, deitado de noite no sono do cansaço: acorda, come e volta a dormir (L-171)
 // h8 quem está na festa com a fome no máximo sai para comer, e a festa segue sem ele (L-171)
 // h9 quem dorme com fome e não tem o que comer ao alcance não fica acordando a cada passo
@@ -158,7 +159,7 @@ if (fset) {
   const calm = [...S.settlements.values()].filter(s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 5).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)[0];
   const v = calm && [...S.villagers.values()].filter(o => o.set === calm.id && o.age >= 18 && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && W.reaches(o, ...V.frontTile(V.nearestDropoff(o.x, o.y, o.set)))).sort((a, b) => a.id - b.id)[0];
   const said = (who, t) => QA.check().filter(q => q.sys === 'fome' && q.sev === 2 && q.id === who.id);
-  let held = [], eating = [], fleeing = [], captive = [], attacked = [], condemned = [], burning = [], fighting = [];
+  let held = [], eating = [], fleeing = [], captive = [], attacked = [], condemned = [], burning = [], fighting = [], between = [], nothing = [];
   if (v) {
     const keep = [v.hunger, v.hp, v.captive]; const set = S.settlements.get(v.set); const alarm = set.alarmT;
     Vg.endTask(v); v.hunger = 100; v.hp = 35;
@@ -167,13 +168,15 @@ if (fset) {
     Vg.endTask(v); Vg.setTask(v, { type: 'flee', pri: 5 }); fleeing = said(v);   // (running from a danger)
     Vg.endTask(v); Vg.setTask(v, { type: 'condemned', pri: 6 }); condemned = said(v); // (not free: bound for the scaffold)
     Vg.endTask(v); Vg.setTask(v, { type: 'fight', pri: 4, id: 0 }); fighting = said(v); // (in a fight: a beast, a brawl)
+    const th0 = v.think; Vg.endTask(v); v.think = 0.2; between = said(v); // (an errand just ended: the next choice at the coming step)
+    v.think = 1.8; nothing = said(v); v.think = th0;                      // (no errand after a choice: the choice found nothing — stuck)
     Vg.endTask(v); v.captive = { from: v.set, home: v.set }; captive = said(v); v.captive = keep[2];
     set.alarmT = 30; attacked = said(v); set.alarmT = alarm;
     const al = Vg.alarms.get(set.id); Vg.alarms.set(set.id, [W.idx(set.cx, set.cy)]); burning = said(v); if (al) Vg.alarms.set(set.id, al); else Vg.alarms.delete(set.id); // (a fire in the town)
     Vg.endTask(v); v.hunger = keep[0]; v.hp = keep[1];
   }
-  ok('h6 o verificador (S2): quem morre de fome com comida ao alcance, preso a outra coisa; não quem vai comer, foge, luta, está condenado ou cativo, nem numa cidade atacada ou em fogo', !!v && held.length === 1 && !eating.length && !fleeing.length && !fighting.length && !condemned.length && !captive.length && !attacked.length && !burning.length,
-    v ? `${v.name} em ${calm.name}: ${held.length ? '«' + held[0].msg + '»' : 'o verificador não viu'}; indo comer ${eating.length}, fugindo ${fleeing.length}, lutando ${fighting.length}, condenado ${condemned.length}, cativo ${captive.length}, cidade atacada ${attacked.length}, cidade em fogo ${burning.length}` : 'ninguém numa cidade calma');
+  ok('h6 o verificador (S2): quem morre de fome com comida ao alcance, preso a outra coisa ou sem afazer depois de escolher; não quem vai comer, foge, luta, está entre dois afazeres, condenado ou cativo, nem numa cidade atacada ou em fogo', !!v && held.length === 1 && nothing.length === 1 && !between.length && !eating.length && !fleeing.length && !fighting.length && !condemned.length && !captive.length && !attacked.length && !burning.length,
+    v ? `${v.name} em ${calm.name}: ${held.length ? '«' + held[0].msg + '»' : 'o verificador não viu'}; sem afazer depois de escolher ${nothing.length}, entre dois afazeres ${between.length}, indo comer ${eating.length}, fugindo ${fleeing.length}, lutando ${fighting.length}, condenado ${condemned.length}, cativo ${captive.length}, cidade atacada ${attacked.length}, cidade em fogo ${burning.length}` : 'ninguém numa cidade calma');
 }
 
 // ---------------- h7 the wounded sleeper: wakes at night to eat, and sleeps again (L-171) ----------------
