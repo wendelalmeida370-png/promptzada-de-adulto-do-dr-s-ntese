@@ -8,7 +8,10 @@
 //      where the people of a side walk out only by its corner, the next side's gate a step away (within three tiles of every
 //      street and worn path of it) —, never two side by side, at most four
 //   2. the gates are where the people walk: a side crossed by a street or a worn path has its gate on one of them
-//   3. Jelling (anos100) planned again: a gate on its west side
+//   3. the bad case of L-140, by rule in every world: the walls whose walked sides differ the most in traffic (the busiest
+//      side's busiest tile against the quietest walked side's) — where the old planner, keeping the four busiest gates of
+//      all, gave the busy side a third gate and the quiet side none — have a gate for their quietest walked side; and Jelling
+//      (anos100), where it was found, on its west side, while that world still has it
 //   4. a wall begun, saved and loaded halfway: the same tiles, the same gates; and then finished, its gates are gates on the map
 //   5. the checker clean, no module error
 const M = require('./nodemundo.js');
@@ -19,7 +22,7 @@ const WORLDS = (process.argv[2] || 'cidade,metropole,mega,mundial,anos100').spli
 const plan = s => { const S = G.S; const keep = S.walls; S.walls = keep.filter(w => w.set !== s.id); const id0 = S.nextId; const w = G.Siege.raiseWalls(s, null, false); S.walls = keep; S.nextId = id0; return w; };
 const sideOf = (w, i) => { const N = G.N, [x0, y0, x1, y1] = w.box, x = i % N, y = (i / N) | 0; const out = []; if (x === x0) out.push('O'); if (x === x1) out.push('L'); if (y === y0) out.push('N'); if (y === y1) out.push('S'); return out; };
 const dist = (i, j) => { const N = G.N; return Math.abs((i % N) - (j % N)) + Math.abs(((i / N) | 0) - ((j / N) | 0)); };
-let plans = 0, bad1 = [], bad2 = [], worst = '';
+let plans = 0, bad1 = [], bad2 = [], worst = ''; const uneven = [];
 for (const k of WORLDS) {
   M.pronto(k); const S = G.S;
   for (const s of [...S.settlements.values()].sort((a, b) => a.id - b.id)) {
@@ -37,17 +40,24 @@ for (const k of WORLDS) {
       const ways = sides[sd].filter(walked); if (!ways.length) continue;
       const g = w.gates.filter(q => sideOf(w, q).includes(sd)); if (g.length && !g.some(walked)) bad2.push(`${name}, lado ${sd}: ${ways.length} casa(s) de rua ou caminho, o portão fora deles`);
     }
+    // (3: how unevenly its walked sides are used — the rank the planner itself gives a gate: the worn path, a street more)
+    { const rank = i => S.wear[i] + (S.road[i] ? 40 : 0); const tops = Object.keys(sides).map(sd => ({ sd, top: Math.max(0, ...sides[sd].filter(walked).map(rank)), ways: sides[sd].filter(walked) })).filter(q => q.ways.length);
+      if (tops.length >= 2) { tops.sort((a, b) => a.top - b.top); const q = tops[0]; const served = w.gates.some(g => sideOf(w, g).includes(q.sd)) || q.ways.every(i => w.gates.some(g => dist(i, g) <= 3));
+        uneven.push({ name, ratio: tops[tops.length - 1].top / Math.max(1, q.top), side: q.sd, served, gates: w.gates.map(g => sideOf(w, g).join('')).join(' ') }); } }
     if (!worst && w.gates.length) worst = `${name}: ${w.tiles.length} casas de muro, ${w.gates.length} portões (${w.gates.map(g => sideOf(w, g).join('')).join(' ')})`;
   }
   if (k === 'anos100') {
-    // 3. Jelling planned again: a gate on the west side
+    // 3b. Jelling planned again, while the world has it: a gate on the west side
     const je = [...S.settlements.values()].find(s => s.name === 'Jelling'); const w = je && plan(je);
-    const west = w ? w.gates.filter(g => sideOf(w, g).includes('O')) : [];
-    ok('3 Jelling planejada de novo: um portão no lado oeste', !!w && west.length > 0, w ? `caixa ${JSON.stringify(w.box)}; portões ${w.gates.map(g => `(${g % G.N},${(g / G.N) | 0})${sideOf(w, g).join('')}`).join(' ')}` : 'sem plano');
+    if (w) { const west = w.gates.filter(g => sideOf(w, g).includes('O')); ok('3b Jelling planejada de novo: um portão no lado oeste', west.length > 0, `caixa ${JSON.stringify(w.box)}; portões ${w.gates.map(g => `(${g % G.N},${(g / G.N) | 0})${sideOf(w, g).join('')}`).join(' ')}`); }
+    else console.log('(3b: o mundo pronto anos100 não tem mais Jelling, onde o L-140 foi achado; o caso ruim vai pela regra, no 3)');
   }
 }
 ok('1 cada lado o seu portão, nunca lado a lado, no máximo quatro', plans > 20 && !bad1.length, `${plans} muros planejados em ${WORLDS.length} mundos; ${bad1.length} com falta: ${bad1.slice(0, 4).join(' · ') || 'nenhum'}${worst ? ' · ex.: ' + worst : ''}`);
 ok('2 o portão do lado fica onde se anda (a rua ou o caminho gasto que o cruza)', !bad2.length, bad2.slice(0, 4).join(' · ') || `${plans} muros, nenhum lado com o portão fora de onde se anda`);
+{ const top = uneven.sort((a, b) => b.ratio - a.ratio).slice(0, 5); const miss = top.filter(q => !q.served);
+  ok('3 o caso ruim do L-140, pela regra: nos muros cujos lados andados mais diferem no movimento, o lado mais quieto tem o seu portão', top.length >= 3 && !miss.length,
+    top.length < 3 ? `só ${top.length} muro(s) com dois lados andados: o caso precisa de outro mundo` : top.map(q => `${q.name}: lado ${q.side} ${q.served ? 'servido' : 'SEM portão'} (${q.ratio.toFixed(1)}×; portões ${q.gates})`).join(' · ')); }
 // 4. a wall begun, saved and loaded halfway; then finished
 {
   M.pronto('anos100'); const S = G.S;
