@@ -32,10 +32,10 @@ let oldRule = 0;
 const bad0 = new Set(QA.check().filter(q => q.sev <= 3).map(q => q.sys + '|' + q.msg));
 // (S0–S2 of everything; S3 too of the body's own rules — the world's own S3, a home out of reach and failed paths, come in its
 // minutes with no body in it as well: counted apart)
-const world3 = new Set();
+const world3 = new Set(), world3who = new Set();
 const vbad = () => QA.check().filter(q => {
   if (q.sev > 3 || bad0.has(q.sys + '|' + q.msg)) return false;
-  if (q.sev === 3 && q.sys !== 'avatar') { world3.add(q.msg); return false; }
+  if (q.sev === 3 && q.sys !== 'avatar') { world3.add(q.msg); world3who.add(q.id || q.msg); return false; }
   if (q.sys === 'avatar' && /sem estar dormindo em casa|onde ninguém pisa/.test(q.msg) && G.Possess.onPlan(G.Possess.body())) { oldRule++; return false; }
   return true;
 });
@@ -78,13 +78,14 @@ function wayIn(d) {
   return pts;
 }
 // (the body put on a doorstep, a building's own: at e.out, the door as asked)
+// (the door opened or shut by the hand of one who has its key: the body, for a moment the building's own)
+const setDoor = (d, open) => god(() => { const own = v.home; v.home = d.b.id; const s0 = In.doorState(d.b, d.e.door).state;
+  if (open) { if (s0 === 'trancada') In.useDoor(d.b, d.e.door, 'destrancar', v); if (In.doorState(d.b, d.e.door).state !== 'aberta') In.useDoor(d.b, d.e.door, 'abrir', v); }
+  else if (s0 === 'aberta') In.useDoor(d.b, d.e.door, 'fechar', v);
+  v.home = own; });
 function bodyAt(d, open) {
   if (S.avatar) G.Possess.release('deus');
-  god(() => { G.Vg.endTask(v); v.inside = 0; v.x = d.O[0] / TL; v.y = d.O[1] / TL; v.path = null; const own = v.home; v.home = d.b.id;
-    const s0 = In.doorState(d.b, d.e.door).state;
-    if (open) { if (s0 === 'trancada') In.useDoor(d.b, d.e.door, 'destrancar', v); if (In.doorState(d.b, d.e.door).state !== 'aberta') In.useDoor(d.b, d.e.door, 'abrir', v); }
-    else if (s0 === 'aberta') In.useDoor(d.b, d.e.door, 'fechar', v);
-    v.home = own; });
+  god(() => { G.Vg.endTask(v); v.inside = 0; v.x = d.O[0] / TL; v.y = d.O[1] / TL; v.path = null; }); setDoor(d, open);
   if (!G.Possess.take(v).ok) return false; G.Avatar.attach(v, Math.atan2(d.D[1] - d.O[1], d.D[0] - d.O[0])); for (let k = 0; k < 6; k++) frame(); return true;
 }
 // (walking as a player holds the stick; every frame watched: a jump of the body's place it did not walk is the world's push)
@@ -97,8 +98,11 @@ function walk(X, Z, max, stopIn) {
 }
 const pathTo = (X, Z) => { const p = W.findPath(v.x, v.y, X / TL, Z / TL, true, 30000); if (p) for (const w2 of p) walk(w2[0] * TL, w2[1] * TL, 200); };
 // (in by the way in; out by it back)
-function goIn(d) { const pts = wayIn(d); pathTo(pts[0][0], pts[0][1]); for (const q of pts) walk(q[0], q[1], 260); for (let k = 0; k < 6; k++) { frame(); watch(); } return v.inside === d.b.id; }
-function goOut(d) { const pts = wayIn(d).slice(0, -1).reverse(); for (const q of pts) walk(q[0], q[1], 260); walk(d.O[0], d.O[1], 260); for (let k = 0; k < 6; k++) { frame(); watch(); } return !v.inside; }
+// (the turn of the day puts the doors back to their rule — Interiors.onNewDay —: one that shut while the body was on its way is
+// opened again before the stride through it, as a player does; counted)
+let reopened = 0; const keepOpen = d => { if (In.doorState(d.b, d.e.door).state !== 'aberta') { reopened++; setDoor(d, true); } };
+function goIn(d) { const pts = wayIn(d); pathTo(pts[0][0], pts[0][1]); for (const q of pts.slice(0, -1)) walk(q[0], q[1], 260); keepOpen(d); const q = pts[pts.length - 1]; walk(q[0], q[1], 260); for (let k = 0; k < 6; k++) { frame(); watch(); } return v.inside === d.b.id; }
+function goOut(d) { const pts = wayIn(d).slice(0, -1).reverse(); keepOpen(d); for (const q of pts) walk(q[0], q[1], 260); walk(d.O[0], d.O[1], 260); for (let k = 0; k < 6; k++) { frame(); watch(); } return !v.inside; }
 const houses = [...S.buildings.values()].filter(q => q.built && In.has(q) && (q.type === 'house' || q.type === 'sobrado') && In.planDoor(q)).sort((a, c) => a.id - c.id);
 
 // ------------------------------ 1. standing on the doorstep ------------------------------
@@ -124,7 +128,7 @@ if (part(1)) { const rows = []; let tried = 0, moved = 0, still = 0; const bad =
 }
 
 // ------------------------------ 2. 50 times in and out ------------------------------
-if (part(2)) { pushes = 0; worst = 0; let ins = 0, outs = 0, trips = 0; const used = [];
+if (part(2)) { pushes = 0; worst = 0; reopened = 0; let ins = 0, outs = 0, trips = 0; const used = [];
   for (const b of houses) {
     if (trips >= 50) break; const d = door(b); if (!d || !bodyAt(d, true)) continue; last = null;
     if (!goIn(d)) continue; ins++; if (!goOut(d)) continue; outs++; trips++; used.push(b.id);
@@ -132,19 +136,19 @@ if (part(2)) { pushes = 0; worst = 0; let ins = 0, outs = 0, trips = 0; const us
   }
   const bad = vbad();
   ok('2. 50 vezes dentro e fora pela porta, uma atrás da outra: nenhum empurrão; dentro a cada vez, fora a cada vez', trips >= 50 && !pushes && ins === outs && !bad.length,
-    `${trips} idas e voltas em ${used.length} casas (${used.slice(0, 6).join(', ')}…): ${ins} entradas, ${outs} saídas; empurrões ${pushes}${worst ? ` (até ${worst.toFixed(2)} m)` : ''}; ${vtxt(bad)}`);
+    `${trips} idas e voltas em ${used.length} casas (${used.slice(0, 6).join(', ')}…): ${ins} entradas, ${outs} saídas; empurrões ${pushes}${worst ? ` (até ${worst.toFixed(2)} m)` : ''}; ${vtxt(bad)}${reopened ? `; a porta voltou à regra no caminho ${reopened} ${reopened > 1 ? 'vezes' : 'vez'}, aberta de novo` : ''}`);
 }
 
 // ------------------------------ 3. every kind of store, its door open ------------------------------
 const flights = [];
 if (part(3)) { const kinds = {}; for (const b of [...S.buildings.values()].filter(q => q.built && In.has(q) && G.BDEF[q.type] && G.BDEF[q.type].dropoff && In.planDoor(q)).sort((a, c) => a.id - c.id)) (kinds[b.type] = kinds[b.type] || []).push(b);
-  const rows = [], miss = []; let n = 0, got = 0;
+  const rows = [], miss = []; let n = 0, got = 0; reopened = 0;
   for (const [t, L] of Object.entries(kinds)) { let k = 0, kin = 0;
-    for (const b of L.slice(0, 6)) { const d = door(b); if (!d || !bodyAt(d, true)) continue; k++; n++; last = null; const okIn = goIn(d); if (okIn) { kin++; got++; } else { const P = G.Avatar.pos(); miss.push(`${t}#${b.id} parou a ${Math.hypot(P.X - d.D[0], P.Z - d.D[1]).toFixed(2)} m`); }
+    for (const b of L.slice(0, 6)) { const d = door(b); if (!d || !bodyAt(d, true)) continue; k++; n++; last = null; const okIn = goIn(d); if (okIn) { kin++; got++; } else { const P = G.Avatar.pos(); miss.push(`${t}#${b.id} parou a ${Math.hypot(P.X - d.D[0], P.Z - d.D[1]).toFixed(2)} m (a porta ${In.doorState(b, d.e.door).state}, dia ${S.day} às ${S.time.toFixed(2)} do dia)`); }
       if (d.fl) flights.push({ b, fl: d.fl }); if (d.st) { const fo = Sp.feet(d.st); const ff = Sp.doorFlight(b, d.p.shell, { w: b.w * TL, d: b.h * TL }, fo.w, fo.h, 0, false, fo.F, fo.uc); if (ff) flights.push({ b, fl: ff }); } }
     rows.push(`${t} ${kin}/${k}`); }
   ok('3. cada tipo de depósito com planta, de porta aberta: o corpo entra da rua — pelos degraus da porta, ou pelos do pé da escada de fora, onde houver', Object.keys(kinds).length >= 2 && got === n && n >= 6,
-    `${rows.join(' · ')}${miss.length ? '; ' + miss.slice(0, 3).join(' · ') : ''}; empurrões ${pushes}`);
+    `${rows.join(' · ')}${miss.length ? '; ' + miss.slice(0, 3).join(' · ') : ''}; empurrões ${pushes}${reopened ? `; a porta voltou à regra no caminho ${reopened} ${reopened > 1 ? 'vezes' : 'vez'}, aberta de novo` : ''}`);
 }
 
 // ------------------------------ 4. the steps walked are the steps drawn ------------------------------
@@ -183,6 +187,6 @@ if (part(5)) { let d = null, on = false;
 }
 
 // (no module error)
-ok('módulos', JSON.stringify(G.modErr) === '{}', `${JSON.stringify(G.modErr)}; S3 do próprio mundo, à parte (vêm também sem corpo nenhum): ${world3.size}${world3.size ? ' — ' + [...world3].slice(0, 2).join(' · ') : ''}`);
+ok('módulos', JSON.stringify(G.modErr) === '{}', `${JSON.stringify(G.modErr)}; S3 do próprio mundo, à parte (vêm também sem corpo nenhum): ${world3.size} acusações de ${world3who.size} ${world3who.size === 1 ? 'pessoa' : 'pessoas'}${world3.size ? ' — ' + [...world3].slice(0, 2).join(' · ') : ''}`);
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');
 process.exit(fails.length ? 1 : 0);
