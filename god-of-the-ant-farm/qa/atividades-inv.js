@@ -143,7 +143,7 @@
         if (!q.fresh || !q.slots || !q.slots.length) continue;
         const nm = `a fila ${q.key}`; const [x0, y0] = q.slots[0];
         if (q.slots.length > q.places) add('fila', 2, `${nm}: ${q.slots.length} lugares, mais que os ${q.places} dela`);
-        const near = []; for (const b of s.buildings.values()) if (b.id !== q.own && b.built && b.blocks && b.type !== 'ruin' && Math.abs(b.x + b.w / 2 - x0) < q.places + 4 && Math.abs(b.y + b.h / 2 - y0) < q.places + 4) { const d = G.Vg.door(b); if (d) near.push([b, d]); }
+        const near = []; for (const b of s.buildings.values()) if (b.id !== q.own && b.blocks && b.type !== 'ruin' && Math.abs(b.x + b.w / 2 - x0) < q.places + 4 && Math.abs(b.y + b.h / 2 - y0) < q.places + 4) { const d = G.Vg.door(b); if (d) near.push([b, d]); }
         for (let k = 1; k < q.slots.length; k++) {
           const [x, y] = q.slots[k]; const [px, py] = q.slots[k - 1]; const where = `${nm}, lugar ${k + 1} (${Math.round(x * 10) / 10}, ${Math.round(y * 10) / 10})`;
           if (!G.W.walkableXY(x, y)) { add('fila', 3, `${where}: onde não se pisa`); break; }

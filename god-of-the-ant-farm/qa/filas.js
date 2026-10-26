@@ -31,7 +31,7 @@ function oldLine(x0, y0, dx, dy) {
 // (each place of a line, judged by the test from the world's fields, apart from the rule that drew it)
 function judge(slots, own, avoid) {
   const [x0, y0] = slots[0]; const T = G.T;
-  const doors = []; for (const b of S.buildings.values()) if (b.id !== own && b.built && b.blocks && b.type !== 'ruin' && Math.abs(b.x + b.w / 2 - x0) < 12 && Math.abs(b.y + b.h / 2 - y0) < 12) { const d = G.Vg.door(b); if (d) doors.push([b, d]); }
+  const doors = []; for (const b of S.buildings.values()) if (b.id !== own && b.blocks && b.type !== 'ruin' && Math.abs(b.x + b.w / 2 - x0) < 12 && Math.abs(b.y + b.h / 2 - y0) < 12) { const d = G.Vg.door(b); if (d) doors.push([b, d]); }
   for (let k = 1; k < slots.length; k++) {
     const [x, y] = slots[k], [px, py] = slots[k - 1]; const i = W.idx(x, y);
     if (!W.walkableXY(x, y)) return `o lugar ${k + 1} onde não se pisa`;
@@ -70,7 +70,7 @@ for (const world of ['metropole', 'mundial']) {
           const olBad = r.slots.length < B.LINE && ol.length > r.slots.length ? judge(ol, o.own, o.avoid) : '';
           if (r.slots.length >= B.LINE) res.full++; else res.short.push(`#${b.id}/${slot}: ${r.slots.length} — ${r.why || 'SEM MOTIVO'}${ol.length > r.slots.length ? ` (a regra antiga achava ${ol.length}: ${olBad || 'SEM DEFEITO'})` : ''}`);
           // (the counter's own place before another door: the stall's, not the line's — told, not judged)
-          for (const q of S.buildings.values()) if (q.id !== b.id && q.built && q.blocks && q.type !== 'ruin' && Math.abs(q.x - b.x) < 8 && Math.abs(q.y - b.y) < 8) { const d = G.Vg.door(q); if (d && Math.hypot(d[0] - sp.buyer[0], d[1] - sp.buyer[1]) < 0.8) { res.front++; break; } }
+          for (const q of S.buildings.values()) if (q.id !== b.id && q.blocks && q.type !== 'ruin' && Math.abs(q.x - b.x) < 8 && Math.abs(q.y - b.y) < 8) { const d = G.Vg.door(q); if (d && Math.hypot(d[0] - sp.buyer[0], d[1] - sp.buyer[1]) < 0.8) { res.front++; break; } }
         }
       }
       res.mk = mk.length; return res;

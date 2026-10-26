@@ -164,7 +164,7 @@
     const S = G.S; const n = q.n || L.LINE; const x0 = q.x, y0 = q.y;
     const doors = [], R = n * GAP + 2;
     for (const b of S.buildings.values()) {
-      if (b.id === q.own || !b.built || !b.blocks || b.type === 'ruin') continue;
+      if (b.id === q.own || !b.blocks || b.type === 'ruin') continue; // (built or being built: a site blocks from its first stone, and finishing it changes no ground)
       if (b.x > x0 + R || b.x + b.w < x0 - R || b.y > y0 + R || b.y + b.h < y0 - R) continue;
       const d = G.Vg.door(b); if (d) doors.push(d);
     }
@@ -202,6 +202,8 @@
       return Math.floor(jx) === Math.floor(x) && Math.floor(jy) === Math.floor(y) ? [jx, jy] : [x, y];
     });
   }
+  // (what a line's places stand on: the ground, the terrain, and the day — a plan's door moves at the turn of the day)
+  const lineVer = () => { const S = G.S; return (S.walkVer || 0) + ':' + (S.typeVer || 0) + ':' + S.day; };
   // (read only: the places a line would have there now, and why it has fewer than it asks — for the proofs)
   L.lineAt = function (x, y, dx, dy, o) {
     const d = Math.hypot(dx, dy) || 1; const q = { x, y, dx: dx / d, dy: dy / d, n: o && o.n, own: o && o.own, avoid: o && o.avoid, budget: o && o.budget };
@@ -220,7 +222,7 @@
   // stand in line; true once this person is at the front, on the spot. o: { n: its places, own: the building it stands
   // at, avoid: other counters' places }, or a function that gives it — read only when the line forms
   L.inLine = function (v, t, key, fx, fy, dx, dy, dt, H, o) {
-    let q = Q.get(key); const S = G.S; const ver = (S.walkVer || 0) + ':' + (S.typeVer || 0);
+    let q = Q.get(key); const ver = lineVer();
     if (!q) { if (typeof o === 'function') o = o(); const d = Math.hypot(dx, dy) || 1; Q.set(key, q = { ids: [], x: fx, y: fy, dx: dx / d, dy: dy / d, n: o && o.n, own: o && o.own, avoid: o && o.avoid, ver, rev: 0 }); q.slots = lineSlots(q); }
     else if (q.ver !== ver) { q.ver = ver; q.rev++; q.slots = lineSlots(q); } // (the ground changed under the line — a building, a wall —: its places again)
     if (v._q !== key) { L.leaveQueue(v); q.ids.push(v.id); v._q = key; t.qk = -1; }
@@ -244,7 +246,7 @@
     const S = G.S;
     for (const [key, q] of Q) { q.ids = q.ids.filter(id => { const v = S.villagers.get(id); return v && v._q === key; }); if (!q.ids.length) Q.delete(key); }
   }
-  L.queues = () => [...Q.entries()].map(([key, q]) => ({ key, n: q.ids.length, x: q.x, y: q.y, ids: q.ids.slice(), slots: q.slots, places: q.n || L.LINE, own: q.own || 0, avoid: q.avoid || [], why: q.why, fresh: q.ver === (G.S.walkVer || 0) + ':' + (G.S.typeVer || 0) }));
+  L.queues = () => [...Q.entries()].map(([key, q]) => ({ key, n: q.ids.length, x: q.x, y: q.y, ids: q.ids.slice(), slots: q.slots, places: q.n || L.LINE, own: q.own || 0, avoid: q.avoid || [], why: q.why, fresh: q.ver === lineVer() }));
 
   // ============================== water for the house ==============================
   // a house drinks its jar in about a day; someone goes to the well, waits in line and brings it back
