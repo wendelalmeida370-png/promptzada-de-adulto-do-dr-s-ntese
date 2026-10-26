@@ -167,6 +167,8 @@
       if (v.home === b.id) v.home = 0;
       if (v.inside === b.id) { v.inside = 0; v.sleeping = false; G.Vg.endTask(v); }
     }
+    // (the coins kept in a house that falls are lost with it — in the ledger: the ruin is no house to hold them)
+    if (G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });
     if (b.type === 'farm' || b.type === 'campfire') {
       V.removeBuilding(b);
       if (b.type === 'campfire' && set) set.campfire = 0;
@@ -407,8 +409,9 @@
         if (v.home === o.id) { v.home = 0; if (!head || v.age > head.age) head = v; }
         if (v.inside === o.id) { v.inside = 0; v.sleeping = false; G.Vg.endTask(v); }
       }
-      // (the family's savings do not come down with the house: the eldest carries them in his purse)
-      if (head && o.coin > 0) { head.purse = (head.purse || 0) + o.coin; o.coin = 0; }
+      // (the family's savings do not come down with the house: the eldest carries them in his purse — with nobody, the
+      // people's treasury keeps them —, in the ledger)
+      if (o.coin > 0) G.Depot.move('h:' + o.id, head ? 'p:' + head.id : 'f:' + set.fac, 'moedas', o.coin, { code: 'obra-da-cidade', by: head ? head.id : 0, part: true });
       if (o.type === 'farm') fields++; else homes++;
       [cx, cy] = V.center(o);
       G.FX && G.FX.dust(cx, cy, 4);
@@ -953,6 +956,8 @@
       if (b.set !== s.id) continue;
       if (b.type === 'cemetery') { b.set = 0; continue; }
       if (b.type === 'farm' || b.type === 'campfire' || !b.built) { V.removeBuilding(b); continue; }
+      // (a house left to the wind keeps no coins: what was in it is lost, in the ledger)
+      if (G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });
       if (b.type !== 'ruin') { b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.ruinT = G.DAY_LEN * (2 + G.R() * 3); b.hp = 1; W.touchWalk(); G.Interiors && G.Interiors.abandon(b); }
       b.set = 0;
     }

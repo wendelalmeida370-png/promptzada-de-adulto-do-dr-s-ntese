@@ -274,17 +274,27 @@
     return G.clamp(r, 0, 0.45);
   };
   const homeOf = v => { const h = v.home && G.S.buildings.get(v.home); return h && G.BDEF[h.type].housing ? h : null; };
-  // the state pays for what a worker brings in (when it has coins)
+  // the coins of a person, as a holder of the depot: the house's pot (the household's), or the purse with no house
+  const coinRef = v => { const h = homeOf(v); return h ? 'h:' + h.id : 'p:' + v.id; };
+  E.coinRef = coinRef;
+  // the state pays for what a worker brings in (when it has coins): from the treasury to the worker's house, in the ledger
   E.pay = function (v, k, n) {
     const f = G.Fac.ofV(v); if (!f || v.captive || !E.coinage(f.id)) return 0;
     const wage = Math.round((E.PRICE[k] || 0.3) * n * 0.35 * 100) / 100;
     if (f.stock.moedas < wage) { v.unpaid = (v.unpaid || 0) + 1; return 0; }
-    f.stock.moedas -= wage; f.eco.wages += wage; v.unpaid = 0;
-    const h = homeOf(v); if (h) h.coin = (h.coin || 0) + wage; else v.purse = (v.purse || 0) + wage;
+    v.unpaid = 0; if (!(wage > 0)) return 0;
+    if (!G.Depot.move('f:' + f.id, coinRef(v), 'moedas', wage, { code: 'salario', by: v.id }).ok) return 0;
+    f.eco.wages += wage;
     return wage;
   };
   function purse(v) { const h = homeOf(v); return h ? (h.coin || 0) : (v.purse || 0); }
-  function spend(v, n) { const h = homeOf(v); if (h) { if ((h.coin || 0) < n) return false; h.coin -= n; return true; } if ((v.purse || 0) < n) return false; v.purse -= n; return true; }
+  // a payment of a person — from the house's pot, or the purse — to its payee (a house 'h:', a purse 'p:', the people's
+  // treasury 'f:'), in the ledger with its cause; false, and nothing moves, when the coins are not there
+  function spend(v, n, to, code) {
+    if (!(n > 0)) return true;
+    const from = coinRef(v); if (G.Depot.get(from, 'moedas') + 1e-6 < n) return false;
+    return G.Depot.move(from, to, 'moedas', n, { code: code || 'gasto', by: v.id }).ok;
+  }
   E.purse = purse; E.spend = spend; E.homeOf = homeOf;
 
   // ------------------------------ helpers for the task machines ------------------------------
@@ -429,7 +439,10 @@
     if (!E.fairOpen() || (G.War && G.War.threat(v.set))) return null;
     const I = inv(b);
     const goods = E.FAIR_GOODS;
-    const low = goods.filter(k => (I[k] || 0) < (k === 'food' ? 10 : 2) && (f.stock[k] || 0) >= (k === 'food' ? 14 : 2));
+    // (the fair keeps on its tables what its town's houses lack — act-compras.js — a few of each at least)
+    const need = G.Compras ? G.Compras.townNeed(b.set) : {};
+    const keep = k => (k === 'food' ? 10 : Math.max(2, Math.min(10, Math.ceil((need[k] || 0) / 2))));
+    const low = goods.filter(k => (I[k] || 0) < keep(k) && (f.stock[k] || 0) >= (k === 'food' ? 14 : 2));
     if (low.length && G.R() < 0.5) return H.setTask(v, { type: 'restock', id: b.id, k: low[Math.floor(G.R() * low.length)], pri: 1 });
     return H.setTask(v, { type: 'sell', id: b.id, pri: 1, dur: G.rr(16, 26), fair: true });
   }
@@ -735,10 +748,10 @@
     const f = G.Fac.ofV(v); if (!f) return H.end(v);
     if (t.st === 0) { const d = store(v); if (!d) return H.end(v); const r = walkB(v, t, d, dt, H); if (r < 0) return H.end(v); if (r > 0) t.st = 1; return; }
     if (t.st === 1) {
-      const n = Math.min(t.k === 'food' ? 8 : 4, Math.floor(f.stock[t.k] || 0));
+      const n = Math.min(t.k === 'food' ? 8 : 6, Math.floor(f.stock[t.k] || 0));
       if (n <= 0) return H.end(v);
       // merchants buy wholesale from the state stores (no coin, no goods: the store gives nothing away)
-      if (E.coinage(f.id) && b.type !== 'feira' && b.type !== 'taverna') { const cost = Math.round(E.PRICE[t.k] * n * 0.6 * 100) / 100; if (!spend(v, cost)) return H.end(v); f.stock.moedas += cost; f.eco.sales += cost; }
+      if (E.coinage(f.id) && b.type !== 'feira' && b.type !== 'taverna') { const cost = Math.round(E.PRICE[t.k] * n * 0.6 * 100) / 100; if (!spend(v, cost, 'f:' + f.id, 'atacado')) return H.end(v); f.eco.sales += cost; }
       f.stock[t.k] -= n; v.carry = { k: t.k, n }; t.st = 2; return;
     }
     const r = walkB(v, t, b, dt, H);
@@ -767,17 +780,25 @@
       if (v.actT < 1.8) return;
       const rate = E.taxRate(f);
       const due = Math.round((h.coin || 0) * rate * 100) / 100;
-      if (due > 0.01) { h.coin -= due; t.bag += due; G.FX && G.FX.chips(v.x, v.y, '#f2c14e'); }
+      // (the house's coins into the collector's bag, marked for the treasury — with the hands full of something else,
+      // straight to the treasury —, in the ledger: 'imposto')
+      if (due > 0.01) {
+        const bag = G.Depot.move('h:' + h.id, 'v:' + v.id, 'moedas', due, { code: 'imposto', by: v.id, to: 'f:' + f.id });
+        if (bag.ok) t.bag += bag.n;
+        else { const r = G.Depot.move('h:' + h.id, 'f:' + f.id, 'moedas', due, { code: 'imposto', by: v.id }); if (r.ok) f.eco.tax += r.n; }
+        G.FX && G.FX.chips(v.x, v.y, '#f2c14e');
+      }
       // an unhappy house grumbles at the door
       if (rate > 0.22) { for (const o of S.villagers.values()) if (o.home === h.id && !o.inside && G.dist2(o.x, o.y, v.x, v.y) < 9 && G.R() < 0.4) G.Vg.emote(o, 'angry', 2); }
       t.k++; t.st = 0; return;
     }
-    if (t.st === 0 && t.bag > 0) v.carry = { k: 'moedas', n: Math.max(1, Math.round(t.bag)) };
     const r = walkB(v, t, b, dt, H);
     if (r !== 0) {
-      f.stock.moedas += t.bag; f.eco.tax += t.bag; made(f, 'moedas', 0);
+      // (the bag into the treasury, in the ledger)
+      const inBag = v.carry && v.carry.k === 'moedas' && v.carry.to === 'f:' + f.id ? v.carry.n : 0;
+      if (inBag > 0) { const m = G.Depot.move('v:' + v.id, 'f:' + f.id, 'moedas', inBag, { code: 'imposto', by: v.id, to: 'f:' + f.id, part: true }); if (m.ok) f.eco.tax += m.n; }
+      made(f, 'moedas', 0);
       if (t.bag > 0) G.FX && G.FX.deposit(v.x, v.y, 'moedas', Math.round(t.bag));
-      v.carry = null;
       if (!f._taxed && t.bag > 0) { f._taxed = S.day; log(`Os primeiros coletores de impostos de ${f.name} bateram de porta em porta.`, 'trade', b.x, b.y); }
       H.end(v);
     }
@@ -802,19 +823,22 @@
   }
   // ------------------------------ citizens: shopping, the tavern, going home ------------------------------
   const HOUSE_WANTS = E.HOUSE_WANTS = { tecido: 0.3, ceramica: 0.15, joias: 0.03, couro: 0.05 };
-  E.shopTask = function (v, H) {
+  // (want: the house's own list, when the house sends someone for it — act-compras.js; without it, a stroll's whim)
+  E.shopTask = function (v, H, want) {
     const S = G.S; const h = homeOf(v); if (!h || v.captive) return null;
     // (the market's stalls first: each merchant's own, with its price and its talk — act-negocio.js)
-    if (G.Biz) { const t = G.Biz.shop(v, H); if (t) return t; }
+    if (G.Biz) { const t = G.Biz.shop(v, H, want); if (t) return t; }
     const I = inv(h); const res = h.res || 1;
-    const need = Object.keys(HOUSE_WANTS).filter(k => (I[k] || 0) < Math.max(1, res * HOUSE_WANTS[k] * 2));
-    if (E.wishes) for (const k of E.wishes(h, v)) need.push(k);
+    const need = want ? want.slice() : Object.keys(HOUSE_WANTS).filter(k => (I[k] || 0) < Math.max(1, res * HOUSE_WANTS[k] * 2));
+    if (!want && E.wishes) for (const k of E.wishes(h, v)) need.push(k);
     if (!need.length && G.R() > 0.15) return null;
     const f = G.Fac.ofV(v); if (!f) return null;
     // the black market tempts the poor and the disloyal
     const set = S.settlements.get(v.set);
     const shops = [];
     for (const b of E.byType(v.set, 'mercado').concat(E.fairOpen() ? E.byType(v.set, 'feira') : EMPTY, E.byType(v.set, 'mercado_negro'))) {
+      // (a market whose merchants keep stalls sells at the stalls: its shelf is the building's store, not a counter)
+      if (b.type === 'mercado' && G.Biz && G.Biz.hasStalls(b)) continue;
       {
         const bi = inv(b); const k = need.find(q => (bi[q] || 0) >= 1) || (bi.food >= 2 && h.pantry < res ? 'food' : null);
         if (!k) continue;
@@ -832,6 +856,8 @@
   function runShop(v, t, dt, H) {
     const S = G.S; const b = workB(v, t, H); if (!b) return;
     const h = homeOf(v);
+    // (a long way across a city is still an errand; a whole morning of it is not: another time)
+    if (t.age > 150) { G.Life && G.Life.leaveQueue(v); return H.end(v); }
     if (t.st === 0) {
       let r;
       if (!b.blocks) { if (!t.spot) { t.si = Math.floor(G.R() * 4); } if (!t.spot) t.spot = b.type === 'feira' && E.stallSpot ? E.stallSpot(b, t.si, true) : [b.x + G.rr(0.3, b.w - 0.3), b.y + G.rr(0.3, b.h - 0.3)]; r = walkTo(v, t, 'spot', t.spot[0], t.spot[1], false, dt, H); }
@@ -846,34 +872,41 @@
         else { fx = t.spot[0]; fy = t.spot[1]; dx = 0.72; dy = 0.63; }
         const key = t.qkey = 'shop:' + b.id + ':' + (b.type === 'feira' ? t.si : 0);
         if (v._q !== key && G.Life.queueFull(key)) { G.Vg.emote(v, 'sad', 1); return H.end(v); } // too long: another time
-        if (!G.Life.inLine(v, t, key, fx, fy, dx, dy, dt, H)) { if (t.waited > 30) { G.Life.leaveQueue(v); return H.end(v); } return; }
+        if (!G.Life.inLine(v, t, key, fx, fy, dx, dy, dt, H, { own: b.id })) { if (t.waited > 30) { G.Life.leaveQueue(v); return H.end(v); } return; }
         t.served = true; v.actT = 0;
       }
       v.act = 'buy'; if (b.blocks) faceB(v, b); else if (b.type === 'feira') G.faceTo(v, -1, 1);
       if (v.actT < (t.qkey && G.Life.queueLen(t.qkey) > 1 ? 1.2 : 2.4)) return; // with a line behind, the seller hurries
       const I = inv(b); const k = t.k;
-      if ((I[k] || 0) < 1) return H.end(v);
-      const f = G.Fac.ofV(v); const n = k === 'food' ? Math.min(3, I[k]) : 1;
-      const shady = b.type === 'mercado_negro';
-      const price = Math.round(E.PRICE[k] * n * (shady ? 0.7 : 1) * 100) / 100;
+      if (!h || (I[k] || 0) < 1) { G.Life && G.Life.leaveQueue(v); return H.end(v); } // (no house to take it to, or none left)
+      // (as many as the house sent for, as the shelf has, and as the house can pay)
+      const f = G.Fac.ofV(v); const shady = b.type === 'mercado_negro'; const unit = E.PRICE[k] * (shady ? 0.7 : 1);
+      const afford = f && E.coinage(f.id) ? Math.floor(((h.coin || 0) + 1e-6) / Math.max(0.01, unit)) : Infinity;
+      // (and as the two hands carry: what does not fit is not bought — the deal would fail in the depot and buy nothing)
+      const arms = Math.floor(G.Depot.room('v:' + v.id, k, { to: 'h:' + h.id }) + 1e-6);
+      if (arms < 1) { G.Life && G.Life.leaveQueue(v); return H.end(v); }
+      const n = Math.max(1, Math.min(Math.max(t.n || 0, k === 'food' ? 3 : 1), k === 'food' ? 6 : 3, Math.floor(I[k] + 1e-6), afford, arms));
+      const price = Math.round(unit * n * 100) / 100;
+      // the goods into the arms, marked for the house, and the coins from the house to the seller's — the state's at the
+      // fair — both or neither, in the ledger; a people without coin: the fair gives what it has
+      const D = G.Depot; const goods = ['b:' + b.id, 'v:' + v.id, k, n];
+      const c = { code: 'compra', by: v.id, to: 'h:' + h.id, tag: { bought: 1 } };
+      let r;
       if (f && E.coinage(f.id)) {
-        if (!spend(v, price)) { G.Vg.emote(v, 'sad', 1.5); return H.end(v); }
-        // the seller's household keeps the money (the state runs the fair)
-        const seller = [...S.villagers.values()].find(o => o.job === b.id);
-        if (b.type === 'feira' || !seller) { f.stock.moedas += price; f.eco.sales += price; }
-        else { const sh = homeOf(seller); if (sh) sh.coin = (sh.coin || 0) + price; else seller.purse = (seller.purse || 0) + price; }
-        if (shady) f.eco.lostTax = (f.eco.lostTax || 0) + price * E.taxRate(f);
-      }
-      // (what was bought is the house's from here: it knows where it goes, and gets there after a save or a lost way)
-      I[k] -= n; v.carry = { k, n, bought: true }; if (h) v.carry.to = 'h:' + h.id; G.Life && G.Life.leaveQueue(v);
+        const seller = [...S.villagers.values()].find(o => o.job === b.id); const sh = seller && homeOf(seller);
+        const payee = b.type === 'feira' || !seller ? 'f:' + f.id : sh ? 'h:' + sh.id : 'p:' + seller.id;
+        if (D.get('h:' + h.id, 'moedas') + 1e-6 < price) { G.Life && G.Life.leaveQueue(v); G.Vg.emote(v, 'sad', 1.5); return H.end(v); }
+        r = D.swap(goods, ['h:' + h.id, payee, 'moedas', price], c);
+        if (r.ok && payee[0] === 'f') f.eco.sales += price;
+        if (r.ok && shady) f.eco.lostTax = (f.eco.lostTax || 0) + price * E.taxRate(f);
+      } else r = D.move(goods[0], goods[1], k, n, Object.assign({}, c, { code: 'feira' }));
+      G.Life && G.Life.leaveQueue(v);
+      if (!r.ok) return H.end(v);
       G.Vg.emote(v, 'happy', 1.2);
-      if (!h) { v.carry = null; return H.end(v); }
-      t.st = 2; return;
+      // (what was bought is the house's from here: it knows where it goes, and gets there after a save or a lost way)
+      return H.setTask(v, { type: 'carga', to: 'h:' + h.id, pri: 0.5, st: 0 });
     }
-    if (!h) return H.end(v); // (the house is gone: what was bought is a load like any other now)
-    const r = walkB(v, t, h, dt, H);
-    if (r < 0) return H.end(v); // (the way home was lost: the purchase stays in the arms, marked for the house, and goes there later)
-    if (r > 0) { const I = inv(h); if (v.carry.k === 'food') h.pantry = (h.pantry || 0) + v.carry.n; else I[v.carry.k] = (I[v.carry.k] || 0) + v.carry.n; v.carry = null; H.end(v); }
+    return H.end(v);
   }
   E.tavernTask = function (v, H) {
     const S = G.S; if (v.captive || v.age < 16) return null;
@@ -894,7 +927,8 @@
     if (v.actT > 12 && !t.paid) {
       t.paid = true;
       const I = inv(b); const f = G.Fac.ofV(v);
-      if ((I.food || 0) >= 1) { I.food -= 1; v.hunger = Math.max(0, v.hunger - 35); if (f && E.coinage(f.id) && spend(v, 0.4)) { const keeper = [...G.S.villagers.values()].find(o => o.job === b.id); const kh = keeper && homeOf(keeper); b.takings = (b.takings || 0) + 0.4; if (kh) kh.coin = (kh.coin || 0) + 0.4; else { f.stock.moedas += 0.4; f.eco.sales += 0.4; } } }
+      // (the meal is paid to the keeper's house — or, with no keeper, to the treasury —, in the ledger)
+      if ((I.food || 0) >= 1) { I.food -= 1; v.hunger = Math.max(0, v.hunger - 35); if (f && E.coinage(f.id)) { const keeper = [...G.S.villagers.values()].find(o => o.job === b.id); const kh = keeper && homeOf(keeper); if (spend(v, 0.4, kh ? 'h:' + kh.id : 'f:' + f.id, 'taverna')) { b.takings = (b.takings || 0) + 0.4; if (!kh) f.eco.sales += 0.4; } } }
     }
     if (v.actT > (t.dur || 16)) H.end(v);
   }
@@ -946,9 +980,9 @@
   E.arrest = function (o, guard) {
     const S = G.S; const f = G.Fac.ofV(o); const set = S.settlements.get(o.set);
     G.Vg.emote(guard, 'angry', 2); G.Vg.emote(o, 'fear', 3);
-    if (o.carry) { if (f) G.Village.addStock(o.carry.k, o.carry.n, f.id); o.carry = null; }
+    if (o.carry) { if (f) G.Vg.toStore(o, f.id, 'apreendido'); else o.carry = null; } // (what the arrested carried: seized, in the ledger)
     const shop = S.buildings.get(o.job);
-    const h = homeOf(o); if (h && f) { const fine = Math.round((h.coin || 0) * 0.8 * 100) / 100; h.coin -= fine; f.stock.moedas += fine; }
+    const h = homeOf(o); if (h && f) { const fine = Math.round((h.coin || 0) * 0.8 * 100) / 100; if (fine > 0) G.Depot.move('h:' + h.id, 'f:' + f.id, 'moedas', fine, { code: 'multa', by: guard.id }); } // (the fine, in the ledger)
     o.role = null; o.job = 0; G.Vg.endTask(o);
     const ruler = f && G.Politics.ruler(f);
     const cruel = ruler && G.Politics.persona(ruler).cru > 0.65;

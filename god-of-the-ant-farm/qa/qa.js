@@ -555,8 +555,103 @@
     if (G.Act.outside) add('act', 1, `${G.Act.outside} operação(ões) criada(s) fora do passo do mundo`);
     // ---- the businesses
     if (G.Biz && G.Biz.audit) G.Biz.audit(add, s);
+    // ---- the houses' coins, and their shopping: one of a house out for it at a time
+    const out = new Map();
+    for (const b of s.buildings.values()) if (b.coin !== undefined) neg(`${b.type}#${b.id}`, 'moedas', b.coin);
+    for (const v of s.villagers.values()) if (v.task && v.task.casa) { out.set(v.task.casa, (out.get(v.task.casa) || 0) + 1); if (v.home !== v.task.casa) add('act', 4, `${v.name} #${v.id} faz compras para uma casa que não é mais a sua (${v.task.casa}): mudou no caminho`); }
+    for (const [h, n] of out) if (n > 1) add('act', 3, `casa #${h}: ${n} pessoas fazendo as compras dela ao mesmo tempo`);
+    // ---- a marked load (an operation's crate, a purchase on its way home, goods for a stall) never leaves the hands
+    // without a line in the ledger: what was in them at the last look = what is in them now + what the ledger moved out
+    // (the guard's rule 20, read in the world instead of in the code)
+    const now = new Map();
+    for (const v of s.villagers.values()) { const c = v.carry; if (c && fin(c.n) && c.n > EPS && (c.op || c.to || c.cid)) now.set(v.id, { k: c.k, n: c.n, name: v.name }); }
+    if (marked && markedS === s) for (const [id, p] of marked) {
+      const c = now.get(id); const left = c && c.k === p.k ? c.n : (() => { const v = s.villagers.get(id); return v && v.carry && v.carry.k === p.k && fin(v.carry.n) ? v.carry.n : 0; })();
+      const went = (movedOut.get(id + '|' + p.k) || 0);
+      if (p.n - left - went > 0.01) { const v = s.villagers.get(id); add('act', 1, `${p.name} #${id}: ${Math.round((p.n - left - went) * 100) / 100} de ${p.k} de uma carga marcada sumiram sem lançamento no livro (${v ? `agora ${v.task ? v.task.type : 'sem tarefa'}, nas mãos ${v.carry ? v.carry.n + ' de ' + v.carry.k : 'nada'}` : 'a pessoa saiu do mundo'})`); }
+    }
+    marked = now; markedS = s; movedOut.clear();
+    // ---- the houses (act-casa.js): an owner is a living person (or the people: 0); a house ordered by a family names it,
+    // and once built the family has moved in (the order is cleared); a let house has an owner, and what is owed is a number
+    if (G.Casa) for (const b of s.buildings.values()) {
+      if (b.dono && !s.villagers.has(b.dono)) add('act', 3, `${b.type}#${b.id}: o dono #${b.dono} não existe mais (a herança não passou)`);
+      if (b.encomenda) {
+        if (!Array.isArray(b.encomenda.fam) || !fin(b.encomenda.paid)) add('act', 2, `${b.type}#${b.id}: encomenda sem família ou sem preço`);
+        else if (b.built) add('act', 3, `${b.type}#${b.id}: pronta e a família da encomenda não mudou`);
+      }
+      if (b.aluga) {
+        if (!b.dono) add('act', 3, `${b.type}#${b.id}: alugada e sem dono`);
+        if (!fin(b.aluga.deve) || b.aluga.deve < -EPS || !fin(b.aluga.pago)) add('act', 1, `${b.type}#${b.id}: aluguel ${JSON.stringify(b.aluga)}`);
+      }
+      if (b.poupa && (!fin(b.poupa.alvo) || !(b.poupa.alvo > 0))) add('act', 2, `${b.type}#${b.id}: poupança sem alvo (${JSON.stringify(b.poupa)})`);
+    }
+    // ---- the fishing grounds (act-pesca.js): what a ground holds is a number, never below nothing, never fished in the
+    // future, and only where there is water
+    if (G.Pesca && s.pesca) for (const id in s.pesca) {
+      const g = s.pesca[id];
+      if (!Array.isArray(g) || !fin(g[0]) || !fin(g[1]) || g[0] < -EPS) { add('act', 1, `pesqueiro ${id}: ${JSON.stringify(g)}`); continue; }
+      if (g[1] > s.clock + 1) add('act', 2, `pesqueiro ${id}: pescado no futuro (${g[1]} > ${Math.round(s.clock)})`);
+      if (!(G.Pesca.cap(+id) > 0)) add('act', 3, `pesqueiro ${id}: pescado numa quadra sem água`);
+    }
+    // ---- hunger with food (L-164, L-165): a town whose people die of hunger with food in their people's stock and no store
+    // anywhere to eat it from; someone dying of hunger with food in reach — the people's store, the house's pantry, plain
+    // food in the hands —, free (not a captive, in a cell, condemned, at sea, in a cave), not on the way to eat nor running
+    // from a danger nor in a fight (a beast, a brawl, a battle), in a calm town (no fight at it nor an army coming —
+    // G.War.threat —, no fire burning in it). Held by an errand of any weight, it is still a death with food in reach;
+    // with no errand at all, only if the last choice gave none (v.think set by a decision that found nothing) — one whose
+    // errand just ended chooses the next at the coming step. (Dying: hunger at the top and under 40 of life.)
+    {
+      const dying = v => v.hunger >= 99.9 && v.hp < 40 && v.age >= 2;
+      const dyingIn = new Map();
+      for (const v of s.villagers.values()) if (dying(v) && !v.captive && !v.aboard && !v.ug) dyingIn.set(v.set, (dyingIn.get(v.set) || 0) + 1);
+      for (const [sid, n] of dyingIn) {
+        const set = s.settlements.get(sid); const f = set && s.factions.get(set.fac);
+        if (f && f.stock.food >= 1 && !G.Village.nearestDropoff(set.cx, set.cy, sid)) add('fome', 1, `${set.name}: ${n} morrendo de fome com ${Math.floor(f.stock.food)} de comida no estoque de ${f.name} e nenhum armazém onde comer`);
+      }
+      for (const v of s.villagers.values()) {
+        if (!dying(v) || v.captive || v.jail || v.aboard || v.ug || v.held || v.air) continue;
+        const t = v.task; if (t && (t.type === 'eat' || t.type === 'forage' || t.type === 'flee' || t.type === 'condemned' || t.type === 'escorted' || t.type === 'fire' || t.type === 'fight' || t.type === 'combat')) continue;
+        if (!t && !(v.think > 0.5)) continue; // (between two errands: the choice comes at the next step)
+        const set = s.settlements.get(v.set); if (!set || G.War.threat(v.set) || (G.Vg.alarms && (G.Vg.alarms.get(v.set) || []).length)) continue;
+        const where = [];
+        const st = G.Fac.stockV(v); const d = st && st.food >= 1 ? G.Village.nearestDropoff(v.x, v.y, v.set) : null;
+        if (d) { const ft = G.Village.frontTile(d); if (G.W.reaches(v, ft[0], ft[1])) where.push(`o armazém (${Math.floor(st.food)} no estoque)`); }
+        const h = v.home && s.buildings.get(v.home);
+        if (h && h.built && (h.pantry || 0) >= 1) { const ft = G.Village.frontTile(h); if (G.W.reaches(v, ft[0], ft[1])) where.push(`a despensa da casa (${Math.floor(h.pantry)})`); }
+        const c = v.carry; if (c && c.k === 'food' && c.n >= 1 && !c.op && !c.to && !c.cid) where.push(`${Math.floor(c.n)} nas mãos`);
+        if (where.length) add('fome', 2, `${v.name} #${v.id} (${set.name}) morre de fome com comida ao alcance: ${where.join(', ')}; ${t ? 'tarefa ' + t.type : 'sem tarefa'}, vida ${Math.round(v.hp)}`, v.id);
+      }
+    }
+    // ---- the lines (life.js): a line's places are where people can stand in a line — on the ground of its front place (its
+    // region of the map), dry, not before another building's door nor on a merchant at his counter, a step from the one
+    // before —, no more of them than it asks; read from the world's fields (the ground, the doors), on a line whose ground
+    // has not changed since its places were drawn (a line draws them again at its next step, life.js)
+    if (G.Life && G.Life.queues && G.Vg && G.Vg.door) {
+      const T = G.T; const wet = i => (s.type[i] <= T.SEA || s.type[i] === T.RIVER) && !s.road[i] && !(s.dry && s.dry[i]);
+      for (const q of G.Life.queues()) {
+        if (!q.fresh || !q.slots || !q.slots.length) continue;
+        const nm = `a fila ${q.key}`; const [x0, y0] = q.slots[0];
+        if (q.slots.length > q.places) add('fila', 2, `${nm}: ${q.slots.length} lugares, mais que os ${q.places} dela`);
+        const near = []; for (const b of s.buildings.values()) if (b.id !== q.own && b.blocks && b.type !== 'ruin' && Math.abs(b.x + b.w / 2 - x0) < q.places + 4 && Math.abs(b.y + b.h / 2 - y0) < q.places + 4) { const d = G.Vg.door(b); if (d) near.push([b, d]); }
+        for (let k = 1; k < q.slots.length; k++) {
+          const [x, y] = q.slots[k]; const [px, py] = q.slots[k - 1]; const where = `${nm}, lugar ${k + 1} (${Math.round(x * 10) / 10}, ${Math.round(y * 10) / 10})`;
+          if (!G.W.walkableXY(x, y)) { add('fila', 3, `${where}: onde não se pisa`); break; }
+          if (wet(G.W.idx(x, y))) { add('fila', 3, `${where}: na água`); break; }
+          if (!G.W.canWalk(x0, y0, x, y, false)) { add('fila', 3, `${where}: fora do chão do balcão (outra região)`); break; }
+          const dr = near.find(([, d]) => Math.hypot(d[0] - x, d[1] - y) < 0.8 - 0.08); if (dr) { add('fila', 3, `${where}: diante da porta de ${dr[0].type}#${dr[0].id}`); break; }
+          if (q.avoid.some(p => Math.hypot(p[0] - x, p[1] - y) < (p[2] || 0.5) - 0.08)) { add('fila', 3, `${where}: em cima de um vendedor`); break; }
+          if (Math.hypot(x - px, y - py) > 0.6 + 0.15) { add('fila', 3, `${where}: longe do lugar de antes (${Math.round(Math.hypot(x - px, y - py) * 100) / 100})`); break; }
+        }
+      }
+    }
   });
+  // (the ledger's lines out of hands since the last look, for the rule above; a new world, or a save loaded, starts over)
+  let marked = null, markedS = null; const movedOut = new Map();
+  if (G.Depot) G.Depot.onMove.push(e => { if (typeof e[3] === 'string' && e[3][0] === 'v' && e[3][1] === ':') { const key = e[3].slice(2) + '|' + e[5]; movedOut.set(key, (movedOut.get(key) || 0) + e[6]); } });
+  if (G.worldHooks) G.worldHooks.push(() => { marked = null; markedS = null; movedOut.clear(); });
   QA.canonMore.push(['acts', () => (G.Act ? G.Act.canon() : null)]);
+  QA.canonMore.push(['pesca', () => (G.S && G.S.pesca ? Object.keys(G.S.pesca).sort((a, b) => a - b).map(id => [+id, G.S.pesca[id][0], G.S.pesca[id][1]]) : null)]);
+  QA.canonMore.push(['casas', () => (G.S ? [...G.S.buildings.values()].filter(b => b.dono || b.encomenda || b.aluga || b.poupa).sort((a, b) => a.id - b.id).map(b => [b.id, b.dono || 0, b.encomenda ? b.encomenda.fam.join('.') + ':' + (b.encomenda.paid || 0) : '', b.aluga ? b.aluga.pago + ':' + b.aluga.deve : '', b.poupa ? b.poupa.by + ':' + b.poupa.alvo : '']) : null)]);
 })();
   // ---- qa/interiores-inv.js ----
 // interiores-inv: as regras do verificador para os interiores (C2) — o registro de cada prédio (b.ip) e a planta que sai

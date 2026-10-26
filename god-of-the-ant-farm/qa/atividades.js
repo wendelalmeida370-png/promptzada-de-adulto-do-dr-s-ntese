@@ -4,7 +4,8 @@
 // d3 reservas, d4 dinheiro (casa, bolso, tesouro) e a troca de duas mãos (swap), o1 uma operação do começo ao fim com
 // os livros fechando, o2 a sabotagem (o verificador acusa uma escrita por fora), o3 save e load no meio (duas vezes: o
 // mesmo futuro), o4 a pessoa morre com a carga (fica no chão; outro pega), o5 o fim solta as reservas, o6 o corpo do deus
-// fica com o papel (keepLoad), o7 o salto e o passo; e o verificador limpo, sem erro de módulo.
+// fica com o papel (keepLoad), o7 o salto e o passo, o8 um segundo é um segundo (a olhada das atividades no passo e no
+// salto no mesmo ritmo); e o verificador limpo, sem erro de módulo.
 const M = require('./nodemundo.js');
 const seed = +(process.argv[2] || 7);
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/atividades-inv.js'] });
@@ -19,7 +20,9 @@ const S = G.S; const D = G.Depot, A = G.Act;
 const f = G.Fac.all()[0]; const set = G.Fac.capitalOf(f.id);
 const people = [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 18 && v.age < 55 && !v.captive);
 const v = people[0], w = people[1];
-for (const p of people) { G.Vg.endTask(p); p.carry = null; }
+// (the test's hand empties hands through the depot, with its cause: a load never vanishes without the ledger — rule 20)
+const clearHands = p => { if (p && p.carry && p.carry.n > 0) D.use('v:' + p.id, p.carry.k, p.carry.n, { code: 'teste', mine: true }); if (p) p.carry = null; };
+for (const p of people) { G.Vg.endTask(p); clearHands(p); }
 // (a test operation: from the people's store to a house, step by step; it keeps its own books by its transfers)
 A.def('teste', { name: 'Teste', conserve: true, title: () => 'Uma operação de teste' });
 
@@ -35,7 +38,7 @@ A.def('teste', { name: 'Teste', conserve: true, title: () => 'Uma operação de 
   const r4 = D.move('v:' + v.id, 'f:' + f.id, 'food', 3, { code: 'teste', part: true }); // (the part that fits)
   ok('d1 tudo ou nada', r1.ok && inHands === 3 && !r2.ok && !r3.ok && keep === before && st3 === cap - 1 && r4.ok && r4.n === 1 && v.carry && v.carry.n === 2 && f.stock.food === cap,
     `pegou ${inHands}; madeira recusada (${r2.why}); 3 num estoque com lugar para 1: ${r3.why}, nas mãos ${keep}, estoque ${st3}/${cap}; com a parte: ${r4.n} entrou, ${v.carry ? v.carry.n : 0} ficou nas mãos`);
-  v.carry = null; f.stock.food = 30;
+  clearHands(v); f.stock.food = 30;
 }
 // ---------------- d2: the same key twice applies once
 {
@@ -113,7 +116,7 @@ A.def('teste', { name: 'Teste', conserve: true, title: () => 'Uma operação de 
   const S2 = G.S; const f2 = G.Fac.get(f.id); const free = p => !A.roleOf(p) && !(p.carry && p.carry.op);
   const vv = [...S2.villagers.values()].find(p => p.set === set.id && p.age > 18 && !p.captive && free(p));
   const ww = [...S2.villagers.values()].find(p => p.set === vv.set && p.id !== vv.id && p.age > 18 && !p.captive && free(p));
-  f2.stock.food = 40; G.Vg.endTask(vv); vv.carry = null; G.Vg.endTask(ww); ww.carry = null;
+  f2.stock.food = 40; G.Vg.endTask(vv); clearHands(vv); G.Vg.endTask(ww); clearHands(ww);
   const op = A.start('teste', { from: 'f:' + f2.id, to: 'h:' + (vv.home || ww.home), goods: { food: 3 }, set: vv.set, fac: f2.id });
   A.join(op, vv, 'carregador'); D.move('f:' + f2.id, 'v:' + vv.id, 'food', 3, { op: op.id, code: 'pegar', by: vv.id });
   G.Village.kill(vv, 'old');
@@ -124,7 +127,7 @@ A.def('teste', { name: 'Teste', conserve: true, title: () => 'Uma operação de 
   M.viver(3);
   const gone = !op.roles[vv.id]; const bad = actBad();
   ok('o4 morreu com a carga', !!g && gn === 3 && !mid.length && picked && gone && !bad.length, g ? `a comida ficou no chão em ${g.x.toFixed(1)},${g.y.toFixed(1)}; ${ww.name} pegou; o papel do morto saiu da operação (${gone}); as contas fecham${bad.length ? ' — ' + bad[0].msg : ''}` : 'nada no chão');
-  A.end(op, 'cancel', 'teste'); ww.carry = null;
+  A.end(op, 'cancel', 'teste'); clearHands(ww);
 }
 // ---------------- o5: the end lets the reservations go
 {
@@ -139,7 +142,7 @@ A.def('teste', { name: 'Teste', conserve: true, title: () => 'Uma operação de 
   const S2 = G.S; const f2 = G.Fac.get(f.id); f2.stock.food = 40;
   const vv = [...S2.villagers.values()].find(p => p.set === set.id && p.age > 18 && p.age < 50 && !p.captive && G.Possess.can(p).ok && !A.roleOf(p) && !(p.carry && p.carry.op));
   const op = A.start('teste', { from: 'f:' + f2.id, to: 'h:' + vv.home, goods: { food: 2 }, fac: f2.id });
-  G.Vg.endTask(vv); vv.carry = null; A.join(op, vv, 'carregador');
+  G.Vg.endTask(vv); clearHands(vv); A.join(op, vv, 'carregador');
   D.move('f:' + f2.id, 'v:' + vv.id, 'food', 2, { op: op.id, code: 'pegar', by: vv.id });
   vv.task = { type: 'carga', to: 'h:' + vv.home, op: op.id, pri: 1, st: 0, age: 0 };
   // (what possess.js will do: end the errand keeping the load, then take the body)
@@ -149,7 +152,7 @@ A.def('teste', { name: 'Teste', conserve: true, title: () => 'Uma operação de 
   G.Possess.release('deus'); M.viver(2);
   const r2 = A.roleOf(vv);
   ok('o6 o corpo fica com o papel', took.ok && b1 === 1 && held && !!r2 && r2.me.body === 0 && !actBad().length, `encarnado: papel ${r1 ? r1.role : '-'} (corpo ${b1}), carga nas mãos: ${held}; devolvido: papel ${r2 ? r2.role : '-'} (corpo ${r2 ? r2.me.body : '-'})`);
-  A.end(op, 'cancel'); vv.carry = null;
+  A.end(op, 'cancel'); clearHands(vv);
 }
 // ---------------- l1: whoever carries something is not sent to the well (the jar took the load's place: it vanished)
 {
@@ -173,6 +176,19 @@ A.def('teste', { name: 'Teste', conserve: true, title: () => 'Uma operação de 
   M.saltar(1); M.viver(20);
   const e = M.erros(); const bad = QA.check().filter(q => q.sev <= 2);
   ok('o7 salto e passo', !Object.keys(e.mod).length && !bad.length, `um ano de salto e 20 s de passo: erros de módulo ${JSON.stringify(e.mod)}, verificador ${bad.length ? bad.slice(0, 3).map(q => q.sys + ': ' + q.msg).join(' · ') : 'limpo'}`);
+}
+// ---------------- o8: the second of the activities is a second — one look of the operations a second of the world, in the
+// step (0.1 s) and in the skip (half steps of 0.5 s) alike (T-d: ten steps of 0.1 add up to 0.9999999999999999, and the
+// look came every 1.1 s in the step)
+{
+  let n = 0; const hook = () => { n++; }; A.hooks.tick.push(hook);
+  const c0 = G.S.clock; M.viver(60); const inStep = n, dS = G.S.clock - c0; // (G.S: after the loads of o3 the world is a new object)
+  n = 0; const c1 = G.S.clock; const W = G.W;
+  G.Skip.on = true; G.FX.off = true; W.pathGreed = 1.3;
+  try { for (let k = 0; k < 60; k++) G.Main.skipStep(1); } finally { G.Skip.on = false; G.FX.off = false; W.pathGreed = W.PATH_EXACT; }
+  const inSkip = n, dK = G.S.clock - c1;
+  A.hooks.tick.splice(A.hooks.tick.indexOf(hook), 1);
+  ok('o8 um segundo é um segundo', Math.abs(inStep - dS) <= 1 && Math.abs(inSkip - dK) <= 1, `em ${Math.round(dS)} s do mundo pelo passo de 0,1 s: ${inStep} olhadas das atividades; em ${Math.round(dK)} s pelo salto (meios passos de 0,5 s): ${inSkip}`);
 }
 const e = M.erros();
 ok('limpo', M.limpo(), e.console.length ? e.console.slice(0, 4).join(' | ') : 'sem erro de módulo nem aviso no console');

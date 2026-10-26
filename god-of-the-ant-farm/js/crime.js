@@ -130,7 +130,9 @@
       if (v.actT < 3) return;
       const n = Math.min(6, Math.round((h.coin || 0) * 0.35 * 100) / 100);
       if (n <= 0) return H.end(v);
-      h.coin -= n; v.purse = (v.purse || 0) + n; h.robbed = S.day;
+      // (the house's coins into the thief's purse, in the ledger: 'roubo')
+      if (!G.Depot.move('h:' + h.id, 'p:' + v.id, 'moedas', n, { code: 'roubo', by: v.id }).ok) return H.end(v);
+      h.robbed = S.day;
       v.thefts = (v.thefts || 0) + 1;
       // who saw it: anyone awake out of doors close by (and they know only what they saw)
       const seen = [];
@@ -216,11 +218,20 @@
     H.move(v, dt, 1.2);
     if (G.dist2(v.x, v.y, g.x, g.y) > 200 || t.age > 25) { H.end(v); }
   }
+  // the stolen coin back from the thief's purse (what is left of it): to the house it was taken from — with the house gone,
+  // to the people's treasury —, in the ledger
+  function giveBack(th, c, code) {
+    const S = G.S; const back = Math.min(c.n, th.purse || 0); if (!(back > 0)) return 0;
+    const h = S.buildings.get(c.house); const to = h && G.BDEF[h.type] && G.BDEF[h.type].housing ? 'h:' + h.id : 'f:' + G.Fac.idOfV(th);
+    const r = G.Depot.move('p:' + th.id, to, 'moedas', back, { code, by: th.id });
+    return r.ok ? r.n : 0;
+  }
   function arrest(g, th, c, H) {
     const S = G.S; const set = S.settlements.get(th.set); const f = G.Fac.ofV(th);
     const law = Cr.sentence(f);
-    // the coin goes back to the house it was taken from (what is left of it)
-    const back = Math.min(c.n, th.purse || 0); if (back > 0) { th.purse -= back; const h = S.buildings.get(c.house); if (h) h.coin = (h.coin || 0) + back; }
+    // the coin goes back to the house it was taken from (what is left of it) — with the house gone, to the people's
+    // treasury —, in the ledger
+    giveBack(th, c, 'devolvido');
     c.st = 'preso'; c.by = g.id; c.dayArrest = S.day; th.caught = S.day; g.hunt = 0;
     const jail = jailsOf(th.set).find(b => b.built && inmates(b) < G.BDEF.cadeia.cells);
     if (!law.days || !jail) {
@@ -264,10 +275,12 @@
     if (!b || !b.built || v.jail !== b.id) { v.jail = 0; v.jailUntil = 0; v.inside = 0; return H.end(v); }
     v.inside = b.id; v.moving = false;
     const night = G.isNight(); v.sleeping = night; v.act = night ? 'sleep' : 'sit';
-    // the bread of the jail comes from the town's store
-    if (v.hunger > 60) { const f = G.Fac.ofSet(b.set); if (f && f.stock.food >= 1) { f.stock.food -= 1; v.hunger = Math.max(0, v.hunger - 45); } }
+    Cr.feed(v, b.set);
     if (S.day >= (v.jailUntil || 0)) return release(v, b, 'cumpriu', H);
   }
+  // the bread of whoever is held — in a cell, bound, condemned —, from the town's store: one rule for every hand that
+  // holds someone (the cells here; justice.js's bound and condemned, who waited for their hour with nothing — L-170)
+  Cr.feed = function (v, setId) { if (v.hunger > 60) { const f = G.Fac.ofSet(setId); if (f && f.stock.food >= 1) { f.stock.food -= 1; v.hunger = Math.max(0, v.hunger - 45); } } };
   function release(v, b, how, H) {
     const S = G.S; const [dx, dy] = G.Vg.door(b);
     v.jail = 0; v.jailUntil = 0; v.inside = 0; v.sleeping = false; v.x = dx; v.y = dy;
@@ -345,8 +358,7 @@
     for (const g of S.villagers.values()) { if (g.set !== c.set || !WATCH[g.role] || g.captive || g.jail || g.aboard || g.ug || g.hunt) continue; const d = G.dist2(g.x, g.y, c.x, c.y); if (d < bd) { bd = d; best = g; } }
     if (!best) {
       // (no guard to tell: found out by the dead, the thief gives the coin back himself)
-      const th = S.villagers.get(c.thief); const back = th ? Math.min(c.n, th.purse || 0) : 0;
-      if (back > 0) { th.purse -= back; const h = S.buildings.get(c.house); if (h) h.coin = (h.coin || 0) + back; }
+      const th = S.villagers.get(c.thief); if (th) giveBack(th, c, 'devolvido');
       c.st = 'devolvido'; c.how = 'devolveu as moedas, com medo dos mortos';
       return null;
     }

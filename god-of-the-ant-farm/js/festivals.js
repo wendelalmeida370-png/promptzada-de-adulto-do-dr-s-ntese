@@ -517,6 +517,13 @@
     if (!fe || liveS !== G.S) { v.torch = false; v.z = 0; H.end(v); return true; }
     const s = fe.sname; const k = fe.slotOf ? fe.slotOf.get(v.id) : 0; const slot = fe.slots && fe.slots[k % Math.max(1, fe.slots.length)];
     const role = t.role; const C = fe.C || [v.x, v.y];
+    // (one at the top of hunger with the life going — not the victim, not one in chains — leaves to eat by the same choice of
+    // a meal as anyone, and the festival goes on without them; with nothing to eat in reach, a while before asking again —
+    // L-171)
+    if (v.hunger >= 99.9 && v.hp < 60 && role !== 'victim' && role !== 'chained' && !(v._hungerT > G.S.clock)) {
+      v._hungerT = G.S.clock + G.DAY_LEN * 0.1;
+      const e = H.eatTask(v); if (e) { v.torch = false; v.z = 0; e.kind = 'eat'; return true; }
+    }
     const night = G.isNight() || G.isEvening();
     v.torch = !!(fe.torches && night && !fe.dark && (role !== 'crowd' || v.id % 3 === 0)) || (fe.key === 'fogonovo' && role === 'runner' && s === 'relight');
     if (role === 'chained') v.act = 'bound';

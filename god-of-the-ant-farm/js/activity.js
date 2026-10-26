@@ -83,9 +83,17 @@
     const z = zIdx.get(id); return z && z.st !== 'fim' ? z : null;
   }
   D.zOf = zOf;
-  // what a stall holds: its own sales furniture in the market, or 24 of each good where the market has no plan
-  const ZCAP = 24;
-  const zRoom = (z, k) => furnRoom('z', z, k, z.inv || {}, Math.max(0, ZCAP - ((z.inv && z.inv[k]) || 0)));
+  // what a stall holds: its own sales furniture in the market; where the market has no plan, one counter that takes
+  // anything — the interiors' market stall, the piece of their catalog itself (G.Interiors.ITEMS.banca, read when used: the
+  // interiors load after this file; 20 with no catalog) — so that the room is the same before and after the plan: one rule
+  // for the stall, in one place (D-xxx: a stall is a counter, not a store; the merchant restocks as it sells)
+  let counterOf = null;
+  const counter = () => {
+    const it = G.Interiors && G.Interiors.ITEMS && G.Interiors.ITEMS.banca; const cap = it && it.store && it.store.cap > 0 ? it.store.cap : 20;
+    if (!counterOf || counterOf[0].cap !== cap) counterOf = [{ id: 0, kind: 'banca', keys: '*', cap }];
+    return counterOf;
+  };
+  const zRoom = (z, k) => { const P = piecesOf('z', z) || counter(); let room = 0; for (const e of stow(P, z.inv || {}).ents) if (takes(e.m, k)) room += e.left; return Math.max(0, room); };
   // each kind of holder: the object, how much of a good it has, how much more fits, taking and putting (items keep their marks)
   const AD = {
     f: { // a people's store (the storehouses, barns, docks and fires are its doors)
@@ -148,12 +156,16 @@
       list: s => (s.goods ? { [s.goods.k]: s.goods.n } : {}),
       owner: s => ({ fac: s.fac }),
     },
+    // (a ship's other holds, each one good: 'l' the fine things it sails out with (trade.js), 'r' what a merchant ship
+    // brings back for its cargo (naval.js), 'y' what the fine things fetched — the coin or the goods back)
+    l: shipHold('lux'), r: shipHold('ret'), y: shipHold('ret2'),
     v: { // two hands: one load
       obj: id => G.S.villagers.get(id) || null,
       get: (v, k, c) => (v.carry && v.carry.k === k && (!c || !c.cid || v.carry.cid === c.cid) ? v.carry.n : 0),
       room: (v, k, c) => {
         // (loads of different errands never mix in the hands: a crate is its own, a purchase is the house's)
         const cur = v.carry; if (cur && cur.n > EPS && (cur.k !== k || cur.cid || (c && c.cid) || (cur.op || 0) !== ((c && c.op) || 0) || (cur.to || null) !== ((c && c.to) || null))) return 0;
+        if (c && c.pack) return Infinity; // (a caravan's load: on the pack horse, or the porter's frame — not the arms' weight)
         const each = D.weight(k, 1); const str = D.strength(v) * ((c && c.pair) ? 1.8 : 1);
         return Math.max(0, Math.floor((str + EPS) / each) - (cur && cur.n > EPS ? cur.n : 0));
       },
@@ -200,6 +212,18 @@
       items: o => [{ cid: o.cid || o.id, k: o.k, n: o.n, op: o.op || 0, x: o.x, y: o.y }],
     },
   };
+  function shipHold(f) {
+    return {
+      obj: id => G.S.ships.find(o => o.id === id) || null,
+      get: (s, k) => (s[f] && s[f].k === k ? s[f].n : 0),
+      room: (s, k) => (s[f] && s[f].k !== k && s[f].n > EPS ? 0 : Infinity),
+      take: (s, k, n) => { s[f].n = r4(s[f].n - n); const rec = { k, n, imp: 1, ship: s.id }; if (s[f].n <= EPS) s[f] = null; return rec; },
+      put: (s, rec) => { if (s[f] && s[f].k === rec.k) s[f].n = r4(s[f].n + rec.n); else s[f] = { k: rec.k, n: rec.n }; },
+      list: s => (s[f] ? { [s[f].k]: s[f].n } : {}),
+      owner: s => ({ fac: s.fac }),
+      all: () => G.S.ships,
+    };
+  }
   // (a module that keeps a holder of its own registers its kind: the businesses' stalls are 'z', act-negocio.js)
   D.addKind = function (kind, ad) { AD[kind] = ad; D.KINDS = Object.keys(AD); };
   D.KINDS = Object.keys(AD);
@@ -355,6 +379,18 @@
     const e = note(from, 'g:' + o.id, k, m, c);
     if (c.op) account(A.get(c.op), from, 'g:' + o.id, k, m, c);
     return { ok: true, n: m, g: o.id, e };
+  };
+  // a load into a people's store as the old count of a delivery did (G.Village.addStock): up to the store's room, the
+  // town's tally of what it produced — and what does not fit is lost, as it always was, now with its cause in the ledger
+  // ('sem-lugar'; water is not kept, it is poured out). The door of the deliveries, of the caravans and of the ships' holds
+  D.store = function (from, fid, k, n, c) {
+    c = c || {}; const S = G.S; const F = 'f:' + fid;
+    if (!(n > EPS) || !hold(from)) return 0;
+    let add = 0;
+    if (k !== 'water' && hold(F)) { const r = D.move(from, F, k, n, Object.assign({}, c, { part: true })); if (r.ok) add = r.n; }
+    const rest = r4(n - add); if (rest > EPS) D.use(from, k, rest, { code: k === 'water' ? 'agua' : 'sem-lugar', by: c.by || 0, mine: true, part: true });
+    if (add > 0 && S.stats) { if (k === 'food') S.stats.foodProduced += add; if (k === 'wood') S.stats.woodProduced += add; if (k === 'stone') S.stats.stoneProduced += add; }
+    return add;
   };
   // two transfers that are one deal (goods for coin): both or neither
   D.swap = function (x, y, c) {
@@ -531,7 +567,10 @@
         if (!A.able(v) && !(op.roles[id].body)) A.leave(op, v, v.captive ? 'cativo' : v.jail ? 'preso' : v.aboard ? 'embarcou' : 'incapaz');
       }
     }
-    tick += dt; if (tick < 1) return; const step = tick; tick = 0;
+    // (an epsilon: ten steps of 0.1 add up to 0.9999999999999999, and "once a second" came every 1.1 s in the step while
+    // the skip's half steps of 0.5 make 1 exactly — the step and the skip in two rhythms, T-d; the step handed to the hooks
+    // rounded to the millionth, so their own sums close exactly too)
+    tick += dt; if (tick + 1e-9 < 1) return; const step = Math.round(tick * 1e6) / 1e6; tick = 0;
     for (const op of ops()) {
       if (!live(op)) continue;
       const def = A.DEFS[op.def]; if (!def) { A.end(op, 'cancel', 'sem definição'); continue; }
@@ -573,6 +612,15 @@
     if (c.to && D.exists(c.to) && reachable(v, c.to)) return H.setTask(v, { type: 'carga', to: c.to, pri: 1, st: 0 });
     return null;
   };
+  // where a load belongs, if anywhere — the rule resumeCarry follows: an operation's crate goes to the operation's
+  // destination, or back to its source ('op': an operation's, with no place of its own); a purchase to where it was bought
+  // for; a load of nobody's is just a load (null). The god's body asks the same (interact.js)
+  A.boundOf = function (c) {
+    if (!c) return null; const op = c.op ? A.get(c.op) : null;
+    if (op && live(op)) return op.to && D.exists(op.to) ? op.to : op.from && D.exists(op.from) ? op.from : 'op';
+    return c.to && D.exists(c.to) ? c.to : null;
+  };
+  A.whyBound = bd => { if (bd === 'op') return 'Esta carga é de um trabalho em andamento: leve-a aonde ele pede.'; const pl = placeOf(bd); return `Esta carga tem destino: ${pl ? G.Village.buildName(pl).toLowerCase() : 'outro lugar'}.`; };
   // ... and when it cannot get there now (the way cut): a load of an operation is set down where its porter stands, by its
   // rule, for a hand that can reach it; a load for a place — a purchase for the house, goods for a stall — stays in the
   // arms, the day's work waiting, and goes when the way opens; after a whole day of it, or with its place gone, the
@@ -778,6 +826,19 @@
       const op = c.op && A.get(c.op);
       D.drop('v:' + v.id, c.k, c.n, v.x, v.y, { op: op && live(op) ? op.id : 0, code: 'caiu', by: v.id, fac: G.Fac.idOfV(v) });
       if (op) A.log(op, 'caiu', v.id, cause || '');
+    } else if (c && c.n > EPS && c.to && D.exists(c.to) && G.S.villagers.has(v.id) && !v.aboard) {
+      // (a load for a place — a purchase on its way home, goods for a stall — is its owner's: it goes there, with the cause;
+      // what has no room there, to the people's store)
+      D.move('v:' + v.id, c.to, c.k, c.n, { code: 'herdado', by: v.id, part: true });
+      const fid = G.Fac.idOfV(v); if (v.carry && v.carry.n > EPS && D.exists('f:' + fid)) D.move('v:' + v.id, 'f:' + fid, v.carry.k, v.carry.n, { code: 'herdado', by: v.id, part: true });
+    }
+    // (the coins of the dead — the purse, a plain bag in the hands — are the household's: to the house they lived in, or,
+    // with no house, to the people's treasury; in the ledger)
+    if (v && G.S.villagers.has(v.id)) {
+      const home = v.home && G.S.buildings.get(v.home); const fid = G.Fac.idOfV(v);
+      const heir = home && D.exists('h:' + home.id) && home.type !== 'ruin' ? 'h:' + home.id : D.exists('f:' + fid) ? 'f:' + fid : null;
+      if (heir && (v.purse || 0) > EPS) D.move('p:' + v.id, heir, 'moedas', v.purse, { code: 'herdado', by: v.id, part: true });
+      const cc = v.carry; if (heir && cc && cc.k === 'moedas' && cc.n > EPS && !cc.op && !cc.to && !cc.cid) D.move('v:' + v.id, heir, 'moedas', cc.n, { code: 'herdado', by: v.id, part: true });
     }
     // (death is the one door out of the world: the dead leave every operation, and what they ran, at once)
     if (v && G.S.villagers.has(v.id)) { for (const op of ops()) if (live(op) && op.roles && op.roles[v.id]) A.leave(op, v, 'morte'); for (const f of A.hooks.gone) f(v, 'morte'); }

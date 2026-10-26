@@ -314,7 +314,8 @@
       if (f) {
         const food = R.tg.kind === 'celeiro' || R.tg.kind === 'storehouse' || R.why === 'fome' || !G.Eco.coinage(f.id);
         if (food && f.stock.food >= 2) { const n = Math.min(10, Math.floor(f.stock.food * 0.04) + 2); f.stock.food -= n; R.looted += n; t.got = 1; }
-        else if (f.stock.moedas >= 2 && G.Eco.coinage(f.id)) { const n = Math.min(8, Math.floor(f.stock.moedas * 0.05) + 1); f.stock.moedas -= n; R.coin += n; const h = S.buildings.get(v.home); if (h) h.coin = (h.coin || 0) + n; t.got = 1; }
+        // (the looted coins from the treasury to the looter's house — or purse —, in the ledger: 'saque-motim')
+        else if (f.stock.moedas >= 2 && G.Eco.coinage(f.id)) { const n = Math.min(8, Math.floor(f.stock.moedas * 0.05) + 1); const h = S.buildings.get(v.home); const to = h && G.BDEF[h.type] && G.BDEF[h.type].housing ? 'h:' + h.id : 'p:' + v.id; const r = G.Depot.move('f:' + f.id, to, 'moedas', n, { code: 'saque-motim', by: v.id }); if (r.ok) R.coin += r.n; t.got = 1; }
         if (t.got) { G.Vg.emote(v, 'happy', 2); t.job = 'stone'; }
       }
       return true;

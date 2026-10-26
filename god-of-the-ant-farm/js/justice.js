@@ -445,6 +445,7 @@
   // (the condemned: bound, waiting; then on the square; then in place)
   J.runDoomed = function (v, t, dt, H) {
     if (t.pose) { v.moving = false; v.act = t.pose === 'hangd' && t.kick ? (Math.sin(G.S.clock * 14) > 0 ? 'hangd' : 'writhe') : t.pose; if (t.pose === 'limp') v.act = 'hangd'; return; }
+    G.Crime && G.Crime.feed(v, v.set); // (the condemned are fed while they wait, as the jail feeds its prisoners — L-170)
     if (t.st === 0) { if (!H.goto(v, t.x, t.y, false) && !H.goto(v, t.x, t.y, true)) { v.x = t.x; v.y = t.y; t.st = 2; return; } t.st = 1; return; }
     if (t.st === 1) { v.act = 'bound'; if (H.move(v, dt, 0.7)) { t.st = 2; v.actT = 0; } if (t.age > 60) { v.x = t.x; v.y = t.y; t.st = 2; } return; }
     v.moving = false; v.act = 'mourn'; if (!v.emo || v.emo.t < 0.2) G.Vg.emote(v, G.R() < 0.5 ? 'sad' : 'fear', 2);
@@ -452,6 +453,7 @@
   J.run = function (v, t, dt, H) {
     if (t.type === 'jail') {
       if (t.age > G.DAY_LEN * 4) { H.end(v); return true; }
+      G.Crime && G.Crime.feed(v, v.set); // (the bound are fed while they wait — L-170)
       if (t.st === 0) { if (!H.goto(v, t.x, t.y, false) && !H.goto(v, t.x, t.y, true)) { v.x = t.x; v.y = t.y; t.st = 2; return true; } t.st = 1; return true; }
       if (t.st === 1) { v.act = 'bound'; if (H.move(v, dt, 0.7)) { t.st = 2; v.actT = 0; } if (t.age > 60) { v.x = t.x; v.y = t.y; t.st = 2; } return true; }
       v.moving = false; v.act = 'bound'; if (!v.emo || v.emo.t < 0.2) G.Vg.emote(v, G.R() < 0.6 ? 'sad' : 'fear', 2);

@@ -179,7 +179,7 @@
         if (b.fleet && G.Fleets && G.Fleets.onDisband(b, v)) continue;
         // raiders who came by sea walk back to their ship
         if (ship && ship.st === 'wait') { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'boardBack', ship: ship.id, pri: 3.1, kind: 'boardBack' }); continue; }
-        if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, fid(v)); v.carry = null; } G.Vg.endTask(v);
+        if (v.carry) G.Vg.spoils(v, fid(v)); G.Vg.endTask(v);
       }
     }
     const f = G.Fac.get(b.fac), en = G.Fac.get(b.enemy), set = S.settlements.get(b.set);
@@ -777,7 +777,7 @@
         if (!home || home.fac !== b.fac) home = G.Fac.capitalOf(b.fac);
         if (!home) return H.end(v);
         if (goPoint(v, t, home.cx, home.cy, 2.5, dt, H, 1)) {
-          if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, b.fac); G.FX && G.FX.deposit(v.x, v.y, v.carry.k, v.carry.n); v.carry = null; }
+          if (v.carry) { const k = v.carry.k, n = G.Vg.spoils(v, b.fac); if (n > 0) G.FX && G.FX.deposit(v.x, v.y, k, n); }
           H.end(v);
         } else if (t.fail > 4) H.end(v);
         break;
@@ -945,7 +945,7 @@
   }
   function runTrade(v, t, dt, H) {
     const S = G.S; const to = G.Fac.get(t.to), from = G.Fac.get(t.from);
-    if (!to || !from || !to.alive || !from.alive || hostile(t.to, t.from)) { if (v.carry && from) { G.Village.addStock(v.carry.k, v.carry.n, from.id); v.carry = null; } return H.end(v); }
+    if (!to || !from || !to.alive || !from.alive || hostile(t.to, t.from)) { if (v.carry && from) G.Vg.toStore(v, from.id, 'caravana-volta'); return H.end(v); }
     if (t.st === 0) {
       const dest = G.Fac.capitalOf(to.id); if (!dest) return H.end(v);
       const drop = G.Village.nearestDropoff(dest.cx, dest.cy, dest.id) || S.buildings.get(dest.campfire);
@@ -954,12 +954,12 @@
         const r = G.Politics.tradeArrive(v, t);
         if (r === 'stay') return H.end(v);
         t.st = 1; t.dest = null;
-      } else if (!t.dest || t.age > 180) { if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, from.id); v.carry = null; } return H.end(v); }
+      } else if (!t.dest || t.age > 180) { if (v.carry) G.Vg.toStore(v, from.id, 'caravana-volta'); return H.end(v); }
     } else {
       const home = G.Fac.capitalOf(from.id); if (!home) return H.end(v);
       const drop = G.Village.nearestDropoff(home.cx, home.cy, home.id) || S.buildings.get(home.campfire);
       if (!drop) return H.end(v);
-      if (goFront(v, t, drop, dt, H) || t.age > 360) { if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, from.id); G.FX && G.FX.deposit(v.x, v.y, v.carry.k, v.carry.n); v.carry = null; } H.end(v); }
+      if (goFront(v, t, drop, dt, H) || t.age > 360) { if (v.carry) { const k = v.carry.k, n = v.carry.n; G.Vg.toStore(v, from.id, 'caravana-volta'); G.FX && G.FX.deposit(v.x, v.y, k, n); } H.end(v); }
     }
   }
   function runDrill(v, t, dt, H) {
@@ -1026,7 +1026,8 @@
     if (cur && cur.pri >= 3) return;
     if (v.age < 16) return H.childDecide(v);
     const night = G.isNight();
-    if (night) { if (!cur || cur.type !== 'sleep') H.setTask(v, { type: 'sleep', pri: 1.5, kind: 'sleep' }); return; }
+    // (to bed at night — but one the hunger woke goes to bed after the meal, not before: L-171)
+    if (night) { if (!cur || (cur.type !== 'sleep' && cur.kind !== 'eat')) H.setTask(v, { type: 'sleep', pri: 1.5, kind: 'sleep' }); return; }
     if (v.hunger > 70 && (!cur || cur.kind !== 'eat')) { const t = H.eatTask(v); if (t) { t.kind = 'eat'; return; } }
     if (v.energy < 15) { H.setTask(v, { type: 'sleep', pri: 1.2, kind: 'sleep' }); return; }
     if (cur && (cur.kind === 'work' || cur.kind === 'eat')) return;

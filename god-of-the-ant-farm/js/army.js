@@ -752,7 +752,7 @@
       t.yield = (t.yield || 0) - dt;
       if (t.yield <= 0) { t.yield = 1.2; if (v.hp < 45 && b.campaign) { let foe = null; for (const o of G.War.fightersNear(v.x, v.y, 1.5)) { if (o.captive || !G.Fac.atWar(b.fac, fid(o)) || G.dist2(o.x, o.y, v.x, v.y) > 2.2) continue; foe = o; break; } if (foe && G.R() < 0.45) { const fb = foe.task && foe.task.type === 'band' ? G.War.bands.get(foe.task.band) : null; G.Vg.emote(v, 'fear', 2); G.War.capture(v, foe, fb); return true; } } }
       if (!v.path || t.routTo !== home.id) { t.routTo = home.id; H.goto(v, home.cx + G.rr(-2, 2), home.cy + G.rr(-2, 2), false); }
-      if (H.move(v, dt, 1.35) || dist(v.x, v.y, home.cx, home.cy) < 4) { if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, b.fac); v.carry = null; } H.end(v); }
+      if (H.move(v, dt, 1.35) || dist(v.x, v.y, home.cx, home.cy) < 4) { if (v.carry) G.Vg.spoils(v, b.fac); H.end(v); }
       return true;
     }
     if (b.st === 'retorno') return false;

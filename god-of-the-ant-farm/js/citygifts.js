@@ -73,7 +73,7 @@
     const b = S.occ[i] && S.buildings.get(S.occ[i]);
     const bf = b && G.Fac.ofSet(b.set);
     if (b && b.built && G.BDEF[b.type].housing && bf && E.coinage(bf.id)) {
-      b.coin = (b.coin || 0) + n; rn.houses += n;
+      G.Depot.make('h:' + b.id, 'moedas', n, { code: 'chuva-de-moedas' }); rn.houses += n; // (born of the god's hand, in the ledger)
       G.FX && G.FX.sparkle(x, y);
       return;
     }
@@ -146,7 +146,7 @@
     const f = G.Fac.ofV(v);
     const shown = Math.max(1, Math.round(q.n));
     G.FX && G.FX.floater(v.x, v.y, `+${shown} ${shown > 1 ? 'moedas' : 'moeda'}`, '#ffd85a', 1.6);
-    if (f && E.coinage(f.id)) { const h = E.homeOf(v); if (h) h.coin = (h.coin || 0) + q.n; else v.purse = (v.purse || 0) + q.n; return { n: q.n, coins: true }; }
+    if (f && E.coinage(f.id)) { const h = E.homeOf(v); G.Depot.make(h ? 'h:' + h.id : 'p:' + v.id, 'moedas', q.n, { code: 'chuva-de-moedas', by: v.id }); return { n: q.n, coins: true }; }
     const n = Math.max(0.2, Math.round(q.n / 6 * 10) / 10);
     v.carry = { k: 'ouro', n: (v.carry && v.carry.k === 'ouro' ? v.carry.n : 0) + n };
     return { n: q.n, coins: false };
