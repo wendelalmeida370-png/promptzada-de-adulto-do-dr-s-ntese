@@ -31,20 +31,22 @@
     // ---- sleeping ----
     'cama-casal': { name: 'Cama de casal', w: 1.4, d: 1.95, h: 0.55, low: 1, wall: 1, rot: 1, places: 2, spots: lie(2) },
     cama: { name: 'Cama', w: 0.9, d: 1.95, h: 0.5, low: 1, wall: 1, rot: 1, places: 1, spots: lie(1) },
-    esteira: { name: 'Esteira', w: 0.72, d: 1.8, h: 0.06, low: 1, wall: 1, rot: 1, places: 1, spots: lie(1) },
+    // (leva: what a household takes with it when it leaves — its mats, the cradle, the stove and the brazier; the house left
+    // behind keeps the rest, its chests, baskets and jars among them: what the world left in them is still there)
+    esteira: { name: 'Esteira', w: 0.72, d: 1.8, h: 0.06, low: 1, wall: 1, rot: 1, places: 1, leva: 1, spots: lie(1) },
     // (the couple's mat, or the pallet two share where there are no beds)
-    'esteira-casal': { name: 'Esteira de casal', w: 1.25, d: 1.85, h: 0.08, low: 1, wall: 1, rot: 1, places: 2, spots: lie(2) },
+    'esteira-casal': { name: 'Esteira de casal', w: 1.25, d: 1.85, h: 0.08, low: 1, wall: 1, rot: 1, places: 2, leva: 1, spots: lie(2) },
     // (the sleeping bench along the long wall of a northern house: one sleeper every 0.7 m of it)
     'banco-cama': { name: 'Banco-cama', w: 0, d: 0.85, h: 0.45, low: 1, wall: 1, per: 0.7, spots: it => { const k = Math.max(1, Math.floor(it.w / 0.7 + 1e-6)); return lie(k, 1)(it); } },
-    berco: { name: 'Berço', w: 0.55, d: 0.95, h: 0.5, low: 1, wall: 1, places: 0, spots: front('cuidar') },
+    berco: { name: 'Berço', w: 0.55, d: 0.95, h: 0.5, low: 1, wall: 1, places: 0, leva: 1, spots: front('cuidar') },
     // ---- fire and food ----
     // (the long hearth of the open hall: stone-lined, along the room; one cooks at either end of it)
     lar: { name: 'Lar', w: 0.8, d: 1.2, h: 0.25, solid: 1, fire: 1, free: 1, spots: it => [{ use: 'cozinhar', a: 0, n: it.d / 2 + 0.45 }, { use: 'cozinhar', a: 0, n: -(it.d / 2 + 0.45) }] },
     fogao: { name: 'Fogão de parede', w: 1.2, d: 0.6, h: 0.9, solid: 1, fire: 1, wall: 1, tall: 1, spots: front('cozinhar') },
     forno: { name: 'Forno de pão', w: 0.9, d: 0.9, h: 1.1, solid: 1, fire: 1, wall: 1, tall: 1, spots: front('assar') },
     // (the small clay stove of a poor house: a pot over the coals)
-    fogareiro: { name: 'Fogareiro de barro', w: 0.6, d: 0.6, h: 0.5, solid: 1, fire: 1, wall: 1, spots: front('cozinhar', 0.4) },
-    braseiro: { name: 'Braseiro', w: 0.5, d: 0.5, h: 0.6, solid: 1, fire: 1, wall: 1, spots: front('aquecer', 0.4) },
+    fogareiro: { name: 'Fogareiro de barro', w: 0.6, d: 0.6, h: 0.5, solid: 1, fire: 1, wall: 1, leva: 1, spots: front('cozinhar', 0.4) },
+    braseiro: { name: 'Braseiro', w: 0.5, d: 0.5, h: 0.6, solid: 1, fire: 1, wall: 1, leva: 1, spots: front('aquecer', 0.4) },
     mesa: { name: 'Mesa', w: 1.1, d: 0.7, h: 0.75, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
     'mesa-baixa': { name: 'Mesa baixa', w: 0.9, d: 0.6, h: 0.35, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
     banco: { name: 'Banco', w: 1.1, d: 0.35, h: 0.45, low: 1, wall: 1, spots: it => [{ use: 'sentar', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: it.d / 2 + 0.35 }] },

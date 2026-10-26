@@ -7,9 +7,9 @@
 # Tudo é determinístico (a mesma semente faz o mesmo mundo): uma prova que muda de resultado mudou porque o jogo mudou.
 cd "$(dirname "$0")"
 OUT=${1:-/tmp/gotaf-regress}; mkdir -p "$OUT"
-# (SKIP="mar guerra" pula fases já rodadas nessa pasta — mar, guerra, vida, estado, tela, cidade, poderes, perf; sem SKIP a pasta
-# começa limpa — fases: mar, guerra, vida, estado, tela, cidade, poderes, encarnado, perf. Com a máquina ocupada: SKIP="perf" agora, e
-# depois, com ela livre, só o desempenho: SKIP="mar guerra vida estado tela cidade poderes encarnado" bash regress.sh pasta)
+# (SKIP="mar guerra" pula fases já rodadas nessa pasta — mar, guerra, vida, estado, tela, cidade, poderes, fundacao, perf; sem SKIP a
+# pasta começa limpa — fases: mar, guerra, vida, estado, tela, cidade, poderes, fundacao, encarnado, perf. Com a máquina ocupada:
+# SKIP="perf" agora, e depois, com ela livre, só o desempenho: SKIP="mar guerra vida estado tela cidade poderes fundacao encarnado" bash regress.sh pasta)
 skip() { [[ " $SKIP " == *" $1 "* ]]; }
 [ -z "$SKIP" ] && rm -f "$OUT"/*.txt
 t0=$(date +%s)
@@ -61,7 +61,15 @@ echo "== cidade: $(cat "$OUT"/cidade_*.txt 2>/dev/null | grep -c '^PASSOU') pass
 # 7. os poderes do deus: os novos (v30) provocados de propósito com os casos ruins, e o deus caótico lançando todos ao acaso
 skip poderes || { (timeout 1500 node poderes.js > "$OUT/poderes.txt" 2>&1) & (timeout 1500 node ev.js 7 continente 128 4 3 chaos.js > "$OUT/caos.txt" 2>&1) & (timeout 1500 node ev.js 13 arquipelago 128 4 3 chaos.js > "$OUT/caos_13.txt" 2>&1) & wait; }
 echo "== poderes: $(grep -c '^PASSOU' "$OUT/poderes.txt" 2>/dev/null) passaram, $(grep -c '^FALHOU' "$OUT/poderes.txt" 2>/dev/null) falharam; caos: $(cat "$OUT"/caos*.txt 2>/dev/null | grep -c '"viol": \[\]') de 2 limpos"
-# 7b. o Modo Encarnado: a cidade real em 3D, a pessoa real, o mundo que continua, a troca, a morte, o terreno, os saves A–E,
+# 7b. a fundação da v37, em Node (sem navegador): o depósito e as operações, o porto, o negócio, a invariância entre os três
+# níveis, os interiores (o registro, a casca, todas as plantas de todas as famílias, os prédios da vida comum), o corpo contra as
+# regras do mundo e o 3D lido por números; o catálogo das plantas e as invariantes no qa.js iguais aos arquivos de onde vêm
+skip fundacao || { F() { local n=$1; shift; timeout 7200 node "$@" > "$OUT/fund_$n.txt" 2>&1; echo "saída $?" >> "$OUT/fund_$n.txt"; }
+  (F plantas plantas.js) & (F atividades atividades.js; F porto porto.js; F negocio negocio.js; F invariancia invariancia.js; F vidacurta vidacurta.js) &
+  (F interiores interiores.js; F casca casca.js; F civicos civicos.js; F catalogo catalogo.js confere; F junta junta-inv.js confere; F muros muros.js) &
+  (F corpo-mundo visual/corpo-mundo.js; F maos visual/maos.js; F estiva visual/estiva.js; F carga-mundo visual/carga-mundo.js; F disputa visual/disputa.js; F corpo-rig visual/corpo-rig.js; F guarda3d visual/guarda3d.js ..) & wait; }
+echo "== fundação: $(cat "$OUT"/fund_*.txt 2>/dev/null | grep -c '^PASSOU') passaram, $(cat "$OUT"/fund_*.txt 2>/dev/null | grep -c '^FALHOU') falharam; $(grep -L '^saída 0' "$OUT"/fund_*.txt 2>/dev/null | wc -l) arquivos com saída de erro"
+# 7c. o Modo Encarnado: a cidade real em 3D, a pessoa real, o mundo que continua, a troca, a morte, o terreno, os saves A–E,
 # o estresse (30 idas e voltas, a caminhada longa, o salto de 10 anos), os casos ruins e o visual (e11) — com fotos em encarna-fotos/
 # (≈ 1 h 20 sozinho: o 3D é desenhado de verdade, sem placa de vídeo — desde a v33, com o chão e os padrões, mais pesado: T-032)
 skip encarnado || (timeout 10800 node encarna.js "$OUT/encarna-fotos" > "$OUT/encarnado.txt" 2>&1)
@@ -77,11 +85,12 @@ skip perf || m17 perf 7; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/m
   [ -f "$OUT/cativos.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/cativos.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | cativos \2/'
   [ -f "$OUT/poderes.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/poderes.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | poderes \2/'
   [ -f "$OUT/encarnado.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/encarnado.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | \2/'
+  for f in "$OUT"/fund_*.txt; do [ -f "$f" ] && { grep -h "^PASSOU |\|^FALHOU |" "$f" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | \2/'; grep -q '^saída 0' "$f" && echo "PASSOU | fundação $(basename "$f" .txt | cut -c6-) saiu limpo" || echo "FALHOU | fundação $(basename "$f" .txt | cut -c6-) saiu limpo"; }; done
   for f in caos caos_13; do [ -f "$OUT/$f.txt" ] && { grep -q '"viol": \[\]' "$OUT/$f.txt" && grep -q '"errs": \[\]' "$OUT/$f.txt" && echo "PASSOU | $f sem violações S0–S2" || echo "FALHOU | $f sem violações S0–S2"; }; done
   for f in "$OUT"/guerra_*.txt; do grep -h " PASS \| FAIL " "$f" | grep -v RESULT | sed -E 's/^([^—]*) (PASS|FAIL) .*/\2 | guerra \1/; s/^PASS/PASSOU/; s/^FAIL/FALHOU/'; done
   grep -h "^PASSOU\|^FALHOU" "$OUT/guard.txt" "$OUT/determinismo.txt" | sed -E 's/^(PASSOU|FALHOU).*/\1/' | head -2 | paste -d' ' - <(echo vigia; echo determinismo) | sed 's/ / | /'
   for f in vida_103 vida_107; do v=$(grep -c "^  S[0-2] " "$OUT/$f.txt"); echo "$([ "$v" = 0 ] && echo PASSOU || echo FALHOU) | $f sem violações S0–S2"; done
-  for f in "$OUT"/*.txt; do e=$(grep -h "erros: \|^erros " "$f" | grep -v "erros: nenhum\|erros nenhum" | head -1); [ -n "$e" ] && echo "FALHOU | $(basename "$f" .txt) com erros: ${e:0:120}"; done
+  for f in "$OUT"/*.txt; do e=$(grep -h "erros: \|^erros " "$f" | grep -v "erros: nenhum\|erros nenhum\|erros de módulo: {}" | head -1); [ -n "$e" ] && echo "FALHOU | $(basename "$f" .txt) com erros: ${e:0:120}"; done
   grep -q '"fails": \[\]' "$OUT/alcance.txt" && echo "PASSOU | alcance" || echo "FALHOU | alcance"
   grep -q '"fails": \[\]' "$OUT/bordo.txt" && echo "PASSOU | a bordo" || echo "FALHOU | a bordo"
   grep -q '"fails": \[\]' "$OUT/ilhado.txt" && echo "PASSOU | isolados (bolsão, náufrago, governante)" || echo "FALHOU | isolados (bolsão, náufrago, governante)"

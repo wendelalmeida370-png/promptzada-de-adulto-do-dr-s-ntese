@@ -119,9 +119,22 @@
       if (bs < 3) best = on[Math.floor(on.length / 2)];
       gates.push(best);
     }
-    // gates are never side by side
-    gates.sort((a, b) => S.wear[b] + (S.road[b] ? 40 : 0) - (S.wear[a] + (S.road[a] ? 40 : 0)));
-    const g2 = []; for (const i of gates) if (g2.length < 4 && !g2.some(j => Math.abs((j % N) - (i % N)) + Math.abs(((j / N) | 0) - ((i / N) | 0)) < 4)) g2.push(i);
+    // gates are never side by side; each side keeps one — its busiest, the busiest side first —, then the busiest of the rest,
+    // four in all (the four busiest alone left a side without a way out: Jelling's west, over Mênfis's quay street — L-140)
+    const rank = i => S.wear[i] + (S.road[i] ? 40 : 0);
+    const near = (i, j) => Math.abs((j % N) - (i % N)) + Math.abs(((j / N) | 0) - ((i / N) | 0)) < 4;
+    const onSide = ([sx, sy], i) => (sx !== null ? i % N === sx : ((i / N) | 0) === sy);
+    gates.sort((a, b) => rank(b) - rank(a));
+    const g2 = []; const top = sd => { const i = gates.find(q => onSide(sd, q)); return i === undefined ? -1 : rank(i); };
+    for (const sd of sides.slice().sort((a, b) => top(b) - top(a))) {
+      if (g2.some(j => onSide(sd, j))) continue; // (a gate at its corner is its own)
+      const cand = gates.filter(q => onSide(sd, q)), free = cand.filter(q => !g2.some(j => near(q, j)));
+      if (free.length) { g2.push(free[0]); continue; }
+      if (cand.length) continue; // (where its people walk out, a gate of the next side is a step away)
+      const alt = tiles.filter(q => onSide(sd, q) && !g2.some(j => near(q, j))).sort((a, b) => rank(b) - rank(a))[0];
+      if (alt !== undefined) g2.push(alt);
+    }
+    for (const i of gates) if (g2.length < 4 && !g2.includes(i) && !g2.some(j => near(i, j))) g2.push(i);
     return { id: S.nextId++, set: s.id, fac: f.id, mat: G.Civ.has(f.id, 'alvenaria') ? 'pedra' : 'madeira', tiles, gates: g2, built: 0, done: false, style: f.civ || 'classico', box: [x0, y0, x1, y1] };
   }
   // walls raised at once (used by the gods, and by tests)
