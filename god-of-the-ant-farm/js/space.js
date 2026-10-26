@@ -41,9 +41,10 @@
     const i = W.idx(x, y); const t = S.type[i];
     const ice = !!(S.ice && S.ice[i]), dry = !!(S.dry && S.dry[i]);
     if (W.walkable(i)) return { kind: t === T.RIVER && !ice && !S.road[i] ? 'shallow' : 'ground', walk: true, i, road: S.road[i], ice, dry };
+    // (a building that stands on the water is a building: what stops the feet there is its wall, not the water — L-150)
+    if (W.blocked(i) && !S.cliff[i]) return { kind: 'building', walk: false, i, b: S.occ[i] };
     if (t <= T.RIVER) return { kind: S.cliff[i] ? 'cliff' : 'deep', walk: false, i };
     if (S.cliff[i]) return { kind: 'cliff', walk: false, i };
-    if (W.blocked(i)) return { kind: 'building', walk: false, i, b: S.occ[i] };
     return { kind: 'wall', walk: false, i };
   };
   // a tile index can be stood on (the same rule, for the controller's quick tests)

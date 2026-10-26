@@ -51,6 +51,15 @@ PASSOU | guerra guerreiro que muda de povo sai do bando
 PASSOU | guerra a última alma morre e o povo acaba junto 
 PASSOU | guerra a última alma livre morre e os cativos herdam a cidade 
 PASSOU | guerra sem erros 
+PASSOU | cativos 1 a cidade tomada se rebela e volta para o seu povo: os cativos desse povo lá dentro ficam livres 
+PASSOU | cativos 1 o cativo de um terceiro povo que vive lá continua cativo 
+PASSOU | cativos 2 a cidade ocupada se levanta contra os ocupantes: os cativos do seu povo ficam livres 
+PASSOU | cativos 3 a paz branca devolve a cidade ocupada: os cativos do seu povo ficam livres 
+PASSOU | cativos 4 salvar e carregar: quem é cativo continua igual 
+PASSOU | cativos 4 verificador (nada de novo de S0 a S2; nenhum cativo do próprio povo) 
+PASSOU | cativos 5 o cativo que naufraga perto da sua cidade, numa terra sem cidade dos captores, chega em casa livre 
+PASSOU | cativos 5 verificador 
+PASSOU | cativos sem erros de página nem de módulo 
 PASSOU | poderes o1 chuva de ouro: o povo corre e cata 
 PASSOU | poderes o1 toda moeda contada 
 PASSOU | poderes o1 a corrida termina com crônica e biografia 
@@ -153,7 +162,8 @@ PASSOU | encarna e7 verificador
 PASSOU | encarna e9 capturado por inimigos: o corpo vai com o mundo 
 PASSOU | encarna e9 levado a um navio: a encarnação acaba 
 PASSOU | encarna e9 um prédio nasce em cima: o mundo move o corpo, o corpo segue 
-PASSOU | encarna e9 a terra afunda sob os pés: a água leva o corpo, o deus volta 
+PASSOU | encarna e9 um prédio nasce em cima de um vau: não é água de nadar, o mundo tira o corpo de lá (L-150) 
+PASSOU | encarna e9 a terra afunda sob os pés: quem sabe nadar nada, encarnado (D-026); quem não sabe, a água leva e o deus volta 
 PASSOU | encarna e9 a guerra e o fogo chamam: viram chamados, o corpo fica 
 PASSOU | encarna e9 mãos: a árvore cai pelo corte, a lenha vai para os braços 
 PASSOU | encarna e9 mãos: a lenha entra no estoque do povo 
@@ -171,7 +181,7 @@ PASSOU | encarna e10 o botão Encarnar no painel da pessoa (e o motivo quando n�
 PASSOU | encarna e10 a ficha diz quem são os pais (dos registros do mundo) 
 PASSOU | encarna e10 Esc abre o menu e pausa; as teclas mudam; G volta; I encarna 
 PASSOU | encarna e10 no toque: o polegar à esquerda anda, os botões aparecem 
-PASSOU | encarna e11 o chão do 3D pinta o que o mundo tem (perto do corpo, ruas, roças, mar) 
+PASSOU | encarna e11 o chão do 3D pinta o que o mundo tem (perto do corpo, ruas, roças, mar; nenhuma neve na água ou no quente, nenhum branco do frio sob o capim) 
 PASSOU | encarna e11 o chão segue o mundo: a casa queimada vira cinza 
 PASSOU | encarna e11 plantas que balançam, paredes e telhados com o material do povo 
 PASSOU | encarna e11 o fogo solta fumaça e faíscas 
@@ -179,6 +189,44 @@ PASSOU | encarna e11 a árvore derrubada cai e deita
 PASSOU | encarna e11 quem está na frente vira a cabeça para o corpo 
 PASSOU | encarna e11 com o mundo parado, o desenho não mexe no mundo 
 PASSOU | encarna e11 verificador 
+PASSOU | encarna e12 o dragão do mundo voa no 3D onde o mundo diz 
+PASSOU | encarna e12 o sopro do dragão: fogo do focinho ao chão, e a luz dele 
+PASSOU | encarna e12 o dragão dorme no covil sobre o tesouro; morto, ficam os ossos 
+PASSOU | encarna e12 à noite o corpo leva uma tocha acesa (de dia não) 
+PASSOU | encarna e12 as carroças das estradas aparecem, com o boi 
+PASSOU | encarna e12 os bichos do mar aparecem na água 
+PASSOU | encarna e12 a chuva de ouro do deus cai também no 3D 
+PASSOU | encarna e12 os mortos ficam onde caíram 
+PASSOU | encarna e12 o campo de capim: aceso na qualidade média, nunca em rua, casa ou água 
+PASSOU | encarna e12 verificador 
+PASSOU | encarna e13 uma pedra grande no caminho: o corpo a escala com as mãos, anda por cima e desce do outro lado 
+PASSOU | encarna e13 a parede de uma casa não se escala 
+PASSOU | encarna e13 sentar no chão (X) e levantar andando 
+PASSOU | encarna e13 acenar (V): o corpo acena e quem está perto responde 
+PASSOU | encarna e13 beber água no rio; o mar é salgado 
+PASSOU | encarna e13 fazer carinho num bicho manso 
+PASSOU | encarna e13 catar ouro do chão: some do chão, vai para a casa (ou para as mãos) e entra na biografia 
+PASSOU | encarna e13 verificador 
+PASSOU | encarna e14 há uma praia de onde se entra no mar 
+PASSOU | encarna e14 entrando no mar: a água sobe pelas pernas e as deixa mais lentas; funda, o corpo nada 
+PASSOU | encarna e14 nadando: o mundo o deixa lá (a marca de quem nada), o deus o vê nadar, a cabeça fica fora d'água, nunca dentro do chão nem a câmera dentro de nada 
+PASSOU | encarna e14 nadando o fôlego vai acabando 
+PASSOU | encarna e14 a ordem do mundo de nadar para a margem não tira o corpo do jogador 
+PASSOU | encarna e14 salvar e carregar no meio do mar: continua nadando, onde estava 
+PASSOU | encarna e14 de volta à praia: nada, depois pisa no fundo, sai andando; a marca some e o fôlego volta 
+PASSOU | encarna e14 no vau do rio a água fica nas canelas ou nos joelhos e não se nada 
+PASSOU | encarna e14 sem fôlego longe da margem: afunda, a vida cai e a tela escurece 
+PASSOU | encarna e14 e se afoga de verdade: a morte do mundo (afogado), na crônica, sem corpo na praia, e o deus volta 
+PASSOU | encarna e14 verificador 
+PASSOU | encarna e15 com a família: a conversa faz a pessoa parar; no cartão dela, Abraçar — o corpo chega perto e os dois se abraçam (no mundo e no 3D) 
+PASSOU | encarna e15 chamada pelo mundo no meio do abraço (uma festa, um incêndio): o corpo solta na hora e o abraço não conta 
+PASSOU | encarna e15 consolar quem está de luto: o luto diminui; um estranho sem luto não recebe abraço 
+PASSOU | encarna e15 a pessoa morre no meio do abraço: nada quebra, o feito não conta, o corpo segue 
+PASSOU | encarna e15 salvar e carregar no meio de um abraço: volta encarnado, sem o feito em dobro 
+PASSOU | encarna e15 dançar (B): o corpo dança, quem está livre por perto entra na dança, andar para, e depois todos voltam à vida 
+PASSOU | encarna e15 acenar de dia, ao lado de alguém: quem está perto acena de volta 
+PASSOU | encarna e15 pescar com as mãos: só com os pés na água; com as mãos cheias, não; levado para longe no meio, não pesca; o peixe é o daquela água e entra na biografia 
+PASSOU | encarna e15 verificador 
 PASSOU | encarna e8 30 idas e voltas (6 com save no meio): sem acúmulo 
 PASSOU | encarna e8 sem ouvintes acumulados 
 PASSOU | encarna e8 caminhada longa: chunks vêm e vão, a memória fica 
@@ -202,6 +250,7 @@ PASSOU | vida_103 sem violações S0–S2
 PASSOU | vida_107 sem violações S0–S2
 PASSOU | alcance
 PASSOU | a bordo
+PASSOU | isolados (bolsão, náufrago, governante)
 PASSOU | saves danificados
 PASSOU | memória dos mortos
 PASSOU | mundos prontos
