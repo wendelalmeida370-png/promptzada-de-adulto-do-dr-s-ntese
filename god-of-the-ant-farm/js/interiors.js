@@ -1453,9 +1453,10 @@
   In.uncache = () => { cache.clear(); shells.clear(); stores.clear(); job = null; }; // (for the proofs)
 
   // ------------------------------ the ports, on ------------------------------
-  // the interiors are the gameplay's ground (§36): the door the world's people come out by is the plan's (villagers.js asks
-  // In.planDoor) — measured over twenty years in three worlds before it was turned on: it moves little of the world, and
-  // nothing for the worse (D-053). What a house, a shelf or a stall holds by its furniture (G.Depot.stores) comes on after
-  // the purchases ask how much fits at home. Only here are the ports turned on (guard, rule 22)
+  // the interiors are the gameplay's ground (§36): what a house, a shelf or a stall holds is what its furniture keeps (C1's
+  // G.Depot asks In.depotStores), and the door the world's people come out by is the plan's (villagers.js asks In.planDoor)
+  // — measured over twenty years in three worlds before they were turned on: they move little of the world, and nothing
+  // for the worse (D-053). Only here are they turned on (guard, rule 22)
+  if (G.Depot) G.Depot.stores = In.depotStores;
   if (G.Vg) G.Vg.planDoor = In.planDoor;
 })(window.G);
