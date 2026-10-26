@@ -17,6 +17,9 @@
 //      the drawing has a face there; and the foot of every flight before a door in the world is walked up: its lowest tread
 //      and the one above it within one step of the body (Avatar.TUNE.stepUp)
 //   5. saved and loaded standing on a doorstep: there still, not moved, not taken for one who swims
+//   6. a house built where the body stands: never inside, never in its rooms — it came in by no door —; the world takes it out
+//      as anyone (L-175); and saved and loaded in a door's opening, walking in, the world not yet having it indoors: there
+//      still, and indoors by the door it came in by
 //   and no module error
 const path = require('path');
 const T = require(path.join(__dirname, 'tres-node.js'));
@@ -205,6 +208,46 @@ if (part(5)) { let d = null, on = false;
   const bad = vbad();
   ok('5. salvo e carregado de pé numa soleira: lá ainda, sem ser movido, sem a marca de quem nada; o corpo onde a planta deixa ficar', on && !!v && v.id === vid && !afl && mv >= 0 && mv < 0.05 && onP && !pushes && !bad.length,
     `${d ? `${d.b.type}#${d.b.id}` : '-'}: ${on ? 'na soleira' : 'não chegou à soleira'}; depois de carregar: ${v ? `${afl ? 'com' : 'sem'} a marca de quem nada, movido ${mv.toFixed(2)} m em 3,5 s, ${onP ? 'onde a planta deixa' : 'fora da planta'} ${at}` : 'sem corpo'}; ${vtxt(bad)}`);
+}
+
+// ------------------------------ 6. walls that rose round the body; a save a step into a room ------------------------------
+if (part(6)) {
+  // (a house built where the body stands, on the open ground of a town: the walls rose round it, it came in by no door —
+  // Possess.cameBy —; the world takes it out as anyone, to the nearest ground it walks, or it stays on the new house's
+  // doorstep, which the plan walks: never inside, never in its rooms. The body put on open ground among the houses — a tile of
+  // nobody's whose eight round it are nobody's too, not in a field's or a square's ground —, as a house is put on free ground)
+  const free = (x, y) => W.inb(x, y) && !S.occ[W.idx(x, y)] && W.walkable(W.idx(x, y)) && ![...S.buildings.values()].some(b => x >= b.x - 1 && x <= b.x + b.w && y >= b.y - 1 && y <= b.y + b.h);
+  const spots = []; for (const b0 of houses) { if (spots.length >= 8) break; const b = S.buildings.get(b0.id); if (!b) continue;
+    for (let r = 2; r <= 6 && spots.length < 8; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const x = b.x + dx, y = b.y + dy;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || spots.some(q => Math.abs(q[0] - x) < 6 && Math.abs(q[1] - y) < 6)) continue;
+      let ok8 = true; for (let ey = -1; ey <= 1 && ok8; ey++) for (let ex = -1; ex <= 1; ex++) if (!free(x + ex, y + ey)) { ok8 = false; break; } if (ok8 && spots.length < 8) spots.push([x, y, b.set]); } }
+  const rows = [], made = []; let n = 0, inside = 0, walled = 0, lost = 0; const bad = new Set();
+  for (const [x, y, set] of spots) {
+    if (n >= 6) break; if (S.avatar) G.Possess.release('deus');
+    god(() => { G.Vg.endTask(v); v.inside = 0; v.x = x + 0.5; v.y = y + 0.5; v.path = null; });
+    if (!G.Possess.take(v).ok) continue; G.Avatar.attach(v, 0); for (let k = 0; k < 4; k++) frame(); if (Math.floor(v.x) !== x || Math.floor(v.y) !== y) continue;
+    const nb = god(() => G.Village.addBuilding('house', x, y, set, true)); if (!nb) continue; n++; // (of the town of the house beside it)
+    for (let k = 0; k < 90; k++) frame(); for (const q of vbad()) bad.add(`S${q.sev} ${q.sys}: ${q.msg}`); // (the world's push, once a second: then the verifier)
+    const q = Sp.indoor(v.x * TL, v.y * TL); const inWalls = !v.inside && !!q && q.b === nb && q.shell;
+    if (v.inside === nb.id) inside++; if (inWalls) walled++; if (!S.avatar || S.avatar.id !== v.id) lost++;
+    rows.push(v.inside === nb.id ? 'dentro' : inWalls ? 'nas paredes' : W.walkableXY(v.x, v.y) ? 'no chão do mundo' : G.Possess.onPlan(v) ? 'na soleira da casa nova' : 'preso'); made.push(`${nb.id}@${nb.x},${nb.y}`);
+    god(() => { if (v.inside === nb.id) { const dd = G.Vg.door(nb); v.x = dd[0]; v.y = dd[1]; v.inside = 0; } G.Village.removeBuilding(nb); });
+  }
+  const tally = {}; for (const r of rows) tally[r] = (tally[r] || 0) + 1;
+  ok('6. um prédio nasce onde o corpo está: o corpo não fica dentro nem nos cômodos — não entrou por porta nenhuma —; o mundo o tira como a qualquer um', n >= 4 && !inside && !walled && !lost && !bad.size && rows.every(r => r === 'no chão do mundo' || r === 'na soleira da casa nova'),
+    `${n} casas nascidas sobre o corpo (${made.join(' ')}): ${Object.entries(tally).map(([k, c]) => `${c} ${k}`).join(', ')}; ${bad.size ? [...bad].slice(0, 2).join(' · ') : 'verificador limpo'}`);
+  // (a save in a door's opening, the body walking in: within the walls, the world not yet having it indoors — its word for it
+  // goes in the next step —; loaded, it stands there, not one who swims, and the world has it indoors by the door it came in by)
+  let d = null, got = false, x0 = 0, y0 = 0, B = null;
+  for (const b0 of houses.slice(0, 40)) { const b = S.buildings.get(b0.id); if (!b) continue; d = door(b); if (!d || !bodyAt(d, true)) continue; const pts = wayIn(d); pathTo(pts[0][0], pts[0][1]);
+    for (const q of pts) { for (let k = 0; k < 260 && !got; k++) { const s = st(); const dx = q[0] - s.X, dz = q[1] - s.Z; if (Math.hypot(dx, dz) < 0.15) break; const yaw = Math.atan2(dz, dx); IN.camYaw = yaw; IN.mx = 0; IN.mz = 1; s.yaw = yaw; frame();
+        const ins = Sp.indoor(s.X, s.Z); if (ins && ins.b === b && ins.shell && ins.walk && ins.door >= 0 && !v.inside) got = true; } if (got) break; }
+    IN.mz = 0; if (got) { B = b; break; } }
+  let w = null, afl = null, mv = -1, via = 0, inn = 0; const bad2 = [];
+  if (got) { x0 = v.x; y0 = v.y; via = S.avatar.via; M.salvarCarregar(); S = G.S; w = G.Possess.body();
+    if (w) { v = w; afl = !!(w.task && w.task.afloat); mv = Math.hypot(w.x - x0, w.y - y0) * TL; G.Avatar.attach(w, 0); for (let k = 0; k < 10; k++) frame(); inn = w.inside; bad2.push(...vbad()); } }
+  ok('6. salvo e carregado no vão da porta, entrando, antes de o mundo o ter dentro: lá ainda, sem a marca de quem nada; o mundo o tem dentro pela porta por onde veio', got && via === (B && B.id) && !!w && !afl && mv >= 0 && mv < 0.05 && B && inn === B.id && !bad2.length,
+    `${B ? `${B.type}#${B.id}` : 'nenhuma casa'}: ${got ? `entrando (vindo pela porta de ${via || '-'})` : 'não achou a janela'}; depois de carregar: ${w ? `${afl ? 'com' : 'sem'} a marca de quem nada, movido ${mv.toFixed(2)} m, dentro de ${inn || '-'} 10 quadros depois` : 'sem corpo'}; ${vtxt(bad2)}`);
 }
 
 // (no module error)

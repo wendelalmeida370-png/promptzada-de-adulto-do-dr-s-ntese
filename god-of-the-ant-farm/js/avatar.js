@@ -127,7 +127,8 @@
     else { b.inB = ins.b; b.inP = ins.p; b.lv = ins.lv; b.inShell = ins.shell; b.stair = G.Space.stairIn(ins.p, ins.lv, ins.x, ins.z); b.stairF = b.stair ? stairF(b.stair, ins.x, ins.z) : 0; b.crawl = (ins.p.levels.find(q => q.lv === ins.lv) || {}).kind === 'jirau'; }
     const want = ins && ins.shell ? ins.b.id : 0;
     if (b.inAsk && b.inAsk.res) b.inAsk = null;
-    if (!b.inAsk && want !== (v.inside || 0)) { const id = want; b.inAsk = G.Possess.apply(w => { if (id && !G.S.buildings.has(id)) return { ok: false, why: '' }; w.inside = id; return { ok: true }; }); }
+    // (the world has it indoors only by the door: a room of the building it came in by — Possess.cameBy; going out is free, L-175)
+    if (!b.inAsk && want !== (v.inside || 0)) { const id = want; b.inAsk = G.Possess.apply(w => { if (id && (!G.S.buildings.has(id) || !G.Possess.cameBy(id))) return { ok: false, why: '' }; w.inside = id; return { ok: true }; }); }
     G.Possess.setLevel(ins && ins.shell && v.inside === ins.b.id ? ins.lv : null); // (once the world has it indoors)
   }
   Av.indoors = () => (b && b.inB && b.inShell ? { b: b.inB, p: b.inP, lv: b.lv, crawl: !!b.crawl } : null); // (for the camera and the 3D)
