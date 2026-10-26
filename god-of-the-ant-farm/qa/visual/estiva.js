@@ -207,15 +207,20 @@ let dest = P.destOf(op);
 function liftAgain() {
   for (let k = 0; k < 30 && !opCrates().length; k++) frame(); if (!opCrates().length) return false;
   const p = god(() => G.Fishers.crateSpot(dock)); walkPath(p[0], p[1], 1.2);
-  // (a crate nobody else holds: the quay's own carriers work this unloading too, and a crate one of them took is theirs —
-  // "Outro carregador já pegou esta caixa"; with none free, a while of the world for one to be — C1, with C3's word)
+  // (a crate nobody else holds: the quay's own carriers work this unloading too, and a crate one of them goes for is his from
+  // then on (Porto.claim), as the one the body's E holds is the body's (Act.begin). On a busy quay every crate may be spoken
+  // for — the town's porters may claim every crate as it comes — and none frees: then another boat lands
+  // its catch on the same quay, into the same unloading, and the body at the pile takes one of the new — C1, with C3's word)
   const freeOne = () => drawnOf().find(e => { const c = opCrates().find(q => q.id === e[4]); return c && (!c.by || c.by === v.id); });
-  let e = freeOne(); for (let k = 0; k < 600 && !e && opCrates().length; k++) { frame(); e = freeOne(); }
-  if (!e) return false;
-  faceTo(e[0], e[2]); still(2);
   const pegar = q => q && q.id === 'atividade' && /^Pegar /.test(q.label) && q.ok;
-  let b = I.best(); for (let k = 0; k < 20 && !pegar(b); k++) { e = freeOne() || e; walkTo(e[0], e[2], 30, 1.4); faceTo(e[0], e[2]); still(1); b = I.best(); }
-  for (let t = 0; t < 3 && pegar(b) && !(v.carry && v.carry.n > 0); t++) { doIt(b); b = I.best(); }
+  for (let round = 0; round < 4 && !(v.carry && v.carry.n > 0) && A.live(op); round++) {
+    let e = freeOne(); for (let k = 0; k < 150 && !e && opCrates().length; k++) { frame(); e = freeOne(); }
+    if (!e && A.live(op)) { god(() => P.landCatch(dock, 'food', 16, 'arenque', '#a8c0d0', 0)); still(2); e = freeOne(); }
+    if (!e) continue;
+    faceTo(e[0], e[2]); still(2);
+    let b = I.best(); for (let k = 0; k < 20 && !pegar(b); k++) { e = freeOne() || e; walkTo(e[0], e[2], 30, 1.4); faceTo(e[0], e[2]); still(1); b = I.best(); }
+    if (pegar(b)) doIt(b);
+  }
   return !!(v.carry && v.carry.op === op.id);
 }
 { // saved and loaded with a crate in the hands
