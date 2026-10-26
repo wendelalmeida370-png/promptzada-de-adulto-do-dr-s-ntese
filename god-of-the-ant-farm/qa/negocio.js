@@ -280,14 +280,18 @@ let z = B.get(z1.id); let m = S.villagers.get(z.owner); const mkb = () => S.buil
   const k = ow ? ow.k : goodOf(); z.margin[k] = -0.1;
   const v = pickBuyer(set, sp, [m.id]);
   D.make('h:' + E.homeOf(v).id, 'moedas', 20, { code: 'teste' });
-  const c0 = D.get(payer, 'moedas'), n0 = z.day.n;
+  // (the coin of the sale, by its own line in the ledger: the house's total moves with other things meanwhile — with the
+  // houses of act-casa.js the world took another course, and the tax collector, who still takes by hand, outside the
+  // ledger, came by in this very window)
+  const c0 = D.get(payer, 'moedas'), n0 = z.day.n; const L12 = S.ledgerN || 0;
   const tb = G.Vg.setTask(v, { type: 'compra', biz: z.id, k, pri: 1.3, st: 0 });
   const sold = fine(120, () => { m.x = sp.seller[0]; m.y = sp.seller[1]; return z.day.n > n0 || !v.task || v.task.type !== 'compra' || watch(); });
   const why12 = `a compra parou em st ${tb.st} fala ${tb.talk}, agora ${v.task ? v.task.type : 'sem tarefa'}; ${E.name(k)} na banca ${r2(z.inv[k] || 0)} a ${B.price(z, k)}, daria ${B.wtp(v, E.homeOf(v), z, k)}; banca ${B.manned(z) ? 'atendida' : 'sem ninguém'}`;
   const c1 = D.get(payer, 'moedas');
+  const paid = D.ledger().filter(e => e[0] > L12 && e[4] === payer && e[5] === 'moedas' && e[8] === 'venda').reduce((s, e) => s + e[6], 0);
   G.Possess.release('deus'); M.viver(0.2);
-  ok('n12 o corpo é o mercador', tk.ok && r1.ok && r2_.ok && r3.ok && sold && z.day.n > n0 && c1 > c0 && !bad().length,
-    `${m.name} pelo deus: ${r1.ok ? r1.msg : r1.why} · ${r2_.ok ? r2_.msg : r2_.why} · ${r3.ok ? r3.msg : r3.why}; ${v.name} veio e ${z.day.n > n0 ? `comprou (a casa do corpo: ${r2(c0)} → ${r2(c1)} ${B.money(fac.id).plural})` : 'NÃO comprou (' + why12 + ')'}`);
+  ok('n12 o corpo é o mercador', tk.ok && r1.ok && r2_.ok && r3.ok && sold && z.day.n > n0 && paid > 0 && !bad().length,
+    `${m.name} pelo deus: ${r1.ok ? r1.msg : r1.why} · ${r2_.ok ? r2_.msg : r2_.why} · ${r3.ok ? r3.msg : r3.why}; ${v.name} veio e ${z.day.n > n0 ? `comprou: ${r2(paid)} ${B.money(fac.id).plural} da venda na casa do corpo, pelo livro (a casa: ${r2(c0)} → ${r2(c1)})` : 'NÃO comprou (' + why12 + ')'}`);
 }
 // ---------------- n13: the god's body buys at someone else's stall, and haggles
 {

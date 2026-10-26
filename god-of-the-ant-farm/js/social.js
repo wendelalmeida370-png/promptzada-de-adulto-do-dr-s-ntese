@@ -86,12 +86,22 @@
     }
     if (!best) return;
     const [r, p] = best; const hr = r.b, hp = p.b;
-    // the families trade roofs; what they own goes with them
+    // the families trade roofs; what they own goes with them, through the ledger: the seller's things to the cheap house
+    // first, then the buyer's (what was counted before) to the dear one, then the price from the buyer to the seller
     // (a merchant house — its banner, its trade — is the family's, not the walls': it moves too)
-    const keep = b => ({ coin: b.coin || 0, pantry: b.pantry || 0, inv: b.inv || null, elite: b.elite || null, trade: b.trade || 0, tradeGood: b.tradeGood || null });
-    const kr = keep(hr), kp = keep(hp);
-    hp.coin = kr.coin - PRICE; hp.pantry = kr.pantry; hp.inv = kr.inv; hp.elite = kr.elite; hp.trade = kr.trade; hp.tradeGood = kr.tradeGood;
-    hr.coin = kp.coin + PRICE; hr.pantry = kp.pantry; hr.inv = kp.inv; hr.elite = kp.elite; hr.trade = kp.trade; hr.tradeGood = kp.tradeGood;
+    const D = G.Depot; const listOf = b => Object.assign({}, D.list('h:' + b.id));
+    const kr = listOf(hr), kp = listOf(hp);
+    // (what the houses keep is what their chests and pantries keep: a swap whose things do not fit both ways waits)
+    for (const [k, n] of Object.entries(kp)) if (D.room('h:' + hr.id, k) + 1e-6 < n) return;
+    for (const [k, n] of Object.entries(kr)) if (D.room('h:' + hp.id, k) + (kp[k] || 0) + 1e-6 < n) return;
+    const by = (r.l.find(v => v.age >= 18) || r.l[0]).id;
+    for (const [k, n] of Object.entries(kp)) if (n > 1e-6) D.move('h:' + hp.id, 'h:' + hr.id, k, n, { code: 'mudança', by, part: true });
+    for (const [k, n] of Object.entries(kr)) if (n > 1e-6) D.move('h:' + hr.id, 'h:' + hp.id, k, n, { code: 'mudança', by, part: true });
+    D.move('h:' + hp.id, 'h:' + hr.id, 'moedas', PRICE, { code: 'compra-casa', by, part: true });
+    const ke = b => ({ elite: b.elite || null, trade: b.trade || 0, tradeGood: b.tradeGood || null });
+    const er = ke(hr), ep = ke(hp);
+    hp.elite = er.elite; hp.trade = er.trade; hp.tradeGood = er.tradeGood; hr.elite = ep.elite; hr.trade = ep.trade; hr.tradeGood = ep.tradeGood;
+    hp.dono = by; hr.dono = (p.l.find(v => v.age >= 18) || p.l[0]).id;
     for (const v of r.l) { v.home = hp.id; v.hhType = hp.type; }
     for (const v of p.l) { v.home = hr.id; v.hhType = hr.type; }
     const dTo = U.districtAt(hp.x + 0.5, hp.y + 0.5), dFrom = U.districtAt(hr.x + 0.5, hr.y + 0.5);
@@ -120,12 +130,16 @@
     const space = new Map(); for (const b of S.buildings.values()) if (b.set === set.id && b.built && G.BDEF[b.type].housing && b.type !== 'barraco') space.set(b.id, G.BDEF[b.type].housing - (res.get(b.id) || []).length);
     for (const b of mine) {
       const l = res.get(b.id) || [];
-      if (!l.length) { b.empty = (b.empty || 0) + 1; if (b.empty >= 2) G.Village.removeBuilding(b); continue; }
+      // (what was left in a shack that falls — a family gone, dead or taken — goes to the people's store, in the ledger)
+      if (!l.length) { b.empty = (b.empty || 0) + 1; if (b.empty >= 2) { for (const [k, n] of Object.entries(G.Depot.list('h:' + b.id))) if (n > 1e-6) G.Depot.store('h:' + b.id, G.Village.facOfSet(set.id), k, n, { code: 'ruína' }); G.Village.removeBuilding(b); } continue; }
       b.empty = 0;
       let to = null; for (const [id, n] of space) if (n >= l.length) { to = id; break; }
-      if (to) { for (const v of l) { v.home = to; v.hhType = S.buildings.get(to).type; } space.set(to, space.get(to) - l.length); if (S.day - (b.born || 0) >= 3) { note(set, l[0], `deixou o barraco e foi morar numa casa de verdade`); for (const v of l) if (v.age >= 16) bio(v, 'Deixou o barraco e foi morar numa casa de verdade.', 'Morei num barraco de tábuas até conseguir uma casa de verdade'); } continue; }
+      // (the family's things go with it to the house with room: the shack's coins and goods, in the ledger)
+      if (to) { const by = (l.find(v => v.age >= 16) || l[0]).id; for (const [k, n] of Object.entries(G.Depot.list('h:' + b.id))) if (n > 1e-6) G.Depot.move('h:' + b.id, 'h:' + to, k, n, { code: 'mudança', by, part: true }); for (const v of l) { v.home = to; v.hhType = S.buildings.get(to).type; } space.set(to, space.get(to) - l.length); if (S.day - (b.born || 0) >= 3) { note(set, l[0], `deixou o barraco e foi morar numa casa de verdade`); for (const v of l) if (v.age >= 16) bio(v, 'Deixou o barraco e foi morar numa casa de verdade.', 'Morei num barraco de tábuas até conseguir uma casa de verdade'); } continue; }
       const coin = b.coin || 0;
-      if (coin >= 12 && l.some(v => v.age >= 18)) { b.coin = coin - 8; b.type = 'hut'; b.hp = b.maxHp = G.BDEF.hut.hp; W.touchWalk(); note(set, l[0], 'juntou moedas e trocou o barraco por uma cabana de paredes firmes'); bio(l[0], 'Juntou moedas e trocou o barraco por uma cabana de paredes firmes.', 'Juntei moeda por moeda e troquei o barraco por uma cabana de paredes firmes'); }
+      // (the walls of a hut are the people's wood, paid at the treasury: through the ledger; no wood in the store, no hut)
+      const f = G.Fac.get(G.Village.facOfSet(set.id)); const wood = G.BDEF.hut.cost.wood || 10;
+      if (coin >= 12 && l.some(v => v.age >= 18) && f && G.Depot.free('f:' + f.id, 'wood') >= wood && G.Depot.move('h:' + b.id, 'f:' + f.id, 'moedas', 8, { code: 'obra-casa', by: l[0].id }).ok) { G.Depot.use('f:' + f.id, 'wood', wood, { code: 'obra-casa', by: l[0].id }); b.type = 'hut'; b.hp = b.maxHp = G.BDEF.hut.hp; b.dono = (l.find(v => v.age >= 18) || l[0]).id; W.touchWalk(); note(set, l[0], 'juntou moedas e trocou o barraco por uma cabana de paredes firmes'); bio(l[0], 'Juntou moedas e trocou o barraco por uma cabana de paredes firmes.', 'Juntei moeda por moeda e troquei o barraco por uma cabana de paredes firmes'); }
     }
   }
   // the street is full: whoever has slept there two nights raises a shack (one or two a day, on the cheapest ground at the edge)

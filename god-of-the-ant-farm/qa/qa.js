@@ -569,6 +569,20 @@
       if (p.n - left - went > 0.01) { const v = s.villagers.get(id); add('act', 1, `${p.name} #${id}: ${Math.round((p.n - left - went) * 100) / 100} de ${p.k} de uma carga marcada sumiram sem lançamento no livro (${v ? `agora ${v.task ? v.task.type : 'sem tarefa'}, nas mãos ${v.carry ? v.carry.n + ' de ' + v.carry.k : 'nada'}` : 'a pessoa saiu do mundo'})`); }
     }
     marked = now; markedS = s; movedOut.clear();
+    // ---- the houses (act-casa.js): an owner is a living person (or the people: 0); a house ordered by a family names it,
+    // and once built the family has moved in (the order is cleared); a let house has an owner, and what is owed is a number
+    if (G.Casa) for (const b of s.buildings.values()) {
+      if (b.dono && !s.villagers.has(b.dono)) add('act', 3, `${b.type}#${b.id}: o dono #${b.dono} não existe mais (a herança não passou)`);
+      if (b.encomenda) {
+        if (!Array.isArray(b.encomenda.fam) || !fin(b.encomenda.paid)) add('act', 2, `${b.type}#${b.id}: encomenda sem família ou sem preço`);
+        else if (b.built) add('act', 3, `${b.type}#${b.id}: pronta e a família da encomenda não mudou`);
+      }
+      if (b.aluga) {
+        if (!b.dono) add('act', 3, `${b.type}#${b.id}: alugada e sem dono`);
+        if (!fin(b.aluga.deve) || b.aluga.deve < -EPS || !fin(b.aluga.pago)) add('act', 1, `${b.type}#${b.id}: aluguel ${JSON.stringify(b.aluga)}`);
+      }
+      if (b.poupa && (!fin(b.poupa.alvo) || !(b.poupa.alvo > 0))) add('act', 2, `${b.type}#${b.id}: poupança sem alvo (${JSON.stringify(b.poupa)})`);
+    }
     // ---- the fishing grounds (act-pesca.js): what a ground holds is a number, never below nothing, never fished in the
     // future, and only where there is water
     if (G.Pesca && s.pesca) for (const id in s.pesca) {
@@ -584,6 +598,7 @@
   if (G.worldHooks) G.worldHooks.push(() => { marked = null; markedS = null; movedOut.clear(); });
   QA.canonMore.push(['acts', () => (G.Act ? G.Act.canon() : null)]);
   QA.canonMore.push(['pesca', () => (G.S && G.S.pesca ? Object.keys(G.S.pesca).sort((a, b) => a - b).map(id => [+id, G.S.pesca[id][0], G.S.pesca[id][1]]) : null)]);
+  QA.canonMore.push(['casas', () => (G.S ? [...G.S.buildings.values()].filter(b => b.dono || b.encomenda || b.aluga || b.poupa).sort((a, b) => a.id - b.id).map(b => [b.id, b.dono || 0, b.encomenda ? b.encomenda.fam.join('.') + ':' + (b.encomenda.paid || 0) : '', b.aluga ? b.aluga.pago + ':' + b.aluga.deve : '', b.poupa ? b.poupa.by + ':' + b.poupa.alvo : '']) : null)]);
 })();
   // ---- qa/interiores-inv.js ----
 // interiores-inv: as regras do verificador para os interiores (C2) — o registro de cada prédio (b.ip) e a planta que sai

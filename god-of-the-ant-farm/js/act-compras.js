@@ -19,6 +19,7 @@
   const EPS = 1e-6;
   const DAYS = 3;    // (what a house keeps of each thing it uses: three days of it)
   const GAP = 0.5;   // (half a day between two errands of the same house)
+  const LUXURY = { joias: 1 };
 
   // what the house lacks, the most lacking first: [{ k, n (how many to buy), lack (0..1) }] — counted from the house,
   // nothing drawn by chance (a rich house's fancies are added when the errand is chosen)
@@ -26,7 +27,10 @@
     const out = []; if (!h || !G.BDEF[h.type] || !G.BDEF[h.type].housing) return out;
     const res = h.res || 0; if (!res) return out;
     const I = h.inv || {};
+    // (a house that saves for a roof of its own — act-casa.js — buys no luxury meanwhile)
+    const saving = G.Casa && G.Casa.saving(h);
     for (const k in E.HOUSE_WANTS) {
+      if (saving && LUXURY[k]) continue;
       const target = Math.max(1, res * E.HOUSE_WANTS[k] * DAYS);
       const have = I[k] || 0; if (have >= target - EPS) continue;
       out.push({ k, n: Math.ceil(target - have - EPS), lack: Math.min(1, 1 - have / target), use: res * E.HOUSE_WANTS[k] });
