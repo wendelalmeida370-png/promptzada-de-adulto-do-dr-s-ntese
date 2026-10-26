@@ -190,16 +190,20 @@
     const P = (a, n) => (F.ax ? [uc + a, F.line + F.o[1] * n] : [F.line + F.o[0] * n, uc + a]);
     // (the ground as it is drawn there, over the plinth's top — or a bridge's deck over it, where the feet stand on that)
     const gAt = (a, n) => { const p = P(a, n); const x = Math.min(N - 0.001, b.x + p[0] / TILE), z = Math.min(N - 0.001, b.y + p[1] / TILE); return Math.max(Sp.drawnAt(x, z), Sp.deckAt(x, z)) - y0; };
-    const under = (a, n, ta, tn) => Math.max(gAt(a, n), gAt(a - ta / 2, n), gAt(a + ta / 2, n), gAt(a, n - tn / 2), gAt(a, n + tn / 2), gAt(a - ta / 2, n + tn / 2), gAt(a + ta / 2, n + tn / 2));
     const reach = (a, ta, n, sd, yt) => { let d = 0; for (let j = 1; j <= 4; j++) { const q = n + sd * j / 4; if (Math.max(gAt(a, q), gAt(a - ta / 2, q), gAt(a + ta / 2, q)) > yt - 0.025) break; d = sd * j / 4; } return d; };
     const room = (F.o[1] > 0 ? lot.d - F.line : F.o[1] < 0 ? F.line : F.o[0] > 0 ? lot.w - F.line : F.line) + 0.15;
     const top = y + 0.02, wd = h.w + 0.5, n0 = 0.1, free = [uc - F.u0, F.u1 - uc];
     let treads = []; let cut = null;
     const drop = top - gAt(0, n0 + 0.3), need = Math.min(8, Math.ceil(drop / 0.26)), nOut = Math.floor(room / 0.22);
-    const out = (n, rise, rm, a0, w0) => { const t = Math.min(0.32, (rm || room) / n), a = a0 || 0, ww = w0 || wd; for (let k = 0; k < n; k++) { const sn = n0 + (k + 0.5) * t, yt = top - k * rise; if (k && yt < under(a, sn, ww, t) + 0.03) break; treads.push({ k, a, n: sn, wa: ww - k * 0.02, wn: t + 0.02, y: yt, gy: Math.min(yt - rise, gAt(a, sn)) - 0.04, kind: 'out' }); } };
+    // (a flight straight out: down to where its next tread would stand under the ground the feet come up — along its middle; a
+    // street sloping across it buries one end of a tread, as a step cut into the slope)
+    const out = (n, rise, rm, a0, w0) => { const t = Math.min(0.32, (rm || room) / n), a = a0 || 0, ww = w0 || wd; for (let k = 0; k < n; k++) { const sn = n0 + (k + 0.5) * t, yt = top - k * rise; if (k && yt < Math.max(gAt(a, sn - t / 2), gAt(a, sn), gAt(a, sn + t / 2)) + 0.03) break; treads.push({ k, a, n: sn, wa: ww - k * 0.02, wn: t + 0.02, y: yt, gy: Math.min(yt - rise, gAt(a, sn)) - 0.04, kind: 'out' }); } };
     const one = () => { const sd = reach(0, wd, n0, Math.min(0.7, room), top); if (sd < 0.1) return; const sn = n0 + sd / 2; treads.push({ k: 0, a: 0, n: sn, wa: wd, wn: sd, y: top, gy: Math.min(top - 0.4, gAt(0, sn) - 0.04), kind: 'one' }); };
-    // (how high the lowest tread laid stands over the ground before it — what the feet must step up from the street)
-    const footStep = () => { const t = treads[treads.length - 1]; const n = t ? t.n + t.wn / 2 : n0, a = t ? t.a : 0; return (t ? t.y : top) - Math.max(gAt(a, n + 0.12), gAt(a - wd / 4, n + 0.12), gAt(a + wd / 4, n + 0.12)); };
+    // (how high the lowest tread laid stands over the ground before it — what the feet must step up from the street —, and
+    // whether that is too high: a lone step up to a span and a half; at the foot of a flight, no more than its rise or so —
+    // the body's rim, a stride ahead, meets the tread above it too: the two together within one step, Avatar.TUNE.stepUp)
+    const footStep = () => { const t = treads[treads.length - 1]; const n = t ? t.n + t.wn / 2 : n0, a = t ? t.a : 0, q = (t ? t.wa : wd) / 4; return (t ? t.y : top) - Math.min(gAt(a, n + 0.12), gAt(a - q, n + 0.12), gAt(a + q, n + 0.12)); };
+    const tooHigh = () => footStep() > (treads.length > 1 ? 0.32 : 0.45);
     if (drop <= 0.5 || need < 2) one();
     else if (nOut >= need) out(need, drop / need);
     else {
@@ -207,30 +211,35 @@
       const dp = Math.min(room, 0.6), sn = n0 + dp / 2; let sg = 0, run = 0, hi = -1e9;
       if (room >= 0.3) for (const s of [1, -1]) { const r = free[s > 0 ? 1 : 0] - wd / 2 - 0.3; if (r < (need - 1) * 0.24) continue; const g = gAt(s * (wd / 2 + (need - 1) * 0.28), sn); if (g > hi) { hi = g; sg = s; run = r; } }
       if (sg) {
+        // (down along the wall, as far as the side has room, to where its next tread would stand under the ground along its
+        // middle — as the flight out: a street that falls away along the wall takes a tread or two more)
         const rise = G.clamp((top - hi) / need, 0.12, 0.26), t = Math.min(0.32, run / (need - 1));
         treads.push({ k: 0, a: 0, n: sn, wa: wd, wn: dp, y: top, gy: Math.min(top - rise, gAt(0, sn)) - 0.04, kind: 'landing' });
-        for (let k = 1; k < need; k++) { const a = sg * (wd / 2 + (k - 0.5) * t), yt = top - k * rise; if (yt < under(a, sn, t, dp) + 0.03) break; treads.push({ k, a, n: sn, wa: t + 0.02, wn: dp - k * 0.01, y: yt, gy: Math.min(yt - rise, gAt(a, sn)) - 0.04, kind: 'side' }); }
-        cut = [sg * (need - 1) * t / 2, wd + (need - 1) * t];
+        for (let k = 1; k * t <= run + 1e-6 && k < 12; k++) { const a = sg * (wd / 2 + (k - 0.5) * t), yt = top - k * rise; if (yt < Math.max(gAt(a - t / 2, sn), gAt(a, sn), gAt(a + t / 2, sn)) + 0.03) break; treads.push({ k, a, n: sn, wa: t + 0.02, wn: Math.max(0.2, dp - k * 0.01), y: yt, gy: Math.min(yt - rise, gAt(a, sn)) - 0.04, kind: 'side' }); }
+        const m = treads.length - 1; cut = [sg * m * t / 2, wd + m * t];
       } else if (nOut < 2) one(); else out(nOut, 0.26);
     }
     // (the last of them too high a step from the ground before it: on into the street, treads a foot and more deep, as many as
     // come down to the ground where the flight ends — a street falls away —, where what it stands on is the building's own
     // ground or open ground the world walks)
-    if (!cut && footStep() > 0.45) {
-      // (a rise of a span at most over a tread a little deeper: what the feet take one stride at a time)
-      let nS = Math.min(12, Math.max(2, need)), end = n0 + nS * 0.29;
-      for (let it = 0; it < 3; it++) { const nn = Math.min(12, Math.max(2, Math.ceil((top - gAt(0, end)) / 0.26))); if (nn === nS) break; nS = nn; end = n0 + nS * 0.29; }
-      const rx = end + 0.02;
+    if (!cut && tooHigh()) {
+      // (a rise of a span at most over a tread a little deeper — what the feet take one stride at a time —, as many as come down
+      // to the ground the feet stand on before the flight's foot, along its middle a: the last of them a rise over it)
+      const span = a => { let nS = Math.min(14, Math.max(2, need)), end = n0 + nS * 0.29;
+        for (let it = 0; it < 4; it++) { const nn = Math.min(14, Math.max(2, Math.ceil((top - gAt(a, end + 0.12)) / 0.26))); if (nn === nS) break; nS = nn; end = n0 + nS * 0.29; }
+        return { nS, end, rise: (top - gAt(a, end + 0.12)) / nS }; };
       const open = (a, n) => { const p = P(a, n); const x = b.x + p[0] / TILE, z = b.y + p[1] / TILE; return W.inb(x, z) && (G.S.occ[W.idx(x, z)] === b.id || W.walkableXY(x, z)); };
       // (straight out from the door's middle, as wide as its steps; where the street has something beside the way, narrower, or to
       // one side of the middle — always before the door: a good stride of its width over it)
-      let sh = null, sw = wd; const over = Math.min(0.9, h.w);
-      if (rx <= room + 3.6) for (const w2 of [wd, Math.max(1, h.w + 0.1), 1]) { for (const s0 of [0, 0.3, -0.3, 0.5, -0.5, 0.7, -0.7]) {
-          if (Math.min(s0 + w2 / 2, h.w / 2) - Math.max(s0 - w2 / 2, -h.w / 2) < over) continue; let ok = true;
+      let go = null; const over = Math.min(0.9, h.w);
+      for (const w2 of [wd, Math.max(1, h.w + 0.1), 1]) { for (const s0 of [0, 0.3, -0.3, 0.5, -0.5, 0.7, -0.7]) {
+          if (Math.min(s0 + w2 / 2, h.w / 2) - Math.max(s0 - w2 / 2, -h.w / 2) < over) continue;
+          const { nS, end, rise } = span(s0); if (end + 0.02 > room + 4.2) continue; let ok = true; // (a tile into the street at most)
           for (const n of [room, (room + end) / 2, end - 0.05]) for (const a of [s0 - w2 / 2 + 0.1, s0, s0 + w2 / 2 - 0.1]) if (ok && !open(a, n)) ok = false;
-          if (ok) { sh = s0; sw = w2; break; } }
-        if (sh !== null) break; }
-      if (sh !== null) { const keep = treads; treads = []; out(nS, (top - gAt(sh, end)) / nS, rx, sh, sw); if (footStep() > 0.45) treads = keep; }
+          if (ok) { go = { s0, w2, nS, end, rise }; break; } }
+        if (go) break; }
+      // (kept where it brings the feet nearer the street than the steps of the lot alone)
+      if (go) { const keep = treads, f0 = footStep(); treads = []; out(go.nS, go.rise, go.end - n0 + 0.02, go.s0, go.w2); if (footStep() >= f0) treads = keep; }
     }
     const f = { F, uc, P, top, w: wd, treads, cut, room };
     if (flights.size > 2000) flights.clear(); flights.set(key, { k: k0, f });
@@ -294,14 +303,16 @@
   const recKey = b => { const In = G.Interiors; if (In.keyOf) return In.keyOf(b); const r = b.ip; return r ? b.id + ':' + r.r + ':' + r.f + ':' + b.type + ':' + r.s + ':' + (r.fx || []).length : ''; };
   const KEPT_MAX = 160;
   // the plan of a building, made — or null (and asked for: a building without one is drawn and walked as before)
+  // (a ruin is walked as the world has it — open ground, its rubble drawn the old way, D-050 —: no plan for the feet either)
+  const planned = b => !!b && b.built && b.type !== 'ruin' && !!G.Interiors && G.Interiors.has(b);
   Sp.plan = function (b) {
-    const In = G.Interiors; if (!b || !b.built || !In || !In.want || !In.has(b)) return null;
+    const In = G.Interiors; if (!planned(b) || !In.want) return null;
     const k = recKey(b); const m = kept.get(b.id); if (m && m.k === k) return m.p;
     const p = In.want(b); return p ? keep(b, p, k) : null;
   };
   // (the plan if it is made — kept here, or in Interiors' cache —, never asked for: what the drawing of the outside reads)
   Sp.planMade = function (b) {
-    const In = G.Interiors; if (!b || !b.built || !In || !In.has(b)) return null;
+    const In = G.Interiors; if (!planned(b)) return null;
     const m = kept.get(b.id); if (m && m.k === recKey(b)) return m.p;
     return In.ready && In.ready(b) ? In.plan(b) : null;
   };
@@ -309,7 +320,7 @@
   Sp.planEntry = id => { const m = kept.get(id); const b = m && G.S.buildings.get(id); if (!b) return null; m.y0 = Sp.plinth(b).y0; return m; };
   // (made now, whatever it costs: the body is in it already — a game loaded with the body indoors)
   Sp.planNow = function (b) {
-    const In = G.Interiors; if (!b || !b.built || !In || !In.has(b)) return null;
+    const In = G.Interiors; if (!planned(b)) return null;
     const k = recKey(b); const m = kept.get(b.id); if (m && m.k === k) return m.p;
     return keep(b, In.plan(b), k);
   };

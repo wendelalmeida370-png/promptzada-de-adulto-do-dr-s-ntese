@@ -9,11 +9,13 @@
 // The proofs:
 //   1. standing 3.5 s of the world on the doorstep of 25 houses — on the plan's ground the world's map has blocked —, the door
 //      open and the door shut: never moved; the verifier clean with the body's rule for its ground (Possess.onPlan), S3 too
-//   2. 50 times in and out through doors, one after another: never pushed, in each time, out each time
+//   2. 50 times in and out through doors, one after another: never pushed, no step climbed with the hands, in each time, out
+//      each time
 //   3. every kind of store with a plan, its door open: the body walks in from the street — up the steps before the door, or
-//      before the foot of its outside flight, where it has them, as a player goes
+//      before the foot of its outside flight, where it has them, as a player goes —, climbing none
 //   4. the steps the feet go up are the ones the 3D lays (Space.doorFlight): over each tread the body's floor is its top, and
-//      the drawing has a face there
+//      the drawing has a face there; and the foot of every flight before a door in the world is walked up: its lowest tread
+//      and the one above it within one step of the body (Avatar.TUNE.stepUp)
 //   5. saved and loaded standing on a doorstep: there still, not moved, not taken for one who swims
 //   and no module error
 const path = require('path');
@@ -88,12 +90,16 @@ function bodyAt(d, open) {
   god(() => { G.Vg.endTask(v); v.inside = 0; v.x = d.O[0] / TL; v.y = d.O[1] / TL; v.path = null; }); setDoor(d, open);
   if (!G.Possess.take(v).ok) return false; G.Avatar.attach(v, Math.atan2(d.D[1] - d.O[1], d.D[0] - d.O[0])); for (let k = 0; k < 6; k++) frame(); return true;
 }
-// (walking as a player holds the stick; every frame watched: a jump of the body's place it did not walk is the world's push)
-let pushes = 0, worst = 0; let last = null;
-const watch = () => { const P = [v.x, v.y]; if (last) { const j = Math.hypot(P[0] - last[0], P[1] - last[1]) * TL; if (j > 0.25) { pushes++; worst = Math.max(worst, j); } } last = P; };
+// (walking as a player holds the stick; every frame watched: a jump of the body's place it did not walk is the world's push —
+// and, on the way in and out by the door, a climb with the hands: steps too high to walk up)
+let pushes = 0, worst = 0; let last = null; let climbs = 0, inWay = false, wasClimb = false;
+const pushedAt = [];
+const watch = () => { const P = [v.x, v.y, v.inside]; if (last) { const j = Math.hypot(P[0] - last[0], P[1] - last[1]) * TL; if (j > 0.25) { pushes++; worst = Math.max(worst, j);
+  if (pushedAt.length < 3) { const q = Sp.indoor(last[0] * TL, last[1] * TL); const B = S.buildings.get(S.occ[W.idx(last[0], last[1])]); pushedAt.push(`${j.toFixed(2)} m de ${last[0].toFixed(2)},${last[1].toFixed(2)} (dentro ${last[2] || 0}; ladrilho ${B ? B.type + '#' + B.id : '-'}; planta ${q ? `${q.b.type}#${q.b.id} walk ${q.walk} casca ${q.shell}` : '-'}; o mundo anda ${W.walkableXY(last[0], last[1])}) a ${P[0].toFixed(2)},${P[1].toFixed(2)} (dentro ${P[2] || 0})`); } } } last = P; };
 const st = () => G.Avatar.state();
 function walk(X, Z, max, stopIn) {
-  let k = 0; for (; k < (max || 240); k++) { const s = st(); const dx = X - s.X, dz = Z - s.Z; if (Math.hypot(dx, dz) < 0.15 || (stopIn && v.inside)) break; const yaw = Math.atan2(dz, dx); IN.camYaw = yaw; IN.mx = 0; IN.mz = 1; s.yaw = yaw; frame(); watch(); }
+  let k = 0; for (; k < (max || 240); k++) { const s = st(); const dx = X - s.X, dz = Z - s.Z; if (Math.hypot(dx, dz) < 0.15 || (stopIn && v.inside)) break; const yaw = Math.atan2(dz, dx); IN.camYaw = yaw; IN.mx = 0; IN.mz = 1; s.yaw = yaw; frame(); watch();
+    const c = st().loco === 'climb'; if (inWay && c && !wasClimb) climbs++; wasClimb = c; }
   IN.mz = 0; return k;
 }
 const pathTo = (X, Z) => { const p = W.findPath(v.x, v.y, X / TL, Z / TL, true, 30000); if (p) for (const w2 of p) walk(w2[0] * TL, w2[1] * TL, 200); };
@@ -101,8 +107,8 @@ const pathTo = (X, Z) => { const p = W.findPath(v.x, v.y, X / TL, Z / TL, true, 
 // (the turn of the day puts the doors back to their rule — Interiors.onNewDay —: one that shut while the body was on its way is
 // opened again before the stride through it, as a player does; counted)
 let reopened = 0; const keepOpen = d => { if (In.doorState(d.b, d.e.door).state !== 'aberta') { reopened++; setDoor(d, true); } };
-function goIn(d) { const pts = wayIn(d); pathTo(pts[0][0], pts[0][1]); for (const q of pts.slice(0, -1)) walk(q[0], q[1], 260); keepOpen(d); const q = pts[pts.length - 1]; walk(q[0], q[1], 260); for (let k = 0; k < 6; k++) { frame(); watch(); } return v.inside === d.b.id; }
-function goOut(d) { const pts = wayIn(d).slice(0, -1).reverse(); keepOpen(d); for (const q of pts) walk(q[0], q[1], 260); walk(d.O[0], d.O[1], 260); for (let k = 0; k < 6; k++) { frame(); watch(); } return !v.inside; }
+function goIn(d) { const pts = wayIn(d); pathTo(pts[0][0], pts[0][1]); inWay = true; for (const q of pts.slice(0, -1)) walk(q[0], q[1], 260); keepOpen(d); const q = pts[pts.length - 1]; walk(q[0], q[1], 260); inWay = false; for (let k = 0; k < 6; k++) { frame(); watch(); } return v.inside === d.b.id; }
+function goOut(d) { const pts = wayIn(d).slice(0, -1).reverse(); keepOpen(d); inWay = true; for (const q of pts) walk(q[0], q[1], 260); walk(d.O[0], d.O[1], 260); inWay = false; for (let k = 0; k < 6; k++) { frame(); watch(); } return !v.inside; }
 const houses = [...S.buildings.values()].filter(q => q.built && In.has(q) && (q.type === 'house' || q.type === 'sobrado') && In.planDoor(q)).sort((a, c) => a.id - c.id);
 
 // ------------------------------ 1. standing on the doorstep ------------------------------
@@ -128,27 +134,27 @@ if (part(1)) { const rows = []; let tried = 0, moved = 0, still = 0; const bad =
 }
 
 // ------------------------------ 2. 50 times in and out ------------------------------
-if (part(2)) { pushes = 0; worst = 0; reopened = 0; let ins = 0, outs = 0, trips = 0; const used = [];
+if (part(2)) { pushes = 0; worst = 0; reopened = 0; climbs = 0; let ins = 0, outs = 0, trips = 0; const used = [];
   for (const b of houses) {
     if (trips >= 50) break; const d = door(b); if (!d || !bodyAt(d, true)) continue; last = null;
     if (!goIn(d)) continue; ins++; if (!goOut(d)) continue; outs++; trips++; used.push(b.id);
     for (let k = 0; k < 9 && trips < 50; k++) { if (!goIn(d)) break; ins++; if (!goOut(d)) break; outs++; trips++; }
   }
   const bad = vbad();
-  ok('2. 50 vezes dentro e fora pela porta, uma atrás da outra: nenhum empurrão; dentro a cada vez, fora a cada vez', trips >= 50 && !pushes && ins === outs && !bad.length,
-    `${trips} idas e voltas em ${used.length} casas (${used.slice(0, 6).join(', ')}…): ${ins} entradas, ${outs} saídas; empurrões ${pushes}${worst ? ` (até ${worst.toFixed(2)} m)` : ''}; ${vtxt(bad)}${reopened ? `; a porta voltou à regra no caminho ${reopened} ${reopened > 1 ? 'vezes' : 'vez'}, aberta de novo` : ''}`);
+  ok('2. 50 vezes dentro e fora pela porta, uma atrás da outra: nenhum empurrão, nenhum degrau escalado com as mãos; dentro a cada vez, fora a cada vez', trips >= 50 && !pushes && !climbs && ins === outs && !bad.length,
+    `${trips} idas e voltas em ${used.length} casas (${used.slice(0, 6).join(', ')}…): ${ins} entradas, ${outs} saídas; empurrões ${pushes}${worst ? ` (até ${worst.toFixed(2)} m: ${pushedAt.join(' · ')})` : ''}; escaladas ${climbs}; ${vtxt(bad)}${reopened ? `; a porta voltou à regra no caminho ${reopened} ${reopened > 1 ? 'vezes' : 'vez'}, aberta de novo` : ''}`);
 }
 
 // ------------------------------ 3. every kind of store, its door open ------------------------------
 const flights = [];
 if (part(3)) { const kinds = {}; for (const b of [...S.buildings.values()].filter(q => q.built && In.has(q) && G.BDEF[q.type] && G.BDEF[q.type].dropoff && In.planDoor(q)).sort((a, c) => a.id - c.id)) (kinds[b.type] = kinds[b.type] || []).push(b);
-  const rows = [], miss = []; let n = 0, got = 0; reopened = 0;
+  const rows = [], miss = []; let n = 0, got = 0; reopened = 0; climbs = 0; pushes = 0; pushedAt.length = 0;
   for (const [t, L] of Object.entries(kinds)) { let k = 0, kin = 0;
     for (const b of L.slice(0, 6)) { const d = door(b); if (!d || !bodyAt(d, true)) continue; k++; n++; last = null; const okIn = goIn(d); if (okIn) { kin++; got++; } else { const P = G.Avatar.pos(); miss.push(`${t}#${b.id} parou a ${Math.hypot(P.X - d.D[0], P.Z - d.D[1]).toFixed(2)} m (a porta ${In.doorState(b, d.e.door).state}, dia ${S.day} às ${S.time.toFixed(2)} do dia)`); }
       if (d.fl) flights.push({ b, fl: d.fl }); if (d.st) { const fo = Sp.feet(d.st); const ff = Sp.doorFlight(b, d.p.shell, { w: b.w * TL, d: b.h * TL }, fo.w, fo.h, 0, false, fo.F, fo.uc); if (ff) flights.push({ b, fl: ff }); } }
     rows.push(`${t} ${kin}/${k}`); }
-  ok('3. cada tipo de depósito com planta, de porta aberta: o corpo entra da rua — pelos degraus da porta, ou pelos do pé da escada de fora, onde houver', Object.keys(kinds).length >= 2 && got === n && n >= 6,
-    `${rows.join(' · ')}${miss.length ? '; ' + miss.slice(0, 3).join(' · ') : ''}; empurrões ${pushes}${reopened ? `; a porta voltou à regra no caminho ${reopened} ${reopened > 1 ? 'vezes' : 'vez'}, aberta de novo` : ''}`);
+  ok('3. cada tipo de depósito com planta, de porta aberta: o corpo entra da rua andando — pelos degraus da porta, ou pelos do pé da escada de fora, onde houver —, sem escalar nenhum', Object.keys(kinds).length >= 2 && got === n && n >= 6 && !climbs,
+    `${rows.join(' · ')}${miss.length ? '; ' + miss.slice(0, 3).join(' · ') : ''}; escaladas ${climbs}; empurrões ${pushes}${pushedAt.length ? ` (${pushedAt.join(' · ')})` : ''}${reopened ? `; a porta voltou à regra no caminho ${reopened} ${reopened > 1 ? 'vezes' : 'vez'}, aberta de novo` : ''}`);
 }
 
 // ------------------------------ 4. the steps walked are the steps drawn ------------------------------
@@ -168,6 +174,21 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
     }
   }
   ok('4. os degraus que os pés sobem são os que o 3D assenta: sobre cada um, o chão do corpo é o topo dele, e o desenho tem uma face ali', n >= 20 && floor === n && drawn === n, `${n} degraus de ${Math.min(30, flights.length)} lances: chão certo em ${floor}, desenhados em ${drawn}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+  // (and the foot of every flight before an outer door, and before the foot of an outside flight, in all the world: the step
+  // up from the ground the feet stand on there — a bridge's deck too — to its lowest tread, with the rise above it, within one
+  // step of the body — its rim, a stride ahead, meets both: Avatar.TUNE.stepUp —; a lone step within one)
+  const UP = G.Avatar.TUNE.stepUp; let nf = 0, hi = 0; const far = [];
+  for (const b of [...S.buildings.values()].filter(q => q.built && In.has(q)).sort((a, c) => a.id - c.id)) {
+    const p = Sp.planNow(b); if (!p || !p.ok) continue; const y0 = Sp.plinth(b).y0; const lot = { w: b.w * TL, d: b.h * TL }; const fls = [];
+    for (const h of p.holes) { const dd = h.door >= 0 ? p.doors[h.door] : null; if (!dd || !dd.outer || h.kind === 'janela') continue; const w = p.walls[h.wall]; if (!w) continue; const l = p.levels.find(q => q.lv === w.lv); fls.push(Sp.doorFlight(b, p.shell, lot, w, h, l ? l.y : 0, raisedOf(p))); }
+    for (const q of p.stairs) if (q.kind === 'degraus') { const fo = Sp.feet(q); fls.push(Sp.doorFlight(b, p.shell, lot, fo.w, fo.h, 0, false, fo.F, fo.uc)); }
+    for (const fl of fls) { if (!fl || !fl.treads.length) continue; nf++;
+      const T = fl.treads.slice().sort((a, c) => a.y - c.y); const lo = T[0], up = T[1]; const sg = lo.kind === 'side' ? Math.sign(lo.a) : 0;
+      const P = sg ? fl.P(lo.a + sg * (lo.wa / 2 + 0.12), lo.n) : fl.P(lo.a, lo.n + lo.wn / 2 + 0.12); const gx = Math.min(G.N - 0.001, b.x + P[0] / TL), gz = Math.min(G.N - 0.001, b.y + P[1] / TL);
+      const foot = lo.y - (Math.max(Sp.drawnAt(gx, gz), Sp.deckAt(gx, gz)) - y0), rise = up ? up.y - lo.y : 0;
+      if (foot + rise > UP + 1e-6) { hi++; if (far.length < 4) far.push(`${b.type}#${b.id}: o pé ${foot.toFixed(2)} m + ${rise.toFixed(2)} m (${fl.treads.length} degraus)`); } }
+  }
+  ok('4b. o pé de cada lance diante de uma porta de fora, em todo o mundo: o degrau mais baixo e o de cima dele dentro de um passo do corpo — sobe-se andando', nf >= 100 && !hi, `${nf} lances: ${hi} altos demais${far.length ? ' — ' + far.join(' · ') : ''}`);
 }
 
 // ------------------------------ 5. saved and loaded on a doorstep ------------------------------

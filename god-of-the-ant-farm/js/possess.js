@@ -222,14 +222,16 @@
   }
   Po.indoorOK = v => indoorOK(v, G.S.avatar);
   // where a plan lets the body stand — the one rule of the world's step, of the push of the stuck (villagers.js) and of the
-  // verifier: indoors, indoorOK; out of the walls, on the plan's own ground that the world's map has blocked (the building's
-  // lot): the doorstep before an outer door, the steps up a house on stilts. The plan made now if it is not yet (Space.planNow),
-  // never the frame's queue: the world's step is the same with or without anyone looking
+  // verifier: indoors, indoorOK; not indoors, on the plan's own ground that the world's map has blocked (the building's lot),
+  // where the plan walks: the doorstep before an outer door, the steps up a house on stilts — and, for a step, a room just
+  // walked into, before the world has the body indoors (the body's word for it goes in the world's next step: L-162). The
+  // plan made now if it is not yet (Space.planNow), never the frame's queue: the world's step is the same with or without
+  // anyone looking
   function onPlan(v, a) {
     if (!v) return false; if (v.inside) return indoorOK(v, a);
     const S = G.S; if (!W.inb(v.x, v.y)) return false; const B = S.buildings.get(S.occ[W.idx(v.x, v.y)]);
     if (!B || !G.Space.planNow || !G.Space.planNow(B)) return false;
-    const ins = G.Space.indoor(v.x * G.Space.TILE, v.y * G.Space.TILE); return !!(ins && ins.b === B && ins.walk && !ins.shell);
+    const ins = G.Space.indoor(v.x * G.Space.TILE, v.y * G.Space.TILE); return !!(ins && ins.b === B && ins.walk);
   }
   Po.onPlan = v => { const a = G.S.avatar; return !!(v && a && a.id === v.id) && onPlan(v, a); };
   // the unloadings the body could lend a hand to, as the world gives its own porters theirs (Porto.claim): of the body's own

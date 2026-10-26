@@ -172,7 +172,8 @@ else {
     if (b3 && p3 && v) {
       if (In.doorState(b3, p3.entrance.door).state !== 'aberta') { G.Possess.apply(w => In.useDoor(b3, p3.entrance.door, 'abrir', w)); frame(); }
       walkIn(b3, p3, 1.0); frame(); frame(); const was = v.inside === b3.id;
-      G.Village.destroyBuilding(b3, 'deus'); for (let k = 0; k < 10; k++) frame(); bad = []; check();
+      // (and a while after — the queue of plans has made the ruin's by then, if it were the feet's: a ruin has none, D-050)
+      G.Village.destroyBuilding(b3, 'deus'); for (let k = 0; k < 120; k++) frame(); bad = []; check();
       const left = S.buildings.get(b3.id);
       ok('6. o deus tira a casa com o corpo dentro: o mundo o põe fora, em chão firme', was && v.inside === 0 && G.Possess.level() === undefined && !bad.length && (!left || left.type === 'ruin'), `estava dentro ${was}; dentro agora ${v.inside}; piso ${G.Possess.level()}; o prédio: ${left ? left.type : 'sumiu'}${bad.length ? '; ' + bad[0] : ''}`);
     } else ok('6. o deus tira a casa com o corpo dentro', false, 'sem casa ou sem corpo');
