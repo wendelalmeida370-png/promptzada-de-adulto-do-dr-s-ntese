@@ -832,9 +832,9 @@
       D.drop('v:' + v.id, c.k, c.n, v.x, v.y, { op: op && live(op) ? op.id : 0, code: 'caiu', by: v.id, fac: G.Fac.idOfV(v) });
       if (op) A.log(op, 'caiu', v.id, cause || '');
     } else if (c && c.n > EPS && c.to && D.exists(c.to) && G.S.villagers.has(v.id) && !v.aboard) {
-      // (a load for a place — a purchase on its way home, goods for a stall — is its owner's: it goes there, with the cause;
-      // what has no room there, to the people's store)
-      D.move('v:' + v.id, c.to, c.k, c.n, { code: 'herdado', by: v.id, part: true });
+      // (a load for a place — a purchase on its way home, goods for a stall — is its owner's: it goes there, with the cause —
+      // a house takes all of its own, on the floor if need be, D-059 —; what a stall has no room for, to the people's store)
+      D.move('v:' + v.id, c.to, c.k, c.n, { code: 'herdado', by: v.id, part: true, floor: c.to[0] === 'h' });
       const fid = G.Fac.idOfV(v); if (v.carry && v.carry.n > EPS && D.exists('f:' + fid)) D.move('v:' + v.id, 'f:' + fid, v.carry.k, v.carry.n, { code: 'herdado', by: v.id, part: true });
     }
     // (the coins of the dead — the purse, a plain bag in the hands — are the household's: to the house they lived in, or,

@@ -184,12 +184,13 @@ function quiet(zz) {
 const told = (...l) => { const s = l.filter(Boolean).join(', '); return s ? ` (a partida: ${s})` : ''; };
 // (his body: a merchant the case would wear out leaves the counter in the middle of it — under 8 of energy or over 85 of
 // hunger, his own body takes him from an errand of 2. The cases here live one morning after another, and the night that
-// rests him never comes: when he is that worn, the world's own errands first, to bed — he wakes by himself, rested — and
-// to a meal at the store, the clock held at the case's hour)
+// rests him never comes: when he is that worn, the world's own errands first, a meal at the store and then to bed — he
+// wakes by himself, rested; the meal first, for a hunger at the top wakes a sleeper (L-171) —, the clock held at the
+// case's hour)
 function body(mer) {
   const c0 = S.clock, did = [];
-  if (mer.energy < 45) { const e0 = Math.round(mer.energy); G.Vg.setTask(mer, { type: 'sleep', pri: 1.2, kind: 'sleep' }); live(240, held(S.time, () => !(mer.task && mer.task.type === 'sleep') || watch())); did.push(`dormiu (energia ${e0} → ${Math.round(mer.energy)})`); }
   if (mer.hunger > 55) { const h0 = Math.round(mer.hunger); G.Vg.setTask(mer, { type: 'eat', pri: 1.2, kind: 'eat' }); live(240, held(S.time, () => !(mer.task && mer.task.type === 'eat') || watch())); did.push(`comeu (fome ${h0} → ${Math.round(mer.hunger)})`); }
+  if (mer.energy < 45) { const e0 = Math.round(mer.energy); G.Vg.setTask(mer, { type: 'sleep', pri: 1.2, kind: 'sleep' }); live(240, held(S.time, () => !(mer.task && mer.task.type === 'sleep') || watch())); did.push(`dormiu (energia ${e0} → ${Math.round(mer.energy)})`); }
   return did.length ? `${mer.name} ${did.join(' e ')} em ${Math.round(S.clock - c0)} s` : '';
 }
 // (the town at a gathering — an execution, an assembly, a feast, a muster, a fire —: the square calls the buyers, an errand
@@ -567,11 +568,12 @@ function stallNow() {
     const calm14 = calmTown(port);
     const sh = S.ships.find(s => s.kind === 'mercante') || S.ships[0]; sh.goods = { k: K, n: 12 }; G.Harbor.land(dock, sh.goods, sh);
     const opd = G.Porto.opAt(dock);
-    // (until the spices are out of the unloading's hands — off the quay, out of the porters' arms, off the ground: another
-    // ship may join its cargo to the same unloading, which then goes on with it)
+    // (until the spices are out of the unloading's hands — off the quay, out of the porters' arms, off the ground —, or a
+    // wholesale's worth of them is in the store: another ship may join its cargo to the same unloading, which goes on)
     const spicesIn = () => (dock.crates || []).some(c => c.k === K) || [...S.villagers.values()].some(o => o.carry && o.carry.k === K && o.carry.op === opd.id) || (S.loose || []).some(o => o.k === K && o.op === opd.id);
-    live(600, held(S.time, () => !A.live(opd) || !spicesIn() || watch()));
-    if (spicesIn()) console.log(`   (n14: as especiarias ainda na descarga depois de 600 s — ${opd.st}${opd.wait ? ' (' + opd.wait + ')' : ''}: ${JSON.stringify((opd.log || []).slice(-4))})`);
+    const stored = () => linesK.filter(e => e[0] > L0 && e[8] === 'depositar').reduce((a, e) => a + e[6], 0);
+    live(600, held(S.time, () => !A.live(opd) || !spicesIn() || stored() >= 4 || watch()));
+    if (spicesIn() && stored() < 4) console.log(`   (n14: as especiarias ainda na descarga depois de 600 s, ${stored()} no armazém — ${opd.st}${opd.wait ? ' (' + opd.wait + ')' : ''}: ${JSON.stringify((opd.log || []).slice(-4))})`);
     // the merchant, in the morning: a stall, the spices on it. The world may take him from the stall in the middle — the
     // planner names another merchant, a fright sends him to a cave: the stall closes, its goods go home —: then the
     // merchant the town has now, once more, with the spices still in the store (twelve landed, four a wholesale: three

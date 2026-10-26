@@ -146,15 +146,16 @@ const fair = stockFair(set);
 {
   S.time = 0.15; stockFair(set);
   const h = houseIn(set, 2); lacking(h, 30); const H = 'h:' + h.id;
-  // (the house's errand of before, if one of it was out for it, let go — the test's hand, as lacking() forgets the mark — and
-  // what its people carry home put away first: the case starts with nothing on the way)
-  for (const o of S.villagers.values()) if (o.task && o.task.casa === h.id) G.Vg.endTask(o);
-  fine(60, () => !members(h).some(o => o.carry && o.carry.to === H) || watch());
   if (D.get(H, 'food') < 2) D.make(H, 'food', 2, { code: 'teste' }); // (something in the chest: a chest of nothing is no plan)
   const held = () => Object.entries(D.list(H)).filter(([k]) => k !== 'moedas').reduce((a, [, n]) => a + n, 0);
   const was = D.stores; let mode = 'cheia', cap = 0;
   const capNow = () => (mode === 'cheia' ? held() : mode === 'um' ? held() + 1 : cap);
   D.stores = b => (b && b.id === h.id ? [{ id: h.id + ':arca', kind: 'arca', keys: '*', cap: capNow(), dep: 'casa', sale: null }] : was ? was(b) : null);
+  // (the house's errand of before, if one of it was out for it, let go — the test's hand, as lacking() forgets the mark —, and
+  // what its people carry home put away first, with the chest already full — on the floor —: the case starts with nothing on
+  // the way; and once more after it, for an errand that started while it waited)
+  const letGo = () => { for (const o of S.villagers.values()) if (o.task && o.task.casa === h.id) G.Vg.endTask(o); h.shopOut = 0; };
+  letGo(); fine(60, () => !members(h).some(o => o.carry && o.carry.to === H) || watch()); letGo();
   // c14: the chest full — no room for one more thing: nobody goes; one sent to the fair's table all the same (a stroll's
   // whim) finds no room at home and buys nothing
   S.time = 0.15;
@@ -173,11 +174,13 @@ const fair = stockFair(set);
   const bought14 = book(e => e[0] > L0 && e[4] === 'v:' + v14.id && (e[8] === 'compra' || e[8] === 'feira')).length;
   ok('c14 a casa cheia não compra', L14 === 0 && u.every(x => x === 0) && !went && !bought14 && (!fair || said.includes('casa_cheia')) && Math.abs(D.get(H, 'moedas') - c0) < 1e-6 && !bad().length,
     `a casa #${h.id} com a arca cheia (${r2(held())} de ${r2(capNow())}): ${L14} falta(s), vontade ${u.join(', ')}; ${went ? `ALGUÉM saiu (${goer ? goer.name + ', ' + goer.task.type + (goer.home !== h.id ? ', de outra casa' : '') : '?'})` : 'ninguém saiu em 60 s'}; ${v14.name}, mandado à feira por tecido, ${bought14 ? 'COMPROU' : 'não comprou'} (falas: ${said.join(', ') || 'nenhuma'}${t14 && v14.task === t14 ? '' : `; agora ${v14.task ? v14.task.type : 'sem tarefa'}`}; moedas da casa ${r2(c0)} → ${r2(D.get(H, 'moedas'))})`);
-  // c15: room for one thing — the house sends for what it lacks, and buys only what fits
-  mode = 'um'; h.shopT = undefined; h.shopOut = 0; S.time = 0.15;
+  // c15: room for one thing — the house sends for what it lacks, and buys only what fits (the fair's tables stocked again —
+  // the town bought from them while the case waited —, and the clock held in the market's hours: a gathering at the square,
+  // an execution, may take the house's people first, as it took them in the doors' world)
+  mode = 'um'; h.shopT = undefined; h.shopOut = 0; S.time = 0.15; stockFair(set);
   const lack15 = C.list(h).map(q => `${q.n} de ${E.name(q.k)}`); const L1 = S.ledgerN;
   let carrier = null;
-  fine(360, () => { carrier = carrier || members(h).find(o => o.carry && o.carry.bought && o.carry.to === H) || null; return !!carrier || watch(); });
+  fine(360, atHour(0.3, () => { carrier = carrier || members(h).find(o => o.carry && o.carry.bought && o.carry.to === H) || null; return !!carrier || watch(); }));
   const buy = book(e => e[0] > L1 && (e[8] === 'compra' || e[8] === 'venda' || e[8] === 'feira') && /^v:/.test(e[4]) && (S.villagers.get(+e[4].slice(2)) || {}).home === h.id && e[5] !== 'moedas')[0];
   ok('c15 com pouco lugar, compra só o que cabe', !!carrier && !!buy && buy[6] <= 1 + 1e-6 && !bad().length,
     buy ? `a casa #${h.id} com lugar para 1 (faltava ${lack15.join(', ')}): ${nm(+buy[4].slice(2))} comprou ${buy[6]} de ${E.name(buy[5])}` : `ninguém da casa comprou em 360 s (faltava ${lack15.join(', ') || 'nada'})`);
