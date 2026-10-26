@@ -37,8 +37,19 @@
   const fwd = (yaw, pitch) => [Math.cos(pitch) * Math.cos(yaw), -Math.sin(pitch), Math.cos(pitch) * Math.sin(yaw)];
   C3.fwd = () => fwd(C3.yaw, C3.pitch);
 
-  // what stops the eye: the ground (and the water's face), the bodies of buildings, walls
+  // (the building the body is in — its rooms: the eye stays in them, never out through an open door to the street, where the
+  // walls would stand between it and the body; set each frame from the body, Avatar.indoors)
+  let room = null;
+  G.worldHooks.push(() => { room = null; });
+  function outRoom(X, Z) {
+    const b = room.b, sh = room.p.shell, L = G.Space.TILE; const x = X - b.x * L, z = Z - b.y * L;
+    if (sh.kind === 'round' ? Math.hypot(x - sh.cx, z - sh.cz) < sh.r : x > sh.r[0] && x < sh.r[2] && z > sh.r[1] && z < sh.r[3]) return false;
+    return !(sh.annex || []).some(a => x > a.r[0] && x < a.r[2] && z > a.r[1] && z < a.r[3]);
+  }
+  // what stops the eye: the ground (and the water's face), the bodies of buildings, walls — and, with the body indoors, the
+  // outside of its building
   function solid(X, Y, Z) {
+    if (room && outRoom(X, Z)) return true;
     const S = G.S; const L = G.Space.TILE, H = G.Space.HM; const x = X / L, y = Z / L;
     if (!W.inb(x, y)) return Y < G.SEA * H + 0.3;
     if (Y < W.hAt(x, y) * H + 0.3) return true;
@@ -102,7 +113,7 @@
   }
   // every frame: follow the body, keep clear of the world, place the camera
   C3.update = function (rdt, body, cam) {
-    clock += rdt;
+    clock += rdt; room = G.Avatar && G.Avatar.indoors ? G.Avatar.indoors() : null;
     const head = body.head !== undefined ? body.head : (body.h || 1.75) * 0.86;
     // (the world moved the body — a building rose where it stood, a scene, a load: the eye goes with it at once;
     // easing after it would fly through the houses on the way, and a pivot inside a house leaves the eye there — L-106)

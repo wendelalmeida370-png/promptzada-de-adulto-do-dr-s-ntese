@@ -48,7 +48,7 @@
   const oa = v => (v.g === 'f' ? 'a' : 'o');
   // (water: only a save opens a body in the water — it was swimming when the game was saved, and swims on; one does not
   // step into a body in the middle of the sea)
-  Po.can = function (v, water) {
+  Po.can = function (v, water, via) {
     const S = G.S;
     if (!v || !S || !S.villagers.has(v.id)) return { ok: false, why: 'Esta pessoa não está mais entre os vivos.' };
     if (v.age < 6) return { ok: false, why: `${v.name} é pequen${oa(v)} demais para andar por aí sozinh${oa(v)}.` };
@@ -62,7 +62,7 @@
     if (t && (t.type === 'scene')) return { ok: false, why: `${v.name} está no meio de uma cena da história.` };
     if (t && (t.type === 'condemned' || t.type === 'escorted' || t.type === 'swim' || t.type === 'cela')) return { ok: false, why: `${v.name} não está em condições agora.` };
     // (on a doorstep — the plan's own ground, that the world's map has blocked — one stands: L-162)
-    if (!v.inside) { const s = G.Space.surface(v.x * G.Space.TILE, v.y * G.Space.TILE); if (!s.walk && !(water && s.kind === 'deep' && KINDS.humano.swim) && !onPlan(v)) return { ok: false, why: `${v.name} não está em chão firme.` }; }
+    if (!v.inside) { const s = G.Space.surface(v.x * G.Space.TILE, v.y * G.Space.TILE); if (!s.walk && !(water && s.kind === 'deep' && KINDS.humano.swim) && !onPlan(v, via ? { via } : null)) return { ok: false, why: `${v.name} não está em chão firme.` }; }
     return { ok: true };
   };
   // what the body can do, from the person (age, a lost leg, sickness, tiredness) and the kind of incarnation
@@ -85,13 +85,14 @@
     // on with the player's hands (keepLoad: C1's endTask leaves the carry where it is); one inside is let out at the door)
     G.Vg.endTask(v, { keepLoad: true });
     v.sleeping = false; v.path = null; v.act = ''; v.actT = 0; v.moving = false; v.z = 0;
-    S.avatar = { id: v.id, kind: KINDS[kind] ? kind : 'humano', since: S.day, t0: S.clock, x0: +v.x.toFixed(2), y0: +v.y.toFixed(2), asks: [], deeds: {}, seen: [], met: [], lv: null };
+    S.avatar = { id: v.id, kind: KINDS[kind] ? kind : 'humano', since: S.day, t0: S.clock, x0: +v.x.toFixed(2), y0: +v.y.toFixed(2), asks: [], deeds: {}, seen: [], met: [], lv: null, via: 0 };
     // (someone indoors in a building whose plan is made is taken where they are in it — by the plan's own place for them —, on
     // their feet in the room: the world's rule lets the body out at the door otherwise)
     { const B = v.inside && S.buildings.get(v.inside); const pl = B && G.Space.planNow && G.Space.planNow(B) && G.Interiors.placeOf ? G.Interiors.placeOf(v) : null;
       if (pl && pl.b === B) { const p = G.Space.plan(B); const TL = G.Space.TILE; const tries = [[pl.x, pl.z]].concat(p.entrance ? [[p.entrance.x + (p.lot.w / 2 - p.entrance.x) * 0.15, p.entrance.z + (p.lot.w / 2 - p.entrance.z) * 0.15]] : []);
         for (const [x, z] of tries) { const ins = G.Space.indoor(B.x * TL + x, B.y * TL + z, pl.lv, B.id); if (ins && ins.walk && ins.shell) { v.x = B.x + x / TL; v.y = B.y + z / TL; S.avatar.lv = ins.lv; break; } } } }
     G.Vg.setTask(v, mark());
+    S.avatar.via = viaOf(v, S.avatar); // (taken indoors, or at a door: by that building)
     cur = v;
     return { ok: true };
   };
@@ -223,16 +224,31 @@
   Po.indoorOK = v => indoorOK(v, G.S.avatar);
   // where a plan lets the body stand — the one rule of the world's step, of the push of the stuck (villagers.js) and of the
   // verifier: indoors, indoorOK; not indoors, on the plan's own ground that the world's map has blocked (the building's lot),
-  // where the plan walks: the doorstep before an outer door, the steps up a house on stilts — and, for a step, a room just
-  // walked into, before the world has the body indoors (the body's word for it goes in the world's next step: L-162). The
-  // plan made now if it is not yet (Space.planNow), never the frame's queue: the world's step is the same with or without
-  // anyone looking
+  // where the plan walks: the doorstep before an outer door, the steps up a house on stilts — and, for a step, a room of the
+  // building it came in by (a.via: walked in from its door, before the world has the body indoors — the body's word for it
+  // goes in the world's next step: L-162). Walls that rose round the body are no room it came into: the world takes it out as
+  // anyone (L-175). The plan made now if it is not yet (Space.planNow), never the frame's queue: the world's step is the same
+  // with or without anyone looking
+  function planAt(v) {
+    const S = G.S; if (!W.inb(v.x, v.y)) return null; const B = S.buildings.get(S.occ[W.idx(v.x, v.y)]);
+    if (!B || !G.Space.planNow || !G.Space.planNow(B)) return null;
+    const ins = G.Space.indoor(v.x * G.Space.TILE, v.y * G.Space.TILE); return ins && ins.b === B && ins.walk ? ins : null;
+  }
   function onPlan(v, a) {
     if (!v) return false; if (v.inside) return indoorOK(v, a);
-    const S = G.S; if (!W.inb(v.x, v.y)) return false; const B = S.buildings.get(S.occ[W.idx(v.x, v.y)]);
-    if (!B || !G.Space.planNow || !G.Space.planNow(B)) return false;
-    const ins = G.Space.indoor(v.x * G.Space.TILE, v.y * G.Space.TILE); return !!(ins && ins.b === B && ins.walk);
+    const ins = planAt(v); return !!ins && (!ins.shell || !!(a && a.via === ins.b.id));
   }
+  // the building the body is by, at the end of each step of the world: indoors, the one the world has it in; at its doorstep,
+  // on its steps, in the opening of its outer door; or still in a room of the one it came in by. The only way into a room is
+  // its door (L-175)
+  function viaOf(v, a) {
+    if (v.inside) return v.inside;
+    const ins = planAt(v); if (!ins) return 0; const id = ins.b.id;
+    if (!ins.shell) return id; // (the doorstep, the steps)
+    const d = ins.door >= 0 && ins.p.doors[ins.door]; if (d && d.outer) return id; // (in its outer door's opening)
+    return a && a.via === id ? id : 0; // (a room walked into from its door; walls that rose round it: none)
+  }
+  Po.cameBy = id => { const a = G.S.avatar; return !!a && a.via === id; };
   Po.onPlan = v => { const a = G.S.avatar; return !!(v && a && a.id === v.id) && onPlan(v, a); };
   // the unloadings the body could lend a hand to, as the world gives its own porters theirs (Porto.claim): of the body's own
   // people, with crates of it — on the quay or on the ground — where its feet reach (the map of regions, asked here in the
@@ -299,6 +315,7 @@
     // the one before left; one asked by a body no longer lived is dropped. Each is answered "not done" until it is done: one
     // that breaks — counted in G.modErr, as any module's error — leaves the rest answered, never a body waiting forever)
     if (queue.length) { const q = queue; queue = []; for (const it of q) it.res = { ok: false, why: '', dropped: 1 }; for (const it of q) { if (it.cancel || it.id !== a.id || S.avatar !== a || !S.villagers.has(v.id)) continue; it.res = it.fn(v) || { ok: true }; } }
+    if (S.avatar === a && S.villagers.has(v.id)) a.via = viaOf(v, a); // (the building the body is by, as the step leaves it)
     void dt;
   };
   // the death of the body (Village.kill is the only door out of the world: the incarnation follows it at once)
@@ -391,7 +408,7 @@
   G.saveHooks.push({
     save(out) {
       const a = G.S.avatar; if (!a) return;
-      out.avatar = { id: a.id, kind: a.kind, since: a.since, t0: a.t0, x0: a.x0, y0: a.y0, asks: a.asks.slice(-6), deeds: Object.assign({}, a.deeds), seen: a.seen.slice(-20), met: a.met.slice(-60), lv: Number.isFinite(a.lv) ? a.lv : null };
+      out.avatar = { id: a.id, kind: a.kind, since: a.since, t0: a.t0, x0: a.x0, y0: a.y0, asks: a.asks.slice(-6), deeds: Object.assign({}, a.deeds), seen: a.seen.slice(-20), met: a.met.slice(-60), lv: Number.isFinite(a.lv) ? a.lv : null, via: a.via || 0 };
       // (the body in a room of a building's plan: where it is in it — the save lets everyone else out at the door)
       const v = G.S.villagers.get(a.id); if (v && v.inside && indoorOK(v, a)) out.avatar.in = { b: v.inside, x: +v.x.toFixed(4), y: +v.y.toFixed(4), sleeping: v.sleeping ? 1 : 0 };
     },
@@ -399,20 +416,22 @@
       const S = G.S; S.avatar = null; cur = null;
       const a = o.avatar; if (!a || typeof a !== 'object') return;
       const v = S.villagers.get(a.id);
-      // (a body that is gone, or in no state to be lived, is not taken back: the save simply opens in the god's eyes)
-      if (!v || !Po.can(v, true).ok) return;
+      // (a body that is gone, or in no state to be lived, is not taken back: the save simply opens in the god's eyes — one saved
+      // a step into a room of the building it came in by stands there: L-175)
+      const via = Number.isFinite(a.via) && S.buildings.has(a.via) ? a.via : 0;
+      if (!v || !Po.can(v, true, via).ok) return;
       const deeds = {}; if (a.deeds && typeof a.deeds === 'object') for (const k in a.deeds) if (DEED[k] && Number.isFinite(a.deeds[k])) deeds[k] = a.deeds[k];
       S.avatar = {
         id: v.id, kind: KINDS[a.kind] ? a.kind : 'humano', since: num(a.since, S.day), t0: num(a.t0, S.clock), x0: num(a.x0, v.x), y0: num(a.y0, v.y),
         asks: Array.isArray(a.asks) ? a.asks.filter(q => q && typeof q.txt === 'string').map(q => ({ type: String(q.type), txt: q.txt, t: num(q.t, S.clock), t0: num(q.t0, S.clock), n: num(q.n, 1) })) : [],
         deeds, seen: Array.isArray(a.seen) ? a.seen.filter(e => e && typeof e.txt === 'string') : [], met: Array.isArray(a.met) ? a.met.filter(Number.isFinite) : [],
-        lv: Number.isFinite(a.lv) ? a.lv : null,
+        lv: Number.isFinite(a.lv) ? a.lv : null, via,
       };
       // (saved in a room of a building's plan: back in it, where it was — the world's step checks it stands where the plan lets it)
       { const I = a.in, B = I && Number.isFinite(I.b) && S.buildings.get(I.b);
         if (B && G.Interiors && G.Interiors.has(B) && Number.isFinite(I.x) && Number.isFinite(I.y) && Number.isFinite(S.avatar.lv) && Math.abs(I.x - (B.x + B.w / 2)) < B.w && Math.abs(I.y - (B.y + B.h / 2)) < B.h) { v.inside = B.id; v.x = I.x; v.y = I.y; }
         else { v.inside = 0; S.avatar.lv = null; } }
-      v.task = mark(); v.sleeping = false; v.path = null;
+      v.task = mark(); v.sleeping = false; v.path = null; S.avatar.via = viaOf(v, S.avatar);
       if (!v.inside && !W.walkableXY(v.x, v.y) && !onPlan(v, S.avatar)) v.task.afloat = 1; // (saved swimming: it swims on — on a doorstep it stands)
       cur = v;
     },
