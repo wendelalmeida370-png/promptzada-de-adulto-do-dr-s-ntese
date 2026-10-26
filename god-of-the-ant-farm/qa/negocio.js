@@ -136,6 +136,7 @@ function pickBuyer(town, sp, not, last) {
 function sendBuyer(town, z, k, not, prep, until, sec) {
   const tried = [];
   for (let i = 0; i < 3; i++) {
+    if (z.st !== 'on') return null; // (the stall closed meanwhile: the case's own retry, with the merchant the town has now)
     const v = pickBuyer(town, B.spots(z), not.concat(tried)); if (!v) return null;
     tried.push(v.id); prep(v);
     G.Vg.setTask(v, { type: 'compra', biz: z.id, k, pri: 1.3, st: 0 });
@@ -146,6 +147,8 @@ function sendBuyer(town, z, k, not, prep, until, sec) {
   }
   return null;
 }
+// the people of a merchant's house: a buyer from it would pay his own house, and the goods of a closed stall go to it
+const mates = o => [...S.villagers.values()].filter(q => o.home && q.home === o.home).map(q => q.id);
 // ... with so many coins in the house
 // (and brought to the market's door — the test's hand: the deal is the subject, not the walk across town, and a long walk
 // ends in the evening, when the stall closes)
@@ -557,7 +560,6 @@ function stallNow() {
     // (the purchase home by its own line — a closed stall's goods go to its merchant's house, so a buyer of that house is
     // left out, and the spices in a house are not a purchase)
     const boughtK = v => linesK.some(e => e[0] > L0 && e[8] === 'compra-em-casa' && e[3] === 'v:' + v.id);
-    const mates = o => [...S.villagers.values()].filter(q => o.home && q.home === o.home).map(q => q.id);
     for (let att = 0; att < 3 && !buyer; att++) {
       if (att) { const m2 = wantMerchant(port, mkt); again += ` (${zz.st === 'on' ? `a ${att === 1 ? 'primeira' : 'segunda'} vez ninguém comprou` : `a banca #${zz.id} fechou no meio: ${zz.why || zz.st}`}; outra vez com ${m2 ? m2.name : 'ninguém'})`; if (!m2) break; mer = m2; }
       S.time = 0.15;
@@ -594,25 +596,37 @@ function stallNow() {
 // ================================ a people without coin: the exchange ================================
 {
   M.pronto('cidade'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1);
-  const tw = [...S.settlements.values()].filter(s => !E.coinage(s.fac) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'mercado' && b.built)).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
-  let info = 'nenhuma cidade sem moeda com mercado', ok15 = false, ok17 = false, info17 = 'não chegou à venda';
-  if (tw) {
+  // (the no-coin towns with a market, the biggest first: a town whose planner keeps no merchant for the case — a town short
+  // of hands gives its trades away first, the merchant to the quay — passes it to the next one, told in the case)
+  const tws = [...S.settlements.values()].filter(s => !E.coinage(s.fac) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'mercado' && b.built)).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id));
+  let info = 'nenhuma cidade sem moeda com mercado', ok15 = false, ok17 = false, info17 = 'não chegou à venda', went = false; const past = [];
+  for (const tw of tws) {
+    if (went) break;
     const mkt = [...S.buildings.values()].find(b => b.set === tw.id && b.type === 'mercado' && b.built); const f = G.Fac.get(tw.fac);
     let mer = wantMerchant(tw, mkt);
     if (!mer) { info = `${tw.name}: o povo não nomeou mercador para o mercado`; } else {
-    S.time = 0.1;
-    let zz = B.of(mer) || B.open(mer, mkt);
-    const K = E.MARKET_GOODS.filter(q => q !== 'food' && !(zz.inv[q] >= 1)).sort()[0] || 'tecido';
-    if ((f.stock[K] || 0) < 6) D.make('f:' + f.id, K, 6, { code: 'teste' });
-    roomOn(zz, K, 3); const L0 = S.ledgerN;
-    G.Vg.setTask(mer, { type: 'atacado', biz: zz.id, k: K, n: 3, pri: 1.2, st: 0, id: mkt.id });
-    live(150, () => (zz.inv[K] || 0) >= 1 || watch());
-    const onAccount = (zz.owe[K] || 0) > 0 && !!book('fiado', e => e[0] > L0 && e[5] === K && e[9] === mer.id).length;
-    S.time = 0.2; start = prep(zz, mer); // (the market's hours: the test's hand on the clock)
-    zz.margin[K] = -0.1;
-    const t0 = S.clock; const n0 = zz.day.n;
-    const buyer = sendBuyer(tw, zz, K, [mer.id], v => D.make('h:' + E.homeOf(v).id, 'food', 12, { code: 'teste' }), () => zz.day.n > n0, 120);
-    if (!buyer) info = `${tw.name}: ninguém da cidade alcança a banca para comprar`; else {
+    // (the world may close the stall in the middle — a caravan takes its merchant, the planner names him to another
+    // trade —: then the merchant the town has now, a stall, the wholesale on account and a buyer again, up to three times)
+    let zz = null, K = null, L0 = 0, onAccount = false, t0 = 0, n0 = 0, buyer = null, again = ''; const L00 = S.ledgerN;
+    for (let att = 0; att < 3 && !buyer; att++) {
+      if (att) { const m2 = wantMerchant(tw, mkt); again += ` (${zz.st === 'on' ? `a banca #${zz.id} não vendeu` : `a banca #${zz.id} fechou no meio: ${zz.why || zz.st}`}; outra vez com ${m2 ? m2.name : 'ninguém'})`; if (!m2) break; mer = m2; }
+      S.time = 0.1;
+      zz = B.of(mer) || B.open(mer, mkt); if (!zz) break;
+      if (!K) K = E.MARKET_GOODS.filter(q => q !== 'food' && !(zz.inv[q] >= 1)).sort()[0] || 'tecido';
+      if ((f.stock[K] || 0) < 6) D.make('f:' + f.id, K, 6, { code: 'teste' });
+      roomOn(zz, K, 3); L0 = S.ledgerN;
+      G.Vg.setTask(mer, { type: 'atacado', biz: zz.id, k: K, n: 3, pri: 1.2, st: 0, id: mkt.id });
+      live(150, () => (zz.inv[K] || 0) >= 1 || watch());
+      // (on account: the stall owes for it, and the ledger has the merchant's line — a stall tried again may owe from before)
+      onAccount = (zz.owe[K] || 0) > 0 && !!book('fiado', e => e[0] > L00 && e[5] === K && e[9] === mer.id).length;
+      S.time = 0.2; start = prep(zz, mer); // (the market's hours: the test's hand on the clock)
+      zz.margin[K] = -0.1;
+      t0 = S.clock; n0 = zz.day.n;
+      if (zz.st === 'on') buyer = sendBuyer(tw, zz, K, [mer.id].concat(mates(mer)), v => D.make('h:' + E.homeOf(v).id, 'food', 12, { code: 'teste' }), () => zz.day.n > n0, 120);
+      if (buyer && !(zz.day.n > n0)) buyer = null;
+    }
+    if (!buyer) info = `${tw.name}: ninguém da cidade comprou na banca (${zz ? `a banca #${zz.id} ${zz.st}${zz.why ? ' — ' + zz.why : ''}, ${B.manned(zz) ? 'atendida' : 'sem ninguém'}` : 'nenhuma banca'}; ${mer.name}: ${mer.role}, ${mer.task ? mer.task.type + '.' + mer.task.st : 'sem tarefa'})${again}`; else {
+    went = true; start += again;
     const hb = E.homeOf(buyer);
     const sale = book('venda', e => e[0] > L0 && e[3] === 'z:' + zz.id)[0]; const pay = sale && D.ledger().find(e => e[0] === sale[0] + 1);
     if (!sale) console.log(`   (n15: ${mer.name} ${mer.task ? mer.task.type + '.' + mer.task.st : '-'}, banca ${JSON.stringify(zz.inv)} ${B.manned(zz) ? 'atendida' : 'sem ninguém'}; ${buyer.name} ${buyer.task ? buyer.task.type + '.' + buyer.task.st + (buyer.task.talk !== undefined ? ' fala ' + buyer.task.talk : '') : '-'}; preço ${B.price(zz, K)}, daria ${B.wtp(buyer, hb, zz, K)})`);
@@ -660,7 +674,9 @@ function stallNow() {
     }
     } }
     wantNone();
+    if (!went) past.push(info);
   }
+  if (went && past.length) info += ` (antes: ${past.join('; ')})`;
   ok('n15 a troca, sem moeda', ok15, info);
   ok('n17 a banca fecha devendo', ok17, info17);
 }
