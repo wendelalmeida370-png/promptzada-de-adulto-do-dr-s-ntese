@@ -274,7 +274,7 @@ const through = (cm, bm, hem) => {
 // behind the eye (and whose shadow is too) is left out, nobody in its field is — and with the field off, nobody is
 { const N = 96, TL = G.Space ? G.Space.TILE : 4; let err = null; const info = [];
   G.T = G.T || { DEEP: 0, SEA: 1, RIVER: 2, SAND: 3, GRASS: 4, MEADOW: 5, ROCKY: 6 };
-  G.Space = Object.assign(G.Space || {}, { TILE: 4, HM: 1.5, stoneTop: () => -Infinity, bedAt: () => 0.3 });
+  G.Space = Object.assign(G.Space || {}, { TILE: 4, HM: 1.5, stoneTop: () => -Infinity, stepTop: () => -Infinity, bedAt: () => 0.3 }); // (a meadow: no stone, no steps before a door)
   Object.assign(G.W, { idx: (x, y) => (y | 0) * N + (x | 0), hAt: () => 1, groundH: () => 1, waterH: () => 0.5, inb: (x, y) => x >= 0 && y >= 0 && x < N && y < N });
   G.Animals = G.Animals || { DEF: {} }; G.Animals.DEF.cervo = G.Animals.DEF.cervo || { cls: 'land', size: 1, diet: 'herb', art: 'quad' };
   const S = G.S = { clock: 0, villagers: new Map(), animals: new Map(), buildings: new Map(), loose: [], type: new Uint8Array(N * N).fill(4), road: new Uint8Array(N * N), ice: null }; // (a world has buildings and things lying about, even none)
