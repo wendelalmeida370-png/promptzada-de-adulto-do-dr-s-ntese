@@ -196,8 +196,15 @@
     let treads = []; let cut = null;
     const drop = top - gAt(0, n0 + 0.3), need = Math.min(8, Math.ceil(drop / 0.26)), nOut = Math.floor(room / 0.22);
     // (a flight straight out: down to where its next tread would stand under the ground the feet come up — along its middle; a
-    // street sloping across it buries one end of a tread, as a step cut into the slope)
-    const out = (n, rise, rm, a0, w0) => { const t = Math.min(0.32, (rm || room) / n), a = a0 || 0, ww = w0 || wd; for (let k = 0; k < n; k++) { const sn = n0 + (k + 0.5) * t, yt = top - k * rise; if (k && yt < Math.max(gAt(a, sn - t / 2), gAt(a, sn), gAt(a, sn + t / 2)) + 0.03) break; treads.push({ k, a, n: sn, wa: ww - k * 0.02, wn: t + 0.02, y: yt, gy: Math.min(yt - rise, gAt(a, sn)) - 0.04, kind: 'out' }); } };
+    // street sloping across it narrows a tread to the part of it over the ground — Build3D.check: a tread's top cut by the
+    // ground —, as wide as a stride at least: where even that is not over it, its end goes into the slope, as a step cut in it)
+    const aboveAt = (q, sn, t, yt) => Math.max(gAt(q, sn - t / 2 - 0.01), gAt(q, sn), gAt(q, sn + t / 2 + 0.01)) < yt - 0.02;
+    let buried = 0;
+    const out = (n, rise, rm, a0, w0) => { const t = Math.min(0.32, (rm || room) / n), a = a0 || 0, ww = w0 || wd; buried = 0;
+      for (let k = 0; k < n; k++) { const sn = n0 + (k + 0.5) * t, yt = top - k * rise; if (k && yt < Math.max(gAt(a, sn - t / 2), gAt(a, sn), gAt(a, sn + t / 2)) + 0.03) break;
+        let hw = (ww - k * 0.02) / 2; if (k) while (hw > 0.3 && !(aboveAt(a - hw, sn, t, yt) && aboveAt(a + hw, sn, t, yt))) hw -= 0.05; // (on its line, as the count of treads was made)
+        if (k) for (const q of [a - hw, a + hw]) buried = Math.max(buried, Math.max(gAt(q, sn - t / 2 - 0.01), gAt(q, sn), gAt(q, sn + t / 2 + 0.01)) - (yt - 0.02)); // (how deep an end goes into the slope)
+        treads.push({ k, a, n: sn, wa: 2 * hw, wn: t + 0.02, y: yt, gy: Math.min(yt - rise, gAt(a, sn)) - 0.04, kind: 'out' }); } };
     const one = () => { const sd = reach(0, wd, n0, Math.min(0.7, room), top); if (sd < 0.1) return; const sn = n0 + sd / 2; treads.push({ k: 0, a: 0, n: sn, wa: wd, wn: sd, y: top, gy: Math.min(top - 0.4, gAt(0, sn) - 0.04), kind: 'one' }); };
     // (how high the lowest tread laid stands over the ground before it — what the feet must step up from the street —, and
     // whether that is too high: a lone step up to a span and a half; at the foot of a flight, no more than its rise or so —
@@ -230,16 +237,19 @@
         return { nS, end, rise: (top - gAt(a, end + 0.12)) / nS }; };
       const open = (a, n) => { const p = P(a, n); const x = b.x + p[0] / TILE, z = b.y + p[1] / TILE; return W.inb(x, z) && (G.S.occ[W.idx(x, z)] === b.id || W.walkableXY(x, z)); };
       // (straight out from the door's middle, as wide as its steps; where the street has something beside the way, narrower, or to
-      // one side of the middle — always before the door: a good stride of its width over it)
-      let go = null; const over = Math.min(0.9, h.w);
-      for (const w2 of [wd, Math.max(1, h.w + 0.1), 1]) { for (const s0 of [0, 0.3, -0.3, 0.5, -0.5, 0.7, -0.7]) {
-          if (Math.min(s0 + w2 / 2, h.w / 2) - Math.max(s0 - w2 / 2, -h.w / 2) < over) continue;
-          const { nS, end, rise } = span(s0); if (end + 0.02 > room + 4.2) continue; let ok = true; // (a tile into the street at most)
-          for (const n of [room, (room + end) / 2, end - 0.05]) for (const a of [s0 - w2 / 2 + 0.1, s0, s0 + w2 / 2 - 0.1]) if (ok && !open(a, n)) ok = false;
-          if (ok) { go = { s0, w2, nS, end, rise }; break; } }
-        if (go) break; }
+      // one side of the middle — always before the door: a good stride of its width over it —; of those the street has room for,
+      // one whose foot is a step over the ground before it, its treads' ends least in the slope — a street sloping across
+      // narrows them, and may bury the ends of the narrowest —; else the one whose foot is lowest; the first of them on a tie)
+      let best = null; const over = Math.min(0.9, h.w); const keep = treads, f0 = footStep();
+      const worse = (q, r) => (q.fs > 0.32) !== (r.fs > 0.32) ? q.fs > 0.32 : q.fs > 0.32 ? q.fs > r.fs + 0.01 : q.buried > r.buried + 0.01;
+      search: for (const w2 of [wd, Math.max(1, h.w + 0.1), 1]) for (const s0 of [0, 0.3, -0.3, 0.5, -0.5, 0.7, -0.7]) {
+        if (Math.min(s0 + w2 / 2, h.w / 2) - Math.max(s0 - w2 / 2, -h.w / 2) < over) continue;
+        const { nS, end, rise } = span(s0); if (end + 0.02 > room + 4.2) continue; let ok = true; // (a tile into the street at most)
+        for (const n of [room, (room + end) / 2, end - 0.05]) for (const a of [s0 - w2 / 2 + 0.1, s0, s0 + w2 / 2 - 0.1]) if (ok && !open(a, n)) ok = false;
+        if (!ok) continue; treads = []; out(nS, rise, end - n0 + 0.02, s0, w2); const c = { fs: footStep(), buried: Math.max(0, buried), treads };
+        if (!best || worse(best, c)) best = c; if (best.fs <= 0.32 && best.buried <= 0) break search; }
       // (kept where it brings the feet nearer the street than the steps of the lot alone)
-      if (go) { const keep = treads, f0 = footStep(); treads = []; out(go.nS, go.rise, go.end - n0 + 0.02, go.s0, go.w2); if (footStep() >= f0) treads = keep; }
+      treads = best && best.fs < f0 ? best.treads : keep;
     }
     const f = { F, uc, P, top, w: wd, treads, cut, room };
     if (flights.size > 2000) flights.clear(); flights.set(key, { k: k0, f });
