@@ -12,7 +12,8 @@
 const M = require('./nodemundo.js');
 const world = process.argv[2] || 'metropole', townName = process.argv[3] || '';
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/atividades-inv.js'] });
-const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | porto ${name} | ${info}`); if (!c) fails.push(name); };
+const fails = []; const mid = []; // (what the checker saw in the middle of a case: the case fails, even if the end looks clean)
+const ok = (name, c, info) => { const m = mid.splice(0); const pass = c && !m.length; console.log(`${pass ? 'PASSOU' : 'FALHOU'} | porto ${name} | ${info}${m.length ? ' — o verificador, no meio do caso: ' + m.slice(0, 2).join(' · ') : ''}`); if (!pass) fails.push(name); };
 // (the checker: the activities' own rules and the world's numbers stop the scenario; what it finds in other systems on the
 // way — a war broke out, a band lost a man — is told at the end, for their owners, and does not hide a fault of ours)
 const others = new Map();
@@ -41,12 +42,17 @@ const clearQuay = () => {
 const day = t => { S.time = t; }; // (the test sets the hour of the day)
 const ship = () => S.ships.find(s => s.kind === 'mercante') || S.ships[0];
 const live = (sec, until) => { for (let k = 0; k < sec; k++) { M.viver(1); if (until && until()) return true; } return false; };
+// (the unloading's own working time: a night, a danger in the town, a store with no room pause it — the world's reasons —,
+// and a case waits them out, up to three times that in the world's time; a fixed time of the world assumed a calm day: in
+// the course of the world with the second of the activities a second, the town of the quay was in danger and then dark
+// in the middle of p8 — T-d)
+const work = (op, sec, until) => { let on = 0; for (let k = 0; k < sec * 3 && on < sec; k++) { M.viver(1); if (A.live(op) && op.st === 'on') on++; if (until && until()) return true; } return false; };
 const land = (k, n) => { clearQuay(); day(0.15); const sh = ship(); sh.goods = { k, n }; G.Harbor.land(dock, sh.goods, sh); return P.opAt(dock); };
 const carrierOf = op => [...S.villagers.values()].find(v => v.carry && v.carry.op === op.id && v.carry.n > 0) || null;
 const book = (op, code) => D.ledger().filter(e => e[7] === op.id && (!code || e[8] === code));
 const r2 = x => Math.round(x * 100) / 100;
 const nm = id => (S.villagers.get(id) || {}).name || '#' + id;
-const watch = () => { const bb = bad(); if (bb.length) { console.log('   verificador no meio:', bb.slice(0, 2).map(q => q.msg).join(' · ')); return true; } return false; };
+const watch = () => { const bb = bad(); if (bb.length) { console.log('   verificador no meio:', bb.slice(0, 2).map(q => q.msg).join(' · ')); for (const q of bb) if (!mid.includes(q.msg)) mid.push(q.msg); return true; } return false; };
 // (a case that fails tells where things are: the operation, the crates, what lies on the ground, the quay's people)
 function tell(name, o) {
   const qs = G.Fishers.crateSpot(dock); const L = (S.loose || []).filter(x => x.op === o.id);
@@ -86,21 +92,26 @@ ok('p2 o manifesto', !!op && op.goods.sal === 14 && op.from === 's:' + sh.id && 
 {
   const op4 = land('stone', 8); let pair = null; let twice = false;
   const done = live(400, () => { for (const v of S.villagers.values()) { const p = A.pair(v); if (p && !pair) pair = p; if (v.carry && v.carry.op === op4.id && v.task && v.task.type === 'ajudar') twice = true; } if (watch()) return true; return !A.live(op4); });
-  ok('p4 a caixa pesada vai a dois', done && op4.st === 'ok' && op4.done.stone === 8 && !!pair && !twice && !bad().length, pair ? `${nm(pair.lead)} na frente e ${nm(pair.help)} atrás, uma caixa de pedra só (no livro, nas mãos de quem vai na frente); chegou ${op4.done.stone} de 8` : `ninguém levou a dois (caixas de 4 pedras = ${D.weight('stone', 4)} de peso; um adulto aguenta ${D.strength([...S.villagers.values()].find(v => v.set === set.id && v.role === 'estivador'))}) — chegou ${op4.done.stone} de 8`);
+  // (what arrived is what the unloading took — the 8 of the test's ship, and whatever else came ashore into it meanwhile: a
+  // merchant ship home with its return cargo lands it into the unloading under way)
+  const want4 = op4.taken.stone || 0;
+  ok('p4 a caixa pesada vai a dois', done && op4.st === 'ok' && want4 >= 8 && Math.abs(op4.done.stone - want4) < 1e-6 && !!pair && !twice && !bad().length, pair ? `${nm(pair.lead)} na frente e ${nm(pair.help)} atrás, uma caixa de pedra só (no livro, nas mãos de quem vai na frente); chegou ${op4.done.stone} de ${want4}${want4 > 8 ? ' (as 8 do teste e ' + r2(want4 - 8) + ' que outro navio desembarcou na mesma descarga)' : ''}` : `ninguém levou a dois (caixas de 4 pedras = ${D.weight('stone', 4)} de peso; um adulto aguenta ${D.strength([...S.villagers.values()].find(v => v.set === set.id && v.role === 'estivador'))}) — chegou ${op4.done.stone} de ${want4}`);
 }
 // ---------------- p5: the warehouse fills while a crate is on its way: the porter waits at the door with it, nobody lifts
 // another, the unloading stops, nothing is lost; with room again, on to the end
 {
   // (coral: a good nobody in town takes out of the store while the test runs — the warehouse stays full)
-  const op5 = land('coral', 14); const cap = G.Village.cap(fac.id); fac.stock.coral = Math.min(fac.stock.coral || 0, cap - 40);
+  // (the store's room is asked every second: it grows when the town builds — the test keeps it full of coral all along)
+  const cap = () => G.Village.cap(fac.id);
+  const op5 = land('coral', 14); fac.stock.coral = Math.min(fac.stock.coral || 0, cap() - 40);
   live(120, () => !!carrierOf(op5) || watch());
-  fac.stock.coral = cap; // (the store is full now: others filled it)
+  fac.stock.coral = cap(); // (the store is full now: others filled it)
   let stopped = false; const waited = new Set();
-  live(300, () => { fac.stock.coral = Math.max(fac.stock.coral, cap); for (const v of S.villagers.values()) if (v.task && v.task.op === op5.id && v.task.st === 4) waited.add(v.id); if (op5.st === 'wait' && op5.wait === 'cheio') stopped = true; return (stopped && !carrierOf(op5)) || watch(); });
+  live(300, () => { fac.stock.coral = Math.max(fac.stock.coral, cap()); for (const v of S.villagers.values()) if (v.task && v.task.op === op5.id && v.task.st === 4) waited.add(v.id); if (op5.st === 'wait' && op5.wait === 'cheio') stopped = true; return (stopped && !carrierOf(op5)) || watch(); });
   const kept = r2(P.custody(op5) + (op5.done.coral || 0)); const atDoor = (S.loose || []).filter(o => o.op === op5.id).length;
-  const quiet = live(15, () => { fac.stock.coral = Math.max(fac.stock.coral, cap); return book(op5, 'pegar').some(e => e[2] > S.clock - 1 && op5.st === 'wait'); });
+  const quiet = live(15, () => { fac.stock.coral = Math.max(fac.stock.coral, cap()); return book(op5, 'pegar').some(e => e[2] > S.clock - 1 && op5.st === 'wait'); });
   D.use('f:' + fac.id, 'coral', 30, { code: 'teste' }); // (room again: some went away in a caravan)
-  const done = live(400, () => watch() || !A.live(op5));
+  const done = work(op5, 400, () => watch() || !A.live(op5));
   ok('p5 o armazém cheio', stopped && waited.size >= 1 && Math.abs(kept - 14) < 1e-6 && !quiet && done && op5.st === 'ok' && op5.done.coral === 14 && !(op5.lost && op5.lost.coral) && !bad().length,
     `${waited.size} carregador(es) esperaram na porta com a caixa; a descarga ${stopped ? 'parou (armazém cheio)' : 'NÃO parou'}, ${atDoor} caixa(s) postas no chão junto da porta, nada sumiu (${kept} de 14 sob guarda ou entregue); ninguém pegou caixa parado; com lugar de novo: ${A.STATES[op5.st]}, chegou ${op5.done.coral} de 14 (coral)`);
 }
@@ -124,7 +135,7 @@ ok('p2 o manifesto', !!op && op.goods.sal === 14 && op.from === 's:' + sh.id && 
   const run = () => { if (G.UI && G.UI.select) G.UI.select(null); G.Save.apply(JSON.parse(str)); G.Main.mode = 'game'; refresh(); live(40); const o = A.get(op7.id); return { canon: JSON.stringify(QA.canon()), done: o ? o.done.sal || 0 : -1, keys: o ? (o.keys || []).length : -1, n: S.ledgerN }; };
   const a = run(), b = run();
   const o7 = A.get(op7.id);
-  const done = live(400, () => watch() || !A.live(o7));
+  const done = work(o7, 400, () => watch() || !A.live(o7));
   const dupe = (() => { const s = new Set(); for (const e of o7.keys || []) { if (s.has(e[0])) return e[0]; s.add(e[0]); } return null; })();
   ok('p7 save no meio, carregado duas vezes', !!who && a.canon === b.canon && a.done === b.done && a.n === b.n && !dupe && done && o7.st === 'ok' && o7.done.sal === 14 && !bad().length,
     `${who ? `${who.name} com a caixa ${cid} nas mãos na hora do save` : 'ninguém carregava'}; as duas vidas depois do load ${a.canon === b.canon ? 'iguais' : 'DIFERENTES'} (chegou ${a.done} e ${b.done}, livro ${a.n} e ${b.n}); nenhum passo aplicado duas vezes${dupe ? ' — MENOS ' + dupe : ''}; no fim ${A.STATES[o7.st]}, chegou ${o7.done.sal} de 14`);
@@ -133,8 +144,9 @@ ok('p2 o manifesto', !!op && op.goods.sal === 14 && op.from === 's:' + sh.id && 
 // away from the store's door (a crate set down there goes in) and from the quay (there it goes back on the pile)
 function midway(op, sec) {
   const dest = P.destOf(op); const [fx, fy] = G.Village.frontTile(dest); const qs = G.Fishers.crateSpot(dock);
-  for (let k = 0; k < sec * 10; k++) {
-    M.viver(0.1);
+  // (the unloading's working time, as in work())
+  for (let k = 0, on = 0; k < sec * 30 && on < sec * 10; k++) {
+    M.viver(0.1); if (A.live(op) && op.st === 'on') on++;
     const v = carrierOf(op);
     if (v && v.task && v.task.type === 'descarga' && v.task.st === 2 && G.dist(v.x, v.y, fx, fy) > 1.7 && G.dist(v.x, v.y, qs[0], qs[1]) > 1.2) return v;
     if (watch()) break;
@@ -175,7 +187,7 @@ const fateOf = (op, v, n0) => { const e = D.ledger().filter(q => q[7] === op.id 
     day(0.2); pv.energy = Math.max(pv.energy, 70); pv.hunger = Math.min(pv.hunger, 30);
     G.Possess.release('deus'); M.viver(0.2); const after = A.role(pv);
     const did = []; const goes = live(60, () => { const ty = pv.task ? pv.task.type : '-'; if (did[did.length - 1] !== ty) did.push(ty); return !!(pv.task && (pv.task.type === 'descarga' || pv.task.op === op8.id)) || !A.live(op8); });
-    const done = live(400, () => watch() || !A.live(op8));
+    const done = work(op8, 400, () => watch() || !A.live(op8));
     fine = tk.ok && !!role && role.op === op8.id && r1.ok && r2_.ok && (!E.coinage(fac.id) || (pay.length >= 1 && pay.every(e => e[4] === payee) && m1 - m0 > got - 0.01) || owed > 0) && goes && done && op8.st === 'ok' && op8.done.sal === (more ? 18 : 14) && !bad().length;
     const where = kept ? 'ficou nas mãos' : !fate ? 'sumiu' : fate.code === 'pousou' ? 'foi ao chão e o corpo a levantou' : fate.code === 'devolveu' ? (more ? 'voltou ao monte do cais e outro a levou; o corpo pegou a caixa de um navio que chegou' : 'voltou ao monte do cais e o corpo a pegou lá') : fate.code === 'depositar' ? 'entrou no armazém (estava na porta) e o corpo pegou a seguinte no cais' : fate.code;
     info = `${pv.name} levava ${n0} de ${E.name(k0)}; o deus tomou o corpo (${tk.ok ? 'ok' : tk.why}), o papel ficou (${role ? role.role : 'nenhum'}), a caixa ${where} (${r1.ok ? r1.msg || 'ok' : r1.why}); guardou no armazém pela mesma porta (${r2_.ok ? r2_.msg : r2_.why}); paga ${pay.length ? got + ' para ' + pay[0][4] : owed > 0 ? 'devida (o tesouro estava sem moeda: ' + r2(owed) + ' anotados)' : 'nenhuma'}; devolvido: ${after ? 'papel ' + after.role : 'sem papel'}, ${goes ? 'voltou às caixas' : 'NÃO voltou (fez: ' + did.join(' → ') + ')'}; no fim ${A.STATES[op8.st]}, chegou ${op8.done.sal} de ${more ? 18 : 14}`;
@@ -198,7 +210,7 @@ const fateOf = (op, v, n0) => { const e = D.ledger().filter(q => q[7] === op.id 
       if (back && !(dock.crates || []).some(c => c.id === cid)) return book(op9, 'pegar').filter(e => e[0] > L0 && e[3] === ref).pop() || null;
       return null;
     };
-    const done = live(400, () => watch() || (!!took() && !A.live(op9)));
+    const done = work(op9, 400, () => watch() || (!!took() && !A.live(op9)));
     const t = took();
     const ins = fate && fate.code === 'depositar';
     fine = !!fate && (ins || !!t) && done && op9.st === 'ok' && op9.done.sal === 14 && !bad().length;
@@ -221,7 +233,7 @@ const fateOf = (op, v, n0) => { const e = D.ledger().filter(q => q[7] === op.id 
   if (boat) {
     const op11 = P.opAt(dock); const born = (dock.crates || []).filter(c => op11 && c.op === op11.id);
     const fishy = born.some(c => c.fish);
-    const done = op11 ? live(400, () => watch() || !A.live(op11)) : false;
+    const done = op11 ? work(op11, 400, () => watch() || !A.live(op11)) : false;
     const got = op11 ? Object.values(op11.done || {}).reduce((a, b) => a + b, 0) : 0, came = op11 ? Object.values(op11.goods || {}).reduce((a, b) => a + b, 0) : 0;
     const bb = bad();
     // (the catch is an unloading of its own — or joins the one under way at the quay, a ship's: one quay, one unloading)
@@ -258,7 +270,7 @@ const fresh = () => { M.pronto(world); M.viver(2); G.inSim = Math.max(G.inSim ||
   const straight = r2((fac.stock.sal || 0) - st0); const n1 = (dock.crates || []).length;
   const kept = r2(P.custody(op12) + (op12.done.sal || 0));
   for (const i of ring) { S.wall[i] = 0; S.wallFac[i] = 0; delete S.wallHp[i]; } G.W.touchWalk();
-  const done = live(400, () => watch() || !A.live(op12));
+  const done = work(op12, 400, () => watch() || !A.live(op12));
   if (!done || op12.st !== 'ok') tell('p12', op12);
   ok('p12 o cais sem caminho', cut && paused && !later && n1 === n0 && straight >= 6 - 1e-6 && Math.abs(kept - 14) < 1e-6 && done && op12.st === 'ok' && op12.done.sal === 14 && !bad().length,
     `${cut ? 'o caminho do cais ao armazém foi cortado' : 'o caminho NÃO foi cortado'}; a descarga ${paused ? 'parou (sem caminho)' : 'NÃO parou (' + A.STATES[op12.st] + (op12.wait ? ' ' + op12.wait : '') + ')'}; ${later ? later + ' tentativa(s) de ir às caixas depois de parada' : 'ninguém ficou tentando chegar lá'}; o navio seguinte: ${n1 === n0 ? 'nenhuma caixa no cais isolado' : (n1 - n0) + ' caixa(s) no cais isolado'}, ${straight} de 6 direto ao armazém; nada sumiu (${kept} de 14); aberto o caminho: ${A.STATES[op12.st]}, chegou ${op12.done.sal} de 14`);
@@ -270,7 +282,7 @@ const fresh = () => { M.pronto(world); M.viver(2); G.inSim = Math.max(G.inSim ||
   const i = G.W.idx(dock.x + 1, dock.y + 1); const lit = G.Nature.ignite(i, 0.95);
   live(8, () => watch());
   for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) { const x = dock.x + 1 + dx, y = dock.y + 1 + dy; if (G.W.inb(x, y)) G.Nature.extinguish(G.W.idx(x, y), 2); }
-  const done = live(400, () => watch() || !A.live(op10));
+  const done = work(op10, 400, () => watch() || !A.live(op10));
   if (!done) tell('p10', op10);
   const burnt = book(op10, 'fogo'); const lost = (op10.lost || {}).sal || 0; const got = (op10.done || {}).sal || 0;
   ok('p10 fogo no cais', lit && burnt.length >= 1 && lost > 0 && Math.abs(got + lost - 14) < 0.01 && done && !bad().length,

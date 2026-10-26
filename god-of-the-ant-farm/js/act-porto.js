@@ -44,7 +44,9 @@
     return best || (dock && G.BDEF[dock.type].dropoff ? dock : null);
   }
   // (the overseer chooses it once a second; between, and for a panel, the choice stands)
-  P.destOf = function (op) { const b = op.data && op.data.dest && S_().buildings.get(op.data.dest); return b && b.built ? b : storeFor(S_().buildings.get(op.at), op.fac, op.x, op.y); };
+  // (a store that burnt is a ruin with the same name and still "built": not a store — another is found at once, not at the
+  // foreman's next round, so that no porter walks a crate to the ashes)
+  P.destOf = function (op) { const b = op.data && op.data.dest && S_().buildings.get(op.data.dest); return b && b.built && b.type !== 'ruin' && G.BDEF[b.type] && G.BDEF[b.type].dropoff ? b : storeFor(S_().buildings.get(op.at), op.fac, op.x, op.y); };
   // do the crates of this quay have a way to that store on foot
   function access(dock, dest) { if (!dock || !dest || dock.type !== 'doca') return !!dest; const p = crateSpot(dock), f = G.Village.frontTile(dest); return G.W.canWalk(p[0], p[1], f[0], f[1], true); }
   P.access = access;
@@ -84,7 +86,9 @@
     const S = S_(); const k = goods.k; let n = goods.n; const n0 = n; // (the hold empties as it lands: n0 is what came)
     const op = opFor(dock, 'navio', { ship: ship ? ship.id : 0 });
     op.goods[k] = r2((op.goods[k] || 0) + n);
-    const from = ship && S.ships.includes(ship) ? 's:' + ship.id : null;
+    // (the hold it comes out of: the ship's cargo, or what a merchant ship brings back in exchange — naval.js lands its
+    // s.ret too: read from s.goods, that was nothing, and the return cargo vanished — L-xxx)
+    const from = ship && S.ships.includes(ship) ? (goods === ship.ret ? 'r:' : goods === ship.lux ? 'l:' : 's:') + ship.id : null;
     const c0 = { op: op.id, code: 'desembarque', part: true, by: 0 };
     if (from) {
       // (the cargo is the ship's own until it touches the quay: the operation takes it from the hold; a second ship that

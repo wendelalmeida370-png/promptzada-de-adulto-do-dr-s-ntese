@@ -149,16 +149,66 @@
   // a line is an ordered list of people in front of a spot, bending around what is in the way
   const Q = new Map();
   const GAP = 0.6;
+  L.LINE = 9; // (the places of a line, the one at the front among them; a stall's has 8 — act-negocio.js)
+  const TURNS = [0, 0.5, -0.5, 1, -1, 1.5, -1.5];
+  // (the first step may also go back along the facade, when the ground before the counter is water or a wall)
+  const TURNS0 = TURNS.concat([2, -2, 2.5, -2.5, Math.PI]);
+  const WHY = { chao: 'o chão em volta acaba (paredes, prédios, o fim da rua)', agua: 'a água em volta', porta: 'as portas dos outros prédios em volta', regiao: 'o chão em volta é de outra região', outra: 'os vendedores das bancas em volta' };
+  // the places of a line: a path of steps of GAP from the front place — straight out first, as it always was, then bending
+  // as the ground asks: along a facade, an L where the street ends; a path that dies in a corner goes back a step and tries
+  // another bend. Never on water, never off the front place's ground (its region of the map), never before another
+  // building's door (its people come and go there) nor on a merchant at his counter (o.avoid: [x, y, radius]);
+  // with no path of n, the longest the ground allows, and why (q.why). The line's own building is o.own: its door is where
+  // the line starts
   function lineSlots(q) {
-    const s = [[q.x, q.y]]; let x = q.x, y = q.y, a = Math.atan2(q.dy, q.dx);
-    for (let k = 1; k < 9; k++) {
-      let ok = false;
-      for (const da of [0, 0.5, -0.5, 1, -1, 1.5, -1.5]) { const nx = x + Math.cos(a + da) * GAP, ny = y + Math.sin(a + da) * GAP; if (W.inb(nx, ny) && W.walkableXY(nx, ny)) { x = nx; y = ny; a += da * 0.5; ok = true; break; } }
-      if (!ok) break;
-      s.push([x + (G.hash(k * 7 + q.x) - 0.5) * 0.1, y + (G.hash(k * 13 + q.y) - 0.5) * 0.1]);
+    const S = G.S; const n = q.n || L.LINE; const x0 = q.x, y0 = q.y;
+    const doors = [], R = n * GAP + 2;
+    for (const b of S.buildings.values()) {
+      if (b.id === q.own || !b.blocks || b.type === 'ruin') continue; // (built or being built: a site blocks from its first stone, and finishing it changes no ground)
+      if (b.x > x0 + R || b.x + b.w < x0 - R || b.y > y0 + R || b.y + b.h < y0 - R) continue;
+      const d = G.Vg.door(b); if (d) doors.push(d);
     }
-    return s;
+    const avoid = q.avoid || []; const no = { chao: 0, agua: 0, porta: 0, regiao: 0, outra: 0 };
+    const free = (x, y) => {
+      if (!W.inb(x, y) || !W.walkableXY(x, y)) { no.chao++; return false; }
+      const i = W.idx(x, y), t = S.type[i];
+      if ((t <= G.T.SEA || t === G.T.RIVER) && !S.road[i] && !(S.dry && S.dry[i])) { no.agua++; return false; } // (a ford, a shore: water; a bridge: no)
+      for (const d of doors) if (G.dist2(d[0], d[1], x, y) < 0.64) { no.porta++; return false; }
+      for (const p of avoid) { const r = p[2] || 0.5; if (G.dist2(p[0], p[1], x, y) < r * r) { no.outra++; return false; } }
+      if (!W.canWalk(x0, y0, x, y, false)) { no.regiao++; return false; }
+      return true;
+    };
+    const path = [[x0, y0]]; let best = [[x0, y0]]; let budget = q.budget || 400;
+    // (a step never comes back on the line's own earlier places)
+    const clear = (x, y) => { for (let j = 0; j < path.length - 1; j++) if (G.dist2(path[j][0], path[j][1], x, y) < GAP * GAP * 0.8) return false; return true; };
+    const walk = (x, y, a) => {
+      if (path.length > best.length) best = path.slice();
+      if (path.length >= n) return true;
+      if (--budget < 0) return false;
+      for (const da of path.length === 1 ? TURNS0 : TURNS) {
+        const nx = x + Math.cos(a + da) * GAP, ny = y + Math.sin(a + da) * GAP;
+        if (!clear(nx, ny) || !free(nx, ny)) continue;
+        path.push([nx, ny]); if (walk(nx, ny, a + da * 0.5)) return true; path.pop();
+      }
+      return false;
+    };
+    walk(x0, y0, Math.atan2(q.dy, q.dx));
+    q.why = null;
+    if (best.length < n) { let k = 'chao'; for (const c in no) if (no[c] > no[k]) k = c; q.why = WHY[k]; }
+    // (a person is not a post: a hair off the path, in the same tile — the ground, the water and the region are the tile's)
+    return best.map(([x, y], k) => {
+      if (!k) return [x, y];
+      const jx = x + (G.hash(k * 7 + q.x) - 0.5) * 0.1, jy = y + (G.hash(k * 13 + q.y) - 0.5) * 0.1;
+      return Math.floor(jx) === Math.floor(x) && Math.floor(jy) === Math.floor(y) ? [jx, jy] : [x, y];
+    });
   }
+  // (what a line's places stand on: the ground, the terrain, and the day — a plan's door moves at the turn of the day)
+  const lineVer = () => { const S = G.S; return (S.walkVer || 0) + ':' + (S.typeVer || 0) + ':' + S.day; };
+  // (read only: the places a line would have there now, and why it has fewer than it asks — for the proofs)
+  L.lineAt = function (x, y, dx, dy, o) {
+    const d = Math.hypot(dx, dy) || 1; const q = { x, y, dx: dx / d, dy: dy / d, n: o && o.n, own: o && o.own, avoid: o && o.avoid, budget: o && o.budget };
+    const slots = lineSlots(q); return { slots, why: q.why, n: q.n || L.LINE };
+  };
   L.queueLen = key => { const q = Q.get(key); return q ? q.ids.length : 0; };
   L.queueFull = key => { const q = Q.get(key); return !!q && q.ids.length >= (q.slots ? q.slots.length : 8); };
   L.leaveQueue = function (v) {
@@ -169,14 +219,16 @@
   };
   // (for the checker: one who thinks he stands in a line is in it)
   L.inQueue = v => { if (!v._q) return true; const q = Q.get(v._q); return !!(q && q.ids.includes(v.id)); };
-  // stand in line; true once this person is at the front, on the spot
-  L.inLine = function (v, t, key, fx, fy, dx, dy, dt, H) {
-    let q = Q.get(key);
-    if (!q) { const d = Math.hypot(dx, dy) || 1; Q.set(key, q = { ids: [], x: fx, y: fy, dx: dx / d, dy: dy / d }); q.slots = lineSlots(q); }
+  // stand in line; true once this person is at the front, on the spot. o: { n: its places, own: the building it stands
+  // at, avoid: other counters' places }, or a function that gives it — read only when the line forms
+  L.inLine = function (v, t, key, fx, fy, dx, dy, dt, H, o) {
+    let q = Q.get(key); const ver = lineVer();
+    if (!q) { if (typeof o === 'function') o = o(); const d = Math.hypot(dx, dy) || 1; Q.set(key, q = { ids: [], x: fx, y: fy, dx: dx / d, dy: dy / d, n: o && o.n, own: o && o.own, avoid: o && o.avoid, ver, rev: 0 }); q.slots = lineSlots(q); }
+    else if (q.ver !== ver) { q.ver = ver; q.rev++; q.slots = lineSlots(q); } // (the ground changed under the line — a building, a wall —: its places again)
     if (v._q !== key) { L.leaveQueue(v); q.ids.push(v.id); v._q = key; t.qk = -1; }
     const k = Math.min(q.ids.indexOf(v.id), q.slots.length - 1);
     const [sx, sy] = q.slots[k];
-    if (t.qk !== k) { t.qk = k; t.qpath = G.dist(v.x, v.y, sx, sy) > 1.6 && !W.losClear(v.x, v.y, sx, sy) ? !!H.goto(v, sx, sy, false) : false; }
+    if (t.qk !== k || t.qrev !== q.rev) { t.qk = k; t.qrev = q.rev; t.qpath = G.dist(v.x, v.y, sx, sy) > 1.6 && !W.losClear(v.x, v.y, sx, sy) ? !!H.goto(v, sx, sy, false) : false; }
     const d = G.dist(v.x, v.y, sx, sy);
     if (t.qpath && !H.arrived(v)) { H.move(v, dt, 0.9); v.act = ''; return false; }
     if (d > 0.08) { // the last steps, or shuffling forward
@@ -194,7 +246,7 @@
     const S = G.S;
     for (const [key, q] of Q) { q.ids = q.ids.filter(id => { const v = S.villagers.get(id); return v && v._q === key; }); if (!q.ids.length) Q.delete(key); }
   }
-  L.queues = () => [...Q.entries()].map(([key, q]) => ({ key, n: q.ids.length, x: q.x, y: q.y, ids: q.ids.slice() }));
+  L.queues = () => [...Q.entries()].map(([key, q]) => ({ key, n: q.ids.length, x: q.x, y: q.y, ids: q.ids.slice(), slots: q.slots, places: q.n || L.LINE, own: q.own || 0, avoid: q.avoid || [], why: q.why, fresh: q.ver === lineVer() }));
 
   // ============================== water for the house ==============================
   // a house drinks its jar in about a day; someone goes to the well, waits in line and brings it back
@@ -229,7 +281,7 @@
     if (t.st === 1) { // the line at the well
       const w = S.buildings.get(t.src.well.id); if (!w) return H.end(v);
       if (G.dist(v.x, v.y, t.src.x, t.src.y) > 5 && !v._q) { if (!t.walk) { if (!H.goto(v, t.src.x + t.src.dx * 1.5, t.src.y + t.src.dy * 1.5, false)) { if (!G.Vg.gotoB(v, w)) return H.end(v); } t.walk = true; } if (!H.move(v, dt)) return; }
-      if (!L.inLine(v, t, 'well:' + w.id, t.src.x, t.src.y, t.src.dx, t.src.dy, dt, H)) { if (t.waited > 40) { L.leaveQueue(v); return H.end(v); } return; }
+      if (!L.inLine(v, t, 'well:' + w.id, t.src.x, t.src.y, t.src.dx, t.src.dy, dt, H, { own: w.id })) { if (t.waited > 40) { L.leaveQueue(v); return H.end(v); } return; }
       t.st = 2; v.actT = 0; G.faceTo(v, w.x - v.x, w.y - v.y);
       return;
     }
@@ -447,8 +499,11 @@
 
   // ============================== apprentices ==============================
   // from nine years on, children go with a parent to work, and copy what they do
-  const TEACH = { agricultor: 1, lenhador: 1, coletor: 1, mineiro: 1, construtor: 1, sacerdote: 1, guerreiro: 1, pastor: 1, cavalarico: 1, ferreiro: 1, tecelao: 1, oleiro: 1, ourives: 1, acougueiro: 1, mercador: 1, feirante: 1, taverneiro: 1, escriba: 1, cacador: 1 };
-  const WORKING = { chop: 1, gather: 1, mine: 1, farm: 1, build: 1, fish: 1, quarry: 1, herd: 1, fodder: 1, penwork: 1, craft: 1, dig: 1, desk: 1, sell: 1, stay: 1, serve: 1, pray: 1, drill: 1, guard: 1, pave: 1, tend: 1, forage: 1, mint: 1, patrol: 1, deliver: 1, haul: 1, fetch: 1 };
+  const TEACH = { agricultor: 1, lenhador: 1, coletor: 1, mineiro: 1, construtor: 1, sacerdote: 1, guerreiro: 1, pastor: 1, cavalarico: 1, ferreiro: 1, tecelao: 1, oleiro: 1, ourives: 1, acougueiro: 1, mercador: 1, feirante: 1, taverneiro: 1, escriba: 1, cacador: 1, pescador: 1 };
+  const WORKING = { chop: 1, gather: 1, mine: 1, farm: 1, build: 1, fish: 1, quarry: 1, herd: 1, fodder: 1, penwork: 1, craft: 1, dig: 1, desk: 1, sell: 1, stay: 1, serve: 1, pray: 1, drill: 1, guard: 1, pave: 1, tend: 1, forage: 1, mint: 1, patrol: 1, deliver: 1, haul: 1, fetch: 1, redes: 1 };
+  // (beside one who fishes — at the shore, or mending the nets on the quay —, the hand for fishing comes too: by watching,
+  // up to a fair hand; the master's own comes from his catches)
+  const FISHING = { fish: 1, redes: 1 };
   const LEARN_AT = 0.8;
   function master(v) {
     const S = G.S;
@@ -486,6 +541,7 @@
       v.act = m.act === 'fight' ? 'drill' : m.act; v.actT = Math.max(0, m.actT - 0.18); G.faceAs(v, m);
       v.learn = v.learn || {};
       const before = v.learn[m.role] || 0; v.learn[m.role] = before + dt * 4 / DAY();
+      if (FISHING[m.task.type]) v.fishXp = Math.min(60, (v.fishXp || 0) + dt * 0.12);
       if (before < LEARN_AT && v.learn[m.role] >= LEARN_AT) { v.skill = m.role; L.bio(v, 'learned', m.role); G.Vg.emote(v, 'happy', 2); G.Vg.emote(m, 'heart', 2); }
       if (G.R() < dt * 0.06) G.Vg.emote(m, G.R() < 0.5 ? 'chat' : 'happy', 1.2);
       if (G.R() < dt * 0.05) G.Vg.emote(v, 'question', 1.1);

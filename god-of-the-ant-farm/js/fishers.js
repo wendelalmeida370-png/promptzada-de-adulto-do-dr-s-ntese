@@ -43,7 +43,7 @@
     if (pop > 110 && big < 2 && G.R() < 0.35) return 'traineira';
     return pop < 18 && G.R() < 0.5 ? 'canoa' : 'barco';
   }
-  const FISHERS = { barco: 1, descarga: 1, redes: 1, estaleiro: 1 };
+  const FISHERS = { barco: 1, descarga: 1, redes: 1, estaleiro: 1, fish: 1 }; // (fish: the line or the net in the hands at the shore)
   Fi.TASKS = FISHERS;
   const docksOfSet = sid => { const out = []; for (const b of G.S.buildings.values()) if (b.type === 'doca' && b.built && b.set === sid) out.push(b); return out; };
   const boatsOf = b => G.S.ships.filter(o => o.dock === b.id && o.kind === 'pesca');
@@ -205,7 +205,8 @@
     const S = G.S;
     // the spots this port knows, worth less where they have been fished too hard
     const sp = (b.spots || []).filter(o => W.inb(o.x, o.y) && S.type[W.idx(o.x, o.y)] <= T.SEA && Nv.compAt(o.x, o.y) === Nv.compAt(s.x, s.y));
-    const val = o => o.q / (1 + Math.max(0, (o.p || 0) - 2) * 0.3);
+    // (and where the fish still are: a water fished out is worth little until it comes back — act-pesca.js)
+    const val = o => o.q / (1 + Math.max(0, (o.p || 0) - 2) * 0.3) * (G.Pesca ? 0.2 + G.Pesca.abundance(o.x, o.y) : 1);
     if (sp.length && G.R() < 0.7) { sp.sort((a, c) => val(c) - val(a)); const o = sp[G.R() < 0.75 ? 0 : Math.min(sp.length - 1, 1)]; return [o.x + G.rr(-0.6, 0.6), o.y + G.rr(-0.6, 0.6), null, o]; }
     const p = Nv._fishingSpot(s); return p;
   }
@@ -219,10 +220,13 @@
     const S = G.S; const cl = Fi.cls(s);
     const sh = S.fish.find(f => f.id === s.shoal && G.dist(f.x, f.y, s.x, s.y) < 3) || S.fish.find(f => G.dist(f.x, f.y, s.x, s.y) < 2.2);
     const skill = crew.length ? crew.reduce((n, v) => n + Math.min(1.35, 0.85 + (v.fishXp || 0) / 120), 0) / crew.length : 1;
-    const spot = s.spot && s.spot[3]; const over = spot ? 1 / (1 + Math.max(0, (spot.p || 0) - 2) * 0.3) : 1;
+    // (the water's own fish: what the net brings up follows what the ground still holds, and leaves it — act-pesca.js; the
+    // old pressure on a spot was a stand-in for that, and goes when the fish are counted)
+    const spot = s.spot && s.spot[3]; const over = G.Pesca ? 1 : spot ? 1 / (1 + Math.max(0, (spot.p || 0) - 2) * 0.3) : 1;
     let n = G.rr(4, 8) * G.Civ.t(s.fac, 'fish') * (sh ? 1.8 : 1) * Math.pow(crew.length / cl.crew, 0.7) * cl.hold * skill * over;
-    if (sh) { sh.n -= n; if (sh.n <= 0) S.fish.splice(S.fish.indexOf(sh), 1); }
-    n = Math.max(1, Math.round(n));
+    if (G.Pesca) n = G.Pesca.take(s.x, s.y, n * G.Pesca.abundance(s.x, s.y));
+    if (sh && n > 0) { sh.n -= n; if (sh.n <= 0) S.fish.splice(S.fish.indexOf(sh), 1); }
+    n = G.Pesca ? n : Math.max(1, Math.round(n));
     learnSpot(b, s.x, s.y, n / Math.max(1, 6 * cl.hold));
     return n;
   }

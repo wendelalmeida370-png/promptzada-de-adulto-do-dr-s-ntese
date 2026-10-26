@@ -808,6 +808,15 @@
           if (w.carry && w.carry.n > 0 && !w.carry.fish) return { ok: false, why: 'Suas mãos já estão cheias.' };
           // (the water may have frozen or gone meanwhile — the god's winter, the sea opened)
           { const S = G.S, i = W.idx(t.x, t.y); if (!(S.type[i] === G.T.RIVER || S.type[i] <= G.T.SEA) || (S.ice && S.ice[i]) || (S.dry && S.dry[i])) return { ok: false, why: 'A água não está mais ali.' }; }
+          // (the world's own fishing, act-pesca.js: that water's fish, counted out of its ground, by the hands' way and the
+          // fisher's hand — the hands are slower than a line —, the world's dice, into the hands through the ledger ('pesca');
+          // another kind with no hand for it goes back to the water, and to its ground)
+          if (G.Pesca) {
+            const r = G.Pesca.cast(w, t.x, t.y, { how: 'maos' });
+            const nm = r.name ? (/a$/.test(r.name) ? 'uma ' : 'um ') + r.name : 'um peixe';
+            if (!r.ok) return r.miss ? { ok: false, why: 'Escapou entre os dedos…', slip: 1 } : { ok: false, why: r.other ? `Você pegou ${nm}, mas não tem mão para ele: solta de volta.` : r.why || 'Escapou entre os dedos…', slip: r.other ? 1 : 0 };
+            G.Possess.deed('pesca'); return { ok: true, nm };
+          }
           // (the world's dice: the hands are slower than a line; and what bites is that water's own fish)
           if (G.R() < 0.55) return { ok: false, why: 'Escapou entre os dedos…', slip: 1 };
           const c = G.Waters ? G.Waters.catchCarry(w, t.x, t.y, 1) : { k: 'food', n: 1, fish: 'carpa' };

@@ -93,7 +93,10 @@ const since = t0 => ({ sales: run.sales - t0.sales, rev: r2(run.rev - t0.rev), c
   // (a full quay of stone — ten crates, three trips each for one pair of arms — so that the skip and the body find it under way)
   const sh = S.ships.find(s => s.kind === 'mercante'); sh.goods = { k: 'stone', n: 40 }; G.Harbor.land(dock, sh.goods, sh);
   const opId = P.opAt(dock).id; const trail = [];
-  const note = w => { const o = A.get(opId); trail.push(`${w}: ${o ? (o.done.stone || 0) + ' de 40' + (A.live(o) ? '' : ' (' + A.STATES[o.st] + ')') : '—'}`); };
+  // (what the unloading took: the test's 40, and whatever another ship landed into it meanwhile — a merchant ship home with
+  // its return cargo lands it into the unloading under way)
+  const want = () => { const o = A.get(opId); return o ? Math.max(40, (o.taken && o.taken.stone) || 0) : 40; };
+  const note = w => { const o = A.get(opId); trail.push(`${w}: ${o ? (o.done.stone || 0) + ' de ' + want() + (A.live(o) ? '' : ' (' + A.STATES[o.st] + ')') : '—'}`); };
   steps(150); note('passo');
   G.Skip.on = true; G.FX.off = true; try { for (let k = 0; k < 6; k++) G.Main.skipStep(1); } finally { G.Skip.on = false; G.FX.off = false; } note('salto');
   const pv = [...S.villagers.values()].find(v => v.carry && v.carry.op === opId) || [...S.villagers.values()].find(v => A.roleOf(v) && A.roleOf(v).op.id === opId);
@@ -102,7 +105,7 @@ const since = t0 => ({ sales: run.sales - t0.sales, rev: r2(run.rev - t0.rev), c
   const str = G.Save.serialize(); if (G.UI && G.UI.select) G.UI.select(null); G.Save.apply(JSON.parse(str)); G.Main.mode = 'game'; S = G.S; note('save/load');
   for (let k = 0; k < 6000 && A.live(A.get(opId)); k++) G.debug.step(0.1); note('passo');
   const o = A.get(opId); const bk = books();
-  ok('B passo, salto, corpo, save', bodied && !!o && o.st === 'ok' && o.done.stone === 40 && !bk.open && !bad().length, `${trail.join(' → ')}; as contas da descarga ${bk.open ? 'NÃO fecham' : 'fecham'}`);
+  ok('B passo, salto, corpo, save', bodied && !!o && o.st === 'ok' && o.done.stone === want() && !bk.open && !bad().length, `${trail.join(' → ')}${want() > 40 ? ` (as 40 do teste e ${want() - 40} que outro navio desembarcou na mesma descarga)` : ''}; as contas da descarga ${bk.open ? 'NÃO fecham' : 'fecham'}`);
 }
 // ---------------- C: two days away (by the skip): the people of the activities and the stalls' books, coherent
 {

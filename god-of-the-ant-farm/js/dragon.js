@@ -187,8 +187,9 @@
     let n = 0;
     if (G.Eco.coinage(f.id)) {
       const houses = [...S.buildings.values()].filter(b => b.set === s.id && b.built && G.BDEF[b.type].housing && (b.coin || 0) > 0).sort((a, b) => b.coin - a.coin || a.id - b.id).slice(0, 8);
-      for (const h of houses) { const k = Math.round(h.coin * 0.35 * 100) / 100; h.coin = Math.round((h.coin - k) * 100) / 100; n += k; }
-      const k = Math.round((f.stock.moedas || 0) * 0.25 * 100) / 100; f.stock.moedas -= k; n += k;
+      // (the coins go into the hoard, out of the houses and the treasury in the ledger: 'dragao')
+      for (const h of houses) { const k = Math.round(h.coin * 0.35 * 100) / 100; const r = G.Depot.use('h:' + h.id, 'moedas', k, { code: 'dragao', mine: true }); if (r.ok) n += r.n; }
+      const k = Math.round((f.stock.moedas || 0) * 0.25 * 100) / 100; const r = G.Depot.use('f:' + f.id, 'moedas', k, { code: 'dragao', mine: true }); if (r.ok) n += r.n;
     } else {
       const k = Math.round((f.stock.ouro || 0) * 0.3 * 100) / 100; f.stock.ouro = (f.stock.ouro || 0) - k; n += k * 6;
     }

@@ -1000,11 +1000,11 @@
   P.tradeArrive = function (v, t) {
     const S = G.S; const a = G.Fac.get(t.from), b = G.Fac.get(t.to); if (!a || !b || !b.alive) return false;
     const r = G.Fac.rel(a.id, b.id); if (!r || r.st === 'guerra') return false;
-    if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, b.id); v.carry = null; }
+    if (v.carry) G.Vg.toStore(v, b.id, 'caravana');
     // merchant peoples and coinage get better deals
     const deal = 1.1 * G.Civ.t(a.id, 'trade') * (G.Civ.has(a.id, 'moeda') ? 1.2 : 1);
     const m = Math.min(Math.floor(t.n * deal), Math.floor(b.stock[t.want] * 0.35));
-    if (m > 0) { b.stock[t.want] -= m; v.carry = { k: t.want, n: m }; }
+    if (m > 0) G.Depot.move('f:' + b.id, 'v:' + v.id, t.want, m, { code: 'caravana-troca', by: v.id, pack: true });
     r.op = Math.min(100, r.op + 5); r.friend = Math.min(100, r.friend + 4); r.trade = (r.trade || 0) + 1;
     const MAT = { food: 'comida', wood: 'madeira', stone: 'pedra' };
     if (r.trade <= 1 || G.R() < 0.25) log(`Uma caravana de ${a.name} trocou ${MAT[t.give]} por ${MAT[t.want]} com ${b.name}.`, 'trade', v.x, v.y);
@@ -1013,7 +1013,7 @@
     if (!v.partner && v.age >= 17 && v.age <= 45 && G.R() < 0.3) {
       let o = null; for (const x of S.villagers.values()) if (x.set === G.Fac.capitalOf(b.id)?.id && !x.partner && !x.captive && x.g !== v.g && x.age >= 17 && x.age <= 45 && Math.abs(x.age - v.age) < 14 && x.id !== b.leader && !isKin(x, v)) { o = x; break; }
       if (o) {
-        if (v.carry) { G.Village.addStock(v.carry.k, v.carry.n, b.id); v.carry = null; }
+        if (v.carry) G.Vg.toStore(v, b.id, 'caravana');
         v.partner = o.id; o.partner = v.id; v.widow = 0; o.widow = 0; v.set = o.set; v.home = 0;
         r.marr = (r.marr || 0) + 1; r.op = Math.min(100, r.op + 8);
         G.FX && G.FX.hearts(v.x, v.y);
