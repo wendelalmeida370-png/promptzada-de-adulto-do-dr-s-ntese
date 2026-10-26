@@ -134,8 +134,9 @@
       if (!l.length) { b.empty = (b.empty || 0) + 1; if (b.empty >= 2) { for (const [k, n] of Object.entries(G.Depot.list('h:' + b.id))) if (n > 1e-6) G.Depot.store('h:' + b.id, G.Village.facOfSet(set.id), k, n, { code: 'ruína' }); G.Village.removeBuilding(b); } continue; }
       b.empty = 0;
       let to = null; for (const [id, n] of space) if (n >= l.length) { to = id; break; }
-      // (the family's things go with it to the house with room: the shack's coins and goods, in the ledger)
-      if (to) { const by = (l.find(v => v.age >= 16) || l[0]).id; for (const [k, n] of Object.entries(G.Depot.list('h:' + b.id))) if (n > 1e-6) G.Depot.move('h:' + b.id, 'h:' + to, k, n, { code: 'mudança', by, part: true }); for (const v of l) { v.home = to; v.hhType = S.buildings.get(to).type; } space.set(to, space.get(to) - l.length); if (S.day - (b.born || 0) >= 3) { note(set, l[0], `deixou o barraco e foi morar numa casa de verdade`); for (const v of l) if (v.age >= 16) bio(v, 'Deixou o barraco e foi morar numa casa de verdade.', 'Morei num barraco de tábuas até conseguir uma casa de verdade'); } continue; }
+      // (the family's things go with it to the house with room: the shack's coins and goods, in the ledger — all of them, on
+      // the floor where the furniture is full: the shack left behind would give them to the people, D-059)
+      if (to) { const by = (l.find(v => v.age >= 16) || l[0]).id; for (const [k, n] of Object.entries(G.Depot.list('h:' + b.id))) if (n > 1e-6) G.Depot.move('h:' + b.id, 'h:' + to, k, n, { code: 'mudança', by, part: true, floor: true }); for (const v of l) { v.home = to; v.hhType = S.buildings.get(to).type; } space.set(to, space.get(to) - l.length); if (S.day - (b.born || 0) >= 3) { note(set, l[0], `deixou o barraco e foi morar numa casa de verdade`); for (const v of l) if (v.age >= 16) bio(v, 'Deixou o barraco e foi morar numa casa de verdade.', 'Morei num barraco de tábuas até conseguir uma casa de verdade'); } continue; }
       const coin = b.coin || 0;
       // (the walls of a hut are the people's wood, paid at the treasury: through the ledger; no wood in the store, no hut)
       const f = G.Fac.get(G.Village.facOfSet(set.id)); const wood = G.BDEF.hut.cost.wood || 10;

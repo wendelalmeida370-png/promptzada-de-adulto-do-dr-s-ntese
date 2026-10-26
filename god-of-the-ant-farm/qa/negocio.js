@@ -121,10 +121,12 @@ const z1 = B.of(merchants()[0]); const m1 = S.villagers.get(z1.owner);
   ok('n3 a banca mostra o que tem', same && disp.length >= 1, `exposto: ${disp.map(g => `${g.n} ${E.name(g.k)} (${g.form}) a ${g.price}`).join(', ')}`);
 }
 // a buyer: a grown person of the town with a house, not a merchant, who reaches the counter (the first by id, or the last);
-// free of an urgent errand if one is (a fire, a muster), rested and fed — a tired one goes to bed before the stall, a hungry
-// one to the pantry: if none is, the test's hand
-function pickBuyer(town, sp, not, last) {
-  const L = [...S.villagers.values()].filter(v => v.set === town.id && !not.includes(v.id) && v.age >= 18 && !v.captive && !v.jail && !v.aboard && v.home && E.homeOf(v) && v.role !== 'mercador' && G.W.reaches(v, sp.buyer[0], sp.buyer[1])).sort((a, b) => (last ? b.id - a.id : a.id - b.id));
+// with room at home for the good, if the case names one (with the interiors' furniture a full house does not buy — D-059;
+// if no house has room, the first anyway: the case says why it did not buy); free of an urgent errand if one is (a fire, a
+// muster), rested and fed — a tired one goes to bed before the stall, a hungry one to the pantry: if none is, the test's hand
+function pickBuyer(town, sp, not, last, k) {
+  let L = [...S.villagers.values()].filter(v => v.set === town.id && !not.includes(v.id) && v.age >= 18 && !v.captive && !v.jail && !v.aboard && v.home && E.homeOf(v) && v.role !== 'mercador' && G.W.reaches(v, sp.buyer[0], sp.buyer[1])).sort((a, b) => (last ? b.id - a.id : a.id - b.id));
+  if (k) { const roomy = L.filter(o => D.room('h:' + o.home, k) + 1e-6 >= 1); if (roomy.length) L = roomy; }
   // (and with free hands: a load in them has somewhere to go first, and a purchase does not fit)
   const calm = o => !(o.task && o.task.pri >= 1.5) && !(o.carry && o.carry.n > 0);
   const v = L.find(o => calm(o) && o.energy > 45 && o.hunger < 55 && !o.sleeping) || L.find(calm) || L[0] || null;
@@ -137,7 +139,7 @@ function sendBuyer(town, z, k, not, prep, until, sec) {
   const tried = [];
   for (let i = 0; i < 3; i++) {
     if (z.st !== 'on') return null; // (the stall closed meanwhile: the case's own retry, with the merchant the town has now)
-    const v = pickBuyer(town, B.spots(z), not.concat(tried)); if (!v) return null;
+    const v = pickBuyer(town, B.spots(z), not.concat(tried), false, k); if (!v) return null;
     tried.push(v.id); prep(v);
     G.Vg.setTask(v, { type: 'compra', biz: z.id, k, pri: 1.3, st: 0 });
     let away = '';
@@ -153,7 +155,7 @@ const mates = o => [...S.villagers.values()].filter(q => o.home && q.home === o.
 // (and brought to the market's door — the test's hand: the deal is the subject, not the walk across town, and a long walk
 // ends in the evening, when the stall closes)
 function buyerFor(k, coins, not) {
-  const sp = B.spots(z1); const v = pickBuyer(set, sp, [m1.id].concat(not || [])); if (!v) return null;
+  const sp = B.spots(z1); const v = pickBuyer(set, sp, [m1.id].concat(not || []), false, k); if (!v) return null;
   G.Vg.endTask(v); const nx = sp.buyer[0] + (sp.dx || 0) * 1.5, ny = sp.buyer[1] + (sp.dy || 0) * 1.5;
   if (G.W.walkableXY(nx, ny) && G.W.canWalk(nx, ny, sp.buyer[0], sp.buyer[1], false)) { v.x = nx; v.y = ny; } else { v.x = sp.buyer[0]; v.y = sp.buyer[1]; } v.path = null;
   const h = E.homeOf(v);
@@ -396,7 +398,7 @@ function stallNow() {
   // (a buyer the world calls away on the way — an assembly, a fire —: another one, as sendBuyer does)
   let v = null, tb = null, sold = false; const tried = [m.id];
   for (let i = 0; i < 3 && !(z.day.n > n0); i++) {
-    v = pickBuyer(set, sp, tried); if (!v) break; tried.push(v.id);
+    v = pickBuyer(set, sp, tried, false, k); if (!v) break; tried.push(v.id);
     D.make('h:' + E.homeOf(v).id, 'moedas', 20, { code: 'teste' });
     tb = G.Vg.setTask(v, { type: 'compra', biz: z.id, k, pri: 1.3, st: 0 });
     sold = fine(120, () => { m.x = sp.seller[0]; m.y = sp.seller[1]; return z.day.n > n0 || !v.task || v.task.type !== 'compra' || watch(); });
@@ -415,11 +417,13 @@ function stallNow() {
   S.time = 0.15; live(1);
   const sw = stallNow(); start = prep(z, m) + sw; S.time = 0.15;
   const sp = B.spots(z);
-  const v = pickBuyer(set, sp, [m.id], true);
+  // (one whose house has room for the counter's first good: a full house does not buy — D-059)
+  const kq = goodOf(z); const v = pickBuyer(set, sp, [m.id], true, kq);
   const h = E.homeOf(v); D.make('h:' + h.id, 'moedas', 30, { code: 'teste' });
   const tk = G.Possess.take(v); M.viver(0.2); v.x = sp.buyer[0]; v.y = sp.buyer[1]; M.viver(0.2);
-  // (a good the counter offers the body — the first ones shown — dearer today, so that the haggle has room)
-  const o0 = A.offers(v, v.x, v.y, 2).find(o => o.act === 'pechinchar' && o.biz === z.id && o.k !== 'food') || A.offers(v, v.x, v.y, 2).find(o => o.act === 'pechinchar' && o.biz === z.id);
+  // (a good the counter offers the body — that one, or the first ones shown — dearer today, so that the haggle has room)
+  const offs = A.offers(v, v.x, v.y, 2).filter(o => o.act === 'pechinchar' && o.biz === z.id);
+  const o0 = offs.find(o => o.k === kq) || offs.find(o => o.k !== 'food') || offs[0];
   const k = o0 ? o0.k : goodOf(z); z.margin[k] = 0.3;
   const oh = A.offers(v, v.x, v.y, 2).find(o => o.act === 'pechinchar' && o.biz === z.id && o.k === k);
   const r1 = oh ? A.perform(v, oh) : { ok: false, why: 'sem oferta de pechincha' };
@@ -444,11 +448,11 @@ function stallNow() {
   // other cases bring their buyer, with the coins for it)
   const nx = sp.buyer[0] + (sp.dx || 0) * 1.5, ny = sp.buyer[1] + (sp.dy || 0) * 1.5; const atDoor = G.W.walkableXY(nx, ny) && G.W.canWalk(nx, ny, sp.buyer[0], sp.buyer[1], false);
   const send = v => { G.Vg.endTask(v); if (atDoor) { v.x = nx; v.y = ny; } else { v.x = sp.buyer[0]; v.y = sp.buyer[1]; } v.path = null; v.energy = Math.max(v.energy, 70); v.hunger = Math.min(v.hunger, 30); D.make('h:' + E.homeOf(v).id, 'moedas', 20, { code: 'teste' }); return G.Vg.setTask(v, { type: 'compra', biz: z.id, k, pri: 1.3, st: 0 }); };
-  const eight = []; for (let i = 0; i < B.LINE; i++) { const v = pickBuyer(set, sp, [m.id].concat(eight.map(o => o.id))); if (!v) break; eight.push(v); }
+  const eight = []; for (let i = 0; i < B.LINE; i++) { const v = pickBuyer(set, sp, [m.id].concat(eight.map(o => o.id)), false, k); if (!v) break; eight.push(v); }
   for (const v of eight) send(v);
   let most = 0; fine(20, () => { most = Math.max(most, G.Life.queueLen(key)); return most >= B.LINE || watch(); });
   // (the ninth, while the first of the eight is at the counter)
-  const ninth = pickBuyer(set, sp, [m.id].concat(eight.map(o => o.id)));
+  const ninth = pickBuyer(set, sp, [m.id].concat(eight.map(o => o.id)), false, k);
   let sad = false, inLineAtAsk = G.Life.queueLen(key); const L0 = S.ledgerN, t0 = S.clock;
   const t9 = ninth ? send(ninth) : null;
   if (ninth) fine(10, () => { if (ninth.emo && ninth.emo.k === 'sad') sad = true; return !ninth.task || ninth.task !== t9 || watch(); });

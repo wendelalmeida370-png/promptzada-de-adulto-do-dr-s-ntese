@@ -248,8 +248,9 @@
     if (!b.progress) G.Village.removeBuilding(b);
   }
   // moving: the family's people to the new house, and what is theirs with them — all of it when the whole household goes,
-  // its share of the pantry, the goods and the coins when it leaves others behind (the house's pot is everyone's in it).
-  // Then the family puts its things in order (the note; the house's own furniture is the interiors')
+  // its share of the pantry, the goods and the coins when it leaves others behind (the house's pot is everyone's in it):
+  // what the new furniture has no room for comes too, on the floor (D-059: the house left behind would give it to the
+  // people). Then the family puts its things in order (the note; the house's own furniture is the interiors')
   function move(fam, b, how) {
     const S = G.S; const from = fam[0].home && S.buildings.get(fam[0].home);
     const left = from && built(from) ? residents(from).filter(v => !fam.includes(v)) : [];
@@ -257,7 +258,7 @@
     if (from && built(from) && from.id !== b.id) {
       const share = left.length ? fam.length / (fam.length + left.length) : 1;
       for (const [k, n] of Object.entries(D.list('h:' + from.id))) {
-        const q = r2(n * share); if (q > EPS) { const r = D.move('h:' + from.id, 'h:' + b.id, k, q, { code: 'mudança', by: fam[0].id, part: true }); if (r.ok && r.n > EPS) brought.push(`${Math.round(r.n * 10) / 10} de ${E.name(k)}`); }
+        const q = r2(n * share); if (q > EPS) { const r = D.move('h:' + from.id, 'h:' + b.id, k, q, { code: 'mudança', by: fam[0].id, part: true, floor: true }); if (r.ok && r.n > EPS) brought.push(`${Math.round(r.n * 10) / 10} de ${E.name(k)}`); }
       }
       if (!left.length && from.type === 'barraco') from.empty = 2; // (the shack left behind falls down)
       if (from.aluga && !left.length) from.aluga = null;

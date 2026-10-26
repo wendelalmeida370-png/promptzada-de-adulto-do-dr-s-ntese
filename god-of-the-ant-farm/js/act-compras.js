@@ -15,29 +15,31 @@
 // ============================================================
 (function (G) {
   const C = G.Compras = {};
-  const E = G.Eco, A = G.Act;
+  const E = G.Eco, A = G.Act, D = G.Depot;
   const EPS = 1e-6;
   const DAYS = 3;    // (what a house keeps of each thing it uses: three days of it)
   const GAP = 0.5;   // (half a day between two errands of the same house)
   const LUXURY = { joias: 1 };
 
   // what the house lacks, the most lacking first: [{ k, n (how many to buy), lack (0..1) }] — counted from the house,
-  // nothing drawn by chance (a rich house's fancies are added when the errand is chosen)
+  // nothing drawn by chance (a rich house's fancies are added when the errand is chosen). As much as the house has room for:
+  // with the interiors' furniture a house keeps what its pieces hold (D-053), and a full house feels no lack (D-059)
   C.list = function (h) {
     const out = []; if (!h || !G.BDEF[h.type] || !G.BDEF[h.type].housing) return out;
     const res = h.res || 0; if (!res) return out;
-    const I = h.inv || {};
+    const I = h.inv || {}; const room = k => Math.floor(D.room('h:' + h.id, k) + EPS);
     // (a house that saves for a roof of its own — act-casa.js — buys no luxury meanwhile)
     const saving = G.Casa && G.Casa.saving(h);
     for (const k in E.HOUSE_WANTS) {
       if (saving && LUXURY[k]) continue;
       const target = Math.max(1, res * E.HOUSE_WANTS[k] * DAYS);
       const have = I[k] || 0; if (have >= target - EPS) continue;
-      out.push({ k, n: Math.ceil(target - have - EPS), lack: Math.min(1, 1 - have / target), use: res * E.HOUSE_WANTS[k] });
+      const n = Math.min(Math.ceil(target - have - EPS), room(k)); if (n < 1) continue;
+      out.push({ k, n, lack: Math.min(1, 1 - have / target), use: res * E.HOUSE_WANTS[k] });
     }
     // (food for suppers at home: a day and a half for each — the common store feeds the rest)
     const food = res * 1.5, pan = h.pantry || 0;
-    if (pan < food - EPS) out.push({ k: 'food', n: Math.ceil(food - pan - EPS), lack: Math.min(1, 1 - pan / food) * 0.6, use: 0 });
+    if (pan < food - EPS) { const n = Math.min(Math.ceil(food - pan - EPS), room('food')); if (n >= 1) out.push({ k: 'food', n, lack: Math.min(1, 1 - pan / food) * 0.6, use: 0 }); }
     // (the most lacking first; of two as lacking, the one the house goes through faster)
     out.sort((a, b) => b.lack - a.lack || b.use - a.use || (a.k < b.k ? -1 : 1));
     return out;
