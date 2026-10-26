@@ -3132,9 +3132,11 @@ float m3scale(float p) {
       const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(); const K = kit(g, b, gp); draw(g, gw, K, false);
       const P = g.p; let bad = 0, lo = 1e9, x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
       for (const arr of [P, g.n, gw.p, gp.p]) for (let k = 0; k < arr.length; k++) if (!Number.isFinite(arr[k])) bad++;
-      // (the steps before a door that come down into the street stand out of the lot by rights: not counted in how far it goes)
+      // (the steps before a door that come down into the street stand out of the lot by rights, on the street's ground — lower
+      // than the lot's on a slope —: not counted in how far it goes, nor in how low; each tread stands on the ground under it,
+      // a hand into it — Space.doorFlight —, and its top over it: the cut by the ground below says so)
       const onStep = (X, Z) => !!K.steps && K.steps.some(r => X >= r[0] - 0.02 && X <= r[1] + 0.02 && Z >= r[2] - 0.02 && Z <= r[3] + 0.02);
-      for (let k = 0; k < P.length; k += 3) { lo = Math.min(lo, P[k + 1]); if (onStep(P[k], P[k + 2])) continue; x0 = Math.min(x0, P[k]); x1 = Math.max(x1, P[k]); z0 = Math.min(z0, P[k + 2]); z1 = Math.max(z1, P[k + 2]); }
+      for (let k = 0; k < P.length; k += 3) { if (onStep(P[k], P[k + 2])) continue; lo = Math.min(lo, P[k + 1]); x0 = Math.min(x0, P[k]); x1 = Math.max(x1, P[k]); z0 = Math.min(z0, P[k + 2]); z1 = Math.max(z1, P[k + 2]); }
       const tag = `${b.type}#${b.id}`;
       if (bad) out.push(`${tag}: ${bad} números que não são números`);
       const over = Math.max(b.x * L - x0, x1 - (b.x + b.w) * L, b.y * L - z0, z1 - (b.y + b.h) * L);

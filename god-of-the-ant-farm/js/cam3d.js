@@ -38,8 +38,14 @@
   C3.fwd = () => fwd(C3.yaw, C3.pitch);
 
   // (the building the body is in — its rooms: the eye stays in them, never out through an open door to the street, where the
-  // walls would stand between it and the body; set each frame from the body, Avatar.indoors)
+  // walls would stand between it and the body; set each frame from the body, Avatar.indoors. Not while the body is in an outer
+  // door's opening or a stride from it, its back to the street: there is no room behind it yet, and the eye stays out — L-179)
   let room = null;
+  const byOuterDoor = (inn, body) => { const p = inn.p, b = inn.b, L = G.Space.TILE;
+    for (const h of p.holes) { const d = h.door >= 0 ? p.doors[h.door] : null; if (!d || !d.outer || h.kind === 'janela') continue; const w = p.walls[h.wall]; if (!w) continue;
+      const len = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const X = b.x * L + w.a[0] + (w.b[0] - w.a[0]) * h.at / len, Z = b.y * L + w.a[1] + (w.b[1] - w.a[1]) * h.at / len;
+      if (Math.hypot(body.X - X, body.Z - Z) < Math.max(0.7, h.w / 2 + 0.2)) return true; }
+    return false; };
   G.worldHooks.push(() => { room = null; });
   function outRoom(X, Z) {
     const b = room.b, sh = room.p.shell, L = G.Space.TILE; const x = X - b.x * L, z = Z - b.y * L;
@@ -82,12 +88,16 @@
     if (!inShell && !annex) return false; // (the yard, the street: open)
     if (annex) return y > (annex.h || 2.2) - 0.05 && y < (annex.h || 2.2) + 0.6; // (an annex's room under its lean-to)
     const lv = p.levels.slice().sort((a, c) => a.y - c.y); let l = null; for (const q of lv) if (y >= q.y - 0.02) l = q;
-    if (!l || y < l.y + 0.06) return true; // (in a floor, under the lowest)
+    const C = G.Interiors.CELL;
+    // (the hole a flight comes up through, in a storey's floor — its hatch, an open height —: where the head of one climbing it
+    // passes, and the eye with it — L-180; a flight that goes up from a storey stands on its floor)
+    const hole = q => { const hc = Sp.cellIn(p, q.lv, x, z); return hc === C.HATCH || hc === C.VOID; };
+    if (!l || (y < l.y + 0.06 && !(l !== lv[0] && hole(l)))) return true; // (in a floor, under the lowest)
     // (over a cellar's ground the earth: the eye stays under it)
     if (l.y < 0 && y < 0 && Y > W.hAt(X / L, Z / L) * G.Space.HM - 0.05) return true;
-    const up = lv.find(q => q.y > l.y + 0.05); const C = G.Interiors.CELL;
-    // (over the storey's rooms: a storey above — its slab —, or the roof)
-    if (y > l.y + l.h + 0.02) { if (up && y > up.y - (up.slab || 0.2) - 0.02) return true; if (!up) { const r = roofIn(p, x, z); return y > r - 0.3 && y < r + 0.7; } }
+    const up = lv.find(q => q.y > l.y + 0.05);
+    // (over the storey's rooms: a storey above — its slab, but for its hole —, or the roof)
+    if (y > l.y + l.h + 0.02) { if (up && y > up.y - (up.slab || 0.2) - 0.02) return !hole(up); if (!up) { const r = roofIn(p, x, z); return y > r - 0.3 && y < r + 0.7; } }
     const c = Sp.cellIn(p, l.lv, x, z);
     if (c === C.WALL) return true;
     if (c === C.SOLID) return y < l.y + 1.0;
@@ -113,7 +123,7 @@
   }
   // every frame: follow the body, keep clear of the world, place the camera
   C3.update = function (rdt, body, cam) {
-    clock += rdt; room = G.Avatar && G.Avatar.indoors ? G.Avatar.indoors() : null;
+    clock += rdt; room = G.Avatar && G.Avatar.indoors ? G.Avatar.indoors() : null; if (room && byOuterDoor(room, body)) room = null;
     const head = body.head !== undefined ? body.head : (body.h || 1.75) * 0.86;
     // (the world moved the body — a building rose where it stood, a scene, a load: the eye goes with it at once;
     // easing after it would fly through the houses on the way, and a pivot inside a house leaves the eye there — L-106)
