@@ -82,10 +82,12 @@
     const want = 0.25 + (tr.includes('Sociável') ? 0.25 : 0) + (tr.includes('Glutão') ? 0.2 : 0) + (v.mourn > 0 ? 0.3 : 0) - (tr.includes('Devoto') ? 0.15 : 0) - (G.isNight() && S.time > 0.92 ? 0.3 : 0) - t.rk * 0.12;
     if (G.R() > want) return;
     const f = G.Fac.ofV(v); const price = 0.3;
-    if (f && E.coinage(f.id) && !E.spend(v, price)) return; // (no coin, no round)
-    if (f && E.coinage(f.id)) b.takings = (b.takings || 0) + price;
+    // (the round is paid to the keeper's house — or, with no keeper, to the treasury —, in the ledger; no coin, no round)
+    const coin = !!(f && E.coinage(f.id)); const keeper = coin ? [...S.villagers.values()].find(o => o.job === b.id) : null; const kh = keeper && E.homeOf(keeper);
+    if (coin && !E.spend(v, price, kh ? 'h:' + kh.id : 'f:' + f.id, 'rodada')) return;
+    if (coin) b.takings = (b.takings || 0) + price;
     const I = b.inv; I[k] -= 0.5; t.rk++; v.drinks = (v.drinks || 0) + 1; v.drinkDay = S.day; b.served = (b.served || 0) + 1;
-    if (f && E.coinage(f.id)) { const keeper = [...S.villagers.values()].find(o => o.job === b.id); const kh = keeper && E.homeOf(keeper); if (kh) kh.coin = (kh.coin || 0) + price; else { f.stock.moedas += price; E.ensure(f); f.eco.sales += price; } }
+    if (coin && !kh) { E.ensure(f); f.eco.sales += price; }
     // the second round makes one tipsy, the third drunk for a long while
     if (v.drinks >= 2) v.drunk = Math.max(v.drunk || 0, S.clock + 30 + v.drinks * 22);
     t.dur = (t.dur || 16) + 7;

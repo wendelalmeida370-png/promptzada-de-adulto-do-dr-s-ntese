@@ -152,7 +152,7 @@
     else if (r && p && r.id !== p.id && vanity(r) > 0.55) { key = 'fr-pele-rei'; vars.RULER = styledOf(f.id, r); }
     else if (s.data.motive === 'ouro') {
       key = 'fr-pele-ouro';
-      if (f && G.Eco.coinage(f.id)) { const h = G.Eco.homeOf(p); const n = 24; if (h) h.coin = (h.coin || 0) + n; else p.purse = (p.purse || 0) + n; vars.COINS = n; }
+      if (f && G.Eco.coinage(f.id)) { const h = G.Eco.homeOf(p); const n = 24; G.Depot.make(h ? 'h:' + h.id : 'p:' + p.id, 'moedas', n, { code: 'historia', by: p.id }); vars.COINS = n; }
     } else key = 'fr-pele-gloria';
     if (p) { p.courage = Math.min(1, (p.courage || 0.5) + 0.06); G.Life && G.Life.bio(p, 'note', `Caçou ${c.B}`); }
     St.finish(s, 'cumprida', tone, St.say(s, key, Object.assign(c, vars)), o);
@@ -567,7 +567,7 @@
   }
   function sell(s, v) {
     const f = G.Fac.ofV(v); const vars = {};
-    if (f && G.Eco.coinage(f.id)) { const n = 40; const h = G.Eco.homeOf(v); if (h) h.coin = (h.coin || 0) + n; else v.purse = (v.purse || 0) + n; vars.COINS = n; }
+    if (f && G.Eco.coinage(f.id)) { const n = 40; const h = G.Eco.homeOf(v); G.Depot.make(h ? 'h:' + h.id : 'p:' + v.id, 'moedas', n, { code: 'historia', by: v.id }); vars.COINS = n; }
     G.Vg.emote(v, 'star', 2.5); G.Life && G.Life.bio(v, 'note', 'Vendeu uma pérola negra');
     return vars;
   }

@@ -83,12 +83,17 @@
     const z = zIdx.get(id); return z && z.st !== 'fim' ? z : null;
   }
   D.zOf = zOf;
-  // what a stall holds: its own sales furniture in the market; where the market has no plan, one counter of 20 that takes
-  // anything — the interiors' market stall — so that the room is the same before and after the plan (D-xxx: a stall is a
-  // counter, not a store; the merchant restocks as it sells)
-  const ZCAP = 20;
-  const COUNTER = [{ id: 0, kind: 'banca', keys: '*', cap: ZCAP }];
-  const zRoom = (z, k) => { const P = piecesOf('z', z) || COUNTER; let room = 0; for (const e of stow(P, z.inv || {}).ents) if (takes(e.m, k)) room += e.left; return Math.max(0, room); };
+  // what a stall holds: its own sales furniture in the market; where the market has no plan, one counter that takes
+  // anything — the interiors' market stall, the piece of their catalog itself (G.Interiors.ITEMS.banca, read when used: the
+  // interiors load after this file; 20 with no catalog) — so that the room is the same before and after the plan: one rule
+  // for the stall, in one place (D-xxx: a stall is a counter, not a store; the merchant restocks as it sells)
+  let counterOf = null;
+  const counter = () => {
+    const it = G.Interiors && G.Interiors.ITEMS && G.Interiors.ITEMS.banca; const cap = it && it.store && it.store.cap > 0 ? it.store.cap : 20;
+    if (!counterOf || counterOf[0].cap !== cap) counterOf = [{ id: 0, kind: 'banca', keys: '*', cap }];
+    return counterOf;
+  };
+  const zRoom = (z, k) => { const P = piecesOf('z', z) || counter(); let room = 0; for (const e of stow(P, z.inv || {}).ents) if (takes(e.m, k)) room += e.left; return Math.max(0, room); };
   // each kind of holder: the object, how much of a good it has, how much more fits, taking and putting (items keep their marks)
   const AD = {
     f: { // a people's store (the storehouses, barns, docks and fires are its doors)
@@ -826,6 +831,14 @@
       // what has no room there, to the people's store)
       D.move('v:' + v.id, c.to, c.k, c.n, { code: 'herdado', by: v.id, part: true });
       const fid = G.Fac.idOfV(v); if (v.carry && v.carry.n > EPS && D.exists('f:' + fid)) D.move('v:' + v.id, 'f:' + fid, v.carry.k, v.carry.n, { code: 'herdado', by: v.id, part: true });
+    }
+    // (the coins of the dead — the purse, a plain bag in the hands — are the household's: to the house they lived in, or,
+    // with no house, to the people's treasury; in the ledger)
+    if (v && G.S.villagers.has(v.id)) {
+      const home = v.home && G.S.buildings.get(v.home); const fid = G.Fac.idOfV(v);
+      const heir = home && D.exists('h:' + home.id) && home.type !== 'ruin' ? 'h:' + home.id : D.exists('f:' + fid) ? 'f:' + fid : null;
+      if (heir && (v.purse || 0) > EPS) D.move('p:' + v.id, heir, 'moedas', v.purse, { code: 'herdado', by: v.id, part: true });
+      const cc = v.carry; if (heir && cc && cc.k === 'moedas' && cc.n > EPS && !cc.op && !cc.to && !cc.cid) D.move('v:' + v.id, heir, 'moedas', cc.n, { code: 'herdado', by: v.id, part: true });
     }
     // (death is the one door out of the world: the dead leave every operation, and what they ran, at once)
     if (v && G.S.villagers.has(v.id)) { for (const op of ops()) if (live(op) && op.roles && op.roles[v.id]) A.leave(op, v, 'morte'); for (const f of A.hooks.gone) f(v, 'morte'); }

@@ -333,6 +333,9 @@ let z = B.get(z1.id); let m = S.villagers.get(z.owner); const mkb = () => S.buil
     [z.b, [{ id: z.b + ':banca', kind: 'banca', keys: '*', cap: zsum + 6, dep: 'predio', sale: z.slot }, { id: z.b + ':prateleira', kind: 'prateleira', keys: '*', cap: shsum + 5, dep: 'predio', sale: null }]]]);
   const kz = Object.keys(z.inv).filter(k => k !== 'moedas').sort()[0] || 'tecido';
   const other = B.all().find(q => q.b === z.b && q.id !== z.id && q.st === 'on');
+  // (the doors of the interiors as the game has them now — on or off —, put back at the end; the case measures with none,
+  // then with its own plan; C2's word)
+  const was = D.stores; D.stores = null;
   const oRoom0 = other ? D.room('z:' + other.id, kz) : 0;
   D.stores = b => plan.get(b.id) || null;
   const rf = D.room(H, 'food'), rt = D.room(H, 'tecido'), rc = D.room(H, 'moedas');
@@ -340,8 +343,11 @@ let z = B.get(z1.id); let m = S.villagers.get(z.owner); const mkb = () => S.buil
   const rf2 = D.room(H, 'food'); const sl = D.slots(H);
   const zr = D.room('z:' + z.id, kz), br = D.room('b:' + z.b, 'tecido'), oRoom = other ? D.room('z:' + other.id, kz) : 0;
   D.stores = null;
-  // (with no plan, the counter of today: 20 in all, every good shared — the D-xxx of the sales furniture)
-  const back = D.room(H, 'tecido') === Infinity && Math.abs(D.room('z:' + z.id, kz) - Math.max(0, 20 - sum(z.inv))) < 1e-6;
+  // (with no plan, the counter of today: the interiors' own stall piece in all — 20 —, every good shared — the D-xxx of the
+  // sales furniture)
+  const it0 = G.Interiors && G.Interiors.ITEMS && G.Interiors.ITEMS.banca; const cap0 = it0 && it0.store ? it0.store.cap : 20;
+  const back = D.room(H, 'tecido') === Infinity && Math.abs(D.room('z:' + z.id, kz) - Math.max(0, cap0 - sum(z.inv))) < 1e-6;
+  D.stores = was;
   const near = (a, b) => Math.abs(a - b) < 1e-6;
   const slOk = sl.length === 2 && sl.some(s => s.m === hh.id + ':tulha' && s.k === 'food' && near(s.n, 20)) && sl.some(s => s.m === hh.id + ':bau' && s.k === 'tecido' && near(s.n, 12));
   ok('n16 os móveis guardam', near(rf, 15) && near(rt, 7) && rc === Infinity && !mv1.ok && mv1.why === 'não cabe' && mv2.ok && near(mv2.n, 7) && near(rf2, 8) && slOk && near(zr, 6) && near(br, 5) && near(oRoom, oRoom0) && back && !bad().length,

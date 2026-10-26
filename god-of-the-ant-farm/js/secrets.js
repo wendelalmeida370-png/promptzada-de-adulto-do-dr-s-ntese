@@ -272,7 +272,7 @@
       if (w.fate === 'jurou' && investigating(v.id)) w.fate = 'fala';
       if (w.fate === 'jurou') { w.done = 1; join(q, v, 'iniciado'); log(`${v.name} recebeu uma visita à noite. No dia seguinte, não falou mais do que viu — e passou a sair nas noites sem lua.`, 'secret', v.x, v.y); continue; }
       if (w.fate === 'comprar') {
-        w.done = 1; const h = S.buildings.get(v.home); if (h) h.coin = (h.coin || 0) + 12;
+        w.done = 1; const h = S.buildings.get(v.home); if (h) G.Depot.make('h:' + h.id, 'moedas', 12, { code: 'segredo', by: v.id }); // (the bribe, in the ledger)
         if (G.R() < 0.7) { log(`Alguém deixou um saco de moedas na porta de ${v.name}. ${v.g === 'f' ? 'Ela' : 'Ele'} entendeu o recado e se calou.`, 'coin', v.x, v.y); continue; }
         w.fate = 'fala';
       }
@@ -469,7 +469,7 @@
       q.power[f.id] = Math.round(mem.reduce((s, v) => s + standing(v), 0));
       const r = P.ruler(f); if (!r || !mem.length || f.rev || f.coup) continue;
       // the merchants' league fills its brothers' purses
-      if (q.creed === 'ouro') for (const v of mem) { const h = S.buildings.get(v.home); if (h && G.Eco.coinage(f.id)) h.coin = (h.coin || 0) + 0.8; }
+      if (q.creed === 'ouro') for (const v of mem) { const h = S.buildings.get(v.home); if (h && G.Eco.coinage(f.id)) G.Depot.make('h:' + h.id, 'moedas', 0.8, { code: 'segredo', by: v.id }); }
       if (r.secret === q.id) continue;
       const mst = person(q.master);
       // a hand behind the throne: when the order is strong in a realm and its master is hungry, it strikes

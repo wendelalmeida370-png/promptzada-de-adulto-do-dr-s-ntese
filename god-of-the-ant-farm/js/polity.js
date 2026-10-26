@@ -249,14 +249,21 @@
       if (econ === 'templo') { b.owner = -1; if (newDay && coin) rent += 0.6; continue; }
       const h = b.owner > 0 && S.buildings.get(b.owner);
       if (!h || !h.built || h.set !== b.set) b.owner = pickOwner(b, f);
-      if (newDay && b.owner > 0 && coin) { const o = S.buildings.get(b.owner); if (o) o.coin = (o.coin || 0) + (econ === 'feudal' ? 1.6 : 1.1); }
+      // (the land's rent, born of the land, into the owner's house — in the ledger)
+      if (newDay && b.owner > 0 && coin) { const o = S.buildings.get(b.owner); if (o) G.Depot.make('h:' + o.id, 'moedas', econ === 'feudal' ? 1.6 : 1.1, { code: 'renda-da-terra' }); }
     }
-    if (newDay && rent) f.stock.moedas += rent;
-    // all is shared: what the houses saved goes back to a common purse, and out again, the same for each
+    if (newDay && rent) G.Depot.make('f:' + f.id, 'moedas', rent, { code: 'renda-da-terra' });
+    // all is shared: what the houses saved goes back to a common purse, and out again, the same for each — through the
+    // treasury, in the ledger ('comum'): the houses above the share pay in, the ones below are paid out
     if (newDay && econ === 'comunal' && coin) {
-      let sum = 0; for (const h of S.buildings.values()) if (h.coin && G.Village.facOfSet(h.set) === f.id) { sum += h.coin; pool.push(h); }
+      // (the houses that stand: the coins set aside in a house being raised are the work's, act-casa.js)
+      let sum = 0; for (const h of S.buildings.values()) if (h.coin && h.built && G.BDEF[h.type] && G.BDEF[h.type].housing && G.Village.facOfSet(h.set) === f.id) { sum += h.coin; pool.push(h); }
       for (const h of S.buildings.values()) if (G.BDEF[h.type] && G.BDEF[h.type].housing && h.built && G.Village.facOfSet(h.set) === f.id && !pool.includes(h)) pool.push(h);
-      if (pool.length) { const each = Math.round(sum / pool.length * 10) / 10; for (const h of pool) h.coin = each; }
+      if (pool.length) {
+        const each = Math.round(sum / pool.length * 10) / 10; const ref = h => 'h:' + h.id;
+        for (const h of pool) if ((h.coin || 0) > each + 1e-6) G.Depot.move(ref(h), 'f:' + f.id, 'moedas', h.coin - each, { code: 'comum', part: true });
+        for (const h of pool) if ((h.coin || 0) + 1e-6 < each) G.Depot.move('f:' + f.id, ref(h), 'moedas', each - (h.coin || 0), { code: 'comum', part: true });
+      }
     }
     // the lords of the land: in each town, the noble with most standing
     if (econ === 'feudal' || f.gov === 'feudal') {
@@ -377,8 +384,8 @@
       case 'impostosMenos': f.taxDay = S.day; f.taxMod = Math.max(-0.08, (f.taxMod || 0) - 0.05); memo(f, 'impostos', { povo: 8, artesaos: 6, mercadores: 6 }); log(how === 'peticao' ? `${who} baixou os impostos.` : `${who} baixou os impostos de ${f.name}. Nas ruas, o povo respira.`, 'coin', x, y); break;
       case 'estatizar': {
         let took = 0, houses = 0;
-        for (const h of richHouses(f)) { const t = Math.round(h.coin * 0.6); h.coin -= t; took += t; houses++; if (h.elite) { h.elite = null; } }
-        if (E.coinage(f.id)) f.stock.moedas += took;
+        // (six tenths of the rich houses' coins to the treasury — without coin, they are simply gone —, in the ledger)
+        for (const h of richHouses(f)) { const t = Math.round(h.coin * 0.6); const r = t > 0 ? (E.coinage(f.id) ? G.Depot.move('h:' + h.id, 'f:' + f.id, 'moedas', t, { code: 'estatizou', part: true }) : G.Depot.use('h:' + h.id, 'moedas', t, { code: 'estatizou', mine: true, part: true })) : null; if (r && r.ok) took += r.n; houses++; if (h.elite) { h.elite = null; } }
         f.econ = 'estatal';
         for (const b of S.buildings.values()) if (LAND[b.type] && G.Village.facOfSet(b.set) === f.id) b.owner = 0;
         memo(f, 'estatizou', { mercadores: -32, nobreza: -26, povo: 6, militares: 4 });
