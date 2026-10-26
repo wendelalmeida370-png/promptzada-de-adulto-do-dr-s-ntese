@@ -594,8 +594,9 @@
     // ---- hunger with food (L-164, L-165): a town whose people die of hunger with food in their people's stock and no store
     // anywhere to eat it from; someone dying of hunger with food in reach — the people's store, the house's pantry, plain
     // food in the hands —, free (not a captive, in a cell, condemned, at sea, in a cave), not on the way to eat nor running
-    // from a danger, in a calm town (no fight at it nor an army coming — G.War.threat —, no fire burning in it). Held by an
-    // errand of any weight, it is still a death with food in reach. (Dying: hunger at the top and under 40 of life.)
+    // from a danger nor in a fight (a beast, a brawl, a battle), in a calm town (no fight at it nor an army coming —
+    // G.War.threat —, no fire burning in it). Held by an errand of any weight, it is still a death with food in reach.
+    // (Dying: hunger at the top and under 40 of life.)
     {
       const dying = v => v.hunger >= 99.9 && v.hp < 40 && v.age >= 2;
       const dyingIn = new Map();
@@ -606,7 +607,7 @@
       }
       for (const v of s.villagers.values()) {
         if (!dying(v) || v.captive || v.jail || v.aboard || v.ug || v.held || v.air) continue;
-        const t = v.task; if (t && (t.type === 'eat' || t.type === 'forage' || t.type === 'flee' || t.type === 'condemned' || t.type === 'escorted' || t.type === 'fire')) continue;
+        const t = v.task; if (t && (t.type === 'eat' || t.type === 'forage' || t.type === 'flee' || t.type === 'condemned' || t.type === 'escorted' || t.type === 'fire' || t.type === 'fight' || t.type === 'combat')) continue;
         const set = s.settlements.get(v.set); if (!set || G.War.threat(v.set) || (G.Vg.alarms && (G.Vg.alarms.get(v.set) || []).length)) continue;
         const where = [];
         const st = G.Fac.stockV(v); const d = st && st.food >= 1 ? G.Village.nearestDropoff(v.x, v.y, v.set) : null;

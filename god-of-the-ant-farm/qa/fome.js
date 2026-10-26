@@ -14,11 +14,12 @@
 //    morrer de fome
 // h5 a regra S1 do verificador: uma cidade cujo povo morre de fome com comida no estoque e nenhum armazém
 // h6 a regra S2: alguém morrendo de fome com comida ao alcance, livre, numa cidade calma, preso a outra coisa — e não quem
-//    vai comer, foge, está condenado ou cativo, nem quem está numa cidade atacada ou em fogo
+//    vai comer, foge, luta, está condenado ou cativo, nem quem está numa cidade atacada ou em fogo
 // h7 o ferido (vida 40) com a fome no máximo, deitado de noite no sono do cansaço: acorda, come e volta a dormir (L-171)
 // h8 quem está na festa com a fome no máximo sai para comer, e a festa segue sem ele (L-171)
 // h9 quem dorme com fome e não tem o que comer ao alcance não fica acordando a cada passo
 // h10 o condenado come enquanto espera a hora, como o preso na cela (L-170)
+// h11 a caminho da cama, quem morre de fome com pão nas mãos come antes de deitar (L-171; achado pela regra S2 no negocio)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -156,7 +157,7 @@ if (fset) {
   const calm = [...S.settlements.values()].filter(s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 5).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)[0];
   const v = calm && [...S.villagers.values()].filter(o => o.set === calm.id && o.age >= 18 && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && W.reaches(o, ...V.frontTile(V.nearestDropoff(o.x, o.y, o.set)))).sort((a, b) => a.id - b.id)[0];
   const said = (who, t) => QA.check().filter(q => q.sys === 'fome' && q.sev === 2 && q.id === who.id);
-  let held = [], eating = [], fleeing = [], captive = [], attacked = [], condemned = [], burning = [];
+  let held = [], eating = [], fleeing = [], captive = [], attacked = [], condemned = [], burning = [], fighting = [];
   if (v) {
     const keep = [v.hunger, v.hp, v.captive]; const set = S.settlements.get(v.set); const alarm = set.alarmT;
     Vg.endTask(v); v.hunger = 100; v.hp = 35;
@@ -164,13 +165,14 @@ if (fset) {
     Vg.endTask(v); Vg.setTask(v, { type: 'eat', pri: 2.5 }); eating = said(v);   // (on the way to eat)
     Vg.endTask(v); Vg.setTask(v, { type: 'flee', pri: 5 }); fleeing = said(v);   // (running from a danger)
     Vg.endTask(v); Vg.setTask(v, { type: 'condemned', pri: 6 }); condemned = said(v); // (not free: bound for the scaffold)
+    Vg.endTask(v); Vg.setTask(v, { type: 'fight', pri: 4, id: 0 }); fighting = said(v); // (in a fight: a beast, a brawl)
     Vg.endTask(v); v.captive = { from: v.set, home: v.set }; captive = said(v); v.captive = keep[2];
     set.alarmT = 30; attacked = said(v); set.alarmT = alarm;
     const al = Vg.alarms.get(set.id); Vg.alarms.set(set.id, [W.idx(set.cx, set.cy)]); burning = said(v); if (al) Vg.alarms.set(set.id, al); else Vg.alarms.delete(set.id); // (a fire in the town)
     Vg.endTask(v); v.hunger = keep[0]; v.hp = keep[1];
   }
-  ok('h6 o verificador (S2): quem morre de fome com comida ao alcance, preso a outra coisa; não quem vai comer, foge, está condenado ou cativo, nem numa cidade atacada ou em fogo', !!v && held.length === 1 && !eating.length && !fleeing.length && !condemned.length && !captive.length && !attacked.length && !burning.length,
-    v ? `${v.name} em ${calm.name}: ${held.length ? '«' + held[0].msg + '»' : 'o verificador não viu'}; indo comer ${eating.length}, fugindo ${fleeing.length}, condenado ${condemned.length}, cativo ${captive.length}, cidade atacada ${attacked.length}, cidade em fogo ${burning.length}` : 'ninguém numa cidade calma');
+  ok('h6 o verificador (S2): quem morre de fome com comida ao alcance, preso a outra coisa; não quem vai comer, foge, luta, está condenado ou cativo, nem numa cidade atacada ou em fogo', !!v && held.length === 1 && !eating.length && !fleeing.length && !fighting.length && !condemned.length && !captive.length && !attacked.length && !burning.length,
+    v ? `${v.name} em ${calm.name}: ${held.length ? '«' + held[0].msg + '»' : 'o verificador não viu'}; indo comer ${eating.length}, fugindo ${fleeing.length}, lutando ${fighting.length}, condenado ${condemned.length}, cativo ${captive.length}, cidade atacada ${attacked.length}, cidade em fogo ${burning.length}` : 'ninguém numa cidade calma');
 }
 
 // ---------------- h7 the wounded sleeper: wakes at night to eat, and sleeps again (L-171) ----------------
@@ -251,6 +253,28 @@ const calmOne = (skip) => {
   ok('h10 o condenado come enquanto espera a hora, como o preso na cela', !!v && fed, v ? `${v.name}, ${how}: a fome ${Math.round(h0)} → ${Math.round(v.hunger)} (o estoque do povo dá o pão a quem está preso)` : 'ninguém');
 }
 
+// ---------------- h11 on the way to bed: the dying one with bread in his hands eats it before lying down (L-171) ----------------
+// (found by the rule S2 in the business scenario: Thyra of Birka, walking home to sleep with ten of food in her hands, the
+// hunger at the top, 37 of life — the wake was only for one already lying down)
+{
+  const v = calmOne(); let st = -1, ate = false, h0 = 0, far = 0;
+  if (v) {
+    // (the test's hand: a walk of a dozen steps from home, on the ground that reaches it — a long road to bed)
+    const home = S.buildings.get(v.home); const hf = V.frontTile(home); let at = null;
+    for (const r of [12, 9, 6]) { for (let k = 0; k < 24 && !at; k++) { const x = hf[0] + Math.cos(k / 24 * 6.283) * r, y = hf[1] + Math.sin(k / 24 * 6.283) * r; if (W.walkableXY(x, y) && W.canWalk(x, y, hf[0], hf[1])) at = [x, y]; } if (at) break; }
+    Vg.endTask(v); if (at) { v.x = at[0]; v.y = at[1]; v.path = null; } far = r2(G.dist(v.x, v.y, hf[0], hf[1]));
+    if (v.carry) D.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true, part: true });
+    D.make('v:' + v.id, 'food', 3, { code: 'teste' });
+    S.time = 0.86; v.hunger = 100; v.hp = 40; v.energy = 5; v._hungerT = 0; h0 = v.hunger;
+    const t = Vg.setTask(v, { type: 'sleep', pri: 2.5, kind: 'sleep' });
+    // (the step of the sleep when it ends, read at the end itself: a tenth of a second of the world can hold two steps)
+    const end0 = Vg.endTask; Vg.endTask = function (o) { if (o === v && o.task === t) st = t.st; return end0.apply(this, arguments); };
+    live(10, () => { if (v.task !== t && v.hunger < h0 - 30) ate = true; return ate || !S.villagers.has(v.id); });
+    Vg.endTask = end0;
+  }
+  ok('h11 a caminho da cama, quem morre de fome com pão nas mãos come antes de deitar', !!v && ate && st === 1,
+    v ? `${v.name}, a ${far} de casa, com 3 de comida nas mãos, a fome no máximo e 40 de vida: ${ate && st === 1 ? `comeu a caminho (o sono acabou no passo 1, o de ir para a cama; fome ${Math.round(h0)} → ${Math.round(v.hunger)})` : ate ? `SÓ comeu deitada (o sono acabou no passo ${st}; fome ${Math.round(h0)} → ${Math.round(v.hunger)})` : `NÃO comeu (o sono ${st >= 0 ? 'acabou no passo ' + st : 'não acabou'}; ${v.task ? v.task.type : 'sem tarefa'})`}` : 'ninguém numa cidade calma');
+}
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }
 console.log(`FOME: ${fails.length ? 'FALHOU (' + fails.join(', ') + ')' : 'ok'}`);

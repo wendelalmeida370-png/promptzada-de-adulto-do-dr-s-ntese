@@ -1409,6 +1409,7 @@
       return;
     }
     if (t.st === 1) {
+      if (hungerWakes(v)) return; // (on the way to bed as in it)
       if (!move(v, dt)) return;
       // a path that never came: they climb out of the water before lying down
       if (!t.home && !W.dryXY(v.x, v.y)) { const p = W.nearestLand(v.x, v.y, 3); if (p) { v.x = p[0]; v.y = p[1]; } }
@@ -1422,13 +1423,17 @@
     if (!v.inside && G.R() < dt * 0.3) emote(v, 'zzz', 1.6);
     if (!night && v.energy >= 96) end(v);
     else if (!night && v.energy > 60 && v.hunger > 80) end(v);
-    // (the hunger at the top and the life going — a wound, a long road —: up to eat, at night too, by the same choice of a
-    // meal as awake; with nothing to eat in reach, sleep on, not woken again for a while. The body the player lives is never
-    // woken by the world — L-171)
-    else if (v.hunger >= 99.9 && v.hp < 60 && !(v._hungerT > S.clock) && !(S.avatar && S.avatar.id === v.id)) {
-      v._hungerT = S.clock + G.DAY_LEN * 0.1;
-      const e = eatTask(v); if (e) e.kind = 'eat';
-    }
+    else hungerWakes(v);
+  }
+  // (the hunger at the top and the life going — a wound, a long road —: up to eat, at night too, by the same choice of a
+  // meal as awake, on the way to bed as in it; with nothing to eat in reach, sleep on, not woken again for a while. The
+  // body the player lives is never woken by the world — L-171)
+  function hungerWakes(v) {
+    const S = G.S;
+    if (!(v.hunger >= 99.9 && v.hp < 60) || v._hungerT > S.clock || (S.avatar && S.avatar.id === v.id)) return false;
+    v._hungerT = S.clock + G.DAY_LEN * 0.1;
+    const e = eatTask(v); if (e) e.kind = 'eat';
+    return !!e;
   }
 
   function tryConceive(v) {
