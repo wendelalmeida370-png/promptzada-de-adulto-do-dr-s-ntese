@@ -437,9 +437,12 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
         R.store = { stock0, stock1: G.Fac.stockV(v).wood, carry: !!v.carry };
         // a meal at the store: the stock gives it, the hunger goes
         const sh2 = G.Village.nearestDropoff(v.x, v.y, v.set); const d2 = sh2 && G.Vg.door(sh2); if (d2) near(d2[0], d2[1], true);
-        v.hunger = 70; const f0 = G.Fac.stockV(v).food; let ate = false;
-        if (sh2) { const r = G.Interact.run({ id: 'porta', t: { b: sh2, X: d2[0] * 4, Z: d2[1] * 4 } }); __E.until(() => !G.Avatar.busy(), 160); ate = v.hunger < 70; R.mealMsg = r && r.msg; }
-        R.meal = { ate, food: [f0, G.Fac.stockV(v).food], hunger: v.hunger };
+        // (the stock read at the meal itself, in the world's step: over the frames of the meal the people's own deliveries come
+        // into the same store — the stock as a whole may well grow — T-077)
+        v.hunger = 70; const f0 = G.Fac.stockV(v).food; let ate = false, took = null; const act0 = G.Avatar.act;
+        G.Avatar.act = function (o) { if (o && o.vact === 'eat' && o.op) { const op0 = o.op; o.op = w => { const st = (G.Army && G.Army.larder(w)) || G.Fac.stockV(w); const a = st.food; const r = op0(w); took = [a, st.food]; return r; }; } return act0.apply(this, arguments); };
+        try { if (sh2) { const r = G.Interact.run({ id: 'porta', t: { b: sh2, X: d2[0] * 4, Z: d2[1] * 4 } }); __E.until(() => !G.Avatar.busy(), 160); ate = v.hunger < 70; R.mealMsg = r && r.msg; } } finally { G.Avatar.act = act0; }
+        R.meal = { ate, took, food: [f0, G.Fac.stockV(v).food], hunger: v.hunger };
       }
       // berries
       const bu = [...S.bushes.values()].filter(b => b.berries >= 2 && G.W.reaches(v, b.x, b.y)).sort((a, b) => G.dist2(a.x, a.y, v.x, v.y) - G.dist2(b.x, b.y, v.x, v.y))[0];
@@ -492,7 +495,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   const H = e9.hands;
   ok('e9 mãos: a árvore cai pelo corte, a lenha vai para os braços', H.tree && H.tree.felled && /^wood:/.test(H.tree.carry || ''), JSON.stringify(H.tree));
   ok('e9 mãos: a lenha entra no estoque do povo', H.store && H.store.stock1 > H.store.stock0 && !H.store.carry, JSON.stringify(H.store));
-  ok('e9 mãos: comer no armazém tira do estoque e mata a fome', H.meal && H.meal.ate && H.meal.food[1] < H.meal.food[0], JSON.stringify(H.meal));
+  ok('e9 mãos: comer no armazém tira do estoque e mata a fome', H.meal && H.meal.ate && !!H.meal.took && H.meal.took[1] < H.meal.took[0], JSON.stringify(H.meal));
   ok('e9 mãos: as frutas saem do arbusto', !H.berries || (H.berries.after < H.berries.before), JSON.stringify(H.berries));
   ok('e9 mãos: a pedra quebrada vai para os braços', H.rock && H.rock.after < H.rock.before && /^stone:/.test(H.rock.carry || ''), JSON.stringify(H.rock));
   ok('e9 mãos: a pedra levada à obra entra nela', H.obra && !H.obra.none && H.obra.after < H.obra.before && !H.obra.carry, JSON.stringify(H.obra));
