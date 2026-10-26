@@ -11,7 +11,9 @@
 // a família sai para uma casa com lugar levando o que é seu, ou faz do barraco uma cabana pagando a madeira do povo — pelo
 // livro; h14 a terra cara (social.js): a família rica compra a casa da família simples do centro, cada uma com o que é
 // seu, pelo livro; h10 o salto: a obra termina e a família muda; h9 um povo sem moeda: o povo levanta com o que tem;
-// e o verificador limpo.
+// e o verificador limpo. Os casos que vivem dias do mundo (h7, h8, h15, h14, h10) partem do mundo pronto de novo, e o h7
+// e o h10 preparam a cidade pelas portas do mundo: em paz, com os materiais de uma casa no armazém (a guerra que vier no
+// meio só faz esperar mais).
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/atividades-inv.js'] });
 const fails = []; const mid = []; // (what the checker saw in the middle of a case: the case fails, even if the end looks clean)
@@ -38,6 +40,10 @@ S.time = 0.15; S.weather.storm = 0;
 const singles = s => [...S.villagers.values()].filter(v => v.set === s.id && v.age >= 18 && v.age < 50 && !v.partner && !v.captive).length;
 let set = [...S.settlements.values()].filter(s => E.coinage(s.fac)).sort((a, b) => singles(b) - singles(a) || a.id - b.id)[0];
 console.log(`(${set.name}: ${G.Village.pop(set.id)} habitantes; moeda: ${E.coinage(set.fac) ? 'sim' : 'não'}; uma casa nova custa uns ${K.price(set, 'house')} moedas)`);
+// (a case that lives days of the world starts from the ready world again, the same town: what an earlier case lived — a war
+// in the middle, the couples it took — does not carry into it)
+const set0 = set.id;
+function reload() { M.pronto('metropole'); S = G.S; M.viver(2); S.time = 0.15; S.weather.storm = 0; set = S.settlements.get(set0); taken.clear(); }
 // ---------------- h1: every lived-in house has an owner, the eldest who lives in it; an empty one is the people's
 {
   townDay(set);
@@ -80,6 +86,23 @@ function clearWay(v) {
   for (let k = 0; k < 8; k++) { const fr = K.plan(v, null, set, null, K.need(v)).free; if (!fr) break; G.Village.removeBuilding(fr); }
   for (const b of [...S.buildings.values()]) if (b.set === set.id && b.encomenda && !b.built && !b.encomenda.fam.includes(v.id)) G.Village.completeBuilding(b);
 }
+// (a couple for a commission, the way cleared: a couple whose need went with it — the families of the other commissions
+// moved out, and the house it shared is no longer full — gives its place to the next)
+function readyCouple() {
+  for (let k = 0; k < 6; k++) { const v = couple(); if (!v) return null; clearWay(v); if (K.need(v)) return v; }
+  return null;
+}
+// (what a commission needs to stand, before the case: the town at peace — the case lives until no fight is at it and no
+// army is coming, up to two days of the world — and the materials of a house in the people's store: what the city's own
+// works took is given back by the god's hand, in the ledger. The world can still bring a war in the middle: the case then
+// waits for the work longer, not forever)
+function readyTown() {
+  let w = 0; for (; w < 400 && G.War.threat(set.id); w++) M.viver(1);
+  const f = 'f:' + set.fac; const cost = G.BDEF.sobrado.cost;
+  for (const k in cost) { const lack = cost[k] * 3 - D.get(f, k); if (lack > 0) D.make(f, k, lack, { code: 'teste', part: true }); }
+  return w;
+}
+const warNote = (w, t0) => `${w ? `; a cidade esperou ${w} s por paz antes do caso` : ''}${G.War.threat(set.id) ? '; a cidade em guerra agora' : ''}${t0 !== undefined ? ` (o caso: ${Math.round(S.clock - t0)} s do mundo)` : ''}`;
 // ---------------- h2: the need goes into the diary, and the house saves (no luxury bought while it does)
 let hv = null, hHome = null;
 {
@@ -213,25 +236,27 @@ if (hb) {
 }
 // ---------------- h7: the one who ordered the house dies in the middle of the work: the family moves just the same
 {
-  const v = couple(); let info = 'nenhum outro casal', fine7 = false;
+  reload();
+  const v = readyCouple(); let info = 'nenhum outro casal', fine7 = false;
   if (v) {
-    const h = S.buildings.get(v.home); clearWay(v); setCoins('h:' + h.id, (K.price(set, 'sobrado') + 4) * 3);
+    const w = readyTown(); const h = S.buildings.get(v.home); setCoins('h:' + h.id, (K.price(set, 'sobrado') + 4) * 3);
     K.order(v);
     const b = K.waiting(v); const p = S.villagers.get(v.partner);
     if (b && p) {
-      G.Village.kill(v, 'teste');
-      const done = fine(900, () => b.built);
-      fine7 = done && p.home === b.id && b.dono === p.id;
-      info = `${v.name} encomendou a casa #${b.id} e morreu no meio da obra: ${done ? 'a obra terminou' : 'a obra NÃO terminou'}; ${p.name} ${p.home === b.id ? 'mudou para ela' : 'NÃO mudou (mora em #' + p.home + ')'} e é ${b.dono === p.id ? 'a dona' : 'NÃO a dona (' + b.dono + ')'}`;
+      G.Village.kill(v, 'teste'); const t0 = S.clock;
+      const done = fine(3000, () => b.built || !S.buildings.has(b.id));
+      fine7 = done && b.built && p.home === b.id && b.dono === p.id;
+      info = `${v.name} encomendou a casa #${b.id} e morreu no meio da obra: ${b.built ? 'a obra terminou' : S.buildings.has(b.id) ? `a obra NÃO terminou (${Math.round((b.progress || 0) * 100)}%)` : 'a obra SUMIU'}; ${p.name} ${p.home === b.id ? 'mudou para ela' : 'NÃO mudou (mora em #' + p.home + ')'} e é ${b.dono === p.id ? 'a dona' : 'NÃO a dona (' + b.dono + ')'}${warNote(w, t0)}`;
     } else info = `${v.name}: nenhuma obra encomendada`;
   }
   ok('h7 morre no meio da obra', fine7 && !bad().length, info);
 }
 // ---------------- h8: a commission that never starts gives back what was paid
 {
-  const v = couple(); let info = 'nenhum outro casal', fine8 = false;
+  reload();
+  const v = readyCouple(); let info = 'nenhum outro casal', fine8 = false;
   if (v) {
-    const h = S.buildings.get(v.home); clearWay(v); setCoins('h:' + h.id, (K.price(set, 'sobrado') + 4) * 3);
+    const h = S.buildings.get(v.home); setCoins('h:' + h.id, (K.price(set, 'sobrado') + 4) * 3);
     K.order(v);
     const b = K.waiting(v);
     if (b) {
@@ -247,9 +272,10 @@ if (hb) {
 }
 // ---------------- h15: a work that is lost (fire takes it half built): the people give back what was not raised of it
 {
-  const v = couple(); let info = 'nenhum outro casal', fine15 = false;
+  reload();
+  const v = readyCouple(); let info = 'nenhum outro casal', fine15 = false;
   if (v) {
-    const h = S.buildings.get(v.home); clearWay(v); setCoins('h:' + h.id, (K.price(set, 'sobrado') + 4) * 3);
+    const h = S.buildings.get(v.home); setCoins('h:' + h.id, (K.price(set, 'sobrado') + 4) * 3);
     K.order(v);
     const b = K.waiting(v);
     if (b) {
@@ -295,6 +321,7 @@ if (hb) {
 }
 // ---------------- h14: the dear land (social.js): a rich family buys the house of a plain family in the heart, each with its own, in the ledger
 {
+  reload();
   const city = [...S.settlements.values()].filter(s => (s.tier || 0) >= 3 && E.coinage(s.fac)).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
   let info = 'nenhuma cidade grande de moeda', fine14 = false;
   if (city && G.Urban && G.Urban.peek) {
@@ -322,12 +349,19 @@ if (hb) {
 }
 // ---------------- h10: the skip: the work ends and the family moves in
 {
-  const v = couple(); let info = 'nenhum outro casal', fine10 = false;
+  reload();
+  const v = readyCouple(); let info = 'nenhum outro casal', fine10 = false;
   if (v) {
-    const h = S.buildings.get(v.home); clearWay(v); setCoins('h:' + h.id, (K.price(set, 'sobrado') + 4) * 3);
+    const w = readyTown(); const h = S.buildings.get(v.home); setCoins('h:' + h.id, (K.price(set, 'sobrado') + 4) * 3);
     K.order(v);
     const b = K.waiting(v);
-    if (b) { M.saltar(2); fine10 = b.built && v.home === b.id && !b.encomenda; info = `um salto de dois anos: a obra #${b.id} ${b.built ? 'terminou' : 'NÃO terminou'} e ${v.name} ${v.home === b.id ? 'mora nela' : 'NÃO mudou'}`; }
+    // (two years of the skip, and a year more at a time while the work stands unfinished — a war in the middle holds the
+    // builders —, up to five)
+    if (b) {
+      M.saltar(2); let y = 2; for (; y < 5 && !b.built && S.buildings.has(b.id) && b.encomenda; y++) M.saltar(1);
+      fine10 = b.built && v.home === b.id && !b.encomenda;
+      info = `um salto de ${y} anos: a obra #${b.id} ${b.built ? 'terminou' : S.buildings.has(b.id) ? `NÃO terminou (${Math.round((b.progress || 0) * 100)}%)` : 'SUMIU'} e ${v.name} ${v.home === b.id ? 'mora nela' : 'NÃO mudou'}${warNote(w)}`;
+    }
     else info = `${v.name}: nenhuma obra encomendada`;
   }
   ok('h10 o salto', fine10 && !bad().length && M.limpo(), info);
