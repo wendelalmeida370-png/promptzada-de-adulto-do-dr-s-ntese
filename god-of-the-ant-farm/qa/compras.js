@@ -148,7 +148,7 @@ const fair = stockFair(set);
   const h = houseIn(set, 2); lacking(h, 30); const H = 'h:' + h.id;
   // (the house's errand of before, if one of it was out for it, let go — the test's hand, as lacking() forgets the mark — and
   // what its people carry home put away first: the case starts with nothing on the way)
-  for (const o of members(h)) if (o.task && o.task.casa === h.id) G.Vg.endTask(o);
+  for (const o of S.villagers.values()) if (o.task && o.task.casa === h.id) G.Vg.endTask(o);
   fine(60, () => !members(h).some(o => o.carry && o.carry.to === H) || watch());
   if (D.get(H, 'food') < 2) D.make(H, 'food', 2, { code: 'teste' }); // (something in the chest: a chest of nothing is no plan)
   const held = () => Object.entries(D.list(H)).filter(([k]) => k !== 'moedas').reduce((a, [, n]) => a + n, 0);
@@ -159,9 +159,11 @@ const fair = stockFair(set);
   // whim) finds no room at home and buys nothing
   S.time = 0.15;
   const u = adults(h).map(v => C.urge(v)); const L14 = C.list(h).length;
-  const went = fine(60, atHour(0.15, () => !!errandOf(h) || watch()));
-  // (the one sent: hands free, brought to the fair — the deal is the subject, not the walk across town —, in the morning)
-  const v14 = adults(h).find(o => !(o.carry && o.carry.n > 0)) || adults(h)[0]; const L0 = S.ledgerN; const c0 = D.get(H, 'moedas');
+  const went = fine(60, atHour(0.15, () => !!errandOf(h) || watch())); const goer = errandOf(h);
+  // (the one sent: hands free, rested and fed — a tired one would go to bed on the way —, brought to the fair — the deal is
+  // the subject, not the walk across town —, in the morning: the test's hand, as negocio's buyers)
+  const v14 = adults(h).filter(o => !(o.carry && o.carry.n > 0)).sort((a, b) => b.energy - a.energy || a.id - b.id)[0] || adults(h)[0]; const L0 = S.ledgerN; const c0 = D.get(H, 'moedas');
+  v14.energy = Math.max(v14.energy, 70); v14.hunger = Math.min(v14.hunger, 30);
   if (v14.carry && v14.carry.n > 0) D.use('v:' + v14.id, v14.carry.k, v14.carry.n, { code: 'teste', mine: true });
   if (fair) { const [fx, fy] = G.Village.frontTile(fair); if (G.W.walkableXY(fx, fy)) { v14.x = fx; v14.y = fy; v14.path = null; } }
   const said = []; const say0 = G.Falas.say; G.Falas.say = function (o, key) { const t = say0.apply(this, arguments); if (o && o.id === v14.id) said.push(key); return t; };
@@ -170,7 +172,7 @@ const fair = stockFair(set);
   G.Falas.say = say0;
   const bought14 = book(e => e[0] > L0 && e[4] === 'v:' + v14.id && (e[8] === 'compra' || e[8] === 'feira')).length;
   ok('c14 a casa cheia não compra', L14 === 0 && u.every(x => x === 0) && !went && !bought14 && (!fair || said.includes('casa_cheia')) && Math.abs(D.get(H, 'moedas') - c0) < 1e-6 && !bad().length,
-    `a casa #${h.id} com a arca cheia (${r2(held())} de ${r2(capNow())}): ${L14} falta(s), vontade ${u.join(', ')}; ${went ? 'ALGUÉM saiu' : 'ninguém saiu em 60 s'}; ${v14.name}, mandado à feira por tecido, ${bought14 ? 'COMPROU' : 'não comprou'} (falas: ${said.join(', ') || 'nenhuma'}${t14 && v14.task === t14 ? '' : `; agora ${v14.task ? v14.task.type : 'sem tarefa'}`}; moedas da casa ${r2(c0)} → ${r2(D.get(H, 'moedas'))})`);
+    `a casa #${h.id} com a arca cheia (${r2(held())} de ${r2(capNow())}): ${L14} falta(s), vontade ${u.join(', ')}; ${went ? `ALGUÉM saiu (${goer ? goer.name + ', ' + goer.task.type + (goer.home !== h.id ? ', de outra casa' : '') : '?'})` : 'ninguém saiu em 60 s'}; ${v14.name}, mandado à feira por tecido, ${bought14 ? 'COMPROU' : 'não comprou'} (falas: ${said.join(', ') || 'nenhuma'}${t14 && v14.task === t14 ? '' : `; agora ${v14.task ? v14.task.type : 'sem tarefa'}`}; moedas da casa ${r2(c0)} → ${r2(D.get(H, 'moedas'))})`);
   // c15: room for one thing — the house sends for what it lacks, and buys only what fits
   mode = 'um'; h.shopT = undefined; h.shopOut = 0; S.time = 0.15;
   const lack15 = C.list(h).map(q => `${q.n} de ${E.name(q.k)}`); const L1 = S.ledgerN;

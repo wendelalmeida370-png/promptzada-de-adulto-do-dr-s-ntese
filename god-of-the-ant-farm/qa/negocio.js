@@ -9,8 +9,8 @@
 // (idem); n12 o corpo do deus é o mercador (compra no atacado, arruma a banca, abre, e um cliente compra dele); n13 o corpo
 // compra e pechincha numa banca dos outros; n14 a cadeia inteira (navio → cais → armazém → atacado → banca → cliente →
 // casa), cada elo no livro-razão; n15 um povo sem moeda: fiado no atacado, a venda em troca, a troca devolvida ao armazém;
-// n16 os móveis dos interiores como o lugar da casa, da prateleira e da banca (a porta desligada no jogo; aqui um plano feito
-// à mão); n17 a banca sem moeda fecha devendo: paga primeiro (o estoque pelo custo, depois a troca guardada na casa), o fiado
+// n16 os móveis dos interiores como o lugar da casa, da prateleira e da banca (um plano feito à mão, por cima da porta do
+// jogo, devolvida no fim); n17 a banca sem moeda fecha devendo: paga primeiro (o estoque pelo custo, depois a troca guardada na casa), o fiado
 // nunca vira presente; n18 a fila cheia (oito na fila, nos oito lugares dela, e o nono vai embora triste, sem nada mudar de
 // mãos). Cada caso de balcão começa pelas portas do mundo: a cidade calma (sem execução, assembleia, festa, convocação ou
 // fogo chamando o povo), o mercador de volta do que fazia, descansado e alimentado (a cama e a comida do próprio mundo,
@@ -470,8 +470,8 @@ function stallNow() {
   // (the eight are served or go: the next cases start with the line as the world leaves it)
   for (const v of eight) if (v.task && v.task.type === 'compra' && v.task.biz === z.id && v.task.st < 2) G.Vg.endTask(v);
 }
-// ---------------- n16: the interiors' furniture as the room of a house, a shelf and a stall (the port is off in the game:
-// here a plan made by hand) — a piece holds its cap in all, each good first in the piece made for it; the people's furniture
+// ---------------- n16: the interiors' furniture as the room of a house, a shelf and a stall (here a plan made by hand, over
+// the game's own port, given back at the end) — a piece holds its cap in all, each good first in the piece made for it; the people's furniture
 // is not the house's; the stall's own sales furniture by its number; with no plan, the room of today again
 {
   start = stallNow();
@@ -556,10 +556,17 @@ function stallNow() {
     const L0 = S.ledgerN;
     // (the spices' lines kept as they are written: a long case outlives the ledger's window of the last lines)
     const linesK = []; const onK = e => { if (e[5] === K) linesK.push(e); }; D.onMove.push(onK);
+    // (the ship in a calm town — a gathering at the square calls the porters from the crates, and they set them down —; the
+    // unloading in the day's hours — the test's hand on the clock, as in qa/porto.js: the porters work by day —, waited for
+    // to the end: a danger pauses it, and it goes on when the danger passes, T-074)
+    const calm14 = calmTown(port);
     const sh = S.ships.find(s => s.kind === 'mercante') || S.ships[0]; sh.goods = { k: K, n: 12 }; G.Harbor.land(dock, sh.goods, sh);
     const opd = G.Porto.opAt(dock);
-    // (the unloading in the day's hours — the test's hand on the clock, as in qa/porto.js: the porters work by day)
-    live(300, held(S.time, () => !A.live(opd) || watch()));
+    // (until the spices are out of the unloading's hands — off the quay, out of the porters' arms, off the ground: another
+    // ship may join its cargo to the same unloading, which then goes on with it)
+    const spicesIn = () => (dock.crates || []).some(c => c.k === K) || [...S.villagers.values()].some(o => o.carry && o.carry.k === K && o.carry.op === opd.id) || (S.loose || []).some(o => o.k === K && o.op === opd.id);
+    live(600, held(S.time, () => !A.live(opd) || !spicesIn() || watch()));
+    if (spicesIn()) console.log(`   (n14: as especiarias ainda na descarga depois de 600 s — ${opd.st}${opd.wait ? ' (' + opd.wait + ')' : ''}: ${JSON.stringify((opd.log || []).slice(-4))})`);
     // the merchant, in the morning: a stall, the spices on it. The world may take him from the stall in the middle — the
     // planner names another merchant, a fright sends him to a cave: the stall closes, its goods go home —: then the
     // merchant the town has now, once more, with the spices still in the store (twelve landed, four a wholesale: three
@@ -582,7 +589,7 @@ function stallNow() {
       if (zz.st === 'on') buyer = sendBuyer(port, zz, K, [mer.id].concat(mates(mer)), v => D.make('h:' + E.homeOf(v).id, 'moedas', 40, { code: 'teste' }), boughtK, 200);
       if (buyer && !boughtK(buyer)) buyer = null;
     }
-    start += again;
+    start += again + (calm14 ? ' (antes do navio: ' + calm14 + ')' : '');
     if (!buyer) info = `${port.name}: ninguém da cidade alcança a banca para comprar (a banca #${zz.id} ${zz.st}${zz.why ? ' — ' + zz.why : ''}, ${B.get(zz.id) ? 'no registro' : 'fora do registro'}, ${B.manned(zz) ? 'atendida' : 'sem ninguém'}; ${mer.name}: ${mer.role}, ofício no #${mer.job} (o mercado #${mkt.id}), a banca dele ${B.of(mer) ? '#' + B.of(mer).id : 'nenhuma'}, ${mer.task ? mer.task.type + '.' + mer.task.st : 'sem tarefa'})`; else {
     const hb = E.homeOf(buyer);
     // the links, in the ledger, in order
@@ -590,7 +597,7 @@ function stallNow() {
     const step = (code, from, to) => Lk.find(e => e[8] === code && (!from || e[3] === from || (from.endsWith(':') && e[3].startsWith(from))) && (!to || e[4] === to || (to.endsWith(':') && e[4].startsWith(to))));
     const opTo = opd.to;
     const links = [['desembarque', 's:' + sh.id, 'q:' + dock.id], ['pegar', 'q:' + dock.id, 'v:'], ['depositar', 'v:', opTo], ['atacado', 'f:' + zz.fac, 'v:' + mer.id], ['entrega', 'v:' + mer.id, 'z:' + zz.id], ['venda', 'z:' + zz.id, 'v:' + buyer.id], ['compra-em-casa', 'v:' + buyer.id, 'h:' + hb.id]].map(([c, a, b]) => [c, step(c, a, b)]);
-    if (!links.every(l => l[1])) console.log(`   (n14: ${mer.name} ${mer.task ? mer.task.type + '.' + mer.task.st : '-'}, banca ${JSON.stringify(zz.inv)} ${B.manned(zz) ? 'atendida' : 'sem ninguém'}; ${buyer.name} ${buyer.task ? buyer.task.type + '.' + buyer.task.st + (buyer.task.talk !== undefined ? ' fala ' + buyer.task.talk : '') : '-'}${buyer.carry ? ' ' + JSON.stringify(buyer.carry) : ''}; o povo do cais ${opTo}, o da banca f:${zz.fac})`);
+    if (!links.every(l => l[1])) console.log(`   (n14: a descarga ${opd.st}${opd.wait ? ' (' + opd.wait + ')' : ''}, ${JSON.stringify((opd.log || []).slice(-6))}; ${mer.name} ${mer.task ? mer.task.type + '.' + mer.task.st : '-'}, banca ${JSON.stringify(zz.inv)} ${B.manned(zz) ? 'atendida' : 'sem ninguém'}; ${buyer.name} ${buyer.task ? buyer.task.type + '.' + buyer.task.st + (buyer.task.talk !== undefined ? ' fala ' + buyer.task.talk : '') : '-'}${buyer.carry ? ' ' + JSON.stringify(buyer.carry) : ''}; o povo do cais ${opTo}, o da banca f:${zz.fac})`);
     const order = links.every((l, i) => l[1] && (i === 0 || l[1][0] > links[i - 1][1][0]));
     fine14 = links.every(l => l[1]) && order && D.get('h:' + hb.id, K) >= 1 && !bad().length;
     info = `${port.name}: ${links.map(([c, e]) => `${c} ${e ? e[3] + '→' + e[4] : 'FALTA'}`).join(' · ')}; ${order ? 'na ordem' : 'FORA DE ORDEM'}; ${E.name(K)} na casa de ${buyer.name}: ${D.get('h:' + hb.id, K)}`;
