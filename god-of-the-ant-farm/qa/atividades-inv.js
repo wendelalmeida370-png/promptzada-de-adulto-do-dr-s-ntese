@@ -104,6 +104,32 @@
       if (g[1] > s.clock + 1) add('act', 2, `pesqueiro ${id}: pescado no futuro (${g[1]} > ${Math.round(s.clock)})`);
       if (!(G.Pesca.cap(+id) > 0)) add('act', 3, `pesqueiro ${id}: pescado numa quadra sem água`);
     }
+    // ---- hunger with food (L-164, L-165): a town whose people die of hunger with food in their people's stock and no store
+    // anywhere to eat it from; someone dying of hunger with food in reach — the people's store, the house's pantry, plain
+    // food in the hands —, free (not a captive, in a cell, condemned, at sea, in a cave), not on the way to eat nor running
+    // from a danger, in a calm town (no fight at it nor an army coming — G.War.threat —, no fire burning in it). Held by an
+    // errand of any weight, it is still a death with food in reach. (Dying: hunger at the top and under 40 of life.)
+    {
+      const dying = v => v.hunger >= 99.9 && v.hp < 40 && v.age >= 2;
+      const dyingIn = new Map();
+      for (const v of s.villagers.values()) if (dying(v) && !v.captive && !v.aboard && !v.ug) dyingIn.set(v.set, (dyingIn.get(v.set) || 0) + 1);
+      for (const [sid, n] of dyingIn) {
+        const set = s.settlements.get(sid); const f = set && s.factions.get(set.fac);
+        if (f && f.stock.food >= 1 && !G.Village.nearestDropoff(set.cx, set.cy, sid)) add('fome', 1, `${set.name}: ${n} morrendo de fome com ${Math.floor(f.stock.food)} de comida no estoque de ${f.name} e nenhum armazém onde comer`);
+      }
+      for (const v of s.villagers.values()) {
+        if (!dying(v) || v.captive || v.jail || v.aboard || v.ug || v.held || v.air) continue;
+        const t = v.task; if (t && (t.type === 'eat' || t.type === 'forage' || t.type === 'flee' || t.type === 'condemned' || t.type === 'escorted' || t.type === 'fire')) continue;
+        const set = s.settlements.get(v.set); if (!set || G.War.threat(v.set) || (G.Vg.alarms && (G.Vg.alarms.get(v.set) || []).length)) continue;
+        const where = [];
+        const st = G.Fac.stockV(v); const d = st && st.food >= 1 ? G.Village.nearestDropoff(v.x, v.y, v.set) : null;
+        if (d) { const ft = G.Village.frontTile(d); if (G.W.reaches(v, ft[0], ft[1])) where.push(`o armazém (${Math.floor(st.food)} no estoque)`); }
+        const h = v.home && s.buildings.get(v.home);
+        if (h && h.built && (h.pantry || 0) >= 1) { const ft = G.Village.frontTile(h); if (G.W.reaches(v, ft[0], ft[1])) where.push(`a despensa da casa (${Math.floor(h.pantry)})`); }
+        const c = v.carry; if (c && c.k === 'food' && c.n >= 1 && !c.op && !c.to && !c.cid) where.push(`${Math.floor(c.n)} nas mãos`);
+        if (where.length) add('fome', 2, `${v.name} #${v.id} (${set.name}) morre de fome com comida ao alcance: ${where.join(', ')}; ${t ? 'tarefa ' + t.type : 'sem tarefa'}, vida ${Math.round(v.hp)}`, v.id);
+      }
+    }
   });
   // (the ledger's lines out of hands since the last look, for the rule above; a new world, or a save loaded, starts over)
   let marked = null, markedS = null; const movedOut = new Map();

@@ -1,0 +1,257 @@
+// fome: a fome com comida, provocada de propósito (C1; L-164, L-165 e L-169, os defeitos antigos que mataram Texcoco: 77
+// ex-cativos com 770 de comida no estoque e nenhum armazém; L-171 e L-170, os que o verificador novo achou depois: quem
+// dorme cansado ou está na festa com a fome no máximo, e o condenado) — no mundo pronto «cidade» (ou: node qa/fome.js metropole).
+// h1 a obra de seis sextos: os golpes do salto numa fogueira de trabalho 3 somam 0,9999999999999999, e o construtor que sai
+//    nesse golpe deixava a obra de ninguém para sempre — agora o próximo construtor a termina
+// h2 a obra parada no último milésimo de um save velho (como a casa #2175 do «anos100»): salva, carregada, volta a andar
+//    sozinha
+// h3 a obra que espera um material que o povo não tem: continua esperando (ninguém fica nela sem fazer nada), e anda quando
+//    o material chega
+// h4 o povo livre fundado de propósito (G.War.foundFree), com fome: sem armazém ninguém escolhe «comer no armazém»; a
+//    fogueira parada no último golpe (o construtor chamado embora), salva e carregada no meio, fica pronta; comem; o deus
+//    derruba a fogueira e, de novo, ninguém fica preso a um comer impossível, e ela volta — os construtores com carga nas
+//    mãos a pousam no chão (L-169); quem a levanta morre no meio e outro termina; um dia inteiro pelo salto sem ninguém
+//    morrer de fome
+// h5 a regra S1 do verificador: uma cidade cujo povo morre de fome com comida no estoque e nenhum armazém
+// h6 a regra S2: alguém morrendo de fome com comida ao alcance, livre, numa cidade calma, preso a outra coisa — e não quem
+//    vai comer, foge, está condenado ou cativo, nem quem está numa cidade atacada ou em fogo
+// h7 o ferido (vida 40) com a fome no máximo, deitado de noite no sono do cansaço: acorda, come e volta a dormir (L-171)
+// h8 quem está na festa com a fome no máximo sai para comer, e a festa segue sem ele (L-171)
+// h9 quem dorme com fome e não tem o que comer ao alcance não fica acordando a cada passo
+// h10 o condenado come enquanto espera a hora, como o preso na cela (L-170)
+// e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
+const M = require('./nodemundo.js');
+const G = M.load({ qa: true });
+const fails = []; const mid = []; // (what the checker saw in the middle of a case: the case fails, even if the end looks clean)
+const ok = (name, c, info) => { const m = mid.splice(0); const pass = c && !m.length; console.log(`${pass ? 'PASSOU' : 'FALHOU'} | fome ${name} | ${info}${m.length ? ' — o verificador, no meio do caso: ' + m.slice(0, 2).join(' · ') : ''}`); if (!pass) fails.push(name); };
+const bad = () => QA.check().filter(q => q.sev <= 2 && (q.sys === 'act' || q.sys === 'nan' || q.sys === 'fome'));
+const watch = () => { const bb = bad(); if (bb.length) { for (const q of bb) if (!mid.includes(q.msg)) mid.push(q.msg); return true; } return false; };
+const D = G.Depot, V = G.Village, Vg = G.Vg, W = G.W;
+const r2 = x => Math.round(x * 100) / 100;
+let S;
+const live = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); if (k % 50 === 49) watch(); if (until && until()) { watch(); return true; } } watch(); return false; };
+const world = process.argv[2] || 'cidade';
+M.pronto(world); S = G.S; M.viver(2); G.inSim++;
+// the town: the most people of all, with builders and a store; a work of it, placed where the city says
+const builders = s => [...S.villagers.values()].filter(v => v.set === s.id && v.role === 'construtor' && !v.captive).length;
+let set0 = [...S.settlements.values()].filter(s => builders(s) >= 2 && V.dropoffs(s.id).length).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)[0];
+if (!set0) { console.log('FALHOU | fome | nenhuma cidade com construtores e armazém'); process.exit(1); }
+let f0 = G.Fac.get(set0.fac);
+// (saved and loaded: the world's objects are new ones — the test holds ids)
+const reload = () => { G.inSim--; M.salvarCarregar(); G.inSim++; S = G.S; set0 = S.settlements.get(set0.id); f0 = G.Fac.get(f0.id); };
+console.log(`(${world}: ${set0.name}, de ${f0.name}: ${V.pop(set0.id)} habitantes, ${builders(set0)} construtores)`);
+const project = type => { for (const t of [type, 'hut', 'well', 'house']) { const b = V.startProject(set0, t); if (b) return b; } return null; };
+const builtNow = id => { const b = S.buildings.get(id); return !!(b && b.built); };
+const onIt = id => [...S.villagers.values()].filter(v => v.task && v.task.type === 'build' && v.task.id === id);
+const leaveIt = b => { for (const v of onIt(b.id)) Vg.endTask(v); }; // (the builder called away)
+const allIn = b => { for (const k in b.need) b.need[k] = 0; b.incoming = {}; }; // (every material delivered)
+
+// ---------------- h1 six sixths ----------------
+let six = 0; for (let k = 0; k < 6; k++) six = Math.min(1, six + 0.5 / 3); // (the strokes of the skip's half steps on a work of 3)
+{
+  const b = project('hut'); let n = 0, done = false;
+  if (b) { allIn(b); b.progress = six; leaveIt(b); done = live(120, () => builtNow(b.id)); n = b.id; }
+  ok('h1 a obra de seis sextos', !!b && six < 1 && done, `seis golpes de 1/6 somam ${six} (${six >= 1 ? 'chega' : 'não chega'} a 1); ${b ? `${b.type}#${n}, todo o material entregue, deixada ali pelo construtor: ${done ? 'outro construtor a terminou' : 'ninguém mais voltou a ela em 120 s'}` : 'nenhuma obra possível'}`);
+}
+
+// ---------------- h2 the last thousandth, in an old save ----------------
+{
+  const b = project('hut'); let done = false, id = 0;
+  if (b) { allIn(b); b.progress = 0.9991666666666666; leaveIt(b); id = b.id; reload(); done = live(120, () => builtNow(id)); }
+  const o = S.buildings.get(id);
+  ok('h2 a obra parada no último milésimo de um save velho volta a andar sozinha', !!b && done, b ? `${o ? o.type : '-'}#${id} a 0,99917 com todo o material, salva e carregada: ${done ? 'pronta' : 'ainda a ' + (o ? o.progress : '-')}` : 'nenhuma obra possível');
+}
+
+// ---------------- h3 waiting for a material the people do not have ----------------
+{
+  const b = project('hut'); const RARE = ['marfim', 'perolas', 'coral', 'seda', 'joias', 'ouro']; const k = RARE.find(q => !((f0.stock[q] || 0) >= 1));
+  let waited = false, onAll = 0, looks = 0, prog0 = 0, came = false, id = 0;
+  if (b && k) {
+    id = b.id; allIn(b); b.need[k] = 3; // (three of a thing the people lack: what it allows is the rest)
+    const al = Vg.allowedProgress(b); b.progress = al; prog0 = b.progress; leaveIt(b);
+    for (let t = 0; t < 30; t++) { live(1); looks++; if (onIt(id).length) onAll++; }
+    waited = !builtNow(id) && Math.abs(S.buildings.get(id).progress - prog0) < 1e-9 && onAll === 0;
+    D.make('f:' + f0.id, k, 3, { code: 'teste' }); // (the material comes to the store)
+    came = live(150, () => builtNow(id));
+  }
+  ok('h3 a obra sem o material continua esperando, sem ninguém preso nela, e anda quando ele chega', !!b && !!k && waited && came, b && k ? `faltando 3 de ${k} (o povo tem ${Math.floor(f0.stock[k] || 0)} agora): ${waited ? 'esperou' : 'não esperou'} (construtores nela em ${onAll} de ${looks} olhadas, o progresso ${r2(prog0)} → ${r2((S.buildings.get(id) || {}).progress || 0)}); com o material: ${came ? 'pronta' : 'não ficou pronta'}` : 'sem obra ou sem um material que falte');
+}
+
+// ---------------- h4 a free people founded on purpose ----------------
+let fset = null, ffac = null, band = [];
+{
+  const kids = [...S.villagers.values()].filter(v => v.set === set0.id && v.age >= 6 && v.age < 14 && !v.captive && !v.aboard && !v.ug).sort((a, b) => a.id - b.id).slice(0, 4);
+  const grown = [...S.villagers.values()].filter(v => v.set === set0.id && v.age >= 18 && v.age < 55 && !v.captive && !v.aboard && !v.jail && !v.ug && v.id !== f0.leader && v.role !== 'guerreiro' && !(S.avatar && S.avatar.id === v.id)).sort((a, b) => a.id - b.id).slice(0, 10);
+  band = grown.concat(kids);
+  // (ex-captives: hungry; the children with a plain load of the captor's work still in the hands)
+  band.forEach((v, i) => { Vg.endTask(v); if (v.carry) D.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true, part: true }); v.hunger = 40 + (i % 4) * 10; if (v.age < 14) D.make('v:' + v.id, i % 2 ? 'wood' : 'stone', 2, { code: 'teste' }); });
+  const captor = G.Fac.all().filter(o => o.id !== f0.id && G.Fac.pop(o.id) > 0).sort((a, b) => a.id - b.id)[0] || null;
+  ffac = G.War.foundFree(band, captor, 'revolta'); fset = ffac ? G.Fac.capitalOf(ffac.id) : null;
+  if (!fset) { ok('h4 o povo livre fundado', false, 'nenhum lugar livre para a cidade neste mundo'); }
+}
+const fireOf = () => { const s = fset && S.settlements.get(fset.id); const b = s && S.buildings.get(s.campfire); return b && b.type === 'campfire' ? b : null; };
+const people = () => [...S.villagers.values()].filter(v => fset && v.set === fset.id);
+const starved = () => { let n = 0; for (const id of band.map(v => v.id)) if (!S.villagers.has(id)) n++; return n; };
+let hungerDead = 0; { const kill0 = V.kill; V.kill = function (v, cause) { if (v && fset && v.set === fset.id && cause === 'hunger' && S.villagers.has(v.id)) hungerDead++; return kill0.apply(this, arguments); }; }
+if (fset) {
+  console.log(`(${band.length} de ${set0.name} fundam ${fset.name}, de ${ffac.name}: ${Math.floor(ffac.stock.food)} de comida no estoque, nenhum prédio)`);
+  // before any store: the hungry do not choose a meal at a store that does not exist (the choice, L-165) — asked of the
+  // hungriest, as its own decision would ask (its errand let go for it, and given back)
+  let eatAsked = 0, eatGot = 0;
+  const askEat = () => {
+    const v = people().filter(o => o.age >= 6 && !V.nearestDropoff(o.x, o.y, o.set)).sort((a, b) => b.hunger - a.hunger || a.id - b.id)[0]; if (!v) return;
+    v.hunger = Math.max(v.hunger, 90); const keep = v.task ? Object.assign({}, v.task) : null; Vg.endTask(v);
+    const t = Vg.H.eatTask(v); eatAsked++; if (t && t.type === 'eat') eatGot++;
+    Vg.endTask(v); if (keep && keep.type === 'migrate') Vg.setTask(v, { type: 'migrate', pri: 1.6, kind: 'migrate' });
+  };
+  askEat();
+  live(60, () => !!fireOf());
+  const cf = fireOf();
+  // the fire left at its last stroke: six sixths, its builder called away — and the save loaded right then
+  if (cf && !cf.built) { askEat(); cf.progress = six; leaveIt(cf); reload(); }
+  const lit = live(120, () => { const b = fireOf(); return !!(b && b.built); });
+  const food = () => { const f = G.Fac.get(ffac.id); return f ? f.stock.food : 0; };
+  const food0 = food(); live(60); const food1 = food();
+  ok('h4 o povo livre: ninguém escolhe comer num armazém que não existe; a fogueira parada no último golpe (e salva) fica pronta, e comem', !!cf && lit && eatGot === 0 && eatAsked > 0 && food1 < food0 && !hungerDead,
+    `${cf ? 'a fogueira #' + cf.id + ' deixada em ' + six + ', o save carregado: ' + (lit ? 'pronta' : 'não ficou pronta') : 'o planejador não pôs a fogueira'}; sem armazém, ${eatAsked} perguntas de comer a quem tinha fome, ${eatGot} «comer no armazém»; o estoque do povo ${Math.floor(food0)} → ${Math.floor(food1)}; mortes de fome ${hungerDead}`);
+
+  // the god pulls the fire down: no store again — nobody stuck on a meal that cannot be; the fire comes back
+  const cf1 = fireOf(); if (cf1) V.destroyBuilding(cf1, 'deus');
+  eatAsked = 0; eatGot = 0;
+  askEat(); const ask1 = eatAsked, got1 = eatGot;
+  // (whoever raises it dies in the middle: another finishes it)
+  let killed = 0; const back = live(150, () => { const b = fireOf(); if (b && !b.built && !killed) { const w = onIt(b.id).find(v => v.task.st === 4); if (w) { V.kill(w, 'god', true); killed = w.id; } } return !!(b && b.built); });
+  const fsNow = S.settlements.get(fset.id); const bsNow = [...S.buildings.values()].filter(b => b.set === fset.id).map(b => `${b.type}${b.built ? '' : '(' + Math.round((b.progress || 0) * 100) + '%)'}`);
+  if (!back) console.log('   (h4: ' + people().filter(o => o.age >= 16).map(o => `${o.role || '-'}:${o.task ? o.task.type + (o.task.id ? '#' + o.task.id : '') : '-'}${o.carry ? '/' + o.carry.k + ' ' + o.carry.n : ''} f${Math.round(o.hunger)}`).join(' ') + ')');
+  ok('h4 o deus derruba a fogueira: sem armazém ninguém fica preso a um comer impossível; ela volta, mesmo com quem a levantava morto no meio', !!cf1 && got1 === 0 && ask1 > 0 && back && !hungerDead,
+    `${cf1 ? 'derrubada' : 'sem fogueira'}; ${ask1} com fome perguntados, ${got1} «comer no armazém»; ${killed ? 'o construtor #' + killed + ' morreu no meio, ' : ''}${back ? 'outra fogueira pronta' : 'nenhuma fogueira de pé'} (prédios [${bsNow.join(' ')}], fogueira ${fsNow ? fsNow.campfire : '-'}, falhas ${fsNow ? fsNow.fails : '-'}); mortes de fome ${hungerDead}`);
+
+  // a whole day of the world by the skip: nobody of them dies of hunger
+  G.inSim--; const d0 = S.day; G.Skip.on = true; G.FX.off = true; W.pathGreed = 1.3;
+  try { let n = 0; while (S.day - d0 < 1) { G.Main.skipStep(1); if (++n % 40 === 0) watch(); } } finally { G.Skip.on = false; G.FX.off = false; W.pathGreed = W.PATH_EXACT; }
+  G.inSim++;
+  const left = people().length; const fire = fireOf();
+  ok('h4 um dia inteiro pelo salto: ninguém do povo livre morre de fome', !hungerDead && !!fire && fire.built, `${left} pessoas em ${fset.name} (${starved()} do bando saíram do mundo, nenhuma de fome); a fogueira ${fire && fire.built ? 'de pé' : 'não está de pé'}; mortes de fome ${hungerDead}`);
+}
+
+// ---------------- h5 the rule S1: a town dying of hunger with food in the stock and no store ----------------
+{
+  let got = [], none = [];
+  if (fset) {
+    const fire = fireOf(); const was = fire ? fire.id : 0;
+    const ppl = people().filter(v => v.age >= 6).slice(0, 3); const keep = ppl.map(v => [v.hunger, v.hp]);
+    for (const v of ppl) { v.hunger = 100; v.hp = 35; }
+    none = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
+    if (fire) { fire.built = false; } // (the town without its store, for the look: put back at once)
+    got = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
+    if (fire) fire.built = true;
+    ppl.forEach((v, i) => { v.hunger = keep[i][0]; v.hp = keep[i][1]; });
+    void was;
+  }
+  ok('h5 o verificador (S1): uma cidade morrendo de fome com comida no estoque e nenhum armazém', !!fset && got.length === 1 && !none.length, got.length ? `«${got[0].msg}»; com a fogueira de pé: ${none.length ? 'também (errado)' : 'nada'}` : 'o verificador não viu');
+}
+
+// ---------------- h6 the rule S2: someone dying of hunger with food in reach ----------------
+{
+  const calm = [...S.settlements.values()].filter(s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 5).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)[0];
+  const v = calm && [...S.villagers.values()].filter(o => o.set === calm.id && o.age >= 18 && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && W.reaches(o, ...V.frontTile(V.nearestDropoff(o.x, o.y, o.set)))).sort((a, b) => a.id - b.id)[0];
+  const said = (who, t) => QA.check().filter(q => q.sys === 'fome' && q.sev === 2 && q.id === who.id);
+  let held = [], eating = [], fleeing = [], captive = [], attacked = [], condemned = [], burning = [];
+  if (v) {
+    const keep = [v.hunger, v.hp, v.captive]; const set = S.settlements.get(v.set); const alarm = set.alarmT;
+    Vg.endTask(v); v.hunger = 100; v.hp = 35;
+    Vg.setTask(v, { type: 'idle', pri: 3, wait: 999 }); held = said(v);          // (stuck to an errand of its own)
+    Vg.endTask(v); Vg.setTask(v, { type: 'eat', pri: 2.5 }); eating = said(v);   // (on the way to eat)
+    Vg.endTask(v); Vg.setTask(v, { type: 'flee', pri: 5 }); fleeing = said(v);   // (running from a danger)
+    Vg.endTask(v); Vg.setTask(v, { type: 'condemned', pri: 6 }); condemned = said(v); // (not free: bound for the scaffold)
+    Vg.endTask(v); v.captive = { from: v.set, home: v.set }; captive = said(v); v.captive = keep[2];
+    set.alarmT = 30; attacked = said(v); set.alarmT = alarm;
+    const al = Vg.alarms.get(set.id); Vg.alarms.set(set.id, [W.idx(set.cx, set.cy)]); burning = said(v); if (al) Vg.alarms.set(set.id, al); else Vg.alarms.delete(set.id); // (a fire in the town)
+    Vg.endTask(v); v.hunger = keep[0]; v.hp = keep[1];
+  }
+  ok('h6 o verificador (S2): quem morre de fome com comida ao alcance, preso a outra coisa; não quem vai comer, foge, está condenado ou cativo, nem numa cidade atacada ou em fogo', !!v && held.length === 1 && !eating.length && !fleeing.length && !condemned.length && !captive.length && !attacked.length && !burning.length,
+    v ? `${v.name} em ${calm.name}: ${held.length ? '«' + held[0].msg + '»' : 'o verificador não viu'}; indo comer ${eating.length}, fugindo ${fleeing.length}, condenado ${condemned.length}, cativo ${captive.length}, cidade atacada ${attacked.length}, cidade em fogo ${burning.length}` : 'ninguém numa cidade calma');
+}
+
+// ---------------- h7 the wounded sleeper: wakes at night to eat, and sleeps again (L-171) ----------------
+// (someone of a calm town with food in its store, at night, worn out — the sleep of exhaustion, that a meal did not
+// break — with the hunger at the top and 40 of life)
+const calmOne = (skip) => {
+  const ok2 = s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 5;
+  for (const s of [...S.settlements.values()].filter(ok2).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)) {
+    const o = [...S.villagers.values()].filter(q => q.set === s.id && q.age >= 18 && q.age < 50 && !q.captive && !q.jail && !q.aboard && !q.ug && !q.held && !q.air && !(S.avatar && S.avatar.id === q.id) && !(skip || []).includes(q.id) && q.home && S.buildings.get(q.home) && S.buildings.get(q.home).built && W.reaches(q, ...V.frontTile(V.nearestDropoff(q.x, q.y, q.set)))).sort((a, b) => a.id - b.id)[0];
+    if (o) return o;
+  }
+  return null;
+};
+{
+  const v = calmOne(); const t0 = S.time; let woke = false, ate = false, slept = false, h0 = 0;
+  if (v) {
+    S.time = 0.86; Vg.endTask(v); v.hunger = 100; v.hp = 40; v.energy = 5; v._hungerT = 0;
+    Vg.setTask(v, { type: 'sleep', pri: 2.5, kind: 'sleep' }); h0 = v.hunger;
+    live(80, () => { if (!S.villagers.has(v.id)) return true; if (v.task && v.task.type !== 'sleep' && !woke) woke = true; if (woke && v.hunger < 60) ate = true; if (ate && v.task && v.task.type === 'sleep') slept = true; return slept; });
+  }
+  ok('h7 o ferido com a fome no máximo, deitado de noite: acorda, come e volta a dormir', !!v && woke && ate && slept && S.villagers.has(v.id),
+    v ? `${v.name}: ${woke ? 'acordou' : 'não acordou'}${ate ? ', comeu (fome ' + Math.round(h0) + ' → ' + Math.round(v.hunger) + ')' : ''}${slept ? ', voltou a dormir' : ''}; vida ${Math.round(v.hp)}` : 'ninguém numa cidade calma');
+  S.time = Math.max(S.time, t0);
+}
+
+// ---------------- h8 the hungry one at a festival leaves to eat; the festival goes on (L-171) ----------------
+{
+  let left = false, still = 0, who = null, fe = null, key = '', town = null; const tried = [];
+  // (a festival of the town's own people, begun at its hour — the first town and feast of them that can hold one)
+  for (const s of [...S.settlements.values()].filter(s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 5).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)) {
+    const civ = (G.Fac.get(s.fac) || {}).civ;
+    for (const k of Object.keys(G.Fest.DEF).filter(q => G.Fest.DEF[q].civ === civ && G.Fest.DEF[q].every && !G.Fest.DEF[q].trigger)) {
+      S.time = G.Fest.DEF[k].at + 0.01; fe = G.Fest.start(s, k); tried.push(s.name + '/' + k); if (fe) { town = s; key = k; break; }
+    }
+    if (fe) break;
+  }
+  if (fe) {
+    const crowd = () => [...S.villagers.values()].filter(q => q.task && q.task.type === 'fest' && q.task.fid === fe.id);
+    who = crowd().filter(q => q.task.role !== 'victim' && q.task.role !== 'chained' && q.age >= 6 && !q.captive).sort((a, b) => b.age - a.age || a.id - b.id)[0];
+    if (who) { who.hunger = 100; who.hp = 40; who._hungerT = 0; live(20, () => { left = !(who.task && who.task.type === 'fest'); return left; }); still = crowd().length; }
+  }
+  ok('h8 quem está na festa com a fome no máximo sai para comer, e a festa segue sem ele', !!who && left && still > 0 && !!(who.task && (who.task.type === 'eat' || who.task.type === 'forage' || who.task.type === 'idle')),
+    who ? `${who.name} na festa (${key}) de ${town.name}: ${left ? 'saiu (' + (who.task ? who.task.type : 'sem tarefa') + ')' : 'continuou na festa'}; ${still} ainda na festa` : fe ? 'a festa começou sem ninguém na roda' : `nenhuma festa começou (${tried.slice(0, 6).join(', ')})`);
+}
+
+// ---------------- h9 with nothing to eat in reach, a sleeper is not woken at every step ----------------
+{
+  const v = calmOne(); let wakes = 0, asleep = 0, looks = 0; let f = null, food0 = 0; const seen = [];
+  if (v) {
+    f = G.Fac.get(S.settlements.get(v.set).fac); food0 = f.stock.food;
+    const h = S.buildings.get(v.home); const pan0 = h ? h.pantry || 0 : 0;
+    // (nothing to eat in reach for the case: the store out of the way — the mark the world leaves when the way to it is not
+    // found (_noStore), kept on for the case —, the berries around picked, no plain food in the hands; the people's farmers
+    // keep filling the store meanwhile, so an emptied store would not stay empty)
+    if (v.carry && v.carry.k === 'food') D.use('v:' + v.id, 'food', v.carry.n, { code: 'teste', mine: true, part: true });
+    // (the berries around picked, and picked again as they grow back)
+    const bushes = new Map(); const pick = () => { for (const b of S.bushes.values()) if (b.berries > 0 && (G.dist(b.x, b.y, v.x, v.y) < 26 || (h && G.dist(b.x, b.y, h.x, h.y) < 26))) { if (!bushes.has(b)) bushes.set(b, b.berries); b.berries = 0; } };
+    S.time = 0.86; Vg.endTask(v); v.hunger = 100; v.hp = 55; v.energy = 5; v._hungerT = 0;
+    Vg.setTask(v, { type: 'sleep', pri: 2.5, kind: 'sleep' });
+    for (let k = 0; k < 40; k++) { v._noStore = S.clock + 5; pick(); const was = v.task && v.task.type === 'sleep'; M.viver(0.5); looks++; if (v.task && v.task.type === 'sleep' && v.sleeping) asleep++; if (was && !(v.task && v.task.type === 'sleep')) { wakes++; seen.push(v.task ? v.task.type : '-'); } }
+    v._noStore = 0; void pan0; void food0;
+    for (const [b, n] of bushes) b.berries = n;
+  }
+  ok('h9 sem comida ao alcance, quem dorme com fome não fica acordando a cada passo', !!v && wakes === 0 && asleep >= looks - 2, v ? `${v.name}: ${asleep} de ${looks} olhadas dormindo, ${wakes} vezes acordado sem ter o que comer${seen.length ? ' (' + seen.join(', ') + ')' : ''}` : 'ninguém');
+}
+
+// ---------------- h10 the condemned are fed while they wait for their hour, as the jail feeds its prisoners (L-170) ----------------
+{
+  const v = calmOne(); let fed = false, h0 = 0, how = '-';
+  if (v) {
+    const f = G.Fac.get(S.settlements.get(v.set).fac);
+    S.time = 0.5; Vg.endTask(v); // (the hour is the next midday: most of a day to wait)
+    G.Justice.sentence(f, [v], 'pelo teste');
+    how = v.task ? v.task.type : '-';
+    if (v.task && (v.task.type === 'condemned' || v.task.type === 'jail')) { v.hunger = 80; h0 = v.hunger; live(20, () => { fed = v.hunger < h0 - 20; return fed; }); }
+    const e = (S.execs || []).find(q => q.ids.includes(v.id)); if (e) G.Justice.free(e, 'perdao'); else Vg.endTask(v);
+  }
+  ok('h10 o condenado come enquanto espera a hora, como o preso na cela', !!v && fed, v ? `${v.name}, ${how}: a fome ${Math.round(h0)} → ${Math.round(v.hunger)} (o estoque do povo dá o pão a quem está preso)` : 'ninguém');
+}
+
+// ---------------- clean ----------------
+{ const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }
+console.log(`FOME: ${fails.length ? 'FALHOU (' + fails.join(', ') + ')' : 'ok'}`);
+process.exit(fails.length ? 1 : 0);

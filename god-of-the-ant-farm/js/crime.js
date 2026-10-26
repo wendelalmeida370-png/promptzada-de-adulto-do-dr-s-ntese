@@ -264,10 +264,12 @@
     if (!b || !b.built || v.jail !== b.id) { v.jail = 0; v.jailUntil = 0; v.inside = 0; return H.end(v); }
     v.inside = b.id; v.moving = false;
     const night = G.isNight(); v.sleeping = night; v.act = night ? 'sleep' : 'sit';
-    // the bread of the jail comes from the town's store
-    if (v.hunger > 60) { const f = G.Fac.ofSet(b.set); if (f && f.stock.food >= 1) { f.stock.food -= 1; v.hunger = Math.max(0, v.hunger - 45); } }
+    Cr.feed(v, b.set);
     if (S.day >= (v.jailUntil || 0)) return release(v, b, 'cumpriu', H);
   }
+  // the bread of whoever is held — in a cell, bound, condemned —, from the town's store: one rule for every hand that
+  // holds someone (the cells here; justice.js's bound and condemned, who waited for their hour with nothing — L-170)
+  Cr.feed = function (v, setId) { if (v.hunger > 60) { const f = G.Fac.ofSet(setId); if (f && f.stock.food >= 1) { f.stock.food -= 1; v.hunger = Math.max(0, v.hunger - 45); } } };
   function release(v, b, how, H) {
     const S = G.S; const [dx, dy] = G.Vg.door(b);
     v.jail = 0; v.jailUntil = 0; v.inside = 0; v.sleeping = false; v.x = dx; v.y = dy;

@@ -49,7 +49,7 @@
     'ord', 'palace', 'pe', 'prophet', 'purse', 'rebel', 'reigned', 'revolt', 'rioted', 'robe', 'robeMark', 'rua',
     'ruaEnd', 'ruaWhy', 'saw', 'sceneHold', 'secret', 'seekT', 'seen', 'shackTry', 'skill', 'stagT', 'thefts',
     'torch', 'traits', 'ug', 'unit', 'unmask', 'unpaid', 'vet', 'voyages', 'wound', 'wrecked',
-    'diary',
+    'diary', '_hungerT',
   ];
   const SHAPED = new Set(SHAPE);
   Vg.shape = function (o) {
@@ -495,7 +495,10 @@
     // before the free time; hunger, sleep and a storm come first)
     if (v.carry && (v.carry.to || v.carry.op) && G.Act && kind !== 'eat' && kind !== 'sleep' && kind !== 'shelter' && kind !== 'watch') { t = G.Act.resumeCarry(v, H); if (t) { t.kind = kind; return; } }
     switch (kind) {
-      case 'eat': t = eatTask(v); break;
+      // (nothing to eat in reach — no store, the store out of the way or empty, no berries —: at night back to sleep, the
+      // hunger waking one again in a while (runSleep); by day the work, which may be what brings food or a store — the fire
+      // of a town just founded, the field, the hunt —, not a day of wandering. L-165, L-171)
+      case 'eat': t = eatTask(v); if (!t) t = G.isNight() ? setTask(v, { type: 'sleep', pri: 1.5 }) : workTask(v); break;
       case 'sleep': t = setTask(v, { type: 'sleep', pri: Math.max(pri, 1.2) }); break;
       case 'work': t = workTask(v); break;
       case 'watch': t = setTask(v, { type: 'patrol', pri: 1.6, torch: true }); break;
@@ -561,7 +564,9 @@
     if (v.carry && v.carry.k === 'food' && !v.carry.op && !v.carry.to && !v.carry.cid) { // eat what you carry (not a load that is someone's errand, not a crate)
       v.carry.n -= 1; v.hunger = Math.max(0, v.hunger - 55); if (v.carry.n <= 0) v.carry = null; emote(v, 'food', 1.5); return setTask(v, { type: 'idle', pri: 0, wait: 1 });
     }
-    if (((G.Army && G.Army.larder(v)) || G.Fac.stockV(v)).food >= 1 && !(v._noStore > S.clock)) return setTask(v, { type: 'eat', pri: v.hunger > 85 ? 2.5 : 1.2 });
+    // (a meal at the store needs a store: a people with food in its stock and no store anywhere — a town just founded, its
+    // fire not lit — looks for something to eat around it, L-165)
+    if (((G.Army && G.Army.larder(v)) || G.Fac.stockV(v)).food >= 1 && !(v._noStore > S.clock) && G.Village.nearestDropoff(v.x, v.y, v.set)) return setTask(v, { type: 'eat', pri: v.hunger > 85 ? 2.5 : 1.2 });
     const b = nearestBush(v, 20); if (b) return setTask(v, { type: 'forage', id: b.id, pri: 1.4 });
     emote(v, 'food', 2);
     return null;
@@ -741,9 +746,9 @@
       if (b.unreach) { if (b.unreach >= 6) { abandonSite(b); continue; } if (S.clock - b.unreachT < 30) continue; }
       const st = G.Fac.stockOfSet(b.set);
       let needMat = false; for (const k in b.need) if (b.need[k] - (b.incoming[k] || 0) > 0 && G.Fac.free(b.set, k) >= 1) { needMat = true; break; }
-      const canWork = b.progress < allowedProgress(b) - 0.001;
+      const work = canWork(b);
       const carryFits = v.carry && b.need[v.carry.k] > 0;
-      if (!needMat && !canWork && !carryFits) continue;
+      if (!needMat && !work && !carryFits) continue;
       let builders = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'build' && o.task.id === b.id) builders++;
       const [cx, cy] = G.Village.center(b);
       const d = G.dist2(v.x, v.y, cx, cy) + builders * 40 + (b.type === 'campfire' ? -500 : 0) + (b.type === 'hut' || b.type === 'house' ? -30 : 0) + (b.type === 'doca' ? -40 : 0);
@@ -752,13 +757,20 @@
     if (!best) return null;
     return setTask(v, { type: 'build', id: best.id, pri: 1, st: 0 });
   }
+  // the progress the materials allow: all of it with every material in — a hair left by the sum of the loads (three of 3.3
+  // for 10 leave 4e-16) is nothing missing, or the ratio would stop the last stroke at 0.9999999999999999
   function allowedProgress(b) {
     const def = G.BDEF[b.type]; const tot = G.Village.totalCost(def);
     if (!tot) return 1;
     let left = 0; for (const k in b.need) left += b.need[k];
-    return 1 - left / tot;
+    return left < 1e-9 ? 1 : 1 - left / tot;
   }
   Vg.allowedProgress = allowedProgress;
+  // work left on a site: with every material in, until it stands — the very opposite of runBuild's "progress >= 1" —;
+  // short of materials, what they allow, within a thousandth. (L-164: a work its builder left in the last thousandth, or
+  // whose strokes add up to 0.9999999999999999 — six sixths, a fire of work 3 in the skip —, was no one's work any more)
+  function canWork(b) { const al = allowedProgress(b); return al >= 1 ? b.progress < 1 : b.progress < al - 0.001; }
+  Vg.canWork = canWork;
   function deliverTask(v) { return setTask(v, { type: 'deliver', pri: 1 }); }
   function exploreTask(v) {
     const S = G.S; const set = S.settlements.get(v.set);
@@ -853,7 +865,10 @@
         if (t.st === 0 && (v.carry.op || v.carry.to) && G.Act) { if (G.Act.resumeCarry(v, H) || G.Act.holdCarry(v, H)) return; if (!v.carry) return end(v); }
         if (t.st === 0) {
           const d = G.Village.nearestDropoff(v.x, v.y, v.set);
-          if (!d) return end(v);
+          // (no store of the people anywhere — a town whose only fire fell, one just founded —: a plain load is set down where
+          // one stands, for a hand later — water is poured out —, and the hands are free for the work that brings a store
+          // back — L-169)
+          if (!d) { const c = v.carry; if (c && c.n > 0 && !c.op && !c.to && !c.cid) { if (c.k === 'water') G.Depot.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true }); else G.Depot.drop('v:' + v.id, c.k, c.n, v.x, v.y, { code: 'pousou', by: v.id, fac: G.Fac.idOfV(v) }); } return end(v); }
           t.drop = d.id; const [fx, fy] = G.Village.frontTile(d);
           if (!Vg.goto(v, fx, fy, true)) return end(v);
           t.st = 1;
@@ -1088,7 +1103,8 @@
       case 'build': runBuild(v, t, dt); break;
       case 'eat': {
         if (t.st === 0) {
-          const d = G.Village.nearestDropoff(v.x, v.y, v.set); if (!d) return end(v);
+          // (no store at all — gone since the choice —: a while of looking elsewhere for food, as when the store is out of reach)
+          const d = G.Village.nearestDropoff(v.x, v.y, v.set); if (!d) { v._noStore = S.clock + 12; return end(v); }
           const alt = G.Village.dropoffs(v.set).filter(o => o !== d).sort((p, q) => G.dist2(p.x, p.y, v.x, v.y) - G.dist2(q.x, q.y, v.x, v.y)).slice(0, 3);
           const n0 = v._pfN || 0; let ok = false; for (const b of [d].concat(alt)) { const [fx, fy] = G.Village.frontTile(b); if (Vg.goto(v, fx, fy, true, b === d ? 8000 : 0)) { ok = true; break; } }
           if (!ok) { v._pfN = n0 + 1; v._noStore = S.clock + 12; unstick(v); return end(v); } t.st = 1;
@@ -1328,7 +1344,7 @@
         if (!Vg.goto(v, dx, dy, true)) return end(v);
         t.mat = mat; t.st = 1; return;
       }
-      if (b.progress < allowedProgress(b) - 0.001) { if (!gotoB(v, b, 0.3)) return end(v); t.st = 3; return; }
+      if (canWork(b)) { if (!gotoB(v, b, 0.3)) return end(v); t.st = 3; return; }
       return end(v);
     }
     if (t.st === 1) {
@@ -1350,7 +1366,7 @@
         if (n - used > 0) G.Village.addStock(k, n - used, G.Village.facOfSet(b.set));
         G.FX && G.FX.chips((b.x + b.w / 2), (b.y + b.h / 2), k === 'wood' ? '#a67c4e' : '#9a9a9a');
       }
-      t.st = b.progress < allowedProgress(b) - 0.001 ? 4 : 0;
+      t.st = canWork(b) ? 4 : 0;
       v.actT = 0;
       return;
     }
@@ -1406,6 +1422,13 @@
     if (!v.inside && G.R() < dt * 0.3) emote(v, 'zzz', 1.6);
     if (!night && v.energy >= 96) end(v);
     else if (!night && v.energy > 60 && v.hunger > 80) end(v);
+    // (the hunger at the top and the life going — a wound, a long road —: up to eat, at night too, by the same choice of a
+    // meal as awake; with nothing to eat in reach, sleep on, not woken again for a while. The body the player lives is never
+    // woken by the world — L-171)
+    else if (v.hunger >= 99.9 && v.hp < 60 && !(v._hungerT > S.clock) && !(S.avatar && S.avatar.id === v.id)) {
+      v._hungerT = S.clock + G.DAY_LEN * 0.1;
+      const e = eatTask(v); if (e) e.kind = 'eat';
+    }
   }
 
   function tryConceive(v) {
