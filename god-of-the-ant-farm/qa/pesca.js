@@ -210,10 +210,13 @@ console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'águ
   const c = P.can(v, sp5.wx, sp5.wy, P.how(town.fac));
   G.Vg.setTask(v, { type: 'fish', spot: W.idx(sp5.lx, sp5.ly), x: sp5.lx, y: sp5.ly, wx: Math.sign(sp5.wx - sp5.lx), wy: Math.sign(sp5.wy - sp5.ly), pri: 1 });
   const L0 = S.ledgerN; fine(40, () => { S.weather.storm = 1; return false; });
-  const caught = book(e => e[0] > L0 && e[8] === 'pesca').length;
+  // (the shore's catches — into the hands at the water's edge —; a boat that comes back in the storm and lands at its quay
+  // what it caught before is the boats', fishers.js: told apart)
+  const caught = book(e => e[0] > L0 && e[8] === 'pesca' && e[4][0] === 'v').length;
+  const landed = book(e => e[0] > L0 && e[8] === 'pesca' && e[4][0] === 'q').length;
   S.weather.storm = 0;
   ok('p9 a tempestade', !c.ok && /tempestade/.test(c.why) && !caught && !(v.task && v.task.type === 'fish') && !bad().length,
-    `na tempestade: "${c.why}"; ${v.name} mandado pescar: ${v.task ? 'agora ' + v.task.type : 'parou'}; peixes pegos no mundo inteiro em 40 s de tempestade: ${caught}`);
+    `na tempestade: "${c.why}"; ${v.name} mandado pescar: ${v.task ? 'agora ' + v.task.type : 'parou'}; peixes pegos na beira d'água no mundo inteiro em 40 s de tempestade: ${caught}${landed ? ` (e ${landed} desembarque(s) de barco que voltou no meio dela, com o que pescou antes)` : ''}`);
 }
 // ---------------- p10: the one who fishes dies with the catch in the hands
 {
