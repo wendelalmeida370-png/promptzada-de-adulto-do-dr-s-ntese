@@ -185,7 +185,12 @@
     // ---- the partitions' openings ----
     for (const w of P.walls) if (w.kind === 'divisoria' && !P.holes.some(h => h.wall === w.id)) {
       const len = P.wlen(w.id); const a = P.rooms.find(q => q.lv === w.lv && touches(q.r, w)); const b2 = P.rooms.find(q => q.lv === w.lv && q !== a && touches(q.r, w)); if (!a || !b2) continue;
-      const dw = 0.85; const at = Math.max(dw / 2 + 0.3, Math.min(len - dw / 2 - 0.3, len * P.pick([0.28, 0.5, 0.72])));
+      // (by one end of it when a room it opens is too shallow for a mat across it and the way through the door — the beds lie
+      // along the partition there, and a door in its middle would cut them in two)
+      const vert = Math.abs(w.a[0] - w.b[0]) < 1e-6; const deepOf = q => (vert ? q.r[2] - q.r[0] : q.r[3] - q.r[1]);
+      // (a people that sleeps on benches along the walls keeps the door in the middle: the side walls stay whole for them)
+      const shallow = Math.min(deepOf(a), deepOf(b2)) < 2.7 && !(tr.bed || []).includes('banco-cama');
+      const dw = 0.85; const at = Math.max(dw / 2 + 0.3, Math.min(len - dw / 2 - 0.3, shallow ? P.pick([0, len]) : len * P.pick([0.28, 0.5, 0.72])));
       P.door(w.id, at, dw, Math.min(1.95, h0 - 0.15), a.id, b2.id, 0, P.chance(0.5) ? 'vao' : 'porta');
     }
     // ---- the storeys over and under the ground, the loft, the roof terrace: what is in them, the ways up and down ----
@@ -232,6 +237,17 @@
       return P.stair(kind || 'escada-de-mao', lv0, lv1, r, du, dv, hole);
     }
     return null;
+  }
+  // ladders along a wall, in the back and front corners of rooms (their ids), up toward the side wall, the foot toward the
+  // middle: where a room is too shallow for a flight or a ladder up toward the back — a storey cut in two, front and back —
+  // the last places tried (no dice: what the places before them laid out stays as it was)
+  function sideLadders(P, ids) {
+    const lw = 0.6, run = 0.65; const out = [];
+    for (const id of ids) {
+      const R = P.rooms[id]; if (!R || R.open || R.circ) continue; const r = R.r;
+      for (const v0 of [r[1] + 0.03, r[3] - 0.03 - lw]) for (const [u0, du] of [[r[0] + 0.55, -1], [r[2] - 0.55 - run, 1]]) { const q = [u0, v0, u0 + run, v0 + lw]; out.push({ r: q, du, dv: 0, hole: q }); }
+    }
+    return out;
   }
   // the loft under the roof, as the shell has it: its floor under the eaves over the back of the top storey — as far forward
   // as a loft may come (the windows keep clear of its slab there); how deep it is, the inside lays out
@@ -298,7 +314,9 @@
       if (two) {
         const id1 = I1[3] - I1[1]; const sp = P.rr(0.47, 0.53); const at = I1[1] + id1 * (P.attempt >= 4 && P.attempt % 2 ? (P.attempt % 4 === 1 ? 0.38 : 0.62) + sp - 0.5 : sp);
         const [back, front, w] = P.split(id, 'v', at, 0.1, h1); ids.splice(0, 1, back, front);
-        const len = P.wlen(w); P.door(w, Math.max(0.6, Math.min(len - 0.6, len * P.pick([0.3, 0.5, 0.7]))), 0.8, Math.min(1.95, h1 - 0.15), back, front, 0, 'porta');
+        // (by one end, as on the ground, when the rooms are too shallow for a mat across them and the way through the door)
+        const shallow = Math.min(P.rooms[back].r[3] - P.rooms[back].r[1], P.rooms[front].r[3] - P.rooms[front].r[1]) < 2.7 && !(P.tr.bed || []).includes('banco-cama');
+        const len = P.wlen(w); P.door(w, Math.max(0.6, Math.min(len - 0.6, shallow ? P.pick([0, len]) : len * P.pick([0.3, 0.5, 0.7]))), 0.8, Math.min(1.95, h1 - 0.15), back, front, 0, 'porta');
       }
       rooms.up.push(...ids);
       // the way up from the storey below
@@ -311,6 +329,8 @@
       const cr = [cu0, cv0, cu0 + cw, cv0 + crun]; const col = [{ r: cr, du: 0, dv: lane ? 1 : -1, hole: cr }];
       const ways = [[col, ladders ? 'escada-de-mao' : 'escada']].concat((P.attempt + k) % 2 ? [[lc, 'escada-de-mao'], [cands, 'escada']] : [[cands, 'escada'], [lc, 'escada-de-mao']]);
       let ok = false; for (const [cs, kind] of ways) if (ladderAt(P, k - 1, k, cs, null, kind)) { ok = true; break; }
+      // (none of them in a storey cut in two shallow rooms: a ladder along a wall in a corner of one of its rooms)
+      if (!ok && ladderAt(P, k - 1, k, sideLadders(P, P.rooms.filter(m => m.lv === k - 1 && m.fn !== 'anexo').map(m => m.id)))) ok = true;
       if (!ok) P.errs.push(`não cabe a escada do ${k}º andar`);
     }
   }
@@ -414,6 +434,7 @@
 
   // ------------------------------ the furniture of a home ------------------------------
   function furnishHome(P, rooms, need) {
+    const e0 = P.errs.length; // (what the house itself could not raise — a stair, a loft —, before any piece went in)
     const tr = P.tr, rec = P.rec; const rich = rec.w >= 2; const shack = rec.t === 'barraco';
     const lar = rooms.lar; const hot = rec.cl === 'q';
     const loftOf = id => P.lvl(P.rooms[id].lv).kind === 'jirau';
@@ -463,12 +484,12 @@
       if (!lit) P.errs.push('sem lugar para o fogo');
     };
     // what keeps the household's things: the pantry (in the cellar, the annex, the hall) and the chest (coins and goods)
-    const keep = () => {
+    const keep = upFirst => {
       const keepAt = [rooms.despensa, rooms.anexo, rooms.lar, rooms.leitos, rooms.quarto].concat(rooms.up || []).filter(x => x !== undefined);
       const pantry = tr.keep.find(k => k !== 'arca') || 'cesto';
       // (every fourth attempt of a full house, its things up on the walls first — baskets from the beams, the shelf on pegs,
       // the niche —, the floor left to the sleepers)
-      const up = need >= 4 && P.attempt % 4 === 3;
+      const up = upFirst === true || (need >= 4 && P.attempt % 4 === 3);
       let gotP = false; if (up) for (const id of keepAt) { if (P.niche('cesto-pendurado', P.rooms[id].lv, id)) { gotP = true; break; } }
       if (!gotP) for (const id of keepAt) { const lv = P.rooms[id].lv; if (P.place(pantry, lv, id) || P.place('cesto', lv, id)) { gotP = true; break; } }
       // (no floor for the jars: the food hung in baskets from the beams)
@@ -492,9 +513,25 @@
     // roofs and the land is not cold, the roof: who does not fit inside sleeps under the stars rather than on the floor. A
     // house that holds its household already is not touched)
     const roofTo = !hot && tr.roofSleep && rec.cl !== 'f' ? [rooms.terraco, rooms.terracoFrente].filter(x => x !== undefined) : [];
-    if (P.places() < need && !shack) for (const id of order.concat(roofTo)) {
+    const rowsIn = ids => { if (!shack) for (const id of ids) {
       const R = P.rooms[id]; if (!R || R.circ || P.places() >= need) continue;
       for (const s of ['fundo', 'esquerda', 'direita', 'frente'].sort((a, b) => wallLen(R, b) - wallLen(R, a))) { if (P.places() >= need) break; rowOf(P, id, s, rowKinds, need); }
+    } };
+    if (P.places() < need) rowsIn(order.concat(roofTo));
+    // (and a house that still does not hold its household, or where the fire or the things kept found no place: its floor
+    // cleared — the same rooms, doors and stairs — and laid out again in two orders more: the beds in rows along every wall,
+    // the couple's among them and no longer before them, and the things kept up on the walls first; the fire before the beds,
+    // then after them, where it is left a place. The best of the lay-outs stays. A house laid out already is not touched)
+    const score = () => (P.errs.length > e0 ? -1000 : 0) + Math.min(P.places(), need);
+    const snap = () => ({ s: score(), items: P.items.map(it => Object.assign({}, it, { drop: it.drop ? it.drop.slice() : it.drop })), errs: P.errs.slice() });
+    if ((P.places() < need || P.errs.length > e0) && !shack && need >= 3) {
+      let best = snap();
+      for (const steps of [[fireUp, () => rowsIn(order), () => keep(true), beds], [() => rowsIn(order), beds, () => keep(true), fireUp]]) {
+        P.items.length = 0; P._ver = (P._ver || 0) + 1; P.errs.length = e0;
+        for (const st of steps) st(); if (P.places() < need) rowsIn(order.concat(roofTo));
+        if (score() > best.s) best = snap(); if (best.s >= need) break;
+      }
+      P.items.length = 0; P.items.push(...best.items); P.errs.length = 0; P.errs.push(...best.errs); P._ver++;
     }
     // the work front: the bench (or the counter) facing the door
     if (rooms.oficina !== undefined && !P.place('bancada', 0, rooms.oficina, { sides: ['fundo', 'esquerda', 'direita'] }) && !P.place('balcao', 0, rooms.oficina, { sides: ['livre'] })) P.errs.push('sem lugar para a bancada');
@@ -503,5 +540,5 @@
     P.opt(() => { if (!shack && tr.fire === 'lar' && rooms.anexo !== undefined) P.place('lenha', 0, rooms.anexo); });
   }
   // (what the other recipes — the block round a court, the buildings of work — lay out with)
-  In.HOME = { ladderAt, loft, porao, terrace, windows, roofOf, pitched, wet, flatOK, cellarOK, touches, roomHolding, ptInR, parseV, NUM, TOPN, rowOf };
+  In.HOME = { ladderAt, sideLadders, loft, porao, terrace, windows, roofOf, pitched, wet, flatOK, cellarOK, touches, roomHolding, ptInR, parseV, NUM, TOPN, rowOf };
 })(window.G);
