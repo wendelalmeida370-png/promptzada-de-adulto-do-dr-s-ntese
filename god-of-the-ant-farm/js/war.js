@@ -1026,7 +1026,8 @@
     if (cur && cur.pri >= 3) return;
     if (v.age < 16) return H.childDecide(v);
     const night = G.isNight();
-    if (night) { if (!cur || cur.type !== 'sleep') H.setTask(v, { type: 'sleep', pri: 1.5, kind: 'sleep' }); return; }
+    // (to bed at night — but one the hunger woke goes to bed after the meal, not before: L-171)
+    if (night) { if (!cur || (cur.type !== 'sleep' && cur.kind !== 'eat')) H.setTask(v, { type: 'sleep', pri: 1.5, kind: 'sleep' }); return; }
     if (v.hunger > 70 && (!cur || cur.kind !== 'eat')) { const t = H.eatTask(v); if (t) { t.kind = 'eat'; return; } }
     if (v.energy < 15) { H.setTask(v, { type: 'sleep', pri: 1.2, kind: 'sleep' }); return; }
     if (cur && (cur.kind === 'work' || cur.kind === 'eat')) return;

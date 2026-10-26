@@ -20,6 +20,7 @@
 // h9 quem dorme com fome e não tem o que comer ao alcance não fica acordando a cada passo
 // h10 o condenado come enquanto espera a hora, como o preso na cela (L-170)
 // h11 a caminho da cama, quem morre de fome com pão nas mãos come antes de deitar (L-171; achado pela regra S2 no negocio)
+// h12 a criança que a fome acorda de noite come antes de voltar para a cama (L-171; achado pela regra S2 na medida)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -274,6 +275,30 @@ const calmOne = (skip) => {
   }
   ok('h11 a caminho da cama, quem morre de fome com pão nas mãos come antes de deitar', !!v && ate && st === 1,
     v ? `${v.name}, a ${far} de casa, com 3 de comida nas mãos, a fome no máximo e 40 de vida: ${ate && st === 1 ? `comeu a caminho (o sono acabou no passo 1, o de ir para a cama; fome ${Math.round(h0)} → ${Math.round(v.hunger)})` : ate ? `SÓ comeu deitada (o sono acabou no passo ${st}; fome ${Math.round(h0)} → ${Math.round(v.hunger)})` : `NÃO comeu (o sono ${st >= 0 ? 'acabou no passo ' + st : 'não acabou'}; ${v.task ? v.task.type : 'sem tarefa'})`}` : 'ninguém numa cidade calma');
+}
+// ---------------- h12 the child the hunger wakes at night eats before going back to bed (L-171) ----------------
+// (found by the rule S2 in the measurement of 12 years: Tlalli of Tenochtitlan, woken by the hunger at night, sent back to
+// bed on the way to the store by the children's own rule of the night, again and again until the morning)
+{
+  const kid = (() => {
+    const ok2 = s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 5;
+    for (const s of [...S.settlements.values()].filter(ok2).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)) {
+      const o = [...S.villagers.values()].filter(q => q.set === s.id && q.age >= 6 && q.age < 15 && !q.captive && !q.jail && !q.aboard && !q.ug && !q.held && !q.air && q.home && S.buildings.get(q.home) && S.buildings.get(q.home).built && W.reaches(q, ...V.frontTile(V.nearestDropoff(q.x, q.y, q.set)))).sort((a, b) => a.id - b.id)[0];
+      if (o) return o;
+    }
+    return null;
+  })();
+  let ate = false, back = 0, h0 = 0; const t0 = S.time;
+  if (kid) {
+    if (kid.carry) D.use('v:' + kid.id, kid.carry.k, kid.carry.n, { code: 'teste', mine: true, part: true });
+    S.time = 0.86; Vg.endTask(kid); kid.hunger = 100; kid.hp = 40; kid.energy = 5; kid._hungerT = 0; h0 = kid.hunger;
+    Vg.setTask(kid, { type: 'sleep', pri: 1.5, kind: 'sleep' });
+    // (the night held for the case: the test's hand on the clock)
+    live(40, () => { if (S.time > 0.95) S.time = 0.86; if (!S.villagers.has(kid.id)) return true; if (kid.hunger < h0 - 30) ate = true; if (!ate && kid.task && kid.task.type === 'sleep' && kid._hungerT > S.clock) back++; return ate; });
+  }
+  ok('h12 a criança que a fome acorda de noite come antes de voltar para a cama', !!kid && ate,
+    kid ? `${kid.name}, ${Math.floor(kid.age)} anos, com a fome no máximo e 40 de vida, de noite: ${ate ? `comeu (fome ${Math.round(h0)} → ${Math.round(kid.hunger)})` : `NÃO comeu: posta de volta na cama ${back} vezes antes de comer`}` : 'nenhuma criança numa cidade calma');
+  S.time = Math.max(S.time, t0);
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }
