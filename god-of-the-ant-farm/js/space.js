@@ -326,22 +326,25 @@
     const lo = treads.length ? treads.reduce((q, t) => (t.y < q.y ? t : q)) : null; const gp = lo ? P(lo.a, lo.n + lo.wn / 2 + 0.5) : null;
     const ground = !gp || (() => { const x = b.x + gp[0] / TILE, z = b.y + gp[1] / TILE; return W.inb(x, z) && (G.S.occ[W.idx(x, z)] === b.id || W.walkableXY(x, z)); })();
     // (and whether the body goes up them and in, along the way it takes — as a player does: up a side flight over the middle of
-    // each tread, over the landing from its end to the door's middle; else up the flight's line —: no other building where its
-    // middle goes, nor a wall, and no other building under a body's rim to either side across its way. A tread is ground over
-    // a steep slope or over the water — the feet stand on its top —, never over a house: a landing over a quay built since
-    // before the door is none — L-207, the taverna#9656; what lies beyond the door's middle, on the landing's far side, the
-    // body never goes over)
-    const tileAt = (a, n) => { const p = P(a, n); const x = b.x + p[0] / TILE, z = b.y + p[1] / TILE; return W.inb(x, z) ? W.idx(x, z) : -1; };
-    const house = (a, n) => { const i = tileAt(a, n); return i < 0 || (G.S.occ[i] !== b.id && W.blocked(i)); };
-    const solid = (a, n) => { const i = tileAt(a, n); return house(a, n) || (G.S.occ[i] !== b.id && !!G.S.wall[i] && G.S.wall[i] !== 2 && G.S.wall[i] !== 3); }; // (a gate and an aqueduct's arch are walked through)
+    // each tread, over the landing from its end to the door's middle; else up the flight's line —: where its middle goes, and
+    // under its rim to either side across its way — the points of the rim a step meets, aslant ahead: r·√½ out —, ground the
+    // body stands on by its own rule (Avatar's solidAt): the building's own lot — the plan's doorstep —; out of it, what the
+    // world walks, or the water a body swims, the feet on the tread's top. Never another building, a wall, a cliff, the map's
+    // edge: a landing over a quay built since before the door is none — L-207, the taverna#9656 —, nor one over a cliff beyond
+    // the lot's edge — L-208, the quartel#4882. What lies beyond the door's middle, on the landing's far side, the body never
+    // goes over)
+    const off = (a, n) => { const p = P(a, n); const X = b.x * TILE + p[0], Z = b.y * TILE + p[1]; if (!W.inb(X / TILE, Z / TILE)) return true;
+      if (G.S.occ[W.idx(X / TILE, Z / TILE)] === b.id) return false; const s = Sp.surface(X, Z); return !s.walk && s.kind !== 'deep'; };
+    const RIM = BODY_R * Math.SQRT1_2;
     const stand = (() => {
       const side = treads.filter(t => t.kind === 'side'), L = treads.find(t => t.kind === 'landing');
       if (side.length && L) {
-        for (const t of side) { const r = Math.min(BODY_R, t.wn / 2); if (solid(t.a, t.n) || house(t.a, t.n - r) || house(t.a, t.n + r)) return false; }
-        const sg = Math.sign(side[0].a) || 1; for (let a = Math.max(0, L.wa / 2 - BODY_R); a > 1e-9; a -= 0.2) if (solid(sg * a, L.n)) return false;
-        return !solid(0, L.n);
+        for (const t of side) { const r = Math.min(RIM, t.wn / 2); if (off(t.a, t.n) || off(t.a, t.n - r) || off(t.a, t.n + r)) return false; }
+        const sg = Math.sign(side[0].a) || 1, rl = Math.min(RIM, L.wn / 2);
+        for (let a = Math.max(0, L.wa / 2 - BODY_R); a > 1e-9; a -= 0.2) if (off(sg * a, L.n) || off(sg * a, L.n - rl) || off(sg * a, L.n + rl)) return false;
+        return !off(0, L.n);
       }
-      return treads.every(t => { const r = Math.min(BODY_R, t.wa / 2); return !solid(t.a, t.n) && !house(t.a - r, t.n) && !house(t.a + r, t.n); });
+      return treads.every(t => { const r = Math.min(RIM, t.wa / 2); return !off(t.a, t.n) && !off(t.a - r, t.n) && !off(t.a + r, t.n); });
     })();
     const fs = treads.length ? footStep() : 0, ru = riseUp();
     const f = { F, uc, P, top, w: wd, treads, cut, room, foot: fs, rise: ru, walks: !treads.length || walks(fs, ru, treads.length), ground, stand };

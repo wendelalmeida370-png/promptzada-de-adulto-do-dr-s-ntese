@@ -122,7 +122,7 @@
     const T = TYPES[ctx.t];
     // (hh: who heads the house; nm: how many lived there at the last turn of the day; vz: the day the last of them left;
     // ab: the day the house was given up — the house left behind)
-    const rec = { v: 1, f: '', r: 0, t: ctx.t, u: T ? T.use : '', s: ctx.s, o: ctx.o, c: ctx.c, e: ctx.e, k: ctx.k, cl: ctx.cl, fl: ctx.fl, d: ctx.d, w: ctx.w, pw: ctx.pw, h: [], m: migrated ? 1 : 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 };
+    const rec = { v: 2, f: '', r: 0, t: ctx.t, u: T ? T.use : '', s: ctx.s, o: ctx.o, c: ctx.c, e: ctx.e, k: ctx.k, cl: ctx.cl, fl: ctx.fl, d: ctx.d, w: ctx.w, pw: ctx.pw, h: [], m: migrated ? 1 : 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 };
     rec.f = chooseFamily(b, rec);
     return rec;
   }
@@ -1322,12 +1322,17 @@
 
   // ------------------------------ the side of the door: where the way in fits (L-195) ------------------------------
   // A door is put only where the way in fits before it: steps the feet walk up, from ground the world walks a stride before
-  // their foot (Space.entryFits — the same reckoning as the steps the 3D lays and the body climbs, made anew, pure). Of the
-  // sides open to the street, in their order, the first where it fits. Asked in the world's step only — the founding, the
-  // turn of the day, a renovation —, of the shell the record makes there: the plan itself never reads the world
+  // their foot (Space.entryFits — the same reckoning as the steps the 3D lays and the body climbs, made anew, pure), and the
+  // tile of the street it opens onto one the world walks (L-209). Of the sides open to the street, in their order, the first
+  // where it fits. Asked in the world's step only — the founding, the turn of the day, a renovation —, of the shell the
+  // record makes there: the plan itself never reads the world
   // (the shell a record makes: the building's own, kept; another side's, made for the asking and never kept)
   const shellFor = (b, rec) => { if (rec === b.ip) return In.shellOf(b); const fo = famOf(b, rec); return fo.P ? shellOut(fo.P) : null; };
-  const entryOk = (b, rec) => { const sh = shellFor(b, rec); return !sh || G.Space.entryFits(b, sh).ok; };
+  // (and the tile of the street the door opens onto — the plan's way out, the people's door, In.door —, as the world walks it
+  // now: a door before a closed tile is no way in, though its side has an open one — L-209)
+  const frontOpen = (b, sh) => { const e = sh && sh.entrance; return !e || !e.out || G.W.walkableXY(b.x + e.out[0] / TILE, b.y + e.out[1] / TILE); };
+  const entryOk = (b, rec) => { const sh = shellFor(b, rec); return !sh || (frontOpen(b, sh) && G.Space.entryFits(b, sh).ok); };
+  In.frontOpen = b => (b && b.ip && TYPES[b.ip.t] ? frontOpen(b, In.shellOf(b)) : true);
   // the side and the open tiles for the door of a record: the first side open to the street where the way in fits, or null
   function fitSide(b, rec) {
     for (const s of SIDES) {
@@ -1341,7 +1346,8 @@
   In.fitSide = b => (b && b.ip && TYPES[b.ip.t] ? fitSide(b, b.ip) : null);
   In.entryOn = function (b, s) {
     if (!b || !b.ip || !TYPES[b.ip.t] || !SIDES.includes(s)) return null; const m = openTiles(b, s); if (!m) return null;
-    const sh = shellFor(b, s === b.ip.s && m === b.ip.o ? b.ip : Object.assign({}, b.ip, { s, o: m })); return sh ? G.Space.entryFits(b, sh) : null;
+    const sh = shellFor(b, s === b.ip.s && m === b.ip.o ? b.ip : Object.assign({}, b.ip, { s, o: m })); if (!sh) return null;
+    const e = G.Space.entryFits(b, sh), front = frontOpen(b, sh); return Object.assign({}, e, { ok: e.ok && front, front });
   };
   // (the step's last word on a building's way in, while its record and the ground are the same — for the checker; undefined
   // when the step has not said since. The ground: what the walk and the land are, and the grown trees about it — the steps
@@ -1515,7 +1521,15 @@
     const t = TYPES[b.type] ? b.type : TYPES[b.origType] ? b.origType : null; if (!t) { delete b.ip; return false; }
     const ctx = In.contextOf(b); ctx.t = t; b.ip = newRecord(b, ctx, true); if (b.type !== 'ruin') placeDoor(b); b.ip.h.push([G.S.day, 'migrado']); return true;
   }
-  In.migrate = function () { let n = 0; for (const b of G.S.buildings.values()) if ((TYPES[b.type] || (b.type === 'ruin' && TYPES[b.origType])) && repair(b)) n++; return n; };
+  In.migrate = function () {
+    let n = 0; for (const b of G.S.buildings.values()) if ((TYPES[b.type] || (b.type === 'ruin' && TYPES[b.origType])) && repair(b)) n++;
+    // (a record of an older version — v 1: before the door of a building of work went before an open tile of its street and
+    // the way in asked for that tile, L-209 —: its door judged now, as the turn of the day judges it, so a plan that changed
+    // under an old save opens where the way in fits from its first frame — whoever was inside goes out by the new door, the
+    // stalls stand by it; a record of this version is never judged on loading: what a save and a load give back is the same)
+    for (const b of G.S.buildings.values()) { const r = b.ip; if (!r || r.v !== 1) continue; r.v = 2; if (b.built && b.type !== 'ruin' && TYPES[b.type] && r.t === b.type) doorRule(b); }
+    return n;
+  };
   G.saveHooks = G.saveHooks || [];
   // (the record goes into the save with its building; loading a world without records — an older save, a ready-made world —
   // gives each building one from what it is on the day it is loaded, the same each time)
