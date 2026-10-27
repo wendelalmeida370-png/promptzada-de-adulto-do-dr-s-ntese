@@ -83,12 +83,14 @@ for (const world of ['metropole', 'mundial']) {
 // ---------------- f2: three market days of the metropolis, the doors on: the line full is rare; the world's lines keep the rule
 {
   M.pronto('metropole'); S = G.S; G.Vg.planDoor = G.Interiors.planDoor;
-  const q0 = L.queueFull; let full = 0, short = 0, at = 0; const seen = new Set(); const where = new Map();
+  const q0 = L.queueFull; let full = 0, short = 0, noWhy = 0, at = 0; const seen = new Set(); const where = new Map();
   // (counted at the world's own question: a buyer at the counter asks if the line is full — not changed, only counted; a
-  // line full with fewer places than its own is the ground's doing, not the crowd's: counted apart)
+  // line full with fewer places than its own is the ground's doing, not the crowd's: counted apart, out of the rate, and
+  // always with the ground's reason — in the new metropolis, in the world of L-203, a merchant opened at the market's place
+  // with water all round, one place, and nine found it full in three days, T-098)
   L.queueFull = function (key) {
     const r = q0.apply(this, arguments);
-    if (r && typeof key === 'string' && key.startsWith('biz:') && G.inSim) { full++; const q = L.queues().find(o => o.key === key); const n = q ? q.slots.length : 0; if (n < B.LINE) short++; where.set(`${key} (${n} lugares${q && q.why ? ': ' + q.why : ''})`, (where.get(`${key} (${n} lugares${q && q.why ? ': ' + q.why : ''})`) || 0) + 1); }
+    if (r && typeof key === 'string' && key.startsWith('biz:') && G.inSim) { full++; const q = L.queues().find(o => o.key === key); const n = q ? q.slots.length : 0; if (n < B.LINE) { short++; if (!(q && q.why)) noWhy++; } where.set(`${key} (${n} lugares${q && q.why ? ': ' + q.why : n < B.LINE ? ': SEM MOTIVO' : ''})`, (where.get(`${key} (${n} lugares${q && q.why ? ': ' + q.why : n < B.LINE ? ': SEM MOTIVO' : ''})`) || 0) + 1); }
     return r;
   };
   const L0 = S.ledgerN; let fila = new Map(); const t0 = S.clock;
@@ -100,9 +102,9 @@ for (const world of ['metropole', 'mundial']) {
   L.queueFull = q0;
   const sold = G.Depot.ledger().filter(e => e[0] > L0 && e[8] === 'venda').length;
   const lines = L.queues(); const wells = lines.filter(q => q.key.startsWith('well:')).length, shops = lines.filter(q => q.key.startsWith('shop:')).length, stalls = lines.filter(q => q.key.startsWith('biz:')).length;
-  const rate = at ? full / at : 0;
-  ok('f2 três dias de mercado com as portas ligadas', at >= 20 && rate <= 0.05 && !fila.size,
-    `${Math.round(S.clock - t0)} s do mundo: ${at} chegadas ao balcão, ${sold} vendas no livro; ${full} acharam a fila cheia e foram embora (${Math.round(rate * 1000) / 10}%${short ? `; ${short} numa fila com menos que os ${B.LINE} lugares` : ''})${where.size ? ': ' + [...where.entries()].slice(0, 4).map(([k, n]) => `${n}× ${k}`).join(' · ') : ''}; as filas agora: ${stalls} de banca, ${wells} de poço, ${shops} de loja; o verificador das filas: ${fila.size ? [...fila.keys()].slice(0, 3).join(' · ') : 'limpo'}`);
+  const rate = at ? (full - short) / at : 0;
+  ok('f2 três dias de mercado com as portas ligadas', at >= 20 && rate <= 0.05 && !noWhy && !fila.size,
+    `${Math.round(S.clock - t0)} s do mundo: ${at} chegadas ao balcão, ${sold} vendas no livro; ${full} acharam a fila cheia e foram embora (${Math.round(rate * 1000) / 10}% numa fila com os ${B.LINE} lugares${short ? `; ${short} numa fila com menos, pelo chão${noWhy ? ` — ${noWhy} SEM MOTIVO` : ''}` : ''})${where.size ? ': ' + [...where.entries()].slice(0, 4).map(([k, n]) => `${n}× ${k}`).join(' · ') : ''}; as filas agora: ${stalls} de banca, ${wells} de poço, ${shops} de loja; o verificador das filas: ${fila.size ? [...fila.keys()].slice(0, 3).join(' · ') : 'limpo'}`);
 }
 // (the checker of the lines and of the activities: what weighs, S0 to S2 — and no module error)
 { const l = QA.check().filter(q => q.sev <= 2 && (q.sys === 'fila' || q.sys === 'act' || q.sys === 'nan')); ok('verificador e módulos', !l.length && M.limpo(), `${l.length ? l.slice(0, 3).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : 'verificador limpo'} · ${JSON.stringify(M.erros().mod)}`); }

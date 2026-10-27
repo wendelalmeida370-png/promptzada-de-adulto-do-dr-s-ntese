@@ -621,6 +621,9 @@
         // (hands that carry something — wood to the store, a crate, a purchase — do not go for water: the jar would take their place — L-136)
         if (v.age < 10 || v.age >= 70 || v.inside || v.sleeping || v.aboard || v.held || v.hp < 40 || (v.carry && v.carry.n > 0)) continue;
         if (v.task && v.task.pri >= 1.05) continue;
+        // (nor one out on the house's errand, the shopping: the jar waits for the next one, or for the errand's end — taken
+        // to the well, the errand was lost and the house waited half a day, L-203)
+        if (v.task && v.task.casa) continue;
         const s = (v.task ? 1 - v.task.pri : 2) + (v.age < 16 ? 0.6 : 0) + G.R();
         if (s > bs) { bs = s; best = v; }
       }

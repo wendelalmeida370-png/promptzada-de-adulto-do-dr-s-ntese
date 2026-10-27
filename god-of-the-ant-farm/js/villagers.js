@@ -209,6 +209,16 @@
     if (c.n > 0 && (c.op || c.to || c.cid)) return 0;
     return fid ? Vg.toStore(v, fid, 'saque') : 0;
   };
+  // what a gathering puts in the hands — berries, fruit, honey, the flats' shellfish —: added to the same plain good already
+  // there; hands with another thing, or with a load that belongs somewhere, are never filled over it — what was in them would
+  // be gone with no line in the ledger (L-186) —: nothing goes in, and the gathering leaves it where it was. → how much went in
+  Vg.plainLoad = v => { const c = v.carry; return !!(c && c.n > 1e-6 && c.k !== 'water' && !c.op && !c.to && !c.cid); };
+  Vg.handsFor = (v, k) => { const c = v.carry; return !c || !(c.n > 1e-6) || (c.k === k && !c.op && !c.to && !c.cid); };
+  Vg.fillHands = function (v, k, n, look) {
+    if (!(n > 0) || !Vg.handsFor(v, k)) return 0;
+    const c = v.carry; if (c && c.n > 1e-6) { c.n += n; return n; }
+    v.carry = Object.assign({ k, n }, look); return n;
+  };
   // a plain load brought to a store (the world's delivery, villagers' and the god's body's alike): into the people's store;
   // a year of plenty doubles the stone and the wood (born of the world, with its cause), what came along with the load goes
   // in too, and the person's tally counts it
@@ -316,7 +326,10 @@
     if (v.hp <= 0) G.Village.kill(v, v.lastCause, v.lastGod);
   }
 
-  const FIELD = { praia: 1, reembarque: 1, expl: 1, naufrago: 1, saga: 1, scene: 1, band: 1, muster: 1, refugio: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1, aboard: 1, embark: 1, boardBack: 1, pave: 1 };
+  // (the crew waiting on the quay for its voyage — 'cais', an errand of 3,25 that the hunger cannot outweigh — is in the field
+  // too: a voyage made ready for a day and more kept them from every meal, and Solveig of Birka starved on the quay with the
+  // store seven steps away, L-201)
+  const FIELD = { praia: 1, reembarque: 1, expl: 1, naufrago: 1, saga: 1, scene: 1, band: 1, muster: 1, refugio: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1, aboard: 1, embark: 1, boardBack: 1, pave: 1, cais: 1 };
   // ------------------------------ emergencies ------------------------------
   Vg.alarms = new Map(); // settlement id -> [tile indices]
   Vg.fireFighters = new Map();
@@ -543,6 +556,14 @@
     if (v.hunger > 60 && (!cur || cur.pri < 1.2)) { const t = eatTask(v); if (t) { t.kind = 'eat'; return; } }
     if (v.energy < 15 && (!cur || cur.pri < 1.2)) { setTask(v, { type: 'sleep', pri: 1.2, kind: 'sleep' }); return; }
     if (S.weather.storm > 0 && S.weather.rain > 0.3 && (!cur || cur.pri < 1.05)) { const h = S.buildings.get(v.home); if (h && h.built) { setTask(v, { type: 'shelter', pri: 1.05, kind: 'shelter' }); return; } }
+    // (by day, a load in the hands goes to its place first — the people's store, or where a load that belongs somewhere
+    // goes —, as the grown-ups' work does: the night's sleep cut the errand that was taking it there, and play, an
+    // apprenticeship or a gathering would keep it in the hands for days, or fill them over it — L-186)
+    const c = v.carry;
+    if (c && c.n > 1e-6 && c.k !== 'water' && (!cur || (cur.pri < 1 && cur.type !== 'deliver')) && !(v._noStore > S.clock)) {
+      const t = (c.op || c.to) && G.Act ? G.Act.resumeCarry(v, H) || G.Act.holdCarry(v, H) : deliverTask(v);
+      if (t) { t.kind = 'deliver'; return; }
+    }
     if (cur && cur.type !== 'wander') return;
     const m = S.villagers.get(v.mother);
     const r = G.R();
@@ -874,7 +895,8 @@
           // back — L-169)
           if (!d) { const c = v.carry; if (c && c.n > 0 && !c.op && !c.to && !c.cid) { if (c.k === 'water') G.Depot.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true }); else G.Depot.drop('v:' + v.id, c.k, c.n, v.x, v.y, { code: 'pousou', by: v.id, fac: G.Fac.idOfV(v) }); } return end(v); }
           t.drop = d.id; const [fx, fy] = G.Village.frontTile(d);
-          if (!Vg.goto(v, fx, fy, true)) return end(v);
+          // (the store out of reach: not asked again at once — a child would ask at each look, L-186 —, as the meal does)
+          if (!Vg.goto(v, fx, fy, true)) { v._noStore = S.clock + 12; return end(v); }
           t.st = 1;
         } else if (move(v, dt)) { deliverPlain(v, G.Fac.idOfV(v)); end(v); }
         break;
@@ -912,7 +934,9 @@
             if (t.type === 'forage') {
               const n = Math.min(b.berries, 2); b.berries -= n; v.hunger = Math.max(0, v.hunger - 32 * n); emote(v, 'food', 1.5); end(v);
             } else {
-              const n = Math.min(cap(v), b.berries); b.berries -= n; v.carry = { k: 'food', n, berries: 1 }; b.claim = 0;
+              // (into the hands, on top of what they hold of the same; what they cannot take stays on the bush — L-186)
+              const held = v.carry && v.carry.n > 1e-6 ? v.carry.n : 0;
+              const n = Vg.fillHands(v, 'food', Math.min(Math.max(0, cap(v) - held), b.berries), { berries: 1 }); b.berries -= n; b.claim = 0;
               deliverTask(v);
             }
           }
@@ -984,7 +1008,8 @@
           if (t.k <= 0) {
             v.moving = false;
             if (t.got) {
-              v.carry = { k: 'food', n: t.got, shell: 1 }; emote(v, 'food', 1.2);
+              // (on top of what the hands hold of the same; with another thing in them, the catch goes back to the water — L-186)
+              if (Vg.fillHands(v, 'food', t.got, { shell: 1 })) emote(v, 'food', 1.2);
               const f = G.Fac.ofV(v); if (f && !f.shell) { f.shell = 1; const set = S.settlements.get(v.set); G.Village.log(`Na maré baixa, ${v.name}, de ${set ? set.name : f.name}, descobriu que a areia molhada esconde mariscos: agora a praia também dá de comer.`, 'sea', v.x, v.y); }
               deliverTask(v);
             } else end(v);

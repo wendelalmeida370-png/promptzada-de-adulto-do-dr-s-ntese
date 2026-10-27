@@ -1,5 +1,7 @@
-// negocio: o primeiro negócio provocado de propósito (C1) — as bancas do mercado no mundo pronto «metrópole» (Argos, com
-// moeda) e no «cidade» (um povo sem moeda: a troca).   node qa/negocio.js [cidade]     (em Node, pelo qa/nodemundo.js)
+// negocio: o primeiro negócio provocado de propósito (C1) — as bancas do mercado no mundo pronto «metrópole» (a cidade
+// mais antiga com moeda, um mercado com mercador e gente para a fila cheia — hoje, Argos —, ou a cidade dada) e no «cidade»
+// (um povo sem moeda: a troca). Sem uma cidade que sirva, falha dizendo o que falta.   node qa/negocio.js [cidade]
+// (em Node, pelo qa/nodemundo.js)
 // n1 as bancas abrem (uma por mercador, cada uma no seu lugar; a prateleira velha do mercado passa a elas, nada some);
 // n2 o atacado é pago (as mercadorias nas mãos e as moedas no tesouro ao mesmo tempo; sem moeda, sem mercadoria);
 // n3 a banca mostra o que tem; n4 um cliente vem, pergunta, compra, paga à casa do vendedor e leva para a casa dele;
@@ -11,14 +13,15 @@
 // casa), cada elo no livro-razão; n15 um povo sem moeda: fiado no atacado, a venda em troca, a troca devolvida ao armazém;
 // n16 os móveis dos interiores como o lugar da casa, da prateleira e da banca (um plano feito à mão, por cima da porta do
 // jogo, devolvida no fim); n17 a banca sem moeda fecha devendo: paga primeiro (o estoque pelo custo, depois a troca guardada na casa), o fiado
-// nunca vira presente; n18 a fila cheia (oito na fila, nos oito lugares dela, e o nono vai embora triste, sem nada mudar de
+// nunca vira presente; n17b a banca do tempo da troca, devendo, quando o povo aprende a moeda: fecha e paga do mesmo jeito
+// (L-198); n18 a fila cheia (oito na fila, nos oito lugares dela, e o nono vai embora triste, sem nada mudar de
 // mãos). Cada caso de balcão começa pelas portas do mundo: a cidade calma (sem execução, assembleia, festa, convocação ou
 // fogo chamando o povo), o mercador de volta do que fazia, descansado e alimentado (a cama e a comida do próprio mundo,
 // quando o caso o cansaria até largar o balcão), a fila de antes servida; o caso cujo negócio não aconteceu porque o mundo
 // chamou o comprador ou o mercador recomeça, até três vezes, com outro comprador; depois do load, a banca que o mundo deixou
 // aberta (a partida vai escrita no caso). E o verificador limpo, sem erro de módulo, durante e depois.
 const M = require('./nodemundo.js');
-const townName = process.argv[2] || 'Argos';
+const townName = process.argv[2] || '';
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/atividades-inv.js'] });
 const fails = []; const mid = []; // (what the checker saw in the middle of a case: the case fails, even if the end looks clean)
 let start = ''; // (how the case's start was prepared — the merchant back, the line served —: told with the case)
@@ -63,9 +66,20 @@ function roomOn(z, k, n) {
 // ================================ the world with coin ================================
 M.pronto('metropole');
 S = G.S;
-let set = [...S.settlements.values()].find(s => s.name === townName);
-if (!set) { console.log(`FALHOU | negocio | sem a cidade ${townName}`); process.exit(1); }
-const mk = [...S.buildings.values()].find(b => b.set === set.id && b.type === 'mercado' && b.built);
+// the town of the counter cases: coin, a market with a merchant of its own (the stall of the cases) and grown people of
+// the houses for a full line (the eight and a ninth) — the oldest of them, the first founded; or the town named (a rule,
+// not a name: a new ready world finds its own; a world without one stops here, saying what it lacks)
+const mkOf = s => [...S.buildings.values()].find(b => b.set === s.id && b.type === 'mercado' && b.built);
+const lacks = s => {
+  const m = mkOf(s); const grown = [...S.villagers.values()].filter(v => v.set === s.id && v.age >= 18 && !v.captive && !v.jail && !v.aboard && v.home && E.homeOf(v) && v.role !== 'mercador').length;
+  return !E.coinage(s.fac) ? 'sem moeda' : !m ? 'sem mercado' : ![...S.villagers.values()].some(v => v.set === s.id && v.role === 'mercador' && v.job === m.id) ? 'o mercado sem mercador'
+    : grown < B.LINE + 1 ? `só ${grown} adultos com casa (a fila cheia pede ${B.LINE + 1})` : '';
+};
+const towns = [...S.settlements.values()];
+let set = townName ? towns.find(s => s.name === townName) : towns.filter(s => !lacks(s)).sort((a, b) => (a.founded || 0) - (b.founded || 0) || a.id - b.id)[0];
+const lack = !set ? (townName ? `sem a cidade ${townName}` : `nenhuma cidade com moeda, um mercado com mercador e ${B.LINE + 1} adultos com casa na metrópole`) : lacks(set) ? `${set.name}: ${lacks(set)}` : '';
+if (lack) { console.log(`FALHOU | negocio | ${lack}`); process.exit(1); }
+const mk = mkOf(set);
 const shelf0 = Object.assign({}, mk.inv || {}); const st0 = Object.assign({}, G.Fac.get(set.fac).stock);
 // (everything that leaves or reaches the old shelf from now on, by the ledger: the stalls' share, a family's purchase
 // before the stalls opened, what did not fit and went to the store)
@@ -74,7 +88,7 @@ D.onMove.push(e => { if (e[3] === 'b:' + mk.id) { shelfFlow[e[5]] = (shelfFlow[e
 M.viver(2); G.inSim++; listen();
 let fac = G.Fac.get(set.fac);
 const merchants = () => [...S.villagers.values()].filter(v => v.set === set.id && v.role === 'mercador' && v.job === mk.id);
-console.log(`(${set.name}, ${fac.civ}: ${G.Village.pop(set.id)} habitantes; mercado #${mk.id}, mercadores: ${merchants().map(v => v.name).join(', ') || 'nenhum'}; moeda: ${E.coinage(fac.id) ? 'sim' : 'não'}; prateleira velha: ${Object.keys(shelf0).filter(k => shelf0[k] > 0).length} bens)`);
+console.log(`(${set.name}${townName ? '' : ', a mais antiga com moeda, mercado com mercador e gente para a fila'}, ${fac.civ}: ${G.Village.pop(set.id)} habitantes; mercado #${mk.id}, mercadores: ${merchants().map(v => v.name).join(', ') || 'nenhum'}; moeda: ${E.coinage(fac.id) ? 'sim' : 'não'}; prateleira velha: ${Object.keys(shelf0).filter(k => shelf0[k] > 0).length} bens)`);
 S.time = 0.1;
 
 // ---------------- n1: the stalls open, each in its own place; the old shelf goes to them, nothing lost
@@ -365,11 +379,13 @@ function stallNow() {
   if (!kq) { kq = E.MARKET_GOODS.filter(k => k !== 'food' && D.free('f:' + fac.id, k) >= 2 && !(z.day.sold[k] > 0)).sort()[0]; if (kq) { roomOn(z, kq, 2); D.move('f:' + fac.id, 'z:' + z.id, kq, 2, { code: 'teste', part: true }); } }
   if (kq) z.margin[kq] = 0.8;
   const ks = Object.keys(z.inv).filter(k => z.inv[k] >= 1).sort();
-  const day0 = z.day.d, hist0 = z.hist.length; const mBefore = Object.assign({}, z.margin);
+  const day0 = z.day.d; const mBefore = Object.assign({}, z.margin);
   // (the stall shuts at the first look of the businesses after the hours)
   S.time = 0.61; live(8, () => !z.open); const shut = !z.open; const why9 = `hora ${S.time.toFixed(3)}, banca ${z.st} aberta ${z.open}, na lista ${B.all().includes(z)}, o dono ${m.task ? m.task.type : 'sem tarefa'}`;
   S.time = 0.995; live(4);
-  const rolled = z.day.d !== day0 && !!z.prev && z.prev.d === day0 && z.hist.length === hist0 + 1;
+  // (the day closed: a new one, the closed one kept as prev and as the last line of the history — which keeps only the last
+  // ten days, act-negocio.js: a stall of an older world comes with its ten, and their count does not grow, T-096)
+  const rolled = z.day.d !== day0 && !!z.prev && z.prev.d === day0 && z.hist.length > 0 && z.hist[z.hist.length - 1][0] === day0;
   const moved = ks.filter(k => (z.margin[k] || 0) !== (mBefore[k] === undefined ? 0.25 : mBefore[k]));
   ok('n9 o fim do dia', shut && rolled && moved.length >= 1 && (!kq || moved.includes(kq)) && !bad().length,
     `${shut ? 'ao fim da tarde a banca fechou' : 'a banca NÃO fechou (' + why9 + ')'}; o livro do dia ${rolled ? `fechou (${z.prev.n} vendas, ${z.prev.rev} de receita, ${z.prev.cost} de custo, ${z.prev.refus} recusa(s), ${z.prev.hag} pechincha(s))` : 'NÃO fechou'}; a margem mudou em ${moved.map(k => `${E.name(k)} ${mBefore[k] === undefined ? 0.25 : mBefore[k]} → ${z.margin[k]}`).join(', ') || 'nada'}`);
@@ -454,27 +470,50 @@ function stallNow() {
   const key = 'biz:' + z.id; const sp = B.spots(z);
   const k = Object.keys(z.inv).filter(q => z.inv[q] >= 1).sort((a, b) => z.inv[b] - z.inv[a] || (a < b ? -1 : 1))[0] || goodOf(z);
   if ((z.inv[k] || 0) < 12) { roomOn(z, k, 12); D.make('z:' + z.id, k, 12, { code: 'teste', part: true }); }
+  // (and the stall kept stocked while the case runs — the test's hand, as p5 keeps its store full: the line is the case, not
+  // the stock. The eight take up to six of food each, and a stall holds twelve: in an older world they bought the food out
+  // in the middle, the merchant went for more and the line went home, T-098)
+  const q0 = z.inv[k] || 0; const stocked = () => { const lack = q0 - (z.inv[k] || 0); if (lack > 1e-6) D.make('z:' + z.id, k, lack, { code: 'teste', part: true }); };
   // (eight of the town sent to the stall at once — an errand each, the world's door —, brought to the market's door as the
   // other cases bring their buyer, with the coins for it)
   const nx = sp.buyer[0] + (sp.dx || 0) * 1.5, ny = sp.buyer[1] + (sp.dy || 0) * 1.5; const atDoor = G.W.walkableXY(nx, ny) && G.W.canWalk(nx, ny, sp.buyer[0], sp.buyer[1], false);
   const send = v => { G.Vg.endTask(v); if (atDoor) { v.x = nx; v.y = ny; } else { v.x = sp.buyer[0]; v.y = sp.buyer[1]; } v.path = null; v.energy = Math.max(v.energy, 70); v.hunger = Math.min(v.hunger, 30); D.make('h:' + E.homeOf(v).id, 'moedas', 20, { code: 'teste' }); return G.Vg.setTask(v, { type: 'compra', biz: z.id, k, pri: 1.3, st: 0 }); };
-  const eight = []; for (let i = 0; i < B.LINE; i++) { const v = pickBuyer(set, sp, [m.id].concat(eight.map(o => o.id)), false, k); if (!v) break; eight.push(v); }
-  for (const v of eight) send(v);
-  let most = 0; fine(20, () => { most = Math.max(most, G.Life.queueLen(key)); return most >= B.LINE || watch(); });
-  // (the ninth, while the first of the eight is at the counter)
-  const ninth = pickBuyer(set, sp, [m.id].concat(eight.map(o => o.id)), false, k);
-  let sad = false, inLineAtAsk = G.Life.queueLen(key); const L0 = S.ledgerN, t0 = S.clock;
-  const t9 = ninth ? send(ninth) : null;
-  if (ninth) fine(10, () => { if (ninth.emo && ninth.emo.k === 'sad') sad = true; return !ninth.task || ninth.task !== t9 || watch(); });
+  const sent = []; const pickNew = () => { const v = pickBuyer(set, sp, [m.id].concat(sent.map(o => o.id)), false, k); if (v) { sent.push(v); send(v); } return v; };
+  for (let i = 0; i < B.LINE; i++) if (!pickNew()) break;
+  const eight = sent.slice();
+  // (one of the eight who leaves before the line is full — served at once, or called away by the world: a prayer, the
+  // estate's work — gives the place to another of the town, eight more at most: the line full is the case. In an older world
+  // two of the eight were called away and three served before the last came, and the line never held more than seven,
+  // T-098)
+  const inIt = v => !!(v.task && v.task.type === 'compra' && v.task.biz === z.id);
+  let most = 0; fine(20, () => {
+    stocked(); most = Math.max(most, G.Life.queueLen(key));
+    if (most < B.LINE) for (let i = 0; i < eight.length; i++) if (!inIt(eight[i]) && sent.length < B.LINE * 2) { const o = pickNew(); if (o) eight[i] = o; }
+    return most >= B.LINE || watch();
+  });
+  // (the ninth, while the first of the eight is at the counter — put at the counter's spot, so that the line he asks of is
+  // the one the case filled: walking from the market's door, in the new metropolis he found it at seven — one of the eight
+  // served on his way — and took the eighth place, T-098. A line with a place when he asks is filled again, and the case
+  // goes to another ninth, up to three)
+  let ninth = null, t9 = null, sad = false, inLineAtAsk = 0, L0 = S.ledgerN, t0 = S.clock; const tried9 = [], joined9 = [];
+  for (let a = 0; a < 3; a++) {
+    if (a) fine(20, () => { stocked(); if (G.Life.queueLen(key) < B.LINE) for (let i = 0; i < eight.length; i++) if (!inIt(eight[i]) && sent.length < B.LINE * 3) { const o = pickNew(); if (o) eight[i] = o; } return G.Life.queueLen(key) >= B.LINE || watch(); });
+    ninth = pickBuyer(set, sp, [m.id].concat(sent.map(o => o.id), tried9), false, k); if (!ninth) break; tried9.push(ninth.id);
+    sad = false; inLineAtAsk = -1; L0 = S.ledgerN; t0 = S.clock;
+    t9 = send(ninth); ninth.x = sp.buyer[0]; ninth.y = sp.buyer[1]; ninth.path = null;
+    fine(10, () => { stocked(); if (inLineAtAsk < 0 && (ninth.task !== t9 || t9.st >= 1)) inLineAtAsk = G.Life.queueLen(key) - (ninth._q === key ? 1 : 0); if (ninth.emo && ninth.emo.k === 'sad') sad = true; return !ninth.task || ninth.task !== t9 || watch(); });
+    if (sad || inLineAtAsk >= B.LINE || ninth._q !== key) break;
+    joined9.push(`${ninth.name} achou ${inLineAtAsk} e entrou na fila`); G.Life.leaveQueue(ninth); G.Vg.endTask(ninth);
+  }
   const q = G.Life.queues().find(o => o.key === key);
   const places = q ? q.slots.length : 0;
   const bought9 = ninth && book('venda', e => e[0] > L0 && e[4] === 'v:' + ninth.id).length;
   const talk9 = ninth ? saidBy(ninth.id, t0).map(e => e[1]) : [];
   const off = q ? QA.check().filter(c => c.sys === 'fila' && c.msg.startsWith('a fila ' + key)).map(c => c.msg) : [];
   ok('n18 a fila cheia', most >= B.LINE && places === B.LINE && !!ninth && sad && !bought9 && !talk9.length && (!ninth.task || ninth.task !== t9) && !off.length && !bad().length,
-    `${eight.length} da cidade mandados à banca de ${m.name}: até ${most} na fila ao mesmo tempo, nos ${places} lugares dela${q && q.why ? ` (${q.why})` : ''}; ${ninth ? `o nono, ${ninth.name}, chegou com ${inLineAtAsk} na fila e ${sad ? 'foi embora triste' : 'NÃO se entristeceu'}${talk9.length ? `, MAS falou: ${talk9.join(', ')}` : ', sem dizer nada'}; ${bought9 ? 'COMPROU' : 'nada mudou de mãos'}` : 'NENHUM nono comprador'}${off.length ? `; a regra da fila: ${off[0]}` : ''}`);
+    `${B.LINE} da cidade mandados à banca de ${m.name}${sent.length > B.LINE ? ` (e ${sent.length - B.LINE} no lugar de quem saiu antes de a fila encher)` : ''}: até ${most} na fila ao mesmo tempo, nos ${places} lugares dela${q && q.why ? ` (${q.why})` : ''}; ${ninth ? `o nono, ${ninth.name}, chegou com ${inLineAtAsk} na fila e ${sad ? 'foi embora triste' : 'NÃO se entristeceu'}${talk9.length ? `, MAS falou: ${talk9.join(', ')}` : ', sem dizer nada'}; ${bought9 ? 'COMPROU' : 'nada mudou de mãos'}` : 'NENHUM nono comprador'}${joined9.length ? ` (antes: ${joined9.join('; ')})` : ''}${off.length ? `; a regra da fila: ${off[0]}` : ''}`);
   // (the eight are served or go: the next cases start with the line as the world leaves it)
-  for (const v of eight) if (v.task && v.task.type === 'compra' && v.task.biz === z.id && v.task.st < 2) G.Vg.endTask(v);
+  for (const v of sent) if (v.task && v.task.type === 'compra' && v.task.biz === z.id && v.task.st < 2) G.Vg.endTask(v);
 }
 // ---------------- n16: the interiors' furniture as the room of a house, a shelf and a stall (here a plan made by hand, over
 // the game's own port, given back at the end) — a piece holds its cap in all, each good first in the piece made for it; the people's furniture
@@ -559,6 +598,9 @@ function stallNow() {
     for (const c of (dock.crates || []).slice()) D.move('q:' + dock.id, 'f:' + f.id, c.k, c.n, { code: 'teste', part: true });
     dock.crates = [];
     D.use('f:' + f.id, K, D.get('f:' + f.id, K), { code: 'teste' }); // (the store had none: all that comes is the ship's)
+    // (nor the town's stalls: a stall of an older world comes with the spices of its own life, and the buyer takes those,
+    // with no wholesale and no delivery — T-097)
+    for (const q of B.all()) if (q.set === port.id && (q.inv[K] || 0) > 1e-6) D.use('z:' + q.id, K, q.inv[K], { code: 'teste' });
     const L0 = S.ledgerN;
     // (the spices' lines kept as they are written: a long case outlives the ledger's window of the last lines)
     const linesK = []; const onK = e => { if (e[5] === K) linesK.push(e); }; D.onMove.push(onK);
@@ -566,8 +608,9 @@ function stallNow() {
     // unloading in the day's hours — the test's hand on the clock, as in qa/porto.js: the porters work by day —, waited for
     // to the end: a danger pauses it, and it goes on when the danger passes, T-074)
     const calm14 = calmTown(port);
-    const sh = S.ships.find(s => s.kind === 'mercante') || S.ships[0]; sh.goods = { k: K, n: 12 }; G.Harbor.land(dock, sh.goods, sh);
-    const opd = G.Porto.opAt(dock);
+    const sh = S.ships.find(s => s.kind === 'mercante') || S.ships[0]; if (sh) { sh.goods = { k: K, n: 12 }; G.Harbor.land(dock, sh.goods, sh); }
+    const opd = sh && G.Porto.opAt(dock);
+    if (!opd) info = `${port.name}: ${sh ? 'o cais não abriu a descarga do navio' : 'nenhum navio no mundo para trazer as especiarias'}`; else {
     // (until the spices are out of the unloading's hands — off the quay, out of the porters' arms, off the ground —, or a
     // wholesale's worth of them is in the store: another ship may join its cargo to the same unloading, which goes on)
     const spicesIn = () => (dock.crates || []).some(c => c.k === K) || [...S.villagers.values()].some(o => o.carry && o.carry.k === K && o.carry.op === opd.id) || (S.loose || []).some(o => o.k === K && o.op === opd.id);
@@ -609,6 +652,7 @@ function stallNow() {
     fine14 = links.every(l => l[1]) && order && D.get('h:' + hb.id, K) >= 1 && !bad().length;
     info = `${port.name}: ${links.map(([c, e]) => `${c} ${e ? e[3] + '→' + e[4] : 'FALTA'}`).join(' · ')}; ${order ? 'na ordem' : 'FORA DE ORDEM'}; ${E.name(K)} na casa de ${buyer.name}: ${D.get('h:' + hb.id, K)}`;
     }
+    }
     D.onMove.splice(D.onMove.indexOf(onK), 1); }
     wantNone();
   }
@@ -618,6 +662,11 @@ function stallNow() {
 // ================================ a people without coin: the exchange ================================
 {
   M.pronto('cidade'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1);
+  // (the peoples without coin stay without it while the cases run — the test's hand on the world's door of the arts,
+  // G.Civ.learn, as wantMerchant's on the planner's demand: a young world's peoples learn the coin within minutes, and in
+  // the new «cidade» Argos learned it in the middle of n15, its stall selling for drachmas, T-098)
+  const noCoin = new Set([...S.factions.values()].filter(f => !E.coinage(f.id)).map(f => f.id)); const learn0 = G.Civ.learn;
+  G.Civ.learn = function (f, t) { if (t === 'moeda' && f && noCoin.has(f.id)) return false; return learn0.apply(this, arguments); };
   // (the no-coin towns with a market, the biggest first: a town whose planner keeps no merchant for the case — a town short
   // of hands gives its trades away first, the merchant to the quay — passes it to the next one, told in the case)
   const tws = [...S.settlements.values()].filter(s => !E.coinage(s.fac) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'mercado' && b.built)).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id));
@@ -661,7 +710,9 @@ function stallNow() {
     // (a full pantry at the merchant's house, so that the day of food the family keeps leaves something to pay with)
     if (kindRef[0] === 'h') D.make(kindRef, 'food', 6, { code: 'teste' });
     G.Vg.setTask(mer, { type: 'devolver', biz: zz.id, k: 'food', pri: 1.2, st: 0, id: mkt.id });
-    live(150, () => !!book('troca', e => e[0] > L0).length && !mer.carry || watch());
+    // (the give-back of this merchant: with other stalls of the people paying back too, any stall's line ended the wait before
+    // his — T-098)
+    live(150, () => !!book('troca', e => e[0] > L0 && e[9] === mer.id).length && !mer.carry || watch());
     const owe1 = Object.values(zz.owe).reduce((a, b) => a + b, 0);
     ok15 = onAccount && !!sale && inKind && owe1 < owe0 - 1e-6 && !bad().length;
     info = `${tw.name} (${f.civ}, sem moeda): ${mer.name} levou ${E.name(K)} fiado (${onAccount ? 'devendo ' + r2(zz.owe[K] || owe0) : 'NÃO'}); ${buyer.name} ${sale ? `comprou ${sale[6]} e pagou ${pay ? pay[6] + ' de ' + E.name(pay[5]) : '?'}` : 'NÃO comprou'} (${talk.slice(0, 3).join(' / ')}); a troca (${got} de comida, paga ${kindRef[0] === 'h' ? 'à casa do mercador' : 'à banca'}) levada de lá ao armazém: a dívida ${r2(owe0)} → ${r2(owe1)}`;
@@ -685,14 +736,17 @@ function stallNow() {
       if (mer17.carry && mer17.carry.to === 'z:' + z17.id) D.move('v:' + mer17.id, 'z:' + z17.id, mer17.carry.k, mer17.carry.n, { code: 'expor', by: mer17.id, part: true });
       const unit = k => z17.cost[k] || r2((E.PRICE[k] || 0.3) * 0.6);
       const oweA = r2(Object.values(z17.owe).reduce((a, b) => a + b, 0)); const stockV = r2(Object.keys(z17.inv).reduce((a, k) => a + (z17.inv[k] || 0) * unit(k), 0)); const cost0 = Object.assign({}, z17.cost);
+      // (what the store has room for: a store full of a good takes none of it back — in the new «cidade» the store of Argos
+      // was full of food, and the stall's 3 of it went home with the rest, T-098)
+      const backV = r2(Object.keys(z17.inv).reduce((a, k) => a + Math.min(z17.inv[k] || 0, Math.max(0, D.room('f:' + f.id, k))) * unit(k), 0));
       const fiado = book('fiado', e => e[0] > Lw).length;
       B.close(z17, 'teste');
       G.Possess.release('deus'); M.viver(0.2);
       const lines = book('acerto', e => e[0] > Lw);
       const paid = r2(lines.reduce((a, e) => a + e[6] * (e[3][0] === 'z' ? (cost0[e[5]] || r2((E.PRICE[e[5]] || 0.3) * 0.6)) : (E.PRICE[e[5]] || 0.3)), 0));
       const toStore = lines.every(e => e[4] === 'f:' + f.id);
-      ok17 = tk.ok && r.ok && (fiado >= 1 || owe0 >= 1) && oweA > 0 && !Object.keys(z17.owe).length && toStore && paid <= oweA + 0.06 && paid >= Math.min(oweA, stockV) - 0.06 && !bad().length;
-      info17 = `${mer17.name} pelo deus: ${r.ok ? r.msg : r.why}; a banca devia ${oweA} e fechou: voltaram ao armazém ${lines.length} lançamento(s) de acerto que valem ${paid} (o estoque valia ${stockV} pelo custo)${toStore ? '' : ' — MAS NEM TODOS AO ARMAZÉM'}; a dívida ${Object.keys(z17.owe).length ? 'FICOU' : 'acabou'}`;
+      ok17 = tk.ok && r.ok && (fiado >= 1 || owe0 >= 1) && oweA > 0 && !Object.keys(z17.owe).length && toStore && paid <= oweA + 0.06 && paid >= Math.min(oweA, backV) - 0.06 && !bad().length;
+      info17 = `${mer17.name} pelo deus: ${r.ok ? r.msg : r.why}; a banca devia ${oweA} e fechou: voltaram ao armazém ${lines.length} lançamento(s) de acerto que valem ${paid} (o estoque valia ${stockV} pelo custo${backV < stockV - 1e-6 ? `, ${backV} no que cabia no armazém` : ''})${toStore ? '' : ' — MAS NEM TODOS AO ARMAZÉM'}; a dívida ${Object.keys(z17.owe).length ? 'FICOU' : 'acabou'}`;
     }
     } }
     wantNone();
@@ -701,6 +755,42 @@ function stallNow() {
   if (went && past.length) info += ` (antes: ${past.join('; ')})`;
   ok('n15 a troca, sem moeda', ok15, info);
   ok('n17 a banca fecha devendo', ok17, info17);
+  // ---- n17b: a stall of the time of the exchange, owing on account, when its people learns the coin: closing, it still
+  // pays what it took — the coin does not make the debt a gift (L-198)
+  {
+    let info = 'nenhuma cidade sem moeda com mercado e mercador', fine = false;
+    for (const tw of tws) {
+      const mkt = [...S.buildings.values()].find(b => b.set === tw.id && b.type === 'mercado' && b.built); const f = G.Fac.get(tw.fac);
+      if (!mkt || !f || E.coinage(f.id)) continue;
+      const mer = wantMerchant(tw, mkt); if (!mer) { info = `${tw.name}: o povo não nomeou mercador`; continue; }
+      S.time = 0.12; const z = B.of(mer) || B.open(mer, mkt); if (!z) { info = `${tw.name}: a banca não abriu`; continue; }
+      const K = E.MARKET_GOODS.filter(q => q !== 'food').sort()[0];
+      roomOn(z, K, 8); if ((f.stock[K] || 0) < 20) D.make('f:' + f.id, K, 20, { code: 'teste' });
+      if (mer.carry) D.use('v:' + mer.id, mer.carry.k, mer.carry.n, { code: 'teste', mine: true });
+      // (the debt made on account by the god's body in the merchant's place, as in n17 — the god takes a body only on firm
+      // ground: where she stands, or else at the market's door or the store's, or the nearest ground one walks; in an older
+      // world the world had left her wading, and the doors of its dense city stood on the next building's ground)
+      const d = G.Village.nearestDropoff(mer.x, mer.y, mer.set); const [dx, dy] = G.Village.frontTile(d);
+      for (const p of [[mer.x, mer.y], G.Village.frontTile(mkt), [dx, dy], G.W.nearestLand(mer.x, mer.y, 6), G.W.nearestLand(dx, dy, 6)]) { if (!p) continue; mer.x = p[0]; mer.y = p[1]; mer.path = null; if (G.Possess.can(mer).ok) break; }
+      const tk = G.Possess.take(mer); M.viver(0.2); mer.x = dx; mer.y = dy;
+      const offs = A.offers(mer, dx, dy, 2).filter(o => o.act === 'atacado' && o.biz === z.id && o.ok !== false);
+      const ow = offs.find(o => o.k === K) || offs[0];
+      const r = ow ? A.perform(mer, ow) : { ok: false, why: 'sem oferta de atacado' };
+      if (mer.carry && mer.carry.to === 'z:' + z.id) D.move('v:' + mer.id, 'z:' + z.id, mer.carry.k, mer.carry.n, { code: 'expor', by: mer.id, part: true });
+      const owe = r2(Object.values(z.owe).reduce((a, b) => a + b, 0));
+      G.Possess.release('deus'); M.viver(0.2);
+      // (the people learns the coin — a dream sent by the god, by the world's own door), and the stall closes
+      learn0.call(G.Civ, f, 'moeda', 'divina'); const coinNow = E.coinage(f.id);
+      const Lw = S.ledgerN; B.close(z, 'teste'); M.viver(0.2);
+      const lines = book('acerto', e => e[0] > Lw); const toStore = lines.every(e => e[4] === 'f:' + f.id);
+      fine = tk.ok && r.ok && owe > 0 && coinNow && lines.length >= 1 && toStore && !Object.keys(z.owe).length && !bad().length;
+      info = `${mer.name}, de ${tw.name}, pelo deus: ${r.ok ? r.msg : r.why}; a banca devia ${owe}; o povo aprendeu a moeda (${coinNow ? 'sim' : 'NÃO'}); fechou: ${lines.length} lançamento(s) de acerto ${toStore ? 'ao armazém' : 'NEM TODOS AO ARMAZÉM'}, ${Object.keys(z.owe).length ? 'a dívida FICOU' : 'nada ficou devendo'}${tk.ok ? '' : '; o corpo NÃO tomou o mercador: ' + (tk.why || JSON.stringify(tk))}${bad().length ? '; o verificador: ' + bad()[0].msg : ''}`;
+      break;
+    }
+    wantNone();
+    ok('n17b a banca do tempo da troca, quando o povo aprende a moeda', fine, info);
+  }
+  G.Civ.learn = learn0;
 }
 
 const e = M.erros();

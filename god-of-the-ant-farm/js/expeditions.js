@@ -1124,6 +1124,16 @@
   // on the quay before a voyage: carry the crates, wait by the ship, look at the sea
   function runCais(v, t, dt, H) {
     const e = X.get(t.exp); if (!e || (e.st !== 'prep' && e.st !== 'reunir' && e.st !== 'embarque')) { v.gear = null; return H.end(v); }
+    // (a plain load in the hands — the day's ore, a basket of fruit — goes to the people's store before the quay: called
+    // in the middle of the day's work, the crew sailed with it, out of the store for the voyage — L-186; with no store, or
+    // none in reach, it is set down where one stands, as the delivery does, L-169)
+    if (G.Vg.plainLoad(v)) {
+      const d = G.Village.nearestDropoff(v.x, v.y, v.set); const ft = d && G.Village.frontTile(d);
+      const r = d ? walkTo(v, t, 'dep' + d.id, ft[0], ft[1], dt, H) : -1;
+      if (r === 0) return;
+      if (r > 0 && G.Vg.deliver(v, d).ok) return;
+      const c = v.carry; G.Depot.drop('v:' + v.id, c.k, c.n, v.x, v.y, { code: 'pousou', by: v.id, fac: G.Fac.idOfV(v) }); return;
+    }
     const spot = () => { const k = t.k || 0; const a = k * 2.39996, r = 0.6 + Math.sqrt(k) * 0.45; const p = [e.port[0] + Math.cos(a) * r, e.port[1] + Math.sin(a) * r]; return W.walkableXY(p[0], p[1]) ? p : e.port; };
     if (t.job === 'load' && e.st === 'prep' && e.prov < e.provT) {
       const f = F(e.fac);
@@ -1199,7 +1209,7 @@
   X.taskText = function (v, t) {
     const e = t.exp && X.get(t.exp);
     switch (t.type) {
-      case 'cais': return t.job === 'load' && e && e.st === 'prep' ? (v.gear === 'caixa' ? 'Levando uma caixa de provisões para o cais' : 'Buscando provisões no armazém') : `No cais, esperando para embarcar${e ? ' n' + (e.name.startsWith('A ') || e.name.startsWith('As ') ? 'a ' + e.name.replace(/^(A|As) /, '') : 'a expedição') : ''}`;
+      case 'cais': return G.Vg.plainLoad(v) ? `Guardando ${G.Eco.name(v.carry.k)} no armazém antes do cais` : t.job === 'load' && e && e.st === 'prep' ? (v.gear === 'caixa' ? 'Levando uma caixa de provisões para o cais' : 'Buscando provisões no armazém') : `No cais, esperando para embarcar${e ? ' n' + (e.name.startsWith('A ') || e.name.startsWith('As ') ? 'a ' + e.name.replace(/^(A|As) /, '') : 'a expedição') : ''}`;
       case 'adeus': return e && (e.st === 'partida' || e.st === 'viagem') ? 'Acenando para os barcos que partem' : 'No cais, despedindo-se de quem vai para o mar';
       case 'expl': return t.st === 'camp' ? 'Acampado numa praia desconhecida' : t.st === 'back' ? 'Voltando para os barcos' : t.st === 'meet' ? 'Frente a frente com um povo desconhecido' : v.id === (e && e.roles.cart) && t.st === 'look' ? 'Desenhando o mapa da costa' : v.id === (e && e.roles.nat) && t.st === 'look' ? 'Estudando plantas e bichos nunca vistos' : 'Explorando uma terra nova';
       case 'contato': return 'Olhando os estrangeiros que vieram do mar';

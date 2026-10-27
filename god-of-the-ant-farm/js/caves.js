@@ -511,7 +511,12 @@
       case 4: if (walkUG(v, t, dt)) {
         exit(v); const carry = t.carry; H.end(v);
         if (carry && carry.k === 'guano') manure(v, carry.n, cv);
-        else if (carry && carry.n > 0) { v.carry = carry; G.Vg.setTask(v, { type: 'deliver', pri: 1.1 }); }
+        // (the find into the hands — free, or holding the same plain good —; with another thing in them it stays in the rock,
+        // the deposit given it back: the find was written over the hands, and what they held went with no line, L-202)
+        else if (carry && carry.n > 0) {
+          if (G.Vg.fillHands(v, carry.k, carry.n)) G.Vg.setTask(v, { type: 'deliver', pri: 1.1 });
+          else { const dep = cv.mine && (G.S.ores || []).find(q => q.id === cv.deposit); if (dep && (carry.k === 'minerio' || carry.k === 'ouro')) dep.amt += carry.n; }
+        }
         after(v, t, cv);
       } break;
     }
@@ -1072,8 +1077,10 @@
       const cv = caveFor(set, 28); if (!cv) continue;
       const f = G.Fac.get(set.fac); if (!f) continue;
       if (night) continue;
+      // (who goes down goes with the hands free: one on the way to the store with a load in them takes it there first — a find
+      // comes up in the hands, L-202)
       const people = [];
-      for (const v of S.villagers.values()) if (v.set === set.id && !v.captive && !v.ug && !v.inside && !v.sleeping && v.age >= 12 && (!v.task || v.task.pri < 1.2) && v.hunger < 70) people.push(v);
+      for (const v of S.villagers.values()) if (v.set === set.id && !v.captive && !v.ug && !v.inside && !v.sleeping && v.age >= 12 && (!v.task || v.task.pri < 1.2) && v.hunger < 70 && !(v.carry && v.carry.n > 1e-6)) people.push(v);
       if (!people.length) continue;
       const one = test => { const l = people.filter(test); return l.length ? l[Math.floor(G.R() * l.length)] : null; };
       // painters: young and old, the ones with time on their hands

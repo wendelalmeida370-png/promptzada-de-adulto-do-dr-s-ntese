@@ -126,9 +126,12 @@
       // reaching up into the branches (the tall palms are climbed)
       v.act = tr.kind === 'date' || tr.kind === 'acai' ? 'climb' : 'pick'; G.faceTo(v, tr.x - v.x, tr.y - v.y);
       if (v.actT < 3.2 / G.Vg.workMul(v)) return true;
-      const n = Math.min(tr.fruit, 2); tr.fruit -= n; tr.claim = 0;
-      if (K.good) v.carry = { k: K.good, n: Math.max(1, Math.round(n)), basket: K.col };
-      else v.carry = { k: 'food', n: Math.max(1, Math.round(n * K.food)), basket: K.col };
+      // (into the hands, on top of what they hold of the same; with another thing in them the fruit stays on the tree, and
+      // what is in them goes to its place first — L-186)
+      const n = Math.min(tr.fruit, 2); tr.claim = 0;
+      const got = G.Vg.fillHands(v, K.good || 'food', K.good ? Math.max(1, Math.round(n)) : Math.max(1, Math.round(n * K.food)), { basket: K.col });
+      if (!got) { H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1 }); return true; }
+      tr.fruit -= n;
       G.Vg.emote(v, 'food', 1.2);
       if (K.good && !S.firstFruit) S.firstFruit = {};
       if (K.good && !S.firstFruit[K.good]) { S.firstFruit[K.good] = S.day; const set = S.settlements.get(v.set); log(`${v.name} colheu ${K.fruit} de ${K.g === 'f' ? 'uma' : 'um'} ${K.name} silvestre${set ? ' perto de ' + set.name : ''}. É a primeira vez que ${set ? 'a gente de ' + set.name : 'alguém'} ${K.good === 'incenso' ? 'sente esse perfume' : 'prova disso'}.`, 'food', tr.x, tr.y); }
@@ -144,9 +147,11 @@
       v.act = 'smoke'; G.faceTo(v, h.x - v.x, h.y - v.y); h.sting = Math.max(h.sting, 2);
       if (G.FX && G.R() < dt * 6) G.FX.spawn({ x: v.x + G.rr(-0.2, 0.2), y: v.y + G.rr(-0.2, 0.2), z: 9, vz: G.rr(6, 12), vx: G.rr(-0.3, 0.3), life: G.rr(1.2, 2), s0: 1.5, s1: 5, c: 'rgba(220,220,220,0.5)', k: 2 });
       if (v.actT < 5 / G.Vg.workMul(v)) return true;
+      // (with another thing in the hands the comb stays in the hive, and what is in them goes to its place first — L-186)
+      if (!G.Vg.handsFor(v, 'mel')) { h.claim = 0; H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1 }); return true; }
       const n = Fl.raidHive(h, v); h.claim = 0;
       if (G.R() < 0.35) { G.Vg.emote(v, 'angry', 1.4); G.Vg.damage(v, 3, 'beast'); }
-      v.carry = { k: 'mel', n: Math.max(1, Math.round(n)), jar: false, honey: 1 };
+      G.Vg.fillHands(v, 'mel', Math.max(1, Math.round(n)), { jar: false, honey: 1 });
       v._wax = (v._wax || 0) + (G.R() < 0.6 ? 1 : 0);
       H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1 });
       return true;
