@@ -69,12 +69,17 @@ god(() => {
   dock.crates = []; S.time = 0.15;
 });
 const sp0 = god(() => G.Fishers.crateSpot(dock));
-// (the hands of the quay: stevedores of this town, hands free, where the feet reach the crates — the first lived by the god, the
-// others the world's porters, brought a few steps from the pile so that they go for a crate at once)
-const able = o => o.set === set.id && o.role === 'estivador' && !(o.carry && o.carry.n > 0) && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp0[0], sp0[1]);
-const cands = [...S.villagers.values()].filter(able).sort((a, b) => a.id - b.id);
+// (the hands emptied into the people's store as the world stores a delivery — Depot.store: what does not fit is lost, with its
+// line 'sem-lugar' in the ledger —, so they are empty whatever room the store has: T-070)
+const clearHands = o => { if (o.carry && o.carry.n > 0) god(() => D.store('v:' + o.id, fac.id, o.carry.k, o.carry.n, { op: o.carry.op || 0, code: 'teste', by: o.id })); };
+// (the hands of the quay: stevedores of this town where the feet reach the crates — the first lived by the god, the others the
+// world's porters, brought a few steps from the pile so that they go for a crate at once —; those with free hands first, and
+// the hands of the three emptied by the depot: a docker may come from his bed with a load still in his arms — T-086)
+const loaded = o => !!(o.carry && o.carry.n > 0);
+const able = o => o.set === set.id && o.role === 'estivador' && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp0[0], sp0[1]);
+const cands = [...S.villagers.values()].filter(able).sort((a, b) => loaded(a) - loaded(b) || a.id - b.id);
 if (cands.length < 3) { ok('um estivador para viver e dois carregadores do mundo', false, `${cands.length} em ${set.name}`); process.exit(1); }
-let v = cands[0]; const p1 = cands[1], p2 = cands[2];
+let v = cands[0]; const p1 = cands[1], p2 = cands[2]; for (const o of [v, p1, p2]) clearHands(o);
 const near = []; for (let r = 2; r <= 4 && near.length < 4; r += 0.5) for (let k = 0; k < 24 && near.length < 4; k++) { const a = k / 24 * Math.PI * 2; const x = sp0[0] + Math.cos(a) * r, y = sp0[1] + Math.sin(a) * r; if (dry(x, y) && W.canWalk(sp0[0], sp0[1], x, y, false)) near.push([x, y]); }
 if (near.length < 3) { ok('lugares perto do cais', false, near.length); process.exit(1); }
 const bring = (o, at) => god(() => { G.Vg.endTask(o); o.x = at[0]; o.y = at[1]; o.path = null; });
@@ -149,9 +154,6 @@ const offeredFree = cid => { const o = offerOf(cid); return !!o && o.ok !== fals
 const first = () => opCrates()[0] || null;
 const offerOf = cid => A.offers(v, v.x, v.y, 2.6 / TL + 2).find(q => q.act === 'pegar' && q.cid === cid) || null;
 const hold = c => (c ? `#${c.id} de ${c.by ? (c.by === v.id ? 'corpo' : (S.villagers.get(c.by) || { name: c.by }).name) : 'ninguém'}` : 'fora do cais');
-// (the hands emptied into the people's store as the world stores a delivery — Depot.store: what does not fit is lost, with its
-// line 'sem-lugar' in the ledger —, so they are empty whatever room the store has: T-070)
-const clearHands = o => { if (o.carry && o.carry.n > 0) god(() => D.store('v:' + o.id, fac.id, o.carry.k, o.carry.n, { op: o.carry.op || 0, code: 'teste', by: o.id })); };
 const rest = o => god(() => { if (o.task && o.task.type !== 'avatar') G.Vg.endTask(o); clearHands(o); });
 
 fresh(6);

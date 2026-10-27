@@ -54,8 +54,18 @@ console.log(`(${b.type}#${b.id} ${b.style} ${p.fam}: a soleira a ${out.toFixed(2
 const at = (X, Z, yaw) => { if (!G.Avatar.place(X / TL, Z / TL)) return false; still(3); st.yaw = yaw; IN.camYaw = yaw; still(2); return true; };
 const yawTo = (X, Z) => Math.atan2(DZ - Z, DX - X);
 // (the yard emptied for the proofs that only look — the world stopped —: the animals and the people about, put far away and back)
-const aside = []; const clear = () => { for (const a of S.animals.values()) if (Math.hypot(a.x * TL - SX, a.y * TL - SZ) < 9) aside.push([a, a.x, a.y]); for (const o of S.villagers.values()) if (o !== v && !o.inside && Math.hypot(o.x * TL - SX, o.y * TL - SZ) < 9) aside.push([o, o.x, o.y]); god(() => { for (const [o] of aside) { o.x += 60; o.y += 60; } }); };
+// (round the doorstep, or round the point a proof is made at — T-089)
+const aside = []; const clear = (C) => { const [CX, CZ] = C || [SX, SZ]; const k0 = aside.length; const put = o => { if (!aside.some(q => q[0] === o)) aside.push([o, o.x, o.y]); };
+  for (const a of S.animals.values()) if (Math.hypot(a.x * TL - CX, a.y * TL - CZ) < 9) put(a); for (const o of S.villagers.values()) if (o !== v && !o.inside && Math.hypot(o.x * TL - CX, o.y * TL - CZ) < 9) put(o);
+  god(() => { for (const [o] of aside.slice(k0)) { o.x += 60; o.y += 60; } }); };
 const back = () => { god(() => { for (const [o, x, y] of aside) { o.x = x; o.y = y; } }); aside.length = 0; };
+// (for a proof the world runs in, those about the doorstep sent a few strides off along the street, to ground the world walks —
+// not out of the world, as for the proofs that only look —, and back after: someone standing at the door is whom «E» means — T-089)
+const asideRun = []; const clearRun = () => {
+  const spot = (o, sv) => { for (let r = 10; r <= 16; r += 2) for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2; const x = (SX + Math.cos(a) * r) / TL, y = (SZ + Math.sin(a) * r) / TL; if (W.walkableXY(x, y) && (!sv || W.reaches(o, x, y))) return [x, y]; } return null; };
+  for (const o of S.villagers.values()) { if (o === v || o.inside || Math.hypot(o.x * TL - SX, o.y * TL - SZ) >= 6) continue; const to = spot(o, true); if (!to) continue; asideRun.push([o, o.x, o.y]); god(() => { G.Vg.endTask(o); o.x = to[0]; o.y = to[1]; o.path = null; }); }
+  for (const a of S.animals.values()) { if (Math.hypot(a.x * TL - SX, a.y * TL - SZ) >= 6) continue; const to = spot(a, false); if (!to) continue; asideRun.push([a, a.x, a.y]); god(() => { a.x = to[0]; a.y = to[1]; a.path = null; }); } };
+const backRun = () => { god(() => { for (const [o, x, y] of asideRun) { o.x = x; o.y = y; o.path = null; } }); asideRun.length = 0; };
 // (an animal the hands may pet: the yard's own, or one of the world's)
 const petable = a => { const d = G.Animals.DEF[a.kind]; return !a.dead && !a.held && d && d.cls !== 'water' && d.cls !== 'air' && (a.dom || a.tamed || d.dom || d.pet); };
 const pets = [...S.animals.values()].filter(petable).sort((a, c) => Math.hypot(a.x * TL - SX, a.y * TL - SZ) - Math.hypot(c.x * TL - SX, c.y * TL - SZ));
@@ -77,7 +87,7 @@ const isPet = r => !!r && (r.id === 'carinho' || r.id === 'bicho');
 
 // ------------------------------ 2. E on the doorstep: a step up to it, the door opens, in ------------------------------
 { god(() => { In.useDoor(b, e.door, 'fechar', v); }); for (let k = 0; k < 6; k++) frame();
-  at(SX, SZ, yawTo(SX, SZ)); for (let k = 0; k < 4; k++) frame();
+  at(SX, SZ, yawTo(SX, SZ)); clearRun(); for (let k = 0; k < 4; k++) frame();
   const r = I.best(); const x0 = st.X, z0 = st.Z; said.length = 0;
   const ran = r && r.id === 'portaPlanta' ? I.run(r) : null; let k = 0; for (; k < 240 && G.Avatar.busy(); k++) frame(); for (let q = 0; q < 6; q++) frame();
   const dd = Math.hypot(DX - st.X, DZ - st.Z), moved = Math.hypot(st.X - x0, st.Z - z0); const s1 = In.doorState(b, e.door).state;
@@ -90,6 +100,7 @@ const isPet = r => !!r && (r.id === 'carinho' || r.id === 'bicho');
   // (out again, by the same door, to the street)
   walk(SX, SZ, 400); for (let q = 0; q < 10; q++) frame();
   if (v.inside) ok('2. e sai de novo pela porta', false, `ainda dentro (${v.inside})`);
+  backRun();
 }
 
 // ------------------------------ 3. the rule, around the door ------------------------------
@@ -119,7 +130,7 @@ else {
 if (pet) {
   // (a point of open ground a few steps from the house, no building within reach of a door's prompt)
   let far = null; for (let r = 3; r <= 8 && !far; r += 0.5) for (let k = 0; k < 24 && !far; k++) { const a = k / 24 * Math.PI * 2; const x = SX / TL + Math.cos(a) * r, y = SZ / TL + Math.sin(a) * r; let free = W.walkableXY(x, y); for (let dy = -1; dy <= 1 && free; dy++) for (let dx = -1; dx <= 1 && free; dx++) { const i = W.idx(Math.floor(x) + dx, Math.floor(y) + dy); if (S.occ[i]) free = false; } if (free) far = [x * TL, y * TL]; }
-  clear(); let r = null;
+  clear(); if (far) clear(far); let r = null; // (and round the point itself: someone standing before the body there is whom «E» means)
   if (far) { at(far[0], far[1], 0.3); god(() => { pet.x = (far[0] + Math.cos(0.3) * 0.8) / TL; pet.y = (far[1] + Math.sin(0.3) * 0.8) / TL; }); r = I.best(); }
   back(); god(() => { pet.x = pet0[0]; pet.y = pet0[1]; });
   ok('4. longe de qualquer porta, o bicho diante do corpo ainda é para fazer carinho', !!far && !!r && r.id === 'carinho' && r.t.a === pet, far ? `«${r ? r.label : 'nada'}»` : 'nenhum chão livre perto');

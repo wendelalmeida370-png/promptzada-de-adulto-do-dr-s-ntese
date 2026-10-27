@@ -66,13 +66,19 @@ const porters = s => [...S.villagers.values()].filter(v => v.set === s.id && v.r
 const towns = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'doca' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built)).sort((a, b) => porters(b) - porters(a) || a.id - b.id);
 let set = null, dock = null, fac = null;
 const dry = (x, y) => { const i = W.idx(x, y); const t = S.type[i]; return !((t === G.T.RIVER && !S.road[i]) || t <= G.T.SEA) && W.walkableXY(x, y); };
-for (const s of towns) {
-  for (const d of [...S.buildings.values()].filter(b => b.set === s.id && b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) {
-    const sp = god(() => G.Fishers.crateSpot(d)); const st = god(() => P.destOf({ at: d.id, fac: G.Village.facOfSet(d.set), x: d.x + 1, y: d.y + 1, data: {} }));
-    if (sp && dry(sp[0], sp[1]) && st && st.type === 'armazem' && god(() => P.access(d, st))) { set = s; dock = d; break; }
-  }
-  if (dock) break;
+// (a place a stone's throw from the pile that the feet do not reach from there — across the water, a pocket —: part 3's)
+const cutNear = sp => { for (let r = 2; r <= 6; r += 0.5) for (let k = 0; k < 32; k++) { const a = k / 32 * Math.PI * 2; const x = sp[0] + Math.cos(a) * r, y = sp[1] + Math.sin(a) * r; if (dry(x, y) && !W.canWalk(x, y, sp[0], sp[1], true)) return [x, y]; } return null; };
+// (the stevedores of a town who could be lived there: hands free, where the feet reach the crates)
+const dockers = (s, sp) => [...S.villagers.values()].filter(o => o.set === s.id && o.role === 'estivador' && !(o.carry && o.carry.n > 0) && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp[0], sp[1])).sort((a, b) => a.id - b.id);
+// (the quays with a port store their porters reach, the towns with most hands first; of them the first with such a place by its
+// pile and a docker to live — else the first: part 3 then makes the place, T-087)
+const quays = [];
+for (const s of towns) for (const d of [...S.buildings.values()].filter(b => b.set === s.id && b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) {
+  const sp = god(() => G.Fishers.crateSpot(d)); const st = god(() => P.destOf({ at: d.id, fac: G.Village.facOfSet(d.set), x: d.x + 1, y: d.y + 1, data: {} }));
+  if (sp && dry(sp[0], sp[1]) && st && st.type === 'armazem' && god(() => P.access(d, st))) quays.push({ s, d, sp });
 }
+const pick = quays.find(q => cutNear(q.sp) && dockers(q.s, q.sp).length) || quays[0];
+if (pick) { set = pick.s; dock = pick.d; }
 if (!dock) { ok('um cais com armazém do porto', false, `nenhum em ${world}`); process.exit(1); }
 fac = G.Fac.get(set.fac);
 const ids = { set: set.id, dock: dock.id, fac: fac.id };
@@ -85,7 +91,7 @@ god(() => {
 });
 // the docker: a stevedore of this town's warehouse, hands free, lived by the god, a stone's throw from the quay
 const sp0 = god(() => G.Fishers.crateSpot(dock));
-const cands = [...S.villagers.values()].filter(o => o.set === set.id && o.role === 'estivador' && !(o.carry && o.carry.n > 0) && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp0[0], sp0[1])).sort((a, b) => a.id - b.id);
+const cands = dockers(set, sp0);
 let v = cands[0];
 if (!v) { ok('um estivador para viver', false, `nenhum em ${set.name}`); process.exit(1); }
 // (where the docker comes from: the door of the warehouse, a stone's throw from the quay — or a point one walks to from the
@@ -131,10 +137,25 @@ const snap = () => JSON.stringify([dock.crates, op, S.loose, v.carry, S.avatar.a
 { const p0 = G.Avatar.pos(); const L0 = I.lead(v, p0.X, p0.Z);
   // (a place a stone's throw from the pile that the feet do not reach from there — across the water, a pocket —, with the body put
   // there by the world: the world's step finds the crates out of reach)
-  let cut = null; for (let r = 2; r <= 6 && !cut; r += 0.5) for (let k = 0; k < 32; k++) { const a = k / 32 * Math.PI * 2; const x = sp0[0] + Math.cos(a) * r, y = sp0[1] + Math.sin(a) * r; if (dry(x, y) && !W.canWalk(x, y, sp0[0], sp0[1], true)) { cut = [x, y]; break; } }
+  let cut = cutNear(sp0), made = null;
+  // (none by this pile, nor by any quay of the world: the god makes one — an islet, a ring of water round a dry tile three to four
+  // tiles off, with nothing and nobody on the ring — and undoes it after; the map told both times, S.typeVer and
+  // W.invalidateLand: T-087)
+  if (!cut) {
+    const plain = i => S.type[i] > G.T.RIVER && !S.occ[i] && !S.road[i] && !S.treeAt[i] && !S.wall[i] && !S.cliff[i] && !(S.dry && S.dry[i]) && W.walkable(i);
+    const near9 = (o, x, y) => Math.floor(o.x) >= x - 1 && Math.floor(o.x) <= x + 1 && Math.floor(o.y) >= y - 1 && Math.floor(o.y) <= y + 1;
+    const someone = (x, y) => [...S.villagers.values()].some(o => !o.inside && near9(o, x, y)) || [...S.animals.values()].some(o => near9(o, x, y));
+    find: for (let r = 3; r <= 4; r += 0.5) for (let k = 0; k < 32; k++) { const a = k / 32 * Math.PI * 2; const x = Math.floor(sp0[0] + Math.cos(a) * r), y = Math.floor(sp0[1] + Math.sin(a) * r);
+      if (x < 2 || y < 2 || x >= G.N - 2 || y >= G.N - 2 || someone(x, y)) continue; const ring = []; let good = true;
+      for (let dy = -1; dy <= 1 && good; dy++) for (let dx = -1; dx <= 1; dx++) { const i = W.idx(x + dx, y + dy); if (!plain(i)) { good = false; break; } if (dx || dy) ring.push(i); }
+      if (good) { made = { ring, was: ring.map(i => S.type[i]) }; cut = [x + 0.5, y + 0.5]; break find; } }
+    if (made) god(() => { for (const i of made.ring) S.type[i] = G.T.SEA; S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand(); });
+  }
+  const isle = !!made && !W.canWalk(cut[0], cut[1], sp0[0], sp0[1], true);
   let Lc = null, cc = null; const home = [v.x, v.y];
   if (cut) { god(() => { v.x = cut[0]; v.y = cut[1]; }); for (let k = 0; k < 6; k++) frame(); Lc = I.lead(v); cc = callOf(); god(() => { v.x = home[0]; v.y = home[1]; }); for (let k = 0; k < 6; k++) frame(); }
-  ok('3. de um lugar perto da pilha de onde os pés não chegam a ela, nenhuma pista e nenhum chamado', !!L0 && !!cut && !Lc && !cc && !!I.lead(v), cut ? `em ${cut.map(n => n.toFixed(1))}, a ${(G.dist(cut[0], cut[1], sp0[0], sp0[1]) * TL).toFixed(0)} m das caixas: ${Lc ? '«' + Lc.txt + '»' : 'sem pista'}, ${cc ? 'chamado' : 'sem chamado'}; de volta: ${I.lead(v) ? 'a pista' : 'nada'}` : 'nenhum lugar assim perto deste cais');
+  if (made) { god(() => { made.ring.forEach((i, j) => { S.type[i] = made.was[j]; }); S.typeVer++; W.invalidateLand(); }); for (let k = 0; k < 6; k++) frame(); }
+  ok('3. de um lugar perto da pilha de onde os pés não chegam a ela, nenhuma pista e nenhum chamado', !!L0 && !!cut && (!made || isle) && !Lc && !cc && !!I.lead(v), cut ? `${made ? (isle ? 'a ilhota do deus, desfeita depois: ' : 'a ilhota do deus NÃO cortou o lugar: ') : ''}em ${cut.map(n => n.toFixed(1))}, a ${(G.dist(cut[0], cut[1], sp0[0], sp0[1]) * TL).toFixed(0)} m das caixas: ${Lc ? '«' + Lc.txt + '»' : 'sem pista'}, ${cc ? 'chamado' : 'sem chamado'}; de volta: ${I.lead(v) ? 'a pista' : 'nada'}` : 'nenhum lugar assim perto deste cais');
 }
 // ------------------------------ 4. following the lead to the pile: the prompt comes at arm's length of the crates ------------------------------
 { const p0 = G.Avatar.pos(); const L = I.lead(v, p0.X, p0.Z); const st = G.Avatar.state();
@@ -252,6 +273,11 @@ function liftAgain() {
 { // someone of another people, a stone's throw from the quay: the unloading is not their people's work — no lead, no call
   if (G.Possess.body()) G.Possess.release('deus'); G.Avatar.detach();
   const sp = god(() => G.Fishers.crateSpot(dock)); god(() => P.landCatch(dock, 'food', 16, 'arenque', '#a8c0d0', 0));
+  // (the other quays' unloadings ended by the god first, and all that lies on those quays taken to their stores — with crates left
+  // on it a quay starts a new unloading at the next step —: the one lived may be a docker or a fisherman of a quay of their own,
+  // called to it as the world sends them — T-088 —; a call then could only be this quay's)
+  god(() => { for (const q of A.all()) { if (q.def !== 'descarga' || q.at === dock.id || !A.live(q)) continue; const d = S.buildings.get(q.at); A.end(q, 'cancel', 'teste'); if (!d) continue;
+    const f = G.Village.facOfSet(d.set); for (const c of (d.crates || []).slice()) D.move('q:' + d.id, 'f:' + f, c.k, c.n, { code: 'teste', part: true }); d.crates = []; } });
   const o = [...S.villagers.values()].filter(q => G.Fac.idOfV(q) !== fac.id && q.age >= 18 && !(q.carry && q.carry.n > 0) && G.Possess.can(q).ok && A.able(q)).sort((a, b) => a.id - b.id)[0];
   let L = null, c = null;
   if (o) { god(() => { G.Vg.endTask(o); o.x = start[0]; o.y = start[1]; o.path = null; }); G.Possess.take(o); G.Avatar.attach(o, 0); for (let k = 0; k < 10; k++) frame(); L = I.lead(o); c = callOf(); }

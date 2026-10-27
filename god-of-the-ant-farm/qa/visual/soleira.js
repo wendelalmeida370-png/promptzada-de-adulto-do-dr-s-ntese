@@ -14,8 +14,9 @@
 //   3. every kind of store with a plan, its door open: the body walks in from the street — up the steps before the door, or
 //      before the foot of its outside flight, where it has them, as a player goes —, climbing none
 //   4. the steps the feet go up are the ones the 3D lays (Space.doorFlight): over each tread the body's floor is its top, and
-//      the drawing has a face there; and the foot of every flight before a door in the world is walked up: its lowest tread
-//      and the one above it within one step of the body (Avatar.TUNE.stepUp)
+//      the drawing has a face there; and every flight before a door in the world is walked up, from the ground a stride past
+//      its foot to its top tread, without the hands (T-090: the step measured at its foot, against Avatar.TUNE.stepUp, a number
+//      beside it); and a door moved to the other side of its shell is reckoned anew, not taken for the old one (L-196)
 //   5. saved and loaded standing on a doorstep: there still, not moved, not taken for one who swims
 //   6. a house built where the body stands: never inside, never in its rooms — it came in by no door —; the world takes it out
 //      as anyone (L-175); and saved and loaded in a door's opening, walking in, the world not yet having it indoors: there
@@ -177,21 +178,60 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
     }
   }
   ok('4. os degraus que os pés sobem são os que o 3D assenta: sobre cada um, o chão do corpo é o topo dele, e o desenho tem uma face ali', n >= 20 && floor === n && drawn === n, `${n} degraus de ${Math.min(30, flights.length)} lances: chão certo em ${floor}, desenhados em ${drawn}${bad.length ? '; ' + bad.join(' · ') : ''}`);
-  // (and the foot of every flight before an outer door, and before the foot of an outside flight, in all the world: the step
-  // up from the ground the feet stand on there — a bridge's deck too — to its lowest tread, with the rise above it, within one
-  // step of the body — its rim, a stride ahead, meets both: Avatar.TUNE.stepUp —; a lone step within one)
-  const UP = G.Avatar.TUNE.stepUp; let nf = 0, hi = 0; const far = [];
+  // (and every flight before an outer door, and before the foot of an outside flight, in all the world, walked up (T-090): the
+  // body put on the ground before its foot and led up it to the top, as a player holds the stick —
+  // with the world stopped: only the body moves —; on the top one at the end, nothing climbed with the hands. Beside it, as a
+  // number only, the step measured from the ground a stride past the foot to the lowest tread with the rise above it, against
+  // Avatar.TUNE.stepUp: on a steep slope that ground is lower than the ground the feet step up from, and it says more than the
+  // body finds)
+  const UP = G.Avatar.TUNE.stepUp; let nf = 0, hi = 0, nw = 0, up1 = 0, noFoot = 0, maxRise = 0; const far = [], stops = [];
+  const inShell = (sh, q) => { const cx = (q.r[0] + q.r[2]) / 2, cz = (q.r[1] + q.r[3]) / 2; return sh.kind === 'round' ? Math.hypot(cx - sh.cx, cz - sh.cz) < sh.r : cx > sh.r[0] && cx < sh.r[2] && cz > sh.r[1] && cz < sh.r[3]; };
+  const still = () => G.Avatar.frame(RDT);
+  const walkStill = (X, Z, max) => { let stuck = 0, hiY = -1e9, hands = false; let lastP = [st().X, st().Z];
+    for (let k = 0; k < max; k++) { const s = st(); const dx = X - s.X, dz = Z - s.Z; if (Math.hypot(dx, dz) < 0.15) break; const yaw = Math.atan2(dz, dx); IN.camYaw = yaw; IN.mx = 0; IN.mz = 1; IN.run = false; s.yaw = yaw; still();
+      hiY = Math.max(hiY, st().Y); if (st().loco === 'climb') hands = true;
+      if (Math.hypot(st().X - lastP[0], st().Z - lastP[1]) < 0.002) { if (++stuck > 15) break; } else stuck = 0; lastP = [st().X, st().Z]; }
+    IN.mz = 0; return { hiY, hands }; };
+  // (the body on a point of the world — metres —, facing a way: put there by the god's hand, lived again, a few frames)
+  const putAt = (X, Z, yaw) => { if (S.avatar) G.Possess.release('deus'); god(() => { G.Vg.endTask(v); v.inside = 0; v.x = X / TL; v.y = Z / TL; v.path = null; });
+    if (!G.Possess.take(v).ok) return false; G.Avatar.attach(v, yaw); for (let k = 0; k < 4; k++) still(); return true; };
   for (const b of [...S.buildings.values()].filter(q => q.built && In.has(q)).sort((a, c) => a.id - c.id)) {
     const p = Sp.planNow(b); if (!p || !p.ok) continue; const y0 = Sp.plinth(b).y0; const lot = { w: b.w * TL, d: b.h * TL }; const fls = [];
-    for (const h of p.holes) { const dd = h.door >= 0 ? p.doors[h.door] : null; if (!dd || !dd.outer || h.kind === 'janela') continue; const w = p.walls[h.wall]; if (!w) continue; const l = p.levels.find(q => q.lv === w.lv); fls.push(Sp.doorFlight(b, p.shell, lot, w, h, l ? l.y : 0, raisedOf(p))); }
-    for (const q of p.stairs) if (q.kind === 'degraus') { const fo = Sp.feet(q); fls.push(Sp.doorFlight(b, p.shell, lot, fo.w, fo.h, 0, false, fo.F, fo.uc)); }
-    for (const fl of fls) { if (!fl || !fl.treads.length) continue; nf++;
+    for (const h of p.holes) { const dd = h.door >= 0 ? p.doors[h.door] : null; if (!dd || !dd.outer || h.kind === 'janela') continue; const w = p.walls[h.wall]; if (!w) continue; const l = p.levels.find(q => q.lv === w.lv); fls.push([Sp.doorFlight(b, p.shell, lot, w, h, l ? l.y : 0, raisedOf(p)), true]); }
+    for (const q of p.stairs) if (q.kind === 'degraus') { const fo = Sp.feet(q); fls.push([Sp.doorFlight(b, p.shell, lot, fo.w, fo.h, 0, false, fo.F, fo.uc), !inShell(p.shell, q)]); }
+    for (const [fl, outside] of fls) { if (!fl || !fl.treads.length) continue; nf++;
       const T = fl.treads.slice().sort((a, c) => a.y - c.y); const lo = T[0], up = T[1]; const sg = lo.kind === 'side' ? Math.sign(lo.a) : 0;
+      for (let k = 1; k < T.length; k++) maxRise = Math.max(maxRise, T[k].y - T[k - 1].y);
       const P = sg ? fl.P(lo.a + sg * (lo.wa / 2 + 0.12), lo.n) : fl.P(lo.a, lo.n + lo.wn / 2 + 0.12); const gx = Math.min(G.N - 0.001, b.x + P[0] / TL), gz = Math.min(G.N - 0.001, b.y + P[1] / TL);
       const foot = lo.y - (Math.max(Sp.drawnAt(gx, gz), Sp.deckAt(gx, gz)) - y0), rise = up ? up.y - lo.y : 0;
-      if (foot + rise > UP + 1e-6) { hi++; if (far.length < 4) far.push(`${b.type}#${b.id}: o pé ${foot.toFixed(2)} m + ${rise.toFixed(2)} m (${fl.treads.length} degraus)`); } }
+      if (foot + rise > UP + 1e-6) { hi++; if (far.length < 4) far.push(`${b.type}#${b.id}: ${foot.toFixed(2)} + ${rise.toFixed(2)} m`); }
+      if (!outside) continue; // (the steps down into a sunken floor, inside the walls, are the plan's own)
+      // (the way up as a player takes it, as wayIn does for a door: up a side flight from before its lowest tread — along the
+      // wall beyond it the lot's plinth stands — over each of its treads to the door; else straight up the flight's line from a
+      // stride past its foot to the door — the body ends against it, shut, or in its opening: on the top tread either way)
+      const Wd = q => [b.x * TL + q[0], b.y * TL + q[1]]; const side = T.filter(t => t.kind === 'side'); const pts = [];
+      if (side.length) { pts.push(Wd(fl.P(lo.a, lo.n + lo.wn / 2 + 0.5))); for (const t of side) pts.push(Wd(fl.P(t.a, t.n))); pts.push(Wd(fl.P(0, 0.3)), Wd(fl.P(0, 0))); } // (by the landing: not aslant into the wall)
+      else { const far = Math.max(...T.map(t => t.n + t.wn / 2)) + 0.6; pts.push(Wd(fl.P(lo.a, far)), Wd(fl.P(lo.a, 0))); }
+      const s0 = pts[0], c0 = pts[1];
+      if (!putAt(s0[0], s0[1], Math.atan2(c0[1] - s0[1], c0[0] - s0[0]))) { noFoot++; continue; } nw++;
+      let hiY = st().Y, hands = false; for (const c of pts.slice(1)) { const r = walkStill(c[0], c[1], 200); hiY = Math.max(hiY, r.hiY); hands = hands || r.hands; }
+      if (hiY - y0 >= fl.top - 0.05 && !hands) up1++; else if (stops.length < 4) stops.push(`${b.type}#${b.id}: até ${(hiY - y0).toFixed(2)} m de ${fl.top.toFixed(2)}${hands ? ', com as mãos' : ''} (${T.length} degraus)`); }
   }
-  ok('4b. o pé de cada lance diante de uma porta de fora, em todo o mundo: o degrau mais baixo e o de cima dele dentro de um passo do corpo — sobe-se andando', nf >= 100 && !hi, `${nf} lances: ${hi} altos demais${far.length ? ' — ' + far.join(' · ') : ''}`);
+  ok('4b. cada lance diante de uma porta de fora, em todo o mundo, subido andando: do chão a um passo do pé até o degrau de cima, sem as mãos', nw >= 60 && up1 === nw,
+    `${nw} lances subidos: ${up1} até em cima${stops.length ? ' — PAROU: ' + stops.join(' · ') : ''}; sem chão a um passo do pé ${noFoot}; o degrau mais alto ${maxRise.toFixed(2)} m; ${nf} lances ao todo, ${hi} acima de um passo pela medida parada${far.length ? ' (' + far.join(' · ') + ')' : ''}`);
+  if (S.avatar) G.Possess.release('deus');
+  // (and a door moved to the other side of its shell — a reform, the day's turn, L-195 — with the same wall id and the same place
+  // along it: the flight is the new side's, not the one kept for the old side — L-196)
+  { let got = null;
+    for (const b of houses) { const p = Sp.planNow(b); if (!p || !p.ok || !p.entrance || p.shell.kind === 'round') continue; const h = p.holes.find(q => q.door === p.entrance.door && q.kind !== 'janela'); const w = h && p.walls[h.wall]; if (!w) continue;
+      const l = p.levels.find(q => q.lv === w.lv), ly = l ? l.y : 0, lot = { w: b.w * TL, d: b.h * TL }; const fl = Sp.doorFlight(b, p.shell, lot, w, h, ly, raisedOf(p)); if (!fl || !fl.treads.length) continue;
+      // (the same wall mirrored through the middle of the shell: on the opposite side)
+      const r = p.shell.r, mx = r[0] + r[2], mz = r[1] + r[3]; const w2 = Object.assign({}, w, { a: [mx - w.a[0], mz - w.a[1]], b: [mx - w.b[0], mz - w.b[1]] });
+      const kept = Sp.doorFlight(b, p.shell, lot, w2, h, ly, raisedOf(p)), anew = Sp.doorFlight(b, p.shell, lot, w2, h, ly, raisedOf(p), undefined, undefined, true);
+      got = { b, side: fl.F.sd, kept: kept ? kept.F.sd : '-', anew: anew ? anew.F.sd : '-' }; break; }
+    ok('4c. a porta mudada para o outro lado da casca, com o mesmo id de parede e o mesmo lugar nela: o lance é o do lado novo, não o guardado do velho', !!got && got.kept === got.anew && got.anew !== got.side,
+      got ? `${got.b.type}#${got.b.id}: o lado de antes ${got.side}; o novo, como os pés o leem ${got.kept}, refeito ${got.anew}` : 'nenhuma casa com lance na entrada');
+  }
 }
 
 // ------------------------------ 5. saved and loaded on a doorstep ------------------------------
