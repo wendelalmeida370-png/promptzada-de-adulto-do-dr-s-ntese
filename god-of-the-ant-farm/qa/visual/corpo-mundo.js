@@ -1,6 +1,10 @@
 // corpo-mundo: the body of the Modo Encarnado against the world's own rules, in Node, without a browser (the simulation of
 // qa/nodemundo.js, with the body's files — space, possess, interact, avatar and the poses of people3d — loaded after it; no 3D):
 //   node qa/visual/corpo-mundo.js [mundo]       (default: the ready world «cidade»)
+// Made for the ready world «cidade» (T-091): its places are taken by the test's rule — the first grown-up by id, the first tree,
+// bush, rock and store by id with walkable ground beside them — and there they are what «E» means. In another world the rule
+// may take a tree beside a building (there «E» is the building's, as it should be), a store of another people, a person who
+// comes with full hands: a failure there is the test's precondition, not the game's — the run says so.
 // The proofs (each one of the adendo's "a presença do jogador não produz resultado de graça"):
 //   1. the body does as much work as anyone of the world in the same world time — felling (the woodcutter's dt × workMul),
 //      picking berries (2.2 s / workMul for a load), breaking stone (3.8 s / workMul for a load), eating at the store (1.6 s)
@@ -20,7 +24,8 @@ const path = require('path');
 const M = require(path.join(__dirname, '..', 'nodemundo.js'));
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/people3d.js', 'js/possess.js', 'js/interact.js', 'js/avatar.js', 'qa/visual/corpo-qa.js', 'qa/atividades-inv.js'] });
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | corpo-mundo ${name} | ${info}`); if (!c) fails.push(name); };
-M.pronto(process.argv[2] || 'cidade');
+const WORLD = process.argv[2] || 'cidade'; M.pronto(WORLD);
+if (WORLD !== 'cidade') console.log(`(corpo-mundo é feito para o mundo «cidade»: em «${WORLD}», uma falha é de precondição do teste — o lugar que a regra dele toma não é o que o «E» quer dizer ali —, não do jogo: T-091)`);
 let S = G.S; const W = G.W, L = G.Space.TILE; // (S: the world now — a load makes a new one)
 // (the world's chance drawn outside the world's step: counted)
 let outside = 0; { const R0 = G.R; G.R = function () { if (!G.inSim) outside++; return R0.apply(this, arguments); }; }
@@ -56,7 +61,8 @@ const freshTree = () => [...S.trees.values()].filter(t => G.Nature.isChoppable(t
 { const tree = [...S.trees.values()].filter(t => G.Nature.isChoppable(t) && t.stage === 'grow' && t.size >= 0.8 && !t.claim).sort((a, b) => a.id - b.id).find(t => bodyAt(t.x, t.y, 0.42));
   if (!tree) ok('derrubar: o corpo rende o mesmo que o lenhador', false, 'nenhuma árvore adulta com chão andável ao lado');
   else {
-    const v = G.Possess.body(); const wm = G.Vg.workMul(v); const c0 = tree.chop, t0 = S.clock; let felled = false, k = 0;
+    // (the hands emptied first, by the depot: the person lived may come with a load — the full hands fell nothing: T-085)
+    const v = G.Possess.body(); clearHands(v); const wm = G.Vg.workMul(v); const c0 = tree.chop, t0 = S.clock; let felled = false, k = 0;
     for (; k < 3000 && !felled; k++) { holdE('arvore'); frame(); if (tree.stage !== 'grow') felled = true; }
     const dw = S.clock - t0, done = (felled ? 3 * Math.max(0.5, tree.size) : tree.chop) - c0; const rate = done / dw / wm;
     ok('derrubar: o corpo rende o mesmo que o lenhador por segundo do mundo (dt × trabalho)', rate > 0.8 && rate < 1.2, `${done.toFixed(2)} de trabalho em ${dw.toFixed(2)} s do mundo (${k} quadros): ${rate.toFixed(2)}× o lenhador${felled ? '; a árvore caiu' : ''}`);
@@ -236,5 +242,5 @@ G.Act.def('prova-pegar', {
 if (G.Possess.body()) G.Possess.release('deus');
 { const bad = vbad(); ok('o verificador no fim (S0 a S2)', !bad.length, vtxt(bad)); }
 const e = M.erros(); ok('sem erros de módulo nem do console', M.limpo(), JSON.stringify(e.mod) + ' ' + e.console.slice(0, 3).join(' | '));
-console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');
+console.log(fails.length ? `FALHAS: ${fails.join(', ')}${WORLD !== 'cidade' ? ` (fora da «cidade»: precondição do teste, T-091)` : ''}` : 'TUDO PASSOU');
 process.exit(fails.length ? 1 : 0);
