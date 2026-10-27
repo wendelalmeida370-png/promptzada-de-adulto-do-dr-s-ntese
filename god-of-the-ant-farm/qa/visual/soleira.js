@@ -16,7 +16,9 @@
 //   4. the steps the feet go up are the ones the 3D lays (Space.doorFlight): over each tread the body's floor is its top, and
 //      the drawing has a face there; and every flight before a door in the world is walked up, from the ground a stride past
 //      its foot to its top tread, without the hands (T-090: the step measured at its foot, against Avatar.TUNE.stepUp, a number
-//      beside it); and a door moved to the other side of its shell is reckoned anew, not taken for the old one (L-196)
+//      beside it); and a door moved to the other side of its shell is reckoned anew, not taken for the old one (L-196); and a
+//      grown tree planted in the way of the steps into the street: never in a tread — gone round, or stopped short of —, the
+//      body up them without the hands where their foot walks, and the steps of before when it is gone (L-197)
 //   5. saved and loaded standing on a doorstep: there still, not moved, not taken for one who swims
 //   6. a house built where the body stands: never inside, never in its rooms — it came in by no door —; the world takes it out
 //      as anyone (L-175); and saved and loaded in a door's opening, walking in, the world not yet having it indoors: there
@@ -214,7 +216,9 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
       else { const far = Math.max(...T.map(t => t.n + t.wn / 2)) + 0.6; pts.push(Wd(fl.P(lo.a, far)), Wd(fl.P(lo.a, 0))); }
       const s0 = pts[0], c0 = pts[1];
       if (!putAt(s0[0], s0[1], Math.atan2(c0[1] - s0[1], c0[0] - s0[0]))) { noFoot++; continue; } nw++;
-      let hiY = st().Y, hands = false; for (const c of pts.slice(1)) { const r = walkStill(c[0], c[1], 200); hiY = Math.max(hiY, r.hiY); hands = hands || r.hands; }
+      // (each leg walked until the body is there or stops — fifteen frames without a step —: the frames are only a net, as many
+      // as the leg is long, for the body the world gives after the proofs before, tired and hungry, slower — T-113)
+      let hiY = st().Y, hands = false; for (const c of pts.slice(1)) { const leg = Math.hypot(c[0] - st().X, c[1] - st().Z); const r = walkStill(c[0], c[1], Math.min(1200, Math.ceil(200 + 60 * leg))); hiY = Math.max(hiY, r.hiY); hands = hands || r.hands; }
       if (hiY - y0 >= fl.top - 0.05 && !hands) up1++; else if (stops.length < 4) stops.push(`${b.type}#${b.id}: até ${(hiY - y0).toFixed(2)} m de ${fl.top.toFixed(2)}${hands ? ', com as mãos' : ''} (${T.length} degraus)`); }
   }
   ok('4b. cada lance diante de uma porta de fora, em todo o mundo, subido andando: do chão a um passo do pé até o degrau de cima, sem as mãos', nw >= 60 && up1 === nw,
@@ -231,6 +235,47 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
       got = { b, side: fl.F.sd, kept: kept ? kept.F.sd : '-', anew: anew ? anew.F.sd : '-' }; break; }
     ok('4c. a porta mudada para o outro lado da casca, com o mesmo id de parede e o mesmo lugar nela: o lance é o do lado novo, não o guardado do velho', !!got && got.kept === got.anew && got.anew !== got.side,
       got ? `${got.b.type}#${got.b.id}: o lado de antes ${got.side}; o novo, como os pés o leem ${got.kept}, refeito ${got.anew}` : 'nenhuma casa com lance na entrada');
+  }
+  // (and a grown tree in the way of the steps that run on into the street before a door — L-197 —, the god's hand planting one
+  // halfway down them, on their line, or beside it, its trunk over the edge of their treads: the steps never stand in its trunk.
+  // Beside the line they go round it — narrower, or to the other side of the door's middle — and the body walks up them without
+  // the hands (at one door at least: the street must have room for it); on it they stop short of it — the steps of the lot only:
+  // an entrance that does not fit, Space.entryFits — or go round it. Wherever their foot walks, as the steps say, the body goes
+  // up them without the hands. The tree taken away: the steps as they were; and what the 3D draws them again for,
+  // Space.treeSig, moved with the tree and back)
+  { const Nat = G.Nature; const recs = [];
+    const flightOf = (b, p, w, h, ly) => Sp.doorFlight(b, p.shell, { w: b.w * TL, d: b.h * TL }, w, h, ly, raisedOf(p));
+    const inTrunk = (fl, b, t) => { const R = Sp.trunk(t); const X = t.x * TL - b.x * TL, Z = t.y * TL - b.y * TL; const F = fl.F; const ta = (F.ax ? X : Z) - fl.uc, tn = ((F.ax ? Z : X) - F.line) * (F.ax ? F.o[1] : F.o[0]);
+      return fl.treads.filter(q => Math.hypot(Math.max(q.a - q.wa / 2 - ta, 0, ta - (q.a + q.wa / 2)), Math.max(q.n - q.wn / 2 - tn, 0, tn - (q.n + q.wn / 2))) < R).length; };
+    const look = fl => fl.treads.map(t => `${t.a.toFixed(2)},${t.n.toFixed(2)},${t.y.toFixed(2)},${t.wa.toFixed(2)}`).join(' ');
+    // (up them as the 4b walks them: from a stride past the foot straight to the door)
+    const climb = (b, fl) => { const T2 = fl.treads.slice().sort((a, c) => a.y - c.y), lo = T2[0]; const Wd = z => [b.x * TL + z[0], b.y * TL + z[1]];
+      const f2 = Math.max(...T2.map(t => t.n + t.wn / 2)) + 0.6; const s = Wd(fl.P(lo.a, f2)), c = Wd(fl.P(lo.a, 0));
+      if (!putAt(s[0], s[1], Math.atan2(c[1] - s[1], c[0] - s[0]))) return 'sem chão diante do pé'; const r = walkStill(c[0], c[1], 400);
+      return r.hands ? 'com as mãos' : r.hiY - Sp.plinth(b).y0 >= fl.top - 0.05 ? 'subido' : 'parou'; };
+    const R1 = Sp.trunk({ stage: 'grow', size: 1 }); // (an oak of size 1: its trunk 0.6 m round)
+    for (const b of houses) { if (recs.length >= 6) break;
+      const p = Sp.planNow(b); if (!p || !p.ok || !p.entrance) continue; const h = p.holes.find(q => q.door === p.entrance.door && q.kind !== 'janela'); const w = h && p.walls[h.wall]; if (!w) continue;
+      const l = p.levels.find(q => q.lv === w.lv), ly = l ? l.y : 0; const fl = flightOf(b, p, w, h, ly);
+      // (straight out of the door's middle, a tile and more into the street, its foot walked)
+      if (!fl || !fl.walks || !fl.ground || fl.treads.some(t => t.kind !== 'out' || Math.abs(t.a) > 0.01)) continue;
+      const far = fl.treads.filter(t => t.n > fl.room + 0.3); if (far.length < 3) continue; const mid = far[Math.floor(far.length / 2)];
+      const before = look(fl), ts0 = Sp.treeSig(b);
+      // (on the line; beside it, just past the narrowest steps the street may take — a metre wide —, over the edge of these)
+      for (const [where, a] of [['na linha', 0], ['ao lado', 0.5 + R1 + 0.02], ['ao lado', -(0.5 + R1 + 0.02)]]) {
+        if (where === 'ao lado' && recs.some(r => r.b === b && r.where === 'ao lado')) continue;
+        const q = fl.P(a, mid.n); const tr = god(() => Nat.addTree(b.x + q[0] / TL, b.y + q[1] / TL, 'oak', 1.0)); if (!tr) continue;
+        const old = inTrunk(fl, b, tr); if (!old) { god(() => Nat.removeTree(tr)); continue; } // (beside treads narrower than that: not in their way)
+        const fl2 = flightOf(b, p, w, h, ly); const ts1 = Sp.treeSig(b);
+        const r = { b, where, n0: fl.treads.length, n2: fl2.treads.length, old, through: inTrunk(fl2, b, tr), walks: fl2.walks && fl2.ground, round: fl2.treads.some(t => t.n > fl.room + 0.3) };
+        r.how = r.walks ? climb(b, fl2) : 'não cabe'; if (S.avatar) G.Possess.release('deus');
+        god(() => Nat.removeTree(tr)); r.back = look(flightOf(b, p, w, h, ly)) === before; r.sig = ts1 !== ts0 && Sp.treeSig(b) === ts0; recs.push(r); }
+    }
+    const line = recs.filter(r => r.where === 'na linha'), side = recs.filter(r => r.where === 'ao lado');
+    const good = r => !r.through && r.back && r.sig && (!r.walks || r.how === 'subido');
+    ok('4d. uma árvore crescida no caminho dos degraus que entram na rua: nunca o tronco num degrau; ao lado da linha deles, eles a contornam e o corpo os sobe sem as mãos; na linha, param antes ou a contornam; onde o pé deles anda, o corpo os sobe sem as mãos; sem a árvore, os degraus de antes, e o 3D os refaz com ela e sem ela',
+      line.length >= 1 && side.length >= 1 && recs.every(good) && side.some(r => r.walks && r.how === 'subido'),
+      recs.length ? recs.map(r => `${r.b.type}#${r.b.id} ${r.where}: ${r.n0} degraus sem ela (${r.old} no tronco), ${r.n2} com ela, ${r.through} no tronco, ${r.walks ? (r.round ? 'contornam, ' : 'no lote, ') + r.how : 'param antes (não cabe)'}${r.back ? '' : ', sem ela OUTROS'}${r.sig ? '' : ', a assinatura das árvores não seguiu'}`).join(' · ') : 'nenhuma casa com degraus na rua');
   }
 }
 

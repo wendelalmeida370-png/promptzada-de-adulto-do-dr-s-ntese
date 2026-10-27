@@ -5,6 +5,7 @@
   if (!window.QA || !QA.more) return;
   const SIDES = { N: 1, E: 1, S: 1, W: 1 };
   let turn = 0; // (which few plans this round builds: a different few each time, so a long life sees them all)
+  let heard = new Map(), heardS = null; // (the step's words on the way in already asked again here — once each, in this world)
   QA.more.push(function (add, s) {
     const In = G.Interiors; if (!In) return;
     const withIp = [];
@@ -29,12 +30,17 @@
       if (!b || !b.ip || !T || !T.cells) continue; const cs = In.cells(b); if (!cs.length) continue;
       const at = In.placeOf(v); if (!at || !cs.some(c => c.bed === at.item)) add('int', 3, `pessoa #${v.id}: presa na cadeia #${b.id} fora das celas`);
     }
-    // ---- the way in (L-195): a door the step left where the way in does not fit, with this record and this ground — every
-    // one of them, they are few — has no side open to the street where it fits; asked again here, made anew
-    if (In.entrySaid && G.Space && G.Space.entryFits) for (const b of withIp) {
-      if (In.entrySaid(b) !== false) continue; const e = G.Space.entryFits(b, In.shellOf(b));
-      if (e.ok) { add('int', 2, `${b.type}#${b.id}: a entrada cabe diante da porta, e a virada do dia disse que não cabia com o mesmo chão`); continue; }
-      const to = In.fitSide(b); if (to) add('int', 2, `${b.type}#${b.id}: a porta ficou onde a entrada não cabe (${e.kind}, o pé a ${e.foot} m), e no lado ${to.s} ela cabe`);
+    // ---- the way in (L-195): where the step put the door, with this record and this ground (the trees about it too: L-206),
+    // the way in fits — or it fits on no side open to the street. Asked again here, made anew: every word of the step the first
+    // round after it, the doors left where it does not fit every round (they are few), and the others in the round's few plans
+    if (In.entrySaid && In.entryKey && G.Space && G.Space.entryFits) {
+      if (heardS !== s) { heardS = s; heard = new Map(); }
+      for (const b of withIp) {
+        const said = In.entrySaid(b); if (said === undefined) continue; const k = In.entryKey(b); if (said && heard.get(b.id) === k) continue; heard.set(b.id, k);
+        const e = G.Space.entryFits(b, In.shellOf(b));
+        if (e.ok !== said) { add('int', 2, `${b.type}#${b.id}: a entrada ${e.ok ? 'cabe' : `não cabe (${e.kind}, o pé a ${e.foot} m)`} diante da porta, e a virada do dia disse que ${said ? 'cabia' : 'não cabia'} com o mesmo chão`); continue; }
+        if (!e.ok) { const to = In.fitSide(b); if (to) add('int', 2, `${b.type}#${b.id}: a porta ficou onde a entrada não cabe (${e.kind}, o pé a ${e.foot} m), e no lado ${to.s} ela cabe`); }
+      }
     }
     // ---- a few plans each round: valid, and the shell seen from afar the whole plan's (the 3D draws the one far, the
     // other near: the same building, always)
@@ -47,7 +53,7 @@
       const s1 = In.shellOf(b), s2 = In.shellOfPlan(p); const strip = o => { const x = Object.assign({}, o); delete x.key; return JSON.stringify(x); };
       if (!s1 || strip(s1) !== strip(s2)) add('int', 1, `${b.type}#${b.id}: a casca de longe não é a da planta`);
       // (the way in where the step said it fits, with this record and this ground: asked again here, made anew — L-195)
-      if (In.entrySaid && In.entrySaid(b) === true && s1 && G.Space && G.Space.entryFits) { const e = G.Space.entryFits(b, s1); if (!e.ok) add('int', 2, `${b.type}#${b.id}: a entrada não cabe diante da porta (${e.kind}, o pé a ${e.foot} m), e a virada do dia disse que cabia com o mesmo chão`); }
+      if (In.entrySaid && In.entrySaid(b) === true && s1 && G.Space && G.Space.entryFits) { const e = G.Space.entryFits(b, s1); if (!e.ok) add('int', 2, `${b.type}#${b.id}: a entrada não cabe (${e.kind}, o pé a ${e.foot} m) diante da porta, e a virada do dia disse que cabia com o mesmo chão`); }
       // (the door the world's people use, with the port on: the plan's own wherever the step took it — and the step never
       // took a door onto ground smaller than the old corner's: a pocket shut in all round shuts in whoever comes out)
       if (G.Vg && G.Vg.planDoor === In.planDoor && b.built && b.blocks) {

@@ -168,7 +168,33 @@
     const side = ((lot / 2 - w.a[0]) * -tz + (lot / 2 - w.a[1]) * tx) > 0 ? -1 : 1; const ax = Math.abs(w.b[1] - w.a[1]) < 1e-3;
     return wside(w, ax ? Math.sign(tx * side) || 1 : Math.sign(-tz * side) || 1);
   }
-  let flights = new Map(); G.worldHooks.push(() => { flights = new Map(); });
+  // (a body's rim round its middle, as the steps are stood on — the body's own radius, Avatar.TUNE.radius: kept here, not read
+  // from there, for the developer's panel turns that one, and the world asks these steps where a door may be — L-207)
+  const BODY_R = 0.32;
+  // a grown tree's trunk, as the body meets it — Avatar's pushRound walks it round —: its radius in metres, 0 for a tree too
+  // small, a stump, a log, a tree falling; at a size given, the radius it would have at that size
+  Sp.trunk = (t, size) => (t && t.stage !== 'stump' && t.stage !== 'log' && t.stage !== 'fall' && t.size >= 0.3 ? 0.28 + 0.32 * Math.min(1.2, size === undefined ? t.size : size) : 0);
+  // (the size the steps reckon a tree at: its next tenth up — they never stand in the trunk of a tree grown since, and are not
+  // reckoned again until it grows past that)
+  const tenth = t => Math.min(12, Math.ceil(t.size * 10 - 1e-9));
+  // (the grown trees on some tiles, as a number: a tree born there, grown a tenth, fallen, felled changes it — L-197)
+  const treesOn = tiles => { let s = 0; for (const i of tiles) { const id = G.S.treeAt[i]; const t = id && G.S.trees.get(id); if (Sp.trunk(t)) s = (s * 31 + id * 7 + tenth(t)) | 0; } return s; };
+  let flights = new Map(), under = new Map(); G.worldHooks.push(() => { flights = new Map(); under = new Map(); });
+  // the grown trees about the steps a building's doors run on into the street, as a number (0 where none do): what the 3D draws
+  // its steps again for — Build3D.sig —, the steps reckoned round a tree come and gone (L-197). The tiles are those of the
+  // flights reckoned so far, kept here; only read
+  Sp.treeSig = b => { const t = under.get(b.id); return t ? treesOn(t) : 0; };
+  // the grown trees about a building, as a number — on its lot and two tiles round it: as far as the steps of its doors run on
+  // into the street (room + 5.3 m out of a door's line, a trunk's reach beside them) —, by the same rule and the same tenth:
+  // what the world keys its word on the way in by (Interiors' entrySaid, L-206). Read from the world alone, never from what
+  // the 3D kept (Space.treeSig): a tree born there, grown a tenth, fallen or felled changes it
+  Sp.treesAround = function (b) {
+    const S = G.S; let s = 0;
+    for (let y = Math.max(0, b.y - 2); y <= Math.min(N - 1, b.y + b.h + 1); y++) for (let x = Math.max(0, b.x - 2); x <= Math.min(N - 1, b.x + b.w + 1); x++) {
+      const id = S.treeAt[y * N + x]; const t = id && S.trees.get(id); if (Sp.trunk(t)) s = (s * 31 + id * 7 + tenth(t)) | 0;
+    }
+    return s;
+  };
   // the steps before an outer door down to the ground, for a door on the ground storey of a building whose floor stands over
   // the street (its plinth) — and before the foot of an outside flight (Interiors' 'degraus', from the plinth's top: Space.feet)
   // —: the ones the 3D lays (Build3D's dressing of a door) and the ones the feet go up (Space.indoor on the doorstep,
@@ -186,7 +212,9 @@
     // (kept by the wall's place too — its ends —, and the side given for a flight's foot: a door moved to another side of its
     // shell with the same wall id and the same place along it is another flight)
     const y0 = Sp.plinth(b).y0; const key = b.id + ':' + w.id + ':' + h.at + ':' + h.w; const k0 = y0.toFixed(3) + ':' + (G.S.typeVer || 0) + ':' + ly + ':' + (h.sill || 0) + ':' + sh.r + ':' + w.t + ':' + w.a + ':' + w.b + (F0 ? ':' + F0.sd + F0.line + ':' + uc0 : '');
-    const m = !fresh && flights.get(key); if (m && m.k === k0) return m.f; // (fresh: reckoned anew, and not kept — Space.entryFits)
+    // (fresh: reckoned anew, and not kept — Space.entryFits; one that runs on into the street, kept while the trees about it
+    // are as they were — L-197)
+    const m = !fresh && flights.get(key); if (m && m.k === k0 && (!m.tiles || treesOn(m.tiles) === m.ts)) return m.f;
     let F = F0, uc = uc0;
     if (!F) { F = sideOf(sh, lot.w, w); const Lw = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; uc = F.ax ? w.a[0] + (w.b[0] - w.a[0]) / Lw * h.at : w.a[1] + (w.b[1] - w.a[1]) / Lw * h.at; }
     const P = (a, n) => (F.ax ? [uc + a, F.line + F.o[1] * n] : [F.line + F.o[0] * n, uc + a]);
@@ -195,7 +223,7 @@
     const reach = (a, ta, n, sd, yt) => { let d = 0; for (let j = 1; j <= 4; j++) { const q = n + sd * j / 4; if (Math.max(gAt(a, q), gAt(a - ta / 2, q), gAt(a + ta / 2, q)) > yt - 0.025) break; d = sd * j / 4; } return d; };
     const room = (F.o[1] > 0 ? lot.d - F.line : F.o[1] < 0 ? F.line : F.o[0] > 0 ? lot.w - F.line : F.line) + 0.15;
     const top = y + 0.02, wd = h.w + 0.5, n0 = 0.1, free = [uc - F.u0, F.u1 - uc];
-    let treads = []; let cut = null; let sideK = null;
+    let treads = []; let cut = null; let sideK = null; let tiles = null;
     // (no rise over 0.30 anywhere: over treads of 0.29 the body's rim meets two at once, past its step, and stops it halfway up —
     // L-183 —: a drop that eight treads of a span would rise more over takes as many as bring it to 0.30)
     const drop = top - gAt(0, n0 + 0.3), need = Math.max(Math.min(8, Math.ceil(drop / 0.26)), Math.ceil(drop / 0.30)), nOut = Math.floor(room / 0.22);
@@ -255,6 +283,16 @@
         for (let it = 0; it < 8 && (top - gAt(a, end + 0.12)) / nS > 0.30; it++) { nS++; end = n0 + nS * 0.29; }
         return { nS, end, rise: (top - gAt(a, end + 0.12)) / nS, n14, e14, r14 }; };
       const open = (a, n) => { const p = P(a, n); const x = b.x + p[0] / TILE, z = b.y + p[1] / TILE; return W.inb(x, z) && (G.S.occ[W.idx(x, z)] === b.id || W.walkableXY(x, z)); };
+      // (the world walks under a tree, and the body is walked round its trunk: the steps never stand in the trunk of a grown
+      // tree — a tread its radius from its middle at least, the tree reckoned at its next tenth up —, and the body on them, a
+      // rim inside their edge, is never pushed off them — L-197, the ourives#22497 and its acacia. The tiles a flight of these
+      // runs over, and about them as far as a trunk reaches: the trunks on them in the flight's frame)
+      const c0 = P(-(wd / 2 + 1.4), n0), c1 = P(wd / 2 + 1.4, room + 5.3); const trunks = []; tiles = [];
+      for (let ty = Math.max(0, Math.floor(b.y + Math.min(c0[1], c1[1]) / TILE)); ty <= Math.min(N - 1, Math.floor(b.y + Math.max(c0[1], c1[1]) / TILE)); ty++)
+        for (let tx = Math.max(0, Math.floor(b.x + Math.min(c0[0], c1[0]) / TILE)); tx <= Math.min(N - 1, Math.floor(b.x + Math.max(c0[0], c1[0]) / TILE)); tx++) {
+          const i = ty * N + tx; tiles.push(i); const id = G.S.treeAt[i]; const t = id && G.S.trees.get(id); const r = Sp.trunk(t) && Sp.trunk(t, tenth(t) / 10); if (!r) continue;
+          const X = t.x * TILE - b.x * TILE, Z = t.y * TILE - b.y * TILE; trunks.push([(F.ax ? X : Z) - uc, ((F.ax ? Z : X) - F.line) * (F.ax ? F.o[1] : F.o[0]), r]); }
+      const clear = (s0, w2, e) => trunks.every(([ta, tn, r]) => Math.hypot(Math.max(s0 - w2 / 2 - ta, 0, ta - s0 - w2 / 2), Math.max(n0 - 0.01 - tn, 0, tn - e - 0.03)) >= r);
       // (straight out from the door's middle, as wide as its steps; where the street has something beside the way, narrower, or to
       // one side of the middle — always before the door: a good stride of its width over it —; of those the street has room for,
       // one whose foot is a step over the ground before it, its treads' ends least in the slope — a street sloping across
@@ -267,7 +305,7 @@
         // (as many treads as span says; where the street goes on falling past the flight's end, its foot stands high still: a
         // tread more at a time, as far as the street lets the flight go, until the feet walk it)
         let { nS, end, rise, n14, e14, r14 } = span(s0); const lay = (n, e, r) => { treads = []; out(n, r, e - n0 + 0.02, s0, w2); const c = { fs: footStep(), ru: riseUp(), buried: Math.max(0, buried), treads }; if (!best || worse(best, c)) best = c; return c; };
-        const room2 = (n, e) => { if (e + 0.02 > room + (n > 14 ? 4.6 : 4.2)) return false; for (const q of [room, (room + e) / 2, e - 0.05]) for (const a of [s0 - w2 / 2 + 0.1, s0, s0 + w2 / 2 - 0.1]) if (!open(a, q)) return false; return true; };
+        const room2 = (n, e) => { if (e + 0.02 > room + (n > 14 ? 4.6 : 4.2) || !clear(s0, w2, e)) return false; for (const q of [room, (room + e) / 2, e - 0.05]) for (const a of [s0 - w2 / 2 + 0.1, s0, s0 + w2 / 2 - 0.1]) if (!open(a, q)) return false; return true; };
         let walked = false;
         for (let more = 0; more < 6; more++) {
           if (more) { nS++; end = n0 + nS * 0.29; rise = (top - gAt(s0, end + 0.12)) / nS; }
@@ -285,9 +323,28 @@
     // there is ground the world walks a stride before its lowest tread: what Space.entryFits answers)
     const lo = treads.length ? treads.reduce((q, t) => (t.y < q.y ? t : q)) : null; const gp = lo ? P(lo.a, lo.n + lo.wn / 2 + 0.5) : null;
     const ground = !gp || (() => { const x = b.x + gp[0] / TILE, z = b.y + gp[1] / TILE; return W.inb(x, z) && (G.S.occ[W.idx(x, z)] === b.id || W.walkableXY(x, z)); })();
+    // (and whether the body goes up them and in, along the way it takes — as a player does: up a side flight over the middle of
+    // each tread, over the landing from its end to the door's middle; else up the flight's line —: no other building where its
+    // middle goes, nor a wall, and no other building under a body's rim to either side across its way. A tread is ground over
+    // a steep slope or over the water — the feet stand on its top —, never over a house: a landing over a quay built since
+    // before the door is none — L-207, the taverna#9656; what lies beyond the door's middle, on the landing's far side, the
+    // body never goes over)
+    const tileAt = (a, n) => { const p = P(a, n); const x = b.x + p[0] / TILE, z = b.y + p[1] / TILE; return W.inb(x, z) ? W.idx(x, z) : -1; };
+    const house = (a, n) => { const i = tileAt(a, n); return i < 0 || (G.S.occ[i] !== b.id && W.blocked(i)); };
+    const solid = (a, n) => { const i = tileAt(a, n); return house(a, n) || (G.S.occ[i] !== b.id && !!G.S.wall[i] && G.S.wall[i] !== 2 && G.S.wall[i] !== 3); }; // (a gate and an aqueduct's arch are walked through)
+    const stand = (() => {
+      const side = treads.filter(t => t.kind === 'side'), L = treads.find(t => t.kind === 'landing');
+      if (side.length && L) {
+        for (const t of side) { const r = Math.min(BODY_R, t.wn / 2); if (solid(t.a, t.n) || house(t.a, t.n - r) || house(t.a, t.n + r)) return false; }
+        const sg = Math.sign(side[0].a) || 1; for (let a = Math.max(0, L.wa / 2 - BODY_R); a > 1e-9; a -= 0.2) if (solid(sg * a, L.n)) return false;
+        return !solid(0, L.n);
+      }
+      return treads.every(t => { const r = Math.min(BODY_R, t.wa / 2); return !solid(t.a, t.n) && !house(t.a - r, t.n) && !house(t.a + r, t.n); });
+    })();
     const fs = treads.length ? footStep() : 0, ru = riseUp();
-    const f = { F, uc, P, top, w: wd, treads, cut, room, foot: fs, rise: ru, walks: !treads.length || walks(fs, ru, treads.length), ground };
-    if (!fresh) { if (flights.size > 2000) flights.clear(); flights.set(key, { k: k0, f }); }
+    const f = { F, uc, P, top, w: wd, treads, cut, room, foot: fs, rise: ru, walks: !treads.length || walks(fs, ru, treads.length), ground, stand };
+    if (!fresh) { if (flights.size > 2000) flights.clear(); flights.set(key, { k: k0, f, tiles, ts: tiles ? treesOn(tiles) : 0 });
+      if (tiles) { const u = under.get(b.id) || []; for (const i of tiles) if (!u.includes(i)) u.push(i); under.set(b.id, u); } }
     return f;
   };
   // the foot of an outside flight (Interiors' 'degraus': up a house on stilts, down into a sunken floor), as a door's side for
@@ -311,18 +368,19 @@
   Sp.entryFits = function (b, c) {
     const lot = { w: b.w * TILE, d: b.h * TILE }; let worst = null;
     const look = (fl, de) => { if (!fl || !fl.treads.length) return; const kind = fl.treads.some(t => t.kind === 'side') ? 'lado' : fl.treads.length === 1 ? 'um' : fl.treads.some(t => t.n > fl.room + 0.3) ? 'rua' : 'lote';
-      const r = { ok: fl.walks && fl.ground, foot: +fl.foot.toFixed(2), rise: +fl.rise.toFixed(2), n: fl.treads.length, kind, ground: fl.ground, de }; if (!worst || (worst.ok && !r.ok)) worst = r; };
+      const r = { ok: fl.walks && fl.ground && fl.stand, foot: +fl.foot.toFixed(2), rise: +fl.rise.toFixed(2), n: fl.treads.length, kind, ground: fl.ground, stand: fl.stand, de }; if (!worst || (worst.ok && !r.ok)) worst = r; };
     const e = c.entrance; const h = e && c.holes.find(q => q.door === e.door && q.kind !== 'janela'); const w = h && c.walls[h.wall];
     if (w) { const l = c.levels.find(q => q.lv === w.lv); look(Sp.doorFlight(b, c.shell, lot, w, h, l ? l.y : 0, raisedOf(c), undefined, undefined, true), 'porta'); }
     // (a floor on posts — the door's own steps are the plan's flight up to it —, and every flight up from the ground outside the
     // walls: the steps before its foot. The plan's stairs, or a shell's steps: the same id, r and dir — those inside the walls,
     // down into a sunken floor, are no way in)
     for (const st of (c.stairs || c.steps || [])) { if (st.kind !== 'degraus' || inShell(c.shell, st)) continue; const fo = Sp.feet(st); look(Sp.doorFlight(b, c.shell, lot, fo.w, fo.h, 0, false, fo.F, fo.uc, true), 'pé'); }
-    return worst || { ok: true, foot: 0, rise: 0, n: 0, kind: 'nenhum', ground: true, de: '' };
+    return worst || { ok: true, foot: 0, rise: 0, n: 0, kind: 'nenhum', ground: true, stand: true, de: '' };
   };
   function flightsOf(b, p) {
+    // (kept while the trees about its steps into the street are as they were, too — L-197)
     const y0 = Sp.plinth(b).y0; const k = y0.toFixed(3) + ':' + (G.S.typeVer || 0);
-    const m = stepMemo.get(b.id); if (m && m.p === p && m.k === k) return m.list;
+    const m = stepMemo.get(b.id); if (m && m.p === p && m.k === k && m.ts === Sp.treeSig(b)) return m.list;
     const list = []; const lot = { w: b.w * TILE, d: b.h * TILE }; const raised = raisedOf(p);
     for (const h of p.holes) {
       const d = h.door >= 0 ? p.doors[h.door] : null; if (!d || !d.outer || h.kind === 'janela') continue; const w = p.walls[h.wall]; if (!w) continue;
@@ -330,7 +388,7 @@
     }
     // (and before the foot of each flight outside the walls, on the storey it serves)
     for (const st of p.stairs) { if (st.kind !== 'degraus' || inShell(p.shell, st)) continue; const f = Sp.feet(st); const fl = Sp.doorFlight(b, p.shell, lot, f.w, f.h, 0, false, f.F, f.uc); if (fl) list.push({ fl, h: f.h, w: { lv: st.lv1 }, y0, foot: st }); }
-    if (stepMemo.size > 400) stepMemo.clear(); stepMemo.set(b.id, { p, k, list }); return list;
+    if (stepMemo.size > 400) stepMemo.clear(); stepMemo.set(b.id, { p, k, ts: Sp.treeSig(b), list }); return list;
   }
   // (a flight of the plan inside the shell — its middle within its walls —, or out of them)
   const inShell = (sh, st) => { const cx = (st.r[0] + st.r[2]) / 2, cz = (st.r[1] + st.r[3]) / 2; return sh.kind === 'round' ? Math.hypot(cx - sh.cx, cz - sh.cz) < sh.r : cx > sh.r[0] && cx < sh.r[2] && cz > sh.r[1] && cz < sh.r[3]; };
