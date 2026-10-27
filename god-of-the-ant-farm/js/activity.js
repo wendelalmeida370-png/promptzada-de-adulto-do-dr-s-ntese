@@ -108,7 +108,9 @@
     h: { // a house: the pantry, the family's coins, the goods
       obj: id => { const b = G.S.buildings.get(id); return housing(b) ? b : null; },
       get: (b, k) => (k === 'food' ? b.pantry || 0 : k === 'moedas' ? b.coin || 0 : (b.inv && b.inv[k]) || 0),
-      room: (b, k) => (k === 'moedas' ? Infinity : k === 'water' ? 0 : furnRoom('h', b, k, AD.h.list(b), Infinity)),
+      // (what the furniture holds; c.floor: the family's own things coming home — a purchase paid, a stall's stock, a move —
+      // are kept even with the furniture full, on the floor: the pile of D.slots. D-059: what was paid is never lost for room)
+      room: (b, k, c) => (k === 'moedas' ? Infinity : k === 'water' ? 0 : c && c.floor ? Infinity : furnRoom('h', b, k, AD.h.list(b), Infinity)),
       take: (b, k, n) => { if (k === 'food') b.pantry = r4((b.pantry || 0) - n); else if (k === 'moedas') b.coin = r4((b.coin || 0) - n); else b.inv[k] = r4((b.inv[k] || 0) - n); },
       put: (b, rec) => { const k = rec.k; if (k === 'food') b.pantry = r4((b.pantry || 0) + rec.n); else if (k === 'moedas') b.coin = r4((b.coin || 0) + rec.n); else { const I = b.inv || (b.inv = {}); I[k] = r4((I[k] || 0) + rec.n); } },
       list: b => { const o = Object.assign({}, b.inv || {}); if (b.pantry) o.food = b.pantry; if (b.coin) o.moedas = b.coin; return o; },
@@ -670,7 +672,10 @@
     if (t.st === 1) { if (!H.move(v, dt)) return; if (G.dist(v.x, v.y, b.x + b.w / 2, b.y + b.h / 2) > Math.max(b.w, b.h) + 1.2) { t.rt = (t.rt || 0) + 1; if (t.rt > 3) return H.end(v); t.st = 0; return; } t.st = 2; v.actT = 0; v.act = A.ANIM.pousar.act; return; }
     v.act = A.ANIM.pousar.act; G.Village.center && G.faceTo(v, b.x + b.w / 2 - v.x, b.y + b.h / 2 - v.y);
     if (v.actT < A.ANIM.pousar.contact) return;
-    const r = D.move('v:' + v.id, to, c.k, c.n, { op: c.op || 0, code: c.bought ? 'compra-em-casa' : 'entrega', by: v.id, part: true });
+    // (home takes all of its own: what its furniture has no room for lies on the floor — D-059; a purchase that ends in the
+    // people's store is one whose family has no house left: 'sem-destino', as holdCarry writes it)
+    const code = c.bought ? (kind === 'f' ? 'sem-destino' : 'compra-em-casa') : 'entrega';
+    const r = D.move('v:' + v.id, to, c.k, c.n, { op: c.op || 0, code, by: v.id, part: true, floor: kind === 'h' });
     if (r.ok && c && c.n > EPS) { t.st = 3; } // (what did not fit stays in the arms)
     if (!v.carry) { G.FX && G.FX.deposit(v.x, v.y, r.e ? r.e[5] : 'food', r.n); return H.end(v); }
     // (the rest did not fit: the people's store, or it stays in the arms for later)
@@ -827,9 +832,9 @@
       D.drop('v:' + v.id, c.k, c.n, v.x, v.y, { op: op && live(op) ? op.id : 0, code: 'caiu', by: v.id, fac: G.Fac.idOfV(v) });
       if (op) A.log(op, 'caiu', v.id, cause || '');
     } else if (c && c.n > EPS && c.to && D.exists(c.to) && G.S.villagers.has(v.id) && !v.aboard) {
-      // (a load for a place — a purchase on its way home, goods for a stall — is its owner's: it goes there, with the cause;
-      // what has no room there, to the people's store)
-      D.move('v:' + v.id, c.to, c.k, c.n, { code: 'herdado', by: v.id, part: true });
+      // (a load for a place — a purchase on its way home, goods for a stall — is its owner's: it goes there, with the cause —
+      // a house takes all of its own, on the floor if need be, D-059 —; what a stall has no room for, to the people's store)
+      D.move('v:' + v.id, c.to, c.k, c.n, { code: 'herdado', by: v.id, part: true, floor: c.to[0] === 'h' });
       const fid = G.Fac.idOfV(v); if (v.carry && v.carry.n > EPS && D.exists('f:' + fid)) D.move('v:' + v.id, 'f:' + fid, v.carry.k, v.carry.n, { code: 'herdado', by: v.id, part: true });
     }
     // (the coins of the dead — the purse, a plain bag in the hands — are the household's: to the house they lived in, or,

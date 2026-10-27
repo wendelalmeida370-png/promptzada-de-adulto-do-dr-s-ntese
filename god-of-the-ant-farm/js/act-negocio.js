@@ -152,7 +152,8 @@
     A.note(v, 'memory', `Abri uma banca n${G.gen(G.Village.buildName(b)) === 'a' ? 'a' : 'o'} ${G.Village.buildName(b).toLowerCase()}.`);
     return z;
   };
-  // a business ends: its stock goes to the family's house (or the people's store); the coins were always the family's
+  // a business ends: its stock goes to the family's house — all of it, on the floor where the furniture is full: it is the
+  // family's own (D-059) —, or to the people's store when the family has no house; the coins were always the family's
   B.close = function (z, why) {
     if (!live(z)) return;
     z.open = 0; if (z.st === 'on') { z.st = 'saindo'; z.why = why || ''; }
@@ -161,7 +162,7 @@
     if (!coin(z) && oweTotal(z) > EPS) settle(z, home);
     for (const k of Object.keys(z.inv)) {
       let q = z.inv[k] || 0; if (!(q > EPS)) continue;
-      if (home) { const r = D.move('z:' + z.id, home, k, q, { code: 'fechou', part: true, by: z.owner }); if (r.ok) q = r2(q - r.n); }
+      if (home) { const r = D.move('z:' + z.id, home, k, q, { code: 'fechou', part: true, by: z.owner, floor: true }); if (r.ok) q = r2(q - r.n); }
       if (q > EPS) D.move('z:' + z.id, 'f:' + z.fac, k, q, { code: 'fechou', part: true, by: z.owner });
     }
     // (what is on its way to the stall goes home instead)
@@ -329,11 +330,12 @@
 
   // ------------------------------ the buyers ------------------------------
   // what a house goes to the market for: what it lacks of the things a house keeps, what a rich house fancies, food
+  // (what has no room in the house is no need: a full house feels no lack — D-059)
   function needsOf(h, v) {
-    const I = h.inv || {}; const res = h.res || 1;
-    const need = Object.keys(E.HOUSE_WANTS).filter(k => (I[k] || 0) < Math.max(1, res * E.HOUSE_WANTS[k] * 2));
+    const I = h.inv || {}; const res = h.res || 1; const fits = k => D.room('h:' + h.id, k) + EPS >= 1;
+    const need = Object.keys(E.HOUSE_WANTS).filter(k => (I[k] || 0) < Math.max(1, res * E.HOUSE_WANTS[k] * 2) && fits(k));
     if (E.wishes) for (const k of E.wishes(h, v)) if (!need.includes(k)) need.push(k);
-    if ((h.pantry || 0) < res) need.push('food');
+    if ((h.pantry || 0) < res && fits('food')) need.push('food');
     return need;
   }
   // the stall for it: one open, with someone at the counter and the thing on it; the best deal near at hand (want: the
@@ -413,7 +415,10 @@
         // (and as the two hands carry: a load already in them, or more than they hold, is no deal)
         const arms = Math.floor(D.room('v:' + v.id, k, { to: 'h:' + h.id }) + EPS);
         if (arms < 1) { t.talk = 10; v.actT = 0; return; }
-        const n = Math.min(Math.max(t.n || 0, qty(z, k)), k === 'food' ? 6 : 3, Math.floor((z.inv[k] || 0) + EPS), Math.max(1, Math.floor((means(v, h, z, k) + EPS) / Math.max(0.01, t.p))), arms);
+        // (and as the house has room for: who has nowhere to keep it does not buy it — D-059)
+        const room = Math.floor(D.room('h:' + h.id, k) + EPS);
+        if (room < 1) { t.talk = 11; v.actT = 0; return; }
+        const n = Math.min(Math.max(t.n || 0, qty(z, k)), k === 'food' ? 6 : 3, Math.floor((z.inv[k] || 0) + EPS), Math.max(1, Math.floor((means(v, h, z, k) + EPS) / Math.max(0.01, t.p))), arms, room);
         if (n < 1) return done(v, H);
         const total = r2(t.p * n);
         let r;
@@ -431,6 +436,7 @@
       }
       if (t.talk === 6) { if (t.said !== 6) { t.said = 6; say(seller, 'sem_lugar', {}); } if (v.actT < STEP) return; z.day.ref[k] = (z.day.ref[k] || 0) + 1; z.day.refus++; return done(v, H); }
       if (t.talk === 10) { if (t.said !== 10) { t.said = 10; say(v, 'maos_cheias', {}); } if (v.actT < STEP) return; return done(v, H); }
+      if (t.talk === 11) { if (t.said !== 11) { t.said = 11; say(v, 'casa_cheia', { k }); } if (v.actT < STEP) return; return done(v, H); }
       if (t.talk === 7) { if (t.said !== 7) { t.said = 7; say(seller, 'recusar_oferta', {}); } if (v.actT < STEP) return; t.talk = 9; v.actT = 0; return; }
       if (t.talk === 8) { if (t.said !== 8) { t.said = 8; say(v, 'sem_dinheiro', {}); } if (v.actT < STEP) return; z.day.ref[k] = (z.day.ref[k] || 0) + 1; z.day.refus++; return done(v, H); }
       if (t.talk === 9) { if (t.said !== 9) { t.said = 9; say(v, 'recusar_caro', { k }); } if (v.actT < STEP) return; z.day.ref[k] = (z.day.ref[k] || 0) + 1; z.day.refus++; return done(v, H); }
@@ -614,11 +620,13 @@
     if ((z.inv[o.k] || 0) < 1) return { ok: false, why: 'Acabou.' };
     if (v.carry && v.carry.n > EPS) return { ok: false, why: 'Suas mãos já estão cheias.' };
     const h = E.homeOf(v); if (!h) return { ok: false, why: 'Sem casa para onde levar.' };
+    if (D.room('h:' + h.id, o.k) + EPS < 1) return { ok: false, why: `Em casa não cabe mais ${E.name(o.k)}.` };
     return { ok: true };
   }
   // a sale at a price: the same deal as the people's (the goods into the arms, the payment to the seller's house)
   function sell(z, v, k, p) {
-    const h = E.homeOf(v); const n = Math.min(qty(z, k), Math.floor(D.room('v:' + v.id, k, { to: 'h:' + h.id }) + EPS)); if (n < 1) return { ok: false, why: qty(z, k) < 1 ? 'Acabou.' : 'Suas mãos não levam mais nada.' };
+    const h = E.homeOf(v); const room = Math.floor(D.room('h:' + h.id, k) + EPS);
+    const n = Math.min(qty(z, k), Math.floor(D.room('v:' + v.id, k, { to: 'h:' + h.id }) + EPS), room); if (n < 1) return { ok: false, why: qty(z, k) < 1 ? 'Acabou.' : room < 1 ? `Em casa não cabe mais ${E.name(k)}.` : 'Suas mãos não levam mais nada.' };
     const total = r2(p * n); let r;
     if (coin(z)) r = D.swap(['z:' + z.id, 'v:' + v.id, k, n], [payer(v), payee(z), 'moedas', total], { code: 'venda', by: v.id, to: 'h:' + h.id, tag: { bought: 1 } });
     else {

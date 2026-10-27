@@ -2718,7 +2718,9 @@ float m3scale(float p) {
     const stone = P.base ? P.base[2] : '#a09a8e'; const cut = st === 'grego' ? 'marble' : st === 'romano' ? 'ashlar' : st === 'egipcio' ? 'sandstone' : 'stone';
     const sh2 = st === 'grego' ? (P.trim || '#3f6fb0') : [[86, 104, 70], [104, 74, 50], [70, 92, 104]][Math.floor(K.hv(17) * 3)];
     // (a piece dx along the face from the window's middle, dy up from its foot, its middle n out of the face: w2 along, h2 high, d2 deep)
-    const fx = (dx, dy, w2, h2, d2, col, n) => { const c = F.P(q.uc + dx, py + dy, n); K.box(c[0], c[1], c[2], F.ax ? w2 : d2, h2, F.ax ? d2 : w2, col || fc); };
+    // (beyond the preset's fine reach a piece a hand deep or less is its front face: its depth is nothing at that distance)
+    const fx = (dx, dy, w2, h2, d2, col, n) => { if (!K.fine && d2 <= 0.06) { const f = n + d2 / 2; K.quad(F.P(q.uc + dx - w2 / 2, py + dy, f), F.P(q.uc + dx + w2 / 2, py + dy, f), F.P(q.uc + dx + w2 / 2, py + dy + h2, f), F.P(q.uc + dx - w2 / 2, py + dy + h2, f), col || fc, F.out); return; }
+      const c = F.P(q.uc + dx, py + dy, n); K.box(c[0], c[1], c[2], F.ax ? w2 : d2, h2, F.ax ? d2 : w2, col || fc); };
     if (framed || st === 'nordico') K.as('jamb', () => { const fw = st === 'asteca' ? 0.13 : 0.09;
       fx(0, -0.08, ww + 0.2, 0.08, 0.05, fc, 0.025); fx(0, hh, ww + 0.2, 0.09, 0.05, fc, 0.025); fx(-ww / 2 - fw / 2, 0, fw, hh, 0.05, fc, 0.025); fx(ww / 2 + fw / 2, 0, fw, hh, 0.05, fc, 0.025);
       if (st === 'classico' || st === 'grego') fx(0, 0, 0.05, hh, 0.04, fc, -0.03); });
@@ -2770,7 +2772,9 @@ float m3scale(float p) {
     const P = K.P, st = K.st; const S = ctx.S; const wc = outStuff(K, S, null).col; const tr = P.trim || '#6b4a30';
     const gaps = ops.map(q => [q.u0 - 0.03, q.y0, q.u1 + 0.03, q.y1]).concat(covers || []);
     const band = (y0, hy, d, col, pat, pad) => { if (y0 + hy <= ya + 1e-3 || y0 >= yb) return; const spans = cutRect([F.u0 - pad, Math.max(ya, y0), F.u1 + pad, Math.min(yb, y0 + hy)], gaps);
-      K.as(pat, () => { for (const r of spans) { if (r[2] - r[0] < 0.04 || r[3] - r[1] < 0.01) continue; const c = F.P((r[0] + r[2]) / 2, r[1], d / 2 - 0.01); K.box(c[0], c[1], c[2], F.ax ? r[2] - r[0] : d, r[3] - r[1], F.ax ? d : r[2] - r[0], col); } }); };
+      K.as(pat, () => { for (const r of spans) { if (r[2] - r[0] < 0.04 || r[3] - r[1] < 0.01) continue;
+        if (!K.fine && d <= 0.07) { const f = d - 0.01; K.quad(F.P(r[0], r[1], f), F.P(r[2], r[1], f), F.P(r[2], r[3], f), F.P(r[0], r[3], f), col, F.out); continue; }
+        const c = F.P((r[0] + r[2]) / 2, r[1], d / 2 - 0.01); K.box(c[0], c[1], c[2], F.ax ? r[2] - r[0] : d, r[3] - r[1], F.ax ? d : r[2] - r[0], col); } }); };
     const base = P.base || ['#8a8478', '#6f6a60', '#a09a8e']; const frameAll = ws.length && ws.every(w => outStuff(K, S, w).frame);
     if (st === 'nordico') {
       const wd = nordWood(K).dark;
@@ -3132,9 +3136,11 @@ float m3scale(float p) {
       const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(); const K = kit(g, b, gp); draw(g, gw, K, false);
       const P = g.p; let bad = 0, lo = 1e9, x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
       for (const arr of [P, g.n, gw.p, gp.p]) for (let k = 0; k < arr.length; k++) if (!Number.isFinite(arr[k])) bad++;
-      // (the steps before a door that come down into the street stand out of the lot by rights: not counted in how far it goes)
+      // (the steps before a door that come down into the street stand out of the lot by rights, on the street's ground — lower
+      // than the lot's on a slope —: not counted in how far it goes, nor in how low; each tread stands on the ground under it,
+      // a hand into it — Space.doorFlight —, and its top over it: the cut by the ground below says so)
       const onStep = (X, Z) => !!K.steps && K.steps.some(r => X >= r[0] - 0.02 && X <= r[1] + 0.02 && Z >= r[2] - 0.02 && Z <= r[3] + 0.02);
-      for (let k = 0; k < P.length; k += 3) { lo = Math.min(lo, P[k + 1]); if (onStep(P[k], P[k + 2])) continue; x0 = Math.min(x0, P[k]); x1 = Math.max(x1, P[k]); z0 = Math.min(z0, P[k + 2]); z1 = Math.max(z1, P[k + 2]); }
+      for (let k = 0; k < P.length; k += 3) { if (onStep(P[k], P[k + 2])) continue; lo = Math.min(lo, P[k + 1]); x0 = Math.min(x0, P[k]); x1 = Math.max(x1, P[k]); z0 = Math.min(z0, P[k + 2]); z1 = Math.max(z1, P[k + 2]); }
       const tag = `${b.type}#${b.id}`;
       if (bad) out.push(`${tag}: ${bad} números que não são números`);
       const over = Math.max(b.x * L - x0, x1 - (b.x + b.w) * L, b.y * L - z0, z1 - (b.y + b.h) * L);

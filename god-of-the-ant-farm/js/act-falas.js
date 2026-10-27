@@ -47,6 +47,7 @@
       sem_dinheiro: ['Não tenho com que pagar.', 'Hoje a bolsa está vazia.'],
       sem_lugar: ['Não tenho mais onde guardar a troca. Volte mais tarde.', 'Está tudo cheio: hoje não cabe mais nada.'],
       maos_cheias: ['Estou com as mãos cheias. Volto depois.', 'Agora não tenho como levar.'],
+      casa_cheia: ['Lá em casa não cabe mais {bem}. Fica para outra vez.', 'Não tenho onde guardar mais {bem}.'],
       agradecer: ['Obrigado! Volte sempre.', 'Bom negócio. Até a próxima.', 'Que te faça bom proveito.'],
       escasso: ['{bem} está difícil: o armazém quase não tem.', 'Falta {bem} na cidade inteira.'],
       nao_tenho: ['Hoje não tenho {bem}.', '{bem}, só amanhã.'],

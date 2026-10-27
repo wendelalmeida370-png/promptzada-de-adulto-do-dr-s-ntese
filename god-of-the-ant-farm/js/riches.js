@@ -64,10 +64,11 @@
 
   // ------------------------------ rich houses want what is rare ------------------------------
   const WISH = ['vinho', 'mel', 'azeite', 'especiarias', 'cafe', 'cacau', 'queijo', 'tamaras', 'incenso', 'seda', 'peles', 'plumas', 'perolas', 'coral', 'pele_rara', 'marfim'];
+  // (a fancy needs a place in the house to keep it: with no room for it, no wish — D-059)
   E.wishes = function (h, v) {
     const coin = h.coin || 0; if (coin < 2.5) return [];
     const I = h.inv || {}; const out = [];
-    for (const k of WISH) { if ((I[k] || 0) >= 1 || coin < GD[k].price * 2.5) continue; if (G.R() < 0.4) out.push(k); if (out.length >= 2) break; }
+    for (const k of WISH) { if ((I[k] || 0) >= 1 || coin < GD[k].price * 2.5 || G.Depot.room('h:' + h.id, k) + 1e-6 < 1) continue; if (G.R() < 0.4) out.push(k); if (out.length >= 2) break; }
     void v; return out;
   };
 
