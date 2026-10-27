@@ -632,11 +632,11 @@
   // the type allows (always the same way: the plan stays a function of the record)
   const cache = new Map();
   // (made as a generator: between two attempts whoever makes plans a little at a time — the line below — may stop)
-  function* makeG(b, rec, famId, probe, relax, from) {
+  function* makeG(b, rec, famId, probe, relax, from, lastResort) {
     const F = FAMS[famId]; let last = null; from = from || 0;
     if (F) for (let a = from; a < from + In.TRIES; a++) {
       if (a > from) yield;
-      const P = Plan(b, rec, famId, a); if (relax) P.relax = 1;
+      const P = Plan(b, rec, famId, a); if (relax) P.relax = 1; if (lastResort) P.last = 1;
       try { F.build(P); } catch (e) { P.errs.push('receita: ' + (e && e.message)); }
       let plan = finish(P);
       // (a plan that fails only on the way through: what was put in for comfort — the table, the bench, the wood — goes
@@ -760,6 +760,10 @@
       yield; const q = yield* makeG(b, Object.assign({}, rec, { f: g }), g); if (q.ok) { q.errsOf = p.errs; p = q; break; }
     }
     if (!p.ok && stands) { yield; const q = yield* makeG(b, r1, f, false, true); if (q.ok) { q.errsOf = p.errs; p = q; } }
+    // (and when all of that failed for want of room for the work's own stations — the recipe says so, P.lack —, one round
+    // more as the last resort, where what did not go in on the ground goes up to the gallery or stands free in the hall: a
+    // plan valid today never comes here, so it stays the same — L-182)
+    if (!p.ok && stands && p._P && p._P.lack) { yield; const q = yield* makeG(b, r1, f, false, false, 0, true); if (q.ok) { q.errsOf = p.errs; p = q; } }
     p.shellFam = f;
     if (p.fam !== rec.f) { p.fell = rec.f; if (!p.errsOf) p.errsOf = fo.why || []; }
     if (b.type === 'ruin') p = ruinOf(p, b);
