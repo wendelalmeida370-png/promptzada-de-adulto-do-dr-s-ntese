@@ -74,6 +74,16 @@
   }
   for (const t in PROG) addProg(t, PROG[t]);
 
+  // (the middle of the front door along the front, metres, before one of the record's open tiles — a tile is 4 m of the
+  // front, as a house's entrance has it —: where it falls before one, as it is; else the nearest place before one within
+  // lo..hi, the room it opens into, half the door and a hand in from the tile's ends; where none is, as it was. No chance
+  // drawn: a plan whose door was before an open tile is the same — L-209)
+  function openFront(P, u, dw, lo, hi) {
+    const o = P.rec.o; if (!o || ((o >> Math.floor(u / 4)) & 1)) return u;
+    const m = Math.min(1.9, dw / 2 + 0.1); let best = null;
+    for (let k = 0; k < P.b.w; k++) { if (!((o >> k) & 1)) continue; const a = Math.max(lo, 4 * k + m), z = Math.min(hi, 4 * k + 4 - m); if (a > z) continue; const q = Math.max(a, Math.min(z, u)); if (best === null || Math.abs(q - u) < Math.abs(best - u)) best = q; }
+    return best === null ? u : best;
+  }
   // ------------------------------ the recipe ------------------------------
   function work(P) {
     const F = P.fam, rec = P.rec, tr = P.tr, L = P.L; const PR = PROG[rec.t];
@@ -121,10 +131,12 @@
       const wid = side === 'esquerda' ? P.outer.esquerda : P.outer.direita; const lenW = P.wlen(wid); const dw = big ? 1.2 : 0.85;
       door(wid, Math.max(dw / 2 + 0.3, Math.min(lenW - dw / 2 - 0.3, P.atOf(wid, [side === 'esquerda' ? sh[0] : sh[2], (ai[1] + ai[3]) / 2]))), dw, -1, -1, big ? 'vao' : 'porta'); // (the hall and the lean-to, by where it falls)
     }
-    // ---- the way in: the front wall, wide where carts come ----
+    // ---- the way in: the front wall, wide where carts come — before a tile of the street one can stand on, as a house's
+    // (the record's open tiles along the side): where the room's middle falls before a closed one, along the front to the
+    // nearest open one the room it opens into takes (L-209: a door before a cliff, its people out by another) ----
     {
       const dw = Math.min(er[2] - er[0] - 0.4, P.rr(PR.door[0], PR.door[1]));
-      const u = Math.max(er[0] + dw / 2 + 0.2, Math.min(er[2] - dw / 2 - 0.2, entryU + P.rr(-0.3, 0.3)));
+      const u = openFront(P, Math.max(er[0] + dw / 2 + 0.2, Math.min(er[2] - dw / 2 - 0.2, entryU + P.rr(-0.3, 0.3))), dw, er[0] + dw / 2 + 0.2, er[2] - dw / 2 - 0.2);
       const wid = P.outer.frente; const d = P.door(wid, P.atOf(wid, [u, P.walls[wid].a[1]]), dw, Math.min(h0 - 0.2, dw > 1.3 ? 2.6 : 2.15), -1, 'rua', 1, dw > 1.3 ? 'portao' : 'porta');
       P.entrance = { door: d, u, v: sh[3], w: dw, lv: 0 };
     }

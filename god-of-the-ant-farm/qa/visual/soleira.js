@@ -118,15 +118,29 @@ const pathTo = (X, Z) => { const p = W.findPath(v.x, v.y, X / TL, Z / TL, true, 
 // (the turn of the day puts the doors back to their rule — Interiors.onNewDay —: one that shut while the body was on its way is
 // opened again before the stride through it, as a player does; counted)
 let reopened = 0; const keepOpen = d => { if (In.doorState(d.b, d.e.door).state !== 'aberta') { reopened++; setDoor(d, true); } };
-function goIn(d) { const pts = wayIn(d); pathTo(pts[0][0], pts[0][1]); inWay = true; for (const q of pts.slice(0, -1)) walk(q[0], q[1], 260); keepOpen(d); const q = pts[pts.length - 1]; walk(q[0], q[1], 260); inWay = false; for (let k = 0; k < 6; k++) { frame(); watch(); } return v.inside === d.b.id; }
+// (the stride through the door until the world has the body indoors — not on: a house's stair rising from before its door, in
+// the line of one coming in, takes a body pushed against its foot up to the storey above, where the way out is none — T-114)
+function goIn(d) { const pts = wayIn(d); pathTo(pts[0][0], pts[0][1]); inWay = true; for (const q of pts.slice(0, -1)) walk(q[0], q[1], 260); keepOpen(d); const q = pts[pts.length - 1]; walk(q[0], q[1], 260, true); inWay = false; for (let k = 0; k < 6; k++) { frame(); watch(); } return v.inside === d.b.id; }
 function goOut(d) { const pts = wayIn(d).slice(0, -1).reverse(); keepOpen(d); inWay = true; for (const q of pts) walk(q[0], q[1], 260); walk(d.O[0], d.O[1], 260); inWay = false; for (let k = 0; k < 6; k++) { frame(); watch(); } return !v.inside; }
 const houses = [...S.buildings.values()].filter(q => q.built && In.has(q) && (q.type === 'house' || q.type === 'sobrado') && In.planDoor(q)).sort((a, c) => a.id - c.id);
 
 // ------------------------------ 1. standing on the doorstep ------------------------------
 if (part(1)) { const rows = []; let tried = 0, moved = 0, still = 0, lost = 0; const bad = new Set(), redone = [];
   const houseNow = b => { const B = S.buildings.get(b.id); return B !== b ? 'derrubada' : !B.built ? `obra de ${B.type}` : B.ip ? `${B.type}, porta ${B.ip.s}:${B.ip.o}` : B.type; };
-  for (const b of houses) {
-    if (rows.length >= 25 || tried > 120) break; tried++;
+  // (a world with fewer houses than the proof asks for — the small city —: the ones it lacks raised by the god's hand, one
+  // at a time as the proof needs them, by the world's own door for a building (Village.addBuilding: its record, its plan, its
+  // door and its side as any founding has them), on free lots by the buildings of its towns; where no lot is left, the proof
+  // says how many it lacks — T-116)
+  const homes = houses.slice(); let raised = 0, noLot = false;
+  const HD = G.BDEF.house; const free = (x, y) => W.inb(x, y) && !S.occ[W.idx(x, y)] && !S.treeAt[W.idx(x, y)] && !S.objAt[W.idx(x, y)] && W.walkable(W.idx(x, y));
+  const lot = (x, y) => { for (let yy = y - 1; yy <= y + HD.h; yy++) for (let xx = x - 1; xx <= x + HD.w; xx++) { const inner = xx >= x && xx < x + HD.w && yy >= y && yy < y + HD.h; if (inner ? !free(xx, yy) : !W.walkableXY(xx, yy)) return false; } return true; };
+  const by = [...S.buildings.values()].filter(q => q.built && q.set && In.has(q)).sort((a, c) => (houses.includes(a) ? 0 : 1) - (houses.includes(c) ? 0 : 1) || a.id - c.id);
+  const lots = (function* () { for (const c of by) for (let y = c.y - 3; y <= c.y + c.h + 2; y++) for (let x = c.x - 3; x <= c.x + c.w + 2; x++) yield [x, y, c.set]; })();
+  const raise = () => { for (let n = lots.next(); !n.done; n = lots.next()) { const [x, y, set] = n.value; if (!lot(x, y)) continue; const nb = god(() => G.Village.addBuilding('house', x, y, set, true)); raised++; if (In.has(nb) && In.planDoor(nb)) return nb; } noLot = true; return null; };
+  for (let k = 0; ; k++) {
+    if (rows.length >= 25 || tried > 120) break; let b = homes[k];
+    if (!b) { if (raised >= 80) break; b = raise(); if (!b) break; homes.push(b); }
+    tried++;
     const d = door(b); if (!d || !bodyAt(d, true)) continue;
     // (in from the street until the feet are on the plan's ground the world's map has blocked, not yet within the walls)
     const pts = wayIn(d); let on = false; pathTo(pts[0][0], pts[0][1]);
@@ -151,7 +165,7 @@ if (part(1)) { const rows = []; let tried = 0, moved = 0, still = 0, lost = 0; c
     rows.push(`${b.type}#${b.id} ${mv.toFixed(2)} m`);
   }
   ok('1. parado 3,5 s do mundo na soleira de 25 casas, no chão que a planta anda e o mapa do mundo não, de porta aberta e de porta fechada: nunca movido; verificador limpo, S3 incluído; a casa que o mundo refaz no meio, à parte: o corpo tirado para o chão do mundo, como qualquer um', rows.length >= 25 && !moved && !pushes && !bad.size && !lost,
-    `${rows.length} casas (${tried} olhadas): ${still} paradas, ${moved} movidas; empurrões ${pushes}${worst ? ` (até ${worst.toFixed(2)} m)` : ''}; ${bad.size ? [...bad].slice(0, 3).join(' · ') : 'verificador limpo'}; refeitas pelo mundo no meio ${redone.length}${redone.length ? ' (' + redone.slice(0, 3).join(' · ') + ')' : ''}; a regra antiga do qa.js acusou ${oldRule} vezes onde a planta deixa (Possess.onPlan)`);
+    `${rows.length} casas (${tried} olhadas${raised ? `; o mundo tinha ${houses.length}, ${raised} erguidas pela mão do deus` : ''})${rows.length < 25 ? `; FALTAM ${25 - rows.length}: ${noLot ? 'não há mais lote livre para casas' : 'as outras não têm a soleira no chão do lote'}` : ''}: ${still} paradas, ${moved} movidas; empurrões ${pushes}${worst ? ` (até ${worst.toFixed(2)} m)` : ''}; ${bad.size ? [...bad].slice(0, 3).join(' · ') : 'verificador limpo'}; refeitas pelo mundo no meio ${redone.length}${redone.length ? ' (' + redone.slice(0, 3).join(' · ') + ')' : ''}; a regra antiga do qa.js acusou ${oldRule} vezes onde a planta deixa (Possess.onPlan)`);
 }
 
 // ------------------------------ 2. 50 times in and out ------------------------------

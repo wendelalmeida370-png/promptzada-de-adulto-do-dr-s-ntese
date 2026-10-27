@@ -16,7 +16,7 @@
       if (!b.ip) continue;
       const r = b.ip; withIp.push(b);
       // ---- the record is whole: its family is one its type has, its side a side, its counters numbers
-      if (r.v !== 1 || !In.TYPES[r.t] || !In.FAMS[r.f] || !SIDES[r.s] || !Number.isInteger(r.r) || r.r < 0 || !Array.isArray(r.h) || !Array.isArray(r.fx) || !r.dr || typeof r.dr !== 'object') { add('int', 1, `${nm}: registro danificado (${JSON.stringify(r).slice(0, 120)})`); continue; }
+      if (r.v !== 2 || !In.TYPES[r.t] || !In.FAMS[r.f] || !SIDES[r.s] || !Number.isInteger(r.r) || r.r < 0 || !Array.isArray(r.h) || !Array.isArray(r.fx) || !r.dr || typeof r.dr !== 'object') { add('int', 1, `${nm}: registro danificado (${JSON.stringify(r).slice(0, 120)})`); continue; }
       if (!In.TYPES[r.t].fams.includes(r.f)) add('int', 1, `${nm}: a família ${r.f} não é de ${r.t}`);
       // ---- a building standing and finished is of the type its record says (a rebuilding is a renovation of the record)
       if (b.built && b.type !== 'ruin' && T && r.t !== b.type) add('int', 2, `${nm}: o registro diz ${r.t}`);
@@ -32,14 +32,17 @@
     }
     // ---- the way in (L-195): where the step put the door, with this record and this ground (the trees about it too: L-206),
     // the way in fits — or it fits on no side open to the street. Asked again here, made anew: every word of the step the first
-    // round after it, the doors left where it does not fit every round (they are few), and the others in the round's few plans
+    // round after it, the doors left where it does not fit every round (they are few), and the others in the round's few plans.
+    // The way in fits with the door before a tile of the street the world walks — the people's door is the plan's, the body's,
+    // wherever the step said it fits (L-209)
     if (In.entrySaid && In.entryKey && G.Space && G.Space.entryFits) {
       if (heardS !== s) { heardS = s; heard = new Map(); }
       for (const b of withIp) {
         const said = In.entrySaid(b); if (said === undefined) continue; const k = In.entryKey(b); if (said && heard.get(b.id) === k) continue; heard.set(b.id, k);
-        const e = G.Space.entryFits(b, In.shellOf(b));
-        if (e.ok !== said) { add('int', 2, `${b.type}#${b.id}: a entrada ${e.ok ? 'cabe' : `não cabe (${e.kind}, o pé a ${e.foot} m)`} diante da porta, e a virada do dia disse que ${said ? 'cabia' : 'não cabia'} com o mesmo chão`); continue; }
-        if (!e.ok) { const to = In.fitSide(b); if (to) add('int', 2, `${b.type}#${b.id}: a porta ficou onde a entrada não cabe (${e.kind}, o pé a ${e.foot} m), e no lado ${to.s} ela cabe`); }
+        const e = G.Space.entryFits(b, In.shellOf(b)); const front = !In.frontOpen || In.frontOpen(b); const ok = e.ok && front;
+        const why = front ? `${e.kind}, o pé a ${e.foot} m` : 'a porta dá para uma casa da rua que não se anda';
+        if (ok !== said) { add('int', 2, `${b.type}#${b.id}: a entrada ${ok ? 'cabe' : `não cabe (${why})`} diante da porta, e a virada do dia disse que ${said ? 'cabia' : 'não cabia'} com o mesmo chão`); continue; }
+        if (!ok) { const to = In.fitSide(b); if (to) add('int', 2, `${b.type}#${b.id}: a porta ficou onde a entrada não cabe (${why}), e no lado ${to.s} ela cabe`); }
       }
     }
     // ---- a few plans each round: valid, and the shell seen from afar the whole plan's (the 3D draws the one far, the
@@ -53,7 +56,7 @@
       const s1 = In.shellOf(b), s2 = In.shellOfPlan(p); const strip = o => { const x = Object.assign({}, o); delete x.key; return JSON.stringify(x); };
       if (!s1 || strip(s1) !== strip(s2)) add('int', 1, `${b.type}#${b.id}: a casca de longe não é a da planta`);
       // (the way in where the step said it fits, with this record and this ground: asked again here, made anew — L-195)
-      if (In.entrySaid && In.entrySaid(b) === true && s1 && G.Space && G.Space.entryFits) { const e = G.Space.entryFits(b, s1); if (!e.ok) add('int', 2, `${b.type}#${b.id}: a entrada não cabe (${e.kind}, o pé a ${e.foot} m) diante da porta, e a virada do dia disse que cabia com o mesmo chão`); }
+      if (In.entrySaid && In.entrySaid(b) === true && s1 && G.Space && G.Space.entryFits) { const e = G.Space.entryFits(b, s1); const front = !In.frontOpen || In.frontOpen(b); if (!e.ok || !front) add('int', 2, `${b.type}#${b.id}: a entrada não cabe (${front ? `${e.kind}, o pé a ${e.foot} m` : 'a porta dá para uma casa da rua que não se anda'}) diante da porta, e a virada do dia disse que cabia com o mesmo chão`); }
       // (the door the world's people use, with the port on: the plan's own wherever the step took it — and the step never
       // took a door onto ground smaller than the old corner's: a pocket shut in all round shuts in whoever comes out)
       if (G.Vg && G.Vg.planDoor === In.planDoor && b.built && b.blocks) {
