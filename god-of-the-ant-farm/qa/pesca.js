@@ -45,8 +45,10 @@ const person = (set, not) => [...S.villagers.values()].filter(v => v.set === set
 // (the test's hand: a person put at the water's edge, hands free, a little skill)
 function atEdge(v, sp) { G.Vg.endTask(v); if (v.carry) D.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true }); v.x = sp.lx; v.y = sp.ly; v.path = null; }
 const towns = [...S.settlements.values()].filter(s => G.Village.pop(s.id) > 20).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id));
-const town = towns.find(s => shore(s, ['sea', 'river', 'lake', 'rock', 'mud', 'reef'])) || towns[0];
-const sp = shore(town, ['sea', 'river', 'lake', 'rock', 'mud', 'reef']);
+const town = towns.find(s => shore(s, ['sea', 'river', 'lake', 'rock', 'mud', 'reef'])) || null;
+const sp = town && shore(town, ['sea', 'river', 'lake', 'rock', 'mud', 'reef']);
+// (a world without a town by a water stops here saying so — never a TypeError)
+if (!sp) { console.log('FALHOU | pesca | nenhuma cidade de mais de 20 habitantes à beira d\'água na metrópole'); process.exit(1); }
 const used = [sp.id]; const fresh = () => { const q = shore(town, null, used) || sp; used.push(q.id); return q; };
 console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'água em ${sp.lx},${sp.ly}, água de ${sp.kind}, pesqueiro ${sp.id} de ${r2(P.cap(sp.id))} peixes; o jeito do povo: ${P.how(town.fac)})`);
 

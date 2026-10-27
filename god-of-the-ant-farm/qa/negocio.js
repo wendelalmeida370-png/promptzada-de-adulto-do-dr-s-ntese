@@ -1,5 +1,7 @@
-// negocio: o primeiro negócio provocado de propósito (C1) — as bancas do mercado no mundo pronto «metrópole» (Argos, com
-// moeda) e no «cidade» (um povo sem moeda: a troca).   node qa/negocio.js [cidade]     (em Node, pelo qa/nodemundo.js)
+// negocio: o primeiro negócio provocado de propósito (C1) — as bancas do mercado no mundo pronto «metrópole» (a cidade
+// mais antiga com moeda, um mercado com mercador e gente para a fila cheia — hoje, Argos —, ou a cidade dada) e no «cidade»
+// (um povo sem moeda: a troca). Sem uma cidade que sirva, falha dizendo o que falta.   node qa/negocio.js [cidade]
+// (em Node, pelo qa/nodemundo.js)
 // n1 as bancas abrem (uma por mercador, cada uma no seu lugar; a prateleira velha do mercado passa a elas, nada some);
 // n2 o atacado é pago (as mercadorias nas mãos e as moedas no tesouro ao mesmo tempo; sem moeda, sem mercadoria);
 // n3 a banca mostra o que tem; n4 um cliente vem, pergunta, compra, paga à casa do vendedor e leva para a casa dele;
@@ -18,7 +20,7 @@
 // chamou o comprador ou o mercador recomeça, até três vezes, com outro comprador; depois do load, a banca que o mundo deixou
 // aberta (a partida vai escrita no caso). E o verificador limpo, sem erro de módulo, durante e depois.
 const M = require('./nodemundo.js');
-const townName = process.argv[2] || 'Argos';
+const townName = process.argv[2] || '';
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/atividades-inv.js'] });
 const fails = []; const mid = []; // (what the checker saw in the middle of a case: the case fails, even if the end looks clean)
 let start = ''; // (how the case's start was prepared — the merchant back, the line served —: told with the case)
@@ -63,9 +65,20 @@ function roomOn(z, k, n) {
 // ================================ the world with coin ================================
 M.pronto('metropole');
 S = G.S;
-let set = [...S.settlements.values()].find(s => s.name === townName);
-if (!set) { console.log(`FALHOU | negocio | sem a cidade ${townName}`); process.exit(1); }
-const mk = [...S.buildings.values()].find(b => b.set === set.id && b.type === 'mercado' && b.built);
+// the town of the counter cases: coin, a market with a merchant of its own (the stall of the cases) and grown people of
+// the houses for a full line (the eight and a ninth) — the oldest of them, the first founded; or the town named (a rule,
+// not a name: a new ready world finds its own; a world without one stops here, saying what it lacks)
+const mkOf = s => [...S.buildings.values()].find(b => b.set === s.id && b.type === 'mercado' && b.built);
+const lacks = s => {
+  const m = mkOf(s); const grown = [...S.villagers.values()].filter(v => v.set === s.id && v.age >= 18 && !v.captive && !v.jail && !v.aboard && v.home && E.homeOf(v) && v.role !== 'mercador').length;
+  return !E.coinage(s.fac) ? 'sem moeda' : !m ? 'sem mercado' : ![...S.villagers.values()].some(v => v.set === s.id && v.role === 'mercador' && v.job === m.id) ? 'o mercado sem mercador'
+    : grown < B.LINE + 1 ? `só ${grown} adultos com casa (a fila cheia pede ${B.LINE + 1})` : '';
+};
+const towns = [...S.settlements.values()];
+let set = townName ? towns.find(s => s.name === townName) : towns.filter(s => !lacks(s)).sort((a, b) => (a.founded || 0) - (b.founded || 0) || a.id - b.id)[0];
+const lack = !set ? (townName ? `sem a cidade ${townName}` : `nenhuma cidade com moeda, um mercado com mercador e ${B.LINE + 1} adultos com casa na metrópole`) : lacks(set) ? `${set.name}: ${lacks(set)}` : '';
+if (lack) { console.log(`FALHOU | negocio | ${lack}`); process.exit(1); }
+const mk = mkOf(set);
 const shelf0 = Object.assign({}, mk.inv || {}); const st0 = Object.assign({}, G.Fac.get(set.fac).stock);
 // (everything that leaves or reaches the old shelf from now on, by the ledger: the stalls' share, a family's purchase
 // before the stalls opened, what did not fit and went to the store)
@@ -74,7 +87,7 @@ D.onMove.push(e => { if (e[3] === 'b:' + mk.id) { shelfFlow[e[5]] = (shelfFlow[e
 M.viver(2); G.inSim++; listen();
 let fac = G.Fac.get(set.fac);
 const merchants = () => [...S.villagers.values()].filter(v => v.set === set.id && v.role === 'mercador' && v.job === mk.id);
-console.log(`(${set.name}, ${fac.civ}: ${G.Village.pop(set.id)} habitantes; mercado #${mk.id}, mercadores: ${merchants().map(v => v.name).join(', ') || 'nenhum'}; moeda: ${E.coinage(fac.id) ? 'sim' : 'não'}; prateleira velha: ${Object.keys(shelf0).filter(k => shelf0[k] > 0).length} bens)`);
+console.log(`(${set.name}${townName ? '' : ', a mais antiga com moeda, mercado com mercador e gente para a fila'}, ${fac.civ}: ${G.Village.pop(set.id)} habitantes; mercado #${mk.id}, mercadores: ${merchants().map(v => v.name).join(', ') || 'nenhum'}; moeda: ${E.coinage(fac.id) ? 'sim' : 'não'}; prateleira velha: ${Object.keys(shelf0).filter(k => shelf0[k] > 0).length} bens)`);
 S.time = 0.1;
 
 // ---------------- n1: the stalls open, each in its own place; the old shelf goes to them, nothing lost
@@ -566,8 +579,9 @@ function stallNow() {
     // unloading in the day's hours — the test's hand on the clock, as in qa/porto.js: the porters work by day —, waited for
     // to the end: a danger pauses it, and it goes on when the danger passes, T-074)
     const calm14 = calmTown(port);
-    const sh = S.ships.find(s => s.kind === 'mercante') || S.ships[0]; sh.goods = { k: K, n: 12 }; G.Harbor.land(dock, sh.goods, sh);
-    const opd = G.Porto.opAt(dock);
+    const sh = S.ships.find(s => s.kind === 'mercante') || S.ships[0]; if (sh) { sh.goods = { k: K, n: 12 }; G.Harbor.land(dock, sh.goods, sh); }
+    const opd = sh && G.Porto.opAt(dock);
+    if (!opd) info = `${port.name}: ${sh ? 'o cais não abriu a descarga do navio' : 'nenhum navio no mundo para trazer as especiarias'}`; else {
     // (until the spices are out of the unloading's hands — off the quay, out of the porters' arms, off the ground —, or a
     // wholesale's worth of them is in the store: another ship may join its cargo to the same unloading, which goes on)
     const spicesIn = () => (dock.crates || []).some(c => c.k === K) || [...S.villagers.values()].some(o => o.carry && o.carry.k === K && o.carry.op === opd.id) || (S.loose || []).some(o => o.k === K && o.op === opd.id);
@@ -608,6 +622,7 @@ function stallNow() {
     const order = links.every((l, i) => l[1] && (i === 0 || l[1][0] > links[i - 1][1][0]));
     fine14 = links.every(l => l[1]) && order && D.get('h:' + hb.id, K) >= 1 && !bad().length;
     info = `${port.name}: ${links.map(([c, e]) => `${c} ${e ? e[3] + '→' + e[4] : 'FALTA'}`).join(' · ')}; ${order ? 'na ordem' : 'FORA DE ORDEM'}; ${E.name(K)} na casa de ${buyer.name}: ${D.get('h:' + hb.id, K)}`;
+    }
     }
     D.onMove.splice(D.onMove.indexOf(onK), 1); }
     wantNone();

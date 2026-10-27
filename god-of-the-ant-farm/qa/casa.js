@@ -1,5 +1,6 @@
-// casa: um teto para chamar de meu, provocado de propósito (C1, a atividade 01) — no mundo pronto «metrópole» (Argos,
-// com moeda) e no «cidade» (um povo sem moeda).   node qa/casa.js
+// casa: um teto para chamar de meu, provocado de propósito (C1, a atividade 01) — no mundo pronto «metrópole» (a cidade de
+// moeda com mais adultos sem par — hoje, Tenochtitlan) e no «cidade» (um povo sem moeda). Sem uma cidade que sirva, falha
+// dizendo o que falta.   node qa/casa.js
 // h1 toda casa tem dono (o mais velho que mora nela; a vazia é do povo); h2 quem precisa de casa (o casal na casa cheia
 // dos pais) põe no diário e junta — e a casa que junta não compra luxo; h11 a casa vazia do povo, comprada pelo livro
 // ('compra-casa'), e a família muda com a sua parte ('mudança'); h3 com o bastante, paga os materiais de uma nova pelo
@@ -39,6 +40,7 @@ S.time = 0.15; S.weather.storm = 0;
 // (the town of the cases: a town of coin with the most grown people without a partner — the couples of the cases come from them)
 const singles = s => [...S.villagers.values()].filter(v => v.set === s.id && v.age >= 18 && v.age < 50 && !v.partner && !v.captive).length;
 let set = [...S.settlements.values()].filter(s => E.coinage(s.fac)).sort((a, b) => singles(b) - singles(a) || a.id - b.id)[0];
+if (!set) { console.log('FALHOU | casa | nenhuma cidade com moeda na metrópole'); process.exit(1); }
 console.log(`(${set.name}: ${G.Village.pop(set.id)} habitantes; moeda: ${E.coinage(set.fac) ? 'sim' : 'não'}; uma casa nova custa uns ${K.price(set, 'house')} moedas)`);
 // (a case that lives days of the world starts from the ready world again, the same town: what an earlier case lived — a war
 // in the middle, the couples it took — does not carry into it)

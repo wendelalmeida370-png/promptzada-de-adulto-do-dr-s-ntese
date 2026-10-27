@@ -17,8 +17,10 @@ M.viver(40);
 // world does it; the checker counts any operation or transfer made from outside it)
 G.inSim++;
 const S = G.S; const D = G.Depot, A = G.Act;
-const f = G.Fac.all()[0]; const set = G.Fac.capitalOf(f.id);
-const people = [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 18 && v.age < 55 && !v.captive);
+const f = G.Fac.all()[0]; const set = f && G.Fac.capitalOf(f.id);
+const people = set ? [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 18 && v.age < 55 && !v.captive) : [];
+// (a world without a capital and two grown people in it stops here saying so — never a TypeError)
+if (people.length < 2) { console.log(`FALHOU | atividades | o mundo da semente ${seed} sem ${set ? `dois adultos na capital ${set.name}` : 'um povo com capital'}`); process.exit(1); }
 const v = people[0], w = people[1];
 // (the test's hand empties hands through the depot, with its cause: a load never vanishes without the ledger — rule 20)
 const clearHands = p => { if (p && p.carry && p.carry.n > 0) D.use('v:' + p.id, p.carry.k, p.carry.n, { code: 'teste', mine: true }); if (p) p.carry = null; };

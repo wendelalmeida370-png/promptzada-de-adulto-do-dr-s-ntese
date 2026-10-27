@@ -1,5 +1,6 @@
 // compras: as compras da casa provocadas de propósito (C1) — a família que precisa vai comprar, pela moeda da casa, no
-// mundo pronto «metrópole» (Argos, com moeda) e no «cidade» (um povo sem moeda).   node qa/compras.js   (em Node)
+// mundo pronto «metrópole» (a cidade mais antiga com moeda, feira e casas de família para os casos — hoje, Argos) e no
+// «cidade» (um povo sem moeda). Sem uma cidade que sirva, falha dizendo o que falta.   node qa/compras.js   (em Node)
 // c1 a casa que precisa manda um dos seus; c2 a compra paga pela casa (no livro-razão) chega em casa; c3 sem moeda,
 // ninguém sai; c4 nada faltando, ninguém sai; c5 um de cada vez; c6 fora das horas do mercado, ninguém sai; c7 save no
 // meio do recado: o recado perdido não prende a casa, e ela compra de novo, um de cada vez; c8 quem compra morre com a
@@ -28,11 +29,15 @@ const members = h => [...S.villagers.values()].filter(v => v.home === h.id);
 const adults = h => members(h).filter(v => v.age >= 14 && !v.captive && !v.jail && !v.aboard);
 const errandOf = h => [...S.villagers.values()].find(v => v.task && v.task.casa === h.id) || null;
 const book = f => D.ledger().filter(f);
-// a house of the town with a few grown people in it (the first by id, past the ones taken)
+// (a world without what the cases ask stops here, out loud, with what it lacks — never a TypeError, never an empty pass)
+const none = why => { console.log(`FALHOU | compras | ${why}`); process.exit(1); };
+// the houses of a town with a few grown people in them (by id, past the ones taken)
 const taken = new Set();
+const homesOf = (set, min) => [...S.buildings.values()].filter(b => b.set === set.id && b.built && G.BDEF[b.type].housing && (b.res || 0) >= 2 && !taken.has(b.id) && adults(b).length >= (min || 2)).sort((a, b) => a.id - b.id);
 function houseIn(set, min) {
-  const L = [...S.buildings.values()].filter(b => b.set === set.id && b.built && G.BDEF[b.type].housing && (b.res || 0) >= 2 && !taken.has(b.id) && adults(b).length >= (min || 2)).sort((a, b) => a.id - b.id);
-  const h = L[0]; if (h) taken.add(h.id); return h || null;
+  const h = homesOf(set, min)[0];
+  if (!h) none(`${set.name} não tem mais uma casa com ${min || 2} adulto(s) para o caso (${taken.size} já tomadas pelos casos)`);
+  taken.add(h.id); return h;
 }
 // the test's hand on a house: what it keeps taken away (so that it lacks), coins given or taken, the last errand forgotten
 function lacking(h, coins) {
@@ -51,8 +56,13 @@ function stockFair(set) {
 
 // ================================ the world with coin ================================
 M.pronto('metropole'); S = G.S; M.viver(2); G.inSim++;
-let set = [...S.settlements.values()].find(s => s.name === 'Argos');
-console.log(`(${set.name}: ${G.Village.pop(set.id)} habitantes; moeda: ${E.coinage(set.fac) ? 'sim' : 'não'})`);
+// the town of the cases: coin, a fair, and a house for each case (nine families with two grown people) — the oldest of
+// them, the first founded (a rule, not a name: a new ready world finds its own)
+const HOUSES = 9;
+const hasB = (s, t) => [...S.buildings.values()].some(b => b.set === s.id && b.type === t && b.built);
+let set = [...S.settlements.values()].filter(s => E.coinage(s.fac) && hasB(s, 'feira') && homesOf(s, 2).length >= HOUSES).sort((a, b) => (a.founded || 0) - (b.founded || 0) || a.id - b.id)[0];
+if (!set) none(`nenhuma cidade com moeda, feira e ${HOUSES} casas de família (dois adultos) na metrópole`);
+console.log(`(${set.name}, a mais antiga com moeda, feira e ${HOUSES} casas de família: ${G.Village.pop(set.id)} habitantes; moeda: ${E.coinage(set.fac) ? 'sim' : 'não'})`);
 S.time = 0.15;
 const fair = stockFair(set);
 // ---------------- c1/c2/c5: a house that lacks sends one of its people; the purchase is paid by the house and gets home
@@ -123,7 +133,7 @@ const fair = stockFair(set);
 // ---------------- c13: hands with a purchase on the way home take no errand from outside (a cave, a feast, a theft would put
 // their own things in them over it); an urgent call does take the person — and the purchase stays in the hands
 {
-  const h = houseIn(set, 1) || houseIn(set, 0); const v = adults(h)[0];
+  const h = houseIn(set, 1); const v = adults(h)[0];
   G.Vg.endTask(v); if (v.carry) D.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true });
   D.make('v:' + v.id, 'tecido', 2, { code: 'teste', to: 'h:' + h.id, tag: { bought: 1 } }); // (a purchase in the arms, marked for the house)
   G.Vg.setTask(v, { type: 'carga', to: 'h:' + h.id, pri: 0.5, st: 0 });
@@ -232,11 +242,13 @@ const fair = stockFair(set);
 // ================================ a people without coin ================================
 {
   M.pronto('cidade'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1); S.time = 0.15;
-  const tw = [...S.settlements.values()].filter(s => !E.coinage(s.fac) && [...S.buildings.values()].some(b => b.set === s.id && (b.type === 'feira' || b.type === 'mercado') && b.built)).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
-  let info = 'nenhuma cidade sem moeda com feira ou mercado', fine9 = false;
+  // (the biggest town without coin, with a fair or a market and a family house — two grown people — for the case)
+  const family = s => [...S.buildings.values()].filter(b => b.set === s.id && b.built && G.BDEF[b.type].housing && (b.res || 0) >= 2 && [...S.villagers.values()].filter(v => v.home === b.id && v.age >= 14).length >= 2).sort((a, b) => a.id - b.id);
+  const tw = [...S.settlements.values()].filter(s => !E.coinage(s.fac) && [...S.buildings.values()].some(b => b.set === s.id && (b.type === 'feira' || b.type === 'mercado') && b.built) && family(s).length).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
+  let info = 'nenhuma cidade sem moeda com feira ou mercado e uma casa de família (dois adultos) no mundo «cidade»', fine9 = false;
   if (tw) {
     stockFair(tw);
-    const h = [...S.buildings.values()].filter(b => b.set === tw.id && b.built && G.BDEF[b.type].housing && (b.res || 0) >= 2 && [...S.villagers.values()].filter(v => v.home === b.id && v.age >= 14).length >= 2).sort((a, b) => a.id - b.id)[0];
+    const h = family(tw)[0];
     lacking(h); if ((h.pantry || 0) < 12) D.make('h:' + h.id, 'food', 12, { code: 'teste' });
     const L0 = S.ledgerN;
     const got = fine(240, () => book(e => e[0] > L0 && e[4] === 'h:' + h.id && e[8] === 'compra-em-casa').length > 0 || watch());
