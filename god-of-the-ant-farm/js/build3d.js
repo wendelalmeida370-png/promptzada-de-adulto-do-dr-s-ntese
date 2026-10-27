@@ -1445,6 +1445,16 @@ float m3scale(float p) {
     fence(K, e, e, w - e, e, h, col); fence(K, w - e, e, w - e, d - e, h, col); fence(K, e, e, e, d - e, h, col);
     if (gate) { fence(K, e, d - e, w / 2 - 1, d - e, h, col); fence(K, w / 2 + 1, d - e, w - e, d - e, h, col); } else fence(K, e, d - e, w - e, d - e, h, col);
   }
+  // (the side of a quay its water is on: the world's — Naval.dockInfo writes it when the quay works —, or, for one still building,
+  // reckoned here by the same rule — the side with most water along it — and never written: the drawing reads the world. None
+  // with water on any side: null — L-188)
+  function quaySide(b) {
+    if (b.wd) return b.wd; const S = G.S, T = G.T; let best = null, bw = 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { let n = 0;
+      for (let k = 0; k < b.w; k++) { const x = dx > 0 ? b.x + b.w : dx < 0 ? b.x - 1 : b.x + k, y = dy > 0 ? b.y + b.h : dy < 0 ? b.y - 1 : b.y + k; if (G.W.inb(x, y)) { const i = G.W.idx(x, y); if (S.type[i] <= T.SEA && !(S.dry && S.dry[i])) n++; } }
+      if (n > bw) { bw = n; best = [dx, dy]; } }
+    return best;
+  }
   // ------------------------------ the types ------------------------------
   const KIT = {
     hut(g, gw, K) {
@@ -1546,14 +1556,26 @@ float m3scale(float p) {
     mercado_negro(g, gw, K) { stalls(K, 2, ['#3a3440', '#4a2a2a']); },
     doca(g, gw, K) {
       // the quay: planks out over the water on the side of the sea, on posts
-      const b = K.b; const wd = b.wd || [0, 1]; const L = K.L; const sea = G.SEA * HM() + 0.5;
-      const len = 2.6 * L; const x = K.w / 2 + wd[0] * (K.w / 2 + len / 2 - L * 0.3), z = K.d / 2 + wd[1] * (K.d / 2 + len / 2 - L * 0.3);
-      const sx = wd[0] ? len : K.w * 0.6, sz = wd[1] ? len : K.d * 0.6;
-      // (the deck starts where the bank comes below its top: its land end does not go into the ground as it is drawn)
-      const half = (wd[0] ? sz : sx) / 2, P = u => [x + wd[0] * (u - len / 2), z + wd[1] * (u - len / 2)], over = u => { const p = P(u); return Math.max(K.gy(p[0], p[1]), K.gy(p[0] + wd[1] * half, p[1] + wd[0] * half), K.gy(p[0] - wd[1] * half, p[1] - wd[0] * half)) + K.y0; };
-      let u0 = 0; while (u0 < len && over(u0) > sea + 0.27) u0 += len / 40;
-      if (u0 < len) { const c = P((u0 + len) / 2), ln = len - u0; K.as('plankH', () => g.put(SH.box, R3.mat(K.x0 + c[0], sea, K.z0 + c[1], 0, wd[0] ? ln : sx, 0.3, wd[1] ? ln : sz), K.c('#8a6a44'))); }
-      for (let k = 0; k < 4; k++) { const f = k / 3 - 0.5; g.put(SH.cyl, R3.mat(K.x0 + x + (wd[0] ? f * sx : sx / 2) * 1, sea - 3, K.z0 + z + (wd[1] ? f * sz : sz / 2), 0, 0.3, 3.2, 0.3), K.c('#6a4a2c')); }
+      const b = K.b; const wd = quaySide(b); const L = K.L; const sea = G.SEA * HM() + 0.5;
+      if (wd) {
+        const len = 2.6 * L; const x = K.w / 2 + wd[0] * (K.w / 2 + len / 2 - L * 0.3), z = K.d / 2 + wd[1] * (K.d / 2 + len / 2 - L * 0.3);
+        const half = (wd[0] ? K.d : K.w) * 0.3, top = sea + 0.27, P = u => [x + wd[0] * (u - len / 2), z + wd[1] * (u - len / 2)];
+        // (the deck only over ground below its top, as the steps of the street (L-178): from where the bank comes below it, in
+        // lengths of planks each as wide as the ground under its edges lets it — a stride at least —, out to where the ground
+        // comes above it again — a rock by the planks, the other bank —, and no further: the posts under it — L-188)
+        const gAt = (u, s) => { const p = P(u); return K.gy(p[0] + wd[1] * s, p[1] + wd[0] * s) + K.y0; };
+        const clear = (a, e, h) => [a, (a + e) / 2, e].every(u => gAt(u, -h) <= top && gAt(u, 0) <= top && gAt(u, h) <= top);
+        const NL = 13, dl = len / NL, segs = [];
+        for (let j = 0; j < NL; j++) { const a = j * dl, e = a + dl; let hw = half; while (hw > 0.6 && !clear(a, e, hw)) hw -= 0.1;
+          if (!clear(a, e, hw)) { if (segs.length) break; continue; }
+          const q = segs[segs.length - 1]; if (q && Math.abs(q.hw - hw) < 1e-6) { q.e = e; continue; }
+          let a0 = a; if (!q) while (a0 - len / 40 >= 0 && clear(a0 - len / 40, a0, hw)) a0 -= len / 40; // (the first length from as near the bank as its edge lets it)
+          segs.push({ a: a0, e, hw }); }
+        K.as('plankH', () => { for (const q of segs) { const c = P((q.a + q.e) / 2), ln = q.e - q.a; g.put(SH.box, R3.mat(K.x0 + c[0], sea, K.z0 + c[1], 0, wd[0] ? ln : 2 * q.hw, 0.3, wd[1] ? ln : 2 * q.hw), K.c('#8a6a44')); } });
+        if (segs.length) { const u0 = segs[0].a, u1 = segs[segs.length - 1].e;
+          for (let k = 0; k < 4; k++) { const u = u0 + (u1 - u0) * (0.1 + k * 0.8 / 3); const q = segs.find(s => u >= s.a - 1e-6 && u <= s.e + 1e-6) || segs[0]; const c = P(u);
+            g.put(SH.cyl, R3.mat(K.x0 + c[0] + (wd[0] ? 0 : q.hw - 0.15), sea - 3, K.z0 + c[1] + (wd[0] ? q.hw - 0.15 : 0), 0, 0.3, 3.2, 0.3), K.c('#6a4a2c')); } }
+      }
       house(g, gw, K, { h: 2.4, inset: Math.min(K.w, K.d) * 0.22, wall: '#9a7a50', pat: 'plankH', door: true });
     },
     // the mine: a mound of rock over the shaft — only its cap, laid on the floor (a ball sunk 2.3 m in the ground drew the same
