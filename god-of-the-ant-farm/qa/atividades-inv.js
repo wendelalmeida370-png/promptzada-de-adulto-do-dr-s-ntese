@@ -82,6 +82,24 @@
       if (p.n - left - went > 0.01) { const v = s.villagers.get(id); add('act', 1, `${p.name} #${id}: ${Math.round((p.n - left - went) * 100) / 100} de ${p.k} de uma carga marcada sumiram sem lançamento no livro (${v ? `agora ${v.task ? v.task.type : 'sem tarefa'}, nas mãos ${v.carry ? v.carry.n + ' de ' + v.carry.k : 'nada'}` : 'a pessoa saiu do mundo'})`); }
     }
     marked = now; markedS = s; movedOut.clear();
+    // ---- L-186: the hands are never filled over what they hold — a gathering (berries, fruit, honey, the flats' shellfish)
+    // starts with the hands free or holding the same plain good —; and by day a child's load goes to its place before
+    // play (the night's sleep cut the errand that took it there): a free child awake with a load, in no errand that carries
+    // it and with a store in reach, for more than 30 s of the day
+    const r2 = x => Math.round(x * 100) / 100; const day = s === G.S && G.isNight ? !G.isNight() : false; const kidNow = new Map();
+    for (const v of s.villagers.values()) {
+      const c = v.carry; const t = v.task; if (!c || !fin(c.n) || c.n <= EPS) continue;
+      if (t && (t.type === 'gather' || t.type === 'mariscar' || t.type === 'pick' || t.type === 'honey')) {
+        const tr = t.type === 'pick' && s.trees.get(t.id); const K = tr && G.Flora && G.Flora.KIND[tr.kind];
+        const want = t.type === 'honey' ? 'mel' : (K && K.good) || 'food';
+        if (c.k !== want || c.op || c.to || c.cid) add('act', 3, `${v.name} #${v.id}: ${t.type} com ${r2(c.n)} de ${c.k} nas mãos — a colheita escreveria por cima do que elas levam (L-186)`);
+      }
+      if (!day || !(v.age >= 2 && v.age < 16) || c.k === 'water' || v.captive || v.jail || v.aboard || v.ug || v.held || v.air || v.sleeping || (s.avatar && s.avatar.id === v.id)) continue;
+      if ((t && (t.pri >= 1 || t.type === 'deliver' || t.type === 'carga')) || v._noStore > s.clock) continue;
+      const p = kidMarkS === s && kidMark.get(v.id); const since = p && p.k === c.k ? p.since : s.clock; kidNow.set(v.id, { k: c.k, since });
+      if (s.clock - since > 30) add('act', 3, `${v.name} #${v.id}, ${Math.floor(v.age)} anos: ${r2(c.n)} de ${c.k} nas mãos há ${Math.round(s.clock - since)} s, de dia, ${t ? 'em ' + t.type : 'sem afazer'} — a carga não foi ao seu lugar (L-186)`);
+    }
+    kidMark = kidNow; kidMarkS = s;
     // ---- a family's purchase never ends in a people's store (D-059): what was paid goes home — on the floor, where the
     // furniture is full —, so the line of a purchase put away ('compra-em-casa') always goes into a house
     for (const e of toStore.splice(0)) { const v = s.villagers.get(+String(e[3]).slice(2)); add('act', 2, `a compra de ${v ? v.name + ' #' + v.id : e[3]} (${e[6]} de ${e[5]}) acabou no estoque do povo ${e[4]}, não em casa (livro ${e[0]})`); }
@@ -164,12 +182,12 @@
   });
   // (the ledger's lines out of hands since the last look, and the purchases that ended in a people's store, for the rules
   // above; a new world, or a save loaded, starts over)
-  let marked = null, markedS = null; const movedOut = new Map(); const toStore = [];
+  let marked = null, markedS = null; const movedOut = new Map(); const toStore = []; let kidMark = new Map(), kidMarkS = null;
   if (G.Depot) G.Depot.onMove.push(e => {
     if (typeof e[3] === 'string' && e[3][0] === 'v' && e[3][1] === ':') { const key = e[3].slice(2) + '|' + e[5]; movedOut.set(key, (movedOut.get(key) || 0) + e[6]); }
     if (e[8] === 'compra-em-casa' && typeof e[4] === 'string' && e[4][0] === 'f') { toStore.push(e); if (toStore.length > 50) toStore.shift(); }
   });
-  if (G.worldHooks) G.worldHooks.push(() => { marked = null; markedS = null; movedOut.clear(); toStore.length = 0; });
+  if (G.worldHooks) G.worldHooks.push(() => { marked = null; markedS = null; movedOut.clear(); toStore.length = 0; kidMark = new Map(); kidMarkS = null; });
   QA.canonMore.push(['acts', () => (G.Act ? G.Act.canon() : null)]);
   QA.canonMore.push(['pesca', () => (G.S && G.S.pesca ? Object.keys(G.S.pesca).sort((a, b) => a - b).map(id => [+id, G.S.pesca[id][0], G.S.pesca[id][1]]) : null)]);
   QA.canonMore.push(['casas', () => (G.S ? [...G.S.buildings.values()].filter(b => b.dono || b.encomenda || b.aluga || b.poupa).sort((a, b) => a.id - b.id).map(b => [b.id, b.dono || 0, b.encomenda ? b.encomenda.fam.join('.') + ':' + (b.encomenda.paid || 0) : '', b.aluga ? b.aluga.pago + ':' + b.aluga.deve : '', b.poupa ? b.poupa.by + ':' + b.poupa.alvo : '']) : null)]);

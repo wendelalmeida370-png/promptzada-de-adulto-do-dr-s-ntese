@@ -836,6 +836,13 @@
       // a house takes all of its own, on the floor if need be, D-059 —; what a stall has no room for, to the people's store)
       D.move('v:' + v.id, c.to, c.k, c.n, { code: 'herdado', by: v.id, part: true, floor: c.to[0] === 'h' });
       const fid = G.Fac.idOfV(v); if (v.carry && v.carry.n > EPS && D.exists('f:' + fid)) D.move('v:' + v.id, 'f:' + fid, v.carry.k, v.carry.n, { code: 'herdado', by: v.id, part: true });
+    } else if (c && c.n > EPS && !c.op && !c.to && !c.cid && c.k !== 'moedas' && G.S.villagers.has(v.id) && !v.aboard) {
+      // (a plain load — the day's wood, a basket of berries — is the people's: into its store, with the cause, as the
+      // delivery would have done, what does not fit lost in writing; water is poured out. It went with the dead, unwritten:
+      // L-186)
+      const fid = G.Fac.idOfV(v);
+      if (c.k === 'water') D.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true });
+      else if (fid && D.exists('f:' + fid)) G.Vg.toStore(v, fid, 'herdado');
     }
     // (the coins of the dead — the purse, a plain bag in the hands — are the household's: to the house they lived in, or,
     // with no house, to the people's treasury; in the ledger)
