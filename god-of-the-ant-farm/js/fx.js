@@ -57,6 +57,9 @@
     FX.rings.push({ x, y, h: G.W.groundH(x, y), r0, r1, life, max: life, c: color, w: width || 2, glow: !!glow });
   };
   const R = G.vrr;
+  // (a little text is put up where an eye can read it: the god's, near enough — or the body's, near the ground, whose 3D draws
+  // the same texts: incui.js, L-211)
+  const reads = z => !!G.Render && (G.Render.cam.zoom >= z || !!(G.Modes && G.Modes.cover && G.Modes.cover()));
 
   // ---------------- small feedback ----------------
   FX.chips = function (x, y, c) {
@@ -73,7 +76,7 @@
     FX.spawn({ x: x + R(-0.2, 0.2), y: y + R(-0.2, 0.2), z: R(2, 8), vz: R(10, 25), life: R(0.8, 1.4), s0: 4, s1: 9, c: 'rgba(90,90,90,0.4)', k: 2, drag: 0.5 });
   };
   FX.deposit = function (x, y, k, n) {
-    if (!G.Render || G.Render.cam.zoom < 1.6) return;
+    if (!reads(1.6)) return;
     const col = { wood: '#e8b77a', stone: '#d4d4d4', food: '#ff9f7a' }[k] || '#fff';
     FX.floater(x, y, '+' + (n % 1 ? (n < 10 ? n.toFixed(1) : Math.round(n)) : n), col, 1.2);
   };
@@ -96,7 +99,7 @@
     FX.spawn({ x: x + R(-0.2, 0.2), y: y + R(-0.2, 0.2), z: 14, vz: R(10, 20), life: R(1, 1.6), s0: 2, s1: 0.5, c: '#ffe39a', k: 8, layer: 1 });
   };
   FX.faithText = function (x, y, g) {
-    if (!G.Render || G.Render.cam.zoom < 1.2) return;
+    if (!reads(1.2)) return;
     FX.floater(x, y, '+' + (g < 1 ? g.toFixed(1) : Math.round(g)) + ' fé', '#ffd978', 1.8);
   };
   FX.sparkle = function (x, y) {
@@ -113,7 +116,7 @@
       FX.spawn({ x, y, z: R(8, 20), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: R(20, 70), g: 60, drag: 1.5, life: R(0.8, 1.6), s0: 2.2, s1: 0.4, c: G.vpick(['#ffe08a', '#fff3c8', '#ffd05a']), k: 8, layer: 1 });
     }
     FX.ring(x, y, 0.2, size * 1.4, 0.9, 'rgba(255,230,150,0.9)', 2, true);
-    if (G.Render && G.Render.cam.zoom > 1.1) FX.floater(x, y, G.Village.buildName(b) + '!', '#fff1c4', 2.2);
+    if (reads(1.1)) FX.floater(x, y, G.Village.buildName(b) + '!', '#fff1c4', 2.2);
     FX.dust(x, y, 8);
   };
   FX.blessing = function (x, y) {

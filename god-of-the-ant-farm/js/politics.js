@@ -343,7 +343,8 @@
       const ex = (G.S.execs || []).find(q => q.fac === f.id); if (ex) f.exec = { j: ex.id };
       if (f.alive && (!f.leader || !G.S.villagers.has(f.leader))) { f.leader = 0; P.crown(f, P.pickLeader(f), 'escolha', true); }
     }
-    G.War && G.War.reset();
+    // (the war module starts over in its own world hook, before the load; resetting it here, after, threw away the bands
+    // the load itself had just rebuilt — the armies walking home: L-185)
   };
   function ensureLeader(f) {
     const S = G.S;

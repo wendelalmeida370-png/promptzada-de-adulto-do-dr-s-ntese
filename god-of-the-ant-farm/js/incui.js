@@ -34,6 +34,7 @@
     root = document.createElement('div'); root.id = 'inc-root';
     root.innerHTML = `
       <div id="inc-hud" class="hidden">
+        <canvas id="inc-air"></canvas>
         <div class="ih-who panel"><div class="ih-name"></div><div class="ih-sub"></div>
           <div class="ih-bars">${bar('hp', 'Vida')}${bar('st', 'Fôlego')}${bar('fo', 'Fome')}${bar('en', 'Sono')}</div><div class="ih-carry"></div></div>
         <div class="ih-clock panel"><div class="ih-time"></div><div class="ih-place"></div></div>
@@ -135,6 +136,7 @@
     if (hintT > 0) { hintT -= rdt; }
     fadeOut($('.ih-hint', hud), hintT, 1.2);
     if (!G.Modes.inc()) { label.classList.add('hidden'); markEl.classList.add('hidden'); return; }
+    drawAir();
     const v = G.Possess.body(); if (!v) return;
     // the best thing to do, a few times a second (the world is asked, not the picture)
     bestT -= rdt;
@@ -191,6 +193,58 @@
     const h = $('.ih-hint', hud); h.classList.toggle('hidden', hintT <= 0);
     if (hintT > 0) h.innerHTML = [['frente', 'andar'], ['correr', 'correr'], ['pular', 'pular'], ['interagir', 'interagir'], ['ficha', 'quem sou eu'], ['deus', 'Modo Deus'], ['menu', 'menu']].map(([a, t]) => `<span><kbd>${esc(a === 'frente' ? 'WASD' : G.Input3D.label(a))}</kbd> ${t}</span>`).join('') + '<span><kbd>Mouse</kbd> olhar</span>';
   };
+  // the words over the heads and the little texts of the world: what the god's view draws over it, over the body's eyes too —
+  // the words said (G.Talk: a bubble over the one who speaks, typed out by the world's clock; the same bubble by the same hand,
+  // Talk.paint) and the little texts that rise where something happens (G.FX.floaters: a load put in the store, the coins of a
+  // sale, a catch landed). Only read: both lists are the god's view's own; each head where the 3D draws it (People3D.visOf), the
+  // body's where it stands (L-211)
+  // (for the tests: what was drawn this frame — a bubble { id, txt, t0, n, x, y, box }: t0 when it was said, n the letters typed,
+  // x y the point over the head, box [x, y, w, h] where it was painted, pixels of the screen; a text { text, x, y })
+  IU.airAt = [];
+  let airC = null, airInk = false; // (airInk: something is painted on the layer — wiped only then: an empty layer is left alone)
+  function drawAir() {
+    const cv = $('#inc-air', hud); IU.airAt = []; if (!cv) return;
+    const Wd = window.innerWidth, Ht = window.innerHeight; const S = G.S, cam = G.Realm.camera && G.Realm.camera();
+    // (near, the size the god's view gives them; farther, a little smaller — three-quarters at thirty metres: from above, all are
+    // about as far from the eye)
+    const size = d => G.clamp(1.25 - d / 48, 0.72, 1);
+    const items = [], texts = [];
+    if (S && cam) {
+      const q = IU._aq || (IU._aq = new window.THREE.Vector3()); const TL = G.Space.TILE, cx = cam.position.x, cz = cam.position.z;
+      const at = (X, Y, Z) => { q.set(X, Y, Z); q.project(cam); return q.z > 1 || q.z < -1 ? null : [(q.x * 0.5 + 0.5) * Wd, (-q.y * 0.5 + 0.5) * Ht]; };
+      const me = G.Possess.body(), av = G.Avatar.pos();
+      if (G.Talk) for (const b of G.Talk.list) {
+        if (S.clock > b.until) continue; const v = S.villagers.get(b.id); if (!v) continue;
+        const s = me && v.id === me.id ? av : G.People3D.visOf(v.id); if (!s || s.cull) continue;
+        const d = Math.hypot(s.X - cx, s.Z - cz); if (d > 40) continue;
+        // (over the head — over the sign above it, when there is one, as in the god's view; over the name of the one the body
+        // faces, too)
+        const k = G.People3D.look(v).s, hl = G.People3D.highlight === v.id; const up = Math.max(v.emo && v.emo.k ? 2.2 * k + 0.32 : 2.02 * k, hl ? 2.25 * k : 0);
+        const p = at(s.X, s.Y + up, s.Z); if (!p) continue;
+        items.push({ b, hx: p[0], hy: p[1] - (hl ? 20 : 0), s: size(d), d });
+      }
+      if (G.FX) for (const f of G.FX.floaters) {
+        const X = f.x * TL, Z = f.y * TL; const d = Math.hypot(X - cx, Z - cz); if (d > 32) continue;
+        const p = at(X, G.Space.drawnAt(f.x, f.y) + 1.75 + (f.z - 16) * 0.035, Z); if (p) texts.push({ f, p, d });
+      }
+    }
+    if (!items.length && !texts.length && !airInk) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1), w = Math.round(Wd * dpr), h = Math.round(Ht * dpr);
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const c = airC || (airC = cv.getContext('2d')); if (!c) return;
+    c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h); airInk = false;
+    if (!items.length && !texts.length) return;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    items.sort((a, b) => a.d - b.d);
+    const boxes = items.length ? G.Talk.paint(c, items, 1) : [];
+    for (const it of items) { const bx = boxes.find(q => q[0] === it.b); if (bx) IU.airAt.push({ id: it.b.id, txt: it.b.txt, t0: it.b.t0, n: G.Talk.typed(it.b), x: +it.hx.toFixed(1), y: +it.hy.toFixed(1), box: bx.slice(1).map(q => +q.toFixed(1)) }); }
+    for (const { f, p, d } of texts) {
+      c.globalAlpha = Math.min(1, f.life / f.max * 2); c.font = `800 ${Math.round(14 * size(d))}px Nunito, sans-serif`; c.textAlign = 'center';
+      c.lineWidth = 3; c.strokeStyle = 'rgba(20,15,10,0.6)'; c.strokeText(f.text, p[0], p[1]); c.fillStyle = f.c; c.fillText(f.text, p[0], p[1]);
+      IU.airAt.push({ text: f.text, x: +p[0].toFixed(1), y: +p[1].toFixed(1) });
+    }
+    c.globalAlpha = 1; airInk = true;
+  }
   function placeLabel() {
     const id = G.People3D.highlight; const o = id && G.S.villagers.get(id); const s = id && G.People3D.visOf(id);
     if (!o || !s) { label.classList.add('hidden'); return; }

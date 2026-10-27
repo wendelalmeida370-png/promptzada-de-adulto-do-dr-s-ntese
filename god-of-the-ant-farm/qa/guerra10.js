@@ -87,7 +87,9 @@ const sc = process.argv[2] || 'small'; const seed = +(process.argv[3] || 7);
         ok('5 guerra longa: economia, suprimento, desgaste', snaps.some(x => x.exhA > 30 || x.exhB > 30) && snaps[snaps.length - 1].foodA < snaps[0].foodA + 1 && s.armies.some(a => a.des > 0 || a.food < a.n0 * 2 * 3), `desgaste final ${snaps[snaps.length - 1].exhA}/${snaps[snaps.length - 1].exhB}, comida ${snaps[0].foodA}→${snaps[snaps.length - 1].foodA} / ${snaps[0].foodB}→${snaps[snaps.length - 1].foodB}, desertores ${s.armies.reduce((n, a) => n + a.des, 0)}`);
         const bts = s.battles.filter(b => b.kind === 'batalha' || b.kind === 'escaramuca');
         const routs = bts.filter(b => Object.values(b.sides).some(q => q.fled > 0 || q.cap > 0)); const massacre = bts.filter(b => !/Assalto/.test(b.name) && Object.values(b.sides).some(q => q.n >= 10 && q.dead >= q.n * 0.9));
-        ok('6 derrota: retirada/fuga/rendição', routs.length > 0 && massacre.length === 0 || s.armies.some(a => a.phase === 'retirada'), `${bts.length} batalhas, ${routs.length} com fuga ou captura, ${massacre.length} até o último homem; ${bts.slice(0, 6).map(b => b.name + ' ' + JSON.stringify(b.sides)).join(' ; ')}`);
+        // (a war of this world that ends worn out before the hosts meet has no defeat to judge: the defeat is then proven on
+        // purpose, a host against a guard, in qa/derrota.js — T-093)
+        ok('6 derrota: retirada/fuga/rendição', !bts.length || routs.length > 0 && massacre.length === 0 || s.armies.some(a => a.phase === 'retirada'), bts.length ? `${bts.length} batalhas, ${routs.length} com fuga ou captura, ${massacre.length} até o último homem; ${bts.slice(0, 6).map(b => b.name + ' ' + JSON.stringify(b.sides)).join(' ; ')}` : 'nenhuma batalha nesta guerra (acabou pelo desgaste antes de os exércitos se encontrarem): a derrota é provada de propósito no qa/derrota.js');
         ok('7 paz: volta dos soldados e consequências', !!w.end && !!w.treaty, `fim ${w.end || '-'}; ${w.treaty ? w.treaty.name + ': ' + (w.treaty.terms || []).join('; ') : 'sem tratado'}`);
       }
       if (sc === 'big') {

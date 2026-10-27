@@ -834,6 +834,7 @@
     G.Life && G.Life.onDeath(v);
     const violent = cause === 'war' || cause === 'arrow' || cause === 'massacre' || cause === 'execution' || cause === 'coup' || cause === 'sacrifice';
     if (violent) G.War.noteDeath(v, cause);
+    G.War && G.War.onGone(v);
     const wasRuler = G.Fac.all().some(f => f.leader === v.id);
     const p = S.villagers.get(v.partner);
     if (p) { p.partner = 0; p.widow = v.id; p.mourn = G.DAY_LEN * 1.5; p.emo = { k: 'sad', t: 6 }; }

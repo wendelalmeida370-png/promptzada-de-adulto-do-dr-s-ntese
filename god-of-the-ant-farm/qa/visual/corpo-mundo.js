@@ -1,9 +1,14 @@
 // corpo-mundo: the body of the Modo Encarnado against the world's own rules, in Node, without a browser (the simulation of
 // qa/nodemundo.js, with the body's files — space, possess, interact, avatar and the poses of people3d — loaded after it; no 3D):
 //   node qa/visual/corpo-mundo.js [mundo]       (default: the ready world «cidade»)
+// Made for the ready world «cidade» (T-091): its places are taken by the test's rule — the first grown-up by id, the first tree,
+// bush, rock and store by id with walkable ground beside them — and there they are what «E» means. In another world the rule
+// may take a tree beside a building (there «E» is the building's, as it should be), a store of another people, a person who
+// comes with full hands: a failure there is the test's precondition, not the game's — the run says so.
 // The proofs (each one of the adendo's "a presença do jogador não produz resultado de graça"):
 //   1. the body does as much work as anyone of the world in the same world time — felling (the woodcutter's dt × workMul),
-//      picking berries (2.2 s / workMul for a load), breaking stone (3.8 s / workMul for a load), eating at the store (1.6 s)
+//      picking berries (2.2 s / workMul for a load), breaking stone (3.8 s / workMul for a load), eating at the store (1.6 s),
+//      fishing by hand (the same person lived by the world with the hands, at the same ground: casts and catches per minute)
 //   2. with the world stopped (the menu open: no step of the world), an act of the hands does not finish and the world does not
 //      change — the act waits for the world's time
 //   3. what the hands do to the world happens inside the world's step (G.inSim): the world's chance (G.R) is never drawn in
@@ -20,7 +25,8 @@ const path = require('path');
 const M = require(path.join(__dirname, '..', 'nodemundo.js'));
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/people3d.js', 'js/possess.js', 'js/interact.js', 'js/avatar.js', 'qa/visual/corpo-qa.js', 'qa/atividades-inv.js'] });
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | corpo-mundo ${name} | ${info}`); if (!c) fails.push(name); };
-M.pronto(process.argv[2] || 'cidade');
+const WORLD = process.argv[2] || 'cidade'; M.pronto(WORLD);
+if (WORLD !== 'cidade') console.log(`(corpo-mundo é feito para o mundo «cidade»: em «${WORLD}», uma falha é de precondição do teste — o lugar que a regra dele toma não é o que o «E» quer dizer ali —, não do jogo: T-091)`);
 let S = G.S; const W = G.W, L = G.Space.TILE; // (S: the world now — a load makes a new one)
 // (the world's chance drawn outside the world's step: counted)
 let outside = 0; { const R0 = G.R; G.R = function () { if (!G.inSim) outside++; return R0.apply(this, arguments); }; }
@@ -56,7 +62,8 @@ const freshTree = () => [...S.trees.values()].filter(t => G.Nature.isChoppable(t
 { const tree = [...S.trees.values()].filter(t => G.Nature.isChoppable(t) && t.stage === 'grow' && t.size >= 0.8 && !t.claim).sort((a, b) => a.id - b.id).find(t => bodyAt(t.x, t.y, 0.42));
   if (!tree) ok('derrubar: o corpo rende o mesmo que o lenhador', false, 'nenhuma árvore adulta com chão andável ao lado');
   else {
-    const v = G.Possess.body(); const wm = G.Vg.workMul(v); const c0 = tree.chop, t0 = S.clock; let felled = false, k = 0;
+    // (the hands emptied first, by the depot: the person lived may come with a load — the full hands fell nothing: T-085)
+    const v = G.Possess.body(); clearHands(v); const wm = G.Vg.workMul(v); const c0 = tree.chop, t0 = S.clock; let felled = false, k = 0;
     for (; k < 3000 && !felled; k++) { holdE('arvore'); frame(); if (tree.stage !== 'grow') felled = true; }
     const dw = S.clock - t0, done = (felled ? 3 * Math.max(0.5, tree.size) : tree.chop) - c0; const rate = done / dw / wm;
     ok('derrubar: o corpo rende o mesmo que o lenhador por segundo do mundo (dt × trabalho)', rate > 0.8 && rate < 1.2, `${done.toFixed(2)} de trabalho em ${dw.toFixed(2)} s do mundo (${k} quadros): ${rate.toFixed(2)}× o lenhador${felled ? '; a árvore caiu' : ''}`);
@@ -97,6 +104,67 @@ const freshTree = () => [...S.trees.values()].filter(t => G.Nature.isChoppable(t
     for (; k < 1500 && tEnd === null; k++) { holdE('porta'); frame(); if (v.hunger < h0 - 1) tEnd = S.clock; }
     const dw = (tEnd === null ? S.clock : tEnd) - t0;
     ok('comer no armazém: leva o tempo do mundo de quem come lá (1,6 s)', tEnd !== null && dw > 1.6 * 0.8, `comeu em ${dw.toFixed(2)} s do mundo (quem come lá: 1,60 s)`);
+  } }
+// fishing by hand: the same person at the same moment (the same save, lived twice), at the same fishing ground — as the body, in
+// a ford, and as the world lives it, on the bank, with the task «fish» and the hands: the casts and the catches per minute of the
+// world, counted at the world's door (G.Pesca.cast) and in the ledger. After each catch the god's hand empties the hands (by the
+// depot), fills the ground again and puts the hand back as it was, and it keeps the person fed and rested: only the pace is
+// measured — the world's minutes of whole casts, from one cast to the next (a cast cut by an errand of the world counts no time)
+// (L-212: the body cast at the table's 2.2 s and the people at 5 to 9 s, then 4 to 7 — the body 2.8× faster with the same hands)
+function fishPlace() {
+  const P = G.Pesca, N = G.N;
+  for (let i = 0; i < S.type.length; i++) {
+    if (S.type[i] !== G.T.RIVER || S.road[i] || !W.walkable(i)) continue;
+    const fx = i % N + 0.5, fy = Math.floor(i / N) + 0.5; if (G.Space.surface(fx * L, fy * L).kind !== 'shallow') continue;
+    const gid = P.idAt(fx - 0.4, fy), kind = G.Waters.kind(fx - 0.4, fy); // (the body's cast: 0.7 tiles ahead of it, facing west)
+    const cx = Math.floor(fx / P.GS) * P.GS, cy = Math.floor(fy / P.GS) * P.GS;
+    for (let y = cy; y < cy + P.GS; y++) for (let x = cx; x < cx + P.GS; x++) {
+      if (!W.inb(x, y)) continue; const j = W.idx(x, y);
+      if (!W.walkable(j) || S.type[j] === G.T.RIVER || S.type[j] < G.T.SAND || S.road[j]) continue;
+      for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+        if (!W.inb(x + dx, y + dy) || S.type[W.idx(x + dx, y + dy)] !== G.T.RIVER) continue;
+        // (where the world's fisher stands, and the water 0.8 tiles on where it casts: villagers.js)
+        const sx = x + 0.5 + dx * 0.3, sy = y + 0.5 + dy * 0.3;
+        if (P.idAt(sx + dx * 0.8, sy + dy * 0.8) === gid && G.Waters.kind(sx + dx * 0.8, sy + dy * 0.8) === kind) return { ford: [fx, fy], bank: { i: j, x: sx, y: sy, wx: dx, wy: dy }, gid, kind };
+      }
+    }
+  }
+  return null;
+}
+{ const P = G.Pesca; const pl = P && fishPlace(); const p = pl && [...S.villagers.values()].filter(o => o.age >= 20 && o.age < 50 && !o.inside && !o.sleeping && G.Possess.can(o).ok).sort((a, b) => a.id - b.id)[0];
+  if (!pl || !p) ok('pescar com as mãos: o corpo rende o mesmo que uma pessoa do mundo', false, !P ? 'sem a pescaria' : !pl ? 'nenhum vau com margem no mesmo pesqueiro' : 'ninguém para viver');
+  else {
+    if (G.Possess.body()) G.Possess.release('deus'); G.Avatar.detach();
+    const id = p.id, SEC = 60, snap = G.Save.serialize(); const cast0 = P.cast; let casts = 0;
+    P.cast = function (w) { const r = cast0.apply(this, arguments); if (G.inSim && w.id === id && r && (r.ok || r.miss)) casts++; return r; };
+    const live = body => {
+      G.Save.apply(JSON.parse(snap)); S = G.S; casts = 0; const v = S.villagers.get(id); const xp0 = v.fishXp || 0; const b = pl.bank;
+      const give = () => G.Vg.setTask(v, { type: 'fish', spot: b.i, x: b.x, y: b.y, wx: b.wx, wy: b.wy, how: 'maos', pri: 1 });
+      G.Vg.endTask(v); v.path = null;
+      if (body) { v.x = pl.ford[0] + 0.3 + 1e-4; v.y = pl.ford[1]; if (!G.Possess.take(v).ok) return null; G.Avatar.attach(v, Math.PI); G.Avatar.state().yaw = Math.PI; G.Avatar.input.camYaw = Math.PI; }
+      else { v.x = b.x; v.y = b.y; give(); }
+      let seen = S.ledgerN || 0, catches = 0, food = 0, T = 0, n = 0, k = 0, t0 = null;
+      for (; T < SEC && k < 40000; k++) {
+        v.hunger = 10; v.energy = 90;
+        // (a cast's time: from the one before — or, for the world's fisher, from the moment it is at the water, st 2 — to it; the
+        // body's first is from the key, half a gesture: not counted)
+        if (!body && !(v.task && v.task.type === 'fish' && v.task.st === 2)) t0 = null; else if (!body && t0 === null) t0 = S.clock;
+        const c0 = casts; if (body) holdE('peixe'); frame();
+        if (casts > c0) { if (t0 !== null) { T += S.clock - t0; n++; } t0 = S.clock; }
+        const Lg = S.ledger || []; for (let q = Lg.length - 1; q >= 0 && Lg[q][0] > seen; q--) if (Lg[q][8] === 'pesca' && Lg[q][4] === 'v:' + id) { catches++; food += Lg[q][6]; }
+        if (Lg.length) seen = Math.max(seen, Lg[Lg.length - 1][0]);
+        if (v.carry && v.carry.n > 0 && v.carry.fish) { clearHands(v); god(() => { if (S.pesca) delete S.pesca[pl.gid]; }); v.fishXp = xp0; }
+        if (!body && (!v.task || v.task.type !== 'fish')) give();
+      }
+      const r = { T, casts: n, catches, food };
+      if (body) { G.Possess.release('deus'); G.Avatar.detach(); }
+      return r;
+    };
+    const a = live(true), c = live(false); P.cast = cast0;
+    const per = r => (r ? `${r.casts} lances inteiros em ${r.T.toFixed(1)} s do mundo (${(r.casts / r.T * 60).toFixed(1)} por minuto, um a cada ${(r.T / Math.max(1, r.casts)).toFixed(2)} s), ${r.catches} pegas (${r.food} de comida; ${(r.catches / r.T * 60).toFixed(1)} por minuto)` : 'não encarnou');
+    const pace = a && c && c.casts && a.T && c.T ? (a.casts / a.T) / (c.casts / c.T) : 0;
+    ok('pescar com as mãos: o corpo lança no ritmo de uma pessoa do mundo com as mesmas mãos, no mesmo pesqueiro (por minuto do mundo, no livro-razão)', pace > 0.85 && pace < 1.15 && a.catches > 0 && c.catches > 0,
+      `o pesqueiro ${pl.gid} (${pl.kind}); a pessoa ${id}; o corpo no vau: ${per(a)}; a mesma pessoa, vivida pelo mundo na margem: ${per(c)}; o ritmo do corpo: ${pace.toFixed(2)}× o dela`);
   } }
 
 // ------------------------------ 4. the load into the store ------------------------------
@@ -236,5 +304,5 @@ G.Act.def('prova-pegar', {
 if (G.Possess.body()) G.Possess.release('deus');
 { const bad = vbad(); ok('o verificador no fim (S0 a S2)', !bad.length, vtxt(bad)); }
 const e = M.erros(); ok('sem erros de módulo nem do console', M.limpo(), JSON.stringify(e.mod) + ' ' + e.console.slice(0, 3).join(' | '));
-console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');
+console.log(fails.length ? `FALHAS: ${fails.join(', ')}${WORLD !== 'cidade' ? ` (fora da «cidade»: precondição do teste, T-091)` : ''}` : 'TUDO PASSOU');
 process.exit(fails.length ? 1 : 0);

@@ -2,7 +2,8 @@
 // palácios e a feira — nos mundos prontos, provocados nos casos ruins: todos com registro e planta válida; o que cada um é
 // para, em peças que o mundo conta (a imagem e o altar, as celas com palha atrás da grade e o carcereiro, a piscina e a
 // fornalha, o assento do chefe, o trono, as bancas dos feirantes); a casca de longe a da planta (a feira, casca aberta:
-// sem paredes nem telhado); salvar e carregar duas vezes, as mesmas plantas; um ano de salto; a ruína de cada tipo; o save
+// sem paredes nem telhado); os presos na palha das celas (num mundo sem preso, o caso prende um pela porta do crime.js —
+// nunca passa vazio); salvar e carregar duas vezes, as mesmas plantas; um ano de salto; a ruína de cada tipo; o save
 // antigo, sem registros. Nenhum erro de módulo.
 //   node qa/civicos.js [mundo,mundo...]
 const M = require('./nodemundo.js');
@@ -39,16 +40,52 @@ const check = (name) => {
   return by;
 };
 // the prisoners the world has (crime.js puts them in: v.jail): each one in his jail on the straw of one of its cells
-const presos = (name) => {
+const presos = (name, note) => {
   let n = 0, bad = 0; const ex = [];
   for (const v of G.S.villagers.values()) {
     if (!v.jail || v.inside !== v.jail) continue; const b = G.S.buildings.get(v.jail); if (!b || !b.ip || b.type !== 'cadeia') continue; n++;
     const pl = In.placeOf(v); const p = In.plan(b); const it = pl && p.items.find(i => i.id === pl.item); const room = it && p.rooms[it.room];
     if (!it || it.kind !== 'palha' || !room || room.fn !== 'cela') { bad++; if (ex.length < 3) ex.push(`${v.name}: ${it ? it.kind : 'nada'}`); }
   }
-  if (n) ok(`${name} presos nas celas`, !bad, `${n} presos: ${bad} fora de uma cela${ex.length ? ' (' + ex.join(', ') + ')' : ''}`);
+  if (n) ok(`${name} presos nas celas`, !bad, `${n} presos: ${bad} fora de uma cela${ex.length ? ' (' + ex.join(', ') + ')' : ''}${note ? ' — ' + note : ''}`);
+  else if (note) console.log(`   (${name}: ${note})`);
   return n;
 };
+// a world with nobody in its cells still has the case, by crime.js's own doors (T-084): a theft told to the town's watch,
+// as the god's ghosts tell one (Crime.reveal) — the guard goes after the thief, takes him to the jail, and the cell holds
+// him. The test's hand only brings the thief before the guard: the hunt across town is not the case. A world with no jail
+// with a free cell, no law that jails or no guard free to go says so — and the case is seen in some world, or fails
+const WATCH = { vigia: 1, guerreiro: 1 }; // (crime.js's own: who goes after a thief)
+const freeV = v => !v.captive && !v.jail && !v.aboard && !v.ug && !v.hunt;
+function prende() {
+  const S = G.S, D = G.Depot; const why = [];
+  for (const v of S.villagers.values()) if (v.jail && v.inside === v.jail) return '';
+  for (const set of [...S.settlements.values()].sort((a, b) => a.id - b.id)) {
+    const jails = [...S.buildings.values()].filter(b => b.type === 'cadeia' && b.set === set.id).sort((a, b) => a.id - b.id); if (!jails.length) continue;
+    const jail = jails.find(b => b.built && b.ip && G.Crime.inmates(b) < G.BDEF.cadeia.cells);
+    if (!jail) { why.push(`${set.name}: a cadeia ${jails.some(b => b.built) ? 'sem cela livre' : 'ainda em obra'}`); continue; }
+    const law = G.Crime.sentence(G.Fac.ofSet(set.id)); if (!law.days) { why.push(`${set.name}: a lei não prende`); continue; }
+    const people = [...S.villagers.values()].filter(v => v.set === set.id).sort((a, b) => a.id - b.id);
+    const g = people.find(o => WATCH[o.role] && freeV(o) && !o.inside && !(o.task && o.task.pri >= 1.65));
+    const th = people.find(o => o.age >= 18 && o.home && freeV(o) && !G.Crime.law(o));
+    if (!g || !th) { why.push(`${set.name}: ${g ? 'ninguém para roubar' : 'nenhum vigia livre'}`); continue; }
+    const house = [...S.buildings.values()].filter(b => b.set === set.id && b.built && G.BDEF[b.type] && G.BDEF[b.type].housing && b.id !== th.home).sort((a, b) => G.dist2(a.x, a.y, g.x, g.y) - G.dist2(b.x, b.y, g.x, g.y) || a.id - b.id)[0];
+    if (!house) { why.push(`${set.name}: nenhuma casa para roubar`); continue; }
+    // (the theft as crime.js writes one: the house's coins into the thief's purse, in the ledger, and the open case)
+    const H = 'h:' + house.id; if (D.get(H, 'moedas') < 3) D.make(H, 'moedas', 3, { code: 'teste' });
+    if (!D.move(H, 'p:' + th.id, 'moedas', 3, { code: 'roubo', by: th.id }).ok) { why.push(`${set.name}: as moedas não saíram da casa`); continue; }
+    const c = { id: S.nextId++, kind: 'furto', day: S.day, set: set.id, thief: th.id, house: house.id, n: 3, x: Math.round(house.x * 10) / 10, y: Math.round(house.y * 10) / 10, seen: [], told: 0, found: 0, st: 'aberto' };
+    (S.crimes || (S.crimes = [])).push(c); house.robbed = S.day;
+    const hunter = G.Crime.reveal(c);
+    if (!hunter || !(hunter.task && hunter.task.type === 'prender')) { why.push(`${set.name}: nenhum vigia saiu atrás do ladrão`); continue; }
+    G.Vg.endTask(th); th.inside = 0; th.sleeping = false; th.path = null; th.x = hunter.x + 0.3; th.y = hunter.y + 0.2;
+    const c0 = S.clock; let jailed = false;
+    for (let k = 0; k < 300 && !jailed; k++) { M.viver(1); jailed = !!th.jail && th.inside === th.jail; }
+    if (jailed) return `sem preso no mundo, ${th.name} roubou 3 moedas de uma casa de ${set.name}; ${hunter.name} o prendeu, e em ${Math.round(S.clock - c0)} s ele estava na cela (${law.how})`;
+    why.push(`${set.name}: ${th.name} não chegou à cela (o caso ${c.st}, ${th.task ? th.task.type : 'sem tarefa'})`);
+  }
+  return 'ninguém preso: ' + (why.length ? why.join('; ') : 'nenhuma cadeia neste mundo');
+}
 // (the checker's own rules for the interiors — the records, a few plans each round, the prisoners on the straw of a cell)
 const qa = name => { const bad = QA.check().filter(q => q.sys === 'int'); ok(`${name} verificador`, !bad.length, bad.length ? bad.slice(0, 4).map(q => `S${q.sev}: ${q.msg}`).join(' · ') : 'sem nada dos interiores'); };
 const snap = () => { In.uncache(); const m = new Map(); for (const b of civ()) if (b.ip && b.type !== 'ruin') m.set(b.id, print(In.plan(b))); return m; };
@@ -56,7 +93,7 @@ const same = (a, b) => { let d = 0; for (const [id, s] of a) if (b.get(id) !== s
 const seen = {};
 for (const key of list) {
   M.pronto(key); const by = check(`${key} aberto`); for (const t in by) seen[t] = (seen[t] || 0) + by[t];
-  seen.presos = (seen.presos || 0) + presos(`${key} aberto`); qa(`${key} aberto`);
+  const pr = prende(); seen.presos = (seen.presos || 0) + presos(`${key} aberto`, pr); qa(`${key} aberto`);
   const s0 = snap(); M.salvarCarregar(); const s1 = snap(); M.salvarCarregar(); const s2 = snap();
   ok(`${key} salvar e carregar`, !same(s0, s1) && !same(s1, s2), `${s0.size} plantas: ${same(s0, s1)} diferentes depois de carregar, ${same(s1, s2)} depois de carregar de novo`);
   presos(`${key} carregado`);
@@ -70,6 +107,7 @@ for (const key of list) {
   }
   M.saltar(1); check(`${key} um ano de salto`); presos(`${key} um ano de salto`); qa(`${key} um ano de salto`);
 }
+ok('presos nas celas, em algum mundo', seen.presos > 0, `${seen.presos || 0} presos nas celas ao abrir os mundos (num mundo sem preso, o caso prende um pela porta do crime.js)`);
 // ---- a palace of each size founded by hand where the land is free — the colossal one no ready world has —: its record from
 // the day it is placed, its plan valid and what it is for, its shell the plan's, the same after a save, and its ruin
 {

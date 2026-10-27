@@ -216,20 +216,27 @@
   };
 
   // ------------------------------ sites by the water ------------------------------
+  // a 2×2 quay site: dry, free, on open sea, with the water on a side — each tile of the ring around it counted once (the
+  // corners were counted twice: one sea tile at a corner passed, and a quay was born with water only on the diagonal, its
+  // pier on sand and rock facing nowhere: L-189); gives how much sea is around it, or 0
+  Ci.dockOk = function (x, y) {
+    const S = G.S;
+    if (x < 2 || y < 2 || x + 2 > N - 2 || y + 2 > N - 2) return 0;
+    for (let ty = y; ty < y + 2; ty++) for (let tx = x; tx < x + 2; tx++) { const i = ty * N + tx; if (S.type[i] < T.SAND || S.occ[i] || S.objAt[i] || S.wall[i] || S.fire[i] > 0) return 0; }
+    const sea = (tx, ty) => (W.inb(tx, ty) && S.type[ty * N + tx] <= T.SEA ? 1 : 0);
+    let side = 0; for (let k = 0; k < 2; k++) side += sea(x - 1, y + k) + sea(x + 2, y + k) + sea(x + k, y - 1) + sea(x + k, y + 2);
+    const corner = sea(x - 1, y - 1) + sea(x + 2, y - 1) + sea(x - 1, y + 2) + sea(x + 2, y + 2);
+    if (!side || side + corner < 2) return 0;
+    if (G.Naval && !G.Naval.openSea(x + 1, y + 1)) return 0;
+    return side + corner;
+  };
   Ci.dockSite = function (set, test) {
     const S = G.S; let best = null, bs = -1e9; const cands = [];
     const R = Math.min(18, Math.round((set.radius || 8) + 4));
     const cx = Math.floor(set.cx), cy = Math.floor(set.cy);
     for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
       const x = cx + dx, y = cy + dy;
-      if (x < 2 || y < 2 || x + 2 > N - 2 || y + 2 > N - 2) continue;
-      let ok = true;
-      for (let ty = y; ty < y + 2 && ok; ty++) for (let tx = x; tx < x + 2; tx++) { const i = ty * N + tx; if (S.type[i] < T.SAND || S.occ[i] || S.objAt[i] || S.wall[i] || S.fire[i] > 0) { ok = false; break; } }
-      if (!ok) continue;
-      let sea = 0;
-      for (let k = -1; k <= 2; k++) for (const [tx, ty] of [[x - 1, y + k], [x + 2, y + k], [x + k, y - 1], [x + k, y + 2]]) { if (W.inb(tx, ty) && S.type[ty * N + tx] <= T.SEA) sea++; }
-      if (sea < 2) continue;
-      if (G.Naval && !G.Naval.openSea(x + 1, y + 1)) continue;
+      const sea = Ci.dockOk(x, y); if (!sea) continue;
       const sl = W.slope(x, y, 2, 2); if (sl > 1.5) continue;
       const d = G.dist(x + 1, y + 1, set.cx, set.cy);
       const sc = -d * 0.8 + sea * 0.4 - sl * 2 + G.R();

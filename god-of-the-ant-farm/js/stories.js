@@ -636,24 +636,35 @@
 
   // ============================== the loop ==============================
   let tAcc = 0;
-  G.worldHooks.push(() => { tAcc = 0; });
+  // (the stories have heard the world since it began or was loaded: before their first turn, a death in the save has not
+  // reached them yet)
+  let heard = false;
+  G.worldHooks.push(() => { tAcc = 0; heard = false; });
+  // a story's beat: its own tick, the furthest step, and the ends that need no one to say them
+  function beat(story) {
+    const S = G.S; const d = DEF[story.type]; if (!d) { story.st = 'fim'; story.end = { k: 'interrompida', tone: 'sereno', d: S.day }; return; }
+    try { if (d.tick) d.tick(story); } catch (e) { console.warn('stories tick', story.type, e); }
+    // the furthest step it reached (for the panel's track, even when it ends badly)
+    if (d.stage && story.st === 'ativa') { const k = d.stage(story); if (k > (story.data.stg || 0)) story.data.stg = k; }
+    // nobody left to carry it, and nothing said: it ends quietly
+    if (story.st === 'ativa' && !alive(story.protag) && !story.data.waitHeir) finish(story, 'interrompida', 'sereno', `${(P(story.protag) || {}).name || 'Quem a carregava'} se foi, e a história parou ali.`);
+    if (story.st === 'ativa' && S.day - story.born > (d.maxDays || 70)) finish(story, 'esquecida', 'sereno', d.forgotten ? d.forgotten(story, ctxOf(story)) : 'O tempo passou, e ninguém mais falou disso.');
+  }
+  // (a death the stories have not heard yet — its signal waits for their next turn, or the world was just loaded —: for the
+  // checker, an active story's protagonist gone is a fault only once they have)
+  St.unheard = id => !heard || pending.some(([k, d]) => k === 'death' && d && d.v && d.v.id === id);
   St.update = function (dt) {
     const S = G.S; if (!S) return;
     if (idxFor !== S) reindex();
     flush();
-    tAcc += dt; if (tAcc < 1.5) return; tAcc = 0;
     const s = st();
+    // a protagonist gone: the story settles it as soon as it hears — its own tick (an heir taken up, or waited for), else its
+    // end —, not up to a beat later: an active story never carries the dead
+    for (const story of s.stories) if (story.st === 'ativa' && !alive(story.protag) && !story.data.waitHeir) beat(story);
+    heard = true;
+    tAcc += dt; if (tAcc < 1.5) return; tAcc = 0;
     if (St.lookAround) St.lookAround(Math.max(4, Math.ceil(S.villagers.size / 10)));
-    for (const story of s.stories) {
-      if (story.st !== 'ativa') continue;
-      const d = DEF[story.type]; if (!d) { story.st = 'fim'; story.end = { k: 'interrompida', tone: 'sereno', d: S.day }; continue; }
-      try { if (d.tick) d.tick(story); } catch (e) { console.warn('stories tick', story.type, e); }
-      // the furthest step it reached (for the panel's track, even when it ends badly)
-      if (d.stage && story.st === 'ativa') { const k = d.stage(story); if (k > (story.data.stg || 0)) story.data.stg = k; }
-      // nobody left to carry it, and nothing said: it ends quietly
-      if (story.st === 'ativa' && !alive(story.protag) && !story.data.waitHeir) finish(story, 'interrompida', 'sereno', `${(P(story.protag) || {}).name || 'Quem a carregava'} se foi, e a história parou ali.`);
-      if (story.st === 'ativa' && S.day - story.born > (d.maxDays || 70)) finish(story, 'esquecida', 'sereno', d.forgotten ? d.forgotten(story, ctxOf(story)) : 'O tempo passou, e ninguém mais falou disso.');
-    }
+    for (const story of s.stories) if (story.st === 'ativa') beat(story);
     direct();
     // keep only the facts something still points to
     if (S.clock % 60 < 1.6) prune();

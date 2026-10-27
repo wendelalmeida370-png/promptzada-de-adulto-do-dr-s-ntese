@@ -223,8 +223,8 @@
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
       const x = x0 + dx, y = y0 + dy; if (!W.inb(x, y)) continue; const i = y * G.N + x;
       let cx = 0, cz = 0, rr = 0;
-      const tid = S.treeAt[i]; const t = tid && S.trees.get(tid);
-      if (t && t.stage !== 'stump' && t.stage !== 'log' && t.stage !== 'fall' && t.size >= 0.3) { cx = t.x * L; cz = t.y * L; rr = 0.28 + 0.32 * Math.min(1.2, t.size); }
+      const tid = S.treeAt[i]; const t = tid && S.trees.get(tid); const tr = G.Space.trunk(t); // (the rule the steps before a door keep from: L-197)
+      if (tr) { cx = t.x * L; cz = t.y * L; rr = tr; }
       else if (S.occ[i] && S.occ[i] !== sq) { const B = S.buildings.get(S.occ[i]); if (B && B.type === 'praca' && B.built) { sq = B.id; cx = (B.x + B.w / 2) * L; cz = (B.y + B.h / 2) * L; rr = 1.4; } }
       if (!rr) continue;
       const ddx = X + ox - cx, ddz = Z + oz - cz; const d = Math.hypot(ddx, ddz); const m = rr + TUNE.radius;

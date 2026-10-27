@@ -31,7 +31,7 @@ const low = (L, ms) => L.length >= 40 && ms <= L[L.length - 1].ms; let nCells = 
 for (const type of Object.keys(In.TYPES)) {
   if (ONLY && !ONLY.includes(type)) continue;
   const def = G.BDEF[type]; if (!def) { ok('tipo ' + type, false, 'tipo sem BDEF'); continue; }
-  for (const c of Object.keys(In.TRAD)) for (const ctx of CTX) {
+  for (const c of Object.keys(In.TRAD)) for (const [ci, ctx] of CTX.entries()) {
     const side = SIDES[(nPlans + c.length) % 4];
     const rec0 = { v: 1, f: '', r: 0, t: type, u: In.TYPES[type].use, s: side, o: 0, c, e: ctx.e, k: ctx.k, cl: ctx.cl, fl: ctx.fl, d: ctx.d, w: ctx.w, pw: 0, h: [], m: 0, fx: [], dr: {} };
     const cat = In.familiesFor(rec0);
@@ -39,7 +39,9 @@ for (const type of Object.keys(In.TYPES)) {
     for (const f of cat.ok) {
       const seen = new Set(); const fine = new Set();
       for (let q = 0; q < NID; q++) {
-        const id = 1000 + q * 7919 + c.length * 31;
+        // (other ids in each context: a family the context does not touch — a workshop's — would otherwise be laid out on the
+        // same ids six times over, 24 plans in all, and a failure of 1 to 3% of the ids went through: T-083)
+        const id = 1000 + (q + ci * NID) * 7919 + c.length * 31;
         const s = SIDES[q % 4]; const b = { id, type, x: 10, y: 10, w: def.w, h: def.h };
         const rec = Object.assign({}, rec0, { f, s, pw: q % 5 === 0 ? 2 : 0 });
         // (each attempt timed too: a plan made a little at a time stops between two of them)

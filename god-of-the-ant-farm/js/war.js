@@ -155,15 +155,16 @@
     if (G.Army && members.length >= 8) G.Army.organize(b, members, f, enemy, best, from, opts);
     return b;
   };
+  // (o.home: a band already on the road home, under the number of the one a load lost — wars.js resume, L-185)
   Wr.makeBand = function (f, enemy, set, members, goal, o) {
     o = o || {};
     const b = {
-      id: G.S.nextId++, fac: f.id, enemy: enemy.id, set: set.id, from: o.from || set.id, goal, st: o.landed ? 'ataque' : 'reunir', t: 0, life: 0,
+      id: o.id || G.S.nextId++, fac: f.id, enemy: enemy.id, set: set.id, from: o.from || set.id, goal, st: o.home ? 'retorno' : o.landed ? 'ataque' : 'reunir', t: 0, life: 0,
       members: members.map(v => v.id), start: members.length, kills: 0, lost: 0, captives: 0, loot: { food: 0, wood: 0, stone: 0 }, burned: 0, quiet: 0,
       rx: set.cx, ry: set.cy, tx: set.cx, ty: set.cy, fury: !!o.fury, ship: o.ship || 0, reached: !!o.landed,
     };
     Wr.bands.set(b.id, b);
-    members.forEach((v, k) => { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'band', band: b.id, pri: 3.2, kind: 'band', flag: k === 0 }); if (G.Life) { if (goal === 'defesa') G.Life.bio(v, 'defend', set.name, enemy.name); else G.Life.bio(v, 'war', enemy.name, set.name); } });
+    members.forEach((v, k) => { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'band', band: b.id, pri: 3.2, kind: 'band', flag: k === 0 }); if (G.Life && !o.home) { if (goal === 'defesa') G.Life.bio(v, 'defend', set.name, enemy.name); else G.Life.bio(v, 'war', enemy.name, set.name); } });
     return b;
   };
   Wr.disband = function (b, silent) {
@@ -778,6 +779,9 @@
         if (!home) return H.end(v);
         if (goPoint(v, t, home.cx, home.cy, 2.5, dt, H, 1)) {
           if (v.carry) { const k = v.carry.k, n = G.Vg.spoils(v, b.fac); if (n > 0) G.FX && G.FX.deposit(v.x, v.y, k, n); }
+          // (home: the host's arms go back to the armoury and the war welcomes its veteran — each as he gets in, not only
+          // the last of the band: L-187)
+          G.Army && G.Army.discharge(v); if (b.campaign && G.Wars) G.Wars.cameHome(v, b);
           H.end(v);
         } else if (t.fail > 4) H.end(v);
         break;
@@ -877,11 +881,20 @@
       }
     }
   }
+  // the captor is dead: the captive he led runs for it, or stays a captive with nobody leading him
+  function captorLost(v) { const dest = destFor(v); if (dest) { log(`Com a morte de seu captor, ${v.name} conseguiu fugir.`, 'free', v.x, v.y); Wr.freeCaptive(v, dest); } else { G.Vg.endTask(v); v.think = Math.min(v.think, 0.2); } }
+  // who dies leaves the band then and there, and the captive he led learns of it at once: the band's own tick (every half
+  // second) and the captive's came after — between them the dead stood in the band and led the captive (L-191). (A new
+  // list, not a splice: a loop over the old one may be running.)
+  Wr.onGone = function (v) {
+    for (const b of Wr.bands.values()) if (b.members.includes(v.id)) b.members = b.members.filter(id => id !== v.id);
+    for (const o of G.S.villagers.values()) if (o.captive && o.task && o.task.type === 'escorted' && o.task.by === v.id) captorLost(o);
+  };
   function runEscorted(v, t, dt, H) {
     const S = G.S; const c = S.villagers.get(t.by);
     // the captor boards a ship: the captive goes aboard too
     if (c && c.aboard) { const sh = G.Naval && G.Naval.aboard(c.aboard); if (sh && G.dist(v.x, v.y, c.x, c.y) < 5) { G.Naval.board(v, sh); } else H.end(v); return; }
-    if (!c) { const dest = destFor(v); if (dest) { log(`Com a morte de seu captor, ${v.name} conseguiu fugir.`, 'free', v.x, v.y); Wr.freeCaptive(v, dest); } else H.end(v); return; }
+    if (!c) { captorLost(v); return; }
     if (!c.task || !(c.task.type === 'band' || c.task.type === 'combat' || c.task.type === 'escort')) return H.end(v);
     v.act = 'bound';
     const d = G.dist(v.x, v.y, c.x, c.y);

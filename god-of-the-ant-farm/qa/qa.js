@@ -89,6 +89,8 @@
         if (t.type === 'scene' && G.Scene && !G.Scene.list.some(x => x.id === t.sc && x.st === 'run')) add('scene', 1, `${nm}: preso numa cena que não está rodando`, v.id);
         if (t.type === 'escorted' && !P(t.by)) add('war', 2, `${nm}: escoltado por ${t.by} que não existe`, v.id);
         if (t.type === 'escorted' && !v.captive) add('war', 2, `${nm}: escoltado sem ser cativo`, v.id);
+        // (who is in a riot, or guards it, is in one that is on — the save keeps the riot and what they do in it: L-190)
+        if ((t.type === 'riot' || t.type === 'riotguard') && !(s.riots || []).some(R => R.id === t.r)) add('pol', 2, `${nm}: ${t.type === 'riot' ? 'no motim' : 'na guarda do motim'} ${t.r}, que não existe`, v.id);
         if (t.type === 'aboard' && !v.aboard) add('sea', 2, `${nm}: tarefa 'aboard' em terra`, v.id);
         if ((t.type === 'combat' || t.type === 'fight') && t.id && t.age > 60) add('ai', 3, `${nm}: combate há ${Math.round(t.age)} s`, v.id);
         if (t.age > G.DAY_LEN * 3 && !{ aboard: 1, jail: 1, band: 1, swim: 0, scene: 0 }[t.type] && !t.saga) add('ai', 3, `${nm}: mesma tarefa '${t.type}' há ${(t.age / G.DAY_LEN).toFixed(1)} dias`, v.id);
@@ -441,7 +443,8 @@
         const nm = `história #${st.id} ${st.type} "${st.title}"`;
         if (st.st === 'ativa') {
           if (keys.has(st.key)) add('story', 1, `${nm}: chave duplicada entre ativas`); keys.add(st.key);
-          if (!P(st.protag) && !st.data.waitHeir) add('story', 1, `${nm}: ativa com protagonista morto/inexistente`);
+          // (a death the stories have not heard yet — they hear the world on their next turn — is not theirs to have settled)
+          if (!P(st.protag) && !st.data.waitHeir && !(G.Stories.unheard && G.Stories.unheard(st.protag))) add('story', 1, `${nm}: ativa com protagonista morto/inexistente`);
           for (const k in st.cast) { const id = st.cast[k]; if (typeof id === 'number' && id > 0 && !person(id) && !s.buildings.has(id) && !s.animals.has(id) && !s.settlements.has(id)) add('story', 3, `${nm}: elenco ${k}=${id} não existe em lugar nenhum`); }
           const def = G.Stories.DEF[st.type]; if (def && def.maxDays && s.day - st.born > def.maxDays * 1.2) add('story', 2, `${nm}: ativa há ${s.day - st.born} anos (máx. ${def.maxDays})`);
         } else if (st.st === 'fim' && !st.end) add('story', 1, `${nm}: terminada sem desfecho`);
@@ -697,6 +700,7 @@
   if (!window.QA || !QA.more) return;
   const SIDES = { N: 1, E: 1, S: 1, W: 1 };
   let turn = 0; // (which few plans this round builds: a different few each time, so a long life sees them all)
+  let heard = new Map(), heardS = null; // (the step's words on the way in already asked again here — once each, in this world)
   QA.more.push(function (add, s) {
     const In = G.Interiors; if (!In) return;
     const withIp = [];
@@ -707,7 +711,7 @@
       if (!b.ip) continue;
       const r = b.ip; withIp.push(b);
       // ---- the record is whole: its family is one its type has, its side a side, its counters numbers
-      if (r.v !== 1 || !In.TYPES[r.t] || !In.FAMS[r.f] || !SIDES[r.s] || !Number.isInteger(r.r) || r.r < 0 || !Array.isArray(r.h) || !Array.isArray(r.fx) || !r.dr || typeof r.dr !== 'object') { add('int', 1, `${nm}: registro danificado (${JSON.stringify(r).slice(0, 120)})`); continue; }
+      if (r.v !== 2 || !In.TYPES[r.t] || !In.FAMS[r.f] || !SIDES[r.s] || !Number.isInteger(r.r) || r.r < 0 || !Array.isArray(r.h) || !Array.isArray(r.fx) || !r.dr || typeof r.dr !== 'object') { add('int', 1, `${nm}: registro danificado (${JSON.stringify(r).slice(0, 120)})`); continue; }
       if (!In.TYPES[r.t].fams.includes(r.f)) add('int', 1, `${nm}: a família ${r.f} não é de ${r.t}`);
       // ---- a building standing and finished is of the type its record says (a rebuilding is a renovation of the record)
       if (b.built && b.type !== 'ruin' && T && r.t !== b.type) add('int', 2, `${nm}: o registro diz ${r.t}`);
@@ -721,6 +725,21 @@
       if (!b || !b.ip || !T || !T.cells) continue; const cs = In.cells(b); if (!cs.length) continue;
       const at = In.placeOf(v); if (!at || !cs.some(c => c.bed === at.item)) add('int', 3, `pessoa #${v.id}: presa na cadeia #${b.id} fora das celas`);
     }
+    // ---- the way in (L-195): where the step put the door, with this record and this ground (the trees about it too: L-206),
+    // the way in fits — or it fits on no side open to the street. Asked again here, made anew: every word of the step the first
+    // round after it, the doors left where it does not fit every round (they are few), and the others in the round's few plans.
+    // The way in fits with the door before a tile of the street the world walks — the people's door is the plan's, the body's,
+    // wherever the step said it fits (L-209)
+    if (In.entrySaid && In.entryKey && G.Space && G.Space.entryFits) {
+      if (heardS !== s) { heardS = s; heard = new Map(); }
+      for (const b of withIp) {
+        const said = In.entrySaid(b); if (said === undefined) continue; const k = In.entryKey(b); if (said && heard.get(b.id) === k) continue; heard.set(b.id, k);
+        const e = G.Space.entryFits(b, In.shellOf(b)); const front = !In.frontOpen || In.frontOpen(b); const ok = e.ok && front;
+        const why = front ? `${e.kind}, o pé a ${e.foot} m` : 'a porta dá para uma casa da rua que não se anda';
+        if (ok !== said) { add('int', 2, `${b.type}#${b.id}: a entrada ${ok ? 'cabe' : `não cabe (${why})`} diante da porta, e a virada do dia disse que ${said ? 'cabia' : 'não cabia'} com o mesmo chão`); continue; }
+        if (!ok) { const to = In.fitSide(b); if (to) add('int', 2, `${b.type}#${b.id}: a porta ficou onde a entrada não cabe (${why}), e no lado ${to.s} ela cabe`); }
+      }
+    }
     // ---- a few plans each round: valid, and the shell seen from afar the whole plan's (the 3D draws the one far, the
     // other near: the same building, always)
     if (!withIp.length) return;
@@ -731,6 +750,8 @@
       if (p.left && p.items.some(it => In.ITEMS[it.kind] && In.ITEMS[it.kind].leva)) add('int', 3, `${b.type}#${b.id}: a casa abandonada ainda tem as coisas que a família leva`);
       const s1 = In.shellOf(b), s2 = In.shellOfPlan(p); const strip = o => { const x = Object.assign({}, o); delete x.key; return JSON.stringify(x); };
       if (!s1 || strip(s1) !== strip(s2)) add('int', 1, `${b.type}#${b.id}: a casca de longe não é a da planta`);
+      // (the way in where the step said it fits, with this record and this ground: asked again here, made anew — L-195)
+      if (In.entrySaid && In.entrySaid(b) === true && s1 && G.Space && G.Space.entryFits) { const e = G.Space.entryFits(b, s1); const front = !In.frontOpen || In.frontOpen(b); if (!e.ok || !front) add('int', 2, `${b.type}#${b.id}: a entrada não cabe (${front ? `${e.kind}, o pé a ${e.foot} m` : 'a porta dá para uma casa da rua que não se anda'}) diante da porta, e a virada do dia disse que cabia com o mesmo chão`); }
       // (the door the world's people use, with the port on: the plan's own wherever the step took it — and the step never
       // took a door onto ground smaller than the old corner's: a pocket shut in all round shuts in whoever comes out)
       if (G.Vg && G.Vg.planDoor === In.planDoor && b.built && b.blocks) {

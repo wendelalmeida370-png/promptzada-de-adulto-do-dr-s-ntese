@@ -1120,6 +1120,8 @@ canvas#game3d { touch-action: none; transition: none; }
 }
 #inc-root .hidden { display: none !important; }
 #inc-hud { position: absolute; inset: 0; animation: incIn .6s ease both; }
+/* (the words over the heads and the little texts of the world, under every panel: js/incui.js draws them, L-211) */
+#inc-air { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 @keyframes incIn { from { opacity: 0; } to { opacity: 1; } }
 /* (the 'translate' property, apart from 'transform': what is centred with a transform stays centred while it comes in) */
 @keyframes ihIn { from { opacity: 0; translate: 0 5px; } to { opacity: 1; translate: 0 0; } }
