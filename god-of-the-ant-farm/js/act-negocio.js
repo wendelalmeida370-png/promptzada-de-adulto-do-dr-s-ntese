@@ -159,7 +159,9 @@
     z.open = 0; if (z.st === 'on') { z.st = 'saindo'; z.why = why || ''; }
     const S = G.S;
     const home = z.home && D.exists('h:' + z.home) ? 'h:' + z.home : null;
-    if (!coin(z) && oweTotal(z) > EPS) settle(z, home);
+    // (what it owes is paid whatever its people uses now: a debt of the time of the exchange is no gift once the people
+    // learns the coin — only a stall without coin takes on account, and it closed paying nothing when the coin came: L-198)
+    if (oweTotal(z) > EPS) settle(z, home);
     for (const k of Object.keys(z.inv)) {
       let q = z.inv[k] || 0; if (!(q > EPS)) continue;
       if (home) { const r = D.move('z:' + z.id, home, k, q, { code: 'fechou', part: true, by: z.owner, floor: true }); if (r.ok) q = r2(q - r.n); }
@@ -199,8 +201,9 @@
     if (z && z.b !== b.id) { B.close(z, 'mudou de mercado'); z = null; }
     if (!z) z = B.open(v, b); if (!z) return null;
     if (!B.hours()) return null; // (the market is shut: another errand, home)
-    // (a people without coin: what the stall got in exchange goes to the store, as payment of what it took on account)
-    if (!coin(z) && oweTotal(z) > 0) { const k = Object.keys(z.got).sort().find(q => (z.got[q] || 0) >= 2 && spare(z, q) >= 2); if (k) return H.setTask(v, { type: 'devolver', biz: z.id, k, pri: 1, st: 0, id: b.id }); }
+    // (a people without coin: what the stall got in exchange goes to the store, as payment of what it took on account — and
+    // goes on going after the people learns the coin, until the debt is paid)
+    if (oweTotal(z) > 0) { const k = Object.keys(z.got).sort().find(q => (z.got[q] || 0) >= 2 && spare(z, q) >= 2); if (k) return H.setTask(v, { type: 'devolver', biz: z.id, k, pri: 1, st: 0, id: b.id }); }
     const want = restockPick(z, v, f);
     if (want) return H.setTask(v, { type: 'atacado', biz: z.id, k: want.k, n: want.n, pri: 1, st: 0, id: b.id });
     if (!Object.keys(z.inv).some(k => z.inv[k] >= 1)) return null; // (nothing to sell and nothing to buy: another errand)
