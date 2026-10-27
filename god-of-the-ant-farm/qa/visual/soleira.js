@@ -216,7 +216,9 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
       else { const far = Math.max(...T.map(t => t.n + t.wn / 2)) + 0.6; pts.push(Wd(fl.P(lo.a, far)), Wd(fl.P(lo.a, 0))); }
       const s0 = pts[0], c0 = pts[1];
       if (!putAt(s0[0], s0[1], Math.atan2(c0[1] - s0[1], c0[0] - s0[0]))) { noFoot++; continue; } nw++;
-      let hiY = st().Y, hands = false; for (const c of pts.slice(1)) { const r = walkStill(c[0], c[1], 200); hiY = Math.max(hiY, r.hiY); hands = hands || r.hands; }
+      // (each leg walked until the body is there or stops — fifteen frames without a step —: the frames are only a net, as many
+      // as the leg is long, for the body the world gives after the proofs before, tired and hungry, slower — T-113)
+      let hiY = st().Y, hands = false; for (const c of pts.slice(1)) { const leg = Math.hypot(c[0] - st().X, c[1] - st().Z); const r = walkStill(c[0], c[1], Math.min(1200, Math.ceil(200 + 60 * leg))); hiY = Math.max(hiY, r.hiY); hands = hands || r.hands; }
       if (hiY - y0 >= fl.top - 0.05 && !hands) up1++; else if (stops.length < 4) stops.push(`${b.type}#${b.id}: até ${(hiY - y0).toFixed(2)} m de ${fl.top.toFixed(2)}${hands ? ', com as mãos' : ''} (${T.length} degraus)`); }
   }
   ok('4b. cada lance diante de uma porta de fora, em todo o mundo, subido andando: do chão a um passo do pé até o degrau de cima, sem as mãos', nw >= 60 && up1 === nw,

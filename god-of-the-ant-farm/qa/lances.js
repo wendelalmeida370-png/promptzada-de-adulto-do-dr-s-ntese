@@ -17,7 +17,12 @@
 //      depois da virada, e o verificador não chama isso de virada errada — a palavra dela era para outro chão —; um save no
 //      meio; a virada seguinte leva a porta a um lado onde cabe; a árvore cortada deixa a porta onde está (D-060); e uma porta
 //      sem outro lado: com a árvore, fica, e a virada diz que não cabe; sem ela, cabe de novo;
-//   8. salvar e carregar: os mesmos lados e as mesmas portas, e a virada seguinte não muda nada.
+//   8. a rua tomada diante de uma porta (L-207): um prédio fundado na casa da frente — a porta do vizinho muda na própria
+//      fundação, não na virada —, com save no meio, e o chão que volta (o prédio novo desfeito: a porta fica onde está, D-060);
+//      e um degrau de um lance de lado sobre chão que o mundo não anda: a entrada não cabe, e a virada a muda; e uma obra
+//      cuja rua é tomada antes de ficar pronta: a fundação ao lado, um save e a virada passam por ela; pronta, a porta
+//      dela é julgada na hora;
+//   9. salvar e carregar: os mesmos lados e as mesmas portas, e a virada seguinte não muda nada.
 // O verificador limpo, nenhum erro de módulo.
 //   node qa/lances.js [mundo]
 const M = require('./nodemundo.js');
@@ -259,14 +264,92 @@ if (built3) {
 }
 qa('as árvores');
 
-// ---- 8. save and load: the same sides and the same doors, and the next turn changes nothing ----
+// ---- 8. the street taken before a door (L-207): a building founded on the tile before it — the neighbour's door moves at that
+// founding, not at the next turn —, a save in the middle, and the ground come back (the new building undone: the door stays
+// where it is, D-060); and a tread of a side flight over ground the world does not walk: the way in does not fit, and the
+// turn moves the door; and a building at work whose street is taken: done, its door is judged then
+let taken = null, atWork = null;
+{
+  const TL = Sp.TILE;
+  const outOf = c => { const sh = In.shellOf(c); const e = sh && sh.entrance; return e && e.out ? [c.x + e.out[0] / TL, c.y + e.out[1] / TL] : null; };
+  const freeTile = (x, y) => W.inb(x, y) && !G.S.occ[W.idx(x, y)] && !G.S.treeAt[W.idx(x, y)] && !G.S.objAt[W.idx(x, y)] && W.walkable(W.idx(x, y));
+  const heardBad = () => QA.check().filter(q => q.sys === 'int' && /a entrada|a porta ficou/.test(q.msg));
+  // 8a. a house founded on the tile before a door that has another side where it fits
+  let A = null, tried = 0;
+  for (const c of ready()) {
+    if (!c.blocks || !entry(c).ok || tried >= 60) continue; const d = outOf(c); if (!d) continue; const x = Math.floor(d[0]), y = Math.floor(d[1]); if (!freeTile(x, y)) continue;
+    tried++; const r0 = recOf(c), day = G.S.day; const nb = sim(() => G.Village.addBuilding('house', x, y, c.set, true));
+    if (!sameRec(recOf(c), r0)) { A = { c, nb, r0, day }; break; }
+    sim(() => G.Village.removeBuilding(nb)); turn();
+  }
+  if (!A) ok('a casa fundada diante da porta', false, `nenhum prédio deste mundo com a casa da frente livre e outro lado onde a entrada caiba (${tried} tentados)`);
+  else {
+    const { c, nb, r0, day } = A; const ref = c.ip.h[c.ip.h.length - 1]; const e = entry(c), eN = entry(nb);
+    ok('a casa fundada diante da porta', c.ip.r === r0.r + 1 && ref[0] === day && ref[1] === 'reforma' && /^porta /.test(ref[2] || '') && e.ok && In.entrySaid(c) === true && eN.ok, `${nb.type}#${nb.id} fundada na casa diante da porta de ${c.type}#${c.id}: a porta foi de ${r0.s}/${r0.o} a ${c.ip.s}/${c.ip.o} na hora (${JSON.stringify(ref)}), sem esperar a virada; a entrada dele ${e.kind}, a da casa nova ${eN.kind}`);
+    const id = c.id, nid = nb.id, r1 = recOf(c); M.salvarCarregar(); In.uncache(); const c2 = G.S.buildings.get(id), nb2 = G.S.buildings.get(nid);
+    ok('a rua tomada: salvar e carregar no meio', !!c2 && !!nb2 && sameRec(recOf(c2), r1) && entry(c2).ok, `${c2 ? c2.type + '#' + id : '-'} em ${c2 ? c2.ip.s + '/' + c2.ip.o : '-'}, a casa nova ${nb2 ? 'lá' : 'SUMIU'}`);
+    sim(() => G.Village.removeBuilding(nb2)); turn(); const e3 = entry(c2);
+    ok('o chão que volta deixa a porta onde está', sameRec(recOf(c2), r1) && e3.ok, `a casa nova desfeita: a porta de ${c2.type}#${id} fica em ${c2.ip.s}/${c2.ip.o}, onde cabe (${e3.kind}); no lado ${r0.s} ${(In.entryOn(c2, r0.s) || {}).ok ? 'caberia de novo' : 'ainda não caberia'}`);
+    taken = { id, s: c2.ip.s, o: c2.ip.o };
+  }
+  // 8b. a tread of a side flight over ground the world does not walk (a wall where its foot runs along the street): the feet
+  // could not stand on it — the way in does not fit (Space.entryFits: stand), and the turn moves the door
+  let C = null, triedC = 0;
+  for (const c of ready()) {
+    if (!c.blocks || triedC >= 200) continue; const e = entry(c); if (!e.ok || e.kind !== 'lado') continue;
+    const sh = In.shellOf(c); const en = sh.entrance; const h = sh.holes.find(q => q.door === en.door && q.kind !== 'janela'); const w = sh.walls[h.wall]; const l = sh.levels.find(q => q.lv === w.lv);
+    const fl = Sp.doorFlight(c, sh.shell, { w: c.w * TL, d: c.h * TL }, w, h, l ? l.y : 0, false, undefined, undefined, true);
+    const lowS = fl.treads.filter(t => t.kind === 'side').sort((p, q) => p.y - q.y)[0]; if (!lowS) continue;
+    const q = fl.P(lowS.a, lowS.n); const i = W.idx(c.x + q[0] / TL, c.y + q[1] / TL); if (G.S.occ[i] === c.id || !W.walkable(i)) continue;
+    const d = outOf(c); if (d && W.idx(d[0], d[1]) === i) continue; // (not the tile before the door itself: there it is the street taken, 8a)
+    triedC++; ground([], [i]); const e2 = entry(c);
+    if (!e2.ok && !e2.stand && In.fitSide(c)) { C = { c, i, e2 }; break; } unwall([i]);
+  }
+  if (!C) ok('o degrau sobre chão que não se anda', false, `nenhum prédio deste mundo com um lance de lado cujo degrau de baixo caia fora do lote e da casa da porta (${triedC} tentados)`);
+  else {
+    const { c, i, e2 } = C; const r0 = recOf(c); const bad = heardBad(); turn(); const e3 = entry(c);
+    ok('o degrau sobre chão que não se anda', !bad.length && !sameRec(recOf(c), r0) && e3.ok, `${c.type}#${c.id}: um muro sob o degrau de baixo do lance de lado — a entrada não cabe (${e2.kind}, os pés não pisam em todos), o verificador ${bad.length ? 'QUEIXOU: ' + bad[0].msg : 'calado'}; na virada, a porta vai de ${r0.s}/${r0.o} a ${c.ip.s}/${c.ip.o}, onde cabe (${e3.kind})`);
+    unwall([i]);
+  }
+  // 8c. a building at work whose street is taken before it is done: the founding beside it and the turn of the day pass it by
+  // — its plan is not walked yet —; a save in the middle; done, its door is judged then (In.complete), not at the next turn
+  let D = null, triedD = 0; const HD = G.BDEF.house;
+  const lotFree = (x, y) => { for (let yy = y - 1; yy <= y + HD.h; yy++) for (let xx = x - 1; xx <= x + HD.w; xx++) { const inner = xx >= x && xx < x + HD.w && yy >= y && yy < y + HD.h; if (inner ? !freeTile(xx, yy) : !(W.inb(xx, yy) && W.walkable(W.idx(xx, yy)))) return false; } return true; };
+  look: for (const c of ready()) {
+    if (triedD >= 40) break;
+    for (let y = c.y - 3; y <= c.y + c.h + 2; y++) for (let x = c.x - 3; x <= c.x + c.w + 2; x++) {
+      if (!lotFree(x, y)) continue;
+      const site = sim(() => G.Village.addBuilding('house', x, y, c.set, false)); const d = site.ip && outOf(site); const fx = d ? Math.floor(d[0]) : -1, fy = d ? Math.floor(d[1]) : -1;
+      if (d && freeTile(fx, fy)) {
+        triedD++; const r0 = recOf(site); const nb = sim(() => G.Village.addBuilding('house', fx, fy, c.set, true));
+        if (sameRec(recOf(site), r0) && In.fitSide(site)) { D = { site, nb, r0 }; break look; }
+        sim(() => G.Village.removeBuilding(nb));
+      }
+      sim(() => G.Village.removeBuilding(site));
+    }
+  }
+  if (!D) ok('a obra cuja rua foi tomada', false, `nenhum lugar deste mundo para uma obra com a casa da frente livre e outro lado onde a entrada caiba (${triedD} tentados)`);
+  else {
+    const { site, nb, r0 } = D; const sid = site.id, nid = nb.id; const shut0 = shutNow(site), e0 = entry(site);
+    M.salvarCarregar(); In.uncache(); let s2 = G.S.buildings.get(sid); const nb2 = G.S.buildings.get(nid);
+    turn(); s2 = G.S.buildings.get(sid); const passed = !!s2 && !s2.built && sameRec(recOf(s2), r0);
+    ok('a obra: a fundação ao lado, salvar e carregar e a virada passam por ela', passed && !!nb2 && shut0, `a obra ${s2 ? s2.type + '#' + sid : '-'} (porta em ${r0.s}/${r0.o}) com ${nb.type}#${nid} fundada na casa diante da porta dela: a rua dela ${shut0 ? 'fechada' : 'ABERTA'} (a entrada ${e0.ok ? 'cabe' : 'não cabe'}, ${e0.kind}); depois de salvar e carregar e da virada, ${passed ? 'o registro o mesmo' : 'MUDOU: ' + JSON.stringify(s2 ? recOf(s2) : null)}`);
+    const day = G.S.day; sim(() => G.Village.completeBuilding(s2)); const h = s2.ip.h, last = h[h.length - 1], prev = h[h.length - 2]; const e1 = entry(s2), bad = heardBad();
+    ok('a obra pronta: a porta julgada na hora', s2.built && prev && prev[0] === day && prev[1] === 'pronto' && last[0] === day && last[1] === 'reforma' && /^porta /.test(last[2] || '') && !shutNow(s2) && e1.ok && In.entrySaid(s2) === true && !bad.length,
+      `${s2.type}#${sid} pronta no dia ${day}: ${JSON.stringify(prev)}, ${JSON.stringify(last)} — a porta de ${r0.s}/${r0.o} a ${s2.ip.s}/${s2.ip.o}, onde a entrada cabe (${e1.kind}), sem esperar a virada; o verificador ${bad.length ? 'QUEIXOU: ' + bad[0].msg : 'calado'}`);
+    atWork = { id: sid };
+  }
+}
+qa('a rua tomada');
+
+// ---- 9. save and load: the same sides and the same doors, and the next turn changes nothing ----
 {
   const snap = () => { const m = new Map(); for (const b of ready()) m.set(b.id, JSON.stringify([b.ip.s, b.ip.o, b.ip.r, b.blocks ? sim(() => G.Vg.door(b)) : null])); return m; };
   const a = snap(); M.salvarCarregar(); In.uncache(); const c = snap(); turn(); const d = snap(); let diff = 0, diffT = 0; const ex = [];
   for (const [id, s] of a) { if (c.get(id) !== s) { diff++; if (ex.length < 2) ex.push(`#${id}: ${s} ≠ ${c.get(id)}`); } if (d.get(id) !== c.get(id)) { diffT++; if (ex.length < 2) ex.push(`#${id} na virada: ${c.get(id)} → ${d.get(id)}`); } }
   // (the doors the cases moved or kept, as they are now — later cases may move them again: what must hold is the load and the
   // turn after it changing none of them, as none of the others)
-  const kept = [['o muro', moved2], ['lado nenhum', alone], ['a árvore', treeDoor]].filter(q => q[1]).map(([n, x]) => { const b = G.S.buildings.get(x.id); return `${n}: ${b.type}#${b.id} em ${b.ip.s}/${b.ip.o}`; });
+  const kept = [['o muro', moved2], ['lado nenhum', alone], ['a árvore', treeDoor], ['a rua tomada', taken], ['a obra', atWork]].filter(q => q[1]).map(([n, x]) => { const b = G.S.buildings.get(x.id); return `${n}: ${b.type}#${b.id} em ${b.ip.s}/${b.ip.o}`; });
   ok('salvar e carregar', !diff && !diffT && a.size === c.size, `${a.size} prédios: ${diff} com outro lado ou outra porta depois de carregar, ${diffT} mudados pela virada seguinte${ex.length ? ' — ' + ex.join(' · ') : ''}; ${kept.join(', ')}`);
 }
 qa('no fim');

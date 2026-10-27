@@ -1365,11 +1365,38 @@
     if (!b || !TYPES[b.type] || b.ip) return;
     b.ip = newRecord(b, In.contextOf(b), false); placeDoor(b);
     fact(b, b.built ? 'pronto' : 'obra');
+    besides(b);
   };
+  // the door of a building standing, as the step judges it — at the turn of the day, when the work on it is done, and when a
+  // building is founded beside it, which may have taken the street before it (L-207) —: where the street the door opens to
+  // is closed now (a wall, a building, the water), or the way in no longer fits before it (the ground fell away, something
+  // took the street its steps went down, or the ground their treads stand on: L-195, L-207), the door moves to the first
+  // side open where the way in fits; where it fits on none, a closed street still moves it to the first side open, as
+  // before, and an open one keeps it
+  function doorRule(b) {
+    const rec = b.ip; const m0 = openTiles(b, rec.s); const shut = !(m0 & (rec.o || m0)) || !m0;
+    if (!shut && entryOk(b, rec)) { sayEntry(b, true); return; }
+    let to = fitSide(b, rec); const ok = !!to;
+    if (!to && shut) for (const s of SIDES) { const m = openTiles(b, s); if (m) { to = { s, o: m }; break; } }
+    if (to && (to.s !== rec.s || to.o !== rec.o)) { rec.s = to.s; rec.o = to.o; rec.r++; fact(b, 'reforma', 'porta ' + to.s); }
+    // (said: fits, or fits on no side open; a door left on a street shut all round says nothing)
+    if (to || !shut) sayEntry(b, ok); else entrySaid.delete(b.id);
+  }
+  // (a building founded: the doors standing round it, as far as a door's steps run on into the street — two tiles —, judged
+  // again now, not at the next turn of the day: the street it took was theirs a moment ago — L-207)
+  function besides(b) {
+    for (const c of G.S.buildings.values()) {
+      if (c === b || !c.ip || !c.built || c.type === 'ruin' || !TYPES[c.type] || c.ip.t !== c.type) continue;
+      if (b.x < c.x + c.w + 2 && b.x + b.w > c.x - 2 && b.y < c.y + c.h + 2 && b.y + b.h > c.y - 2) doorRule(c);
+    }
+  }
   In.complete = function (b, from) {
     if (!b) return; if (!b.ip) { if (TYPES[b.type]) In.found(b); return; }
-    if (b.ip.t !== b.type) return retype(b, b.ip.t, 'reforma');
-    fact(b, 'pronto');
+    if (b.ip.t !== b.type) retype(b, b.ip.t, 'reforma'); else fact(b, 'pronto');
+    // (and its door judged now, as at the turn of the day: the turn and a founding beside it pass a building at work by — its
+    // plan is not walked yet —, and the street before it may have been taken, or the ground under its steps changed, while
+    // the work went on: done, it opens where the way in fits — L-207)
+    if (TYPES[b.type]) doorRule(b);
   };
   // the type changed under the record (a hut rebuilt as a house, a shack made a hut): a renovation, with its own new plan —
   // the family kept if the new type still has it, the record's frozen context otherwise kept as it was
@@ -1463,19 +1490,8 @@
       if (b.type === 'ruin') continue;
       if (rec.t !== b.type && b.built) { retype(b, rec.t, 'reforma'); continue; }
       if (!b.built) continue;
-      // (the street the door opens to is closed now — a wall, a building, the water —, or the way in no longer fits before it —
-      // the ground fell away, something took the street its steps went down: L-195 —: the door moves to the first side open
-      // where the way in fits; where it fits on none, a closed street still moves it to the first side open, as before, and
-      // an open one keeps it)
-      const m0 = openTiles(b, rec.s); const shut = !(m0 & (rec.o || m0)) || !m0;
-      if (!shut && entryOk(b, rec)) sayEntry(b, true);
-      else {
-        let to = fitSide(b, rec); const ok = !!to;
-        if (!to && shut) for (const s of SIDES) { const m = openTiles(b, s); if (m) { to = { s, o: m }; break; } }
-        if (to && (to.s !== rec.s || to.o !== rec.o)) { rec.s = to.s; rec.o = to.o; rec.r++; fact(b, 'reforma', 'porta ' + to.s); }
-        // (said: fits, or fits on no side open; a door left on a street shut all round says nothing)
-        if (to || !shut) sayEntry(b, ok); else entrySaid.delete(b.id);
-      }
+      // (the door: where its street is closed, or the way in no longer fits before it, it moves — doorRule)
+      doorRule(b);
       if (TYPES[b.type].use === 'casa') {
         const head = heads.get(b.id) || null; const hid = head ? head.id : 0; const n = dwell.get(b.id) || 0;
         // (the last of the household gone: empty from today — a house nobody lived in yet is only new —; given up after
