@@ -443,7 +443,8 @@
         const nm = `história #${st.id} ${st.type} "${st.title}"`;
         if (st.st === 'ativa') {
           if (keys.has(st.key)) add('story', 1, `${nm}: chave duplicada entre ativas`); keys.add(st.key);
-          if (!P(st.protag) && !st.data.waitHeir) add('story', 1, `${nm}: ativa com protagonista morto/inexistente`);
+          // (a death the stories have not heard yet — they hear the world on their next turn — is not theirs to have settled)
+          if (!P(st.protag) && !st.data.waitHeir && !(G.Stories.unheard && G.Stories.unheard(st.protag))) add('story', 1, `${nm}: ativa com protagonista morto/inexistente`);
           for (const k in st.cast) { const id = st.cast[k]; if (typeof id === 'number' && id > 0 && !person(id) && !s.buildings.has(id) && !s.animals.has(id) && !s.settlements.has(id)) add('story', 3, `${nm}: elenco ${k}=${id} não existe em lugar nenhum`); }
           const def = G.Stories.DEF[st.type]; if (def && def.maxDays && s.day - st.born > def.maxDays * 1.2) add('story', 2, `${nm}: ativa há ${s.day - st.born} anos (máx. ${def.maxDays})`);
         } else if (st.st === 'fim' && !st.end) add('story', 1, `${nm}: terminada sem desfecho`);
