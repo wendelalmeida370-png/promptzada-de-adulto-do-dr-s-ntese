@@ -378,11 +378,13 @@ function stallNow() {
   if (!kq) { kq = E.MARKET_GOODS.filter(k => k !== 'food' && D.free('f:' + fac.id, k) >= 2 && !(z.day.sold[k] > 0)).sort()[0]; if (kq) { roomOn(z, kq, 2); D.move('f:' + fac.id, 'z:' + z.id, kq, 2, { code: 'teste', part: true }); } }
   if (kq) z.margin[kq] = 0.8;
   const ks = Object.keys(z.inv).filter(k => z.inv[k] >= 1).sort();
-  const day0 = z.day.d, hist0 = z.hist.length; const mBefore = Object.assign({}, z.margin);
+  const day0 = z.day.d; const mBefore = Object.assign({}, z.margin);
   // (the stall shuts at the first look of the businesses after the hours)
   S.time = 0.61; live(8, () => !z.open); const shut = !z.open; const why9 = `hora ${S.time.toFixed(3)}, banca ${z.st} aberta ${z.open}, na lista ${B.all().includes(z)}, o dono ${m.task ? m.task.type : 'sem tarefa'}`;
   S.time = 0.995; live(4);
-  const rolled = z.day.d !== day0 && !!z.prev && z.prev.d === day0 && z.hist.length === hist0 + 1;
+  // (the day closed: a new one, the closed one kept as prev and as the last line of the history — which keeps only the last
+  // ten days, act-negocio.js: a stall of an older world comes with its ten, and their count does not grow, T-?)
+  const rolled = z.day.d !== day0 && !!z.prev && z.prev.d === day0 && z.hist.length > 0 && z.hist[z.hist.length - 1][0] === day0;
   const moved = ks.filter(k => (z.margin[k] || 0) !== (mBefore[k] === undefined ? 0.25 : mBefore[k]));
   ok('n9 o fim do dia', shut && rolled && moved.length >= 1 && (!kq || moved.includes(kq)) && !bad().length,
     `${shut ? 'ao fim da tarde a banca fechou' : 'a banca NÃO fechou (' + why9 + ')'}; o livro do dia ${rolled ? `fechou (${z.prev.n} vendas, ${z.prev.rev} de receita, ${z.prev.cost} de custo, ${z.prev.refus} recusa(s), ${z.prev.hag} pechincha(s))` : 'NÃO fechou'}; a margem mudou em ${moved.map(k => `${E.name(k)} ${mBefore[k] === undefined ? 0.25 : mBefore[k]} → ${z.margin[k]}`).join(', ') || 'nada'}`);
@@ -572,6 +574,9 @@ function stallNow() {
     for (const c of (dock.crates || []).slice()) D.move('q:' + dock.id, 'f:' + f.id, c.k, c.n, { code: 'teste', part: true });
     dock.crates = [];
     D.use('f:' + f.id, K, D.get('f:' + f.id, K), { code: 'teste' }); // (the store had none: all that comes is the ship's)
+    // (nor the town's stalls: a stall of an older world comes with the spices of its own life, and the buyer takes those,
+    // with no wholesale and no delivery — T-?)
+    for (const q of B.all()) if (q.set === port.id && (q.inv[K] || 0) > 1e-6) D.use('z:' + q.id, K, q.inv[K], { code: 'teste' });
     const L0 = S.ledgerN;
     // (the spices' lines kept as they are written: a long case outlives the ledger's window of the last lines)
     const linesK = []; const onK = e => { if (e[5] === K) linesK.push(e); }; D.onMove.push(onK);

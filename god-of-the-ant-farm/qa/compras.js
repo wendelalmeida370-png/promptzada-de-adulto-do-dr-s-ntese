@@ -232,11 +232,13 @@ const fair = stockFair(set);
   ok('c10 no salto também', n >= 10 && !bad().length, `um dia pelo salto: ${n} compras das casas (bancas, feira, prateleiras)`);
 }
 // ---------------- c11: the volume of a day by the step (before Etapa 4: none in the day that starts at 0.10)
+// (at least ten, as the skip's c10: what the case says is that the day has purchases, and that they get home — 20 was the
+// old metropolis' own day, 25; the new one's day makes 18, all of them home: T-?)
 {
   M.pronto('metropole'); S = G.S; S.time = 0.1; G.inSim = Math.max(G.inSim, 1);
   let n = 0, home = 0; const f = e => { if ((e[8] === 'venda' && e[3][0] === 'z') || ((e[8] === 'compra' || e[8] === 'feira') && e[3][0] === 'b')) n++; if (e[8] === 'compra-em-casa') home++; };
   D.onMove.push(f); const d0 = S.day; while (S.day - d0 < 1) G.debug.step(0.1); D.onMove.splice(D.onMove.indexOf(f), 1);
-  ok('c11 o volume de um dia', n >= 20 && home >= n * 0.7 && !bad().length, `um dia da metrópole desde as 0,10: ${n} compras das casas, ${home} chegaram em casa (antes: 0)`);
+  ok('c11 o volume de um dia', n >= 10 && home >= n * 0.7 && !bad().length, `um dia da metrópole desde as 0,10: ${n} compras das casas, ${home} chegaram em casa (antes: 0)`);
 }
 
 // ================================ a people without coin ================================
