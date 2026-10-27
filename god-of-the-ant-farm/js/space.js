@@ -177,8 +177,10 @@
   // (the size the steps reckon a tree at: its next tenth up — they never stand in the trunk of a tree grown since, and are not
   // reckoned again until it grows past that)
   const tenth = t => Math.min(12, Math.ceil(t.size * 10 - 1e-9));
-  // (the grown trees on some tiles, as a number: a tree born there, grown a tenth, fallen, felled changes it — L-197)
-  const treesOn = tiles => { let s = 0; for (const i of tiles) { const id = G.S.treeAt[i]; const t = id && G.S.trees.get(id); if (Sp.trunk(t)) s = (s * 31 + id * 7 + tenth(t)) | 0; } return s; };
+  // (the street on some tiles, as a number: its grown trees — a tree born there, grown a tenth, fallen, felled changes it, L-197 —
+  // and its ground, whose lot it is and whether the world walks it — a building, a wall, a ruin come or gone changes it: the
+  // steps into the street are reckoned from that ground, open(), and were kept by the memo over a street built over, L-213)
+  const treesOn = tiles => { const S = G.S; let s = 0; for (const i of tiles) { const id = S.treeAt[i]; const t = id && S.trees.get(id); if (Sp.trunk(t)) s = (s * 31 + id * 7 + tenth(t)) | 0; s = (s * 17 + (S.occ[i] || 0) * 3 + (W.walkable(i) ? 1 : 2)) | 0; } return s; };
   let flights = new Map(), under = new Map(); G.worldHooks.push(() => { flights = new Map(); under = new Map(); });
   // the grown trees about the steps a building's doors run on into the street, as a number (0 where none do): what the 3D draws
   // its steps again for — Build3D.sig —, the steps reckoned round a tree come and gone (L-197). The tiles are those of the

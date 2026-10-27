@@ -1,7 +1,8 @@
 // guarda3d: the rules of the 3D read straight from the code (a second, no browser), after qa/guard.js:
 //   node qa/visual/guarda3d.js [PASTA_DO_JOGO]
 //   FALHA (exit 1): a file of the 3D outside guard.js's "only seen" list (LOOK: its rule does not reach it); a file of
-//   the 3D drawing from the world's chance (G.R, rr, ri, pick, chance); the internet at run time (fetch, XMLHttpRequest,
+//   the 3D drawing from the world's chance (G.R, rr, ri, pick, chance); a file of the 3D writing a list of the god's view it
+//   draws too (the words over the heads, G.Talk.list; the texts and particles of G.FX: only read, L-211); the internet at run time (fetch, XMLHttpRequest,
 //   a URL to load — the game opens by file://, no CDN); a <script> of index.html that does not exist; the texture stack over
 //   its budget (arte/ESTUDIO.md §2: 512×512 a material, 6 MB of base64 in all)
 //   AVISO: a file of the 3D that seems to write the world (G.S.x = …), a new file of js/ no <script> loads, the weight of
@@ -33,6 +34,9 @@ for (const f of D3) {
     if (/\bfetch\s*\(|XMLHttpRequest|\bimport\s*\(|new\s+Worker\s*\(\s*['"`]http/.test(l)) fails.push(`[${own(f)}] ${f}:${k + 1} carrega algo em tempo de execução (o jogo abre por file://: sem fetch, sem rede): ${l.trim().slice(0, 110)}`);
     if (/['"`]https?:\/\/[^'"`]+\.(js|png|jpe?g|webp|gltf|glb|bin|ktx2?|hdr|json|wasm)\b/i.test(l)) fails.push(`[${own(f)}] ${f}:${k + 1} depende de um arquivo na internet: ${l.trim().slice(0, 110)}`);
     // (the world written from the drawing: a suspicion to look at, not a proof — the guard's rule 9 and the runtime check of caca.js are the proofs)
+    // (the god's view's own lists — the words over the heads, G.Talk.list; the little texts and the particles of G.FX — the 3D
+    // draws too, only reading them: the god's view keeps them, L-211)
+    if (/\bG\.(Talk\.list|FX\.(floaters|list|rings|glows|bolts))\s*(=(?!=)|\.(push|splice|shift|pop|unshift|sort|reverse|fill)\(|\.length\s*=(?!=))/.test(l)) fails.push(`[${own(f)}] ${f}:${k + 1} o 3D escreve numa lista da vista do deus (as falas, os efeitos), que ele só lê (L-211): ${l.trim().slice(0, 110)}`);
     if (/\bG\.S\.\w+(\[[^\]]*\])?(\.\w+)*\s*(=(?!=)|\+\+|--|\+=|-=)/.test(l) && f !== 'modes.js') warns.push(`[${own(f)}] ${f}:${k + 1} parece escrever no mundo (G.S…): ${l.trim().slice(0, 110)}`);
   });
 }

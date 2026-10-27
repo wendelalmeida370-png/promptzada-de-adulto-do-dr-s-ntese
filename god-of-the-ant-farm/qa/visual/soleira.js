@@ -18,7 +18,9 @@
 //      its foot to its top tread, without the hands (T-090: the step measured at its foot, against Avatar.TUNE.stepUp, a number
 //      beside it); and a door moved to the other side of its shell is reckoned anew, not taken for the old one (L-196); and a
 //      grown tree planted in the way of the steps into the street: never in a tread — gone round, or stopped short of —, the
-//      body up them without the hands where their foot walks, and the steps of before when it is gone (L-197)
+//      body up them without the hands where their foot walks, and the steps of before when it is gone (L-197); and the street
+//      before the door taken by a building's ground: the steps reckoned anew from it, the 3D's and the feet's, none on the
+//      other's lot, and the ones of before when it is open again (L-213)
 //   5. saved and loaded standing on a doorstep: there still, not moved, not taken for one who swims
 //   6. a house built where the body stands: never inside, never in its rooms — it came in by no door —; the world takes it out
 //      as anyone (L-175); and saved and loaded in a door's opening, walking in, the world not yet having it indoors: there
@@ -276,6 +278,31 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
     ok('4d. uma árvore crescida no caminho dos degraus que entram na rua: nunca o tronco num degrau; ao lado da linha deles, eles a contornam e o corpo os sobe sem as mãos; na linha, param antes ou a contornam; onde o pé deles anda, o corpo os sobe sem as mãos; sem a árvore, os degraus de antes, e o 3D os refaz com ela e sem ela',
       line.length >= 1 && side.length >= 1 && recs.every(good) && side.some(r => r.walks && r.how === 'subido'),
       recs.length ? recs.map(r => `${r.b.type}#${r.b.id} ${r.where}: ${r.n0} degraus sem ela (${r.old} no tronco), ${r.n2} com ela, ${r.through} no tronco, ${r.walks ? (r.round ? 'contornam, ' : 'no lote, ') + r.how : 'param antes (não cabe)'}${r.back ? '' : ', sem ela OUTROS'}${r.sig ? '' : ', a assinatura das árvores não seguiu'}`).join(' · ') : 'nenhuma casa com degraus na rua');
+  }
+  // (and the street before such a door taken — the ground of a building where the steps ran on into it, the world told:
+  // W.touchWalk —: the steps reckoned anew from that ground, the 3D's and the feet's — none left standing on the other's lot —,
+  // and the ones of before when the street is open again (L-213: the memo kept the old ones over a street built over, and
+  // Space.stepTop gave the feet their tops inside the new lot))
+  { const recs = []; const blocker = [...S.buildings.values()].filter(q => q.built && q.blocks).sort((a, c) => a.id - c.id)[0];
+    const look = fl => (fl ? fl.treads.map(t => `${t.a.toFixed(2)},${t.n.toFixed(2)},${t.y.toFixed(2)},${t.wa.toFixed(2)}`).join(' ') : '-');
+    for (const b of houses) { if (recs.length >= 3 || !blocker) break;
+      const p = Sp.planNow(b); if (!p || !p.ok || !p.entrance) continue; const h = p.holes.find(q => q.door === p.entrance.door && q.kind !== 'janela'); const w = h && p.walls[h.wall]; if (!w) continue;
+      const l = p.levels.find(q => q.lv === w.lv), ly = l ? l.y : 0, lot = { w: b.w * TL, d: b.h * TL }; const fl = Sp.doorFlight(b, p.shell, lot, w, h, ly, raisedOf(p));
+      if (!fl || !fl.walks || !fl.ground || fl.treads.some(t => t.kind !== 'out')) continue;
+      const far = fl.treads.filter(t => t.n > fl.room + 0.3); if (far.length < 2) continue;
+      const t = far[far.length - 1]; const q = fl.P(t.a, t.n); const X = b.x * TL + q[0], Z = b.y * TL + q[1]; const i = W.idx(X / TL, Z / TL);
+      if (S.occ[i] || !W.walkable(i)) continue;
+      const before = look(fl), sig0 = Sp.treeSig(b), top0 = Sp.stepTop(X, Z);
+      god(() => { S.occ[i] = blocker.id; W.touchWalk(); });
+      const kept = Sp.doorFlight(b, p.shell, lot, w, h, ly, raisedOf(p)), anew = Sp.doorFlight(b, p.shell, lot, w, h, ly, raisedOf(p), undefined, undefined, true);
+      const top1 = Sp.stepTop(X, Z), sig1 = Sp.treeSig(b);
+      god(() => { S.occ[i] = 0; W.touchWalk(); });
+      const back = look(Sp.doorFlight(b, p.shell, lot, w, h, ly, raisedOf(p))) === before;
+      recs.push({ b, n0: fl.treads.length, n1: kept ? kept.treads.length : 0, same: look(kept) === look(anew), top0, top1, sig: sig1 !== sig0 && Sp.treeSig(b) === sig0, back });
+    }
+    ok('4e. a rua diante da porta tomada (o chão de um prédio onde os degraus entravam nela): os degraus refeitos daquele chão, os do 3D e os dos pés — nenhum no lote do outro —; a rua de volta, os de antes',
+      recs.length >= 1 && recs.every(r => r.same && r.top1 === -Infinity && r.sig && r.back),
+      recs.length ? recs.map(r => `${r.b.type}#${r.b.id}: ${r.n0} degraus com a rua aberta, ${r.n1} com ela tomada (${r.same ? 'refeitos' : 'OS DE ANTES, guardados'}); o pé no último degrau de antes: ${r.top0.toFixed(2)} → ${r.top1 === -Infinity ? 'nenhum degrau' : r.top1.toFixed(2)}${r.sig ? '' : '; a assinatura da rua não seguiu'}${r.back ? '' : '; com a rua de volta, OUTROS'}`).join(' · ') : 'nenhuma casa com degraus na rua');
   }
 }
 

@@ -80,7 +80,8 @@
   // ------------------------------ the ways of fishing ------------------------------
   // the way a people fishes from the shore: the spear where it knows neither boats nor metal; the hook and line with bronze;
   // the net with boats — and the peoples who live by the water (the Norse, the Nile, the lakes of the Aztecs) know the net
-  // early. dur: a cast, in seconds of the world; p: the chance that something bites; n: how many; fit: the water it suits
+  // early. anim: its gesture (A.ANIM, whose dur is a cast in seconds of the world: P.castDur); p: the chance that something
+  // bites; n: how many; fit: the water it suits
   const GEAR = P.GEAR = {
     maos: { name: 'as mãos', label: 'Pescar com as mãos', anim: 'pescarMaos', p: 0.45, n: [1, 1], fit: { river: 1, lake: 0.8, mud: 0.9, rock: 0.7, reef: 0.6, sea: 0.5, deep: 0 } },
     arpao: { name: 'o arpão', label: 'Pescar com o arpão', anim: 'pescarArpao', p: 0.6, n: [1, 2], fit: { river: 1.1, lake: 0.9, mud: 0.8, rock: 1, reef: 1, sea: 0.6, deep: 0.2 } },
@@ -103,6 +104,11 @@
   P.gearOf = how => (how === 'rede' ? 'rede' : null);
   // the hand of the one who fishes: a novice catches less, a master more (and a few catches a day make a hand)
   P.skill = v => 0.85 + Math.min(0.4, (v.fishXp || 0) / 120);
+  // one cast, in seconds of the world: the gesture of that way, by the fisher's work — one truth for the people and for the god's
+  // body (the people's casts vary about it, villagers.js; the body's is it). L-212: the body cast at the gesture's 2.2 s and the
+  // people at 5 to 9 s, then 4 to 7, whatever the gear — with the same hands, the body 2.8× faster
+  P.gesture = how => A.ANIM[(GEAR[how] || GEAR.maos).anim];
+  P.castDur = (v, how) => P.gesture(how || P.how(G.Fac.idOfV(v))).dur / G.Vg.workMul(v);
   // where one can fish from here: the water beside the feet (an edge of a river, a lake, the sea)
   P.edge = function (x, y, r) {
     const S = G.S; let best = null, bd = 1e9; const R = Math.max(1, Math.ceil(r || 1));
