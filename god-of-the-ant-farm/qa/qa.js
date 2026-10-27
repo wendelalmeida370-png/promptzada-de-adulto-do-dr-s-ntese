@@ -589,6 +589,14 @@
       if (s.clock - since > 30) add('act', 3, `${v.name} #${v.id}, ${Math.floor(v.age)} anos: ${r2(c.n)} de ${c.k} nas mãos há ${Math.round(s.clock - since)} s, de dia, ${t ? 'em ' + t.type : 'sem afazer'} — a carga não foi ao seu lugar (L-186)`);
     }
     kidMark = kidNow; kidMarkS = s;
+    // ---- L-200: the two under a heavy crate walk a crate's length apart (G.Porto.PAIR_GAP: the steps of the one who
+    // leads draw the helper after him); twice that apart, the crate between them reaches no pair of hands
+    const gap = G.Porto && G.Porto.PAIR_GAP;
+    if (gap) for (const v of s.villagers.values()) {
+      const h = v.carry && v.carry.pair && s.villagers.get(v.carry.pair); const t = h && h.task;
+      if (!t || t.type !== 'ajudar' || t.st !== 2 || t.lead !== v.id) continue;
+      const d = Math.hypot(h.x - v.x, h.y - v.y); if (d > gap * 2) add('act', 3, `${v.name} #${v.id} e ${h.name} #${h.id} sob uma caixa pesada a ${r2(d)} casa um do outro, e a dupla anda a ${gap} (L-200)`);
+    }
     // ---- a family's purchase never ends in a people's store (D-059): what was paid goes home — on the floor, where the
     // furniture is full —, so the line of a purchase put away ('compra-em-casa') always goes into a house
     for (const e of toStore.splice(0)) { const v = s.villagers.get(+String(e[3]).slice(2)); add('act', 2, `a compra de ${v ? v.name + ' #' + v.id : e[3]} (${e[6]} de ${e[5]}) acabou no estoque do povo ${e[4]}, não em casa (livro ${e[0]})`); }
