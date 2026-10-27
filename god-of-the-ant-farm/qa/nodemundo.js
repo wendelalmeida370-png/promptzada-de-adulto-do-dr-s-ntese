@@ -57,13 +57,14 @@ M.load = function (o) {
   M.root = root;
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const files = [...html.matchAll(/<script src="(js\/[^"]+)"><\/script>/g)].map(m => m[1]);
-  const stop = files.indexOf('js/lib/three.min.js');
+  const stop = files.indexOf('js/lib/three.min.js'); const ran = new Set();
   for (const f of files.slice(0, stop < 0 ? files.length : stop)) {
     if (f === 'js/devmode.js' && !o.dev) continue; // (the developer's panel: the page's address and keys)
-    M.run(f);
+    M.run(f); ran.add(f);
   }
   if (o.qa) M.run('qa/qa.js');
-  for (const f of o.extra || []) M.run(f);
+  // (an extra the page already runs before three.js runs once: js/space.js, which the world asks since L-195)
+  for (const f of o.extra || []) if (!ran.has(f)) M.run(f);
   G.Main.mode = 'game';
   return G;
 };
