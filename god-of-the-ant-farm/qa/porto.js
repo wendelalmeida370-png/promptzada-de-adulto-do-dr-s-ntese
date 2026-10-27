@@ -151,12 +151,17 @@ function apart(v, h) {
   fac.stock.coral = cap(); // (the store is full now: others filled it)
   let stopped = false; const waited = new Set();
   live(300, () => { fac.stock.coral = Math.max(fac.stock.coral, cap()); for (const v of S.villagers.values()) if (v.task && v.task.op === op5.id && v.task.st === 4) waited.add(v.id); if (op5.st === 'wait' && op5.wait === 'cheio') stopped = true; return (stopped && !carrierOf(op5)) || watch(); });
-  const kept = r2(P.custody(op5) + (op5.done.coral || 0)); const atDoor = (S.loose || []).filter(o => o.op === op5.id).length;
+  // (what the unloading took: the 14 of coral, and whatever the quay's boats and ships landed into it meanwhile — one quay,
+  // one unloading, as in p4 and p11: in the new metropolis, after the merge of 496dfd3, the boats' catch joined it, and the
+  // count «nothing lost» asked for 14, T-099)
+  const all = o => Object.values(o || {}).reduce((a, b) => a + b, 0);
+  const kept = r2(P.custody(op5) + all(op5.done)), took5 = r2(all(op5.taken)); const atDoor = (S.loose || []).filter(o => o.op === op5.id).length;
   const quiet = live(15, () => { fac.stock.coral = Math.max(fac.stock.coral, cap()); return book(op5, 'pegar').some(e => e[2] > S.clock - 1 && op5.st === 'wait'); });
   D.use('f:' + fac.id, 'coral', 30, { code: 'teste' }); // (room again: some went away in a caravan)
   const done = work(op5, 400, () => watch() || !A.live(op5));
-  ok('p5 o armazém cheio', stopped && waited.size >= 1 && Math.abs(kept - 14) < 1e-6 && !quiet && done && op5.st === 'ok' && op5.done.coral === 14 && !(op5.lost && op5.lost.coral) && !bad().length,
-    `${waited.size} carregador(es) esperaram na porta com a caixa; a descarga ${stopped ? 'parou (armazém cheio)' : 'NÃO parou'}, ${atDoor} caixa(s) postas no chão junto da porta, nada sumiu (${kept} de 14 sob guarda ou entregue); ninguém pegou caixa parado; com lugar de novo: ${A.STATES[op5.st]}, chegou ${op5.done.coral} de 14 (coral)`);
+  const coral = (op5.taken || {}).coral || 0;
+  ok('p5 o armazém cheio', stopped && waited.size >= 1 && took5 >= 14 && Math.abs(kept - took5) < 1e-6 && !quiet && done && op5.st === 'ok' && coral >= 14 && Math.abs((op5.done.coral || 0) - coral) < 1e-6 && !(op5.lost && op5.lost.coral) && !bad().length,
+    `${waited.size} carregador(es) esperaram na porta com a caixa; a descarga ${stopped ? 'parou (armazém cheio)' : 'NÃO parou'}, ${atDoor} caixa(s) postas no chão junto da porta, nada sumiu (${kept} de ${took5} sob guarda ou entregue${took5 > 14 + 1e-6 ? `: as 14 de coral do teste e ${r2(took5 - 14)} que os barcos e os navios do cais desembarcaram na mesma descarga` : ''}); ninguém pegou caixa parado; com lugar de novo: ${A.STATES[op5.st]}, chegou ${op5.done.coral} de ${coral} (coral)`);
 }
 // ---------------- p6: night stops the unloading; the morning takes it up again
 {
