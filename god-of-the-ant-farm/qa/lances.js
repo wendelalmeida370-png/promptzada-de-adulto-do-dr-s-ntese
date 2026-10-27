@@ -13,7 +13,11 @@
 //      verificador sabe que não havia outro lado;
 //   5. a reforma do deus para um lado onde a entrada não cabe é recusada e não muda nada, nem a família pedida junto;
 //   6. o verificador vê uma virada que errou (a pergunta trocada por uma que diz que nada cabe);
-//   7. salvar e carregar: os mesmos lados e as mesmas portas, e a virada seguinte não muda nada.
+//   7. uma árvore crescida no caminho dos degraus que entram na rua (L-197, L-206): ela nasce, cresce um décimo ou é cortada
+//      depois da virada, e o verificador não chama isso de virada errada — a palavra dela era para outro chão —; um save no
+//      meio; a virada seguinte leva a porta a um lado onde cabe; a árvore cortada deixa a porta onde está (D-060); e uma porta
+//      sem outro lado: com a árvore, fica, e a virada diz que não cabe; sem ela, cabe de novo;
+//   8. salvar e carregar: os mesmos lados e as mesmas portas, e a virada seguinte não muda nada.
 // O verificador limpo, nenhum erro de módulo.
 //   node qa/lances.js [mundo]
 const M = require('./nodemundo.js');
@@ -193,13 +197,77 @@ if (built3) {
   ok('o verificador vê uma virada errada', bad.length > 0 && !after.length, `com a pergunta trocada, ${bad.length} queixas (${bad.slice(0, 1).map(q => q.msg).join('')}); com a pergunta de volta e a virada refeita, ${after.length}`);
 }
 
-// ---- 7. save and load: the same sides and the same doors, and the next turn changes nothing ----
+// ---- 7. a tree on the way the steps run on into the street (L-197, L-206): the turn said; then a grown tree comes there, grows a
+// tenth or is felled, and the way in is another — the checker, asking again before the next turn, never calls that a turn that
+// judged wrong: its word was for other ground. A save in the middle; the next turn takes the door to a side where it fits; the
+// tree felled, the door stays where it is (D-060). And a door with no other side open: with the tree it stays, and the turn
+// says the way in does not fit; the tree felled, it fits again — and the checker, again, says nothing until the turn says it
+{
+  const Nat = G.Nature, TL = Sp.TILE;
+  const raisedOf = c => { const l0 = c.levels.filter(l => l.kind !== 'porao' && l.kind !== 'terraco' && l.kind !== 'jirau').sort((a, d) => a.y - d.y)[0] || c.levels[0]; return !!l0 && (l0.kind === 'elevado' || c.shell.base === 'esteios'); };
+  // (the steps before a building's way in, reckoned anew — the flight its entry's answer is from)
+  const flightOf = b => { const c = In.shellOf(b); const en = c && c.entrance; const h = en && c.holes.find(q => q.door === en.door && q.kind !== 'janela'); const w = h && c.walls[h.wall]; if (!w) return null; const l = c.levels.find(q => q.lv === w.lv); return Sp.doorFlight(b, c.shell, { w: b.w * TL, d: b.h * TL }, w, h, l ? l.y : 0, raisedOf(c), undefined, undefined, true); };
+  // (a grown oak on the line of the steps that run on into the street, halfway down them — or null where it cannot stand)
+  const plantOn = b => { const fl = flightOf(b); if (!fl) return null; const far = fl.treads.filter(t => t.n > fl.room + 0.3); if (far.length < 2) return null; const q = fl.P(0, far[Math.floor(far.length / 2)].n); return sim(() => Nat.addTree(b.x + q[0] / TL, b.y + q[1] / TL, 'oak', 1.0)); };
+  const fell = t => sim(() => { t.stage = 'log'; }); // (felled and lying: a log is no trunk in the way — Space.trunk)
+  const unplant = t => sim(() => Nat.removeTree(t));
+  const heardBad = () => QA.check().filter(q => q.sys === 'int' && /a entrada|a porta ficou/.test(q.msg));
+  const sig = b => (Sp.treesAround ? Sp.treesAround(b) : null);
+  const rua = c => { const e = entry(c); return e.ok && e.kind === 'rua' && e.de === 'porta'; };
+  turn(); // (a word of the turn for every door, before any tree comes)
+  // 7a. a building whose way in fits with steps into the street, where the oak on their line makes it not fit, and another side fits
+  let A = null; const usedA = new Set();
+  for (const c of ready()) { if (!c.blocks || !rua(c)) continue; usedA.add(c.id); const t = plantOn(c); if (!t) continue; if (!entry(c).ok && In.fitSide(c)) { A = { b: c, t }; break; } unplant(t); if (usedA.size > 120) break; }
+  if (!A) ok('a árvore na rua dos degraus', false, `nenhum prédio deste mundo com degraus na rua onde um carvalho na linha deles tire a entrada e outro lado sirva (${usedA.size} tentados)`);
+  else {
+    const id = A.b.id, s0 = A.b.ip.s + '/' + A.b.ip.o, e1 = entry(A.b); const bad1 = heardBad();
+    ok('a árvore na rua dos degraus', !e1.ok && !bad1.length && In.entrySaid(A.b) === undefined, `${A.b.type}#${id}, lado ${s0}: um carvalho no meio dos degraus da rua — a entrada não cabe mais (${e1.kind}, o pé a ${e1.foot} m); o verificador antes da virada: ${bad1.length ? bad1.length + ' queixas (' + bad1[0].msg + ')' : 'nada, a palavra da virada era para o chão sem a árvore'}`);
+    M.salvarCarregar(); In.uncache(); let b = G.S.buildings.get(id); const tr = G.S.trees.get(A.t.id);
+    ok('a árvore: salvar e carregar no meio', !!b && !!tr && b.ip.s + '/' + b.ip.o === s0 && !entry(b).ok, `a árvore ${tr ? 'lá' : 'SUMIU'}, o lado ${b ? b.ip.s + '/' + b.ip.o : '-'}, e a entrada ainda não cabe`);
+    turn(); const e2 = entry(b); const ref = b.ip.h[b.ip.h.length - 1]; const s1 = b.ip.s + '/' + b.ip.o; const bad2 = heardBad();
+    ok('a árvore: a virada muda a porta', s1 !== s0 && e2.ok && ref[1] === 'reforma' && In.entrySaid(b) === true && !bad2.length, `o lado ${s0} → ${s1}, o fato ${JSON.stringify(ref)}; a entrada ${e2.kind}; o verificador ${bad2.length ? bad2.length + ' queixas: ' + bad2[0].msg : 'limpo'}`);
+    // (felled: the side of before would have its way in again — and the door stays where it is, where it fits: D-060)
+    fell(tr); const back = In.entryOn(b, s0.split('/')[0]); const bad3 = heardBad(); turn(); const bad4 = heardBad();
+    ok('a árvore cortada deixa a porta onde está', b.ip.s + '/' + b.ip.o === s1 && entry(b).ok && !bad3.length && !bad4.length, `a árvore cortada: no lado ${s0.split('/')[0]} a entrada ${back && back.ok ? 'caberia de novo' : 'ainda não caberia'}; a porta fica em ${b.ip.s}/${b.ip.o}, onde cabe; o verificador ${bad3.length + bad4.length ? 'QUEIXAS: ' + bad3.concat(bad4)[0].msg : 'limpo antes e depois da virada'}`);
+    treeDoor = { id, s: b.ip.s, o: b.ip.o };
+    // 7b. a tree come up a tenth about the door, after the turn said: the word is for other ground (and a sapling is no matter)
+    // (on the first tile free round it, two tiles out at most — where the word's ground is: Space.treesAround)
+    let small = null; for (let r = 1; r <= 2 && !small; r++) for (let y = b.y - r; y <= b.y + b.h - 1 + r && !small; y++) for (let x = b.x - r; x <= b.x + b.w - 1 + r && !small; x++) {
+      if (Math.max(x < b.x ? b.x - x : x - b.x - b.w + 1, y < b.y ? b.y - y : y - b.y - b.h + 1) !== r || !W.inb(x, y)) continue; small = sim(() => Nat.addTree(x + 0.5, y + 0.5, 'oak', 0.44)); }
+    if (!small) ok('a árvore que cresce um décimo', false, `nenhuma casa livre a duas casas de ${b.type}#${id}`);
+    else {
+      turn(); const said0 = In.entrySaid(b), g0 = sig(b); sim(() => { small.size = 0.47; }); const said1 = In.entrySaid(b), g1 = sig(b); sim(() => { small.size = 0.53; }); const said2 = In.entrySaid(b), g2 = sig(b);
+      ok('a árvore que cresce um décimo', said0 === true && said1 === true && g1 === g0 && said2 === undefined && g2 !== g0, `a palavra da virada: ${said0}; a árvore de 0,44 a 0,47, no mesmo décimo: ${said1} (a assinatura ${g1 === g0 ? 'igual' : 'OUTRA'}); a 0,53, o décimo de cima: ${said2 === undefined ? 'a palavra é para outro chão' : said2} (a assinatura ${g2 !== g0 ? 'outra' : 'IGUAL'})`);
+      unplant(small);
+    }
+  }
+  // 7c. a door with no other side open: the oak on its steps, it stays and the turn says the way in does not fit; felled, it fits
+  let B = null, walls = [];
+  for (const c of ready()) {
+    if (!c.blocks || (A && c.id === A.b.id) || !rua(c)) continue; const s0 = c.ip.s; const close = [];
+    for (const sd of SIDES) { if (sd === s0) continue; const n = sd === 'S' || sd === 'N' ? c.w : c.h; for (let k = 0; k < n; k++) { const p = outside(c, sd, k); const i = W.idx(p[0], p[1]); if (W.inb(p[0], p[1]) && W.walkable(i)) close.push(i); } }
+    ground([], close); if (!rua(c) || SIDES.some(sd => sd !== s0 && openT(c, sd))) { unwall(close); continue; }
+    turn(); const t = plantOn(c); if (t && !entry(c).ok) { B = { b: c, t }; walls = close; break; } if (t) unplant(t); unwall(close);
+  }
+  if (!B) ok('a árvore numa porta sem outro lado', false, 'nenhum prédio deste mundo com degraus na rua onde um carvalho na linha deles tire a entrada');
+  else {
+    const b = B.b, r0 = recOf(b); const bad1 = heardBad(); turn(); const said1 = In.entrySaid(b), bad2 = heardBad();
+    fell(B.t); const e3 = entry(b); const bad3 = heardBad(); turn(); const said3 = In.entrySaid(b);
+    ok('a árvore numa porta sem outro lado', !bad1.length && said1 === false && !bad2.length && sameRec(recOf(b), r0) && e3.ok && !bad3.length && said3 === true, `${b.type}#${b.id}: os outros lados fechados (${walls.length} muros); com o carvalho a virada diz que a entrada ${said1 === false ? 'não cabe' : '?'} e a porta fica; cortado, a entrada cabe de novo (${e3.kind}) — o verificador, com o carvalho antes da virada: ${bad1.length ? 'QUEIXA: ' + bad1[0].msg : 'nada'}; depois dela: ${bad2.length ? 'QUEIXA: ' + bad2[0].msg : 'nada'}; cortado, antes da virada: ${bad3.length ? 'QUEIXA: ' + bad3[0].msg : 'nada'}; a virada seguinte diz que ${said3 === true ? 'cabe' : said3 === false ? 'NÃO CABE' : '?'}`);
+    unwall(walls);
+  }
+}
+qa('as árvores');
+
+// ---- 8. save and load: the same sides and the same doors, and the next turn changes nothing ----
 {
   const snap = () => { const m = new Map(); for (const b of ready()) m.set(b.id, JSON.stringify([b.ip.s, b.ip.o, b.ip.r, b.blocks ? sim(() => G.Vg.door(b)) : null])); return m; };
   const a = snap(); M.salvarCarregar(); In.uncache(); const c = snap(); turn(); const d = snap(); let diff = 0, diffT = 0; const ex = [];
   for (const [id, s] of a) { if (c.get(id) !== s) { diff++; if (ex.length < 2) ex.push(`#${id}: ${s} ≠ ${c.get(id)}`); } if (d.get(id) !== c.get(id)) { diffT++; if (ex.length < 2) ex.push(`#${id} na virada: ${c.get(id)} → ${d.get(id)}`); } }
-  const b2 = moved2 && G.S.buildings.get(moved2.id);
-  ok('salvar e carregar', !diff && !diffT && a.size === c.size && (!moved2 || (b2.ip.s === moved2.s && b2.ip.o === moved2.o)) && (!alone || G.S.buildings.get(alone.id).ip.s === 'S'), `${a.size} prédios: ${diff} com outro lado ou outra porta depois de carregar, ${diffT} mudados pela virada seguinte${ex.length ? ' — ' + ex.join(' · ') : ''}`);
+  // (the doors the cases moved or kept, as they are now — later cases may move them again: what must hold is the load and the
+  // turn after it changing none of them, as none of the others)
+  const kept = [['o muro', moved2], ['lado nenhum', alone], ['a árvore', treeDoor]].filter(q => q[1]).map(([n, x]) => { const b = G.S.buildings.get(x.id); return `${n}: ${b.type}#${b.id} em ${b.ip.s}/${b.ip.o}`; });
+  ok('salvar e carregar', !diff && !diffT && a.size === c.size, `${a.size} prédios: ${diff} com outro lado ou outra porta depois de carregar, ${diffT} mudados pela virada seguinte${ex.length ? ' — ' + ex.join(' · ') : ''}; ${kept.join(', ')}`);
 }
 qa('no fim');
 const er = M.erros(); ok('sem erros', M.limpo(), `módulos ${JSON.stringify(er.mod)}; console ${er.console.slice(0, 2).join(' | ') || 'limpo'}`);

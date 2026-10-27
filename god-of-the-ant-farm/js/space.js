@@ -181,6 +181,17 @@
   // its steps again for — Build3D.sig —, the steps reckoned round a tree come and gone (L-197). The tiles are those of the
   // flights reckoned so far, kept here; only read
   Sp.treeSig = b => { const t = under.get(b.id); return t ? treesOn(t) : 0; };
+  // the grown trees about a building, as a number — on its lot and two tiles round it: as far as the steps of its doors run on
+  // into the street (room + 5.3 m out of a door's line, a trunk's reach beside them) —, by the same rule and the same tenth:
+  // what the world keys its word on the way in by (Interiors' entrySaid, L-206). Read from the world alone, never from what
+  // the 3D kept (Space.treeSig): a tree born there, grown a tenth, fallen or felled changes it
+  Sp.treesAround = function (b) {
+    const S = G.S; let s = 0;
+    for (let y = Math.max(0, b.y - 2); y <= Math.min(N - 1, b.y + b.h + 1); y++) for (let x = Math.max(0, b.x - 2); x <= Math.min(N - 1, b.x + b.w + 1); x++) {
+      const id = S.treeAt[y * N + x]; const t = id && S.trees.get(id); if (Sp.trunk(t)) s = (s * 31 + id * 7 + tenth(t)) | 0;
+    }
+    return s;
+  };
   // the steps before an outer door down to the ground, for a door on the ground storey of a building whose floor stands over
   // the street (its plinth) — and before the foot of an outside flight (Interiors' 'degraus', from the plinth's top: Space.feet)
   // —: the ones the 3D lays (Build3D's dressing of a door) and the ones the feet go up (Space.indoor on the doorstep,

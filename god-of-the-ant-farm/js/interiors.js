@@ -1344,11 +1344,13 @@
     const sh = shellFor(b, s === b.ip.s && m === b.ip.o ? b.ip : Object.assign({}, b.ip, { s, o: m })); return sh ? G.Space.entryFits(b, sh) : null;
   };
   // (the step's last word on a building's way in, while its record and the ground are the same — for the checker; undefined
-  // when the step has not said since)
+  // when the step has not said since. The ground: what the walk and the land are, and the grown trees about it — the steps
+  // into the street go round their trunks, L-197 —, read from the world: L-206)
   const entrySaid = new Map(); G.worldHooks.push(() => entrySaid.clear());
-  const groundKey = b => planKey(b, b.ip) + ':' + (G.S.walkVer || 0) + ':' + (G.S.typeVer || 0);
+  const groundKey = b => planKey(b, b.ip) + ':' + (G.S.walkVer || 0) + ':' + (G.S.typeVer || 0) + ':' + G.Space.treesAround(b);
   const sayEntry = (b, ok) => { entrySaid.set(b.id, { key: groundKey(b), ok }); if (entrySaid.size > In.SHELLS) entrySaid.delete(entrySaid.keys().next().value); };
   In.entrySaid = b => { const m = b && b.ip && entrySaid.get(b.id); return m && m.key === groundKey(b) ? m.ok : undefined; };
+  In.entryKey = b => (b && b.ip ? groundKey(b) : null); // (the ground that word is for: the checker hears each word once)
   // (a record new or made again: its door on the first side open where the way in fits — where it fits on none, on the first
   // side open, as the context put it)
   function placeDoor(b) {
