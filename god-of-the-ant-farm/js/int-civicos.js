@@ -65,7 +65,20 @@
       for (let dv = 0.5; v0 + dv + 0.7 < A[3] - 1.2 && !al; dv += 0.2) for (const du of [0, -0.3, 0.3, -0.6, 0.6]) { const u = Math.max(A[0] + 0.7, Math.min(A[2] - 0.7, cu + du)); al = P.at('altar', lv, at, [u - 0.6, v0 + dv, u + 0.6, v0 + dv + 0.7], 0, 1); if (al) break; }
       if (al) break;
     }
-    if (!al) { P.errs.push('sem lugar para o altar'); return; }
+    // (the last resort, once every attempt left the altar out — the round In.plan makes only then: L-192. Behind a court the
+    // hall can be too shallow for the altar a pace before the image with the faithful's room before it, the sanctuary's
+    // door keeping clear the floor before the image, and the court's doors keeping its own: the altar wherever it goes in
+    // the hall, then in the court, the nearest the image first, with only the room its offering needs before it)
+    if (!al && P.last) {
+      const tries = [];
+      for (const at of [cella].concat(has(rooms.court) ? [rooms.court] : [])) {
+        const A = P.rooms[at].r; const v0 = at === cella ? im.r[3] : A[1];
+        for (let v = v0 + 0.5; v + 0.7 <= A[3] - 0.6 + 1e-6; v += 0.1) for (let u = A[0] + 0.6; u + 0.6 <= A[2] + 1e-6; u += 0.15) tries.push([at, u, v, (at === cella ? 0 : 100) + Math.abs(u - cu) + (v - v0)]);
+      }
+      tries.sort((x, y) => x[3] - y[3]);
+      for (const [at, u, v] of tries) { al = P.at('altar', lv, at, [u - 0.6, v, u + 0.6, v + 0.7], 0, 1); if (al) { ar = at; break; } }
+    }
+    if (!al) { P.lack = 1; P.errs.push('sem lugar para o altar'); return; }
     P.opt(() => { const ac = (al.r[0] + al.r[2]) / 2; for (const du of [-1.1, 1.1]) P.at('lampadario', lv, ar, [ac + du - 0.23, al.r[1] + 0.12, ac + du + 0.22, al.r[1] + 0.57], 0, 1); });
     const kind = KNEEL[P.rec.c] ? 'esteira-oracao' : 'banco-fieis'; const D = In.ITEMS[kind];
     // (where the room is wide enough, two to a row with the aisle between; a narrow nave or aisle, one to a row in the middle,
