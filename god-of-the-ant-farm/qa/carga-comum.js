@@ -9,7 +9,8 @@
 // idem; m6 o mariscar, idem; m7 save/load no meio — a criança indo ao armazém, e dormindo com a carga —: a carga chega;
 // m8 a criança morre no meio: a carga vai ao estoque do povo pelo livro ('herdado'), não some com ela; m9 a tripulação de
 // uma expedição guarda a carga no armazém antes do cais; m10 o verificador vê a carga parada nas mãos de uma criança de
-// dia; e o verificador limpo, sem erro de módulo. Quem o caso precisa (a criança, o arbusto, a árvore, a colmeia, a praia
+// dia; m11 quem desce à mina com carga nas mãos sobe com ela: o achado da caverna não escreve por cima (L-202); e o
+// verificador limpo, sem erro de módulo. Quem o caso precisa (a criança, o arbusto, a árvore, a colmeia, a praia
 // na maré baixa, o povo do mar) vem pela regra; sem um que sirva, o caso falha dizendo o que falta.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/atividades-inv.js'] });
@@ -125,53 +126,85 @@ S.weather.storm = 0;
   // hand: the case is the hands, not the walk)
   const trees = Fl ? [...S.trees.values()].filter(q => Fl.KIND[q.kind] && q.stage === 'grow' && q.fruit >= 1 && !(q.claim && S.villagers.has(q.claim))).sort((a, b) => a.id - b.id) : [];
   const beside = q => { for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) if (G.W.walkableXY(q.x + dx, q.y + dy)) return [q.x + dx + 0.5, q.y + dy + 0.5]; return null; };
-  let tr = null, v = null;
-  for (const q of trees) { const p = beside(q); if (!p) continue; v = person(16, 60, o => G.W.reaches(o, p[0], p[1]) && G.dist(o.x, o.y, p[0], p[1]) < 60); if (v) { tr = q; v.x = p[0]; v.y = p[1]; v.path = null; break; } }
-  const K = tr && Fl.KIND[tr.kind];
+  // (one the world calls away before the case ends — the cave's errand, of 1,6, took one for eighty seconds; the night put
+  // the next to bed — gives it to another, by day, at the next tree or hive, up to three: the case is the hands, not the call)
+  const calledAway = (o, own) => !!(o.task && o.task.type !== own && o.task.type !== 'deliver' && (o.task.pri || 0) > 1);
+  const away = [];
   let info = trees.length ? `nenhum adulto livre alcança as ${trees.length} árvores com fruta` : 'nenhuma árvore com fruta no mundo', fine = false;
-  if (v && tr && give(v, 'stone', 2)) {
+  for (let a = 0, i0 = 0; a < 3 && !fine; a++) {
+    S.time = 0.3;
+    let tr = null, v = null;
+    for (; i0 < trees.length && !v; i0++) { const q = trees[i0]; if (!(q.fruit >= 1) || (q.claim && S.villagers.has(q.claim))) continue; const p = beside(q); if (!p) continue; v = person(16, 60, o => G.W.reaches(o, p[0], p[1]) && G.dist(o.x, o.y, p[0], p[1]) < 60); if (v) { tr = q; v.x = p[0]; v.y = p[1]; v.path = null; } }
+    if (!v || !tr || !give(v, 'stone', 2)) break;
+    const K = Fl.KIND[tr.kind];
     tr.claim = v.id; G.Vg.setTask(v, { type: 'pick', id: tr.id, pri: 1, st: 0 });
-    const n0 = lines.length, f0 = tr.fruit;
-    const went = live(90, () => outOf(v.id, n0).some(e => e[5] === 'stone' && e[8] === 'entrega'));
+    const n0 = lines.length, f0 = tr.fruit; let cut = '';
+    const went = live(120, () => { if (calledAway(v, 'pick')) cut = v.task.type; return !!cut || outOf(v.id, n0).some(e => e[5] === 'stone' && e[8] === 'entrega'); });
+    if (cut) { away.push(`${nm(v)} chamad${v.g === 'f' ? 'a' : 'o'} para ${cut}`); continue; }
     const fr = outOf(v.id, n0).filter(e => e[5] === (K.good || 'food'));
     fine = went && tr.fruit === f0 && !fr.length;
     info = `${nm(v)} com 2 de pedra nas mãos, mandado(a) a ${K.name}: a árvore ${tr.fruit === f0 ? 'ficou com as suas frutas' : `PERDEU ${r2(f0 - tr.fruit)}`}; ${went ? 'a pedra foi ao armazém' : `a pedra NÃO foi (nas mãos: ${hands(v)})`}`;
+    break;
   }
   // (a hive with honey anywhere, and a grown-up who walks to it, brought beside it)
   const hives = (S.hives || []).filter(q => q.honey >= 1.5 && !(q.sting > 0) && !(q.claim && S.villagers.has(q.claim))).sort((a, b) => a.id - b.id);
-  let h = null, w = null;
-  for (const q of hives) { const p = beside({ x: Math.floor(q.x), y: Math.floor(q.y) }); if (!p) continue; w = person(16, 60, o => G.W.reaches(o, p[0], p[1]) && G.dist(o.x, o.y, p[0], p[1]) < 60); if (w) { h = q; w.x = p[0]; w.y = p[1]; w.path = null; break; } }
   let infoH = hives.length ? `nenhum adulto livre alcança as ${hives.length} colmeias com mel` : 'nenhuma colmeia com mel no mundo', fineH = false;
-  if (w && h && give(w, 'mel', 1)) {
+  for (let a = 0, i0 = 0; a < 3 && !fineH; a++) {
+    S.time = 0.3;
+    let h = null, w = null;
+    for (; i0 < hives.length && !w; i0++) { const q = hives[i0]; if (!(q.honey >= 1.5) || q.sting > 0 || (q.claim && S.villagers.has(q.claim))) continue; const p = beside({ x: Math.floor(q.x), y: Math.floor(q.y) }); if (!p) continue; w = person(16, 60, o => G.W.reaches(o, p[0], p[1]) && G.dist(o.x, o.y, p[0], p[1]) < 60); if (w) { h = q; w.x = p[0]; w.y = p[1]; w.path = null; } }
+    if (!w || !h || !give(w, 'mel', 1)) break;
     h.claim = w.id; G.Vg.setTask(w, { type: 'honey', id: h.id, pri: 1, st: 0 });
-    const n0 = lines.length; const h0 = h.honey; let held = null;
-    live(90, () => { if (held === null && h.honey < h0) held = w.carry && w.carry.k === 'mel' ? w.carry.n : 0; return held !== null || !S.villagers.has(w.id); });
+    const n0 = lines.length; const h0 = h.honey; let held = null, cut = '';
+    live(90, () => { if (held === null && h.honey < h0) held = w.carry && w.carry.k === 'mel' ? w.carry.n : 0; if (held === null && calledAway(w, 'honey')) cut = w.task.type; return held !== null || !!cut || !S.villagers.has(w.id); });
+    if (cut) { away.push(`${nm(w)} chamad${w.g === 'f' ? 'a' : 'o'} para ${cut}`); continue; }
     const raided = r2(h0 - h.honey); const got = held !== null ? r2(held - 1) : 0;
     const home = live(240, () => outOf(w.id, n0).some(e => e[5] === 'mel' && (e[8] === 'entrega' || e[8] === 'herdado')) || !S.villagers.has(w.id));
     const out = outOf(w.id, n0).filter(e => e[5] === 'mel');
     fineH = held !== null && got >= 1 && home && Math.abs(sum(out) - r2(held)) < 1e-6;
     infoH = `${nm(w)} com 1 de mel nas mãos, à colmeia: ${held !== null ? `tirou ${raided} da colmeia e ficou com ${r2(held)} nas mãos (1 + ${got})` : 'NÃO tirou mel'}; ${home ? `levou ${sum(out)} ao armazém` : `NÃO levou (nas mãos: ${hands(w)})`}`;
+    break;
   }
-  ok('m5 a fruta e o mel', fine && fineH && !look().length, info + ' · ' + infoH);
+  ok('m5 a fruta e o mel', fine && fineH && !look().length, info + ' · ' + infoH + (away.length ? ` (antes: ${away.join('; ')})` : ''));
 }
 // ---------------- m6: the flats at low water, the same
 {
   // (the low water of the day: the tide's own clock, at the start of its ebb)
   const frac = x => x - Math.floor(x);
-  const t0 = frac((0.36 - frac(S.day * 0.13)) / 2); S.time = t0 < 0.08 ? t0 + 0.5 : t0;
+  const ebb = () => { const t0 = frac((0.36 - frac(S.day * 0.13)) / 2); S.time = t0 < 0.08 ? t0 + 0.5 : t0; };
   const spotFor = o => G.Sea && G.Sea.lowTide() && G.Sea.shellSpot(o.x, o.y, 18);
-  const v = person(16, 60, spotFor); const sp = v && spotFor(v);
-  let info = `nenhum adulto com mariscos ao alcance na maré baixa (maré ${G.Sea ? r2(G.Sea.tide()) : '?'})`, fine = false;
-  if (v && sp && give(v, 'wood', 2)) {
+  let info = '', fine = false; const away = []; let sp0 = null;
+  // (one the world calls away from the flats before the catch — the cave's errand, of 1,3, took one for fifty seconds and
+  // the tide came back — gives the case to another, at the next ebb, on the same flats, up to three: the case is the hands,
+  // not the call)
+  for (let a = 0; a < 3 && !fine && !info; a++) {
+    ebb();
+    // (the first by id with flats in reach — or, after a call, anyone on the same flats — who can hold the two of wood)
+    let v = null, sp = null;
+    for (let g = 0; g < 6 && !v; g++) {
+      let o = person(16, 60, spotFor), q = o && spotFor(o);
+      if (!o && sp0 && G.Sea.lowTide()) { o = person(16, 60); q = o && sp0; }
+      if (!o) break;
+      if (q && give(o, 'wood', 2)) { v = o; sp = q; }
+    }
+    if (!v) { info = `nenhum adulto com mariscos ao alcance na maré baixa (maré ${G.Sea ? r2(G.Sea.tide()) : '?'})`; break; }
+    sp0 = sp0 || sp;
     // (brought to the beach by the test's hand: the ebb does not wait for a long walk)
     if (G.W.walkableXY(sp.x, sp.y)) { v.x = sp.x; v.y = sp.y; v.path = null; }
     G.Vg.setTask(v, { type: 'mariscar', x: sp.x, y: sp.y, wx: sp.wx, wy: sp.wy, rock: sp.rock, pri: 1 });
-    const n0 = lines.length; let caught = 0;
-    const went = live(120, () => { if (v.task && v.task.type === 'mariscar' && v.task.got) caught = v.task.got; return outOf(v.id, n0).some(e => e[5] === 'wood' && e[8] === 'entrega'); });
+    const n0 = lines.length; let caught = 0, cut = '';
+    const went = live(120, () => {
+      if (v.task && v.task.type === 'mariscar' && v.task.got) caught = v.task.got;
+      if (!caught && v.task && v.task.type !== 'mariscar' && v.task.type !== 'deliver' && (v.task.pri || 0) > 1) cut = v.task.type;
+      return !!cut || outOf(v.id, n0).some(e => e[5] === 'wood' && e[8] === 'entrega');
+    });
+    if (cut) { away.push(`${nm(v)} chamad${v.g === 'f' ? 'a' : 'o'} para ${cut}`); continue; }
     const food = outOf(v.id, n0).filter(e => e[5] === 'food');
     fine = went && caught > 0 && !food.length;
     info = `${nm(v)} com 2 de lenha nas mãos, na maré baixa: ${caught ? `achou ${caught} de mariscos, que ficaram na água` : 'NÃO achou mariscos'}; ${went ? 'a lenha foi ao armazém' : `a lenha NÃO foi (nas mãos: ${hands(v)})`}${food.length ? `; comida das mãos: ${sum(food)}` : ''}`;
   }
+  if (!info) info = 'ninguém ficou na praia até achar mariscos';
+  if (away.length) info += ` (antes: ${away.join('; ')} antes de achar)`;
   ok('m6 o mariscar', fine && !look().length, info);
 }
 // ---------------- m7: a save in the middle — the child on the way to the store, and the child asleep with its load —: the load gets there
@@ -208,9 +241,11 @@ S.weather.storm = 0;
     const n0 = lines.length, f = store(v), was = D.get(f, 'wood'), id = v.id, held = v.carry && v.carry.k === 'wood' ? v.carry.n : 0;
     G.Village.kill(v, 'old');
     const out = outOf(id, n0);
-    const inStore = r2(D.get(f, 'wood') - was);
-    ok('m8 a criança morre no meio', held === 2 && !S.villagers.has(id) && Math.abs(sum(out) - 2) < 1e-6 && out.every(e => e[8] === 'herdado' || e[8] === 'sem-lugar') && Math.abs(inStore - sum(out.filter(e => e[8] === 'herdado'))) < 1e-6 && !look().length,
-      `${nm(v)} morreu com ${held} de lenha nas mãos: ${out.length ? out.map(e => `${e[8]} ${e[6]} para ${e[4]}`).join(', ') : 'NENHUM lançamento — a lenha sumiu com ela'}; o estoque do povo ganhou ${inStore}`);
+    // (the store gets at least what the ledger says she left it: the same death can open a new cemetery, and the clearing of
+    // its ground puts wood in the store too, the old economy's way, with no line — in the world of the later fixes, three)
+    const inStore = r2(D.get(f, 'wood') - was); const left = sum(out.filter(e => e[8] === 'herdado'));
+    ok('m8 a criança morre no meio', held === 2 && !S.villagers.has(id) && Math.abs(sum(out) - 2) < 1e-6 && out.every(e => e[8] === 'herdado' || e[8] === 'sem-lugar') && inStore >= left - 1e-6 && !look().length,
+      `${nm(v)} morreu com ${held} de lenha nas mãos: ${out.length ? out.map(e => `${e[8]} ${e[6]} para ${e[4]}`).join(', ') : 'NENHUM lançamento — a lenha sumiu com ela'}; o estoque do povo ganhou ${inStore}${inStore > left + 1e-6 ? ` (${r2(inStore - left)} de outra coisa no mesmo instante)` : ''}`);
   }
 }
 // ---------------- m9: an expedition's crew puts the load in the store before the quay
@@ -255,6 +290,37 @@ S.weather.storm = 0;
     info = `${nm(v)} parado(a) com 2 de lenha, sem pensar: ${saw ? '«' + saw + '»' : 'o verificador NÃO viu'}; solto(a), ${went ? 'levou-a ao armazém' : `NÃO a levou (${v.task ? v.task.type : 'sem afazer'}, nas mãos: ${hands(v)})`}${calls.length ? ` (antes, o mundo chamou: ${calls.join(', ')})` : ''}`;
   }
   ok('m10 o verificador vê a carga parada', fine && !look().length, info);
+}
+// ---------------- m11: the cave's find never writes over the hands (L-202): one sent down a mine with a load in the hands —
+// the test's hand gives the shift; the world no longer sends anyone down with something in them — comes up with it: the ore
+// stays in the rock, and the load goes to its place
+{
+  S.time = 0.3;
+  const mines = [...S.buildings.values()].filter(b => b.type === 'mina' && b.built && b.ore && (S.ores || []).some(o => o.id === b.ore && o.amt >= 3)).sort((a, b) => a.id - b.id);
+  let info = mines.length ? 'nenhum adulto livre de uma cidade com mina que chegue à porta dela' : 'nenhuma mina com minério no mundo', fine = false;
+  for (const b of mines) {
+    if (!G.Caves || !G.Caves.mineShift) { info = 'o mundo não tem cavernas'; break; }
+    const o = S.ores.find(q => q.id === b.ore); const door = G.Vg.door(b);
+    const v = person(16, 60, q => q.set === b.set && G.W.reaches(q, door[0], door[1]));
+    if (!v || !give(v, 'wood', 2)) continue;
+    v.x = door[0]; v.y = door[1]; v.path = null;
+    const amt0 = o.amt, n0 = lines.length;
+    if (!G.Caves.mineShift(v, b, o)) { info = `${nm(v)}: a mina #${b.id} não deu um turno`; continue; }
+    // (what she dug, read in the errand, and the deposit at the step she came up: it gets back what she dug — the mine's other
+    // miners dig from it meanwhile, and in a newer world they took 2 while the case lived)
+    let up = false, held = '', dug = 0, before = o.amt, back = 0;
+    const done = live(150, () => {
+      if (!up && v.task && v.task.type === 'caverna' && v.task.carry) dug = v.task.carry.n;
+      if (!up && !(v.task && v.task.type === 'caverna')) { up = true; held = hands(v); back = r2(o.amt - before); }
+      before = o.amt;
+      return up && outOf(v.id, n0).some(e => e[5] === 'wood' && e[8] === 'entrega');
+    });
+    const wood = outOf(v.id, n0).filter(e => e[5] === 'wood');
+    fine = up && held === '2 de wood' && done && Math.abs(sum(wood) - 2) < 1e-6 && dug > 0 && back >= dug - 1e-6;
+    info = `${nm(v)} desceu à mina #${b.id} com 2 de lenha nas mãos${dug ? ` e cavou ${dug} de minério` : ', e NÃO cavou'}: ${up ? `subiu com ${held}` : 'NÃO subiu'}; ${done ? `a lenha foi ao armazém (${wood.map(e => e[8] + ' ' + e[6]).join(', ')})` : `a lenha NÃO foi (no livro: ${wood.map(e => e[8] + ' ' + e[6]).join(', ') || 'nada'}; nas mãos: ${hands(v)})`}; o veio ${back >= dug - 1e-6 && dug ? `recebeu de volta os ${dug} na saída` : `NÃO recebeu de volta (${back} na saída)`} (no caso todo, ${r2(o.amt - amt0)})`;
+    break;
+  }
+  ok('m11 a caverna não escreve por cima das mãos', fine && !look().length, info);
 }
 
 const e = M.erros();
