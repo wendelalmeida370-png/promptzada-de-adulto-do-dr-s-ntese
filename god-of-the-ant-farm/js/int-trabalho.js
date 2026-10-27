@@ -352,7 +352,17 @@
   // a trade: its work stations (the ones the trade employs: it is not built without them), what keeps its goods, its tools
   function tradeFurnish(P, stations, keeps, tools, hot) {
     const rooms = P._rooms; const ids = mix(P, roomsFor(rooms)); const work = mix(P, [rooms.lean, rooms.court, rooms.main, ...rooms.cells, rooms.front].filter(x => x !== undefined && x !== null));
-    const st = () => { for (const [k, n] of stations) { let got = 0; for (const id of work) { let g = 0; while (got < n && g++ < 6) { if (!P.place(k, lvOf(P, id), id)) break; got++; } if (got >= n) break; } if (got < n) P.errs.push(`sem lugar para ${In.ITEMS[k].name.toLowerCase()}`); } };
+    // (the last resort, once every attempt of the recipe left a station out — the round In.plan makes only then: L-182. A
+    // tall station goes against a wall and never before a window, and on some lots the shell's windows leave the outer
+    // walls too short for it — a loom of 1.3 m beside two windows, the hall kept clear by the arches —: what did not go in
+    // on the ground goes up to the gallery, against its walls, and then stands free in a room of the ground)
+    const lastResort = (k, m) => {
+      let got = 0;
+      for (const id of (rooms.up || []).filter(i => P.rooms[i].fn === 'galeria')) { let g = 0; while (got < m && g++ < 6) { if (!P.place(k, lvOf(P, id), id)) break; got++; } }
+      for (const id of work) { if (lvOf(P, id) !== 0) continue; let g = 0; while (got < m && g++ < 6) { if (!P.place(k, 0, id, { sides: ['livre'] })) break; got++; } }
+      return got;
+    };
+    const st = () => { for (const [k, n] of stations) { let got = 0; for (const id of work) { let g = 0; while (got < n && g++ < 6) { if (!P.place(k, lvOf(P, id), id)) break; got++; } if (got >= n) break; } if (got < n && P.last) got += lastResort(k, n - got); if (got < n) { P.lack = 1; P.errs.push(`sem lugar para ${In.ITEMS[k].name.toLowerCase()}`); } } };
     const hotOnes = () => { for (const k of hot || []) { let ok = false; for (const id of work) { if (P.place(k, lvOf(P, id), id)) { ok = true; break; } } if (!ok) P.errs.push(`sem lugar para ${In.ITEMS[k].name.toLowerCase()}`); } };
     const keep = () => { let ok = false; for (const k of keeps) for (const id of ids) { if (ok) break; if (P.place(k, lvOf(P, id), id)) ok = true; } if (!ok) P.errs.push('sem lugar para guardar o que se faz'); };
     const order = [[hotOnes, st, keep], [st, hotOnes, keep], [keep, hotOnes, st]][P.attempt % 3]; for (const f of order) f();
