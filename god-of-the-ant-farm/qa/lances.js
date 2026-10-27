@@ -26,7 +26,14 @@
 //   9. a porta da frente dos prédios de trabalho (L-209): todos com ela diante de um chão que se anda (ou sem lado onde
 //      caiba), e a porta das pessoas é a da planta; e um muro diante da casa da porta, outra casa do lado aberta: a virada a
 //      leva a um chão que se anda;
+//  11. a porta diante de um bolsão (L-216): o primeiro lado aberto dá para uma casa fechada em volta — a cabana de
+//      Tenochtitlan cuja família morreu de fome a dois passos do armazém —: a fundação põe a porta no primeiro lado que dá
+//      para a rua; a rua de uma porta fechada num bolsão: até a virada o passo não a usa, um save no meio, alguém dentro, e
+//      a virada a leva à rua, por onde ele sai; o verificador vê uma virada que a deixou no bolsão, e uma porta num bolsão há
+//      dois dias; e um registro de antes (v 2) com a porta no bolsão e a família presa nele (o save de antes guardava quem
+//      estava dentro na porta de então), julgado ao abrir: a porta vai à rua, e a família sai por ela;
 //  10. salvar e carregar: os mesmos lados e as mesmas portas, e a virada seguinte não muda nada.
+// (os casos 8b e 8d, num mundo sem um lance de lado que sirva, fazem o seu: um armazém num lote inclinado pelo deus, T-117)
 // O verificador limpo, nenhum erro de módulo.
 //   node qa/lances.js [mundo]
 const M = require('./nodemundo.js');
@@ -63,6 +70,37 @@ function ground(set, walls) {
 const unground = back => { ground(back.H, []); sim(() => { for (const [i, w] of back.walls) G.S.wall[i] = w; W.touchWalk(); }); };
 const unwall = list => sim(() => { for (const i of list) G.S.wall[i] = 0; W.touchWalk(); });
 M.pronto(KEY); In.uncache();
+// (free lots of n by n tiles anywhere on the map, the nearest to the main town first, apart: the lot and the ring round it
+// ground one walks with nothing on it — no building, wall, cliff, tree or stone —, the second ring with no building nor wall
+// on it — the god's hand moves the vertices of the first and walls tiles of the second; the water or a cliff may be there, as
+// on a small island —; with the height of the highest vertex of the lot and its ring)
+function freeLots(n, max, also) {
+  const S = G.S, N = G.N; const vH = (vx, vy) => S.H[vy * V1() + vx]; const set0 = G.Village.mainSettlement(); const cx = set0 ? set0.cx : N / 2, cy = set0 ? set0.cy : N / 2; const cands = [];
+  for (let y = 3; y + n + 3 < N; y++) for (let x = 3; x + n + 3 < N; x++) { let good = true;
+    for (let ty = y - 2; ty <= y + n + 1 && good; ty++) for (let tx = x - 2; tx <= x + n + 1; tx++) { const i = ty * N + tx; const ring = Math.max(tx < x ? x - tx : tx >= x + n ? tx - x - n + 1 : 0, ty < y ? y - ty : ty >= y + n ? ty - y - n + 1 : 0);
+      if (S.occ[i] || S.wall[i] || (ring <= 1 && (S.type[i] < T.SAND || S.cliff[i] || !W.walkable(i) || S.treeAt[i] || S.objAt[i]))) { good = false; break; } }
+    if (good && (!also || also({ x, y }))) cands.push({ x, y, d: Math.hypot(x - cx, y - cy) }); }
+  cands.sort((p, q) => p.d - q.d || p.y - q.y || p.x - q.x); const out = [];
+  for (const { x, y } of cands) { if (out.length >= max) break; if (out.some(l => Math.abs(l.x - x) < n + 5 && Math.abs(l.y - y) < n + 5)) continue; let hi = -1e9; for (let vy = y - 1; vy <= y + n + 1; vy++) for (let vx = x - 1; vx <= x + n + 1; vx++) hi = Math.max(hi, vH(vx, vy)); out.push({ x, y, base: hi, set: (G.Village.nearestSettlement(x, y) || set0 || {}).id }); }
+  return out;
+}
+// (a world with no free lot that serves — small islands taken by their towns —: the god raises land from the sea by the game's
+// own power, G.Powers.reshape, in the open water nearest the main town, and lays its middle flat; twice at most)
+const raised = [];
+function newLand() {
+  if (raised.length >= 2) return false; const S = G.S, N = G.N; const set0 = G.Village.mainSettlement(); const cx = set0 ? set0.cx : N / 2, cy = set0 ? set0.cy : N / 2;
+  let best = null, bd = 1e9;
+  for (let y = 10; y < N - 10; y++) for (let x = 10; x < N - 10; x++) { const d = Math.hypot(x - cx, y - cy); if (d >= bd) continue; let all = true;
+    for (let ty = y - 7; ty <= y + 7 && all; ty++) for (let tx = x - 7; tx <= x + 7; tx++) { const i = ty * N + tx; if (S.type[i] > T.SEA || S.occ[i]) { all = false; break; } }
+    if (all) { best = [x, y]; bd = d; } }
+  if (!best) return false;
+  sim(() => G.Powers.reshape(best[0] + 0.5, best[1] + 0.5, 5.5, +1, { peak: 0.6, hill: 0 }));
+  let hi = -1e9; const set = []; for (let vy = best[1] - 3; vy <= best[1] + 4; vy++) for (let vx = best[0] - 3; vx <= best[0] + 4; vx++) hi = Math.max(hi, S.H[vy * V1() + vx]);
+  for (let vy = best[1] - 3; vy <= best[1] + 4; vy++) for (let vx = best[0] - 3; vx <= best[0] + 4; vx++) set.push([vx, vy, hi]);
+  ground(set, []); raised.push([best[0], best[1]]);
+  return true;
+}
+const landNote = () => (raised.length ? ` (no chão que o deus ergueu do mar em ${raised[raised.length - 1].join(',')}: este mundo não tinha lote livre que servisse)` : '');
 
 // ---- 1. the world as it opens: after the turn of the day, every way in fits, or fits on no side open ----
 {
@@ -296,23 +334,43 @@ let taken = null, atWork = null;
     ok('o chão que volta deixa a porta onde está', sameRec(recOf(c2), r1) && e3.ok, `a casa nova desfeita: a porta de ${c2.type}#${id} fica em ${c2.ip.s}/${c2.ip.o}, onde cabe (${e3.kind}); no lado ${r0.s} ${(In.entryOn(c2, r0.s) || {}).ok ? 'caberia de novo' : 'ainda não caberia'}`);
     taken = { id, s: c2.ip.s, o: c2.ip.o };
   }
+  // (a world with no side flight that serves a case — a young town on flat ground —: the case makes its own, by the god's hand —
+  // a free lot of two by two by the main town tilted down to the street before it, a store founded on it, whose floor stands
+  // over the street higher than its lot gives steps room for: they go down along its wall; the ground and the building left
+  // as they are if it serves, put back if not — T-117)
+  const flightOf = c => { const sh = In.shellOf(c); const en = sh.entrance; const h = sh.holes.find(q => q.door === en.door && q.kind !== 'janela'); const w = sh.walls[h.wall]; const l = sh.levels.find(q => q.lv === w.lv);
+    return Sp.doorFlight(c, sh.shell, { w: c.w * TL, d: c.h * TL }, w, h, l ? l.y : 0, false, undefined, undefined, true); };
+  let lots2 = null; const made = [];
+  const lotsOf2 = () => (lots2 || (lots2 = freeLots(2, 12)));
+  const why = {}; const no = k => { why[k] = (why[k] || 0) + 1; return null; };
+  const whyNot = () => `${lotsOf2().length} lotes livres de dois por dois; ${Object.entries(why).map(([k, n]) => `${n} ${k}`).join(', ') || 'nenhum feito'}`;
+  const makeSide = serves => {
+    const r = makeSideOn(serves); if (r || !newLand()) return r; lots2 = null; const r2 = makeSideOn(serves); if (r2) r2.made += landNote(); return r2; };
+  const makeSideOn = serves => {
+    let n = 0;
+    for (const L of lotsOf2()) { if (L.used) continue; for (const dh of [0.4, 0.6, 0.3, 0.8]) {
+      // (its back at base + dh, falling to its front at base, the street round it at base)
+      const set = []; for (let vy = L.y - 1; vy <= L.y + 3; vy++) for (let vx = L.x - 1; vx <= L.x + 3; vx++) { const inLot = vx >= L.x && vx <= L.x + 2 && vy >= L.y && vy <= L.y + 2; set.push([vx, vy, inLot ? L.base + dh * (L.y + 2 - vy) / 2 : L.base]); }
+      const back = ground(set, []); const c = sim(() => G.Village.addBuilding('storehouse', L.x, L.y, L.set, true)); n++;
+      const e = entry(c); const r = e.ok && e.kind === 'lado' ? serves(c) : no(`com a entrada ${e.ok ? e.kind : 'que não cabe'}`);
+      if (r) { L.used = 1; made.push(c.id); r.made = ` (feito pelo deus neste mundo, que não tinha um que servisse: ${c.type}#${c.id} num lote inclinado ${dh} em ${L.x},${L.y})`; return r; }
+      sim(() => G.Village.removeBuilding(c)); unground(back); if (n >= 24) return null; } }
+    return null; };
   // 8b. a tread of a side flight over ground the world does not walk (a wall where its foot runs along the street): the feet
   // could not stand on it — the way in does not fit (Space.entryFits: stand), and the turn moves the door
-  let C = null, triedC = 0;
-  for (const c of ready()) {
-    if (!c.blocks || triedC >= 200) continue; const e = entry(c); if (!e.ok || e.kind !== 'lado') continue;
-    const sh = In.shellOf(c); const en = sh.entrance; const h = sh.holes.find(q => q.door === en.door && q.kind !== 'janela'); const w = sh.walls[h.wall]; const l = sh.levels.find(q => q.lv === w.lv);
-    const fl = Sp.doorFlight(c, sh.shell, { w: c.w * TL, d: c.h * TL }, w, h, l ? l.y : 0, false, undefined, undefined, true);
-    const lowS = fl.treads.filter(t => t.kind === 'side').sort((p, q) => p.y - q.y)[0]; if (!lowS) continue;
-    const q = fl.P(lowS.a, lowS.n); const i = W.idx(c.x + q[0] / TL, c.y + q[1] / TL); if (G.S.occ[i] === c.id || !W.walkable(i)) continue;
-    const d = outOf(c); if (d && W.idx(d[0], d[1]) === i) continue; // (not the tile before the door itself: there it is the street taken, 8a)
+  const serves8b = c => {
+    const fl = flightOf(c); const lowS = fl.treads.filter(t => t.kind === 'side').sort((p, q) => p.y - q.y)[0]; if (!lowS) return no('sem degrau de lado');
+    const q = fl.P(lowS.a, lowS.n); const i = W.idx(c.x + q[0] / TL, c.y + q[1] / TL); if (G.S.occ[i] === c.id) return no('com o degrau de baixo no lote'); if (!W.walkable(i)) return no('com o degrau de baixo num chão que não se anda');
+    const d = outOf(c); if (d && W.idx(d[0], d[1]) === i) return no('com o degrau de baixo na casa da porta'); // (not the tile before the door itself: there it is the street taken, 8a)
     triedC++; ground([], [i]); const e2 = entry(c);
-    if (!e2.ok && !e2.stand && In.fitSide(c)) { C = { c, i, e2 }; break; } unwall([i]);
-  }
-  if (!C) ok('o degrau sobre chão que não se anda', false, `nenhum prédio deste mundo com um lance de lado cujo degrau de baixo caia fora do lote e da casa da porta (${triedC} tentados)`);
+    if (!e2.ok && !e2.stand && In.fitSide(c)) return { c, i, e2, made: '' }; unwall([i]); return no(e2.ok || e2.stand ? 'que o muro não tirou' : 'sem outro lado onde caiba'); };
+  let C = null, triedC = 0;
+  for (const c of ready()) { if (!c.blocks || triedC >= 200) continue; const e = entry(c); if (!e.ok || e.kind !== 'lado') continue; C = serves8b(c); if (C) break; }
+  if (!C) C = makeSide(serves8b);
+  if (!C) ok('o degrau sobre chão que não se anda', false, `nenhum prédio deste mundo com um lance de lado cujo degrau de baixo caia fora do lote e da casa da porta (${triedC} tentados), e nenhum que o deus fizesse servir (${whyNot()})`);
   else {
     const { c, i, e2 } = C; const r0 = recOf(c); const bad = heardBad(); turn(); const e3 = entry(c);
-    ok('o degrau sobre chão que não se anda', !bad.length && !sameRec(recOf(c), r0) && e3.ok, `${c.type}#${c.id}: um muro sob o degrau de baixo do lance de lado — a entrada não cabe (${e2.kind}, os pés não pisam em todos), o verificador ${bad.length ? 'QUEIXOU: ' + bad[0].msg : 'calado'}; na virada, a porta vai de ${r0.s}/${r0.o} a ${c.ip.s}/${c.ip.o}, onde cabe (${e3.kind})`);
+    ok('o degrau sobre chão que não se anda', !bad.length && !sameRec(recOf(c), r0) && e3.ok, `${c.type}#${c.id}: um muro sob o degrau de baixo do lance de lado — a entrada não cabe (${e2.kind}, os pés não pisam em todos), o verificador ${bad.length ? 'QUEIXOU: ' + bad[0].msg : 'calado'}; na virada, a porta vai de ${r0.s}/${r0.o} a ${c.ip.s}/${c.ip.o}, onde cabe (${e3.kind})${C.made}`);
     unwall([i]);
   }
   // 8c. a building at work whose street is taken before it is done: the founding beside it and the turn of the day pass it by
@@ -347,24 +405,22 @@ let taken = null, atWork = null;
   // the quartel#4882's of the new metropolis (L-208): the feet would not stand there — the way in does not fit (Space.entryFits:
   // stand) —, and the turn moves the door to a side where it fits; the cliff gone, the door stays (D-060)
   const cliff = (list, on) => sim(() => { for (const i of list) G.S.cliff[i] = on ? 1 : 0; G.S.typeVer = (G.S.typeVer || 0) + 1; W.invalidateLand(); W.touchWalk(); });
-  let E = null, triedE = 0;
-  for (const c of ready()) {
-    if (!c.blocks || triedE >= 200) continue; const e = entry(c); if (!e.ok || e.kind !== 'lado') continue;
-    const sh = In.shellOf(c); const en = sh.entrance; const h = sh.holes.find(q => q.door === en.door && q.kind !== 'janela'); const w = sh.walls[h.wall]; const l = sh.levels.find(q => q.lv === w.lv);
-    const fl = Sp.doorFlight(c, sh.shell, { w: c.w * TL, d: c.h * TL }, w, h, l ? l.y : 0, false, undefined, undefined, true);
-    const L = fl.treads.find(t => t.kind === 'landing'); if (!L) continue;
-    const q = fl.P(0, L.n); const i = W.idx(c.x + q[0] / TL, c.y + q[1] / TL); if (G.S.occ[i] === c.id || !W.walkable(i)) continue;
+  const serves8d = c => {
+    const fl = flightOf(c); const L = fl.treads.find(t => t.kind === 'landing'); if (!L) return no('sem patamar');
+    const q = fl.P(0, L.n); const i = W.idx(c.x + q[0] / TL, c.y + q[1] / TL); if (G.S.occ[i] === c.id) return no('com o patamar no lote'); if (!W.walkable(i)) return no('com o patamar num chão que não se anda');
     // (the ground a stride before the lowest of its steps on another tile, open: only the landing over the cliff — the
     // quartel's way: its steps down onto the open tile of its street, the landing before the closed one)
-    const lo = fl.treads.reduce((a, t) => (t.y < a.y ? t : a)); const g = fl.P(lo.a, lo.n + lo.wn / 2 + 0.5); const gi = W.idx(c.x + g[0] / TL, c.y + g[1] / TL); if (gi === i) continue;
+    const lo = fl.treads.reduce((a, t) => (t.y < a.y ? t : a)); const g = fl.P(lo.a, lo.n + lo.wn / 2 + 0.5); const gi = W.idx(c.x + g[0] / TL, c.y + g[1] / TL); if (gi === i) return no('com o pé dos degraus na casa do patamar');
     triedE++; cliff([i], true); const other = SIDES.some(s => s !== c.ip.s && (In.entryOn(c, s) || {}).ok);
-    if (other) { E = { c, i }; break; } cliff([i], false);
-  }
-  if (!E) ok('o patamar sobre um penhasco', false, `nenhum prédio deste mundo com um patamar fora do lote e outro lado onde a entrada caiba (${triedE} tentados)`);
+    if (other) return { c, i, made: '' }; cliff([i], false); return no('sem outro lado onde caiba'); };
+  let E = null, triedE = 0;
+  for (const c of ready()) { if (!c.blocks || triedE >= 200) continue; const e = entry(c); if (!e.ok || e.kind !== 'lado') continue; E = serves8d(c); if (E) break; }
+  if (!E) E = makeSide(serves8d);
+  if (!E) ok('o patamar sobre um penhasco', false, `nenhum prédio deste mundo com um patamar fora do lote e outro lado onde a entrada caiba (${triedE} tentados), e nenhum que o deus fizesse servir (${whyNot()})`);
   else {
     const { c, i } = E; const r0 = recOf(c); const e2 = entry(c); turn(); const e3 = entry(c); const r1 = recOf(c); cliff([i], false); turn();
     ok('o patamar sobre um penhasco', !e2.ok && !e2.stand && !sameRec(r1, r0) && e3.ok && sameRec(recOf(c), r1),
-      `${c.type}#${c.id}: um penhasco sob o meio do patamar — a entrada ${e2.ok ? 'CABE' : 'não cabe'} (${e2.kind}, os pés ${e2.stand ? 'PISAM em todos' : 'não pisam em todos'}); na virada, a porta vai de ${r0.s}/${r0.o} a ${r1.s}/${r1.o}${e3.ok ? ', onde cabe' : ', onde NÃO cabe'} (${e3.kind}); sem o penhasco, ${sameRec(recOf(c), r1) ? 'fica onde está' : 'MUDOU de novo'}`);
+      `${c.type}#${c.id}: um penhasco sob o meio do patamar — a entrada ${e2.ok ? 'CABE' : 'não cabe'} (${e2.kind}, os pés ${e2.stand ? 'PISAM em todos' : 'não pisam em todos'}); na virada, a porta vai de ${r0.s}/${r0.o} a ${r1.s}/${r1.o}${e3.ok ? ', onde cabe' : ', onde NÃO cabe'} (${e3.kind}); sem o penhasco, ${sameRec(recOf(c), r1) ? 'fica onde está' : 'MUDOU de novo'}${E.made}`);
   }
 }
 qa('a rua tomada');
@@ -402,6 +458,93 @@ let slid = null;
 }
 qa('as portas de trabalho');
 
+// ---- 11. a door onto a pocket (L-216): the street before a side shut in round a single tile — the hut of Tenochtitlan whose
+// first side open faced a tile between three cliffs, its family starved two steps from the store —: the founding takes the
+// first side onto the street, the turn takes a door whose street closed round it into a pocket to another (a save in the
+// middle, someone inside who comes out on the street), the checker sees a turn that left one there, and a record of before
+// (v 2), its family shut in the pocket, is judged on loading ----
+let pocketDoor = null;
+{
+  const S = G.S, N = G.N; const at = (x, y) => y * N + x;
+  const outOf = c => { const sh = In.shellOf(c); const e = sh && sh.entrance; return e && e.out ? [c.x + e.out[0] / Sp.TILE, c.y + e.out[1] / Sp.TILE] : null; };
+  const size = () => { const L = W.reachIds(true); const m = new Map(); for (let i = 0; i < L.length; i++) if (L[i] >= 0) m.set(L[i], (m.get(L[i]) || 0) + 1); return p => (p && W.walkableXY(p[0], p[1]) ? m.get(L[W.idx(p[0], p[1])]) || 0 : -1); };
+  const pocketBad = () => QA.check().filter(q => q.sys === 'int' && /bolsão/.test(q.msg));
+  // (a lot of one tile with two rings of ground one walks round it, nothing on them: the god walls three tiles round the tile
+  // before its south side — S, the first side open, a pocket of one tile; the others on the street)
+  // (the lot: its other three sides on one street, a dozen tiles at least, and the second ring round it ground one walks — the
+  // walls the case lays there leave a way round its corners to the street; on a small island, the first lot where they are)
+  const ring2 = c => { for (let ty = c.y - 2; ty <= c.y + 2; ty++) for (let tx = c.x - 2; tx <= c.x + 2; tx++) if (!W.walkable(at(tx, ty))) return false; return true; };
+  let L = null, b = null, tried = 0;
+  for (let pass = 0; pass < 2 && !L; pass++) { if (pass && !newLand()) break; tried = 0; for (const c of freeLots(1, 40, ring2)) {
+    if (tried >= 16) break; tried++; const { x, y } = c; const wS = [at(x - 1, y + 1), at(x + 1, y + 1), at(x, y + 2)].filter(i => W.walkable(i)); const back = ground([], wS);
+    const h = sim(() => G.Village.addBuilding('house', x, y, c.set, true)); const L0 = W.reachIds(true); const sz = size();
+    const reg = p => L0[W.idx(p[0], p[1])]; const E = [x + 1.4, y + 0.5], Wt = [x - 0.4, y + 0.5], Nt = [x + 0.5, y - 0.4];
+    if (sz([x + 0.5, y + 1.4]) === 1 && [E, Wt, Nt].every(p => sz(p) >= 12) && reg(E) === reg(Wt) && reg(Wt) === reg(Nt)) { L = c; b = h; L.note = pass ? landNote() : ''; break; }
+    sim(() => G.Village.removeBuilding(h)); unground(back);
+  } }
+  if (!L) ok('a fundação diante de um bolsão', false, `nenhum lote livre de uma casa com os outros três lados numa rua, neste mundo (${tried} tentados)`);
+  else {
+    const { x, y } = L; const sTile = [x + 0.5, y + 1.4];
+    // 11a. the founding: the door on the first side onto the street, never the pocket's (the house on the lot closes it)
+    const first = SIDES.find(s => (In.entryOn(b, s) || {}).ok);
+    const sz1 = size(); const pd = sim(() => In.planDoor(b)); const od = outOf(b);
+    ok('a fundação diante de um bolsão', b.ip.s !== 'S' && b.ip.s === first && !!pd && near(pd, od) && sz1(od) >= 12 && W.walkableXY(sTile[0], sTile[1]) && sz1(sTile) === 1 && In.entrySaid(b) === true && !pocketBad().length,
+      `house#${b.id} em ${x},${y}: o sul, o primeiro lado aberto, dá para uma casa que se anda (${f2(sTile)}) fechada pelos três muros e pela casa — um bolsão de ${sz1(sTile)} casa —; a porta nasce em ${b.ip.s}/${b.ip.o}, o primeiro lado para a rua onde a entrada cabe (${first || '-'}), diante de um chão de ${sz1(od)} casas; quem sai sai em ${f2(pd)}${L.note}`);
+    // 11b. the street before the door closed round it into a pocket — walls on the tiles beside the one it opens onto, the other
+    // sides on the street —: until the turn the step does not take that door (the first old corner on the street meanwhile), a
+    // save in the middle, someone inside at the turn, which moves the door; who was inside comes out on the street
+    const s0 = b.ip.s, r0 = recOf(b); const oi = W.idx(od[0], od[1]); const ox = oi % N, oy = (oi / N) | 0;
+    const wE = [at(ox - 1, oy), at(ox + 1, oy), at(ox, oy - 1), at(ox, oy + 1)].filter(i => i !== oi && S.occ[i] !== b.id && W.walkable(i)); ground([], wE);
+    const sz2 = size(); const pocket = sz2(od); const bad0 = pocketBad(); const inStep = sim(() => In.planDoor(b)); const exitV = sim(() => G.Vg.door(b));
+    ok('a rua da porta fechada num bolsão', pocket >= 1 && pocket <= 2 && !!inStep && !near(inStep, od) && near(exitV, inStep) && sz2(inStep) >= 12 && !bad0.length, `house#${b.id}: ${wE.length} muros em volta da casa diante da porta (${s0}) — um bolsão de ${pocket} casa(s); no passo, até a virada, quem sai sai em ${f2(exitV)}, ${inStep && near(inStep, od) ? 'A PORTA DO BOLSÃO' : 'um canto de antes num chão de ' + sz2(inStep) + ' casas'}; o verificador antes da virada ${bad0.length ? 'QUEIXOU: ' + bad0[0].msg : 'calado (a palavra da virada era para o chão de antes)'}`);
+    const id = b.id; M.salvarCarregar(); In.uncache(); let b2 = G.S.buildings.get(id);
+    const free16 = v => !v.jail && !v.aboard && !v.captive && v.age >= 16 && !(G.S.avatar && G.S.avatar.id === v.id) && !v.inside;
+    const v = [...G.S.villagers.values()].find(q => free16(q) && q.set === b2.set);
+    ok('o bolsão: salvar e carregar no meio', !!b2 && sameRec(recOf(b2), r0) && wE.every(i => G.S.wall[i] === 1) && size()(od) === pocket, `o registro ${b2 ? b2.ip.s + '/' + b2.ip.o : '-'} e os muros como estavam, o bolsão ainda de ${size()(od)}`);
+    if (v) sim(() => { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'idle', wait: 5, pri: 0.3 }); v.inside = id; });
+    turn(); const ref = b2.ip.h[b2.ip.h.length - 1]; const pd2 = sim(() => In.planDoor(b2)); const od2 = outOf(b2); const sz3 = size();
+    ok('a virada tira a porta do bolsão', b2.ip.s !== s0 && b2.ip.r === r0.r + 1 && ref[1] === 'reforma' && /^porta /.test(ref[2] || '') && !!pd2 && near(pd2, od2) && sz3(od2) >= 12 && In.entrySaid(b2) === true && !pocketBad().length,
+      `o lado ${s0} → ${b2.ip.s}/${b2.ip.o}, o fato ${JSON.stringify(ref)}; a porta nova diante de um chão de ${sz3(od2)} casas; o verificador ${pocketBad().length ? 'QUEIXOU: ' + pocketBad()[0].msg : 'calado'}`);
+    if (v) sim(() => G.Vg.endTask(v));
+    ok('quem estava dentro sai na rua', !!v && !v.inside && near([v.x, v.y], pd2) && sz3([v.x, v.y]) >= 12, v ? `${v.name} saiu em ${f2([v.x, v.y])}, num chão de ${sz3([v.x, v.y])} casas` : 'ninguém dentro');
+    // 11c. the checker sees a turn that left a door before a pocket: the step's map swapped for one where all ground is one
+    // (a turn that does not see pockets) — the door left there, and the word said with this ground —; then the real turn
+    const s1 = b2.ip.s; const oi2 = W.idx(od2[0], od2[1]); const qx = oi2 % N, qy = (oi2 / N) | 0;
+    const wW = [at(qx - 1, qy), at(qx + 1, qy), at(qx, qy - 1), at(qx, qy + 1)].filter(i => i !== oi2 && S.occ[i] !== b2.id && W.walkable(i)); ground([], wW);
+    const real = W.reachIds; const one = new Int32Array(N * N).fill(-1); for (let i = 0; i < N * N; i++) if (W.walkable(i)) one[i] = 0;
+    let bad1 = [];
+    try { W.reachIds = peek => (peek ? real(true) : one); W.reachBuilds++; turn(); } finally { W.reachIds = real; W.reachBuilds++; }
+    bad1 = pocketBad(); const left = b2.ip.s === s1;
+    turn(); const bad2 = pocketBad(); const od3 = outOf(b2);
+    ok('o verificador vê a porta deixada num bolsão', left && bad1.length > 0 && b2.ip.s !== s1 && !bad2.length && size()(od3) >= 12, `com o mapa trocado, a virada deixou a porta em ${s1}: ${bad1.length} queixa(s) (${bad1.slice(0, 1).map(q => q.msg).join('')}); com o mapa de volta, a virada a leva a ${b2.ip.s}, e o verificador ${bad2.length ? 'AINDA QUEIXA' : 'cala'}`);
+    // 11d. the checker sees a door before a pocket two days on, whatever the step said: the ground changed again (the word
+    // is for another ground), the days go by without a turn of the interiors (the street of the side before it given back,
+    // so that one side is on the street)
+    unwall(wW);
+    const s2 = b2.ip.s; const oi3 = W.idx(od3[0], od3[1]); const zx = oi3 % N, zy = (oi3 / N) | 0;
+    const wN = [at(zx - 1, zy), at(zx + 1, zy), at(zx, zy - 1), at(zx, zy + 1)].filter(i => i !== oi3 && S.occ[i] !== b2.id && W.walkable(i)); ground([], wN);
+    const day = G.S.day; const n0 = pocketBad().length; G.S.day = day + 2; const n2 = pocketBad(); G.S.day = day;
+    turn(); const n3 = pocketBad().length;
+    ok('o verificador vê a porta num bolsão há dois dias', !n0 && n2.length > 0 && /desde o dia/.test(n2[0].msg) && !n3, `um bolsão novo diante da porta (${s2}): no mesmo dia, ${n0} queixas; dois dias depois sem virada, ${n2.length} (${n2.slice(0, 1).map(q => q.msg).join('')}); depois da virada (a porta em ${b2.ip.s}), ${n3}`);
+    // 11e. a record of before (v 2), its door before a pocket in the save, and the family already shut in there — the save of
+    // before kept those who were inside at the door of then, in the pocket —: judged on loading, the door on the street from
+    // the first frame, the record of this version, the family out at the new door, the checker calm
+    const before = b2.ip.s; const str = G.Save.serialize(); const o = JSON.parse(str); const ob = (o.buildings || []).find(q => q.id === id);
+    const fam = (o.villagers || []).filter(q => !q.jail && !q.aboard && !q.captive && !q.ug && q.age >= 2 && q.set === ob.set && !(o.avatar && o.avatar.id === q.id)).slice(0, 3);
+    let migr = null;
+    if (ob && ob.ip && fam.length) {
+      ob.ip.v = 2; ob.ip.s = s2; ob.ip.o = 1; for (const q of fam) { q.x = od3[0]; q.y = od3[1]; q.home = id; q.inside = 0; }
+      const shut0 = size()(od3); G.Save.apply(o); In.uncache(); const b3 = G.S.buildings.get(id); const od4 = b3 && outOf(b3); const fact = b3 && b3.ip.h[b3.ip.h.length - 1];
+      const out = fam.map(q => G.S.villagers.get(q.id)).filter(Boolean); const vd = b3 && sim(() => G.Vg.door(b3)); const sz4 = size();
+      const free = out.length === fam.length && out.every(v => near([v.x, v.y], vd) && sz4([v.x, v.y]) >= 12);
+      migr = { ok: !!b3 && b3.ip.v === 3 && b3.ip.s !== s2 && !!fact && fact[1] === 'reforma' && sz4(od4) >= 12 && In.entrySaid(b3) === true && free && !pocketBad().length,
+        info: `o registro v 2 com a porta em ${s2}/1, diante do bolsão de ${shut0} casa(s), e ${fam.length} da família nele (${fam.map(q => q.name).join(', ')}): ao abrir, v ${b3 ? b3.ip.v : '-'}, a porta em ${b3 ? b3.ip.s + '/' + b3.ip.o : '-'} (o fato ${JSON.stringify(fact)}), diante de um chão de ${sz4(od4)} casas; a família ${free ? 'na porta nova, nesse chão' : 'AINDA NO BOLSÃO: ' + out.map(v => f2([v.x, v.y]) + ' num chão de ' + sz4([v.x, v.y])).join(' · ')}; antes de salvar, ${before}` }; }
+    ok('o registro de antes julgado ao abrir', !!migr && migr.ok, migr ? migr.info : 'o save sem o prédio, o registro ou gente da cidade');
+    pocketDoor = { id };
+  }
+}
+qa('o bolsão');
+
 // ---- 10. save and load: the same sides and the same doors, and the next turn changes nothing ----
 {
   const snap = () => { const m = new Map(); for (const b of ready()) m.set(b.id, JSON.stringify([b.ip.s, b.ip.o, b.ip.r, b.blocks ? sim(() => G.Vg.door(b)) : null])); return m; };
@@ -409,7 +552,7 @@ qa('as portas de trabalho');
   for (const [id, s] of a) { if (c.get(id) !== s) { diff++; if (ex.length < 2) ex.push(`#${id}: ${s} ≠ ${c.get(id)}`); } if (d.get(id) !== c.get(id)) { diffT++; if (ex.length < 2) ex.push(`#${id} na virada: ${c.get(id)} → ${d.get(id)}`); } }
   // (the doors the cases moved or kept, as they are now — later cases may move them again: what must hold is the load and the
   // turn after it changing none of them, as none of the others)
-  const kept = [['o muro', moved2], ['lado nenhum', alone], ['a árvore', treeDoor], ['a rua tomada', taken], ['a obra', atWork], ['a porta de trabalho', slid]].filter(q => q[1]).map(([n, x]) => { const b = G.S.buildings.get(x.id); return `${n}: ${b.type}#${b.id} em ${b.ip.s}/${b.ip.o}`; });
+  const kept = [['o muro', moved2], ['lado nenhum', alone], ['a árvore', treeDoor], ['a rua tomada', taken], ['a obra', atWork], ['a porta de trabalho', slid], ['o bolsão', pocketDoor]].filter(q => q[1]).map(([n, x]) => { const b = G.S.buildings.get(x.id); return `${n}: ${b.type}#${b.id} em ${b.ip.s}/${b.ip.o}`; });
   ok('salvar e carregar', !diff && !diffT && a.size === c.size, `${a.size} prédios: ${diff} com outro lado ou outra porta depois de carregar, ${diffT} mudados pela virada seguinte${ex.length ? ' — ' + ex.join(' · ') : ''}; ${kept.join(', ')}`);
 }
 qa('no fim');

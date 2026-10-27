@@ -6,6 +6,7 @@
   const SIDES = { N: 1, E: 1, S: 1, W: 1 };
   let turn = 0; // (which few plans this round builds: a different few each time, so a long life sees them all)
   let heard = new Map(), heardS = null; // (the step's words on the way in already asked again here — once each, in this world)
+  let pocketAt = new Map(), pocketS = null; // (the day each door was first seen before a pocket, in this world: L-216)
   QA.more.push(function (add, s) {
     const In = G.Interiors; if (!In) return;
     const withIp = [];
@@ -16,7 +17,7 @@
       if (!b.ip) continue;
       const r = b.ip; withIp.push(b);
       // ---- the record is whole: its family is one its type has, its side a side, its counters numbers
-      if (r.v !== 2 || !In.TYPES[r.t] || !In.FAMS[r.f] || !SIDES[r.s] || !Number.isInteger(r.r) || r.r < 0 || !Array.isArray(r.h) || !Array.isArray(r.fx) || !r.dr || typeof r.dr !== 'object') { add('int', 1, `${nm}: registro danificado (${JSON.stringify(r).slice(0, 120)})`); continue; }
+      if (r.v !== 3 || !In.TYPES[r.t] || !In.FAMS[r.f] || !SIDES[r.s] || !Number.isInteger(r.r) || r.r < 0 || !Array.isArray(r.h) || !Array.isArray(r.fx) || !r.dr || typeof r.dr !== 'object') { add('int', 1, `${nm}: registro danificado (${JSON.stringify(r).slice(0, 120)})`); continue; }
       if (!In.TYPES[r.t].fams.includes(r.f)) add('int', 1, `${nm}: a família ${r.f} não é de ${r.t}`);
       // ---- a building standing and finished is of the type its record says (a rebuilding is a renovation of the record)
       if (b.built && b.type !== 'ruin' && T && r.t !== b.type) add('int', 2, `${nm}: o registro diz ${r.t}`);
@@ -45,6 +46,29 @@
         if (!ok) { const to = In.fitSide(b); if (to) add('int', 2, `${b.type}#${b.id}: a porta ficou onde a entrada não cabe (${why}), e no lado ${to.s} ela cabe`); }
       }
     }
+    // ---- the door onto the street (L-216): the plan's door opens onto the biggest ground round the building — never a pocket
+    // smaller than the ground another side opens onto: whoever came out there would be shut in, as the family of a hut whose
+    // door faced a tile between three cliffs starved two steps from its store. Where the step judged the door with this ground,
+    // at once; anywhere else, a door seen before a pocket at the turn of a day and still there two days on (the ground may close
+    // round a door between two turns — a wall, the god —: the next turn moves it). Read from the map of reach as it stands,
+    // peeked at, never rebuilt for the clock here
+    if (In.entrySaid && In.shellOf && G.W.reachIds) {
+      if (pocketS !== s) { pocketS = s; pocketAt = new Map(); }
+      const W = G.W, L = W.reachIds(true); let size = null;
+      const at = (x, y) => { if (!W.inb(x, y) || !W.walkableXY(x, y)) return -1; if (!size) { size = new Map(); for (let i = 0; i < L.length; i++) if (L[i] >= 0) size.set(L[i], (size.get(L[i]) || 0) + 1); } return size.get(L[W.idx(x, y)]) || 0; };
+      const out = (b, q, k) => q === 'S' ? [b.x + k + 0.5, b.y + b.h + 0.4] : q === 'N' ? [b.x + b.w - 1 - k + 0.5, b.y - 0.4] : q === 'E' ? [b.x + b.w + 0.4, b.y + b.h - 1 - k + 0.5] : [b.x - 0.4, b.y + k + 0.5];
+      const TL = G.Space ? G.Space.TILE : 4; const seen = new Set();
+      for (const b of withIp) {
+        if (!b.built || !b.blocks || b.type === 'ruin' || !In.TYPES[b.type]) continue;
+        const sh = In.shellOf(b); const e = sh && sh.entrance; if (!e || !e.out) continue;
+        const g = at(b.x + e.out[0] / TL, b.y + e.out[1] / TL); if (g < 0) continue; // (a closed tile before the door: the way in's rule, above)
+        let big = 0, side = ''; for (const q of ['S', 'E', 'W', 'N']) { const n = q === 'S' || q === 'N' ? b.w : b.h; for (let k = 0; k < n; k++) { const p = out(b, q, k); const z = at(p[0], p[1]); if (z > big) { big = z; side = q; } } }
+        if (g >= big) continue;
+        seen.add(b.id); const d0 = pocketAt.has(b.id) ? pocketAt.get(b.id) : (pocketAt.set(b.id, s.day), s.day);
+        if (In.entrySaid(b) !== undefined || s.day - d0 >= 2) add('int', 2, `${b.type}#${b.id}: a porta (lado ${b.ip.s}) dá para um bolsão de ${g} casas, e o lado ${side} dá para um chão de ${big}${In.entrySaid(b) !== undefined ? ' — com o chão que a virada julgou' : ` — desde o dia ${d0}`}`);
+      }
+      for (const id of [...pocketAt.keys()]) if (!seen.has(id)) pocketAt.delete(id);
+    }
     // ---- a few plans each round: valid, and the shell seen from afar the whole plan's (the 3D draws the one far, the
     // other near: the same building, always)
     if (!withIp.length) return;
@@ -58,14 +82,17 @@
       // (the way in where the step said it fits, with this record and this ground: asked again here, made anew — L-195)
       if (In.entrySaid && In.entrySaid(b) === true && s1 && G.Space && G.Space.entryFits) { const e = G.Space.entryFits(b, s1); const front = !In.frontOpen || In.frontOpen(b); if (!e.ok || !front) add('int', 2, `${b.type}#${b.id}: a entrada não cabe (${front ? `${e.kind}, o pé a ${e.foot} m` : 'a porta dá para uma casa da rua que não se anda'}) diante da porta, e a virada do dia disse que cabia com o mesmo chão`); }
       // (the door the world's people use, with the port on: the plan's own wherever the step took it — and the step never
-      // took a door onto ground smaller than the old corner's: a pocket shut in all round shuts in whoever comes out)
+      // took a door onto ground smaller than the biggest round the building, the old corner's among it: a pocket shut in all
+      // round shuts in whoever comes out — L-216)
       if (G.Vg && G.Vg.planDoor === In.planDoor && b.built && b.blocks) {
         const pd = In.planDoor(b);
         if (pd) { const d = G.Vg.door(b); if (Math.abs(d[0] - pd[0]) > 1e-6 || Math.abs(d[1] - pd[1]) > 1e-6) add('int', 2, `${b.type}#${b.id}: quem sai não sai pela porta da planta`); }
-        const said = In.doorSaid(b); const corner = [[b.x + b.w - 0.5, b.y + b.h + 0.4], [b.x + b.w + 0.4, b.y + b.h - 0.5], [b.x - 0.4, b.y + 0.5], [b.x + 0.5, b.y - 0.4]].find(c => G.W.walkableXY(c[0], c[1]));
-        if (said && corner) {
-          const L = G.W.reachIds(true); const rd = L[G.W.idx(said[0], said[1])], ro = L[G.W.idx(corner[0], corner[1])];
-          if (rd !== ro) { let nd = 0, no = 0; for (let i = 0; i < L.length; i++) { if (L[i] === rd) nd++; else if (L[i] === ro) no++; } if (nd < no) add('int', 2, `${b.type}#${b.id}: a porta de quem sai dá para um chão fechado de ${nd} casas (o canto de antes, para ${no})`); }
+        const said = In.doorSaid(b);
+        if (said) {
+          const W = G.W, L = W.reachIds(true); const reg = p => (W.inb(p[0], p[1]) && W.walkableXY(p[0], p[1]) ? L[W.idx(p[0], p[1])] : -1);
+          const ring = []; for (let k = 0; k < b.w; k++) ring.push([b.x + k + 0.5, b.y + b.h + 0.4], [b.x + k + 0.5, b.y - 0.4]); for (let k = 0; k < b.h; k++) ring.push([b.x + b.w + 0.4, b.y + k + 0.5], [b.x - 0.4, b.y + k + 0.5]);
+          const rd = reg(said), regs = new Set(ring.map(reg).filter(r => r >= 0 && r !== rd));
+          if (regs.size) { const n = new Map(); for (let i = 0; i < L.length; i++) if (L[i] === rd || regs.has(L[i])) n.set(L[i], (n.get(L[i]) || 0) + 1); const nd = n.get(rd) || 0; let no = 0; for (const r of regs) no = Math.max(no, n.get(r) || 0); if (nd < no) add('int', 2, `${b.type}#${b.id}: a porta de quem sai dá para um chão fechado de ${nd} casas (outro lado do prédio, para ${no})`); }
         }
       }
     }

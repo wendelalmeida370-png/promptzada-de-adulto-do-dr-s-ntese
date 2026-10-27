@@ -89,10 +89,23 @@
   // what the builders knew and where they built, frozen the day the building was placed (the plan never reads today's world)
   const CLIMA = { 0: 't', 1: 'f', 2: 'f', 3: 'u', 4: 'u', 5: 'q', 6: 'q' }; // (Biome.ID: temperado, neve, taiga, pântano, selva, savana, deserto)
   const SIDES = ['S', 'E', 'W', 'N'];
-  // the point before the middle of a side's k-th tile (tiles), and whether one can stand there
+  // the point before the middle of a side's k-th tile (tiles), and whether one can stand there — and come out onto the street:
+  // the biggest ground round the building, as the map of reach has it. A tile of a pocket smaller than that (a ledge a tile
+  // wide between cliffs, a gap boxed in by houses) is no way out: whoever came out there would be shut in — L-216, a hut whose
+  // first side open was a tile between three cliffs, its other two on the street: its family starved two steps from the store
   const outside = (b, s, k) => s === 'S' ? [b.x + k + 0.5, b.y + b.h + 0.4] : s === 'N' ? [b.x + b.w - 1 - k + 0.5, b.y - 0.4] : s === 'E' ? [b.x + b.w + 0.4, b.y + b.h - 1 - k + 0.5] : [b.x - 0.4, b.y + k + 0.5];
+  // (the map of reach: in the world's step as the step asks it; the proofs and the checker only peek at it, never rebuilding it
+  // for the clock. The size of each region, counted once a build)
+  const reachMap = () => G.W.reachIds(!G.inSim);
+  let regN = null, regAt = -1;
+  const regSize = (L, r) => { if (!regN || regAt !== G.W.reachBuilds) { regN = new Map(); regAt = G.W.reachBuilds; for (let i = 0; i < L.length; i++) { const k = L[i]; if (k >= 0) regN.set(k, (regN.get(k) || 0) + 1); } } return regN.get(r) || 0; };
+  G.worldHooks.push(() => { regN = null; regAt = -1; });
+  const groundAt = (L, x, y) => (G.W.inb(x, y) && G.W.walkableXY(x, y) ? regSize(L, L[G.W.idx(x, y)]) : -1);
+  // (the biggest ground any side of a building opens onto: 0 where none is open)
+  function bigGround(b, L) { let big = 0; for (const s of SIDES) { const n = s === 'S' || s === 'N' ? b.w : b.h; for (let k = 0; k < n; k++) { const p = outside(b, s, k); big = Math.max(big, groundAt(L, p[0], p[1])); } } return big; }
+  const onStreet = (b, x, y, L, big) => { const g = groundAt(L, x, y); return g >= 0 && g >= big; };
   // (k counts along u, the canonical across: for S left to right is west to east; the others turn with it)
-  function openTiles(b, s) { let m = 0; const n = s === 'S' || s === 'N' ? b.w : b.h; for (let k = 0; k < n; k++) { const p = outside(b, s, k); if (G.W.walkableXY(p[0], p[1])) m |= 1 << k; } return m; }
+  function openTiles(b, s) { const L = reachMap(), big = bigGround(b, L); let m = 0; const n = s === 'S' || s === 'N' ? b.w : b.h; for (let k = 0; k < n; k++) { const p = outside(b, s, k); if (onStreet(b, p[0], p[1], L, big)) m |= 1 << k; } return m; }
   function blindSides(b) {
     // (a side against another building's wall at the founding: a party wall, no window in it)
     const S = G.S; let m = 0;
@@ -122,7 +135,7 @@
     const T = TYPES[ctx.t];
     // (hh: who heads the house; nm: how many lived there at the last turn of the day; vz: the day the last of them left;
     // ab: the day the house was given up — the house left behind)
-    const rec = { v: 2, f: '', r: 0, t: ctx.t, u: T ? T.use : '', s: ctx.s, o: ctx.o, c: ctx.c, e: ctx.e, k: ctx.k, cl: ctx.cl, fl: ctx.fl, d: ctx.d, w: ctx.w, pw: ctx.pw, h: [], m: migrated ? 1 : 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 };
+    const rec = { v: 3, f: '', r: 0, t: ctx.t, u: T ? T.use : '', s: ctx.s, o: ctx.o, c: ctx.c, e: ctx.e, k: ctx.k, cl: ctx.cl, fl: ctx.fl, d: ctx.d, w: ctx.w, pw: ctx.pw, h: [], m: migrated ? 1 : 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 };
     rec.f = chooseFamily(b, rec);
     return rec;
   }
@@ -1214,22 +1227,23 @@
     stores.set(b.id, { key, out }); if (stores.size > In.SHELLS) stores.delete(stores.keys().next().value);
     return out;
   };
-  // the door the world's people use (tiles, before the plan's own door, on open ground), or null. Never a door onto a pocket
-  // of ground shut in between walls and buildings, smaller than the ground the old corner opens to: whoever came out there
-  // would be shut in (a court's door that faced a single tile between two buildings). Judged in the world's step by the map
-  // of reach; what is drawn reads the step's last answer for the same record and the same ground — a drawing never rebuilds
-  // the map (the world is the same with or without anyone looking)
-  let regN = null, regAt = -1;
-  const regSize = (L, r) => { if (!regN || regAt !== G.W.reachBuilds) { regN = new Map(); regAt = G.W.reachBuilds; for (let i = 0; i < L.length; i++) { const k = L[i]; if (k >= 0) regN.set(k, (regN.get(k) || 0) + 1); } } return regN.get(r) || 0; };
+  // the door the world's people use (tiles, before the plan's own door, on open ground), or null — where the plan's own is
+  // not on open ground (the people's door then the first old corner open, Vg.door). Never a door onto a pocket of ground shut
+  // in between walls and buildings, smaller than the biggest ground round the building: whoever came out there would be shut
+  // in (a court's door that faced a single tile between two buildings; a wall laid round the street before a door, until the
+  // turn of the day moves it: L-216) — there the first of the old corners on that ground, never one the pocket took (the
+  // door's own tile is one of them). Judged in the world's step by the map of reach; what is drawn reads the step's last
+  // answer for the same record and the same ground — a drawing never rebuilds the map (the world is the same with or without
+  // anyone looking)
   const doorSaid = new Map();
-  G.worldHooks.push(() => { doorSaid.clear(); regN = null; regAt = -1; });
+  G.worldHooks.push(() => doorSaid.clear());
+  const CORNERS = b => [[b.x + b.w - 0.5, b.y + b.h + 0.4], [b.x + b.w + 0.4, b.y + b.h - 0.5], [b.x - 0.4, b.y + 0.5], [b.x + 0.5, b.y - 0.4]];
   In.planDoor = function (b) {
     const d = doorOf(b); if (!d || !G.W.walkableXY(d[0], d[1])) return null;
-    const o = oldDoor(b); if (!o || !G.W.walkableXY(o[0], o[1])) return d;
     const S = G.S; const key = planKey(b, b.ip) + ':' + (S.walkVer || 0) + ':' + (S.typeVer || 0);
     if (!G.inSim) { const m = doorSaid.get(b.id); return m && m.key === key ? m.d : d; }
-    const L = G.W.reachIds(); const rd = L[G.W.idx(d[0], d[1])], ro = L[G.W.idx(o[0], o[1])];
-    const out = rd === ro || regSize(L, rd) >= regSize(L, ro) ? d : null;
+    const L = G.W.reachIds(), big = bigGround(b, L);
+    const out = onStreet(b, d[0], d[1], L, big) ? d : CORNERS(b).find(c => onStreet(b, c[0], c[1], L, big)) || null;
     doorSaid.set(b.id, { key, d: out }); if (doorSaid.size > In.SHELLS) doorSaid.delete(doorSaid.keys().next().value);
     return out;
   };
@@ -1329,8 +1343,9 @@
   // (the shell a record makes: the building's own, kept; another side's, made for the asking and never kept)
   const shellFor = (b, rec) => { if (rec === b.ip) return In.shellOf(b); const fo = famOf(b, rec); return fo.P ? shellOut(fo.P) : null; };
   // (and the tile of the street the door opens onto — the plan's way out, the people's door, In.door —, as the world walks it
-  // now: a door before a closed tile is no way in, though its side has an open one — L-209)
-  const frontOpen = (b, sh) => { const e = sh && sh.entrance; return !e || !e.out || G.W.walkableXY(b.x + e.out[0] / TILE, b.y + e.out[1] / TILE); };
+  // now: a door before a closed tile is no way in, though its side has an open one — L-209 —, nor before a pocket smaller
+  // than the biggest ground round the building — L-216)
+  const frontOpen = (b, sh) => { const e = sh && sh.entrance; if (!e || !e.out) return true; const L = reachMap(); return onStreet(b, b.x + e.out[0] / TILE, b.y + e.out[1] / TILE, L, bigGround(b, L)); };
   const entryOk = (b, rec) => { const sh = shellFor(b, rec); return !sh || (frontOpen(b, sh) && G.Space.entryFits(b, sh).ok); };
   In.frontOpen = b => (b && b.ip && TYPES[b.ip.t] ? frontOpen(b, In.shellOf(b)) : true);
   // the side and the open tiles for the door of a record: the first side open to the street where the way in fits, or null
@@ -1375,12 +1390,13 @@
   };
   // the door of a building standing, as the step judges it — at the turn of the day, when the work on it is done, and when a
   // building is founded beside it, which may have taken the street before it (L-207) —: where the street the door opens to
-  // is closed now (a wall, a building, the water), or the way in no longer fits before it (the ground fell away, something
-  // took the street its steps went down, or the ground their treads stand on: L-195, L-207), the door moves to the first
-  // side open where the way in fits; where it fits on none, a closed street still moves it to the first side open, as
-  // before, and an open one keeps it
+  // is closed now (a wall, a building, the water — or a pocket of it shut in, smaller than the ground another side opens
+  // onto: L-216 —), or the way in no longer fits before it (the ground fell away, something took the street its steps went
+  // down, or the ground their treads stand on: L-195, L-207), the door moves to the first side open where the way in fits;
+  // where it fits on none, a closed street — its side's, or the tile before the door itself — still moves it to the first
+  // side open, as before, and an open one keeps it
   function doorRule(b) {
-    const rec = b.ip; const m0 = openTiles(b, rec.s); const shut = !(m0 & (rec.o || m0)) || !m0;
+    const rec = b.ip; const m0 = openTiles(b, rec.s); const shut = !(m0 & (rec.o || m0)) || !m0 || !frontOpen(b, In.shellOf(b));
     if (!shut && entryOk(b, rec)) { sayEntry(b, true); return; }
     let to = fitSide(b, rec); const ok = !!to;
     if (!to && shut) for (const s of SIDES) { const m = openTiles(b, s); if (m) { to = { s, o: m }; break; } }
@@ -1524,12 +1540,28 @@
   In.migrate = function () {
     let n = 0; for (const b of G.S.buildings.values()) if ((TYPES[b.type] || (b.type === 'ruin' && TYPES[b.origType])) && repair(b)) n++;
     // (a record of an older version — v 1: before the door of a building of work went before an open tile of its street and
-    // the way in asked for that tile, L-209 —: its door judged now, as the turn of the day judges it, so a plan that changed
-    // under an old save opens where the way in fits from its first frame — whoever was inside goes out by the new door, the
-    // stalls stand by it; a record of this version is never judged on loading: what a save and a load give back is the same)
-    for (const b of G.S.buildings.values()) { const r = b.ip; if (!r || r.v !== 1) continue; r.v = 2; if (b.built && b.type !== 'ruin' && TYPES[b.type] && r.t === b.type) doorRule(b); }
+    // the way in asked for that tile, L-209; v 2: before a side open onto a pocket, smaller than the ground another side opens
+    // onto, stopped being a side open to the street, L-216 —: its door judged now, as the turn of the day judges it, so a plan
+    // that changed under an old save opens where the way in fits from its first frame — whoever was inside goes out by the
+    // new door, the stalls stand by it, the town's streets are where its houses open; a record of this version is never
+    // judged on loading: what a save and a load give back is the same)
+    for (const b of G.S.buildings.values()) {
+      const r = b.ip; if (!r || (r.v | 0) >= 3) continue; r.v = 3; if (!b.built || b.type === 'ruin' || !TYPES[b.type] || r.t !== b.type) continue;
+      const d0 = doorOf(b), s0 = r.s + '/' + r.o; doorRule(b); if (d0 && r.s + '/' + r.o !== s0) outOfPocket(b, d0);
+    }
     return n;
   };
+  // (and whoever the save left in a pocket before the old door — a save keeps those inside at the door of then, outside: the
+  // family of a hut whose door faced a tile between three cliffs, L-216 —, out at the new one, on the street: everyone on that
+  // ground but the body the player lives, who walks out by the house, in and out at its new door)
+  function outOfPocket(b, d0) {
+    const S = G.S, W = G.W; if (!W.walkableXY(d0[0], d0[1])) return; const L = W.reachIds(); const ro = L[W.idx(d0[0], d0[1])];
+    const d1 = In.planDoor(b); if (!d1 || ro < 0) return; const rn = L[W.idx(d1[0], d1[1])]; if (rn === ro || regSize(L, ro) >= regSize(L, rn)) return;
+    for (const v of S.villagers.values()) {
+      if (v.inside || v.aboard || v.captive || v.jail || v.air || v.held || v.ug || (S.avatar && S.avatar.id === v.id) || !W.inb(v.x, v.y) || L[W.idx(v.x, v.y)] !== ro) continue;
+      v.x = d1[0]; v.y = d1[1]; v.path = null; v.moving = false;
+    }
+  }
   G.saveHooks = G.saveHooks || [];
   // (the record goes into the save with its building; loading a world without records — an older save, a ready-made world —
   // gives each building one from what it is on the day it is loaded, the same each time)

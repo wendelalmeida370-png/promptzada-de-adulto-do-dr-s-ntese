@@ -4,9 +4,9 @@
 // mercado de 2×2 com a casa da frente do lado S fechada por um muro e a porta de então diante dele; dentro, o corpo encarnado
 // um passo atrás da porta velha e uma pessoa que trabalha no mercado — um save guarda quem está dentro na porta de então,
 // fora —; a porta aberta por alguém; uma banca aberta. As provas:
-//   1. ao abrir, a porta de um registro de antes julgada como a virada a julga (In.migrate): a porta da frente diante de um
-//      chão que se anda — a planta a pôs diante da casa aberta, ou a regra a levou a um lado onde a entrada cabe —; a das
-//      pessoas (Vg.door) é a da planta
+//   1. ao abrir, a porta de um registro de antes (v 1) julgada como a virada a julga (In.migrate), e o registro na versão de
+//      agora (v 3, L-216): a porta da frente diante de um chão que se anda — a planta a pôs diante da casa aberta, ou a regra
+//      a levou a um lado onde a entrada cabe —; a das pessoas (Vg.door) é a da planta
 //   2. o estado das portas: a que alguém abriu, aberta ainda, pelo mesmo índice; nenhuma porta guardada que a planta não tem
 //   3. quem estava dentro: o corpo — num lugar onde a planta nova o deixa ficar, ou posto para fora pela porta nova, nunca
 //      numa parede —, e sai andando pela porta nova; a pessoa do mundo, que o save pôs na porta de então, num chão que se
@@ -36,7 +36,7 @@ const near = (a, b) => !!a && !!b && Math.abs(a[0] - b[0]) < 1e-6 && Math.abs(a[
 // ---- 1. the plan: the front door before ground one walks; the people's door the plan's ----
 const p = Sp.planNow(B); const e = p.entrance; const out = [B.x + e.out[0] / TL, B.y + e.out[1] / TL];
 const pd = In.planDoor(B), vd = G.Vg.door(B); const last = B.ip.h[B.ip.h.length - 1];
-ok('1. a porta diante de um chão que se anda', B.ip.v === 2 && W.walkableXY(out[0], out[1]) && near(pd, out) && near(vd, out) && In.entrySaid(B) === true,
+ok('1. a porta diante de um chão que se anda', B.ip.v === 3 && W.walkableXY(out[0], out[1]) && near(pd, out) && near(vd, out) && In.entrySaid(B) === true,
   `${B.type}#${B.id}: no save, S/1 com a porta diante do muro; ao abrir, ${B.ip.s}/${B.ip.o} r${B.ip.r} (o último fato ${JSON.stringify(last)}), a porta da frente ${W.walkableXY(out[0], out[1]) ? 'diante de um chão que se anda' : 'DIANTE DE UM CHÃO QUE NÃO SE ANDA'}; a porta das pessoas ${near(vd, out) ? 'é a da planta' : `é outra (${vd.map(n => n.toFixed(2))})`}; a palavra da virada ${In.entrySaid(B)}`);
 
 // ---- 2. the doors' states: the one someone opened still open, by the same number; no door kept that the plan lacks ----
