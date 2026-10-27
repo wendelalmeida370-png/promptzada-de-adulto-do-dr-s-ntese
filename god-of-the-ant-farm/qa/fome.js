@@ -22,6 +22,8 @@
 // h10 o condenado come enquanto espera a hora, como o preso na cela (L-170)
 // h11 a caminho da cama, quem morre de fome com pão nas mãos come antes de deitar (L-171; achado pela regra S2 no negocio)
 // h12 a criança que a fome acorda de noite come antes de voltar para a cama (L-171; achado pela regra S2 na medida)
+// h13 a tripulação esperando no cais a partida da viagem come das provisões, como quem está em campo (L-201; achado pela
+//    regra S2 no porto)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -232,8 +234,11 @@ const calmOne = (skip) => {
     // found (_noStore), kept on for the case —, the berries around picked, no plain food in the hands; the people's farmers
     // keep filling the store meanwhile, so an emptied store would not stay empty)
     if (v.carry && v.carry.k === 'food') D.use('v:' + v.id, 'food', v.carry.n, { code: 'teste', mine: true, part: true });
-    // (the berries around picked, and picked again as they grow back)
-    const bushes = new Map(); const pick = () => { for (const b of S.bushes.values()) if (b.berries > 0 && (G.dist(b.x, b.y, v.x, v.y) < 26 || (h && G.dist(b.x, b.y, h.x, h.y) < 26))) { if (!bushes.has(b)) bushes.set(b, b.berries); b.berries = 0; } };
+    // (the berries around picked, and picked again as they grow back — with the growth a bush keeps stored, b.grow: a full bush
+    // keeps growing, and the step after the picking its store came back as berries at once; in a newer world a bush 1,8 from
+    // her bed woke her to forage. Out to 30: the hunger looks for a bush in a square of twenty tiles each way, 28,3 at its
+    // corners, T-115)
+    const bushes = new Map(); const pick = () => { for (const b of S.bushes.values()) if ((b.berries > 0 || b.grow > 0) && (G.dist(b.x, b.y, v.x, v.y) < 30 || (h && G.dist(b.x, b.y, h.x, h.y) < 30))) { if (!bushes.has(b)) bushes.set(b, [b.berries, b.grow]); b.berries = 0; b.grow = 0; } };
     S.time = 0.86; Vg.endTask(v); v.hunger = 100; v.hp = 55; v.energy = 5; v._hungerT = 0;
     Vg.setTask(v, { type: 'sleep', pri: 2.5, kind: 'sleep' });
     // (counted from when she lies down: the way to her bed is the world's own — 3.5 s of it once the plan's door was on —,
@@ -241,7 +246,7 @@ const calmOne = (skip) => {
     while (walk < 60 && !(v.task && v.task.type === 'sleep' && v.sleeping)) { v._noStore = S.clock + 5; pick(); M.viver(0.5); walk++; }
     for (let k = 0; k < 40; k++) { v._noStore = S.clock + 5; pick(); const was = v.task && v.task.type === 'sleep'; M.viver(0.5); looks++; if (v.task && v.task.type === 'sleep' && v.sleeping) asleep++; if (was && !(v.task && v.task.type === 'sleep')) { wakes++; seen.push(v.task ? v.task.type : '-'); } }
     v._noStore = 0; void pan0; void food0;
-    for (const [b, n] of bushes) b.berries = n;
+    for (const [b, [n, g]] of bushes) { b.berries = n; b.grow = g; }
   }
   ok('h9 sem comida ao alcance, quem dorme com fome não fica acordando a cada passo', !!v && wakes === 0 && asleep >= looks - 2, v ? `${v.name}: ${(walk * 0.5).toFixed(1)} s até deitar; depois, ${asleep} de ${looks} olhadas dormindo, ${wakes} vezes acordado sem ter o que comer${seen.length ? ' (' + seen.join(', ') + ')' : ''}` : 'ninguém');
 }
@@ -305,6 +310,35 @@ const calmOne = (skip) => {
   ok('h12 a criança que a fome acorda de noite come antes de voltar para a cama', !!kid && ate,
     kid ? `${kid.name}, ${Math.floor(kid.age)} anos, com a fome no máximo e 40 de vida, de noite: ${ate ? `comeu (fome ${Math.round(h0)} → ${Math.round(kid.hunger)})` : `NÃO comeu: posta de volta na cama ${back} vezes antes de comer`}` : 'nenhuma criança numa cidade calma');
   S.time = Math.max(S.time, t0);
+}
+// ---------------- h13 the crew waiting on the quay for its voyage eats, as the people of the field do (L-201) ----------------
+// (found by the rule S2 in the port scenario: Solveig of Birka, of the crew of a voyage still being made ready, waited on the
+// quay with the hunger at the top — the quay's errand, 3,25, keeps the hunger from choosing, and it was not one of the
+// errands of the field, whose people eat their provisions where they are — down to 32 of life, the store seven steps away)
+{
+  const onQuay = q => q && q.task && q.task.type === 'cais' && !q.aboard && !q.captive && !(S.avatar && S.avatar.id === q.id);
+  let v = [...S.villagers.values()].filter(onQuay).sort((a, b) => a.id - b.id)[0] || null; const tried = [];
+  // (no crew on a quay in this world: the people's own reasons for a voyage first, or the god's word — toward the middle of
+  // the sea)
+  if (!v) {
+    S.time = 0.25; const X = G.Expe; let e = null;
+    for (const f of [...S.factions.values()].filter(q => q.alive && G.Civ.has(q.id, 'navegacao')).sort((a, b) => a.id - b.id)) {
+      if (!X || e) break;
+      e = X.consider(f, { many: true }) || X.launch(f, { k: 'terra', w: 1, why: 'terra', txt: '', x: G.N / 2, y: G.N / 2 }, 'media', {});
+      tried.push(f.name + (e ? '' : ' (não)'));
+    }
+    if (e) v = e.crew.map(id => S.villagers.get(id)).filter(onQuay).sort((a, b) => a.id - b.id)[0] || null;
+  }
+  let ate = false, h0 = 0, where = '-', food = 0, t0 = S.clock, left = '';
+  if (v) {
+    const st = G.Fac.stockV(v); food = st ? Math.floor(st.food) : 0;
+    v.hunger = 95; v.hp = 60; h0 = v.hunger; t0 = S.clock;
+    // (on the quay, ten seconds of the world: the meal comes there, or not at all — a voyage the world calls off in the middle
+    // sends the crew home, and a meal after that is not this one)
+    live(10, () => { if (v.hunger < h0 - 30) { ate = true; where = v.task ? v.task.type : '-'; } if (!onQuay(v) && !left) left = `${v.task ? v.task.type : 'sem tarefa'} em ${Math.round(S.clock - t0)} s`; return ate || !S.villagers.has(v.id) || !!left; });
+  }
+  ok('h13 a tripulação esperando no cais da viagem come, como quem está em campo', !!v && ate && where === 'cais',
+    v ? `${v.name} (${S.settlements.get(v.set) ? S.settlements.get(v.set).name : '?'}), no cais esperando a viagem, com a fome ${Math.round(h0)} e ${food} de comida no estoque do povo: ${ate && where === 'cais' ? `comeu das provisões sem sair do cais, em ${Math.round(S.clock - t0)} s (fome ${Math.round(h0)} → ${Math.round(v.hunger)})` : `NÃO comeu no cais (fome ${Math.round(v.hunger)}, vida ${Math.round(v.hp)}${left ? '; saiu dele: ' + left : `; ${Math.round(S.clock - t0)} s ainda no cais`}${ate ? ', e comeu fora' : ''})`}` : `ninguém no cais de uma viagem (${tried.join(', ') || 'nenhum povo com navegação'})`);
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }
