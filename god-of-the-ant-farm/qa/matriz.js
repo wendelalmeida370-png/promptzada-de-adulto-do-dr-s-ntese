@@ -214,10 +214,22 @@ for (const k of Object.keys(ANIM)) {
   const bp = bodyPose(g.act); if (!STATES.has(bp)) fail.b.push(`«${g.act}» (${k}): o corpo do jogador faria «${bp}», um estado que o 3D não tem`);
 }
 for (const v of VERBS) for (const b of v.f.body) if (/^\w+$/.test(b.anim) && !STATES.has(b.anim)) fail.b.push(`o verbo «${v.id}» faz «${b.anim}», um estado que o 3D não tem`);
-// (c) the gestures nobody uses: no offer and no step plays them (a field that only names one — GEAR's anim — is no use)
+// (c) the gestures nobody uses: no offer and no step plays them (a field that only names one is no use)
 const USED = new Map(); const use = (k, by) => { if (!USED.has(k)) USED.set(k, []); if (!USED.get(k).includes(by)) USED.get(k).push(by); };
 for (const a of ACTS) for (const o of a.offersInCode.concat(a.harvested)) if (o.anim) use(o.anim, `oferta ${a.def}.${o.act || a.act}`);
 for (const st of STEPS) for (const k of st.f.anims) use(k, `passo ${st.type}`);
+// (the ways of fishing: a cast lasts its way's gesture — G.Pesca.castDur reads GEAR's anim, L-212 —, so whoever casts through it
+// uses them: the people's step «fish», by its people's way — any of them —, and the body's verb «peixe», by the hands')
+{ const ps = src('js/act-pesca.js'), vs = src('js/villagers.js'), is = src('js/interact.js');
+  const gm = /const GEAR = P\.GEAR = \{([\s\S]*?)\n  \};/.exec(ps);
+  if (gm && /P\.gesture = [^\n]*A\.ANIM\[/.test(ps) && /P\.castDur = [^\n]*P\.gesture\(/.test(ps)) {
+    const ways = new Map([...gm[1].matchAll(/^\s*(\w+): \{[^\n]*?\banim: '(\w+)'/gm)].map(m => [m[1], m[2]]));
+    // (the call itself, or a helper of the same file that makes it — villagers.js's castT)
+    const through = (s, body) => body.includes('G.Pesca.castDur(') || [...s.matchAll(/const (\w+) = [^\n]*G\.Pesca\.castDur\(/g)].some(m => new RegExp('\\b' + m[1] + '\\(').test(body));
+    const cf = /case 'fish':\s*\{/.exec(vs); if (cf && through(vs, bodyAt(vs, cf.index + cf[0].length - 1))) for (const k of ways.values()) use(k, 'passo fish (o lance, pelo jeito do povo: G.Pesca.castDur)');
+    const vp = /I\.add\(\{\s*id:\s*'peixe'/.exec(is);
+    if (vp) { const b = bodyAt(is, vp.index); if (through(is, b)) for (const m of b.matchAll(/G\.Pesca\.(?:castDur|gesture)\([^)]*?'(\w+)'\)/g)) if (ways.has(m[1])) use(ways.get(m[1]), 'verbo peixe (o lance das mãos: G.Pesca.castDur)'); }
+  } }
 for (const k of Object.keys(ANIM)) if (!USED.has(k)) gap.c.push(k);
 // (d) the acts of a definition with no offer and no step of the world's people (a step that writes the same in the ledger, or
 // plays the same gesture, is the same act done by someone of the world)
@@ -225,11 +237,17 @@ const npcOf = a => STEPS.filter(st => st.def === a.def && ([...a.run.codes].some
 // (a definition with no acts at all — the fishing: the body fishes by its hands' own verb — is told in its row, not a gap here)
 for (const a of ACTS) { if (a.none) continue; a.npc = npcOf(a); if (!a.offersInCode.length && !a.harvested.length && !a.npc.length) gap.d.push(`${a.def}.${a.act}`); }
 // (e) actions with no audiovisual answer: no sound, no particle, no line, no sign, no words to the player
-const av = f => [...f.sounds].map(x => 'som ' + x).concat([...f.fx].map(x => 'partícula ' + x + ' (vista do deus)'), [...f.fx3d].map(x => 'partícula 3D ' + x), [...f.says].map(x => 'fala ' + x + ' (balão, vista do deus)'), [...f.emotes].map(x => 'sinal ' + x));
+// (what the body's eyes draw of the god's view's own lists — incui.js reading G.Talk.list and painting it by Talk.paint, and
+// G.FX.floaters: L-211 —; of G.FX's helpers, the ones that put a little text up — FX.floater — are seen in both views, the
+// particles only in the god's)
+const UI3 = src('js/incui.js'), FXS = src('js/fx.js');
+const talk3d = /G\.Talk\.list/.test(UI3) && /G\.Talk\.paint\(/.test(UI3), float3d = /G\.FX\.floaters/.test(UI3);
+const FLOATS = new Set(['floater']); for (const m of FXS.matchAll(/FX\.(\w+) = function[^{]*\{/g)) if (/FX\.floater\(/.test(bodyAt(FXS, m.index))) FLOATS.add(m[1]);
+const av = f => [...f.sounds].map(x => 'som ' + x).concat([...f.fx].map(x => (float3d && FLOATS.has(x) ? 'texto ' + x + ' (nas duas vistas)' : 'partícula ' + x + ' (vista do deus)')), [...f.fx3d].map(x => 'partícula 3D ' + x), [...f.says].map(x => 'fala ' + x + (talk3d ? ' (balão, nas duas vistas)' : ' (balão, vista do deus)')), [...f.emotes].map(x => 'sinal ' + x));
 for (const a of ACTS) { if (a.none) continue; const f = merge(a.can, a.begin, a.run, a.abort); a.av = av(f); a.words = a.run.msgs.length ? 'as palavras ao jogador (' + a.run.msgs.length + ')' : ''; if (!a.av.length && !a.words) gap.e.push(`o ato do corpo ${a.def}.${a.act}`); }
 for (const st of STEPS) { st.av = av(st.f); if (!st.av.length) gap.e.push(`o passo «${st.type}» (${st.def}, ${st.file})`); }
-// (and the answer only the god's view shows: the lines over the heads — G.Talk — and the god's view's particles — G.FX — are
-// drawn there and not in the 3D of the Modo Encarnado: a step whose answer is only these says nothing to the one living a body)
+// (and the answer only the god's view shows — the god's view's particles, G.FX.list; the lines over the heads and the little
+// texts too, before the 3D drew them —: a step whose answer is only these says nothing to the one living a body)
 for (const st of STEPS) if (st.av.length && st.av.every(x => /vista do deus/.test(x))) gap.e2.push(`o passo «${st.type}» (${st.def}): ${st.av.join(', ')}`);
 for (const v of VERBS) { v.av = av(v.f).concat(v.f.hud ? ['palavras ao jogador'] : [], v.f.deny ? ['som deny e palavras, na recusa'] : []); if (!v.av.length) gap.e.push(`o verbo do corpo «${v.id}»`); }
 
@@ -299,7 +317,7 @@ sect('(b) Ato de G.Act.ANIM sem pose no 3D (falha)', fail.b);
 sect('(c) Gestos de G.Act.ANIM que ninguém usa', gap.c.map(k => `${k} (${ANIM[k].act || 'carregar'}, ${ANIM[k].dur} s)`));
 sect('(d) Atos de uma definição sem oferta e sem passo de NPC', gap.d);
 sect('(e) Ações sem retorno audiovisual nenhum', gap.e);
-sect('(e, no 3D) Passos cujo retorno só a vista do deus mostra — as falas (G.Talk) e as partículas (G.FX) não são desenhadas no 3D do Modo Encarnado', gap.e2);
+sect('(e, no 3D) Passos cujo retorno só a vista do deus mostra — ' + (talk3d && float3d ? 'as partículas de G.FX (as falas de G.Talk e os textos de G.FX o 3D do Modo Encarnado também desenha: incui.js, L-211)' : 'as falas (G.Talk) e as partículas (G.FX) não são desenhadas no 3D do Modo Encarnado'), gap.e2);
 const text = out.join('\n') + '\n';
 fs.writeFileSync(OUT, text);
 const okAll = !fail.a.length && !fail.b.length && !Object.keys(G.modErr).length;

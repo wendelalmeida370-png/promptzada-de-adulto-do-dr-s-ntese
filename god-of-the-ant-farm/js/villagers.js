@@ -676,6 +676,9 @@
     Vg.fishSpots.set(spot.i, v.id);
     return setTask(v, { type: 'fish', spot: spot.i, x: spot.x, y: spot.y, wx: spot.wx, wy: spot.wy, how, pri: 1 });
   }
+  // (a cast lasts the gesture of the people's way, by the fisher's work — G.Pesca.castDur, the god's body's too —, give or take a
+  // fifth; after a miss as at first: L-212)
+  const castT = (v, t) => G.Pesca.castDur(v, t.how) * G.rr(0.8, 1.2);
   function huntTask(v, maxD) {
     const S = G.S; const set = S.settlements.get(v.set);
     let best = null, bd = 1e9;
@@ -1012,7 +1015,7 @@
       }
       case 'fish': {
         if (t.st === 0) { if (!Vg.goto(v, t.x, t.y, false)) return end(v); t.st = 1; }
-        else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; t.dur = G.rr(5, 9) / workMul(v); } }
+        else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; t.dur = G.Pesca ? castT(v, t) : G.rr(5, 9) / workMul(v); } }
         else {
           v.act = 'fish'; G.faceTo(v, t.wx, t.wy);
           if (G.Pesca && !v.gear) v.gear = G.Pesca.gearOf(t.how || G.Pesca.how(G.Fac.idOfV(v)));
@@ -1023,7 +1026,7 @@
             if (G.Pesca) {
               const r = G.Pesca.cast(v, wx, wy, { how: t.how });
               if (r.ok) { v.gear = null; emote(v, 'fish', 1.8); G.FX && G.FX.splash(wx, wy, 0.5); deliverTask(v); }
-              else if (r.miss) { v.actT = 0; t.dur = G.rr(4, 7); t.miss = (t.miss || 0) + 1; if (t.miss > 6) { v.gear = null; end(v); } }
+              else if (r.miss) { v.actT = 0; t.dur = castT(v, t); t.miss = (t.miss || 0) + 1; if (t.miss > 6) { v.gear = null; end(v); } }
               else { v.gear = null; end(v); }
             } else if (G.R() < 0.8 * Math.min(1.2, G.Civ.tV(v, 'fish'))) { const n = Math.min(cap(v), Math.round(G.ri(1, 3) * G.Civ.tV(v, 'fish'))); v.carry = G.Waters ? G.Waters.catchCarry(v, wx, wy, n) : { k: 'food', n, fish: 1 }; emote(v, 'fish', 1.8); G.FX && G.FX.splash(wx, wy, 0.5); deliverTask(v); }
             else { v.actT = 0; t.dur = G.rr(4, 7); }

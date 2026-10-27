@@ -4,7 +4,7 @@ Gerada por `node qa/matriz.js` a partir do código (as definições `G.Act.DEFS`
 
 **Incoerências (falham a prova):** (a) oferta ou passo com gesto fora de `G.Act.ANIM`: **0**; (b) ato de `G.Act.ANIM` sem pose no 3D: **0**.
 
-**Lacunas (listadas, não falham):** (c) gestos que ninguém usa: **11**; (d) atos sem oferta e sem passo de NPC: **0**; (e) ações sem retorno audiovisual nenhum: **4**, e passos cujo retorno só a vista do deus mostra: **4**.
+**Lacunas (listadas, não falham):** (c) gestos que ninguém usa: **7**; (d) atos sem oferta e sem passo de NPC: **0**; (e) ações sem retorno audiovisual nenhum: **4**, e passos cujo retorno só a vista do deus mostra: **0**.
 
 Uma lacuna é uma lacuna: o que está aqui sem animação, sem pose ou sem retorno não está pronto.
 
@@ -17,15 +17,15 @@ Uma lacuna é uma lacuna: o que está aqui sem animação, sem pose ou sem retor
 | descarga.depositar (entrega) — colhida: cidade, metropole | mãos, casa, bolsa, armazém do povo | feita no contato do gesto; o mesmo pelas pessoas: descarga, ajudar | pousar → lift → corpo carry / pessoas carry | as palavras ao jogador (4) | pode, salvo: A descarga acabou. · Você não está com uma caixa desta descarga. · O armazém está cheio. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) | livro-razão: depositar, paga — «Você guarda … de … no armazém${got ?» |
 | descarga.pousar — colhida: cidade, metropole | mãos, cais, casa, bolsa, armazém do povo | feita no contato do gesto; o mesmo pelas pessoas: descarga, ajudar | pousar → lift → corpo carry / pessoas carry | as palavras ao jogador (1) | pode, salvo: Não há o que pôr no chão. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) | livro-razão: depositar, devolveu, caiu, pousou, paga — «Você põe a caixa no chão.» |
 | negocio.atacado (compra) — colhida: cidade (não pode: A banca está cheia: venda antes de comprar mais.), metropole (não pode: A banca está cheia: venda antes de comprar mais.) | banca, armazém do povo, mãos | feita no contato do gesto; o mesmo pelas pessoas: atacado | examinar → examine → corpo interact / pessoas interact | as palavras ao jogador (1) | pode, salvo: A banca não é sua. · Suas mãos já estão cheias. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) · O povo não existe mais. · Falta dinheiro para o atacado. · O armazém não fia mais: primeiro pague o que deve. | livro-razão: atacado, fiado — «Você compra … de … no atacado…. Agora é levar à banca.» |
-| negocio.abrir — colhida: cidade, metropole | — | feita no contato do gesto | apontar → point → corpo interact / pessoas talk | fala abrir (balão, vista do deus); as palavras ao jogador (1) | pode, salvo: O mercado está fechado a esta hora. · A banca não é sua. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) | sem lançamento no livro — «Você abre a banca.» |
-| negocio.fechar — colhida: cidade | — | feita no contato do gesto | apontar → point → corpo interact / pessoas talk | fala fechar (balão, vista do deus); as palavras ao jogador (1) | pode, salvo: A banca não é sua. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) | sem lançamento no livro — «Você fecha a banca por hoje.» |
+| negocio.abrir — colhida: cidade, metropole | — | feita no contato do gesto | apontar → point → corpo interact / pessoas talk | fala abrir (balão, nas duas vistas); as palavras ao jogador (1) | pode, salvo: O mercado está fechado a esta hora. · A banca não é sua. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) | sem lançamento no livro — «Você abre a banca.» |
+| negocio.fechar — colhida: cidade | — | feita no contato do gesto | apontar → point → corpo interact / pessoas talk | fala fechar (balão, nas duas vistas); as palavras ao jogador (1) | pode, salvo: A banca não é sua. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) | sem lançamento no livro — «Você fecha a banca por hoje.» |
 | negocio.porNaBanca (trabalho) — oferta no código, não colhida | mãos, banca | feita no contato do gesto | porNaBanca → arrange → corpo carry / pessoas gesto das mãos | as palavras ao jogador (1) | pode, salvo: A banca não é sua. · Suas mãos estão vazias. · Não cabe mais disso na banca. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) | livro-razão: expor — «Você arruma … de … na banca.» |
 | negocio.tirarDaBanca — colhida: cidade, metropole | mãos, banca | feita no contato do gesto; o mesmo pelas pessoas: devolver | tirarDaBanca → arrange → corpo carry / pessoas gesto das mãos | as palavras ao jogador (1) | pode, salvo: A banca não é sua. · Suas mãos já estão cheias. · Não há mais disso na banca. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) | livro-razão: recolher — «Você recolhe … de ….» |
 | negocio.precoMais — colhida: cidade, metropole | — | feita no contato do gesto | apontar → point → corpo interact / pessoas talk | as palavras ao jogador (1) | pode, salvo: A banca não é sua. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) | sem lançamento no livro — «… agora sai por ….» |
 | negocio.precoMenos — colhida: cidade, metropole | — | feita no contato do gesto | apontar → point → corpo interact / pessoas talk | as palavras ao jogador (1) | pode, salvo: A banca não é sua. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) | sem lançamento no livro — «… agora sai por ….» |
-| negocio.comprar (compra) — colhida: cidade, metropole | casa, mãos, banca | feita no contato do gesto; o mesmo pelas pessoas: compra | pagar → pay → corpo interact / pessoas interact | fala sem_lugar (balão, vista do deus), fala sem_dinheiro (balão, vista do deus), fala agradecer (balão, vista do deus); as palavras ao jogador (1) | pode, salvo: Não há ninguém na banca. · Acabou. · Suas mãos já estão cheias. · Sem casa para onde levar. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) · Você não tem com que trocar. | livro-razão: venda — «Você compra … de … por ….» |
-| negocio.pechinchar — colhida: cidade, metropole | casa, mãos, banca | feita no contato do gesto; o mesmo pelas pessoas: compra | pechinchar → haggle → corpo talk / pessoas talk | fala pechinchar (balão, vista do deus), fala troca_pechinchar (balão, vista do deus), fala aceitar (balão, vista do deus), fala recusar_oferta (balão, vista do deus), fala contrapropor (balão, vista do deus), fala sem_lugar (balão, vista do deus) (+2); as palavras ao jogador (2) | pode, salvo: Não há ninguém na banca. · Acabou. · Suas mãos já estão cheias. · Sem casa para onde levar. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) · Você não tem com que trocar. | livro-razão: venda — «O vendedor pede ….» |
-| negocio.aceitarContra (compra) — colhida: cidade, metropole | casa, mãos, banca | feita no contato do gesto; o mesmo pelas pessoas: compra | pagar → pay → corpo interact / pessoas interact | fala aceitar_contra (balão, vista do deus), fala sem_lugar (balão, vista do deus), fala sem_dinheiro (balão, vista do deus), fala agradecer (balão, vista do deus); as palavras ao jogador (1) | pode, salvo: A proposta não vale mais. · Não há ninguém na banca. · Acabou. · Suas mãos já estão cheias. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) · Você não tem com que trocar. | livro-razão: venda — «Você compra … de … por ….» |
+| negocio.comprar (compra) — colhida: cidade, metropole | casa, mãos, banca | feita no contato do gesto; o mesmo pelas pessoas: compra | pagar → pay → corpo interact / pessoas interact | fala sem_lugar (balão, nas duas vistas), fala sem_dinheiro (balão, nas duas vistas), fala agradecer (balão, nas duas vistas); as palavras ao jogador (1) | pode, salvo: Não há ninguém na banca. · Acabou. · Suas mãos já estão cheias. · Sem casa para onde levar. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) · Você não tem com que trocar. | livro-razão: venda — «Você compra … de … por ….» |
+| negocio.pechinchar — colhida: cidade, metropole | casa, mãos, banca | feita no contato do gesto; o mesmo pelas pessoas: compra | pechinchar → haggle → corpo talk / pessoas talk | fala pechinchar (balão, nas duas vistas), fala troca_pechinchar (balão, nas duas vistas), fala aceitar (balão, nas duas vistas), fala recusar_oferta (balão, nas duas vistas), fala contrapropor (balão, nas duas vistas), fala sem_lugar (balão, nas duas vistas) (+2); as palavras ao jogador (2) | pode, salvo: Não há ninguém na banca. · Acabou. · Suas mãos já estão cheias. · Sem casa para onde levar. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) · Você não tem com que trocar. | livro-razão: venda — «O vendedor pede ….» |
+| negocio.aceitarContra (compra) — colhida: cidade, metropole | casa, mãos, banca | feita no contato do gesto; o mesmo pelas pessoas: compra | pagar → pay → corpo interact / pessoas interact | fala aceitar_contra (balão, nas duas vistas), fala sem_lugar (balão, nas duas vistas), fala sem_dinheiro (balão, nas duas vistas), fala agradecer (balão, nas duas vistas); as palavras ao jogador (1) | pode, salvo: A proposta não vale mais. · Não há ninguém na banca. · Acabou. · Suas mãos já estão cheias. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) · Você não tem com que trocar. | livro-razão: venda — «Você compra … de … por ….» |
 | pesca (nenhum ato) | — | — | — | — | — | — | a definição não tem atos nem ofertas: o corpo, pelo verbo «peixe»; as pessoas, pelo passo «fish» |
 | casa.encomendar (casa) — colhida: cidade, metropole | casa, bolsa, armazém do povo | feita no contato do gesto; o mesmo pelas pessoas: (decisão) | pagar → pay → corpo interact / pessoas interact | as palavras ao jogador (3) | pode, salvo: A família tem onde morar. · A casa da família já está sendo levantada. · Falta dinheiro: uma casa custa uns … moedas e a família tem …. | cortado antes do contato: nada acontece · na hora do contato o mundo pergunta de novo (can) · A família tem onde morar. · A casa da família já está sendo levantada. · A família deixou a casa nova para depois. | livro-razão: mudança, obra-casa — «Você aluga … … (… moedas ao ano): a família muda hoje.» |
 | verbo «atividade» ((as ofertas)) | — | pela porta do mundo (Possess.apply), no contato do gesto | o gesto da oferta, pela tabela Interact.GEST (o mundo vê o ato do gesto) | palavras ao jogador, som deny e palavras, na recusa | — | cortado antes do contato: nada acontece | o que a oferta faz (as linhas acima) |
@@ -35,13 +35,13 @@ Uma lacuna é uma lacuna: o que está aqui sem animação, sem pose ou sem retor
 
 | Passo (tarefa) | Atividade | Objeto | Interação lógica | Animação (gesto → ato → pose) | Retorno audiovisual | Início (quem dá) | Cancelamento | Estado final esperado |
 |---|---|---|---|---|---|---|---|---|
-| carga (runCarga, js/activity.js) | comum | casa, armazém do povo, mãos | a tarefa da pessoa, passo a passo | pousar → lift → carry | partícula deposit (vista do deus) | runShop (economy.js), A.resumeCarry (activity.js), runAtacado (act-negocio.js), runDevolver (act-negocio.js), runCompra (act-negocio.js) | 6 saídas (fim da tarefa) | livro-razão: sem-destino, compra-em-casa, entrega |
-| descarga (runDescarga, js/act-porto.js) | descarga | mãos, chão, cais, casa, bolsa, armazém do povo | a tarefa da pessoa, passo a passo | esperar → wait → idle; levantar → lift → carry; pousar → lift → carry | partícula deposit (vista do deus), fala pedir_ajuda (balão, vista do deus), fala sozinho (balão, vista do deus), fala armazem_cheio (balão, vista do deus) | P.work (act-porto.js), resume (act-porto.js) | larga: sem armazém · larga: sem caminho · larga: cheio · para a operação: cheio · 11 saídas (fim da tarefa) | livro-razão: pegar, depositar, devolveu, caiu, pousou, paga |
+| carga (runCarga, js/activity.js) | comum | casa, armazém do povo, mãos | a tarefa da pessoa, passo a passo | pousar → lift → carry | texto deposit (nas duas vistas) | runShop (economy.js), A.resumeCarry (activity.js), runAtacado (act-negocio.js), runDevolver (act-negocio.js), runCompra (act-negocio.js) | 6 saídas (fim da tarefa) | livro-razão: sem-destino, compra-em-casa, entrega |
+| descarga (runDescarga, js/act-porto.js) | descarga | mãos, chão, cais, casa, bolsa, armazém do povo | a tarefa da pessoa, passo a passo | esperar → wait → idle; levantar → lift → carry; pousar → lift → carry | texto deposit (nas duas vistas), fala pedir_ajuda (balão, nas duas vistas), fala sozinho (balão, nas duas vistas), fala armazem_cheio (balão, nas duas vistas) | P.work (act-porto.js), resume (act-porto.js) | larga: sem armazém · larga: sem caminho · larga: cheio · para a operação: cheio · 11 saídas (fim da tarefa) | livro-razão: pegar, depositar, devolveu, caiu, pousou, paga |
 | ajudar (runAjudar, js/act-porto.js) | descarga | mãos, cais, casa, bolsa, armazém do povo | a tarefa da pessoa, passo a passo | esperar → wait → idle; carregarDois → carry2 → carry | — | pairUp (act-porto.js) | larga: sem ajuda · 5 saídas (fim da tarefa) | livro-razão: depositar, devolveu, caiu, pousou, paga |
-| conferir (runConferir, js/act-porto.js) | descarga | — | a tarefa da pessoa, passo a passo | contar → count → interact | fala faltam (balão, vista do deus), fala conferido (balão, vista do deus) | tick (act-porto.js) | 4 saídas (fim da tarefa) | — |
+| conferir (runConferir, js/act-porto.js) | descarga | — | a tarefa da pessoa, passo a passo | contar → count → interact | fala faltam (balão, nas duas vistas), fala conferido (balão, nas duas vistas) | tick (act-porto.js) | 4 saídas (fim da tarefa) | — |
 | atacado (runAtacado, js/act-negocio.js) | negocio | banca, armazém do povo, mãos | a tarefa da pessoa, passo a passo | examinar → examine → interact | — | B.task (act-negocio.js) | 5 saídas (fim da tarefa) | livro-razão: atacado, fiado; depois: carga |
-| banca (runBanca, js/act-negocio.js) | negocio | — | a tarefa da pessoa, passo a passo | vender → sell → talk | fala abrir (balão, vista do deus), fala pregao (balão, vista do deus) | B.task (act-negocio.js) | 6 saídas (fim da tarefa) | — |
-| compra (runCompra, js/act-negocio.js) | negocio | mãos, casa, banca | a tarefa da pessoa, passo a passo | esperar → wait → idle; pagar → pay → interact; pechinchar → haggle → talk | fala nao_tenho (balão, vista do deus), fala perguntar (balão, vista do deus), fala preco (balão, vista do deus), fala troca_preco (balão, vista do deus), fala pechinchar (balão, vista do deus), fala troca_pechinchar (balão, vista do deus) (+12) | B.shop (act-negocio.js) | 15 saídas (fim da tarefa) | livro-razão: venda; depois: carga |
+| banca (runBanca, js/act-negocio.js) | negocio | — | a tarefa da pessoa, passo a passo | vender → sell → talk | fala abrir (balão, nas duas vistas), fala pregao (balão, nas duas vistas) | B.task (act-negocio.js) | 6 saídas (fim da tarefa) | — |
+| compra (runCompra, js/act-negocio.js) | negocio | mãos, casa, banca | a tarefa da pessoa, passo a passo | esperar → wait → idle; pagar → pay → interact; pechinchar → haggle → talk | fala nao_tenho (balão, nas duas vistas), fala perguntar (balão, nas duas vistas), fala preco (balão, nas duas vistas), fala troca_preco (balão, nas duas vistas), fala pechinchar (balão, nas duas vistas), fala troca_pechinchar (balão, nas duas vistas) (+12) | B.shop (act-negocio.js) | 15 saídas (fim da tarefa) | livro-razão: venda; depois: carga |
 | devolver (runDevolver, js/act-negocio.js) | negocio | mãos, armazém do povo | a tarefa da pessoa, passo a passo | tirarDaBanca → arrange → gesto das mãos | — | B.task (act-negocio.js) | 5 saídas (fim da tarefa) | livro-razão: troca; depois: carga |
 | fish (case fish, js/villagers.js) | pesca | — | a tarefa da pessoa, passo a passo | «fish» → interact | partícula splash (vista do deus), sinal fish | fishTask (villagers.js) | 3 saídas (fim da tarefa) | — |
 | (decisão) (A.hooks.tick, js/act-casa.js) | casa | casa, bolsa, armazém do povo | decisão, sem tarefa nem corpo que se veja | nenhuma: não há gesto | — | o passo do mundo, uma vez por dia (act-casa.js) | — | livro-razão: aluguel, venda-casa, obra-devolvida, mudança, obra-casa |
@@ -69,10 +69,10 @@ Uma lacuna é uma lacuna: o que está aqui sem animação, sem pose ou sem retor
 | esperar | wait | 0 | 0 | 0 | idle | idle | walk | — | interact | passo descarga, passo ajudar, passo compra |
 | vender | sell | 0 | 0 | 0 | talk | talk | walk | — | interact | passo banca |
 | comprar | buy | 0 | 0 | 0 | talk | talk | walk | — | interact | — |
-| pescarMaos | fish | 2.2 | 1.2 | 2 | interact | interact | walk | — | interact | — |
-| pescarArpao | fish | 5 | 4.6 | 2 | interact | interact | walk | — | interact | — |
-| pescarLinha | fish | 6.5 | 6 | 2 | interact | interact | walk | — | interact | — |
-| pescarRede | fish | 7.5 | 6.8 | 2 | interact | interact | walk | — | interact | — |
+| pescarMaos | fish | 2.2 | 1.2 | 2 | interact | interact | walk | — | interact | passo fish (o lance, pelo jeito do povo: G.Pesca.castDur), verbo peixe (o lance das mãos: G.Pesca.castDur) |
+| pescarArpao | fish | 5 | 4.6 | 2 | interact | interact | walk | — | interact | passo fish (o lance, pelo jeito do povo: G.Pesca.castDur) |
+| pescarLinha | fish | 6.5 | 6 | 2 | interact | interact | walk | — | interact | passo fish (o lance, pelo jeito do povo: G.Pesca.castDur) |
+| pescarRede | fish | 7.5 | 6.8 | 2 | interact | interact | walk | — | interact | passo fish (o lance, pelo jeito do povo: G.Pesca.castDur) |
 
 ## As ofertas colhidas nos mundos prontos
 
@@ -114,7 +114,7 @@ Nenhuma.
 
 Nenhuma.
 
-### (c) Gestos de G.Act.ANIM que ninguém usa — 11
+### (c) Gestos de G.Act.ANIM que ninguém usa — 7
 
 - empilhar (lift, 1.1 s)
 - carregar (carregar, 0 s)
@@ -123,10 +123,6 @@ Nenhuma.
 - receberMoedas (pay, 0.8 s)
 - chamarAjuda (call, 1.2 s)
 - comprar (buy, 0 s)
-- pescarMaos (fish, 2.2 s)
-- pescarArpao (fish, 5 s)
-- pescarLinha (fish, 6.5 s)
-- pescarRede (fish, 7.5 s)
 
 ### (d) Atos de uma definição sem oferta e sem passo de NPC — 0
 
@@ -139,10 +135,7 @@ Nenhuma.
 - o passo «devolver» (negocio, js/act-negocio.js)
 - o passo «(decisão)» (casa, js/act-casa.js)
 
-### (e, no 3D) Passos cujo retorno só a vista do deus mostra — as falas (G.Talk) e as partículas (G.FX) não são desenhadas no 3D do Modo Encarnado — 4
+### (e, no 3D) Passos cujo retorno só a vista do deus mostra — as partículas de G.FX (as falas de G.Talk e os textos de G.FX o 3D do Modo Encarnado também desenha: incui.js, L-211) — 0
 
-- o passo «carga» (comum): partícula deposit (vista do deus)
-- o passo «descarga» (descarga): partícula deposit (vista do deus), fala pedir_ajuda (balão, vista do deus), fala sozinho (balão, vista do deus), fala armazem_cheio (balão, vista do deus)
-- o passo «conferir» (descarga): fala faltam (balão, vista do deus), fala conferido (balão, vista do deus)
-- o passo «banca» (negocio): fala abrir (balão, vista do deus), fala pregao (balão, vista do deus)
+Nenhuma.
 

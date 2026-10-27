@@ -78,10 +78,10 @@
   // its own step (Avatar.act's op, through Possess.apply), and it lasts the world seconds the same work lasts for anyone of the
   // world — the woodcutter's stroke and the dt × workMul it adds to the tree, the quarryman's load of stone in 3.8 s, a load of
   // berries in 2.2 s, a meal at the store in 1.6 s, a prayer at the temple in 5 s (villagers.js), a try of the hands in the
-  // shallows slower than the fisher's line (5 to 9 s for one to three fish), a lift and a setting down in the docker's own
-  // gestures (G.Act.ANIM): the player's presence gives no work for free. Only the hands' own gestures — a word, a wave, a hug's
-  // arms — keep the body's own seconds
-  const WT = { chop: 0.55, mine: 0.6, mineLoad: 3.8, gather: 2.2, eat: 1.6, pray: 5, fish: 2.2 };
+  // shallows in the cast of anyone fishing with the hands (G.Pesca.castDur — L-212; without the fishing module, the people's
+  // old 4 to 7 s), a lift and a setting down in the docker's own gestures (G.Act.ANIM): the player's presence gives no work for
+  // free. Only the hands' own gestures — a word, a wave, a hug's arms — keep the body's own seconds
+  const WT = { chop: 0.55, mine: 0.6, mineLoad: 3.8, gather: 2.2, eat: 1.6, pray: 5, fish: 5.5 };
   I.WT = WT;
   // (the gestures of the hands as the world's people make them — seconds of the world, the contact where the world passes the
   // thing: C1's Act.ANIM —, for the body too: it never lifts a load faster than the docker)
@@ -802,9 +802,10 @@
     run(ctx, t) {
       const v = ctx.v; const f = ctx.yaw;
       const splash = () => { const p = G.Avatar.pos(); if (p && G.FX3D) for (let k = 0; k < 10; k++) G.FX3D.spawn({ x: t.X + G.vrr(-0.2, 0.2), y: G.Avatar.waterAt(t.X, t.Z) + 0.05, z: t.Z + G.vrr(-0.2, 0.2), vx: G.vrr(-0.8, 0.8), vy: G.vrr(1, 2.2), vz: G.vrr(-0.8, 0.8), life: 0.7, s0: 0.07, s1: 0.03, c: [0.86, 0.94, 1], a: 0.8, sh: 1, grav: 9 }); G.Audio && G.Audio.play && G.Audio.play('splash'); };
-      // (a try of the world's time — slower than the line —, its luck and its fish the world's, drawn by the world at the grab)
-      const dur = WT.fish / wm(v);
-      G.Avatar.act({ world: true, anim: 'low', dur, contact: dur * 0.55, face: f, vact: 'fish',
+      // (a try of the world's time — the hands' cast of anyone of the world, G.Pesca.castDur, with its gesture's contact: L-212 —,
+      // its luck and its fish the world's, drawn by the world at the grab)
+      const Pg = G.Pesca && G.Pesca.gesture('maos'); const dur = Pg ? G.Pesca.castDur(v, 'maos') : WT.fish / wm(v);
+      G.Avatar.act({ world: true, anim: 'low', dur, contact: Pg ? dur * Pg.contact / Pg.dur : dur * 0.55, face: f, vact: 'fish',
         op: w => {
           if (w.carry && w.carry.n > 0 && !w.carry.fish) return { ok: false, why: 'Suas mãos já estão cheias.' };
           // (the water may have frozen or gone meanwhile — the god's winter, the sea opened)

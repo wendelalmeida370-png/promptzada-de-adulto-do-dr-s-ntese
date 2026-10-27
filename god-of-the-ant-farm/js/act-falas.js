@@ -11,8 +11,10 @@
 //  templates per people over a common one, chosen by the moment's
 //  own numbers (never the world's chance: the words change nothing
 //  in the world), filled only with what the speaker knows — the
-//  caller gives the facts. Said through G.Talk: the bubble shows
-//  over the head in the god's view, and the 3D shows the same list.
+//  caller gives the facts. Said through G.Talk: a bubble over the
+//  head, in the god's view and over the body's eyes in the Modo
+//  Encarnado — incui.js reads the same list and paints it with the
+//  same hand, Talk.paint (L-211; before it, the 3D drew no words).
 // ============================================================
 (function (G) {
   const F = G.Falas = {};

@@ -6,9 +6,10 @@
 //  then gone. A shout is a jagged white burst; a whisper a dim, dotted
 //  breath; a thought a little cloud; a chant floats up without a bubble
 //  in the colour of the order. The bubbles keep the same size on the
-//  screen however far the camera is, and step out of each other's way.
-//  (The scenes, the executions, the riots and the secret orders all
-//  speak through here.)
+//  screen however far the camera is, and step out of each other's way
+//  — over the god's view and over the body's eyes (incui.js paints the
+//  same list with the same hand, T.paint). (The scenes, the
+//  executions, the riots and the secret orders all speak through here.)
 // ============================================================
 (function (G) {
   const T = G.Talk = { list: [] };
@@ -24,7 +25,7 @@
     for (let k = T.list.length - 1; k >= 0; k--) if (T.list[k].id === v.id) T.list.splice(k, 1);
     const style = o.style || (/!$/.test(txt) && txt.length < 26 ? 'shout' : 'say');
     const dur = o.dur || T.durOf(txt, style);
-    const b = { id: v.id, txt: String(txt), style, t0: S.clock, until: S.clock + dur, dur, name: o.name || '', col: o.col || '', scene: o.scene || 0, lines: null, w: 0 };
+    const b = { id: v.id, txt: String(txt), style, t0: S.clock, until: S.clock + dur, dur, name: o.name || '', col: o.col || '', scene: o.scene || 0 };
     T.list.push(b);
     if (T.list.length > 24) T.list.shift();
     if (T.onSay) try { T.onSay(v, b); } catch (e) { /* a listener is never worth an error */ }
@@ -76,36 +77,24 @@
     rr(c, x, y, w, h, 8);
   }
   const placed = [];
-  G.renderHooks = G.renderHooks || { ground: [], ents: [] };
-  G.renderHooks.air = G.renderHooks.air || [];
-  G.renderHooks.air.push(function (ctx, proj, view) {
-    const S = G.S; if (!S || !T.list.length) return;
-    const R = G.Render; if (R.under) return;
-    const z = R.cam.zoom; if (z < 0.5) return;
-    const k = 1 / z;
-    // drop the old ones
-    for (let i = T.list.length - 1; i >= 0; i--) { const b = T.list[i]; if (S.clock > b.until || !S.villagers.has(b.id)) T.list.splice(i, 1); }
-    placed.length = 0;
-    // the nearest to the bottom of the screen first: the ones behind step up
-    const items = [];
-    for (const b of T.list) {
-      const v = S.villagers.get(b.id); if (!v || v.inside || v.aboard) continue;
-      const p = proj(v.x, v.y, G.W.groundH(v.x, v.y));
-      const sc = v.age < 16 ? 0.55 + (v.age / 16) * 0.42 : 1;
-      const hx = p[0], hy = p[1] - (v.z || 0) - (22 * sc + (v.emo ? 13 : 0) + 3);
-      if (hx < view[0] - 80 || hx > view[2] + 80 || hy < view[1] - 60 || hy > view[3] + 40) continue;
-      items.push({ b, v, hx, hy });
-    }
-    items.sort((a, b) => b.hy - a.hy);
+  // (a bubble's lines and their width, worked out once — kept aside, nothing written on the bubble: two views read it)
+  const lay = new WeakMap();
+  // the bubbles over the heads, the same for the god's view and for the body's eyes (incui.js — L-211): items [{ b, hx, hy, s }],
+  // where each head is in the context's own units, the nearest first (the ones behind step up out of their way); k: the
+  // context's units in a pixel of the screen (the god's view 1/zoom; the body's eyes, a screen of their own, 1); s: the bubble's
+  // size on the screen (1, the god's). The words typed out by the world's clock, held, gone; only read. It gives back the boxes
+  // painted, in pixels of the screen ([b, x, y, w, h]: for the tests)
+  T.paint = function (ctx, items, k) {
+    const S = G.S; placed.length = 0; const out = [];
     ctx.save();
     ctx.textBaseline = 'alphabetic';
     for (const it of items) {
-      const b = it.b;
+      const b = it.b; const z = it.s || 1;
       ctx.font = fontOf(b.style);
-      if (!b.lines) { b.lines = wrap(ctx, b.txt, MAXW); b.w = Math.max(...b.lines.map(l => ctx.measureText(l).width)); }
+      let L = lay.get(b); if (!L) { const lines = wrap(ctx, b.txt, MAXW); L = { lines, w: Math.max(...lines.map(l => ctx.measureText(l).width)) }; lay.set(b, L); }
       const lh = b.style === 'shout' ? 15 : 14.5;
       const head = b.name ? 12 : 0;
-      const bw = Math.max(26, b.w + 16), bh = b.lines.length * lh + 9 + head;
+      const bw = Math.max(26, L.w + 16), bh = L.lines.length * lh + 9 + head;
       // fade in/out, a little pop on a shout
       const age = S.clock - b.t0, left = b.until - S.clock;
       const a = Math.min(1, age / 0.18, left / 0.35);
@@ -115,14 +104,14 @@
       let ox = it.hx, oy = it.hy;
       let bx = -bw / 2, by = -bh - (b.style === 'think' ? 16 : 9);
       for (let guard = 0; guard < 6; guard++) {
-        const sx0 = ox / k + bx, sy0 = oy / k + by;
-        const hit = placed.find(q => sx0 < q[0] + q[2] && sx0 + bw > q[0] && sy0 < q[1] + q[3] && sy0 + bh > q[1]);
+        const sx0 = ox / k + bx * z, sy0 = oy / k + by * z;
+        const hit = placed.find(q => sx0 < q[0] + q[2] && sx0 + bw * z > q[0] && sy0 < q[1] + q[3] && sy0 + bh * z > q[1]);
         if (!hit) break;
-        by -= (sy0 + bh) - hit[1] + 4;
+        by -= ((sy0 + bh * z) - hit[1] + 4) / z;
       }
-      placed.push([ox / k + bx, oy / k + by, bw, bh]);
+      placed.push([ox / k + bx * z, oy / k + by * z, bw * z, bh * z]); out.push([b].concat(placed[placed.length - 1]));
       ctx.save();
-      ctx.translate(ox, oy); ctx.scale(k * pop, k * pop);
+      ctx.translate(ox, oy); ctx.scale(k * pop * z, k * pop * z);
       ctx.globalAlpha = a;
       if (b.style === 'shout') { const j = age < 0.6 ? Math.sin(age * 60) * (0.6 - age) * 2 : 0; ctx.translate(j, 0); }
       const n = T.typed(b);
@@ -133,7 +122,7 @@
         ctx.textAlign = 'center';
         ctx.shadowColor = b.col || '#c8a24a'; ctx.shadowBlur = 8;
         ctx.fillStyle = b.col || '#f2dca0';
-        let left2 = n; b.lines.forEach((l, i) => { const s = l.slice(0, Math.max(0, left2)); left2 -= l.length + 1; ctx.fillText(s, 0, by + 12 + i * lh); });
+        let left2 = n; L.lines.forEach((l, i) => { const s = l.slice(0, Math.max(0, left2)); left2 -= l.length + 1; ctx.fillText(s, 0, by + 12 + i * lh); });
         ctx.restore(); continue;
       }
       // the bubble
@@ -155,10 +144,32 @@
       ctx.textAlign = 'center';
       ctx.fillStyle = b.style === 'whisper' ? '#efe6d4' : b.style === 'shout' ? '#5a1410' : '#2a1c14';
       let left2 = n;
-      b.lines.forEach((l, i) => { const s = l.slice(0, Math.max(0, left2)); left2 -= l.length + 1; ctx.fillText(s, 0, by + head + 4 + (i + 1) * lh - 3.5); });
+      L.lines.forEach((l, i) => { const s = l.slice(0, Math.max(0, left2)); left2 -= l.length + 1; ctx.fillText(s, 0, by + head + 4 + (i + 1) * lh - 3.5); });
       ctx.restore();
     }
     ctx.restore();
+    return out;
+  };
+  G.renderHooks = G.renderHooks || { ground: [], ents: [] };
+  G.renderHooks.air = G.renderHooks.air || [];
+  G.renderHooks.air.push(function (ctx, proj, view) {
+    const S = G.S; if (!S || !T.list.length) return;
+    const R = G.Render; if (R.under) return;
+    const z = R.cam.zoom; if (z < 0.5) return;
+    // drop the old ones
+    for (let i = T.list.length - 1; i >= 0; i--) { const b = T.list[i]; if (S.clock > b.until || !S.villagers.has(b.id)) T.list.splice(i, 1); }
+    // the nearest to the bottom of the screen first: the ones behind step up
+    const items = [];
+    for (const b of T.list) {
+      const v = S.villagers.get(b.id); if (!v || v.inside || v.aboard) continue;
+      const p = proj(v.x, v.y, G.W.groundH(v.x, v.y));
+      const sc = v.age < 16 ? 0.55 + (v.age / 16) * 0.42 : 1;
+      const hx = p[0], hy = p[1] - (v.z || 0) - (22 * sc + (v.emo ? 13 : 0) + 3);
+      if (hx < view[0] - 80 || hx > view[2] + 80 || hy < view[1] - 60 || hy > view[3] + 40) continue;
+      items.push({ b, v, hx, hy });
+    }
+    items.sort((a, b) => b.hy - a.hy);
+    T.paint(ctx, items, 1 / z);
   });
   (G.saveHooks = G.saveHooks || []).push({ save() { }, load() { T.list.length = 0; } });
 })(window.G);
