@@ -726,12 +726,18 @@
     talk: 'talk', chat: 'talk', call: 'talk', shout: 'talk', wave: 'talk', point: 'talk', question: 'talk', sell: 'talk', buy: 'talk', serve: 'talk',
     dance: 'dance', joy: 'dance', play: 'dance', mourn: 'mourn', weep: 'mourn', sad: 'mourn', cower: 'mourn', sick: 'mourn',
     hug: 'hug', embrace: 'hug', sleep: 'sleep', zzz: 'sleep', throw: 'throw', swim: 'swim', dive: 'swim', bound: 'bound', sneak: 'sneak', run: 'run', climb: 'interact', knock: 'interact', look: 'idle',
+    // (the gestures of the activities, G.Act.ANIM, as the body makes them — Interact.GEST —: paying and taking the coins, the
+    // hand out; haggling, talking; looking the goods over and counting the crates at the door, the hand to them; waiting,
+    // standing; the second pair of hands under a heavy crate, a carrier's arms — L-205, L-210)
+    pay: 'interact', haggle: 'talk', examine: 'interact', count: 'interact', wait: 'idle', carry2: 'carry',
   };
+  // (the acts that carry what the world has in someone else's hands: walking, a carrier's walk — the helper of a pair)
+  const CARRY_ACTS = new Set(['carry2']);
   // the state an NPC is in: from the world, every frame
   Anim.stateOf = function (v, sp) {
     if (v.task && v.task.type === 'swim') return 'swim';
     if (v.sleeping) return 'sleep';
-    if (sp > 0.25) { if (v.act === 'sneak') return 'sneak'; if (v.carry && v.carry.n > 0) return 'carryWalk'; return sp > 3.1 || v.act === 'run' ? 'run' : 'walk'; }
+    if (sp > 0.25) { if (v.act === 'sneak') return 'sneak'; if ((v.carry && v.carry.n > 0) || CARRY_ACTS.has(v.act)) return 'carryWalk'; return sp > 3.1 || v.act === 'run' ? 'run' : 'walk'; }
     if (v.downT && v.downT > G.S.clock) return 'sleep';
     const a = ACT[v.act]; if (a && a !== 'run') return a;
     if (v.carry && v.carry.n > 0) return 'carry';
@@ -757,8 +763,10 @@
   function reachDepth(H, L, hy, w) { const q = G.clamp((1.05 - hy) / 0.85, 0, 1) * G.smooth(0, 1, w); const hv = H ? G.clamp(H.kg / (28 * (L.str || 1)), 0, 1) : 0; return { q, sq: q * (0.75 + 0.25 * hv), bw: q * (1 - 0.35 * hv) }; }
   Anim.reachDepth = reachDepth;
   Anim.hold = function (want, L, st, t, sp) {
-    const H = L.held, r = L.reach && L.reach.w > 0.001 ? L.reach : null; if (!H && !r) return want;
     const walk = st === 'walk' || st === 'carryWalk' || st === 'run' || st === 'sneak' || st === 'wade';
+    // (a crate between two, at the hips: both hands of each on their end of it — the rig's — and the step a little heavier)
+    if (L.pair) { want.holdW = 1; if (walk) want.bob = (want.bob || 0) * 0.75; return want; }
+    const H = L.held, r = L.reach && L.reach.w > 0.001 ? L.reach : null; if (!H && !r) return want;
     if (H && H.grip !== 'chao') {
       const k = G.clamp(H.kg / (28 * (L.str || 1)), 0, 1.6), g = H.grip; want.holdW = 1;
       // (the free arm: the step's own swing, not the 'carry' state's arms held out)
@@ -1101,6 +1109,18 @@
       C.makeRotationFromQuaternion(Q.a); C.setPosition(V3.a);
     }
   }
+  // (one of two under one crate — L.pair, its frame between them, from P3.update —: the crate's long side along the line from
+  // the helper to the one ahead, and each one's palms on their own end of it, low on its face, near its corners — the one
+  // ahead's behind him, the elbows out and back; the helper's before him, as at the chest — L-210)
+  const POLE_BACK = [0.55, -1, -0.7];
+  function pairTargets(L, PR) {
+    const H = PR.H; const w = H.size[0], h = H.size[1], d = H.size[2]; const end = PR.lead === L.id ? 1 : -1;
+    const ux = Math.cos(PR.yaw), uz = Math.sin(PR.yaw), along = end * (w / 2 - 0.02), half = d / 2 - 0.04;
+    HP.mode = 'pair'; HP.pole = end > 0 ? POLE_BACK : HOLDS.peito.pole;
+    for (let q = 0; q < 2; q++) { const sd = q ? -1 : 1; V3.a.set(PR.X + ux * along - uz * sd * half, PR.Y - h * 0.2, PR.Z + uz * along + ux * sd * half).applyMatrix4(M.ci); HP.t[q] = HP.tw[q]; HP.t[q][0] = V3.a.x; HP.t[q][1] = V3.a.y; HP.t[q][2] = V3.a.z; }
+    // (the palm on the holder's left to the left arm: in the trunk's frame the left is +x)
+    if (HP.t[0][0] < HP.t[1][0]) { const t = HP.tw[0]; HP.tw[0] = HP.tw[1]; HP.tw[1] = t; HP.t[0] = HP.tw[0]; HP.t[1] = HP.tw[1]; }
+  }
   // (the empty hands reaching for a point of the world: each palm a hand's width to its side)
   function reachEmpty(R, L, s) {
     const r = L.reach; HP.mode = 'reach'; HP.pole = [0.7, -0.5, -0.45];
@@ -1142,9 +1162,11 @@
     const grip = pose.grip || 0;
     // (what is held — or the empty hands reaching for a point —: where the thing sits and where the palms must be)
     const H = !lie && !L.bind ? L.held || null : null; const rch = !lie && !L.bind && L.reach && L.reach.w > 0.001 ? L.reach : null;
-    if (H || rch) { L.yaw0 = -yaw + Math.PI / 2; M.ci.copy(R[B.chest]).invert(); holdTargets(R, L, s); if (hold && !H) HP.t[0] = null; }
+    const PR = !lie && !L.bind && L.pair ? L.pair : null; // (one of two under one crate)
+    if (PR) { M.ci.copy(R[B.chest]).invert(); pairTargets(L, PR); }
+    else if (H || rch) { L.yaw0 = -yaw + Math.PI / 2; M.ci.copy(R[B.chest]).invert(); holdTargets(R, L, s); if (hold && !H) HP.t[0] = null; }
     else HP.t[0] = HP.t[1] = null;
-    const hw = H ? (rch ? 1 : G.clamp(pose.holdW || 0, 0, 1)) : rch ? G.clamp(rch.w, 0, 1) : 0;
+    const hw = PR ? 1 : H ? (rch ? 1 : G.clamp(pose.holdW || 0, 0, 1)) : rch ? G.clamp(rch.w, 0, 1) : 0;
     for (let k = 0; k < 2; k++) {
       const sd = k ? -1 : 1;
       let sp = k ? pose.shRp : pose.shLp, sr = k ? pose.shRr : pose.shLr, el = k ? pose.elR : pose.elL;
@@ -1165,7 +1187,7 @@
       frHalf(R[B.shHL + k], R[B.chest], sd * 0.235, 0.46, jz * 0.5, 0, 0, sd * RIG.roll, sp, ry, roll);
       fr(R[B.faL + k], R[B.shL + k], 0, -0.3, 0, -el, 0, 0); fr(R[B.elHL + k], R[B.shL + k], 0, -0.3, 0, -el / 2, 0, 0);
       fr(R[B.hdL + k], R[B.faL + k], 0, -0.29, 0, 0, 0, 0);
-      const onIt = H && H.hands.includes(k ? 'R' : 'L');
+      const onIt = !!PR || (H && H.hands.includes(k ? 'R' : 'L'));
       const g = (hold && sd > 0) || (k && (pose.tool || L.tool)) || onIt ? 1 : grip; // (both hands close on a swung haft: the swing's own grip)
       fr(R[B.fgL + k], R[B.hdL + k], 0, -RIG.knuckle, 0, 0, 0, -sd * g * 0.95);
       fr(R[B.tbL + k], R[B.hdL + k], -sd * 0.0076, -0.0238, 0.0324, 0, -sd * g * 0.55, -sd * g * 0.25);
@@ -1188,8 +1210,10 @@
     // carried kept upright by the wrist; a swung tool bent down by the wrist as it strikes)
     const carried = L.tool && !pose.tool && !lie && upright(pose);
     fr(R[B.tool], R[B.hdR], 0.027, -0.076, 0, Math.PI / 2 + (carried ? -Math.PI / 2 + 1.0 : pose.tool ? (pose.wrist || 0) : 0), 0, 0);
+    // (the crate of two: between them, its long side along their line; and, for the tests, where the palms came to on it)
+    if (PR) { const C = R[B.carry]; C.makeRotationY(-PR.yaw); C.setPosition(PR.X, PR.Y, PR.Z); const p = P3.palms(R); (PR.palms || (PR.palms = {}))[PR.lead === L.id ? 'lead' : 'help'] = p.map(q => (q ? [q.x, q.y, q.z] : null)); }
     // (the held thing that hangs from the fist — upright, its handle in the palm —, or waits on the ground at the right front)
-    if (H && (HP.mode === 'hand' || HP.mode === 'ground')) {
+    else if (H && (HP.mode === 'hand' || HP.mode === 'ground')) {
       const C = R[B.carry];
       if (HP.mode === 'hand') { V3.a.set(0.027, -0.076, 0).applyMatrix4(R[B.hdR]); V3.a.y -= HANG[H.form] || H.size[1] * 0.5; }
       else { V3.a.set(-0.42, 0, 0.3).applyMatrix4(root); V3.a.y = (L.ground !== undefined ? L.ground : Y) + H.size[1] / 2; }
@@ -1262,6 +1286,11 @@
   P3.avatar = null; // (set by the body's controller: { X, Y, Z, yaw, pose, look })
   P3.flames = []; // (the flames of the torches and lanterns in the hands drawn this frame: [X, Y, Z, size] — for FX3D)
   P3.walkers = []; // (the people drawn whole this frame: [X, Y, Z, speed, state, act, yaw, id] — only seen)
+  // (the crates of two drawn this frame: { lead, help, X, Y, Z, yaw, gap, H, palms: { lead, help } } — for the tests; only seen.
+  // Two within 1.2 m — what both pairs of arms reach on a crate of half a metre — carry it between them; its middle 1.08 m
+  // over the ground, the palms a little under it, at the belly — L-210)
+  P3.pairs = []; const pairOf = new Map(); G.worldHooks.push(() => { pairOf.clear(); P3.pairs.length = 0; });
+  const PAIR_NEAR = 1.2, PAIR_Y = 1.08;
   P3.highlight = 0; // (the one the body is looking at, to talk to)
   P3.update = function (dt, focus) {
     if (!mesh || !focus) return;
@@ -1296,6 +1325,24 @@
       avFeet.t = (avFeet.t || 0) + dt; av.pose.blink = blinkAt(avFeet.t, av.id); cloth(avFeet, av.X, av.Z, av.yaw, dt, av.pose); if (av.look.mood) av.look.mood = easeMood(avFeet, av.look.mood, dt);
       P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null);
     }
+    // (two under one crate — G.Act.pair: the one ahead holds it in the world, the helper behind takes its other end —, both
+    // drawn whole, out of doors, and near enough for one crate to be in both pairs of hands: its frame between them, at the
+    // belly, its long side along their line — L-210. Farther apart — a turn the world takes wide —, the crate at the chest of
+    // the one ahead and the helper's arms a carrier's: no crate is drawn that the world does not have)
+    P3.pairs.length = 0; pairOf.clear();
+    if (G.Act && G.Act.pair) {
+      const whole = new Set(); for (let k = 0; k < n; k++) whole.add(near[k][1].id);
+      for (let k = 0; k < n; k++) {
+        const v = near[k][1]; if (v.inside) continue; const p = G.Act.pair(v); if (!p || p.lead !== v.id) continue;
+        const h = S.villagers.get(p.help); if (!h || h.inside || !whole.has(h.id)) continue;
+        const q = G.Act.pair(h); if (!q || q.lead !== v.id) continue; // (the helper's own errand says so too: one called away holds nothing)
+        const X1 = v.x * TL, Z1 = v.y * TL, X2 = h.x * TL, Z2 = h.y * TL; const gap = Math.hypot(X1 - X2, Z1 - Z2); if (gap > PAIR_NEAR || gap < 0.45) continue;
+        const fc = G.Fac.ofV ? G.Fac.ofV(v) : null; const Hd = P3.held(v, (fc && fc.civ) || v._civ || v.civ || 'nordico'); if (!Hd || Hd.gear || Hd.grip === 'lado' || Hd.grip === 'cabeca') continue;
+        const X = (X1 + X2) / 2, Z = (Z1 + Z2) / 2;
+        const e = { lead: v.id, help: h.id, X, Y: groundY(X / TL, Z / TL) + PAIR_Y, Z, yaw: Math.atan2(Z1 - Z2, X1 - X2), gap: +gap.toFixed(3), H: Hd, palms: null };
+        pairOf.set(v.id, e); pairOf.set(h.id, e); P3.pairs.push(e);
+      }
+    }
     const seen = new Set();
     for (let k = 0; k < n; k++) {
       const v = near[k][1]; seen.add(v.id);
@@ -1319,6 +1366,10 @@
       // (waved at by the body: those standing or strolling near wave back, a moment later — only seen)
       if (s.greetT > 0) { if ((s.greetD -= dt) <= 0) { s.greetT -= dt; if (st === 'idle' || st === 'walk' || st === 'talk') st = 'wave'; } }
       const Lv = P3.look(v);
+      // (one of two under one crate: the frame between them; the crate is the one ahead's, drawn once, by his rig — both hands
+      // of each on it: no torch, no spear)
+      const pr = pairOf.get(v.id) || null; Lv.pair = pr;
+      if (pr) { Lv.torch = false; Lv.lantern = false; Lv.tool = false; if (pr.help === v.id) { Lv.held = null; Lv.carry = false; } }
       // (the stride in step with the ground: the phase at the rate the rig's own legs need for this speed and this size)
       if (st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak') s.ph += dt * s.sp * Anim.rate(st, s.sp, Lv.s); else s.ph += dt * 4;
       // (the load in the hands and the hands reaching: the view's own memory of the lift and the setting down — reachOf)
