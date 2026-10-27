@@ -16,7 +16,7 @@
 //   4. the steps the feet go up are the ones the 3D lays (Space.doorFlight): over each tread the body's floor is its top, and
 //      the drawing has a face there; and every flight before a door in the world is walked up, from the ground a stride past
 //      its foot to its top tread, without the hands (T-090: the step measured at its foot, against Avatar.TUNE.stepUp, a number
-//      beside it)
+//      beside it); and a door moved to the other side of its shell is reckoned anew, not taken for the old one (L-196)
 //   5. saved and loaded standing on a doorstep: there still, not moved, not taken for one who swims
 //   6. a house built where the body stands: never inside, never in its rooms — it came in by no door —; the world takes it out
 //      as anyone (L-175); and saved and loaded in a door's opening, walking in, the world not yet having it indoors: there
@@ -220,6 +220,18 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
   ok('4b. cada lance diante de uma porta de fora, em todo o mundo, subido andando: do chão a um passo do pé até o degrau de cima, sem as mãos', nw >= 60 && up1 === nw,
     `${nw} lances subidos: ${up1} até em cima${stops.length ? ' — PAROU: ' + stops.join(' · ') : ''}; sem chão a um passo do pé ${noFoot}; o degrau mais alto ${maxRise.toFixed(2)} m; ${nf} lances ao todo, ${hi} acima de um passo pela medida parada${far.length ? ' (' + far.join(' · ') + ')' : ''}`);
   if (S.avatar) G.Possess.release('deus');
+  // (and a door moved to the other side of its shell — a reform, the day's turn, L-195 — with the same wall id and the same place
+  // along it: the flight is the new side's, not the one kept for the old side — L-196)
+  { let got = null;
+    for (const b of houses) { const p = Sp.planNow(b); if (!p || !p.ok || !p.entrance || p.shell.kind === 'round') continue; const h = p.holes.find(q => q.door === p.entrance.door && q.kind !== 'janela'); const w = h && p.walls[h.wall]; if (!w) continue;
+      const l = p.levels.find(q => q.lv === w.lv), ly = l ? l.y : 0, lot = { w: b.w * TL, d: b.h * TL }; const fl = Sp.doorFlight(b, p.shell, lot, w, h, ly, raisedOf(p)); if (!fl || !fl.treads.length) continue;
+      // (the same wall mirrored through the middle of the shell: on the opposite side)
+      const r = p.shell.r, mx = r[0] + r[2], mz = r[1] + r[3]; const w2 = Object.assign({}, w, { a: [mx - w.a[0], mz - w.a[1]], b: [mx - w.b[0], mz - w.b[1]] });
+      const kept = Sp.doorFlight(b, p.shell, lot, w2, h, ly, raisedOf(p)), anew = Sp.doorFlight(b, p.shell, lot, w2, h, ly, raisedOf(p), undefined, undefined, true);
+      got = { b, side: fl.F.sd, kept: kept ? kept.F.sd : '-', anew: anew ? anew.F.sd : '-' }; break; }
+    ok('4c. a porta mudada para o outro lado da casca, com o mesmo id de parede e o mesmo lugar nela: o lance é o do lado novo, não o guardado do velho', !!got && got.kept === got.anew && got.anew !== got.side,
+      got ? `${got.b.type}#${got.b.id}: o lado de antes ${got.side}; o novo, como os pés o leem ${got.kept}, refeito ${got.anew}` : 'nenhuma casa com lance na entrada');
+  }
 }
 
 // ------------------------------ 5. saved and loaded on a doorstep ------------------------------

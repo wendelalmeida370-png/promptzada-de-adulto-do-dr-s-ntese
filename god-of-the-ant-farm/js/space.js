@@ -183,7 +183,9 @@
   // → { F, uc, P, top, w (the steps' width), treads: [{ k, a, n, wa, wn, y, gy, kind }], cut, room } — or null: no steps there
   Sp.doorFlight = function (b, sh, lot, w, h, ly, raised, F0, uc0, fresh) {
     const y = ly + (h.sill || 0); if (raised || y >= 0.3 || !w || !h) return null;
-    const y0 = Sp.plinth(b).y0; const key = b.id + ':' + w.id + ':' + h.at + ':' + h.w; const k0 = y0.toFixed(3) + ':' + (G.S.typeVer || 0) + ':' + ly + ':' + (h.sill || 0) + ':' + sh.r + ':' + w.t;
+    // (kept by the wall's place too — its ends —, and the side given for a flight's foot: a door moved to another side of its
+    // shell with the same wall id and the same place along it is another flight)
+    const y0 = Sp.plinth(b).y0; const key = b.id + ':' + w.id + ':' + h.at + ':' + h.w; const k0 = y0.toFixed(3) + ':' + (G.S.typeVer || 0) + ':' + ly + ':' + (h.sill || 0) + ':' + sh.r + ':' + w.t + ':' + w.a + ':' + w.b + (F0 ? ':' + F0.sd + F0.line + ':' + uc0 : '');
     const m = !fresh && flights.get(key); if (m && m.k === k0) return m.f; // (fresh: reckoned anew, and not kept — Space.entryFits)
     let F = F0, uc = uc0;
     if (!F) { F = sideOf(sh, lot.w, w); const Lw = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; uc = F.ax ? w.a[0] + (w.b[0] - w.a[0]) / Lw * h.at : w.a[1] + (w.b[1] - w.a[1]) / Lw * h.at; }
@@ -304,14 +306,19 @@
   // does the way in fit before the door of a plan — or of a shell a plan is being made for, as a plan has it: shell, walls, holes,
   // levels, entrance —: steps the feet walk up, from ground the world walks a stride before their foot (L-195 asks it, for the
   // side a door is put on). The same reckoning as the steps drawn and walked (Space.doorFlight), reckoned anew and not kept;
-  // pure: it never writes the world, and draws no chance. A floor on posts has its own flight up to it: it fits
+  // pure: it never writes the world, and draws no chance. The worst of the door's steps and the feet of the flights outside:
+  // { ok, foot, rise, n, kind, ground, de: 'porta' | 'pé' }
   Sp.entryFits = function (b, c) {
+    const lot = { w: b.w * TILE, d: b.h * TILE }; let worst = null;
+    const look = (fl, de) => { if (!fl || !fl.treads.length) return; const kind = fl.treads.some(t => t.kind === 'side') ? 'lado' : fl.treads.length === 1 ? 'um' : fl.treads.some(t => t.n > fl.room + 0.3) ? 'rua' : 'lote';
+      const r = { ok: fl.walks && fl.ground, foot: +fl.foot.toFixed(2), rise: +fl.rise.toFixed(2), n: fl.treads.length, kind, ground: fl.ground, de }; if (!worst || (worst.ok && !r.ok)) worst = r; };
     const e = c.entrance; const h = e && c.holes.find(q => q.door === e.door && q.kind !== 'janela'); const w = h && c.walls[h.wall];
-    if (!w) return { ok: true, foot: 0, rise: 0, n: 0, kind: 'nenhum', ground: true };
-    const l = c.levels.find(q => q.lv === w.lv); const fl = Sp.doorFlight(b, c.shell, { w: b.w * TILE, d: b.h * TILE }, w, h, l ? l.y : 0, raisedOf(c), undefined, undefined, true);
-    if (!fl || !fl.treads.length) return { ok: true, foot: 0, rise: 0, n: 0, kind: 'nenhum', ground: true };
-    const kind = fl.treads.some(t => t.kind === 'side') ? 'lado' : fl.treads.length === 1 ? 'um' : fl.treads.some(t => t.n > fl.room + 0.3) ? 'rua' : 'lote';
-    return { ok: fl.walks && fl.ground, foot: +fl.foot.toFixed(2), rise: +fl.rise.toFixed(2), n: fl.treads.length, kind, ground: fl.ground };
+    if (w) { const l = c.levels.find(q => q.lv === w.lv); look(Sp.doorFlight(b, c.shell, lot, w, h, l ? l.y : 0, raisedOf(c), undefined, undefined, true), 'porta'); }
+    // (a floor on posts — the door's own steps are the plan's flight up to it —, and every flight up from the ground outside the
+    // walls: the steps before its foot. The plan's stairs, or a shell's steps: the same id, r and dir — those inside the walls,
+    // down into a sunken floor, are no way in)
+    for (const st of (c.stairs || c.steps || [])) { if (st.kind !== 'degraus' || inShell(c.shell, st)) continue; const fo = Sp.feet(st); look(Sp.doorFlight(b, c.shell, lot, fo.w, fo.h, 0, false, fo.F, fo.uc, true), 'pé'); }
+    return worst || { ok: true, foot: 0, rise: 0, n: 0, kind: 'nenhum', ground: true, de: '' };
   };
   function flightsOf(b, p) {
     const y0 = Sp.plinth(b).y0; const k = y0.toFixed(3) + ':' + (G.S.typeVer || 0);
