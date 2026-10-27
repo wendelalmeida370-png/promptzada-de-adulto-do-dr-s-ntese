@@ -633,7 +633,7 @@
   const cache = new Map();
   // (made as a generator: between two attempts whoever makes plans a little at a time — the line below — may stop)
   function* makeG(b, rec, famId, probe, relax, from, lastResort) {
-    const F = FAMS[famId]; let last = null; from = from || 0;
+    const F = FAMS[famId]; let last = null, best = null; from = from || 0;
     if (F) for (let a = from; a < from + In.TRIES; a++) {
       if (a > from) yield;
       const P = Plan(b, rec, famId, a); if (relax) P.relax = 1; if (lastResort) P.last = 1;
@@ -647,12 +647,14 @@
         plan = finish(P);
       }
       if (In.trace) In.trace(a, plan); // (for the proofs: what each attempt came to)
+      // (the last resort keeps the attempt that leaves the fewest on the floor: its places give the room of a bed to the fire)
+      if (plan.ok && lastResort && plan.short) { if (!best || plan.short < best.short) best = plan; continue; }
       if (plan.ok) return plan;
       if (probe) { const fa = floorArea(plan); plan.maxArea = Math.max(fa, last ? last.maxArea || 0 : 0); }
       last = plan;
       if (P.phase === 'casca') { plan.shellFailed = 1; break; } // (the shell itself does not stand: it is the same in every attempt)
     }
-    return last || { id: b.id, ok: false, errs: ['família desconhecida: ' + famId] };
+    return best || last || { id: b.id, ok: false, errs: ['família desconhecida: ' + famId] };
   }
   const run = g => { for (;;) { const r = g.next(); if (r.done) return r.value; } };
   function make(b, rec, famId, probe, relax) { return run(makeG(b, rec, famId, probe, relax)); }
@@ -760,10 +762,13 @@
       yield; const q = yield* makeG(b, Object.assign({}, rec, { f: g }), g); if (q.ok) { q.errsOf = p.errs; p = q; break; }
     }
     if (!p.ok && stands) { yield; const q = yield* makeG(b, r1, f, false, true); if (q.ok) { q.errsOf = p.errs; p = q; } }
-    // (and when all of that failed for want of room for the work's own stations — the recipe says so, P.lack —, one round
-    // more as the last resort, where what did not go in on the ground goes up to the gallery or stands free in the hall: a
-    // plan valid today never comes here, so it stays the same — L-182)
-    if (!p.ok && stands && p._P && p._P.lack) { yield; const q = yield* makeG(b, r1, f, false, false, 0, true); if (q.ok) { q.errsOf = p.errs; p = q; } }
+    // (and when all of that failed for want of room for a piece the building must have — the recipe says so, P.lack: the
+    // work's stations, a temple's altar, a house's fire, a cellar's hatch —, one round more as the last resort, where each
+    // recipe has its last places: the stations up on the gallery or free in the hall, the altar nearer the image, the brazier
+    // in another room, the hatch anywhere in the cellar's corner —, as the round before it laid out for fewer sleepers (a
+    // house's fire taking the room of a bed: someone sleeps on the floor, said). A plan valid today never comes here, so it
+    // stays the same — L-182, L-192, L-193, L-194)
+    if (!p.ok && stands && p._P && p._P.lack) { yield; const q = yield* makeG(b, r1, f, false, true, 0, true); if (q.ok) { q.errsOf = p.errs; p = q; } }
     p.shellFam = f;
     if (p.fam !== rec.f) { p.fell = rec.f; if (!p.errsOf) p.errsOf = fo.why || []; }
     if (b.type === 'ruin') p = ruinOf(p, b);

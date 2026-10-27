@@ -343,7 +343,15 @@
     P.walls4(-1, [r[0] - 0.12, r[1] - 0.12, r[2] + 0.12, r[3] + 0.12], 0.24, 1.9, 1, 'parede');
     const lw = 0.6; const cands = [];
     for (const u0 of [left ? r[2] - lw - 0.1 : r[0] + 0.1, (r[0] + r[2]) / 2 - lw / 2]) for (const v0 of [r[1] + 0.9, r[1] + 0.7, r[1] + 1.2]) { const hz = [u0, v0, u0 + lw, v0 + 0.7]; cands.push({ r: hz, du: 0, dv: 1, hole: hz }); }
-    if (!ladderAt(P, -1, 0, cands)) P.errs.push('o alçapão do porão não cabe');
+    // (the last resort, once every attempt left the hatch out — the round In.plan makes only then: L-194. Under a hall whose
+    // doors keep most of its floor clear — the arches of three naves —, the few places tried all fall in their ways: the hatch
+    // anywhere in the cellar's corner, either way up)
+    let hatch = ladderAt(P, -1, 0, cands);
+    if (!hatch && P.last) {
+      const more = []; for (let u0 = r[0] + 0.05; u0 + lw <= r[2] - 0.05 + 1e-6; u0 += 0.15) for (let v0 = r[1] + 0.3; v0 + 0.7 <= r[3] - 0.3 + 1e-6; v0 += 0.15) for (const dv of [1, -1]) { const hz = [u0, v0, u0 + lw, v0 + 0.7]; more.push({ r: hz, du: 0, dv, hole: hz }); }
+      hatch = ladderAt(P, -1, 0, more);
+    }
+    if (!hatch) { P.lack = 1; P.errs.push('o alçapão do porão não cabe'); }
   }
   // the roof made a terrace, as the shell has it: the parapet round it; maybe a room on it, roofed with reed — its walls and
   // its door are seen from the street
@@ -481,7 +489,11 @@
       if (fire === 'lar') lit = !!(P.place('lar', 0, lar, { sides: ['centro'], margin: 0.3 }) || P.place('lar', 0, lar, { sides: ['livre'], margin: 0.25 }));
       if (!lit && fire !== 'braseiro') lit = !!P.place(fire === 'lar' ? 'fogao' : fire, 0, lar, { sides: P.shuffle(['fundo', 'esquerda', 'direita', 'frente']) });
       if (!lit) lit = !!P.place('braseiro', 0, lar, { sides: ['fundo', 'esquerda', 'direita', 'frente'] });
-      if (!lit) P.errs.push('sem lugar para o fogo');
+      // (the last resort, once every attempt left the fire out — the round In.plan makes only then: L-193. In a small house
+      // with a loft over the back of the hall and the cellar's hatch under it, the hall's front keeps the door's way and the
+      // beds: the brazier in another room of the ground floor)
+      if (!lit && P.last) for (const m of P.rooms) { if (m.lv !== 0 || m.id === lar || m.circ) continue; if (P.place('braseiro', 0, m.id, { sides: ['fundo', 'esquerda', 'direita', 'frente', 'livre'] })) { lit = true; break; } }
+      if (!lit) { P.lack = 1; P.errs.push('sem lugar para o fogo'); }
     };
     // what keeps the household's things: the pantry (in the cellar, the annex, the hall) and the chest (coins and goods)
     const keep = upFirst => {
