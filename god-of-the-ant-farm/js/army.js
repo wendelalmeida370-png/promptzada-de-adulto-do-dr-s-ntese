@@ -129,6 +129,8 @@
     A.cols = {};
     if (members.length >= 40) for (const w of ['e', 'd']) { const cs = A.cos.filter(c => c.wing === w); if (cs.length) A.cols[w] = cs[0].cap; }
     for (const v of members) { const t = v.task; t.army = true; }
+    // (who the host armed: all of them lay the arms down when it ends, the companies the road home emptied first too — L-187)
+    b.roster = members.map(v => v.id);
     gen.task.flag = false; gen.task.general = true;
     // levied archers take up the bow
     for (const v of members) if (v.unit === 'arqueiro' && v.role !== 'guerreiro') { v.arm = 'arco'; v._bow = true; }
@@ -903,9 +905,18 @@
   };
   // eating inside a besieged town comes from its larder
   AR.larder = function (v) { const s = G.S.settlements.get(v.set); return s && s.larder && !v.captive ? s.larder : null; };
+  // a soldier lays down what the host gave him: the unit, the bow lent to a levy, the armoury's weapon back to its store
+  // (and with it the levy is unarmed again: the next host arms him from the armoury, not from a weapon already given back)
+  AR.discharge = function (v) {
+    v.unit = null; if (v._bow) { v.arm = null; v._bow = false; }
+    if (v._levy && v.role !== 'guerreiro') { const f = G.Fac.ofV(v); if (f) f.stock.armas = (f.stock.armas || 0) + 1; v._armed = false; }
+    v._levy = false;
+  };
   AR.onDisband = function (b) {
+    // (the whole roster, not the companies still standing: those the road home emptied were dropped from A.cos — L-187)
+    for (const id of b.roster || []) { const v = G.S.villagers.get(id); if (v) AR.discharge(v); }
     const A = b.army; if (!A) return;
-    for (const co of A.cos) for (const id of co.members) { const v = G.S.villagers.get(id); if (v) { v.unit = null; if (A.phase === 'acampar') v.sleeping = false; if (v._bow) { v.arm = null; v._bow = false; } if (v._levy && v.role !== 'guerreiro') { const f = G.Fac.ofV(v); if (f) f.stock.armas = (f.stock.armas || 0) + 1; } v._levy = false; } }
+    if (A.phase === 'acampar') for (const id of b.members) { const v = G.S.villagers.get(id); if (v) v.sleeping = false; }
     const set = G.S.settlements.get(b.set); if (set && set.larder && set.larder.by === b.id) endSiege(set, 'fim');
     if (b.stolen) { const f = G.Fac.get(b.fac); if (f) log(`${f.name} voltou da guerrilha com ${b.stolen} animais roubados.`, 'war'); for (const a of G.S.animals.values()) if (a.stolen === b.fac && a.state === 'led') { a.state = 'pen'; a.pen = 0; a.dom = b.fac; a.ledBy = 0; a.stolen = 0; } }
     if (A.reports.length && b.goal !== 'defesa') { const f = G.Fac.get(b.fac); if (f) f.warLog = (f.warLog || []).concat([{ d: G.S.day, strat: A.strat, rep: A.reports.slice(0, 4) }]).slice(-6); }

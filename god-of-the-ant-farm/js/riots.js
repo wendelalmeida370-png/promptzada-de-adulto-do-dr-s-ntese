@@ -410,9 +410,19 @@
     for (const R of riots().slice()) { try { tick(R, dt); } catch (err) { console.warn('riot', err); end(R, 'gone'); } }
   };
   (G.saveHooks = G.saveHooks || []).push({
-    save(out) { out.riots = G.S.riots || []; },
-    // (a riot is a moment, not a state: after a load the street is quiet again)
-    load() { G.S.riots = []; },
+    // (the save keeps the riot and what each one is doing in it, the guard's too: the people's tasks are not in the save,
+    // and every load quieted the street — the riot, its guard and its end were lost; L-190)
+    save(out) { out.riots = riots().map(R => Object.assign({}, R, { held: alive(R).map(v => [v.id, Object.assign({}, v.task)]), guard: guardsOf(R).map(v => [v.id, Object.assign({}, v.task)]) })); },
+    load(o) {
+      const S = G.S; S.riots = [];
+      for (const R0 of o.riots || []) {
+        if (!R0.held) continue; // (a save from before: the street is quiet again, as it always was)
+        const R = Object.assign({}, R0); const back = R.held.concat(R.guard || []); delete R.held; delete R.guard;
+        riots().push(R);
+        // (each one walks back to where he stood: the save keeps no paths)
+        for (const [id, t] of back) { const v = S.villagers.get(id); if (v && !v.captive) G.Vg.setTask(v, Object.assign({}, t, { st: 0 })); }
+      }
+    },
   });
 
   // ------------------------------ drawing: the torches light the square at night ------------------------------

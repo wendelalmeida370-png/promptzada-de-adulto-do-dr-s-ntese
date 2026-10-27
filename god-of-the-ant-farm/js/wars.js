@@ -593,20 +593,30 @@
     }
   }
   // home again: the veterans, the families
+  // one back from the war: the veteran's mark, the family's welcome
+  function welcome(a, w, v) {
+    if (!v._vetWar || v._vetWar !== w.id) { v._vetWar = w.id; G.Life && G.Life.bio(v, 'veteran', w.name, a.battles.length); }
+    if (v.unit) v.unit = null;
+    const kin = G.Stories ? G.Stories.kin(v).filter(k => !k.captive && dist(k.x, k.y, v.x, v.y) < 14) : [];
+    for (const k of kin.slice(0, 2)) { G.Vg.emote(k, 'heart', 3); }
+    if (kin.length) G.Vg.emote(v, 'heart', 3);
+  }
+  // a soldier of a campaign gets home (war.js, the road home): welcomed then and there — the road empties the band one by
+  // one, and the army ends only when the last is in, so the end alone welcomed the last few (L-187); a.came keeps who
+  // came, in the save, for the end to tell
+  Wz.cameHome = function (v, b) {
+    const a = Wz.army(b.campaign); const w = a && Wz.get(a.war); if (!w || a.done || v.captive) return;
+    const came = a.came || (a.came = []); if (came.includes(v.id)) return;
+    welcome(a, w, v); came.push(v.id);
+  };
   function homecoming(a) {
     const S = G.S; const w = Wz.get(a.war); if (!w) return;
-    const f = F(a.fac); let n = 0;
-    for (const id of a.members) {
-      const v = P(id); if (!v || v.captive) continue; n++;
-      if (!v._vetWar || v._vetWar !== w.id) { v._vetWar = w.id; G.Life && G.Life.bio(v, 'veteran', w.name, a.battles.length); }
-      if (v.unit) v.unit = null;
-      const kin = G.Stories ? G.Stories.kin(v).filter(k => !k.captive && dist(k.x, k.y, v.x, v.y) < 14) : [];
-      for (const k of kin.slice(0, 2)) { G.Vg.emote(k, 'heart', 3); }
-      if (kin.length) G.Vg.emote(v, 'heart', 3);
-    }
+    const f = F(a.fac); const came = a.came || []; a.came = null;
+    for (const id of a.members) { const v = P(id); if (!v || v.captive || came.includes(id)) continue; welcome(a, w, v); came.push(id); }
+    const n = came.length;
     if (n && w && !w.end) a.home = S.day;
     if (n >= 5 && a.role !== 'defesa' && w) { const home = G.S.settlements.get(a.front); event(w, `${cap1(a.name)} voltou para casa${a.dead ? ` — dos ${a.n0} que partiram, ${a.dead} ficaram pelo caminho` : ''}.`, home ? home.cx : undefined, home ? home.cy : undefined, 'army', { quiet: !w.end && n < 20 }); }
-    if (n && f) G.Stories && G.Stories.signal('armyHome', { war: w.id, army: a.id, fac: a.fac, ids: a.members.slice(), n });
+    if (n && f) G.Stories && G.Stories.signal('armyHome', { war: w.id, army: a.id, fac: a.fac, ids: came, n });
   }
 
   // ====================================================================================
@@ -779,6 +789,8 @@
     const gN = Math.max(3, Math.ceil(b.members.length * 0.3));
     const garr = b.members.slice(0, gN);
     for (const id of garr) { const v = P(id); if (v) { if (v.task && v.task.type === 'band') G.Vg.endTask(v); v.set = set.id; v.home = 0; } }
+    // (the garrison keeps the arms it holds the town with: when the host ends, it lays nothing down — L-187)
+    if (b.roster) b.roster = b.roster.filter(id => !garr.includes(id));
     b.members = b.members.slice(gN);
     if (set.occ) set.occ.garrison = garr.length;
     if (!a || !w || w.end || b.members.length < 8 || supplyDays(a) < 0.5) { b.st = 'retorno'; b.t = 0; if (a && w) event(w, `${cap1(a.name)} deixou ${garr.length} de guarnição em ${set.name} e voltou para casa.`, set.cx, set.cy, 'army'); return; }
@@ -1074,18 +1086,22 @@
     if (armies().length > 120) st().armies = armies().filter(a => !a.done || G.S.day - (a.day || 0) < 30).slice(-120);
     if (wars().length > 60) { const keep = wars().filter(w => !w.end).concat(wars().filter(w => w.end).slice(-50)); st().wars = wars().filter(w => keep.includes(w)); }
   };
-  // after a load: the armies in the field come back together where their soldiers stand
+  // after a load: the armies in the field come back together where their soldiers stand; the ones on the road home — and
+  // the ones left with no war, no target or not three to fight — walk on home, and end as they would have, at home (the
+  // save keeps no bands: they were closed right there, and the save lost the road, the welcome and the armoury's
+  // weapons — L-185)
   function resume() {
     const S = G.S;
     for (const a of armies()) {
       if (a.done) continue;
-      const w = Wz.get(a.war); if (!w || w.end) { a.done = true; continue; }
-      const f = F(a.fac); const tgt = S.settlements.get(a.target);
+      const w = Wz.get(a.war); const f = F(a.fac); const tgt = S.settlements.get(a.target);
       const ms = a.members.map(P).filter(v => v && !v.captive && fid(v) === a.fac);
-      if (!f || !tgt || ms.length < 3) { a.done = true; continue; }
+      if (!f || !f.alive || !ms.length || a.phase === 'dispersado') { a.done = true; continue; }
       if (a.sea && (a.phase === 'embarque' || a.phase === 'travessia')) continue;
-      if (a.phase === 'mobilizar') { a.called = S.clock; ms.forEach((v, k) => G.Vg.setTask(v, { type: 'muster', army: a.id, k, pri: 3.15, kind: 'muster', st: 0 })); continue; }
-      if (a.phase === 'retorno' || a.phase === 'retirada' || a.phase === 'dispersado') { a.done = true; continue; }
+      // (still at the muster: called again, and the muster itself decides — no target or too few, it sends them home; a
+      // muster of a war already over breaks up here, as the peace breaks it up)
+      if (a.phase === 'mobilizar') { if (!w || w.end) { a.done = true; a.phase = 'dispersado'; continue; } a.called = S.clock; ms.forEach((v, k) => G.Vg.setTask(v, { type: 'muster', army: a.id, k, pri: 3.15, kind: 'muster', st: 0 })); continue; }
+      if (!w || w.end || !tgt || ms.length < 3 || a.phase === 'retorno' || a.phase === 'retirada') { if (!walkHome(a, w, f, tgt, ms)) a.done = true; continue; }
       // the soldiers fall in again around their commander
       const lead = P(a.gen) || ms[0];
       a.muster = [lead.x, lead.y];
@@ -1094,6 +1110,18 @@
     }
     // (a land battle is fought again when the lines meet; a sea battle in progress goes on — the fleets keep it)
     for (const bt of st().battles) if (bt.open && !bt.naval) { bt.open = false; bt.t1 = S.clock; }
+  }
+  // the road home, after a load: a band under the number of the one the save could not keep, with the soldiers still on
+  // it (the ones already home were welcomed as they got in); the arms they hold go back when it ends (b.roster)
+  function walkHome(a, w, f, tgt, ms) {
+    const S = G.S; if (!a.band || G.War.bands.has(a.band)) return false;
+    const en = F((w ? foesOf(w, a.fac) : [])[0] || (tgt ? tgt.fac : 0)); const at = tgt || S.settlements.get(a.front) || G.Fac.capitalOf(a.fac);
+    if (!en || !at) return false;
+    const b = G.War.makeBand(f, en, at, ms, 'conquista', { id: a.band, home: true, from: a.front });
+    b.campaign = a.id; b.retreat = a.phase === 'retirada'; b.roster = b.members.slice();
+    if (a.sea) b.fleet = a.sea; // (the fleet, if it still waits at the beach, takes them back aboard: fleets.js decides)
+    a.phase = b.retreat ? 'retirada' : 'retorno';
+    return true;
   }
   (G.saveHooks = G.saveHooks || []).push({
     save(out) { if (G.S.wz) out.wz = G.S.wz; },

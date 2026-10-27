@@ -89,6 +89,8 @@
         if (t.type === 'scene' && G.Scene && !G.Scene.list.some(x => x.id === t.sc && x.st === 'run')) add('scene', 1, `${nm}: preso numa cena que não está rodando`, v.id);
         if (t.type === 'escorted' && !P(t.by)) add('war', 2, `${nm}: escoltado por ${t.by} que não existe`, v.id);
         if (t.type === 'escorted' && !v.captive) add('war', 2, `${nm}: escoltado sem ser cativo`, v.id);
+        // (who is in a riot, or guards it, is in one that is on — the save keeps the riot and what they do in it: L-190)
+        if ((t.type === 'riot' || t.type === 'riotguard') && !(s.riots || []).some(R => R.id === t.r)) add('pol', 2, `${nm}: ${t.type === 'riot' ? 'no motim' : 'na guarda do motim'} ${t.r}, que não existe`, v.id);
         if (t.type === 'aboard' && !v.aboard) add('sea', 2, `${nm}: tarefa 'aboard' em terra`, v.id);
         if ((t.type === 'combat' || t.type === 'fight') && t.id && t.age > 60) add('ai', 3, `${nm}: combate há ${Math.round(t.age)} s`, v.id);
         if (t.age > G.DAY_LEN * 3 && !{ aboard: 1, jail: 1, band: 1, swim: 0, scene: 0 }[t.type] && !t.saga) add('ai', 3, `${nm}: mesma tarefa '${t.type}' há ${(t.age / G.DAY_LEN).toFixed(1)} dias`, v.id);
