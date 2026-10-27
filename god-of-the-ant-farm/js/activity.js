@@ -778,10 +778,12 @@
     const S = G.S; const out = { doing: [], goals: [], promises: [], found: [], rumors: [], memories: [], options: [] }; if (!v) return out;
     for (const op of A.of(v)) { if (!live(op)) continue; const def = A.DEFS[op.def]; out.doing.push({ id: op.id, kind: 'doing', txt: def && def.title ? def.title(op, v) : op.def, day: op.born, st: op.st, op: op.id }); }
     for (const f of A.hooks.diary) { try { f(v, out); } catch (e) { oops('diário', e); } }
-    for (const e of v.diary || []) { const k = e.kind === 'goal' ? 'goals' : e.kind === 'promise' ? 'promises' : e.kind === 'found' ? 'found' : e.kind === 'rumor' ? 'rumors' : e.kind === 'option' ? 'options' : 'memories'; out[k].push(Object.assign({ id: 0 }, e)); }
-    if (G.Life) for (const e of G.Life.bioList(v).slice(-8)) out.memories.push({ id: 0, kind: 'memory', txt: e.txt, day: e.d });
-    // (rumours: what the person's people heard, with how sure it is — a rumour is not a fact)
-    if (G.Know && G.Know.rumorsOf) { try { for (const r of G.Know.rumorsOf(G.Fac.idOfV(v)) || []) out.rumors.push({ id: r.id || 0, kind: 'rumor', txt: r.claim || r.text || '', day: r.day || 0, conf: r.conf }); } catch (e) { oops('rumores', e); } }
+    // (each line says where it came from — src: the system that noted it; a note that says none, the diary's own 'nota')
+    for (const e of v.diary || []) { const k = e.kind === 'goal' ? 'goals' : e.kind === 'promise' ? 'promises' : e.kind === 'found' ? 'found' : e.kind === 'rumor' ? 'rumors' : e.kind === 'option' ? 'options' : 'memories'; out[k].push(Object.assign({ id: 0, src: 'nota' }, e)); }
+    if (G.Life) for (const e of G.Life.bioList(v).slice(-8)) out.memories.push({ id: 0, kind: 'memory', src: 'biografia', txt: e.txt, day: e.d });
+    // (rumours: what the person's people heard, with how sure the people are of it, from the day they heard it — a rumour is
+    // not a fact; one the people saw settled, confirmed or exposed, is known, and no rumour any more)
+    if (G.Know && G.Know.rumorsOf) { try { const fid = G.Fac.idOfV(v); for (const r of G.Know.rumorsOf(fid) || []) { const by = (r.by && r.by[fid]) || {}; if (by.end) continue; out.rumors.push({ id: r.id || 0, kind: 'rumor', src: 'rumor', txt: r.claim || r.text || '', day: by.d || (r.origin && r.origin.day) || 0, conf: G.Know.belief ? G.Know.belief(r, fid) : r.conf }); } } catch (e) { oops('rumores', e); } }
     for (const a of A.avail(v)) if (a.ok && a.known !== false) out.options.push({ id: 0, kind: 'option', txt: a.txt || a.name, day: S.day, def: a.def });
     return out;
   };

@@ -244,6 +244,7 @@
       else if (b.dataset.act === 'incarnate') { const s = UI.selected; if (s && !s.dead && G.Modes) G.Modes.enter(s); }
       else if (b.dataset.act === 'tree') UI.openTree(UI.selected.id);
       else if (b.dataset.act === 'bio') UI.openBio(UI.selected.id);
+      else if (b.dataset.act === 'diary') UI.openDiary(UI.selected.id);
       else if (b.dataset.act === 'cave-view') G.Caves.view(+b.dataset.id);
       else if (b.dataset.act === 'cave-panel') { const cv = G.Caves.get(+b.dataset.id); if (cv) UI.select(G.Caves.selectCave(cv)); }
       else if (b.dataset.act === 'saga') G.Stories.openStory(+b.dataset.id);
@@ -603,7 +604,7 @@
       ${(() => { const mem = G.Life ? G.Life.bioList(v).slice(-3).reverse() : []; return mem.length ? `<div class="memories"><label>Memórias</label>${mem.map(e => `<div><em>${e.age} ${e.age === 1 ? 'ano' : 'anos'}</em>${esc(e.txt)}</div>`).join('')}</div>` : ''; })()}
       <div class="doing">Atualmente: <b>${esc(G.Vg.taskText(v))}</b></div>${G.WarsUI ? G.WarsUI.personLine(v) : ''}${G.SeaUI ? G.SeaUI.personLine(v) : ''}
       <div class="meta">${set ? esc(set.name) : ''}${v.skill ? ` · aprendeu o ofício de ${esc((G.ROLE[v.skill] || [v.skill])[0].toLowerCase())} ainda criança` : ''}${(() => { const d = G.Pets && G.Pets.dogOf(v); return d ? ` · cão: ${esc(d.named || 'sem nome')}` : ''; })()}${G.Eco && G.Eco.personLine(v) ? ' · ' + esc(G.Eco.personLine(v)) : ''}${home ? (() => { const hn = G.Village.buildName(home).toLowerCase(); return ' · mora n' + (G.gen(hn) === 'a' ? 'uma ' : 'um ') + esc(hn); })() : ''}${feats.length ? '<br>Contribuiu com ' + feats.join(', ') : ''}</div>
-      <div class="btns"><button data-act="follow" class="${following ? 'on' : ''}">${ICON.eye} ${following ? 'Seguindo' : 'Seguir'}</button><button data-act="tree">${ICON.tree} Família</button><button data-act="bio">${ICON.book} Biografia</button>${G.Modes ? (() => { const c = G.Modes.can(v); return `<button data-act="incarnate" class="incarnate"${c.ok ? '' : ` disabled title="${esc(c.why || '')}"`}>${ICON.incarnate || ICON.eye} Encarnar</button>`; })() : ''}</div>`;
+      <div class="btns"><button data-act="follow" class="${following ? 'on' : ''}">${ICON.eye} ${following ? 'Seguindo' : 'Seguir'}</button><button data-act="tree">${ICON.tree} Família</button><button data-act="bio">${ICON.book} Biografia</button>${G.DiarioUI ? `<button data-act="diary">${ICON.book} Diário</button>` : ''}${G.Modes ? (() => { const c = G.Modes.can(v); return `<button data-act="incarnate" class="incarnate"${c.ok ? '' : ` disabled title="${esc(c.why || '')}"`}>${ICON.incarnate || ICON.eye} Encarnar</button>`; })() : ''}</div>`;
   }
   function shipHTML(s) {
     const S = G.S; if (!S.ships.includes(s)) { UI.select(null); return ''; }
@@ -804,6 +805,14 @@
     UI.openModal(`<h2>A vida de ${esc(p.name)}</h2><p class="muted center">${p.dead ? `Viveu ${Math.floor(p.age)} anos` : `${Math.floor(p.age)} anos · ${esc(G.roleName(p))}`} · tudo o que está escrito aqui aconteceu</p>
       ${list.length || end ? `<ol class="bio">${list.map(e => `<li><span>Dia ${e.d} · ${e.age} ${e.age === 1 ? 'ano' : 'anos'}</span>${esc(e.txt)}</li>`).join('')}${end}</ol>` : '<p class="muted center">Uma vida ainda sem histórias.</p>'}
       <div class="mbtns"><button data-m="person" data-id="${p.id}">Ver ${esc(p.name)}</button><button data-m="tree" data-id="${p.id}">Família</button><button class="primary" data-m="close">Fechar</button></div>`, 'wide');
+  };
+  // the diary of a life (DiarioUI): the person's own page — what they know, lived and mean to do —, the same one the body sees
+  // over its eyes; read only here (only the body, from its own page, lets a goal go)
+  UI.openDiary = function (id) {
+    const p = G.person(id); if (!p || p.dead || !G.DiarioUI) return;
+    const pg = G.DiarioUI.page(p, { god: true });
+    UI.openModal(`<h2>O diário de ${esc(p.name)}</h2><div class="dl-page">${pg.html}</div>
+      <div class="mbtns"><button data-m="person" data-id="${p.id}">Ver ${esc(p.name)}</button><button data-m="bio" data-id="${p.id}">Biografia</button><button class="primary" data-m="close">Fechar</button></div>`, 'wide');
   };
   UI.openTree = function (id) {
     const S = G.S; const p = G.person(id); if (!p) return;

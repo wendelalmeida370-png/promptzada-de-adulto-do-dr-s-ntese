@@ -1238,6 +1238,27 @@ canvas#game3d { touch-action: none; transition: none; }
 #inc-card .btns button[disabled] { opacity: .5; cursor: not-allowed; }
 #inc-card .btns button svg { width: 15px; height: 15px; }
 #inc-card .btns button[data-c="swap"] { border-color: rgba(240, 198, 110, .5); color: var(--ih-gold-2); }
+/* the diary of the life (diario-ui.js): its button beside the way back to the god, its panel; the same page in the god's view */
+.ih-corner { position: absolute; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 6px; pointer-events: none; }
+.ih-corner .ih-god { position: static; }
+.ih-diary { pointer-events: auto; display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--ih-edge); background: var(--ih-glass); color: var(--ih-text); font-weight: 800; font-size: 12px; box-shadow: var(--ih-drop); text-shadow: var(--ih-ts); }
+.ih-diary svg { width: 15px; height: 15px; color: var(--ih-gold); }
+.ih-diary:hover { background: rgba(255, 255, 255, .1); }
+#inc-card.diario { width: min(440px, calc(100vw - 32px)); max-height: 82vh; }
+.dl-head { margin: 6px 0 2px; font-size: 11px; font-weight: 800; color: var(--ih-mute, var(--muted)); letter-spacing: .02em; }
+.dl-sec { margin-top: 12px; }
+.dl-sec > label { display: block; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ih-gold, var(--gold)); font-weight: 900; margin-bottom: 4px; }
+.dl-e { padding: 4px 0 5px; border-top: 1px solid rgba(255, 236, 200, .06); }
+.dl-sec > label + .dl-e { border-top: 0; }
+.dl-t { font-size: 13px; line-height: 1.38; color: var(--ih-text, var(--text)); }
+.dl-o { font-size: 10.5px; font-weight: 700; color: var(--ih-mute, var(--muted)); margin-top: 1px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+.dl-o button { border: 1px solid rgba(240, 198, 110, .45); background: rgba(240, 198, 110, .08); color: var(--ih-gold-2, var(--gold-2)); border-radius: 7px; padding: 1px 8px; font-size: 10.5px; font-weight: 800; }
+.dl-o button:hover { background: rgba(240, 198, 110, .18); }
+.dl-o button[disabled] { opacity: .5; cursor: progress; }
+.dl-p { display: block; height: 3px; margin: 4px 0 1px; border-radius: 2px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.dl-p b { display: block; height: 100%; background: var(--ih-gold, var(--gold)); }
+.dl-none { margin: 14px 0 4px; font-size: 12.5px; color: var(--ih-mute, var(--muted)); font-style: italic; }
+#modal .dl-page { max-height: 58vh; overflow-y: auto; padding-right: 6px; text-align: left; }
 /* the pause menu */
 #inc-menu { pointer-events: auto; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, calc(100vw - 32px)); max-height: 84vh; overflow: auto; padding: 14px 18px 16px; animation: ihIn .22s ease both; font-size: 13px; }
 .im-tabs { display: flex; gap: 4px; margin-bottom: 10px; }

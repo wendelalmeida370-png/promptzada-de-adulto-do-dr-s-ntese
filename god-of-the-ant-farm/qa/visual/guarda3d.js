@@ -14,10 +14,10 @@ const files = fs.readdirSync(dir).filter(f => f.endsWith('.js')).sort();
 const src = Object.fromEntries(files.map(f => [f, fs.readFileSync(path.join(dir, f), 'utf8')]));
 const fails = [], warns = [], info = [];
 // (who answers for a file: arte/ESTUDIO.md §3)
-const OWN = { 'build3d.js': 'A2', 'props3d.js': 'A2', 'ground3d.js': 'A3', 'grass3d.js': 'A3', 'people3d.js': 'A4', 'body3d.js': 'A4', 'bodymesh.js': 'A4', 'fx3d.js': 'A5', 'post3d.js': 'A5', 'cam3d.js': 'A5', 'incui.js': 'A1', 'mesh3d.js': 'A1', 'tex3d.js': 'A1' };
+const OWN = { 'build3d.js': 'A2', 'props3d.js': 'A2', 'ground3d.js': 'A3', 'grass3d.js': 'A3', 'people3d.js': 'A4', 'body3d.js': 'A4', 'bodymesh.js': 'A4', 'fx3d.js': 'A5', 'post3d.js': 'A5', 'cam3d.js': 'A5', 'incui.js': 'A1', 'diario-ui.js': 'A1', 'mesh3d.js': 'A1', 'tex3d.js': 'A1' };
 const own = f => OWN[f] || 'líder';
 // the files of the 3D: the ones the contract names, and any new one that looks like it (…3d.js, a mesh, a post-process)
-const KNOWN = ['space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'modes.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'post3d.js', 'mesh3d.js'];
+const KNOWN = ['space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'post3d.js', 'mesh3d.js'];
 const is3D = f => KNOWN.includes(f) || /3d\.js$/i.test(f) || /^(mesh|post|body)[\w-]*\.js$/.test(f);
 const D3 = files.filter(is3D);
 // guard.js's own list of what is only seen
