@@ -1,5 +1,7 @@
 // invariancia: a mesma causa, o mesmo efeito, em qualquer resolução (C1, o adendo da invariância causal) — em Node.
 //   node qa/invariancia.js [mundo]
+// (as descargas de E e B no porto com mais estivadores — cais e armazém do porto —, como o qa/porto.js o escolhe; hoje, na
+// metrópole, Óstia. Sem ele, ou sem navio mercante, o caso falha dizendo o que falta)
 // A  o salto × o passo: a mesma cidade com bancas e cais vivendo dias pelo salto e pelo passo — os livros fecham nos dois
 //    (o que saiu = o que chegou + o perdido com causa + o que está sob guarda), nenhum estoque negativo, nenhuma venda sem
 //    pagamento; as diferenças (quantas vendas, quantas caixas) medidas e ditas: vêm do tamanho do passo e das decisões;
@@ -35,6 +37,13 @@ const run = { sales: 0, rev: 0, crates: 0 };
 D.onMove.push(e => { if (e[8] === 'venda' && e[3][0] === 'z') run.sales++; if (e[8] === 'venda' && e[5] === 'moedas') run.rev += e[6]; if (e[8] === 'depositar') run.crates++; });
 const tally = () => ({ sales: run.sales, rev: run.rev, crates: run.crates });
 const since = t0 => ({ sales: run.sales - t0.sales, rev: r2(run.rev - t0.rev), crates: run.crates - t0.crates });
+// the port of the unloadings (E, B): a quay, a harbour warehouse, stevedores — the one with the most of them, the oldest
+// on a tie, as qa/porto.js picks it —, and a merchant ship to land there (a rule, not a name: a new ready world finds its
+// own; a world without them fails the case, saying what it lacks)
+const porters = s => [...S.villagers.values()].filter(v => v.set === s.id && v.role === 'estivador').length;
+const hasB = (s, t) => [...S.buildings.values()].some(b => b.set === s.id && b.type === t && b.built);
+const portOf = () => [...S.settlements.values()].filter(s => hasB(s, 'doca') && hasB(s, 'armazem') && porters(s) >= 1).sort((a, b) => porters(b) - porters(a) || (a.founded || 0) - (b.founded || 0) || a.id - b.id)[0] || null;
+const portLacks = (set, sh) => !set ? `nenhuma cidade com cais, armazém do porto e estivadores em ${world}` : !sh ? `nenhum navio mercante em ${world} para descarregar em ${set.name}` : '';
 
 // ---------------- F: the same world with and without frames (what only reads, between the steps)
 {
@@ -55,14 +64,16 @@ const since = t0 => ({ sales: run.sales - t0.sales, rev: r2(run.rev - t0.rev), c
   ok('F com e sem quadros', a === b && ta.sales === tb.sales && ta.crates === tb.crates && !outside && !bad().length, `${a === b ? 'o mesmo mundo' : 'MUNDOS DIFERENTES'} depois de 120 s (${a.slice(0, 8)} / ${b.slice(0, 8)}); ${ta.sales} e ${tb.sales} vendas, ${ta.crates} e ${tb.crates} caixas; nada mudado de fora do passo (${outside})`);
 }
 // ---------------- E: the ledger: a cause for each entry, no key twice; a save at each phase of an unloading, loaded twice
-{
+caseE: {
   M.pronto(world); S = G.S; S.time = 0.15; steps(20); G.inSim++;
-  const set = [...S.settlements.values()].find(s => s.name === 'Óstia') || [...S.settlements.values()].find(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'doca' && b.built));
+  const set = portOf(), sh = S.ships.find(s => s.kind === 'mercante');
+  if (portLacks(set, sh)) { ok('E o livro-razão', false, portLacks(set, sh)); break caseE; }
   let dock = [...S.buildings.values()].find(b => b.set === set.id && b.type === 'doca' && b.built); const fid = set.fac;
   for (const op of A.all()) if (op.def === 'descarga' && op.at === dock.id && A.live(op)) A.end(op, 'cancel', 'teste');
   for (const c of (dock.crates || []).slice()) D.move('q:' + dock.id, 'f:' + fid, c.k, c.n, { code: 'teste', part: true });
-  const sh = S.ships.find(s => s.kind === 'mercante'); sh.goods = { k: 'sal', n: 14 }; G.Harbor.land(dock, sh.goods, sh);
-  const opId = P.opAt(dock).id;
+  sh.goods = { k: 'sal', n: 14 }; G.Harbor.land(dock, sh.goods, sh);
+  const op0 = P.opAt(dock); if (!op0) { ok('E o livro-razão', false, `o cais de ${set.name} não abriu a descarga do navio`); break caseE; }
+  const opId = op0.id;
   const phases = [['caixas no cais', () => true], ['uma caixa nas mãos', () => [...S.villagers.values()].some(v => v.carry && v.carry.op === opId)], ['a meio', () => { const o = A.get(opId); return o && (o.done.sal || 0) >= 4; }], ['quase no fim', () => { const o = A.get(opId); return o && (o.done.sal || 0) >= 10; }]];
   const res = [];
   const stOf = () => { const o = A.get(opId); return o ? `${A.STATES[o.st]}${o.wait ? ' (' + o.wait + ')' : ''}, ${o.done.sal || 0} de 14` : 'fora do registro'; };
@@ -81,18 +92,20 @@ const since = t0 => ({ sales: run.sales - t0.sales, rev: r2(run.rev - t0.rev), c
   const o = A.get(opId); const bk = books();
   const dupe = o && (() => { const s = new Set(); for (const e of o.keys || []) { if (s.has(e[0])) return e[0]; s.add(e[0]); } return null; })();
   ok('E o livro-razão', !!o && res.every(r => r[1]) && !dupe && !bk.nocause && !bk.open && o.st === 'ok' && o.done.sal === 14 && !bad().length,
-    `um save em cada fase, carregado duas vezes: ${res.map(r => `${r[0]} ${r[1] ? 'o mesmo futuro' : 'FUTUROS DIFERENTES'} (${r[2]}/${r[3]})${r[4]}`).join('; ')}; nenhuma chave duas vezes${dupe ? ' — MENOS ' + dupe : ''}; lançamentos sem causa: ${bk.nocause}; a descarga ${o ? `${A.STATES[o.st]}, chegou ${o.done.sal} de 14${o.end ? ' (' + o.end.why + ')' : ''}` : 'NÃO está mais no registro'}`);
+    `${set.name}: um save em cada fase, carregado duas vezes: ${res.map(r => `${r[0]} ${r[1] ? 'o mesmo futuro' : 'FUTUROS DIFERENTES'} (${r[2]}/${r[3]})${r[4]}`).join('; ')}; nenhuma chave duas vezes${dupe ? ' — MENOS ' + dupe : ''}; lançamentos sem causa: ${bk.nocause}; a descarga ${o ? `${A.STATES[o.st]}, chegou ${o.done.sal} de 14${o.end ? ' (' + o.end.why + ')' : ''}` : 'NÃO está mais no registro'}`);
 }
 // ---------------- B: an unloading through step → skip → body → save/load → step
-{
+caseB: {
   M.pronto(world); S = G.S; S.time = 0.12; steps(20); G.inSim++;
-  const set = [...S.settlements.values()].find(s => s.name === 'Óstia') || [...S.settlements.values()].find(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'doca' && b.built));
+  const set = portOf(), sh = S.ships.find(s => s.kind === 'mercante');
+  if (portLacks(set, sh)) { ok('B passo, salto, corpo, save', false, portLacks(set, sh)); break caseB; }
   let dock = [...S.buildings.values()].find(b => b.set === set.id && b.type === 'doca' && b.built); const fid = set.fac;
   for (const op of A.all()) if (op.def === 'descarga' && op.at === dock.id && A.live(op)) A.end(op, 'cancel', 'teste');
   for (const c of (dock.crates || []).slice()) D.move('q:' + dock.id, 'f:' + fid, c.k, c.n, { code: 'teste', part: true });
   // (a full quay of stone — ten crates, three trips each for one pair of arms — so that the skip and the body find it under way)
-  const sh = S.ships.find(s => s.kind === 'mercante'); sh.goods = { k: 'stone', n: 40 }; G.Harbor.land(dock, sh.goods, sh);
-  const opId = P.opAt(dock).id; const trail = [];
+  sh.goods = { k: 'stone', n: 40 }; G.Harbor.land(dock, sh.goods, sh);
+  const op0 = P.opAt(dock); if (!op0) { ok('B passo, salto, corpo, save', false, `o cais de ${set.name} não abriu a descarga do navio`); break caseB; }
+  const opId = op0.id; const trail = [];
   // (what the unloading took: the test's 40, and whatever another ship landed into it meanwhile — a merchant ship home with
   // its return cargo lands it into the unloading under way)
   const want = () => { const o = A.get(opId); return o ? Math.max(40, (o.taken && o.taken.stone) || 0) : 40; };
@@ -105,7 +118,7 @@ const since = t0 => ({ sales: run.sales - t0.sales, rev: r2(run.rev - t0.rev), c
   const str = G.Save.serialize(); if (G.UI && G.UI.select) G.UI.select(null); G.Save.apply(JSON.parse(str)); G.Main.mode = 'game'; S = G.S; note('save/load');
   for (let k = 0; k < 6000 && A.live(A.get(opId)); k++) G.debug.step(0.1); note('passo');
   const o = A.get(opId); const bk = books();
-  ok('B passo, salto, corpo, save', bodied && !!o && o.st === 'ok' && o.done.stone === want() && !bk.open && !bad().length, `${trail.join(' → ')}${want() > 40 ? ` (as 40 do teste e ${want() - 40} que outro navio desembarcou na mesma descarga)` : ''}; as contas da descarga ${bk.open ? 'NÃO fecham' : 'fecham'}`);
+  ok('B passo, salto, corpo, save', bodied && !!o && o.st === 'ok' && o.done.stone === want() && !bk.open && !bad().length, `${set.name}: ${trail.join(' → ')}${want() > 40 ? ` (as 40 do teste e ${want() - 40} que outro navio desembarcou na mesma descarga)` : ''}; as contas da descarga ${bk.open ? 'NÃO fecham' : 'fecham'}`);
 }
 // ---------------- C: two days away (by the skip): the people of the activities and the stalls' books, coherent
 {
@@ -120,7 +133,8 @@ const since = t0 => ({ sales: run.sales - t0.sales, rev: r2(run.rev - t0.rev), c
   const zs = (S2.biz || []).filter(z => z.st === 'on'); let badBook = 0;
   for (const z of zs) { const own = S2.villagers.get(z.owner); if (!own) badBook++; else if (h0.has(z.id) && z.day.d !== S2.day) badBook++; }
   const bk = books();
-  ok('C dois dias longe', !orphan && !stuck && !badBook && !bk.open && !bk.unpaid && !bk.neg && !bad().length,
+  // (with a stall at least: a world without stalls would pass it empty)
+  ok('C dois dias longe', zs.length > 0 && !orphan && !stuck && !badBook && !bk.open && !bk.unpaid && !bk.neg && !bad().length,
     `do dia ${d0} ao ${S2.day} pelo salto: ${zs.length} banca(s) de pé, cada uma com dono vivo e o livro do dia de hoje; ${orphan} carga(s) de operação acabada, ${stuck} levando para lugar que não existe${why.length ? ' (' + why.slice(0, 2).join('; ') + ')' : ''}; contas abertas ${bk.open}, vendas sem pagamento ${bk.unpaid}, estoques negativos ${bk.neg}`);
 }
 // ---------------- A: the skip × the step — the same town, the same books closing, the differences measured
@@ -133,7 +147,8 @@ const since = t0 => ({ sales: run.sales - t0.sales, rev: r2(run.rev - t0.rev), c
   };
   const a = life(false), b = life(true);
   const fine = x => !x.bk.open && !x.bk.unpaid && !x.bk.neg && !x.bk.nocause && !x.bad;
-  ok('A salto × passo', fine(a) && fine(b),
+  // (and something moved in both lives — a sale or a crate: books that close because nothing happened prove nothing)
+  ok('A salto × passo', fine(a) && fine(b) && a.sales + a.crates > 0 && b.sales + b.crates > 0,
     `um dia pelo passo: ${a.sales} vendas (${a.rev} em moedas), ${a.crates} caixas guardadas; pelo salto: ${b.sales} vendas (${b.rev}), ${b.crates} caixas; nos dois as contas fecham (abertas ${a.bk.open}/${b.bk.open}, vendas sem pagamento ${a.bk.unpaid}/${b.bk.unpaid}, negativos ${a.bk.neg}/${b.bk.neg}); a diferença vem do passo (0,1 s × meio passo de 0,5 s: quem anda e quem decide antes) e das decisões que ele muda`);
 }
 const e = M.erros();

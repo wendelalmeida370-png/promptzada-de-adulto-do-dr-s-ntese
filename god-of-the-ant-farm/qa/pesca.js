@@ -1,7 +1,7 @@
 // pesca: a pescaria provocada de propósito (C1, a atividade 02) — no mundo pronto «metrópole».   node qa/pesca.js
 // p0 olhar a água não escreve nada (um mundo que ninguém pescou volta do save sem livro); p1 o peixe é contado (cada peixe pego sai do pesqueiro daquela água, pelo livro-razão: 'pesca'); p2 pescar demais
 // esvazia a água, a pesca rende cada vez menos e some das opções (a do corpo diz por quê; os pescadores do povo vão a
-// outra água); p3 o peixe volta, pela conta da vida (a mesma conta a qualquer hora em que se olhe); p4 o barco pesca do
+// outra água); p2b a água pequena pescada até um peixe fica «sem peixe»: nenhum lançamento traria nada (L-199); p3 o peixe volta, pela conta da vida (a mesma conta a qualquer hora em que se olhe); p4 o barco pesca do
 // mesmo pesqueiro e volta leve de uma água vazia; p5 save no meio: o pesqueiro volta igual (e o resto do mundo também);
 // p6 o aprendiz ao lado do mestre aprende a pescar (e sozinho não); p7 o corpo do deus pesca pela mesma porta (a mesma
 // água, o mesmo peixe, o mesmo livro); p8 sem água, gelo ou água funda demais para o jeito do povo: não há pesca; p9 a
@@ -45,8 +45,10 @@ const person = (set, not) => [...S.villagers.values()].filter(v => v.set === set
 // (the test's hand: a person put at the water's edge, hands free, a little skill)
 function atEdge(v, sp) { G.Vg.endTask(v); if (v.carry) D.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true }); v.x = sp.lx; v.y = sp.ly; v.path = null; }
 const towns = [...S.settlements.values()].filter(s => G.Village.pop(s.id) > 20).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id));
-const town = towns.find(s => shore(s, ['sea', 'river', 'lake', 'rock', 'mud', 'reef'])) || towns[0];
-const sp = shore(town, ['sea', 'river', 'lake', 'rock', 'mud', 'reef']);
+const town = towns.find(s => shore(s, ['sea', 'river', 'lake', 'rock', 'mud', 'reef'])) || null;
+const sp = town && shore(town, ['sea', 'river', 'lake', 'rock', 'mud', 'reef']);
+// (a world without a town by a water stops here saying so — never a TypeError)
+if (!sp) { console.log('FALHOU | pesca | nenhuma cidade de mais de 20 habitantes à beira d\'água na metrópole'); process.exit(1); }
 const used = [sp.id]; const fresh = () => { const q = shore(town, null, used) || sp; used.push(q.id); return q; };
 console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'água em ${sp.lx},${sp.ly}, água de ${sp.kind}, pesqueiro ${sp.id} de ${r2(P.cap(sp.id))} peixes; o jeito do povo: ${P.how(town.fac)})`);
 
@@ -79,19 +81,41 @@ console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'águ
 }
 // ---------------- p2: fishing too hard empties the water: less and less, then no fishing there
 {
-  const v = person(town); atEdge(v, sp); v.fishXp = 120;
+  // (a water with fish enough to show the decline: of the town's fresh shores near it, the one whose ground holds the most — a
+  // river ground of twelve fish is fished out in one round of casts, T-110)
+  const near = []; { const skip = used.slice(); for (let i = 0; i < 6; i++) { const q = shore(town, null, skip); if (!q) break; skip.push(q.id); near.push(q); } }
+  const sp2 = near.sort((a, b) => P.cap(b.id) - P.cap(a.id) || a.id - b.id)[0] || sp; used.push(sp2.id);
+  const v = person(town); atEdge(v, sp2); v.fishXp = 120;
   const yields = []; let casts = 0, empty = null;
   for (let round = 0; round < 40 && !empty; round++) {
-    let n = 0; for (let k = 0; k < 10; k++) { const r = P.cast(v, sp.wx, sp.wy); casts++; if (r.ok) { n += r.took; if (v.carry) D.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true }); } if (r.empty) { empty = r; break; } }
+    let n = 0; for (let k = 0; k < 10; k++) { const r = P.cast(v, sp2.wx, sp2.wy); casts++; if (r.ok) { n += r.took; if (v.carry) D.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true }); } if (r.empty) { empty = r; break; } }
     yields.push(n);
   }
-  const ab = P.abundance(sp.wx, sp.wy);
+  const ab = P.abundance(sp2.wx, sp2.wy);
   // (the question every fisher asks there — the people's, and the body's hands through the same door — says so)
-  const offer = P.can(v, sp.wx, sp.wy, P.how(town.fac));
+  const offer = P.can(v, sp2.wx, sp2.wy, P.how(town.fac));
   const half = Math.max(1, Math.floor(yields.length / 2)); const sum = L => L.reduce((a, b) => a + b, 0);
   const falling = yields.length >= 3 && sum(yields.slice(-half)) < sum(yields.slice(0, half));
   ok('p2 pescar demais esvazia', !!empty && ab < P.EMPTY && falling && offer.ok === false && /sem peixe/.test(offer.why) && !bad().length,
     `${casts} lançamentos no mesmo pesqueiro: o que se pegou a cada 10 — ${yields.join(', ')}; ${empty ? `vazio ("${empty.why}")` : 'NÃO esvaziou'}, ${Math.round(ab * 100)}% do peixe; quem pergunta ali se pode pescar: ${offer.ok ? 'ainda pode' : `não (${offer.why})`}`);
+}
+// ---------------- p2b: a small water fished down to one fish is «without fish»: no cast could bring anything up (a catch
+// takes at most half of what is there) — it stayed «with fish» at 8% and every cast came up empty (L-199)
+{
+  // (a small ground anywhere in the world — under forty fish when full, where one fish is more than the empty mark —, its
+  // book set by the test's hand at a fish and a half, the leftover of a hard day)
+  let tile = null, gid = -1;
+  for (let i = 0; i < G.N * G.N && !tile; i++) { if (S.type[i] > G.T.RIVER || (S.ice && S.ice[i])) continue; const x = i % G.N + 0.5, y = Math.floor(i / G.N) + 0.5; const id = P.idAt(x, y), K = P.cap(id); if (K >= 6 && K < 40 && 1.5 / K >= P.EMPTY) { tile = [x, y]; gid = id; } }
+  let info = 'nenhuma água pequena no mundo (de 6 a 40 peixes)', fine = false;
+  if (tile) {
+    const v = person(town); atEdge(v, sp); S.weather.storm = 0; const keep = S.pesca[gid]; S.pesca[gid] = [1.5, S.clock];
+    const can = P.can(v, tile[0], tile[1], 'rede'); let empties = 0, misses = 0;
+    for (let k = 0; k < 20; k++) { const r = P.cast(v, tile[0], tile[1], { how: 'rede' }); if (r.empty) empties++; else if (r.miss) misses++; }
+    fine = can.ok === false && /sem peixe/.test(can.why) && empties === 20 && !bad().length;
+    info = `o pesqueiro ${gid} (${r2(P.cap(gid))} peixes cheio) com 1,5 peixe (${Math.round(1.5 / P.cap(gid) * 100)}%): «pode pescar aqui?» ${can.ok ? 'PODE' : `não (${can.why})`}; 20 lançamentos: ${empties} «sem peixe», ${misses} «nada mordeu»`;
+    if (keep) S.pesca[gid] = keep; else delete S.pesca[gid];
+  }
+  ok('p2b a água pequena fica sem peixe', fine, info);
 }
 // ---------------- p3: the fish come back, by the logistic — the same number whenever one looks
 {
@@ -158,8 +182,11 @@ console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'águ
     for (let k = 0; k < 900; k++) {
       M.viver(0.1);
       if (!par.task || par.task.type !== 'fish') { if (par.carry) D.use('v:' + par.id, par.carry.k, par.carry.n, { code: 'teste', mine: true }); par.x = sp2.lx; par.y = sp2.ly; fishT(); }
-      if (!kid.task || kid.task.type !== 'appr') G.Life.apprenticeTask(kid, G.Vg.H);
-      if (kid.task && kid.task.type === 'appr') followed++;
+      // (the apprentice goes with the parent who fishes — the test's hand names the master: the world's rule takes, at each
+      // errand, the parent of the child's own sex if at work, or else the other; in an older world the mother's fishing
+      // ended for a moment, the father herded sheep nearby, and the girl went with him for the rest of the case, T-110)
+      if (!kid.task || kid.task.type !== 'appr' || kid.task.id !== par.id) G.Vg.setTask(kid, { type: 'appr', id: par.id, pri: 0.25, dur: 24, kind: 'appr' });
+      if (kid.task && kid.task.type === 'appr' && kid.task.id === par.id) followed++;
     }
     const gain = (kid.fishXp || 0) - xp0, gainO = other ? (other.fishXp || 0) - xo0 : 0;
     ok6 = followed > 300 && gain > 2 && gain > gainO + 2;
@@ -228,8 +255,11 @@ console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'águ
 }
 // ---------------- p11: the skip: the grounds stay counted
 {
-  M.saltar(1);
-  const badG = Object.keys(S.pesca).filter(id => { const g = S.pesca[id]; const K = P.cap(+id); return !(Array.isArray(g) && isFinite(g[0]) && isFinite(g[1]) && g[0] >= 0 && g[0] <= K + 1e-6 && g[1] <= S.clock + 1); });
+  // (what the skip wrote is within what each ground holds; a line of before may be above it: a ground whose water shrank —
+  // a quay, a bridge, a filled shore: the map changed — keeps the leftover of its last catch, and every read and every catch
+  // clamps it to what the water holds now — now(), take, untake —: the old metropolis had none, the new one came with nine, T-110)
+  const c0 = S.clock; M.saltar(1);
+  const badG = Object.keys(S.pesca).filter(id => { const g = S.pesca[id]; const K = P.cap(+id); return !(Array.isArray(g) && isFinite(g[0]) && isFinite(g[1]) && g[0] >= 0 && (g[1] < c0 || g[0] <= K + 1e-6) && g[1] <= S.clock + 1); });
   const fished = Object.keys(S.pesca).length;
   ok('p11 o salto', fished >= 1 && !badG.length && !bad().length && M.limpo(), `um ano de salto: ${fished} pesqueiro(s) pescado(s) no mundo, ${badG.length ? 'INVÁLIDOS: ' + badG.slice(0, 3).join(', ') : 'todos dentro do que comportam'}`);
 }

@@ -127,7 +127,11 @@
     if (S.weather && S.weather.storm > 0) return { ok: false, why: 'Com esta tempestade, ninguém fica na beira da água.' };
     const g = GEAR[how] || GEAR.maos; const fit = g.fit[G.Waters.kind(x, y)] || 0;
     if (!(fit > 0)) return { ok: false, why: `Com ${g.name} não se pesca nesta água: é funda demais.` };
-    if (P.abundance(x, y) < P.EMPTY) return { ok: false, why: 'Esta água está sem peixe: pescaram demais aqui. Daqui a um tempo ele volta.', empty: 1 };
+    // (no fish worth a cast: below the empty mark, or fewer than two fish — a catch takes at most half of what is there, so
+    // with one fish nothing ever comes up: a small water, twelve fish when full, stayed «with fish» at 8% and every cast
+    // came up empty, L-199)
+    const st = P.stock(x, y);
+    if (st.ab < P.EMPTY || st.n < 2) return { ok: false, why: 'Esta água está sem peixe: pescaram demais aqui. Daqui a um tempo ele volta.', empty: 1 };
     const c = v.carry; if (c && c.n > EPS && !(c.fish && !c.op && !c.to && !c.cid)) return { ok: false, why: 'Suas mãos já estão ocupadas.' };
     return { ok: true, g, fit };
   };

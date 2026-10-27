@@ -20,10 +20,12 @@ M.pronto('metropole'); S = G.S; M.viver(2); G.inSim++;
 // the town: the biggest with a quay (the ship of w4 comes back to it); the other people: any other alive, not at war with it
 const docks = s => [...S.buildings.values()].filter(b => b.set === s.id && b.type === 'doca' && b.built);
 const set = [...S.settlements.values()].filter(s => docks(s).length).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
+// (a world without a town on a quay, or without another people, stops here saying so — never a TypeError)
+if (!set) { console.log('FALHOU | saque | nenhuma cidade com cais na metrópole'); process.exit(1); }
 const f = G.Fac.get(set.fac);
 const en = [...S.factions.values()].filter(o => o.alive && o.id !== f.id).sort((a, b) => (G.Fac.atWar(f.id, a.id) ? 1 : 0) - (G.Fac.atWar(f.id, b.id) ? 1 : 0) || a.id - b.id)[0];
 const enSet = en && G.Fac.capitalOf(en.id);
-if (!set || !en || !enSet) { console.log('FALHOU | saque | sem uma cidade com cais e outro povo'); process.exit(1); }
+if (!en || !enSet) { console.log(`FALHOU | saque | ${set.name} sem outro povo vivo com capital`); process.exit(1); }
 console.log(`(${set.name}, ${f.name}: ${G.Village.pop(set.id)} habitantes; o outro povo: ${en.name}, ${enSet.name}; em guerra: ${G.Fac.atWar(f.id, en.id) ? 'sim' : 'não'})`);
 const used = [];
 // two grown people of the town, at home and free (not the god's body, not at sea, not in a cell, in no band), by id
