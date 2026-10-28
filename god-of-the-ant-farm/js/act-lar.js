@@ -25,8 +25,9 @@
   // (and the prayer of the faithful, kneeling — before the temple or inside it: five seconds of the world, villagers.js 'pray')
   if (A.addAnim) { A.addAnim('cozinhar', { act: 'cook', dur: L.COOK, contact: L.COOK - 0.2, hands: 2 }); A.addAnim('ninar', { act: 'rock', dur: 0, contact: 0, hands: 2 }); A.addAnim('rezar', { act: 'pray', dur: 5, contact: 4.8, hands: 0 }); }
   const housing = b => !!(b && G.BDEF[b.type] && G.BDEF[b.type].housing);
-  const built = b => housing(b) && b.built && b.type !== 'ruin';
-  const homeOf = v => { const h = v && v.home ? G.S.buildings.get(v.home) : null; return built(h) ? h : null; };
+  // (the house that serves to live in — standing, or being raised further over its family —: G.Village.livable, L-371)
+  const livable = b => G.Village.livable(b);
+  const homeOf = v => { const h = v && v.home ? G.S.buildings.get(v.home) : null; return livable(h) ? h : null; };
   const isBody = v => !!(G.Possess && G.Possess.is && G.Possess.is(v));
   const food = h => D.get('h:' + h.id, 'food');
 
@@ -93,7 +94,7 @@
   // (a supper cooked today fills more than a cold bite from the jars — the cook's work is that difference)
   L.MEAL = 55; L.COOKED = 65;
   L.eat = function (v, h, cooked) {
-    if (!v || !built(h)) return false;
+    if (!v || !livable(h)) return false;
     const r = D.use('h:' + h.id, 'food', 1, { code: cooked ? 'ceia' : 'refeicao', by: v.id });
     if (!r.ok) return false;
     v.hunger = Math.max(0, v.hunger - (cooked ? L.COOKED : L.MEAL) * r.n);
@@ -198,7 +199,7 @@
   function runLar(v, t, dt, H) {
     const S = G.S; const h = S.buildings.get(t.home);
     // (the house gone, a ruin, or no longer one's own — the family moved —: the errand is over)
-    if (!built(h) || v.home !== h.id || !WHAT[t.what]) return H.end(v);
+    if (!livable(h) || v.home !== h.id || !WHAT[t.what]) return H.end(v);
     if (t.st === 0) {
       if (v.inside === h.id) return arrive(v, t, h);
       const [fx, fy] = G.Village.frontTile(h);
@@ -532,7 +533,7 @@
           v.x = e[2]; v.y = e[3]; v.path = null; v.moving = false; v.inside = b.id; v.actT = Number.isFinite(e[7]) ? e[7] : 0;
           continue;
         }
-        if (e[1] && !built(b)) continue; // (the house is gone, or a ruin: at the door, as the save left them)
+        if (e[1] && !livable(b)) continue; // (the house is gone, or a ruin: at the door, as the save left them)
         let t = null;
         if (k === 'sleep') t = { type: 'sleep', pri: 1.5, st: 2, home: b ? b.id : 0, kind: 'sleep' };
         else if (k === 'shelter' && b && b.id === v.home) t = { type: 'shelter', pri: 1.05, st: 2, kind: 'shelter' };

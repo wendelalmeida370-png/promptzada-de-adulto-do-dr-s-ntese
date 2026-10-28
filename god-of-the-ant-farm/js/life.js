@@ -283,12 +283,12 @@
     const S = G.S;
     for (const v of S.villagers.values()) {
       const c = v.carry; if (!c || c.k !== 'water' || !c.jar || v.task) continue;
-      const h = S.buildings.get(v.home); if (!h || !h.built || h.type === 'ruin') continue;
+      const h = S.buildings.get(v.home); if (!G.Village.livable(h)) continue; // (a house standing or under the works: L-371)
       G.Vg.setTask(v, { type: 'water', home: h.id, pri: 1.05, st: 6, kind: 'water' });
     }
   } });
   function runWater(v, t, dt, H) {
-    const S = G.S; const h = S.buildings.get(t.home); if (!h || !h.built) { L.jarHome(v, null); return H.end(v); }
+    const S = G.S; const h = S.buildings.get(t.home); if (!G.Village.livable(h)) { L.jarHome(v, null); return H.end(v); } // (L-371)
     if (t.st === 6) { if (!G.Vg.gotoB(v, h)) { L.jarHome(v, null); return H.end(v); } t.st = 3; return; }
     if (t.st === 0) {
       const src = waterSource(v); if (!src) { h.waterTry = S.clock; return H.end(v); }
@@ -326,7 +326,7 @@
   }
   L.fams = () => [...fams.values()];
   function family(v) {
-    const S = G.S; const h = S.buildings.get(v.home); if (!h || !h.built || h.type === 'ruin') return null;
+    const S = G.S; const h = S.buildings.get(v.home); if (!G.Village.livable(h)) return null; // (L-371)
     const key = famKey(v); if (!key) return null;
     let f = fams.get(key);
     if (!f) {
@@ -630,7 +630,7 @@
     const houses = new Map();
     for (const v of S.villagers.values()) if (v.home && !v.captive) { let l = houses.get(v.home); if (!l) houses.set(v.home, l = []); l.push(v); }
     for (const [hid, list] of houses) {
-      const h = S.buildings.get(hid); if (!h || !h.built) continue;
+      const h = S.buildings.get(hid); if (!G.Village.livable(h)) continue; // (a house standing or under the works: L-371)
       h.water = Math.max(0, L.homeWater(h) - 1 / (DAY() * 1.15));
       if (h.water > 0.35 || t < 0.06 || t > 0.55 || (h.waterTry && S.clock - h.waterTry < DAY() * 0.3)) continue;
       if (list.some(v => v.task && v.task.type === 'water')) continue;

@@ -31,6 +31,11 @@
 //      antes do moço. l16b: de dois casais de fora numa casa cheia, o dia da cidade pergunta ao mais moço; o dono fica
 //  l13 a continuidade da casa (o pedido 8.4): o corpo longe, perto, dentro (come e cozinha), fora, o tempo, de volta, o save —
 //      a família igual ao ser olhada e ao ver o corpo entrar, a despensa só pelo livro, o corpo deitado em casa no save
+//  l17 a casa que a cidade amplia por cima da família continua sendo a casa dela (L-371): a noite em casa e dormindo dentro,
+//      nunca ao relento; o save no meio da noite; a jarra enchida de novo; o verificador vê a casa em obra cheia (D-098); o
+//      dono morre no meio da obra e o herdeiro fica com ela; a obra deixada devolve a casa antiga
+//      inteira, com a família; ampliada de novo e pronta, a família segue nela; a planta durante a obra é a da casa antiga
+//      (o registro dos interiores), refeita na hora em que a casa nova fica pronta
 //  l11 a reza dentro do templo (L-224): os fiéis entram pela porta até os lugares da planta, os outros nas fileiras de fora;
 //      um save no meio; todos terminam e saem
 //  l11b quem reza dentro do templo está num lugar de rezar da planta (as esteiras, os bancos, o altar do sacerdote — o
@@ -166,7 +171,9 @@ if (want('l1', 'l1b')) {
   const fine = dw.n() >= 5 && !dw.wrong.length && grown.length >= 5 && early.length <= Math.max(1, grown.length * 0.05) && span >= 0.03 && (!kids.length || mk < mg - 0.02)
     && !!snap && snap.grownA > 0 && snap.grownW > 0 && !!k78 && (!k78.kidsN || k78.kidsA >= k78.kidsN * 0.6);
   ok('l1 cada um na sua hora', fine, `${dw.n()} entradas em casa${dw.wrong.length ? ` — ERRADAS: ${dw.wrong.slice(0, 3).join(' · ')}` : ', todas pela porta'}; ${grown.length} adultos deitaram entre ${fmtT(Math.min(...ts))} e ${fmtT(Math.max(...ts))} (média ${fmtT(mg)}), ${kids.length} crianças em média às ${kids.length ? fmtT(mk) : '—'}; antes da própria hora sem cansaço: ${early.length}${early.length ? ' (' + early.slice(0, 2).map(f => `${fmtT(f.t)} < ${fmtT(f.bed)}, ${f.task}`).join(', ') + ')' : ''}; às ${snap ? String(snap.t).replace('.', ',') : '—'}: ${snap ? `${snap.grownA} adultos dormindo e ${snap.grownW} acordados em casa (${snap.awakeLate} pela hora deles: ${snap.wake.join(', ')}), às 0,78 ${k78 ? k78.kidsA : 0} de ${k78 ? k78.kidsN : 0} crianças dormindo; adultos acordados fora de casa: ${[...snap.away].map(([k, n]) => `${k} ${n}`).join(', ') || 'nenhum'}` : 'NÃO CHEGOU'}`);
-  ok('l1b quem dorme está deitado', !lying.length, lying.length ? `${lying.length} de pé ou sentados dormindo (L-228, o repartidor do P4): ${lying.slice(0, 2).join(' · ')}` : `${looks} olhadas do verificador: ninguém dormindo de pé`);
+  // (the rule asks the P4 allocator's places — In.placeRule —: without it there is nothing to ask, and the case says so)
+  const rep1b = !!(G.Interiors && G.Interiors.placeRule);
+  ok('l1b quem dorme está deitado', rep1b && !lying.length, !rep1b ? 'sem o repartidor dos lugares do P4 (In.placeRule): ainda não há lugar de deitar a dar' : lying.length ? `${lying.length} de pé ou sentados dormindo (L-228, o repartidor do P4): ${lying.slice(0, 2).join(' · ')}` : `${looks} olhadas do verificador: ninguém dormindo de pé`);
   nightReady = true;
 }
 
@@ -279,9 +286,11 @@ if (want('l3')) {
     const h = builtHome(v); const ref = 'h:' + h.id;
     D.make(ref, 'food', 3, { code: 'teste', part: true, floor: true }); const pan0 = r2(D.get(ref, 'food')); // (the test's hand: food in the house — on the floor if its jars are full, D-059)
     const L0 = S.ledgerN || 0; v.hunger = 60; v.sick = G.DAY_LEN * 0.6; const t3 = S.clock;
-    // (in bed, the sick one's own food in the house — the test's hand: a family of five eats a pantry of four at once)
+    // (in bed, the sick one's own food in the house — the test's hand: a family of five eats a pantry of four at once —, and
+    // the sick one hungry there: the one picked may be at a meal, which takes the hunger the case needs in bed — after L-371
+    // changed the world's path, Hakon was picked eating at the store, went to bed full and ate nothing at home)
     const dw = doorWatch(); let inBed = -1, work = 0, abed = 0; const trace = []; let last = '';
-    live(60, () => { dw.step(); const t = v.task; const k = t ? `${t.type}${t.what ? ':' + t.what : ''}/${t.st}${v.inside ? '/dentro' : ''}` : 'nada'; if (k !== last && trace.length < 14) { trace.push(`${r2(S.clock - t3)} ${k} (fome ${Math.round(v.hunger)})`); last = k; } const a = t && t.type === 'lar' && t.what === 'acamado' && t.st === 2 && v.inside === h.id; if (a) abed += 0.1; if (a && inBed < 0) { inBed = S.clock; if (D.get(ref, 'food') < 1) D.make(ref, 'food', 2, { code: 'teste', part: true, floor: true }); } if (inBed >= 0 && !a && L.fever(v)) work += 0.1; return inBed >= 0 && S.clock - inBed > 15; });
+    live(60, () => { dw.step(); const t = v.task; const k = t ? `${t.type}${t.what ? ':' + t.what : ''}/${t.st}${v.inside ? '/dentro' : ''}` : 'nada'; if (k !== last && trace.length < 14) { trace.push(`${r2(S.clock - t3)} ${k} (fome ${Math.round(v.hunger)})`); last = k; } const a = t && t.type === 'lar' && t.what === 'acamado' && t.st === 2 && v.inside === h.id; if (a) abed += 0.1; if (a && inBed < 0) { inBed = S.clock; if (D.get(ref, 'food') < 1) D.make(ref, 'food', 2, { code: 'teste', part: true, floor: true }); if (v.hunger < 50) v.hunger = 60; } if (inBed >= 0 && !a && L.fever(v)) work += 0.1; return inBed >= 0 && S.clock - inBed > 15; });
     const meals = book(e => e[0] > L0 && e[3] === ref && e[5] === 'food' && (e[8] === 'refeicao' || e[8] === 'ceia') && e[9] === v.id);
     v.sick = G.DAY_LEN * 0.2; // (the fever over: the later days of the illness, up and about)
     let up = -1; live(20, () => { dw.step(); if (up < 0 && !(v.task && v.task.type === 'lar' && v.task.what === 'acamado')) up = S.clock; return up >= 0 && S.clock - up > 2; });
@@ -775,6 +784,120 @@ if (want('l16', 'l16b')) {
   }
 }
 
+// ======================= l17: the house the city raises further over its family (L-371) =======================
+// (a family's house — three or more living in it, fitting its beds, its owner and an heir among them — of the biggest town
+// at peace with a builder, raised further by the test's hand as the city does it, city.js upgradeHomes / village.js
+// improve: the new type, not standing, the old one in
+// upgradeFrom. Through the evening and the night they live in it: the evening at home, asleep inside, never outdoors by its
+// door; a save in the middle of the night; at dawn its jar, emptied, is filled again; its owner dies in the middle of the
+// works and the heir keeps it; the works given up give the old house back whole, the family in it; raised again and
+// finished, the family goes on in the new one. Through the works the plan is the old house's — the interiors' record keeps
+// the old type —, made over the moment the new one stands)
+if (want('l17')) {
+  const UP = { hut: 'house', house: 'sobrado', sobrado: 'insula' };
+  const res = b => [...S.villagers.values()].filter(v => v.home === b.id && !v.captive && !v.jail && !v.aboard);
+  const free = v => !v.captive && !v.jail && !v.aboard && !v.ug && !isBody(v);
+  const builderOf = st => [...S.villagers.values()].filter(v => v.set === st.id && v.role === 'construtor' && free(v) && !(v.carry && (v.carry.op || v.carry.to))).sort((a, c) => a.id - c.id)[0] || null;
+  // (the case's town: the biggest at peace with what the case asks — a family that fits its house, its owner with an heir in
+  // it (the town's day of houses settles the owners first); a builder of the town, who will see the works given up; two
+  // grown ones of the town unpartnered, and another house with room, for the checker's look at the house too full —, in
+  // this world or, when it has none, in the metropolis: in the branch's own «cidade» the first house of three or more was a
+  // hut of twelve, the next one's owner had only little ones, and Hedeby had no builder)
+  const pick = () => {
+    for (const st of [...S.settlements.values()].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)) {
+      if ((G.War && G.War.threat && G.War.threat(st.id)) || !builderOf(st)) continue;
+      if (G.Casa && G.Casa.day) G.Casa.day(st);
+      const room = [...S.buildings.values()].some(o => o.set === st.id && o.built && housing(o) && G.BDEF[o.type].housing > res(o).length + 1);
+      const homes = [...S.buildings.values()].filter(b => b.set === st.id && UP[b.type] && b.built && !b.upgradeFrom && !b.encomenda && res(b).length >= 3 && res(b).length <= G.BDEF[b.type].housing
+        && res(b).some(v => v.id === b.dono && v.age >= 18) && res(b).some(v => v.id !== b.dono && v.age >= 16)).sort((a, c) => a.id - c.id);
+      for (const b of homes) if (room && [...S.villagers.values()].filter(v => v.set === st.id && v.home && v.home !== b.id && v.age >= 18 && v.age < 62 && !v.partner && free(v)).length >= 2) return { st, h: b };
+    }
+    return null;
+  };
+  open(); let got = pick();
+  if (!got && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; live(1); got = pick(); }
+  // (the city's own hand: the type changed, the site begun over the family — and, the test's hand, three of a thing its people
+  // lack among the materials, so that the works last through the case: in the metropolis its builders raised the sobrado
+  // before dawn. The works wait for it, with nobody kept at them — fome.js h3)
+  const RARE = ['marfim', 'perolas', 'coral', 'seda', 'joias', 'ouro'];
+  const raise = b => { const from = b.type, to = UP[from], def = G.BDEF[to]; b.type = to; b.built = false; b.progress = 0; b.upgradeFrom = from; b.need = Object.assign({ wood: 0, stone: 0 }, def.cost); b.incoming = { wood: 0, stone: 0 }; b.hp = def.hp; b.maxHp = def.hp;
+    const st = G.Fac.stockOfSet(b.set) || {}; const k = RARE.find(q => !((st[q] || 0) >= 1)); if (k) b.need[k] = 3; return from; };
+  let info = 'nenhuma cidade em paz com uma casa de família que caiba nela, o dono com herdeiro, um construtor e dois solteiros (cidade e metrópole)', fine = false;
+  if (got) {
+    set = got.st; const h = got.h;
+    S.time = 0.6; const from = raise(h); const fam0 = res(h).map(v => v.id); const n0 = fam0.length;
+    const outs = new Set(); let lar = 0, family = 0, inside = 0;
+    // (the evening and the night: who of the house is at home, asleep inside, or asleep outdoors)
+    liveTo(0.95, () => {
+      for (const id of fam0) { const v = S.villagers.get(id); if (!v || v.home !== h.id) continue; const t = v.task;
+        if (t && t.type === 'lar' && t.home === h.id) lar++; if (t && t.type === 'family') family++;
+        if (v.sleeping && v.inside === h.id) inside++; if (v.sleeping && !v.inside && t && t.type === 'sleep') outs.add(v.id); }
+    });
+    const asleepIn = fam0.filter(id => { const v = S.villagers.get(id); return v && v.sleeping && v.inside === h.id; });
+    // (the plan they live in through the works is the old house's: the interiors' record keeps the old type until it stands)
+    const regMid = h.ip ? h.ip.t : null;
+    // (a save in the middle of the night: each one of the house at home as before it — inside, asleep or not, the same task, as
+    // the save hook of the home gives them back (D-073). The whole world's round trip is the regression's: here only the house
+    // of the case)
+    const was = id => { const v = S.villagers.get(id); return v ? `${v.inside === h.id ? 'dentro' : 'fora'}/${v.sleeping ? 'dormindo' : 'acordado'}/${v.task ? v.task.type : 'nada'}` : 'morto'; };
+    const before = new Map(fam0.filter(id => { const v = S.villagers.get(id); return v && v.inside === h.id; }).map(id => [id, was(id)]));
+    M.salvarCarregar(); S = G.S; const hh = S.buildings.get(h.id);
+    const afterIn = fam0.filter(id => { const v = S.villagers.get(id); return v && v.sleeping && v.inside === h.id; });
+    const lost = [...before.keys()].filter(id => was(id) !== before.get(id)).map(id => `${(S.villagers.get(id) || {}).name || '#' + id}: ${before.get(id)} → ${was(id)}`);
+    // (dawn: the jar emptied, filled again by one of the house)
+    liveTo(0.08); hh.water = 0.1; hh.waterTry = undefined;
+    let fetched = 0; liveTo(0.45, () => { if (!fetched && G.Life.homeWater(hh) > 0.9) fetched = S.time; });
+    // (the checker sees the house under the works too — by the beds of the house it is becoming, as the town counts them —: an
+    // old one put out of it by the test's hand while a young single of it stays, D-098)
+    let seen17 = null;
+    {
+      const cap17 = G.BDEF[hh.type].housing;
+      const pool = [...S.villagers.values()].filter(v => v.set === set.id && v.home && v.home !== hh.id && v.age >= 18 && free(v)).sort((a, c) => a.id - c.id);
+      const singles = pool.filter(v => !v.partner && v.age < 62);
+      const O = singles[0] || null, Yn = singles.find(v => v !== O) || null;
+      const other = O && [...S.buildings.values()].find(b => b.set === set.id && b.id !== hh.id && b.id !== O.home && b.built && housing(b) && G.BDEF[b.type].housing > res(b).length);
+      if (O && Yn && other) {
+        const back = [[O, O.home], [Yn, Yn.home]]; const a0 = O.age;
+        O.age = 66; O.home = hh.id; Yn.home = hh.id;
+        for (const f of pool) { if (res(hh).length > cap17) break; if (f !== O && f !== Yn) { back.push([f, f.home]); f.home = hh.id; } }
+        const n = res(hh).length;
+        QA.check(); O.home = other.id; const seen = QA.check().filter(q => String(q.msg).includes('D-098') && String(q.msg).includes('#' + hh.id));
+        seen17 = { n, cap: cap17, msg: seen.length ? seen[0].msg : '' };
+        for (const [v, hm] of back) v.home = hm; O.age = a0;
+      }
+    }
+    // (its owner dies in the middle of the works: the heir keeps it)
+    const owner = S.villagers.get(hh.dono); const ownerId = owner ? owner.id : 0; if (owner) V.kill(owner, 'teste');
+    const heir = S.villagers.get(hh.dono); live(2);
+    // (the works given up — six tries that found no way, as gotoB counts them —, seen by the next builder of the town who
+    // looks for work, as the world does it, villagers.js buildTask → abandonSite: the old house back whole, the family in it.
+    // The test's hand sends the town's builder to look now, and waits for the world when the builder is gone)
+    hh.unreach = 6; hh.unreachT = S.clock;
+    const builder = builderOf(set); if (builder) G.Vg.H.workTask(builder);
+    const gaveUp = (hh.built && !hh.upgradeFrom) || live(120, () => hh.built && !hh.upgradeFrom);
+    const back = hh.built && hh.type === from && !hh.upgradeFrom && !!hh.ip && hh.ip.t === from;
+    // (the family goes on in it — or, a grown single of it, in another house of the town: of a house too full the young single
+    // ones leave first, D-098 —, nobody of it put out in the street)
+    const kept = id => { const v = S.villagers.get(id); return !!v && (v.home === hh.id || (v.age >= 18 && !v.partner && !!v.home)); };
+    const stayed = fam0.filter(id => id !== ownerId && kept(id)).length;
+    const away = () => { const n = fam0.filter(id => id !== ownerId && kept(id) && S.villagers.get(id).home !== hh.id).length; return n ? ` (${n} solteiro(s) da casa cheia noutra casa da cidade, D-098)` : ''; };
+    const backSaid = back ? `voltou a ${from}, de pé, com o registro dela, e ${stayed} seguem nela${away()}` : `NÃO voltou (${hh.type}${hh.built ? '' : ', em obra'}, registro ${hh.ip ? hh.ip.t : 'nenhum'}${builder ? '' : ', sem construtor na cidade'})`;
+    // (raised again and finished — the materials in, the last stroke by the world's own door —: the family in the new house)
+    let done = false, regEnd = null, inNew = 0;
+    if (back) {
+      raise(hh); for (const k in hh.need) hh.need[k] = 0; hh.progress = 1; V.completeBuilding(hh); live(2);
+      // (and its record made over at once — Interiors.complete —: the new house's plan, not the old one's until the turn of the day)
+      regEnd = hh.ip ? hh.ip.t : null;
+      done = hh.built && !hh.upgradeFrom && hh.type === UP[from] && regEnd === hh.type;
+      inNew = fam0.filter(id => id !== ownerId && kept(id)).length;
+    }
+    const crowd17 = !!seen17 && seen17.n > seen17.cap && !!seen17.msg;
+    fine = n0 >= 3 && regMid === from && asleepIn.length >= Math.min(2, n0) && !outs.size && lar > 0 && afterIn.length === asleepIn.length && !lost.length && !!fetched && crowd17 && !!heir && heir.id !== ownerId && gaveUp && back && stayed >= n0 - 1 && done && inNew >= n0 - 1;
+    info = `${set.name}: ${from}#${h.id} ampliada a ${UP[from]} por cima de ${n0} moradores (a planta durante a obra: ${regMid === from ? `a da casa antiga, ${from}` : `${regMid || 'NENHUMA'}, NÃO A DA CASA ANTIGA`}) → à noite ${asleepIn.length} dormindo dentro${outs.size ? `, ${outs.size} AO RELENTO` : ', ninguém ao relento'}; ${lar} olhadas no lar, ${family} na noite em família; o save no meio da noite: ${afterIn.length} dentro depois${lost.length ? ' — MUDOU: ' + lost.slice(0, 3).join(' · ') : ', cada um como estava'}; a jarra vazia de madrugada ${fetched ? `cheia de novo às ${fmtT(fetched)}` : 'NÃO foi enchida'}; a casa em obra cheia ${seen17 ? `(${seen17.n} para as ${seen17.cap} camas da casa que ela será): ${crowd17 ? `o verificador viu «${seen17.msg}»` : 'o verificador NÃO viu o velho posto para fora antes do moço'}` : 'SEM GENTE para a prova do verificador'}; ${owner ? `${owner.name} (o dono) morreu: ${heir ? `a casa ficou com ${heir.name}` : 'a casa ficou SEM DONO'}` : 'SEM DONO para morrer'}; a obra deixada: ${backSaid}; ampliada de novo e pronta: ${!back ? '—' : done ? `${hh.type}, com o registro refeito na hora, ${inNew} morando nela${away()}` : `NÃO ficou pronta (${hh.type}, registro ${regEnd || 'nenhum'})`}`;
+  }
+  ok('l17 a casa em ampliação continua sendo a casa da família (L-371)', fine, info);
+  nightReady = false;
+}
 // ======================= l11: the faithful inside the temple =======================
 if (want('l11', 'l11b')) {
   // (the temple with the most faithful for whom it is the nearest — the prayer goes to the nearest temple or monument of
@@ -805,7 +928,8 @@ if (want('l11', 'l11b')) {
     const wrongIn = dw.wrong.filter(w => w.includes('#' + tp.id));
     ok('l11 a reza dentro do templo', most >= 2 && !over && saved && kept === inside && !left && !still && !wrongIn.length,
       `${who.length} fiéis de ${set.name} (${V.pop(set.id)} habitantes, ${people(set).filter(v => v.age >= 16).length} adultos com casa) chamados ao templo #${tp.id} (${places} lugares de rezar na planta): até ${most} rezando dentro ao mesmo tempo${over ? `, ACIMA DOS LUGARES em ${over} passos` : ''}, ${prayed.size} rezaram; o save no meio com ${inside} dentro: ${kept === inside ? 'seguiram dentro, rezando' : `SÓ ${kept} SEGUIRAM`}; no fim ${left ? `${left} AINDA REZANDO` : 'todos terminaram'}${still ? `, ${still} AINDA DENTRO` : ''}${wrongIn.length ? ' — ' + wrongIn.slice(0, 2).join(' · ') : ''}`);
-    ok('l11b quem reza dentro está num lugar de rezar', !praying.length, praying.length ? `${praying.length} rezando fora das esteiras, dos bancos e do altar (o repartidor do P4 com a regra do templo): ${praying.slice(0, 2).join(' · ')}` : 'todos nas esteiras, nos bancos ou no altar da planta');
+    const rep11b = !!(G.Interiors && G.Interiors.placeRule);
+    ok('l11b quem reza dentro está num lugar de rezar', rep11b && !praying.length, !rep11b ? 'sem o repartidor dos lugares do P4 (In.placeRule): ainda não há lugar de rezar a dar' : praying.length ? `${praying.length} rezando fora das esteiras, dos bancos e do altar (o repartidor do P4 com a regra do templo): ${praying.slice(0, 2).join(' · ')}` : 'todos nas esteiras, nos bancos ou no altar da planta');
   }
 }
 

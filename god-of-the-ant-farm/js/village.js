@@ -118,6 +118,11 @@
   V.totalCost = def => { let n = 0; for (const k in def.cost) n += def.cost[k] || 0; return n; };
   V.nameOf = (type, b) => G.Civ.bname(type, b ? b.style : null);
   V.buildName = b => (b.upgradeFrom && !b.built ? V.nameOf(b.type, b) + ' (obra)' : V.nameOf(b.type === 'ruin' ? (b.origType || 'ruin') : b.type, b));
+  // a house that serves to live in: standing, or being raised further over its family by the city (b.upgradeFrom: the old
+  // house stands while the new floor goes up — as the work given up gives it back whole). The one question for sleeping at
+  // home, the evening at home, the water, the family's evening, the minding of the little ones and the town's day of houses:
+  // the family under the works slept outdoors with no water and no home, and nobody saw it needed a roof, L-371
+  V.livable = b => !!b && b.type !== 'ruin' && !!G.BDEF[b.type] && !!G.BDEF[b.type].housing && (b.built || !!b.upgradeFrom);
 
   V.completeBuilding = function (b) {
     const S = G.S; b.built = true; b.progress = 1; b.need.wood = 0; b.need.stone = 0; b.upgradeFrom = null;
@@ -663,7 +668,7 @@
   function assignHousing(set) {
     const S = G.S;
     const homes = [];
-    for (const b of S.buildings.values()) if (b.set === set.id && G.BDEF[b.type].housing && (b.built || b.upgradeFrom)) { b.res = 0; homes.push(b); }
+    for (const b of S.buildings.values()) if (b.set === set.id && V.livable(b)) { b.res = 0; homes.push(b); } // (standing, or under the works: the one rule, L-371)
     const byId = new Map(homes.map(b => [b.id, b]));
     const vs = [];
     for (const v of S.villagers.values()) if (v.set === set.id) { if (v.captive) { v.home = 0; continue; } vs.push(v); }

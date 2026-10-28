@@ -1,14 +1,18 @@
 // lar-inv: as regras do verificador para a vida em casa (P1, Patch 2) — quem está dentro de uma casa e por quê, quem dorme
 // e como, quem está fora de casa à noite sem afazer, quem cuida dos pequenos de dia (um por casa, e nenhuma criança presa
 // em casa sem ele), o bebê nos braços certos ao alcance (D-074), da casa cheia os moços saem primeiro (D-098), a despensa
-// pelo livro-razão, a casa trocada na terra cara pelo menos pelo que custou à família que a tinha (L-236); e, no estado
-// canônico, quem está em casa e o que cada casa custou
+// pelo livro-razão, a casa trocada na terra cara pelo menos pelo que custou à família que a tinha (L-236), ninguém dormindo
+// ao relento perto da casa que vale para morar — de pé ou em ampliação (L-371); e, no estado canônico, quem está em casa e
+// o que cada casa custou
 // (a ida e volta pelo save não pode tirar ninguém da cama: D-073). Carregado depois do qa/qa.js (QA.more / QA.canonMore);
 // o junta-inv.js o leva para dentro do qa.js. Lê os campos do mundo direto; a planta, pelas portas do G.Interiors.
 (function () {
   if (!window.QA || !QA.more) return;
   const r2 = x => Math.round(x * 100) / 100;
   const housing = b => !!(b && G.BDEF[b.type] && G.BDEF[b.type].housing);
+  // (a house that serves to live in, read from the world's fields — standing, or being raised further over its family —:
+  // the checker's own reading, not the code it checks, L-371)
+  const lives = b => housing(b) && b.type !== 'ruin' && (b.built || !!b.upgradeFrom);
   // (what keeps someone in a house: asleep, the evening at home, sheltering from a storm, the end of the day's work, hiding
   // from an enemy, a secret meeting in a house that is a front, the god's body)
   const IN_OK = { sleep: 1, lar: 1, shelter: 1, goHome: 1, hide: 1, conclave: 1, avatar: 1 };
@@ -20,6 +24,7 @@
   let baby0 = new Map(), baby0S = null; // (since when each baby has been in the wrong arms — or in none — with the right ones within reach)
   let pan = new Map(), panS = null; const moved = new Map(); // (each pantry at the last look; what the ledger moved since)
   let crowd = new Map(), crowdS = null; // (the houses too full at the last look: their beds, their people, their old and their young singles — D-098)
+  let out0 = new Map(), out0S = null; // (since when each one has slept outdoors near the house that serves them to live in — L-371)
   const sold = []; // (the houses traded between two families since the last look: [house, coins paid, its cost then, the owner lived in it, ledger line])
   QA.more.push(function (add, s) {
     const Lr = G.Lar; if (!Lr) return;
@@ -34,7 +39,7 @@
       // standing anywhere: L-224. Only where the plan is made)
       if (b.type === 'temple') {
         const t = v.task;
-        if (t && t.type === 'pray' && t.inT === b.id && t.st === 2 && In && In.ready && In.ready(b) && In.placeOf) { const q = In.placeOf(v); if (!(q && (q.use === 'rezar' || q.use === 'sentar' || (t.priest && q.use === 'oficiar')))) add('lar', 3, `${nm}: rezando em ${b.type}#${b.id} fora de um lugar de rezar da planta (${q ? q.use || q.pose : 'sem lugar'})`, v.id); }
+        if (t && t.type === 'pray' && t.inT === b.id && t.st === 2 && In && In.ready && In.ready(b) && In.placeOf && In.placeRule) { const q = In.placeOf(v); if (!(q && (q.use === 'rezar' || q.use === 'sentar' || (t.priest && q.use === 'oficiar')))) add('lar', 3, `${nm}: rezando em ${b.type}#${b.id} fora de um lugar de rezar da planta (${q ? q.use || q.pose : 'sem lugar'})`, v.id); }
         continue;
       }
       if (!housing(b)) continue;
@@ -46,7 +51,10 @@
       if (v.sleeping && t.type !== 'sleep') add('lar', 2, `${nm}: dormindo dentro de ${b.type}#${b.id} na tarefa ${t.type}`, v.id);
       // (asleep, the plan's place for them is lying down — on the bed, or on the floor —, never standing: L-228. Only where the
       // plan is already made: the checker does not make plans for every house it looks at)
-      if (v.sleeping && In && In.ready && In.ready(b) && In.placeOf) { const q = In.placeOf(v); if (q && q.pose !== 'deitado') add('lar', 3, `${nm}: dormindo ${q.pose} em ${b.type}#${b.id} (o lugar da planta não é de deitar)`, v.id); }
+      // (and only where the plan shares its places out by rule — the P4 allocator, In.placeRule, that lays the sleeper on a bed
+      // or the floor and the faithful on their mats —: before it lands there is no such place to give, and with these rules in
+      // the qa.js the short life of a branch without it saw the sleepers standing, L-228, L-224)
+      if (v.sleeping && In && In.ready && In.ready(b) && In.placeOf && In.placeRule) { const q = In.placeOf(v); if (q && q.pose !== 'deitado') add('lar', 3, `${nm}: dormindo ${q.pose} em ${b.type}#${b.id} (o lugar da planta não é de deitar)`, v.id); }
     }
     // ---- after dark, a grown one with a house, awake and out of it with nothing to do, for more than 30 s of the world (a
     // night outdoors is not an evening at home: L-225 — the tavern, the watch, a feast, the war, the sea are causes; a stroll is not)
@@ -55,12 +63,27 @@
     const now = new Map();
     if (night) for (const v of s.villagers.values()) {
       if (v.age < 16 || !v.home || v.inside || v.sleeping || v.captive || v.jail || v.aboard || v.ug || v.held || v.air || v.id === body || v.wrecked || v.guestOf) continue;
-      const h = s.buildings.get(v.home); if (!h || !h.built || h.type === 'ruin') continue;
+      const h = s.buildings.get(v.home); if (!lives(h)) continue; // (standing, or under the works: L-371)
       const t = v.task; if (t && t.type !== 'wander' && t.type !== 'idle') continue;
       const since = night0.has(v.id) ? night0.get(v.id) : s.clock; now.set(v.id, since);
       if (s.clock - since > 30) add('lar', 3, `${v.name} #${v.id}: fora de casa à noite sem afazer há ${Math.round(s.clock - since)} s (${t ? t.type : 'sem tarefa'}${Lr.sleepy(v) ? ', na hora de dormir' : ''})`, v.id);
     }
     night0 = now;
+    // ---- nobody asleep outdoors near the house that serves them to live in — standing, or being raised further over them
+    // (lives, the checker's own reading) —, in their own town, with the way to its door open by the map, for more than 5 s of the world:
+    // under the works the family slept outdoors with no water and no home, L-371. (The way home that ended off its door twice
+    // — the night where one is, L-231 —, a captive, the jailed, the sea, a cave, the god's body are other causes)
+    if (out0S !== s) { out0S = s; out0 = new Map(); }
+    const outNow = new Map(); const Wd = G.W;
+    for (const v of s.villagers.values()) {
+      const t = v.task; if (!v.sleeping || v.inside || !t || t.type !== 'sleep' || (t.re || 0) > 2 || v.age < 2) continue;
+      if (!v.home || v.captive || v.jail || v.aboard || v.ug || v.held || v.air || v.id === body || v.guestOf) continue;
+      const h = s.buildings.get(v.home); if (!lives(h) || h.set !== v.set) continue;
+      const [fx, fy] = G.Village.frontTile(h); if (G.dist(v.x, v.y, fx, fy) > 12 || !(Wd && Wd.reaches(v, fx, fy))) continue;
+      const since = out0.has(v.id) ? out0.get(v.id) : s.clock; outNow.set(v.id, since);
+      if (s.clock - since > 5) add('lar', 3, `${v.name} #${v.id}: dorme ao relento a ${Math.round(G.dist(v.x, v.y, fx, fy))} casas da porta de ${h.type}#${h.id}${h.built ? '' : ' (em ampliação)'}, a casa onde mora — L-371`, v.id);
+    }
+    out0 = outNow;
     // ---- by day, one of the house minds the little ones at home — one per house —, and a little one stays at home past the
     // day's while (12 s) only while someone minds them there — or waits a while (G.Lar.WAIT_CARE) for the one minding them who
     // stepped out, L-235: none kept at home by a minder who is gone (the request's 3.1)
@@ -100,7 +123,7 @@
     if (crowdS !== s) { crowdS = s; crowd = new Map(); }
     const homeNow = new Map(); for (const v of s.villagers.values()) homeNow.set(v.id, v.home || 0);
     for (const [hid, c] of crowd) {
-      const b = s.buildings.get(hid); if (!housing(b) || !b.built || b.type === 'ruin') continue;
+      const b = s.buildings.get(hid); if (!lives(b)) continue;
       for (const [id, age] of c.old) {
         const v = s.villagers.get(id); const nh = v ? v.home || 0 : 0;
         if (!v || !nh || nh === hid || v.set !== c.set || v.captive || v.jail || v.aboard) continue;
@@ -115,7 +138,9 @@
     {
       const ppl = new Map(); for (const v of s.villagers.values()) if (v.home && !v.captive) { const l = ppl.get(v.home); if (l) l.push(v); else ppl.set(v.home, [v]); }
       for (const [hid, L] of ppl) {
-        const b = s.buildings.get(hid); if (!housing(b) || !b.built || b.type === 'ruin') continue;
+        // (a house under the works counts too, with the beds of the house it is becoming — as the town's housing and its day of
+        // houses count them, L-371)
+        const b = s.buildings.get(hid); if (!lives(b)) continue;
         const cap = G.BDEF[b.type].housing; if (L.length <= cap) continue;
         const old = L.filter(o => o.age >= 62).map(o => [o.id, o.age]); if (!old.length) continue;
         const follow = new Set(); for (const k of L) if (k.age < 16) { const m = s.villagers.get(k.mother), f = s.villagers.get(k.father); if (m && m.home === hid) follow.add(m.id); else if (f && f.home === hid) follow.add(f.id); }
@@ -160,7 +185,7 @@
     const at = (ref, k) => { if (typeof ref === 'string' && ref[0] === 'h' && ref[1] === ':') { const id = +ref.slice(2); moved.set(id, (moved.get(id) || 0) + k * e[6]); } };
     at(e[3], -1); at(e[4], 1);
   });
-  if (G.worldHooks) G.worldHooks.push(() => { night0 = new Map(); night0S = null; held0 = new Map(); held0S = null; baby0 = new Map(); baby0S = null; pan = new Map(); panS = null; moved.clear(); crowd = new Map(); crowdS = null; sold.length = 0; });
+  if (G.worldHooks) G.worldHooks.push(() => { night0 = new Map(); night0S = null; held0 = new Map(); held0S = null; baby0 = new Map(); baby0S = null; pan = new Map(); panS = null; moved.clear(); crowd = new Map(); crowdS = null; sold.length = 0; out0 = new Map(); out0S = null; });
   // (who is at home — asleep, in the evening at home, sheltering — and who sleeps outdoors, is the same after a save and a
   // load: the round trip that takes anyone out of bed is seen — D-073, L-220)
   QA.canonMore.push(['lar', () => {
@@ -168,7 +193,7 @@
     for (const v of [...s.villagers.values()].sort((a, c) => a.id - c.id)) {
       if (v.id === body || v.age < 2 || v.captive || v.jail || v.aboard || v.ug) continue; const t = v.task;
       const b = v.inside ? s.buildings.get(v.inside) : null;
-      if (b && housing(b) && b.built && b.type !== 'ruin' && t && (t.type === 'sleep' || (t.type === 'lar' && t.st === 2 && b.id === v.home) || (t.type === 'shelter' && b.id === v.home))) out.push([v.id, b.id, v.sleeping ? 1 : 0, t.type, t.what || '']);
+      if (b && lives(b) && t && (t.type === 'sleep' || (t.type === 'lar' && t.st === 2 && b.id === v.home) || (t.type === 'shelter' && b.id === v.home))) out.push([v.id, b.id, v.sleeping ? 1 : 0, t.type, t.what || '']);
       else if (b && b.type === 'temple' && b.built && t && t.type === 'pray' && t.st === 2 && t.inT === b.id) out.push([v.id, b.id, 0, 'pray', t.priest ? 'sacerdote' : '']); // (at prayer inside the temple: L-224)
       else if (!v.inside && v.sleeping && t && t.type === 'sleep' && t.st >= 2) out.push([v.id, 0, 1, 'sleep', '']);
     }
