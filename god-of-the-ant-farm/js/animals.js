@@ -199,11 +199,14 @@
   A.invalidate = () => { habVer = -1; };
   A.invalidateHab = () => { habCount = null; scaleKey = null; };
   const seaTemp = i => { const S = G.S; return S.temp ? S.temp[i] / 255 : 0.5; };
+  // (the water a sea creature swims in: the sea, never the bed the god laid dry — S.dry, of seapart.js, ground for everyone
+  // else, the boats, the fishers and the 3D: a dolphin swam onto the sand of the open sea, L-369)
+  const seaWater = i => G.S.type[i] <= T.SEA && !(G.S.dry && G.S.dry[i]);
   const seaOK = (sp, i) => { const t = seaTemp(i); return sp.sea === 'cold' ? t < 0.36 : sp.sea === 'warm' ? t > 0.55 : sp.sea === 'mild' ? t > 0.22 : true; };
   // can this species live on this tile?
   A.habitat = function (sp, i) {
     const S = G.S; const t = S.type[i];
-    if (sp.cls === 'water') { if (t > T.SEA) return false; if (sp.deep && t !== T.DEEP) return false; return seaOK(sp, i); }
+    if (sp.cls === 'water') { if (!seaWater(i)) return false; if (sp.deep && t !== T.DEEP) return false; return seaOK(sp, i); }
     if (sp.cls === 'amph' && t <= T.SEA) return dLand[i] <= 3 && (sp.sea ? seaOK(sp, i) : sp.id !== 'polarbear' || seaTemp(i) < 0.36);
     if (sp.coast) return t >= T.SAND ? dSea[i] <= 3 && seaTemp(i) > 0.12 : t <= T.SEA && dLand[i] <= 4 && seaTemp(i) > 0.12;
     if (t < T.SAND && !(t === T.RIVER && (sp.near === 'water' || sp.cls === 'amph'))) return false;
@@ -329,7 +332,7 @@
   function walkOK(a, x, y) {
     if (!W.inb(x, y)) return false;
     const S = G.S; const i = W.idx(x, y); const t = S.type[i]; const sp = SP[a.kind];
-    if (sp.cls === 'water') return t <= T.SEA && (!sp.deep || t === T.DEEP || S.type[i] === T.SEA);
+    if (sp.cls === 'water') return seaWater(i) && (!sp.deep || t === T.DEEP || S.type[i] === T.SEA);
     if (sp.cls === 'amph') {
       if (t <= T.SEA) return dLand[i] <= 3;
       if (W.blocked(i) || S.cliff[i]) return false;
@@ -527,7 +530,7 @@
       if (SP[p.kind].cls === 'air' && p.z > 6) return;
       if (p.z > 3 && SP[p.kind].cls !== 'air' && sp.cls !== 'air' && sp.climb !== 'tree') return;
       const d = G.dist2(a.x, a.y, p.x, p.y); if (d > r * r) return;
-      if (sp.cls === 'water' && !(G.S.type[W.idx(p.x, p.y)] <= T.SEA)) return;
+      if (sp.cls === 'water' && !seaWater(W.idx(p.x, p.y))) return;
       if (sp.cls === 'land' && G.S.type[W.idx(p.x, p.y)] <= T.SEA) return;
       // weak, young and slow prey first
       const s = -Math.sqrt(d) - (p.hp / p.maxHp) * 3 - SP[p.kind].hp / 40 + (p.grown < 1 ? 3 : 0);
@@ -1195,7 +1198,7 @@
         else {
           const l = Math.hypot(sh.fx || 0, sh.fy || 0) || 1, fx = (sh.fx || 0) / l, fy = (sh.fy || 0) / l, side = (a.id & 1 ? 1 : -1) * (0.25 + Math.sin(a.ph * 0.7) * 0.1);
           a.tx = sh.x + fx * 0.9 - fy * side; a.ty = sh.y + fy * 0.9 + fx * side;
-          if (S.type[W.idx(a.tx, a.ty)] > T.SEA) { a.state = 'idle'; a.ride = 0; a.t = 3; return; }
+          if (!seaWater(W.idx(a.tx, a.ty))) { a.state = 'idle'; a.ride = 0; a.t = 3; return; }
           moveTo(a, dt, sp.run * 1.05); return;
         }
       } else if (a.scan <= 0 && !(a.rideCD > S.clock)) {
@@ -1214,15 +1217,14 @@
       const hungry = a.hunger > 0.35;
       if (sp.diet === 'carn' && hungry && a.state !== 'chase') {
         const p = findPrey(a, 9); if (p) { a.target = p.id; a.state = 'chase'; a.t = 10; }
-        else if (sp.bold > 0 && a.hunger > 0.6) { const v = nearestVillager(a, 4, v => S.type[W.idx(v.x, v.y)] <= T.SEA); if (v) { a.target = v.id; a.state = 'chase'; a.t = 8; } }
+        else if (sp.bold > 0 && a.hunger > 0.6) { const v = nearestVillager(a, 4, v => seaWater(W.idx(v.x, v.y))); if (v) { a.target = v.id; a.state = 'chase'; a.t = 8; } }
       }
       if (sp.diet === 'fish' && hungry && a.state !== 'chase') { const f = nearestShoal(a, 12); if (f) { a.tx = f.x + G.rr(-0.6, 0.6); a.ty = f.y + G.rr(-0.6, 0.6); a.state = 'fish'; a.shoal = f.id; } }
     }
     if (a.state === 'chase') {
       const tg = S.animals.get(a.target) || S.villagers.get(a.target);
       if (!tg || tg.dead || tg.held || a.t <= 0) { a.state = 'idle'; a.target = 0; a.t = 1; return; }
-      if (!tg.kind && S.type[W.idx(tg.x, tg.y)] > T.SEA) { a.state = 'idle'; a.target = 0; return; }
-      if (tg.kind && S.type[W.idx(tg.x, tg.y)] > T.SEA) { a.state = 'idle'; a.target = 0; return; }
+      if (!seaWater(W.idx(tg.x, tg.y))) { a.state = 'idle'; a.target = 0; return; }
       if (G.dist(a.x, a.y, tg.x, tg.y) < 0.8) { bite(a, tg, dt); if (tg.dead) { a.hunger = Math.max(0, a.hunger - 0.6); tg.meat = 0; tg.sink = true; a.state = 'idle'; a.target = 0; } return; }
       a.tx = tg.x; a.ty = tg.y; moveTo(a, dt, sp.run); return;
     }
@@ -1361,7 +1363,7 @@
     const S = G.S; const i = W.idx(a.x, a.y); const sp = SP[a.kind];
     if (sp.cls === 'air') { a.z = 20; a.state = 'fly'; a.t = 0; return; }
     if (S.type[i] <= T.SEA && sp.cls !== 'water' && sp.cls !== 'amph') { G.FX && G.FX.splash(a.x, a.y, 1); A.remove(a); return; }
-    if (sp.cls === 'water' && S.type[i] > T.SEA) { G.FX && G.FX.dust(a.x, a.y, 5); A.kill(a, null, 'stranded'); return; }
+    if (sp.cls === 'water' && !seaWater(i)) { G.FX && G.FX.dust(a.x, a.y, 5); A.kill(a, null, 'stranded'); return; }
     G.FX && G.FX.dust(a.x, a.y, 5);
     const dmg = Math.max(0, (impact - 220) * 0.3);
     if (dmg > 0) A.damage(a, dmg, null);
@@ -1479,11 +1481,11 @@
     if (a.age > sp.life * a.lifeMul) { A.kill(a, null, 'old'); return false; }
     if (S.fire[i] > 0.1 && a.z < 6) { a.hp -= S.fire[i] * 40 * dt; if (a.hp <= 0) { A.kill(a, null, 'fire'); return false; } }
     if (sp.cls === 'land' && (t <= T.SEA || (S.deep[i] && !sp.swims)) && a.state !== 'leave') { const n = W.nearestLand(a.x, a.y, 8); if (n) { a.x = n[0]; a.y = n[1]; } else { dead.push(a); return false; } }
-    if (sp.cls === 'water' && t > T.SEA) { const n = seaNear(a.x, a.y); if (n) { a.x = n[0]; a.y = n[1]; } else { A.kill(a, null, 'stranded'); return false; } }
+    if (sp.cls === 'water' && !seaWater(i)) { const n = seaNear(a.x, a.y); if (n) { a.x = n[0]; a.y = n[1]; } else { A.kill(a, null, 'stranded'); return false; } }
     return true;
   }
   const dead = [];
-  function seaNear(x, y) { for (let r = 1; r <= 5; r++) for (let k = 0; k < 12; k++) { const a = k / 12 * 6.28; const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r; if (W.inb(px, py) && G.S.type[W.idx(px, py)] <= T.SEA) return [px, py]; } return null; }
+  function seaNear(x, y) { for (let r = 1; r <= 5; r++) for (let k = 0; k < 12; k++) { const a = k / 12 * 6.28; const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r; if (W.inb(px, py) && seaWater(W.idx(px, py))) return [px, py]; } return null; }
 
   // births: well-fed adults, while there is room in the habitat
   function breed(dt) {

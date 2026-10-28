@@ -33,6 +33,7 @@
 // Abrir o Mar (no mundo pronto «metrópole», o estreito entre duas cidades)
 //  p1 o mar se abre: o fundo vira chão pisável e as duas cidades se alcançam a pé; o povo desce para catar peixes; alguém da
 //     terra de um lado atravessa pelo fundo (o estreito de verdade primeiro; de uma ilhota, alguém posto lá)
+//  p1b um golfinho ao lado do fundo aberto, nadando para o meio dele: fica na água (L-369)
 //  p2 um save com o mar aberto carregado duas vezes: o fundo seco volta igual, o mesmo futuro
 //  p3 o fim: as paredes tremem, quem está lá embaixo corre; quem não sai é levado; depois, nada de fundo seco e as cidades separadas
 //  p4 um navio no caminho quando o mar se abre; o deus ergue terra no meio do fundo; um save com um mar aberto quebrado
@@ -758,6 +759,24 @@ const key = process.argv[2] || 'cidade';
       ok('p1 o povo desce para catar peixes e atravessa a pé', r.down >= 2 && r.fished >= 1 && r.across, `até ${r.down} descendo, ${r.onBed} no fundo ao mesmo tempo; ${r.fished} de ${r.fish} cestos de peixe; ${r.walker}${r.setDown ? ' (posta na ponta de lá: ninguém da cidade mora naquela terra)' : ''} atravessou pelo fundo ${r.across}`);
       ok('p1 verificador', !r.bad.length && !r.qa.length, [...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'limpo');
     }
+  }
+  // p1b — a creature of the sea beside the open bed, swimming for the middle of it: it stays in the water (L-369: a dolphin of
+  // the metropole of 28/10 swam onto the sand of the open sea, and the checker saw it there)
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(H.straitWorld()); const S = G.S; const W = G.W, T = G.T;
+      const c = H.strait(); if (!c) return { none: true };
+      G.Powers.cast('seapart', c.x, c.y); const p = S.parts[0]; H.run(4);
+      const bed = new Set(p.tiles); const mid = p.tiles[Math.floor(p.tiles.length / 2)];
+      let from = -1; for (const i of p.tiles) { const x = i % G.N, y = (i / G.N) | 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { if (!W.inb(x + dx, y + dy)) continue; const j = W.idx(x + dx, y + dy); if (!bed.has(j) && S.type[j] <= T.SEA && !S.dry[j]) { from = j; break; } } if (from >= 0) break; }
+      if (from < 0) return { none: true };
+      const a = G.Animals.spawn('dolphin', (from % G.N) + 0.5, ((from / G.N) | 0) + 0.5, {});
+      let onBed = 0, steps = 0;
+      for (let k = 0; k < 80 && S.animals.has(a.id) && !a.dead; k++) { a.state = 'wander'; a.t = 12; a.tx = (mid % G.N) + 0.5; a.ty = ((mid / G.N) | 0) + 0.5; H.run(0.1); steps++; if (S.dry[W.idx(a.x, a.y)]) onBed++; }
+      return { onBed, steps, d: G.dist(a.x, a.y, (mid % G.N) + 0.5, ((mid / G.N) | 0) + 0.5), qa: H.qaSea().map(e => e.msg) };
+    });
+    if (r.none) ok('p1b o bicho do mar não entra no fundo seco', false, 'nenhum estreito com mar vivo ao lado do fundo nos mundos prontos');
+    else ok('p1b o bicho do mar não entra no fundo seco', !r.onBed && !r.qa.length, `um golfinho na água ao lado do fundo aberto, nadando para o meio dele por ${r.steps} momentos: ${r.onBed ? `${r.onBed} deles NA AREIA do fundo` : 'ficou na água'} (a ${r.d.toFixed(1)} casas do meio); verificador: ${r.qa.slice(0, 2).join(' | ') || 'limpo'}`);
   }
   {
     const r = await page.evaluate(() => {

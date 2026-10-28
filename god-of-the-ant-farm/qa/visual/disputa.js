@@ -78,8 +78,17 @@ const clearHands = o => { if (o.carry && o.carry.n > 0) god(() => D.store('v:' +
 // the hands of the three emptied by the depot: a docker may come from his bed with a load still in his arms — T-086)
 const loaded = o => !!(o.carry && o.carry.n > 0);
 const able = o => o.set === set.id && o.role === 'estivador' && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp0[0], sp0[1]);
+// (the stevedores of a town are as many as the crates waiting on its quays ask, up to three a store — harbor.js, the town's job
+// board every 4 s of the world —: a clean quay asks one. Fewer than the proof needs: the god lands a catch on the quay — the
+// one the proof lands first anyway — and the town calls its hands by its own rule, in 30 s at most: T-224)
+let called = '';
+if ([...S.villagers.values()].filter(able).length < 3) {
+  const n0 = [...S.villagers.values()].filter(able).length; god(() => { S.time = 0.15; P.landCatch(dock, 'food', 32, 'arenque', '#a8c0d0', 0); });
+  let t = 0; for (; t < 30 && [...S.villagers.values()].filter(able).length < 3; t++) M.viver(1);
+  called = ` (eram ${n0}: com um barco no cais a cidade chamou mais em ${t} s)`;
+}
 const cands = [...S.villagers.values()].filter(able).sort((a, b) => loaded(a) - loaded(b) || a.id - b.id);
-if (cands.length < 3) { ok('um estivador para viver e dois carregadores do mundo', false, `${cands.length} em ${set.name}`); process.exit(1); }
+if (cands.length < 3) { ok('um estivador para viver e dois carregadores do mundo', false, `${cands.length} em ${set.name}${called || ''}`); process.exit(1); }
 let v = cands[0]; const p1 = cands[1], p2 = cands[2]; for (const o of [v, p1, p2]) clearHands(o);
 const near = []; for (let r = 2; r <= 4 && near.length < 4; r += 0.5) for (let k = 0; k < 24 && near.length < 4; k++) { const a = k / 24 * Math.PI * 2; const x = sp0[0] + Math.cos(a) * r, y = sp0[1] + Math.sin(a) * r; if (dry(x, y) && W.canWalk(sp0[0], sp0[1], x, y, false)) near.push([x, y]); }
 if (near.length < 3) { ok('lugares perto do cais', false, near.length); process.exit(1); }
@@ -90,7 +99,7 @@ const bring = (o, at) => god(() => { if (o.ug && G.Caves) G.Caves.exitNow(o); G.
 bring(v, near[0]); bring(p1, near[1]); bring(p2, near[2]);
 if (!G.Possess.take(v).ok) { ok('encarnar o estivador', false, v.name); process.exit(1); }
 G.Avatar.attach(v, Math.atan2(sp0[1] - v.y, sp0[0] - v.x)); for (let k = 0; k < 6; k++) frame();
-console.log(`(${set.name}: o cais #${dock.id}; ${v.name} encarnado; ${p1.name} e ${p2.name}, carregadores do mundo)`);
+console.log(`(${set.name}: o cais #${dock.id}; ${v.name} encarnado; ${p1.name} e ${p2.name}, carregadores do mundo${called})`);
 
 // ------------------------------ the unloading, the pile, the oracles ------------------------------
 let op = null;

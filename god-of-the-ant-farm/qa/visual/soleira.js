@@ -215,7 +215,7 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
   // number only, the step measured from the ground a stride past the foot to the lowest tread with the rise above it, against
   // Avatar.TUNE.stepUp: on a steep slope that ground is lower than the ground the feet step up from, and it says more than the
   // body finds)
-  const UP = G.Avatar.TUNE.stepUp; let nf = 0, hi = 0, nw = 0, up1 = 0, noFoot = 0, maxRise = 0; const far = [], stops = [];
+  const UP = G.Avatar.TUNE.stepUp; let nf = 0, hi = 0, nw = 0, up1 = 0, noFoot = 0, maxRise = 0; const far = [], stops = [], besides = [];
   let nNo = 0, upNo = 0, footNo = 0; const left = [];
   const inShell = (sh, q) => { const cx = (q.r[0] + q.r[2]) / 2, cz = (q.r[1] + q.r[3]) / 2; return sh.kind === 'round' ? Math.hypot(cx - sh.cx, cz - sh.cz) < sh.r : cx > sh.r[0] && cx < sh.r[2] && cz > sh.r[1] && cz < sh.r[3]; };
   const still = () => G.Avatar.frame(RDT);
@@ -229,9 +229,9 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
     if (!G.Possess.take(v).ok) return false; G.Avatar.attach(v, yaw); for (let k = 0; k < 4; k++) still(); return true; };
   for (const b of [...S.buildings.values()].filter(q => q.built && In.has(q)).sort((a, c) => a.id - c.id)) {
     const p = Sp.planNow(b); if (!p || !p.ok) continue; const y0 = Sp.plinth(b).y0; const lot = { w: b.w * TL, d: b.h * TL }; const fls = [];
-    for (const h of p.holes) { const dd = h.door >= 0 ? p.doors[h.door] : null; if (!dd || !dd.outer || h.kind === 'janela') continue; const w = p.walls[h.wall]; if (!w) continue; const l = p.levels.find(q => q.lv === w.lv); fls.push([Sp.doorFlight(b, p.shell, lot, w, h, l ? l.y : 0, raisedOf(p)), true]); }
-    for (const q of p.stairs) if (q.kind === 'degraus') { const fo = Sp.feet(q); fls.push([Sp.doorFlight(b, p.shell, lot, fo.w, fo.h, 0, false, fo.F, fo.uc), !inShell(p.shell, q)]); }
-    for (const [fl, outside] of fls) { if (!fl || !fl.treads.length) continue; nf++;
+    for (const h of p.holes) { const dd = h.door >= 0 ? p.doors[h.door] : null; if (!dd || !dd.outer || h.kind === 'janela') continue; const w = p.walls[h.wall]; if (!w) continue; const l = p.levels.find(q => q.lv === w.lv); fls.push([Sp.doorFlight(b, p.shell, lot, w, h, l ? l.y : 0, raisedOf(p)), true, h]); }
+    for (const q of p.stairs) if (q.kind === 'degraus') { const fo = Sp.feet(q); fls.push([Sp.doorFlight(b, p.shell, lot, fo.w, fo.h, 0, false, fo.F, fo.uc), !inShell(p.shell, q), null]); }
+    for (const [fl, outside, hole] of fls) { if (!fl || !fl.treads.length) continue; nf++;
       const T = fl.treads.slice().sort((a, c) => a.y - c.y); const lo = T[0], up = T[1]; const sg = lo.kind === 'side' ? Math.sign(lo.a) : 0;
       for (let k = 1; k < T.length; k++) maxRise = Math.max(maxRise, T[k].y - T[k - 1].y);
       const P = sg ? fl.P(lo.a + sg * (lo.wa / 2 + 0.12), lo.n) : fl.P(lo.a, lo.n + lo.wn / 2 + 0.12); const gx = Math.min(G.N - 0.001, b.x + P[0] / TL), gz = Math.min(G.N - 0.001, b.y + P[1] / TL);
@@ -258,14 +258,30 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
       let hiY = st().Y, hands = false; for (const c of pts.slice(1)) { const leg = Math.hypot(c[0] - st().X, c[1] - st().Z); const r = walkStill(c[0], c[1], Math.min(1200, Math.ceil(200 + 60 * leg))); hiY = Math.max(hiY, r.hiY); hands = hands || r.hands; }
       // (up, and at the door: the height of the top tread reached at the flight's end is not the door reached — a landing over a
       // wall, over a cliff — T-102)
-      const D = Wd(fl.P(0, 0)), dD = Math.hypot(st().X - D[0], st().Z - D[1]); const got = hiY - y0 >= fl.top - 0.05 && !hands && dD < 0.45;
+      const D = Wd(fl.P(0, 0)), dD = Math.hypot(st().X - D[0], st().Z - D[1]);
+      // (at the door: within 0.45 m of its middle — or, the door shut, against it before its opening where what stands beside the
+      // steps keeps the body from the middle: the far half of a landing over a lot the world does not walk, the doca#18887's
+      // before the storehouse#11508 of the fifth metropolis, T-226 —: its middle before the opening by the body's own width, its
+      // rim at the door's face; and there the door opened by the hand of one who has its key, the body on to the middle, in — as
+      // it goes in when the door is open —, the door then as the world had it)
+      let beside = false;
+      if (dD >= 0.45 && hole && hiY - y0 >= fl.top - 0.05 && !hands && In.doorState(b, hole.door).state !== 'aberta') {
+        const F = fl.F, x = st().X - b.x * TL, z = st().Z - b.y * TL; const ka = (F.ax ? x : z) - fl.uc, kn = ((F.ax ? z : x) - F.line) * (F.ax ? F.o[1] : F.o[0]);
+        if (Math.abs(ka) <= hole.w / 2 - G.Avatar.TUNE.radius && kn <= 0.45) {
+          const dr0 = b.ip.dr ? b.ip.dr[hole.door] : undefined; setDoor({ b, e: { door: hole.door } }, true);
+          walkStill(D[0], D[1], 300); const dIn = Math.hypot(st().X - D[0], st().Z - D[1]);
+          god(() => { if (dr0 === undefined) delete b.ip.dr[hole.door]; else b.ip.dr[hole.door] = dr0; });
+          beside = dIn < 0.45; if (beside) besides.push(`${b.type}#${b.id}: a ${Math.abs(ka).toFixed(2)} m do meio, a ${dD.toFixed(2)} dele; a porta aberta, a ${dIn.toFixed(2)}`);
+        }
+      }
+      const got = hiY - y0 >= fl.top - 0.05 && !hands && (dD < 0.45 || beside);
       const how = () => `${b.type}#${b.id}: até ${(hiY - y0).toFixed(2)} m de ${fl.top.toFixed(2)}${hands ? ', com as mãos' : ''}${dD < 0.45 ? '' : `, parou a ${dD.toFixed(2)} m da porta${st().block ? ` (${st().block})` : ''}`} (${T.length} degraus)`;
       if (fits) { if (got) up1++; else if (stops.length < 4) stops.push(how()); }
       else if (got) upNo++;
       else if (left.length < 4) { const to = b.ip ? In.fitSide(b) : null; left.push(`${how()}, ${[!fl.walks && 'os pés não sobem', !fl.ground && 'sem chão diante do pé', !fl.stand && 'o corpo não pisa'].filter(Boolean).join(', ')}: ${!to ? 'não cabe em lado nenhum, a porta fica (L-195)' : to.s !== b.ip.s ? `cabe do lado ${to.s}, para onde a virada do dia a leva` : `a entrada cabe do lado ${to.s}, o dela`}`); } }
   }
   ok('4b. cada lance diante de uma porta de fora, em todo o mundo, onde o mundo diz que a entrada cabe: subido andando, do chão a um passo do pé até a porta, em cima, sem as mãos', nw >= 60 && up1 === nw && !noFoot,
-    `${nw} lances subidos: ${up1} até a porta${stops.length ? ' — PAROU: ' + stops.join(' · ') : ''}; sem chão a um passo do pé ${noFoot}; à parte, onde o mundo diz que não cabe: ${nNo + footNo} (${upNo} subidos assim mesmo; ${footNo} sem chão diante do pé${left.length ? '; ' + left.join(' · ') : ''}); o degrau mais alto ${maxRise.toFixed(2)} m; ${nf} lances ao todo, ${hi} acima de um passo pela medida parada${far.length ? ' (' + far.join(' · ') + ')' : ''}`);
+    `${nw} lances subidos: ${up1} até a porta${besides.length ? ` (${besides.length} diante da porta fechada, ao lado do meio, e por ela adentro aberta: ${besides.slice(0, 4).join(' · ')})` : ''}${stops.length ? ' — PAROU: ' + stops.join(' · ') : ''}; sem chão a um passo do pé ${noFoot}; à parte, onde o mundo diz que não cabe: ${nNo + footNo} (${upNo} subidos assim mesmo; ${footNo} sem chão diante do pé${left.length ? '; ' + left.join(' · ') : ''}); o degrau mais alto ${maxRise.toFixed(2)} m; ${nf} lances ao todo, ${hi} acima de um passo pela medida parada${far.length ? ' (' + far.join(' · ') + ')' : ''}`);
   if (S.avatar) G.Possess.release('deus');
   // (and a door moved to the other side of its shell — a reform, the day's turn, L-195 — with the same wall id and the same place
   // along it: the flight is the new side's, not the one kept for the old side — L-196)
