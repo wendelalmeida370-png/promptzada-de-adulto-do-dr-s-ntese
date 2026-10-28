@@ -732,11 +732,15 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   // ================================ e13: the body's new ways: climbing, sitting, waving, drinking, stroking ================================
   const e13 = await E(() => {
     __E.fresh('cidade'); const S = G.S, N = G.N, T = G.T; const HM = G.Space.HM, TL = G.Space.TILE; const out = {};
-    const s = __E.town(); const v = __E.adults(s)[0]; out.inn = __E.enter(v); __E.f(10); const p0 = [v.x, v.y]; const st = G.Avatar.state(); const A = () => S.avatar.deeds;
+    // (one with the hands free: the gold is picked up only by empty hands — «Suas mãos já estão cheias», the game's rule —, and
+    // in the generation-6 «cidade» the first of Roma, Hakon, was back from the hunt with a wolf's meat in his: T-246)
+    const s = __E.town(); const v = __E.adults(s).find(o => !(o.carry && o.carry.n > 0)) || __E.adults(s)[0]; out.inn = __E.enter(v); __E.f(10); const p0 = [v.x, v.y]; const st = G.Avatar.state(); const A = () => S.avatar.deeds;
     const TU = G.Avatar.TUNE; const fl = (x, y) => G.Avatar.floorAt((x + 0.5) * TL, (y + 0.5) * TL);
     // a boulder in the way: a big stone set on open flat ground near the body (the feet stand on its faces: G.Space.stoneTop)
     const flat = (x, y) => { for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const j = (y + dy) * N + x + dx; if (!G.W.walkable(j) || S.occ[j] || S.treeAt[j] || S.objAt[j] || S.road[j] || S.type[j] === T.RIVER) return false; } return Math.abs(fl(x - 2, y) - fl(x + 2, y)) < 0.8 && Math.abs(fl(x, y - 2) - fl(x, y + 2)) < 0.8; };
-    let spot = null; for (let r = 2; r < 40 && !spot; r++) for (let k = 0; k < r * 8 && !spot; k++) { const a = k / (r * 8) * Math.PI * 2; const x = Math.round(v.x + Math.cos(a) * r), y = Math.round(v.y + Math.sin(a) * r); if (x > 4 && y > 4 && x < N - 5 && y < N - 5 && flat(x, y) && G.W.reaches(v, x + 0.5, y + 0.5)) spot = [x, y]; }
+    // (the nearest such place the feet reach, anywhere in the map — the body is put by the stone —: round Roma of the generation-6
+    // «cidade» there is none within 40 tiles, among its woods, water and streets, and the nearest is 52 tiles off: T-246)
+    let spot = null; for (let r = 2; r < N && !spot; r++) for (let k = 0; k < r * 8 && !spot; k++) { const a = k / (r * 8) * Math.PI * 2; const x = Math.round(v.x + Math.cos(a) * r), y = Math.round(v.y + Math.sin(a) * r); if (x > 4 && y > 4 && x < N - 5 && y < N - 5 && flat(x, y) && G.W.reaches(v, x + 0.5, y + 0.5)) spot = [x, y]; }
     out.climb = null;
     if (spot) {
       const rk = G.Nature.addRock(spot[0] + 0.5, spot[1] + 0.5, 40); const st0 = G.Space.stones(rk)[0]; const top = G.Space.stoneTop(st0.X, st0.Z); const g0 = G.W.hAt(rk.x, rk.y) * HM;
