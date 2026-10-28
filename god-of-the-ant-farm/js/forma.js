@@ -83,7 +83,13 @@
   //   roda       a stone wheel standing on its edge, facing the front: c [u, v] (its middle), y (its axle's height), r, t
   //              (thick), cor [rim, face]; aneis [[f, cor], …]: the painted rings on its face (at f of r, larg of r wide),
   //              raios { n, r0, r1, a, cor }: the rays between them (from r0 to r1 of r, a their half angle at r1)
-  //   flores     flower beds on a floor: pts [[u, v], …], y, r (how far round each the blooms are), cor (theirs, by turns)
+  //   flores     flower beds on a floor: pts [[u, v], …], y, r (how far round each the blooms are), cor (theirs, by turns);
+  //              n: the blooms at each (6), b: how big (0.13); chato: lying flat on water (the lotus's pads)
+  //   lamina     a still sheet of water: r, y, cor
+  //   palmeira   a palm: p [u, v, y], h (its trunk), s (its fronds' reach)
+  //   aro        a ring of stone standing, facing along v: c [u, v, y], r, t (its thickness), dir (±1: the way it faces), cor
+  //   (cavea, a part of the round: arco [a0, a1], the angles it spans — from +u toward +v —; fecho: the colour of its back
+  //   wall and its ends, standing on the ground where no drum holds it)
   // (mat on an element: the stuff it is built of — 'base' the people's own stone)
   // ------------------------------ the god's units ------------------------------
   const px = z => z / ZPX;
@@ -261,6 +267,85 @@
   def('estatua', 'egipcio', L => ({ els: [...pedestal(L), { k: 'estatua', p: [L / 2, L / 2, px(11)], h: px(20.6), cor: GOLD, pose: 'trono', nemes: '#2f5fae' }] }));
   def('estatua', 'asteca', L => ({ els: [...pedestal(L), { k: 'estatua', p: [L / 2, L / 2, px(11)], h: px(27.4), cor: GOLD, pose: 'serpente', penas: '#2fae8f', olho: '#b33a2a' }] }));
 
+  // ------------------------------ the theatre of each people (arch.js teatro) ------------------------------
+  // (the rings of a bowl as the god paints them: six, from the rim of r and H px, each a tenth narrower and 12% of H lower —
+  // arch.js bowl(); the rows a body sits on come with the plan's tiers, and both views follow them: D-084)
+  const bowlRings = (r, hp) => { const out = []; for (let k = 0; k < 6; k++) out.push([r * (1 - k * 0.1), px(hp - k * hp * 0.12)]); return out; };
+  // the arena (romano): the god's bowl of r 1.35 tiles and 26 px, two tiers of arches round it, its rings of seats inside, the
+  // arena at its heart 0.3 of its height up — the Colosseum's own, smaller and without the awning
+  def('teatro', 'romano', L => {
+    const R = 1.35 * TILE, H = px(26), c = [L / 2, L / 2]; const rings = bowlRings(R, 26);
+    return { els: [
+      { k: 'tambor', c, r: R, t: R * 0.1, y0: 0, y1: H, andares: 2, arcos: 24, arcoW: 0.6, arcoA: 0.175, arcoB: 0.725, cor: ['#e0c79a', '#b09268'], escuro: '#2a1e18', mat: 'ashlar' },
+      { k: 'cavea', c, aneis: rings, fundo: R * 0.4, cor: '#c8b8a0' },
+      { k: 'arena', c, r: R * 0.4, y: px(26 * 0.3), cor: '#e8d8a8', muro: rings[5][1] },
+    ], door: { u: L / 2, w: 0.9, y0: 0, y1: H / 2 * 0.725 } };
+  });
+  // the Greek (and classical) theatre: on its paved ground, the half bowl of r 1.3 tiles and 16 px opening to the front —
+  // its back wall and its ends standing on the ground —, the orchestra round before it, the stage building along the front
+  // (the skene of 1.8 × 0.3 tiles and 9 px; the Greek's painted band at its top) with its six columns before it, 7 px
+  const theatre = grego => L => {
+    const R = 1.3 * TILE, c = [L / 2, L / 2]; const els = [
+      { k: 'bloco', r: rect(L, -1.4, -1.4, 1.4, 1.4), y0: 0, y1: px(0.2), cor: ['#a8a08c', '#988f7c', '#b8b09c'], mat: 'slab' },
+      { k: 'cavea', c, aneis: bowlRings(R, 16), fundo: R * 0.4, cor: '#d8d0bc', arco: [Math.PI, 2 * Math.PI], fecho: 'wl' },
+      { k: 'arena', c: [L / 2, at(L, 0.3)], r: 0.53 * TILE, y: px(0.3), cor: '#e8dcc0' },
+      { k: 'bloco', r: rect(L, -0.9, 0.85, 0.9, 1.15), y0: 0, y1: px(9), cor: ['wl', 'wr', 'top'] },
+    ];
+    if (grego) els.push({ k: 'faixa', r: rect(L, -0.9, 0.85, 0.9, 1.15), y0: px(7.5), y1: px(9), cor: 'acc' });
+    const cols = []; for (let k = 0; k < 6; k++) cols.push([at(L, -0.85 + 1.7 * k / 5), at(L, 1.25)]);
+    els.push({ k: 'colunata', pts: cols, r: 0.03 * TILE, y0: 0, y1: px(7), cor: ['col0', 'col1'] });
+    return { els };
+  };
+  def('teatro', 'classico', theatre(false));
+  def('teatro', 'grego', theatre(true));
+  // the sacred garden (egipcio): its lawn, its walls at the back and the left (5 px), the pool of 1.4 × 1 tiles in its rim
+  // of stone with the lotus on its water, the six palms, the sphinx in the front corner
+  def('teatro', 'egipcio', L => {
+    const e = 1.4; const els = [
+      { k: 'bloco', r: rect(L, -e, -e, e, e), y0: 0, y1: px(0.3), cor: ['#76983e', '#668a36', '#86a84e'], mat: 'turf' },
+      { k: 'bloco', r: rect(L, -e, -e, e, -e + 0.08), y0: 0, y1: px(5), cor: ['wl', 'wr', 'top'] },
+      { k: 'bloco', r: rect(L, -e, -e, -e + 0.08, e), y0: 0, y1: px(5), cor: ['wl', 'wr', 'top'] },
+      // (the pool: its rim of stone round the water, the floor under it)
+      ...[[-0.7, -0.5, 0.7, -0.42], [-0.7, 0.42, 0.7, 0.5], [-0.7, -0.42, -0.62, 0.42], [0.62, -0.42, 0.7, 0.42]].map(q => ({ k: 'bloco', r: rect(L, ...q), y0: 0, y1: px(1.6), cor: ['base0', 'base1', 'base2'] })),
+      { k: 'bloco', r: rect(L, -0.62, -0.42, 0.62, 0.42), y0: 0, y1: px(0.5), cor: ['base1', 'base1', '#3a6a7a'] },
+      { k: 'lamina', r: rect(L, -0.62, -0.42, 0.62, 0.42), y: px(1.2), cor: '#4a9ac0' },
+    ];
+    const lotus = []; for (let k = 0; k < 6; k++) lotus.push([at(L, -0.5 + k * 0.2), at(L, -0.2 + (k % 2) * 0.35)]);
+    els.push({ k: 'flores', pts: lotus, y: px(1.2), r: 0, n: 1, b: 0.24, chato: true, cor: ['#5a9a3c', '#f0a0c0'] });
+    for (const [x, y] of [[-1.1, -0.9], [-0.9, 1.1], [1.1, -1.1], [1.1, 0.9], [0, -1.15], [-1.15, 0.1]]) els.push({ k: 'palmeira', p: [at(L, x), at(L, y), px(0.3)], h: px(14.4), s: 1.2 });
+    els.push({ k: 'estatua', p: [at(L, 0.95), at(L, 0.95), px(0.3)], h: px(9.2), cor: 'wl', pose: 'esfinge' });
+    return { els };
+  });
+  // the ball court (asteca): on its ground, the two walls of 2.4 × 0.75 tiles and 7 px, their faces to the court sloping down
+  // to it (the benches), the painted band at their tops, the alley between them with its band, and the stone ring on each
+  // wall's slope, facing the alley
+  def('teatro', 'asteca', L => {
+    const e = 1.4, H = px(7); const els = [{ k: 'bloco', r: rect(L, -e, -e, e, e), y0: 0, y1: px(0.3), cor: ['top', 'top', 'top'] }];
+    for (const s of [-1, 1]) {
+      const r = s < 0 ? rect(L, -1.2, -1.2, 1.2, -0.25) : rect(L, -1.2, 0.25, 1.2, 1.2), r1 = s < 0 ? rect(L, -1.2, -1.2, 1.2, -0.45) : rect(L, -1.2, 0.45, 1.2, 1.2);
+      els.push({ k: 'talude', r, r1, y0: 0, y1: H, cor: ['wl', 'wr', 'top'], mat: 'stucco' }, { k: 'faixa', r: r1, y0: px(5.5), y1: H, cor: 'trim' });
+    }
+    els.push({ k: 'bloco', r: rect(L, -1.2, -0.25, 1.2, 0.25), y0: 0, y1: px(0.4), cor: ['#b8a888', '#a89878', '#b8a888'] });
+    els.push({ k: 'faixa', r: rect(L, -1.2, -0.25, 1.2, 0.25), y0: px(0.3), y1: px(0.6), cor: 'trim2' });
+    for (const s of [-1, 1]) els.push({ k: 'aro', c: [L / 2, at(L, s * 0.3), px(4.5)], r: 0.5, t: 0.08, dir: -s, cor: '#6a645a' });
+    return { els };
+  });
+  // the mead hall (nordico): the god's longhouse of 2.5 × 1.2 tiles — its footing of 1.2 px, its walls of planks to 9 px with
+  // the red band under the eaves, the door, the three painted shields on its front, the steep roof of turf 22 px high and
+  // the dragon at its gable
+  def('teatro', 'nordico', L => {
+    const lx = 1.25, ly = 0.6, z0 = px(1.2), H = px(9), rh = px(22);
+    return { els: [
+      { k: 'bloco', r: rect(L, -lx - 0.04, -ly - 0.04, lx + 0.04, ly + 0.04), y0: 0, y1: z0, cor: ['base0', 'base1', 'base2'] },
+      { k: 'bloco', r: rect(L, -lx, -ly, lx, ly), y0: z0, y1: H, cor: ['wl', 'wr', 'top'], tabuas: 10 },
+      { k: 'faixa', r: rect(L, -lx, -ly, lx, ly), y0: H - px(0.8), y1: H, cor: 'trim' },
+      { k: 'porta', na: 'frente', v: at(L, ly), u: L / 2, w: 0.16 * TILE, y0: z0, y1: px(7.5), cor: 'door' },
+      ...[[-lx + 0.2, '#a23c2a'], [0.2 * lx, '#d8b25a'], [lx - 0.25, '#3f6fb0']].map(([x, cor]) => ({ k: 'disco', na: 'frente', u: at(L, x), v: at(L, ly), y: H * 0.55, r: 0.42, cor, olho: '#d8c89a' })),
+      { k: 'telhado', r: rect(L, -lx, -ly, lx, ly), y0: H, y1: H + rh, ao: 'u', ov: 0.1 * TILE, cor: ['roof0', 'roof1', 'wl', 'roof2'], mat: 'turf' },
+      { k: 'dragao', p: [at(L, lx + 0.1), L / 2, H + rh], dir: 1, cor: '#3a2616' },
+    ], door: { u: L / 2, w: 0.64, y0: z0, y1: px(7.5) } };
+  });
+
   // ------------------------------ the statues' figures ------------------------------
   // the parts of a statue (estatua), in the canonical frame — what the 3D builds, and what its far figure and its height
   // keep (the god paints the figure flat; these are its solids, as wide seen from the god's corner):
@@ -273,7 +358,14 @@
   // each with its colour (cor) and, where the god shades it, how much darker (tom)
   Fo.figure = function (e) {
     const [u, v, y] = e.p, h = e.h, c = e.cor, out = [];
-    if (e.pose === 'trono') {
+    if (e.pose === 'esfinge') {
+      // (the god's sphinx in the garden's corner: the lion lying, 1.6 m long, its head in the nemes up at its front, 2.3 m)
+      const k = h / 3.03; const c2 = c;
+      out.push({ k: 'caixa', c: [u, v - 0.1 * k, y], a: 0.55 * k, d: 1.5 * k, h: 0.95 * k, cor: c2, tom: 0.92 });
+      out.push({ k: 'caixa', c: [u, v + 0.45 * k, y + 0.95 * k], a: 0.5 * k, d: 0.45 * k, h: 0.7 * k, cor: c2 });
+      out.push({ k: 'bola', c: [u, v + 0.5 * k, y + 2.0 * k], r: 0.36 * k, ry: 0.42 * k, cor: c2 });
+      out.push({ k: 'caixa', c: [u, v + 0.45 * k, y + 1.65 * k], a: 0.72 * k, d: 0.5 * k, h: 0.45 * k, cor: c2, tom: 0.85 });
+    } else if (e.pose === 'trono') {
       // (the god's seated king: the throne and the legs to 0.39 of its height, a little darker; the body to 0.78; the head;
       // the nemes over it — its crown from 0.85 to the top, its lappets down beside the face —; the crook in his right hand)
       out.push({ k: 'caixa', c: [u, v + 0.02 * h, y], a: 0.118 * h, d: 0.103 * h, h: 0.388 * h, cor: c, tom: 0.8 });
@@ -341,7 +433,7 @@
   function topOf(els) {
     let t = 0;
     for (const e of els) {
-      const y = e.k === 'mastros' ? e.y0 + e.h : e.k === 'estatua' ? Math.max(...Fo.figure(e).map(partTop)) : e.k === 'roda' ? e.y + e.r : e.k === 'flores' ? e.y + 0.2 : e.k === 'braseiro' ? e.p[2] + 0.8 : e.k === 'dragao' ? e.p[2] + 1.1 : e.k === 'escalonada' ? e.niveis[e.niveis.length - 1][2] : e.k === 'arena' ? e.y : e.k === 'cavea' ? Math.max(...e.aneis.map(a => a[1])) : e.k === 'escada' ? Math.max(e.a[2], e.b[2]) : e.k === 'disco' || e.k === 'porta' ? 0 : e.y1;
+      const y = e.k === 'mastros' ? e.y0 + e.h : e.k === 'estatua' ? Math.max(...Fo.figure(e).map(partTop)) : e.k === 'roda' ? e.y + e.r : e.k === 'flores' ? e.y + 0.2 : e.k === 'palmeira' ? e.p[2] + e.h + 0.5 : e.k === 'aro' ? e.c[2] + e.r + e.t : e.k === 'lamina' ? e.y : e.k === 'braseiro' ? e.p[2] + 0.8 : e.k === 'dragao' ? e.p[2] + 1.1 : e.k === 'escalonada' ? e.niveis[e.niveis.length - 1][2] : e.k === 'arena' ? e.y : e.k === 'cavea' ? Math.max(...e.aneis.map(a => a[1])) : e.k === 'escada' ? Math.max(e.a[2], e.b[2]) : e.k === 'disco' || e.k === 'porta' ? 0 : e.y1;
       if (y > t) t = y;
     }
     return t;
@@ -377,6 +469,8 @@
       else if (e.k === 'pedra') out.push({ k: 'talude', r: [e.c[0] - e.e, e.c[1] - e.e, e.c[0] + e.e, e.c[1] + e.e], r1: [e.c[0] - e.e1, e.c[1] - e.e1, e.c[0] + e.e1, e.c[1] + e.e1], y0: e.y0, y1: e.y1, cor: e.cor[0] });
       else if (e.k === 'roda') out.push({ k: 'tronco', a: [e.c[0], e.c[1] - e.t / 2, e.y], b: [e.c[0], e.c[1] + e.t / 2, e.y], r0: e.r, r1: e.r, cor: e.cor[1] });
       else if (e.k === 'estatua') for (const p of Fo.figure(e)) { const m = partMass(p); if (m) out.push(m); }
+      else if (e.k === 'cavea' && e.arco) out.push({ k: 'anel', c: e.c, r: e.aneis[0][0], t: e.aneis[0][0] - e.fundo, y0: 0, y1: e.aneis[0][1], a0: e.arco[0], a1: e.arco[1], cor: e.cor });
+      else if (e.k === 'palmeira') out.push({ k: 'tronco', a: e.p, b: [e.p[0], e.p[1], e.p[2] + e.h], r0: 0.12, r1: 0.1, cor: '#8a6a44' }, { k: 'tronco', a: [e.p[0], e.p[1], e.p[2] + e.h - 0.35], b: [e.p[0], e.p[1], e.p[2] + e.h + 0.3], r0: e.s, r1: e.s * 0.5, cor: '#4f9d45' });
     }
     return out;
   };

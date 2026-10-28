@@ -191,9 +191,12 @@ F.formPic = function (b, Fm, side) {
       quad(W(t2[0], t2[3], m.y1), W(t2[2], t2[3], m.y1), W(t2[2], t2[1], m.y1), W(t2[0], t2[1], m.y1), [0, 1, 0]); }
     else if (m.k === 'piramide') { const Q = [[-1, 1], [1, 1], [1, -1], [-1, -1]];
       for (let k = 0; k < 4; k++) { const q = (k + 1) % 4; const d = Fo.dirLot(side, (Q[k][0] + Q[q][0]) / 2, (Q[k][1] + Q[q][1]) / 2); tri(W(m.c[0] + Q[k][0] * m.e, m.c[1] + Q[k][1] * m.e, y0), W(m.c[0] + Q[q][0] * m.e, m.c[1] + Q[q][1] * m.e, y0), W(m.c[0], m.c[1], m.y1), norm([d[0], 0.5, d[1]])); } }
-    else if (m.k === 'anel') { const S = 48; for (let k = 0; k < S; k++) { const a0 = k / S * Math.PI * 2, a1 = (k + 1) / S * Math.PI * 2, am = (a0 + a1) / 2; const p = (r, a, y) => W(m.c[0] + Math.cos(a) * r, m.c[1] + Math.sin(a) * r, y); const d = Fo.dirLot(side, Math.cos(am), Math.sin(am));
+    else if (m.k === 'anel') { const A0 = m.a0 !== undefined ? m.a0 : 0, A1 = m.a1 !== undefined ? m.a1 : Math.PI * 2; const S = Math.max(4, Math.round(48 * (A1 - A0) / (Math.PI * 2))); const p = (r, a, y) => W(m.c[0] + Math.cos(a) * r, m.c[1] + Math.sin(a) * r, y);
+      for (let k = 0; k < S; k++) { const a0 = A0 + (A1 - A0) * k / S, a1 = A0 + (A1 - A0) * (k + 1) / S, am = (a0 + a1) / 2; const d = Fo.dirLot(side, Math.cos(am), Math.sin(am));
         quad(p(m.r, a0, y0), p(m.r, a1, y0), p(m.r, a1, m.y1), p(m.r, a0, m.y1), [d[0], 0, d[1]]); quad(p(m.r - m.t, a0, m.y1), p(m.r, a0, m.y1), p(m.r, a1, m.y1), p(m.r - m.t, a1, m.y1), [0, 1, 0]);
-        quad(p(m.r - m.t, a0, y0), p(m.r - m.t, a1, y0), p(m.r - m.t, a1, m.y1), p(m.r - m.t, a0, m.y1), [-d[0], 0, -d[1]]); } }
+        quad(p(m.r - m.t, a0, y0), p(m.r - m.t, a1, y0), p(m.r - m.t, a1, m.y1), p(m.r - m.t, a0, m.y1), [-d[0], 0, -d[1]]); }
+      // (a part of the round: its two ends)
+      if (A1 - A0 < Math.PI * 2 - 1e-6) for (const [a, sg] of [[A0, -1], [A1, 1]]) { const t = Fo.dirLot(side, -Math.sin(a), Math.cos(a)); quad(p(m.r - m.t, a, y0), p(m.r, a, y0), p(m.r, a, m.y1), p(m.r - m.t, a, m.y1), [t[0] * sg, 0, t[1] * sg]); } }
     else if (m.k === 'telhado') { const ov = m.ov || 0; const along = m.ao === 'u' ? 'u' : 'v'; const r = [m.r[0] - ov, m.r[1] - ov, m.r[2] + ov, m.r[3] + ov];
       const mu = (r[0] + r[2]) / 2, mv = (r[1] + r[3]) / 2;
       const ridge = along === 'u' ? [W(r[0], mv, m.y1), W(r[2], mv, m.y1)] : [W(mu, r[1], m.y1), W(mu, r[3], m.y1)];
