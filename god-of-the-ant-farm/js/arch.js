@@ -27,6 +27,10 @@
   function box(c, x0, y0, x1, y1, z0, z1, cl, cr, ct) { walls(c, x0, y0, x1, y1, z0, z1, cl, cr); top(c, x0, y0, x1, y1, z1, ct || cl); }
   function onL(c, y1, a, b, z0, z1, fill, m) { const pts = [P(a, y1, z0), P(b, y1, z0), P(b, y1, z1), P(a, y1, z1)]; poly(c, pts, fill); if (m) m.win.push(pts); }
   function onR(c, x1, a, b, z0, z1, fill, m) { const pts = [P(x1, a, z0), P(x1, b, z0), P(x1, b, z1), P(x1, a, z1)]; poly(c, pts, fill); if (m) m.win.push(pts); }
+  // (the door of a picture, on its front-left face — the god's door face —; the picture of a building whose door is on a side
+  // the view does not see has none: L-264)
+  let NODOOR = false;
+  function door(c, y1, a, b, z0, z1, fill, m) { if (!NODOOR) onL(c, y1, a, b, z0, z1, fill, m); }
   const dims = (fw, fh, maxZ) => Art.spriteDims(fw, fh, maxZ);
   function shade(hex, f) {
     const r = G.hex2rgb(hex);
@@ -240,7 +244,7 @@
     c.strokeStyle = 'rgba(30,20,10,0.35)'; c.lineWidth = 0.4;
     for (let k = 1; k < 10; k++) { const x = x0 + (x1 - x0) * k / 10; ln(c, P(x, y1, 1.2), P(x, y1, H), 'rgba(30,20,10,0.35)', 0.4); }
     for (let k = 1; k < 4; k++) { const y = y0 + (y1 - y0) * k / 4; ln(c, P(x1, y, 1.2), P(x1, y, H), 'rgba(30,20,10,0.35)', 0.4); }
-    onL(c, y1, -0.08, 0.08, 1.2, Math.min(H, 7.5), p.door);
+    door(c, y1, -0.08, 0.08, 1.2, Math.min(H, 7.5), p.door);
     band(c, x0, y0, x1, y1, H - 0.8, H, p.trim);
     onL(c, y1, x0 + 0.12, x0 + 0.2, H - 4, H - 2, p.win, m); onL(c, y1, x1 - 0.2, x1 - 0.12, H - 4, H - 2, p.win, m);
     onR(c, x1, -0.05, 0.05, H - 4, H - 2, p.win, m);
@@ -252,8 +256,8 @@
     let g = c.createLinearGradient(-10, 0, 10, 0); g.addColorStop(0, wa); g.addColorStop(1, wb);
     c.fillStyle = g; c.beginPath(); c.ellipse(0, 1, 9.5, 4.8, 0, 0, Math.PI); c.lineTo(-9.5, -5); c.lineTo(9.5, -5); c.closePath(); c.fill(); c.fillRect(-9.5, -5, 19, 6);
     if (band2) { c.fillStyle = band2; c.beginPath(); c.ellipse(0, -2.8, 9.5, 4.8, 0, 0, Math.PI); c.lineTo(-9.5, -4.2); c.ellipse(0, -4.2, 9.5, 4.8, 0, Math.PI, 0, true); c.fill(); }
-    c.fillStyle = '#3a2616'; c.beginPath(); c.moveTo(-6, 4.5); c.lineTo(-6, -1.5); c.quadraticCurveTo(-4, -4.4, -2, -1.5); c.lineTo(-2, 5.3); c.closePath(); c.fill();
-    m.win.push([[-5.6, 4.4], [-5.6, -1.3], [-4, -3.4], [-2.4, -1.3], [-2.4, 5.1]]);
+    if (!NODOOR) { c.fillStyle = '#3a2616'; c.beginPath(); c.moveTo(-6, 4.5); c.lineTo(-6, -1.5); c.quadraticCurveTo(-4, -4.4, -2, -1.5); c.lineTo(-2, 5.3); c.closePath(); c.fill();
+      m.win.push([[-5.6, 4.4], [-5.6, -1.3], [-4, -3.4], [-2.4, -1.3], [-2.4, 5.1]]); }
     g = c.createLinearGradient(-12, 0, 12, 0); g.addColorStop(0, straw[0]); g.addColorStop(1, straw[1]);
     c.fillStyle = g; c.beginPath(); c.moveTo(-12.5, -4); c.lineTo(0, -24); c.lineTo(12.5, -4); c.ellipse(0, -4, 12.5, 5.5, 0, 0, Math.PI); c.closePath(); c.fill();
     c.strokeStyle = 'rgba(110,80,35,0.45)'; c.lineWidth = 0.45;
@@ -266,7 +270,7 @@
     const e = 0.3, x0 = -e, x1 = e, y0 = -e + 0.04, y1 = e - 0.04;
     plinth(c, p, x0, y0, x1, y1, 1.2);
     walls(c, x0, y0, x1, y1, 1.2, 8, p.wl, p.wr, p.batter);
-    onL(c, y1, -0.1, 0.06, 1.2, 6.5, p.door);
+    door(c, y1, -0.1, 0.06, 1.2, 6.5, p.door);
     onR(c, x1 - (p.batter || 0) * 0.5, -0.06, 0.08, 4, 6, p.win, m);
     if (st === 'egipcio') {
       roof(c, m, p, x0 + 0.02, y0 + 0.02, x1 - 0.02, y1 - 0.02, 8, { par: 1 });
@@ -285,7 +289,7 @@
         const zz = z + fh;
         walls(c, -e2, -e2, e2, e2, z, zz, p.wl, p.wr);
         band(c, -e2, -e2, e2, e2, zz - 1.6, zz, p.trim);
-        if (f === 0) { onL(c, e2, -0.1, 0.08, z, z + 6.5, p.door); poly(c, [P(-0.13, e2, z), P(-0.1, e2, z), P(-0.1, e2, z + 7), P(-0.13, e2, z + 7)], p.trim2); }
+        if (f === 0 && !NODOOR) { onL(c, e2, -0.1, 0.08, z, z + 6.5, p.door); poly(c, [P(-0.13, e2, z), P(-0.1, e2, z), P(-0.1, e2, z + 7), P(-0.13, e2, z + 7)], p.trim2); }
         winsL(c, m, p, e2, -e2, e2, z + 3.5, 2.2, f === 0 ? 1 : 2);
         winsR(c, m, p, e2, -e2, e2, z + 3.5, 2.2, 2);
         top(c, -e2, -e2, e2, e2, zz, p.top);
@@ -310,8 +314,7 @@
       awning(c, x0 + 0.04, x1 - 0.04, y1, z0 + 5, z0 + 7.5, 0.14, ['#c8483a', '#efe2c4']);
       onR(c, x1, -0.25, 0.05, z0, z0 + 6, '#3a2a20');
     } else {
-      onL(c, y1, -0.14, 0.06, z0, z0 + 7, p.door);
-      if (st === 'romano') { column(c, p, -0.2, y1 + 0.05, z0, z0 + 7.5, 0.025); column(c, p, 0.12, y1 + 0.05, z0, z0 + 7.5, 0.025); }
+      if (!NODOOR) { onL(c, y1, -0.14, 0.06, z0, z0 + 7, p.door); if (st === 'romano') { column(c, p, -0.2, y1 + 0.05, z0, z0 + 7.5, 0.025); column(c, p, 0.12, y1 + 0.05, z0, z0 + 7.5, 0.025); } }
       if (st === 'grego') { onL(c, y1, 0.16, 0.19, z0 + 3.5, z0 + 6.5, p.trim); }
       winsL(c, m, p, y1, 0.08, x1, z0 + 3.5, 3, 1);
       winsR(c, m, p, x1, y0, y1, z0 + 3.5, 3, 2);
@@ -375,7 +378,7 @@
     const z0 = o.plinth || 2;
     if (st === 'nordico') { longhouse(c, m, p, (x1 - x0) / 2, (y1 - y0) / 2, H * 0.6, H * 0.75, o.big); return H * 1.35; }
     walls(c, x0, y0, x1, y1, z0, H, p.wl, p.wr, p.batter);
-    if (o.door !== false) onL(c, y1, (x0 + x1) / 2 - 0.12, (x0 + x1) / 2 + 0.12, z0, z0 + Math.min(10, (H - z0) * 0.7), p.door);
+    if (o.door !== false) door(c, y1, (x0 + x1) / 2 - 0.12, (x0 + x1) / 2 + 0.12, z0, z0 + Math.min(10, (H - z0) * 0.7), p.door);
     winsL(c, m, p, y1, x0, x1, z0 + (H - z0) * 0.5, 3, Math.max(1, Math.round((x1 - x0) * 2)));
     winsR(c, m, p, x1 - (p.batter || 0), y0, y1, z0 + (H - z0) * 0.5, 3, Math.max(1, Math.round((y1 - y0) * 2)));
     if (st === 'egipcio' || st === 'asteca') {
@@ -398,7 +401,7 @@
       const cx0 = g ? -0.5 : -0.55, cx1 = g ? 0.45 : 0.55, cy0 = g ? -0.5 : -0.7, cy1 = g ? 0.45 : 0.2;
       if (g) colonnade(c, p, -0.72, -0.72, 0.72, 0.72, z0, H, 5, 0.045, 'B');
       walls(c, cx0, cy0, cx1, cy1, z0, H, p.wl, p.wr);
-      onL(c, cy1, -0.15, 0.15, z0, z0 + 10, '#3a2e24', m);
+      door(c, cy1, -0.15, 0.15, z0, z0 + 10, '#3a2e24', m);
       if (g) colonnade(c, p, -0.72, -0.72, 0.72, 0.72, z0, H, 5, 0.045, 'LR');
       else colonnade(c, p, -0.62, 0.3, 0.62, 0.72, z0, H, 4, 0.05, 'L');
       const ey0 = g ? -0.78 : -0.72, ey1 = g ? 0.78 : 0.76;
@@ -422,7 +425,7 @@
         const fp = P((a + b) / 2, 0.93, 0); flag(c, fp[0], fp[1], p.trim2, 36);
       }
       box(c, -0.18, 0.62, 0.18, 0.86, 0, 20, p.wl, p.wr, p.top);
-      onL(c, 0.86, -0.1, 0.1, 0, 13, '#2a2016', m);
+      door(c, 0.86, -0.1, 0.1, 0, 13, '#2a2016', m);
       band(c, -0.18, 0.62, 0.18, 0.86, 18, 20, p.trim);
       m.glow.push(P(0, 0.86, 16));
       m.fires.push(P(-0.6, 1.05, 3)); m.fires.push(P(0.6, 1.05, 3));
@@ -432,7 +435,7 @@
       const H = stepPyr(c, p, 0.95, 0.5, 4, 6.5, p.wl, p.wr, p.top, 0.2);
       box(c, -0.36, -0.36, 0.36, 0.3, H, H + 9, p.wl, p.wr, p.top);
       band(c, -0.36, -0.36, 0.36, 0.3, H + 6.5, H + 9, p.trim);
-      onL(c, 0.3, -0.12, 0.12, H, H + 6, '#2a1c14', m);
+      door(c, 0.3, -0.12, 0.12, H, H + 6, '#2a1c14', m);
       // roof comb
       box(c, -0.3, -0.08, 0.3, 0.02, H + 9, H + 17, p.trim, shade(p.trim, 0.8), p.trim);
       for (let k = 0; k < 4; k++) { const q = P(-0.22 + k * 0.15, 0.02, H + 13); c.fillStyle = p.trim2; c.fillRect(q[0] - 0.8, q[1] - 1.5, 1.6, 3); }
@@ -446,7 +449,7 @@
       walls(c, -0.55, -0.55, 0.55, 0.55, 1.5, 12, p.wl, p.wr);
       poly(c, [P(-0.75, 0.75, 7), P(0.75, 0.75, 7), P(0.55, 0.55, 11), P(-0.55, 0.55, 11)], S[0]);
       poly(c, [P(0.75, 0.75, 7), P(0.75, -0.75, 7), P(0.55, -0.55, 11), P(0.55, 0.55, 11)], S[1]);
-      onL(c, 0.75, -0.1, 0.1, 1.5, 7, p.door);
+      door(c, 0.75, -0.1, 0.1, 1.5, 7, p.door);
       gableX(c, -0.55, -0.55, 0.55, 0.55, 12, 22, 0.08, S[0], S[1], p.wl, S[2]);
       walls(c, -0.32, -0.32, 0.32, 0.32, 18, 27, p.wl, p.wr);
       onL(c, 0.32, -0.08, 0.04, 21, 24, '#ffd27a', m); onR(c, 0.32, -0.04, 0.08, 21, 24, '#ffd27a', m);
@@ -535,7 +538,7 @@
       for (const [x, y] of [[-0.5, -0.4], [0.5, -0.4], [0.5, 0.4], [-0.5, 0.4]]) box(c, x - 0.05, y - 0.05, x + 0.05, y + 0.05, 0, 6, '#5a4030', '#4a3222', '#6a4a36');
       box(c, -0.6, -0.48, 0.6, 0.48, 6, 7, '#6a4a30', '#4e3620', '#7a5a3a');
       walls(c, -0.55, -0.42, 0.55, 0.42, 7, 15, p.wl, p.wr);
-      onL(c, 0.42, -0.1, 0.1, 7, 13, p.door);
+      door(c, 0.42, -0.1, 0.1, 7, 13, p.door);
       poly(c, [P(-0.1, 0.9, 0), P(0.1, 0.9, 0), P(0.1, 0.44, 7), P(-0.1, 0.44, 7)], '#7a5a3a');
       roof(c, m, p, -0.55, -0.42, 0.55, 0.42, 15, { rh: 10 });
       return 28;
@@ -724,11 +727,11 @@
     if (st === 'asteca' || st === 'nordico') {
       if (st === 'nordico') { box(c, -0.5, -0.4, 0.5, 0.4, 0, 1, p.base[0], p.base[1], p.base[2]); walls(c, -0.45, -0.35, 0.45, 0.35, 1, 8, p.wl, p.wr);
         for (let z = 2; z < 8; z += 1.4) { ln(c, P(-0.45, 0.35, z), P(0.45, 0.35, z), 'rgba(30,20,10,0.4)', 0.5); ln(c, P(0.45, 0.35, z), P(0.45, -0.35, z), 'rgba(30,20,10,0.4)', 0.5); }
-        onL(c, 0.35, -0.08, 0.08, 1, 6, p.door); const zr = roof(c, m, p, -0.45, -0.35, 0.45, 0.35, 8, { rh: 9 }); m.fires.push(P(0.1, 0, zr)); m.fires.push(P(-0.1, 0, zr)); return zr + 4; }
+        door(c, 0.35, -0.08, 0.08, 1, 6, p.door); const zr = roof(c, m, p, -0.45, -0.35, 0.45, 0.35, 8, { rh: 9 }); m.fires.push(P(0.1, 0, zr)); m.fires.push(P(-0.1, 0, zr)); return zr + 4; }
       top(c, -0.8, -0.8, 0.8, 0.8, 0.4, p.top);
       const b = P(0, 0, 0.4); const g = c.createLinearGradient(b[0] - 14, 0, b[0] + 14, 0); g.addColorStop(0, '#c8b8a0'); g.addColorStop(1, '#8a7a68');
       c.fillStyle = g; c.beginPath(); c.ellipse(b[0], b[1], 14, 7, 0, 0, Math.PI); c.lineTo(-14, b[1]); c.ellipse(b[0], b[1], 14, 16, 0, Math.PI, TAU); c.fill();
-      c.fillStyle = '#2a1c14'; c.beginPath(); c.ellipse(b[0] - 4, b[1] + 3, 2.5, 3, 0, Math.PI, TAU); c.fill();
+      if (!NODOOR) { c.fillStyle = '#2a1c14'; c.beginPath(); c.ellipse(b[0] - 4, b[1] + 3, 2.5, 3, 0, Math.PI, TAU); c.fill(); } // (the low way in)
       band(c, -0.6, -0.6, 0.6, 0.6, 0.4, 1.5, p.trim);
       m.fires.push(P(0, 0, 18)); m.fires.push(P(0.2, -0.1, 16));
       return 22;
@@ -763,7 +766,7 @@
       colonnade(c, p, -1.2, 0.5, 1.2, 0.95, 0, 15, 7, 0.06, 'L', true);
       top(c, -1.3, 0.45, 1.3, 1.0, 15, p.top);
       for (const [a, b] of [[-1.3, -0.35], [0.35, 1.3]]) { walls(c, a, 1.0, b, 1.35, 0, 26, p.wl, p.wr, 0.08); top(c, a + 0.08, 1.08, b - 0.08, 1.27, 26, p.top); band(c, a + 0.08, 1.0, b - 0.08, 1.27, 24, 26, p.trim); const fp = P((a + b) / 2, 1.36, 0); flag(c, fp[0], fp[1], '#e8b83a', 32); }
-      onL(c, 1.2, -0.2, 0.2, 0, 14, '#2a2016', m);
+      door(c, 1.2, -0.2, 0.2, 0, 14, '#2a2016', m);
       return 38;
     }
     if (st === 'nordico') { longhouse(c, m, p, 1.35, 0.75, 10, 26, true); const a = P(-0.9, 0.95, 0); flag(c, a[0], a[1], '#a23c2a', 30); return 40; }
@@ -1139,12 +1142,17 @@
   const NEW = { quarteirao: 1, sobrado: 1, insula: 1, praca: 1, mercado: 1, celeiro: 1, biblioteca: 1, teatro: 1, banhos: 1, palacio: 1, doca: 1, aqueduto: 1, maravilha: 1 };
   // later files add building types of their own with the same drawing kit
   A.EXT = {};
-  A.kit = () => ({ longhouse, stepPyr, P, poly, ln, walls, top, box, onL, onR, shade, roof, hall, column, colonnade, steps, flag, palm, jar, barrel, awning, stall, statue, dome, tree, basin, pave, band, parapet, plinth, winsL, winsR, gableX, gableY, hip, pal, TAU });
-  A.building = function (type, v, style, extra) {
+  A.kit = () => ({ longhouse, stepPyr, P, poly, ln, walls, top, box, onL, onR, door, shade, roof, hall, column, colonnade, steps, flag, palm, jar, barrel, awning, stall, statue, dome, tree, basin, pave, band, parapet, plinth, winsL, winsR, gableX, gableY, hip, pal, TAU });
+  // (noDoor: the picture without its door — its door is on a side the view does not see: L-264)
+  A.building = function (type, v, style, extra, noDoor) {
+    NODOOR = !!noDoor;
+    try { return building(type, v, style, extra, noDoor ? '|c' : ''); } finally { NODOOR = false; }
+  };
+  function building(type, v, style, extra, kd) {
     const X = A.EXT[type];
     if (X) {
       const st = PAL[style] ? style : 'classico'; const def = G.BDEF[type]; if (!def) return null;
-      const key = 'x-' + type + (v || 0) + st + (extra ? extra.join(',') : '');
+      const key = 'x-' + type + (v || 0) + st + (extra ? extra.join(',') : '') + kd;
       const [w, h, ax, ay] = dims(def.w, def.h, X.maxz);
       return Art.sprite(key, w, h, ax, ay, (c, m) => X.draw(c, m, pal(st), st, v || 0, extra));
     }
@@ -1153,7 +1161,7 @@
     if (type === 'monument' && st === 'egipcio') return null; // the obelisk is already Egyptian
     if (type === 'torre' && st === 'nordico') return null; // a timber watchtower is already Norse
     const def = G.BDEF[type]; if (!def || !MAXZ[type]) return null;
-    const key = 'a-' + type + (v || 0) + st + (extra ? extra.join(',') : '');
+    const key = 'a-' + type + (v || 0) + st + (extra ? extra.join(',') : '') + kd;
     const grow = type === 'doca' ? 1.6 : 0;
     const [w, h, ax, ay] = dims(def.w + grow * 2, def.h + grow * 2, MAXZ[type]);
     const p = pal(st);
@@ -1182,7 +1190,7 @@
         case 'maravilha': maravilha(c, m, p, st); break;
       }
     });
-  };
+  }
 
   A.plazaColor = st => st === 'nordico' ? '#86a84e' : st === 'egipcio' ? '#e2cfa2' : st === 'asteca' ? '#e0d6c0' : st === 'romano' ? '#d8cbb0' : '#ddd6c6';
 

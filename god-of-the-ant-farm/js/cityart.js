@@ -8,7 +8,7 @@
 // ============================================================
 (function (G) {
   const A = G.Arch; const K = A.kit();
-  const { P, poly, ln, walls, box, onL, onR, shade, roof, colonnade, steps, flag, palm, jar, barrel, statue, dome, band, winsL, winsR, gableX, TAU } = K;
+  const { P, poly, ln, walls, box, onL, onR, door, shade, roof, colonnade, steps, flag, palm, jar, barrel, statue, dome, band, winsL, winsR, gableX, TAU } = K;
   let N = G.N; G.mapHooks.push(n => { N = n; });
   const W = G.W;
 
@@ -25,7 +25,7 @@
     box(c, x0 - 0.04, y0 - 0.04, x1 + 0.04, y1 + 0.04, 0, z0, p.base[0], p.base[1], p.base[2]);
     walls(c, x0, y0, x1, y1, z0, H, p.wl, p.wr, st === 'egipcio' ? 0.03 : 0);
     if (st === 'nordico') { c.strokeStyle = 'rgba(30,20,10,0.3)'; c.lineWidth = 0.35; for (let k = 1; k < 8; k++) { const f = x0 + (x1 - x0) * k / 8; ln(c, P(f, y1, z0), P(f, y1, H), 'rgba(30,20,10,0.3)', 0.35); const g = y0 + (y1 - y0) * k / 8; ln(c, P(x1, g, z0), P(x1, g, H), 'rgba(30,20,10,0.3)', 0.35); } }
-    if (o.door !== false) { const dx = o.doorX !== undefined ? o.doorX : (x0 + x1) / 2; onL(c, y1, dx - 0.1, dx + 0.1, z0, z0 + Math.min(8, (H - z0) * 0.72), p.door); }
+    if (o.door !== false) { const dx = o.doorX !== undefined ? o.doorX : (x0 + x1) / 2; door(c, y1, dx - 0.1, dx + 0.1, z0, z0 + Math.min(8, (H - z0) * 0.72), p.door); }
     if (o.win !== false) {
       winsL(c, m, p, y1, x0, x1, z0 + (H - z0) * 0.52, 2.6, Math.max(1, Math.round((x1 - x0) * 1.6)));
       winsR(c, m, p, x1, y0, y1, z0 + (H - z0) * 0.52, 2.6, Math.max(1, Math.round((y1 - y0) * 1.6)));

@@ -45,7 +45,7 @@
   // an offset in a sprite's own space (sprites are mirrored on the side views)
   R.soff = (dx, dy, z) => [(dx - dy) * 16 * (rot & 1 ? -1 : 1), (dx + dy) * 8 - (z || 0)];
   // a sprite's screen-x offset (in its own space) as a world offset
-  R.sprToWorld = px => { const X = px * (rot & 1 ? -1 : 1) / 32; return R.vdirToWorld(X, -X); };
+  R.sprToWorld = (px, m) => { const X = px * (m !== undefined ? m : rot & 1 ? -1 : 1) / 32; return R.vdirToWorld(X, -X); }; // (m: the sprite's own mirror)
   // the edges of a rectangle, split into the two at the back and the two at the front of this view
   R.rectEdges = (x0, y0, x1, y1) => {
     const E = [[x0, y1, x0, y0], [x0, y0, x1, y0], [x1, y0, x1, y1], [x0, y1, x1, y1]];
@@ -986,13 +986,13 @@
         if (G.VR() < dt * 1.3) G.FX.spawn({ x: cx + G.vrr(-0.1, 0.1), y: cy + G.vrr(-0.1, 0.1), z: 10, vz: G.vrr(12, 22), vx: wx * 0.6, vy: wy * 0.6, life: G.vrr(2, 3.5), s0: 3, s1: 9, c: 'rgba(150,150,150,0.3)', k: 2 });
         if (G.VR() < dt * 2.2) G.FX.spawn({ x: cx, y: cy, z: 5, vz: G.vrr(20, 45), vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.3, 0.3), life: G.vrr(0.6, 1.4), s0: 0.9, s1: 0.2, c: '#ffc060', k: 4, layer: 1 });
       } else if (SMOKE[b.type] && (KILN[b.type] || b.type === 'banhos' || G.VR() < 0.5 + night)) {
-        const spr = homeSprite(b, false) || G.Art.building(b.type, b.v, b.style, b.wd); // (the chimney of the picture drawn)
+        const dv = doorView(b); const spr = homeSprite(b, false) || G.Art.building(b.type, b.v, b.style, b.wd, dv.back); // (the chimney of the picture drawn)
         const steam = b.type === 'banhos';
         if (spr && spr.fires.length && G.VR() < dt * (KILN[b.type] ? 1.2 : steam ? 1.4 : 0.55 + night * 0.5)) {
           const h = W.groundH(cx, cy);
           const f = G.vpick(spr.fires);
           // convert sprite-local px to world tile offset
-          const wo = R.sprToWorld(f[0]), oz = -f[1];
+          const wo = R.sprToWorld(f[0], dv.m), oz = -f[1];
           G.FX.spawn({ x: cx + wo[0], y: cy + wo[1], h, z: oz, vz: G.vrr(10, 18), vx: wx * 0.5, vy: wy * 0.5, life: G.vrr(2.5, 4), s0: 2.2, s1: steam ? 9 : 7, c: steam ? 'rgba(240,245,250,0.45)' : 'rgba(200,200,205,0.35)', k: 2 });
           if ((b.type === 'workshop' || b.type === 'forja') && G.VR() < 0.3) G.FX.spawn({ x: cx + wo[0], y: cy + wo[1], h, z: oz, vz: G.vrr(25, 45), vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.3, 0.3), life: 0.8, s0: 0.8, s1: 0.1, c: '#ffb040', k: 4, layer: 1 });
         }
@@ -2484,6 +2484,17 @@
     const t0 = now(); const p = A.homePaint(b, k); homeMs += now() - t0; return p;
   }
   R.homeSprite = b => homeSprite(b, false); // (for the proofs: the picture a home has now, or null)
+  // ---- the god's door on the side its plan opens it (L-264): a picture of before has its door on its front-left face — it
+  // is drawn as it is where the plan's door is on the side the view shows at the front-left, mirrored where that side is at
+  // the front-right, and without its door where the view does not see that side (the sides at the front, by the view's
+  // quarter: as Arch.homeGeo turns a shell). A home drawn from its shell has its own (D-082); a block of houses keeps its
+  // houses' doors ----
+  const FL = ['S', 'E', 'N', 'W'], FR = ['E', 'N', 'W', 'S']; const OWN_DOORS = { quarteirao: 1 };
+  function doorView(b, q) {
+    const m0 = R.mirror(); const s = b.ip && b.ip.s; if (!s || OWN_DOORS[b.type] || (G.Arch && G.Arch.fromShell && G.Arch.fromShell(b.type))) return { m: m0, back: false };
+    if (q === undefined) q = R.quarter(); return s === FL[q] ? { m: 1, back: false } : s === FR[q] ? { m: -1, back: false } : { m: m0, back: true };
+  }
+  R.doorView = doorView; // (for the proofs: { m: the mirror, back: drawn without its door } for a view's quarter)
   function drawBuilding(b, sx, sy, t, nightF) {
     const S = G.S; const Art = G.Art;
     const def = G.BDEF[b.type];
@@ -2505,12 +2516,13 @@
     if (b.type === 'ruin') { drawRuin(b, sx, sy, t); return; }
     if (b.type === 'cercado') { if (b.built) penStakes(b, penFront(b), 1); else { penStakes(b, penFront(b), b.progress); overlays.push(b, sx, sy - 14); } return; }
     if (!b.built) { drawSite(b, sx, sy, t); if (burning) emisFire.push(sx, sy - 8, 1); return; }
-    const spr = homeSprite(b, true) || Art.building(b.type, b.v, b.style, b.wd);
+    const dv = doorView(b);
+    const spr = homeSprite(b, true) || Art.building(b.type, b.v, b.style, b.wd, dv.back);
     if (!spr) return;
     // storehouse piles
     if (b.type === 'storehouse' && !b.style) drawPiles(b, sx, sy);
-    Art.drawM(ctx, spr, sx, sy, 1);
-    const m = R.mirror();
+    Art.drawMx(ctx, spr, sx, sy, 1, dv.m);
+    const m = dv.m;
     if (b.hp < b.maxHp * 0.6) { ctx.fillStyle = 'rgba(30,20,15,0.25)'; ctx.beginPath(); ctx.ellipse(sx, sy - 8, 10 * b.w, 6 * b.h, 0, 0, TAU); ctx.fill(); }
     // night windows & fires
     const occupied = G.Village && (!def.housing ? true : hasResidents(b));
@@ -2617,7 +2629,7 @@
         ctx.stroke();
         if (p > 0.85) {
           ctx.globalAlpha = (p - 0.85) / 0.15;
-          const spr = homeSprite(b, true) || G.Art.building(b.type, b.v, b.style, b.wd); if (spr) G.Art.drawM(ctx, spr, sx, sy, 1); // (the house it will be)
+          const dv = doorView(b); const spr = homeSprite(b, true) || G.Art.building(b.type, b.v, b.style, b.wd, dv.back); if (spr) G.Art.drawMx(ctx, spr, sx, sy, 1, dv.m); // (the house it will be)
           ctx.globalAlpha = 1;
         }
       }

@@ -376,7 +376,7 @@
 (function (G) {
   if (!G.Arch || !G.Arch.EXT) return;
   const K = G.Arch.kit(); const TAU = Math.PI * 2;
-  const { P, poly, ln, walls, top, box, onL, shade, roof, colonnade, flag, palm, statue, dome, basin, band, plinth, winsL, winsR, longhouse, stepPyr } = K;
+  const { P, poly, ln, walls, top, box, onL, door, shade, roof, colonnade, flag, palm, statue, dome, basin, band, plinth, winsL, winsR, longhouse, stepPyr } = K;
   const GOLD = ['#f2c14e', '#d8a63a', '#b8862a'];
   const at = (c, dx, dy, fn) => { const q = P(dx, dy, 0); c.save(); c.translate(q[0], q[1]); fn(); c.restore(); };
   // a wing of the palace: floors of windows, a cornice, the roof of the culture
@@ -386,7 +386,7 @@
     const fh = (H - z0) / floors;
     for (let f = 0; f < floors; f++) { const z = z0 + fh * f + fh * 0.3; const h = Math.min(3.4, fh * 0.48); winsL(c, m, p, y1, x0, x1, z, h, Math.max(1, Math.round((x1 - x0) * 2.4))); winsR(c, m, p, x1, y0, y1, z, h, Math.max(1, Math.round((y1 - y0) * 2.4))); }
     band(c, x0, y0, x1, y1, H - 1.3, H - 0.4, o.trim || p.trim);
-    if (o.door) onL(c, y1, o.door - 0.12, o.door + 0.12, z0, z0 + Math.min(9, fh * 0.8), o.gold ? '#b8862a' : p.door);
+    if (o.door !== undefined) door(c, y1, o.door - 0.12, o.door + 0.12, z0, z0 + Math.min(9, fh * 0.8), o.gold ? '#b8862a' : p.door); // (a door in the middle is at 0: L-264)
     if (st === 'egipcio' || st === 'asteca') return roof(c, m, p, x0, y0, x1, y1, H, { kind: 'flat', par: 1.4 });
     if (st === 'nordico') return roof(c, m, p, x0, y0, x1, y1, H, { kind: 'turf', rh: o.rh });
     return roof(c, m, p, x0, y0, x1, y1, H, { kind: st === 'grego' ? 'gable' : 'hip', rh: o.rh, colors: o.gold ? GOLD : undefined });

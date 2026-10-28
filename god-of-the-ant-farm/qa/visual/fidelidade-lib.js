@@ -122,10 +122,11 @@ F.god = function (b, o) {
   o = o || {}; const Art = G.Art, A = G.Arch; const doc0 = global.document; let rec = null;
   global.document = new Proxy(doc0, { get(t, k) { if (k === 'createElement') return tag => { if (tag !== 'canvas') return doc0.createElement(tag); const R = recorder(); rec = R; const cv = { width: 0, height: 0, getContext: () => R.c }; R.c.canvas = cv; return cv; }; return t[k]; } });
   const keep = Art.clear; let spr = null;
-  // (o.shell: the home drawn from that shell — Arch.home, D-082 —, for the view's quarter o.q; else the type's sprite)
+  // (o.shell: the home drawn from that shell — Arch.home, D-082 —, for the view's quarter o.q; else the type's sprite, without
+  // its door with o.noDoor — L-264)
   // (with the god's view drawing its homes from their shells — Arch.homeOn, D-082 —, a home is that picture, as the view has it)
   const shell = o.shell !== undefined ? o.shell : A.fromShell && A.fromShell(b.type) && b.ip && G.Interiors ? G.Interiors.shellOf(b) : undefined;
-  try { Art.clear(); if (A.homeClear) A.homeClear(); spr = shell !== undefined ? (shell && A.home ? A.home(b, shell, o.q || 0) : null) : Art.building(b.type, b.v, b.style, b.wd); } finally { global.document = doc0; void keep; }
+  try { Art.clear(); if (A.homeClear) A.homeClear(); spr = shell !== undefined ? (shell && A.home ? A.home(b, shell, o.q || 0) : null) : Art.building(b.type, b.v, b.style, b.wd, o.noDoor); } finally { global.document = doc0; void keep; }
   if (A.homeClear) A.homeClear();
   if (!spr || !rec) return { ops: [], none: true };
   // (the recorder's frame is the canvas's: scale(3) then translate(ax, ay) — back to the god's pixels from the anchor)
