@@ -672,7 +672,11 @@
       for (const v of s.villagers.values()) if (dying(v) && !v.captive && !v.aboard && !v.ug) dyingIn.set(v.set, (dyingIn.get(v.set) || 0) + 1);
       for (const [sid, n] of dyingIn) {
         const set = s.settlements.get(sid); const f = set && s.factions.get(set.fac);
-        if (f && f.stock.food >= 1 && !G.Village.nearestDropoff(set.cx, set.cy, sid)) add('fome', 1, `${set.name}: ${n} morrendo de fome com ${Math.floor(f.stock.food)} de comida no estoque de ${f.name} e nenhum armazém onde comer`);
+        // (a town lighting its fire again — every store of it taken by a disaster since yesterday — eats once the fire burns: Hedeby,
+        // in the chaos of seed 13, lost its fire to a volcano, its people to a plague and its berries to a winter in one day, and
+        // lit the fire again before the next; a day with no fire rising is still a town that will not eat, T-225)
+        const rising = () => { for (const b of s.buildings.values()) if (b.set === sid && b.type === 'campfire' && !b.built && s.day - (b.born || 0) <= 1) return true; return false; };
+        if (f && f.stock.food >= 1 && !G.Village.nearestDropoff(set.cx, set.cy, sid) && !rising()) add('fome', 1, `${set.name}: ${n} morrendo de fome com ${Math.floor(f.stock.food)} de comida no estoque de ${f.name} e nenhum armazém onde comer`);
       }
       for (const v of s.villagers.values()) {
         if (!dying(v) || v.captive || v.jail || v.aboard || v.ug || v.held || v.air) continue;

@@ -203,6 +203,14 @@
     if (k === 'stone') S.stats.stoneProduced += add;
     return add;
   };
+  // a town whose streets reach one of its stores, or a fire of it rising (L-368)
+  V.fed = function (set) {
+    for (const b of G.S.buildings.values()) {
+      if (b.set !== set.id || !G.BDEF[b.type] || !(b.built ? G.BDEF[b.type].dropoff : b.type === 'campfire')) continue;
+      const [fx, fy] = V.frontTile(b); if (W.townReaches(set, fx, fy)) return true;
+    }
+    return false;
+  };
   V.dropoffs = function (setId) {
     const out = [];
     for (const b of G.S.buildings.values()) if (b.built && G.BDEF[b.type].dropoff && (setId === undefined || b.set === setId)) out.push(b);
@@ -291,7 +299,8 @@
   };
 
   // ------------------------------ site placement ------------------------------
-  V.findSite = function (set, type) {
+  // (reach, when given: only where it says — the fire of a town cut off from its stores, on its streets' side, L-368)
+  V.findSite = function (set, type, reach) {
     const S = G.S; const def = G.BDEF[type];
     if (type === 'doca' && G.City) return G.City.dockSite(set);
     if (G.Eco) { const e = G.Eco.findSite(set, type); if (e !== undefined) return e; }
@@ -304,7 +313,7 @@
     const counts = {}; for (const b of S.buildings.values()) if (b.set === set.id) counts[b.type] = (counts[b.type] || 0) + 1;
     // (a block that finds no room in the heart settles for a lower house, wherever a family would like to live)
     let best = type === 'quarteirao' && G.Urban ? V.blockSite(set) : null;
-    if (!best) best = search(set, type, def, R, field, counts, false);
+    if (!best) best = search(set, type, def, R, field, counts, false, undefined, reach);
     // a full city puts its great buildings out by its edge, beyond the walls if need be,
     // and when even there is no room, it builds them over its own old fields and houses
     if (!best && def.civic) best = search(set, type, def, R + 6, field, counts, false);
@@ -331,7 +340,7 @@
   const RENEW = { farm: 1, hut: 2, house: 3 };
   const RENEW_BLOCK = { farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, hut: 2, house: 3, sobrado: 4 };
   const KEEP = { farm: 2, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1 };
-  function search(set, type, def, R, field, counts, renew, dear) {
+  function search(set, type, def, R, field, counts, renew, dear, reach) {
     const S = G.S; const block = renew && type === 'quarteirao'; const may = block ? RENEW_BLOCK : RENEW;
     const left = gone => { const n = {}; for (const id of gone) { const t = S.buildings.get(id).type; if (KEEP[t] && (counts[t] || 0) - (n[t] = (n[t] || 0) + 1) < KEEP[t]) return false; } return true; };
     const bad = (gone, beds) => renew && ((!gone && !block) || (gone && (gone.length > 4 || !left(gone))) || beds > (block ? 24 : 12));
@@ -345,6 +354,7 @@
       const d = G.dist(fx, fy, set.cx, set.cy);
       if (d > R) continue;
       if (dear && G.Urban.valueAt(set, fx, fy) < dear) continue;
+      if (reach && !reach(x, y)) continue;
       let ok = true, trees = 0, fert = 0, gone = null, cost = 0, beds = 0;
       for (let ty = y; ty < y + def.h && ok; ty++) for (let tx = x; tx < x + def.w; tx++) {
         const i = ty * N + tx; const t = S.type[i];
@@ -468,6 +478,10 @@
     const isMain = G.Fac.capitalOf(fac.id) === set;
     const facHas = type => G.Fac.has(fac.id, type);
     if (!c.campfire) { const b = V.startProject(set, 'campfire'); if (b) { set.campfire = b.id; } return; }
+    // (a town eats at a store its streets reach: with every store and fire of it cut off by the water — Tenochtitlan, cut in two,
+    // kept its fire and its quay on the far side of its houses, and a child starved at home for three days —, it lights a
+    // fire on its streets' side, L-368)
+    if (!V.fed(set)) { const pos = V.findSite(set, 'campfire', (x, y) => W.townReaches(set, x + 0.5, y + 0.5)); const b = pos && V.startProject(set, 'campfire', pos); if (b) set.campfire = b.id; return; }
     const maxSites = Math.min(4 + Math.max(0, (set.tier || 0) - 2) * 2, 1 + Math.floor(pop / 11));
     if (c.sites >= maxSites) return;
     const st = fac.stock; const cap = V.cap(fac.id);
