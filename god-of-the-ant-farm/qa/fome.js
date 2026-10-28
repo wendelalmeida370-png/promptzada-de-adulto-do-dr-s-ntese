@@ -151,9 +151,11 @@ if (fset) {
     const ppl = people().filter(v => v.age >= 6).slice(0, 3); const keep = ppl.map(v => [v.hunger, v.hp]);
     for (const v of ppl) { v.hunger = 100; v.hp = 35; }
     none = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
-    if (fire) { fire.built = false; } // (the town without its store, for the look: put back at once)
+    // (the town without a store, for the look — every store of it: its fire, and a storehouse its builders may have raised in
+    // the day of the skip, as with the final worlds, T-203 —: put back at once)
+    const stores = V.dropoffs(fset.id); for (const b of stores) b.built = false;
     got = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
-    if (fire) fire.built = true;
+    for (const b of stores) b.built = true;
     ppl.forEach((v, i) => { v.hunger = keep[i][0]; v.hp = keep[i][1]; });
     void was;
   }

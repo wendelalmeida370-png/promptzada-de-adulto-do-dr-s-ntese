@@ -11,7 +11,8 @@
 // começa devolve o que se pagou; h15 a obra que se perde (o fogo) devolve o que não se levantou; h13 o barraco (social.js):
 // a família sai para uma casa com lugar levando o que é seu, ou faz do barraco uma cabana pagando a madeira do povo — pelo
 // livro; h14 a terra cara (social.js): a família rica compra a casa da família simples do centro, cada uma com o que é
-// seu, pelo livro; h10 o salto: a obra termina e a família muda; h16 a ruína (a casa que caiu, a da cidade abandonada)
+// seu, pelo livro; h10 o salto: a obra termina e a família muda (vista quando a casa fica pronta, T-139; a mão da prova
+// mantém a pedra e a madeira do povo enquanto o salto roda, T-202); h16 a ruína (a casa que caiu, a da cidade abandonada)
 // sem dono quando o dono morre (L-304); h9 um povo sem moeda: o povo levanta com o que tem;
 // e o verificador limpo. Os casos que vivem dias do mundo (h7, h8, h15, h14, h10) partem do mundo pronto de novo, e o h7
 // e o h10 preparam a cidade pelas portas do mundo: em paz, com os materiais de uma casa no armazém (a guerra que vier no
@@ -110,9 +111,21 @@ function readyCouple() {
 // waits for the work longer, not forever)
 function readyTown() {
   let w = 0; for (; w < 400 && G.War.threat(set.id); w++) M.viver(1);
+  stockUp();
+  return w;
+}
+// (the materials of three sobrados in the people's store: what the city's own works took, given back by the god's hand)
+function stockUp() {
   const f = 'f:' + set.fac; const cost = G.BDEF.sobrado.cost;
   for (const k in cost) { const lack = cost[k] * 3 - D.get(f, k); if (lack > 0) D.make(f, k, lack, { code: 'teste', part: true }); }
-  return w;
+}
+// (the skip, as M.saltar runs it, with the god's hand keeping the people's stone and wood while it runs — as the quarteirão's
+// year() does with its feed(): the case is the house a family paid for standing and the family moving in, not the town's
+// store; in the final metrópole twenty works of Hedeby's people waited for stone, and the house stood at 58% for years, T-202)
+function skipFed(n) {
+  const d0 = S.day; const low = () => Object.keys(G.BDEF.sobrado.cost).some(k => D.get('f:' + set.fac, k) < G.BDEF.sobrado.cost[k]);
+  G.Skip.on = true; G.FX.off = true; W.pathGreed = 1.3;
+  try { while (G.S.day - d0 < n) { G.Main.skipStep(1); if (low()) stockUp(); } } finally { G.Skip.on = false; G.FX.off = false; W.pathGreed = W.PATH_EXACT; }
 }
 const warNote = (w, t0) => `${w ? `; a cidade esperou ${w} s por paz antes do caso` : ''}${G.War.threat(set.id) ? '; a cidade em guerra agora' : ''}${t0 !== undefined ? ` (o caso: ${Math.round(S.clock - t0)} s do mundo)` : ''}`;
 // ---------------- h2: the need goes into the diary, and the house saves (no luxury bought while it does)
@@ -122,7 +135,11 @@ let hv = null, hHome = null;
   let info = 'nenhum casal numa casa cheia', fine2 = false;
   if (hv) {
     setCoins('h:' + hHome.id, 1); // (a house with too few coins even for a rent: it saves)
-    for (let k = 0; k < 3 && !(hHome.poupa && hHome.poupa.by === hv.id); k++) townDay(set);
+    // (the family saves by the head the town's day asks — either of the two, the first of them in the world's list: in the
+    // final metrópole Gudrun came before Gunnar, and the case waited for him, T-200 —; the cases after go on with that one)
+    const saves = () => !!hHome.poupa && (hHome.poupa.by === hv.id || hHome.poupa.by === hv.partner);
+    for (let k = 0; k < 3 && !saves(); k++) townDay(set);
+    if (saves() && hHome.poupa.by === hv.partner) hv = S.villagers.get(hv.partner);
     const goal = (A.diary(hv).goals || []).find(g => g.src === 'casa-nova');
     const list = G.Compras ? G.Compras.list(hHome).map(q => q.k) : [];
     fine2 = !!goal && !!hHome.poupa && hHome.poupa.by === hv.id && !list.includes('joias');
@@ -163,6 +180,10 @@ let hb = null;
   let info = 'sem o casal de h2', fine3 = false;
   if (hv) {
     clearWay(hv);
+    // (the couple's house may no longer be full — in a small town the others of it went in the cases between, to the
+    // people's empty house of h11 or to a commission the way cleared, and «A família tem onde morar», T-201 —: the test's
+    // hand fills it to its beds again, as couple() does)
+    const full0 = !K.need(hv); if (full0) hHome.res = Math.max(hHome.res || 0, G.BDEF[hHome.type].housing);
     const price = K.price(set, 'sobrado') + 4; setCoins('h:' + hHome.id, price * 3); // (a good year)
     const L0 = S.ledgerN;
     const r3 = K.order(hv); // (the family's decision, now — the day of the town takes the most urgent family first)
@@ -174,7 +195,7 @@ let hb = null;
     const why3 = { obra: !!hb, livro: !!paid, dono: !!hb && hb.dono === hv.id, obraAberta: !!hb && !hb.built, encomenda: !!(hb && hb.encomenda), ele: !!(hb && hb.encomenda && hb.encomenda.fam.includes(hv.id)), par: !!(hb && hb.encomenda && hb.encomenda.fam.includes(hv.partner)), preco: !!(hb && hb.encomenda && paid && Math.abs(paid[6] - hb.encomenda.paid) < 0.01) };
     fine3 = Object.values(why3).every(Boolean);
     if (!fine3) console.log(`   (h3: ${JSON.stringify(why3)})`);
-    info = hb ? `${hv.name} guardou ${paid ? paid[6] : '?'} moedas da casa na obra (livro ${paid ? paid[0] : '—'}: vão ao povo quando ela ficar de pé); a cidade pôs ${G.Village.buildName(hb).toLowerCase()} em ${hb.x},${hb.y} (a terra ali vale ${val}; ${G.Urban && G.Urban.DEAR ? `um sobrado pede ${G.Urban.DEAR.sobrado}` : ''}); dono: ${hb.dono === hv.id ? hv.name : hb.dono}; a família da encomenda: ${hb.encomenda.fam.length}` : 'nenhuma obra encomendada';
+    info = (full0 ? '(a casa do casal já não estava cheia: a mão da prova a encheu de novo) ' : '') + (hb ? `${hv.name} guardou ${paid ? paid[6] : '?'} moedas da casa na obra (livro ${paid ? paid[0] : '—'}: vão ao povo quando ela ficar de pé); a cidade pôs ${G.Village.buildName(hb).toLowerCase()} em ${hb.x},${hb.y} (a terra ali vale ${val}; ${G.Urban && G.Urban.DEAR ? `um sobrado pede ${G.Urban.DEAR.sobrado}` : ''}); dono: ${hb.dono === hv.id ? hv.name : hb.dono}; a família da encomenda: ${hb.encomenda.fam.length}` : 'nenhuma obra encomendada');
   }
   ok('h3 pagar e encomendar', fine3 && !bad().length, info);
 }
@@ -190,13 +211,14 @@ if (hb) {
   let info = 'sem a obra de h3', fine4 = false;
   if (hb) {
     const from = hHome; const L0 = S.ledgerN; const pantry0 = D.get('h:' + from.id, 'food');
-    const done = fine(900, () => hb.built);
+    // (up to h7's time: a small town of few builders takes longer — Hedeby, of 13 people, in the final metrópole, T-201)
+    const done = fine(3000, () => hb.built);
     const moved = book(e => e[0] > L0 && e[8] === 'mudança' && e[3] === 'h:' + from.id && e[4] === 'h:' + hb.id);
     const fam = [hv, S.villagers.get(hv.partner)].filter(Boolean);
     const arranged = (hv.diary || []).some(e => /Arrumamos a casa nova/.test(e.txt));
     const people = book(e => e[0] > L0 && e[8] === 'obra-casa' && e[3] === 'h:' + hb.id && e[4] === 'f:' + set.fac)[0]; // (the coins set aside, to the people)
     fine4 = done && fam.every(v => v.home === hb.id) && hb.dono === hv.id && !hb.encomenda && moved.length >= 1 && arranged && !!people;
-    info = `${done ? `levantada no dia ${Math.round(S.day)}` : 'NÃO terminou em 900 s'}: ${fam.map(v => `${v.name} mora ${v.home === hb.id ? 'nela' : 'em #' + v.home}`).join(', ')}; a mudança no livro: ${moved.map(e => `${e[6]} ${e[5]}`).join(', ') || 'NADA'} (a despensa da casa velha tinha ${r2(pantry0)}); dona: ${hb.dono === hv.id ? 'a família' : hb.dono}; no diário: ${arranged ? '«Arrumamos a casa nova…»' : 'NADA da arrumação'}; as moedas guardadas na obra ao povo: ${people ? people[6] + ' (livro ' + people[0] + ')' : 'NADA'}`;
+    info = `${done ? `levantada no dia ${Math.round(S.day)}` : 'NÃO terminou em 3000 s'}: ${fam.map(v => `${v.name} mora ${v.home === hb.id ? 'nela' : 'em #' + v.home}`).join(', ')}; a mudança no livro: ${moved.map(e => `${e[6]} ${e[5]}`).join(', ') || 'NADA'} (a despensa da casa velha tinha ${r2(pantry0)}); dona: ${hb.dono === hv.id ? 'a família' : hb.dono}; no diário: ${arranged ? '«Arrumamos a casa nova…»' : 'NADA da arrumação'}; as moedas guardadas na obra ao povo: ${people ? people[6] + ' (livro ' + people[0] + ')' : 'NADA'}`;
   }
   ok('h4 levantar e mudar', fine4 && !bad().length, info);
 }
@@ -444,14 +466,21 @@ if (hb) {
     K.order(v);
     const b = K.waiting(v);
     // (two years of the skip, and a year more at a time while the work stands unfinished — a war in the middle holds the
-    // builders —, up to five)
+    // builders —, up to five; the people's stone and wood kept by the god's hand, T-202)
     if (b) {
-      M.saltar(2); let y = 2; for (; y < 5 && !b.built && S.buildings.has(b.id) && b.encomenda; y++) M.saltar(1);
+      // (the family's move, seen when the house stands — act-casa.js moves it as the work is finished —: in the years of a city
+      // after it, the dear land may send it on, social.js moveUp — a rich family of cheap ground bought the new sobrado from
+      // Citlali's the next morning —, T-139)
+      let movedIn = false; const c0 = G.Village.completeBuilding;
+      G.Village.completeBuilding = function (x) { const r = c0.apply(this, arguments); if (x && x.id === b.id) movedIn = movedIn || (G.S.villagers.get(v.id) || {}).home === b.id; return r; };
+      let y = 2;
+      try { skipFed(2); for (; y < 5 && !b.built && S.buildings.has(b.id) && b.encomenda; y++) skipFed(1); } finally { G.Village.completeBuilding = c0; }
       // (a house finished and lived in that the city is already raising further — a house to a sobrado: built again from
       // the ground of the old one — is a work that ended; in a world changed by L-201 the skip ended on it at 72%, T-111)
       const up = !b.built && !!b.upgradeFrom && !b.encomenda;
-      fine10 = (b.built || up) && v.home === b.id && !b.encomenda;
-      info = `um salto de ${y} anos: a obra #${b.id} ${b.built ? 'terminou' : up ? `terminou, e a cidade já a aumenta (${G.Village.buildName(b).toLowerCase()}, ${Math.round((b.progress || 0) * 100)}%)` : S.buildings.has(b.id) ? `NÃO terminou (${Math.round((b.progress || 0) * 100)}%)` : 'SUMIU'} e ${v.name} ${v.home === b.id ? 'mora nela' : 'NÃO mudou'}${warNote(w)}`;
+      const now = S.buildings.get(v.home);
+      fine10 = (b.built || up) && (v.home === b.id || movedIn) && !b.encomenda;
+      info = `um salto de ${y} anos: a obra #${b.id} ${b.built ? 'terminou' : up ? `terminou, e a cidade já a aumenta (${G.Village.buildName(b).toLowerCase()}, ${Math.round((b.progress || 0) * 100)}%)` : S.buildings.has(b.id) ? `NÃO terminou (${Math.round((b.progress || 0) * 100)}%)` : 'SUMIU'} e ${v.name} ${v.home === b.id ? 'mora nela' : movedIn ? `mudou para ela quando ficou pronta (agora mora em ${now ? now.type + '#' + now.id : 'nenhuma casa'})` : 'NÃO mudou'}${warNote(w)}`;
     }
     else info = `${v.name}: nenhuma obra encomendada`;
   }

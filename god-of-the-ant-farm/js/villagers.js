@@ -1387,6 +1387,10 @@
 
   function runBuild(v, t, dt) {
     const S = G.S;
+    // (the task's 70 s count a leg at a time — the walk to the store, the walk with the load, the work —, not the whole
+    // task: after a while of work, the walk to a store 18 tiles off died in the middle, and the stone never reached the
+    // house a family had paid for, L-358. A leg that stalls still dies at 70 s)
+    if (t.leg !== t.st) { t.leg = t.st; t.age = 0; }
     const b = S.buildings.get(t.id);
     if (!b || b.built || b.type === 'ruin') return end(v);
     const def = G.BDEF[b.type];
