@@ -600,7 +600,7 @@
       r.ok = !!rel && !!PEACE[rel.st] && a.fac !== b.fac;
       if (a.fac === b.fac) r.dead = true;
     }
-    if (S.routes.some(r => r.dead)) { S.routes = S.routes.filter(r => !r.dead); S.carts = S.carts.filter(c => S.routes.some(r => r.id === c.route)); }
+    if (S.routes.some(r => r.dead)) { S.routes = S.routes.filter(r => !r.dead); S.carts = S.carts.filter(c => { const keep = S.routes.some(r => r.id === c.route); if (!keep) unload(c); return keep; }); }
     // new routes: at most one path search per round
     for (const f of G.Fac.all()) {
       if (!has(f, 'roda')) continue;
