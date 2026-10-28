@@ -2617,7 +2617,7 @@
         ctx.stroke();
         if (p > 0.85) {
           ctx.globalAlpha = (p - 0.85) / 0.15;
-          const spr = G.Art.building(b.type, b.v, b.style, b.wd); if (spr) G.Art.drawM(ctx, spr, sx, sy, 1);
+          const spr = homeSprite(b, true) || G.Art.building(b.type, b.v, b.style, b.wd); if (spr) G.Art.drawM(ctx, spr, sx, sy, 1); // (the house it will be)
           ctx.globalAlpha = 1;
         }
       }

@@ -11,6 +11,7 @@
 // planta vista de cima, as alturas, as colunas, os arcos, os andares). Um tipo com forma tem de passar nas duas.
 //   node qa/visual/fidelidade.js [tipo,tipo...] [povo,povo...]
 //   IDS=n prédios por tipo e povo (3; cada um com os seus dados e, nos de planta, a família que o registro escolhe)
+//   CASCA=1  o deus desenhando as casas pela casca (D-082), antes de ligar no jogo
 //   PNG=pasta  as figuras: uma folha por tipo, os seis povos — o deus, o 3D de perto, o 3D de longe
 //   JSON=arquivo  os números de cada caso      VERB=1  o motivo de cada um que não é igual
 // Falha: um tipo com forma que não tem a massa do deus ou não segue a forma; outra massa (≠) em mais tipos e povos do que o
@@ -21,6 +22,7 @@ const F = require('./fidelidade-lib.js');
 const clock = () => Number(process.hrtime.bigint() / 1000000n);
 const t0 = clock();
 const { G, M } = F.load();
+if (process.env.CASCA) G.Arch.homeOn = true; // (CASCA=1: as the god will draw the homes from their shells — D-082 —, before it is switched on)
 const ONLY = process.argv[2] ? process.argv[2].split(',') : null;
 const STY = ['classico', 'grego', 'romano', 'egipcio', 'asteca', 'nordico'];
 const POVOS = process.argv[3] ? process.argv[3].split(',') : STY;
