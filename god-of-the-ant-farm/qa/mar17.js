@@ -85,21 +85,30 @@ const CASE = process.argv[2] || 'rich'; const seed = +(process.argv[3] || 7);
   if (CASE === 'fisher') {
     // 5. the fisherman's routine (shed, gear, quay, boarding, out, fish, back, unload, carry, store, mend)
     await newGame({ type: 'ilha', size: 96, tribes: 1 });
-    for (let k = 0; k < 6; k++) { const m = await R(() => { const f = G.Fac.all()[0]; const d = T.prep(f, { fam: 8 }); return { dock: d ? d.id : null, pop: G.Fac.pop(f.id) }; }); if (m.dock) break; await newGame({ type: 'ilha', size: 96, tribes: 1 }); }
+    // (the food the test gives fills half the store's room, not past it: with the store over-full the catch rightly waits on
+    // the quay, and the routine has nothing to carry — T-173)
+    for (let k = 0; k < 6; k++) { const m = await R(() => { const f = G.Fac.all()[0]; const d = T.prep(f, { fam: 8, food: Math.max(1, Math.floor(G.Depot.room('f:' + f.id, 'food') / 2)) }); return { dock: d ? d.id : null, pop: G.Fac.pop(f.id) }; }); if (m.dock) break; await newGame({ type: 'ilha', size: 96, tribes: 1 }); }
     const r = await R(() => {
-      const S = G.S; const seen = new Set(); let watch = 0; const steps = [];
+      const S = G.S; const seen = new Set(); let watch = 0; const steps = []; const n0 = S.ledgerN || 0;
+      // (every fishing boat's turn, not only the first one found: on another day that one is still at sea when the run ends — T-173)
       T.run(3, () => {
-        const s = S.ships.find(o => o.kind === 'pesca' && (o.crew || []).length); if (s) { seen.add('boat:' + s.st); if (!watch) watch = s.crew[0]; }
+        for (const s of S.ships) if (s.kind === 'pesca' && (s.crew || []).length) { seen.add('boat:' + s.st); if (!watch) watch = s.crew[0]; }
         const v = watch && S.villagers.get(watch); if (v) { const k = v.aboard ? 'a bordo' : v.task ? v.task.type + (v.task.st !== undefined ? ':' + v.task.st : '') : '-'; const g = v.gear ? '+' + v.gear : ''; const kk = k + g + (v.carry ? '+carga' : ''); if (steps[steps.length - 1] !== kk) steps.push(kk); }
         return false;
       });
       const d = [...S.buildings.values()].find(b => b.type === 'doca');
-      return { seen: [...seen], steps: steps.slice(0, 60), fishers: [...S.villagers.values()].filter(v => v.role === 'pescador').length, delivered: S.stats && S.stats.fishDelivered || 0, mend: steps.some(x => /redes/.test(x)) };
+      // (the catch carried off the quay and into the store by the fishermen, as the ledger saw it in the run: the one fisherman
+      // watched may be at sea, asleep or at a feast when it happens — T-173)
+      const role = p => { const v = S.villagers.get(+String(p).slice(2)); return v ? v.role : ''; };
+      const L = G.Depot.ledger().filter(e => e[0] > n0);
+      const took = L.filter(e => String(e[3]).startsWith('q:') && String(e[4]).startsWith('v:') && role(e[4]) === 'pescador').length;
+      const stored = L.filter(e => String(e[3]).startsWith('v:') && String(e[4]).startsWith('f:') && e[8] === 'depositar' && role(e[3]) === 'pescador').length;
+      return { seen: [...seen], steps: steps.slice(0, 60), took, stored, fishers: [...S.villagers.values()].filter(v => v.role === 'pescador').length, delivered: S.stats && S.stats.fishDelivered || 0, mend: steps.some(x => /redes/.test(x)) };
     });
     if (process.env.PROBE) console.log('PROBE ' + JSON.stringify(await page.evaluate(c => (0, eval)('(() => {' + c + '})()'), require('fs').readFileSync(process.env.PROBE, 'utf8')), null, 1));
     const need = ['boat:board', 'boat:out', 'boat:fish', 'boat:back', 'boat:unload'];
-    const hasCarry = r.steps.some(x => /descarga/.test(x) || /carga/.test(x));
-    ok('5 rotina do pescador', need.every(k => r.seen.includes(k)) && r.steps.some(x => /barco/.test(x)) && hasCarry, `barco: ${r.seen.join(' → ')}; um pescador: ${r.steps.slice(0, 22).join(' → ')}${r.mend ? ' (consertou as redes)' : ''}; ${r.fishers} pescadores`);
+    const hasCarry = r.steps.some(x => /descarga/.test(x) || /carga/.test(x)) || (r.took > 0 && r.stored > 0);
+    ok('5 rotina do pescador', need.every(k => r.seen.includes(k)) && r.steps.some(x => /barco/.test(x)) && hasCarry, `barcos: ${r.seen.join(' → ')}; um pescador: ${r.steps.slice(0, 22).join(' → ')}${r.mend ? ' (consertou as redes)' : ''}; do cais às mãos de pescadores ${r.took}, delas ao armazém ${r.stored}; ${r.fishers} pescadores`);
   }
 
   if (CASE === 'solo' || CASE === 'grand') {
