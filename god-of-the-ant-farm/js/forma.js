@@ -216,23 +216,51 @@
     return { els: els.concat(rf.els), z: rf.z, door };
   }
 
-  // (D-084, the seats one sits on — the Colosseum's and the arena's: four balconies round the arena, the maeniana, each a tread
-  // as deep from the arena's wall to the drum's inner face, their floors evenly up from the god's lowest ring (0.4 of its
-  // height) to a step under its rim, the parapet 0.9 m high at the edge of each over the drop; the god's six rings were 70°)
-  const balcoes = (R, t, H, fundo) => { const tr = (R - t - fundo) / 4, y0 = H * 0.4, st = (H - y0) / 4; const a = [[R, H]]; for (let k = 3; k >= 0; k--) a.push([fundo + (k + 1) * tr, y0 + k * st]); return a; };
-  // the Colosseum (arch.js maravilha, romano): the god's bowl of r 1.45 tiles and 42 px — three tiers of arches round it, its
-  // seats inside (D-084), the arena at its heart (the god's floor, 0.3 of the height up: under it, inside the drum, the
-  // arena's undercroft), and the masts of the awning (ten on the half the god shows: twenty round). The arches of the god's
-  // tiers stand from 0.175 to 0.725 of a tier (its zc ± ah/2); the ground tier's reach the ground: they are the ways in
-  def('maravilha', 'romano', L => {
-    const R = 1.45 * TILE, H = px(42), c = [L / 2, L / 2]; const rings = balcoes(R, R * 0.1, H, R * 0.4);
-    return { els: [
-      { k: 'tambor', c, r: R, t: R * 0.1, y0: 0, y1: H, andares: 3, arcos: 24, arcoW: 0.6, arcoA: 0.175, arcoB: 0.725, cor: ['#e8d2a6', '#b89a70'], escuro: '#2a1e18', mat: 'ashlar' },
-      { k: 'cavea', c, aneis: rings, fundo: R * 0.4, cor: '#c8b8a0', parapeito: 0.9, muro: '#b8a888' },
-      { k: 'arena', c, r: R * 0.4, y: px(42 * 0.3), cor: '#e8d8a8', muro: rings[rings.length - 1][1] },
-      { k: 'mastros', c, r: R - 0.08, n: 20, y0: H, h: px(6), cor: '#7a5a3a' },
-    ], door: { u: L / 2, w: 0.9, y0: 0, y1: H / 3 * 0.725 } };
-  });
+  // the amphitheatre one walks in and watches from (D-084, D-095 — the Colosseum's and the arena's, the god's bowl): the drum of
+  // arcades, o.andares tiers of 24 arches round, their bays centred on the lot's sides — the one at the street the way in: its
+  // passage through the substructure (the ground under the balconies, solid) into the undercroft, and the flight of 48° there
+  // up through the hatch in the arena's floor —; the arena's floor at 0.3 of the height, as the god draws it; the first
+  // balcony, the podium, two steps over the sand — a walk 1 m deep behind its parapet of 0.9 m (the body's: the balconies of
+  // D-084, 0.68–0.73 deep, were narrower than a body with a parapet), the steps up to it from the sand on the side left of
+  // the way in, its parapet open there —; the three balconies over it, the maenia, evenly up to a storey under the drum's rim,
+  // seen and not walked. → the elements, and the numbers the plan reads (amphi)
+  const RUN48 = 1 / Math.tan(48 * Math.PI / 180); // (a flight's run for each metre it climbs: 48°, a house's stair)
+  function amphi(L, o) {
+    const R = o.r * TILE, H = px(o.h), c = [L / 2, L / 2]; const [cu, cv] = c;
+    const t = 0.35, fundo = R * 0.35, ya = H * 0.3, yb = ya + 0.45, tr1 = 1.12, n = 4; const tr = (R - t - fundo - tr1) / (n - 1), st = (H - yb) / n;
+    const aneis = [[R, H]]; for (let k = n - 1; k >= 1; k--) aneis.push([fundo + tr1 + k * tr, yb + k * st]); aneis.push([fundo + tr1, yb]);
+    const N = 24, bw = 2 * R * Math.sin(Math.PI / N), aw = bw * 0.6, ah = (H / o.andares) * 0.725; const hw = aw / 2;
+    const STONE = ['#c8b8a0', '#a89880', '#d8c8b0'];
+    // (a flight's treads, each a box from the floor it stands on to its top — no riser over 0.23: m of them; along v rising to
+    // the back (dv -1) or along u rising to the left (du -1))
+    const treads = (r, y, rise, m, du) => { const out = []; for (let j = 0; j < m; j++) { const f0 = (m - j - 1) / m, f1 = (m - j) / m;
+      const q = du ? [r[0] + (r[2] - r[0]) * f0, r[1], r[0] + (r[2] - r[0]) * f1, r[3]] : [r[0], r[1] + (r[3] - r[1]) * f0, r[2], r[1] + (r[3] - r[1]) * f1];
+      out.push({ k: 'bloco', r: q, y0: y, y1: y + rise * (j + 1) / m, cor: STONE, mat: 'slab', degrau: 1 }); } return out; };
+    // (the undercroft's flight, 0.3 of the height at 48°, its top end 0.88 m behind the middle; the hatch over its upper part,
+    // where a head would meet the floor — 0.2 m thick —, round the middle of the arena)
+    const run = ya * RUN48, vt = cv - 0.88; const under = [cu - hw, vt, cu + hw, vt + run];
+    const hatch = [cu - hw, vt, cu + hw, vt + run * (1 - (ya - 0.2 - 1.9) / ya)];
+    // (the steps from the sand up to the podium, on the side left of the way in: two, 0.5 m, rising to the left)
+    const steps = [cu - fundo, cv - 0.4, cu - fundo + 0.5, cv + 0.4];
+    // (the passage: its walls from the arch to the flight's foot — up to its vault under the substructure, up to the arena's
+    // floor in the undercroft —, the vault, the wall at the undercroft's far end)
+    const vo = cv + R - t, vf = cv + Math.sqrt(Math.max(0, fundo * fundo - (hw + 0.15) ** 2)), hv = Math.min(ah, yb - 0.25); const pass = [];
+    for (const s of [-1, 1]) { const u0 = s < 0 ? cu - hw - 0.15 : cu + hw, u1 = u0 + 0.15;
+      pass.push({ k: 'bloco', r: [u0, vf, u1, vo], y0: 0, y1: hv, cor: STONE, mat: 'ashlar' }, { k: 'bloco', r: [u0, vt - 0.1, u1, vf], y0: 0, y1: ya - 0.2, cor: STONE, mat: 'ashlar' }); }
+    pass.push({ k: 'bloco', r: [cu - hw - 0.15, vf, cu + hw + 0.15, vo], y0: hv, y1: hv + 0.2, cor: STONE, mat: 'ashlar' }, { k: 'bloco', r: [cu - hw, vt - 0.1, cu + hw, vt], y0: 0, y1: ya - 0.2, cor: STONE, mat: 'ashlar' });
+    const els = [
+      { k: 'tambor', c, r: R, t, y0: 0, y1: H, andares: o.andares, arcos: N, arcoW: 0.6, arcoA: 0.175, arcoB: 0.725, cor: o.cor, escuro: '#2a1e18', mat: 'ashlar', abertos: [Math.PI / 2] },
+      { k: 'cavea', c, aneis, fundo, cor: '#c8b8a0', parapeito: 0.9, muro: '#b8a888', vaos: [{ anel: n, a: Math.PI, w: 1.1 }] },
+      { k: 'arena', c, r: fundo, y: ya, cor: '#e8d8a8', muro: yb, buraco: hatch },
+      ...treads(under, 0, ya, Math.ceil(ya / 0.23), 0), ...treads(steps, ya, yb - ya, 2, -1), ...pass,
+    ];
+    if (o.mastros) els.push({ k: 'mastros', c, r: R - 0.08, n: 20, y0: H, h: px(6), cor: '#7a5a3a' });
+    return { els, door: { u: L / 2, w: aw, y0: 0, y1: ah },
+      amphi: { c, R, t, fundo, ya, yb, tr1, aw, ah, under, hatch, steps, gap: { a: Math.PI, w: 1.1 } } };
+  }
+  // the Colosseum (arch.js maravilha, romano): the god's bowl of r 1.45 tiles and 42 px, three tiers of arches, the masts of
+  // the awning (ten on the half the god shows: twenty round) — the amphitheatre one walks in (D-095)
+  def('maravilha', 'romano', L => amphi(L, { r: 1.45, h: 42, andares: 3, cor: ['#e8d2a6', '#b89a70'], mastros: true }));
   // the Great Pyramid (egipcio): a slab under it, the smooth pyramid of half side 1.45 tiles and 74 px, its eighteen courses,
   // the gilded capstone (its top tenth) and the dark door high on its front face (the sealed entrance, z 20–26 px)
   def('maravilha', 'egipcio', L => {
@@ -386,16 +414,9 @@
   def('estatua', 'asteca', L => ({ els: [...pedestal(L), { k: 'estatua', p: [L / 2, L / 2, px(11)], h: px(27.4), cor: GOLD, pose: 'serpente', penas: '#2fae8f', olho: '#b33a2a' }] }));
 
   // ------------------------------ the theatre of each people (arch.js teatro) ------------------------------
-  // the arena (romano): the god's bowl of r 1.35 tiles and 26 px, two tiers of arches round it, its seats inside (D-084: the
-  // balconies, rows of 0.675 m), the arena at its heart 0.3 of its height up — the Colosseum's own, smaller, no awning
-  def('teatro', 'romano', L => {
-    const R = 1.35 * TILE, H = px(26), c = [L / 2, L / 2]; const rings = balcoes(R, R * 0.1, H, R * 0.4);
-    return { els: [
-      { k: 'tambor', c, r: R, t: R * 0.1, y0: 0, y1: H, andares: 2, arcos: 24, arcoW: 0.6, arcoA: 0.175, arcoB: 0.725, cor: ['#e0c79a', '#b09268'], escuro: '#2a1e18', mat: 'ashlar' },
-      { k: 'cavea', c, aneis: rings, fundo: R * 0.4, cor: '#c8b8a0', parapeito: 0.9, muro: '#b8a888' },
-      { k: 'arena', c, r: R * 0.4, y: px(26 * 0.3), cor: '#e8d8a8', muro: rings[rings.length - 1][1] },
-    ], door: { u: L / 2, w: 0.9, y0: 0, y1: H / 2 * 0.725 } };
-  });
+  // the arena (romano): the god's bowl of r 1.35 tiles and 26 px, two tiers of arches round it — the Colosseum's own, smaller,
+  // no awning (D-095)
+  def('teatro', 'romano', L => amphi(L, { r: 1.35, h: 26, andares: 2, cor: ['#e0c79a', '#b09268'] }));
   // the Greek (and classical) theatre (D-084: the slope of a real one): on its paved ground, the orchestra — a round of 2 m,
   // its middle 1 m before the lot's — and round its back half the rows of seats as many as the lot holds, 0.70 m deep and
   // 0.40 m up each, a gangway of 0.4 m between the orchestra and the first (six rows from 2.4 m to 6.6 m: the four inner on
@@ -439,33 +460,27 @@
     return { els };
   });
   // the ball court (asteca): on its ground, the two walls of 2.4 × 0.75 tiles and 7 px, their faces to the court sloping down
-  // to it (the benches), the painted band at their tops, the alley between them with its band, and the stone ring on each
-  // wall's slope, facing the alley
+  // to it (the benches), the painted band at their tops, the alley between them with its painted edge, and the stone ring on
+  // each wall's slope, facing the alley. The alley's floor as high as the ground round it — the plan's floor, where the
+  // players run (D-093) —: the ground in four pieces round it, none over another
   def('teatro', 'asteca', L => {
-    const e = 1.4, H = px(7); const els = [{ k: 'bloco', r: rect(L, -e, -e, e, e), y0: 0, y1: px(0.3), cor: ['top', 'top', 'top'] }];
+    const e = 1.4, H = px(7); const els = [[-e, -e, e, -0.25], [-e, 0.25, e, e], [-e, -0.25, -1.2, 0.25], [1.2, -0.25, e, 0.25]].map(q => ({ k: 'bloco', r: rect(L, ...q), y0: 0, y1: px(0.3), cor: ['top', 'top', 'top'] }));
     for (const s of [-1, 1]) {
       const r = s < 0 ? rect(L, -1.2, -1.2, 1.2, -0.25) : rect(L, -1.2, 0.25, 1.2, 1.2), r1 = s < 0 ? rect(L, -1.2, -1.2, 1.2, -0.45) : rect(L, -1.2, 0.45, 1.2, 1.2);
       els.push({ k: 'talude', r, r1, y0: 0, y1: H, cor: ['wl', 'wr', 'top'], mat: 'stucco' }, { k: 'faixa', r: r1, y0: px(5.5), y1: H, cor: 'trim' });
     }
-    els.push({ k: 'bloco', r: rect(L, -1.2, -0.25, 1.2, 0.25), y0: 0, y1: px(0.4), cor: ['#b8a888', '#a89878', '#b8a888'] });
-    els.push({ k: 'faixa', r: rect(L, -1.2, -0.25, 1.2, 0.25), y0: px(0.3), y1: px(0.6), cor: 'trim2' });
+    els.push({ k: 'bloco', r: rect(L, -1.2, -0.25, 1.2, 0.25), y0: 0, y1: px(0.3), cor: ['#b8a888', '#a89878', '#b8a888'] });
+    els.push({ k: 'faixa', r: rect(L, -1.2, -0.25, 1.2, 0.25), y0: px(0.3), y1: px(0.45), cor: 'trim2' });
     for (const s of [-1, 1]) els.push({ k: 'aro', c: [L / 2, at(L, s * 0.3), px(4.5)], r: 0.5, t: 0.08, dir: -s, cor: '#6a645a' });
     return { els };
   });
   // the mead hall (nordico): the god's longhouse of 2.5 × 1.2 tiles — its footing of 1.2 px, its walls of planks to 9 px with
-  // the red band under the eaves, the door, the three painted shields on its front, the steep roof of turf 22 px high and
-  // the dragon at its gable
+  // the red band under the eaves, the door, the windows high on its front and its side, the three painted shields on its
+  // front, the steep roof of turf 22 px high and the dragon at its gable —, its door of 0.8 m (the body's: D-093; the god's
+  // was 0.64), the walls the body the plan raises its shell on (int-monumentos.js)
   def('teatro', 'nordico', L => {
-    const lx = 1.25, ly = 0.6, z0 = px(1.2), H = px(9), rh = px(22);
-    return { els: [
-      { k: 'bloco', r: rect(L, -lx - 0.04, -ly - 0.04, lx + 0.04, ly + 0.04), y0: 0, y1: z0, cor: ['base0', 'base1', 'base2'] },
-      { k: 'bloco', r: rect(L, -lx, -ly, lx, ly), y0: z0, y1: H, cor: ['wl', 'wr', 'top'], tabuas: 10 },
-      { k: 'faixa', r: rect(L, -lx, -ly, lx, ly), y0: H - px(0.8), y1: H, cor: 'trim' },
-      { k: 'porta', na: 'frente', v: at(L, ly), u: L / 2, w: 0.16 * TILE, y0: z0, y1: px(7.5), cor: 'door' },
-      ...[[-lx + 0.2, '#a23c2a'], [0.2 * lx, '#d8b25a'], [lx - 0.25, '#3f6fb0']].map(([x, cor]) => ({ k: 'disco', na: 'frente', u: at(L, x), v: at(L, ly), y: H * 0.55, r: 0.42, cor, olho: '#d8c89a' })),
-      { k: 'telhado', r: rect(L, -lx, -ly, lx, ly), y0: H, y1: H + rh, ao: 'u', ov: 0.1 * TILE, cor: ['roof0', 'roof1', 'wl', 'roof2'], mat: 'turf' },
-      { k: 'dragao', p: [at(L, lx + 0.1), L / 2, H + rh], dir: 1, cor: '#3a2616' },
-    ], door: { u: L / 2, w: 0.64, y0: z0, y1: px(7.5) } };
+    const lh = longhouseF(L, 1.25, 0.6, 9, 22, true, 1.2, 0.1); const walls = lh.els.find(e => e.mat === 'parede');
+    return { els: lh.els, door: lh.door, body: { walls } };
   });
 
   // ------------------------------ the library (arch.js biblioteca) ------------------------------
@@ -1099,13 +1114,13 @@
 
   // ------------------------------ asking ------------------------------
   const memo = new Map();
-  // the form of a type in a people's style — { type, style, L, els, door, top } — or null (its shell, or its old drawing, is
-  // its form); the same object for every building of it
+  // the form of a type in a people's style — { type, style, L, els, door, body, amphi, top } — or null (its shell, or its old
+  // drawing, is its form); the same object for every building of it (amphi: an amphitheatre's numbers, the plan's — D-095)
   Fo.of = function (type, style) {
     const F0 = FORMS[type]; if (!F0) return null; const fn = F0[style] || F0.classico; if (!fn) return null;
     const key = type + ':' + (F0[style] ? style : 'classico'); let F = memo.get(key); if (F) return F;
     const d = G.BDEF && G.BDEF[type]; const L = (d ? d.w : 3) * TILE; const o = fn(L);
-    F = Object.freeze({ type, style: F0[style] ? style : 'classico', L, els: o.els, door: o.door || null, body: o.body || null, top: topOf(o.els) });
+    F = Object.freeze({ type, style: F0[style] ? style : 'classico', L, els: o.els, door: o.door || null, body: o.body || null, amphi: o.amphi || null, top: topOf(o.els) });
     memo.set(key, F); return F;
   };
   Fo.has = (type, style) => !!(FORMS[type] && (FORMS[type][style] || FORMS[type].classico));

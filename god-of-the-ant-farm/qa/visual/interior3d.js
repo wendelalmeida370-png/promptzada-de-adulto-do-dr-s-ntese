@@ -343,7 +343,7 @@ for (const [b, plan, own] of jobs) {
     }
     // 12. the doors and arches of the outside, from the street: shut, the leaf in the opening; with the inside drawn, free
     for (const h of S2.holes) {
-      if (h.kind === 'janela') continue; const w = S2.byId.get(h.wall); const l = w && lvOf(w.lv); if (!w || !l || l.kind === 'terraco') continue;
+      if (h.kind === 'janela') continue; const w = S2.byId.get(h.wall); const l = w && lvOf(w.lv); if (!w || !l || l.kind === 'terraco' || w.kind === 'borda') continue; // (the edge of an open ground: nothing stands there to shut)
       const Lw = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const tx = (w.b[0] - w.a[0]) / Lw, tz = (w.b[1] - w.a[1]) / Lw, nx = -tz, nz = tx; const mx = w.a[0] + tx * h.at, mz = w.a[1] + tz * h.at;
       const inBody = (x, z) => (sh.kind === 'round' ? Math.hypot(x - sh.cx, z - sh.cz) < sh.r : x > sh.r[0] && x < sh.r[2] && z > sh.r[1] && z < sh.r[3]) || (sh.annex || []).some(a => x > a.r[0] && x < a.r[2] && z > a.r[1] && z < a.r[3]) || (sh.court && x > sh.court[0] && x < sh.court[2] && z > sh.court[1] && z < sh.court[3]);
       const q1 = inBody(mx + nx * (w.t / 2 + 0.3), mz + nz * (w.t / 2 + 0.3)), q2 = inBody(mx - nx * (w.t / 2 + 0.3), mz - nz * (w.t / 2 + 0.3)); if (q1 === q2) continue; const o = q1 ? -1 : 1;

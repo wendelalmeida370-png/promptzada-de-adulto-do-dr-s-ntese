@@ -44,6 +44,10 @@ const SEM_PORTA = {
   'banhos/egipcio': 'o lago sagrado', 'banhos/classico': 'as termas: as janelas em arco e a cúpula', 'banhos/grego': 'as termas', 'banhos/romano': 'as termas',
   'palacio/classico': 'a frente de colunas', 'palacio/grego': 'a frente de colunas', 'palacio/romano': 'a frente de colunas', 'palacio/asteca': 'o pórtico de colunas',
   'paco/asteca': 'o pórtico', 'insula/romano': 'as lojas do térreo (sem a porta da casa)',
+  // (the theatres planned on their form — int-monumentos.js, D-093 —: the way in is the open front of their ground, or the
+  // arch of the drum; the Norse's mead hall has its door)
+  'teatro/classico': 'a meia-tigela aberta: entra-se pela frente, à volta do palco', 'teatro/grego': 'a meia-tigela aberta: entra-se pela frente, à volta do palco',
+  'teatro/egipcio': 'o jardim aberto na frente', 'teatro/asteca': 'o campo aberto na frente', 'teatro/romano': 'a arena: os arcos do tambor, o da frente a entrada (D-095)',
 };
 const semPorta = (type, st) => SEM_PORTA[type] || SEM_PORTA[type + '/' + st];
 const same = [], grew = []; let m = 0;

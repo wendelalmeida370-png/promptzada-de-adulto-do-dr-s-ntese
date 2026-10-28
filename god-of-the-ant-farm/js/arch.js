@@ -134,7 +134,7 @@
     for (const [x, y] of pts) column(c, p, x, y, z0, z1, r, flared);
   }
   // (the caveas of a type's form, each with its lot's side: the rows the god draws — D-084)
-  const cavOf = (type, st) => { const F = G.Forma && G.Forma.of(type, st); return F ? F.els.filter(q => q.k === 'cavea').map(q => Object.assign({ L: F.L }, q)) : []; };
+  const cavOf = (type, st) => { const F = G.Forma && G.Forma.of(type, st); const ar = F && F.els.find(q => q.k === 'arena'); return F ? F.els.filter(q => q.k === 'cavea').map(q => Object.assign({ L: F.L, buraco: ar && ar.buraco }, q)) : []; };
   function steps(c, p, e, n, h, shrink) { for (let k = 0; k < n; k++) { const q = e - k * shrink; box(c, -q, -q, q, q, k * h, (k + 1) * h, p.base[0], p.base[1], p.base[2]); } return n * h; }
   function flag(c, x, y, col, h) { ln(c, [x, y], [x, y - h], '#5a3c22', 0.7); c.fillStyle = col; c.beginPath(); c.moveTo(x, y - h); c.lineTo(x + 5, y - h + 1.5); c.lineTo(x, y - h + 3); c.closePath(); c.fill(); }
   function palm(c, x, y, s) {
@@ -242,7 +242,10 @@
       c.beginPath(); if (half) c.ellipse(0, -z, rx * f, ry * f, 0, Math.PI, TAU); else c.ellipse(0, -z, rx * f, ry * f, 0, 0, TAU);
       if (half) c.lineTo(rx * f, -z); c.fill();
     }
-    c.fillStyle = floor; c.beginPath(); c.ellipse(0, -H * 0.3, rx * 0.4, ry * 0.4, 0, 0, TAU); c.fill();
+    // (the arena as wide as its form's, and the hatch in its floor over the undercroft's flight — D-095)
+    const fa = cav && cav.fundo ? cav.fundo / (r * 4) : 0.4;
+    c.fillStyle = floor; c.beginPath(); c.ellipse(0, -H * 0.3, rx * fa, ry * fa, 0, 0, TAU); c.fill();
+    if (cav && cav.buraco) { const T = v => (v - cav.L / 2) / 4, q = cav.buraco; poly(c, [P(T(q[0]), T(q[1]), H * 0.3), P(T(q[2]), T(q[1]), H * 0.3), P(T(q[2]), T(q[3]), H * 0.3), P(T(q[0]), T(q[3]), H * 0.3)], '#4a3a2a'); }
     if (half) return;
     // front half of the outer wall
     const g = c.createLinearGradient(-rx, 0, rx, 0); g.addColorStop(0, wallL); g.addColorStop(1, wallR);
@@ -762,12 +765,12 @@
       top(c, -e, -e, e, e, 0.3, p.top);
       for (const [y0, y1] of [[-1.2, -0.45], [0.45, 1.2]]) { walls(c, -1.2, y0, 1.2, y1, 0, 7, p.wl, p.wr); top(c, -1.2, y0, 1.2, y1, 7, p.top); band(c, -1.2, y0, 1.2, y1, 5.5, 7, p.trim); }
       poly(c, [P(-1.2, -0.45, 7), P(1.2, -0.45, 7), P(1.2, -0.25, 0.3), P(-1.2, -0.25, 0.3)], shade(p.wl, 0.95));
-      top(c, -1.2, -0.25, 1.2, 0.25, 0.4, '#b8a888');
+      top(c, -1.2, -0.25, 1.2, 0.25, 0.3, '#b8a888'); // (the alley as high as the court's ground: Forma's, the plan's floor)
       const r = P(0, -0.3, 4.5); c.strokeStyle = '#6a645a'; c.lineWidth = 1.2; c.beginPath(); c.ellipse(r[0], r[1], 1.8, 2.2, 0, 0, TAU); c.stroke();
-      band(c, -1.2, -0.25, 1.2, 0.25, 0.3, 0.6, p.trim2);
+      band(c, -1.2, -0.25, 1.2, 0.25, 0.3, 0.45, p.trim2);
       return 16;
     }
-    if (st === 'nordico') { longhouse(c, m, p, 1.25, 0.6, 9, 22, true); return 36; }
+    if (st === 'nordico') { longhouse(c, m, p, 1.25, 0.6, 9, 22, true, 0.1); return 36; } // (its door of 0.8 m: Forma's)
     if (st === 'romano') { bowl(c, 1.35, 26, '#e0c79a', '#b09268', '#c8b8a0', '#e8d8a8', 2, false, cavOf('teatro', 'romano')[0]); return 34; }
     // Greek (and classic) theatre: the rows of a real one round the back of the orchestra, the outer ones cut by the lot (its
     // form: D-084), the orchestra, the stage building and its columns along the front

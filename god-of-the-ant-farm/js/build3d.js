@@ -1574,13 +1574,16 @@ float m3scale(float p) {
     },
     // the drum of arcades: one flat bay a segment round, each tier's arch in it — its piers, the sill under the arch (not on
     // the ground tier: its arches are the ways in), the wall over it, the corners round its round head, the reveals through
-    // the wall and the dark of the gallery behind; the cornice between the tiers; the walk on its top
+    // the wall and the dark of the gallery behind (not behind an open one: e.abertos, the way in — D-095); the cornice between
+    // the tiers; the walk on its top. Its bays centred on the lot's sides, as the plan's ring of walls (P.ringWall)
     tambor(K, e, X) {
       const C = X.XZ(e.c[0], e.c[1]); const N = e.arcos, R = e.r, t = e.t; const th = (e.y1 - e.y0) / e.andares; const ap = R * Math.cos(Math.PI / N);
       const bw = 2 * R * Math.sin(Math.PI / N), aw = bw * e.arcoW; const lit = rgbOf(X.col(e.cor[0])); const dark = X.col(e.escuro || '#2a1e18'); const M = 6;
       const yBase = X.foot(e.y0);
+      const open = (e.abertos || []).map(ac => { const d = G.Forma.dirLot(X.side, Math.cos(ac), Math.sin(ac)); return Math.atan2(d[1], d[0]); });
+      const isOpen = a => open.some(b => { const g = Math.abs(((a - b) % TAU + TAU + Math.PI) % TAU - Math.PI); return g < Math.PI / N; });
       K.as(X.mat(e, 'ashlar'), () => { for (let q = 0; q < N; q++) {
-        const a = (q + 0.5) / N * TAU; const o = [Math.cos(a), 0, Math.sin(a)], tg = [-Math.sin(a), 0, Math.cos(a)];
+        const a = q / N * TAU; const o = [Math.cos(a), 0, Math.sin(a)], tg = [-Math.sin(a), 0, Math.cos(a)]; const way = isOpen(a);
         const P = (s, y, d) => [C[0] + o[0] * (ap - d) + tg[0] * s, y, C[1] + o[2] * (ap - d) + tg[2] * s]; // (s along the bay, d in from its face)
         const face = (s0, y0, s1, y1, cc) => K.quad(P(s0, y0, 0), P(s1, y0, 0), P(s1, y1, 0), P(s0, y1, 0), cc || lit, o);
         // (the stone's tone a little its own, bay by bay: the id's dice)
@@ -1600,8 +1603,8 @@ float m3scale(float p) {
           // (the jambs, the sill's top through the wall — the threshold of a way in —, and the dark of the gallery behind)
           for (const sg of [-1, 1]) K.quad(P(sg * aw / 2, ya, 0), P(sg * aw / 2, yh, 0), P(sg * aw / 2, yh, t), P(sg * aw / 2, ya, t), dim(tone, 0.78), [tg[0] * -sg, 0, tg[2] * -sg]);
           K.quad(P(-aw / 2, ya, 0), P(aw / 2, ya, 0), P(aw / 2, ya, t), P(-aw / 2, ya, t), dim(tone, 0.88), UP);
-          K.quad(P(-aw / 2, ya, t), P(aw / 2, ya, t), P(aw / 2, yh, t), P(-aw / 2, yh, t), dark, o);
-          for (let j = 0; j < M * 2; j++) K.tri(P(0, yh, t), P(arc[j][0], arc[j][1], t), P(arc[j + 1][0], arc[j + 1][1], t), dark, o);
+          if (!(way && !k)) { K.quad(P(-aw / 2, ya, t), P(aw / 2, ya, t), P(aw / 2, yh, t), P(-aw / 2, yh, t), dark, o);
+            for (let j = 0; j < M * 2; j++) K.tri(P(0, yh, t), P(arc[j][0], arc[j][1], t), P(arc[j + 1][0], arc[j + 1][1], t), dark, o); }
           // (the cornice over the tier: a band standing out of the wall)
           if (K.fine) { const yc = ytop; K.quad(P(-bw / 2 - 0.01, yc - 0.22, -0.09), P(bw / 2 + 0.01, yc - 0.22, -0.09), P(bw / 2 + 0.01, yc, -0.09), P(-bw / 2 - 0.01, yc, -0.09), dim(tone, 1.04), o);
             K.quad(P(-bw / 2, yc, -0.09), P(bw / 2, yc, -0.09), P(bw / 2, yc, 0), P(-bw / 2, yc, 0), dim(tone, 1.08), UP); }
@@ -1626,7 +1629,12 @@ float m3scale(float p) {
         for (let k = 0; k < n - 1; k++) riser(A[k + 1][0], X.Y(A[k + 1][1]), X.Y(A[k][1]), e.muro ? rgbOf(X.col(e.muro)) : dim(col, 0.8));
         // (a balcony's parapet at the edge of each row over the drop — D-084, the maeniana: 0.12 m thick, its two faces and top)
         if (e.parapeito) for (let k = e.fecho ? 0 : 1; k < n; k++) { const r = k < n - 1 ? A[k + 1][0] : e.fundo, y = X.Y(A[k][1]), pc = e.muro ? rgbOf(X.col(e.muro)) : dim(col, 0.85);
-          riser(r, y, y + e.parapeito, pc, false); riser(r + 0.12, y, y + e.parapeito, dim(pc, 1.05), true); ring(r, r + 0.12, y + e.parapeito, dim(pc, 1.1)); }
+          // (open where a flight comes out on the balcony: the segments whose middle is within half its width — D-095)
+          const gaps = (e.vaos || []).filter(g => g.anel === k); const shut = j => !gaps.some(g => { const m = (ang(j) + ang(j + 1)) / 2; return Math.abs(((m - g.a) % TAU + TAU + Math.PI) % TAU - Math.PI) * r < g.w / 2; });
+          for (let j = 0; j < nS; j++) { if (!shut(j)) continue; const dm = dir((ang(j) + ang(j + 1)) / 2);
+            K.quad(at(r, ang(j), y), at(r, ang(j + 1), y), at(r, ang(j + 1), y + e.parapeito), at(r, ang(j), y + e.parapeito), pc, [-dm[0], 0, -dm[1]]);
+            K.quad(at(r + 0.12, ang(j), y), at(r + 0.12, ang(j + 1), y), at(r + 0.12, ang(j + 1), y + e.parapeito), at(r + 0.12, ang(j), y + e.parapeito), dim(pc, 1.05), [dm[0], 0, dm[1]]);
+            K.quad(at(r, ang(j), y + e.parapeito), at(r + 0.12, ang(j), y + e.parapeito), at(r + 0.12, ang(j + 1), y + e.parapeito), at(r, ang(j + 1), y + e.parapeito), dim(pc, 1.1), UP); } }
       });
       // (a bowl that stands on the ground, no drum round it: its back wall from the ground to its rim, the lowest ring's face
       // down to the ground, and its two ends, stepped as its rings are)
@@ -1639,7 +1647,20 @@ float m3scale(float p) {
     },
     arena(K, e, X) {
       const C = X.XZ(e.c[0], e.c[1]); const y = X.Y(e.y); const S = FORM_SEG;
-      K.as('soil', () => { for (let k = 0; k < S; k++) { const a0 = k / S * TAU, a1 = (k + 1) / S * TAU; K.tri([C[0], y, C[1]], [C[0] + Math.cos(a0) * e.r, y, C[1] + Math.sin(a0) * e.r], [C[0] + Math.cos(a1) * e.r, y, C[1] + Math.sin(a1) * e.r], X.col(e.cor), UP); } });
+      if (!e.buraco) K.as('soil', () => { for (let k = 0; k < S; k++) { const a0 = k / S * TAU, a1 = (k + 1) / S * TAU; K.tri([C[0], y, C[1]], [C[0] + Math.cos(a0) * e.r, y, C[1] + Math.sin(a0) * e.r], [C[0] + Math.cos(a1) * e.r, y, C[1] + Math.sin(a1) * e.r], X.col(e.cor), UP); } });
+      else {
+        // (a floor with a hatch round its middle — D-095: the sand from the hatch's edge out to the round, the ray from the middle
+        // at each angle — the round's and the hatch's corners —; its underside 0.2 m lower over the undercroft, the hatch's sides)
+        const h = X.rect(e.buraco); const d0 = 0.2;
+        const inner = a => { const c = Math.cos(a), s = Math.sin(a); const tx = c > 1e-9 ? (h[2] - C[0]) / c : c < -1e-9 ? (h[0] - C[0]) / c : Infinity, tz = s > 1e-9 ? (h[3] - C[1]) / s : s < -1e-9 ? (h[1] - C[1]) / s : Infinity; return Math.min(tx, tz); };
+        const As = []; for (let k = 0; k <= S; k++) As.push(k / S * TAU); for (const [x, z] of [[h[0], h[1]], [h[2], h[1]], [h[2], h[3]], [h[0], h[3]]]) As.push(((Math.atan2(z - C[1], x - C[0]) % TAU) + TAU) % TAU); As.sort((p, q) => p - q);
+        const pt = (a, r, yy) => [C[0] + Math.cos(a) * r, yy, C[1] + Math.sin(a) * r];
+        K.as('soil', () => { for (let k = 0; k < As.length - 1; k++) { const a0 = As[k], a1 = As[k + 1]; if (a1 - a0 < 1e-6) continue;
+          K.quad(pt(a0, inner(a0), y), pt(a0, e.r, y), pt(a1, e.r, y), pt(a1, inner(a1), y), X.col(e.cor), UP);
+          K.quad(pt(a1, inner(a1), y - d0), pt(a1, e.r, y - d0), pt(a0, e.r, y - d0), pt(a0, inner(a0), y - d0), dim(rgbOf(X.col(e.cor)), 0.55), [0, -1, 0]); } });
+        K.as('wood', () => { for (const [ax, az, bx, bz, nx, nz] of [[h[0], h[1], h[2], h[1], 0, 1], [h[2], h[1], h[2], h[3], -1, 0], [h[2], h[3], h[0], h[3], 0, -1], [h[0], h[3], h[0], h[1], 1, 0]])
+          K.quad([ax, y - d0, az], [bx, y - d0, bz], [bx, y, bz], [ax, y, az], [96, 72, 48], [nx, 0, nz]); });
+      }
       // (the wall round the arena, from its floor up to the lowest ring of seats)
       if (e.muro) K.as('ashlar', () => { const yb = X.Y(e.muro); for (let k = 0; k < S; k++) { const a0 = k / S * TAU, a1 = (k + 1) / S * TAU, am = (a0 + a1) / 2; const p = (a, yy) => [C[0] + Math.cos(a) * e.r, yy, C[1] + Math.sin(a) * e.r];
         K.quad(p(a0, y), p(a1, y), p(a1, yb), p(a0, yb), '#b8a888', [-Math.cos(am), 0, -Math.sin(am)]); } });
