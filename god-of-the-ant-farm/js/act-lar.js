@@ -314,8 +314,9 @@
     const at = (code, txt) => ({ home: true, code, txt }), away = (code, txt) => ({ home: false, code, txt });
     const inHome = !!(h && v.inside === h.id);
     if (isBody(v)) return inHome ? at('corpo', 'Em casa, vivido pelo deus') : away('corpo', 'Vivido pelo deus');
+    // (a baby is where the arms that hold it are: at home, or out with them — never «with nothing to do»)
+    if (v.age < 2) { const c = S.villagers.get(v.carrier); const arms = c ? `no colo de ${c.name}` : ''; return inHome ? at('colo', v.sleeping ? 'Dormindo' + (arms ? ', ' + arms : '') : c ? `No colo de ${c.name}` : 'Em casa') : away('colo', c ? (v.sleeping ? `Dormindo, ${arms}` : `No colo de ${c.name}`) : 'Fora de casa'); }
     if (inHome) {
-      if (v.age < 2) { const c = S.villagers.get(v.carrier); return at('colo', v.sleeping ? 'Dormindo' : c ? `No colo de ${c.name}` : 'Em casa'); }
       if (v.sleeping) return at('dorme', 'Dormindo');
       if (t && t.type === 'lar') return at(AT_HOME[t.what] || 'casa', L.taskText(v, t));
       if (t && t.type === 'shelter') return at('abrigo', 'Abrigado da tempestade');
