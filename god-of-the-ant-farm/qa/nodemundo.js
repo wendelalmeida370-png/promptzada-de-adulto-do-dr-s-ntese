@@ -6,7 +6,7 @@
 //   const M = require('./nodemundo.js'); const G = M.load({ qa: true, extra: ['qa/meu-teste.js'] });
 //   M.novo({ seed: 7, type: 'ilha', size: 64, tribes: 2 })   um mundo novo, pelo G.Main.newGame
 //   M.pronto('cidade')                                       um mundo pronto de worlds/, pelo menu (G.Main.openSave)
-//   M.viver(seg)    o passo normal (passos de 0,1 s, como o QA.run)
+//   M.viver(seg)    o passo normal: seg/0,1 passos de 0,1 s, contados (como o QA.run; T-131)
 //   M.saltar(anos)  o salto no tempo (G.Skip.on + G.Main.skipStep(1), como o timeskip.js)
 //   M.salvarCarregar()  serializa e carrega de volta (devolve o tamanho do save)
 //   M.erros()       { mod: G.modErr, console: [...] }   ·   M.reseed(k)  o Math.random de novo a partir de k
@@ -79,7 +79,9 @@ M.pronto = function (key) {
   G.Main.openSave(JSON.parse(data[key]), ''); quiet();
   return G.S;
 };
-M.viver = function (seg) { const c0 = G.S.clock; while (G.S.clock - c0 < seg) G.debug.step(0.1); };
+// (seg/0.1 steps of a tenth of a second, counted — never the clock compared: its float sum falls a hair short of each tenth,
+// and «while the clock has moved less than seg» took one step more, M.viver(0.1) two of them: T-131)
+M.viver = function (seg) { const n = seg > 0 ? Math.max(1, Math.round(seg / 0.1)) : 0; for (let k = 0; k < n; k++) G.debug.step(0.1); };
 M.saltar = function (anos) {
   const S = G.S; const d0 = S.day; const W = G.W;
   G.Skip.on = true; G.FX.off = true; W.pathGreed = 1.3;
