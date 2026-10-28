@@ -1,6 +1,7 @@
 // lar-inv: as regras do verificador para a vida em casa (P1, Patch 2) — quem está dentro de uma casa e por quê, quem dorme
 // e como, quem está fora de casa à noite sem afazer, quem cuida dos pequenos de dia (um por casa, e nenhuma criança presa
-// em casa sem ele), a despensa pelo livro-razão; e, no estado canônico, quem está em casa
+// em casa sem ele), o bebê nos braços certos ao alcance (D-074), a despensa pelo livro-razão; e, no estado canônico, quem
+// está em casa
 // (a ida e volta pelo save não pode tirar ninguém da cama: D-073). Carregado depois do qa/qa.js (QA.more / QA.canonMore);
 // o junta-inv.js o leva para dentro do qa.js. Lê os campos do mundo direto; a planta, pelas portas do G.Interiors.
 (function () {
@@ -15,6 +16,7 @@
   const PANTRY_SEV = 4;
   let night0 = new Map(), night0S = null; // (since when each grown one has been out at night with nothing to do)
   let held0 = new Map(), held0S = null; // (since when each little one has been kept at home by day with nobody minding)
+  let baby0 = new Map(), baby0S = null; // (since when each baby has been in the wrong arms — or in none — with the right ones within reach)
   let pan = new Map(), panS = null; const moved = new Map(); // (each pantry at the last look; what the ledger moved since)
   QA.more.push(function (add, s) {
     const Lr = G.Lar; if (!Lr) return;
@@ -72,6 +74,21 @@
       }
     }
     held0 = held;
+    // ---- a baby changes arms where it is (D-074): alone at home with one of its house there who can hold it, or in the arms
+    // of another with the mother or the father within reach who can — for more than 3 s of the world (the hand-over looks
+    // once a second) —; the body the player lives keeps the baby it holds
+    if (baby0S !== s) { baby0S = s; baby0 = new Map(); }
+    const bnow = new Map(); const Vg = G.Vg;
+    if (Vg && Vg.canHold && Vg.babyReach) for (const b of s.villagers.values()) {
+      if (b.age >= 2 || b.captive || b.ug) continue;
+      let wrong = '';
+      if (!b.carrier) { if (b.inside > 0) for (const o of s.villagers.values()) if (o.id !== body && o.home && o.home === b.home && o.age >= 16 && o.age < 70 && o.set === b.set && Vg.canHold(o) && Vg.babyReach(b, o)) { wrong = `sozinho em casa com ${o.name} #${o.id} ali, que pode segurá-lo`; break; } }
+      else if (b.carrier !== b.mother && b.carrier !== b.father && b.carrier !== body) { const p = [s.villagers.get(b.mother), s.villagers.get(b.father)].find(o => o && o.id !== body && o.set === b.set && Vg.canHold(o) && Vg.babyReach(b, o)); if (p) wrong = `no colo de #${b.carrier} com ${p.name} #${p.id} (${p.id === b.mother ? 'a mãe' : 'o pai'}) ao alcance`; }
+      if (!wrong) continue;
+      const since = baby0.has(b.id) ? baby0.get(b.id) : s.clock; bnow.set(b.id, since);
+      if (s.clock - since > 3) add('lar', 3, `o bebê ${b.name} #${b.id}: ${wrong}, há ${Math.round(s.clock - since)} s`, b.id);
+    }
+    baby0 = bnow;
     // ---- whoever is at a feast is at one under way, in a part of it (L-222: a save no longer ends a festival)
     if (G.Fest && G.Fest.list) {
       const fl = new Map(G.Fest.list().map(f => [f.id, f]));
@@ -93,7 +110,7 @@
     const at = (ref, k) => { if (typeof ref === 'string' && ref[0] === 'h' && ref[1] === ':') { const id = +ref.slice(2); moved.set(id, (moved.get(id) || 0) + k * e[6]); } };
     at(e[3], -1); at(e[4], 1);
   });
-  if (G.worldHooks) G.worldHooks.push(() => { night0 = new Map(); night0S = null; held0 = new Map(); held0S = null; pan = new Map(); panS = null; moved.clear(); });
+  if (G.worldHooks) G.worldHooks.push(() => { night0 = new Map(); night0S = null; held0 = new Map(); held0S = null; baby0 = new Map(); baby0S = null; pan = new Map(); panS = null; moved.clear(); });
   // (who is at home — asleep, in the evening at home, sheltering — and who sleeps outdoors, is the same after a save and a
   // load: the round trip that takes anyone out of bed is seen — D-073, L-220)
   QA.canonMore.push(['lar', () => {
