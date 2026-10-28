@@ -237,7 +237,10 @@
         if (t.what === 'conversar' && G.R() < dt * 0.25 && (!v.emo || v.emo.t < 0.2)) G.Vg.emote(v, 'chat', 1.2);
         if (v.hunger > 45 && food(h) >= 1 && v.actT > 6) { t.what = 'ceia'; t.ate = 0; v.actT = 0; return; }
         if (!night && !G.isEvening() && v.actT > 12) return H.end(v);
-        if (v.actT > 30) { t.what = idle(v, h, entry(h)); v.actT = 0; }
+        // (a look round the house every few seconds: one of the house gone out into the night is waited for, the one to talk
+        // to gone to bed leaves a rest by the fire, one come home is talked to — the while at home goes on, the same evening)
+        t.look = (t.look || 0) + dt;
+        if (t.look > 3) { t.look = 0; const w = idle(v, h, entry(h)); if (w !== t.what) t.what = w; }
       }
     }
   }
