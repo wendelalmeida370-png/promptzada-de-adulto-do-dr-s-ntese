@@ -564,6 +564,8 @@ if (want('l15')) {
     const w = [...S.villagers.values()].filter(o => o.id !== m.id && o.home === h.id && o.inside === h.id && !o.sleeping && fit(o)).sort((a, c) => a.id - c.id)[0];
     if (!G.Possess.take(w) || !isBody(w)) notes.push(`(f) o corpo não pegou ${w.name}`);
     else {
+      // (the body is taken at the door; the test's hand puts it back in the room by the mother, as l13 does)
+      if (w.inside !== h.id) { w.inside = h.id; w.x = m.x; w.y = m.y; w.path = null; w.moving = false; }
       const doIt = id => { const o = G.Act.offers(w, w.x, w.y).find(q => q.id === id); if (!o) return { ok: false, why: 'sem a oferta «' + id + '»' }; const it = G.Possess.apply(() => G.Act.perform(w, o)); live(0.3); return it.res || { ok: false, why: 'o mundo não fez' }; };
       const r1 = doIt('lar.pegarBebe:' + Fb.id); const b1 = S.villagers.get(Fb.id);
       if (!r1.ok || b1.carrier !== w.id) { const ww = S.villagers.get(w.id); fail(`(f) pegar o bebê: ${r1.why || 'o bebê não veio para o colo do corpo'} [bebê home ${b1.home}, mãe ${b1.mother}, pai ${b1.father}, colo ${b1.carrier}, dentro ${b1.inside}; corpo #${ww.id} home ${ww.home}, dentro ${ww.inside}; ao alcance ${G.Vg.babyReach(b1, ww)}, pode segurar ${G.Vg.canHold(ww)}; ofertas: ${G.Act.offers(ww, ww.x, ww.y).map(o => o.id).join(', ') || 'nenhuma'}]`); }
