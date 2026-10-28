@@ -19,6 +19,8 @@
   const EPS = 1e-6;
   const DAYS = 3;    // (what a house keeps of each thing it uses: three days of it)
   const GAP = 0.5;   // (half a day between two errands of the same house)
+  const WAIT = 1.5;  // (and a day and a half more for a need that waits to weigh like the heaviest work: L-331)
+  const RETRY = 0.08; // (an errand that found nobody selling what the house lacks: the house looks again soon — L-345)
   const LUXURY = { joias: 1 };
 
   // what the house lacks, the most lacking first: [{ k, n (how many to buy), lack (0..1) }] — counted from the house,
@@ -66,20 +68,40 @@
   // (the one already out for it keeps the same wish, so that the errand is not dropped for the next chore)
   C.urge = function (v) {
     const S = G.S;
-    if (v.age < 14 || v.captive || v.jail || v.aboard || v.held || v.ug || A.isBody(v)) return 0;
+    // (grown is 16, the age of decide: under it the child's own choice — childDecide — never asks this wish, and a house that
+    // counted a boy of 15 as the one to send sent nobody)
+    if (v.age < 16 || v.captive || v.jail || v.aboard || v.held || v.ug || A.isBody(v)) return 0;
     const h = E.homeOf(v); if (!h || !h.res) return 0;
     const out = C.outOf(h); if (out && out.id !== v.id) return 0;
     const L = C.list(h); if (!L.length) return 0;
     if (!out) {
       if (v.carry && v.carry.n > EPS) return 0; // (hands full of something else: one with free hands goes)
-      if (!((G.Biz && G.Biz.hours()) || E.fairOpen())) return 0;
+      // (someone sells in town now something the house lacks: the market's hours alone open no counter — at 0,06 nobody sold
+      // yet, the errand found nobody, and the house lost its market day, L-345)
+      if (!C.selling(v.set, L)) return 0;
       if (S.clock - (h.shopT === undefined ? -1e9 : h.shopT) < GAP * G.DAY_LEN) return 0;
       if (!C.canPay(h)) return 0;
     }
     const well = h.well === undefined ? 0.5 : h.well;
     // (whoever is freest goes: one with a workplace leaves it only when the work weighs little — an old one, a mourner)
     const busy = v.job || (E.isJobRole && E.isJobRole(v.role)) ? 0.55 : 0.85;
-    return (0.2 + 0.45 * L[0].lack + (well < 0.45 ? 0.1 : 0)) * busy;
+    // (and a need that waits grows: past the house's gap since it last sent someone, in a day and a half the errand weighs
+    // like the heaviest work, and anyone of the house goes — a house never sent yet has waited long enough. A house of
+    // tradesmen and hard workers lacked everything and sent nobody: work weighed 0,55 — 0,69 for a hard worker — and the
+    // wish at most 0,64, 0,41 with a trade; 29 of the 193 houses of the new metropolis never shopped by day: L-331)
+    const since = h.sentT !== undefined ? h.sentT : h.shopT;
+    const press = since === undefined ? 1 : Math.min(1, Math.max(0, (S.clock - since) / G.DAY_LEN - GAP) / WAIT);
+    return (0.2 + 0.45 * L[0].lack + (well < 0.45 ? 0.1 : 0)) * (busy + (1 - busy) * press) + 0.15 * press * L[0].lack;
+  };
+  // someone selling in the town now something of the list (L: C.list of a house; none, anything): a merchant at an open
+  // stall, the fair open, or the shelf of a market whose merchants keep no stalls (or the black market), in the market's hours
+  C.selling = function (setId, L) {
+    const ks = L ? L.map(q => q.k) : null; const has = ref => !ks || ks.some(k => D.get(ref, k) >= 1);
+    if (E.fairOpen()) for (const b of E.byType(setId, 'feira')) if (has('b:' + b.id)) return true;
+    if (!(G.Biz ? G.Biz.hours() : true)) return false;
+    if (G.Biz && G.Biz.selling(setId, ks)) return true;
+    for (const b of E.byType(setId, 'mercado').concat(E.byType(setId, 'mercado_negro'))) if (!(G.Biz && b.type === 'mercado' && G.Biz.hasStalls(b)) && has('b:' + b.id)) return true;
+    return false;
   };
   // what the houses of a town lack, good by good — what a market hears of its town, for the sellers' stock (counted once
   // in an eighth of a day in the world's step; from outside it, counted afresh and not kept)
@@ -102,12 +124,13 @@
     const need = L.map(q => q.k);
     if (E.wishes) for (const k of E.wishes(h, v)) if (!need.includes(k)) need.push(k);
     const t = E.shopTask(v, H, need);
-    if (!t) return null;
+    // (nobody sold what the house lacks: it looks again in a while, not in half a day — L-345)
+    if (!t) { h.shopT = S.clock - (GAP - RETRY) * G.DAY_LEN; return null; }
     // (how much of it: what the house lacks of that thing — the seller and the purse may say less)
     const it = L.find(q => q.k === t.k);
     // (once on the way, the errand is the house's: the day's work does not call the person back from it — hunger, sleep, a
     // storm or anything urgent still do)
-    t.casa = h.id; t.n = it ? it.n : 1; t.pri = Math.max(t.pri || 0, 1.02); h.shopOut = v.id;
+    t.casa = h.id; t.n = it ? it.n : 1; t.pri = Math.max(t.pri || 0, 1.02); h.shopOut = v.id; h.sentT = S.clock;
     return t;
   };
 

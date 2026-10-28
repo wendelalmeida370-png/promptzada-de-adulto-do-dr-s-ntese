@@ -34,6 +34,9 @@
   B.of = v => { const id = v && (v.id || v); for (const z of all()) if (live(z) && z.st === 'on' && z.owner === id) return z; return null; };
   B.at = (b, slot) => { const id = b && (b.id || b); for (const z of all()) if (live(z) && z.b === id && z.slot === slot) return z; return null; };
   B.hasStalls = b => { const id = b && (b.id || b); for (const z of all()) if (z.st === 'on' && z.b === id) return true; return false; };
+  // (someone sells at a stall of the town now — open today, the merchant at the counter — one of the goods ks (none: any):
+  // what a house's wish to shop asks, act-compras.js)
+  B.selling = (setId, ks) => { for (const z of all()) if (live(z) && z.st === 'on' && z.set === setId && z.open && B.manned(z) && (!ks || ks.some(k => (z.inv[k] || 0) >= 1))) return true; return false; };
   // the hours of a market: from the morning to dusk
   B.hours = () => { const t = G.S.time; return t > 0.06 && t < 0.62; };
   const coin = z => E.coinage(z.fac);
