@@ -71,7 +71,11 @@ for (const k of WORLDS) {
       try { const w0 = keep.length ? plan(s) : w; const cut = w0 && shutOff(s, w0); if (cut && cut.length) bad7.push(`${name}: ${cut.length} prédio(s) fechados (${cut.slice(0, 2).map(b => b.type + '#' + b.id).join(', ')})`); if (w0 && (w0.ways || []).length) ways7++; }
       finally { for (const [i, v] of keep) S.wall[i] = v; if (keep.length) G.W.touchWalk(); } }
     // 1. each side its gate (or one at its corner), none side by side, at most four
+    // (a side that is only its corner — the rest of the line water, or out of the plan —, the corner a tile of the next side: no
+    // side of its own to gate; in the anos100 of the v37 the north of Karnak's box was all water but the corner by the west gate,
+    // two tiles away, T-194)
     const sides = {}; for (const i of w.tiles) for (const sd of sideOf(w, i)) (sides[sd] = sides[sd] || []).push(i);
+    for (const sd of Object.keys(sides)) if (sides[sd].every(i => sideOf(w, i).length > 1)) delete sides[sd];
     const walked = i => S.road[i] || S.wear[i] > 22;
     // (a side with no street nor path of its own, only light wear: served where its busiest tile — where its people walk out, the
     // planner's own measure — is a step from the next side's gate, as the planner keeps it; the old count asked every such side
@@ -143,11 +147,12 @@ for (const instant of [false, true]) {
 }
 // 6b, 6c. a wall from before L-342, by hand: a box into the corner of a standing wall, whose two runs there have no gate, and
 //     of a town next to it without a wall
-for (const old of [false, true]) {
-  M.pronto('metropole'); const S = G.S, N = G.N, W = G.W, Sg = G.Siege;
-  const nm = old ? '6c o muro de antes de pé num save velho: carregado, o que está dentro do outro muro cai e o bolsão abre' : '6b o plano de antes do conserto, erguido pelos construtores: nada dele dentro do outro muro, e o chão de lá continua da cidade';
+// (the corner sought in each ready world in turn, as deep as six tiles, then five: the worlds made after L-342 raise no wall
+// into another's box, and their walls have gates nearer their corners — the metropolis of the v37 had no corner of six, T-194)
+const corner = (K) => {
+  const S = G.S, N = G.N, W = G.W;
   const standing = o => o.done && o.tiles.filter(i => S.wall[i] && S.wall[i] !== 3).length >= o.tiles.length * 0.8;
-  const K = 6; let best = null; const L0 = W.reachIds(true);
+  let best = null; const L0 = W.reachIds(true);
   for (const a of S.walls.filter(standing).sort((p, q) => p.id - q.id)) {
     const s = S.settlements.get(a.set); if (!s || !G.Fac.get(s.fac)) continue; const R = W.townRegion(s); if (R < 0) continue;
     const [x0, y0, x1, y1] = a.box; if (x1 - x0 < K + 3 || y1 - y0 < K + 3) continue;
@@ -164,6 +169,13 @@ for (const old of [false, true]) {
       if (!best || pk.length > best.pk.length) best = { a, s, cx, cy, sx, sy, pk };
     }
   }
+  return best;
+};
+for (const old of [false, true]) {
+  let best = null, K = 6, world = '';
+  for (const k of ['metropole', 'mega', 'mundial', 'anos100', 'cidade']) { M.pronto(k); for (const k2 of [6, 5]) { best = corner(k2); if (best) { K = k2; world = k; break; } } if (best) break; }
+  const S = G.S, N = G.N, W = G.W, Sg = G.Siege;
+  const nm = old ? '6c o muro de antes de pé num save velho: carregado, o que está dentro do outro muro cai e o bolsão abre' : '6b o plano de antes do conserto, erguido pelos construtores: nada dele dentro do outro muro, e o chão de lá continua da cidade';
   const b = best && [...S.settlements.values()].filter(q => q.id !== best.s.id && G.Fac.get(q.fac) && !Sg.wallOf(q.id)).sort((p, q) => G.dist2(p.cx, p.cy, best.cx, best.cy) - G.dist2(q.cx, q.cy, best.cx, best.cy) || p.id - q.id)[0];
   if (!best || !b) { ok(nm, false, !best ? 'nenhum muro de pé com um canto sem portão e chão da cidade dentro' : 'nenhuma cidade sem muro'); continue; }
   const { a, s, cx, cy, sx, sy, pk } = best; const f = G.Fac.get(b.fac);
@@ -176,7 +188,7 @@ for (const old of [false, true]) {
   const w = { id: S.nextId++, set: b.id, fac: b.fac, mat: 'madeira', tiles, gates, built: 0, done: false, style: f.civ || 'classico', box };
   const inA = i => { const x = i % N, y = (i / N) | 0; return x > a.box[0] && x < a.box[2] && y > a.box[1] && y < a.box[3]; };
   const inner = tiles.filter(inA);
-  const where = `o muro de ${b.name} em ${JSON.stringify(box)}, ${tiles.length} casas (${inner.length} dentro do muro de ${s.name}, ${JSON.stringify(a.box)}); o canto (${cx},${cy}) com ${pk.length} casas de chão de ${s.name}`;
+  const where = `${world}: o muro de ${b.name} em ${JSON.stringify(box)}, ${tiles.length} casas (${inner.length} dentro do muro de ${s.name}, ${JSON.stringify(a.box)}); o canto (${cx},${cy}) com ${pk.length} casas de chão de ${s.name}`;
   const open = () => { const R = W.townRegion(s), L = W.reachIds(true); return pk.filter(i => L[i] === R).length; };
   S.walls.push(w);
   if (!old) {
@@ -234,7 +246,9 @@ for (const k of ['metropole', 'mega', 'cidade', 'anos100', 'mundial']) {
   if (!s0) ok('8 nada que bloqueia no caminho de um portão: o buscador de lugar vai para outro lado', false, 'a maior cidade não tem lugar para uma casa');
   else {
     // (a gate beside the best site — on its south side, where the ground is open —, as a wall raised later would put it)
-    let g = -1; for (let x = s0[0]; x < s0[0] + def.w && g < 0; x++) { const i = (s0[1] + def.h) * N + x; if (G.W.walkable(i) && !S.occ[i] && !S.wall[i]) g = i; }
+    // (on any side of it, the south first: in the metropolis of the v37 the best site's south was all taken, T-194)
+    const around = []; for (let x = s0[0]; x < s0[0] + def.w; x++) around.push([x, s0[1] + def.h]); for (let x = s0[0]; x < s0[0] + def.w; x++) around.push([x, s0[1] - 1]); for (let y = s0[1]; y < s0[1] + def.h; y++) around.push([s0[0] - 1, y], [s0[0] + def.w, y]);
+    let g = -1; for (const [x, y] of around) { if (g >= 0 || x < 0 || y < 0 || x >= N || y >= N) continue; const i = y * N + x; if (G.W.walkable(i) && !S.occ[i] && !S.wall[i]) g = i; }
     if (g < 0) ok('8 nada que bloqueia no caminho de um portão: o buscador de lugar vai para outro lado', false, 'nenhum chão aberto ao lado do lugar');
     else {
       S.wall[g] = 2; G.W.touchWalk(); let s1 = null; try { s1 = V.findSite(s, 'house'); } finally { S.wall[g] = 0; G.W.touchWalk(); }

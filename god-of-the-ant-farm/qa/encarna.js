@@ -159,22 +159,37 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   // ================================ e2: the real person ================================
   const e2 = await E(() => {
     __E.fresh('cidade'); const s = __E.town();
-    const v = __E.adults(s, o => o.mother && o.bio && o.bio.length >= 3).sort((a, b) => (b.kids.length - a.kids.length))[0];
+    // (a real person with a family and a past; of them, one the world lets walk at a person's own pace — rested, not starving,
+    // the hands free, on dry ground —: the walk below proves the hands on the stick, not the ford, the load nor the tiredness
+    // that slow a body as the world has it (Avatar's move). The Penélope #1667 of the final city stood in a ford at midnight
+    // with a load and no strength left — 0.9 to 1.2 m/s, as the world gives it: 5.1 m in 4.6 s, T-208)
+    const dry = (X, Z) => { const sf = G.Space.surface(X, Z); return sf.walk && sf.kind === 'ground'; };
+    const fit = o => o.energy >= 30 && (o.hunger || 0) < 100 && !(o.carry && o.carry.n > 0) && !(o.sick > 0) && !(o.lost && o.lost.leg) && dry(o.x * 4, o.y * 4);
+    const v = __E.adults(s, o => o.mother && o.bio && o.bio.length >= 3).sort((a, b) => (fit(b) ? 1 : 0) - (fit(a) ? 1 : 0) || (b.kids.length - a.kids.length))[0];
+    // (and the way it walks: the first of sixteen headings from 0.7 with 8 m of dry ground the world walks straight ahead, no
+    // more than half a metre up)
+    const clear = a => { const y0 = G.W.hAt(v.x, v.y) * G.Space.HM; for (let d = 0.5; d <= 8 + 1e-9; d += 0.5) { const X = v.x * 4 + Math.cos(a) * d, Z = v.y * 4 + Math.sin(a) * d; if (!dry(X, Z) || G.W.hAt(X / 4, Z / 4) * G.Space.HM - y0 > 0.5) return false; } return true; };
+    let yaw = 0.7; for (let k = 0; k < 16; k++) { const a = 0.7 + k * Math.PI / 8; if (clear(a)) { yaw = a; break; } }
+    const how = `${fit(v) ? 'descansada, de mãos livres, em terra' : `energia ${Math.round(v.energy)}, ${v.carry && v.carry.n ? 'com carga' : 'mãos livres'}, ${dry(v.x * 4, v.y * 4) ? 'em terra' : 'na água'}`}; rumo ${yaw.toFixed(2)}${clear(yaw) ? '' : ' (sem 8 m livres em rumo nenhum)'}`;
     const id0 = { id: v.id, name: v.name, mother: v.mother, father: v.father, partner: v.partner, kids: v.kids.slice(), home: v.home, set: v.set, role: v.role, age: v.age, bio: (v.bio || []).length, stories: G.Stories ? G.Stories.of(v.id).map(x => x.id).sort().join(',') : '' };
     const inn = __E.enter(v); const inTask = v.task && v.task.type;
     const st = G.Avatar.state(); const x0 = v.x, y0 = v.y;
-    G.Input3D.down.frente = true; G.Cam3D.yaw = 0.7; __E.f(140); G.Input3D.down.frente = false; __E.f(10);
+    G.Input3D.down.frente = true; G.Cam3D.yaw = yaw; __E.f(140); G.Input3D.down.frente = false; __E.f(10);
     const moved = G.dist(x0, y0, v.x, v.y) * 4; const at = { x: v.x, y: v.y };
+    // (measured against the pace the world gives this body — Avatar's move: the person's own walk, 0.7 of it below 8 of
+    // strength, 0.8 starving, 0.9 with a load of 4 or more —: seven tenths of it over the 4.6 s at least, the first steps and a
+    // ford's within that; a body rested, its hands free, on dry ground, 6.2 m)
+    const pace = st.caps.walk * (v.energy < 8 ? 0.7 : 1) * ((v.hunger || 0) >= 100 ? 0.8 : 1) * (v.carry && v.carry.n >= 4 ? 0.9 : 1); const want = 0.7 * pace * 140 / 30;
     const n = G.S.villagers.size; let same = 0; for (const o of G.S.villagers.values()) if (o.id === v.id) same++;
     const left = __E.leave();
     const o = G.S.villagers.get(id0.id);
     // (the moment the god's view is back: the person is exactly where the body was left)
     const atGod = G.dist(at.x, at.y, o.x, o.y) * 4;
     const ai = __E.until(() => o.task && o.task.type !== 'avatar', 120) >= 0;
-    return { inn, inTask, moved, left, n, same, alive: !!o, same2: o === v, id0, after: o && { name: o.name, mother: o.mother, father: o.father, partner: o.partner, kids: o.kids.slice(), home: o.home, set: o.set, role: o.role, age: o.age, stories: G.Stories ? G.Stories.of(o.id).map(x => x.id).sort().join(',') : '' }, task: o && o.task && o.task.type, ai, sel: G.UI.selected && G.UI.selected.id === o.id, leftAt: atGod, bio: G.Life.bioList(o).slice(-1)[0], avatar: !!G.S.avatar, qa: __E.qa() };
+    return { inn, inTask, moved, pace, want, how, left, n, same, alive: !!o, same2: o === v, id0, after: o && { name: o.name, mother: o.mother, father: o.father, partner: o.partner, kids: o.kids.slice(), home: o.home, set: o.set, role: o.role, age: o.age, stories: G.Stories ? G.Stories.of(o.id).map(x => x.id).sort().join(',') : '' }, task: o && o.task && o.task.type, ai, sel: G.UI.selected && G.UI.selected.id === o.id, leftAt: atGod, bio: G.Life.bioList(o).slice(-1)[0], avatar: !!G.S.avatar, qa: __E.qa() };
   });
   ok('e2 encarna uma pessoa real', e2.inn && e2.inTask === 'avatar', `${e2.id0.name} #${e2.id0.id}, ${Math.floor(e2.id0.age)} anos, ${e2.id0.kids.length} filhos, ${e2.id0.bio} memórias`);
-  ok('e2 anda com ela', e2.moved > 6, `${e2.moved.toFixed(1)} m em 4,6 s`);
+  ok('e2 anda com ela', e2.moved > e2.want, `${e2.moved.toFixed(1)} m em 4,6 s — o passo do mundo para ela, ${e2.pace.toFixed(2)} m/s: pede ${e2.want.toFixed(1)} m (${e2.how})`);
   ok('e2 a mesma pessoa depois (id, família, casa, povo)', e2.alive && e2.same2 && e2.same === 1 && JSON.stringify([e2.id0.name, e2.id0.mother, e2.id0.father, e2.id0.partner, e2.id0.kids, e2.id0.home, e2.id0.set, e2.id0.role]) === JSON.stringify([e2.after.name, e2.after.mother, e2.after.father, e2.after.partner, e2.after.kids, e2.after.home, e2.after.set, e2.after.role]) && e2.after.age > e2.id0.age, `mesmo objeto: ${e2.same2}; idade ${e2.id0.age.toFixed(3)} → ${e2.after && e2.after.age.toFixed(3)}; histórias ${e2.id0.stories || '-'} → ${e2.after && e2.after.stories || '-'}`);
   ok('e2 volta ao Modo Deus: exatamente onde foi deixada, selecionada; depois a IA de novo', e2.left && !e2.avatar && e2.ai && e2.sel && e2.leftAt < 0.05, `a ${e2.leftAt.toFixed(2)} m de onde o jogador a deixou quando o Modo Deus voltou; tarefa depois: ${e2.task}`);
   ok('e2 a biografia lembra', !!e2.bio && /guiad/.test(e2.bio.txt), e2.bio ? e2.bio.txt : '-');
