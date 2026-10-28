@@ -1669,6 +1669,8 @@
   // house, act-lar.js; the only hands on a baby's arms besides babyUpdate's)
   Vg.canHold = c => !!c && c.age >= 14 && !unfitCarrier(c);
   Vg.babyReach = (b, o) => !!b && !!o && b.age < 2 && nearBaby(b, o);
+  // (the baby in someone's arms — for whoever needs to know the hands are taken: an offer of two hands to the body; reads only)
+  Vg.holdsBaby = v => { if (!v) return null; for (const b of G.S.villagers.values()) if (b.age < 2 && b.carrier === v.id) return b; return null; };
   Vg.handBaby = function (b, c) { if (!b || b.age >= 2 || !Vg.canHold(c) || c.set !== b.set || !nearBaby(b, c)) return false; b.carrier = c.id; b.seekT = 0; return true; };
   function babyUpdate(v, dt) {
     const S = G.S;
