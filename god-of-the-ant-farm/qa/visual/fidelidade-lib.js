@@ -118,11 +118,13 @@ function recorder() {
 // the god's picture of a building, as the god's view would paint it (Art.building: the sprite of its type, variant and
 // people), in the god's pixels from the anchor — the middle of the lot on its highest ground; ops: what was painted, in
 // order. Art's cache is put aside for the call: the picture is painted anew, and the game's cache stays as it was
-F.god = function (b) {
-  const Art = G.Art; const doc0 = global.document; let rec = null;
+F.god = function (b, o) {
+  o = o || {}; const Art = G.Art, A = G.Arch; const doc0 = global.document; let rec = null;
   global.document = new Proxy(doc0, { get(t, k) { if (k === 'createElement') return tag => { if (tag !== 'canvas') return doc0.createElement(tag); const R = recorder(); rec = R; const cv = { width: 0, height: 0, getContext: () => R.c }; R.c.canvas = cv; return cv; }; return t[k]; } });
   const keep = Art.clear; let spr = null;
-  try { Art.clear(); spr = Art.building(b.type, b.v, b.style, b.wd); } finally { global.document = doc0; void keep; }
+  // (o.shell: the home drawn from that shell — Arch.home, D-082 —, for the view's quarter o.q; else the type's sprite)
+  try { Art.clear(); if (A.homeClear) A.homeClear(); spr = o.shell !== undefined ? (o.shell && A.home ? A.home(b, o.shell, o.q || 0) : null) : Art.building(b.type, b.v, b.style, b.wd); } finally { global.document = doc0; void keep; }
+  if (A.homeClear) A.homeClear();
   if (!spr || !rec) return { ops: [], none: true };
   // (the recorder's frame is the canvas's: scale(3) then translate(ax, ay) — back to the god's pixels from the anchor)
   const un = p => [p[0] / 3 - spr.ax, p[1] / 3 - spr.ay];

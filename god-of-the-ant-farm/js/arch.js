@@ -899,6 +899,167 @@
     return z + 8;
   }
 
+  // ------------------------------ a home drawn from its shell (D-082) ------------------------------
+  // The god's picture of a home drawn from the shell its plan raises — Interiors.shellOf, made from the record alone, the same
+  // the 3D draws near and far: where it stands in its lot and how big; its storeys and how high; its roof (the kind, the
+  // ridge, the rise, the eaves); the round hut; the annex under its lean-to; the door where the plan opens it, on the side of
+  // the street; the windows the plan cuts in the walls one sees — in the people's own dressing of the drawings of before (the
+  // timber frame, the bands, the balcony, the columns and the awning, the wind-catcher, the terrace plants, the turf and its
+  // dragons). A sprite is drawn for the view's first side and mirrored on the side views: the shell is turned into the
+  // sprite's own frame for the quarter it is seen from. Only the view: the plan is never asked for, nothing is written.
+  const ZPX = 3.04; // (one metre of height in the god's pixels: the descent's, D-081)
+  const QS = [[1, 1], [1, -1], [-1, -1], [-1, 1]]; // (a world offset (wx, wy) in the sprite's frame, by the view's quarter)
+  const BODY = { piso: 1, semienterrado: 1, elevado: 1, andar: 1 }; // (the storeys that are the house's body)
+  const STRAW = ['#e2bf6c', '#b08a44'];
+  const CLASSIC_ROOFS = [['#b85a3c', '#94452d', '#7a3826'], ['#9a6a3a', '#7f5530', '#6a4526'], ['#6c6f86', '#56596e', '#46485a']]; // (the house of before's, art.js)
+  const q2 = v => Math.round(v * 32) / 32, qz = v => Math.round(v * 2) / 2; // (a sprite's numbers to a pixel: what tells two apart)
+  // the shell in the sprite's frame (tiles from the lot's middle; heights in px over its highest ground): the house's numbers
+  A.homeGeo = function (b, s, q) {
+    const sh = s && s.shell; if (!sh || (sh.kind !== 'rect' && sh.kind !== 'round')) return null;
+    const L = b.w * 4, hL = L / 2, [qx, qy] = QS[q & 3];
+    const X = x => q2(qx * (x - hL) / 4), Y = z => q2(qy * (z - hL) / 4), Z = y => qz((0.4 + y) * ZPX);
+    const R = r => { const a = X(r[0]), c = X(r[2]), d = Y(r[1]), e = Y(r[3]); return [Math.min(a, c), Math.min(d, e), Math.max(a, c), Math.max(d, e)]; };
+    const lv = (s.levels || []).filter(l => BODY[l.kind]).sort((a, c) => a.y - c.y); if (!lv.length) return null;
+    const H = { round: sh.kind === 'round', base: sh.base, floor: Z(lv[0].y), eave: Z(sh.eave), floors: lv.map(l => Z(l.y)), wins: [], door: null, annex: [] };
+    if (H.round) { H.c = [X(sh.cx), Y(sh.cz)]; H.r = q2(sh.r / 4); } else H.rect = R(sh.r);
+    const rf = sh.roof || {}; H.roof = { kind: rf.kind || 'plano', alongY: rf.along === 'z', rise: qz((rf.h || 0) * ZPX), ov: q2((rf.over || 0) / 4) };
+    if (rf.room) H.roof.room = { rect: R(rf.room.r), h: qz((rf.room.h || 2) * ZPX) };
+    H.par = s.levels.some(l => l.kind === 'terraco') ? qz(1.15 * ZPX) : 0; // (a roof one lives on: its parapet, 0.9 m over the terrace)
+    // (which face of the sprite a world side is, for this quarter: L the front-left one, R the front-right; the back ones unseen)
+    const faceOf = side => (side === 'S' ? (qy > 0 ? 'L' : null) : side === 'N' ? (qy < 0 ? 'L' : null) : side === 'E' ? (qx > 0 ? 'R' : null) : (qx < 0 ? 'R' : null));
+    // the openings of the shell's walls on the faces one sees: the windows, the door, the arches
+    if (!H.round) {
+      const r = sh.r, cx = (r[0] + r[2]) / 2, cz = (r[1] + r[3]) / 2; const yOf = new Map(s.levels.map(l => [l.lv, l]));
+      const byId = new Map((s.walls || []).map(w => [w.id, w]));
+      for (const h of s.holes || []) {
+        const w = byId.get(h.wall); const l = w && yOf.get(w.lv); if (!l || !BODY[l.kind]) continue;
+        const dx = w.b[0] - w.a[0], dz = w.b[1] - w.a[1], len = Math.hypot(dx, dz) || 1; const px = w.a[0] + dx * h.at / len, pz = w.a[1] + dz * h.at / len;
+        const horiz = Math.abs(dz) < 1e-6; const edge = horiz ? Math.min(Math.abs(pz - r[1]), Math.abs(pz - r[3])) : Math.min(Math.abs(px - r[0]), Math.abs(px - r[2]));
+        if (edge > (w.t || 0.3) + 0.05) continue; // (a wall of the main body's outside only)
+        const F = faceOf(horiz ? (pz > cz ? 'S' : 'N') : (px > cx ? 'E' : 'W')); if (!F) continue;
+        const mid = F === 'L' ? X(px) : Y(pz), hw = h.w / 8;
+        const o = { face: F, a: q2(mid - hw), b: q2(mid + hw), z0: Z(l.y + (h.sill || 0)), z1: Z(l.y + (h.sill || 0) + h.h), kind: h.door >= 0 ? 'porta' : h.kind };
+        if (s.entrance && h.door === s.entrance.door) H.door = o; else H.wins.push(o);
+      }
+    } else if (s.entrance) { const e = s.entrance; H.door = { face: faceOf(e.side), at: [X(e.x), Y(e.z)], w: q2(e.w / 4), z1: Z(lv[0].y + 1.9) }; }
+    for (const a of sh.annex || []) H.annex.push({ rect: R(a.r), h: Z(a.h) });
+    return H;
+  };
+  // the picture of a home from its numbers (homeGeo), in its people's dressing
+  function homeDraw(c, m, p, st, v, H, type) {
+    if (H.round) return roundDraw(c, m, p, st, H);
+    const rf = H.roof, kind = rf.kind; const [x0, y0, x1, y1] = H.rect; const zF = H.floor, zE = H.eave; const bat = st === 'egipcio' ? 0.04 : 0;
+    const mid = r => (r[0] + r[2]) / 2 + (r[1] + r[3]) / 2; const behind = a => mid(a.rect) < mid(H.rect);
+    for (const a of H.annex) if (behind(a)) annexDraw(c, p, st, a, H);
+    // (what it stands on: the plinth of stone; the posts of a floor over wet ground; a sunken floor shows its walls only)
+    if (H.base === 'esteios') { for (const [x, y] of [[x0 + 0.04, y1 - 0.04], [x1 - 0.04, y1 - 0.04], [x1 - 0.04, y0 + 0.04]]) box(c, x - 0.03, y - 0.03, x + 0.03, y + 0.03, 0, zF, '#6a4a30', '#523822', '#7a5a3a'); }
+    else if (H.base !== 'semienterrado' && zF > 0.3) plinth(c, p, x0, y0, x1, y1, zF);
+    const z0 = H.base === 'semienterrado' ? 0 : Math.max(0, zF); const fl = H.floors;
+    walls(c, x0, y0, x1, y1, z0, zE, p.wl, p.wr, bat);
+    // ---- the people's dressing of the walls ----
+    if (st === 'nordico') {
+      const nx = Math.max(3, Math.round((x1 - x0) * 12)), ny = Math.max(2, Math.round((y1 - y0) * 6));
+      for (let k = 1; k < nx; k++) { const x = x0 + (x1 - x0) * k / nx; ln(c, P(x, y1, z0), P(x, y1, zE), 'rgba(30,20,10,0.35)', 0.4); }
+      for (let k = 1; k < ny; k++) { const y = y0 + (y1 - y0) * k / ny; ln(c, P(x1, y, z0), P(x1, y, zE), 'rgba(30,20,10,0.35)', 0.4); }
+      band(c, x0, y0, x1, y1, zE - 0.8, zE, p.trim);
+    } else if (st === 'classico') { // the timber frame: the corner posts, a beam at each storey and under the eaves
+      for (let f = 1; f <= fl.length; f++) { const z = f < fl.length ? fl[f] : zE; ln(c, P(x0, y1, z), P(x1, y1, z), p.trim, 0.8); ln(c, P(x1, y1, z), P(x1, y0, z), p.trim, 0.8); }
+      ln(c, P(x0, y1, z0), P(x0, y1, zE), p.trim, 0.8); ln(c, P(x1, y1, z0), P(x1, y1, zE), p.trim, 0.8); ln(c, P(x1, y0, z0), P(x1, y0, zE), p.trim, 0.8);
+    } else if (st === 'asteca') { for (let f = 1; f <= fl.length; f++) { const z = f < fl.length ? fl[f] : zE; band(c, x0, y0, x1, y1, z - 1.6, z, p.trim); } }
+    else if (st === 'egipcio') band(c, x0, y0, x1, y1, zE - 2, zE - 1, p.trim);
+    else for (let f = 1; f < fl.length; f++) band(c, x0, y0, x1, y1, fl[f] - 0.7, fl[f], st === 'grego' ? p.col[1] : shade(p.wl, 0.85));
+    // ---- the openings the plan cut in the walls one sees ----
+    const onF = (o, col, mm) => { if (o.face === 'L') onL(c, y1, o.a, o.b, o.z0, o.z1, col, mm); else onR(c, x1 - bat * (o.z0 - z0) / Math.max(1, zE - z0), o.a, o.b, o.z0, o.z1, col, mm); };
+    for (const o of H.wins) {
+      onF(o, o.kind === 'janela' ? p.win : '#2a2018', o.kind === 'janela' ? m : null);
+      if (st === 'grego' && o.kind === 'janela' && o.z0 > fl[0] + 6) { const w = (o.b - o.a) * 0.3; onF({ face: o.face, a: o.a - w, b: o.a - w * 0.35, z0: o.z0, z1: o.z1 }, p.trim); } // (the shutter)
+    }
+    const d = H.door;
+    if (d && d.face) {
+      onF(d, p.door);
+      if (st === 'asteca') onF({ face: d.face, a: d.a - 0.03, b: d.a, z0: d.z0, z1: d.z1 + 0.5 }, p.trim2);
+      if (st === 'romano' && type !== 'insula') { const cl = (x, y) => column(c, p, x, y, d.z0, d.z1 + 0.5, 0.025); if (d.face === 'L') { cl(d.a - 0.06, y1 + 0.05); cl(d.b + 0.06, y1 + 0.05); } else { cl(x1 + 0.05, d.a - 0.06); cl(x1 + 0.05, d.b + 0.06); } }
+      // (the shops of a Roman block: an awning over the ground storey of the door's face)
+      if (st === 'romano' && type === 'insula' && d.face === 'L') { const z = fl.length > 1 ? fl[1] - 1 : zE - 1; awning(c, x0 + 0.04, x1 - 0.04, y1, z - 2.5, z, 0.14, ['#c8483a', '#efe2c4']); }
+      // (the wooden balcony of the top storey, on the door's face)
+      if ((st === 'romano' || st === 'grego' || st === 'classico') && fl.length >= 2 && d.face === 'L') {
+        const z = fl[fl.length - 1] + 1.3; box(c, x0 + 0.05, y1, x1 - 0.05, y1 + 0.12, z - 1.2, z - 0.6, '#7a5230', '#5a3a20', '#8a6038');
+        for (let k = 0; k <= 5; k++) { const x = x0 + 0.05 + (x1 - x0 - 0.1) * k / 5; ln(c, P(x, y1 + 0.12, z - 0.6), P(x, y1 + 0.12, z + 1.6), '#6a4526', 0.45); }
+        ln(c, P(x0 + 0.05, y1 + 0.12, z + 1.6), P(x1 - 0.05, y1 + 0.12, z + 1.6), '#6a4526', 0.6);
+      }
+    }
+    // ---- the roof of the plan's kind, ridge and rise ----
+    if (kind === 'plano') {
+      const par = H.par || (st === 'egipcio' ? 1.3 : 1.2); roof(c, m, p, x0 + bat, y0 + bat, x1 - bat, y1 - bat, zE, { kind: 'flat', par });
+      if (rf.room) { const [a0, b0, a1, b1] = rf.room.rect; const zr = zE + 0.8; box(c, a0, b0, a1, b1, zr, zr + rf.room.h, p.wl, p.wr, '#b8a070'); top(c, a0 - 0.03, b0 - 0.03, a1 + 0.03, b1 + 0.03, zr + rf.room.h + 0.4, '#9a8a4a'); }
+      else if (st === 'egipcio') { // the rooftop awning and the wind-catcher
+        const ax = (x0 + x1) / 2 - 0.1, ay = (y0 + y1) / 2 + 0.05;
+        for (const [dx, dy] of [[-0.15, -0.1], [0.15, -0.1], [0.15, 0.12], [-0.15, 0.12]]) ln(c, P(ax + dx, ay + dy, zE), P(ax + dx, ay + dy, zE + 5), '#7a5a3a', 0.6);
+        poly(c, [P(ax - 0.17, ay - 0.12, zE + 5), P(ax + 0.17, ay - 0.12, zE + 5), P(ax + 0.17, ay + 0.14, zE + 4.4), P(ax - 0.17, ay + 0.14, zE + 4.4)], '#e8e0c8', '#b8a888');
+        const wx = x1 - 0.2, wy = y0 + 0.08; box(c, wx - 0.08, wy, wx + 0.08, wy + 0.16, zE, zE + 6, p.wl, p.wr, p.top); poly(c, [P(wx - 0.08, wy + 0.16, zE + 6), P(wx + 0.08, wy + 0.16, zE + 6), P(wx + 0.08, wy + 0.16, zE + 4), P(wx - 0.08, wy + 0.16, zE + 4)], '#3a2a1c');
+      }
+      if (st === 'asteca') for (let k = 0; k < 3; k++) { const q = P(x0 + 0.1 + k * (x1 - x0 - 0.2) / 2, y1 - 0.04, zE); c.fillStyle = k % 2 ? '#5a9a3c' : '#e05a7a'; c.beginPath(); c.arc(q[0], q[1] - 0.8, 1.1, 0, TAU); c.fill(); }
+      m.fires.push(P((x0 + x1) / 2, (y0 + y1) / 2, zE + 2));
+    } else {
+      const k2 = kind === 'quatro-aguas' ? 'hip' : kind === 'turfa' ? 'turf' : kind === 'palha' ? 'thatch' : 'gable';
+      const pp = k2 === 'thatch' && !p.thatch ? Object.assign({}, p, { thatch: STRAW }) : p;
+      const zr = roof(c, m, pp, x0, y0, x1, y1, zE, { kind: k2, alongY: rf.alongY, rh: Math.max(2, rf.rise), ov: rf.ov, colors: type === 'house' && st === 'classico' ? CLASSIC_ROOFS[v % 3] : undefined });
+      if ((st === 'classico' || st === 'romano') && k2 !== 'thatch') { const cx = x0 + (x1 - x0) * 0.68, cy = y0 + (y1 - y0) * 0.3; box(c, cx - 0.07, cy - 0.07, cx + 0.07, cy + 0.07, zE + 2, Math.min(zr, zE + 12) + 2, '#8e8578', '#6f675c', '#5a534a'); m.fires.push(P(cx, cy, Math.min(zr, zE + 12) + 3)); }
+      else m.fires.push(P((x0 + x1) / 2, (y0 + y1) / 2, zr));
+    }
+    for (const a of H.annex) if (!behind(a)) annexDraw(c, p, st, a, H);
+  }
+  // an annex against a side: its low walls and its lean-to falling away from the house
+  function annexDraw(c, p, st, a, H) {
+    const [x0, y0, x1, y1] = a.rect; const [X0, Y0, X1, Y1] = H.rect; const zF = Math.max(0, H.floor), zt = a.h;
+    if (H.base !== 'semienterrado' && zF > 0.3) plinth(c, p, x0, y0, x1, y1, zF);
+    walls(c, x0, y0, x1, y1, zF, zt, shade(p.wl, 0.95), shade(p.wr, 0.95));
+    // (the lean-to: high against the house, low on the far side)
+    const hi = zt + 2.5, lo = zt; const fx = x0 >= X1 - 0.01 ? 1 : x1 <= X0 + 0.01 ? -1 : 0, fy = fx ? 0 : y0 >= Y1 - 0.01 ? 1 : -1;
+    const zAt = (x, y) => (fx > 0 ? (x === x0 ? hi : lo) : fx < 0 ? (x === x1 ? hi : lo) : fy > 0 ? (y === y0 ? hi : lo) : (y === y1 ? hi : lo));
+    const r = p.roof || ['#8a6a44', '#6a5034', '#5a4028']; const o = 0.05;
+    poly(c, [P(x0 - o, y0 - o, zAt(x0, y0)), P(x1 + o, y0 - o, zAt(x1, y0)), P(x1 + o, y1 + o, zAt(x1, y1)), P(x0 - o, y1 + o, zAt(x0, y1))], st === 'nordico' ? r[1] : r[0], 'rgba(0,0,0,0.25)', 0.4);
+  }
+  // a round hut from its shell: the ring of wall to its eaves, the cone of thatch over it, the door where the plan leaves the gap
+  function roundDraw(c, m, p, st, H) {
+    const [cx, cy] = H.c; const o = P(cx, cy, 0); const rx = H.r * 22.63, ry = rx / 2; const zF = Math.max(0, H.floor), zE = H.eave;
+    const wa = st === 'asteca' ? p.wl : '#c9a36e', wb = st === 'asteca' ? p.wr : '#86673f';
+    let g = c.createLinearGradient(o[0] - rx, 0, o[0] + rx, 0); g.addColorStop(0, wa); g.addColorStop(1, wb);
+    c.fillStyle = g; c.beginPath(); c.ellipse(o[0], o[1] - zF, rx, ry, 0, 0, Math.PI); c.lineTo(o[0] - rx, o[1] - zE); c.lineTo(o[0] + rx, o[1] - zE); c.closePath(); c.fill();
+    if (st === 'asteca') { c.fillStyle = p.trim; c.beginPath(); c.ellipse(o[0], o[1] - zE + 2.2, rx, ry, 0, 0, Math.PI); c.lineTo(o[0] - rx, o[1] - zE + 0.8); c.ellipse(o[0], o[1] - zE + 0.8, rx, ry, 0, Math.PI, 0, true); c.fill(); }
+    const d = H.door; // (the door: where the gap is, if it is on the side one sees)
+    if (d && (d.at[0] - cx) + (d.at[1] - cy) > -1e-3) {
+      const dp = P(d.at[0], d.at[1], 0); const w = Math.max(3, d.w * 22.63 * 0.9); const zt = Math.min(zE - 0.5, d.z1);
+      c.fillStyle = '#3a2616'; c.beginPath(); c.moveTo(dp[0] - w / 2, dp[1] - zF); c.lineTo(dp[0] - w / 2, dp[1] - zt + w * 0.3); c.quadraticCurveTo(dp[0], dp[1] - zt - w * 0.4, dp[0] + w / 2, dp[1] - zt + w * 0.3); c.lineTo(dp[0] + w / 2, dp[1] - zF); c.closePath(); c.fill();
+      m.win.push([[dp[0] - w / 2, dp[1] - zF], [dp[0] - w / 2, dp[1] - zt], [dp[0] + w / 2, dp[1] - zt], [dp[0] + w / 2, dp[1] - zF]]);
+    }
+    const straw = p.thatch || STRAW; const R2 = (H.r + H.roof.ov) * 22.63, ry2 = R2 / 2, zA = zE + Math.max(4, H.roof.rise);
+    g = c.createLinearGradient(o[0] - R2, 0, o[0] + R2, 0); g.addColorStop(0, straw[0]); g.addColorStop(1, straw[1]);
+    c.fillStyle = g; c.beginPath(); c.moveTo(o[0] - R2, o[1] - zE + 1); c.lineTo(o[0], o[1] - zA); c.lineTo(o[0] + R2, o[1] - zE + 1); c.ellipse(o[0], o[1] - zE + 1, R2, ry2, 0, 0, Math.PI); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(110,80,35,0.45)'; c.lineWidth = 0.45;
+    for (let k = -0.9; k <= 0.9; k += 0.16) { c.beginPath(); c.moveTo(o[0], o[1] - zA + 0.5); c.lineTo(o[0] + k * R2, o[1] - zE + 1 + Math.sqrt(Math.max(0, 1 - k * k)) * ry2); c.stroke(); }
+    c.fillStyle = '#7a5a2e'; c.beginPath(); c.arc(o[0], o[1] - zA, 1.4, 0, TAU); c.fill();
+    m.fires.push([o[0], o[1] - zA]);
+  }
+  // the sprite of a home drawn from its shell, for the view's quarter q — or null (not a home, no shell: the drawing of
+  // before). Kept by what it draws — two homes with the same numbers share one picture —, the last few hundred
+  const HOMES = A.HOMES = { hut: 1, house: 1, sobrado: 1, insula: 1 };
+  const homePics = new Map(); A.HOMEPICS = 600;
+  A.homeClear = () => homePics.clear();
+  A.home = function (b, s, q) {
+    if (!b || !HOMES[b.type] || !s) return null; const H = A.homeGeo(b, s, q); if (!H) return null;
+    const st = PAL[b.style] ? b.style : 'classico'; const v = b.v || 0;
+    const key = b.type + st + (b.type === 'house' && st === 'classico' ? v % 3 : '') + JSON.stringify(H);
+    let spr = homePics.get(key); if (spr) { homePics.delete(key); homePics.set(key, spr); return spr; }
+    const top = Math.max(MAXZ[b.type] || 64, H.eave + (H.roof.rise || 0) + (H.roof.room ? H.roof.room.h + 4 : 0) + 16);
+    const [w, h, ax, ay] = dims(b.w, b.h, top); const cv = document.createElement('canvas'); const K = 3; // (painted at 3×, as Art's sprites)
+    cv.width = Math.max(1, Math.ceil(w * K)); cv.height = Math.max(1, Math.ceil(h * K)); const c = cv.getContext('2d'); c.scale(K, K); c.translate(ax, ay); c.lineJoin = 'round'; c.lineCap = 'round';
+    const meta = { win: [], fires: [], glow: [] }; homeDraw(c, meta, pal(st), st, v, H, b.type);
+    spr = { c: cv, w, h, ax, ay, win: meta.win, fires: meta.fires, glow: meta.glow, H };
+    homePics.set(key, spr); if (homePics.size > A.HOMEPICS) homePics.delete(homePics.keys().next().value);
+    return spr;
+  };
+
   // ------------------------------ dispatch ------------------------------
   const MAXZ = { quarteirao: 84, hut: 30, house: 40, sobrado: 52, insula: 64, temple: 64, monument: 72, storehouse: 44, workshop: 46, quartel: 44, torre: 54, praca: 44, mercado: 38, celeiro: 44, biblioteca: 44, teatro: 56, banhos: 50, palacio: 72, doca: 36, aqueduto: 36, maravilha: 100 };
   const NEW = { quarteirao: 1, sobrado: 1, insula: 1, praca: 1, mercado: 1, celeiro: 1, biblioteca: 1, teatro: 1, banhos: 1, palacio: 1, doca: 1, aqueduto: 1, maravilha: 1 };
