@@ -1104,8 +1104,10 @@
     return out;
   });
   // the body of a form one goes in by its door — or null: { r — its walls' foot —, r1 — their top, a battered wall's —, y0 — the
-  // floor —, y1 — the eaves —, tabuas — walls of planks —, porta: { u, w, y0, y1 } on the front face (v = r[3]), janelas:
-  // [{ na: 'frente' | 'fundo' | 'direita' | 'esquerda', de, ate (along the face), y0, y1 }], portico: { r, y1 (the ceiling),
+  // floor —, y1 — the eaves: where the roof starts over the walls (over an entablature, its top: the walls of the plan rise to
+  // it) —, tabuas — walls of planks —, porta: { u, w, y0, y1 } on the front face (v = r[3]), janelas: [{ na: 'frente' |
+  // 'fundo' | 'direita' | 'esquerda', de, ate (along the face), y0, y1 }] (but the pane of the god's row over the door: its
+  // top's, not an opening of its own), portico: { r, y1 (the ceiling),
   // colunas: [{ c, r }] } or null, base: { r, h } — the plinth under the floor —, degraus: [{ r, y1 }] — the treads from the
   // street up to it, from the lowest —, telhado: { tipo: 'duas-aguas' | 'quatro-aguas' | 'turfa' | 'plano', r, y0, y1, ao, ov } }
   Fo.body = F => (F.body ? keep(F, 'body', () => {
@@ -1117,11 +1119,13 @@
       if (!e.n) { janelas.push({ na: e.na, de: e.de, ate: e.ate, y0: e.y0, y1: e.y1 }); continue; }
       const g = (e.ate - e.de) / (e.n * 2 + 1); for (let k = 0; k < e.n; k++) janelas.push({ na: e.na, de: e.de + g * (1 + 2 * k), ate: e.de + g * (2 + 2 * k), y0: e.y0, y1: e.y1 });
     }
+    const D = F.door; const onDoor = j => !!D && j.na === 'frente' && j.de < D.u + D.w / 2 && j.ate > D.u - D.w / 2 && j.y0 < D.y1 && j.y1 > D.y0;
+    for (let k = janelas.length - 1; k >= 0; k--) if (onDoor(janelas[k])) janelas.splice(k, 1);
     const cu = (r[0] + r[2]) / 2, cv = (r[1] + r[3]) / 2;
     const rf = F.els.find(e => e.k === 'telhado' && cu > e.r[0] && cu < e.r[2] && cv > e.r[1] && cv < e.r[3]);
     const telhado = rf ? { tipo: rf.quatro ? 'quatro-aguas' : rf.mat === 'turf' ? 'turfa' : 'duas-aguas', r: rf.r.slice(), y0: rf.y0, y1: rf.y1, ao: rf.ao, ov: rf.ov || 0 } : { tipo: 'plano', r: r.slice(), y0: w.y1, y1: w.y1, ao: null, ov: 0 };
     const P = B.porch;
-    return { r: r.slice(), r1: w.r1 ? w.r1.slice() : null, y0: w.y0, y1: w.y1, tabuas: !!w.tabuas, porta: F.door ? { u: F.door.u, w: F.door.w, y0: F.door.y0, y1: F.door.y1 } : null, janelas,
+    return { r: r.slice(), r1: w.r1 ? w.r1.slice() : null, y0: w.y0, y1: Math.max(w.y1, telhado.y0), tabuas: !!w.tabuas, porta: F.door ? { u: F.door.u, w: F.door.w, y0: F.door.y0, y1: F.door.y1 } : null, janelas,
       portico: P ? { r: P.r.slice(), y1: P.y1, colunas: P.cols.pts.map(q => ({ c: q.slice(), r: P.cols.r })) } : null,
       base: B.base ? { r: B.base.r.slice(), h: B.base.y1 } : null, degraus: (B.steps || []).map(q => ({ r: q.r.slice(), y1: q.y1 })).sort((a, b) => a.y1 - b.y1), telhado };
   }) : null);

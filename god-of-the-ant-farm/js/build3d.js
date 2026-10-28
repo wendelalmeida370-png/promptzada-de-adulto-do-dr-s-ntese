@@ -1506,8 +1506,10 @@ float m3scale(float p) {
   }
   const FORMK = {
     bloco(K, e, X) {
-      const r = X.rect(e.r), y0 = X.foot(e.y0), y1 = X.Y(e.y1); const c = e.cor || ['wl', 'wr', 'top'];
-      K.as(e.crista ? 'stucco' : X.mat(e, e.tabuas ? (K.st === 'nordico' ? 'plankV' : stuff(K.b).wall) : null), () => formBox(K, r[0], r[1], r[2], r[3], y0, y1, X.col(c[0]), X.col(c[2] || c[0])));
+      const r = X.rect(e.r), y0 = X.foot(e.y0), y1 = X.Y(e.y1); const c = e.cor || ['wl', 'wr', 'top']; const cut = e.topCut ? X.rect(e.topCut) : null;
+      K.as(e.crista ? 'stucco' : X.mat(e, e.tabuas ? (K.st === 'nordico' ? 'plankV' : stuff(K.b).wall) : null), () => { formBox(K, r[0], r[1], r[2], r[3], y0, y1, X.col(c[0]), cut ? null : X.col(c[2] || c[0]));
+        // (its top but over topCut: a shell's walls under it, the roof's underside their ceiling)
+        if (cut) for (const q of cutRect(r, [cut])) K.quad([q[0], y1, q[1]], [q[2], y1, q[1]], [q[2], y1, q[3]], [q[0], y1, q[3]], X.col(c[2] || c[0]), UP); });
       // (the god's line under each level's top: a course a little darker, standing out a finger)
       if (e.friso && K.fine) K.as(X.mat(e), () => formBox(K, r[0] - 0.02, r[1] - 0.02, r[2] + 0.02, r[3] + 0.02, y1 - e.friso - 0.08, y1 - e.friso, dim(rgbOf(X.col(c[0])), 0.82)));
     },
@@ -1903,11 +1905,11 @@ float m3scale(float p) {
       const r = X.rect([e.r[0] - ov, e.r[1] - ov, e.r[2] + ov, e.r[3] + ov]); const y = X.Y(e.y0);
       K.quad([r[0], y, r[1]], [r[2], y, r[1]], [r[2], y, r[3]], [r[0], y, r[3]], dim(rgbOf(c), 0.7), [0, -1, 0]); });
   }
-  // a building's form, built: every element in order (the god's own, back to front) — but those skip leaves out —, the
-  // generic plinth not under it (onPlan: a shell's form, on the plinth's top — formCtx)
+  // a building's form, built: every element in order (the god's own, back to front) — but those skip leaves out, or gives
+  // another for (an element) —, the generic plinth not under it (onPlan: a shell's form, on the plinth's top — formCtx)
   function formInto(g, gw, K, F, side, skip, onPlan) {
     const X = formCtx(K, F, side, onPlan); X.gw = gw; K.footed = true;
-    for (const e of F.els) { if (skip && skip(e)) continue; const f = FORMK[e.k]; if (f) f(K, e, X); }
+    for (const e0 of F.els) { const s = skip ? skip(e0) : false; if (s === true) continue; const e = s || e0; const f = FORMK[e.k]; if (f) f(K, e, X); }
     // (the body's box — what the form covers from above —, for what reads it: Props3D, the door's side)
     const R = [1e9, 1e9, -1e9, -1e9]; for (const f of G.Forma.foot(F)) { const r = f.k === 'circ' ? [f.c[0] - f.r, f.c[1] - f.r, f.c[0] + f.r, f.c[1] + f.r] : f.r; R[0] = Math.min(R[0], r[0]); R[1] = Math.min(R[1], r[1]); R[2] = Math.max(R[2], r[2]); R[3] = Math.max(R[3], r[3]); }
     const rr = X.rect(R[0] < R[2] ? R : [0, 0, F.L, F.L]); const od = SIDEO[side] || [0, 1];
@@ -3170,7 +3172,9 @@ float m3scale(float p) {
     if (!FB && K.footed && !raised && K.body.door) wallGrass(K, x, z, sx, sz, { side, a: K.body.door.a, w: K.body.door.w });
     // (the form, all but its walls and the door and the windows on them: the shell's own, with the plan's openings)
     if (FB) { const kb = K.body, fw = FB.body.walls, fr = fw.r; const face = { frente: fr[3], fundo: fr[1], direita: fr[2], esquerda: fr[0] };
-      top = Math.max(top, formInto(g, gw, K, FB, side, q => q === fw || q.k === 'porta' || (q.k === 'janelas' && face[q.na] !== undefined && Math.abs(q.em - face[q.na]) <= 0.3), true) || 0); K.body = kb; }
+      // (a block from the walls' top up to the roof over them — the entablature —: its top only out of the walls, under the roof)
+      const T = G.Forma.body(FB).telhado; const lid = q => q.k === 'bloco' && q.y0 >= fw.y1 - 0.01 && q.y1 <= T.y0 + 0.01 && q.r[0] <= fr[0] + 0.01 && q.r[1] <= fr[1] + 0.01 && q.r[2] >= fr[2] - 0.01 && q.r[3] >= fr[3] - 0.01;
+      top = Math.max(top, formInto(g, gw, K, FB, side, q => q === fw || q.k === 'porta' || (q.k === 'janelas' && face[q.na] !== undefined && Math.abs(q.em - face[q.na]) <= 0.3) || (lid(q) ? Object.assign({}, q, { topCut: fr }) : false), true) || 0); K.body = kb; }
     return top;
   }
   // (the tops of a shell's walls with no roof over them: each side's wall, its thickness, at the eaves)
