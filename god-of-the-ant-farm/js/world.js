@@ -237,11 +237,13 @@
     r = -1; let bn = 0; for (const [k, c] of cnt) if (c > bn) { bn = c; r = k; }
     townReg.set(set.id, r); return r;
   };
-  // where a person stands, as regions: inside a building, at its door; on no walkable ground, what is within two steps.
-  // null when nothing is near at all (the caller then does not judge)
+  // where a person stands, as regions: inside a building, at the door they come out by — the people's door, Vg.door: the
+  // plan's, on the street —, never the middle of its south front, which may give onto other ground (a pocket, a yard, the far
+  // side of a cliff: whoever slept there was taken for lost, woken and set down outside — L-217); on no walkable ground, what
+  // is within two steps. null when nothing is near at all (the caller then does not judge)
   W.regsOf = function (v) {
     let x = v.x, y = v.y;
-    if (v.inside > 0) { const b = G.S.buildings.get(v.inside); if (b) { const d = G.Village.door(b); x = d[0]; y = d[1]; } }
+    if (v.inside > 0) { const b = G.S.buildings.get(v.inside); if (b) { const d = G.Vg ? G.Vg.door(b) : G.Village.door(b); x = d[0]; y = d[1]; } }
     if (!W.inb(x, y)) return null;
     const i = W.idx(x, y); const out = stepRegs(i, []); if (out.length) return out;
     const L = W.reachIds(); const x0 = i % N, y0 = (i / N) | 0;
