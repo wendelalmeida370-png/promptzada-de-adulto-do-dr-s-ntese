@@ -419,10 +419,9 @@ if (want('l14')) {
   open(); S.time = 0.12; live(15); // (the morning, after its moves of house: 75 s of the day, before the evening at 0,6)
   // (a house of the world with someone of 62 or more — whose working day weighs less than the minding — and little ones of
   // three to six living in it; one of the old minds them. A small town may have none: then the metropolis)
-  // (not a house too full for its beds or a couple without one of their own: someone of it moves out any day — the old one,
-  // maybe, and the little ones are no longer hers: act-casa.js)
-  const moving = v => !!(G.Casa && G.Casa.need && G.Casa.need(v));
-  const findHouse = () => { const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v) && !moving(v)) e.old.push(v); if (v.age >= 3 && v.age < 7) e.kids.push(v); houses.set(h.id, e); } return [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0]; };
+  // (chosen after the morning's moves of house — a house too full for its beds splits once a day, act-casa.js: the old one
+  // may move out, and the little ones are no longer hers)
+  const findHouse = () => { const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v)) e.old.push(v); if (v.age >= 3 && v.age < 7) e.kids.push(v); houses.set(h.id, e); } return [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0]; };
   let e = findHouse();
   if (!e && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); S.time = 0.12; live(15); e = findHouse(); }
   if (!e) ok('l14 os velhos cuidam dos pequenos em casa', false, 'nenhuma casa com alguém de 62 anos ou mais e crianças de 3 a 6');
@@ -576,11 +575,11 @@ if (want('l15')) {
       const doIt = id => { const o = G.Act.offers(w, w.x, w.y).find(q => q.id === id); if (!o) return { ok: false, why: 'sem a oferta «' + id + '»' }; const it = G.Possess.apply(() => G.Act.perform(w, o)); live(0.3); return it.res || { ok: false, why: 'o mundo não fez' }; };
       const r1 = doIt('lar.pegarBebe:' + Fb.id); const b1 = S.villagers.get(Fb.id);
       if (!r1.ok || b1.carrier !== w.id) { const ww = S.villagers.get(w.id); fail(`(f) pegar o bebê: ${r1.why || 'o bebê não veio para o colo do corpo'} [bebê home ${b1.home}, mãe ${b1.mother}, pai ${b1.father}, colo ${b1.carrier}, dentro ${b1.inside}; corpo #${ww.id} home ${ww.home}, dentro ${ww.inside}; ao alcance ${G.Vg.babyReach(b1, ww)}, pode segurar ${G.Vg.canHold(ww)}; ofertas: ${G.Act.offers(ww, ww.x, ww.y).map(o => o.id).join(', ') || 'nenhuma'}]`); }
-      live(1.5); const b2 = S.villagers.get(Fb.id);
-      if (r1.ok && b2.carrier !== w.id) fail(`(f) o mundo tirou o bebê do colo do corpo (está com ${who(b2.carrier)})`);
+      live(1.5); const b2 = S.villagers.get(Fb.id); const kept = b2.carrier === w.id; // (now: the baby object is the same after the giving)
+      if (r1.ok && !kept) fail(`(f) o mundo tirou o bebê do colo do corpo (está com ${who(b2.carrier)})`);
       const r2 = doIt('lar.darBebe:' + Fb.id + ':' + m.id); const b3 = S.villagers.get(Fb.id);
       if (r1.ok && (!r2.ok || b3.carrier !== m.id)) fail(`(f) dar o bebê à mãe: ${r2.why || 'o bebê ficou com ' + who(b3.carrier)}`);
-      notes.push(`(f) ${w.name}, vivido pelo jogador, em casa: «${r1.msg || r1.why}» (1,5 s depois, ainda no colo dele: ${b2.carrier === w.id ? 'sim' : 'NÃO'}); «${r2.msg || r2.why}»`);
+      notes.push(`(f) ${w.name}, vivido pelo jogador, em casa: «${r1.msg || r1.why}» (1,5 s depois, ainda no colo dele: ${kept ? 'sim' : 'NÃO'}); «${r2.msg || r2.why}»`);
       G.Possess.release('deus');
     }
   }
