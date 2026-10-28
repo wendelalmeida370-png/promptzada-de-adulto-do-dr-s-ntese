@@ -233,16 +233,15 @@
   };
   // the ceiling of the trades (D-090): there is no craft without bread — the trades take at most 38% of a town's grown hands
   // (18% in a hungry town) — once, over every trade its workplaces ask for, the ones the other modules add too (the
-  // watch, the docks, the estates, the stokers...); first one hand for each kind of workplace while the ceiling holds them
-  // (below), then the rest by the largest remainder: each trade its floor, then one hand more to the largest fractions, in a
-  // fixed order (the role's name), no chance — a trade of one hand is not the first to go any more (the floor of each share
-  // gave none to any of them: the taverns, the goldsmiths, the butchers, the markets stood empty most of the time, and what
-  // the other modules added after the ceiling was outside it). The trades that bring food —
-  // the fishermen, the orchards — are the fields the hungry towns send their hands to: outside it. A shepherd always stays
+  // watch, the docks, the estates, the stokers...). First one hand for each kind of workplace the town has, while the
+  // ceiling holds them, in the fixed order below — the docks, the jail and the watch, the baths, the tavern, the market and
+  // the fair first: a town's flows live from them; then the crafts —, so that no kind of place stands all empty for being
+  // small (the warehouse lost its dockers to the potters' shares); then the rest by the largest remainder: each trade its
+  // floor, then one hand more to the largest fractions, in a fixed order (the role's name), no chance (the floor of each
+  // share alone gave none to the trades of one hand: the taverns, the goldsmiths, the butchers, the markets stood empty most
+  // of the time, and what the other modules added after the ceiling was outside it). The trades that bring food — the
+  // fishermen, the orchards — are the fields the hungry towns send their hands to: outside it. A shepherd always stays
   // with the herds.
-  // (before the shares, one hand for each kind of workplace the town has, while the ceiling holds them — the docks, the jail
-  // and the watch, the baths, the tavern... first, in this fixed order: a town's flows live from them; then the crafts —, so
-  // that no kind of place stands all empty for being small: the warehouse lost its dockers to the potters' shares)
   const FIRST = ['estivador', 'carcereiro', 'vigia', 'foguista', 'taverneiro', 'mercador', 'feirante', 'cobrador', 'escriba', 'copista', 'ator', 'oleiro', 'ferreiro', 'tecelao', 'ourives', 'acougueiro', 'mineiro', 'cavalarico', 'apicultor', 'vinhateiro', 'lavrador', 'salineiro', 'salgador', 'sericultor', 'mergulhador', 'pastor', 'contrabandista'];
   const rank = k => { const i = FIRST.indexOf(k); return i < 0 ? FIRST.length : i; };
   const FOOD = { pescador: 1, fruticultor: 1 };
@@ -267,6 +266,22 @@
     for (const k of keys) out[k] = got[k] || 0;
     if (keys.includes('pastor') && !(out.pastor >= 1)) out.pastor = 1;
     return out;
+  };
+  // the cut of the minimum rest (village.js assignJobs: some hands for wood and forage before the trades): n hands, one at a
+  // time, from the trade with the most hands — a trade of one hand is not cut before one of four —, and between equals the
+  // one that comes last in the order of the first hands above (the tavern's keeper, the market and the fair go last of the
+  // trades; the orchards, which bring food, after them all). The docks, the jail, the watch, the baths, the shepherd and the
+  // mines are not cut here (the smugglers go before: village.js). Returns how many it cut
+  const KEEP = { estivador: 1, carcereiro: 1, vigia: 1, foguista: 1, pastor: 1, mineiro: 1, contrabandista: 1 };
+  E.CUT = FIRST.slice().reverse().filter(r => !KEEP[r]).concat(['fruticultor']);
+  E.cut = function (want, n) {
+    let k = 0;
+    while (k < n) {
+      let r = null; for (const q of E.CUT) if (want[q] > 0 && (!r || want[q] > want[r])) r = q;
+      if (!r) break;
+      want[r]--; k++;
+    }
+    return k;
   };
   // every worker of a workplace role gets a concrete workplace (and keeps it)
   E.place = function (set) {

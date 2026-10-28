@@ -104,6 +104,17 @@ ok('verificador', !bad.length, bad.slice(0, 4).join(' | ') || 'limpo em todos os
   ok('teto-com-fome', hun.oleiro + hun.ourives + hun.mercador === 1 && hun.pescador === 4, `com fome (${f.stock.food} de comida para ${pop}): ${JSON.stringify(hun)}`);
   const few = E.share({ oleiro: 1, ourives: 1 }, set, f, 100);
   ok('teto-folgado', few.oleiro === 1 && few.ourives === 1, `sob o teto, nada muda: ${JSON.stringify(few)}`);
+  // (the cut of the minimum rest, by the same order: four hands — the pottery, with the most, gives two, one at a time (at two,
+  // equal to the orchards, the pottery goes first: the orchards bring food, last of all); then the orchards one; then, all at
+  // one hand, the first in the order of the cut — the crafts before the actor, the market and the tavern: the pottery's last;
+  // the docks, the baths and the shepherd are not cut)
+  const w1 = { oleiro: 3, fruticultor: 2, ator: 1, mercador: 1, taverneiro: 1, estivador: 1, foguista: 1, pastor: 1 };
+  const n1 = E.cut(w1, 4);
+  ok('corte-do-resto', n1 === 4 && w1.oleiro === 0 && w1.fruticultor === 1 && w1.ator === 1 && w1.mercador === 1 && w1.taverneiro === 1 && w1.estivador === 1 && w1.foguista === 1 && w1.pastor === 1, `corta 4: ${JSON.stringify(w1)}`);
+  // (deeper: the tavern's keeper is the last trade of one hand to go; past every trade, nothing more is cut here)
+  const w2 = { oleiro: 1, ator: 1, feirante: 1, mercador: 1, taverneiro: 1, estivador: 1, foguista: 1, pastor: 1 };
+  const n2 = E.cut(w2, 4); const t2 = w2.taverneiro; const n3 = E.cut(w2, 3);
+  ok('corte-a-taverna-por-ultimo', n2 === 4 && t2 === 1 && n3 === 1 && w2.taverneiro === 0 && w2.estivador === 1 && w2.foguista === 1 && w2.pastor === 1, `corta 4: fica a taverna (${t2}); pede mais 3, corta ${n3}: ${JSON.stringify(w2)}`);
   void S;
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));

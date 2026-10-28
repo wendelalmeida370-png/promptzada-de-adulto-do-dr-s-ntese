@@ -670,16 +670,11 @@
     if (rest < MIN_REST) { want.construtor = Math.min(want.construtor, Math.max(1, Math.floor(A * 0.2))); want.cacador = Math.min(want.cacador, 1 + (threats > 1 ? 1 : 0)); rest = restOf(); }
     if (rest < MIN_REST) { want.guerreiro = Math.max(0, want.guerreiro - 1); rest = restOf(); }
     if (rest < MIN_REST) {
-      // (the smugglers first — nobody is ordered into crime —, then one hand at a time from the trade with the most hands,
-      // in a fixed order between equals: a trade of one hand is not cut before one of four — D-090; the tavern's keeper was
-      // the third to go, whatever the rest)
-      const CUT = ['ator', 'copista', 'escriba', 'taverneiro', 'mergulhador', 'sericultor', 'salgador', 'salineiro', 'vinhateiro', 'apicultor', 'fruticultor', 'lavrador', 'ourives', 'feirante', 'oleiro', 'cavalarico', 'mercador', 'cobrador', 'tecelao', 'acougueiro', 'ferreiro'];
+      // (the smugglers first — nobody is ordered into crime —, then the trades by the rule of the sharing, G.Eco.cut — D-090:
+      // a trade of one hand is not cut before one of four, and the tavern, the market and the fair go last; the tavern's
+      // keeper was the third to go, whatever the rest)
       if (want.contrabandista > 0) { const cut = Math.min(want.contrabandista, MIN_REST - rest); want.contrabandista -= cut; ecoN -= cut; rest += cut; }
-      while (rest < MIN_REST) {
-        let r = null; for (const q of CUT) if (want[q] > 0 && (!r || want[q] > want[r])) r = q;
-        if (!r) break;
-        want[r]--; ecoN--; rest++;
-      }
+      if (rest < MIN_REST && G.Eco && G.Eco.cut) { const cut = G.Eco.cut(want, MIN_REST - rest); ecoN -= cut; rest += cut; }
     }
     let rocks = 0; for (const r of S.rocks.values()) if (G.dist(r.x, r.y, set.cx, set.cy) < 26) { rocks++; if (rocks > 2) break; }
     if (!rocks && G.Vg.canQuarry(set)) rocks = 1;
