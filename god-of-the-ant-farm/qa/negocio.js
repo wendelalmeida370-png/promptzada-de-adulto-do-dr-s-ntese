@@ -32,8 +32,17 @@ const watch = () => { const bb = bad(); if (bb.length) { console.log('   verific
 const D = G.Depot, A = G.Act, B = G.Biz, E = G.Eco;
 const r2 = x => Math.round(x * 100) / 100;
 let S;
-const live = (sec, until) => { for (let k = 0; k < sec; k++) { M.viver(1); if (until && until()) return true; } return false; };
-const fine = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); if (until && until()) return true; } return false; };
+// (the god keeps the peace while the counters work — the Divine Peace, the game's own power (powers.js): the stall is the
+// case, not the war. With the generation-6 worlds Pólis de Argos itself declared two wars at the turn of day 59, two days
+// into the cases — the Guerra do marfim on República de Lavínio, for Alba Longa, and the Guerra da Garganta do Sol on Clã
+// de Hrafn, for Uppsala —, called 28 to arms at Argos, and its merchants took up arms, the buyers hid and fled, and the
+// stall of the cases closed with the town left without a merchant, T-227. Declared when each world opens, held at every
+// step of the cases)
+let peace = false;
+const godsPeace = () => { G.Politics.divinePeace(); peace = true; };
+const held2 = () => { if (peace) S.divinePeace = Math.max(S.divinePeace || 0, G.DAY_LEN); };
+const live = (sec, until) => { for (let k = 0; k < sec; k++) { M.viver(1); held2(); if (until && until()) return true; } return false; };
+const fine = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); held2(); if (until && until()) return true; } return false; };
 const book = (code, f) => D.ledger().filter(e => e[8] === code && (!f || f(e)));
 const nm = id => (S.villagers.get(id) || {}).name || '#' + id;
 // the words said at the counters (what G.Falas said, by whom, with which key)
@@ -89,7 +98,7 @@ M.viver(2); G.inSim++; listen();
 let fac = G.Fac.get(set.fac);
 const merchants = () => [...S.villagers.values()].filter(v => v.set === set.id && v.role === 'mercador' && v.job === mk.id);
 console.log(`(${set.name}${townName ? '' : ', a mais antiga com moeda, mercado com mercador e gente para a fila'}, ${fac.civ}: ${G.Village.pop(set.id)} habitantes; mercado #${mk.id}, mercadores: ${merchants().map(v => v.name).join(', ') || 'nenhum'}; moeda: ${E.coinage(fac.id) ? 'sim' : 'não'}; prateleira velha: ${Object.keys(shelf0).filter(k => shelf0[k] > 0).length} bens)`);
-S.time = 0.1;
+S.time = 0.1; godsPeace();
 
 // ---------------- n1: the stalls open, each in its own place; the old shelf goes to them, nothing lost
 {
@@ -619,7 +628,7 @@ function stallNow() {
 
 // ================================ the chain, §37: from the ship to the house ================================
 {
-  M.pronto('metropole'); S = G.S; M.viver(2);
+  M.pronto('metropole'); S = G.S; M.viver(2); godsPeace(); // (the world opened again: the god's peace again, T-227)
   const nMer = s => [...S.villagers.values()].filter(v => v.set === s.id && v.role === 'mercador').length;
   // (the chain's town keeps its merchant to the end — the premise, on purpose. A town short of hands gives its trades away
   // when it opens works, the merchant among the last of them, but before the food and the works: the planner's rule
@@ -715,7 +724,7 @@ function stallNow() {
 
 // ================================ a people without coin: the exchange ================================
 {
-  M.pronto('cidade'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1);
+  M.pronto('cidade'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1); godsPeace(); // (and here, T-227)
   // (the peoples without coin stay without it while the cases run — the test's hand on the world's door of the arts,
   // G.Civ.learn, as wantMerchant's on the planner's demand: a young world's peoples learn the coin within minutes, and in
   // the new «cidade» Argos learned it in the middle of n15, its stall selling for drachmas, T-098)
