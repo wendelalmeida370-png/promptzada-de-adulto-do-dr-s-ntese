@@ -32,9 +32,10 @@ const fails = []; const mid = []; const lying = [];
 // (the checker's systems the house touches, down to which severity a case fails: the house's own rules to S3. L-228's
 // message — asleep and not lying down — is l1b's alone)
 const SEV = { lar: 3, act: 2, nan: 2, pop: 2, fam: 2, fome: 2, avatar: 2, int: 2, maos: 2, ids: 2 };
-const LYING = 'o lugar da planta não é de deitar';
+const LYING = 'o lugar da planta não é de deitar', PRAYING = 'fora de um lugar de rezar da planta';
+const praying = [];
 const PANTRY = 'fora do livro-razão';
-const bad = () => QA.check().filter(q => SEV[q.sys] !== undefined && q.sev <= SEV[q.sys] && !String(q.msg).includes(LYING));
+const bad = () => QA.check().filter(q => SEV[q.sys] !== undefined && q.sev <= SEV[q.sys] && !String(q.msg).includes(LYING) && !String(q.msg).includes(PRAYING));
 let looks = 0;
 function watch() {
   looks++;
@@ -42,6 +43,7 @@ function watch() {
   for (const q of all) {
     const m = String(q.msg);
     if (m.includes(LYING)) { if (!lying.includes(m)) lying.push(m); continue; }
+    if (m.includes(PRAYING)) { if (!praying.includes(m)) praying.push(m); continue; }
     if (SEV[q.sys] === undefined || q.sev > SEV[q.sys]) continue;
     const k = `S${q.sev} ${q.sys}: ${m}`; if (!mid.includes(k)) mid.push(k);
   }
@@ -435,6 +437,7 @@ if (want('l11')) {
     const wrongIn = dw.wrong.filter(w => w.includes('#' + tp.id));
     ok('l11 a reza dentro do templo', most >= 2 && !over && saved && kept === inside && !left && !still && !wrongIn.length,
       `${who.length} fiéis de ${set.name} (${V.pop(set.id)} habitantes, ${people(set).filter(v => v.age >= 16).length} adultos com casa) chamados ao templo #${tp.id} (${places} lugares de rezar na planta): até ${most} rezando dentro ao mesmo tempo${over ? `, ACIMA DOS LUGARES em ${over} passos` : ''}, ${prayed.size} rezaram; o save no meio com ${inside} dentro: ${kept === inside ? 'seguiram dentro, rezando' : `SÓ ${kept} SEGUIRAM`}; no fim ${left ? `${left} AINDA REZANDO` : 'todos terminaram'}${still ? `, ${still} AINDA DENTRO` : ''}${wrongIn.length ? ' — ' + wrongIn.slice(0, 2).join(' · ') : ''}`);
+    ok('l11b quem reza dentro está num lugar de rezar', !praying.length, praying.length ? `${praying.length} rezando fora das esteiras, dos bancos e do altar (o repartidor do P4 com a regra do templo): ${praying.slice(0, 2).join(' · ')}` : 'todos nas esteiras, nos bancos ou no altar da planta');
   }
 }
 

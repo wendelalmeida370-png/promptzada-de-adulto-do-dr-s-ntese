@@ -23,6 +23,13 @@
       if (!(v.inside > 0) || v.id === body || v.ug) continue;
       const b = s.buildings.get(v.inside); const nm = `${v.name} #${v.id}`;
       if (!b) { add('lar', 2, `${nm}: dentro de um prédio que não existe (${v.inside})`, v.id); continue; }
+      // (at prayer inside the temple: at a place of prayer of its plan — the mats, the benches, the altar for the priest —, never
+      // standing anywhere: L-224. Only where the plan is made)
+      if (b.type === 'temple') {
+        const t = v.task;
+        if (t && t.type === 'pray' && t.inT === b.id && t.st === 2 && In && In.ready && In.ready(b) && In.placeOf) { const q = In.placeOf(v); if (!(q && (q.use === 'rezar' || q.use === 'sentar' || (t.priest && q.use === 'oficiar')))) add('lar', 3, `${nm}: rezando em ${b.type}#${b.id} fora de um lugar de rezar da planta (${q ? q.use || q.pose : 'sem lugar'})`, v.id); }
+        continue;
+      }
       if (!housing(b)) continue;
       // (a baby: in the arms of who carries it, or at home — the house keeps the baby nobody is free to hold, babyUpdate)
       if (v.age < 2) { const c = s.villagers.get(v.carrier); const m = s.villagers.get(v.mother); if (!(c && c.inside === b.id) && v.home !== b.id && !(m && m.home === b.id)) add('lar', 3, `o bebê ${nm} está dentro de ${b.type}#${b.id} sem quem o carrega, e não é a casa dele`, v.id); continue; }
