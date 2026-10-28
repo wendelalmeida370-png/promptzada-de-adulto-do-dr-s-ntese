@@ -621,15 +621,26 @@ function stallNow() {
 {
   M.pronto('metropole'); S = G.S; M.viver(2);
   const nMer = s => [...S.villagers.values()].filter(v => v.set === s.id && v.role === 'mercador').length;
-  const port = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'doca' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'mercado' && b.built) && E.coinage(s.fac) && G.Porto.access([...S.buildings.values()].find(b => b.set === s.id && b.type === 'doca' && b.built), G.Village.nearestDropoff(s.cx, s.cy, s.id))).sort((a, b) => nMer(b) - nMer(a))[0];
-  let info = 'nenhuma cidade com cais, armazém do porto, mercado e moeda', fine14 = false;
-  if (port) {
+  // (the chain's town keeps its merchant to the end — the premise, on purpose. A town short of hands gives its trades away
+  // when it opens works, the merchant among the last of them, but before the food and the works: the planner's rule
+  // (village.js), as T-184 found for the market without coin. With the final worlds Tebas — 27 grown-ups, 25 of them asked
+  // for by its trades — named Kiya, then opened two works, and the four builders took her trade: her stall closed and the
+  // town named no other, T-214. So the ports one at a time, the most hands to spare first — the grown-ups the trades and
+  // the town's own work leave free, as the planner counts them now: an order only, the world decides —, until one keeps
+  // its merchant through the chain, three at most)
+  const spare = s => { const ad = [...S.villagers.values()].filter(v => v.set === s.id && !v.captive && v.age >= 16 && v.age < 62); const eco = E.demand(s, G.Fac.get(s.fac), ad.length); let n = ad.length; for (const k in eco) if (k !== 'mineiro') n -= eco[k]; for (const v of ad) if (['agricultor', 'construtor', 'cacador', 'guerreiro', 'sacerdote'].includes(v.role)) n--; return n; };
+  const ports = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'doca' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'mercado' && b.built) && E.coinage(s.fac) && G.Porto.access([...S.buildings.values()].find(b => b.set === s.id && b.type === 'doca' && b.built), G.Village.nearestDropoff(s.cx, s.cy, s.id)));
+  const room14 = new Map(ports.map(s => [s.id, spare(s)]));
+  ports.sort((a, b) => room14.get(b.id) - room14.get(a.id) || nMer(b) - nMer(a) || a.id - b.id);
+  let info = 'nenhuma cidade com cais, armazém do porto, mercado e moeda', fine14 = false; const gave14 = [];
+  for (const port of ports.slice(0, 3)) {
+    let noMer = false;
     const dock = [...S.buildings.values()].find(b => b.set === port.id && b.type === 'doca' && b.built);
     const mkt = [...S.buildings.values()].find(b => b.set === port.id && b.type === 'mercado' && b.built);
     const f = G.Fac.get(port.fac);
     // (a merchant for the market, if the town has none yet: the people's planner names one)
     let mer = wantMerchant(port, mkt);
-    if (!mer) { info = `${port.name}: o povo não nomeou mercador para o mercado`; } else {
+    if (!mer) { noMer = true; info = `${port.name}: o povo não nomeou mercador para o mercado`; } else {
     const K = 'especiarias';
     S.time = 0.1; G.inSim = Math.max(G.inSim, 1);
     // (a clean quay, as in qa/porto.js: what was on it goes to the store — on a full quay the cargo would go straight in)
@@ -659,13 +670,13 @@ function stallNow() {
     // the merchant, in the morning: a stall, the spices on it. The world may take him from the stall in the middle — the
     // planner names another merchant, a fright sends him to a cave: the stall closes, its goods go home —: then the
     // merchant the town has now, once more, with the spices still in the store (twelve landed, four a wholesale: three
-    // tries; a town short of hands gives its trades away first, and may do it twice)
+    // tries; a town short of hands gives its trades away first, and may do it twice — with none named, the next port)
     let zz = null, buyer = null, again = '';
     // (the purchase home by its own line — a closed stall's goods go to its merchant's house, so a buyer of that house is
     // left out, and the spices in a house are not a purchase)
     const boughtK = v => linesK.some(e => e[0] > L0 && e[8] === 'compra-em-casa' && e[3] === 'v:' + v.id);
     for (let att = 0; att < 3 && !buyer; att++) {
-      if (att) { const m2 = wantMerchant(port, mkt); again += ` (${zz.st === 'on' ? `a ${att === 1 ? 'primeira' : 'segunda'} vez ninguém comprou` : `a banca #${zz.id} fechou no meio: ${zz.why || zz.st}`}; outra vez com ${m2 ? m2.name : 'ninguém'})`; if (!m2) break; mer = m2; }
+      if (att) { const m2 = wantMerchant(port, mkt); again += ` (${zz.st === 'on' ? `a ${att === 1 ? 'primeira' : 'segunda'} vez ninguém comprou` : `a banca #${zz.id} fechou no meio: ${zz.why || zz.st}`}; outra vez com ${m2 ? m2.name : 'ninguém'})`; if (!m2) { noMer = true; break; } mer = m2; }
       S.time = 0.15;
       zz = B.of(mer); if (!zz) zz = B.open(mer, mkt);
       D.make(E.homeOf(mer) ? 'h:' + mer.home : 'p:' + mer.id, 'moedas', 30, { code: 'teste' }); // (where the family keeps its coins: its house, or the purse)
@@ -694,7 +705,11 @@ function stallNow() {
     }
     D.onMove.splice(D.onMove.indexOf(onK), 1); }
     wantNone();
+    // (the town gave its merchant's trade away and named no other: the premise did not hold there — the next port)
+    if (!noMer) break;
+    gave14.push(`${port.name}, com ${room14.get(port.id)} mão(s) de sobra, ficou sem mercador${start ? start : ''}`); start = '';
   }
+  if (gave14.length) start += ` (antes: ${gave14.join('; ')})`;
   ok('n14 a cadeia do navio à casa', fine14, info);
 }
 
