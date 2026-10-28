@@ -81,7 +81,7 @@
       if (v.inside && !v.sleeping && v.age >= 3) at(v.inside).awake.push(v);
       if (v.age < 2 && v.carrier) o.baby.set(v.carrier, v.id);
       const t = v.task; if (t && t.type === 'lar' && t.what === 'cozinhar') at(t.home).cook = v.id;
-      if (t && t.type === 'lar' && t.what === 'cuidar' && t.st === 2) at(t.home).care = v.id;
+      if (t && t.type === 'lar' && t.what === 'cuidar' && t.st === 2 && !at(t.home).care) at(t.home).care = v.id; // (one minds: the first)
       if (t && t.type === 'pray' && t.inT) { const e = at(t.inT); if (t.priest) e.pp++; else e.pf++; }
     }
     if (G.inSim) { ix = o; ixS = S; ixT = sec; }
@@ -133,11 +133,17 @@
   // (the widowed, the first half day of grief — the death of the partner: Village.kill's mourn of a day and a half —: at
   // home by day, by the fire; the funeral goes first, 1.1)
   L.grief = v => !!v.widow && v.mourn > G.DAY_LEN && v.age >= 16;
-  // (the old of a house with little ones — two to six years old — mind them at home by day while the others are at work:
+  // (the old of a house with little ones — three to six years old — mind them at home by day while the others are at work:
   // the house is not empty by day — the request's 3.1 and 3.2 —; the little ones stay with them instead of trailing after a
-  // mother to the field. The little ones of the house, or none)
-  const little = h => entry(h).res.filter(o => o.age >= 2 && o.age < 7 && !o.captive);
-  L.minder = v => { if (v.age < 55 || v.sick > 0 || v.hp < 50 || !(v.home > 0)) return null; const h = homeOf(v); if (!h) return null; const k = little(h); return k.length ? k : null; };
+  // mother to the field. One minds — the first at home —, the other old of the house go about their day. The little ones of
+  // the house who can come home, or none)
+  const little = h => entry(h).res.filter(o => o.age >= 3 && o.age < 7 && !o.captive && !o.aboard && !o.held && !o.ug && !o.air);
+  L.minder = v => {
+    if (v.age < 55 || v.sick > 0 || v.hp < 50 || !(v.home > 0)) return null;
+    const h = homeOf(v); if (!h) return null;
+    const c = entry(h).care; if (c && c !== v.id) return null;
+    const k = little(h); return k.length ? k : null;
+  };
   // the task: what to do at home now, by the house and the hour — or null. why: 'acamado' (ill), 'fome' (hungry, already home:
   // only the supper), 'tarde' (the evening's going home), 'noite' (awake after dark). only: just the supper (or cooking it)
   L.task = function (v, H, why, only) {
@@ -163,6 +169,7 @@
   // fire; whoever else is awake, talked to; or a rest by the fire)
   function idle(v, h, e) {
     if (index().baby.has(v.id)) return 'ninar';
+    if (!G.isNight() && !G.isEvening() && L.minder(v)) return 'cuidar'; // (by day, the old with little ones at home mind them)
     if (G.isNight() && v.age >= 16 && waited(v, e)) return 'esperar';
     if (e.awake.some(o => o.id !== v.id && o.age >= 6 && (!o.task || o.task.type === 'lar'))) return 'conversar';
     return 'descansar';
