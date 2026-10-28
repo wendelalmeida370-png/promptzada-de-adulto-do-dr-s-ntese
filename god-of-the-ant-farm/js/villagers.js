@@ -780,7 +780,9 @@
       if (!needMat && !work && !carryFits) continue;
       let builders = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'build' && o.task.id === b.id) builders++;
       const [cx, cy] = G.Village.center(b);
-      const d = G.dist2(v.x, v.y, cx, cy) + builders * 40 + (b.type === 'campfire' ? -500 : 0) + (b.type === 'hut' || b.type === 'house' ? -30 : 0) + (b.type === 'doca' ? -40 : 0);
+      // (a family's house paid for — its materials paid at the town's prices, act-casa.js — has its turn before the city's
+      // own works: the stone of the store went to a palace, and the house stood at 92% for years, L-313)
+      const d = G.dist2(v.x, v.y, cx, cy) + builders * 40 + (b.type === 'campfire' ? -500 : 0) + (b.type === 'hut' || b.type === 'house' ? -30 : 0) + (b.type === 'doca' ? -40 : 0) + (b.encomenda ? -200 : 0);
       if (d < bd) { bd = d; best = b; }
     }
     if (!best) return null;
