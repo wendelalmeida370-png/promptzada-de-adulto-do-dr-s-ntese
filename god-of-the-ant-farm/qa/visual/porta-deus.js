@@ -66,8 +66,11 @@ for (const type of Object.keys(In.TYPES)) {
   }
 }
 ok('o desenho sem porta', !same.length && !grew.length, same.length || grew.length ? `${same.length ? 'não muda sem a porta: ' + same.join(', ') : ''}${grew.length ? ' ganha sem a porta: ' + grew.join(', ') : ''}` : `${m} tipos e povos com planta: todo desenho de antes perde a porta (menos os sem porta própria: ${Object.keys(SEM_PORTA).join(', ')})`);
-// (and the homes' pictures of before, until D-082 is on)
-{ const same2 = []; for (const type of Object.keys(A.HOMES)) for (const st of STY) { const b = F.put(type, st, 7900 + st.length); const g0 = F.god(b, { shell: undefined }), g1 = F.god(b, { shell: undefined, noDoor: true }); F.drop(b); if (!g0.none && !semPorta(type, st) && g1.ops.filter(o => o.f).length >= g0.ops.filter(o => o.f).length) same2.push(`${type}/${st}`); }
+// (and the homes' pictures of before, while D-082 is off: with it on — phase C —, a home is drawn from its shell with the
+// shell's own door, (a), and its picture of before is only the stand-in of a frame or two until that one is painted, drawn as
+// it is — Render.doorView leaves a home drawn from its shell alone)
+if (A.homeOn) ok('as casas de antes sem porta', true, 'as casas desenhadas pela casca (D-082, ligada): a porta de cada uma é a da casca — (a)');
+else { const same2 = []; for (const type of Object.keys(A.HOMES)) for (const st of STY) { const b = F.put(type, st, 7900 + st.length); const g0 = F.god(b, { shell: undefined }), g1 = F.god(b, { shell: undefined, noDoor: true }); F.drop(b); if (!g0.none && !semPorta(type, st) && g1.ops.filter(o => o.f).length >= g0.ops.filter(o => o.f).length) same2.push(`${type}/${st}`); }
   ok('as casas de antes sem porta', !same2.length, same2.length ? `não muda: ${same2.join(', ')}` : `${Object.keys(A.HOMES).length * STY.length} casas: todas perdem a porta`); }
 const e = M.erros(); ok('sem erro do jogo', M.limpo(), M.limpo() ? 'nenhum erro de módulo nem aviso no console' : JSON.stringify(e.mod) + ' ' + e.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');

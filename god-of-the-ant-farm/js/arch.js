@@ -1197,9 +1197,10 @@
   const HOMES = A.HOMES = { hut: 1, house: 1, sobrado: 1, insula: 1 };
   // (the types the god draws from their shells always: they had no drawing of their own — the jail, L-265)
   const SHELLS = A.SHELLS = { cadeia: 1 };
-  // (the god's view draws its homes from their shells once their plans follow the god's typology — the yard, the storeys, the
-  // people's roof, the round hut: P4's B2c, D-082; until then the drawing of before)
-  A.homeOn = false;
+  // (the god's view draws its homes from their shells: their plans follow the god's typology since P4's B2c — the yard, the
+  // storeys, the people's roof, the round hut —; D-082, switched on in phase C: the hut and the house of the six peoples, the
+  // sobrado and the ínsula with the 3D's mass — fidelidade.js)
+  A.homeOn = true;
   // (whether the god draws a building of this type from its shell now)
   A.fromShell = type => (HOMES[type] ? A.homeOn : !!SHELLS[type]);
   // (each home's windows and door are its plan's own, so nearly every home has a picture of its own: a city of 150 homes

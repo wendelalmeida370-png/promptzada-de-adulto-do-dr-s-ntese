@@ -13,7 +13,7 @@
 // uma família de antes da forma é a casca dela (L-c), e só a massa é medida (a catraca), até a família da forma (D-093).
 //   node qa/visual/fidelidade.js [tipo,tipo...] [povo,povo...]
 //   IDS=n prédios por tipo e povo (3; cada um com os seus dados e, nos de planta, a família que o registro escolhe)
-//   CASCA=1  o deus desenhando as casas pela casca (D-082), antes de ligar no jogo
+//   CASCA=0  as casas como o deus as desenhava antes da casca (D-082, ligada na fase C), para comparar
 //   PNG=pasta  as figuras: uma folha por tipo, os seis povos — o deus, o 3D de perto, o 3D de longe
 //   JSON=arquivo  os números de cada caso      VERB=1  o motivo de cada um que não é igual
 // Falha: um tipo com forma que não tem a massa do deus ou não segue a forma; outra massa (≠) em mais tipos e povos do que o
@@ -24,7 +24,7 @@ const F = require('./fidelidade-lib.js');
 const clock = () => Number(process.hrtime.bigint() / 1000000n);
 const t0 = clock();
 const { G, M } = F.load();
-if (process.env.CASCA) G.Arch.homeOn = true; // (CASCA=1: as the god will draw the homes from their shells — D-082 —, before it is switched on)
+if (process.env.CASCA === '0') G.Arch.homeOn = false; // (CASCA=0: the homes as the god drew them before their shells — D-082 —, to compare)
 const ONLY = process.argv[2] ? process.argv[2].split(',') : null;
 const STY = ['classico', 'grego', 'romano', 'egipcio', 'asteca', 'nordico'];
 const POVOS = process.argv[3] ? process.argv[3].split(',') : STY;
@@ -68,8 +68,10 @@ function verdict(cn, cf) {
 // 138 with the mine and the well — D-092; 120 with the silk house, the salting yard and the divers' house from theirs; 118 with
 // the pens and the salt pans measured, the same mass — their rows move the ids of the types after them: the Aztecs' tavern and
 // two great palaces ≈ by theirs, the Roman paço ≠; 104 with the homes in the god's typology and the tavern's yard — P4's B2c
-// and B2d: the Aztecs' and the Norse's house, the sobrado and the ínsula of four peoples ≈, the tavern ≈ in all six)
-const TETO = 104;
+// and B2d: the Aztecs' and the Norse's house, the sobrado and the ínsula of four peoples ≈, the tavern ≈ in all six; 90 with
+// the homes drawn by the god from their shells — Arch.homeOn, D-082, phase C: the hut and the house of the six peoples, the
+// sobrado and the ínsula = or ≈)
+const TETO = 90;
 
 // ------------------------------ the round ------------------------------
 // (the kinds the god paints in a layer of its own, not as a building's picture: what its hooks paint for a building is recorded
