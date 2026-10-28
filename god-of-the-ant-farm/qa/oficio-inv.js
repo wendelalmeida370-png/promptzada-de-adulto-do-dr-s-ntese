@@ -71,6 +71,29 @@
         const op = (s.acts || []).find(o => o.id === t.op); if (!op || !LIVE[op.st]) add('oficio', 3, `${v.name} #${v.id}: dentro da taverna #${t.id} num dia que acabou`);
       }
     }
+    // the day of the baths (G.Termas): one at a time, at baths standing; its bathers alive; the fire within what the furnace
+    // holds; the entries the ledger's payments of it, and the wood burnt the ledger's logs of it
+    if (G.Termas) {
+      const days = new Map();
+      for (const op of (s.acts || []).filter(o => o.def === 'termas' && LIVE[o.st])) {
+        const nm = `dia dos banhos #${op.id}`; const d = op.data || {}; const b = s.buildings.get(op.at);
+        if (days.has(op.at)) add('oficio', 2, `banhos #${op.at}: dois dias abertos (#${days.get(op.at)} e #${op.id})`); days.set(op.at, op.id);
+        if (!b || b.type !== 'banhos' || !b.built) { add('oficio', 2, `${nm}: os banhos ${op.at} ${!b ? 'não existem' : 'não estão de pé'} e o dia segue`); continue; }
+        for (const k of ['entradas', 'receita', 'lenha', 'calor', 'quentes', 'frios']) if (!fin(d[k]) || d[k] < -EPS) add('oficio', 1, `${nm}: ${k} = ${d[k]}`);
+        if (d.calor > 2 * G.Termas.BURN + EPS) add('oficio', 2, `${nm}: ${d.calor} s de fogo, mais que a fornalha leva (${2 * G.Termas.BURN})`);
+        for (const id in d.banho || {}) if (!s.villagers.has(+id)) add('oficio', 2, `${nm}: #${id} nos banhos não existe`);
+        const led = s.ledger || [];
+        if (led.length && (led[0][1] < op.born || (led[0][1] === op.born && led[0][2] <= op.t0))) {
+          let paid = 0, logs = 0; for (const e of led) { if (e[7] !== op.id) continue; if (e[8] === 'termas' && e[5] === 'moedas') paid += e[6]; if (e[8] === 'fornalha' && e[5] === 'wood') logs += e[6]; }
+          if (Math.abs(paid - (d.receita || 0)) > 0.01) add('oficio', 2, `${nm}: o caixa diz ${d.receita}, as entradas do livro-razão ${Math.round(paid * 100) / 100}`);
+          if (Math.abs(logs - (d.lenha || 0)) > 0.01) add('oficio', 2, `${nm}: ${d.lenha} de lenha queimada, o livro-razão diz ${Math.round(logs * 100) / 100}`);
+        }
+      }
+      for (const v of s.villagers.values()) {
+        const t = v.task; if (!t || t.type !== 'termas' || !(t.st >= 1) || !v.inside) continue;
+        const op = (s.acts || []).find(o => o.id === t.op); if (!op || !LIVE[op.st]) add('oficio', 3, `${v.name} #${v.id}: dentro dos banhos #${t.id} num dia que acabou`);
+      }
+    }
     // the brick of a work: what the foundation took of the stone, and no more
     for (const b of s.buildings.values()) {
       if (!b.brick || b.built || b.type === 'ruin') continue;

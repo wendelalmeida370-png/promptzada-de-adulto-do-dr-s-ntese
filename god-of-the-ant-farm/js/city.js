@@ -704,6 +704,8 @@
     for (const b of S.buildings.values()) if (b.set === v.set && b.built && LEIS[b.type]) for (let k = 0; k < LEIS[b.type]; k++) opts.push(b);
     if (!opts.length) return null;
     const b = G.pick(opts);
+    // (the baths are a service with its day, its entry and its water: act-servicos.js — closed, full or too dear, no bath)
+    if (b.type === 'banhos') return G.Termas ? G.Termas.visit(v, b, H) : null;
     return H.setTask(v, { type: 'citylife', id: b.id, pri: 0.3, st: 0 });
   };
   function runCity(v, t, dt, H) {
@@ -716,12 +718,12 @@
       if (!H.goto(v, tx, ty, false)) return H.end(v);
       t.st = 1; return;
     }
-    if (t.st === 1) { if (H.move(v, dt, 0.85)) { t.st = 2; v.actT = 0; t.dur = G.rr(6, 13); if (b.type === 'teatro' || b.type === 'banhos' || b.type === 'biblioteca') v.inside = b.id; } else if (t.age > 40) H.end(v); return; }
+    if (t.st === 1) { if (H.move(v, dt, 0.85)) { t.st = 2; v.actT = 0; t.dur = G.rr(6, 13); if (b.type === 'teatro' || b.type === 'biblioteca') v.inside = b.id; } else if (t.age > 40) H.end(v); return; }
     if (!v.inside) {
       v.act = b.type === 'praca' || b.type === 'mercado' ? 'talk' : '';
       if (G.R() < dt * 0.3) G.Vg.emote(v, b.type === 'mercado' ? G.pick(['food', 'chat', 'happy']) : G.pick(['chat', 'happy']), 1.4);
     }
-    if (v.actT > t.dur) { if (b.type === 'teatro') v.devotion = Math.min(100, v.devotion + 0.5); if (b.type === 'banhos' && v.sick > 0) v.sick = Math.max(0, v.sick - 20); H.end(v); }
+    if (v.actT > t.dur) { if (b.type === 'teatro') v.devotion = Math.min(100, v.devotion + 0.5); H.end(v); }
   }
 
   Ci.run = function (v, t, dt, H) {
@@ -738,7 +740,7 @@
       case 'citylife': {
         const b = S.buildings.get(t.id); if (!b) return 'Passeando pela cidade';
         const n = G.Village.buildName(b); const o = G.gen(n);
-        return ({ praca: `Conversando n${o} ${n}`, mercado: `Fazendo compras n${o} ${n}`, teatro: `Assistindo a um espetáculo n${o} ${n}`, banhos: `Relaxando n${o} ${n}`, biblioteca: `Lendo n${o} ${n}`, maravilha: `Admirando ${o} ${n}` })[b.type] || 'Passeando pela cidade';
+        return ({ praca: `Conversando n${o} ${n}`, mercado: `Fazendo compras n${o} ${n}`, teatro: `Assistindo a um espetáculo n${o} ${n}`, biblioteca: `Lendo n${o} ${n}`, maravilha: `Admirando ${o} ${n}` })[b.type] || 'Passeando pela cidade';
       }
     }
     return null;

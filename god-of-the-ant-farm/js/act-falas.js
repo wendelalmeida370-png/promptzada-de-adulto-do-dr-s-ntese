@@ -65,6 +65,10 @@
       cheia: ['Está lotado! Volte mais tarde.', 'Não cabe mais ninguém hoje.'],
       fechando: ['Vamos fechar! Todo mundo para casa.', 'Última rodada já foi. Boa noite a todos!'],
       sem_servico: ['Ninguém vem servir... vou embora.', 'Cansei de esperar.'],
+      // the baths (act-servicos.js)
+      banho_quente: ['Ah, a água está quente hoje!', 'Que calor bom nesta água.', 'Isto sim é descanso.'],
+      banho_frio: ['Brr! A água está fria hoje.', 'Sem fogo na fornalha... água gelada.', 'Fria, mas lava do mesmo jeito.'],
+      termas_cheia: ['Está cheio. Volto outra hora.', 'Não cabe mais ninguém na água.'],
     },
     grego: {
       pregao: ['Olha o {bem}! Melhor que o de Corinto!', '{bem} da ágora! Quem vai querer?'],
