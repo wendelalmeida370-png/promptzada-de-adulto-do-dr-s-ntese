@@ -116,9 +116,13 @@ if (fset) {
   if (cf && !cf.built) { askEat(); cf.progress = six; leaveIt(cf); reload(); }
   const lit = live(120, () => { const b = fireOf(); return !!(b && b.built); });
   const food = () => { const f = G.Fac.get(ffac.id); return f ? f.stock.food : 0; };
-  const food0 = food(); live(60); const food1 = food();
-  ok('h4 o povo livre: ninguém escolhe comer num armazém que não existe; a fogueira parada no último golpe (e salva) fica pronta, e comem', !!cf && lit && eatGot === 0 && eatAsked > 0 && food1 < food0 && !hungerDead,
-    `${cf ? 'a fogueira #' + cf.id + ' deixada em ' + six + ', o save carregado: ' + (lit ? 'pronta' : 'não ficou pronta') : 'o planejador não pôs a fogueira'}; sem armazém, ${eatAsked} perguntas de comer a quem tinha fome, ${eatGot} «comer no armazém»; o estoque do povo ${Math.floor(food0)} → ${Math.floor(food1)}; mortes de fome ${hungerDead}`);
+  // (what they ate from the store: its change, less what came in and went out by the ledger — the meal is taken from the
+  // stock by hand, and the gatherers deliver to the fire while the hungry eat: in the cidade of before the 28/10 worlds, a
+  // minute of 11 meals in which 13 of food came in, and the stock went up, T-181)
+  const fRef = 'f:' + ffac.id; let fin = 0, fout = 0; const book = e => { if (e[5] !== 'food') return; if (e[4] === fRef) fin += e[6]; if (e[3] === fRef) fout += e[6]; };
+  D.onMove.push(book); const food0 = food(); live(60); const food1 = food(); D.onMove.splice(D.onMove.indexOf(book), 1); const ate = food0 + fin - fout - food1;
+  ok('h4 o povo livre: ninguém escolhe comer num armazém que não existe; a fogueira parada no último golpe (e salva) fica pronta, e comem', !!cf && lit && eatGot === 0 && eatAsked > 0 && ate > 0.5 && !hungerDead,
+    `${cf ? 'a fogueira #' + cf.id + ' deixada em ' + six + ', o save carregado: ' + (lit ? 'pronta' : 'não ficou pronta') : 'o planejador não pôs a fogueira'}; sem armazém, ${eatAsked} perguntas de comer a quem tinha fome, ${eatGot} «comer no armazém»; o estoque do povo ${Math.floor(food0)} → ${Math.floor(food1)} (pelo livro entrou ${r2(fin)} e saiu ${r2(fout)}: comeram ${r2(ate)}); mortes de fome ${hungerDead}`);
 
   // the god pulls the fire down: no store again — nobody stuck on a meal that cannot be; the fire comes back
   const cf1 = fireOf(); if (cf1) V.destroyBuilding(cf1, 'deus');
