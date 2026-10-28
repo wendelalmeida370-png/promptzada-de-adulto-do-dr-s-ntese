@@ -1,6 +1,7 @@
 // biblioteca-praca: as plantas da biblioteca e da praça (fase E do Patch 2, P4) provadas em Node, sem mundo, sobre o código
 // do jogo (M.load):
-//   1. a biblioteca se arma em todo povo e lado, nas famílias do salão: as estantes de rolos (o inventário do prédio), as mesas
+//   1. a biblioteca de cada povo pela sua forma (D-093), em todo lado: a casca pelo corpo da forma (as paredes, a base maciça,
+//      a porta, as janelas, o pórtico com as colunas, os degraus da rua); as estantes de rolos (o inventário do prédio), as mesas
 //      de leitura — um leitor de cada lado onde nada mais está; três leitores ao menos —, a mesa do escriba do copista; um
 //      lugar livre para ler, escrever e guardar (o G.Biblioteca do P2 pergunta ao repartidor)
 //   2. a praça de cada povo pela sua forma (D-093: o deus e o 3D desenham a forma, a planta põe nela a função): casca aberta, no
@@ -33,11 +34,29 @@ const free = (m, uses) => uses.filter(u => !In.freePlace(m.b, u));
 {
   const L = made.filter(m => m.t === 'biblioteca'); const bad = L.filter(m => !m.p.ok);
   const per = POVOS.map(c => `${c} ${(L.find(m => m.c === c) || { nfam: 0 }).nfam}`).join(', ');
-  ok('1a a biblioteca se arma em todo povo e lado, nas famílias do salão', L.length && !bad.length && POVOS.every(c => L.some(m => m.c === c)), `${L.length - bad.length} de ${L.length} plantas; famílias por povo: ${per}${bad.length ? '; ' + bad.slice(0, 2).map(m => `${m.c} ${m.f}: ${m.p.errs.slice(0, 2).join(' | ')}`).join(' / ') : ''}`);
+  ok('1a a biblioteca se arma em todo povo e lado, pela forma', L.length && !bad.length && POVOS.every(c => L.some(m => m.c === c)), `${L.length - bad.length} de ${L.length} plantas; famílias por povo: ${per}${bad.length ? '; ' + bad.slice(0, 2).map(m => `${m.c} ${m.f}: ${m.p.errs.slice(0, 2).join(' | ')}`).join(' / ') : ''}`);
   // (two tables at least, each with a reader at least — a reader on either side where nothing else stands —, three readers in all)
   const short = L.filter(m => m.p.ok).map(m => { const n = k => m.p.items.filter(i => i.kind === k).length; const T = m.p.items.filter(i => i.kind === 'mesa-leitura'); const rd = T.map(i => i.spots.filter(q => q.use === 'ler').length); return n('estante') >= 2 && T.length >= 2 && n('mesa-escriba') >= 1 && rd.every(x => x >= 1) && rd.reduce((a, x) => a + x, 0) >= 3 ? null : `${m.c} ${m.f}: estantes ${n('estante')}, mesas ${T.length} (leitores ${rd.join('+')}), escriba ${n('mesa-escriba')}`; }).filter(Boolean);
   const miss = L.filter(m => m.p.ok).map(m => { const x = free(m, ['ler', 'escrever', 'guardar']); return x.length ? `${m.c} ${m.s}: sem ${x.join(', ')}` : null; }).filter(Boolean);
   ok('1b as estantes, as mesas de leitura (três leitores ao menos) e a mesa do escriba; um lugar livre para ler, escrever e guardar', !short.length && !miss.length, short.concat(miss).slice(0, 3).join(' / ') || `${L.length} plantas`);
+  // (the shell from the form's body, D-093: the walls at the form's foot, the floor on the solid base at the form's height, the
+  // door where the form has it, a window for each of its panes, the porch an annex with the form's columns — the way in
+  // through the gap nearest the door —, the form's steps from the street; the hall reached from the street)
+  const body = [];
+  for (const m of L.filter(q => q.p.ok)) {
+    const p = m.p; const B = G.Forma.body(G.Forma.of('biblioteca', m.c)); const Lw = p.lot.w; const R = r => { const a = In.toLoc(m.s, Lw, r[0], r[1]), b = In.toLoc(m.s, Lw, r[2], r[3]); return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])]; };
+    const same = (a, b) => a.every((x, k) => Math.abs(x - b[k]) < 0.02); const why = [];
+    if (!same(p.shell.r, R(B.r))) why.push('as paredes fora do pé da forma');
+    if (p.shell.base !== 'macica' || Math.abs(p.shell.baseH - B.y0) > 0.01 || Math.abs(p.levels[0].y - B.y0) > 0.01) why.push(`o piso a ${p.levels[0].y} (a forma ${B.y0})`);
+    const wins = p.holes.filter(h => h.kind === 'janela').length; if (wins !== B.janelas.length) why.push(`${wins} janelas (a forma ${B.janelas.length})`);
+    if (B.portico) { const an = (p.shell.annex || [])[0]; const col = p.walls.find(w => w.kind === 'colunata'); if (!an || !same(an.r, R(B.portico.r)) || !col || p.doors.filter(d => d.wall === col.id).length !== B.portico.colunas.length - 1) why.push('o pórtico ou as colunas fora da forma'); }
+    const st = p.stairs.find(q => q.kind === 'degraus'); if (B.degraus.length && !st) why.push('sem os degraus da forma');
+    const e = p.entrance; const g = p.reach && p.reach[0]; const hall = p.rooms.find(q => q.fn === 'salao'); const n = p.grid.n, cs = p.grid.cs; let got = 0;
+    if (g && hall) for (let z = 0; z < n && !got; z++) for (let x = 0; x < n; x++) if (g[z * n + x] && (x + 0.5) * cs > hall.r[0] && (x + 0.5) * cs < hall.r[2] && (z + 0.5) * cs > hall.r[1] && (z + 0.5) * cs < hall.r[3]) { got = 1; break; }
+    if (!e || !got) why.push('o salão que a rua não alcança');
+    if (why.length) body.push(`${m.c} ${m.s}: ${why.join(', ')}`);
+  }
+  ok('1c a casca pelo corpo da forma (D-093): as paredes, a base maciça, a porta, as janelas, o pórtico e as colunas, os degraus; da rua ao salão', L.length && !body.length, body.slice(0, 3).join(' / ') || `${L.length} plantas nos seis povos`);
 }
 // ---------------------------------------------------------------- 2. the square, by its form (D-093)
 {

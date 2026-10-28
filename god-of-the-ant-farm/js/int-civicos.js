@@ -199,6 +199,53 @@
   }
   W.add('biblioteca', { use: 'biblioteca', H: ['salao', 'frente', 'naves', 'patio'], V: ['terreo', 'galeria', 'andar'], open: 1, lockNight: 1, need: { estante: 2, 'mesa-leitura': 2 }, door: [1.1, 1.5], furnish: libraryFurnish });
 
+  // ------------------------------ a building of the town by its form (P4, D-093) ------------------------------
+  // the shell of a type whose form has a body (G.Forma.body — the library today), as the god and the 3D draw it: the hall's
+  // walls at the form's foot (the people's thickness, inside it), its floor on the solid base (base 'macica', the floor's
+  // height), the eaves, the door and the windows where the form has them; the porch before the door an annex open at its sides,
+  // the form's columns across its front (P.colonnade: the gap nearest the door the street's way in); the form's steps from the
+  // street up to the base, one flight. Nothing of the shell drawn by chance: it is the form's. The inside, the type's own
+  // furnishing in the hall
+  const FORM_FURNISH = { biblioteca: libraryFurnish };
+  const r2 = x => Math.round(x * 100) / 100;
+  function formHall(P) {
+    const rec = P.rec, tr = P.tr; const F = G.Forma && G.Forma.of(rec.t, rec.c); const B = F && G.Forma.body(F); if (!B) { P.errs.push('a forma do prédio sem corpo'); return; }
+    const t = Math.min(tr.t || 0.3, 0.35), c = t / 2; const sh = B.r.slice(); const y0 = B.y0, h0 = B.y1 - B.y0;
+    P.shell = { kind: 'rect', r: sh, t, mat: B.tabuas ? 'tabua' : tr.mat, base: 'macica', baseH: y0, floors: 1, eave: B.y1 };
+    const T = B.telhado; P.roof = { kind: T.tipo, along: T.ao || null, h: r2(T.y1 - T.y0), over: T.ov || 0 }; P.roofGeo = { kind: T.tipo, along: T.ao || null, eave: T.y0, rise: T.y1 - T.y0, R: T.r.slice() };
+    const I = P.inner(); P.level(0, y0, h0, 'piso', I); P.entryLv = 0;
+    P.outer = P.walls4(0, [sh[0] + c, sh[1] + c, sh[2] - c, sh[3] - c], t, h0, 1, 'parede'); P.outers = [P.outer];
+    // (the door on the front face where the form has it — the street's, where no porch stands before it)
+    const fw = P.outer.frente, porch = B.portico;
+    const d0 = P.door(fw, P.atOf(fw, [B.porta.u, sh[3] - c]), B.porta.w, Math.min(h0 - 0.1, B.porta.y1 - B.porta.y0), -1, porch ? -1 : 'rua', porch ? 0 : 1, 'porta');
+    // (the windows: each pane on its face, along it as the form has it, its sill over the floor)
+    for (const j of B.janelas) {
+      const id = P.outer[j.na]; if (id === undefined) continue; const m = (j.de + j.ate) / 2;
+      const p = j.na === 'frente' ? [m, sh[3] - c] : j.na === 'fundo' ? [m, sh[1] + c] : j.na === 'direita' ? [sh[2] - c, m] : [sh[0] + c, m];
+      P.window(id, P.atOf(id, p), j.ate - j.de, j.y1 - j.y0, j.y0 - y0);
+    }
+    let entry = { door: d0, u: B.porta.u, w: B.porta.w, v: sh[3] };
+    if (porch) {
+      P.annex.push({ r: porch.r.slice(), h: porch.y1 - y0, fn: 'portico', lv: 0, roof: 'portico' });
+      // (the colonnade right to left, as a front wall runs: its openings numbered from its start)
+      const cols = porch.colunas.slice().sort((a, b) => a.c[0] - b.c[0]); const n = cols.length, vc = cols[0].c[1];
+      const gaps = []; for (let k = 0; k < n - 1; k++) gaps.push((cols[k].c[0] + cols[k + 1].c[0]) / 2);
+      let kn = 0; for (let k = 1; k < gaps.length; k++) if (Math.abs(gaps[k] - B.porta.u) < Math.abs(gaps[kn] - B.porta.u)) kn = k;
+      const C = P.colonnade(0, [cols[n - 1].c[0], vc], [cols[0].c[0], vc], { n, col: 2 * cols[0].r, h: porch.y1 - y0, outer: 1, door: n - 2 - kn, rua: true });
+      entry = { door: C.door, u: gaps[kn], w: P.doors[C.door].w, v: porch.r[3] };
+    }
+    P.entrance = { door: entry.door, u: entry.u, v: entry.v, w: entry.w, lv: 0 };
+    // (the steps of the form, from the street up to the base)
+    if (B.degraus.length) { let r = B.degraus[0].r.slice(); for (const q of B.degraus) r = [Math.min(r[0], q.r[0]), Math.min(r[1], q.r[1]), Math.max(r[2], q.r[2]), Math.max(r[3], q.r[3])]; P.stair('degraus', -1, 0, r, 0, -1, null, { larga: r[2] - r[0] >= 1.2 ? 1 : 0 }); }
+    if (P.inside()) return;
+    const rooms = { main: P.room(0, 'salao', I), front: undefined, cells: [], court: null, all: [] }; rooms.all.push(rooms.main);
+    if (porch) { rooms.porch = P.room(0, 'portico', porch.r, 1); rooms.all.push(rooms.porch); }
+    P._rooms = rooms; FORM_FURNISH[rec.t](P, rooms);
+  }
+  // (the family: the form's, the only one of a type it draws — every people has the form, its own or the classic one)
+  In.addFamilies([{ id: 'forma.salao', H: 'forma', V: 'salao', S: 'forma.salao', name: 'Pela forma', can: rec => (G.Forma && G.Forma.of(rec.t, rec.c) && G.Forma.body(G.Forma.of(rec.t, rec.c)) ? null : 'o prédio sem a forma de um corpo'), build: P => formHall(P) }]);
+  for (const t in FORM_FURNISH) In.addTypes({ [t]: Object.assign({}, In.TYPES[t], { fams: ['forma.salao'] }) });
+
   // ------------------------------ the square (P4, phase E) ------------------------------
   // the town's open ground — it blocks nothing: the world walks across it —, its shell 'aberta' (no walls, no roof, on the
   // ground: Space.BASELESS), as the god draws it: the fountain in the middle (where one drinks), a bench on either side of it,
