@@ -373,6 +373,8 @@ function quayGone(name, act, why) {
   fresh();
   const o = underWay(); const c0 = cratesOn(o), h0 = heldOf(o);
   const L0 = S.ledgerN; const at = o.at;
+  // (its own books at the blow: what goes in or out of its keeping before the overseer's next look is in them)
+  const b0 = {}; for (const f of ['taken', 'done', 'lost', 'back']) b0[f] = Object.assign({}, o[f] || {});
   const what = act(o);
   const car = carrierOf(o); const carK = car ? car.carry.k : null, carN = car ? car.carry.n : 0;
   const ended = live(3, () => !A.live(o));
@@ -382,7 +384,13 @@ function quayGone(name, act, why) {
   // then, and the one he took goes on in his hands, counted in op.left — in an older world a porter of the town took one,
   // and the ground got 6 of the 10, T-099)
   const liftedN = r2(D.ledger().filter(e => e[0] > L0 && e[8] === 'pegar' && e[3] === 'q:' + at).reduce((a, e) => a + e[6], 0));
-  const left = o.left || {}; const leftOk = Object.keys(h0).every(k => Math.abs((left[k] || 0) - h0[k]) < 0.01);
+  // (what it still held at its end is what it held at the blow, and what came into its keeping since, less what went out of
+  // it — into the store, lost, back —: the quay goes at the blow, the unloading at the overseer's next look, and in that
+  // second a porter at the store's door put his crate in: the 2 of salt Djoser delivered, counted in op.done and not in
+  // op.left, T-176)
+  const moved = k => { const d = f => ((o[f] || {})[k] || 0) - (b0[f][k] || 0); return r2(d('taken') - d('done') - d('lost') - d('back')); };
+  const left = o.left || {}; const leftOk = Object.keys(Object.assign({}, h0, left)).every(k => Math.abs((left[k] || 0) - ((h0[k] || 0) + moved(k))) < 0.01);
+  const since = Object.keys(Object.assign({}, h0, left)).filter(k => Math.abs(moved(k)) > 0.01).map(k => `${moved(k) > 0 ? '+' : ''}${moved(k)} de ${E.name(k)}`).join(', ');
   // (the porter's crate, a plain load now: to a store of his people, in the ledger)
   const gone = car && live(90, () => watch() || !S.villagers.has(car.id) || !(car.carry && car.carry.k === carK && car.carry.n > 1e-6));
   const del = car ? D.ledger().filter(e => e[0] > L0 && e[3] === 'v:' + car.id && e[5] === carK) : [];
@@ -391,7 +399,7 @@ function quayGone(name, act, why) {
   live(3); const pb = placeBad();
   const fellOk = why === 'o cais mudou de dono' ? fellN === 0 : Math.abs(fellN + liftedN - c0) < 0.01;
   ok(name, ended && o.end && o.end.why === why && fellOk && leftOk && closes(o) && (!car || (gone && del.length >= 1)) && !pb.length && !bad().length,
-    `${what}: a descarga ${ended ? `terminou (${A.STATES[o.st]}: ${o.end && o.end.why})` : 'NÃO terminou'}; ${c0} de sal no cais${why === 'o cais mudou de dono' ? (fellN ? `, e ${fellN} foram ao chão (NÃO deviam)` : ' ficaram nele, livres para a próxima descarga') : `, ${fellN} foram ao chão pelo livro (ruina)${liftedN ? ` e ${liftedN} um estivador levantou do cais caído antes de o capataz ver` : ''}`}; o que ela ainda tinha ${JSON.stringify(h0)} → op.left ${JSON.stringify(left)}${leftOk ? '' : ' (NÃO BATE)'}; as contas ${closes(o) ? 'fecham' : 'NÃO fecham'}; ${car ? `a caixa nas mãos de ${car.name} (${r2(carN)} de ${carK}): ${del.length ? del.map(e => `${e[8]} ${e[6]} para ${e[4]}`).join(', ') : 'NÃO saiu das mãos'}` : 'ninguém com caixa nas mãos'}${pb.length ? '; o verificador: ' + pb[0].msg : ''}`);
+    `${what}: a descarga ${ended ? `terminou (${A.STATES[o.st]}: ${o.end && o.end.why})` : 'NÃO terminou'}; ${c0} de sal no cais${why === 'o cais mudou de dono' ? (fellN ? `, e ${fellN} foram ao chão (NÃO deviam)` : ' ficaram nele, livres para a próxima descarga') : `, ${fellN} foram ao chão pelo livro (ruina)${liftedN ? ` e ${liftedN} um estivador levantou do cais caído antes de o capataz ver` : ''}`}; o que ela ainda tinha ${JSON.stringify(h0)}${since ? ` (e, no segundo até o capataz ver, ${since} pelos livros dela)` : ''} → op.left ${JSON.stringify(left)}${leftOk ? '' : ' (NÃO BATE)'}; as contas ${closes(o) ? 'fecham' : 'NÃO fecham'}; ${car ? `a caixa nas mãos de ${car.name} (${r2(carN)} de ${carK}): ${del.length ? del.map(e => `${e[8]} ${e[6]} para ${e[4]}`).join(', ') : 'NÃO saiu das mãos'}` : 'ninguém com caixa nas mãos'}${pb.length ? '; o verificador: ' + pb[0].msg : ''}`);
   return { o, free };
 }
 quayGone('p13 o cais cai no meio da descarga', () => { G.Village.destroyBuilding(dock, 'quake'); return `o cais de ${set.name} caiu (terremoto)`; }, 'o cais acabou');
