@@ -1,5 +1,7 @@
 # A Fundação de Gameplay e os Interiores Vivos (v37): o diagnóstico e o plano
 
+> O resultado, para quem não programa: `RELATORIO_FUNDACAO.md`.
+
 O pedido do dono (19/10) tem dois pilares e um adendo:
 - **a Fundação de Gameplay:** atividades reutilizáveis, completas e causais;
 - **os Interiores Vivos:** prédios com dentro, coerentes, variados, funcionais e persistentes;

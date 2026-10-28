@@ -224,7 +224,9 @@
     if (v.expCD && G.S.day - v.expCD < 3) return false;
     return true;
   }
-  function pool(f, x, y, R, o) { const out = []; for (const v of G.S.villagers.values()) if (free(v, f, o) && G.dist2(v.x, v.y, x, y) < R * R) out.push(v); return out; }
+  // (who can walk to the quay — the land by the mooring, where the crew waits: the mooring is on the water —: one of another
+  // island near it by the map is no crew of a voyage from there, L-346)
+  function pool(f, x, y, R, o, at) { const q = at || [x, y]; const out = []; for (const v of G.S.villagers.values()) if (free(v, f, o) && G.dist2(v.x, v.y, x, y) < R * R && W.reaches(v, q[0], q[1])) out.push(v); return out; }
   const adventurous = v => ((v.traits || []).includes('Curioso') ? 0.35 : 0) + ((v.traits || []).includes('Corajoso') ? 0.25 : 0) + v.courage * 0.4 - ((v.traits || []).includes('Medroso') ? 0.4 : 0) + (v.voyages || 0) * 0.15 - (v.partner && (v.kids || []).length ? 0.15 : 0);
   // the person of means who pays for a voyage, hoping it pays back
   function patron(f, x, y) {
@@ -297,7 +299,7 @@
     const S = G.S; o = o || {}; const docks = home(f); if (!docks.length) return null;
     const dock = docks.sort((a, b) => G.dist(a.x, a.y, c.x, c.y) - G.dist(b.x, b.y, c.x, c.y))[0];
     const di = Nv.dockInfo(dock); const from = S.settlements.get(dock.set); if (!from || !di.moor) return null;
-    const cands = pool(f, di.moor[0], di.moor[1], 55);
+    const cands = pool(f, di.moor[0], di.moor[1], 55, null, di.quay);
     if (!cands.length) return null;
     const e = { id: S.nextId++, fac: f.id, civ: f.civ, kind: c.k === 'busca' ? 'busca' : 'exploracao', scale, st: 'prep', t: 0, day0: S.day, from: from.id, fromName: from.name, dock: dock.id, port: di.quay ? di.quay.slice() : di.moor.slice(), moor: di.moor.slice(),
       obj: { k: c.k, why: c.why, rumor: c.rumor || 0, key: c.key === undefined ? null : c.key, x: c.x, y: c.y, a: c.a, txt: c.txt || '' }, crew: [], roles: { sold: [], work: [], col: [] }, ships: [], flag: 0,
@@ -327,9 +329,9 @@
       const pop = G.Fac.pop(f.id); const n = clamp(Math.round(14 + pop * 0.09 + (o.ef ? o.ef.exp * 10 : 0)), 14, 70);
       const nShips = clamp(Math.ceil(n / 14), 2, 5);
       // a cartographer (a scribe, a curious elder), a naturalist (a priest, someone who knows the beasts)
-      const cart = pool(f, di.moor[0], di.moor[1], 60, { maxAge: 66 }).filter(v => !e.crew.includes(v.id)).sort((a, b) => ((b.role === 'escriba') * 3 + (b.traits || []).includes('Curioso') * 2 + b.age / 40) - ((a.role === 'escriba') * 3 + (a.traits || []).includes('Curioso') * 2 + a.age / 40))[0];
+      const cart = pool(f, di.moor[0], di.moor[1], 60, { maxAge: 66 }, di.quay).filter(v => !e.crew.includes(v.id)).sort((a, b) => ((b.role === 'escriba') * 3 + (b.traits || []).includes('Curioso') * 2 + b.age / 40) - ((a.role === 'escriba') * 3 + (a.traits || []).includes('Curioso') * 2 + a.age / 40))[0];
       if (cart) { e.roles.cart = cart.id; e.crew.push(cart.id); }
-      const nat = pool(f, di.moor[0], di.moor[1], 60, { maxAge: 64 }).filter(v => !e.crew.includes(v.id)).sort((a, b) => ((b.role === 'sacerdote') * 2 + (b.role === 'cacador') * 2 + (b.traits || []).includes('Curioso') * 2) - ((a.role === 'sacerdote') * 2 + (a.role === 'cacador') * 2 + (a.traits || []).includes('Curioso') * 2))[0];
+      const nat = pool(f, di.moor[0], di.moor[1], 60, { maxAge: 64 }, di.quay).filter(v => !e.crew.includes(v.id)).sort((a, b) => ((b.role === 'sacerdote') * 2 + (b.role === 'cacador') * 2 + (b.traits || []).includes('Curioso') * 2) - ((a.role === 'sacerdote') * 2 + (a.role === 'cacador') * 2 + (a.traits || []).includes('Curioso') * 2))[0];
       if (nat) { e.roles.nat = nat.id; e.crew.push(nat.id); }
       const sold = take(cands.filter(v => v.role === 'guerreiro'), Math.round(n * 0.2)); e.roles.sold = sold.map(v => v.id);
       const work = take(cands.filter(v => v.role === 'construtor' || v.role === 'lenhador'), Math.round(n * 0.1)); e.roles.work = work.map(v => v.id);
@@ -448,6 +450,14 @@
     // nobody left: the sea keeps the story (the people at home will wait, and then they will know)
     if (!crew.length) { if (['prep', 'reunir', 'embarque'].includes(e.st)) finish(e, 'cancelada', `Não sobrou ninguém para ${e.name}.`); else lostAll(e); return; }
     if (!ensureLeader(e) && e.st !== 'prep') { lostAll(e); return; }
+    // (on the quay only who can walk to it: one of another island in the crew — taken by a plan of before L-346, or cut off by
+    // the map since — is let go at once, as whoever never came; the leader so cut off, the voyage does not sail)
+    if ((e.st === 'prep' || e.st === 'reunir' || e.st === 'embarque') && e.port) {
+      const off = crew.filter(v => !v.aboard && !W.reaches(v, e.port[0], e.port[1]));
+      if (off.some(v => v.id === e.leader)) return finish(e, 'cancelada', `${e.leaderName} não chega a pé ao cais de ${e.fromName}: ${e.name} não sai.`);
+      for (const v of off) { G.Vg.endTask(v); e.crew = e.crew.filter(id => id !== v.id); crew.splice(crew.indexOf(v), 1); }
+      if (!crew.length) return finish(e, 'cancelada', `Não sobrou ninguém para ${e.name}.`);
+    }
     if (flag && Nv.atSea(flag)) { if (!e.track.length || G.dist2(e.track[e.track.length - 1][0], e.track[e.track.length - 1][1], flag.x, flag.y) > 9) { e.track.push([+flag.x.toFixed(1), +flag.y.toFixed(1)]); if (e.track.length > 160) e.track.splice(1, 1); } e.lastX = flag.x; e.lastY = flag.y; }
     switch (e.st) {
       case 'prep': prepTick(e, f, crew, ships); break;
@@ -524,7 +534,9 @@
       // (someone saying goodbye in a scene of their own is waited for: the ship does not leave in the middle of an embrace)
       const inScene = v => !!(G.Scene && G.Scene.actorScene(v));
       for (const v of left.filter(q => !inScene(q)).slice(0, 2)) {
-        if (G.dist(v.x, v.y, e.port[0], e.port[1]) > 3.5 && e.t < 40) continue;
+        // (after a while, whoever is a step or two off on the quay's own ground too — never one boarded from far away: Solveig,
+        // of Birka, crew of a voyage from Ribe's quay, was put aboard from 50 casas off, across the water, L-346)
+        const d = G.dist(v.x, v.y, e.port[0], e.port[1]); if (d > 3.5 && !(e.t >= 40 && d <= 8 && W.reaches(v, e.port[0], e.port[1]))) continue;
         const s = berth(e, v, ships); if (!s) continue;
         Nv.board(v, s); v.gear = null;
         G.FX && G.FX.splash(s.x, s.y, 0.2);

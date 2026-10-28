@@ -334,7 +334,14 @@
     const S = S_(); const op = A.get(t.op); const dock = S.buildings.get(t.dock);
     if (!op || !live(op)) { if (v.carry && v.carry.op === t.op) v.carry.op = 0; return H.end(v); }
     // (carrying a crate, the porter finishes the trip before sleeping)
-    if (v.carry && v.carry.op === op.id) t.pri = Math.max(t.pri, 1.6);
+    if (v.carry && v.carry.op === op.id) t.pri = Math.max(t.pri, P.CARRY);
+    // (a heavy crate whose second pair of hands is no longer under it — called away, taken, gone —: it goes down where it is,
+    // by its rule, as when the two are pulled apart; one pair of hands does not carry what takes two. It went on in the arms
+    // of the one who leads, with the helper's name on it and nobody there: L-330)
+    if (t.st >= 2 && v.carry && v.carry.op === op.id && v.carry.pair && !under(v, S)) {
+      if (D.hands(v.carry.k, v.carry.n, v) !== 1) { drop(op, v, 'sem ajuda'); return H.end(v); }
+      v.carry.pair = 0;
+    }
     if (t.st === 0) {
       if (v.carry && v.carry.op === op.id) { t.st = 2; return; }
       if (op.st === 'wait') return H.end(v);
@@ -361,7 +368,7 @@
       const room = D.room('v:' + v.id, s.k, { op: op.id, cid: s.cid, pair: t.pair });
       const r = D.move(s.ref, 'v:' + v.id, s.k, Math.min(s.n, room), { op: op.id, cid: s.cid, code: 'pegar', by: v.id, pair: t.pair, key: liftKey(s.obj, v) });
       if (!r.ok || !lifted(v, op, r)) { s.obj.by = 0; return H.end(v); }
-      if (t.pair && t.helper) { const hp = S.villagers.get(t.helper); if (hp && hp.task && hp.task.type === 'ajudar') { hp.task.st = 2; v.carry.pair = hp.id; } }
+      if (t.pair && t.helper) { const hp = S.villagers.get(t.helper); if (hp && hp.task && hp.task.type === 'ajudar') { hp.task.st = 2; hp.task.pri = Math.max(hp.task.pri || 0, P.CARRY); v.carry.pair = hp.id; } }
       const rest = srcOf(op, t); if (rest) rest.obj.by = 0; // (a part of it taken: the rest waits for the next hand)
       t.st = 2; t.wk = null; v.act = ''; return;
     }
@@ -413,6 +420,12 @@
   // tile, a metre — within the reach of both pairs of arms (the 3D draws the lead's crate between the two up to 1,2 m apart,
   // and on his chest farther than that), L-200
   P.PAIR_GAP = 0.25;
+  // a crate in the arms is a promise kept to its end — the one who leads it and the one under its other end alike: the
+  // day's work, the night, a chat, a cave do not take them from it (and an errand from outside waits for both: the hands
+  // under a crate are busy hands, villagers.js); hunger at its worst, a call to arms, a fire, a panic do (L-330)
+  P.CARRY = 1.6;
+  // (the second pair of hands still under the crate: the helper's errand, carrying, with this one as its lead)
+  function under(v, S) { const c = v.carry; const hp = c && c.pair && S.villagers.get(c.pair); const t = hp && hp.task; return !!(t && t.type === 'ajudar' && t.lead === v.id && t.st === 2); }
   // (where the helper stands to lift: PAIR_GAP from the one who leads, on the side away from the store — of sixteen
   // bearings, the one on ground one walks that is most behind him)
   function pairSpot(lead, op) {
@@ -428,16 +441,29 @@
   // carrying together, the crate ties the two: each step of the one who leads draws the helper after him, PAIR_GAP behind,
   // on the line between them (a rope's way: never past him, never a step and a stop). It is done in the lead's own step,
   // after his feet, so the two end every step of the world a crate's length apart, whichever of them lives first in it. A
-  // corner the rope would cut through a wall: his own track, a crate's length back; and if that is no ground either, the
-  // helper waits a step. The helper walked after him on his own, closing in only past 0,7 of a tile and stopping at 0,6:
-  // nearly three metres apart in the 3D, and no crate reached both pairs of hands (L-200)
+  // corner the rope would cut through a wall: his own track, a crate's length back; and if that is no ground either — the
+  // corner of a house, both points on it —, of sixteen bearings a crate's length from him and not ahead of his step, the
+  // ground nearest where the helper stands (there the helper used to wait a step: 0,38 of a tile apart and standing while
+  // he walked, by the harbour warehouse of Mênfis, L-332); only with none of them ground does the helper wait. The helper
+  // walked after him on his own, closing in only past 0,7 of a tile and stopping at 0,6: nearly three metres apart in the
+  // 3D, and no crate reached both pairs of hands (L-200)
   function tow(v) {
     const S = S_(); const c = v.carry; const hp = c && c.pair && S.villagers.get(c.pair); const t = hp && hp.task;
     if (!t || t.type !== 'ajudar' || t.lead !== v.id || t.st !== 2 || A.isBody(hp)) return;
     const dx = hp.x - v.x, dy = hp.y - v.y, d = Math.hypot(dx, dy);
     let x = v.x, y = v.y, on = false;
     if (d > 1e-6) { x = v.x + dx / d * P.PAIR_GAP; y = v.y + dy / d * P.PAIR_GAP; on = G.W.walkableXY(x, y); }
-    if (!on) { const f = Math.hypot(v.fx || 0, v.fy || 0); if (!(f > 1e-6)) return; x = v.x - v.fx / f * P.PAIR_GAP; y = v.y - v.fy / f * P.PAIR_GAP; if (!G.W.walkableXY(x, y)) return; }
+    const f = Math.hypot(v.fx || 0, v.fy || 0); const ux = f > 1e-6 ? v.fx / f : 0, uy = f > 1e-6 ? v.fy / f : 0;
+    if (!on && f > 1e-6) { x = v.x - ux * P.PAIR_GAP; y = v.y - uy * P.PAIR_GAP; on = G.W.walkableXY(x, y); }
+    if (!on) {
+      let bd = Infinity;
+      for (let k = 0; k < 16; k++) {
+        const a = k * Math.PI / 8, cx = Math.cos(a), cy = Math.sin(a); if (cx * ux + cy * uy > 0) continue;
+        const px = v.x + cx * P.PAIR_GAP, py = v.y + cy * P.PAIR_GAP; if (!G.W.walkableXY(px, py)) continue;
+        const dd = G.dist2(px, py, hp.x, hp.y); if (dd < bd) { bd = dd; x = px; y = py; on = true; }
+      }
+    }
+    if (!on) return;
     const s = G.dist(hp.x, hp.y, x, y); hp.x = x; hp.y = y; hp.walkPh += s * 8.5; G.faceTo(hp, v.x - x, v.y - y);
   }
   // the second pair of hands under a heavy crate: to its place by the crate, then carried along by the steps of the one who
@@ -457,6 +483,7 @@
     }
     // carrying together (one load, his: nothing counted twice): his steps carry this one along; here, the hands and the eyes
     if (!lead.carry || lead.carry.pair !== v.id) return H.end(v);
+    t.pri = Math.max(t.pri, P.CARRY);
     v.act = AN.carregarDois.act || 'carry2'; G.faceTo(v, lead.x - v.x, lead.y - v.y);
     if (G.dist(v.x, v.y, lead.x, lead.y) > 3) { drop(op, lead, 'sem ajuda'); return H.end(v); }
   }
@@ -554,7 +581,8 @@
     return oldRun(v, t, dt, H);
   };
   P.run = runDescarga;
-  G.Act.pair = function (v) { const S = S_(); if (!v) return null; if (v.carry && v.carry.pair) return { lead: v.id, help: v.carry.pair, cid: v.carry.cid || 0, side: 'frente' }; if (v.task && v.task.type === 'ajudar' && v.task.st === 2) { const l = S.villagers.get(v.task.lead); if (l && l.carry && l.carry.pair === v.id) return { lead: l.id, help: v.id, cid: l.carry.cid || 0, side: 'tras' }; } return null; };
+  // (two under one crate when both say so: the lead's crate names the helper, and the helper's errand is carrying it with him)
+  G.Act.pair = function (v) { const S = S_(); if (!v) return null; if (v.carry && v.carry.pair) return under(v, S) ? { lead: v.id, help: v.carry.pair, cid: v.carry.cid || 0, side: 'frente' } : null; if (v.task && v.task.type === 'ajudar' && v.task.st === 2) { const l = S.villagers.get(v.task.lead); if (l && l.carry && l.carry.pair === v.id) return { lead: l.id, help: v.id, cid: l.carry.cid || 0, side: 'tras' }; } return null; };
 
   // ------------------------------ things on the ground, drawn (the god's view; the 3D draws them from G.Depot.items) ------------------------------
   G.renderHooks = G.renderHooks || { ground: [], ents: [] };

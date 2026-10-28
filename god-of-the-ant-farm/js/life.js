@@ -270,8 +270,26 @@
     }
     return null;
   }
+  // the one door out of the hands for the water (L-300): the jar into the house it was for (the house has water, the hands
+  // are free) or, with no house to take it, poured out — in the ledger, as at a death
+  L.jarHome = function (v, h) {
+    const c = v.carry; if (!c || c.k !== 'water') return false;
+    if (h) { h.water = 1; v.carry = null; return true; }
+    G.Depot.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true }); return true;
+  };
+  // the jar on its way home, in a save: the hands are saved and the errand is not — whoever held the house's jar takes the
+  // way home again once the world is open (the way found in the first step, st 6), as the live world would have gone on
+  G.saveHooks.push({ save() { }, load() {
+    const S = G.S;
+    for (const v of S.villagers.values()) {
+      const c = v.carry; if (!c || c.k !== 'water' || !c.jar || v.task) continue;
+      const h = S.buildings.get(v.home); if (!h || !h.built || h.type === 'ruin') continue;
+      G.Vg.setTask(v, { type: 'water', home: h.id, pri: 1.05, st: 6, kind: 'water' });
+    }
+  } });
   function runWater(v, t, dt, H) {
-    const S = G.S; const h = S.buildings.get(t.home); if (!h || !h.built) return H.end(v);
+    const S = G.S; const h = S.buildings.get(t.home); if (!h || !h.built) { L.jarHome(v, null); return H.end(v); }
+    if (t.st === 6) { if (!G.Vg.gotoB(v, h)) { L.jarHome(v, null); return H.end(v); } t.st = 3; return; }
     if (t.st === 0) {
       const src = waterSource(v); if (!src) { h.waterTry = S.clock; return H.end(v); }
       t.src = src; t.st = src.well ? 1 : 5;
@@ -292,10 +310,10 @@
       if (G.R() < dt * 1.5) G.FX && G.FX.splash(v.x + 0.2, v.y - 0.2, 0.2);
       if (v.actT < (v._q && L.queueLen(v._q) > 1 ? 1.1 : 1.8)) return;
       L.leaveQueue(v); v.carry = { k: 'water', n: 1, jar: 1 }; v.act = '';
-      if (!G.Vg.gotoB(v, h)) { v.carry = null; return H.end(v); }
+      if (!G.Vg.gotoB(v, h)) { L.jarHome(v, null); return H.end(v); }
       t.st = 3; return;
     }
-    if (t.st === 3) { if (!H.move(v, dt, 0.9)) return; h.water = 1; v.carry = null; G.Vg.emote(v, 'happy', 1); H.end(v); }
+    if (t.st === 3) { if (!H.move(v, dt, 0.9)) return; L.jarHome(v, h); G.Vg.emote(v, 'happy', 1); H.end(v); }
   }
 
   // ============================== family evenings ==============================

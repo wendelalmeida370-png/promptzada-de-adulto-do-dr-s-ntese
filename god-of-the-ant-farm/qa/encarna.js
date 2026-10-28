@@ -191,9 +191,14 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const f0 = far && { id: far.id, x: far.x, y: far.y, age: far.age };
     const t0 = { day: S.day, clock: S.clock, births: S.stats.births || 0, deaths: S.stats.deaths || 0, logN: S.logN, built: [...S.buildings.values()].filter(b => b.built).length };
     let farNews = 0; const hook = (e) => { if (Number.isFinite(e.x) && G.dist(e.x, e.y, v.x, v.y) > 30) farNews++; }; G.Possess.onLog.push(hook);
-    v.energy = 5; G.Possess.sleep(v); const slept = v.sleeping;
-    // (a tired body sleeps; whenever it wakes it is put back to bed: the nights pass quickly, as they do for the player)
-    for (let k = 0; k < 600; k++) { if (!v.sleeping) { v.energy = 5; G.Possess.sleep(v); } G.Main.frameFor(100); }
+    // (the world's pace with the body awake first — 30 frames, standing —, then asleep: a tired body sleeps, and whenever it wakes
+    // — by day, rested, as anyone of the world: L-341 — it is put back to bed. The two paces, frame by frame: the main loop
+    // cuts the steps of a frame past 60 ms of the machine when the pace is over 2× (asleep, 4.9×), so on a busy machine a frame
+    // asleep carries less of the world's time than 0.49 s — T-162: the clock alone, over 200 s, was the machine's)
+    const cA = S.clock; for (let k = 0; k < 30; k++) G.Main.frameFor(100); const paceAwake = (S.clock - cA) / 30;
+    v.energy = 5; G.Possess.sleep(v); const slept = v.sleeping; let asleepN = 0; const cS = S.clock;
+    for (let k = 0; k < 600; k++) { if (!v.sleeping) { v.energy = 5; G.Possess.sleep(v); } const was = v.sleeping; G.Main.frameFor(100); if (was && v.sleeping) asleepN++; }
+    const paceAsleep = (S.clock - cS) / 600;
     G.Possess.onLog.splice(G.Possess.onLog.indexOf(hook), 1);
     const awake = !v.sleeping || (G.Possess.wake(v), true);
     const t1 = { day: S.day, clock: S.clock, births: S.stats.births || 0, deaths: S.stats.deaths || 0, logN: S.logN };
@@ -201,9 +206,9 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const fo = far && S.villagers.get(far.id) || (far && S.dead.get(far.id));
     __E.leave();
     const stillThere = entries.every(n => S.history.some(e => e.n === n));
-    return { slept, awake, t0, t1, farNews, entries: entries.length, stillThere, far: f0 && fo ? { moved: fo.dead ? 'morreu' : G.dist(f0.x, f0.y, fo.x, fo.y).toFixed(1), aged: fo.dead ? '-' : (fo.age - f0.age).toFixed(2) } : null, clockAfter: S.clock, qa: __E.qa() };
+    return { slept, asleepN, paceAwake, paceAsleep, awake, t0, t1, farNews, entries: entries.length, stillThere, far: f0 && fo ? { moved: fo.dead ? 'morreu' : G.dist(f0.x, f0.y, fo.x, fo.y).toFixed(1), aged: fo.dead ? '-' : (fo.age - f0.age).toFixed(2) } : null, clockAfter: S.clock, qa: __E.qa() };
   });
-  ok('e3 o tempo passa no corpo (dormir acelera)', e3.slept && e3.t1.clock > e3.t0.clock + 200, `relógio ${e3.t0.clock.toFixed(0)} → ${e3.t1.clock.toFixed(0)} s; dia ${e3.t0.day} → ${e3.t1.day}`);
+  ok('e3 o tempo passa no corpo (dormir acelera)', e3.slept && e3.asleepN >= 570 && e3.paceAsleep >= 4 * e3.paceAwake, `dormiu ${e3.asleepN} de 600 quadros; o mundo a ${e3.paceAsleep.toFixed(3)} s por quadro dormindo, ${e3.paceAwake.toFixed(3)} acordado (${(e3.paceAsleep / Math.max(1e-6, e3.paceAwake)).toFixed(1)}×; pede 4×); relógio ${e3.t0.clock.toFixed(0)} → ${e3.t1.clock.toFixed(0)} s; dia ${e3.t0.day} → ${e3.t1.day}`);
   ok('e3 longe dali o mundo acontece', e3.entries > 0 && (e3.t1.births > e3.t0.births || e3.t1.deaths > e3.t0.deaths) && e3.far && e3.far.moved !== '0.0', `${e3.entries} linhas novas na crônica (${e3.farNews} a mais de 120 m); nascimentos ${e3.t0.births}→${e3.t1.births}, mortes ${e3.t0.deaths}→${e3.t1.deaths}; alguém a 160 m andou ${e3.far && e3.far.moved} casas e envelheceu ${e3.far && e3.far.aged}`);
   ok('e3 de volta a Deus, nada desfeito', e3.stillThere && e3.clockAfter >= e3.t1.clock, `crônica intacta; relógio ${e3.clockAfter.toFixed(0)}`);
   ok('e3 verificador', !e3.qa.length, e3.qa.slice(0, 3).join(' · ') || 'limpo');
@@ -445,9 +450,11 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
         R.meal = { ate, took, food: [f0, G.Fac.stockV(v).food], hunger: v.hunger };
       }
       // berries
-      const bu = [...S.bushes.values()].filter(b => b.berries >= 2 && G.W.reaches(v, b.x, b.y)).sort((a, b) => G.dist2(a.x, a.y, v.x, v.y) - G.dist2(b.x, b.y, v.x, v.y))[0];
+      // (a bush someone is picking is theirs until they are done — «X está colhendo aqui»: the next free one, up to four — T-172)
+      const picking = b => { const o = b.claim && b.claim !== v.id ? S.villagers.get(b.claim) : null; return !!(o && o.task && o.task.id === b.id); };
+      const bus = [...S.bushes.values()].filter(b => b.berries >= 2 && G.W.reaches(v, b.x, b.y)).sort((a, b) => G.dist2(a.x, a.y, v.x, v.y) - G.dist2(b.x, b.y, v.x, v.y)).slice(0, 4);
       // (the picker's time for a load: 2.2 s of the world ÷ workMul — at the body's pace, two hundred frames and more: L-133)
-      if (bu && near(bu.x, bu.y)) { const n0 = bu.berries; v.hunger = 60; const r = G.Interact.run({ id: 'arbusto', t: { bu, X: bu.x * 4, Z: bu.y * 4 } }); __E.until(() => !G.Avatar.busy(), 500); R.berries = { before: n0, after: bu.berries, hunger: v.hunger, msg: r && r.msg }; }
+      for (const bu of bus) { if (picking(bu) || !near(bu.x, bu.y) || picking(bu)) continue; const n0 = bu.berries; v.hunger = 60; const r = G.Interact.run({ id: 'arbusto', t: { bu, X: bu.x * 4, Z: bu.y * 4 } }); __E.until(() => !G.Avatar.busy(), 500); R.berries = { before: n0, after: bu.berries, hunger: v.hunger, msg: r && r.msg }; break; }
       // a rock broken the quarrymen's way: its stone leaves it, into the arms; then carried to a building going up (a well
       // the town plans by its own rule, if none of its works wants stone): the work's need falls by what was brought
       { v.carry = null; // (empty hands for the rock)
@@ -464,10 +471,11 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
           } else R.obra = { none: true };
         }
       }
-      // a prayer at the temple of the body's town: the devotion grows
+      // a prayer at the temple of the body's town: the devotion grows, and the faith (room for both: the god's faith tops at 999,
+      // where a rich world's ready save already is — T-171)
       { const tp = [...S.buildings.values()].filter(b => b.type === 'temple' && b.built && b.set === v.set && G.W.reaches(v, ...G.Vg.door(b)))[0];
         // (the faithful's five seconds of the world before the temple: at the body's pace, four hundred frames and more — L-133)
-        if (tp) { const d = G.Vg.door(tp); near(d[0], d[1], true); v.devotion = Math.min(v.devotion, 80); const d0 = v.devotion, f0 = G.S.faith; const r = G.Interact.run({ id: 'porta', t: { b: tp, X: d[0] * 4, Z: d[1] * 4 } }); __E.until(() => !G.Avatar.busy(), 900); R.temple = { before: d0, after: v.devotion, faith: +(G.S.faith - f0).toFixed(2), msg: r && r.msg }; } else R.temple = null; }
+        if (tp) { const d = G.Vg.door(tp); near(d[0], d[1], true); v.devotion = Math.min(v.devotion, 80); G.S.faith = Math.min(G.S.faith, 900); const d0 = v.devotion, f0 = G.S.faith; const r = G.Interact.run({ id: 'porta', t: { b: tp, X: d[0] * 4, Z: d[1] * 4 } }); __E.until(() => !G.Avatar.busy(), 900); R.temple = { before: d0, after: v.devotion, faith: +(G.S.faith - f0).toFixed(2), msg: r && r.msg }; } else R.temple = null; }
       // home through its door, tired: the body goes in and lies down (the world's sleep), and gets up and out by the door again
       { const h = S.buildings.get(v.home);
         if (h && h.built && G.W.reaches(v, ...G.Vg.door(h))) { const d = G.Vg.door(h); near(d[0], d[1], true); v.energy = 30; const r = G.Interact.run({ id: 'porta', t: { b: h, X: d[0] * 4, Z: d[1] * 4 } }); __E.until(() => !G.Avatar.busy(), 120);

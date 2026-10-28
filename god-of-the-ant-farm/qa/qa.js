@@ -16,6 +16,7 @@
   if (G.Village.forget && !G.Village.forget.qa) { const f = G.Village.forget; G.Village.forget = function () { const r = f.apply(this, arguments); QA.memAfter = staleDead(); return r; }; G.Village.forget.qa = true; }
 
   // ---------------- invariants ----------------
+  let wallTurn = 0; // (which standing wall this round asks whether it shuts a building of its town off: one a round, L-344)
   QA.check = function (opts) {
     opts = opts || {};
     const s = S(); const out = []; const N = G.N;
@@ -166,6 +167,15 @@
       let by = null; for (let ty = b.y - 1; ty <= b.y + b.h && !by; ty++) for (let tx = b.x - 1; tx <= b.x + b.w; tx++) { if (ty >= b.y && ty < b.y + b.h && tx >= b.x && tx < b.x + b.w) continue; if (tx < 0 || ty < 0 || tx >= G.N || ty >= G.N) continue; const o = s.buildings.get(s.occ[ty * G.N + tx]); if (o && o.blocks && o !== b) { by = o; break; } }
       if (by) add('city', 3, `quarteirão#${b.id}: ${by.type}#${by.id} encostado nele (o anel de passagem fechou)`);
     }
+    // a town's wall never stands inside another town's walls: there it shuts a pocket with no gate of either (L-342)
+    // a gate whose way through is shut by blocking buildings on both sides of the wall line (L-348)
+    { const blk = j => { const o = s.occ[j]; const b = o && s.buildings.get(o); return !!(b && b.blocks); }; const wl = j => s.wall[j] === 1 || s.wall[j] === 2 || s.wall[j] === 4;
+      for (let i = 0; i < N * N; i++) { const w = s.wall[i]; if (w !== 2 && w !== 4) continue; const x = i % N, y = (i / N) | 0; if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) continue;
+        const ew = wl(i - 1) && wl(i + 1), ns = wl(i - N) && wl(i + N); const a = ew ? [i - N, i + N] : ns ? [i - 1, i + 1] : null;
+        if (a && blk(a[0]) && blk(a[1])) add('city', 3, `o portão em (${x},${y}) está fechado por prédios dos dois lados`); } }
+    // a building of a town shut off by the town's own standing wall, where a gate in it would open the way (L-344)
+    if (G.Siege && G.Siege.openWays) { const ws = (s.walls || []).filter(w => w.done && s.settlements.has(w.set)); if (ws.length) { const w = ws[(wallTurn++) % ws.length], st = s.settlements.get(w.set); const o = G.Siege.openWays(st, w, true); if (o.length) add('city', 3, `o muro de ${st.name} (#${w.id}) fecha ${o.length} prédio(s) da cidade: um portão em (${o[0] % N},${(o[0] / N) | 0}) abriria o caminho`); } }
+    if (G.Siege && G.Siege.walledIn) for (const w of s.walls || []) { const st = s.settlements.get(w.set); for (const i of w.tiles) if (s.wall[i] && s.wall[i] !== 3 && G.Siege.walledIn(i, w)) { add('city', 3, `o muro de ${st ? st.name : '#' + w.set} (#${w.id}) tem casa de pé em (${i % G.N},${(i / G.N) | 0}), dentro do muro de outra cidade`); break; } }
     { let ghost = 0, ex = 0; for (let i = 0; i < s.occ.length; i++) { const o = s.occ[i]; if (o && !s.buildings.has(o)) { ghost++; ex = o; } } if (ghost) add('city', 2, `${ghost} casa(s) do mapa ocupadas por prédio inexistente #${ex}`); }
     // ---- the memory of the dead: cemeteries hold twelve, a grave and its record agree, nobody is kept past three
     // generations unless they mattered or the living are their children and grandchildren (L-072)
@@ -429,6 +439,8 @@
       if (!crew.length && !sh.length) add('sea', 2, `expedição ${e.name} (${e.st}): viva sem gente nem navio`);
       if (!G.Fac.get(e.fac) || !G.Fac.get(e.fac).alive) add('sea', 2, `expedição ${e.name}: povo extinto`);
       if (e.t0 !== undefined && s.day - e.t0 > 25) add('sea', 3, `expedição ${e.name}: há ${s.day - e.t0} anos (${e.st})`);
+      // (on the quay, the crew can walk to it: L-346)
+      if ((e.st === 'prep' || e.st === 'reunir' || e.st === 'embarque') && e.port) for (const v of crew.map(P)) if (v && !v.aboard && !G.W.reaches(v, e.port[0], e.port[1])) add('sea', 3, `expedição ${e.name} (${e.st}): ${v.name} #${v.id}, da tripulação, não chega a pé ao cais`, v.id);
     }
     for (const fl of (s.fleets || [])) {
       if (fl.st === 'fim') continue;
@@ -592,6 +604,17 @@
       if (s.clock - since > 30) add('act', 3, `${v.name} #${v.id}, ${Math.floor(v.age)} anos: ${r2(c.n)} de ${c.k} nas mãos há ${Math.round(s.clock - since)} s, de dia, ${t ? 'em ' + t.type : 'sem afazer'} — a carga não foi ao seu lugar (L-186)`);
     }
     kidMark = kidNow; kidMarkS = s;
+    // ---- L-300: the water in the hands lives inside its errand (the house's jar, the bucket for a fire; a scene only lends
+    // the person for a moment): out of it for more than 5 s of the world, it was left in the hands — the next work begins
+    // over it (the body the player lives is the player's hands)
+    const waterNow = new Map();
+    for (const v of s.villagers.values()) {
+      const c = v.carry; const t = v.task; if (!c || c.k !== 'water' || !fin(c.n) || c.n <= EPS || (s.avatar && s.avatar.id === v.id)) continue;
+      if (t && (t.type === 'water' || t.type === 'fire' || t.type === 'scene')) continue;
+      const since = waterMarkS === s && waterMark.has(v.id) ? waterMark.get(v.id) : s.clock; waterNow.set(v.id, since);
+      if (s.clock - since > 5) add('act', 3, `${v.name} #${v.id}: ${r2(c.n)} de água nas mãos há ${Math.round(s.clock - since)} s, ${t ? 'em ' + t.type : 'sem afazer'} — fora do recado da água e do fogo (L-300)`);
+    }
+    waterMark = waterNow; waterMarkS = s;
     // ---- L-200: the two under a heavy crate walk a crate's length apart (G.Porto.PAIR_GAP: the steps of the one who
     // leads draw the helper after him); twice that apart, the crate between them reaches no pair of hands
     const gap = G.Porto && G.Porto.PAIR_GAP;
@@ -659,6 +682,11 @@
         if (where.length) add('fome', 2, `${v.name} #${v.id} (${set.name}) morre de fome com comida ao alcance: ${where.join(', ')}; ${t ? 'tarefa ' + t.type : 'sem tarefa'}, vida ${Math.round(v.hp)}`, v.id);
       }
     }
+    // ---- coins are not born in the house, the purse or the hands of someone of a people without coin (L-305): a line of the
+    // ledger, since the last look, that brought coins into one of them from outside what was already a person's or a house's
+    // own — made by the world, out of a treasury, a shelf, the ground, a hold. An inheritance, a move between houses, a theft,
+    // someone who changed people bring no coin that was not already someone's, and are not counted
+    for (const [e, fid] of coinIn.splice(0)) { const f = s.factions.get(fid); add('moeda', 2, `${e[6]} moedas nasceram em ${e[4]} (${e[8] || 'sem causa'}, de ${e[3]}), e ${f ? f.name : 'o povo #' + fid} não conhece a moeda`); }
     // ---- the lines (life.js): a line's places are where people can stand in a line — on the ground of its front place (its
     // region of the map), dry, not before another building's door nor on a merchant at his counter, a step from the one
     // before —, no more of them than it asks; read from the world's fields (the ground, the doors), on a line whose ground
@@ -684,12 +712,19 @@
   });
   // (the ledger's lines out of hands since the last look, and the purchases that ended in a people's store, for the rules
   // above; a new world, or a save loaded, starts over)
-  let marked = null, markedS = null; const movedOut = new Map(); const toStore = []; let kidMark = new Map(), kidMarkS = null;
+  let marked = null, markedS = null; const movedOut = new Map(); const toStore = []; let kidMark = new Map(), kidMarkS = null, waterMark = new Map(), waterMarkS = null;
+  // (coins that came into a house, a purse or the hands of someone of a people without coin from outside what was already a
+  // person's or a house's own — made by the world, out of a treasury, a shelf, the ground, a hold: L-305's rule, below. The
+  // people is the one the receiver is of at that moment)
+  const coinIn = []; const PRIV = { h: 1, p: 1, v: 1 };
+  const priv = r => typeof r === 'string' && PRIV[r[0]] === 1 && r[1] === ':';
+  const facOfRef = r => { const id = +r.slice(2); if (r[0] === 'h') { const b = G.S.buildings.get(id); return b ? G.Village.facOfSet(b.set) : 0; } const v = G.S.villagers.get(id); return v ? G.Fac.idOfV(v) : 0; };
   if (G.Depot) G.Depot.onMove.push(e => {
     if (typeof e[3] === 'string' && e[3][0] === 'v' && e[3][1] === ':') { const key = e[3].slice(2) + '|' + e[5]; movedOut.set(key, (movedOut.get(key) || 0) + e[6]); }
     if (e[8] === 'compra-em-casa' && typeof e[4] === 'string' && e[4][0] === 'f') { toStore.push(e); if (toStore.length > 50) toStore.shift(); }
+    if (e[5] === 'moedas' && priv(e[4]) && !priv(e[3]) && G.Eco) { const fid = facOfRef(e[4]); if (fid && !G.Eco.coinage(fid)) { coinIn.push([e, fid]); if (coinIn.length > 20) coinIn.shift(); } }
   });
-  if (G.worldHooks) G.worldHooks.push(() => { marked = null; markedS = null; movedOut.clear(); toStore.length = 0; kidMark = new Map(); kidMarkS = null; });
+  if (G.worldHooks) G.worldHooks.push(() => { marked = null; markedS = null; movedOut.clear(); toStore.length = 0; kidMark = new Map(); kidMarkS = null; waterMark = new Map(); waterMarkS = null; coinIn.length = 0; });
   QA.canonMore.push(['acts', () => (G.Act ? G.Act.canon() : null)]);
   QA.canonMore.push(['pesca', () => (G.S && G.S.pesca ? Object.keys(G.S.pesca).sort((a, b) => a - b).map(id => [+id, G.S.pesca[id][0], G.S.pesca[id][1]]) : null)]);
   QA.canonMore.push(['casas', () => (G.S ? [...G.S.buildings.values()].filter(b => b.dono || b.encomenda || b.aluga || b.poupa).sort((a, b) => a.id - b.id).map(b => [b.id, b.dono || 0, b.encomenda ? b.encomenda.fam.join('.') + ':' + (b.encomenda.paid || 0) : '', b.aluga ? b.aluga.pago + ':' + b.aluga.deve : '', b.poupa ? b.poupa.by + ':' + b.poupa.alvo : '']) : null)]);

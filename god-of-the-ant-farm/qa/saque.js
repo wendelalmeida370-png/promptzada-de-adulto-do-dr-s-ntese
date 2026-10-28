@@ -38,6 +38,9 @@ function arm(A, B) {
   clean(A); clean(B);
   D.make('v:' + A.id, 'ceramica', 1, { code: 'teste', to: 'h:' + A.home });
   D.make('v:' + B.id, 'food', 3, { code: 'teste' });
+  // (room in the store for the loot: a full store keeps what fits and loses the rest by the ledger, 'sem-lugar', as the game
+  // always did — the store of the new metropole fills up while the cases live, and by the fourth it had room for 2 of the 3, T-174)
+  const room = D.room('f:' + f.id, 'food'); if (room < 10) D.use('f:' + f.id, 'food', 10 - room, { code: 'teste', part: true });
   return 'h:' + A.home; // (the house the purchase is for — the planner may move them meanwhile; the load knows its house)
 }
 // what each case asks: the purchase still the family's — in the arms, or already at home —, never the store's; the loot in

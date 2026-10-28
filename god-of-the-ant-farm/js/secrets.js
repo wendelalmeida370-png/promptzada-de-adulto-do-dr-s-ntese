@@ -272,8 +272,11 @@
       if (w.fate === 'jurou' && investigating(v.id)) w.fate = 'fala';
       if (w.fate === 'jurou') { w.done = 1; join(q, v, 'iniciado'); log(`${v.name} recebeu uma visita à noite. No dia seguinte, não falou mais do que viu — e passou a sair nas noites sem lua.`, 'secret', v.x, v.y); continue; }
       if (w.fate === 'comprar') {
-        w.done = 1; const h = S.buildings.get(v.home); if (h) G.Depot.make('h:' + h.id, 'moedas', 12, { code: 'segredo', by: v.id }); // (the bribe, in the ledger)
-        if (G.R() < 0.7) { log(`Alguém deixou um saco de moedas na porta de ${v.name}. ${v.g === 'f' ? 'Ela' : 'Ele'} entendeu o recado e se calou.`, 'coin', v.x, v.y); continue; }
+        // (the bribe, in the ledger — in coin where the witness's people knows it; a people without coin is not bought with
+        // coins: the order's visit at night is enough, and the witness keeps quiet. L-305)
+        w.done = 1; const h = S.buildings.get(v.home); const coin = G.Eco.coinage(h ? G.Village.facOfSet(h.set) : G.Fac.idOfV(v));
+        if (h && coin) G.Depot.make('h:' + h.id, 'moedas', 12, { code: 'segredo', by: v.id });
+        if (G.R() < 0.7) { if (coin) log(`Alguém deixou um saco de moedas na porta de ${v.name}. ${v.g === 'f' ? 'Ela' : 'Ele'} entendeu o recado e se calou.`, 'coin', v.x, v.y); else log(`${v.name} recebeu uma visita à noite. No dia seguinte, não falou mais do que viu.`, 'secret', v.x, v.y); continue; }
         w.fate = 'fala';
       }
       if (w.fate === 'calar') {

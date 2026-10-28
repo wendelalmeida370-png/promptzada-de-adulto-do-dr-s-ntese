@@ -29,7 +29,8 @@
   const P = id => (id && G.S.villagers.get(id)) || null;
   const PD = id => (id ? G.person(id) : null);
   const J = () => G.Justice;
-  const exOf = s => (J() ? J().list().find(q => q.id === s.data.ex) || null : null);
+  // (no story, no sentence: a scene may begin after its story is gone — L-321)
+  const exOf = s => (s && J() ? J().list().find(q => q.id === s.data.ex) || null : null);
   const party = s => (St.party ? St.party.of(s).filter(v => G.S.villagers.has(v.id)) : []);
   const oa = v => (v && v.g === 'f' ? 'a' : 'o');
   const lo = v => (v && v.g === 'f' ? 'la' : 'lo');
