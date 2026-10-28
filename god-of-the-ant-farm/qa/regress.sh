@@ -14,6 +14,9 @@ skip() { [[ " $SKIP " == *" $1 "* ]]; }
 [ -z "$SKIP" ] && rm -f "$OUT"/*.txt
 t0=$(date +%s)
 echo "== vigia do código"; node guard.js "${GAMEDIR:-$(dirname "$PWD")}" > "$OUT/guard.txt" 2>&1; tail -1 "$OUT/guard.txt"
+# (o navegador das provas: o mundo da mesma semente é o mesmo só no mesmo motor de JavaScript — as contas do Math mudam de
+# um V8 para outro, T-123 —; a versão vai no resumo, e uma troca dela aparece entre as diferenças da linha de base)
+node -e "require(process.env.PLAYWRIGHT || 'playwright').chromium.launch().then(async b => { console.log(b.version()); await b.close(); })" > "$OUT/navegador.txt" 2>&1; echo "== navegador $(head -1 "$OUT/navegador.txt")"
 # 1. o mar: 17 provas, quatro de cada vez
 m17() { DET=1 timeout 1500 node mar17.js $1 $2 > "$OUT/mar_$1.txt" 2>&1; }
 if ! skip mar; then
@@ -66,9 +69,10 @@ echo "== poderes: $(grep -c '^PASSOU' "$OUT/poderes.txt" 2>/dev/null) passaram, 
 # as moedas, a casa, as compras, a pesca, as filas, o saque, a carga comum nas mãos), a invariância entre os três níveis, os interiores (o registro, a
 # casca, todas as plantas de todas as famílias, os prédios da vida comum e a vida deles, as portas, os muros), o corpo contra as
 # regras do mundo (a soleira, a porta, a casa por dentro) e o 3D lido por números; o catálogo das plantas e as invariantes no qa.js iguais aos arquivos de onde vêm;
-# e o que a v37 achou de antigo: o exército que volta para casa e o save no caminho, o motim no save, o lugar dos cais
+# e o que a v37 achou de antigo: o exército que volta para casa e o save no caminho, o motim no save, o lugar dos cais; e a paz
+# provocada de propósito (T-125)
 skip fundacao || { F() { local n=$1; shift; timeout 7200 node "$@" > "$OUT/fund_$n.txt" 2>&1; echo "saída $?" >> "$OUT/fund_$n.txt"; }
-  (F plantas plantas.js; F fome fome.js; F casa casa.js; F compras compras.js; F volta volta.js 7) & (F atividades atividades.js; F porto porto.js; F negocio negocio.js; F invariancia invariancia.js; F vidacurta vidacurta.js; F moedas moedas.js; F pesca pesca.js; F motim motim.js metropole; F docas docas.js; F derrota derrota.js 11; F protagonista protagonista.js; F carga-comum carga-comum.js) &
+  (F plantas plantas.js; F fome fome.js; F casa casa.js; F compras compras.js; F volta volta.js 7) & (F atividades atividades.js; F porto porto.js; F negocio negocio.js; F invariancia invariancia.js; F vidacurta vidacurta.js; F moedas moedas.js; F pesca pesca.js; F motim motim.js metropole; F docas docas.js; F derrota derrota.js 11; F paz paz.js 11; F protagonista protagonista.js; F carga-comum carga-comum.js) &
   (F interiores interiores.js; F casca casca.js; F civicos civicos.js; F catalogo catalogo.js confere; F junta junta-inv.js confere; F muros muros.js; F vida-predios vida-predios.js; F portas-casos portas-casos.js cidade; F lances lances.js cidade; F lances-anos100 lances.js anos100; F perdidos perdidos.js; F filas filas.js; F saque saque.js) &
   (F corpo-mundo visual/corpo-mundo.js; F maos visual/maos.js; F estiva visual/estiva.js; F carga-mundo visual/carga-mundo.js; F disputa visual/disputa.js; F corpo-rig visual/corpo-rig.js; F guarda3d visual/guarda3d.js ..; F soleira visual/soleira.js; F porta-velha visual/porta-velha.js; F porta visual/porta.js; F corpo-casa visual/corpo-casa.js; F interior3d visual/interior3d.js; F cais visual/cais.js; F dupla visual/dupla.js; F matriz matriz.js "$OUT/MATRIZ.md") & wait; }
 echo "== fundação: $(cat "$OUT"/fund_*.txt 2>/dev/null | grep -c '^PASSOU') passaram, $(cat "$OUT"/fund_*.txt 2>/dev/null | grep -c '^FALHOU') falharam; $(grep -L '^saída 0' "$OUT"/fund_*.txt 2>/dev/null | wc -l) arquivos com saída de erro"
@@ -107,6 +111,7 @@ skip perf || m17 perf 7; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/m
   grep -q "falhas: nenhuma" "$OUT/corrupt.txt" && echo "PASSOU | saves danificados" || echo "FALHOU | saves danificados"
   grep -q '"fails": \[\]' "$OUT/memoria.txt" && echo "PASSOU | memória dos mortos" || echo "FALHOU | memória dos mortos"
   grep -q "^MUNDOS: ok" "$OUT/mundos.txt" && echo "PASSOU | mundos prontos" || echo "FALHOU | mundos prontos"
+  echo "INFO | navegador $(head -1 "$OUT/navegador.txt")"
 } | sed 's/  */ /g' > "$OUT/resumo.txt"
 echo; cat "$OUT/resumo.txt"
 echo; echo "== diferenças desde a linha de base"

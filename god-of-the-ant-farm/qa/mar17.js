@@ -41,6 +41,10 @@ const CASE = process.argv[2] || 'rich'; const seed = +(process.argv[3] || 7);
         let ore = (S.ores || []).find(o => o.kind === 'ferro' && own.has(G.Know.at(o.x, o.y)));
         if (!ore) { const cap = G.Fac.capitalOf(f.id); const p = G.W.nearestLand(cap.cx + 6, cap.cy + 4, 8); ore = { id: S.nextId++, kind: 'ferro', x: p[0], y: p[1], amt: 400, max: 400 }; (S.ores = S.ores || []).push(ore); }
         G.Know.learnOre(f.id, ore, 'ferro'); f.stock.minerio = 60; f.stock.wood += 1500;
+        // (the cautious ruler, given — it was only said, and the case judged whoever the world crowned: with the browser of
+        // 28/10 a ruler of ambition 0.98, who sails for glory on day 2, T-124 —; whoever comes to rule after is cautious too)
+        window._cauto = () => { const ru = G.Politics.ruler(f); if (ru && ru.id !== window._ruId) { window._ruId = ru.id; ru.pe = Object.assign({}, G.Politics.persona(ru), { amb: 0.2, agg: 0.3 }); } return false; };
+        window._cauto();
       } else {
         // no iron anywhere at home (and a war on the horizon)
         for (const o of S.ores || []) if (o.kind === 'ferro' && own.has(G.Know.at(o.x, o.y))) o.amt = 0;
@@ -50,7 +54,7 @@ const CASE = process.argv[2] || 'rich'; const seed = +(process.argv[3] || 7);
       out.p0 = G.Expe.pressure(f); out.prof = Object.assign({}, G.Expe.prof(f)); delete out.prof.lostDirs;
       window._F = f.id; return out;
     }, CASE);
-    const t = await R(c => { const f = G.Fac.get(window._F); const own = G.Expe.ownRegions(f.id); return T.run(12, c === 'iron' ? () => { if ((f.stock.minerio || 0) > 2 && !(G.S.ores || []).some(o => o.kind === 'ferro' && o.amt > 0 && G.Know.knowsOre(f.id, o.id) && !own.has(G.Know.at(o.x, o.y)))) f.stock.minerio = 2; return false; } : null); }, CASE);
+    const t = await R(c => { const f = G.Fac.get(window._F); const own = G.Expe.ownRegions(f.id); return T.run(12, c === 'iron' ? () => { if ((f.stock.minerio || 0) > 2 && !(G.S.ores || []).some(o => o.kind === 'ferro' && o.amt > 0 && G.Know.knowsOre(f.id, o.id) && !own.has(G.Know.at(o.x, o.y)))) f.stock.minerio = 2; return false; } : window._cauto); }, CASE);
     const res = await R(() => {
       const S = G.S; const f = G.Fac.get(window._F); const ex = T.exps(f.id);
       const own = G.Expe.ownRegions(f.id);

@@ -90,7 +90,11 @@ const sc = process.argv[2] || 'small'; const seed = +(process.argv[3] || 7);
         // (a war of this world that ends worn out before the hosts meet has no defeat to judge: the defeat is then proven on
         // purpose, a host against a guard, in qa/derrota.js — T-093)
         ok('6 derrota: retirada/fuga/rendição', !bts.length || routs.length > 0 && massacre.length === 0 || s.armies.some(a => a.phase === 'retirada'), bts.length ? `${bts.length} batalhas, ${routs.length} com fuga ou captura, ${massacre.length} até o último homem; ${bts.slice(0, 6).map(b => b.name + ' ' + JSON.stringify(b.sides)).join(' ; ')}` : 'nenhuma batalha nesta guerra (acabou pelo desgaste antes de os exércitos se encontrarem): a derrota é provada de propósito no qa/derrota.js');
-        ok('7 paz: volta dos soldados e consequências', !!w.end && !!w.treaty, `fim ${w.end || '-'}; ${w.treaty ? w.treaty.name + ': ' + (w.treaty.terms || []).join('; ') : 'sem tratado'}`);
+        // (the war this world finds ends in a peace or in a conquest: when the people that loses is gone — all its towns
+        // taken — there is no treaty to judge, and the peace is made on purpose in qa/paz.js, T-125; either way the war
+        // closes and no host of it is still in the field)
+        const fin = await page.evaluate(() => { const wz = G.S.wz; const w0 = wz.wars[0]; return { gone: [window._A, window._B].filter(id => !(G.Fac.get(id) || {}).alive).map(id => (G.Fac.get(id) || { name: '?' }).name), field: wz.armies.filter(a => a.war === w0.id && !a.done && (a.phase === 'mobilizar' || ((b) => b && b.st !== 'retorno')(G.War.bands.get(a.band)))).map(a => a.name + ':' + a.phase) }; });
+        ok('7 paz: volta dos soldados e consequências', !!w.end && (!!w.treaty || fin.gone.length > 0) && !fin.field.length, `fim ${w.end || '-'}; ${w.treaty ? w.treaty.name + ': ' + (w.treaty.terms || []).join('; ') : fin.gone.length ? `sem tratado: ${fin.gone.join(', ')} deixou de existir, conquistado (a paz é provada de propósito no qa/paz.js)` : 'sem tratado'}${fin.field.length ? '; ainda no campo: ' + fin.field.join(', ') : ''}`);
       }
       if (sc === 'big') {
         ok('3 grandes civilizações: centenas', maxN >= 150, `exércitos: ${s.armies.map(a => a.name + ' ' + a.n0 + '/' + a.pop0).join(', ')}`);
