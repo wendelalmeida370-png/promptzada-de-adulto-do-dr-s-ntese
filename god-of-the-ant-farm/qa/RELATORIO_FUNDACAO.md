@@ -148,6 +148,23 @@ antes do conserto, e a prova que falhava passa depois. Por família:
   outra, e as 162 frases do roteiro das histórias (a sentença lida, o chamado da família, a herança) deixaram de ser
   escritas: cada uma rodava a vez inteira da história, fora de hora. Ele foi achado por uma cena que quebrava ao começar
   (L-321), e agora uma regra do `guard.js` impede o nome repetido.
+- **O que a regressão achou com os mundos finais** (L-350 a L-353, L-358, L-360, L-364 a L-366). Rodando a regressão
+  inteira com os mundos gerados de novo, mais nove apareceram:
+  - o barraco que vira cabana ficava com a planta de barraco até o dia seguinte (L-350);
+  - a semente de uma história guardava o protagonista morto (L-351);
+  - quem tinha o caminho cortado no meio o refazia só até perto do fim, e parava longe de aonde ia (L-352);
+  - a execução salva entre o último golpe e a conta perdia a conta: a crônica, a lealdade da cidade, o Livro do Mundo
+    (L-353);
+  - a obra morria aos 70 s da tarefa inteira, e não de cada ida ao armazém (L-358);
+  - o lance de degraus de uma porta era medido no chão desenhado, e não no chão dos pés (L-360);
+  - o calceteiro numa ilhota escolhia um trecho de rua em diagonal através da água, e tentava a cada passo (L-364);
+  - a árvore que o castor roía ficava marcada no toco quando um lenhador a derrubava, e nenhum castor a pegava nunca mais
+    (L-365);
+  - a guerra convocava os amotinados no meio do motim, e o motim era contado como esmagado pela guarda (L-366).
+
+  As outras falhas daquela rodada eram limites das provas diante dos mundos novos — a madeira do casco que faltava para
+  a viagem, a árvore da prova que o lenhador levava, a água pequena demais para ver o peixe minguar —, e estão no AUDIT
+  (T-189 a T-220).
 
 ## 6. O que fica parcial, ou não foi feito
 
