@@ -148,8 +148,8 @@ antes do conserto, e a prova que falhava passa depois. Por família:
   outra, e as 162 frases do roteiro das histórias (a sentença lida, o chamado da família, a herança) deixaram de ser
   escritas: cada uma rodava a vez inteira da história, fora de hora. Ele foi achado por uma cena que quebrava ao começar
   (L-321), e agora uma regra do `guard.js` impede o nome repetido.
-- **O que a regressão achou com os mundos finais** (L-350 a L-353, L-358, L-360, L-364 a L-367). Rodando a regressão
-  inteira com os mundos gerados de novo, mais dez apareceram:
+- **O que a regressão achou com os mundos finais** (L-350 a L-353, L-358, L-360, L-364 a L-370). Rodando a regressão
+  inteira com os mundos gerados de novo, mais treze apareceram:
   - o barraco que vira cabana ficava com a planta de barraco até o dia seguinte (L-350);
   - a semente de uma história guardava o protagonista morto (L-351);
   - quem tinha o caminho cortado no meio o refazia só até perto do fim, e parava longe de aonde ia (L-352);
@@ -162,7 +162,11 @@ antes do conserto, e a prova que falhava passa depois. Por família:
     (L-365);
   - a guerra convocava os amotinados no meio do motim, e o motim era contado como esmagado pela guarda (L-366);
   - a tripulação espantada do cais por um bicho nunca era chamada de volta, e o embarque esperava os dois primeiros da
-    fila mesmo longe: a grande viagem de Públio saiu com 1 dos 26 e se perdeu (L-367).
+    fila mesmo longe: a grande viagem de Públio saiu com 1 dos 26 e se perdeu (L-367);
+  - a cidade que a água cortou da sua fogueira e da sua doca nunca acendia outra do lado das casas: uma criança de
+    Tenochtitlan morreu de fome em casa, no caos do deus (L-368);
+  - um golfinho nadava para dentro do fundo seco do mar que o deus abriu (L-369);
+  - a «Grande Coalizão» contra um império podia ser os quatro povos grandes contra um povo de oito pessoas (L-370).
 
   As outras falhas daquela rodada eram limites das provas diante dos mundos novos — a madeira do casco que faltava para
   a viagem, a árvore da prova que o lenhador levava, a água pequena demais para ver o peixe minguar —, e estão no AUDIT
