@@ -927,6 +927,7 @@
     const rf = sh.roof || {}; H.roof = { kind: rf.kind || 'plano', alongY: rf.along === 'z', rise: qz((rf.h || 0) * ZPX), ov: q2((rf.over || 0) / 4) };
     if (rf.room) H.roof.room = { rect: R(rf.room.r), h: qz((rf.room.h || 2) * ZPX) };
     H.par = s.levels.some(l => l.kind === 'terraco') ? qz(1.15 * ZPX) : 0; // (a roof one lives on: its parapet, 0.9 m over the terrace)
+    if (rf.court) H.court = R(rf.court); // (a hall round a court: the court open to the sky, the roof cut over it)
     // (which face of the sprite a world side is, for this quarter: L the front-left one, R the front-right; the back ones unseen)
     const faceOf = side => (side === 'S' ? (qy > 0 ? 'L' : null) : side === 'N' ? (qy < 0 ? 'L' : null) : side === 'E' ? (qx > 0 ? 'R' : null) : (qx < 0 ? 'R' : null));
     // the openings of the shell's walls on the faces one sees: the windows, the door, the arches
@@ -983,25 +984,30 @@
     else for (let f = 1; f < fl.length; f++) band(c, x0, y0, x1, y1, fl[f] - 0.7, fl[f], st === 'grego' ? p.col[1] : shade(p.wl, 0.85));
     // ---- the openings the plan cut in the walls one sees ----
     const onF = (o, col, mm) => { if (o.face === 'L') onL(c, y1, o.a, o.b, o.z0, o.z1, col, mm); else onR(c, x1 - bat * (o.z0 - z0) / Math.max(1, zE - z0), o.a, o.b, o.z0, o.z1, col, mm); };
+    // (the iron of a jail: the bars of its windows, three up and one across; the straps across its door)
+    const iron = (o, fs, up) => { const xR = x1 - bat * (o.z0 - z0) / Math.max(1, zE - z0) + 0.01; for (const f of fs) { if (up) { const t = o.a + (o.b - o.a) * f; if (o.face === 'L') ln(c, P(t, y1 + 0.01, o.z0), P(t, y1 + 0.01, o.z1), '#2e2c2a', 0.45); else ln(c, P(xR, t, o.z0), P(xR, t, o.z1), '#2e2c2a', 0.45); }
+      else { const z = o.z0 + (o.z1 - o.z0) * f; if (o.face === 'L') ln(c, P(o.a, y1 + 0.01, z), P(o.b, y1 + 0.01, z), '#2e2c2a', 0.5); else ln(c, P(xR, o.a, z), P(xR, o.b, z), '#2e2c2a', 0.5); } } };
     for (const o of H.wins) {
       onF(o, o.kind === 'janela' ? p.win : '#2a2018', o.kind === 'janela' ? m : null);
+      if (type === 'cadeia' && o.kind === 'janela') { iron(o, [0.25, 0.5, 0.75], true); iron(o, [0.5], false); }
       if (st === 'grego' && o.kind === 'janela' && o.z0 > fl[0] + 6) { const w = (o.b - o.a) * 0.3; onF({ face: o.face, a: o.a - w, b: o.a - w * 0.35, z0: o.z0, z1: o.z1 }, p.trim); } // (the shutter)
     }
     const d = H.door;
     if (d && d.face) {
-      onF(d, p.door);
+      onF(d, p.door); if (type === 'cadeia') iron(d, [0.3, 0.7], false);
       if (st === 'asteca') onF({ face: d.face, a: d.a - 0.03, b: d.a, z0: d.z0, z1: d.z1 + 0.5 }, p.trim2);
       if (st === 'romano' && type !== 'insula') { const cl = (x, y) => column(c, p, x, y, d.z0, d.z1 + 0.5, 0.025); if (d.face === 'L') { cl(d.a - 0.06, y1 + 0.05); cl(d.b + 0.06, y1 + 0.05); } else { cl(x1 + 0.05, d.a - 0.06); cl(x1 + 0.05, d.b + 0.06); } }
       // (the shops of a Roman block: an awning over the ground storey of the door's face)
       if (st === 'romano' && type === 'insula' && d.face === 'L') { const z = fl.length > 1 ? fl[1] - 1 : zE - 1; awning(c, x0 + 0.04, x1 - 0.04, y1, z - 2.5, z, 0.14, ['#c8483a', '#efe2c4']); }
       // (the wooden balcony of the top storey, on the door's face)
-      if ((st === 'romano' || st === 'grego' || st === 'classico') && fl.length >= 2 && d.face === 'L') {
+      if ((st === 'romano' || st === 'grego' || st === 'classico') && fl.length >= 2 && d.face === 'L' && type !== 'cadeia') {
         const z = fl[fl.length - 1] + 1.3; box(c, x0 + 0.05, y1, x1 - 0.05, y1 + 0.12, z - 1.2, z - 0.6, '#7a5230', '#5a3a20', '#8a6038');
         for (let k = 0; k <= 5; k++) { const x = x0 + 0.05 + (x1 - x0 - 0.1) * k / 5; ln(c, P(x, y1 + 0.12, z - 0.6), P(x, y1 + 0.12, z + 1.6), '#6a4526', 0.45); }
         ln(c, P(x0 + 0.05, y1 + 0.12, z + 1.6), P(x1 - 0.05, y1 + 0.12, z + 1.6), '#6a4526', 0.6);
       }
     }
     // ---- the roof of the plan's kind, ridge and rise ----
+    let zRoof = () => zE; // (the roof's height over a point of it: where a court cuts it)
     if (kind === 'plano') {
       const par = H.par || (st === 'egipcio' ? 1.3 : 1.2); roof(c, m, p, x0 + bat, y0 + bat, x1 - bat, y1 - bat, zE, { kind: 'flat', par });
       if (rf.room) { const [a0, b0, a1, b1] = rf.room.rect; const zr = zE + 0.8; box(c, a0, b0, a1, b1, zr, zr + rf.room.h, p.wl, p.wr, '#b8a070'); top(c, a0 - 0.03, b0 - 0.03, a1 + 0.03, b1 + 0.03, zr + rf.room.h + 0.4, '#9a8a4a'); }
@@ -1011,7 +1017,15 @@
         poly(c, [P(ax - 0.17, ay - 0.12, zE + 5), P(ax + 0.17, ay - 0.12, zE + 5), P(ax + 0.17, ay + 0.14, zE + 4.4), P(ax - 0.17, ay + 0.14, zE + 4.4)], '#e8e0c8', '#b8a888');
         const wx = x1 - 0.2, wy = y0 + 0.08; box(c, wx - 0.08, wy, wx + 0.08, wy + 0.16, zE, zE + 6, p.wl, p.wr, p.top); poly(c, [P(wx - 0.08, wy + 0.16, zE + 6), P(wx + 0.08, wy + 0.16, zE + 6), P(wx + 0.08, wy + 0.16, zE + 4), P(wx - 0.08, wy + 0.16, zE + 4)], '#3a2a1c');
       }
-      if (st === 'asteca') for (let k = 0; k < 3; k++) { const q = P(x0 + 0.1 + k * (x1 - x0 - 0.2) / 2, y1 - 0.04, zE); c.fillStyle = k % 2 ? '#5a9a3c' : '#e05a7a'; c.beginPath(); c.arc(q[0], q[1] - 0.8, 1.1, 0, TAU); c.fill(); }
+      if (st === 'asteca') {
+        // (the merlons along the parapet's top, about a metre apart, every other one capped in red — the 3D's roofOf: its
+        // block of 0.44 × 0.24 m and 0.16 m, its cap of 0.26 × 0.2 m and 0.14 m; the far sides first)
+        const zp = zE + par; const mer = (xa, ya, xb, yb) => { const ax = Math.abs(yb - ya) < 1e-6; const n = Math.max(2, Math.round(Math.hypot(xb - xa, yb - ya) * 4 / 0.9));
+          for (let k = 0; k < n; k++) { const f = (k + 0.5) / n, x = xa + (xb - xa) * f, y = ya + (yb - ya) * f; const [hx, hy] = ax ? [0.055, 0.03] : [0.03, 0.055], [cx, cy] = ax ? [0.033, 0.025] : [0.025, 0.033];
+            box(c, x - hx, y - hy, x + hx, y + hy, zp, zp + 0.5, p.wl, p.wr, p.top); box(c, x - cx, y - cy, x + cx, y + cy, zp + 0.5, zp + 0.92, k % 2 ? p.trim : p.wl, k % 2 ? shade(p.trim, 0.8) : p.wr, k % 2 ? p.trim : p.top); } };
+        if (!H.par) { mer(x0 + bat, y0 + bat, x1 - bat, y0 + bat); mer(x0 + bat, y0 + bat, x0 + bat, y1 - bat); mer(x0 + bat, y1 - bat, x1 - bat, y1 - bat); mer(x1 - bat, y0 + bat, x1 - bat, y1 - bat); } // (a terrace has the shell's own parapet: none)
+        for (let k = 0; k < 3; k++) { const q = P(x0 + 0.1 + k * (x1 - x0 - 0.2) / 2, y1 - 0.04, zE); c.fillStyle = k % 2 ? '#5a9a3c' : '#e05a7a'; c.beginPath(); c.arc(q[0], q[1] - 0.8, 1.1, 0, TAU); c.fill(); }
+      }
       m.fires.push(P((x0 + x1) / 2, (y0 + y1) / 2, zE + 2));
     } else {
       const k2 = kind === 'quatro-aguas' ? 'hip' : kind === 'turfa' ? 'turf' : kind === 'palha' ? 'thatch' : 'gable';
@@ -1023,13 +1037,31 @@
       const drop = ov3 * Math.tan(ang) * ZPX, zTop = zE + rf.rise + (k2 === 'hip' ? 0.15 : T / Math.cos(ang)) * ZPX;
       const zb = k2 === 'hip' ? zE - drop + 0.15 * ZPX : zE - drop + 1; // (the gables draw their eaves a pixel under their base; the hip at it)
       const zr = roof(c, m, pp, x0, y0, x1, y1, zb, { kind: k2, alongY: rf.alongY, rh: Math.max(2, zTop - zb), ov: ov3 / 4, colors: type === 'house' && st === 'classico' ? CLASSIC_ROOFS[v % 3] : undefined });
+      { const ov = ov3 / 4 + (k2 === 'thatch' ? 0.04 : 0), X0 = x0 - ov, X1 = x1 + ov, Y0 = y0 - ov, Y1 = y1 + ov; const ze = k2 === 'hip' ? zb : zb - 1;
+        zRoof = k2 === 'hip' ? (x, y) => { const d = Math.min(X1 - X0, Y1 - Y0) / 2; return ze + (zr - ze) * Math.min(1, Math.max(0, Math.min(x - X0, X1 - x, y - Y0, Y1 - y)) / d); }
+          : rf.alongY ? (x, y) => ze + (zr - ze) * Math.max(0, 1 - Math.abs(x - (x0 + x1) / 2) / ((X1 - X0) / 2)) : (x, y) => ze + (zr - ze) * Math.max(0, 1 - Math.abs(y - (y0 + y1) / 2) / ((Y1 - Y0) / 2)); }
       // (the north's barge boards crossed past the ridge at both gables, their ends carved: the 3D's bargeEnd)
       if (k2 === 'turf') { const o = ov3 / 4; const ends = rf.alongY ? [[(x0 + x1) / 2, y0 - o], [(x0 + x1) / 2, y1 + o]] : [[x0 - o, (y0 + y1) / 2], [x1 + o, (y0 + y1) / 2]];
         for (const [ex, ey] of ends) { const a = P(ex, ey, zr); ln(c, [a[0] - 2, a[1] + 1.5], [a[0] + 0.9, a[1] - 1.3], '#5a3c24', 0.9); ln(c, [a[0] + 2, a[1] + 1.5], [a[0] - 0.9, a[1] - 1.3], '#5a3c24', 0.9); } }
       if ((st === 'classico' || st === 'romano') && k2 !== 'thatch') { const cx = x0 + (x1 - x0) * 0.68, cy = y0 + (y1 - y0) * 0.3; box(c, cx - 0.07, cy - 0.07, cx + 0.07, cy + 0.07, zE + 2, Math.min(zr, zE + 12) + 2, '#8e8578', '#6f675c', '#5a534a'); m.fires.push(P(cx, cy, Math.min(zr, zE + 12) + 3)); }
       else m.fires.push(P((x0 + x1) / 2, (y0 + y1) / 2, zr));
     }
+    if (H.court) courtDraw(c, p, H, zRoof);
     for (const a of H.annex) if (!behind(a)) annexDraw(c, p, st, a, H);
+  }
+  // a court open to the sky: the roof cut over it, and through the cut the court's paving and its two far walls, from the
+  // court's floor up under the roof (as the 3D opens it: the sky over the court, the roof all round it)
+  function courtDraw(c, p, H, zRoof) {
+    const [a0, b0, a1, b1] = H.court; const zF = Math.max(0, H.floor); const ring = []; const n = 6;
+    const edge = (xa, ya, xb, yb) => { for (let k = 0; k < n; k++) { const x = xa + (xb - xa) * k / n, y = ya + (yb - ya) * k / n; ring.push(P(x, y, zRoof(x, y))); } };
+    edge(a0, b0, a1, b0); edge(a1, b0, a1, b1); edge(a1, b1, a0, b1); edge(a0, b1, a0, b0);
+    const zt = Math.max(zRoof(a0, b0), zRoof(a1, b0), zRoof(a0, b1), zRoof((a0 + a1) / 2, (b0 + b1) / 2)) + 2;
+    c.save(); c.beginPath(); c.moveTo(ring[0][0], ring[0][1]); for (const q of ring) c.lineTo(q[0], q[1]); c.closePath(); c.clip();
+    top(c, a0, b0, a1, b1, zF, '#c8bca4');
+    poly(c, [P(a0, b0, zF), P(a1, b0, zF), P(a1, b0, zt), P(a0, b0, zt)], shade(p.wl, 0.88));
+    poly(c, [P(a0, b0, zF), P(a0, b1, zF), P(a0, b1, zt), P(a0, b0, zt)], shade(p.wr, 0.88));
+    c.restore();
+    c.strokeStyle = 'rgba(0,0,0,0.22)'; c.lineWidth = 0.5; c.beginPath(); c.moveTo(ring[0][0], ring[0][1]); for (const q of ring) c.lineTo(q[0], q[1]); c.closePath(); c.stroke();
   }
   // an annex against a side: its low walls and its lean-to falling away from the house
   function annexDraw(c, p, st, a, H) {
@@ -1071,16 +1103,20 @@
   // the sprite of a home drawn from its shell, for the view's quarter q — or null (not a home, no shell: the drawing of
   // before). Kept by what it draws — two homes with the same numbers share one picture —, the last few hundred
   const HOMES = A.HOMES = { hut: 1, house: 1, sobrado: 1, insula: 1 };
+  // (the types the god draws from their shells always: they had no drawing of their own — the jail, L-265)
+  const SHELLS = A.SHELLS = { cadeia: 1 };
   // (the god's view draws its homes from their shells once their plans follow the god's typology — the yard, the storeys, the
   // people's roof, the round hut: P4's B2c, D-082; until then the drawing of before)
   A.homeOn = false;
+  // (whether the god draws a building of this type from its shell now)
+  A.fromShell = type => (HOMES[type] ? A.homeOn : !!SHELLS[type]);
   // (each home's windows and door are its plan's own, so nearly every home has a picture of its own: a city of 150 homes
   // asks ~25 MB a side of the view — kept up to A.HOMEMB, the least lately drawn let go and painted again when seen)
   const homePics = new Map(); let homeBytes = 0; A.HOMEMB = 48;
   A.homeClear = () => { homePics.clear(); homeBytes = 0; };
   // (what a home's picture is known by, for the view's quarter q: the numbers it is drawn from — or null)
   A.homeKey = function (b, s, q) {
-    if (!b || !HOMES[b.type] || !s) return null; const H = A.homeGeo(b, s, q); if (!H) return null;
+    if (!b || !(HOMES[b.type] || SHELLS[b.type]) || !s) return null; const H = A.homeGeo(b, s, q); if (!H) return null;
     const st = PAL[b.style] ? b.style : 'classico'; const v = b.v || 0;
     return { key: b.type + st + (b.type === 'house' && st === 'classico' ? v % 3 : '') + JSON.stringify(H), H, st, v };
   };

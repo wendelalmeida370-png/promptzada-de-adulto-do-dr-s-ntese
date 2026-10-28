@@ -3089,15 +3089,17 @@ float m3scale(float p) {
     if (st === 'romano' || st === 'grego' || st === 'egipcio') K.as(st === 'egipcio' ? 'stucco' : cut, () => fx(0, hh + 0.09, ww + 0.34, 0.12, 0.08, st === 'egipcio' ? (P.trim || '#2f8f8a') : stone, 0.04));
     const r = K.hv(130 + k);
     if (st === 'egipcio') K.as('beam', () => { for (const e of [-0.22, 0, 0.22]) fx(e * ww, 0, 0.035, hh, 0.04, '#5a4430', -0.03); });
-    if (st === 'romano' && K.fine && r < 0.45) K.as('iron', () => { for (const e of [-0.25, 0.25]) fx(e * ww, 0, 0.025, hh, 0.04, '#2e2c2a', -0.03); fx(0, hh * 0.5, ww, 0.025, 0.03, '#2e2c2a', -0.03); });
+    // (the bars of a jail's windows, three up and one across — the god's —; now and then a Roman street's grille)
+    if (K.b.type === 'cadeia') K.as('iron', () => { for (const e of [-0.25, 0, 0.25]) fx(e * ww, 0, 0.03, hh, 0.04, '#2e2c2a', -0.03); fx(0, hh * 0.5, ww, 0.03, 0.03, '#2e2c2a', -0.03); });
+    else if (st === 'romano' && K.fine && r < 0.45) K.as('iron', () => { for (const e of [-0.25, 0.25]) fx(e * ww, 0, 0.025, hh, 0.04, '#2e2c2a', -0.03); fx(0, hh * 0.5, ww, 0.025, 0.03, '#2e2c2a', -0.03); });
     if (st === 'asteca' && K.fine && r < 0.4) K.as('wicker', () => fx(0, hh - 0.16, ww + 0.04, 0.16, 0.16, [176, 150, 98], 0.09));
-    if (K.fine && (st === 'classico' || st === 'grego' || st === 'romano') && K.hv(120 + k) < 0.32 && hh < 1.4) {
+    if (K.fine && (st === 'classico' || st === 'grego' || st === 'romano') && K.b.type !== 'cadeia' && K.hv(120 + k) < 0.32 && hh < 1.4) {
       K.as('jamb', () => fx(0, -0.36, ww + 0.08, 0.2, 0.2, dim(fc, 0.9), 0.12));
       const fl = [[204, 62, 56], [222, 112, 140], [236, 230, 214]][Math.floor(K.hv(125 + k) * 3)];
       for (let j = 0; j < 6; j++) { const a = ((j + 0.5) / 6 - 0.5) * ww; const p0 = F.P(q.uc + a, py - 0.17, 0.13); const X = K.x0 + p0[0], Y = K.y0 + p0[1], Z = K.z0 + p0[2]; const ang = j * 1.9 + k;
         K.gp.blade(X, Y, Z, 0.09, ang, X + F.o[0] * 0.12 + Math.cos(ang) * 0.05, Y + 0.24, Z + F.o[1] * 0.12 + Math.sin(ang) * 0.05, [62, 104, 46], j % 2 ? [84, 140, 62] : fl, 0.5); }
     }
-    const sh = shut ? (st === 'grego' ? r < 0.78 : true) : (st === 'romano' && K.b.type !== 'insula' && r >= 0.45 && r < 0.75) || (st === 'nordico' && r < 0.6);
+    const sh = K.b.type === 'cadeia' ? false : shut ? (st === 'grego' ? r < 0.78 : true) : (st === 'romano' && K.b.type !== 'insula' && r >= 0.45 && r < 0.75) || (st === 'nordico' && r < 0.6);
     if (sh) K.as(st === 'nordico' ? 'plankV' : 'painted', () => { const open = K.hv(110 + k) < 0.7; const sc = st === 'nordico' ? nordWood(K).dark : sh2;
       for (const s2 of [-1, 1]) { if (open) fx(s2 * (ww / 2 + 0.1 + ww / 4 + 0.03), 0, ww * 0.5, hh, 0.04, sc, 0.03); else fx(s2 * ww * 0.25, 0, ww * 0.5, hh, 0.05, sc, 0.04); } });
   }

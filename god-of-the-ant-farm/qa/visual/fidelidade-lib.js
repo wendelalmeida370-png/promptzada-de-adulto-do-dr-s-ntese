@@ -124,7 +124,7 @@ F.god = function (b, o) {
   const keep = Art.clear; let spr = null;
   // (o.shell: the home drawn from that shell — Arch.home, D-082 —, for the view's quarter o.q; else the type's sprite)
   // (with the god's view drawing its homes from their shells — Arch.homeOn, D-082 —, a home is that picture, as the view has it)
-  const shell = o.shell !== undefined ? o.shell : A.homeOn && A.HOMES && A.HOMES[b.type] && b.ip && G.Interiors ? G.Interiors.shellOf(b) : undefined;
+  const shell = o.shell !== undefined ? o.shell : A.fromShell && A.fromShell(b.type) && b.ip && G.Interiors ? G.Interiors.shellOf(b) : undefined;
   try { Art.clear(); if (A.homeClear) A.homeClear(); spr = shell !== undefined ? (shell && A.home ? A.home(b, shell, o.q || 0) : null) : Art.building(b.type, b.v, b.style, b.wd); } finally { global.document = doc0; void keep; }
   if (A.homeClear) A.homeClear();
   if (!spr || !rec) return { ops: [], none: true };

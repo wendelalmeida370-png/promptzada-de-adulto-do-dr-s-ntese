@@ -60,8 +60,9 @@ function verdict(cn, cf) {
 // it made a building of the god's view and the body's two buildings: fix it, or the leader agrees and the commit says why.
 // 190 on the v37, 87090a0: 4 with the same mass, 58 with losses, 190 another — the shells fill the lot where the god keeps
 // a yard, the monuments are the KIT's own shapes, the jail has no picture of the god at all; 184 with the wonders from
-// their form, counted apart since — B3; 174 with the monuments and the golden statue from theirs — D1)
-const TETO = 174;
+// their form, counted apart since — B3; 174 with the monuments and the golden statue from theirs — D1; 168 with the jail
+// drawn by the god from its shell — L-265)
+const TETO = 168;
 
 // ------------------------------ the round ------------------------------
 // (the kinds the god paints in a layer of its own, not as a building's picture — the ground of the fields and of the farm,
@@ -123,6 +124,9 @@ if (formed.size) ok('os tipos com forma', !ruins.length, ruins.length ? ruins.ma
 const outra = [...per.values()].filter(r => r.v === '≠' && !formed.has(r.type));
 if (!ONLY && POVOS.length === STY.length && NID === 3) ok('outra massa (a catraca)', outra.length <= TETO, `${outra.length} tipos e povos com outra massa (teto ${TETO}, a meta é zero)${outra.length < TETO ? ' — baixou: desça o teto' : ''}`);
 else console.log(`outra massa: ${outra.length} tipos e povos (a catraca só vale na rodada inteira, IDS=3)`);
+// (every building the world raises has the god's picture — the jail had none: L-265 —, but those of a layer of their own)
+const blind = [...per.values()].filter(r => r.near && r.near.empty === 'deus').map(r => `${r.type}/${r.style}`);
+ok('todo prédio com o desenho do deus', !blind.length, blind.length ? `sem desenho: ${blind.join(', ')}` : `${per.size} tipos e povos`);
 ok('sem furos (faces de costas)', !holes.length, holes.length ? `${holes.length} figuras com mais de ${HOLE * 100}% coberto só por faces de costas: ${holes.slice(0, 12).join(' · ')}` : `${rows.length} prédios, de perto e de longe: nenhum`);
 const e = M.erros(); ok('sem erro do jogo', M.limpo(), M.limpo() ? 'nenhum erro de módulo nem aviso no console' : JSON.stringify(e.mod) + ' ' + e.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');

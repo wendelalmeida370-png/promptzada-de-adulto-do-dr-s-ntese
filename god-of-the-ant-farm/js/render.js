@@ -2473,7 +2473,7 @@
   let homeMs = 0; const HOME_MS = 2; // (the share of a frame, ms)
   R.quarter = () => (mirOver >= 0 ? mirOver : rot) & 3;
   function homeSprite(b, make) {
-    const A = G.Arch, In = G.Interiors; if (!A.homeOn || !A.HOMES[b.type] || !b.ip || !In || !In.shellOf || !In.keyOf) return null;
+    const A = G.Arch, In = G.Interiors; if (!A.fromShell || !A.fromShell(b.type) || !b.ip || !In || !In.shellOf || !In.keyOf) return null;
     const key = In.keyOf(b); if (!key) return null; const q = R.quarter();
     let e = homeMemo.get(b.id); if (e && e.key !== key) e = null;
     if (!e) { if (!make || homeMs >= HOME_MS) return null; const t0 = now(); e = { key, s: In.shellOf(b), k: [] }; homeMs += now() - t0; homeMemo.set(b.id, e); }
