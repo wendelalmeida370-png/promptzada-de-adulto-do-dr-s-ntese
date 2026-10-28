@@ -19,7 +19,7 @@ const KINDS = {
   cidade: { seed: 3101, opts: { type: 'continente', size: 128, tribes: 4 }, legs: [{ goal: 'cidade', course: 'fartura' }, { snap: 'cidade' }] },
   metropole: { seed: 3202, opts: { type: 'continente', size: 160, tribes: 5 }, legs: [{ goal: 'metropole', course: 'fartura' }, { snap: 'metropole' }] },
   mega: { seed: 3305, opts: { type: 'continente', size: 160, tribes: 4 }, legs: [{ goal: 'mega', course: 'fartura' }, { snap: 'mega' }] },
-  mundial: { seed: 3505, opts: { type: 'continente', size: 160, tribes: 6 }, legs: [{ goal: 'metropole', course: 'fartura' }, { ww: 80 }, { after: 60 }, { snap: 'mundial' }] },
+  mundial: { seed: 3510, opts: { type: 'continente', size: 160, tribes: 6 }, legs: [{ goal: 'metropole', course: 'fartura' }, { ww: 80 }, { after: 60 }, { snap: 'mundial' }] },
   anos: { seed: 3404, opts: { type: 'continente', size: 128, tribes: 5 }, legs: [{ years: 100 }, { snap: 'anos100' }, { years: 400 }, { snap: 'anos500' }, { years: 500 }, { snap: 'anos1000' }] },
 };
 const kind = process.argv[2]; const K = KINDS[kind];

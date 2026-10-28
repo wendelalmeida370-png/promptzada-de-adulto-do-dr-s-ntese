@@ -168,6 +168,11 @@
       if (by) add('city', 3, `quarteirão#${b.id}: ${by.type}#${by.id} encostado nele (o anel de passagem fechou)`);
     }
     // a town's wall never stands inside another town's walls: there it shuts a pocket with no gate of either (L-342)
+    // a gate whose way through is shut by blocking buildings on both sides of the wall line (L-348)
+    { const blk = j => { const o = s.occ[j]; const b = o && s.buildings.get(o); return !!(b && b.blocks); }; const wl = j => s.wall[j] === 1 || s.wall[j] === 2 || s.wall[j] === 4;
+      for (let i = 0; i < N * N; i++) { const w = s.wall[i]; if (w !== 2 && w !== 4) continue; const x = i % N, y = (i / N) | 0; if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) continue;
+        const ew = wl(i - 1) && wl(i + 1), ns = wl(i - N) && wl(i + N); const a = ew ? [i - N, i + N] : ns ? [i - 1, i + 1] : null;
+        if (a && blk(a[0]) && blk(a[1])) add('city', 3, `o portão em (${x},${y}) está fechado por prédios dos dois lados`); } }
     // a building of a town shut off by the town's own standing wall, where a gate in it would open the way (L-344)
     if (G.Siege && G.Siege.openWays) { const ws = (s.walls || []).filter(w => w.done && s.settlements.has(w.set)); if (ws.length) { const w = ws[(wallTurn++) % ws.length], st = s.settlements.get(w.set); const o = G.Siege.openWays(st, w, true); if (o.length) add('city', 3, `o muro de ${st.name} (#${w.id}) fecha ${o.length} prédio(s) da cidade: um portão em (${o[0] % N},${(o[0] / N) | 0}) abriria o caminho`); } }
     if (G.Siege && G.Siege.walledIn) for (const w of s.walls || []) { const st = s.settlements.get(w.set); for (const i of w.tiles) if (s.wall[i] && s.wall[i] !== 3 && G.Siege.walledIn(i, w)) { add('city', 3, `o muro de ${st ? st.name : '#' + w.set} (#${w.id}) tem casa de pé em (${i % G.N},${(i / G.N) | 0}), dentro do muro de outra cidade`); break; } }

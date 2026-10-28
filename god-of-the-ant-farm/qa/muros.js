@@ -28,6 +28,9 @@
 //      7b Hedeby's forge, while the mega has it: opened from the save, a gate in the wall and the forge reached
 //      7c a standing wall with every gate shut into wall, in a save (an old wall that shut the town's buildings outside off):
 //         loaded, gates open in it, and every building reached before is reached again
+//   8. no blocking building in the way of a gate (L-348: two houses, one on each side of a gate of Tenochtitlan's wall, in the
+//      metropole of 28/10, left it a tile of nowhere): a gate put beside the town's best site for a house turns the site finder
+//      elsewhere, and the site it gives has no tile beside a gate
 //   5. the checker clean, no module error
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -220,6 +223,24 @@ for (const k of ['metropole', 'mega', 'cidade', 'anos100', 'mundial']) {
     const L = W.reachIds(true), R = W.townRegion(s1); const back = before.filter(id => { const b = S1.buildings.get(id); return !b || around(b, L).includes(R); }).length;
     ok('7c o muro de pé com todo portão fechado em muro, num save: carregado, os prédios da cidade ao alcance de novo', shut > 0 && back === before.length && w1 && w1.gates.length > 0, `${k}: o muro de ${s.name} (#${wid}), sem portão: ${shut} de ${before.length} prédios da cidade fora de alcance; carregado, ${(w1 && w1.gates.length) || 0} portão(ões) abertos (${w1 ? w1.gates.map(g => `(${g % N},${(g / N) | 0})`).join(' ') : '-'}), ${back} de ${before.length} ao alcance`);
     break;
+  }
+}
+// 8. the site finder and the gates
+{
+  M.pronto('metropole'); const S = G.S, N = G.N, V = G.Village;
+  const beside = (b, def) => { for (let y = b[1]; y < b[1] + def.h; y++) for (let x = b[0]; x < b[0] + def.w; x++) if (V.byGate(x, y)) return true; return false; };
+  const s = [...S.settlements.values()].filter(q => G.Fac.get(q.fac)).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)[0];
+  const def = G.BDEF.house; const s0 = s && V.findSite(s, 'house');
+  if (!s0) ok('8 nada que bloqueia no caminho de um portão: o buscador de lugar vai para outro lado', false, 'a maior cidade não tem lugar para uma casa');
+  else {
+    // (a gate beside the best site — on its south side, where the ground is open —, as a wall raised later would put it)
+    let g = -1; for (let x = s0[0]; x < s0[0] + def.w && g < 0; x++) { const i = (s0[1] + def.h) * N + x; if (G.W.walkable(i) && !S.occ[i] && !S.wall[i]) g = i; }
+    if (g < 0) ok('8 nada que bloqueia no caminho de um portão: o buscador de lugar vai para outro lado', false, 'nenhum chão aberto ao lado do lugar');
+    else {
+      S.wall[g] = 2; G.W.touchWalk(); let s1 = null; try { s1 = V.findSite(s, 'house'); } finally { S.wall[g] = 0; G.W.touchWalk(); }
+      const moved = !!s1 && (s1[0] !== s0[0] || s1[1] !== s0[1]);
+      ok('8 nada que bloqueia no caminho de um portão: o buscador de lugar vai para outro lado', moved && !(s1 && beside(s1, def)), `${s.name}: o lugar de uma casa em (${s0[0]},${s0[1]}); um portão posto em (${g % N},${(g / N) | 0}), ao lado dele: ${s1 ? 'o lugar foi para (' + s1[0] + ',' + s1[1] + ')' + (beside(s1, def) ? ', AO LADO de um portão' : ', longe de portão') : 'nenhum lugar'}`);
+    }
   }
 }
 // 5. the checker, the module errors
