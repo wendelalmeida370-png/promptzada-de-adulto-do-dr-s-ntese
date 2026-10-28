@@ -627,20 +627,20 @@
   const MAT = { food: 'comida', wood: 'madeira', stone: 'pedra' };
   // the cart's load, a holder of the depot ('c', the cart's id): one good at a time — what it takes to the other town
   // (goods), then what it brings back (ret, once it turned: back) — so that what goes by road is in the ledger, and nothing
-  // a cart carried is lost with no line when it ends
-  if (G.Depot && G.Depot.addKind) {
-    const r4 = x => Math.round(x * 1e4) / 1e4; const slot = c => (c.back ? 'ret' : 'goods');
-    G.Depot.addKind('c', {
-      obj: id => (G.S.carts || []).find(c => c.id === id) || null,
-      get: (c, k) => { const L = c[slot(c)]; return L && L.k === k ? L.n || 0 : 0; },
-      room: (c, k) => { const L = c[slot(c)]; return L && L.k !== k && L.n > 1e-6 ? 0 : Infinity; },
-      take: (c, k, n) => { const L = c[slot(c)]; L.n = r4(L.n - n); return { k, n }; },
-      put: (c, rec) => { const sl = slot(c); const L = c[sl]; if (L && L.k === rec.k) L.n = r4((L.n || 0) + rec.n); else c[sl] = { k: rec.k, n: rec.n }; },
-      list: c => { const L = c[slot(c)]; return L && L.n > 1e-6 ? { [L.k]: L.n } : {}; },
-      owner: c => ({ fac: c.fac }),
-      all: () => G.S.carts || [],
-    });
-  }
+  // a cart carried is lost with no line when it ends. (Registered with the first world: the depot, activity.js, loads after
+  // this file — registered here at load, it never was, and no cart of trade ever left)
+  const r4 = x => Math.round(x * 1e4) / 1e4; const slot = c => (c.back ? 'ret' : 'goods');
+  const CART = {
+    obj: id => (G.S.carts || []).find(c => c.id === id) || null,
+    get: (c, k) => { const L = c[slot(c)]; return L && L.k === k ? L.n || 0 : 0; },
+    room: (c, k) => { const L = c[slot(c)]; return L && L.k !== k && L.n > 1e-6 ? 0 : Infinity; },
+    take: (c, k, n) => { const L = c[slot(c)]; L.n = r4(L.n - n); return { k, n }; },
+    put: (c, rec) => { const sl = slot(c); const L = c[sl]; if (L && L.k === rec.k) L.n = r4((L.n || 0) + rec.n); else c[sl] = { k: rec.k, n: rec.n }; },
+    list: c => { const L = c[slot(c)]; return L && L.n > 1e-6 ? { [L.k]: L.n } : {}; },
+    owner: c => ({ fac: c.fac }),
+    all: () => G.S.carts || [],
+  };
+  G.worldHooks.push(() => { if (G.Depot && G.Depot.addKind && !G.Depot.KINDS.includes('c')) G.Depot.addKind('c', CART); });
   // (a cart that ends with something still on it — its road gone, its towns gone, too long on the way —: the load goes home
   // to its people's store, or, with no people left, is lost with its cause)
   function unload(c) {
