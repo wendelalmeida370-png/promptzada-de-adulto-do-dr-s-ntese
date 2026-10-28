@@ -1945,41 +1945,47 @@
   };
   // the places the body could take about a point of a storey (metres of the lot), within R — usable where a body is, free of
   // everyone else the world has inside (the share-out's own test, the body left out: where it would be, once there) —, the
-  // nearest first; of a use, a list of them, or any: { b, lv, x, z, y, ry, use, item, it, q, on, st, at, d } — at: where one
-  // stands to take it and stands up to (a place on a piece, from the standing point of the piece nearest the point asked
-  // from; a place where one stands, or with no piece to get onto, itself). For the body's verb (Interact 'lugar'): never a
-  // place someone holds
+  // nearest first; of a use, a list of them, or any: { b, lv, x, z, y, ry, use, item, it, q, on, st, d }. For the body's verb
+  // (Interact 'lugar'): never a place someone holds. The free ones kept for the moment of the world (asked every frame by the
+  // prompt), made fresh in its step
+  const fmemo = new Map(); let fmAt = ''; G.worldHooks.push(() => { fmemo.clear(); fmAt = ''; });
   In.freeNear = function (b, lv, x, z, R, uses) {
     const t = b && b.ip ? tableOf(b) : null; if (!t) return [];
-    const want = uses ? new Set([].concat(uses)) : null;
-    return assign(b, t, free => {
-      const out = [];
-      for (const e of t.spots) { if (!e.ok || e.lv !== lv || (want && !want.has(e.use)) || !free(e)) continue; const d = Math.hypot(e.x - x, e.z - z); if (d <= R) out.push([d, e]); }
-      out.sort((a, c) => a[0] - c[0] || a[1].k - c[1].k);
-      return out.map(([d, e]) => bodyPlace(b, e, x, z, d));
-    }, true).probe;
+    let free = null;
+    if (!G.inSim) { const k = G.S.clock + ':' + G.S.villagers.size + ':' + (G.S.avatar && G.S.avatar.use ? 1 : 0); if (fmAt !== k) { fmemo.clear(); fmAt = k; } free = fmemo.get(b.id + ':' + planKey(b, b.ip)) || null; }
+    if (!free) { free = assign(b, t, f => t.spots.filter(e => e.ok && f(e)), true).probe; if (!G.inSim) fmemo.set(b.id + ':' + planKey(b, b.ip), free); }
+    const want = uses ? new Set([].concat(uses)) : null; const out = [];
+    for (const e of free) { if (e.lv !== lv || (want && !want.has(e.use))) continue; const d = Math.hypot(e.x - x, e.z - z); if (d <= R) out.push([d, e]); }
+    out.sort((a, c) => a[0] - c[0] || a[1].k - c[1].k);
+    return out.map(([d, e]) => bodyPlace(b, e, d));
   };
   // (a place of a piece — its id, the place's index — as the body has it, or would: free of everyone else (freeFor: asked
   // again in the world's step, at the take — null when someone holds it, or it is no place of the plan any more), or held
-  // (placeFor: the body's own, to sit on it again — a game loaded with the body seated)
+  // (placeFor: the body's own, to sit on it again — a game loaded with the body seated); with where one gets onto it from
+  // about the point given: at)
   const spotOf = (t, item, q) => t.spots.find(s => s.it.id === item && s.q === q && s.ok) || null;
   In.freeFor = function (b, item, q, x, z) {
     const t = b && b.ip ? tableOf(b) : null; const e = t && spotOf(t, item, q); if (!e) return null;
-    return assign(b, t, free => (free(e) ? bodyPlace(b, e, x === undefined ? e.x : x, z === undefined ? e.z : z, 0) : null), true).probe;
+    const pl = assign(b, t, free => (free(e) ? bodyPlace(b, e, 0) : null), true).probe; if (pl) pl.at = In.standFor(b, pl, x === undefined ? e.x : x, z === undefined ? e.z : z); return pl;
   };
-  In.placeFor = function (b, item, q, x, z) { const t = b && b.ip ? tableOf(b) : null; const e = t && spotOf(t, item, q); return e ? bodyPlace(b, e, x === undefined ? e.x : x, z === undefined ? e.z : z, 0) : null; };
-  function bodyPlace(b, e, x, z, d) {
+  In.placeFor = function (b, item, q, x, z) { const t = b && b.ip ? tableOf(b) : null; const e = t && spotOf(t, item, q); if (!e) return null; const pl = bodyPlace(b, e, 0); pl.at = In.standFor(b, pl, x === undefined ? e.x : x, z === undefined ? e.z : z); return pl; };
+  function bodyPlace(b, e, d) {
     const st = e.it.st || USE_ST[e.use] || 'idle';
-    return { b, lv: e.lv, x: e.x, z: e.z, y: In.rootY(e.it, e.it.spots[e.q], st), ry: e.ry, use: e.use, item: e.it.id, it: e.it, q: e.q, on: e.on, st, at: standOf(e, x, z), d: r2(d) };
+    return { b, lv: e.lv, x: e.x, z: e.z, y: In.rootY(e.it, e.it.spots[e.q], st), ry: e.ry, use: e.use, item: e.it.id, it: e.it, q: e.q, on: e.on, st, d: r2(d) };
   }
-  // (where one stands to take a place, and stands up to: by a piece, the standing point of it nearest — one of its own uses,
-  // or where one gets onto it —; a place where one stands, a row of seats, a place with no piece: itself)
-  function standOf(e, x, z) {
-    if (!e.on || e.it.mark || e.it.tier) return [e.x, e.z];
-    let best = null, bd = Infinity;
-    for (const sp of e.it.spots) { if (sp.on || !sp.ok) continue; const d = Math.hypot(sp.x - x, sp.z - z); if (d < bd) { bd = d; best = [sp.x, sp.z]; } }
-    return best || [e.x, e.z];
-  }
+  // where one stands to take a place, and stands up to — a point the body stands on with its whole rim (BODY.r, the
+  // controller's own), reached from the door, the nearest the point asked from: by a piece, one of its standing points (its
+  // own uses, where one gets onto it); failing those — or at a place where one stands that is too tight for the rim, between a
+  // table and a wall —, the nearest such point round the place, up to 0.7 m; the place itself where there is none
+  In.standFor = function (b, pl, x, z) {
+    const p = b && pl ? In.plan(b) : null; if (!p || !p.ok || !p.grid) return pl ? [pl.x, pl.z] : null;
+    const lv = pl.lv, seen = p.reach || {}; const okAt = (u, v) => standsAt(p, lv, u, v, BODY.r) && reachedNear(p, seen, lv, [u, v], 0.3);
+    const cand = []; if (pl.on && !pl.it.mark && !pl.it.tier) { for (const sp of pl.it.spots) if (!sp.on && sp.ok) cand.push([sp.x, sp.z]); } else cand.push([pl.x, pl.z]);
+    cand.sort((a, c) => Math.hypot(a[0] - x, a[1] - z) - Math.hypot(c[0] - x, c[1] - z));
+    for (const c of cand) if (okAt(c[0], c[1])) return c;
+    for (let r = 0.1; r <= 0.7 + 1e-6; r += 0.05) { let best = null, bd = Infinity; for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2; const u = pl.x + Math.cos(a) * r, v = pl.z + Math.sin(a) * r; if (!okAt(u, v)) continue; const d = Math.hypot(u - x, v - z); if (d < bd) { bd = d; best = [r2(u), r2(v)]; } } if (best) return best; }
+    return cand[0] || [pl.x, pl.z];
+  };
   // the metres of the walk from the way in to a place (In.places' or In.freePlace's) — the plan's walk for a body, the flights
   // by their length —, kept with the places: the step times the way from the door to the place by it without the plan;
   // Infinity where the door does not reach it

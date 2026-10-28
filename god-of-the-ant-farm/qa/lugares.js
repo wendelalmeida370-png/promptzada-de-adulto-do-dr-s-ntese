@@ -16,8 +16,8 @@
 //      (In.rootY): deitado no colchão, sentado com os pés no chão
 //   9. o caminho da porta ao lugar: os metros (In.walkIn, guardados com os lugares) e os pontos (In.pathIn), pelo lance
 //  10. os lugares do corpo (o verbo 'lugar', fase C): acordado, nenhum lugar que a regra dê (só as mãos tomam um, L-286);
-//      dormindo, a própria cama; os livres em volta de um ponto (In.freeNear: nunca o de alguém, o mais perto primeiro, subir
-//      de onde se fica); na hora de tomar, livre (In.freeFor); tomado, dele e de mais ninguém
+//      dormindo, a própria cama; os livres em volta de um ponto (In.freeNear: nunca o de alguém, o mais perto primeiro; sobe-se
+//      de onde o corpo inteiro fica, In.standFor); na hora de tomar, livre (In.freeFor); tomado, dele e de mais ninguém
 //   node qa/lugares.js
 const M = require('./nodemundo.js');
 const G = M.load({});
@@ -256,7 +256,8 @@ const lying = pl => pl && (pl.st === 'sleep' || pl.st === 'sick') && pl.pose ===
   const near = In.freeNear(b, 0, seat.x, seat.z, 9);
   const clash = near.filter(pl => held.some(h => h.lv === pl.lv && ((h.it && h.item === pl.item && h.q === pl.q) || (Math.hypot(h.x - pl.x, h.z - pl.z) < 0.5 && !(pl.on && h.it && h.item === pl.item)))));
   const order = near.every((pl, k) => !k || near[k - 1].d <= pl.d + 1e-9);
-  const atBad = near.filter(pl => pl.on && !pl.it.mark && !pl.it.tier && !In.standsAt(p, pl.lv, pl.at[0], pl.at[1], 0.25));
+  // (where one gets onto each: a point the body's whole rim stands on — In.standFor, BODY.r)
+  const atBad = near.filter(pl => { const at = In.standFor(b, pl, seat.x, seat.z); return !at || !In.standsAt(p, pl.lv, at[0], at[1], In.BODY.r); });
   ok('10b os lugares livres do corpo (In.freeNear)', near.length >= 1 && !clash.length && order && !atBad.length && others.every(v => P.by.get(v.id)), `${f}: ${near.length} livres em 9 m (de ${T.spots.filter(e => e.ok).length} lugares, ${held.length} ocupados); sobre alguém: ${clash.length}; em ordem: ${order}; subir de onde não se fica: ${atBad.length}`);
   // (c: freeFor, asked again at the take: a place someone holds is not free; one nobody holds is; placeFor, the body's own
   // held one, whatever is round it; and once taken — S.avatar.use —, the place is the body's, and nobody else's)

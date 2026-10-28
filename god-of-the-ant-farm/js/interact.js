@@ -365,6 +365,8 @@
     can(ctx, t) { const r = USE_RULES.get(t.pl.use); return (r && r.can && r.can(ctx, t.pl)) || { ok: true }; },
     run(ctx, t) {
       const v = ctx.v, B = t.b, pl = t.pl, L0 = L(); const rule = USE_RULES.get(pl.use);
+      // (where one gets onto it from here: a point the body's whole rim stands on, the nearest — Interiors.standFor)
+      pl.at = G.Interiors.standFor(B, pl, ctx.X - B.x * L0, ctx.Z - B.y * L0);
       const at = [B.x * L0 + pl.at[0], B.y * L0 + pl.at[1]]; const d = Math.hypot(at[0] - ctx.X, at[1] - ctx.Z);
       const go = d > 0.08 ? G.clamp(d / (G.Possess.caps(v).walk * 1.1), 0.25, 1.6) : 0; const key = G.Interiors.keyOf(B);
       G.Avatar.act({ anim: 'interact', dur: go + 0.3, contact: go + 0.2, face: face(ctx, t.X, t.Z), to: go ? at : null, toT: go,

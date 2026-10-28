@@ -67,8 +67,11 @@ const follow = (b, pts) => { followAt = ''; for (const pt of pts) { const r = wa
 // to a point of a storey of the house, by its stairs, storey by storey (up or down the flight between each two)
 // (why the last goTo stopped short, for the proof's line)
 let goWhy = '';
+// (the doors between its rooms opened, by the world in its step, as the hands would open them: a room behind a door with a
+// leaf is shut by the house's rule — Interiors.doorState —, and the way through it is the hands' own proof, the first)
+function openInner(b, p) { G.Possess.apply(w => { p.doors.forEach((d, id) => { if (!d.outer && d.kind !== 'vao' && In.doorState(b, id).state !== 'aberta') In.useDoor(b, id, 'abrir', w); }); return { ok: true }; }); frame(); }
 function goTo(b, p, lv, to) {
-  const st = G.Avatar.state(); goWhy = '';
+  const st = G.Avatar.state(); goWhy = ''; openInner(b, p);
   for (let k = 0; k < 8 && G.Possess.level() !== lv; k++) {
     const cur = G.Possess.level(); const up = lv > cur; const s = p.stairs.find(q => q.kind !== 'degraus' && (up ? q.lv0 === cur : q.lv1 === cur));
     if (!s) { goWhy = `nenhuma escada do piso ${cur}`; return false; } const from = up ? s.a : s.b, dest = up ? s.b : s.a;
@@ -85,7 +88,9 @@ function goTo(b, p, lv, to) {
 // a house of the world with a plan, its door on a street, a grown-up living in it who can be lived; and the body by its door
 function houseAndBody() {
   const homes = [...S.buildings.values()].filter(b => b.built && In.has(b) && (b.type === 'house' || b.type === 'sobrado') && In.planDoor(b)).sort((a, b) => a.id - b.id);
-  for (const b of homes) {
+  // (one with a seat or a table first — part 7 sits on it —, any of them else)
+  const seat = b => { const t = In.table(b); return !!t && t.spots.some(e => e.ok && (e.use === 'sentar' || e.use === 'comer')); };
+  for (const b of homes.filter(seat).concat(homes.filter(b => !seat(b)))) {
     const p = Sp.planNow(b); if (!p || !p.entrance) continue;
     const v = [...S.villagers.values()].filter(o => o.home === b.id && o.age >= 18 && o.age < 55 && !o.sleeping && G.Possess.can(o).ok).sort((a, c) => a.id - c.id)[0]; if (!v) continue;
     const d = In.planDoor(b); if (G.Possess.body()) G.Possess.release('deus'); G.Avatar.detach();
@@ -124,7 +129,7 @@ else {
   const s0 = p.stairs.find(s => s.kind !== 'degraus' && s.lv0 === (p.entryLv || 0));
   if (!s0) ok('3. sobe a escada ao piso de cima e desce', true, 'a casa não tem escada (nada a provar)');
   else {
-    bad = []; const here = [st().X - b.x * TL, st().Z - b.y * TL]; const foot = s0.a; const path0 = pathIn(b, p, p.entryLv || 0, here, foot);
+    bad = []; openInner(b, p); const here = [st().X - b.x * TL, st().Z - b.y * TL]; const foot = s0.a; const path0 = pathIn(b, p, p.entryLv || 0, here, foot);
     const got = path0 && follow(b, path0);
     // (up the flight: along its climb, past its top)
     const top = s0.b;
@@ -162,16 +167,23 @@ else {
   // body —, the body on it, turned as the place is; a gesture of the hands there keeps it seated; walking, up where it got on,
   // the place let go. And seated again, for the save below: loaded, seated on it again)
   let seatedAt = null;
-  { const lv = G.Possess.level(); const pl0 = In.freeNear(b, lv, st().X - b.x * TL, st().Z - b.y * TL, 30).filter(q => G.Interact.PURE.has(q.use) && !q.it.mark && !q.it.tier);
+  { // (a place free on any storey of the house — the one the body is on first —, a seat or the table first)
+    const lv0 = G.Possess.level(); const pl0 = [];
+    for (const l of p.levels.slice().sort((a, c) => (a.lv === lv0 ? 0 : 1) - (c.lv === lv0 ? 0 : 1) || a.lv - c.lv)) pl0.push(...In.freeNear(b, l.lv, st().X - b.x * TL, st().Z - b.y * TL, 30).filter(q => G.Interact.PURE.has(q.use) && !q.it.mark && !q.it.tier));
     const pl = pl0.find(q => q.use === 'sentar' || q.use === 'comer') || pl0[0];
+    if (pl) pl.at = In.standFor(b, pl, st().X - b.x * TL, st().Z - b.y * TL); // (where one gets onto it: the body's whole rim stands there)
+    // (the feet walk up to where one gets onto it — the player's stick: to a point near it where the body's rim fits, the
+    // verb takes the last step itself)
+    const fitsAt = (lv, x, z) => { const r = 0.34; for (const [dx, dz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r * 0.7, r * 0.7], [-r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, -r * 0.7]]) { const q = Sp.indoor(b.x * TL + x + dx, b.y * TL + z + dz, lv, b.id); if (!q || !q.walk) return false; } return true; };
+    const near = q => { if (fitsAt(q.lv, q.at[0], q.at[1])) return q.at; for (let rr = 0.1; rr <= 0.6; rr += 0.05) for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2; const x = q.at[0] + Math.cos(a) * rr, z = q.at[1] + Math.sin(a) * rr; if (fitsAt(q.lv, x, z)) return [x, z]; } return q.at; };
     const sitDown = () => {
-      if (!goTo(b, p, pl.lv, pl.at)) return { why: goWhy };
+      if (!goTo(b, p, pl.lv, near(pl))) return { why: goWhy };
       let best = null; for (let k = 0; k < 30 && !(best && best.id === 'lugar' && best.t.pl.item === pl.item); k++) { const ya = Math.atan2(b.y * TL + pl.z - st().Z, b.x * TL + pl.x - st().X); IN.camYaw = ya; st().yaw = ya; best = G.Interact.best(); frame(); }
       if (!(best && best.id === 'lugar')) return { why: `o E oferece ${best ? `«${best.label}»` : 'nada'}` };
       const r = G.Interact.run(best); for (let k = 0; k < 150 && !(G.Avatar.seatNow() && G.Avatar.seatNow().k >= 1); k++) frame();
       return { r, best };
     };
-    if (!pl) ok('7. senta num lugar da planta', true, 'nenhum lugar livre de sentar neste piso (nada a provar)');
+    if (!pl) ok('7. senta num lugar da planta', true, 'nenhum lugar livre de sentar na casa (nada a provar)');
     else {
       bad = []; const s1 = sitDown(); const u = G.Possess.useOf(); const sn = G.Avatar.seatNow(); const tp = s1.best ? s1.best.t.pl : pl;
       const onIt = Math.hypot(st().X - (b.x * TL + tp.x), st().Z - (b.y * TL + tp.z)) < 0.05; let dy = st().yaw - (Math.PI / 2 - tp.ry); while (dy > Math.PI) dy -= 2 * Math.PI; while (dy < -Math.PI) dy += 2 * Math.PI;
