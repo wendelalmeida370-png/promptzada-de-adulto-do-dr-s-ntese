@@ -177,6 +177,8 @@
     azeite: ['anfora', 'ombro', 9, 5], vinho: ['anfora', 'ombro', 9, 5], oleo: ['barril', 'abraco', 8, 4], queijo: ['queijo', 'peito', 3, 0],
     bacalhau: ['peixe', 'lado', 3, 0], atum: ['peixe', 'lado', 6, 0], marfim: ['marfim', 'ombro', 12, 0], chifre: ['marfim', 'ombro', 3, 0],
     ferramentas: ['ferramentas', 'ombro', 2.5, 0], armas: ['ferramentas', 'ombro', 3, 0],
+    // (the pottery's bricks and adobe, P2's olaria: a stack held low before the body, as the stones)
+    tijolo: ['pedras', 'baixo', 7, 0], adobe: ['pedras', 'baixo', 8, 0],
   };
   P3.GOOD = GOOD;
   // the peoples' own ways (a form replaced, a grip): the north keeps its wine and oil in casks; the Aztecs carry the heavy loads

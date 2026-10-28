@@ -18,7 +18,7 @@
       if (!b.ip) continue;
       const r = b.ip; withIp.push(b);
       // ---- the record is whole: its family is one its type has, its side a side, its counters numbers
-      if (r.v !== 3 || !In.TYPES[r.t] || !In.FAMS[r.f] || !SIDES[r.s] || !Number.isInteger(r.r) || r.r < 0 || !Array.isArray(r.h) || !Array.isArray(r.fx) || !r.dr || typeof r.dr !== 'object') { add('int', 1, `${nm}: registro danificado (${JSON.stringify(r).slice(0, 120)})`); continue; }
+      if (r.v !== 4 || !In.TYPES[r.t] || !In.FAMS[r.f] || !SIDES[r.s] || !Number.isInteger(r.r) || r.r < 0 || !Array.isArray(r.h) || !Array.isArray(r.fx) || !r.dr || typeof r.dr !== 'object') { add('int', 1, `${nm}: registro danificado (${JSON.stringify(r).slice(0, 120)})`); continue; }
       if (!In.TYPES[r.t].fams.includes(r.f)) add('int', 1, `${nm}: a família ${r.f} não é de ${r.t}`);
       // ---- a building standing and finished is of the type its record says (a rebuilding is a renovation of the record)
       if (b.built && b.type !== 'ruin' && T && r.t !== b.type) add('int', 2, `${nm}: o registro diz ${r.t}`);
@@ -90,6 +90,13 @@
     for (let k = 0; k < 3; k++) {
       const b = withIp[(turn++ * 7919) % withIp.length]; const p = In.plan(b); if (!p) { add('int', 1, `${b.type}#${b.id}: sem planta`); continue; }
       if (!p.ok) add('int', 2, `${b.type}#${b.id}: planta inválida (${(p.errs || []).slice(0, 2).join('; ')})`);
+      // (the body's places in a valid plan, D-088: both ends of every flight where its rim stands — L-281 —, every use of every
+      // piece with a place ok, where the feet stand — L-282)
+      else if (In.landsAt) {
+        const s0 = p.stairs.find(st => st.kind !== 'degraus' && (!In.landsAt(p, st.lv0, st.a[0], st.a[1]) || !In.landsAt(p, st.lv1, st.b[0], st.b[1])));
+        if (s0) add('int', 3, `${b.type}#${b.id}: o corpo não cabe ${In.landsAt(p, s0.lv0, s0.a[0], s0.a[1]) ? 'no topo' : 'no pé'} de um lance (${s0.kind}, piso ${s0.lv0}→${s0.lv1})`);
+        for (const it of p.items) { const bad = [...new Set(it.spots.map(q => q.use))].find(u => u !== 'acesso' && u !== 'entrar' && !it.spots.some(q => q.use === u && q.ok && (q.on || In.standsAt(p, it.lv, q.x, q.z, In.BODY.feet)))); if (bad) { add('int', 3, `${b.type}#${b.id}: o corpo não fica em ${it.kind} (${bad})`); break; } }
+      }
       // (the plan of a house given up: what the household takes with it is gone)
       if (p.left && p.items.some(it => In.ITEMS[it.kind] && In.ITEMS[it.kind].leva)) add('int', 3, `${b.type}#${b.id}: a casa abandonada ainda tem as coisas que a família leva`);
       const s1 = In.shellOf(b), s2 = In.shellOfPlan(p); const strip = o => { const x = Object.assign({}, o); delete x.key; return JSON.stringify(x); };

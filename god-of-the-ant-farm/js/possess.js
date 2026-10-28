@@ -455,7 +455,9 @@
         else { v.inside = 0; S.avatar.lv = null; } }
       // (the place its hands held, held again — while it is in that building and the plan is the same; else let go, on its feet)
       { const u = a.use; if (u && typeof u === 'object' && Number.isFinite(u.b) && typeof u.it === 'string' && Number.isFinite(u.q) && typeof u.use === 'string' && typeof u.key === 'string') { S.avatar.use = { b: u.b, it: u.it, q: u.q, use: u.use, st: typeof u.st === 'string' ? u.st : '', key: u.key, t0: num(u.t0, S.clock) }; if (!useHolds(v, S.avatar)) S.avatar.use = null; } }
-      v.task = mark(); v.sleeping = false; v.path = null; S.avatar.via = viaOf(v, S.avatar);
+      // (saved asleep in its own house: asleep again — lying is only at home, as the world's step lets it be; anywhere else, on
+      // its feet: the P1's l13 of qa/lar.js)
+      v.task = mark(); v.sleeping = !!(a.in && a.in.sleeping && v.inside && v.inside === v.home); v.path = null; S.avatar.via = viaOf(v, S.avatar);
       if (!v.inside && !W.walkableXY(v.x, v.y) && !onPlan(v, S.avatar)) v.task.afloat = 1; // (saved swimming: it swims on — on a doorstep it stands)
       cur = v;
     },

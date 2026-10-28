@@ -136,7 +136,9 @@ const lying = pl => pl && (pl.st === 'sleep' || pl.st === 'sick') && pl.pose ===
   const P = In.places(b); const bad = sound(b, P, 'olaria');
   const at = ws.map(v => P.by.get(v.id)); const wheels = at.filter(pl => pl && pl.use === 'tornear').map(pl => pl.item);
   const kp = P.by.get(kiln.id); const sts = at.filter(pl => pl && pl.use === 'tornear').map(pl => pl.st);
-  ok('5a os ofícios pelo uso da tarefa', !bad.length && new Set(wheels).size === 2 && at.filter(pl => pl && pl.use === 'de-pe').length === 1 && kp && kp.use === 'cozer' && kp.st === 'low' && sts.every(x => typeof x === 'string'), `${f}: tornos ${wheels.join(', ')} (dois oficiais, cada um no seu, no estado ${sts.join(', ')} — o passo da tarefa não é estado); o terceiro ${at[2] ? at[2].use : '—'}; o forno ${kp ? kp.it.kind : '—'} (t.pose ${kp ? kp.st : '—'}); ${bad.slice(0, 2).join(' · ') || 'um ponto por pessoa'}`);
+  // (the third, with no wheel free: at another station of the trade — the bench where the clay is worked — or standing)
+  const third = at.find(pl => pl && pl.use !== 'tornear');
+  ok('5a os ofícios pelo uso da tarefa', !bad.length && new Set(wheels).size === 2 && wheels.length === 2 && third && (third.use === 'de-pe' || (third.it && third.it.job)) && kp && kp.use === 'cozer' && kp.st === 'low' && sts.every(x => typeof x === 'string'), `${f}: tornos ${wheels.join(', ')} (dois oficiais, cada um no seu, no estado ${sts.join(', ')} — o passo da tarefa não é estado); o terceiro ${third ? third.use + (third.it ? ' em ' + third.it.kind : '') : '—'}; o forno ${kp ? kp.it.kind : '—'} (t.pose ${kp ? kp.st : '—'}); ${bad.slice(0, 2).join(' · ') || 'um ponto por pessoa'}`);
   // (and the piece the task names: t.item)
   reset();
   const wheel2 = In.plan(b).items.filter(i => i.kind === 'roda-oleiro')[1].id;

@@ -19,6 +19,9 @@
   const TILE = Sp.TILE = 4, HM = Sp.HM = 1.5;
   // the pace of time in the body: one god-speed of the world is too quick for a human walk (D-015)
   Sp.TIME = 0.35;
+  // the body, one rule for all who read it — the plans' places and landings, the places given out, the 3D's body (adendo 8):
+  // the plans' own table (interiors.js), the same object
+  Sp.BODY = G.Interiors ? G.Interiors.BODY : { r: 0.32, h: 1.75, step: 0.3, up: 0.6, feet: 0.2, fit: 0.4 };
 
   Sp.toWorld = (x, y, h) => ({ X: x * TILE, Y: (h === undefined ? W.groundH(x, y) : h) * HM, Z: y * TILE });
   Sp.toTile = (X, Z) => [X / TILE, Z / TILE];

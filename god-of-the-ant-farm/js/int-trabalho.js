@@ -50,7 +50,7 @@
     workshop: { use: 'oficina', H: ['salao', 'frente', 'patio', 'anexo'], V: ['terreo', 'galeria', 'porao', 'andar'], open: 1, lockNight: 1, jobs: 2, door: [1.0, 1.3], furnish: P => tradeFurnish(P, [['bancada', 2]], ['prateleira', 'secador'], ['cepo']) },
     forja: { use: 'forja', H: ['salao', 'frente', 'patio', 'anexo'], V: ['terreo', 'galeria', 'andar'], open: 1, lockNight: 1, door: [1.0, 1.3], hot: 'forja-fogo', furnish: P => tradeFurnish(P, [['forja-fogo', 1], ['bancada', 1]], ['prateleira'], ['bigorna', 'tina']) },
     tecelagem: { use: 'tecelagem', H: ['salao', 'frente', 'patio', 'naves'], V: ['terreo', 'galeria', 'andar'], open: 1, lockNight: 1, door: [1.0, 1.3], furnish: P => tradeFurnish(P, [['tear', 3]], ['secador', 'prateleira'], []) },
-    olaria: { use: 'olaria', H: ['salao', 'frente', 'patio', 'anexo'], V: ['terreo', 'galeria', 'andar'], open: 1, lockNight: 1, door: [1.0, 1.3], hot: 'forno-olaria', furnish: P => tradeFurnish(P, [['roda-oleiro', 2]], ['secador'], [], ['forno-olaria']) },
+    olaria: { use: 'olaria', H: ['salao', 'frente', 'patio', 'anexo'], V: ['terreo', 'galeria', 'andar'], open: 1, lockNight: 1, door: [1.0, 1.3], hot: 'forno-olaria', furnish: P => { tradeFurnish(P, [['roda-oleiro', 2]], ['secador'], [], ['forno-olaria']); bricks(P); } },
     acougue: { use: 'acougue', H: ['salao', 'frente', 'anexo'], V: ['terreo', 'porao', 'andar'], open: 1, lockNight: 1, door: [0.9, 1.1], furnish: P => tradeFurnish(P, [['cepo', 1]], ['ganchos'], ['balcao']) },
     ourives: { use: 'ourives', H: ['salao', 'frente', 'anexo'], V: ['terreo', 'porao', 'andar'], open: 1, lockNight: 1, door: [0.85, 1.0], furnish: P => tradeFurnish(P, [['bancada-ourives', 1]], ['cofre'], ['fornalha']) },
     taverna: { use: 'taverna', H: ['salao', 'frente', 'patio', 'naves', 'anexo'], V: ['terreo', 'galeria', 'porao', 'andar'], open: 1, lockNight: 1, door: [1.0, 1.4], furnish: tavernFurnish },
@@ -381,6 +381,14 @@
     P.opt(() => { for (const k of tools) for (const id of work) if (P.place(k, lvOf(P, id), id)) break; });
     // (a counter by the door of a shop that sells across it)
     if (rooms.front !== undefined) P.opt(() => P.place('balcao', 0, rooms.front, { sides: ['livre'], margin: 0.3 }));
+  }
+  // the pottery's brick work, where there is room (P2's olaria): the clay pit and the moulding floor in the court — else the
+  // ground floor —, the stack of bricks by the kiln's room, the bench where the clay is worked
+  function bricks(P) {
+    const rooms = P._rooms; const ground = mix(P, [rooms.court, rooms.lean, rooms.main, ...rooms.cells, rooms.front].filter(x => x !== undefined && x !== null && lvOf(P, x) === 0));
+    for (const k of ['tanque-barro', 'eira']) P.opt(() => { for (const id of ground) if (P.place(k, 0, id, { sides: ['livre'] })) break; });
+    P.opt(() => { for (const id of ground) if (P.place('pilha-tijolos', 0, id)) break; });
+    P.opt(() => { for (const id of ground) if (P.place('bancada', 0, id, { sides: ['fundo', 'esquerda', 'direita'] })) break; });
   }
   // (the other buildings this recipe lays out — the temple, the barracks, the jail, the baths, the chief's hall — register
   // their programmes here, with their own furnishing: int-civicos.js)

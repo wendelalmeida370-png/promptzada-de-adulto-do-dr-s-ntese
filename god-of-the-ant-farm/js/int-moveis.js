@@ -38,9 +38,9 @@
     cama: { name: 'Cama', w: 0.9, d: 1.95, h: 0.5, lie: 0.5, low: 1, wall: 1, rot: 1, places: 1, spots: lie(1) },
     // (leva: what a household takes with it when it leaves — its mats, the cradle, the stove and the brazier; the house left
     // behind keeps the rest, its chests, baskets and jars among them: what the world left in them is still there)
-    esteira: { name: 'Esteira', w: 0.72, d: 1.8, h: 0.06, low: 1, wall: 1, rot: 1, places: 1, leva: 1, spots: lie(1) },
+    esteira: { name: 'Esteira', w: 0.72, d: 1.8, h: 0.06, low: 1, wall: 1, rot: 1, places: 1, leva: 1, flex: 1, spots: lie(1) },
     // (the couple's mat, or the pallet two share where there are no beds)
-    'esteira-casal': { name: 'Esteira de casal', w: 1.25, d: 1.85, h: 0.08, low: 1, wall: 1, rot: 1, places: 2, leva: 1, spots: lie(2) },
+    'esteira-casal': { name: 'Esteira de casal', w: 1.25, d: 1.85, h: 0.08, low: 1, wall: 1, rot: 1, places: 2, leva: 1, flex: 1, spots: lie(2) },
     // (the sleeping bench along the long wall of a northern house: one sleeper every 0.7 m of it)
     'banco-cama': { name: 'Banco-cama', w: 0, d: 0.85, h: 0.45, low: 1, wall: 1, per: 0.7, spots: it => { const k = Math.max(1, Math.floor(it.w / 0.7 + 1e-6)); return lie(k, 1)(it); } },
     berco: { name: 'Berço', w: 0.55, d: 0.95, h: 0.5, low: 1, wall: 1, places: 0, leva: 1, spots: front('cuidar') },
@@ -88,6 +88,11 @@
     'roda-oleiro': { name: 'Roda de oleiro', w: 0.8, d: 0.8, h: 0.7, solid: 1, free: 1, job: 1, spots: front('tornear', 0.45) },
     'forno-olaria': { name: 'Forno de olaria', w: 1.5, d: 1.5, h: 1.6, solid: 1, fire: 1, free: 1, tall: 1, spots: front('cozer', 0.6) },
     secador: { name: 'Estante de secar', w: 1.6, d: 0.5, h: 1.6, solid: 1, wall: 1, tall: 1, store: { dep: 'predio', key: 'inv', cap: 12 }, spots: front('guardar') },
+    // (the pottery's brick work — P2's olaria: the clay kneaded in its pit, the bricks and the adobe moulded on the floor beside
+    // it, the fired ones stacked by the kiln; keys: the goods the store holds)
+    'tanque-barro': { name: 'Tanque de barro', w: 1.2, d: 0.9, h: 0.6, solid: 1, free: 1, store: { dep: 'predio', key: 'inv', cap: 8, keys: ['argila'] }, spots: it => [{ use: 'amassar', a: 0, n: it.d / 2 + 0.45 }, { use: 'amassar', a: 0, n: -(it.d / 2 + 0.45) }] },
+    eira: { name: 'Eira de moldar', w: 2.0, d: 1.6, h: 0.05, low: 1, free: 1, spots: it => [{ use: 'moldar', a: 0, n: it.d / 2 + 0.4 }, { use: 'moldar', a: -(it.w / 2 + 0.4), n: 0 }, { use: 'moldar', a: it.w / 2 + 0.4, n: 0 }] },
+    'pilha-tijolos': { name: 'Pilha de tijolos', w: 1.4, d: 0.8, h: 1.0, solid: 1, wall: 1, store: { dep: 'predio', key: 'inv', cap: 24, keys: ['tijolo', 'adobe', 'ceramica'] }, spots: front('guardar') },
     'bancada-ourives': { name: 'Bancada de ourives', w: 1.1, d: 0.6, h: 0.8, solid: 1, wall: 1, job: 1, spots: front('lavrar', 0.45) },
     fornalha: { name: 'Fornalha', w: 0.6, d: 0.6, h: 0.9, solid: 1, fire: 1, wall: 1, spots: front('fundir', 0.45) },
     cepo: { name: 'Cepo', w: 0.7, d: 0.7, h: 0.8, solid: 1, free: 1, job: 1, spots: front('cortar', 0.45) },
