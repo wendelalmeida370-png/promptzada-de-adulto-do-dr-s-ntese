@@ -6,11 +6,14 @@
 // as provas —, conferidas contra o código: as peças e os usos nas plantas de amostra de cada tipo e povo, a tarefa no código
 // que a dá, o ato no G.Act.DEFS, o verbo no interact.js, os sistemas no G, as provas no disco e — com --resultados — no
 // resultado da regressão. O estado de cada categoria sai daí (não auditada · auditada · parcial · funcional · validada: o
-// formato diz quando cada um vale); o gerador nunca o inventa.
+// formato diz quando cada um vale); o gerador nunca o inventa. E a geometria de cada tipo com planta (Parte 7.4, D-087): o
+// relatório geométrico das plantas de amostra (In.report, o mesmo do qa/geometria.js e da planta do deus no modo
+// desenvolvedor) e, com --geometria, o dos mundos prontos (os JSON que o qa/geometria.js <mundo> <saída.json> grava); uma falha
+// geométrica é lacuna e segura a categoria abaixo de validada.
 // FALHA (sai com 1): um tipo sem categoria ou em duas; uma folha com categoria, peça, uso, ato, verbo, sistema ou prova que
 // não existem; uma atividade feita (feito: true) cujo código não está lá; uma folha que afirma um estado acima do calculado.
 // O que falta (atividade não feita, essencial sem prova) sai como lacuna, contada.
-//   node qa/matriz-predios.js [--resultados <pasta da regressão>] [--sem-plantas] [--categorias] [saída.md]
+//   node qa/matriz-predios.js [--resultados <pasta da regressão>] [--geometria <a.json,b.json…>] [--sem-plantas] [--categorias] [saída.md]
 //   (padrão: qa/MATRIZ-PREDIOS.md; só lê o código — M.load —, nenhum mundo)
 const fs = require('fs'), path = require('path');
 const M = require('./nodemundo.js');
@@ -18,8 +21,12 @@ const G = M.load({}); const In = G.Interiors;
 const ROOT = path.join(__dirname, '..');
 const args = process.argv.slice(2);
 const opt = k => { const i = args.indexOf(k); return i >= 0 ? (args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : true) : null; };
-const RES = opt('--resultados'), NOPLAN = !!opt('--sem-plantas'), LIST = !!opt('--categorias');
-const OUT = args.filter((a, i) => !a.startsWith('--') && !(i && args[i - 1] === '--resultados'))[0] || path.join(__dirname, 'MATRIZ-PREDIOS.md');
+const RES = opt('--resultados'), NOPLAN = !!opt('--sem-plantas'), LIST = !!opt('--categorias'), GEOF = opt('--geometria');
+const OUT = args.filter((a, i) => !a.startsWith('--') && !(i && (args[i - 1] === '--resultados' || args[i - 1] === '--geometria')))[0] || path.join(__dirname, 'MATRIZ-PREDIOS.md');
+// (the geometric report of the worlds: per type, the plans, the failures, the choices — summed over the files given)
+const GEO = new Map();
+if (GEOF && GEOF !== true) for (const f of String(GEOF).split(',')) { let j; try { j = JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { console.log(`FALHOU | matriz | --geometria ${f}: ${e.message}`); process.exit(1); }
+  for (const t in j) { const g = GEO.get(t) || { plantas: 0, falhas: 0, escolhas: 0, motivos: {} }; g.plantas += j[t].plantas || 0; g.falhas += j[t].falhas || 0; g.escolhas += j[t].escolhas || 0; for (const k in j[t].motivos || {}) if (k.startsWith('FALHA')) g.motivos[k] = (g.motivos[k] || 0) + j[t].motivos[k]; GEO.set(t, g); } }
 
 // ------------------------------ the categories ------------------------------
 // (by what each building is for in the world; dono: whose sheet speaks for the category first — the others add to it)
@@ -59,16 +66,17 @@ const SYSTEMS = new Set(); for (const [, s] of JS) for (const m of s.matchAll(/G
 const USES = new Map(); for (const k in In.ITEMS) { const D = In.ITEMS[k]; let sp = []; try { sp = D.spots ? D.spots({ w: D.w || 1.2, d: D.d || 0.8, h: D.h || 0.5 }) : []; } catch (e) { sp = []; } for (const s of sp) { if (!USES.has(s.use)) USES.set(s.use, new Set()); USES.get(s.use).add(k); } }
 // (the plans of each type that has them: one of each people, the first family its rules allow that is laid out — the pieces
 // in them, the uses of their places: of the pieces, the rows of seats, the places with no piece)
-const SAMPLE = new Map(); // type → { pieces: Set, uses: Set, fams: n, made: n }
+const SAMPLE = new Map(); // type → { pieces: Set, uses: Set, fams: n, made: n, geoF, geoE: the geometric report's failures and choices, why }
 if (!NOPLAN) for (const t of Object.keys(In.TYPES)) {
-  const T = In.TYPES[t]; const def = G.BDEF[t]; if (!def) continue; const o = { pieces: new Set(), uses: new Set(), fams: (T.fams || []).length, made: 0, peoples: [] };
+  const T = In.TYPES[t]; const def = G.BDEF[t]; if (!def) continue; const o = { pieces: new Set(), uses: new Set(), fams: (T.fams || []).length, made: 0, peoples: [], geoF: 0, geoE: 0, why: [] };
   for (const c of Object.keys(In.TRAD)) {
     const rec = { v: 4, f: '', r: 0, t, u: T.use, s: 'S', o: 0, c, e: 3, k: 'ae', cl: 't', fl: 0, d: 3, w: 0, pw: 0, h: [], m: 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 };
     let tries = 0;
     for (const f of T.fams || []) {
       const F = In.FAMS[f]; if (!F || (F.can && F.can(rec, T, In.TRAD[c]))) continue; if (++tries > 3) break;
-      const p = In.makeFam({ id: 101, type: t, x: 8, y: 8, w: def.w, h: def.h }, Object.assign({}, rec, { f }), f); if (!p.ok) continue;
+      const b0 = { id: 101, type: t, x: 8, y: 8, w: def.w, h: def.h }; const p = In.makeFam(b0, Object.assign({}, rec, { f }), f); if (!p.ok) continue;
       o.made++; o.peoples.push(c);
+      for (const g of In.report(b0, p, { rec: Object.assign({}, rec, { f }) })) { if (g.k === 'FALHA') { o.geoF++; if (o.why.length < 2) o.why.push(`${c}: ${g.what}`); } else o.geoE++; }
       for (const it of p.items) { o.pieces.add(it.kind); for (const s of it.spots) o.uses.add(s.use); }
       for (const T2 of p.tiers || []) o.uses.add(T2.use || 'assistir');
       for (const M2 of p.marks || []) o.uses.add(M2.use);
@@ -125,23 +133,27 @@ for (const C of byCat.values()) {
   let st = 0; if (C.acts.length) st = 1;
   if (ess.some(a => a.feito === true || a.feito === 'parcial')) st = 2;
   if (ess.length && ess.every(a => a.feito === true && a.found)) st = 3;
-  if (st === 3 && ess.every(a => a.pass.length && a.pass.every(([, ok]) => ok === true))) st = 4;
+  // (the geometry of its types: no failure in the plans of the samples, nor in the worlds' when they are given)
+  C.geoF = C.cat.tipos.reduce((n, t) => n + (SAMPLE.get(t) ? SAMPLE.get(t).geoF : 0) + (GEO.get(t) ? GEO.get(t).falhas : 0), 0);
+  if (st === 3 && ess.every(a => a.pass.length && a.pass.every(([, ok]) => ok === true)) && !C.geoF) st = 4;
   C.state = st; C.ess = ess;
   for (const [who, cl] of C.claims) if (STATES.indexOf(cl) > st) fail(`${C.cat.id}: a folha de ${who} afirma '${cl}', o gerador acha '${STATES[st]}'`);
 }
 
 // ------------------------------ the matrix ------------------------------
 const L = [];
-L.push('# A matriz por prédio', '', `Gerada por \`node qa/matriz-predios.js\` em ${new Date().toISOString().slice(0, 10)} — do código e das folhas \`qa/categorias/pN.js\` (o formato está no \`p4.js\`); nunca editada à mão.${RES && RES !== true ? ' Resultado da regressão: `' + RES + '`.' : ' Sem resultado de regressão: nenhuma categoria chega a validada.'}`, '');
-L.push('| Categoria | Tipos | Estado | Essenciais feitas | Folhas |', '|---|---|---|---|---|');
-for (const C of byCat.values()) { const done = C.ess.filter(a => a.feito === true && a.found).length; L.push(`| ${C.cat.nome} | ${C.cat.tipos.length} | **${STATES[C.state]}** | ${done}/${C.ess.length} | ${[...new Set(C.sheets)].join(', ') || '—'} |`); }
+L.push('# A matriz por prédio', '', `Gerada por \`node qa/matriz-predios.js\` em ${new Date().toISOString().slice(0, 10)} — do código e das folhas \`qa/categorias/pN.js\` (o formato está no \`p4.js\`); nunca editada à mão.${RES && RES !== true ? ' Resultado da regressão: `' + RES + '`.' : ' Sem resultado de regressão: nenhuma categoria chega a validada.'}${GEO.size ? ` A geometria dos mundos prontos: ${String(GEOF).split(',').map(f => '`' + path.basename(f) + '`').join(', ')}.` : ' A geometria só das plantas de amostra (sem --geometria).'}`, '');
+L.push('| Categoria | Tipos | Estado | Essenciais feitas | Falhas geométricas | Folhas |', '|---|---|---|---|---|---|');
+for (const C of byCat.values()) { const done = C.ess.filter(a => a.feito === true && a.found).length; L.push(`| ${C.cat.nome} | ${C.cat.tipos.length} | **${STATES[C.state]}** | ${done}/${C.ess.length} | ${C.geoF} | ${[...new Set(C.sheets)].join(', ') || '—'} |`); }
 L.push('');
 for (const C of byCat.values()) {
   L.push(`## ${C.cat.nome} — ${STATES[C.state]}`, '');
   if (C.funcao) L.push(`**Função:** ${C.funcao}${C.quem ? ' · **Quem:** ' + C.quem : ''}`, '');
   if ((C.sistemas || []).length) L.push(`**Sistemas:** ${[...new Set(C.sistemas)].join(', ')}`, '');
-  L.push('| Tipo | Planta | Peças nas plantas de amostra | Usos |', '|---|---|---|---|');
-  for (const t of C.cat.tipos) { const T = In.TYPES[t]; const S = SAMPLE.get(t); L.push(`| ${t} (${G.BDEF[t] ? G.BDEF[t].name : '?'}) | ${T ? `${(T.fams || []).length} famílias${S ? `, ${S.made} de ${Object.keys(In.TRAD).length} povos armados` : ''}` : 'sem planta'} | ${S ? [...S.pieces].sort().join(', ') : '—'} | ${S ? [...S.uses].sort().join(', ') : '—'} |`); }
+  L.push('| Tipo | Planta | Peças nas plantas de amostra | Usos | Geometria |', '|---|---|---|---|---|');
+  for (const t of C.cat.tipos) { const T = In.TYPES[t]; const S = SAMPLE.get(t); const g = GEO.get(t);
+    const geo = !T ? '—' : `amostra: ${S ? `${S.geoF} ${S.geoF === 1 ? 'falha' : 'falhas'}, ${S.geoE} ${S.geoE === 1 ? 'escolha' : 'escolhas'}${S.why.length ? ' (' + S.why.join('; ') + ')' : ''}` : '—'}${g ? `; mundos: ${g.plantas} plantas, ${g.falhas} ${g.falhas === 1 ? 'falha' : 'falhas'}${g.falhas ? ' (' + Object.entries(g.motivos).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, n]) => `${k.replace(/^FALHA: /, '')} ×${n}`).join('; ') + ')' : ''}` : ''}`;
+    L.push(`| ${t} (${G.BDEF[t] ? G.BDEF[t].name : '?'}) | ${T ? `${(T.fams || []).length} famílias${S ? `, ${S.made} de ${Object.keys(In.TRAD).length} povos armados` : ''}` : 'sem planta'} | ${S ? [...S.pieces].sort().join(', ') : '—'} | ${S ? [...S.uses].sort().join(', ') : '—'} | ${geo} |`); }
   L.push('');
   if (C.acts.length) {
     L.push('| Atividade | Essencial | Quem faz | Feita | No código | Provas |', '|---|---|---|---|---|---|');
@@ -151,6 +163,7 @@ for (const C of byCat.values()) {
   if (C.notas) L.push(`**Notas:** ${C.notas}`, '');
 }
 const gaps = []; for (const C of byCat.values()) for (const a of C.acts) { if (a.essencial && a.feito !== true) gaps.push(`${C.cat.id}/${a.id}: não feita`); else if (a.essencial && !(a.provas || []).length) gaps.push(`${C.cat.id}/${a.id}: sem prova`); }
+for (const C of byCat.values()) for (const t of C.cat.tipos) { const S = SAMPLE.get(t), g = GEO.get(t); const n = (S ? S.geoF : 0) + (g ? g.falhas : 0); if (n) gaps.push(`${C.cat.id}/${t}: ${n} ${n === 1 ? 'falha geométrica' : 'falhas geométricas'} (qa/geometria.js)`); }
 L.push('## Lacunas', '', ...(gaps.length ? gaps.map(g => '- ' + g) : ['- nenhuma']), '');
 if (fails.length) L.push('## Falhas', '', ...fails.map(f => '- ' + f), '');
 fs.writeFileSync(OUT, L.join('\n'));
