@@ -66,8 +66,13 @@ const TETO = 184;
 // the fences of the pens and of the graveyard, the campfire, the ruin, the fair's ground: compared elsewhere, T-150)
 const OWN_LAYER = { campfire: 1, farm: 1, cemetery: 1, cercado: 1, ruin: 1, curral: 1, estabulo: 1, feira: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, salina: 1, horta: 1 };
 const FORMA = G.Forma || null; // (js/forma.js: the form of a type and a people, or null — the shell is its form)
+// (a hole: a picture of which more than half a percent only the backs of faces cover — the rest is a sliver between two
+// pieces, a stone's edge; L-271 was 1–2% of every Egyptian building)
+const HOLE = 0.005;
 F.blank();
-const rows = []; const per = new Map(); const sheets = new Map(); const other = new Set(); const formed = new Set();
+const rows = []; const per = new Map(); const sheets = new Map(); const other = new Set(); const formed = new Set(); const holes = [];
+// (the shapes every builder uses, each face wound out of it: L-270)
+{ const sw = F.shapesWound(); const bad = Object.entries(sw).filter(([, s]) => s.inward); ok('as formas do 3D enroladas para fora', !bad.length, bad.length ? bad.map(([k, s]) => `${k}: ${s.inward} de ${s.faces} faces para dentro`).join(', ') : `${Object.keys(sw).length} formas, todas as faces para fora`); }
 for (const type of Object.keys(G.BDEF)) {
   if (ONLY && !ONLY.includes(type)) continue;
   for (const style of POVOS) for (let q = 0; q < NID; q++) {
@@ -82,6 +87,8 @@ for (const type of Object.keys(G.BDEF)) {
       const mg = F.measure(Rg), mn = F.measure(Rn), mf = F.measure(Rf);
       const cn = F.compare(mg, mn, lot), cf = F.compare(mg, mf, lot); const vd = verdict(cn, cf);
       const row = { type, style, id, fam: b.ip ? b.ip.f : '', v: vd.v, why: vd.why, near: cn, far: { iou: cf.iou, topA: cf.topA, topB: cf.topB, dTop: cf.dTop } };
+      // (the holes: what only the backs of the faces cover, near and far)
+      row.costas = Math.max(F.backOnly(near), F.backOnly(far)); if (row.costas > HOLE) holes.push(`${type}/${style}#${id}${row.fam ? ' (' + row.fam + ')' : ''}: ${(row.costas * 100).toFixed(1)}%`);
       for (const k of ['profA', 'profB']) delete row.near[k];
       // (b) the form, where there is one
       const Fm = FORMA && FORMA.of(type, style, b);
@@ -114,6 +121,7 @@ if (formed.size) ok('os tipos com forma', !ruins.length, ruins.length ? ruins.ma
 const outra = [...per.values()].filter(r => r.v === '≠' && !formed.has(r.type));
 if (!ONLY && POVOS.length === STY.length && NID === 3) ok('outra massa (a catraca)', outra.length <= TETO, `${outra.length} tipos e povos com outra massa (teto ${TETO}, a meta é zero)${outra.length < TETO ? ' — baixou: desça o teto' : ''}`);
 else console.log(`outra massa: ${outra.length} tipos e povos (a catraca só vale na rodada inteira, IDS=3)`);
+ok('sem furos (faces de costas)', !holes.length, holes.length ? `${holes.length} figuras com mais de ${HOLE * 100}% coberto só por faces de costas: ${holes.slice(0, 12).join(' · ')}` : `${rows.length} prédios, de perto e de longe: nenhum`);
 const e = M.erros(); ok('sem erro do jogo', M.limpo(), M.limpo() ? 'nenhum erro de módulo nem aviso no console' : JSON.stringify(e.mod) + ' ' + e.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');
 process.exit(fails.length ? 1 : 0);

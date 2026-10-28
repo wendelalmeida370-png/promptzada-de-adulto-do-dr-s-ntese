@@ -282,6 +282,26 @@ F.paint3D = function (pic, R) {
   }
   return R;
 };
+// (how much of a picture only the backs of its faces cover: a surface the game, its material one-sided, never draws from
+// outside — a hole where the world behind shows through, L-270, L-271)
+F.backOnly = function (pic) {
+  if (!pic.tris.length) return 0;
+  const both = { tris: pic.tris.map(t => (t.ds ? t : Object.assign({}, t, { ds: true }))), fr: pic.fr };
+  const mk = F.gridFor(pic); const A = F.paint3D(pic, mk()), B = F.paint3D(both, mk()); let only = 0, n = 0;
+  for (let q = 0; q < A.a.length; q++) { if (B.a[q] >= 0.5) n++; if (B.a[q] >= 0.5 && !(A.a[q] >= 0.5)) only++; }
+  return n ? only / n : 0;
+};
+// (the shapes every builder of the 3D uses: how many of their faces are wound in — the GPU culls by the winding)
+F.shapesWound = function () {
+  const SH = G.Realm.SH; const out = {};
+  for (const k in SH) { const g = SH[k]; if (!g || !g.attributes || !g.attributes.position) continue; const P = g.attributes.position.array, I = g.index ? g.index.array : null; const cnt = I ? I.length / 3 : P.length / 9;
+    let cx = 0, cy = 0, cz = 0; const nv = P.length / 3; for (let i = 0; i < nv; i++) { cx += P[i * 3]; cy += P[i * 3 + 1]; cz += P[i * 3 + 2]; } cx /= nv; cy /= nv; cz /= nv; let inward = 0;
+    for (let t = 0; t < cnt; t++) { const id = q => (I ? I[t * 3 + q] : t * 3 + q); const v = q => [P[id(q) * 3], P[id(q) * 3 + 1], P[id(q) * 3 + 2]]; const a = v(0), b = v(1), c = v(2);
+      const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]; const wn = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+      if (wn[0] * ((a[0] + b[0] + c[0]) / 3 - cx) + wn[1] * ((a[1] + b[1] + c[1]) / 3 - cy) + wn[2] * ((a[2] + b[2] + c[2]) / 3 - cz) < 0) inward++; }
+    out[k] = { faces: cnt, inward }; }
+  return out;
+};
 // the bounds of what each picture covers, for a grid round both (god's pixels from the anchor)
 function boundsGod(god) { const B = [1e9, 1e9, -1e9, -1e9]; for (const o of god.ops) { const L = o.f ? o.polys.flat() : o.segs.flat(); for (const p of L) { B[0] = Math.min(B[0], p[0]); B[1] = Math.min(B[1], p[1]); B[2] = Math.max(B[2], p[0]); B[3] = Math.max(B[3], p[1]); } } return B; }
 function bounds3D(pic) { const B = [1e9, 1e9, -1e9, -1e9]; for (const t of pic.tris) for (let k = 0; k < 9; k += 3) { const p = pic.fr.P(t.v[k], t.v[k + 1], t.v[k + 2]); B[0] = Math.min(B[0], p[0]); B[1] = Math.min(B[1], p[1]); B[2] = Math.max(B[2], p[0]); B[3] = Math.max(B[3], p[1]); } return B; }
