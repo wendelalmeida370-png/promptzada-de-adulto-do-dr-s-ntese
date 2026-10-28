@@ -59,7 +59,8 @@ skip cidade || { (timeout 2400 node urb1.js 41 128 90 > "$OUT/cidade_bairros.txt
   (timeout 1500 node quarteirao.js > "$OUT/cidade_quarteirao.txt" 2>&1); }
 echo "== cidade: $(cat "$OUT"/cidade_*.txt 2>/dev/null | grep -c '^PASSOU') passaram, $(cat "$OUT"/cidade_*.txt 2>/dev/null | grep -c '^FALHOU') falharam; memória e mundos prontos: $(grep -h '^MUNDOS' "$OUT/mundos.txt" 2>/dev/null)"
 # 7. os poderes do deus: os novos (v30) provocados de propósito com os casos ruins, e o deus caótico lançando todos ao acaso
-skip poderes || { (timeout 1500 node poderes.js > "$OUT/poderes.txt" 2>&1) & (timeout 1500 node ev.js 7 continente 128 4 3 chaos.js > "$OUT/caos.txt" 2>&1) & (timeout 1500 node ev.js 13 arquipelago 128 4 3 chaos.js > "$OUT/caos_13.txt" 2>&1) & wait; }
+# (e as famílias que o modo desenvolvedor faz: cada filho ao menos 11 anos depois dos pais, L-219)
+skip poderes || { (timeout 1500 node poderes.js > "$OUT/poderes.txt" 2>&1) & (timeout 1500 node ev.js 7 continente 128 4 3 chaos.js > "$OUT/caos.txt" 2>&1) & (timeout 1500 node ev.js 13 arquipelago 128 4 3 chaos.js > "$OUT/caos_13.txt" 2>&1) & (timeout 900 node devfamilias.js > "$OUT/devfamilias.txt" 2>&1) & wait; }
 echo "== poderes: $(grep -c '^PASSOU' "$OUT/poderes.txt" 2>/dev/null) passaram, $(grep -c '^FALHOU' "$OUT/poderes.txt" 2>/dev/null) falharam; caos: $(cat "$OUT"/caos*.txt 2>/dev/null | grep -c '"viol": \[\]') de 2 limpos"
 # 7b. a fundação da v37, em Node (sem navegador): o depósito e as operações, o porto, o negócio, a economia de verdade (a fome,
 # as moedas, a casa, as compras, a pesca, as filas, o saque, a carga comum nas mãos), a invariância entre os três níveis, os interiores (o registro, a
@@ -88,6 +89,9 @@ skip perf || m17 perf 7; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/m
   [ -f "$OUT/vira.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/vira.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | guerra \2/'
   [ -f "$OUT/cativos.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/cativos.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | cativos \2/'
   [ -f "$OUT/poderes.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/poderes.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | poderes \2/'
+  [ -f "$OUT/devfamilias.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/devfamilias.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | \2/'
+  # (o macaco: as violações S0–S2 que ele acha contam — antes só os erros contavam, T-122)
+  [ -f "$OUT/macaco.txt" ] && { grep -q "^violações S0-S2: nenhuma" "$OUT/macaco.txt" && echo "PASSOU | macaco sem violações S0–S2" || echo "FALHOU | macaco sem violações S0–S2"; }
   [ -f "$OUT/encarnado.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/encarnado.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | \2/'
   [ -f "$OUT/baloes.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/baloes.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | \2/'
   [ -f "$OUT/diario.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/diario.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | \2/'

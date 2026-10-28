@@ -120,7 +120,8 @@
       const a = G.Vg.create({ set: set.id, x: p0[0], y: p0[1], age: G.rr(19, 36), g: 'm' });
       const b = G.Vg.create({ set: set.id, x: p0[0] + 0.4, y: p0[1], age: G.rr(18, 34), g: 'f' });
       if (a && b) { a.partner = b.id; b.partner = a.id; made += 2; }
-      for (let c = 0, nc = Math.floor(G.rr(0, 3)); c < nc && a && b; c++) { const kid = G.Vg.create({ set: set.id, x: p0[0], y: p0[1] + 0.4, age: G.rr(1, 14), mother: b.id, father: a.id }); if (kid) { (a.kids = a.kids || []).push(kid.id); (b.kids = b.kids || []).push(kid.id); made++; } }
+      // (a child born at least 12 years after each parent — the family rule of the checker is 11, L-219)
+      for (let c = 0, nc = Math.floor(G.rr(0, 3)); c < nc && a && b; c++) { const kid = G.Vg.create({ set: set.id, x: p0[0], y: p0[1] + 0.4, age: G.rr(1, Math.min(14, a.age - 12, b.age - 12)), mother: b.id, father: a.id }); if (kid) { (a.kids = a.kids || []).push(kid.id); (b.kids = b.kids || []).push(kid.id); made++; } }
     }
     return made;
   }
