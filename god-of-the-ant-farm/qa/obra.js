@@ -46,6 +46,16 @@ const site = id => { const b = S.buildings.get(id); return b && !b.built && b.ty
 const onIt = id => [...S.villagers.values()].filter(v => v.task && v.task.type === 'build' && v.task.id === id);
 const carrying = id => onIt(id).find(v => v.task.counted && v.carry && v.carry.n > 0);
 const firstNeed = (b, n) => Object.keys(b.need).sort().find(k => b.need[k] >= n);
+// (a builder with free hands, not on this work: the next to look for work — the door every builder of the world goes
+// through, G.Vg.H.workTask —, or sent to this work with the task the planner's builders get)
+const freeBuilder = id => builders(set0).filter(v => !(v.carry && v.carry.n > 0) && !(v.task && v.task.type === 'build' && v.task.id === id) && !v.sleeping && !v.inside).sort((a, b) => a.id - b.id)[0] || null;
+const nextLooks = () => { const w = freeBuilder(0); if (w) { Vg.endTask(w); Vg.H.workTask(w); } return w; };
+// (by day: a builder is sent in the morning — the night's sleep would keep the load for the next day)
+const send = b => {
+  if (S.time < 0.25 || S.time > 0.6) { S.time = 0.27; live(3); }
+  let w = null; for (let k = 0; k < 30 && !(w = freeBuilder(b.id)); k++) live(1); // (one with free hands: the other may be carrying)
+  if (w) { Vg.endTask(w); Vg.H.setTask(w, { type: 'build', id: b.id, pri: 1, st: 0 }); } return w;
+};
 
 // ---------------- b1 the delivery; b2 the work stands ----------------
 {
@@ -59,6 +69,17 @@ const firstNeed = (b, n) => Object.keys(b.need).sort().find(k => b.need[k] >= n)
   const o = S.buildings.get(id); const built = seen.filter(e => e[3] === ref && e[8] === 'obra-feita');
   ok('b2 a-obra-pronta', done && !!o && o.built && Math.abs(sum(built) - total(V.bill(o))) < 0.01 && !D.exists(ref) && Math.abs(flowOf(ref)) < 0.01, o ? `${o.type}#${id} ${o.built ? 'de pé' : 'ainda obra a ' + Math.round(o.progress * 100) + '%'}: ${sum(built)} de material virou o prédio ('obra-feita'), a conta era ${total(V.bill(o))}; lugar do depósito: ${D.exists(ref) ? 'ainda' : 'não mais'}` : 'a obra sumiu');
 }
+// ---------------- b8 a save in the middle of a delivery (while the town's builders are free of other works) ----------------
+{
+  stock(); seen.length = 0; const b = project(set0, 'well'); const id = b ? b.id : 0;
+  if (b) send(b);
+  const mid0 = !!b && live(240, () => !!carrying(id));
+  const w = b && carrying(id); const was = w ? `${w.carry.n} de ${w.carry.k} nas mãos de ${w.name}` : 'ninguém carregando';
+  if (b) reload();
+  const done = !!b && live(400, () => !site(id));
+  const o = S.buildings.get(id);
+  ok('b8 save-no-meio-da-entrega', mid0 && done && !!o && o.built, b ? `${b.type}#${id}, salva com ${was}, carregada: ${o && o.built ? 'pronta' : o ? 'ainda a ' + Math.round(o.progress * 100) + '%' : 'sumiu'}` : 'nenhuma obra possível');
+}
 // ---------------- b3 a reform given up (L-246) ----------------
 {
   stock(); seen.length = 0;
@@ -69,8 +90,9 @@ const firstNeed = (b, n) => Object.keys(b.need).sort().find(k => b.need[k] >= n)
     const id = old.id, ref = 'o:' + id;
     old.type = 'house'; old.built = false; old.progress = 0; old.upgradeFrom = 'hut'; V.refound(old); old.hp = G.BDEF.house.hp; old.maxHp = old.hp;
     const k = firstNeed(old, 4); const r = k ? D.make(ref, k, 4, { code: 'teste' }) : { ok: false };
-    // (and nobody reaches it any more: the next builder that looks gives it up)
+    // (and nobody reaches it any more: the next builder that looks for work gives it up)
     for (const v of onIt(id)) Vg.endTask(v); old.unreach = 6; old.unreachT = S.clock;
+    if (r.ok) nextLooks();
     const back = r.ok && live(40, () => { const o = S.buildings.get(id); return !!o && o.built && o.type === 'hut'; });
     const ret = seen.filter(e => e[3] === ref && e[8] === 'obra-largada');
     ok('b3 a-reforma-largada', back && Math.abs(sum(ret) - 4) < 0.01 && ret.every(e => e[4] === 'f:' + f0.id) && Math.abs(flowOf(ref)) < 0.01, `cabana #${id} reformada em casa, 4 de ${k} entregues: ${back ? 'a cabana ficou' : 'a reforma não foi largada'}; o que veio para a casa voltou ao estoque pelo livro: ${sum(ret)} ('obra-largada')`);
@@ -80,7 +102,7 @@ const firstNeed = (b, n) => Object.keys(b.need).sort().find(k => b.need[k] >= n)
 {
   stock(); seen.length = 0; const b = project(set0, 'well'); const id = b ? b.id : 0, ref = 'o:' + id;
   const k = b && firstNeed(b, 3); const r = k ? D.make(ref, k, 3, { code: 'teste' }) : { ok: false };
-  if (b) { for (const v of onIt(id)) Vg.endTask(v); b.unreach = 6; b.unreachT = S.clock; }
+  if (b) { for (const v of onIt(id)) Vg.endTask(v); b.unreach = 6; b.unreachT = S.clock; if (r.ok) nextLooks(); }
   const gone = r.ok && live(40, () => !S.buildings.has(id));
   const ret = seen.filter(e => e[3] === ref && e[8] === 'obra-largada');
   ok('b4 a-obra-largada', gone && sum(ret) >= 3 - 0.01 && Math.abs(flowOf(ref)) < 0.01, b ? `${b.type}#${id} com ${k}: ${gone ? 'largada' : 'ainda de pé'}; voltou ao estoque pelo livro ${sum(ret)}, e o que entrou nela saiu (${flowOf(ref)} sobrando)` : 'nenhuma obra possível');
@@ -92,24 +114,10 @@ const firstNeed = (b, n) => Object.keys(b.need).sort().find(k => b.need[k] >= n)
   const lost = seen.filter(e => e[3] === ref && e[8] === 'ruina'); const o = S.buildings.get(id);
   ok('b5 o-deus-derruba-a-obra', r.ok && Math.abs(sum(lost) - 2) < 0.01 && !D.exists(ref) && Math.abs(flowOf(ref)) < 0.01, b ? `${b.type}#${id}: ${o ? o.type : 'sumiu'}; o que ela tinha caiu com ela pelo livro: ${sum(lost)} de ${k} ('ruina')` : 'nenhuma obra possível');
 }
-// ---------------- b6 the builder dies with the load on the way ----------------
-{
-  stock(); seen.length = 0; const b = project(set0, 'well'); const id = b ? b.id : 0;
-  const got = !!b && live(120, () => !!carrying(id) || !site(id));
-  const w = b && carrying(id);
-  if (!w) ok('b6 o-construtor-morre-com-a-carga', !!b && !site(id), b ? 'ninguém levou carga a ela em 120 s' : 'nenhuma obra possível');
-  else {
-    const k = w.task.mat, n = w.carry.n, wid = w.id, before = b.incoming[k];
-    V.kill(w, 'teste', true);
-    const others = onIt(id).filter(v => v.task.counted && v.task.mat === k).reduce((q, v) => q + (v.task.cn || 0), 0);
-    const store = seen.filter(e => e[3] === 'v:' + wid && TO_STORE[e[8]]);
-    watch();
-    ok('b6 o-construtor-morre-com-a-carga', Math.abs((b.incoming[k] || 0) - others) < 0.01 && Math.abs(sum(store) - n) < 0.01, `${n} de ${k} a caminho de ${b.type}#${id}: a carga foi ao estoque pelo livro (${sum(store)}, 'herdado'); a obra esperava ${before} a caminho, agora ${b.incoming[k]} — o que os outros trazem: ${others}`);
-  }
-}
-// ---------------- b7 the excess ----------------
+// ---------------- b7 the excess (before b6: a builder dies there) ----------------
 {
   stock(); seen.length = 0; const b = project(set0, 'well'); const id = b ? b.id : 0, ref = 'o:' + id;
+  if (b) send(b);
   live(120, () => !!carrying(id) || !site(id));
   const w = b && carrying(id);
   if (!w) ok('b7 a-sobra', !!b && !site(id), b ? 'ninguém levou carga a ela em 120 s' : 'nenhuma obra possível');
@@ -122,15 +130,21 @@ const firstNeed = (b, n) => Object.keys(b.need).sort().find(k => b.need[k] >= n)
     ok('b7 a-sobra', Math.abs(sum(back) - n) < 0.01 && !over.length, `${n} de ${k} a caminho, a obra enchida por outra mão (${fill}): voltou ao estoque ${sum(back)} (${[...new Set(back.map(e => e[8]))].join(', ')}), entrou na obra ${sum(over)}`);
   }
 }
-// ---------------- b8 a save in the middle of a delivery ----------------
+// ---------------- b6 the builder dies with the load on the way ----------------
 {
   stock(); seen.length = 0; const b = project(set0, 'well'); const id = b ? b.id : 0;
-  const mid0 = !!b && live(120, () => !!carrying(id) || !site(id));
-  const was = b && carrying(id) ? `${carrying(id).carry.n} de ${carrying(id).carry.k} nas mãos de ${carrying(id).name}` : 'ninguém carregando';
-  if (b) reload();
-  const done = !!b && live(400, () => !site(id));
-  const o = S.buildings.get(id);
-  ok('b8 save-no-meio-da-entrega', mid0 && done && !!o && o.built, b ? `${b.type}#${id}, salva com ${was}, carregada: ${o && o.built ? 'pronta' : o ? 'ainda a ' + Math.round(o.progress * 100) + '%' : 'sumiu'}` : 'nenhuma obra possível');
+  if (b) send(b);
+  live(120, () => !!carrying(id) || !site(id));
+  const w = b && carrying(id);
+  if (!w) ok('b6 o-construtor-morre-com-a-carga', !!b && !site(id), b ? 'ninguém levou carga a ela em 120 s' : 'nenhuma obra possível');
+  else {
+    const k = w.task.mat, n = w.carry.n, wid = w.id, before = b.incoming[k];
+    V.kill(w, 'teste', true);
+    const others = onIt(id).filter(v => v.task.counted && v.task.mat === k).reduce((q, v) => q + (v.task.cn || 0), 0);
+    const store = seen.filter(e => e[3] === 'v:' + wid && TO_STORE[e[8]]);
+    watch();
+    ok('b6 o-construtor-morre-com-a-carga', Math.abs((b.incoming[k] || 0) - others) < 0.01 && Math.abs(sum(store) - n) < 0.01, `${n} de ${k} a caminho de ${b.type}#${id}: a carga foi ao estoque pelo livro (${sum(store)}, 'herdado'); a obra esperava ${before} a caminho, agora ${b.incoming[k]} — o que os outros trazem: ${others}`);
+  }
 }
 // ---------------- b9 a cart of trade, by the ledger ----------------
 {
@@ -159,9 +173,11 @@ const firstNeed = (b, n) => Object.keys(b.need).sort().find(k => b.need[k] >= n)
 // ---------------- b10 a town left to the wind with a work in it ----------------
 {
   seen.length = 0;
-  const s = [...S.settlements.values()].filter(q => q.id !== set0.id && G.Fac.settlementsOf(q.fac).length > 1 && V.pop(q.id) > 0).sort((a, b) => V.pop(a.id) - V.pop(b.id) || a.id - b.id)[0];
-  const b = s ? project(s, 'well') : null; const id = b ? b.id : 0, ref = 'o:' + id;
-  if (!b) ok('b10 a-cidade-abandonada', true, 'nenhuma cidade de um povo com outras, com lugar para uma obra: sem o caso');
+  // (the smallest other town — of a people with other towns, if there is one —, with room for a work)
+  const towns = [...S.settlements.values()].filter(q => q.id !== set0.id && V.pop(q.id) > 0).sort((a, b) => (G.Fac.settlementsOf(b.fac).length > 1) - (G.Fac.settlementsOf(a.fac).length > 1) || V.pop(a.id) - V.pop(b.id) || a.id - b.id);
+  let s = null, b = null; for (const q of towns) { b = project(q, 'well'); if (b) { s = q; break; } }
+  const id = b ? b.id : 0, ref = 'o:' + id;
+  if (!b) ok('b10 a-cidade-abandonada', true, 'nenhuma outra cidade com lugar para uma obra: sem o caso');
   else {
     const k = firstNeed(b, 2); const r = k ? D.make(ref, k, 2, { code: 'teste' }) : { ok: false };
     for (const v of [...S.villagers.values()].filter(q => q.set === s.id)) V.kill(v, 'teste', true);
