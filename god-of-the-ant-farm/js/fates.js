@@ -199,8 +199,15 @@
       }
       // (someone else married one of them on the way — a marriage of state, a courtship: the arrow missed)
       if (!l.done && a && b && ((a.partner && a.partner !== b.id) || (b.partner && b.partner !== a.id))) l.done = 2;
-      // (done, timed out, or nobody runs for it anymore: the arrow is spent)
-      if (l.done || l.t > LOVE_T || (!running(a) && !running(b))) {
+      // (a danger or a duty more urgent than love took them both from the way — a fight, a flight, a fire —: the arrow
+      // waits, and each one runs again once free, until its time is spent; it was spent at once, with no word, and the
+      // god's faith with it — L-302. The body the player lives is asked only once, by the arrow itself)
+      if (!l.done && a && b && l.t <= LOVE_T && !running(a) && !running(b)) {
+        for (const [p, q] of [[a, b], [b, a]]) if (freeOf(p) && !(p.task && p.task.pri >= 2.4) && !(S.avatar && S.avatar.id === p.id)) G.Vg.H.setTask(p, { type: 'amor', id: q.id, love: l.id, pri: 2.4, st: 0, kind: 'amor' });
+        continue;
+      }
+      // (done, or timed out: the arrow is spent)
+      if (l.done || l.t > LOVE_T) {
         if (!l.done && l.t > LOVE_T && a && b && !a.partner && !b.partner) log(`${a.name} e ${b.name} nunca chegaram a se encontrar.`, 'heart', a.x, a.y);
         for (const v of [a, b]) if (running(v)) G.Vg.endTask(v);
         L.splice(k, 1);

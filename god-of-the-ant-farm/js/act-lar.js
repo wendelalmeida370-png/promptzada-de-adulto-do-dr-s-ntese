@@ -161,15 +161,8 @@
     if (what === 'cozinhar') entry(h).cook = v.id;
     return t;
   }
-  function arrive(v, t, h) { v.inside = h.id; t.st = 2; v.actT = 0; v.moving = false; v.path = null; L.jarHome(v, h); }
-  // (the house's jar of water, brought home by one whose errand to the well was cut — called to bed, to the evening at home,
-  // to lie ill —: poured into the house's own as one comes in, never kept in the hands for the next errand — a gathering would
-  // find them full: L-186. The water is drunk and cooked, not stored: out of the hands as the ledger says, 'agua')
-  L.jarHome = function (v, h) {
-    const c = v.carry; if (!c || c.k !== 'water' || !c.jar || !(c.n > 0) || !h || v.home !== h.id) return false;
-    D.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true }); h.water = 1;
-    return true;
-  };
+  // (in: the house's jar, if one came home with it, is already in the house — setTask, by G.Life.jarHome, L-300)
+  function arrive(v, t, h) { v.inside = h.id; t.st = 2; v.actT = 0; v.moving = false; v.path = null; }
 
   // the task's steps: to the door, in, and the evening at home
   L.run = function (v, t, dt, H) { if (t.type === 'lar') { runLar(v, t, dt, H); return true; } return false; };

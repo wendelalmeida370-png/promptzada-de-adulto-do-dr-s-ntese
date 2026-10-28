@@ -134,6 +134,14 @@
     if (v.jail && G.Crime) { const kept = G.Crime.keeps(v, t); if (kept) return kept; }
     // (a body the player lives: the world asks first — a request becomes a call, a force of the world takes the body back)
     if (G.S.avatar && G.S.avatar.id === v.id && G.Possess) { const kept = G.Possess.ask(v, t); if (kept) return kept; }
+    // (the water in the hands lives inside its errand — the house's jar on its way home, the bucket for a fire —: another
+    // task cuts the errand and the water is set down, poured out in the ledger; a scene only lends the person for a moment.
+    // It stayed in the hands, and the work that came next began over it — L-300. At home, or at its door, the next errand
+    // that goes on at home — to bed, the evening by the fire: t.stay — takes the house's jar in first, by the same door)
+    if (v.carry && v.carry.k === 'water' && t.type !== 'water' && t.type !== 'fire' && t.type !== 'scene' && G.Life && G.Life.jarHome) {
+      const h = v.carry.jar && v.home && t.stay === v.home ? G.S.buildings.get(v.home) : null;
+      G.Life.jarHome(v, h && h.built && h.type !== 'ruin' && (v.inside === h.id || atDoor(v, h)) ? h : null);
+    }
     // (an errand that goes on in the building one is in — t.stay: from the fire to the table, to bed — keeps one there: the
     // door is for going out)
     Vg.endTask(v, t.stay && v.inside && v.inside === t.stay ? { stay: t.stay } : undefined);
@@ -182,6 +190,8 @@
     v.sleeping = false;
     v.task = null; v.path = null; v.act = '';
   };
+  // (by a building's door: at its front, where one goes in from)
+  function atDoor(v, b) { const d = V_door(b); const f = G.Village.frontTile(b); return G.dist(v.x, v.y, d[0], d[1]) <= 1.6 || G.dist(v.x, v.y, f[0], f[1]) <= 1.6; }
   // (out of a building by its door — the people's door, the plan's)
   function leave(v) { const b = G.S.buildings.get(v.inside); if (b) { const [dx, dy] = V_door(b); v.x = dx; v.y = dy; } v.inside = 0; }
   // the door of a building's plan, when the interiors give one (G.Vg.planDoor = b => [x, y] | null, in tiles, outside the
@@ -797,7 +807,9 @@
       if (!needMat && !work && !carryFits) continue;
       let builders = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'build' && o.task.id === b.id) builders++;
       const [cx, cy] = G.Village.center(b);
-      const d = G.dist2(v.x, v.y, cx, cy) + builders * 40 + (b.type === 'campfire' ? -500 : 0) + (b.type === 'hut' || b.type === 'house' ? -30 : 0) + (b.type === 'doca' ? -40 : 0);
+      // (a family's house paid for — its materials paid at the town's prices, act-casa.js — has its turn before the city's
+      // own works: the stone of the store went to a palace, and the house stood at 92% for years, L-313)
+      const d = G.dist2(v.x, v.y, cx, cy) + builders * 40 + (b.type === 'campfire' ? -500 : 0) + (b.type === 'hut' || b.type === 'house' ? -30 : 0) + (b.type === 'doca' ? -40 : 0) + (b.encomenda ? -200 : 0);
       if (d < bd) { bd = d; best = b; }
     }
     if (!best) return null;
@@ -1323,7 +1335,7 @@
         if (!h || !h.built || h.type === 'ruin') return end(v);
         if (t.st === 0 && v.inside === h.id) { t.st = 2; break; } // (already at home)
         if (t.st === 0) { const [fx, fy] = G.Village.frontTile(h); if (!Vg.goto(v, fx, fy, true)) return end(v); t.st = 1; }
-        else if (t.st === 1) { if (move(v, dt, 1.25)) { t.st = 2; v.inside = h.id; G.Lar && G.Lar.jarHome(v, h); } }
+        else if (t.st === 1) { if (move(v, dt, 1.25)) { t.st = 2; v.inside = h.id; } }
         else if (S.weather.storm <= 0 || S.weather.rain < 0.2 || t.age > 45) end(v);
         break;
       }
@@ -1450,7 +1462,7 @@
       const home = S.buildings.get(v.home);
       if (home && home.built && home.type !== 'ruin') {
         // (already at home — from the fire to bed —: no going out and in again)
-        if (v.inside === home.id) { t.st = 2; t.home = home.id; v.sleeping = true; G.Lar && G.Lar.jarHome(v, home); if (v.g === 'f') tryConceive(v); return; }
+        if (v.inside === home.id) { t.st = 2; t.home = home.id; v.sleeping = true; if (v.g === 'f') tryConceive(v); return; }
         const [fx, fy] = G.Village.frontTile(home);
         if (Vg.goto(v, fx, fy, true)) { t.st = 1; t.home = home.id; return; }
       }
@@ -1470,7 +1482,7 @@
       // a path that never came: they climb out of the water before lying down
       if (!t.home && !W.dryXY(v.x, v.y)) { const p = W.nearestLand(v.x, v.y, 3); if (p) { v.x = p[0]; v.y = p[1]; } }
       t.st = 2; v.sleeping = true;
-      if (t.home) { const h = S.buildings.get(t.home); if (h && h.built) { v.inside = h.id; G.Lar && G.Lar.jarHome(v, h); } }
+      if (t.home) { const h = S.buildings.get(t.home); if (h && h.built) v.inside = h.id; }
       // conception happens at night when partners share a bed
       if (v.g === 'f') tryConceive(v);
       return;
