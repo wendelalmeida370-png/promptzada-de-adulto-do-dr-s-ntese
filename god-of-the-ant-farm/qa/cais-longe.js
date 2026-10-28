@@ -9,6 +9,9 @@
 //     hora, e nunca embarca; quem embarca está no cais (a 8 casas, no máximo, e no chão dele)
 //  k3 a líder levada a uma ilhota: a viagem não sai
 //  k4 o mesmo do k2 salvo e carregado no meio: carregado, sai da tripulação
+//  k5 um susto no cais no meio da reunião (um bicho na beira d'água: todos fogem): a tripulação volta ao cais, e a viagem sai
+//     com ela inteira (L-367: a grande viagem de Públio, no mar 8, saiu com um de vinte e seis)
+//  k6 os dois primeiros da fila do embarque longe do cais: quem está no cais embarca assim mesmo (L-367)
 //  e o verificador limpo (S0–S3 novos), sem erro de módulo.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -82,6 +85,40 @@ else {
       toIslet(v, p.isl); const eid = e.id, vid = v.id; M.salvarCarregar(); S = G.S;
       let n = 0; const e1 = () => X.get(eid); while (n++ < 50 && e1() && e1().crew.includes(vid)) G.debug.step(0.1);
       ok('k4 o mesmo, salvo e carregado no meio: carregado, sai da tripulação', !!e1() && !e1().crew.includes(vid), `carregado: ${e1() ? (e1().crew.includes(vid) ? 'AINDA na tripulação' : 'fora da tripulação em ' + (n / 10).toFixed(1) + ' s') : 'a viagem sumiu no load'}`);
+    }
+  }
+  // k5 — a fright on the quay in the middle of the gathering: the crew runs, comes back, and sails whole
+  {
+    S = M.pronto(KEY); moved.clear(); p = findPick() || p;
+    const e = media(p); const K5 = 'k5 um susto no cais: a tripulação foge, volta, e a viagem sai com ela inteira';
+    let n = 0; while (e && n++ < 4000 && X.get(e.id) && e.st === 'prep') G.debug.step(0.1);
+    if (!e || !X.get(e.id) || e.st !== 'reunir') ok(K5, false, !e ? 'a viagem «média» não saiu' : `a viagem não chegou à reunião no cais (${X.get(e.id) ? e.st : 'sumiu'})`);
+    else {
+      // (the fright, as the emergency gives it: everyone on the quay runs from a beast at the water's edge — the test's hand)
+      const crew0 = e.crew.slice(); for (const id of crew0) { const v = S.villagers.get(id); if (v && !v.aboard) G.Vg.fleeFrom(v, e.port[0], e.port[1], 7, 'wolf'); }
+      const fled = crew0.filter(id => { const v = S.villagers.get(id); return v && v.task && v.task.type === 'flee'; }).length;
+      let m = 0; while (m++ < 2400 && X.get(e.id) && ['reunir', 'embarque'].includes(e.st)) G.debug.step(0.1);
+      const sailed = !!X.get(e.id) && !['prep', 'reunir', 'embarque', 'fim'].includes(e.st);
+      const live0 = crew0.map(id => S.villagers.get(id)).filter(Boolean); const behind = live0.filter(v => !v.aboard);
+      ok(K5, fled > 0 && sailed && !behind.length, `${e.name}: ${crew0.length} na reunião do cais, ${fled} fugiram do susto; ${sailed ? 'a viagem saiu (' + e.st + ')' : 'a viagem NÃO saiu (' + (X.get(e.id) ? e.st : 'sumiu') + ')'}: ${live0.length - behind.length} a bordo, ${behind.length ? behind.length + ' deixados em terra (' + behind.slice(0, 3).map(v => v.name + ': ' + (v.task ? v.task.type : 'nada')).join(', ') + ')' : 'ninguém deixado'}`);
+    }
+  }
+  // k6 — the first two of the boarding line away from the quay (a long errand of their own: the test's hand holds them a dozen
+  // steps up the quay's own ground): the ones on the quay board all the same
+  {
+    S = M.pronto(KEY); moved.clear(); p = findPick() || p;
+    const e = media(p); const K6 = 'k6 os dois primeiros da fila longe do cais: quem está no cais embarca assim mesmo';
+    let n = 0; while (e && n++ < 4000 && X.get(e.id) && e.st !== 'embarque' && e.st !== 'fim') G.debug.step(0.1);
+    const held = e ? e.crew.map(id => S.villagers.get(id)).filter(v => v && !v.aboard && v.id !== e.leader).slice(0, 2) : [];
+    let far = null; if (e) for (let r = 10; r <= 14 && !far; r++) for (let k = 0; k < 24 && !far; k++) { const x = Math.floor(e.port[0] + Math.cos(k / 24 * 6.283) * r) + 0.5, y = Math.floor(e.port[1] + Math.sin(k / 24 * 6.283) * r) + 0.5; if (W.inb(x, y) && W.walkableXY(x, y) && W.canWalk(e.port[0], e.port[1], x, y, false)) far = [x, y]; }
+    if (!e || e.st !== 'embarque' || held.length < 2 || !far) ok(K6, false, !e ? 'a viagem «média» não saiu' : e.st !== 'embarque' ? `a viagem não chegou ao embarque (${e.st})` : held.length < 2 ? 'menos de dois na fila' : 'nenhum chão a dez passos do cais');
+    else {
+      const others = e.crew.filter(id => !held.some(h => h.id === id)).map(id => S.villagers.get(id)).filter(Boolean);
+      const atQuay = others.filter(v => !v.aboard && G.dist(v.x, v.y, e.port[0], e.port[1]) <= 3.5).length, a0 = others.filter(v => v.aboard).length;
+      let k = 0; while (k++ < 100 && X.get(e.id) && e.st === 'embarque') { for (const h of held) { h.x = far[0]; h.y = far[1]; h.path = null; } G.debug.step(0.1); }
+      const a1 = others.filter(v => v.aboard).length;
+      ok(K6, a1 - a0 >= Math.min(4, atQuay), `${held.map(h => h.name).join(' e ')}, os primeiros da fila, a ${G.dist(far[0], far[1], e.port[0], e.port[1]).toFixed(0)} casas do cais; dos outros, ${atQuay} no cais: em 10 s, ${a1 - a0} embarcaram`);
+      for (const h of held) h.path = null;
     }
   }
 }
