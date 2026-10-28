@@ -332,9 +332,9 @@
       if (a.done) continue;
       const set = S.settlements.get(a.set), b = S.buildings.get(a.b);
       if (!set || !b || b.type !== 'aqueduto') { a.dead = true; continue; }
-      const f = G.Fac.get(set.fac); if (!f || f.stock.stone < 2) continue;
+      const f = G.Fac.get(set.fac); if (!f || G.Depot.free('f:' + f.id, 'stone') < 2) continue;
       if (G.R() > 0.8) continue;
-      f.stock.stone -= 2;
+      if (!G.Depot.use('f:' + f.id, 'stone', 2, { code: 'aqueduto' }).ok) continue; // (the arches' stone, in the ledger)
       const [x, y] = a.tiles[a.built]; const i = y * N + x;
       if (!S.wall[i] && !(S.occ[i] && S.buildings.get(S.occ[i]) && S.buildings.get(S.occ[i]).blocks)) S.wall[i] = 3;
       a.built++;
@@ -547,8 +547,10 @@
     if (!fac) { Ci.claims.delete(t.i); return H.end(v); }
     const bridge = S.type[t.i] === T.RIVER;
     const stone = t.lvl === 1 ? 0 : bridge ? 3 : 1, wood = bridge ? 2 : 0;
-    if (fac.stock.stone < stone || fac.stock.wood - (wood ? fac._rsv || 0 : 0) < wood || S.occ[t.i]) { Ci.claims.delete(t.i); return H.end(v); }
-    fac.stock.stone -= stone; fac.stock.wood -= wood;
+    const D = G.Depot; const F = 'f:' + fac.id;
+    if (D.free(F, 'stone') < stone || D.free(F, 'wood') - (wood ? fac._rsv || 0 : 0) < wood || S.occ[t.i]) { Ci.claims.delete(t.i); return H.end(v); }
+    // (the paving stones and the bridge's timber, out of the people's store — in the ledger)
+    if (stone > 0) D.use(F, 'stone', stone, { code: 'calcamento', by: v.id }); if (wood > 0) D.use(F, 'wood', wood, { code: 'calcamento', by: v.id });
     if (S.road[t.i] < t.lvl) { if (!S.road[t.i] && S.deep[t.i]) { S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand(); } S.road[t.i] = t.lvl; }
     G.Nature.markDirty(t.i);
     G.FX && G.FX.chips(x, y, t.lvl >= 2 ? '#b8b0a0' : '#a08a66');
@@ -623,6 +625,29 @@
   }
   const RES = ['food', 'wood', 'stone'];
   const MAT = { food: 'comida', wood: 'madeira', stone: 'pedra' };
+  // the cart's load, a holder of the depot ('c', the cart's id): one good at a time — what it takes to the other town
+  // (goods), then what it brings back (ret, once it turned: back) — so that what goes by road is in the ledger, and nothing
+  // a cart carried is lost with no line when it ends
+  if (G.Depot && G.Depot.addKind) {
+    const r4 = x => Math.round(x * 1e4) / 1e4; const slot = c => (c.back ? 'ret' : 'goods');
+    G.Depot.addKind('c', {
+      obj: id => (G.S.carts || []).find(c => c.id === id) || null,
+      get: (c, k) => { const L = c[slot(c)]; return L && L.k === k ? L.n || 0 : 0; },
+      room: (c, k) => { const L = c[slot(c)]; return L && L.k !== k && L.n > 1e-6 ? 0 : Infinity; },
+      take: (c, k, n) => { const L = c[slot(c)]; L.n = r4(L.n - n); return { k, n }; },
+      put: (c, rec) => { const sl = slot(c); const L = c[sl]; if (L && L.k === rec.k) L.n = r4((L.n || 0) + rec.n); else c[sl] = { k: rec.k, n: rec.n }; },
+      list: c => { const L = c[slot(c)]; return L && L.n > 1e-6 ? { [L.k]: L.n } : {}; },
+      owner: c => ({ fac: c.fac }),
+      all: () => G.S.carts || [],
+    });
+  }
+  // (a cart that ends with something still on it — its road gone, its towns gone, too long on the way —: the load goes home
+  // to its people's store, or, with no people left, is lost with its cause)
+  function unload(c) {
+    const D = G.Depot; const ref = 'c:' + c.id; const L = c[c.back ? 'ret' : 'goods'];
+    if (!D || !L || !(L.n > 1e-6)) return;
+    if (D.exists('f:' + c.fac)) D.store(ref, c.fac, L.k, L.n, { code: 'carroca-volta' }); else D.use(ref, L.k, L.n, { code: 'carroca-perdida', mine: true });
+  }
   function spawnCart(r, from, to) {
     const S = G.S; const fa = G.Fac.get(from.fac), fb = G.Fac.get(to.fac); if (!fa || !fb) return;
     const capA = G.Village.cap(fa.id), capB = G.Village.cap(fb.id);
@@ -631,37 +656,43 @@
       // send what we have plenty of and they lack
       const sur = k => fa.stock[k] / capA - fb.stock[k] / capB;
       const give = RES.slice().sort((x, y) => sur(y) - sur(x))[0];
-      const n = Math.min(14, Math.floor(fa.stock[give] * 0.08));
+      const n = Math.min(14, Math.floor(G.Depot.free('f:' + fa.id, give) * 0.08));
       if (n < 3) return;
-      fa.stock[give] -= n; goods = { k: give, n };
+      goods = { k: give, n };
     } else {
       const k = G.pick(RES); goods = { k, n: 0 };
     }
     const fwd = from.id === r.a;
     const pts = r.pts; const start = fwd ? pts[0] : pts[pts.length - 1];
-    S.carts.push({ id: S.nextId++, route: r.id, fwd, k: fwd ? 1 : pts.length - 2, x: start[0], y: start[1], fac: fa.id, home: from.id, dest: to.id, goods, back: false, face: 1, civ: fa.civ || null, t: 0 });
+    // (the cart on the road, and its load out of the store onto it — in the ledger)
+    const c = { id: S.nextId++, route: r.id, fwd, k: fwd ? 1 : pts.length - 2, x: start[0], y: start[1], fac: fa.id, home: from.id, dest: to.id, goods: goods.n > 0 ? null : goods, back: false, face: 1, civ: fa.civ || null, t: 0 };
+    S.carts.push(c);
+    if (goods.n > 0 && !G.Depot.move('f:' + fa.id, 'c:' + c.id, goods.k, goods.n, { code: 'carroca' }).ok) S.carts.splice(S.carts.indexOf(c), 1);
   }
   function arrive(c, r) {
     const S = G.S; const home = S.settlements.get(c.home), dest = S.settlements.get(c.dest);
-    if (!home || !dest) return true;
+    if (!home || !dest) { unload(c); return true; }
     if (r.kind === 'interno') {
       if (!c.back) { dest.linkDay = S.day; dest.loyalty = Math.min(100, (dest.loyalty ?? 60) + 1.5); c.back = true; return false; }
       return true;
     }
-    const fa = G.Fac.get(home.fac), fb = G.Fac.get(dest.fac); if (!fa || !fb) return true;
-    const rel = G.Fac.rel(fa.id, fb.id);
+    const fa = G.Fac.get(home.fac), fb = G.Fac.get(dest.fac); if (!fa || !fb) { unload(c); return true; }
+    const rel = G.Fac.rel(fa.id, fb.id); const D = G.Depot; const ref = 'c:' + c.id;
     if (!c.back) {
-      if (c.goods) G.Village.addStock(c.goods.k, c.goods.n, fb.id);
+      // (the load into the other people's store, and what they give for it onto the cart — in the ledger)
+      const gk = c.goods ? c.goods.k : null, gn = c.goods ? c.goods.n || 0 : 0;
+      if (gn > 0) D.store(ref, fb.id, gk, gn, { code: 'carroca' });
       const deal = 1.05 * G.Civ.t(fa.id, 'trade') * (has(fa, 'moeda') ? 1.15 : 1) * (G.Fac.has(fa.id, 'mercado') ? 1.2 : 1);
-      const want = RES.filter(k => !c.goods || k !== c.goods.k).sort((x, y) => (fb.stock[y] - fa.stock[y]) - (fb.stock[x] - fa.stock[x]))[0];
-      const m = Math.min(Math.round((c.goods ? c.goods.n : 5) * deal), Math.floor(fb.stock[want] * 0.12));
-      if (m > 0) { fb.stock[want] -= m; c.ret = { k: want, n: m }; }
+      const want = RES.filter(k => !gk || k !== gk).sort((x, y) => (fb.stock[y] - fa.stock[y]) - (fb.stock[x] - fa.stock[x]))[0];
+      const m = Math.min(Math.round((gk ? gn : 5) * deal), Math.floor(D.free('f:' + fb.id, want) * 0.12));
+      c.back = true;
+      if (m > 0) D.move('f:' + fb.id, ref, want, m, { code: 'carroca-troca' });
       if (rel) { rel.op = Math.min(100, rel.op + 1.5); rel.friend = Math.min(100, (rel.friend || 0) + 1); rel.trade = (rel.trade || 0) + 1; }
       r.trips++;
       if (r.trips === 1) log(`A primeira carroça de ${home.name} chegou a ${dest.name} com ${MAT[c.goods ? c.goods.k : 'food']}.`, 'cart', dest.cx, dest.cy);
-      c.back = true; return false;
+      return false;
     }
-    if (c.ret) G.Village.addStock(c.ret.k, c.ret.n, fa.id);
+    if (c.ret && c.ret.n > 0) D.store(ref, fa.id, c.ret.k, c.ret.n, { code: 'carroca' });
     return true;
   }
   function updateCarts(dt) {
@@ -680,7 +711,7 @@
     }
     for (let k = S.carts.length - 1; k >= 0; k--) {
       const c = S.carts[k]; const r = S.routes.find(q => q.id === c.route);
-      if (!r || !r.ok) { S.carts.splice(k, 1); continue; }
+      if (!r || !r.ok) { unload(c); S.carts.splice(k, 1); continue; }
       c.t += dt;
       const pts = r.pts; const dir = (c.fwd !== c.back) ? 1 : -1;
       if (c.k < 0 || c.k >= pts.length) { if (arrive(c, r)) { S.carts.splice(k, 1); continue; } c.k = dir > 0 ? pts.length - 2 : 1; continue; }
@@ -692,7 +723,7 @@
       else { c.x += dx / d * sp; c.y += dy / d * sp; }
       if (Math.abs(dx - dy) > 0.02) G.faceTo(c, dx, dy);
       c.dx = dx / (d || 1); c.dy = dy / (d || 1);
-      if (c.t > 400) S.carts.splice(k, 1);
+      if (c.t > 400) { unload(c); S.carts.splice(k, 1); }
     }
   }
 

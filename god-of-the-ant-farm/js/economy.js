@@ -524,28 +524,36 @@
     if (t.type === 'desk') { const f = G.Fac.ofV(v); if (f) f._scribes = G.S.clock; }
     if (v.actT > (t.dur || 12)) H.end(v);
   }
+  // from the store to a workshop's shelf: the goods into the arms, marked for the workshop, and onto its shelf — in the
+  // ledger. With the way cut, the load keeps where it belongs, in the arms: the next errand takes it there, or by its rule
+  // to the store (G.Act.holdCarry) — never dropped back into a full store with no line (L-244)
   function runFetch(v, t, dt, H) {
-    const S = G.S; const b = workB(v, t, H); if (!b) return;
+    const b = workB(v, t, H); if (!b) return;
     const f = G.Fac.ofV(v); if (!f) return H.end(v);
+    const D = G.Depot; const ref = 'b:' + b.id;
     if (t.st === 0) { const d = store(v); if (!d) return H.end(v); t.d = d.id; const r = walkB(v, t, d, dt, H); if (r < 0) return H.end(v); if (r > 0) t.st = 1; return; }
     if (t.st === 1) {
-      const n = Math.min(t.n, Math.floor(f.stock[t.k] || 0));
-      if (n <= 0) return H.end(v);
-      f.stock[t.k] -= n; v.carry = { k: t.k, n }; t.st = 2; return;
+      const n = Math.floor(Math.min(t.n, D.free('f:' + f.id, t.k), D.room('v:' + v.id, t.k, { to: ref })) + 1e-6);
+      if (n <= 0 || !D.move('f:' + f.id, 'v:' + v.id, t.k, n, { code: 'buscar', by: v.id, to: ref }).ok) return H.end(v);
+      t.st = 2; return;
     }
     const r = walkB(v, t, b, dt, H);
-    if (r < 0) { G.Village.addStock(v.carry.k, v.carry.n, f.id); v.carry = null; return H.end(v); }
-    if (r > 0) { const I = inv(b); I[v.carry.k] = (I[v.carry.k] || 0) + v.carry.n; v.carry = null; H.end(v); }
-    void S;
+    if (r < 0) return H.end(v);
+    if (r > 0) { const c = v.carry; if (c && c.to === ref) D.move('v:' + v.id, ref, c.k, c.n, { code: 'entrega', by: v.id, part: true }); H.end(v); }
   }
+  // a workshop's goods to the store: from its shelf into the arms, marked for the people's store, with the wage of who
+  // carries them (E.pay) — in the ledger; the delivery is the plain errand's (a marked load goes where it is marked for)
   function runHaul(v, t, dt, H) {
     const b = workB(v, t, H); if (!b) return;
     if (t.st === 0) { const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v); if (r > 0) t.st = 1; return; }
-    const I = inv(b); const k = (t.keys || []).find(q => (I[q] || 0) > 0);
-    if (!k) return H.end(v);
-    const n = Math.min(I[k], G.Vg.cap(v) + 2); I[k] -= n;
-    v.carry = { k, n }; G.Vg.emote(v, 'happy', 1);
-    E.pay(v, k, n);
+    const f = G.Fac.ofV(v); if (!f) return H.end(v);
+    const D = G.Depot; const ref = 'b:' + b.id; const to = 'f:' + f.id;
+    const k = (t.keys || []).find(q => D.free(ref, q) > 1e-6); if (!k) return H.end(v);
+    const n = Math.min(D.free(ref, k), G.Vg.cap(v) + 2, D.room('v:' + v.id, k, { to }));
+    const r = n > 1e-6 ? D.move(ref, 'v:' + v.id, k, n, { code: 'recolher', by: v.id, to }) : null;
+    if (!r || !r.ok) return H.end(v);
+    G.Vg.emote(v, 'happy', 1);
+    E.pay(v, k, r.n);
     H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' });
   }
   // take the flock out to graze and bring it back before dark
@@ -581,15 +589,22 @@
       if (r !== 0) { releaseHerd(b); b.herdCD = S.clock + DAY() * 0.3; H.end(v); }
     }
   }
+  // hay from the store to the pen's trough: out of the store into the arms (a plain load: with the way to the pen cut, the
+  // next errand takes it back to the store — never put back with no line, L-244), eaten by the flock — in the ledger
   function runFodder(v, t, dt, H) {
     const b = workB(v, t, H); if (!b) return;
     const f = G.Fac.ofV(v); if (!f) return H.end(v);
+    const D = G.Depot;
     if (t.st === 0) { const d = store(v); if (!d) return H.end(v); const r = walkB(v, t, d, dt, H); if (r < 0) return H.end(v); if (r > 0) t.st = 1; return; }
-    if (t.st === 1) { const n = Math.min(t.n, Math.floor(f.stock.food || 0)); if (n <= 0) return H.end(v); f.stock.food -= n; used(f, 'food', n); v.carry = { k: 'food', n, hay: 1 }; t.st = 2; return; }
+    if (t.st === 1) {
+      const n = Math.floor(Math.min(t.n, D.free('f:' + f.id, 'food'), D.room('v:' + v.id, 'food')) + 1e-6);
+      if (n <= 0 || !D.move('f:' + f.id, 'v:' + v.id, 'food', n, { code: 'feno', by: v.id, tag: { hay: 1 } }).ok) return H.end(v);
+      used(f, 'food', n); t.st = 2; return;
+    }
     if (t.st === 2) {
       if (!t.spot) t.spot = [b.x + b.w - 0.45, b.y + b.h / 2];
       const r = walkTo(v, t, 'spot', t.spot[0], t.spot[1], false, dt, H);
-      if (r < 0) { G.Village.addStock('food', v.carry ? v.carry.n : 0, f.id); v.carry = null; return H.end(v); }
+      if (r < 0) return H.end(v);
       if (r > 0) { t.st = 3; v.actT = 0; }
       return;
     }
@@ -597,9 +612,11 @@
     if (v.actT < 3.5) return;
     // the flock crowds the trough and eats the hay
     const herd = E.penAnimals(b).filter(a => a.state === 'pen');
-    const per = (v.carry ? v.carry.n : 0) / Math.max(1, herd.length);
+    const hay = v.carry && v.carry.k === 'food' && v.carry.hay ? v.carry.n : 0;
+    const per = hay / Math.max(1, herd.length);
     for (const a of herd) { a.hunger = Math.max(0, a.hunger - per * 0.45); a.tx = t.spot[0] - G.rr(0.2, 0.8); a.ty = t.spot[1] + G.rr(-0.8, 0.8); a.t = 4; }
-    v.carry = null; H.end(v);
+    if (hay > 0) D.use('v:' + v.id, 'food', hay, { code: 'feno', by: v.id, mine: true });
+    H.end(v);
   }
   function runTend(v, t, dt, H) {
     const S = G.S; const b = workB(v, t, H); if (!b) return;
@@ -611,14 +628,20 @@
     a.hold = 1;
     if (t.what === 'shear' && G.R() < dt * 3) G.FX && G.FX.chips(a.x, a.y - 0.1, '#f4f0e6');
     if (v.actT < (t.what === 'shear' ? 4.5 : 3.2)) return;
-    const f = G.Fac.ofV(v);
+    const f = G.Fac.ofV(v); const D = G.Depot;
     let carry = null;
-    if (t.what === 'shear') { const n = Math.max(1, Math.floor(a.wool)); a.wool = 0; a.shorn = DAY() * 0.5; carry = { k: 'la', n: n * 2 }; }
-    else if (t.what === 'milk') { a.milk = 0; carry = G.R() < 0.4 && E.GOODS.queijo ? { k: 'queijo', n: 1 } : { k: 'food', n: 2 }; } // (some of the milk is made into cheese)
-    else if (t.what === 'eggs') { a.eggs = 0; carry = { k: 'food', n: 2 }; }
+    if (t.what === 'shear') carry = { k: 'la', n: Math.max(1, Math.floor(a.wool)) * 2, code: 'tosquia' };
+    else if (t.what === 'milk') carry = G.R() < 0.4 && E.GOODS.queijo ? { k: 'queijo', n: 1, code: 'ordenha' } : { k: 'food', n: 2, code: 'ordenha' }; // (some of the milk is made into cheese)
+    else if (t.what === 'eggs') carry = { k: 'food', n: 2, code: 'ovos' };
+    // (what the beast gives, born of the world into the arms — in the ledger; with the hands holding something else, the
+    // beast keeps it for the next time: what was in the hands is never written over)
+    if (carry && D.room('v:' + v.id, carry.k, { pack: true }) + 1e-6 < carry.n) { a.hold = 0; return H.end(v); }
+    if (t.what === 'shear') { a.wool = 0; a.shorn = DAY() * 0.5; }
+    else if (t.what === 'milk') a.milk = 0;
+    else if (t.what === 'eggs') a.eggs = 0;
     else { a.hunger = Math.max(0, a.hunger - 0.2); if (f) f._grooms = (f._grooms || 0) + 1; }
     a.hold = 0;
-    if (carry) { if (f) made(f, carry.k, carry.n); v.carry = carry; E.pay(v, carry.k, carry.n); H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' }); }
+    if (carry) { const r = D.make('v:' + v.id, carry.k, carry.n, { code: carry.code, by: v.id, pack: true }); if (r.ok) { if (f) made(f, carry.k, r.n); E.pay(v, carry.k, r.n); } H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' }); }
     else H.end(v);
   }
   function runSlaughter(v, t, dt, H) {
@@ -639,15 +662,19 @@
     }
     v.act = 'butcher'; faceB(v, b);
     if (v.actT < 3.2) return;
+    // (the hands must be free for the meat: a butcher holding something else lets the beast back into the pen)
+    if (!(G.Depot.room('v:' + v.id, 'food', { pack: true }) > 0)) { a.state = 'pen'; a.ledBy = 0; return H.end(v); }
     const sp = G.Animals.DEF[a.kind]; const f = G.Fac.ofV(v);
     const meat = Math.max(2, Math.round(sp.meat * 0.8 * G.Civ.tV(v, 'hunt')));
     const hide = a.kind === 'peru' ? 0 : a.kind === 'porco' ? 1 : 2;
     G.FX && G.FX.blood(a.x, a.y);
     const eco = S.eco || (S.eco = { deaths: {}, born: {} }); eco.slaughter = (eco.slaughter || 0) + 1;
     G.Animals.remove(a);
-    const I = inv(b); if (hide) I.couro = (I.couro || 0) + hide;
-    if (f) { made(f, 'food', meat); if (hide) made(f, 'couro', hide); }
-    v.carry = { k: 'food', n: meat, meat: a.kind }; E.pay(v, 'food', meat);
+    // (the meat into the arms, the hide onto the butcher's hooks — born of the beast, in the ledger)
+    const D = G.Depot; const hr = hide ? D.make('b:' + b.id, 'couro', hide, { code: 'abate', by: v.id, part: true }) : null;
+    const mr = D.make('v:' + v.id, 'food', meat, { code: 'abate', by: v.id, pack: true, tag: { meat: a.kind } });
+    if (f) { if (mr.ok) made(f, 'food', mr.n); if (hr && hr.ok) made(f, 'couro', hr.n); }
+    if (mr.ok) E.pay(v, 'food', mr.n);
     H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' });
   }
   // miners vanish into the mountain and come back loaded
@@ -670,10 +697,12 @@
       const need = (o.kind === 'ouro' ? 13 : 10) / Math.max(0.5, (v.work || 1) * G.Civ.tV(v, 'build'));
       if (v.actT < need) return;
       const n = Math.min(o.amt, o.kind === 'ouro' ? 1 + (G.R() < 0.4 ? 1 : 0) : 2 + (G.R() < 0.5 ? 1 : 0));
-      o.amt -= n;
       const k = o.kind === 'ouro' ? 'ouro' : 'minerio';
       const [dx, dy] = G.Vg.door(b); v.inside = 0; v.x = dx; v.y = dy;
-      v.carry = { k, n }; const f = G.Fac.ofV(v); if (f) made(f, k, n); E.pay(v, k, n);
+      // (the ore out of the vein into the arms — in the ledger; hands holding something else leave it in the vein)
+      if (G.Depot.room('v:' + v.id, k, { pack: true }) + 1e-6 < n) return H.end(v);
+      o.amt -= n;
+      const r = G.Depot.make('v:' + v.id, k, n, { code: 'mina', by: v.id, pack: true }); const f = G.Fac.ofV(v); if (r.ok) { if (f) made(f, k, r.n); E.pay(v, k, r.n); }
       G.FX && G.FX.dust(dx, dy, 2);
       if (o.kind === 'ouro' && f && !f._gold) { f._gold = S.day; log(`Os mineiros de ${G.S.settlements.get(b.set).name} encontraram ouro na montanha!`, 'star', b.x, b.y); G.Village.milestone('firstGold', 'Ouro!', 'Mineiros tiraram o primeiro ouro da montanha.', 'star'); }
       if (o.amt <= 0) { const s = S.settlements.get(b.set); log(`A mina de ${o.kind === 'ouro' ? 'ouro' : 'minério'}${s ? ' de ' + s.name : ''} se esgotou.`, 'stone', b.x, b.y); }
@@ -687,21 +716,28 @@
     if (o.kind === 'ouro' && f && !f._gold && b) { f._gold = S.day; const st = S.settlements.get(b.set); log(`Os mineiros de ${st ? st.name : f.name} encontraram ouro na montanha!`, 'star', b.x, b.y); G.Village.milestone('firstGold', 'Ouro!', 'Mineiros tiraram o primeiro ouro da montanha.', 'star'); }
     if (o.amt <= 0 && b) { const st = S.settlements.get(b.set); log(`A mina de ${o.kind === 'ouro' ? 'ouro' : 'minério'}${st ? ' de ' + st.name : ''} se esgotou.`, 'stone', b.x, b.y); }
   };
+  // a stall's stock from the store: merchants buy wholesale (the goods into the arms and the coins from their house to the
+  // treasury, both or neither — no coin, no goods); a fair is the people's, and the store gives — in the ledger. With the way
+  // back cut, the load keeps where it belongs, in the arms (L-244)
   function runRestock(v, t, dt, H) {
     const b = workB(v, t, H); if (!b) return;
     const f = G.Fac.ofV(v); if (!f) return H.end(v);
+    const D = G.Depot; const ref = 'b:' + b.id;
     if (t.st === 0) { const d = store(v); if (!d) return H.end(v); const r = walkB(v, t, d, dt, H); if (r < 0) return H.end(v); if (r > 0) t.st = 1; return; }
     if (t.st === 1) {
-      const n = Math.min(t.k === 'food' ? 8 : 6, Math.floor(f.stock[t.k] || 0));
+      const n = Math.floor(Math.min(t.k === 'food' ? 8 : 6, D.free('f:' + f.id, t.k), D.room('v:' + v.id, t.k, { to: ref })) + 1e-6);
       if (n <= 0) return H.end(v);
-      // merchants buy wholesale from the state stores (no coin, no goods: the store gives nothing away)
-      if (E.coinage(f.id) && b.type !== 'feira') { const cost = Math.round(E.PRICE[t.k] * n * 0.6 * 100) / 100; if (!spend(v, cost, 'f:' + f.id, 'atacado')) return H.end(v); f.eco.sales += cost; }
-      f.stock[t.k] -= n; v.carry = { k: t.k, n }; t.st = 2; return;
+      let r;
+      if (E.coinage(f.id) && b.type !== 'feira') { const cost = Math.round(E.PRICE[t.k] * n * 0.6 * 100) / 100; r = D.swap(['f:' + f.id, 'v:' + v.id, t.k, n], [coinRef(v), 'f:' + f.id, 'moedas', cost], { code: 'atacado', by: v.id, to: ref }); if (r.ok) f.eco.sales += cost; }
+      else r = D.move('f:' + f.id, 'v:' + v.id, t.k, n, { code: 'feira', by: v.id, to: ref });
+      if (!r.ok) return H.end(v);
+      t.st = 2; return;
     }
     const r = walkB(v, t, b, dt, H);
-    if (r < 0) { G.Village.addStock(v.carry.k, v.carry.n, f.id); v.carry = null; return H.end(v); }
-    if (r > 0) { const I = inv(b); I[v.carry.k] = (I[v.carry.k] || 0) + v.carry.n; v.carry = null; H.end(v); }
+    if (r < 0) return H.end(v);
+    if (r > 0) { const c = v.carry; if (c && c.to === ref) D.move('v:' + v.id, ref, c.k, c.n, { code: 'entrega', by: v.id, part: true }); H.end(v); }
   }
+  // the mint: an ounce of the people's gold into six coins of the treasury — in the ledger ('cunhagem')
   function runMint(v, t, dt, H) {
     const b = workB(v, t, H); if (!b) return;
     const f = G.Fac.ofV(v); if (!f) return H.end(v);
@@ -709,7 +745,11 @@
     v.act = 'craft'; faceB(v, b);
     if (G.R() < dt * 2) G.FX && G.FX.chips(v.x, v.y, '#f2c14e');
     if (v.actT < 6) return;
-    if (f.stock.ouro >= 1) { f.stock.ouro -= 1; f.stock.moedas += 6; used(f, 'ouro', 1); made(f, 'moedas', 6); if (!f._minted) { f._minted = G.S.day; const s = G.S.settlements.get(b.set); log(`${f.name} cunhou suas primeiras moedas${s ? ' em ' + s.name : ''}.`, 'trade', b.x, b.y); } }
+    const D = G.Depot; const ref = 'f:' + f.id;
+    if (D.free(ref, 'ouro') >= 1 && D.use(ref, 'ouro', 1, { code: 'cunhagem', by: v.id }).ok) {
+      D.make(ref, 'moedas', 6, { code: 'cunhagem', by: v.id }); used(f, 'ouro', 1); made(f, 'moedas', 6);
+      if (!f._minted) { f._minted = G.S.day; const s = G.S.settlements.get(b.set); log(`${f.name} cunhou suas primeiras moedas${s ? ' em ' + s.name : ''}.`, 'trade', b.x, b.y); }
+    }
     H.end(v);
   }
   // door to door: knock, collect, move on; back to the treasury with the bag
@@ -748,22 +788,26 @@
     }
     if (t.st === 0) t.st = 1;
   }
+  // the smuggler's night: out of the people's store into the arms, marked for the black market, onto its shelf — in the
+  // ledger ('contrabando'); with the way there cut, the stolen goods stay in the arms, still marked (they used to vanish)
   function runSteal(v, t, dt, H) {
     const S = G.S; const b = workB(v, t, H); if (!b) return;
     const d = S.buildings.get(t.drop); const f = G.Fac.ofV(v); if (!d || !f) return H.end(v);
+    const D = G.Depot; const ref = 'b:' + b.id;
     if (t.st === 0) { const r = walkB(v, t, d, dt, H, 0.85); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } v.act = 'sneak'; return; }
     if (t.st === 1) {
       v.act = 'sneak';
       if (v.actT < 2) return;
-      const n = Math.min(t.k === 'food' ? 5 : 3, Math.floor(f.stock[t.k] || 0));
+      const n = Math.floor(Math.min(t.k === 'food' ? 5 : 3, D.free('f:' + f.id, t.k), D.room('v:' + v.id, t.k, { to: ref })) + 1e-6);
       if (n <= 0) return H.end(v);
-      f.stock[t.k] -= n; used(f, t.k, n); f.eco.stolen = (f.eco.stolen || 0) + n;
-      v.carry = { k: t.k, n, stolen: true }; t.st = 2; return;
+      const r = D.move('f:' + f.id, 'v:' + v.id, t.k, n, { code: 'contrabando', by: v.id, to: ref, tag: { stolen: true } }); if (!r.ok) return H.end(v);
+      used(f, t.k, r.n); f.eco.stolen = (f.eco.stolen || 0) + r.n;
+      t.st = 2; return;
     }
     v.act = 'sneak';
     const r = walkB(v, t, b, dt, H, 0.85);
-    if (r < 0) { v.carry = null; return H.end(v); }
-    if (r > 0) { const I = inv(b); I[v.carry.k] = (I[v.carry.k] || 0) + v.carry.n; v.carry = null; H.end(v); }
+    if (r < 0) return H.end(v);
+    if (r > 0) { const c = v.carry; if (c && c.to === ref) D.move('v:' + v.id, ref, c.k, c.n, { code: 'contrabando', by: v.id, part: true }); H.end(v); }
   }
   // ------------------------------ citizens: shopping, the tavern, going home ------------------------------
   const HOUSE_WANTS = E.HOUSE_WANTS = { tecido: 0.3, ceramica: 0.15, joias: 0.03, couro: 0.05 };
@@ -908,7 +952,8 @@
   E.arrest = function (o, guard) {
     const S = G.S; const f = G.Fac.ofV(o); const set = S.settlements.get(o.set);
     G.Vg.emote(guard, 'angry', 2); G.Vg.emote(o, 'fear', 3);
-    if (o.carry) { if (f) G.Vg.toStore(o, f.id, 'apreendido'); else o.carry = null; } // (what the arrested carried: seized, in the ledger)
+    // (what the arrested carried: seized into the people's store — or, with no people, set down where it is — in the ledger)
+    if (o.carry && o.carry.n > 0) { if (f) G.Vg.toStore(o, f.id, 'apreendido'); else G.Depot.drop('v:' + o.id, o.carry.k, o.carry.n, o.x, o.y, { code: 'apreendido', by: guard.id }); }
     const shop = S.buildings.get(o.job);
     const h = homeOf(o); if (h && f) { const fine = Math.round((h.coin || 0) * 0.8 * 100) / 100; if (fine > 0) G.Depot.move('h:' + h.id, 'f:' + f.id, 'moedas', fine, { code: 'multa', by: guard.id }); } // (the fine, in the ledger)
     o.role = null; o.job = 0; G.Vg.endTask(o);
