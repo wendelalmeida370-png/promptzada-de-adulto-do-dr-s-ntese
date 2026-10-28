@@ -134,7 +134,9 @@
     if (v.jail && G.Crime) { const kept = G.Crime.keeps(v, t); if (kept) return kept; }
     // (a body the player lives: the world asks first — a request becomes a call, a force of the world takes the body back)
     if (G.S.avatar && G.S.avatar.id === v.id && G.Possess) { const kept = G.Possess.ask(v, t); if (kept) return kept; }
-    Vg.endTask(v);
+    // (an errand that goes on in the building one is in — t.stay: from the fire to the table, to bed — keeps one there: the
+    // door is for going out)
+    Vg.endTask(v, t.stay && v.inside && v.inside === t.stay ? { stay: t.stay } : undefined);
     t.age = 0; if (t.st === undefined) t.st = 0;
     v.task = t; v.act = ''; v.actT = 0;
     return t;
@@ -156,8 +158,9 @@
   }
   Vg.emote = emote;
 
-  // (o.keepLoad: the errand ends but the hands keep what they carry — the god taking the body goes on carrying it)
-  Vg.endTask = function (v) {
+  // (o.keepLoad: the errand ends but the hands keep what they carry — the god taking the body goes on carrying it; o.stay:
+  // the next errand goes on in the building one is in — nobody is let out at the door)
+  Vg.endTask = function (v, o) {
     const S = G.S; const t = v.task; if (!t) return;
     G.Life && G.Life.onEndTask(v);
     G.Carnage && G.Carnage.onEndTask(v);
@@ -172,7 +175,7 @@
       const b = S.buildings.get(t.id);
       if (b && t.counted && v.carry && b.incoming[v.carry.k] !== undefined) b.incoming[v.carry.k] = Math.max(0, b.incoming[v.carry.k] - v.carry.n);
     }
-    if (v.inside) {
+    if (v.inside && !(o && o.stay === v.inside)) {
       const b = S.buildings.get(v.inside);
       if (b) { const [dx, dy] = V_door(b); v.x = dx; v.y = dy; }
       v.inside = 0;
@@ -458,12 +461,16 @@
     if (v.captive) return G.War.captiveDecide(v, H);
     if (v.age < 16) return childDecide(v);
     const night = G.isNight(), eve = G.isEvening();
+    // (bed at one's own hour — the clock of each one, G.Lar.clock —, not all at the fall of night: L-225, D-071)
+    const sleepy = G.Lar ? G.Lar.sleepy(v) : night;
     let best = null, bs = -1, bp = 0;
     const opt = (score, pri, kind) => { if (score > bs) { bs = score; best = kind; bp = pri; } };
     if (v.hunger > 50) opt((v.hunger - 40) / 60 * 1.3 + (v.hunger > 88 ? 1 : 0), v.hunger > 85 ? 2.5 : 1.2, 'eat');
     const atTav = cur && cur.type === 'tavern' && v.energy > 20 && S.time > 0.5 && S.time < (cur.st === 1 ? 0.88 : 0.78);
-    if (night) opt(0.95 + (100 - v.energy) / 250, atTav ? 0.3 : 1.5, 'sleep');
+    if (sleepy) opt(0.95 + (100 - v.energy) / 250, atTav ? 0.3 : 1.5, 'sleep');
     else if (v.energy < 22) opt(0.6 + (22 - v.energy) / 30, v.energy < 8 ? 2.5 : 1.2, 'sleep');
+    // (at home: ill in bed by day, and after dark awake before one's bed time — the tavern keeps its own until it shuts)
+    if (G.Lar && !atTav) { const u = G.Lar.urge(v, night); if (u) opt(u.u, u.pri, 'lar'); }
     const elder = v.age >= 62;
     // a night watch keeps a torch lit when the village is big enough
     const watch = night && v.role === 'cacador' && v.energy > 45 && Vg.nightWatch.get(v.set) === v.id;
@@ -511,8 +518,9 @@
       // (nothing to eat in reach — no store, the store out of the way or empty, no berries —: at night back to sleep, the
       // hunger waking one again in a while (runSleep); by day the work, which may be what brings food or a store — the fire
       // of a town just founded, the field, the hunt —, not a day of wandering. L-165, L-171)
-      case 'eat': t = eatTask(v); if (!t) t = G.isNight() ? setTask(v, { type: 'sleep', pri: 1.5 }) : workTask(v); break;
-      case 'sleep': t = setTask(v, { type: 'sleep', pri: Math.max(pri, 1.2) }); break;
+      case 'eat': t = eatTask(v); if (!t) t = (G.Lar ? G.Lar.sleepy(v) : G.isNight()) ? setTask(v, { type: 'sleep', pri: 1.5, stay: v.home }) : workTask(v); break;
+      case 'sleep': t = setTask(v, { type: 'sleep', pri: Math.max(pri, 1.2), stay: v.home }); break;
+      case 'lar': { const u = G.Lar && G.Lar.urge(v, G.isNight()); t = u && G.Lar.task(v, H, u.why); break; }
       case 'work': t = workTask(v); break;
       case 'watch': t = setTask(v, { type: 'patrol', pri: 1.6, torch: true }); break;
       case 'social': { const o = socialTarget(v); if (o) t = setTask(v, { type: 'social', id: o.id, pri: 0.3 }); break; }
@@ -521,8 +529,10 @@
       case 'explore': t = exploreTask(v); break;
       case 'visit': { const o = relativeTarget(v); if (o) t = setTask(v, { type: 'visit', id: o.id, pri: 0.3 }); break; }
       case 'rest': t = setTask(v, { type: 'rest', pri: 0.2 }); break;
-      case 'shelter': t = setTask(v, { type: 'shelter', pri: 1.05 }); emote(v, 'fear', 1.5); break;
-      case 'home': t = (G.Urban && G.R() < (G.Urban.gardenDue(v) ? 0.75 : 0) && G.Urban.gardenTask(v, H)) || (G.Life && G.Life.familyTask(v, H)) || (G.Eco && G.Eco.goHomeTask(v, H)); break;
+      case 'shelter': t = setTask(v, { type: 'shelter', pri: 1.05, stay: v.home }); emote(v, 'fear', 1.5); break;
+      // (the end of the working day: the supper at home first — the house's cook to the fire, the hungry to the table —, then
+      // the garden, the family at the door, an evening in the house; act-lar.js)
+      case 'home': t = (G.Lar && G.Lar.task(v, H, 'tarde', true)) || (G.Urban && G.R() < (G.Urban.gardenDue(v) ? 0.75 : 0) && G.Urban.gardenTask(v, H)) || (G.Life && G.Life.familyTask(v, H)) || (G.Lar && G.Lar.task(v, H, 'tarde')) || (G.Eco && G.Eco.goHomeTask(v, H)); break;
       case 'tavern': t = G.Eco && G.Eco.tavernTask(v, H); break;
       case 'shop': t = G.Eco && G.Eco.shopTask(v, H); break;
       case 'compras': t = G.Compras && G.Compras.task(v, H); break;
@@ -549,12 +559,18 @@
     if (v.age < 2) return;
     if (cur && cur.pri >= 3) return;
     const night = G.isNight();
+    // (to bed at one's own hour — the little ones early, the older ones later: G.Lar.clock, L-225)
+    const sleepy = G.Lar ? G.Lar.sleepy(v) : night;
     // a story by the fire, or the family at the door, keeps them up a little longer
-    if (night && cur && (cur.type === 'listen' || cur.type === 'family') && S.time > 0.5 && S.time < 0.8) return;
-    // (to bed at night — but a child the hunger woke goes to bed after the meal, not before: L-171)
-    if (night) { if (!cur || (cur.type !== 'sleep' && cur.kind !== 'eat')) setTask(v, { type: 'sleep', pri: 1.5, kind: 'sleep' }); return; }
+    if (sleepy && cur && (cur.type === 'listen' || cur.type === 'family') && S.time > 0.5 && S.time < 0.8) return;
+    // (to bed — but a child the hunger woke goes to bed after the meal, not before: L-171)
+    if (sleepy) { if (!cur || (cur.type !== 'sleep' && cur.kind !== 'eat')) setTask(v, { type: 'sleep', pri: 1.5, kind: 'sleep', stay: v.home }); return; }
     if (v.hunger > 60 && (!cur || cur.pri < 1.2)) { const t = eatTask(v); if (t) { t.kind = 'eat'; return; } }
-    if (v.energy < 15 && (!cur || cur.pri < 1.2)) { setTask(v, { type: 'sleep', pri: 1.2, kind: 'sleep' }); return; }
+    if (v.energy < 15 && (!cur || cur.pri < 1.2)) { setTask(v, { type: 'sleep', pri: 1.2, kind: 'sleep', stay: v.home }); return; }
+    // (ill: in bed at home while the fever lasts — L-227)
+    if (G.Lar && G.Lar.fever(v) && (!cur || cur.pri < 1.3)) { const t = G.Lar.task(v, H, 'acamado'); if (t) return; }
+    // (awake after dark, before one's bed time: at home with the family — a story or the family at the door keep their own)
+    if (night && G.Lar) { if (cur && (cur.type === 'lar' || cur.type === 'listen' || cur.type === 'family' || cur.pri >= 1)) return; const t = G.Lar.task(v, H, 'noite'); if (t) return; }
     if (S.weather.storm > 0 && S.weather.rain > 0.3 && (!cur || cur.pri < 1.05)) { const h = S.buildings.get(v.home); if (h && h.built) { setTask(v, { type: 'shelter', pri: 1.05, kind: 'shelter' }); return; } }
     // (by day, a load in the hands goes to its place first — the people's store, or where a load that belongs somewhere
     // goes —, as the grown-ups' work does: the night's sleep cut the errand that was taking it there, and play, an
@@ -570,6 +586,8 @@
     // while the years are skipped nobody sees their games: the children stay put between meals,
     // lessons and errands, and the world runs lighter
     if (G.Skip && G.Skip.on && r >= 0.4) { setTask(v, { type: 'idle', pri: 0.1, wait: 5 + G.R() * 5, kind: 'play' }); return; }
+    // (the evening: the supper at home when the house has one, then the family at the door)
+    if (G.isEvening() && G.Lar && r < 0.7) { const t = G.Lar.task(v, H, 'tarde', true); if (t) return; }
     if (G.isEvening() && G.Life && r < 0.7) { const t = G.Life.familyTask(v, H); if (t) { t.kind = 'family'; return; } }
     if (v.age < 7 && m && !m.inside && !m.sleeping && !m.aboard && !m.ug && !m.held && !m.air && m.set === v.set && r < 0.5) { setTask(v, { type: 'follow', id: m.id, pri: 0.2, kind: 'follow' }); return; }
     // from nine on, a child often goes along to learn a parent's trade
@@ -586,6 +604,8 @@
     if (v.carry && v.carry.k === 'food' && !v.carry.op && !v.carry.to && !v.carry.cid) { // eat what you carry (not a load that is someone's errand, not a crate)
       v.carry.n -= 1; v.hunger = Math.max(0, v.hunger - 55); if (v.carry.n <= 0) v.carry = null; emote(v, 'food', 1.5); return setTask(v, { type: 'idle', pri: 0, wait: 1 });
     }
+    // (at home, with something in the house's pantry: the meal there, in the ledger — act-lar.js)
+    if (G.Lar && v.inside && v.inside === v.home) { const t = G.Lar.task(v, H, 'fome', true); if (t) return t; }
     // (a meal at the store needs a store: a people with food in its stock and no store anywhere — a town just founded, its
     // fire not lit — looks for something to eat around it, L-165)
     if (((G.Army && G.Army.larder(v)) || G.Fac.stockV(v)).food >= 1 && !(v._noStore > S.clock) && G.Village.nearestDropoff(v.x, v.y, v.set)) return setTask(v, { type: 'eat', pri: v.hunger > 85 ? 2.5 : 1.2 });
@@ -1297,6 +1317,7 @@
       case 'shelter': {
         const h = S.buildings.get(v.home);
         if (!h || !h.built || h.type === 'ruin') return end(v);
+        if (t.st === 0 && v.inside === h.id) { t.st = 2; break; } // (already at home)
         if (t.st === 0) { const [fx, fy] = G.Village.frontTile(h); if (!Vg.goto(v, fx, fy, true)) return end(v); t.st = 1; }
         else if (t.st === 1) { if (move(v, dt, 1.25)) { t.st = 2; v.inside = h.id; } }
         else if (S.weather.storm <= 0 || S.weather.rain < 0.2 || t.age > 45) end(v);
@@ -1344,10 +1365,10 @@
         break;
       }
       case 'saga': if (G.Stories) G.Stories.run(v, t, dt, H); else end(v); break;
-      default: if (!(G.Scene && G.Scene.run(v, t, dt, H)) && !(G.Caves && G.Caves.run(v, t, dt, H)) && !G.War.run(v, t, dt, H) && !(G.Wars && G.Wars.run(v, t, dt, H)) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Urban && G.Urban.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Carnage && G.Carnage.run(v, t, dt, H)) && !(G.Flora && G.Flora.run(v, t, dt, H)) && !(G.Nests && G.Nests.run(v, t, dt, H)) && !(G.Polity && G.Polity.run(v, t, dt, H)) && !(G.Justice && G.Justice.run(v, t, dt, H)) && !(G.Riots && G.Riots.run(v, t, dt, H)) && !(G.Secrets && G.Secrets.run(v, t, dt, H)) && !(G.Stories && G.Stories.party && G.Stories.party.run(v, t, dt, H)) && !(G.Riches && G.Riches.run(v, t, dt, H))) end(v);
+      default: if (!(G.Scene && G.Scene.run(v, t, dt, H)) && !(G.Caves && G.Caves.run(v, t, dt, H)) && !G.War.run(v, t, dt, H) && !(G.Wars && G.Wars.run(v, t, dt, H)) && !(G.City && G.City.run(v, t, dt, H)) && !(G.Urban && G.Urban.run(v, t, dt, H)) && !(G.Naval && G.Naval.run(v, t, dt, H)) && !(G.Eco && G.Eco.run(v, t, dt, H)) && !(G.Army && G.Army.run(v, t, dt, H)) && !(G.Fest && G.Fest.run(v, t, dt, H)) && !(G.Life && G.Life.run(v, t, dt, H)) && !(G.Lar && G.Lar.run(v, t, dt, H)) &&!(G.Carnage && G.Carnage.run(v, t, dt, H)) && !(G.Flora && G.Flora.run(v, t, dt, H)) && !(G.Nests && G.Nests.run(v, t, dt, H)) && !(G.Polity && G.Polity.run(v, t, dt, H)) && !(G.Justice && G.Justice.run(v, t, dt, H)) && !(G.Riots && G.Riots.run(v, t, dt, H)) && !(G.Secrets && G.Secrets.run(v, t, dt, H)) && !(G.Stories && G.Stories.party && G.Stories.party.run(v, t, dt, H)) && !(G.Riches && G.Riches.run(v, t, dt, H))) end(v);
     }
   }
-  const LONG = { praia: 1, muster: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, embark: 1, boardBack: 1, scene: 1, saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1, carga: 1, ajudar: 1, banca: 1, compra: 1, atacado: 1, devolver: 1, shop: 1 };
+  const LONG = { praia: 1, muster: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, embark: 1, boardBack: 1, scene: 1, saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1, carga: 1, ajudar: 1, banca: 1, compra: 1, atacado: 1, devolver: 1, shop: 1, lar: 1 };
 
   function runBuild(v, t, dt) {
     const S = G.S;
@@ -1424,6 +1445,8 @@
       }
       const home = S.buildings.get(v.home);
       if (home && home.built && home.type !== 'ruin') {
+        // (already at home — from the fire to bed —: no going out and in again)
+        if (v.inside === home.id) { t.st = 2; t.home = home.id; v.sleeping = true; if (v.g === 'f') tryConceive(v); return; }
         const [fx, fy] = G.Village.frontTile(home);
         if (Vg.goto(v, fx, fy, true)) { t.st = 1; t.home = home.id; return; }
       }
@@ -1450,8 +1473,11 @@
     }
     v.sleeping = true; v.act = 'sleep';
     if (!v.inside && G.R() < dt * 0.3) emote(v, 'zzz', 1.6);
-    if (!night && v.energy >= 96) end(v);
-    else if (!night && v.energy > 60 && v.hunger > 80) end(v);
+    // (up at one's own hour, rested — the old before the light, the idle later: G.Lar.clock)
+    const up = G.Lar ? !G.Lar.sleepy(v) : !night;
+    // (and, hungry at home with something in the pantry, a bite there before going out)
+    if (up && v.energy >= 96) { if (!(G.Lar && v.inside && v.inside === v.home && v.hunger > 40 && G.Lar.task(v, H, 'fome', true))) end(v); }
+    else if (up && v.energy > 60 && v.hunger > 80) end(v);
     else hungerWakes(v);
   }
   // (the hunger at the top and the life going — a wound, a long road —: up to eat, at night too, by the same choice of a
@@ -1761,7 +1787,7 @@
     if (v.air) return 'Voando pelos ares!';
     if (v.age < 2) { const c = S.villagers.get(v.carrier); return c ? (v.sleeping ? 'Dormindo' : `No colo de ${c.name}`) : 'Chorando sozinho'; }
     if (!t) return v.sleeping ? 'Dormindo' : 'Pensando no que fazer';
-    const wt = (G.Scene && G.Scene.taskText(v, t)) || (G.Justice && G.Justice.taskText(v, t)) || (G.Riots && G.Riots.taskText(v, t)) || (G.Secrets && G.Secrets.taskText(v, t)) || (G.Stories && G.Stories.party && G.Stories.party.taskText(v, t)) || (G.Polity && G.Polity.taskText(v, t)) || (G.Flora && G.Flora.taskText(v, t)) || (G.Nests && G.Nests.taskText(v, t)) || (G.Riches && G.Riches.taskText && G.Riches.taskText(v, t)) || (G.Caves && G.Caves.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || G.War.taskText(v, t) || (G.Wars && G.Wars.taskText(v, t)) || (G.City && G.City.taskText(v, t)) || (G.Urban && G.Urban.taskText(v, t)) || (G.Naval && G.Naval.taskText(v, t)) || (G.Eco && G.Eco.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || (G.Fest && G.Fest.taskText(v, t)) || (G.Life && G.Life.taskText(v, t)) || (G.Carnage && G.Carnage.taskText(v, t)); if (wt) return wt;
+    const wt = (G.Scene && G.Scene.taskText(v, t)) || (G.Justice && G.Justice.taskText(v, t)) || (G.Riots && G.Riots.taskText(v, t)) || (G.Secrets && G.Secrets.taskText(v, t)) || (G.Stories && G.Stories.party && G.Stories.party.taskText(v, t)) || (G.Polity && G.Polity.taskText(v, t)) || (G.Flora && G.Flora.taskText(v, t)) || (G.Nests && G.Nests.taskText(v, t)) || (G.Riches && G.Riches.taskText && G.Riches.taskText(v, t)) || (G.Caves && G.Caves.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || G.War.taskText(v, t) || (G.Wars && G.Wars.taskText(v, t)) || (G.City && G.City.taskText(v, t)) || (G.Urban && G.Urban.taskText(v, t)) || (G.Naval && G.Naval.taskText(v, t)) || (G.Eco && G.Eco.taskText(v, t)) || (G.Army && G.Army.taskText(v, t)) || (G.Fest && G.Fest.taskText(v, t)) || (G.Life && G.Life.taskText(v, t)) || (G.Lar && G.Lar.taskText(v, t)) || (G.Carnage && G.Carnage.taskText(v, t)); if (wt) return wt;
     const bname = id => { const b = S.buildings.get(id); return b ? G.Village.buildName(b) : 'construção'; };
     const pname = id => { const o = S.villagers.get(id); return o ? o.name : 'alguém'; };
     switch (t.type) {

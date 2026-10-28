@@ -392,8 +392,8 @@
     }
     v.moving = false;
     G.faceTo(v, f.x - v.x, f.y - v.y);
-    // supper from the family pantry
-    if (v.hunger > 40 && (h.pantry || 0) >= 1 && !t.ate) { h.pantry -= 1; v.hunger = Math.max(0, v.hunger - 55); t.ate = 2.2; }
+    // supper from the family pantry, in the ledger (G.Lar.eat: the meal cooked today, or a cold one — L-221)
+    if (v.hunger > 40 && !t.ate && G.Lar && G.Lar.eat(v, h, G.Lar.cooked(h))) t.ate = 2.2;
     if (t.ate > 0) { t.ate -= dt; v.act = 'eat'; return; }
     v.act = t.talk > 0 ? 'sittalk' : 'sit';
     if (t.talk > 0) t.talk -= dt; else if (G.R() < dt * 0.3) t.talk = G.rr(1.5, 3);
