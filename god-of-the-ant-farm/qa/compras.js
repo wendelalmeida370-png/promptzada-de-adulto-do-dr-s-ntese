@@ -33,12 +33,18 @@ const book = f => D.ledger().filter(f);
 const none = why => { console.log(`FALHOU | compras | ${why}`); process.exit(1); };
 // the houses of a town with a few grown people in them (by id, past the ones taken)
 const taken = new Set();
-const homesOf = (set, min) => [...S.buildings.values()].filter(b => b.set === set.id && b.built && G.BDEF[b.type].housing && (b.res || 0) >= 2 && !taken.has(b.id) && adults(b).length >= (min || 2)).sort((a, b) => a.id - b.id);
-function houseIn(set, min) {
-  const h = homesOf(set, min)[0];
-  if (!h) none(`${set.name} não tem mais uma casa com ${min || 2} adulto(s) para o caso (${taken.size} já tomadas pelos casos)`);
+const homesOf = (set, min, pred) => [...S.buildings.values()].filter(b => b.set === set.id && b.built && G.BDEF[b.type].housing && (b.res || 0) >= 2 && !taken.has(b.id) && adults(b).length >= (min || 2) && (!pred || pred(b))).sort((a, b) => a.id - b.id);
+function houseIn(set, min, pred, what) {
+  const h = homesOf(set, min, pred)[0];
+  if (!h) none(`${set.name} não tem mais uma casa com ${min || 2} adulto(s)${what ? ' ' + what : ''} para o caso (${taken.size} já tomadas pelos casos)`);
   taken.add(h.id); return h;
 }
+// (a house that can send one of its own by the game's rule: a grown one with no trade, and no hard worker — the wish to shop
+// outweighs the work only for such a one; a house of tradesmen and hard workers sends nobody, L-331, open: in the new
+// metropolis the first house of the town had a weaver and a hard-working farmer, and nobody went in 90 s, T-179. Grown is
+// 16 or more: under it the child's choice — childDecide — never asks the wish to shop, though the wish counts from 14)
+const grown16 = h => adults(h).filter(v => v.age >= 16);
+const canSend = h => grown16(h).some(v => !(v.job || (E.isJobRole && E.isJobRole(v.role))) && !(v.work > 1));
 // the test's hand on a house: what it keeps taken away (so that it lacks), coins given or taken, the last errand forgotten
 function lacking(h, coins) {
   for (const k of Object.keys(E.HOUSE_WANTS)) { const n = D.get('h:' + h.id, k); if (n > 0) D.use('h:' + h.id, k, n, { code: 'teste' }); }
@@ -73,8 +79,8 @@ function again(h, L0) {
 // other things feels no lack and sends nobody — the test's hand takes those away too (in the new metropolis, in the world of
 // L-203, the house of c7 had its chest full: an empty list, nobody sent in 90 s; taking the next house instead, after the merge
 // of 496dfd3 the town ran out of houses for the cases, T-095)
-function houseLacking(set, min, coins) {
-  const h = houseIn(set, min); lacking(h, coins);
+function houseLacking(set, min, coins, pred, what) {
+  const h = houseIn(set, min, pred, what); lacking(h, coins);
   if (!C.list(h).length) { const L = D.list('h:' + h.id); for (const k of Object.keys(L)) if (k !== 'moedas' && L[k] > 0) D.use('h:' + h.id, k, L[k], { code: 'teste' }); }
   return h;
 }
@@ -96,7 +102,7 @@ S.time = 0.15;
 const fair = stockFair(set);
 // ---------------- c1/c2/c5: a house that lacks sends one of its people; the purchase is paid by the house and gets home
 {
-  const h = houseLacking(set, 2, 30);
+  const h = houseLacking(set, 2, 30, canSend, 'que possa mandar alguém (um adulto sem ofício e não trabalhador)');
   const L0 = S.ledgerN; const list = C.list(h).map(q => q.k);
   let most = 0; let errand = null;
   const sent = fine(90, () => { const v = errandOf(h); if (v) errand = errand || { v, k: v.task.k, type: v.task.type, n: v.task.n }; let c = 0; for (const o of S.villagers.values()) if (o.task && o.task.casa === h.id) c++; most = Math.max(most, c); return !!errand || watch(); });
