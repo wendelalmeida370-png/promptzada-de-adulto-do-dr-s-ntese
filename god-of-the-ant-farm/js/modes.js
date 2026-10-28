@@ -32,6 +32,7 @@
   M3.inc = () => M3.state === 'INC';
   M3.panel = () => !!(panel || menuOpen);
   M3.setPanel = p => { panel = p || null; };
+  M3.panelIs = p => panel === p; // (which one: 'card', 'self', 'diario')
   // ------------------------------ can it be done ------------------------------
   // (asked of the browser without making anything: the god's view never holds a 3D context of its own — the real one is
   // made at the first descent, G.Realm.ready, and a browser that cannot is told so then)
@@ -298,6 +299,7 @@
     if (menuOpen) return;
     if (a === 'deus') { M3.leave('deus'); return; }
     if (a === 'ficha') { if (panel === 'self') { G.IncUI.closeAll(); panel = null; } else { G.IncUI.selfCard(); } return; }
+    if (a === 'diario') { if (panel === 'diario') { G.IncUI.closeAll(); panel = null; } else { G.IncUI.diary(); } return; }
     if (a === 'sentar') { G.Avatar.sit(); return; }
     // (a wave of the hand: those standing near turn to it and wave back — the hello of the people, only seen)
     // (a dance: whoever is free and merry near the body joins in — the world's people, stopping a while to dance with it)

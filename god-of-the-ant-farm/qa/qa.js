@@ -616,6 +616,8 @@
         if (!fin(b.aluga.deve) || b.aluga.deve < -EPS || !fin(b.aluga.pago)) add('act', 1, `${b.type}#${b.id}: aluguel ${JSON.stringify(b.aluga)}`);
       }
       if (b.poupa && (!fin(b.poupa.alvo) || !(b.poupa.alvo > 0))) add('act', 2, `${b.type}#${b.id}: poupança sem alvo (${JSON.stringify(b.poupa)})`);
+      // (a family that let the new house go, for now, does not save for it those days — D-061)
+      if (b.poupa && G.Casa.gaveUp) { const sv = s.villagers.get(b.poupa.by); if (sv && G.Casa.gaveUp(sv)) add('act', 3, `${b.type}#${b.id}: a família de ${sv.name} #${sv.id} deixou a casa nova para depois e continua juntando para ela`); }
     }
     // ---- the fishing grounds (act-pesca.js): what a ground holds is a number, never below nothing, never fished in the
     // future, and only where there is water

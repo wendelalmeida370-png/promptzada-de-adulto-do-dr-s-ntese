@@ -25,6 +25,7 @@
   const r2 = x => Math.round(x * 100) / 100;
   const bio = (v, third, first) => G.Life && G.Life.bio(v, 'note', third, first);
   const coinPeople = set => E.coinage(set.fac);
+  const NOTE = { src: 'casa' }; // (where a line of the diary came from: the house — the diary's page says it)
   K.MAX_WAIT = 3;   // days a family waits for a house it paid for before the people give it back the coins
   K.RENT = 0.04;    // the rent of a day (a year of the people's calendar), of what the house would cost
   K.OWE_DAYS = 5;   // days of rent owed before the owner gives the house up to the people
@@ -134,8 +135,9 @@
     const S = G.S; const why = K.need(v); if (!why) return { ok: false, why: 'A família tem onde morar.' };
     const set = S.settlements.get(v.set); if (!set) return { ok: false, why: '' };
     if (K.waiting(v)) return { ok: false, why: 'A casa da família já está sendo levantada.' };
-    // (a family that let the new house go, for now — the diary's choice — is not asked again for a few days)
-    if ((v.diary || []).some(e => e.src === 'casa' && e.dropped !== undefined && S.day - e.dropped < 3)) return { ok: false, why: 'A família deixou a casa nova para depois.' };
+    // (a family that let the new house go, for now — the diary's choice: any of its grown ones —, is not asked again for a few
+    // days, D-061)
+    if (K.gaveUp(v)) return { ok: false, why: 'A família deixou a casa nova para depois.' };
     const r = homeRef(v); const h = r && S.buildings.get(+r.slice(2));
     const fam = K.family(v); const occ = occupancy();
     const plan = K.plan(v, fam, set, occ, why);
@@ -184,7 +186,7 @@
     b.dono = v.id; move(fam, b, 'comprou');
     const nm = G.Village.buildName(b).toLowerCase();
     bio(v, `Comprou ${art(nm)} ${nm} do povo${coinPeople(set) ? ' por ' + price + ' moedas' : ''} e se mudou com a família (${WHY[why]}).`, `Compramos ${art(nm)} ${nm} e nos mudamos — enfim um teto nosso`);
-    A.note(v, 'memory', `Compramos uma casa: ${nm}.`);
+    A.note(v, 'memory', `Compramos uma casa: ${nm}.`, NOTE);
     return true;
   }
   // a house its owner left empty, rented: the family moves in; the rent goes each day to the owner's household
@@ -194,8 +196,8 @@
     b.aluga = { d: G.S.day, pago: G.S.day, deve: 0, por: v.id };
     const nm = G.Village.buildName(b).toLowerCase();
     bio(v, `Alugou ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm} de ${o.name}, por ${rent} moedas ao ano, e se mudou com a família (${WHY[why]}).`, `Alugamos ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm} de ${o.name} — um teto, mesmo que não seja nosso`);
-    A.note(v, 'memory', `Alugamos a casa de ${o.name}: ${rent} moedas ao ano.`);
-    A.note(o, 'memory', `Aluguei a minha casa vazia a ${v.name}.`);
+    A.note(v, 'memory', `Alugamos a casa de ${o.name}: ${rent} moedas ao ano.`, NOTE);
+    A.note(o, 'memory', `Aluguei a minha casa vazia a ${v.name}.`, NOTE);
   }
   // the rent of a day, paid by the household of a let house to the owner's, in the ledger ('aluguel'): what it cannot pay
   // is owed, and paid first when there is coin; too much owed and the owner gives the house up — the people buy it
@@ -214,8 +216,8 @@
       // (the owner gives up: the people buy the house, for what they can pay of half its worth; the debt goes with it)
       const f = 'f:' + set.fac; const worth = r2(Math.min(K.price(set, b.type) * 0.5, D.get(f, 'moedas')));
       if (worth > EPS) D.move(f, to, 'moedas', worth, { code: 'venda-casa', by: o.id });
-      A.note(o, 'memory', `${head.name} não pagava o aluguel: vendi a casa ao povo${worth > EPS ? ` por ${worth} moedas` : ''}.`);
-      for (const m of L) if (m.age >= 16) A.note(m, 'memory', `Devíamos o aluguel a ${o.name}: a casa passou ao povo.`);
+      A.note(o, 'memory', `${head.name} não pagava o aluguel: vendi a casa ao povo${worth > EPS ? ` por ${worth} moedas` : ''}.`, NOTE);
+      for (const m of L) if (m.age >= 16) A.note(m, 'memory', `Devíamos o aluguel a ${o.name}: a casa passou ao povo.`, NOTE);
       b.dono = 0; b.aluga = null;
     }
   }
@@ -235,7 +237,7 @@
     b.dono = v.id; b.encomenda = { fam: fam.map(m => m.id), d: G.S.day, paid: coinPeople(set) ? price : 0, by: v.id, why, fac: set.fac };
     const nm = G.Village.buildName(b).toLowerCase().replace(/ \(obra\)$/, '');
     bio(v, `${coinPeople(set) ? `Pagou ${price} moedas pelos materiais de` : 'Pediu ao povo'} ${art(nm)} ${nm} para a família (${WHY[why]}); os construtores começaram a obra.`, `${coinPeople(set) ? 'Juntamos o bastante e pagamos' : 'O povo nos deu'} a madeira e a pedra de uma casa nossa`);
-    A.note(v, 'memory', coinPeople(set) ? `Pagamos ${price} moedas pelos materiais da nossa casa.` : 'O povo vai levantar a nossa casa.');
+    A.note(v, 'memory', coinPeople(set) ? `Pagamos ${price} moedas pelos materiais da nossa casa.` : 'O povo vai levantar a nossa casa.', NOTE);
     return b;
   }
   // a commission that never started (no hands, no ground): the coins come back to the household that paid, in the ledger
@@ -243,7 +245,7 @@
     const o = b.encomenda; const v = P(o.by) || o.fam.map(P).find(Boolean);
     const kept = D.get('h:' + b.id, 'moedas');
     if (kept > EPS) { const to = v ? homeRef(v) || 'p:' + v.id : 'f:' + set.fac; D.move('h:' + b.id, to, 'moedas', kept, { code: 'obra-devolvida', by: v ? v.id : 0, part: true }); }
-    if (v) A.note(v, 'memory', 'A obra da nossa casa nunca começou: as moedas voltaram para nós.');
+    if (v) A.note(v, 'memory', 'A obra da nossa casa nunca começou: as moedas voltaram para nós.', NOTE);
     b.encomenda = null; b.dono = 0;
     if (!b.progress) G.Village.removeBuilding(b);
   }
@@ -268,7 +270,7 @@
     b.res = (b.res || 0) + fam.length;
     const said = { comprou: 'comprou uma casa e se mudou', alugou: 'alugou uma casa e se mudou', levantou: 'mudou para a casa que levantou' }[how];
     (fam[0].moves || (fam[0].moves = [])).push([S.day, said]); if (fam[0].moves.length > 6) fam[0].moves.shift();
-    A.note(fam[0], 'memory', `Arrumamos a casa nova${brought.length ? ': trouxemos ' + brought.slice(0, 4).join(', ') : ''}.`);
+    A.note(fam[0], 'memory', `Arrumamos a casa nova${brought.length ? ': trouxemos ' + brought.slice(0, 4).join(', ') : ''}.`, NOTE);
   }
   // a site paid for that is lost before it stands (a fire, a war, the sea, a site nobody reaches, a town left): the people
   // give back what was not yet built of it, in the ledger
@@ -280,7 +282,7 @@
     const kept = D.get('h:' + b.id, 'moedas'); const done = r2(kept * G.clamp(b.progress || 0, 0, 1)); const back = r2(kept - done);
     if (done > EPS && D.exists('f:' + fac)) D.move('h:' + b.id, 'f:' + fac, 'moedas', done, { code: 'obra-casa', by: v ? v.id : 0, part: true });
     if (back > EPS) D.move('h:' + b.id, v ? homeRef(v) || 'p:' + v.id : 'f:' + fac, 'moedas', back, { code: 'obra-devolvida', by: v ? v.id : 0, part: true });
-    if (v) A.note(v, 'memory', `A obra da nossa casa se perdeu (${how})${back > EPS ? `: ${back} moedas voltaram para nós` : ''}.`);
+    if (v) A.note(v, 'memory', `A obra da nossa casa se perdeu (${how})${back > EPS ? `: ${back} moedas voltaram para nós` : ''}.`, NOTE);
   }
   const remove0 = G.Village.removeBuilding;
   G.Village.removeBuilding = function (b) { if (b && b.encomenda) lost(b, 'o lugar foi desfeito'); return remove0.apply(this, arguments); };
@@ -301,7 +303,7 @@
     move(fam, b, 'levantou');
     const v = fam[0]; const nm = G.Village.buildName(b).toLowerCase();
     bio(v, `Mudou-se com a família para ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm} que mandou levantar.`, `Nos mudamos para a nossa casa — levantada com o que juntamos`);
-    for (const m of fam) A.note(m, 'memory', `Mudamos para a nossa casa nova.`);
+    for (const m of fam) A.note(m, 'memory', `Mudamos para a nossa casa nova.`, NOTE);
     return r;
   };
 
@@ -311,12 +313,37 @@
     const S = G.S; const why = K.need(v); if (!why) return { ok: false, why: 'A família tem onde morar.' };
     const set = S.settlements.get(v.set); if (!set) return { ok: false, why: '' };
     if (K.waiting(v)) return { ok: false, why: 'A casa da família já está sendo levantada.' };
+    { const d = K.gaveUp(v); if (d) return { ok: false, why: `A família deixou a casa nova para depois: volta a pensar nisso no dia ${d}.` }; }
     const plan = K.plan(v, null, set, null, why); const has = K.savings(v);
     if (coinPeople(set) && has + EPS < plan.price) {
       if (plan.lease && has + EPS >= plan.rent * 3) return { ok: true, price: plan.price, rent: plan.rent, lease: plan.lease, why };
       return { ok: false, why: `Falta dinheiro: uma casa custa uns ${Math.ceil(plan.price)} moedas e a família tem ${Math.floor(has)}.`, price: plan.price };
     }
     return { ok: true, price: plan.price, free: plan.free, why };
+  };
+  // ------------------------------ the new house let go, for now (D-061) ------------------------------
+  // The family changes its mind: it stops saving for a house of its own and is not asked again for K.DROP_DAYS days — the
+  // whole family: the note, with the day, goes into the diary of each grown one, and the plan reads any of them (K.order);
+  // then the need comes back as a goal, and one may change one's mind again. Only in the world's step: the body asks it with
+  // its hands (Possess.apply), from the diary's page
+  K.DROP_DAYS = 3;
+  const DROP = 'Deixamos a casa nova para depois.';
+  // (the day the family's letting go ends — until then it is not asked —; 0 when it has not let it go)
+  K.gaveUp = function (v) {
+    const S = G.S; let until = 0; if (!v) return 0;
+    for (const m of K.family(v)) for (const e of m.diary || []) if (e.src === 'casa' && e.dropped !== undefined && S.day - e.dropped < K.DROP_DAYS) until = Math.max(until, e.dropped + K.DROP_DAYS);
+    return until;
+  };
+  K.giveUp = function (v) {
+    const S = G.S; if (!v || !K.need(v)) return { ok: false, why: 'A família tem onde morar.' };
+    if (K.waiting(v)) return { ok: false, why: 'A casa nova já está sendo levantada.' };
+    if (K.gaveUp(v)) return { ok: false, why: 'A família já deixou a casa nova para depois.' };
+    const fam = K.family(v);
+    // (the saving stops — the household keeps its coins: nothing was paid, nothing is lost)
+    const r = homeRef(v); const h = r && S.buildings.get(+r.slice(2)); if (h && h.poupa && fam.some(m => m.id === h.poupa.by)) h.poupa = null;
+    // (the same note at the end of a diary is the same note told again: its day is today's)
+    for (const m of fam) { if (m.age < 16) continue; const L = m.diary || []; const e = L[L.length - 1]; if (e && e.txt === DROP && e.src === 'casa') { e.day = S.day; e.dropped = S.day; } else A.note(m, 'memory', DROP, { src: 'casa', dropped: S.day }); }
+    return { ok: true, msg: `Você deixa a casa nova para depois: a família para de juntar por ${K.DROP_DAYS} dias.` };
   };
   A.def('casa', {
     name: 'Um teto', conserve: false,
@@ -355,7 +382,7 @@
         const heir = b.built ? heirOf(b, v) : null;
         b.dono = heir ? heir.id : 0;
         if (!b.dono) b.aluga = null;
-        if (heir) { bio(heir, `Herdou a casa de ${v.name}.`, `Herdei a casa de ${v.name}`); A.note(heir, 'memory', `Herdei a casa de ${v.name}.`); }
+        if (heir) { bio(heir, `Herdou a casa de ${v.name}.`, `Herdei a casa de ${v.name}`); A.note(heir, 'memory', `Herdei a casa de ${v.name}.`, NOTE); }
       }
       if (b.encomenda && b.encomenda.fam.includes(v.id)) { b.encomenda.fam = b.encomenda.fam.filter(id => id !== v.id); if (b.encomenda.by === v.id) b.encomenda.by = b.encomenda.fam[0] || 0; if (!b.encomenda.fam.length) b.dono = 0; }
       if (b.poupa && b.poupa.by === v.id) b.poupa = null;
@@ -372,10 +399,13 @@
     if (w) { out.goals.push({ id: w.id, kind: 'goal', src: 'casa-nova', txt: `A nossa casa está sendo levantada (${Math.round((w.progress || 0) * 100)}%).`, day: w.encomenda.d }); return; }
     const h = v.home && G.S.buildings.get(v.home); const why = K.need(v);
     if (!why) return;
+    // (let go, for now: no goal these days — the need comes back after them, D-061)
+    if (K.gaveUp(v)) return;
     const set = G.S.settlements.get(v.set); if (!set) return;
-    if (!coinPeople(set)) { out.goals.push({ id: v.id, kind: 'goal', src: 'casa-nova', txt: `Uma casa para a família (${WHY[why]}): pedir ao povo.`, day: G.S.day }); return; }
+    // (a goal the person may let go: drop names the world's door for it, K.giveUp)
+    if (!coinPeople(set)) { out.goals.push({ id: v.id, kind: 'goal', src: 'casa-nova', txt: `Uma casa para a família (${WHY[why]}): pedir ao povo.`, day: G.S.day, drop: 'casa-nova' }); return; }
     const alvo = h && h.poupa && h.poupa.by === v.id ? h.poupa.alvo : r2(K.price(set, wantType(set)) + 2);
-    out.goals.push({ id: v.id, kind: 'goal', src: 'casa-nova', txt: `Uma casa para a família (${WHY[why]}): juntadas ${Math.floor(K.savings(v))} de ${Math.ceil(alvo)} moedas.`, day: h && h.poupa ? h.poupa.d : G.S.day, prog: Math.min(1, K.savings(v) / alvo) });
+    out.goals.push({ id: v.id, kind: 'goal', src: 'casa-nova', txt: `Uma casa para a família (${WHY[why]}): juntadas ${Math.floor(K.savings(v))} de ${Math.ceil(alvo)} moedas.`, day: h && h.poupa ? h.poupa.d : G.S.day, prog: Math.min(1, K.savings(v) / alvo), drop: 'casa-nova' });
   });
   // a house that saves buys no luxury (act-compras.js asks)
   K.saving = h => !!(h && h.poupa && P(h.poupa.by) && P(h.poupa.by).home === h.id);

@@ -46,7 +46,7 @@
         <div class="ih-prompt hidden"><kbd>E</kbd><span></span></div>
         <div class="ih-reticle"></div>
         <div class="ih-hint panel"></div>
-        <button class="ih-god" title="Voltar ao Modo Deus">${(G.ICON && G.ICON.eye) || ''}<span>Modo Deus</span></button>
+        <div class="ih-corner"><button class="ih-diary" title="Diário de Vida">${(G.ICON && G.ICON.book) || ''}<span>Diário</span></button><button class="ih-god" title="Voltar ao Modo Deus">${(G.ICON && G.ICON.eye) || ''}<span>Modo Deus</span></button></div>
         <div class="ih-toasts"></div>
         <div class="ih-sleep hidden">Dormindo… <small>o tempo passa depressa · <kbd>E</kbd> para acordar</small></div>
         <div class="ih-touch hidden"><div class="ih-stick"><i></i></div><button data-k="pular">Pular</button><button data-k="correr">Correr</button><button data-k="interagir">E</button><button data-k="menu">☰</button></div>
@@ -61,6 +61,7 @@
     hud = $('#inc-hud'); card = $('#inc-card'); menu = $('#inc-menu'); fadeEl = $('#inc-fade'); banner = $('#inc-banner'); deathEl = $('#inc-death'); label = $('#inc-label'); stickEl = $('.ih-stick', hud);
     leadEl = $('.ih-lead', hud); markEl = $('.ih-mark', hud);
     $('.ih-god', hud).onclick = () => G.Modes.leave('deus');
+    $('.ih-diary', hud).onclick = () => G.Input3D.press('diario'); // (the same as its key)
     for (const b of hud.querySelectorAll('.ih-touch button')) {
       const k = b.dataset.k;
       b.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); if (k === 'correr') G.Input3D.press(k, !G.Input3D.down.correr); else G.Input3D.press(k); }, { passive: false });
@@ -138,6 +139,8 @@
     if (!G.Modes.inc()) { label.classList.add('hidden'); markEl.classList.add('hidden'); return; }
     drawAir();
     const v = G.Possess.body(); if (!v) return;
+    // (the diary's page, while it is open: read again once a second — the world goes on while one reads)
+    if (G.Modes.panelIs('diario')) { diaryT -= rdt; if (diaryT <= 0) { diaryT = 1; renderDiary(); } }
     // the best thing to do, a few times a second (the world is asked, not the picture)
     bestT -= rdt;
     if (bestT <= 0) {
@@ -191,7 +194,7 @@
     $('.ih-sleep', hud).classList.toggle('hidden', !v.sleeping);
     hud.classList.toggle('asleep', !!v.sleeping);
     const h = $('.ih-hint', hud); h.classList.toggle('hidden', hintT <= 0);
-    if (hintT > 0) h.innerHTML = [['frente', 'andar'], ['correr', 'correr'], ['pular', 'pular'], ['interagir', 'interagir'], ['ficha', 'quem sou eu'], ['deus', 'Modo Deus'], ['menu', 'menu']].map(([a, t]) => `<span><kbd>${esc(a === 'frente' ? 'WASD' : G.Input3D.label(a))}</kbd> ${t}</span>`).join('') + '<span><kbd>Mouse</kbd> olhar</span>';
+    if (hintT > 0) h.innerHTML = [['frente', 'andar'], ['correr', 'correr'], ['pular', 'pular'], ['interagir', 'interagir'], ['ficha', 'quem sou eu'], ['diario', 'diário'], ['deus', 'Modo Deus'], ['menu', 'menu']].map(([a, t]) => `<span><kbd>${esc(a === 'frente' ? 'WASD' : G.Input3D.label(a))}</kbd> ${t}</span>`).join('') + '<span><kbd>Mouse</kbd> olhar</span>';
   };
   // the words over the heads and the little texts of the world: what the god's view draws over it, over the body's eyes too —
   // the words said (G.Talk: a bubble over the one who speaks, typed out by the world's clock; the same bubble by the same hand,
@@ -299,7 +302,7 @@
 
   // ------------------------------ cards ------------------------------
   IU.card = function (c, said) {
-    if (!root) return; G.Modes.setPanel('card'); G.Input3D.unlock(); G.Input3D.clear();
+    if (!root) return; G.Modes.setPanel('card'); G.Input3D.unlock(); G.Input3D.clear(); card.classList.remove('diario');
     let h = `<button class="x" data-c="close">×</button>`;
     if (c.kind === 'person') {
       const o = G.S.villagers.get(c.id);
@@ -334,7 +337,7 @@
   IU.selfCard = function () {
     const c = G.Possess.context(); if (!c) return;
     const v = G.Possess.body(); const pc = G.Interact.personCard(v, null);
-    G.Modes.setPanel('self'); G.Input3D.unlock(); G.Input3D.clear();
+    G.Modes.setPanel('self'); G.Input3D.unlock(); G.Input3D.clear(); card.classList.remove('diario');
     const caps = c.caps; const kind = (G.Possess.KINDS[c.kind] || {}).label || c.kind;
     let h = `<button class="x" data-c="close">×</button><div class="ic-head"><div><h3>${esc(pc.name)}</h3><div class="sub">${esc(pc.sub)} · ${esc(kind)}</div></div></div>`;
     const rows = [];
@@ -349,14 +352,34 @@
     if (dd.length) h += `<div class="ic-bio"><label>Desde que você chegou</label><div>${esc(G.cap ? G.cap(dd.join(', ')) : dd.join(', '))}.</div></div>`;
     if (c.witnessed.length) h += `<div class="ic-bio"><label>O que você presenciou</label>${c.witnessed.slice(-4).reverse().map(e => `<div>${esc(e.txt)}</div>`).join('')}</div>`;
     if (pc.bio.length) h += `<div class="ic-bio"><label>Memórias de ${esc(v.name)}</label>${pc.bio.map(e => `<div><em>${e.age} ${e.age === 1 ? 'ano' : 'anos'}</em> ${esc(e.txt)}</div>`).join('')}</div>`;
-    h += `<div class="btns">${v.energy < 70 && !v.sleeping ? '<button data-c="sleep">Dormir aqui</button>' : ''}<button data-c="close">Fechar <kbd>${esc(G.Input3D.label('ficha'))}</kbd></button></div>`;
+    h += `<div class="btns">${v.energy < 70 && !v.sleeping ? '<button data-c="sleep">Dormir aqui</button>' : ''}${G.DiarioUI ? `<button data-c="diary">${(G.ICON && G.ICON.book) || ''} Diário de Vida <kbd>${esc(G.Input3D.label('diario'))}</kbd></button>` : ''}<button data-c="close">Fechar <kbd>${esc(G.Input3D.label('ficha'))}</kbd></button></div>`;
     card.innerHTML = h; card.classList.remove('hidden');
   };
+  // the diary of the life (DiarioUI: the page; here its panel): only read — a goal let go is asked of the world by the body's
+  // hands (DiarioUI.ask → Possess.apply), and told when the world has done it in its step
+  let diaryLines = [], diaryT = 0, diaryH = '';
+  IU.diary = function () {
+    if (!root || !G.DiarioUI || !G.Possess.body()) return;
+    G.Modes.setPanel('diario'); G.Input3D.unlock(); G.Input3D.clear();
+    card.classList.add('diario'); diaryT = 1; renderDiary(true); card.scrollTop = 0; card.classList.remove('hidden'); // (opened: from its top)
+  };
+  IU.diaryLines = () => diaryLines; // (for the tests: the lines of the page as it was drawn, in the order of their data-i)
+  function renderDiary(force) {
+    const v = G.Possess.body(); if (!v || !card) return; const pg = G.DiarioUI.page(v, { mine: true });
+    const h = `<button class="x" data-c="close">×</button><div class="ic-head"><div><h3>Diário de Vida</h3><div class="sub">${esc(v.name)}</div></div></div>${pg.html}<div class="btns"><button data-c="self">Quem sou eu <kbd>${esc(G.Input3D.label('ficha'))}</kbd></button><button data-c="close">Fechar <kbd>${esc(G.Input3D.label('diario'))}</kbd></button></div>`;
+    diaryLines = pg.lines; if (!force && h === diaryH) return; diaryH = h;
+    const top = card.scrollTop; card.innerHTML = h; card.scrollTop = top;
+  }
   function onCardClick(e) {
     const b = e.target.closest('[data-c]'); if (!b) return; const c = b.dataset.c;
     if (c === 'close') { IU.closeAll(); G.Modes.setPanel(null); }
     else if (c === 'hug') { const o = G.S.villagers.get(+b.dataset.id); IU.closeAll(); G.Modes.setPanel(null); const r = o ? G.Interact.hug(o) : null; if (r && r.ok) IU.when(r.ask, () => IU.toast(r.msg, 2.4)); else if (r) IU.toast(r.msg || 'Agora não dá.', 2.4); }
     else if (c === 'swap') { const o = G.S.villagers.get(+b.dataset.id); IU.closeAll(); G.Modes.setPanel(null); if (o) G.Modes.switchTo(o); }
+    else if (c === 'diary') IU.diary();
+    else if (c === 'self') IU.selfCard();
+    // (a goal let go: the body changes its mind — the world decides it in its step, by its own rule)
+    else if (c === 'drop') { const ask = G.DiarioUI.ask(diaryLines[+b.dataset.i]); if (!ask) { IU.toast('Isso não se deixa de lado.', 2.4); return; } b.disabled = true;
+      IU.when(ask, r => { IU.toast(r.msg || 'Deixado de lado.', 3.4); if (G.Modes.panelIs('diario')) renderDiary(true); }, r => { IU.toast(r.why || 'Agora não dá.', 3); if (G.Modes.panelIs('diario')) renderDiary(true); }); }
     // (lying down where one stands: the world lays the body down in its step, and it is said once it has)
     else if (c === 'sleep') { IU.closeAll(); G.Modes.setPanel(null); IU.when(G.Possess.apply(w => { if (!G.Possess.sleep(w)) return { ok: false, why: '' }; G.Possess.deed('sono'); return { ok: true }; }), () => IU.toast('Você se deita no chão e dorme.')); }
   }
@@ -366,6 +389,9 @@
     if (!root || !down) return false;
     const a = G.Input3D.actionOf((e.key || '').toLowerCase());
     if (!card.classList.contains('hidden')) {
+      // (the diary's key over a card: to the diary, or closes it; the self's key over the diary: to the self's card)
+      if (a === 'diario') { e.preventDefault(); if (G.Modes.panelIs('diario')) { IU.closeAll(); G.Modes.setPanel(null); } else IU.diary(); return true; }
+      if (a === 'ficha' && G.Modes.panelIs('diario')) { e.preventDefault(); IU.selfCard(); return true; }
       if (a === 'interagir' || a === 'menu' || (a === 'ficha' && G.Modes.panel())) { e.preventDefault(); IU.closeAll(); G.Modes.setPanel(null); return true; }
       return a !== null;
     }
