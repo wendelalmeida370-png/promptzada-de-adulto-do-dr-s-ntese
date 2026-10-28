@@ -107,10 +107,12 @@
     r.op = Math.min(100, r.op + 4); r.friend = Math.min(100, (r.friend || 0) + 3); r.trade = (r.trade || 0) + 1;
     a.exports = (a.exports || 0) + value; b.imports = (b.imports || 0) + value;
     const im = b.dep || (b.dep = {}); im[k] = { from: a.id, n: ((im[k] && im[k].from === a.id ? im[k].n : 0) + n), day: S.day };
-    // the merchant's house takes its share (the trade's own gain: born of the deal, with its cause in the ledger)
+    // the merchant's house takes its share (the trade's own gain: born of the deal, with its cause in the ledger) — in coin,
+    // where the merchant's people has coin: a people that does not know it gets no coins born of the deal, the house keeps
+    // the renown of the road (L-305)
     const h = v.ship ? null : E.homeOf(v); const cut = Math.round(value * 0.18 * 10) / 10;
     const seized = G.Polity && (G.Polity.econOf(a) === 'estatal' || G.Polity.econOf(a) === 'comunal');
-    const gain = ref => D.make(ref, 'moedas', cut, { code: 'comissao', by: v.id || 0 });
+    const gain = ref => (E.coinage(a.id) ? D.make(ref, 'moedas', cut, { code: 'comissao', by: v.id || 0 }) : null);
     if (seized) { gain('f:' + a.id); if (h) h.trade = (h.trade || 0) + value * 0.3; }
     else if (h) { gain('h:' + h.id); h.trade = (h.trade || 0) + value; h.tradeGood = k; checkElite(h, v, a, k); } else if (!v.ship) gain('p:' + v.id);
     // the road gets a name when it is walked again and again
