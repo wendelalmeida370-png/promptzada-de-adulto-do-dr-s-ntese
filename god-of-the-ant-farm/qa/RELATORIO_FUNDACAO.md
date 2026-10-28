@@ -110,7 +110,7 @@ antes do conserto, e a prova que falhava passa depois. Por família:
   L-191, L-215, L-219). A obra deixada no último milésimo, o povo com comida e sem armazém que não comia, o exército que
   voltava para casa encerrado no load, o motim que sumia no save, o cais com água só na diagonal, as famílias do modo
   desenvolvedor com filhos nascidos antes da hora.
-- **O que os mundos novos acharam no fechamento** (L-300 a L-306, L-308, L-310 a L-314, L-320, L-321). Gerando de novo os
+- **O que os mundos novos acharam no fechamento** (L-300 a L-306, L-308, L-310 a L-314, L-320 a L-322). Gerando de novo os
   mundos prontos e rodando as provas neles apareceram:
   - a água nas mãos fora do seu recado (L-300);
   - a crônica que contava de novo a primeira represa dos castores (L-301);
@@ -123,6 +123,8 @@ antes do conserto, e a prova que falhava passa depois. Por família:
   - prédios e a Grande Pirâmide fora do lote no 3D (L-310, L-311);
   - três da casa: o aluguel que a família podia pagar, a obra paga sem a vez dos materiais, a troca da terra cara que
     nunca acontecia (L-312 a L-314).
+  - o calceteiro que escolhia a rua de outra ilha e tentava de novo a cada 12 s, sem fim (L-322, achado pela regressão
+    final: com o conserto, o mundo de teste constrói mais).
 
   O mais sério foi o **L-320**. Desde um conserto desta mesma versão (L-215), uma função de mesmo nome tomou o lugar de
   outra, e as 162 frases do roteiro das histórias (a sentença lida, o chamado da família, a herança) deixaram de ser
