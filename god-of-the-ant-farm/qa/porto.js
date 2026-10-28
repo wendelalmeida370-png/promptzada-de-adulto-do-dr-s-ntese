@@ -207,9 +207,15 @@ function apart(v, h) {
   live(2); const paused = op6.st === 'wait' && op6.wait === 'noite'; const t0 = S.clock;
   live(40); const night = book(op6, 'pegar').filter(e => e[2] > t0 + 0.5);
   day(0.06); // (the morning)
-  const done = live(500, () => watch() || !A.live(op6));
-  ok('p6 a noite', paused && !night.length && done && op6.st === 'ok' && op6.done.sal === 14 && !bad().length,
-    `${paused ? 'ao escurecer a descarga parou' : 'NÃO parou ao escurecer (' + A.STATES[op6.st] + ')'}; caixas levantadas de noite: ${night.length}; de manhã ${A.STATES[op6.st]}, chegou ${op6.done.sal} de 14`);
+  // (the case's salt home: the 14 in the store and none of it left in the unloading's keeping — one quay, one unloading: what
+  // the quay's boats and ships land joins it, as in p5, and it goes on for them; with the final worlds before the 40f626b the
+  // 14 of salt were in by the morning, and after 500 s the unloading still had 27 of food and wood of the others in its
+  // keeping, the night come again, T-198)
+  const saltIn = () => (op6.done.sal || 0) >= 14 - 1e-6 && !((dock.crates || []).some(c => c.op === op6.id && c.k === 'sal') || (S.loose || []).some(o => o.op === op6.id && o.k === 'sal') || [...S.villagers.values()].some(v => v.carry && v.carry.op === op6.id && v.carry.k === 'sal'));
+  const done = live(500, () => watch() || !A.live(op6) || saltIn());
+  const others = Object.keys(op6.goods).filter(k => k !== 'sal' && op6.goods[k] > 1e-6);
+  ok('p6 a noite', paused && !night.length && done && (op6.st === 'ok' || (A.live(op6) && saltIn())) && op6.done.sal === 14 && !bad().length,
+    `${paused ? 'ao escurecer a descarga parou' : 'NÃO parou ao escurecer (' + A.STATES[op6.st] + ')'}; caixas levantadas de noite: ${night.length}; de manhã ${A.STATES[op6.st]}, chegou ${op6.done.sal} de 14${A.live(op6) && others.length ? ` (a descarga segue com o que os barcos e os navios do cais desembarcaram nela: ${others.map(k => `${r2(op6.goods[k])} de ${E.name(k) || k}`).join(', ')})` : ''}`);
 }
 // ---------------- p7: a save in the middle of a crate, loaded twice: the same future, nothing applied twice
 {
