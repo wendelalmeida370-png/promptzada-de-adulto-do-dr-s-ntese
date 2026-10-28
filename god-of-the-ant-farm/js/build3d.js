@@ -3538,9 +3538,13 @@ float m3scale(float p) {
   B3.patsOf = function (b) {
     const g = R3.Geo(), gw = R3.Geo(); const K = kit(g, b); draw(g, gw, K, false);
     const out = {}; for (const q of g.q || []) out[q] = (out[q] || 0) + 1; const st = stuff(b); const P = palOf(b);
-    const roof = P.kind === 'flat' ? (st.tile === 'mud' ? 'mud' : 'slab') : P.kind === 'turf' || styleOf(b) === 'nordico' ? 'turf' : P.kind === 'thatch' ? 'thatch' : st.tile;
+    // (a building drawn from its shell has the walls and the roof its shell says — the stuff its people build that type of,
+    // the kind of roof they give it: the hut of the south of wattle and daub under straw, as the drawing has it — T-151)
+    const sh = (B3.shellOf(b) || {}).shell; const kind = sh ? ROOFK[sh.roof && sh.roof.kind] || P.kind : P.kind;
+    const roof = kind === 'flat' ? (st.tile === 'mud' ? 'mud' : 'slab') : kind === 'turf' || (!sh && styleOf(b) === 'nordico') ? 'turf' : kind === 'thatch' ? 'thatch' : st.tile;
     // (the half-timber of the classical lands is timber standing out of plaster now: its wall is the plaster between)
-    return { pats: out, wall: PAT[styleOf(b) === 'nordico' ? 'plankV' : st.wall === 'frame' ? 'plaster' : st.wall], roof: PAT[roof] };
+    const wall = sh ? OUTPAT[sh.mat] || 'plaster' : styleOf(b) === 'nordico' ? 'plankV' : st.wall === 'frame' ? 'plaster' : st.wall;
+    return { pats: out, wall: PAT[wall], roof: PAT[roof] };
   };
   // what stands on a tile, and how high (for the camera, so it does not go through roofs): the top its near picture really
   // reaches, once drawn; the type's height before that
