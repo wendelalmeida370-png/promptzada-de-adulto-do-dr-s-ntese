@@ -123,8 +123,10 @@
     },
   };
   // Forja: stone smithy, tall chimney, open work floor with hearth, anvil, rack of weapons
+  // (extra ['frio']: the fire out — the hearth, the crucible, the kiln's mouth dark, no glow: Arch.fired, the world's batch)
+  const cold = extra => !!(extra && extra[0] === 'frio');
   EXT.forja = {
-    maxz: 54, draw(c, m, p, st) {
+    maxz: 54, draw(c, m, p, st, v, extra) {
       const stone = st === 'nordico' ? ['#7c766a', '#5f5a50', '#8e877b'] : [p.base[0], p.base[1], p.base[2]];
       house(c, m, p, st, -0.92, -0.92, 0.05, 0.1, 13, { doorX: -0.45 });
       box(c, -0.8, -0.8, -0.52, -0.52, 0, 34, stone[0], stone[1], stone[2]);
@@ -133,7 +135,7 @@
       shed(c, p, st, 0.18, -0.8, 0.94, 0.9, 11);
       // hearth with its glow, bellows, anvil, quench barrel
       box(c, 0.3, -0.6, 0.62, -0.3, 0, 4.5, stone[0], stone[1], '#3a2a22');
-      c.fillStyle = '#ff9a3a'; const h = P(0.46, -0.45, 4.6); c.beginPath(); c.ellipse(h[0], h[1], 3.4, 1.5, 0, 0, TAU); c.fill(); m.glow.push(h);
+      c.fillStyle = cold(extra) ? '#4a3a32' : '#ff9a3a'; const h = P(0.46, -0.45, 4.6); c.beginPath(); c.ellipse(h[0], h[1], 3.4, 1.5, 0, 0, TAU); c.fill(); if (!cold(extra)) m.glow.push(h);
       const bl = P(0.72, -0.5, 2); c.fillStyle = '#6a4a30'; c.beginPath(); c.moveTo(bl[0] - 2, bl[1]); c.lineTo(bl[0] + 2.6, bl[1] - 1.4); c.lineTo(bl[0] + 2.6, bl[1] + 1); c.fill();
       const an = P(0.55, 0.15, 0); c.fillStyle = '#5a5046'; c.fillRect(an[0] - 1.2, an[1] - 3, 2.4, 3); c.fillStyle = '#3a3a40'; c.beginPath(); c.moveTo(an[0] - 3, an[1] - 4.4); c.lineTo(an[0] + 2.6, an[1] - 4.4); c.lineTo(an[0] + 3.6, an[1] - 3.6); c.lineTo(an[0] - 2, an[1] - 3); c.fill();
       const qb = P(0.82, 0.3, 0); barrel(c, qb[0], qb[1], 1);
@@ -145,10 +147,10 @@
   };
   // Ourivesaria: a neat little shop with gold trim, a small kiln and a sign with a ring
   EXT.ourives = {
-    maxz: 36, draw(c, m, p, st) {
+    maxz: 36, draw(c, m, p, st, v, extra) {
       house(c, m, p, st, -0.42, -0.42, 0.22, 0.26, 12, { doorX: -0.12 });
       band(c, -0.42, -0.42, 0.22, 0.26, 9.4, 10.2, '#e8b83a');
-      const k = P(0.36, -0.22, 0); dome(c, k[0], k[1], 3.4, 5, '#9a6a4a', '#6a4a30', null); c.fillStyle = '#ffb040'; c.beginPath(); c.arc(k[0] - 0.4, k[1] - 1.4, 1, 0, TAU); c.fill(); m.glow.push([k[0] - 0.4, k[1] - 1.6]);
+      const k = P(0.36, -0.22, 0); dome(c, k[0], k[1], 3.4, 5, '#9a6a4a', '#6a4a30', null); c.fillStyle = cold(extra) ? '#3a2a22' : '#ffb040'; c.beginPath(); c.arc(k[0] - 0.4, k[1] - 1.4, 1, 0, TAU); c.fill(); if (!cold(extra)) m.glow.push([k[0] - 0.4, k[1] - 1.6]);
       box(c, 0.28, 0.12, 0.46, 0.36, 0, 2.6, '#7a5a3a', '#5a4028', '#8a6a44');
       for (let q = 0; q < 3; q++) { const g = P(0.32 + q * 0.05, 0.22, 2.7); c.fillStyle = q === 1 ? '#6ad0e8' : '#f2c14e'; c.beginPath(); c.arc(g[0], g[1], 0.6, 0, TAU); c.fill(); m.glow.push(g); }
       sign(c, 0.22, 0.26, 10, '#3a2a1c', (x, y) => { c.strokeStyle = '#f2c14e'; c.lineWidth = 0.6; c.beginPath(); c.arc(x, y, 0.9, 0, TAU); c.stroke(); });
@@ -157,10 +159,11 @@
   };
   // Olaria: potter's shed, beehive kiln, pots drying in rows, the wheel
   EXT.olaria = {
-    maxz: 40, draw(c, m, p, st) {
+    maxz: 40, draw(c, m, p, st, v, extra) {
       house(c, m, p, st, -0.92, -0.92, -0.05, -0.2, 11, { doorX: -0.5 });
       const k = P(0.5, -0.5, 0); dome(c, k[0], k[1], 9, 13, '#c07850', '#8a5034', '#6a3a24');
-      c.fillStyle = '#2a1a12'; c.beginPath(); c.arc(k[0] - 2, k[1] - 2.4, 2.2, Math.PI, TAU); c.fill(); c.fillStyle = '#ff9a3a'; c.beginPath(); c.arc(k[0] - 2, k[1] - 2.2, 1.3, Math.PI, TAU); c.fill(); m.glow.push([k[0] - 2, k[1] - 3]);
+      c.fillStyle = '#2a1a12'; c.beginPath(); c.arc(k[0] - 2, k[1] - 2.4, 2.2, Math.PI, TAU); c.fill();
+      if (!cold(extra)) { c.fillStyle = '#ff9a3a'; c.beginPath(); c.arc(k[0] - 2, k[1] - 2.2, 1.3, Math.PI, TAU); c.fill(); m.glow.push([k[0] - 2, k[1] - 3]); }
       m.fires.push([k[0], k[1] - 14]);
       // the wheel and the potter's seat
       const w = P(-0.45, 0.35, 0); c.fillStyle = '#6a4a30'; c.fillRect(w[0] - 0.5, w[1] - 3, 1, 3); c.fillStyle = '#8a6a44'; c.beginPath(); c.ellipse(w[0], w[1] - 3.2, 2.6, 1.1, 0, 0, TAU); c.fill(); c.fillStyle = '#b8704a'; c.beginPath(); c.ellipse(w[0], w[1] - 4.4, 1.1, 1.3, 0, 0, TAU); c.fill();
