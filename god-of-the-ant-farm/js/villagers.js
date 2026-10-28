@@ -109,7 +109,11 @@
   Vg.goto = function (v, x, y, adj, maxNodes) {
     const ti = W.inb(x, y) ? W.idx(x, y) * 2 + (adj ? 1 : 0) : -1; const now = G.S.clock;
     if (ti === v._pfI && now - v._pfT < 12) { v.path = null; return false; }
-    const p = W.findPath(v.x, v.y, x, y, adj, maxNodes);
+    // (a long way the map of regions says is open, its budget spent before it was found — out of a walled town, round a lake:
+    // the exact search floods the ground all round —: searched once more, greedier, as the skip searches every way; a trader
+    // home from a caravan stood two minutes inside the walls of the town she had traded with, every search of her way home
+    // spent, and then stayed there, L-343. A short way that fails is a shut gate, not the budget: no second search)
+    const p = W.findPath(v.x, v.y, x, y, adj, maxNodes) || (ti >= 0 && G.dist(v.x, v.y, x, y) >= 24 && W.canWalk(v.x, v.y, x, y, !!adj || !W.walkable(W.idx(x, y))) ? W.findPath(v.x, v.y, x, y, adj, Math.max(maxNodes || 0, 12000), W.PATH_GREEDY) : null);
     if (!p) { v.path = null; v._pfI = ti; v._pfT = now; v._pfN = (v._pfN || 0) + 1; return false; }
     v.path = p; v.pi = 0; v._pfN = 0; return true;
   };
