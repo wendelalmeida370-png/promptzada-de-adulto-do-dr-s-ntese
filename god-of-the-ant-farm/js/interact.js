@@ -325,7 +325,8 @@
       for (const s of G.Avatar.downs()) { const p = at(s, 0.9); out.push({ s, up: false, X: p[0], Z: p[1] }); }
       return out;
     },
-    label(ctx, t) { const lad = t.s.kind === 'escada-de-mao'; return t.up ? (lad ? 'Subir pela escada de mão' : 'Subir a escada') : (lad ? 'Descer pela escada de mão' : 'Descer a escada'); },
+    // (by the flight's class, D-086)
+    label(ctx, t) { const c = t.s.cls || (t.s.kind === 'escada-de-mao' ? 'mao' : 'escada'); const w = c === 'mao' ? 'pela escada de mão' : c === 'ingreme' ? 'a escada íngreme' : c === 'degraus' ? 'os degraus' : 'a escada'; return (t.up ? 'Subir ' : 'Descer ') + w; },
     can() { return { ok: true }; },
     run(ctx, t) { return (t.up ? G.Avatar.up(t.s.id) : G.Avatar.down(t.s.id)) ? { ok: true } : { ok: false, msg: 'Daqui não dá.' }; },
   });
@@ -344,6 +345,57 @@
       G.Avatar.act({ anim: 'interact', dur: 0.7, face: f, contact: 0.5,
         op: w => { if (!G.S.buildings.has(b.id) || w.home !== b.id || w.inside !== b.id || !P.sleep(w)) return { ok: false, why: 'Agora não dá para dormir.' }; P.deed('sono'); return { ok: true }; },
         fail: deny }); // (asleep, the body is laid in its bed by its controller: the world has it sleeping)
+      return { ok: true };
+    },
+  });
+  // a place of a building's plan where the body can be — on a bench, at the table, by the fire, on a row of seats, on the stone
+  // one speaks from, where one stops to listen or to talk, at the reading table —: the usable and free ones in reach
+  // (Interiors.freeNear: the share-out's own test, the body left out — never a place someone holds), one a piece, its nearest
+  // place; a step or two to where one gets onto it, by the feet's own rules (blocked on the way, it is not taken: «chegue mais
+  // perto»), turned as the place is, held until the player walks (Avatar.seatAt). The world marks it in its step (Possess.use —
+  // S.avatar.use, the place the share-out gives the body; on an open ground, the body is in it while it holds it). What a use
+  // does in the world is its owner's: I.useRule(use, { label(ctx, pl), can(ctx, pl) → { ok, why }, op(w, b, pl) → { ok, why,
+  // msg } }) — done in the world's step at the take —; a use with no rule is taken only where being there is all there is to
+  // it (PURE). The body's own bed is the verb 'cama' (the world's sleep); while it holds a place, the hands work there seated —
+  // the world's offers, the eating at the table (Avatar.act)
+  const USE_RULES = new Map();
+  I.useRule = function (use, r) { if (r && typeof r === 'object') USE_RULES.set(use, r); else USE_RULES.delete(use); };
+  I.PURE = new Set(['sentar', 'comer', 'aquecer', 'assistir', 'falar', 'ouvir', 'conversar', 'ler']);
+  const pieceNm = pl => ((G.Interiors.ITEMS[pl.it.kind] || {}).name || 'lugar').toLowerCase();
+  const em = pl => { const n = pieceNm(pl); return (G.gen(n) === 'a' ? 'na ' : 'no ') + n; };
+  const PLACE_TXT = { sentar: pl => `Sentar ${em(pl)}`, comer: () => 'Sentar à mesa', aquecer: pl => `Sentar junto ${G.gen(pieceNm(pl)) === 'a' ? 'à' : 'ao'} ${pieceNm(pl)}`, assistir: () => 'Sentar para assistir', falar: pl => `Subir ${em(pl)}`, ouvir: () => 'Parar para ouvir', conversar: () => 'Parar para conversar', ler: () => 'Sentar para ler' };
+  I.add({
+    id: 'lugar', prio: 4.1, reach: 2.2,
+    find(ctx) {
+      const ind = G.Avatar.indoors(); if (!ind || !G.Interiors.freeNear || G.Avatar.seatNow()) return [];
+      const B = ind.b, L0 = L(); const out = []; const seen = new Set();
+      for (const pl of G.Interiors.freeNear(B, ind.lv, ctx.X - B.x * L0, ctx.Z - B.y * L0, 2.4)) {
+        if (seen.has(pl.item) || !(USE_RULES.has(pl.use) || I.PURE.has(pl.use))) continue; seen.add(pl.item);
+        out.push({ b: B, pl, X: B.x * L0 + pl.x, Z: B.y * L0 + pl.z, pref: -0.3 });
+      }
+      return out;
+    },
+    label(ctx, t) { const r = USE_RULES.get(t.pl.use); return (r && r.label && r.label(ctx, t.pl)) || (PLACE_TXT[t.pl.use] || (() => 'Ficar aqui'))(t.pl); },
+    can(ctx, t) { const r = USE_RULES.get(t.pl.use); return (r && r.can && r.can(ctx, t.pl)) || { ok: true }; },
+    run(ctx, t) {
+      const v = ctx.v, B = t.b, pl = t.pl, L0 = L(); const rule = USE_RULES.get(pl.use);
+      // (where one gets onto it from here: a point the body's whole rim stands on, the nearest — Interiors.standFor)
+      pl.at = G.Interiors.standFor(B, pl, ctx.X - B.x * L0, ctx.Z - B.y * L0);
+      const at = [B.x * L0 + pl.at[0], B.y * L0 + pl.at[1]]; const d = Math.hypot(at[0] - ctx.X, at[1] - ctx.Z);
+      const go = d > 0.08 ? G.clamp(d / (G.Possess.caps(v).walk * 1.1), 0.25, 1.6) : 0; const key = G.Interiors.keyOf(B);
+      G.Avatar.act({ anim: 'interact', dur: go + 0.3, contact: go + 0.2, face: face(ctx, t.X, t.Z), to: go ? at : null, toT: go,
+        // (taken where the feet got to — before the place, a stride at most: the world moved them, or the way was blocked —, if it
+        // is still free and still the plan's; the rule's can asked again with the world's body)
+        op: w => {
+          const b = G.S.buildings.get(B.id); if (!b || G.Interiors.keyOf(b) !== key) return { ok: false, why: 'Esse lugar não existe mais.' };
+          if (Math.hypot(w.x * L0 - at[0], w.y * L0 - at[1]) > 0.6) return { ok: false, why: 'Chegue mais perto.' };
+          const p = G.Interiors.freeFor(b, pl.item, pl.q, pl.at[0], pl.at[1]); if (!p) return { ok: false, why: 'Alguém já está nesse lugar.' };
+          if (rule && rule.can) { const c = rule.can({ v: w }, p); if (c && !c.ok) return c; }
+          if (!G.Possess.use(w, b, p)) return { ok: false, why: 'Daqui não dá.' };
+          const r = rule && rule.op ? rule.op(w, b, p) : null; if (r && !r.ok) { G.Possess.unuse(w); return r; }
+          return { ok: true, pl: p, msg: (r && r.msg) || '' };
+        },
+        then: r => { G.Avatar.seatAt(B, Object.assign({}, r.pl, { at: pl.at })); say(r.msg); }, fail: deny });
       return { ok: true };
     },
   });
@@ -683,7 +735,9 @@
   // the moment he goes for it, by the same rule: a hand acting on it —; done at the contact — Act.commit —; let go if the
   // gesture is cut short — Act.abort. Refused at the key — another hand acting on it —, the gesture stops there, with the
   // world's words)
-  const GEST = { lift: 'carry', arrange: 'carry', give: 'interact', pay: 'interact', haggle: 'talk', examine: 'interact', count: 'interact', call: 'wave', point: 'interact' };
+  const GEST = { lift: 'carry', arrange: 'carry', give: 'interact', pay: 'interact', haggle: 'talk', examine: 'interact', count: 'interact', call: 'wave', point: 'interact',
+    // (the household's gestures at its places — at the table, on a seat, at the fire, with a child in the arms: Anim3D's states)
+    eat: 'eat', sit: 'sit', cook: 'cook', rock: 'rock' };
   I.GEST = GEST; // (for the coverage matrix, qa/matriz.js: the body's pose of each act — only read)
   // (where an offer is, for the reach and for the hands: a crate of a quay where the 3D draws it — the pile reached from any of
   // its sides, by its crate nearest the body; the hands to the very crate the world offers —; a crate set down in its store at

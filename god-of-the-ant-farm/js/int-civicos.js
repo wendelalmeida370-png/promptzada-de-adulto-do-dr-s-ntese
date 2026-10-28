@@ -36,8 +36,11 @@
     balde: { name: 'Balde', w: 0.35, d: 0.35, h: 0.4, solid: 1, wall: 1, spots: () => [] },
     chaves: { name: 'Quadro das chaves', w: 0.5, d: 0.15, h: 0.5, y: 1.4, solid: 1, wall: 1, mount: 'parede', spots: SP.front('pegar', 0.35) },
     // ---- the baths ----
-    // (the pool: one goes down into it — from its front or either end)
-    piscina: { name: 'Piscina', w: 2.2, d: 1.6, h: 0.5, low: 1, wall: 1, spots: it => [{ use: 'banhar', a: 0, n: 0, on: 1 }, { use: 'entrar', a: 0, n: it.d / 2 + 0.4 }, { use: 'entrar', a: -(it.w / 2 + 0.4), n: 0 }, { use: 'entrar', a: it.w / 2 + 0.4, n: 0 }] },
+    // (the pool: one goes down into it — from its front or either end —; in it, a bather every 0.8 m² of water or so, the
+    // places the baths ask of In.freePlace)
+    piscina: { name: 'Piscina', w: 2.2, d: 1.6, h: 0.5, low: 1, wall: 1, spots: it => { const ka = Math.max(1, Math.round(it.w / 1.1)), kn = Math.max(1, Math.round(it.d / 0.8)); const out = [];
+      for (let i = 0; i < ka; i++) for (let j = 0; j < kn; j++) out.push({ use: 'banhar', a: (i + 0.5) / ka * it.w - it.w / 2, n: (j + 0.5) / kn * it.d - it.d / 2, on: 1 });
+      return out.concat([{ use: 'entrar', a: 0, n: it.d / 2 + 0.4 }, { use: 'entrar', a: -(it.w / 2 + 0.4), n: 0 }, { use: 'entrar', a: it.w / 2 + 0.4, n: 0 }]); } },
     'tina-banho': { name: 'Tina de banho', w: 1.2, d: 0.8, h: 0.6, low: 1, wall: 1, spots: it => [{ use: 'banhar', a: 0, n: 0, on: 1 }, { use: 'entrar', a: 0, n: it.d / 2 + 0.4 }] },
     'fornalha-banho': { name: 'Fornalha dos banhos', w: 0.9, d: 0.8, h: 1.0, solid: 1, fire: 1, wall: 1, job: 1, spots: SP.front('alimentar', 0.5) },
     cabide: { name: 'Cabides', w: 1.2, d: 0.2, h: 0.4, y: 1.5, solid: 1, wall: 1, mount: 'parede', spots: SP.front('despir', 0.35) },
@@ -45,6 +48,13 @@
     cuba: { name: 'Cuba de fermentar', w: 1.0, d: 1.0, h: 1.1, solid: 1, wall: 1, store: { dep: 'predio', key: 'inv', cap: 8 }, spots: SP.front('mexer', 0.5) },
     // ---- the chief's hall ----
     trono: { name: 'Assento do chefe', w: 1.0, d: 0.8, h: 1.4, solid: 1, wall: 1, spots: it => [{ use: 'sentar', a: 0, n: 0, on: 1 }, { use: 'audiencia', a: 0, n: it.d / 2 + 0.9 }] },
+    // ---- the library (P4, phase E: P2's G.Biblioteca reads and copies there) ----
+    // (the shelves of scrolls and tablets — the building's own —; the reading table, a reader on either side of it)
+    estante: { name: 'Estante de rolos', w: 1.6, d: 0.45, h: 2.1, solid: 1, wall: 1, tall: 1, store: { dep: 'predio', key: 'inv', cap: 20 }, spots: SP.front('guardar') },
+    'mesa-leitura': { name: 'Mesa de leitura', w: 1.4, d: 0.8, h: 0.75, solid: 1, free: 1, spots: it => [{ use: 'ler', a: 0, n: it.d / 2 + 0.4 }, { use: 'ler', a: 0, n: -(it.d / 2 + 0.4) }] },
+    // ---- the square (P4, phase E) ----
+    // (the speaker's stone: one stands on it to speak to the people — P2's 'falar' —, got onto from behind or either side)
+    tribuna: { name: 'Pedra de falar', w: 1.0, d: 1.0, h: 0.45, low: 1, free: 1, spots: it => [{ use: 'falar', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: -(it.d / 2 + 0.35) }, { use: 'acesso', a: -(it.w / 2 + 0.35), n: 0 }, { use: 'acesso', a: it.w / 2 + 0.35, n: 0 }] },
   });
   if (!W) return;
 
@@ -173,4 +183,160 @@
   W.add('cadeia', { use: 'cadeia', H: ['corredor', 'celas', 'patio'], V: ['terreo', 'andar', 'porao'], skip: { 'corredor.andar': 1, 'corredor.porao': 1, 'patio.porao': 1 }, lockNight: 1, cells: (G.BDEF.cadeia && G.BDEF.cadeia.cells) || 4, cellDoor: 'grade', door: [0.9, 1.1], furnish: jailFurnish });
   W.add('banhos', { use: 'banhos', H: ['enfiada', 'salao', 'patio', 'anexo'], V: ['terreo', 'andar'], open: 1, lockNight: 1, jobs: 1, door: [1.0, 1.3], seq: ['vestiario', 'frio', 'quente'], share: [0.26, 0.37, 0.37], furnish: bathsFurnish });
   W.add('paco', { use: 'paco', H: ['salao', 'frente', 'naves', 'patio'], V: ['terreo', 'andar', 'galeria'], lockNight: 1, apse: 2.0, need: { trono: 1 }, door: [1.2, 1.6], furnish: hallFurnish });
+
+  // ------------------------------ the library (P4, phase E) ------------------------------
+  // the shelves of scrolls and tablets along the walls (up on the gallery too), the reading tables free in the hall — two
+  // readers to a table —, the copyist's desk against a wall: what it keeps is the building's own (its inventory), read and
+  // copied there (P2's G.Biblioteca: 'ler', 'escrever'); a bench where one waits
+  function libraryFurnish(P) {
+    const rooms = P._rooms; const all = W.mix(P, W.roomsFor(rooms)).filter(id => !P.rooms[id].open); const hall = W.mix(P, [rooms.main, rooms.front].concat(rooms.cells).filter(has).filter(id => !P.rooms[id].open && lvOf(P, id) >= 0));
+    const shelves = () => { let n = 0; for (const id of all) { let g = 0; while (n < 6 && g++ < 3) { if (!P.place('estante', lvOf(P, id), id)) break; n++; } } if (n < 2) P.errs.push(`só ${n} estantes de rolos`); };
+    // (the reading tables free in the room, a stride from the walls: a reader on either side, where nothing else stands)
+    const tables = () => { let n = 0; for (const id of hall) { let g = 0; while (n < 4 && g++ < 3) { if (!P.place('mesa-leitura', lvOf(P, id), id, { sides: ['livre'], margin: 0.6 })) break; n++; } } if (n < 2) P.errs.push(`só ${n} mesas de leitura`); };
+    const desk = () => { for (const id of hall.concat(rooms.up || [])) if (P.place('mesa-escriba', lvOf(P, id), id)) return; P.lack = 1; P.errs.push('sem lugar para a mesa do escriba'); };
+    for (const f of [[shelves, tables, desk], [tables, desk, shelves], [desk, shelves, tables]][P.attempt % 3]) f();
+    P.opt(() => { for (const id of hall) if (P.place('banco', lvOf(P, id), id)) break; });
+  }
+  W.add('biblioteca', { use: 'biblioteca', H: ['salao', 'frente', 'naves', 'patio'], V: ['terreo', 'galeria', 'andar'], open: 1, lockNight: 1, need: { estante: 2, 'mesa-leitura': 2 }, door: [1.1, 1.5], furnish: libraryFurnish });
+
+  // ------------------------------ a building of the town by its form (P4, D-093) ------------------------------
+  // the shell of a type whose form has a body (G.Forma.body — the library today), as the god and the 3D draw it: the hall's
+  // walls at the form's foot (the people's thickness, inside it), its floor on the solid base (base 'macica', the floor's
+  // height), the eaves, the door and the windows where the form has them; the porch before the door an annex open at its sides,
+  // the form's columns across its front (P.colonnade: the gap nearest the door the street's way in); the form's steps from the
+  // street up to the base, one flight. Nothing of the shell drawn by chance: it is the form's. The inside, the type's own
+  // furnishing in the hall
+  const FORM_FURNISH = { biblioteca: libraryFurnish };
+  const r2 = x => Math.round(x * 100) / 100;
+  function formHall(P) {
+    const rec = P.rec, tr = P.tr; const F = G.Forma && G.Forma.of(rec.t, rec.c); const B = F && G.Forma.body(F); if (!B) { P.errs.push('a forma do prédio sem corpo'); return; }
+    const t = Math.min(tr.t || 0.3, 0.35), c = t / 2; const sh = B.r.slice(); const y0 = B.y0, h0 = B.y1 - B.y0;
+    P.shell = { kind: 'rect', r: sh, t, mat: B.tabuas ? 'tabua' : tr.mat, base: 'macica', baseH: y0, floors: 1, eave: B.y1 };
+    const T = B.telhado; P.roof = { kind: T.tipo, along: T.ao || null, h: r2(T.y1 - T.y0), over: T.ov || 0 }; P.roofGeo = { kind: T.tipo, along: T.ao || null, eave: T.y0, rise: T.y1 - T.y0, R: T.r.slice() };
+    const I = P.inner(); P.level(0, y0, h0, 'piso', I); P.entryLv = 0;
+    P.outer = P.walls4(0, [sh[0] + c, sh[1] + c, sh[2] - c, sh[3] - c], t, h0, 1, 'parede'); P.outers = [P.outer];
+    // (the door on the front face where the form has it — the street's, where no porch stands before it)
+    const fw = P.outer.frente, porch = B.portico;
+    const d0 = P.door(fw, P.atOf(fw, [B.porta.u, sh[3] - c]), B.porta.w, Math.min(h0 - 0.1, B.porta.y1 - B.porta.y0), -1, porch ? -1 : 'rua', porch ? 0 : 1, 'porta');
+    // (the windows: each pane on its face, along it as the form has it, its sill over the floor)
+    for (const j of B.janelas) {
+      const id = P.outer[j.na]; if (id === undefined) continue; const m = (j.de + j.ate) / 2;
+      const p = j.na === 'frente' ? [m, sh[3] - c] : j.na === 'fundo' ? [m, sh[1] + c] : j.na === 'direita' ? [sh[2] - c, m] : [sh[0] + c, m];
+      P.window(id, P.atOf(id, p), j.ate - j.de, j.y1 - j.y0, j.y0 - y0);
+    }
+    let entry = { door: d0, u: B.porta.u, w: B.porta.w, v: sh[3] };
+    if (porch) {
+      P.annex.push({ r: porch.r.slice(), h: porch.y1 - y0, fn: 'portico', lv: 0, roof: 'portico' });
+      // (the colonnade right to left, as a front wall runs: its openings numbered from its start)
+      const cols = porch.colunas.slice().sort((a, b) => a.c[0] - b.c[0]); const n = cols.length, vc = cols[0].c[1];
+      const gaps = []; for (let k = 0; k < n - 1; k++) gaps.push((cols[k].c[0] + cols[k + 1].c[0]) / 2);
+      let kn = 0; for (let k = 1; k < gaps.length; k++) if (Math.abs(gaps[k] - B.porta.u) < Math.abs(gaps[kn] - B.porta.u)) kn = k;
+      const C = P.colonnade(0, [cols[n - 1].c[0], vc], [cols[0].c[0], vc], { n, col: 2 * cols[0].r, h: porch.y1 - y0, outer: 1, door: n - 2 - kn, rua: true });
+      entry = { door: C.door, u: gaps[kn], w: P.doors[C.door].w, v: porch.r[3] };
+    }
+    P.entrance = { door: entry.door, u: entry.u, v: entry.v, w: entry.w, lv: 0 };
+    // (the steps of the form, from the street up to the base: one flight, on the form's own treads — the feet on each, as the
+    // god and the 3D draw them —, up to the porch's front or to the face the door is in: where the form's base runs on before
+    // the walls — the Nordic hall's 0.2 m of plinth between its steps and its door, the P3's probe —, a last tread at the floor)
+    if (B.degraus.length) {
+      let r = B.degraus[0].r.slice(); for (const q of B.degraus) r = [Math.min(r[0], q.r[0]), Math.min(r[1], q.r[1]), Math.max(r[2], q.r[2]), Math.max(r[3], q.r[3])];
+      const treads = B.degraus.map(q => ({ r: q.r.slice(), y: q.y1 })); const edge = porch ? porch.r[3] : sh[3];
+      if (r[1] > edge + 1e-6) { treads.push({ r: [r[0], edge, r[2], r[1]], y: y0 }); r[1] = edge; }
+      P.stair('degraus', -1, 0, r, 0, -1, null, { larga: r[2] - r[0] >= 1.2 ? 1 : 0, treads });
+    }
+    if (P.inside()) return;
+    const rooms = { main: P.room(0, 'salao', I), front: undefined, cells: [], court: null, all: [] }; rooms.all.push(rooms.main);
+    if (porch) { rooms.porch = P.room(0, 'portico', porch.r, 1); rooms.all.push(rooms.porch); }
+    P._rooms = rooms; FORM_FURNISH[rec.t](P, rooms);
+  }
+  // (the family: the form's, the only one of a type it draws — every people has the form, its own or the classic one)
+  In.addFamilies([{ id: 'forma.salao', H: 'forma', V: 'salao', S: 'forma.salao', name: 'Pela forma', can: rec => (G.Forma && G.Forma.of(rec.t, rec.c) && G.Forma.body(G.Forma.of(rec.t, rec.c)) ? null : 'o prédio sem a forma de um corpo'), build: P => formHall(P) }]);
+  for (const t in FORM_FURNISH) In.addTypes({ [t]: Object.assign({}, In.TYPES[t], { fams: ['forma.salao'] }) });
+
+  // ------------------------------ the square (P4, phase E) ------------------------------
+  // the town's open ground — it blocks nothing: the world walks across it —, its shell 'aberta' (no walls, no roof, on the
+  // ground: Space.BASELESS), as the god draws it: the fountain in the middle (where one drinks), a bench on either side of it,
+  // facing it; the speaker's stone at one side, facing the fountain — one speaks to the people from it (P2's 'falar') — and
+  // the places of those who stop to listen, in an arc before it ('ouvir'); in the corners, two by two, the places of those who
+  // stop to talk ('conversar'): P.marks. The fountain, the benches and the stone are the square's own, under the sky: laid
+  // with the shell ({ yard: 1 }, as a yard's — shellOut.yard), so that the god's view and the 3D from afar draw them where the
+  // body and the people use them. Laid out by hand, no chance drawn: every square the same
+  const SQ = ['praca-fonte.chao'];
+  In.addFamilies([{ id: SQ[0], H: 'praca-fonte', V: 'chao', name: 'Praça da fonte', can: () => null, build: P => square(P) }]);
+  In.addTypes({ praca: { use: 'praca', fams: SQ, open: 1 } });
+  function square(P) {
+    const L = P.L; const m = 0.1; const sh = [m, m, L - m, L - m]; const c = L / 2;
+    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: 'chao', floors: 1, eave: 0 }; P.roof = null;
+    P.level(0, 0, 3.0, 'chao', sh); P.entryLv = 0;
+    P.entrance = { door: -1, u: c, v: sh[3], w: L - 2 * m, lv: 0 };
+    const id = P.room(0, 'largo', sh, 1); const Y = { yard: 1 };
+    // (a people whose square has a form — the one the god and the 3D draw, D-093 —: its things where the form has them)
+    if (G.Forma && G.Forma.has('praca', P.rec.c)) { squareOf(P, id, G.Forma.of('praca', P.rec.c), sh); return; }
+    // (the fountain's basin, as the 3D draws it — round, of 1.4 m — in the square it fits in; the drinkers before and behind it)
+    if (!P.at('fonte', 0, id, [c - 1.2, c - 1.2, c + 1.2, c + 1.2], 0, 1, { yard: 1, h: 0.72 })) { P.errs.push('sem lugar para a fonte'); return; }
+    for (const s of [-1, 1]) if (!P.at('banco', 0, id, [c - 0.9, c + s * 2.7 - 0.22, c + 0.9, c + s * 2.7 + 0.22], 0, -s, Y)) { P.errs.push('sem lugar para o banco da praça'); return; }
+    const st = P.at('tribuna', 0, id, [m + 0.5, c - 0.5, m + 1.5, c + 0.5], 1, 0, Y); if (!st) { P.errs.push('sem lugar para a pedra de falar'); return; }
+    if (P.inside()) return;
+    // (who listens: before the stone, facing it, at 1.3 m)
+    const su = (st.r[0] + st.r[2]) / 2, sv = (st.r[1] + st.r[3]) / 2; const ear = [];
+    for (const a of [-50, -25, 0, 25, 50]) { const t = a * Math.PI / 180; const u = su + 1.3 * Math.cos(t), v = sv + 1.3 * Math.sin(t); ear.push([u, v, Math.atan2(su - u, sv - v)]); }
+    P.marks(0, id, 'ouvir', ear);
+    // (who stops to talk: two by two in the corners, facing each other)
+    const talk = []; for (const [u, v] of [[1.4, 1.5], [L - 2.3, 1.5], [1.4, L - 1.5], [L - 2.3, L - 1.5]]) talk.push([u, v, Math.PI / 2], [u + 0.9, v, -Math.PI / 2]);
+    P.marks(0, id, 'conversar', talk);
+  }
+  // ------------------------------ the square of a people's form (P4, D-093) ------------------------------
+  // the square as the god and the 3D draw it — its form (G.Forma), the one seen: the plan puts there only what is used, where the
+  // form has it — the fountain, the benches, the speaker's stone (P.at on the form's rectangle, at its top; marked form: the 3D
+  // does not draw them again) —, keeps the feet off what stands solid on its ground (a piece of no use at the foot of each:
+  // 'solido'), and lays on the free floor the places of those who listen before the stone and of those who talk, two by two.
+  // A speaker's stone higher than a step (the rostra of Rome, 1.64 m) is a storey of its own over the square — its top, the
+  // speaker's place on it —, the form's treads the flight up to it
+  In.addItems({ solido: { name: 'Sólido', w: 0.2, d: 0.2, h: 1, solid: 1, free: 1, spots: () => [] } });
+  const KIND_OF_USE = { fonte: 'fonte', banco: 'banco', tribuna: 'tribuna' };
+  function squareOf(P, id, F, sh) {
+    const uses = G.Forma.uses(F); const FM = { form: 1 };
+    // (the rostra: its top a storey over the square, the treads up from behind — in the shell, what is seen from afar)
+    const high = uses.find(u => u.uso === 'tribuna' && u.y1 > In.BODY.up); let top = null;
+    if (high) {
+      const st = high.escada || []; if (!st.length) { P.errs.push('a tribuna alta da forma sem escada'); return; }
+      P.level(1, high.y1, 2.6, 'tribuna', high.r); top = P.room(1, 'tribuna', high.r, 1);
+      const lo = st[0].r, hi = st[st.length - 1].r; const R = [Math.min(lo[0], hi[0]), Math.min(lo[1], hi[1]), Math.max(lo[2], hi[2]), Math.max(lo[3], hi[3])];
+      const du = Math.sign((hi[0] + hi[2]) - (lo[0] + lo[2])), dv = Math.sign((hi[1] + hi[3]) - (lo[1] + lo[3]));
+      P.stair('escada', 0, 1, R, du, dv);
+    }
+    if (P.inside()) return;
+    let stone = null;
+    for (const u of uses) {
+      const kind = KIND_OF_USE[u.uso]; if (!kind) continue; const f = u.vira || [0, 1];
+      if (u === high) { if (!P.at('solido', 0, id, u.r, 0, 1, Object.assign({ h: u.y1 }, FM))) { P.errs.push('sem lugar para os rostros da forma'); return; } stone = { r: u.r, f, lv: 1, room: top }; continue; }
+      const it = P.at(kind, 0, id, u.r, f[0], f[1], Object.assign({ h: u.y1 }, FM));
+      if (!it) { P.errs.push(`sem lugar para ${kind === 'fonte' ? 'a fonte' : kind === 'banco' ? 'o banco' : 'a pedra de falar'} da forma`); return; }
+      if (kind === 'tribuna') stone = { r: it.r, f, lv: 0, room: id };
+    }
+    // (what stands solid on the ground: a solid piece at its foot, the biggest first — one touching another's foot is the
+    // other's: the posts of a stall at its counter's corners —, the feet and the marks kept off it)
+    const feet = []; const foot = s => (s.k === 'rect' ? s.r : [s.c[0] - s.r, s.c[1] - s.r, s.c[0] + s.r, s.c[1] + s.r]); const area = r => (r[2] - r[0]) * (r[3] - r[1]);
+    for (const s of G.Forma.solids(F).slice().sort((a, c) => area(foot(c)) - area(foot(a)))) {
+      const r = foot(s); if (feet.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1])) continue;
+      if (!P.at('solido', 0, id, r, 0, 1, Object.assign({ h: s.y1 }, FM))) { P.errs.push('um sólido da forma onde a praça não o põe'); return; }
+      feet.push(r);
+    }
+    if (!stone) { P.errs.push('a forma da praça sem a pedra de falar'); return; }
+    // (who speaks: on the stone — the piece's own place —, or on the rostra's top, facing the people)
+    const su = (stone.r[0] + stone.r[2]) / 2, sv = (stone.r[1] + stone.r[3]) / 2; const [fu, fv] = stone.f;
+    if (stone.lv === 1) P.marks(1, stone.room, 'falar', [[su, sv, Math.atan2(fu, fv)]]);
+    // (who listens: in an arc before it, facing it, 0.8 m past its front)
+    const R = (fu ? (stone.r[2] - stone.r[0]) : (stone.r[3] - stone.r[1])) / 2 + 0.8; const a0 = Math.atan2(fv, fu); const ear = [];
+    for (const a of [-50, -25, 0, 25, 50]) { const t = a0 + a * Math.PI / 180; const u = su + R * Math.cos(t), v = sv + R * Math.sin(t); ear.push([u, v, Math.atan2(su - u, sv - v)]); }
+    P.marks(0, id, 'ouvir', ear);
+    // (who stops to talk: two by two on the free floor, facing each other — the farthest pairs from the stone and from each other)
+    const open = (u, v) => u > sh[0] + 0.4 && u < sh[2] - 0.4 && v > sh[1] + 0.4 && v < sh[3] - 0.4 && !P.items.some(it => it.lv === 0 && u > it.r[0] - 0.45 && u < it.r[2] + 0.45 && v > it.r[1] - 0.45 && v < it.r[3] + 0.45) && !ear.some(q => Math.hypot(q[0] - u, q[1] - v) < 0.9);
+    const pairs = [];
+    for (let v = sh[1] + 0.9; v <= sh[3] - 0.9 + 1e-9; v += 0.5) for (let u = sh[0] + 0.9; u + 0.9 <= sh[2] - 0.9 + 1e-9; u += 0.5) if (open(u, v) && open(u + 0.9, v)) pairs.push([u, v]);
+    const pick = []; for (const p of pairs.sort((p, q) => Math.hypot(q[0] - su, q[1] - sv) - Math.hypot(p[0] - su, p[1] - sv) || p[1] - q[1] || p[0] - q[0])) { if (pick.length >= 4) break; if (pick.every(q => Math.hypot(q[0] - p[0], q[1] - p[1]) >= 2)) pick.push(p); }
+    if (!pick.length) { P.errs.push('sem chão livre para quem conversa'); return; }
+    const talk = []; for (const [u, v] of pick) talk.push([u, v, Math.PI / 2], [u + 0.9, v, -Math.PI / 2]);
+    P.marks(0, id, 'conversar', talk);
+  }
 })(window.G);
