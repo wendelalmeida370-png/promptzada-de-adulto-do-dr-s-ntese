@@ -142,14 +142,15 @@ function framer(b) {
   return { cx, cz, hi, P: (X, Y, Z) => { const dx = (X - cx) / L, dy = (Z - cz) / L; return [(dx - dy) * 16, (dx + dy) * 8 - (Y - hi) * ZPX, (X - cx + Z - cz) * k1 + (Y - hi) * k2]; } };
 }
 F.framer = framer;
-// (the triangles of a geometry the 3D built — a BufferGeometry or the builder's own lists — with their colours in sRGB)
-function trisOf(geo, plain) {
+// (the triangles of a geometry the 3D built — a BufferGeometry or the builder's own lists — with their colours in sRGB; ds:
+// drawn from both sides, as the plants' material is — the solid one and the panes show their front only)
+function trisOf(geo, plain, ds) {
   const out = []; if (!geo) return out;
   const P = geo.attributes ? geo.attributes.position.array : geo.p, C = geo.attributes ? (geo.attributes.color ? geo.attributes.color.array : null) : geo.c, Nn = geo.attributes ? (geo.attributes.normal ? geo.attributes.normal.array : null) : geo.n;
   for (let k = 0; k + 8 < P.length; k += 9) {
     const col = plain ? plain : C ? [toSrgb((C[k] + C[k + 3] + C[k + 6]) / 3), toSrgb((C[k + 1] + C[k + 4] + C[k + 7]) / 3), toSrgb((C[k + 2] + C[k + 5] + C[k + 8]) / 3)] : [200, 200, 200];
     const n = Nn ? [(Nn[k] + Nn[k + 3] + Nn[k + 6]) / 3, (Nn[k + 1] + Nn[k + 4] + Nn[k + 7]) / 3, (Nn[k + 2] + Nn[k + 5] + Nn[k + 8]) / 3] : [0, 1, 0];
-    out.push({ v: [P[k], P[k + 1], P[k + 2], P[k + 3], P[k + 4], P[k + 5], P[k + 6], P[k + 7], P[k + 8]], col, n });
+    out.push({ v: [P[k], P[k + 1], P[k + 2], P[k + 3], P[k + 4], P[k + 5], P[k + 6], P[k + 7], P[k + 8]], col, n, ds: !!ds });
   }
   return out;
 }
@@ -159,12 +160,71 @@ const GLASS = [28, 38, 48]; // (the panes: Build3D's glass, 0x1c2630)
 F.near = function (b, o) {
   o = o || {}; const B3 = G.Build3D; const P3 = G.Props3D; if (!o.props) G.Props3D = null;
   let r; try { r = B3.nearGeo(b.x, b.y, 1); } finally { G.Props3D = P3; }
-  const tris = trisOf(r.solid).concat(trisOf(r.glass, GLASS), trisOf(r.plants));
+  const tris = trisOf(r.solid).concat(trisOf(r.glass, GLASS), trisOf(r.plants, null, true));
   for (const k of ['solid', 'glass', 'plants', 'water']) if (r[k]) r[k].dispose();
   return { tris, fr: framer(b) };
 };
 // the far picture (the chunk's far figure, as one sees the building from afar)
 F.far = function (b) { const B3 = G.Build3D; const geo = B3.farGeo(b.x, b.y, 1); const tris = trisOf(geo); if (geo) geo.dispose(); return { tris, fr: framer(b) }; };
+
+// ------------------------------ the form, drawn by the proof itself ------------------------------
+// (the masses of a form — G.Forma.mass: blocks, battered rocks, pyramids, drums, roofs — as triangles in the world, drawn
+// here and not by Build3D: the form is held to the god's picture and to the 3D by a drawing of its own)
+F.formPic = function (b, Fm, side) {
+  const Fo = G.Forma, L = TILE, hi = G.W.maxH(b.x, b.y, b.w, b.h) * G.Space.HM; const X0 = b.x * L, Z0 = b.y * L; side = side || 'S';
+  const W = (u, v, y) => { const q = Fo.toLot(side, Fm.L, u, v); return [X0 + q[0], hi + y, Z0 + q[1]]; };
+  const tris = []; const col = [200, 196, 186];
+  const tri = (a, b2, c, n) => tris.push({ v: [...a, ...b2, ...c], col, n });
+  const quad = (a, b2, c, d, n) => { tri(a, b2, c, n); tri(a, c, d, n); };
+  const norm = v => { const l = Math.hypot(...v) || 1; return v.map(x => x / l); };
+  for (const m of Fo.mass(Fm)) {
+    const y0 = m.y0;
+    if (m.k === 'box' || m.k === 'talude') { const a = m.r, t2 = m.r1 || m.r; const lo4 = [[a[0], a[3]], [a[2], a[3]], [a[2], a[1]], [a[0], a[1]]], hi4 = [[t2[0], t2[3]], [t2[2], t2[3]], [t2[2], t2[1]], [t2[0], t2[1]]];
+      const cu = (a[0] + a[2]) / 2, cv = (a[1] + a[3]) / 2;
+      for (let k = 0; k < 4; k++) { const q = (k + 1) % 4; const mu = (lo4[k][0] + lo4[q][0]) / 2 - cu, mv = (lo4[k][1] + lo4[q][1]) / 2 - cv; const d = Fo.dirLot(side, mu, mv);
+        quad(W(lo4[k][0], lo4[k][1], y0), W(lo4[q][0], lo4[q][1], y0), W(hi4[q][0], hi4[q][1], m.y1), W(hi4[k][0], hi4[k][1], m.y1), norm([d[0], 0, d[1]])); }
+      quad(W(t2[0], t2[3], m.y1), W(t2[2], t2[3], m.y1), W(t2[2], t2[1], m.y1), W(t2[0], t2[1], m.y1), [0, 1, 0]); }
+    else if (m.k === 'piramide') { const Q = [[-1, 1], [1, 1], [1, -1], [-1, -1]];
+      for (let k = 0; k < 4; k++) { const q = (k + 1) % 4; const d = Fo.dirLot(side, (Q[k][0] + Q[q][0]) / 2, (Q[k][1] + Q[q][1]) / 2); tri(W(m.c[0] + Q[k][0] * m.e, m.c[1] + Q[k][1] * m.e, y0), W(m.c[0] + Q[q][0] * m.e, m.c[1] + Q[q][1] * m.e, y0), W(m.c[0], m.c[1], m.y1), norm([d[0], 0.5, d[1]])); } }
+    else if (m.k === 'anel') { const S = 48; for (let k = 0; k < S; k++) { const a0 = k / S * Math.PI * 2, a1 = (k + 1) / S * Math.PI * 2, am = (a0 + a1) / 2; const p = (r, a, y) => W(m.c[0] + Math.cos(a) * r, m.c[1] + Math.sin(a) * r, y); const d = Fo.dirLot(side, Math.cos(am), Math.sin(am));
+        quad(p(m.r, a0, y0), p(m.r, a1, y0), p(m.r, a1, m.y1), p(m.r, a0, m.y1), [d[0], 0, d[1]]); quad(p(m.r - m.t, a0, m.y1), p(m.r, a0, m.y1), p(m.r, a1, m.y1), p(m.r - m.t, a1, m.y1), [0, 1, 0]);
+        quad(p(m.r - m.t, a0, y0), p(m.r - m.t, a1, y0), p(m.r - m.t, a1, m.y1), p(m.r - m.t, a0, m.y1), [-d[0], 0, -d[1]]); } }
+    else if (m.k === 'telhado') { const ov = m.ov || 0; const along = m.ao === 'u' ? 'u' : 'v'; const r = [m.r[0] - ov, m.r[1] - ov, m.r[2] + ov, m.r[3] + ov];
+      const mu = (r[0] + r[2]) / 2, mv = (r[1] + r[3]) / 2;
+      const ridge = along === 'u' ? [W(r[0], mv, m.y1), W(r[2], mv, m.y1)] : [W(mu, r[1], m.y1), W(mu, r[3], m.y1)];
+      if (along === 'u') { quad(W(r[0], r[3], m.y0), W(r[2], r[3], m.y0), ridge[1], ridge[0], [0, 1, 0]); quad(W(r[2], r[1], m.y0), W(r[0], r[1], m.y0), ridge[0], ridge[1], [0, 1, 0]); tri(W(r[0], r[1], m.y0), W(r[0], r[3], m.y0), ridge[0], [0, 1, 0]); tri(W(r[2], r[3], m.y0), W(r[2], r[1], m.y0), ridge[1], [0, 1, 0]); }
+      else { quad(W(r[2], r[1], m.y0), W(r[2], r[3], m.y0), ridge[1], ridge[0], [0, 1, 0]); quad(W(r[0], r[3], m.y0), W(r[0], r[1], m.y0), ridge[0], ridge[1], [0, 1, 0]); tri(W(r[0], r[3], m.y0), W(r[2], r[3], m.y0), ridge[1], [0, 1, 0]); tri(W(r[2], r[1], m.y0), W(r[0], r[1], m.y0), ridge[0], [0, 1, 0]); } }
+  }
+  return { tris, fr: framer(b) };
+};
+// what the 3D covers seen from above (its triangles laid flat on the ground, cells of 0.1 m) against what the form covers
+// (G.Forma.foot): their overlap; and the 3D's highest point against the form's top, in metres
+F.planCheck = function (b, Fm, pic, side) {
+  const Fo = G.Forma, L = TILE, X0 = b.x * L, Z0 = b.y * L, S = 0.1; side = side || 'S';
+  const n = Math.ceil(Fm.L / S) + 40, off = 20; const A = new Uint8Array(n * n), B = new Uint8Array(n * n); let top = -1e9;
+  for (const t of pic.tris) { const P = [[t.v[0], t.v[2]], [t.v[3], t.v[5]], [t.v[6], t.v[8]]].map(p => [(p[0] - X0) / S + off, (p[1] - Z0) / S + off]); top = Math.max(top, t.v[1], t.v[4], t.v[7]);
+    const den = (P[1][1] - P[2][1]) * (P[0][0] - P[2][0]) + (P[2][0] - P[1][0]) * (P[0][1] - P[2][1]); if (Math.abs(den) < 1e-9) continue;
+    const i0 = Math.max(0, Math.floor(Math.min(P[0][0], P[1][0], P[2][0]))), i1 = Math.min(n - 1, Math.ceil(Math.max(P[0][0], P[1][0], P[2][0]))), j0 = Math.max(0, Math.floor(Math.min(P[0][1], P[1][1], P[2][1]))), j1 = Math.min(n - 1, Math.ceil(Math.max(P[0][1], P[1][1], P[2][1])));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const x = i + 0.5, y = j + 0.5; const l1 = ((P[1][1] - P[2][1]) * (x - P[2][0]) + (P[2][0] - P[1][0]) * (y - P[2][1])) / den, l2 = ((P[2][1] - P[0][1]) * (x - P[2][0]) + (P[0][0] - P[2][0]) * (y - P[2][1])) / den; if (l1 >= 0 && l2 >= 0 && l1 + l2 <= 1) A[j * n + i] = 1; } }
+  for (const f of Fo.foot(Fm)) for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const lx = (i + 0.5 - off) * S, lz = (j + 0.5 - off) * S; const c = Fo.toLot(side === 'S' ? 'S' : side === 'N' ? 'N' : side === 'E' ? 'W' : 'E', Fm.L, lx, lz); // (the lot back to the form's frame)
+    if (f.k === 'rect' ? c[0] >= f.r[0] && c[0] <= f.r[2] && c[1] >= f.r[1] && c[1] <= f.r[3] : Math.hypot(c[0] - f.c[0], c[1] - f.c[1]) <= f.r) B[j * n + i] = 1; }
+  let inter = 0, uni = 0; for (let q = 0; q < n * n; q++) { if (A[q] && B[q]) inter++; if (A[q] || B[q]) uni++; }
+  const hi = G.W.maxH(b.x, b.y, b.w, b.h) * G.Space.HM;
+  return { iou: uni ? inter / uni : 1, top: top - hi, formTop: Fm.top };
+};
+// (b) a building of a type with a form: the god's picture has the form's mass, the 3D has the form's mass, covers what the
+// form covers from above, stands as high as the form says, and keeps to its lot as the god's does (Build3D.check, 0.3 m)
+F.formCheck = function (b, Fm, god, near, lim) {
+  const why = []; const pic = F.formPic(b, Fm); const mk = F.gridFor(god, near, pic); const lot = [b.w, b.h];
+  const mg = F.measure(F.paintGod(god, mk())), mf = F.measure(F.paint3D(pic, mk())), mn = F.measure(F.paint3D(near, mk()));
+  const cg = F.compare(mg, mf, lot), cn = F.compare(mn, mf, lot);
+  const mass = (c, who) => { const topLim = Math.max(lim.top, lim.topK * c.topA); if (c.iou < lim.iou) why.push(`${who} × forma: silhueta ${c.iou.toFixed(2)}`); if (Math.abs(c.dTop) > topLim) why.push(`${who} × forma: alto ${c.topA.toFixed(1)}→${c.topB.toFixed(1)} m`); if (c.dProf > lim.prof) why.push(`${who} × forma: largura ${c.dProf.toFixed(2)}`); };
+  mass(cg, 'deus'); mass(cn, '3D');
+  const pc = F.planCheck(b, Fm, near); if (pc.iou < 0.85) why.push(`planta vista de cima ${pc.iou.toFixed(2)}`); if (Math.abs(pc.top - pc.formTop) > 0.3) why.push(`alto do 3D ${pc.top.toFixed(2)} m, da forma ${pc.formTop.toFixed(2)} m`);
+  const chk = G.Build3D.check([b]); for (const c of chk) why.push('Build3D.check: ' + c);
+  return { ok: !why.length, why, god: cg, d3: cn, plan: pc };
+};
 
 // ------------------------------ the grid, painted ------------------------------
 // a grid of cells over the god's pixels (RES to a pixel), each with its colour and how covered it is; x0, y0 its corner
@@ -199,10 +259,14 @@ F.paintGod = function (god, R) { for (const o of god.ops) { if (o.f) fillPolys(R
 // (the 3D's triangles with the depth of each cell: the nearest wins; lit as the god's picture shades its faces — the front-
 // left face lighter, the front-right darker, the tops lightest)
 const LIGHT = (() => { const v = [-0.3, 0.8, 0.5]; const l = Math.hypot(...v); return v.map(x => x / l); })();
+const VIEW = [Math.cos(Math.PI / 6) / Math.SQRT2, Math.sin(Math.PI / 6), Math.cos(Math.PI / 6) / Math.SQRT2]; // (toward the eye)
 F.paint3D = function (pic, R) {
   if (!R.z) { R.z = new Float32Array(R.W * R.H).fill(-1e9); }
   const fr = pic.fr;
   for (const t of pic.tris) {
+    // (a face turned away from the eye is not drawn, as the game's one-sided material has it: its normal through the squash
+    // of the descent, against the way to the eye — south-east and up)
+    if (!t.ds && t.n[0] * VIEW[0] + t.n[1] / 0.62 * VIEW[1] + t.n[2] * VIEW[2] < -1e-4) continue;
     const A = fr.P(t.v[0], t.v[1], t.v[2]), B = fr.P(t.v[3], t.v[4], t.v[5]), C = fr.P(t.v[6], t.v[7], t.v[8]);
     const den = (B[1] - C[1]) * (A[0] - C[0]) + (C[0] - B[0]) * (A[1] - C[1]); if (Math.abs(den) < 1e-9) continue;
     const sh = 0.55 + 0.45 * Math.max(0, t.n[0] * LIGHT[0] + t.n[1] * LIGHT[1] + t.n[2] * LIGHT[2]);
@@ -234,7 +298,10 @@ F.measure = function (R, lot) {
   for (let q = 0; q < W * H; q++) if (R.a[q] >= 0.5) { mask[q] = 1; n++; const i = q % W, j = (q / W) | 0; if (i < ix0) ix0 = i; if (i > ix1) ix1 = i; if (j < jy0) jy0 = j; if (j > jy1) jy1 = j; }
   const out = { mask, n, area: n / (RES * RES), R };
   if (!n) return out;
-  out.top = -(R.y0 + jy0 / RES); out.foot = R.y0 + (jy1 + 1) / RES; out.left = R.x0 + ix0 / RES; out.right = R.x0 + (ix1 + 1) / RES;
+  // (the top of the mass: the highest row where the picture is two pixels wide at least — a mast, a flagpole, a spear are
+  // the picture's details, not its height; the tip of a pyramid is measured where both pictures narrow alike)
+  let jt = jy0; for (let j = jy0; j <= jy1; j++) { let run = 0, best = 0; for (let i = 0; i < W; i++) { if (mask[j * W + i]) { run++; if (run > best) best = run; } else run = 0; } if (best >= 2 * RES) { jt = j; break; } }
+  out.top = -(R.y0 + jt / RES); out.tip = -(R.y0 + jy0 / RES); out.foot = R.y0 + (jy1 + 1) / RES; out.left = R.x0 + ix0 / RES; out.right = R.x0 + (ix1 + 1) / RES;
   // (the lowest covered cell of each column: the line where the building meets the ground, seen from the front)
   out.low = new Float32Array(W).fill(NaN); for (let i = 0; i < W; i++) for (let j = H - 1; j >= 0; j--) if (mask[j * W + i]) { out.low[i] = R.y0 + (j + 1) / RES; break; }
   // (the openings: a cell darker than 0.7 of its faces round it — the mean of the covered cells 6 px about it —; a spot of

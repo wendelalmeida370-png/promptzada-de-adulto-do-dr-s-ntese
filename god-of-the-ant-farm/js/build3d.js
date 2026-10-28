@@ -417,8 +417,12 @@ float m3scale(float p) {
     return (a + (b - a) * u) * (1 - v) + (c + (d - c) * u) * v;
   }
   // (heights of the buildings, in metres: the camera and the far picture use them too)
-  const HEIGHT = { hut: 4.4, house: 5.2, sobrado: 8.4, insula: 14, quarteirao: 15, barraco: 3, storehouse: 6.5, armazem: 7, celeiro: 7, workshop: 5.5, forja: 6, olaria: 5, tecelagem: 5.5, ourives: 5.5, perolaria: 5, sericultura: 5, acougue: 5, temple: 10, monument: 13, estatua: 7, maravilha: 26, palacio: 14, paco: 12, administracao: 9, coletoria: 7, biblioteca: 9, teatro: 7, banhos: 7, cadeia: 6, quartel: 6, torre: 12, taverna: 7.5, mercado: 3.2, feira: 3, mercado_negro: 3, doca: 1.2, mina: 4, apiario: 1.6, curral: 1.4, estabulo: 5, cercado: 1.5, farm: 1, horta: 0.8, plantacao: 1.2, vinhedo: 1.8, pomar: 4, well: 2.6, campfire: 0.6, cemetery: 1.2, praca: 3, aqueduto: 7, ruin: 2.5 };
-  B3.height = b => HEIGHT[b.type] || 5;
+  // (a type with a form, G.Forma, stands as high as its form: maravilha — the others by this table)
+  const HEIGHT = { hut: 4.4, house: 5.2, sobrado: 8.4, insula: 14, quarteirao: 15, barraco: 3, storehouse: 6.5, armazem: 7, celeiro: 7, workshop: 5.5, forja: 6, olaria: 5, tecelagem: 5.5, ourives: 5.5, perolaria: 5, sericultura: 5, acougue: 5, temple: 10, monument: 13, estatua: 7, palacio: 14, paco: 12, administracao: 9, coletoria: 7, biblioteca: 9, teatro: 7, banhos: 7, cadeia: 6, quartel: 6, torre: 12, taverna: 7.5, mercado: 3.2, feira: 3, mercado_negro: 3, doca: 1.2, mina: 4, apiario: 1.6, curral: 1.4, estabulo: 5, cercado: 1.5, farm: 1, horta: 0.8, plantacao: 1.2, vinhedo: 1.8, pomar: 4, well: 2.6, campfire: 0.6, cemetery: 1.2, praca: 3, aqueduto: 7, ruin: 2.5 };
+  // (the form of a building — its type's in its people's style —, or null: the shell, or the kit's own shapes, are its form)
+  const formOf = b => (G.Forma && G.Forma.has(b.type, styleOf(b)) ? G.Forma.of(b.type, styleOf(b)) : null);
+  const heightOf = b => { const F = formOf(b); return F ? F.top : HEIGHT[b.type] || 5; };
+  B3.height = heightOf;
 
   // ------------------------------ the kit ------------------------------
   // (everything in metres, from the corner of the footprint: a building is a little world of its own, then put in place)
@@ -708,6 +712,9 @@ float m3scale(float p) {
           // (the gorge in three bands, flaring more as it rises)
           const prof = [[0, 0], [0.18, 0.05], [0.34, 0.14], [H2, F]];
           for (let k = 0; k < 3; k++) { const [u0, f0] = prof[k], [u1, f1] = prof[k + 1]; K.tri3(p(a0, u0, f0), p(a1, u0, f0), p(a1, u1, f1), k ? pc : c2, k ? pc : c2, pc, [W2.o[0], 0.3, W2.o[1]]); K.tri3(p(a0, u0, f0), p(a1, u1, f1), p(a0, u1, f1), k ? pc : c2, pc, pc, [W2.o[0], 0.3, W2.o[1]]); }
+          // (the gorge's inside, from the roof's slab up to the parapet: the gorge shows its front only — without it the sky
+          // was seen through it from the terrace, L-271)
+          K.quad(p(a0, 0.16, -0.16), p(a1, 0.16, -0.16), p(a1, H2 + 0.1, -0.16), p(a0, H2 + 0.1, -0.16), dim(pc, 0.9), [-W2.o[0], 0, -W2.o[1]]);
           K.box(...(W2.ax ? [x, yb + H2, z + W2.o[1] * (sz / 2 + F / 2 - 0.02), sx + F * 2, 0.1, F + 0.04] : [x + W2.o[0] * (sx / 2 + F / 2 - 0.02), yb + H2, z, F + 0.04, 0.1, sz + F * 2]), dim(pc, 0.95));
           if (shell !== 'terrace') K.box(...(W2.ax ? [x, yb + H2 + 0.1, z + W2.o[1] * (sz / 2 - 0.05), sx + 0.1, 0.32, 0.22] : [x + W2.o[0] * (sx / 2 - 0.05), yb + H2 + 0.1, z, 0.22, 0.32, sz + 0.1]), pc);
         }
@@ -1455,6 +1462,275 @@ float m3scale(float p) {
       if (n > bw) { bw = n; best = [dx, dy]; } }
     return best;
   }
+  // ------------------------------ the form: the architecture as one definition (G.Forma) ------------------------------
+  // a building whose type has a form (js/forma.js: the shapes the god's view paints, in metres) is built from it — each
+  // element by its builder, in the people's stuff and the god's colours, turned to the side its door opens to. The form
+  // stands on the ground of its lot: its own base reaches down to the lowest ground (no plinth under it), and its heights
+  // are over the lot's highest ground, as the god's picture has them (the kit's own are over the plinth's top)
+  const FORM_SEG = 48; // (the segments round a drum, a ring of seats, an arena)
+  function formCtx(K, F, side) {
+    const L = F.L, lift = K.y0 - K.hi, foot = K.lo - K.hi - 0.2;
+    const XZ = (u, v) => G.Forma.toLot(side, L, u, v);
+    const P = K.P;
+    const col = s => { if (Array.isArray(s)) return s; if (typeof s !== 'string') return '#8a8478'; if (s[0] === '#') return s;
+      const m = s.match(/^([a-z]+)(\d)?$/); if (!m) return '#8a8478'; const v = P[m[1]]; return m[2] !== undefined ? (Array.isArray(v) ? v[+m[2]] : v) || '#8a8478' : (Array.isArray(v) ? v[0] : v) || '#8a8478'; };
+    return {
+      F, side, L, K, col,
+      Y: y => y - lift, // (the form's height to the kit's)
+      foot: y0 => (y0 <= 0.001 ? foot - lift : y0 - lift), // (a foot on the ground reaches the lowest ground of the lot)
+      XZ, front: G.Forma.dirLot(side, 0, 1), across: G.Forma.dirLot(side, 1, 0),
+      rect: r => { const a = XZ(r[0], r[1]), b2 = XZ(r[2], r[3]); return [Math.min(a[0], b2[0]), Math.min(a[1], b2[1]), Math.max(a[0], b2[0]), Math.max(a[1], b2[1])]; },
+      // (a point of the form, [u, v, y], in the kit's frame)
+      pt: (u, v, y) => { const q = XZ(u, v); return [q[0], y - lift, q[1]]; },
+      mat: (e, dflt) => e.mat || dflt || stuff(K.b).base,
+    };
+  }
+  // (the four sides and the top of a block, x0..x1 × z0..z1 in the kit's frame, y0..y1: its sides one colour — the light of
+  // the hour shades them, as the god's two tones —, its top its own)
+  function formBox(K, x0, z0, x1, z1, y0, y1, side, top) {
+    const sides = [[[x0, z1], [x1, z1], [0, 0, 1]], [[x1, z1], [x1, z0], [1, 0, 0]], [[x1, z0], [x0, z0], [0, 0, -1]], [[x0, z0], [x0, z1], [-1, 0, 0]]];
+    for (const [a, b2, o] of sides) K.quad([a[0], y0, a[1]], [b2[0], y0, b2[1]], [b2[0], y1, b2[1]], [a[0], y1, a[1]], side, o);
+    if (top) K.quad([x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1], top, UP);
+  }
+  // (where a flight up the front is — its v — at a height: on the line from its foot to its top)
+  const stairV = (st, y) => st.a[1] - (st.a[1] - st.b[1]) * (y - st.a[2]) / (st.b[2] - st.a[2]);
+  // (a round of n segments on a plane: its middle c, its normal out, r; the fan of triangles, seen from out)
+  function formDisc(K, c, out, r, col, n) {
+    const a = Math.abs(out[1]) > 0.9 ? [1, 0, 0] : [-out[2], 0, out[0]]; const la = Math.hypot(...a); const e1 = a.map(q => q / la);
+    const e2 = [out[1] * e1[2] - out[2] * e1[1], out[2] * e1[0] - out[0] * e1[2], out[0] * e1[1] - out[1] * e1[0]];
+    const P = k => { const t = k / n * TAU; return [c[0] + (Math.cos(t) * e1[0] + Math.sin(t) * e2[0]) * r, c[1] + (Math.cos(t) * e1[1] + Math.sin(t) * e2[1]) * r, c[2] + (Math.cos(t) * e1[2] + Math.sin(t) * e2[2]) * r]; };
+    for (let k = 0; k < n; k++) K.tri(c, P(k), P(k + 1), col, out);
+  }
+  const FORMK = {
+    bloco(K, e, X) {
+      const r = X.rect(e.r), y0 = X.foot(e.y0), y1 = X.Y(e.y1); const c = e.cor || ['wl', 'wr', 'top'];
+      K.as(e.crista ? 'stucco' : X.mat(e, e.tabuas ? (K.st === 'nordico' ? 'plankV' : stuff(K.b).wall) : null), () => formBox(K, r[0], r[1], r[2], r[3], y0, y1, X.col(c[0]), X.col(c[2] || c[0])));
+      // (the god's line under each level's top: a course a little darker, standing out a finger)
+      if (e.friso && K.fine) K.as(X.mat(e), () => formBox(K, r[0] - 0.02, r[1] - 0.02, r[2] + 0.02, r[3] + 0.02, y1 - e.friso - 0.08, y1 - e.friso, dim(rgbOf(X.col(c[0])), 0.82)));
+    },
+    talude(K, e, X) {
+      const a = X.rect(e.r), b2 = X.rect(e.r1), y0 = X.foot(e.y0), y1 = X.Y(e.y1); const c = e.cor;
+      const lo = [[a[0], a[3]], [a[2], a[3]], [a[2], a[1]], [a[0], a[1]]], hi = [[b2[0], b2[3]], [b2[2], b2[3]], [b2[2], b2[1]], [b2[0], b2[1]]], outs = [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]];
+      K.as(X.mat(e, 'rock'), () => { for (let k = 0; k < 4; k++) { const q = (k + 1) % 4; K.quad([lo[k][0], y0, lo[k][1]], [lo[q][0], y0, lo[q][1]], [hi[q][0], y1, hi[q][1]], [hi[k][0], y1, hi[k][1]], X.col(c[0]), outs[k]); }
+        K.quad([b2[0], y1, b2[1]], [b2[2], y1, b2[1]], [b2[2], y1, b2[3]], [b2[0], y1, b2[3]], X.col(c[2] || c[0]), UP); });
+    },
+    piramide(K, e, X) {
+      const C = X.XZ(e.c[0], e.c[1]), y0 = X.foot(e.y0), ya = X.Y(e.y0), y1 = X.Y(e.y1); const s = e.e; const f = e.ponta ? e.ponta.f : 0; const yc = y1 - (y1 - ya) * f, sc = s * f;
+      const corner = (q, h, sz) => [C[0] + q[0] * sz, h, C[1] + q[1] * sz]; const Q = [[-1, 1], [1, 1], [1, -1], [-1, -1]], outs = [[0, 0.5, 1], [1, 0.5, 0], [0, 0.5, -1], [-1, 0.5, 0]];
+      K.as(X.mat(e, 'sandstone'), () => { for (let k = 0; k < 4; k++) { const q = (k + 1) % 4;
+        // (from the ground under its foot to its capstone, the courses' stone; the foot a little out where the ground falls away)
+        const s0 = s + (ya - y0) * 0.02;
+        K.quad(corner(Q[k], y0, s0), corner(Q[q], y0, s0), corner(Q[q], yc, sc), corner(Q[k], yc, sc), X.col(e.cor[0]), outs[k]); } });
+      if (f > 0) K.as('slab', () => { for (let k = 0; k < 4; k++) { const q = (k + 1) % 4; K.tri(corner(Q[k], yc, sc), corner(Q[q], yc, sc), [C[0], y1, C[1]], X.col(e.ponta.cor[0]), outs[k]); } });
+    },
+    escalonada(K, e, X) {
+      const st = X.F.els.find(q => q.k === 'escada');
+      // (the stair up its front is set into it: each level it climbs split round the stair's strip, and the strip behind the
+      // stair the level's own back part, to where the flight is at the level's top — the steps fill the rest)
+      const half = st ? st.w / 2 + (st.alfarda || 0) : 0; const cols = e.cor;
+      e.niveis.forEach(([s, ya, yb], k) => {
+        const y0 = k ? X.Y(ya) : X.foot(ya), y1 = X.Y(yb);
+        const u0 = e.c[0] - s, u1 = e.c[0] + s, v0 = e.c[1] - s, v1 = e.c[1] + s;
+        const cut = st && ya < st.b[2] - 1e-6; const parts = cut ? [[u0, st.a[0] - half], [st.a[0] + half, u1]] : [[u0, u1]];
+        K.as(X.mat(e, 'stucco'), () => { for (const [a, b2] of parts) { const r = X.rect([a, v0, b2, v1]); formBox(K, r[0], r[1], r[2], r[3], y0, y1, X.col(cols[0]), X.col(cols[2] || cols[0])); }
+          if (cut) { const r = X.rect([st.a[0] - half, v0, st.a[0] + half, Math.min(v1, stairV(st, yb))]); if (r[2] > r[0] + 1e-3 && r[3] > r[1] + 1e-3) formBox(K, r[0], r[1], r[2], r[3], y0, y1, X.col(cols[0]), X.col(cols[2] || cols[0])); } });
+        // (the god's darker line under each level's top, standing out a finger)
+        if (e.friso && K.fine) K.as(X.mat(e, 'stucco'), () => { for (const [a, b2] of parts) { const r = X.rect([a, v0, b2, v1]); formBox(K, r[0] - 0.02, r[1] - 0.02, r[2] + 0.02, r[3] + 0.02, y1 - e.friso - 0.07, y1 - e.friso, dim(rgbOf(X.col(cols[0])), 0.84)); } });
+      });
+    },
+    // a flight up the front, set into the levels: its steps from its foot to its top, each from the level under it (or the
+    // ground) to its tread; its ramps at its sides (the alfardas) a hand over the treads; the painted line down its middle
+    escada(K, e, X) {
+      const lv = X.F.els.find(q => q.k === 'escalonada'); const run = e.a[1] - e.b[1], rise = e.b[2] - e.a[2];
+      const n = Math.max(2, Math.ceil(rise / 0.26)); const u = e.a[0], hw = e.w / 2; const col = dim(rgbOf(X.col(e.cor)), e.clara || 1);
+      // (the base of the level a height is in: the step stands on the level below it)
+      const levelUnder = y => { if (!lv) return null; for (const [, ya, yb] of lv.niveis) if (y > ya + 1e-6 && y <= yb + 1e-6) return ya > 1e-6 ? ya : null; return null; };
+      K.as(X.mat(e, stuff(K.b).base), () => { for (let k = 0; k < n; k++) {
+        const yT = e.a[2] + rise * (k + 1) / n, vF = e.a[1] - run * k / n; const under = levelUnder(yT); const y0 = under === null ? X.foot(0) : X.Y(under);
+        // (the step reaches back to where the next one's tread begins over it, and the last into the level it climbs to)
+        const vB = k === n - 1 ? e.b[1] - 0.4 : e.a[1] - run * (k + 1) / n - 0.02; const r = X.rect([u - hw, vB, u + hw, vF]);
+        formBox(K, r[0], r[1], r[2], r[3], y0, X.Y(yT), col, dim(col, 1.04)); } });
+      // (the ramps at its sides: a slanted slab each, its upper face a hand over the treads, from the foot to the top)
+      if (e.alfarda) { const ac = dim(rgbOf(X.col('wr')), 0.92);
+        K.as(X.mat(e, stuff(K.b).base), () => { for (const sg of [-1, 1]) { const uu = u + sg * (hw + e.alfarda / 2);
+          const A = X.pt(uu, e.a[1], e.a[2]), B = X.pt(uu, e.b[1], e.b[2]);
+          K.bar([A[0], A[1] - 0.12, A[2]], [B[0], B[1] - 0.12, B[2]], [0, 0.42, 0], [X.across[0] * e.alfarda, 0, X.across[1] * e.alfarda], ac); } }); }
+      if (e.divisor) { const d = e.divisor; const A = X.pt(u + d.u, e.a[1] + 0.01, e.a[2] + 0.02), B = X.pt(u + d.u, e.b[1] + 0.01, e.b[2] + 0.02);
+        K.as('stucco', () => K.bar([A[0], A[1], A[2]], [B[0], B[1], B[2]], [0, 0.06, 0], [X.across[0] * d.w, 0, X.across[1] * d.w], X.col(d.cor))); }
+    },
+    // the drum of arcades: one flat bay a segment round, each tier's arch in it — its piers, the sill under the arch (not on
+    // the ground tier: its arches are the ways in), the wall over it, the corners round its round head, the reveals through
+    // the wall and the dark of the gallery behind; the cornice between the tiers; the walk on its top
+    tambor(K, e, X) {
+      const C = X.XZ(e.c[0], e.c[1]); const N = e.arcos, R = e.r, t = e.t; const th = (e.y1 - e.y0) / e.andares; const ap = R * Math.cos(Math.PI / N);
+      const bw = 2 * R * Math.sin(Math.PI / N), aw = bw * e.arcoW; const lit = rgbOf(X.col(e.cor[0])); const dark = X.col(e.escuro || '#2a1e18'); const M = 6;
+      const yBase = X.foot(e.y0);
+      K.as(X.mat(e, 'ashlar'), () => { for (let q = 0; q < N; q++) {
+        const a = (q + 0.5) / N * TAU; const o = [Math.cos(a), 0, Math.sin(a)], tg = [-Math.sin(a), 0, Math.cos(a)];
+        const P = (s, y, d) => [C[0] + o[0] * (ap - d) + tg[0] * s, y, C[1] + o[2] * (ap - d) + tg[2] * s]; // (s along the bay, d in from its face)
+        const face = (s0, y0, s1, y1, cc) => K.quad(P(s0, y0, 0), P(s1, y0, 0), P(s1, y1, 0), P(s0, y1, 0), cc || lit, o);
+        // (the stone's tone a little its own, bay by bay: the id's dice)
+        const tone = dim(lit, 0.95 + K.hv(600 + q) * 0.08);
+        for (let k = 0; k < e.andares; k++) {
+          const yb = k ? X.Y(e.y0 + k * th) : yBase, ytop = X.Y(e.y0 + (k + 1) * th); const ya = k ? X.Y(e.y0 + k * th + e.arcoA * th) : X.Y(e.y0), yt = X.Y(e.y0 + k * th + e.arcoB * th); const yh = yt - aw / 2;
+          face(-bw / 2, yb, -aw / 2, ytop, tone); face(aw / 2, yb, bw / 2, ytop, tone); // (the piers)
+          if (k) face(-aw / 2, yb, aw / 2, ya, tone); // (the sill)
+          face(-aw / 2, yt, aw / 2, ytop, tone); // (over the arch)
+          // (the corners round the arch's head, and its intrados through the wall)
+          const arc = []; for (let j = 0; j <= M * 2; j++) { const f = j / (M * 2) * Math.PI; arc.push([-Math.cos(f) * aw / 2, yh + Math.sin(f) * aw / 2]); }
+          for (let j = 0; j < M * 2; j++) { const c0 = arc[j], c1 = arc[j + 1]; const corner = j < M ? [-aw / 2, yt] : [aw / 2, yt];
+            K.tri(P(corner[0], corner[1], 0), P(c0[0], c0[1], 0), P(c1[0], c1[1], 0), tone, o);
+            // (the soffit faces the arch's middle: in along the bay and down)
+            const fm = (j + 0.5) / (M * 2) * Math.PI; const inw = [tg[0] * Math.cos(fm), -Math.sin(fm), tg[2] * Math.cos(fm)];
+            K.quad(P(c0[0], c0[1], 0), P(c1[0], c1[1], 0), P(c1[0], c1[1], t), P(c0[0], c0[1], t), dim(tone, 0.7), inw); }
+          // (the jambs, the sill's top through the wall — the threshold of a way in —, and the dark of the gallery behind)
+          for (const sg of [-1, 1]) K.quad(P(sg * aw / 2, ya, 0), P(sg * aw / 2, yh, 0), P(sg * aw / 2, yh, t), P(sg * aw / 2, ya, t), dim(tone, 0.78), [tg[0] * -sg, 0, tg[2] * -sg]);
+          K.quad(P(-aw / 2, ya, 0), P(aw / 2, ya, 0), P(aw / 2, ya, t), P(-aw / 2, ya, t), dim(tone, 0.88), UP);
+          K.quad(P(-aw / 2, ya, t), P(aw / 2, ya, t), P(aw / 2, yh, t), P(-aw / 2, yh, t), dark, o);
+          for (let j = 0; j < M * 2; j++) K.tri(P(0, yh, t), P(arc[j][0], arc[j][1], t), P(arc[j + 1][0], arc[j + 1][1], t), dark, o);
+          // (the cornice over the tier: a band standing out of the wall)
+          if (K.fine) { const yc = ytop; K.quad(P(-bw / 2 - 0.01, yc - 0.22, -0.09), P(bw / 2 + 0.01, yc - 0.22, -0.09), P(bw / 2 + 0.01, yc, -0.09), P(-bw / 2 - 0.01, yc, -0.09), dim(tone, 1.04), o);
+            K.quad(P(-bw / 2, yc, -0.09), P(bw / 2, yc, -0.09), P(bw / 2, yc, 0), P(-bw / 2, yc, 0), dim(tone, 1.08), UP); }
+        }
+        // (the walk on top of the wall: from its face to its inner face)
+        K.quad(P(-bw / 2, X.Y(e.y1), 0), P(bw / 2, X.Y(e.y1), 0), P(bw / 2, X.Y(e.y1), t), P(-bw / 2, X.Y(e.y1), t), dim(tone, 1.06), UP);
+      } });
+    },
+    // the rings of seats: each a flat ring at its height, from the next one's edge to its own, and the face down from it to the
+    // next (the seats in rows, where the machine carries detail); the lowest one's inner edge is the arena's
+    cavea(K, e, X) {
+      const C = X.XZ(e.c[0], e.c[1]); const A = e.aneis, n = A.length; const col = rgbOf(X.col(e.cor)); const S = FORM_SEG;
+      const ring = (r0, r1, y, cc) => { for (let k = 0; k < S; k++) { const a0 = k / S * TAU, a1 = (k + 1) / S * TAU; const p = (r, a) => [C[0] + Math.cos(a) * r, y, C[1] + Math.sin(a) * r];
+        K.quad(p(r0, a0), p(r1, a0), p(r1, a1), p(r0, a1), cc, UP); } };
+      const riser = (r, ya, yb, cc) => { for (let k = 0; k < S; k++) { const a0 = k / S * TAU, a1 = (k + 1) / S * TAU; const p = (a, y) => [C[0] + Math.cos(a) * r, y, C[1] + Math.sin(a) * r]; const am = (a0 + a1) / 2;
+        K.quad(p(a0, ya), p(a1, ya), p(a1, yb), p(a0, yb), cc, [-Math.cos(am), 0, -Math.sin(am)]); } };
+      K.as(X.mat(e, 'slab'), () => {
+        for (let k = 1; k < n; k++) { const rIn = k < n - 1 ? A[k + 1][0] : e.fundo; ring(rIn, A[k][0], X.Y(A[k][1]), dim(col, 0.96 + (k % 2) * 0.06)); }
+        for (let k = 0; k < n - 1; k++) riser(A[k + 1][0], X.Y(A[k + 1][1]), X.Y(A[k][1]), dim(col, 0.8));
+        // (the seats in rows on each ring's face: two ledges standing out of it, a third and two thirds up)
+        if (K.fine) for (let k = 1; k < n - 1; k++) { const r = A[k + 1][0], ya = X.Y(A[k + 1][1]), yb = X.Y(A[k][1]); for (let j = 1; j < 3; j++) ring(r - 0.12, r, ya + (yb - ya) * j / 3, dim(col, 1.05)); }
+      });
+    },
+    arena(K, e, X) {
+      const C = X.XZ(e.c[0], e.c[1]); const y = X.Y(e.y); const S = FORM_SEG;
+      K.as('soil', () => { for (let k = 0; k < S; k++) { const a0 = k / S * TAU, a1 = (k + 1) / S * TAU; K.tri([C[0], y, C[1]], [C[0] + Math.cos(a0) * e.r, y, C[1] + Math.sin(a0) * e.r], [C[0] + Math.cos(a1) * e.r, y, C[1] + Math.sin(a1) * e.r], X.col(e.cor), UP); } });
+      // (the wall round the arena, from its floor up to the lowest ring of seats)
+      if (e.muro) K.as('ashlar', () => { const yb = X.Y(e.muro); for (let k = 0; k < S; k++) { const a0 = k / S * TAU, a1 = (k + 1) / S * TAU, am = (a0 + a1) / 2; const p = (a, yy) => [C[0] + Math.cos(a) * e.r, yy, C[1] + Math.sin(a) * e.r];
+        K.quad(p(a0, y), p(a1, y), p(a1, yb), p(a0, yb), '#b8a888', [-Math.cos(am), 0, -Math.sin(am)]); } });
+    },
+    mastros(K, e, X) {
+      const C = X.XZ(e.c[0], e.c[1]); K.as('beam', () => { for (let k = 0; k < e.n; k++) { const a = (k + 0.5) / e.n * TAU; const x = C[0] + Math.cos(a) * e.r, z = C[1] + Math.sin(a) * e.r;
+        K.log([x, X.Y(e.y0) - 0.3, z], [x, X.Y(e.y0 + e.h), z], 0.07, X.col(e.cor)); } });
+    },
+    colunata(K, e, X) {
+      const y0 = X.Y(e.y0), y1 = X.Y(e.y1), h = y1 - y0; const c = X.col(e.cor[0]);
+      K.as(X.mat(e, 'marble'), () => { for (const p of e.pts) { const q = X.XZ(p[0], p[1]);
+        K.cyl(q[0], y0, q[1], e.r, h, c); // (the shaft)
+        K.box(q[0], y0, q[1], e.r * 2.3, 0.12, e.r * 2.3, c); // (its base)
+        K.box(q[0], y1 - 0.18, q[1], e.r * 2.8, 0.18, e.r * 2.8, c); } }); // (its capital)
+    },
+    // a roof: its two slopes from the eaves to the ridge, the ridge the way it runs, out over the walls by ov; the gables in
+    // their own colour (the pediment, the end of a hall); a roof of shields, the shields in rows down both its slopes
+    telhado(K, e, X) {
+      const r = X.rect(e.r), y0 = X.Y(e.y0), y1 = X.Y(e.y1); const along = e.ao === 'u' ? X.across : X.front; const alongX = Math.abs(along[0]) > 0.5;
+      const ov = e.ov || 0; const x0 = r[0] - ov, x1 = r[2] + ov, z0 = r[1] - ov, z1 = r[3] + ov; const c = e.cor;
+      K.as(e.escudos ? 'slab' : X.mat(e, stuff(K.b).tile), () => K.gable((x0 + x1) / 2, y0, (z0 + z1) / 2, x1 - x0, y1 - y0, z1 - z0, X.col(c[0]), !alongX));
+      // (the gables: the triangles at the ridge's two ends, a hair out)
+      const g2 = X.col(c[2] || c[0]); K.as(X.mat(e, 'marble'), () => {
+        if (alongX) for (const [xx, s] of [[x0 - 0.01, -1], [x1 + 0.01, 1]]) K.tri([xx, y0, z0], [xx, y0, z1], [xx, y1, (z0 + z1) / 2], g2, [s, 0, 0]);
+        else for (const [zz, s] of [[z0 - 0.01, -1], [z1 + 0.01, 1]]) K.tri([x0, y0, zz], [x1, y0, zz], [(x0 + x1) / 2, y1, zz], g2, [0, 0, s]); });
+      if (e.escudos) { const sc = e.escudos; const span = alongX ? (z1 - z0) / 2 : (x1 - x0) / 2, len = alongX ? x1 - x0 : z1 - z0, rise = y1 - y0;
+        const slope = Math.hypot(span, rise); const rr = Math.min(len / sc.n, slope / sc.linhas) * 0.46;
+        K.as('iron', () => { for (const sg of [-1, 1]) for (let row = 0; row < sc.linhas; row++) for (let k = 0; k < sc.n; k++) {
+          const f = (row + 0.5) / sc.linhas, a = -len / 2 + (k + 0.5) * len / sc.n; const off = span * (1 - f), y = y0 + rise * f;
+          const nrm = alongX ? [0, span / slope, sg * rise / slope] : [sg * rise / slope, span / slope, 0];
+          const ctr = alongX ? [(x0 + x1) / 2 + a, y, (z0 + z1) / 2 + sg * off] : [(x0 + x1) / 2 + sg * off, y, (z0 + z1) / 2 + a];
+          formDisc(K, [ctr[0] + nrm[0] * 0.04, ctr[1] + nrm[1] * 0.04, ctr[2] + nrm[2] * 0.04], nrm, rr, sc.cor[(k + row) % 2], 10); } }); }
+    },
+    faixa(K, e, X) { const r = X.rect(e.r); K.as('stucco', () => formBox(K, r[0] - 0.02, r[1] - 0.02, r[2] + 0.02, r[3] + 0.02, X.Y(e.y0), X.Y(e.y1), X.col(e.cor))); },
+    // a door or a dark opening on a face: on the form's front at v, or on the face of its pyramid; sealed or not, a dark
+    // leaf a hair out of the face (the god's door is where it draws it)
+    porta(K, e, X) {
+      let A, B, Cc, D, out;
+      if (e.na === 'piramide') { const p = X.F.els.find(q => q.k === 'piramide'); const vAt = y => p.c[1] + p.e * (1 - (y - p.y0) / (p.y1 - p.y0)); const nn = [X.front[0], (p.e / (p.y1 - p.y0)), X.front[1]];
+        const l = Math.hypot(...nn); out = nn.map(q => q / l); const d = 0.03;
+        A = X.pt(e.u - e.w / 2, vAt(e.y0) + d, e.y0); B = X.pt(e.u + e.w / 2, vAt(e.y0) + d, e.y0); Cc = X.pt(e.u + e.w / 2, vAt(e.y1) + d, e.y1); D = X.pt(e.u - e.w / 2, vAt(e.y1) + d, e.y1); }
+      else { const v = e.v + 0.02; A = X.pt(e.u - e.w / 2, v, e.y0); B = X.pt(e.u + e.w / 2, v, e.y0); Cc = X.pt(e.u + e.w / 2, v, e.y1); D = X.pt(e.u - e.w / 2, v, e.y1); out = [X.front[0], 0, X.front[1]]; }
+      K.as(e.luz ? 'linen' : 'door', () => K.quad(A, B, Cc, D, X.col(e.cor), out)); // (a door of light: the hall's fire through a cloth)
+    },
+    disco(K, e, X) {
+      const c = X.pt(e.u, e.v + 0.03, e.y); const out = [X.front[0], 0, X.front[1]];
+      K.as('slab', () => { formDisc(K, c, out, e.r, X.col(e.cor), 14);
+        if (e.olho) formDisc(K, [c[0] + out[0] * 0.02, c[1], c[2] + out[2] * 0.02], out, e.r * 0.32, X.col(e.olho), 10); });
+    },
+    // a statue in gold: its robe from its feet, its belt, its shoulders and head; with the spear upright at its right hand and
+    // the round shield on its left arm — the god's figure, in metres
+    estatua(K, e, X) {
+      const p = X.pt(e.p[0], e.p[1], e.p[2]); const h = e.h, w = Math.max(0.32, h * 0.085); const col = rgbOf(X.col(e.cor)); const fr = [X.front[0], 0, X.front[1]], ac = [X.across[0], 0, X.across[1]];
+      const y = p[1]; const P2 = (s, yy, d) => [p[0] + ac[0] * s + fr[0] * d, y + yy, p[2] + ac[2] * s + fr[2] * d];
+      K.as('slab', () => {
+        // (the robe: a block narrowing from the feet to the belt, and the shoulders)
+        K.para(P2(0, 0, 0), [ac[0] * w * 2, 0, ac[2] * w * 2], [0, h * 0.62, 0], [fr[0] * w * 1.3, 0, fr[2] * w * 1.3], col);
+        K.para(P2(0, h * 0.62, 0), [ac[0] * w * 2.2, 0, ac[2] * w * 2.2], [0, h * 0.1, 0], [fr[0] * w * 1.4, 0, fr[2] * w * 1.4], dim(col, 0.9));
+        K.sph(P2(0, h * 0.78, 0)[0], y + h * 0.78, P2(0, h * 0.78, 0)[2], w * 0.75, col);
+        if (e.lanca) { K.log(P2(w * 1.3, h * 0.05, 0), P2(w * 1.3, h * 1.1, 0), 0.05, dim(col, 0.7));
+          formDisc(K, P2(-w * 1.25, h * 0.42, w * 0.2), fr, w * 1.1, dim(col, 0.85), 12); }
+      });
+    },
+    // a dragon's head at a gable's end: the carved neck rising from the ridge and curling out a hand, the head at its end — the
+    // god's thin line and its round, kept over the lot (the gable is at its edge)
+    dragao(K, e, X) {
+      const p = X.pt(e.p[0], e.p[1], e.p[2]); const d = [X.across[0] * e.dir, 0, X.across[1] * e.dir]; const col = X.col(e.cor);
+      const pts = [0, 0.33, 0.66, 1].map(f => [p[0] + d[0] * (f * f * 0.1 - 0.14), p[1] + Math.sin(f * Math.PI * 0.5) * 1.0, p[2] + d[2] * (f * f * 0.1 - 0.14)]);
+      K.as('beam', () => { for (let k = 0; k < 3; k++) K.log(pts[k], pts[k + 1], 0.06 - k * 0.01, col); K.sph(pts[3][0] + d[0] * 0.02, pts[3][1], pts[3][2] + d[2] * 0.02, 0.12, col, 0.1); });
+    },
+    braseiro(K, e, X) {
+      const p = X.pt(e.p[0], e.p[1], e.p[2]); K.as('iron', () => { K.cyl(p[0], p[1], p[2], 0.07, 0.55, '#4a3a2a'); K.sph(p[0], p[1] + 0.62, p[2], e.r, '#5a4030', e.r * 0.45); });
+      K.as('soil', () => K.sph(p[0], p[1] + 0.72, p[2], e.r * 0.75, [226, 98, 40], e.r * 0.2)); // (the embers)
+    },
+  };
+  // a building's form, built: every element in order (the god's own, back to front), the generic plinth not under it
+  function formInto(g, gw, K, F, side) {
+    const X = formCtx(K, F, side); K.footed = true;
+    for (const e of F.els) { const f = FORMK[e.k]; if (f) f(K, e, X); }
+    // (the body's box — what the form covers from above —, for what reads it: Props3D, the door's side)
+    const R = [1e9, 1e9, -1e9, -1e9]; for (const f of G.Forma.foot(F)) { const r = f.k === 'circ' ? [f.c[0] - f.r, f.c[1] - f.r, f.c[0] + f.r, f.c[1] + f.r] : f.r; R[0] = Math.min(R[0], r[0]); R[1] = Math.min(R[1], r[1]); R[2] = Math.max(R[2], r[2]); R[3] = Math.max(R[3], r[3]); }
+    const rr = X.rect(R[0] < R[2] ? R : [0, 0, F.L, F.L]); const od = SIDEO[side] || [0, 1];
+    K.body = { x: (rr[0] + rr[2]) / 2, z: (rr[1] + rr[3]) / 2, sx: rr[2] - rr[0], sz: rr[3] - rr[1], door: F.door ? { side, o: od, a: 0, w: F.door.w } : null, form: true };
+    return X.Y(F.top);
+  }
+  B3.formInto = formInto; // (for the proofs)
+  // (the far figure of a form: its masses alone — a block, a battered rock, a pyramid, a drum, a roof — on the lot, in world
+  // metres; g the far chunk's builder)
+  function massInto(g, b, F, side) {
+    const L = TL(), P = palOf(b); const hi = G.Space.plinth(b).hi, lo = G.Space.plinth(b).lo; const X0 = b.x * L, Z0 = b.y * L;
+    const col = s => { if (typeof s !== 'string') return P.wl || '#efe2c4'; if (s[0] === '#') return s; const m = s.match(/^([a-z]+)(\d)?$/); const v = m ? P[m[1]] : null; return (m && m[2] !== undefined && Array.isArray(v) ? v[+m[2]] : Array.isArray(v) ? v[0] : v) || '#8a8478'; };
+    const W = (u, v, y) => { const q = G.Forma.toLot(side, F.L, u, v); return [X0 + q[0], hi + y, Z0 + q[1]]; };
+    // (a face turned out: its corners in the order that shows it from out — the far material shows one side)
+    const tri = (a, b2, c, cc, out) => { const n = [(b2[1] - a[1]) * (c[2] - a[2]) - (b2[2] - a[2]) * (c[1] - a[1]), (b2[2] - a[2]) * (c[0] - a[0]) - (b2[0] - a[0]) * (c[2] - a[2]), (b2[0] - a[0]) * (c[1] - a[1]) - (b2[1] - a[1]) * (c[0] - a[0])];
+      if (n[0] * out[0] + n[1] * out[1] + n[2] * out[2] < 0) g.tri(a, c, b2, cc); else g.tri(a, b2, c, cc); };
+    const quad = (a, b2, c, d, cc, out) => { tri(a, b2, c, cc, out); tri(a, c, d, cc, out); };
+    const mid = (a, b2) => { const c = [(a[0] + b2[0]) / 2, 0, (a[2] + b2[2]) / 2]; return c; };
+    for (const m of G.Forma.mass(F)) {
+      const y0 = m.y0 <= 0.001 ? lo - hi - 0.2 : m.y0; g.pat = PAT[m.k === 'piramide' ? 'sandstone' : m.k === 'telhado' ? 'tile' : 'stone']; const cc = col(m.cor);
+      if (m.k === 'box' || m.k === 'talude') { const a = m.r, t2 = m.r1 || m.r; const lo4 = [[a[0], a[3]], [a[2], a[3]], [a[2], a[1]], [a[0], a[1]]], hi4 = [[t2[0], t2[3]], [t2[2], t2[3]], [t2[2], t2[1]], [t2[0], t2[1]]];
+        const C = W((a[0] + a[2]) / 2, (a[1] + a[3]) / 2, 0);
+        for (let k = 0; k < 4; k++) { const q = (k + 1) % 4; const A = W(lo4[k][0], lo4[k][1], y0), B = W(lo4[q][0], lo4[q][1], y0); const md = mid(A, B);
+          quad(A, B, W(hi4[q][0], hi4[q][1], m.y1), W(hi4[k][0], hi4[k][1], m.y1), cc, [md[0] - C[0], 0, md[2] - C[2]]); }
+        quad(W(t2[0], t2[3], m.y1), W(t2[2], t2[3], m.y1), W(t2[2], t2[1], m.y1), W(t2[0], t2[1], m.y1), cc, UP); }
+      else if (m.k === 'piramide') { const Q = [[-1, 1], [1, 1], [1, -1], [-1, -1]]; const C = W(m.c[0], m.c[1], 0);
+        for (let k = 0; k < 4; k++) { const q = (k + 1) % 4; const A = W(m.c[0] + Q[k][0] * m.e, m.c[1] + Q[k][1] * m.e, y0), B = W(m.c[0] + Q[q][0] * m.e, m.c[1] + Q[q][1] * m.e, y0); const md = mid(A, B);
+          tri(A, B, W(m.c[0], m.c[1], m.y1), cc, [md[0] - C[0], 0.5, md[2] - C[2]]); } }
+      else if (m.k === 'anel') { const S = 24; for (let k = 0; k < S; k++) { const a0 = k / S * TAU, a1 = (k + 1) / S * TAU, am = (a0 + a1) / 2; const p = (r, a, y) => W(m.c[0] + Math.cos(a) * r, m.c[1] + Math.sin(a) * r, y);
+          const o = G.Forma.dirLot(side, Math.cos(am), Math.sin(am)); const out = [o[0], 0, o[1]], inn = [-o[0], 0, -o[1]];
+          quad(p(m.r, a0, y0), p(m.r, a1, y0), p(m.r, a1, m.y1), p(m.r, a0, m.y1), cc, out); quad(p(m.r - m.t, a0, m.y1), p(m.r, a0, m.y1), p(m.r, a1, m.y1), p(m.r - m.t, a1, m.y1), cc, UP);
+          quad(p(m.r - m.t, a1, y0), p(m.r - m.t, a0, y0), p(m.r - m.t, a0, m.y1), p(m.r - m.t, a1, m.y1), dim(rgbOf(cc), 0.8), inn); } }
+      else if (m.k === 'telhado') { const ov = m.ov || 0; const a = W(m.r[0] - ov, m.r[1] - ov, 0), b2 = W(m.r[2] + ov, m.r[3] + ov, 0); const x0 = Math.min(a[0], b2[0]), x1 = Math.max(a[0], b2[0]), z0 = Math.min(a[2], b2[2]), z1 = Math.max(a[2], b2[2]);
+        const along = m.ao === 'u' ? G.Forma.dirLot(side, 1, 0) : G.Forma.dirLot(side, 0, 1); const ax = Math.abs(along[0]) > 0.5;
+        g.put(SH.gable, R3.mat((x0 + x1) / 2, hi + m.y0, (z0 + z1) / 2, ax ? 0 : Math.PI / 2, ax ? x1 - x0 : z1 - z0, m.y1 - m.y0, ax ? z1 - z0 : x1 - x0), col(m.cor)); }
+    }
+    g.pat = 0;
+  }
   // ------------------------------ the types ------------------------------
   const KIT = {
     hut(g, gw, K) {
@@ -1517,12 +1793,11 @@ float m3scale(float p) {
       const P = K.P; K.box(K.w / 2, 0, K.d / 2, 2.2, 2, 2.2, P.base ? P.base[0] : '#8a8478');
       const s = '#d8d4c8'; K.box(K.w / 2, 2, K.d / 2, 0.8, 2.4, 0.5, s); K.sph(K.w / 2, 4.75, K.d / 2, 0.42, s); K.box(K.w / 2 + 0.55, 3.5, K.d / 2, 0.25, 1.4, 0.25, s);
     },
+    // the wonder of each people, from its form (G.Forma): the Colosseum, the Great Pyramid, the Templo Mayor, the Acropolis,
+    // Valhalla, the ziggurat — the god's own, in metres (L-260, L-261)
     maravilha(g, gw, K) {
-      const P = K.P; if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 10); return; }
-      const st = styleOf(K.b);
-      if (st === 'egipcio') { g.put(SH.cone, R3.mat(K.x0 + K.w / 2, K.y0, K.z0 + K.d / 2, Math.PI / 4, K.w * 1.35, 24, K.d * 1.35), K.c(P.wl)); return; }
-      for (let k = 0; k < 6; k++) { const s = K.w * (1 - k * 0.14); K.box(K.w / 2, k * 3.4, K.d / 2, s, 3.4, s, k % 2 ? P.wr : P.wl); }
-      K.box(K.w / 2, 20.4, K.d / 2, K.w * 0.18, 4, K.d * 0.18, P.acc || '#f2c14e');
+      if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 10); return; }
+      formInto(g, gw, K, G.Forma.of('maravilha', styleOf(K.b)), doorSide(K.b));
     },
     palacio(g, gw, K) {
       const P = K.P; if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 8); return; }
@@ -1962,6 +2237,8 @@ float m3scale(float p) {
         if (rk !== 'flat' && sh.roof && sh.roof.h > 0) { const az = sh.roof.along === 'z'; const rc = rk === 'thatch' ? ((P.thatch && P.thatch[0]) || '#c8a85a') : rk === 'turf' ? mixc(calm((P.roof && P.roof[0]) || '#71903f', 0.66, 0.86), [114, 108, 70], hvOf(b, 3) * 0.42) : (P.roof && P.roof[0]) || '#b85a3c';
           g.pat = PAT[rk === 'turf' ? 'turf' : rk === 'thatch' ? 'thatch' : st.tile]; g.put(SH.gable, R3.mat(X, y0 + sh.eave, Z, az ? Math.PI / 2 : 0, (az ? R[3] - R[1] : R[2] - R[0]) + 0.84, sh.roof.h, (az ? R[2] - R[0] : R[3] - R[1]) + 0.84), rc); }
         g.pat = 0; continue; }
+      // (a building with a form: its masses, as the form has them — the drum, the pyramid, the levels, the roof)
+      const Fm = b.built && formOf(b); if (Fm) { massInto(g, b, Fm, doorSide(b)); continue; }
       const h = (HEIGHT[b.type] || 5) * (b.built ? 1 : 0.4); if (h < 1.5) continue;
       const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L, Y = W.maxH(b.x, b.y, b.w, b.h) * HM();
       const st = stuff(b); const flat = P.kind === 'flat';
@@ -3168,7 +3445,10 @@ float m3scale(float p) {
       const tag = `${b.type}#${b.id}`;
       if (bad) out.push(`${tag}: ${bad} números que não são números`);
       const over = Math.max(b.x * L - x0, x1 - (b.x + b.w) * L, b.y * L - z0, z1 - (b.y + b.h) * L);
-      if (b.type !== 'doca' && P.length && over > 1.6) out.push(`${tag}: ${over.toFixed(2)} m fora do lote`);
+      // (a building drawn from its form keeps to its lot as the god's picture does: 0.3 m at most — a dragon's head, an eave;
+      // the others, the old 1.6 m — L-261: the Great Pyramid's cone went 2 m out of its lot unseen)
+      const outLim = b.built && formOf(b) ? 0.3 : 1.6;
+      if (b.type !== 'doca' && P.length && over > outLim) out.push(`${tag}: ${over.toFixed(2)} m fora do lote`);
       if (P.length && lo < K.lo - 1.2 && b.type !== 'doca') out.push(`${tag}: enterrado ${(K.lo - lo).toFixed(2)} m`); // (a quay's posts go down into the sea)
       if (P.length && lo > K.hi + 0.35) out.push(`${tag}: flutua ${(lo - K.hi).toFixed(2)} m`);
       if (K.y0 < K.lo - 0.05) out.push(`${tag}: piso abaixo do chão`);
@@ -3196,7 +3476,7 @@ float m3scale(float p) {
   // reaches, once drawn; the type's height before that
   B3.heightAt = function (i) {
     const S = G.S; const b = S.occ[i] && S.buildings.get(S.occ[i]);
-    if (b && b.blocks) { const t = B3.tops.get(b.id); return t === undefined ? HEIGHT[b.type] || 5 : Math.max(1, t - W.maxH(i % N, (i / N) | 0, 1, 1) * HM()); }
+    if (b && b.blocks) { const t = B3.tops.get(b.id); return t === undefined ? heightOf(b) : Math.max(1, t - W.maxH(i % N, (i / N) | 0, 1, 1) * HM()); }
     const w = S.wall[i]; return w === 1 || w === 2 || w === 4 ? 6 : 0;
   };
   // is a point (metres) in the stones of a wall or a gate, give or take m? (no wall here: false)
