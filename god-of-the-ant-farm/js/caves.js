@@ -477,10 +477,13 @@
   // ------------------------------ the people's errands below ------------------------------
   // kind: explore · paint · guano · pilgrim · oracle · tomb · refuge · mine · raid (against outlaws)
   const ACT = { explore: '', paint: 'craft', guano: 'dig', pilgrim: 'pray', oracle: 'pray', tomb: 'mourn', refuge: 'sittalk', mine: 'mine', raid: 'fight', treasure: 'dig' };
+  // (o.force: given over what one does — but an errand from outside asks first the hands' rule, D-094: the leg of an operation
+  // under way, a load with somewhere to go, a task of more priority wait; the miner's shift is his own trade (o.job), and the
+  // flight from an attack cannot wait (o.urge))
   C.give = function (v, kind, cv, goal, o) {
     const m = nearestMouth(cv, v.x, v.y); if (!m) return false;
     const t = Object.assign({ type: 'caverna', kind, cave: cv.id, goal, pri: 1.3, st: 0, stay: rr(8, 14), torch: 1, mouth: m }, o || {});
-    if (o && o.force) { G.Vg.setTask(v, t); return true; }
+    if (o && o.force) { if (!o.job && !o.urge && G.Vg.busy && G.Vg.busy(v, t)) return false; G.Vg.setTask(v, t); return true; }
     return G.Vg.give(v, t);
   };
   C.run = function (v, t, dt, H) {
@@ -1195,7 +1198,7 @@
         if (!(v.age >= 3 && v.age < 14) && v.age < 60 && !mothers.has(v.id)) continue;
         if (v.task && v.task.type === 'caverna') continue;
         const h = deepHall(cv); const c = spotIn(cv, h); if (c < 0) continue;
-        if (C.give(v, 'refuge', cv, c, { pri: 2.7, stay: 1e9, force: !v.task || v.task.pri < 2.7 ? 1 : 0 })) n++;
+        if (C.give(v, 'refuge', cv, c, { pri: 2.7, stay: 1e9, force: !v.task || v.task.pri < 2.7 ? 1 : 0, urge: 1 })) n++;
       }
       if (n >= 2 && !(S.day - (set._refugeDay || -9) < 3)) { set._refugeDay = S.day; log(`Enquanto ${set.name} era atacada, ${n} crianças, velhos e mães com bebês fugiram para se esconder ${C.na(cv)}.`, 'cave', set.cx, set.cy); }
     }
