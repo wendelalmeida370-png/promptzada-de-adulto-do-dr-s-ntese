@@ -536,9 +536,14 @@ if (want('l15')) {
   if (!F) notes.push('(e) nenhum bebê na rua só com estranhos por perto');
   else {
     const m = S.villagers.get(F.mother); const role = m.role; m.role = 'guerreiro';
-    track(F.id, 1.5); const b = S.villagers.get(F.id); m.role = role; const o = S.villagers.get(b.carrier);
-    if (b.carrier !== m.id && !(o && (o.home === b.home || o.id === b.father))) fail(`(e) a guerreira entre lutas deu o bebê a ${who(b.carrier)}, que não é da casa`);
-    notes.push(`(e) a mãe ${m.name}, guerreira entre lutas, só estranhos por perto: o bebê com ${who(b.carrier)}`);
+    // (between fights: a fight, a drill or a watch given to her meanwhile is a letting go of its own — the case does not count)
+    let called = ''; live(1.5, () => { if (!called && m.task && ROUGHT[m.task.type]) called = m.task.type; });
+    const b = S.villagers.get(F.id); m.role = role; const o = S.villagers.get(b.carrier);
+    if (called) notes.push(`(e) a guerreira ${m.name} foi chamada (${called}) no meio — o caso não vale`);
+    else {
+      if (b.carrier !== m.id && !(o && (o.home === b.home || o.id === b.father))) fail(`(e) a guerreira entre lutas deu o bebê a ${who(b.carrier)}, que não é da casa`);
+      notes.push(`(e) a mãe ${m.name}, guerreira entre lutas, só estranhos por perto: o bebê com ${who(b.carrier)}`);
+    }
   }
   // (f) the body's hands, by the offers of the house: in the evening at home, one of the house lived by the player takes the
   // baby from the mother's arms (G.Vg.handBaby), keeps it while the mother is near, and gives it back to her
