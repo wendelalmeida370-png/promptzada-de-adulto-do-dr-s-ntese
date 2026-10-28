@@ -15,6 +15,8 @@
 //  l7  o corpo encarnado em casa (o adendo 4.1): come à mesa o que a despensa tem e cozinha a ceia da casa, pelas mesmas
 //      portas e no livro; dorme em casa; devolvido, segue a vida dele — em casa pelo motivo dele, ou pela porta
 //  l12 o ferido fica de cama em casa e sara mais depressa; quem perde o companheiro passa as primeiras horas de luto em casa
+//  l13 a continuidade da casa (o pedido 8.4): o corpo longe, perto, dentro (come e cozinha), fora, o tempo, de volta, o save —
+//      a família igual ao ser olhada e ao ver o corpo entrar, a despensa só pelo livro, o corpo deitado em casa no save
 //  l11 a reza dentro do templo (L-224): os fiéis entram pela porta até os lugares da planta, os outros nas fileiras de fora;
 //      um save no meio; todos terminam e saem
 //  l10 uma festa atravessa o save (L-222) e o banquete sai pelo livro-razão (L-223)
@@ -336,6 +338,70 @@ if (want('l12')) {
     const rate = inBed >= 0 ? r2(((healed >= 0 ? 60 : w.hp) - hpBed) / Math.max(0.1, (healed >= 0 ? healed : S.clock) - inBed)) : 0;
     ok('l12 o ferido e o enlutado', inBed >= 0 && healed >= 0 && rate > 0.5 && grief > 5 && code === 'luto' && !dw.wrong.length,
       `${nm(w)} com ${hp0} de vida: ${inBed >= 0 ? `de cama em casa («${txt}»), sarando ${rate} por segundo (de pé: 0,3), ${healed >= 0 ? `levantou com ${Math.round(w.hp)}` : 'AINDA DE CAMA'}` : 'NÃO FOI PARA A CAMA'}; ${dead.name} morreu: ${p0.name} ${grief > 5 ? `de luto em casa ${r2(grief)} s («${griefTxt}», no cartão: ${code})` : 'NÃO FICOU DE LUTO EM CASA'}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}`);
+  }
+}
+
+// ======================= l13: the continuity of a house (the request's 8.4): far, near, in, out, time, back, save =======================
+if (want('l13')) {
+  open(); set = town(); S.time = 0.6; liveTo(0.7);
+  const TL = G.Space.TILE;
+  // (the body: a grown one of a house of four or more whose plan is made, out of it now — at the day's end, coming home)
+  let v = null, h = null;
+  for (const o of people(set)) {
+    if (o.age < 18 || o.age >= 60 || o.sleeping || isBody(o) || o.secret || o.inside === o.home || !G.Possess.can(o).ok) continue;
+    const b = builtHome(o); if ([...S.villagers.values()].filter(q => q.home === b.id).length < 4 || !G.Space.planNow(b) || !G.Interiors.slots(b, 'deitar').length) continue;
+    v = o; h = b; break;
+  }
+  if (!v) ok('l13 a casa contínua', false, 'nenhum adulto fora de uma casa de quatro com planta e cama');
+  else {
+    const ref = 'h:' + h.id; const famIds = [...S.villagers.values()].filter(o => o.home === h.id && o.id !== v.id).map(o => o.id);
+    const fam = () => famIds.map(id => S.villagers.get(id)).filter(Boolean);
+    // (where each of the family is and whether asleep — what a look, a body coming in or a save must not change; the errands
+    // change by themselves from one step to the next)
+    const famOf = () => fam().map(o => `${o.id}/${o.inside || 0}/${o.sleeping ? 1 : 0}`).join(' ');
+    // (the house's pantry by the ledger alone, the whole case: what it had + what the ledger moved in and out)
+    let pan = D.get(ref, 'food'), led = 0; const onMv = e => { if (e[5] === 'food') { if (e[3] === ref) led -= e[6]; if (e[4] === ref) led += e[6]; } }; D.onMove.push(onMv);
+    const panOK = () => Math.abs(D.get(ref, 'food') - (pan + led)) < 0.01;
+    const dw = doorWatch(); const notes = []; let fine = true;
+    const say = (tag, c, txt) => { notes.push(`${tag}: ${c ? '' : 'NÃO — '}${txt}`); if (!c) fine = false; };
+    // (1) far: the body taken at its work, the house lives
+    const took = G.Possess.take(v); const d0 = G.Vg.door(h);
+    const away = () => { const a = G.R() * 6.28; for (let r = 18; r >= 6; r -= 2) { const x = d0[0] + Math.cos(a) * r, y = d0[1] + Math.sin(a) * r; if (W.inb(x, y) && W.walkableXY(x, y)) return [x, y]; } return [v.x, v.y]; };
+    const put = p => { v.inside = 0; v.x = p[0]; v.y = p[1]; v.path = null; v.moving = false; G.Possess.setLevel(null); };
+    put(away()); live(15, () => { dw.step(); });
+    say('longe', took.ok && panOK(), `${nm(v)} encarnado longe de casa; a família: ${fam().map(o => L.why(o).code).join(', ')}`);
+    // (2) near: at the door, looking — nothing of the house changes for being looked at
+    const f1 = famOf(); put([d0[0], d0[1]]); const f2 = famOf(); live(0.1, () => { dw.step(); });
+    say('perto', f1 === f2 && panOK(), f1 === f2 ? 'a família igual ao chegar à porta' : `a família mudou: ${f1} → ${f2}`);
+    // (3) in: the body walks in (the 3D's controller; the test's hand here), eats at the table and cooks, by the ledger
+    const stand = uses => { for (const u of uses) for (const q of G.Interiors.slots(h, u)) { const x = h.x * TL + q.spot.x, z = h.y * TL + q.spot.z; for (let r = 0; r <= 1.2; r += 0.25) for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; const ins = G.Space.indoor(x + Math.cos(a) * r, z + Math.sin(a) * r, q.item.lv, h.id); if (ins && ins.b === h && ins.shell && ins.walk) return [(x + Math.cos(a) * r) / TL, (z + Math.sin(a) * r) / TL, ins.lv]; if (!r) break; } } return null; };
+    const table = stand(['comer', 'sentar', 'aquecer']), fire = stand(['cozinhar', 'assar', 'aquecer']);
+    D.make(ref, 'food', 3, { code: 'teste', part: true, floor: true }); v.hunger = 50;
+    const inside = p => { v.inside = h.id; v.x = p[0]; v.y = p[1]; G.Possess.setLevel(p[2]); };
+    const f3 = famOf(); if (table) inside(table); G.debug.step(0.1); dw.step(); const f4 = famOf(); live(0.2, () => { dw.step(); });
+    const doIt = id => { const o = G.Act.offers(v, v.x, v.y).find(q => q.id === id); if (!o) return { ok: false, why: 'sem a oferta' }; const it = G.Possess.apply(() => G.Act.perform(v, o)); live(0.3, () => { dw.step(); }); return it.res || { ok: false }; };
+    const ra = doIt('lar.comer:' + h.id); if (fire) inside(fire); live(0.2); const rc = doIt('lar.cozinhar:' + h.id);
+    // (what changed in the family in the step the body came in, and was not their own errand going on — one coming home to
+    // bed or to the evening by the door, one falling asleep in bed)
+    const own = (e, f) => { const [id, i0, s0] = e.split('/').map(Number), [, i1, s1] = f.split('/').map(Number); const o = S.villagers.get(id); const t = o && o.task; if (!t) return false; if (!i0 && i1 === h.id && (t.type === 'sleep' || t.type === 'lar' || t.type === 'shelter')) return s0 === s1 || t.type === 'sleep'; if (i0 === i1 && !s0 && s1 && t.type === 'sleep') return true; return false; };
+    const diff = (x, y) => { const A = x.split(' '), B = y.split(' '); return A.map((e, k) => e !== B[k] && !own(e, B[k]) ? `${e}→${B[k]} (${(S.villagers.get(+e.split('/')[0]) || {}).task ? S.villagers.get(+e.split('/')[0]).task.type : '-'})` : null).filter(Boolean).join(', '); };
+    const dIn = diff(f3, f4);
+    say('dentro', !!table && !!fire && !dIn && !!ra.ok && !!rc.ok && panOK(), `${!dIn ? 'a família igual ao entrar (fora o que é da vida dela)' : 'a família MUDOU ao entrar: ' + dIn}; comeu ${ra.ok ? 'sim' : 'NÃO (' + ra.why + ')'}; cozinhou ${rc.ok ? 'sim' : 'NÃO (' + rc.why + ')'}; a despensa pelo livro ${panOK() ? 'sim' : 'NÃO'}`);
+    // (4) out and away; (5) the time goes by — the night falls, the house goes to bed; (6) back, at the door
+    put([d0[0], d0[1]]); live(0.1, () => { dw.step(); }); put(away());
+    liveTo(0.84, () => { dw.step(); });
+    put([d0[0], d0[1]]); live(0.2, () => { dw.step(); });
+    const asleep = fam().filter(o => o.inside === h.id && o.sleeping).length, home = fam().filter(o => o.inside === h.id).length;
+    say('de volta', home >= 1 && panOK(), `às ${fmtT(S.time)}: ${home} da família em casa, ${asleep} dormindo; os de fora: ${fam().filter(o => o.inside !== h.id).map(o => L.why(o).code).join(', ') || 'ninguém'}`);
+    // (7) in to bed, and a save: the house as it was, the body in its bed
+    if (table) inside(table); v.energy = Math.min(v.energy, 60); G.Possess.sleep(v); live(0.5, () => { dw.step(); });
+    const f5 = famOf(); const bed0 = v.sleeping && v.inside === h.id;
+    M.salvarCarregar(); S = G.S; v = S.villagers.get(v.id); h = S.buildings.get(h.id); G.debug.step(0.1); // (a step: the babies back in the arms that hold them, babyUpdate)
+    const f6 = famOf(); const bed1 = v && v.sleeping && v.inside === h.id && isBody(v);
+    say('save', bed0 && f5 === f6 && bed1, `${f5 === f6 ? 'a família igual depois do save' : `a família mudou no save: ${f5} → ${f6}`}; o corpo ${bed0 ? 'deitado em casa' : 'NÃO deitado'} antes, ${bed1 ? 'deitado em casa' : 'NÃO deitado em casa'} depois (possess.js)`);
+    D.onMove.splice(D.onMove.indexOf(onMv), 1);
+    if (S.avatar) G.Possess.release('deus');
+    ok('l13 a casa contínua', fine && !dw.wrong.length, notes.join(' · ') + (dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''));
   }
 }
 
