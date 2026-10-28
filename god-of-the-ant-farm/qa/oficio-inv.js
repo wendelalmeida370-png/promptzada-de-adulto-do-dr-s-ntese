@@ -1,7 +1,7 @@
 // oficio-inv: the checker's rules for the trades (P2) — the batches of a workshop (G.Oficio: the pottery's bricks, adobes and
-// pots), the brick of the works (D-075). Loaded after qa/qa.js (QA.more); copied into qa.js by qa/junta-inv.js. It reads the
-// world's fields directly: a fault in the trades' own code is not hidden by the code it checks. The rule has its name
-// (QA.oficio): a proof asks for the one it watches by it, not by its place in QA.more
+// pots), the brick of the works (D-075) — and the busy hands (D-094). Loaded after qa/qa.js (QA.more); copied into qa.js by
+// qa/junta-inv.js. It reads the world's fields directly: a fault in the trades' own code is not hidden by the code it checks.
+// Each rule has its name (QA.oficio, QA.maos): a proof asks for the one it watches by it, not by its place in QA.more
 (function () {
   if (!window.QA || !QA.more) return;
   const fin = x => typeof x === 'number' && isFinite(x);
@@ -190,4 +190,19 @@
     }
   });
   if (G.worldHooks) G.worldHooks.push(() => sites.clear());
+  // ---- the hands busy (D-094): nobody is at a call of the square — an assembly, a funeral, a celebration, a petition, below
+  // 3; an execution, its executioner and herald too, and a feast of the town, whatever their rank (their 5, 4,5 and 3,2 are to
+  // keep their people, not to take them) — with busy hands: a load that has somewhere to go (a purchase on its way home, an operation's crate) or the leg of an operation under
+  // way (G.Act.leg: the crate kept for one until it is delivered, the material of a work on its way to it, a sale at the
+  // counter). The calls ask first (Vg.busy, Vg.handsBusy) and wait for the hands. The body the player lives is the player's
+  // (Vg.handsBusy leaves it out)
+  const CALL = { justice: 1, assembly: 1, funeral: 1, celebrate: 1, petition: 1 };
+  QA.more.push(QA.maos = function (add, s) {
+    if (!G.Vg || !G.Vg.handsBusy) return;
+    for (const v of s.villagers.values()) {
+      const t = v.task; if (!t || !(CALL[t.type] && (t.pri || 0) < 3 || t.type === 'justice' || t.type === 'fest') || !G.Vg.handsBusy(v)) continue;
+      const l = (G.Act && G.Act.leg && G.Act.leg(v)) || 'uma carga com destino';
+      add('act', 2, `${v.name} #${v.id}: chamado para ${t.type} (${t.pri}) com as mãos ocupadas (${l})`);
+    }
+  });
 })();

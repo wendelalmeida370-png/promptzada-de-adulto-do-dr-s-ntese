@@ -152,10 +152,13 @@
 
   // ------------------------------ the people in it ------------------------------
   const busy = v => !v || v.captive && !(v.task && v.task.j) || v.held || v.aboard || v.inside;
+  // (the executioner and the herald: their 5 and 4,5 are to keep them at the scaffold, not to take one from a leg under way —
+  // a purchase on its way home, a crate kept for one —: another is chosen, as the feast does, D-094)
+  const handsBusy = v => !!(G.Vg.handsBusy && G.Vg.handsBusy(v));
   function pickExecutioner(f, set, e) {
     const S = G.S; let best = null, bs = -1e9;
     for (const v of S.villagers.values()) {
-      if (v.set !== set.id || v.captive || v.age < 20 || v.age > 60 || e.ids.includes(v.id) || v.id === f.leader || (v.task && v.task.pri >= 3)) continue;
+      if (v.set !== set.id || v.captive || v.age < 20 || v.age > 60 || e.ids.includes(v.id) || v.id === f.leader || (v.task && v.task.pri >= 3) || handsBusy(v)) continue;
       const priest = e.method === 'sacrificio';
       const s = (priest ? (v.role === 'sacerdote' ? 10 : 0) : (v.role === 'guerreiro' ? 6 : 0)) + (P.persona(v).cru * 6) + v.courage * 2 - G.dist(v.x, v.y, e.x, e.y) * 0.05;
       if (s > bs) { bs = s; best = v; }
@@ -163,13 +166,14 @@
     return best;
   }
   function pickHerald(f, set, e) {
-    const r = P.ruler(f); if (r && r.set === set.id && !busy(r) && !r.sleeping && G.dist(r.x, r.y, e.x, e.y) < 30 && !(r.task && r.task.pri >= 3)) return r;
+    const r = P.ruler(f); if (r && r.set === set.id && !busy(r) && !r.sleeping && G.dist(r.x, r.y, e.x, e.y) < 30 && !(r.task && r.task.pri >= 3) && !handsBusy(r)) return r;
     let best = null, bs = -1e9;
-    for (const v of G.S.villagers.values()) { if (v.set !== set.id || v.captive || v.age < 18 || e.ids.includes(v.id) || v.id === e.exe || (v.task && v.task.pri >= 3)) continue; const s = (v.role === 'escriba' ? 6 : v.role === 'sacerdote' ? 3 : 0) + (v.age > 40 ? 1 : 0) - G.dist(v.x, v.y, e.x, e.y) * 0.05; if (s > bs) { bs = s; best = v; } }
+    for (const v of G.S.villagers.values()) { if (v.set !== set.id || v.captive || v.age < 18 || e.ids.includes(v.id) || v.id === e.exe || (v.task && v.task.pri >= 3) || handsBusy(v)) continue; const s = (v.role === 'escriba' ? 6 : v.role === 'sacerdote' ? 3 : 0) + (v.age > 40 ? 1 : 0) - G.dist(v.x, v.y, e.x, e.y) * 0.05; if (s > bs) { bs = s; best = v; } }
     return best;
   }
   // the town comes to see: called by the herald, and more trickle in until the first death
   // (workers leave their benches for it; only the sleeping, the sick abed and the children in arms stay away)
+  const CALL = { type: 'justice', pri: 1.95 }, GUARD = { type: 'justice', pri: 2.4 }; // (what the call asks the hands, Vg.busy)
   function gather(f, set, e) {
     const S = G.S; let n = 0, have = 0;
     for (const o of S.villagers.values()) if (o.task && o.task.j === e.id && o.task.role === 'watch') have++;
@@ -178,6 +182,9 @@
       if (have + n >= cap) break;
       if (o.set !== set.id || o.age < 6 || o.captive || o.sleeping || o.air || o.held || o.aboard || o.ug || e.ids.includes(o.id) || o.id === e.exe || o.id === e.her || G.dist(o.x, o.y, e.x, e.y) > 40) continue;
       if (o.task && (o.task.j === e.id || o.task.pri >= 1.95)) continue;
+      // (the hands busy — a purchase on its way home, a crate kept for one, a sale at the counter — the call waits: one is
+      // called again while the town still gathers, D-094)
+      if (G.Vg.busy(o, CALL)) continue;
       const at = standSpot(e, o.id, have + n); if (!at) continue;
       G.Vg.setTask(o, { type: 'justice', role: 'watch', j: e.id, x: at[0], y: at[1], pri: 1.95, st: 0, kind: 'justice' }); n++;
     }
@@ -185,7 +192,7 @@
     if (e.guards) return;
     // guards at the corners
     let gN = 0;
-    for (const o of S.villagers.values()) { if (gN >= 2) break; if (o.set !== set.id || o.role !== 'guerreiro' || o.captive || o.sleeping || o.id === e.exe || (o.task && o.task.pri >= 3)) continue; G.Vg.setTask(o, { type: 'justice', role: 'guard', j: e.id, x: e.x + (gN ? 1.6 : -1.6), y: e.y + 0.9, pri: 2.4, st: 0, kind: 'justice' }); gN++; }
+    for (const o of S.villagers.values()) { if (gN >= 2) break; if (o.set !== set.id || o.role !== 'guerreiro' || o.captive || o.sleeping || o.id === e.exe || (o.task && o.task.pri >= 3) || G.Vg.busy(o, GUARD)) continue; G.Vg.setTask(o, { type: 'justice', role: 'guard', j: e.id, x: e.x + (gN ? 1.6 : -1.6), y: e.y + 0.9, pri: 2.4, st: 0, kind: 'justice' }); gN++; }
     e.guards = 1;
   }
   // where a spectator stands: in a ring round the scaffold (at the foot of the stairs, for the

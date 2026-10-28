@@ -478,7 +478,7 @@
 
   // ============================== operations ==============================
   // (the modules of the activities hang their parts here: a body taken or given back, the diary, the canon, the checker)
-  A.hooks = { possess: [], diary: [], canon: [], tick: [], gone: [] }; // (tick: once a second of the world; gone: (v, why) when one leaves for good or is taken)
+  A.hooks = { possess: [], diary: [], canon: [], tick: [], gone: [], leg: [] }; // (tick: once a second of the world; gone: (v, why) when one leaves for good or is taken; leg: (v) → the leg one holds outside an operation of here, or null)
   const ops = () => G.S.acts || (G.S.acts = []);
   const LIVE = { plan: 1, rsv: 1, on: 1, wait: 1 };
   const live = op => !!(op && LIVE[op.st]);
@@ -553,6 +553,20 @@
     return { op, role: op.roles[v.id || v].r, me: op.roles[v.id || v] };
   };
   A.role = v => { const r = A.roleOf(v); return r ? { op: r.op.id, def: r.op.def, role: r.role, step: v.task && v.task.op === r.op.id ? v.task.st : null } : null; };
+  // the leg of an operation under way that this person holds now — the crate kept for one until it is delivered, the
+  // material fetched for a work until it is there, a sale at the counter —, or null: what makes the hands busy for an errand
+  // from outside (Vg.busy, D-094). The operation's own definition says it (def.leg(op, v) → a word, or null), read from the
+  // operation, not from the task (a body given back holds what it took); a leg that is no operation of here — a sale at a
+  // stall, a work's load — says it by its hook. Read from the world at the moment: nothing kept
+  A.leg = function (v) {
+    if (!v) return null;
+    const r = A.roleOf(v); if (r) { const def = A.DEFS[r.op.def]; const l = def && def.leg ? def.leg(r.op, v) : null; if (l) return l; }
+    for (const f of A.hooks.leg) { const l = f(v); if (l) return l; }
+    return null;
+  };
+  // (the material fetched for a work — the builder's walk to the store and back with it to the site, villagers.js runBuild st
+  // 1 and 2 — is a leg until it is there; the work of days at the site is not)
+  A.hooks.leg.push(v => { const t = v.task; return t && t.type === 'build' && (t.st === 1 || t.st === 2) ? 'obra' : null; });
   A.of = v => ops().filter(op => op.roles && op.roles[v.id || v]);
   // who can still work: alive, free, not a captive, not jailed, not at sea, not in a cave
   A.able = function (v) { return !!(v && G.S.villagers.has(v.id) && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && v.age >= 12 && v.hp > 15); };

@@ -415,7 +415,9 @@
   const CONCEDE = { pao: 'pao', paz: 'paz', soldo: 'soldo', impostos: 'impostosMenos', templo: 'templo' };
   function petition(f, k) {
     const S = G.S; const q = f.grp[k]; const r = P.ruler(f);
-    const lead = q.lead && S.villagers.get(q.lead); if (!lead || !r || lead.captive || lead.held || lead.task && lead.task.pri >= 3) return false;
+    // (a lead with busy hands — a crate kept for him, a purchase on its way home, a sale at the counter — leads it a little
+    // later: the petition waits, D-094)
+    const lead = q.lead && S.villagers.get(q.lead); if (!lead || !r || lead.captive || lead.held || lead.task && lead.task.pri >= 3 || G.Vg.busy(lead, { type: 'petition', pri: 2.3 })) return false;
     const cap = G.Fac.capitalOf(f.id); if (!cap) return false;
     const at = Po.seat(f) || [cap.cx, cap.cy];
     const id = (f.petN = (f.petN || 0) + 1);

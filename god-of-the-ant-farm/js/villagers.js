@@ -153,9 +153,28 @@
   Vg.give = function (v, t) {
     // (the body the player lives: a request is a call it may answer; a force of the world goes through setTask and takes it)
     if (G.S.avatar && G.S.avatar.id === v.id && G.Possess) { if (!G.Possess.FORCE[t.type]) { G.Possess.ask(v, t); return false; } setTask(v, t); return true; }
-    if (v.task && v.task.pri >= (t.pri || 0) + 0.01 && v.task.pri >= 2) return false; if (v.sleeping || v.inside || v.air || v.held || v.age < 3) return false;
-    if (busyHands(v, t)) return false;
+    if (v.sleeping || v.inside || v.air || v.held || v.age < 3) return false;
+    if (Vg.busy(v, t)) return false;
     setTask(v, t); return true; };
+  // (the hands busy, D-094: an errand from outside — Vg.give, and the calls of the square other modules give by setTask, who
+  // ask this first — takes one only from a task of less priority than its own, never from a load that has somewhere to go,
+  // nor from the leg of an operation under way (G.Act.leg: the crate kept for one until it is delivered, the material
+  // fetched for a work until it is there, a sale at the counter — not the work of days, not the day at the stall); what
+  // cannot wait — 3 or more: fire, panic, war, a dragon — passes, and an operation's own next step for one of its people.
+  // The body the player lives is never asked: what the world sends it is a call (Vg.give, above). A funeral (1,1) took a
+  // docker on his way to the crate kept for him (1,1), a cave (1,25) another, an execution (1,95) one with a purchase in his
+  // hands on his way home)
+  Vg.busy = function (v, t) {
+    const p = t.pri || 0; if (p >= 3 || (G.S.avatar && G.S.avatar.id === v.id)) return false;
+    const own = !!(t.op && v.task && v.task.op === t.op);
+    if (v.task && !own && (v.task.pri || 0) >= p) return true;
+    if (busyHands(v, t)) return true;
+    return !own && !!(G.Act && G.Act.leg && G.Act.leg(v));
+  };
+  // (the hands alone: a load that has somewhere to go, or a leg under way — for a call above 3 that still waits for them, the
+  // feast's)
+  const HANDS = { type: '', pri: 0 };
+  Vg.handsBusy = v => !(G.S.avatar && G.S.avatar.id === v.id) && (busyHands(v, HANDS) || !!(G.Act && G.Act.leg && G.Act.leg(v)));
   // (hands busy with a load that has somewhere to go — an operation's crate, a purchase on its way home, goods for a stall:
   // an errand from outside waits until it is there, unless it is about that load or cannot wait; an errand that takes the
   // hands — a cave, a whale, a theft — would put its own things in them over it, and the load would be gone unwritten)
