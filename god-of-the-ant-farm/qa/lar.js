@@ -18,7 +18,8 @@
 //  l14 de dia, um dos velhos da casa cuida dos pequenos (3 a 6 anos) em casa, e os pequenos ficam com ele, sem entrar e sair sem parar
 //  l15 o bebê muda de colo onde está (D-074): em casa à noite, a mãe em fúria o passa ao pai ou a alguém da casa, ali; um
 //      save no meio; na rua, a quem está perto (sem pulo); sem ninguém perto, à mãe, ao pai ou a uma mulher da vila, onde
-//      estiverem (como antes); nunca ao corpo do jogador; a guerreira entre lutas só o dá a alguém da casa
+//      estiverem (como antes); nunca ao corpo do jogador; a guerreira entre lutas só o dá a alguém da casa; e o corpo, pelas
+//      ofertas da casa, pega o bebê no colo, fica com ele e o devolve à mãe
 //  l13 a continuidade da casa (o pedido 8.4): o corpo longe, perto, dentro (come e cozinha), fora, o tempo, de volta, o save —
 //      a família igual ao ser olhada e ao ver o corpo entrar, a despensa só pelo livro, o corpo deitado em casa no save
 //  l11 a reza dentro do templo (L-224): os fiéis entram pela porta até os lugares da planta, os outros nas fileiras de fora;
@@ -538,6 +539,27 @@ if (want('l15')) {
     track(F.id, 1.5); const b = S.villagers.get(F.id); m.role = role; const o = S.villagers.get(b.carrier);
     if (b.carrier !== m.id && !(o && (o.home === b.home || o.id === b.father))) fail(`(e) a guerreira entre lutas deu o bebê a ${who(b.carrier)}, que não é da casa`);
     notes.push(`(e) a mãe ${m.name}, guerreira entre lutas, só estranhos por perto: o bebê com ${who(b.carrier)}`);
+  }
+  // (f) the body's hands, by the offers of the house: in the evening at home, one of the house lived by the player takes the
+  // baby from the mother's arms (G.Vg.handBaby), keeps it while the mother is near, and gives it back to her
+  open(); liveTo(0.66);
+  const Fb = babies().find(b => { const m = S.villagers.get(b.mother); const h = m && builtHome(m); return !!h && m.inside === h.id && b.inside === h.id && !m.sleeping && [...S.villagers.values()].some(o => o.id !== m.id && o.home === h.id && o.inside === h.id && !o.sleeping && fit(o)); });
+  if (!Fb) notes.push('(f) nenhuma casa ao anoitecer com a mãe, o bebê e outro da casa acordados dentro');
+  else {
+    const m = S.villagers.get(Fb.mother), h = builtHome(m);
+    const w = [...S.villagers.values()].filter(o => o.id !== m.id && o.home === h.id && o.inside === h.id && !o.sleeping && fit(o)).sort((a, c) => a.id - c.id)[0];
+    if (!G.Possess.take(w) || !isBody(w)) notes.push(`(f) o corpo não pegou ${w.name}`);
+    else {
+      const doIt = id => { const o = G.Act.offers(w, w.x, w.y).find(q => q.id === id); if (!o) return { ok: false, why: 'sem a oferta «' + id + '»' }; const it = G.Possess.apply(() => G.Act.perform(w, o)); live(0.3); return it.res || { ok: false, why: 'o mundo não fez' }; };
+      const r1 = doIt('lar.pegarBebe:' + Fb.id); const b1 = S.villagers.get(Fb.id);
+      if (!r1.ok || b1.carrier !== w.id) fail(`(f) pegar o bebê: ${r1.why || 'o bebê não veio para o colo do corpo'}`);
+      live(1.5); const b2 = S.villagers.get(Fb.id);
+      if (r1.ok && b2.carrier !== w.id) fail(`(f) o mundo tirou o bebê do colo do corpo (está com ${who(b2.carrier)})`);
+      const r2 = doIt('lar.darBebe:' + Fb.id + ':' + m.id); const b3 = S.villagers.get(Fb.id);
+      if (r1.ok && (!r2.ok || b3.carrier !== m.id)) fail(`(f) dar o bebê à mãe: ${r2.why || 'o bebê ficou com ' + who(b3.carrier)}`);
+      notes.push(`(f) ${w.name}, vivido pelo jogador, em casa: «${r1.msg || r1.why}» (1,5 s depois, ainda no colo dele: ${b2.carrier === w.id ? 'sim' : 'NÃO'}); «${r2.msg || r2.why}»`);
+      G.Possess.release('deus');
+    }
   }
   ok('l15 o bebê muda de colo onde está (D-074)', good, notes.join(' · '));
 }

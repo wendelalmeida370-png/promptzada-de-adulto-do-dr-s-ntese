@@ -1665,6 +1665,11 @@
     }
     return best;
   }
+  // (the god's body takes a baby of its house within reach, or gives one it holds to arms within reach — the offers of the
+  // house, act-lar.js; the only hands on a baby's arms besides babyUpdate's)
+  Vg.canHold = c => !!c && c.age >= 14 && !unfitCarrier(c);
+  Vg.babyReach = (b, o) => !!b && !!o && b.age < 2 && nearBaby(b, o);
+  Vg.handBaby = function (b, c) { if (!b || b.age >= 2 || !Vg.canHold(c) || c.set !== b.set || !nearBaby(b, c)) return false; b.carrier = c.id; b.seekT = 0; return true; };
   function babyUpdate(v, dt) {
     const S = G.S;
     v.task = null;

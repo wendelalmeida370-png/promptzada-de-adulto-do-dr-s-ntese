@@ -431,14 +431,31 @@
     return null;
   }
   const atHome = v => { const h = homeOf(v); return h && v.inside === h.id ? h : null; };
+  // (a baby of the body's house — or its own child — within reach of it, and the arms of the house within reach of the baby)
+  const ofHouse = (v, b) => b.mother === v.id || b.father === v.id || (!!v.home && b.home === v.home);
+  const freeHands = v => !(v.carry && v.carry.n > 1e-6);
+  function babyOffers(v, out) {
+    const S = G.S; const Vg = G.Vg; if (!Vg.babyReach || !Vg.handBaby) return;
+    for (const b of S.villagers.values()) {
+      if (b.age >= 2 || b.captive || !ofHouse(v, b) || !Vg.babyReach(b, v)) continue;
+      if (b.carrier !== v.id) { out.push({ id: 'lar.pegarBebe:' + b.id, act: 'pegarBebe', baby: b.id, label: `Pegar ${b.name} no colo`, at: [b.x, b.y], anim: 'levantar', hands: 2, ok: Vg.canHold(v) && freeHands(v), why: !freeHands(v) ? 'Suas mãos estão ocupadas.' : 'Agora você não pode segurar um bebê.' }); continue; }
+      let n = 0;
+      for (const o of S.villagers.values()) {
+        if (n >= 3 || o.id === v.id || o.age < 14 || !(o.id === b.mother || o.id === b.father || (b.home && o.home === b.home)) || !Vg.babyReach(b, o)) continue;
+        n++; out.push({ id: 'lar.darBebe:' + b.id + ':' + o.id, act: 'darBebe', baby: b.id, to: o.id, label: `Dar ${b.name} a ${o.name}`, at: [o.x, o.y], anim: 'entregar', hands: 1, ok: Vg.canHold(o), why: `${o.name} não pode segurar o bebê agora.` });
+      }
+    }
+  }
+  const babyOf = (v, o) => { const b = o && G.S.villagers.get(o.baby); return b && b.age < 2 && ofHouse(v, b) ? b : null; };
   A.def('lar', {
     name: 'Em casa', conserve: false,
-    purpose: 'A vida em casa: comer à mesa o que a despensa tem e cozinhar a ceia da casa no fogo, pelas mesmas portas de quem mora nela.',
-    needs: 'estar dentro da própria casa, com comida na despensa',
+    purpose: 'A vida em casa: comer à mesa o que a despensa tem e cozinhar a ceia da casa no fogo, pelas mesmas portas de quem mora nela; pegar no colo um bebê da casa, ou dá-lo a alguém da casa ali perto.',
+    needs: 'estar dentro da própria casa, com comida na despensa; para o bebê, estar perto dele (na mesma casa, ou a poucos passos na rua)',
     offers(v, x, y, r) {
-      const h = atHome(v); if (!h) return [];
+      const out = []; babyOffers(v, out);
+      const h = atHome(v); if (!h) return out;
       const lv = G.Possess && G.Possess.level ? G.Possess.level() : undefined;
-      const out = []; const has = food(h) >= 1; const hot = L.cooked(h);
+      const has = food(h) >= 1; const hot = L.cooked(h);
       const table = pieceAt(h, ['comer', 'sentar', 'aquecer'], lv);
       if (table && G.dist(x, y, table[0], table[1]) <= r + 0.5) out.push({ id: 'lar.comer:' + h.id, act: 'comer', label: hot ? 'Cear em casa (a ceia de hoje)' : 'Comer em casa, da despensa', at: table, anim: 'comer', hands: 1, ok: has && v.hunger > 15, why: !has ? 'A despensa da casa está vazia.' : 'Você não está com fome.' });
       const fire = pieceAt(h, ['cozinhar', 'assar', 'aquecer'], lv);
@@ -455,6 +472,16 @@
         deed: 'cozinha',
         can(v) { const h = atHome(v); if (!h) return { ok: false, why: 'Só dentro de casa.' }; if (L.cooked(h)) return { ok: false, why: 'A ceia de hoje já está pronta.' }; if (food(h) < 1) return { ok: false, why: 'A despensa da casa está vazia.' }; return { ok: true }; },
         run(v) { const h = atHome(v); if (!h || L.cooked(h) || food(h) < 1) return { ok: false, why: 'Agora não dá para cozinhar.' }; h.ceia = G.S.day; return { ok: true, msg: 'A ceia da casa está pronta: quem chegar com fome come quente.' }; },
+      },
+      // (the baby in the body's arms — or in the arms of one of the house within reach —, by the villagers' one door to a
+      // baby's arms, G.Vg.handBaby: D-074)
+      pegarBebe: {
+        can(v, o) { const b = babyOf(v, o); if (!b) return { ok: false, why: 'O bebê não está mais aqui.' }; if (b.carrier === v.id) return { ok: false, why: 'O bebê já está no seu colo.' }; if (!freeHands(v)) return { ok: false, why: 'Suas mãos estão ocupadas.' }; if (!G.Vg.canHold(v) || !G.Vg.babyReach(b, v)) return { ok: false, why: 'Agora você não pode pegar o bebê.' }; return { ok: true }; },
+        run(v, o) { const b = babyOf(v, o); if (!b || !freeHands(v) || !G.Vg.handBaby(b, v)) return { ok: false, why: 'Agora você não pode pegar o bebê.' }; return { ok: true, msg: `Você pega ${b.name} no colo.` }; },
+      },
+      darBebe: {
+        can(v, o) { const b = babyOf(v, o); const c = o && G.S.villagers.get(o.to); if (!b || b.carrier !== v.id) return { ok: false, why: 'Você não está com o bebê.' }; if (!c || !G.Vg.canHold(c) || !G.Vg.babyReach(b, c)) return { ok: false, why: 'Não há quem segure o bebê aqui.' }; return { ok: true }; },
+        run(v, o) { const b = babyOf(v, o); const c = o && G.S.villagers.get(o.to); if (!b || b.carrier !== v.id || !c || !G.Vg.handBaby(b, c)) return { ok: false, why: 'Não há quem segure o bebê aqui.' }; return { ok: true, msg: `Você dá ${b.name} a ${c.name}.` }; },
       },
     },
   });
