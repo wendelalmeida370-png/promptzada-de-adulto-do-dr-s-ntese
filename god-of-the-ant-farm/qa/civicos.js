@@ -26,7 +26,10 @@ const FOR = {
   feira: p => (p.shell.kind === 'aberta' && !p.walls.length && p.items.filter(i => i.kind === 'banca').length >= (G.BDEF.feira.jobs || 0) ? null : 'casca fechada ou bancas de menos'),
   // (the library and the square of the phase E, P4: qa/biblioteca-praca.js proves them without a world)
   biblioteca: p => (p.items.filter(i => i.kind === 'estante').length >= 2 && p.items.filter(i => i.kind === 'mesa-leitura').length >= 2 && p.items.some(i => i.kind === 'mesa-escriba') ? null : 'sem as estantes, as mesas de leitura ou a mesa do escriba'),
-  praca: p => (p.shell.kind === 'aberta' && !p.walls.length && p.items.some(i => i.kind === 'fonte') && p.items.some(i => i.kind === 'tribuna') && (p.marks || []).some(m => m.use === 'ouvir') && (p.marks || []).some(m => m.use === 'conversar') ? null : 'casca fechada, ou sem a fonte, a pedra de falar ou os lugares de ouvir e de conversar'),
+  // (the square of a people with a form — D-093 —: the fountain where its form has one; who speaks on the stone, or on the top
+  // of the rostra, a place of its own)
+  praca: (p, b) => { const F = G.Forma && b && G.Forma.of('praca', b.ip.c); const fonte = !F || G.Forma.uses(F).some(u => u.uso === 'fonte'); const falar = p.items.some(i => i.kind === 'tribuna') || (p.marks || []).some(m => m.use === 'falar');
+    return p.shell.kind === 'aberta' && !p.walls.length && (!fonte || p.items.some(i => i.kind === 'fonte')) && falar && (p.marks || []).some(m => m.use === 'ouvir') && (p.marks || []).some(m => m.use === 'conversar') ? null : 'casca fechada, ou sem a fonte da forma, quem fala ou os lugares de ouvir e de conversar'; },
 };
 FOR.grande_palacio = FOR.palacio_colossal = FOR.palacio;
 const check = (name) => {
@@ -37,7 +40,7 @@ const check = (name) => {
     const s1 = In.shellOf(b); const p = In.plan(b);
     if (!p.ok) { inval++; if (ex.length < 4) ex.push(`#${b.id} ${b.type}/${b.ip.f}: ${(p.errs || []).slice(0, 2).join('; ')}`); continue; }
     if (!s1 || strip(s1) !== strip(In.shellOfPlan(p))) { shells++; if (ex.length < 4) ex.push(`#${b.id} ${b.type}: a casca de longe difere`); }
-    const why = FOR[b.type] && FOR[b.type](p); if (why) { bad++; if (ex.length < 4) ex.push(`#${b.id} ${b.type}/${b.ip.f}: ${why}`); }
+    const why = FOR[b.type] && FOR[b.type](p, b); if (why) { bad++; if (ex.length < 4) ex.push(`#${b.id} ${b.type}/${b.ip.f}: ${why}`); }
   }
   const n = Object.values(by).reduce((x, y) => x + y, 0);
   ok(name, n > 0 && !noRec && !inval && !bad && !shells && M.limpo(), `${n} prédios (${Object.entries(by).map(([t, k]) => t + ' ' + k).join(', ')}): ${noRec} sem registro, ${inval} plantas inválidas, ${bad} sem o que são, ${shells} cascas diferentes${ex.length ? ' — ' + ex.join(' · ') : ''}`);
@@ -127,7 +130,7 @@ ok('presos nas celas, em algum mundo', seen.presos > 0, `${seen.presos || 0} pre
     }
   } finally { G.inSim--; }
   In.uncache(); let bad = 0; const ex = [];
-  for (const b of made) { const p = In.plan(b); const s = In.shellOf(b); const why = !b.ip ? 'sem registro' : !p.ok ? (p.errs || []).slice(0, 2).join('; ') : FOR[b.type](p) || (strip(s) !== strip(In.shellOfPlan(p)) ? 'a casca de longe difere' : null); if (why) { bad++; ex.push(`#${b.id} ${b.type}: ${why}`); } else ex.push(`#${b.id} ${b.type}/${b.ip.f}: ${p.rooms.length} cômodos, ${p.items.length} peças`); }
+  for (const b of made) { const p = In.plan(b); const s = In.shellOf(b); const why = !b.ip ? 'sem registro' : !p.ok ? (p.errs || []).slice(0, 2).join('; ') : FOR[b.type](p, b) || (strip(s) !== strip(In.shellOfPlan(p)) ? 'a casca de longe difere' : null); if (why) { bad++; ex.push(`#${b.id} ${b.type}: ${why}`); } else ex.push(`#${b.id} ${b.type}/${b.ip.f}: ${p.rooms.length} cômodos, ${p.items.length} peças`); }
   const s0 = snap(); M.salvarCarregar(); const s1 = snap();
   ok('palácios fundados à mão', made.length === 3 && !bad && !same(s0, s1), `${made.length} de 3 fundados: ${ex.join(' · ')}; depois de salvar e carregar, ${same(s0, s1)} plantas diferentes`);
   for (const b of made) seen[b.type] = (seen[b.type] || 0) + 1;

@@ -216,6 +216,8 @@
     P.level(0, 0, 3.0, 'chao', sh); P.entryLv = 0;
     P.entrance = { door: -1, u: c, v: sh[3], w: L - 2 * m, lv: 0 };
     const id = P.room(0, 'largo', sh, 1); const Y = { yard: 1 };
+    // (a people whose square has a form — the one the god and the 3D draw, D-093 —: its things where the form has them)
+    if (G.Forma && G.Forma.has('praca', P.rec.c)) { squareOf(P, id, G.Forma.of('praca', P.rec.c), sh); return; }
     // (the fountain's basin, as the 3D draws it — round, of 1.4 m — in the square it fits in; the drinkers before and behind it)
     if (!P.at('fonte', 0, id, [c - 1.2, c - 1.2, c + 1.2, c + 1.2], 0, 1, { yard: 1, h: 0.72 })) { P.errs.push('sem lugar para a fonte'); return; }
     for (const s of [-1, 1]) if (!P.at('banco', 0, id, [c - 0.9, c + s * 2.7 - 0.22, c + 0.9, c + s * 2.7 + 0.22], 0, -s, Y)) { P.errs.push('sem lugar para o banco da praça'); return; }
@@ -227,6 +229,60 @@
     P.marks(0, id, 'ouvir', ear);
     // (who stops to talk: two by two in the corners, facing each other)
     const talk = []; for (const [u, v] of [[1.4, 1.5], [L - 2.3, 1.5], [1.4, L - 1.5], [L - 2.3, L - 1.5]]) talk.push([u, v, Math.PI / 2], [u + 0.9, v, -Math.PI / 2]);
+    P.marks(0, id, 'conversar', talk);
+  }
+  // ------------------------------ the square of a people's form (P4, D-093) ------------------------------
+  // the square as the god and the 3D draw it — its form (G.Forma), the one seen: the plan puts there only what is used, where the
+  // form has it — the fountain, the benches, the speaker's stone (P.at on the form's rectangle, at its top; marked form: the 3D
+  // does not draw them again) —, keeps the feet off what stands solid on its ground (a piece of no use at the foot of each:
+  // 'solido'), and lays on the free floor the places of those who listen before the stone and of those who talk, two by two.
+  // A speaker's stone higher than a step (the rostra of Rome, 1.64 m) is a storey of its own over the square — its top, the
+  // speaker's place on it —, the form's treads the flight up to it
+  In.addItems({ solido: { name: 'Sólido', w: 0.2, d: 0.2, h: 1, solid: 1, free: 1, spots: () => [] } });
+  const KIND_OF_USE = { fonte: 'fonte', banco: 'banco', tribuna: 'tribuna' };
+  function squareOf(P, id, F, sh) {
+    const uses = G.Forma.uses(F); const FM = { form: 1 };
+    // (the rostra: its top a storey over the square, the treads up from behind — in the shell, what is seen from afar)
+    const high = uses.find(u => u.uso === 'tribuna' && u.y1 > In.BODY.up); let top = null;
+    if (high) {
+      const st = high.escada || []; if (!st.length) { P.errs.push('a tribuna alta da forma sem escada'); return; }
+      P.level(1, high.y1, 2.6, 'tribuna', high.r); top = P.room(1, 'tribuna', high.r, 1);
+      const lo = st[0].r, hi = st[st.length - 1].r; const R = [Math.min(lo[0], hi[0]), Math.min(lo[1], hi[1]), Math.max(lo[2], hi[2]), Math.max(lo[3], hi[3])];
+      const du = Math.sign((hi[0] + hi[2]) - (lo[0] + lo[2])), dv = Math.sign((hi[1] + hi[3]) - (lo[1] + lo[3]));
+      P.stair('escada', 0, 1, R, du, dv);
+    }
+    if (P.inside()) return;
+    let stone = null;
+    for (const u of uses) {
+      const kind = KIND_OF_USE[u.uso]; if (!kind) continue; const f = u.vira || [0, 1];
+      if (u === high) { if (!P.at('solido', 0, id, u.r, 0, 1, Object.assign({ h: u.y1 }, FM))) { P.errs.push('sem lugar para os rostros da forma'); return; } stone = { r: u.r, f, lv: 1, room: top }; continue; }
+      const it = P.at(kind, 0, id, u.r, f[0], f[1], Object.assign({ h: u.y1 }, FM));
+      if (!it) { P.errs.push(`sem lugar para ${kind === 'fonte' ? 'a fonte' : kind === 'banco' ? 'o banco' : 'a pedra de falar'} da forma`); return; }
+      if (kind === 'tribuna') stone = { r: it.r, f, lv: 0, room: id };
+    }
+    // (what stands solid on the ground: a solid piece at its foot, the biggest first — one touching another's foot is the
+    // other's: the posts of a stall at its counter's corners —, the feet and the marks kept off it)
+    const feet = []; const foot = s => (s.k === 'rect' ? s.r : [s.c[0] - s.r, s.c[1] - s.r, s.c[0] + s.r, s.c[1] + s.r]); const area = r => (r[2] - r[0]) * (r[3] - r[1]);
+    for (const s of G.Forma.solids(F).slice().sort((a, c) => area(foot(c)) - area(foot(a)))) {
+      const r = foot(s); if (feet.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1])) continue;
+      if (!P.at('solido', 0, id, r, 0, 1, Object.assign({ h: s.y1 }, FM))) { P.errs.push('um sólido da forma onde a praça não o põe'); return; }
+      feet.push(r);
+    }
+    if (!stone) { P.errs.push('a forma da praça sem a pedra de falar'); return; }
+    // (who speaks: on the stone — the piece's own place —, or on the rostra's top, facing the people)
+    const su = (stone.r[0] + stone.r[2]) / 2, sv = (stone.r[1] + stone.r[3]) / 2; const [fu, fv] = stone.f;
+    if (stone.lv === 1) P.marks(1, stone.room, 'falar', [[su, sv, Math.atan2(fu, fv)]]);
+    // (who listens: in an arc before it, facing it, 0.8 m past its front)
+    const R = (fu ? (stone.r[2] - stone.r[0]) : (stone.r[3] - stone.r[1])) / 2 + 0.8; const a0 = Math.atan2(fv, fu); const ear = [];
+    for (const a of [-50, -25, 0, 25, 50]) { const t = a0 + a * Math.PI / 180; const u = su + R * Math.cos(t), v = sv + R * Math.sin(t); ear.push([u, v, Math.atan2(su - u, sv - v)]); }
+    P.marks(0, id, 'ouvir', ear);
+    // (who stops to talk: two by two on the free floor, facing each other — the farthest pairs from the stone and from each other)
+    const open = (u, v) => u > sh[0] + 0.4 && u < sh[2] - 0.4 && v > sh[1] + 0.4 && v < sh[3] - 0.4 && !P.items.some(it => it.lv === 0 && u > it.r[0] - 0.45 && u < it.r[2] + 0.45 && v > it.r[1] - 0.45 && v < it.r[3] + 0.45) && !ear.some(q => Math.hypot(q[0] - u, q[1] - v) < 0.9);
+    const pairs = [];
+    for (let v = sh[1] + 0.9; v <= sh[3] - 0.9 + 1e-9; v += 0.5) for (let u = sh[0] + 0.9; u + 0.9 <= sh[2] - 0.9 + 1e-9; u += 0.5) if (open(u, v) && open(u + 0.9, v)) pairs.push([u, v]);
+    const pick = []; for (const p of pairs.sort((p, q) => Math.hypot(q[0] - su, q[1] - sv) - Math.hypot(p[0] - su, p[1] - sv) || p[1] - q[1] || p[0] - q[0])) { if (pick.length >= 4) break; if (pick.every(q => Math.hypot(q[0] - p[0], q[1] - p[1]) >= 2)) pick.push(p); }
+    if (!pick.length) { P.errs.push('sem chão livre para quem conversa'); return; }
+    const talk = []; for (const [u, v] of pick) talk.push([u, v, Math.PI / 2], [u + 0.9, v, -Math.PI / 2]);
     P.marks(0, id, 'conversar', talk);
   }
 })(window.G);

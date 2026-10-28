@@ -53,7 +53,7 @@ module.exports = {
         { id: 'pisar', o: 'o corpo anda e pisa onde a obra deixa: a praça, a borda do poço, os escombros da ruína', tipos: ['praca', 'well', 'ruin', 'aqueduto'], corpo: 'porta', resultado: 'nenhum (é o chão)', condicao: 'sempre', feito: 'parcial', provas: ['qa/encarna.js'] },
         { id: 'beber-poco', o: 'o corpo bebe no poço (hoje só no rio)', tipos: ['well'], corpo: 'agua', feito: false, provas: [] },
       ],
-      notas: 'buscar água no poço é do P1 (a folha p1.js, com a prova qa/agua-solta.js); a praça tem planta desde a fase E (P4, int-civicos.js: a fonte, os dois bancos, a pedra de falar e os lugares de ouvir e de conversar — P.marks —, com a casca; qa/biblioteca-praca.js); o «juntar» espera o lado do P2 (quem vem à praça toma esses lugares); a ruína não tem planta (o corpo pisa a casa como o mundo a tem); o aqueduto não tem atividade própria: só leva água',
+      notas: 'buscar água no poço é do P1 (a folha p1.js, com a prova qa/agua-solta.js); a praça tem planta desde a fase E (P4, int-civicos.js) e, desde a D-093, pela forma de cada povo (G.Forma: o deus e o 3D desenham a forma; a planta põe a fonte, os bancos e a pedra de falar onde a forma os tem — nos rostros de Roma, quem fala no topo, um piso pelo lance dos degraus —, os sólidos da forma como chão onde não se pisa, os lugares de ouvir e de conversar no chão livre; qa/biblioteca-praca.js); o «juntar» espera o lado do P2 (quem vem à praça toma esses lugares); a ruína não tem planta (o corpo pisa a casa como o mundo a tem); o aqueduto não tem atividade própria: só leva água',
     },
   },
 };

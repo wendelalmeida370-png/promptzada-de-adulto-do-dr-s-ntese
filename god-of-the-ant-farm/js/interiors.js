@@ -981,6 +981,7 @@
       const o = { id: P.b.id + ':' + it.k, k: it.k, kind: it.kind, name: D.name, room: it.room, lv: it.lv, x: r2((r[0] + r[2]) / 2), z: r2((r[1] + r[3]) / 2), y: r2(it.y || 0), ry: r2(Math.atan2(f[0], f[1])), w: r2(it.w), d: r2(it.d), h: r2(it.h), r, solid: D.low ? 0 : 1, low: D.low ? 1 : 0, places: it.places !== undefined ? it.places : (D.places || 0), job: D.job ? 1 : 0, fire: D.fire ? 1 : 0, niche: it.niche ? 1 : 0 };
       if (D.store) o.store = Object.assign({}, D.store, { cap: it.cap || D.store.cap });
       if (it.yard) o.yard = 1; // (one of the yard's, laid with the shell)
+      if (it.form) o.form = 1; // (one the type's form draws — the god and the 3D —, the plan only using it: D-093)
       o.spots = P.spotsOf(it).map(sp => { const p = loc(sp.u, sp.v); const fd = dirLoc(s, sp.f[0], sp.f[1]); return { use: sp.use, on: sp.on, x: p[0], z: p[1], ry: r2(Math.atan2(fd[0], fd[1])), y: r2(it.y || 0) + (sp.on ? r2(D.h) : 0) }; });
       return o;
     });

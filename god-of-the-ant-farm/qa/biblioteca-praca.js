@@ -3,13 +3,13 @@
 //   1. a biblioteca se arma em todo povo e lado, nas famílias do salão: as estantes de rolos (o inventário do prédio), as mesas
 //      de leitura — um leitor de cada lado onde nada mais está; três leitores ao menos —, a mesa do escriba do copista; um
 //      lugar livre para ler, escrever e guardar (o G.Biblioteca do P2 pergunta ao repartidor)
-//   2. a praça se arma em todo povo e lado: casca aberta, sem paredes nem telhado, no chão (Space.BASELESS); a fonte no meio,
-//      um banco de cada lado virado para ela, a pedra de falar de um lado (quem fala fica em cima dela, virado para o povo),
-//      os lugares de quem ouve em arco diante dela, virados para ela, e os de quem para para conversar, dois a dois nos cantos,
-//      um de frente para o outro — todos onde o corpo fica; um lugar livre para beber, sentar, falar, ouvir e conversar
-//   3. a fonte, os bancos e a pedra vão com a casca (shellOut.yard): o deus e o 3D de longe os desenham onde o corpo e o povo
-//      os usam — a casca sozinha igual à da planta inteira
-//   4. o corpo pisa a praça em volta da fonte (Space.inBody, a grade da planta), não dentro dela
+//   2. a praça de cada povo pela sua forma (D-093: o deus e o 3D desenham a forma, a planta põe nela a função): casca aberta, no
+//      chão (Space.BASELESS); cada uso da forma uma peça da planta no retângulo da forma (marcada form) — a fonte, os bancos, a
+//      pedra de falar —; os sólidos da forma, chão onde ninguém pisa; quem fala na pedra, ou no topo dos rostros (um piso, pelo
+//      lance dos degraus da forma); quem ouve virado para ele, quem conversa um para o outro, todos onde o corpo fica; um lugar
+//      livre de cada uso da forma
+//   3. a casca de longe: a praça da forma sem peças na casca (a forma é o que se vê); a casca sozinha igual à da planta
+//   4. o corpo pisa o chão livre da praça, a volta da fonte (não dentro dela) e o topo dos rostros
 //   node qa/biblioteca-praca.js
 const M = require('./nodemundo.js');
 const G = M.load({});
@@ -39,36 +39,54 @@ const free = (m, uses) => uses.filter(u => !In.freePlace(m.b, u));
   const miss = L.filter(m => m.p.ok).map(m => { const x = free(m, ['ler', 'escrever', 'guardar']); return x.length ? `${m.c} ${m.s}: sem ${x.join(', ')}` : null; }).filter(Boolean);
   ok('1b as estantes, as mesas de leitura (três leitores ao menos) e a mesa do escriba; um lugar livre para ler, escrever e guardar', !short.length && !miss.length, short.concat(miss).slice(0, 3).join(' / ') || `${L.length} plantas`);
 }
-// ---------------------------------------------------------------- 2. the square
+// ---------------------------------------------------------------- 2. the square, by its form (D-093)
 {
   const Q = made.filter(m => m.t === 'praca'); const bad = Q.filter(m => !m.p.ok);
-  ok('2a a praça se arma em todo povo e lado: casca aberta, no chão', Q.length && !bad.length && Q.every(m => !m.p.ok || (m.p.shell.kind === 'aberta' && !m.p.shell.roof)) && Sp.baseless({ type: 'praca' }), `${Q.length - bad.length} de ${Q.length} plantas${bad.length ? '; ' + bad[0].p.errs.slice(0, 2).join(' | ') : ''}`);
+  ok('2a a praça se arma em todo povo e lado: casca aberta, no chão', Q.length && !bad.length && Q.every(m => !m.p.ok || (m.p.shell.kind === 'aberta' && !m.p.shell.roof)) && Sp.baseless({ type: 'praca' }), `${Q.length - bad.length} de ${Q.length} plantas${bad.length ? '; ' + bad[0].c + ': ' + bad[0].p.errs.slice(0, 2).join(' | ') : ''}`);
+  // (each use of the form a piece of the plan at the form's own rectangle — turned with the lot —, marked form; the speaker on
+  // the stone or, where it is higher than a step, on the rostra's top, a storey reached by the form's treads; who listens faces
+  // the speaker, who talks faces the other of the pair, all where a body stands; a place free of each use the form has)
   const out = [];
   for (const m of Q.filter(q => q.p.ok)) {
-    const p = m.p; const n = k => p.items.filter(i => i.kind === k);
-    const st = n('tribuna')[0]; const ouvir = (p.marks || []).find(q => q.use === 'ouvir'), conv = (p.marks || []).find(q => q.use === 'conversar');
-    if (n('fonte').length !== 1 || n('banco').length !== 2 || !st || !ouvir || !conv) { out.push(`${m.c} ${m.s}: as peças`); continue; }
-    // (who listens faces the stone; who talks faces the other of the pair; all where a body stands)
-    const sp = st.spots.find(q => q.use === 'falar'); const face = (q, x, z) => { const a = Math.atan2(x - q.x, z - q.z); return Math.abs(Math.atan2(Math.sin(a - q.ry), Math.cos(a - q.ry))) < 0.2; };
-    if (!ouvir.pts.every(q => q.ok && face(q, sp.x, sp.z))) out.push(`${m.c} ${m.s}: quem ouve não olha a pedra`);
+    const p = m.p; const F = G.Forma.of('praca', m.c); const U = G.Forma.uses(F); const L = p.lot.w;
+    const at = r => { const a = In.toLoc(m.s, L, r[0], r[1]), b = In.toLoc(m.s, L, r[2], r[3]); return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; };
+    for (const u of U) {
+      if (u.uso === 'tribuna' && u.y1 > In.BODY.up) { const M2 = (p.marks || []).find(q => q.use === 'falar' && q.lv === 1); const st = p.stairs.find(q => q.lv0 === 0 && q.lv1 === 1); if (!M2 || !M2.pts.some(q => q.ok) || !st || !p.levels.some(l => l.lv === 1 && Math.abs(l.y - u.y1) < 0.01)) out.push(`${m.c} ${m.s}: os rostros sem o topo, o lance ou quem fala nele`); continue; }
+      const c = at(u.r); const it = p.items.find(i => i.kind === u.uso && i.form && Math.hypot(i.x - c[0], i.z - c[1]) < 0.02);
+      if (!it) out.push(`${m.c} ${m.s}: ${u.uso} da forma fora do lugar dela (${c.map(x => x.toFixed(2)).join(',')})`);
+    }
+    const solid = G.Forma.solids(F).length; if (solid && !p.items.some(i => i.kind === 'solido' && i.form)) out.push(`${m.c} ${m.s}: os sólidos da forma fora da planta`);
+    const sp = (p.items.find(i => i.kind === 'tribuna') || { spots: [] }).spots.find(q => q.use === 'falar') || ((p.marks || []).find(q => q.use === 'falar') || { pts: [] }).pts[0];
+    const ouvir = (p.marks || []).find(q => q.use === 'ouvir'), conv = (p.marks || []).find(q => q.use === 'conversar');
+    if (!sp || !ouvir || !conv) { out.push(`${m.c} ${m.s}: sem quem fala, quem ouve ou quem conversa`); continue; }
+    const face = (q, x, z) => { const a = Math.atan2(x - q.x, z - q.z); return Math.abs(Math.atan2(Math.sin(a - q.ry), Math.cos(a - q.ry))) < 0.2; };
+    if (!ouvir.pts.every(q => q.ok && face(q, sp.x, sp.z))) out.push(`${m.c} ${m.s}: quem ouve não olha quem fala`);
     for (let k = 0; k < conv.pts.length; k += 2) { const a = conv.pts[k], c = conv.pts[k + 1]; if (!a.ok || !c.ok || !face(a, c.x, c.z) || !face(c, a.x, a.z)) { out.push(`${m.c} ${m.s}: um par que não se olha`); break; } }
-    const x = free(m, ['beber', 'sentar', 'falar', 'ouvir', 'conversar']); if (x.length) out.push(`${m.c} ${m.s}: sem ${x.join(', ')}`);
+    const want = ['falar', 'ouvir', 'conversar'].concat(U.some(u => u.uso === 'fonte') ? ['beber'] : [], U.some(u => u.uso === 'banco') ? ['sentar'] : []);
+    const x = free(m, want); if (x.length) out.push(`${m.c} ${m.s}: sem ${x.join(', ')}`);
   }
-  ok('2b a fonte, os bancos, a pedra de falar; quem ouve virado para a pedra, quem conversa um para o outro; um lugar livre de cada uso', !out.length, out.slice(0, 3).join(' / ') || `${Q.length} plantas`);
+  ok('2b as peças da forma onde a forma as tem; quem fala, quem ouve virado para ele, quem conversa um para o outro; um lugar livre de cada uso', !out.length, out.slice(0, 3).join(' / ') || `${Q.length} plantas`);
 }
-// ---------------------------------------------------------------- 3. the square's pieces with the shell
+// ---------------------------------------------------------------- 3. the shell seen from afar
 {
+  // (a square with a form: nothing of it in the shell — the form is what is seen, its pieces drawn by it —; and the shell asked
+  // alone the plan's whole one)
   const Q = made.filter(m => m.t === 'praca' && m.p.ok); const all = made.filter(m => m.p.ok);
   const diff = all.filter(m => !m.so || strip(m.so) !== strip(In.shellOfPlan(m.p)));
-  const pieces = Q.filter(m => !(m.so.yard && m.so.yard.length === 4 && ['fonte', 'banco', 'banco', 'tribuna'].every(k => m.so.yard.some(q => q.kind === k))));
-  ok('3a a fonte, os bancos e a pedra na casca (o deus e o 3D de longe); a casca sozinha igual à da planta', !diff.length && !pieces.length, `${diff.length} cascas diferentes da planta (de ${all.length}); ${pieces.length} praças sem as peças na casca`);
+  const pieces = Q.filter(m => m.so.yard && m.so.yard.length);
+  ok('3a a casca de longe: a praça da forma sem peças na casca; a casca sozinha igual à da planta', !diff.length && !pieces.length, `${diff.length} cascas diferentes da planta (de ${all.length}); ${pieces.length} praças com peças na casca`);
 }
 // ---------------------------------------------------------------- 4. the body on the square
 {
-  const m = made.find(q => q.t === 'praca' && q.p.ok && q.s === 'S'); const p = m.p; const fo = p.items.find(i => i.kind === 'fonte');
-  const c = [(fo.r[0] + fo.r[2]) / 2, (fo.r[1] + fo.r[3]) / 2];
-  const onSq = Sp.inBody(p.shell, 0, 1.0, 1.0) && In.standsAt(p, 0, 1.0, 1.0, 0.25), round = In.standsAt(p, 0, c[0], fo.r[3] + 0.5, 0.25), inFont = In.standsAt(p, 0, c[0], c[1], 0.25);
-  ok('4a o corpo pisa a praça e a volta da fonte, não dentro dela', onSq && round && !inFont, `no canto ${onSq}, junto da fonte ${round}, dentro da fonte ${inFont}`);
+  // (on the free floor of the square; by the fountain where the form has one, not in it; on the rostra's top, a storey of its own)
+  const out = [];
+  for (const m of made.filter(q => q.t === 'praca' && q.p.ok && q.s === 'S')) {
+    const p = m.p; const fo = p.items.find(i => i.kind === 'fonte'); const conv = (p.marks || []).find(q => q.use === 'conversar'); const q0 = conv && conv.pts.find(q => q.ok);
+    if (!q0 || !Sp.inBody(p.shell, 0, q0.x, q0.z) || !In.standsAt(p, 0, q0.x, q0.z, 0.25)) out.push(`${m.c}: o corpo não fica no chão livre`);
+    if (fo) { const c = [(fo.r[0] + fo.r[2]) / 2, (fo.r[1] + fo.r[3]) / 2]; const sp = fo.spots.find(q => q.use === 'beber' && q.ok); if (!sp || !In.standsAt(p, 0, sp.x, sp.z, 0.25) || In.standsAt(p, 0, c[0], c[1], 0.25)) out.push(`${m.c}: o corpo junto da fonte ${sp ? 'não' : 'sem lugar'}, ou dentro dela`); }
+    const top = (p.marks || []).find(q => q.use === 'falar' && q.lv === 1); if (top && !top.pts.some(q => q.ok && In.standsAt(p, 1, q.x, q.z, 0.25))) out.push(`${m.c}: o corpo não fica no topo dos rostros`);
+  }
+  ok('4a o corpo pisa a praça, a volta da fonte e o topo dos rostros, não dentro da fonte', !out.length, out.slice(0, 3).join(' / ') || 'nos seis povos');
 }
 const err = M.erros(); if (Object.keys(err.mod).length || err.console.length) ok('sem erros de módulo', false, JSON.stringify(err).slice(0, 300));
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');
