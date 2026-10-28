@@ -55,6 +55,10 @@
     mesa: { name: 'Mesa', w: 1.1, d: 0.7, h: 0.75, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
     'mesa-baixa': { name: 'Mesa baixa', w: 0.9, d: 0.6, h: 0.35, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
     banco: { name: 'Banco', w: 1.1, d: 0.35, h: 0.45, low: 1, wall: 1, spots: it => [{ use: 'sentar', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: it.d / 2 + 0.35 }] },
+    // (a row of seats of an arena, a theatre — P.tiers lays them, never placed as a piece: its name, for the places on it)
+    fileira: { name: 'Fileira', w: 0, d: 0, h: 0, low: 1, spots: () => [] },
+    // (a place with no piece — P.marks: the orchestra, the sand, a square —: its name, for the places at it)
+    marca: { name: 'Lugar', w: 0, d: 0, h: 0, low: 1, spots: () => [] },
     // ---- what keeps the house's things (the world's own: h.pantry, h.coin, h.inv) ----
     arca: { name: 'Arca', w: 0.9, d: 0.5, h: 0.55, solid: 1, wall: 1, rot: 1, store: { dep: 'casa', key: 'inv', cap: 12, coin: 1 }, spots: front('guardar') },
     despensa: { name: 'Prateleiras da despensa', w: 1.0, d: 0.4, h: 1.7, solid: 1, wall: 1, tall: 1, store: { dep: 'casa', key: 'pantry', cap: 30 }, spots: front('guardar') },

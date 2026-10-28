@@ -51,6 +51,9 @@
   const dirLoc = (s, du, dv) => (s === 'S' ? [du, dv] : s === 'N' ? [-du, -dv] : s === 'E' ? [dv, -du] : [-dv, du]);
   const toCan = (s, L, x, z) => (s === 'S' ? [x, z] : s === 'N' ? [L - x, L - z] : s === 'E' ? [L - z, x] : [z, L - x]);
   const rectLoc = (s, L, r) => { const a = toLoc(s, L, r[0], r[1]), b = toLoc(s, L, r[2], r[3]); return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])]; };
+  // (an angle turned to the lot, and the circle of a side of a ring wall: its middle, radius, the angles it spans)
+  const angLocOf = (s, a) => { const d = dirLoc(s, Math.cos(a), Math.sin(a)); return Math.round(Math.atan2(d[1], d[0]) * 1e4) / 1e4; };
+  const ringLoc = (s, L, R) => { const c = toLoc(s, L, R[0], R[1]); return [Math.round(c[0] * 100) / 100, Math.round(c[1] * 100) / 100, R[2], angLocOf(s, R[3]), angLocOf(s, R[4])]; };
   In.toLoc = toLoc; In.toCan = toCan;
   // the roof's height over a point of the plan (canonical metres): the slopes of a gable from its eaves to its ridge, the four
   // of a hip, the cone of a round hut; flat, the eaves themselves (what a loft's headroom is measured under)
@@ -257,7 +260,7 @@
       b, rec, fam: FAMS[fam], famId: fam, L, rnd: G.mulberry32(shellSeed(b.id, FAMS[fam])), phase: 'casca', T: TYPES[rec.t], tr: TRAD[rec.c] || TRAD.classico || {}, attempt,
       // (how far a place's score is shaken: little at first, more as the attempts on the same shell go on failing)
       jit: attempt < 4 ? 0.1 : attempt < In.TRIES ? 0.6 : 1.4,
-      levels: [], rooms: [], walls: [], holes: [], doors: [], stairs: [], items: [], annex: [], zones: [], errs: [], shell: null, roof: null, entrance: null, need: {}, notes: [],
+      levels: [], rooms: [], walls: [], holes: [], doors: [], stairs: [], items: [], annex: [], zones: [], errs: [], shell: null, roof: null, entrance: null, need: {}, notes: [], tierList: [], markList: [],
     };
     P.rr = (a, c) => a + P.rnd() * (c - a);
     P.pick = arr => arr[Math.floor(P.rnd() * arr.length)];
@@ -321,13 +324,35 @@
       for (let k = 0; k < n; k++) {
         const a0 = Math.PI / 2 - Math.PI / n + k * 2 * Math.PI / n, a1 = a0 + 2 * Math.PI / n;
         const A = [r2(cu + rad * Math.cos(a0)), r2(cv + rad * Math.sin(a0))], B = [r2(cu + rad * Math.cos(a1)), r2(cv + rad * Math.sin(a1))];
-        out.walls.push(this.wall(lv, A, B, t, h, o.outer ? 1 : 0, o.kind || 'parede', o.mat));
+        const id = this.wall(lv, A, B, t, h, o.outer ? 1 : 0, o.kind || 'parede', o.mat); this.walls[id].ring = [cu, cv, rad, a0, a1]; out.walls.push(id);
       }
       const each = (list, fn) => { for (const k of list === true ? out.walls.map((_, q) => q) : list || []) { const id = out.walls[k]; if (id !== undefined) fn(id, this.wlen(id)); } };
       each(o.arcs, (id, len) => out.doors.push(this.door(id, len / 2, Math.min(o.aw || 1.2, len - 0.2), o.ah || Math.min(h - 0.2, 2.6), -1, -1, o.outer ? 1 : 0, 'arco')));
       each(o.wins, (id, len) => { const ho = this.hole(id, len / 2, Math.min(o.aw || 1.0, len - 0.2), o.ah || Math.min(h - (o.sill || 0.9) - 0.2, 1.6), o.sill || 0.9, 'janela'); ho.arch = 1; });
       return out;
     },
+    // rows to sit on and watch from — an arena's, a theatre's (B4) —, in a room of a storey: o.ring [cu, cv, r0, r1] (o.arc
+    // [a0, a1]: the angles they span, radians from +u toward +v — all round when not said) rising 'out' from the middle or
+    // 'in' toward it (o.dir); or o.r [u0, v0, u1, v1] rising toward a side ('n' the back, 's' the front, 'e', 'w'). o.rows of
+    // them, each o.rise high (0.40) and o.tread deep (0.80), the first one's top o.first over the storey's floor (one rise);
+    // the depth the rows leave at the top, a walk at the last one's height. o.aisles: the ways up through them, half a row at
+    // a step (angles for a ring, u — or v, rising 'e' or 'w' — for a rectangle), o.aisleW wide (1 m); along each row a place
+    // to watch every o.seat (0.5 m), clear of the aisles, facing down the rows ('assistir', seated on the row). Several of them
+    // in one room, at heights of their own (the maeniana of an amphitheatre, their walls between: P.ringWall). Laid in the
+    // shell — what is seen from afar —, they are the storey's floor where they are: the walk climbs a half step at a time,
+    // never a row (plan.hgt). → the block
+    tiers(lv, room, o) {
+      o = o || {}; const T = { id: this.tierList.length, lv, room, rows: Math.max(1, Math.round(o.rows || 1)), rise: o.rise || 0.4, tread: o.tread || 0.8, aw: o.aisleW || 1.0, seat: o.seat || 0.5, aisles: (o.aisles || []).slice(), use: o.use || 'assistir' };
+      T.first = o.first !== undefined ? o.first : T.rise; T.climb = Math.max(1, Math.round(o.climb || Math.ceil(T.rise / 0.25 - 1e-9)));
+      if (o.ring) { const [cu, cv, r0, r1] = o.ring; Object.assign(T, { kind: 'ring', cu, cv, r0, r1, dir: o.dir === 'in' ? 'in' : 'out', arc: o.arc ? o.arc.slice() : null }); }
+      else { Object.assign(T, { kind: 'rect', r: o.r.slice(), dir: { n: 'n', s: 's', e: 'e', w: 'w' }[o.dir] || 'n' }); }
+      this.tierList.push(T); this._ver = (this._ver || 0) + 1; return T;
+    },
+    // places of use at points of a room with no piece (B4): where one acts in an orchestra, fights on the sand, speaks or
+    // listens in a square, stands on a top — pts [[u, v, ry], …] (ry the way one faces, as a piece's: 0 toward the front), on
+    // the storey's floor (or its rows' height there); each fitted where the body stands, as a piece's place is (L-282). o.st:
+    // the state the 3D shows there (the use's own when not said). → the marks
+    marks(lv, room, use, pts, o) { const M = { id: this.markList.length, lv, room, use, pts: pts.map(q => q.slice()), st: (o && o.st) || null }; this.markList.push(M); return M; },
     // a window as the recipe wants it (at, width, height, sill), kept clear of the floors that cross its wall there — a loft's,
     // a gallery's: under the slab, sunk to fit, else over it, else none — and, in an outside wall, of the ground outside
     window(id, at, w, h, sill) {
@@ -466,7 +491,7 @@
     // places for each use, every room, the ends of its stairs — from the street door on the entrance storey, from the
     // stairs' ends on the others
     walks(lv) {
-      const dr = draft(this, lv); if (!dr) return true; const { g, n } = dr; const cr = dr.crawl;
+      const dr = draft(this, lv); if (!dr) return true; const { g, n } = dr; const cr = dr.crawl; const H = dr.hgt;
       const seen = new Uint8Array(n * n); const q = [];
       const pass = (x, z) => {
         const c = g[z * n + x]; if (cr) return c === C.FLOOR || c === C.LOWROOF || c === C.DOOR || c === C.HATCH;
@@ -475,7 +500,7 @@
         const a = g[z * n + x + 1], b = g[z * n + x - 1], c2 = g[(z + 1) * n + x], d = g[(z - 1) * n + x];
         return NEAR(a) && NEAR(b) && NEAR(c2) && NEAR(d);
       };
-      const push = (x, z) => { if (x < 0 || z < 0 || x >= n || z >= n || seen[z * n + x] || !pass(x, z)) return; seen[z * n + x] = 1; q.push(x, z); };
+      const push = (x, z, from) => { if (x < 0 || z < 0 || x >= n || z >= n || seen[z * n + x] || !pass(x, z) || (from !== undefined ? !stepOK(H, from, z * n + x) : !floorStep(H, z * n + x))) return; seen[z * n + x] = 1; q.push(x, z); };
       const near = (p, rad) => { const cx = Math.floor(p[0] / CS), cz = Math.floor(p[1] / CS); const k = Math.ceil(rad / CS); for (let dz = -k; dz <= k; dz++) for (let dx = -k; dx <= k; dx++) { const x = cx + dx, z = cz + dz; if (x >= 0 && z >= 0 && x < n && z < n && seen[z * n + x]) return true; } return false; };
       // (the ways in to this storey: from the street on the entrance one; elsewhere the end of the flight that comes from the
       // side of the entrance — the others, the flights going on, are ends to reach)
@@ -489,13 +514,13 @@
       if (entry) { const e = this.entrance; const ex = Math.floor(e.u / CS), ez = Math.floor(e.v / CS); for (let dz = -5; dz <= 5; dz++) for (let dx = -5; dx <= 5; dx++) if (Math.hypot(dx, dz) * CS <= 1.25) push(ex + dx, ez + dz); }
       else for (const p of ins) { const cx = Math.floor(p[0] / CS), cz = Math.floor(p[1] / CS); for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) push(cx + dx, cz + dz); }
       if (!q.length) return !entry && !ins.length && !ends.length;
-      for (let k = 0; k < q.length; k += 2) { const x = q[k], z = q[k + 1]; push(x + 1, z); push(x - 1, z); push(x, z + 1); push(x, z - 1); }
+      for (let k = 0; k < q.length; k += 2) { const x = q[k], z = q[k + 1], k0 = z * n + x; push(x + 1, z, k0); push(x - 1, z, k0); push(x, z + 1, k0); push(x, z - 1, k0); }
       for (const p of ends) if (!near(p, 0.45)) return false;
       for (const m of this.rooms) {
         if (m.lv !== lv) continue; let ok = false;
         const x0 = Math.max(0, Math.floor((m.r[0] + 0.01) / CS)), x1 = Math.min(n - 1, Math.floor((m.r[2] - 0.01) / CS)), z0 = Math.max(0, Math.floor((m.r[1] + 0.01) / CS)), z1 = Math.min(n - 1, Math.floor((m.r[3] - 0.01) / CS));
-        // (a ring's own floor: not the arena inside it, whose cells are in its rectangle too)
-        for (let z = z0; z <= z1 && !ok; z++) for (let x = x0; x <= x1; x++) if (seen[z * n + x] && !(m.circ && m.circ[3] > 0 && !inRoomPt(m, (x + 0.5) * CS, (z + 0.5) * CS))) { ok = true; break; }
+        // (a round room's own floor: not the corners of its rectangle — nor, in a ring, the arena inside it)
+        for (let z = z0; z <= z1 && !ok; z++) for (let x = x0; x <= x1; x++) if (seen[z * n + x] && !(m.circ && !inRoomPt(m, (x + 0.5) * CS, (z + 0.5) * CS))) { ok = true; break; }
         if (!ok) return false;
       }
       for (const it of this.items) {
@@ -510,7 +535,7 @@
     // inside it and every place of use in it reached, nothing else of the storey was cut off. The whole walk is proved at
     // the end, as on every lot
     walksIn(lv, room) {
-      const dr = draft(this, lv); if (!dr) return true; const { g, n } = dr; const cr = dr.crawl; const R = this.rooms[room].r;
+      const dr = draft(this, lv); if (!dr) return true; const { g, n } = dr; const cr = dr.crawl; const H = dr.hgt; const R = this.rooms[room].r;
       const x0 = Math.max(0, Math.floor(R[0] / CS) - 1), x1 = Math.min(n - 1, Math.floor(R[2] / CS) + 1), z0 = Math.max(0, Math.floor(R[1] / CS) - 1), z1 = Math.min(n - 1, Math.floor(R[3] / CS) + 1);
       const pass = (x, z) => {
         const c = g[z * n + x]; if (cr) return c === C.FLOOR || c === C.LOWROOF || c === C.DOOR || c === C.HATCH;
@@ -519,7 +544,7 @@
         return NEAR(g[z * n + x + 1]) && NEAR(g[z * n + x - 1]) && NEAR(g[(z + 1) * n + x]) && NEAR(g[(z - 1) * n + x]);
       };
       const seen = new Uint8Array(n * n); const q = [];
-      const push = (x, z) => { if (x < x0 || z < z0 || x > x1 || z > z1 || seen[z * n + x] || !pass(x, z)) return; seen[z * n + x] = 1; q.push(x, z); };
+      const push = (x, z, from) => { if (x < x0 || z < z0 || x > x1 || z > z1 || seen[z * n + x] || !pass(x, z) || (from !== undefined ? !stepOK(H, from, z * n + x) : !floorStep(H, z * n + x))) return; seen[z * n + x] = 1; q.push(x, z); };
       // (its ways in: the door cells on its walls, the stairs' ends in it, the street door's ground)
       const ports = [];
       for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) if (g[z * n + x] === C.DOOR && pass(x, z)) ports.push([[x, z]]);
@@ -529,7 +554,7 @@
       if (!ports.length) return this.walks(lv);
       if (ports.some(p => !p.length)) return false;
       for (const [x, z] of ports[0]) push(x, z);
-      for (let k = 0; k < q.length; k += 2) { const x = q[k], z = q[k + 1]; push(x + 1, z); push(x - 1, z); push(x, z + 1); push(x, z - 1); }
+      for (let k = 0; k < q.length; k += 2) { const x = q[k], z = q[k + 1], k0 = z * n + x; push(x + 1, z, k0); push(x - 1, z, k0); push(x, z + 1, k0); push(x, z - 1, k0); }
       for (const p of ports) if (!p.some(([x, z]) => seen[z * n + x])) return false;
       // (every place of use in the room reached — its own pieces', and the buyers' places of a stall beyond its opening)
       const reached = (p, rad) => { const cx = Math.floor(p[0] / CS), cz = Math.floor(p[1] / CS); const k = Math.ceil(rad / CS); for (let dz = -k; dz <= k; dz++) for (let dx = -k; dx <= k; dx++) { const x = cx + dx, z = cz + dz; if (x >= 0 && z >= 0 && x < n && z < n && seen[z * n + x]) return true; } return false; };
@@ -778,7 +803,8 @@
     for (const w of p.walls) if (w.shell) walls.push({ id: w.id, lv: w.lv, a: w.a, b: w.b, t: w.t, h: w.h, kind: w.kind, mat: w.mat, outer: w.outer });
     for (const h of p.holes) { const w = p.walls[h.wall]; if (!w || !w.shell) continue; holes.push(Object.assign({ wall: h.wall, at: h.at, w: h.w, h: h.h, sill: h.sill, kind: h.kind, door: h.door }, h.arch ? { arch: 1 } : {})); }
     const steps = p.stairs.filter(st => st.kind === 'degraus').map(st => ({ id: st.id, kind: st.kind, lv0: st.lv0, lv1: st.lv1, r: st.r, dir: st.dir, w: st.w }));
-    return { shell: p.shell, levels: p.levels.map(l => ({ lv: l.lv, y: l.y, h: l.h, kind: l.kind, slab: l.slab || 0 })), walls, holes, steps, entrance: p.entrance || null, entryLv: p.entryLv || 0, fam: p.shellFam || p.fam };
+    const out = { shell: p.shell, levels: p.levels.map(l => ({ lv: l.lv, y: l.y, h: l.h, kind: l.kind, slab: l.slab || 0 })), walls, holes, steps, entrance: p.entrance || null, entryLv: p.entryLv || 0, fam: p.shellFam || p.fam };
+    if (p.tiers) out.tiers = p.tiers.map(t => { const o = Object.assign({}, t); delete o.room; return o; }); return out;
   };
   // ---- plans asked for without stopping the frame (the 3D, the god's view): a plan is made in one go (from a few ms to a
   // tenth of a second in a tall block), so whoever draws asks with want(b) — the plan if it is made, else null and the
@@ -856,12 +882,14 @@
     // (the walls the shell raised — the outside ones of every storey, the annex's, the terrace's parapet and its room's; in a
     // block, all of its outside — with the plan's own ids, and what opens in them)
     const walls = [], holes = [];
-    for (const w of P.walls) if (w.shell) walls.push({ id: w.id, lv: w.lv, a: loc(w.a[0], w.a[1]), b: loc(w.b[0], w.b[1]), t: w.t, h: r2(w.h), kind: w.kind, mat: w.mat, outer: w.outer });
+    for (const w of P.walls) if (w.shell) walls.push(Object.assign({ id: w.id, lv: w.lv, a: loc(w.a[0], w.a[1]), b: loc(w.b[0], w.b[1]), t: w.t, h: r2(w.h), kind: w.kind, mat: w.mat, outer: w.outer }, w.ring ? { ring: ringLoc(s, L, w.ring) } : {}));
     for (const h of P.holes) { const w = P.walls[h.wall]; if (!w || !w.shell) continue; holes.push(Object.assign({ wall: h.wall, at: r2(h.at), w: r2(h.w), h: r2(h.h), sill: r2(h.sill), kind: h.kind, door: h.door }, h.arch ? { arch: 1 } : {})); }
     let entrance = null; if (P.entrance) { const e = P.entrance; const p = loc(e.u, e.v); entrance = { door: e.door, side: s, x: p[0], z: p[1], w: e.w, lv: e.lv, out: loc(e.u, L + 1.6) }; }
     // (the steps from the ground the shell has: up to the porch on stilts, down into a sunken floor)
     const steps = P.stairs.filter(st => st.kind === 'degraus').map(st => ({ id: st.id, kind: st.kind, lv0: st.lv0, lv1: st.lv1, r: R(st.r), dir: dirLoc(s, st.dir[0], st.dir[1]), w: r2(st.w) }));
-    return { shell, levels, walls, holes, steps, entrance, entryLv: P.entryLv || 0 };
+    const out = { shell, levels, walls, holes, steps, entrance, entryLv: P.entryLv || 0 };
+    if (P.tierList.length) out.tiers = tiersOut(P, false); // (the rows of seats: seen from afar, over an arena open to the sky)
+    return out;
   }
   // a flight's slope and its class (D-086), from what it climbs over its length — steps from the ground outside (lv0 -1) from
   // the ground, at 0: up to a house on stilts, down into a sunken floor —: 'degraus' to 45°, walked; 'escada' to 50°, walked;
@@ -888,7 +916,7 @@
     if (P.shellPrint && JSON.stringify(so) !== P.shellPrint) plan.errs.push('o interior mexeu na casca');
     plan.shell = so.shell;
     plan.levels = so.levels.map((l, i) => Object.assign({}, l, { area: R(P.levels[i].area) }));
-    plan.walls = P.walls.map(w => ({ id: w.id, lv: w.lv, a: loc(w.a[0], w.a[1]), b: loc(w.b[0], w.b[1]), t: w.t, h: r2(w.h), outer: w.outer, kind: w.kind, mat: w.mat, shell: w.shell ? 1 : 0 }));
+    plan.walls = P.walls.map(w => Object.assign({ id: w.id, lv: w.lv, a: loc(w.a[0], w.a[1]), b: loc(w.b[0], w.b[1]), t: w.t, h: r2(w.h), outer: w.outer, kind: w.kind, mat: w.mat, shell: w.shell ? 1 : 0 }, w.ring ? { ring: ringLoc(s, L, w.ring) } : {}));
     plan.holes = P.holes.map(h => Object.assign({ wall: h.wall, at: r2(h.at), w: r2(h.w), h: r2(h.h), sill: r2(h.sill), kind: h.kind, door: h.door }, h.arch ? { arch: 1 } : {}));
     plan.doors = P.doors.map(d => Object.assign({ id: d.id, wall: d.wall, at: r2(d.at), w: r2(d.w), h: r2(d.h), sill: r2(d.sill || 0), hinge: d.hinge, into: d.into, outer: d.outer, rooms: d.rooms.slice(), kind: d.kind }, d.arch ? { arch: 1 } : {}));
     plan.rooms = P.rooms.map(m => {
@@ -912,6 +940,9 @@
     plan.cap = { places: P.places(), jobs: plan.items.filter(i => i.job).length, store: plan.items.reduce((n, i) => n + (i.store && i.store.dep === 'povo' ? i.store.cap : 0), 0), seats: plan.items.filter(i => i.spots.some(q => q.use === 'sentar' || q.use === 'comer')).length };
     plan.head = P.headAt ? P.headAt : null; void plan.head; delete plan.head;
     plan.roofGeo = P.roofGeo || null; // (canonical: what the loft's headroom is measured under)
+    if (P.tierList.length) { plan.tiers = tiersOut(P, true); plan.cap.watch = 0; } // (the rows of seats: B4 — the places to watch, counted below)
+    // (the places with no piece: their points and the way one faces turned to the lot — fitted to the body by the validator)
+    if (P.markList.length) plan.marks = P.markList.map(M => ({ id: M.id, lv: M.lv, room: M.room, use: M.use, st: M.st, pts: M.pts.map(q => { const c = loc(q[0], q[1]); const f = dirLoc(s, Math.sin(q[2] || 0), Math.cos(q[2] || 0)); return { x: c[0], z: c[1], ry: r2(Math.atan2(f[0], f[1])) }; }) }));
     plan._P = P; // (the canonical builder kept for the grid's headroom; not part of the contract)
     gridOf(plan, P);
     validate(plan);
@@ -925,6 +956,99 @@
   // · 5 stair · 6 door or opening · 7 void (no floor here: one would fall) · 8 roof too low to stand · 9 a trapdoor over a
   // ladder (shut, it is floor: one walks over it; one opens it to go down)
   const C = In.CELL = { OUT: 0, FLOOR: 1, WALL: 2, SOLID: 3, LOW: 4, STAIR: 5, DOOR: 6, VOID: 7, LOWROOF: 8, HATCH: 9 };
+  // ---- the rows of seats (P.tiers): the storey's height over its floor where they are, the places to watch from on them ----
+  const TAU = Math.PI * 2;
+  const angIn = (th, a0, a1) => { const span = ((a1 - a0) % TAU + TAU) % TAU || TAU; return ((th - a0) % TAU + TAU) % TAU <= span + 1e-9; };
+  const angGap = (a, b) => { const d = ((a - b) % TAU + TAU) % TAU; return Math.min(d, TAU - d); };
+  // (a point in a block: how far into it up the rows (s), how deep it is (D), and across it — the angle and the radius of a
+  // ring, the coordinate along the rows of a rectangle (c); null out of it)
+  function tierPos(T, x, z) {
+    if (T.kind === 'ring') {
+      const dx = x - T.cu, dz = z - T.cv; const d = Math.hypot(dx, dz); const s = T.dir === 'out' ? d - T.r0 : T.r1 - d; const D = T.r1 - T.r0;
+      if (s < 0 || s >= D) return null; const th = Math.atan2(dz, dx); if (T.arc && !angIn(th, T.arc[0], T.arc[1])) return null;
+      return { s, D, th, d };
+    }
+    const [u0, v0, u1, v1] = T.r; if (x < u0 || x >= u1 || z < v0 || z >= v1) return null; const ns = T.dir === 'n' || T.dir === 's';
+    return { s: T.dir === 'n' ? v1 - z : T.dir === 's' ? z - v0 : T.dir === 'e' ? x - u0 : u1 - x, D: ns ? v1 - v0 : u1 - u0, c: ns ? x : z };
+  }
+  // (in one of its aisles: within half their width of an aisle's line — for a ring, along the circle where the point is)
+  const inAisle = (T, q, pad) => T.aisles.some(a => (T.kind === 'ring' ? angGap(q.th, a) * q.d : Math.abs(q.c - a)) <= T.aw / 2 + (pad || 0));
+  // the height over the storey's floor at a point of a block, or null out of it: a row's top — past the last one, the walk at
+  // its height —; in an aisle, the steps up the row (T.climb of them: two for a row of 0.40, a step of 0.25 at most — five up a
+  // stage of 1.2)
+  function tierH(T, x, z) {
+    const q = tierPos(T, x, z); if (!q) return null; const k = Math.floor(q.s / T.tread);
+    if (k >= T.rows) return T.first + (T.rows - 1) * T.rise; const top = T.first + k * T.rise;
+    if (!inAisle(T, q)) return top; const m = T.climb || 2; const j = Math.min(m - 1, Math.floor((q.s - k * T.tread) / (T.tread / m)));
+    return top - T.rise + (j + 1) * T.rise / m;
+  }
+  In.tierH = tierH;
+  // (a storey's heights on the plan's cells in its own frame, from its blocks — null where it has none)
+  function hgtOf(P, lv, n) {
+    const L = P.tierList.filter(T => T.lv === lv); if (!L.length) return null;
+    const m = P._hg || (P._hg = {}); if (m[lv] && m[lv].key === P.tierList.length) return m[lv].h;
+    const h = new Float32Array(n * n);
+    for (let z = 0; z < n; z++) for (let x = 0; x < n; x++) for (const T of L) { const y = tierH(T, (x + 0.5) * CS, (z + 0.5) * CS); if (y !== null) { h[z * n + x] = y; break; } }
+    m[lv] = { key: P.tierList.length, h }; return h;
+  }
+  // (two cells next to each other the walk goes between: within a step of each other — BODY.step —, where a storey has heights)
+  const stepOK = (H, a, c) => !H || Math.abs(H[a] - H[c]) <= BODY.step + 1e-6;
+  const floorStep = (H, c) => !H || H[c] <= BODY.step + 1e-6; // (a cell one comes onto from the storey's floor: a door, a flight)
+  // the blocks as the lot has them (the plan's, the shell's): their middle, angles, rectangle and the way they rise turned to it;
+  // the plan's with the room each is in (the recipe's, or the room of the storey its middle falls in — the rows are laid with
+  // the shell, often before the rooms: the shell's own leave it out)
+  function tierRoom(P, T) {
+    if (T.room !== null && T.room !== undefined && T.room >= 0) return T.room;
+    const mid = T.kind === 'ring' ? (() => { const a = T.arc ? T.arc[0] + ((((T.arc[1] - T.arc[0]) % TAU) + TAU) % TAU || TAU) / 2 : 0; const rm = (T.r0 + T.r1) / 2; return [T.cu + Math.cos(a) * rm, T.cv + Math.sin(a) * rm]; })() : [(T.r[0] + T.r[2]) / 2, (T.r[1] + T.r[3]) / 2];
+    const m = P.rooms.find(q => q.lv === T.lv && inRoomPt(q, mid[0], mid[1])); return m ? m.id : -1;
+  }
+  function tiersOut(P, withRoom) {
+    const s = P.rec.s, L = P.L; const angLoc = a => angLocOf(s, a);
+    const SIDE = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] }; const sideOf = d => (d[1] < -0.5 ? 'n' : d[1] > 0.5 ? 's' : d[0] > 0.5 ? 'e' : 'w');
+    return P.tierList.map(T => {
+      const o = { id: T.id, lv: T.lv, kind: T.kind, rows: T.rows, rise: T.rise, tread: T.tread, first: T.first, aw: T.aw, seat: T.seat, dir: T.dir, use: T.use, climb: T.climb }; if (withRoom) o.room = tierRoom(P, T);
+      if (T.kind === 'ring') { const c = toLoc(s, L, T.cu, T.cv); Object.assign(o, { cu: r2(c[0]), cv: r2(c[1]), r0: T.r0, r1: T.r1, arc: T.arc ? T.arc.map(angLoc) : null, aisles: T.aisles.map(angLoc) }); }
+      else {
+        const dl = sideOf(dirLoc(s, SIDE[T.dir][0], SIDE[T.dir][1])); const ns = T.dir === 'n' || T.dir === 's'; const mid = ns ? (T.r[1] + T.r[3]) / 2 : (T.r[0] + T.r[2]) / 2;
+        Object.assign(o, { r: rectLoc(s, L, T.r).map(r2), dir: dl, aisles: T.aisles.map(a => { const p = ns ? toLoc(s, L, a, mid) : toLoc(s, L, mid, a); return r2(dl === 'n' || dl === 's' ? p[0] : p[1]); }) });
+      }
+      return o;
+    });
+  }
+  // the places to watch from on the rows of a plan's blocks (metres of the lot): on each row a seat's depth in from its front,
+  // every T.seat along it, a quarter metre clear of the aisles; facing down the rows, seated on the row's top
+  function tierSeats(plan) {
+    const out = [];
+    for (const T of plan.tiers || []) for (let k = 0; k < T.rows; k++) {
+      const s = k * T.tread + Math.min(0.3, T.tread / 2); const y = r2(T.first + k * T.rise);
+      if (T.kind === 'ring') {
+        const d = T.dir === 'out' ? T.r0 + s : T.r1 - s; if (d <= 0.3) continue;
+        const a0 = T.arc ? T.arc[0] : 0; const span = T.arc ? ((T.arc[1] - a0) % TAU + TAU) % TAU || TAU : TAU; const m = Math.max(1, Math.floor(span * d / T.seat));
+        for (let j = 0; j < m; j++) {
+          const th = a0 + (j + 0.5) * span / m; if (inAisle(T, { th, d }, 0.25)) continue; const f = T.dir === 'out' ? [-Math.cos(th), -Math.sin(th)] : [Math.cos(th), Math.sin(th)];
+          out.push({ T, k, lv: T.lv, x: r2(T.cu + Math.cos(th) * d), z: r2(T.cv + Math.sin(th) * d), ry: r2(Math.atan2(f[0], f[1])), y });
+        }
+      } else {
+        const [u0, v0, u1, v1] = T.r; const ns = T.dir === 'n' || T.dir === 's'; const lo = ns ? u0 : v0, hi = ns ? u1 : v1;
+        const f = T.dir === 'n' ? [0, 1] : T.dir === 's' ? [0, -1] : T.dir === 'e' ? [-1, 0] : [1, 0];
+        for (let c = lo + 0.25; c <= hi - 0.25 + 1e-9; c += T.seat) {
+          if (inAisle(T, { c }, 0.25)) continue;
+          const x = ns ? c : T.dir === 'e' ? u0 + s : u1 - s, z = ns ? (T.dir === 'n' ? v1 - s : v0 + s) : c;
+          out.push({ T, k, lv: T.lv, x: r2(x), z: r2(z), ry: r2(Math.atan2(f[0], f[1])), y });
+        }
+      }
+    }
+    return out;
+  }
+  In.tierSeats = tierSeats; // (for the proofs and the drawing)
+  // (a place on a row the walk from the door reaches: a cell beside it it reached, at the row's height or a step from it — a
+  // floor below the row's end is no way onto it)
+  function seatReached(plan, se) {
+    const n = plan.grid.n; const R = plan.reach && plan.reach[se.lv]; const H = plan.hgt && plan.hgt[se.lv]; if (!R) return false;
+    const cx = Math.floor(se.x / CS), cz = Math.floor(se.z / CS);
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const x = cx + dx, z = cz + dz; if (x < 0 || z < 0 || x >= n || z >= n) continue; const k = z * n + x; if (R[k] && (!H || Math.abs(H[k] - se.y) <= BODY.step + 1e-6)) return true; }
+    return false;
+  }
   function grid(plan, only) {
     const L = plan.lot.w; const n = Math.round(L / CS);
     plan.grid = { cs: CS, n, lv: {} };
@@ -964,8 +1088,21 @@
         if (w.lv !== l.lv) continue;
         const ht = Math.max(w.t / 2, CS / 2 + 1e-3); const ax = Math.min(w.a[0], w.b[0]), az = Math.min(w.a[1], w.b[1]), bx = Math.max(w.a[0], w.b[0]), bz = Math.max(w.a[1], w.b[1]);
         const vert = Math.abs(w.a[0] - w.b[0]) < 1e-6;
-        // (a wall aslant — the sides of a wall round a circle, P.ringWall —: the cells whose middle is within its half thickness of
-        // its line, its ends run on by as much so that two meeting at a corner close it; its openings the cells along their span)
+        // (a side of a wall round a circle — P.ringWall —: the band of the circle its middle line is on, half its thickness to
+        // either side, over the side's angles — the rooms about it are circles too: they meet it with no cell between —, a
+        // little past its corners so that the next side closes it; its openings, the cells of the band within their span)
+        if (w.ring) {
+          const [cu, cv, rad, a0, a1] = w.ring; const ex = ht / Math.max(rad, 0.1); const bulge = rad - rad * Math.cos(Math.min(Math.PI, ((a1 - a0) % TAU + TAU) % TAU) / 2) + ht;
+          const [x0, z0, x1, z1] = cellsOf([ax - bulge, az - bulge, bx + bulge, bz + bulge]); const L2 = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1;
+          const hs = plan.holes.filter(h => h.wall === w.id && h.kind !== 'janela').map(h => { const t = h.at / L2; const px = w.a[0] + (w.b[0] - w.a[0]) * t, pz = w.a[1] + (w.b[1] - w.a[1]) * t; return { th: Math.atan2(pz - cv, px - cu), half: h.w / 2 / rad }; });
+          for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
+            const px = (x + 0.5) * CS - cu, pz = (z + 0.5) * CS - cv; if (Math.abs(Math.hypot(px, pz) - rad) > ht) continue; const th = Math.atan2(pz, px); if (!angIn(th, a0 - ex, a1 + ex)) continue;
+            g[idx(x, z)] = hs.some(q => angGap(th, q.th) <= q.half) ? C.DOOR : C.WALL;
+          }
+          continue;
+        }
+        // (a wall aslant: the cells whose middle is within its half thickness of its line, its ends run on by as much so that two
+        // meeting at a corner close it; its openings the cells along their span)
         if (!vert && Math.abs(w.a[1] - w.b[1]) >= 1e-6) {
           const L2 = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); const tx = (w.b[0] - w.a[0]) / L2, tz = (w.b[1] - w.a[1]) / L2;
           const [x0, z0, x1, z1] = cellsOf([ax - ht, az - ht, bx + ht, bz + ht]); const hs = plan.holes.filter(h => h.wall === w.id && h.kind !== 'janela');
@@ -1009,7 +1146,7 @@
     if (!base.g) return null;
     const g = base.g.slice(); const items = []; for (const it of P.items) if (it.lv === lv) items.push({ lv, r: it.r, low: ITEMS[it.kind].low ? 1 : 0, niche: it.niche ? 1 : 0 });
     stampItems({ items }, lv, g, n);
-    return { g, n, crawl: base.crawl };
+    return { g, n, crawl: base.crawl, hgt: hgtOf(P, lv, n) };
   }
   // the grid of a plan made: the very one its pieces were laid out on (the canonical frame's), turned to the lot — never a
   // second rasterising of the plan in centimetres, whose rounding puts an edge now and then on the other side of a cell's
@@ -1025,11 +1162,13 @@
     const L = plan.lot.w; const n = Math.round(L / CS); const m = turnOf(plan.side, L);
     plan.grid = { cs: CS, n, lv: {} };
     for (const l of P.levels) { const dr = draft(P, l.lv); if (dr) plan.grid.lv[l.lv] = turn(dr.g, m); }
+    // (and where a storey has rows of seats, its heights over its floor on the same cells: plan.hgt[lv], metres)
+    for (const l of P.levels) { const h = hgtOf(P, l.lv, n); if (!h) continue; if (!plan.hgt) plan.hgt = {}; const o = new Float32Array(m.length); for (let k = 0; k < m.length; k++) o[k] = h[m[k]]; plan.hgt[l.lv] = o; }
   }
   // the walk from the entrance in the plan's own frame, on those same cells, from its own door and stairs
   function reachCan(P) {
-    const n = Math.round(P.L / CS); const grid = { n, lv: {} }; for (const l of P.levels) { const dr = draft(P, l.lv); if (dr) grid.lv[l.lv] = dr.g; }
-    const e = P.entrance; const pc = { grid, levels: P.levels, entrance: e ? { x: e.u, z: e.v, lv: e.lv || 0 } : null, stairs: P.stairs.map(st => ({ kind: st.kind, lv0: st.lv0, lv1: st.lv1, a: st.foot, b: st.top })) };
+    const n = Math.round(P.L / CS); const grid = { n, lv: {} }; const hgt = {}; for (const l of P.levels) { const dr = draft(P, l.lv); if (dr) { grid.lv[l.lv] = dr.g; if (dr.hgt) hgt[l.lv] = dr.hgt; } }
+    const e = P.entrance; const pc = { grid, hgt, levels: P.levels, entrance: e ? { x: e.u, z: e.v, lv: e.lv || 0 } : null, stairs: P.stairs.map(st => ({ kind: st.kind, lv0: st.lv0, lv1: st.lv1, a: st.foot, b: st.top })) };
     return { pc, seen: reach(pc) };
   }
   const PASS = c => c === C.FLOOR || c === C.DOOR || c === C.HATCH;
@@ -1048,15 +1187,18 @@
   // the walk from the entrance: every storey's cells one reaches on foot (by the stairs between them)
   function reach(plan) {
     const n = plan.grid.n; const seen = {}; for (const l of plan.levels) seen[l.lv] = new Uint8Array(n * n);
-    const q = []; const push = (lv, x, z) => { if (!seen[lv] || !passable(plan, lv, x, z) || seen[lv][z * n + x]) return; seen[lv][z * n + x] = 1; q.push([lv, x, z]); };
+    // (from a cell to the next one: a step at most between their heights, where the storey has rows of seats)
+    const HG = plan.hgt || {};
+    // (and the cells the walk starts from — inside the door, at a flight's end — at the storey's floor, a step at most over it)
+    const q = []; const push = (lv, x, z, from) => { if (!seen[lv] || !passable(plan, lv, x, z) || seen[lv][z * n + x]) return; if (from !== undefined ? !stepOK(HG[lv], from, z * n + x) : !floorStep(HG[lv], z * n + x)) return; seen[lv][z * n + x] = 1; q.push([lv, x, z]); };
     if (!plan.entrance) return seen;
     // (just inside the door: the first passable cells within 1.2 m of it, on the entrance's storey)
     const e = plan.entrance; const [ex, ez] = cellAt(plan, [e.x, e.z]); const lv0 = e.lv || 0;
     for (let dz = -5; dz <= 5; dz++) for (let dx = -5; dx <= 5; dx++) { const x = ex + dx, z = ez + dz; if (Math.hypot(dx, dz) * CS <= 1.25) push(lv0, x, z); }
     const links = plan.stairs.map(s => ({ s, f: cellAt(plan, s.a), t: cellAt(plan, s.b) }));
     for (let k = 0; k < q.length; k++) {
-      const [lv, x, z] = q[k];
-      push(lv, x + 1, z); push(lv, x - 1, z); push(lv, x, z + 1); push(lv, x, z - 1);
+      const [lv, x, z] = q[k]; const k0 = z * n + x;
+      push(lv, x + 1, z, k0); push(lv, x - 1, z, k0); push(lv, x, z + 1, k0); push(lv, x, z - 1, k0);
       for (const L of links) {
         if (L.s.kind === 'degraus') continue;
         if (lv === L.s.lv0 && Math.abs(x - L.f[0]) <= 2 && Math.abs(z - L.f[1]) <= 2) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) push(L.s.lv1, L.t[0] + dx, L.t[1] + dz);
@@ -1168,7 +1310,7 @@
       const P = P0(plan); const { pc, seen } = reachCan(P); const n = pc.grid.n;
       for (const m of P.rooms) {
         let ok = false; const s = seen[m.lv];
-        if (s) { const [x0, z0] = cellAt(pc, [m.r[0] + 0.01, m.r[1] + 0.01]), [x1, z1] = cellAt(pc, [m.r[2] - 0.01, m.r[3] - 0.01]); for (let z = Math.max(0, z0); z <= Math.min(n - 1, z1) && !ok; z++) for (let x = Math.max(0, x0); x <= Math.min(n - 1, x1); x++) if (s[z * n + x] && !(m.circ && m.circ[3] > 0 && !inRoomPt(m, (x + 0.5) * CS, (z + 0.5) * CS))) { ok = true; break; } }
+        if (s) { const [x0, z0] = cellAt(pc, [m.r[0] + 0.01, m.r[1] + 0.01]), [x1, z1] = cellAt(pc, [m.r[2] - 0.01, m.r[3] - 0.01]); for (let z = Math.max(0, z0); z <= Math.min(n - 1, z1) && !ok; z++) for (let x = Math.max(0, x0); x <= Math.min(n - 1, x1); x++) if (s[z * n + x] && !(m.circ && !inRoomPt(m, (x + 0.5) * CS, (z + 0.5) * CS))) { ok = true; break; } }
         if (!ok) E.push(`não se chega ao cômodo ${m.fn} (piso ${m.lv})`);
       }
       // (every use of every piece: one of its places for that use is enough — a long bench is reached at one of its ends)
@@ -1178,6 +1320,11 @@
       }
       const m = turnOf(plan.side, plan.lot.w); plan.reach = {}; for (const lv in seen) plan.reach[lv] = turn(seen[lv], m);
       fitBody(plan, E);
+      // (the rows of seats: each block in its room, with places to watch from, and the door reaching one of them — up its
+      // aisles, half a row at a step)
+      if (plan.tiers) { const seats = tierSeats(plan); plan.cap.watch = 0;
+        for (const T of plan.tiers) { const mine = seats.filter(q => q.T === T); const m = plan.rooms[T.room]; const got = mine.filter(q => seatReached(plan, q)).length; if (T.use === 'assistir') plan.cap.watch += got;
+          if (!mine.length) E.push(`fileiras sem lugar para assistir (piso ${T.lv})`); else if (!m || mine.some(q => !inRoomPt(m, q.x, q.z, 0.05))) E.push(`fileiras fora do cômodo (piso ${T.lv})`); else if (!got) E.push(`não se chega às fileiras (piso ${T.lv})`); } }
     }
     plan.ok = !E.length;
   }
@@ -1187,6 +1334,10 @@
   // along the flight's line (and across it, within its width) to where the body's rim stands. Every use of every piece needs
   // a place ok, every flight both ends: else the plan is refused and laid out again (D-088)
   function fitBody(plan, E) {
+    for (const M of plan.marks || []) {
+      let any = 0; for (const q of M.pts) { const pt = fitStand(plan, M.lv, q.x, q.z, null); q.ok = pt ? 1 : 0; if (pt) { q.x = pt[0]; q.z = pt[1]; any = 1; } }
+      if (!any) E.push(`o corpo não fica nos lugares de ${M.use} (piso ${M.lv})`);
+    }
     for (const it of plan.items) {
       const own = new Map(); let any = 0;
       for (const sp of it.spots) {
@@ -1309,8 +1460,11 @@
       const len = s.dir[0] ? s.r[2] - s.r[0] : s.r[3] - s.r[1]; const t = s.dir[0] ? (s.dir[0] > 0 ? x - s.r[0] : s.r[2] - x) : (s.dir[1] > 0 ? z - s.r[1] : s.r[3] - z);
       return y0 + (y1 - y0) * G.clamp(t / (len || 1), 0, 1);
     }
-    return y0;
+    return y0 + hAt(p, lv, x, z); // (on the rows of seats, their height)
   };
+  // (the height over its storey's floor at a point of a plan made, where the storey has rows of seats: plan.hgt)
+  function hAt(p, lv, x, z) { const H = p && p.hgt && p.hgt[lv]; if (!H) return 0; const n = p.grid.n; const cx = Math.floor(x / CS), cz = Math.floor(z / CS); return cx < 0 || cz < 0 || cx >= n || cz >= n ? 0 : H[cz * n + cx]; }
+  In.hAt = hAt;
   // the world's door of a building (tiles): the point before the plan's entrance — or, when that is not open ground now, the
   // first open corner (the old rule), until the turn of the day records that the door moved. Read from the shell: the same
   // way in as the whole plan's (the shell from afar is the plan's), at a small part of its cost — the door is asked by the
@@ -1396,7 +1550,7 @@
   In.SIT_H = 0.5; // (the hips of one seated over the feet, as the 3D seats people: people3d.js 'sit' — qa/lugares.js checks it)
   const APPROACH = { acesso: 1, entrar: 1 }; // (where one stands to get onto a piece: no place of its own)
   // the state the 3D shows at a place by its use (a household's rule may say another: In.placeRule's st)
-  const USE_ST = In.USE_ST = { deitar: 'sleep', sentar: 'sit', comer: 'eat', cozinhar: 'cook', assar: 'cook', aquecer: 'rest', cuidar: 'low', tecer: 'sit', trabalhar: 'interact', forjar: 'swing', martelar: 'swing', temperar: 'low', tornear: 'sit', cozer: 'low', lavrar: 'sit', fundir: 'low', cortar: 'swing', pendurar: 'interact', escrever: 'sit', remendar: 'low', oficiar: 'interact', ofertar: 'pray', rezar: 'pray', armar: 'interact', treinar: 'fight', banhar: 'sit', alimentar: 'low', despir: 'interact', mexer: 'interact', audiencia: 'idle', beber: 'low', vender: 'talk', comprar: 'talk', conferir: 'interact', entregar: 'interact', guardar: 'interact', pegar: 'low', assistir: 'sit' };
+  const USE_ST = In.USE_ST = { atuar: 'talk', lutar: 'fight', discursar: 'talk', conversar: 'talk', ouvir: 'idle', topo: 'idle', ler: 'sit', deitar: 'sleep', sentar: 'sit', comer: 'eat', cozinhar: 'cook', assar: 'cook', aquecer: 'rest', cuidar: 'low', tecer: 'sit', trabalhar: 'interact', forjar: 'swing', martelar: 'swing', temperar: 'low', tornear: 'sit', cozer: 'low', lavrar: 'sit', fundir: 'low', cortar: 'swing', pendurar: 'interact', escrever: 'sit', remendar: 'low', oficiar: 'interact', ofertar: 'pray', rezar: 'pray', armar: 'interact', treinar: 'fight', banhar: 'sit', alimentar: 'low', despir: 'interact', mexer: 'interact', audiencia: 'idle', beber: 'low', vender: 'talk', comprar: 'talk', conferir: 'interact', entregar: 'interact', guardar: 'interact', pegar: 'low', assistir: 'sit' };
   const LYING = { sleep: 1, sick: 1 }, SEATED = { sit: 1, eat: 1, rock: 1, sittalk: 1 }, LOW_SEAT = { rest: 1, pray: 1, eatg: 1, rockg: 1 };
   const ON_GROUND = { sit: 'rest', sittalk: 'rest', eat: 'eatg', rock: 'rockg' }; // (a seated state, where there is no seat)
   // (the words the drawing read before st — B3.openPlace's pose: one sitting on the ground is 'no chão', which it has not got,
@@ -1405,7 +1559,10 @@
   // the height of the root of one at a place, over its storey's floor — the 3D's root, the body's feet: on the floor by a piece;
   // lying, on what one lies on; seated, the hips on the seat (In.SIT_H over the feet); kneeling or on the ground, on its top
   In.rootY = function (it, sp, st) {
-    if (!sp || !sp.on) return 0; const D = ITEMS[it.kind] || {};
+    if (!sp || !sp.on) return 0;
+    if (it.tier) return SEATED[st] ? Math.max(0, it.h - In.SIT_H) : it.h; // (on a row of seats: its top the seat)
+    if (it.mark) return sp.y || 0; // (at a place with no piece: on its floor)
+    const D = ITEMS[it.kind] || {};
     if (LYING[st]) return D.lie !== undefined ? D.lie : D.h || 0;
     if (SEATED[st]) return Math.max(0, (D.seat !== undefined ? D.seat : Math.min(D.h || 0, In.SIT_H)) - In.SIT_H);
     return D.h || 0;
@@ -1442,18 +1599,19 @@
     const push = (c, lv, k, fl, fc) => { if (!D[lv] || c >= D[lv][k]) return; D[lv][k] = c; FL[lv][k] = fl; FC[lv][k] = fc; hc.push(c); hl.push(lv); hk.push(k); up(hc.length - 1); };
     const pass = (lv, x, z) => passable(p, lv, x, z);
     const lv0 = e.lv || 0; const [ex, ez] = cellAt(p, [e.x, e.z]);
-    for (let dz = -5; dz <= 5; dz++) for (let dx = -5; dx <= 5; dx++) { const x = ex + dx, z = ez + dz; if (Math.hypot(dx, dz) * CS <= 1.25 && pass(lv0, x, z)) push(Math.hypot((x + 0.5) * CS - e.x, (z + 0.5) * CS - e.z), lv0, z * n + x, -100, -1); }
+    const HG = p.hgt || {}; const onto = (lv, k) => floorStep(HG[lv], k);
+    for (let dz = -5; dz <= 5; dz++) for (let dx = -5; dx <= 5; dx++) { const x = ex + dx, z = ez + dz; if (Math.hypot(dx, dz) * CS <= 1.25 && pass(lv0, x, z) && onto(lv0, z * n + x)) push(Math.hypot((x + 0.5) * CS - e.x, (z + 0.5) * CS - e.z), lv0, z * n + x, -100, -1); }
     // (the flights: from a cell beside one end to the other end, the flight's length)
     const lvY = lv => { const l = p.levels.find(q => q.lv === lv); return l ? l.y : 0; };
     const links = p.stairs.filter(s => s.kind !== 'degraus').map(s => ({ s, f: cellAt(p, s.a), t: cellAt(p, s.b), len: Math.hypot(s.dir[0] ? s.r[2] - s.r[0] : s.r[3] - s.r[1], lvY(s.lv1) - lvY(s.lv0)) + 0.8 }));
     const N8 = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, Math.SQRT2], [-1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, -1, Math.SQRT2]];
     while (hc.length) {
       const c = hc[0], lv = hl[0], k = hk[0]; const lc = hc.pop(), ll = hl.pop(), lk = hk.pop(); if (hc.length) { hc[0] = lc; hl[0] = ll; hk[0] = lk; down(0); }
-      if (c > D[lv][k]) continue; const x = k % n, z = (k - x) / n;
-      for (const [dx, dz, w] of N8) { const X = x + dx, Z = z + dz; if (!pass(lv, X, Z) || (dx && dz && (!pass(lv, x + dx, z) || !pass(lv, x, z + dz)))) continue; push(c + w * CS, lv, Z * n + X, lv, k); }
+      if (c > D[lv][k]) continue; const x = k % n, z = (k - x) / n; const H = p.hgt && p.hgt[lv];
+      for (const [dx, dz, w] of N8) { const X = x + dx, Z = z + dz; if (!pass(lv, X, Z) || (dx && dz && (!pass(lv, x + dx, z) || !pass(lv, x, z + dz))) || !stepOK(H, k, Z * n + X)) continue; push(c + w * CS, lv, Z * n + X, lv, k); }
       for (const L of links) {
-        if (lv === L.s.lv0 && Math.abs(x - L.f[0]) <= 2 && Math.abs(z - L.f[1]) <= 2) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) { const X = L.t[0] + dx, Z = L.t[1] + dz; if (pass(L.s.lv1, X, Z)) push(c + L.len + Math.hypot(dx, dz) * CS, L.s.lv1, Z * n + X, lv, k); }
-        if (lv === L.s.lv1 && Math.abs(x - L.t[0]) <= 2 && Math.abs(z - L.t[1]) <= 2) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) { const X = L.f[0] + dx, Z = L.f[1] + dz; if (pass(L.s.lv0, X, Z)) push(c + L.len + Math.hypot(dx, dz) * CS, L.s.lv0, Z * n + X, lv, k); }
+        if (lv === L.s.lv0 && Math.abs(x - L.f[0]) <= 2 && Math.abs(z - L.f[1]) <= 2) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) { const X = L.t[0] + dx, Z = L.t[1] + dz; if (pass(L.s.lv1, X, Z) && onto(L.s.lv1, Z * n + X)) push(c + L.len + Math.hypot(dx, dz) * CS, L.s.lv1, Z * n + X, lv, k); }
+        if (lv === L.s.lv1 && Math.abs(x - L.t[0]) <= 2 && Math.abs(z - L.t[1]) <= 2) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) { const X = L.f[0] + dx, Z = L.f[1] + dz; if (pass(L.s.lv0, X, Z) && onto(L.s.lv0, Z * n + X)) push(c + L.len + Math.hypot(dx, dz) * CS, L.s.lv0, Z * n + X, lv, k); }
       }
     }
     return { n, D, FL, FC };
@@ -1490,6 +1648,24 @@
         spots.push(e); if (e.ok) { let L = byUse.get(sp.use); if (!L) byUse.set(sp.use, L = []); L.push(e); }
       });
     }
+    // (the places to watch from on the rows of seats — P.tiers —: each row a thing of its own for whoever sits on it, its places
+    // and its height; usable where the door reaches it, up the aisles)
+    const rows = new Map();
+    for (const se of tierSeats(p)) {
+      const key = se.T.id + '.' + se.k; let it = rows.get(key);
+      if (!it) { it = { id: p.id + ':t' + key, kind: 'fileira', lv: se.lv, room: se.T.room, tier: 1, h: se.y, y: 0, job: 0, places: 0, spots: [] }; rows.set(key, it); }
+      const ok = seatReached(p, se) ? 1 : 0; const q = it.spots.length;
+      const use = se.T.use || 'assistir'; it.spots.push({ use, on: 1, x: se.x, z: se.z, ry: se.ry, y: se.y, ok });
+      const e = { k: spots.length, it, q, use, on: 1, lv: se.lv, x: se.x, z: se.z, ry: se.ry, ok, din: ok ? r2(walkTo(W, se.lv, se.x, se.z, 0.35)) : Infinity };
+      spots.push(e); if (ok) { let L = byUse.get(use); if (!L) byUse.set(use, L = []); L.push(e); }
+    }
+    // (the places with no piece — P.marks —: each set a thing of its own, its points; usable where the body was fitted there)
+    for (const M of p.marks || []) {
+      const it = { id: p.id + ':m' + M.id, kind: 'marca', lv: M.lv, room: M.room, mark: 1, h: 0, y: 0, job: 0, places: 0, st: M.st, spots: [] };
+      M.pts.forEach((q, j) => { const y = r2(hAt(p, M.lv, q.x, q.z)); it.spots.push({ use: M.use, on: 1, x: q.x, z: q.z, ry: q.ry, y, ok: q.ok ? 1 : 0 });
+        const e = { k: spots.length, it, q: j, use: M.use, on: 1, lv: M.lv, x: q.x, z: q.z, ry: q.ry, ok: q.ok ? 1 : 0, din: q.ok ? r2(walkTo(W, M.lv, q.x, q.z, 0.35)) : Infinity };
+        spots.push(e); if (e.ok) { let L = byUse.get(M.use); if (!L) byUse.set(M.use, L = []); L.push(e); } });
+    }
     const e0 = p.entryLv || 0;
     // (standing on the floor: on a half-metre lattice in each room, where a body stands and the door reaches — the entrance's
     // storey first, room by room, the middle of each first, facing it)
@@ -1497,9 +1673,10 @@
     for (const m of p.rooms) {
       const r = m.r; const cx = (r[0] + r[2]) / 2, cz = (r[1] + r[3]) / 2;
       for (let x = r[0] + 0.3; x <= r[2] - 0.3 + 1e-6; x += 0.5) for (let z = r[1] + 0.3; z <= r[3] - 0.3 + 1e-6; z += 0.5) {
-        if (m.circ && Math.hypot(x - m.circ[0], z - m.circ[1]) > m.circ[2] - 0.3) continue;
+        if (m.circ && !inRoomPt(m, x, z, -0.3)) continue;
         if (!standsAt(p, m.lv, x, z, 0.25) || !reachedNear(p, seen, m.lv, [x, z], 0.3)) continue;
-        floor.push({ lv: m.lv, room: m.id, x: r2(x), z: r2(z), ry: r2(Math.atan2(cx - x, cz - z)), d: Math.hypot(x - cx, z - cz), din: r2(walkTo(W, m.lv, x, z, 0.35)) });
+        const fy = hAt(p, m.lv, x, z); const f = { lv: m.lv, room: m.id, x: r2(x), z: r2(z), ry: r2(Math.atan2(cx - x, cz - z)), d: Math.hypot(x - cx, z - cz), din: r2(walkTo(W, m.lv, x, z, 0.35)) }; if (fy) f.y = r2(fy);
+        floor.push(f);
       }
     }
     floor.sort((a, c) => (a.lv === e0 ? 0 : 1) - (c.lv === e0 ? 0 : 1) || a.lv - c.lv || a.room - c.room || a.d - c.d || a.x - c.x || a.z - c.z);
@@ -1508,7 +1685,8 @@
     // who would use it), in the rooms where people sleep first, along a wall first; reached from the door. A body's root a
     // little toward the head, as the 3D lays a sleeper — the head 0.62 m behind it, the feet 0.86 before)
     const lie = []; const inUse = (lv, R) => keep.some(([l, x, z]) => l === lv && x > R[0] - BODY.feet && x < R[2] + BODY.feet && z > R[1] - BODY.feet && z < R[3] + BODY.feet);
-    const allOpen = (lv, R) => { const cr = crawl(p, lv); for (let z = R[1] + CS / 2; z < R[3]; z += CS) for (let x = R[0] + CS / 2; x < R[2]; x += CS) { const c = codeAt(p, lv, x, z); if (!(c === C.FLOOR || (cr && c === C.LOWROOF))) return false; } return true; };
+    // (open floor, flat: on rows of seats nobody lies)
+    const allOpen = (lv, R) => { const cr = crawl(p, lv); for (let z = R[1] + CS / 2; z < R[3]; z += CS) for (let x = R[0] + CS / 2; x < R[2]; x += CS) { const c = codeAt(p, lv, x, z); if (!(c === C.FLOOR || (cr && c === C.LOWROOF)) || hAt(p, lv, x, z)) return false; } return true; };
     for (const m of p.rooms) {
       if (m.circ) continue; const r = m.r; const rank = SLEEP_FN[m.fn] !== undefined ? SLEEP_FN[m.fn] : 4;
       for (const [w, d] of [[0.7, 1.9], [1.9, 0.7]]) for (let x = r[0] + 0.05; x + w <= r[2] - 0.05 + 1e-6; x += 0.25) for (let z = r[1] + 0.05; z + d <= r[3] - 0.05 + 1e-6; z += 0.25) {
@@ -1522,7 +1700,7 @@
     // (a jail's cells: each one's room, its bed of straw and the place on it, its grating)
     const cells = p.rooms.filter(m => m.fn === 'cela').map(m => { const bed = p.items.find(i => i.room === m.id && i.places > 0); const door = p.doors.find(d => d.rooms.includes(m.id)); return { room: m.id, lv: m.lv, r: m.r, bed: bed ? bed.id : null, spot: bed ? bed.spots.find(q => q.use === 'deitar') || null : null, door: door ? door.id : null }; });
     const e = p.entrance;
-    return { items: p.items, spots, byUse, floor, lie: lie.slice(0, 240), cells, entry: e ? { lv: e.lv || 0, x: e.x, z: e.z } : null };
+    return { items: p.items, rows: [...rows.values()], spots, byUse, floor, lie: lie.slice(0, 240), cells, entry: e ? { lv: e.lv || 0, x: e.x, z: e.z } : null };
   }
   const floorPts = t => t.floor, liePts = t => t.lie;
   In.walkField = walkField; // (for the proofs)
@@ -1610,7 +1788,7 @@
       // (standing — with no seat, sitting on the ground: eating with the bowl in the lap, rocking the child, keeping company;
       // praying, on one's knees —, or, with no floor to lie on left, lying where one stands)
       const fst = lie ? st || 'sleep' : ON_GROUND[st] || (st === 'pray' || st === 'rest' ? st : 'idle');
-      for (const f of floorPts(t)) { if (clash(f.lv, f.x, f.z, null, 0)) continue; discs.push({ lv: f.lv, x: f.x, z: f.z, it: null, on: 0 }); by.set(v.id, { b, lv: f.lv, x: f.x, z: f.z, y: 0, ry: f.ry, use: 'de-pe', item: null, it: null, q: -1, st: fst, pose: poseWord(fst, 0) }); return true; }
+      for (const f of floorPts(t)) { if (clash(f.lv, f.x, f.z, null, 0)) continue; discs.push({ lv: f.lv, x: f.x, z: f.z, it: null, on: 0 }); by.set(v.id, { b, lv: f.lv, x: f.x, z: f.z, y: f.y || 0, ry: f.ry, use: 'de-pe', item: null, it: null, q: -1, st: fst, pose: poseWord(fst, 0) }); return true; }
       return false;
     };
     const firstFree = uses => { for (const u of uses) { const L = t.byUse.get(u); if (!L) continue; for (const e of L) if (free(e)) return e; } return null; };
@@ -1642,7 +1820,7 @@
       if (tk && (tk.item || tk.use)) {
         if (tk.item) e = t.spots.find(s => s.it.id === tk.item && (!tk.use || s.use === tk.use) && !APPROACH[s.use] && free(s)) || null;
         if (!e && tk.use) e = firstFree([tk.use]);
-        if (e) { give(v, e, (typeof tk.pose === 'string' && tk.pose) || USE_ST[e.use] || 'interact'); continue; }
+        if (e) { give(v, e, (typeof tk.pose === 'string' && tk.pose) || e.it.st || USE_ST[e.use] || 'interact'); continue; }
       }
       if (v.job === b.id) { e = t.spots.find(s => s.it.job && free(s)) || null; if (e) { give(v, e, USE_ST[e.use] || 'interact'); continue; } }
     }
@@ -1658,7 +1836,7 @@
         const uses = Array.isArray(w.use) ? w.use : [w.use]; let e = null;
         if (w.item) for (const u of uses) { e = t.spots.find(s => s.it.id === w.item && s.use === u && free(s)) || null; if (e) break; }
         if (!e) e = firstFree(uses);
-        if (e) { give(v, e, w.st || USE_ST[e.use] || 'idle'); continue; }
+        if (e) { give(v, e, w.st || e.it.st || USE_ST[e.use] || 'idle'); continue; }
         const lie = uses[0] === 'deitar' || LYING[w.st]; if (onFloor(v, lie, w.st || (lie ? 'sleep' : 'idle'))) continue;
       }
       left.push(v);

@@ -8,6 +8,12 @@
 //      volta por dentro); a área; uma peça posta na coroa nunca entra na arena
 //   3. o que já existia fica como era: a cabana redonda (os cantos da sua grade continuam parede) e uma parede reta (as
 //      mesmas casas)
+//   4. as fileiras: P.tiers — numa coroa (subindo para fora, os corredores em meio degrau) e num retângulo (subindo para o
+//      fundo): a altura de cada fileira e de cada meio degrau (plan.hgt, In.floorYOf), o passo da caminhada (meia fileira
+//      sobe; uma fileira inteira, não), os lugares de assistir (a cada 0,5 m, fora dos corredores, virados para baixo, na
+//      altura da fileira) que a porta alcança, o repartidor dando um a cada espectador, a casca com as fileiras (sem o
+//      cômodo); sem corredor, a planta é recusada (não se chega às fileiras); o palco (uma fileira de 1,2 m, os degraus pela
+//      lateral, os lugares de atuar de pé); os lugares sem peça (P.marks: lutar na areia)
 //   node qa/motor.js
 const M = require('./nodemundo.js');
 const G = M.load({});
@@ -104,6 +110,104 @@ const p = In.makeFam(b, rec, 'teste.anel'); const P = lastP;
   const cp = In.makeFam({ id: 101, type: 'house', x: 8, y: 8, w: 1, h: 1 }, crec, 'integrado.andar');
   const straight = cp.walls.every(w => Math.abs(w.a[0] - w.b[0]) < 1e-6 || Math.abs(w.a[1] - w.b[1]) < 1e-6);
   ok('3b as paredes de uma casa continuam retas (o viés é só do anel)', straight && cp.ok, `${cp.walls.length} paredes, a planta ${cp.ok ? 'vale' : cp.errs[0]}`);
+}
+// ---- 4. the rows of seats ----
+// (a lot of 4 × 4 tiles, 16 m: the round shell, its arcades; the cavea between them and the podium's ring — three rows
+// rising outward from a walk a metre wide, four aisles —, the arena inside; and, on a lot of 3 × 3, a hall with three rows
+// rising to its back, an aisle in the middle)
+G.BDEF['teste-cavea'] = { name: 'Cávea de teste', w: 4, h: 4, blocks: true }; G.BDEF['teste-reta'] = { name: 'Fileiras de teste', w: 3, h: 3, blocks: true };
+const CV = { cu: 8, cv: 8, rad: 7.9, t: 0.3, outer: 7.75, inner: 4.0, r0: 5.2, r1: 7.6 };
+const cavea = aisles => P => {
+  const { cu, cv, rad, t, outer, inner, r0, r1 } = CV;
+  P.shell = { kind: 'round', cu, cv, rad, t, mat: 'pedra', base: 'pedra', floors: 1, eave: 6 }; P.roof = null; P.roofGeo = null;
+  P.level(0, 0, 6, 'piso', [cu - rad + t, cv - rad + t, cu + rad - t, cv + rad - t]); P.entryLv = 0;
+  const A = P.ringWall(0, cu, cv, outer, t, 6, { n: 24, outer: 1, arcs: [6, 12, 18], aw: 1.4, ah: 3 });
+  const w0 = A.walls[0]; const len0 = P.wlen(w0); const d0 = P.door(w0, len0 / 2, 1.6, 3, -1, 'rua', 1, 'arco'); P.entrance = { door: d0, u: cu, v: cv + rad, w: 1.6, lv: 0 };
+  P.ringWall(0, cu, cv, inner, 0.3, 2.6, { n: 16, arcs: [0, 4, 8, 12], aw: 1.2, ah: 2.2 });
+  // (all round but the front, the way in from the street to the walk and the arena at the floor)
+  P.test = { T: P.tiers(0, null, { ring: [cu, cv, r0, r1], arc: [Math.PI / 2 + 0.45, Math.PI / 2 - 0.45 + 2 * Math.PI], dir: 'out', rows: 3, rise: 0.4, tread: 0.8, first: 0.4, aisles, aisleW: 1.0 }) };
+  if (P.inside()) return;
+  P.room(0, 'cavea', [cu - outer + t / 2, cv - outer + t / 2, cu + outer - t / 2, cv + outer - t / 2], 0, [cu, cv, outer - t / 2, inner + 0.15]);
+  const ar = P.room(0, 'arena', [cu - inner + 0.15, cv - inner + 0.15, cu + inner - 0.15, cv + inner - 0.15], 1, [cu, cv, inner - 0.15]);
+  // (two places to fight on the sand, facing each other — no piece: P.marks)
+  P.marks(0, ar, 'lutar', [[cu - 1, cv, Math.PI / 2], [cu + 1, cv, -Math.PI / 2]], { st: 'fight' });
+};
+const Q4 = [Math.PI / 4, 3 * Math.PI / 4, 5 * Math.PI / 4, 7 * Math.PI / 4];
+In.addFamilies([
+  { id: 'teste.cavea', H: 'teste', V: 'cavea', S: 'teste.cavea', name: 'Cávea de teste', can: () => null, build: cavea(Q4) },
+  { id: 'teste.semcorredor', H: 'teste', V: 'semcorredor', S: 'teste.semcorredor', name: 'Cávea sem corredor', can: () => null, build: cavea([]) },
+  { id: 'teste.reta', H: 'teste', V: 'reta', S: 'teste.reta', name: 'Fileiras retas de teste', can: () => null, build: P => {
+    const L = P.L; P.shell = { kind: 'rect', r: [0.2, 0.2, L - 0.2, L - 0.2], t: 0.25, mat: 'pedra', base: 'pedra', floors: 1, eave: 5 }; P.roof = { kind: 'plano', h: 0, over: 0 }; P.roofGeo = null;
+    const I = P.inner(); P.level(0, 0, 5, 'piso', I); P.entryLv = 0; P.outer = P.walls4(0, [0.325, 0.325, L - 0.325, L - 0.325], 0.25, 5, 1, 'parede');
+    const d = P.door(P.outer.frente, P.wlen(P.outer.frente) / 2, 1.2, 2.4, -1, 'rua', 1, 'porta'); P.entrance = { door: d, u: L / 2, v: L - 0.2, w: 1.2, lv: 0 };
+    // (three rows rising to the back, from 2 m in from the front wall; an aisle up the middle)
+    P.test = { T: P.tiers(0, null, { r: [I[0], I[1], I[2], I[3] - 2.0], dir: 'n', rows: 3, rise: 0.4, tread: 0.9, aisles: [L / 2], aisleW: 1.0 }) };
+    if (P.inside()) return;
+    P.room(0, 'sala', I);
+  } },
+]);
+In.addTypes({ 'teste-cavea': { use: 'teste', fams: ['teste.cavea', 'teste.semcorredor'] }, 'teste-reta': { use: 'teste', fams: ['teste.reta'] } });
+{
+  const crec = Object.assign({}, rec, { t: 'teste-cavea', f: 'teste.cavea' }); const cb = { id: 6101, type: 'teste-cavea', x: 10, y: 10, w: 4, h: 4 };
+  const cp = In.makeFam(cb, crec, 'teste.cavea');
+  ok('4a a cávea vale; as fileiras na planta, no cômodo dela; as alturas do piso', cp.ok && cp.tiers && cp.tiers.length === 1 && cp.tiers[0].room === cp.rooms.find(m => m.fn === 'cavea').id && !!(cp.hgt && cp.hgt[0]),
+    cp.ok ? `${cp.tiers.length} bloco, cômodo ${cp.tiers[0].room}, ${cp.cap.watch} lugares de assistir` : cp.errs.slice(0, 3).join(' | '));
+  if (cp.ok) {
+    const H = (rad, ang) => In.floorYOf(cp, 0, CV.cu + Math.cos(ang) * rad, CV.cv + Math.sin(ang) * rad);
+    const rows = [H(4.6, 0), H(5.6, 0), H(6.4, 0), H(7.2, 0)].map(r2), aisle = [5.4, 5.8, 6.2, 6.6, 7.0, 7.4].map(rr => r2(H(rr, Math.PI / 4)));
+    ok('4b a altura: o passeio no chão, as fileiras a 0,4, 0,8 e 1,2; o corredor em meios degraus', rows.join() === '0,0.4,0.8,1.2' && aisle.join() === '0.2,0.4,0.6,0.8,1,1.2', `fora do corredor ${rows.join(' · ')}; no corredor ${aisle.join(' · ')}`);
+    // (the walk's step: between the cells of two rows, a whole row, no; up the aisle, half a row, yes)
+    const dRow = Math.abs(H(5.6, 0) - H(6.4, 0)), dAis = Math.abs(H(5.4, Math.PI / 4) - H(5.8, Math.PI / 4));
+    ok('4c o passo: uma fileira inteira não se sobe a pé, meia fileira sim', dRow > In.BODY.step && dAis <= In.BODY.step, `entre duas fileiras ${r2(dRow)} m, no corredor ${r2(dAis)} m (o passo ${In.BODY.step})`);
+    const seats = In.tierSeats(cp); const T = cp.tiers[0];
+    const bad = seats.filter(q => { const a = Math.atan2(q.z - CV.cv, q.x - CV.cu); const d = Math.hypot(q.x - CV.cu, q.z - CV.cv); return Q4.some(al => { const g = Math.abs(((a - al) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI) * d; return g < 0.5 + 0.25 - 0.01; }); });
+    const faces = seats.every(q => { const fx = Math.sin(q.ry), fz = Math.cos(q.ry); return fx * (CV.cu - q.x) + fz * (CV.cv - q.z) > 0; });
+    const heights = seats.every(q => Math.abs(q.y - (T.first + q.k * T.rise)) < 1e-6);
+    ok('4d os lugares de assistir: fora dos corredores, virados para a arena, na altura da fileira; a porta chega a eles', seats.length > 40 && !bad.length && faces && heights && cp.cap.watch === seats.length,
+      `${seats.length} lugares (${cp.cap.watch} alcançados), ${bad.length} num corredor, virados para dentro: ${faces}, na altura: ${heights}`);
+    const sh = In.shellOfPlan(cp); ok('4e a casca leva as fileiras (o que se vê de longe), sem o cômodo', !!(sh.tiers && sh.tiers.length === 1 && sh.tiers[0].room === undefined && sh.tiers[0].rows === 3), sh.tiers ? JSON.stringify(sh.tiers[0]).slice(0, 120) : 'sem fileiras');
+    // (the places: a world of nothing but the building and its spectators, each with a task to watch)
+    G.S = { villagers: new Map(), buildings: new Map(), dead: new Map(), settlements: new Map(), clock: 100, day: 3, time: 0.6, avatar: null, nextId: 9000, history: [], fire: new Float32Array(G.N * G.N) };
+    const B = Object.assign({}, cb, { built: true, blocks: true, hp: 100, maxHp: 100, set: 0, ip: Object.assign({}, crec) }); G.S.buildings.set(B.id, B);
+    for (let k = 0; k < 30; k++) G.S.villagers.set(7000 + k, { id: 7000 + k, name: 'E' + k, g: 'm', age: 30, home: 0, inside: B.id, sleeping: false, partner: 0, task: { type: 'assistir', use: 'assistir' }, job: 0, jail: 0, sick: 0, x: B.x + 2, y: B.y + 2 });
+    for (let k = 0; k < 2; k++) G.S.villagers.set(7100 + k, { id: 7100 + k, name: 'G' + k, g: 'm', age: 25, home: 0, inside: B.id, sleeping: false, partner: 0, task: { type: 'lutar', use: 'lutar' }, job: 0, jail: 0, sick: 0, x: B.x + 2, y: B.y + 2 });
+    const PL = In.places(B); const got = [...PL.by.values()]; const sat = got.filter(q => q.use === 'assistir');
+    const fig = got.filter(q => q.use === 'lutar'); const facing = fig.length === 2 && fig.every(q => { const o = fig.find(r => r !== q); return Math.sin(q.ry) * (o.x - q.x) + Math.cos(q.ry) * (o.z - q.z) > 0; });
+    ok('4j os lugares sem peça (P.marks): os dois lutadores na areia, um diante do outro, no chão, no estado da marca', fig.length === 2 && facing && fig.every(q => q.y === 0 && q.st === 'fight' && q.it.mark === 1), `${fig.length} na areia, um diante do outro: ${facing}, ${fig.map(q => q.st + '@' + q.y).join(', ')}`);
+    let two = 0; for (let i = 0; i < sat.length; i++) for (let j = i + 1; j < sat.length; j++) if (sat[i].lv === sat[j].lv && Math.hypot(sat[i].x - sat[j].x, sat[i].z - sat[j].z) < 0.45) two++;
+    const root = sat.every(q => Math.abs(q.y - Math.max(0, q.it.h - In.SIT_H)) < 1e-6 && q.st === 'sit');
+    ok('4f o repartidor: um lugar de assistir para cada espectador, sentado na fileira, nunca dois no mesmo ponto', sat.length === 30 && !two && root, `${sat.length} de 30 sentados, ${two} pares no mesmo ponto, a raiz na fileira menos o assento: ${root}`);
+    G.S.buildings.clear(); G.S.villagers.clear();
+  }
+  const np = In.makeFam(Object.assign({}, cb, { id: 6107 }), Object.assign({}, crec, { f: 'teste.semcorredor' }), 'teste.semcorredor');
+  ok('4g sem corredor não se chega às fileiras: a planta é recusada', !np.ok && np.errs.some(e => /não se chega às fileiras/.test(e)), np.ok ? 'valeu' : np.errs.slice(0, 2).join(' | '));
+  const rp = In.makeFam({ id: 6201, type: 'teste-reta', x: 10, y: 10, w: 3, h: 3 }, Object.assign({}, rec, { t: 'teste-reta', f: 'teste.reta' }), 'teste.reta');
+  if (rp.ok) {
+    const L = 12; const T = rp.tiers[0]; const seats = In.tierSeats(rp); const fwd = seats.every(q => Math.abs(q.ry) < 1e-6); const hs = [L / 2 + 2, L / 2 - 0.2].map(u => [0.675, 1.575, 2.475].map(s => r2(In.floorYOf(rp, 0, u, T.r[3] - s))).join(',')); const half = r2(In.floorYOf(rp, 0, L / 2, T.r[3] - 0.225));
+    ok('4h as fileiras retas subindo para o fundo: as alturas, o corredor do meio, os lugares virados para a frente', hs[0] === '0.4,0.8,1.2' && hs[1] === '0.4,0.8,1.2' && half === 0.2 && fwd && rp.cap.watch === seats.length && seats.length > 30,
+      `na segunda metade de cada fileira: fora do corredor ${hs[0]}, no corredor ${hs[1]}; na primeira metade da 1ª, no corredor, ${half}; ${seats.length} lugares virados para a frente: ${fwd}`);
+  } else ok('4h as fileiras retas subindo para o fundo', false, rp.errs.slice(0, 3).join(' | '));
+}
+// (a stage: one row of 1.2 m, its deck 1.5 m deep facing the front, five steps up its side — the places to act on it, standing)
+G.BDEF['teste-palco'] = { name: 'Palco de teste', w: 2, h: 2, blocks: true };
+In.addFamilies([{ id: 'teste.palco', H: 'teste', V: 'palco', S: 'teste.palco', name: 'Palco de teste', can: () => null, build: P => {
+  const L = P.L; P.shell = { kind: 'rect', r: [0.2, 0.2, L - 0.2, L - 0.2], t: 0.25, mat: 'pedra', base: 'pedra', floors: 1, eave: 5 }; P.roof = { kind: 'plano', h: 0, over: 0 }; P.roofGeo = null;
+  const I = P.inner(); P.level(0, 0, 5, 'piso', I); P.entryLv = 0; P.outer = P.walls4(0, [0.325, 0.325, L - 0.325, L - 0.325], 0.25, 5, 1, 'parede');
+  const d = P.door(P.outer.frente, P.wlen(P.outer.frente) / 2, 1.2, 2.4, -1, 'rua', 1, 'porta'); P.entrance = { door: d, u: L / 2, v: L - 0.2, w: 1.2, lv: 0 };
+  P.test = { T: P.tiers(0, null, { r: [I[0], I[1], I[2], I[1] + 1.5], dir: 'n', rows: 1, rise: 1.2, tread: 1.5, use: 'atuar', seat: 1.0, aisles: [I[0] + 0.6], aisleW: 1.0 }) };
+  if (P.inside()) return;
+  P.room(0, 'sala', I);
+} }]);
+In.addTypes({ 'teste-palco': { use: 'teste', fams: ['teste.palco'] } });
+{
+  const sp = In.makeFam({ id: 6301, type: 'teste-palco', x: 10, y: 10, w: 2, h: 2 }, Object.assign({}, rec, { t: 'teste-palco', f: 'teste.palco' }), 'teste.palco');
+  if (sp.ok) {
+    const T = sp.tiers[0]; const u = T.aisles[0]; const v1 = T.r[3]; const steps = [0.15, 0.45, 0.75, 1.05, 1.35].map(s => r2(In.floorYOf(sp, 0, u, v1 - s)));
+    const seats = In.tierSeats(sp); const t = In.table ? null : null; void t;
+    const up = steps.every((h, k) => k === 0 ? h <= In.BODY.step : h - steps[k - 1] <= In.BODY.step + 1e-6) && steps[4] === 1.2;
+    ok('4i o palco: cinco degraus de 0,24 pela lateral, a 1,2 m; os lugares de atuar no palco, virados para a frente', T.climb === 5 && up && T.use === 'atuar' && seats.length > 3 && seats.every(q => q.T.use === 'atuar' && Math.abs(q.y - 1.2) < 1e-6 && Math.abs(q.ry) < 1e-6),
+      `${T.climb} degraus: ${steps.join(' · ')}; ${seats.length} lugares de atuar`);
+  } else ok('4i o palco', false, sp.errs.slice(0, 3).join(' | '));
 }
 const err = M.erros(); if (Object.keys(err.mod).length || err.console.length) ok('sem erros de módulo', false, JSON.stringify(err).slice(0, 300));
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');
