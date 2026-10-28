@@ -6,7 +6,8 @@
 // paga ao tesouro, tira a roupa, entra na água, banha-se, veste-se e sai; o banho quente tira mais da doença que o frio; a casa
 // cheia; o fechamento na hora, com todos para fora e o fogo apagado; o caixa do dia contra o livro; o dia que atravessa o save
 // com gente na água; um povo sem moeda (ninguém paga); o corpo do deus que entra, se banha e sai pelas ofertas; e a oferenda do
-// templo, da despensa da casa à prateleira do templo, com o sacerdote que come dela na manhã seguinte.
+// templo, da despensa da casa à prateleira do templo, com o sacerdote que come dela na manhã seguinte; e os serviços públicos
+// pelo corpo: cobrar o imposto de uma casa e entregar o saco ao tesouro, cunhar moedas, escrever os registros, treinar.
 //   node qa/termas-mao.js
 const M = require('./nodemundo.js'); const G = M.load({ qa: true, extra: ['qa/oficio-inv.js'] });
 const D = G.Depot, A = G.Act, Te = G.Termas, E = G.Eco;
@@ -129,6 +130,29 @@ const r2 = x => Math.round(x * 100) / 100;
   const st0 = f.stock.food; S.day++; A.update(1);
   ok('o-sacerdote-come', pr.hunger === 25 && lines('sustento').length === 1 && D.get('b:5', 'food') === 6 && f.stock.food === st0 + 2, `fome do sacerdote 60 → ${pr.hunger}; prateleira ${D.get('b:5', 'food')}; armazém ${st0} → ${f.stock.food}`);
   A.update(1); ok('uma-vez-por-dia', lines('sustento').length === 1, `${lines('sustento').length} refeição(ões) no dia`);
+}
+// ---------------- the public trades by the god's body: the collector's round and the mint, the scribe, the drill
+{
+  const { S, f, person } = world('romano', true);
+  f.gov = 'reino'; f.stock.ouro = 2;
+  const B = (id, type, x, y) => ({ id, type, x, y, w: 1, h: 1, built: true, progress: 1, set: 2, inv: {}, need: { wood: 0, stone: 0 }, incoming: {}, hp: 200, maxHp: 200, ip: null });
+  S.buildings.set(6, B(6, 'coletoria', 2, 2)); S.buildings.set(7, B(7, 'administracao', 2, 5)); S.buildings.set(8, B(8, 'quartel', 5, 2));
+  const payer = person('Pagante', 10); const ph = S.buildings.get(payer.home);
+  const me = person('Coletor', 1, { job: 6, role: 'cobrador' }); S.avatar = { id: me.id, deeds: {} };
+  const offer = (x, y, act) => A.offers(me, x, y, 2.5).find(o => o.def === 'publico' && o.act === act);
+  const pd = G.Vg.door(ph); const oc = offer(pd[0], pd[1], 'cobrar'); const due = oc ? +((ph.coin * E.taxRate(f)).toFixed(2)) : 0;
+  const rc = oc ? A.perform(me, oc) : { ok: false, why: 'sem oferta' };
+  const again = offer(pd[0], pd[1], 'cobrar');
+  const cd = G.Vg.door(S.buildings.get(6)); const t0 = f.stock.moedas; const oe = offer(cd[0], cd[1], 'entregar'); const re = oe ? A.perform(me, oe) : { ok: false, why: 'sem oferta' };
+  ok('corpo-cobra', rc.ok && re.ok && !me.carry && r2(10 - ph.coin) === due && r2(f.stock.moedas - t0) === due && again && again.ok === false && lines('imposto').length === 2, `cobrou ${rc.ok ? rc.msg : rc.why}; de novo: ${again ? again.why : '-'}; entregou ${re.ok ? re.msg : re.why}; tesouro +${r2(f.stock.moedas - t0)}`);
+  const m0 = f.stock.moedas; const ou = offer(cd[0], cd[1], 'cunhar'); const rm = ou ? A.perform(me, ou) : { ok: false, why: 'sem oferta' };
+  ok('corpo-cunha', rm.ok && f.stock.ouro === 1 && r2(f.stock.moedas - m0) === 6 && lines('cunhagem').length === 2, `${rm.ok ? rm.msg : rm.why}; ouro 2 → ${f.stock.ouro}; moedas +${r2(f.stock.moedas - m0)}`);
+  const sc = person('Escriba', 1, { job: 7, role: 'escriba' }); S.avatar = { id: sc.id, deeds: {} };
+  const ad = G.Vg.door(S.buildings.get(7)); const ow = A.offers(sc, ad[0], ad[1], 2.5).find(o => o.def === 'publico' && o.act === 'escrever'); const rw = ow ? A.perform(sc, ow) : { ok: false, why: 'sem oferta' };
+  const qd = G.Vg.door(S.buildings.get(8)); const otr = A.offers(sc, qd[0], qd[1], 2.5).find(o => o.def === 'publico' && o.act === 'treinar'); const rt = otr ? A.perform(sc, otr) : { ok: false, why: 'sem oferta' };
+  // (the deeds of the body are counted by the possession, which Node does not load: the world's part is what is checked here)
+  ok('corpo-escreve-e-treina', rw.ok && f._scribes === S.clock && rt.ok && (sc.diary || []).some(e => /Treinei/.test(e.txt)), `escrever: ${rw.ok ? rw.msg : rw.why} (a ordem dos escribas marcada: ${f._scribes === S.clock}); treinar: ${rt.ok ? rt.msg : rt.why}`);
+  S.avatar = null;
 }
 ok('verificador', !bad.length, bad.slice(0, 4).join(' | ') || 'limpo em todos os segundos');
 // (and the checker sees a till that lies)

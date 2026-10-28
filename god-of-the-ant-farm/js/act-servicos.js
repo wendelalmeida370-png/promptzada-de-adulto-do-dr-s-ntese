@@ -25,6 +25,12 @@
 //  ('oferenda'). Cada manhã os sacerdotes comem do que o povo deu,
 //  e a comida que passa do que o templo guarda vai ao armazém do
 //  povo; o resto fica como o tesouro do templo, até um tanto.
+//
+//  Os serviços públicos ('publico'), pelo corpo do deus: treinar
+//  com os soldados diante do quartel, escrever os registros da
+//  administração (sendo o escriba), cobrar o imposto de uma casa e
+//  levar o saco ao tesouro, cunhar moedas (sendo o coletor) — pelas
+//  mesmas regras de quem faz isso no mundo.
 // ============================================================
 (function (G) {
   const A = G.Act, D = G.Depot, E = G.Eco; if (!A || !D || !E || !G.BDEF.banhos) return;
@@ -411,5 +417,78 @@
         if (over >= 1 - EPS) D.store(ref, fid, k, Math.floor(over + EPS), { code: 'oferenda' });
       }
     }
+  });
+
+  // ============================== the public trades: the barracks, the scribes' hall, the tax house ==============================
+  // (what the god's body can do there, by the same rules as the people who do it: drill with the soldiers before the
+  // barracks; the scribe's registers — the order they keep, economy.js loyaltyMod —; the collector's round — a house's tax
+  // into the bag, marked for the treasury, the bag to the treasury — and the mint, an ounce of gold into six coins)
+  A.addAnim('treinar', { act: 'drill', dur: 4, contact: 3.6, hands: 2 });
+  A.addAnim('escrever', { act: 'write', dur: 5, contact: 4.4, hands: 1 });
+  A.addAnim('cunhar', { act: 'craft', dur: 6, contact: 5.4, hands: 2 });
+  A.addAnim('cobrar', { act: 'knock', dur: 1.8, contact: 1.6, hands: 1 });
+  const isHouse = b => !!(b && G.BDEF[b.type] && G.BDEF[b.type].housing);
+  const bagOf = (v, f) => { const c = v.carry; return c && c.k === 'moedas' && c.n > EPS && c.to === 'f:' + f.id ? c : null; };
+  A.def('publico', {
+    name: 'Serviço público', conserve: false, many: true,
+    purpose: 'Os serviços da cidade que o corpo do deus pode fazer como quem os faz: treinar com os soldados diante do quartel, escrever os registros da administração, cobrar o imposto de porta em porta e levá-lo ao tesouro, cunhar moedas na coletoria.',
+    needs: 'o quartel, a administração ou a coletoria da cidade — e, para escrever, cobrar e cunhar, o ofício de escriba ou de coletor de impostos',
+    offers(v, x, y, r) {
+      const S = S_(); const out = []; const f = G.Fac.ofV(v); if (!f || v.captive || v.age < 14) return out;
+      const c = v.carry; const free = !(c && c.n > EPS); const bag = bagOf(v, f); const rate = E.taxRate(f);
+      for (const b of S.buildings.values()) {
+        if (!b.built || b.type === 'ruin' || facOf(b) !== f.id) continue;
+        const at = G.Vg.door(b); if (v.inside !== b.id && G.dist(x, y, at[0], at[1]) > r + 2) continue;
+        if (b.type === 'quartel' && free) out.push({ id: 'publico.treinar:' + b.id, act: 'treinar', b: b.id, label: 'Treinar com os soldados', at, anim: 'treinar', hands: 2, use: 'treinar' });
+        if (b.type === 'administracao' && v.role === 'escriba' && v.job === b.id && free) out.push({ id: 'publico.escrever:' + b.id, act: 'escrever', b: b.id, label: 'Escrever os registros', at, anim: 'escrever', hands: 1, use: 'escrever' });
+        if (b.type === 'coletoria' && v.role === 'cobrador' && v.job === b.id) {
+          if (bag) out.push({ id: 'publico.entregar:' + b.id, act: 'entregar', b: b.id, label: `Entregar o imposto ao tesouro (${money(b, r2(bag.n))})`, at, anim: 'entregar', hands: 1 });
+          if (free && E.coinage(f.id)) out.push({ id: 'publico.cunhar:' + b.id, act: 'cunhar', b: b.id, label: 'Cunhar moedas (1 de ouro dá 6 moedas)', at, anim: 'cunhar', hands: 2, use: 'conferir', ok: D.free('f:' + f.id, 'ouro') >= 1 - EPS, why: 'Não há ouro no armazém.' });
+        }
+        if (isHouse(b) && v.role === 'cobrador' && v.home !== b.id && rate > 0 && (free || bag)) {
+          const due = r2((b.coin || 0) * rate);
+          if (due > 0.01) out.push({ id: 'publico.cobrar:' + b.id, act: 'cobrar', b: b.id, label: `Cobrar o imposto desta casa (${money(b, due)})`, at, anim: 'cobrar', hands: 1, ok: !(b.taxT > S.clock), why: 'Esta casa já pagou há pouco.' });
+        }
+      }
+      return out;
+    },
+    acts: {
+      treinar: {
+        deed: 'treino',
+        can(v, o) { const b = S_().buildings.get(o.b); return b && b.built && b.type === 'quartel' ? { ok: true } : { ok: false, why: 'Não há quartel aqui.' }; },
+        run(v) { if (v.trainDay !== S_().day) { v.trainDay = S_().day; A.note(v, 'memory', 'Treinei com os soldados diante do quartel.'); } return { ok: true, msg: 'Você treina com os soldados: a lança, o escudo, de novo.' }; },
+      },
+      escrever: {
+        deed: 'escrita',
+        can(v, o) { const b = S_().buildings.get(o.b); return b && v.job === b.id && v.role === 'escriba' ? { ok: true } : { ok: false, why: 'Só o escriba daqui escreve os registros.' }; },
+        run(v) { const f = G.Fac.ofV(v); if (f) f._scribes = S_().clock; return { ok: true, msg: 'Você anota os grãos, as gentes e os impostos. A cidade fica em ordem.' }; },
+      },
+      cunhar: {
+        deed: 'trabalho',
+        can(v, o) { const b = S_().buildings.get(o.b); const f = G.Fac.ofV(v); if (!b || !f || v.job !== b.id || v.role !== 'cobrador') return { ok: false, why: 'Só o coletor daqui cunha moedas.' }; if (!E.coinage(f.id)) return { ok: false, why: 'O povo não conhece a moeda.' }; return D.free('f:' + f.id, 'ouro') >= 1 - EPS ? { ok: true } : { ok: false, why: 'Não há ouro no armazém.' }; },
+        run(v, o) {
+          const S = S_(); const b = S.buildings.get(o.b); const f = G.Fac.ofV(v); const ref = 'f:' + f.id;
+          if (!D.use(ref, 'ouro', 1, { code: 'cunhagem', by: v.id }).ok) return { ok: false, why: 'Não deu.' };
+          D.make(ref, 'moedas', 6, { code: 'cunhagem', by: v.id });
+          if (!f._minted) { f._minted = S.day; const s = S.settlements.get(b.set); G.Village.log(`${f.name} cunhou suas primeiras moedas${s ? ' em ' + s.name : ''}.`, 'trade', b.x, b.y); }
+          return { ok: true, n: 6, msg: 'Você funde o ouro e bate seis moedas com o cunho do povo.' };
+        },
+      },
+      cobrar: {
+        deed: 'cobranca',
+        can(v, o) { const S = S_(); const h = S.buildings.get(o.b); const f = G.Fac.ofV(v); if (!h || !isHouse(h) || !f || v.role !== 'cobrador') return { ok: false, why: 'Só o coletor de impostos cobra.' }; if (h.taxT > S.clock) return { ok: false, why: 'Esta casa já pagou há pouco.' }; if (v.carry && v.carry.n > EPS && !bagOf(v, f)) return { ok: false, why: 'Suas mãos estão ocupadas.' }; return r2((h.coin || 0) * E.taxRate(f)) > 0.01 ? { ok: true } : { ok: false, why: 'Esta casa não tem o que pagar.' }; },
+        run(v, o) {
+          const S = S_(); const h = S.buildings.get(o.b); const f = G.Fac.ofV(v); const due = r2((h.coin || 0) * E.taxRate(f));
+          const r = D.move('h:' + h.id, 'v:' + v.id, 'moedas', due, { code: 'imposto', by: v.id, to: 'f:' + f.id }); if (!r.ok) return { ok: false, why: r.why || 'Não deu.' };
+          h.taxT = S.clock + G.DAY_LEN * 0.6;
+          return { ok: true, n: r.n, msg: `A casa paga ${money(h, r.n)} de imposto. Agora é levar ao tesouro.` };
+        },
+      },
+      entregar: {
+        deed: 'carga',
+        can(v, o) { const f = G.Fac.ofV(v); return f && bagOf(v, f) ? { ok: true } : { ok: false, why: 'Você não está com o imposto.' }; },
+        run(v, o) { const f = G.Fac.ofV(v); const c = bagOf(v, f); const r = D.move('v:' + v.id, 'f:' + f.id, 'moedas', c.n, { code: 'imposto', by: v.id, to: 'f:' + f.id, part: true }); if (!r.ok) return { ok: false, why: r.why || 'Não deu.' }; E.ensure(f); f.eco.tax = (f.eco.tax || 0) + r.n; return { ok: true, n: r.n, msg: `Você entrega ${money(S_().buildings.get(o.b), r.n)} ao tesouro.` }; },
+      },
+    },
   });
 })(window.G);
