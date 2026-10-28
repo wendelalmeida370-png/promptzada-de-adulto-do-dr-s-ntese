@@ -875,6 +875,9 @@
   });
 })(window.G);
   // ==== fim das invariantes dos sistemas novos ====
+  // (the executions a load keeps: one in its aftermath, or with nobody left to execute, is over — the load of justice.js drops it,
+  // as the tick would — and is no loss of the save: the mundial of the v37 lived into one and the round trip said «execs: 3 → 2», T-212)
+  const liveExec = e => { const s = S(); const f = G.Fac.get(e.fac); return !!f && f.alive && s.settlements.has(e.set) && e.phase !== 'after' && e.phase !== 'done' && (e.ids || []).some(id => s.villagers.has(id) && !(e.done || []).includes(id)); };
   QA.canon = function () {
     const s = S(); const r = x => Math.round(x * 100) / 100;
     const vs = [...s.villagers.values()].sort((a, b) => a.id - b.id).map(v => [v.id, v.name, v.set, v.home, v.partner, v.mother, v.father, (G.Save.ageR ? G.Save.ageR(v.age) : Math.round(v.age * 1000) / 1000), v.captive ? 'c' + v.captive.from : '', v.aboard || 0, v.role || '', v.job || 0, (v.kids || []).length, v.g, v.secret || 0, v.grp || '', v.reigned || 0]);
@@ -893,7 +896,7 @@
     return {
       day: s.day, nextId: s.nextId, villagers: vs, dead: s.dead.size, factions: fs, settlements: ss, buildings: bs, ships: sh, wars, armies: arm, stories: st, seeds: sd, exps: ex, fleets: fl,
       history: s.history.length, logN: s.logN || 0, animals: an, trees: s.trees.size, rocks: s.rocks.size, bushes: s.bushes.size,
-      riots: (s.riots || []).length, execs: (s.execs || []).length, secrets: s.secrets ? s.secrets.socs.length : 0, ww: s.worldWar ? [s.worldWar.name, s.worldWar.end] : null,
+      riots: (s.riots || []).length, execs: (s.execs || []).filter(liveExec).length, secrets: s.secrets ? s.secrets.socs.length : 0, ww: s.worldWar ? [s.worldWar.name, s.worldWar.end] : null,
       walls: (s.walls || []).length, stats: [s.stats.births, s.stats.deaths, s.stats.wars || 0], more: QA.canonMore.map(([k, f]) => [k, f()]),
     };
   };
