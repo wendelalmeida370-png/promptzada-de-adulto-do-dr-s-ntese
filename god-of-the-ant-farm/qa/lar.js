@@ -22,6 +22,10 @@
 //      save no meio; na rua, a quem está perto (sem pulo); sem ninguém perto, à mãe, ao pai ou a uma mulher da vila, onde
 //      estiverem (como antes); nunca ao corpo do jogador; a guerreira entre lutas só o dá a alguém da casa; e o corpo, pelas
 //      ofertas da casa, pega o bebê no colo, fica com ele e o devolve à mãe
+//  l16 da casa cheia saem os moços primeiro (D-098): a mão da prova enche uma casa de pequenos com uma velha que cuida
+//      deles e moços solteiros — sai o mais moço, a velha e o dono ficam; um save no meio e mais um moço: sai de novo o
+//      mais moço; a velha morre cuidando e os pequenos voltam ao dia deles; e o verificador vê o velho posto para fora
+//      antes do moço. l16b: de dois casais de fora numa casa cheia, o dia da cidade pergunta ao mais moço; o dono fica
 //  l13 a continuidade da casa (o pedido 8.4): o corpo longe, perto, dentro (come e cozinha), fora, o tempo, de volta, o save —
 //      a família igual ao ser olhada e ao ver o corpo entrar, a despensa só pelo livro, o corpo deitado em casa no save
 //  l11 a reza dentro do templo (L-224): os fiéis entram pela porta até os lugares da planta, os outros nas fileiras de fora;
@@ -620,6 +624,142 @@ if (want('l15')) {
     }
   }
   ok('l15 o bebê muda de colo onde está (D-074)', good, notes.join(' · '));
+}
+
+// ======================= l16: of a house too full, the young leave first (D-098) =======================
+if (want('l16', 'l16b')) {
+  const calm = id => !(G.War && G.War.threat && G.War.threat(id));
+  const cap = b => G.BDEF[b.type].housing;
+  const residents = b => [...S.villagers.values()].filter(v => v.home === b.id && !v.captive);
+  const homesOf = set => [...S.buildings.values()].filter(b => b.set === set && b.built && housing(b) && b.type !== 'barraco' && b.type !== 'ruin').sort((a, c) => a.id - c.id);
+  const roomIn = (set, not) => homesOf(set).filter(b => b.id !== not).reduce((n, b) => n + Math.max(0, cap(b) - residents(b).length), 0);
+  const owns = v => [...S.buildings.values()].some(b => b.dono === v.id && housing(b));
+  const kidsAt = v => (v.kids || []).some(id => { const k = S.villagers.get(id); return k && k.age < 16 && k.home === v.home; });
+  const fit = v => !v.captive && !v.jail && !v.aboard && !v.ug && !isBody(v) && v.hp >= 50 && !(v.sick > 0) && v.role !== 'guerreiro' && !v.secret;
+  const single = v => !v.partner && !kidsAt(v) && fit(v);
+  // (the morning after the day of every town — the day's moves of house done —: this world's, or the metropolis' when this one
+  // has nothing for the case)
+  const morning = w => { if (w) { M.pronto(w); S = G.S; S.weather.storm = 0; S.weather.rain = 0; } else open(); live(2 * S.settlements.size + 4); S.time = 0.12; };
+  // (who of a house too full would leave first by the rule: the youngest single of 18 or more who is not its owner, not the
+  // parent its children follow, not the old one who minds its little ones — village.js assignHousing)
+  const nextOut = b => {
+    const L0 = residents(b); const follow = new Set();
+    for (const k of L0) if (k.age < 16) { const m = S.villagers.get(k.mother), f = S.villagers.get(k.father); if (m && m.home === b.id) follow.add(m.id); else if (f && f.home === b.id) follow.add(f.id); }
+    return L0.filter(v => v.age >= 18 && !v.partner && v.id !== b.dono && !follow.has(v.id) && !(L.minder && L.minder(v))).sort((a, c) => a.age - c.age || a.id - c.id)[0] || null;
+  };
+  if (want('l16')) {
+    const notes = []; let fine = true; const say = (k, c, t) => { notes.push(`${c ? '' : 'FALHA '}(${k}) ${t}`); if (!c) fine = false; };
+    // the house: in a town at peace with beds to spare elsewhere, with little ones of 3 to 6 and the parent they follow in it;
+    // the old one who will mind them — a single of 62 or more of the town, or one the test's hand makes 63 —, and two or three
+    // young singles of the town, moved in by the test's hand: one bed too few
+    let pick = null; let aged = null;
+    const find = () => { for (const st of [...S.settlements.values()].filter(s => calm(s.id)).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)) {
+      for (const h of homesOf(st.id)) {
+        const L0 = residents(h); const need = cap(h) - L0.length; if (need < 1 || need > 3) continue;
+        const little = L0.filter(o => o.age >= 3 && o.age < 7);
+        if (!little.some(k => [k.mother, k.father].some(id => { const p = S.villagers.get(id); return p && p.home === h.id; }))) continue;
+        if (roomIn(st.id, h.id) < 2) continue;
+        const kin = new Set(little.flatMap(k => [k.mother, k.father]));
+        const town0 = [...S.villagers.values()].filter(v => v.set === st.id && v.home && v.home !== h.id && single(v) && !kin.has(v.id) && v.id !== h.dono).sort((a, c) => a.id - c.id);
+        const old = town0.find(v => v.age >= 62) || town0.filter(v => v.age >= 25 && v.age < 62).sort((a, c) => c.age - a.age || a.id - c.id)[0];
+        const young = town0.filter(v => v !== old && v.age >= 18 && v.age < 36).sort((a, c) => a.id - c.id);
+        if (!old || young.length < need + 1) continue;
+        return { st, h, old, young: young.slice(0, need), extra: young[need] };
+      }
+    } return null; };
+    morning(); pick = find(); if (!pick && WORLD !== 'metropole') { morning('metropole'); pick = find(); }
+    if (!pick) ok('l16 da casa cheia saem os moços primeiro (D-098)', false, 'nenhuma cidade em paz com uma casa de pequenos de 1 a 3 camas livres, camas sobrando noutras casas, um solteiro velho e moços (cidade e metrópole)');
+    else {
+      let h = pick.h; const st = pick.st, hid = h.id, owner = h.dono, E0 = pick.old;
+      const ownerHome = owner && S.villagers.get(owner) ? S.villagers.get(owner).home : 0;
+      if (E0.age < 62) { aged = [E0.id, E0.age]; E0.age = 63; }
+      E0.home = hid; for (const y of pick.young) y.home = hid;
+      const E = () => S.villagers.get(E0.id);
+      notes.push(`${h.type}#${hid} de ${st.name} (${cap(h)} camas): ${residents(h).length} moradores, com ${E0.name} (${Math.floor(aged ? aged[1] : E0.age)}${aged ? ', posta em 63 pela mão da prova' : ''}) e ${pick.young.map(y => `${y.name} (${Math.floor(y.age)})`).join(', ')}`);
+      // (who left the house, in what order)
+      const left = []; const prevHome = new Map(residents(h).map(v => [v.id, hid]));
+      const look = () => { for (const [id] of [...prevHome]) { const v = S.villagers.get(id); if (!v) { prevHome.delete(id); continue; } if (v.home !== hid) { left.push([v.id, v.name, v.age]); prevHome.delete(id); } } };
+      watch();
+      // the first wave: one bed too few — the youngest of the singles leaves, the old one who minds stays
+      const exp1 = nextOut(h);
+      live(6, () => { look(); return left.length >= 1; });
+      say('1ª', left.length === 1 && !!exp1 && left[0][0] === exp1.id && E().home === hid, left.length ? `saiu ${left.map(x => `${x[1]} (${Math.floor(x[2])})`).join(', ')}${exp1 && left[0][0] === exp1.id ? ', a mais moça dos solteiros' : ` — a regra mandava ${exp1 ? exp1.name : 'ninguém'}`}; ${E0.name} ${E().home === hid ? 'ficou' : 'SAIU'} (cuida dos pequenos: ${L.minder(E()) ? 'sim' : 'não'})` : 'NINGUÉM saiu em 6 s');
+      // a save in the middle: the house as it was, and the next one to leave by the same rule
+      const fam0 = residents(h).map(v => v.id).sort((a, c) => a - c).join(',');
+      M.salvarCarregar(); S = G.S; h = S.buildings.get(hid);
+      const fam1 = residents(h).map(v => v.id).sort((a, c) => a - c).join(',');
+      say('save', fam0 === fam1, fam0 === fam1 ? 'a casa igual depois do save' : `a casa mudou no save: ${fam0} → ${fam1}`);
+      // the second wave: one more young single by the test's hand — one bed too few again
+      const Y3 = S.villagers.get(pick.extra.id); Y3.home = hid; prevHome.set(Y3.id, hid);
+      const exp2 = nextOut(h);
+      live(6, () => { look(); return left.length >= 2; });
+      say('2ª', left.length === 2 && !!exp2 && left[1][0] === exp2.id && E().home === hid, left.length >= 2 ? `depois do save, com ${Y3.name} (${Math.floor(Y3.age)}) na casa, saiu ${left[1][1]} (${Math.floor(left[1][2])})${exp2 && left[1][0] === exp2.id ? ', o mais moço dos solteiros' : ` — a regra mandava ${exp2 ? exp2.name : 'ninguém'}`}; ${E0.name} ${E().home === hid ? 'ficou' : 'SAIU'}` : 'NINGUÉM saiu depois do save');
+      const own = owner && S.villagers.get(owner);
+      say('dono', !own || own.home === ownerHome, `o dono, ${own ? own.name : 'o povo'}, ${!own || own.home === ownerHome ? 'não saiu' : 'SAIU'}`);
+      // the death of the one who minds: by day, minding the little ones — or as she is —, in the middle of the morning
+      let minded = false; live(30, () => { const e = E(); minded = minded || !!(e && e.task && e.task.type === 'lar' && e.task.what === 'cuidar' && e.inside === hid); return minded; });
+      if (E()) V.kill(E(), 'teste');
+      const kids = residents(h).filter(o => o.age >= 3 && o.age < 7).map(o => o.id);
+      live(25, () => { look(); });
+      let heldAfter = 0; for (const id of kids) { const k = S.villagers.get(id); if (k && k.inside === hid && k.task && k.task.type === 'lar' && k.actT > 18) heldAfter++; }
+      say('morte', !heldAfter, `${E0.name} ${minded ? 'cuidava dos pequenos em casa' : 'ainda não cuidava'} e morreu: ${heldAfter ? `${heldAfter} criança(s) PRESA(S) em casa` : 'os pequenos voltaram ao dia deles'}; ${left.length} saíram ao todo`);
+      // the checker sees it: an old one put out of a house too full by the test's hand, with a young single still in it
+      {
+        const town1 = [...S.villagers.values()].filter(v => v.set === st.id && v.home && v.home !== hid && single(v)).sort((a, c) => a.id - c.id);
+        const O = town1.find(v => v.age >= 25 && v.age < 62), Yn = town1.find(v => v !== O && v.age >= 18 && v.age < 36);
+        const other = O && homesOf(st.id).find(b => b.id !== hid && b.id !== O.home && cap(b) > residents(b).length);
+        if (O && Yn && other) {
+          const back = [[O, O.home], [Yn, Yn.home]]; const a0 = O.age, hp0 = O.hp;
+          O.age = 66; O.hp = 40; O.home = hid; Yn.home = hid;
+          for (const f of town1) { if (residents(h).length > cap(h)) break; if (f !== O && f !== Yn && f.age >= 18 && f.age > Yn.age) { back.push([f, f.home]); f.home = hid; } }
+          QA.check(); O.home = other.id; const seen = QA.check().filter(q => String(q.msg).includes('D-098'));
+          say('verificador', residents(h).length >= cap(h) && seen.length > 0, seen.length ? `o verificador viu: «${seen[0].msg}»` : 'o verificador NÃO viu o velho posto para fora antes do moço');
+          for (const [v, hm] of back) v.home = hm; O.age = a0; O.hp = hp0;
+        } else say('verificador', false, 'sem gente para a prova do verificador');
+      }
+      if (aged) { const o = S.villagers.get(aged[0]); if (o) o.age = aged[1]; }
+      ok('l16 da casa cheia saem os moços primeiro (D-098)', fine, notes.join(' · '));
+    }
+  }
+  // l16b: the town's day (act-casa.js) — of a house full with two couples of others, one older and one younger, the family
+  // asked is the youngest of the house; its owner, whose family fits, is not asked
+  if (want('l16b')) {
+    const K = G.Casa; let info = '', okb = false;
+    const couplesOf = () => { const out = [];
+      for (const v of [...S.villagers.values()].sort((a, c) => a.id - c.id)) {
+        const p = v.partner && S.villagers.get(v.partner); if (!p || p.id < v.id || !p.home || p.home !== v.home || v.age < 18 || p.age < 18) continue;
+        if (!calm(v.set) || !fit(v) || !fit(p)) continue;
+        out.push([v, p]);
+      } return out; };
+    const eld = c => Math.max(c[0].age, c[1].age);
+    const tryB = () => {
+      const bySet = new Map(); for (const c of couplesOf()) { const l = bySet.get(c[0].set) || []; l.push(c); bySet.set(c[0].set, l); }
+      for (const [sid, cs] of [...bySet].sort((a, c) => a[0] - c[0])) {
+        if (cs.length < 2) continue;
+        cs.sort((a, c) => eld(c) - eld(a) || a[0].id - c[0].id);
+        const oldC = cs[0], youngC = cs[cs.length - 1]; if (eld(oldC) - eld(youngC) < 10) continue;
+        const kidsOf = c => (c[0].kids || []).map(id => S.villagers.get(id)).filter(k => k && k.age < 16 && k.home === c[0].home);
+        const comes = 4 + kidsOf(oldC).length + kidsOf(youngC).length;
+        const h2 = homesOf(sid).find(b => { const o = b.dono && S.villagers.get(b.dono); return o && o.home === b.id && b.id !== oldC[0].home && b.id !== youngC[0].home && K.family(o).length <= cap(b) && residents(b).length + comes >= cap(b); });
+        if (!h2) continue;
+        for (const k of [...kidsOf(oldC), ...kidsOf(youngC)]) k.home = h2.id;
+        for (const v of [...oldC, ...youngC]) v.home = h2.id;
+        h2.res = residents(h2).length; // (the count the world keeps — assignHousing's —, made now by the test's hand)
+        const q = K.queue(S.settlements.get(sid)).filter(e => e[0].home === h2.id);
+        const own = S.villagers.get(h2.dono);
+        const fam = e => Math.max(e[0].age, ...K.family(e[0]).filter(m => m.age >= 16).map(m => m.age));
+        // (the youngest family of the house in need, by the rule — a young single of it would come before the young couple)
+        const all = [...S.villagers.values()].filter(v => v.home === h2.id && v.age >= 18).map(v => [v, K.need(v)]).filter(e => e[1] === 'lotada' || e[1] === 'casal');
+        const youngest = all.sort((a, c) => fam(a) - fam(c) || a[0].id - c[0].id)[0];
+        okb = q.length === 1 && !oldC.includes(q[0][0]) && !!youngest && fam(q[0]) === fam(youngest) && K.need(own) === null;
+        info = `${h2.type}#${h2.id} de ${S.settlements.get(sid).name} (${h2.res} para ${cap(h2)} camas, dono ${own.name}): o casal de ${Math.floor(eld(oldC))} anos (${oldC[0].name} e ${oldC[1].name}) e o de ${Math.floor(eld(youngC))} (${youngC[0].name} e ${youngC[1].name}); o dia da cidade pergunta a ${q.length ? `${q[0][0].name} (${q[0][1]}, a família de ${Math.floor(fam(q[0]))} anos)` : 'NINGUÉM'}${q.length > 1 ? ` e a mais ${q.length - 1} da mesma casa` : ''}; o dono ${K.need(own) === null ? 'fica (a família dele cabe)' : 'PRECISA SAIR'}`;
+        return true;
+      }
+      return false;
+    };
+    morning(); if (!tryB() && WORLD !== 'metropole') { morning('metropole'); tryB(); }
+    ok('l16b da casa cheia, a família mais moça é a perguntada (D-098)', okb, info || 'nenhuma cidade com dois casais de fora e uma casa com dono que os receba');
+  }
 }
 
 // ======================= l11: the faithful inside the temple =======================

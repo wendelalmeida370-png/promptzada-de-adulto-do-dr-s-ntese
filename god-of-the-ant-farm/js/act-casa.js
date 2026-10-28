@@ -59,7 +59,7 @@
 
   // ------------------------------ who needs a house, and how much it costs ------------------------------
   // (the head of a family: a grown person; the reason, or null)
-  K.need = function (v) {
+  const need0 = function (v) {
     if (!v || v.age < 18 || v.captive || v.jail || v.aboard) return null;
     const S = G.S; if (!v.home) return v.rua ? 'rua' : null;
     const h = S.buildings.get(v.home); if (!built(h)) return null;
@@ -71,6 +71,15 @@
     if (K.tenant(v, h)) return 'aluga';
     return null;
   };
+  // (a house full, or too full, is left by the others first: its owner and the old one who minds its little ones there — with
+  // their partners — stay; the owner's family leaves only when it is the one that does not fit the house, D-098)
+  K.need = function (v) {
+    const w = need0(v); if (w !== 'lotada' && w !== 'casal') return w;
+    const h = G.S.buildings.get(v.home); const p = P(v.partner); const here = !!p && p.home === v.home;
+    const keep = h.dono === v.id || (here && h.dono === p.id) || K.minds(v) || (here && K.minds(p));
+    return keep && K.family(v).length <= G.BDEF[h.type].housing ? null : w;
+  };
+  K.minds = o => !!(G.Lar && G.Lar.minder && G.Lar.minder(o)); // (the old one of the house who minds its little ones, act-lar.js)
   const WHY = { rua: 'sem teto', barraco: 'num barraco', casal: 'na casa de outros, cheia', lotada: 'gente demais para as camas', aluga: 'de aluguel' };
   const URGENT = { rua: 0, barraco: 1, lotada: 2, casal: 3, aluga: 4 };
   // the family that would move: the person, the partner, the children under sixteen living with them
@@ -120,14 +129,23 @@
     // a house paid for and not built: after a few days with no hands for it, the people give back what the family paid
     for (const b of homes) if (b.encomenda && !b.built && S.day - b.encomenda.d > K.MAX_WAIT && !b.progress) refund(b, set);
     // the families in need, the most urgent first (one decision a day per town — the dear ground of a city moves slowly)
-    const heads = []; const seen = new Set();
+    for (const [v] of K.queue(set)) { if (A.isBody(v)) continue; const r = K.order(v); if (r.ok) break; }
+  }
+  // the families in need of a town, in the order the day asks them: [head, why], the most urgent first. Of a house too many
+  // for its beds, or full with a couple of others, only its youngest family — its eldest grown one's age —: the old ones of
+  // the house wait for the young to go (D-098); the house is as urgent as its most urgent family. Reads only
+  K.queue = function (set) {
+    const S = G.S; const heads = []; const seen = new Set();
     for (const v of S.villagers.values()) {
       if (v.set !== set.id || seen.has(v.id)) continue; const why = K.need(v); if (!why) continue;
       for (const m of K.family(v)) seen.add(m.id); heads.push([v, why]);
     }
-    heads.sort((a, b) => URGENT[a[1]] - URGENT[b[1]] || a[0].id - b[0].id);
-    for (const [v] of heads) { if (A.isBody(v)) continue; const r = K.order(v); if (r.ok) break; }
-  }
+    const eldest = v => Math.max(v.age, ...K.family(v).filter(m => m.age >= 16).map(m => m.age));
+    const asked = []; const byHouse = new Map();
+    for (const e of heads) { if (e[1] !== 'lotada' && e[1] !== 'casal') { asked.push(e); continue; } const l = byHouse.get(e[0].home); if (l) l.push(e); else byHouse.set(e[0].home, [e]); }
+    for (const l of byHouse.values()) { l.sort((a, b) => eldest(a[0]) - eldest(b[0]) || a[0].id - b[0].id); asked.push([l[0][0], l.some(e => e[1] === 'lotada') ? 'lotada' : 'casal']); }
+    return asked.sort((a, b) => URGENT[a[1]] - URGENT[b[1]] || a[0].id - b[0].id);
+  };
   // the family's decision, now: the people's empty house if there is one with beds for them (bought — or given, in a
   // people without coin), else a new one raised; short of coin, an empty house its owner lets, rented — or saving for it.
   // The god's body decides by the same rule

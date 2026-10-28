@@ -1,7 +1,7 @@
 // lar-inv: as regras do verificador para a vida em casa (P1, Patch 2) — quem está dentro de uma casa e por quê, quem dorme
 // e como, quem está fora de casa à noite sem afazer, quem cuida dos pequenos de dia (um por casa, e nenhuma criança presa
-// em casa sem ele), o bebê nos braços certos ao alcance (D-074), a despensa pelo livro-razão; e, no estado canônico, quem
-// está em casa
+// em casa sem ele), o bebê nos braços certos ao alcance (D-074), da casa cheia os moços saem primeiro (D-098), a despensa
+// pelo livro-razão; e, no estado canônico, quem está em casa
 // (a ida e volta pelo save não pode tirar ninguém da cama: D-073). Carregado depois do qa/qa.js (QA.more / QA.canonMore);
 // o junta-inv.js o leva para dentro do qa.js. Lê os campos do mundo direto; a planta, pelas portas do G.Interiors.
 (function () {
@@ -18,6 +18,7 @@
   let held0 = new Map(), held0S = null; // (since when each little one has been kept at home by day with nobody minding)
   let baby0 = new Map(), baby0S = null; // (since when each baby has been in the wrong arms — or in none — with the right ones within reach)
   let pan = new Map(), panS = null; const moved = new Map(); // (each pantry at the last look; what the ledger moved since)
+  let crowd = new Map(), crowdS = null; // (the houses too full at the last look: their beds, their people, their old and their young singles — D-098)
   QA.more.push(function (add, s) {
     const Lr = G.Lar; if (!Lr) return;
     const body = s.avatar ? s.avatar.id : 0; const In = G.Interiors;
@@ -89,6 +90,36 @@
       if (s.clock - since > 3) add('lar', 3, `o bebê ${b.name} #${b.id}: ${wrong}, há ${Math.round(s.clock - since)} s`, b.id);
     }
     baby0 = bnow;
+    // ---- of a house too full the young single ones leave first (D-098): no one of 62 or more leaves a house that was too full
+    // at the last look while a younger single grown one of it still lives there — one who could leave: not its owner, not
+    // the old one who minds its little ones, not the parent they follow, not in jail or at sea, not the god's body —; unless
+    // the old one's whole family went, and it was the one that did not fit the house
+    if (crowdS !== s) { crowdS = s; crowd = new Map(); }
+    const homeNow = new Map(); for (const v of s.villagers.values()) homeNow.set(v.id, v.home || 0);
+    for (const [hid, c] of crowd) {
+      const b = s.buildings.get(hid); if (!housing(b) || !b.built || b.type === 'ruin') continue;
+      for (const [id, age] of c.old) {
+        const v = s.villagers.get(id); const nh = v ? v.home || 0 : 0;
+        if (!v || !nh || nh === hid || v.set !== c.set || v.captive || v.jail || v.aboard) continue;
+        const p = v.partner && s.villagers.get(v.partner); if (p && p.home === nh && !c.ppl.includes(p.id)) continue; // (married into another house)
+        if (c.ppl.filter(q => homeNow.get(q) === nh).length > c.cap) continue; // (the whole family went: it did not fit)
+        const y = c.singles.find(([q, a]) => a < age && homeNow.get(q) === hid); if (!y) continue;
+        const o = s.villagers.get(y[0]); const f = o && o.g === 'f';
+        add('lar', 3, `${v.name} #${v.id} (${Math.floor(age)} anos) saiu da casa cheia ${b.type}#${hid} (${c.n} para ${c.cap} camas) antes de ${o ? o.name : ''} #${y[0]} (${Math.floor(y[1])}), ${f ? 'solteira mais moça' : 'solteiro mais moço'} dela (D-098)`, v.id);
+      }
+    }
+    crowd = new Map();
+    {
+      const ppl = new Map(); for (const v of s.villagers.values()) if (v.home && !v.captive) { const l = ppl.get(v.home); if (l) l.push(v); else ppl.set(v.home, [v]); }
+      for (const [hid, L] of ppl) {
+        const b = s.buildings.get(hid); if (!housing(b) || !b.built || b.type === 'ruin') continue;
+        const cap = G.BDEF[b.type].housing; if (L.length <= cap) continue;
+        const old = L.filter(o => o.age >= 62).map(o => [o.id, o.age]); if (!old.length) continue;
+        const follow = new Set(); for (const k of L) if (k.age < 16) { const m = s.villagers.get(k.mother), f = s.villagers.get(k.father); if (m && m.home === hid) follow.add(m.id); else if (f && f.home === hid) follow.add(f.id); }
+        const singles = L.filter(o => o.age >= 18 && !o.partner && o.id !== b.dono && o.id !== body && !o.jail && !o.aboard && !follow.has(o.id) && !(Lr.minder && Lr.minder(o))).map(o => [o.id, o.age]);
+        if (singles.length) crowd.set(hid, { cap, n: L.length, set: b.set, ppl: L.map(o => o.id), old, singles });
+      }
+    }
     // ---- whoever is at a feast is at one under way, in a part of it (L-222: a save no longer ends a festival)
     if (G.Fest && G.Fest.list) {
       const fl = new Map(G.Fest.list().map(f => [f.id, f]));
@@ -110,7 +141,7 @@
     const at = (ref, k) => { if (typeof ref === 'string' && ref[0] === 'h' && ref[1] === ':') { const id = +ref.slice(2); moved.set(id, (moved.get(id) || 0) + k * e[6]); } };
     at(e[3], -1); at(e[4], 1);
   });
-  if (G.worldHooks) G.worldHooks.push(() => { night0 = new Map(); night0S = null; held0 = new Map(); held0S = null; baby0 = new Map(); baby0S = null; pan = new Map(); panS = null; moved.clear(); });
+  if (G.worldHooks) G.worldHooks.push(() => { night0 = new Map(); night0S = null; held0 = new Map(); held0S = null; baby0 = new Map(); baby0S = null; pan = new Map(); panS = null; moved.clear(); crowd = new Map(); crowdS = null; });
   // (who is at home — asleep, in the evening at home, sheltering — and who sleeps outdoors, is the same after a save and a
   // load: the round trip that takes anyone out of bed is seen — D-073, L-220)
   QA.canonMore.push(['lar', () => {

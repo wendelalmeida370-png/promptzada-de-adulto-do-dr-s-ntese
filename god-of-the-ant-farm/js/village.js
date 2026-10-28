@@ -678,12 +678,16 @@
       }
       if (!v.home) { const b = findHome(1); if (b) { v.home = b.id; b.res++; } }
     }
-    // grown single adults move out of an overcrowded parental home when possible (not the parent the children follow)
+    // grown single adults move out of an overcrowded home when possible, the youngest first — never the parent the children
+    // follow, the house's owner, the old one who minds the little ones there (G.Lar.minder), nor the god's body (its house is
+    // the player's to leave, as in act-casa.js): D-098
     const minders = new Set(); for (const v of vs) if (v.age < 16 && v.home) { const m = S.villagers.get(v.mother), f = S.villagers.get(v.father); if (m && m.home === v.home) minders.add(m.id); else if (f && f.home === v.home) minders.add(f.id); }
+    const cares = v => !!(G.Lar && G.Lar.minder && G.Lar.minder(v));
+    const body = S.avatar ? S.avatar.id : 0;
     for (const b of homes) {
       if (!b.built || space(b) >= 0) continue;
-      for (const v of vs) {
-        if (v.home !== b.id || v.age < 18 || v.partner || minders.has(v.id)) continue;
+      for (const v of vs.filter(o => o.home === b.id).sort((p, q) => p.age - q.age || p.id - q.id)) {
+        if (v.age < 18 || v.partner || minders.has(v.id) || v.id === b.dono || v.id === body || cares(v)) continue;
         const nb = findHome(1); if (nb && nb !== b) { v.home = nb.id; nb.res++; b.res--; }
         if (space(b) >= 0) break;
       }

@@ -2,7 +2,7 @@
 // moeda com mais adultos sem par — hoje, Tenochtitlan) e no «cidade» (um povo sem moeda). Sem uma cidade que sirva, falha
 // dizendo o que falta.   node qa/casa.js
 // h1 toda casa tem dono (o mais velho que mora nela; a vazia é do povo); h2 quem precisa de casa (o casal na casa cheia
-// dos pais) põe no diário e junta — e a casa que junta não compra luxo; h11 a casa vazia do povo, comprada pelo livro
+// dos pais — o que o dia da cidade pergunta: de uma casa cheia, só a família mais moça, D-098) põe no diário e junta — e a casa que junta não compra luxo; h11 a casa vazia do povo, comprada pelo livro
 // ('compra-casa'), e a família muda com a sua parte ('mudança'); h3 com o bastante, paga os materiais de uma nova pelo
 // livro ('obra-casa'), e a cidade diz onde e quão alta; h6 save no meio da obra; h4 os construtores levantam, a família
 // muda e é a dona; h12 o aluguel: a casa que o dono deixou vazia, alugada; o aluguel de cada dia pelo livro ('aluguel');
@@ -110,7 +110,9 @@ const warNote = (w, t0) => `${w ? `; a cidade esperou ${w} s por paz antes do ca
 // ---------------- h2: the need goes into the diary, and the house saves (no luxury bought while it does)
 let hv = null, hHome = null;
 {
-  hv = couple(); hHome = hv && S.buildings.get(hv.home);
+  // (a couple the town's day asks: of a full house, only its youngest family is — D-098 —, by the head the day names)
+  for (let k = 0; k < 8 && !hv; k++) { const c = couple(); if (!c) break; const e = K.queue(set).find(q => q[0].id === c.id || q[0].id === c.partner); if (e) hv = e[0]; }
+  hHome = hv && S.buildings.get(hv.home);
   let info = 'nenhum casal numa casa cheia', fine2 = false;
   if (hv) {
     setCoins('h:' + hHome.id, 1); // (a house with too few coins even for a rent: it saves)

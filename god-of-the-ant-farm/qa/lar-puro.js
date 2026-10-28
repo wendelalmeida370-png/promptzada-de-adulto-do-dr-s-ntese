@@ -71,5 +71,39 @@ G.Vg.endTask(w, { stay: 500 }); ok('endTask com stay: continua dentro', w.inside
   ok('não passar a quem não pode segurar', !Vg.handBaby(baby, Object.assign(add(Q(13, { x: 10.5, y: 10 })), { fury: 2 })) && baby.carrier === near.id);
   ok('não passar a gente de outra vila', !Vg.handBaby(baby, add(Q(14, { x: 10.5, y: 10, set: 2 }))) && baby.carrier === near.id);
 }
+// ---- the house too full (D-098): who needs to leave it (G.Casa.need), and whom the town's day asks first (G.Casa.queue)
+{
+  const K = G.Casa;
+  ok('G.Casa.need e queue', !!(K && K.need && K.queue));
+  G.S = { time: 0.5, clock: 0, day: 3, villagers: new Map(), buildings: new Map(), settlements: new Map(), avatar: null };
+  const Q = (id, o) => Object.assign({ id, age: 30, set: 1, x: 10, y: 10, inside: 0, ug: 0, traits: [], role: null, g: 'f', task: null, kids: [], partner: 0, hp: 100, sick: 0 }, o || {});
+  const add = o => { G.S.villagers.set(o.id, o); return o; };
+  const house = (id, type, res, dono) => { const b = { id, type, set: 1, x: 10, y: 10, w: 1, h: 1, built: true, res, dono }; G.S.buildings.set(id, b); return b; };
+  // (a house of 6 beds with 8 in it: the owner's family — the couple, a child of 4 and one of 9 — fits; a grandmother of 70
+  // who minds the little one; a wounded old man of 66, alone; two young singles of 22 and 27)
+  house(100, 'house', 8, 1);
+  const own = add(Q(1, { age: 40, partner: 2, home: 100, kids: [3, 4], g: 'm' })), wife = add(Q(2, { age: 38, partner: 1, home: 100, kids: [3, 4] }));
+  add(Q(3, { age: 4, mother: 2, father: 1, home: 100 })); add(Q(4, { age: 9, mother: 2, father: 1, home: 100 }));
+  const gran = add(Q(5, { age: 70, home: 100 })), old = add(Q(6, { age: 66, home: 100, g: 'm', hp: 40 }));
+  const y1 = add(Q(7, { age: 22, home: 100 })), y2 = add(Q(8, { age: 27, home: 100, g: 'm' }));
+  const nd = [own, wife, gran, old, y1, y2].map(v => K.need(v));
+  ok('casa cheia: o dono e a companheira ficam (a família deles cabe)', nd[0] === null && nd[1] === null, nd.join(','));
+  ok('casa cheia: a avó que cuida do pequeno fica', nd[2] === null && !!G.Lar.minder(gran), String(nd[2]));
+  ok('casa cheia: o velho sozinho e os moços precisam sair', nd[3] === 'lotada' && nd[4] === 'lotada' && nd[5] === 'lotada', nd.slice(3).join(','));
+  const q1 = K.queue({ id: 1 });
+  ok('o dia da cidade pergunta só à mais moça da casa (a de 22), não ao velho', q1.length === 1 && q1[0][0] === y1, q1.map(e => e[0].id + ':' + e[1]).join(' '));
+  // (the owner's own family does not fit — a hut of 4 beds, the couple and three children —: it is the one that leaves)
+  G.S.villagers.clear(); G.S.buildings.clear(); house(200, 'hut', 5, 11);
+  const o2 = add(Q(11, { age: 35, partner: 12, home: 200, kids: [13, 14, 15], g: 'm' })); add(Q(12, { age: 33, partner: 11, home: 200, kids: [13, 14, 15] }));
+  for (const id of [13, 14, 15]) add(Q(id, { age: 6 + id - 13, mother: 12, father: 11, home: 200 }));
+  ok('a família do dono que não cabe na casa é a que sai', K.need(o2) === 'lotada' && K.queue({ id: 1 }).length === 1 && K.queue({ id: 1 })[0][0] === o2, String(K.need(o2)));
+  // (two couples of others in a full house — one in their sixties, one in their twenties —: the young couple is asked)
+  G.S.villagers.clear(); G.S.buildings.clear(); house(300, 'house', 6, 21);
+  add(Q(21, { age: 45, home: 300, g: 'm' })); add(Q(22, { age: 19, home: 300, mother: 0 }));
+  const oa = add(Q(23, { age: 64, partner: 24, home: 300, g: 'm' })); add(Q(24, { age: 61, partner: 23, home: 300 }));
+  const ya = add(Q(25, { age: 24, partner: 26, home: 300, g: 'm' })); add(Q(26, { age: 23, partner: 25, home: 300 }));
+  const q3 = K.queue({ id: 1 });
+  ok('o casal velho e o casal moço numa casa de outros, cheia: pergunta-se ao moço', K.need(oa) === 'casal' && K.need(ya) === 'casal' && q3.length === 1 && q3[0][0] === ya, q3.map(e => e[0].id + ':' + e[1]).join(' '));
+}
 console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'PASSOU');
 process.exit(fails.length ? 1 : 0);
