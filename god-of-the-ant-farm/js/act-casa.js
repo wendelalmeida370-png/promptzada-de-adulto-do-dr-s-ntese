@@ -377,7 +377,9 @@
   const kill0 = G.Village.kill;
   G.Village.kill = function (v) {
     if (v && G.S.villagers.has(v.id)) for (const b of G.S.buildings.values()) {
-      if (!housing(b)) continue;
+      // (what is left of a house that fell or was left to the wind — a ruin — keeps the owner it had, and is no one's to
+      // inherit: with the owner gone, it is nobody's — L-304)
+      if (!housing(b)) { if (b.dono === v.id) { b.dono = 0; b.aluga = null; } continue; }
       if (b.dono === v.id) {
         const heir = b.built ? heirOf(b, v) : null;
         b.dono = heir ? heir.id : 0;
