@@ -43,6 +43,11 @@
     if (!(G.Render && G.Render.mirror() < 0)) return Art.draw(ctx, s, x, y, sc);
     ctx.save(); ctx.translate(x, y); ctx.scale(-1, 1); Art.draw(ctx, s, 0, 0, sc); ctx.restore();
   };
+  // (a sprite as it is, or mirrored, by the caller's word: the god's door on the side the plan opens it — L-264)
+  Art.drawMx = function (ctx, s, x, y, sc, mir) {
+    if (!(mir < 0)) return Art.draw(ctx, s, x, y, sc);
+    ctx.save(); ctx.translate(x, y); ctx.scale(-1, 1); Art.draw(ctx, s, 0, 0, sc); ctx.restore();
+  };
 
   // ------------------------------ iso helpers ------------------------------
   const P = (dx, dy, z) => [(dx - dy) * 16, (dx + dy) * 8 - (z || 0)];
@@ -404,9 +409,15 @@
 
   // ------------------------------ buildings ------------------------------
   const ROOFS = [['#b85a3c', '#94452d', '#7a3826'], ['#9a6a3a', '#7f5530', '#6a4526'], ['#6c6f86', '#56596e', '#46485a']];
-  Art.building = function (type, v, style, extra) {
-    if (G.Arch) { const s = G.Arch.building(type, v, style || 'classico', extra); if (s) return s; }
-    const key = 'b-' + type + v;
+  // (noDoor: the picture without its door — its door is on a side the view does not see: L-264)
+  let noDoor = false;
+  Art.building = function (type, v, style, extra, nd) {
+    if (G.Arch) { const s = G.Arch.building(type, v, style || 'classico', extra, nd); if (s) return s; }
+    noDoor = !!nd;
+    try { return before(type, v, nd ? '|c' : ''); } finally { noDoor = false; }
+  };
+  function before(type, v, kd) {
+    const key = 'b-' + type + v + kd;
     switch (type) {
       case 'hut': {
         const [w, h, ax, ay] = spriteDims(1, 1, 26);
@@ -420,8 +431,8 @@
           c.strokeStyle = 'rgba(80,55,30,0.5)'; c.lineWidth = 0.4;
           for (let k = -8; k <= 8; k += 2.2) { c.beginPath(); c.moveTo(k, -5); c.lineTo(k, 1 + Math.sqrt(Math.max(0, 1 - (k / 9.5) ** 2)) * 4.8 - 0.3); c.stroke(); }
           // door
-          c.fillStyle = '#3a2616'; c.beginPath(); c.moveTo(-6, 4.5); c.lineTo(-6, -1.5); c.quadraticCurveTo(-4, -4.4, -2, -1.5); c.lineTo(-2, 5.3); c.closePath(); c.fill();
-          m.win.push([[-5.6, 4.4], [-5.6, -1.3], [-4, -3.4], [-2.4, -1.3], [-2.4, 5.1]]);
+          if (!noDoor) { c.fillStyle = '#3a2616'; c.beginPath(); c.moveTo(-6, 4.5); c.lineTo(-6, -1.5); c.quadraticCurveTo(-4, -4.4, -2, -1.5); c.lineTo(-2, 5.3); c.closePath(); c.fill();
+            m.win.push([[-5.6, 4.4], [-5.6, -1.3], [-4, -3.4], [-2.4, -1.3], [-2.4, 5.1]]); }
           // roof
           g = c.createLinearGradient(-12, 0, 12, 0); g.addColorStop(0, straw[0]); g.addColorStop(1, straw[1]);
           c.fillStyle = g; c.beginPath(); c.moveTo(-12.5, -4); c.lineTo(0, -22); c.lineTo(12.5, -4); c.ellipse(0, -4, 12.5, 5.5, 0, 0, Math.PI); c.closePath(); c.fill();
@@ -446,8 +457,7 @@
           line(P(x0, y1, 7), P(x1, y1, 7)); line(P(x1, y1, 7), P(x1, y0, 7));
           line(P(x0, y1, H), P(x1, y1, H)); line(P(x1, y1, H), P(x1, y0, H));
           // door & windows
-          onL(c, y1, -0.14, 0.06, 2, 9, '#5a3b25');
-          c.fillStyle = '#c9a063'; const dk = P(0.02, y1, 5.5); c.fillRect(dk[0], dk[1], 0.6, 0.6);
+          if (!noDoor) { onL(c, y1, -0.14, 0.06, 2, 9, '#5a3b25'); c.fillStyle = '#c9a063'; const dk = P(0.02, y1, 5.5); c.fillRect(dk[0], dk[1], 0.6, 0.6); }
           onL(c, y1, 0.14, 0.28, 8, 11, '#2f3a48', m, 1);
           onR(c, x1, -0.2, 0.0, 8, 11, '#2f3a48', m, 1);
           onR(c, x1, -0.2, 0.0, 3.5, 6.5, '#2f3a48', m, 1);
@@ -465,10 +475,10 @@
           walls(c, x0, y0, x1, y1, 2.5, H, '#a0703f', '#7c5431');
           c.strokeStyle = 'rgba(60,35,15,0.45)'; c.lineWidth = 0.45;
           for (let z = 4.5; z < H; z += 2) { let a = P(x0, y1, z), b = P(x1, y1, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); a = P(x1, y1, z); b = P(x1, y0, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
-          onL(c, y1, -0.35, 0.3, 2.5, 12, '#4a301c');
-          c.strokeStyle = '#7a5230'; c.lineWidth = 0.7;
-          let a = P(-0.35, y1, 2.5), b = P(0.3, y1, 12); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke();
-          a = P(0.3, y1, 2.5); b = P(-0.35, y1, 12); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke();
+          if (!noDoor) { onL(c, y1, -0.35, 0.3, 2.5, 12, '#4a301c');
+            c.strokeStyle = '#7a5230'; c.lineWidth = 0.7;
+            let a = P(-0.35, y1, 2.5), b = P(0.3, y1, 12); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke();
+            a = P(0.3, y1, 2.5); b = P(-0.35, y1, 12); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
           onR(c, x1, -0.3, 0.1, 9, 12, '#2b323c', m, 1);
           gableX(c, x0, y0, x1, y1, H, H + 16, 0.12, v === 1 ? '#8a6a3a' : '#6e4a2e', v === 1 ? '#735630' : '#5a3c26', '#8a6036', '#3e2a1a');
         });
@@ -482,7 +492,7 @@
           for (let z = 2; z < 6; z += 2) { const a = P(x0, y1, z), b = P(x1, y1, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
           walls(c, x0, y0, x1, y1, 6, H, '#b0804e', '#8c6238');
           onL(c, y1, -0.5, -0.2, 7.5, 11, '#2f3a48', m, 1);
-          onL(c, y1, 0.0, 0.2, 0, 9, '#4a301c');
+          if (!noDoor) onL(c, y1, 0.0, 0.2, 0, 9, '#4a301c');
           gableX(c, x0, y0, x1, y1, H, H + 12, 0.1, '#5f6776', '#4e5562', '#b8905e', '#3a3f48');
           // tall chimney
           box(c, -0.55, -0.6, -0.3, -0.35, 8, H + 22, '#8a8378', '#6c655b', '#57504a');
@@ -503,7 +513,7 @@
           box(c, -0.8, -0.8, 0.8, 0.8, 3, 6, '#d8d0ba', '#b6ac94', '#ebe5d4');
           const x0 = -0.5, x1 = 0.45, y0 = -0.5, y1 = 0.45, H = 24;
           walls(c, x0, y0, x1, y1, 6, H, '#f1ead9', '#cfc5ae');
-          onL(c, y1, -0.15, 0.15, 6, 16, '#3a2e24', m, 1);
+          if (!noDoor) onL(c, y1, -0.15, 0.15, 6, 16, '#3a2e24', m, 1);
           // columns
           const col = (cx, cy) => { box(c, cx - 0.045, cy - 0.045, cx + 0.045, cy + 0.045, 6, H, '#fbf6ea', '#d6ccb4', '#fffaf0'); };
           for (const cx of [-0.5, -0.17, 0.2, 0.62]) col(cx, 0.66);
@@ -559,7 +569,7 @@
           walls(c, x0, y0, x1, y1, 3.5, H, '#8a5a36', '#6a4428');
           c.strokeStyle = 'rgba(40,24,12,0.45)'; c.lineWidth = 0.45;
           for (let z = 5.5; z < H; z += 2) { let a = P(x0, y1, z), b = P(x1, y1, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); a = P(x1, y1, z); b = P(x1, y0, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
-          onL(c, y1, -0.3, 0.0, 3.5, 10.5, '#3a2414');
+          if (!noDoor) onL(c, y1, -0.3, 0.0, 3.5, 10.5, '#3a2414');
           onR(c, x1, -0.55, -0.35, 8, 11, '#2b323c', m, 1);
           onR(c, x1, 0.05, 0.25, 8, 11, '#2b323c', m, 1);
           gableX(c, x0, y0, x1, y1, H, H + 11, 0.1, '#7a3a2a', '#5e2c20', '#9a6a44', '#3e1c14');
