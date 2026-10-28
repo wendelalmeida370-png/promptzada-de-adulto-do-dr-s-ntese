@@ -239,6 +239,9 @@ const calmOne = (skip) => {
     // her bed woke her to forage. Out to 30: the hunger looks for a bush in a square of twenty tiles each way, 28,3 at its
     // corners, T-115)
     const bushes = new Map(); const pick = () => { for (const b of S.bushes.values()) if ((b.berries > 0 || b.grow > 0) && (G.dist(b.x, b.y, v.x, v.y) < 30 || (h && G.dist(b.x, b.y, h.x, h.y) < 30))) { if (!bushes.has(b)) bushes.set(b, [b.berries, b.grow]); b.berries = 0; b.grow = 0; } };
+    // (nor the house's pantry: at home with food in it, the hungry one rises to eat at the table — the supper of the house,
+    // G.Lar (villagers.js eatTask), of the Patch 2: the case would see her rise for a meal in reach. Given back at the end)
+    const pan = h ? D.get('h:' + h.id, 'food') : 0; if (pan > 0) D.use('h:' + h.id, 'food', pan, { code: 'teste', part: true });
     S.time = 0.86; Vg.endTask(v); v.hunger = 100; v.hp = 55; v.energy = 5; v._hungerT = 0;
     Vg.setTask(v, { type: 'sleep', pri: 2.5, kind: 'sleep' });
     // (counted from when she lies down: the way to her bed is the world's own — 3.5 s of it once the plan's door was on —,
@@ -247,6 +250,7 @@ const calmOne = (skip) => {
     for (let k = 0; k < 40; k++) { v._noStore = S.clock + 5; pick(); const was = v.task && v.task.type === 'sleep'; M.viver(0.5); looks++; if (v.task && v.task.type === 'sleep' && v.sleeping) asleep++; if (was && !(v.task && v.task.type === 'sleep')) { wakes++; seen.push(v.task ? v.task.type : '-'); } }
     v._noStore = 0; void pan0; void food0;
     for (const [b, [n, g]] of bushes) { b.berries = n; b.grow = g; }
+    if (pan > 0) D.make('h:' + h.id, 'food', pan, { code: 'teste', part: true });
   }
   ok('h9 sem comida ao alcance, quem dorme com fome não fica acordando a cada passo', !!v && wakes === 0 && asleep >= looks - 2, v ? `${v.name}: ${(walk * 0.5).toFixed(1)} s até deitar; depois, ${asleep} de ${looks} olhadas dormindo, ${wakes} vezes acordado sem ter o que comer${seen.length ? ' (' + seen.join(', ') + ')' : ''}` : 'ninguém');
 }
