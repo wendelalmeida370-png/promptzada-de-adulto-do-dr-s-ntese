@@ -1032,11 +1032,50 @@
     for (const a of sh.annex || []) H.annex.push({ rect: R(a.r), h: Z(a.h) });
     // (a storey whose outside walls are of another stuff than the shell's: the half-timber over the ground floor's adobe)
     H.bands = []; for (const l of lv) { const w = (s.walls || []).find(q => q.lv === l.lv && q.mat && q.mat !== sh.mat && q.kind === 'parede'); if (w) H.bands.push({ z0: Z(l.y), z1: Math.min(H.eave, Z(l.y + l.h)), mat: w.mat }); }
+    if (YARDS[b.type] && sh.yard) H.yard = yardGeo(b, s, sh, lv, { X, Y, Z, R, faceOf, qx, qy });
     return H;
   };
+  // the yard before the roofed part (B2d: the pottery's, the tavern's) in the sprite's frame, as the 3D lays it — Build3D's
+  // shellYard: the yard's rect and its floor, the plan's storey on the plinth's top; the fence — the plan's walls of kind
+  // 'cerca' — in runs broken at the gates, each on the yard's far sides or on its near ones; the gates, their posts, lintel and
+  // leaf; the pieces the plan lays with the shell (the kiln, the racks, the bricks, the moulding floor, the wheel, the clay pit;
+  // the table and its benches, the barrels, the jar): their rects, heights, the way their fronts face, their fire; and the
+  // tavern's sign, where the 3D hangs it — Build3D's innSign
+  function yardGeo(b, s, sh, lv, F) {
+    const { X, Y, Z, R, faceOf, qx, qy } = F; const ylv = sh.yard.lv || 0; const l = (s.levels || []).find(q => q.lv === ylv) || lv[0];
+    const Yd = { rect: R(sh.yard.r), z: Z(l.y), runs: [], gates: [], items: [], sign: null };
+    const [a0, b0] = Yd.rect; const far = (p0, p1) => (Math.abs(p0[0] - p1[0]) < 1e-6 && Math.abs(p0[0] - a0) < 0.06) || (Math.abs(p0[1] - p1[1]) < 1e-6 && Math.abs(p0[1] - b0) < 0.06);
+    for (const w of s.walls || []) {
+      if (w.kind !== 'cerca' || w.lv !== ylv) continue;
+      const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L < 0.05) continue;
+      const tx = (w.b[0] - w.a[0]) / L, tz = (w.b[1] - w.a[1]) / L; const at = d => [X(w.a[0] + tx * d), Y(w.a[1] + tz * d)];
+      const t = q2(w.t / 4), z1 = Z(l.y + w.h);
+      const run = (d0, d1) => { if (d1 - d0 < 0.05) return; const p0 = at(d0), p1 = at(d1); Yd.runs.push({ a: p0, b: p1, t, z1, far: far(p0, p1) }); };
+      const gates = (s.holes || []).filter(h => h.wall === w.id && h.kind !== 'janela').sort((p, q) => p.at - q.at); let d0 = 0;
+      for (const h of gates) {
+        run(d0, h.at - h.w / 2 - 0.15); d0 = h.at + h.w / 2 + 0.15;
+        const hy = Math.max(w.h + 0.2, (h.sill || 0) + h.h + 0.02); const p0 = at(h.at - h.w / 2 - 0.11), p1 = at(h.at + h.w / 2 + 0.11);
+        Yd.gates.push({ a: p0, b: p1, z1: Z(l.y + hy), top: Z(l.y + hy + 0.15), leaf: Z(l.y + Math.min(h.h, hy - 0.02)), far: far(p0, p1) });
+      }
+      run(d0, L);
+    }
+    for (const it of s.yard || []) Yd.items.push({ kind: it.kind, rect: R(it.r), h: qz(it.h * ZPX), face: [q2(qx * Math.sin(it.rot || 0)), q2(qy * Math.cos(it.rot || 0))], fire: it.fire ? 1 : 0 });
+    // (the tavern's sign by the way into its yard, on the house's front: the iron arm 0.82 m out at 2.45 m, the board under it
+    // 0.14–0.76 m out, on the side the building's own hash says, as Build3D's innSign hangs it)
+    const e = s.entrance;
+    if (b.type === 'taverna' && e && sh.kind === 'rect') {
+      const r = sh.r, o = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[e.side] || [0, 1]; const ax = o[1] !== 0; const face = faceOf(e.side);
+      const wall = ax ? (r[1] + r[3]) / 2 + o[1] * (r[3] - r[1]) / 2 : (r[0] + r[2]) / 2 + o[0] * (r[2] - r[0]) / 2;
+      const sd = G.hash(b.id * 7919 + 23 * 104729 + 13) < 0.5 ? -1 : 1; const a = (ax ? e.x : e.z) + sd * (((e.w || 1) + 0.5) / 2 + 0.35);
+      const pt = n => (ax ? [X(a), Y(wall + o[1] * n)] : [X(wall + o[0] * n), Y(a)]);
+      if (face) Yd.sign = { w: pt(0), arm: pt(0.82), a: pt(0.14), b: pt(0.76), z: Z(2.45), zb: Z(1.79) };
+    }
+    return Yd;
+  }
   // the picture of a home from its numbers (homeGeo), in its people's dressing
   function homeDraw(c, m, p, st, v, H, type) {
     if (H.round) return roundDraw(c, m, p, st, H);
+    if (H.yard) yardDraw(c, m, p, st, H, true);
     const rf = H.roof, kind = rf.kind; const [x0, y0, x1, y1] = H.rect; const zF = H.floor, zE = H.eave; const bat = st === 'egipcio' ? 0.04 : 0;
     const mid = r => (r[0] + r[2]) / 2 + (r[1] + r[3]) / 2; const behind = a => mid(a.rect) < mid(H.rect);
     for (const a of H.annex) if (behind(a)) annexDraw(c, p, st, a, H);
@@ -1126,6 +1165,117 @@
     }
     if (H.court) courtDraw(c, p, H, zRoof);
     for (const a of H.annex) if (!behind(a)) annexDraw(c, p, st, a, H);
+    if (H.yard) yardDraw(c, m, p, st, H, false);
+  }
+  // ---- a yard before the roofed part (yardGeo), back to front about it: before the house its floor of beaten earth and the
+  // stone edge it stands on, the fence's far runs and gates, the pieces behind the house; after it the pieces before it, the
+  // sign, the fence's near runs and gates ----
+  const yMid = r => (r[0] + r[2]) / 2 + (r[1] + r[3]) / 2;
+  function yardDraw(c, m, p, st, H, back) {
+    const Y = H.yard, hm = yMid(H.rect); const [x0, y0, x1, y1] = Y.rect;
+    if (back) {
+      if (Y.z > 0.3) walls(c, x0, y0, x1, y1, 0, Y.z, shade(p.base[1], 0.78), shade(p.base[1], 0.7));
+      top(c, x0, y0, x1, y1, Y.z, '#a48a68');
+      for (const r of Y.runs) if (r.far) runDraw(c, p, st, r, Y.z);
+      for (const g of Y.gates) if (g.far) gateDraw(c, p, st, g, Y.z);
+    }
+    for (const it of Y.items.filter(q => (yMid(q.rect) < hm) === back).sort((a, b2) => yMid(a.rect) - yMid(b2.rect))) pieceDraw(c, m, p, st, it, Y.z);
+    if (!back) {
+      if (Y.sign) signDraw(c, p, Y.sign);
+      for (const r of Y.runs) if (!r.far) runDraw(c, p, st, r, Y.z);
+      for (const g of Y.gates) if (!g.far) gateDraw(c, p, st, g, Y.z);
+    }
+  }
+  // (the stuff of the fence and of the gate's posts, as the 3D has it — Build3D's shellYard: whitewash, mud and stucco the
+  // people's walls', stone elsewhere; the cap of the low wall)
+  const fenceCol = (p, st) => (st === 'egipcio' || st === 'grego' || st === 'asteca' ? p.wl : p.base[1]);
+  // a run of the fence: a low wall of the people's stuff under its cap (0.07 m, a little wider); in the north, wattle on stakes
+  function runDraw(c, p, st, r, z) {
+    const hz = Math.abs(r.a[1] - r.b[1]) < 1e-6, t = r.t / 2;
+    const q = hz ? [Math.min(r.a[0], r.b[0]), r.a[1] - t, Math.max(r.a[0], r.b[0]), r.a[1] + t] : [r.a[0] - t, Math.min(r.a[1], r.b[1]), r.a[0] + t, Math.max(r.a[1], r.b[1])];
+    if (st === 'nordico') {
+      box(c, q[0], q[1], q[2], q[3], z, r.z1 - 0.3, '#8e7654', '#766850', '#9a8460');
+      const n = Math.max(1, Math.round((hz ? q[2] - q[0] : q[3] - q[1]) * 4 / 0.9));
+      for (let k = 0; k <= n; k++) { const f = k / n; const x = hz ? q[0] + (q[2] - q[0]) * f : q[2], y = hz ? q[3] : q[1] + (q[3] - q[1]) * f; ln(c, P(x, y, z - 0.3), P(x, y, r.z1), '#5a4430', 0.55); }
+      return;
+    }
+    const wc = fenceCol(p, st), cap = st === 'asteca' ? p.trim : shade(p.base[2], 0.95);
+    box(c, q[0], q[1], q[2], q[3], z, r.z1 - 0.21, wc, shade(wc, 0.86), wc);
+    box(c, q[0] - 0.01, q[1] - 0.01, q[2] + 0.01, q[3] + 0.01, r.z1 - 0.21, r.z1, cap, shade(cap, 0.85), cap);
+  }
+  // a gate: its two posts, its leaf shut between them, the lintel over them — the far post first
+  function gateDraw(c, p, st, g, z) {
+    const hz = Math.abs(g.a[1] - g.b[1]) < 1e-6, s = 0.0275, l = 0.012; const nord = st === 'nordico';
+    const wood = nord ? '#4a3626' : (p.trim || '#6b4a30'), pc = nord ? '#4a3626' : shade(fenceCol(p, st), 0.94);
+    const [n0, n1] = [g.a, g.b].sort((u, w) => u[0] + u[1] - (w[0] + w[1]));
+    const post = q => box(c, q[0] - s, q[1] - s, q[0] + s, q[1] + s, Math.max(0, z - 0.15), g.top, pc, shade(pc, 0.82), pc);
+    post(n0);
+    const lf = hz ? [Math.min(g.a[0], g.b[0]) + s, g.a[1] - l, Math.max(g.a[0], g.b[0]) - s, g.a[1] + l] : [g.a[0] - l, Math.min(g.a[1], g.b[1]) + s, g.a[0] + l, Math.max(g.a[1], g.b[1]) - s];
+    box(c, lf[0], lf[1], lf[2], lf[3], z, g.leaf, p.door, shade(p.door, 0.8), p.door);
+    const ll = hz ? [Math.min(g.a[0], g.b[0]) - 0.035, g.a[1] - 0.025, Math.max(g.a[0], g.b[0]) + 0.035, g.a[1] + 0.025] : [g.a[0] - 0.025, Math.min(g.a[1], g.b[1]) - 0.035, g.a[0] + 0.025, Math.max(g.a[1], g.b[1]) + 0.035];
+    box(c, ll[0], ll[1], ll[2], ll[3], g.z1, g.z1 + 0.55, wood, shade(wood, 0.8), wood);
+    post(n1);
+  }
+  // (an upright cylinder from the middle of its foot o, the screen's px: its side, then its top)
+  function cylUp(c, o, rx, h, side, topc) {
+    const ry = rx / 2; c.fillStyle = side; c.beginPath(); c.ellipse(o[0], o[1], rx, ry, 0, 0, Math.PI); c.lineTo(o[0] - rx, o[1] - h); c.ellipse(o[0], o[1] - h, rx, ry, 0, Math.PI, 0, true); c.closePath(); c.fill();
+    c.fillStyle = topc; c.beginPath(); c.ellipse(o[0], o[1] - h, rx, ry, 0, 0, TAU); c.fill();
+  }
+  // a piece of the yard in the god's dressing, standing on the yard's floor at z, as big as the 3D builds it (Build3D's FURN)
+  function pieceDraw(c, m, p, st, it, z) {
+    const [x0, y0, x1, y1] = it.rect, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, h = it.h, o = P(cx, cy, z); const long = x1 - x0 >= y1 - y0;
+    switch (it.kind) {
+      case 'forno-olaria': { // the kiln: its ring of stone a third of its height, the dome of clay over it, its mouth, its smoke
+        const rx = Math.min(x1 - x0, y1 - y0) / 2 * 22.63 * 0.96, hb = h * 0.32;
+        cylUp(c, o, rx, hb, '#9a948a', '#8a8478'); dome(c, o[0], o[1] - hb, rx * 0.97, h - hb, '#c07850', '#8a5034');
+        const f = it.face;
+        if (f[1] > 0.7 || f[0] > 0.7) {
+          const q = P(cx + f[0] * (x1 - x0) * 0.44, cy + f[1] * (y1 - y0) * 0.44, z); const r = Math.max(1.6, rx * 0.2);
+          c.fillStyle = '#2a1a12'; c.beginPath(); c.arc(q[0], q[1] - hb * 0.4, r, Math.PI, TAU); c.fill();
+          if (it.fire) { c.fillStyle = '#ff9a3a'; c.beginPath(); c.arc(q[0], q[1] - hb * 0.4, r * 0.6, Math.PI, TAU); c.fill(); m.glow.push([q[0], q[1] - hb * 0.4 - 1]); }
+        }
+        m.fires.push([o[0], o[1] - h - 1]);
+        break;
+      }
+      case 'secador': { // the drying rack: its posts and shelves, the pots on them
+        box(c, x0, y0, x1, y1, z, z + h, '#7a5a3a', '#5a4028', '#8a6a44');
+        const n = Math.max(2, Math.round((long ? x1 - x0 : y1 - y0) * 8));
+        for (let k = 0; k < n; k++) { const f = (k + 0.5) / n; const q = long ? P(x0 + (x1 - x0) * f, cy, z + h) : P(cx, y0 + (y1 - y0) * f, z + h); jar(c, q[0], q[1], 0.55, k % 2 ? '#c8683a' : '#b85a30'); }
+        break;
+      }
+      case 'pilha-tijolos': box(c, x0, y0, x1, y1, z, z + h, '#b8683a', '#9a5030', '#c87a4a'); break;
+      case 'eira': top(c, x0, y0, x1, y1, z + 0.15, '#ccb488'); break;
+      case 'tanque-barro': box(c, x0, y0, x1, y1, z, z + h, '#a8805a', '#8a6a48', '#6a4028'); break;
+      case 'roda-oleiro': { // the potter's wheel: the kick wheel at its foot, the shaft, the head with the clay on it
+        cylUp(c, o, (x1 - x0) / 2 * 22.63 * 0.8, Math.max(0.3, h * 0.12), '#7a5a3a', '#8a6a44');
+        const t = P(cx, cy, z + h * 0.9); ln(c, P(cx, cy, z + h * 0.12), t, '#5a4028', 0.7);
+        c.fillStyle = '#8a6a44'; c.beginPath(); c.ellipse(t[0], t[1], 1.8, 0.9, 0, 0, TAU); c.fill(); c.fillStyle = '#b8704a'; c.beginPath(); c.ellipse(t[0], t[1] - 0.8, 0.8, 1, 0, 0, TAU); c.fill();
+        break;
+      }
+      case 'mesa-terreiro': { // the table on its trestles, a bench along each long side — the far bench first
+        const bw = 0.075, zs = z + qz(0.45 * ZPX);
+        const tb = long ? [x0 + 0.02, cy - 0.1, x1 - 0.02, cy + 0.1] : [cx - 0.1, y0 + 0.02, cx + 0.1, y1 - 0.02];
+        const b1 = long ? [x0, y0, x1, y0 + bw] : [x0, y0, x0 + bw, y1], b2 = long ? [x0, y1 - bw, x1, y1] : [x1 - bw, y0, x1, y1];
+        box(c, b1[0], b1[1], b1[2], b1[3], z, zs, '#8a6a44', '#6a4e30', '#9a7a52');
+        box(c, tb[0], tb[1], tb[2], tb[3], z, z + h, '#8a6a44', '#6a4e30', '#a8865a');
+        box(c, b2[0], b2[1], b2[2], b2[3], z, zs, '#8a6a44', '#6a4e30', '#9a7a52');
+        break;
+      }
+      case 'pipas': { // the barrels on their rack
+        box(c, x0, y0, x1, y1, z, z + qz(0.12 * ZPX), '#4a3a2a', '#3a2c20', '#5a4632');
+        for (let k = 0; k < 2; k++) { const f = (k + 0.5) / 2; const q = long ? P(x0 + (x1 - x0) * f, cy, z) : P(cx, y0 + (y1 - y0) * f, z); barrel(c, q[0], q[1], h / 3.6); }
+        break;
+      }
+      case 'talha': jar(c, o[0], o[1], h / 4.2, '#c87a4a'); break;
+      default: box(c, x0, y0, x1, y1, z, z + h, '#8a6a44', '#6a4e30', '#9a7a52');
+    }
+  }
+  // the tavern's sign: the iron arm out from the house's front, the board hung under it (as the 3D: across the wall), a cup on it
+  function signDraw(c, p, sg) {
+    ln(c, P(sg.w[0], sg.w[1], sg.z), P(sg.arm[0], sg.arm[1], sg.z), '#2e2b28', 0.7);
+    for (const q of [sg.a, sg.b]) ln(c, P(q[0], q[1], sg.z), P(q[0], q[1], sg.zb + 0.7), '#3a3632', 0.3);
+    poly(c, [P(sg.a[0], sg.a[1], sg.zb - 0.7), P(sg.b[0], sg.b[1], sg.zb - 0.7), P(sg.b[0], sg.b[1], sg.zb + 0.7), P(sg.a[0], sg.a[1], sg.zb + 0.7)], p.trim || '#6b4a30', 'rgba(0,0,0,0.3)', 0.3);
+    const m0 = P((sg.a[0] + sg.b[0]) / 2, (sg.a[1] + sg.b[1]) / 2, sg.zb); c.fillStyle = p.acc || '#d8b25a'; c.fillRect(m0[0] - 0.6, m0[1] - 0.5, 1.2, 1.1);
   }
   // a home's pieces on its flat roof (Forma.deck, where the 3D builds them: L-267) — the awning of cloth on its four poles,
   // the wind-catcher with its mouth (on the face one sees, if its front is one), the pots of flowers — back to front
@@ -1195,6 +1345,9 @@
   // the sprite of a home drawn from its shell, for the view's quarter q — or null (not a home, no shell: the drawing of
   // before). Kept by what it draws — two homes with the same numbers share one picture —, the last few hundred
   const HOMES = A.HOMES = { hut: 1, house: 1, sobrado: 1, insula: 1 };
+  // (the buildings of a yard before their roofed part — the pottery's, the tavern's, P4's B2d —: drawn from their shells with
+  // the homes, the yard and what stands in it as the shell has them)
+  const YARDS = A.YARDS = { olaria: 1, taverna: 1 };
   // (the types the god draws from their shells always: they had no drawing of their own — the jail, L-265)
   const SHELLS = A.SHELLS = { cadeia: 1 };
   // (the god's view draws its homes from their shells: their plans follow the god's typology since P4's B2c — the yard, the
@@ -1202,14 +1355,14 @@
   // sobrado and the ínsula with the 3D's mass — fidelidade.js)
   A.homeOn = true;
   // (whether the god draws a building of this type from its shell now)
-  A.fromShell = type => (HOMES[type] ? A.homeOn : !!SHELLS[type]);
+  A.fromShell = type => (HOMES[type] || YARDS[type] ? A.homeOn : !!SHELLS[type]);
   // (each home's windows and door are its plan's own, so nearly every home has a picture of its own: a city of 150 homes
   // asks ~25 MB a side of the view — kept up to A.HOMEMB, the least lately drawn let go and painted again when seen)
   const homePics = new Map(); let homeBytes = 0; A.HOMEMB = 48;
   A.homeClear = () => { homePics.clear(); homeBytes = 0; };
   // (what a home's picture is known by, for the view's quarter q: the numbers it is drawn from — or null)
   A.homeKey = function (b, s, q) {
-    if (!b || !(HOMES[b.type] || SHELLS[b.type]) || !s) return null; const H = A.homeGeo(b, s, q); if (!H) return null;
+    if (!b || !(HOMES[b.type] || YARDS[b.type] || SHELLS[b.type]) || !s) return null; const H = A.homeGeo(b, s, q); if (!H) return null;
     const st = PAL[b.style] ? b.style : 'classico'; const v = b.v || 0;
     return { key: b.type + st + (b.type === 'house' && st === 'classico' ? v % 3 : '') + JSON.stringify(H), H, st, v };
   };

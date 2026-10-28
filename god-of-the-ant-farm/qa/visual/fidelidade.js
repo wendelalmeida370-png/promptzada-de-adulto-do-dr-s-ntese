@@ -70,8 +70,9 @@ function verdict(cn, cf) {
 // two great palaces ≈ by theirs, the Roman paço ≠; 104 with the homes in the god's typology and the tavern's yard — P4's B2c
 // and B2d: the Aztecs' and the Norse's house, the sobrado and the ínsula of four peoples ≈, the tavern ≈ in all six; 90 with
 // the homes drawn by the god from their shells — Arch.homeOn, D-082, phase C: the hut and the house of the six peoples, the
-// sobrado and the ínsula = or ≈)
-const TETO = 90;
+// sobrado and the ínsula = or ≈; 84 with the pottery and the tavern drawn from theirs, their yards (P4's B2d) in both views,
+// near and far: the pottery = in five peoples, the tavern in five, the rest ≈)
+const TETO = 84;
 
 // ------------------------------ the round ------------------------------
 // (the kinds the god paints in a layer of its own, not as a building's picture: what its hooks paint for a building is recorded

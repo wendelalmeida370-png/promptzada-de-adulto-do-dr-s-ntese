@@ -2468,6 +2468,25 @@ float m3scale(float p) {
     wallsInto(g, x0, y0, n, gq);
     return { solid: g.empty ? null : g.build(true), glass: gw.empty ? null : gw.build(), plants: gp.empty ? null : gp.build(), water: gq.empty ? null : gq.build() };
   };
+  // a yard from afar (B2d), from the shell alone: its floor on the plinth's top with its edge down to the ground, the fence's
+  // runs (the plan's walls of kind 'cerca', whole: from afar the gate is one with them), what stands in it as blocks — the
+  // kiln its ring of stone and its dome of clay, as near
+  function farYard(g, b, Sh, P, y0, L) {
+    const Y = Sh.shell.yard, l = Sh.levels.find(q => q.lv === (Y.lv || 0)) || Sh.levels[0], fy = y0 + (l ? l.y : 0), X0 = b.x * L, Z0 = b.y * L, r = Y.r; const st = styleOf(b);
+    g.pat = PAT.soil; g.put(SH.box, R3.mat(X0 + (r[0] + r[2]) / 2, y0 - 0.3, Z0 + (r[1] + r[3]) / 2, 0, r[2] - r[0], fy - y0 + 0.3, r[3] - r[1]), [164, 138, 104]);
+    const wc = st === 'nordico' ? [130, 108, 78] : st === 'egipcio' || st === 'grego' || st === 'asteca' ? (P.wl || '#efe2c4') : ((P.base && P.base[1]) || '#6f6a60');
+    g.pat = PAT[st === 'nordico' ? 'bark' : st === 'egipcio' ? 'mud' : st === 'grego' || st === 'asteca' ? 'plaster' : 'stone'];
+    for (const w of Sh.walls) {
+      if (w.kind !== 'cerca' || w.lv !== (Y.lv || 0)) continue; const dx = w.b[0] - w.a[0], dz = w.b[1] - w.a[1], len = Math.hypot(dx, dz); if (len < 0.05) continue;
+      g.put(SH.box, R3.mat(X0 + (w.a[0] + w.b[0]) / 2, fy, Z0 + (w.a[1] + w.b[1]) / 2, -Math.atan2(dz, dx), len, w.h, w.t), wc);
+    }
+    g.pat = 0;
+    for (const it of Sh.yard || []) {
+      const q = it.r, cx = X0 + (q[0] + q[2]) / 2, cz = Z0 + (q[1] + q[3]) / 2, sx = q[2] - q[0], sz = q[3] - q[1]; if (!(it.h > 0.08)) continue;
+      if (it.kind === 'forno-olaria') { g.put(SH.cyl, R3.mat(cx, fy, cz, 0, sx * 0.97, it.h * 0.32, sz * 0.97), ISTONE); g.put(SH.sph, R3.mat(cx, fy + it.h * 0.5, cz, 0, sx * 0.92, it.h, sz * 0.92), ICLAY); }
+      else g.put(SH.box, R3.mat(cx, fy, cz, 0, sx, it.h, sz), it.kind === 'pilha-tijolos' ? [184, 104, 58] : it.kind === 'tanque-barro' ? ICLAY : IWOOD);
+    }
+  }
   // the far picture: a block and a roof for each house, the height of what it is
   B3.farGeo = function (x0, y0, n) {
     const g = R3.Geo(); const L = TL();
@@ -2488,6 +2507,8 @@ float m3scale(float p) {
         if (rk === 'flat' && DECKED[b.type] && Sh.entrance && G.Forma) { const yt = y0 + sh.eave + 0.25; const dk = G.Forma.deck(R, Sh.entrance.side, b.w * L, styleOf(b), G.Forma.lived(Sh)); g.pat = 0;
           for (const it of dk.items) { const ax = Math.abs(dk.across[0]) > 0.5; if (it.k === 'torre') g.put(SH.box, R3.mat(b.x * L + it.x, yt, b.y * L + it.z, 0, it.w, it.h, it.w), P.wl || '#efe2c4');
             else if (it.k === 'toldo') g.put(SH.box, R3.mat(b.x * L + it.x, yt + it.h1, b.y * L + it.z, 0, ax ? it.w : it.d, it.h - it.h1 + 0.05, ax ? it.d : it.w), '#e8e0c8'); } }
+        // (a yard before the roofed part — the pottery's, the tavern's: B2d —, as near and as the god draws it)
+        if (sh.yard) farYard(g, b, Sh, P, y0, L);
         g.pat = 0; continue; }
       // (the salt pans from afar: their nine pans flat on the ground in the brine's colour, as the near picture lays them)
       if (b.type === 'salina' && b.built) { const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L, Y = W.maxH(b.x, b.y, b.w, b.h) * HM(); g.pat = 0; g.put(SH.box, R3.mat(X, Y - 0.1, Z, 0, b.w * L - 0.32, 0.22, b.h * L - 0.32), [170, 196, 204]); continue; }
