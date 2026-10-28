@@ -262,14 +262,14 @@
   }
 
   // ------------------------------ homes ------------------------------
-  function longhouse(c, m, p, lx, ly, H, rh, big) {
+  function longhouse(c, m, p, lx, ly, H, rh, big, dw) {
     const x0 = -lx, x1 = lx, y0 = -ly, y1 = ly;
     box(c, x0 - 0.04, y0 - 0.04, x1 + 0.04, y1 + 0.04, 0, 1.2, p.base[0], p.base[1], p.base[2]);
     walls(c, x0, y0, x1, y1, 1.2, H, p.wl, p.wr);
     c.strokeStyle = 'rgba(30,20,10,0.35)'; c.lineWidth = 0.4;
     for (let k = 1; k < 10; k++) { const x = x0 + (x1 - x0) * k / 10; ln(c, P(x, y1, 1.2), P(x, y1, H), 'rgba(30,20,10,0.35)', 0.4); }
     for (let k = 1; k < 4; k++) { const y = y0 + (y1 - y0) * k / 4; ln(c, P(x1, y, 1.2), P(x1, y, H), 'rgba(30,20,10,0.35)', 0.4); }
-    door(c, y1, -0.08, 0.08, 1.2, Math.min(H, 7.5), p.door);
+    door(c, y1, -(dw || 0.08), dw || 0.08, 1.2, Math.min(H, 7.5), p.door);
     band(c, x0, y0, x1, y1, H - 0.8, H, p.trim);
     onL(c, y1, x0 + 0.12, x0 + 0.2, H - 4, H - 2, p.win, m); onL(c, y1, x1 - 0.2, x1 - 0.12, H - 4, H - 2, p.win, m);
     onR(c, x1, -0.05, 0.05, H - 4, H - 2, p.win, m);
@@ -401,7 +401,7 @@
     const { x0, y0, x1, y1, H } = o;
     plinth(c, p, x0, y0, x1, y1, o.plinth || 2);
     const z0 = o.plinth || 2;
-    if (st === 'nordico') { longhouse(c, m, p, (x1 - x0) / 2, (y1 - y0) / 2, H * 0.6, H * 0.75, o.big); return H * 1.35; }
+    if (st === 'nordico') { longhouse(c, m, p, (x1 - x0) / 2, (y1 - y0) / 2, H * 0.6, H * 0.75, o.big, o.doorW); return H * 1.35; }
     walls(c, x0, y0, x1, y1, z0, H, p.wl, p.wr, p.batter);
     if (o.door !== false) door(c, y1, (x0 + x1) / 2 - 0.12, (x0 + x1) / 2 + 0.12, z0, z0 + Math.min(10, (H - z0) * 0.7), p.door);
     winsL(c, m, p, y1, x0, x1, z0 + (H - z0) * 0.5, 3, Math.max(1, Math.round((x1 - x0) * 2)));
@@ -617,53 +617,81 @@
     m.fires.push(P(0.1, 0.1, 36));
     return 40;
   }
+  // (the pieces the plan uses — D-093, G.Forma's square —: a bench, its plank 0.37–0.45 m on its two feet of stone; the speaker's
+  // stone of 0.45 m; a basin with its rim standing from z0 to z1 px — its side, its top, its water)
+  const ZM = 3.04; // (a metre of height in px)
+  function bench(c, p, x0, y0, x1, y1) {
+    const along = x1 - x0 >= y1 - y0, m = (along ? x1 - x0 : y1 - y0) / 2 - 0.05, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    for (const s2 of [-1, 1]) { if (along) box(c, cx + s2 * m - 0.0175, y0 + 0.0075, cx + s2 * m + 0.0175, y1 - 0.0075, 0, 0.37 * ZM, p.base[0], p.base[1], p.base[2]); else box(c, x0 + 0.0075, cy + s2 * m - 0.0175, x1 - 0.0075, cy + s2 * m + 0.0175, 0, 0.37 * ZM, p.base[0], p.base[1], p.base[2]); }
+    box(c, x0, y0, x1, y1, 0.37 * ZM, 0.45 * ZM, '#8a6a44', '#6e5436', '#9a7a52');
+  }
+  const speakerStone = (c, p, x0, y0, x1, y1) => box(c, x0, y0, x1, y1, 0, 0.45 * ZM, p.base[0], p.base[1], p.base[2]);
+  function basinRim(c, x, y, r, z0, z1, side, water) {
+    const a = P(x, y, z0), b = P(x, y, z1), rx = r * 22.63, ry = r * 11.31;
+    c.fillStyle = side; c.beginPath(); c.ellipse(a[0], a[1], rx, ry, 0, 0, Math.PI); c.lineTo(b[0] - rx, b[1]); c.ellipse(b[0], b[1], rx, ry, 0, Math.PI, 0, true); c.closePath(); c.fill();
+    basin(c, x, y, r, z1, water);
+  }
   function praca(c, m, p, st) {
-    // (the pavement itself is drawn on the ground layer, so people can walk over it)
+    // (the pavement itself is drawn on the ground layer, so people can walk over it; on it each people's square, its pieces
+    // where its form has them — G.Forma, D-093 —, back to front)
     if (st === 'nordico') {
       for (let k = 0; k < 9; k++) { const a = k / 9 * TAU; const x = Math.cos(a) * 0.72, y = Math.sin(a) * 0.72; box(c, x - 0.06, y - 0.05, x + 0.06, y + 0.05, 0, 8 + (k % 3) * 2, '#a09a90', '#7e7870', '#b8b2a8'); }
       box(c, -0.18, -0.12, 0.18, 0.14, 0, 3.5, '#9a948a', '#787268', '#b0aa9e');
       statue(c, 0, 0, 3.5, '#6a4a30', 7, false);
+      speakerStone(c, p, -0.125, 0.165, 0.125, 0.365); // (the law speaker's, before the law stone)
       return 14;
     }
-    if (st === 'grego') { // stoa along the back
-      box(c, -0.9, -0.9, 0.9, -0.62, 0.4, 12, p.wl, p.wr, p.top);
+    if (st === 'grego') { // stoa along the back: its back wall, the benches under its roof, the columns, the roof
+      box(c, -0.9, -0.9, 0.9, -0.82, 0.4, 12, p.wl, p.wr, p.top);
+      bench(c, p, -0.7, -0.81, -0.25, -0.7); bench(c, p, 0.25, -0.81, 0.7, -0.7);
       colonnade(c, p, -0.9, -0.62, 0.9, -0.5, 0.4, 12, 7, 0.035, 'L');
       gableX(c, -0.92, -0.92, 0.92, -0.48, 12, 16, 0.04, p.roof[0], p.roof[1], p.gable, p.roof[2]);
-      statue(c, 0.15, 0.2, 0.4, '#f0ebe0', 12, true); basin(c, -0.45, 0.35, 0.18, 0.5);
+      basinRim(c, -0.45, 0.35, 0.18, 0, 0.8, p.base[1]); statue(c, 0.15, 0.2, 0.4, '#f0ebe0', 12, true);
+      speakerStone(c, p, 0.6, -0.25, 0.85, 0);
       return 20;
     }
     if (st === 'romano') {
       box(c, -0.4, -0.9, 0.5, -0.55, 0.4, 5, p.base[0], p.base[1], p.base[2]); // rostra
+      for (let k = 1; k <= 5; k++) box(c, 0.5 + (k - 1) * 0.075, -0.85, 0.5 + k * 0.075, -0.6, 0, 5 * (6 - k) / 6, p.base[0], p.base[1], p.base[2]); // (their stair, at their right end)
       for (const x of [-0.3, -0.05, 0.2, 0.45]) column(c, p, x, -0.5, 0.4, 5.5, 0.02);
+      statue(c, -0.4, 0.3, 0.4, '#b8a888', 10, true);
+      bench(c, p, -0.3, 0.05, 0.15, 0.16); bench(c, p, 0.225, 0.05, 0.675, 0.16);
       box(c, 0.45, 0.45, 0.6, 0.6, 0.4, 3, p.col[0], p.col[1], p.col[0]);
       box(c, 0.5, 0.5, 0.55, 0.55, 3, 26, p.col[0], p.col[1], p.col[0]);
       statue(c, 0.525, 0.525, 26, '#e0b84a', 6, false);
-      statue(c, -0.4, 0.3, 0.4, '#b8a888', 10, true);
       m.glow.push(P(0.525, 0.525, 30));
       return 34;
     }
     if (st === 'egipcio') {
-      const pts = [[-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]];
-      for (const [x, y] of pts) { const q = P(x, y, 0.4); palm(c, q[0], q[1], 1.1); }
+      const palmAt = (x, y) => { const q = P(x, y, 0.4); palm(c, q[0], q[1], 1.1); };
+      palmAt(-0.7, -0.7); bench(c, p, -0.225, -0.73, 0.225, -0.62); speakerStone(c, p, -0.85, -0.125, -0.6, 0.125); palmAt(0.7, -0.7); palmAt(-0.7, 0.7);
       box(c, -0.12, -0.12, 0.12, 0.12, 0.4, 3, p.base[0], p.base[1], p.base[2]);
       poly(c, [P(-0.08, 0.08, 3), P(0.08, 0.08, 3), P(0.05, 0.05, 30), P(-0.05, 0.05, 30)], '#e6dfcc');
       poly(c, [P(0.08, 0.08, 3), P(0.08, -0.08, 3), P(0.05, -0.05, 30), P(0.05, 0.05, 30)], '#bdb39c');
       const t = P(0, 0, 34); poly(c, [P(-0.05, 0.05, 30), P(0.05, 0.05, 30), t], '#f7d66a'); poly(c, [P(0.05, 0.05, 30), P(0.05, -0.05, 30), t], '#d9a93a');
       m.glow.push(t);
+      bench(c, p, -0.225, 0.62, 0.225, 0.73); palmAt(0.7, 0.7);
       return 36;
     }
     if (st === 'asteca') {
+      speakerStone(c, p, -0.85, -0.125, -0.6, 0.125);
       box(c, -0.2, -0.2, 0.2, 0.2, 0.4, 3.5, p.wl, p.wr, p.top); band(c, -0.2, -0.2, 0.2, 0.2, 2.4, 3.5, p.trim);
       m.fires.push(P(0, 0, 4.5));
       const cols = [['#b33a2a', '#f1e9d6'], ['#2fae8f', '#f1e9d6'], ['#e8b83a', '#b33a2a']];
       for (const [x, y, k] of [[-0.55, -0.55, 0], [0.55, -0.5, 1], [-0.55, 0.5, 2], [0.5, 0.55, 0]]) stall(c, p, x, y, cols[k][0], cols[k][1]);
       return 14;
     }
-    // classic: fountain
-    basin(c, 0, 0, 0.58, 0.8, '#5aaed0'); box(c, -0.06, -0.06, 0.06, 0.06, 0.8, 7, '#c8c0b0', '#a8a090', '#d8d0c0');
-    c.fillStyle = 'rgba(200,235,255,0.85)'; const f = P(0, 0, 8); c.beginPath(); c.arc(f[0], f[1], 1.8, 0, TAU); c.fill();
-    c.strokeStyle = 'rgba(200,235,255,0.7)'; c.lineWidth = 0.6; for (const dx of [-3, 3]) { c.beginPath(); c.moveTo(f[0], f[1]); c.quadraticCurveTo(f[0] + dx, f[1] - 2, f[0] + dx * 1.6, f[1] + 5); c.stroke(); }
-    for (const [x, y] of [[-0.75, 0.7], [0.7, -0.75], [-0.75, -0.75]]) { const q = P(x, y, 0.4); tree(c, q[0], q[1], 1.1); }
+    // classic: the fountain — its basin of 0.35 tiles with its rim to 0.72 m (the plan's: D-093), the column to 1.5 m and its
+    // bowl spilling into it —, the benches either side of it, the speaker's stone, the trees
+    for (const [x, y] of [[-0.75, -0.75], [0.7, -0.75]]) { const q = P(x, y, 0.4); tree(c, q[0], q[1], 1.1); }
+    speakerStone(c, p, -0.85, -0.125, -0.6, 0.125); bench(c, p, -0.225, -0.73, 0.225, -0.62);
+    basinRim(c, 0, 0, 0.35, 0, 0.72 * ZM, '#a8a090', '#5aaed0');
+    box(c, -0.0425, -0.0425, 0.0425, 0.0425, 1.8, 1.5 * ZM, '#c8c0b0', '#a8a090', '#d8d0c0');
+    basinRim(c, 0, 0, 0.125, 1.5 * ZM, 1.75 * ZM, '#b8b0a0', '#5aaed0');
+    c.fillStyle = 'rgba(200,235,255,0.85)'; const f = P(0, 0, 1.75 * ZM + 0.6); c.beginPath(); c.arc(f[0], f[1], 1.4, 0, TAU); c.fill();
+    c.strokeStyle = 'rgba(200,235,255,0.7)'; c.lineWidth = 0.6; for (const dx of [-3, 3]) { c.beginPath(); c.moveTo(f[0], f[1]); c.quadraticCurveTo(f[0] + dx, f[1] - 1.5, f[0] + dx * 1.4, f[1] + 3.2); c.stroke(); }
+    bench(c, p, -0.225, 0.62, 0.225, 0.73);
+    { const q = P(-0.75, 0.7, 0.4); tree(c, q[0], q[1], 1.1); }
     return 10;
   }
   function mercado(c, m, p, st) {
@@ -693,16 +721,19 @@
     if (st === 'egipcio') { const q = P(0.8, -0.8, 0.4); palm(c, q[0], q[1], 1); }
     return 26;
   }
+  // (the treads of a plinth's front: from its top at z px down in n − 1 treads of 0.075 tiles, the front at y, x0..x1 — G.Forma's)
+  function treads(c, p, x0, x1, y, z, n) { for (let k = 1; k < n; k++) box(c, x0, y - 0.075 * (n - k), x1, y - 0.075 * (n - k - 1), 0, z * (n - k) / n, p.base[0], p.base[1], p.base[2]); }
   function biblioteca(c, m, p, st) {
     if (st === 'egipcio' || st === 'asteca') {
       const z = hall(c, m, p, st, { x0: -0.8, y0: -0.8, x1: 0.8, y1: 0.35, H: 16 });
       plinth(c, p, -0.8, 0.35, 0.8, 0.66, 2); // (the portico's floor: its columns stand on it — its form, Phase E)
+      treads(c, p, -0.85, 0.85, 0.86, 2, 3); // (down to the street: three risers of 0.22 m — its form, D-093)
       colonnade(c, p, -0.7, 0.35, 0.7, 0.62, 2, 14, 5, 0.045, 'L', st === 'egipcio');
       top(c, -0.8, 0.35, 0.8, 0.66, 14, p.top); band(c, -0.8, 0.35, 0.8, 0.66, 12.5, 14, p.trim);
       return z + 4;
     }
-    if (st === 'nordico') { hall(c, m, p, st, { x0: -0.8, y0: -0.5, x1: 0.8, y1: 0.5, H: 16 }); for (const x of [-0.6, 0.6]) { box(c, x - 0.04, 0.72, x + 0.04, 0.8, 0, 12, '#6a4a30', '#4e3620', '#7a5a3a'); dragon(c, P(x, 0.76, 12), x > 0 ? 1 : -1); } return 32; }
-    plinth(c, p, -0.85, -0.85, 0.85, 0.85, 2.5);
+    if (st === 'nordico') { hall(c, m, p, st, { x0: -0.8, y0: -0.5, x1: 0.8, y1: 0.5, H: 16, doorW: 0.1 }); treads(c, p, -0.2, 0.2, 0.7, 2, 3); for (const x of [-0.6, 0.6]) { box(c, x - 0.04, 0.72, x + 0.04, 0.8, 0, 12, '#6a4a30', '#4e3620', '#7a5a3a'); dragon(c, P(x, 0.76, 12), x > 0 ? 1 : -1); } return 32; }
+    box(c, -0.9, -0.9, 0.9, 0.75, 0, 2.5, p.base[0], p.base[1], p.base[2]); treads(c, p, -0.9, 0.9, 0.9, 2.5, 3); // (its plinth, its front two treads down to the street — its form, D-093)
     walls(c, -0.7, -0.8, 0.75, 0.3, 2.5, 17, p.wl, p.wr);
     winsR(c, m, p, 0.75, -0.8, 0.3, 9, 5, 2);
     colonnade(c, p, -0.7, 0.3, 0.75, 0.68, 2.5, 17, 5, 0.04, 'L');

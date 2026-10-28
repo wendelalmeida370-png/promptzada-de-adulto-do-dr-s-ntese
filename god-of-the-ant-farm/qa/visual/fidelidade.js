@@ -62,8 +62,8 @@ function verdict(cn, cf) {
 // a yard, the monuments are the KIT's own shapes, the jail has no picture of the god at all; 184 with the wonders from
 // their form, counted apart since — B3; 174 with the monuments and the golden statue from theirs — D1; 168 with the jail
 // drawn by the god from its shell — L-265; 166 with the theatres from their forms; 156 with the watchtower, the aqueduct,
-// the library, the administration, the tax office and the smugglers' market from theirs — Phase E)
-const TETO = 156;
+// the library, the administration, the tax office and the smugglers' market from theirs — Phase E; 150 with the square — D-093)
+const TETO = 150;
 
 // ------------------------------ the round ------------------------------
 // (the kinds the god paints in a layer of its own, not as a building's picture — the ground of the fields and of the farm,

@@ -132,6 +132,10 @@ F.god = function (b, o) {
   // (the recorder's frame is the canvas's: scale(3) then translate(ax, ay) — back to the god's pixels from the anchor)
   const un = p => [p[0] / 3 - spr.ax, p[1] / 3 - spr.ay];
   const ops = rec.ops.map(o => o.f ? { f: 1, col: o.col, polys: o.polys.map(P => P.map(un)) } : { f: 0, col: o.col, w: o.w / 3, segs: o.segs.map(s => [un(s[0]), un(s[1])]) });
+  // (the square's pavement: the god paints it on the ground layer, under the picture — render.js, the lot less 0.02 tiles in
+  // its people's colour —, so the view has it with the picture)
+  if (b.type === 'praca' && A.plazaColor) { const P = (dx, dy) => [(dx - dy) * 16, (dx + dy) * 8]; const hw = b.w / 2 - 0.02, hh = b.h / 2 - 0.02; const c = parseCol(A.plazaColor(b.style));
+    ops.unshift({ f: 1, col: [c[0], c[1], c[2], c[3]], polys: [[P(-hw, -hh), P(hw, -hh), P(hw, hh), P(-hw, hh)]] }); }
   Art.clear(); // (the game's sprites are painted again on demand: nothing of the recorder stays in the cache)
   return { ops, spr: { w: spr.w, h: spr.h, ax: spr.ax, ay: spr.ay } };
 };
