@@ -91,8 +91,23 @@
     for (const z of F.zones) if (ov(rr, z)) return false;
     return true;
   }
-  // a rectangle inside a circle [cu, cv, rad] (its four corners), by a margin
-  const inCirc = (r, c, e) => [[r[0], r[1]], [r[2], r[1]], [r[0], r[3]], [r[2], r[3]]].every(p => Math.hypot(p[0] - c[0], p[1] - c[1]) <= c[2] - (e || 0));
+  // a rectangle inside a circle [cu, cv, rad] (its four corners), by a margin — and, in a ring between two circles
+  // [cu, cv, rad, r0] (the crown about an arena: B4), all of it outside the inner one by the same margin
+  const inCirc = (r, c, e) => [[r[0], r[1]], [r[2], r[1]], [r[0], r[3]], [r[2], r[3]]].every(p => Math.hypot(p[0] - c[0], p[1] - c[1]) <= c[2] - (e || 0))
+    && !(c[3] > 0 && Math.hypot(Math.max(r[0] - c[0], 0, c[0] - r[2]), Math.max(r[1] - c[1], 0, c[1] - r[3])) < c[3] + (e || 0));
+  // (a point in a room — its rectangle, or its circle, its ring —, by a margin; and a room's floor, m²)
+  const inRoomPt = (m, x, z, e) => { e = e || 0; if (!m.circ) return ptIn([x, z], m.r, e); const d = Math.hypot(x - m.circ[0], z - m.circ[1]); return d <= m.circ[2] + e && !(m.circ[3] > 0 && d < m.circ[3] - e); };
+  const roomArea = m => (m.circ ? Math.PI * (m.circ[2] * m.circ[2] - (m.circ[3] || 0) * (m.circ[3] || 0)) : (m.r[2] - m.r[0]) * (m.r[3] - m.r[1]));
+  In.inRoomPt = inRoomPt; In.roomArea = roomArea;
+  // (two rooms of a storey over each other: their rectangles cross — and, of a circle or a ring, their floors: two rings
+  // about one middle cross where their radii do, a ring and a rectangle where the rectangle reaches into the ring)
+  function roomsCross(a, b) {
+    if (!ov(a.r, b.r, 0.01)) return false; if (!a.circ && !b.circ) return true;
+    const ring = (c, r) => { const near = Math.hypot(Math.max(r[0] - c[0], 0, c[0] - r[2]), Math.max(r[1] - c[1], 0, c[1] - r[3])); const far = Math.max(...[[r[0], r[1]], [r[2], r[1]], [r[0], r[3]], [r[2], r[3]]].map(p => Math.hypot(p[0] - c[0], p[1] - c[1]))); return near < c[2] - 0.01 && far > (c[3] || 0) + 0.01; };
+    if (a.circ && b.circ && Math.hypot(a.circ[0] - b.circ[0], a.circ[1] - b.circ[1]) < 0.01) return a.circ[2] > (b.circ[3] || 0) + 0.01 && b.circ[2] > (a.circ[3] || 0) + 0.01;
+    if (a.circ && !b.circ) return ring(a.circ, b.r); if (b.circ && !a.circ) return ring(b.circ, a.r);
+    return true; // (two circles about different middles: as their rectangles)
+  }
 
   // ------------------------------ the record ------------------------------
   // what the builders knew and where they built, frozen the day the building was placed (the plan never reads today's world)
@@ -270,7 +285,7 @@
         if (d.rooms[0] !== -1 && d.rooms[1] !== -1) continue;
         const w = this.walls[d.wall]; const p = this.ptOn(d.wall, d.at); const L = this.wlen(d.wall) || 1;
         const nx = -(w.b[1] - w.a[1]) / L, nz = (w.b[0] - w.a[0]) / L; const off = w.t / 2 + 0.12;
-        const at = q => { const m = this.rooms.find(R => R.lv === w.lv && (R.circ ? Math.hypot(q[0] - R.circ[0], q[1] - R.circ[1]) <= R.circ[2] + 0.02 : ptIn(q, R.r, 0.02))); return m ? m.id : -1; };
+        const at = q => { const m = this.rooms.find(R => R.lv === w.lv && inRoomPt(R, q[0], q[1], 0.02)); return m ? m.id : -1; };
         const s1 = at([p[0] + nx * off, p[1] + nz * off]), s2 = at([p[0] - nx * off, p[1] - nz * off]);
         if (d.rooms[1] === 'rua') d.rooms[0] = s1 !== -1 ? s1 : s2; else { d.rooms[0] = s1; d.rooms[1] = s2; }
       }
@@ -289,9 +304,29 @@
     hole(wall, at, w, h, sill, kind, door) { const o = { wall, at, w, h, sill, kind, door: door === undefined ? -1 : door }; this.holes.push(o); return o; },
     // a door in a wall between two rooms (or a room and the street: 'rua'); hinge and swing from the plan's chance
     // (sill: a way in whose threshold is above the storey's floor — the sunken house's, at the ground outside)
+    // (kind 'arco': an opening with its arch — walked as a 'vao', drawn with the arch: arch 1 on the door and its hole, B4)
     door(wall, at, w, h, ra, rb, outer, kind, sill) {
+      const arch = kind === 'arco'; if (arch) kind = 'vao';
       const id = this.doors.length; const d = { id, wall, at, w, h, sill: sill || 0, hinge: this.chance(0.5) ? 'a' : 'b', into: 1, outer: outer ? 1 : 0, rooms: [ra, rb], kind: kind || 'porta' };
-      this.doors.push(d); this.hole(wall, at, w, h, sill || 0, kind === 'vao' ? 'vao' : 'porta', id); return id;
+      if (arch) d.arch = 1;
+      this.doors.push(d); const ho = this.hole(wall, at, w, h, sill || 0, kind === 'vao' ? 'vao' : 'porta', id); if (arch) ho.arch = 1; return id;
+    },
+    // a wall round a circle, as straight walls: n of them (24 when not said, 8 to 32 — a multiple of four keeps four of them
+    // square to the lot, the first across the front), their middle line through corners on the circle of radius rad, each a → b
+    // round it; o.arcs: the walls with an arch through them (their numbers, or true: every one), aw wide and ah high — a way
+    // through ('arco'), between the rooms either side of it (bindDoors); o.wins: the walls with an arched window (sill o.sill)
+    // instead. → { walls: [ids], doors: [ids] }
+    ringWall(lv, cu, cv, rad, t, h, o) {
+      o = o || {}; const n = Math.max(8, Math.min(32, Math.round(o.n || 24))); const out = { walls: [], doors: [] };
+      for (let k = 0; k < n; k++) {
+        const a0 = Math.PI / 2 - Math.PI / n + k * 2 * Math.PI / n, a1 = a0 + 2 * Math.PI / n;
+        const A = [r2(cu + rad * Math.cos(a0)), r2(cv + rad * Math.sin(a0))], B = [r2(cu + rad * Math.cos(a1)), r2(cv + rad * Math.sin(a1))];
+        out.walls.push(this.wall(lv, A, B, t, h, o.outer ? 1 : 0, o.kind || 'parede', o.mat));
+      }
+      const each = (list, fn) => { for (const k of list === true ? out.walls.map((_, q) => q) : list || []) { const id = out.walls[k]; if (id !== undefined) fn(id, this.wlen(id)); } };
+      each(o.arcs, (id, len) => out.doors.push(this.door(id, len / 2, Math.min(o.aw || 1.2, len - 0.2), o.ah || Math.min(h - 0.2, 2.6), -1, -1, o.outer ? 1 : 0, 'arco')));
+      each(o.wins, (id, len) => { const ho = this.hole(id, len / 2, Math.min(o.aw || 1.0, len - 0.2), o.ah || Math.min(h - (o.sill || 0.9) - 0.2, 1.6), o.sill || 0.9, 'janela'); ho.arch = 1; });
+      return out;
     },
     // a window as the recipe wants it (at, width, height, sill), kept clear of the floors that cross its wall there — a loft's,
     // a gallery's: under the slab, sunk to fit, else over it, else none — and, in an outside wall, of the ground outside
@@ -403,7 +438,7 @@
       const drop = [], kept = {}, uses = {};
       for (const sp of spots || []) {
         if (sp.on) continue; uses[sp.use] = 1;
-        let bad = !pt2(sp.u, sp.v, R.r, -0.1) || (R.circ && Math.hypot(sp.u - R.circ[0], sp.v - R.circ[1]) > R.circ[2] - 0.2);
+        let bad = !pt2(sp.u, sp.v, R.r, -0.1) || (R.circ && !inRoomPt(R, sp.u, sp.v, -0.2));
         // (the buyer of a stall or a counter stands across it, in the room beyond its opening: an aisle, a court)
         if (bad && D.across === sp.use && this.rooms.some(m => m.lv === lv && m.id !== room && pt2(sp.u, sp.v, m.r, -0.1))) bad = false;
         if (!bad) for (const it of F.solid) if (pt2(sp.u, sp.v, it.r, 0.12)) { bad = true; break; }
@@ -459,7 +494,8 @@
       for (const m of this.rooms) {
         if (m.lv !== lv) continue; let ok = false;
         const x0 = Math.max(0, Math.floor((m.r[0] + 0.01) / CS)), x1 = Math.min(n - 1, Math.floor((m.r[2] - 0.01) / CS)), z0 = Math.max(0, Math.floor((m.r[1] + 0.01) / CS)), z1 = Math.min(n - 1, Math.floor((m.r[3] - 0.01) / CS));
-        for (let z = z0; z <= z1 && !ok; z++) for (let x = x0; x <= x1; x++) if (seen[z * n + x]) { ok = true; break; }
+        // (a ring's own floor: not the arena inside it, whose cells are in its rectangle too)
+        for (let z = z0; z <= z1 && !ok; z++) for (let x = x0; x <= x1; x++) if (seen[z * n + x] && !(m.circ && m.circ[3] > 0 && !inRoomPt(m, (x + 0.5) * CS, (z + 0.5) * CS))) { ok = true; break; }
         if (!ok) return false;
       }
       for (const it of this.items) {
@@ -702,7 +738,7 @@
   // the floor a household can sleep on: the closed rooms (the hot lands' open roof at half), less the flights' feet
   function floorArea(plan) {
     if (!plan.rooms) return 0; let a = 0;
-    for (const m of plan.rooms) a += (m.circ ? Math.PI * m.circ[2] * m.circ[2] : (m.r[2] - m.r[0]) * (m.r[3] - m.r[1])) * (m.open ? (plan.hot ? 0.5 : 0) : 1);
+    for (const m of plan.rooms) a += roomArea(m) * (m.open ? (plan.hot ? 0.5 : 0) : 1);
     for (const st of plan.stairs || []) if (st.kind !== 'degraus') a -= (st.r[2] - st.r[0]) * (st.r[3] - st.r[1]);
     return a;
   }
@@ -740,7 +776,7 @@
   In.shellOfPlan = function (p) {
     if (!p || !p.shell) return null; const walls = [], holes = [];
     for (const w of p.walls) if (w.shell) walls.push({ id: w.id, lv: w.lv, a: w.a, b: w.b, t: w.t, h: w.h, kind: w.kind, mat: w.mat, outer: w.outer });
-    for (const h of p.holes) { const w = p.walls[h.wall]; if (!w || !w.shell) continue; holes.push({ wall: h.wall, at: h.at, w: h.w, h: h.h, sill: h.sill, kind: h.kind, door: h.door }); }
+    for (const h of p.holes) { const w = p.walls[h.wall]; if (!w || !w.shell) continue; holes.push(Object.assign({ wall: h.wall, at: h.at, w: h.w, h: h.h, sill: h.sill, kind: h.kind, door: h.door }, h.arch ? { arch: 1 } : {})); }
     const steps = p.stairs.filter(st => st.kind === 'degraus').map(st => ({ id: st.id, kind: st.kind, lv0: st.lv0, lv1: st.lv1, r: st.r, dir: st.dir, w: st.w }));
     return { shell: p.shell, levels: p.levels.map(l => ({ lv: l.lv, y: l.y, h: l.h, kind: l.kind, slab: l.slab || 0 })), walls, holes, steps, entrance: p.entrance || null, entryLv: p.entryLv || 0, fam: p.shellFam || p.fam };
   };
@@ -821,7 +857,7 @@
     // block, all of its outside — with the plan's own ids, and what opens in them)
     const walls = [], holes = [];
     for (const w of P.walls) if (w.shell) walls.push({ id: w.id, lv: w.lv, a: loc(w.a[0], w.a[1]), b: loc(w.b[0], w.b[1]), t: w.t, h: r2(w.h), kind: w.kind, mat: w.mat, outer: w.outer });
-    for (const h of P.holes) { const w = P.walls[h.wall]; if (!w || !w.shell) continue; holes.push({ wall: h.wall, at: r2(h.at), w: r2(h.w), h: r2(h.h), sill: r2(h.sill), kind: h.kind, door: h.door }); }
+    for (const h of P.holes) { const w = P.walls[h.wall]; if (!w || !w.shell) continue; holes.push(Object.assign({ wall: h.wall, at: r2(h.at), w: r2(h.w), h: r2(h.h), sill: r2(h.sill), kind: h.kind, door: h.door }, h.arch ? { arch: 1 } : {})); }
     let entrance = null; if (P.entrance) { const e = P.entrance; const p = loc(e.u, e.v); entrance = { door: e.door, side: s, x: p[0], z: p[1], w: e.w, lv: e.lv, out: loc(e.u, L + 1.6) }; }
     // (the steps from the ground the shell has: up to the porch on stilts, down into a sunken floor)
     const steps = P.stairs.filter(st => st.kind === 'degraus').map(st => ({ id: st.id, kind: st.kind, lv0: st.lv0, lv1: st.lv1, r: R(st.r), dir: dirLoc(s, st.dir[0], st.dir[1]), w: r2(st.w) }));
@@ -853,12 +889,14 @@
     plan.shell = so.shell;
     plan.levels = so.levels.map((l, i) => Object.assign({}, l, { area: R(P.levels[i].area) }));
     plan.walls = P.walls.map(w => ({ id: w.id, lv: w.lv, a: loc(w.a[0], w.a[1]), b: loc(w.b[0], w.b[1]), t: w.t, h: r2(w.h), outer: w.outer, kind: w.kind, mat: w.mat, shell: w.shell ? 1 : 0 }));
-    plan.holes = P.holes.map(h => ({ wall: h.wall, at: r2(h.at), w: r2(h.w), h: r2(h.h), sill: r2(h.sill), kind: h.kind, door: h.door }));
-    plan.doors = P.doors.map(d => ({ id: d.id, wall: d.wall, at: r2(d.at), w: r2(d.w), h: r2(d.h), sill: r2(d.sill || 0), hinge: d.hinge, into: d.into, outer: d.outer, rooms: d.rooms.slice(), kind: d.kind }));
+    plan.holes = P.holes.map(h => Object.assign({ wall: h.wall, at: r2(h.at), w: r2(h.w), h: r2(h.h), sill: r2(h.sill), kind: h.kind, door: h.door }, h.arch ? { arch: 1 } : {}));
+    plan.doors = P.doors.map(d => Object.assign({ id: d.id, wall: d.wall, at: r2(d.at), w: r2(d.w), h: r2(d.h), sill: r2(d.sill || 0), hinge: d.hinge, into: d.into, outer: d.outer, rooms: d.rooms.slice(), kind: d.kind }, d.arch ? { arch: 1 } : {}));
     plan.rooms = P.rooms.map(m => {
       const r = R(m.r); const o = { id: m.id, lv: m.lv, fn: m.fn, r, poly: [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]], open: m.open };
       // (a round room: its circle, and its outline as sixteen points)
-      if (m.circ) { const c = loc(m.circ[0], m.circ[1]); o.circ = [c[0], c[1], r2(m.circ[2])]; o.poly = []; for (let q = 0; q < 16; q++) { const a = q / 16 * Math.PI * 2; o.poly.push([r2(c[0] + Math.cos(a) * m.circ[2]), r2(c[1] + Math.sin(a) * m.circ[2])]); } }
+      if (m.circ) { const c = loc(m.circ[0], m.circ[1]); o.circ = [c[0], c[1], r2(m.circ[2])]; o.poly = []; const ring = (rad, back) => { for (let q = 0; q <= 16; q++) { const a = (back ? 16 - q : q) / 16 * Math.PI * 2; o.poly.push([r2(c[0] + Math.cos(a) * rad), r2(c[1] + Math.sin(a) * rad)]); } };
+        // (a ring: its outline round the outside and back round the inside — one outline with the arena left out of it)
+        if (m.circ[3] > 0) { o.circ.push(r2(m.circ[3])); ring(m.circ[2], 0); ring(m.circ[3], 1); } else for (let q = 0; q < 16; q++) { const a = q / 16 * Math.PI * 2; o.poly.push([r2(c[0] + Math.cos(a) * m.circ[2]), r2(c[1] + Math.sin(a) * m.circ[2])]); } }
       return o;
     });
     plan.stairs = P.stairs.map(st => Object.assign({ id: st.id, kind: st.kind, lv0: st.lv0, lv1: st.lv1, r: R(st.r), a: loc(st.foot[0], st.foot[1]), b: loc(st.top[0], st.top[1]), dir: dirLoc(s, st.dir[0], st.dir[1]), w: r2(st.w), hole: st.hole ? R(st.hole) : null, larga: st.larga || 0 }, slopeOf(P, st)));
@@ -913,13 +951,32 @@
       const shellR = plan.shell.kind === 'round' ? [plan.shell.cx - plan.shell.r, plan.shell.cz - plan.shell.r, plan.shell.cx + plan.shell.r, plan.shell.cz + plan.shell.r] : plan.shell.r;
       { const [x0, z0, x1, z1] = cellsOf(shellR); for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) g[idx(x, z)] = C.VOID; }
       for (const a of plan.shell.annex || []) if (l.lv === (a.lv || 0)) { const [x0, z0, x1, z1] = cellsOf(a.r); for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) g[idx(x, z)] = C.VOID; }
-      for (const m of plan.rooms) { if (m.lv !== l.lv) continue; const [x0, z0, x1, z1] = cellsOf(m.r); for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) g[idx(x, z)] = C.FLOOR; }
+      // (a round room in a shell that is not round, or a ring about an arena: the cells whose middle is in its floor — the round
+      // hut's own room, its rectangle: its shell's ring below makes the rest of it wall)
+      for (const m of plan.rooms) {
+        if (m.lv !== l.lv) continue; const [x0, z0, x1, z1] = cellsOf(m.r);
+        const own = m.circ && (plan.shell.kind !== 'round' || m.circ[3] > 0);
+        for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) if (!own || inRoomPt(m, (x + 0.5) * CS, (z + 0.5) * CS)) g[idx(x, z)] = C.FLOOR;
+      }
       if (plan.shell.kind === 'round') { const cx = plan.shell.cx, cz = plan.shell.cz, rr = plan.shell.r - plan.shell.t; for (let z = 0; z < n; z++) for (let x = 0; x < n; x++) { const px = (x + 0.5) * CS, pz = (z + 0.5) * CS; const d = Math.hypot(px - cx, pz - cz); if (d > rr && d <= plan.shell.r + CS * 0.5) g[idx(x, z)] = C.WALL; else if (d > plan.shell.r + CS * 0.5 && g[idx(x, z)] !== C.FLOOR) g[idx(x, z)] = C.OUT; else if (d > rr) g[idx(x, z)] = C.WALL; } }
       // walls (at least a cell thick), with their doors and openings
       for (const w of plan.walls) {
         if (w.lv !== l.lv) continue;
         const ht = Math.max(w.t / 2, CS / 2 + 1e-3); const ax = Math.min(w.a[0], w.b[0]), az = Math.min(w.a[1], w.b[1]), bx = Math.max(w.a[0], w.b[0]), bz = Math.max(w.a[1], w.b[1]);
-        const vert = Math.abs(w.a[0] - w.b[0]) < 1e-6; const r = vert ? [ax - ht, az - w.t / 2, bx + ht, bz + w.t / 2] : [ax - w.t / 2, az - ht, bx + w.t / 2, bz + ht];
+        const vert = Math.abs(w.a[0] - w.b[0]) < 1e-6;
+        // (a wall aslant — the sides of a wall round a circle, P.ringWall —: the cells whose middle is within its half thickness of
+        // its line, its ends run on by as much so that two meeting at a corner close it; its openings the cells along their span)
+        if (!vert && Math.abs(w.a[1] - w.b[1]) >= 1e-6) {
+          const L2 = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); const tx = (w.b[0] - w.a[0]) / L2, tz = (w.b[1] - w.a[1]) / L2;
+          const [x0, z0, x1, z1] = cellsOf([ax - ht, az - ht, bx + ht, bz + ht]); const hs = plan.holes.filter(h => h.wall === w.id && h.kind !== 'janela');
+          for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
+            const px = (x + 0.5) * CS - w.a[0], pz = (z + 0.5) * CS - w.a[1]; const s = px * tx + pz * tz, o = -px * tz + pz * tx;
+            if (Math.abs(o) > ht || s < -ht || s > L2 + ht) continue;
+            g[idx(x, z)] = hs.some(h => s >= h.at - h.w / 2 && s <= h.at + h.w / 2) ? C.DOOR : C.WALL;
+          }
+          continue;
+        }
+        const r = vert ? [ax - ht, az - w.t / 2, bx + ht, bz + w.t / 2] : [ax - w.t / 2, az - ht, bx + w.t / 2, bz + ht];
         const [x0, z0, x1, z1] = cellsOf(r); const code = w.kind === 'guarda-corpo' || w.kind === 'parapeito' ? C.WALL : C.WALL;
         for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) g[idx(x, z)] = code;
         for (const h of plan.holes) {
@@ -1063,7 +1120,7 @@
     if (!plan.entrance) E.push('sem entrada');
     // rooms inside the shell, not over each other on a storey
     for (const m of plan.rooms) { const host = [shR].concat((sh.annex || []).map(a => a.r)); if (!host.some(h => inside(m.r, h, 0.02))) E.push(`cômodo ${m.fn} fora da casca`); }
-    for (let i = 0; i < plan.rooms.length; i++) for (let j = i + 1; j < plan.rooms.length; j++) { const a = plan.rooms[i], b = plan.rooms[j]; if (a.lv === b.lv && ov(a.r, b.r, 0.01)) E.push(`cômodos sobrepostos: ${a.fn} e ${b.fn}`); }
+    for (let i = 0; i < plan.rooms.length; i++) for (let j = i + 1; j < plan.rooms.length; j++) { const a = plan.rooms[i], b = plan.rooms[j]; if (a.lv === b.lv && roomsCross(a, b)) E.push(`cômodos sobrepostos: ${a.fn} e ${b.fn}`); }
     // furniture inside its room, never over another piece
     for (const it of plan.items) { const m = plan.rooms[it.room]; if (!m || !inside(it.r, it.niche ? [m.r[0] - 0.5, m.r[1] - 0.5, m.r[2] + 0.5, m.r[3] + 0.5] : m.r, 0.02)) E.push(`${it.kind} fora do cômodo`); }
     for (let i = 0; i < plan.items.length; i++) for (let j = i + 1; j < plan.items.length; j++) { const a = plan.items[i], b = plan.items[j]; if (a.lv === b.lv && (!a.niche || b.niche) && (!b.niche || a.niche) && ov(a.r, b.r, 0.01)) E.push(`móveis sobrepostos: ${a.kind} e ${b.kind}`); }
@@ -1098,7 +1155,7 @@
     { const J = T.jobs === undefined ? def.jobs : T.jobs; if (J && plan.cap.jobs < J) E.push(`só ${plan.cap.jobs} postos de trabalho (o prédio emprega ${J})`); }
     if (def.storage && T.storeAll && plan.cap.store < def.storage) E.push(`depósitos para ${plan.cap.store} (o armazém guarda ${def.storage})`);
     // (the room a household lives in: its closed rooms, and half its roof terrace in the hot lands, where one lives on the roof)
-    if (def.housing) { let a = 0; for (const m of plan.rooms) a += (m.circ ? Math.PI * m.circ[2] * m.circ[2] : (m.r[2] - m.r[0]) * (m.r[3] - m.r[1])) * (m.open ? (plan.hot ? 0.5 : 0) : 1); if (a / def.housing < 1.5 && !plan.short) E.push(`${(a / def.housing).toFixed(2)} m² por pessoa (menos que 1,5)`); }
+    if (def.housing) { let a = 0; for (const m of plan.rooms) a += roomArea(m) * (m.open ? (plan.hot ? 0.5 : 0) : 1); if (a / def.housing < 1.5 && !plan.short) E.push(`${(a / def.housing).toFixed(2)} m² por pessoa (menos que 1,5)`); }
     // (a jail: the cells the world puts its prisoners in — each with its bed of straw, behind a grating)
     if (T.cells) {
       const cs = plan.rooms.filter(m => m.fn === 'cela'); if (cs.length < T.cells) E.push(`só ${cs.length} celas (a cadeia tem ${T.cells})`);
@@ -1111,7 +1168,7 @@
       const P = P0(plan); const { pc, seen } = reachCan(P); const n = pc.grid.n;
       for (const m of P.rooms) {
         let ok = false; const s = seen[m.lv];
-        if (s) { const [x0, z0] = cellAt(pc, [m.r[0] + 0.01, m.r[1] + 0.01]), [x1, z1] = cellAt(pc, [m.r[2] - 0.01, m.r[3] - 0.01]); for (let z = Math.max(0, z0); z <= Math.min(n - 1, z1) && !ok; z++) for (let x = Math.max(0, x0); x <= Math.min(n - 1, x1); x++) if (s[z * n + x]) { ok = true; break; } }
+        if (s) { const [x0, z0] = cellAt(pc, [m.r[0] + 0.01, m.r[1] + 0.01]), [x1, z1] = cellAt(pc, [m.r[2] - 0.01, m.r[3] - 0.01]); for (let z = Math.max(0, z0); z <= Math.min(n - 1, z1) && !ok; z++) for (let x = Math.max(0, x0); x <= Math.min(n - 1, x1); x++) if (s[z * n + x] && !(m.circ && m.circ[3] > 0 && !inRoomPt(m, (x + 0.5) * CS, (z + 0.5) * CS))) { ok = true; break; } }
         if (!ok) E.push(`não se chega ao cômodo ${m.fn} (piso ${m.lv})`);
       }
       // (every use of every piece: one of its places for that use is enough — a long bench is reached at one of its ends)
