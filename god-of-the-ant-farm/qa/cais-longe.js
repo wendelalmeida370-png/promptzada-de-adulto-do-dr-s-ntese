@@ -32,6 +32,10 @@ const findPick = () => {
 const fit = (v, f) => v && !v.captive && !v.aboard && !v.held && !v.air && !v.ug && v.hp >= 55 && !(v.preg > 0) && !v.rebel && v.age >= 20 && v.age <= 50 && G.Fac.idOfV(v) === f.id && v.id !== f.leader && !(S.avatar && S.avatar.id === v.id) && !X.memberOf(v.id);
 const moved = new Set(); const toIslet = (v, isl) => { Vg.endTask(v); v.inside = 0; v.x = isl[0]; v.y = isl[1]; v.path = null; moved.add(v.id); };
 const goal = p => ({ k: 'terra', w: 1, why: 'terra', txt: '', x: p.di.moor[0] + 12, y: p.di.moor[1] });
+// (a medium voyage of more than five builds an explorer when none lies idle at the quay — 22 of wood, and 4 kept —: in the
+// metropole of 28/10 Hedeby had 17, and the voyage put the wood aside and did not sail. The case is who walks to the quay,
+// not the timber: the test's hand gives the people the wood for the hull, through the depot, T-217)
+const media = p => { const need = Nv.SHIP.explorador.cost + 6 - (p.f.stock.wood || 0); if (need > 0) G.Depot.make('f:' + p.f.id, 'wood', need, { code: 'teste', part: true }); return X.launch(p.f, goal(p), 'media', {}); };
 const reachAll = e => e.crew.map(id => G.S.villagers.get(id)).filter(Boolean).every(v => v.aboard || W.reaches(v, e.port[0], e.port[1]));
 let p = findPick();
 if (!p) ok('k1 a mais aventureira, numa ilhota perto do cais: a viagem sai sem ela', false, 'nenhuma doca com uma ilhota perto do cais neste mundo');
@@ -48,7 +52,7 @@ else {
   // k2 — one of the crew taken to the islet in the middle of the gathering; and nobody boards from far
   {
     S = M.pronto(KEY); moved.clear(); p = findPick() || p; // (each case in a world of its own: the voyages before spent its wood and its crews)
-    const e = X.launch(p.f, goal(p), 'media', {});
+    const e = media(p);
     const v = e && e.crew.map(id => S.villagers.get(id)).find(q => q && q.id !== e.leader && !q.aboard);
     if (!e || !v) ok('k2 alguém da tripulação levado a uma ilhota: sai da tripulação e não embarca; quem embarca está no cais', false, !e ? 'a viagem «média» não saiu' : 'a viagem não tem tripulação além da líder');
     else {
@@ -63,7 +67,7 @@ else {
   // k3 — the leader taken to the islet: the voyage does not sail
   {
     S = M.pronto(KEY); moved.clear(); p = findPick() || p; // (each case in a world of its own: the voyages before spent its wood and its crews)
-    const e = X.launch(p.f, goal(p), 'media', {}); const lead = e && S.villagers.get(e.leader);
+    const e = media(p); const lead = e && S.villagers.get(e.leader);
     if (!e || !lead) ok('k3 a líder levada a uma ilhota: a viagem não sai', false, 'a viagem «média» não saiu');
     else { toIslet(lead, p.isl); for (let k = 0; k < 30 && e.st !== 'fim'; k++) G.debug.step(0.1);
       ok('k3 a líder levada a uma ilhota: a viagem não sai', e.st === 'fim' && e.status === 'cancelada', `${lead.name}, à frente de ${e.name}, numa ilhota: ${e.st === 'fim' ? 'a viagem ' + e.status : 'a viagem segue em «' + e.st + '»'}`); }
@@ -71,7 +75,7 @@ else {
   // k4 — the same as k2, saved and loaded in the middle
   {
     S = M.pronto(KEY); moved.clear(); p = findPick() || p; // (each case in a world of its own: the voyages before spent its wood and its crews)
-    const e = X.launch(p.f, goal(p), 'media', {});
+    const e = media(p);
     const v = e && e.crew.map(id => S.villagers.get(id)).find(q => q && q.id !== e.leader && !q.aboard);
     if (!e || !v) ok('k4 o mesmo, salvo e carregado no meio: carregado, sai da tripulação', false, !e ? 'a viagem «média» não saiu' : 'sem tripulação além da líder');
     else {
