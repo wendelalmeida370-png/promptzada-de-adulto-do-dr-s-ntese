@@ -159,8 +159,10 @@
     // the rest: those living closest to the festival, and those with no shift to keep
     const venue = fe.C || fe.A || [set.cx, set.cy];
     const ON_SHIFT = { agricultor: 1, construtor: 1, mineiro: 1, lenhador: 1, pastor: 1, cavalarico: 1, ferreiro: 1, tecelao: 1, oleiro: 1, mercador: 1, feirante: 1, guerreiro: 1, cobrador: 1 };
-    const score = v => { const h = S.buildings.get(v.home); const hx = h ? h.x : v.x, hy = h ? h.y : v.y; return G.dist(hx, hy, venue[0], venue[1]) + (ON_SHIFT[v.role] ? 7 : 0) - (v.age < 16 || v.age >= 60 ? 3 : 0) - v.devotion / 25 + G.R() * 2; };
-    const rest = crowd.filter(v => !fe.parts.includes(v.id)).map(v => [score(v), v]).sort((a, b) => a[0] - b[0]).map(e => e[1]);
+    // (a feast that begins after dark wakes the town for the rite and the people its roles need — the crowd is who is up: the
+    // ones asleep come last, and the children asleep in their beds stay there)
+    const score = v => { const h = S.buildings.get(v.home); const hx = h ? h.x : v.x, hy = h ? h.y : v.y; return G.dist(hx, hy, venue[0], venue[1]) + (ON_SHIFT[v.role] ? 7 : 0) - (v.age < 16 || v.age >= 60 ? 3 : 0) - v.devotion / 25 + (v.sleeping ? 12 : 0) + G.R() * 2; };
+    const rest = crowd.filter(v => !fe.parts.includes(v.id) && !(v.sleeping && v.age < 12)).map(v => [score(v), v]).sort((a, b) => a[0] - b[0]).map(e => e[1]);
     for (const v of take(rest, cap - fe.parts.length)) enlist(fe, v, 'crowd');
     live.set(fe.id, fe);
     set.festDone = set.festDone || {}; set.festDone[key] = S.day;

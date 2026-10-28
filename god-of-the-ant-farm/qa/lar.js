@@ -345,11 +345,14 @@ if (want('l11')) {
 
 // ======================= l10: a festival across a save, and its feast in the ledger =======================
 if (want('l10')) {
-  open(); set = town(); const f = G.Fac.get(set.fac);
+  // (after dark, as the feasts of the long nights begin — Jól, Saturnália, Toxcatl: the small ones already asleep)
+  open(); set = town(); const f = G.Fac.get(set.fac); S.time = 0.62; liveTo(0.8);
   const keys = G.Fest.of(f.civ).filter(k => !G.Fest.DEF[k].trigger);
   D.make('f:' + f.id, 'food', 40, { code: 'teste', part: true });
   let fe = null; const L0 = S.ledgerN || 0;
+  const kidsAsleep = new Set([...S.villagers.values()].filter(v => v.set === set.id && v.age >= 2 && v.age < 12 && v.sleeping).map(v => v.id));
   for (const k of keys) { fe = G.Fest.start(set, k, {}); if (fe) break; }
+  const woken = fe ? fe.parts.filter(id => kidsAsleep.has(id) && !Object.values(fe.roles).some(l => l.includes(id))) : [];
   if (!fe) ok('l10 a festa atravessa o save', false, `${set.name} (${f.civ}) não começou nenhuma festa: ${keys.join(', ')}`);
   else {
     const id = fe.id, key = fe.key; live(10);
@@ -363,8 +366,8 @@ if (want('l10')) {
     const feast = book(e => e[0] > L0 && e[3] === 'f:' + f.id && e[5] === 'food' && (e[8] === 'banquete' || e[8] === 'festa'));
     const eaten = r2(feast.reduce((s, e) => s + e[6], 0));
     const plan = (fe2 || fe).plan || []; const hasFeast = plan.some(s => s[0] === 'feast');
-    ok('l10 a festa atravessa o save', before === after && ended >= 0 && !stuck && (!hasFeast || feast.length >= 1),
-      `${key} em ${set.name}: antes do save ${before}, depois ${after} (festa/etapa/participantes/na festa); ${ended >= 0 ? 'terminou' : 'NÃO TERMINOU'}${stuck ? `, ${stuck} AINDA NA FESTA` : ''}; o banquete no livro: ${feast.length} linha(s), ${eaten} de comida${hasFeast ? '' : ' (esta festa não tem banquete)'}`);
+    ok('l10 a festa atravessa o save', before === after && ended >= 0 && !stuck && (!hasFeast || feast.length >= 1) && !woken.length,
+      `${key} em ${set.name} às ${fmtT(0.8)}: ${kidsAsleep.size} crianças dormindo, ${woken.length ? `${woken.length} ARRANCADAS DA CAMA para a plateia` : 'nenhuma arrancada da cama para a plateia'}; antes do save ${before}, depois ${after} (festa/etapa/participantes/na festa); ${ended >= 0 ? 'terminou' : 'NÃO TERMINOU'}${stuck ? `, ${stuck} AINDA NA FESTA` : ''}; o banquete no livro: ${feast.length} linha(s), ${eaten} de comida${hasFeast ? '' : ' (esta festa não tem banquete)'}`);
   }
 }
 
