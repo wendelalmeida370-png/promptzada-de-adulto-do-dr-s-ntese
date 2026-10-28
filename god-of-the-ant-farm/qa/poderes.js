@@ -50,6 +50,7 @@ const key = process.argv[2] || 'cidade';
   await page.addScriptTag({ path: path.join(ROOT, 'worlds', key + '.js') });
   await page.addScriptTag({ path: path.join(ROOT, 'worlds', 'mundial.js') }); // (a world at war, for the duel of champions)
   await page.addScriptTag({ path: path.join(ROOT, 'worlds', 'metropole.js') }); // (two great towns across a strait, for the parted sea)
+  await page.addScriptTag({ path: path.join(ROOT, 'worlds', 'mega.js') }); // (or, when the metropole has none, the megalopolis: T-127)
   const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASSOU' : 'FALHOU'} | ${name} | ${info}`); if (!cond) fails.push(name); };
   // the helpers every test uses: the ready world, steps of the world, the checker
   await page.evaluate(key => {
@@ -243,12 +244,18 @@ const key = process.argv[2] || 'cidade';
   {
     const r = await page.evaluate(() => {
       const H = __H; H.fresh(); const S = G.S;
-      const set = H.town(); const v = H.mate(set); if (!v) return null;
+      // (a couple whose widow can marry again — someone free of the other sex in the widow's town, not of the family —, the
+      // biggest town first: the world of 28/10 had nobody for the first couple there, and the case judged a widow who never
+      // married again, T-126)
+      const canWed = (m, o) => o.set === m.set && o.g !== m.g && !o.partner && o.age >= 18 && o.id !== m.mother && o.id !== m.father && o.mother !== m.id && !(m.mother && o.mother === m.mother);
+      const set = H.town(); const all = [...S.villagers.values()];
+      const v = all.filter(q => q.partner && S.villagers.has(q.partner) && q.age >= 18 && q.age < 55 && !q.captive && !q.aboard && !q.ug && !q.jail && !q.inside && !(q.task && q.task.type === 'scene')).sort((a, b) => (a.set === set.id ? 0 : 1) - (b.set === set.id ? 0 : 1) || a.id - b.id).find(q => { const m = S.villagers.get(q.partner); return all.some(o => o !== q && canWed(m, o)); });
+      if (!v) return { none: true };
       const id = v.id, name = v.name, mateId = v.partner;
       G.Village.kill(v, 'sick', true); H.run(0.5);
       const rec = S.dead.get(id); const cem = rec && S.buildings.get(rec.grave); if (!cem) return { name, grave: false };
       // the widow marries again before the god acts: she does not go back
-      const mate = S.villagers.get(mateId); const other = [...S.villagers.values()].find(o => o.set === set.id && o.g !== mate.g && !o.partner && o.age >= 18 && o.id !== mate.mother && o.id !== mate.father && o.mother !== mate.id && !(mate.mother && o.mother === mate.mother));
+      const mate = S.villagers.get(mateId); const other = [...S.villagers.values()].find(o => canWed(mate, o));
       if (other) { mate.partner = other.id; other.partner = mate.id; mate.widow = 0; }
       const [cx, cy] = G.Village.center(cem);
       const cast = H.raise(cx, cy, id); H.run(2);
@@ -259,7 +266,8 @@ const key = process.argv[2] || 'cidade';
       const w2 = G.S.villagers.get(id);
       return { name, grave: true, cast, back: !!w, empty, single: w ? !w.partner : null, mateStays: other ? G.S.villagers.get(mateId).partner === other.id : 'sem par', saved: !!(w2 && w2.name === name), qa: H.qa() };
     });
-    if (r) ok('r2 ressurreição da cova: a cova fica vazia; a viúva casada de novo não volta', r.grave && r.cast === true && r.back && r.empty && r.single && r.mateStays !== false && r.saved && !r.qa.length, `${r.name}: cova ${r.grave}; lançado ${r.cast}; vivo ${r.back}; cova vazia ${r.empty}; sozinho ${r.single}; o par fica com o novo ${r.mateStays}; passou pelo save ${r.saved}; ${(r.qa || []).slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+    if (r && r.none) ok('r2 ressurreição da cova: a cova fica vazia; a viúva casada de novo não volta', false, 'nenhum casal no mundo cuja viúva possa casar de novo');
+    else if (r) ok('r2 ressurreição da cova: a cova fica vazia; a viúva casada de novo não volta', r.grave && r.cast === true && r.back && r.empty && r.single && r.mateStays === true && r.saved && !r.qa.length, `${r.name}: cova ${r.grave}; lançado ${r.cast}; vivo ${r.back}; cova vazia ${r.empty}; sozinho ${r.single}; o par fica com o novo ${r.mateStays}; passou pelo save ${r.saved}; ${(r.qa || []).slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
   }
   {
     const r = await page.evaluate(() => {
@@ -670,7 +678,8 @@ const key = process.argv[2] || 'cidade';
 
   // ------------------------------ Abrir o Mar ------------------------------
   await page.evaluate(() => {
-    // the strait: in the ready world «metrópole», the widest way the sea can open between two lands with a town on each side
+    // the strait: in the ready world of the strait (H.straitWorld), the widest way the sea can open between two lands with a
+    // town on each side
     __H.strait = () => {
       const S = G.S, N = G.N; let best = null;
       for (let y = 2; y < N - 2; y++) for (let x = 2; x < N - 2; x++) {
@@ -685,10 +694,13 @@ const key = process.argv[2] || 'cidade';
     __H.qaSea = () => QA.check().filter(e => (e.sev <= 2 || (e.sev === 3 && e.sys === 'marAberto')) && !(__H.base && __H.base.has(__H.qkey(e))));
     __H.seaDigest = c => { const S = G.S; return JSON.stringify(S.parts) + '|' + S.rng + '|' + (S.dry ? S.dry.reduce((a, b) => a + b, 0) : 0) + '|' + [...S.villagers.values()].filter(v => G.dist(v.x, v.y, c.x, c.y) < 25).map(v => `${v.id}:${v.x.toFixed(2)},${v.y.toFixed(2)}:${v.task ? v.task.type : '-'}`).join(';'); };
     __H.setByName = n => [...G.S.settlements.values()].find(s => s.name === n);
+    // (the world of the strait: the first ready world, in this order, with two towns across a narrow sea — the metropole of
+    // 28/10 has none, and the cases judged nothing, T-127)
+    __H.straitWorld = () => { if (__H._sw !== undefined) return __H._sw; __H._sw = null; for (const w of ['metropole', 'mega', 'mundial']) { if (!G.Ready.data[w]) continue; __H.fresh(w); if (__H.strait()) { __H._sw = w; break; } } return __H._sw; };
   });
   {
     const r = await page.evaluate(() => {
-      const H = __H; H.fresh('metropole'); const S = G.S; const W = G.W;
+      const H = __H; H.fresh(H.straitWorld()); const S = G.S; const W = G.W;
       const c = H.strait(); if (!c) return { none: true };
       const A = H.setByName(c.A), B = H.setByName(c.B);
       const w0 = G.Powers.seaWay(c.x, c.y); const linked0 = W.canWalk(w0.a.x, w0.a.y, w0.b.x, w0.b.y);
@@ -704,7 +716,7 @@ const key = process.argv[2] || 'cidade';
       H.until(() => { down = Math.max(down, H.tasks('fundo').length); const set = new Set(p.tiles); onBed = Math.max(onBed, [...S.villagers.values()].filter(o => set.has(W.idx(o.x, o.y))).length); if (v && S.villagers.has(v.id) && G.dist(v.x, v.y, p.bx, p.by) < 2) across = true; const e = H.qaSea(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); return across && p.fished >= p.fish; }, 100);
       return { c, linked0, ok, tiles: p.tiles.length, dry, linked, shipOn, walker, across, down, onBed, fished: p.fished, fish: p.fish, log: S.history.some(e => /O mar se abriu/.test(e.txt)), bad, qa: H.qaSea() };
     });
-    if (r.none) ok('p1 abrir o mar', false, 'nenhum estreito entre duas cidades no mundo pronto');
+    if (r.none) ok('p1 abrir o mar', false, 'nenhum estreito entre duas cidades nos mundos prontos');
     else {
       ok('p1 o mar se abre entre duas terras: o fundo vira caminho', r.ok && r.dry && !r.linked0 && r.linked && !r.shipOn && r.log, `${r.c.A} ↔ ${r.c.B}: ${r.tiles} casas de fundo seco, pisáveis ${r.dry}; de uma margem se chega à outra a pé: antes ${r.linked0}, agora ${r.linked}; navio no fundo ${r.shipOn}`);
       ok('p1 o povo desce para catar peixes e atravessa a pé', r.down >= 2 && r.fished >= 1 && r.across, `até ${r.down} descendo, ${r.onBed} no fundo ao mesmo tempo; ${r.fished} de ${r.fish} cestos de peixe; ${r.walker} atravessou ${r.across}`);
@@ -713,8 +725,8 @@ const key = process.argv[2] || 'cidade';
   }
   {
     const r = await page.evaluate(() => {
-      const H = __H; H.fresh('metropole'); const S = G.S;
-      const c = H.strait(); G.Powers.cast('seapart', c.x, c.y); H.run(20);
+      const H = __H; H.fresh(H.straitWorld()); const S = G.S;
+      const c = H.strait(); if (!c) return { none: true }; G.Powers.cast('seapart', c.x, c.y); H.run(20);
       const dry0 = S.dry.reduce((a, b) => a + b, 0);
       const save = G.Save.serialize();
       G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; G.UI.setSpeed(0); const dry1 = G.S.dry ? G.S.dry.reduce((a, b) => a + b, 0) : 0; const walk = G.S.parts[0] && G.W.walkable(G.S.parts[0].tiles[0]);
@@ -723,12 +735,13 @@ const key = process.argv[2] || 'cidade';
       let j = 0; while (j < a.length && a[j] === b[j]) j++;
       return { dry0, dry1, walk, same: a === b, len: a.length, at: j, ctx: a.slice(Math.max(0, j - 60), j + 60) + ' ≠ ' + b.slice(Math.max(0, j - 60), j + 60), qa: H.qaSea() };
     });
-    ok('p2 save com o mar aberto: o fundo volta igual, o mesmo futuro', r.same && r.dry0 === r.dry1 && r.walk && !r.qa.length, r.same ? `${r.dry0} casas secas no save, ${r.dry1} depois de carregar, pisável ${r.walk}; futuro idêntico (${r.len} caracteres)` : `diferem no caractere ${r.at}: ${r.ctx}`);
+    if (r.none) ok('p2 save com o mar aberto: o fundo volta igual, o mesmo futuro', false, 'nenhum estreito entre duas cidades nos mundos prontos');
+    else ok('p2 save com o mar aberto: o fundo volta igual, o mesmo futuro', r.same && r.dry0 === r.dry1 && r.walk && !r.qa.length, r.same ? `${r.dry0} casas secas no save, ${r.dry1} depois de carregar, pisável ${r.walk}; futuro idêntico (${r.len} caracteres)` : `diferem no caractere ${r.at}: ${r.ctx}`);
   }
   {
     const r = await page.evaluate(() => {
-      const H = __H; H.fresh('metropole'); const S = G.S; const W = G.W, T = G.T;
-      const c = H.strait(); const A = H.setByName(c.A), B = H.setByName(c.B);
+      const H = __H; H.fresh(H.straitWorld()); const S = G.S; const W = G.W, T = G.T;
+      const c = H.strait(); if (!c) return { none: true }; const A = H.setByName(c.A), B = H.setByName(c.B);
       G.Powers.cast('seapart', c.x, c.y); const p = S.parts[0];
       // (wait until the last moments: three people are down on the bed when the walls start to tremble)
       H.until(() => p.t > G.DAY_LEN * 0.75 - 14, 200);
@@ -747,12 +760,13 @@ const key = process.argv[2] || 'cidade';
       const dryLeft = S.dry ? S.dry.reduce((a, b) => a + b, 0) : 0;
       return { ran, held: held.name, dead: !o, caught, wet, dryLeft, walk: W.walkable(mid), linked: W.canWalk(p.ax, p.ay, p.bx, p.by), log: S.history.some(e => /O mar se fechou/.test(e.txt) && (o ? new RegExp(o.name + '.*cuspid') : /não saiu a tempo|não saíram a tempo/).test(e.txt)), warn: S.history.some(e => /paredes do mar começaram a tremer/.test(e.txt)), qa: H.qaSea() };
     });
-    ok('p3 o mar se fecha: quem está lá embaixo corre; quem não sai é levado', r.warn && r.ran >= 2 && r.caught && r.log && !r.wet && !r.dryLeft && !r.walk && !r.linked && !r.qa.length, `aviso ${r.warn}; ${r.ran} correram para a margem; ${r.held} ficou no meio: ${r.dead ? 'morreu afogado' : 'sobreviveu e foi cuspido na praia'}; crônica ${r.log}; gente na água sem nadar ${r.wet}; fundo seco restante ${r.dryLeft}; de uma margem ainda se chega à outra ${r.linked}; ${r.qa.map(e => e.msg).slice(0, 3).join(' | ') || 'verificador limpo'}`);
+    if (r.none) ok('p3 o mar se fecha: quem está lá embaixo corre; quem não sai é levado', false, 'nenhum estreito entre duas cidades nos mundos prontos');
+    else ok('p3 o mar se fecha: quem está lá embaixo corre; quem não sai é levado', r.warn && r.ran >= 2 && r.caught && r.log && !r.wet && !r.dryLeft && !r.walk && !r.linked && !r.qa.length, `aviso ${r.warn}; ${r.ran} correram para a margem; ${r.held} ficou no meio: ${r.dead ? 'morreu afogado' : 'sobreviveu e foi cuspido na praia'}; crônica ${r.log}; gente na água sem nadar ${r.wet}; fundo seco restante ${r.dryLeft}; de uma margem ainda se chega à outra ${r.linked}; ${r.qa.map(e => e.msg).slice(0, 3).join(' | ') || 'verificador limpo'}`);
   }
   {
     const r = await page.evaluate(() => {
-      const H = __H; H.fresh('metropole'); const S = G.S; const W = G.W, T = G.T; const bad = []; const chk = () => { const e = H.qaSea(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); };
-      const c = H.strait(); const w = G.Powers.seaWay(c.x, c.y);
+      const H = __H; H.fresh(H.straitWorld()); const S = G.S; const W = G.W, T = G.T; const bad = []; const chk = () => { const e = H.qaSea(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); };
+      const c = H.strait(); if (!c) return { none: true }; const w = G.Powers.seaWay(c.x, c.y);
       // a ship lying in the way when the sea opens: it is pushed out to the water, never left on the sand
       const sh = S.ships.find(q => q.st === 'idle') || S.ships[0]; let shipMoved = null;
       if (sh) { const i = w.tiles[Math.floor(w.tiles.length / 2)]; sh.x = (i % G.N) + 0.5; sh.y = ((i / G.N) | 0) + 0.5; }
@@ -769,7 +783,8 @@ const key = process.argv[2] || 'cidade';
       H.run(3); chk();
       return { ship: !!sh, shipMoved, raised, n0, n1: p.tiles.length, loaded, kept, bad, qa: H.qaSea() };
     });
-    ok('p4 um navio no caminho é empurrado para a água; terra erguida no fundo deixa de ser fundo', (!r.ship || r.shipMoved === true || r.shipMoved === 'afundou') && r.raised, `navio ${r.ship ? (r.shipMoved === true ? 'empurrado para a água' : r.shipMoved) : 'nenhum no mundo'}; terra erguida: fundo ${r.n0} → ${r.n1} casas, todas ainda mar ${r.raised}`);
+    if (r.none) ok('p4 um navio no caminho é empurrado para a água; terra erguida no fundo deixa de ser fundo', false, 'nenhum estreito entre duas cidades nos mundos prontos');
+    else ok('p4 um navio no caminho é empurrado para a água; terra erguida no fundo deixa de ser fundo', (!r.ship || r.shipMoved === true || r.shipMoved === 'afundou') && r.raised, `navio ${r.ship ? (r.shipMoved === true ? 'empurrado para a água' : r.shipMoved) : 'nenhum no mundo'}; terra erguida: fundo ${r.n0} → ${r.n1} casas, todas ainda mar ${r.raised}`);
     ok('p4 save danificado: o mar aberto quebrado fica de fora, o mundo carrega', r.loaded && r.kept && !r.bad.length && !r.qa.length, `carregou ${r.loaded}, ficou só o mar aberto bom ${r.kept}; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}`);
   }
 

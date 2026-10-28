@@ -94,7 +94,7 @@ const sc = process.argv[2] || 'small'; const seed = +(process.argv[3] || 7);
         // taken — there is no treaty to judge, and the peace is made on purpose in qa/paz.js, T-125; either way the war
         // closes and no host of it is still in the field)
         const fin = await page.evaluate(() => { const wz = G.S.wz; const w0 = wz.wars[0]; return { gone: [window._A, window._B].filter(id => !(G.Fac.get(id) || {}).alive).map(id => (G.Fac.get(id) || { name: '?' }).name), field: wz.armies.filter(a => a.war === w0.id && !a.done && (a.phase === 'mobilizar' || ((b) => b && b.st !== 'retorno')(G.War.bands.get(a.band)))).map(a => a.name + ':' + a.phase) }; });
-        ok('7 paz: volta dos soldados e consequências', !!w.end && (!!w.treaty || fin.gone.length > 0) && !fin.field.length, `fim ${w.end || '-'}; ${w.treaty ? w.treaty.name + ': ' + (w.treaty.terms || []).join('; ') : fin.gone.length ? `sem tratado: ${fin.gone.join(', ')} deixou de existir, conquistado (a paz é provada de propósito no qa/paz.js)` : 'sem tratado'}${fin.field.length ? '; ainda no campo: ' + fin.field.join(', ') : ''}`);
+        ok('7 paz: volta dos soldados e consequências', !!w.end && (!!w.treaty || fin.gone.length > 0) && !fin.field.length, `fim ${w.end || '-'}; ${w.treaty ? w.treaty.name + ': ' + (w.treaty.terms || []).join('; ') : fin.gone.length ? `sem tratado: ${fin.gone.join(', ')} deixou de existir pela conquista (a paz é provada de propósito no qa/paz.js)` : 'sem tratado'}${fin.field.length ? '; ainda no campo: ' + fin.field.join(', ') : ''}`);
       }
       if (sc === 'big') {
         ok('3 grandes civilizações: centenas', maxN >= 150, `exércitos: ${s.armies.map(a => a.name + ' ' + a.n0 + '/' + a.pop0).join(', ')}`);

@@ -134,6 +134,10 @@
     if (v.jail && G.Crime) { const kept = G.Crime.keeps(v, t); if (kept) return kept; }
     // (a body the player lives: the world asks first — a request becomes a call, a force of the world takes the body back)
     if (G.S.avatar && G.S.avatar.id === v.id && G.Possess) { const kept = G.Possess.ask(v, t); if (kept) return kept; }
+    // (the water in the hands lives inside its errand — the house's jar on its way home, the bucket for a fire —: another
+    // task cuts the errand and the water is set down, poured out in the ledger; a scene only lends the person for a moment.
+    // It stayed in the hands, and the work that came next began over it — L-300)
+    if (v.carry && v.carry.k === 'water' && t.type !== 'water' && t.type !== 'fire' && t.type !== 'scene' && G.Life && G.Life.jarHome) G.Life.jarHome(v, null);
     Vg.endTask(v);
     t.age = 0; if (t.st === undefined) t.st = 0;
     v.task = t; v.act = ''; v.actT = 0;

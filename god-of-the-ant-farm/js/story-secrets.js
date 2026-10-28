@@ -555,7 +555,9 @@
     const s = c.story(); const p = c.v('p'); if (!s || !p) return 'sem';
     if (!c.take('p', { vital: true, force: true })) return 'ocupada';
     const k = c.v('k'); const home = G.S.buildings.get(p.home);
-    const at = home && home.built ? (Sn.spot(G.Village.frontTile(home)[0] + 0.5, G.Village.frontTile(home)[1] + 0.8, 1.5)) : [p.x, p.y];
+    // (no free place before the door — the front of the house taken —: where they stand; it was nothing, and the kin put
+    // beside it broke the scene, L-303)
+    const at = (home && home.built && Sn.spot(G.Village.frontTile(home)[0] + 0.5, G.Village.frontTile(home)[1] + 0.8, 1.5)) || [p.x, p.y];
     if (k) c.take('k', { keep: true });
     yield c.walk('p', at, { max: 60 });
     if (k) yield c.walk('k', Sn.spot(at[0] + 0.9, at[1] + 0.3, 1) || at, { max: 30 });
