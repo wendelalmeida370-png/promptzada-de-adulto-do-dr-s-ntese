@@ -144,7 +144,7 @@
     const w = planWall(s, f); if (!w) return null;
     if (mat) w.mat = mat;
     S.walls.push(w);
-    if (instant) for (const i of w.tiles) { if (S.wall[i] || (S.occ[i] && (S.buildings.get(S.occ[i]) || {}).blocks)) continue; const gate = w.gates.includes(i); S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; }
+    if (instant) for (const i of w.tiles) { const gate = w.gates.includes(i); if ((S.wall[i] && !(gate && S.wall[i] === 1)) || (S.occ[i] && (S.buildings.get(S.occ[i]) || {}).blocks)) continue; S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; }
     if (instant) { w.built = w.tiles.length; w.done = true; G.W.touchWalk(); }
     return w;
   };
@@ -176,9 +176,12 @@
       const k = w.mat === 'pedra' ? 'stone' : 'wood';
       if (f.stock[k] < 3 || G.R() > 0.35) continue;
       const i = w.tiles[w.built++];
-      if (i !== undefined && !S.wall[i] && !(S.occ[i] && (S.buildings.get(S.occ[i]) || {}).blocks)) {
+      // (a gate of the plan where a wall already stands — a neighbour's wall planned over the same tile and raised first, or an
+      // old one —: the gate is cut in it; the town's builders skipped any tile already walled, and the street the gate was for
+      // stayed shut, L-340)
+      const gate = w.gates.includes(i);
+      if (i !== undefined && (gate && S.wall[i] === 1 || !S.wall[i] && !(S.occ[i] && (S.buildings.get(S.occ[i]) || {}).blocks))) {
         f.stock[k] -= 2;
-        const gate = w.gates.includes(i);
         S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; G.W.touchWalk();
         const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
         G.FX && G.FX.dust(x, y, 2);

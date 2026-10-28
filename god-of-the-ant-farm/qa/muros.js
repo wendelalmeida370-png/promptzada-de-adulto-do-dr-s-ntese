@@ -13,6 +13,7 @@
 //      all, gave the busy side a third gate and the quiet side none — have a gate for their quietest walked side; and Jelling
 //      (anos100), where it was found, on its west side, while that world still has it
 //   4. a wall begun, saved and loaded halfway: the same tiles, the same gates; and then finished, its gates are gates on the map
+//   4b. a gate of the plan over a wall that already stands (a neighbour's, raised first): the gate is cut in it (L-340)
 //   5. the checker clean, no module error
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -32,7 +33,11 @@ for (const k of WORLDS) {
     // 1. each side its gate (or one at its corner), none side by side, at most four
     const sides = {}; for (const i of w.tiles) for (const sd of sideOf(w, i)) (sides[sd] = sides[sd] || []).push(i);
     const walked = i => S.road[i] || S.wear[i] > 22;
-    const miss = Object.keys(sides).filter(sd => { if (w.gates.some(g => sideOf(w, g).includes(sd))) return false; const ways = sides[sd].filter(walked); return !ways.length || !ways.every(i => w.gates.some(g => dist(i, g) <= 3)); });
+    // (a side with no street nor path of its own, only light wear: served where its busiest tile — where its people walk out, the
+    // planner's own measure — is a step from the next side's gate, as the planner keeps it; the old count asked every such side
+    // its own gate, more than the rule: Óstia's east in the mundial of 28/10, its wear at the corner by the south gate, T-180)
+    const busiest = sd => sides[sd].reduce((a, i) => (S.wear[i] > S.wear[a] ? i : a), sides[sd][0]);
+    const miss = Object.keys(sides).filter(sd => { if (w.gates.some(g => sideOf(w, g).includes(sd))) return false; const ways = sides[sd].filter(walked); if (!ways.length) { const b = busiest(sd); return !(S.wear[b] >= 3 && w.gates.some(g => dist(b, g) <= 3)); } return !ways.every(i => w.gates.some(g => dist(i, g) <= 3)); });
     const close = w.gates.some((g, a) => w.gates.some((h, b) => a < b && dist(g, h) < 4));
     if (miss.length || close || w.gates.length > 4) bad1.push(`${name}: lados sem portão ${miss.join('') || '-'}${close ? ', portões lado a lado' : ''}${w.gates.length > 4 ? ', ' + w.gates.length + ' portões' : ''}`);
     // 2. a side a street or a worn path crosses has its gate on one (where the people walk — the planner's own test)
@@ -72,6 +77,21 @@ ok('2 o portão do lado fica onde se anda (a rua ou o caminho gasto que o cruza)
     const up = w1 ? w1.tiles.filter(i => S.wall[i]) : []; const wrong = up.filter(i => (w1.gates.includes(i) ? !(S.wall[i] === 2 || S.wall[i] === 4) : S.wall[i] !== 1) && S.wall[i] !== 3);
     ok('4 um muro começado, salvo e carregado no meio: as mesmas casas e os mesmos portões, e no mapa o que o plano diz', built > 0 && same && !wrong.length, `${s.name}: ${w0.tiles.length} casas, ${w0.gates.length} portões; ${built} feitas antes do save${same ? '' : ' — mudou no load'}; no mapa ${up.length} de pé, ${wrong.length} fora do plano`);
   }
+}
+// 4b. a gate of the plan over a wall that already stands (L-340): a neighbour's wall raised first on one of the town's planned
+//     gates — the builders cut the gate in it; and a wall raised at once, the same (they skipped any tile already walled, and
+//     the street the gate was for stayed shut: Roma, anos100 of 28/10, under the plan of the town next door)
+for (const instant of [false, true]) {
+  M.pronto('cidade'); const S = G.S;
+  const s = [...S.settlements.values()].filter(q => !G.Siege.wallOf(q.id) && G.Fac.get(q.fac)).sort((a, b) => a.id - b.id).find(q => plan(q));
+  const name = `4b o portão do plano onde já há muro de pé: aberto nele (${instant ? 'o muro erguido de uma vez' : 'pelos construtores'})`;
+  if (!s) { ok(name, false, 'nenhuma cidade sem muro que possa erguer um'); continue; }
+  const g = plan(s).gates[0]; S.wall[g] = 1; S.wallFac[g] = 0; G.W.touchWalk();
+  const w = G.Siege.raiseWalls(s, null, instant); const at = w.tiles.indexOf(g);
+  // (the material the builders take, so they reach the gate)
+  if (!instant) G.Depot.make('f:' + w.fac, w.mat === 'pedra' ? 'stone' : 'wood', 400, { code: 'teste', part: true });
+  let n = 0; while (!instant && w.built <= at && !w.done && n++ < 6000) G.debug.step(0.5);
+  ok(name, w.gates.includes(g) && (S.wall[g] === 2 || S.wall[g] === 4), `${s.name}: o portão (${g % G.N},${(g / G.N) | 0}) ${w.gates.includes(g) ? 'no plano' : 'FORA do plano de novo'}; os construtores passaram por ele: ${w.built > at}; no mapa ${S.wall[g] === 2 || S.wall[g] === 4 ? 'portão' : S.wall[g] === 1 ? 'MURO' : S.wall[g]}`);
 }
 // 5. the checker, the module errors
 { const bad = QA.check().filter(q => q.sev <= 2); const e = M.erros(); ok('5 verificador e erros de módulo', !bad.length && !Object.keys(e.mod).length, bad.length ? bad.slice(0, 3).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : `limpo; erros de módulo: ${JSON.stringify(e.mod)}`); }
