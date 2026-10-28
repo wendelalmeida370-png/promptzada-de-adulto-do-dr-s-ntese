@@ -14,6 +14,7 @@
 //   7. o corpo: o lugar que as mãos tomaram (S.avatar.use) é dele; ninguém o recebe, nem o ponto onde ele está de pé
 //   8. o mesmo mundo, a mesma resposta: duas vezes, dentro e fora do passo; o lugar livre (In.freePlace); a altura da raiz
 //      (In.rootY): deitado no colchão, sentado com os pés no chão
+//   9. o caminho da porta ao lugar: os metros (In.walkIn, guardados com os lugares) e os pontos (In.pathIn), pelo lance
 //   node qa/lugares.js
 const M = require('./nodemundo.js');
 const G = M.load({});
@@ -129,12 +130,13 @@ const lying = pl => pl && (pl.st === 'sleep' || pl.st === 'sick') && pl.pose ===
   reset();
   const f = famWith('olaria', 'grego', p => p.items.filter(i => i.kind === 'roda-oleiro').length >= 2);
   const b = building('olaria', 'grego', f, 50, 10, 'S');
-  const ws = [1, 2, 3].map(k => person({ age: 25 + k, inside: b.id, job: b.id, task: { type: 'oficio', b: b.id, use: 'tornear' } }));
-  const kiln = person({ age: 40, inside: b.id, job: b.id, task: { type: 'oficio', b: b.id, use: 'cozer' } });
+  // (t.st is the task's step — a number, 2 or 3 inside —, never the 3D's state; t.pose is, where the gesture is not the use's)
+  const ws = [1, 2, 3].map(k => person({ age: 25 + k, inside: b.id, job: b.id, task: { type: 'oficio', b: b.id, use: 'tornear', st: 2 } }));
+  const kiln = person({ age: 40, inside: b.id, job: b.id, task: { type: 'oficio', b: b.id, use: 'cozer', st: 3, pose: 'low' } });
   const P = In.places(b); const bad = sound(b, P, 'olaria');
   const at = ws.map(v => P.by.get(v.id)); const wheels = at.filter(pl => pl && pl.use === 'tornear').map(pl => pl.item);
-  const kp = P.by.get(kiln.id);
-  ok('5a os ofícios pelo uso da tarefa', !bad.length && new Set(wheels).size === 2 && at.filter(pl => pl && pl.use === 'de-pe').length === 1 && kp && kp.use === 'cozer', `${f}: tornos ${wheels.join(', ')} (dois oficiais, cada um no seu); o terceiro ${at[2] ? at[2].use : '—'}; o forno ${kp ? kp.it.kind : '—'}; ${bad.slice(0, 2).join(' · ') || 'um ponto por pessoa'}`);
+  const kp = P.by.get(kiln.id); const sts = at.filter(pl => pl && pl.use === 'tornear').map(pl => pl.st);
+  ok('5a os ofícios pelo uso da tarefa', !bad.length && new Set(wheels).size === 2 && at.filter(pl => pl && pl.use === 'de-pe').length === 1 && kp && kp.use === 'cozer' && kp.st === 'low' && sts.every(x => typeof x === 'string'), `${f}: tornos ${wheels.join(', ')} (dois oficiais, cada um no seu, no estado ${sts.join(', ')} — o passo da tarefa não é estado); o terceiro ${at[2] ? at[2].use : '—'}; o forno ${kp ? kp.it.kind : '—'} (t.pose ${kp ? kp.st : '—'}); ${bad.slice(0, 2).join(' · ') || 'um ponto por pessoa'}`);
   // (and the piece the task names: t.item)
   reset();
   const wheel2 = In.plan(b).items.filter(i => i.kind === 'roda-oleiro')[1].id;
@@ -192,7 +194,8 @@ const lying = pl => pl && (pl.st === 'sleep' || pl.st === 'sick') && pl.pose ===
   reset();
   const fs = famWith('house', 'romano', p => p.items.filter(i => i.spots.some(q => (q.use === 'sentar' || q.use === 'comer') && !q.on && In.fitStand(p, i.lv, q.x, q.z, i.r))).length >= 1, 'S');
   const bs = building('house', 'romano', fs, 95, 10, 'S');
-  for (let k = 0; k < 4; k++) person({ age: 20 + k, home: bs.id, inside: bs.id, sleeping: true });
+  // (as many asleep as the house has beds, up to four: one more, lying on the floor by the table, would keep its seat — rightly)
+  for (let k = 0; k < Math.min(4, In.plan(bs).cap.places); k++) person({ age: 20 + k, home: bs.id, inside: bs.id, sleeping: true });
   const seats = In.table(bs).spots.filter(e => e.ok && (e.use === 'sentar' || e.use === 'comer')).length;
   const fp = In.freePlace(bs, ['sentar', 'comer']); const P = In.places(bs);
   const takenNow = fp && [...P.by.values()].some(pl => pl.it && pl.item === fp.item && pl.q === fp.q);
@@ -203,6 +206,21 @@ const lying = pl => pl && (pl.st === 'sleep' || pl.st === 'sick') && pl.pose ===
   const bed = { kind: 'cama' }, bench = { kind: 'banco' }, mat = { kind: 'esteira' };
   const y1 = In.rootY(bed, { on: 1 }, 'sleep'), y2 = In.rootY(bench, { on: 1 }, 'sit'), y3 = In.rootY(mat, { on: 1 }, 'sleep'), y4 = In.rootY(bed, { on: 0 }, 'idle');
   ok('8c a altura da raiz', y1 === 0.5 && y2 === 0 && Math.abs(y3 - 0.06) < 1e-9 && y4 === 0, `deitado na cama ${y1} m (o colchão), sentado no banco ${y2} m (os pés no chão, a bacia a ${In.SIT_H} m), na esteira ${y3} m, de pé ${y4} m`);
+}
+// ---------------------------------------------------------------- 9. the way from the door to the place
+{
+  reset();
+  const f = famWith('house', 'grego', p => p.levels.length >= 2 && p.items.some(i => i.lv >= 1 && i.places > 0) && p.items.some(i => i.lv === 0 && i.spots.some(q => (q.use === 'sentar' || q.use === 'comer' || q.use === 'cozinhar') && !q.on && In.fitStand(p, i.lv, q.x, q.z, i.r))), 'S');
+  const b = building('house', 'grego', f, 100, 10, 'S');
+  // (sleepers until one sleeps on a storey that is not the door's — the beds go out in the household's order)
+  const pln = In.plan(b); const e = pln.entrance; const lvIn = e.lv || 0;
+  const ups = [1, 2, 3, 4, 5, 6].map(k => person({ age: 20 + k, home: b.id, inside: b.id, sleeping: true })), down = person({ age: 31, home: b.id, inside: b.id, task: { type: 'goHome' } });
+  const P = In.places(b); const up = ups.find(v => { const q = P.by.get(v.id); return q && q.lv !== lvIn; }) || ups[0]; const pu = P.by.get(up.id), pd = P.by.get(down.id);
+  const wu = In.walkIn(b, pu), wd = In.walkIn(b, pd); const ru = In.pathIn(b, pu), rd = In.pathIn(b, pd);
+  const shape = r => r && r.pts.length >= 2 && Math.hypot(r.pts[0][0] - e.x, r.pts[0][1] - e.z) < 1e-6;
+  const ends = (r, pl) => r && Math.hypot(r.pts[r.pts.length - 1][0] - pl.x, r.pts[r.pts.length - 1][1] - pl.z) < 1e-6 && r.pts[r.pts.length - 1][2] === pl.lv;
+  const storeys = ru ? new Set(ru.pts.map(q => q[2])).size : 0;
+  ok('9 o caminho da porta ao lugar', pu && pd && pu.lv !== lvIn && wu > wd && wu < Infinity && shape(ru) && shape(rd) && ends(ru, pu) && ends(rd, pd) && storeys >= 2 && Math.abs(ru.len - wu) < 1.5, `${f}: à cama no piso ${pu ? pu.lv : '—'}, ${wu.toFixed(1)} m pelo walkIn e ${ru ? ru.len : '—'} m pelo pathIn (${ru ? ru.pts.length : 0} pontos, ${storeys} pisos); ao ${pd ? pd.use : '—'} embaixo, ${wd.toFixed(1)} m`);
 }
 console.log(Object.keys(G.modErr).length ? `FALHOU: erro de módulo ${JSON.stringify(G.modErr)}` : '');
 console.log(fails.length ? `FALHOU: ${fails.length} (${fails.join(', ')})` : 'PASSOU');
