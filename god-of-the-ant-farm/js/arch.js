@@ -460,15 +460,15 @@
       return;
     }
     if (st === 'asteca') {
-      const H = stepPyr(c, p, 0.95, 0.5, 4, 6.5, p.wl, p.wr, p.top, 0.2);
-      box(c, -0.36, -0.5, 0.36, 0.3, H, H + 9, p.wl, p.wr, p.top); // (its back on the back edge of the top: Forma's temple)
-      band(c, -0.36, -0.5, 0.36, 0.3, H + 6.5, H + 9, p.trim);
-      door(c, 0.3, -0.12, 0.12, H, H + 6, '#2a1c14', m);
+      const H = stepPyr(c, p, 0.95, 0.55, 4, 6.5, p.wl, p.wr, p.top, 0.2); // (its top 4.4 m square, the shrine's back on its back edge: Forma's temple)
+      box(c, -0.42, -0.55, 0.42, 0.32, H, H + 9, p.wl, p.wr, p.top);
+      band(c, -0.42, -0.55, 0.42, 0.32, H + 6.5, H + 9, p.trim);
+      door(c, 0.32, -0.12, 0.12, H, H + 6, '#2a1c14', m);
       // roof comb
       box(c, -0.3, -0.08, 0.3, 0.02, H + 9, H + 17, p.trim, shade(p.trim, 0.8), p.trim);
       for (let k = 0; k < 4; k++) { const q = P(-0.22 + k * 0.15, 0.02, H + 13); c.fillStyle = p.trim2; c.fillRect(q[0] - 0.8, q[1] - 1.5, 1.6, 3); }
-      for (const [bx, by] of [[-0.42, 0.42], [0.42, 0.42]]) { box(c, bx - 0.05, by - 0.05, bx + 0.05, by + 0.05, H, H + 2.5, '#6a5a50', '#4a3e36', '#7a6a60'); m.fires.push(P(bx, by, H + 3)); }
-      m.glow.push(P(0, 0.3, H + 3));
+      for (const [bx, by] of [[-0.47, 0.42], [0.47, 0.42]]) { box(c, bx - 0.05, by - 0.05, bx + 0.05, by + 0.05, H, H + 2.5, '#6a5a50', '#4a3e36', '#7a6a60'); m.fires.push(P(bx, by, H + 3)); }
+      m.glow.push(P(0, 0.32, H + 3));
       return;
     }
     if (st === 'nordico') { // stave church

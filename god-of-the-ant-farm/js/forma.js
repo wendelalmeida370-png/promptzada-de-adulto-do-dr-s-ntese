@@ -554,19 +554,19 @@
   // (the treads of a flight set into a stepped pyramid — Build3D's escada: no riser over 0.26 m —, from its foot: [{ r, y1 }])
   const stairTreads = e => { const run = e.a[1] - e.b[1], rise = e.b[2] - e.a[2], n = Math.max(2, Math.ceil(rise / 0.26)), u = e.a[0], hw = e.w / 2; const out = [];
     for (let k = 0; k < n; k++) out.push({ r: [u - hw, e.a[1] - run * (k + 1) / n, u + hw, e.a[1] - run * k / n], y1: e.a[2] + rise * (k + 1) / n }); return out; };
-  // the Aztec's: the pyramid of four levels of 6.5 px, from half side 0.95 to 0.5 tiles, the stair up its front set into it
-  // (0.2 tiles each side of the middle, its ramps of 0.06), the shrine on its top — 0.72 × 0.8 tiles, its back on the back
-  // edge of the top (inside, the image, the priest's place, the altar and the offering's in a row: P4's plan, D-093), 9 px,
-  // its band at the top, its door of 0.24 tiles and 6 px to the front —, the crest of 8 px on its roof, the two braziers before
-  // the shrine where the priests light them
+  // the Aztec's: the pyramid of four levels of 6.5 px, from half side 0.95 to 0.55 tiles, the stair up its front set into it
+  // (0.2 tiles each side of the middle, its ramps of 0.06), the shrine on its top — 0.84 × 0.87 tiles, its back on the back
+  // edge of the top (inside 2.76 × 2.88 m: the image, the priest's place, the altar with the way past it, the way in from the
+  // door — P4's plan, D-093 —; 0.92 m before it on the top), 9 px, its band at the top, its door of 0.24 tiles and 6 px to the
+  // front —, the crest of 8 px on its roof, the two braziers before the shrine's sides where the priests light them
   def('temple', 'asteca', L => {
-    const n = 4, h = px(6.5), H = n * h, e0 = 0.95 * TILE, e1 = 0.5 * TILE; const niveis = [];
+    const n = 4, h = px(6.5), H = n * h, e0 = 0.95 * TILE, e1 = 0.55 * TILE; const niveis = [];
     for (let k = 0; k < n; k++) niveis.push([e0 - (e0 - e1) * k / (n - 1), k * h, (k + 1) * h]);
-    const escada = { k: 'escada', a: [L / 2, at(L, 0.97), 0], b: [L / 2, at(L, 0.5), H], w: 0.4 * TILE, cor: 'wl', clara: 1.08, alfarda: 0.06 * TILE };
-    const z = 26, walls = blocoF(L, -0.36, -0.5, 0.36, 0.3, z, z + 9, WALL, { mat: 'parede' });
-    const els = [{ k: 'escalonada', c: [L / 2, L / 2], niveis, cor: WALL, friso: px(0.8), mat: 'stucco' }, escada, walls, faixaF(L, -0.36, -0.5, 0.36, 0.3, z + 6.5, z + 9, 'trim'),
-      doorF(L, 0.3, -0.12, 0.12, z, z + 6, '#2a1c14'), blocoF(L, -0.3, -0.08, 0.3, 0.02, z + 9, z + 17, ['trim', 'trim', 'trim'], { crista: true })];
-    for (const bx of [-0.42, 0.42]) els.push(blocoF(L, bx - 0.05, 0.37, bx + 0.05, 0.47, z, z + 2.5, ['#6a5a50', '#4a3e36', '#7a6a60']), { k: 'braseiro', p: [at(L, bx), at(L, 0.42), px(z + 2.5)], r: 0.15, uso: 'acender' });
+    const escada = { k: 'escada', a: [L / 2, at(L, 0.97), 0], b: [L / 2, at(L, 0.55), H], w: 0.4 * TILE, cor: 'wl', clara: 1.08, alfarda: 0.06 * TILE };
+    const z = 26, walls = blocoF(L, -0.42, -0.55, 0.42, 0.32, z, z + 9, WALL, { mat: 'parede' });
+    const els = [{ k: 'escalonada', c: [L / 2, L / 2], niveis, cor: WALL, friso: px(0.8), mat: 'stucco' }, escada, walls, faixaF(L, -0.42, -0.55, 0.42, 0.32, z + 6.5, z + 9, 'trim'),
+      doorF(L, 0.32, -0.12, 0.12, z, z + 6, '#2a1c14'), blocoF(L, -0.3, -0.08, 0.3, 0.02, z + 9, z + 17, ['trim', 'trim', 'trim'], { crista: true })];
+    for (const bx of [-0.47, 0.47]) els.push(blocoF(L, bx - 0.05, 0.37, bx + 0.05, 0.47, z, z + 2.5, ['#6a5a50', '#4a3e36', '#7a6a60']), { k: 'braseiro', p: [at(L, bx), at(L, 0.42), px(z + 2.5)], r: 0.15, uso: 'acender' });
     return { els, door: { u: L / 2, w: 0.24 * TILE, y0: px(z), y1: px(z + 6) },
       body: { walls, base: { r: rect(L, -0.95, -0.95, 0.95, 0.95), y1: H, degraus: niveis.map(([s, , yb]) => ({ r: [L / 2 - s, L / 2 - s, L / 2 + s, L / 2 + s], y1: yb })) }, steps: stairTreads(escada) } };
   });
