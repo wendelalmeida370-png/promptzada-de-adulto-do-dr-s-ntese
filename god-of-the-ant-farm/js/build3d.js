@@ -1499,6 +1499,10 @@ float m3scale(float p) {
     for (const [a, b2, o] of sides) K.quad([a[0], y0, a[1]], [b2[0], y0, b2[1]], [b2[0], y1, b2[1]], [a[0], y1, a[1]], side, o);
     if (top) K.quad([x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1], top, UP);
   }
+  // (does a block of a form stand on another part of it — the top of a block, of a battered one, of a level of a stepped mass
+  // — at its middle: its underside hidden there)
+  const standsOn = (F, e) => { const u = (e.r[0] + e.r[2]) / 2, v = (e.r[1] + e.r[3]) / 2; const on = r => u > r[0] && u < r[2] && v > r[1] && v < r[3];
+    return F.els.some(q => q !== e && (((q.k === 'bloco') && Math.abs(q.y1 - e.y0) < 0.02 && on(q.r)) || (q.k === 'talude' && Math.abs(q.y1 - e.y0) < 0.02 && on(q.r1)) || (q.k === 'escalonada' && q.niveis.some(([s, , yb]) => Math.abs(yb - e.y0) < 0.02 && on([q.c[0] - s, q.c[1] - s, q.c[0] + s, q.c[1] + s]))))); };
   // (where a flight up the front is — its v — at a height: on the line from its foot to its top)
   const stairV = (st, y) => st.a[1] - (st.a[1] - st.b[1]) * (y - st.a[2]) / (st.b[2] - st.a[2]);
   // (a round of n segments on a plane: its middle c, its normal out, r; the fan of triangles, seen from out)
@@ -1512,6 +1516,7 @@ float m3scale(float p) {
     bloco(K, e, X) {
       const r = X.rect(e.r), y0 = X.foot(e.y0), y1 = X.Y(e.y1); const c = e.cor || ['wl', 'wr', 'top']; const cut = e.topCut ? X.rect(e.topCut) : null;
       K.as(e.crista ? 'stucco' : X.mat(e, e.tabuas ? (K.st === 'nordico' ? 'plankV' : stuff(K.b).wall) : null), () => { formBox(K, r[0], r[1], r[2], r[3], y0, y1, X.col(c[0]), cut ? null : X.col(c[2] || c[0]));
+        if (e.y0 > 0.05 && !standsOn(X.F, e)) K.quad([r[0], y0, r[1]], [r[2], y0, r[1]], [r[2], y0, r[3]], [r[0], y0, r[3]], dim(rgbOf(X.col(c[0])), 0.8), DOWN);
         // (its top but over topCut: a shell's walls under it, the roof's underside their ceiling)
         if (cut) for (const q of cutRect(r, [cut])) K.quad([q[0], y1, q[1]], [q[2], y1, q[1]], [q[2], y1, q[3]], [q[0], y1, q[3]], X.col(c[2] || c[0]), UP); });
       // (the god's line under each level's top: a course a little darker, standing out a finger)
@@ -2611,6 +2616,9 @@ float m3scale(float p) {
   // joists under it
   function inFloor(K, plan, l, below) {
     const holes = plan.stairs.filter(s => s.lv1 === l.lv && s.hole).map(s => s.hole);
+    // (and where the steps come up to it from the street — a storey over the ground: a flight cut into its base, the feet on
+    // its treads, never on a floor over them; the steps down into a sunken floor stand on it)
+    const steps = l.y > 0.05 ? plan.stairs.filter(s => s.kind === 'degraus' && s.lv1 === l.lv).map(s => s.r) : [];
     // (over a court open to the sky a storey has no floor — its grid has none there: the court's own storey has its paving)
     const court = plan.shell.court; if (court && courtOpenOn(plan, l, court)) holes.push(court);
     const [pat, col] = floorMat(K, l); const y = l.y + FLOOR_UP;
@@ -2618,10 +2626,10 @@ float m3scale(float p) {
       const sh = plan.shell, ri = sh.r - sh.t + 0.02, n = 22; K.as(pat, () => { for (let k = 0; k < n; k++) { const a0 = TAU * k / n, a1 = TAU * (k + 1) / n; K.tri([sh.cx, y, sh.cz], [sh.cx + Math.cos(a0) * ri, y, sh.cz + Math.sin(a0) * ri], [sh.cx + Math.cos(a1) * ri, y, sh.cz + Math.sin(a1) * ri], col, UP); } });
       return;
     }
-    const pieces = cutRect(l.area, holes);
+    const pieces = cutRect(l.area, holes.concat(steps));
     // (and the rooms beyond the storey's own area — an annex against its side)
     const A0 = l.area; const extra = plan.rooms.filter(m => m.lv === l.lv && (m.r[0] < A0[0] - 0.05 || m.r[1] < A0[1] - 0.05 || m.r[2] > A0[2] + 0.05 || m.r[3] > A0[3] + 0.05) && !clipR(m.r, A0));
-    K.as(pat, () => { for (const r of pieces) flatQ(K, r, y, col, 1); for (const m of extra) for (const r of cutRect(m.r, holes)) flatQ(K, r, y, col, 1); });
+    K.as(pat, () => { for (const r of pieces) flatQ(K, r, y, col, 1); for (const m of extra) for (const r of cutRect(m.r, holes.concat(steps))) flatQ(K, r, y, col, 1); });
     if (!below) return;
     // (the slab the plan gives the storey — from y − slab to y —, the joists within it, their feet at the ceiling of the room
     // below — the boards between them a hand higher: the headroom drawn is the plan's)
@@ -2960,6 +2968,10 @@ float m3scale(float p) {
     put(0, -0.05, d / 2, w, 0.05, d, [140, 108, 74], 'plankH'); for (const e of [-0.3, 0.3]) put(e * w, -0.09, d / 2, 0.08, 0.04, d - 0.1, IDARK, 'beam'); put(0, 0, d - 0.12, 0.12, 0.008, 0.05, IIRON, 'iron');
     g.pat = 0; return g;
   }
+  // (a wall of a plan the form draws: on a form's body, out of its shell — the pylon's gate, the rows of a porch's or a
+  // peristyle's columns —: the form stands there, the plan's walls are its way through; the inside does not draw it again)
+  function formWall(b, plan, w) { const sh = plan.shell; return sh.kind === 'rect' && !!bodyForm(b) && !inRect(sh.r, (w.a[0] + w.b[0]) / 2, (w.a[1] + w.b[1]) / 2); }
+  B3.formWall = formWall; // (for the proofs)
   B3.interior = function (plan, b, o) {
     o = o || {}; if (!plan || !plan.levels || !plan.levels.length || !plan.shell) return null;
     const levels = plan.levels.slice().sort((p, q) => p.y - q.y); const fine = o.fine !== undefined ? !!o.fine : undefined; const fill = o.fill || null;
@@ -2976,7 +2988,7 @@ float m3scale(float p) {
     for (const l of levels) {
       const K = Ks[l.lv]; const g = out.lv[l.lv];
       inFloor(K, plan, l, under(l));
-      for (const w of plan.walls) if (w.lv === l.lv && l.kind !== 'terraco') inWall(K, plan, w, l);
+      for (const w of plan.walls) if (w.lv === l.lv && l.kind !== 'terraco' && !formWall(b, plan, w)) inWall(K, plan, w, l);
       if (round && l.lv === levels[0].lv) inRing(K, plan, l);
       for (const s of plan.stairs) if ((s.kind === 'degraus' ? s.lv1 : s.lv0) === l.lv && !outSteps.has(s)) inStair(K, plan, s);
       for (const it of plan.items) {
