@@ -42,15 +42,19 @@ const stop = () => { IN.mx = 0; IN.mz = 0; IN.run = false; };
 // the body walked toward a point (metres), as a player holds the stick — and round what stops the feet on the way, as a player
 // steers: a boulder lying on the world's path (ground the world walks; a stone the body climbs when it can, and goes round when
 // it cannot — Avatar's ledge), a pier: the feet stopped far from the point, a step aside and on again, farther and to the other
-// side the next time (T-205); a building is the place itself, or its wall: there the walk ends, as before. And along the
-// world's path to a place (tiles)
-function walkTo(X, Z, max, near) {
+// side the next time (T-205); and the furniture of a lot the world walks across — the stalls at the edge of an open feira
+// (D-044): the world's path crosses the lot by its tiles, and in Birka of the generation-6 metropolis it ran over the feira's
+// edge, the body stopped at a stall (the block «building») 8,7 tiles from the pile — goes round as well (T-231). A stride from
+// the point it is the place itself, or its wall: there the walk ends, as before. And along the world's path to a place (tiles)
+// (each: asked after every frame of the walk — true ends it there, as a player stops when the prompt comes)
+function walkTo(X, Z, max, near, each) {
   const st = G.Avatar.state(); let k = 0, stuck = 0, last = [st.X, st.Z], turns = 0, aside = 0, side = 1, lim = max || 400;
   for (; k < lim; k++) {
     const dx = X - st.X, dz = Z - st.Z; if (Math.hypot(dx, dz) < (near || 0.3)) break;
     IN.camYaw = Math.atan2(dz, dx) + (aside > 0 ? side * Math.PI / 2 : 0); if (aside > 0) aside--; IN.mz = 1; IN.mx = 0; frame();
+    if (each && each()) break;
     if (Math.hypot(st.X - last[0], st.Z - last[1]) < 0.004) {
-      if (++stuck > 25) { if (turns >= 6 || Math.hypot(X - st.X, Z - st.Z) < 1.5 || !(st.block === 'ledge' || st.block === 'wall')) break; turns++; side = -side; aside = 30 * turns; lim += aside + 30; stuck = 0; }
+      if (++stuck > 25) { if (turns >= 6 || Math.hypot(X - st.X, Z - st.Z) < 1.5 || !(st.block === 'ledge' || st.block === 'wall' || st.block === 'building')) break; turns++; side = -side; aside = 30 * turns; lim += aside + 30; stuck = 0; }
     } else stuck = 0;
     last = [st.X, st.Z];
   }
@@ -79,8 +83,30 @@ function throughGates(x0, y0, pts) {
   }
   return out;
 }
+// (the way for the body's feet, as a player picks one: the ground the world walks, but not the lot of an open building with its
+// furniture standing in it — the stalls at the edges of a feira (D-044), which the world crosses by its tiles and the body goes
+// round —, nor a cliff; a diagonal step only where both tiles beside it are free, and straight legs where the body clears every
+// tile it may not tread by a hand's breadth. In Birka of the generation-6 metropolis the world's path from the port's store to
+// the pile ran across the feira, and the body, stopped at a stall and stepping aside, ended against a cliff: T-231)
+function feetPath(x0, y0, x1, y1) {
+  const N = G.N, s = W.idx(x0, y0), t = W.idx(x1, y1);
+  const free = i => { if (i === t || i === s) return true; if (!W.walkable(i) || S.cliff[i]) return false; const b = S.occ[i] ? S.buildings.get(S.occ[i]) : null; const pl = b ? G.Space.planNow(b) : null; return !(pl && pl.shell && pl.shell.kind === 'aberta'); }; // (the plan made now if it is not yet: the body meets its furniture as it comes)
+  const prev = new Map([[s, -1]]), q = [s]; let found = s === t ? s : -1;
+  for (let h = 0; h < q.length && found < 0; h++) { const a = q[h], ax = a % N, ay = (a / N) | 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const nx = ax + dx, ny = ay + dy; if (!W.inb(nx, ny)) continue; const j = W.idx(nx, ny);
+      if (prev.has(j) || !free(j) || (dx && dy && !(free(W.idx(nx, ay)) && free(W.idx(ax, ny))))) continue;
+      prev.set(j, a); if (j === t) { found = j; break; } q.push(j); } }
+  if (found < 0) return null;
+  const cells = []; for (let c = found; c >= 0; c = prev.get(c)) cells.unshift(c);
+  const pts = cells.slice(1).map(c => [c % N + 0.5, ((c / N) | 0) + 0.5]); if (pts.length) pts[pts.length - 1] = [x1, y1];
+  const clears = (ax, ay, bx, by) => { const n = Math.ceil(Math.hypot(bx - ax, by - ay) * 10); for (let k = 0; k <= n; k++) { const x = ax + (bx - ax) * k / n, y = ay + (by - ay) * k / n; for (const [ox, oy] of [[0, 0], [0.15, 0], [-0.15, 0], [0, 0.15], [0, -0.15]]) if (!free(W.idx(x + ox, y + oy))) return false; } return true; };
+  const out = []; let a = [x0, y0];
+  for (let k = 0; k < pts.length;) { let j = pts.length - 1; while (j > k && !clears(a[0], a[1], pts[j][0], pts[j][1])) j--; out.push(pts[j]); a = pts[j]; k = j + 1; }
+  return out;
+}
 function walkPath(x, y, near) {
-  const v = G.Possess.body(); const p = W.findPath(v.x, v.y, x, y, true, 30000); if (!p) return -1;
+  const v = G.Possess.body(); const p = feetPath(v.x, v.y, x, y); if (!p) return -1;
   // (the path ends beside the place — the tile next to it —; the last steps go straight to it, to near metres of it)
   for (const w of throughGates(v.x, v.y, p)) walkTo(w[0] * TL, w[1] * TL, legFrames(w[0] * TL, w[1] * TL, 300), 0.35);
   walkTo(x * TL, y * TL, legFrames(x * TL, y * TL, 200), Math.max(0.3, near || 0));
@@ -141,6 +167,21 @@ const op = god(() => { P.landCatch(dock, 'food', 32, 'arenque', '#a8c0d0', 0); r
 for (let k = 0; k < 10; k++) frame();
 const opCrates = () => (dock.crates || []).filter(c => c.op === op.id);
 const drawnOf = () => { const ids2 = new Set(opCrates().map(c => c.id)); return P3.lyingOf(dock.id).filter(e => ids2.has(e[4])); };
+// (the catch of the case on the quay while the body comes to it: the town's carriers work this unloading too — its porters, and
+// in Birka of the generation-6 metropolis its fishermen —, a crate one of them goes for is his (Porto.claim), and on that busy
+// quay they took seven of the eight while the body walked, the last one spoken for: then another boat lands its catch on the
+// same quay, into the same unloading while it is on — the world's own landing, as part 8's (T-205) —: T-231)
+const freeCrates = () => opCrates().filter(c => !c.by || c.by === v.id);
+const freeDrawn = () => { const ids2 = new Set(freeCrates().map(c => c.id)); const st = G.Avatar.state(); return P3.lyingOf(dock.id).filter(e => ids2.has(e[4])).sort((a, b) => Math.hypot(a[0] - st.X, a[2] - st.Z) - Math.hypot(b[0] - st.X, b[2] - st.Z)); };
+const topUp = n => { if (A.live(op) && freeCrates().length < n) { god(() => P.landCatch(dock, 'food', 32, 'arenque', '#a8c0d0', 0)); still(4); } };
+// (and for the proofs that only look — the world stopped —, the people and the animals about the pile put far away and back:
+// someone standing at the pile is whom «E» means — a child playing by it, Cássio of Birka, took it on three sides: T-089, T-231)
+const away = [];
+const clear = () => { const dr = drawnOf(); if (!dr.length) return; const cx = dr.reduce((a, e) => a + e[0], 0) / dr.length, cz = dr.reduce((a, e) => a + e[2], 0) / dr.length;
+  for (const a of S.animals.values()) if (Math.hypot(a.x * TL - cx, a.y * TL - cz) < 9) away.push([a, a.x, a.y]);
+  for (const o of S.villagers.values()) if (o !== v && !o.inside && Math.hypot(o.x * TL - cx, o.y * TL - cz) < 9) away.push([o, o.x, o.y]);
+  god(() => { for (const [o] of away) { o.x += 60; o.y += 60; } }); };
+const back = () => { god(() => { for (const [o, x, y] of away) { o.x = x; o.y = y; } }); away.length = 0; };
 ok('1. o barco descarrega: uma descarga do mundo, as caixas no cais, desenhadas onde estão', !!op && opCrates().length >= 4 && drawnOf().length === opCrates().length,
   op ? `descarga #${op.id} (${A.STATES[op.st]}); ${opCrates().length} caixas de peixe no cais, ${drawnOf().length} desenhadas` : 'nenhuma');
 
@@ -190,13 +231,15 @@ const snap = () => JSON.stringify([dock.crates, op, S.loose, v.carry, S.avatar.a
   ok('3. de um lugar perto da pilha de onde os pés não chegam a ela, nenhuma pista e nenhum chamado', !!L0 && !!cut && (!made || isle) && !Lc && !cc && !!I.lead(v), cut ? `${made ? (isle ? 'a ilhota do deus, desfeita depois: ' : 'a ilhota do deus NÃO cortou o lugar: ') : ''}em ${cut.map(n => n.toFixed(1))}, a ${(G.dist(cut[0], cut[1], sp0[0], sp0[1]) * TL).toFixed(0)} m das caixas: ${Lc ? '«' + Lc.txt + '»' : 'sem pista'}, ${cc ? 'chamado' : 'sem chamado'}; de volta: ${I.lead(v) ? 'a pista' : 'nada'}` : 'nenhum lugar assim perto deste cais');
 }
 // ------------------------------ 4. following the lead to the pile: the prompt comes at arm's length of the crates ------------------------------
-{ const p0 = G.Avatar.pos(); const L = I.lead(v, p0.X, p0.Z); const st = G.Avatar.state();
-  // (along the world's path to the quay's spot for the crates — the pile is drawn around it —, as a player walks up to it: the
-  // first moment the prompt is the crate's, how far the nearest crate drawn is)
-  const pth = L ? W.findPath(v.x, v.y, sp0[0], sp0[1], true, 30000) : null; let first = null, b = null;
+{ topUp(6); const p0 = G.Avatar.pos(); const L = I.lead(v, p0.X, p0.Z); const st = G.Avatar.state();
+  // (along the world's ground to the quay's spot for the crates — the pile is drawn around it —, by the way a player's feet take
+  // (feetPath, T-231): the first moment the prompt is the crate's, how far the nearest crate drawn is)
+  const pth = L ? feetPath(v.x, v.y, sp0[0], sp0[1]) : null; let first = null, b = null;
   const nearC = () => P3.lyingOf(dock.id).reduce((m, e) => Math.min(m, Math.hypot(e[0] - st.X, e[2] - st.Z)), 99);
   const pts = throughGates(v.x, v.y, pth || []).map(w => [w[0] * TL, w[1] * TL]).concat(pth ? [[sp0[0] * TL, sp0[1] * TL]] : []);
-  walk: for (const [X, Z] of pts) for (let k = 0, kk = legFrames(X, Z, 300); k < kk; k++) { if (Math.hypot(X - st.X, Z - st.Z) < 0.35) break; IN.camYaw = Math.atan2(Z - st.Z, X - st.X); IN.mz = 1; frame(); b = I.best(); if (b && b.id === 'atividade' && /^Pegar /.test(b.label)) { first = nearC(); break walk; } }
+  // (each leg as walkTo walks it, round what stops the feet as a player steers — the stalls of Birka's feira on the path: T-231)
+  const came = () => { b = I.best(); if (b && b.id === 'atividade' && /^Pegar /.test(b.label)) { first = nearC(); return true; } return false; };
+  for (const [X, Z] of pts) { walkTo(X, Z, legFrames(X, Z, 300), 0.35, came); if (first !== null) break; }
   stop(); for (let q = 0; q < 4; q++) frame();
   ok('4. seguindo a pista pelo caminho do mundo, «E — Pegar a caixa» aparece ao chegar a uns 2,5 m das caixas desenhadas', !!L && first !== null && first <= 2.7 && first >= 1.5, `pista a ${L ? L.d.toFixed(0) : '?'} m; ${pth ? pth.length + ' passos do caminho' : 'sem caminho'}; «${b ? b.label : '-'}» ${first !== null ? 'a ' + first.toFixed(2) + ' m da caixa mais perto' : 'não apareceu'}`);
 }
@@ -205,7 +248,7 @@ let lastBest = null;
 { const dr = drawnOf(); const cx = dr.reduce((a, e) => a + e[0], 0) / dr.length, cz = dr.reduce((a, e) => a + e[2], 0) / dr.length;
   const nearest = (X, Z) => Math.min(...dr.map(e => Math.hypot(e[0] - X, e[2] - Z)));
   const at = (dir, m) => { let X = cx, Z = cz; for (let k = 0; k < 200 && nearest(X, Z) < m; k++) { X += Math.cos(dir) * 0.02; Z += Math.sin(dir) * 0.02; } return [X, Z]; };
-  const sides = [], miss = []; let far = 0, farN = 0;
+  const sides = [], miss = []; let far = 0, farN = 0; clear();
   for (let k = 0; k < 8; k++) {
     const dir = k / 8 * Math.PI * 2; const [X, Z] = at(dir, 2.3); const x = X / TL, y = Z / TL;
     if (!dry(x, y) || !W.canWalk(sp0[0], sp0[1], x, y, true) || !G.Avatar.place(x, y)) continue;
@@ -214,6 +257,7 @@ let lastBest = null;
     if (good) { sides.push(k); lastBest = { b, x, y }; } else { const ctx = I.ctx(); const o = b && b.t && b.t.o && b.t.o.id ? S.villagers.get(b.t.o.id) : null; const sc = (X1, Z1) => { const dx = X1 - ctx.X, dz = Z1 - ctx.Z; const ang = Math.abs(Math.atan2(Math.sin(Math.atan2(dz, dx) - ctx.yaw), Math.cos(Math.atan2(dz, dx) - ctx.yaw))); return `${Math.hypot(dx, dz).toFixed(2)} m ${(ang * 57.3).toFixed(0)}°`; }; const near = P3.lyingOf(dock.id).reduce((m, e) => Math.min(m, Math.hypot(e[0] - ctx.X, e[2] - ctx.Z)), 9); miss.push(`${k}: ${b ? b.label : 'nada'}${o ? ' (' + sc(b.t.X, b.t.Z) + ', ' + (o.task ? o.task.type + '.' + o.task.st : '-') + ')' : ''} caixa a ${near.toFixed(2)}`); }
     const [X2, Z2] = at(dir, 3.4); if (dry(X2 / TL, Z2 / TL) && G.Avatar.place(X2 / TL, Z2 / TL)) { still(4); faceTo(cx, cz); still(2); const b2 = I.best(); farN++; if (b2 && b2.id === 'atividade' && /^Pegar /.test(b2.label)) far++; }
   }
+  back();
   ok('4. «E — Pegar a caixa» a 2,3 m das caixas desenhadas, de cada lado da pilha onde se pode estar', sides.length >= 3 && !miss.length, `${sides.length} lados com o aviso${miss.length ? '; sem: ' + miss.join(' · ') : ''}; ${lastBest ? '«' + lastBest.b.label + '»' : ''}`);
   ok('4. e não a 3,4 m', farN >= 2 && far === 0, `${far} de ${farN} lados a 3,4 m com o aviso`);
 }
@@ -221,10 +265,11 @@ let lastBest = null;
 // ------------------------------ 5. the lift ------------------------------
 let cid = 0;
 if (lastBest) {
-  G.Avatar.place(lastBest.x, lastBest.y); still(4); const dr = drawnOf(); faceTo(dr[0][0], dr[0][2]); still(2);
-  // (a porter may take the crate offered between the key and the contact — the world says so —: E again, as a player does)
+  G.Avatar.place(lastBest.x, lastBest.y); still(4); topUp(3);
+  // (a porter may take the crate offered between the key and the contact — the world says so —: E again, as a player does,
+  // turned each time to a crate nobody else holds — the quay's carriers claim theirs as they go for them: T-231)
   let b = null, hand = null, r = null, tries = 0; const all = [];
-  for (; tries < 3 && !(v.carry && v.carry.n > 0); tries++) { b = I.best(); if (!(b && b.id === 'atividade' && /^Pegar /.test(b.label))) break; cid = b.t.o.cid; hand = b.t.hand; r = doIt(b); all.push(...said); }
+  for (; tries < 3 && !(v.carry && v.carry.n > 0); tries++) { const e5 = freeDrawn()[0] || drawnOf()[0]; if (e5) { faceTo(e5[0], e5[2]); still(2); } b = I.best(); if (!(b && b.id === 'atividade' && /^Pegar /.test(b.label))) break; cid = b.t.o.cid; hand = b.t.hand; r = doIt(b); all.push(...said); }
   said.length = 0; said.push(...all);
   const H = P3.look(v).held;
   ok('5. a caixa oferecida vem às mãos no contato do estivador, e sai do cais e do desenho', !!r && r.ok && !!v.carry && v.carry.op === op.id && !opCrates().some(c => c.id === cid) && !P3.lyingOf(dock.id).some(e => e[4] === cid) && !!H && H.form === 'caixaPeixe' && !!hand,
