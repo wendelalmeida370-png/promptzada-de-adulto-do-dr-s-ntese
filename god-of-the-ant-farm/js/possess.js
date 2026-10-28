@@ -207,7 +207,9 @@
   Po.live = function (v, dt) {
     // (a task ended by someone else without another given: the body is still the player's)
     if (!v.task) v.task = mark();
-    if (v.sleeping && (v.energy >= 99.5 || (v.energy > 70 && G.S.time > 0.05 && G.S.time < 0.3))) Po.wake(v);
+    // (asleep, it wakes as anyone of the world in its state would — by day, its strength back: villagers.js runSleep —, never in
+    // the night however rested, and never for hunger: the world does not wake the body, L-171 — L-341)
+    if (v.sleeping && !G.isNight() && v.energy >= 96) Po.wake(v);
     reach(v); duty(v);
     void dt;
   };

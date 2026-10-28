@@ -16,6 +16,7 @@
   if (G.Village.forget && !G.Village.forget.qa) { const f = G.Village.forget; G.Village.forget = function () { const r = f.apply(this, arguments); QA.memAfter = staleDead(); return r; }; G.Village.forget.qa = true; }
 
   // ---------------- invariants ----------------
+  let wallTurn = 0; // (which standing wall this round asks whether it shuts a building of its town off: one a round, L-344)
   QA.check = function (opts) {
     opts = opts || {};
     const s = S(); const out = []; const N = G.N;
@@ -166,6 +167,15 @@
       let by = null; for (let ty = b.y - 1; ty <= b.y + b.h && !by; ty++) for (let tx = b.x - 1; tx <= b.x + b.w; tx++) { if (ty >= b.y && ty < b.y + b.h && tx >= b.x && tx < b.x + b.w) continue; if (tx < 0 || ty < 0 || tx >= G.N || ty >= G.N) continue; const o = s.buildings.get(s.occ[ty * G.N + tx]); if (o && o.blocks && o !== b) { by = o; break; } }
       if (by) add('city', 3, `quarteirão#${b.id}: ${by.type}#${by.id} encostado nele (o anel de passagem fechou)`);
     }
+    // a town's wall never stands inside another town's walls: there it shuts a pocket with no gate of either (L-342)
+    // a gate whose way through is shut by blocking buildings on both sides of the wall line (L-348)
+    { const blk = j => { const o = s.occ[j]; const b = o && s.buildings.get(o); return !!(b && b.blocks); }; const wl = j => s.wall[j] === 1 || s.wall[j] === 2 || s.wall[j] === 4;
+      for (let i = 0; i < N * N; i++) { const w = s.wall[i]; if (w !== 2 && w !== 4) continue; const x = i % N, y = (i / N) | 0; if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) continue;
+        const ew = wl(i - 1) && wl(i + 1), ns = wl(i - N) && wl(i + N); const a = ew ? [i - N, i + N] : ns ? [i - 1, i + 1] : null;
+        if (a && blk(a[0]) && blk(a[1])) add('city', 3, `o portão em (${x},${y}) está fechado por prédios dos dois lados`); } }
+    // a building of a town shut off by the town's own standing wall, where a gate in it would open the way (L-344)
+    if (G.Siege && G.Siege.openWays) { const ws = (s.walls || []).filter(w => w.done && s.settlements.has(w.set)); if (ws.length) { const w = ws[(wallTurn++) % ws.length], st = s.settlements.get(w.set); const o = G.Siege.openWays(st, w, true); if (o.length) add('city', 3, `o muro de ${st.name} (#${w.id}) fecha ${o.length} prédio(s) da cidade: um portão em (${o[0] % N},${(o[0] / N) | 0}) abriria o caminho`); } }
+    if (G.Siege && G.Siege.walledIn) for (const w of s.walls || []) { const st = s.settlements.get(w.set); for (const i of w.tiles) if (s.wall[i] && s.wall[i] !== 3 && G.Siege.walledIn(i, w)) { add('city', 3, `o muro de ${st ? st.name : '#' + w.set} (#${w.id}) tem casa de pé em (${i % G.N},${(i / G.N) | 0}), dentro do muro de outra cidade`); break; } }
     { let ghost = 0, ex = 0; for (let i = 0; i < s.occ.length; i++) { const o = s.occ[i]; if (o && !s.buildings.has(o)) { ghost++; ex = o; } } if (ghost) add('city', 2, `${ghost} casa(s) do mapa ocupadas por prédio inexistente #${ex}`); }
     // ---- the memory of the dead: cemeteries hold twelve, a grave and its record agree, nobody is kept past three
     // generations unless they mattered or the living are their children and grandchildren (L-072)
@@ -429,6 +439,8 @@
       if (!crew.length && !sh.length) add('sea', 2, `expedição ${e.name} (${e.st}): viva sem gente nem navio`);
       if (!G.Fac.get(e.fac) || !G.Fac.get(e.fac).alive) add('sea', 2, `expedição ${e.name}: povo extinto`);
       if (e.t0 !== undefined && s.day - e.t0 > 25) add('sea', 3, `expedição ${e.name}: há ${s.day - e.t0} anos (${e.st})`);
+      // (on the quay, the crew can walk to it: L-346)
+      if ((e.st === 'prep' || e.st === 'reunir' || e.st === 'embarque') && e.port) for (const v of crew.map(P)) if (v && !v.aboard && !G.W.reaches(v, e.port[0], e.port[1])) add('sea', 3, `expedição ${e.name} (${e.st}): ${v.name} #${v.id}, da tripulação, não chega a pé ao cais`, v.id);
     }
     for (const fl of (s.fleets || [])) {
       if (fl.st === 'fim') continue;

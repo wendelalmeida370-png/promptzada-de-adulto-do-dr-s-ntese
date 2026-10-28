@@ -82,7 +82,10 @@ if (cands.length < 3) { ok('um estivador para viver e dois carregadores do mundo
 let v = cands[0]; const p1 = cands[1], p2 = cands[2]; for (const o of [v, p1, p2]) clearHands(o);
 const near = []; for (let r = 2; r <= 4 && near.length < 4; r += 0.5) for (let k = 0; k < 24 && near.length < 4; k++) { const a = k / 24 * Math.PI * 2; const x = sp0[0] + Math.cos(a) * r, y = sp0[1] + Math.sin(a) * r; if (dry(x, y) && W.canWalk(sp0[0], sp0[1], x, y, false)) near.push([x, y]); }
 if (near.length < 3) { ok('lugares perto do cais', false, near.length); process.exit(1); }
-const bring = (o, at) => god(() => { G.Vg.endTask(o); o.x = at[0]; o.y = at[1]; o.path = null; });
+// (brought out of a cave first, as the god's hand would: a porter who went down one by himself between two parts — the
+// world's people explore — and was only put by the pile stayed underground, and the caves let him out a second later at the
+// mouth nearest, 23 tiles away: T-154)
+const bring = (o, at) => god(() => { if (o.ug && G.Caves) G.Caves.exitNow(o); G.Vg.endTask(o); o.x = at[0]; o.y = at[1]; o.path = null; });
 bring(v, near[0]); bring(p1, near[1]); bring(p2, near[2]);
 if (!G.Possess.take(v).ok) { ok('encarnar o estivador', false, v.name); process.exit(1); }
 G.Avatar.attach(v, Math.atan2(sp0[1] - v.y, sp0[0] - v.x)); for (let k = 0; k < 6; k++) frame();
@@ -177,11 +180,14 @@ ok('o barco descarrega: as caixas de verdade no cais, desenhadas', !!op && opCra
   const pr = pressHold(); const Xb = pr ? pr.X : 0;
   row('com o E do corpo apertado nela', pr ? bodyMay(Xb, pr.o).may && offeredFree(Xb) : null, porterMay(p2, Xb), true, false);
   G.Avatar.cancelAct(); frame(); frame(); const cutBy = (crate(Xb) || {}).by === v.id;
-  // (held by someone no longer lived: the body's begin, then the god lets the body go)
-  const hr = god(() => A.begin(v, offerOf(X) || o0)); const yaw = G.Avatar.state().yaw;
+  // (held by someone no longer lived: the body's begin on a crate free now — since the first, steps of the world went by, and
+  // a porter of the town may have gone back to work and taken it, the one called away among them: T-154 —, then the god lets
+  // the body go)
+  const Xf = (opCrates().find(c => offeredFree(c.id)) || { id: X }).id;
+  const hr = god(() => A.begin(v, offerOf(Xf) || o0)); const yaw = G.Avatar.state().yaw;
   G.Possess.release('deus'); G.Avatar.detach();
-  row('de quem não é mais o corpo', null, porterMay(p2, X), null, true);
-  god(() => { if (hr.ok) A.abort(hr.h, 'teste'); }); const gone = (crate(X) || {}).by === v.id;
+  row('de quem não é mais o corpo', null, porterMay(p2, Xf), null, true);
+  god(() => { if (hr.ok) A.abort(hr.h, 'teste'); }); const gone = (crate(Xf) || {}).by === v.id;
   G.Possess.take(v); G.Avatar.attach(v, yaw); for (let k = 0; k < 6; k++) frame();
   const bad = rows.filter(r => r.body !== r.wb || r.porter !== r.wp);
   const yn = x => (x === null ? '?' : x ? 'pode' : 'não');

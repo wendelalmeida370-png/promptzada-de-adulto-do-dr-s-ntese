@@ -109,7 +109,11 @@
   Vg.goto = function (v, x, y, adj, maxNodes) {
     const ti = W.inb(x, y) ? W.idx(x, y) * 2 + (adj ? 1 : 0) : -1; const now = G.S.clock;
     if (ti === v._pfI && now - v._pfT < 12) { v.path = null; return false; }
-    const p = W.findPath(v.x, v.y, x, y, adj, maxNodes);
+    // (a long way the map of regions says is open, its budget spent before it was found — out of a walled town, round a lake:
+    // the exact search floods the ground all round —: searched once more, greedier, as the skip searches every way; a trader
+    // home from a caravan stood two minutes inside the walls of the town she had traded with, every search of her way home
+    // spent, and then stayed there, L-343. A short way that fails is a shut gate, not the budget: no second search)
+    const p = W.findPath(v.x, v.y, x, y, adj, maxNodes) || (ti >= 0 && G.dist(v.x, v.y, x, y) >= 24 && W.canWalk(v.x, v.y, x, y, !!adj || !W.walkable(W.idx(x, y))) ? W.findPath(v.x, v.y, x, y, adj, Math.max(maxNodes || 0, 12000), W.PATH_GREEDY) : null);
     if (!p) { v.path = null; v._pfI = ti; v._pfT = now; v._pfN = (v._pfN || 0) + 1; return false; }
     v.path = p; v.pi = 0; v._pfN = 0; return true;
   };
@@ -154,7 +158,11 @@
   // an errand from outside waits until it is there, unless it is about that load or cannot wait; an errand that takes the
   // hands — a cave, a whale, a theft — would put its own things in them over it, and the load would be gone unwritten)
   function busyHands(v, t) {
-    const c = v.carry; if (!c || !(c.n > 1e-6) || !(c.op || c.to || c.cid)) return false;
+    let c = v.carry;
+    // (the second pair of hands under a heavy crate are as busy as the first: the crate the one who leads holds is theirs too —
+    // G.Act.pair; a cave took the helper from under one and the lead went on alone with the helper's name on it, L-330)
+    if (!(c && c.n > 1e-6) && v.task && v.task.st === 2 && G.Act && G.Act.pair) { const p = G.Act.pair(v); const l = p && p.side === 'tras' && G.S.villagers.get(p.lead); if (l) c = l.carry; }
+    if (!c || !(c.n > 1e-6) || !(c.op || c.to || c.cid)) return false;
     if ((t.pri || 0) >= 3 || t.type === 'carga' || t.type === 'deliver') return false;
     return !(c.op && t.op === c.op);
   }
@@ -741,6 +749,10 @@
   // reach a building from its front, or from any free side (a coast, a wall, a crowded block)
   function gotoB(v, b, jit) {
     const S = G.S; const [fx, fy] = G.Village.frontTile(b);
+    // (a building where the map says this one cannot walk — its front and every tile round it in another region —: no search
+    // at all; it counts as a try, as the failed searches would, and a site is let go after six — a builder of Ribe was sent each
+    // minute to a site across the water, four searches failing each time, L-349)
+    if (!W.reaches(v, fx, fy) && !ringReached(v, b)) { b.unreach = (b.unreach || 0) + 1; b.unreachT = S.clock; return false; }
     const j = jit || 0;
     if (Vg.goto(v, fx + (j ? G.rr(-j, j) : 0), fy + (j ? G.rr(-j, j) : 0), true)) return true;
     if (b.unreachT && S.clock - b.unreachT < 8) return false; // failed a moment ago: don't flood the pathfinder
@@ -753,6 +765,13 @@
     ring.sort((a, c) => a[2] - c[2]);
     for (let k = 0; k < Math.min(3, ring.length); k++) if (Vg.goto(v, ring[k][0], ring[k][1], false)) { b.unreach = 0; return true; }
     b.unreach = (b.unreach || 0) + 1; b.unreachT = S.clock;
+    return false;
+  }
+  function ringReached(v, b) {
+    for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) {
+      if (y >= b.y && y < b.y + b.h && x >= b.x && x < b.x + b.w) continue;
+      if (W.inb(x, y) && W.walkable(y * N + x) && W.reaches(v, x + 0.5, y + 0.5)) return true;
+    }
     return false;
   }
   Vg.gotoB = gotoB;
@@ -895,7 +914,7 @@
         if (!v.carry) return end(v);
         if (t.st === 0 && (v.carry.op || v.carry.to) && G.Act) { if (G.Act.resumeCarry(v, H) || G.Act.holdCarry(v, H)) return; if (!v.carry) return end(v); }
         if (t.st === 0) {
-          const d = G.Village.nearestDropoff(v.x, v.y, v.set);
+          const d = G.Village.nearestDropoff(v.x, v.y, v.set, v);
           // (no store of the people anywhere — a town whose only fire fell, one just founded —: a plain load is set down where
           // one stands, for a hand later — water is poured out —, and the hands are free for the work that brings a store
           // back — L-169)
@@ -1139,7 +1158,7 @@
       case 'eat': {
         if (t.st === 0) {
           // (no store at all — gone since the choice —: a while of looking elsewhere for food, as when the store is out of reach)
-          const d = G.Village.nearestDropoff(v.x, v.y, v.set); if (!d) { v._noStore = S.clock + 12; return end(v); }
+          const d = G.Village.nearestDropoff(v.x, v.y, v.set, v); if (!d) { v._noStore = S.clock + 12; return end(v); }
           const alt = G.Village.dropoffs(v.set).filter(o => o !== d).sort((p, q) => G.dist2(p.x, p.y, v.x, v.y) - G.dist2(q.x, q.y, v.x, v.y)).slice(0, 3);
           const n0 = v._pfN || 0; let ok = false; for (const b of [d].concat(alt)) { const [fx, fy] = G.Village.frontTile(b); if (Vg.goto(v, fx, fy, true, b === d ? 8000 : 0)) { ok = true; break; } }
           if (!ok) { v._pfN = n0 + 1; v._noStore = S.clock + 12; unstick(v); return end(v); } t.st = 1;

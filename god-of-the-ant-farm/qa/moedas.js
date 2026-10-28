@@ -82,7 +82,7 @@ let drinker = null;
   if (drinker) { const t = E.tavernTask(drinker, Vg.H); if (t) t.pri = 4; }
 }
 // m4 the family's errand of shopping: one of a house that lacks something and has coins
-let shopper = null, shopWhy = '';
+let shopper = null, shopWhy = '', shopZ = null, shopK = null, shopTries = 0;
 {
   // (a purchase at a merchant's stall — the family's errand goes there first —: an open, manned stall of a people with coin,
   // anywhere in the world, a good on it a little cheaper today, and one of that town with coins at home who reaches it)
@@ -90,7 +90,10 @@ let shopper = null, shopWhy = '';
   // (a merchant of a people with coin at the market he works at: his stall — opened as his own morning would open it —, a
   // good on it, and a turn at it)
   const mkOf = o => { const b = S.buildings.get(o.job); return b && b.type === 'mercado' && b.built ? b : null; };
-  const mer = B && [...S.villagers.values()].filter(o => o.role === 'mercador' && !o.captive && !o.jail && !o.aboard && !o.ug && mkOf(o) && E.coinage(G.Village.facOfSet(mkOf(o).set)) && !(S.avatar && S.avatar.id === o.id)).sort((a, b) => a.id - b.id)[0];
+  // (never one another case took: in the metropole of 28/10 the first merchant was Miztli, the drinker of m3, and his turn at
+  // the stall took him out of the tavern before he paid, T-182)
+  const mer = B && [...S.villagers.values()].filter(o => o.role === 'mercador' && !used.has(o.id) && !o.captive && !o.jail && !o.aboard && !o.ug && mkOf(o) && E.coinage(G.Village.facOfSet(mkOf(o).set)) && !(S.avatar && S.avatar.id === o.id)).sort((a, b) => a.id - b.id)[0];
+  if (mer) used.add(mer.id);
   const z = mer ? B.of(mer) || B.open(mer, mkOf(mer)) : null;
   if (z && !Object.keys(z.inv || {}).some(k => k !== 'moedas' && z.inv[k] >= 1)) D.make('z:' + z.id, 'tecido', 3, { code: 'teste', part: true });
   if (z && !B.manned(z)) { Vg.endTask(mer); Vg.setTask(mer, { type: 'banca', biz: z.id, pri: 2, st: 0, dur: 200, id: z.b }); live(40, () => B.manned(z)); }
@@ -101,7 +104,7 @@ let shopper = null, shopWhy = '';
     if (shopper) {
       used.add(shopper.id); const hh = E.homeOf(shopper); if ((hh.coin || 0) < 5) D.make('h:' + hh.id, 'moedas', 10, { code: 'teste' });
       shopper.hunger = Math.min(shopper.hunger, 30); shopper.energy = Math.max(shopper.energy, 70); Vg.endTask(shopper);
-      Vg.setTask(shopper, { type: 'compra', biz: z.id, k, pri: 4, st: 0 }); shopWhy = `${E.name(k)} na banca #${z.id}`;
+      Vg.setTask(shopper, { type: 'compra', biz: z.id, k, pri: 4, st: 0 }); shopWhy = `${E.name(k)} na banca #${z.id}`; shopZ = z; shopK = k;
     }
   }
 }
@@ -109,11 +112,16 @@ let shopper = null, shopWhy = '';
 let worker = null, wage = 0;
 { worker = pick(); if (worker && (fac.stock.moedas || 0) > 5) wage = E.pay(worker, 'wood', 4); }
 
+// (the stall's line full when the shopper gets there — the good a little cheaper today brings the town to it —: she goes off, as
+// anyone would; the case is the coin of the deal, not the line, so she goes again once the line has room, up to three times:
+// Yaretzi, in the metropole of 28/10, found it full, T-186)
+const shopDone = () => lines.some(e => shopper && e[3] === 'h:' + shopper.home && e[5] === 'moedas' && (e[8] === 'compra' || e[8] === 'venda' || e[8] === 'compra-em-casa'));
 live(150, () => {
+  if (shopper && shopZ && !shopDone() && !(shopper.task && shopper.task.type === 'compra') && shopTries < 3 && G.Biz.manned(shopZ) && !G.Life.queueFull('biz:' + shopZ.id)) { shopTries++; Vg.setTask(shopper, { type: 'compra', biz: shopZ.id, k: shopK, pri: 4, st: 0 }); }
   const done1 = !tax || !(tax.task && tax.task.type === 'taxes');
   const done2 = !thief || !(thief.task && thief.task.type === 'furto');
   const done3 = !drinker || !(drinker.task && drinker.task.type === 'tavern');
-  const done4 = !shopper || !(shopper.task && (shopper.task.casa || shopper.task.type === 'compra' || shopper.task.type === 'shop'));
+  const done4 = !shopper || shopDone() || (shopTries >= 3 && !(shopper.task && (shopper.task.casa || shopper.task.type === 'compra' || shopper.task.type === 'shop')));
   return done1 && done2 && done3 && done4;
 });
 {
@@ -130,7 +138,7 @@ live(150, () => {
 }
 {
   const cp = lines.filter(e => shopper && e[3] === 'h:' + shopper.home && e[5] === 'moedas' && (e[8] === 'compra' || e[8] === 'venda' || e[8] === 'compra-em-casa'));
-  ok('m4 a compra da família: a moeda da casa a quem vende, pelo livro', !!shopper && cp.length > 0, shopper ? `${shopper.name} (${shopWhy}): ${cp.map(e => e[8] + ' ' + r2(e[6]) + ' → ' + e[4]).slice(0, 3).join(', ') || 'nada comprado (agora ' + (shopper.task ? shopper.task.type : 'sem tarefa') + ')'}` : 'ninguém com compras a fazer que ache onde comprar');
+  ok('m4 a compra da família: a moeda da casa a quem vende, pelo livro', !!shopper && cp.length > 0, shopper ? `${shopper.name} (${shopWhy}${shopTries ? ', mandada de novo ' + shopTries + ' vez(es): a fila estava cheia' : ''}): ${cp.map(e => e[8] + ' ' + r2(e[6]) + ' → ' + e[4]).slice(0, 3).join(', ') || 'nada comprado (agora ' + (shopper.task ? shopper.task.type : 'sem tarefa') + ')'}` : 'ninguém com compras a fazer que ache onde comprar');
 }
 {
   const sl = linesOf('salario', e => worker && e[4] === 'h:' + worker.home);
