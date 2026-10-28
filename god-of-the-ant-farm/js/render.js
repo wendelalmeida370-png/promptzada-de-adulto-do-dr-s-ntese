@@ -2472,18 +2472,41 @@
   let homeMemo = new Map(); G.worldHooks.push(() => { homeMemo = new Map(); });
   let homeMs = 0; const HOME_MS = 2; // (the share of a frame, ms)
   R.quarter = () => (mirOver >= 0 ? mirOver : rot) & 3;
-  function homeSprite(b, make) {
-    const A = G.Arch, In = G.Interiors; if (!A.fromShell || !A.fromShell(b.type) || !b.ip || !In || !In.shellOf || !In.keyOf) return null;
-    const key = In.keyOf(b); if (!key) return null; const q = R.quarter();
+  // (as: the building drawn as another type — the old house of one being extended, R.siteOld —, from the same shell)
+  function homeSprite(b, make, as) {
+    const A = G.Arch, In = G.Interiors; const tb = as || b; if (!A.fromShell || !A.fromShell(tb.type) || !b.ip || !In || !In.shellOf || !In.keyOf) return null;
+    const k0 = In.keyOf(b); if (!k0) return null; const key = as ? k0 + '>' + as.type : k0; const q = R.quarter();
     let e = homeMemo.get(b.id); if (e && e.key !== key) e = null;
     if (!e) { if (!make || homeMs >= HOME_MS) return null; const t0 = now(); e = { key, s: In.shellOf(b), k: [] }; homeMs += now() - t0; homeMemo.set(b.id, e); }
     if (!e.s) return null;
-    if (e.k[q] === undefined) { if (!make || homeMs >= HOME_MS) return null; const t0 = now(); e.k[q] = A.homeKey(b, e.s, q); homeMs += now() - t0; }
+    if (e.k[q] === undefined) { if (!make || homeMs >= HOME_MS) return null; const t0 = now(); e.k[q] = A.homeKey(tb, e.s, q); homeMs += now() - t0; }
     const k = e.k[q]; if (!k) return null;
     const spr = A.homePic(k.key); if (spr || !make || homeMs >= HOME_MS) return spr;
-    const t0 = now(); const p = A.homePaint(b, k); homeMs += now() - t0; return p;
+    const t0 = now(); const p = A.homePaint(tb, k); homeMs += now() - t0; return p;
   }
   R.homeSprite = b => homeSprite(b, false); // (for the proofs: the picture a home has now, or null)
+  // ---- a house extended over its family (L-371): the old house stands whole the whole work long — its record is the old
+  // one until the work is done (Interiors.complete retypes it then) — as the 3D keeps it, and the scaffold of the new one
+  // rises round it with the work ----
+  // (the building as the type it was, for its picture)
+  const asOld = b => ({ id: b.id, type: b.upgradeFrom, w: b.w, h: b.h, style: b.style, v: b.v, wd: b.wd, ip: b.ip });
+  // the old house's picture: from the shell of its record, as the type it was, or its sprite of before — with the mirror its
+  // door asks — or null where the building is no house being extended
+  function siteOld(b, make) {
+    if (!b || b.built || !b.upgradeFrom || !G.BDEF[b.upgradeFrom]) return null; const o = asOld(b); const dv = doorView(o);
+    const spr = homeSprite(b, make, o) || G.Art.building(o.type, b.v, b.style, b.wd, dv.back); return spr ? { spr, m: dv.m, shell: !!spr.H } : null;
+  }
+  R.siteOld = (b, make) => siteOld(b, make); // (for the proofs too: what the god draws of a house being extended)
+  // (how high a type's walls rise as its site draws them, px)
+  const siteH = (type, def) => (type === 'hut' ? 7 : type === 'temple' ? 22 : type === 'monument' ? 30 : type === 'farm' ? 0 : type === 'maravilha' ? 34 : type === 'quarteirao' ? 30 : type === 'insula' ? 24 : type === 'sobrado' ? 18 : def && def.w >= 3 ? 20 : 12);
+  // the scaffold's top over a house being extended, px: from over the old house's walls up to over the new one's — over the old
+  // roof's top at least: the work goes up over the family — with the work (o: the old house's picture, siteOld's: its eaves and
+  // its roof when it is drawn from its shell; else the walls a site of its type has, the top of its sprite of before)
+  R.siteTop = (b, o) => {
+    const H = o && o.spr && o.spr.H; const e0 = H ? H.eave : siteH(b.upgradeFrom, G.BDEF[b.upgradeFrom]);
+    const t0 = H ? H.eave + (H.roof.rise || 0) : o && o.spr && o.spr.ay > e0 ? o.spr.ay : e0 + 6;
+    const h0 = e0 + 3, h1 = Math.max(t0 + 4.5, siteH(b.type, G.BDEF[b.type]) + 8); return h0 + Math.max(0, h1 - h0) * G.clamp(b.progress || 0, 0, 1);
+  };
   // ---- the god's door on the side its plan opens it (L-264): a picture of before has its door on its front-left face — it
   // is drawn as it is where the plan's door is on the side the view shows at the front-left, mirrored where that side is at
   // the front-right, and without its door where the view does not see that side (the sides at the front, by the view's
@@ -2599,13 +2622,20 @@
     const p = b.progress;
     const hx = b.w / 2 - 0.1, hy = b.h / 2 - 0.1;
     const P = (dx, dy, z) => { const o = R.soff(dx, dy, z); return [sx + o[0], sy + o[1]]; };
-    const wallH = b.type === 'hut' ? 7 : b.type === 'temple' ? 22 : b.type === 'monument' ? 30 : b.type === 'farm' ? 0 : b.type === 'maravilha' ? 34 : b.type === 'quarteirao' ? 30 : b.type === 'insula' ? 24 : b.type === 'sobrado' ? 18 : def.w >= 3 ? 20 : 12;
+    const wallH = siteH(b.type, def);
     if (b.type === 'farm' || def.field) return;
-    if (b.upgradeFrom && p < 0.35) {
-      const old = G.Art.building(b.upgradeFrom, b.v, b.style); if (old) G.Art.drawM(ctx, old, sx, sy, 1);
-      // scaffolding goes up around the old house
-      ctx.strokeStyle = '#8a6a44'; ctx.lineWidth = 0.8;
-      for (const [dx, dy] of [[-0.45, 0.45], [0.45, 0.45], [0.45, -0.45]]) { const a = P(dx, dy, 0), c2 = P(dx, dy, wallH + 8); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(c2[0], c2[1]); ctx.stroke(); }
+    if (b.upgradeFrom) {
+      // (a house extended over its family — L-371 —: the old house whole the whole work long, as the 3D keeps it, and round it
+      // the scaffold of the new one rising with the work — the poles at its corners, the ledgers between them every two metres,
+      // the deck of planks on the top one; the old house was drawn only to a third of the work, then the site of a new one)
+      const o = siteOld(b, true); if (o) G.Art.drawMx(ctx, o.spr, sx, sy, 1, o.m);
+      const top = R.siteTop(b, o); const cs = [[-hx, hy], [hx, hy], [hx, -hy]];
+      ctx.strokeStyle = '#8a6a44'; ctx.lineWidth = 0.8; ctx.beginPath();
+      for (const [dx, dy] of cs) { const a = P(dx, dy, 0), c2 = P(dx, dy, top); ctx.moveTo(a[0], a[1]); ctx.lineTo(c2[0], c2[1]); }
+      for (let z = 6; z < top - 1; z += 6) { const a = P(cs[0][0], cs[0][1], z), m2 = P(cs[1][0], cs[1][1], z), e = P(cs[2][0], cs[2][1], z); ctx.moveTo(a[0], a[1]); ctx.lineTo(m2[0], m2[1]); ctx.lineTo(e[0], e[1]); }
+      ctx.stroke();
+      const zd = Math.max(6, Math.floor((top - 1) / 6) * 6); const a = P(cs[0][0], cs[0][1], zd), m2 = P(cs[1][0], cs[1][1], zd);
+      ctx.strokeStyle = '#9a7a50'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(m2[0], m2[1]); ctx.stroke();
     } else {
       // foundation stones along the edges
       ctx.fillStyle = '#9a958c';

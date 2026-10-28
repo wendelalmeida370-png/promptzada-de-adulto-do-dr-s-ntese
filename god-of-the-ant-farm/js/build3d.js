@@ -519,7 +519,8 @@ float m3scale(float p) {
   // then what lies about it (Props3D: only seen, and only where the machine carries detail)
   function draw(g, gw, K, props) {
     const S = B3.shellOf(K.b);
-    if (S) shellHouse(g, gw, K, S); else { const f = KIT[K.b.type]; if (f) f(g, gw, K); else house(g, gw, K); }
+    if (S && !K.b.built && K.b.upgradeFrom) upgrading(g, gw, K, S);
+    else if (S) shellHouse(g, gw, K, S); else { const f = KIT[K.b.type]; if (f) f(g, gw, K); else house(g, gw, K); }
     if (!K.footed) K.plinth();
     if (props && K.fine && G.Props3D && K.prog >= 1) G.Props3D.into(K);
   }
@@ -1407,6 +1408,16 @@ float m3scale(float p) {
         const o = W2.o; const p = [x + o[0] * lx / 2 + (W2.ax ? a : 0), h * 0.6, z + o[1] * lz / 2 + (W2.ax ? 0 : a)];
         K.log([p[0] + o[0] * 0.02, p[1], p[2] + o[1] * 0.02], [p[0] + o[0] * 0.07, p[1], p[2] + o[1] * 0.07], 0.34, cols[Math.floor(K.hv(80 + k++) * 4)]);
         K.as('iron', () => K.sph(p[0] + o[0] * 0.08, p[1] - 0.06, p[2] + o[1] * 0.08, 0.08, '#6a6660', 0.06)); } }
+  }
+  // a house extended over its family (L-371): the old house whole, from the shell of its record — the old one until the work
+  // is done —, and round it the scaffold of the new one, from over the old walls up to over the new ones with the work (the god's
+  // view draws the same: Render.siteOld, Render.siteTop)
+  function upgrading(g, gw, K, S) {
+    const pg = K.prog; K.prog = 1; shellHouse(g, gw, K, S); K.prog = pg;
+    const sh = S.shell; const R = sh.kind === 'round' ? [sh.cx - sh.r, sh.cz - sh.r, sh.cx + sh.r, sh.cz + sh.r] : sh.r;
+    // (from over the old walls up to over the new ones — over the old roof's top at least: the work goes up over the family)
+    const h0 = (sh.eave || 2.5) + 0.4, h1 = Math.max((sh.eave || 2.5) + ((sh.roof && sh.roof.h) || 0) + 1.5, HEIGHT[K.b.type] || 0);
+    scaffold(K, (R[0] + R[2]) / 2, (R[1] + R[3]) / 2, R[2] - R[0] + 0.2, R[3] - R[1] + 0.2, h0 + Math.max(0, h1 - h0) * pg);
   }
   // a building going up: the poles of the scaffold at its corners and along its long sides, the ledgers lashed across them
   // at two heights, a deck of planks on one, braces, a ladder leaning on it; and in the lot what it is being made of — a
@@ -2512,7 +2523,8 @@ float m3scale(float p) {
         g.pat = 0; continue; }
       // (the salt pans from afar: their nine pans flat on the ground in the brine's colour, as the near picture lays them)
       if (b.type === 'salina' && b.built) { const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L, Y = W.maxH(b.x, b.y, b.w, b.h) * HM(); g.pat = 0; g.put(SH.box, R3.mat(X, Y - 0.1, Z, 0, b.w * L - 0.32, 0.22, b.h * L - 0.32), [170, 196, 204]); continue; }
-      const h = (HEIGHT[b.type] || 5) * (b.built ? 1 : 0.4); if (h < 1.5) continue;
+      // (a house being extended over its family — L-371 —: the old one, whole, as near)
+      const h = (HEIGHT[!b.built && b.upgradeFrom ? b.upgradeFrom : b.type] || 5) * (b.built || b.upgradeFrom ? 1 : 0.4); if (h < 1.5) continue;
       const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L, Y = W.maxH(b.x, b.y, b.w, b.h) * HM();
       const st = stuff(b); const flat = P.kind === 'flat';
       g.pat = PAT[st.wall === 'frame' ? 'plaster' : st.wall]; g.put(SH.box, R3.mat(X, Y - 0.3, Z, 0, b.w * L * 0.85, h * (flat ? 0.95 : 0.6), b.h * L * 0.85), P.wl || '#efe2c4');
@@ -3120,7 +3132,8 @@ float m3scale(float p) {
   // (kept by building while its record is the same and its plan as it was: a chunk drawn again does not ask again)
   let shellMemo = new Map(); G.worldHooks.push(() => { shellMemo = new Map(); });
   B3.shellOf = function (b) {
-    const In = G.Interiors; if (!In || !In.has || !b || !b.built || b.type === 'ruin' || !In.has(b)) return null;
+    // (a house being extended over its family — L-371 —: the shell of its record, the old house's, until the work is done)
+    const In = G.Interiors; if (!In || !In.has || !b || (!b.built && !b.upgradeFrom) || b.type === 'ruin' || !In.has(b)) return null;
     const p = G.Space.planMade ? G.Space.planMade(b) : In.ready && In.ready(b) ? In.plan(b) : null;
     const k = (In.keyOf ? In.keyOf(b) : b.type + ':' + (b.ip ? b.ip.r + ':' + b.ip.f + ':' + b.ip.s + ':' + (b.ip.fx || []).length : '')); const m = shellMemo.get(b.id);
     if (m && m.k === k && m.p === p) return m.S;
