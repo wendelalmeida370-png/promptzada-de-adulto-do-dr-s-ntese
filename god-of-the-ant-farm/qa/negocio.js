@@ -105,15 +105,23 @@ S.time = 0.1;
 const z1 = B.of(merchants()[0]); const m1 = S.villagers.get(z1.owner);
 // ---------------- n2: the wholesale is paid; no coin, no goods
 {
-  // (the merchant buys for his stall: what it lacks, from the people's store)
+  // (fed and rested first, by the world's own meal and bed, as the counter cases start: a hungry merchant goes to the pantry
+  // before the store — in the new metropolis Hipátia came to n2 with a hunger of 79, the meal took the case's errand, and
+  // what she bought later was incense for her own stall, T-177)
+  if (m1.hunger > 55) { G.Vg.setTask(m1, { type: 'eat', pri: 1.2, kind: 'eat' }); live(240, () => !(m1.task && m1.task.type === 'eat') || watch()); }
+  if (m1.energy < 45) { G.Vg.setTask(m1, { type: 'sleep', pri: 1.2, kind: 'sleep' }); live(240, () => !(m1.task && m1.task.type === 'sleep') || watch()); }
+  // (the merchant buys for his stall: what it lacks, from the people's store — the errand of his trade, as his day gives it)
   const k = E.MARKET_GOODS.find(q => D.free('f:' + fac.id, q) >= 4 && (z1.inv[q] || 0) < 2) || 'food';
   const payer = E.homeOf(m1) ? 'h:' + m1.home : 'p:' + m1.id; D.make(payer, 'moedas', 20, { code: 'teste' }); // (a family with coins)
   roomOn(z1, k, 3);
   const c0 = D.get(payer, 'moedas'), t0 = fac.stock.moedas || 0, s0 = D.get('f:' + fac.id, k), L0 = S.ledgerN;
-  G.Vg.setTask(m1, { type: 'atacado', biz: z1.id, k, n: 3, pri: 1, st: 0, id: mk.id });
-  const got = live(120, () => !!book('atacado', e => e[0] > L0 && e[5] === k).length || watch());
-  const legs = book('atacado', e => e[0] > L0);
-  const goods = legs.find(e => e[5] === k), coin = legs.find(e => e[5] === 'moedas');
+  G.Vg.setTask(m1, { type: 'atacado', biz: z1.id, k, n: 3, pri: 1, st: 0, id: mk.id, kind: 'work' });
+  // (his own wholesale: the world's other merchants buy at their stores meanwhile — in the new metropolis the case took
+  // Kamose's 8 of food in Mênfis and Caio's coins in another town for his, before his own came, T-177 —; the payment is the
+  // line right after the goods)
+  const got = live(120, () => !!book('atacado', e => e[0] > L0 && e[5] === k && e[9] === m1.id).length || watch());
+  const legs = book('atacado', e => e[0] > L0 && e[9] === m1.id);
+  const goods = legs.find(e => e[5] === k), coin = goods ? legs.find(e => e[5] === 'moedas' && e[0] === goods[0] + 1) || legs.find(e => e[5] === 'moedas' && e[0] > goods[0]) : null;
   const paidOk = !!goods && !!coin && coin[0] === goods[0] + 1 && coin[3] === payer && coin[4] === 'f:' + fac.id && Math.abs(coin[6] - r2((E.PRICE[k] || 0.3) * goods[6] * 0.6)) < 0.011;
   const arrived = live(120, () => !!book('entrega', e => e[0] > L0 && e[4] === 'z:' + z1.id).length || watch());
   // (now with an empty purse: the store gives nothing)
