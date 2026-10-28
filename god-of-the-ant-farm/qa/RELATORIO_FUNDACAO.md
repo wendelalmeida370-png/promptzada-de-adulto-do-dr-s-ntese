@@ -193,7 +193,11 @@ As duas provas que mudaram foram olhadas uma a uma. Nenhuma era defeito do jogo;
   há tratado. A paz agora é provocada de propósito numa prova nova (`qa/paz.js`), que confere o tratado, os soldados de
   volta e os presos trocados. Passa nas sementes 11, 7 e 13.
 
-A semente do mundo da guerra mundial também mudou. Com o navegador novo, a 3507 não fazia a guerra vir sozinha (§4).
+A semente do mundo da guerra mundial também mudou. Com o navegador novo, a 3507 não fazia mais a guerra vir sozinha. A
+receita do «mundial» agora espera a guerra vir sozinha, ou até só restarem quatro povos grandes, e então o jogo a começa
+enquanto ainda acha dois lados (D-091). Antes, a espera era de 80 anos fixos, e com as cidades crescendo mais (os
+construtores soltos, L-322) um império engolia os outros nesse tempo. Com o código final, a 3510, a primeira semente da
+lista, fez a guerra vir sozinha no ano 47: a Guerra da Fome.
 
 ## 8. Desempenho medido
 
