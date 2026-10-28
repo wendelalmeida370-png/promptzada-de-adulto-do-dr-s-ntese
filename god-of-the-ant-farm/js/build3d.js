@@ -3393,9 +3393,11 @@ float m3scale(float p) {
   // where someone the world has inside a building drawn open stands, sits, lies or works: Interiors.placeOf, in the world's
   // metres — { X, Y, Z, yaw, st } — or null (not open: not drawn); the same for a step of the world. The state drawn is the
   // place's own when it says one (q.st: the rule of the house or of the work that gave the place — sleep, sit, eat, cook,
-  // pray…), else the old one of its pose
+  // pray…), made a state the people's drawing has (Anim3D.resolve, P4); a place without one, the old one of its pose (one
+  // sitting on the floor stands: never on a chair that is not there)
   const placeMemo = new Map(); let placeT = -1;
   const POSE_ST = { deitado: 'sleep', sentado: 'sit', trabalhando: 'interact' };
+  const stOf = q => { const res = G.Anim3D && G.Anim3D.resolve; return q.st ? (res ? res(q.st) : q.st) : POSE_ST[q.pose] || 'idle'; };
   B3.openPlace = function (v) {
     if (!v || !(v.inside > 0)) return null; let o = opened.get(v.inside);
     // (an open shell — a fair —, its plan made: the same, without opening it)
@@ -3404,7 +3406,7 @@ float m3scale(float p) {
     let pl = placeMemo.get(v.id); if (pl !== undefined) return pl; pl = null;
     const q = G.Interiors.placeOf(v);
     if (q && q.b === o.b) { const l = o.p.levels.find(x => x.lv === q.lv); const L = TL(); const y0 = G.Space.plinth(o.b).y0;
-      pl = { X: o.b.x * L + q.x, Z: o.b.y * L + q.z, Y: y0 + (l ? l.y : 0) + (q.y || 0) + FLOOR_UP, yaw: Math.PI / 2 - (q.ry || 0), st: q.st || POSE_ST[q.pose] || 'idle' }; }
+      pl = { X: o.b.x * L + q.x, Z: o.b.y * L + q.z, Y: y0 + (l ? l.y : 0) + (q.y || 0) + FLOOR_UP, yaw: Math.PI / 2 - (q.ry || 0), st: stOf(q) }; }
     placeMemo.set(v.id, pl); return pl;
   };
   B3.bounds = function (b) {
