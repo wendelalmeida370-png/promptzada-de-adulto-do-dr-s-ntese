@@ -567,8 +567,12 @@ if (want('l15')) {
     const w = [...S.villagers.values()].filter(o => o.id !== m.id && o.home === h.id && o.inside === h.id && !o.sleeping && fit(o)).sort((a, c) => a.id - c.id)[0];
     if (!G.Possess.take(w) || !isBody(w)) notes.push(`(f) o corpo não pegou ${w.name}`);
     else {
-      // (the body is taken at the door; the test's hand puts it back in the room by the mother, as l13 does)
-      if (w.inside !== h.id) { w.inside = h.id; w.x = m.x; w.y = m.y; w.path = null; w.moving = false; }
+      // (the body is taken at the door; the test's hand puts it back in the room, on a floor the body can stand on by the table
+      // or the fire of the plan — as l13 does)
+      const TL = G.Space.TILE; G.Space.planNow(h);
+      const stand = uses => { for (const u of uses) for (const q of G.Interiors.slots(h, u)) { const x = h.x * TL + q.spot.x, z = h.y * TL + q.spot.z; for (let r = 0; r <= 1.2; r += 0.25) for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; const ins = G.Space.indoor(x + Math.cos(a) * r, z + Math.sin(a) * r, q.item.lv, h.id); if (ins && ins.b === h && ins.shell && ins.walk) return [(x + Math.cos(a) * r) / TL, (z + Math.sin(a) * r) / TL, ins.lv]; if (!r) break; } } return null; };
+      const spot = stand(['sentar', 'comer', 'aquecer', 'cozinhar']);
+      if (spot) { w.inside = h.id; w.x = spot[0]; w.y = spot[1]; w.path = null; w.moving = false; G.Possess.setLevel(spot[2]); G.debug.step(0.1); }
       const doIt = id => { const o = G.Act.offers(w, w.x, w.y).find(q => q.id === id); if (!o) return { ok: false, why: 'sem a oferta «' + id + '»' }; const it = G.Possess.apply(() => G.Act.perform(w, o)); live(0.3); return it.res || { ok: false, why: 'o mundo não fez' }; };
       const r1 = doIt('lar.pegarBebe:' + Fb.id); const b1 = S.villagers.get(Fb.id);
       if (!r1.ok || b1.carrier !== w.id) { const ww = S.villagers.get(w.id); fail(`(f) pegar o bebê: ${r1.why || 'o bebê não veio para o colo do corpo'} [bebê home ${b1.home}, mãe ${b1.mother}, pai ${b1.father}, colo ${b1.carrier}, dentro ${b1.inside}; corpo #${ww.id} home ${ww.home}, dentro ${ww.inside}; ao alcance ${G.Vg.babyReach(b1, ww)}, pode segurar ${G.Vg.canHold(ww)}; ofertas: ${G.Act.offers(ww, ww.x, ww.y).map(o => o.id).join(', ') || 'nenhuma'}]`); }
