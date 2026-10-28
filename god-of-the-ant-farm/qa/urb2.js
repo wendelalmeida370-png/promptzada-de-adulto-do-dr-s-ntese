@@ -116,7 +116,8 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     const ff = G.Fac.get(set.fac); ff.stock.wood = 0; ff.stock.stone = 0;
     const homes = [...S.buildings.values()].filter(b => b.set === set.id && b.built && G.BDEF[b.type].housing && b.type !== 'barraco').sort((a, b) => a.id - b.id);
     const fams = prev.slice();
-    const out = () => fams.filter(id => { const v = S.villagers.get(id); return v && !v.home && v.age >= 16 && !v.aboard; }).length;
+    // (out in the street of this town: one who left with settlers has no house here either, and is not the case's)
+    const out = () => fams.filter(id => { const v = S.villagers.get(id); return v && v.set === set.id && !v.home && v.age >= 16 && !v.aboard; }).length;
     for (const h of homes) {
       G.Village.forceUpdate(); if (out() >= 4) break;
       for (const v of S.villagers.values()) if (v.home === h.id && !fams.includes(v.id)) fams.push(v.id);
@@ -125,15 +126,23 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     G.Village.forceUpdate();
     return { fams, homes: homes.length };
   }, prev);
-  // (no wood, no stone, at every step: the town cannot rebuild what burned)
-  const dry = secs => page.evaluate(n => { const ff = G.Fac.get(window.__set.fac); for (let k = 0; k < n; k++) { G.debug.step(0.1); ff.stock.wood = Math.min(ff.stock.wood, 0.5); ff.stock.stone = Math.min(ff.stock.stone, 0.5); } }, Math.round(secs * 10));
+  // (no wood, no stone, at every step: the town cannot rebuild what burned. And it sends no settlers away while the case
+  // runs — the crisis is the case: a city with its stone houses burnt falls back to a town after 36 looks (city.js), a
+  // town that is no city sends a third of its people to found another (village.js checkExpansion), and the beds they
+  // leave take the burnt families in before their second night in the street. With the final code, seed 7, Argos fell
+  // back three minutes after the fire and sent sixteen away at the turn of the second day, in two fires of the three —
+  // the young of the burnt houses among them —, T-215. So the god holds the city's standing and its patience for the
+  // case, as he holds the wood and the stone)
+  const dry = secs => page.evaluate(n => { const st = window.__set; const ff = G.Fac.get(st.fac); for (let k = 0; k < n; k++) { G.debug.step(0.1); ff.stock.wood = Math.min(ff.stock.wood, 0.5); ff.stock.stone = Math.min(ff.stock.stone, 0.5); st.tierLow = 0; st.fails = 0; } }, Math.round(secs * 10));
   const untilDry = async (fn, maxSecs, arg) => { for (let k = 0; k < maxSecs / 5; k++) { const r = await page.evaluate(fn, arg); if (r) return r; await dry(5); } return page.evaluate(fn, arg); };
-  let fr = { fams: [] }, sh = null, rounds = 0;
+  let fr = { fams: [] }, sh = null, rounds = 0; const day4 = await page.evaluate(() => G.S.day);
   for (; rounds < 3 && !sh; rounds++) {
     fr = await burn(fr.fams);
     sh = await untilDry(o => { const S = G.S; const vs = o.fams.map(id => S.villagers.get(id)).filter(Boolean); const why = vs.filter(v => v.ruaWhy === 'fogo').length; const inShack = vs.filter(v => v.home && (S.buildings.get(v.home) || {}).type === 'barraco').length; return inShack ? { why, inShack } : null; }, 700, fr);
   }
   const why = await page.evaluate(o => o.fams.map(id => G.S.villagers.get(id)).filter(Boolean).map(v => v.ruaWhy || (v.home ? (G.S.buildings.get(v.home) || {}).type : '-')), fr);
+  // (settlers who left the town all the same, for the message: the hold is the case's premise)
+  const went4 = await page.evaluate(d => { const nm = window.__set.name; return G.S.history.filter(h => h.d >= d && h.txt.includes('partiram de ' + nm + ' ')).map(h => h.d + ': ' + h.txt); }, day4);
   if (!sh) console.log('RUA ' + JSON.stringify(await page.evaluate(() => { const S = G.S; const set = window.__set; return { tier: set.tier, hi: G.Village.housingInfo(set.id), rua: [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 16 && !v.home).map(v => [v.name, v.rua, v.ruaWhy, v.task && v.task.type, v.task && v.task.pri]).slice(0, 8), day: S.day }; })));
   let left = null;
   if (sh) {
@@ -142,7 +151,7 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     const inS = await page.evaluate(o => o.fams.filter(id => { const v = G.S.villagers.get(id); return v && v.home && (G.S.buildings.get(v.home) || {}).type === 'barraco'; }), fr);
     left = await until(ids => { const S = G.S; const out = ids.map(id => S.villagers.get(id)).filter(v => v && v.home && S.buildings.get(v.home) && S.buildings.get(v.home).type !== 'barraco' && G.BDEF[S.buildings.get(v.home).type].housing).length; return out ? out : null; }, 1200, inS);
   }
-  ok('4 a casa queima: a família vai para a rua (por isso), levanta um barraco e depois sai dele', !!sh && !!left, sh ? `${rounds > 1 ? `(${rounds} incêndios) ` : ''}${sh.inShack} da família num barraco (motivos: ${[...new Set(why)].join(', ')}); ${left ? left + ' saíram do barraco para uma casa' : 'ninguém saiu do barraco'}` : `sem barraco em ${rounds} incêndios de 700 s; estado: ${[...new Set(why)].join(', ')}`);
+  ok('4 a casa queima: a família vai para a rua (por isso), levanta um barraco e depois sai dele', !!sh && !!left, sh ? `${rounds > 1 ? `(${rounds} incêndios) ` : ''}${sh.inShack} da família num barraco (motivos: ${[...new Set(why)].join(', ')}); ${left ? left + ' saíram do barraco para uma casa' : 'ninguém saiu do barraco'}` : `sem barraco em ${rounds} incêndios de 700 s; estado: ${[...new Set(why)].join(', ')}${went4.length ? `; a cidade mandou gente embora: ${went4.join(' · ')}` : ''}`);
 
   // 5 the theft
   const th = await page.evaluate(() => {
