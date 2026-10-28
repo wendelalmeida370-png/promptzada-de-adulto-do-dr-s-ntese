@@ -2296,6 +2296,13 @@ float m3scale(float p) {
         g.pat = PAT[OUTPAT[sh.mat] || 'plaster']; g.put(SH.box, R3.mat(X, y0 - 0.3, Z, 0, R[2] - R[0], sh.eave + 0.3, R[3] - R[1]), P.wl || '#efe2c4');
         if (rk !== 'flat' && sh.roof && sh.roof.h > 0) { const az = sh.roof.along === 'z'; const rc = rk === 'thatch' ? ((P.thatch && P.thatch[0]) || '#c8a85a') : rk === 'turf' ? mixc(calm((P.roof && P.roof[0]) || '#71903f', 0.66, 0.86), [114, 108, 70], hvOf(b, 3) * 0.42) : (P.roof && P.roof[0]) || '#b85a3c';
           g.pat = PAT[rk === 'turf' ? 'turf' : rk === 'thatch' ? 'thatch' : st.tile]; g.put(SH.gable, R3.mat(X, y0 + sh.eave, Z, az ? Math.PI / 2 : 0, (az ? R[3] - R[1] : R[2] - R[0]) + 0.84, sh.roof.h, (az ? R[2] - R[0] : R[3] - R[1]) + 0.84), rc); }
+        // (the room on a terrace, as near — its walls and its roof of reed —; a home's wind-catcher and awning over its flat
+        // roof, as near: Forma.deck)
+        const rm = sh.roof && sh.roof.room, tl = rk === 'flat' && rm && rm.r && Sh.levels.find(l => l.kind === 'terraco');
+        if (tl) { g.pat = PAT[OUTPAT[sh.mat] || 'plaster']; g.put(SH.box, R3.mat(b.x * L + (rm.r[0] + rm.r[2]) / 2, y0 + tl.y, b.y * L + (rm.r[1] + rm.r[3]) / 2, 0, rm.r[2] - rm.r[0], rm.h + 0.14, rm.r[3] - rm.r[1]), P.wl || '#efe2c4'); }
+        if (rk === 'flat' && DECKED[b.type] && Sh.entrance && G.Forma) { const yt = y0 + sh.eave + 0.25; const dk = G.Forma.deck(R, Sh.entrance.side, b.w * L, styleOf(b), !!(sh.roof && sh.roof.room)); g.pat = 0;
+          for (const it of dk.items) { const ax = Math.abs(dk.across[0]) > 0.5; if (it.k === 'torre') g.put(SH.box, R3.mat(b.x * L + it.x, yt, b.y * L + it.z, 0, it.w, it.h, it.w), P.wl || '#efe2c4');
+            else if (it.k === 'toldo') g.put(SH.box, R3.mat(b.x * L + it.x, yt + it.h1, b.y * L + it.z, 0, ax ? it.w : it.d, it.h - it.h1 + 0.05, ax ? it.d : it.w), '#e8e0c8'); } }
         g.pat = 0; continue; }
       // (a building with a form: its masses, as the form has them — the drum, the pyramid, the levels, the roof)
       const Fm = b.built && formOf(b); if (Fm) { massInto(g, b, Fm, doorSide(b)); continue; }
@@ -3266,9 +3273,9 @@ float m3scale(float p) {
       // (the slab's band round the walls' tops, under it: what the slab stands out over)
       for (const sd of ['N', 'E', 'S', 'W']) { const F = rside(RR, sd), Fi = rside(R, sd); K.quad(F.P(F.u0, yb, 0), F.P(F.u1, yb, 0), Fi.P(Fi.u1, yb, 0), Fi.P(Fi.u0, yb, 0), dim(sc, 0.7), DOWN); }
       if (c) for (const sd of ['N', 'E', 'S', 'W']) { const F = rside(c, sd); const o = [-F.o[0], 0, -F.o[1]]; K.quad(F.P(F.u0, yb, 0), F.P(F.u1, yb, 0), F.P(F.u1, yt, 0), F.P(F.u0, yt, 0), ed, o); } });
-    if (!tl) return roofOf(K, x, z, sx, sz, yb, 'flat', null, undefined, 0, true);
+    if (!tl) { const t = roofOf(K, x, z, sx, sz, yb, 'flat', null, undefined, 0, true); deckInto(K, ctx, yt); return Math.max(t, deckTop(K, ctx, yt)); }
     // the terrace: the shell's parapet and the room on it
-    const top = roofOf(K, x, z, sx, sz, yb, 'flat', null, undefined, 0, 'terrace');
+    const top = roofOf(K, x, z, sx, sz, yb, 'flat', null, undefined, 0, 'terrace'); deckInto(K, ctx, yt);
     for (const w of S.walls) {
       if (w.lv !== tl.lv) continue; const sf = outStuff(K, S, w);
       if (w.kind === 'parapeito') { const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L < 0.02) continue; const ry = Math.atan2(-(w.b[1] - w.a[1]) / L, (w.b[0] - w.a[0]) / L); const cx = (w.a[0] + w.b[0]) / 2, cz = (w.a[1] + w.b[1]) / 2; const hh = w.h || 0.9;
@@ -3280,7 +3287,28 @@ float m3scale(float p) {
         for (const [px, py, pz, ssx, ssy, ssz, col, pat] of leafParts(d.w, d.h, (P && P.door) || '#5a3b25')) K.as(pat, () => K.box(ps.hx + px * cy + pz * sy, ps.y + py, ps.hz - px * sy + pz * cy, ssx, ssy, ssz, col, ps.yaw)); }
     }
     const rm = sh.roof && sh.roof.room; if (rm && rm.r) K.as('thatch', () => K.box((rm.r[0] + rm.r[2]) / 2, tl.y + rm.h, (rm.r[1] + rm.r[3]) / 2, rm.r[2] - rm.r[0] + 0.2, 0.14, rm.r[3] - rm.r[1] + 0.2, ISTRAW));
-    return Math.max(top, rm && rm.r ? tl.y + rm.h + 0.14 : 0, tl.y + 0.9);
+    return Math.max(top, rm && rm.r ? tl.y + rm.h + 0.14 : 0, tl.y + 0.9, deckTop(K, ctx, yt));
+  }
+  // a home's pieces on its flat roof, where the god paints them (Forma.deck: L-267) — the Egyptian's awning of cloth on its
+  // four poles and its wind-catcher with the mouth to the front, the Aztec's pots of flowers along the front — on the roof's
+  // top at y
+  const DECKED = { hut: 1, house: 1, sobrado: 1, insula: 1 };
+  const roofDeck = (K, ctx) => { const S = ctx.S, sh = S.shell; return DECKED[K.b.type] && S.entrance && G.Forma ? G.Forma.deck(sh.r, S.entrance.side, K.w, K.st, !!(sh.roof && sh.roof.room)) : null; };
+  const deckTop = (K, ctx, y) => { const dk = roofDeck(K, ctx); let t = 0; if (dk) for (const it of dk.items) t = Math.max(t, y + (it.h || 0.6)); return t; };
+  function deckInto(K, ctx, y) {
+    const dk = roofDeck(K, ctx); if (!dk) return; const fr = dk.front, ac = dk.across;
+    for (const it of dk.items) {
+      if (it.k === 'toldo') {
+        const pts = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, f]) => [it.x + ac[0] * a * it.w / 2 + fr[0] * f * it.d / 2, it.z + ac[1] * a * it.w / 2 + fr[1] * f * it.d / 2, f > 0 ? it.h1 : it.h]);
+        K.as('beam', () => { for (const q of pts) K.log([q[0], y, q[1]], [q[0], y + q[2], q[1]], 0.03, '#7a5a3a'); });
+        const Q = pts.map(q => [q[0], y + q[2], q[1]]); K.as('canvas', () => { K.quad(Q[0], Q[1], Q[2], Q[3], '#e8e0c8', UP); K.quad(Q[0], Q[1], Q[2], Q[3], '#d8d0b8', DOWN); });
+      } else if (it.k === 'torre') {
+        const sf = outStuff(K, ctx.S, null); K.as(sf.pat, () => K.box(it.x, y, it.z, it.w, it.h, it.w, sf.col));
+        // (its mouth: the top of its front face, dark)
+        const hw = it.w / 2 - 0.06, f = it.w / 2 + 0.01; const C = [it.x + fr[0] * f, it.z + fr[1] * f]; const A = (a, yy) => [C[0] + ac[0] * a, yy, C[1] + ac[1] * a];
+        K.quad(A(-hw, y + it.h - it.boca), A(hw, y + it.h - it.boca), A(hw, y + it.h - 0.06), A(-hw, y + it.h - 0.06), '#3a2a1c', [fr[0], 0, fr[1]]);
+      } else { K.as('mud', () => K.cyl(it.x, y, it.z, 0.14, 0.24, '#a8603a')); K.sph(it.x, y + 0.36, it.z, it.r, it.cor); }
+    }
   }
   // the smoke of the house, by a rule of its shell alone — where its fire is, only the inside knows (each try of the plan puts it
   // its own way): the north's smoke hole on the ridge; a chimney on the ridge a third along it (which end, the house's id)

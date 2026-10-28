@@ -25,6 +25,26 @@
   Fo.toLot = (s, L, u, v) => (s === 'S' ? [u, v] : s === 'N' ? [L - u, L - v] : s === 'E' ? [v, L - u] : [L - v, u]);
   // (a direction in the canonical frame to the lot's)
   Fo.dirLot = (s, du, dv) => (s === 'S' ? [du, dv] : s === 'N' ? [-du, -dv] : s === 'E' ? [dv, -du] : [-dv, du]);
+  // (a point of the lot to the canonical frame: Fo.toLot turned back)
+  Fo.toCan = (s, L, x, z) => (s === 'S' ? [x, z] : s === 'N' ? [L - x, L - z] : s === 'E' ? [L - z, x] : [z, L - x]);
+  // ------------------------------ the roof one lives on ------------------------------
+  // the people's own pieces on a flat roof, where the god paints them and the 3D builds them (L-267) — from the shell's rect
+  // (lot metres) and the side its door opens to: the Egyptian's awning of cloth on four poles, a little to the left of the
+  // middle and toward the front, and its wind-catcher at the back on the right, its mouth to the front (none on a roof with
+  // a room on it: the room is its shade); the Aztec's three pots of flowers along the front — in lot metres, over the roof:
+  // { front, across, items: [{ k: 'toldo', x, z, w, d, h (its back), h1 (its front) } | { k: 'torre', x, z, w, h, boca }
+  // | { k: 'vaso', x, z, r, cor }] } (the god's numbers: its awning 0.3 × 0.22 tiles and 5 px, its tower 0.16 tiles and 6 px)
+  Fo.deck = function (r, s, L, st, room) {
+    const a = Fo.toCan(s, L, r[0], r[1]), b = Fo.toCan(s, L, r[2], r[3]);
+    const u0 = Math.min(a[0], b[0]), u1 = Math.max(a[0], b[0]), v0 = Math.min(a[1], b[1]), v1 = Math.max(a[1], b[1]);
+    const at = (u, v) => Fo.toLot(s, L, u, v); const items = [];
+    if (st === 'egipcio' && !room) {
+      const c = at((u0 + u1) / 2 - 0.4, (v0 + v1) / 2 + 0.2); items.push({ k: 'toldo', x: c[0], z: c[1], w: 1.2, d: 0.88, h: px(5), h1: px(4.4) });
+      const t = at(u1 - 0.8, v0 + 0.64); items.push({ k: 'torre', x: t[0], z: t[1], w: 0.64, h: px(6), boca: px(2) });
+    }
+    if (st === 'asteca') for (let k = 0; k < 3; k++) { const q = at(u0 + 0.4 + k * (u1 - u0 - 0.8) / 2, v1 - 0.16); items.push({ k: 'vaso', x: q[0], z: q[1], r: 0.19, cor: k % 2 ? '#5a9a3c' : '#e05a7a' }); }
+    return { front: Fo.dirLot(s, 0, 1), across: Fo.dirLot(s, 1, 0), items };
+  };
   // ------------------------------ the vocabulary ------------------------------
   // Each element of a form: { k: kind, ... } in metres of the canonical frame; colours as the god's palette names them ('wl',
   // 'wr', 'top', 'trim', 'acc', 'base0'… 'roof1', 'col0'), or as the god's own hex where the god paints its own:

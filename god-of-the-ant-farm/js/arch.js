@@ -933,6 +933,17 @@
     if (rf.court) H.court = R(rf.court); // (a hall round a court: the court open to the sky, the roof cut over it)
     // (which face of the sprite a world side is, for this quarter: L the front-left one, R the front-right; the back ones unseen)
     const faceOf = side => (side === 'S' ? (qy > 0 ? 'L' : null) : side === 'N' ? (qy < 0 ? 'L' : null) : side === 'E' ? (qx > 0 ? 'R' : null) : (qx < 0 ? 'R' : null));
+    // (a home's pieces on its flat roof, where the 3D puts them — Forma.deck, L-267: the awning, the wind-catcher, the pots)
+    if (!H.round && HOMES[b.type] && H.roof.kind === 'plano' && s.entrance && G.Forma) {
+      const dk = G.Forma.deck(sh.r, s.entrance.side, L, PAL[b.style] ? b.style : 'classico', !!rf.room);
+      const fx = dk.front[0] * qx, fy = dk.front[1] * qy, acX = Math.abs(dk.across[0]) > 0.5;
+      H.deck = dk.items.map(it => {
+        const o = { k: it.k, x: X(it.x), y: Y(it.z), cor: it.cor };
+        if (it.k === 'toldo') { const hx = (acX ? it.w : it.d) / 8, hy = (acX ? it.d : it.w) / 8; o.c = [[-hx, -hy], [hx, -hy], [hx, hy], [-hx, hy]].map(([dx, dy]) => [q2(o.x + dx), q2(o.y + dy), qz((dx * fx + dy * fy > 0 ? it.h1 : it.h) * ZPX)]); }
+        else if (it.k === 'torre') { o.hw = q2(it.w / 8); o.h = qz(it.h * ZPX); o.boca = qz(it.boca * ZPX); o.face = faceOf(s.entrance.side); }
+        return o;
+      });
+    }
     // the openings of the shell's walls on the faces one sees: the windows, the door, the arches
     if (!H.round) {
       const r = sh.r, cx = (r[0] + r[2]) / 2, cz = (r[1] + r[3]) / 2; const yOf = new Map(s.levels.map(l => [l.lv, l]));
@@ -1014,12 +1025,6 @@
     if (kind === 'plano') {
       const par = H.par || (st === 'egipcio' ? 1.3 : 1.2); roof(c, m, p, x0 + bat, y0 + bat, x1 - bat, y1 - bat, zE, { kind: 'flat', par });
       if (rf.room) { const [a0, b0, a1, b1] = rf.room.rect; const zr = zE + 0.8; box(c, a0, b0, a1, b1, zr, zr + rf.room.h, p.wl, p.wr, '#b8a070'); top(c, a0 - 0.03, b0 - 0.03, a1 + 0.03, b1 + 0.03, zr + rf.room.h + 0.4, '#9a8a4a'); }
-      else if (st === 'egipcio') { // the rooftop awning and the wind-catcher
-        const ax = (x0 + x1) / 2 - 0.1, ay = (y0 + y1) / 2 + 0.05;
-        for (const [dx, dy] of [[-0.15, -0.1], [0.15, -0.1], [0.15, 0.12], [-0.15, 0.12]]) ln(c, P(ax + dx, ay + dy, zE), P(ax + dx, ay + dy, zE + 5), '#7a5a3a', 0.6);
-        poly(c, [P(ax - 0.17, ay - 0.12, zE + 5), P(ax + 0.17, ay - 0.12, zE + 5), P(ax + 0.17, ay + 0.14, zE + 4.4), P(ax - 0.17, ay + 0.14, zE + 4.4)], '#e8e0c8', '#b8a888');
-        const wx = x1 - 0.2, wy = y0 + 0.08; box(c, wx - 0.08, wy, wx + 0.08, wy + 0.16, zE, zE + 6, p.wl, p.wr, p.top); poly(c, [P(wx - 0.08, wy + 0.16, zE + 6), P(wx + 0.08, wy + 0.16, zE + 6), P(wx + 0.08, wy + 0.16, zE + 4), P(wx - 0.08, wy + 0.16, zE + 4)], '#3a2a1c');
-      }
       if (st === 'asteca') {
         // (the merlons along the parapet's top, about a metre apart, every other one capped in red — the 3D's roofOf: its
         // block of 0.44 × 0.24 m and 0.16 m, its cap of 0.26 × 0.2 m and 0.14 m; the far sides first)
@@ -1027,8 +1032,8 @@
           for (let k = 0; k < n; k++) { const f = (k + 0.5) / n, x = xa + (xb - xa) * f, y = ya + (yb - ya) * f; const [hx, hy] = ax ? [0.055, 0.03] : [0.03, 0.055], [cx, cy] = ax ? [0.033, 0.025] : [0.025, 0.033];
             box(c, x - hx, y - hy, x + hx, y + hy, zp, zp + 0.5, p.wl, p.wr, p.top); box(c, x - cx, y - cy, x + cx, y + cy, zp + 0.5, zp + 0.92, k % 2 ? p.trim : p.wl, k % 2 ? shade(p.trim, 0.8) : p.wr, k % 2 ? p.trim : p.top); } };
         if (!H.par) { mer(x0 + bat, y0 + bat, x1 - bat, y0 + bat); mer(x0 + bat, y0 + bat, x0 + bat, y1 - bat); mer(x0 + bat, y1 - bat, x1 - bat, y1 - bat); mer(x1 - bat, y0 + bat, x1 - bat, y1 - bat); } // (a terrace has the shell's own parapet: none)
-        for (let k = 0; k < 3; k++) { const q = P(x0 + 0.1 + k * (x1 - x0 - 0.2) / 2, y1 - 0.04, zE); c.fillStyle = k % 2 ? '#5a9a3c' : '#e05a7a'; c.beginPath(); c.arc(q[0], q[1] - 0.8, 1.1, 0, TAU); c.fill(); }
       }
+      deckDraw(c, p, H, zE);
       m.fires.push(P((x0 + x1) / 2, (y0 + y1) / 2, zE + 2));
     } else {
       const k2 = kind === 'quatro-aguas' ? 'hip' : kind === 'turfa' ? 'turf' : kind === 'palha' ? 'thatch' : 'gable';
@@ -1051,6 +1056,20 @@
     }
     if (H.court) courtDraw(c, p, H, zRoof);
     for (const a of H.annex) if (!behind(a)) annexDraw(c, p, st, a, H);
+  }
+  // a home's pieces on its flat roof (Forma.deck, where the 3D builds them: L-267) — the awning of cloth on its four poles,
+  // the wind-catcher with its mouth (on the face one sees, if its front is one), the pots of flowers — back to front
+  function deckDraw(c, p, H, z0) {
+    for (const o of (H.deck || []).slice().sort((a, b2) => a.x + a.y - (b2.x + b2.y))) {
+      if (o.k === 'toldo') {
+        for (const [x, y, z] of o.c) { const ix = x + (x < o.x ? 0.02 : -0.02), iy = y + (y < o.y ? 0.02 : -0.02); ln(c, P(ix, iy, z0), P(ix, iy, z0 + z), '#7a5a3a', 0.6); }
+        poly(c, o.c.map(([x, y, z]) => P(x, y, z0 + z)), '#e8e0c8', '#b8a888');
+      } else if (o.k === 'torre') {
+        const w = o.hw, zt = z0 + o.h, zb = zt - o.boca; box(c, o.x - w, o.y - w, o.x + w, o.y + w, z0, zt, p.wl, p.wr, p.top);
+        if (o.face === 'L') poly(c, [P(o.x - w, o.y + w, zt), P(o.x + w, o.y + w, zt), P(o.x + w, o.y + w, zb), P(o.x - w, o.y + w, zb)], '#3a2a1c');
+        else if (o.face === 'R') poly(c, [P(o.x + w, o.y + w, zt), P(o.x + w, o.y - w, zt), P(o.x + w, o.y - w, zb), P(o.x + w, o.y + w, zb)], '#3a2a1c');
+      } else { const q = P(o.x, o.y, z0); c.fillStyle = o.cor; c.beginPath(); c.arc(q[0], q[1] - 0.8, 1.1, 0, TAU); c.fill(); }
+    }
   }
   // a court open to the sky: the roof cut over it, and through the cut the court's paving and its two far walls, from the
   // court's floor up under the roof (as the 3D opens it: the sky over the court, the roof all round it)
