@@ -224,51 +224,60 @@
     homes.sort((a, c) => G.dist2(a.x, a.y, b.x, b.y) - G.dist2(c.x, c.y, b.x, b.y));
     const route = homes.slice(0, 5).map(h => h.id);
     for (const id of route) S.buildings.get(id).taxT = S.clock + DAY() * 0.6;
-    return H.setTask(v, { type: 'tribute', id: b.id, route, k: 0, bag: 0, goods: {}, pri: 1.05 });
+    // (where the tribute goes: the chief's house when it stands near, else the people's store — chosen now, and written on
+    // the sacks: the load knows where it goes, after a save or a lost way)
+    const pal = bestPalace(f); const d = pal && pal.built && G.dist(pal.x, pal.y, v.x, v.y) < 30 ? pal : G.Village.nearestDropoff(v.x, v.y, v.set);
+    const dest = d ? (Co.RANK[d.type] ? 'b:' + d.id : 'f:' + f.id) : 'f:' + f.id;
+    return H.setTask(v, { type: 'tribute', id: b.id, route, k: 0, bag: 0, goods: {}, dest, pri: 1.05 });
   }
+  // door to door: the share of the house's pantry into the collector's sacks — in the ledger, marked for where the tribute
+  // goes —, and a share of what else the house keeps sent there at once (one good in the hands at a time); then the sacks to
+  // the chief or the store. A house's pantry and goods only move by the depot (T-130: the pantry was written by hand here)
   function runTribute(v, t, dt, H) {
     const S = G.S; const b = S.buildings.get(t.id); if (!b || !b.built) return H.end(v);
     const f = G.Fac.ofV(v); if (!f) return H.end(v);
+    const D = G.Depot; const dest = t.dest && D.exists(t.dest) ? t.dest : 'f:' + f.id;
     if (t.k < t.route.length) {
       const h = S.buildings.get(t.route[t.k]);
       if (!h || !h.built) { t.k++; t.st = 0; t.gob = 0; return; }
       if (!t.st) { if (!t.gob) { t.gob = 1; if (!G.Vg.gotoB(v, h, 0.25)) { t.k++; t.gob = 0; return; } } if (H.move(v, dt)) { t.gob = 0; t.st = 1; v.actT = 0; } return; }
       v.act = 'knock'; const [cx, cy] = G.Village.center(h); G.faceTo(v, cx - v.x, cy - v.y);
       if (v.actT < 1.8) return;
-      const rate = Co.tributeRate(f);
-      const n = Math.floor((h.pantry || 0) * rate * 10) / 10; if (n > 0) { h.pantry -= n; t.bag += n; }
+      const rate = Co.tributeRate(f); const ref = 'h:' + h.id;
+      const n = Math.floor(D.get(ref, 'food') * rate * 10) / 10;
+      if (n > 0) {
+        // (into the sacks; what the hands cannot take goes straight where the tribute goes, as the coin tax does)
+        const r = D.move(ref, 'v:' + v.id, 'food', n, { code: 'tributo', by: v.id, to: dest, part: true });
+        const got = r.ok ? r.n : 0; const rest = Math.round((n - got) * 100) / 100;
+        const r2 = rest > 0 ? D.move(ref, dest, 'food', rest, { code: 'tributo', by: v.id, part: true }) : null;
+        t.bag += got + (r2 && r2.ok ? r2.n : 0);
+      }
       // a share of what the house made or bought, too
-      const I = h.inv || {}; const k = Object.keys(I).find(q => q !== 'food' && (I[q] || 0) >= 2 && G.R() < rate * 2);
-      if (k) { I[k] -= 1; t.goods[k] = (t.goods[k] || 0) + 1; }
+      const I = h.inv || {}; const k = Object.keys(I).sort().find(q => q !== 'food' && (I[q] || 0) >= 2 && G.R() < rate * 2);
+      if (k) { const r = D.move(ref, dest, k, 1, { code: 'tributo', by: v.id }); if (r.ok) t.goods[k] = (t.goods[k] || 0) + 1; }
       if (rate > 0.22) { for (const o of S.villagers.values()) if (o.home === h.id && !o.inside && G.dist2(o.x, o.y, v.x, v.y) < 9 && G.R() < 0.5) G.Vg.emote(o, 'angry', 2); }
       else if (n > 0 && G.R() < 0.3) G.Vg.emote(v, 'chat', 1);
       t.k++; t.st = 0; return;
     }
-    // with the sacks to the chief's house (or the common store)
-    if (!t.dest) { const pal = bestPalace(f); const d = pal && pal.built && G.dist(pal.x, pal.y, v.x, v.y) < 30 ? pal : G.Village.nearestDropoff(v.x, v.y, v.set); t.dest = d ? d.id : -1; }
-    const dest = S.buildings.get(t.dest);
-    if (!dest) { v.carry = null; return H.end(v); }
-    if (!t.carried) { t.carried = 1; const tot = t.bag + Object.values(t.goods).reduce((s, x) => s + x, 0); if (tot > 0) v.carry = { k: t.bag >= 1 ? 'food' : Object.keys(t.goods)[0] || 'food', n: Math.max(1, Math.round(tot)), tribute: 1 }; }
-    if (!t.gob) { t.gob = 1; if (!G.Vg.gotoB(v, dest, 0.25)) { v.carry = null; return H.end(v); } }
-    if (!H.move(v, dt)) return;
-    if (Co.RANK[dest.type]) { const I = dest.inv || (dest.inv = {}); I.food = (I.food || 0) + t.bag; for (const k in t.goods) I[k] = (I[k] || 0) + t.goods[k]; }
-    else { G.Village.addStock('food', t.bag, f.id); for (const k in t.goods) G.Village.addStock(k, t.goods[k], f.id); }
+    // the round done: what it brought counted, and the sacks to the chief's house (or the common store)
     f.eco.tax = (f.eco.tax || 0) + t.bag;
-    if (t.bag + Object.keys(t.goods).length > 0) G.FX && G.FX.deposit(v.x, v.y, 'food', Math.round(t.bag * 10) / 10 || 1);
-    if (!f._tribute && (t.bag > 0 || Object.keys(t.goods).length)) { f._tribute = S.day; log(`Os primeiros coletores de tributo de ${f.name} bateram de porta em porta e levaram sacos de grão e um pouco de tudo para ${Co.RANK[dest.type] ? G.Village.buildName(dest) : 'o armazém do chefe'}.`, 'trade', dest.x, dest.y); }
-    v.carry = null; H.end(v);
+    if (!f._tribute && (t.bag > 0 || Object.keys(t.goods).length)) { const pl = A_place(dest); f._tribute = S.day; log(`Os primeiros coletores de tributo de ${f.name} bateram de porta em porta e levaram sacos de grão e um pouco de tudo para ${pl && Co.RANK[pl.type] ? G.Village.buildName(pl) : 'o armazém do chefe'}.`, 'trade', pl ? pl.x : v.x, pl ? pl.y : v.y); }
+    if (v.carry && v.carry.to === dest && v.carry.n > 0) return H.setTask(v, { type: 'carga', to: dest, pri: 1, st: 0 });
+    H.end(v);
   }
-  // the court lives off what is brought in
+  const A_place = ref => (G.Act && G.Act.placeOf ? G.Act.placeOf(ref) : null);
+  // the court lives off what is brought in: its meals counted out of its larder a whole unit at a time, what it does not eat
+  // to the people's store — in the ledger ('corte')
   function courtTick(dt) {
-    const S = G.S;
+    const S = G.S; const D = G.Depot;
     for (const b of S.buildings.values()) {
       if (!Co.RANK[b.type] || !b.built || !b.inv) continue;
       const f = G.Fac.get(G.Village.facOfSet(b.set)); if (!f) continue;
-      const I = b.inv; const eat = dt / DAY() * (2 + Co.RANK[b.type] * 2);
-      I.food = Math.max(0, (I.food || 0) - eat);
-      // what the court does not eat goes to the stores
-      if ((I.food || 0) > 30) { const n = I.food - 20; I.food = 20; G.Village.addStock('food', n, f.id); }
-      for (const k in I) if (k !== 'food' && I[k] >= 4) { G.Village.addStock(k, I[k] - 2, f.id); I[k] = 2; }
+      const ref = 'b:' + b.id; const eat = dt / DAY() * (2 + Co.RANK[b.type] * 2);
+      const acc = (b.eatAcc || 0) + Math.min(eat, D.get(ref, 'food')); const n = Math.floor(acc + 1e-9);
+      if (n >= 1) { const r = D.use(ref, 'food', n, { code: 'corte', mine: true, part: true }); b.eatAcc = Math.max(0, acc - (r.ok ? r.n : 0)); } else b.eatAcc = acc;
+      if (D.get(ref, 'food') > 30) D.store(ref, f.id, 'food', D.get(ref, 'food') - 20, { code: 'corte' });
+      for (const k of Object.keys(b.inv).sort()) if (k !== 'food' && D.get(ref, k) >= 4) D.store(ref, f.id, k, D.get(ref, k) - 2, { code: 'corte' });
     }
   }
 

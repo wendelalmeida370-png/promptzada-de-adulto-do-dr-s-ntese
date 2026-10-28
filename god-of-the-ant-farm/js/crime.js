@@ -280,7 +280,8 @@
   }
   // the bread of whoever is held — in a cell, bound, condemned —, from the town's store: one rule for every hand that
   // holds someone (the cells here; justice.js's bound and condemned, who waited for their hour with nothing — L-170)
-  Cr.feed = function (v, setId) { if (v.hunger > 60) { const f = G.Fac.ofSet(setId); if (f && f.stock.food >= 1) { f.stock.food -= 1; v.hunger = Math.max(0, v.hunger - 45); } } };
+  // (the prisoner's bread, from the town's store — in the ledger: 'preso')
+  Cr.feed = function (v, setId) { if (v.hunger > 60) { const f = G.Fac.ofSet(setId); if (f && G.Depot.get('f:' + f.id, 'food') >= 1 && G.Depot.use('f:' + f.id, 'food', 1, { code: 'preso', by: v.id }).ok) v.hunger = Math.max(0, v.hunger - 45); } };
   function release(v, b, how, H) {
     const S = G.S; const [dx, dy] = G.Vg.door(b);
     v.jail = 0; v.jailUntil = 0; v.inside = 0; v.sleeping = false; v.x = dx; v.y = dy;

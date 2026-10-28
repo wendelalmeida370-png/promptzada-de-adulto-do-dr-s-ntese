@@ -925,8 +925,8 @@
   function runGoHome(v, t, dt, H) {
     const h = G.S.buildings.get(t.id); if (!h || !h.built) return H.end(v);
     if (t.st === 0) { const r = walkB(v, t, h, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; t.dur = G.rr(6, 14); if (G.R() < 0.5) v.inside = h.id; } return; }
-    // eat from the family pantry, then rest at the door
-    if (v.hunger > 45 && (h.pantry || 0) >= 1) { h.pantry -= 1; v.hunger = Math.max(0, v.hunger - 55); v.act = 'eat'; }
+    // eat from the family pantry (in the ledger: the supper), then rest at the door
+    if (v.hunger > 45 && G.Depot.get('h:' + h.id, 'food') >= 1) { if (G.Depot.use('h:' + h.id, 'food', 1, { code: 'refeicao', by: v.id }).ok) { v.hunger = Math.max(0, v.hunger - 55); v.act = 'eat'; } }
     else if (!v.inside) v.act = 'sit';
     if (v.actT > t.dur) H.end(v);
   }
@@ -1022,18 +1022,27 @@
       }
     }
   }
+  // what a house has of a good it uses up: what it keeps, less what it already used of the last unit (the use is counted
+  // in the house's own tally, h.useAcc, and leaves its goods a whole unit at a time, in the ledger: 'consumo')
+  E.houseHas = (h, k) => Math.max(0, ((h.inv && h.inv[k]) || 0) - ((h.useAcc && h.useAcc[k]) || 0));
   function houseTick(dt) {
     const S = G.S; const dayF = dt / DAY();
     const bySet = new Map();
     for (const h of S.buildings.values()) {
       if (!h.built || !G.BDEF[h.type].housing) continue;
-      const I = inv(h); const res = h.res || 0; if (!res) continue;
+      const res = h.res || 0; if (!res) continue;
       let sat = 0, cnt = 0;
       for (const k in HOUSE_WANTS) {
         const need = res * HOUSE_WANTS[k];
         const use = need * dayF;
-        const have = I[k] || 0;
-        if (have >= use) { I[k] = have - use; sat += 1; } else { I[k] = 0; sat += have / Math.max(0.0001, use); }
+        const have = E.houseHas(h, k);
+        const used = Math.min(have, use); sat += have >= use ? 1 : have / Math.max(0.0001, use);
+        if (used > 0) {
+          const acc = h.useAcc || (h.useAcc = {}); acc[k] = (acc[k] || 0) + used;
+          // (a whole unit used, or the last of what the house had: out of its goods, in the ledger)
+          const kept = (h.inv && h.inv[k]) || 0; const n = acc[k] >= 1 - 1e-9 ? Math.floor(acc[k] + 1e-9) : acc[k] >= kept - 1e-9 ? kept : 0;
+          if (n > 1e-6) { const r = G.Depot.use('h:' + h.id, k, n, { code: 'consumo', mine: true, part: true }); if (r.ok) acc[k] = Math.max(0, Math.round((acc[k] - r.n) * 1e6) / 1e6); }
+        }
         cnt++;
       }
       h.well = G.lerp(h.well === undefined ? 0.5 : h.well, sat / cnt, Math.min(1, dayF * 2));

@@ -33,7 +33,7 @@
     for (const k in E.HOUSE_WANTS) {
       if (saving && LUXURY[k]) continue;
       const target = Math.max(1, res * E.HOUSE_WANTS[k] * DAYS);
-      const have = I[k] || 0; if (have >= target - EPS) continue;
+      const have = E.houseHas ? E.houseHas(h, k) : I[k] || 0; if (have >= target - EPS) continue; // (less what the house already used of the last unit)
       const n = Math.min(Math.ceil(target - have - EPS), room(k)); if (n < 1) continue;
       out.push({ k, n, lack: Math.min(1, 1 - have / target), use: res * E.HOUSE_WANTS[k] });
     }
