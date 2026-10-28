@@ -426,8 +426,12 @@ if (want('l14')) {
   else {
     let h = e.h; const dw = doorWatch(); let minded = 0, kidsHome = 0, n = 0, txt = '', two = 0, reload = '', reloadOk = true; const exits = new Map();
     let died = null, after = '', afterOk = true;
+    // (what the old of the house did, second by second, and why one was not minding — for the note when the case fails)
+    const seq = []; const whyNot = new Map();
+    const notMinding = o => { if (o.age < 55) return 'idade'; if (o.sick > 0) return 'doente'; if (o.hp < 50) return `ferida (${Math.round(o.hp)})`; if (!builtHome(o)) return 'sem casa'; const t = o.task; return t ? `${t.type}${t.what ? ':' + t.what : ''}` : 'sem tarefa'; };
     live(75, () => {
       dw.step(); n++;
+      if (n % 10 === 0 && n <= 550) { const o = S.villagers.get(e.old[0].id); const w = o ? (o.task && o.task.type === 'lar' && o.task.what === 'cuidar' ? 'cuidar' : notMinding(o)) : 'morta'; if (seq[seq.length - 1] !== w) seq.push(w); if (o && w !== 'cuidar') whyNot.set(w, (whyNot.get(w) || 0) + 1); }
       if (n === 550) {
         // (the one minding dies in the middle of the day: another old of the house takes over, or the little ones go about
         // their day — none kept at home by a minder who is gone)
@@ -461,7 +465,7 @@ if (want('l14')) {
     });
     const avgKids = minded ? r2(kidsHome / minded) : 0; const loops = [...exits.values()].filter(x => x > 2).length;
     ok('l14 os velhos cuidam dos pequenos em casa', minded >= 200 && avgKids >= 1 && !loops && two <= 20 && reloadOk && afterOk && !!died && !dw.wrong.length,
-      `${h.type}#${h.id}: ${e.old.map(o => o.name).join(', ')} (${e.old.map(o => Math.floor(o.age)).join(', ')} anos) e ${e.kids.length} criança(s) de 3 a 6; de dia, cuidando em casa ${r2(minded / 10)} s de 55 («${txt}»), com ${avgKids} criança(s) em casa em média${reload}${after}${died ? '' : '; aos 55 s, NINGUÉM CUIDANDO para morrer'}${two ? `; dois cuidando juntos ${r2(two / 10)} s` : ''}${loops ? `; ${loops} criança(s) ENTRANDO E SAINDO sem parar` : ''}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}`);
+      `${h.type}#${h.id}: ${e.old.map(o => o.name).join(', ')} (${e.old.map(o => Math.floor(o.age)).join(', ')} anos) e ${e.kids.length} criança(s) de 3 a 6; de dia, cuidando em casa ${r2(minded / 10)} s de 55 («${txt}»), com ${avgKids} criança(s) em casa em média${reload}${after}${died ? '' : '; aos 55 s, NINGUÉM CUIDANDO para morrer'}${two ? `; dois cuidando juntos ${r2(two / 10)} s` : ''}${loops ? `; ${loops} criança(s) ENTRANDO E SAINDO sem parar` : ''}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}${minded < 200 ? ` — o que ${e.old[0].name} fez: ${seq.slice(0, 12).join(' → ')}; fora do cuidado: ${[...whyNot].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, c]) => `${k} ${c} s`).join(', ')}` : ''}`);
   }
 }
 
@@ -562,7 +566,7 @@ if (want('l15')) {
     else {
       const doIt = id => { const o = G.Act.offers(w, w.x, w.y).find(q => q.id === id); if (!o) return { ok: false, why: 'sem a oferta «' + id + '»' }; const it = G.Possess.apply(() => G.Act.perform(w, o)); live(0.3); return it.res || { ok: false, why: 'o mundo não fez' }; };
       const r1 = doIt('lar.pegarBebe:' + Fb.id); const b1 = S.villagers.get(Fb.id);
-      if (!r1.ok || b1.carrier !== w.id) fail(`(f) pegar o bebê: ${r1.why || 'o bebê não veio para o colo do corpo'}`);
+      if (!r1.ok || b1.carrier !== w.id) { const ww = S.villagers.get(w.id); fail(`(f) pegar o bebê: ${r1.why || 'o bebê não veio para o colo do corpo'} [bebê home ${b1.home}, mãe ${b1.mother}, pai ${b1.father}, colo ${b1.carrier}, dentro ${b1.inside}; corpo #${ww.id} home ${ww.home}, dentro ${ww.inside}; ao alcance ${G.Vg.babyReach(b1, ww)}, pode segurar ${G.Vg.canHold(ww)}; ofertas: ${G.Act.offers(ww, ww.x, ww.y).map(o => o.id).join(', ') || 'nenhuma'}]`); }
       live(1.5); const b2 = S.villagers.get(Fb.id);
       if (r1.ok && b2.carrier !== w.id) fail(`(f) o mundo tirou o bebê do colo do corpo (está com ${who(b2.carrier)})`);
       const r2 = doIt('lar.darBebe:' + Fb.id + ':' + m.id); const b3 = S.villagers.get(Fb.id);
