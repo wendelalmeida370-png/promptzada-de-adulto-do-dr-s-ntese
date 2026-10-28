@@ -170,6 +170,8 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     const [dx, dy] = G.Vg.door(rich); guard.x = dx + 1.2; guard.y = dy + 0.8; guard.sleeping = false; guard.inside = 0; G.Vg.setTask(guard, { type: 'ronda', pts: Array.from({ length: 40 }, (_, k) => k % 2 ? [dx - 1.2, dy + 0.8] : [dx + 1.5, dy + 0.6]), k: 0, pri: 1.6, st: 0, loop: 1, kind: 'ronda' });
     thief.sleeping = false; thief.inside = 0; G.Vg.endTask(thief);
     G.Vg.setTask(thief, { type: 'furto', house: rich.id, pri: 2.05, st: 0, kind: 'furto' });
+    // (the coins in and out of the thief's purse, as the ledger writes them: the house's own total moves with the day)
+    window.__c5 = []; G.Depot.onMove.push(e => { if (e[5] === 'moedas' && (e[3] === 'p:' + thief.id || e[4] === 'p:' + thief.id)) window.__c5.push([e[3], e[4], e[6], e[8]]); });
     return { rich: rich.id, thief: thief.id, guard: guard.id, jail: jail ? jail.id : 0, coin0: rich.coin };
   });
   if (th.skip) ok('5 o roubo: a moeda muda de casa, o guarda vê, prende e leva à cadeia', false, th.skip);
@@ -190,7 +192,12 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     if (stole) th.crime = stole.id;
     const caught = await until(o => { const v = G.S.villagers.get(o.thief); return v && v.jail ? { jail: v.jail, until: v.jailUntil, task: v.task && v.task.type } : null; }, 200, th);
     const after = await page.evaluate(o => { const S = G.S; const c = (S.crimes || []).find(q => q.id === o.crime); const v = S.villagers.get(o.thief); return { st: c && c.st, how: c && c.how, coin: (S.buildings.get(o.rich) || {}).coin, purse: v ? v.purse : null }; }, th);
-    ok('5 o roubo: a moeda muda de casa, o guarda vê, prende e leva à cadeia', !!stole && stole.seen >= 1 && !!caught && after.coin >= th.coin0 - 0.01, stole ? `roubou ${stole.n} moedas (${stole.seen} testemunha${stole.seen > 1 ? 's' : ''}${stole.flag ? ', o guarda viu' : ''}); ${caught ? `preso até o ano ${caught.until} (${caught.task})` : 'não foi preso'}; ${after.how || ''}; a casa: ${th.coin0} → ${after.coin && after.coin.toFixed(1)} moedas` : 'não roubou');
+    // (the coin back home by its own line in the ledger — «devolvido», from the thief's purse to the house, what is left in
+    // it of the theft —, not the house's total: a house of 40 coins buys at the market and pays its rounds the same day,
+    // and with the final code, seed 7, the house went from 40 to 21,6 with the thief caught and the 6 given back, T-216)
+    const coin5 = await page.evaluate(o => { const L = window.__c5 || [], P = 'p:' + o.thief, H = 'h:' + o.rich; const sum = f => Math.round(L.filter(f).reduce((a, e) => a + e[2], 0) * 100) / 100; return { took: sum(e => e[0] === H && e[1] === P && e[3] === 'roubo'), back: sum(e => e[0] === P && e[1] === H && e[3] === 'devolvido'), out: sum(e => e[0] === P && e[3] !== 'devolvido'), inn: sum(e => e[1] === P && e[3] !== 'roubo') }; }, th);
+    const due5 = stole ? Math.min(stole.n, coin5.took + coin5.inn - coin5.out) : 0;
+    ok('5 o roubo: a moeda muda de casa, o guarda vê, prende e leva à cadeia', !!stole && stole.seen >= 1 && !!caught && coin5.back > 0 && Math.abs(coin5.back - due5) < 0.01, stole ? `roubou ${stole.n} moedas (${stole.seen} testemunha${stole.seen > 1 ? 's' : ''}${stole.flag ? ', o guarda viu' : ''}); ${caught ? `preso até o ano ${caught.until} (${caught.task})` : 'não foi preso'}; ${after.how || ''}; de volta à casa pelo livro: ${coin5.back} de ${Math.round(due5 * 100) / 100}${coin5.out ? ` (o ladrão gastou ${coin5.out} antes)` : ''}; a casa: ${th.coin0} → ${after.coin && after.coin.toFixed(1)} moedas, com o dia dela` : 'não roubou');
     // 6 the cell through a save
     const A = await page.evaluate(() => QA.check().filter(x => x.sys === 'urb' && x.sev <= 3).map(x => x.sev + ' ' + x.msg));
     await page.evaluate(() => G.Save.save(true));
