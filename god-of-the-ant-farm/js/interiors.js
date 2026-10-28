@@ -1427,6 +1427,48 @@
   }
   // (whether the body's rim stands at a flight's end of a plan made: for the proofs and the checker)
   In.landsAt = (plan, lv, x, z) => { const cr = crawl(plan, lv); return RIM9.every(([dx, dz]) => { const c = codeAt(plan, lv, x + dx * BODY.r, z + dz * BODY.r); return LAND(c) || (cr && c === C.LOWROOF); }); };
+  // the geometric report of one building's plan (Parte 7.4, D-087): each finding a FALHA (a defect) or an ESCOLHA (legitimate,
+  // said with its reason) — for qa/geometria.js and for the plan the god looks at in the dev mode (int-planta.js); it only
+  // reads. o.world: the building stands in a world (its entrance against the ground, the door people leave by); o.rec: the
+  // record asked for; o.holding: a house whose plan does not hold, told by the family the world founds it in
+  const SLOPE_MAX = { escada: 50, degraus: 45 }; // (D-086: above these, the flight is of the next class — a class that says less is a defect)
+  In.report = function (b, p, o) {
+    o = o || {}; const rec = o.rec || b.ip; const out = []; const F = w => out.push({ k: 'FALHA', what: w }), E = w => out.push({ k: 'ESCOLHA', what: w });
+    if (!p || !p.ok) {
+      const g = o.holding && TYPES[rec.t] && TYPES[rec.t].use === 'casa' ? In.holdingFam(b, rec) : null;
+      if (g) E(`a família ${rec.f} não abriga a casa neste lote: o mundo a funda em ${g}`); else F(`a planta não se arma (${(p && p.errs || []).slice(0, 2).join('; ') || 'sem planta'})`);
+      return out;
+    }
+    // (the way in: an entrance, from the street to a room; an open ground has none — it is walked on from every side)
+    if (!p.entrance) F('sem entrada');
+    else if (p.entrance.door < 0) { if (p.shell.kind === 'aberta') E('chão aberto, sem porta: entra-se de todo lado'); else F('a entrada sem porta'); }
+    if (o.world && b.built && b.blocks && G.Space && G.Space.entryFits) { const e = G.Space.entryFits(b, In.shellOf(b)); const said = In.entrySaid(b); if (!e.ok && said !== false) F(`a entrada não cabe diante da porta (${e.kind}, o pé a ${e.foot} m)`); else if (!e.ok) E('a entrada não cabe em lado nenhum aberto à rua (dito pela virada do dia)'); }
+    if (o.world && b.built && b.blocks && G.Vg && G.Vg.planDoor === In.planDoor) { const pd = In.planDoor(b), d = G.Vg.door(b); if (pd && (Math.abs(pd[0] - d[0]) > 1e-6 || Math.abs(pd[1] - d[1]) > 1e-6)) F('quem sai não sai pela porta da planta'); }
+    // (the flights: their ends where a body stands; their class by their slope — a ladder or a steep stair a choice, said)
+    for (const s of p.stairs) {
+      if (s.kind === 'degraus') continue;
+      if (!In.landsAt(p, s.lv0, s.a[0], s.a[1]) || !In.landsAt(p, s.lv1, s.b[0], s.b[1])) F(`o corpo não cabe no ${In.landsAt(p, s.lv0, s.a[0], s.a[1]) ? 'topo' : 'pé'} do lance ${s.lv0}→${s.lv1}`);
+      const cls = s.cls || (s.kind === 'escada-de-mao' ? 'mao' : 'escada'); const deg = s.slope !== undefined ? Math.round(s.slope) : null;
+      if (cls === 'mao') E(`escada de mão ${s.lv0}→${s.lv1}${deg !== null ? ` (${deg}°)` : ''}`);
+      else if (cls === 'ingreme') E(`escada íngreme ${s.lv0}→${s.lv1}${deg !== null ? ` (${deg}°)` : ''}`);
+      else if (deg !== null && SLOPE_MAX[cls] && deg > SLOPE_MAX[cls] + 0.5 && !s.larga) F(`${cls} de ${deg}° (mais que ${SLOPE_MAX[cls]}°: a classe não diz o lance)`);
+    }
+    // (each storey and each room reached from the door — a room the recipe declares restricted, a choice)
+    const n = p.grid ? p.grid.n : 0, cs = p.grid ? p.grid.cs : CS; const R = p.reach || {};
+    const hit = (lv, r) => { const g = R[lv]; if (!g) return false; for (let z = Math.max(0, Math.floor(r[1] / cs)); z <= Math.min(n - 1, Math.floor(r[3] / cs)); z++) for (let x = Math.max(0, Math.floor(r[0] / cs)); x <= Math.min(n - 1, Math.floor(r[2] / cs)); x++) if (g[z * n + x]) return true; return false; };
+    for (const l of p.levels) { const rooms = p.rooms.filter(m => m.lv === l.lv); if (!rooms.length) continue; if (!rooms.some(m => hit(l.lv, m.r))) { if (rooms.every(m => m.restrito)) E(`piso ${l.lv} restrito`); else F(`piso ${l.lv} (${l.kind}) que a porta não alcança`); } }
+    for (const m of p.rooms) if (!hit(m.lv, m.r)) { if (m.restrito) E(`cômodo ${m.fn} restrito (piso ${m.lv})`); else if (p.levels.some(l => l.lv === m.lv)) F(`cômodo ${m.fn} (piso ${m.lv}) que a porta não alcança`); }
+    // (a cellar: its headroom — 1.8 m at least where one walks in it)
+    for (const l of p.levels) if (l.kind === 'porao' && l.h !== undefined && l.h < 1.8 - 1e-6) F(`porão com ${l.h.toFixed(2)} m de pé-direito`);
+    // (the places of use: each use of each piece with a place where a body is)
+    for (const it of p.items) { const uses = [...new Set(it.spots.map(q => q.use))].filter(u => u !== 'acesso' && u !== 'entrar'); for (const u of uses) if (!it.spots.some(q => q.use === u && q.ok)) F(`o corpo não fica em ${(ITEMS[it.kind] || {}).name || it.kind} (${u}, piso ${it.lv})`); }
+    // (the shell inside the lot)
+    const L = p.lot ? p.lot.w : 4; const sh = p.shell; const r = sh.kind === 'round' ? [sh.cu - sh.rad, sh.cv - sh.rad, sh.cu + sh.rad, sh.cv + sh.rad] : sh.r;
+    if (r && (r[0] < -1e-3 || r[1] < -1e-3 || r[2] > L + 1e-3 || r[3] > L + 1e-3)) F(`a casca sai do lote (${JSON.stringify(r)} num lote de ${L} m)`);
+    // (who sleeps on a floor kept for them: said by the plan)
+    if (p.short) E(`${p.short} ${p.short > 1 ? 'dormem' : 'dorme'} no chão guardado da casa`);
+    return out;
+  };
 
   // ------------------------------ the signature: what makes two plans the same plan, and two families different ------------------------------
   // the graph of its spaces — storeys and their kind, rooms by what they are for, the ways between the rooms of a storey (a
