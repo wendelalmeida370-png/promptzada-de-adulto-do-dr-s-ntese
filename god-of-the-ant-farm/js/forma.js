@@ -509,6 +509,47 @@
     return { els, door: h.door, body: { walls, base: els[0], steps } };
   });
 
+  // ------------------------------ the temple (arch.js temple) ------------------------------
+  // (the body's flight cut into the front of a base — D-093: no riser over 0.30 m —: n risers from the street at v0 tiles up
+  // to the base's top at z px, its treads d tiles deep from −s to s across; the last riser onto the base itself)
+  const flightF = (L, s, v0, z, n, d) => { const out = []; for (let j = 0; j < n - 1; j++) out.push(blocoF(L, -s, v0 - d * (j + 1), s, v0 - d * j, 0, z * (j + 1) / n, BASE, { degrau: 1 })); return out; };
+  // (a block of a base, its half side q tiles, with the flight's slot cut out of its front — from −s to s, from vS forward: the
+  // three pieces round it)
+  const slottedF = (L, q, vS, s, z0, z1) => [blocoF(L, -q, -q, q, vS, z0, z1, BASE), blocoF(L, -q, vS, -s, q, z0, z1, BASE), blocoF(L, s, vS, q, q, z0, z1, BASE)];
+  // (the braziers at the base's front corners: a stand of stone 4 px high, its fire on it)
+  const templeFires = L => [-0.9, 0.9].flatMap(bx => [blocoF(L, bx - 0.05, 0.85, bx + 0.05, 0.95, 0, 4, ['#8a7a5a', '#6a5a40', '#9a8a6a']), { k: 'braseiro', p: [at(L, bx), at(L, 0.9), px(4)], r: 0.16 }]);
+  // the Greek's (and the classical people's): the crepidoma — three steps of 1.4 px, each 0.07 tiles in, the flight of five
+  // risers on the axis —, the peristyle of 0.045 tiles columns round the cella (six on the front and the back, five on the
+  // sides) to 17 px over the stylobate, the cella of 0.95 tiles with its door of 0.3 × 10 px, the entablature of 2.5 px with
+  // its band, the pediment roof along the way in to 9.5 px over it, the gilded round in the gable; the Roman's: the podium of
+  // 7 px and 1.7 tiles, the flight of eight risers on the axis from the street to the porch, the four columns of the porch
+  // before the cella of 1.1 × 0.9 tiles, the entablature and the roof as the Greek's
+  const templeGR = st => L => {
+    const ro = st === 'romano'; const els = []; let z0, walls, door, cols, steps, base, extra;
+    if (!ro) {
+      const s = 0.0875, vS = 0.63; for (let k = 0; k < 3; k++) els.push(...slottedF(L, 0.95 - k * 0.07, vS, s, 1.4 * k, 1.4 * (k + 1)));
+      steps = flightF(L, s, 0.95, 4.2, 5, 0.08); z0 = 4.2;
+      base = { r: rect(L, -0.81, -0.81, 0.81, 0.81), y1: px(4.2), degraus: [0, 1, 2].map(k => ({ r: rect(L, -0.95 + k * 0.07, -0.95 + k * 0.07, 0.95 - k * 0.07, 0.95 - k * 0.07), y1: px(1.4 * (k + 1)) })) };
+      const pts = []; for (let k = 0; k < 6; k++) { const x = -0.72 + 1.44 * k / 5; pts.push([x, -0.72], [x, 0.72]); } for (let k = 1; k < 4; k++) { const y = -0.72 + 1.44 * k / 4; pts.push([-0.72, y], [0.72, y]); }
+      cols = { k: 'colunata', pts: pts.map(([x, y]) => [at(L, x), at(L, y)]), r: 0.045 * TILE, y0: px(z0), y1: px(z0 + 17), cor: ['col0', 'col1'] };
+      walls = wallsF(L, -0.5, -0.5, 0.45, 0.45, z0, z0 + 17); door = doorF(L, 0.45, -0.15, 0.15, z0, z0 + 10, '#3a2e24');
+      extra = { peristyle: { r: rect(L, -0.81, -0.81, 0.81, 0.81), y1: px(z0 + 17), cols } };
+    } else {
+      const s = 0.125, n = 8, d = 0.08125, vS = 1.0 - d * (n - 1); els.push(...slottedF(L, 0.85, vS, s, 0, 7));
+      steps = flightF(L, s, 1.0, 7, n, d); z0 = 7; base = { r: rect(L, -0.85, -0.85, 0.85, 0.85), y1: px(7) };
+      cols = colsF(L, -0.62, 0.3, 0.62, 0.72, z0, z0 + 17, 4, 0.05, 'L');
+      walls = wallsF(L, -0.55, -0.7, 0.55, 0.2, z0, z0 + 17); door = doorF(L, 0.2, -0.15, 0.15, z0, z0 + 10, '#3a2e24');
+      extra = { porch: { r: rect(L, -0.67, 0.2, 0.67, 0.85), y1: px(z0 + 17), cols } };
+    }
+    const H = z0 + 17, ey0 = ro ? -0.72 : -0.78, ey1 = ro ? 0.76 : 0.78;
+    els.push(...steps, walls, door, cols, ...templeFires(L),
+      blocoF(L, -0.78, ey0, 0.78, ey1, H, H + 2.5, COL), faixaF(L, -0.78, ey0, 0.78, ey1, H + 1, H + 2, ro ? 'acc2' : 'acc'),
+      { k: 'telhado', r: rect(L, -0.78, ey0, 0.78, ey1), y0: px(H + 2.5), y1: px(H + 12), ao: 'v', ov: 0.05 * TILE, cor: ['roof0', 'roof1', 'gable', 'roof2'] },
+      { k: 'disco', na: 'frente', u: L / 2, v: at(L, ey1 + 0.05), y: px(H + 6), r: 0.28, cor: ro ? 'acc' : '#f2c14e' });
+    return { els, door: { u: L / 2, w: 0.3 * TILE, y0: px(z0), y1: px(z0 + 10) }, body: Object.assign({ walls, base, steps }, extra) };
+  };
+  def('temple', 'grego', templeGR('grego')); def('temple', 'romano', templeGR('romano'));
+
   // ------------------------------ the administration (cityart.js administracao) ------------------------------
   // the classical one: its base of 0.95 tiles and 2 px, the hall of 1.6 × 1.1 tiles to 17 px with three windows a side, the
   // six columns along its front, the entablature to 18.6 px, the roof along the front 7.4 px over it, the blue flag at its
@@ -1108,7 +1149,8 @@
   // it) —, tabuas — walls of planks —, porta: { u, w, y0, y1 } on the front face (v = r[3]), janelas: [{ na: 'frente' |
   // 'fundo' | 'direita' | 'esquerda', de, ate (along the face), y0, y1 }] (but the pane of the god's row over the door: its
   // top's, not an opening of its own), portico: { r, y1 (the ceiling),
-  // colunas: [{ c, r }] } or null, base: { r, h } — the plinth under the floor —, degraus: [{ r, y1 }] — the treads from the
+  // colunas: [{ c, r }] } or null, peristilo: the same round the walls (a Greek temple's) or null, base: { r, h, degraus? } —
+  // the plinth under the floor, and its own steps from the ground ([{ r, y1 }]: a crepidoma's) —, degraus: [{ r, y1 }] — the treads from the
   // street up to it, from the lowest —, telhado: { tipo: 'duas-aguas' | 'quatro-aguas' | 'turfa' | 'plano', r, y0, y1, ao, ov } }
   Fo.body = F => (F.body ? keep(F, 'body', () => {
     const B = F.body, w = B.walls, r = w.r; const tol = 0.3;
@@ -1127,7 +1169,8 @@
     const P = B.porch;
     return { r: r.slice(), r1: w.r1 ? w.r1.slice() : null, y0: w.y0, y1: Math.max(w.y1, telhado.y0), tabuas: !!w.tabuas, porta: F.door ? { u: F.door.u, w: F.door.w, y0: F.door.y0, y1: F.door.y1 } : null, janelas,
       portico: P ? { r: P.r.slice(), y1: P.y1, colunas: P.cols.pts.map(q => ({ c: q.slice(), r: P.cols.r })) } : null,
-      base: B.base ? { r: B.base.r.slice(), h: B.base.y1 } : null, degraus: (B.steps || []).map(q => ({ r: q.r.slice(), y1: q.y1 })).sort((a, b) => a.y1 - b.y1), telhado };
+      peristilo: B.peristyle ? { r: B.peristyle.r.slice(), y1: B.peristyle.y1, colunas: B.peristyle.cols.pts.map(q => ({ c: q.slice(), r: B.peristyle.cols.r })) } : null,
+      base: B.base ? Object.assign({ r: B.base.r.slice(), h: B.base.y1 }, B.base.degraus ? { degraus: B.base.degraus.map(q => ({ r: q.r.slice(), y1: q.y1 })) } : {}) : null, degraus: (B.steps || []).map(q => ({ r: q.r.slice(), y1: q.y1 })).sort((a, b) => a.y1 - b.y1), telhado };
   }) : null);
   // the faces of a hip roof (the god's hip): its four slopes from the eaves — r out by ov, at y0 — to the ridge at y1 along its
   // longer way, as long as the longer side less the shorter: [{ p: [[u, v, y], …], n: [du, dv, up] }] (the way each faces)

@@ -8,7 +8,9 @@
 // massa (=), a mesma massa com perdas (≈) ou outra massa (≠), com o motivo. A massa é o que se pode medir sem saber o que o
 // prédio é: duas massas iguais podem ter arquiteturas diferentes (uma colunata e uma parede lisa) — por isso:
 // (b) A forma, onde o G.Forma a define (js/forma.js): o deus contra a forma e o 3D contra a forma, pelo que ela diz (a
-// planta vista de cima, as alturas, as colunas, os arcos, os andares). Um tipo com forma tem de passar nas duas.
+// planta vista de cima, as alturas, as colunas, os arcos, os andares). Um tipo com forma tem de passar nas duas — onde o 3D
+// o desenha pela forma (Build3D.byForm): sem casca, casca aberta ou casca sobre o corpo da forma; um templo com a planta de
+// uma família de antes da forma é a casca dela (L-c), e só a massa é medida (a catraca), até a família da forma (D-093).
 //   node qa/visual/fidelidade.js [tipo,tipo...] [povo,povo...]
 //   IDS=n prédios por tipo e povo (3; cada um com os seus dados e, nos de planta, a família que o registro escolhe)
 //   CASCA=1  o deus desenhando as casas pela casca (D-082), antes de ligar no jogo
@@ -101,7 +103,7 @@ for (const type of Object.keys(G.BDEF)) {
       row.costas = Math.max(F.backOnly(near), F.backOnly(far)); if (row.costas > HOLE) holes.push(`${type}/${style}#${id}${row.fam ? ' (' + row.fam + ')' : ''}: ${(row.costas * 100).toFixed(1)}%`);
       for (const k of ['profA', 'profB']) delete row.near[k];
       // (b) the form, where there is one
-      const Fm = FORMA && FORMA.of(type, style, b);
+      const Fm = FORMA && FORMA.of(type, style, b) && (!G.Build3D.byForm || G.Build3D.byForm(b)) ? FORMA.of(type, style, b) : null;
       if (Fm) { formed.add(type); const fc = F.formCheck(b, Fm, god, near, LIM); row.forma = { ok: fc.ok, why: fc.why, plan: fc.plan.iou, top3D: fc.plan.top, topForma: fc.plan.formTop }; }
       rows.push(row);
       const key = type + '/' + style; const was = per.get(key); const rank = { '=': 0, '≈': 1, '≠': 2 };

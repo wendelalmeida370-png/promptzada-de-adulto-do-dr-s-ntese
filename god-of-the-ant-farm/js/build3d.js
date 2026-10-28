@@ -424,6 +424,9 @@ float m3scale(float p) {
   const heightOf = b => { const F = formOf(b); return F ? F.top : HEIGHT[b.type] || 5; };
   B3.height = heightOf;
   B3.formOf = formOf; // (for the proofs)
+  // (is a building drawn by its form — for the proofs: its kit's form with no shell, an open shell's (the square's), or a shell
+  // raised on the form's body; a shell of a plan's family from before its form is drawn as that shell)
+  B3.byForm = b => { if (!formOf(b)) return false; const S = B3.shellOf(b); return !S || S.shell.kind === 'aberta' || !!bodyForm(b); };
 
   // ------------------------------ the kit ------------------------------
   // (everything in metres, from the corner of the footprint: a building is a little world of its own, then put in place)
@@ -1999,6 +2002,7 @@ float m3scale(float p) {
     temple(g, gw, K) {
       const st = styleOf(K.b); const P = K.P;
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 5); return; }
+      if (G.Forma && G.Forma.has('temple', st)) { formInto(g, gw, K, G.Forma.of('temple', st), doorSide(K.b)); return; } // (D-093: the form)
       if (st === 'asteca' || st === 'maia' || st === 'inca') { K.as('tezontle', () => { for (let k = 0; k < 4; k++) { const s = (K.w - 0.5) * (1 - k * 0.2); K.box(K.w / 2, k * 1.6, K.d / 2, s, 1.6, s, P.base ? P.base[k % 2] : '#b9ad93'); } }); K.as('stucco', () => K.box(K.w / 2, 6.4, K.d / 2, K.w * 0.3, 2, K.d * 0.3, P.wl)); K.as('stucco', () => K.box(K.w / 2, 0.8, K.d - 0.6, 1.2, 0.2, 2.6, P.trim || '#b33a2a')); return; }
       if (st === 'egipcio') { K.as('sandstone', () => K.box(K.w / 2, 0, K.d / 2, K.w - 0.6, 6, K.d - 0.6, P.wl)); K.box(K.w / 2, 6, K.d / 2, K.w - 0.4, 0.5, K.d - 0.4, P.trim || '#2f8f8a'); K.as('plankV', () => K.box(K.w / 2, 0, K.d - 0.25, 1.6, 3.4, 0.2, P.door || '#3e2e1c')); K.as('sandstone', () => { for (const s of [-1, 1]) K.box(K.w / 2 + s * 2.6, 0, K.d + 0.4, 0.6, 7.5, 0.6, P.wr); }); return; }
       if (st === 'nordico') { house(g, gw, K, { h: 3.4, roof: 'turf', inset: 0.3 }); return; }
