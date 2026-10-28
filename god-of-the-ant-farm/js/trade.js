@@ -95,8 +95,9 @@
     const mono = Tr.monopolyOf(k) === a.id ? 1.5 : 1;
     const value = (E.PRICE[k] || 1) * n * 1.15 * G.Civ.t(a.id, 'trade') * mono;
     // what they pay: coin, or something of theirs worth as much — out of their store into the merchant's pack, in the ledger
+    // (coin only where both peoples know it: the merchant of a people without coin is paid in kind — L-305)
     let back = null; const pay = (q, m) => { if (m > 0 && D.move('f:' + b.id, dst, q, m, { code: 'caravana-paga', by: v.id || 0, pack: true }).ok) back = { k: q, n: m }; };
-    if (E.coinage(b.id) && b.stock.moedas >= value * 0.6) pay('moedas', Math.round(Math.min(value, b.stock.moedas * 0.5)));
+    if (E.coinage(b.id) && E.coinage(a.id) && b.stock.moedas >= value * 0.6) pay('moedas', Math.round(Math.min(value, b.stock.moedas * 0.5)));
     else {
       // barter: something of theirs worth as much (their own fine things first)
       const opts = TRADE.filter(q => q !== k && surplus(b, q) >= 1 && (a.stock[q] || 0) < 4).sort((x, y) => (E.PRICE[y] || 0) - (E.PRICE[x] || 0));

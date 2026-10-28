@@ -178,6 +178,11 @@
         if (where.length) add('fome', 2, `${v.name} #${v.id} (${set.name}) morre de fome com comida ao alcance: ${where.join(', ')}; ${t ? 'tarefa ' + t.type : 'sem tarefa'}, vida ${Math.round(v.hp)}`, v.id);
       }
     }
+    // ---- coins are not born in the house, the purse or the hands of someone of a people without coin (L-305): a line of the
+    // ledger, since the last look, that brought coins into one of them from outside what was already a person's or a house's
+    // own — made by the world, out of a treasury, a shelf, the ground, a hold. An inheritance, a move between houses, a theft,
+    // someone who changed people bring no coin that was not already someone's, and are not counted
+    for (const [e, fid] of coinIn.splice(0)) { const f = s.factions.get(fid); add('moeda', 2, `${e[6]} moedas nasceram em ${e[4]} (${e[8] || 'sem causa'}, de ${e[3]}), e ${f ? f.name : 'o povo #' + fid} não conhece a moeda`); }
     // ---- the lines (life.js): a line's places are where people can stand in a line — on the ground of its front place (its
     // region of the map), dry, not before another building's door nor on a merchant at his counter, a step from the one
     // before —, no more of them than it asks; read from the world's fields (the ground, the doors), on a line whose ground
@@ -204,11 +209,18 @@
   // (the ledger's lines out of hands since the last look, and the purchases that ended in a people's store, for the rules
   // above; a new world, or a save loaded, starts over)
   let marked = null, markedS = null; const movedOut = new Map(); const toStore = []; let kidMark = new Map(), kidMarkS = null, waterMark = new Map(), waterMarkS = null;
+  // (coins that came into a house, a purse or the hands of someone of a people without coin from outside what was already a
+  // person's or a house's own — made by the world, out of a treasury, a shelf, the ground, a hold: L-305's rule, below. The
+  // people is the one the receiver is of at that moment)
+  const coinIn = []; const PRIV = { h: 1, p: 1, v: 1 };
+  const priv = r => typeof r === 'string' && PRIV[r[0]] === 1 && r[1] === ':';
+  const facOfRef = r => { const id = +r.slice(2); if (r[0] === 'h') { const b = G.S.buildings.get(id); return b ? G.Village.facOfSet(b.set) : 0; } const v = G.S.villagers.get(id); return v ? G.Fac.idOfV(v) : 0; };
   if (G.Depot) G.Depot.onMove.push(e => {
     if (typeof e[3] === 'string' && e[3][0] === 'v' && e[3][1] === ':') { const key = e[3].slice(2) + '|' + e[5]; movedOut.set(key, (movedOut.get(key) || 0) + e[6]); }
     if (e[8] === 'compra-em-casa' && typeof e[4] === 'string' && e[4][0] === 'f') { toStore.push(e); if (toStore.length > 50) toStore.shift(); }
+    if (e[5] === 'moedas' && priv(e[4]) && !priv(e[3]) && G.Eco) { const fid = facOfRef(e[4]); if (fid && !G.Eco.coinage(fid)) { coinIn.push([e, fid]); if (coinIn.length > 20) coinIn.shift(); } }
   });
-  if (G.worldHooks) G.worldHooks.push(() => { marked = null; markedS = null; movedOut.clear(); toStore.length = 0; kidMark = new Map(); kidMarkS = null; waterMark = new Map(); waterMarkS = null; });
+  if (G.worldHooks) G.worldHooks.push(() => { marked = null; markedS = null; movedOut.clear(); toStore.length = 0; kidMark = new Map(); kidMarkS = null; waterMark = new Map(); waterMarkS = null; coinIn.length = 0; });
   QA.canonMore.push(['acts', () => (G.Act ? G.Act.canon() : null)]);
   QA.canonMore.push(['pesca', () => (G.S && G.S.pesca ? Object.keys(G.S.pesca).sort((a, b) => a - b).map(id => [+id, G.S.pesca[id][0], G.S.pesca[id][1]]) : null)]);
   QA.canonMore.push(['casas', () => (G.S ? [...G.S.buildings.values()].filter(b => b.dono || b.encomenda || b.aluga || b.poupa).sort((a, b) => a.id - b.id).map(b => [b.id, b.dono || 0, b.encomenda ? b.encomenda.fam.join('.') + ':' + (b.encomenda.paid || 0) : '', b.aluga ? b.aluga.pago + ':' + b.aluga.deve : '', b.poupa ? b.poupa.by + ':' + b.poupa.alvo : '']) : null)]);
