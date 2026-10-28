@@ -1228,12 +1228,15 @@
           if (!target) { const set = S.settlements.get(v.set); target = set && S.buildings.get(set.campfire); }
           if (!target) return end(v);
           t.b = target.id; const [fx, fy] = G.Village.frontTile(target);
+          // (inside the temple, at a place of its plan — the mats, the benches, the altar for the priest —, while there is one
+          // free: in by the door, before the image; L-224)
+          if (G.Lar && G.Lar.prayIn(v, target, t.priest) && Vg.goto(v, fx, fy, true)) { t.inT = target.id; t.st = 1; break; }
           // the faithful kneel in rows before the temple; the priest leads from the front
           const row = (target.type === 'temple' || target.type === 'monument') && G.Life && G.Life.rowSpot(target, v, 4, 0.62, t.priest ? 0.2 : 0.95);
           if (row) { t.row = target.id; if (!Vg.goto(v, row[0], row[1], false)) { G.Life.rowRelease(v); t.row = 0; if (!Vg.goto(v, fx + G.rr(-0.4, 0.4), fy + G.rr(-0.4, 0.4), true)) return end(v); } }
           else if (!Vg.goto(v, fx + G.rr(-0.4, 0.4), fy + G.rr(-0.4, 0.4), true)) return end(v);
           t.st = 1;
-        } else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; } }
+        } else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; const b = t.inT && S.buildings.get(t.inT); if (b && b.built) v.inside = b.id; else t.inT = 0; } }
         else {
           v.act = 'pray';
           const b = S.buildings.get(t.b);

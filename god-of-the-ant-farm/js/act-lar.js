@@ -18,9 +18,12 @@
   const A = G.Act, D = G.Depot; if (!A || !D) return;
   const L = G.Lar = {};
   const AN = A.ANIM;
-  // (the gestures of the house, beside the activities' own: cooking at the fire, crouched; rocking the baby, seated — their
-  // poses are the 3D's, P4's; eating and sitting are the activities' file's)
-  if (A.addAnim) { A.addAnim('cozinhar', { act: 'cook', dur: 0, contact: 0, hands: 2 }); A.addAnim('ninar', { act: 'rock', dur: 0, contact: 0, hands: 2 }); }
+  // (the gestures of the house, beside the activities' own: cooking the household's supper at the fire, crouched, the whole
+  // of its seconds — the god's body at the fire takes as long as anyone of the world, L.COOK —; rocking the baby, seated —
+  // their poses are the 3D's, P4's; eating and sitting are the activities' file's)
+  L.COOK = 9; // (seconds of the world over the fire for a household's supper)
+  // (and the prayer of the faithful, kneeling — before the temple or inside it: five seconds of the world, villagers.js 'pray')
+  if (A.addAnim) { A.addAnim('cozinhar', { act: 'cook', dur: L.COOK, contact: L.COOK - 0.2, hands: 2 }); A.addAnim('ninar', { act: 'rock', dur: 0, contact: 0, hands: 2 }); A.addAnim('rezar', { act: 'pray', dur: 5, contact: 4.8, hands: 0 }); }
   const housing = b => !!(b && G.BDEF[b.type] && G.BDEF[b.type].housing);
   const built = b => housing(b) && b.built && b.type !== 'ruin';
   const homeOf = v => { const h = v && v.home ? G.S.buildings.get(v.home) : null; return built(h) ? h : null; };
@@ -104,7 +107,6 @@
   L.WHAT = WHAT;
   const PRI = { acamado: 1.3, cozinhar: 0.5, ceia: 0.5 };
   const pri = w => PRI[w] || 0.45;
-  L.COOK = 9; // (seconds of the world over the fire for a household's supper, by the cook's hands)
   const SUPPER = t => t > 0.55 && t < 0.85; // (the hours of the supper: the evening and the start of the night)
   // how much this person wants to be at home now (a choice of decide, among the others) — or null: the ill in bed by day
   // in the fever's days (L-227), and, after dark and before one's own bed time, the evening at home (L-225: awake is not a
@@ -189,7 +191,7 @@
         v.act = AN.cozinhar ? AN.cozinhar.act : '';
         if (L.cooked(h)) { t.what = 'ceia'; v.actT = 0; return; }
         if (food(h) < 1) { t.what = idle(v, h, entry(h)); v.actT = 0; return; }
-        t.w = (t.w || 0) + dt * G.Vg.workMul(v);
+        t.w = (t.w || 0) + dt; // (the pot takes its time, whoever stirs it: the body too)
         if (t.w >= L.COOK) { h.ceia = S.day; t.w = 0; t.what = 'ceia'; v.actT = 0; G.Vg.emote(v, 'food', 1.6); }
         return;
       }
@@ -330,6 +332,61 @@
   };
   if (G.Interiors && G.Interiors.placeRule) { G.Interiors.placeRule('casa', (b, v) => L.want(v, b)); G.Interiors.placeRule('templo', (b, v) => L.want(v, b)); }
   if (G.Interiors && G.Interiors.bedRule) G.Interiors.bedRule((b, residents) => L.beds(b, residents));
+
+  // ------------------------------ the faithful inside the temple (L-224) ------------------------------
+  // (a place free to pray in the temple's plan — the mats and the benches for the faithful, the altar for the priest —, counted
+  // against those already praying inside: the faithful go in by the door and kneel before the image; full, or a temple with no
+  // place of prayer, they keep to the rows before its door. The plan is pure: made now if it is not, it is the same plan)
+  L.prayIn = function (v, b, priest) {
+    const In = G.Interiors; if (!In || !In.plan || !b || !b.built || b.type !== 'temple') return false;
+    const p = In.plan(b); if (!p || !p.ok) return false;
+    const uses = priest ? ['oficiar'] : ['rezar', 'sentar'];
+    let n = 0; for (const it of p.items) for (const sp of it.spots) if (uses.includes(sp.use)) n++;
+    if (!n) return false;
+    let k = 0; const e = index().house.get(b.id);
+    if (e) for (const o of e.awake) if (o.id !== v.id && o.task && o.task.type === 'pray' && !!o.task.priest === !!priest) k++;
+    return k < n;
+  };
+
+  // ------------------------------ the god's body at home (the adendo's 4.1) ------------------------------
+  // in its own house the body eats at the table what the pantry has (today's supper hot, if it was cooked) and cooks the
+  // household's supper at the fire — by the same doors as the people of the world (L.eat, the supper of today), in the world's
+  // step, in the same seconds (the gestures 'comer' and 'cozinhar'). Offered where the plan has the piece, on the storey the
+  // body is on; offers only read
+  const TL = 4; // (the interiors' metres to a tile)
+  function pieceAt(b, uses, lv) {
+    const In = G.Interiors; if (!In || !In.slots || !In.ready || !In.ready(b)) return null;
+    for (const u of uses) for (const q of In.slots(b, u)) if (lv === undefined || lv === null || q.item.lv === lv) return [b.x + q.spot.x / TL, b.y + q.spot.z / TL];
+    return null;
+  }
+  const atHome = v => { const h = homeOf(v); return h && v.inside === h.id ? h : null; };
+  A.def('lar', {
+    name: 'Em casa', conserve: false,
+    purpose: 'A vida em casa: comer à mesa o que a despensa tem e cozinhar a ceia da casa no fogo, pelas mesmas portas de quem mora nela.',
+    needs: 'estar dentro da própria casa, com comida na despensa',
+    offers(v, x, y, r) {
+      const h = atHome(v); if (!h) return [];
+      const lv = G.Possess && G.Possess.level ? G.Possess.level() : undefined;
+      const out = []; const has = food(h) >= 1; const hot = L.cooked(h);
+      const table = pieceAt(h, ['comer', 'sentar', 'aquecer'], lv);
+      if (table && G.dist(x, y, table[0], table[1]) <= r + 0.5) out.push({ id: 'lar.comer:' + h.id, act: 'comer', label: hot ? 'Cear em casa (a ceia de hoje)' : 'Comer em casa, da despensa', at: table, anim: 'comer', hands: 1, ok: has && v.hunger > 15, why: !has ? 'A despensa da casa está vazia.' : 'Você não está com fome.' });
+      const fire = pieceAt(h, ['cozinhar', 'assar', 'aquecer'], lv);
+      if (fire && G.dist(x, y, fire[0], fire[1]) <= r + 0.5) out.push({ id: 'lar.cozinhar:' + h.id, act: 'cozinhar', label: 'Cozinhar a ceia da casa', at: fire, anim: 'cozinhar', hands: 2, ok: has && !hot, why: hot ? 'A ceia de hoje já está pronta.' : 'A despensa da casa está vazia.' });
+      return out;
+    },
+    acts: {
+      comer: {
+        deed: 'refeicao',
+        can(v) { const h = atHome(v); if (!h) return { ok: false, why: 'Só dentro de casa.' }; if (food(h) < 1) return { ok: false, why: 'A despensa da casa está vazia.' }; if (!(v.hunger > 15)) return { ok: false, why: 'Você não está com fome.' }; return { ok: true }; },
+        run(v) { const h = atHome(v); const hot = L.cooked(h); if (!h || !L.eat(v, h, hot)) return { ok: false, why: 'A despensa da casa está vazia.' }; return { ok: true, msg: hot ? 'Você ceia em casa: a ceia de hoje, quente.' : 'Você come em casa, do que a despensa tem.' }; },
+      },
+      cozinhar: {
+        deed: 'cozinha',
+        can(v) { const h = atHome(v); if (!h) return { ok: false, why: 'Só dentro de casa.' }; if (L.cooked(h)) return { ok: false, why: 'A ceia de hoje já está pronta.' }; if (food(h) < 1) return { ok: false, why: 'A despensa da casa está vazia.' }; return { ok: true }; },
+        run(v) { const h = atHome(v); if (!h || L.cooked(h) || food(h) < 1) return { ok: false, why: 'Agora não dá para cozinhar.' }; h.ceia = G.S.day; return { ok: true, msg: 'A ceia da casa está pronta: quem chegar com fome come quente.' }; },
+      },
+    },
+  });
 
   // ------------------------------ the save: who is at home stays at home (D-073) ------------------------------
   // The save lets everyone out at the door and wakes them (save.js, the same for every building): this hook keeps who was in
