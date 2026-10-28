@@ -106,5 +106,54 @@
       if (b.need && (b.need.stone || 0) < -EPS) add('oficio', 1, `${b.type}#${b.id}: a obra pede pedra negativa (${b.need.stone})`);
       if (def && G.Village.bill) { let a = 0, z = 0; const bill = G.Village.bill(b); for (const q in bill) a += bill[q] || 0; for (const q in def.cost) z += def.cost[q] || 0; if (Math.abs(a - z) > EPS) add('oficio', 2, `${b.type}#${b.id}: a conta da obra (${a}) não é a do tipo (${z})`); }
     }
+    // the works, a holder of the depot ('o', L-246): what a work still needs is within its bill (nothing it got vanished
+    // from it, nothing was born in it); what it waits for on the way is what its builders carry for it; what it got is what
+    // the ledger brought it — from the checker's first look at it —, and a work that ends ends with no material left unwritten
+    if (G.Village.delivered && G.Depot && G.Depot.exists) {
+      // (a builder lent to a scene keeps the errand to be given back, with its load on the way: G.Scene.prevTask)
+      const carried = new Map();
+      for (const v of s.villagers.values()) {
+        const t = v.task && v.task.type === 'scene' && G.Scene && G.Scene.prevTask ? G.Scene.prevTask(v) : v.task;
+        if (t && t.type === 'build' && t.counted && t.mat) { const key = t.id + '|' + t.mat; carried.set(key, (carried.get(key) || 0) + (t.cn || 0)); }
+      }
+      const live = new Set();
+      for (const b of s.buildings.values()) {
+        if (b.built || !b.need || b.type === 'ruin') continue;
+        live.add(b.id); const nm = `obra ${b.type}#${b.id}`; const bill = G.Village.bill(b);
+        for (const k in b.need) {
+          const n = b.need[k];
+          if (!fin(n) || n < -EPS) { add('oficio', 1, `${nm}: pede ${n} de ${k}`); continue; }
+          if (n > (bill[k] || 0) + EPS) add('oficio', 2, `${nm}: pede ${n} de ${k}, mais que a conta dela (${bill[k] || 0}) — material que sumiu da obra`);
+        }
+        for (const k in b.incoming || {}) {
+          const n = b.incoming[k], c = carried.get(b.id + '|' + k) || 0;
+          if (!fin(n) || n < -EPS) add('oficio', 1, `${nm}: ${n} de ${k} a caminho`);
+          else if (Math.abs(n - c) > 0.01) add('oficio', 2, `${nm}: espera ${n} de ${k} a caminho, os construtores trazem ${c}`);
+        }
+        const got = G.Village.delivered(b); let e = sites.get(b.id);
+        if (!e) { sites.set(b.id, { base: got, flow: {} }); continue; }
+        for (const k of new Set(Object.keys(got).concat(Object.keys(e.base), Object.keys(e.flow)))) {
+          const want = (e.base[k] || 0) + (e.flow[k] || 0), has = got[k] || 0;
+          if (Math.abs(want - has) > 0.01) { add('oficio', 2, `${nm}: tem ${has} de ${k}, o livro-razão diz ${Math.round(want * 100) / 100} — mudou à mão`); e.base[k] = has - (e.flow[k] || 0); }
+        }
+      }
+      for (const [id, e] of sites) {
+        if (live.has(id)) continue;
+        for (const k of new Set(Object.keys(e.base).concat(Object.keys(e.flow)))) { const left = (e.base[k] || 0) + (e.flow[k] || 0); if (Math.abs(left) > 0.01) add('oficio', 2, `a obra #${id} acabou com ${Math.round(left * 100) / 100} de ${k} sem linha no livro-razão`); }
+        sites.delete(id);
+      }
+    }
   });
+  // (what the ledger moves in and out of each work, from the checker's first look at it; a work first met by a line is met
+  // with what it had before that line)
+  const sites = new Map();
+  if (G.Depot) G.Depot.onMove.push(e => {
+    for (const [ref, sg] of [[e[3], -1], [e[4], 1]]) {
+      if (typeof ref !== 'string' || ref[0] !== 'o' || ref[1] !== ':') continue;
+      const id = +ref.slice(2); let x = sites.get(id);
+      if (!x) { const b = G.S.buildings.get(id); const got = b && G.Village.delivered ? G.Village.delivered(b) : {}; got[e[5]] = (got[e[5]] || 0) - sg * e[6]; x = { base: got, flow: {} }; sites.set(id, x); }
+      x.flow[e[5]] = (x.flow[e[5]] || 0) + sg * e[6];
+    }
+  });
+  if (G.worldHooks) G.worldHooks.push(() => sites.clear());
 })();

@@ -649,13 +649,15 @@
     can(ctx, t) { const b = t.b; const v = ctx.v; if (!G.S.buildings.has(b.id) || b.built) return { ok: false, why: 'A obra já terminou.' }; if (G.Village.facOfSet(b.set) !== G.Fac.idOfV(v)) return { ok: false, why: 'Esta obra é de outro povo.' }; return v.carry && b.need[v.carry.k] > 0 ? { ok: true } : { ok: false, why: 'A obra não precisa disso.' }; },
     run(ctx, t) {
       const b = t.b; const v = ctx.v; const P = G.Possess; const f = face(ctx, t.X, t.Z);
-      // (the load set down at the works, and into them as the builders' loads go: what the works need, the rest to the stock)
+      // (the load set down at the works, and into them as the builders' loads go — by the ledger, into the work's holder ('o:',
+      // L-246): what the works need, the rest to the stock)
       const { to, go } = walkUp(ctx, v, t.X, t.Z, 0.8); const g = AN('pousar'), goW = go * G.Space.TIME; const hands = reachTo(putAt(v, t.X, t.Z), 0.34, 0.4);
       G.Avatar.act({ world: true, anim: 'carry', dur: g.dur + goW, contact: g.contact + goW, face: f, to, toT: go, vact: g.act, reach: a => (a.tr < go ? null : hands(a)),
         op: w => {
           if (!w.carry || !(w.carry.n > 0) || !G.S.buildings.has(b.id) || b.built) return { ok: false, why: 'A obra já terminou.' };
           const n = w.carry.n, k = w.carry.k; const used = Math.min(n, b.need[k] || 0); if (used <= 0) return { ok: false, why: 'A obra não precisa disso.' };
-          b.need[k] -= used; w.carry = null; if (n - used > 0) G.Village.addStock(k, n - used, G.Village.facOfSet(b.set));
+          const r = G.Depot.move('v:' + w.id, 'o:' + b.id, k, used, { code: 'obra', by: w.id }); if (!r.ok) return { ok: false, why: 'A obra não precisa disso.' };
+          if (w.carry) G.Vg.toStore(w, G.Village.facOfSet(b.set), 'sobra-obra');
           G.FX && G.FX.chips(b.x + b.w / 2, b.y + b.h / 2, k === 'wood' ? '#a67c4e' : '#9a9a9a');
           P.deed('obra'); return { ok: true }; // (one load brought, whatever it held)
         }, then: () => say('Você entrega o material aos construtores.'), fail: deny });

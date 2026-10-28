@@ -141,6 +141,40 @@
     for (const k in bill) { const n = Math.max(0, (bill[k] || 0) - ((b.need && b.need[k]) || 0)); if (n > 0) out[k] = n; }
     return out;
   };
+  // the work's materials, a holder of the depot ('o', the work's id): what came to a site and is not built in yet — its bill
+  // less what it still needs —, so that what the builders and the god's body bring to a work, and what comes back of one
+  // let go, is in the ledger with its cause: nothing a work got is lost, or born, with no line (L-246). A work takes only
+  // what it still needs; what is taken from it is needed again — but from a work standing whole (progress 1) it is built in.
+  // (Registered with the first world: the depot, activity.js, loads after this file)
+  const r4 = x => Math.round(x * 1e4) / 1e4;
+  const isSite = b => !!b && !b.built && !!b.need && b.type !== 'ruin';
+  const SITE = {
+    obj: id => { const b = G.S.buildings.get(id); return isSite(b) ? b : null; },
+    get: (b, k) => V.delivered(b)[k] || 0,
+    room: (b, k) => Math.max(0, b.need[k] || 0),
+    take: (b, k, n) => { if (!(b.progress >= 1)) b.need[k] = r4((b.need[k] || 0) + n); },
+    put: (b, rec) => { b.need[rec.k] = r4(Math.max(0, (b.need[rec.k] || 0) - rec.n)); },
+    list: b => V.delivered(b),
+    owner: b => ({ fac: V.facOfSet(b.set), bld: b.id }),
+    place: b => b,
+    all: () => { const out = []; for (const b of G.S.buildings.values()) if (isSite(b)) out.push(b); return out; },
+  };
+  G.worldHooks.push(() => { if (G.Depot && G.Depot.addKind && !G.Depot.KINDS.includes('o')) G.Depot.addKind('o', SITE); });
+  // what a work got goes back to its people's store, in the ledger — a work given up, a reform let go (what the store has
+  // no room for is lost with its cause, as in any delivery); with its people gone, lost with the work
+  V.siteBack = function (b, code) {
+    const D = G.Depot; const ref = 'o:' + b.id; if (!D || !D.exists(ref)) return;
+    const fid = V.facOfSet(b.set); const got = V.delivered(b);
+    for (const k of Object.keys(got).sort()) {
+      if (fid && D.exists('f:' + fid)) D.store(ref, fid, k, got[k], { code });
+      else D.use(ref, k, got[k], { code, mine: true });
+    }
+  };
+  // what a work got is gone with it — it burnt, it fell, it was left to the wind; or it stands, and is what it was made of
+  V.siteGone = function (b, code) {
+    const D = G.Depot; const ref = 'o:' + b.id; if (!D || !D.exists(ref)) return;
+    const got = V.delivered(b); for (const k of Object.keys(got).sort()) D.use(ref, k, got[k], { code, mine: true });
+  };
   // the town's works still waiting for this brick (what is not on its way already)
   V.brickWant = function (set, k) {
     let n = 0; const id = set && (set.id || set);
@@ -181,7 +215,9 @@
   V.buildName = b => (b.upgradeFrom && !b.built ? V.nameOf(b.type, b) + ' (obra)' : V.nameOf(b.type === 'ruin' ? (b.origType || 'ruin') : b.type, b));
 
   V.completeBuilding = function (b) {
-    const S = G.S; b.built = true; b.progress = 1; b.need.wood = 0; b.need.stone = 0; b.upgradeFrom = null;
+    const S = G.S; b.progress = 1;
+    V.siteGone(b, 'obra-feita'); // (what the work got is built in: out of its holder, in the ledger)
+    b.built = true; b.need.wood = 0; b.need.stone = 0; b.upgradeFrom = null;
     G.Interiors && G.Interiors.complete(b); // (a fact of its life; a type made over — a hut become a house — a new plan)
     S.stats.built++;
     const [cx, cy] = V.center(b);
@@ -230,6 +266,7 @@
     }
     // (the coins kept in a house that falls are lost with it — in the ledger: the ruin is no house to hold them)
     if (G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });
+    V.siteGone(b, 'ruina'); // (and what a work had got falls with it, in the ledger)
     if (b.type === 'farm' || b.type === 'campfire') {
       V.removeBuilding(b);
       if (b.type === 'campfire' && set) set.campfire = 0;
@@ -1017,6 +1054,7 @@
     for (const b of [...S.buildings.values()]) {
       if (b.set !== s.id) continue;
       if (b.type === 'cemetery') { b.set = 0; continue; }
+      V.siteGone(b, 'abandono'); // (what a work had got is left to the wind with it, in the ledger)
       if (b.type === 'farm' || b.type === 'campfire' || !b.built) { V.removeBuilding(b); continue; }
       // (a house left to the wind keeps no coins: what was in it is lost, in the ledger)
       if (G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });

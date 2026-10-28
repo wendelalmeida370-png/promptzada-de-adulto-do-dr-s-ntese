@@ -173,8 +173,12 @@
     else if (t.type === 'fish' || t.type === 'quarry') { Vg.fishSpots.delete(t.spot); }
     else if ((t.type === 'mariscar' || t.type === 'pocas') && t.bx !== undefined && t.k > 0) { v.x = t.bx; v.y = t.by; } // (called away from the flats: back on the beach)
     else if (t.type === 'build') {
+      // (the load counted on its way to the work, by what was counted — not by the hands: a builder who dies carrying has
+      // given the load to the store before the task ends, and the work waited for it for ever; an errand given back later
+      // counts its load again)
       const b = S.buildings.get(t.id);
-      if (b && t.counted && v.carry && b.incoming[v.carry.k] !== undefined) b.incoming[v.carry.k] = Math.max(0, b.incoming[v.carry.k] - v.carry.n);
+      if (b && t.counted && t.mat && b.incoming && b.incoming[t.mat] !== undefined) b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - (t.cn || 0));
+      t.counted = false;
     }
     if (v.inside) {
       const b = S.buildings.get(v.inside);
@@ -756,15 +760,16 @@
     return false;
   }
   Vg.gotoB = gotoB;
-  // a site nobody can reach (walled in, cut off by the sea) is given up and its materials go back to the store
+  // a site nobody can reach (walled in, cut off by the sea) is given up and its materials go back to the store — what was
+  // delivered, by the work's own bill (the brick that took the place of stone counted as brick: D-075), in the ledger; a
+  // reform given up too: the house stands as it was, and what came for the new one goes back (it was lost: L-246)
   function abandonSite(b) {
-    const def = G.BDEF[b.type]; const fid = G.Village.facOfSet(b.set);
     if (b.upgradeFrom) {
       const od = G.BDEF[b.upgradeFrom]; if (!od || od.w !== b.w || od.h !== b.h) return;
+      G.Village.siteBack(b, 'obra-largada');
       b.type = b.upgradeFrom; b.upgradeFrom = null; b.built = true; b.progress = 1; b.need = { wood: 0, stone: 0 }; b.incoming = { wood: 0, stone: 0 }; b.unreach = 0;
     } else {
-      // (what was delivered, by the work's own bill — the brick that took the place of stone counted as brick: D-075)
-      const got = G.Village.delivered(b); for (const k of Object.keys(got).sort()) G.Village.addStock(k, got[k], fid);
+      G.Village.siteBack(b, 'obra-largada');
       G.Village.removeBuilding(b);
     }
     for (const o of G.S.villagers.values()) if (o.task && o.task.type === 'build' && o.task.id === b.id) end(o);
@@ -777,7 +782,7 @@
       const st = G.Fac.stockOfSet(b.set);
       let needMat = false; for (const k in b.need) if (b.need[k] - (b.incoming[k] || 0) > 0 && G.Fac.free(b.set, k) >= 1) { needMat = true; break; }
       const work = canWork(b);
-      const carryFits = v.carry && b.need[v.carry.k] > 0;
+      const carryFits = Vg.plainLoad(v) && b.need[v.carry.k] > 0;
       if (!needMat && !work && !carryFits) continue;
       let builders = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'build' && o.task.id === b.id) builders++;
       const [cx, cy] = G.Village.center(b);
@@ -1369,11 +1374,12 @@
     if (!b || b.built || b.type === 'ruin') return end(v);
     const def = G.BDEF[b.type];
     if (t.st === 0) {
-      if (v.carry && b.need[v.carry.k] !== undefined && v.carry.k !== 'food') {
+      // (only a plain load goes into a work: an operation's crate, a purchase for a house, are not the builder's to use)
+      if (v.carry && Vg.plainLoad(v) && b.need[v.carry.k] !== undefined && v.carry.k !== 'food') {
         if (b.need[v.carry.k] > 0) {
           t.mat = v.carry.k;
-          if (!t.counted) { b.incoming[t.mat] = (b.incoming[t.mat] || 0) + v.carry.n; t.counted = true; }
-          if (!gotoB(v, b)) { b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - v.carry.n); t.counted = false; end(v); return deliverTask(v); }
+          if (!t.counted) { t.cn = v.carry.n; b.incoming[t.mat] = (b.incoming[t.mat] || 0) + t.cn; t.counted = true; }
+          if (!gotoB(v, b)) { b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - t.cn); t.counted = false; end(v); return deliverTask(v); }
           t.st = 2; return;
         }
         return deliverTask(v);
@@ -1392,21 +1398,24 @@
     }
     if (t.st === 1) {
       if (!move(v, dt)) return;
-      const stk = G.Fac.stockOfSet(b.set);
       const n = Math.min(cap(v), Math.ceil(b.need[t.mat] - (b.incoming[t.mat] || 0)), Math.floor(G.Fac.free(b.set, t.mat)));
       if (n <= 0) { t.st = 0; return; }
-      stk[t.mat] -= n; v.carry = { k: t.mat, n }; b.incoming[t.mat] = (b.incoming[t.mat] || 0) + n; t.counted = true;
-      if (!gotoB(v, b)) { b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - n); t.counted = false; end(v); return deliverTask(v); }
+      // (out of the store into the hands, in the ledger — the builder's load by its own measure, cap(v), as it always was)
+      const r = G.Depot.move('f:' + G.Village.facOfSet(b.set), 'v:' + v.id, t.mat, n, { code: 'obra', by: v.id, pack: true, part: true });
+      if (!r.ok) return end(v);
+      t.cn = r.n; b.incoming[t.mat] = (b.incoming[t.mat] || 0) + t.cn; t.counted = true;
+      if (!gotoB(v, b)) { b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - t.cn); t.counted = false; end(v); return deliverTask(v); }
       t.st = 2; return;
     }
     if (t.st === 2) {
       if (!move(v, dt)) return;
       if (v.carry) {
-        const n = v.carry.n; const k = v.carry.k;
-        b.incoming[k] = Math.max(0, (b.incoming[k] || 0) - n);
-        const used = Math.min(n, b.need[k]); b.need[k] -= used;
-        v.carry = null; t.counted = false;
-        if (n - used > 0) G.Village.addStock(k, n - used, G.Village.facOfSet(b.set));
+        const k = v.carry.k;
+        if (t.counted) { b.incoming[t.mat] = Math.max(0, (b.incoming[t.mat] || 0) - (t.cn || 0)); t.counted = false; }
+        // (the load into the work, and what it no longer needs back to the store at once, as it always went — in the ledger)
+        const used = Math.min(v.carry.n, Math.max(0, b.need[k] || 0));
+        if (used > 0 && Vg.plainLoad(v)) G.Depot.move('v:' + v.id, 'o:' + b.id, k, used, { code: 'obra', by: v.id });
+        if (v.carry && Vg.plainLoad(v)) Vg.toStore(v, G.Village.facOfSet(b.set), 'sobra-obra');
         G.FX && G.FX.chips((b.x + b.w / 2), (b.y + b.h / 2), k === 'wood' ? '#a67c4e' : '#9a9a9a');
       }
       t.st = canWork(b) ? 4 : 0;
