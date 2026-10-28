@@ -1,5 +1,6 @@
 // lar-inv: as regras do verificador para a vida em casa (P1, Patch 2) — quem está dentro de uma casa e por quê, quem dorme
-// e como, quem está fora de casa à noite sem afazer, a despensa pelo livro-razão; e, no estado canônico, quem está em casa
+// e como, quem está fora de casa à noite sem afazer, quem cuida dos pequenos de dia (um por casa, e nenhuma criança presa
+// em casa sem ele), a despensa pelo livro-razão; e, no estado canônico, quem está em casa
 // (a ida e volta pelo save não pode tirar ninguém da cama: D-073). Carregado depois do qa/qa.js (QA.more / QA.canonMore);
 // o junta-inv.js o leva para dentro do qa.js. Lê os campos do mundo direto; a planta, pelas portas do G.Interiors.
 (function () {
@@ -13,6 +14,7 @@
   // so at S4 until they close; then it is S2)
   const PANTRY_SEV = 4;
   let night0 = new Map(), night0S = null; // (since when each grown one has been out at night with nothing to do)
+  let held0 = new Map(), held0S = null; // (since when each little one has been kept at home by day with nobody minding)
   let pan = new Map(), panS = null; const moved = new Map(); // (each pantry at the last look; what the ledger moved since)
   QA.more.push(function (add, s) {
     const Lr = G.Lar; if (!Lr) return;
@@ -54,6 +56,22 @@
       if (s.clock - since > 30) add('lar', 3, `${v.name} #${v.id}: fora de casa à noite sem afazer há ${Math.round(s.clock - since)} s (${t ? t.type : 'sem tarefa'}${Lr.sleepy(v) ? ', na hora de dormir' : ''})`, v.id);
     }
     night0 = now;
+    // ---- by day, one of the house minds the little ones at home — one per house —, and a little one stays at home past the
+    // day's while (12 s) only while someone minds them there: none kept at home by a minder who is gone (the request's 3.1)
+    const day = s === G.S && G.isNight && G.isEvening ? !G.isNight() && !G.isEvening() : false;
+    if (held0S !== s) { held0S = s; held0 = new Map(); }
+    const held = new Map();
+    if (day) {
+      const care = new Map();
+      for (const v of s.villagers.values()) { const t = v.task; if (t && t.type === 'lar' && t.what === 'cuidar' && t.st === 2 && v.inside === t.home) { const a = care.get(t.home) || []; a.push(v); care.set(t.home, a); } }
+      for (const [hid, a] of care) { const long = a.filter(o => o.actT > 3); if (long.length > 1) add('lar', 3, `casa #${hid}: ${long.length} cuidando dos pequenos ao mesmo tempo (${long.map(o => `${o.name} #${o.id}`).join(', ')})`); }
+      for (const v of s.villagers.values()) {
+        const t = v.task; if (v.age >= 7 || v.id === body || !t || t.type !== 'lar' || t.st !== 2 || (t.what !== 'conversar' && t.what !== 'descansar') || !(v.actT > 12) || care.has(t.home)) continue;
+        const since = held0.has(v.id) ? held0.get(v.id) : s.clock; held.set(v.id, since);
+        if (s.clock - since > 5) add('lar', 3, `${v.name} #${v.id}: criança presa em casa (#${t.home}) de dia há ${Math.round(v.actT)} s, sem ninguém da casa cuidando`, v.id);
+      }
+    }
+    held0 = held;
     // ---- whoever is at a feast is at one under way, in a part of it (L-222: a save no longer ends a festival)
     if (G.Fest && G.Fest.list) {
       const fl = new Map(G.Fest.list().map(f => [f.id, f]));
@@ -75,7 +93,7 @@
     const at = (ref, k) => { if (typeof ref === 'string' && ref[0] === 'h' && ref[1] === ':') { const id = +ref.slice(2); moved.set(id, (moved.get(id) || 0) + k * e[6]); } };
     at(e[3], -1); at(e[4], 1);
   });
-  if (G.worldHooks) G.worldHooks.push(() => { night0 = new Map(); night0S = null; pan = new Map(); panS = null; moved.clear(); });
+  if (G.worldHooks) G.worldHooks.push(() => { night0 = new Map(); night0S = null; held0 = new Map(); held0S = null; pan = new Map(); panS = null; moved.clear(); });
   // (who is at home — asleep, in the evening at home, sheltering — and who sleeps outdoors, is the same after a save and a
   // load: the round trip that takes anyone out of bed is seen — D-073, L-220)
   QA.canonMore.push(['lar', () => {
