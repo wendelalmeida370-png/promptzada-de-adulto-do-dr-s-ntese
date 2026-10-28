@@ -50,6 +50,8 @@
     'ruaEnd', 'ruaWhy', 'saw', 'sceneHold', 'secret', 'seekT', 'seen', 'shackTry', 'skill', 'stagT', 'thefts',
     'torch', 'traits', 'ug', 'unit', 'unmask', 'unpaid', 'vet', 'voyages', 'wound', 'wrecked',
     'diary', '_hungerT',
+    // (the day of a thing done once a day: the bath, the drill, the show, the reading, the speech at the plaza — P2)
+    'bathDay', 'trainDay', 'showDay', 'readDay', 'speakDay',
   ];
   const SHAPED = new Set(SHAPE);
   Vg.shape = function (o) {

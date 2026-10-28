@@ -673,7 +673,7 @@
       // (the smugglers first — nobody is ordered into crime —, then one hand at a time from the trade with the most hands,
       // in a fixed order between equals: a trade of one hand is not cut before one of four — D-090; the tavern's keeper was
       // the third to go, whatever the rest)
-      const CUT = ['escriba', 'taverneiro', 'mergulhador', 'sericultor', 'salgador', 'salineiro', 'vinhateiro', 'apicultor', 'fruticultor', 'lavrador', 'ourives', 'feirante', 'oleiro', 'cavalarico', 'mercador', 'cobrador', 'tecelao', 'acougueiro', 'ferreiro'];
+      const CUT = ['ator', 'copista', 'escriba', 'taverneiro', 'mergulhador', 'sericultor', 'salgador', 'salineiro', 'vinhateiro', 'apicultor', 'fruticultor', 'lavrador', 'ourives', 'feirante', 'oleiro', 'cavalarico', 'mercador', 'cobrador', 'tecelao', 'acougueiro', 'ferreiro'];
       if (want.contrabandista > 0) { const cut = Math.min(want.contrabandista, MIN_REST - rest); want.contrabandista -= cut; ecoN -= cut; rest += cut; }
       while (rest < MIN_REST) {
         let r = null; for (const q of CUT) if (want[q] > 0 && (!r || want[q] > want[r])) r = q;

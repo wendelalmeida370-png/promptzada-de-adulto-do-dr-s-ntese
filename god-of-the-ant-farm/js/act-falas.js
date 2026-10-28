@@ -69,6 +69,11 @@
       banho_quente: ['Ah, a água está quente hoje!', 'Que calor bom nesta água.', 'Isto sim é descanso.'],
       banho_frio: ['Brr! A água está fria hoje.', 'Sem fogo na fornalha... água gelada.', 'Fria, mas lava do mesmo jeito.'],
       termas_cheia: ['Está cheio. Volto outra hora.', 'Não cabe mais ninguém na água.'],
+      // the theatre (act-lazer.js)
+      teatro_comeca: ['Silêncio! Vai começar.', 'Atenção, povo: a peça começa!', 'Que comece o espetáculo!'],
+      teatro_aplausos: ['Bravo! Bravo!', 'Que peça! Valeu cada moeda.', 'Mais uma! Mais uma!'],
+      teatro_cheio: ['Não cabe mais ninguém nas fileiras.', 'Lotado. Fica para amanhã.'],
+      teatro_sem_peca: ['Não veio ator nenhum... hoje não tem peça.', 'Sem atores, sem espetáculo. Devolvem a entrada.'],
     },
     grego: {
       pregao: ['Olha o {bem}! Melhor que o de Corinto!', '{bem} da ágora! Quem vai querer?'],
