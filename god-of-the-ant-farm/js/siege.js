@@ -86,8 +86,55 @@
     for (let y = y1 - 1; y > y0; y--) out.push([x0, y]);
     return out;
   }
+  // (the ground inside another town's walls is walled already — an older wall, standing or still going up —: a wall of the
+  // town next door run inside it shuts a pocket between the two with no gate of either — Corinto's east wall inside Argos's,
+  // in the metropole of 28/10: three houses of Argos in a strip of 4 by 10, their people with no way home, L-342)
+  Sg.walledIn = function (i, w) {
+    const S = G.S; const x = i % N, y = (i / N) | 0;
+    for (const o of S.walls) {
+      if (o === w || o.set === w.set || o.id > w.id) continue;
+      const [x0, y0, x1, y1] = o.box; if (x <= x0 || x >= x1 || y <= y0 || y >= y1) continue;
+      if (!o.done || o.tiles.some(j => S.wall[j] && S.wall[j] !== 3)) return true;
+    }
+    return false;
+  };
+  // (no building of the town shut off by its own wall: a forge on a strip between the water and the wall line, its only way
+  // into the town through what the wall closes — Hedeby's in the mega of 28/10, its smith in failed searches all day, four
+  // gates and none there —: where the wall would shut one off, a gate, beyond the four (w.ways), L-344. The wall as planned:
+  // its tiles shut, its gates open, whether raised yet or not. dry: only the tiles it would open)
+  Sg.openWays = function (s, w, dry) {
+    const S = G.S, n = N * N; const R = W.townRegion(s); if (R < 0) return [];
+    const L = W.reachIds(true); const plan = new Set(w.tiles); const gates = new Set(w.gates); const out = [];
+    const pass = i => W.ground(i) && (plan.has(i) ? gates.has(i) : W.wallOpen(S.wall[i]));
+    let seed = -1; for (let r = 0; r <= 10 && seed < 0; r++) for (let dy = -r; dy <= r && seed < 0; dy++) for (let dx = -r; dx <= r && seed < 0; dx++) { const x = Math.floor(s.cx) + dx, y = Math.floor(s.cy) + dy; if (x < 0 || y < 0 || x >= N || y >= N) continue; const i = y * N + x; if (L[i] === R && pass(i)) seed = i; }
+    if (seed < 0) return [];
+    const mark = new Uint8Array(n); const st = new Int32Array(n);
+    const flood = (from, m) => { let sp = 0; st[sp++] = from; mark[from] = m; while (sp) { const a = st[--sp]; const x = a % N; const nb = [x > 0 ? a - 1 : -1, x < N - 1 ? a + 1 : -1, a - N, a + N]; for (const b of nb) { if (b < 0 || b >= n || mark[b] === m || !pass(b)) continue; mark[b] = m; st[sp++] = b; } } };
+    // (each building of the town by the ground round it — the tiles beside its footprint one could stand on —: reached when one
+    // of them is; a function of the map alone, as the plan and the load must see it alike)
+    const ring = b => { const o = []; for (let x = b.x; x < b.x + b.w; x++) o.push([x, b.y - 1], [x, b.y + b.h]); for (let y = b.y; y < b.y + b.h; y++) o.push([b.x - 1, y], [b.x + b.w, y]); return o.filter(([x, y]) => x >= 0 && y >= 0 && x < N && y < N).map(([x, y]) => y * N + x).filter(W.ground); };
+    const left = [...S.buildings.values()].filter(b => b.set === s.id && b.built && b.type !== 'ruin').sort((a, b) => a.id - b.id).map(b => [b, ring(b)]).filter(q => q[1].length);
+    const near = (i, m) => { const x = i % N; return (x > 0 && mark[i - 1] === m) || (x < N - 1 && mark[i + 1] === m) || (i >= N && mark[i - N] === m) || (i + N < n && mark[i + N] === m); };
+    let dirty = true; const later = []; // (one with no tile to open yet: a gate opened for another may give it one)
+    while (out.length < 8 && left.length) {
+      if (dirty) { mark.fill(0); flood(seed, 1); dirty = false; }
+      const j = left.findIndex(q => !q[1].some(i => mark[i] === 1)); if (j < 0) break;
+      const [b, around] = left[j]; left.splice(j, 1); for (const i of around) if (!mark[i] && pass(i)) flood(i, 2);
+      // (the tile of the wall between the town and that pocket — or the wall's own tile beside the building, where the wall
+      // line runs along it — nearest the building)
+      const bx = b.x + b.w / 2, by = b.y + b.h / 2; let best = -1, bd = 1e18;
+      for (const i of w.tiles) { if (gates.has(i) || !W.ground(i) || !near(i, 1) || !(near(i, 2) || around.includes(i))) continue; const dd = G.dist2((i % N) + 0.5, ((i / N) | 0) + 0.5, bx, by); if (dd < bd) { bd = dd; best = i; } }
+      if (best < 0) { later.push([b, around]); continue; } // (shut off by something else — water, another wall —: not this wall's to open, unless a gate opened for another reaches it)
+      gates.add(best); out.push(best); dirty = true; left.push(...later.splice(0));
+    }
+    if (!dry && out.length) { for (const i of out) w.gates.push(i); w.ways = (w.ways || []).concat(out); }
+    return out;
+  };
   function planWall(s, f, core) {
     const S = G.S;
+    // (a town whose heart is inside another town's walls is walled already: what it would raise is a strip outside the other
+    // wall that shuts nothing of its own — Corinto inside Delfos, in the old mega, L-342)
+    if (Sg.walledIn(W.idx(s.cx, s.cy), { set: s.id, id: Infinity })) return null;
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
     for (const b of S.buildings.values()) {
       if (b.set !== s.id || b.type === 'farm' || b.type === 'cemetery' || b.type === 'doca' || b.type === 'ruin' || b.type === 'cercado') continue;
@@ -104,7 +151,7 @@
     const per = perimeter(x0, y0, x1, y1);
     for (const [x, y] of per) {
       const i = y * N + x;
-      if (S.type[i] < T.SAND || S.wall[i] === 3) continue;
+      if (S.type[i] < T.SAND || S.wall[i] === 3 || Sg.walledIn(i, { set: s.id, id: Infinity })) continue;
       if (S.occ[i]) { const b = S.buildings.get(S.occ[i]); if (b && (b.blocks || b.type === 'praca')) continue; }
       tiles.push(i);
       if (S.road[i] || S.wear[i] > 22) gates.push(i);
@@ -135,7 +182,9 @@
       if (alt !== undefined) g2.push(alt);
     }
     for (const i of gates) if (g2.length < 4 && !g2.includes(i) && !g2.some(j => near(i, j))) g2.push(i);
-    return { id: S.nextId++, set: s.id, fac: f.id, mat: G.Civ.has(f.id, 'alvenaria') ? 'pedra' : 'madeira', tiles, gates: g2, built: 0, done: false, style: f.civ || 'classico', box: [x0, y0, x1, y1] };
+    const w = { id: S.nextId++, set: s.id, fac: f.id, mat: G.Civ.has(f.id, 'alvenaria') ? 'pedra' : 'madeira', tiles, gates: g2, built: 0, done: false, style: f.civ || 'classico', box: [x0, y0, x1, y1] };
+    Sg.openWays(s, w);
+    return w;
   }
   // walls raised at once (used by the gods, and by tests)
   Sg.raiseWalls = function (s, mat, instant) {
@@ -144,7 +193,7 @@
     const w = planWall(s, f); if (!w) return null;
     if (mat) w.mat = mat;
     S.walls.push(w);
-    if (instant) for (const i of w.tiles) { if (S.wall[i] || (S.occ[i] && (S.buildings.get(S.occ[i]) || {}).blocks)) continue; const gate = w.gates.includes(i); S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; }
+    if (instant) for (const i of w.tiles) { const gate = w.gates.includes(i); if ((S.wall[i] && !(gate && S.wall[i] === 1)) || (S.occ[i] && (S.buildings.get(S.occ[i]) || {}).blocks) || Sg.walledIn(i, w)) continue; S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; }
     if (instant) { w.built = w.tiles.length; w.done = true; G.W.touchWalk(); }
     return w;
   };
@@ -176,9 +225,13 @@
       const k = w.mat === 'pedra' ? 'stone' : 'wood';
       if (f.stock[k] < 3 || G.R() > 0.35) continue;
       const i = w.tiles[w.built++];
-      if (i !== undefined && !S.wall[i] && !(S.occ[i] && (S.buildings.get(S.occ[i]) || {}).blocks)) {
+      // (a gate of the plan where a wall already stands — a neighbour's wall planned over the same tile and raised first, or an
+      // old one —: the gate is cut in it; the town's builders skipped any tile already walled, and the street the gate was for
+      // stayed shut, L-340)
+      const gate = w.gates.includes(i);
+      // (and never inside another town's walls: a plan saved before L-342 still has those tiles)
+      if (i !== undefined && !Sg.walledIn(i, w) && (gate && S.wall[i] === 1 || !S.wall[i] && !(S.occ[i] && (S.buildings.get(S.occ[i]) || {}).blocks))) {
         f.stock[k] -= 2;
-        const gate = w.gates.includes(i);
         S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; G.W.touchWalk();
         const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
         G.FX && G.FX.dust(x, y, 2);
@@ -595,6 +648,21 @@
   // ------------------------------ save ------------------------------
   (G.saveHooks = G.saveHooks || []).push({
     save(out) { const S = G.S; out.walls = S.walls; out.wallHp = S.wallHp; out.sacr = G.Fac.all().filter(f => f.sac).length; },
-    load(o) { const S = G.S; S.walls = o.walls || []; S.wallHp = o.wallHp || {}; S.missiles = []; for (const f of S.factions.values()) f.sac = null; Sg.reset(); },
+    load(o) {
+      const S = G.S; S.walls = o.walls || []; S.wallHp = o.wallHp || {}; S.missiles = []; for (const f of S.factions.values()) f.sac = null; Sg.reset();
+      // (a save from before L-342: what was raised inside another town's walls comes down — the pocket opens; the tile map is
+      // back already, city.js loads before)
+      let down = 0;
+      for (const w of S.walls) for (const i of w.tiles) {
+        if (!S.wall[i] || S.wall[i] === 3 || !Sg.walledIn(i, w)) continue;
+        if (S.walls.some(q => q !== w && q.tiles.includes(i) && !Sg.walledIn(i, q))) continue; // (a tile of a wall that may stand there)
+        S.wall[i] = 0; S.wallFac[i] = 0; delete S.wallHp[i]; down++;
+      }
+      // (and a building of the town its own wall shuts off gets its gate — cut at once where the wall already stands, L-344)
+      if (down) G.W.touchWalk();
+      let cut = 0;
+      for (const w of S.walls) { const s = S.settlements.get(w.set); if (!s) continue; for (const i of Sg.openWays(s, w)) if (S.wall[i] === 1) { S.wall[i] = 2; S.wallHp[i] = WALLHP[w.mat][1]; cut++; } }
+      if (cut) G.W.touchWalk();
+    },
   });
 })(window.G);

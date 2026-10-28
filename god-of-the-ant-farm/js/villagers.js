@@ -109,7 +109,11 @@
   Vg.goto = function (v, x, y, adj, maxNodes) {
     const ti = W.inb(x, y) ? W.idx(x, y) * 2 + (adj ? 1 : 0) : -1; const now = G.S.clock;
     if (ti === v._pfI && now - v._pfT < 12) { v.path = null; return false; }
-    const p = W.findPath(v.x, v.y, x, y, adj, maxNodes);
+    // (a long way the map of regions says is open, its budget spent before it was found — out of a walled town, round a lake:
+    // the exact search floods the ground all round —: searched once more, greedier, as the skip searches every way; a trader
+    // home from a caravan stood two minutes inside the walls of the town she had traded with, every search of her way home
+    // spent, and then stayed there, L-343. A short way that fails is a shut gate, not the budget: no second search)
+    const p = W.findPath(v.x, v.y, x, y, adj, maxNodes) || (ti >= 0 && G.dist(v.x, v.y, x, y) >= 24 && W.canWalk(v.x, v.y, x, y, !!adj || !W.walkable(W.idx(x, y))) ? W.findPath(v.x, v.y, x, y, adj, Math.max(maxNodes || 0, 12000), W.PATH_GREEDY) : null);
     if (!p) { v.path = null; v._pfI = ti; v._pfT = now; v._pfN = (v._pfN || 0) + 1; return false; }
     v.path = p; v.pi = 0; v._pfN = 0; return true;
   };
@@ -160,7 +164,11 @@
   // an errand from outside waits until it is there, unless it is about that load or cannot wait; an errand that takes the
   // hands — a cave, a whale, a theft — would put its own things in them over it, and the load would be gone unwritten)
   function busyHands(v, t) {
-    const c = v.carry; if (!c || !(c.n > 1e-6) || !(c.op || c.to || c.cid)) return false;
+    let c = v.carry;
+    // (the second pair of hands under a heavy crate are as busy as the first: the crate the one who leads holds is theirs too —
+    // G.Act.pair; a cave took the helper from under one and the lead went on alone with the helper's name on it, L-330)
+    if (!(c && c.n > 1e-6) && v.task && v.task.st === 2 && G.Act && G.Act.pair) { const p = G.Act.pair(v); const l = p && p.side === 'tras' && G.S.villagers.get(p.lead); if (l) c = l.carry; }
+    if (!c || !(c.n > 1e-6) || !(c.op || c.to || c.cid)) return false;
     if ((t.pri || 0) >= 3 || t.type === 'carga' || t.type === 'deliver') return false;
     return !(c.op && t.op === c.op);
   }

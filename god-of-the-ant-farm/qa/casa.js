@@ -49,11 +49,19 @@ const set0 = set.id;
 function reload() { M.pronto('metropole'); S = G.S; M.viver(2); S.time = 0.15; S.weather.storm = 0; set = S.settlements.get(set0); taken.clear(); }
 // ---------------- h1: every lived-in house has an owner, the eldest who lives in it; an empty one is the people's
 {
-  townDay(set);
+  // (looked at right when the town's day settles the owners: in the second after it the village's housing may already have
+  // moved a single grown one into a house of the people with room — village.js, every 2,5 s —, whose owner the next day
+  // gives: T-132)
+  // (and a let house whose tenants owed too much: the day's rent sells it to the people, and the family stays in it until
+  // the next town day gives it an owner — rent(), act-casa.js: in the metrópole of L-322 one of them was in Tenochtitlan)
+  const letBefore = new Set([...S.buildings.values()].filter(b => b.set === set.id && b.aluga).map(b => b.id));
+  K.day(set);
   const homes = [...S.buildings.values()].filter(b => b.set === set.id && housing(b) && b.built && b.type !== 'ruin');
-  const wrong = homes.filter(b => { const L = residents(b).filter(v => v.age >= 16); return L.length ? !(b.dono && S.villagers.has(b.dono)) : !!b.dono && !S.villagers.has(b.dono); });
+  const sold = homes.filter(b => letBefore.has(b.id) && !b.dono && !b.aluga);
+  const wrong = homes.filter(b => { if (sold.includes(b)) return false; const L = residents(b).filter(v => v.age >= 16 && v.set === b.set); return L.length ? !(b.dono && S.villagers.has(b.dono)) : !!b.dono && !S.villagers.has(b.dono); });
   const owned = homes.filter(b => b.dono).length;
-  ok('h1 toda casa tem dono', homes.length >= 5 && !wrong.length && owned >= homes.length * 0.6, `${owned} de ${homes.length} casas de ${set.name} com dono${wrong.length ? `; SEM DONO CERTO: ${wrong.slice(0, 3).map(b => '#' + b.id).join(', ')}` : ''}`);
+  M.viver(1);
+  ok('h1 toda casa tem dono', homes.length >= 5 && !wrong.length && owned >= homes.length * 0.6, `${owned} de ${homes.length} casas de ${set.name} com dono${sold.length ? ` (${sold.map(b => '#' + b.id).join(', ')}: a de aluguel que o dono vendeu hoje ao povo, com a família ainda nela)` : ''}${wrong.length ? `; SEM DONO CERTO: ${wrong.slice(0, 3).map(b => '#' + b.id).join(', ')}` : ''}`);
 }
 // a couple in a full house that is not theirs (the parents'): the test's hand makes one if the town has none
 const taken = new Set();
@@ -213,6 +221,8 @@ if (hb) {
       if (!r.rented) console.log(`   (h12: ${v.name} ${K.need(v)}, família ${K.family(v).length}, ${Math.floor(K.savings(v))} moedas; a casa feita #${made.id} (${made.type}, dono ${made.dono}, ${G.BDEF[made.type].housing} camas, moradores ${[...S.villagers.values()].filter(q => q.home === made.id).length}); o plano: livre ${plan0.free ? plan0.free.id : '-'}, aluguel ${plan0.lease ? plan0.lease.id : '-'} a ${plan0.rent}, preço ${plan0.price})`);
       const rent = b ? K.rentOf(t12, b.type) : 0;
       const lets = r.ok && r.rented && v.home === b.id && b.aluga && lord && lord.home !== b.id;
+      // (the owner kin of none of the family — not the partner's sister either: the day's rent would end the lease, L-315)
+      const kinLord = lets && K.family(v).filter(m => kinOf(lord, m)).map(m => m.name);
       // (a day goes by: the rent of a day, to the owner's house)
       const L0 = S.ledgerN; const o0 = lord ? coins('h:' + lord.home) : 0;
       // (the owner's house keeps its coins by the ledger — the rent comes in, and the family may pay for things of its own
@@ -225,16 +235,16 @@ if (hb) {
       // (then nothing to pay with, for days: owed; too much owed and the owner sells the house to the people)
       let gaveUp = false, owed = 0, sold = null;
       if (lets) {
-        setCoins('h:' + b.id, 0); b.aluga.pago = S.day - 2; townDay(t12); owed = b.aluga ? b.aluga.deve : -1;
+        setCoins('h:' + b.id, 0); if (b.aluga) b.aluga.pago = S.day - 2; townDay(t12); owed = b.aluga ? b.aluga.deve : -1;
         const L1 = S.ledgerN; if (b.aluga) { b.aluga.pago = S.day - K.OWE_DAYS; townDay(t12); }
         gaveUp = !b.aluga && !b.dono; sold = book(e => e[0] > L1 && e[8] === 'venda-casa' && e[4] === 'h:' + lord.home)[0];
       }
       D.onMove.splice(D.onMove.indexOf(onOwn), 1);
       const net12 = r2(own12.reduce((a, e) => a + (e[4] === H12 ? e[6] : 0) - (e[3] === H12 ? e[6] : 0), 0));
       const kept12 = !!H12 && Math.abs(coins(H12) - (o0 + net12)) < 0.02;
-      fine12 = lets && !!paid && Math.abs(paid[6] - rent) < 0.01 && kept12 && need === 'aluga' && Math.abs(owed - rent * 2) < 0.01 && gaveUp && v.home === b.id;
+      fine12 = lets && !kinLord.length && !!paid && Math.abs(paid[6] - rent) < 0.01 && kept12 && need === 'aluga' && Math.abs(owed - rent * 2) < 0.01 && gaveUp && v.home === b.id;
       if (!fine12 && lets) console.log(`   (h12: as moedas da casa do dono ${r2(o0)} → ${r2(coins(H12))}, pelo livro ${r2(o0 + net12)}: ${own12.map(e => `${e[8]} ${e[6]} ${e[3]}→${e[4]}`).slice(0, 8).join(' · ')})`);
-      info = `${v.name} ${lets ? `alugou a casa #${b.id} de ${lord.name} (${rent} moedas ao ano)` : 'NÃO alugou: ' + (r.why || JSON.stringify(r))}; ${paid ? `o aluguel do dia foi à casa de ${lord.name} (livro ${paid[0]}, ${paid[6]})` : 'NENHUM aluguel no livro'}; no diário, a família de aluguel quer casa: ${need || 'NÃO'}; sem moeda dois dias: deve ${owed}; ${gaveUp ? `devendo demais, ${lord.name} vendeu a casa ao povo${sold ? ` por ${sold[6]} moedas` : ''}; a família continua nela` : 'o dono NÃO desistiu'}`;
+      info = `${v.name} ${lets ? `alugou a casa #${b.id} de ${lord.name} (${rent} moedas ao ano)${kinLord.length ? ` — PARENTE de ${kinLord.join(', ')}` : ''}` : 'NÃO alugou: ' + (r.why || JSON.stringify(r))}; ${paid ? `o aluguel do dia foi à casa de ${lord.name} (livro ${paid[0]}, ${paid[6]})` : 'NENHUM aluguel no livro'}; no diário, a família de aluguel quer casa: ${need || 'NÃO'}; sem moeda dois dias: deve ${owed}; ${gaveUp ? `devendo demais, ${lord.name} vendeu a casa ao povo${sold ? ` por ${sold[6]} moedas` : ''}; a família continua nela` : 'o dono NÃO desistiu'}`;
     } else info = 'a cidade não tem lugar para uma casa vazia';
   }
   if (v && t12 !== set) info = `(em ${t12.name}: ${set.name} não tem mais com quem fazer um casal) ` + info;
@@ -350,28 +360,47 @@ if (hb) {
 // ---------------- h14: the dear land (social.js): a rich family buys the house of a plain family in the heart, each with its own, in the ledger
 {
   reload();
-  const city = [...S.settlements.values()].filter(s => (s.tier || 0) >= 3 && E.coinage(s.fac)).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
-  let info = 'nenhuma cidade grande de moeda', fine14 = false;
+  // (the big towns of coin, the most people first: the first with a pair the dear land's own rules would trade — T-133)
+  const cities = [...S.settlements.values()].filter(s => (s.tier || 0) >= 3 && E.coinage(s.fac)).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id) || a.id - b.id);
+  let info = 'nenhuma cidade grande de moeda', fine14 = false; const tried = []; let tested = false;
+  for (const city of cities) {
+  if (tested) break; // (one pair is the case: the first town that has one)
   if (city && G.Urban && G.Urban.peek) {
     const sn = G.Urban.peek(city.id);
     const occ = new Map(); for (const v of S.villagers.values()) if (v.set === city.id && v.home) { const l = occ.get(v.home) || []; l.push(v); occ.set(v.home, l); }
     const homes = [...S.buildings.values()].filter(b => b.set === city.id && b.built && housing(b) && b.type !== 'barraco' && !b.upgradeFrom && (occ.get(b.id) || []).length && !(occ.get(b.id) || []).some(v => v.jail || v.aboard || taken.has(v.id))).map(b => { const c = G.Village.center(b); const o = sn && sn.cells.get(G.Urban.cellOf(c[0], c[1])); return o ? { b, val: o.value, cap: G.BDEF[b.type].housing, n: occ.get(b.id).length } : null; }).filter(Boolean).sort((a, b) => a.val - b.val || a.b.id - b.b.id);
     if (homes.length >= 8) {
-      const cheap = homes[0], dear = homes.slice().reverse().find(h => h.cap >= cheap.n && cheap.cap >= h.n && !h.b.elite && h.val - cheap.val > 9);
+      // (the pair by the rules of the dear land itself, social.js moveUp: the rich family below the town's middle land, the plain
+      // one in its top quarter — no elite house, no noble living in it —, each house fitting the other's family: in the cities
+      // grown by L-322 the dearest house that fitted was below the top quarter, and no trade came, T-133)
+      // (the middle and the top quarter over the houses moveUp itself counts: lived in by people of the town, not captives)
+      const occ2 = new Map(); for (const v of S.villagers.values()) if (v.set === city.id && v.home && !v.captive) occ2.set(v.home, (occ2.get(v.home) || 0) + 1);
+      const vals = [...S.buildings.values()].filter(b => b.set === city.id && b.built && housing(b) && b.type !== 'barraco' && !b.upgradeFrom && occ2.get(b.id) && ![...S.villagers.values()].some(v => v.home === b.id && v.set === city.id && !v.captive && (v.jail || v.aboard))).map(b => { const c = G.Village.center(b); const o = sn && sn.cells.get(G.Urban.cellOf(c[0], c[1])); return o ? o.value : null; }).filter(x => x !== null).sort((a, b) => a - b);
+      const mid = vals[vals.length >> 1], high = vals[Math.floor(vals.length * 0.75)];
+      const noble = h => (occ.get(h.b.id) || []).some(v => v.grp === 'nobreza');
+      const cheap = homes.find(h => h.val < mid && !h.b.elite);
+      const dear = cheap && homes.slice().reverse().find(h => h.val >= high && h.cap >= cheap.n && cheap.cap >= h.n && !h.b.elite && !noble(h) && h.val - cheap.val > 9);
       if (dear) {
+        tested = true;
         setCoins('h:' + cheap.b.id, 40); setCoins('h:' + dear.b.id, 5); // (the test's hand: a rich family on cheap ground, a plain one on dear)
         D.make('h:' + dear.b.id, 'food', 3, { code: 'teste' });
         const before = coins('h:' + cheap.b.id) + coins('h:' + dear.b.id);
         const L0 = S.ledgerN;
+        // (the two houses' coins change only by the ledger: the price passes between them, and the day may bring the families
+        // other coin of their own — a rent, a sale: in the cidade of L-322 one of them got 1,1 that day, T-133)
+        const R14 = ['h:' + cheap.b.id, 'h:' + dear.b.id]; const own14 = []; const on14 = e => { if (e[5] === 'moedas' && (R14.includes(e[3]) || R14.includes(e[4]))) own14.push(e); }; D.onMove.push(on14);
         nextDay();
+        D.onMove.splice(D.onMove.indexOf(on14), 1);
+        const net14 = r2(own14.reduce((a, e) => a + (R14.includes(e[4]) ? e[6] : 0) - (R14.includes(e[3]) ? e[6] : 0), 0));
         const price = book(e => e[0] > L0 && e[8] === 'compra-casa' && e[5] === 'moedas' && e[3][0] === 'h' && e[4][0] === 'h')[0];
         const moves = book(e => e[0] > L0 && e[8] === 'mudança' && e[3][0] === 'h' && e[4][0] === 'h');
         const ours = price && ((price[3] === 'h:' + dear.b.id && price[4] === 'h:' + cheap.b.id));
         const after = coins('h:' + cheap.b.id) + coins('h:' + dear.b.id);
-        fine14 = !!price && Math.abs(price[6] - 12) < 1e-6 && moves.length >= 2 && (!ours || (Math.abs(before - after) < 0.01 && dear.b.dono && cheap.b.dono));
-        info = price ? `${ours ? 'a família rica da casa #' + cheap.b.id + ' (terra a ' + Math.round(cheap.val) + ') comprou a casa #' + dear.b.id + ' (terra a ' + Math.round(dear.val) + ')' : 'outra troca da terra cara aconteceu'}: o preço, ${price[6]} moedas, pelo livro (${price[0]}); ${moves.length} mudanças no livro (${moves.slice(0, 4).map(e => `${e[6]} ${e[5]}`).join(', ')}); as moedas das duas casas ${ours ? `${r2(before)} → ${r2(after)}` : '—'}; donos: ${ours ? `${(S.villagers.get(dear.b.dono) || {}).name} e ${(S.villagers.get(cheap.b.dono) || {}).name}` : '—'}` : `NENHUMA troca no dia (a casa #${cheap.b.id}, terra a ${Math.round(cheap.val)}, e a #${dear.b.id}, terra a ${Math.round(dear.val)})`;
-      } else info = `${city.name}: nenhuma casa de terra cara que sirva`;
-    } else info = `${city.name}: menos de oito casas`;
+        fine14 = !!price && Math.abs(price[6] - 12) < 1e-6 && moves.length >= 2 && (!ours || (Math.abs(before + net14 - after) < 0.02 && dear.b.dono && cheap.b.dono));
+        info = (tried.length ? tried.join(' · ') + ' · ' : '') + `${city.name}: ` + (price ? `${ours ? 'a família rica da casa #' + cheap.b.id + ' (terra a ' + Math.round(cheap.val) + ') comprou a casa #' + dear.b.id + ' (terra a ' + Math.round(dear.val) + ')' : 'outra troca da terra cara aconteceu'}: o preço, ${price[6]} moedas, pelo livro (${price[0]}); ${moves.length} mudanças no livro (${moves.slice(0, 4).map(e => `${e[6]} ${e[5]}`).join(', ')}); as moedas das duas casas ${ours ? `${r2(before)} → ${r2(after)} (pelo livro ${r2(before + net14)})` : '—'}; donos: ${ours ? `${(S.villagers.get(dear.b.dono) || {}).name} e ${(S.villagers.get(cheap.b.dono) || {}).name}` : '—'}` : `NENHUMA troca no dia (a casa #${cheap.b.id}, terra a ${Math.round(cheap.val)}, e a #${dear.b.id}, terra a ${Math.round(dear.val)})`);
+      } else { tried.push(`${city.name}: nenhuma casa de terra cara que sirva (o meio da terra a ${Math.round(mid)}, o quarto de cima a partir de ${Math.round(high)})`); info = tried.join(' · '); }
+    } else { tried.push(`${city.name}: menos de oito casas`); info = tried.join(' · '); }
+  }
   }
   ok('h14 a terra cara', fine14 && !bad().length, info);
 }
@@ -430,11 +459,14 @@ if (hb) {
 // ---------------- h9: a people without coin: the people raise it with what they have
 {
   M.pronto('cidade'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1); taken.clear();
-  set = [...S.settlements.values()].filter(s => !E.coinage(s.fac)).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
+  // (the biggest town of a people without coin — or, when it has nobody left to make a couple of, the next one: in the cidade
+  // grown by L-322 the single men of Argos all own the house they live in, T-134)
+  const noCoin = [...S.settlements.values()].filter(s => !E.coinage(s.fac)).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id) || a.id - b.id);
+  set = noCoin[0];
   let info = 'nenhuma cidade sem moeda', fine9 = false;
+  let v = null; for (const tw of noCoin) { v = couple(tw); if (v) { set = tw; break; } }
   if (set) {
     const f = G.Fac.get(set.fac); for (const k of ['wood', 'stone']) if ((f.stock[k] || 0) < 60) D.make('f:' + f.id, k, 60, { code: 'teste', part: true });
-    const v = couple();
     if (v) {
       // (the builders free — the town's other orders finished: the world raises two at a time — and wood and stone for the
       // house the family needs, a sobrado for seven; then the family's decision, now, as h7's: the town's day takes the most
@@ -449,7 +481,7 @@ if (hb) {
       const paid = book(e => e[0] > L0 && e[5] === 'moedas' && (e[8] === 'obra-casa' || e[8] === 'compra-casa' || e[8] === 'aluguel')).length;
       fine9 = !!r.ok && !!b && !paid && b.dono === v.id;
       info = `${set.name} (sem moeda): ${v.name} ${b ? (b.built ? `recebeu do povo a casa vazia #${b.id}` : `pediu ao povo, e o povo pôs ${G.Village.buildName(b).toLowerCase()} em ${b.x},${b.y}`) : 'NÃO conseguiu casa: ' + (r.why || JSON.stringify(r))}; moedas pagas: ${paid}`;
-    } else info = `${set.name}: nenhum casal numa casa cheia`;
+    } else info = `${noCoin.map(s => s.name).join(', ')}: nenhum casal numa casa cheia`;
   }
   ok('h9 um povo sem moeda', fine9 && !bad().length, info);
 }

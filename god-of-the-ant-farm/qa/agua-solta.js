@@ -19,6 +19,15 @@ const WTASK = { water: 1, fire: 1 };
 const stray = S => [...S.villagers.values()].filter(v => v.carry && v.carry.k === 'water' && v.carry.n > 1e-6 && !(v.task && (WTASK[v.task.type] || v.task.pri >= 3)));
 const GATHER = { gather: 1, mariscar: 1, pick: 1, honey: 1 };
 let S = M.pronto(KEY);
+// (a world opened with nobody holding water — the worlds of 28/10 were saved so, and a1 and a2 had nothing to look at —: it
+// lives until two jars are on their way home, by day, and is opened again by the menu from a save of that moment, T-183)
+let made = '';
+if (![...S.villagers.values()].some(v => v.carry && v.carry.k === 'water' && v.carry.n > 1e-6)) {
+  const out = () => [...S.villagers.values()].filter(v => v.carry && v.carry.k === 'water' && v.carry.jar && v.task && v.task.type === 'water' && S.buildings.get(v.home)).length;
+  let k = 0; for (; k < 12000 && !(out() >= 2 && S.time > 0.1 && S.time < 0.45); k++) M.viver(0.1);
+  made = ` — o mundo pronto abriu sem ninguém com água nas mãos: ${Math.round(k / 10)} s de mundo até ${out()} jarros a caminho de casa, de dia, e aberto de novo pelo menu`;
+  S = M.abrir(JSON.parse(G.Save.serialize()));
+}
 const base = new Set(QA.check().filter(q => q.sev <= 3).map(q => q.sys + '|' + q.msg));
 const fresh = () => QA.check().filter(q => q.sev <= 3 && !base.has(q.sys + '|' + q.msg)).map(q => `[S${q.sev}] ${q.sys}: ${q.msg}`);
 const w0 = [...S.villagers.values()].filter(v => v.carry && v.carry.k === 'water' && v.carry.n > 1e-6 && !(v.task && v.task.pri >= 3 && !WTASK[v.task.type]));
@@ -31,7 +40,7 @@ const bad3 = new Set(); const look3 = () => { for (const v of S.villagers.values
 for (let k = 0; k < 300; k++) { M.viver(0.1); look3(); }
 const w1 = stray(S);
 const poured = (S.ledger || []).filter(e => e[0] > ln0 && e[8] === 'agua').length;
-ok('a1 a água solta vai para casa ou é derramada', w0.length > 0 && !w1.length, `${w0.length} abriram com água nas mãos (${jars.filter(j => j.back).length} de ${jars.length} jarros já de volta ao recado da água); em 30 s, ${w1.length} ainda com ela fora do recado${w1.length ? ': ' + w1.slice(0, 4).map(v => `${v.name} #${v.id} (${v.task ? v.task.type : 'sem afazer'})`).join(', ') : ''}; ${poured} derramada(s) pelo livro`);
+ok('a1 a água solta vai para casa ou é derramada', w0.length > 0 && !w1.length, `${w0.length} abriram com água nas mãos (${jars.filter(j => j.back).length} de ${jars.length} jarros já de volta ao recado da água); em 30 s, ${w1.length} ainda com ela fora do recado${w1.length ? ': ' + w1.slice(0, 4).map(v => `${v.name} #${v.id} (${v.task ? v.task.type : 'sem afazer'})`).join(', ') : ''}; ${poured} derramada(s) pelo livro${made}`);
 for (let k = 0; k < 300; k++) { M.viver(0.1); look3(); }
 const home = jars.filter(j => inHome.has(j.id)); const pouredJ = jars.filter(j => !inHome.has(j.id) && (S.ledger || []).some(e => e[0] > ln0 && e[8] === 'agua' && e[9] === j.id)); const still = jars.filter(j => !inHome.has(j.id) && !pouredJ.includes(j) && (v => v && v.carry && v.carry.k === 'water')(S.villagers.get(j.id)));
 const lost = jars.filter(j => !inHome.has(j.id) && !pouredJ.includes(j) && !still.includes(j));
