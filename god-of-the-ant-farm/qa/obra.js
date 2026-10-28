@@ -21,7 +21,7 @@ const D = G.Depot, V = G.Village, Vg = G.Vg, A = G.Act;
 const fails = []; const mid = [];
 const ok = (name, c, info) => { const m = mid.splice(0); const pass = c && !m.length; console.log(`${pass ? 'PASSOU' : 'FALHOU'} | obra ${name} | ${info}${m.length ? ' — o verificador, no meio do caso: ' + m.slice(0, 2).join(' · ') : ''}`); if (!pass) fails.push(name); };
 // (the trades' rules of the checker — the works among them —, alone, every two seconds)
-const rule = QA.more[QA.more.length - 1];
+const rule = QA.oficio; // (the trades' rule by its name: oficio-inv.js has more than one)
 const watch = () => rule((sys, sev, msg) => { if (sys === 'oficio' && sev <= 2 && mid.length < 6 && !mid.includes(`S${sev} ${msg}`)) mid.push(`S${sev} ${msg}`); }, G.S);
 const world = process.argv[2] || 'cidade';
 M.pronto(world); let S = G.S; M.viver(2); G.inSim++;

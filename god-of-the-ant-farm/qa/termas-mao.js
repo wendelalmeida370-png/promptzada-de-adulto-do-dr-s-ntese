@@ -41,7 +41,7 @@ function world(civ, coinOn, wood) {
 }
 G.inSim++;
 // (the trades' and the services' rules of the checker, alone — the rest of QA.check wants a whole world — every second)
-const rule = QA.more[QA.more.length - 1]; const bad = [];
+const rule = QA.oficio; const bad = []; // (the trades' rule by its name: oficio-inv.js has more than one)
 const sec = (n, people) => { for (let k = 0; k < n; k++) { G.S.clock += 1; G.S.time = (G.S.time + 1 / G.DAY_LEN) % 1; for (const v of people) { if (!v.task) continue; v.task.age += 1; v.actT += 1; G.Eco.run(v, v.task, 1, H); } A.update(1); rule((sys, sev, msg) => { if (sys === 'oficio') bad.push(`S${sev} ${msg}`); }, G.S); } };
 const lines = code => G.S.ledger.filter(e => e[8] === code);
 const r2 = x => Math.round(x * 100) / 100;

@@ -35,7 +35,7 @@ G.inSim++;
 }
 // ---------------- a batch of fired bricks, every stage
 const { f, ol, v } = world();
-const rule = QA.more[QA.more.length - 1]; const bad = [];
+const rule = QA.oficio; const bad = []; // (the trades' rule by its name: oficio-inv.js has more than one)
 const inv = () => rule((sys, sev, msg) => { if (sys === 'oficio') bad.push(`S${sev} ${msg}`); }, G.S);
 const sec = n => { for (let k = 0; k < n; k++) { G.S.clock += 1; G.S.time = (G.S.time + 1 / G.DAY_LEN) % 1; A.update(1); inv(); } };
 const codes = op => { const c = {}; for (const e of G.S.ledger) if (e[7] === op.id) c[e[8]] = Math.round(((c[e[8]] || 0) + e[6]) * 100) / 100; return c; };

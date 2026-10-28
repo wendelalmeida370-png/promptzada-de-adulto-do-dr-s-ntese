@@ -34,7 +34,7 @@ function world(stock) {
   return { S, f, set, person, tec: S.buildings.get(3), forja: S.buildings.get(5), our: S.buildings.get(6) };
 }
 G.inSim++;
-const rule = QA.more[QA.more.length - 1]; const bad = [];
+const rule = QA.oficio; const bad = []; // (the trades' rule by its name: oficio-inv.js has more than one)
 // (each second: whoever is free asks for the next thing of their trade; every task runs; the world's clock; the checker)
 const sec = (n, people) => { for (let k = 0; k < n; k++) { G.S.clock += 1; G.S.time = 0.3 + ((G.S.clock / G.DAY_LEN) % 1) * 0.3; for (const v of people) { if (!v.task) E.jobTask(v, H); if (!v.task) continue; v.task.age += 1; v.actT += 1; E.run(v, v.task, 1, H); } A.update(1); rule((sys, sev, msg) => { if (sys === 'oficio') bad.push(`S${sev} ${msg}`); }, G.S); } };
 const lines = code => G.S.ledger.filter(e => e[8] === code);

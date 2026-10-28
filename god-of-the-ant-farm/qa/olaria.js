@@ -20,7 +20,7 @@ const fresh = () => { M.reseed(4242); G.Save.apply(JSON.parse(snap)); G.Main.mod
 const S = () => G.S;
 const facOfSet = id => V.facOfSet(id);
 // (the trades' rule of the checker, alone, every few seconds)
-const rule = QA.more[QA.more.length - 1];
+const rule = QA.oficio; // (the trades' rule by its name: oficio-inv.js has more than one)
 const watch = bad => rule((sys, sev, msg) => { if (sys === 'oficio' && sev <= 2 && bad.length < 6) bad.push(`S${sev} ${msg}`); }, S());
 const liveSec = (sec, until, bad) => { for (let k = 0; k < sec; k++) { M.viver(1); if (bad && k % 5 === 4) watch(bad); if (until && until()) return true; } return false; };
 const potters = b => [...S().villagers.values()].filter(v => v.job === b.id && v.role === 'oleiro' && A.able(v));

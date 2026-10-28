@@ -1,11 +1,12 @@
 // oficio-inv: the checker's rules for the trades (P2) — the batches of a workshop (G.Oficio: the pottery's bricks, adobes and
 // pots), the brick of the works (D-075). Loaded after qa/qa.js (QA.more); copied into qa.js by qa/junta-inv.js. It reads the
-// world's fields directly: a fault in the trades' own code is not hidden by the code it checks.
+// world's fields directly: a fault in the trades' own code is not hidden by the code it checks. The rule has its name
+// (QA.oficio): a proof asks for the one it watches by it, not by its place in QA.more
 (function () {
   if (!window.QA || !QA.more) return;
   const fin = x => typeof x === 'number' && isFinite(x);
   const EPS = 1e-4;
-  QA.more.push(function (add, s) {
+  QA.more.push(QA.oficio = function (add, s) {
     const O = G.Oficio; if (!O || !G.Act) return;
     const LIVE = { plan: 1, rsv: 1, on: 1, wait: 1 };
     const ops = (s.acts || []).filter(op => op.def === 'oficio' && LIVE[op.st]);

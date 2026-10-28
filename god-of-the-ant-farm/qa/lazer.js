@@ -20,7 +20,7 @@ const snap = G.Save.serialize();
 const fresh = () => { M.reseed(4242); G.Save.apply(JSON.parse(snap)); G.Main.mode = 'game'; if (G.UI && G.UI.setSpeed) G.UI.setSpeed(0); };
 const S = () => G.S;
 const r2 = x => Math.round(x * 100) / 100;
-const rule = QA.more[QA.more.length - 1];
+const rule = QA.oficio; // (the trades' rule by its name: oficio-inv.js has more than one)
 const watch = bad => rule((sys, sev, msg) => { if (sys === 'oficio' && sev <= 2 && bad.length < 6 && !bad.includes(`S${sev} ${msg}`)) bad.push(`S${sev} ${msg}`); }, S());
 const liveSec = (sec, until, bad, each) => { for (let k = 0; k < sec; k++) { M.viver(1); if (each) each(); if (bad && k % 5 === 4) watch(bad); if (until && until()) return true; } return false; };
 const seen = []; D.onMove.push(e => { seen.push(e); });
