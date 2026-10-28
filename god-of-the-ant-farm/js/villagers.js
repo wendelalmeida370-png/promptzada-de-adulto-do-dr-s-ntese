@@ -1379,7 +1379,14 @@
       }
       case 'swim': {
         v.act = 'swim';
-        const tgt = t.to || (t.to = W.nearestLand(v.x, v.y, 30) || W.nearestLand(v.x, v.y, 90));
+        // (for the nearest land; when home is not reached from it — a pocket of sand the sea and the houses close in, where one
+        // would stand with every way failing: L-306 —, a shore that reaches home a few strokes farther, if there is one)
+        if (!t.to) {
+          const n0 = W.nearestLand(v.x, v.y, 30) || W.nearestLand(v.x, v.y, 90); const home = G.S.settlements.get(v.set); let to = n0;
+          if (n0 && home && !W.reachesTownXY(n0[0], n0[1], home)) { const d0 = Math.ceil(Math.max(Math.abs(n0[0] - v.x), Math.abs(n0[1] - v.y))); to = W.nearestLand(v.x, v.y, d0 + 6, (x, y) => W.reachesTownXY(x, y, home)) || n0; }
+          t.to = to;
+        }
+        const tgt = t.to;
         if (!tgt) { Vg.damage(v, 999, 'drown', true); return; }
         const dx = tgt[0] - v.x, dy = tgt[1] - v.y; const d = Math.hypot(dx, dy);
         const sp = 0.7 * dt;
@@ -1800,6 +1807,23 @@
     return false;
   }
   Vg.unstick = unstick;
+  // (the round of every second for one person, at once — for whoever the ground just changed under (miracles.js): off ground
+  // that no longer bears them — a ford gone deep, a slope gone steep — to the nearest that does, on the way they were going;
+  // in the sea with no boat, swimming for the shore. Before the panic sends them looking for a way from where there is no
+  // ground, a failed way each step — L-306). True when it did
+  Vg.reground = function (v) {
+    const S = G.S; const t = v.task;
+    if (v.inside || v.air || v.held || v.age < 2 || v.aboard || v.ug || (t && (t.perch || (t.type === 'barco' && t.st === 4)))) return false;
+    if (G.Possess && (G.Possess.afloat(v) || (G.Possess.onPlan && G.Possess.onPlan(v)))) return false;
+    const i = W.idx(v.x, v.y);
+    if (!W.walkable(i) && S.type[i] !== T.SEA && S.type[i] !== T.DEEP) {
+      const n = W.nearestLand(v.x, v.y, 5); if (!n) return false; const e = v.path && v.pi < v.path.length ? v.path[v.path.length - 1] : null;
+      v.x = n[0]; v.y = n[1]; v.path = null; v._pfN = 0; v._pfI = -1; if (v.task && e && !Vg.goto(v, e[0], e[1], false)) v.task.st = 0; return true;
+    }
+    if (!(S.type[i] <= T.SEA) || (S.dry && S.dry[i])) return false;
+    if (t && (t.type === 'swim' || ((t.type === 'mariscar' || t.type === 'pocas') && t.st >= 2) || (t.type === 'dive' && t.st >= 1))) return false;
+    v.path = null; v._pfN = 0; v._pfI = -1; setTask(v, { type: 'swim', pri: 6 }); return true;
+  };
   Vg.hasWell = G.perPart(function (setId) { for (const b of G.S.buildings.values()) if (b.type === 'well' && b.built && b.set === setId) return true; return false; });
 
   // helpers shared with the war & politics modules
