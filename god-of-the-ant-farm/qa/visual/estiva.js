@@ -251,8 +251,13 @@ let dest = P.destOf(op);
   const mine = D.ledger().filter(e => e[0] > led0 && e[7] === op.id && e[9] === v.id);
   const dep = mine.find(e => e[8] === 'depositar'), pay = mine.find(e => e[8] === 'paga');
   const coin = E.coinage(fac.id); const due = r2(P.payOf(k0, n));
-  ok('7. na porta, «E — Guardar a caixa…»: entra como a de um estivador — o estoque, a paga na casa, a conta dele, a da descarga', !!r && r.ok && !v.carry && !!dep && dep[3] === 'v:' + v.id && dep[4] === op.to && Math.abs(dep[6] - n) < 1e-6 && (coin ? !!pay && pay[4] === payee && pay[5] === 'moedas' && Math.abs(pay[6] - due) < 1e-6 : true) && Math.abs((v.st[k0] || 0) - st0 - n) < 1e-6 && Math.abs(((op.done || {})[k0] || 0) - done0 - n) < 1e-6 && ((op.roles[v.id] || {}).n || 0) === n0 + 1,
-    `${b ? '«' + b.label + '»' : 'nada'} (a ${left.toFixed(1)} m da porta); ${dep ? `${dep[6]} de ${E.name(dep[5])} de ${dep[3]} para ${dep[4]}` : 'nada guardado'}; ${coin ? (pay ? `paga ${pay[6]} moedas a ${pay[4]} (devia ${due})` : 'sem paga') : 'povo sem moeda'}; a conta dele ${st0} → ${v.st[k0] || 0}; caixas dele na descarga ${n0} → ${(op.roles[v.id] || {}).n || 0}`);
+  // (the unloading's count: what reached its store in these steps — the body's crate, and any a porter of the quay brought in
+  // the same steps on a busy quay —, each in the ledger, as the unloading's own books count it (Act.account): T-223)
+  const inOp = D.ledger().filter(e => e[0] > led0 && e[7] === op.id && e[5] === k0);
+  const arrived = inOp.reduce((s, e) => s + (e[4] === op.to && e[3] !== op.to ? e[6] : e[3] === op.to && e[4] !== op.to && (/^[vg]:/.test(e[4]) || e[4] === op.stage) ? -e[6] : 0), 0);
+  const done1 = (op.done || {})[k0] || 0; const others = r2(arrived - (dep ? dep[6] : 0));
+  ok('7. na porta, «E — Guardar a caixa…»: entra como a de um estivador — o estoque, a paga na casa, a conta dele, a da descarga', !!r && r.ok && !v.carry && !!dep && dep[3] === 'v:' + v.id && dep[4] === op.to && Math.abs(dep[6] - n) < 1e-6 && (coin ? !!pay && pay[4] === payee && pay[5] === 'moedas' && Math.abs(pay[6] - due) < 1e-6 : true) && Math.abs((v.st[k0] || 0) - st0 - n) < 1e-6 && Math.abs(done1 - done0 - arrived) < 1e-6 && ((op.roles[v.id] || {}).n || 0) === n0 + 1,
+    `${b ? '«' + b.label + '»' : 'nada'} (a ${left.toFixed(1)} m da porta); ${dep ? `${dep[6]} de ${E.name(dep[5])} de ${dep[3]} para ${dep[4]}` : 'nada guardado'}; ${coin ? (pay ? `paga ${pay[6]} moedas a ${pay[4]} (devia ${due})` : 'sem paga') : 'povo sem moeda'}; a conta dele ${st0} → ${v.st[k0] || 0}; caixas dele na descarga ${n0} → ${(op.roles[v.id] || {}).n || 0}; a conta da descarga ${r2(done0)} → ${r2(done1)}${others ? ` (${others} de outro carregador no mesmo instante, no livro-razão)` : ''}`);
 }
 
 // ------------------------------ 8. the bad cases ------------------------------
