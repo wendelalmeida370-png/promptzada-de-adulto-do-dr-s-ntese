@@ -1654,12 +1654,13 @@
   // where it is, never across the town: D-074)
   const REACH = 3;
   const nearBaby = (v, o) => (v.inside > 0 ? o.inside === v.inside : (o.ug || 0) === (v.ug || 0) && (v.ug ? true : !o.inside) && G.dist2(o.x, o.y, v.x, v.y) <= REACH * REACH);
-  // (the arms within reach: one of its house — and, for who must let go now, anyone, a woman before a man)
+  // (the arms within reach: one of its house, a grandmother of any age — and, for who must let go now, anyone grown under
+  // seventy, a woman before a man)
   function reachOf(v, ok, anyone) {
     let best = null, bd = 1e9;
     for (const o of G.S.villagers.values()) {
-      if (!ok(o) || o.age < 16 || o.age >= 70 || !nearBaby(v, o)) continue;
-      const kin = !!v.home && o.home === v.home; if (!kin && !anyone) continue;
+      if (!ok(o) || o.age < 16 || !nearBaby(v, o)) continue;
+      const kin = !!v.home && o.home === v.home; if (!kin && (!anyone || o.age >= 70)) continue;
       const d = G.dist2(o.x, o.y, v.x, v.y) + (kin ? 0 : 40) + (o.g === 'f' ? 0 : 20);
       if (d < bd) { bd = d; best = o; }
     }

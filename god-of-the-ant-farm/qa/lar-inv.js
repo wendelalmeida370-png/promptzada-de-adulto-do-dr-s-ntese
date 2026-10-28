@@ -82,7 +82,7 @@
     if (Vg && Vg.canHold && Vg.babyReach) for (const b of s.villagers.values()) {
       if (b.age >= 2 || b.captive || b.ug) continue;
       let wrong = '';
-      if (!b.carrier) { if (b.inside > 0) for (const o of s.villagers.values()) if (o.id !== body && o.home && o.home === b.home && o.age >= 16 && o.age < 70 && o.set === b.set && Vg.canHold(o) && Vg.babyReach(b, o)) { wrong = `sozinho em casa com ${o.name} #${o.id} ali, que pode segurá-lo`; break; } }
+      if (!b.carrier) { if (b.inside > 0) for (const o of s.villagers.values()) if (o.id !== body && o.home && o.home === b.home && o.age >= 16 && o.set === b.set && Vg.canHold(o) && Vg.babyReach(b, o)) { wrong = `sozinho em casa com ${o.name} #${o.id} ali, que pode segurá-lo`; break; } }
       else if (b.carrier !== b.mother && b.carrier !== b.father && b.carrier !== body) { const p = [s.villagers.get(b.mother), s.villagers.get(b.father)].find(o => o && o.id !== body && o.set === b.set && Vg.canHold(o) && Vg.babyReach(b, o)); if (p) wrong = `no colo de #${b.carrier} com ${p.name} #${p.id} (${p.id === b.mother ? 'a mãe' : 'o pai'}) ao alcance`; }
       if (!wrong) continue;
       const since = baby0.has(b.id) ? baby0.get(b.id) : s.clock; bnow.set(b.id, since);
