@@ -46,15 +46,24 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     let w = [...S.buildings.values()].find(b => b.type === 'armazem' && b.set === set.id && b.built) || window.__put('armazem', dock.x, dock.y);
     if (!w) return { skip: 'sem lugar para o armazém' };
     const hand = window.__adults().find(v => v.role !== 'guerreiro'); hand.role = 'estivador'; hand.job = w.id; G.Vg.endTask(hand);
-    G.Eco.ensure(f); const before = f.eco.imp || 0;
-    G.Harbor.land(dock, { k: 'tecido', n: 12 }, null);
-    return { dock: dock.id, w: w.id, hand: hand.id, before, crates: dock.crates.length };
+    // (the cloth comes out of a ship's hold, as every cargo of the depot does — the porto's own cases' hand: a landing with no
+    // ship lands nothing, and the case passed only while other ships' food emptied the quay and filled the imports; with
+    // the final worlds the food never fitted the store, the unloading waited «cheio», and no cloth had come ashore, T-197)
+    const sh = S.ships.find(s => s.kind === 'mercante') || S.ships[0]; if (!sh) return { skip: 'nenhum navio no mundo' };
+    // (the cloth that the porters' hands put into the people's store — the ledger's «depositar», counted as it happens)
+    window.__clothIn = 0; G.Depot.onMove.push(e => { if (e[5] === 'tecido' && e[4] === 'f:' + f.id && e[8] === 'depositar' && /^v:/.test(e[3])) window.__clothIn += e[6]; });
+    sh.goods = { k: 'tecido', n: 12 }; G.Harbor.land(dock, sh.goods, sh);
+    const cloth = (dock.crates || []).filter(c => c.k === 'tecido').length;
+    return { dock: dock.id, w: w.id, hand: hand.id, crates: cloth };
   });
   if (q.skip) ok('1 a carga do navio desce no cais e vai a pé ao armazém', true, `(sem prova: ${q.skip})`);
   else {
-    const r = await until(o => { const d = G.S.buildings.get(o.dock); const f = G.Fac.get(window.__set.fac); return (d.crates || []).length === 0 && (f.eco.imp || 0) >= o.before + 12 ? 1 : null; }, 400, q);
-    const fin = await page.evaluate(o => ({ left: (G.S.buildings.get(o.dock).crates || []).length, now: G.Fac.get(window.__set.fac).eco.imp || 0 }), q);
-    ok('1 a carga do navio desce no cais e vai a pé ao armazém', fin.left === 0 && fin.now >= q.before + 12, `${q.crates} caixas de tecido no cais; depois: ${fin.left} no cais, ${fin.now - q.before} medidas entraram no estoque pelo armazém`);
+    // (the case's own cargo: its cloth crates off the quay, and the cloth in the store by the porters' hands; the quay of a
+    // busy port has other crates on it all the time)
+    await page.evaluate(() => { window.__cloth = o => { const d = G.S.buildings.get(o.dock); return { left: (d.crates || []).filter(c => c.k === 'tecido').length, inn: Math.round(window.__clothIn * 100) / 100 }; }; });
+    await until(o => { const r = window.__cloth(o); return r.left === 0 && r.inn >= 12 - 1e-6 ? 1 : null; }, 400, q);
+    const fin = await page.evaluate(o => window.__cloth(o), q);
+    ok('1 a carga do navio desce no cais e vai a pé ao armazém', q.crates > 0 && fin.left === 0 && fin.inn >= 12 - 1e-6, `${q.crates} caixas de tecido no cais; depois: ${fin.left} no cais, ${fin.inn} medidas entraram no estoque pelas mãos dos estivadores`);
   }
 
   // 2 the tavern
