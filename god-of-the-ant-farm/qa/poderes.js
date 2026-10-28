@@ -271,8 +271,9 @@ const key = process.argv[2] || 'cidade';
       const H = __H; H.fresh(); const S = G.S;
       // (a couple whose widow can marry again — someone free of the other sex in the widow's town, not of the family —, the
       // biggest town first: the world of 28/10 had nobody for the first couple there, and the case judged a widow who never
-      // married again, T-126)
-      const canWed = (m, o) => o.set === m.set && o.g !== m.g && !o.partner && o.age >= 18 && o.id !== m.mother && o.id !== m.father && o.mother !== m.id && !(m.mother && o.mother === m.mother);
+      // married again, T-126. «Not of the family» by the world's own rule, both parents both ways: the case's own list forgot
+      // the father's side, and in the «cidade» of the v37 the widower Creonte was married to his daughter Penélope, T-190)
+      const canWed = (m, o) => o.set === m.set && o.g !== m.g && !o.partner && o.age >= 18 && !G.Vg.relatedClose(m, o);
       const set = H.town(); const all = [...S.villagers.values()];
       const v = all.filter(q => q.partner && S.villagers.has(q.partner) && q.age >= 18 && q.age < 55 && !q.captive && !q.aboard && !q.ug && !q.jail && !q.inside && !(q.task && q.task.type === 'scene')).sort((a, b) => (a.set === set.id ? 0 : 1) - (b.set === set.id ? 0 : 1) || a.id - b.id).find(q => { const m = S.villagers.get(q.partner); return all.some(o => o !== q && canWed(m, o)); });
       if (!v) return { none: true };
@@ -783,14 +784,21 @@ const key = process.argv[2] || 'cidade';
       const mid = p.tiles[Math.floor(p.tiles.length / 2)]; const near = p.tiles.slice(0, 3);
       const ppl = [...S.villagers.values()].filter(o => o.age >= 16 && !o.inside && !o.aboard && !o.captive && !o.jail && (o.set === A.id || o.set === B.id)).slice(0, 3);
       ppl.forEach((o, k) => { const i = k === 0 ? mid : near[k]; G.Vg.endTask(o); o.x = (i % G.N) + 0.5; o.y = ((i / G.N) | 0) + 0.5; o.path = null; G.Vg.H.setTask(o, { type: 'olhar', x: o.x, y: o.y, fx: o.x + 1, fy: o.y, pri: 3, until: S.clock + 60, what: 'mar', kind: 'olhar' }); });
-      let ran = 0; H.until(() => { ran = Math.max(ran, H.tasks('sair').length); return p.st === 'fecha'; }, 20);
-      H.until(() => { ran = Math.max(ran, H.tasks('sair').length); return false; }, 3);
+      // (each one who ran counted once, seen at every step: one put a tile from the shore is out before the next second, and the
+      // most at once was one in the v37 — T-193)
+      const runners = new Set(); const seeRun = () => { for (const q of H.tasks('sair')) runners.add(q.id); };
+      for (let t = 0; t < 20 && p.st !== 'fecha'; t++) H.run(1, seeRun);
+      H.run(3, seeRun); const ran = runners.size;
       // (the one in the middle is caught: the god holds him there for the last seconds)
       const held = ppl[0]; const hid = held.id;
-      H.until(() => { const o = S.villagers.get(hid); if (o) { o.x = (mid % G.N) + 0.5; o.y = ((mid / G.N) | 0) + 0.5; o.path = null; } return !S.parts.includes(p); }, 20);
+      // (held only while the sea stands open: the hold went on one second past the close and put the one it spat out on the
+      // beach back in the middle of the water — Helga in the v37, «sobreviveu», and in the water: T-193)
+      H.until(() => { if (!S.parts.includes(p)) return true; const o = S.villagers.get(hid); if (o) { o.x = (mid % G.N) + 0.5; o.y = ((mid / G.N) | 0) + 0.5; o.path = null; } return false; }, 20);
       H.run(2);
       const o = S.villagers.get(hid);
-      const caught = !o || S.dead.has(hid) || (S.type[W.idx(o.x, o.y)] >= T.SAND);
+      // (taken: drowned, or out of the sea on ground the feet stand on — a ford of a river too: Helga, spat on the beach, had
+      // walked off to sleep across one in the v37, T-193)
+      const caught = !o || S.dead.has(hid) || (W.walkable(W.idx(o.x, o.y)) && S.type[W.idx(o.x, o.y)] > T.SEA);
       const wet = [...S.villagers.values()].filter(q => !q.aboard && S.type[W.idx(q.x, q.y)] <= T.SEA && !(q.task && q.task.type === 'swim')).length;
       const dryLeft = S.dry ? S.dry.reduce((a, b) => a + b, 0) : 0;
       return { ran, held: held.name, dead: !o, caught, wet, dryLeft, walk: W.walkable(mid), linked: W.canWalk(p.ax, p.ay, p.bx, p.by), log: S.history.some(e => /O mar se fechou/.test(e.txt) && (o ? new RegExp(o.name + '.*cuspid') : /não saiu a tempo|não saíram a tempo/).test(e.txt)), warn: S.history.some(e => /paredes do mar começaram a tremer/.test(e.txt)), qa: H.qaSea() };

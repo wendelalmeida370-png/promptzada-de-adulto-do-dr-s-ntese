@@ -179,12 +179,14 @@
     { let ghost = 0, ex = 0; for (let i = 0; i < s.occ.length; i++) { const o = s.occ[i]; if (o && !s.buildings.has(o)) { ghost++; ex = o; } } if (ghost) add('city', 2, `${ghost} casa(s) do mapa ocupadas por prédio inexistente #${ex}`); }
     // ---- the memory of the dead: cemeteries hold twelve, a grave and its record agree, nobody is kept past three
     // generations unless they mattered or the living are their children and grandchildren (L-072)
+    // (a cemetery that fell keeps its graves under the ruin, as the stories that go to a grave know: T-191)
+    const holds = b => b.type === 'cemetery' || (b.type === 'ruin' && b.origType === 'cemetery');
     for (const b of s.buildings.values()) {
-      if (b.type !== 'cemetery') continue;
+      if (!holds(b)) continue;
       const gr = b.graves || []; if (gr.length > 12) add('mem', 3, `cemitério #${b.id}: ${gr.length} túmulos (cabem 12)`);
       for (const id of gr) { const d = s.dead.get(id); if (d && d.grave !== b.id) add('mem', 3, `cemitério #${b.id}: o túmulo de ${d.name} #${id} aponta para ${d.grave}`); }
     }
-    for (const [id, d] of s.dead) if (d.grave) { const b = s.buildings.get(d.grave); if (b && (b.type !== 'cemetery' || !(b.graves || []).includes(id))) add('mem', 3, `${d.name} #${id}: enterrado no cemitério ${d.grave}, que não guarda seu túmulo`); }
+    for (const [id, d] of s.dead) if (d.grave) { const b = s.buildings.get(d.grave); if (b && (!holds(b) || !(b.graves || []).includes(id))) add('mem', 3, `${d.name} #${id}: enterrado no cemitério ${d.grave}, que não guarda seu túmulo`); }
     { const m = QA.memAfter; if (m && m.world === s && m.day === s.day && m.n) add('mem', 3, `na virada do ano ficaram ${m.n} morto(s) de mais de 80 anos que ninguém lembra (ex.: ${m.ex.name}, ano ${m.ex.died})`); }
     // ---- quarters of the towns
     if (G.Urban) {
@@ -464,7 +466,8 @@
         const ch = st.chapters.map(c => c.txt); const dups = ch.length - new Set(ch).size; if (dups) add('story', 3, `${nm}: ${dups} capítulo(s) com texto idêntico`);
         const ends = st.chapters.filter(c => c.end).length; if (ends > 1) add('story', 1, `${nm}: ${ends} capítulos de fim`);
       }
-      for (const sd of s.saga.seeds) if (!P(sd.protag)) add('story', 3, `semente ${sd.type}: protagonista morto`);
+      // (as with an active story: a death the stories have not heard yet is not theirs to have settled — once heard, its seeds go, L-351)
+      for (const sd of s.saga.seeds) if (!P(sd.protag) && !(G.Stories.unheard && G.Stories.unheard(sd.protag))) add('story', 3, `semente ${sd.type}: protagonista morto`);
     }
     // ---- duplicated events: the same chronicle line twice on the same day
     { const seen = new Map(); for (const h of s.history.slice(-300)) { const k = Math.floor(h.d) + '|' + (h.x === undefined ? '' : Math.round(h.x) + ',' + Math.round(h.y)) + '|' + h.txt; seen.set(k, (seen.get(k) || 0) + 1); } for (const [k, n] of seen) if (n > 1) add('chron', 3, `crônica: linha repetida ${n}× no mesmo dia e lugar: ${k.split('|')[2].slice(0, 90)}`); }
