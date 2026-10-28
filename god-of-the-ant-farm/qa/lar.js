@@ -416,14 +416,17 @@ if (want('l13')) {
 
 // ======================= l14: by day, the old mind the little ones at home =======================
 if (want('l14')) {
-  open(); S.time = 0.12; live(15); // (the morning, after its moves of house: 75 s of the day, before the evening at 0,6)
+  // (after the day of every town — act-casa.js looks at one town every 2 s of the world from the first step: the moves of house
+  // of the day are done —, the clock back to the morning: 75 s of the day, before the evening at 0,6)
+  const afterMoves = () => { live(2 * S.settlements.size + 4); S.time = 0.12; };
+  open(); afterMoves();
   // (a house of the world with someone of 62 or more — whose working day weighs less than the minding — and little ones of
   // three to six living in it; one of the old minds them. A small town may have none: then the metropolis)
-  // (chosen after the morning's moves of house — a house too full for its beds splits once a day, act-casa.js: the old one
-  // may move out, and the little ones are no longer hers)
+  // (chosen after the day's moves of house — a house too full for its beds splits once a day, act-casa.js: the old one may
+  // move out, and the little ones are no longer hers)
   const findHouse = () => { const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v)) e.old.push(v); if (v.age >= 3 && v.age < 7) e.kids.push(v); houses.set(h.id, e); } return [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0]; };
   let e = findHouse();
-  if (!e && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); S.time = 0.12; live(15); e = findHouse(); }
+  if (!e && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); afterMoves(); e = findHouse(); }
   if (!e) ok('l14 os velhos cuidam dos pequenos em casa', false, 'nenhuma casa com alguém de 62 anos ou mais e crianças de 3 a 6');
   else {
     let h = e.h; const dw = doorWatch(); let minded = 0, kidsHome = 0, n = 0, txt = '', two = 0, reload = '', reloadOk = true; const exits = new Map();
