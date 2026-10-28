@@ -996,7 +996,7 @@
     const faceOf = side => (side === 'S' ? (qy > 0 ? 'L' : null) : side === 'N' ? (qy < 0 ? 'L' : null) : side === 'E' ? (qx > 0 ? 'R' : null) : (qx < 0 ? 'R' : null));
     // (a home's pieces on its flat roof, where the 3D puts them — Forma.deck, L-267: the awning, the wind-catcher, the pots)
     if (!H.round && HOMES[b.type] && H.roof.kind === 'plano' && s.entrance && G.Forma) {
-      const dk = G.Forma.deck(sh.r, s.entrance.side, L, PAL[b.style] ? b.style : 'classico', !!rf.room);
+      const dk = G.Forma.deck(sh.r, s.entrance.side, L, PAL[b.style] ? b.style : 'classico', G.Forma.lived(s));
       const fx = dk.front[0] * qx, fy = dk.front[1] * qy, acX = Math.abs(dk.across[0]) > 0.5;
       H.deck = dk.items.map(it => {
         const o = { k: it.k, x: X(it.x), y: Y(it.z), cor: it.cor };

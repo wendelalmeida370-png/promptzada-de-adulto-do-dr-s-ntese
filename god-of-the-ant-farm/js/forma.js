@@ -30,15 +30,20 @@
   // ------------------------------ the roof one lives on ------------------------------
   // the people's own pieces on a flat roof, where the god paints them and the 3D builds them (L-267) — from the shell's rect
   // (lot metres) and the side its door opens to: the Egyptian's awning of cloth on four poles, a little to the left of the
-  // middle and toward the front, and its wind-catcher at the back on the right, its mouth to the front (none on a roof with
-  // a room on it: the room is its shade); the Aztec's three pots of flowers along the front — in lot metres, over the roof:
+  // middle and toward the front, and its wind-catcher at the back on the right, its mouth to the front; the Aztec's three
+  // pots of flowers along the front — none on a roof one lives on (Fo.lived: a room on it is its shade; a terrace is where
+  // people walk and the plan's own things stand — the awning was at 1.5 m over it, the tower in the way, the pots in the
+  // parapet's foot: L-272) — in lot metres, over the roof:
   // { front, across, items: [{ k: 'toldo', x, z, w, d, h (its back), h1 (its front) } | { k: 'torre', x, z, w, h, boca }
   // | { k: 'vaso', x, z, r, cor }] } (the god's numbers: its awning 0.3 × 0.22 tiles and 5 px, its tower 0.16 tiles and 6 px)
-  Fo.deck = function (r, s, L, st, room) {
+  // (a roof one lives on, of a shell's record — Interiors' shellOf, a plan: a room on its roof, or a terrace over its storeys)
+  Fo.lived = s => !!(s && ((s.shell && s.shell.roof && s.shell.roof.room) || (s.levels || []).some(l => l.kind === 'terraco')));
+  Fo.deck = function (r, s, L, st, lived) {
     const a = Fo.toCan(s, L, r[0], r[1]), b = Fo.toCan(s, L, r[2], r[3]);
     const u0 = Math.min(a[0], b[0]), u1 = Math.max(a[0], b[0]), v0 = Math.min(a[1], b[1]), v1 = Math.max(a[1], b[1]);
     const at = (u, v) => Fo.toLot(s, L, u, v); const items = [];
-    if (st === 'egipcio' && !room) {
+    if (lived) return { front: Fo.dirLot(s, 0, 1), across: Fo.dirLot(s, 1, 0), items };
+    if (st === 'egipcio') {
       const c = at((u0 + u1) / 2 - 0.4, (v0 + v1) / 2 + 0.2); items.push({ k: 'toldo', x: c[0], z: c[1], w: 1.2, d: 0.88, h: px(5), h1: px(4.4) });
       const t = at(u1 - 0.8, v0 + 0.64); items.push({ k: 'torre', x: t[0], z: t[1], w: 0.64, h: px(6), boca: px(2) });
     }

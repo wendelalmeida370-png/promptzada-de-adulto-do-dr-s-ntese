@@ -713,8 +713,9 @@ float m3scale(float p) {
           const prof = [[0, 0], [0.18, 0.05], [0.34, 0.14], [H2, F]];
           for (let k = 0; k < 3; k++) { const [u0, f0] = prof[k], [u1, f1] = prof[k + 1]; K.tri3(p(a0, u0, f0), p(a1, u0, f0), p(a1, u1, f1), k ? pc : c2, k ? pc : c2, pc, [W2.o[0], 0.3, W2.o[1]]); K.tri3(p(a0, u0, f0), p(a1, u1, f1), p(a0, u1, f1), k ? pc : c2, pc, pc, [W2.o[0], 0.3, W2.o[1]]); }
           // (the gorge's inside, from the roof's slab up to the parapet: the gorge shows its front only — without it the sky
-          // was seen through it from the terrace, L-271)
-          K.quad(p(a0, 0.16, -0.16), p(a1, 0.16, -0.16), p(a1, H2 + 0.1, -0.16), p(a0, H2 + 0.1, -0.16), dim(pc, 0.9), [-W2.o[0], 0, -W2.o[1]]);
+          // was seen through it from the terrace, L-271; a terrace's own parapet hides it, and the face stood 2 cm proud of the
+          // parapet's inner face: L-273)
+          if (shell !== 'terrace') K.quad(p(a0, 0.16, -0.16), p(a1, 0.16, -0.16), p(a1, H2 + 0.1, -0.16), p(a0, H2 + 0.1, -0.16), dim(pc, 0.9), [-W2.o[0], 0, -W2.o[1]]);
           K.box(...(W2.ax ? [x, yb + H2, z + W2.o[1] * (sz / 2 + F / 2 - 0.02), sx + F * 2, 0.1, F + 0.04] : [x + W2.o[0] * (sx / 2 + F / 2 - 0.02), yb + H2, z, F + 0.04, 0.1, sz + F * 2]), dim(pc, 0.95));
           if (shell !== 'terrace') K.box(...(W2.ax ? [x, yb + H2 + 0.1, z + W2.o[1] * (sz / 2 - 0.05), sx + 0.1, 0.32, 0.22] : [x + W2.o[0] * (sx / 2 - 0.05), yb + H2 + 0.1, z, 0.22, 0.32, sz + 0.1]), pc);
         }
@@ -2451,7 +2452,7 @@ float m3scale(float p) {
         // roof, as near: Forma.deck)
         const rm = sh.roof && sh.roof.room, tl = rk === 'flat' && rm && rm.r && Sh.levels.find(l => l.kind === 'terraco');
         if (tl) { g.pat = PAT[OUTPAT[sh.mat] || 'plaster']; g.put(SH.box, R3.mat(b.x * L + (rm.r[0] + rm.r[2]) / 2, y0 + tl.y, b.y * L + (rm.r[1] + rm.r[3]) / 2, 0, rm.r[2] - rm.r[0], rm.h + 0.14, rm.r[3] - rm.r[1]), P.wl || '#efe2c4'); }
-        if (rk === 'flat' && DECKED[b.type] && Sh.entrance && G.Forma) { const yt = y0 + sh.eave + 0.25; const dk = G.Forma.deck(R, Sh.entrance.side, b.w * L, styleOf(b), !!(sh.roof && sh.roof.room)); g.pat = 0;
+        if (rk === 'flat' && DECKED[b.type] && Sh.entrance && G.Forma) { const yt = y0 + sh.eave + 0.25; const dk = G.Forma.deck(R, Sh.entrance.side, b.w * L, styleOf(b), G.Forma.lived(Sh)); g.pat = 0;
           for (const it of dk.items) { const ax = Math.abs(dk.across[0]) > 0.5; if (it.k === 'torre') g.put(SH.box, R3.mat(b.x * L + it.x, yt, b.y * L + it.z, 0, it.w, it.h, it.w), P.wl || '#efe2c4');
             else if (it.k === 'toldo') g.put(SH.box, R3.mat(b.x * L + it.x, yt + it.h1, b.y * L + it.z, 0, ax ? it.w : it.d, it.h - it.h1 + 0.05, ax ? it.d : it.w), '#e8e0c8'); } }
         g.pat = 0; continue; }
@@ -3458,7 +3459,7 @@ float m3scale(float p) {
   // four poles and its wind-catcher with the mouth to the front, the Aztec's pots of flowers along the front — on the roof's
   // top at y
   const DECKED = { hut: 1, house: 1, sobrado: 1, insula: 1 };
-  const roofDeck = (K, ctx) => { const S = ctx.S, sh = S.shell; return DECKED[K.b.type] && S.entrance && G.Forma ? G.Forma.deck(sh.r, S.entrance.side, K.w, K.st, !!(sh.roof && sh.roof.room)) : null; };
+  const roofDeck = (K, ctx) => { const S = ctx.S, sh = S.shell; return DECKED[K.b.type] && S.entrance && G.Forma ? G.Forma.deck(sh.r, S.entrance.side, K.w, K.st, G.Forma.lived(S)) : null; };
   const deckTop = (K, ctx, y) => { const dk = roofDeck(K, ctx); let t = 0; if (dk) for (const it of dk.items) t = Math.max(t, y + (it.h || 0.6)); return t; };
   function deckInto(K, ctx, y) {
     const dk = roofDeck(K, ctx); if (!dk) return; const fr = dk.front, ac = dk.across;
