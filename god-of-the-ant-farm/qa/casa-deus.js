@@ -11,6 +11,9 @@
 //      casa que abriga fica como está
 //   5. a casa abandonada (leftOf) nas mesmas casas da grade da habitada: só as das coisas que a família leva livres, e as
 //      pontas dos lances onde o corpo fica como na habitada
+//   6. a cabana redonda do deus (T-161, com o P3): fora do centro, no lote inteiro, o fogo de chão no meio, 3 esteiras de 1,7 m
+//      ao longo do anel e 1 no chão guardado diante da porta, o corpo chegando a cada esteira (0,5 m de chão em volta de um ponto
+//      de pé dela, e o corpo inteiro a 0,7 m de um); no centro não é oferecida
 //   node qa/casa-deus.js
 const M = require('./nodemundo.js');
 const G = M.load({});
@@ -95,6 +98,29 @@ const L = 4;
     for (const st of a.stairs) { if (st.kind === 'degraus') continue; for (const [lv, p] of [[st.lv0, st.a], [st.lv1, st.b]]) if (In.landsAt(a, lv, p[0], p[1]) !== In.landsAt(h, lv, p[0], p[1])) bad.push(`${t}/${c}/${s} ${f}: a ponta do lance ${st.lv0}→${st.lv1} em ${p.join(',')}: o corpo ${In.landsAt(h, lv, p[0], p[1]) ? 'cabe' : 'não cabe'} na habitada, ${In.landsAt(a, lv, p[0], p[1]) ? 'cabe' : 'não cabe'} na abandonada`); }
   }
   ok('5 a casa abandonada nas mesmas casas da habitada, só as das coisas levadas livres', n > 0 && !bad.length, `${n} casas de andares (sobrado e ínsula, cada povo, cada lado): ${cells} casas da grade diferentes, todas de peças levadas${bad.length ? '; ' + bad.slice(0, 3).join(' · ') : ''}`);
+}
+// ---------------------------------------------------------------- 6. the round hut of the god
+{
+  // (T-161, with P3: out of the centre the round hut fills its lot — its fire on the ground in the middle, three mats of 1.7 m
+  // along the ring round it, the fourth on the floor kept before the door —, every one of them where the body gets to it: a
+  // standing point of the mat with half a metre of floor round it, and the whole body (In.BODY.r) within 0.7 m of one, the door
+  // reaching it; in the centre it is not offered — the hut there is the shell's square one)
+  const R = In.BODY.r; let n = 0; const bad = []; const sides = ['S', 'E', 'W', 'N'];
+  const OUTS = [OUT, { k: '', cl: 'f', fl: 0, d: 0, w: 0, e: 1 }];
+  for (const c of POVOS.filter(c => In.TRAD[c].round)) for (const x of OUTS) for (const f of ['redonda.terreo', 'redonda.funda']) for (let q = 0; q < 8; q++) {
+    const b = { id: 7001 + q * 7919 + c.length * 31, type: 'hut', x: 10, y: 10, w: 1, h: 1, built: true }; const p = In.makeFam(b, rec('hut', c, x, f, sides[q % 4]), f); n++;
+    const tag = `${c}/d${x.d}/${f}/${sides[q % 4]} #${b.id}`;
+    if (!p.ok) { bad.push(`${tag}: não se arma (${(p.errs || [])[0]})`); continue; }
+    const mats = p.items.filter(it => it.spots.some(sp => sp.use === 'deitar')); const fire = p.items.find(it => it.kind === 'fogo-chao'); const sh = p.shell;
+    if (mats.length !== 3 || mats.some(it => it.kind !== 'esteira' || Math.abs(Math.max(it.w, it.d) - 1.7) > 0.01) || (p.short || 0) !== 1 || !(p.floorBeds || []).length) { bad.push(`${tag}: ${mats.length} esteiras (${mats.map(it => it.kind + ' ' + Math.max(it.w, it.d)).join(', ')}), ${p.short || 0} no chão`); continue; }
+    if (!fire || Math.hypot(fire.x - sh.cx, fire.z - sh.cz) > 0.3) { bad.push(`${tag}: o fogo ${fire ? 'fora do meio' : 'que falta'}`); continue; }
+    const g = p.reach || {}; const at = (lv, u, v) => { const G0 = g[lv]; return !!G0 && !!G0[Math.floor(v / p.grid.cs) * p.grid.n + Math.floor(u / p.grid.cs)]; };
+    const half = it => it.spots.some(sp => !sp.on && sp.ok && In.standsAt(p, it.lv, sp.x, sp.z, 0.25));
+    const whole = it => it.spots.some(sp => { if (sp.on || !sp.ok) return false; for (let r = 0; r <= 0.7 + 1e-6; r += 0.05) for (let k = 0; k < (r ? 24 : 1); k++) { const a = k / 24 * Math.PI * 2, u = sp.x + Math.cos(a) * r, v = sp.z + Math.sin(a) * r; if (In.standsAt(p, it.lv, u, v, R) && at(it.lv, u, v)) return true; } return false; });
+    const far = mats.find(it => !half(it) || !whole(it)); if (far) bad.push(`${tag}: o corpo não chega à esteira em ${far.x},${far.z}`);
+  }
+  const mid = POVOS.filter(c => In.TRAD[c].round).filter(c => In.familiesFor(rec('hut', c, MID)).ok.some(f => f.startsWith('redonda')));
+  ok('6 a cabana redonda do deus: o fogo no meio, 3 esteiras de 1,7 m em volta e 1 no chão, o corpo chegando a cada esteira; no centro não', n > 0 && !bad.length && !mid.length, `${n} cabanas redondas fora do centro (os povos de cabana redonda, terra e frio, térrea e funda, cada lado): ${n - bad.length} com tudo; no centro oferecida em ${mid.length ? mid.join(', ') : 'nenhum povo'}${bad.length ? '; ' + bad.slice(0, 3).join(' · ') : ''}`);
 }
 const err = M.erros(); if (Object.keys(err.mod).length || err.console.length) ok('sem erros de módulo', false, JSON.stringify(err).slice(0, 300));
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');

@@ -116,7 +116,7 @@ console.log(`combinações abaixo de 5 só porque a arquitetura não permite mai
 for (const s of small.slice(0, process.env.CAT ? 999 : 12)) console.log('   · ' + s);
 // (a ratchet: the count the grammar has reached — it may only go down; brought down, the ceiling comes down with it, and the
 // goal is zero. Raised by a change, the change is wrong — unless the leader agrees and the commit says why)
-const GERADOR_TETO = 11; // (17 → 11 com a B2c: a ínsula do centro com um andar a mais, D-082 (3))
+const GERADOR_TETO = 9; // (17 → 11 com a B2c: a ínsula do centro com um andar a mais, D-082 (3); 11 → 9 com a cabana redonda do deus, T-161)
 ok('abaixo de 5 pelo gerador', byGen.length <= GERADOR_TETO, `${byGen.length} combinações ficam abaixo de 5 só porque o gerador não armou famílias que a arquitetura permite (teto ${GERADOR_TETO}, a meta é zero)${byGen.length < GERADOR_TETO ? ' — baixou: desça o teto' : ''}`);
 for (const s of byGen.slice(0, process.env.CAT ? 999 : 30)) console.log('   ✗ ' + s);
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');

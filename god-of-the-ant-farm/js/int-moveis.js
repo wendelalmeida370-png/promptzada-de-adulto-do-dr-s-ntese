@@ -52,6 +52,9 @@
     // (the small clay stove of a poor house: a pot over the coals)
     fogareiro: { name: 'Fogareiro de barro', w: 0.6, d: 0.6, h: 0.5, solid: 1, fire: 1, wall: 1, leva: 1, spots: front('cozinhar', 0.4) },
     braseiro: { name: 'Braseiro', w: 0.5, d: 0.5, h: 0.6, solid: 1, fire: 1, wall: 1, leva: 1, spots: front('aquecer', 0.4) },
+    // (the round hut's fire, on the ground in its middle: a ring of stones, the embers in it, the smoke out by the cone's top —
+    // D-082 (6), T-161; one cooks before it, the others warm themselves about it)
+    'fogo-chao': { name: 'Fogo de chão', w: 0.5, d: 0.5, h: 0.15, solid: 1, fire: 1, free: 1, spots: it => [{ use: 'cozinhar', a: 0, n: it.d / 2 + 0.4 }, { use: 'aquecer', a: 0, n: -(it.d / 2 + 0.4) }, { use: 'aquecer', a: it.w / 2 + 0.4, n: 0 }, { use: 'aquecer', a: -(it.w / 2 + 0.4), n: 0 }] },
     mesa: { name: 'Mesa', w: 1.1, d: 0.7, h: 0.75, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
     'mesa-baixa': { name: 'Mesa baixa', w: 0.9, d: 0.6, h: 0.35, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
     banco: { name: 'Banco', w: 1.1, d: 0.35, h: 0.45, low: 1, wall: 1, spots: it => [{ use: 'sentar', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: it.d / 2 + 0.35 }] },

@@ -42,7 +42,8 @@
   // ------------------------------ the families of homes: ground (H) × storeys (V) ------------------------------
   const HS = {
     integrado: { name: 'Salão', can: () => null },
-    redonda: { name: 'Cabana redonda', can: (rec, tr) => (rec.t !== 'hut' ? 'só cabanas são redondas' : !tr.round ? 'este povo não faz casas redondas' : null) },
+    // (the round hut out of the centre only: in it the hut is the shell's square one, as the god draws it there — T-161)
+    redonda: { name: 'Cabana redonda', can: (rec, tr) => (rec.t !== 'hut' ? 'só cabanas são redondas' : !tr.round ? 'este povo não faz casas redondas' : rec.d >= 2 ? 'no centro a cabana é quadrada' : null) },
     setores: { name: 'Setores', can: rec => (rec.t === 'barraco' ? 'um barraco não tem divisória' : null) },
     anexo: { name: 'Anexo', can: rec => (rec.t === 'barraco' ? 'um barraco não tem anexo' : rec.d >= 3 ? 'no coração da cidade não sobra lote para um anexo' : null) },
     produtiva: { name: 'Frente de trabalho', can: rec => (rec.t === 'hut' || rec.t === 'barraco' ? 'a cabana não tem frente de trabalho' : rec.d < 1 && rec.w < 1 ? 'longe do movimento da cidade' : null) },
@@ -133,6 +134,8 @@
   // (the shell grows from the god's size toward the lot's — side and depth together, an eighth of the way at a time — to the
   // first that holds the household; the lot's own: no yard, null)
   const GROW = 8, YARD_K = 1.55;
+  // (the round hut: its shell 2 cm inside its lot, its mats 1.7 m long — P3's, the round hut's only: T-161)
+  const ROUND_M = 0.02, ROUND_MAT = 1.7;
   function yardOf(P, rec, tr, H, V, floors, topK, round, t, need, m) {
     if (!(rec.d <= 1) || !GODSZ[rec.t] || H === 'anexo' || V === 'esteios' || !need) return null;
     const L = P.L;
@@ -143,7 +146,7 @@
     // with a median of 1.4 — a third more for it)
     const f = 1 + 0.55 * (floors - 1) + (topK === 'quarto' ? 0.15 : topK === 'terraco' ? 0.35 : 0);
     const A = In.floorNeed(need) / f * YARD_K * (H === 'produtiva' ? 1.3 : 1);
-    if (round) { const r0 = GODR[rec.t] || 1.68, r1 = (L - 2 * m) / 2; for (let g = 0; g < GROW; g++) { const rad = r0 + g / GROW * (r1 - r0); if (Math.PI * (rad - t) * (rad - t) >= A) return { rad }; } return null; }
+    if (round) return null; // (the round hut fills its lot: home's shell, T-161)
     const [gw, gd] = GODSZ[rec.t](rec.c); const W = L - 2 * m;
     for (let g = 0; g < GROW; g++) {
       const w = gw + g / GROW * (W - gw), d = gd + g / GROW * (W - gd); if ((w - 2 * t) * (d - 2 * t) < A) continue;
@@ -166,7 +169,9 @@
     // ---- as big as the lot lets it (the eaves inside the lot); the north's long and low ----
     const t = shack ? 0.06 : hut ? tr.hutT : tr.t; const mat = shack ? 'tabua' : hut && tr.hutT < tr.t ? (tr.mat === 'tabua' ? 'tabua' : 'pau-a-pique') : tr.mat;
     // (a house of storeys fills its lot: every storey is as small as the ground one)
-    const m = shack ? P.rr(0.28, 0.42) : hut ? P.rr(0.08, 0.16) : floors >= 2 ? P.rr(0.1, 0.13) : P.rr(0.1, 0.2);
+    // (the round hut to the edge of its lot: its three mats round the fire along the ring, the fourth on the floor before the door,
+    // and the body to each of them — T-161, P3's measures —; its eaves over the lot's line, as the god's cone has them)
+    const m = shack ? P.rr(0.28, 0.42) : round ? ROUND_M : hut ? P.rr(0.08, 0.16) : floors >= 2 ? P.rr(0.1, 0.13) : P.rr(0.1, 0.2);
     let sh = [m, m, L - m, L - m];
     // (out of the centre, the house as the god draws it, its yard about it — D-082 (2): yardOf)
     const yd = yardOf(P, rec, tr, H, V, floors, topK, round, t, need, m);
@@ -518,17 +523,20 @@
     const sidesOf = id => (loftOf(id) ? ['fundo', 'esquerda', 'direita'] : P.attempt % 2 ? ['fundo'].concat(P.shuffle(['esquerda', 'direita']), ['frente']) : P.shuffle(['fundo', 'esquerda', 'direita']).concat(['frente']));
     // where people sleep, in this order: the sleeping rooms, the roof room, the loft, the hall, the roof itself in the hot lands
     const order = [rooms.leitos, rooms.quarto].concat(rooms.up || [], [rooms.jirau, rooms.lar, hot ? rooms.terraco : undefined, hot ? rooms.terracoFrente : undefined, rooms.anexo]).filter(x => x !== undefined);
-    const couple = shack ? null : rich || rec.w >= 1 ? tr.coupleRich || tr.couple : tr.couple;
-    const kinds = rich ? tr.rich : tr.bed;
+    // (the round hut: single mats along its ring, round the fire — D-082 (6), T-161)
+    const round = !!P.rooms[lar].circ;
+    const couple = shack || round ? null : rich || rec.w >= 1 ? tr.coupleRich || tr.couple : tr.couple;
+    const kinds = round ? ['esteira'] : rich ? tr.rich : tr.bed;
     // (every other attempt, the beds first in a row along the back wall, head to it, one against the other — what holds most
     // sleepers in a small room —, then wherever they go)
     const rowFirst = P.attempt % 2 === 0;
     const fill = (k, id) => {
       const lv = P.rooms[id].lv;
       if (k === 'banco-cama') { for (const s of P.shuffle(['esquerda', 'direita', 'fundo', 'frente'])) { if (P.places() >= need) return; P.bench(lv, id, s, { min: 2 }); } return; }
+      const circ = !!P.rooms[id].circ; if (circ && k === 'esteira-casal') return; const d = circ && k === 'esteira' ? ROUND_MAT : undefined; // (the round hut's mats: 1.7 m)
       let g = 0;
-      if (rowFirst && !loftOf(id)) while (P.places() < need && g++ < 12) if (!P.place(k, lv, id, { sides: ['fundo'], fixed: true })) break;
-      g = 0; while (P.places() < need && g++ < 12) if (!P.place(k, lv, id, { sides: sidesOf(id) })) break;
+      if (rowFirst && !loftOf(id)) while (P.places() < need && g++ < 12) if (!P.place(k, lv, id, { sides: ['fundo'], fixed: true, d })) break;
+      g = 0; while (P.places() < need && g++ < 12) if (!P.place(k, lv, id, { sides: sidesOf(id), d })) break;
     };
     // the couple's bed — or mat: a household is first of all a couple and its children
     const coupleBed = () => { if (couple && need >= 3) for (const id of order) { if (loftOf(id)) continue; const lv = P.rooms[id].lv; if ((rowFirst && P.place(couple, lv, id, { sides: ['fundo'], fixed: true })) || P.place(couple, lv, id, { sides: sidesOf(id) })) break; } };
@@ -555,9 +563,9 @@
     // else a brazier
     const fireUp = () => {
       const fire = shack ? 'braseiro' : rec.t === 'hut' && tr.hutFire ? tr.hutFire : tr.fire; let lit = false;
-      if (fire === 'lar') lit = !!(P.place('lar', 0, lar, { sides: ['centro'], margin: 0.3 }) || P.place('lar', 0, lar, { sides: ['livre'], margin: 0.25 }));
-      // (a round hut's fire in its middle, whatever the people keeps: the ring is the mats' — D-082's round hut)
-      if (!lit && fire !== 'lar' && P.rooms[lar].circ) lit = !!P.place(fire, 0, lar, { sides: ['centro'], margin: 0.3 });
+      // (a round hut's fire on the ground in its middle, whatever the people keeps: the ring is the mats' — D-082 (6), T-161)
+      if (round) lit = !!P.place('fogo-chao', 0, lar, { sides: ['centro'], margin: 0.3 });
+      if (!lit && fire === 'lar') lit = !!(P.place('lar', 0, lar, { sides: ['centro'], margin: 0.3 }) || P.place('lar', 0, lar, { sides: ['livre'], margin: 0.25 }));
       if (!lit && fire !== 'braseiro') lit = !!P.place(fire === 'lar' ? 'fogao' : fire, 0, lar, { sides: P.shuffle(['fundo', 'esquerda', 'direita', 'frente']) });
       if (!lit) lit = !!P.place('braseiro', 0, lar, { sides: ['fundo', 'esquerda', 'direita', 'frente'] });
       // (the last resort, once every attempt left the fire out — the round In.plan makes only then: L-193. In a small house
@@ -589,8 +597,12 @@
     // (each attempt lays the house out in its own order: where the beds go first, or the things kept, or the fire)
     // (a house of five and more: its beds always before the things it keeps — these go up on the walls when the floor is
     // taken)
-    const plans = need >= 5 ? [[coupleBed, beds, fireUp, keep], [fireUp, coupleBed, beds, keep], [coupleBed, fireUp, beds, keep]] : [[coupleBed, beds, fireUp, keep], [fireUp, coupleBed, beds, keep], [coupleBed, keep, beds, fireUp], [keep, fireUp, coupleBed, beds], [fireUp, keep, coupleBed, beds], [coupleBed, fireUp, beds, keep]];
-    for (const step of plans[P.attempt % plans.length]) step();
+    // (the round hut: its fire first, in the middle — then the mats round it, the things kept up on the ring or after them)
+    const plans = round ? [[fireUp, beds, () => keep(true)], [fireUp, beds, keep]] : need >= 5 ? [[coupleBed, beds, fireUp, keep], [fireUp, coupleBed, beds, keep], [coupleBed, fireUp, beds, keep]] : [[coupleBed, beds, fireUp, keep], [fireUp, coupleBed, beds, keep], [coupleBed, keep, beds, fireUp], [keep, fireUp, coupleBed, beds], [fireUp, keep, coupleBed, beds], [coupleBed, fireUp, beds, keep]];
+    // (the round hut laid by its ring's own measure — the fire, then the three mats round it: roundHut —, its things up on the
+    // ring; where the ring is too small for that, as any other)
+    const laid = round && roundHut(P, lar); if (laid) keep(true);
+    if (!laid) for (const step of plans[P.attempt % plans.length]) step();
     // (still short after all of it: the free stretches left along the walls filled with beds in rows — rowOf: the mix that
     // sleeps most in each —, room by room, the longest walls first; and the last of all, where the people sleeps on its flat
     // roofs and the land is not cold, the roof: who does not fit inside sleeps under the stars rather than on the floor. A
@@ -607,9 +619,9 @@
     // then after them, where it is left a place. The best of the lay-outs stays. A house laid out already is not touched)
     const score = () => (P.errs.length > e0 ? -1000 : 0) + Math.min(P.places(), need);
     const snap = () => ({ s: score(), items: P.items.map(it => Object.assign({}, it, { drop: it.drop ? it.drop.slice() : it.drop })), errs: P.errs.slice() });
-    if ((P.places() < need || P.errs.length > e0) && !shack && need >= 3) {
+    if ((P.places() < need || P.errs.length > e0) && !shack && !laid && need >= 3) {
       let best = snap();
-      for (const steps of [[fireUp, () => rowsIn(order), () => keep(true), beds], [() => rowsIn(order), beds, () => keep(true), fireUp]]) {
+      for (const steps of round ? [[fireUp, () => keep(true), beds]] : [[fireUp, () => rowsIn(order), () => keep(true), beds], [() => rowsIn(order), beds, () => keep(true), fireUp]]) {
         P.items.length = 0; P._ver = (P._ver || 0) + 1; P.errs.length = e0;
         for (const st of steps) st(); if (P.places() < need) rowsIn(order.concat(roofTo));
         if (score() > best.s) best = snap(); if (best.s >= need) break;
@@ -620,8 +632,25 @@
     if (rooms.oficina !== undefined && !P.place('bancada', 0, rooms.oficina, { sides: ['fundo', 'esquerda', 'direita'] }) && !P.place('balcao', 0, rooms.oficina, { sides: ['livre'] })) P.errs.push('sem lugar para a bancada');
     // the table and its bench, if there is room (a poor hall goes without); the wood in the annex of a house with an open fire
     // (laid out for fewer as the last resort — P.relax —, a house short of beds goes without it: its floor is for who sleeps on it)
-    P.opt(() => { if (!shack && !(P.relax && P.places() < need) && P.place(tr.eat, 0, lar, { sides: ['livre'] }) && tr.eat === 'mesa') P.place('banco', 0, lar, { sides: ['esquerda', 'direita', 'fundo'] }); });
+    // (the round hut goes without it: its floor is the fire's ring and the fourth's bed)
+    P.opt(() => { if (!shack && !round && !(P.relax && P.places() < need) && P.place(tr.eat, 0, lar, { sides: ['livre'] }) && tr.eat === 'mesa') P.place('banco', 0, lar, { sides: ['esquerda', 'direita', 'fundo'] }); });
     P.opt(() => { if (!shack && tr.fire === 'lar' && rooms.anexo !== undefined) P.place('lenha', 0, rooms.anexo); });
+  }
+  // the round hut of the god (D-082 (6), T-161 — P3's measures): the fire on the ground in its middle; three single mats of 1.7 m
+  // along the ring in a U open to the door — one across the back, one down each side, their corners where the ring's foot
+  // takes a mat (In.FLEX) —, three cells (0.75 m) of floor between each and the fire, where the whole body stands to lie down;
+  // the fourth on the floor between the fire and the door (the floor kept for one: P.kept), no piece on it. Laid by the ring's
+  // measure, not searched; false where a piece does not go in (the hut laid out as any other then)
+  function roundHut(P, id) {
+    const R = P.rooms[id]; if (!R || !R.circ) return false; const [cu, cv, ri] = R.circ; const W = IT.esteira.w, half = ROUND_MAT / 2;
+    const e = Math.sqrt((ri + In.FLEX) * (ri + In.FLEX) - half * half) - 0.01; // (from the middle to a mat's outer edge, its corners on the ring's foot)
+    if (e - W < 0.95) return false; // (three cells of floor between a mat and the fire, the fire's half a metre)
+    const fire = P.at('fogo-chao', 0, id, [cu - 0.25, cv - 0.25, cu + 0.25, cv + 0.25], 0, 1); if (!fire) return false;
+    const mats = [[[cu - half, cv - e, cu + half, cv - e + W], 0, 1], [[cu - e, cv - half, cu - e + W, cv + half], 1, 0], [[cu + e - W, cv - half, cu + e, cv + half], -1, 0]];
+    for (const [rr, fu, fv] of mats) if (!P.at('esteira', 0, id, rr, fu, fv)) return false;
+    // (the fourth's floor, across the way in: kept clear of the things)
+    P.zones.push({ lv: 0, r: [cu - 0.95, cv + 0.55, cu + 0.95, cv + 1.25] });
+    return true;
   }
   // (what the other recipes — the block round a court, the buildings of work — lay out with)
   In.HOME = { ladderAt, sideLadders, loft, porao, terrace, windows, roofOf, pitched, wet, flatOK, cellarOK, touches, roomHolding, ptInR, parseV, NUM, TOPN, rowOf };

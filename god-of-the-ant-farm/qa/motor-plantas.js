@@ -102,11 +102,12 @@ const p = In.makeFam(b, rec, 'teste.anel'); const P = lastP;
 }
 // ---- 3. what was there stays as it was ----
 {
-  // (the round hut: its room's rectangle is still filled and its corners, out of the circle, are the shell's wall)
-  const hrec = { v: 4, f: 'redonda.terreo', r: 0, t: 'hut', u: 'casa', s: 'S', o: 0, c: 'classico', e: 3, k: 'ae', cl: 't', fl: 0, d: 3, w: 0, pw: 0, h: [], m: 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 };
+  // (the round hut — out of the centre, where it is: T-161 —: its room's rectangle is still filled and its corners, out of the
+  // circle, are the shell's wall — the first cell of the rectangle whose middle is in it)
+  const hrec = { v: 4, f: 'redonda.terreo', r: 0, t: 'hut', u: 'casa', s: 'S', o: 0, c: 'classico', e: 3, k: 'ae', cl: 't', fl: 0, d: 1, w: 0, pw: 0, h: [], m: 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 };
   const hp = In.makeFam({ id: 101, type: 'hut', x: 8, y: 8, w: 1, h: 1 }, hrec, 'redonda.terreo');
   const sh = hp.shell; const room = hp.rooms.find(m => m.circ); let corner = null;
-  if (room) { const r = room.r; corner = codeAt(hp, 0, r[0] + 0.05, r[1] + 0.05); }
+  if (room) { const r = room.r; const first = v => (Math.ceil(v / CS - 0.5) + 0.5) * CS; corner = codeAt(hp, 0, first(r[0]), first(r[1])); }
   ok('3a a cabana redonda: os cantos do cômodo fora do círculo continuam parede', sh.kind === 'round' && corner === C.WALL, `casca ${sh.kind}, canto ${corner}`);
   // (a straight wall, as before: the same cells — a house of the people)
   const crec = { v: 4, f: 'integrado.andar', r: 0, t: 'house', u: 'casa', s: 'S', o: 0, c: 'grego', e: 3, k: 'ae', cl: 't', fl: 0, d: 3, w: 0, pw: 0, h: [], m: 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 };

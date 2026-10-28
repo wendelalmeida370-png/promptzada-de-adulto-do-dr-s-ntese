@@ -671,7 +671,8 @@
       if (R.circ) {
         if (!hung) return null;
         const [cu, cv, rad] = R.circ; const e = this.entrance;
-        for (const [fu, fv] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) for (const a of [0, -0.55, 0.55]) {
+        // (and, after those, farther along the ring toward the door's side — where the round hut's mats leave the ring free: T-161)
+        for (const A of [[0, -0.55, 0.55], [-0.95, 0.95]]) for (const [fu, fv] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) for (const a of A) {
           const half = Math.abs(a) + W / 2; if (half >= rad - 0.1) continue; const ex = Math.sqrt(rad * rad - half * half) - 0.03; // (its outer corners on the ring)
           const rr = fv ? [cu + a - W / 2, fv > 0 ? cv - ex : cv + ex - dep, cu + a + W / 2, fv > 0 ? cv - ex + dep : cv + ex] : [fu > 0 ? cu - ex : cu + ex - dep, cv + a - W / 2, fu > 0 ? cu - ex + dep : cu + ex, cv + a + W / 2];
           if (e && Math.hypot((rr[0] + rr[2]) / 2 - e.u, (rr[1] + rr[3]) / 2 - e.v) < W / 2 + 0.75) continue;
