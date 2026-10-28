@@ -107,7 +107,10 @@
       if (!v.aboard && !v.ug && !v.held && s.type[i] === G.T.DEEP && !(s.dry && s.dry[i]) && !(t && (t.type === 'swim' || t.type === 'naufrago'))) add('pop', 2, `${nm}: em mar profundo sem nadar (${t ? t.type : '-'})`, v.id);
     }
     // dead ones are nowhere among the living
-    for (const [id, bid] of bandOf) { const v = P(id); if (!v) add('war', 1, `bando ${bid}: membro morto/inexistente #${id}`, id); else if (!v.task || v.task.type !== 'band' || v.task.band !== bid) { const b = G.War.bands.get(bid); if (!(b && b.campaign)) add('war', 3, `bando ${bid}: membro #${id} sem tarefa de bando (${v.task ? v.task.type : '-'})`, id); } }
+    // (a band takes stock of its members every half second — war.js, bandUpdate —: one who broke and ran within that half second
+    // is still on its list, and leaves it at the next tick; one in a scene keeps the band as the task it goes back to, T-220)
+    const inBand = (v, bid) => { const t = v.task; if (t && t.type === 'band') return t.band === bid; const pt = t && t.type === 'scene' && G.Scene && G.Scene.prevTask(v); return pt ? pt.type === 'band' && pt.band === bid : !!t && (t.age || 0) < 0.6; };
+    for (const [id, bid] of bandOf) { const v = P(id); if (!v) add('war', 1, `bando ${bid}: membro morto/inexistente #${id}`, id); else if (!inBand(v, bid)) { const b = G.War.bands.get(bid); if (!(b && b.campaign)) add('war', 3, `bando ${bid}: membro #${id} sem tarefa de bando (${v.task ? v.task.type : '-'})`, id); } }
     for (const a of armies) {
       const live = (a.members || []).filter(id => P(id));
       if ((a.members || []).length && !live.length) add('war', 2, `exército ${a.name}: todos os membros mortos, mas ativo (${a.phase})`);
