@@ -19,11 +19,13 @@
     const body = s.avatar ? s.avatar.id : 0; const In = G.Interiors;
     // ---- inside a house only with a cause; asleep there only to sleep, and lying down
     for (const v of s.villagers.values()) {
-      if (!v.inside || v.id === body || v.ug) continue;
+      // (a building's id; the underground's mark — caves.js, UGIN — is the caves' own)
+      if (!(v.inside > 0) || v.id === body || v.ug) continue;
       const b = s.buildings.get(v.inside); const nm = `${v.name} #${v.id}`;
       if (!b) { add('lar', 2, `${nm}: dentro de um prédio que não existe (${v.inside})`, v.id); continue; }
       if (!housing(b)) continue;
-      if (v.age < 2) { const c = s.villagers.get(v.carrier); if (c ? c.inside !== b.id : v.home !== b.id) add('lar', 3, `o bebê ${nm} está dentro de ${b.type}#${b.id} sem quem o carrega`, v.id); continue; }
+      // (a baby: in the arms of who carries it, or at home — the house keeps the baby nobody is free to hold, babyUpdate)
+      if (v.age < 2) { const c = s.villagers.get(v.carrier); const m = s.villagers.get(v.mother); if (!(c && c.inside === b.id) && v.home !== b.id && !(m && m.home === b.id)) add('lar', 3, `o bebê ${nm} está dentro de ${b.type}#${b.id} sem quem o carrega, e não é a casa dele`, v.id); continue; }
       const t = v.task;
       if (!t || !IN_OK[t.type]) { add('lar', 2, `${nm}: dentro de ${b.type}#${b.id} sem motivo (${t ? 'tarefa ' + t.type : 'sem tarefa'})`, v.id); continue; }
       if (t.type === 'lar' && (t.home !== b.id || t.st !== 2 || !Lr.WHAT[t.what])) add('lar', 3, `${nm}: «${t.what}» da casa ${t.home} (passo ${t.st}) dentro de ${b.type}#${b.id}`, v.id);
