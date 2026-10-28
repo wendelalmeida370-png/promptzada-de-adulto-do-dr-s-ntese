@@ -798,6 +798,9 @@
       if (p.left && p.items.some(it => In.ITEMS[it.kind] && In.ITEMS[it.kind].leva)) add('int', 3, `${b.type}#${b.id}: a casa abandonada ainda tem as coisas que a família leva`);
       const s1 = In.shellOf(b), s2 = In.shellOfPlan(p); const strip = o => { const x = Object.assign({}, o); delete x.key; return JSON.stringify(x); };
       if (!s1 || strip(s1) !== strip(s2)) add('int', 1, `${b.type}#${b.id}: a casca de longe não é a da planta`);
+      // (the yard of a pottery or a tavern, B2d: each of its pieces in a room of the yard open to the sky, on its storey, inside its
+      // fence — what the god's view and the 3D from afar draw there, from the shell)
+      if (p.ok && p.shell.yard) { const Y = p.shell.yard.r; const it = p.items.find(i => i.yard && !(p.rooms[i.room] && p.rooms[i.room].open && p.rooms[i.room].fn === 'terreiro' && i.lv === (p.shell.yard.lv || 0) && i.r[0] >= Y[0] - 1e-6 && i.r[1] >= Y[1] - 1e-6 && i.r[2] <= Y[2] + 1e-6 && i.r[3] <= Y[3] + 1e-6)); if (it) add('int', 3, `${b.type}#${b.id}: ${it.kind} do terreiro fora dele`); }
       // (the way in where the step said it fits, with this record and this ground: asked again here, made anew — L-195)
       if (In.entrySaid && In.entrySaid(b) === true && s1 && G.Space && G.Space.entryFits) { const e = G.Space.entryFits(b, s1); const front = !In.frontOpen || In.frontOpen(b); if (!e.ok || !front) add('int', 2, `${b.type}#${b.id}: a entrada não cabe (${front ? `${e.kind}, o pé a ${e.foot} m` : 'a porta dá para uma casa da rua que não se anda'}) diante da porta, e a virada do dia disse que cabia com o mesmo chão`); }
       // (the door the world's people use, with the port on: the plan's own wherever the step took it — and the step never

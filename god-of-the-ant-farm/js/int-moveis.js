@@ -55,6 +55,14 @@
     mesa: { name: 'Mesa', w: 1.1, d: 0.7, h: 0.75, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
     'mesa-baixa': { name: 'Mesa baixa', w: 0.9, d: 0.6, h: 0.35, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
     banco: { name: 'Banco', w: 1.1, d: 0.35, h: 0.45, low: 1, wall: 1, spots: it => [{ use: 'sentar', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: it.d / 2 + 0.35 }] },
+    // (the trestle table of a tavern's yard and its two benches, one piece (B2d): those who eat sit along both benches, one
+    // every 0.6 m, facing the table — the front bench's turned back to it —, and get onto them from their ends)
+    'mesa-terreiro': { name: 'Mesa com bancos', w: 2.2, d: 1.7, h: 0.75, seat: 0.45, solid: 1, free: 1, spots: it => {
+      const k = Math.max(1, Math.floor(it.w / 0.6 + 1e-6)); const nb = it.d / 2 - 0.175; const out = [];
+      for (let q = 0; q < k; q++) { const a = -it.w / 2 + it.w * (q + 0.5) / k; out.push({ use: 'comer', a, n: -nb, on: 1 }, { use: 'comer', a, n: nb, on: 1, back: 1 }); }
+      for (const n of [-nb, nb]) for (const s of [-1, 1]) out.push({ use: 'acesso', a: s * (it.w / 2 + 0.35), n });
+      return out;
+    } },
     // (a row of seats of an arena, a theatre — P.tiers lays them, never placed as a piece: its name, for the places on it)
     fileira: { name: 'Fileira', w: 0, d: 0, h: 0, low: 1, spots: () => [] },
     // (a place with no piece — P.marks: the orchestra, the sand, a square —: its name, for the places at it)
@@ -97,6 +105,8 @@
     'tanque-barro': { name: 'Tanque de barro', w: 1.2, d: 0.9, h: 0.6, solid: 1, free: 1, store: { dep: 'predio', key: 'inv', cap: 8, keys: ['argila'] }, spots: it => [{ use: 'amassar', a: 0, n: it.d / 2 + 0.45 }, { use: 'amassar', a: 0, n: -(it.d / 2 + 0.45) }] },
     eira: { name: 'Eira de moldar', w: 2.0, d: 1.6, h: 0.05, low: 1, free: 1, spots: it => [{ use: 'moldar', a: 0, n: it.d / 2 + 0.4 }, { use: 'moldar', a: -(it.w / 2 + 0.4), n: 0 }, { use: 'moldar', a: it.w / 2 + 0.4, n: 0 }] },
     'pilha-tijolos': { name: 'Pilha de tijolos', w: 1.4, d: 0.8, h: 1.0, solid: 1, wall: 1, store: { dep: 'predio', key: 'inv', cap: 24, keys: ['tijolo', 'adobe', 'ceramica'] }, spots: front('guardar') },
+    // (the big jar of a Greek or Roman tavern's yard, the wine in it: B2d)
+    talha: { name: 'Talha', w: 0.6, d: 0.6, h: 1.2, solid: 1, free: 1, store: { dep: 'predio', key: 'inv', cap: 8 }, spots: front('guardar', 0.4) },
     'bancada-ourives': { name: 'Bancada de ourives', w: 1.1, d: 0.6, h: 0.8, solid: 1, wall: 1, job: 1, spots: front('lavrar', 0.45) },
     fornalha: { name: 'Fornalha', w: 0.6, d: 0.6, h: 0.9, solid: 1, fire: 1, wall: 1, spots: front('fundir', 0.45) },
     cepo: { name: 'Cepo', w: 0.7, d: 0.7, h: 0.8, solid: 1, free: 1, job: 1, spots: front('cortar', 0.45) },

@@ -168,7 +168,7 @@
   // (the side a wall of the outside is on: a side of the shell's rectangle, of an annex's, or the wall's own — out away from the
   // middle of the lot)
   function sideOf(sh, lot, w) {
-    if (sh.kind !== 'round') for (const r of [sh.r].concat((sh.annex || []).map(a => a.r))) for (const sd of ['N', 'E', 'S', 'W']) { const F = rside(r, sd); if (wallOn(w, F)) return F; }
+    if (sh.kind !== 'round') for (const r of [sh.r].concat((sh.annex || []).map(a => a.r), sh.yard ? [sh.yard.r] : [])) for (const sd of ['N', 'E', 'S', 'W']) { const F = rside(r, sd); if (wallOn(w, F)) return F; }
     const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const tx = (w.b[0] - w.a[0]) / L, tz = (w.b[1] - w.a[1]) / L;
     const side = ((lot / 2 - w.a[0]) * -tz + (lot / 2 - w.a[1]) * tx) > 0 ? -1 : 1; const ax = Math.abs(w.b[1] - w.a[1]) < 1e-3;
     return wside(w, ax ? Math.sign(tx * side) || 1 : Math.sign(-tz * side) || 1);
@@ -497,8 +497,8 @@
     const S = G.S; const tx = Math.floor(X / TILE), ty = Math.floor(Z / TILE); if (tx < 0 || ty < 0 || tx >= N || ty >= N) return null;
     const id = S.occ[ty * N + tx]; const b = id && S.buildings.get(id); if (!b) return null; const p = Sp.plan(b); if (!p) return null;
     const m = kept.get(b.id); const x = X - b.x * TILE, z = Z - b.y * TILE; const sh = p.shell;
-    const shell = sh.kind === 'round' ? Math.hypot(x - sh.cx, z - sh.cz) < sh.r : x > sh.r[0] && x < sh.r[2] && z > sh.r[1] && z < sh.r[3];
     const L = of === b.id && lv !== undefined && lv !== null && p.levels.some(q => q.lv === lv) ? lv : p.entryLv || 0;
+    const shell = inBody(sh, L, x, z);
     const C = G.Interiors.CELL; let code = Sp.cellIn(p, L, x, z), walk = false, door = -1;
     let step = null;
     if (shell) {
@@ -524,6 +524,15 @@
     else if (door >= 0 && p.doors[door] && p.doors[door].outer) fy = Math.max(fy, 0);
     return { b, p, lv: L, x, z, code, walk, shell, door, y: Sp.plinth(b).y0 + fy + Sp.FLOOR_UP };
   };
+  // (a point of a storey within the building: inside its shell, or an annex against it — the lean-to (L-285) —, or its yard
+  // (B2d), on their own storey: where the plan's floor is the feet's. Out of them, the street's, but for the doorstep)
+  const inR = (r, x, z) => x > r[0] && x < r[2] && z > r[1] && z < r[3];
+  function inBody(sh, lv, x, z) {
+    if (sh.kind === 'round' ? Math.hypot(x - sh.cx, z - sh.cz) < sh.r : inR(sh.r, x, z)) return true;
+    for (const a of sh.annex || []) if ((a.lv || 0) === lv && inR(a.r, x, z)) return true;
+    return !!sh.yard && (sh.yard.lv || 0) === lv && inR(sh.yard.r, x, z);
+  }
+  Sp.inBody = inBody; // (for the proofs)
   // (the outer door whose opening a point of the wall's thickness is in — across the whole wall, along it inside its jambs —,
   // or -1)
   function outerDoorAt(p, lv, x, z) {
