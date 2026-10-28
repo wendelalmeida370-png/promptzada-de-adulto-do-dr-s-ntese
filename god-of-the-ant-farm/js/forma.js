@@ -555,15 +555,16 @@
   const stairTreads = e => { const run = e.a[1] - e.b[1], rise = e.b[2] - e.a[2], n = Math.max(2, Math.ceil(rise / 0.26)), u = e.a[0], hw = e.w / 2; const out = [];
     for (let k = 0; k < n; k++) out.push({ r: [u - hw, e.a[1] - run * (k + 1) / n, u + hw, e.a[1] - run * k / n], y1: e.a[2] + rise * (k + 1) / n }); return out; };
   // the Aztec's: the pyramid of four levels of 6.5 px, from half side 0.95 to 0.5 tiles, the stair up its front set into it
-  // (0.2 tiles each side of the middle, its ramps of 0.06), the shrine on its top — 0.72 × 0.66 tiles, 9 px, its band at the
-  // top, its door of 0.24 tiles and 6 px to the front —, the crest of 8 px on its roof, the two braziers before the shrine
-  // where the priests light them
+  // (0.2 tiles each side of the middle, its ramps of 0.06), the shrine on its top — 0.72 × 0.8 tiles, its back on the back
+  // edge of the top (inside, the image, the priest's place, the altar and the offering's in a row: P4's plan, D-093), 9 px,
+  // its band at the top, its door of 0.24 tiles and 6 px to the front —, the crest of 8 px on its roof, the two braziers before
+  // the shrine where the priests light them
   def('temple', 'asteca', L => {
     const n = 4, h = px(6.5), H = n * h, e0 = 0.95 * TILE, e1 = 0.5 * TILE; const niveis = [];
     for (let k = 0; k < n; k++) niveis.push([e0 - (e0 - e1) * k / (n - 1), k * h, (k + 1) * h]);
     const escada = { k: 'escada', a: [L / 2, at(L, 0.97), 0], b: [L / 2, at(L, 0.5), H], w: 0.4 * TILE, cor: 'wl', clara: 1.08, alfarda: 0.06 * TILE };
-    const z = 26, walls = blocoF(L, -0.36, -0.36, 0.36, 0.3, z, z + 9, WALL, { mat: 'parede' });
-    const els = [{ k: 'escalonada', c: [L / 2, L / 2], niveis, cor: WALL, friso: px(0.8), mat: 'stucco' }, escada, walls, faixaF(L, -0.36, -0.36, 0.36, 0.3, z + 6.5, z + 9, 'trim'),
+    const z = 26, walls = blocoF(L, -0.36, -0.5, 0.36, 0.3, z, z + 9, WALL, { mat: 'parede' });
+    const els = [{ k: 'escalonada', c: [L / 2, L / 2], niveis, cor: WALL, friso: px(0.8), mat: 'stucco' }, escada, walls, faixaF(L, -0.36, -0.5, 0.36, 0.3, z + 6.5, z + 9, 'trim'),
       doorF(L, 0.3, -0.12, 0.12, z, z + 6, '#2a1c14'), blocoF(L, -0.3, -0.08, 0.3, 0.02, z + 9, z + 17, ['trim', 'trim', 'trim'], { crista: true })];
     for (const bx of [-0.42, 0.42]) els.push(blocoF(L, bx - 0.05, 0.37, bx + 0.05, 0.47, z, z + 2.5, ['#6a5a50', '#4a3e36', '#7a6a60']), { k: 'braseiro', p: [at(L, bx), at(L, 0.42), px(z + 2.5)], r: 0.15, uso: 'acender' });
     return { els, door: { u: L / 2, w: 0.24 * TILE, y0: px(z), y1: px(z + 6) },
@@ -594,13 +595,15 @@
       body: { walls, porta: { u: L / 2, w: 0.2 * TILE, y0: px(1.5), y1: px(7) }, base: { r: rect(L, -0.75, -0.75, 0.75, 0.75), y1: px(1.5) }, steps, peristyle: { r: rect(L, -0.75, -0.75, 0.75, 0.75), y1: px(7), cols: staves } } };
   });
   // the Egyptian's: the hall at the back, 15 px with its band of 12–13.5 px, its top flat; its door to the court, 0.2 tiles
-  // and 10 px (behind the pylon: the god does not show it); the row of five papyrus columns of 13 px across the court; the
+  // and 10 px (behind the pylon: the god does not show it); the row of six papyrus columns of 13 px across the court, symmetric
+  // round the axis of the gate and the door — the gap in the middle 0.95 m clear: the body's way from the gate to the door
+  // (P4's plan: D-093) —, the court 0.8 m deep between the hall and them; the
   // pylon — two towers of 30 px, battered 0.1 tiles, their bands at the top, the flags of 36 px before them —, the gate's
   // block of 20 px between them with its band, the passage through it 0.2 tiles wide and 13 px high under its lintel, the
   // dark gate the god paints on its face; the two braziers before the pylon (the god's fires), where one lights them
   def('temple', 'egipcio', L => {
-    const walls = blocoF(L, -0.7, -0.9, 0.85, 0.35, 0, 15, WALL, { mat: 'parede' }); const cols = colsF(L, -0.6, 0.35, 0.75, 0.55, 0, 13, 5, 0.05, 'L', true);
-    const els = [walls, faixaF(L, -0.7, -0.9, 0.85, 0.35, 12, 13.5, 'trim'), doorF(L, 0.35, -0.1, 0.1, 0, 10, '#2a2016'), cols];
+    const walls = blocoF(L, -0.7, -0.9, 0.85, 0.3, 0, 15, WALL, { mat: 'parede' }); const cols = colsF(L, -0.84375, 0.3, 0.84375, 0.55, 0, 13, 6, 0.05, 'L', true);
+    const els = [walls, faixaF(L, -0.7, -0.9, 0.85, 0.3, 12, 13.5, 'trim'), doorF(L, 0.3, -0.1, 0.1, 0, 10, '#2a2016'), cols];
     const torres = [];
     for (const [a, b] of [[-0.92, -0.18], [0.18, 0.92]]) {
       torres.push(rect(L, a, 0.55, b, 0.92));
@@ -611,7 +614,7 @@
       { k: 'porta', na: 'frente', v: at(L, 0.86), u: L / 2, w: 0.2 * TILE, y0: 0, y1: px(13), cor: '#2a2016', portao: true });
     for (const x of [-0.6, 0.6]) els.push({ k: 'braseiro', p: [at(L, x), at(L, 0.96), 0], r: 0.2, uso: 'acender' });
     return { els, door: { u: L / 2, w: 0.2 * TILE, y0: 0, y1: px(13) }, body: { walls, porta: { u: L / 2, w: 0.2 * TILE, y0: 0, y1: px(10) },
-      court: { r: rect(L, -0.92, 0.35, 0.92, 0.55), cols }, gate: { r: rect(L, -0.1, 0.62, 0.1, 0.86), u: L / 2, w: 0.2 * TILE, y0: 0, y1: px(13), v: at(L, 0.86) }, towers: torres } };
+      court: { r: rect(L, -0.92, 0.3, 0.92, 0.55), cols }, gate: { r: rect(L, -0.1, 0.62, 0.1, 0.86), u: L / 2, w: 0.2 * TILE, y0: 0, y1: px(13), v: at(L, 0.86) }, towers: torres } };
   });
 
   // ------------------------------ the administration (cityart.js administracao) ------------------------------
@@ -1168,7 +1171,8 @@
   const keep = (F, k, fn) => { let m = asked.get(F); if (!m) asked.set(F, m = {}); if (!(k in m)) m[k] = Object.freeze(fn()); return m[k]; };
   const lowFoot = y => y <= 0.15; // (standing on the ground: on it, or on the square's pavement)
   const HEAD = 1.9; // (what is lower than this over the ground is in the body's way: a person of 1.75 m and a hand)
-  // the pieces one uses: [{ uso: 'fonte' | 'tribuna' | 'banco' | 'acender' (a brazier), r: [u0, v0, u1, v1] — its foot —, c, rad — a round one's middle
+  // the pieces one uses: [{ uso: 'fonte' | 'tribuna' | 'banco' | 'acender' (a brazier), r: [u0, v0, u1, v1] — its foot —, pe — the
+  // foot of what it stands on, when it stands on something of the form (a brazier's stand) —, c, rad — a round one's middle
   // and reach —, y1 — its top: where one stands or sits, the rim one drinks at —, vira [du, dv] — the way one faces using it —,
   // escada — the treads up to the top of a high one, from the lowest: [{ r, y1 }] }]
   Fo.uses = F => keep(F, 'uses', () => {
@@ -1176,7 +1180,8 @@
     for (const e of F.els) {
       if (!e.uso) continue; const u = { uso: e.uso, vira: e.vira || null };
       if (e.k === 'bacia') Object.assign(u, { r: [e.c[0] - e.r, e.c[1] - e.r, e.c[0] + e.r, e.c[1] + e.r], c: e.c.slice(), rad: e.r, y1: e.y1 });
-      else if (e.k === 'braseiro') Object.assign(u, { r: [e.p[0] - e.r, e.p[1] - e.r, e.p[0] + e.r, e.p[1] + e.r], c: [e.p[0], e.p[1]], rad: e.r, y1: e.p[2] + 0.72 }); // (its bowl's rim)
+      else if (e.k === 'braseiro') { Object.assign(u, { r: [e.p[0] - e.r, e.p[1] - e.r, e.p[0] + e.r, e.p[1] + e.r], c: [e.p[0], e.p[1]], rad: e.r, y1: e.p[2] + 0.72 }); // (its bowl's rim)
+        const st = e.p[2] > 0.02 && F.els.find(q => q.k === 'bloco' && Math.abs(q.y1 - e.p[2]) < 0.02 && e.p[0] > q.r[0] && e.p[0] < q.r[2] && e.p[1] > q.r[1] && e.p[1] < q.r[3]); if (st) u.pe = st.r.slice(); }
       else Object.assign(u, { r: e.r.slice(), y1: e.k === 'banco' ? e.y : e.y1 });
       const st = F.els.filter(q => q.degrau === e.uso).map(q => ({ r: q.r.slice(), y1: q.y1 })).sort((a, b) => a.y1 - b.y1);
       if (st.length) u.escada = st;

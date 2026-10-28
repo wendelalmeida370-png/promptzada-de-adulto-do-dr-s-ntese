@@ -2541,6 +2541,7 @@ float m3scale(float p) {
   // a wall of the plan on its storey: its faces between the openings (an outer wall's inner face; a partition whole), the
   // reveals of the openings through it and its top; a rail is posts and rails
   function inWall(K, plan, w, l) {
+    if (w.kind === 'borda') return; // (the edge where a flight meets a platform, all of it the way in: nothing stands there — P4's temple)
     const ax = w.b[0] - w.a[0], az = w.b[1] - w.a[1]; const L = Math.hypot(ax, az); if (L < 0.02) return;
     const tx = ax / L, tz = az / L, nx = -tz, nz = tx; const H = w.h, t = w.t; const ry = Math.atan2(-tz, tx);
     const P = (s, y, o) => [w.a[0] + tx * s + nx * o, l.y + y, w.a[1] + tz * s + nz * o];

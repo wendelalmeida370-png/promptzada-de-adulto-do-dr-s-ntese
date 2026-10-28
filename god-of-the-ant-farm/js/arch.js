@@ -441,9 +441,9 @@
       return;
     }
     if (st === 'egipcio') {
-      box(c, -0.7, -0.9, 0.85, 0.35, 0, 15, p.wl, p.wr, p.top);
-      band(c, -0.7, -0.9, 0.85, 0.35, 12, 13.5, p.trim);
-      colonnade(c, p, -0.6, 0.35, 0.75, 0.55, 0, 13, 5, 0.05, 'L', true);
+      box(c, -0.7, -0.9, 0.85, 0.3, 0, 15, p.wl, p.wr, p.top);
+      band(c, -0.7, -0.9, 0.85, 0.3, 12, 13.5, p.trim);
+      colonnade(c, p, -0.84375, 0.3, 0.84375, 0.55, 0, 13, 6, 0.05, 'L', true); // (six, symmetric round the gate's axis: Forma's temple)
       for (const [a, b] of [[-0.92, -0.18], [0.18, 0.92]]) {
         walls(c, a, 0.55, b, 0.92, 0, 30, p.wl, p.wr, 0.1);
         top(c, a + 0.1, 0.65, b - 0.1, 0.82, 30, p.top);
@@ -461,8 +461,8 @@
     }
     if (st === 'asteca') {
       const H = stepPyr(c, p, 0.95, 0.5, 4, 6.5, p.wl, p.wr, p.top, 0.2);
-      box(c, -0.36, -0.36, 0.36, 0.3, H, H + 9, p.wl, p.wr, p.top);
-      band(c, -0.36, -0.36, 0.36, 0.3, H + 6.5, H + 9, p.trim);
+      box(c, -0.36, -0.5, 0.36, 0.3, H, H + 9, p.wl, p.wr, p.top); // (its back on the back edge of the top: Forma's temple)
+      band(c, -0.36, -0.5, 0.36, 0.3, H + 6.5, H + 9, p.trim);
       door(c, 0.3, -0.12, 0.12, H, H + 6, '#2a1c14', m);
       // roof comb
       box(c, -0.3, -0.08, 0.3, 0.02, H + 9, H + 17, p.trim, shade(p.trim, 0.8), p.trim);
