@@ -337,7 +337,8 @@
     const i = W.idx(v.x, v.y);
     if (!v.inside && S.fire[i] > 0.1) { Vg.damage(v, S.fire[i] * 22 * dt, 'fire', !!S.fireGod); if (!S.villagers.has(v.id)) return; }
     if (v.inside) { const b = S.buildings.get(v.inside); if (b) { const fi = W.idx(b.x, b.y); if (S.fire[fi] > 0.2) { Vg.endTask(v); fleeFrom(v, b.x + 0.5, b.y + 0.5, 6, 'fire'); } } }
-    if (v.hunger < 75 && v.sick <= 0 && v.hp < 100) v.hp = Math.min(100, v.hp + dt * (v.sleeping ? 0.9 : 0.3) * (v.traits.includes('Resistente') ? 1.5 : 1));
+    // (asleep, or in bed at home — the wounded's rest —, the body mends three times as fast)
+    if (v.hunger < 75 && v.sick <= 0 && v.hp < 100) v.hp = Math.min(100, v.hp + dt * (v.sleeping || (v.task && v.task.type === 'lar' && v.task.what === 'acamado') ? 0.9 : 0.3) * (v.traits.includes('Resistente') ? 1.5 : 1));
     if (v.mourn > 0) v.mourn -= dt;
     if (v.courtCD > 0) v.courtCD -= dt;
     if (v.fear > 0) v.fear = Math.max(0, v.fear - dt * 0.12);
@@ -587,8 +588,8 @@
     if (sleepy) { if (!cur || (cur.type !== 'sleep' && cur.kind !== 'eat')) setTask(v, { type: 'sleep', pri: 1.5, kind: 'sleep', stay: v.home }); return; }
     if (v.hunger > 60 && (!cur || cur.pri < 1.2)) { const t = eatTask(v); if (t) { t.kind = 'eat'; return; } }
     if (v.energy < 15 && (!cur || cur.pri < 1.2)) { setTask(v, { type: 'sleep', pri: 1.2, kind: 'sleep', stay: v.home }); return; }
-    // (ill: in bed at home while the fever lasts — L-227)
-    if (G.Lar && G.Lar.fever(v) && (!cur || cur.pri < 1.3)) { const t = G.Lar.task(v, H, 'acamado'); if (t) return; }
+    // (ill or badly hurt: in bed at home while the fever or the wound lasts — L-227)
+    if (G.Lar && G.Lar.bedrest(v) && (!cur || cur.pri < 1.3)) { const t = G.Lar.task(v, H, 'acamado'); if (t) return; }
     // (awake after dark, before one's bed time: at home with the family — a story or the family at the door keep their own)
     if (night && G.Lar) { if (cur && (cur.type === 'lar' || cur.type === 'listen' || cur.type === 'family' || cur.pri >= 1)) return; const t = G.Lar.task(v, H, 'noite'); if (t) return; }
     if (S.weather.storm > 0 && S.weather.rain > 0.3 && (!cur || cur.pri < 1.05)) { const h = S.buildings.get(v.home); if (h && h.built) { setTask(v, { type: 'shelter', pri: 1.05, kind: 'shelter' }); return; } }

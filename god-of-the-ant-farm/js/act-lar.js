@@ -103,25 +103,33 @@
   // ------------------------------ the evening and the night at home: the task 'lar' ------------------------------
   // what one does at home, awake: the supper (from the pantry, at the table), cooking it (at the house's fire), talking with
   // whoever is awake, resting by the fire, rocking the baby one carries, lying ill in bed, waiting for one of the house who
-  // is out. Only this file gives it (guard), always through setTask; it keeps the person in the house from one thing to the
-  // next — the door is for going out (t.stay)
-  const WHAT = { ceia: 1, cozinhar: 1, conversar: 1, descansar: 1, ninar: 1, acamado: 1, esperar: 1 };
+  // is out, the first hours of grief at home. Only this file gives it (guard), always through setTask; it keeps the person in
+  // the house from one thing to the next — the door is for going out (t.stay)
+  const WHAT = { ceia: 1, cozinhar: 1, conversar: 1, descansar: 1, ninar: 1, acamado: 1, esperar: 1, luto: 1 };
   L.WHAT = WHAT;
-  const PRI = { acamado: 1.3, cozinhar: 0.5, ceia: 0.5 };
+  const PRI = { acamado: 1.3, cozinhar: 0.5, ceia: 0.5, luto: 0.95 };
   const pri = w => PRI[w] || 0.45;
   const SUPPER = t => t > 0.55 && t < 0.85; // (the hours of the supper: the evening and the start of the night)
-  // how much this person wants to be at home now (a choice of decide, among the others) — or null: the ill in bed by day
-  // in the fever's days (L-227), and, after dark and before one's own bed time, the evening at home (L-225: awake is not a
-  // night outdoors). The evening's going home is decide's own 'home' (L.task)
+  // how much this person wants to be at home now (a choice of decide, among the others) — or null: the ill and the badly
+  // wounded in bed by day (L-227), the widowed in the first hours of grief, and, after dark and before one's own bed time,
+  // the evening at home (L-225: awake is not a night outdoors). The evening's going home is decide's own 'home' (L.task)
   L.urge = function (v, night) {
     if (v.captive || v.jail || v.aboard || v.ug || v.held || v.air || v.age < 3 || isBody(v)) return null;
     if (!homeOf(v) || (v.inside !== v.home && blocked(v))) return null;
-    if (L.fever(v)) return { u: 1.1 + (v.hp < 60 ? 0.3 : 0), pri: PRI.acamado, why: 'acamado' };
+    if (L.bedrest(v)) return { u: 1.1 + (v.hp < 60 ? 0.3 : 0), pri: PRI.acamado, why: 'acamado' };
+    if (!night && L.grief(v)) return { u: 0.8, pri: PRI.luto, why: 'luto' };
     if (night && !L.sleepy(v)) return { u: 0.7, pri: 0.45, why: 'noite' };
     return null;
   };
   // (the first days of an illness — its fever —: in bed at home. The later ones up and about, still weak)
   L.fever = v => v.sick > G.DAY_LEN * 0.25 && !L.sleepy(v);
+  // (in bed at home, by day: the fever, or a bad wound — under 40 of life, not in a fight: in bed until it is over 60 —;
+  // 'febre', 'ferida' or null. The wounded in bed heal as one asleep does: needs, villagers.js)
+  L.bedrest = v => (L.fever(v) ? 'febre' : !L.sleepy(v) && !(v.sick > 0) && (v.hp < 40 || (v.hp < 60 && v.task && v.task.type === 'lar' && v.task.what === 'acamado')) && !(v.task && WARLIKE[v.task.type]) ? 'ferida' : null);
+  const WARLIKE = { fight: 1, combat: 1, band: 1, army: 1, siege: 1, defend: 1, raid: 1, muster: 1, flee: 1, fire: 1, dragao: 1 };
+  // (the widowed, the first half day of grief — the death of the partner: Village.kill's mourn of a day and a half —: at
+  // home by day, by the fire; the funeral goes first, 1.1)
+  L.grief = v => !!v.widow && v.mourn > G.DAY_LEN && v.age >= 16;
   // the task: what to do at home now, by the house and the hour — or null. why: 'acamado' (ill), 'fome' (hungry, already home:
   // only the supper), 'tarde' (the evening's going home), 'noite' (awake after dark). only: just the supper (or cooking it)
   L.task = function (v, H, why, only) {
@@ -130,6 +138,7 @@
     if (v.inside !== h.id && blocked(v)) return null;
     let what = null;
     if (why === 'acamado') what = 'acamado';
+    else if (why === 'luto') what = 'luto';
     else {
       const e = entry(h); const has = food(h) >= 1; const t = S.time;
       if (has && SUPPER(t) && !L.cooked(h) && !e.cook && v.age >= 14) what = 'cozinhar';
@@ -182,9 +191,9 @@
     const night = G.isNight();
     switch (t.what) {
       case 'acamado': {
-        // (in bed while the fever lasts — fed from the pantry when hungry, the house's care; well again, up)
+        // (in bed while the fever or the wound lasts — fed from the pantry when hungry, the house's care; well again, up)
         v.act = '';
-        if (!L.fever(v)) return H.end(v);
+        if (!L.bedrest(v)) return H.end(v);
         if (v.hunger > 55 && !(t.ate > S.clock - 30) && L.eat(v, h, L.cooked(h))) t.ate = S.clock;
         if (G.R() < dt * 0.05) G.Vg.emote(v, 'sick', 1.5);
         return;
@@ -209,6 +218,14 @@
         }
         v.act = AN.comer ? AN.comer.act : '';
         if (v.actT > 2.4) { t.what = idle(v, h, entry(h)); t.ate = 0; v.actT = 0; }
+        return;
+      }
+      case 'luto': {
+        // (by the fire, the first hours of grief; the grief eased — or the night come —, the house's evening goes on)
+        v.act = AN.sentar ? AN.sentar.act : '';
+        if (!L.grief(v) || night) { t.what = idle(v, h, entry(h)); v.actT = 0; return; }
+        if (v.hunger > 45 && food(h) >= 1 && v.actT > 6) { t.what = 'ceia'; t.ate = 0; v.actT = 0; return; }
+        if (G.R() < dt * 0.06) G.Vg.emote(v, 'sad', 1.6);
         return;
       }
       case 'esperar': {
@@ -244,7 +261,8 @@
     if (t.st < 2) return t.what === 'acamado' ? 'Voltando para casa, doente' : 'Voltando para casa';
     const nm = id => { const o = S.villagers.get(id); return o ? o.name : 'alguém'; };
     switch (t.what) {
-      case 'acamado': return 'De cama, doente';
+      case 'acamado': return L.bedrest(v) === 'ferida' ? 'De cama, ferid' + (v.g === 'f' ? 'a' : 'o') : 'De cama, doente';
+      case 'luto': { const o = S.dead && S.dead.get(v.widow); return o ? `De luto por ${o.name}, em casa` : 'De luto, em casa'; }
       case 'cozinhar': return 'Cozinhando a ceia da casa';
       case 'ceia': return t.ate ? (L.cooked(S.buildings.get(t.home)) ? 'Ceando em casa' : 'Comendo em casa, da despensa') : 'Esperando a ceia ficar pronta';
       case 'esperar': { const h = S.buildings.get(t.home); const o = h ? waited(v, entry(h)) : null; return o ? `Esperando ${o.name} voltar para casa` : 'Esperando em casa'; }
@@ -259,7 +277,7 @@
   // (as the world has it: at home — asleep, at supper, at the fire —, or away — at work, at sea, at war, in a cell, a captive,
   // in a cave, at a feast, at the tavern —; with a short code for the proofs. 'nada': out with nothing to do, which the
   // checker watches after dark)
-  const AT_HOME = { ceia: 'ceia', cozinhar: 'cozinha', conversar: 'conversa', descansar: 'descansa', ninar: 'nina', acamado: 'acamado', esperar: 'espera' };
+  const AT_HOME = { ceia: 'ceia', cozinhar: 'cozinha', conversar: 'conversa', descansar: 'descansa', ninar: 'nina', acamado: 'acamado', esperar: 'espera', luto: 'luto' };
   const WAR = { band: 1, army: 1, combat: 1, muster: 1, siege: 1, defend: 1, raid: 1 };
   const HOMEWARD = { lar: 1, sleep: 1, goHome: 1, shelter: 1, family: 1 };
   L.why = function (v) {
@@ -304,7 +322,7 @@
   // how pressing it is (pri: the share-out gives the more pressing first — the ill to the bed, the cook to the fire, the one
   // rocking a baby to a seat, the hungry to the table, before who only sits); { with }: a baby in the arms of who carries it,
   // no place of its own; null: the share-out's own default. With no seat left the share-out sits one on the ground)
-  const WANT_PRI = { acamado: 5, cozinhar: 4, ninar: 3, ceia: 2, esperar: 1, conversar: 1, descansar: 0 };
+  const WANT_PRI = { acamado: 5, cozinhar: 4, ninar: 3, ceia: 2, luto: 1, esperar: 1, conversar: 1, descansar: 0 };
   L.want = function (v, b) {
     const S = G.S; const t = v.task;
     if (v.age < 2) { const c = S.villagers.get(v.carrier); return c && c.inside === b.id && !v.sleeping ? { with: c.id } : v.sleeping ? { use: ['deitar'], item: null, st: 'sleep', pri: 5 } : null; }

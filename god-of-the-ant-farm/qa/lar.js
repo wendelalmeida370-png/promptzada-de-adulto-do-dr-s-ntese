@@ -14,6 +14,7 @@
 //  l3  o doente (L-227): fica de cama em casa enquanto dura a febre, come da despensa pelo livro-razão, sara e sai
 //  l7  o corpo encarnado em casa (o adendo 4.1): come à mesa o que a despensa tem e cozinha a ceia da casa, pelas mesmas
 //      portas e no livro; dorme em casa; devolvido, segue a vida dele — em casa pelo motivo dele, ou pela porta
+//  l12 o ferido fica de cama em casa e sara mais depressa; quem perde o companheiro passa as primeiras horas de luto em casa
 //  l11 a reza dentro do templo (L-224): os fiéis entram pela porta até os lugares da planta, os outros nas fileiras de fora;
 //      um save no meio; todos terminam e saem
 //  l10 uma festa atravessa o save (L-222) e o banquete sai pelo livro-razão (L-223)
@@ -213,31 +214,33 @@ if (want('l6')) {
 
 // ======================= l2: the night watch, and the house that waits =======================
 if (want('l2')) {
-  open(); set = town(); S.time = 0.66;
-  liveTo(0.745);
+  open(); set = town(); S.time = 0.62;
+  liveTo(0.734);
   // (a grown one awake at home in the evening at home, whose bed time is still a while away, and one of the house awake to
   // go out on the watch)
   let pair = null;
   for (const b of [...S.villagers.values()].filter(o => builtHome(o) && !o.captive).sort((x, y) => x.id - y.id)) {
-    if (b.age < 16 || b.sleeping || b.inside !== b.home || !b.task || b.task.type !== 'lar' || L.clock(b).bed < S.time + 0.02) continue;
-    const a = [...S.villagers.values()].filter(o => o.home === b.home && o.id !== b.id && o.age >= 16 && o.age < 60 && !o.sleeping && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !isBody(o) && (o.id === b.partner || o.mother === b.id || o.father === b.id)).sort((x, y) => x.id - y.id)[0];
+    // (at the fire or talking — not over the pot or at the table: the cook's while is its own)
+    if (b.age < 16 || b.sleeping || b.inside !== b.home || !b.task || b.task.type !== 'lar' || !(b.task.what === 'descansar' || b.task.what === 'conversar') || L.clock(b).bed < S.time + 0.04) continue;
+    // (not of a secret society: its people go to its meetings by night — secrets.js, the conclave)
+    const a = [...S.villagers.values()].filter(o => o.home === b.home && o.id !== b.id && o.age >= 16 && o.age < 60 && !o.sleeping && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.secret && !isBody(o) && (o.id === b.partner || o.mother === b.id || o.father === b.id)).sort((x, y) => x.id - y.id)[0];
     if (a) { pair = [a, b]; break; }
   }
   if (!pair) ok('l2 a vigia e a casa que espera', false, `ninguém acordado em casa às ${fmtT(S.time)} com alguém da casa para sair de vigia`);
   else {
     const [a, b] = pair; const h = S.buildings.get(b.home); const dw = doorWatch();
-    G.Vg.setTask(a, { type: 'patrol', pri: 1.6, torch: true, n: 2 }); // (the test's hand: two rounds of the watch)
-    let waitS = 0, outS = 0, nadaS = 0, back = -1, waitEnd = -1, why = '';
-    live(120, () => {
+    G.Vg.setTask(a, { type: 'patrol', pri: 1.6, torch: true, n: 0 }); // (the test's hand: the four rounds of the watch)
+    let waitS = 0, outS = 0, nadaS = 0, back = -1, waitEnd = -1, why = ''; const seq = [], seqB = []; const c2 = S.clock;
+    live(180, () => {
       dw.step();
       const out = a.inside !== h.id;
-      if (out && back < 0) { outS += 0.1; const w = L.why(a); if (w.code === 'nada') nadaS += 0.1; if (!why) why = w.txt; if (b.inside === h.id && b.task && b.task.type === 'lar' && b.task.what === 'esperar') waitS += 0.1; }
+      if (out && back < 0) { outS += 0.1; const w = L.why(a); if (w.code === 'nada') nadaS += 0.1; if (!why) why = w.txt; const k = a.task ? a.task.type + (a.task.what ? ':' + a.task.what : '') : '—'; if ((!seq.length || seq[seq.length - 1][1] !== k) && seq.length < 10) seq.push([r2(S.clock - c2), k]); const kb = (b.task ? b.task.type + (b.task.what ? ':' + b.task.what : '') : '—') + (b.sleeping ? '/dorme' : ''); if ((!seqB.length || seqB[seqB.length - 1][1] !== kb) && seqB.length < 10) seqB.push([r2(S.clock - c2), kb]); if (b.inside === h.id && b.task && b.task.type === 'lar' && b.task.what === 'esperar') waitS += 0.1; }
       if (!out && outS > 1 && back < 0) back = S.clock;
       if (back >= 0 && waitEnd < 0 && !(b.task && b.task.type === 'lar' && b.task.what === 'esperar')) waitEnd = S.clock;
       return back >= 0 && waitEnd >= 0 && S.clock - back > 2;
     });
     const fine = waitS >= 3 && back >= 0 && waitEnd >= 0 && waitEnd - back <= 5 && nadaS < 1 && !dw.wrong.length;
-    ok('l2 a vigia e a casa que espera', fine, `${nm(a)} saiu de vigia por ${r2(outS)} s («${why}»${nadaS >= 1 ? `, ${r2(nadaS)} s SEM AFAZER` : ''}); ${nm(b)} esperou em casa ${r2(waitS)} s; ${back >= 0 ? `${a.name} voltou${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ' pela porta'}, e a espera acabou ${waitEnd >= 0 ? r2(waitEnd - back) + ' s depois' : 'NUNCA'}` : `${a.name} NÃO VOLTOU em 120 s`}`);
+    ok('l2 a vigia e a casa que espera', fine, `${nm(a)} saiu de vigia por ${r2(outS)} s («${why}»${nadaS >= 1 ? `, ${r2(nadaS)} s SEM AFAZER` : ''}); ${nm(b)} esperou em casa ${r2(waitS)} s; ${back >= 0 ? `${a.name} voltou${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ' pela porta'}, e a espera acabou ${waitEnd >= 0 ? r2(waitEnd - back) + ' s depois' : 'NUNCA'}` : `${a.name} NÃO VOLTOU em 180 s`}${back < 0 || nadaS >= 1 || waitS < 3 || process.env.TRACE ? ` [fora: ${seq.map(x => x.join(' ')).join(' → ')}; em casa: ${seqB.map(x => x.join(' ')).join(' → ')}]` : ''}`);
   }
 }
 
@@ -307,6 +310,32 @@ if (want('l7')) {
     const outNow = !v.inside && dwr.out.includes(v.id) && !dwr.wrong.length;
     ok('l7 o corpo em casa', took.ok && f0 === f1 && !!re.ok && ate.length === 1 && v.hunger < hu0 && !!rc.ok && cooked && deeds.refeicao >= 1 && deeds.cozinha >= 1 && slept && (homeNow || outNow) && !(t && t.type === 'avatar'),
       `${nm(v)} encarnado ${took.ok ? '' : `NÃO (${took.why}) `}— a família ${f0 === f1 ? 'igual' : 'MUDOU'}; comer à mesa: ${re.ok ? `sim (fome ${Math.round(hu0)} → ${Math.round(v.hunger)}, livro: ${ate.map(e => e[8]).join(', ') || 'NADA'})` : 'NÃO: ' + re.why}; cozinhar: ${rc.ok ? `sim (a ceia de hoje: ${cooked ? 'pronta' : 'NÃO'})` : 'NÃO: ' + rc.why}; feitos ${JSON.stringify(deeds)}; dormiu em casa: ${slept ? 'sim' : 'NÃO'}; devolvido: ${homeNow ? `em casa (${t.type}${t.what ? ':' + t.what : ''})` : outNow ? 'saiu pela porta' : `ONDE? (dentro de ${v.inside}, ${t ? t.type : 'sem tarefa'})`}${slept ? '' : ` [${sts.join(' · ')}]`}`);
+  }
+}
+
+// ======================= l12: the wounded in bed, and the widowed at home in the first hours of grief =======================
+if (want('l12')) {
+  open(); set = town(); S.time = 0.28;
+  const pick = (not) => people(set).find(o => o.age >= 18 && o.age < 55 && !o.sleeping && o.inside !== o.home && !(o.sick > 0) && o.hp > 70 && !isBody(o) && !o.secret && o.task && o.task.pri < 2 && o.task.type !== 'sleep' && !not.includes(o.id) && !o.widow);
+  const w = pick([]);
+  // (the widowed: one whose partner lives in the same house — the partner dies, the test's hand)
+  const p0 = people(set).find(o => o.age >= 20 && o.age < 60 && o.partner && S.villagers.get(o.partner) && S.villagers.get(o.partner).home === o.home && !o.sleeping && !isBody(o) && !o.secret && o.id !== (w && w.id) && o.partner !== (w && w.id) && o.task && o.task.pri < 2);
+  if (!w || !p0) ok('l12 o ferido e o enlutado', false, `${w ? '' : 'nenhum adulto para ferir; '}${p0 ? '' : 'nenhum casal na mesma casa'}`);
+  else {
+    const dw = doorWatch(); const hw = builtHome(w); const hp0 = 30; w.hp = hp0; // (the test's hand: a bad wound — a fall, a beast)
+    const dead = S.villagers.get(p0.partner); V.kill(dead, 'teste');
+    let inBed = -1, hpBed = 0, healed = -1, txt = '', grief = 0, griefTxt = '', code = '';
+    live(90, () => {
+      dw.step(); const t = w.task;
+      const a = t && t.type === 'lar' && t.what === 'acamado' && t.st === 2 && w.inside === hw.id;
+      if (a && inBed < 0) { inBed = S.clock; hpBed = w.hp; txt = L.taskText(w, t); }
+      if (inBed >= 0 && healed < 0 && !a) healed = S.clock;
+      const tg = p0.task; if (tg && tg.type === 'lar' && tg.what === 'luto' && tg.st === 2 && p0.inside === p0.home) { grief += 0.1; if (!griefTxt) { griefTxt = L.taskText(p0, tg); code = L.why(p0).code; } }
+      return healed >= 0 && grief > 5;
+    });
+    const rate = inBed >= 0 ? r2(((healed >= 0 ? 60 : w.hp) - hpBed) / Math.max(0.1, (healed >= 0 ? healed : S.clock) - inBed)) : 0;
+    ok('l12 o ferido e o enlutado', inBed >= 0 && healed >= 0 && rate > 0.5 && grief > 5 && code === 'luto' && !dw.wrong.length,
+      `${nm(w)} com ${hp0} de vida: ${inBed >= 0 ? `de cama em casa («${txt}»), sarando ${rate} por segundo (de pé: 0,3), ${healed >= 0 ? `levantou com ${Math.round(w.hp)}` : 'AINDA DE CAMA'}` : 'NÃO FOI PARA A CAMA'}; ${dead.name} morreu: ${p0.name} ${grief > 5 ? `de luto em casa ${r2(grief)} s («${griefTxt}», no cartão: ${code})` : 'NÃO FICOU DE LUTO EM CASA'}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}`);
   }
 }
 
