@@ -332,7 +332,11 @@ const fresh = () => { M.pronto(world); M.viver(2); G.inSim = Math.max(G.inSim ||
   // (a second ship while the quay is cut off)
   const sh12 = ship(); const st0 = fac.stock.sal || 0; const n0 = (dock.crates || []).length; sh12.goods = { k: 'sal', n: 6 }; G.Harbor.land(dock, sh12.goods, sh12);
   const straight = r2((fac.stock.sal || 0) - st0); const n1 = (dock.crates || []).length;
-  const kept = r2(P.custody(op12) + (op12.done.sal || 0));
+  // (what the unloading still holds of the salt — on the quay, on the ground, in hands — and what of it is in: the 14. A boat's
+  // catch landed into the same unloading meanwhile — one quay, one unloading — is in its keeping too, and is not the salt: in
+  // the new metropolis the custody counted 31,5 of everything, T-175)
+  const salOf = o => { let n = 0; for (const c of dock.crates || []) if (c.op === o.id && c.k === 'sal') n += c.n; for (const x of S.loose || []) if (x.op === o.id && x.k === 'sal') n += x.n; for (const v of S.villagers.values()) if (v.carry && v.carry.op === o.id && v.carry.k === 'sal') n += v.carry.n; return n; };
+  const kept = r2(salOf(op12) + (op12.done.sal || 0));
   for (const i of ring) { S.wall[i] = 0; S.wallFac[i] = 0; delete S.wallHp[i]; } G.W.touchWalk();
   const done = work(op12, 400, () => watch() || !A.live(op12));
   if (!done || op12.st !== 'ok') tell('p12', op12);
