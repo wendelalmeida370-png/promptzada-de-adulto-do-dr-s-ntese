@@ -135,10 +135,12 @@
   // (the flight the body is going up or down now — the stair's id, its building's, how far along: the 3D lifts its lid)
   Av.flight = () => (b && b.loco === 'stair' && b.flight && b.inB ? { s: b.flight.s, b: b.inB.id, k: b.flight.T > 0 ? b.flight.t / b.flight.T : 1, up: !!b.flight.up } : null);
   // lying down on a bed of the plan (the world has the body asleep: Possess.sleep): on its sleeping place, the head to its wall
+  // — turned as the people of the world are laid on theirs (the plan's ry is the way one faces; the rig's yaw, π/2 − ry), on
+  // what one lies on (Interiors.rootY): L-284
   Av.lieAt = function (B, it, sp) {
     const v = G.Possess.body(); const e = B && G.Space.planEntry(B.id); if (!b || !v || !e || !e.p) return false;
-    const L = TL(); b.X = b.pX = B.x * L + sp.x; b.Z = b.pZ = B.y * L + sp.z; b.Y = b.pY = e.y0 + (e.p.levels.find(q => q.lv === it.lv) || { y: 0 }).y + sp.y + G.Space.FLOOR_UP;
-    b.yaw = sp.ry + Math.PI / 2; b.bed = { b: B.id, it: it.id }; b.loco = 'sleep'; b.vx = b.vz = b.vy = 0; b.ground = true;
+    const L = TL(); b.X = b.pX = B.x * L + sp.x; b.Z = b.pZ = B.y * L + sp.z; b.Y = b.pY = e.y0 + (e.p.levels.find(q => q.lv === it.lv) || { y: 0 }).y + G.Interiors.rootY(it, sp, 'sleep') + G.Space.FLOOR_UP;
+    b.yaw = Math.PI / 2 - sp.ry; b.bed = { b: B.id, it: it.id }; b.loco = 'sleep'; b.vx = b.vz = b.vy = 0; b.ground = true;
     v.x = b.wx = b.X / L; v.y = b.wy = b.Z / L; return true;
   };
   // (up from the bed: the nearest point of the room the body can stand on, all round it — one the house's door reaches on foot,

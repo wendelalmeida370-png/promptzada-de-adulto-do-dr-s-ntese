@@ -622,6 +622,9 @@
     rock: (t) => ({ ...ST.sit(t), shLp: -0.75, shRp: -0.75, shLr: -0.35, shRr: 0.35, elL: 1.5, elR: 1.5, twist: Math.sin(t * 1.3) * 0.1, neck: 0.3 }),
     // (sick in bed, awake: lying, a hand on the chest, the head turning a little now and then)
     sick: (t) => ({ ...ST.sleep(t), shRp: -0.9, shRr: -0.2, elR: 1.9, neck: Math.sin(t * 0.4) * 0.12 }),
+    // (the same sitting on the ground, where there is no seat: eating with the bowl in the lap, rocking the child)
+    eatg: (t) => { const k = Math.pow(Math.max(0, Math.sin(t * 1.6)), 2); return { ...ST.rest(t), shRp: -0.45 - k * 0.75, shRr: -0.15, elR: 1.1 + k * 1.05, shLp: -0.5, elL: 1.2, neck: 0.18 - k * 0.12 }; },
+    rockg: (t) => ({ ...ST.rest(t), shLp: -1.25, shRp: -1.25, shLr: -0.25, shRr: 0.25, elL: 1.85, elR: 1.85, twist: Math.sin(t * 1.3) * 0.1, neck: 0.3 }), // (the child at the chest, over the knees)
     talk: (t) => ({ ...ST.idle(t), shRp: -0.5 - Math.max(0, Math.sin(t * 2.6)) * 0.6, shRr: -0.25, elR: 0.9 + Math.sin(t * 3.3) * 0.3, twist: Math.sin(t * 1.1) * 0.08, neck: Math.sin(t * 2.2) * 0.08, talk: Math.max(0, Math.sin(t * 9.0) * Math.sin(t * 2.3 + 1)) * 0.8 }),
     dance: (t) => ({ bob: Math.abs(Math.sin(t * 4)) * 0.09, twist: Math.sin(t * 2) * 0.35, shLp: -2.4 + Math.sin(t * 4) * 0.5, shRp: -2.4 - Math.sin(t * 4) * 0.5, shLr: 0.5, shRr: -0.5, elL: 0.6, elR: 0.6, hipL: Math.sin(t * 4) * 0.3, hipR: -Math.sin(t * 4) * 0.3, knL: 0.3, knR: 0.3 }),
     mourn: (t) => ({ neck: 0.65, lean: 0.25, shLp: -0.6, shRp: -0.6, shLr: 0.35, shRr: -0.35, elL: 1.7, elR: 1.7, bob: Math.sin(t * 5) * 0.006 }),

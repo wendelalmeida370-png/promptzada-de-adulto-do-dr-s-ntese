@@ -19,9 +19,12 @@
   // spots in the piece's own frame: across (a, −w/2..w/2) and out from its front (n, + toward the user)
   const front = (use, n) => it => [{ use, a: 0, n: it.d / 2 + (n || 0.45) }];
   // (a bed is got into from its foot or from either long side — one of them free is enough; a sleeping bench from its front,
-  // before any of its sleepers)
+  // before any of its sleepers. Its sleepers lie along its length: from its head, against the wall, to its foot — or, a bed
+  // turned along the wall, longer across its front than deep, along it, side by side across its depth: along says which —
+  // L-284)
   const lie = (k, bench) => it => {
-    const out = []; for (let q = 0; q < k; q++) out.push({ use: 'deitar', a: -it.w / 2 + it.w * (q + 0.5) / k, n: 0, on: 1 });
+    const out = []; const turned = !bench && it.w > it.d + 1e-6;
+    for (let q = 0; q < k; q++) out.push(turned ? { use: 'deitar', a: 0, n: -it.d / 2 + it.d * (q + 0.5) / k, on: 1, along: 'a' } : { use: 'deitar', a: -it.w / 2 + it.w * (q + 0.5) / k, n: 0, on: 1, along: 'n' });
     if (bench) for (let q = 0; q < k; q++) out.push({ use: 'acesso', a: -it.w / 2 + it.w * (q + 0.5) / k, n: it.d / 2 + 0.35 });
     else { out.push({ use: 'acesso', a: 0, n: it.d / 2 + 0.35 }); out.push({ use: 'acesso', a: -(it.w / 2 + 0.35), n: 0.25 }); out.push({ use: 'acesso', a: it.w / 2 + 0.35, n: 0.25 }); }
     return out;
@@ -29,8 +32,10 @@
   In.SPOTS = { front, lie }; // (for the pieces other files add: int-civicos.js)
   In.addItems({
     // ---- sleeping ----
-    'cama-casal': { name: 'Cama de casal', w: 1.4, d: 1.95, h: 0.55, low: 1, wall: 1, rot: 1, places: 2, spots: lie(2) },
-    cama: { name: 'Cama', w: 0.9, d: 1.95, h: 0.5, low: 1, wall: 1, rot: 1, places: 1, spots: lie(1) },
+    // (lie: the height of what one lies on — a bed's mattress over its frame; seat: of what one sits on — a seat's height,
+    // where the piece is taller than it, as a throne's back. Without them, the piece's own height)
+    'cama-casal': { name: 'Cama de casal', w: 1.4, d: 1.95, h: 0.55, lie: 0.5, low: 1, wall: 1, rot: 1, places: 2, spots: lie(2) },
+    cama: { name: 'Cama', w: 0.9, d: 1.95, h: 0.5, lie: 0.5, low: 1, wall: 1, rot: 1, places: 1, spots: lie(1) },
     // (leva: what a household takes with it when it leaves — its mats, the cradle, the stove and the brazier; the house left
     // behind keeps the rest, its chests, baskets and jars among them: what the world left in them is still there)
     esteira: { name: 'Esteira', w: 0.72, d: 1.8, h: 0.06, low: 1, wall: 1, rot: 1, places: 1, leva: 1, spots: lie(1) },

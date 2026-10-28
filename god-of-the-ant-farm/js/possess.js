@@ -81,16 +81,27 @@
   Po.take = function (v, kind) {
     const S = G.S; const c = Po.can(v); if (!c.ok) return c;
     if (S.avatar) Po.release('troca');
+    // (someone indoors in a building whose plan is made is taken where they are in it — at the place the world gives them there,
+    // Interiors.placeOf, read as they are before the errand ends and the will changes hands —, on their feet in the room: the
+    // errand's end lets one inside out at the door first)
+    const inB = v.inside > 0 ? v.inside : 0; const B0 = inB ? S.buildings.get(inB) : null;
+    const pl0 = B0 && G.Space.planNow && G.Space.planNow(B0) && G.Interiors.placeOf ? G.Interiors.placeOf(v) : null;
     // (the errand stops where it is — the load in the hands stays in them: it is the same person, and what they were doing goes
-    // on with the player's hands (keepLoad: C1's endTask leaves the carry where it is); one inside is let out at the door)
-    G.Vg.endTask(v, { keepLoad: true });
+    // on with the player's hands (keepLoad: C1's endTask leaves the carry where it is); stay: the building one is in)
+    G.Vg.endTask(v, { keepLoad: true, stay: inB });
     v.sleeping = false; v.path = null; v.act = ''; v.actT = 0; v.moving = false; v.z = 0;
-    S.avatar = { id: v.id, kind: KINDS[kind] ? kind : 'humano', since: S.day, t0: S.clock, x0: +v.x.toFixed(2), y0: +v.y.toFixed(2), asks: [], deeds: {}, seen: [], met: [], lv: null, via: 0 };
-    // (someone indoors in a building whose plan is made is taken where they are in it — by the plan's own place for them —, on
-    // their feet in the room: the world's rule lets the body out at the door otherwise)
-    { const B = v.inside && S.buildings.get(v.inside); const pl = B && G.Space.planNow && G.Space.planNow(B) && G.Interiors.placeOf ? G.Interiors.placeOf(v) : null;
-      if (pl && pl.b === B) { const p = G.Space.plan(B); const TL = G.Space.TILE; const tries = [[pl.x, pl.z]].concat(p.entrance ? [[p.entrance.x + (p.lot.w / 2 - p.entrance.x) * 0.15, p.entrance.z + (p.lot.w / 2 - p.entrance.z) * 0.15]] : []);
-        for (const [x, z] of tries) { const ins = G.Space.indoor(B.x * TL + x, B.y * TL + z, pl.lv, B.id); if (ins && ins.walk && ins.shell) { v.x = B.x + x / TL; v.y = B.y + z / TL; S.avatar.lv = ins.lv; break; } } } }
+    S.avatar = { id: v.id, kind: KINDS[kind] ? kind : 'humano', since: S.day, t0: S.clock, x0: +v.x.toFixed(2), y0: +v.y.toFixed(2), asks: [], deeds: {}, seen: [], met: [], lv: null, via: 0, use: null };
+    // (where it stands: the place itself, standing there; on a piece — a bed, a seat —, beside it, where one stands to get onto
+    // it; else a little inside the way in; with no floor for the feet in any of them, out at the door, as waking does)
+    if (pl0 && pl0.b === B0) {
+      const p = G.Space.plan(B0); const TL = G.Space.TILE; const tries = []; const sp0 = pl0.it ? pl0.it.spots[pl0.q] : null;
+      if (!(sp0 && sp0.on)) tries.push([pl0.x, pl0.z]);
+      if (pl0.it && G.Interiors.fitStand) for (const sp of pl0.it.spots) if (!sp.on) { const f = G.Interiors.fitStand(p, pl0.it.lv, sp.x, sp.z, pl0.it.r); if (f) tries.push(f); }
+      if (p.entrance) tries.push([p.entrance.x + (p.lot.w / 2 - p.entrance.x) * 0.15, p.entrance.z + (p.lot.w / 2 - p.entrance.z) * 0.15]);
+      let at = null; for (const [x, z] of tries) { const ins = G.Space.indoor(B0.x * TL + x, B0.y * TL + z, pl0.lv, B0.id); if (ins && ins.walk && ins.shell) { at = [x, z, ins.lv]; break; } }
+      if (at) { v.inside = B0.id; v.x = B0.x + at[0] / TL; v.y = B0.y + at[1] / TL; S.avatar.lv = at[2]; }
+      else if (v.inside) { const d = G.Vg.door(B0); v.x = d[0]; v.y = d[1]; v.inside = 0; }
+    }
     G.Vg.setTask(v, mark());
     S.avatar.via = viaOf(v, S.avatar); // (taken indoors, or at a door: by that building)
     cur = v;
@@ -249,6 +260,16 @@
     return a && a.via === id ? id : 0; // (a room walked into from its door; walls that rose round it: none)
   }
   Po.cameBy = id => { const a = G.S.avatar; return !!a && a.via === id; };
+  // the place of a building's plan the body's hands took — on a bench, in a bed, at the wheel (Interact's verb, done in the
+  // world's step) —: only this file writes it; Interiors.places gives it to the body and to no one else (D-085). Let go when
+  // the body leaves the building, or the plan it was taken in is no longer the building's (a renovation, a ruin)
+  Po.use = function (v, b, pl) {
+    const a = G.S.avatar; if (!a || !Po.is(v) || !b || !pl || !pl.it || v.inside !== b.id || !G.Interiors.keyOf) return false;
+    a.use = { b: b.id, it: pl.item, q: pl.q, use: pl.use, st: pl.st || '', key: G.Interiors.keyOf(b), t0: G.S.clock }; return true;
+  };
+  Po.unuse = function () { const a = G.S.avatar; if (a) a.use = null; };
+  Po.useOf = () => { const a = G.S.avatar; return a && a.use ? a.use : null; };
+  const useHolds = (v, a) => { const u = a.use; const B = u && G.S.buildings.get(u.b); return !!(B && v.inside === u.b && G.Interiors.keyOf && G.Interiors.keyOf(B) === u.key); };
   Po.onPlan = v => { const a = G.S.avatar; return !!(v && a && a.id === v.id) && onPlan(v, a); };
   // the unloadings the body could lend a hand to, as the world gives its own porters theirs (Porto.claim): of the body's own
   // people, with crates of it — on the quay or on the ground — where its feet reach (the map of regions, asked here in the
@@ -310,6 +331,7 @@
     // asleep in one's own bed; anything else that put the body indoors lets it out at the door)
     if (v.inside && !(v.sleeping && v.inside === v.home) && !indoorOK(v, a)) { const b = S.buildings.get(v.inside); if (b) { const d = G.Vg.door(b); v.x = d[0]; v.y = d[1]; } v.inside = 0; a.lv = null; }
     if (!v.inside && a.lv !== null && a.lv !== undefined && !onPlan(v, a)) a.lv = null; // (out, and off any plan: no storey)
+    if (a.use && !useHolds(v, a)) a.use = null; // (out of the building, or its plan made over: the place let go)
     for (let k = a.asks.length - 1; k >= 0; k--) if (S.clock - a.asks[k].t > 90) a.asks.splice(k, 1);
     // (what the hands asked since the last step: done now, in the world's own step, in the order asked — each sees the world
     // the one before left; one asked by a body no longer lived is dropped. Each is answered "not done" until it is done: one
@@ -391,7 +413,7 @@
   // ------------------------------ words ------------------------------
   const tt0 = G.Vg.taskText;
   G.Vg.taskText = function (v) { return v.task && v.task.type === 'avatar' ? (v.sleeping ? 'Dormindo — guiad' + oa(v) + ' pelo deus' : 'Vivid' + oa(v) + ' pelo deus (Modo Encarnado)') : tt0(v); };
-  const DEED = { abraco: ['deu', 'abraço', 'abraços'], consolo: ['consolou', 'pessoa de luto', 'pessoas de luto'], danca: ['dançou', 'vez', 'vezes'], pesca: ['pescou com as mãos', 'peixe', 'peixes'], escalada: ['escalou', 'pedra ou barranco', 'pedras e barrancos'], ouro: ['catou', 'moeda de ouro do chão', 'moedas de ouro do chão'], carinho: ['fez carinho em', 'bicho', 'bichos'], agua: ['bebeu água de', 'rio', 'rios'], aceno: ['acenou', 'vez', 'vezes'], conversa: ['conversou com', 'pessoa', 'pessoas'], lenha: ['cortou', 'árvore', 'árvores'], pedra: ['quebrou', 'pedra', 'pedras'], frutas: ['colheu', 'punhado de frutas', 'punhados de frutas'], entrega: ['levou ao armazém', 'carga', 'cargas'], refeicao: ['fez', 'refeição', 'refeições'], sono: ['dormiu', 'noite', 'noites'], exame: ['examinou', 'coisa', 'coisas'], porta: ['bateu em', 'porta', 'portas'], reza: ['rezou', 'vez no templo', 'vezes no templo'], obra: ['levou às obras', 'carga de material', 'cargas de material'] };
+  const DEED = { abraco: ['deu', 'abraço', 'abraços'], consolo: ['consolou', 'pessoa de luto', 'pessoas de luto'], danca: ['dançou', 'vez', 'vezes'], pesca: ['pescou com as mãos', 'peixe', 'peixes'], escalada: ['escalou', 'pedra ou barranco', 'pedras e barrancos'], ouro: ['catou', 'moeda de ouro do chão', 'moedas de ouro do chão'], carinho: ['fez carinho em', 'bicho', 'bichos'], agua: ['bebeu água de', 'rio', 'rios'], aceno: ['acenou', 'vez', 'vezes'], conversa: ['conversou com', 'pessoa', 'pessoas'], lenha: ['cortou', 'árvore', 'árvores'], pedra: ['quebrou', 'pedra', 'pedras'], frutas: ['colheu', 'punhado de frutas', 'punhados de frutas'], entrega: ['levou ao armazém', 'carga', 'cargas'], refeicao: ['fez', 'refeição', 'refeições'], sono: ['dormiu', 'noite', 'noites'], exame: ['examinou', 'coisa', 'coisas'], porta: ['bateu em', 'porta', 'portas'], reza: ['rezou', 'vez no templo', 'vezes no templo'], obra: ['levou às obras', 'carga de material', 'cargas de material'], cozinha: ['cozinhou', 'ceia da casa', 'ceias da casa'] };
   Po.DEED = DEED;
   if (G.Life) {
     const bl0 = G.Life.bioLine;
@@ -408,7 +430,7 @@
   G.saveHooks.push({
     save(out) {
       const a = G.S.avatar; if (!a) return;
-      out.avatar = { id: a.id, kind: a.kind, since: a.since, t0: a.t0, x0: a.x0, y0: a.y0, asks: a.asks.slice(-6), deeds: Object.assign({}, a.deeds), seen: a.seen.slice(-20), met: a.met.slice(-60), lv: Number.isFinite(a.lv) ? a.lv : null, via: a.via || 0 };
+      out.avatar = { id: a.id, kind: a.kind, since: a.since, t0: a.t0, x0: a.x0, y0: a.y0, asks: a.asks.slice(-6), deeds: Object.assign({}, a.deeds), seen: a.seen.slice(-20), met: a.met.slice(-60), lv: Number.isFinite(a.lv) ? a.lv : null, via: a.via || 0, use: a.use ? Object.assign({}, a.use) : null };
       // (the body in a room of a building's plan: where it is in it — the save lets everyone else out at the door)
       const v = G.S.villagers.get(a.id); if (v && v.inside && indoorOK(v, a)) out.avatar.in = { b: v.inside, x: +v.x.toFixed(4), y: +v.y.toFixed(4), sleeping: v.sleeping ? 1 : 0 };
     },
@@ -425,12 +447,14 @@
         id: v.id, kind: KINDS[a.kind] ? a.kind : 'humano', since: num(a.since, S.day), t0: num(a.t0, S.clock), x0: num(a.x0, v.x), y0: num(a.y0, v.y),
         asks: Array.isArray(a.asks) ? a.asks.filter(q => q && typeof q.txt === 'string').map(q => ({ type: String(q.type), txt: q.txt, t: num(q.t, S.clock), t0: num(q.t0, S.clock), n: num(q.n, 1) })) : [],
         deeds, seen: Array.isArray(a.seen) ? a.seen.filter(e => e && typeof e.txt === 'string') : [], met: Array.isArray(a.met) ? a.met.filter(Number.isFinite) : [],
-        lv: Number.isFinite(a.lv) ? a.lv : null, via,
+        lv: Number.isFinite(a.lv) ? a.lv : null, via, use: null,
       };
       // (saved in a room of a building's plan: back in it, where it was — the world's step checks it stands where the plan lets it)
       { const I = a.in, B = I && Number.isFinite(I.b) && S.buildings.get(I.b);
         if (B && G.Interiors && G.Interiors.has(B) && Number.isFinite(I.x) && Number.isFinite(I.y) && Number.isFinite(S.avatar.lv) && Math.abs(I.x - (B.x + B.w / 2)) < B.w && Math.abs(I.y - (B.y + B.h / 2)) < B.h) { v.inside = B.id; v.x = I.x; v.y = I.y; }
         else { v.inside = 0; S.avatar.lv = null; } }
+      // (the place its hands held, held again — while it is in that building and the plan is the same; else let go, on its feet)
+      { const u = a.use; if (u && typeof u === 'object' && Number.isFinite(u.b) && typeof u.it === 'string' && Number.isFinite(u.q) && typeof u.use === 'string' && typeof u.key === 'string') { S.avatar.use = { b: u.b, it: u.it, q: u.q, use: u.use, st: typeof u.st === 'string' ? u.st : '', key: u.key, t0: num(u.t0, S.clock) }; if (!useHolds(v, S.avatar)) S.avatar.use = null; } }
       v.task = mark(); v.sleeping = false; v.path = null; S.avatar.via = viaOf(v, S.avatar);
       if (!v.inside && !W.walkableXY(v.x, v.y) && !onPlan(v, S.avatar)) v.task.afloat = 1; // (saved swimming: it swims on — on a doorstep it stands)
       cur = v;

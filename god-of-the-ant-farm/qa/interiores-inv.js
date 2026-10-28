@@ -5,6 +5,7 @@
   if (!window.QA || !QA.more) return;
   const SIDES = { N: 1, E: 1, S: 1, W: 1 };
   let turn = 0; // (which few plans this round builds: a different few each time, so a long life sees them all)
+  let placeTurn = 0; // (and which few buildings with people inside have their places looked at)
   let heard = new Map(), heardS = null; // (the step's words on the way in already asked again here — once each, in this world)
   let pocketAt = new Map(), pocketS = null; // (the day each door was first seen before a pocket, in this world: L-216)
   QA.more.push(function (add, s) {
@@ -30,6 +31,20 @@
       if (!v.jail || v.inside !== v.jail) continue; const b = s.buildings.get(v.jail); const T = b && In.TYPES[b.type];
       if (!b || !b.ip || !T || !T.cells) continue; const cs = In.cells(b); if (!cs.length) continue;
       const at = In.placeOf(v); if (!at || !cs.some(c => c.bed === at.item)) add('int', 3, `pessoa #${v.id}: presa na cadeia #${b.id} fora das celas`);
+    }
+    // ---- the places of who is inside (D-085): one person a point — never two at one place of a piece, nor two closer than
+    // 0.3 m but on one piece made for several (the double bed's two) —, every place a place of its piece; a few buildings with
+    // people in them each round, a different few each time
+    if (In.places) {
+      const occ = []; const seenB = new Set();
+      for (const v of s.villagers.values()) { if (!(v.inside > 0) || seenB.has(v.inside)) continue; seenB.add(v.inside); const b = s.buildings.get(v.inside); if (b && b.ip && In.TYPES[b.ip.t]) occ.push(b); }
+      occ.sort((a, c) => a.id - c.id);
+      for (let k = 0; k < Math.min(3, occ.length); k++) {
+        const b = occ[(placeTurn++ * 7919) % occ.length]; const pts = [...In.places(b).by.entries()]; let clash = null;
+        for (let i = 0; i < pts.length && !clash; i++) for (let j = i + 1; j < pts.length; j++) { const [ia, a] = pts[i], [ib, c] = pts[j]; if (a.lv !== c.lv) continue; if ((a.it && c.it && a.item === c.item && a.q === c.q) || (Math.hypot(a.x - c.x, a.z - c.z) < 0.3 && !(a.it && c.it && a.item === c.item))) { clash = `#${ia} e #${ib}`; break; } }
+        if (clash) add('int', 2, `${b.type}#${b.id}: ${clash} no mesmo lugar`);
+        for (const [id, pl] of pts) if (pl.it && (!pl.it.spots[pl.q] || pl.it.spots[pl.q].use !== pl.use)) { add('int', 3, `${b.type}#${b.id}: #${id} num ponto que não é da peça (${pl.item}:${pl.q} ${pl.use})`); break; }
+      }
     }
     // ---- the way in (L-195): where the step put the door, with this record and this ground (the trees about it too: L-206),
     // the way in fits — or it fits on no side open to the street. Asked again here, made anew: every word of the step the first

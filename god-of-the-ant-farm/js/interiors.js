@@ -339,10 +339,12 @@
       this.items.push(it); this._ver = (this._ver || 0) + 1; return it;
     },
     // the spots of an item in the canonical frame (q: its number among the piece's own; the ones lost are left out)
+    // (one standing by the piece faces it; one on it looks the way the piece does — the sleeper's feet to the bed's foot, the
+    // sitter's face to the room, the faithful's to the altar —, or, lying along a bed turned against the wall, along it: L-284)
     spotsAll(it) {
       const D = ITEMS[it.kind]; const cu = (it.r[0] + it.r[2]) / 2, cv = (it.r[1] + it.r[3]) / 2; const [fu, fv] = it.face;
       const au = -fv, av = fu; // (across: the right hand of one facing the item from its front)
-      return (D.spots ? D.spots({ w: it.w, d: it.d, h: it.h }) : []).map((s, q) => ({ q, use: s.use, on: s.on ? 1 : 0, u: cu + fu * s.n + au * s.a, v: cv + fv * s.n + av * s.a, f: Math.abs(s.a) > Math.abs(s.n) ? [-au * Math.sign(s.a), -av * Math.sign(s.a)] : [-fu * Math.sign(s.n || 1), -fv * Math.sign(s.n || 1)] }));
+      return (D.spots ? D.spots({ w: it.w, d: it.d, h: it.h }) : []).map((s, q) => ({ q, use: s.use, on: s.on ? 1 : 0, u: cu + fu * s.n + au * s.a, v: cv + fv * s.n + av * s.a, f: s.on ? (s.along === 'a' ? [au, av] : [fu, fv]) : Math.abs(s.a) > Math.abs(s.n) ? [-au * Math.sign(s.a), -av * Math.sign(s.a)] : [-fu * Math.sign(s.n || 1), -fv * Math.sign(s.n || 1)] }));
     },
     spotsOf(it) { const all = this.spotsAll(it); return it.drop && it.drop.length ? all.filter(sp => !it.drop.includes(sp.q)) : all; },
     // what stands on a storey, for the placing of one piece (taken once per piece: the pieces, the places one stands to use
@@ -1263,46 +1265,273 @@
   In.stores = function (b) { const p = In.plan(b); return p ? p.items.filter(it => it.store) : []; };
   In.capacity = function (b) { const p = In.plan(b); return p ? p.cap : null; };
 
-  // ------------------------------ who sleeps where, who is in, what the doors are ------------------------------
-  // the beds of a house go to its people by a rule (derived from who lives there, never stored): the couples first, in the
-  // widest beds, then the grown, then the children by age; who is left over sleeps on the floor (said, not hidden)
-  In.beds = function (b) {
-    const p = In.plan(b); if (!p) return { by: new Map(), floor: [] };
-    const S = G.S; const res = []; for (const v of S.villagers.values()) if (v.home === b.id) res.push(v);
-    res.sort((x, y) => (y.age >= 16) - (x.age >= 16) || y.age - x.age || x.id - y.id);
-    const places = [];
-    for (const it of p.items) { const n = it.places || 0; if (!n) continue; const lie = it.spots.filter(s => s.use === 'deitar'); for (let k = 0; k < n; k++) places.push({ it, spot: lie[k] || lie[0], k, n, double: n === 2 }); }
-    places.sort((a, c) => c.n - a.n || a.it.lv - c.it.lv || a.it.k - c.it.k || a.k - c.k);
-    const by = new Map(); const used = new Set(); const floor = [];
-    const take = (v, pl) => { by.set(v.id, pl); used.add(pl); };
-    for (const v of res) {
-      if (by.has(v.id)) continue;
-      const mate = v.partner && res.find(o => o.id === v.partner);
-      if (mate && !by.has(mate.id)) { const pair = places.filter(q => !used.has(q) && q.double); const a = pair.find(q => pair.some(o => o !== q && o.it === q.it)); if (a) { const b2 = pair.find(o => o !== a && o.it === a.it); take(v, a); take(mate, b2); continue; } }
-      const pl = places.find(q => !used.has(q)); if (pl) take(v, pl); else floor.push(v.id);
-    }
-    return { by, floor, places };
+  // ------------------------------ the places: who is where inside (D-085) ------------------------------
+  // Everyone the world has inside a building is at one place of its plan — in a bed, on a seat, at the bench of a trade, by the
+  // fire, on the floor — and every place holds one person: only here are the places given out (rule 29). Derived from the
+  // world as it stands — who is inside, asleep, at which task, what each household wants (the rules the owners of the life
+  // inside register: In.placeRule, In.bedRule) — and from the plan: never stored, the same answer for the same world, asked by
+  // the world's step and by the drawing alike. The plan's places are kept by the record (a city has more buildings than the
+  // plans' cache holds: the step never makes a plan again only for this)
+  In.SIT_H = 0.5; // (the hips of one seated over the feet, as the 3D seats people: people3d.js 'sit' — qa/lugares.js checks it)
+  const APPROACH = { acesso: 1, entrar: 1 }; // (where one stands to get onto a piece: no place of its own)
+  // the state the 3D shows at a place by its use (a household's rule may say another: In.placeRule's st)
+  const USE_ST = In.USE_ST = { deitar: 'sleep', sentar: 'sit', comer: 'eat', cozinhar: 'cook', assar: 'cook', aquecer: 'rest', cuidar: 'low', tecer: 'sit', trabalhar: 'interact', forjar: 'swing', martelar: 'swing', temperar: 'low', tornear: 'sit', cozer: 'low', lavrar: 'sit', fundir: 'low', cortar: 'swing', pendurar: 'interact', escrever: 'sit', remendar: 'low', oficiar: 'interact', ofertar: 'pray', rezar: 'pray', armar: 'interact', treinar: 'fight', banhar: 'sit', alimentar: 'low', despir: 'interact', mexer: 'interact', audiencia: 'idle', beber: 'low', vender: 'talk', comprar: 'talk', conferir: 'interact', entregar: 'interact', guardar: 'interact', pegar: 'low', assistir: 'sit' };
+  const LYING = { sleep: 1, sick: 1 }, SEATED = { sit: 1, eat: 1, rock: 1, sittalk: 1 }, LOW_SEAT = { rest: 1, pray: 1, eatg: 1, rockg: 1 };
+  const ON_GROUND = { sit: 'rest', sittalk: 'rest', eat: 'eatg', rock: 'rockg' }; // (a seated state, where there is no seat)
+  // (the words the drawing read before st — B3.openPlace's pose: one sitting on the ground is 'no chão', which it has not got,
+  // never 'sentado' on a seat that is not there)
+  const poseWord = (st, job) => (LYING[st] ? 'deitado' : SEATED[st] ? 'sentado' : LOW_SEAT[st] ? 'no chão' : job ? 'trabalhando' : 'de pé');
+  // the height of the root of one at a place, over its storey's floor — the 3D's root, the body's feet: on the floor by a piece;
+  // lying, on what one lies on; seated, the hips on the seat (In.SIT_H over the feet); kneeling or on the ground, on its top
+  In.rootY = function (it, sp, st) {
+    if (!sp || !sp.on) return 0; const D = ITEMS[it.kind] || {};
+    if (LYING[st]) return D.lie !== undefined ? D.lie : D.h || 0;
+    if (SEATED[st]) return Math.max(0, (D.seat !== undefined ? D.seat : Math.min(D.h || 0, In.SIT_H)) - In.SIT_H);
+    return D.h || 0;
   };
-  In.bedOf = function (v) { const b = v && G.S.buildings.get(v.home); if (!b || !b.ip) return null; const r = In.beds(b); const pl = r.by.get(v.id); return pl ? { b, item: pl.it, spot: pl.spot } : null; };
-  // where someone the world has inside a building is, inside it (for the drawing): in bed asleep, at the bench of their trade,
-  // by the fire — from their task, their sleep and their work; never stored, always the same answer for the same world
+  // (what is at a point of a storey of a plan made — metres of the lot —, and whether one stands there: a body's rim of radius r
+  // on open floor — a loft crawled under its low roof —, as In.walk asks it of a building)
+  const codeAt = (p, lv, x, z) => { const g = p.grid && p.grid.lv[lv]; if (!g) return C.OUT; const n = p.grid.n; const cx = Math.floor(x / CS), cz = Math.floor(z / CS); return cx < 0 || cz < 0 || cx >= n || cz >= n ? C.OUT : g[cz * n + cx]; };
+  const openCode = (c, cr) => c === C.FLOOR || c === C.DOOR || c === C.HATCH || (cr && c === C.LOWROOF);
+  const RIM9 = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]];
+  const standsAt = (p, lv, x, z, r) => { const cr = crawl(p, lv); return RIM9.every(([dx, dz]) => openCode(codeAt(p, lv, x + dx * r, z + dz * r), cr)); };
+  In.standsAt = standsAt; // (for the proofs)
+  // where one standing at a piece stands: its place of use, or — that point on a flight, a wall, another piece, as the plan's
+  // walk lets it be (a reached cell within 0.3 m of it is all the walk asks) — the nearest point within 0.4 m where the feet
+  // stand on open floor the door reaches, never in the piece; null where there is none (L-282)
+  const FEET = 0.2;
+  function fitStand(p, lv, x, z, R) {
+    const seen = p.reach || {}; const good = (X, Z) => !(R && X > R[0] && X < R[2] && Z > R[1] && Z < R[3]) && standsAt(p, lv, X, Z, FEET) && reachedNear(p, seen, lv, [X, Z], 0.3);
+    if (good(x, z)) return [x, z];
+    for (let rad = 0.05; rad <= 0.4 + 1e-9; rad += 0.05) { const n = Math.max(8, Math.round(2 * Math.PI * rad / 0.05)); for (let k = 0; k < n; k++) { const a = k / n * 2 * Math.PI; const X = x + Math.cos(a) * rad, Z = z + Math.sin(a) * rad; if (good(X, Z)) return [r2(X), r2(Z)]; } }
+    return null;
+  }
+  In.fitStand = fitStand; // (for the proofs)
+  // the places of a plan: every piece's places of use, but where one stands to get onto it (APPROACH); each usable (ok) where
+  // one stands at it (fitStand) — a place on the piece, where one stands at one of the piece's standing points to get onto it —;
+  // and the floor where one stands or lies with no piece (made when first asked)
+  const tables = new Map(); G.worldHooks.push(() => tables.clear());
+  function tableOf(b) {
+    if (!b || !b.ip || !TYPES[b.ip.t]) return null;
+    const key = planKey(b, b.ip); const c = tables.get(b.id); if (c && c.key === key) return c.t;
+    const p = In.plan(b); const t = p && p.ok && p.grid ? makeTable(p) : null;
+    tables.set(b.id, { key, t }); if (tables.size > In.SHELLS) tables.delete(tables.keys().next().value);
+    return t;
+  }
+  In.table = tableOf; // (for the proofs and the drawing of the plan)
+  function makeTable(p) {
+    const spots = []; const byUse = new Map();
+    for (const it of p.items) {
+      const at = it.spots.map(sp => (sp.on ? null : fitStand(p, it.lv, sp.x, sp.z, it.niche ? null : it.r)));
+      it.spots.forEach((sp, q) => {
+        if (APPROACH[sp.use]) return;
+        const pt = sp.on ? (at.some(x => x) ? [sp.x, sp.z] : null) : at[q];
+        const e = { k: spots.length, it, q, use: sp.use, on: sp.on ? 1 : 0, lv: it.lv, x: pt ? pt[0] : sp.x, z: pt ? pt[1] : sp.z, ry: sp.ry, ok: pt ? 1 : 0 };
+        spots.push(e); if (e.ok) { let L = byUse.get(sp.use); if (!L) byUse.set(sp.use, L = []); L.push(e); }
+      });
+    }
+    return { p, spots, byUse, floor: null, lie: null };
+  }
+  // (standing on the floor: on a half-metre lattice in each room, where a body stands and the door reaches — the entrance's
+  // storey first, room by room, the middle of each first, facing it)
+  function floorPts(t) {
+    if (t.floor) return t.floor; const p = t.p, seen = p.reach || {}; const out = []; const e0 = p.entryLv || 0;
+    for (const m of p.rooms) {
+      const r = m.r; const cx = (r[0] + r[2]) / 2, cz = (r[1] + r[3]) / 2;
+      for (let x = r[0] + 0.3; x <= r[2] - 0.3 + 1e-6; x += 0.5) for (let z = r[1] + 0.3; z <= r[3] - 0.3 + 1e-6; z += 0.5) {
+        if (m.circ && Math.hypot(x - m.circ[0], z - m.circ[1]) > m.circ[2] - 0.3) continue;
+        if (!standsAt(p, m.lv, x, z, 0.25) || !reachedNear(p, seen, m.lv, [x, z], 0.3)) continue;
+        out.push({ lv: m.lv, room: m.id, x: r2(x), z: r2(z), ry: r2(Math.atan2(cx - x, cz - z)), d: Math.hypot(x - cx, z - cz) });
+      }
+    }
+    out.sort((a, c) => (a.lv === e0 ? 0 : 1) - (c.lv === e0 ? 0 : 1) || a.lv - c.lv || a.room - c.room || a.d - c.d || a.x - c.x || a.z - c.z);
+    return (t.floor = out);
+  }
+  // (lying on the floor: a body's length and width of open floor — not a doorway, a hatch, a flight —, its head to the nearer
+  // wall: in the rooms where people sleep first, along a wall first; reached from the door)
+  const SLEEP_FN = { leitos: 0, quarto: 0, sobrado: 0, cela: 0, lar: 1, salao: 1, anexo: 2, galeria: 2, frente: 3 };
+  function liePts(t) {
+    if (t.lie) return t.lie; const p = t.p, seen = p.reach || {}; const out = [];
+    const allOpen = (lv, R) => { const cr = crawl(p, lv); for (let z = R[1] + CS / 2; z < R[3]; z += CS) for (let x = R[0] + CS / 2; x < R[2]; x += CS) { const c = codeAt(p, lv, x, z); if (!(c === C.FLOOR || (cr && c === C.LOWROOF))) return false; } return true; };
+    for (const m of p.rooms) {
+      if (m.circ) continue; const r = m.r; const rank = SLEEP_FN[m.fn] !== undefined ? SLEEP_FN[m.fn] : 4;
+      for (const [w, d] of [[0.7, 1.9], [1.9, 0.7]]) for (let x = r[0] + 0.05; x + w <= r[2] - 0.05 + 1e-6; x += 0.25) for (let z = r[1] + 0.05; z + d <= r[3] - 0.05 + 1e-6; z += 0.25) {
+        const R = [r2(x), r2(z), r2(x + w), r2(z + d)]; if (!allOpen(m.lv, R)) continue;
+        const cx = (R[0] + R[2]) / 2, cz = (R[1] + R[3]) / 2; if (!reachedNear(p, seen, m.lv, [cx, cz], 1.0)) continue;
+        // (the head toward the nearer wall along the body, the feet away from it: the root a little toward the head, as the
+        // 3D lays a sleeper — the head 0.62 m behind it, the feet 0.86 before)
+        const along = d > w; const lo = along ? R[1] - r[1] : R[0] - r[0], hi = along ? r[3] - R[3] : r[2] - R[2]; const s = lo <= hi ? 1 : -1;
+        const f = along ? [0, s] : [s, 0];
+        const wall = Math.min(R[0] - r[0], r[2] - R[2], R[1] - r[1], r[3] - R[3]);
+        out.push({ lv: m.lv, room: m.id, R, x: r2(cx - f[0] * 0.12), z: r2(cz - f[1] * 0.12), ry: r2(Math.atan2(f[0], f[1])), rank, wall });
+      }
+    }
+    out.sort((a, c) => a.rank - c.rank || a.wall - c.wall || a.lv - c.lv || a.room - c.room || a.R[0] - c.R[0] || a.R[1] - c.R[1] || a.R[2] - c.R[2]);
+    return (t.lie = out);
+  }
+  // who the world has inside a building, by id: counted fresh in the world's step (once a part during the skip, as the head
+  // counts are: G.perPart); for the drawing, once a frame for all
+  const insideFresh = bid => { const out = []; for (const v of G.S.villagers.values()) if (v.inside === bid) out.push(v); out.sort((a, c) => a.id - c.id); return out; };
+  const insideStep = G.perPart(insideFresh);
+  let idx = null, idxAt = ''; const pmemo = new Map(); let pmAt = ''; // (and the places given out, once a frame for the drawing)
+  G.worldHooks.push(() => { idx = null; idxAt = ''; pmemo.clear(); pmAt = ''; });
+  function insideOf(bid) {
+    if (G.inSim) return insideStep(bid);
+    const k = G.S.clock + ':' + G.S.villagers.size;
+    if (!idx || idxAt !== k) { idx = new Map(); idxAt = k; for (const v of G.S.villagers.values()) if (v.inside > 0) { let L = idx.get(v.inside); if (!L) idx.set(v.inside, L = []); L.push(v); } for (const L of idx.values()) L.sort((a, c) => a.id - c.id); }
+    return idx.get(bid) || [];
+  }
+  // the rules of the life inside, by the use of the building ('casa', 'templo', 'taverna'…): fn(b, v) → what v wants there —
+  // { use: [uses, the first wanted first], item: the piece it would have, or null, st: the 3D's state } — or { with: id } (a
+  // child held by someone: at that one's place, no place of its own), or null (the rule has nothing to say: the default). Pure:
+  // asked by the step and by the drawing, for whoever the world has inside
+  const RULES = {};
+  In.placeRule = function (use, fn) { if (typeof fn === 'function') RULES[use] = fn; else delete RULES[use]; };
+  // the household's rule for its beds: fn(b, people, plan) → { order: [ids], pair: Map(id → id), with: Map(id → id),
+  // crib: Set(ids), floor: Set(ids) } — who chooses first, who shares a double bed with whom, who sleeps with whom (a child in
+  // its mother's bed), who wants the cradle, who sleeps on the floor by choice; the beds are given out here
+  let BEDRULE = null;
+  In.bedRule = function (fn) { BEDRULE = typeof fn === 'function' ? fn : null; };
+  // the beds of a house go to its people by a rule (derived from who lives there, never stored): the household's rule when one
+  // is registered, else the couples first, in the widest beds, then the grown, then the children by age; who is left over
+  // sleeps on the floor (said, not hidden). The cradle only to a child that wants it
+  In.beds = function (b) {
+    const t = tableOf(b); if (!t) return { by: new Map(), floor: [], with: new Map(), places: [] };
+    const S = G.S; const p = t.p; const res = []; for (const v of S.villagers.values()) if (v.home === b.id) res.push(v);
+    const places = [];
+    for (const it of p.items) {
+      const n = it.places || 0; if (!n) continue; const lie = []; it.spots.forEach((sp, q) => { if (sp.use === 'deitar') lie.push(q); }); if (!lie.length) continue;
+      for (let k = 0; k < n; k++) { const q = lie[Math.min(k, lie.length - 1)]; places.push({ it, spot: it.spots[q], q, k, n, double: n === 2, crib: ITEMS[it.kind] && ITEMS[it.kind].crib ? 1 : 0 }); }
+    }
+    places.sort((a, c) => c.n - a.n || a.it.lv - c.it.lv || a.it.k - c.it.k || a.k - c.k);
+    let want = null;
+    if (BEDRULE) { const ppl = res.slice(); for (const v of insideOf(b.id)) if (v.sleeping && v.home !== b.id) ppl.push(v); want = BEDRULE(b, ppl, p) || null; }
+    const pick = id => S.villagers.get(id);
+    const order = want && Array.isArray(want.order) ? want.order.map(pick).filter(Boolean) : res.slice().sort((x, y) => (y.age >= 16) - (x.age >= 16) || y.age - x.age || x.id - y.id);
+    const pairOf = want && want.pair instanceof Map ? want.pair : null, withW = want && want.with instanceof Map ? want.with : null;
+    const crib = want && want.crib instanceof Set ? want.crib : null, flo = want && want.floor instanceof Set ? want.floor : null;
+    const by = new Map(); const used = new Set(); const floor = []; const withM = new Map();
+    const take = (v, pl) => { by.set(v.id, pl); used.add(pl); };
+    for (const v of order) {
+      if (by.has(v.id) || floor.includes(v.id) || withM.has(v.id)) continue;
+      if (flo && flo.has(v.id)) { floor.push(v.id); continue; }
+      if (crib && crib.has(v.id)) { const c = places.find(q => !used.has(q) && q.crib); if (c) { take(v, c); continue; } }
+      if (withW && withW.has(v.id)) { withM.set(v.id, withW.get(v.id)); continue; }
+      const mid = pairOf ? pairOf.get(v.id) : v.partner; const mate = mid && order.find(o => o.id === mid);
+      if (mate && !by.has(mate.id) && !(flo && flo.has(mate.id))) { const pair = places.filter(q => !used.has(q) && q.double); const a = pair.find(q => pair.some(o => o !== q && o.it === q.it)); if (a) { const b2 = pair.find(o => o !== a && o.it === a.it); take(v, a); take(mate, b2); continue; } }
+      const pl = places.find(q => !used.has(q) && !q.crib); if (pl) take(v, pl); else floor.push(v.id);
+    }
+    return { by, floor, with: withM, places };
+  };
+  In.bedOf = function (v) { const b = v && G.S.buildings.get(v.home); if (!b || !b.ip) return null; const r = In.beds(b); const pl = r.by.get(v.id); return pl ? { b, item: pl.it, spot: pl.spot, q: pl.q } : null; };
   // the cells of a jail, as the world fills them (crime.js puts the prisoners in: v.jail): each one's room, its bed of straw
   // and the place on it, its grating — [] for a building with no cells
   In.cells = function (b) {
     const p = In.plan(b); if (!p || !p.ok) return [];
     return p.rooms.filter(m => m.fn === 'cela').map(m => { const bed = p.items.find(i => i.room === m.id && i.places > 0); const door = p.doors.find(d => d.rooms.includes(m.id)); return { room: m.id, lv: m.lv, r: m.r, bed: bed ? bed.id : null, spot: bed ? bed.spots.find(q => q.use === 'deitar') || null : null, door: door ? door.id : null }; });
   };
+  // the places given out: in a fixed order, the ties by id — (0) the body's own, the place its hands took (S.avatar.use); (1) the
+  // prisoners, a cell each; (2) who sleeps in a house, in its beds (In.beds: a bed of one's own, the cradle, with one's mother,
+  // or on the floor, lying); (3) who works, at the place the task names (t.item, t.use) or at a station of the trade; (4) what
+  // the household wants (In.placeRule); (5) the rest, the old way — a seat coming home, the fire, a seat —; whoever is left,
+  // on the floor: standing, or lying asleep. Never two at one point (half a metre), never on a point that is no place
+  const EMPTY = { by: new Map(), with: new Map() };
+  In.places = function (b) {
+    const t = b && b.ip ? tableOf(b) : null; if (!t) return EMPTY;
+    if (G.inSim) return assign(b, t);
+    const k = G.S.clock + ':' + G.S.villagers.size; if (pmAt !== k) { pmemo.clear(); pmAt = k; }
+    let r = pmemo.get(b.id); if (!r) { r = assign(b, t); pmemo.set(b.id, r); } return r;
+  };
+  // (probe: the uses of one more, given out after everyone: what freePlace answers, by the very same rule)
+  function assign(b, t, probe) {
+    const S = G.S; const p = t.p; const T = TYPES[b.ip.t] || {}; const people = insideOf(b.id);
+    const by = new Map(), withM = new Map(); const used = new Set(); const discs = [], rects = [];
+    // (a point taken: half a metre round it — but the places on one piece made for several, the double bed's two)
+    const clash = (lv, x, z, it, on) => discs.some(d => d.lv === lv && Math.hypot(d.x - x, d.z - z) < 0.5 && !(on && d.on && d.it && d.it === it)) || rects.some(q => q.lv === lv && x > q.R[0] - 0.25 && x < q.R[2] + 0.25 && z > q.R[1] - 0.25 && z < q.R[3] + 0.25);
+    const free = e => e.ok && !used.has(e.k) && !clash(e.lv, e.x, e.z, e.it.id, e.on);
+    const give = (v, e, st) => { used.add(e.k); discs.push({ lv: e.lv, x: e.x, z: e.z, it: e.it.id, on: e.on }); const sp = e.it.spots[e.q]; by.set(v.id, { b, lv: e.lv, x: e.x, z: e.z, y: In.rootY(e.it, sp, st), ry: e.ry, use: e.use, item: e.it.id, it: e.it, q: e.q, st, pose: poseWord(st, e.it.job) }); };
+    const onFloor = (v, lie, st) => {
+      if (lie) for (const f of liePts(t)) { if (rects.some(q => q.lv === f.lv && ov(q.R, f.R)) || discs.some(d => d.lv === f.lv && d.x > f.R[0] - 0.25 && d.x < f.R[2] + 0.25 && d.z > f.R[1] - 0.25 && d.z < f.R[3] + 0.25)) continue; rects.push({ lv: f.lv, R: f.R }); by.set(v.id, { b, lv: f.lv, x: f.x, z: f.z, y: 0, ry: f.ry, use: 'chao', item: null, it: null, q: -1, st: st || 'sleep', pose: 'deitado' }); return true; }
+      // (standing — with no seat, sitting on the ground: eating with the bowl in the lap, rocking the child, keeping company;
+      // praying, on one's knees —, or, with no floor to lie on left, lying where one stands)
+      const fst = lie ? st || 'sleep' : ON_GROUND[st] || (st === 'pray' || st === 'rest' ? st : 'idle');
+      for (const f of floorPts(t)) { if (clash(f.lv, f.x, f.z, null, 0)) continue; discs.push({ lv: f.lv, x: f.x, z: f.z, it: null, on: 0 }); by.set(v.id, { b, lv: f.lv, x: f.x, z: f.z, y: 0, ry: f.ry, use: 'de-pe', item: null, it: null, q: -1, st: fst, pose: poseWord(fst, 0) }); return true; }
+      return false;
+    };
+    const firstFree = uses => { for (const u of uses) { const L = t.byUse.get(u); if (!L) continue; for (const e of L) if (free(e)) return e; } return null; };
+    const left = []; const done = v => by.has(v.id) || withM.has(v.id);
+    // (0) the body: the place its hands took holds it; standing in the house, its own point is taken
+    const A = S.avatar; const body = A ? S.villagers.get(A.id) : null;
+    if (body && body.inside === b.id) {
+      const u = A.use; const e = u && u.b === b.id && u.key === planKey(b, b.ip) ? t.spots.find(s => s.it.id === u.it && s.q === u.q) : null;
+      if (e) give(body, e, u.st || USE_ST[e.use] || 'idle');
+      else discs.push({ lv: Number.isFinite(A.lv) ? A.lv : p.entryLv || 0, x: r2((body.x - b.x) * TILE), z: r2((body.y - b.y) * TILE), it: null, on: 0 });
+    }
+    // (1) the prisoners: a cell each, in the order of the cells; awake, sitting on its straw
+    if (T.cells) { const cs = In.cells(b); let k = 0;
+      for (const v of people) { if (done(v) || v.jail !== b.id) continue;
+        while (k < cs.length) { const c = cs[k++]; const e = c.bed ? t.spots.find(s => s.it.id === c.bed && s.use === 'deitar') : null; if (e && free(e)) { give(v, e, v.sleeping ? 'sleep' : 'rest'); break; } } } }
+    // (2) who sleeps in a house: in the beds the household gives out
+    const beds = T.use === 'casa' && people.some(v => v.sleeping && !done(v)) ? In.beds(b) : null;
+    if (beds) for (const v of people) {
+      if (done(v) || !v.sleeping) continue;
+      const w = beds.with.get(v.id); if (w && people.some(o => o.id === w)) { withM.set(v.id, w); continue; }
+      const pl = beds.by.get(v.id); const e = pl ? t.spots.find(s => s.it.id === pl.it.id && s.q === pl.q) : null;
+      if (e && free(e)) { give(v, e, v.sick > 0 ? 'sick' : 'sleep'); continue; }
+      // (no bed of one's own free there — the household has fewer, its own cannot be got to, the floor by choice —: lying on it)
+      onFloor(v, true, v.sick > 0 ? 'sick' : 'sleep');
+    }
+    // (3) who works: at the place the task names, else another of its use; at a station of the trade where one works
+    for (const v of people) {
+      if (done(v) || v.sleeping) continue; const tk = v.task; let e = null;
+      if (tk && (tk.item || tk.use)) {
+        if (tk.item) e = t.spots.find(s => s.it.id === tk.item && (!tk.use || s.use === tk.use) && !APPROACH[s.use] && free(s)) || null;
+        if (!e && tk.use) e = firstFree([tk.use]);
+        if (e) { give(v, e, tk.st || USE_ST[e.use] || 'interact'); continue; }
+      }
+      if (v.job === b.id) { e = t.spots.find(s => s.it.job && free(s)) || null; if (e) { give(v, e, USE_ST[e.use] || 'interact'); continue; } }
+    }
+    // (4) what the household wants — the more pressing first (pri, the rule's: the cook at the fire before who only sits), then
+    // by id
+    const rule = RULES[T.use]; const wants = [];
+    for (const v of people) if (!done(v)) wants.push([v, rule ? rule(b, v) : null]);
+    wants.sort((a, c) => ((c[1] && c[1].pri) || 0) - ((a[1] && a[1].pri) || 0) || a[0].id - c[0].id);
+    for (const [v, w] of wants) {
+      if (done(v)) continue;
+      if (w && w.with) { if (w.with !== v.id && people.some(o => o.id === w.with)) { withM.set(v.id, w.with); continue; } }
+      if (w && w.use) {
+        const uses = Array.isArray(w.use) ? w.use : [w.use]; let e = null;
+        if (w.item) for (const u of uses) { e = t.spots.find(s => s.it.id === w.item && s.use === u && free(s)) || null; if (e) break; }
+        if (!e) e = firstFree(uses);
+        if (e) { give(v, e, w.st || USE_ST[e.use] || 'idle'); continue; }
+        const lie = uses[0] === 'deitar' || LYING[w.st]; if (onFloor(v, lie, w.st || (lie ? 'sleep' : 'idle'))) continue;
+      }
+      left.push(v);
+    }
+    // (5) the rest: asleep, a bed free of its own or the floor; else a seat coming home, the fire, a seat; else the floor
+    for (const v of left) {
+      if (done(v)) continue;
+      if (v.sleeping) { const e = firstFree(['deitar']); if (e) give(v, e, v.sick > 0 ? 'sick' : 'sleep'); else onFloor(v, true, v.sick > 0 ? 'sick' : 'sleep'); continue; }
+      const home = v.task && v.task.type === 'goHome';
+      const e = firstFree(home ? ['sentar', 'comer', 'aquecer', 'cozinhar'] : ['aquecer', 'cozinhar', 'sentar', 'comer']);
+      if (e) give(v, e, USE_ST[e.use] || 'idle'); else onFloor(v, false, 'idle');
+    }
+    return { by, with: withM, probe: probe ? firstFree(probe) : null };
+  }
+  // where someone the world has inside a building is, inside it — the place given out (In.places); a child held, at the
+  // place of the one who holds it (with); with no place left at all, at the way in
   In.placeOf = function (v) {
-    if (!v || !(v.inside > 0)) return null; const b = G.S.buildings.get(v.inside); const p = b && In.plan(b); if (!p) return null;
-    if (v.sleeping && v.home === b.id) { const bd = In.bedOf(v); if (bd) return { b, lv: bd.item.lv, x: bd.spot.x, z: bd.spot.z, y: bd.spot.y, ry: bd.spot.ry, pose: 'deitado', item: bd.item.id }; }
-    // (a prisoner: in a cell of his own while there are cells for each — the cells by the prisoners' numbers —, on its straw)
-    if (v.jail === b.id) { const cs = In.cells(b); const c = cs.length ? cs[Math.abs(v.id | 0) % cs.length] : null; if (c && c.spot) { const it = p.items.find(i => i.id === c.bed); return { b, lv: it.lv, x: c.spot.x, z: c.spot.z, y: c.spot.y, ry: c.spot.ry, pose: v.sleeping ? 'deitado' : 'sentado', item: it.id }; } }
-    const jobs = p.items.filter(it => it.job); const t = v.task;
-    if (v.job === b.id && jobs.length) { const k = Math.abs((v.id | 0) % jobs.length); const it = jobs[k]; const sp = it.spots.find(s => !s.on) || it.spots[0]; if (sp) return { b, lv: it.lv, x: sp.x, z: sp.z, y: sp.y, ry: sp.ry, pose: 'trabalhando', item: it.id }; }
-    const fire = p.items.find(it => it.fire); const seat = p.items.find(it => it.spots.some(s => s.use === 'sentar' || s.use === 'comer'));
-    const pick = (t && t.type === 'goHome' && seat) || fire || seat || p.items[0];
-    if (pick) { const sp = pick.spots.find(s => !s.on) || pick.spots[0]; if (sp) return { b, lv: pick.lv, x: sp.x, z: sp.z, y: sp.y, ry: sp.ry, pose: pick === seat ? 'sentado' : 'de pé', item: pick.id }; }
-    const e = p.entrance; return e ? { b, lv: e.lv || 0, x: e.x, z: e.z, y: 0, ry: 0, pose: 'de pé', item: null } : null;
+    if (!v || !(v.inside > 0)) return null; const b = G.S.buildings.get(v.inside); if (!b || !b.ip || !TYPES[b.ip.t]) return null;
+    const P = In.places(b); const pl = P.by.get(v.id); if (pl) return pl;
+    const w = P.with.get(v.id); const o = w && P.by.get(w); if (o) return Object.assign({}, o, { with: w });
+    const p = In.plan(b); const e = p && p.entrance; return e ? { b, lv: e.lv || 0, x: e.x, z: e.z, y: 0, ry: 0, use: '', item: null, it: null, q: -1, st: 'idle', pose: 'de pé' } : null;
+  };
+  // the place one more wanting a use would have there now (a use or a list, the first wanted first): the step asks it before
+  // sending someone to eat at home or to pray in the temple — null where none is free
+  In.freePlace = function (b, use) {
+    const t = b && b.ip ? tableOf(b) : null; if (!t) return null;
+    const e = assign(b, t, Array.isArray(use) ? use : [use]).probe;
+    return e ? { b, lv: e.lv, x: e.x, z: e.z, ry: e.ry, use: e.use, item: e.it.id, it: e.it, q: e.q } : null;
   };
   // the doors as the world has them now: a rule of the world (time and who is in), or what someone made of them today
   const DS = ['fechada', 'aberta', 'trancada', 'bloqueada'];
