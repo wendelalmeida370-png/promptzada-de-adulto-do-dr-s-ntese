@@ -1,7 +1,8 @@
 // lar-inv: as regras do verificador para a vida em casa (P1, Patch 2) — quem está dentro de uma casa e por quê, quem dorme
 // e como, quem está fora de casa à noite sem afazer, quem cuida dos pequenos de dia (um por casa, e nenhuma criança presa
 // em casa sem ele), o bebê nos braços certos ao alcance (D-074), da casa cheia os moços saem primeiro (D-098), a despensa
-// pelo livro-razão; e, no estado canônico, quem está em casa
+// pelo livro-razão, a casa trocada na terra cara pelo menos pelo que custou à família que a tinha (L-236); e, no estado
+// canônico, quem está em casa e o que cada casa custou
 // (a ida e volta pelo save não pode tirar ninguém da cama: D-073). Carregado depois do qa/qa.js (QA.more / QA.canonMore);
 // o junta-inv.js o leva para dentro do qa.js. Lê os campos do mundo direto; a planta, pelas portas do G.Interiors.
 (function () {
@@ -19,6 +20,7 @@
   let baby0 = new Map(), baby0S = null; // (since when each baby has been in the wrong arms — or in none — with the right ones within reach)
   let pan = new Map(), panS = null; const moved = new Map(); // (each pantry at the last look; what the ledger moved since)
   let crowd = new Map(), crowdS = null; // (the houses too full at the last look: their beds, their people, their old and their young singles — D-098)
+  const sold = []; // (the houses traded between two families since the last look: [house, coins paid, its cost then, the owner lived in it, ledger line])
   QA.more.push(function (add, s) {
     const Lr = G.Lar; if (!Lr) return;
     const body = s.avatar ? s.avatar.id : 0; const In = G.Interiors;
@@ -135,6 +137,22 @@
       pan.set(b.id, n);
     }
     moved.clear();
+    // ---- a house traded between two families — the dear land's, social.js moveUp: the price paid from the house sold, where
+    // the buyer's things already are, to the seller's new one — is paid at least what it had cost the family that had it
+    // (b.custo, G.Casa), and only by its owner's family: a let house is not its tenants' to sell (L-236)
+    if (s === G.S) {
+      for (const [id, n, c, own, ln] of sold) {
+        if (n + 0.01 < c) add('lar', 3, `casa #${id}: trocada por ${r2(n)} moedas, menos do que tinha custado à família que a tinha (${r2(c)}; livro ${ln}) — L-236`);
+        if (!own) add('lar', 3, `casa #${id}: trocada por quem morava nela sem ser do dono (livro ${ln}) — L-236`);
+      }
+      sold.length = 0;
+    }
+  });
+  // (the ledger's lines of a house sold to another family, read as the price is paid: the cost, and whether its owner lived in it)
+  if (G.Depot) G.Depot.onMove.push(e => {
+    if (e[8] !== 'compra-casa' || e[5] !== 'moedas' || typeof e[3] !== 'string' || typeof e[4] !== 'string' || e[3].slice(0, 2) !== 'h:' || e[4].slice(0, 2) !== 'h:') return;
+    const b = G.S.buildings.get(+e[3].slice(2)); const o = b && b.dono ? G.S.villagers.get(b.dono) : null;
+    sold.push([+e[3].slice(2), e[6], b && Number.isFinite(b.custo) ? b.custo : 0, !!o && o.home === b.id, e[0]]); if (sold.length > 20) sold.shift();
   });
   // (the ledger's lines of food in and out of the houses, between two looks)
   if (G.Depot) G.Depot.onMove.push(e => {
@@ -142,7 +160,7 @@
     const at = (ref, k) => { if (typeof ref === 'string' && ref[0] === 'h' && ref[1] === ':') { const id = +ref.slice(2); moved.set(id, (moved.get(id) || 0) + k * e[6]); } };
     at(e[3], -1); at(e[4], 1);
   });
-  if (G.worldHooks) G.worldHooks.push(() => { night0 = new Map(); night0S = null; held0 = new Map(); held0S = null; baby0 = new Map(); baby0S = null; pan = new Map(); panS = null; moved.clear(); crowd = new Map(); crowdS = null; });
+  if (G.worldHooks) G.worldHooks.push(() => { night0 = new Map(); night0S = null; held0 = new Map(); held0S = null; baby0 = new Map(); baby0S = null; pan = new Map(); panS = null; moved.clear(); crowd = new Map(); crowdS = null; sold.length = 0; });
   // (who is at home — asleep, in the evening at home, sheltering — and who sleeps outdoors, is the same after a save and a
   // load: the round trip that takes anyone out of bed is seen — D-073, L-220)
   QA.canonMore.push(['lar', () => {
@@ -156,6 +174,8 @@
     }
     return out;
   }]);
+  // (what each house cost the family that has it — the dear land's price — is the same after a save and a load: L-236)
+  QA.canonMore.push(['custo', () => (G.S ? [...G.S.buildings.values()].filter(b => Number.isFinite(b.custo) && b.custo > 0).sort((a, c) => a.id - c.id).map(b => [b.id, b.custo]) : null)]);
   // (the festivals under way, their stage and their people in their parts, the same after a save and a load — L-222)
   QA.canonMore.push(['festas', () => {
     if (!G.S || !G.Fest || !G.Fest.list) return null; const s = G.S;

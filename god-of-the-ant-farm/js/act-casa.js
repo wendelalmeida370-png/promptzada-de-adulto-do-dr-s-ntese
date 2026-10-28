@@ -33,6 +33,9 @@
   // ------------------------------ who owns a house ------------------------------
   // b.dono: the owner's id; 0 = the people's. A house of an older world (or one the planner filled) gets its owner the day
   // the world first looks: the eldest grown person living in it — the founders' houses are their families'
+  // b.custo: what the house cost the family that has it — the price it was bought for, the materials and the ground of the
+  // work it paid —; the dear land's trade pays at least that (social.js moveUp, L-236). A house of an older world, one the
+  // planner filled, the people's: nothing
   K.owner = b => (built(b) ? b.dono || 0 : 0);
   const residents = b => { const out = []; for (const v of G.S.villagers.values()) if (v.home === b.id && !v.captive) out.push(v); return out; };
   // (how many live in each house, counted once for a decision)
@@ -207,7 +210,7 @@
   const art = nm => (G.gen(nm) === 'a' ? 'uma' : 'um');
   function buy(v, fam, b, set, price, why) {
     if (!pay(v, set, price, 'compra-casa')) return false;
-    b.dono = v.id; move(fam, b, 'comprou');
+    b.dono = v.id; b.custo = coinPeople(set) ? price : 0; move(fam, b, 'comprou');
     const nm = G.Village.buildName(b).toLowerCase();
     bio(v, `Comprou ${art(nm)} ${nm} do povo${coinPeople(set) ? ' por ' + price + ' moedas' : ''} e se mudou com a família (${WHY[why]}).`, `Compramos ${art(nm)} ${nm} e nos mudamos — enfim um teto nosso`);
     A.note(v, 'memory', `Compramos uma casa: ${nm}.`, NOTE);
@@ -242,7 +245,7 @@
       if (worth > EPS) D.move(f, to, 'moedas', worth, { code: 'venda-casa', by: o.id });
       A.note(o, 'memory', `${head.name} não pagava o aluguel: vendi a casa ao povo${worth > EPS ? ` por ${worth} moedas` : ''}.`, NOTE);
       for (const m of L) if (m.age >= 16) A.note(m, 'memory', `Devíamos o aluguel a ${o.name}: a casa passou ao povo.`, NOTE);
-      b.dono = 0; b.aluga = null;
+      b.dono = 0; b.aluga = null; b.custo = 0;
     }
   }
   // a new house: the city says where it goes and how tall; the people's builders raise it; the family paid the materials
@@ -322,8 +325,9 @@
     const kept = D.get('h:' + b.id, 'moedas'); const fac = o.fac || G.Village.facOfSet(b.set);
     if (kept > EPS && D.exists('f:' + fac)) D.move('h:' + b.id, 'f:' + fac, 'moedas', kept, { code: 'obra-casa', by: o.by || 0, part: true });
     const fam = o.fam.map(P).filter(v => v && !v.captive && v.set === b.set);
-    if (!fam.length) { b.dono = 0; return r; }
+    if (!fam.length) { b.dono = 0; b.custo = 0; return r; }
     if (!P(b.dono)) b.dono = fam[0].id;
+    b.custo = o.paid || 0; // (the materials and the ground the family paid for: L-236)
     move(fam, b, 'levantou');
     const v = fam[0]; const nm = G.Village.buildName(b).toLowerCase();
     bio(v, `Mudou-se com a família para ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm} que mandou levantar.`, `Nos mudamos para a nossa casa — levantada com o que juntamos`);
@@ -407,7 +411,7 @@
       if (b.dono === v.id) {
         const heir = b.built ? heirOf(b, v) : null;
         b.dono = heir ? heir.id : 0;
-        if (!b.dono) b.aluga = null;
+        if (!b.dono) { b.aluga = null; b.custo = 0; }
         if (heir) { bio(heir, `Herdou a casa de ${v.name}.`, `Herdei a casa de ${v.name}`); A.note(heir, 'memory', `Herdei a casa de ${v.name}.`, NOTE); }
       }
       if (b.encomenda && b.encomenda.fam.includes(v.id)) { b.encomenda.fam = b.encomenda.fam.filter(id => id !== v.id); if (b.encomenda.by === v.id) b.encomenda.by = b.encomenda.fam[0] || 0; if (!b.encomenda.fam.length) b.dono = 0; }
