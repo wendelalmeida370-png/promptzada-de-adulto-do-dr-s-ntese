@@ -1669,14 +1669,14 @@
     const S = G.S;
     v.task = null;
     let c = S.villagers.get(v.carrier) || null;
+    // (the body the player lives: the world never puts a baby in its arms, nor takes one from them unless it must)
+    const body = S.avatar ? S.avatar.id : 0;
     const drop = dropNow(c, v), held = !drop && !unfitCarrier(c);
-    if (held && (c.id === v.mother || c.id === v.father)) v.seekT = 0; // (in a parent's arms: a loss looks for new arms at once)
+    if (!drop && (c.id === body || (held && (c.id === v.mother || c.id === v.father)))) v.seekT = 0; // (in a parent's arms, or the body's: a loss looks for new arms at once)
     else {
       if (drop && c) v.seekT = 0; // (the arms just lost: new ones at once)
       if ((v.seekT = (v.seekT || 0) - dt) <= 0) {
         v.seekT = 1;
-        // (never put in the arms of the body the player lives without the player: the world's hands only)
-        const body = S.avatar ? S.avatar.id : 0;
         const ok = o => o && o !== v && o.id !== body && o.set === v.set && o.age >= 14 && !unfitCarrier(o);
         // (the mother or the father within reach takes it back; else one of the house within reach; who must let go now with
         // nobody near gives it to the mother or the father, or a grandmother, an aunt, a neighbour — the women of the village,
