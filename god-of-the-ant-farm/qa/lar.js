@@ -432,7 +432,10 @@ if (want('l14')) {
   // the age back at the end —, and the mechanism is what is proven: the old one minds them, they come home and stay)
   if (!e) {
     const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const x = houses.get(h.id) || { h, old: [], kids: [], grown: [] }; if (v.age >= 3 && v.age < 7) x.kids.push(v); else if (v.age >= 25 && v.age < 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v) && !v.secret) x.grown.push(v); houses.set(h.id, x); }
-    const cand = [...houses.values()].filter(x => x.kids.length).map(x => Object.assign(x, { o: x.grown.filter(g => !x.kids.some(k => k.mother === g.id || k.father === g.id)).sort((a, b) => b.age - a.age || a.id - b.id)[0] })).filter(x => x.o).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0];
+    // (one with a partner in the same house: a single grown one of a house too full is sent to one with room every few
+    // seconds — village.js assignHousing —, and the case would watch someone else's house)
+    const coupled = (g, h) => { const p = g.partner && S.villagers.get(g.partner); return !!p && p.home === h.id; };
+    const cand = [...houses.values()].filter(x => x.kids.length).map(x => Object.assign(x, { o: x.grown.filter(g => !x.kids.some(k => k.mother === g.id || k.father === g.id)).sort((a, b) => coupled(b, x.h) - coupled(a, x.h) || b.age - a.age || a.id - b.id)[0] })).filter(x => x.o).sort((a, b) => coupled(b.o, b.h) - coupled(a.o, a.h) || b.kids.length - a.kids.length || a.h.id - b.h.id)[0];
     if (cand) { aged = [cand.o, cand.o.age]; cand.o.age = 63; cand.old = [cand.o]; e = cand; }
   }
   if (!e) ok('l14 os velhos cuidam dos pequenos em casa', false, 'nenhuma casa com alguém de 62 anos ou mais e crianças de 3 a 6, nem com um adulto da casa que não seja o pai ou a mãe delas');
