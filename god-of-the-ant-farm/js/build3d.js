@@ -2834,7 +2834,50 @@ float m3scale(float p) {
     tina(F, it) { const { w, h } = it; F.cyl(0, 0, 0, w / 2 - 0.02, h, IWOOD, 'plankV'); F.cyl(0, h - 0.08, 0, w / 2 - 0.05, 0.01, [52, 70, 82]); },
     'roda-oleiro'(F, it) { F.cyl(0, 0.04, 0, 0.32, 0.07, IWOOD, 'plankH'); F.cyl(0, 0.1, 0, 0.03, 0.52, IDARK); F.cyl(0, 0.62, 0, 0.18, 0.04, IWOOD); F.cyl(0, 0.66, 0, 0.09, 0.12, ICLAY, 'mud'); },
     'forno-olaria'(F, it) { const { w, h } = it; F.cyl(0, 0, 0, w / 2 - 0.02, h * 0.32, ISTONE, 'stone'); F.sph(0, h * 0.5, 0, w / 2 - 0.05, ICLAY, h * 0.5, 'mud'); F.box(0, 0.1, w / 2 - 0.12, 0.36, 0.34, 0.2, [40, 32, 28]); },
-    secador(F, it) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.03), 0, 0, 0.05, h, d, IDARK, 'beam'); for (const y of [0.3, 0.75, 1.2]) { F.box(0, y, 0, w - 0.06, 0.03, d, IWOOD, 'plankH'); for (let k = 0; k < 4; k++) F.cyl(-w / 2 + 0.22 + (w - 0.44) * k / 3, y + 0.03, 0, 0.08, 0.16, ICLAY, 'mud'); } },
+    // (a rack of boards with the pots drying on them: as many boards as its height holds — the god's low racks of the potter's
+    // yard, 0.7 m, two; a tall one, three —, the pots on each to under its top; a post every 1.2 m along it)
+    secador(F, it) { const { w, d, h } = it; const m = Math.max(1, Math.ceil((w - 0.06) / 1.2)); for (let k = 0; k <= m; k++) F.box(-w / 2 + 0.03 + (w - 0.06) * k / m, 0, 0, 0.05, h, d, IDARK, 'beam');
+      const n = Math.max(1, Math.min(3, Math.round(h / 0.45))), np = Math.max(2, Math.round((w - 0.3) / 0.36));
+      for (let j = 0; j < n; j++) { const y = (h - 0.2) * (j + 1) / n; F.box(0, y, 0, w - 0.06, 0.03, d, IWOOD, 'plankH'); for (let k = 0; k < np; k++) F.cyl(-w / 2 + 0.2 + (w - 0.4) * k / (np - 1), y + 0.03, 0, 0.08, 0.15, dim(ICLAY, 0.92 + F.hv(j * 9 + k) * 0.12), 'mud'); } },
+    // (the fire on the floor of a round hut — T-161 —: eight stones round its ashes, the embers, two logs across; its light, FIRE_K)
+    'fogo-chao'(F, it) { const r = Math.min(it.w, it.d) / 2;
+      for (let k = 0; k < 8; k++) { const a = k * TAU / 8; F.cyl(Math.cos(a) * (r - 0.06), 0, Math.sin(a) * (r - 0.06), 0.06, Math.min(it.h || 0.15, 0.12), k % 2 ? ISTONE : dim(ISTONE, 0.88), 'stone'); }
+      F.cyl(0, 0, 0, r - 0.11, 0.03, IASH, 'soil'); F.cyl(0, 0.03, 0, r * 0.42, 0.03, IEMBER);
+      F.log(-r * 0.55, 0.07, -r * 0.3, r * 0.55, 0.09, r * 0.3, 0.035, IDARK, 'bark'); F.log(-r * 0.55, 0.07, r * 0.3, r * 0.55, 0.09, -r * 0.3, 0.035, IDARK, 'bark'); },
+    // (the trestle table of a yard and its two benches, one piece: the board on its two trestles in the middle, a bench along
+    // each side where the plan seats the eaters — d/2 − 0.175 out, the seat's height —; a jug, a cup and a bowl on it)
+    'mesa-terreiro'(F, it) { const { w, d, h } = it; const sy = it.seat || 0.45, nb = d / 2 - 0.175;
+      for (const e of [-1, 1]) { F.box(e * (w / 2 - 0.3), 0, 0, 0.08, h - 0.05, 0.62, IDARK, 'plankV'); F.box(0, sy - 0.05, e * nb, w - 0.1, 0.05, 0.3, IWOOD, 'plankH'); for (const s of [-1, 1]) F.box(s * (w / 2 - 0.2), 0, e * nb, 0.06, sy - 0.05, 0.24, IDARK, 'plankV'); }
+      F.box(0, 0.22, 0, w - 0.66, 0.06, 0.06, IDARK, 'beam'); F.box(0, h - 0.05, 0, w - 0.1, 0.05, 0.78, IWOOD, 'plankH');
+      F.cyl(-w * 0.22, h, 0.05, 0.07, 0.2, ICLAY, 'mud'); F.cyl(w * 0.08, h, -0.12, 0.045, 0.08, dim(ICLAY, 0.82)); F.cyl(w * 0.26, h, 0.1, 0.12, 0.05, IWOOD); },
+    // (the potter's tank: four walls of clay and in it the wet clay, up to how full it is — told nothing, near the brim)
+    'tanque-barro'(F, it, cx) { const { w, d, h } = it; for (const e of [-1, 1]) { F.box(0, 0, e * (d / 2 - 0.04), w, h, 0.08, ICLAY, 'mud'); F.box(e * (w / 2 - 0.04), 0, 0, 0.08, h, d - 0.16, ICLAY, 'mud'); }
+      const f = cx && Number.isFinite(cx.fill) ? G.clamp(cx.fill, 0, 1) : 0.85; const top = 0.04 + (h - 0.14) * f;
+      F.box(0, 0, 0, w - 0.16, top, d - 0.16, [128, 92, 66], 'mud'); F.box(0, top, 0, w - 0.22, 0.008, d - 0.22, [102, 78, 60]); },
+    // (the moulding floor: a bed of sand, the wooden mould at its corner and rows of fresh bricks drying on it)
+    eira(F, it) { const { w, d } = it; F.box(0, 0, 0, w, 0.02, d, [204, 180, 136], 'soil');
+      const ma = -w / 2 + 0.32, mn = d / 2 - 0.26; for (const e of [-1, 1]) { F.box(ma, 0.02, mn + e * 0.11, 0.5, 0.05, 0.025, IWOOD, 'plankH'); F.box(ma + e * 0.24, 0.02, mn, 0.025, 0.05, 0.22, IWOOD, 'plankH'); }
+      for (let j = 0; j < 3; j++) for (let k = 0; k < 4; k++) { const a = -w / 2 + 0.75 + k * (w - 1.0) / 3, n = -d / 2 + 0.3 + j * (d - 0.75) / 2; if (F.hv(j * 5 + k) < 0.85) F.box(a, 0.02, n, 0.26, 0.07, 0.13, dim([158, 112, 78], 0.9 + F.hv(j * 5 + k + 40) * 0.15), 'mud'); } },
+    // (a stack of bricks on its boards, as high as the store it holds is full — told nothing, most of the way)
+    'pilha-tijolos'(F, it, cx) { const { w, d, h } = it; F.box(0, 0, 0, w, 0.06, d, IDARK, 'plankH');
+      const f = cx && Number.isFinite(cx.fill) ? G.clamp(cx.fill, 0, 1) : 0.8; const hh = Math.max(0.08, (h - 0.06) * f);
+      F.box(0, 0.06, 0, w - 0.06, hh, d - 0.06, [176, 92, 62], 'brick'); if (hh < h - 0.2) F.box(-w * 0.18, 0.06 + hh, 0, w * 0.45, 0.08, d - 0.2, [170, 88, 60], 'brick'); },
+    // (the great jar: its foot, the swelling body, the neck and the rim, a lid of wood)
+    talha(F, it) { const { w, h } = it; const r = w / 2 - 0.03, hb = h * 0.37;
+      F.cyl(0, 0, 0, 0.14, 0.06, dim(ICLAY, 0.8), 'mud'); F.sph(0, 0.06 + hb, 0, r, ICLAY, hb, 'mud'); F.cyl(0, h * 0.72, 0, r * 0.45, h * 0.2, dim(ICLAY, 0.92), 'mud'); F.cyl(0, h * 0.92, 0, r * 0.58, 0.05, dim(ICLAY, 0.8), 'mud'); F.cyl(0, h * 0.92 + 0.05, 0, r * 0.52, 0.025, IWOOD, 'plankH'); },
+    // (the case of scrolls: its sides, back and top, five shelves, and on them the rolls lying front to back, as many as it
+    // keeps — the scrolls of the building's own store; told nothing, most of them)
+    estante(F, it, cx) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.02), 0, 0, 0.04, h, d, IDARK, 'plankV'); F.box(0, 0, -d / 2 + 0.015, w - 0.08, h, 0.03, dim(IWOOD, 0.8), 'plankV'); F.box(0, h - 0.04, 0, w, 0.04, d, IDARK, 'plankH');
+      const ys = [0.06, 0.46, 0.86, 1.26, 1.66].filter(y => y < h - 0.3); for (const y of ys) F.box(0, y, 0, w - 0.08, 0.03, d - 0.03, IWOOD, 'plankH');
+      const per = Math.max(2, Math.floor((w - 0.12) / 0.075)); const told = cx && Number.isFinite(cx.fill); const all = ys.length * per; const shown = told ? Math.round(G.clamp(cx.fill, 0, 1) * all) : all; let q = 0;
+      for (const y of ys) for (let k = 0; k < per; k++) { if (told ? q++ >= shown : F.hv(k * 7 + y * 31) > 0.78) continue; const a = -w / 2 + 0.08 + (w - 0.16) * (k + 0.5) / per, r = 0.03 + F.hv(k + y * 13) * 0.008;
+        F.log(a, y + 0.03 + r, -d / 2 + 0.06, a, y + 0.03 + r, d / 2 - 0.05, r, F.hv(k * 3 + y * 17) < 0.5 ? [214, 200, 164] : [196, 172, 128], 'linen'); } },
+    // (the reading table: its legs and board, a scroll open on each side where the readers sit, the rolls at its ends; a lamp)
+    'mesa-leitura'(F, it) { const { w, d, h } = it; F.legs(w, d, h - 0.05, 0.035, IDARK); F.box(0, h - 0.05, 0, w, 0.05, d, IWOOD, 'plankH');
+      for (const [a, n] of [[-w * 0.2, d * 0.2], [w * 0.2, -d * 0.2]]) { F.box(a, h, n, 0.4, 0.006, 0.22, [224, 210, 172]); for (const e of [-1, 1]) F.log(a + e * 0.2, h + 0.026, n - 0.12, a + e * 0.2, h + 0.026, n + 0.12, 0.026, [202, 186, 148]); }
+      F.cyl(0, h, 0, 0.05, 0.04, ICLAY, 'mud'); },
+    // (the speaker's stone where no form draws it: a block of the people's stone, a slab a little wider over it)
+    tribuna(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w - 0.06, h - 0.06, d - 0.06, ISTONE, 'stone'); F.box(0, h - 0.06, 0, w, 0.06, d, dim(ISTONE, 1.06), 'stone'); },
     'bancada-ourives'(F, it) { FURN.bancada(F, it); },
     fornalha(F, it) { const { w, h } = it; F.cyl(0, 0, 0, w / 2 - 0.02, h, ISTONE, 'stone'); F.box(0, 0.12, w / 2 - 0.08, 0.2, 0.22, 0.12, IEMBER); },
     cepo(F, it) { const { w, h } = it; F.cyl(0, 0, 0, w / 2 - 0.04, h, dim(IWOOD, 0.85), 'bark'); F.box(0.05, h, 0, 0.26, 0.02, 0.12, IIRON, 'iron', 0.4); },
@@ -2882,7 +2925,7 @@ float m3scale(float p) {
       F.cyl(0, h - 0.1, 0, 0.09, 0.45, dim(ISTONE, 0.95), 'stone'); F.sph(0, h + 0.38, 0, 0.13, dim(ISTONE, 0.95), 0.07, 'stone'); },
   };
   B3.FURN = FURN; // (for the tests: the kinds the 3D knows how to draw)
-  const FIRE_K = { lar: 1, fogao: 0.7, forno: 0.5, fogareiro: 0.45, braseiro: 0.6, 'forja-fogo': 1, 'forno-olaria': 0.6, fornalha: 0.5, 'fornalha-banho': 0.55 };
+  const FIRE_K = { lar: 1, 'fogo-chao': 0.9, fogao: 0.7, forno: 0.5, fogareiro: 0.45, braseiro: 0.6, 'forja-fogo': 1, 'forno-olaria': 0.6, fornalha: 0.5, 'fornalha-banho': 0.55 };
   // the door's leaf, apart, in its own frame: from its hinge (the origin) across the opening along +X, its foot at 0 — planks
   // with their battens on the room's side, the iron straps
   function leafParts(w, h, col) {
@@ -2917,6 +2960,7 @@ float m3scale(float p) {
     for (const l of levels) { const g = R3.Geo(); const K = kit(g, b, undefined, undefined, fine); g.ao = null; Ks[l.lv] = K; out.lv[l.lv] = g; if (!K0) K0 = K; }
     out.at = [K0.x0, K0.y0, K0.z0]; // (the plan's origin in the world: the lot's corner, the plinth's top)
     const sh = plan.shell; const round = sh.kind === 'round';
+    const Fm = formOf(b); // (the pieces of use its form draws — marked form, D-093 —: the outside's, not drawn again here)
     // (what the outside draws, from the same shell: the steps outside it; a terrace's walls)
     const outSteps = new Set(outOfPlan(plan).steps);
     // (the storey under another: the one whose area its own lies over, highest first)
@@ -2928,7 +2972,7 @@ float m3scale(float p) {
       if (round && l.lv === levels[0].lv) inRing(K, plan, l);
       for (const s of plan.stairs) if ((s.kind === 'degraus' ? s.lv1 : s.lv0) === l.lv && !outSteps.has(s)) inStair(K, plan, s);
       for (const it of plan.items) {
-        if (it.lv !== l.lv) continue; const from = g.p.length / 3; const foot = l.y + (it.y || 0) + FLOOR_UP; const F = piece(K, it, foot);
+        if (it.lv !== l.lv || (it.form && Fm)) continue; const from = g.p.length / 3; const foot = l.y + (it.y || 0) + FLOOR_UP; const F = piece(K, it, foot);
         // (the ceiling a piece reaches up to from its foot — a hood, a flue: the storey's own, or the eaves)
         const ceil = Math.min(l.y + l.h, sh.eave) - foot;
         const f = FURN[it.kind]; if (f) f(F, it, { ceil, fill: fill ? fill[it.id] : undefined }); else F.box(0, 0, 0, it.w, it.h, it.d, IWOOD, 'plankH');
