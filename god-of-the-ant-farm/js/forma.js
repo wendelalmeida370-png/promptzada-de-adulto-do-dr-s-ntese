@@ -610,6 +610,9 @@
       els.push({ k: 'talude', r: rect(L, a, 0.55, b, 0.92), r1: rect(L, a + 0.1, 0.65, b - 0.1, 0.82), y0: 0, y1: px(30), cor: WALL }, faixaF(L, a + 0.1, 0.65, b - 0.1, 0.82, 28, 30, 'trim'),
         { k: 'bandeira', p: [at(L, (a + b) / 2), at(L, 0.93), 0], h: px(36), cor: 'trim2' });
     }
+    // (the floor of the court and of the way under the gate — the yard of its plan —: from the lowest ground up to the hall's
+    // floor, a pavement the feet walk on, as the god's ground is; under the towers, hidden)
+    els.push({ k: 'bloco', r: rect(L, -0.92, 0.3, 0.92, 0.92), y0: 0, y1: 0.01, cor: ['base1', 'base1', 'base0'], mat: 'slab', piso: 1 });
     els.push(blocoF(L, -0.18, 0.62, -0.1, 0.86, 0, 20, WALL), blocoF(L, 0.1, 0.62, 0.18, 0.86, 0, 20, WALL), blocoF(L, -0.1, 0.62, 0.1, 0.86, 13, 20, WALL), faixaF(L, -0.18, 0.62, 0.18, 0.86, 18, 20, 'trim'),
       { k: 'porta', na: 'frente', v: at(L, 0.86), u: L / 2, w: 0.2 * TILE, y0: 0, y1: px(13), cor: '#2a2016', portao: true });
     for (const x of [-0.6, 0.6]) els.push({ k: 'braseiro', p: [at(L, x), at(L, 0.96), 0], r: 0.2, uso: 'acender' });

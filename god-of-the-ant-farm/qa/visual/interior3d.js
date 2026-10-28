@@ -114,6 +114,10 @@ for (const [b, plan, own] of jobs) {
   const Q = own ? { walk: (lv, x, z) => walkP(plan, lv, x, z), floorY: (lv, x, z) => floorYP(plan, lv, x, z) } : { walk: (lv, x, z) => In.walk(b, lv, x, z), floorY: (lv, x, z) => In.floorY(b, lv, x, z) };
   const tag = `${b.type}#${b.id}${plan.shell.kind === 'round' ? '(redonda)' : ''}`;
   const FMb = B3.formOf(b); // (its form, which draws its pieces of use marked form: D-093)
+  // (where its form's columns stand over the ground, in the lot's metres: each one's middle and its reach — its capital's, the
+  // papyrus of Egypt wider than the shaft —, a hand more)
+  const capR = FMb ? FMb.els.filter(e => e.k === 'colunata').flatMap(e => e.pts.map(p => { const q = G.Forma.toLot(B3.doorSide(b), FMb.L, p[0], p[1]); return [q[0], q[1], (e.papiro ? e.papiro.r : e.r) + 0.1]; })) : [];
+  const underCap = (x, z) => capR.some(([cx, cz, r]) => Math.hypot(x - cx, z - cz) < r);
   const rng0 = JSON.stringify(S.rng), bj0 = JSON.stringify(b, (k, v) => (k === '_dock' ? undefined : v));
   G.rngWatch = k => { draws[k ? 1 : 0]++; };
   const out = B3.interior(plan, b, { fine: true }); const again = B3.interior(plan, b, { fine: true }); const lean = B3.interior(plan, b, { fine: false });
@@ -167,7 +171,7 @@ for (const [b, plan, own] of jobs) {
       if (ox > 0.05 && oz > 0.05) found.push(`${tag} ${A.kind} #${A.id} e ${B.kind} #${B.id} um sobre o outro (piso ${A.lv}, ${(ox * 100).toFixed(0)} × ${(oz * 100).toFixed(0)} cm)`); } }
   // 2 and 3. the walls and their openings
   for (const w of plan.walls) {
-    if (w.kind === 'guarda-corpo') continue; const l = lvOf(w.lv); if (!l) continue;
+    if (w.kind === 'guarda-corpo' || (B3.formWall && B3.formWall(b, plan, w))) continue; const l = lvOf(w.lv); if (!l) continue; // (the form's own: its columns, its gate)
     const ax = w.b[0] - w.a[0], az = w.b[1] - w.a[1]; const L = Math.hypot(ax, az); if (L < 0.5) continue; const tx = ax / L, tz = az / L, nx = -tz, nz = tx;
     const holes = plan.holes.filter(h => h.wall === w.id);
     const nich = plan.items.filter(it => it.niche && it.lv === w.lv).map(it => (it.x - w.a[0]) * tx + (it.z - w.a[1]) * tz);
@@ -333,7 +337,8 @@ for (const [b, plan, own] of jobs) {
       for (const r of plan.rooms) { if (!r.open || (covered && r.lv === 0) || roofed(r)) continue; const l = lvOf(r.lv); if (!l) continue;
         for (const fx of [0.25, 0.5, 0.75]) for (const fz of [0.25, 0.5, 0.75]) { const x = r.r[0] + (r.r[2] - r.r[0]) * fx, z = r.r[1] + (r.r[3] - r.r[1]) * fz;
           if (rm && rm.r && x > rm.r[0] - 0.4 && x < rm.r[2] + 0.4 && z > rm.r[1] - 0.4 && z < rm.r[3] + 0.4) continue;
-          if (plan.items.some(it => it.lv === r.lv && x > it.r[0] - 0.1 && x < it.r[2] + 0.1 && z > it.r[1] - 0.1 && z < it.r[3] + 0.1)) continue; nSky++; // (a stall of the market in the court)
+          if (plan.items.some(it => it.lv === r.lv && x > it.r[0] - 0.1 && x < it.r[2] + 0.1 && z > it.r[1] - 0.1 && z < it.r[3] + 0.1)) continue; // (a stall of the market in the court)
+          if (underCap(x, z)) continue; nSky++; // (under a column of the form and its capital)
           const hit = cast(TA, W3([x, l.y + 0.3, z]), [0, 1, 0], 30, cutAt); if (hit) bad.sky.push(`${tag} ${r.fn} (piso ${r.lv}) em ${x.toFixed(2)},${z.toFixed(2)}: algo a ${hit.t.toFixed(2)} m`); } } }
     }
     // 12. the doors and arches of the outside, from the street: shut, the leaf in the opening; with the inside drawn, free
