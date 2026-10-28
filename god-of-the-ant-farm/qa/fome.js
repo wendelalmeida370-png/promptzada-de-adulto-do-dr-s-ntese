@@ -49,7 +49,9 @@ const project = type => { for (const t of [type, 'hut', 'well', 'house']) { cons
 const builtNow = id => { const b = S.buildings.get(id); return !!(b && b.built); };
 const onIt = id => [...S.villagers.values()].filter(v => v.task && v.task.type === 'build' && v.task.id === id);
 const leaveIt = b => { for (const v of onIt(b.id)) Vg.endTask(v); }; // (the builder called away)
-const allIn = b => { for (const k in b.need) b.need[k] = 0; b.incoming = {}; }; // (every material delivered)
+// (every material delivered: into the work, by the ledger — the work is a holder of the depot, 'o:', L-246; what was on its
+// way is let go by the builders' errands ending, leaveIt)
+const allIn = b => { for (const k of Object.keys(b.need)) if (b.need[k] > 0) D.make('o:' + b.id, k, b.need[k], { code: 'teste' }); };
 
 // ---------------- h1 six sixths ----------------
 let six = 0; for (let k = 0; k < 6; k++) six = Math.min(1, six + 0.5 / 3); // (the strokes of the skip's half steps on a work of 3)
