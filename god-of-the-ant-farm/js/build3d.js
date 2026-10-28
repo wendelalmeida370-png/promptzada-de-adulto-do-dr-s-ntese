@@ -423,6 +423,7 @@ float m3scale(float p) {
   const formOf = b => (G.Forma && G.Forma.has(b.type, styleOf(b)) ? G.Forma.of(b.type, styleOf(b)) : null);
   const heightOf = b => { const F = formOf(b); return F ? F.top : HEIGHT[b.type] || 5; };
   B3.height = heightOf;
+  B3.formOf = formOf; // (for the proofs)
 
   // ------------------------------ the kit ------------------------------
   // (everything in metres, from the corner of the footprint: a building is a little world of its own, then put in place)
