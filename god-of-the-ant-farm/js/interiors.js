@@ -832,7 +832,9 @@
   // 'ingreme' to 70°, climbed facing it, a hand on the steps (the miller's stair of a house); 'mao' beyond, a ladder
   const CLS = In.STAIR_CLS = [[45, 'degraus'], [50, 'escada'], [70, 'ingreme'], [91, 'mao']];
   function slopeOf(P, st) {
-    const yOf = lv => (lv === -1 ? 0 : (P.levels.find(l => l.lv === lv) || { y: 0 }).y);
+    // (the steps from outside start on the ground, at 0 — their lv0 -1 is the street, not a cellar; any other flight between two
+    // storeys of the plan, a cellar's -1 among them)
+    const yOf = lv => (lv === -1 && st.kind === 'degraus' ? 0 : (P.levels.find(l => l.lv === lv) || { y: 0 }).y);
     const len = st.dir[0] ? st.r[2] - st.r[0] : st.r[3] - st.r[1]; const rise = Math.abs(yOf(st.lv1) - yOf(st.lv0));
     const a = Math.atan2(rise, Math.max(0.01, len)) * 180 / Math.PI; return { slope: Math.round(a * 10) / 10, cls: CLS.find(c => a <= c[0])[1], rise: r2(rise) };
   }
