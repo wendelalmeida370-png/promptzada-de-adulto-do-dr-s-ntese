@@ -200,8 +200,12 @@
     const s = G.Space.surface(X, Z);
     // (water the world does not walk — the sea, a lake, a deep river — is no wall to a body that swims: in it goes)
     if (!s.walk && !(s.kind === 'deep' && b && b.caps && b.caps.swim)) return s.kind;
+    // (an open gate: the world walks its whole tile, the body only its passage — its piers are the stones the drawing puts there
+    // and the eye keeps out of, Build3D.wallSolid; a body already in them, a gate raised where it stood, steps out freely — L-308)
+    if (inGate(X, Z, feet) && !(b && inGate(b.X, b.Z, feet))) return 'wall';
     return ledge(X, Z, feet, floorAt(X, Z)) ? 'ledge' : null;
   }
+  const inGate = (X, Z, feet) => { const x = Math.floor(X / TL()), y = Math.floor(Z / TL()); return W.inb(x, y) && G.S.wall[y * G.N + x] === 2 && !!G.Build3D && G.Build3D.wallSolid(X, feet + 0.3, Z, 0); };
   // too high for a step: more than a stair's rise — or a boulder's steep face standing high over the earth, which is
   // climbed with the hands and not walked (a low stone is just stepped on)
   function ledge(X, Z, feet, f) {

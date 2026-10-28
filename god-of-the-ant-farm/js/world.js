@@ -275,7 +275,9 @@
     for (let vy = y; vy <= y + h; vy++) for (let vx = x; vx <= x + w; vx++) mn = Math.min(mn, G.S.H[vy * V + vx]);
     return mn;
   };
-  W.nearestLand = function (x, y, maxR) {
+  // (ok, when given: only land where ok(x, y) — the swimmer's, land from which home is reached, not a pocket the sea and the
+  // houses close in: L-306)
+  W.nearestLand = function (x, y, maxR, ok) {
     maxR = maxR || 20;
     const x0 = x | 0, y0 = y | 0;
     let best = null, bd = 1e9;
@@ -285,7 +287,7 @@
         const tx = x0 + dx, ty = y0 + dy;
         if (!W.inb(tx, ty)) continue;
         const i = W.idx(tx, ty);
-        if (W.isLand(i) && W.walkable(i)) {
+        if (W.isLand(i) && W.walkable(i) && (!ok || ok(tx + 0.5, ty + 0.5))) {
           const d = G.dist2(x, y, tx + 0.5, ty + 0.5);
           if (d < bd) { bd = d; best = [tx + 0.5, ty + 0.5]; }
         }

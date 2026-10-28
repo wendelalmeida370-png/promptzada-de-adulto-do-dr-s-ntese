@@ -10,10 +10,12 @@ const OUT = process.env.OUT || path.join(ROOT, 'worlds');
 // a leg: { goal, course } a goal of the skip; { years } free years; { ww: max } free years until the world war begins
 // (if it has not begun by then, the game's own start of a world war is called: the world chooses the reason and the
 // sides, only the moment is ours); { after: seconds } a little more, so the armies are on the move; { snap } keep it
+// (as sementes são as do navegador das provas: com outro motor de JavaScript o mesmo número faz outro mundo, e uma semente
+// que chegava à meta pode não chegar — T-123; no Chrome 153 a megalópole 3303 parou no nível 4 e a 3305 chegou)
 const KINDS = {
   cidade: { seed: 3101, opts: { type: 'continente', size: 128, tribes: 4 }, legs: [{ goal: 'cidade', course: 'fartura' }, { snap: 'cidade' }] },
   metropole: { seed: 3202, opts: { type: 'continente', size: 160, tribes: 5 }, legs: [{ goal: 'metropole', course: 'fartura' }, { snap: 'metropole' }] },
-  mega: { seed: 3303, opts: { type: 'continente', size: 160, tribes: 4 }, legs: [{ goal: 'mega', course: 'fartura' }, { snap: 'mega' }] },
+  mega: { seed: 3305, opts: { type: 'continente', size: 160, tribes: 4 }, legs: [{ goal: 'mega', course: 'fartura' }, { snap: 'mega' }] },
   mundial: { seed: 3505, opts: { type: 'continente', size: 160, tribes: 6 }, legs: [{ goal: 'metropole', course: 'fartura' }, { ww: 80 }, { after: 60 }, { snap: 'mundial' }] },
   anos: { seed: 3404, opts: { type: 'continente', size: 128, tribes: 5 }, legs: [{ years: 100 }, { snap: 'anos100' }, { years: 400 }, { snap: 'anos500' }, { years: 500 }, { snap: 'anos1000' }] },
 };

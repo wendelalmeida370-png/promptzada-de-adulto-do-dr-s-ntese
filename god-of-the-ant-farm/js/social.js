@@ -91,12 +91,11 @@
     // (a merchant house — its banner, its trade — is the family's, not the walls': it moves too)
     const D = G.Depot; const listOf = b => Object.assign({}, D.list('h:' + b.id));
     const kr = listOf(hr), kp = listOf(hp);
-    // (what the houses keep is what their chests and pantries keep: a swap whose things do not fit both ways waits)
-    for (const [k, n] of Object.entries(kp)) if (D.room('h:' + hr.id, k) + 1e-6 < n) return;
-    for (const [k, n] of Object.entries(kr)) if (D.room('h:' + hp.id, k) + (kp[k] || 0) + 1e-6 < n) return;
+    // (each family takes all of its own, as every move does — on the floor where the other house's chests and pantry are full,
+    // D-059: the dear house's pantry no longer has to fit in the cheap one's before they trade, L-314)
     const by = (r.l.find(v => v.age >= 18) || r.l[0]).id;
-    for (const [k, n] of Object.entries(kp)) if (n > 1e-6) D.move('h:' + hp.id, 'h:' + hr.id, k, n, { code: 'mudança', by, part: true });
-    for (const [k, n] of Object.entries(kr)) if (n > 1e-6) D.move('h:' + hr.id, 'h:' + hp.id, k, n, { code: 'mudança', by, part: true });
+    for (const [k, n] of Object.entries(kp)) if (n > 1e-6) D.move('h:' + hp.id, 'h:' + hr.id, k, n, { code: 'mudança', by, part: true, floor: true });
+    for (const [k, n] of Object.entries(kr)) if (n > 1e-6) D.move('h:' + hr.id, 'h:' + hp.id, k, n, { code: 'mudança', by, part: true, floor: true });
     D.move('h:' + hp.id, 'h:' + hr.id, 'moedas', PRICE, { code: 'compra-casa', by, part: true });
     const ke = b => ({ elite: b.elite || null, trade: b.trade || 0, tradeGood: b.tradeGood || null });
     const er = ke(hr), ep = ke(hp);

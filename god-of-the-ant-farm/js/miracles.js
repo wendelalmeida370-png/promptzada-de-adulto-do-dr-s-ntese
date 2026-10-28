@@ -247,6 +247,9 @@
     G.Save.computeDistances();
     G.Render && G.Render.reshape && G.Render.reshape(x, y, R + 2);
     G.Fac.updateTerritory();
+    // (who stood where the ground changed — sunk into the sea (or in a house it swallowed), a ford gone deep, a slope gone
+    // steep — is set right at once, as the round of every second would: L-306)
+    for (const v of S.villagers.values()) if (v.x >= x0 && v.x < x1 + 1 && v.y >= y0 && v.y < y1 + 1) G.Vg.reground(v);
     return { changed: changed.size, lost };
   }
   P.reshape = reshape;

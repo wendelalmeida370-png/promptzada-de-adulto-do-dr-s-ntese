@@ -640,8 +640,9 @@
   // reached them yet)
   let heard = false;
   G.worldHooks.push(() => { tAcc = 0; heard = false; });
-  // a story's beat: its own tick, the furthest step, and the ends that need no one to say them
-  function beat(story) {
+  // a story's turn: its own tick, the furthest step, and the ends that need no one to say them (not «beat»: that name is the
+  // storylet's line, St.beat — two functions of one name and the last one wins, L-320)
+  function turn(story) {
     const S = G.S; const d = DEF[story.type]; if (!d) { story.st = 'fim'; story.end = { k: 'interrompida', tone: 'sereno', d: S.day }; return; }
     try { if (d.tick) d.tick(story); } catch (e) { console.warn('stories tick', story.type, e); }
     // the furthest step it reached (for the panel's track, even when it ends badly)
@@ -660,11 +661,11 @@
     const s = st();
     // a protagonist gone: the story settles it as soon as it hears — its own tick (an heir taken up, or waited for), else its
     // end —, not up to a beat later: an active story never carries the dead
-    for (const story of s.stories) if (story.st === 'ativa' && !alive(story.protag) && !story.data.waitHeir) beat(story);
+    for (const story of s.stories) if (story.st === 'ativa' && !alive(story.protag) && !story.data.waitHeir) turn(story);
     heard = true;
     tAcc += dt; if (tAcc < 1.5) return; tAcc = 0;
     if (St.lookAround) St.lookAround(Math.max(4, Math.ceil(S.villagers.size / 10)));
-    for (const story of s.stories) if (story.st === 'ativa') beat(story);
+    for (const story of s.stories) if (story.st === 'ativa') turn(story);
     direct();
     // keep only the facts something still points to
     if (S.clock % 60 < 1.6) prune();

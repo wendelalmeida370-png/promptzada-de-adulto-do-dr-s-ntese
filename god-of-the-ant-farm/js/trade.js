@@ -95,8 +95,9 @@
     const mono = Tr.monopolyOf(k) === a.id ? 1.5 : 1;
     const value = (E.PRICE[k] || 1) * n * 1.15 * G.Civ.t(a.id, 'trade') * mono;
     // what they pay: coin, or something of theirs worth as much — out of their store into the merchant's pack, in the ledger
+    // (coin only where both peoples know it: the merchant of a people without coin is paid in kind — L-305)
     let back = null; const pay = (q, m) => { if (m > 0 && D.move('f:' + b.id, dst, q, m, { code: 'caravana-paga', by: v.id || 0, pack: true }).ok) back = { k: q, n: m }; };
-    if (E.coinage(b.id) && b.stock.moedas >= value * 0.6) pay('moedas', Math.round(Math.min(value, b.stock.moedas * 0.5)));
+    if (E.coinage(b.id) && E.coinage(a.id) && b.stock.moedas >= value * 0.6) pay('moedas', Math.round(Math.min(value, b.stock.moedas * 0.5)));
     else {
       // barter: something of theirs worth as much (their own fine things first)
       const opts = TRADE.filter(q => q !== k && surplus(b, q) >= 1 && (a.stock[q] || 0) < 4).sort((x, y) => (E.PRICE[y] || 0) - (E.PRICE[x] || 0));
@@ -107,10 +108,12 @@
     r.op = Math.min(100, r.op + 4); r.friend = Math.min(100, (r.friend || 0) + 3); r.trade = (r.trade || 0) + 1;
     a.exports = (a.exports || 0) + value; b.imports = (b.imports || 0) + value;
     const im = b.dep || (b.dep = {}); im[k] = { from: a.id, n: ((im[k] && im[k].from === a.id ? im[k].n : 0) + n), day: S.day };
-    // the merchant's house takes its share (the trade's own gain: born of the deal, with its cause in the ledger)
+    // the merchant's house takes its share (the trade's own gain: born of the deal, with its cause in the ledger) — in coin,
+    // where the merchant's people has coin: a people that does not know it gets no coins born of the deal, the house keeps
+    // the renown of the road (L-305)
     const h = v.ship ? null : E.homeOf(v); const cut = Math.round(value * 0.18 * 10) / 10;
     const seized = G.Polity && (G.Polity.econOf(a) === 'estatal' || G.Polity.econOf(a) === 'comunal');
-    const gain = ref => D.make(ref, 'moedas', cut, { code: 'comissao', by: v.id || 0 });
+    const gain = ref => (E.coinage(a.id) ? D.make(ref, 'moedas', cut, { code: 'comissao', by: v.id || 0 }) : null);
     if (seized) { gain('f:' + a.id); if (h) h.trade = (h.trade || 0) + value * 0.3; }
     else if (h) { gain('h:' + h.id); h.trade = (h.trade || 0) + value; h.tradeGood = k; checkElite(h, v, a, k); } else if (!v.ship) gain('p:' + v.id);
     // the road gets a name when it is walked again and again

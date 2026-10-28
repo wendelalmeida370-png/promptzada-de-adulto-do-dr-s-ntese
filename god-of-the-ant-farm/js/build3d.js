@@ -1520,7 +1520,9 @@ float m3scale(float p) {
     maravilha(g, gw, K) {
       const P = K.P; if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 10); return; }
       const st = styleOf(K.b);
-      if (st === 'egipcio') { g.put(SH.cone, R3.mat(K.x0 + K.w / 2, K.y0, K.z0 + K.d / 2, Math.PI / 4, K.w * 1.35, 24, K.d * 1.35), K.c(P.wl)); return; }
+      // (the Great Pyramid: four faces over a square base inside its lot — the eight-sided cone of before, 8.1 m of radius on a
+      // lot of 12, stood 2.1 m out of it all round)
+      if (st === 'egipcio') { g.put(SH.hip, R3.mat(K.x0 + K.w / 2, K.y0, K.z0 + K.d / 2, 0, K.w - 0.4, 24, K.d - 0.4), K.c(P.wl)); return; }
       for (let k = 0; k < 6; k++) { const s = K.w * (1 - k * 0.14); K.box(K.w / 2, k * 3.4, K.d / 2, s, 3.4, s, k % 2 ? P.wr : P.wl); }
       K.box(K.w / 2, 20.4, K.d / 2, K.w * 0.18, 4, K.d * 0.18, P.acc || '#f2c14e');
     },
@@ -3127,10 +3129,15 @@ float m3scale(float p) {
       pl = { X: o.b.x * L + q.x, Z: o.b.y * L + q.z, Y: y0 + (l ? l.y : 0) + (q.y || 0) + FLOOR_UP, yaw: Math.PI / 2 - (q.ry || 0), st: { deitado: 'sleep', sentado: 'sit', trabalhando: 'interact' }[q.pose] || 'idle' }; }
     placeMemo.set(v.id, pl); return pl;
   };
+  // (the steps before a door that come down into the street stand out of the lot by rights, on the street's ground — lower
+  // than the lot's on a slope, up to a few metres into it: Space.doorFlight —: the building's box leaves them out, the same in
+  // every proof that measures it — Build3D.check, and Build3D.bounds for the e1 of the incarnation and the hunt —, L-310)
+  const onStepOf = K => (X, Z) => !!K.steps && K.steps.some(r => X >= r[0] - 0.02 && X <= r[1] + 0.02 && Z >= r[2] - 0.02 && Z <= r[3] + 0.02);
   B3.bounds = function (b) {
     const g = R3.Geo(), gw = R3.Geo(); const K = kit(g, b); draw(g, gw, K, false);
-    const P = g.p; if (!P.length) return null; const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
-    for (let k = 0; k < P.length; k += 3) for (let a = 0; a < 3; a++) { lo[a] = Math.min(lo[a], P[k + a]); hi[a] = Math.max(hi[a], P[k + a]); }
+    const P = g.p; const onStep = onStepOf(K); const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+    for (let k = 0; k < P.length; k += 3) { if (onStep(P[k], P[k + 2])) continue; for (let a = 0; a < 3; a++) { lo[a] = Math.min(lo[a], P[k + a]); hi[a] = Math.max(hi[a], P[k + a]); } }
+    if (lo[0] > hi[0]) return null;
     return { lo, hi, floor: K.y0, ground: [K.lo, K.hi] };
   };
   // (what a building costs to draw: its triangles — the solid body, the panes, the swaying grass — with what lies about it)
@@ -3160,10 +3167,10 @@ float m3scale(float p) {
       const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(); const K = kit(g, b, gp); draw(g, gw, K, false);
       const P = g.p; let bad = 0, lo = 1e9, x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
       for (const arr of [P, g.n, gw.p, gp.p]) for (let k = 0; k < arr.length; k++) if (!Number.isFinite(arr[k])) bad++;
-      // (the steps before a door that come down into the street stand out of the lot by rights, on the street's ground — lower
-      // than the lot's on a slope —: not counted in how far it goes, nor in how low; each tread stands on the ground under it,
-      // a hand into it — Space.doorFlight —, and its top over it: the cut by the ground below says so)
-      const onStep = (X, Z) => !!K.steps && K.steps.some(r => X >= r[0] - 0.02 && X <= r[1] + 0.02 && Z >= r[2] - 0.02 && Z <= r[3] + 0.02);
+      // (the steps before a door that come down into the street — onStepOf —: not counted in how far it goes, nor in how low;
+      // each tread stands on the ground under it, a hand into it — Space.doorFlight —, and its top over it: the cut by the
+      // ground below says so)
+      const onStep = onStepOf(K);
       for (let k = 0; k < P.length; k += 3) { if (onStep(P[k], P[k + 2])) continue; lo = Math.min(lo, P[k + 1]); x0 = Math.min(x0, P[k]); x1 = Math.max(x1, P[k]); z0 = Math.min(z0, P[k + 2]); z1 = Math.max(z1, P[k + 2]); }
       const tag = `${b.type}#${b.id}`;
       if (bad) out.push(`${tag}: ${bad} números que não são números`);
