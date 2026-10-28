@@ -669,7 +669,9 @@
   // the moment he goes for it, by the same rule: a hand acting on it —; done at the contact — Act.commit —; let go if the
   // gesture is cut short — Act.abort. Refused at the key — another hand acting on it —, the gesture stops there, with the
   // world's words)
-  const GEST = { lift: 'carry', arrange: 'carry', give: 'interact', pay: 'interact', haggle: 'talk', examine: 'interact', count: 'interact', call: 'wave', point: 'interact' };
+  const GEST = { lift: 'carry', arrange: 'carry', give: 'interact', pay: 'interact', haggle: 'talk', examine: 'interact', count: 'interact', call: 'wave', point: 'interact',
+    // (the household's gestures at its places — at the table, on a seat, at the fire, with a child in the arms: Anim3D's states)
+    eat: 'eat', sit: 'sit', cook: 'cook', rock: 'rock' };
   I.GEST = GEST; // (for the coverage matrix, qa/matriz.js: the body's pose of each act — only read)
   // (where an offer is, for the reach and for the hands: a crate of a quay where the 3D draws it — the pile reached from any of
   // its sides, by its crate nearest the body; the hands to the very crate the world offers —; a crate set down in its store at
