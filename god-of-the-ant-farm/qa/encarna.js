@@ -74,20 +74,51 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       town: k => [...G.S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[k || 0],
       adults: (s, f) => [...G.S.villagers.values()].filter(o => (!s || o.set === s.id) && o.age >= 18 && o.age < 55 && !o.inside && G.Possess.can(o).ok && (!f || f(o))),
       body: () => G.Possess.body(),
-      // the body walked along the world's own path to (x, y) — the camera turned toward each next step, W held
+      // (the world's path in straight legs, as a player walks it: an open gate on a leg is gone through by the middle of its
+      // passage — the world walks the gate's whole tile, the body only the way between its piers (Build3D.wallSolid, L-308) —: a
+      // tile before it, the gate, a tile after, along the passage, across the wall, as qa/visual/estiva.js does (T-205). In
+      // Mênfis of the generation-6 metropolis the walk to the market crossed the gate of the town wall by a pier, and the body
+      // stood there pushing it to the end of the walk, and the two walks after began there: T-242)
+      throughGates(x0, y0, pts) {
+        const S = G.S, W = G.W; const out = []; let ax = x0, ay = y0;
+        for (const w of pts) {
+          const n = Math.ceil(Math.hypot(w[0] - ax, w[1] - ay) * 4); let last = -1;
+          for (let k = 1; k <= n; k++) {
+            const x = ax + (w[0] - ax) * k / n, y = ay + (w[1] - ay) * k / n; const gx = Math.floor(x), gy = Math.floor(y), i = W.idx(gx, gy);
+            if (S.wall[i] !== 2 || i === last) continue; last = i;
+            const ns = !!(S.wall[W.idx(gx, gy - 1)] || S.wall[W.idx(gx, gy + 1)]); // (the wall runs north to south: the passage west to east)
+            const s = (ns ? Math.sign(w[0] - ax) : Math.sign(w[1] - ay)) || 1; const c = [gx + 0.5, gy + 0.5];
+            for (const q of ns ? [[c[0] - s, c[1]], c, [c[0] + s, c[1]]] : [[c[0], c[1] - s], c, [c[0], c[1] + s]]) if (W.walkableXY(q[0], q[1])) out.push(q);
+          }
+          out.push(w); ax = w[0]; ay = w[1];
+        }
+        return out;
+      },
+      // the body walked along the world's own path to (x, y) — the camera turned toward each next step, W held; and round what
+      // stops the feet on the way, as a player steers — a boulder, a pier, a stall —: a step aside and on again, farther and to
+      // the other side the next time, as the estiva's proof walks (T-205, T-231, T-242)
       walkTo(x, y, max, run) {
         const v = E.body(); const st = G.Avatar.state(); if (!v || !st) return { ok: false, why: 'sem corpo' };
-        const p = G.W.findPath(v.x, v.y, x, y, true, 30000); if (!p) return { ok: false, why: 'sem caminho' };
-        let i = 0, bad = 0, under = 0, still = 0, last = [v.x, v.y], k = 0, camIn = 0;
-        for (; k < (max || 1500); k++) {
+        const p0 = G.W.findPath(v.x, v.y, x, y, true, 30000); if (!p0) return { ok: false, why: 'sem caminho' };
+        const p = E.throughGates(v.x, v.y, p0);
+        // (and the frames its length asks, at a slow walk, 0.05 m a frame, and some, when that is more than max: through the gate,
+        // the walk to the market of Mênfis is 31 tiles, 124 m, past the 1800 frames of the case — T-152 of the estiva, T-242)
+        let len = 0; { let a = [v.x, v.y]; for (const w of p) { len += Math.hypot(w[0] - a[0], w[1] - a[1]); a = w; } }
+        const lim = Math.max(max || 1500, Math.ceil(len * G.Space.TILE / 0.05) + 300);
+        let i = 0, bad = 0, under = 0, still = 0, last = [v.x, v.y], k = 0, camIn = 0, aside = 0, side = 1, turns = 0;
+        for (; k < lim; k++) {
           const w = p[Math.min(i, p.length - 1)]; const dx = w[0] - v.x, dy = w[1] - v.y; const d = Math.hypot(dx, dy);
           if (d < 0.3) { if (i >= p.length - 1) break; i++; continue; }
-          G.Cam3D.yaw = Math.atan2(dy, dx); G.Input3D.down.frente = true; G.Input3D.down.correr = !!run;
+          G.Cam3D.yaw = Math.atan2(dy, dx) + (aside > 0 ? side * Math.PI / 2 : 0); if (aside > 0) aside--; G.Input3D.down.frente = true; G.Input3D.down.correr = !!run;
           G.Main.frameFor(33);
           if (!G.W.walkableXY(v.x, v.y)) bad++;
           if (st.Y < G.Avatar.floorAt(st.X, st.Z) - 0.05) under++;
           const c = G.Realm.camera().position; if (G.Cam3D.solid(c.x, c.y, c.z)) camIn++;
-          if (k % 60 === 59) { if (G.dist(last[0], last[1], v.x, v.y) < 0.15) still++; else still = 0; last = [v.x, v.y]; if (still >= 3) break; }
+          if (k % 60 === 59) {
+            if (G.dist(last[0], last[1], v.x, v.y) < 0.15) still++; else still = 0; last = [v.x, v.y];
+            if (still && turns < 6 && d > 0.4 && (st.block === 'ledge' || st.block === 'wall' || st.block === 'building')) { turns++; side = -side; aside = 30 * turns; still = 0; }
+            if (still >= 3) break;
+          }
         }
         G.Input3D.down.frente = false; G.Input3D.down.correr = false; E.f(4);
         const end = p[p.length - 1];
@@ -366,7 +397,11 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const B = Sv.serialize(); load(B); const b1 = G.S.villagers.get(id);
     out.B = { avatar: G.S.avatar && G.S.avatar.id, task: b1 && b1.task && b1.task.type, mode: G.Modes.state, at: b1 ? G.dist(pB[0], pB[1], b1.x, b1.y) : -1, hud: (document.querySelector('#inc-hud .ih-name') || {}).textContent };
     // D) after walking far
-    const w = (() => { const x0 = b1.x, y0 = b1.y; G.Input3D.down.frente = true; G.Input3D.down.correr = true; G.Cam3D.yaw = 1.1; __E.f(240); G.Input3D.down.frente = false; G.Input3D.down.correr = false; __E.f(8); return G.dist(x0, y0, b1.x, b1.y) * 4; })();
+    // (a straight run, the stick held, toward the most open way about the body — dry ground the world walks, no lot nor wall —
+    // when the way of before is not: in the generation-6 «cidade» the way 1,1 rad from Túlia met an obstacle at 7,5 m — T-243)
+    const openTo = a => { let d = 0; for (; d < 8; d += 0.25) { const x = b1.x + Math.cos(a) * d, y = b1.y + Math.sin(a) * d; if (!G.W.inb(x, y)) break; const i = G.W.idx(x, y); if (!G.W.walkableXY(x, y) || S.occ[i] || S.wall[i] || S.type[i] <= G.T.RIVER) break; } return d; };
+    let yawD = 1.1; { let best = openTo(1.1); for (let k = 0; k < 16 && best < 6; k++) { const a = k / 16 * Math.PI * 2, d = openTo(a); if (d > best) { best = d; yawD = a; } } }
+    const w = (() => { const x0 = b1.x, y0 = b1.y; G.Input3D.down.frente = true; G.Input3D.down.correr = true; G.Cam3D.yaw = yawD; __E.f(240); G.Input3D.down.frente = false; G.Input3D.down.correr = false; __E.f(8); return G.dist(x0, y0, b1.x, b1.y) * 4; })();
     const pD = [b1.x, b1.y]; const D = Sv.serialize(); load(D); const d1 = G.S.villagers.get(id);
     out.D = { walked: w, at: d1 ? G.dist(pD[0], pD[1], d1.x, d1.y) : -1, avatar: G.S.avatar && G.S.avatar.id, mode: G.Modes.state };
     // C) after leaving
