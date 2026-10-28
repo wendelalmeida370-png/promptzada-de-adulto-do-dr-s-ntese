@@ -16,6 +16,9 @@
 //      portas e no livro; dorme em casa; devolvido, segue a vida dele — em casa pelo motivo dele, ou pela porta
 //  l12 o ferido fica de cama em casa e sara mais depressa; quem perde o companheiro passa as primeiras horas de luto em casa
 //  l14 de dia, um dos velhos da casa cuida dos pequenos (3 a 6 anos) em casa, e os pequenos ficam com ele, sem entrar e sair sem parar
+//  l15 o bebê muda de colo onde está (D-074): em casa à noite, a mãe em fúria o passa ao pai ou a alguém da casa, ali; um
+//      save no meio; na rua, a quem está perto (sem pulo); sem ninguém perto, à mãe, ao pai ou a uma mulher da vila, onde
+//      estiverem (como antes); nunca ao corpo do jogador; a guerreira entre lutas só o dá a alguém da casa
 //  l13 a continuidade da casa (o pedido 8.4): o corpo longe, perto, dentro (come e cozinha), fora, o tempo, de volta, o save —
 //      a família igual ao ser olhada e ao ver o corpo entrar, a despensa só pelo livro, o corpo deitado em casa no save
 //  l11 a reza dentro do templo (L-224): os fiéis entram pela porta até os lugares da planta, os outros nas fileiras de fora;
@@ -457,6 +460,85 @@ if (want('l14')) {
     ok('l14 os velhos cuidam dos pequenos em casa', minded >= 200 && avgKids >= 1 && !loops && two <= 20 && reloadOk && afterOk && !!died && !dw.wrong.length,
       `${h.type}#${h.id}: ${e.old.map(o => o.name).join(', ')} (${e.old.map(o => Math.floor(o.age)).join(', ')} anos) e ${e.kids.length} criança(s) de 3 a 6; de dia, cuidando em casa ${r2(minded / 10)} s de 55 («${txt}»), com ${avgKids} criança(s) em casa em média${reload}${after}${died ? '' : '; aos 55 s, NINGUÉM CUIDANDO para morrer'}${two ? `; dois cuidando juntos ${r2(two / 10)} s` : ''}${loops ? `; ${loops} criança(s) ENTRANDO E SAINDO sem parar` : ''}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}`);
   }
+}
+
+// ======================= l15: the baby changes arms where it is (D-074) =======================
+if (want('l15')) {
+  open();
+  const ROUGHT = { band: 1, fight: 1, patrol: 1, drill: 1, guard: 1, hunt: 1 };
+  const fit = o => !!o && o.age >= 16 && o.age < 70 && !(o.fury > 0) && o.role !== 'guerreiro' && !o.captive && !o.aboard && !o.ug && !isBody(o) && !(o.task && ROUGHT[o.task.type]);
+  const babies = () => [...S.villagers.values()].filter(b => b.age < 2 && !b.ug && !b.captive && b.carrier && b.carrier === b.mother).sort((a, c) => a.id - c.id);
+  const near3 = (b, o) => !o.inside && G.dist(o.x, o.y, b.x, b.y) <= 3;
+  const others = (b, m) => [...S.villagers.values()].filter(o => o.id !== m.id && o.id !== b.id && o.age >= 14 && near3(b, o));
+  const who = id => { const o = S.villagers.get(id); return o ? o.name : id ? '#' + id : 'ninguém'; };
+  const notes = []; let good = true; const fail = m => { good = false; notes.push(m.toUpperCase()); };
+  // (step by step: the biggest jump of the baby in one step, and the arms it went through)
+  const track = (id, sec) => { let b = S.villagers.get(id); let px = b.x, py = b.y, max = 0; const arms = [b.carrier || 0]; live(sec, () => { b = S.villagers.get(id); if (!b) return true; const d = Math.hypot(b.x - px, b.y - py); if (d > max) max = d; px = b.x; py = b.y; if (arms[arms.length - 1] !== (b.carrier || 0)) arms.push(b.carrier || 0); }); return { max, arms }; };
+  // (a) at night in the house: the mother in a fury — the father or one of the house takes the baby, there; a save in the
+  // middle keeps it in the same arms; the fury over, the mother or the father has it
+  liveTo(0.86);
+  const A = babies().find(b => { const m = S.villagers.get(b.mother); const h = m && builtHome(m); return !!h && m.inside === h.id && b.inside === h.id && [...S.villagers.values()].some(o => o.id !== m.id && o.home === h.id && o.inside === h.id && fit(o)); });
+  if (!A) fail('(a) nenhuma casa à noite com a mãe, o bebê e outro da casa dentro');
+  else {
+    const m = S.villagers.get(A.mother), h = builtHome(m); m.fury = 6;
+    const r1 = track(A.id, 4);
+    const before = S.villagers.get(A.id).carrier; M.salvarCarregar(); S = G.S; const after = S.villagers.get(A.id).carrier;
+    if (before !== after) fail(`(a) o save mudou o colo (${who(before)} → ${who(after)})`);
+    const r2_ = track(A.id, 8);
+    const b = S.villagers.get(A.id); const arms = r1.arms.concat(r2_.arms);
+    const held = arms.find(id => id && id !== m.id) || 0; const o = S.villagers.get(held);
+    if (!held) fail('(a) com a mãe em fúria, o bebê ficou nos braços dela');
+    else if (!o || o.inside !== h.id) fail(`(a) o bebê foi para ${who(held)}, fora da casa`);
+    if (arms.includes(0)) fail('(a) o bebê ficou sem colo no meio');
+    if (b.inside !== h.id) fail(`(a) o bebê saiu de casa (dentro de ${b.inside})`);
+    const jump = Math.max(r1.max, r2_.max); if (jump > h.w + h.h) fail(`(a) o bebê pulou ${r2(jump)} casas num passo`);
+    if (b.carrier !== m.id && b.carrier !== b.father) fail(`(a) passada a fúria, o bebê está com ${who(b.carrier)}`);
+    notes.push(`(a) ${h.type}#${h.id} à noite: a mãe ${m.name} em fúria → ${who(held)}, dentro de casa; o save o deixou com ${who(after)}; passada a fúria, com ${who(b.carrier)}${b.carrier === m.id ? ' (a mãe)' : b.carrier === b.father ? ' (o pai)' : ''}`);
+  }
+  // (b) by day in the street, someone near: the mother in a fury — the baby goes to arms within reach, no jump
+  open(); liveTo(0.3);
+  const B = babies().find(b => { const m = S.villagers.get(b.mother); return !!m && !m.inside && !b.inside && fit(m) && others(b, m).some(fit); });
+  if (!B) fail('(b) nenhum bebê de dia no colo da mãe, na rua, com alguém por perto');
+  else {
+    const m = S.villagers.get(B.mother); m.fury = 4;
+    const r = track(B.id, 2); const b = S.villagers.get(B.id);
+    if (!b.carrier || b.carrier === m.id) fail(`(b) o bebê ficou ${b.carrier ? 'com a mãe em fúria' : 'sem colo'}`);
+    if (r.max > 3.5) fail(`(b) o bebê pulou ${r2(r.max)} casas num passo (o colo de perto está a menos de 3)`);
+    notes.push(`(b) na rua, de dia: a mãe ${m.name} em fúria → ${who(b.carrier)}, ${r2(r.max)} casas no maior passo`);
+  }
+  // (c) by day in the street, nobody near: the mother or the father, or a woman of the village, wherever they are (as before)
+  const C = babies().find(b => { const m = S.villagers.get(b.mother); return !!m && !m.inside && !b.inside && fit(m) && !others(b, m).length; });
+  if (!C) notes.push('(c) nenhum bebê na rua sem ninguém por perto: o caminho de antes não foi visto');
+  else {
+    const m = S.villagers.get(C.mother); m.fury = 4;
+    track(C.id, 2); const b = S.villagers.get(C.id);
+    if (!b.carrier || b.carrier === m.id) fail(`(c) sem ninguém por perto, o bebê ficou ${b.carrier ? 'com a mãe em fúria' : 'sozinho'}`);
+    notes.push(`(c) na rua, ninguém perto: a mãe ${m.name} em fúria → ${who(b.carrier)}${b.carrier === b.father ? ' (o pai)' : ''}, onde estiver`);
+  }
+  // (d) the body the player lives, within reach: the world never puts the baby in its arms
+  const E = babies().find(b => { const m = S.villagers.get(b.mother); return !!m && !m.inside && !b.inside && fit(m) && others(b, m).filter(fit).length >= 1; });
+  if (!E) notes.push('(d) nenhum bebê com alguém perto para o corpo');
+  else {
+    const m = S.villagers.get(E.mother); const w = others(E, m).filter(fit).sort((a, c) => G.dist(a.x, a.y, E.x, E.y) - G.dist(c.x, c.y, E.x, E.y) || a.id - c.id)[0];
+    const took = G.Possess.take(w);
+    if (!took || !isBody(w)) notes.push(`(d) o corpo não pegou ${w.name}`);
+    else {
+      m.fury = 4; track(E.id, 2); const b = S.villagers.get(E.id);
+      if (b.carrier === w.id) fail(`(d) o mundo pôs o bebê no colo do corpo do jogador (${w.name})`);
+      notes.push(`(d) o corpo (${w.name}) ao lado: o bebê foi para ${who(b.carrier)}`);
+      G.Possess.release('deus');
+    }
+  }
+  // (e) a warrior between fights, only strangers near: keeps the baby (it goes only to one of the house within reach)
+  const F = babies().find(b => { const m = S.villagers.get(b.mother); if (!m || m.inside || b.inside || !fit(m)) return false; const n = others(b, m); return n.length > 0 && n.every(o => o.home !== b.home && o.id !== b.father); });
+  if (!F) notes.push('(e) nenhum bebê na rua só com estranhos por perto');
+  else {
+    const m = S.villagers.get(F.mother); const role = m.role; m.role = 'guerreiro';
+    track(F.id, 1.5); const b = S.villagers.get(F.id); m.role = role; const o = S.villagers.get(b.carrier);
+    if (b.carrier !== m.id && !(o && (o.home === b.home || o.id === b.father))) fail(`(e) a guerreira entre lutas deu o bebê a ${who(b.carrier)}, que não é da casa`);
+    notes.push(`(e) a mãe ${m.name}, guerreira entre lutas, só estranhos por perto: o bebê com ${who(b.carrier)}`);
+  }
+  ok('l15 o bebê muda de colo onde está (D-074)', good, notes.join(' · '));
 }
 
 // ======================= l11: the faithful inside the temple =======================

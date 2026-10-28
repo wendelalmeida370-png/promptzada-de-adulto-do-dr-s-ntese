@@ -1643,22 +1643,55 @@
   // ------------------------------ babies ------------------------------
   // nobody takes a baby to a battlefield: soldiers, hunters and guards leave it with someone at home
   const ROUGH = { band: 1, fight: 1, patrol: 1, drill: 1, guard: 1, hunt: 1, flee: 0 };
-  const unfitCarrier = c => !c || c.dead || c.captive || c.role === 'guerreiro' || (c.task && (ROUGH[c.task.type] || c.task.kind === 'band' || (c.task.type === 'caverna' && c.task.kind === 'raid'))) || c.fury > 0 || atSea(c);
+  const rough = c => !!(c.task && (ROUGH[c.task.type] || c.task.kind === 'band' || (c.task.type === 'caverna' && c.task.kind === 'raid')));
+  const unfitCarrier = c => !c || c.dead || c.captive || c.role === 'guerreiro' || rough(c) || c.fury > 0 || atSea(c);
   // (nor out to sea: a baby stays ashore with someone while the boat fishes or the ship explores — only colonists take the whole family)
   function atSea(c) { if (!c.aboard) return false; const e = G.Expe && G.Expe.memberOf(c.id); return !(e && e.kind === 'colonia'); }
+  // (who cannot hold the baby a moment longer — gone, taken, dead, at sea, off to fight, hunt or keep watch, in a fury, of
+  // another town —; a warrior between fights holds it until one of its house is within reach: D-074)
+  const dropNow = (c, v) => !c || c.dead || c.captive || c.set !== v.set || c.age < 14 || rough(c) || c.fury > 0 || atSea(c);
+  // (within reach of the baby: in the same house, or a few steps away outdoors or in the same cave — a baby changes arms
+  // where it is, never across the town: D-074)
+  const REACH = 3;
+  const nearBaby = (v, o) => (v.inside > 0 ? o.inside === v.inside : (o.ug || 0) === (v.ug || 0) && (v.ug ? true : !o.inside) && G.dist2(o.x, o.y, v.x, v.y) <= REACH * REACH);
+  // (the arms within reach: one of its house — and, for who must let go now, anyone, a woman before a man)
+  function reachOf(v, ok, anyone) {
+    let best = null, bd = 1e9;
+    for (const o of G.S.villagers.values()) {
+      if (!ok(o) || o.age < 16 || o.age >= 70 || !nearBaby(v, o)) continue;
+      const kin = !!v.home && o.home === v.home; if (!kin && !anyone) continue;
+      const d = G.dist2(o.x, o.y, v.x, v.y) + (kin ? 0 : 40) + (o.g === 'f' ? 0 : 20);
+      if (d < bd) { bd = d; best = o; }
+    }
+    return best;
+  }
   function babyUpdate(v, dt) {
     const S = G.S;
     v.task = null;
-    let c = S.villagers.get(v.carrier);
-    if (!c || c.set !== v.set || c.age < 14 || unfitCarrier(c)) {
-      c = null;
+    let c = S.villagers.get(v.carrier) || null;
+    const drop = dropNow(c, v), held = !drop && !unfitCarrier(c);
+    if (held && (c.id === v.mother || c.id === v.father)) v.seekT = 0; // (in a parent's arms: a loss looks for new arms at once)
+    else {
+      if (drop && c) v.seekT = 0; // (the arms just lost: new ones at once)
       if ((v.seekT = (v.seekT || 0) - dt) <= 0) {
         v.seekT = 1;
-        const ok = o => o && o !== v && o.set === v.set && o.age >= 14 && !unfitCarrier(o);
-        c = [S.villagers.get(v.mother), S.villagers.get(v.father)].find(ok) || null;
-        // a grandmother, an aunt, a neighbour: the women of the village, then anyone grown
-        if (!c) { let bd = 1e9; for (const o of S.villagers.values()) if (ok(o) && o.age >= 16 && o.age < 70) { const d = G.dist2(o.x, o.y, v.x, v.y) + (o.g === 'f' ? 0 : 400); if (d < bd) { bd = d; c = o; } } }
-      }
+        // (never put in the arms of the body the player lives without the player: the world's hands only)
+        const body = S.avatar ? S.avatar.id : 0;
+        const ok = o => o && o !== v && o.id !== body && o.set === v.set && o.age >= 14 && !unfitCarrier(o);
+        // (the mother or the father within reach takes it back; else one of the house within reach; who must let go now with
+        // nobody near gives it to the mother or the father, or a grandmother, an aunt, a neighbour — the women of the village,
+        // then anyone grown —, wherever they are)
+        const p = [S.villagers.get(v.mother), S.villagers.get(v.father)].find(o => ok(o) && nearBaby(v, o));
+        if (p) c = p;
+        else if (!held) {
+          let n = reachOf(v, ok, drop);
+          if (!n && drop) {
+            n = [S.villagers.get(v.mother), S.villagers.get(v.father)].find(ok) || null;
+            if (!n) { let bd = 1e9; for (const o of S.villagers.values()) if (ok(o) && o.age >= 16 && o.age < 70) { const d = G.dist2(o.x, o.y, v.x, v.y) + (o.g === 'f' ? 0 : 400); if (d < bd) { bd = d; n = o; } } }
+          }
+          if (n) c = n; else if (drop) c = null;
+        }
+      } else if (drop) c = null;
       v.carrier = c ? c.id : 0;
     }
     if (c) {
