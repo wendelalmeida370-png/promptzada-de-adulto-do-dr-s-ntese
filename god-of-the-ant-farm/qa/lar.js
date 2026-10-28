@@ -575,7 +575,7 @@ if (want('l15')) {
 }
 
 // ======================= l11: the faithful inside the temple =======================
-if (want('l11')) {
+if (want('l11', 'l11b')) {
   // (the temple with the most faithful for whom it is the nearest — the prayer goes to the nearest temple or monument of
   // one's own town, villagers.js —, in this world or, with too few, in the metropolis)
   const nearest = v => { let best = null, bd = 1e9; for (const b of S.buildings.values()) if (b.built && (b.type === 'temple' || b.type === 'monument') && b.set === v.set) { const d = G.dist2(v.x, v.y, b.x, b.y); if (d < bd) { bd = d; best = b; } } return best; };
