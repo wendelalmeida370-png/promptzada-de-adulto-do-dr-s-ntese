@@ -171,6 +171,27 @@ antes do conserto, e a prova que falhava passa depois. Por família:
   As outras falhas daquela rodada eram limites das provas diante dos mundos novos — a madeira do casco que faltava para
   a viagem, a árvore da prova que o lenhador levava, a água pequena demais para ver o peixe minguar —, e estão no AUDIT
   (T-189 a T-220).
+- **O que a última rodada achou** (L-376; abertos para o Patch 2: L-371, L-374, L-377). Os mundos foram gerados uma
+  última vez com todos esses consertos (a geração 6), e a regressão rodou de novo neles. Um defeito apareceu:
+  - depois de abrir um save, quem fazia um inquérito voltava às perguntas por cima do que outro sistema acabava de lhe
+    devolver: Jasão, guarda do motim de Argos, saía da praça para perguntar pela cidade (L-376).
+
+  E três ficaram anotados para o Patch 2, porque o conserto muda o mundo, e o Patch 2 vai gerar os mundos de novo:
+  - a família cuja casa está sendo ampliada fica sem água, sem cama e sem lar enquanto a obra dura (L-371);
+  - a porta dos guardados perde a operação da carga na sobra que não cabe no armazém — latente, nenhum caminho do mundo
+    chega lá hoje (L-374);
+  - o que um prédio guarda sai do mundo sem linha no livro quando ele cai, quando a cidade é abandonada, quando a guarda
+    fecha um mercado clandestino ou quando a cidade derruba o bairro velho (L-377).
+
+  O resto foram limites das provas diante dos mundos novos (T-231 a T-246), e o mais comum foi um só: **o corpo andando
+  pelo caminho do mundo**. O mundo anda de casa em casa, e o corpo tem largura. Por isso o corpo parava:
+  - no pilar de um portão, que o mundo atravessa pela casa toda e o corpo só pelo vão;
+  - na banca da borda de uma feira, que o mundo atravessa por dentro do lote;
+  - rente à quina de um prédio.
+
+  As provas agora andam como um jogador anda: passam o portão pelo meio, contornam o que trava os pés e têm o tempo que o
+  caminho pede. O jogador, que guia o corpo, não encontra esse problema. O caminho alisado do mundo, que corta quinas,
+  é o L-354, aberto para o Patch 2.
 
 ## 6. O que fica parcial, ou não foi feito
 
@@ -191,6 +212,10 @@ antes do conserto, e a prova que falhava passa depois. Por família:
   antes de qualquer banca abrir; uma tentativa sem ninguém para vender põe a casa em meio dia de espera. Num dia da
   metrópole de antes, 104 tentativas e 19 casas que compraram. O conserto pensado muda a economia da casa, e vai com o
   Patch 2, junto das oficinas cheias (D-090).
+- **Mais quatro defeitos abertos, para o Patch 2** (L-354, L-371, L-374 e L-377), cada um com o conserto proposto no
+  AUDIT. São eles: o caminho alisado do mundo, que corta a quina de um prédio; a família da casa em ampliação; a sobra que
+  a porta dos guardados registra sem a operação; e os guardados de um prédio que cai ou é derrubado. Todos mudam o mundo
+  ou o save, e o Patch 2 vai gerar os mundos de novo.
 - **Duas regras para decidir no Patch 2:** se um ato em curso (a caixa que alguém foi buscar) segura as mãos contra uma
   ida de fora, como a caverna; e se a execução espera quem leva uma compra para casa, como a festa já espera.
 - **Não medido:** o desempenho numa placa de vídeo de verdade e num celular.
