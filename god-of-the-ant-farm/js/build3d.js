@@ -1984,8 +1984,10 @@ float m3scale(float p) {
         B3.chim.set(K.b.id, [K.x0 + px, K.y0 + gy + 0.7, K.z0 + pz]); B.kiln = { side: d ? d.side : 'S', at: ax ? px : pz }; } },
     tecelagem(g, gw, K) { house(g, gw, K, { h: 3.2 }); if (K.prog >= 1) for (const [cc, k] of [['#c8483a', 0], ['#3f6fb0', 1], ['#e8b83a', 2]]) K.box(K.w * (0.25 + k * 0.25), 2.2, K.d - 0.3, 0.9, 1.4, 0.05, cc); },
     ourives(g, gw, K) { house(g, gw, K, { h: 3.2, wall: K.P.wr }); },
-    perolaria(g, gw, K) { house(g, gw, K, { h: 3 }); },
-    sericultura(g, gw, K) { house(g, gw, K, { h: 3 }); },
+    // the divers' hut, the silk house and the salting yard, from their forms
+    perolaria(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1.4, K.d - 1.4, 2.5); return; } formInto(g, gw, K, G.Forma.of('perolaria', styleOf(K.b)), doorSide(K.b)); },
+    sericultura(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 4); return; } formInto(g, gw, K, G.Forma.of('sericultura', styleOf(K.b)), doorSide(K.b)); },
+    salga(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 4); return; } formInto(g, gw, K, G.Forma.of('salga', styleOf(K.b)), doorSide(K.b)); },
     acougue(g, gw, K) { house(g, gw, K, { h: 3 }); if (K.prog >= 1) K.box(K.w * 0.75, 1.6, K.d - 0.3, 1.2, 0.08, 0.08, '#6a4a30'); },
     // the inn: its yard before the door (barrels, a table and its benches: Props3D), its sign hung from an iron arm by the door
     taverna(g, gw, K) { house(g, gw, K, { floors: 2, h: 2.9, chimney: true, plinth: true, yard: 1.2 }); if (K.prog >= 1) innSign(K); },

@@ -150,7 +150,7 @@
     o = o || {}; const [k0, pitch] = ROOFK[st] || ROOFK.classico; const kind = o.kind || k0; const ov = o.ov !== undefined ? o.ov : 0.08;
     if (kind === 'flat') { const h = o.par === 0 ? 0 : o.par || 1.4; return { els: h ? parapetF(L, x0, y0, x1, y1, z, h) : [], z: z + h }; }
     const rh = o.rh || Math.min(x1 - x0, y1 - y0) * 18 * pitch; const alongY = o.alongY || (x1 - x0 < y1 - y0 - 0.01);
-    const t = { k: 'telhado', r: rect(L, x0, y0, x1, y1), y0: px(z), y1: px(z + rh), ao: alongY ? 'v' : 'u', ov: ov * TILE, cor: ['roof0', 'roof1', 'gable', 'roof2'] };
+    const t = { k: 'telhado', r: rect(L, x0, y0, x1, y1), y0: px(z), y1: px(z + rh), ao: alongY ? 'v' : 'u', ov: ov * TILE, cor: o.cor || ['roof0', 'roof1', 'gable', 'roof2'] };
     if (kind === 'hip') t.quatro = true;
     if (kind === 'thatch') Object.assign(t, { ov: (ov + 0.04) * TILE, cor: ['thatch0', 'thatch1', 'wl', '#7a5a2e'], mat: 'thatch' });
     const els = [t];
@@ -808,6 +808,57 @@
     ] };
   };
   for (const st of ['classico', 'grego', 'romano', 'egipcio', 'asteca', 'nordico']) def('well', st, well(st));
+
+  // ------------------------------ the silk house, the salting yard (estates.js), the divers' hut (waters.js) ------------------------------
+  // (the estates' house: its footing of 1.5 px, its walls to H px, the door in the middle of its front, two windows on its right
+  // halfway up, the people's roof — the Norse's turf, the Egyptian's and the Aztec's flat behind a parapet of 1.2 px)
+  function estateF(L, st, x0, y0, x1, y1, H) {
+    const els = [blocoF(L, x0 - 0.04, y0 - 0.04, x1 + 0.04, y1 + 0.04, 0, 1.5, BASE), wallsF(L, x0, y0, x1, y1, 1.5, H, 0), doorF(L, y1, (x0 + x1) / 2 - 0.1, (x0 + x1) / 2 + 0.1, 1.5, 8),
+      winsF(L, 'direita', x1, y0, y1, H * 0.55, 2.4, 2)];
+    const rf = st === 'nordico' ? roofF(L, st, x0, y0, x1, y1, H, { kind: 'turf' }) : st === 'egipcio' || st === 'asteca' ? roofF(L, st, x0, y0, x1, y1, H, { par: 1.2 }) : roofF(L, st, x0, y0, x1, y1, H, {});
+    return { els: els.concat(rf.els), door: { u: at(L, (x0 + x1) / 2), w: 0.2 * TILE, y0: px(1.5), y1: px(8) } };
+  }
+  const WOOD = ['#6e4a2c', '#553820', '#6e4a2c'];
+  // the silk house: the house of 1.1 × 1 tiles to 15 px at the back left, and beside it the racks of trays under an open roof —
+  // four posts of 11 px, the trays at 3, 6 and 9 px white with cocoons, the roof of one slope from 12.5 to 11 px —; the line of
+  // skeins drying before the house and the mulberry bush at the front corner
+  const silk = st => L => {
+    const h = estateF(L, st, -0.9, -0.9, 0.2, 0.1, 15); const els = h.els.slice(); const P = (x, y, z) => [at(L, x), at(L, y), px(z)];
+    for (const [x, y] of [[0.4, -0.75], [0.85, -0.75], [0.4, -0.1], [0.85, -0.1]]) els.push(blocoF(L, x - 0.03, y - 0.03, x + 0.03, y + 0.03, 0, 11, WOOD, { mat: 'beam' }));
+    for (const z of [3, 6, 9]) els.push(blocoF(L, 0.35, -0.8, 0.9, -0.05, z, z + 0.25, ['#c8b088', '#a8905a', '#e8dcc0'], { mat: 'plankH' }));
+    els.push({ k: 'pano', p: [P(0.3, -0.85, 12.5), P(0.95, -0.85, 12), P(0.95, 0, 11), P(0.3, 0, 11.5)], cor: st === 'nordico' ? '#5a7631' : 'roof0', mat: st === 'nordico' ? 'turf' : 'shingle', grosso: 0.06 });
+    for (const x of [-0.8, 0.6]) els.push({ k: 'tora', a: P(x, 0.6, 0), b: P(x, 0.6, 9.4), r: 0.05, cor: '#6a4a2c' });
+    els.push({ k: 'tora', a: P(-0.8, 0.6, 9), b: P(0.6, 0.6, 9), r: 0.012, cor: '#7a6a50', mat: 'rope' });
+    ['#f6eede', '#f2e6a8', '#e8c8c0', '#f6eede', '#d8e0f0'].forEach((cor, k) => els.push({ k: 'tora', a: P(-0.65 + k * 0.28, 0.6, 9), b: P(-0.65 + k * 0.28, 0.6, 7.6), r: 0.07, cor, mat: 'linen' }));
+    els.push({ k: 'bola', c: [at(L, 0.75), at(L, 0.6), px(4)], r: 0.6, cor: '#4a7a2a' });
+    return { els, door: h.door };
+  };
+  // the salting yard: the house of 1 × 0.9 tiles to 13 px at the back left, the two racks across the yard hung with fish and
+  // meat — their posts of 10 px at the yard's sides, the bars at 6 and 9.6 px —, the two barrels of salt by the house
+  const salting = st => L => {
+    const h = estateF(L, st, -0.9, -0.9, 0.1, 0, 13); const els = h.els.slice(); const P = (x, y, z) => [at(L, x), at(L, y), px(z)];
+    for (const y of [0.25, 0.75]) {
+      for (const x of [-0.85, 0.85]) els.push({ k: 'tora', a: P(x, y, 0), b: P(x, y, 10), r: 0.07, cor: '#6a4a2c' });
+      for (const z of [9.6, 6]) els.push({ k: 'tora', a: P(-0.85, y, z), b: P(0.85, y, z), r: 0.04, cor: '#5a3c22' });
+      for (let k = 0; k < 7; k++) { const fish = (k + (y > 0.5 ? 1 : 0)) % 2; els.push({ k: 'tora', a: P(-0.75 + k * 0.25, y, 9.6), b: P(-0.75 + k * 0.25, y, fish ? 7.6 : 8), r: fish ? 0.11 : 0.09, cor: fish ? '#d8d0b8' : '#8a3a2a', mat: 'linen' }); }
+    }
+    for (const [x, y] of [[0.45, -0.6], [0.7, -0.35]]) els.push({ k: 'tina', c: [at(L, x), at(L, y)], r: 0.25, y0: 0, y1: px(3.2), cor: '#7a5230', aros: 2, aro: '#5a3a20', agua: '#f4f4f0' });
+    return { els, door: h.door };
+  };
+  // the divers' hut: its footing of 0.62 tiles and 1 px toward the back left, the walls of reed to 8 px, the roof of thatch 7 px
+  // high; the dugout lying at the front corner, the two baskets of shells before the hut, the pole with its line at the right
+  const divers = L => {
+    const P = (x, y, z) => [at(L, x), at(L, y), px(z)];
+    const els = [blocoF(L, -0.42, -0.42, 0.2, 0.2, 0, 1, BASE), blocoF(L, -0.38, -0.38, 0.16, 0.16, 1, 8, ['#b8905a', '#98703a', '#a8804a'], { mat: 'plankV' }),
+      ...roofF(L, 'classico', -0.45, -0.45, 0.24, 0.24, 8, { kind: 'gable', rh: 7, cor: ['#c8a860', '#a8884a', '#8a6a3a', '#8a6a3a'] }).els,
+      { k: 'tora', a: P(0.265, 0.31, 0.9), b: P(0.49, 0.075, 0.9), r: 0.16, cor: '#6a4a2a', mat: 'bark' },
+      ...[[-0.3, 0.38], [-0.08, 0.42]].map(([x, y]) => ({ k: 'tina', c: [at(L, x), at(L, y)], r: 0.3, y0: 0, y1: 0.3, cor: '#a07040', agua: '#e8d8c0' })),
+      { k: 'tora', a: P(0.3, -0.3, 0), b: P(0.3, -0.3, 9), r: 0.04, cor: '#6a4a2c' }, { k: 'tora', a: P(0.3, -0.3, 8.6), b: P(0.48, -0.1, 8.2), r: 0.012, cor: '#7a6a50', mat: 'rope' }];
+    els[2].mat = 'thatch';
+    return { els };
+  };
+  for (const st of ['classico', 'grego', 'romano', 'egipcio', 'asteca', 'nordico']) { def('sericultura', st, silk(st)); def('salga', st, salting(st)); }
+  def('perolaria', 'classico', divers);
 
   // ------------------------------ the statues' figures ------------------------------
   // the parts of a statue (estatua), in the canonical frame — what the 3D builds, and what its far figure and its height

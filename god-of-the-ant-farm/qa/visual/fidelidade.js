@@ -63,8 +63,8 @@ function verdict(cn, cf) {
 // their form, counted apart since — B3; 174 with the monuments and the golden statue from theirs — D1; 168 with the jail
 // drawn by the god from its shell — L-265; 166 with the theatres from their forms; 156 with the watchtower, the aqueduct,
 // the library, the administration, the tax office and the smugglers' market from theirs — Phase E; 150 with the square — D-093;
-// 138 with the mine and the well — D-092)
-const TETO = 138;
+// 138 with the mine and the well — D-092; 120 with the silk house, the salting yard and the divers' house from theirs)
+const TETO = 120;
 
 // ------------------------------ the round ------------------------------
 // (the kinds the god paints in a layer of its own, not as a building's picture — the ground of the fields and of the farm,
