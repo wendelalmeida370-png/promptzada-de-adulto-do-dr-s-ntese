@@ -8,8 +8,9 @@ const fs = require('fs'), path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const OUT = process.env.OUT || path.join(ROOT, 'worlds');
 // a leg: { goal, course } a goal of the skip; { years } free years; { ww: max } free years until the world war begins —
-// or until only three big peoples are left (pop 12 or more: the fewest the game's own start of a world war takes); with
-// the builders free (L-322) one empire swallowed the others in the 80 years, seeds 3510 and 3511 of 28/10, D-091 — (if it
+// or until only four big peoples are left (pop 12 or more: with three the game's own start may find no two sides — an
+// empire with the others its vassals); with the builders free (L-322) one empire swallowed the others in the 80 years,
+// seeds 3510 and 3511 of 28/10, D-091 — (if it
 // has not begun by itself, the game's own start of a world war is called: the world chooses the reason and the sides,
 // only the moment is ours); { after: seconds } a little more, so the armies are on the move; { snap } keep it
 // (as sementes são as do navegador das provas: com outro motor de JavaScript o mesmo número faz outro mundo, e uma semente
@@ -90,7 +91,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       const d0 = await page.evaluate(() => G.S.day); let left = leg.years;
       while (left > 0 && !failed) { const r = await run(null, 'livre', left); left = leg.years - (r.day - d0); if (!r.pop) failed = 'o mundo ficou vazio'; }
     } else if (leg.ww) {
-      const r = await run(null, 'livre', leg.ww, '() => !!G.WorldWar.active() || G.Fac.all().filter(f => G.Fac.pop(f.id) >= 12).length <= 3');
+      const r = await run(null, 'livre', leg.ww, '() => !!G.WorldWar.active() || G.Fac.all().filter(f => G.Fac.pop(f.id) >= 12).length <= 4');
       if (!r.ww) {
         const w = await page.evaluate(() => { const w = G.WorldWar.start() || G.WorldWar.start(true); return w ? w.name : null; });
         const big = await page.evaluate(() => G.Fac.all().filter(f => G.Fac.pop(f.id) >= 12).length);
