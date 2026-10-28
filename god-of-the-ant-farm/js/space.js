@@ -227,7 +227,7 @@
   // sobrado#14759, their steps down onto the gate of a wall's line; and the lot of another building of walls with its plan,
   // the body in only by its door — the steps of one never on another's lot, L-213 —, L-324, the house#24793, whose fourteen
   // steps came down into the feira#10950)
-  const barred = i => { const S = G.S; if (S.wall[i] === 2 || S.wall[i] === 4) return true; const B = S.occ[i] && S.buildings.get(S.occ[i]); return !!(B && !Sp.BASELESS[B.type] && G.Interiors && G.Interiors.has(B)); };
+  const barred = i => { const S = G.S; if (S.wall[i] === 2 || S.wall[i] === 4) return true; const B = S.occ[i] && S.buildings.get(S.occ[i]); return !!(B && !Sp.baseless(B) && G.Interiors && G.Interiors.has(B)); };
   Sp.doorFlight = function (b, sh, lot, w, h, ly, raised, F0, uc0, fresh) {
     const y = ly + (h.sill || 0); if (raised || y >= 0.3 || !w || !h) return null;
     // (kept by the wall's place too — its ends —, and the side given for a flight's foot: a door moved to another side of its
