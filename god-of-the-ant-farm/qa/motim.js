@@ -2,7 +2,8 @@
 // O save guardava o motim, mas não o que cada um fazia nele (as tarefas das pessoas não vão no save), e o load o apagava:
 // a rua ficava calma de repente, sem desfecho nenhum — e a ida e volta acusava (QA.roundTrip, riots).
 // m1 save/load na concentração; m2 na marcha; m3 na fúria, com a guarda na praça; m4 o líder morre no meio, e o save vem
-// logo depois; m5 um save antigo (o motim sem as tarefas guardadas) carrega como antes: a rua calma; e o verificador limpo.
+// logo depois; m5 um save antigo (o motim sem as tarefas guardadas) carrega como antes: a rua calma; m6 uma guerra convoca o
+// povo no meio do motim: os amotinados ficam na praça (L-366); e o verificador limpo.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const world = process.argv[2] || 'cidade';
@@ -105,6 +106,24 @@ const lastLog = () => (G.S.history.slice(-6).map(e => e.t || e.txt || '').filter
     G.Save.apply(o); S = G.S; live(2);
     const stale = [...G.S.villagers.values()].filter(v => v.task && (v.task.type === 'riot' || v.task.type === 'riotguard')).length;
     ok('m5 o save antigo', !(G.S.riots || []).length && !stale, `${where}: ${(G.S.riots || []).length} motins depois do load; ${stale} pessoas com tarefa de motim`);
+  }
+  undo();
+}
+
+// ---------------- m6 a levy in the middle of the riot: the crowd stays in the square (L-366) ----------------
+// (the ruler's levy took twenty of the forty rioters of Tenochtitlan to a war of conquest, and the riot, its square empty, was
+// told as crushed by the guard. Here the town in a riot is called to its defence — a war by the test's hand)
+{
+  const { R, where, undo } = rise(false);
+  if (!R) ok('m6 a convocação no meio do motim: a multidão fica na praça', false, 'precondição: ' + rise.why);
+  else {
+    live(3); const f = G.Fac.get(R.fac), set = G.S.settlements.get(R.set);
+    const foe = G.Fac.all().filter(q => q.alive && q.id !== f.id).sort((a, b) => a.id - b.id)[0];
+    const n0 = inIt(R); let A = null;
+    if (foe) { G.Wars.ensure(f, foe); const w = G.Wars.warOf(f.id, foe.id); A = w && G.Wars.mobilize(w, f, 'defesa', set); }
+    const n1 = inIt(R); const took = A ? A.members.filter(id => R.ids.includes(id)).length : 0;
+    const e = toEnd(R.id);
+    ok('m6 a convocação no meio do motim: a multidão fica na praça', !!A && n1 === n0 && !took && e.over && !e.stale, `${where}: ${A ? `${A.name} convocou ${A.members.length}` : `NENHUMA convocação (${foe ? 'a levada não saiu' : 'nenhum outro povo'})`}; no motim ${n0} → ${n1}, ${took} amotinado(s) levado(s); ${e.over ? 'o motim acabou' : 'não acabou em 200 s'}, ${e.stale} ainda com a tarefa do motim`);
   }
   undo();
 }
