@@ -154,7 +154,11 @@
   // an errand from outside waits until it is there, unless it is about that load or cannot wait; an errand that takes the
   // hands — a cave, a whale, a theft — would put its own things in them over it, and the load would be gone unwritten)
   function busyHands(v, t) {
-    const c = v.carry; if (!c || !(c.n > 1e-6) || !(c.op || c.to || c.cid)) return false;
+    let c = v.carry;
+    // (the second pair of hands under a heavy crate are as busy as the first: the crate the one who leads holds is theirs too —
+    // G.Act.pair; a cave took the helper from under one and the lead went on alone with the helper's name on it, L-330)
+    if (!(c && c.n > 1e-6) && v.task && v.task.st === 2 && G.Act && G.Act.pair) { const p = G.Act.pair(v); const l = p && p.side === 'tras' && G.S.villagers.get(p.lead); if (l) c = l.carry; }
+    if (!c || !(c.n > 1e-6) || !(c.op || c.to || c.cid)) return false;
     if ((t.pri || 0) >= 3 || t.type === 'carga' || t.type === 'deliver') return false;
     return !(c.op && t.op === c.op);
   }

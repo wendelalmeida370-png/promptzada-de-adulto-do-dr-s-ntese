@@ -140,6 +140,43 @@ function apart(v, h) {
   const walk = W4.length ? `; a dupla a ${r2(min)}–${r2(max)} casa uma da outra em ${looks} olhadas (${W4.length} viagem(ns), ${way} casas de caminho), ${ahead ? ahead + ' vez(es) À FRENTE de quem conduz' : 'nunca à frente'}, ${stops ? stops + ' PARADA(S) com ele andando' : 'nunca parada com ele andando'}; o verificador ${saw ? 'vê' : saw === null ? 'NÃO olhou' : 'NÃO vê'} a dupla separada` : '';
   ok('p4 a caixa pesada vai a dois', done && op4.st === 'ok' && want4 >= 8 && Math.abs(op4.done.stone - want4) < 1e-6 && !!pair && !twice && together && !!saw && !bad().length, pair ? `${nm(pair.lead)} na frente e ${nm(pair.help)} atrás, uma caixa de pedra só (no livro, nas mãos de quem vai na frente); chegou ${op4.done.stone} de ${want4}${want4 > 8 ? ' (as 8 do teste e ' + r2(want4 - 8) + ' que outro navio desembarcou na mesma descarga)' : ''}${walk}` : `ninguém levou a dois (caixas de 4 pedras = ${D.weight('stone', 4)} de peso; um adulto aguenta ${D.strength([...S.villagers.values()].find(v => v.set === set.id && v.role === 'estivador'))}) — chegou ${op4.done.stone} de ${want4}`);
 }
+// ---------------- p4b: the helper called in the middle of the way (L-330): an errand of the day — a cave's, pri 1,3, by the
+// door caves.js gives it through — waits for the crate (the hands under it are busy hands); one that cannot wait — pri 6 —
+// takes her, and the crate goes down there by its rule ('sem ajuda'): the one who leads does not go on alone with it, and
+// nobody, to the end of the unloading, carries alone what takes two
+{
+  const op4b = land('stone', 8); let lead = null, help = null;
+  // (a pair under way: at the first look after the two lift together — the store may be a few steps from the quay)
+  for (let k = 0; k < 1200 && !lead; k++) {
+    M.viver(0.1);
+    for (const v of S.villagers.values()) { const p = A.pair(v); if (p && p.side === 'frente' && v.carry.op === op4b.id && v.task && v.task.st === 2) { lead = v; help = S.villagers.get(p.help); break; } }
+    if (k % 10 === 9 && watch()) break;
+  }
+  let stays = false, took1 = null, down = false, took6 = null, line = null, alone = 0, done = false, k0 = '', n0 = 0;
+  if (lead) {
+    took1 = G.Vg.give(help, { type: 'idle', wait: 20, pri: 1.3 });
+    stays = !took1 && !!help.task && help.task.type === 'ajudar' && help.task.st === 2;
+    M.viver(0.1); const p1 = A.pair(lead); stays = stays && !!p1 && p1.help === help.id;
+  }
+  if (lead && stays) {
+    const L0 = S.ledgerN; k0 = lead.carry.k; n0 = lead.carry.n;
+    // (the crate goes by its rule: on the ground where he stands, back on the quay near it, into the store at its door)
+    took6 = G.Vg.give(help, { type: 'idle', wait: 20, pri: 6 }); M.viver(0.5);
+    line = D.ledger().find(e => e[0] > L0 && e[3] === 'v:' + lead.id && e[5] === k0) || null;
+    down = !!took6 && !(lead.carry && lead.carry.op === op4b.id) && !!line && ['pousou', 'devolveu', 'depositar'].includes(line[8]);
+    // (looked at every tenth of a second to the end: a load of two hands in one pair of arms, two looks running)
+    const run = new Map();
+    for (let s = 0; s < 4000 && A.live(op4b); s++) {
+      M.viver(0.1);
+      const now = new Map(); for (const v of S.villagers.values()) if (v.carry && v.carry.op === op4b.id && D.hands(v.carry.k, v.carry.n, v) !== 1 && !A.pair(v)) { now.set(v.id, (run.get(v.id) || 0) + 1); if (now.get(v.id) === 2) alone++; }
+      run.clear(); for (const [id, n] of now) run.set(id, n);
+      if (s % 10 === 9 && watch()) break;
+    }
+    done = !A.live(op4b);
+  }
+  ok('p4b a ajudante chamada no meio', !!lead && stays && down && !alone && done && op4b.st === 'ok' && Math.abs((op4b.done.stone || 0) - (op4b.taken.stone || 0)) < 1e-6 && !bad().length,
+    lead ? `${lead.name} e ${help.name} sob uma caixa de ${n0} ${E.name(k0) || k0}: chamada para um afazer do dia (pri 1,3), ${took1 ? 'ELA FOI' : 'ela ficou'} ${stays ? '(a dupla seguiu)' : '(a dupla NÃO seguiu)'}; chamada para o que não espera (pri 6), ${took6 ? 'foi' : 'NÃO foi'} — a caixa ${line ? `${line[8]} (${line[3]} → ${line[4]})` : 'NÃO saiu das mãos de ' + lead.name}${line ? (line[8] === 'pousou' ? ', no chão onde ele estava' : line[8] === 'devolveu' ? ', de volta ao monte do cais' : line[8] === 'depositar' ? ', para dentro do armazém (na porta)' : '') : ''}; ${alone ? alone + ' vez(es) ALGUÉM levou sozinho uma caixa de dois' : 'ninguém levou sozinho uma caixa de dois'}; no fim ${A.STATES[op4b.st]}, chegou ${op4b.done.stone || 0} de ${op4b.taken.stone || 0}` : 'nenhuma dupla sob uma caixa pesada');
+}
 // ---------------- p5: the warehouse fills while a crate is on its way: the porter waits at the door with it, nobody lifts
 // another, the unloading stops, nothing is lost; with room again, on to the end
 {
