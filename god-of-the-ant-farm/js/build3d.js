@@ -1099,6 +1099,7 @@ float m3scale(float p) {
   }
   // a rune stone (the model made in Blender, G.Mesh3D 'runa': its foot a quarter of a metre in the ground), at (x, z) of the lot,
   // its carved face turned ry from +Z, s its size: granite, the serpent band painted red, the runes cut dark. False: no model
+  B3.runeStone = (...a) => runeStone(...a); // (for what lies about a building: the stone at a northern town's first well, Props3D)
   function runeStone(K, x, z, ry, s) {
     const M3 = G.Mesh3D; if (!M3 || !M3.has('runa') || !M3.part('runa', 'pedra')) return false;
     const y = K.footed || BASELESS[K.b.type] ? Math.min(K.gy(x - 0.4, z), K.gy(x + 0.4, z), K.gy(x, z)) : 0; const m = R3.mat(K.x0 + x, K.y0 + y, K.z0 + z, ry, s, s, s);
@@ -1810,7 +1811,7 @@ float m3scale(float p) {
     bacia(K, e, X) {
       const C = X.XZ(e.c[0], e.c[1]); const y0 = X.foot(e.y0), y1 = X.Y(e.y1); const col = rgbOf(X.col(e.cor)); const ri = e.r - e.t, yw = y1 - (e.nivel || 0.1); const n = e.blocos || 0;
       K.as(X.mat(e, 'stone'), () => {
-        K.cyl(C[0], y0, C[1], ri + 0.02, Math.max(0.04, yw - 0.06 - y0), dim(col, 0.8)); // (its floor, under the water)
+        K.cyl(C[0], y0, C[1], ri + 0.02, Math.max(0.04, yw - 0.06 - y0), e.fundo ? rgbOf(X.col(e.fundo)) : dim(col, 0.8)); // (its floor, under the water)
         if (n) { const rm = e.r - e.t / 2, len = TAU * rm / n + 0.02;
           for (let k = 0; k < n; k++) { const a = (k + 0.5) / n * TAU; K.rbox(C[0] + Math.cos(a) * rm, y0, C[1] + Math.sin(a) * rm, len, y1 - 0.07 - y0, e.t, dim(col, 0.92 + K.hv(160 + k) * 0.14), -a - Math.PI / 2); } }
         else { const m = 20; const p = (r, a, y) => [C[0] + Math.cos(a) * r, y, C[1] + Math.sin(a) * r];
@@ -1822,6 +1823,20 @@ float m3scale(float p) {
       // (the coping of the blocks: a slab on each, a finger out of the rim both ways)
       if (n) K.as('slab', () => { const rm = e.r - e.t / 2, len = TAU * rm / n + 0.03; for (let k = 0; k < n; k++) { const a = (k + 0.5) / n * TAU; K.rbox(C[0] + Math.cos(a) * rm, y1 - 0.07, C[1] + Math.sin(a) * rm, len, 0.07, e.t + 0.02, dim(col, 1.04 + K.hv(180 + k) * 0.08), -a - Math.PI / 2); } });
       K.gq.disc(K.x0 + C[0], K.y0 + yw, K.z0 + C[1], ri, rgbOf(X.col(e.agua || '#4a9ac0')), 0.55, n ? 24 : 12);
+    },
+    // a hill of rock, a heap — the god's dome turned round (Forma.dome): rounds of flat faces up its curve, its stones out or in
+    // by the building's id, darker at its foot (a mine of gold, ouro: K.b.v — only seen), the glints of ore in its face
+    morro(K, e, X) {
+      const C = X.XZ(e.c[0], e.c[1]); const y0 = X.foot(e.y0), yb = X.Y(e.y0), H = e.y1 - e.y0; const big = e.r > 1; const nu = big ? 18 : 10, nv = big ? 6 : 3;
+      const cols = e.ouro && K.b.v === 1 ? e.ouro : e.cor; const hi = rgbOf(X.col(cols[0])), lo = rgbOf(X.col(cols[1]));
+      const ring = []; for (let j = 0; j <= nv; j++) { const d = G.Forma.dome(j / nv); const row = [];
+        for (let i = 0; i < nu; i++) { const a = i / nu * TAU; const jr = j === 0 || j === nv ? 1 : 0.86 + K.hv(300 + i + j * 17) * 0.14; const r = Math.max(0.02, e.r * d[0] * jr); // (in, never out past its round: the lot)
+          row.push([C[0] + Math.cos(a) * r, j === 0 ? y0 : yb + H * d[1], C[1] + Math.sin(a) * r]); }
+        ring.push(row); }
+      K.as(e.mat || 'rock', () => { for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) { const i2 = (i + 1) % nu; const am = (i + 0.5) / nu * TAU; const f = G.clamp((ring[j][i][1] + ring[j + 1][i][1]) / 2 - yb, 0, H) / H;
+        K.quad(ring[j][i], ring[j][i2], ring[j + 1][i2], ring[j + 1][i], mixc(lo, hi, f), [Math.cos(am), 0.4, Math.sin(am)]); } });
+      if (e.veios) K.as('slab', () => { const ore = K.b.v === 1 ? '#f2c14e' : '#a8522e'; for (let k = 0; k < e.veios; k++) { const j = 1 + Math.floor(K.hv(520 + k) * (nv - 2)), a = K.hv(540 + k) * TAU; const d = G.Forma.dome((j + 0.5) / nv);
+        K.box(C[0] + Math.cos(a) * e.r * d[0] * 0.98, yb + H * d[1], C[1] + Math.sin(a) * e.r * d[0] * 0.98, 0.16, 0.08, 0.16, ore); } });
     },
     // a bench: its plank, on its two feet of stone a little in from its ends
     banco(K, e, X) {
@@ -2070,17 +2085,9 @@ float m3scale(float p) {
       }
       house(g, gw, K, { h: 2.4, inset: Math.min(K.w, K.d) * 0.22, wall: '#9a7a50', pat: 'plankH', door: true });
     },
-    // the mine: a mound of rock over the shaft — only its cap, laid on the floor (a ball sunk 2.3 m in the ground drew the same
-    // cap: Build3D.check found it buried), its stones out or in by the mine's id, darker at its foot; the timbered mouth before it
-    mina(g, gw, K) {
-      const cx = K.w / 2, cz = K.d / 2, R = K.w * 0.4, H = 1.3, nu = 12, nv = 4; const pts = [];
-      for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) { const q = i % nu, a = q / nu * TAU, t = j / nv;
-        const jr = j === 0 ? 0.96 + K.hv(300 + q) * 0.08 : j === nv ? 1 : 0.86 + K.hv(300 + q + j * 17) * 0.28, jy = j === 0 || j === nv ? 1 : 0.94 + K.hv(340 + q + j * 13) * 0.12;
-        const r = Math.max(0.02, R * Math.pow(Math.cos(t * Math.PI / 2), 0.75) * jr); pts.push([cx + Math.cos(a) * r, j === 0 ? -0.05 : H * Math.sin(t * Math.PI / 2) * jy, cz + Math.sin(a) * r]); }
-      K.as('rock', () => K.sheet(pts, nu, nv, (X, Y) => mixc([104, 98, 86], [140, 134, 122], G.clamp((Y - K.y0) / H, 0, 1)), [0, 1, 0]));
-      K.as('beam', () => { for (const s of [-1, 1]) K.box(cx + s * 0.9, 0, K.d - 0.6, 0.4, 2.4, 0.4, '#6a4a2c'); K.box(cx, 1.9, K.d - 0.6, 1.4, 0.5, 0.4, '#5e4228'); });
-      K.box(cx, 0, K.d - 0.7, 1.4, 1.9, 0.42, '#141414');
-    },
+    // the mine, from its form: the hill over the galleries filling the lot, the mouth at its foot, the rails and the cart in the
+    // front corner (D-092) — the hill was there before the mine, going up as built
+    mina(g, gw, K) { formInto(g, gw, K, G.Forma.of('mina', styleOf(K.b)), doorSide(K.b)); },
     apiario(g, gw, K) { for (let k = 0; k < 4; k++) { const px = K.w * (0.25 + (k % 2) * 0.5), pz = K.d * (0.3 + Math.floor(k / 2) * 0.4); K.box(px, 0, pz, 0.15, 0.6, 0.15, '#6a4a2c'); K.box(px, 0.6, pz, 0.8, 0.7, 0.6, '#e8c870'); K.box(px, 1.3, pz, 0.95, 0.1, 0.75, '#8a6a44'); } },
     curral(g, gw, K) { fenceAround(K, 1.3, '#8a6a44', true); },
     estabulo(g, gw, K) { house(g, gw, K, { h: 3.4, inset: 0.6, wall: '#8a5a3a', pat: 'plankH' }); },
@@ -2090,27 +2097,9 @@ float m3scale(float p) {
     plantacao(g, gw, K) { fields(K, '#c8b84a', '#5a8a2a'); },
     vinhedo(g, gw, K) { for (let r = 0; r < K.b.h * 2; r++) { const z = (r + 0.5) * K.d / (K.b.h * 2); K.box(K.w / 2, 0, z, K.w - 0.8, 1.5, 0.35, '#4a7a2a'); K.box(0.4, 0, z, 0.12, 1.8, 0.12, '#6a4a2c'); K.box(K.w - 0.4, 0, z, 0.12, 1.8, 0.12, '#6a4a2c'); } },
     pomar(g, gw, K) { for (let k = 0; k < K.b.w * K.b.h; k++) { const px = ((k % K.b.w) + 0.5) * K.L, pz = (Math.floor(k / K.b.w) + 0.5) * K.L; K.cyl(px, 0, pz, 0.18, 1.6, '#6a4a2c'); K.sph(px, 2.6, pz, 1.2, '#4f8f36', 1.0); K.sph(px + 0.6, 2.3, pz + 0.3, 0.2, '#d23a2a'); } },
-    // the well: a ring of stones round the shaft, dark inside, its water deep down; two posts, the windlass across them with its
-    // rope and bucket, a little roof of the people's kind (the same place and size as the god's: x, z, 0.8 m round)
-    well(g, gw, K) {
-      const P = K.P; const x = K.w / 2, z = K.d / 2; const bs = P.base || ['#8a8478', '#6f6a60', '#a09a8e']; const nord = K.st === 'nordico';
-      K.cyl(x, 0, z, 0.6, 0.35, dim(bs[1], 0.45)); // (the shaft's dark)
-      K.as('stone', () => { const n = 11; for (let k = 0; k < n; k++) { const a = (k + 0.5) / n * TAU; K.rbox(x + Math.cos(a) * 0.68, 0, z + Math.sin(a) * 0.68, 0.43, 0.8, 0.24, mixc(bs[k % 3], bs[(k + 1) % 3], K.hv(170 + k) * 0.6), -a - Math.PI / 2); } });
-      K.as('slab', () => { for (let k = 0; k < 11; k++) { const a = (k + 0.5) / 11 * TAU; K.rbox(x + Math.cos(a) * 0.68, 0.8, z + Math.sin(a) * 0.68, 0.45, 0.07, 0.28, dim(bs[2], 0.95 + K.hv(190 + k) * 0.08), -a - Math.PI / 2); } });
-      K.gq.disc(K.x0 + x, K.y0 + 0.36, K.z0 + z, 0.57, [34, 62, 70], 0.85, 12);
-      const wc = nord ? nordWood(K).dark : [104, 78, 52];
-      K.as('beam', () => { for (const s of [-1, 1]) K.box(x + s * 0.82, 0, z, 0.13, 2.25, 0.13, wc); });
-      K.as('bark', () => K.log([x - 0.84, 1.45, z], [x + 0.84, 1.45, z], 0.075, [118, 94, 66]));
-      K.as('beam', () => K.bar([x + 0.88, 1.45, z], [x + 1.02, 1.28, z], [0, 0, 0.04], [0, 0.04, 0], wc)); // (the crank)
-      K.as('rope', () => K.log([x + 0.05, 1.42, z], [x + 0.05, 0.98, z], 0.012, [176, 156, 118]));
-      K.as('plankV', () => K.cyl(x + 0.05, 0.72, z, 0.13, 0.26, [120, 88, 56])); K.as('iron', () => K.cyl(x + 0.05, 0.9, z, 0.138, 0.03, '#3c3a36'));
-      const rp = nord ? 'shingle' : stuff(K.b).tile === 'mud' ? 'thatch' : stuff(K.b).tile; const rc = nord ? dim(wc, 1.1) : rp === 'thatch' ? ((P.thatch && P.thatch[0]) || '#c8a85a') : (P.roof && P.roof[0]) || '#b85a3c';
-      K.as(rp, () => K.gable(x, 2.2, z, 2, 0.6, 1.4, rc));
-      // (one rune stone to a town of the north, at its oldest well: in the well's lot — the body does not walk into it — behind the
-      // well from the side people come to it, its carved face to them)
-      if (nord && K.prog >= 1 && ![...G.S.buildings.values()].some(q => q.type === 'well' && q.set === K.b.set && q.id < K.b.id)) {
-        const o = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[doorSide(K.b)]; runeStone(K, x - o[0] * 1.48, z - o[1] * 1.48, Math.atan2(o[0], o[1]), 0.7); }
-    },
+    // the well, from its form: the god's well-house at the scale of people (D-092); the rune stone at a northern town's first well
+    // is among what lies about it (Props3D)
+    well(g, gw, K) { formInto(g, gw, K, G.Forma.of('well', styleOf(K.b)), doorSide(K.b)); },
     // the campfire: a ring of broken stones half sunk in the ground — each its size, its tilt and its grey by the fire's id,
     // sooted on the side the fire is — round a bed of ash and embers, and the logs leaning in on one another, their bark on,
     // their upper ends burnt to charcoal (where they meet, 0.6 m over the ground, FX3D's flames rise)

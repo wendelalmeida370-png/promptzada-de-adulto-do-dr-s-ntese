@@ -223,11 +223,14 @@ F.planCheck = function (b, Fm, pic, side) {
     const den = (P[1][1] - P[2][1]) * (P[0][0] - P[2][0]) + (P[2][0] - P[1][0]) * (P[0][1] - P[2][1]); if (Math.abs(den) < 1e-9) continue;
     const i0 = Math.max(0, Math.floor(Math.min(P[0][0], P[1][0], P[2][0]))), i1 = Math.min(n - 1, Math.ceil(Math.max(P[0][0], P[1][0], P[2][0]))), j0 = Math.max(0, Math.floor(Math.min(P[0][1], P[1][1], P[2][1]))), j1 = Math.min(n - 1, Math.ceil(Math.max(P[0][1], P[1][1], P[2][1])));
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const x = i + 0.5, y = j + 0.5; const l1 = ((P[1][1] - P[2][1]) * (x - P[2][0]) + (P[2][0] - P[1][0]) * (y - P[2][1])) / den, l2 = ((P[2][1] - P[0][1]) * (x - P[2][0]) + (P[0][0] - P[2][0]) * (y - P[2][1])) / den; if (l1 >= 0 && l2 >= 0 && l1 + l2 <= 1) A[j * n + i] = 1; } }
-  // (the form from above: its footprint and its roofs, out to their eaves — the 3D's roof covers its rect and ov all round)
+  // (the form from above: its footprint, its roofs out to their eaves — the 3D's roof covers its rect and ov all round —, and
+  // its sheets laid flat: a roof of boards, a cloth)
   const roofs = Fm.els.filter(e => e.k === 'telhado').map(e => ({ k: 'rect', r: [e.r[0] - (e.ov || 0), e.r[1] - (e.ov || 0), e.r[2] + (e.ov || 0), e.r[3] + (e.ov || 0)] }));
-  for (const f of [...Fo.foot(Fm), ...roofs]) for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+  const sheets = Fm.els.filter(e => e.k === 'pano').map(e => ({ k: 'poly', p: e.p.map(q => [q[0], q[1]]) }));
+  const inPoly = (P, x, y) => { let inside = false; for (let a = 0, b2 = P.length - 1; a < P.length; b2 = a++) { const [xa, ya] = P[a], [xb, yb] = P[b2]; if ((ya > y) !== (yb > y) && x < (xb - xa) * (y - ya) / (yb - ya) + xa) inside = !inside; } return inside; };
+  for (const f of [...Fo.foot(Fm), ...roofs, ...sheets]) for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const lx = (i + 0.5 - off) * S, lz = (j + 0.5 - off) * S; const c = Fo.toLot(side === 'S' ? 'S' : side === 'N' ? 'N' : side === 'E' ? 'W' : 'E', Fm.L, lx, lz); // (the lot back to the form's frame)
-    if (f.k === 'rect' ? c[0] >= f.r[0] && c[0] <= f.r[2] && c[1] >= f.r[1] && c[1] <= f.r[3] : Math.hypot(c[0] - f.c[0], c[1] - f.c[1]) <= f.r) B[j * n + i] = 1; }
+    if (f.k === 'rect' ? c[0] >= f.r[0] && c[0] <= f.r[2] && c[1] >= f.r[1] && c[1] <= f.r[3] : f.k === 'poly' ? inPoly(f.p, c[0], c[1]) : Math.hypot(c[0] - f.c[0], c[1] - f.c[1]) <= f.r) B[j * n + i] = 1; }
   let inter = 0, uni = 0; for (let q = 0; q < n * n; q++) { if (A[q] && B[q]) inter++; if (A[q] || B[q]) uni++; }
   const hi = G.W.maxH(b.x, b.y, b.w, b.h) * G.Space.HM;
   return { iou: uni ? inter / uni : 1, top: top - hi, formTop: Fm.top };

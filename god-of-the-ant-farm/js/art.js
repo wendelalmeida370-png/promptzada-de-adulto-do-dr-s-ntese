@@ -614,6 +614,9 @@
       case 'well': {
         const [w, h, ax, ay] = spriteDims(1, 1, 24);
         return Art.sprite(key, w, h, ax, ay, (c) => {
+          // (the well-house at the scale of people — D-092: its form's, G.Forma well —, 0.57 of the picture of before about its
+          // foot: 3.9 m high where it was 6.6)
+          c.save(); c.translate(0, 1); c.scale(0.57, 0.57); c.translate(0, -1);
           const g = c.createLinearGradient(-8, 0, 8, 0); g.addColorStop(0, '#b8b2a6'); g.addColorStop(1, '#7e786e');
           c.fillStyle = g; c.beginPath(); c.ellipse(0, 1, 7, 3.5, 0, 0, Math.PI); c.lineTo(-7, -4); c.lineTo(7, -4); c.closePath(); c.fill(); c.fillRect(-7, -4, 14, 5);
           c.strokeStyle = 'rgba(70,65,60,0.5)'; c.lineWidth = 0.35;
@@ -622,10 +625,13 @@
           c.fillStyle = '#1e3a4a'; c.beginPath(); c.ellipse(0, -4, 5.2, 2.5, 0, 0, TAU); c.fill();
           c.fillStyle = 'rgba(120,190,220,0.5)'; c.beginPath(); c.ellipse(-1, -4.4, 2, 0.8, 0, 0, TAU); c.fill();
           c.fillStyle = '#6e4a2c'; c.fillRect(-6.5, -16, 1.2, 12); c.fillRect(5.3, -16, 1.2, 12);
-          c.fillStyle = '#9a4a32'; c.beginPath(); c.moveTo(-9, -14); c.lineTo(0, -20); c.lineTo(9, -14); c.lineTo(9, -12.5); c.lineTo(0, -18.3); c.lineTo(-9, -12.5); c.closePath(); c.fill();
-          c.fillStyle = '#7a3826'; c.beginPath(); c.moveTo(0, -20); c.lineTo(9, -14); c.lineTo(9, -12.5); c.lineTo(0, -18.3); c.closePath(); c.fill();
-          c.strokeStyle = '#4a3a2a'; c.lineWidth = 0.4; c.beginPath(); c.moveTo(-5.3, -13); c.lineTo(5.3, -13); c.moveTo(0, -13); c.lineTo(0, -8); c.stroke();
-          c.fillStyle = '#7a5a3a'; c.fillRect(-1.2, -8, 2.4, 2);
+          // (its roof of two slopes: as deep as the form's — its ridge of 0.6 m seen from the god's corner)
+          c.fillStyle = '#9a4a32'; c.beginPath(); c.moveTo(-9, -14); c.lineTo(0, -20); c.lineTo(9, -14); c.lineTo(9, -11); c.lineTo(0, -17); c.lineTo(-9, -11); c.closePath(); c.fill();
+          c.fillStyle = '#7a3826'; c.beginPath(); c.moveTo(0, -20); c.lineTo(9, -14); c.lineTo(9, -11); c.lineTo(0, -17); c.closePath(); c.fill();
+          // (the windlass at a person's height, 1.45 m, its rope down to the bucket at the curb's rim — its form's)
+          c.strokeStyle = '#4a3a2a'; c.lineWidth = 0.4; c.beginPath(); c.moveTo(-5.3, -6.74); c.lineTo(5.3, -6.74); c.moveTo(0, -6.74); c.lineTo(0, -4.23); c.stroke();
+          c.fillStyle = '#7a5a3a'; c.fillRect(-1.2, -4.23, 2.4, 1.39);
+          c.restore();
         });
       }
     }
