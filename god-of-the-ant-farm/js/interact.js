@@ -23,6 +23,8 @@
   const I = G.Interact = { list: [] };
   const oa = v => (v.g === 'f' ? 'a' : 'o');
   // add({ id, prio, reach (metres), find(ctx) → [target…], label(ctx, t), can(ctx, t) → {ok, why}, run(ctx, t) → result })
+  //   (and door: a door's; opens: a door that opens, the plan's; passing: an animal going by; here: a target where the body is,
+  //   with no place of its own; urgent: what wins at a door all the same — I.best)
   I.add = function (p) { I.list = I.list.filter(q => q.id !== p.id); I.list.push(p); I.list.sort((a, b) => b.prio - a.prio); };
   const L = () => G.Space.TILE;
   const tile = (X, Z) => [X / L(), Z / L()];
@@ -40,9 +42,10 @@
   }
   // the best thing to do right now (what the prompt shows: "E — …")
   I.AHEAD = 0.05; // (radians: how much more before the body an animal must be than a door to be what one means there)
+  I.FACE = Math.PI / 4; // (radians: a door this far round from where the body looks, or less, is the door it faces — L-326)
   I.best = function () {
     const ctx = I.ctx(); if (!ctx || G.Avatar.swimming()) return null; // (the hands are swimming)
-    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1;
+    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1, open = null, os = -1;
     for (const p of I.list) {
       for (const t of p.find(ctx)) {
         // (t.reach: a target reached from farther than its kind — the door of a house from its doorstep)
@@ -52,12 +55,23 @@
         if (sc > bs) { bs = sc; best = c; }
         if (p.door && sc > ds) { ds = sc; door = c; }
         if (p.passing && sc > ps) { ps = sc; pass = c; }
+        if (p.opens && sc > os) { os = sc; open = c; }
       }
     }
     if (!best) return null;
     // (at a door it is the door one means, not an animal going by — unless the body faces the animal more than the door, by more
     // than a few degrees, and the animal is the nearer: then the animal. In line with the door, the door)
     if (door && pass && (best === door || best === pass)) { const a = aim(ctx, pass.t.X, pass.t.Z), b = aim(ctx, door.t.X, door.t.Z); best = a.d < b.d && a.ang + I.AHEAD < b.ang ? pass : door; }
+    // (and out of doors, facing the door of a plan in reach — within I.FACE of where the body looks —, that door over anything
+    // else about it that is not a door's, by the same rule: a tree, a stone, someone in line with it; and the water one stands
+    // in, which has no place of its own to be faced more than a door (here) — on the doorstep of the sobrado#13586, in a canal,
+    // «Pescar com as mãos», always a stride straight ahead, won over «Bater à porta»: L-326. Save the urgent (nothing the hands
+    // do today), and what is meant more than a door: the work in reach at its pile or at the door it goes in by (pref); indoors,
+    // the house's own things — its bed, its stairs — as they were)
+    else if (open && !best.p.door && !best.p.urgent && !(best.t.pref > 0) && !G.Avatar.indoors()) {
+      const a = aim(ctx, best.t.X, best.t.Z), b = aim(ctx, open.t.X, open.t.Z);
+      if (b.ang <= I.FACE && !(!best.p.here && a.d < b.d && a.ang + I.AHEAD < b.ang)) best = open;
+    }
     const c = best.p.can(ctx, best.t);
     return { id: best.p.id, t: best.t, label: best.p.label(ctx, best.t), ok: c.ok, why: c.why || '', p: best.p };
   };
@@ -256,7 +270,7 @@
   // (the door the street goes in by is reached from its doorstep — Interiors' entrance.out, where the world's people stand to go
   // in, up to two metres out —: the body steps up to it before the hands go to it)
   I.add({
-    id: 'portaPlanta', prio: 4.6, reach: 1.8, door: true,
+    id: 'portaPlanta', prio: 4.6, reach: 1.8, door: true, opens: true, // (opens: a door that opens and shuts — the plan's)
     find(ctx) {
       const out = []; const S = G.S; const seen = new Set(); const ind = G.Avatar.indoors();
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
@@ -762,7 +776,7 @@
   });
   // water at the feet: a river or a lake is drunk from, kneeling (the breath comes back); the sea is salt
   I.add({
-    id: 'agua', prio: 1.5, reach: 2.4,
+    id: 'agua', prio: 1.5, reach: 2.4, here: true, // (here: where the body is — the water it stands in, the edge nearest it —, no place of its own)
     find(ctx) {
       const S = G.S; const T = G.T; const out = []; const x0 = Math.floor(ctx.x), y0 = Math.floor(ctx.y);
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = x0 + dx, y = y0 + dy; if (!W.inb(x, y)) continue; const i = W.idx(x, y); const t = S.type[i];
@@ -784,7 +798,7 @@
   // of that water — a trout in a cold river, sardines in a mild sea, a piranha's bite in the jungle's — into the hands,
   // to be taken to the store like any fisher's. It slips away as often as not
   I.add({
-    id: 'peixe', prio: 3.2, reach: 1.6,
+    id: 'peixe', prio: 3.2, reach: 1.6, here: true, // (here: always a stride straight before the body, wherever it looks)
     find(ctx) {
       const w = G.Avatar.wade(); if (w < 0.12) return [];
       const X = ctx.X + Math.cos(ctx.yaw) * 0.7, Z = ctx.Z + Math.sin(ctx.yaw) * 0.7; const S = G.S, T = G.T; const x = X / L(), y = Z / L();

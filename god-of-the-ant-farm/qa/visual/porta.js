@@ -13,6 +13,9 @@
 //      faces it more than the door (by more than a few degrees: Interact.AHEAD) and it is the nearer; else the door
 //   4. away from any door, an animal before the body is still there to pet
 //   5. someone else's locked door, from its doorstep: «Bater à porta» — the body steps up to it to knock, the door stays locked
+//   5b. on every doorstep in the water (a canal, a ford: the water offers a fish a stride before the body, wherever it looks),
+//      and a little behind it, facing the door: the door's own verb, not the fish (L-326); turned from it past Interact.FACE,
+//      the fish again
 //   and the verifier clean, no module error
 const path = require('path');
 const M = require(path.join(__dirname, '..', 'nodemundo.js'));
@@ -32,10 +35,13 @@ const said = []; G.IncUI = G.IncUI || {}; G.IncUI.toast = t => { said.push(t); }
 const deg = r => Math.round(r * 57.2958);
 
 // ------------------------------ the house, the body ------------------------------
-// (a house with a plan whose door is on a street, and a grown-up of it who can be lived — as the e18 of qa/encarna.js)
+// (a house with a plan whose door is on a street, and a grown-up of it who can be lived — as the e18 of qa/encarna.js —; one the
+// city will not rebuild while the proof runs, the farthest from its town's middle: the city densifies from its heart out
+// (City.upgradeHomes), and the house#2924 of the new metropole, the nearest, was made a sobrado in the middle of the proof — T-156)
 const adults = f => [...S.villagers.values()].filter(o => o.age >= 18 && o.age < 55 && !o.inside && G.Possess.can(o).ok && (!f || f(o)));
+const outer = q => { const t = S.settlements.get(q.set); return t ? G.dist(q.x + 0.5, q.y + 0.5, t.cx, t.cy) : 0; }; // (how far from its town's middle)
 let H = null;
-for (const b of [...S.buildings.values()].filter(q => q.built && In.has(q) && (q.type === 'house' || q.type === 'sobrado') && In.planDoor(q)).sort((a, c) => a.id - c.id)) {
+for (const b of [...S.buildings.values()].filter(q => q.built && In.has(q) && (q.type === 'house' || q.type === 'sobrado') && In.planDoor(q)).sort((a, c) => outer(c) - outer(a) || a.id - c.id)) {
   const p = Sp.planNow(b); if (!p || !p.entrance || !p.entrance.out) continue;
   const v = adults(o => o.home === b.id && !o.sleeping).sort((a, c) => a.id - c.id)[0]; if (v) { H = { b, p, v }; break; }
 }
@@ -91,9 +97,11 @@ const isPet = r => !!r && (r.id === 'carinho' || r.id === 'bicho');
   const r = I.best(); const x0 = st.X, z0 = st.Z; said.length = 0;
   const ran = r && r.id === 'portaPlanta' ? I.run(r) : null; let k = 0; for (; k < 240 && G.Avatar.busy(); k++) frame(); for (let q = 0; q < 6; q++) frame();
   const dd = Math.hypot(DX - st.X, DZ - st.Z), moved = Math.hypot(st.X - x0, st.Z - z0); const s1 = In.doorState(b, e.door).state;
-  // (in: square through the opening, as a player walks)
-  const walk = (X, Z, max) => { for (let q = 0; q < max; q++) { const dx = X - st.X, dz = Z - st.Z; if (Math.hypot(dx, dz) < 0.12) break; IN.camYaw = Math.atan2(dz, dx); IN.mz = 1; frame(); } stop(); for (let q = 0; q < 6; q++) frame(); };
-  walk(DX - ux * 1.3, DZ - uz * 1.3, 300); for (let q = 0; q < 10; q++) frame();
+  // (in: square through the opening, as a player walks — until there, or the body stops: a piece of furniture may stand where
+  // the walk aims, 1.3 m in —; and in once the world has it inside, a stride past the door — T-156)
+  const walk = (X, Z, max, done) => { let still = 0, last = [st.X, st.Z]; for (let q = 0; q < max; q++) { const dx = X - st.X, dz = Z - st.Z; if (Math.hypot(dx, dz) < 0.12 || (done && done())) break; IN.camYaw = Math.atan2(dz, dx); IN.mz = 1; frame();
+    if (Math.hypot(st.X - last[0], st.Z - last[1]) < 0.004) { if (++still > 25) break; } else still = 0; last = [st.X, st.Z]; } stop(); for (let q = 0; q < 6; q++) frame(); };
+  walk(DX - ux * 1.3, DZ - uz * 1.3, 300, () => v.inside === b.id && (DX - st.X) * ux + (DZ - st.Z) * uz > 0.6); for (let q = 0; q < 10; q++) frame();
   const inside = v.inside === b.id;
   ok('2. E na soleira: o corpo dá o passo até a porta, as mãos a abrem (o mundo no seu passo), e entra', !!ran && ran.ok && s1 === 'aberta' && dd <= 1.0 && moved >= out - 1.2 && inside,
     `«${r ? r.label : 'nada'}»: andou ${moved.toFixed(2)} m, parou a ${dd.toFixed(2)} m da porta (${k} quadros); a porta ${s1}; ${inside ? 'dentro' : 'fora (v.inside ' + v.inside + ')'}`);
@@ -128,10 +136,12 @@ else {
 
 // ------------------------------ 4. away from any door, an animal to pet ------------------------------
 if (pet) {
-  // (a point of open ground a few steps from the house, no building within reach of a door's prompt)
-  let far = null; for (let r = 3; r <= 8 && !far; r += 0.5) for (let k = 0; k < 24 && !far; k++) { const a = k / 24 * Math.PI * 2; const x = SX / TL + Math.cos(a) * r, y = SZ / TL + Math.sin(a) * r; let free = W.walkableXY(x, y); for (let dy = -1; dy <= 1 && free; dy++) for (let dx = -1; dx <= 1 && free; dx++) { const i = W.idx(Math.floor(x) + dx, Math.floor(y) + dy); if (S.occ[i]) free = false; } if (free) far = [x * TL, y * TL]; }
-  clear(); if (far) clear(far); let r = null; // (and round the point itself: someone standing before the body there is whom «E» means)
-  if (far) { at(far[0], far[1], 0.3); god(() => { pet.x = (far[0] + Math.cos(0.3) * 0.8) / TL; pet.y = (far[1] + Math.sin(0.3) * 0.8) / TL; }); r = I.best(); }
+  // (a point of open ground a few steps from the house, no building within reach of a door's prompt — and, the yard emptied round
+  // it, nothing else there to mean: the water of a ford offers a fish a stride before the body, a tree its wood — T-156)
+  clear(); let far = null, r = null;
+  for (let rr = 3; rr <= 8 && !far; rr += 0.5) for (let k = 0; k < 24 && !far; k++) { const a = k / 24 * Math.PI * 2; const x = SX / TL + Math.cos(a) * rr, y = SZ / TL + Math.sin(a) * rr; let free = W.walkableXY(x, y); for (let dy = -1; dy <= 1 && free; dy++) for (let dx = -1; dx <= 1 && free; dx++) { const i = W.idx(Math.floor(x) + dx, Math.floor(y) + dy); if (S.occ[i]) free = false; }
+    if (!free) continue; const P = [x * TL, y * TL]; clear(P); if (at(P[0], P[1], 0.3) && !I.best()) far = P; } // (and round the point itself: someone standing before the body there is whom «E» means)
+  if (far) { god(() => { pet.x = (far[0] + Math.cos(0.3) * 0.8) / TL; pet.y = (far[1] + Math.sin(0.3) * 0.8) / TL; }); r = I.best(); }
   back(); god(() => { pet.x = pet0[0]; pet.y = pet0[1]; });
   ok('4. longe de qualquer porta, o bicho diante do corpo ainda é para fazer carinho', !!far && !!r && r.id === 'carinho' && r.t.a === pet, far ? `«${r ? r.label : 'nada'}»` : 'nenhum chão livre perto');
 }
@@ -163,6 +173,33 @@ if (pet) {
       `${q.type}#${q.id}: «${r ? r.label : 'nada'}» a ${Math.hypot(x0 - (t2 ? t2.X : x0), z0 - (t2 ? t2.Z : z0)).toFixed(2)} m; depois a ${dd.toFixed(2)} m, «${said.join(' / ') || '-'}»; a porta ${s2}`);
     god(() => { In.useDoor(q, pq.entrance.door, 'destrancar', owner); });
   }
+}
+
+// ------------------------------ 5b. the door before a doorstep in the water ------------------------------
+// (every building of plans whose doorstep is in a canal or a ford, the yard emptied round it: the body on the doorstep and a
+// little behind it, as one comes up from the street — the door still in reach —, facing the door: the water there offers a
+// fish a stride straight ahead, and the door is what one means, its own verb; turned a quarter from it, past Interact.FACE,
+// the water's. The sobrado#13586 of the new metropole, two metres from its door: «Pescar com as mãos» over «Bater à porta» —
+// L-326)
+{ let n = 0, away = 0; const bad = [], seen = [];
+  for (const q of [...S.buildings.values()].filter(q => q.built && In.has(q) && In.planDoor(q)).sort((a, c) => a.id - c.id)) {
+    const pq = Sp.planNow(q); if (!pq || !pq.entrance || !pq.entrance.out) continue;
+    const sx = q.x * TL + pq.entrance.out[0], sz = q.y * TL + pq.entrance.out[1]; const i = W.idx(sx / TL, sz / TL); const t = S.type[i];
+    if (!(t === G.T.RIVER || t <= G.T.SEA) || S.road[i] || (S.ice && S.ice[i])) continue;
+    clear([sx, sz]); if (!at(sx, sz, 0)) continue;
+    const pp = I.list.find(x => x.id === 'portaPlanta'); const dt = (pp.find(I.ctx()) || []).find(x => x.b === q && x.d.id === pq.entrance.door); if (!dt) continue;
+    const L0 = Math.hypot(sx - dt.X, sz - dt.Z) || 1, ox = (sx - dt.X) / L0, oz = (sz - dt.Z) / L0;
+    for (const back of [0, 0.15, 0.3]) {
+      const X = sx + ox * back, Z = sz + oz * back; if (!at(X, Z, Math.atan2(dt.Z - Z, dt.X - X))) continue;
+      const yaw = Math.atan2(dt.Z - st.Z, dt.X - st.X); st.yaw = yaw; IN.camYaw = yaw; still(2);
+      if (!I.list.find(x => x.id === 'peixe').find(I.ctx()).length) continue; n++;
+      const r = I.best(); const tag = `${q.type}#${q.id} a ${Math.hypot(dt.X - st.X, dt.Z - st.Z).toFixed(2)} m: «${r ? r.label : 'nada'}»`; if (seen.length < 3) seen.push(tag); if (!(r && r.p.door && r.t.b === q)) bad.push(tag);
+      st.yaw = yaw + Math.PI / 2; IN.camYaw = st.yaw; still(2); const r2 = I.best(); if (r2 && r2.id === 'peixe') away++;
+    }
+  }
+  back();
+  ok('5b. na soleira na água (um canal, um vau) e um pouco atrás dela, de frente para a porta: a porta, não o peixe que a água oferece à frente; virado um quarto dela, o peixe', n >= 3 && !bad.length && away >= 1,
+    `${n} lugares na água com o peixe à frente: ${n - bad.length} a porta (${seen.join(' · ')})${bad.length ? `; ${bad.length} ERRADOS: ${bad.slice(0, 4).join(' · ')}` : ''}; virados um quarto da porta, o peixe em ${away}`);
 }
 
 // (the verifier: what weighs, S0 to S2 — and no module error)
