@@ -425,9 +425,17 @@ if (want('l14')) {
   // (chosen after the day's moves of house — a house too full for its beds splits once a day, act-casa.js: the old one may
   // move out, and the little ones are no longer hers)
   const findHouse = () => { const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v)) e.old.push(v); if (v.age >= 3 && v.age < 7) e.kids.push(v); houses.set(h.id, e); } return [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0]; };
-  let e = findHouse();
+  let e = findHouse(); let aged = null;
   if (!e && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); afterMoves(); e = findHouse(); }
-  if (!e) ok('l14 os velhos cuidam dos pequenos em casa', false, 'nenhuma casa com alguém de 62 anos ou mais e crianças de 3 a 6');
+  // (the ready worlds may have none after the day's moves — a full house splits, and the old one is often who leaves —: then
+  // the test's hand makes one of the house old for the case, a grown one who is not the little ones' mother or father —
+  // the age back at the end —, and the mechanism is what is proven: the old one minds them, they come home and stay)
+  if (!e) {
+    const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const x = houses.get(h.id) || { h, old: [], kids: [], grown: [] }; if (v.age >= 3 && v.age < 7) x.kids.push(v); else if (v.age >= 25 && v.age < 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v) && !v.secret) x.grown.push(v); houses.set(h.id, x); }
+    const cand = [...houses.values()].filter(x => x.kids.length).map(x => Object.assign(x, { o: x.grown.filter(g => !x.kids.some(k => k.mother === g.id || k.father === g.id)).sort((a, b) => b.age - a.age || a.id - b.id)[0] })).filter(x => x.o).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0];
+    if (cand) { aged = [cand.o, cand.o.age]; cand.o.age = 63; cand.old = [cand.o]; e = cand; }
+  }
+  if (!e) ok('l14 os velhos cuidam dos pequenos em casa', false, 'nenhuma casa com alguém de 62 anos ou mais e crianças de 3 a 6, nem com um adulto da casa que não seja o pai ou a mãe delas');
   else {
     let h = e.h; const dw = doorWatch(); let minded = 0, kidsHome = 0, n = 0, txt = '', two = 0, reload = '', reloadOk = true; const exits = new Map();
     let died = null, after = '', afterOk = true;
@@ -469,8 +477,9 @@ if (want('l14')) {
       dw.out.length = 0;
     });
     const avgKids = minded ? r2(kidsHome / minded) : 0; const loops = [...exits.values()].filter(x => x > 2).length;
+    if (aged) { const o = S.villagers.get(aged[0].id); if (o) o.age = aged[1]; }
     ok('l14 os velhos cuidam dos pequenos em casa', minded >= 200 && avgKids >= 1 && !loops && two <= 20 && reloadOk && afterOk && !!died && !dw.wrong.length,
-      `${h.type}#${h.id}: ${e.old.map(o => o.name).join(', ')} (${e.old.map(o => Math.floor(o.age)).join(', ')} anos) e ${e.kids.length} criança(s) de 3 a 6; de dia, cuidando em casa ${r2(minded / 10)} s de 55 («${txt}»), com ${avgKids} criança(s) em casa em média${reload}${after}${died ? '' : '; aos 55 s, NINGUÉM CUIDANDO para morrer'}${two ? `; dois cuidando juntos ${r2(two / 10)} s` : ''}${loops ? `; ${loops} criança(s) ENTRANDO E SAINDO sem parar` : ''}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}${minded < 200 ? ` — o que ${e.old[0].name} fez: ${seq.slice(0, 12).join(' → ')}; fora do cuidado: ${[...whyNot].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, c]) => `${k} ${c} s`).join(', ')}` : ''}`);
+      `${h.type}#${h.id}: ${e.old.map(o => o.name).join(', ')} (${aged ? `${Math.floor(aged[1])} anos, posta em 63 pela mão da prova — os mundos prontos não têm, depois das mudanças do dia, velho morando com crianças pequenas` : e.old.map(o => Math.floor(o.age)).join(', ') + ' anos'}) e ${e.kids.length} criança(s) de 3 a 6; de dia, cuidando em casa ${r2(minded / 10)} s de 55 («${txt}»), com ${avgKids} criança(s) em casa em média${reload}${after}${died ? '' : '; aos 55 s, NINGUÉM CUIDANDO para morrer'}${two ? `; dois cuidando juntos ${r2(two / 10)} s` : ''}${loops ? `; ${loops} criança(s) ENTRANDO E SAINDO sem parar` : ''}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}${minded < 200 ? ` — o que ${e.old[0].name} fez: ${seq.slice(0, 12).join(' → ')}; fora do cuidado: ${[...whyNot].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, c]) => `${k} ${c} s`).join(', ')}` : ''}`);
   }
 }
 
