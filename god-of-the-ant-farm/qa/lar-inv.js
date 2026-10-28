@@ -75,6 +75,7 @@
       if (v.id === body || v.age < 2 || v.captive || v.jail || v.aboard || v.ug) continue; const t = v.task;
       const b = v.inside ? s.buildings.get(v.inside) : null;
       if (b && housing(b) && b.built && b.type !== 'ruin' && t && (t.type === 'sleep' || (t.type === 'lar' && t.st === 2 && b.id === v.home) || (t.type === 'shelter' && b.id === v.home))) out.push([v.id, b.id, v.sleeping ? 1 : 0, t.type, t.what || '']);
+      else if (b && b.type === 'temple' && b.built && t && t.type === 'pray' && t.st === 2 && t.inT === b.id) out.push([v.id, b.id, 0, 'pray', t.priest ? 'sacerdote' : '']); // (at prayer inside the temple: L-224)
       else if (!v.inside && v.sleeping && t && t.type === 'sleep' && t.st >= 2) out.push([v.id, 0, 1, 'sleep', '']);
     }
     return out;

@@ -1323,7 +1323,7 @@
         if (!h || !h.built || h.type === 'ruin') return end(v);
         if (t.st === 0 && v.inside === h.id) { t.st = 2; break; } // (already at home)
         if (t.st === 0) { const [fx, fy] = G.Village.frontTile(h); if (!Vg.goto(v, fx, fy, true)) return end(v); t.st = 1; }
-        else if (t.st === 1) { if (move(v, dt, 1.25)) { t.st = 2; v.inside = h.id; } }
+        else if (t.st === 1) { if (move(v, dt, 1.25)) { t.st = 2; v.inside = h.id; G.Lar && G.Lar.jarHome(v, h); } }
         else if (S.weather.storm <= 0 || S.weather.rain < 0.2 || t.age > 45) end(v);
         break;
       }
@@ -1450,7 +1450,7 @@
       const home = S.buildings.get(v.home);
       if (home && home.built && home.type !== 'ruin') {
         // (already at home — from the fire to bed —: no going out and in again)
-        if (v.inside === home.id) { t.st = 2; t.home = home.id; v.sleeping = true; if (v.g === 'f') tryConceive(v); return; }
+        if (v.inside === home.id) { t.st = 2; t.home = home.id; v.sleeping = true; G.Lar && G.Lar.jarHome(v, home); if (v.g === 'f') tryConceive(v); return; }
         const [fx, fy] = G.Village.frontTile(home);
         if (Vg.goto(v, fx, fy, true)) { t.st = 1; t.home = home.id; return; }
       }
@@ -1470,7 +1470,7 @@
       // a path that never came: they climb out of the water before lying down
       if (!t.home && !W.dryXY(v.x, v.y)) { const p = W.nearestLand(v.x, v.y, 3); if (p) { v.x = p[0]; v.y = p[1]; } }
       t.st = 2; v.sleeping = true;
-      if (t.home) { const h = S.buildings.get(t.home); if (h && h.built) v.inside = h.id; }
+      if (t.home) { const h = S.buildings.get(t.home); if (h && h.built) { v.inside = h.id; G.Lar && G.Lar.jarHome(v, h); } }
       // conception happens at night when partners share a bed
       if (v.g === 'f') tryConceive(v);
       return;

@@ -159,7 +159,15 @@
     if (what === 'cozinhar') entry(h).cook = v.id;
     return t;
   }
-  function arrive(v, t, h) { v.inside = h.id; t.st = 2; v.actT = 0; v.moving = false; v.path = null; }
+  function arrive(v, t, h) { v.inside = h.id; t.st = 2; v.actT = 0; v.moving = false; v.path = null; L.jarHome(v, h); }
+  // (the house's jar of water, brought home by one whose errand to the well was cut — called to bed, to the evening at home,
+  // to lie ill —: poured into the house's own as one comes in, never kept in the hands for the next errand — a gathering would
+  // find them full: L-186. The water is drunk and cooked, not stored: out of the hands as the ledger says, 'agua')
+  L.jarHome = function (v, h) {
+    const c = v.carry; if (!c || c.k !== 'water' || !c.jar || !(c.n > 0) || !h || v.home !== h.id) return false;
+    D.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true }); h.water = 1;
+    return true;
+  };
 
   // the task's steps: to the door, in, and the evening at home
   L.run = function (v, t, dt, H) { if (t.type === 'lar') { runLar(v, t, dt, H); return true; } return false; };
@@ -407,7 +415,8 @@
           else if (t && t.type === 'shelter') e[5] = 'shelter';
           else continue; // (another errand in a house — the end of a day's work —: out at the door, as before)
           list.push(e);
-        } else if (!v.inside && v.sleeping && t && t.type === 'sleep' && t.st >= 2) list.push([v.id, 0, r3(v.x), r3(v.y), 1, 'sleep']);
+        } else if (b && b.type === 'temple' && t && t.type === 'pray' && t.st === 2 && t.inT === b.id) list.push([v.id, b.id, r3(v.x), r3(v.y), 0, 'pray', t.priest ? 1 : 0, r3(v.actT || 0)]); // (at prayer inside the temple)
+        else if (!v.inside && v.sleeping && t && t.type === 'sleep' && t.st >= 2) list.push([v.id, 0, r3(v.x), r3(v.y), 1, 'sleep']);
       }
       out.lar = list;
     },
@@ -417,9 +426,17 @@
       for (const e of list) {
         if (!Array.isArray(e) || !Number.isFinite(e[0]) || !Number.isFinite(e[2]) || !Number.isFinite(e[3])) continue;
         const v = S.villagers.get(e[0]); if (!v || v.id === body || v.task || v.captive || v.jail || v.aboard || v.ug || v.age < 2) continue;
-        const b = e[1] ? S.buildings.get(e[1]) : null;
+        const b = e[1] ? S.buildings.get(e[1]) : null; const k = e[5];
+        if (k === 'pray') {
+          // (at prayer inside the temple: on with it there)
+          if (!b || !b.built || b.type !== 'temple') continue;
+          const t = { type: 'pray', pri: 0.6, st: 2, b: b.id, inT: b.id, priest: !!e[6], kind: 'pray' };
+          G.Vg.setTask(v, t); if (v.task !== t) continue;
+          v.x = e[2]; v.y = e[3]; v.path = null; v.moving = false; v.inside = b.id; v.actT = Number.isFinite(e[7]) ? e[7] : 0;
+          continue;
+        }
         if (e[1] && !built(b)) continue; // (the house is gone, or a ruin: at the door, as the save left them)
-        const k = e[5]; let t = null;
+        let t = null;
         if (k === 'sleep') t = { type: 'sleep', pri: 1.5, st: 2, home: b ? b.id : 0, kind: 'sleep' };
         else if (k === 'shelter' && b && b.id === v.home) t = { type: 'shelter', pri: 1.05, st: 2, kind: 'shelter' };
         else if (WHAT[k] && b && b.id === v.home) { t = { type: 'lar', what: k, home: b.id, pri: pri(k), st: 2, stay: b.id, kind: 'lar' }; if (e[6]) t.ate = 1; if (Number.isFinite(e[7]) && e[7] > 0) t.w = e[7]; }
