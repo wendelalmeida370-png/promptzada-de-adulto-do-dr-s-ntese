@@ -15,7 +15,7 @@ else G.S = { villagers: new Map(), buildings: new Map(), dead: new Map(), settle
 const CTX = [{ k: '', cl: 't', fl: 0, d: 1, w: 0, e: 1 }, { k: 'a', cl: 't', fl: 0, d: 3, w: 1, e: 3 }];
 // the findings of one plan: [{ k: 'FALHA'|'ESCOLHA', what }] — the game's own report (In.report, the one the plan of the dev
 // mode shows), with the world when there is one
-const findings = (b, p, rec) => In.report(b, p, { world: !!WORLD, rec, holding: 1 });
+const findings = (b, p, rec) => In.report(b, p, { world: !!WORLD, rec, holding: 1, sides: 1 });
 // the buildings: the world's, or one of each type, people, context and side
 const list = [];
 if (WORLD) { for (const b of G.S.buildings.values()) if (b.ip && In.TYPES[b.ip.t] && b.type !== 'ruin') list.push({ b, rec: b.ip }); }

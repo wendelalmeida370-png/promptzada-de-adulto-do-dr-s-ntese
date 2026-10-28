@@ -1444,7 +1444,12 @@
     // (the way in: an entrance, from the street to a room; an open ground has none — it is walked on from every side)
     if (!p.entrance) F('sem entrada');
     else if (p.entrance.door < 0) { if (p.shell.kind === 'aberta') E('chão aberto, sem porta: entra-se de todo lado'); else F('a entrada sem porta'); }
-    if (o.world && b.built && b.blocks && G.Space && G.Space.entryFits) { const e = G.Space.entryFits(b, In.shellOf(b)); const said = In.entrySaid(b); if (!e.ok && said !== false) F(`a entrada não cabe diante da porta (${e.kind}, o pé a ${e.foot} m)`); else if (!e.ok) E('a entrada não cabe em lado nenhum aberto à rua (dito pela virada do dia)'); }
+    // (a building no side of which opens onto a street the world walks — the town shut it in: a wall, a cliff, the buildings
+    // round it — has no way in to fit anywhere: said as such, a defect of the world round it, not of the plan's door. o.sides:
+    // the proofs ask the map of regions for it; the drawing never does — it would make the world's map anew from outside)
+    if (o.world && b.built && b.blocks && G.Space && G.Space.entryFits) { const e = G.Space.entryFits(b, In.shellOf(b)); const said = In.entrySaid(b);
+      if (!e.ok && said !== false) F(o.sides && !SIDES.some(s => openTiles(b, s)) ? 'sem rua: nenhum lado do prédio dá para uma rua que o mundo anda (fechado pelo que está em volta)' : `a entrada não cabe diante da porta (${e.kind}, o pé a ${e.foot} m)`);
+      else if (!e.ok) E('a entrada não cabe em lado nenhum aberto à rua (dito pela virada do dia)'); }
     if (o.world && b.built && b.blocks && G.Vg && G.Vg.planDoor === In.planDoor) { const pd = In.planDoor(b), d = G.Vg.door(b); if (pd && (Math.abs(pd[0] - d[0]) > 1e-6 || Math.abs(pd[1] - d[1]) > 1e-6)) F('quem sai não sai pela porta da planta'); }
     // (the flights: their ends where a body stands; their class by their slope — a ladder or a steep stair a choice, said)
     for (const s of p.stairs) {
