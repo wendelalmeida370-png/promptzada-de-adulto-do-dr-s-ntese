@@ -9,6 +9,8 @@
 //   4. a regra da fundação (In.secure, no passo do mundo): a casa cuja família não abriga a casa naquele lote passa à primeira
 //      que abriga, na ordem do tipo girada pelo id — a mesma escolha duas vezes —, com o fato no registro e a planta válida; a
 //      casa que abriga fica como está
+//   5. a casa abandonada (leftOf) nas mesmas casas da grade da habitada: só as das coisas que a família leva livres, e as
+//      pontas dos lances onde o corpo fica como na habitada
 //   node qa/casa-deus.js
 const M = require('./nodemundo.js');
 const G = M.load({});
@@ -73,6 +75,26 @@ const L = 4;
   const b = mk('house', 4001); b.ip = rec('house', 'grego', OUT, In.familiesFor(rec('house', 'grego', OUT)).ok[0], 'S'); G.S.buildings.set(b.id, b);
   const f0 = b.ip.f, h0 = b.ip.h.length; const p0 = In.make(b, b.ip); G.inSim++; try { In.secure(b); } finally { G.inSim--; }
   ok('4 a casa que a família abriga fica como está', !p0.ok || (b.ip.f === f0 && b.ip.h.length === h0), `${f0}: ${p0.ok ? (b.ip.f === f0 ? 'a mesma família, nenhum fato' : 'TROCOU para ' + b.ip.f) : 'a planta não sai (outra prova)'}`);
+}
+// ---------------------------------------------------------------- 5. the house given up, on the cells of the one lived in
+{
+  // (the houses of storeys of each people, each side: the plan given up — what the family takes gone — on the very cells of the
+  // plan lived in, those of the pieces taken freed and no other; every flight's ends where the body stands as in the one lived
+  // in. Its grid rasterised again in centimetres put a wall's edge on the other side of a cell's middle: the top of the stair of
+  // the sobrado#6003 of the metropole, given up, a wall's cell from the body)
+  const C = In.CELL; let n = 0, cells = 0; const bad = [];
+  for (const t of ['sobrado', 'insula']) for (const c of POVOS) for (const [q, s] of ['S', 'E', 'W', 'N'].entries()) {
+    const r0 = rec(t, c, OUT, '', s); const fams = In.familiesFor(r0).ok; if (!fams.length) continue;
+    const f = fams[(c.length * 3 + q) % fams.length]; const b = { id: 6001 + n * 41 + q, type: t, x: 10, y: 10, w: 1, h: 1, built: true };
+    const h = In.make(b, Object.assign({}, r0, { f })), a = In.make(b, Object.assign({}, r0, { f, ab: 40 }));
+    if (!h.ok || !a.ok || !a.left) continue; n++;
+    const taken = h.items.filter(it => In.ITEMS[it.kind] && In.ITEMS[it.kind].leva); const cs = h.grid.cs, N = h.grid.n;
+    const inTaken = (lv, x, z) => taken.some(it => it.lv === lv && x > it.r[0] - cs && x < it.r[2] + cs && z > it.r[1] - cs && z < it.r[3] + cs);
+    for (const lv in h.grid.lv) { const g0 = h.grid.lv[lv], g1 = a.grid.lv[lv]; for (let k = 0; k < N * N; k++) { if (g0[k] === g1[k]) continue; cells++; const x = (k % N + 0.5) * cs, z = (Math.floor(k / N) + 0.5) * cs;
+      if (!((g1[k] === C.FLOOR || g1[k] === C.LOWROOF) && (g0[k] === C.LOW || g0[k] === C.SOLID) && inTaken(+lv, x, z))) { bad.push(`${t}/${c}/${s} ${f}: a casa ${x.toFixed(2)},${z.toFixed(2)} piso ${lv} era ${g0[k]}, abandonada ${g1[k]}`); break; } } }
+    for (const st of a.stairs) { if (st.kind === 'degraus') continue; for (const [lv, p] of [[st.lv0, st.a], [st.lv1, st.b]]) if (In.landsAt(a, lv, p[0], p[1]) !== In.landsAt(h, lv, p[0], p[1])) bad.push(`${t}/${c}/${s} ${f}: a ponta do lance ${st.lv0}→${st.lv1} em ${p.join(',')}: o corpo ${In.landsAt(h, lv, p[0], p[1]) ? 'cabe' : 'não cabe'} na habitada, ${In.landsAt(a, lv, p[0], p[1]) ? 'cabe' : 'não cabe'} na abandonada`); }
+  }
+  ok('5 a casa abandonada nas mesmas casas da habitada, só as das coisas levadas livres', n > 0 && !bad.length, `${n} casas de andares (sobrado e ínsula, cada povo, cada lado): ${cells} casas da grade diferentes, todas de peças levadas${bad.length ? '; ' + bad.slice(0, 3).join(' · ') : ''}`);
 }
 const err = M.erros(); if (Object.keys(err.mod).length || err.console.length) ok('sem erros de módulo', false, JSON.stringify(err).slice(0, 300));
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');

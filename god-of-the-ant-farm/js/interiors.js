@@ -1184,7 +1184,8 @@
     }
   }
   // the plan as it stands while it is laid out, in its own frame (the entrance at the front): what the walk of a storey needs
-  function draft(P, lv) {
+  // (keep: the pieces stamped on it, all when not said — the house given up, without what its family took: leftOf)
+  function draft(P, lv, keep) {
     const n = Math.round(P.L / CS); const key = P.walls.length + '|' + P.holes.length + '|' + P.stairs.length + '|' + P.rooms.length + '|' + P.levels.length + '|' + P.annex.length + '|' + (P.yard ? 1 : 0);
     const st = P._st || (P._st = {}); let base = st[lv];
     if (!base || base.key !== key) {
@@ -1193,7 +1194,7 @@
       const l = P.levels.find(q => q.lv === lv); base = st[lv] = { key, g: l ? rasterStatic(pp, l, n) : null, crawl: !!(l && l.kind === 'jirau') };
     }
     if (!base.g) return null;
-    const g = base.g.slice(); const items = []; for (const it of P.items) if (it.lv === lv) items.push({ lv, r: it.r, low: ITEMS[it.kind].low ? 1 : 0, niche: it.niche ? 1 : 0 });
+    const g = base.g.slice(); const items = []; for (const it of P.items) if (it.lv === lv && (!keep || keep(it))) items.push({ lv, r: it.r, low: ITEMS[it.kind].low ? 1 : 0, niche: it.niche ? 1 : 0 });
     stampItems({ items }, lv, g, n);
     return { g, n, crawl: base.crawl, hgt: hgtOf(P, lv, n) };
   }
@@ -1207,10 +1208,10 @@
     turns.set(key, m); return m;
   }
   const turn = (g, m) => { const o = new Uint8Array(m.length); for (let k = 0; k < m.length; k++) o[k] = g[m[k]]; return o; };
-  function gridOf(plan, P) {
+  function gridOf(plan, P, keep) {
     const L = plan.lot.w; const n = Math.round(L / CS); const m = turnOf(plan.side, L);
     plan.grid = { cs: CS, n, lv: {} };
-    for (const l of P.levels) { const dr = draft(P, l.lv); if (dr) plan.grid.lv[l.lv] = turn(dr.g, m); }
+    for (const l of P.levels) { const dr = draft(P, l.lv, keep); if (dr) plan.grid.lv[l.lv] = turn(dr.g, m); }
     // (and where a storey has rows of seats, its heights over its floor on the same cells: plan.hgt[lv], metres)
     for (const l of P.levels) { const h = hgtOf(P, l.lv, n); if (!h) continue; if (!plan.hgt) plan.hgt = {}; const o = new Float32Array(m.length); for (let k = 0; k < m.length; k++) o[k] = h[m[k]]; plan.hgt[l.lv] = o; }
   }
@@ -1465,7 +1466,10 @@
     o.cap = Object.assign({}, p.cap, { places });
     o.ok = true; o.errs = [];
     Object.defineProperty(o, '_P', { enumerable: false, value: p._P });
-    grid(o);
+    // (on the very cells of the plan it was, without what was taken: a second rasterising of it in centimetres put an edge of
+    // a wall on the other side of a cell's middle now and then — the top of the stair of the sobrado#6003 of the metropole a
+    // wall's cell from where the body stands, in the house given up and not in the one lived in)
+    gridOf(o, p._P, it => !ITEMS[it.kind].leva);
     return o;
   }
   // ------------------------------ the ruin of a plan ------------------------------
