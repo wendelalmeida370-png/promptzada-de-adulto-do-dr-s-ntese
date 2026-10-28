@@ -142,7 +142,7 @@
   // ------------------------------ starting ------------------------------
   function start(set, key, opt) {
     const S = G.S; const d = FE.DEF[key]; const f = G.Fac.get(set.fac); if (!f) return null;
-    const fe = { id: nextId++, key, set: set.id, fac: f.id, t: 0, len: d.dur * DAY() * 1.15, stage: -1, parts: [], roles: {}, trail: [], props: {}, lit: new Set(), dark: false, fx: [], note: {} };
+    const fe = { id: nextId++, key, set: set.id, fac: f.id, t: 0, len: d.dur * DAY() * 1.15, stage: -1, parts: [], roles: {}, trail: [], props: {}, lit: new Set(), dark: false, fx: [], note: {}, day0: S.day };
     fe.grand = !!(opt && opt.grand);
     // captives only take part where the rite needs them: guests, the chained, the victims
     const pop = people(set, { captives: true });
@@ -410,7 +410,9 @@
     if (fe.note.water) bits.push('os campos regados com a água nova');
     if (fe.winner) { const w = S.villagers.get(fe.winner) || S.dead.get(fe.winner); if (w) bits.push(`${w.name} campe${w.g === 'f' ? 'ã' : 'ão'}`); }
     const nm = (fe.grand ? 'Grandes ' : '') + d.name;
-    log(`${ended(d, fe.grand)} ${theName(d, fe.grand)} em ${set.name}: ${n} pessoas${bits.length ? ' · ' + bits.join(' · ') : ''}.`, 'fest', set.cx, set.cy);
+    // (a feast begun the year before says which it was: the Jól of 68 of Hedeby ended in 69 beside the Jól of 69, with the same
+    // eight people and four of food — two lines the chronicle could not tell apart, L-347)
+    log(`${ended(d, fe.grand)} ${theName(d, fe.grand)}${fe.day0 !== S.day ? ' do ano ' + fe.day0 : ''} em ${set.name}: ${n} pessoas${bits.length ? ' · ' + bits.join(' · ') : ''}.`, 'fest', set.cx, set.cy);
     if (fe.key === 'fogonovo') log(`O fogo novo foi aceso: o mundo continua por mais 52 anos em ${set.name}.`, 'fest', set.cx, set.cy);
     if (!S.milestones.fest) G.Village.milestone('fest', 'Festividade', `${set.name} celebrou ${theName(d, fe.grand)}.`, 'fest');
     G.Lore && G.Lore.note && G.Lore.note('fest', { fac: f.id, name: nm, set: set.name });

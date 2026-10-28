@@ -208,12 +208,23 @@
     for (const b of G.S.buildings.values()) if (b.built && G.BDEF[b.type].dropoff && (setId === undefined || b.set === setId)) out.push(b);
     return out;
   };
-  V.nearestDropoff = function (x, y, setId) {
+  // a tile beside a gate (open or shut, or only planned: the builders raise it later on the tiles it has): the way through it
+  let gatesKey = -1, planned = new Set();
+  G.worldHooks.push(() => { gatesKey = -1; planned = new Set(); }); // (a new world, or a save loaded: asked again)
+  V.byGate = (x, y) => {
+    const S = G.S; const key = S.walls.length * 1e6 + (S.walkVer || 0);
+    if (key !== gatesKey) { gatesKey = key; planned = new Set(); for (const w of S.walls) if (!w.done) for (const g of w.gates) planned.add(g); }
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const xx = x + dx, yy = y + dy; if (!W.inb(xx, yy)) continue; const j = yy * N + xx; const w = S.wall[j]; if (w === 2 || w === 4 || planned.has(j)) return true; }
+    return false;
+  };
+  // (asked for someone, the nearest store that one can walk to — the nearest by the map's distance across the water was the
+  // other island's, and every load of the day failed its search there, L-349 —; none reached, the nearest as before)
+  V.nearestDropoff = function (x, y, setId, v) {
     let list = V.dropoffs(setId);
     if (!list.length) { const fid = V.facOfSet(setId); list = V.dropoffs().filter(b => V.facOfSet(b.set) === fid); }
-    let best = null, bd = 1e9;
-    for (const b of list) { const [cx, cy] = V.center(b); const d = G.dist2(x, y, cx, cy); if (d < bd) { bd = d; best = b; } }
-    return best;
+    let best = null, bd = 1e9, near = null, nd = 1e9;
+    for (const b of list) { const [cx, cy] = V.center(b); const d = G.dist2(x, y, cx, cy); if (d < bd) { bd = d; best = b; } if (v && d < nd) { const [fx, fy] = V.frontTile(b); if (W.reaches(v, fx, fy)) { nd = d; near = b; } } }
+    return near || best;
   };
 
   // ------------------------------ settlements ------------------------------
@@ -345,6 +356,9 @@
         } else if (S.occ[i]) { ok = false; break; }
         if (t < T.SAND || S.objAt[i] || S.fire[i] > 0 || S.scar[i] > G.DAY_LEN * 2 || S.wall[i] || S.road[i] >= 2 || (S.road[i] && G.City && G.City.onStreet(set, i))) { ok = false; break; }
         if (field && (t === T.SAND || t === T.ROCKY)) { ok = false; break; }
+        // (never in the way of a gate: a blocking building on a tile beside one shuts it — two houses, one on each side of a gate of
+        // Tenochtitlan's wall, left it a tile of nowhere, and a visitor whose host's door gave onto it was shut in there, L-348)
+        if (def.blocks && V.byGate(tx, ty)) { ok = false; break; }
         if (S.treeAt[i]) trees++;
         fert += S.fert[i];
       }

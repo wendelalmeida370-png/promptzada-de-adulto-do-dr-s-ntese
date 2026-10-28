@@ -7,6 +7,7 @@
 //  c1 na ilhota, a tarefa de calçar não lhe dá trecho que ele não alcança
 //  c2 um minuto do mundo na ilhota: nenhuma busca de calçada falha
 //  c3 de volta à cidade, ele calça: um trecho que ele alcança
+//  c4 na ilhota, mandado a uma obra da cidade: nenhuma busca de caminho (o mapa já diz que não), e a obra conta a tentativa (L-349)
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const fails = [];
@@ -39,6 +40,13 @@ else {
   G.City.paveTask(v, H); const t3 = v.task;
   const good = t3 && t3.type === 'pave' && W.reaches(v, ...tileOf(t3.i));
   ok('c3 de volta à cidade, calça um trecho que alcança', reg && good, `no centro de ${set.name} (a cidade alcançada: ${reg}): ${t3 && t3.type === 'pave' ? `trecho ${tileOf(t3.i).map(n => n.toFixed(1)).join(',')} — ${good ? 'ele alcança' : 'ele NÃO alcança'}` : 'nenhum trecho'}`);
+}
+// c4 — on the islet, sent to a building of the town: the map says no, and no search is made (L-349)
+if (v && islet) {
+  place(islet[0], islet[1]); const site = [...S.buildings.values()].filter(b => b.set === set.id && b.blocks).sort((a, b) => a.id - b.id)[0];
+  const fp = W.findPath; let n = 0; W.findPath = function () { n++; return fp.apply(this, arguments); };
+  const u0 = site ? site.unreach || 0 : 0; let r = null; try { if (site) { site.unreachT = 0; r = G.Vg.gotoB(v, site); } } finally { W.findPath = fp; }
+  ok('c4 na ilhota, mandado a um prédio da cidade: nenhuma busca, e a tentativa contada', !!site && r === false && n === 0 && (site.unreach || 0) === u0 + 1, site ? `${site.type}#${site.id} de ${set.name}: ${r ? 'chegou?!' : 'não vai'}; buscas de caminho ${n}; tentativas contadas ${u0} → ${site.unreach || 0}` : 'a cidade não tem prédio');
 }
 const e = M.erros(); const mods = Object.keys(e.mod);
 ok('erros', !mods.length && !e.console.length, `módulos: ${mods.join(', ') || 'nenhum'}; console: ${e.console.slice(0, 2).join(' · ') || 'nada'}`);
