@@ -517,6 +517,19 @@
       return null;
     },
     tick,
+    // the leg one holds in it (G.Act.leg, D-094): from the walk to the crate kept for one (by) until it is delivered — the load
+    // in the hands, or on its way to them —, and the helper under a heavy crate from her walk to it (the crate is the two's,
+    // L-330); not the day at the quay, between crates
+    leg(op, v) {
+      const S = S_(); if (v.carry && v.carry.op === op.id && v.carry.n > EPS) return 'caixa';
+      const t = v.task; if (!t || t.op !== op.id) return null;
+      if (t.type === 'descarga') {
+        const dock = S.buildings.get(t.dock); const c = t.cid && dock && dock.crates ? dock.crates.find(q => q.id === t.cid && q.op === op.id) : null; if (c && c.by === v.id) return 'caixa';
+        const o = t.gid ? (S.loose || []).find(q => q.id === t.gid && q.op === op.id) : null; if (o && o.by === v.id) return 'caixa';
+      }
+      if (t.type === 'ajudar') { const lead = S.villagers.get(t.lead); if (lead && lead.task && lead.task.op === op.id && lead.task.helper === v.id) return 'caixa'; }
+      return null;
+    },
     resume(op, v, H) { const S = S_(); const dock = S.buildings.get(op.at); if (!dock || v.carry.op !== op.id) return null; return H.setTask(v, { type: 'descarga', dock: dock.id, op: op.id, cid: v.carry.cid || 0, pri: 1.6, st: 2, trips: 0, id: dock.id }); },
     drop,
     text(v, t, op) {

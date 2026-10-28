@@ -124,10 +124,11 @@
     const R = flared ? r * 2.1 : r * 1.5;
     box(c, x - R, y - R, x + R, y + R, z1 - (flared ? 1.6 : 0.9), z1, flared ? p.acc2 || p.col[0] : p.col[0], flared ? shade(p.acc2 || p.col[1], 0.85) : p.col[1], p.col[0]);
   }
-  function colonnade(c, p, x0, y0, x1, y1, z0, z1, n, r, sides, flared) {
-    const pts = [];
-    if (sides.includes('B')) { for (let k = 0; k < n; k++) pts.push([x0 + (x1 - x0) * k / (n - 1), y0]); for (let k = 1; k < n; k++) pts.push([x0, y0 + (y1 - y0) * k / (n - 1)]); }
-    if (sides.includes('L')) for (let k = 0; k < n; k++) pts.push([x0 + (x1 - x0) * k / (n - 1), y1]);
+  // (nr: how many along the rows — the back and the front —, n along the sides; a Greek temple's front of six, its sides of five)
+  function colonnade(c, p, x0, y0, x1, y1, z0, z1, n, r, sides, flared, nr) {
+    const pts = []; const m = nr || n;
+    if (sides.includes('B')) { for (let k = 0; k < m; k++) pts.push([x0 + (x1 - x0) * k / (m - 1), y0]); for (let k = 1; k < n; k++) pts.push([x0, y0 + (y1 - y0) * k / (n - 1)]); }
+    if (sides.includes('L')) for (let k = 0; k < m; k++) pts.push([x0 + (x1 - x0) * k / (m - 1), y1]);
     if (sides.includes('R')) for (let k = 0; k < n - (sides.includes('L') ? 1 : 0); k++) pts.push([x1, y0 + (y1 - y0) * k / (n - 1)]);
     pts.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
     for (const [x, y] of pts) column(c, p, x, y, z0, z1, r, flared);
@@ -419,15 +420,17 @@
     if (st === 'grego' || st === 'romano') {
       const g = st === 'grego';
       const H0 = g ? steps(c, p, 0.95, 3, 1.4, 0.07) : 0;
-      if (!g) { box(c, -0.85, -0.85, 0.85, 0.85, 0, 7, p.base[0], p.base[1], p.base[2]); // podium with front stairs
-        poly(c, [P(-0.35, 1.02, 0), P(0.35, 1.02, 0), P(0.35, 0.85, 7), P(-0.35, 0.85, 7)], shade(p.base[2], 1.05));
-        for (let k = 1; k < 6; k++) ln(c, P(-0.35, 1.02 - 0.17 * k / 6, 7 * k / 6), P(0.35, 1.02 - 0.17 * k / 6, 7 * k / 6), 'rgba(0,0,0,0.15)', 0.3); }
+      if (!g) box(c, -0.85, -0.85, 0.85, 0.85, 0, 7, p.base[0], p.base[1], p.base[2]); // podium
+      // (the flight up the front on the axis, cut into the base — the body's, no riser over 0.30 m: Forma's temple —, from the
+      // highest tread down, each a box from the ground)
+      { const s = g ? 0.0875 : 0.125, n = g ? 5 : 8, d = g ? 0.08 : 0.08125, v0 = g ? 0.95 : 1.0, zt = g ? H0 : 7;
+        for (let j = n - 2; j >= 0; j--) box(c, -s, v0 - d * (j + 1), s, v0 - d * j, 0, zt * (j + 1) / n, p.base[0], p.base[1], shade(p.base[2], 1.05)); }
       const z0 = g ? H0 : 7, H = z0 + 17;
       const cx0 = g ? -0.5 : -0.55, cx1 = g ? 0.45 : 0.55, cy0 = g ? -0.5 : -0.7, cy1 = g ? 0.45 : 0.2;
-      if (g) colonnade(c, p, -0.72, -0.72, 0.72, 0.72, z0, H, 5, 0.045, 'B');
+      if (g) colonnade(c, p, -0.72, -0.72, 0.72, 0.72, z0, H, 5, 0.045, 'B', false, 6);
       walls(c, cx0, cy0, cx1, cy1, z0, H, p.wl, p.wr);
       door(c, cy1, -0.15, 0.15, z0, z0 + 10, '#3a2e24', m);
-      if (g) colonnade(c, p, -0.72, -0.72, 0.72, 0.72, z0, H, 5, 0.045, 'LR');
+      if (g) colonnade(c, p, -0.72, -0.72, 0.72, 0.72, z0, H, 5, 0.045, 'LR', false, 6);
       else colonnade(c, p, -0.62, 0.3, 0.62, 0.72, z0, H, 4, 0.05, 'L');
       const ey0 = g ? -0.78 : -0.72, ey1 = g ? 0.78 : 0.76;
       box(c, -0.78, ey0, 0.78, ey1, H, H + 2.5, p.col[0], p.col[1], p.col[0]);
@@ -996,7 +999,7 @@
     const faceOf = side => (side === 'S' ? (qy > 0 ? 'L' : null) : side === 'N' ? (qy < 0 ? 'L' : null) : side === 'E' ? (qx > 0 ? 'R' : null) : (qx < 0 ? 'R' : null));
     // (a home's pieces on its flat roof, where the 3D puts them — Forma.deck, L-267: the awning, the wind-catcher, the pots)
     if (!H.round && HOMES[b.type] && H.roof.kind === 'plano' && s.entrance && G.Forma) {
-      const dk = G.Forma.deck(sh.r, s.entrance.side, L, PAL[b.style] ? b.style : 'classico', !!rf.room);
+      const dk = G.Forma.deck(sh.r, s.entrance.side, L, PAL[b.style] ? b.style : 'classico', G.Forma.lived(s));
       const fx = dk.front[0] * qx, fy = dk.front[1] * qy, acX = Math.abs(dk.across[0]) > 0.5;
       H.deck = dk.items.map(it => {
         const o = { k: it.k, x: X(it.x), y: Y(it.z), cor: it.cor };

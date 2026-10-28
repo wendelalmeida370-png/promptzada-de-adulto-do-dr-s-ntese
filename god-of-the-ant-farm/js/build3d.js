@@ -423,6 +423,10 @@ float m3scale(float p) {
   const formOf = b => (G.Forma && G.Forma.has(b.type, styleOf(b)) ? G.Forma.of(b.type, styleOf(b)) : null);
   const heightOf = b => { const F = formOf(b); return F ? F.top : HEIGHT[b.type] || 5; };
   B3.height = heightOf;
+  B3.formOf = formOf; // (for the proofs)
+  // (is a building drawn by its form — for the proofs: its kit's form with no shell, an open shell's (the square's), or a shell
+  // raised on the form's body; a shell of a plan's family from before its form is drawn as that shell)
+  B3.byForm = b => { if (!formOf(b)) return false; const S = B3.shellOf(b); return !S || S.shell.kind === 'aberta' || !!bodyForm(b); };
 
   // ------------------------------ the kit ------------------------------
   // (everything in metres, from the corner of the footprint: a building is a little world of its own, then put in place)
@@ -713,8 +717,9 @@ float m3scale(float p) {
           const prof = [[0, 0], [0.18, 0.05], [0.34, 0.14], [H2, F]];
           for (let k = 0; k < 3; k++) { const [u0, f0] = prof[k], [u1, f1] = prof[k + 1]; K.tri3(p(a0, u0, f0), p(a1, u0, f0), p(a1, u1, f1), k ? pc : c2, k ? pc : c2, pc, [W2.o[0], 0.3, W2.o[1]]); K.tri3(p(a0, u0, f0), p(a1, u1, f1), p(a0, u1, f1), k ? pc : c2, pc, pc, [W2.o[0], 0.3, W2.o[1]]); }
           // (the gorge's inside, from the roof's slab up to the parapet: the gorge shows its front only — without it the sky
-          // was seen through it from the terrace, L-271)
-          K.quad(p(a0, 0.16, -0.16), p(a1, 0.16, -0.16), p(a1, H2 + 0.1, -0.16), p(a0, H2 + 0.1, -0.16), dim(pc, 0.9), [-W2.o[0], 0, -W2.o[1]]);
+          // was seen through it from the terrace, L-271; a terrace's own parapet hides it, and the face stood 2 cm proud of the
+          // parapet's inner face: L-273)
+          if (shell !== 'terrace') K.quad(p(a0, 0.16, -0.16), p(a1, 0.16, -0.16), p(a1, H2 + 0.1, -0.16), p(a0, H2 + 0.1, -0.16), dim(pc, 0.9), [-W2.o[0], 0, -W2.o[1]]);
           K.box(...(W2.ax ? [x, yb + H2, z + W2.o[1] * (sz / 2 + F / 2 - 0.02), sx + F * 2, 0.1, F + 0.04] : [x + W2.o[0] * (sx / 2 + F / 2 - 0.02), yb + H2, z, F + 0.04, 0.1, sz + F * 2]), dim(pc, 0.95));
           if (shell !== 'terrace') K.box(...(W2.ax ? [x, yb + H2 + 0.1, z + W2.o[1] * (sz / 2 - 0.05), sx + 0.1, 0.32, 0.22] : [x + W2.o[0] * (sx / 2 - 0.05), yb + H2 + 0.1, z, 0.22, 0.32, sz + 0.1]), pc);
         }
@@ -1099,6 +1104,7 @@ float m3scale(float p) {
   }
   // a rune stone (the model made in Blender, G.Mesh3D 'runa': its foot a quarter of a metre in the ground), at (x, z) of the lot,
   // its carved face turned ry from +Z, s its size: granite, the serpent band painted red, the runes cut dark. False: no model
+  B3.runeStone = (...a) => runeStone(...a); // (for what lies about a building: the stone at a northern town's first well, Props3D)
   function runeStone(K, x, z, ry, s) {
     const M3 = G.Mesh3D; if (!M3 || !M3.has('runa') || !M3.part('runa', 'pedra')) return false;
     const y = K.footed || BASELESS[K.b.type] ? Math.min(K.gy(x - 0.4, z), K.gy(x + 0.4, z), K.gy(x, z)) : 0; const m = R3.mat(K.x0 + x, K.y0 + y, K.z0 + z, ry, s, s, s);
@@ -1468,16 +1474,17 @@ float m3scale(float p) {
   // stands on the ground of its lot: its own base reaches down to the lowest ground (no plinth under it), and its heights
   // are over the lot's highest ground, as the god's picture has them (the kit's own are over the plinth's top)
   const FORM_SEG = 48; // (the segments round a drum, a ring of seats, an arena)
-  function formCtx(K, F, side) {
-    const L = F.L, lift = K.y0 - K.hi, foot = K.lo - K.hi - 0.2;
+  // (onPlan: the form of a shell raised on its body — Interiors' forma.* —, over the plinth's top as its plan and the feet are)
+  function formCtx(K, F, side, onPlan) {
+    const L = F.L, lift = onPlan ? 0 : K.y0 - K.hi, foot = K.lo - K.y0 - 0.2; // (foot: the lot's lowest ground, in the kit's frame)
     const XZ = (u, v) => G.Forma.toLot(side, L, u, v);
     const P = K.P;
     const col = s => { if (Array.isArray(s)) return s; if (typeof s !== 'string') return '#8a8478'; if (s[0] === '#') return s;
       const m = s.match(/^([a-z]+)(\d)?$/); if (!m) return '#8a8478'; const v = P[m[1]]; return m[2] !== undefined ? (Array.isArray(v) ? v[+m[2]] : v) || '#8a8478' : (Array.isArray(v) ? v[0] : v) || '#8a8478'; };
     return {
-      F, side, L, K, col,
+      F, side, L, K, col, lift,
       Y: y => y - lift, // (the form's height to the kit's)
-      foot: y0 => (y0 <= 0.001 ? foot - lift : y0 - lift), // (a foot on the ground reaches the lowest ground of the lot)
+      foot: y0 => (y0 <= 0.001 ? foot : y0 - lift), // (a foot on the ground reaches the lowest ground of the lot)
       XZ, front: G.Forma.dirLot(side, 0, 1), across: G.Forma.dirLot(side, 1, 0),
       rect: r => { const a = XZ(r[0], r[1]), b2 = XZ(r[2], r[3]); return [Math.min(a[0], b2[0]), Math.min(a[1], b2[1]), Math.max(a[0], b2[0]), Math.max(a[1], b2[1])]; },
       // (a point of the form, [u, v, y], in the kit's frame)
@@ -1503,8 +1510,10 @@ float m3scale(float p) {
   }
   const FORMK = {
     bloco(K, e, X) {
-      const r = X.rect(e.r), y0 = X.foot(e.y0), y1 = X.Y(e.y1); const c = e.cor || ['wl', 'wr', 'top'];
-      K.as(e.crista ? 'stucco' : X.mat(e, e.tabuas ? (K.st === 'nordico' ? 'plankV' : stuff(K.b).wall) : null), () => formBox(K, r[0], r[1], r[2], r[3], y0, y1, X.col(c[0]), X.col(c[2] || c[0])));
+      const r = X.rect(e.r), y0 = X.foot(e.y0), y1 = X.Y(e.y1); const c = e.cor || ['wl', 'wr', 'top']; const cut = e.topCut ? X.rect(e.topCut) : null;
+      K.as(e.crista ? 'stucco' : X.mat(e, e.tabuas ? (K.st === 'nordico' ? 'plankV' : stuff(K.b).wall) : null), () => { formBox(K, r[0], r[1], r[2], r[3], y0, y1, X.col(c[0]), cut ? null : X.col(c[2] || c[0]));
+        // (its top but over topCut: a shell's walls under it, the roof's underside their ceiling)
+        if (cut) for (const q of cutRect(r, [cut])) K.quad([q[0], y1, q[1]], [q[2], y1, q[1]], [q[2], y1, q[3]], [q[0], y1, q[3]], X.col(c[2] || c[0]), UP); });
       // (the god's line under each level's top: a course a little darker, standing out a finger)
       if (e.friso && K.fine) K.as(X.mat(e), () => formBox(K, r[0] - 0.02, r[1] - 0.02, r[2] + 0.02, r[3] + 0.02, y1 - e.friso - 0.08, y1 - e.friso, dim(rgbOf(X.col(c[0])), 0.82)));
     },
@@ -1797,7 +1806,7 @@ float m3scale(float p) {
     placa(K, e, X) { const v = e.v + 0.03; K.as('slab', () => K.quad(X.pt(e.u - e.w / 2, v, e.y0), X.pt(e.u + e.w / 2, v, e.y0), X.pt(e.u + e.w / 2, v, e.y1), X.pt(e.u - e.w / 2, v, e.y1), X.col(e.cor), [X.front[0], 0, X.front[1]])); },
     // a flag: its pole, and the pennant at its top out to the right of one who faces the front, seen from both sides
     bandeira(K, e, X) {
-      const a = X.pt(e.p[0], e.p[1], e.p[2] <= 0.001 ? X.foot(0) + (K.y0 - K.hi) : e.p[2]), b = X.pt(e.p[0], e.p[1], e.p[2] + e.h); K.as('beam', () => K.log(a, b, 0.05, '#5a3c22'));
+      const a = X.pt(e.p[0], e.p[1], e.p[2] <= 0.001 ? X.foot(0) + X.lift : e.p[2]), b = X.pt(e.p[0], e.p[1], e.p[2] + e.h); K.as('beam', () => K.log(a, b, 0.05, '#5a3c22'));
       const ac = [X.across[0], 0, X.across[1]], fr = [X.front[0], 0, X.front[1]]; const t = [b[0], b[1] - 0.04, b[2]]; const w = 1.25, hh = 1.0;
       const A = t, B = [t[0] + ac[0] * w, t[1] - hh / 2, t[2] + ac[2] * w], C = [t[0], t[1] - hh, t[2]];
       K.as('linen', () => { K.tri(A, B, C, X.col(e.cor), fr); K.tri(A, C, B, X.col(e.cor), [-fr[0], 0, -fr[2]]); });
@@ -1810,7 +1819,7 @@ float m3scale(float p) {
     bacia(K, e, X) {
       const C = X.XZ(e.c[0], e.c[1]); const y0 = X.foot(e.y0), y1 = X.Y(e.y1); const col = rgbOf(X.col(e.cor)); const ri = e.r - e.t, yw = y1 - (e.nivel || 0.1); const n = e.blocos || 0;
       K.as(X.mat(e, 'stone'), () => {
-        K.cyl(C[0], y0, C[1], ri + 0.02, Math.max(0.04, yw - 0.06 - y0), dim(col, 0.8)); // (its floor, under the water)
+        K.cyl(C[0], y0, C[1], ri + 0.02, Math.max(0.04, yw - 0.06 - y0), e.fundo ? rgbOf(X.col(e.fundo)) : dim(col, 0.8)); // (its floor, under the water)
         if (n) { const rm = e.r - e.t / 2, len = TAU * rm / n + 0.02;
           for (let k = 0; k < n; k++) { const a = (k + 0.5) / n * TAU; K.rbox(C[0] + Math.cos(a) * rm, y0, C[1] + Math.sin(a) * rm, len, y1 - 0.07 - y0, e.t, dim(col, 0.92 + K.hv(160 + k) * 0.14), -a - Math.PI / 2); } }
         else { const m = 20; const p = (r, a, y) => [C[0] + Math.cos(a) * r, y, C[1] + Math.sin(a) * r];
@@ -1822,6 +1831,20 @@ float m3scale(float p) {
       // (the coping of the blocks: a slab on each, a finger out of the rim both ways)
       if (n) K.as('slab', () => { const rm = e.r - e.t / 2, len = TAU * rm / n + 0.03; for (let k = 0; k < n; k++) { const a = (k + 0.5) / n * TAU; K.rbox(C[0] + Math.cos(a) * rm, y1 - 0.07, C[1] + Math.sin(a) * rm, len, 0.07, e.t + 0.02, dim(col, 1.04 + K.hv(180 + k) * 0.08), -a - Math.PI / 2); } });
       K.gq.disc(K.x0 + C[0], K.y0 + yw, K.z0 + C[1], ri, rgbOf(X.col(e.agua || '#4a9ac0')), 0.55, n ? 24 : 12);
+    },
+    // a hill of rock, a heap — the god's dome turned round (Forma.dome): rounds of flat faces up its curve, its stones out or in
+    // by the building's id, darker at its foot (a mine of gold, ouro: K.b.v — only seen), the glints of ore in its face
+    morro(K, e, X) {
+      const C = X.XZ(e.c[0], e.c[1]); const y0 = X.foot(e.y0), yb = X.Y(e.y0), H = e.y1 - e.y0; const big = e.r > 1; const nu = big ? 18 : 10, nv = big ? 6 : 3;
+      const cols = e.ouro && K.b.v === 1 ? e.ouro : e.cor; const hi = rgbOf(X.col(cols[0])), lo = rgbOf(X.col(cols[1]));
+      const ring = []; for (let j = 0; j <= nv; j++) { const d = G.Forma.dome(j / nv); const row = [];
+        for (let i = 0; i < nu; i++) { const a = i / nu * TAU; const jr = j === 0 || j === nv ? 1 : 0.86 + K.hv(300 + i + j * 17) * 0.14; const r = Math.max(0.02, e.r * d[0] * jr); // (in, never out past its round: the lot)
+          row.push([C[0] + Math.cos(a) * r, j === 0 ? y0 : yb + H * d[1], C[1] + Math.sin(a) * r]); }
+        ring.push(row); }
+      K.as(e.mat || 'rock', () => { for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) { const i2 = (i + 1) % nu; const am = (i + 0.5) / nu * TAU; const f = G.clamp((ring[j][i][1] + ring[j + 1][i][1]) / 2 - yb, 0, H) / H;
+        K.quad(ring[j][i], ring[j][i2], ring[j + 1][i2], ring[j + 1][i], mixc(lo, hi, f), [Math.cos(am), 0.4, Math.sin(am)]); } });
+      if (e.veios) K.as('slab', () => { const ore = K.b.v === 1 ? '#f2c14e' : '#a8522e'; for (let k = 0; k < e.veios; k++) { const j = 1 + Math.floor(K.hv(520 + k) * (nv - 2)), a = K.hv(540 + k) * TAU; const d = G.Forma.dome((j + 0.5) / nv);
+        K.box(C[0] + Math.cos(a) * e.r * d[0] * 0.98, yb + H * d[1], C[1] + Math.sin(a) * e.r * d[0] * 0.98, 0.16, 0.08, 0.16, ore); } });
     },
     // a bench: its plank, on its two feet of stone a little in from its ends
     banco(K, e, X) {
@@ -1886,11 +1909,11 @@ float m3scale(float p) {
       const r = X.rect([e.r[0] - ov, e.r[1] - ov, e.r[2] + ov, e.r[3] + ov]); const y = X.Y(e.y0);
       K.quad([r[0], y, r[1]], [r[2], y, r[1]], [r[2], y, r[3]], [r[0], y, r[3]], dim(rgbOf(c), 0.7), [0, -1, 0]); });
   }
-  // a building's form, built: every element in order (the god's own, back to front) — but those skip leaves out —, the
-  // generic plinth not under it
-  function formInto(g, gw, K, F, side, skip) {
-    const X = formCtx(K, F, side); X.gw = gw; K.footed = true;
-    for (const e of F.els) { if (skip && skip(e)) continue; const f = FORMK[e.k]; if (f) f(K, e, X); }
+  // a building's form, built: every element in order (the god's own, back to front) — but those skip leaves out, or gives
+  // another for (an element) —, the generic plinth not under it (onPlan: a shell's form, on the plinth's top — formCtx)
+  function formInto(g, gw, K, F, side, skip, onPlan) {
+    const X = formCtx(K, F, side, onPlan); X.gw = gw; K.footed = true;
+    for (const e0 of F.els) { const s = skip ? skip(e0) : false; if (s === true) continue; const e = s || e0; const f = FORMK[e.k]; if (f) f(K, e, X); }
     // (the body's box — what the form covers from above —, for what reads it: Props3D, the door's side)
     const R = [1e9, 1e9, -1e9, -1e9]; for (const f of G.Forma.foot(F)) { const r = f.k === 'circ' ? [f.c[0] - f.r, f.c[1] - f.r, f.c[0] + f.r, f.c[1] + f.r] : f.r; R[0] = Math.min(R[0], r[0]); R[1] = Math.min(R[1], r[1]); R[2] = Math.max(R[2], r[2]); R[3] = Math.max(R[3], r[3]); }
     const rr = X.rect(R[0] < R[2] ? R : [0, 0, F.L, F.L]); const od = SIDEO[side] || [0, 1];
@@ -1901,7 +1924,7 @@ float m3scale(float p) {
   // (the far figure of a form: its masses alone — a block, a battered rock, a pyramid, a drum, a roof — on the lot, in world
   // metres; g the far chunk's builder)
   function massInto(g, b, F, side) {
-    const L = TL(), P = palOf(b); const hi = G.Space.plinth(b).hi, lo = G.Space.plinth(b).lo; const X0 = b.x * L, Z0 = b.y * L;
+    const L = TL(), P = palOf(b); const pl = G.Space.plinth(b); const hi = bodyForm(b) ? pl.y0 : pl.hi, lo = pl.lo; const X0 = b.x * L, Z0 = b.y * L; // (a shell's form on the plinth's top: formCtx)
     const col = s => { if (typeof s !== 'string') return P.wl || '#efe2c4'; if (s[0] === '#') return s; const m = s.match(/^([a-z]+)(\d)?$/); const v = m ? P[m[1]] : null; return (m && m[2] !== undefined && Array.isArray(v) ? v[+m[2]] : Array.isArray(v) ? v[0] : v) || '#8a8478'; };
     const W = (u, v, y) => { const q = G.Forma.toLot(side, F.L, u, v); return [X0 + q[0], hi + y, Z0 + q[1]]; };
     // (a face turned out: its corners in the order that shows it from out — the far material shows one side)
@@ -1969,14 +1992,17 @@ float m3scale(float p) {
         B3.chim.set(K.b.id, [K.x0 + px, K.y0 + gy + 0.7, K.z0 + pz]); B.kiln = { side: d ? d.side : 'S', at: ax ? px : pz }; } },
     tecelagem(g, gw, K) { house(g, gw, K, { h: 3.2 }); if (K.prog >= 1) for (const [cc, k] of [['#c8483a', 0], ['#3f6fb0', 1], ['#e8b83a', 2]]) K.box(K.w * (0.25 + k * 0.25), 2.2, K.d - 0.3, 0.9, 1.4, 0.05, cc); },
     ourives(g, gw, K) { house(g, gw, K, { h: 3.2, wall: K.P.wr }); },
-    perolaria(g, gw, K) { house(g, gw, K, { h: 3 }); },
-    sericultura(g, gw, K) { house(g, gw, K, { h: 3 }); },
+    // the divers' hut, the silk house and the salting yard, from their forms
+    perolaria(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1.4, K.d - 1.4, 2.5); return; } formInto(g, gw, K, G.Forma.of('perolaria', styleOf(K.b)), doorSide(K.b)); },
+    sericultura(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 4); return; } formInto(g, gw, K, G.Forma.of('sericultura', styleOf(K.b)), doorSide(K.b)); },
+    salga(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 4); return; } formInto(g, gw, K, G.Forma.of('salga', styleOf(K.b)), doorSide(K.b)); },
     acougue(g, gw, K) { house(g, gw, K, { h: 3 }); if (K.prog >= 1) K.box(K.w * 0.75, 1.6, K.d - 0.3, 1.2, 0.08, 0.08, '#6a4a30'); },
     // the inn: its yard before the door (barrels, a table and its benches: Props3D), its sign hung from an iron arm by the door
     taverna(g, gw, K) { house(g, gw, K, { floors: 2, h: 2.9, chimney: true, plinth: true, yard: 1.2 }); if (K.prog >= 1) innSign(K); },
     temple(g, gw, K) {
       const st = styleOf(K.b); const P = K.P;
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 5); return; }
+      if (G.Forma && G.Forma.has('temple', st)) { formInto(g, gw, K, G.Forma.of('temple', st), doorSide(K.b)); return; } // (D-093: the form)
       if (st === 'asteca' || st === 'maia' || st === 'inca') { K.as('tezontle', () => { for (let k = 0; k < 4; k++) { const s = (K.w - 0.5) * (1 - k * 0.2); K.box(K.w / 2, k * 1.6, K.d / 2, s, 1.6, s, P.base ? P.base[k % 2] : '#b9ad93'); } }); K.as('stucco', () => K.box(K.w / 2, 6.4, K.d / 2, K.w * 0.3, 2, K.d * 0.3, P.wl)); K.as('stucco', () => K.box(K.w / 2, 0.8, K.d - 0.6, 1.2, 0.2, 2.6, P.trim || '#b33a2a')); return; }
       if (st === 'egipcio') { K.as('sandstone', () => K.box(K.w / 2, 0, K.d / 2, K.w - 0.6, 6, K.d - 0.6, P.wl)); K.box(K.w / 2, 6, K.d / 2, K.w - 0.4, 0.5, K.d - 0.4, P.trim || '#2f8f8a'); K.as('plankV', () => K.box(K.w / 2, 0, K.d - 0.25, 1.6, 3.4, 0.2, P.door || '#3e2e1c')); K.as('sandstone', () => { for (const s of [-1, 1]) K.box(K.w / 2 + s * 2.6, 0, K.d + 0.4, 0.6, 7.5, 0.6, P.wr); }); return; }
       if (st === 'nordico') { house(g, gw, K, { h: 3.4, roof: 'turf', inset: 0.3 }); return; }
@@ -2070,47 +2096,36 @@ float m3scale(float p) {
       }
       house(g, gw, K, { h: 2.4, inset: Math.min(K.w, K.d) * 0.22, wall: '#9a7a50', pat: 'plankH', door: true });
     },
-    // the mine: a mound of rock over the shaft — only its cap, laid on the floor (a ball sunk 2.3 m in the ground drew the same
-    // cap: Build3D.check found it buried), its stones out or in by the mine's id, darker at its foot; the timbered mouth before it
-    mina(g, gw, K) {
-      const cx = K.w / 2, cz = K.d / 2, R = K.w * 0.4, H = 1.3, nu = 12, nv = 4; const pts = [];
-      for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) { const q = i % nu, a = q / nu * TAU, t = j / nv;
-        const jr = j === 0 ? 0.96 + K.hv(300 + q) * 0.08 : j === nv ? 1 : 0.86 + K.hv(300 + q + j * 17) * 0.28, jy = j === 0 || j === nv ? 1 : 0.94 + K.hv(340 + q + j * 13) * 0.12;
-        const r = Math.max(0.02, R * Math.pow(Math.cos(t * Math.PI / 2), 0.75) * jr); pts.push([cx + Math.cos(a) * r, j === 0 ? -0.05 : H * Math.sin(t * Math.PI / 2) * jy, cz + Math.sin(a) * r]); }
-      K.as('rock', () => K.sheet(pts, nu, nv, (X, Y) => mixc([104, 98, 86], [140, 134, 122], G.clamp((Y - K.y0) / H, 0, 1)), [0, 1, 0]));
-      K.as('beam', () => { for (const s of [-1, 1]) K.box(cx + s * 0.9, 0, K.d - 0.6, 0.4, 2.4, 0.4, '#6a4a2c'); K.box(cx, 1.9, K.d - 0.6, 1.4, 0.5, 0.4, '#5e4228'); });
-      K.box(cx, 0, K.d - 0.7, 1.4, 1.9, 0.42, '#141414');
+    // the mine, from its form: the hill over the galleries filling the lot, the mouth at its foot, the rails and the cart in the
+    // front corner (D-092) — the hill was there before the mine, going up as built
+    mina(g, gw, K) { formInto(g, gw, K, G.Forma.of('mina', styleOf(K.b)), doorSide(K.b)); },
+    // the salt pans, as the god paints them on their ground: nine pans, a tile each, their low rims of clay, the brine in them
+    // white as the sun leaves its salt (the world's b.salt: read, never written — only seen), the heap raked in the middle of
+    // a pan where enough is left; on the ground, no plinth under them
+    salina(g, gw, K) {
+      K.footed = true; const L = K.L, salt = K.b.salt || []; const rim = [154, 138, 112];
+      for (let k = 0; k < 9; k++) {
+        const x0 = (k % 3) * L, z0 = Math.floor(k / 3) * L; const s = (salt[k] || 0) / 3; const a = 0.16, i = 0.48; // (the rim's outer and inner edges in from the tile's)
+        const gy = K.gy(x0 + L / 2, z0 + L / 2);
+        K.as('mud', () => { for (const [ux0, uz0, ux1, uz1] of [[a, a, L - a, i], [a, L - i, L - a, L - a], [a, i, i, L - i], [L - i, i, L - a, L - i]]) formBox(K, x0 + ux0, z0 + uz0, x0 + ux1, z0 + uz1, gy - 0.1, gy + 0.12, rim, dim(rim, 1.06)); });
+        const brine = mixc([120, 190, 215], [246, 246, 240], Math.min(1, s * 1.2));
+        K.as(s > 0.5 ? 'slab' : 'mud', () => K.quad([x0 + i, gy + 0.06, z0 + i], [x0 + L - i, gy + 0.06, z0 + i], [x0 + L - i, gy + 0.06, z0 + L - i], [x0 + i, gy + 0.06, z0 + L - i], brine, UP));
+        if ((salt[k] || 0) >= 1.6) { const h = (1.5 + ((salt[k] || 0) - 1.6) * 1.6) / G.Forma.ZPX; K.as('slab', () => K.cone(x0 + L / 2, gy + 0.06, z0 + L / 2, 0.53, h, [246, 246, 242])); }
+      }
     },
     apiario(g, gw, K) { for (let k = 0; k < 4; k++) { const px = K.w * (0.25 + (k % 2) * 0.5), pz = K.d * (0.3 + Math.floor(k / 2) * 0.4); K.box(px, 0, pz, 0.15, 0.6, 0.15, '#6a4a2c'); K.box(px, 0.6, pz, 0.8, 0.7, 0.6, '#e8c870'); K.box(px, 1.3, pz, 0.95, 0.1, 0.75, '#8a6a44'); } },
-    curral(g, gw, K) { fenceAround(K, 1.3, '#8a6a44', true); },
-    estabulo(g, gw, K) { house(g, gw, K, { h: 3.4, inset: 0.6, wall: '#8a5a3a', pat: 'plankH' }); },
+    // the pens, from their forms: the fence round, the stable along the back, the shelter in its corner (as the god draws them)
+    curral(g, gw, K) { formInto(g, gw, K, G.Forma.of('curral', styleOf(K.b)), doorSide(K.b)); },
+    estabulo(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, 1.9, K.w - 0.6, 3.4, 3.6); return; } formInto(g, gw, K, G.Forma.of('estabulo', styleOf(K.b)), doorSide(K.b)); },
     cercado(g, gw, K) { fenceAround(K, 1.6, '#6a5a44', true); },
     farm(g, gw, K) { fields(K, '#d4ac44', '#6a9a3a'); },
     horta(g, gw, K) { fields(K, '#7aaa4a', '#4a8a2a', true); },
     plantacao(g, gw, K) { fields(K, '#c8b84a', '#5a8a2a'); },
     vinhedo(g, gw, K) { for (let r = 0; r < K.b.h * 2; r++) { const z = (r + 0.5) * K.d / (K.b.h * 2); K.box(K.w / 2, 0, z, K.w - 0.8, 1.5, 0.35, '#4a7a2a'); K.box(0.4, 0, z, 0.12, 1.8, 0.12, '#6a4a2c'); K.box(K.w - 0.4, 0, z, 0.12, 1.8, 0.12, '#6a4a2c'); } },
     pomar(g, gw, K) { for (let k = 0; k < K.b.w * K.b.h; k++) { const px = ((k % K.b.w) + 0.5) * K.L, pz = (Math.floor(k / K.b.w) + 0.5) * K.L; K.cyl(px, 0, pz, 0.18, 1.6, '#6a4a2c'); K.sph(px, 2.6, pz, 1.2, '#4f8f36', 1.0); K.sph(px + 0.6, 2.3, pz + 0.3, 0.2, '#d23a2a'); } },
-    // the well: a ring of stones round the shaft, dark inside, its water deep down; two posts, the windlass across them with its
-    // rope and bucket, a little roof of the people's kind (the same place and size as the god's: x, z, 0.8 m round)
-    well(g, gw, K) {
-      const P = K.P; const x = K.w / 2, z = K.d / 2; const bs = P.base || ['#8a8478', '#6f6a60', '#a09a8e']; const nord = K.st === 'nordico';
-      K.cyl(x, 0, z, 0.6, 0.35, dim(bs[1], 0.45)); // (the shaft's dark)
-      K.as('stone', () => { const n = 11; for (let k = 0; k < n; k++) { const a = (k + 0.5) / n * TAU; K.rbox(x + Math.cos(a) * 0.68, 0, z + Math.sin(a) * 0.68, 0.43, 0.8, 0.24, mixc(bs[k % 3], bs[(k + 1) % 3], K.hv(170 + k) * 0.6), -a - Math.PI / 2); } });
-      K.as('slab', () => { for (let k = 0; k < 11; k++) { const a = (k + 0.5) / 11 * TAU; K.rbox(x + Math.cos(a) * 0.68, 0.8, z + Math.sin(a) * 0.68, 0.45, 0.07, 0.28, dim(bs[2], 0.95 + K.hv(190 + k) * 0.08), -a - Math.PI / 2); } });
-      K.gq.disc(K.x0 + x, K.y0 + 0.36, K.z0 + z, 0.57, [34, 62, 70], 0.85, 12);
-      const wc = nord ? nordWood(K).dark : [104, 78, 52];
-      K.as('beam', () => { for (const s of [-1, 1]) K.box(x + s * 0.82, 0, z, 0.13, 2.25, 0.13, wc); });
-      K.as('bark', () => K.log([x - 0.84, 1.45, z], [x + 0.84, 1.45, z], 0.075, [118, 94, 66]));
-      K.as('beam', () => K.bar([x + 0.88, 1.45, z], [x + 1.02, 1.28, z], [0, 0, 0.04], [0, 0.04, 0], wc)); // (the crank)
-      K.as('rope', () => K.log([x + 0.05, 1.42, z], [x + 0.05, 0.98, z], 0.012, [176, 156, 118]));
-      K.as('plankV', () => K.cyl(x + 0.05, 0.72, z, 0.13, 0.26, [120, 88, 56])); K.as('iron', () => K.cyl(x + 0.05, 0.9, z, 0.138, 0.03, '#3c3a36'));
-      const rp = nord ? 'shingle' : stuff(K.b).tile === 'mud' ? 'thatch' : stuff(K.b).tile; const rc = nord ? dim(wc, 1.1) : rp === 'thatch' ? ((P.thatch && P.thatch[0]) || '#c8a85a') : (P.roof && P.roof[0]) || '#b85a3c';
-      K.as(rp, () => K.gable(x, 2.2, z, 2, 0.6, 1.4, rc));
-      // (one rune stone to a town of the north, at its oldest well: in the well's lot — the body does not walk into it — behind the
-      // well from the side people come to it, its carved face to them)
-      if (nord && K.prog >= 1 && ![...G.S.buildings.values()].some(q => q.type === 'well' && q.set === K.b.set && q.id < K.b.id)) {
-        const o = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[doorSide(K.b)]; runeStone(K, x - o[0] * 1.48, z - o[1] * 1.48, Math.atan2(o[0], o[1]), 0.7); }
-    },
+    // the well, from its form: the god's well-house at the scale of people (D-092); the rune stone at a northern town's first well
+    // is among what lies about it (Props3D)
+    well(g, gw, K) { formInto(g, gw, K, G.Forma.of('well', styleOf(K.b)), doorSide(K.b)); },
     // the campfire: a ring of broken stones half sunk in the ground — each its size, its tilt and its grey by the fire's id,
     // sooted on the side the fire is — round a bed of ash and embers, and the logs leaning in on one another, their bark on,
     // their upper ends burnt to charcoal (where they meet, 0.6 m over the ground, FX3D's flames rise)
@@ -2400,7 +2415,7 @@ float m3scale(float p) {
     let s = 0; const fine = fineAt(x0, y0, n);
     // (and the trees about the steps its doors run on into the street: the steps go round a tree come, and back where it went —
     // Space.doorFlight, L-197)
-    for (const b of G.S.buildings.values()) { if (!inChunk(b, x0, y0, n)) continue; s = (s * 31 + b.id * 7 + (b.built ? 1 : 0) + Math.floor((b.progress || 0) * 5) * 3 + Math.floor((b.hp / (b.maxHp || 1)) * 4) * 11 + (b.crops ? b.crops.reduce((a, c) => a + c.s + Math.floor((c.g || 0) * 3), 0) : 0) * 13 + (b.graves ? b.graves.length : 0) * 17 + B3.shellSig(b) * 19 + G.Space.treeSig(b) * 37) | 0;
+    for (const b of G.S.buildings.values()) { if (!inChunk(b, x0, y0, n)) continue; s = (s * 31 + b.id * 7 + (b.built ? 1 : 0) + Math.floor((b.progress || 0) * 5) * 3 + Math.floor((b.hp / (b.maxHp || 1)) * 4) * 11 + (b.type === 'salina' && b.salt ? b.salt.reduce((a, q, k) => a + Math.floor(q * 2) * (k + 3), 0) * 13 : 0) + (b.crops ? b.crops.reduce((a, c) => a + c.s + Math.floor((c.g || 0) * 3), 0) : 0) * 13 + (b.graves ? b.graves.length : 0) * 17 + B3.shellSig(b) * 19 + G.Space.treeSig(b) * 37) | 0;
       // (a store's heaps are its people's stock: drawn again, where they are drawn — fine, in its yard —, when a count of them
       // changes; a store drawn from its plan has no yard: it shows its stock inside, in its keeping pieces — Build3D.fillOf)
       if (fine && b.built && G.Props3D && G.Props3D.shows && G.Props3D.shows(b) && !B3.shellOf(b)) { const p = G.Props3D.piles(b); s = (s * 7 + p[0] * 19 + p[1] * 23 + p[2] * 29) | 0; } }
@@ -2444,10 +2459,12 @@ float m3scale(float p) {
         // roof, as near: Forma.deck)
         const rm = sh.roof && sh.roof.room, tl = rk === 'flat' && rm && rm.r && Sh.levels.find(l => l.kind === 'terraco');
         if (tl) { g.pat = PAT[OUTPAT[sh.mat] || 'plaster']; g.put(SH.box, R3.mat(b.x * L + (rm.r[0] + rm.r[2]) / 2, y0 + tl.y, b.y * L + (rm.r[1] + rm.r[3]) / 2, 0, rm.r[2] - rm.r[0], rm.h + 0.14, rm.r[3] - rm.r[1]), P.wl || '#efe2c4'); }
-        if (rk === 'flat' && DECKED[b.type] && Sh.entrance && G.Forma) { const yt = y0 + sh.eave + 0.25; const dk = G.Forma.deck(R, Sh.entrance.side, b.w * L, styleOf(b), !!(sh.roof && sh.roof.room)); g.pat = 0;
+        if (rk === 'flat' && DECKED[b.type] && Sh.entrance && G.Forma) { const yt = y0 + sh.eave + 0.25; const dk = G.Forma.deck(R, Sh.entrance.side, b.w * L, styleOf(b), G.Forma.lived(Sh)); g.pat = 0;
           for (const it of dk.items) { const ax = Math.abs(dk.across[0]) > 0.5; if (it.k === 'torre') g.put(SH.box, R3.mat(b.x * L + it.x, yt, b.y * L + it.z, 0, it.w, it.h, it.w), P.wl || '#efe2c4');
             else if (it.k === 'toldo') g.put(SH.box, R3.mat(b.x * L + it.x, yt + it.h1, b.y * L + it.z, 0, ax ? it.w : it.d, it.h - it.h1 + 0.05, ax ? it.d : it.w), '#e8e0c8'); } }
         g.pat = 0; continue; }
+      // (the salt pans from afar: their nine pans flat on the ground in the brine's colour, as the near picture lays them)
+      if (b.type === 'salina' && b.built) { const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L, Y = W.maxH(b.x, b.y, b.w, b.h) * HM(); g.pat = 0; g.put(SH.box, R3.mat(X, Y - 0.1, Z, 0, b.w * L - 0.32, 0.22, b.h * L - 0.32), [170, 196, 204]); continue; }
       const h = (HEIGHT[b.type] || 5) * (b.built ? 1 : 0.4); if (h < 1.5) continue;
       const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L, Y = W.maxH(b.x, b.y, b.w, b.h) * HM();
       const st = stuff(b); const flat = P.kind === 'flat';
@@ -2824,7 +2841,50 @@ float m3scale(float p) {
     tina(F, it) { const { w, h } = it; F.cyl(0, 0, 0, w / 2 - 0.02, h, IWOOD, 'plankV'); F.cyl(0, h - 0.08, 0, w / 2 - 0.05, 0.01, [52, 70, 82]); },
     'roda-oleiro'(F, it) { F.cyl(0, 0.04, 0, 0.32, 0.07, IWOOD, 'plankH'); F.cyl(0, 0.1, 0, 0.03, 0.52, IDARK); F.cyl(0, 0.62, 0, 0.18, 0.04, IWOOD); F.cyl(0, 0.66, 0, 0.09, 0.12, ICLAY, 'mud'); },
     'forno-olaria'(F, it) { const { w, h } = it; F.cyl(0, 0, 0, w / 2 - 0.02, h * 0.32, ISTONE, 'stone'); F.sph(0, h * 0.5, 0, w / 2 - 0.05, ICLAY, h * 0.5, 'mud'); F.box(0, 0.1, w / 2 - 0.12, 0.36, 0.34, 0.2, [40, 32, 28]); },
-    secador(F, it) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.03), 0, 0, 0.05, h, d, IDARK, 'beam'); for (const y of [0.3, 0.75, 1.2]) { F.box(0, y, 0, w - 0.06, 0.03, d, IWOOD, 'plankH'); for (let k = 0; k < 4; k++) F.cyl(-w / 2 + 0.22 + (w - 0.44) * k / 3, y + 0.03, 0, 0.08, 0.16, ICLAY, 'mud'); } },
+    // (a rack of boards with the pots drying on them: as many boards as its height holds — the god's low racks of the potter's
+    // yard, 0.7 m, two; a tall one, three —, the pots on each to under its top; a post every 1.2 m along it)
+    secador(F, it) { const { w, d, h } = it; const m = Math.max(1, Math.ceil((w - 0.06) / 1.2)); for (let k = 0; k <= m; k++) F.box(-w / 2 + 0.03 + (w - 0.06) * k / m, 0, 0, 0.05, h, d, IDARK, 'beam');
+      const n = Math.max(1, Math.min(3, Math.round(h / 0.45))), np = Math.max(2, Math.round((w - 0.3) / 0.36));
+      for (let j = 0; j < n; j++) { const y = (h - 0.2) * (j + 1) / n; F.box(0, y, 0, w - 0.06, 0.03, d, IWOOD, 'plankH'); for (let k = 0; k < np; k++) F.cyl(-w / 2 + 0.2 + (w - 0.4) * k / (np - 1), y + 0.03, 0, 0.08, 0.15, dim(ICLAY, 0.92 + F.hv(j * 9 + k) * 0.12), 'mud'); } },
+    // (the fire on the floor of a round hut — T-161 —: eight stones round its ashes, the embers, two logs across; its light, FIRE_K)
+    'fogo-chao'(F, it) { const r = Math.min(it.w, it.d) / 2;
+      for (let k = 0; k < 8; k++) { const a = k * TAU / 8; F.cyl(Math.cos(a) * (r - 0.06), 0, Math.sin(a) * (r - 0.06), 0.06, Math.min(it.h || 0.15, 0.12), k % 2 ? ISTONE : dim(ISTONE, 0.88), 'stone'); }
+      F.cyl(0, 0, 0, r - 0.11, 0.03, IASH, 'soil'); F.cyl(0, 0.03, 0, r * 0.42, 0.03, IEMBER);
+      F.log(-r * 0.55, 0.07, -r * 0.3, r * 0.55, 0.09, r * 0.3, 0.035, IDARK, 'bark'); F.log(-r * 0.55, 0.07, r * 0.3, r * 0.55, 0.09, -r * 0.3, 0.035, IDARK, 'bark'); },
+    // (the trestle table of a yard and its two benches, one piece: the board on its two trestles in the middle, a bench along
+    // each side where the plan seats the eaters — d/2 − 0.175 out, the seat's height —; a jug, a cup and a bowl on it)
+    'mesa-terreiro'(F, it) { const { w, d, h } = it; const sy = it.seat || 0.45, nb = d / 2 - 0.175;
+      for (const e of [-1, 1]) { F.box(e * (w / 2 - 0.3), 0, 0, 0.08, h - 0.05, 0.62, IDARK, 'plankV'); F.box(0, sy - 0.05, e * nb, w - 0.1, 0.05, 0.3, IWOOD, 'plankH'); for (const s of [-1, 1]) F.box(s * (w / 2 - 0.2), 0, e * nb, 0.06, sy - 0.05, 0.24, IDARK, 'plankV'); }
+      F.box(0, 0.22, 0, w - 0.66, 0.06, 0.06, IDARK, 'beam'); F.box(0, h - 0.05, 0, w - 0.1, 0.05, 0.78, IWOOD, 'plankH');
+      F.cyl(-w * 0.22, h, 0.05, 0.07, 0.2, ICLAY, 'mud'); F.cyl(w * 0.08, h, -0.12, 0.045, 0.08, dim(ICLAY, 0.82)); F.cyl(w * 0.26, h, 0.1, 0.12, 0.05, IWOOD); },
+    // (the potter's tank: four walls of clay and in it the wet clay, up to how full it is — told nothing, near the brim)
+    'tanque-barro'(F, it, cx) { const { w, d, h } = it; for (const e of [-1, 1]) { F.box(0, 0, e * (d / 2 - 0.04), w, h, 0.08, ICLAY, 'mud'); F.box(e * (w / 2 - 0.04), 0, 0, 0.08, h, d - 0.16, ICLAY, 'mud'); }
+      const f = cx && Number.isFinite(cx.fill) ? G.clamp(cx.fill, 0, 1) : 0.85; const top = 0.04 + (h - 0.14) * f;
+      F.box(0, 0, 0, w - 0.16, top, d - 0.16, [128, 92, 66], 'mud'); F.box(0, top, 0, w - 0.22, 0.008, d - 0.22, [102, 78, 60]); },
+    // (the moulding floor: a bed of sand, the wooden mould at its corner and rows of fresh bricks drying on it)
+    eira(F, it) { const { w, d } = it; F.box(0, 0, 0, w, 0.02, d, [204, 180, 136], 'soil');
+      const ma = -w / 2 + 0.32, mn = d / 2 - 0.26; for (const e of [-1, 1]) { F.box(ma, 0.02, mn + e * 0.11, 0.5, 0.05, 0.025, IWOOD, 'plankH'); F.box(ma + e * 0.24, 0.02, mn, 0.025, 0.05, 0.22, IWOOD, 'plankH'); }
+      for (let j = 0; j < 3; j++) for (let k = 0; k < 4; k++) { const a = -w / 2 + 0.75 + k * (w - 1.0) / 3, n = -d / 2 + 0.3 + j * (d - 0.75) / 2; if (F.hv(j * 5 + k) < 0.85) F.box(a, 0.02, n, 0.26, 0.07, 0.13, dim([158, 112, 78], 0.9 + F.hv(j * 5 + k + 40) * 0.15), 'mud'); } },
+    // (a stack of bricks on its boards, as high as the store it holds is full — told nothing, most of the way)
+    'pilha-tijolos'(F, it, cx) { const { w, d, h } = it; F.box(0, 0, 0, w, 0.06, d, IDARK, 'plankH');
+      const f = cx && Number.isFinite(cx.fill) ? G.clamp(cx.fill, 0, 1) : 0.8; const hh = Math.max(0.08, (h - 0.06) * f);
+      F.box(0, 0.06, 0, w - 0.06, hh, d - 0.06, [176, 92, 62], 'brick'); if (hh < h - 0.2) F.box(-w * 0.18, 0.06 + hh, 0, w * 0.45, 0.08, d - 0.2, [170, 88, 60], 'brick'); },
+    // (the great jar: its foot, the swelling body, the neck and the rim, a lid of wood)
+    talha(F, it) { const { w, h } = it; const r = w / 2 - 0.03, hb = h * 0.37;
+      F.cyl(0, 0, 0, 0.14, 0.06, dim(ICLAY, 0.8), 'mud'); F.sph(0, 0.06 + hb, 0, r, ICLAY, hb, 'mud'); F.cyl(0, h * 0.72, 0, r * 0.45, h * 0.2, dim(ICLAY, 0.92), 'mud'); F.cyl(0, h * 0.92, 0, r * 0.58, 0.05, dim(ICLAY, 0.8), 'mud'); F.cyl(0, h * 0.92 + 0.05, 0, r * 0.52, 0.025, IWOOD, 'plankH'); },
+    // (the case of scrolls: its sides, back and top, five shelves, and on them the rolls lying front to back, as many as it
+    // keeps — the scrolls of the building's own store; told nothing, most of them)
+    estante(F, it, cx) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.02), 0, 0, 0.04, h, d, IDARK, 'plankV'); F.box(0, 0, -d / 2 + 0.015, w - 0.08, h, 0.03, dim(IWOOD, 0.8), 'plankV'); F.box(0, h - 0.04, 0, w, 0.04, d, IDARK, 'plankH');
+      const ys = [0.06, 0.46, 0.86, 1.26, 1.66].filter(y => y < h - 0.3); for (const y of ys) F.box(0, y, 0, w - 0.08, 0.03, d - 0.03, IWOOD, 'plankH');
+      const per = Math.max(2, Math.floor((w - 0.12) / 0.075)); const told = cx && Number.isFinite(cx.fill); const all = ys.length * per; const shown = told ? Math.round(G.clamp(cx.fill, 0, 1) * all) : all; let q = 0;
+      for (const y of ys) for (let k = 0; k < per; k++) { if (told ? q++ >= shown : F.hv(k * 7 + y * 31) > 0.78) continue; const a = -w / 2 + 0.08 + (w - 0.16) * (k + 0.5) / per, r = 0.03 + F.hv(k + y * 13) * 0.008;
+        F.log(a, y + 0.03 + r, -d / 2 + 0.06, a, y + 0.03 + r, d / 2 - 0.05, r, F.hv(k * 3 + y * 17) < 0.5 ? [214, 200, 164] : [196, 172, 128], 'linen'); } },
+    // (the reading table: its legs and board, a scroll open on each side where the readers sit, the rolls at its ends; a lamp)
+    'mesa-leitura'(F, it) { const { w, d, h } = it; F.legs(w, d, h - 0.05, 0.035, IDARK); F.box(0, h - 0.05, 0, w, 0.05, d, IWOOD, 'plankH');
+      for (const [a, n] of [[-w * 0.2, d * 0.2], [w * 0.2, -d * 0.2]]) { F.box(a, h, n, 0.4, 0.006, 0.22, [224, 210, 172]); for (const e of [-1, 1]) F.log(a + e * 0.2, h + 0.026, n - 0.12, a + e * 0.2, h + 0.026, n + 0.12, 0.026, [202, 186, 148]); }
+      F.cyl(0, h, 0, 0.05, 0.04, ICLAY, 'mud'); },
+    // (the speaker's stone where no form draws it: a block of the people's stone, a slab a little wider over it)
+    tribuna(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w - 0.06, h - 0.06, d - 0.06, ISTONE, 'stone'); F.box(0, h - 0.06, 0, w, 0.06, d, dim(ISTONE, 1.06), 'stone'); },
     'bancada-ourives'(F, it) { FURN.bancada(F, it); },
     fornalha(F, it) { const { w, h } = it; F.cyl(0, 0, 0, w / 2 - 0.02, h, ISTONE, 'stone'); F.box(0, 0.12, w / 2 - 0.08, 0.2, 0.22, 0.12, IEMBER); },
     cepo(F, it) { const { w, h } = it; F.cyl(0, 0, 0, w / 2 - 0.04, h, dim(IWOOD, 0.85), 'bark'); F.box(0.05, h, 0, 0.26, 0.02, 0.12, IIRON, 'iron', 0.4); },
@@ -2872,7 +2932,7 @@ float m3scale(float p) {
       F.cyl(0, h - 0.1, 0, 0.09, 0.45, dim(ISTONE, 0.95), 'stone'); F.sph(0, h + 0.38, 0, 0.13, dim(ISTONE, 0.95), 0.07, 'stone'); },
   };
   B3.FURN = FURN; // (for the tests: the kinds the 3D knows how to draw)
-  const FIRE_K = { lar: 1, fogao: 0.7, forno: 0.5, fogareiro: 0.45, braseiro: 0.6, 'forja-fogo': 1, 'forno-olaria': 0.6, fornalha: 0.5, 'fornalha-banho': 0.55 };
+  const FIRE_K = { lar: 1, 'fogo-chao': 0.9, fogao: 0.7, forno: 0.5, fogareiro: 0.45, braseiro: 0.6, 'forja-fogo': 1, 'forno-olaria': 0.6, fornalha: 0.5, 'fornalha-banho': 0.55 };
   // the door's leaf, apart, in its own frame: from its hinge (the origin) across the opening along +X, its foot at 0 — planks
   // with their battens on the room's side, the iron straps
   function leafParts(w, h, col) {
@@ -2907,6 +2967,7 @@ float m3scale(float p) {
     for (const l of levels) { const g = R3.Geo(); const K = kit(g, b, undefined, undefined, fine); g.ao = null; Ks[l.lv] = K; out.lv[l.lv] = g; if (!K0) K0 = K; }
     out.at = [K0.x0, K0.y0, K0.z0]; // (the plan's origin in the world: the lot's corner, the plinth's top)
     const sh = plan.shell; const round = sh.kind === 'round';
+    const Fm = formOf(b); // (the pieces of use its form draws — marked form, D-093 —: the outside's, not drawn again here)
     // (what the outside draws, from the same shell: the steps outside it; a terrace's walls)
     const outSteps = new Set(outOfPlan(plan).steps);
     // (the storey under another: the one whose area its own lies over, highest first)
@@ -2918,7 +2979,7 @@ float m3scale(float p) {
       if (round && l.lv === levels[0].lv) inRing(K, plan, l);
       for (const s of plan.stairs) if ((s.kind === 'degraus' ? s.lv1 : s.lv0) === l.lv && !outSteps.has(s)) inStair(K, plan, s);
       for (const it of plan.items) {
-        if (it.lv !== l.lv) continue; const from = g.p.length / 3; const foot = l.y + (it.y || 0) + FLOOR_UP; const F = piece(K, it, foot);
+        if (it.lv !== l.lv || (it.form && Fm)) continue; const from = g.p.length / 3; const foot = l.y + (it.y || 0) + FLOOR_UP; const F = piece(K, it, foot);
         // (the ceiling a piece reaches up to from its foot — a hood, a flue: the storey's own, or the eaves)
         const ceil = Math.min(l.y + l.h, sh.eave) - foot;
         const f = FURN[it.kind]; if (f) f(F, it, { ceil, fill: fill ? fill[it.id] : undefined }); else F.box(0, 0, 0, it.w, it.h, it.d, IWOOD, 'plankH');
@@ -2987,7 +3048,7 @@ float m3scale(float p) {
     const walls = p.walls.filter(w => kindOf.get(w.lv) !== 'porao' && (marked ? w.shell : w.outer || kindOf.get(w.lv) === 'terraco'));
     const ids = new Set(walls.map(w => w.id)); const sh = p.shell;
     S = { shell: sh, levels: p.levels, walls, holes: p.holes.filter(h => ids.has(h.wall)), doors: p.doors, rooms: p.rooms, entrance: p.entrance,
-      steps: p.stairs.filter(s => s.kind === 'degraus' && outsideShell(sh, s)), items: [], p };
+      steps: p.stairs.filter(s => s.kind === 'degraus' && outsideShell(sh, s)), items: [], yard: p.yard || null, p };
     S.byId = new Map(p.walls.map(w => [w.id, w])); outMemo.set(p, S); return S;
   }
   function outOfShell(s, p) {
@@ -2996,7 +3057,7 @@ float m3scale(float p) {
     // (the steps outside it: the shell's own; a door's hinge and the room it swings into, the plan's once made)
     const P0 = p && p.ok ? outOfPlan(p) : null;
     S = { shell: s.shell, levels: s.levels, walls, holes: (s.holes || []).filter(h => ids.has(h.wall)), doors: P0 ? P0.doors : null, rooms: P0 ? P0.rooms : null, entrance: s.entrance,
-      steps: (s.steps || (P0 ? P0.steps : [])).filter(q => q.kind === 'degraus' && outsideShell(s.shell, q)), items: [], p };
+      steps: (s.steps || (P0 ? P0.steps : [])).filter(q => q.kind === 'degraus' && outsideShell(s.shell, q)), items: [], yard: s.yard || null, p };
     S.byId = new Map((s.walls || []).map(w => [w.id, w])); outMemo.set(s, S); return S;
   }
   // the shell a building is drawn from outside — Interiors.shellOf (cheap, from afar), else its plan once made (Space's, or
@@ -3076,8 +3137,13 @@ float m3scale(float p) {
         K.tri3(A, B, C, c0, c0, c1, F.out); K.tri3(A, C, D, c0, c1, c1, F.out); } } });
   }
   // the outside of a building from its shell (rect; round: shellRound)
+  // (a shell the plan raised on a form's body — Interiors' family forma.*, D-093: the library —: its walls are the shell's, with
+  // the plan's openings, which are the form's; the rest is the form's — its base and its treads, its porch and its columns, its
+  // entablature, its roof —, and not the shell's footing, annexes, roof nor flights: what is seen is the form)
+  const bodyForm = b => { const F = b.ip && /^forma\./.test(b.ip.f || '') && G.Forma && G.Forma.of(b.type, styleOf(b)); return F && F.body ? F : null; };
   function shellHouse(g, gw, K, S) {
     const sh = S.shell, P = K.P; if (sh.kind === 'round') return shellRound(g, gw, K, S); if (sh.kind === 'aberta') return shellOpen(g, gw, K, S);
+    const FB = bodyForm(K.b);
     const R = sh.r, x = (R[0] + R[2]) / 2, z = (R[1] + R[3]) / 2, sx = R[2] - R[0], sz = R[3] - R[1];
     const byLv = new Map(S.levels.map(l => [l.lv, l]));
     const body = S.levels.filter(l => l.kind !== 'porao' && l.kind !== 'terraco' && l.kind !== 'jirau').sort((a, c) => a.y - c.y);
@@ -3087,28 +3153,82 @@ float m3scale(float p) {
     const e = S.entrance, side = (e && e.side) || doorSide(K.b), od = SIDEO[side] || [0, 1];
     K.cls = K.st === 'nordico' ? NCLS[K.b.type] || 1 : 0;
     K.body = { x, z, sx, sz, door: e ? { side, o: od, a: od[1] ? e.x - x : e.z - z, w: (e.w || 1) + 0.5 } : null, shell: true };
-    const ctx = { S, byLv, l0, foot, eave, rk, flat, raised, k: 0, gw };
-    // the base: stones under the walls (an annex's too), or the posts of a raised floor
-    if (raised) stilts(K, ctx, R); else { footing(K, x, z, sx, sz, K.st !== 'egipcio' && K.st !== 'asteca', true); for (const a of sh.annex || []) footing(K, (a.r[0] + a.r[2]) / 2, (a.r[1] + a.r[3]) / 2, a.r[2] - a.r[0], a.r[3] - a.r[1], false, true); }
+    const ctx = { S, byLv, l0, foot, eave, rk, flat, raised, k: 0, gw, form: !!FB };
+    // the base: stones under the walls (an annex's too), or the posts of a raised floor — a form's, its own plinth
+    if (raised) stilts(K, ctx, R); else if (!FB) { footing(K, x, z, sx, sz, K.st !== 'egipcio' && K.st !== 'asteca', true); for (const a of sh.annex || []) footing(K, (a.r[0] + a.r[2]) / 2, (a.r[1] + a.r[3]) / 2, a.r[2] - a.r[0], a.r[3] - a.r[1], false, true); }
     // the sides — the shell's from its foot to the eaves (where an annex stands against one, from its lean-to up) — and the
     // annexes' own, and their lean-tos
-    const leans = (sh.annex || []).map(a => leanOf(ctx, a)).filter(Boolean);
+    const leans = FB ? [] : (sh.annex || []).map(a => leanOf(ctx, a)).filter(Boolean); // (a form's porch is the form's)
     for (const sd of ['N', 'E', 'S', 'W']) { const covers = leans.filter(ln => ln.on === sd).map(ln => [ln.u0, foot - 0.01, ln.u1, ln.hi]); sideFace(g, gw, K, ctx, rside(R, sd), foot, eave, covers, true); }
     for (const ln of leans) { for (const sd of ln.free) sideFace(g, gw, K, ctx, rside(ln.a.r, sd), foot, ln.a.h, [], false); leanRoof(K, ctx, ln); }
     if (sh.court) courtSides(K, ctx, sh.court);
     // the roof: the people's, as steep as the shell says, its ridge where it says; a flat one with its terrace; open over a court
     let top;
-    if (!sh.roof) top = wallTops(K, S, R, eave); // (no roof at all — a shell open above, as a ruin's: the tops of its walls)
+    if (FB) top = flat ? formLid(K, R, eave) : eave; // (the form's roof, below — a flat one the walls' top: here)
+    else if (!sh.roof) top = wallTops(K, S, R, eave); // (no roof at all — a shell open above, as a ruin's: the tops of its walls)
     else if (flat) top = flatTop(g, gw, K, ctx, x, z, sx, sz);
     else if (sh.court) top = courtRoof(K, ctx, rk);
     else top = roofOf(K, x, z, sx, sz, eave, rk, null, sh.roof.along === 'z', sh.roof.h, true, new Set(leans.map(ln => ln.on)));
-    if (K.st === 'nordico' && rk === 'turf' && K.roof && !sh.court) nordGables(gw, K, K.cls);
-    // (an outside flight, and the steps before its foot down to the ground — Space.feet; L-163)
-    for (const s of S.steps || []) { inStair(K, S, s); const f = G.Space.feet(s); const fl = G.Space.doorFlight(K.b, sh, { w: K.w, d: K.d }, f.w, f.h, 0, false, f.F, f.uc); if (fl) layFlight(K, fl, (K.P.base || [])[2] || '#a09a8e'); }
+    if (!FB && K.st === 'nordico' && rk === 'turf' && K.roof && !sh.court) nordGables(gw, K, K.cls);
+    // (an outside flight, and the steps before its foot down to the ground — Space.feet; L-163 —: a form's flight its treads)
+    for (const s of S.steps || []) { if (!FB) inStair(K, S, s); const f = G.Space.feet(s); const fl = G.Space.doorFlight(K.b, sh, { w: K.w, d: K.d }, f.w, f.h, 0, false, f.F, f.uc); if (fl) layFlight(K, fl, (K.P.base || [])[2] || '#a09a8e'); }
+    if (sh.yard && !FB && K.prog >= 1) shellYard(K, ctx);
     smokeOf(K, ctx, top);
     if (K.b.type === 'taverna') innSign(K);
-    if (K.footed && !raised && K.body.door) wallGrass(K, x, z, sx, sz, { side, a: K.body.door.a, w: K.body.door.w });
+    if (!FB && K.footed && !raised && K.body.door) wallGrass(K, x, z, sx, sz, { side, a: K.body.door.a, w: K.body.door.w });
+    // (the form, all but its walls and the door and the windows on them: the shell's own, with the plan's openings)
+    if (FB) { const kb = K.body, fw = FB.body.walls, fr = fw.r; const face = { frente: fr[3], fundo: fr[1], direita: fr[2], esquerda: fr[0] };
+      // (a block from the walls' top up to the roof over them — the entablature —: its top only out of the walls, under the roof)
+      const T = G.Forma.body(FB).telhado; const lid = q => q.k === 'bloco' && q.y0 >= fw.y1 - 0.01 && q.y1 <= T.y0 + 0.01 && q.r[0] <= fr[0] + 0.01 && q.r[1] <= fr[1] + 0.01 && q.r[2] >= fr[2] - 0.01 && q.r[3] >= fr[3] - 0.01;
+      top = Math.max(top, formInto(g, gw, K, FB, side, q => q === fw || q.k === 'porta' || (q.k === 'janelas' && face[q.na] !== undefined && Math.abs(q.em - face[q.na]) <= 0.3) || (lid(q) ? Object.assign({}, q, { topCut: fr }) : false), true) || 0); K.body = kb; }
     return top;
+  }
+  // the yard before a shell's roofed part (B2d: the pottery's, the tavern's): its floor of beaten earth on the plinth's top —
+  // the plan's storey, where the feet walk —, its edge down to the lowest ground as a footing's where the house's own does not
+  // stand; the plan's fence round it (its walls of kind 'cerca': in the north stakes and wattle, elsewhere a low wall of the
+  // people's stuff with its cap — yardFence's), the gate in it between its posts under its lintel, its leaf shut as the inside
+  // hangs it (leafPose), its steps down to the street (Space.doorFlight: the feet's); and what stands in it — the shell's yard,
+  // the plan's pieces laid with the shell —, as the inside draws them (the cut puts them aside where the inside is drawn)
+  const spansOut = (a, b, c0, c1) => (c1 <= a + 0.05 || c0 >= b - 0.05 ? [[a, b]] : [[a, c0], [c1, b]].filter(q => q[1] - q[0] > 0.05));
+  function shellYard(K, ctx) {
+    const S = ctx.S, sh = S.shell, Y = sh.yard, P = K.P; const l = ctx.byLv.get(Y.lv || 0) || ctx.l0; const y = l.y;
+    const base = P.base || ['#8a8478', '#6f6a60', '#a09a8e']; const lo = K.lo - K.y0 - 0.2; const R = sh.r, RR = [R[0] - 0.04, R[1] - 0.04, R[2] + 0.04, R[3] + 0.04];
+    K.as('soil', () => { for (const r of cutRect(Y.r, [RR])) flatQ(K, r, y, [164, 138, 104], 1); });
+    K.as('stone', () => { for (const sd of ['N', 'E', 'S', 'W']) { const F = rside(Y.r, sd), H = rside(RR, sd);
+      for (const [u0, u1] of Math.abs(F.line - H.line) < 0.06 ? spansOut(F.u0, F.u1, H.u0, H.u1) : [[F.u0, F.u1]]) K.quad(F.P(u0, lo, 0), F.P(u1, lo, 0), F.P(u1, y, 0), F.P(u0, y, 0), dim(base[1], 0.78), F.out); } });
+    // (the fence, broken at its gates)
+    const nord = K.st === 'nordico'; const pat = K.st === 'egipcio' ? 'mud' : K.st === 'grego' ? 'whitewash' : K.st === 'asteca' ? 'stucco' : 'stone'; const wc = pat === 'stone' ? base[1] : (P.wl || '#efe2c4');
+    const stake = [96, 78, 58], wat = mixc([142, 118, 84], [118, 104, 82], K.hv(601) * 0.6);
+    for (const w of S.walls) {
+      if (w.kind !== 'cerca' || w.lv !== (Y.lv || 0)) continue; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L < 0.05) continue;
+      const tx = (w.b[0] - w.a[0]) / L, tz = (w.b[1] - w.a[1]) / L; const ry = -Math.atan2(tz, tx); const at = s => [w.a[0] + tx * s, w.a[1] + tz * s];
+      const gates = S.holes.filter(h => h.wall === w.id && h.kind !== 'janela').sort((p, q) => p.at - q.at); let s0 = 0; const runs = [];
+      for (const h of gates) { runs.push([s0, h.at - h.w / 2 - 0.15]); s0 = h.at + h.w / 2 + 0.15; } runs.push([s0, L]);
+      // (out of the yard: the wattle of the north on the fence's outer face — the plan's wall is its full thickness, its outer
+      // face the yard's edge —, its stakes behind it)
+      const mid = at(L / 2), ox = Math.abs(tz) < 0.5 ? 0 : (mid[0] > (Y.r[0] + Y.r[2]) / 2 ? 1 : -1), oz = Math.abs(tz) < 0.5 ? (mid[1] > (Y.r[1] + Y.r[3]) / 2 ? 1 : -1) : 0; const off = w.t / 2 - 0.035;
+      for (const [a, b] of runs) { if (b - a < 0.05) continue; const m = at((a + b) / 2), len = b - a;
+        if (nord) { const n = Math.max(1, Math.round(len / 0.9)); K.as('bark', () => { for (let k = 0; k <= n; k++) { const p = at(a + len * k / n); K.log([p[0] + ox * (off - 0.08), y - 0.1, p[1] + oz * (off - 0.08)], [p[0] + ox * (off - 0.08), y + w.h - 0.04 + K.hv(640 + k) * 0.08, p[1] + oz * (off - 0.08)], 0.042, stake); } });
+          K.as('wattle', () => K.rbox(m[0] + ox * off, y, m[1] + oz * off, len, w.h - 0.1, 0.07, wat, ry)); }
+        else { K.as(pat, () => K.rbox(m[0], y, m[1], len, w.h - 0.07, w.t, wc, ry)); K.as('slab', () => K.rbox(m[0], y + w.h - 0.07, m[1], len + 0.04, 0.07, w.t + 0.08, K.st === 'asteca' ? (P.trim || '#b33a2a') : dim(base[2], 0.95), ry)); } }
+      // (the gate: its posts and its lintel, its leaf shut where the inside hangs it, its steps down to the street)
+      for (const h of gates) {
+        const d = doorOf(S, h); const hy = Math.max(w.h + 0.2, (h.sill || 0) + h.h + 0.02);
+        K.as(nord ? 'beam' : pat, () => { for (const s2 of [-1, 1]) { const p = at(h.at + s2 * (h.w / 2 + 0.11)); K.box(p[0], y - 0.05, p[1], 0.22, hy + 0.2, 0.22, nord ? nordWood(K).dark : dim(wc, 0.94)); } });
+        const c = at(h.at); K.as('beam', () => K.rbox(c[0], y + hy, c[1], h.w + 0.5, 0.18, 0.2, nord ? nordWood(K).dark : (P.trim || '#6b4a30'), ry));
+        const F = wside(w, Math.abs(tz) < 0.5 ? (c[1] > (Y.r[1] + Y.r[3]) / 2 ? 1 : -1) : (c[0] > (Y.r[0] + Y.r[2]) / 2 ? 1 : -1)); // (out: away from the yard)
+        const ps = leafPose(w, d, l, roomSide(S, w, d, F)); const cy = Math.cos(ps.yaw), sy = Math.sin(ps.yaw);
+        for (const [px, py, pz, ssx, ssy, ssz, col, pt] of leafParts(d.w, d.h, (P && P.door) || '#5a3b25')) K.as(pt, () => K.box(ps.hx + px * cy + pz * sy, ps.y + py, ps.hz - px * sy + pz * cy, ssx, ssy, ssz, col, ps.yaw));
+        const fl = G.Space.doorFlight(K.b, sh, { w: K.w, d: K.d }, w, h, y, false); if (fl) layFlight(K, fl, base[2]);
+      }
+    }
+    // (what stands in the yard: the kiln, the racks, the tables, the barrels — the plan's pieces, as the inside draws them; the
+    // kiln's smoke out of its top)
+    for (const it of S.yard || []) {
+      const r = it.r, side = Math.abs(Math.sin(it.rot || 0)) > 0.5; const q = { k: +String(it.id).split(':').pop() || 0, kind: it.kind, x: (r[0] + r[2]) / 2, z: (r[1] + r[3]) / 2, w: side ? r[3] - r[1] : r[2] - r[0], d: side ? r[2] - r[0] : r[3] - r[1], h: it.h, ry: it.rot || 0 };
+      const F = piece(K, q, y + FLOOR_UP); const f = FURN[it.kind]; if (f) f(F, q, { ceil: 9 }); else F.box(0, 0, 0, q.w, q.h, q.d, IWOOD, 'plankH');
+      if (it.fire && it.kind === 'forno-olaria') B3.chim.set(K.b.id, [K.x0 + q.x, K.y0 + y + q.h + 0.1, K.z0 + q.z]);
+    }
   }
   // (the tops of a shell's walls with no roof over them: each side's wall, its thickness, at the eaves)
   function wallTops(K, S, R, eave) {
@@ -3276,7 +3396,9 @@ float m3scale(float p) {
     }
     // (the step: down to the ground before the door — no further out than a hand past the lot): Space's reckoning, the one the
     // feet go up (Space.doorFlight; L-163)
-    const fl = G.Space.doorFlight(K.b, ctx.S.shell, { w: K.w, d: K.d }, q.w, q.h, q.l.y, ctx.raised);
+    // (none where the door opens onto its yard — the plan's storey at the floor's own height: no step there, B2d)
+    const fy = F.P(q.uc, 0, 0.5), Yr = ctx.S.shell.yard && ctx.S.shell.yard.r; const toYard = !!Yr && fy[0] > Yr[0] && fy[0] < Yr[2] && fy[2] > Yr[1] && fy[2] < Yr[3];
+    const fl = toYard ? null : G.Space.doorFlight(K.b, ctx.S.shell, { w: K.w, d: K.d }, q.w, q.h, q.l.y, ctx.raised);
     if (fl) { layFlight(K, fl, stone); if (fl.cut && K.body && K.body.door && K.body.door.side === fl.F.sd) K.body.door.cut = fl.cut; }
   }
   // the people's dressing of a side: the socle at its foot, the bands of its storeys, the cornice under the eaves (none under
@@ -3409,6 +3531,9 @@ float m3scale(float p) {
   // a flat roof from the shell: the slab's top (a terrace's floor) and its edges — never its underside: the ceiling under it
   // is the inside's —, open over a court; on a terrace the shell's parapet whole with its coping, the room on it with its
   // door and its roof of reed; else the people's own parapet, the Egyptian's cornice, the Aztec's merlons (roofOf)
+  // (a form's flat roof over a shell raised on its body — the god's: the walls' top, its parapet on it —: the lid at the
+  // eaves over the walls' foot R, a finger over their tops; the parapet, the bands, the cornice are the form's)
+  function formLid(K, R, y) { const sp = stuff(K.b).tile === 'mud' ? 'mud' : 'slab'; K.as(sp, () => flatQ(K, R, y + 0.02, K.P.top || K.P.wl || '#e8dcc0', 1)); return y + 0.02; }
   function flatTop(g, gw, K, ctx, x, z, sx, sz) {
     const S = ctx.S, sh = S.shell, P = K.P, st = stuff(K.b); const tl = S.levels.find(l => l.kind === 'terraco'); const yb = ctx.eave, yt = tl ? tl.y : yb + 0.25;
     const R = sh.r, m = 0.06; const RR = [R[0] - m, R[1] - m, R[2] + m, R[3] + m]; const c = sh.court; const sp = st.tile === 'mud' ? 'mud' : 'slab'; const sc = P.top || P.wl || '#e8dcc0';
@@ -3437,7 +3562,7 @@ float m3scale(float p) {
   // four poles and its wind-catcher with the mouth to the front, the Aztec's pots of flowers along the front — on the roof's
   // top at y
   const DECKED = { hut: 1, house: 1, sobrado: 1, insula: 1 };
-  const roofDeck = (K, ctx) => { const S = ctx.S, sh = S.shell; return DECKED[K.b.type] && S.entrance && G.Forma ? G.Forma.deck(sh.r, S.entrance.side, K.w, K.st, !!(sh.roof && sh.roof.room)) : null; };
+  const roofDeck = (K, ctx) => { const S = ctx.S, sh = S.shell; return DECKED[K.b.type] && S.entrance && G.Forma ? G.Forma.deck(sh.r, S.entrance.side, K.w, K.st, G.Forma.lived(S)) : null; };
   const deckTop = (K, ctx, y) => { const dk = roofDeck(K, ctx); let t = 0; if (dk) for (const it of dk.items) t = Math.max(t, y + (it.h || 0.6)); return t; };
   function deckInto(K, ctx, y) {
     const dk = roofDeck(K, ctx); if (!dk) return; const fr = dk.front, ac = dk.across;
@@ -3528,6 +3653,9 @@ float m3scale(float p) {
       out.push(along ? [X0 + cx - half, Y0 + y0, Z0 + cz - th, X0 + cx + half, Y0 + y1, Z0 + cz + th] : [X0 + cx - th, Y0 + y0, Z0 + cz - half, X0 + cx + th, Y0 + y1, Z0 + cz + half]);
     }
     const c = S.shell.court; if (c) out.push([X0 + c[0] - 0.003, Y0 + 0.008, Z0 + c[1] - 0.003, X0 + c[2] + 0.003, Y0 + S.shell.eave + 12, Z0 + c[3] + 0.003]);
+    // (the pieces of a yard, the outside's while the inside is not drawn: the inside's own, with what they keep, once it is)
+    if (S.shell.yard) { const l = S.levels.find(q => q.lv === (S.shell.yard.lv || 0)); const y = l ? l.y : 0;
+      for (const it of S.yard || []) out.push([X0 + it.r[0] - 0.012, Y0 + y - 0.02, Z0 + it.r[1] - 0.012, X0 + it.r[2] + 0.012, Y0 + y + it.h + 0.12, Z0 + it.r[3] + 0.012]); }
     return out;
   };
   // (for the proofs: the outside of a building drawn from a plan given — or its own shell —: its solid, its panes, the shell

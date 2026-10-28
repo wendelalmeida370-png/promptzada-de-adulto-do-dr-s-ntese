@@ -94,31 +94,34 @@
       return 26;
     },
   };
-  // Mina: a rocky hill with a timbered adit, rails, a cart of ore, the spoil heap
+  // Mina: the rocky hill over the galleries filling the lot, the timbered mouth at its foot toward the front corner, the rails
+  // and the cart of ore in that corner, the spoil heap — as its form has them (G.Forma mina; D-092: the hill filling the lot,
+  // the cart in it, never in the street), each piece in the god's way, back to front
   EXT.mina = {
     maxz: 34, draw(c, m, p, st, v) {
-      const gold = v === 1;
-      const b0 = P(0, 0, 0);
-      c.fillStyle = 'rgba(80,70,60,0.35)'; c.beginPath(); c.ellipse(b0[0], b0[1], 17, 8.4, 0, 0, TAU); c.fill();
-      dome(c, b0[0] - 1, b0[1] - 1, 14, 20, '#948a7c', '#62594f', null);
-      // rock facets and strata
-      const r = G.mulberry32(gold ? 77 : 33);
-      for (let k = 0; k < 9; k++) { const x = b0[0] - 10 + r() * 18, y = b0[1] - 4 - r() * 13; c.fillStyle = r() < 0.5 ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.14)'; c.beginPath(); c.moveTo(x, y); c.lineTo(x + 3 + r() * 3, y - 1.5); c.lineTo(x + 4, y + 1.8); c.closePath(); c.fill(); }
-      for (let k = 0; k < 7; k++) { const x = b0[0] - 9 + r() * 16, y = b0[1] - 5 - r() * 11; c.fillStyle = gold ? '#f2c14e' : '#a8522e'; c.fillRect(x, y, 1.6, 0.9); if (gold) m.glow.push([x + 0.8, y + 0.4]); }
-      // adit
-      const d = P(0.1, 0.38, 0);
-      c.fillStyle = '#16100c'; c.beginPath(); c.moveTo(d[0] - 3.4, d[1]); c.lineTo(d[0] - 3.4, d[1] - 6); c.quadraticCurveTo(d[0], d[1] - 8.4, d[0] + 3.4, d[1] - 6); c.lineTo(d[0] + 3.4, d[1]); c.fill();
-      c.strokeStyle = '#6e4a2c'; c.lineWidth = 1.1; c.beginPath(); c.moveTo(d[0] - 3.6, d[1] + 0.2); c.lineTo(d[0] - 3.6, d[1] - 7); c.lineTo(d[0] + 3.6, d[1] - 7); c.lineTo(d[0] + 3.6, d[1] + 0.2); c.stroke();
-      m.fires.push([d[0] + 4.6, d[1] - 6]); // the lantern at the mouth
-      c.fillStyle = '#3a2a1a'; c.fillRect(d[0] + 4.2, d[1] - 6.6, 0.8, 1.2);
-      // rails and the cart
-      ln(c, [d[0] - 1.6, d[1]], P(0.3, 0.72, 0), '#5a4a3a', 0.5); ln(c, [d[0] + 1.6, d[1]], P(0.55, 0.62, 0), '#5a4a3a', 0.5);
-      const q = P(0.4, 0.62, 0);
-      c.fillStyle = '#5a4030'; c.beginPath(); c.moveTo(q[0] - 3, q[1] - 4); c.lineTo(q[0] + 3, q[1] - 4); c.lineTo(q[0] + 2.2, q[1] - 1.2); c.lineTo(q[0] - 2.2, q[1] - 1.2); c.fill();
-      c.fillStyle = '#2a2420'; c.beginPath(); c.arc(q[0] - 1.6, q[1] - 0.8, 0.9, 0, TAU); c.arc(q[0] + 1.6, q[1] - 0.8, 0.9, 0, TAU); c.fill();
-      c.fillStyle = gold ? '#d8b04a' : '#8a5a42'; c.beginPath(); c.ellipse(q[0], q[1] - 4.2, 2.8, 1.3, 0, 0, TAU); c.fill();
-      // spoil heap
-      const s = P(0.45, -0.1, 0); c.fillStyle = '#8a8276'; c.beginPath(); c.moveTo(s[0] - 6, s[1] + 1); c.quadraticCurveTo(s[0], s[1] - 6, s[0] + 6, s[1] + 1); c.fill();
+      const gold = v === 1; const F = G.Forma.of('mina', st); const h = F.L / 2, ZM = 3.04;
+      const T = (u, w, y) => P((u - h) / 4, (w - h) / 4, (y || 0) * ZM); // (a point of the form, metres, in the god's picture)
+      const depth = e => (e.k === 'morro' ? e.c[0] + e.c[1] : e.k === 'tora' ? (e.a[0] + e.a[1] + e.b[0] + e.b[1]) / 2 : e.k === 'bola' ? e.c[0] + e.c[1] : e.p.reduce((q, x) => q + x[0] + x[1], 0) / e.p.length);
+      const els = F.els.slice().sort((x, y) => depth(x) - depth(y)); let hills = 0;
+      for (const e of els) {
+        if (e.k === 'morro') {
+          const b0 = T(e.c[0], e.c[1], e.y0); const rx = e.r * 5.657, hh = (e.y1 - e.y0) * ZM; const cols = gold && e.ouro ? e.ouro : e.cor;
+          if (!hills++) { c.fillStyle = 'rgba(80,70,60,0.35)'; c.beginPath(); c.ellipse(b0[0], b0[1], rx * 1.2, rx * 0.6, 0, 0, TAU); c.fill(); }
+          dome(c, b0[0], b0[1], rx, hh, shade(cols[0], e.r > 1 ? 1 : 1.04), cols[1], null);
+          if (e.veios) { // (its rock's facets and strata, and the ore in it: the god's own, within the hill's outline)
+            const r = G.mulberry32(gold ? 77 : 33); const k = rx / 14;
+            for (let q = 0; q < 9; q++) { const x = b0[0] - 10 * k + r() * 18 * k, y = b0[1] - (4 + r() * 13) * k; c.fillStyle = r() < 0.5 ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.14)'; c.beginPath(); c.moveTo(x, y); c.lineTo(x + (3 + r() * 3) * k, y - 1.5 * k); c.lineTo(x + 4 * k, y + 1.8 * k); c.closePath(); c.fill(); }
+            for (let q = 0; q < e.veios; q++) { const x = b0[0] - 9 * k + r() * 16 * k, y = b0[1] - (5 + r() * 11) * k; c.fillStyle = gold ? '#f2c14e' : '#a8522e'; c.fillRect(x, y, 1.6, 0.9); if (gold) m.glow.push([x + 0.8, y + 0.4]); }
+          }
+        } else if (e.k === 'pano') {
+          const pts = e.p.map(q => T(q[0], q[1], q[2]));
+          if (e.cor === '#16100c') { // (the mouth's dark, arched at its top as the god draws it)
+            const a = pts[1], b2 = pts[0], tp = pts[2][1]; const mx = (a[0] + b2[0]) / 2;
+            c.fillStyle = e.cor; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(a[0], tp + 1.2); c.quadraticCurveTo(mx, tp - 1.2, b2[0], tp + 1.2); c.lineTo(b2[0], b2[1]); c.closePath(); c.fill();
+          } else poly(c, pts, e.cor);
+        } else if (e.k === 'tora') ln(c, T(...e.a), T(...e.b), e.cor, Math.max(0.5, e.r * 2 * 5.657 * 0.9));
+        else if (e.k === 'bola') { const q = T(...e.c); c.fillStyle = e.cor; c.beginPath(); c.arc(q[0], q[1], Math.max(0.6, e.r * 5.657), 0, TAU); c.fill(); if (e.cor === '#ffcf6a') m.fires.push([q[0], q[1]]); }
+      }
       return 24;
     },
   };
