@@ -42,7 +42,7 @@ function walkTo(X, Z, max, near) {
 // ground does not hold it outdoors)
 let bad = [];
 function check() {
-  const v = G.Possess.body(), st = G.Avatar.state(); if (!v || !st || st.loco === 'sleep' || st.loco === 'stair') return;
+  const v = G.Possess.body(), st = G.Avatar.state(); if (!v || !st || st.loco === 'sleep' || st.loco === 'stair' || st.loco === 'seat') return; // (seated: on the piece, Interiors' place)
   const ins = Sp.indoor(st.X, st.Z, st.lv, st.inB ? st.inB.id : 0);
   if (ins) { if (st.ground && Math.abs(st.Y - ins.y) > 0.03 && !st.stair) bad.push(`pés a ${(st.Y - ins.y).toFixed(2)} m do chão da planta em ${ins.x.toFixed(2)},${ins.z.toFixed(2)} (piso ${ins.lv})`);
     if (!ins.walk) bad.push(`num lugar que a planta não deixa (${ins.code}) em ${ins.x.toFixed(2)},${ins.z.toFixed(2)} piso ${ins.lv}`); }
@@ -157,10 +157,43 @@ else {
       ok('4. acordado, levanta ao lado da cama, dentro de casa', !v.sleeping && v.inside === b.id && st().loco === 'ground' && !bad.length, `dormindo ${v.sleeping}; dentro ${v.inside === b.id}; ${st().loco}${bad.length ? '; ' + bad[0] : ''}`);
     }
   }
+  // ------------------------------ 7. at a place of the plan: sat down by the hands, up as the player walks ------------------------------
+  // (the verb 'lugar': a step to where one gets onto it, the world marks it — S.avatar.use, the place the share-out gives the
+  // body —, the body on it, turned as the place is; a gesture of the hands there keeps it seated; walking, up where it got on,
+  // the place let go. And seated again, for the save below: loaded, seated on it again)
+  let seatedAt = null;
+  { const lv = G.Possess.level(); const pl0 = In.freeNear(b, lv, st().X - b.x * TL, st().Z - b.y * TL, 30).filter(q => G.Interact.PURE.has(q.use) && !q.it.mark && !q.it.tier);
+    const pl = pl0.find(q => q.use === 'sentar' || q.use === 'comer') || pl0[0];
+    const sitDown = () => {
+      if (!goTo(b, p, pl.lv, pl.at)) return { why: goWhy };
+      let best = null; for (let k = 0; k < 30 && !(best && best.id === 'lugar' && best.t.pl.item === pl.item); k++) { const ya = Math.atan2(b.y * TL + pl.z - st().Z, b.x * TL + pl.x - st().X); IN.camYaw = ya; st().yaw = ya; best = G.Interact.best(); frame(); }
+      if (!(best && best.id === 'lugar')) return { why: `o E oferece ${best ? `«${best.label}»` : 'nada'}` };
+      const r = G.Interact.run(best); for (let k = 0; k < 150 && !(G.Avatar.seatNow() && G.Avatar.seatNow().k >= 1); k++) frame();
+      return { r, best };
+    };
+    if (!pl) ok('7. senta num lugar da planta', true, 'nenhum lugar livre de sentar neste piso (nada a provar)');
+    else {
+      bad = []; const s1 = sitDown(); const u = G.Possess.useOf(); const sn = G.Avatar.seatNow(); const tp = s1.best ? s1.best.t.pl : pl;
+      const onIt = Math.hypot(st().X - (b.x * TL + tp.x), st().Z - (b.y * TL + tp.z)) < 0.05; let dy = st().yaw - (Math.PI / 2 - tp.ry); while (dy > Math.PI) dy -= 2 * Math.PI; while (dy < -Math.PI) dy += 2 * Math.PI;
+      const mine = In.places(b).by.get(v.id);
+      ok('7. senta: o mundo marca o lugar, o corpo nele, virado como o lugar', !!u && u.it === tp.item && u.q === tp.q && !!sn && st().loco === 'seat' && onIt && Math.abs(dy) < 0.05 && !!mine && mine.item === tp.item, `${s1.best ? s1.best.label : s1.why} (${tp.use} em ${tp.it.kind}); o mundo: ${u ? u.use + ' ' + u.it : 'nada'}; ${st().loco}, no ponto ${onIt}, virado a ${dy.toFixed(2)} rad; o repartidor: ${mine ? mine.use : 'nada'}`);
+      // (the hands at the place: a gesture with no walk keeps the body seated, in the seated state of a seated gesture)
+      G.Avatar.act({ anim: 'eat', dur: 0.8, lock: true }); for (let k = 0; k < 8; k++) frame(); const kept = st().loco === 'seat', anim = st().anim; for (let k = 0; k < 30; k++) frame();
+      ok('7. as mãos no lugar: o corpo segue nele', kept && anim === 'eat' && st().loco === 'seat' && !!G.Possess.useOf(), `durante: ${kept ? 'sentado' : 'de pé'} (${anim}); depois: ${st().loco}`);
+      // (up: the player walks — eased back to where it got on, on its feet, the place let go in the world's step)
+      const at = [b.x * TL + tp.at[0], b.y * TL + tp.at[1]]; IN.camYaw = st().yaw + Math.PI; IN.mz = 1; frame(); stop(); for (let k = 0; k < 30; k++) frame(); check();
+      const upAt = Math.hypot(st().X - at[0], st().Z - at[1]);
+      ok('7. anda e levanta: de pé onde subiu, o lugar solto', st().loco === 'ground' && !G.Possess.useOf() && !G.Avatar.seatNow() && upAt < 0.6 && !bad.length && v.inside === b.id, `${st().loco}; o mundo: ${G.Possess.useOf() ? 'ainda o lugar' : 'solto'}; a ${upAt.toFixed(2)} m de onde subiu${bad.length ? '; ' + bad[0] : ''}`);
+      const s2 = sitDown(); seatedAt = G.Possess.useOf() ? { it: G.Possess.useOf().it, q: G.Possess.useOf().q } : null; if (!seatedAt) ok('7. senta de novo (para o salvar)', false, s2.why || 'não sentou');
+    }
+  }
   // ------------------------------ 6. save and load indoors ------------------------------
   { const x0 = v.x, y0 = v.y, lv0 = G.Possess.level(); M.salvarCarregar(); S = G.S; v = G.Possess.body();
     if (v) { G.Avatar.attach(v, 0); for (let k = 0; k < 6; k++) frame(); }
     ok('6. salvar e carregar dentro de casa: dentro ainda, no mesmo piso e lugar', !!v && v.inside === b.id && G.Possess.level() === lv0 && Math.hypot(v.x - x0, v.y - y0) < 0.02, v ? `dentro ${v.inside === b.id}; piso ${G.Possess.level()} (era ${lv0}); a ${(Math.hypot(v.x - x0, v.y - y0) * TL).toFixed(2)} m` : 'sem corpo');
+    // (saved seated: seated again on the same place — Possess's load holds it, the controller sits on it)
+    if (seatedAt) { const u = G.Possess.useOf(); ok('6. salvo sentado, senta de novo no mesmo lugar', !!u && u.it === seatedAt.it && u.q === seatedAt.q && st().loco === 'seat', `o mundo: ${u ? u.use + ' ' + u.it : 'nada'}; ${st().loco}`);
+      IN.mz = 1; IN.camYaw = st().yaw + Math.PI; frame(); stop(); for (let k = 0; k < 30; k++) frame(); }
   }
   // ------------------------------ 5. out by the door ------------------------------
   { const b2 = S.buildings.get(b.id), p2 = Sp.planNow(b2); v = G.Possess.body();

@@ -1815,12 +1815,15 @@
     const k = G.S.clock + ':' + G.S.villagers.size; if (pmAt !== k) { pmemo.clear(); pmAt = k; }
     let r = pmemo.get(b.id); if (!r) { r = assign(b, t); pmemo.set(b.id, r); } return r;
   };
-  // (probe: the uses of one more, given out after everyone: what freePlace answers, by the very same rule)
-  function assign(b, t, probe) {
+  // (probe: the uses of one more, given out after everyone: what freePlace answers, by the very same rule — or a function,
+  // given the rule's own test of a place free, for the body's places: In.freeNear. nobody: the body left out, its place and
+  // the point it stands on — where it could be, once there)
+  function assign(b, t, probe, nobody) {
     const S = G.S; const T = TYPES[b.ip.t] || {}; const people = insideOf(b.id);
     const by = new Map(), withM = new Map(); const used = new Set(); const discs = [], rects = [];
-    // (a point taken: half a metre round it — but the places on one piece made for several, the double bed's two)
-    const clash = (lv, x, z, it, on) => discs.some(d => d.lv === lv && Math.hypot(d.x - x, d.z - z) < 0.5 && !(on && d.on && d.it && d.it === it)) || rects.some(q => q.lv === lv && x > q.R[0] - 0.25 && x < q.R[2] + 0.25 && z > q.R[1] - 0.25 && z < q.R[3] + 0.25);
+    // (a point taken: half a metre round it — but the places on one piece made for several, the double bed's two; and where the
+    // body stands, of a piece's places only the one under its feet: walking by a bench, it never puts off who sits on it)
+    const clash = (lv, x, z, it, on) => discs.some(d => d.lv === lv && Math.hypot(d.x - x, d.z - z) < (d.body && it ? 0.25 : 0.5) && !(on && d.on && d.it && d.it === it)) || rects.some(q => q.lv === lv && x > q.R[0] - 0.25 && x < q.R[2] + 0.25 && z > q.R[1] - 0.25 && z < q.R[3] + 0.25);
     const free = e => e.ok && !used.has(e.k) && !clash(e.lv, e.x, e.z, e.it.id, e.on);
     const give = (v, e, st) => { used.add(e.k); discs.push({ lv: e.lv, x: e.x, z: e.z, it: e.it.id, on: e.on }); const sp = e.it.spots[e.q]; by.set(v.id, { b, lv: e.lv, x: e.x, z: e.z, y: In.rootY(e.it, sp, st), ry: e.ry, use: e.use, item: e.it.id, it: e.it, q: e.q, st, pose: poseWord(st, e.it.job) }); };
     const onFloor = (v, lie, st) => {
@@ -1832,13 +1835,16 @@
       return false;
     };
     const firstFree = uses => { for (const u of uses) { const L = t.byUse.get(u); if (!L) continue; for (const e of L) if (free(e)) return e; } return null; };
-    const left = []; const done = v => by.has(v.id) || withM.has(v.id);
-    // (0) the body: the place its hands took holds it; standing in the house, its own point is taken
+    const left = []; const mine = new Set(); const done = v => by.has(v.id) || withM.has(v.id) || mine.has(v.id);
+    // (0) the body: the place its hands took holds it; standing in the house, its own point is taken — and awake it is at no
+    // place the rules give: only its hands take one (L-286). Asleep, its bed is the household's (2), where its controller lays
+    // it (Avatar.lieAt: In.bedOf)
     const A = S.avatar; const body = A ? S.villagers.get(A.id) : null;
     if (body && body.inside === b.id) {
-      const u = A.use; const e = u && u.b === b.id && u.key === planKey(b, b.ip) ? t.spots.find(s => s.it.id === u.it && s.q === u.q) : null;
+      const u = A.use; const e = !nobody && u && u.b === b.id && u.key === planKey(b, b.ip) ? t.spots.find(s => s.it.id === u.it && s.q === u.q) : null;
       if (e) give(body, e, u.st || USE_ST[e.use] || 'idle');
-      else discs.push({ lv: Number.isFinite(A.lv) ? A.lv : t.entry ? t.entry.lv : 0, x: r2((body.x - b.x) * TILE), z: r2((body.y - b.y) * TILE), it: null, on: 0 });
+      else if (!nobody && !body.sleeping) discs.push({ lv: Number.isFinite(A.lv) ? A.lv : t.entry ? t.entry.lv : 0, x: r2((body.x - b.x) * TILE), z: r2((body.y - b.y) * TILE), it: null, on: 0, body: 1 });
+      if (!body.sleeping) mine.add(body.id);
     }
     // (1) the prisoners: a cell each, in the order of the cells; awake, sitting on its straw
     if (T.cells) { const cs = In.cells(b); let k = 0;
@@ -1889,7 +1895,7 @@
       const e = firstFree(home ? ['sentar', 'comer', 'aquecer', 'cozinhar'] : ['aquecer', 'cozinhar', 'sentar', 'comer']);
       if (e) give(v, e, USE_ST[e.use] || 'idle'); else onFloor(v, false, 'idle');
     }
-    return { by, with: withM, probe: probe ? firstFree(probe) : null };
+    return { by, with: withM, probe: typeof probe === 'function' ? probe(free) : probe ? firstFree(probe) : null };
   }
   // where someone the world has inside a building is, inside it — the place given out (In.places); a child held, at the
   // place of the one who holds it (with); with no place left at all, at the way in
@@ -1907,6 +1913,43 @@
     const e = assign(b, t, Array.isArray(use) ? use : [use]).probe;
     return e ? { b, lv: e.lv, x: e.x, z: e.z, ry: e.ry, use: e.use, item: e.it.id, it: e.it, q: e.q, din: e.din } : null;
   };
+  // the places the body could take about a point of a storey (metres of the lot), within R — usable where a body is, free of
+  // everyone else the world has inside (the share-out's own test, the body left out: where it would be, once there) —, the
+  // nearest first; of a use, a list of them, or any: { b, lv, x, z, y, ry, use, item, it, q, on, st, at, d } — at: where one
+  // stands to take it and stands up to (a place on a piece, from the standing point of the piece nearest the point asked
+  // from; a place where one stands, or with no piece to get onto, itself). For the body's verb (Interact 'lugar'): never a
+  // place someone holds
+  In.freeNear = function (b, lv, x, z, R, uses) {
+    const t = b && b.ip ? tableOf(b) : null; if (!t) return [];
+    const want = uses ? new Set([].concat(uses)) : null;
+    return assign(b, t, free => {
+      const out = [];
+      for (const e of t.spots) { if (!e.ok || e.lv !== lv || (want && !want.has(e.use)) || !free(e)) continue; const d = Math.hypot(e.x - x, e.z - z); if (d <= R) out.push([d, e]); }
+      out.sort((a, c) => a[0] - c[0] || a[1].k - c[1].k);
+      return out.map(([d, e]) => bodyPlace(b, e, x, z, d));
+    }, true).probe;
+  };
+  // (a place of a piece — its id, the place's index — as the body has it, or would: free of everyone else (freeFor: asked
+  // again in the world's step, at the take — null when someone holds it, or it is no place of the plan any more), or held
+  // (placeFor: the body's own, to sit on it again — a game loaded with the body seated)
+  const spotOf = (t, item, q) => t.spots.find(s => s.it.id === item && s.q === q && s.ok) || null;
+  In.freeFor = function (b, item, q, x, z) {
+    const t = b && b.ip ? tableOf(b) : null; const e = t && spotOf(t, item, q); if (!e) return null;
+    return assign(b, t, free => (free(e) ? bodyPlace(b, e, x === undefined ? e.x : x, z === undefined ? e.z : z, 0) : null), true).probe;
+  };
+  In.placeFor = function (b, item, q, x, z) { const t = b && b.ip ? tableOf(b) : null; const e = t && spotOf(t, item, q); return e ? bodyPlace(b, e, x === undefined ? e.x : x, z === undefined ? e.z : z, 0) : null; };
+  function bodyPlace(b, e, x, z, d) {
+    const st = e.it.st || USE_ST[e.use] || 'idle';
+    return { b, lv: e.lv, x: e.x, z: e.z, y: In.rootY(e.it, e.it.spots[e.q], st), ry: e.ry, use: e.use, item: e.it.id, it: e.it, q: e.q, on: e.on, st, at: standOf(e, x, z), d: r2(d) };
+  }
+  // (where one stands to take a place, and stands up to: by a piece, the standing point of it nearest — one of its own uses,
+  // or where one gets onto it —; a place where one stands, a row of seats, a place with no piece: itself)
+  function standOf(e, x, z) {
+    if (!e.on || e.it.mark || e.it.tier) return [e.x, e.z];
+    let best = null, bd = Infinity;
+    for (const sp of e.it.spots) { if (sp.on || !sp.ok) continue; const d = Math.hypot(sp.x - x, sp.z - z); if (d < bd) { bd = d; best = [sp.x, sp.z]; } }
+    return best || [e.x, e.z];
+  }
   // the metres of the walk from the way in to a place (In.places' or In.freePlace's) — the plan's walk for a body, the flights
   // by their length —, kept with the places: the step times the way from the door to the place by it without the plan;
   // Infinity where the door does not reach it

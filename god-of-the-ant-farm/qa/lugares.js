@@ -15,6 +15,9 @@
 //   8. o mesmo mundo, a mesma resposta: duas vezes, dentro e fora do passo; o lugar livre (In.freePlace); a altura da raiz
 //      (In.rootY): deitado no colchão, sentado com os pés no chão
 //   9. o caminho da porta ao lugar: os metros (In.walkIn, guardados com os lugares) e os pontos (In.pathIn), pelo lance
+//  10. os lugares do corpo (o verbo 'lugar', fase C): acordado, nenhum lugar que a regra dê (só as mãos tomam um, L-286);
+//      dormindo, a própria cama; os livres em volta de um ponto (In.freeNear: nunca o de alguém, o mais perto primeiro, subir
+//      de onde se fica); na hora de tomar, livre (In.freeFor); tomado, dele e de mais ninguém
 //   node qa/lugares.js
 const M = require('./nodemundo.js');
 const G = M.load({});
@@ -175,10 +178,11 @@ const lying = pl => pl && (pl.st === 'sleep' || pl.st === 'sick') && pl.pose ===
   const others = [1, 2, 3, 4, 5, 6, 7, 8].map(k => person({ age: 20 + k, inside: b.id, task: { type: 'tavern', id: b.id } }));
   const P = In.places(b); const bad = sound(b, P, 'corpo');
   const mine = P.by.get(me.id); const stolen = others.some(v => { const pl = P.by.get(v.id); return pl && pl.item === seat.it.id && pl.q === seat.q; });
-  // (standing in the house without a place: where the body stands is nobody's)
+  // (standing in the house without a place: where the body stands is nobody's — the floor half a metre round it, of a piece's
+  // places the one under its feet: it never puts off who sits beside it, L-286)
   G.S.avatar.use = null; G.S.clock += 1;
   const P2 = In.places(b); const X = (me.x - b.x) * 4, Z = (me.y - b.y) * 4;
-  const near = others.filter(v => { const pl = P2.by.get(v.id); return pl && pl.lv === 0 && Math.hypot(pl.x - X, pl.z - Z) < 0.5; });
+  const near = others.filter(v => { const pl = P2.by.get(v.id); return pl && pl.lv === 0 && Math.hypot(pl.x - X, pl.z - Z) < (pl.it ? 0.25 : 0.5); });
   ok('7 o lugar do corpo', !bad.length && mine && mine.item === seat.it.id && !stolen && !near.length, `o corpo no ${seat.it.kind} que as mãos tomaram: ${!!mine && mine.item === seat.it.id}; alguém no lugar dele: ${stolen}; de pé, alguém sobre o ponto onde ele está: ${near.length}`);
 }
 // ---------------------------------------------------------------- 8. the same world, the same answer; freePlace; rootY
@@ -223,6 +227,44 @@ const lying = pl => pl && (pl.st === 'sleep' || pl.st === 'sick') && pl.pose ===
   const ends = (r, pl) => r && Math.hypot(r.pts[r.pts.length - 1][0] - pl.x, r.pts[r.pts.length - 1][1] - pl.z) < 1e-6 && r.pts[r.pts.length - 1][2] === pl.lv;
   const storeys = ru ? new Set(ru.pts.map(q => q[2])).size : 0;
   ok('9 o caminho da porta ao lugar', pu && pd && pu.lv !== lvIn && wu > wd && wu < Infinity && shape(ru) && shape(rd) && ends(ru, pu) && ends(rd, pd) && storeys >= 2 && Math.abs(ru.len - wu) < 1.5, `${f}: à cama no piso ${pu ? pu.lv : '—'}, ${wu.toFixed(1)} m pelo walkIn e ${ru ? ru.len : '—'} m pelo pathIn (${ru ? ru.pts.length : 0} pontos, ${storeys} pisos); ao ${pd ? pd.use : '—'} embaixo, ${wd.toFixed(1)} m`);
+}
+// ---------------------------------------------------------------- 10. the body's places (the verb 'lugar', phase C)
+{
+  // (a: awake and standing, the body is at no place the rules give — only its hands take one, L-286 —, and its point is
+  // nobody's; asleep in its own house, in its own bed — In.bedOf, where its controller lays it)
+  reset();
+  const f = famWith('house', 'romano', p => p.cap.places >= 4 && p.items.filter(i => i.spots.some(q => q.use === 'sentar' || q.use === 'comer')).length >= 1, 'S');
+  const b = building('house', 'romano', f, 110, 10, 'S');
+  const me = person({ age: 30, home: b.id, inside: b.id, x: b.x + 1, y: b.y + 1 }); G.S.avatar = { id: me.id, lv: 0, use: null };
+  const back = [1, 2].map(k => person({ age: 20 + k, home: b.id, inside: b.id, task: { type: 'goHome' } }));
+  const P = In.places(b); const mine = P.by.get(me.id); const sat = back.filter(v => P.by.get(v.id)).length;
+  me.sleeping = true; for (const v of back) v.sleeping = true; G.S.clock += 1;
+  const P2 = In.places(b); const bd = In.bedOf(me); const inBed = P2.by.get(me.id);
+  ok('10a o corpo acordado não tem lugar que a regra dê; dormindo, a própria cama', !mine && sat === 2 && bd && inBed && inBed.item === bd.item.id && !sound(b, P2, 'corpo dormindo').length, `${f}: acordado, o corpo num lugar da regra: ${mine ? mine.use + ' em ' + mine.item : 'nenhum'} (os outros ${sat} de 2 nos seus); dormindo, na cama da casa (In.bedOf): ${!!(inBed && bd && inBed.item === bd.item.id)}`);
+}
+{
+  // (b: the places free for the body about a point — In.freeNear —: never one someone holds, nor one a stride from where
+  // someone is (the share-out's own test), the nearest first, each usable; where one gets onto a place on a piece, a point of
+  // the piece where a body stands. The body at the way in, where its point is no place's)
+  reset();
+  const f = famWith('taverna', 'romano', p => p.items.filter(i => i.spots.some(s => s.use === 'sentar')).length >= 2);
+  const b = building('taverna', 'romano', f, 120, 10, 'S'); const p = In.plan(b); const T = In.table(b);
+  const seat = T.byUse.get('sentar')[0]; const en = T.entry;
+  const me = person({ age: 30, inside: b.id, x: b.x + en.x / 4, y: b.y + en.z / 4 }); G.S.avatar = { id: me.id, lv: en.lv, use: null };
+  const others = [1, 2, 3, 4, 5].map(k => person({ age: 20 + k, inside: b.id, task: { type: 'tavern', id: b.id } }));
+  const P = In.places(b); const held = [...P.by.entries()].filter(([id]) => id !== me.id).map(([, pl]) => pl);
+  const near = In.freeNear(b, 0, seat.x, seat.z, 9);
+  const clash = near.filter(pl => held.some(h => h.lv === pl.lv && ((h.it && h.item === pl.item && h.q === pl.q) || (Math.hypot(h.x - pl.x, h.z - pl.z) < 0.5 && !(pl.on && h.it && h.item === pl.item)))));
+  const order = near.every((pl, k) => !k || near[k - 1].d <= pl.d + 1e-9);
+  const atBad = near.filter(pl => pl.on && !pl.it.mark && !pl.it.tier && !In.standsAt(p, pl.lv, pl.at[0], pl.at[1], 0.25));
+  ok('10b os lugares livres do corpo (In.freeNear)', near.length >= 1 && !clash.length && order && !atBad.length && others.every(v => P.by.get(v.id)), `${f}: ${near.length} livres em 9 m (de ${T.spots.filter(e => e.ok).length} lugares, ${held.length} ocupados); sobre alguém: ${clash.length}; em ordem: ${order}; subir de onde não se fica: ${atBad.length}`);
+  // (c: freeFor, asked again at the take: a place someone holds is not free; one nobody holds is; placeFor, the body's own
+  // held one, whatever is round it; and once taken — S.avatar.use —, the place is the body's, and nobody else's)
+  const h0 = held.find(h => h.it); const fr = near[0];
+  const no = h0 ? In.freeFor(b, h0.item, h0.q) : null, yes = fr ? In.freeFor(b, fr.item, fr.q) : null, own = fr ? In.placeFor(b, fr.item, fr.q) : null;
+  G.S.avatar.use = fr ? { b: b.id, it: fr.item, q: fr.q, use: fr.use, st: fr.st, key: In.keyOf(b) } : null; G.S.clock += 1;
+  const P3 = In.places(b); const got = P3.by.get(me.id); const twice = [...P3.by.entries()].some(([id, pl]) => id !== me.id && pl.item === fr.item && pl.q === fr.q);
+  ok('10c o lugar tomado: livre na hora de tomar, do corpo depois (In.freeFor, In.placeFor)', h0 && !no && yes && own && got && got.item === fr.item && got.q === fr.q && !twice && !sound(b, P3, 'corpo sentado').length, `o de outro livre: ${!!no}; o livre: ${!!yes}; o do corpo: ${!!own}; tomado, é dele: ${!!(got && got.item === fr.item)}; outro no mesmo: ${twice}`);
 }
 console.log(Object.keys(G.modErr).length ? `FALHOU: erro de módulo ${JSON.stringify(G.modErr)}` : '');
 console.log(fails.length ? `FALHOU: ${fails.length} (${fails.join(', ')})` : 'PASSOU');

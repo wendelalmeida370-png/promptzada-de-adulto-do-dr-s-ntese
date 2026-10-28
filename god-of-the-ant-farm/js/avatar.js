@@ -127,7 +127,10 @@
     const ins = indoorAt(b.X, b.Z);
     if (!ins) { b.inB = null; b.inP = null; b.lv = undefined; b.stair = null; b.stairF = 0; b.inShell = false; }
     else { b.inB = ins.b; b.inP = ins.p; b.lv = ins.lv; b.inShell = ins.shell; b.stair = G.Space.stairIn(ins.p, ins.lv, ins.x, ins.z); b.stairF = b.stair ? stairF(b.stair, ins.x, ins.z) : 0; b.crawl = (ins.p.levels.find(q => q.lv === ins.lv) || {}).kind === 'jirau'; }
-    const want = ins && ins.shell ? ins.b.id : 0;
+    // (an open ground — a square, a fair — is walked on as the town's: the world has the body in it only by a place of it,
+    // Possess.use, and while it is on it)
+    const open = !!(ins && ins.shell && ins.p.shell.kind === 'aberta');
+    const want = ins && ins.shell && !(open && v.inside !== ins.b.id) ? ins.b.id : 0;
     if (b.inAsk && b.inAsk.res) b.inAsk = null;
     // (the world has it indoors only by the door: a room of the building it came in by — Possess.cameBy; going out is free, L-175)
     if (!b.inAsk && want !== (v.inside || 0)) { const id = want; b.inAsk = G.Possess.apply(w => { if (id && (!G.S.buildings.has(id) || !G.Possess.cameBy(id))) return { ok: false, why: '' }; w.inside = id; return { ok: true }; }); }
@@ -147,12 +150,37 @@
   };
   // (up from the bed: the nearest point of the room the body can stand on, all round it — one the house's door reaches on foot,
   // Interiors' own walk from the entrance: never a nook shut in by the furniture)
-  function offBed() {
-    const reached = (q) => { const R = q.p.reach && q.p.reach[q.lv]; if (!R) return true; const n = q.p.grid.n, cs = q.p.grid.cs; return !!R[Math.floor(q.z / cs) * n + Math.floor(q.x / cs)]; };
-    const fits = (X, Z) => { const c = indoorAt(X, Z); if (!c || !c.walk || !c.shell || !reached(c)) return false; return RIM.every(([dx, dz]) => { const q = indoorAt(X + dx * TUNE.radius, Z + dz * TUNE.radius); return q && q.walk && q.shell; }); };
-    for (let r = 0.3; r <= 1.8; r += 0.15) for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; const X = b.X + Math.cos(a) * r, Z = b.Z + Math.sin(a) * r;
-      if (fits(X, Z)) { b.X = b.pX = X; b.Z = b.pZ = Z; b.Y = b.pY = indoorAt(X, Z).y; return true; } }
-    return false;
+  const reached = (q) => { const R = q.p.reach && q.p.reach[q.lv]; if (!R) return true; const n = q.p.grid.n, cs = q.p.grid.cs; return !!R[Math.floor(q.z / cs) * n + Math.floor(q.x / cs)]; };
+  const fits = (X, Z) => { const c = indoorAt(X, Z); if (!c || !c.walk || !c.shell || !reached(c)) return false; return RIM.every(([dx, dz]) => { const q = indoorAt(X + dx * TUNE.radius, Z + dz * TUNE.radius); return q && q.walk && q.shell; }); };
+  function floorNear(X0, Z0) {
+    for (let r = 0.3; r <= 1.8; r += 0.15) for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; const X = X0 + Math.cos(a) * r, Z = Z0 + Math.sin(a) * r; if (fits(X, Z)) return [X, Z]; }
+    return null;
+  }
+  function offBed() { const q = floorNear(b.X, b.Z); if (!q) return false; b.X = b.pX = q[0]; b.Z = b.pZ = q[1]; b.Y = b.pY = indoorAt(q[0], q[1]).y; return true; }
+  // at a place of a plan the world has given the body's hands (Possess.use — Interact's verb 'lugar'): from where one gets onto
+  // it (pl.at, metres of the lot) to the place itself, a moment's ease as one sits down; turned as the place is (the plan's ry is
+  // the way one faces; the rig's yaw, π/2 − ry), on what one sits or stands on (Interiors.rootY: pl.y); held there until the
+  // player walks — or the world lets the place go (a renovation, the body put out) —, and up again where it got on (now: at once,
+  // a game loaded with the body seated)
+  const SEAT_T = 0.45, RISE_T = 0.35;
+  Av.seatAt = function (B, pl, now, v0) {
+    const v = v0 || G.Possess.body(); const e = B && G.Space.planEntry(B.id); if (!b || !v || !e || !e.p || !pl) return false;
+    const L = TL(); const y = e.y0 + (e.p.levels.find(q => q.lv === pl.lv) || { y: 0 }).y + G.Space.FLOOR_UP;
+    const at = pl.at || [pl.x, pl.z]; const yaw1 = Math.PI / 2 - pl.ry;
+    b.seat = { b: B.id, it: pl.item, q: pl.q, st: pl.st || 'sit', X0: B.x * L + at[0], Z0: B.y * L + at[1], Y0: now ? y : b.Y, X1: B.x * L + pl.x, Z1: B.y * L + pl.z, Y1: y + (pl.y || 0), yaw0: b.yaw, yaw1, k: now ? 1 : 0, out: false };
+    b.loco = 'seat'; b.vx = b.vz = b.vy = 0; b.ground = true; b.bed = null;
+    if (now) { const s = b.seat; b.X = b.pX = s.X1; b.Z = b.pZ = s.Z1; b.Y = b.pY = s.Y1; b.yaw = yaw1; v.x = b.wx = b.X / L; v.y = b.wy = b.Z / L; }
+    return true;
+  };
+  Av.seated = () => !!(b && b.seat && !b.seat.out); // (for the verbs and the HUD: at a place, not getting up)
+  Av.seatNow = () => (b && b.seat ? { b: b.seat.b, it: b.seat.it, q: b.seat.q, st: b.seat.st, out: b.seat.out, k: b.seat.k } : null); // (for the tests)
+  // (up from a place: back where it got onto it — where that is no floor any more, the nearest open floor about it —, the world
+  // letting the place go in its step (ask); at once, when an act takes the body away from it)
+  function standUp(ask, now) {
+    const s = b.seat; if (!s) return;
+    if (!s.out) { if (!fits(s.X0, s.Z0)) { const q = floorNear(s.X1, s.Z1); if (q) { s.X0 = q[0]; s.Z0 = q[1]; } } s.Y0 = floorAt(s.X0, s.Z0); s.yaw0 = s.yaw1; s.out = true;
+      if (ask) G.Possess.apply(w => { G.Possess.unuse(w); return { ok: true }; }); }
+    if (now) { b.X = b.pX = s.X0; b.Z = b.pZ = s.Z0; b.Y = b.pY = s.Y0; b.seat = null; b.loco = 'ground'; b.fallFrom = b.Y; }
   }
   // (the world laid the body to sleep indoors, in its own house: into its own bed, if it is there by it)
   function toBed(v) {
@@ -183,8 +211,11 @@
       lv: G.Possess.level(), inB: null, inP: null, inShell: false, stair: null, stairF: 0, crawl: false, inAsk: null,
     };
     { const B = v.inside && G.S.buildings.get(v.inside); if (B && G.Space.plan(B)) { b.inB = B; b.inP = G.Space.plan(B); } b.Y = b.pY = floorAt(X, Z); indoorAfter(v);
-      // (indoors on a piece of furniture — a game loaded with the body in its bed —: up beside it)
-      if (b.inShell && !v.sleeping) { const q = indoorAt(b.X, b.Z); if (!q || !q.walk) offBed(); } }
+      // (at the place its hands held — a game loaded with the body seated: Possess's load holds it again —: on it again; else,
+      // indoors on a piece of furniture — a game loaded with the body in its bed —: up beside it)
+      const u = G.Possess.useOf(); const pl = u && B && b.inB === B && !v.sleeping && G.Interiors.placeFor ? G.Interiors.placeFor(B, u.it, u.q, X - B.x * TL(), Z - B.y * TL()) : null;
+      if (pl && u.st) pl.st = u.st;
+      if (!(pl && Av.seatAt(B, pl, true, v)) && b.inShell && !v.sleeping) { const q = indoorAt(b.X, b.Z); if (!q || !q.walk) offBed(); } }
     Av.on = true;
     return b;
   };
@@ -252,6 +283,23 @@
     // awake, it gets up beside the bed (the nearest open floor of the room)
     sleep: {
       step(v, h) { b.vx = b.vz = 0; b.speed = 0; if (!v.sleeping) { b.loco = 'ground'; if (b.bed) { b.bed = null; offBed(); } } void h; },
+    },
+    // at a place of a plan (Av.seatAt): eased onto it, still on it — the hands may work there, the feet do not move —; up as
+    // the player walks or jumps, or as the world lets the place go once it had it; eased back to where it got on, on its feet
+    seat: {
+      step(v, h) {
+        const s = b.seat; if (!s) { b.loco = 'ground'; return; }
+        b.vx = b.vz = b.vy = 0; b.ground = true;
+        if (!s.out) {
+          const u = G.Possess.useOf(); const lost = !u || u.b !== s.b || u.it !== s.it || u.q !== s.q;
+          const go = Math.abs(IN.mx) + Math.abs(IN.mz) > 0.2 || IN.jump; IN.jump = false;
+          if (go || lost) standUp(!lost);
+        }
+        s.k = G.clamp(s.k + (s.out ? -h / RISE_T : h / SEAT_T), 0, 1); const e = G.smooth(0, 1, s.k);
+        b.X = G.lerp(s.X0, s.X1, e); b.Z = G.lerp(s.Z0, s.Z1, e); b.Y = G.lerp(s.Y0, s.Y1, e);
+        let da = s.yaw1 - s.yaw0; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; b.yaw = s.yaw0 + da * e;
+        if (s.out && s.k <= 0) { b.seat = null; b.loco = 'ground'; b.fallFrom = b.Y; }
+      },
     },
     // climbing a ledge (Breath of the Wild's way: pushing against it, the hands take the edge and the body pulls itself
     // up and over). From one tile the world walks to the next one the world walks on: the world sees a step
@@ -461,9 +509,11 @@
   //    draws it, and the people round it see it), as the body's place is the world's (written by the controller, as v.x)
   Av.act = function (o) {
     if (!b) return false;
+    // (at a place the hands work where the body is: the feet stay, the place held — but an act with a walk to it gets up first)
+    if (b.seat && o.to) standUp(true, true);
     b.act = { anim: o.anim || 'interact', dur: o.dur || 1, t: 0, tr: 0, lock: o.lock !== false, done: o.done || null, at: o.at || null, face: o.face, to: o.to || null, toT: o.toT || 0.7, free: !!o.free, keep: o.keep || null,
       world: !!o.world, op: o.op || null, contact: o.contact !== undefined ? o.contact : o.at ? o.at[0] : o.dur || 1, then: o.then || null, fail: o.fail || null, cut: o.cut || null, reach: o.reach || null, asked: null, res: null, vact: o.vact || '' };
-    if (b.act.lock) b.loco = 'busy';
+    if (b.act.lock && b.loco !== 'seat') b.loco = 'busy';
     if (o.face !== undefined) b.faceTo = o.face;
     b.wc = G.S.clock;
     return true;
@@ -500,13 +550,16 @@
   function step(v, h) {
     // the world moved the body (a building rose where it stood, a load, the world's own push): the world is right
     // (and what the hands were doing there is left undone: the fish in that water, the hug of the one left behind)
-    if (Math.abs(v.x - b.wx) > 1e-6 || Math.abs(v.y - b.wy) > 1e-6) { b.X = b.pX = v.x * TL(); b.Z = b.pZ = v.y * TL(); b.lv = G.Possess.level(); b.inB = null; b.inP = null; b.stair = null; b.Y = b.pY = floorAt(b.X, b.Z); indoorAfter(v); b.vx = b.vz = b.vy = 0; b.ground = true; b.loco = 'ground'; b.climb = null; cutAct(); }
+    // (and a place it held is let go there: the world's step lets it go too, out of the building — Possess.update)
+    if (Math.abs(v.x - b.wx) > 1e-6 || Math.abs(v.y - b.wy) > 1e-6) { if (b.seat) { b.seat = null; G.Possess.apply(w => { G.Possess.unuse(w); return { ok: true }; }); } b.X = b.pX = v.x * TL(); b.Z = b.pZ = v.y * TL(); b.lv = G.Possess.level(); b.inB = null; b.inP = null; b.stair = null; b.Y = b.pY = floorAt(b.X, b.Z); indoorAfter(v); b.vx = b.vz = b.vy = 0; b.ground = true; b.loco = 'ground'; b.climb = null; cutAct(); }
     b.pX = b.X; b.pY = b.Y; b.pZ = b.Z;
     if ((b.capsT -= h) <= 0 || !b.caps) { b.caps = G.Possess.caps(v); b.capsT = 0.5; b.h = 1.75 * (G.People3D ? G.People3D.look(v).s : 1); }
-    if (v.sleeping && b.loco !== 'sleep') { cutAct(); b.loco = 'sleep'; if (b.inShell) toBed(v); }
+    // (asleep — the world's sleep —: off the place it was at, into its bed)
+    if (v.sleeping && b.loco !== 'sleep') { cutAct(); if (b.seat) standUp(true, true); b.loco = 'sleep'; if (b.inShell) toBed(v); }
     // (sitting, the body gets up as soon as the player walks or jumps)
-    // (and a free act — a prayer, a meal — is left there: what it had asked of the world and the world had not yet done never happens)
-    if (b.act && (b.act.sit || b.act.free) && (Math.abs(IN.mx) + Math.abs(IN.mz) > 0.2 || b.buffer > 0 || IN.jump)) { cutAct(); b.loco = 'ground'; }
+    // (and a free act — a prayer, a meal — is left there: what it had asked of the world and the world had not yet done never happens;
+    // at a place, the place's own step gets it up)
+    if (b.act && (b.act.sit || b.act.free) && (Math.abs(IN.mx) + Math.abs(IN.mz) > 0.2 || b.buffer > 0 || IN.jump)) { cutAct(); if (b.loco !== 'seat') b.loco = 'ground'; }
     if (b.act && b.act.keep && !b.act.keep()) cutAct();
     // (the act's own time is counted once a frame — tickAct: the world's or the body's; here only the feet's and the turn)
     if (b.act) {
@@ -534,16 +587,31 @@
     if (v.moving) { const i = W.idx(v.x, v.y); if (S.type[i] >= T.SAND) { const k = b.wear.length; if (k && b.wear[k - 2] === i) b.wear[k - 1] += (d / TL()) * 1.3; else b.wear.push(i, (d / TL()) * 1.3); } }
     animate(v, h);
   }
+  // (the states of the 3D one is seated in, the low ones of the floor and the fire, and a seated gesture's state on the ground —
+  // where there is no seat: eating with the bowl in the lap, rocking the child —, as Interiors gives them out: ON_GROUND)
+  const SEATED_ST = { sit: 1, eat: 1, rock: 1 }, LOW_ST = { rest: 1, pray: 1, cook: 1, low: 1, sleep: 1, sick: 1, eatg: 1, rockg: 1 };
+  const GROUND_ST = { sit: 'rest', sittalk: 'rest', eat: 'eatg', rock: 'rockg' };
+  // (at a place: its own state — Anim3D.resolve: a state, or an act of the world's people —; an act of the hands there shows
+  // as it is where one stands at the place, and seated only if it is a seated one — eating at the table —, else the seat's
+  // own; getting up, standing)
+  function seatSt() {
+    const s = b.seat; if (s.out) return 'idle';
+    const own = G.Anim3D.resolve(s.st); const a = b.act; if (!a) return own;
+    const an = G.Anim3D.resolve(a.anim);
+    if (!SEATED_ST[own] && !LOW_ST[own]) return an;
+    return SEATED_ST[own] && SEATED_ST[an] ? an : own;
+  }
   // the animation the body is in: from what it really does (Part 25: no walking in place, no sliding in idle)
   function animate(v, h) {
     const caps = b.caps; const carry = !!(v.carry && v.carry.n > 0);
     let st;
     if (b.loco === 'sleep') st = 'sleep';
+    else if (b.loco === 'seat') st = seatSt();
     else if (b.loco === 'climb') st = 'climb';
     else if (b.loco === 'stair') st = b.flight && b.flight.lad ? 'climb' : 'walk';
     else if (b.loco === 'swim') st = b.stamina <= 0 ? 'drown' : b.swimK > 0.5 ? 'swim' : 'tread';
     else if (b.act && b.act.to && b.act.tr < b.act.toT && b.speed > 0.22) st = 'walk';
-    else if (b.act && (b.act.lock || b.speed < 0.22)) st = b.act.anim;
+    else if (b.act && (b.act.lock || b.speed < 0.22)) st = GROUND_ST[b.act.anim] || b.act.anim; // (a seated gesture with no seat: on the ground)
     else if (!b.ground) st = b.vy > 0.4 ? 'jump' : 'fall';
     else if (b.landT > 0) st = 'land';
     else if (b.speed > 0.22) st = IN.sneak || b.crawl ? 'sneak' : b.speed > caps.walk * 1.3 ? 'run' : carry ? 'carryWalk' : (b.wade > 0.35 ? 'wade' : 'walk');

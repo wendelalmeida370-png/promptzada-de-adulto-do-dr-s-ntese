@@ -46,6 +46,17 @@
         for (const [id, pl] of pts) if (pl.it && (!pl.it.spots[pl.q] || pl.it.spots[pl.q].use !== pl.use)) { add('int', 3, `${b.type}#${b.id}: #${id} num ponto que não é da peça (${pl.item}:${pl.q} ${pl.use})`); break; }
       }
     }
+    // ---- the place the body's hands took (S.avatar.use — the verb 'lugar', phase C): of the building the world has the body
+    // in, of the plan it was taken in, a place of a piece of it — and the body at it, within a stride (the moment's ease of
+    // sitting down and getting up)
+    { const A = s.avatar, u = A && A.use;
+      if (u && In.placeFor && In.keyOf) {
+        const v = s.villagers.get(A.id), b = s.buildings.get(u.b);
+        if (!v || !b || v.inside !== u.b || In.keyOf(b) !== u.key) add('int', 2, `o corpo #${A.id} segura um lugar de #${u.b} sem estar nele, ou com outra planta`);
+        else { const pl = In.placeFor(b, u.it, u.q); const d = pl ? Math.hypot((v.x - b.x) * 4 - pl.x, (v.y - b.y) * 4 - pl.z) : 0;
+          if (!pl) add('int', 2, `o corpo #${A.id} num lugar que a planta de ${b.type}#${b.id} não tem (${u.it}:${u.q})`);
+          else if (d > 1.0) add('int', 3, `o corpo #${A.id} a ${d.toFixed(2)} m do lugar que segura em ${b.type}#${b.id} (${u.use})`); }
+      } }
     // ---- the way in (L-195): where the step put the door, with this record and this ground (the trees about it too: L-206),
     // the way in fits — or it fits on no side open to the street. Asked again here, made anew: every word of the step the first
     // round after it, the doors left where it does not fit every round (they are few), and the others in the round's few plans.

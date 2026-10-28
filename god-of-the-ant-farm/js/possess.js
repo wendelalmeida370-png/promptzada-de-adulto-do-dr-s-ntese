@@ -263,11 +263,21 @@
   // the place of a building's plan the body's hands took — on a bench, in a bed, at the wheel (Interact's verb, done in the
   // world's step) —: only this file writes it; Interiors.places gives it to the body and to no one else (D-085). Let go when
   // the body leaves the building, or the plan it was taken in is no longer the building's (a renovation, a ruin)
+  // (the open ground of a square, of a fair — a shell with no walls — has no door to come in by: the body walks on it as anyone
+  // of the town, and the world has it there, inside, only while it holds a place of it — taken here, let go with the place)
   Po.use = function (v, b, pl) {
-    const a = G.S.avatar; if (!a || !Po.is(v) || !b || !pl || !pl.it || v.inside !== b.id || !G.Interiors.keyOf) return false;
+    const a = G.S.avatar; if (!a || !Po.is(v) || !b || !pl || !pl.it || !G.Interiors.keyOf) return false;
+    if (v.inside !== b.id) { if (v.inside || !openOn(v, b)) return false; v.inside = b.id; a.lv = pl.lv; }
     a.use = { b: b.id, it: pl.item, q: pl.q, use: pl.use, st: pl.st || '', key: G.Interiors.keyOf(b), t0: G.S.clock }; return true;
   };
-  Po.unuse = function () { const a = G.S.avatar; if (a) a.use = null; };
+  Po.unuse = function (v) {
+    const a = G.S.avatar; if (!a) return; const u = a.use; a.use = null;
+    const w = v || G.S.villagers.get(a.id); const B = u && G.S.buildings.get(u.b);
+    if (w && B && w.inside === B.id && openShell(B)) { w.inside = 0; a.lv = null; }
+  };
+  const openShell = B => { const p = G.Space.planNow ? G.Space.planNow(B) : null; return !!(p && p.shell && p.shell.kind === 'aberta'); };
+  const openOn = (v, B) => { if (!openShell(B)) return false; const ins = planAt(v); return !!(ins && ins.b === B && ins.shell); };
+  Po.openShell = openShell; // (for the controller: an open ground is entered by a place of it, never by walking on it)
   Po.useOf = () => { const a = G.S.avatar; return a && a.use ? a.use : null; };
   const useHolds = (v, a) => { const u = a.use; const B = u && G.S.buildings.get(u.b); return !!(B && v.inside === u.b && G.Interiors.keyOf && G.Interiors.keyOf(B) === u.key); };
   Po.onPlan = v => { const a = G.S.avatar; return !!(v && a && a.id === v.id) && onPlan(v, a); };
@@ -331,7 +341,9 @@
     // asleep in one's own bed; anything else that put the body indoors lets it out at the door)
     if (v.inside && !(v.sleeping && v.inside === v.home) && !indoorOK(v, a)) { const b = S.buildings.get(v.inside); if (b) { const d = G.Vg.door(b); v.x = d[0]; v.y = d[1]; } v.inside = 0; a.lv = null; }
     if (!v.inside && a.lv !== null && a.lv !== undefined && !onPlan(v, a)) a.lv = null; // (out, and off any plan: no storey)
-    if (a.use && !useHolds(v, a)) a.use = null; // (out of the building, or its plan made over: the place let go)
+    if (a.use && !useHolds(v, a)) Po.unuse(v); // (out of the building, or its plan made over: the place let go)
+    // (on an open ground with no place of it — a game loaded there whose place is gone —: out on the town's ground)
+    if (v.inside && !a.use && !v.sleeping) { const B = S.buildings.get(v.inside); if (B && openShell(B)) { v.inside = 0; a.lv = null; } }
     for (let k = a.asks.length - 1; k >= 0; k--) if (S.clock - a.asks[k].t > 90) a.asks.splice(k, 1);
     // (what the hands asked since the last step: done now, in the world's own step, in the order asked — each sees the world
     // the one before left; one asked by a body no longer lived is dropped. Each is answered "not done" until it is done: one
