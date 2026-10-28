@@ -912,6 +912,8 @@
   const BODY = { piso: 1, semienterrado: 1, elevado: 1, andar: 1 }; // (the storeys that are the house's body)
   const STRAW = ['#e2bf6c', '#b08a44'];
   const CLASSIC_ROOFS = [['#b85a3c', '#94452d', '#7a3826'], ['#9a6a3a', '#7f5530', '#6a4526'], ['#6c6f86', '#56596e', '#46485a']]; // (the house of before's, art.js)
+  // (the colours of the stuffs of a wall, as the 3D has them — Build3D's INMAT —, for a storey of another stuff than its shell's)
+  const STUFF = { tabua: '#927250', taipa: '#b2926e', adobe: '#c0a47c', 'adobe-caiado': '#ece6d8', 'adobe-estuque': '#ded0b4', reboco: '#ded5c4', 'pau-a-pique': '#aa906e', pedra: '#9e988e', enxaimel: '#e8e0cf' };
   const q2 = v => Math.round(v * 32) / 32, qz = v => Math.round(v * 2) / 2; // (a sprite's numbers to a pixel: what tells two apart)
   // the shell in the sprite's frame (tiles from the lot's middle; heights in px over its highest ground): the house's numbers
   A.homeGeo = function (b, s, q) {
@@ -943,6 +945,8 @@
       }
     } else if (s.entrance) { const e = s.entrance; H.door = { face: faceOf(e.side), at: [X(e.x), Y(e.z)], w: q2(e.w / 4), z1: Z(lv[0].y + 1.9) }; }
     for (const a of sh.annex || []) H.annex.push({ rect: R(a.r), h: Z(a.h) });
+    // (a storey whose outside walls are of another stuff than the shell's: the half-timber over the ground floor's adobe)
+    H.bands = []; for (const l of lv) { const w = (s.walls || []).find(q => q.lv === l.lv && q.mat && q.mat !== sh.mat && q.kind === 'parede'); if (w) H.bands.push({ z0: Z(l.y), z1: Math.min(H.eave, Z(l.y + l.h)), mat: w.mat }); }
     return H;
   };
   // the picture of a home from its numbers (homeGeo), in its people's dressing
@@ -956,6 +960,15 @@
     else if (H.base !== 'semienterrado' && zF > 0.3) plinth(c, p, x0, y0, x1, y1, zF);
     const z0 = H.base === 'semienterrado' ? 0 : Math.max(0, zF); const fl = H.floors;
     walls(c, x0, y0, x1, y1, z0, zE, p.wl, p.wr, bat);
+    // ---- the storeys of another stuff (the 3D's colours of the stuffs: Build3D's INMAT), the half-timber's frame ----
+    for (const bd of H.bands || []) {
+      const col = STUFF[bd.mat] || '#ded5c4', b0 = bd.z0, b1 = bd.z1;
+      poly(c, [P(x0, y1, b0), P(x1, y1, b0), P(x1 - bat, y1 - bat, b1), P(x0 + bat, y1 - bat, b1)], col); poly(c, [P(x1, y1, b0), P(x1, y0, b0), P(x1 - bat, y0 + bat, b1), P(x1 - bat, y1 - bat, b1)], shade(col, 0.85));
+      if (bd.mat === 'enxaimel') { const tc = p.trim || '#5a3c24'; const nx = Math.max(2, Math.round((x1 - x0) * 8)), ny = Math.max(2, Math.round((y1 - y0) * 8));
+        for (let k = 0; k <= nx; k++) { const x = x0 + (x1 - x0) * k / nx; ln(c, P(x, y1, b0), P(x, y1, b1), tc, 0.6); if (k < nx && k % 2 === 0) ln(c, P(x, y1, b0), P(x + (x1 - x0) / nx, y1, b1), tc, 0.5); }
+        for (let k = 0; k <= ny; k++) { const y = y0 + (y1 - y0) * k / ny; ln(c, P(x1, y, b0), P(x1, y, b1), tc, 0.6); }
+        ln(c, P(x0, y1, b0), P(x1, y1, b0), tc, 0.8); ln(c, P(x1, y1, b0), P(x1, y0, b0), tc, 0.8); }
+    }
     // ---- the people's dressing of the walls ----
     if (st === 'nordico') {
       const nx = Math.max(3, Math.round((x1 - x0) * 12)), ny = Math.max(2, Math.round((y1 - y0) * 6));
@@ -1003,7 +1016,16 @@
     } else {
       const k2 = kind === 'quatro-aguas' ? 'hip' : kind === 'turfa' ? 'turf' : kind === 'palha' ? 'thatch' : 'gable';
       const pp = k2 === 'thatch' && !p.thatch ? Object.assign({}, p, { thatch: STRAW }) : p;
-      const zr = roof(c, m, pp, x0, y0, x1, y1, zE, { kind: k2, alongY: rf.alongY, rh: Math.max(2, rf.rise), ov: rf.ov, colors: type === 'house' && st === 'classico' ? CLASSIC_ROOFS[v % 3] : undefined });
+      // (the roof's mass as the 3D lays it — Build3D's gableRoof and hip —: the stuff's thickness over the ridge, straw 0.4 m,
+      // turf 0.26, tiles 0.16; the eaves running on down the slope past the walls, half a metre out)
+      const half = (rf.alongY ? x1 - x0 : y1 - y0) * 2, rise = rf.rise / ZPX; const ang = Math.atan2(rise, Math.max(0.5, half));
+      const T = k2 === 'thatch' ? 0.4 : k2 === 'turf' ? 0.26 : 0.16, ov3 = k2 === 'thatch' ? 0.5 : k2 === 'turf' ? 0.46 : 0.42;
+      const drop = ov3 * Math.tan(ang) * ZPX, zTop = zE + rf.rise + (k2 === 'hip' ? 0.15 : T / Math.cos(ang)) * ZPX;
+      const zb = k2 === 'hip' ? zE - drop + 0.15 * ZPX : zE - drop + 1; // (the gables draw their eaves a pixel under their base; the hip at it)
+      const zr = roof(c, m, pp, x0, y0, x1, y1, zb, { kind: k2, alongY: rf.alongY, rh: Math.max(2, zTop - zb), ov: ov3 / 4, colors: type === 'house' && st === 'classico' ? CLASSIC_ROOFS[v % 3] : undefined });
+      // (the north's barge boards crossed past the ridge at both gables, their ends carved: the 3D's bargeEnd)
+      if (k2 === 'turf') { const o = ov3 / 4; const ends = rf.alongY ? [[(x0 + x1) / 2, y0 - o], [(x0 + x1) / 2, y1 + o]] : [[x0 - o, (y0 + y1) / 2], [x1 + o, (y0 + y1) / 2]];
+        for (const [ex, ey] of ends) { const a = P(ex, ey, zr); ln(c, [a[0] - 2, a[1] + 1.5], [a[0] + 0.9, a[1] - 1.3], '#5a3c24', 0.9); ln(c, [a[0] + 2, a[1] + 1.5], [a[0] - 0.9, a[1] - 1.3], '#5a3c24', 0.9); } }
       if ((st === 'classico' || st === 'romano') && k2 !== 'thatch') { const cx = x0 + (x1 - x0) * 0.68, cy = y0 + (y1 - y0) * 0.3; box(c, cx - 0.07, cy - 0.07, cx + 0.07, cy + 0.07, zE + 2, Math.min(zr, zE + 12) + 2, '#8e8578', '#6f675c', '#5a534a'); m.fires.push(P(cx, cy, Math.min(zr, zE + 12) + 3)); }
       else m.fires.push(P((x0 + x1) / 2, (y0 + y1) / 2, zr));
     }
@@ -1014,11 +1036,16 @@
     const [x0, y0, x1, y1] = a.rect; const [X0, Y0, X1, Y1] = H.rect; const zF = Math.max(0, H.floor), zt = a.h;
     if (H.base !== 'semienterrado' && zF > 0.3) plinth(c, p, x0, y0, x1, y1, zF);
     walls(c, x0, y0, x1, y1, zF, zt, shade(p.wl, 0.95), shade(p.wr, 0.95));
-    // (the lean-to: high against the house, low on the far side)
-    const hi = zt + 2.5, lo = zt; const fx = x0 >= X1 - 0.01 ? 1 : x1 <= X0 + 0.01 ? -1 : 0, fy = fx ? 0 : y0 >= Y1 - 0.01 ? 1 : -1;
-    const zAt = (x, y) => (fx > 0 ? (x === x0 ? hi : lo) : fx < 0 ? (x === x1 ? hi : lo) : fy > 0 ? (y === y0 ? hi : lo) : (y === y1 ? hi : lo));
-    const r = p.roof || ['#8a6a44', '#6a5034', '#5a4028']; const o = 0.05;
-    poly(c, [P(x0 - o, y0 - o, zAt(x0, y0)), P(x1 + o, y0 - o, zAt(x1, y0)), P(x1 + o, y1 + o, zAt(x1, y1)), P(x0 - o, y1 + o, zAt(x0, y1))], st === 'nordico' ? r[1] : r[0], 'rgba(0,0,0,0.25)', 0.4);
+    // (the lean-to as the 3D lays it — Build3D's leanOf: high against the house by half the annex's depth (under the house's
+    // eaves), low at its outer wall and on past it 0.3 m, as far out at its ends; its cheeks closing the slope over the end walls)
+    const fx = x0 >= X1 - 0.01 ? 1 : x1 <= X0 + 0.01 ? -1 : 0, fy = fx ? 0 : y0 >= Y1 - 0.01 ? 1 : -1;
+    const depth = (fx ? x1 - x0 : y1 - y0) * 4; const hi = Math.min(zt + depth * 0.5 * ZPX, H.eave - 0.15 * ZPX), o = 0.075; const lo = zt - (hi - zt) * (0.3 / Math.max(0.3, depth));
+    const zAt = (x, y) => (fx > 0 ? (x <= x0 ? hi : lo) : fx < 0 ? (x >= x1 ? hi : lo) : fy > 0 ? (y <= y0 ? hi : lo) : (y >= y1 ? hi : lo));
+    const A0 = [fx < 0 ? x0 - o : x0 - (fx ? 0 : o), fy < 0 ? y0 - o : y0 - (fy ? 0 : o)], A1 = [fx > 0 ? x1 + o : x1 + (fx ? 0 : o), fy > 0 ? y1 + o : y1 + (fy ? 0 : o)];
+    // (the cheeks on the ends one sees: the wall's stuff from the wall's top up under the slope)
+    if (fx) { poly(c, [P(x0, y1, zt), P(x1, y1, zt), P(fx > 0 ? x0 : x1, y1, hi)], shade(p.wl, 0.95)); } else { poly(c, [P(x1, y0, zt), P(x1, y1, zt), P(x1, fy > 0 ? y0 : y1, hi)], shade(p.wr, 0.95)); }
+    const r = p.roof || ['#8a6a44', '#6a5034', '#5a4028']; const col = st === 'nordico' ? r[1] : (st === 'egipcio' || st === 'asteca') ? (p.thatch || STRAW)[0] : r[0];
+    poly(c, [P(A0[0], A0[1], zAt(A0[0], A0[1])), P(A1[0], A0[1], zAt(A1[0], A0[1])), P(A1[0], A1[1], zAt(A1[0], A1[1])), P(A0[0], A1[1], zAt(A0[0], A1[1]))], col, 'rgba(0,0,0,0.25)', 0.4);
   }
   // a round hut from its shell: the ring of wall to its eaves, the cone of thatch over it, the door where the plan leaves the gap
   function roundDraw(c, m, p, st, H) {
