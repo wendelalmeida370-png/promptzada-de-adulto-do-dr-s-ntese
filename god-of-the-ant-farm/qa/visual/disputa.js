@@ -12,7 +12,8 @@
 //      one held by someone no longer lived, any porter may; the body's hold with no gesture under way lasts the 60 s of the
 //      world the rule gives it, then the porters may
 //   2. the body first: the E holds the crate from the next step; a porter sent to the quay then goes for another; the body
-//      lifts it at the contact, the porter his own
+//      lifts it at the contact, the porter his own (made again when an errand from outside takes him from his crate before he
+//      lifts it — the porter lives, as in 3: T-234)
 //   3. the porter first: an E on the crate he is going for is refused at the key, in the world's words, and the gesture stops
 //      before its contact; nothing changes on the quay; he lifts it (made again when an errand from outside calls him away
 //      before he does — the porter lives: T-157)
@@ -94,8 +95,10 @@ const near = []; for (let r = 2; r <= 4 && near.length < 4; r += 0.5) for (let k
 if (near.length < 3) { ok('lugares perto do cais', false, near.length); process.exit(1); }
 // (brought out of a cave first, as the god's hand would: a porter who went down one by himself between two parts — the
 // world's people explore — and was only put by the pile stayed underground, and the caves let him out a second later at the
-// mouth nearest, 23 tiles away: T-154)
-const bring = (o, at) => god(() => { if (o.ug && G.Caves) G.Caves.exitNow(o); G.Vg.endTask(o); o.x = at[0]; o.y = at[1]; o.path = null; });
+// mouth nearest, 23 tiles away: T-154); and rested and fed, as negocio.js and moedas.js bring their buyers: a tired porter goes
+// to bed at his next thought — the sleep outranks the work —, and in the generation-6 worlds Nefertiti did, in each of the
+// three tries of case 3, before lifting her crate: T-234)
+const bring = (o, at) => god(() => { if (o.ug && G.Caves) G.Caves.exitNow(o); G.Vg.endTask(o); o.x = at[0]; o.y = at[1]; o.path = null; o.energy = Math.max(o.energy, 70); o.hunger = Math.min(o.hunger, 30); });
 bring(v, near[0]); bring(p1, near[1]); bring(p2, near[2]);
 if (!G.Possess.take(v).ok) { ok('encarnar o estivador', false, v.name); process.exit(1); }
 G.Avatar.attach(v, Math.atan2(sp0[1] - v.y, sp0[0] - v.x)); for (let k = 0; k < 6; k++) frame();
@@ -105,11 +108,14 @@ console.log(`(${set.name}: o cais #${dock.id}; ${v.name} encarnado; ${p1.name} e
 let op = null;
 const opCrates = () => (op && dock.crates ? dock.crates.filter(c => c.op === op.id) : []);
 const drawnOf = () => { const s = new Set(opCrates().map(c => c.id)); return P3.lyingOf(dock.id).filter(e => s.has(e[4])); };
+// (room in the people's store for a good, a catch and some, made by the god: the porters carry nothing to a full one, and a
+// porter's door passes over a crate the store has no room for — T-070)
+const roomFor = k => god(() => { const f = G.Fac.get(ids.fac); const room = G.Village.cap(f.id) - (f.stock[k] || 0); if (room < 80) D.use('f:' + f.id, k, 80 - room, { code: 'teste', part: true }); });
 // (crates on the quay, as many as asked: a boat's catch lands — added to the unloading under way, or a new one)
 function fresh(n, force) {
-  // (an unloading needs room in the people's store — the porters carry nothing to a full one —: the god makes room for a catch
-  // and some, so the proof does not hang on how full the store is — T-070)
-  god(() => { const f = G.Fac.get(ids.fac); const room = G.Village.cap(f.id) - (f.stock.food || 0); if (room < 80) D.use('f:' + f.id, 'food', 80 - room, { code: 'teste', part: true }); });
+  // (an unloading needs room in the people's store: the god makes room for a catch and some, so the proof does not hang on how
+  // full the store is — T-070)
+  roomFor('food');
   if (!force && opCrates().length >= n) return;
   god(() => { S.time = 0.15; P.landCatch(dock, 'food', 32, 'arenque', '#a8c0d0', 0); op = P.opAt(dock); });
   for (let k = 0; k < 6; k++) frame();
@@ -205,29 +211,53 @@ ok('o barco descarrega: as caixas de verdade no cais, desenhadas', !!op && opCra
     `${rows.map(r => `${r.name}: ${r.wb !== null ? 'corpo ' + yn(r.body) + ', ' : ''}carregador ${yn(r.porter)}`).join(' · ')}${bad.length ? '; ERRADO: ' + bad.map(r => r.name).join(', ') : ''}${!b || !pr ? '; ao pé da pilha: ' + pileWhy : ''}${!on ? '; o carregador não foi a ela' : ''}${!left ? '; a marca largada não ficou' : ''}${cutBy ? '; o gesto cortado não soltou a caixa' : ''}${!hr.ok ? '; begin: ' + hr.why : ''}`);
   ok('1. a recusa ao corpo é a mesma do carregador: «Outro carregador pegou esta caixa.»', why === 'Outro carregador pegou esta caixa.', `«${why}»`);
 }
-// (the body's hold with no gesture under way: the 60 s of the world, then the porters may)
+// (the body's hold with no gesture under way: the 60 s of the world, then the porters may — asked at 58 s and at 61 s of a
+// porter by the pile, with room in the store for the crate, as the god's hand would: the porter's door asks for both, and in
+// the generation-6 mega the town filled the store with food in those 61 s, and the door passed over the crate, free, for one
+// of stone: T-234)
 { fresh(6); rest(p1); rest(p2);
   const o = A.offers(v, v.x, v.y, 2.6 / TL + 2).find(q => q.act === 'pegar' && q.op === op.id && q.ok !== false); const X = o ? o.cid : 0;
   const h = o ? god(() => A.begin(v, o)) : { ok: false, why: 'sem oferta' }; const t0 = S.clock;
+  const ready = () => { const c = crate(X); if (c) roomFor(c.k); bring(p2, near[2]); };
   while (S.clock - t0 < 58) G.debug.step(0.5);
-  const at58 = crate(X); const s58 = hold(at58); const kept = !!at58 && at58.by === v.id && !porterMay(p2, X);
+  ready(); const at58 = crate(X); const s58 = hold(at58); const kept = !!at58 && at58.by === v.id && !porterMay(p2, X);
   while (S.clock - t0 < 61.5) G.debug.step(0.5);
-  const at61 = crate(X); const s61 = at61 ? hold(at61) : 'já levada por um carregador'; const freed = !at61 || (at61.by !== v.id && (!!at61.by || porterMay(p2, X)));
+  ready(); const at61 = crate(X); const s61 = at61 ? hold(at61) : 'já levada por um carregador'; const freed = !at61 || (at61.by !== v.id && (!!at61.by || porterMay(p2, X)));
   god(() => { if (h.ok) A.abort(h.h, 'teste'); });
   for (let k = 0; k < 6; k++) frame();
   ok('1. a caixa do corpo sem gesto em curso: dele 60 s do mundo (a regra), e depois dos carregadores', h.ok && kept && freed, `${h.ok ? '' : 'begin: ' + h.why + '; '}aos 58 s ${s58}; aos 61 s ${s61}`);
 }
 
 // ------------------------------ 2. the body first ------------------------------
-{ fresh(6); rest(p1); rest(p2); bring(p2, near[2]);
-  const t0 = S.clock; const pr = pressHold(); const X = pr ? pr.X : 0;
-  god(() => { S.time = 0.15; P.work(p2, dock, G.Vg.H); }); const p2c = p2.task && p2.task.cid;
-  let touched = 0, p2had = 0; for (let k = 0; k < 600 && G.Avatar.busy(); k++) { frame(); if (p2.task && p2.task.cid === X) touched++; if (p2.carry && p2.carry.op === op.id && p2.carry.cid) p2had = p2.carry.cid; }
-  for (let k = 0; k < 3; k++) frame();
-  const got = v.carry && v.carry.op === op.id ? v.carry.cid : 0;
-  for (let k = 0; k < 900 && !p2had; k++) { frame(); if (p2.carry && p2.carry.op === op.id && p2.carry.cid) p2had = p2.carry.cid; if (p2.task && p2.task.cid === X) touched++; }
+// (the porter lives, as in 3: an errand from outside may take him from his crate before he lifts it, by the rule of Vg.give —
+// in the metropole of the generation-6 worlds, on 58adb53, the caves sent Hatshepsut to paint on a cave wall as she reached
+// hers, and the case waited for a lift that could not come. Told, and the case made again, up to three times; a try he was
+// taken from counts for the rest of the rule all the same — the crate he went for, the body's, the body's lift: T-234)
+{ let R = null; const called = [];
+  for (let tries = 0; tries < 3; tries++) {
+    fresh(6); rest(p1); rest(p2); bring(p2, near[2]);
+    const t0 = S.clock; const pr = pressHold(); const X = pr ? pr.X : 0;
+    god(() => { S.time = 0.15; P.work(p2, dock, G.Vg.H); }); const p2c = p2.task && p2.task.cid;
+    // (each frame: whether he went for the body's crate, lifted his, or was taken from his unloading before lifting it — his
+    // errand replaced by another; an unloading that let him go by itself leaves him with none for a step, and is no excuse)
+    let touched = 0, p2had = 0, away = '', ended = false;
+    const see = () => {
+      if (p2.task && p2.task.cid === X) touched++;
+      if (p2.carry && p2.carry.op === op.id && p2.carry.cid) { p2had = p2.carry.cid; return; }
+      if (!p2c || away || ended) return;
+      if (!p2.task) ended = true; else if (p2.task.type !== 'descarga') away = p2.task.type + (p2.task.kind ? ' (' + p2.task.kind + ')' : '');
+    };
+    for (let k = 0; k < 600 && G.Avatar.busy(); k++) { frame(); see(); }
+    for (let k = 0; k < 3; k++) frame();
+    const got = v.carry && v.carry.op === op.id ? v.carry.cid : 0;
+    for (let k = 0; k < 900 && !p2had && !away; k++) { frame(); see(); }
+    R = { pr, X, t0, p2c, touched, got, p2had };
+    if (!away || !(pr && p2c && p2c !== X && !touched && got === X)) break;
+    called.push(`${p2.name} chamado a ${away} antes de levantar a #${p2c}`); clearHands(v); rest(p2);
+  }
+  const { pr, X, t0, p2c, touched, got, p2had } = R;
   ok('2. o corpo primeiro: o E guarda a caixa desde o passo seguinte; o carregador mandado ao cais vai a outra; cada um levanta a sua', !!pr && !!p2c && p2c !== X && !touched && got === X && !!p2had && p2had !== X,
-    pr ? `«${pr.b.label}» (caixa #${X}${pr.n > 1 ? `, ${pr.n} vezes E` : ''}): um passo depois do corpo; ${p2.name} foi à #${p2c || '-'}${touched ? `, e à do corpo ${touched} vezes` : ''}; nas mãos do corpo a #${got || '-'} (${(S.clock - t0).toFixed(2)} s); nas dele a #${p2had || '-'}` : `o E não guardou caixa nenhuma: ${pileWhy}`);
+    `${called.length ? '(' + called.join('; ') + ') ' : ''}` + (pr ? `«${pr.b.label}» (caixa #${X}${pr.n > 1 ? `, ${pr.n} vezes E` : ''}): um passo depois do corpo; ${p2.name} foi à #${p2c || '-'}${touched ? `, e à do corpo ${touched} vezes` : ''}; nas mãos do corpo a #${got || '-'} (${(S.clock - t0).toFixed(2)} s); nas dele a #${p2had || '-'}` : `o E não guardou caixa nenhuma: ${pileWhy}`));
   clearHands(v); rest(p2);
 }
 
