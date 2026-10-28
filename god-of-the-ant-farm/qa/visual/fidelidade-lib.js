@@ -197,17 +197,21 @@ F.formPic = function (b, Fm, side) {
         quad(p(m.r - m.t, a0, y0), p(m.r - m.t, a1, y0), p(m.r - m.t, a1, m.y1), p(m.r - m.t, a0, m.y1), [-d[0], 0, -d[1]]); }
       // (a part of the round: its two ends)
       if (A1 - A0 < Math.PI * 2 - 1e-6) for (const [a, sg] of [[A0, -1], [A1, 1]]) { const t = Fo.dirLot(side, -Math.sin(a), Math.cos(a)); quad(p(m.r - m.t, a, y0), p(m.r, a, y0), p(m.r, a, m.y1), p(m.r - m.t, a, m.y1), [t[0] * sg, 0, t[1] * sg]); } }
+    else if (m.k === 'telhado' && m.quatro) for (const f of Fo.hip(m.r, m.y0, m.y1, m.ov || 0)) { const P = f.p.map(q => W(q[0], q[1], q[2])); const d = Fo.dirLot(side, f.n[0], f.n[1]); const n = norm([d[0], f.n[2], d[1]]);
+      if (P.length === 4) quad(P[0], P[1], P[2], P[3], n); else tri(P[0], P[1], P[2], n); }
     else if (m.k === 'telhado') { const ov = m.ov || 0; const along = m.ao === 'u' ? 'u' : 'v'; const r = [m.r[0] - ov, m.r[1] - ov, m.r[2] + ov, m.r[3] + ov];
       const mu = (r[0] + r[2]) / 2, mv = (r[1] + r[3]) / 2;
       const ridge = along === 'u' ? [W(r[0], mv, m.y1), W(r[2], mv, m.y1)] : [W(mu, r[1], m.y1), W(mu, r[3], m.y1)];
       if (along === 'u') { quad(W(r[0], r[3], m.y0), W(r[2], r[3], m.y0), ridge[1], ridge[0], [0, 1, 0]); quad(W(r[2], r[1], m.y0), W(r[0], r[1], m.y0), ridge[0], ridge[1], [0, 1, 0]); tri(W(r[0], r[1], m.y0), W(r[0], r[3], m.y0), ridge[0], [0, 1, 0]); tri(W(r[2], r[3], m.y0), W(r[2], r[1], m.y0), ridge[1], [0, 1, 0]); }
       else { quad(W(r[2], r[1], m.y0), W(r[2], r[3], m.y0), ridge[1], ridge[0], [0, 1, 0]); quad(W(r[0], r[3], m.y0), W(r[0], r[1], m.y0), ridge[0], ridge[1], [0, 1, 0]); tri(W(r[0], r[3], m.y0), W(r[2], r[3], m.y0), ridge[1], [0, 1, 0]); tri(W(r[2], r[1], m.y0), W(r[0], r[1], m.y0), ridge[0], [0, 1, 0]); } }
     else if (m.k === 'tronco') for (const f of Fo.faces(m)) { const d = Fo.dirLot(side, f.n[0], f.n[1]); tri(W(...f.p[0]), W(...f.p[1]), W(...f.p[2]), [d[0], f.n[2], d[1]]); }
+    else if (m.k === 'pano') { const P = m.p.map(q => W(q[0], q[1], q[2])); const u = P[1].map((x, i) => x - P[0][i]), v = P[2].map((x, i) => x - P[0][i]); const n = norm([u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]);
+      for (let k = 1; k + 1 < P.length; k++) { tri(P[0], P[k], P[k + 1], n); tri(P[0], P[k + 1], P[k], n.map(x => -x)); } }
   }
   return { tris, fr: framer(b) };
 };
 // what the 3D covers seen from above (its triangles laid flat on the ground, cells of 0.1 m) against what the form covers
-// (G.Forma.foot): their overlap; and the 3D's highest point against the form's top, in metres
+// (G.Forma.foot, and its roofs to their eaves): their overlap; and the 3D's highest point against the form's top, in metres
 F.planCheck = function (b, Fm, pic, side) {
   const Fo = G.Forma, L = TILE, X0 = b.x * L, Z0 = b.y * L, S = 0.1; side = side || 'S';
   const n = Math.ceil(Fm.L / S) + 40, off = 20; const A = new Uint8Array(n * n), B = new Uint8Array(n * n); let top = -1e9;
@@ -215,7 +219,9 @@ F.planCheck = function (b, Fm, pic, side) {
     const den = (P[1][1] - P[2][1]) * (P[0][0] - P[2][0]) + (P[2][0] - P[1][0]) * (P[0][1] - P[2][1]); if (Math.abs(den) < 1e-9) continue;
     const i0 = Math.max(0, Math.floor(Math.min(P[0][0], P[1][0], P[2][0]))), i1 = Math.min(n - 1, Math.ceil(Math.max(P[0][0], P[1][0], P[2][0]))), j0 = Math.max(0, Math.floor(Math.min(P[0][1], P[1][1], P[2][1]))), j1 = Math.min(n - 1, Math.ceil(Math.max(P[0][1], P[1][1], P[2][1])));
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const x = i + 0.5, y = j + 0.5; const l1 = ((P[1][1] - P[2][1]) * (x - P[2][0]) + (P[2][0] - P[1][0]) * (y - P[2][1])) / den, l2 = ((P[2][1] - P[0][1]) * (x - P[2][0]) + (P[0][0] - P[2][0]) * (y - P[2][1])) / den; if (l1 >= 0 && l2 >= 0 && l1 + l2 <= 1) A[j * n + i] = 1; } }
-  for (const f of Fo.foot(Fm)) for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+  // (the form from above: its footprint and its roofs, out to their eaves — the 3D's roof covers its rect and ov all round)
+  const roofs = Fm.els.filter(e => e.k === 'telhado').map(e => ({ k: 'rect', r: [e.r[0] - (e.ov || 0), e.r[1] - (e.ov || 0), e.r[2] + (e.ov || 0), e.r[3] + (e.ov || 0)] }));
+  for (const f of [...Fo.foot(Fm), ...roofs]) for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const lx = (i + 0.5 - off) * S, lz = (j + 0.5 - off) * S; const c = Fo.toLot(side === 'S' ? 'S' : side === 'N' ? 'N' : side === 'E' ? 'W' : 'E', Fm.L, lx, lz); // (the lot back to the form's frame)
     if (f.k === 'rect' ? c[0] >= f.r[0] && c[0] <= f.r[2] && c[1] >= f.r[1] && c[1] <= f.r[3] : Math.hypot(c[0] - f.c[0], c[1] - f.c[1]) <= f.r) B[j * n + i] = 1; }
   let inter = 0, uni = 0; for (let q = 0; q < n * n; q++) { if (A[q] && B[q]) inter++; if (A[q] || B[q]) uni++; }

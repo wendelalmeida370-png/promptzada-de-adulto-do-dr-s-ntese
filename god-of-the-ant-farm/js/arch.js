@@ -610,6 +610,8 @@
     for (let z = 7; z < 34; z += 3.5) { ln(c, P(-e, e, z), P(e, e, z), 'rgba(0,0,0,0.1)', 0.35); ln(c, P(e, e, z), P(e, -e, z), 'rgba(0,0,0,0.1)', 0.35); }
     onL(c, e - 0.02, -0.06, 0.06, 20, 25, p.win, m); onR(c, e - 0.02, -0.06, 0.06, 26, 30, p.win, m);
     top(c, -e - 0.04, -e - 0.04, e + 0.04, e + 0.04, 34, p.top || p.base[2]);
+    // (the merlons all round, as the form has them: the back and the far side first, behind the front ones)
+    for (let k = 0; k < 4; k++) { const a = -e + k * (2 * e / 3.5); box(c, a, -e - 0.04, a + 0.1, -e + 0.02, 34, 38, p.wl, p.wr, p.wl); box(c, -e - 0.04, a, -e + 0.02, a + 0.1, 34, 38, p.wl, p.wr, p.wl); }
     for (let k = 0; k < 4; k++) { const a = -e + k * (2 * e / 3.5); box(c, a, e - 0.02, a + 0.1, e + 0.04, 34, 38, p.wl, p.wr, p.wl); box(c, e - 0.02, a, e + 0.04, a + 0.1, 34, 38, p.wl, p.wr, p.wl); }
     if (p.trim) band(c, -e, -e, e, e, 30.5, 32, p.trim);
     m.fires.push(P(0.1, 0.1, 36));
@@ -694,6 +696,7 @@
   function biblioteca(c, m, p, st) {
     if (st === 'egipcio' || st === 'asteca') {
       const z = hall(c, m, p, st, { x0: -0.8, y0: -0.8, x1: 0.8, y1: 0.35, H: 16 });
+      plinth(c, p, -0.8, 0.35, 0.8, 0.66, 2); // (the portico's floor: its columns stand on it — its form, Phase E)
       colonnade(c, p, -0.7, 0.35, 0.7, 0.62, 2, 14, 5, 0.045, 'L', st === 'egipcio');
       top(c, -0.8, 0.35, 0.8, 0.66, 14, p.top); band(c, -0.8, 0.35, 0.8, 0.66, 12.5, 14, p.trim);
       return z + 4;
@@ -703,10 +706,11 @@
     walls(c, -0.7, -0.8, 0.75, 0.3, 2.5, 17, p.wl, p.wr);
     winsR(c, m, p, 0.75, -0.8, 0.3, 9, 5, 2);
     colonnade(c, p, -0.7, 0.3, 0.75, 0.68, 2.5, 17, 5, 0.04, 'L');
-    onL(c, 0.3, -0.12, 0.12, 2.5, 11, '#3a2e24', m);
+    door(c, 0.3, -0.12, 0.12, 2.5, 11, '#3a2e24', m);
     box(c, -0.75, -0.85, 0.8, 0.72, 17, 19, p.col[0], p.col[1], p.col[0]);
     const zr = st === 'romano' ? roof(c, m, p, -0.75, -0.85, 0.8, 0.72, 19, { kind: 'hip' }) : (gableY(c, -0.75, -0.85, 0.8, 0.72, 19, 28, 0.04, p.roof[0], p.roof[1], p.gable, p.roof[2]), 28);
-    const s = P(0, 0.72, 22); c.fillStyle = '#e8d8a8'; c.fillRect(s[0] - 2.5, s[1] - 1.5, 5, 3); c.strokeStyle = '#8a6a3a'; c.lineWidth = 0.4; c.strokeRect(s[0] - 2.5, s[1] - 1.5, 5, 3);
+    // (the library's plaque on its pediment: a hip has none — its form, Phase E)
+    if (st !== 'romano') { const s = P(0, 0.72, 22); c.fillStyle = '#e8d8a8'; c.fillRect(s[0] - 2.5, s[1] - 1.5, 5, 3); c.strokeStyle = '#8a6a3a'; c.lineWidth = 0.4; c.strokeRect(s[0] - 2.5, s[1] - 1.5, 5, 3); }
     return zr;
   }
   function teatro(c, m, p, st) {
@@ -841,7 +845,7 @@
   function aqueduto(c, m, p, st) {
     if (st === 'egipcio') {
       box(c, -0.45, -0.45, 0.45, 0.45, 0, 4, p.base[0], p.base[1], p.base[2]); top(c, -0.36, -0.36, 0.36, 0.36, 3.4, '#3f8fb8');
-      ln(c, P(0.3, 0.3, 4), P(0.3, 0.3, 14), '#7a5a3a', 1); ln(c, P(-0.2, 0.1, 18), P(0.6, 0.5, 10), '#7a5a3a', 0.9);
+      ln(c, P(0.3, 0.3, 4), P(0.3, 0.3, 14), '#7a5a3a', 1); ln(c, P(-0.2, 0.1, 18), P(0.55, 0.475, 10.5), '#7a5a3a', 0.9); // (the beam's end over the lot's edge, never past it: Build3D.check)
       return 22;
     }
     if (st === 'nordico') {

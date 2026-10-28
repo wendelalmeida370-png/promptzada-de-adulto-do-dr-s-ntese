@@ -207,20 +207,21 @@
         box(c, -0.88, -0.83, 0.88, 0.82, 16, 17.6, p.col[0], p.col[1], p.col[0]);
         walls(c, -0.55, -0.6, 0.55, 0.2, 17.6, 23, p.wl, p.wr); winsL(c, m, p, 0.2, -0.55, 0.55, 19, 2.6, 4);
         roof(c, m, p, -0.55, -0.6, 0.55, 0.2, 23, { kind: 'gable', rh: 7 });
-        const f = P(0.9, 0.9, 2.5); flag(c, f[0], f[1], '#8e2f2f', 14);
+        const f = P(0.75, 0.9, 2.5); flag(c, f[0], f[1], '#8e2f2f', 14); // (its cloth inside the lot: Build3D.check)
         return 32;
       }
       if (st === 'egipcio') { // casa do vizir: pylons flanking the gate
         const H = house(c, m, p, st, -0.85, -0.85, 0.85, 0.25, 14, { door: false });
         for (const x of [-0.7, 0.2]) { box(c, x, 0.3, x + 0.5, 0.75, 0, 20, p.wl, p.wr, p.top); band(c, x, 0.3, x + 0.5, 0.75, 17, 18.4, p.trim); onL(c, 0.75, x + 0.12, x + 0.38, 6, 14, 'rgba(47,143,138,0.35)'); }
-        onL(c, 0.75, -0.2, 0.2, 0, 11, p.door);
-        for (const x of [-0.6, 0.6]) { const f = P(x, 0.8, 20); flag(c, f[0], f[1], '#2f8f8a', 10); }
+        door(c, 0.75, -0.2, 0.2, 0, 11, p.door);
+        // (the flags on their poles before the pylons, from the ground: the pennants where they were — its form, Phase E)
+        for (const x of [-0.6, 0.6]) { const f = P(x, 0.8, 0); flag(c, f[0], f[1], '#2f8f8a', 30); }
         return Math.max(H, 32);
       }
       if (st === 'asteca') { // tecpan on a low platform
         box(c, -0.95, -0.95, 0.95, 0.95, 0, 5, p.base[0], p.base[1], p.base[2]);
         band(c, -0.95, -0.95, 0.95, 0.95, 3.2, 4.2, p.trim);
-        poly(c, [P(-0.25, 1.1, 0), P(0.25, 1.1, 0), P(0.25, 0.95, 5), P(-0.25, 0.95, 5)], shade(p.base[2], 1.05));
+        poly(c, [P(-0.25, 1.06, 0), P(0.25, 1.06, 0), P(0.25, 0.95, 5), P(-0.25, 0.95, 5)], shade(p.base[2], 1.05)); // (its foot within a hand of the lot: its form, Phase E)
         const H = house(c, m, p, st, -0.8, -0.8, 0.8, 0.5, 18, { plinth: 5 });
         for (let k = 0; k < 7; k++) { const x = -0.78 + k * 0.26; box(c, x, 0.46, x + 0.1, 0.52, 18.6, 21, p.wl, p.wr, p.wl); }
         return Math.max(H, 26);
@@ -238,7 +239,7 @@
       colonnade(c, p, -0.8, 0.45, 0.8, 0.75, 2, 17, 6, 0.045, 'L');
       box(c, -0.84, -0.84, 0.84, 0.8, 17, 18.6, p.col[0], p.col[1], p.col[0]);
       gableX(c, -0.84, -0.84, 0.84, 0.8, 18.6, 26, 0.04, p.roof[0], p.roof[1], p.gable, p.roof[2]);
-      const f = P(0.9, 0.9, 2); flag(c, f[0], f[1], '#3f6fb0', 14);
+      const f = P(0.75, 0.9, 2); flag(c, f[0], f[1], '#3f6fb0', 14); // (its cloth inside the lot: Build3D.check)
       return 28;
     },
   };
@@ -253,7 +254,7 @@
       onR(c, 0.38, -0.12, 0.02, 11, 13.4, '#1e1a16', m); for (let k = 0; k < 3; k++) ln(c, P(0.39, -0.1 + k * 0.05, 11), P(0.39, -0.1 + k * 0.05, 13.4), '#6a6a72', 0.35);
       const H = st === 'egipcio' || st === 'asteca' ? roof(c, m, p, -0.38, -0.38, 0.38, 0.38, 17, { par: 1.6 }) : st === 'nordico' ? roof(c, m, p, -0.38, -0.38, 0.38, 0.38, 17, { kind: 'turf' }) : roof(c, m, p, -0.38, -0.38, 0.38, 0.38, 17, { kind: 'hip', rh: 8 });
       sign(c, 0.38, 0.38, 13, '#3a2a1c', (x, y) => { c.fillStyle = '#f2c14e'; c.beginPath(); c.arc(x, y, 1.1, 0, TAU); c.fill(); c.fillStyle = '#b8862a'; c.fillRect(x - 0.2, y - 0.6, 0.4, 1.2); });
-      const ch = P(0.3, 0.6, 0); c.fillStyle = '#6a4a2a'; c.fillRect(ch[0] - 2, ch[1] - 2.4, 4, 2.4); c.fillStyle = '#8a6a3a'; c.fillRect(ch[0] - 2, ch[1] - 3.2, 4, 0.9); c.fillStyle = '#5a5a62'; c.fillRect(ch[0] - 0.4, ch[1] - 2.8, 0.8, 1);
+      const ch = P(0.3, 0.43, 0); c.fillStyle = '#6a4a2a'; c.fillRect(ch[0] - 2, ch[1] - 2.4, 4, 2.4); c.fillStyle = '#8a6a3a'; c.fillRect(ch[0] - 2, ch[1] - 3.2, 4, 0.9); c.fillStyle = '#5a5a62'; c.fillRect(ch[0] - 0.4, ch[1] - 2.8, 0.8, 1);
       return H + 2;
     },
   };
