@@ -418,9 +418,10 @@ if (want('l13')) {
 if (want('l14')) {
   open(); S.time = 0.12; // (the morning: 75 s of the day, before the evening at 0,6)
   // (a house of the world with someone of 62 or more — whose working day weighs less than the minding — and little ones of
-  // three to six living in it; one of the old minds them)
-  const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v)) e.old.push(v); if (v.age >= 3 && v.age < 7) e.kids.push(v); houses.set(h.id, e); }
-  const e = [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0];
+  // three to six living in it; one of the old minds them. A small town may have none: then the metropolis)
+  const findHouse = () => { const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v)) e.old.push(v); if (v.age >= 3 && v.age < 7) e.kids.push(v); houses.set(h.id, e); } return [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0]; };
+  let e = findHouse();
+  if (!e && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); S.time = 0.12; e = findHouse(); }
   if (!e) ok('l14 os velhos cuidam dos pequenos em casa', false, 'nenhuma casa com alguém de 62 anos ou mais e crianças de 3 a 6');
   else {
     let h = e.h; const dw = doorWatch(); let minded = 0, kidsHome = 0, n = 0, txt = '', two = 0, reload = '', reloadOk = true; const exits = new Map();
@@ -536,7 +537,9 @@ if (want('l15')) {
   if (!F) notes.push('(e) nenhum bebê na rua só com estranhos por perto');
   else {
     const m = S.villagers.get(F.mother); const role = m.role; m.role = 'guerreiro';
-    // (between fights: a fight, a drill or a watch given to her meanwhile is a letting go of its own — the case does not count)
+    // (between fights — standing a moment where she is, so the warrior's role does not send her to a drill or a watch at once;
+    // one given to her all the same is a letting go of its own, and the case does not count)
+    G.Vg.setTask(m, { type: 'idle', pri: 3, wait: 2, kind: 'teste' });
     let called = ''; live(1.5, () => { if (!called && m.task && ROUGHT[m.task.type]) called = m.task.type; });
     const b = S.villagers.get(F.id); m.role = role; const o = S.villagers.get(b.carrier);
     if (called) notes.push(`(e) a guerreira ${m.name} foi chamada (${called}) no meio — o caso não vale`);
@@ -547,8 +550,10 @@ if (want('l15')) {
   }
   // (f) the body's hands, by the offers of the house: in the evening at home, one of the house lived by the player takes the
   // baby from the mother's arms (G.Vg.handBaby), keeps it while the mother is near, and gives it back to her
-  open(); liveTo(0.66);
-  const Fb = babies().find(b => { const m = S.villagers.get(b.mother); const h = m && builtHome(m); return !!h && m.inside === h.id && b.inside === h.id && !m.sleeping && [...S.villagers.values()].some(o => o.id !== m.id && o.home === h.id && o.inside === h.id && !o.sleeping && fit(o)); });
+  open(); liveTo(0.6);
+  // (from the evening into the night, a look every 5 s: a house with the mother, the baby and another of the house awake inside)
+  const findF = () => babies().find(b => { const m = S.villagers.get(b.mother); const h = m && builtHome(m); return !!h && m.inside === h.id && b.inside === h.id && !m.sleeping && [...S.villagers.values()].some(o => o.id !== m.id && o.home === h.id && o.inside === h.id && !o.sleeping && fit(o)); });
+  let Fb = findF(); for (let k = 0; k < 16 && !Fb; k++) { live(5); Fb = findF(); }
   if (!Fb) notes.push('(f) nenhuma casa ao anoitecer com a mãe, o bebê e outro da casa acordados dentro');
   else {
     const m = S.villagers.get(Fb.mother), h = builtHome(m);
