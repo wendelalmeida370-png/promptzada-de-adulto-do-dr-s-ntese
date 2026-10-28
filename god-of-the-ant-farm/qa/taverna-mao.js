@@ -46,8 +46,8 @@ const lines = (code) => G.S.ledger.filter(e => e[8] === code);
   const c = [person('Ana', 3), person('Bia', 3), person('Caio', 3, { hunger: 70 })]; const poor = person('Pobre', 0.1);
   const all = [k, ...c, poor];
   // before its hour, shut; at its hour with an empty shelf, still shut: its keeper buys first
-  G.S.time = 0.25; sec(2, all); ok('fechada-antes', !T.dia(tv), `S.time ${G.S.time.toFixed(2)}: ${T.dia(tv) ? 'aberta' : 'fechada'}`);
-  G.S.time = 0.31; sec(2, all); ok('sem-estoque-nao-abre', !T.dia(tv), 'a prateleira vazia: não abriu');
+  G.S.time = 0.50; sec(2, all); ok('fechada-antes', !T.dia(tv), `S.time ${G.S.time.toFixed(2)}: ${T.dia(tv) ? 'aberta' : 'fechada'}`);
+  G.S.time = 0.56; sec(2, all); ok('sem-estoque-nao-abre', !T.dia(tv), 'a prateleira vazia: não abriu');
   const k0 = kh.coin, t0 = f.stock.moedas;
   for (let r = 0; r < 2; r++) { E.jobTask(k, H); for (let s = 0; s < 6 && k.task; s++) sec(1, all); }
   ok('compra-no-armazem', D.get('b:3', 'food') >= 6 && D.get('b:3', 'vinho') >= 1 && kh.coin < k0 && f.stock.moedas > t0, `prateleira: ${D.get('b:3', 'food')} de comida, ${D.get('b:3', 'vinho')} de vinho; casa do taverneiro ${k0} → ${kh.coin}; tesouro ${t0} → ${f.stock.moedas}`);
@@ -74,13 +74,13 @@ const lines = (code) => G.S.ledger.filter(e => e[8] === code);
   const inside = () => c.filter(v => v.inside === tv.id).length;
   const before = Object.keys(op.data.mesa).length; G.S.time = 0.881; sec(2, all);
   ok('fecha-na-hora', before >= 2 && !A.live(op) && inside() === 0 && !Object.keys(op.data.mesa).length && c.every(v => !v.task || v.task.type !== 'tavern'), `${before} à mesa antes de fechar; depois: dia ${op.st}, ${inside()} dentro`);
-  ok('nao-reabre', (() => { G.S.time = 0.5; sec(1, all); return !T.dia(tv); })(), 'o dia acabado não abre de novo no mesmo dia');
+  ok('nao-reabre', (() => { G.S.time = 0.6; sec(1, all); return !T.dia(tv); })(), 'o dia acabado não abre de novo no mesmo dia');
 }
 // ---------------- a full tavern; what is not there; the day across a save
 {
   const { S, tv, person } = world('grego', true);
   const k = person('Taverneiro', 6, { job: 3, role: 'taverneiro' });
-  D.make('b:3', 'food', 2, { code: 'teste' }); G.S.time = 0.4; A.update(1); const op = T.dia(tv);
+  D.make('b:3', 'food', 2, { code: 'teste' }); G.S.time = 0.6; A.update(1); const op = T.dia(tv);
   const crowd = []; for (let i = 0; i < T.SEATS; i++) { const v = person('F' + i, 3); T.visitTask(v, H); crowd.push(v); }
   sec(1, [k, ...crowd]);
   const late = person('Atrasado', 3); const tl = T.visitTask(late, H);
@@ -98,7 +98,7 @@ const lines = (code) => G.S.ledger.filter(e => e[8] === code);
 {
   const { S, f, tv, person } = world('egipcio', false);
   const k = person('Taverneiro', 0, { job: 3, role: 'taverneiro' }); const v = person('Nefer', 0);
-  G.S.time = 0.4; E.jobTask(k, H); for (let s = 0; s < 6 && k.task; s++) sec(1, [k]);
+  G.S.time = 0.6; E.jobTask(k, H); for (let s = 0; s < 6 && k.task; s++) sec(1, [k]);
   sec(2, [k]); const op = T.dia(tv);
   const t = T.visitTask(v, H); sec(1, [k, v]); for (let r = 0; r < 4 && op && op.data.fila.length; r++) { if (!k.task || k.task.type !== 'atender') E.jobTask(k, H); sec(3, [k, v]); }
   ok('sem-moeda', !!op && !!t && op.data.servidos >= 1 && op.data.receita === 0 && !lines('taverna').some(e => e[5] === 'moedas'), `aberta ${!!op}, servidos ${op ? op.data.servidos : 0}, receita ${op ? op.data.receita : '-'}`);

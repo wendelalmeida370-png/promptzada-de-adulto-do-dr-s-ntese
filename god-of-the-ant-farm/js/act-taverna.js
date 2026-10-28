@@ -71,7 +71,9 @@
 
   // ------------------------------ hours, the day, who keeps it ------------------------------
   // (the acord with act-lar.js: a pure function of the building and its town — the keeper goes to bed after the closing)
-  T.horas = function (b) { const set = b && S_().settlements.get(b.set); return set && (set.tier || 0) >= 2 ? { abre: 0.30, fecha: 0.88 } : { abre: 0.50, fecha: 0.84 }; };
+  // (the tavern is the evening's: the people come when the day's work ends — villagers.js decide —, the keeper works the
+  // rest of the day at the store, the vat or whatever else is needed)
+  T.horas = function (b) { const set = b && S_().settlements.get(b.set); return set && (set.tier || 0) >= 2 ? { abre: 0.55, fecha: 0.88 } : { abre: 0.58, fecha: 0.84 }; };
   const inHours = b => { const h = T.horas(b); const t = S_().time; return t >= h.abre - EPS && t < h.fecha; };
   T.inHours = inHours;
   // (asked often — the customers, the keeper, the lamp at the door in every frame —: an index of the open days, made again
@@ -80,9 +82,24 @@
   G.worldHooks.push(() => { dIdx = null; dS = null; dN = -1; dT = -1; });
   function days() { const S = S_(); const L = A.all(); if (dIdx && dS === S && dN === L.length && dT === S.clock) return dIdx; dIdx = new Map(); dS = S; dN = L.length; dT = S.clock; for (const op of L) if (op.def === 'taverna' && live(op)) dIdx.set(op.at, op); return dIdx; }
   T.dia = function (b) { const id = b && (b.id || b); const op = days().get(id); return op && live(op) ? op : null; };
-  T.aberta = b => { const op = T.dia(b); return !!op && op.st === 'on' && inHours(b); };
   const keeperOf = b => { const S = S_(); for (const v of S.villagers.values()) if (v.job === b.id && v.role === 'taverneiro' && (A.able(v) || A.isBody(v))) return v; return null; };
   T.keeperOf = keeperOf;
+  // (the keeper at hand: there, awake, not taken by a feast or a trial — the god's body is at hand when it is there)
+  const atHand = k => !!k && (A.isBody(k) || (!k.sleeping && !(k.task && (k.task.pri || 0) >= 1.9 && k.task.type !== 'atender')));
+  T.atHand = b => atHand(keeperOf(b));
+  // open for the people: its day on, in its hours (the day opens only with its keeper at hand; afterwards, with the keeper
+  // away — a feast, a trial, the day's other work —, who comes serves himself at the counter: below)
+  T.aberta = b => { const op = T.dia(b); return !!op && op.st === 'on' && inHours(b); };
+  // (the keeper called to the counter, when free of the tavern's own errands and of what weighs more — hunger, sleep, a
+  // storm, a feast —: the day's other work, a walk, nothing)
+  const OWN = { atender: 1, abastecer: 1, oficio: 1, carga: 1 };
+  const serving = (b, op) => { const k = keeperOf(b); return !!k && atHand(k) && ((A.isBody(k) && G.dist(k.x, k.y, b.x + b.w / 2, b.y + b.h / 2) < Math.max(b.w, b.h) + 2.5) || (!!k.task && k.task.type === 'atender' && k.task.op === op.id)); };
+  T.serving = b => { const op = T.dia(b); return !!op && serving(b, op); };
+  function callKeeper(b, op) {
+    const k = keeperOf(b); if (!k || !G.inSim || A.isBody(k) || !atHand(k)) return;
+    const t = k.task; if (t && (OWN[t.type] || (t.pri || 0) > 1 || t.type === 'shelter')) return;
+    G.Vg.give(k, { type: 'atender', id: b.id, op: op.id, pri: 1.05, st: 0 });
+  }
   // where the takings go: the keeper's house (or his purse); a tavern with no keeper, the people's treasury
   const payeeOf = b => { const k = keeperOf(b); const h = k && E.homeOf(k); return h ? 'h:' + h.id : k ? 'p:' + k.id : 'f:' + G.Village.facOfSet(b.set); };
   const coin = b => E.coinage(G.Village.facOfSet(b.set));
@@ -107,9 +124,10 @@
   // ------------------------------ the day opens and closes ------------------------------
   // (once a day: at its opening hour, with its keeper at hand and something to serve; a day that could not open — the
   // shelf empty — opens later the same day once the keeper has bought; a day ended is not opened again)
-  const openedToday = b => A.all().some(op => op.def === 'taverna' && op.at === b.id && op.data && op.data.day === S_().day);
+  // (a day cut short — its keeper away, the tavern fallen — may open again the same day; one that closed is closed)
+  const openedToday = b => A.all().some(op => op.def === 'taverna' && op.at === b.id && op.data && op.data.day === S_().day && (live(op) || op.st === 'ok'));
   function open(b) {
-    const S = S_(); const k = keeperOf(b); if (!k || !G.inSim || T.dia(b) || openedToday(b) || !inHours(b)) return null;
+    const S = S_(); const k = keeperOf(b); if (!k || !atHand(k) || !G.inSim || T.dia(b) || openedToday(b) || !inHours(b)) return null;
     if (!T.menu(b).length) return null;
     const op = A.start('taverna', { at: b.id, set: b.set, fac: G.Village.facOfSet(b.set), to: 'b:' + b.id, why: 'dia', by: k.id, x: b.x + b.w / 2, y: b.y + b.h / 2,
       data: { day: S.day, servidos: 0, receita: 0, custo: 0, vendas: {}, faltas: 0, recusas: 0, cheia: 0, mesa: {}, fila: [], q: 0 } });
@@ -143,7 +161,12 @@
     if (!b || b.type !== 'taverna' || !b.built) return close(op, 'int', 'a taverna caiu');
     if (G.Village.facOfSet(b.set) !== op.fac) return close(op, 'int', 'a taverna mudou de dono');
     if (d.day !== S.day || !inHours(b)) { if (Object.keys(d.mesa).length) say(keeperOf(b), 'fechando', {}); return close(op, 'ok', 'fechou'); }
-    if (!keeperOf(b)) { if (!d.sem) d.sem = S.clock; else if (S.clock - d.sem > 30) return close(op, 'int', 'sem taverneiro'); } else d.sem = 0;
+    // (no keeper of it any more — the trade given to someone else, the keeper gone — for half a minute: the tavern closes,
+    // and opens again when it has one)
+    const kp = keeperOf(b);
+    if (!kp) { if (!d.sem) d.sem = S.clock; else if (S.clock - d.sem > 30) return close(op, 'int', 'sem taverneiro'); } else d.sem = 0;
+    // (someone waiting at a table: the keeper back to the counter, if free)
+    if (d.fila.length) callKeeper(b, op);
     // whoever left by another door (another errand, taken away, dead) is no longer at the tables
     for (const id of Object.keys(d.mesa)) { const v = S.villagers.get(+id); if (!v || !atTable(v, op)) { if (v) finishCup(v, op); delete d.mesa[id]; } }
     if (d.fila.some(id => !d.mesa[id])) d.fila = d.fila.filter(id => d.mesa[id]);
@@ -154,7 +177,8 @@
   // ------------------------------ a round: served, paid, drunk ------------------------------
   // the server's hand to a customer at a table: what was asked (or the other thing on the shelf), into the customer's hands,
   // the price from the customer's house to the keeper's — both or neither, once (the key of the round). → { ok, k, n | why }
-  function serve(op, v, c) {
+  // (self: the customer at the counter, the keeper away — the same deal, the same book; nobody to say «aqui está»)
+  function serve(op, v, c, self) {
     const S = S_(); const b = S.buildings.get(op.at); const d = op.data; const m = d.mesa[c.id];
     if (!b || !m) return { ok: false, why: 'Não está mais na mesa.' };
     if (c.carry && c.carry.n > EPS) return { ok: false, why: 'Está com as mãos ocupadas.' };
@@ -171,7 +195,7 @@
     if (!r.ok) return { ok: false, why: r.why || 'Não deu.' };
     d.q++; d.servidos++; d.vendas[item.k] = r2((d.vendas[item.k] || 0) + item.n); if (coin(b)) d.receita = r2(d.receita + item.p);
     m.st = 3; m.k = item.k;
-    say(v, 'servir_taverna', { bem: T.nome(item.k) });
+    if (!self) say(v, 'servir_taverna', { bem: T.nome(item.k) });
     if (c.task && c.task.type === 'tavern' && c.task.op === op.id) { c.task.st = 3; c.actT = 0; }
     return { ok: true, k: item.k, n: item.n, p: coin(b) ? item.p : 0 };
   }
@@ -212,14 +236,17 @@
     const S = S_(); if (v.captive || v.age < 16 || (v.carry && v.carry.n > EPS)) return null;
     let best = null, bd = 30 * 30;
     for (const b of E.byType(v.set, 'taverna')) {
-      const op = T.dia(b); if (!op || op.st !== 'on' || !inHours(b) || full(b, op)) continue;
+      const op = T.dia(b); if (!op || !T.aberta(b) || full(b, op)) continue;
       if (coin(b) && E.purse(v) + EPS < T.PRICE.drink) continue;
       const d = G.dist2(v.x, v.y, b.x, b.y); if (d >= bd) continue;
       const dr = G.Vg.door(b); if (!G.W.reaches(v, dr[0], dr[1])) continue;
       best = b; bd = d;
     }
     if (!best) return null;
-    return H.setTask(v, { type: 'tavern', id: best.id, op: T.dia(best).id, pri: 0.4, st: 0 });
+    callKeeper(best, T.dia(best)); // (one coming: the keeper to the counter)
+    // (a little above going home: the evening's choice is not undone on the way, nor at the table — sleep, hunger and the
+    // closing still end it)
+    return H.setTask(v, { type: 'tavern', id: best.id, op: T.dia(best).id, pri: 0.5, st: 0 });
   };
   function walkB(v, t, b, dt, H) {
     const key = 'b' + b.id;
@@ -251,6 +278,8 @@
     if (t.st === 2) { // at the table, waiting to be served
       if (v.carry && v.carry.op === op.id) { t.st = 3; v.actT = 0; m.st = 3; return; }
       v.act = 'sit'; t.wt = (t.wt || 0) + dt;
+      // (nobody at the counter for a while — the keeper away —: one serves oneself there, and pays as to the keeper)
+      if (t.wt > 12 && !serving(b, op)) { d.fila = d.fila.filter(id => id !== v.id); const r = serve(op, v, v, true); if (!r.ok && !m.out) { d.fila.push(v.id); } t.wt = r.ok ? 0 : t.wt; if (r.ok) return; }
       if (t.wt > 45) { d.recusas++; say(v, 'sem_servico', {}); return leave(v, t, op, H); }
       life(v, t, b, op, dt); return;
     }
@@ -501,7 +530,7 @@
           const v = S.villagers.get(+id); const m = d.mesa[id];
           if (!v || m.body || v.captive || v.jail) { delete d.mesa[id]; continue; }
           const st = v.carry && v.carry.op === op.id ? 3 : 2;
-          G.Vg.setTask(v, { type: 'tavern', id: op.at, op: op.id, pri: 0.4, st, wt: 0, use: st === 3 && v.carry.k === 'food' ? 'comer' : 'sentar', kind: 'tavern' });
+          G.Vg.setTask(v, { type: 'tavern', id: op.at, op: op.id, pri: 0.5, st, wt: 0, use: st === 3 && v.carry.k === 'food' ? 'comer' : 'sentar', kind: 'tavern' });
           if (v.task && v.task.type === 'tavern') v.inside = op.at; else delete d.mesa[id];
         }
         d.fila = d.fila.filter(id => d.mesa[id]);

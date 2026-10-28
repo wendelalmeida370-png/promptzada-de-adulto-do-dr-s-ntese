@@ -160,7 +160,7 @@
     const op = Te.dia(b); if (!op || op.st !== 'on' || !inHours(b) || full(b, op) || op.data.banho[v.id]) return null;
     if (coin(b) && E.purse(v) + EPS < Te.FEE) return null;
     const dr = G.Vg.door(b); if (!G.W.reaches(v, dr[0], dr[1])) return null;
-    void S; return H.setTask(v, { type: 'termas', id: b.id, op: op.id, pri: 0.35, st: 0 });
+    void S; return H.setTask(v, { type: 'termas', id: b.id, op: op.id, pri: 0.4, st: 0 });
   };
   function walkB(v, t, b, dt, H) {
     const key = 'b' + b.id;
@@ -368,7 +368,7 @@
           const v = S.villagers.get(+id); const m = d.banho[id];
           if (!v || m.body || v.captive || v.jail) { delete d.banho[id]; continue; }
           const st = Math.max(1, Math.min(3, m.st || 1));
-          G.Vg.setTask(v, { type: 'termas', id: op.at, op: op.id, pri: 0.35, st, use: st === 2 ? 'banhar' : 'despir', kind: 'leisure' });
+          G.Vg.setTask(v, { type: 'termas', id: op.at, op: op.id, pri: 0.4, st, use: st === 2 ? 'banhar' : 'despir', kind: 'leisure' });
           if (v.task && v.task.type === 'termas') { v.inside = op.at; if (st === 2) v.actT = Math.max(0, S.clock - (m.t2 || S.clock)); } else delete d.banho[id];
         }
       }
