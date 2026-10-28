@@ -15,6 +15,7 @@
 //  l7  o corpo encarnado em casa (o adendo 4.1): come à mesa o que a despensa tem e cozinha a ceia da casa, pelas mesmas
 //      portas e no livro; dorme em casa; devolvido, segue a vida dele — em casa pelo motivo dele, ou pela porta
 //  l12 o ferido fica de cama em casa e sara mais depressa; quem perde o companheiro passa as primeiras horas de luto em casa
+//  l14 de dia, os velhos da casa cuidam dos pequenos em casa (e os pequenos ficam com eles, sem entrar e sair sem parar)
 //  l13 a continuidade da casa (o pedido 8.4): o corpo longe, perto, dentro (come e cozinha), fora, o tempo, de volta, o save —
 //      a família igual ao ser olhada e ao ver o corpo entrar, a despensa só pelo livro, o corpo deitado em casa no save
 //  l11 a reza dentro do templo (L-224): os fiéis entram pela porta até os lugares da planta, os outros nas fileiras de fora;
@@ -404,6 +405,28 @@ if (want('l13')) {
     D.onMove.splice(D.onMove.indexOf(onMv), 1);
     if (S.avatar) G.Possess.release('deus');
     ok('l13 a casa contínua', fine && !dw.wrong.length, notes.join(' · ') + (dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''));
+  }
+}
+
+// ======================= l14: by day, the old mind the little ones at home =======================
+if (want('l14')) {
+  open(); S.time = 0.25;
+  // (a house of the world with someone of 55 or more and little ones of two to six living in it)
+  const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 55 && !(v.sick > 0) && v.hp >= 50 && !isBody(v)) e.old.push(v); if (v.age >= 2 && v.age < 7) e.kids.push(v); houses.set(h.id, e); }
+  const e = [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0];
+  if (!e) ok('l14 os velhos cuidam dos pequenos em casa', false, 'nenhuma casa com alguém de 55 anos ou mais e crianças de 2 a 6');
+  else {
+    const h = e.h; const dw = doorWatch(); let minded = 0, kidsHome = 0, n = 0, txt = ''; const exits = new Map();
+    live(60, () => {
+      dw.step(); n++;
+      const m = e.old.find(o => o.task && o.task.type === 'lar' && o.task.what === 'cuidar' && o.inside === h.id);
+      if (m) { minded++; if (!txt) txt = L.taskText(m, m.task); const k = e.kids.filter(o => o.inside === h.id && !o.sleeping).length; kidsHome += k; }
+      for (const id of dw.out) if (e.kids.some(o => o.id === id)) exits.set(id, (exits.get(id) || 0) + 1);
+      dw.out.length = 0;
+    });
+    const avgKids = minded ? r2(kidsHome / minded) : 0; const loops = [...exits.values()].filter(x => x > 2).length;
+    ok('l14 os velhos cuidam dos pequenos em casa', minded >= 200 && avgKids >= 1 && !loops && !dw.wrong.length,
+      `${h.type}#${h.id}: ${e.old.map(o => o.name).join(', ')} (${e.old.map(o => Math.floor(o.age)).join(', ')} anos) e ${e.kids.length} criança(s) de 2 a 6; de dia, cuidando em casa ${r2(minded / 10)} s de 60 («${txt}»), com ${avgKids} criança(s) em casa em média${loops ? `; ${loops} criança(s) ENTRANDO E SAINDO sem parar` : ''}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}`);
   }
 }
 

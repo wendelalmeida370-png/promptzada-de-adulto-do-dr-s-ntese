@@ -610,6 +610,8 @@
     // (the evening: the supper at home when the house has one, then the family at the door)
     if (G.isEvening() && G.Lar && r < 0.7) { const t = G.Lar.task(v, H, 'tarde', true); if (t) return; }
     if (G.isEvening() && G.Life && r < 0.7) { const t = G.Life.familyTask(v, H); if (t) { t.kind = 'family'; return; } }
+    // (a little one of a house where the old mind the little ones at home by day: at home with them — act-lar.js)
+    if (v.age < 7 && G.Lar && !night) { const t = G.Lar.task(v, H, 'cuidado'); if (t) return; }
     if (v.age < 7 && m && !m.inside && !m.sleeping && !m.aboard && !m.ug && !m.held && !m.air && m.set === v.set && r < 0.5) { setTask(v, { type: 'follow', id: m.id, pri: 0.2, kind: 'follow' }); return; }
     // from nine on, a child often goes along to learn a parent's trade
     if (v.age >= 9 && G.Life && !G.isEvening() && r < 0.4) { const t = G.Life.apprenticeTask(v, H); if (t) return; }
