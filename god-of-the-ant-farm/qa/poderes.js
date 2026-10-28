@@ -31,7 +31,8 @@
 //  g3 enquanto dorme, os bravos sobem ao covil; um morre no meio da luta; o dragão morre: o Matador de Dragões, os ossos, o tesouro no chão
 //  g4 raio e meteoro em pleno voo; o covil afunda no mar (outro covil); ele parte levando o tesouro; um save com um dragão quebrado
 // Abrir o Mar (no mundo pronto «metrópole», o estreito entre duas cidades)
-//  p1 o mar se abre: o fundo vira chão pisável e as duas cidades se alcançam a pé; o povo desce para catar peixes; alguém atravessa
+//  p1 o mar se abre: o fundo vira chão pisável e as duas cidades se alcançam a pé; o povo desce para catar peixes; alguém da
+//     terra de um lado atravessa pelo fundo (o estreito de verdade primeiro; de uma ilhota, alguém posto lá)
 //  p2 um save com o mar aberto carregado duas vezes: o fundo seco volta igual, o mesmo futuro
 //  p3 o fim: as paredes tremem, quem está lá embaixo corre; quem não sai é levado; depois, nada de fundo seco e as cidades separadas
 //  p4 um navio no caminho quando o mar se abre; o deus ergue terra no meio do fundo; um save com um mar aberto quebrado
@@ -704,14 +705,17 @@ const key = process.argv[2] || 'cidade';
   await page.evaluate(() => {
     // the strait: in the ready world of the strait (H.straitWorld), the widest way the sea can open between two lands with a
     // town on each side
+    // (a strait proper — each end on the land of its town, the two towns not joined by land — before any other way: the
+    // ready worlds of 28/10 have none, only ways from an islet to the shore with a town near each end, L-307)
     __H.strait = () => {
-      const S = G.S, N = G.N; let best = null;
+      const S = G.S, N = G.N, W = G.W; let best = null; const byName = n => [...S.settlements.values()].find(s => s.name === n);
       for (let y = 2; y < N - 2; y++) for (let x = 2; x < N - 2; x++) {
-        if (S.type[G.W.idx(x, y)] > G.T.SEA) continue;
+        if (S.type[W.idx(x, y)] > G.T.SEA) continue;
         const w = G.Powers.seaWay(x + 0.5, y + 0.5); if (!w || !w.two) continue;
         const A = G.Village.nearSettlementName(w.a.x, w.a.y), B = G.Village.nearSettlementName(w.b.x, w.b.y);
         if (!A || !B || A === B) continue;
-        if (!best || w.tiles.length > best.n) best = { x: x + 0.5, y: y + 0.5, n: w.tiles.length, A, B };
+        const sa = byName(A), sb = byName(B); const real = !!(sa && sb && W.reachesTownXY(w.a.x, w.a.y, sa) && W.reachesTownXY(w.b.x, w.b.y, sb) && !W.townsLinked(sa, sb));
+        if (!best || (real && !best.real) || (real === best.real && w.tiles.length > best.n)) best = { x: x + 0.5, y: y + 0.5, n: w.tiles.length, A, B, real };
       }
       return best;
     };
@@ -728,22 +732,29 @@ const key = process.argv[2] || 'cidade';
       const c = H.strait(); if (!c) return { none: true };
       const A = H.setByName(c.A), B = H.setByName(c.B);
       const w0 = G.Powers.seaWay(c.x, c.y); const linked0 = W.canWalk(w0.a.x, w0.a.y, w0.b.x, w0.b.y);
+      // who walks across: someone of the town on one side who stands on the land of the near end and could not walk to the
+      // other before the sea opened — the nearest to it; where no one of the town lives on that land (the way from an islet to
+      // the shore: L-307), the nearest of the town set down at the near end. Whoever already walks to the far end by land
+      // would go round, never across
+      const free = o => o.age >= 16 && !o.inside && !o.aboard && !o.captive && !(o.task && o.task.pri >= 3);
+      const nearA = (a, b) => G.dist2(a.x, a.y, w0.a.x, w0.a.y) - G.dist2(b.x, b.y, w0.a.x, w0.a.y);
+      let v = [...S.villagers.values()].filter(o => o.set === A.id && free(o) && W.canWalk(o.x, o.y, w0.a.x, w0.a.y) && !W.canWalk(o.x, o.y, w0.b.x, w0.b.y)).sort(nearA)[0]; let setDown = false;
+      if (!v) { v = [...S.villagers.values()].filter(o => o.set === A.id && free(o)).sort(nearA)[0]; if (v) { G.Vg.endTask(v); v.x = w0.a.x; v.y = w0.a.y; v.path = null; setDown = true; } }
       const ok = G.Powers.cast('seapart', c.x, c.y); const p = S.parts[0];
       H.run(4);
       const dry = p.tiles.every(i => S.dry[i] && W.walkable(i)); const linked = W.canWalk(p.ax, p.ay, p.bx, p.by);
       const shipOn = S.ships.some(s => p.tiles.includes(W.idx(s.x, s.y)));
-      // someone of the town on one side walks across to the other
-      const v = [...S.villagers.values()].filter(o => o.set === A.id && o.age >= 16 && !o.inside && !o.aboard && !o.captive && !(o.task && o.task.pri >= 3)).sort((a, b) => G.dist2(a.x, a.y, p.ax, p.ay) - G.dist2(b.x, b.y, p.ax, p.ay))[0];
-      let walker = null, across = false;
+      let walker = null, across = false, onFloor = false; const set = new Set(p.tiles);
       if (v) { walker = v.name; G.Vg.H.setTask(v, { type: 'olhar', x: p.bx, y: p.by, fx: p.bx + 1, fy: p.by, pri: 3, until: S.clock + 120, what: 'mar', kind: 'olhar' }); }
       let down = 0, onBed = 0; const bad = [];
-      H.until(() => { down = Math.max(down, H.tasks('fundo').length); const set = new Set(p.tiles); onBed = Math.max(onBed, [...S.villagers.values()].filter(o => set.has(W.idx(o.x, o.y))).length); if (v && S.villagers.has(v.id) && G.dist(v.x, v.y, p.bx, p.by) < 2) across = true; const e = H.qaSea(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); return across && p.fished >= p.fish; }, 100);
-      return { c, linked0, ok, tiles: p.tiles.length, dry, linked, shipOn, walker, across, down, onBed, fished: p.fished, fish: p.fish, log: S.history.some(e => /O mar se abriu/.test(e.txt)), bad, qa: H.qaSea() };
+      // (across: at the far end, having walked the sea's floor)
+      H.until(() => { down = Math.max(down, H.tasks('fundo').length); onBed = Math.max(onBed, [...S.villagers.values()].filter(o => set.has(W.idx(o.x, o.y))).length); if (v && S.villagers.has(v.id)) { if (set.has(W.idx(v.x, v.y))) onFloor = true; if (onFloor && G.dist(v.x, v.y, p.bx, p.by) < 2) across = true; } const e = H.qaSea(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); return across && p.fished >= p.fish; }, 100);
+      return { c, linked0, ok, tiles: p.tiles.length, dry, linked, shipOn, walker, setDown, across, down, onBed, fished: p.fished, fish: p.fish, log: S.history.some(e => /O mar se abriu/.test(e.txt)), bad, qa: H.qaSea() };
     });
     if (r.none) ok('p1 abrir o mar', false, 'nenhum estreito entre duas cidades nos mundos prontos');
     else {
-      ok('p1 o mar se abre entre duas terras: o fundo vira caminho', r.ok && r.dry && !r.linked0 && r.linked && !r.shipOn && r.log, `${r.c.A} ↔ ${r.c.B}: ${r.tiles} casas de fundo seco, pisáveis ${r.dry}; de uma margem se chega à outra a pé: antes ${r.linked0}, agora ${r.linked}; navio no fundo ${r.shipOn}`);
-      ok('p1 o povo desce para catar peixes e atravessa a pé', r.down >= 2 && r.fished >= 1 && r.across, `até ${r.down} descendo, ${r.onBed} no fundo ao mesmo tempo; ${r.fished} de ${r.fish} cestos de peixe; ${r.walker} atravessou ${r.across}`);
+      ok('p1 o mar se abre entre duas terras: o fundo vira caminho', r.ok && r.dry && !r.linked0 && r.linked && !r.shipOn && r.log, `${r.c.A} ↔ ${r.c.B}${r.c.real ? '' : ' (de uma ilhota à costa: as duas cidades já se alcançam por terra)'}: ${r.tiles} casas de fundo seco, pisáveis ${r.dry}; de uma margem se chega à outra a pé: antes ${r.linked0}, agora ${r.linked}; navio no fundo ${r.shipOn}`);
+      ok('p1 o povo desce para catar peixes e atravessa a pé', r.down >= 2 && r.fished >= 1 && r.across, `até ${r.down} descendo, ${r.onBed} no fundo ao mesmo tempo; ${r.fished} de ${r.fish} cestos de peixe; ${r.walker}${r.setDown ? ' (posta na ponta de lá: ninguém da cidade mora naquela terra)' : ''} atravessou pelo fundo ${r.across}`);
       ok('p1 verificador', !r.bad.length && !r.qa.length, [...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'limpo');
     }
   }
