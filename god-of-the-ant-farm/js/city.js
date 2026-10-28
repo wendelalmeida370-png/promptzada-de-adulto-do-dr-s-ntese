@@ -462,6 +462,9 @@
   function pickPave(set, fac, v, near) {
     const S = G.S; const t = set.tier || 0;
     const lvl = has(fac, 'alvenaria') ? 2 : 1;
+    // (only what the paver walks to, by the map of regions: the town's street on another island, the far half of a road past
+    // the water, is not theirs — they tried it every twelve seconds, a whole failed search each time, L-322)
+    const reach = i => W.reaches(v, (i % N) + 0.5, ((i / N) | 0) + 0.5);
     let best = null, bs = 1e9;
     // a bridge over the water the town keeps wading (half the pavers, the ones already on it, before any street:
     // the streets are never finished, and the bridge would never come)
@@ -470,7 +473,7 @@
         if (S.road[i] >= 3 || S.occ[i] || claimed(i, v)) continue;
         const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
         const sc = (near !== undefined ? G.dist(x, y, (near % N) + 0.5, ((near / N) | 0) + 0.5) * 1.5 : 0) + G.dist(x, y, set.cx, set.cy) * 0.2;
-        if (sc < bs) { bs = sc; best = { i, lvl: 3, bridge: 1 }; }
+        if (sc < bs && reach(i)) { bs = sc; best = { i, lvl: 3, bridge: 1 }; }
       }
       if (best && (near === undefined || bs < 6)) return best;
       best = null; bs = 1e9;
@@ -483,7 +486,7 @@
         const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
         let sc = G.dist(x, y, set.cx, set.cy) + (S.road[i] ? 4 : 0) + G.hash(i + S.day) * 0.5 - (set._plan && set._plan.av && set._plan.av.has(i) ? 6 : 0);
         if (near !== undefined) sc += G.dist(x, y, (near % N) + 0.5, ((near / N) | 0) + 0.5) * 1.5;
-        if (sc < bs) { bs = sc; best = { i, lvl: want }; }
+        if (sc < bs && reach(i)) { bs = sc; best = { i, lvl: want }; }
       }
       if (best) return best;
     }
@@ -500,7 +503,7 @@
         if (claimed(i, v)) continue;
         let sc = d - Math.min(3, S.wear[i] * 0.05) + G.hash(i + S.day) * 0.6;
         if (near !== undefined) sc += G.dist(x, y, near % N, (near / N) | 0) * 1.5;
-        if (sc < bs) { bs = sc; best = { i, lvl }; }
+        if (sc < bs && reach(i)) { bs = sc; best = { i, lvl }; }
       }
       if (best) return best;
     }
@@ -516,7 +519,7 @@
         if (dm > dO + 0.5) continue;
         if (claimed(i, v)) continue;
         let sc = dm + (near !== undefined ? G.dist(x, y, (near % N) + 0.5, ((near / N) | 0) + 0.5) * 2 : 0);
-        if (sc < bs) { bs = sc; best = { i, lvl: 3, route: r.id }; }
+        if (sc < bs && reach(i)) { bs = sc; best = { i, lvl: 3, route: r.id }; }
       }
     }
     return best;
