@@ -482,7 +482,16 @@ function stallNow() {
 // places (life.js: on the counter's ground, dry, before no other door); the ninth who comes finds it full and goes, sad,
 // without a word, and nothing moves for him
 {
-  S.time = 0.15; const sw = stallNow();
+  S.time = 0.15; let sw = stallNow();
+  // (the line full on its own eight places is the case: a stall whose line the ground gives them, by the line's rule — the
+  // counter's ground, dry, before no other door (life.js), as filas f1 counts each stall's. With the final worlds the doors
+  // of the buildings around Heráclito's stall left his line one place: the seven others found it full at once and went
+  // back to their work, and eight more after them, T-199. The case goes to the stall of the market whose line has the most
+  // places, with its own merchant)
+  const placesOf = zz => { const s = B.spots(zz); return s ? G.Life.lineAt(s.buyer[0], s.buyer[1], s.dx, s.dy, B.lineOf(zz)).slots.length : 0; };
+  const zWas = z, mWas = m, pWas = placesOf(z);
+  for (const mer of merchants().sort((a, b) => a.id - b.id)) { const zz = B.of(mer); if (zz && placesOf(zz) > placesOf(z)) { z = zz; m = mer; } }
+  if (z !== zWas) sw += ` (a fila da banca de ${mWas.name} tem ${pWas} lugar${pWas === 1 ? '' : 'es'} pelo chão em volta: o caso vai à de ${m.name}, com ${placesOf(z)})`;
   start = prep(z, m) + sw; S.time = 0.15;
   const key = 'biz:' + z.id; const sp = B.spots(z);
   const k = Object.keys(z.inv).filter(q => z.inv[q] >= 1).sort((a, b) => z.inv[b] - z.inv[a] || (a < b ? -1 : 1))[0] || goodOf(z);
@@ -531,6 +540,7 @@ function stallNow() {
     `${B.LINE} da cidade mandados à banca de ${m.name}${sent.length > B.LINE ? ` (e ${sent.length - B.LINE} no lugar de quem saiu antes de a fila encher)` : ''}: até ${most} na fila ao mesmo tempo, nos ${places} lugares dela${q && q.why ? ` (${q.why})` : ''}; ${ninth ? `o nono, ${ninth.name}, chegou com ${inLineAtAsk} na fila e ${sad ? 'foi embora triste' : 'NÃO se entristeceu'}${talk9.length ? `, MAS falou: ${talk9.join(', ')}` : ', sem dizer nada'}; ${bought9 ? 'COMPROU' : 'nada mudou de mãos'}` : 'NENHUM nono comprador'}${joined9.length ? ` (antes: ${joined9.join('; ')})` : ''}${off.length ? `; a regra da fila: ${off[0]}` : ''}`);
   // (the eight are served or go: the next cases start with the line as the world leaves it)
   for (const v of sent) if (v.task && v.task.type === 'compra' && v.task.biz === z.id && v.task.st < 2) G.Vg.endTask(v);
+  z = zWas; m = mWas;
 }
 // ---------------- n16: the interiors' furniture as the room of a house, a shelf and a stall (here a plan made by hand, over
 // the game's own port, given back at the end) — a piece holds its cap in all, each good first in the piece made for it; the people's furniture
