@@ -136,9 +136,11 @@
   // (a house stands on a plinth over the highest of its ground, as the god's view draws it; a field, a fence, a square lies on
   // the ground: the 3D's drawing and the body's feet read it here, one rule)
   Sp.BASELESS = { farm: 1, horta: 1, plantacao: 1, vinhedo: 1, doca: 1, praca: 1, cemetery: 1, curral: 1, cercado: 1, campfire: 1 };
+  // (and every field of the world's: the orchard, the apiary, the salt pans — BDEF.field —: whoever asks, asks here, B4)
+  Sp.baseless = b => !!(b && (Sp.BASELESS[b.type] || (G.BDEF[b.type] && G.BDEF[b.type].field)));
   Sp.plinth = function (b) {
     let lo = 1e9, hi = -1e9; for (let ty = b.y; ty <= b.y + b.h; ty++) for (let tx = b.x; tx <= b.x + b.w; tx++) { const h = W.hAt(Math.min(N, tx), Math.min(N, ty)) * HM; lo = Math.min(lo, h); hi = Math.max(hi, h); }
-    return { lo, hi, y0: hi + (Sp.BASELESS[b.type] ? 0.12 : 0.4) };
+    return { lo, hi, y0: hi + (Sp.baseless(b) ? 0.12 : 0.4) };
   };
   Sp.FLOOR_UP = 0.012; // (a drawn floor stands a hair over the plinth's top it lies on)
   // (the near ground as its mesh draws it — realm3d's terrainGeo: a point every half tile, each cell cut from its +x corner to
@@ -364,7 +366,8 @@
     const wid = F.u1 - F.u0; return { F, uc: (F.u0 + F.u1) / 2, w: { id: 'pe' + s.id, t: 0, a: [0, 0], b: [0, 0] }, h: { at: 0, w: Math.max(0.3, wid - 0.5), sill: 0 } };
   };
   // (the raised floor of a plan: on posts — its own steps up to its door)
-  const raisedOf = p => { const l0 = p.levels.filter(l => l.kind !== 'porao' && l.kind !== 'terraco' && l.kind !== 'jirau').sort((a, c) => a.y - c.y)[0] || p.levels[0]; return !!l0 && (l0.kind === 'elevado' || p.shell.base === 'esteios'); };
+  // (or on a solid base — a temple's podium, a pyramid's platform: B4 —, its own steps up from the ground before it)
+  const raisedOf = p => { const l0 = p.levels.filter(l => l.kind !== 'porao' && l.kind !== 'terraco' && l.kind !== 'jirau').sort((a, c) => a.y - c.y)[0] || p.levels[0]; return !!l0 && (l0.kind === 'elevado' || p.shell.base === 'esteios' || p.shell.base === 'macica'); };
   // (the steps before the outer doors of a building whose plan is made, as the feet read them — kept with the plan, as the
   // ground under the lot is)
   let stepMemo = new Map(); G.worldHooks.push(() => { stepMemo = new Map(); });

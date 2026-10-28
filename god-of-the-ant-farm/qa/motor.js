@@ -14,6 +14,8 @@
 //      altura da fileira) que a porta alcança, o repartidor dando um a cada espectador, a casca com as fileiras (sem o
 //      cômodo); sem corredor, a planta é recusada (não se chega às fileiras); o palco (uma fileira de 1,2 m, os degraus pela
 //      lateral, os lugares de atuar de pé); os lugares sem peça (P.marks: lutar na areia)
+//   5. a base maciça (shell.base 'macica', baseH, os degraus da base na casca), a colunata (P.colonnade: as colunas parede, os
+//      intercolúnios passagens, o do meio a entrada) e a escada larga de fora (1,20 m ao menos; mais estreita é recusada)
 //   node qa/motor.js
 const M = require('./nodemundo.js');
 const G = M.load({});
@@ -208,6 +210,50 @@ In.addTypes({ 'teste-palco': { use: 'teste', fams: ['teste.palco'] } });
     ok('4i o palco: cinco degraus de 0,24 pela lateral, a 1,2 m; os lugares de atuar no palco, virados para a frente', T.climb === 5 && up && T.use === 'atuar' && seats.length > 3 && seats.every(q => q.T.use === 'atuar' && Math.abs(q.y - 1.2) < 1e-6 && Math.abs(q.ry) < 1e-6),
       `${T.climb} degraus: ${steps.join(' · ')}; ${seats.length} lugares de atuar`);
   } else ok('4i o palco', false, sp.errs.slice(0, 3).join(' | '));
+}
+// ---- 5. the solid base, the colonnade, the wide steps ----
+// (a temple on a lot of 3 × 3, 12 m: its floor on a solid base 1.2 m high, the crepidoma's two lower steps about it; the
+// portico before the cella, six columns across its front — the middle opening the way in —; up from the street, steps
+// 2 m wide (or 1 m: refused, a wide flight is 1.2 at least))
+G.BDEF['teste-templo'] = { name: 'Templo de teste', w: 3, h: 3, blocks: true };
+const temple = sw => P => {
+  const H0 = 1.2; P.shell = { kind: 'rect', r: [1, 1, 11, 9.5], t: 0.4, mat: 'pedra', base: 'macica', baseH: H0, baseSteps: [{ r: [0.6, 0.6, 11.4, 9.9], h: 0.4 }, { r: [0.8, 0.8, 11.2, 9.7], h: 0.8 }], floors: 1, eave: H0 + 4.5 };
+  P.roof = { kind: 'duas-aguas', along: 'v', h: 1.6, over: 0.3 }; P.roofGeo = null;
+  P.level(0, H0, 4.5, 'piso', [1.4, 1.4, 10.6, 9.5]); P.entryLv = 0;
+  // (the cella's walls; the portico's two sides; the columns across the front)
+  const cw = P.walls4(0, [1.2, 1.2, 10.8, 7.0], 0.4, 4.5, 1, 'parede', { frente: 1 });
+  P.wall(0, [10.8, 7.0], [10.8, 9.5], 0.4, 4.5, 1, 'parede'); P.wall(0, [1.2, 9.5], [1.2, 7.0], 0.4, 4.5, 1, 'parede');
+  const cf = P.wall(0, [10.6, 7.0], [1.4, 7.0], 0.4, 4.5, 0, 'parede'); void cw;
+  const C = P.colonnade(0, [10.75, 9.25], [1.25, 9.25], { n: 6, col: 0.5, h: 4.5, outer: 1, door: true, rua: true });
+  P.entrance = { door: C.door, u: 6, v: 9.5, w: P.doors[C.door].w, lv: 0 };
+  P.door(cf, P.wlen(cf) / 2, 1.4, 3.0, -1, -1, 0, 'porta');
+  P.stair('degraus', -1, 0, [6 - sw / 2, 9.52, 6 + sw / 2, 11.12], 0, -1, null, { larga: 1 });
+  P.test = { C };
+  if (P.inside()) return;
+  P.room(0, 'cella', [1.4, 1.4, 10.6, 6.8]); P.room(0, 'portico', [1.4, 7.2, 10.6, 9.0]);
+};
+In.addFamilies([
+  { id: 'teste.templo', H: 'teste', V: 'templo', S: 'teste.templo', name: 'Templo de teste', can: () => null, build: temple(2.0) },
+  { id: 'teste.estreito', H: 'teste', V: 'estreito', S: 'teste.estreito', name: 'Templo de degraus estreitos', can: () => null, build: temple(1.0) },
+]);
+In.addTypes({ 'teste-templo': { use: 'teste', fams: ['teste.templo', 'teste.estreito'] } });
+{
+  const trec = Object.assign({}, rec, { t: 'teste-templo', f: 'teste.templo' }); const tp = In.makeFam({ id: 6401, type: 'teste-templo', x: 10, y: 10, w: 3, h: 3 }, trec, 'teste.templo');
+  const sh = tp.shell;
+  ok('5a o templo na base maciça vale; a casca leva a base, a altura e os degraus de fora dela', tp.ok && sh.base === 'macica' && sh.baseH === 1.2 && sh.baseSteps && sh.baseSteps.length === 2 && tp.levels[0].y === 1.2,
+    tp.ok ? `base ${sh.base} a ${sh.baseH} m, ${sh.baseSteps.length} degraus da base, o piso a ${tp.levels[0].y} m` : tp.errs.slice(0, 3).join(' | '));
+  if (tp.ok) {
+    const w = tp.walls.find(q => q.kind === 'colunata'); const ds = tp.doors.filter(d => d.wall === w.id); const street = ds.filter(d => d.rooms.includes('rua'));
+    // (along the colonnade's line: the columns are wall, the spaces between them open)
+    const codes = []; for (let u = 1.3; u <= 10.7; u += 0.25) codes.push(codeAt(tp, 0, u, 9.25)); const col = codes.filter(c => c === C.WALL).length, gap = codes.filter(c => c === C.DOOR).length;
+    const reach = tp.reach[0]; const n = tp.grid.n; const cella = reach[Math.floor(4 / CS) * n + Math.floor(6 / CS)];
+    ok('5b a colunata: as colunas são parede, os intercolúnios passagens (um deles a entrada); da rua chega-se à cela', !!w && ds.length === 5 && street.length === 1 && col > 0 && gap > col && cella === 1,
+      `${ds.length} intercolúnios (${street.length} da rua), na linha ${col} casas de coluna e ${gap} de passagem; a cela alcançada: ${cella}`);
+    const st = tp.stairs.find(s => s.kind === 'degraus'); const mid = r2(In.floorYOf(tp, 0, 6, 10.32));
+    ok('5c os degraus largos de fora: 2 m, a classe pela inclinação, da rua ao piso', !!st && st.larga === 1 && st.w === 2 && st.cls === 'degraus' && Math.abs(mid - 0.6) < 0.08, st ? `${st.w} m, ${st.slope}° (${st.cls}), no meio a ${mid} m` : 'sem degraus');
+  }
+  const np = In.makeFam({ id: 6402, type: 'teste-templo', x: 10, y: 10, w: 3, h: 3 }, Object.assign({}, trec, { f: 'teste.estreito' }), 'teste.estreito');
+  ok('5d a escada larga estreita é recusada', !np.ok && np.errs.some(e => /escada larga com 1.00/.test(e)), np.ok ? 'valeu' : np.errs.slice(0, 2).join(' | '));
 }
 const err = M.erros(); if (Object.keys(err.mod).length || err.console.length) ok('sem erros de módulo', false, JSON.stringify(err).slice(0, 300));
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');

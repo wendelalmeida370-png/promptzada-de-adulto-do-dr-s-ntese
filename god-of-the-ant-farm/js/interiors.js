@@ -348,6 +348,17 @@
       else { Object.assign(T, { kind: 'rect', r: o.r.slice(), dir: { n: 'n', s: 's', e: 'e', w: 'w' }[o.dir] || 'n' }); }
       this.tierList.push(T); this._ver = (this._ver || 0) + 1; return T;
     },
+    // a colonnade (B4): the columns standing along a line a → b of a storey — a wall of kind 'colunata', as thick as a column
+    // (o.col, 0.5 m), as high as o.h —, the spaces between them its openings ('vao': walked through, o.n columns, the ends two of
+    // them); o.outer one of the shell's sides, o.door the opening (its number; the middle when true) that is a door — 'rua' for
+    // the street's, the way in — and with o.wall its rooms bound by where it falls. → { wall, doors: [ids], door }
+    colonnade(lv, a, b, o) {
+      o = o || {}; const n = Math.max(2, Math.round(o.n || 6)), col = o.col || 0.5, h = o.h || 3;
+      const wid = this.wall(lv, a, b, col, h, o.outer ? 1 : 0, 'colunata', o.mat); const L = this.wlen(wid); const gap = (L - col) / (n - 1) - col;
+      const out = { wall: wid, doors: [], door: -1 }; const mid = o.door === true ? Math.floor((n - 1) / 2) : o.door;
+      for (let k = 0; k < n - 1; k++) { const at = col / 2 + (k + 0.5) * (gap + col); const isDoor = k === mid; const d = this.door(wid, at, gap, Math.min(h - 0.15, o.dh || h - 0.15), -1, isDoor && o.rua ? 'rua' : -1, o.outer ? 1 : 0, 'vao'); out.doors.push(d); if (isDoor) out.door = d; }
+      return out;
+    },
     // places of use at points of a room with no piece (B4): where one acts in an orchestra, fights on the sand, speaks or
     // listens in a square, stands on a top — pts [[u, v, ry], …] (ry the way one faces, as a piece's: 0 toward the front), on
     // the storey's floor (or its rows' height there); each fitted where the body stands, as a piece's place is (L-282). o.st:
@@ -877,6 +888,10 @@
     else if (sh.kind === 'aberta') { const r = R(sh.r); shell = { kind: 'aberta', x: r2((r[0] + r[2]) / 2), z: r2((r[1] + r[3]) / 2), sx: r2(r[2] - r[0]), sz: r2(r[3] - r[1]), r, t: 0, mat: sh.mat, eave: r2(sh.eave), base: sh.base, floors: 1, roof: P.roof ? Object.assign({}, P.roof, { along: P.roof.along ? (dirLoc(s, P.roof.along === 'u' ? 1 : 0, P.roof.along === 'v' ? 1 : 0)[0] ? 'x' : 'z') : null }) : null }; }
     else { const r = R(sh.r); shell = { kind: 'rect', x: r2((r[0] + r[2]) / 2), z: r2((r[1] + r[3]) / 2), sx: r2(r[2] - r[0]), sz: r2(r[3] - r[1]), r, t: sh.t, mat: sh.mat, eave: r2(sh.eave), base: sh.base, floors: sh.floors, roof: P.roof ? Object.assign({}, P.roof, { along: P.roof.along ? (dirLoc(s, P.roof.along === 'u' ? 1 : 0, P.roof.along === 'v' ? 1 : 0)[0] ? 'x' : 'z') : null }, P.roof.room ? { room: Object.assign({}, P.roof.room, { r: R(P.roof.room.r) }) } : {}) : null }; }
     shell.annex = P.annex.map(a => Object.assign({}, a, { r: R(a.r) }));
+    // (a solid base — shell.base 'macica' —: how high its top is, the floor of the ground storey; and the steps of a stepped one,
+    // each a rectangle and its top over the ground: the crepidoma, the tiers of a pyramid — B4)
+    if (sh.baseH) shell.baseH = r2(sh.baseH);
+    if (sh.baseSteps) shell.baseSteps = sh.baseSteps.map(q => ({ r: R(q.r), h: r2(q.h) }));
     if (sh.court) { shell.court = R(sh.court); if (shell.roof) shell.roof = Object.assign({}, shell.roof, { court: R(sh.court) }); } // (a block: the court open to the sky in the middle)
     const levels = P.levels.map(l => ({ lv: l.lv, y: r2(l.y), h: r2(l.h), kind: l.kind, slab: l.slab || 0 }));
     // (the walls the shell raised — the outside ones of every storey, the annex's, the terrace's parapet and its room's; in a
@@ -1271,7 +1286,7 @@
     for (const s of plan.stairs) if (s.kind !== 'degraus' && (!plan.levels.some(l => l.lv === s.lv0) || !plan.levels.some(l => l.lv === s.lv1))) E.push('escada para um pavimento que não existe');
     // (the class against the kind, D-086: a stair steeper than 70° is a ladder — save the wide stair of a temple its recipe
     // declares —, a ladder gentler than 50° a stair laid out as one)
-    for (const s of plan.stairs) { if (s.kind === 'escada' && s.cls === 'mao' && !s.larga) E.push(`escada de ${s.slope}°: é escada de mão`); if (s.kind === 'escada-de-mao' && (s.cls === 'degraus' || s.cls === 'escada')) E.push(`escada de mão de ${s.slope}°: é escada`); }
+    for (const s of plan.stairs) { if (s.kind === 'escada' && s.cls === 'mao' && !s.larga) E.push(`escada de ${s.slope}°: é escada de mão`); if (s.kind === 'escada-de-mao' && (s.cls === 'degraus' || s.cls === 'escada')) E.push(`escada de mão de ${s.slope}°: é escada`); if (s.larga && s.w < 1.2 - 1e-6) E.push(`a escada larga com ${s.w.toFixed(2)} m (1,20 ao menos)`); }
     // the holes as the walls show them: a window clear of the floors that cross its wall (a loft's, a gallery's) and, in an
     // outside wall, above the ground; a way through tall enough, and the way in from the floor before it (the street, the
     // porch on stilts): its threshold on that floor, its lintel high enough over it
@@ -1550,7 +1565,7 @@
   In.SIT_H = 0.5; // (the hips of one seated over the feet, as the 3D seats people: people3d.js 'sit' — qa/lugares.js checks it)
   const APPROACH = { acesso: 1, entrar: 1 }; // (where one stands to get onto a piece: no place of its own)
   // the state the 3D shows at a place by its use (a household's rule may say another: In.placeRule's st)
-  const USE_ST = In.USE_ST = { atuar: 'talk', lutar: 'fight', discursar: 'talk', conversar: 'talk', ouvir: 'idle', topo: 'idle', ler: 'sit', deitar: 'sleep', sentar: 'sit', comer: 'eat', cozinhar: 'cook', assar: 'cook', aquecer: 'rest', cuidar: 'low', tecer: 'sit', trabalhar: 'interact', forjar: 'swing', martelar: 'swing', temperar: 'low', tornear: 'sit', cozer: 'low', lavrar: 'sit', fundir: 'low', cortar: 'swing', pendurar: 'interact', escrever: 'sit', remendar: 'low', oficiar: 'interact', ofertar: 'pray', rezar: 'pray', armar: 'interact', treinar: 'fight', banhar: 'sit', alimentar: 'low', despir: 'interact', mexer: 'interact', audiencia: 'idle', beber: 'low', vender: 'talk', comprar: 'talk', conferir: 'interact', entregar: 'interact', guardar: 'interact', pegar: 'low', assistir: 'sit' };
+  const USE_ST = In.USE_ST = { falar: 'talk', atuar: 'talk', lutar: 'fight', discursar: 'talk', conversar: 'talk', ouvir: 'idle', topo: 'idle', ler: 'sit', deitar: 'sleep', sentar: 'sit', comer: 'eat', cozinhar: 'cook', assar: 'cook', aquecer: 'rest', cuidar: 'low', tecer: 'sit', trabalhar: 'interact', forjar: 'swing', martelar: 'swing', temperar: 'low', tornear: 'sit', cozer: 'low', lavrar: 'sit', fundir: 'low', cortar: 'swing', pendurar: 'interact', escrever: 'sit', remendar: 'low', oficiar: 'interact', ofertar: 'pray', rezar: 'pray', armar: 'interact', treinar: 'fight', banhar: 'sit', alimentar: 'low', despir: 'interact', mexer: 'interact', audiencia: 'idle', beber: 'low', vender: 'talk', comprar: 'talk', conferir: 'interact', entregar: 'interact', guardar: 'interact', pegar: 'low', assistir: 'sit' };
   const LYING = { sleep: 1, sick: 1 }, SEATED = { sit: 1, eat: 1, rock: 1, sittalk: 1 }, LOW_SEAT = { rest: 1, pray: 1, eatg: 1, rockg: 1 };
   const ON_GROUND = { sit: 'rest', sittalk: 'rest', eat: 'eatg', rock: 'rockg' }; // (a seated state, where there is no seat)
   // (the words the drawing read before st — B3.openPlace's pose: one sitting on the ground is 'no chão', which it has not got,
