@@ -60,7 +60,8 @@
     }
     night0 = now;
     // ---- by day, one of the house minds the little ones at home — one per house —, and a little one stays at home past the
-    // day's while (12 s) only while someone minds them there: none kept at home by a minder who is gone (the request's 3.1)
+    // day's while (12 s) only while someone minds them there — or waits a while (G.Lar.WAIT_CARE) for the one minding them who
+    // stepped out, L-235: none kept at home by a minder who is gone (the request's 3.1)
     const day = s === G.S && G.isNight && G.isEvening ? !G.isNight() && !G.isEvening() : false;
     if (held0S !== s) { held0S = s; held0 = new Map(); }
     const held = new Map();
@@ -71,7 +72,7 @@
       for (const v of s.villagers.values()) {
         const t = v.task; if (v.age >= 7 || v.id === body || !t || t.type !== 'lar' || t.st !== 2 || (t.what !== 'conversar' && t.what !== 'descansar') || !(v.actT > 12) || care.has(t.home)) continue;
         const since = held0.has(v.id) ? held0.get(v.id) : s.clock; held.set(v.id, since);
-        if (s.clock - since > 5) add('lar', 3, `${v.name} #${v.id}: criança presa em casa (#${t.home}) de dia há ${Math.round(v.actT)} s, sem ninguém da casa cuidando`, v.id);
+        if (s.clock - since > (Lr.WAIT_CARE || 0) + 5) add('lar', 3, `${v.name} #${v.id}: criança presa em casa (#${t.home}) de dia há ${Math.round(v.actT)} s, sem ninguém da casa cuidando há ${Math.round(s.clock - since)} s`, v.id);
       }
     }
     held0 = held;

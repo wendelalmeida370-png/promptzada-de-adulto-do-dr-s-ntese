@@ -139,6 +139,7 @@
   // mother to the field. One minds — the first at home —, the other old of the house go about their day. The little ones of
   // the house who can come home, or none)
   const little = h => entry(h).res.filter(o => o.age >= 3 && o.age < 7 && !o.captive && !o.aboard && !o.held && !o.ug && !o.air);
+  L.WAIT_CARE = 20; // (seconds the little ones wait at home for the one minding them who stepped out: L-235)
   L.minder = v => {
     if (v.age < 55 || v.sick > 0 || v.hp < 50 || !(v.home > 0)) return null;
     const h = homeOf(v); if (!h) return null;
@@ -275,7 +276,12 @@
         v.act = AN.sentar ? AN.sentar.act : '';
         if (t.what === 'conversar' && G.R() < dt * 0.25 && (!v.emo || v.emo.t < 0.2)) G.Vg.emote(v, 'chat', 1.2);
         if (v.hunger > 45 && food(h) >= 1 && v.actT > 6) { t.what = 'ceia'; t.ate = 0; v.actT = 0; return; }
-        if (!night && !G.isEvening() && v.actT > 12 && !(v.age < 7 && entry(h).care)) return H.end(v); // (a little one minded at home stays)
+        // (a little one minded at home stays; the one minding gone out a moment — a meal at the store, a rest —, the little ones
+        // wait for her by the fire a while before they go about their day: they went after their mothers to the fields, and
+        // into a cave, the moment Cassandra went to eat, L-235)
+        const minded = v.age < 7 && !night && !G.isEvening() && !!entry(h).care;
+        if (minded) { t.minded = 1; t.gone = 0; } else if (t.minded) t.gone = (t.gone || 0) + dt;
+        if (!night && !G.isEvening() && v.actT > 12 && !minded && !(t.minded && t.gone < L.WAIT_CARE)) return H.end(v);
         // (a look round the house every few seconds: one of the house gone out into the night is waited for, the one to talk
         // to gone to bed leaves a rest by the fire, one come home is talked to — the while at home goes on, the same evening)
         t.look = (t.look || 0) + dt;

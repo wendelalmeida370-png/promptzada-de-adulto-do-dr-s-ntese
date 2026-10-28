@@ -17,7 +17,9 @@
 //      portas e no livro; dorme em casa; devolvido, segue a vida dele — em casa pelo motivo dele, ou pela porta
 //  l12 o ferido fica de cama em casa e sara mais depressa; quem perde o companheiro passa as primeiras horas de luto em casa
 //  l14 de dia, um dos velhos da casa cuida dos pequenos (3 a 6 anos) em casa, e os pequenos ficam com ele, sem entrar e sair sem
-//      parar; um save no meio do dia; quem cuida morre no meio (outro velho assume, ou os pequenos voltam ao dia deles). Sem
+//      parar — e esperam por ele quando sai por pouco, para comer ou descansar (L-235); um save no meio do dia; quem cuida
+//      morre no meio (outro velho assume, ou os pequenos voltam ao dia deles); o save e a morte no primeiro instante em que
+//      ele está cuidando. Sem
 //      velho morando com pequenos numa cidade em paz, a mão da prova põe em 63 anos um adulto da casa que não é pai nem mãe deles
 //  l15 o bebê muda de colo onde está (D-074): em casa à noite, a mãe em fúria o passa ao pai ou a alguém da casa, ali; um
 //      save no meio; na rua, a quem está perto (sem pulo); sem ninguém perto, à mãe, ao pai ou a uma mulher da vila, onde
@@ -462,32 +464,38 @@ if (want('l14')) {
     // (the little ones come home and stay: when each first came home while minded, and — from then on — how much of the
     // minding it spent at home, awake; a little one far away takes a while to walk home)
     const came = new Map(), stayIn = new Map(), stayAll = new Map();
-    let died = null, after = '', afterOk = true;
+    let died = null, diedAt = 0, after = '', afterOk = true, saved = false;
+    // (the save and the death come at the first moment the old one is minding from 40 s and from 55 s — one of the world takes
+    // a meal or a rest now and then, and the little ones wait for her: L-235 —; nobody minding in the next ten seconds, the
+    // case says so)
+    const mindingNow = () => e.old.find(o => o.task && o.task.type === 'lar' && o.task.what === 'cuidar' && o.inside === h.id) || null;
     // (what the old of the house did, second by second, and why one was not minding — for the note when the case fails)
     const seq = []; const whyNot = new Map(); const kseq = new Map();
     const notMinding = o => { if (o.home !== h.id) return 'mudou de casa'; if (o.age < 55) return 'idade'; if (o.sick > 0) return 'doente'; if (o.hp < 50) return `ferida (${Math.round(o.hp)})`; if (!builtHome(o)) return 'sem casa'; const t = o.task; return t ? `${t.type}${t.what ? ':' + t.what : ''}` : 'sem tarefa'; };
-    live(75, () => {
+    live(95, () => {
       dw.step(); n++;
-      if (n % 10 === 0 && n <= 550) {
+      if (n % 10 === 0 && !died) {
         const o = S.villagers.get(e.old[0].id); const w = o ? (o.task && o.task.type === 'lar' && o.task.what === 'cuidar' ? (o.task.st === 2 ? 'cuidar' : 'indo cuidar') : notMinding(o)) : 'morta'; if (seq[seq.length - 1] !== w) seq.push(w); if (o && w !== 'cuidar') whyNot.set(w, (whyNot.get(w) || 0) + 1);
         for (const c of e.kids) { const k = S.villagers.get(c.id); const kw = !k ? 'morta' : k.inside === h.id ? 'em casa' + (k.task ? ':' + k.task.type + (k.task.what ? '/' + k.task.what : '') : '') : k.task ? k.task.type : 'sem tarefa'; const l = kseq.get(c.id) || []; if (l[l.length - 1] !== kw) l.push(kw); kseq.set(c.id, l); }
       }
-      if (n === 550) {
+      if (n >= 550 && n <= 650 && !died) {
         // (the one minding dies in the middle of the day: another old of the house takes over, or the little ones go about
-        // their day — none kept at home by a minder who is gone)
-        died = e.old.find(o => o.task && o.task.type === 'lar' && o.task.what === 'cuidar' && o.inside === h.id) || null;
-        if (died) V.kill(died, 'teste');
+        // their day — none kept at home by a minder who is gone, past the while they wait for her)
+        died = mindingNow();
+        if (died) { V.kill(died, 'teste'); diedAt = n; }
       }
-      if (n === 750 && died) {
-        const other = e.old.find(o => o.id !== died.id && S.villagers.has(o.id) && o.task && o.task.type === 'lar' && o.task.what === 'cuidar' && o.inside === h.id);
-        const held = e.kids.filter(o => S.villagers.has(o.id) && o.inside === h.id && o.task && o.task.type === 'lar' && o.task.what !== 'acamado' && o.actT > 16).length;
+      if (died && n === diedAt + 80 + Math.round((L.WAIT_CARE || 0) * 10)) {
+        // (another of the house minding now — an old one of the case, or one of 55 or more of the house —: the little ones stay)
+        const other = [...S.villagers.values()].find(o => o.id !== died.id && o.home === h.id && o.task && o.task.type === 'lar' && o.task.what === 'cuidar' && o.inside === h.id);
+        const heldL = e.kids.filter(o => S.villagers.has(o.id) && o.inside === h.id && o.task && o.task.type === 'lar' && o.task.what !== 'acamado' && o.actT > 16); const held = heldL.length;
         afterOk = !!other || !held;
-        after = `; ${died.name} morreu aos 55 s: ${other ? `${other.name} passou a cuidar` : held ? `${held} criança(s) AINDA PRESA(S) EM CASA 20 s depois` : 'as crianças voltaram ao dia delas'}`;
+        const why = heldL.map(o => `${o.name}: ${o.task.what}, ${Math.round(o.actT)} s, esperou ${r2(o.task.gone || 0)} s${o.task.minded ? '' : ' (sem a marca do cuidado)'}`).join('; ');
+        after = `; ${died.name} morreu aos ${r2(diedAt / 10)} s: ${other ? `${other.name} (${Math.floor(other.age)}) passou a cuidar` : held ? `${held} criança(s) AINDA PRESA(S) EM CASA ${8 + (L.WAIT_CARE || 0)} s depois (${why})` : 'as crianças voltaram ao dia delas'}`;
       }
       if (died) return;
-      if (n === 400) {
+      if (n >= 400 && n <= 500 && !saved && (mindingNow() || n === 500)) {
         // (the save in the middle of the day: the one minding goes on minding, the little ones at home stay at home)
-        const was = e.old.find(o => o.task && o.task.type === 'lar' && o.task.what === 'cuidar' && o.inside === h.id);
+        saved = true; const was = mindingNow();
         const kin = e.kids.filter(o => o.inside === h.id).map(o => o.id);
         M.salvarCarregar(); S = G.S; h = S.buildings.get(h.id);
         for (const a of [e.old, e.kids]) for (let k = 0; k < a.length; k++) a[k] = S.villagers.get(a[k].id) || a[k];
@@ -495,7 +503,7 @@ if (want('l14')) {
         const kept = !!now && !!now.task && now.task.type === 'lar' && now.task.what === 'cuidar' && now.inside === h.id;
         const kk = kin.filter(id => { const o = S.villagers.get(id); return o && o.inside === h.id; }).length;
         reloadOk = !!was && kept && kk === kin.length;
-        reload = was ? `; no save aos 40 s, ${kept ? `${now.name} continua cuidando` : 'O CUIDADO SE PERDEU'} e ${kk} de ${kin.length} criança(s) ainda em casa` : '; aos 40 s, NINGUÉM CUIDANDO para o save';
+        reload = was ? `; no save aos ${r2(n / 10)} s, ${kept ? `${now.name} continua cuidando` : 'O CUIDADO SE PERDEU'} e ${kk} de ${kin.length} criança(s) ainda em casa` : '; dos 40 aos 50 s, NINGUÉM CUIDANDO para o save';
       }
       const ms = e.old.filter(o => o.task && o.task.type === 'lar' && o.task.what === 'cuidar' && o.inside === h.id); const m = ms[0];
       if (ms.length > 1) two++;
@@ -512,7 +520,7 @@ if (want('l14')) {
     const kidsOk = came.size >= Math.ceil(e.kids.length / 2) && stayed >= 0.8;
     if (aged) { const o = S.villagers.get(aged[0].id); if (o) o.age = aged[1]; }
     ok('l14 os velhos cuidam dos pequenos em casa', minded >= 200 && kidsOk && !loops && two <= 20 && reloadOk && afterOk && !!died && !dw.wrong.length,
-      `${h.type}#${h.id}: ${e.old.map(o => o.name).join(', ')} (${aged ? `${Math.floor(aged[1])} anos, posta em 63 pela mão da prova, ${aged[2]} — os mundos prontos não têm, depois das mudanças do dia, velho morando com crianças pequenas` : e.old.map(o => Math.floor(o.age)).join(', ') + ' anos'}) e ${e.kids.length} criança(s) de 3 a 6; de dia, cuidando em casa ${r2(minded / 10)} s de 55 («${txt}»), ${came.size} de ${e.kids.length} criança(s) vieram para casa${came.size ? ` (a primeira aos ${r2(first / 10)} s) e ficaram em casa ${Math.round(stayed * 100)}% do cuidado dali em diante` : ''}${reload}${after}${died ? '' : '; aos 55 s, NINGUÉM CUIDANDO para morrer'}${two ? `; dois cuidando juntos ${r2(two / 10)} s` : ''}${loops ? `; ${loops} criança(s) ENTRANDO E SAINDO sem parar` : ''}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}${minded < 200 || !kidsOk ? ` — o que ${e.old[0].name} fez: ${seq.slice(0, 12).join(' → ')}; fora do cuidado: ${[...whyNot].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, c]) => `${k} ${c} s`).join(', ')}; as crianças: ${e.kids.map(c => `${c.name}: ${(kseq.get(c.id) || []).slice(0, 8).join(' → ')}`).join(' | ')}` : ''}`);
+      `${h.type}#${h.id}: ${e.old.map(o => o.name).join(', ')} (${aged ? `${Math.floor(aged[1])} anos, posta em 63 pela mão da prova, ${aged[2]} — os mundos prontos não têm, depois das mudanças do dia, velho morando com crianças pequenas` : e.old.map(o => Math.floor(o.age)).join(', ') + ' anos'}) e ${e.kids.length} criança(s) de 3 a 6; de dia, cuidando em casa ${r2(minded / 10)} s de 55 («${txt}»), ${came.size} de ${e.kids.length} criança(s) vieram para casa${came.size ? ` (a primeira aos ${r2(first / 10)} s) e ficaram em casa ${Math.round(stayed * 100)}% do cuidado dali em diante` : ''}${reload}${after}${died ? '' : '; dos 55 aos 65 s, NINGUÉM CUIDANDO para morrer'}${two ? `; dois cuidando juntos ${r2(two / 10)} s` : ''}${loops ? `; ${loops} criança(s) ENTRANDO E SAINDO sem parar` : ''}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}${minded < 200 || !kidsOk ? ` — o que ${e.old[0].name} fez: ${seq.slice(0, 12).join(' → ')}; fora do cuidado: ${[...whyNot].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, c]) => `${k} ${c} s`).join(', ')}; as crianças: ${e.kids.map(c => `${c.name}: ${(kseq.get(c.id) || []).slice(0, 8).join(' → ')}`).join(' | ')}` : ''}`);
   }
 }
 
