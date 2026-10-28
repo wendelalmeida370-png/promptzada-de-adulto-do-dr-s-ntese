@@ -287,12 +287,21 @@ function attempt(hour, one, done) {
   const sale = book('venda', e => e[0] > L0 && e[3] === 'z:' + z1.id && e[4] === 'v:' + v.id)[0];
   const pay = sale && D.ledger().find(e => e[0] === sale[0] + 1);
   const carry = v.carry && v.carry.k === k && v.carry.to === 'h:' + h.id && v.carry.bought;
-  const home = live(120, () => D.get('h:' + h.id, k) > have0 + 1e-6 || watch());
+  // (the walk home is the world's: a call on the way — the square, a meal, his bed — takes the buyer with the purchase in
+  // his hands, marked for home, and he comes back to it (c13 of compras); the case waits for it while it stays so, the clock
+  // held at the case's hour, up to ten minutes — in the old metropolis an execution called Alexios on his way, then a meal
+  // and his bed, and the 120 s ended with him asleep at home with the cloth in his hands; in another future of it the
+  // execution, a storm, his bed and a meal took more than 300 s, T-188)
+  // (what called him on the way, and for how long: [the errand, seconds])
+  const keeps = () => !!(v.carry && v.carry.k === k && v.carry.to === 'h:' + h.id && v.carry.bought); const away4 = []; const w0 = S.clock;
+  let cur4 = null, c4 = 0; const shift4 = ty => { if (ty === cur4) return; if (cur4) away4.find(a => a[0] === cur4)[1] += S.clock - c4; if (ty && !away4.some(a => a[0] === ty)) away4.push([ty, 0]); cur4 = ty; c4 = S.clock; };
+  live(600, held(S.time, () => { const t = v.task; shift4(t && t.type !== 'carga' && keeps() ? t.type : null); return D.get('h:' + h.id, k) > have0 + 1e-6 || !keeps() || watch(); }));
+  shift4(null); const home = D.get('h:' + h.id, k) > have0 + 1e-6; const took4 = Math.round(S.clock - w0);
   const talk = saidBy(v.id, t0).map(e => e[1]).concat(saidBy(m1.id, t0).map(e => e[1]));
   // (the payment is the ledger's line, from the buyer's house to the seller's, right after the goods: the houses' coins
   // move for other reasons meanwhile — a wage, a family's errand — so they are not counted)
   ok('n4 o cliente compra', sold && !!sale && !!pay && pay[3] === 'h:' + h.id && pay[4] === sellerHouse && pay[5] === 'moedas' && pay[6] > 0 && pay[8] === 'venda' && carry && home && talk.includes('perguntar') && talk.includes('preco') && !bad().length,
-    sale ? `${v.name} perguntou e comprou ${sale[6]} de ${E.name(k)} de ${m1.name} por ${pay ? pay[6] : '?'} ${B.money(fac.id).plural} (da casa dele à do vendedor); levou nas mãos marcado para casa (${carry ? 'sim' : 'NÃO'}) e ${home ? 'chegou lá' : 'NÃO chegou'}; falas: ${talk.join(', ')}` : `não comprou (${v.task ? v.task.type + ' ' + v.task.talk : 'sem tarefa'}; ${talk.join(', ')})`);
+    sale ? `${v.name} perguntou e comprou ${sale[6]} de ${E.name(k)} de ${m1.name} por ${pay ? pay[6] : '?'} ${B.money(fac.id).plural} (da casa dele à do vendedor); levou nas mãos marcado para casa (${carry ? 'sim' : 'NÃO'}) e ${home ? `chegou lá em ${took4} s` : `NÃO chegou em ${took4} s`}${away4.length ? ` (no caminho, chamado para ${away4.map(a => `${a[0]} ${Math.round(a[1])} s`).join(', ')})` : ''}; falas: ${talk.join(', ')}` : `não comprou (${v.task ? v.task.type + ' ' + v.task.talk : 'sem tarefa'}; ${talk.join(', ')})`);
 }
 // the price that makes a buyer haggle, refuse: the margin set so the stall asks f × what the buyer would give
 function priceAt(k, v, f) { const h = E.homeOf(v); const w = B.wtp(v, h, z1, k); z1.margin[k] = 0; const p0 = B.price(z1, k); const base = E.PRICE[k] || 0.3; z1.margin[k] = r2((w * f) / base - p0 / base); return { w, p: B.price(z1, k) }; }
