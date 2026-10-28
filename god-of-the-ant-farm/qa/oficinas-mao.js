@@ -90,10 +90,15 @@ ok('verificador', !bad.length, bad.slice(0, 4).join(' | ') || 'limpo em todos os
   const A0 = 10;
   const ask = () => ({ oleiro: 2, ourives: 1, taverneiro: 1, mercador: 1, pescador: 4, pastor: 1 });
   const got = E.share(ask(), set, f, A0);
-  // (6 hands asked under the ceiling of 3: f = 0.5 — the floors give the potter 1, the rest go to the largest remainders
-  // (0.5 each), in the order of the names: mercador, ourives; the fishermen bring food: outside; the shepherd stays, even
-  // over the ceiling, as always)
-  ok('teto-pelo-maior-resto', got.oleiro === 1 && got.mercador === 1 && got.ourives === 1 && got.taverneiro === 0 && got.pescador === 4 && got.pastor >= 1, `pedem ${JSON.stringify(ask())}, o teto ${Math.floor(A0 * 0.38)}: ${JSON.stringify(got)}`);
+  // (6 hands asked under the ceiling of 3: first one hand for each kind of place, in the fixed order — the tavern, the
+  // market, the pottery —, and the ceiling is full; the fishermen bring food: outside; the shepherd stays, even over the
+  // ceiling, as always)
+  ok('teto-um-por-tipo', got.taverneiro === 1 && got.mercador === 1 && got.oleiro === 1 && got.ourives === 0 && got.pescador === 4 && got.pastor >= 1, `pedem ${JSON.stringify(ask())}, o teto ${Math.floor(A0 * 0.38)}: ${JSON.stringify(got)}`);
+  // (a bigger town: the ceiling of 7 holds one of each of the 5 kinds, and the 2 left go by the largest remainder of what
+  // each still asks — the pottery 3 more and the mine 1 more, 4 in all, f = 0.5: the pottery 1 by the floor, then the
+  // remainders of 0.5 by name, the mine first)
+  const big = E.share({ oleiro: 4, mineiro: 2, taverneiro: 1, mercador: 1, ourives: 1 }, set, f, 20);
+  ok('teto-maior-resto', big.oleiro === 2 && big.mineiro === 2 && big.taverneiro === 1 && big.mercador === 1 && big.ourives === 1, `o teto ${Math.floor(20 * 0.38)}: ${JSON.stringify(big)}`);
   const pop = G.Village.pop(set.id); f.stock.food = pop * 1.5 - 1; // (a hungry town: the ceiling 18% — one hand)
   const hun = E.share({ oleiro: 2, ourives: 1, mercador: 1, pescador: 4 }, set, f, A0);
   ok('teto-com-fome', hun.oleiro + hun.ourives + hun.mercador === 1 && hun.pescador === 4, `com fome (${f.stock.food} de comida para ${pop}): ${JSON.stringify(hun)}`);

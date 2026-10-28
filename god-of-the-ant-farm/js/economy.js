@@ -233,12 +233,18 @@
   };
   // the ceiling of the trades (D-090): there is no craft without bread — the trades take at most 38% of a town's grown hands
   // (18% in a hungry town) — once, over every trade its workplaces ask for, the ones the other modules add too (the
-  // watch, the docks, the estates, the stokers...); shared by the largest remainder: each trade its floor, then one hand more
-  // to the largest fractions, in a fixed order (the role's name), no chance — a trade of one hand is not the first to go
-  // any more (the floor of each share gave none to any of them: the taverns, the goldsmiths, the butchers, the markets stood
-  // empty most of the time, and what the other modules added after the ceiling was outside it). The trades that bring food —
+  // watch, the docks, the estates, the stokers...); first one hand for each kind of workplace while the ceiling holds them
+  // (below), then the rest by the largest remainder: each trade its floor, then one hand more to the largest fractions, in a
+  // fixed order (the role's name), no chance — a trade of one hand is not the first to go any more (the floor of each share
+  // gave none to any of them: the taverns, the goldsmiths, the butchers, the markets stood empty most of the time, and what
+  // the other modules added after the ceiling was outside it). The trades that bring food —
   // the fishermen, the orchards — are the fields the hungry towns send their hands to: outside it. A shepherd always stays
   // with the herds.
+  // (before the shares, one hand for each kind of workplace the town has, while the ceiling holds them — the docks, the jail
+  // and the watch, the baths, the tavern... first, in this fixed order: a town's flows live from them; then the crafts —, so
+  // that no kind of place stands all empty for being small: the warehouse lost its dockers to the potters' shares)
+  const FIRST = ['estivador', 'carcereiro', 'vigia', 'foguista', 'taverneiro', 'mercador', 'feirante', 'cobrador', 'escriba', 'copista', 'ator', 'oleiro', 'ferreiro', 'tecelao', 'ourives', 'acougueiro', 'mineiro', 'cavalarico', 'apicultor', 'vinhateiro', 'lavrador', 'salineiro', 'salgador', 'sericultor', 'mergulhador', 'pastor', 'contrabandista'];
+  const rank = k => { const i = FIRST.indexOf(k); return i < 0 ? FIRST.length : i; };
   const FOOD = { pescador: 1, fruticultor: 1 };
   E.FOOD_TRADES = FOOD;
   E.share = function (out, set, fac, A) {
@@ -247,10 +253,18 @@
     const keys = Object.keys(out).filter(k => !FOOD[k] && out[k] > 0).sort();
     let tot = 0; for (const k of keys) tot += out[k];
     if (!tot || tot <= capN) return out;
-    const f = capN / tot; let given = 0; const rest = [];
-    for (const k of keys) { const x = out[k] * f; const n = Math.floor(x + 1e-9); out[k] = n; given += n; rest.push([x - n, k]); }
-    rest.sort((a, b) => b[0] - a[0] || (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0));
-    for (const [, k] of rest) { if (given >= capN) break; out[k]++; given++; }
+    const got = {}; let given = 0;
+    for (const k of keys.slice().sort((a, b) => rank(a) - rank(b) || (a < b ? -1 : 1))) { if (given >= capN) break; got[k] = 1; given++; }
+    // (the rest of the ceiling by the largest remainder, over what each still asks)
+    let tot2 = 0; for (const k of keys) tot2 += out[k] - (got[k] || 0);
+    const left = capN - given;
+    if (left > 0 && tot2 > 0) {
+      const f = Math.min(1, left / tot2); const rest = [];
+      for (const k of keys) { const x = (out[k] - (got[k] || 0)) * f; const n = Math.floor(x + 1e-9); got[k] = (got[k] || 0) + n; given += n; rest.push([x - n, k]); }
+      rest.sort((a, b) => b[0] - a[0] || (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0));
+      for (const [, k] of rest) { if (given >= capN) break; if (got[k] < out[k]) { got[k]++; given++; } }
+    }
+    for (const k of keys) out[k] = got[k] || 0;
     if (keys.includes('pastor') && !(out.pastor >= 1)) out.pastor = 1;
     return out;
   };
