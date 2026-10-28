@@ -60,8 +60,8 @@ function verdict(cn, cf) {
 // it made a building of the god's view and the body's two buildings: fix it, or the leader agrees and the commit says why.
 // 190 on the v37, 87090a0: 4 with the same mass, 58 with losses, 190 another — the shells fill the lot where the god keeps
 // a yard, the monuments are the KIT's own shapes, the jail has no picture of the god at all; 184 with the wonders from
-// their form, counted apart since — B3)
-const TETO = 184;
+// their form, counted apart since — B3; 174 with the monuments and the golden statue from theirs — D1)
+const TETO = 174;
 
 // ------------------------------ the round ------------------------------
 // (the kinds the god paints in a layer of its own, not as a building's picture — the ground of the fields and of the farm,

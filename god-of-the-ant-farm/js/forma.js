@@ -50,9 +50,21 @@
   //   porta      a door or a dark opening on a face: na 'frente' (v = the face's line), u, w, y0..y1, cor; lacrada: seen,
   //              never gone through (the Great Pyramid's)
   //   disco      a round of gold (an eye, a shield) on the front face of a block: u, v, y, r, cor, olho: its dark pupil
-  //   estatua    a statue: p [u, v, y], h, cor; lanca: the spear and the shield (Athena Promachos)
+  //   estatua    a statue: p [u, v, y], h, cor; w: the half width of its robe; lanca: the spear and the shield (Athena
+  //              Promachos); corvos: the colour of the two ravens on its shoulders; pose 'trono' (enthroned in the nemes:
+  //              its colour, nemes) or 'serpente' (the feathered serpent: penas, olho) — its parts are Fo.figure's
   //   dragao     a dragon's head at a gable's end: p [u, v, y], dir (along u: ±1)
   //   braseiro   a brazier: p [u, v, y], r
+  //   coluna     a round shaft standing alone: c, r, y0..y1, cor [lit, shaded]; espiral { y0, passo, w }: the frieze winding
+  //              up it from y0, a turn every passo, w wide (the shaft's stone a little darker)
+  //   pedra      a standing stone: c, e (half its side at its foot), e1 (at its top), y0..y1 (y1 its front corner on the
+  //              right: the highest), cai [left, back]: how far its top falls across it each way; cobra: the colour of the
+  //              serpent carved down its front
+  //   roda       a stone wheel standing on its edge, facing the front: c [u, v] (its middle), y (its axle's height), r, t
+  //              (thick), cor [rim, face]; aneis [[f, cor], …]: the painted rings on its face (at f of r, larg of r wide),
+  //              raios { n, r0, r1, a, cor }: the rays between them (from r0 to r1 of r, a their half angle at r1)
+  //   flores     flower beds on a floor: pts [[u, v], …], y, r (how far round each the blooms are), cor (theirs, by turns)
+  // (mat on an element: the stuff it is built of — 'base' the people's own stone)
   // ------------------------------ the god's units ------------------------------
   const px = z => z / ZPX;
   const at = (L, d) => L / 2 + d * TILE; // (tiles from the middle of the lot, the god's dx or dy, to metres from its corner)
@@ -151,6 +163,147 @@
     return { els, door: { u: L / 2, w: 1.6, y0: 0, y1: px(z - 12), stair: true } };
   });
 
+  // ------------------------------ the monuments (arch.js monument; art.js the obelisk) ------------------------------
+  // (the god's steps — arch.js steps(): n blocks of h px from half side e tiles, each `shrink` tiles less)
+  const degraus = (L, e, n, h, shrink) => { const out = []; for (let k = 0; k < n; k++) { const q = e - k * shrink; out.push({ k: 'bloco', r: rect(L, -q, -q, q, q), y0: px(k * h), y1: px((k + 1) * h), cor: ['base0', 'base1', 'base2'] }); } return out; };
+  // (the god's robed figure hp px tall is max(1.4, 0.13 hp) px wide each side of its middle; the 3D's robe, 2w across and
+  // 1.3w deep, seen from the god's corner is as wide — 3.3w × 4 px a metre each side — when w is that over 6.6)
+  const robe = hp => Math.max(1.4, hp * 0.13) / 6.6;
+  // the obelisk (art.js: the classical monument and the Egyptian — the Egyptian has no other): the paved square of 0.95 tiles
+  // and 1.5 px, its two pedestals, the shaft tapering from 0.2 to 0.12 tiles between 8 and 58 px, the gilded pyramidion 9 px
+  // over it, the golden eye on its front 34 px up and the flower beds at three corners of the square
+  def('monument', 'classico', L => {
+    const a0 = 0.2, a1 = 0.12, z0 = 8, z1 = 58; const aEye = a0 - (a0 - a1) * (34 - z0) / (z1 - z0);
+    return { els: [
+      { k: 'bloco', r: rect(L, -0.95, -0.95, 0.95, 0.95), y0: 0, y1: px(1.5), cor: ['#c9c1ae', '#aaa18c', '#ddd6c5'], mat: 'slab' },
+      { k: 'flores', pts: [[at(L, -0.75), at(L, 0.75)], [at(L, 0.75), at(L, -0.75)], [at(L, 0.75), at(L, 0.75)]], y: px(1.5), r: 0.35, cor: ['#ff8fb0', '#ffd85a', '#ffffff', '#b98cff'] },
+      { k: 'bloco', r: rect(L, -0.36, -0.36, 0.36, 0.36), y0: px(1.5), y1: px(5), cor: ['#b8ae98', '#978d78', '#cbc2ae'] },
+      { k: 'bloco', r: rect(L, -0.28, -0.28, 0.28, 0.28), y0: px(5), y1: px(8), cor: ['#c4baa4', '#a39984', '#d6ceba'] },
+      { k: 'talude', r: rect(L, -a0, -a0, a0, a0), r1: rect(L, -a1, -a1, a1, a1), y0: px(z0), y1: px(z1), cor: ['#e6dfcc', '#bdb39c', '#e6dfcc'], mat: 'base' },
+      { k: 'piramide', c: [L / 2, L / 2], e: a1 * TILE, y0: px(z1), y1: px(z1 + 9), cor: ['#f7d66a', '#d9a93a'], mat: 'slab' },
+      { k: 'disco', na: 'frente', u: L / 2, v: at(L, aEye), y: px(34), r: 0.5, cor: '#d9b34a', olho: '#6a4a1a' },
+    ] };
+  });
+  // the god's statue (grego): two steps of 0.9 tiles and 1.3 px, the marble pedestal of 0.3 tiles to 12 px with its painted
+  // band at the top, and on it the gilded god 30 px tall with his spear and shield
+  def('monument', 'grego', L => ({ els: [
+    ...degraus(L, 0.9, 2, 1.3, 0.1),
+    { k: 'bloco', r: rect(L, -0.3, -0.3, 0.3, 0.3), y0: px(2.6), y1: px(12), cor: ['col0', 'col1', 'col0'], mat: 'marble' },
+    { k: 'faixa', r: rect(L, -0.3, -0.3, 0.3, 0.3), y0: px(10.5), y1: px(12), cor: 'acc' },
+    { k: 'estatua', p: [L / 2, L / 2, px(12)], h: px(30), w: robe(30), cor: '#c9a24a', lanca: true },
+  ] }));
+  // the triumphal column (romano): two steps of 0.85 tiles and 1.4 px, the pedestal of 0.28 tiles to 9 px, the shaft to 56 px
+  // — round where the god's is square (as the 3D's columns are), its girth between that square's inner and outer rounds —
+  // with the frieze winding up it from 11 px, a turn every 8.4 px; the capital of 0.2 tiles and 2 px, and on it the gilded
+  // emperor 10 px tall
+  def('monument', 'romano', L => ({ els: [
+    ...degraus(L, 0.85, 2, 1.4, 0.12),
+    { k: 'bloco', r: rect(L, -0.28, -0.28, 0.28, 0.28), y0: px(2.8), y1: px(9), cor: ['col0', 'col1', 'col0'], mat: 'marble' },
+    { k: 'coluna', c: [L / 2, L / 2], r: 0.14 * TILE * 1.2, y0: px(9), y1: px(56), cor: ['col0', 'col1'], mat: 'marble', espiral: { y0: px(11), passo: px(8.4), w: 0.24 } },
+    { k: 'bloco', r: rect(L, -0.2, -0.2, 0.2, 0.2), y0: px(56), y1: px(58), cor: ['col0', 'col1', 'col0'], mat: 'marble' },
+    { k: 'estatua', p: [L / 2, L / 2, px(58)], h: px(10), w: robe(10), cor: '#e0b84a', lanca: true },
+  ] }));
+  // the Sun Stone (asteca): three steps of 0.9 tiles and 1.5 px, and on the top one the stone wheel standing on its edge,
+  // facing the front, in the low cradle of stone that holds it — the god's round of 13 px over the top step (a wheel facing
+  // the front is a little flatter seen from the god's corner: 3.4 m reach its height and its width): its rim, its face, the
+  // four painted rings (at 10, 7.5, 5 and 2.6 of its 13) and the eight rays between the inner ones
+  def('monument', 'asteca', L => {
+    const R = 3.4, y0 = px(4.5), cr = 0.3;
+    return { els: [
+      ...degraus(L, 0.9, 3, 1.5, 0.12),
+      { k: 'bloco', r: rect(L, -0.3, 0.1 - 0.15, 0.3, 0.1 + 0.15), y0, y1: y0 + cr, cor: ['#8a8478', '#6f6a60', '#a09a8e'] },
+      { k: 'roda', c: [L / 2, at(L, 0.1)], y: y0 + cr + R, r: R, t: 0.8, cor: ['#9a9488', '#b8b2a4'], aneis: [[10 / 13, '#2fae8f'], [7.5 / 13, '#b33a2a'], [5 / 13, '#e8c24a'], [2.6 / 13, '#b33a2a']], larg: 1.2 / 13, raios: { n: 8, r0: 5.5 / 13, r1: 9.5 / 13, a: 0.15, cor: '#7a746a' } },
+    ] };
+  });
+  // the rune stones (nordico): on the grass of 0.9 tiles the god's three standing stones — at [x, y] tiles, so many px tall,
+  // so many tiles each side of their middle —, tapering to three quarters, their tops falling 2 px to the left and 1 px to
+  // the back from the front corner, the red serpent carved down the front of each
+  def('monument', 'nordico', L => ({ els: [
+    { k: 'bloco', r: rect(L, -0.9, -0.9, 0.9, 0.9), y0: 0, y1: px(0.3), cor: ['#6a8a3a', '#5e7e36', '#7a9a4a'], mat: 'turf' },
+    ...[[-0.4, -0.35, 26, 0.13], [0.35, -0.2, 34, 0.16], [0, 0.35, 22, 0.12]].map(([x, y, h, w]) => (
+      { k: 'pedra', c: [at(L, x), at(L, y)], e: w * TILE, e1: w * TILE * 0.75, y0: 0, y1: px(h), cai: [px(2), px(1)], cor: ['#a09a90', '#7e7870'], cobra: '#b33a2a' })),
+  ] }));
+
+  // ------------------------------ the golden statue (cityart.js estatua) ------------------------------
+  // its two steps of 0.46 and 0.34 tiles, 2 px each, the column of 0.2 tiles to 11 px with its golden band, and on it the
+  // god in gold as each people makes him: robed, with spear and shield (the classical, the Greek, the Roman: 26 px); with his
+  // two ravens (the Norse: 24 px); enthroned in the nemes with the crook (the Egyptian: to 20.6 px); the feathered serpent
+  // rising in its coils (the Aztec: to 27.4 px, the top of its crest)
+  const pedestal = L => [
+    { k: 'bloco', r: rect(L, -0.46, -0.46, 0.46, 0.46), y0: 0, y1: px(2), cor: ['base0', 'base1', 'base2'] },
+    { k: 'bloco', r: rect(L, -0.34, -0.34, 0.34, 0.34), y0: px(2), y1: px(4), cor: ['base0', 'base1', 'base2'] },
+    { k: 'bloco', r: rect(L, -0.2, -0.2, 0.2, 0.2), y0: px(4), y1: px(11), cor: ['col0', 'col1', 'col0'] },
+    { k: 'faixa', r: rect(L, -0.2, -0.2, 0.2, 0.2), y0: px(9.6), y1: px(10.4), cor: '#e8b83a' },
+  ];
+  const GOLD = '#f2c14e';
+  def('estatua', 'classico', L => ({ els: [...pedestal(L), { k: 'estatua', p: [L / 2, L / 2, px(11)], h: px(26), w: robe(26), cor: GOLD, lanca: true }] }));
+  def('estatua', 'nordico', L => ({ els: [...pedestal(L), { k: 'estatua', p: [L / 2, L / 2, px(11)], h: px(24), w: robe(24), cor: GOLD, lanca: true, corvos: '#2a2a30' }] }));
+  def('estatua', 'egipcio', L => ({ els: [...pedestal(L), { k: 'estatua', p: [L / 2, L / 2, px(11)], h: px(20.6), cor: GOLD, pose: 'trono', nemes: '#2f5fae' }] }));
+  def('estatua', 'asteca', L => ({ els: [...pedestal(L), { k: 'estatua', p: [L / 2, L / 2, px(11)], h: px(27.4), cor: GOLD, pose: 'serpente', penas: '#2fae8f', olho: '#b33a2a' }] }));
+
+  // ------------------------------ the statues' figures ------------------------------
+  // the parts of a statue (estatua), in the canonical frame — what the 3D builds, and what its far figure and its height
+  // keep (the god paints the figure flat; these are its solids, as wide seen from the god's corner):
+  //   caixa   a block standing on c [u, v, y]: a across, d deep, h up
+  //   bola    a ball at c: r, ry (its half height, when not round)
+  //   haste   a round bar from a to b, r: a spear, a staff, a neck, a feather
+  //   escudo  a round at c facing the front, r
+  //   espira  the coils of a serpent: a tube winding up from c, h high, voltas turns, its ring from R0 to R1 and its
+  //           thickness from t0 to t1, beginning (and so ending) on its left; its turns darker and lighter by turns (toms)
+  // each with its colour (cor) and, where the god shades it, how much darker (tom)
+  Fo.figure = function (e) {
+    const [u, v, y] = e.p, h = e.h, c = e.cor, out = [];
+    if (e.pose === 'trono') {
+      // (the god's seated king: the throne and the legs to 0.39 of its height, a little darker; the body to 0.78; the head;
+      // the nemes over it — its crown from 0.85 to the top, its lappets down beside the face —; the crook in his right hand)
+      out.push({ k: 'caixa', c: [u, v + 0.02 * h, y], a: 0.118 * h, d: 0.103 * h, h: 0.388 * h, cor: c, tom: 0.8 });
+      out.push({ k: 'caixa', c: [u, v - 0.012 * h, y + 0.388 * h], a: 0.092 * h, d: 0.071 * h, h: 0.39 * h, cor: c });
+      out.push({ k: 'bola', c: [u, v + 0.004 * h, y + 0.84 * h], r: 0.058 * h, ry: 0.07 * h, cor: c });
+      out.push({ k: 'caixa', c: [u, v - 0.012 * h, y + 0.855 * h], a: 0.125 * h, d: 0.09 * h, h: 0.145 * h, cor: e.nemes });
+      for (const s of [-1, 1]) out.push({ k: 'caixa', c: [u + s * 0.052 * h, v + 0.012 * h, y + 0.73 * h], a: 0.024 * h, d: 0.04 * h, h: 0.13 * h, cor: e.nemes });
+      out.push({ k: 'haste', a: [u + 0.045 * h, v + 0.03 * h, y + 0.66 * h], b: [u + 0.09 * h, v + 0.03 * h, y + 0.66 * h], r: 0.018 * h, cor: c });
+      out.push({ k: 'haste', a: [u + 0.09 * h, v + 0.035 * h, y + 0.553 * h], b: [u + 0.09 * h, v + 0.035 * h, y + 0.8 * h], r: 0.016 * h, cor: c });
+      out.push({ k: 'bola', c: [u + 0.09 * h, v + 0.035 * h, y + 0.825 * h], r: 0.028 * h, cor: c });
+    } else if (e.pose === 'serpente') {
+      // (the god's feathered serpent, in metres of its 9 m: three coils on the column, the lowest as wide as the column, the
+      // neck rising from the top one on the left and bending to the right, the head to the right with its jaw and its red
+      // eye, the crest of five feathers — jade and gold by turns — up from the back of the head)
+      const k = h / 9.0, R1 = 0.36 * k, t1 = 0.28 * k, hc = 3.9 * k;
+      out.push({ k: 'espira', c: [u, v, y], h: hc, voltas: 3, R0: 0.5 * k, R1, t0: 0.35 * k, t1, cor: c, toms: [1, 0.8] });
+      const A = [u - R1, v, y + hc - t1], B = [u - 0.15 * k, v, y + 7.3 * k], C = [u + 0.55 * k, v, y + 6.75 * k]; const n = 6;
+      const bz = t => [0, 1, 2].map(i => (1 - t) * (1 - t) * A[i] + 2 * (1 - t) * t * B[i] + t * t * C[i]);
+      for (let j = 0; j < n; j++) out.push({ k: 'haste', a: bz(j / n), b: bz((j + 1) / n), r: t1 + (0.24 * k - t1) * j / (n - 1), cor: c, tom: j % 2 ? 0.8 : 1 });
+      out.push({ k: 'caixa', c: [u + 0.95 * k, v, y + 6.35 * k], a: 0.9 * k, d: 0.52 * k, h: 0.55 * k, cor: c });
+      out.push({ k: 'caixa', c: [u + 0.9 * k, v, y + 5.95 * k], a: 0.7 * k, d: 0.42 * k, h: 0.26 * k, cor: c, tom: 0.8 });
+      for (const s of [-1, 1]) out.push({ k: 'bola', c: [u + 1.12 * k, v + s * 0.25 * k, y + 6.68 * k], r: 0.08 * k, cor: e.olho });
+      // (the feathers fan out across the god's view, as its crest is, a hand apart at their tips)
+      for (let j = 0; j < 5; j++) out.push({ k: 'haste', a: [u + (0.52 + 0.04 * j) * k, v + (0.08 - 0.04 * j) * k, y + 6.85 * k], b: [u + (0.1 + 0.125 * j) * k, v + (0.1 - 0.06 * j) * k, y + (8.6 + 0.08 * j) * k], r: 0.15 * k, cor: j % 2 ? e.penas : c });
+    } else {
+      // (the robed god: the robe to 0.62 of his height, the belt and the shoulders, the head; the spear upright at his right
+      // hand and the round shield on his left arm; the ravens on his shoulders)
+      const w = e.w || Math.max(0.32, h * 0.085);
+      out.push({ k: 'caixa', c: [u, v, y], a: 2 * w, d: 1.3 * w, h: 0.62 * h, cor: c });
+      out.push({ k: 'caixa', c: [u, v, y + 0.62 * h], a: 2.2 * w, d: 1.4 * w, h: 0.1 * h, cor: c, tom: 0.9 });
+      out.push({ k: 'bola', c: [u, v, y + 0.78 * h], r: 0.75 * w, cor: c });
+      if (e.lanca) { out.push({ k: 'haste', a: [u + 1.3 * w, v, y + 0.05 * h], b: [u + 1.3 * w, v, y + 1.1 * h], r: 0.05, cor: c, tom: 0.7 });
+        out.push({ k: 'escudo', c: [u - 1.25 * w, v + 0.2 * w, y + 0.42 * h], r: 1.1 * w, cor: c, tom: 0.85 }); }
+      if (e.corvos) for (const s of [-1, 1]) { const q = [u + s * 1.05 * w, v - 0.1 * w, y + 0.72 * h];
+        out.push({ k: 'bola', c: [q[0], q[1], q[2] + 0.16], r: 0.2, ry: 0.15, cor: e.corvos }, { k: 'bola', c: [q[0], q[1] + 0.16, q[2] + 0.34], r: 0.1, cor: e.corvos }); }
+    }
+    return out;
+  };
+  // (the top of a figure's part, m: a bar's is its higher end's, and its round's rim as far as it leans)
+  const partTop = p => {
+    if (p.k === 'haste') { const d = [p.b[0] - p.a[0], p.b[1] - p.a[1], p.b[2] - p.a[2]]; const l = Math.hypot(...d) || 1; return Math.max(p.a[2], p.b[2]) + p.r * Math.sqrt(Math.max(0, 1 - (d[2] / l) * (d[2] / l))); }
+    return p.k === 'caixa' ? p.c[2] + p.h : p.k === 'bola' ? p.c[2] + (p.ry || p.r) : p.k === 'escudo' ? p.c[2] + p.r : p.k === 'espira' ? p.c[2] + p.h : 0;
+  };
+  // (a figure's part as a mass: a block, or a round from one end to the other — a ball as the round that holds most of it)
+  const partMass = p => (p.k === 'caixa' ? { k: 'box', r: [p.c[0] - p.a / 2, p.c[1] - p.d / 2, p.c[0] + p.a / 2, p.c[1] + p.d / 2], y0: p.c[2], y1: p.c[2] + p.h, cor: p.cor }
+    : p.k === 'bola' ? { k: 'tronco', a: [p.c[0], p.c[1], p.c[2] - 0.7 * (p.ry || p.r)], b: [p.c[0], p.c[1], p.c[2] + 0.7 * (p.ry || p.r)], r0: p.r, r1: p.r, cor: p.cor }
+    : p.k === 'haste' ? { k: 'tronco', a: p.a, b: p.b, r0: p.r, r1: p.r, cor: p.cor }
+    : p.k === 'escudo' ? { k: 'tronco', a: [p.c[0], p.c[1] - 0.03, p.c[2]], b: [p.c[0], p.c[1] + 0.03, p.c[2]], r0: p.r, r1: p.r, cor: p.cor }
+    : p.k === 'espira' ? { k: 'tronco', a: p.c, b: [p.c[0], p.c[1], p.c[2] + p.h], r0: p.R0 + p.t0, r1: p.R1 + p.t1, cor: p.cor } : null);
+
   // ------------------------------ asking ------------------------------
   const memo = new Map();
   // the form of a type in a people's style — { type, style, L, els, door, top } — or null (its shell, or its old drawing, is
@@ -168,7 +321,7 @@
   function topOf(els) {
     let t = 0;
     for (const e of els) {
-      const y = e.k === 'mastros' ? e.y0 + e.h : e.k === 'estatua' ? e.p[2] + e.h * 1.1 : e.k === 'braseiro' ? e.p[2] + 0.8 : e.k === 'dragao' ? e.p[2] + 1.1 : e.k === 'escalonada' ? e.niveis[e.niveis.length - 1][2] : e.k === 'arena' ? e.y : e.k === 'cavea' ? Math.max(...e.aneis.map(a => a[1])) : e.k === 'escada' ? Math.max(e.a[2], e.b[2]) : e.k === 'disco' || e.k === 'porta' ? 0 : e.y1;
+      const y = e.k === 'mastros' ? e.y0 + e.h : e.k === 'estatua' ? Math.max(...Fo.figure(e).map(partTop)) : e.k === 'roda' ? e.y + e.r : e.k === 'flores' ? e.y + 0.2 : e.k === 'braseiro' ? e.p[2] + 0.8 : e.k === 'dragao' ? e.p[2] + 1.1 : e.k === 'escalonada' ? e.niveis[e.niveis.length - 1][2] : e.k === 'arena' ? e.y : e.k === 'cavea' ? Math.max(...e.aneis.map(a => a[1])) : e.k === 'escada' ? Math.max(e.a[2], e.b[2]) : e.k === 'disco' || e.k === 'porta' ? 0 : e.y1;
       if (y > t) t = y;
     }
     return t;
@@ -181,12 +334,15 @@
       if (e.k === 'bloco' || e.k === 'talude') out.push({ k: 'rect', r: e.r });
       else if (e.k === 'piramide') out.push({ k: 'rect', r: [e.c[0] - e.e, e.c[1] - e.e, e.c[0] + e.e, e.c[1] + e.e] });
       else if (e.k === 'escalonada') { const s = e.niveis[0][0]; out.push({ k: 'rect', r: [e.c[0] - s, e.c[1] - s, e.c[0] + s, e.c[1] + s] }); }
-      else if (e.k === 'tambor') out.push({ k: 'circ', c: e.c, r: e.r });
+      else if (e.k === 'tambor' || e.k === 'coluna') out.push({ k: 'circ', c: e.c, r: e.r });
+      else if (e.k === 'pedra') out.push({ k: 'rect', r: [e.c[0] - e.e, e.c[1] - e.e, e.c[0] + e.e, e.c[1] + e.e] });
+      else if (e.k === 'roda') out.push({ k: 'rect', r: [e.c[0] - e.r, e.c[1] - e.t / 2, e.c[0] + e.r, e.c[1] + e.t / 2] });
     }
     return out;
   };
   // the far figure of a form: its masses alone, the simplest solids that keep its silhouette — a box, a battered block, a
-  // pyramid, a drum, a gable roof — in the canonical frame: [{ k, … }]
+  // pyramid, a drum, a gable roof, a round (tronco: from a [u, v, y], r0 round, to b, r1 round) — in the canonical frame:
+  // [{ k, … }]
   Fo.mass = function (F) {
     const out = [];
     for (const e of F.els) {
@@ -197,6 +353,27 @@
       else if (e.k === 'tambor') out.push({ k: 'anel', c: e.c, r: e.r, t: Math.max(e.t, e.r * 0.5), y0: e.y0, y1: e.y1, cor: e.cor[0] });
       else if (e.k === 'telhado') out.push({ k: 'telhado', r: e.r, y0: e.y0, y1: e.y1, ao: e.ao, ov: e.ov, cor: e.cor[0] });
       else if (e.k === 'colunata') { let u0 = 1e9, v0 = 1e9, u1 = -1e9, v1 = -1e9; for (const p of e.pts) { u0 = Math.min(u0, p[0]); v0 = Math.min(v0, p[1]); u1 = Math.max(u1, p[0]); v1 = Math.max(v1, p[1]); } out.push({ k: 'box', r: [u0 - e.r, v0 - e.r, u1 + e.r, v1 + e.r], y0: e.y0, y1: e.y1, cor: e.cor[0], ralo: true }); }
+      else if (e.k === 'coluna') out.push({ k: 'tronco', a: [e.c[0], e.c[1], e.y0], b: [e.c[0], e.c[1], e.y1], r0: e.r, r1: e.r, cor: e.cor[0] });
+      else if (e.k === 'pedra') out.push({ k: 'talude', r: [e.c[0] - e.e, e.c[1] - e.e, e.c[0] + e.e, e.c[1] + e.e], r1: [e.c[0] - e.e1, e.c[1] - e.e1, e.c[0] + e.e1, e.c[1] + e.e1], y0: e.y0, y1: e.y1, cor: e.cor[0] });
+      else if (e.k === 'roda') out.push({ k: 'tronco', a: [e.c[0], e.c[1] - e.t / 2, e.y], b: [e.c[0], e.c[1] + e.t / 2, e.y], r0: e.r, r1: e.r, cor: e.cor[1] });
+      else if (e.k === 'estatua') for (const p of Fo.figure(e)) { const m = partMass(p); if (m) out.push(m); }
+    }
+    return out;
+  };
+  // the faces of a round mass (tronco) in the canonical frame: triangles with the way each faces, [{ p: [A, B, C], n }] —
+  // for whoever draws the far figure (the thinner, the fewer sides)
+  Fo.faces = function (m) {
+    const d = [m.b[0] - m.a[0], m.b[1] - m.a[1], m.b[2] - m.a[2]]; const l = Math.hypot(...d) || 1; const ax = d.map(q => q / l);
+    let e1 = Math.abs(ax[2]) > 0.9 ? [1, 0, 0] : [-ax[1], ax[0], 0]; const l1 = Math.hypot(...e1); e1 = e1.map(q => q / l1);
+    const e2 = [ax[1] * e1[2] - ax[2] * e1[1], ax[2] * e1[0] - ax[0] * e1[2], ax[0] * e1[1] - ax[1] * e1[0]];
+    const R = Math.max(m.r0, m.r1); const n = R < 0.15 ? 6 : R < 0.6 ? 10 : 16; const TAU = Math.PI * 2;
+    const way = t => [Math.cos(t) * e1[0] + Math.sin(t) * e2[0], Math.cos(t) * e1[1] + Math.sin(t) * e2[1], Math.cos(t) * e1[2] + Math.sin(t) * e2[2]];
+    const at3 = (o, r, t) => { const w = way(t); return [o[0] + w[0] * r, o[1] + w[1] * r, o[2] + w[2] * r]; };
+    const out = []; const down = ax.map(q => -q);
+    for (let k = 0; k < n; k++) {
+      const t0 = k / n * TAU, t1 = (k + 1) / n * TAU; const nn = way((t0 + t1) / 2);
+      const A0 = at3(m.a, m.r0, t0), A1 = at3(m.a, m.r0, t1), B0 = at3(m.b, m.r1, t0), B1 = at3(m.b, m.r1, t1);
+      out.push({ p: [A0, A1, B1], n: nn }, { p: [A0, B1, B0], n: nn }, { p: [m.a, A1, A0], n: down }, { p: [m.b, B0, B1], n: ax });
     }
     return out;
   };

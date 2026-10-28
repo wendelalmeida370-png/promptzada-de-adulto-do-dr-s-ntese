@@ -198,6 +198,7 @@ F.formPic = function (b, Fm, side) {
       const ridge = along === 'u' ? [W(r[0], mv, m.y1), W(r[2], mv, m.y1)] : [W(mu, r[1], m.y1), W(mu, r[3], m.y1)];
       if (along === 'u') { quad(W(r[0], r[3], m.y0), W(r[2], r[3], m.y0), ridge[1], ridge[0], [0, 1, 0]); quad(W(r[2], r[1], m.y0), W(r[0], r[1], m.y0), ridge[0], ridge[1], [0, 1, 0]); tri(W(r[0], r[1], m.y0), W(r[0], r[3], m.y0), ridge[0], [0, 1, 0]); tri(W(r[2], r[3], m.y0), W(r[2], r[1], m.y0), ridge[1], [0, 1, 0]); }
       else { quad(W(r[2], r[1], m.y0), W(r[2], r[3], m.y0), ridge[1], ridge[0], [0, 1, 0]); quad(W(r[0], r[3], m.y0), W(r[0], r[1], m.y0), ridge[0], ridge[1], [0, 1, 0]); tri(W(r[0], r[3], m.y0), W(r[2], r[3], m.y0), ridge[1], [0, 1, 0]); tri(W(r[2], r[1], m.y0), W(r[0], r[1], m.y0), ridge[0], [0, 1, 0]); } }
+    else if (m.k === 'tronco') for (const f of Fo.faces(m)) { const d = Fo.dirLot(side, f.n[0], f.n[1]); tri(W(...f.p[0]), W(...f.p[1]), W(...f.p[2]), [d[0], f.n[2], d[1]]); }
   }
   return { tris, fr: framer(b) };
 };

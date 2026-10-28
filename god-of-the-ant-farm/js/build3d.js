@@ -417,7 +417,7 @@ float m3scale(float p) {
     return (a + (b - a) * u) * (1 - v) + (c + (d - c) * u) * v;
   }
   // (heights of the buildings, in metres: the camera and the far picture use them too)
-  // (a type with a form, G.Forma, stands as high as its form: maravilha — the others by this table)
+  // (a type with a form, G.Forma, stands as high as its form: maravilha, monument, estatua — the others by this table)
   const HEIGHT = { hut: 4.4, house: 5.2, sobrado: 8.4, insula: 14, quarteirao: 15, barraco: 3, storehouse: 6.5, armazem: 7, celeiro: 7, workshop: 5.5, forja: 6, olaria: 5, tecelagem: 5.5, ourives: 5.5, perolaria: 5, sericultura: 5, acougue: 5, temple: 10, monument: 13, estatua: 7, palacio: 14, paco: 12, administracao: 9, coletoria: 7, biblioteca: 9, teatro: 7, banhos: 7, cadeia: 6, quartel: 6, torre: 12, taverna: 7.5, mercado: 3.2, feira: 3, mercado_negro: 3, doca: 1.2, mina: 4, apiario: 1.6, curral: 1.4, estabulo: 5, cercado: 1.5, farm: 1, horta: 0.8, plantacao: 1.2, vinhedo: 1.8, pomar: 4, well: 2.6, campfire: 0.6, cemetery: 1.2, praca: 3, aqueduto: 7, ruin: 2.5 };
   // (the form of a building — its type's in its people's style —, or null: the shell, or the kit's own shapes, are its form)
   const formOf = b => (G.Forma && G.Forma.has(b.type, styleOf(b)) ? G.Forma.of(b.type, styleOf(b)) : null);
@@ -1482,7 +1482,7 @@ float m3scale(float p) {
       rect: r => { const a = XZ(r[0], r[1]), b2 = XZ(r[2], r[3]); return [Math.min(a[0], b2[0]), Math.min(a[1], b2[1]), Math.max(a[0], b2[0]), Math.max(a[1], b2[1])]; },
       // (a point of the form, [u, v, y], in the kit's frame)
       pt: (u, v, y) => { const q = XZ(u, v); return [q[0], y - lift, q[1]]; },
-      mat: (e, dflt) => e.mat || dflt || stuff(K.b).base,
+      mat: (e, dflt) => (e.mat === 'base' ? stuff(K.b).base : e.mat) || dflt || stuff(K.b).base,
     };
   }
   // (the four sides and the top of a block, x0..x1 × z0..z1 in the kit's frame, y0..y1: its sides one colour — the light of
@@ -1663,19 +1663,23 @@ float m3scale(float p) {
       K.as('slab', () => { formDisc(K, c, out, e.r, X.col(e.cor), 14);
         if (e.olho) formDisc(K, [c[0] + out[0] * 0.02, c[1], c[2] + out[2] * 0.02], out, e.r * 0.32, X.col(e.olho), 10); });
     },
-    // a statue in gold: its robe from its feet, its belt, its shoulders and head; with the spear upright at its right hand and
-    // the round shield on its left arm — the god's figure, in metres
+    // a statue in gold: its figure's parts (Forma.figure) — the robe, the belt and the shoulders, the head, the spear upright
+    // at its right hand and the round shield on its left arm; the throne and the nemes; the serpent's coils, its neck, its
+    // head and its crest — the god's figure, in metres, turned to the lot
     estatua(K, e, X) {
-      const p = X.pt(e.p[0], e.p[1], e.p[2]); const h = e.h, w = Math.max(0.32, h * 0.085); const col = rgbOf(X.col(e.cor)); const fr = [X.front[0], 0, X.front[1]], ac = [X.across[0], 0, X.across[1]];
-      const y = p[1]; const P2 = (s, yy, d) => [p[0] + ac[0] * s + fr[0] * d, y + yy, p[2] + ac[2] * s + fr[2] * d];
-      K.as('slab', () => {
-        // (the robe: a block narrowing from the feet to the belt, and the shoulders)
-        K.para(P2(0, 0, 0), [ac[0] * w * 2, 0, ac[2] * w * 2], [0, h * 0.62, 0], [fr[0] * w * 1.3, 0, fr[2] * w * 1.3], col);
-        K.para(P2(0, h * 0.62, 0), [ac[0] * w * 2.2, 0, ac[2] * w * 2.2], [0, h * 0.1, 0], [fr[0] * w * 1.4, 0, fr[2] * w * 1.4], dim(col, 0.9));
-        K.sph(P2(0, h * 0.78, 0)[0], y + h * 0.78, P2(0, h * 0.78, 0)[2], w * 0.75, col);
-        if (e.lanca) { K.log(P2(w * 1.3, h * 0.05, 0), P2(w * 1.3, h * 1.1, 0), 0.05, dim(col, 0.7));
-          formDisc(K, P2(-w * 1.25, h * 0.42, w * 0.2), fr, w * 1.1, dim(col, 0.85), 12); }
-      });
+      const fr = [X.front[0], 0, X.front[1]], ac = [X.across[0], 0, X.across[1]];
+      const col = (c, f) => (f && f !== 1 ? dim(rgbOf(X.col(c)), f) : rgbOf(X.col(c)));
+      K.as('slab', () => { for (const p of G.Forma.figure(e)) {
+        if (p.k === 'caixa') K.para(X.pt(p.c[0], p.c[1], p.c[2]), [ac[0] * p.a, 0, ac[2] * p.a], [0, p.h, 0], [fr[0] * p.d, 0, fr[2] * p.d], col(p.cor, p.tom));
+        else if (p.k === 'bola') { const o = X.pt(p.c[0], p.c[1], p.c[2]); K.sph(o[0], o[1], o[2], p.r, col(p.cor, p.tom), p.ry); }
+        else if (p.k === 'haste') K.log(X.pt(p.a[0], p.a[1], p.a[2]), X.pt(p.b[0], p.b[1], p.b[2]), p.r, col(p.cor, p.tom));
+        else if (p.k === 'escudo') formDisc(K, X.pt(p.c[0], p.c[1], p.c[2]), fr, p.r, col(p.cor, p.tom), 12);
+        else if (p.k === 'espira') {
+          // (the tube winding up: a round bar from point to point of its line, twelve to a turn, its turns by the tones)
+          const N = p.voltas * 12, y0 = p.t0, y1 = p.h - p.t1; const at = j => { const f = j / N, a = Math.PI + f * p.voltas * TAU, R = p.R0 + (p.R1 - p.R0) * f;
+            return X.pt(p.c[0] + Math.cos(a) * R, p.c[1] + Math.sin(a) * R, p.c[2] + y0 + (y1 - y0) * f); };
+          for (let j = 0; j < N; j++) { const f = (j + 0.5) / N; K.log(at(j), at(j + 1), p.t0 + (p.t1 - p.t0) * f, col(p.cor, p.toms[Math.floor(f * p.voltas) % p.toms.length])); } }
+      } });
     },
     // a dragon's head at a gable's end: the carved neck rising from the ridge and curling out a hand, the head at its end — the
     // god's thin line and its round, kept over the lot (the gable is at its edge)
@@ -1687,6 +1691,62 @@ float m3scale(float p) {
     braseiro(K, e, X) {
       const p = X.pt(e.p[0], e.p[1], e.p[2]); K.as('iron', () => { K.cyl(p[0], p[1], p[2], 0.07, 0.55, '#4a3a2a'); K.sph(p[0], p[1] + 0.62, p[2], e.r, '#5a4030', e.r * 0.45); });
       K.as('soil', () => K.sph(p[0], p[1] + 0.72, p[2], e.r * 0.75, [226, 98, 40], e.r * 0.2)); // (the embers)
+    },
+    // a round shaft standing alone: sixteen faces from its foot to its top, and its top; the frieze winding up it — a band
+    // standing out a finger, the shaft's stone a little darker — from espiral.y0, a turn every espiral.passo
+    coluna(K, e, X) {
+      const C = X.XZ(e.c[0], e.c[1]), y0 = X.foot(e.y0), y1 = X.Y(e.y1), r = e.r, N = 16; const col = X.col(e.cor[0]);
+      const p = (a, rr, y) => [C[0] + Math.cos(a) * rr, y, C[1] + Math.sin(a) * rr];
+      K.as(X.mat(e, 'marble'), () => { for (let k = 0; k < N; k++) { const a0 = k / N * TAU, a1 = (k + 1) / N * TAU, am = (a0 + a1) / 2;
+        K.quad(p(a0, r, y0), p(a1, r, y0), p(a1, r, y1), p(a0, r, y1), col, [Math.cos(am), 0, Math.sin(am)]); K.tri([C[0], y1, C[1]], p(a0, r, y1), p(a1, r, y1), col, UP); } });
+      const sp = e.espiral; if (!sp) return;
+      const ya = X.Y(sp.y0), yb = y1 - sp.w, rr = r + 0.03, hw = sp.w / 2; const fc = dim(rgbOf(col), 0.8); const n = Math.ceil((yb - ya) / sp.passo * N);
+      K.as(X.mat(e, 'marble'), () => { for (let k = 0; k < n; k++) { const t0 = k / N, t1 = (k + 1) / N; const a0 = t0 * TAU, a1 = t1 * TAU, am = (a0 + a1) / 2;
+        const ya0 = ya + t0 * sp.passo, ya1 = Math.min(yb, ya + t1 * sp.passo); if (ya0 >= yb) break;
+        K.quad(p(a0, rr, ya0 - hw), p(a1, rr, ya1 - hw), p(a1, rr, ya1 + hw), p(a0, rr, ya0 + hw), fc, [Math.cos(am), 0, Math.sin(am)]); } });
+    },
+    // a standing stone: its four faces from its foot (half side e) to its top (e1), its top falling from its front corner on
+    // the right toward the left and the back; the serpent carved down its front — a red band a hair out of the face, curling
+    // from a fifth of its height to four fifths, as wide across the face as the face lets it
+    pedra(K, e, X) {
+      const y0 = X.foot(e.y0); const S = [[-1, 1], [1, 1], [1, -1], [-1, -1]]; // (the corners: front-left, front-right, back-right, back-left)
+      const top = q => X.Y(e.y1 - (1 - q[0]) / 2 * e.cai[0] - (1 - q[1]) / 2 * e.cai[1]);
+      const lo = S.map(q => { const a = X.XZ(e.c[0] + q[0] * e.e, e.c[1] + q[1] * e.e); return [a[0], y0, a[1]]; });
+      const hi = S.map(q => { const a = X.XZ(e.c[0] + q[0] * e.e1, e.c[1] + q[1] * e.e1); return [a[0], top(q), a[1]]; });
+      const outs = [[X.front[0], 0, X.front[1]], [X.across[0], 0, X.across[1]], [-X.front[0], 0, -X.front[1]], [-X.across[0], 0, -X.across[1]]];
+      K.as('rock', () => { for (let k = 0; k < 4; k++) { const q = (k + 1) % 4; K.quad(lo[k], lo[q], hi[q], hi[k], X.col(k === 1 ? e.cor[1] : e.cor[0]), outs[k]); }
+        K.quad(hi[0], hi[1], hi[2], hi[3], X.col(e.cor[0]), UP); });
+      if (!e.cobra) return;
+      // (the band in the face's own measure: s across it from -1 to 1, f up it from its foot to its top)
+      const h = e.y1 - e.y0; const face = (s2, f) => { const half = e.e + (e.e1 - e.e) * f; return X.pt(e.c[0] + s2 * half, e.c[1] + half + 0.02, e.y0 + f * h); };
+      const B = [[-0.55, 0.2], [0.75, 0.38], [-0.75, 0.62], [0.3, 0.8]]; const bz = t => [0, 1].map(i => (1 - t) ** 3 * B[0][i] + 3 * (1 - t) ** 2 * t * B[1][i] + 3 * (1 - t) * t * t * B[2][i] + t ** 3 * B[3][i]);
+      const n = 14, hw = 0.07; const fc = X.col(e.cobra); const nn = [X.front[0], 0, X.front[1]];
+      K.as('stucco', () => { for (let j = 0; j < n; j++) { const a = bz(j / n), b2 = bz((j + 1) / n); const A = face(a[0], a[1]), Bq = face(b2[0], b2[1]);
+        const dx = Bq[0] - A[0], dy = Bq[1] - A[1], dz = Bq[2] - A[2]; const l = Math.hypot(dx, dy, dz) || 1;
+        // (across the band: in the face, square to its run)
+        const w = [(dy * nn[2] - dz * nn[1]) / l * hw, (dz * nn[0] - dx * nn[2]) / l * hw, (dx * nn[1] - dy * nn[0]) / l * hw];
+        K.quad([A[0] - w[0], A[1] - w[1], A[2] - w[2]], [Bq[0] - w[0], Bq[1] - w[1], Bq[2] - w[2]], [Bq[0] + w[0], Bq[1] + w[1], Bq[2] + w[2]], [A[0] + w[0], A[1] + w[1], A[2] + w[2]], fc, nn); } });
+    },
+    // a stone wheel standing on its edge, facing the front: its rim, its two faces, and on the front one the painted rings
+    // and the rays between them, each a hair out of it
+    roda(K, e, X) {
+      const N = 32; const fr = [X.front[0], 0, X.front[1]], ac = [X.across[0], 0, X.across[1]]; const C = X.pt(e.c[0], e.c[1], e.y); const t2 = e.t / 2;
+      const P = (a, rr, d) => [C[0] + ac[0] * Math.cos(a) * rr + fr[0] * d, C[1] + Math.sin(a) * rr, C[2] + ac[2] * Math.cos(a) * rr + fr[2] * d];
+      const rim = X.col(e.cor[0]), face = X.col(e.cor[1]); const back = [-fr[0], 0, -fr[2]];
+      K.as(X.mat(e, 'stone'), () => { for (let k = 0; k < N; k++) { const a0 = k / N * TAU, a1 = (k + 1) / N * TAU, am = (a0 + a1) / 2;
+        K.quad(P(a0, e.r, -t2), P(a1, e.r, -t2), P(a1, e.r, t2), P(a0, e.r, t2), rim, [ac[0] * Math.cos(am), Math.sin(am), ac[2] * Math.cos(am)]);
+        K.tri(P(0, 0, t2), P(a0, e.r, t2), P(a1, e.r, t2), face, fr); K.tri(P(0, 0, -t2), P(a0, e.r, -t2), P(a1, e.r, -t2), rim, back); } });
+      const hw = (e.larg || 0.09) * e.r / 2;
+      K.as('stucco', () => {
+        for (const [f, c] of e.aneis || []) { const r0 = f * e.r - hw, r1 = f * e.r + hw;
+          for (let k = 0; k < N; k++) { const a0 = k / N * TAU, a1 = (k + 1) / N * TAU; K.quad(P(a0, r0, t2 + 0.01), P(a1, r0, t2 + 0.01), P(a1, r1, t2 + 0.01), P(a0, r1, t2 + 0.01), X.col(c), fr); } }
+        const ry = e.raios; if (ry) for (let k = 0; k < ry.n; k++) { const a = k / ry.n * TAU; K.tri(P(a, ry.r0 * e.r, t2 + 0.012), P(a + ry.a, ry.r1 * e.r, t2 + 0.012), P(a - ry.a, ry.r1 * e.r, t2 + 0.012), X.col(ry.cor), fr); }
+      });
+    },
+    // the flower beds: a handful of blooms in the god's colours round each point, on the floor
+    flores(K, e, X) {
+      e.pts.forEach((q, j) => { for (let k = 0; k < 6; k++) { const o = X.pt(q[0] + Math.cos(k + j) * e.r, q[1] + Math.sin((k + j) * 1.7) * e.r * 0.6, e.y);
+        K.sph(o[0], o[1] + 0.1, o[2], 0.13, X.col(e.cor[(k + j) % e.cor.length])); } });
     },
   };
   // a building's form, built: every element in order (the god's own, back to front), the generic plinth not under it
@@ -1728,6 +1788,7 @@ float m3scale(float p) {
       else if (m.k === 'telhado') { const ov = m.ov || 0; const a = W(m.r[0] - ov, m.r[1] - ov, 0), b2 = W(m.r[2] + ov, m.r[3] + ov, 0); const x0 = Math.min(a[0], b2[0]), x1 = Math.max(a[0], b2[0]), z0 = Math.min(a[2], b2[2]), z1 = Math.max(a[2], b2[2]);
         const along = m.ao === 'u' ? G.Forma.dirLot(side, 1, 0) : G.Forma.dirLot(side, 0, 1); const ax = Math.abs(along[0]) > 0.5;
         g.put(SH.gable, R3.mat((x0 + x1) / 2, hi + m.y0, (z0 + z1) / 2, ax ? 0 : Math.PI / 2, ax ? x1 - x0 : z1 - z0, m.y1 - m.y0, ax ? z1 - z0 : x1 - x0), col(m.cor)); }
+      else if (m.k === 'tronco') for (const f of G.Forma.faces(m)) { const o = G.Forma.dirLot(side, f.n[0], f.n[1]); tri(W(...f.p[0]), W(...f.p[1]), W(...f.p[2]), cc, [o[0], f.n[2], o[1]]); }
     }
     g.pat = 0;
   }
@@ -1782,16 +1843,15 @@ float m3scale(float p) {
       // (the pediment and its roof of tiles)
       K.as('tile', () => roofOf(K, K.w / 2, K.d / 2, K.w - 1.6, K.d - 1.6, 1.3 + hh, 'gable', P.roof));
     },
+    // the monument of each people and the golden statue, from their forms (G.Forma): the obelisk, the god's statue, the
+    // triumphal column, the Sun Stone, the rune stones; the god in gold on his column — the god's own, in metres
     monument(g, gw, K) {
-      const P = K.P; if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, 3, 3, 6); return; }
-      // (the north raises rune stones, not needles: a tall one, two lesser ones turned toward it)
-      if (K.st === 'nordico' && runeStone(K, K.w / 2, K.d / 2 - 0.4, 0, 1.3)) { runeStone(K, K.w / 2 - 2.1, K.d / 2 + 1.3, 0.5, 0.8); runeStone(K, K.w / 2 + 2.1, K.d / 2 + 1.3, -0.5, 0.85); return; }
-      K.box(K.w / 2, 0, K.d / 2, 3.4, 1, 3.4, P.base ? P.base[0] : '#8a8478');
-      g.put(SH.cone, R3.mat(K.x0 + K.w / 2, K.y0 + 1, K.z0 + K.d / 2, Math.PI / 4, 2.2, 12, 2.2), K.c(P.wl)); // (an obelisk: a needle of stone)
+      if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, 3, 3, 6); return; }
+      formInto(g, gw, K, G.Forma.of('monument', styleOf(K.b)), doorSide(K.b));
     },
     estatua(g, gw, K) {
-      const P = K.P; K.box(K.w / 2, 0, K.d / 2, 2.2, 2, 2.2, P.base ? P.base[0] : '#8a8478');
-      const s = '#d8d4c8'; K.box(K.w / 2, 2, K.d / 2, 0.8, 2.4, 0.5, s); K.sph(K.w / 2, 4.75, K.d / 2, 0.42, s); K.box(K.w / 2 + 0.55, 3.5, K.d / 2, 0.25, 1.4, 0.25, s);
+      if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, 2.2, 2.2, 3); return; }
+      formInto(g, gw, K, G.Forma.of('estatua', styleOf(K.b)), doorSide(K.b));
     },
     // the wonder of each people, from its form (G.Forma): the Colosseum, the Great Pyramid, the Templo Mayor, the Acropolis,
     // Valhalla, the ziggurat — the god's own, in metres (L-260, L-261)
