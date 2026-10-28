@@ -56,8 +56,8 @@
     rx: {
       tijolo: { k: 'tijolo', n: 12, in: 'argila', pit: 1, name: 'tijolos', st: [
         { id: 'argila', kind: 'busca', n: 6, name: 'juntando argila' },
-        { id: 'amassar', kind: 'mao', anim: 'amassar', use: 'amassar', take: 1, to: 'massa', give: 1, name: 'amassando o barro' },
-        { id: 'moldar', kind: 'mao', anim: 'moldar', use: 'moldar', from: 'massa', take: 1, to: 'cru', give: 2, name: 'moldando' },
+        { id: 'amassar', kind: 'mao', anim: 'amassar', use: 'trabalhar', take: 1, to: 'massa', give: 1, name: 'amassando o barro' },
+        { id: 'moldar', kind: 'mao', anim: 'moldar', use: 'trabalhar', from: 'massa', take: 1, to: 'cru', give: 2, name: 'moldando' },
         { id: 'secar', kind: 'espera', wait: 60, sun: 1, name: 'secando ao sol' },
         { id: 'enfornar', kind: 'mao', anim: 'enfornar', use: 'cozer', from: 'cru', take: 4, to: 'forno', kiln: 1, name: 'enfornando' },
         { id: 'queimar', kind: 'fogo', fire: 60, fuel: 4, burn: 16, kiln: 1, name: 'no fogo' },
@@ -66,10 +66,10 @@
       ] },
       adobe: { k: 'adobe', n: 12, in: 'argila', pit: 1, name: 'adobes', st: [
         { id: 'argila', kind: 'busca', n: 6, name: 'juntando argila' },
-        { id: 'amassar', kind: 'mao', anim: 'amassar', use: 'amassar', take: 1, to: 'massa', give: 1, name: 'amassando o barro' },
-        { id: 'moldar', kind: 'mao', anim: 'moldar', use: 'moldar', from: 'massa', take: 1, to: 'cru', give: 2, name: 'moldando' },
+        { id: 'amassar', kind: 'mao', anim: 'amassar', use: 'trabalhar', take: 1, to: 'massa', give: 1, name: 'amassando o barro' },
+        { id: 'moldar', kind: 'mao', anim: 'moldar', use: 'trabalhar', from: 'massa', take: 1, to: 'cru', give: 2, name: 'moldando' },
         { id: 'secar', kind: 'espera', wait: 100, sun: 1, name: 'secando ao sol' },
-        { id: 'empilhar', kind: 'mao', anim: 'empilhar', use: 'moldar', from: 'cru', take: 4, make: 1, brk: 0.04, name: 'contando os adobes' },
+        { id: 'empilhar', kind: 'mao', anim: 'empilhar', use: 'trabalhar', from: 'cru', take: 4, make: 1, brk: 0.04, name: 'contando os adobes' },
       ] },
       ceramica: { k: 'ceramica', n: 8, in: 'argila', pit: 1, name: 'potes', st: [
         { id: 'argila', kind: 'busca', n: 8, name: 'juntando argila' },

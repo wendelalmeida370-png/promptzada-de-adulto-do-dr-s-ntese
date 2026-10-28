@@ -48,9 +48,9 @@
   // the town's beer or pulque, brewed from the grain on the tavern's shelf — bought by its keeper: nothing is fetched for it
   const vat = (k, name) => ({ k, n: 3, in: 'food', shelf: 1, name, st: [
     { id: 'grao', kind: 'busca', n: 2, name: 'esperando o grão' },
-    { id: 'macerar', kind: 'mao', anim: 'amassar', use: 'cuba', take: 1, to: 'massa', give: 1.5, name: 'o grão de molho' },
+    { id: 'macerar', kind: 'mao', anim: 'amassar', use: 'mexer', take: 1, to: 'massa', give: 1.5, name: 'o grão de molho' },
     { id: 'fermentar', kind: 'espera', wait: 100, name: 'fermentando na cuba' },
-    { id: 'encher', kind: 'mao', anim: 'encher', use: 'cuba', from: 'massa', take: 1.5, make: 1, brk: 0, name: 'enchendo os jarros' },
+    { id: 'encher', kind: 'mao', anim: 'encher', use: 'mexer', from: 'massa', take: 1.5, make: 1, brk: 0, name: 'enchendo os jarros' },
   ] });
   O.def('taverna', {
     b: 'taverna', role: 'taverneiro', name: 'Taverna', keep: 1, own: 1,
