@@ -986,7 +986,7 @@
         if (G.VR() < dt * 1.3) G.FX.spawn({ x: cx + G.vrr(-0.1, 0.1), y: cy + G.vrr(-0.1, 0.1), z: 10, vz: G.vrr(12, 22), vx: wx * 0.6, vy: wy * 0.6, life: G.vrr(2, 3.5), s0: 3, s1: 9, c: 'rgba(150,150,150,0.3)', k: 2 });
         if (G.VR() < dt * 2.2) G.FX.spawn({ x: cx, y: cy, z: 5, vz: G.vrr(20, 45), vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.3, 0.3), life: G.vrr(0.6, 1.4), s0: 0.9, s1: 0.2, c: '#ffc060', k: 4, layer: 1 });
       } else if (SMOKE[b.type] && (KILN[b.type] || b.type === 'banhos' || G.VR() < 0.5 + night)) {
-        const spr = G.Art.building(b.type, b.v, b.style, b.wd);
+        const spr = homeSprite(b, false) || G.Art.building(b.type, b.v, b.style, b.wd); // (the chimney of the picture drawn)
         const steam = b.type === 'banhos';
         if (spr && spr.fires.length && G.VR() < dt * (KILN[b.type] ? 1.2 : steam ? 1.4 : 0.55 + night * 0.5)) {
           const h = W.groundH(cx, cy);
@@ -1066,7 +1066,7 @@
     const t = R.time;
     const cam = R.cam;
     // process dirty tiles/chunks (bounded work per frame; big maps: visible chunks first)
-    frameNo++;
+    frameNo++; homeMs = 0;
     updateSpin(dt);
     const zPx = cam.zoom * dpr, wantHi = !bigMap || (zPx > LRS * 1.05 && visCount <= HI_CAP);
     let nVis = 0;
@@ -2465,6 +2465,25 @@
   }
   const penBack = b => R.rectEdges(b.x + 0.05, b.y + 0.05, b.x + b.w - 0.05, b.y + b.h - 0.05).back;
   const penFront = b => R.rectEdges(b.x + 0.05, b.y + 0.05, b.x + b.w - 0.05, b.y + b.h - 0.05).front;
+  // ---- a home's picture from its shell (Arch.home, D-082): the shell asked for within a share of each frame — Interiors.
+  // shellOf, from the record alone (a tenth of a ms, tens in the worst block), never the plan —, and its picture painted
+  // within the same share; the picture of before until then. Kept by building while its record is the same: the shell, and
+  // the picture for each side the world is seen from (the quarter: the sprite is mirrored on the side views) ----
+  let homeMemo = new Map(); G.worldHooks.push(() => { homeMemo = new Map(); });
+  let homeMs = 0; const HOME_MS = 2; // (the share of a frame, ms)
+  R.quarter = () => (mirOver >= 0 ? mirOver : rot) & 3;
+  function homeSprite(b, make) {
+    const A = G.Arch, In = G.Interiors; if (!A.homeOn || !A.HOMES[b.type] || !b.ip || !In || !In.shellOf || !In.keyOf) return null;
+    const key = In.keyOf(b); if (!key) return null; const q = R.quarter();
+    let e = homeMemo.get(b.id); if (e && e.key !== key) e = null;
+    if (!e) { if (!make || homeMs >= HOME_MS) return null; const t0 = now(); e = { key, s: In.shellOf(b), k: [] }; homeMs += now() - t0; homeMemo.set(b.id, e); }
+    if (!e.s) return null;
+    if (e.k[q] === undefined) { if (!make || homeMs >= HOME_MS) return null; const t0 = now(); e.k[q] = A.homeKey(b, e.s, q); homeMs += now() - t0; }
+    const k = e.k[q]; if (!k) return null;
+    const spr = A.homePic(k.key); if (spr || !make || homeMs >= HOME_MS) return spr;
+    const t0 = now(); const p = A.homePaint(b, k); homeMs += now() - t0; return p;
+  }
+  R.homeSprite = b => homeSprite(b, false); // (for the proofs: the picture a home has now, or null)
   function drawBuilding(b, sx, sy, t, nightF) {
     const S = G.S; const Art = G.Art;
     const def = G.BDEF[b.type];
@@ -2486,7 +2505,7 @@
     if (b.type === 'ruin') { drawRuin(b, sx, sy, t); return; }
     if (b.type === 'cercado') { if (b.built) penStakes(b, penFront(b), 1); else { penStakes(b, penFront(b), b.progress); overlays.push(b, sx, sy - 14); } return; }
     if (!b.built) { drawSite(b, sx, sy, t); if (burning) emisFire.push(sx, sy - 8, 1); return; }
-    const spr = Art.building(b.type, b.v, b.style, b.wd);
+    const spr = homeSprite(b, true) || Art.building(b.type, b.v, b.style, b.wd);
     if (!spr) return;
     // storehouse piles
     if (b.type === 'storehouse' && !b.style) drawPiles(b, sx, sy);

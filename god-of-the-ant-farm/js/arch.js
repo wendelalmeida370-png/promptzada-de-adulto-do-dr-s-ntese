@@ -1044,21 +1044,32 @@
   // the sprite of a home drawn from its shell, for the view's quarter q — or null (not a home, no shell: the drawing of
   // before). Kept by what it draws — two homes with the same numbers share one picture —, the last few hundred
   const HOMES = A.HOMES = { hut: 1, house: 1, sobrado: 1, insula: 1 };
-  const homePics = new Map(); A.HOMEPICS = 600;
-  A.homeClear = () => homePics.clear();
-  A.home = function (b, s, q) {
+  // (the god's view draws its homes from their shells once their plans follow the god's typology — the yard, the storeys, the
+  // people's roof, the round hut: P4's B2c, D-082; until then the drawing of before)
+  A.homeOn = false;
+  // (each home's windows and door are its plan's own, so nearly every home has a picture of its own: a city of 150 homes
+  // asks ~25 MB a side of the view — kept up to A.HOMEMB, the least lately drawn let go and painted again when seen)
+  const homePics = new Map(); let homeBytes = 0; A.HOMEMB = 48;
+  A.homeClear = () => { homePics.clear(); homeBytes = 0; };
+  // (what a home's picture is known by, for the view's quarter q: the numbers it is drawn from — or null)
+  A.homeKey = function (b, s, q) {
     if (!b || !HOMES[b.type] || !s) return null; const H = A.homeGeo(b, s, q); if (!H) return null;
     const st = PAL[b.style] ? b.style : 'classico'; const v = b.v || 0;
-    const key = b.type + st + (b.type === 'house' && st === 'classico' ? v % 3 : '') + JSON.stringify(H);
-    let spr = homePics.get(key); if (spr) { homePics.delete(key); homePics.set(key, spr); return spr; }
+    return { key: b.type + st + (b.type === 'house' && st === 'classico' ? v % 3 : '') + JSON.stringify(H), H, st, v };
+  };
+  A.homePic = key => { const spr = homePics.get(key); if (spr) { homePics.delete(key); homePics.set(key, spr); } return spr || null; };
+  A.homePaint = function (b, k) {
+    let spr = A.homePic(k.key); if (spr) return spr; const H = k.H;
     const top = Math.max(MAXZ[b.type] || 64, H.eave + (H.roof.rise || 0) + (H.roof.room ? H.roof.room.h + 4 : 0) + 16);
     const [w, h, ax, ay] = dims(b.w, b.h, top); const cv = document.createElement('canvas'); const K = 3; // (painted at 3×, as Art's sprites)
     cv.width = Math.max(1, Math.ceil(w * K)); cv.height = Math.max(1, Math.ceil(h * K)); const c = cv.getContext('2d'); c.scale(K, K); c.translate(ax, ay); c.lineJoin = 'round'; c.lineCap = 'round';
-    const meta = { win: [], fires: [], glow: [] }; homeDraw(c, meta, pal(st), st, v, H, b.type);
-    spr = { c: cv, w, h, ax, ay, win: meta.win, fires: meta.fires, glow: meta.glow, H };
-    homePics.set(key, spr); if (homePics.size > A.HOMEPICS) homePics.delete(homePics.keys().next().value);
+    const meta = { win: [], fires: [], glow: [] }; homeDraw(c, meta, pal(k.st), k.st, k.v, H, b.type);
+    spr = { c: cv, w, h, ax, ay, win: meta.win, fires: meta.fires, glow: meta.glow, H, bytes: cv.width * cv.height * 4 * 4 / 3 };
+    homePics.set(k.key, spr); homeBytes += spr.bytes;
+    while (homeBytes > A.HOMEMB * 1048576 && homePics.size > 1) { const [k0, s0] = homePics.entries().next().value; homePics.delete(k0); homeBytes -= s0.bytes; }
     return spr;
   };
+  A.home = function (b, s, q) { const k = A.homeKey(b, s, q); return k ? A.homePaint(b, k) : null; };
 
   // ------------------------------ dispatch ------------------------------
   const MAXZ = { quarteirao: 84, hut: 30, house: 40, sobrado: 52, insula: 64, temple: 64, monument: 72, storehouse: 44, workshop: 46, quartel: 44, torre: 54, praca: 44, mercado: 38, celeiro: 44, biblioteca: 44, teatro: 56, banhos: 50, palacio: 72, doca: 36, aqueduto: 36, maravilha: 100 };
