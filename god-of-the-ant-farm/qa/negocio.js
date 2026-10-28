@@ -423,7 +423,14 @@ function stallNow() {
   if (m.carry) { const bd = A.boundOf(m.carry); G.Vg.endTask(m); G.Vg.setTask(m, { type: 'carga', to: bd && bd !== 'op' ? bd : 'f:' + G.Fac.idOfV(m), pri: 1, st: 0 }); fine(90, held(t12, () => !m.carry || watch())); }
   start = sw12 + told(calm12, rest12);
   roomOn(z, 'food', 8); // (room on the stall for what the body buys)
-  const tk = G.Possess.take(m); M.viver(0.2);
+  // (the god takes him as a player clicks again, each tenth of a second up to 5 s: on his way, the world's step may cut the
+  // corner of a house, and the take says no for that instant. With the final worlds Heráclito stood 0,05 inside the corner
+  // of a sobrado on his way to the store — «não está em chão firme» —, the case went on without the body, set out the stall
+  // by the god's hand on him and stood him at the counter, and every buyer waited for a seller who was not there, T-213)
+  let tk = G.Possess.take(m), took12 = 1; const no12 = tk.ok ? '' : tk.why;
+  for (; !tk.ok && took12 < 50; took12++) { M.viver(0.1); tk = G.Possess.take(m); }
+  M.viver(0.2);
+  if (!tk.ok) { ok('n12 o corpo é o mercador', false, `o deus NÃO tomou ${m.name} em 5 s: ${tk.why}`); } else {
   // (to the store's door, wholesale; to the stall, set it out; open)
   const d = G.Village.nearestDropoff(m.x, m.y, m.set); const [dx, dy] = G.Village.frontTile(d); m.x = dx; m.y = dy; M.viver(0.2);
   const ow = A.offers(m, m.x, m.y, 2).find(o => o.act === 'atacado' && o.biz === z.id);
@@ -453,7 +460,8 @@ function stallNow() {
   const paid = D.ledger().filter(e => e[0] > L12 && e[4] === payer && e[5] === 'moedas' && e[8] === 'venda').reduce((s, e) => s + e[6], 0);
   G.Possess.release('deus'); M.viver(0.2);
   ok('n12 o corpo é o mercador', tk.ok && r1.ok && r2_.ok && r3.ok && sold && z.day.n > n0 && paid > 0 && !bad().length,
-    `${m.name} pelo deus: ${r1.ok ? r1.msg : r1.why} · ${r2_.ok ? r2_.msg : r2_.why} · ${r3.ok ? r3.msg : r3.why}; ${v ? v.name : 'ninguém'} veio e ${z.day.n > n0 ? `comprou: ${r2(paid)} ${B.money(fac.id).plural} da venda na casa do corpo, pelo livro (a casa: ${r2(c0)} → ${r2(c1)})` : 'NÃO comprou (' + why12 + ')'}`);
+    `${m.name} pelo deus${took12 > 1 ? ` (tomado na ${took12}ª vez; na primeira: «${no12}»)` : ''}: ${r1.ok ? r1.msg : r1.why} · ${r2_.ok ? r2_.msg : r2_.why} · ${r3.ok ? r3.msg : r3.why}; ${v ? v.name : 'ninguém'} veio e ${z.day.n > n0 ? `comprou: ${r2(paid)} ${B.money(fac.id).plural} da venda na casa do corpo, pelo livro (a casa: ${r2(c0)} → ${r2(c1)})` : 'NÃO comprou (' + why12 + ')'}`);
+  }
 }
 // ---------------- n13: the god's body buys at someone else's stall, and haggles
 {
