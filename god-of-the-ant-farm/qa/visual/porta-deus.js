@@ -39,6 +39,7 @@ ok('as faces da porta', !bad.length, bad.length ? bad.join(' · ') : `${n} casos
 // of houses keeps its houses' doors: Render.doorView leaves it as it is)
 const SEM_PORTA = {
   mercado: 'as bancas abertas', feira: 'o chão da feira, numa camada própria', quarteirao: 'as casas do bloco, cada uma com a sua porta',
+  praca: 'o chão aberto da praça (a planta do P4 pela forma): entra-se de todo lado, não há porta',
   'storehouse/egipcio': 'os silos de cúpula', 'celeiro/egipcio': 'os silos de cúpula', 'celeiro/asteca': 'os silos de barro',
   'banhos/egipcio': 'o lago sagrado', 'banhos/classico': 'as termas: as janelas em arco e a cúpula', 'banhos/grego': 'as termas', 'banhos/romano': 'as termas',
   'palacio/classico': 'a frente de colunas', 'palacio/grego': 'a frente de colunas', 'palacio/romano': 'a frente de colunas', 'palacio/asteca': 'o pórtico de colunas',

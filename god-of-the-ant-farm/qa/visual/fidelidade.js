@@ -67,8 +67,9 @@ function verdict(cn, cf) {
 // the library, the administration, the tax office and the smugglers' market from theirs — Phase E; 150 with the square — D-093;
 // 138 with the mine and the well — D-092; 120 with the silk house, the salting yard and the divers' house from theirs; 118 with
 // the pens and the salt pans measured, the same mass — their rows move the ids of the types after them: the Aztecs' tavern and
-// two great palaces ≈ by theirs, the Roman paço ≠)
-const TETO = 118;
+// two great palaces ≈ by theirs, the Roman paço ≠; 104 with the homes in the god's typology and the tavern's yard — P4's B2c
+// and B2d: the Aztecs' and the Norse's house, the sobrado and the ínsula of four peoples ≈, the tavern ≈ in all six)
+const TETO = 104;
 
 // ------------------------------ the round ------------------------------
 // (the kinds the god paints in a layer of its own, not as a building's picture: what its hooks paint for a building is recorded
