@@ -63,13 +63,18 @@ function verdict(cn, cf) {
 // their form, counted apart since — B3; 174 with the monuments and the golden statue from theirs — D1; 168 with the jail
 // drawn by the god from its shell — L-265; 166 with the theatres from their forms; 156 with the watchtower, the aqueduct,
 // the library, the administration, the tax office and the smugglers' market from theirs — Phase E; 150 with the square — D-093;
-// 138 with the mine and the well — D-092; 120 with the silk house, the salting yard and the divers' house from theirs)
-const TETO = 120;
+// 138 with the mine and the well — D-092; 120 with the silk house, the salting yard and the divers' house from theirs; 118 with
+// the pens and the salt pans measured, the same mass — their rows move the ids of the types after them: the Aztecs' tavern and
+// two great palaces ≈ by theirs, the Roman paço ≠)
+const TETO = 118;
 
 // ------------------------------ the round ------------------------------
-// (the kinds the god paints in a layer of its own, not as a building's picture — the ground of the fields and of the farm,
-// the fences of the pens and of the graveyard, the campfire, the ruin, the fair's ground: compared elsewhere, T-150)
-const OWN_LAYER = { campfire: 1, farm: 1, cemetery: 1, cercado: 1, ruin: 1, curral: 1, estabulo: 1, feira: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, salina: 1, horta: 1 };
+// (the kinds the god paints in a layer of its own, not as a building's picture: what its hooks paint for a building is recorded
+// with the picture now — F.layer, T-150 —, and the pens and the pans of salt are compared as the rest. Still apart: what grows
+// in the fields and the apiary — the plants as the world grows them, which the empty world here has not sown —, the fair —
+// its stalls the god's, its plan P4's: D-093 —, and what render.js paints itself — the farm, the graveyard, the fenced field,
+// the campfire, the ruin)
+const OWN_LAYER = { campfire: 1, farm: 1, cemetery: 1, cercado: 1, ruin: 1, feira: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, horta: 1 };
 const FORMA = G.Forma || null; // (js/forma.js: the form of a type and a people, or null — the shell is its form)
 // (a hole: a picture of which more than half a percent only the backs of faces cover — the rest is a sliver between two
 // pieces, a stone's edge; L-271 was 1–2% of every Egyptian building)
@@ -85,7 +90,7 @@ for (const type of Object.keys(G.BDEF)) {
     const b = F.put(type, style, id);
     try {
       const god = F.god(b);
-      if (god.none && OWN_LAYER[type]) { other.add(type); continue; }
+      if (OWN_LAYER[type]) { other.add(type); continue; }
       const near = F.near(b), far = F.far(b);
       const mk = F.gridFor(god, near, far); const lot = [b.w, b.h];
       const Rg = F.paintGod(god, mk()), Rn = F.paint3D(near, mk()), Rf = F.paint3D(far, mk());
@@ -114,7 +119,7 @@ const types = [...new Set([...per.keys()].map(k => k.split('/')[0]))];
 console.log('\n' + 'tipo'.padEnd(18) + POVOS.map(s => s.slice(0, 7).padStart(9)).join('') + '   (a massa; F: com forma, conferida contra ela)');
 const count = { '=': 0, '≈': 0, '≠': 0 };
 for (const t of types) console.log((t + (formed.has(t) ? ' F' : '')).padEnd(18) + POVOS.map(s => { const r = per.get(t + '/' + s); if (!r) return '        -'; count[r.v]++; return (r.v + (r.forma && !r.forma.ok ? '!' : ' ')).padStart(9); }).join(''));
-if (other.size) console.log(`desenhados pelo deus numa camada própria (o chão, as cercas, a fogueira, a ruína — fora desta prova, T-150): ${[...other].join(', ')}`);
+if (other.size) console.log(`desenhados pelo deus numa camada própria e ainda fora desta prova (T-150: o que cresce nos campos e no apiário, a feira da planta do P4, e o que o render.js pinta sozinho — a fazenda, o cemitério, a cerca, a fogueira, a ruína): ${[...other].join(', ')}`);
 console.log(`\n${count['=']} com a mesma massa, ${count['≈']} a mesma massa com perdas, ${count['≠']} outra massa (de ${per.size} tipos e povos; ${rows.length} prédios em ${((clock() - t0) / 1000).toFixed(1)} s)`);
 if (process.env.VERB) for (const r of per.values()) if (r.v !== '=' || (r.forma && !r.forma.ok)) console.log(`   ${r.v} ${r.type}/${r.style}${r.fam ? ' (' + r.fam + ')' : ''}: ${r.why.join(', ')}${r.forma && !r.forma.ok ? ' · forma: ' + r.forma.why.join(', ') : ''}`);
 

@@ -860,6 +860,57 @@
   for (const st of ['classico', 'grego', 'romano', 'egipcio', 'asteca', 'nordico']) { def('sericultura', st, silk(st)); def('salga', st, salting(st)); }
   def('perolaria', 'classico', divers);
 
+  // ------------------------------ the pens (cityart.js: the paddock, the stable, the shelter) ------------------------------
+  // the fence round a pen as the god draws it on its ground and among the beasts (cityart.js rail and drawRailSeg; T-150): the
+  // lot less 0.05 tiles round, each side in as many bays as it has tiles, a post of 1.4 by 7.2 px at each end of a bay, the two
+  // rails at 3 and 5.6 px; the gate the middle bay of the front, its brace across. from: how far along each side, from its back
+  // end, a building stands on it (the fence runs from there); col: the rails' colour and the posts'
+  function penFence(L, from, col) {
+    const a = 0.05 * TILE, b = L - a, n = Math.max(1, Math.round((b - a) / TILE)); const els = []; const seen = new Set();
+    const post = (u, v) => { const k = u.toFixed(2) + ',' + v.toFixed(2); if (seen.has(k)) return; seen.add(k); els.push({ k: 'bloco', r: [u - 0.09, v - 0.09, u + 0.09, v + 0.09], y0: 0, y1: px(7.2), cor: [col[1], col[1], col[1]], mat: 'beam' }); };
+    const bay = (p0, p1, gate) => { for (const z of [3, 5.6]) els.push({ k: 'tora', a: [p0[0], p0[1], px(z)], b: [p1[0], p1[1], px(z)], r: 0.08, cor: col[0], mat: 'beam' }); if (gate) els.push({ k: 'tora', a: [p0[0], p0[1], px(5.6)], b: [p1[0], p1[1], px(3)], r: 0.04, cor: col[1], mat: 'beam' }); };
+    // (a side from its back end to its front: its bays where the fence stands, its posts)
+    const side = (P, s0, gate) => { for (let k = 0; k < n; k++) { const t0 = a + (b - a) * k / n, t1 = a + (b - a) * (k + 1) / n; if (t1 <= s0 + 1e-6) continue; bay(P(Math.max(t0, s0)), P(t1), gate && k === Math.floor(n / 2)); }
+      for (let k = 0; k <= n; k++) { const t = a + (b - a) * k / n; if (t >= s0 - 1e-6) post(...P(t)); } };
+    side(t => [t, b], 0, true); side(t => [a, t], (from && from.esquerda) || 0); side(t => [b, t], (from && from.direita) || 0); side(t => [t, a], (from && from.fundo) || 0);
+    return els;
+  }
+  // (the trough of a pen, as the god lays it on the ground of both: three metres of planks along the yard's right, its water)
+  const troughF = L => { const tu = L - 0.45 * TILE, tv = L / 2; return [{ k: 'bloco', r: [tu - 2, tv - 0.25, tu + 1, tv + 0.25], y0: 0, y1: 0.53, cor: ['#6a4a2c', '#5a3c22', '#6a4a2c'], mat: 'plankH' }, { k: 'lamina', r: [tu - 1.9, tv - 0.17, tu + 0.9, tv + 0.17], y: 0.54, cor: '#5aaed0' }]; }; // (the water over the planks' top: seen)
+  // the stable (economy.js estabulo): its paddock fenced round, and along its back the god's long low stable — 2.9 × 0.85 tiles,
+  // its footing of 1 px, its walls to 11 px (the Norse's of their palette), the five stalls open to the yard with their half
+  // doors, the window at its right end, the people's roof (the Norse's turf, rh 9; the Egyptian's and the Aztec's flat with its
+  // parapet; the others' gable, rh 8) —; the trough at the right of the yard
+  const stable = st => L => {
+    const A0 = (x, y) => [L / 2 + x * TILE, 0.5 * TILE + y * TILE]; const x0 = -1.45, x1 = 1.45, y0 = -0.45, y1 = 0.4;
+    const r = [A0(x0, y0)[0], A0(x0, y0)[1], A0(x1, y1)[0], A0(x1, y1)[1]];
+    const wood = st === 'nordico' ? ['wl', 'wr', 'top'] : ['#9a7a52', '#7a5c3a', '#9a7a52'];
+    const els = [{ k: 'bloco', r: r.slice(), y0: 0, y1: px(1), cor: BASE }, { k: 'bloco', r: r.slice(), y0: px(1), y1: px(11), cor: wood, mat: st === 'nordico' ? 'parede' : 'plankV', tabuas: st === 'nordico' ? 6 : 0 }];
+    for (let k = 0; k < 5; k++) { const a = x0 + 0.12 + k * 0.57; const u0 = A0(a, 0)[0], u1 = A0(a + 0.4, 0)[0];
+      els.push({ k: 'janelas', na: 'frente', em: r[3], de: u0, ate: u1, y0: px(1), y1: px(8), n: 0, tinta: '#2a1e14' }, { k: 'placa', v: r[3] + 0.02, u: (u0 + u1) / 2, w: u1 - u0, y0: px(4), y1: px(4.6), cor: '#8a6a44' }); }
+    els.push({ k: 'janelas', na: 'direita', em: r[2], de: A0(0, -0.1)[1], ate: A0(0, 0.1)[1], y0: px(5), y1: px(8), n: 0 });
+    const rf = st === 'nordico' ? { kind: 'turf', rh: 9 } : st === 'egipcio' || st === 'asteca' ? { par: 1 } : { rh: 8 };
+    els.push(...roofF(L, st, x0, (r[1] - L / 2) / TILE, x1, (r[3] - L / 2) / TILE, 11, rf).els);
+    els.push(...penFence(L, { esquerda: r[3], direita: r[3], fundo: L }, ['#7a5634', '#5a3c22']));
+    els.push(...troughF(L));
+    return { els };
+  };
+  // the pen for the flocks (curral): its fence round, and in its back left corner the god's shelter — four posts of 9 px, its
+  // back wall of planks, the roof of boards from 12 px at the back down to 8 at the front with its edge, the hay under it —; the
+  // trough at the right of the yard
+  const fold = st => L => {
+    const A0 = (x, y) => [0.5 * TILE + x * TILE, 0.5 * TILE + y * TILE]; const P = (x, y, z) => { const q = A0(x, y); return [q[0], q[1], px(z)]; };
+    const rc = st === 'nordico' ? '#5a7631' : st === 'egipcio' || st === 'asteca' ? '#caa85c' : 'roof0', re = st === 'nordico' ? '#44591f' : st === 'egipcio' || st === 'asteca' ? '#987e45' : 'roof1';
+    const els = [...[[-0.45, -0.45], [0.35, -0.45], [-0.45, 0.35], [0.35, 0.35]].map(([x, y]) => { const q = A0(x, y); return { k: 'bloco', r: [q[0] - 0.12, q[1] - 0.12, q[0] + 0.12, q[1] + 0.12], y0: 0, y1: px(9), cor: WOOD, mat: 'beam' }; }),
+      (() => { const a = A0(-0.45, -0.48), b2 = A0(0.35, -0.42); return { k: 'bloco', r: [a[0], a[1], b2[0], b2[1]], y0: 0, y1: px(9), cor: ['#8a6a44', '#6a4e30', '#8a6a44'], mat: 'plankV' }; })(),
+      { k: 'pano', p: [P(-0.55, -0.55, 12), P(0.45, -0.55, 12), P(0.45, 0.45, 8), P(-0.55, 0.45, 8)], cor: rc, mat: st === 'nordico' ? 'turf' : 'shingle', grosso: 0.06 },
+      (() => { const a = A0(-0.55, 0.45), b2 = A0(0.45, 0.45); return { k: 'bloco', r: [a[0], a[1] - 0.05, b2[0], b2[1]], y0: px(7.2), y1: px(8), cor: [re, re, re] }; })(),
+      ...[0, 1, 2].map(k => { const q = A0(-0.3 + k * 0.2, -0.3); return { k: 'bloco', r: [q[0] - 0.36, q[1] - 0.26, q[0] + 0.36, q[1] + 0.26], y0: 0, y1: 0.45, cor: ['#d8b862', '#b8984a', '#e8c872'], mat: 'thatch' }; }),
+      ...penFence(L, null, ['#8a6440', '#6a4a2c']), ...troughF(L)];
+    return { els };
+  };
+  for (const st of ['classico', 'grego', 'romano', 'egipcio', 'asteca', 'nordico']) { def('estabulo', st, stable(st)); def('curral', st, fold(st)); }
+
   // ------------------------------ the statues' figures ------------------------------
   // the parts of a statue (estatua), in the canonical frame — what the 3D builds, and what its far figure and its height
   // keep (the god paints the figure flat; these are its solids, as wide seen from the god's corner):

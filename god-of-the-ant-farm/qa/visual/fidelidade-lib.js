@@ -65,6 +65,8 @@ const toSrgb = v => (v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) -
 // ------------------------------ the god's picture, recorded ------------------------------
 // a 2D context that paints nothing and writes down what would be painted: each fill as its polygons (the curves cut in
 // short lines, the transform applied) and its colour with the alpha; each stroke as its segments, its width and colour
+// (the canvases painted into a recorder while the god's picture is made — a sprite drawn into another is laid in by drawImage)
+const PAINTED = new WeakMap();
 function recorder() {
   const ops = []; let path = [], cur = null, start = null; let M = [1, 0, 0, 1, 0, 0]; const stack = [];
   const st = { fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, globalAlpha: 1 };
@@ -107,7 +109,15 @@ function recorder() {
       if (segs.length) ops.push({ f: 0, segs, w, col: [col[0], col[1], col[2], col[3] * st.globalAlpha] }); },
     fillRect(x, y, w, h) { const col = parseCol(st.fillStyle); if (!col) return; ops.push({ f: 1, polys: [[tp(x, y), tp(x + w, y), tp(x + w, y + h), tp(x, y + h)]], col: [col[0], col[1], col[2], col[3] * st.globalAlpha] }); },
     strokeRect(x, y, w, h) { const col = parseCol(st.strokeStyle); if (!col) return; const P = [tp(x, y), tp(x + w, y), tp(x + w, y + h), tp(x, y + h)]; ops.push({ f: 0, segs: [[P[0], P[1]], [P[1], P[2]], [P[2], P[3]], [P[3], P[0]]], w: st.lineWidth * scaleOf(), col: [col[0], col[1], col[2], col[3] * st.globalAlpha] }); },
-    clearRect() { }, fillText() { }, strokeText() { }, drawImage() { }, setLineDash() { }, clip() { },
+    clearRect() { }, fillText() { }, strokeText() { }, setLineDash() { }, clip() { },
+    // (a picture drawn into this one — a sprite the god's layer puts down, Art.draw —: its own painting, recorded when it was
+    // made, laid in where it is drawn)
+    drawImage(img, dx, dy, dw, dh) {
+      const R2 = PAINTED.get(img); if (!R2 || !img.width || !img.height) return; const sx = (dw === undefined ? img.width : dw) / img.width, sy = (dh === undefined ? img.height : dh) / img.height;
+      const map = p => tp(dx + p[0] * sx, dy + p[1] * sy); const k = Math.sqrt(Math.abs(sx * sy)) * scaleOf();
+      const ga = st.globalAlpha; const cl = c => [c[0], c[1], c[2], c[3] * ga]; // (the picture laid in through this one's own alpha)
+      for (const o of R2.ops) ops.push(o.f ? { f: 1, col: cl(o.col), polys: o.polys.map(P => P.map(map)) } : { f: 0, col: cl(o.col), w: o.w * k, segs: o.segs.map(s => [map(s[0]), map(s[1])]) });
+    },
     measureText: () => ({ width: 0 }),
     createLinearGradient() { const g = { stops: [], addColorStop(o, cc) { g.stops.push(cc); } }; return g; },
     createRadialGradient() { const g = { stops: [], addColorStop(o, cc) { g.stops.push(cc); } }; return g; },
@@ -128,7 +138,11 @@ F.god = function (b, o) {
   const shell = o.shell !== undefined ? o.shell : A.fromShell && A.fromShell(b.type) && b.ip && G.Interiors ? G.Interiors.shellOf(b) : undefined;
   try { Art.clear(); if (A.homeClear) A.homeClear(); spr = shell !== undefined ? (shell && A.home ? A.home(b, shell, o.q || 0) : null) : Art.building(b.type, b.v, b.style, b.wd, o.noDoor); } finally { global.document = doc0; void keep; }
   if (A.homeClear) A.homeClear();
-  if (!spr || !rec) return { ops: [], none: true };
+  // (what the god paints for it in a layer of its own — its ground, its fences, what stands in it: T-150 —, under the picture
+  // and among the people as the view sorts them: the open grounds, whose picture that layer is — a tavern's lamp at night, a
+  // festival's banner, are the hour's and the world's, not the building)
+  const own = o.layer === false || !F.LAYERED[b.type] ? [] : F.layer(b);
+  if (!spr || !rec) return own.length ? { ops: own, spr: null, layer: own.length } : { ops: [], none: true };
   // (the recorder's frame is the canvas's: scale(3) then translate(ax, ay) — back to the god's pixels from the anchor)
   const un = p => [p[0] / 3 - spr.ax, p[1] / 3 - spr.ay];
   const ops = rec.ops.map(o => o.f ? { f: 1, col: o.col, polys: o.polys.map(P => P.map(un)) } : { f: 0, col: o.col, w: o.w / 3, segs: o.segs.map(s => [un(s[0]), un(s[1])]) });
@@ -137,7 +151,34 @@ F.god = function (b, o) {
   if (b.type === 'praca' && A.plazaColor) { const P = (dx, dy) => [(dx - dy) * 16, (dx + dy) * 8]; const hw = b.w / 2 - 0.02, hh = b.h / 2 - 0.02; const c = parseCol(A.plazaColor(b.style));
     ops.unshift({ f: 1, col: [c[0], c[1], c[2], c[3]], polys: [[P(-hw, -hh), P(hw, -hh), P(hw, hh), P(-hw, hh)]] }); }
   Art.clear(); // (the game's sprites are painted again on demand: nothing of the recorder stays in the cache)
-  return { ops, spr: { w: spr.w, h: spr.h, ax: spr.ax, ay: spr.ay } };
+  return { ops: own.concat(ops), spr: { w: spr.w, h: spr.h, ax: spr.ax, ay: spr.ay }, layer: own.length };
+};
+// the god's own layer of a building (T-150): what the game paints for it on the ground under the pictures — the hooks of the
+// ground (G.renderHooks.ground: the pens' earth and their back fences, the fair's ground, the fields' soil and their rows, the
+// pans of salt) — and what it sorts among the people (G.renderHooks.ents: the fences before them, the shelter, the stable, the
+// stalls, the plants, the skeps, the heaps), as the view paints them, with the building alone in the world: in the god's
+// pixels from its anchor, the middle of the lot on its highest ground. Its ops, in the order they are painted
+F.LAYERED = { curral: 1, estabulo: 1, feira: 1, salina: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, horta: 1 };
+F.layer = function (b) {
+  const H = G.renderHooks; if (!H) return []; const Art = G.Art, W = G.W, HS = (G.Render && G.Render.HS) || 4;
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2, h0 = W.maxH(b.x, b.y, b.w, b.h);
+  const proj = (x, y, h) => [(x - cx - (y - cy)) * 16, (x - cx + y - cy) * 8 - (h - h0) * HS];
+  const doc0 = global.document; const R = recorder(); const c = R.c; const VIEW = [-1e9, -1e9, 1e9, 1e9];
+  const diamond = (x0, y0, x1, y1, lift) => { const l = lift || 0; const P = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => proj(x, y, W.hAt(x, y) + l)); c.beginPath(); c.moveTo(...P[0]); for (let k = 1; k < 4; k++) c.lineTo(...P[k]); c.closePath(); };
+  // (a sprite the layer draws — the stable, a stall — is painted into a recorder of its own and laid in where it is drawn)
+  global.document = new Proxy(doc0, { get(t, k) { if (k === 'createElement') return tag => { if (tag !== 'canvas') return doc0.createElement(tag); const R2 = recorder(); const cv = { width: 0, height: 0, getContext: () => R2.c }; R2.c.canvas = cv; PAINTED.set(cv, R2); return cv; }; return t[k]; } });
+  try {
+    Art.clear();
+    for (const h of H.ground) h(c, proj, VIEW, 0, 0, diamond, null);
+    // (a fill of the ground seen through — the trampled earth of a pen, the fair's ground, the soil of a field — tints the land, which
+    // the 3D draws as the land itself, not the building: no mass of it)
+    for (let k = R.ops.length - 1; k >= 0; k--) if (R.ops[k].f && R.ops[k].col[3] < 0.999) R.ops.splice(k, 1);
+    const list = []; const add = (d, e, x, y, hh) => list.push({ d, e, p: proj(x, y, hh === undefined ? W.groundH(x, y) : hh) });
+    for (const h of H.ents) h(add, VIEW, 1.6);
+    list.sort((a, b2) => a.d - b2.d);
+    for (const it of list) if (it.e && it.e.fn && it.e.b === b) it.e.fn(c, it.e, it.p[0], it.p[1], 0, 0, null);
+  } finally { global.document = doc0; Art.clear(); }
+  return R.ops;
 };
 
 // ------------------------------ the 3D, projected by the camera of the descent ------------------------------
@@ -227,10 +268,13 @@ F.planCheck = function (b, Fm, pic, side) {
   // its sheets laid flat: a roof of boards, a cloth)
   const roofs = Fm.els.filter(e => e.k === 'telhado').map(e => ({ k: 'rect', r: [e.r[0] - (e.ov || 0), e.r[1] - (e.ov || 0), e.r[2] + (e.ov || 0), e.r[3] + (e.ov || 0)] }));
   const sheets = Fm.els.filter(e => e.k === 'pano').map(e => ({ k: 'poly', p: e.p.map(q => [q[0], q[1]]) }));
+  // (and its logs lying across — a fence's rails, a beam —, as wide from above as they are thick: a post standing is its circle)
+  const logs = Fm.els.filter(e => e.k === 'tora').map(e => ({ k: 'seg', a: [e.a[0], e.a[1]], b: [e.b[0], e.b[1]], r: e.r }));
+  const segD = (f, x, y) => { const dx = f.b[0] - f.a[0], dy = f.b[1] - f.a[1], l2 = dx * dx + dy * dy; const t = l2 ? Math.max(0, Math.min(1, ((x - f.a[0]) * dx + (y - f.a[1]) * dy) / l2)) : 0; return Math.hypot(x - f.a[0] - t * dx, y - f.a[1] - t * dy); };
   const inPoly = (P, x, y) => { let inside = false; for (let a = 0, b2 = P.length - 1; a < P.length; b2 = a++) { const [xa, ya] = P[a], [xb, yb] = P[b2]; if ((ya > y) !== (yb > y) && x < (xb - xa) * (y - ya) / (yb - ya) + xa) inside = !inside; } return inside; };
-  for (const f of [...Fo.foot(Fm), ...roofs, ...sheets]) for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+  for (const f of [...Fo.foot(Fm), ...roofs, ...sheets, ...logs]) for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const lx = (i + 0.5 - off) * S, lz = (j + 0.5 - off) * S; const c = Fo.toLot(side === 'S' ? 'S' : side === 'N' ? 'N' : side === 'E' ? 'W' : 'E', Fm.L, lx, lz); // (the lot back to the form's frame)
-    if (f.k === 'rect' ? c[0] >= f.r[0] && c[0] <= f.r[2] && c[1] >= f.r[1] && c[1] <= f.r[3] : f.k === 'poly' ? inPoly(f.p, c[0], c[1]) : Math.hypot(c[0] - f.c[0], c[1] - f.c[1]) <= f.r) B[j * n + i] = 1; }
+    if (f.k === 'rect' ? c[0] >= f.r[0] && c[0] <= f.r[2] && c[1] >= f.r[1] && c[1] <= f.r[3] : f.k === 'poly' ? inPoly(f.p, c[0], c[1]) : f.k === 'seg' ? segD(f, c[0], c[1]) <= f.r : Math.hypot(c[0] - f.c[0], c[1] - f.c[1]) <= f.r) B[j * n + i] = 1; }
   let inter = 0, uni = 0; for (let q = 0; q < n * n; q++) { if (A[q] && B[q]) inter++; if (A[q] || B[q]) uni++; }
   const hi = G.W.maxH(b.x, b.y, b.w, b.h) * G.Space.HM;
   return { iou: uni ? inter / uni : 1, top: top - hi, formTop: Fm.top };

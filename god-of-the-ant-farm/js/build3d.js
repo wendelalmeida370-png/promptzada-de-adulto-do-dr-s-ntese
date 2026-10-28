@@ -2090,9 +2090,24 @@ float m3scale(float p) {
     // the mine, from its form: the hill over the galleries filling the lot, the mouth at its foot, the rails and the cart in the
     // front corner (D-092) — the hill was there before the mine, going up as built
     mina(g, gw, K) { formInto(g, gw, K, G.Forma.of('mina', styleOf(K.b)), doorSide(K.b)); },
+    // the salt pans, as the god paints them on their ground: nine pans, a tile each, their low rims of clay, the brine in them
+    // white as the sun leaves its salt (the world's b.salt: read, never written — only seen), the heap raked in the middle of
+    // a pan where enough is left; on the ground, no plinth under them
+    salina(g, gw, K) {
+      K.footed = true; const L = K.L, salt = K.b.salt || []; const rim = [154, 138, 112];
+      for (let k = 0; k < 9; k++) {
+        const x0 = (k % 3) * L, z0 = Math.floor(k / 3) * L; const s = (salt[k] || 0) / 3; const a = 0.16, i = 0.48; // (the rim's outer and inner edges in from the tile's)
+        const gy = K.gy(x0 + L / 2, z0 + L / 2);
+        K.as('mud', () => { for (const [ux0, uz0, ux1, uz1] of [[a, a, L - a, i], [a, L - i, L - a, L - a], [a, i, i, L - i], [L - i, i, L - a, L - i]]) formBox(K, x0 + ux0, z0 + uz0, x0 + ux1, z0 + uz1, gy - 0.1, gy + 0.12, rim, dim(rim, 1.06)); });
+        const brine = mixc([120, 190, 215], [246, 246, 240], Math.min(1, s * 1.2));
+        K.as(s > 0.5 ? 'slab' : 'mud', () => K.quad([x0 + i, gy + 0.06, z0 + i], [x0 + L - i, gy + 0.06, z0 + i], [x0 + L - i, gy + 0.06, z0 + L - i], [x0 + i, gy + 0.06, z0 + L - i], brine, UP));
+        if ((salt[k] || 0) >= 1.6) { const h = (1.5 + ((salt[k] || 0) - 1.6) * 1.6) / G.Forma.ZPX; K.as('slab', () => K.cone(x0 + L / 2, gy + 0.06, z0 + L / 2, 0.53, h, [246, 246, 242])); }
+      }
+    },
     apiario(g, gw, K) { for (let k = 0; k < 4; k++) { const px = K.w * (0.25 + (k % 2) * 0.5), pz = K.d * (0.3 + Math.floor(k / 2) * 0.4); K.box(px, 0, pz, 0.15, 0.6, 0.15, '#6a4a2c'); K.box(px, 0.6, pz, 0.8, 0.7, 0.6, '#e8c870'); K.box(px, 1.3, pz, 0.95, 0.1, 0.75, '#8a6a44'); } },
-    curral(g, gw, K) { fenceAround(K, 1.3, '#8a6a44', true); },
-    estabulo(g, gw, K) { house(g, gw, K, { h: 3.4, inset: 0.6, wall: '#8a5a3a', pat: 'plankH' }); },
+    // the pens, from their forms: the fence round, the stable along the back, the shelter in its corner (as the god draws them)
+    curral(g, gw, K) { formInto(g, gw, K, G.Forma.of('curral', styleOf(K.b)), doorSide(K.b)); },
+    estabulo(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, 1.9, K.w - 0.6, 3.4, 3.6); return; } formInto(g, gw, K, G.Forma.of('estabulo', styleOf(K.b)), doorSide(K.b)); },
     cercado(g, gw, K) { fenceAround(K, 1.6, '#6a5a44', true); },
     farm(g, gw, K) { fields(K, '#d4ac44', '#6a9a3a'); },
     horta(g, gw, K) { fields(K, '#7aaa4a', '#4a8a2a', true); },
@@ -2391,7 +2406,7 @@ float m3scale(float p) {
     let s = 0; const fine = fineAt(x0, y0, n);
     // (and the trees about the steps its doors run on into the street: the steps go round a tree come, and back where it went —
     // Space.doorFlight, L-197)
-    for (const b of G.S.buildings.values()) { if (!inChunk(b, x0, y0, n)) continue; s = (s * 31 + b.id * 7 + (b.built ? 1 : 0) + Math.floor((b.progress || 0) * 5) * 3 + Math.floor((b.hp / (b.maxHp || 1)) * 4) * 11 + (b.crops ? b.crops.reduce((a, c) => a + c.s + Math.floor((c.g || 0) * 3), 0) : 0) * 13 + (b.graves ? b.graves.length : 0) * 17 + B3.shellSig(b) * 19 + G.Space.treeSig(b) * 37) | 0;
+    for (const b of G.S.buildings.values()) { if (!inChunk(b, x0, y0, n)) continue; s = (s * 31 + b.id * 7 + (b.built ? 1 : 0) + Math.floor((b.progress || 0) * 5) * 3 + Math.floor((b.hp / (b.maxHp || 1)) * 4) * 11 + (b.type === 'salina' && b.salt ? b.salt.reduce((a, q, k) => a + Math.floor(q * 2) * (k + 3), 0) * 13 : 0) + (b.crops ? b.crops.reduce((a, c) => a + c.s + Math.floor((c.g || 0) * 3), 0) : 0) * 13 + (b.graves ? b.graves.length : 0) * 17 + B3.shellSig(b) * 19 + G.Space.treeSig(b) * 37) | 0;
       // (a store's heaps are its people's stock: drawn again, where they are drawn — fine, in its yard —, when a count of them
       // changes; a store drawn from its plan has no yard: it shows its stock inside, in its keeping pieces — Build3D.fillOf)
       if (fine && b.built && G.Props3D && G.Props3D.shows && G.Props3D.shows(b) && !B3.shellOf(b)) { const p = G.Props3D.piles(b); s = (s * 7 + p[0] * 19 + p[1] * 23 + p[2] * 29) | 0; } }
@@ -2439,6 +2454,8 @@ float m3scale(float p) {
           for (const it of dk.items) { const ax = Math.abs(dk.across[0]) > 0.5; if (it.k === 'torre') g.put(SH.box, R3.mat(b.x * L + it.x, yt, b.y * L + it.z, 0, it.w, it.h, it.w), P.wl || '#efe2c4');
             else if (it.k === 'toldo') g.put(SH.box, R3.mat(b.x * L + it.x, yt + it.h1, b.y * L + it.z, 0, ax ? it.w : it.d, it.h - it.h1 + 0.05, ax ? it.d : it.w), '#e8e0c8'); } }
         g.pat = 0; continue; }
+      // (the salt pans from afar: their nine pans flat on the ground in the brine's colour, as the near picture lays them)
+      if (b.type === 'salina' && b.built) { const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L, Y = W.maxH(b.x, b.y, b.w, b.h) * HM(); g.pat = 0; g.put(SH.box, R3.mat(X, Y - 0.1, Z, 0, b.w * L - 0.32, 0.22, b.h * L - 0.32), [170, 196, 204]); continue; }
       const h = (HEIGHT[b.type] || 5) * (b.built ? 1 : 0.4); if (h < 1.5) continue;
       const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L, Y = W.maxH(b.x, b.y, b.w, b.h) * HM();
       const st = stuff(b); const flat = P.kind === 'flat';
