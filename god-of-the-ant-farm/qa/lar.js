@@ -416,10 +416,11 @@ if (want('l13')) {
 // ======================= l14: by day, the old mind the little ones at home =======================
 if (want('l14')) {
   open(); S.time = 0.12; // (the morning: 75 s of the day, before the evening at 0,6)
-  // (a house of the world with someone of 55 or more and little ones of three to six living in it; one of the old minds them)
-  const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 55 && !(v.sick > 0) && v.hp >= 50 && !isBody(v)) e.old.push(v); if (v.age >= 3 && v.age < 7) e.kids.push(v); houses.set(h.id, e); }
+  // (a house of the world with someone of 62 or more — whose working day weighs less than the minding — and little ones of
+  // three to six living in it; one of the old minds them)
+  const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v)) e.old.push(v); if (v.age >= 3 && v.age < 7) e.kids.push(v); houses.set(h.id, e); }
   const e = [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0];
-  if (!e) ok('l14 os velhos cuidam dos pequenos em casa', false, 'nenhuma casa com alguém de 55 anos ou mais e crianças de 3 a 6');
+  if (!e) ok('l14 os velhos cuidam dos pequenos em casa', false, 'nenhuma casa com alguém de 62 anos ou mais e crianças de 3 a 6');
   else {
     let h = e.h; const dw = doorWatch(); let minded = 0, kidsHome = 0, n = 0, txt = '', two = 0, reload = '', reloadOk = true; const exits = new Map();
     let died = null, after = '', afterOk = true;

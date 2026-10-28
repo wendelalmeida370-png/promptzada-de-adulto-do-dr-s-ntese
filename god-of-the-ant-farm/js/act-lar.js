@@ -120,7 +120,8 @@
     if (!homeOf(v) || (v.inside !== v.home && blocked(v))) return null;
     if (L.bedrest(v)) return { u: 1.1 + (v.hp < 60 ? 0.3 : 0), pri: PRI.acamado, why: 'acamado' };
     if (!night && L.grief(v)) return { u: 0.8, pri: PRI.luto, why: 'luto' };
-    if (!night && !G.isEvening() && L.minder(v)) return { u: 0.62, pri: PRI.cuidar, why: 'cuidar' };
+    // (the minding below a working day of one in their fifties, above an old one's: the smith of 58 keeps the forge)
+    if (!night && !G.isEvening() && L.minder(v)) return { u: 0.5, pri: PRI.cuidar, why: 'cuidar' };
     if (night && !L.sleepy(v)) return { u: 0.7, pri: 0.45, why: 'noite' };
     return null;
   };
