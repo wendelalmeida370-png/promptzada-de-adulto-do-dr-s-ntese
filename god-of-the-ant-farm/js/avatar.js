@@ -96,8 +96,10 @@
     for (const s of p.stairs) {
       if (s.kind === 'degraus' || s !== b.stairHit) continue; const along = wx * s.dir[0] + wz * s.dir[1]; const r = s.r, dx = s.dir[0], dz = s.dir[1];
       const mid = dx ? [(r[1] + r[3]) / 2] : [(r[0] + r[2]) / 2]; const at = t => (dx ? [(dx > 0 ? r[0] : r[2]) + dx * t, mid[0]] : [mid[0], (dz > 0 ? r[1] : r[3]) + dz * t]);
-      const len = dx ? r[2] - r[0] : r[3] - r[1]; const lad = s.kind === 'escada-de-mao'; const y0 = lvY(s.lv0), y1 = lvY(s.lv1);
-      const T = lad ? Math.abs(y1 - y0) / 0.55 : Math.hypot(len, y1 - y0) / Math.max(0.6, b.caps.walk * 0.55);
+      // (by its class, D-086: a ladder hand over hand; a steep stair climbed facing it, a hand on the steps, slower than a
+      // stair; a stair and steps at a walk — the class the plan gives it, the kind where an older plan has none)
+      const len = dx ? r[2] - r[0] : r[3] - r[1]; const cls = s.cls || (s.kind === 'escada-de-mao' ? 'mao' : 'escada'); const lad = cls === 'mao' || cls === 'ingreme'; const y0 = lvY(s.lv0), y1 = lvY(s.lv1);
+      const T = cls === 'mao' ? Math.abs(y1 - y0) / 0.55 : cls === 'ingreme' ? Math.abs(y1 - y0) / 0.45 + 0.4 : Math.hypot(len, y1 - y0) / Math.max(0.6, b.caps.walk * 0.55);
       const foot = at(0), top = at(len), land = [s.b[0], s.b[1]]; const W3 = (q, y) => [B.x * L + q[0], B.y * L + q[1], y];
       let P = null, lv = s.lv0;
       if (b.lv === s.lv0 && atFoot(s) && along > 0.4) { P = [[b.X, b.Z, b.Y], W3(foot, y0), W3(top, y1), W3(land, y1)]; lv = s.lv1; }
@@ -106,7 +108,7 @@
       // (the times along it: steps on the level at a walk, the flight in its own time)
       const wk = Math.max(0.5, b.caps.walk * 0.6); P[0][3] = 0;
       for (let k = 1; k < P.length; k++) { const flat = Math.abs(P[k][2] - P[k - 1][2]) < 0.05; P[k][3] = P[k - 1][3] + (flat ? Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]) / wk : T); }
-      b.flight = { P, T: P[P.length - 1][3], t: 0, lv, s: s.id, lad, up: lv === s.lv1, along: +along.toFixed(2), from: [+x.toFixed(2), +z.toFixed(2)] }; b.loco = 'stair'; Av.lastFlight = b.flight; b.yaw = Math.atan2(dz * (lv === s.lv1 ? 1 : -1), dx * (lv === s.lv1 ? 1 : -1)); b.vx = b.vz = 0;
+      b.flight = { P, T: P[P.length - 1][3], t: 0, lv, s: s.id, lad, up: lv === s.lv1, along: +along.toFixed(2), from: [+x.toFixed(2), +z.toFixed(2)] }; b.loco = 'stair'; Av.lastFlight = b.flight; { const f = lad || lv === s.lv1 ? 1 : -1; b.yaw = Math.atan2(dz * f, dx * f); } b.vx = b.vz = 0; // (down a ladder or a steep stair, facing it)
       return true;
     }
     return false;
@@ -309,7 +311,7 @@
     const running = IN.run && caps.run > 1 && b.stamina > 1 && wl > 0.2 && !IN.sneak;
     if (running) sp *= caps.run;
     if (IN.sneak || b.crawl) sp *= TUNE.sneak;
-    if (b.inShell && b.stair && b.stair.kind === 'escada-de-mao') sp *= 0.55; // (a ladder: hand over hand)
+    if (b.inShell && b.stair && (b.stair.cls ? b.stair.cls === 'mao' || b.stair.cls === 'ingreme' : b.stair.kind === 'escada-de-mao')) sp *= 0.55; // (a ladder, a steep stair: hand over hand)
     // (water to the shins slows a little, to the thighs a lot)
     if (b.wade > 0.05) sp *= Math.max(0.4, 1 - b.wade * TUNE.wadeDrag); else if (here.road) sp *= TUNE.road;
     if (v.energy < 8) sp *= 0.7; if (v.hunger >= 100) sp *= 0.8; if (v.carry && v.carry.n >= 4) sp *= 0.9;

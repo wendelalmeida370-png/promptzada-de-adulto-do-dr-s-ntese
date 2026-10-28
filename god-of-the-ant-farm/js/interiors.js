@@ -313,11 +313,12 @@
       return [id, nb, w];
     },
     // a flight between storeys: its footprint on lv0, the way up (du, dv); foot and top are where one stands to take it
-    stair(kind, lv0, lv1, r, du, dv, hole) {
+    // (o: what the recipe says of it — larga: the wide flight of a temple, steep as it may be: a choice, D-086)
+    stair(kind, lv0, lv1, r, du, dv, hole, o) {
       const id = this.stairs.length; const cu = (r[0] + r[2]) / 2, cv = (r[1] + r[3]) / 2;
       const len = du ? r[2] - r[0] : r[3] - r[1];
       const foot = [cu - du * (len / 2 + 0.4), cv - dv * (len / 2 + 0.4)], top = [cu + du * (len / 2 + 0.35), cv + dv * (len / 2 + 0.35)];
-      const s = { id, kind, lv0, lv1, r: r.slice(), dir: [du, dv], w: du ? r[3] - r[1] : r[2] - r[0], foot, top, hole: hole ? hole.slice() : null };
+      const s = { id, kind, lv0, lv1, r: r.slice(), dir: [du, dv], w: du ? r[3] - r[1] : r[2] - r[0], foot, top, hole: hole ? hole.slice() : null, larga: o && o.larga ? 1 : 0 };
       this.stairs.push(s); return s;
     },
     // the inner rectangle of the main shell (the walls' insides)
@@ -826,6 +827,16 @@
     const steps = P.stairs.filter(st => st.kind === 'degraus').map(st => ({ id: st.id, kind: st.kind, lv0: st.lv0, lv1: st.lv1, r: R(st.r), dir: dirLoc(s, st.dir[0], st.dir[1]), w: r2(st.w) }));
     return { shell, levels, walls, holes, steps, entrance, entryLv: P.entryLv || 0 };
   }
+  // a flight's slope and its class (D-086), from what it climbs over its length — steps from the ground outside (lv0 -1) from
+  // the ground, at 0: up to a house on stilts, down into a sunken floor —: 'degraus' to 45°, walked; 'escada' to 50°, walked;
+  // 'ingreme' to 70°, climbed facing it, a hand on the steps (the miller's stair of a house); 'mao' beyond, a ladder
+  const CLS = In.STAIR_CLS = [[45, 'degraus'], [50, 'escada'], [70, 'ingreme'], [91, 'mao']];
+  function slopeOf(P, st) {
+    const yOf = lv => (lv === -1 ? 0 : (P.levels.find(l => l.lv === lv) || { y: 0 }).y);
+    const len = st.dir[0] ? st.r[2] - st.r[0] : st.r[3] - st.r[1]; const rise = Math.abs(yOf(st.lv1) - yOf(st.lv0));
+    const a = Math.atan2(rise, Math.max(0.01, len)) * 180 / Math.PI; return { slope: Math.round(a * 10) / 10, cls: CLS.find(c => a <= c[0])[1], rise: r2(rise) };
+  }
+  In.slopeOf = slopeOf;
   // (a ruin's shell, as ruinOf makes a ruin of the plan: the ground storey, no roof, nothing open in walls broken low)
   const ruinWall = (b, w) => Object.assign({}, w, { h: r2(0.15 + G.hash(Math.imul(b.id, 31) + w.id) * 0.3), kind: 'ruina' });
   const ruinShell = (s, b) => Object.assign({}, s, { shell: Object.assign({}, s.shell, { roof: null, eave: 0.45, floors: 1 }), levels: s.levels.filter(l => l.lv === s.entryLv), walls: s.walls.filter(w => w.lv === s.entryLv).map(w => ruinWall(b, w)), holes: [], steps: [] });
@@ -848,7 +859,7 @@
       if (m.circ) { const c = loc(m.circ[0], m.circ[1]); o.circ = [c[0], c[1], r2(m.circ[2])]; o.poly = []; for (let q = 0; q < 16; q++) { const a = q / 16 * Math.PI * 2; o.poly.push([r2(c[0] + Math.cos(a) * m.circ[2]), r2(c[1] + Math.sin(a) * m.circ[2])]); } }
       return o;
     });
-    plan.stairs = P.stairs.map(st => ({ id: st.id, kind: st.kind, lv0: st.lv0, lv1: st.lv1, r: R(st.r), a: loc(st.foot[0], st.foot[1]), b: loc(st.top[0], st.top[1]), dir: dirLoc(s, st.dir[0], st.dir[1]), w: r2(st.w), hole: st.hole ? R(st.hole) : null }));
+    plan.stairs = P.stairs.map(st => Object.assign({ id: st.id, kind: st.kind, lv0: st.lv0, lv1: st.lv1, r: R(st.r), a: loc(st.foot[0], st.foot[1]), b: loc(st.top[0], st.top[1]), dir: dirLoc(s, st.dir[0], st.dir[1]), w: r2(st.w), hole: st.hole ? R(st.hole) : null, larga: st.larga || 0 }, slopeOf(P, st)));
     plan.items = P.items.map(it => {
       const r = R(it.r); const f = dirLoc(s, it.face[0], it.face[1]); const D = ITEMS[it.kind];
       const o = { id: P.b.id + ':' + it.k, k: it.k, kind: it.kind, name: D.name, room: it.room, lv: it.lv, x: r2((r[0] + r[2]) / 2), z: r2((r[1] + r[3]) / 2), y: r2(it.y || 0), ry: r2(Math.atan2(f[0], f[1])), w: r2(it.w), d: r2(it.d), h: r2(it.h), r, solid: D.low ? 0 : 1, low: D.low ? 1 : 0, places: it.places !== undefined ? it.places : (D.places || 0), job: D.job ? 1 : 0, fire: D.fire ? 1 : 0, niche: it.niche ? 1 : 0 };
@@ -1057,6 +1068,9 @@
     // doors wide enough, stairs between storeys that exist
     for (const d of plan.doors) if (d.w < 0.8 - 1e-6) E.push('porta estreita demais');
     for (const s of plan.stairs) if (s.kind !== 'degraus' && (!plan.levels.some(l => l.lv === s.lv0) || !plan.levels.some(l => l.lv === s.lv1))) E.push('escada para um pavimento que não existe');
+    // (the class against the kind, D-086: a stair steeper than 70° is a ladder — save the wide stair of a temple its recipe
+    // declares —, a ladder gentler than 50° a stair laid out as one)
+    for (const s of plan.stairs) { if (s.kind === 'escada' && s.cls === 'mao' && !s.larga) E.push(`escada de ${s.slope}°: é escada de mão`); if (s.kind === 'escada-de-mao' && (s.cls === 'degraus' || s.cls === 'escada')) E.push(`escada de mão de ${s.slope}°: é escada`); }
     // the holes as the walls show them: a window clear of the floors that cross its wall (a loft's, a gallery's) and, in an
     // outside wall, above the ground; a way through tall enough, and the way in from the floor before it (the street, the
     // porch on stilts): its threshold on that floor, its lintel high enough over it

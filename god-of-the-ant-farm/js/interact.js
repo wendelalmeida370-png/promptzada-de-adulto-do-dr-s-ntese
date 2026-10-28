@@ -311,7 +311,8 @@
       for (const s of G.Avatar.downs()) { const p = at(s, 0.9); out.push({ s, up: false, X: p[0], Z: p[1] }); }
       return out;
     },
-    label(ctx, t) { const lad = t.s.kind === 'escada-de-mao'; return t.up ? (lad ? 'Subir pela escada de mão' : 'Subir a escada') : (lad ? 'Descer pela escada de mão' : 'Descer a escada'); },
+    // (by the flight's class, D-086)
+    label(ctx, t) { const c = t.s.cls || (t.s.kind === 'escada-de-mao' ? 'mao' : 'escada'); const w = c === 'mao' ? 'pela escada de mão' : c === 'ingreme' ? 'a escada íngreme' : c === 'degraus' ? 'os degraus' : 'a escada'; return (t.up ? 'Subir ' : 'Descer ') + w; },
     can() { return { ok: true }; },
     run(ctx, t) { return (t.up ? G.Avatar.up(t.s.id) : G.Avatar.down(t.s.id)) ? { ok: true } : { ok: false, msg: 'Daqui não dá.' }; },
   });
