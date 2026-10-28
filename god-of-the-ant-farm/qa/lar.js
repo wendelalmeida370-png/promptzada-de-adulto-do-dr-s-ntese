@@ -15,7 +15,9 @@
 //  l7  o corpo encarnado em casa (o adendo 4.1): come à mesa o que a despensa tem e cozinha a ceia da casa, pelas mesmas
 //      portas e no livro; dorme em casa; devolvido, segue a vida dele — em casa pelo motivo dele, ou pela porta
 //  l12 o ferido fica de cama em casa e sara mais depressa; quem perde o companheiro passa as primeiras horas de luto em casa
-//  l14 de dia, um dos velhos da casa cuida dos pequenos (3 a 6 anos) em casa, e os pequenos ficam com ele, sem entrar e sair sem parar
+//  l14 de dia, um dos velhos da casa cuida dos pequenos (3 a 6 anos) em casa, e os pequenos ficam com ele, sem entrar e sair sem
+//      parar; um save no meio do dia; quem cuida morre no meio (outro velho assume, ou os pequenos voltam ao dia deles). Sem
+//      velho morando com pequenos numa cidade em paz, a mão da prova põe em 63 anos um adulto da casa que não é pai nem mãe deles
 //  l15 o bebê muda de colo onde está (D-074): em casa à noite, a mãe em fúria o passa ao pai ou a alguém da casa, ali; um
 //      save no meio; na rua, a quem está perto (sem pulo); sem ninguém perto, à mãe, ao pai ou a uma mulher da vila, onde
 //      estiverem (como antes); nunca ao corpo do jogador; a guerreira entre lutas só o dá a alguém da casa; e o corpo, pelas
@@ -421,26 +423,36 @@ if (want('l14')) {
   const afterMoves = () => { live(2 * S.settlements.size + 4); S.time = 0.12; };
   open(); afterMoves();
   // (a house of the world with someone of 62 or more — whose working day weighs less than the minding — and little ones of
-  // three to six living in it; one of the old minds them. A small town may have none: then the metropolis)
-  // (chosen after the day's moves of house — a house too full for its beds splits once a day, act-casa.js: the old one may
-  // move out, and the little ones are no longer hers)
-  const findHouse = () => { const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v)) e.old.push(v); if (v.age >= 3 && v.age < 7) e.kids.push(v); houses.set(h.id, e); } return [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0]; };
-  let e = findHouse(); let aged = null;
-  if (!e && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); afterMoves(); e = findHouse(); }
+  // three to six living in it; one of the old minds them. Chosen after the day's moves of house — a house too full for its
+  // beds splits once a day, act-casa.js: the old one may move out, and the little ones are no longer hers —, in a town at
+  // peace: a town under threat calls its grown ones to the fight, and the case would watch a battle)
+  const calm = h => !(G.War && G.War.threat && G.War.threat(h.set));
+  const findHouse = () => { const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive || !calm(h)) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v)) e.old.push(v); if (v.age >= 3 && v.age < 7) e.kids.push(v); houses.set(h.id, e); } return [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0]; };
   // (the ready worlds may have none after the day's moves — a full house splits, and the old one is often who leaves —: then
-  // the test's hand makes one of the house old for the case, a grown one who is not the little ones' mother or father —
-  // the age back at the end —, and the mechanism is what is proven: the old one minds them, they come home and stay)
-  if (!e) {
-    const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const x = houses.get(h.id) || { h, old: [], kids: [], grown: [] }; if (v.age >= 3 && v.age < 7) x.kids.push(v); else if (v.age >= 25 && v.age < 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v) && !v.secret) x.grown.push(v); houses.set(h.id, x); }
-    // (one with a partner in the same house: a single grown one of a house too full is sent to one with room every few
-    // seconds — village.js assignHousing —, and the case would watch someone else's house)
+  // the test's hand makes one of the house old for the case, a grown one who is not the little ones' mother or father, nor a
+  // warrior — the age back at the end —, and the mechanism is what is proven: the old one minds them, they come home and stay)
+  let aged = null;
+  const ageOne = () => {
+    const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive || !calm(h)) continue; const x = houses.get(h.id) || { h, old: [], kids: [], grown: [], n: 0 }; x.n++; if (v.age >= 3 && v.age < 7) x.kids.push(v); else if (v.age >= 25 && v.age < 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v) && !v.secret && v.role !== 'guerreiro' && !v.jail && !v.aboard) x.grown.push(v); houses.set(h.id, x); }
+    // (one who stays in the house through the case: a single grown one of a house too full is sent to one with room every
+    // few seconds — village.js assignHousing —, and the case would watch someone else's house. A partner in the same house
+    // keeps one there; so does a house with a bed to spare, even for a baby born in the case)
     const coupled = (g, h) => { const p = g.partner && S.villagers.get(g.partner); return !!p && p.home === h.id; };
-    const cand = [...houses.values()].filter(x => x.kids.length).map(x => Object.assign(x, { o: x.grown.filter(g => !x.kids.some(k => k.mother === g.id || k.father === g.id)).sort((a, b) => coupled(b, x.h) - coupled(a, x.h) || b.age - a.age || a.id - b.id)[0] })).filter(x => x.o).sort((a, b) => coupled(b.o, b.h) - coupled(a.o, a.h) || b.kids.length - a.kids.length || a.h.id - b.h.id)[0];
-    if (cand) { aged = [cand.o, cand.o.age]; cand.o.age = 63; cand.old = [cand.o]; e = cand; }
-  }
+    const stays = (g, x) => (coupled(g, x.h) ? 2 : 0) + (x.n < G.BDEF[x.h.type].housing ? 1 : 0);
+    const cand = [...houses.values()].filter(x => x.kids.length).map(x => Object.assign(x, { o: x.grown.filter(g => !x.kids.some(k => k.mother === g.id || k.father === g.id)).sort((a, b) => stays(b, x) - stays(a, x) || b.age - a.age || a.id - b.id)[0] })).filter(x => x.o).sort((a, b) => stays(b.o, b) - stays(a.o, a) || b.kids.length - a.kids.length || a.h.id - b.h.id)[0];
+    if (!cand) return null;
+    const st = stays(cand.o, cand); aged = [cand.o, cand.o.age, st >= 2 ? 'com o companheiro em casa' : st ? `numa casa com cama sobrando, ${cand.n} de ${G.BDEF[cand.h.type].housing}` : `só numa casa cheia, ${cand.n} de ${G.BDEF[cand.h.type].housing} — nenhuma melhor`];
+    cand.o.age = 63; cand.old = [cand.o]; return cand;
+  };
+  // (this world first — the small town is calm —, and only then the metropolis)
+  let e = findHouse() || ageOne();
+  if (!e && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); afterMoves(); e = findHouse() || ageOne(); }
   if (!e) ok('l14 os velhos cuidam dos pequenos em casa', false, 'nenhuma casa com alguém de 62 anos ou mais e crianças de 3 a 6, nem com um adulto da casa que não seja o pai ou a mãe delas');
   else {
-    let h = e.h; const dw = doorWatch(); let minded = 0, kidsHome = 0, n = 0, txt = '', two = 0, reload = '', reloadOk = true; const exits = new Map();
+    let h = e.h; const dw = doorWatch(); let minded = 0, n = 0, txt = '', two = 0, reload = '', reloadOk = true; const exits = new Map();
+    // (the little ones come home and stay: when each first came home while minded, and — from then on — how much of the
+    // minding it spent at home, awake; a little one far away takes a while to walk home)
+    const came = new Map(), stayIn = new Map(), stayAll = new Map();
     let died = null, after = '', afterOk = true;
     // (what the old of the house did, second by second, and why one was not minding — for the note when the case fails)
     const seq = []; const whyNot = new Map(); const kseq = new Map();
@@ -478,14 +490,20 @@ if (want('l14')) {
       }
       const ms = e.old.filter(o => o.task && o.task.type === 'lar' && o.task.what === 'cuidar' && o.inside === h.id); const m = ms[0];
       if (ms.length > 1) two++;
-      if (m) { minded++; if (!txt) txt = L.taskText(m, m.task); const k = e.kids.filter(o => o.inside === h.id && !o.sleeping).length; kidsHome += k; }
+      if (m) {
+        minded++; if (!txt) txt = L.taskText(m, m.task);
+        for (const c of e.kids) { const k = S.villagers.get(c.id); if (!k) continue; const inn = k.inside === h.id && !k.sleeping; if (inn && !came.has(c.id)) came.set(c.id, n); if (came.has(c.id)) { stayAll.set(c.id, (stayAll.get(c.id) || 0) + 1); if (inn) stayIn.set(c.id, (stayIn.get(c.id) || 0) + 1); } }
+      }
       for (const id of dw.out) if (e.kids.some(o => o.id === id)) exits.set(id, (exits.get(id) || 0) + 1);
       dw.out.length = 0;
     });
-    const avgKids = minded ? r2(kidsHome / minded) : 0; const loops = [...exits.values()].filter(x => x > 2).length;
+    const loops = [...exits.values()].filter(x => x > 2).length;
+    const sum = mp => [...mp.values()].reduce((a, b) => a + b, 0);
+    const stayed = sum(stayAll) ? sum(stayIn) / sum(stayAll) : 0; const first = came.size ? Math.min(...came.values()) : 0;
+    const kidsOk = came.size >= Math.ceil(e.kids.length / 2) && stayed >= 0.8;
     if (aged) { const o = S.villagers.get(aged[0].id); if (o) o.age = aged[1]; }
-    ok('l14 os velhos cuidam dos pequenos em casa', minded >= 200 && avgKids >= 1 && !loops && two <= 20 && reloadOk && afterOk && !!died && !dw.wrong.length,
-      `${h.type}#${h.id}: ${e.old.map(o => o.name).join(', ')} (${aged ? `${Math.floor(aged[1])} anos, posta em 63 pela mão da prova — os mundos prontos não têm, depois das mudanças do dia, velho morando com crianças pequenas` : e.old.map(o => Math.floor(o.age)).join(', ') + ' anos'}) e ${e.kids.length} criança(s) de 3 a 6; de dia, cuidando em casa ${r2(minded / 10)} s de 55 («${txt}»), com ${avgKids} criança(s) em casa em média${reload}${after}${died ? '' : '; aos 55 s, NINGUÉM CUIDANDO para morrer'}${two ? `; dois cuidando juntos ${r2(two / 10)} s` : ''}${loops ? `; ${loops} criança(s) ENTRANDO E SAINDO sem parar` : ''}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}${minded < 200 || avgKids < 1 ? ` — o que ${e.old[0].name} fez: ${seq.slice(0, 12).join(' → ')}; fora do cuidado: ${[...whyNot].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, c]) => `${k} ${c} s`).join(', ')}; as crianças: ${e.kids.map(c => `${c.name}: ${(kseq.get(c.id) || []).slice(0, 8).join(' → ')}`).join(' | ')}` : ''}`);
+    ok('l14 os velhos cuidam dos pequenos em casa', minded >= 200 && kidsOk && !loops && two <= 20 && reloadOk && afterOk && !!died && !dw.wrong.length,
+      `${h.type}#${h.id}: ${e.old.map(o => o.name).join(', ')} (${aged ? `${Math.floor(aged[1])} anos, posta em 63 pela mão da prova, ${aged[2]} — os mundos prontos não têm, depois das mudanças do dia, velho morando com crianças pequenas` : e.old.map(o => Math.floor(o.age)).join(', ') + ' anos'}) e ${e.kids.length} criança(s) de 3 a 6; de dia, cuidando em casa ${r2(minded / 10)} s de 55 («${txt}»), ${came.size} de ${e.kids.length} criança(s) vieram para casa${came.size ? ` (a primeira aos ${r2(first / 10)} s) e ficaram em casa ${Math.round(stayed * 100)}% do cuidado dali em diante` : ''}${reload}${after}${died ? '' : '; aos 55 s, NINGUÉM CUIDANDO para morrer'}${two ? `; dois cuidando juntos ${r2(two / 10)} s` : ''}${loops ? `; ${loops} criança(s) ENTRANDO E SAINDO sem parar` : ''}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}${minded < 200 || !kidsOk ? ` — o que ${e.old[0].name} fez: ${seq.slice(0, 12).join(' → ')}; fora do cuidado: ${[...whyNot].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, c]) => `${k} ${c} s`).join(', ')}; as crianças: ${e.kids.map(c => `${c.name}: ${(kseq.get(c.id) || []).slice(0, 8).join(' → ')}`).join(' | ')}` : ''}`);
   }
 }
 
