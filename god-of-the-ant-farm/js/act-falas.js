@@ -58,6 +58,13 @@
       // a people without coin: exchange, not price
       troca_preco: ['{bem}? Troco por {preco}.', 'Dou {bem} por {preco}.'],
       troca_pechinchar: ['{preco} é muito. Te dou {oferta}.', 'Aceita {oferta} em troca?'],
+      // the tavern (act-taverna.js)
+      pedir_taverna: ['Me vê {bem}!', '{bem}, por favor.', 'Hoje eu quero {bem}.'],
+      servir_taverna: ['Aqui está: {bem}.', 'Saindo {bem}! Bom proveito.', '{bem}, como pediu.'],
+      acabou: ['Acabou {bem}! Só amanhã.', 'Hoje não tem mais {bem}, amigo.'],
+      cheia: ['Está lotado! Volte mais tarde.', 'Não cabe mais ninguém hoje.'],
+      fechando: ['Vamos fechar! Todo mundo para casa.', 'Última rodada já foi. Boa noite a todos!'],
+      sem_servico: ['Ninguém vem servir... vou embora.', 'Cansei de esperar.'],
     },
     grego: {
       pregao: ['Olha o {bem}! Melhor que o de Corinto!', '{bem} da ágora! Quem vai querer?'],
@@ -74,6 +81,8 @@
       conferido: ['O escriba pode anotar: {got}. Tudo certo.', 'Contado e certo: {got}.'],
     },
     nordico: {
+      pedir_taverna: ['Mais {bem}, taverneiro!', 'Enche o meu corno: {bem}!'],
+      fechando: ['Fora, todos! O salão fecha.', 'Chega de hidromel por hoje. Para casa!'],
       pedir_ajuda: ['Ei! Uma mão nesta caixa de {bem}, que pesa como um touro.', 'Preciso de outro braço aqui!'],
       pregao: ['{bem}! Pesado na balança, honesto no preço!', 'Olha o {bem}, trazido pelo mar!'],
       preco: ['{bem}? {preco}, pesadas na balança.', '{preco}. Pode pesar.'],

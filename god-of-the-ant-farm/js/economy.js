@@ -354,7 +354,7 @@
       case 'mineiro': return H.setTask(v, { type: 'minejob', id: b.id, pri: 1 });
       case 'mercador': return G.Biz && b.type === 'mercado' ? G.Biz.task(v, b, f, H) : merchantTask(v, b, f, H); // (a stall of one's own: act-negocio.js)
       case 'feirante': return fairTask(v, b, f, H);
-      case 'taverneiro': return tavernTask(v, b, f, H);
+      case 'taverneiro': return G.Taverna ? G.Taverna.task(v, b, f, H) : null; // (the keeper's day: act-taverna.js)
       case 'escriba': return H.setTask(v, { type: 'desk', id: b.id, pri: 1, dur: G.rr(14, 24) });
       case 'cobrador': return collectorTask(v, b, f, H);
       case 'contrabandista': return smugglerTask(v, b, f, H);
@@ -456,11 +456,6 @@
     if (low.length && G.R() < 0.5) return H.setTask(v, { type: 'restock', id: b.id, k: low[Math.floor(G.R() * low.length)], pri: 1 });
     return H.setTask(v, { type: 'sell', id: b.id, pri: 1, dur: G.rr(16, 26), fair: true });
   }
-  function tavernTask(v, b, f, H) {
-    const I = inv(b);
-    if ((I.food || 0) < 6 && f.stock.food >= 16) return H.setTask(v, { type: 'restock', id: b.id, k: 'food', pri: 1 });
-    return H.setTask(v, { type: 'serve', id: b.id, pri: 1, dur: G.rr(16, 26) });
-  }
   function collectorTask(v, b, f, H) {
     const S = G.S;
     // gold becomes coin at the treasury
@@ -527,7 +522,6 @@
       case 'taxes': return runTaxes(v, t, dt, H), true;
       case 'steal': return runSteal(v, t, dt, H), true;
       case 'shop': return runShop(v, t, dt, H), true;
-      case 'tavern': return runTavernVisit(v, t, dt, H), true;
       case 'guard': return runGuard(v, t, dt, H), true;
       case 'goHome': return runGoHome(v, t, dt, H), true;
     }
@@ -761,7 +755,7 @@
       const n = Math.min(t.k === 'food' ? 8 : 6, Math.floor(f.stock[t.k] || 0));
       if (n <= 0) return H.end(v);
       // merchants buy wholesale from the state stores (no coin, no goods: the store gives nothing away)
-      if (E.coinage(f.id) && b.type !== 'feira' && b.type !== 'taverna') { const cost = Math.round(E.PRICE[t.k] * n * 0.6 * 100) / 100; if (!spend(v, cost, 'f:' + f.id, 'atacado')) return H.end(v); f.eco.sales += cost; }
+      if (E.coinage(f.id) && b.type !== 'feira') { const cost = Math.round(E.PRICE[t.k] * n * 0.6 * 100) / 100; if (!spend(v, cost, 'f:' + f.id, 'atacado')) return H.end(v); f.eco.sales += cost; }
       f.stock[t.k] -= n; v.carry = { k: t.k, n }; t.st = 2; return;
     }
     const r = walkB(v, t, b, dt, H);
@@ -923,30 +917,9 @@
     }
     return H.end(v);
   }
-  E.tavernTask = function (v, H) {
-    const S = G.S; if (v.captive || v.age < 16) return null;
-    let best = null, bd = 1e9;
-    for (const b of E.byType(v.set, 'taverna')) if ((inv(b).food || 0) >= 1) { const d = G.dist2(v.x, v.y, b.x, b.y); if (d < bd) { bd = d; best = b; } }
-    if (!best || bd > 30 * 30) return null;
-    return H.setTask(v, { type: 'tavern', id: best.id, pri: 0.4 });
-  };
-  function runTavernVisit(v, t, dt, H) {
-    const b = workB(v, t, H); if (!b) return;
-    if (t.st === 0) {
-      // a place by the door on dry ground (never in the river the tavern looks onto)
-      if (!t.spot) { const [dx, dy] = G.Vg.door(b); let sp = null; for (let k = 0; k < 10 && !sp; k++) { const x = dx + G.rr(-0.6, 0.6), y = dy + G.rr(-0.1, 0.5); const i = W.idx(x, y); if (W.walkable(i) && G.S.type[i] !== T.RIVER && !G.S.occ[i]) sp = [x, y]; } t.spot = sp || [dx, dy]; }
-      const r = walkTo(v, t, 'spot', t.spot[0], t.spot[1], false, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return;
-    }
-    v.act = v.actT % 6 < 4 ? 'drink' : 'talk'; faceB(v, b);
-    if (G.R() < dt * 0.08) G.Vg.emote(v, G.pick(['happy', 'chat', 'heart']), 1.3);
-    if (v.actT > 12 && !t.paid) {
-      t.paid = true;
-      const I = inv(b); const f = G.Fac.ofV(v);
-      // (the meal is paid to the keeper's house — or, with no keeper, to the treasury —, in the ledger)
-      if ((I.food || 0) >= 1) { I.food -= 1; v.hunger = Math.max(0, v.hunger - 35); if (f && E.coinage(f.id)) { const keeper = [...G.S.villagers.values()].find(o => o.job === b.id); const kh = keeper && homeOf(keeper); if (spend(v, 0.4, kh ? 'h:' + kh.id : 'f:' + f.id, 'taverna')) { b.takings = (b.takings || 0) + 0.4; if (!kh) f.eco.sales += 0.4; } } }
-    }
-    if (v.actT > (t.dur || 16)) H.end(v);
-  }
+  // (the tavern — its keeper's day, its customers' evening — is act-taverna.js's alone: G.Taverna; a world without it has
+  // no tavern errands)
+  E.tavernTask = (v, H) => (G.Taverna ? G.Taverna.visitTask(v, H) : null);
   // the end of the working day: back to the house
   E.goHomeTask = function (v, H) { const h = homeOf(v); if (!h || !h.built) return null; return H.setTask(v, { type: 'goHome', id: h.id, pri: 0.5 }); };
   function runGoHome(v, t, dt, H) {

@@ -48,12 +48,13 @@
   //   fogo   — the kiln burns on the wood it is fed (burn seconds a load), until it has burnt long enough (fire)
   // (kiln: the stages that hold the kiln — one batch in it at a time)
   O.def = function (id, spec) { O.DEFS[id] = Object.assign({ id }, spec); return O.DEFS[id]; };
-  const STAGE_TXT = { amassar: 'Amassando o barro', moldar: 'Moldando tijolos', tornear: 'Torneando potes na roda', enfornar: 'Pondo no forno', tirar: 'Tirando do forno e contando', empilhar: 'Contando e empilhando os adobes' };
-  const STAGE_DO = { amassar: 'Amassar o barro', moldar: 'Moldar tijolos', tornear: 'Tornear um pote', enfornar: 'Pôr no forno', tirar: 'Tirar do forno e contar', empilhar: 'Contar e empilhar os adobes' };
+  const STAGE_TXT = { amassar: 'Amassando o barro', moldar: 'Moldando tijolos', tornear: 'Torneando potes na roda', enfornar: 'Pondo no forno', tirar: 'Tirando do forno e contando', empilhar: 'Contando e empilhando os adobes', macerar: 'Pondo o grão de molho na cuba', encher: 'Enchendo os jarros da cuba' };
+  const STAGE_DO = { amassar: 'Amassar o barro', moldar: 'Moldar tijolos', tornear: 'Tornear um pote', enfornar: 'Pôr no forno', tirar: 'Tirar do forno e contar', empilhar: 'Contar e empilhar os adobes', macerar: 'Pôr o grão de molho na cuba', encher: 'Encher os jarros da cuba' };
+  O.STAGE_TXT = STAGE_TXT; O.STAGE_DO = STAGE_DO;
   O.def('olaria', {
     b: 'olaria', role: 'oleiro', name: 'Olaria',
     rx: {
-      tijolo: { k: 'tijolo', n: 12, in: 'argila', name: 'tijolos', st: [
+      tijolo: { k: 'tijolo', n: 12, in: 'argila', pit: 1, name: 'tijolos', st: [
         { id: 'argila', kind: 'busca', n: 6, name: 'juntando argila' },
         { id: 'amassar', kind: 'mao', anim: 'amassar', use: 'amassar', take: 1, to: 'massa', give: 1, name: 'amassando o barro' },
         { id: 'moldar', kind: 'mao', anim: 'moldar', use: 'moldar', from: 'massa', take: 1, to: 'cru', give: 2, name: 'moldando' },
@@ -63,14 +64,14 @@
         { id: 'esfriar', kind: 'espera', wait: 30, kiln: 1, name: 'esfriando no forno' },
         { id: 'tirar', kind: 'mao', anim: 'desenfornar', use: 'cozer', from: 'forno', take: 4, make: 1, brk: 0.05, kiln: 1, name: 'tirando do forno' },
       ] },
-      adobe: { k: 'adobe', n: 12, in: 'argila', name: 'adobes', st: [
+      adobe: { k: 'adobe', n: 12, in: 'argila', pit: 1, name: 'adobes', st: [
         { id: 'argila', kind: 'busca', n: 6, name: 'juntando argila' },
         { id: 'amassar', kind: 'mao', anim: 'amassar', use: 'amassar', take: 1, to: 'massa', give: 1, name: 'amassando o barro' },
         { id: 'moldar', kind: 'mao', anim: 'moldar', use: 'moldar', from: 'massa', take: 1, to: 'cru', give: 2, name: 'moldando' },
         { id: 'secar', kind: 'espera', wait: 100, sun: 1, name: 'secando ao sol' },
         { id: 'empilhar', kind: 'mao', anim: 'empilhar', use: 'moldar', from: 'cru', take: 4, make: 1, brk: 0.04, name: 'contando os adobes' },
       ] },
-      ceramica: { k: 'ceramica', n: 8, in: 'argila', name: 'potes', st: [
+      ceramica: { k: 'ceramica', n: 8, in: 'argila', pit: 1, name: 'potes', st: [
         { id: 'argila', kind: 'busca', n: 8, name: 'juntando argila' },
         { id: 'tornear', kind: 'mao', anim: 'tornear', use: 'tornear', take: 1, to: 'cru', give: 1, name: 'torneando' },
         { id: 'secar', kind: 'espera', wait: 40, sun: 1, name: 'secando' },
@@ -181,7 +182,7 @@
     const S = S_(); if (!op || !live(op)) return { ok: false, why: 'A fornada acabou.' };
     const b = S.buildings.get(op.at); const R = rxOf(op); const s = stageOf(op);
     if (!b || !R || !s) return { ok: false, why: 'A fornada acabou.' };
-    if (s.kind !== 'mao') return { ok: false, why: s.kind === 'espera' ? `A fornada está ${s.name}.` : s.kind === 'fogo' ? 'Os tijolos estão no fogo.' : 'Ainda falta argila para esta fornada.' };
+    if (s.kind !== 'mao') return { ok: false, why: s.kind === 'espera' ? `A fornada está ${s.name}.` : s.kind === 'fogo' ? 'A fornada está no fogo.' : `Ainda falta ${E.name(R.in)} para esta fornada.` };
     if (s.kiln) { const k = kilnOf(b); if (k && k !== op) return { ok: false, why: 'O forno está ocupado com outra fornada.' }; }
     if (poolOf(op, s) < EPS) return { ok: false, why: 'Esta etapa terminou.' };
     if (s.make && D.room('b:' + b.id, R.k) < 1 - EPS) return { ok: false, why: 'A prateleira está cheia: leve o que está pronto ao armazém primeiro.' };
@@ -223,13 +224,13 @@
   // the batch's input brought in: onto the shelf and set aside for it (a load of the batch, or a plain load of it)
   function bring(op, v, how) {
     const S = S_(); const b = S.buildings.get(op.at); const R = rxOf(op); const c = v.carry;
-    if (!b || !R || !c || c.k !== R.in || !(c.n > EPS)) return { ok: false, why: 'Você não está com argila.' };
+    if (!b || !R || !c || c.k !== R.in || !(c.n > EPS)) return { ok: false, why: `Você não está com ${E.name(R ? R.in : 'argila')}.` };
     const s = stageOf(op);
     const r = D.move('v:' + v.id, 'b:' + b.id, R.in, c.n, { op: c.op === op.id ? op.id : 0, code: how || 'entrega', by: v.id, part: true });
-    if (!r.ok) return { ok: false, why: r.why === 'não cabe' ? 'A prateleira da olaria está cheia.' : r.why };
+    if (!r.ok) return { ok: false, why: r.why === 'não cabe' ? `Não cabe mais nada n${G.gen(G.Village.buildName(b)) === 'a' ? 'a' : 'o'} ${G.Village.buildName(b).toLowerCase()}.` : r.why };
     // (set aside for the batch what it asks, no more: what is over lies free on the shelf, for the next one)
     if (s && s.kind === 'busca') { setRsv(op, b, Math.min(s.n, op.data.got + r.n)); if (op.data.got + EPS >= s.n) next(op); }
-    return { ok: true, n: r.n, msg: `Você deixa ${Math.round(r.n)} de argila na olaria.` };
+    return { ok: true, n: r.n, msg: `Você deixa ${Math.round(r.n)} de ${E.name(R.in)}${where(b)}.` };
   }
   // wood into the kiln: one load's worth of fire — in the ledger, burnt with the batch
   function feed(op, v) {
@@ -245,7 +246,7 @@
   }
 
   // ------------------------------ the overseer (once a second of the world) ------------------------------
-  const PAUSE = { chuva: 'a chuva', noite: 'a noite', argila: 'a falta de argila', lenha: 'a falta de lenha', forno: 'o forno ocupado' };
+  const PAUSE = { chuva: 'a chuva', noite: 'a noite', argila: 'a falta de argila', insumo: 'a falta do que se trabalha', lenha: 'a falta de lenha', forno: 'o forno ocupado' };
   O.PAUSE = PAUSE;
   function tick(op, step) {
     const S = S_(); const b = S.buildings.get(op.at); const R = rxOf(op); const d = op.data;
@@ -259,7 +260,9 @@
       const free = D.free('b:' + b.id, R.in, op.id) - d.got;
       if (free > EPS && d.got < s.n - EPS) setRsv(op, b, Math.min(s.n, d.got + free));
       if (d.got + EPS >= s.n) return next(op);
-      const f = G.Fac.get(op.fac); if (!(f && D.free('f:' + f.id, R.in) >= 1) && !inFlight(op) && !pitOf(b)) why = 'argila';
+      const f = G.Fac.get(op.fac);
+      if (R.shelf) why = 'insumo'; // (it waits for its shelf: nobody fetches for it)
+      else if (!(f && D.free('f:' + f.id, R.in) >= 1) && !inFlight(op) && !(R.pit && pitOf(b))) why = R.in === 'argila' ? 'argila' : 'insumo';
     } else if (s.kind === 'espera') {
       if (s.sun && S.weather && S.weather.rain > 0.5) why = 'chuva';
       else if (s.sun && G.isNight()) why = 'noite';
@@ -305,7 +308,8 @@
     // (a load of one of its batches in the hands — clay for the shelf, wood for the kiln: on with it)
     if (v.carry && v.carry.op) { const op = A.get(v.carry.op); if (op && live(op) && op.def === 'oficio') { const k = resume(op, v, H); if (k) return k; } }
     if (v.carry && v.carry.n > EPS) return null; // (hands full of something else: the old errands take it where it goes)
-    const ready = goodsOn(b);
+    // (what a trade makes for its own counter — the tavern's beer — stays on its shelf; the rest goes to the store)
+    const ready = t.keep ? null : goodsOn(b);
     // (a load's worth to the store — sooner when the shelf is nearly full: the next batch needs the room)
     if (ready && (ready.n >= 4 || D.room('b:' + b.id, ready.k) < 4)) return haul(v, b, f, ready, H);
     for (const op of O.batches(b)) { const k = step(op, v, b, f, H); if (k) return k; }
@@ -335,8 +339,12 @@
       const S = S_(); for (const o of S.loose || []) if (o.op === op.id && o.k === R.in && G.W.reaches(v, o.x, o.y)) { A.join(op, v, tradeOf(b).role); return H.setTask(v, { type: 'oficio', do: 'chao', op: op.id, b: b.id, g: o.id, n: o.n, pri: 1, st: 0 }); }
       const n = Math.min(Math.ceil(want), Math.floor(D.room('v:' + v.id, R.in, { op: op.id }) + EPS));
       if (n < 1) return null;
+      // (a trade that works only what is already on its shelf — the tavern's vat, from the grain its keeper bought — fetches
+      // nothing: the batch waits for the shelf)
+      if (R.shelf) return null;
       if (D.free('f:' + f.id, R.in) >= 1) { A.join(op, v, tradeOf(b).role); return H.setTask(v, { type: 'oficio', do: 'buscar', op: op.id, b: b.id, k: R.in, n: Math.min(n, Math.floor(D.free('f:' + f.id, R.in))), pri: 1, st: 0 }); }
-      const pit = E.clayPit(v, b); if (!pit) return null;
+      // (clay is dug at the river's bank; what else a batch takes comes from the store, or waits)
+      const pit = R.pit ? E.clayPit(v, b) : null; if (!pit) return null;
       A.join(op, v, tradeOf(b).role);
       return H.setTask(v, { type: 'oficio', do: 'cavar', op: op.id, b: b.id, x: pit[0], y: pit[1], n: Math.min(3, n), pri: 1, st: 0 });
     }
@@ -379,7 +387,9 @@
     if (t.op && (!op || !live(op))) { if (v.carry && v.carry.op === t.op) v.carry.op = 0; return H.end(v); }
     switch (t.do) {
       case 'mao': {
-        if (t.st === 0) { const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return; }
+        // (at the work's point inside: the person is in the building — the world keeps them at its door, L-217; the interiors
+        // put them at a free point of the stage's use, t.use, In.places — and any end of the errand puts them out at the door)
+        if (t.st === 0) { const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; const dr = G.Vg.door(b); v.x = dr[0]; v.y = dr[1]; v.inside = b.id; } return; }
         const s = stageOf(op); if (!s || s.kind !== 'mao' || op.data.s !== t.s) return H.end(v);
         const g = AN[s.anim]; v.act = g.act; faceB(v, b);
         if (v.actT < g.dur) return;
@@ -508,7 +518,7 @@
       switch (t.do) {
         case 'mao': return (s && STAGE_TXT[s.id]) || 'Trabalhando na fornada';
         case 'cavar': return t.st < 1 ? 'Indo tirar argila na beira do rio' : t.st === 1 ? 'Cavando argila' : 'Levando argila para a olaria';
-        case 'buscar': return t.st < 2 ? 'Buscando argila no armazém' : 'Levando argila para a olaria';
+        case 'buscar': { const b = S_().buildings.get(t.b); return t.st < 2 ? `Buscando ${E.name(t.k || (R && R.in) || 'argila')} no armazém` : `Levando ${E.name(t.k || (R && R.in) || 'argila')} para ${b ? G.Village.buildName(b).toLowerCase() : 'o trabalho'}`; }
         case 'chao': return t.st < 2 ? 'Indo pegar a argila caída' : 'Levando argila para a olaria';
         case 'lenha': return t.st < 2 ? 'Buscando lenha para o forno' : t.st === 2 ? 'Levando lenha para o forno' : 'Pondo lenha no forno';
       }
@@ -519,8 +529,9 @@
     offers(v, x, y, r) {
       const S = S_(); const out = [];
       for (const b of S.buildings.values()) {
-        if (!tradeOf(b) || !b.built || b.type === 'ruin') continue;
+        const tr = tradeOf(b); if (!tr || !b.built || b.type === 'ruin') continue;
         const at = G.Vg.door(b); if (G.dist(x, y, at[0], at[1]) > r + 1.5 || !mayWork(v, b)) continue;
+        if (tr.own && v.job !== b.id) continue; // (a trade that is its keeper's business: only its own hands work it)
         const c = v.carry; const hasLoad = c && c.n > EPS;
         for (const op of O.batches(b)) {
           const s = stageOf(op); const R = rxOf(op); if (!s) continue;
@@ -544,7 +555,7 @@
       },
       argila: {
         deed: 'entrega',
-        can(v, o) { const op = A.get(o.op); const s = stageOf(op); if (!op || !live(op) || !s || s.kind !== 'busca') return { ok: false, why: 'A fornada não precisa mais de argila.' }; return v.carry && v.carry.k === rxOf(op).in ? { ok: true } : { ok: false, why: 'Você não está com argila.' }; },
+        can(v, o) { const op = A.get(o.op); const s = stageOf(op); if (!op || !live(op) || !s || s.kind !== 'busca') return { ok: false, why: 'A fornada não precisa mais disso.' }; return v.carry && v.carry.k === rxOf(op).in ? { ok: true } : { ok: false, why: `Você não está com ${E.name(rxOf(op).in)}.` }; },
         run(v, o) { const op = A.get(o.op); A.join(op, v, 'ajudante'); return bring(op, v, 'entrega'); },
       },
       lenha: {

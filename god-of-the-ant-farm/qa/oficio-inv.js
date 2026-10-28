@@ -47,6 +47,30 @@
       const ps = new Set(); for (const op of L) { if (ps.has(op.data.p)) add('oficio', 2, `prédio #${id}: duas fornadas de ${op.data.p}`); ps.add(op.data.p); }
       const kiln = L.filter(op => { const st = O.stage(op); return st && st.kiln; }); if (kiln.length > 1) add('oficio', 2, `prédio #${id}: ${kiln.length} fornadas no forno ao mesmo tempo`);
     }
+    // the day of a tavern (G.Taverna): one at a time, at a tavern standing; its people at the tables are alive; its till is
+    // the ledger's payments of it, and in a people of coin nothing was served without one
+    if (G.Taverna) {
+      const days = new Map();
+      for (const op of (s.acts || []).filter(o => o.def === 'taverna' && LIVE[o.st])) {
+        const nm = `dia da taverna #${op.id}`; const d = op.data || {}; const b = s.buildings.get(op.at);
+        if (days.has(op.at)) add('oficio', 2, `taverna #${op.at}: dois dias abertos (#${days.get(op.at)} e #${op.id})`); days.set(op.at, op.id);
+        if (!b || b.type !== 'taverna' || !b.built) { add('oficio', 2, `${nm}: a taverna ${op.at} ${!b ? 'não existe' : 'não está de pé'} e o dia segue`); continue; }
+        for (const k of ['servidos', 'receita', 'custo', 'faltas', 'recusas']) if (!fin(d[k]) || d[k] < -EPS) add('oficio', 1, `${nm}: ${k} = ${d[k]}`);
+        for (const id in d.mesa || {}) if (!s.villagers.has(+id)) add('oficio', 2, `${nm}: #${id} à mesa não existe`);
+        for (const id of d.fila || []) if (!(d.mesa || {})[id]) add('oficio', 3, `${nm}: #${id} na fila sem estar à mesa`);
+        const led = s.ledger || [];
+        if (led.length && (led[0][1] < op.born || (led[0][1] === op.born && led[0][2] <= op.t0))) {
+          let paid = 0, goods = 0, coins = 0; for (const e of led) { if (e[7] !== op.id || e[8] !== 'taverna') continue; if (e[5] === 'moedas') { paid += e[6]; coins++; } else goods++; }
+          if (Math.abs(paid - (d.receita || 0)) > 0.01) add('oficio', 2, `${nm}: o caixa diz ${d.receita}, os pagamentos do livro-razão ${Math.round(paid * 100) / 100}`);
+          if (G.Eco.coinage(op.fac) && goods !== coins) add('oficio', 2, `${nm}: ${goods} servidos e ${coins} pagamentos num povo de moeda`);
+        }
+      }
+      // nobody kept inside a tavern by a day that is over
+      for (const v of s.villagers.values()) {
+        const t = v.task; if (!t || t.type !== 'tavern' || !(t.st >= 1) || !v.inside) continue;
+        const op = (s.acts || []).find(o => o.id === t.op); if (!op || !LIVE[op.st]) add('oficio', 3, `${v.name} #${v.id}: dentro da taverna #${t.id} num dia que acabou`);
+      }
+    }
     // the brick of a work: what the foundation took of the stone, and no more
     for (const b of s.buildings.values()) {
       if (!b.brick || b.built || b.type === 'ruin') continue;
