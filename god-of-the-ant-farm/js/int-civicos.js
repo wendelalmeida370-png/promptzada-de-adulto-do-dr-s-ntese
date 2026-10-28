@@ -235,8 +235,15 @@
       entry = { door: C.door, u: gaps[kn], w: P.doors[C.door].w, v: porch.r[3] };
     }
     P.entrance = { door: entry.door, u: entry.u, v: entry.v, w: entry.w, lv: 0 };
-    // (the steps of the form, from the street up to the base)
-    if (B.degraus.length) { let r = B.degraus[0].r.slice(); for (const q of B.degraus) r = [Math.min(r[0], q.r[0]), Math.min(r[1], q.r[1]), Math.max(r[2], q.r[2]), Math.max(r[3], q.r[3])]; P.stair('degraus', -1, 0, r, 0, -1, null, { larga: r[2] - r[0] >= 1.2 ? 1 : 0 }); }
+    // (the steps of the form, from the street up to the base: one flight, on the form's own treads — the feet on each, as the
+    // god and the 3D draw them —, up to the porch's front or to the face the door is in: where the form's base runs on before
+    // the walls — the Nordic hall's 0.2 m of plinth between its steps and its door, the P3's probe —, a last tread at the floor)
+    if (B.degraus.length) {
+      let r = B.degraus[0].r.slice(); for (const q of B.degraus) r = [Math.min(r[0], q.r[0]), Math.min(r[1], q.r[1]), Math.max(r[2], q.r[2]), Math.max(r[3], q.r[3])];
+      const treads = B.degraus.map(q => ({ r: q.r.slice(), y: q.y1 })); const edge = porch ? porch.r[3] : sh[3];
+      if (r[1] > edge + 1e-6) { treads.push({ r: [r[0], edge, r[2], r[1]], y: y0 }); r[1] = edge; }
+      P.stair('degraus', -1, 0, r, 0, -1, null, { larga: r[2] - r[0] >= 1.2 ? 1 : 0, treads });
+    }
     if (P.inside()) return;
     const rooms = { main: P.room(0, 'salao', I), front: undefined, cells: [], court: null, all: [] }; rooms.all.push(rooms.main);
     if (porch) { rooms.porch = P.room(0, 'portico', porch.r, 1); rooms.all.push(rooms.porch); }

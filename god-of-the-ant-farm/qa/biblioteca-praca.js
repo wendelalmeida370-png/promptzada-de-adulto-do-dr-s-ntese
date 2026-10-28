@@ -107,6 +107,39 @@ const free = (m, uses) => uses.filter(u => !In.freePlace(m.b, u));
   }
   ok('4a o corpo pisa a praça, a volta da fonte e o topo dos rostros, não dentro da fonte', !out.length, out.slice(0, 3).join(' / ') || 'nos seis povos');
 }
+// ---------------------------------------------------------------- 5. the feet up the library's steps, on a blank world
+// (from the street along the way in, every 2 cm: the feet — Space.indoor — on what the form is there, as the god and the 3D
+// draw it — to 2.5 cm: the plan keeps its heights to the centimetre, and the landing before the flight's foot lies 2 cm over the
+// street —: the street, the top of each of its treads, the porch or the plinth before the door, the hall's floor; never a crack
+// to the ground — the Nordic hall's 0.2 m of plinth between its steps and its door —, never a step the body does not take;
+// the plan's frame on the ground the form stands on — Space.onForm: no plinth of 0.4 under it, D-093, the P3's probe)
+{
+  const S = G.newState(7); S.H.fill(4); S.type.fill(G.T.GRASS); if (S.biome) S.biome.fill(0); S.clock = 0; S.day = 30; S.time = 0.3; G.S = S; G.newWorld();
+  const TL = Sp.TILE, out = [], sum = []; let nid2 = 71001;
+  for (const c of POVOS) {
+    const def = G.BDEF.biblioteca; const b = { id: (nid2 += 7), type: 'biblioteca', style: c, x: 20, y: 20, w: def.w, h: def.h, built: true, progress: 1, hp: 100, maxHp: 100, v: 0, set: 0, blocks: !!def.blocks, ip: null };
+    S.buildings.set(b.id, b); if (def.blocks) for (let yy = b.y; yy < b.y + b.h; yy++) for (let xx = b.x; xx < b.x + b.w; xx++) S.occ[yy * G.N + xx] = b.id;
+    b.ip = In.newRecord(b, { t: 'biblioteca', c, e: 3, k: 'ae', cl: 't', fl: 0, d: 1, w: 1, pw: 0, s: 'S', o: (1 << b.w) - 1 });
+    const p = Sp.planNow(b); const B = G.Forma.body(G.Forma.of('biblioteca', c)); if (!p || !B) { out.push(`${c}: sem planta ou sem corpo`); continue; }
+    const pl = Sp.plinth(b); const L = b.h * TL; const u = p.entrance.x;
+    // (what the form is at a point of the lot — the side S: the plan's frame —, over the ground it stands on, and its edges)
+    const inR = (r, x, z) => x >= r[0] && x <= r[2] && z >= r[1] && z <= r[3];
+    const top = (x, z) => { let t = 0; for (const q of B.degraus) if (inR(q.r, x, z)) t = Math.max(t, q.y1); if (B.base && inR(B.base.r, x, z)) t = Math.max(t, B.base.h); if ((B.portico && inR(B.portico.r, x, z)) || inR(B.r, x, z)) t = Math.max(t, B.y0); return t; };
+    const edges = [].concat(B.degraus.map(q => q.r), B.base ? [B.base.r] : [], B.portico ? [B.portico.r] : [], [B.r]).flatMap(r => [r[1], r[3]]);
+    const end = B.portico ? B.r[3] + 0.05 : B.r[3] - 0.6; let worst = 0, at = 0, step = 0, fell = 0, prev = null, n = 0;
+    for (let z = L + 1.0; z >= end; z -= 0.02) {
+      const X = b.x * TL + u, Z = b.y * TL + z; const ins = Sp.indoor(X, Z, 0, b.id); const foot = ins ? ins.y : Sp.footAt(X / TL, Z / TL);
+      if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
+      if (edges.some(e => Math.abs(z - e) < 0.03)) continue; n++;
+      // (the form stands on the highest of its ground, as the god draws it)
+      const want = pl.hi + top(u, z) + (z < L ? Sp.FLOOR_UP : 0); const d = foot - want; if (Math.abs(d) > Math.abs(worst)) { worst = d; at = z; }
+      if (d < -0.05) fell++;
+    }
+    sum.push(`${c} ${worst >= 0 ? '+' : ''}${worst.toFixed(3)}`);
+    if (Math.abs(worst) > 0.025 || fell || step > In.BODY.step + 0.01 || Math.abs(pl.y0 - pl.hi) > 1e-9) out.push(`${c}: os pés a ${worst.toFixed(2)} m da forma em v ${at.toFixed(2)}, ${fell} pontos abaixo dela, o maior degrau ${step.toFixed(2)} m, o quadro a ${(pl.y0 - pl.hi).toFixed(2)} m do chão (${n} pontos)`);
+  }
+  ok('5a os pés sobem a biblioteca pelo que a forma é, da rua ao salão', !out.length, out.slice(0, 3).join(' / ') || `nos seis povos, a cada 2 cm (a maior diferença por povo: ${sum.join(', ')}); o maior degrau no caminho, o de um dos degraus da forma`);
+}
 const err = M.erros(); if (Object.keys(err.mod).length || err.console.length) ok('sem erros de módulo', false, JSON.stringify(err).slice(0, 300));
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');
 process.exit(fails.length ? 1 : 0);

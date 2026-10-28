@@ -145,9 +145,14 @@
   Sp.BASELESS = { farm: 1, horta: 1, plantacao: 1, vinhedo: 1, doca: 1, praca: 1, cemetery: 1, curral: 1, cercado: 1, campfire: 1 };
   // (and every field of the world's: the orchard, the apiary, the salt pans — BDEF.field —: whoever asks, asks here, B4)
   Sp.baseless = b => !!(b && (Sp.BASELESS[b.type] || (G.BDEF[b.type] && G.BDEF[b.type].field)));
+  // (a building raised on its form's own body — a type whose plan's families are all the form's, D-093: the library — stands on
+  // the form's base, on the ground the god draws it on, not on a plinth of its own: the plan's frame on the highest of its
+  // ground. By the type, so that it holds at the founding, before there is a record. The P3's measure: on the plinth of 0.4,
+  // the plan's floor 0.4 m over the one drawn, and a step of 0.42 before the form's steps)
+  Sp.onForm = b => { const t = b && G.Interiors && G.Interiors.TYPES && G.Interiors.TYPES[b.type]; return !!(t && t.fams && t.fams.length && t.fams.every(f => /^forma\./.test(f))); };
   Sp.plinth = function (b) {
     let lo = 1e9, hi = -1e9; for (let ty = b.y; ty <= b.y + b.h; ty++) for (let tx = b.x; tx <= b.x + b.w; tx++) { const h = W.hAt(Math.min(N, tx), Math.min(N, ty)) * HM; lo = Math.min(lo, h); hi = Math.max(hi, h); }
-    return { lo, hi, y0: hi + (Sp.baseless(b) ? 0.12 : 0.4) };
+    return { lo, hi, y0: hi + (Sp.baseless(b) ? 0.12 : Sp.onForm(b) ? 0 : 0.4) };
   };
   Sp.FLOOR_UP = 0.012; // (a drawn floor stands a hair over the plinth's top it lies on)
   // (the near ground as its mesh draws it — realm3d's terrainGeo: a point every half tile, each cell cut from its +x corner to
@@ -506,8 +511,9 @@
   // the storey's floor at a point: on a flight, between its foot and its top — Interiors' own reading (over the flight
   // where its grid has the flight: by its edge the storey's own)
   Sp.floorIn = (p, lv, x, z) => G.Interiors.floorYOf(p, lv, x, z);
-  // the stair a point of a storey is on (its flight, from that storey), or null
-  Sp.stairIn = function (p, lv, x, z) { for (const s of p.stairs) { const r = s.r; if ((s.kind === 'degraus' ? s.lv1 : s.lv0) === lv && x > r[0] && x < r[2] && z > r[1] && z < r[3]) return s; } return null; };
+  // the stair a point of a storey is on (its flight, from that storey), or null — its edges its own: the line where an outside
+  // flight meets the porch or the wall it goes up to is on the flight, not a crack the feet fall through to the ground (P3)
+  Sp.stairIn = function (p, lv, x, z) { for (const s of p.stairs) { const r = s.r; if ((s.kind === 'degraus' ? s.lv1 : s.lv0) === lv && x >= r[0] && x <= r[2] && z >= r[1] && z <= r[3]) return s; } return null; };
   // a point of the world, for a body on storey lv of building 'of' (its own storey indoors; in another building, or coming in, the
   // entrance's):
   // null away from any building whose plan is made; else { b, p, lv, x, z (metres of the lot), code, walk, y (the floor drawn
@@ -539,9 +545,11 @@
     let fy = Sp.floorIn(p, L, x, z);
     if (!shell) { const st = Sp.stairIn(p, L, x, z); if (!st) fy = step ? step.fy : 0;
       // (an outside flight: from the plinth's top at its foot — the steps before it come down to the ground, Space.feet — to the
-      // storey it serves, all along it, its ends too: as the 3D lays its steps)
+      // storey it serves, all along it, its ends too: as the 3D lays its steps. A flight with its treads said — a form's steps,
+      // D-093 —: the top of the highest tread under the feet, as the god and the 3D draw them, never a slope across them)
       else if (st.kind === 'degraus') { const l1 = p.levels.find(q => q.lv === st.lv1); const y1 = l1 ? l1.y : 0; const r = st.r;
-        const len = st.dir[0] ? r[2] - r[0] : r[3] - r[1], t = st.dir[0] ? (st.dir[0] > 0 ? x - r[0] : r[2] - x) : (st.dir[1] > 0 ? z - r[1] : r[3] - z); fy = y1 * G.clamp(t / (len || 1), 0, 1); } }
+        const len = st.dir[0] ? r[2] - r[0] : r[3] - r[1], t = st.dir[0] ? (st.dir[0] > 0 ? x - r[0] : r[2] - x) : (st.dir[1] > 0 ? z - r[1] : r[3] - z); fy = y1 * G.clamp(t / (len || 1), 0, 1);
+        if (st.treads) { let top = -1; for (const q of st.treads) if (x >= q.r[0] && x <= q.r[2] && z >= q.r[1] && z <= q.r[3] && q.y > top) top = q.y; if (top >= 0) fy = top; } } }
     else if (door >= 0 && p.doors[door] && p.doors[door].outer) fy = Math.max(fy, 0);
     return { b, p, lv: L, x, z, code, walk, shell, door, y: Sp.plinth(b).y0 + fy + Sp.FLOOR_UP };
   };

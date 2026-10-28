@@ -396,12 +396,14 @@
       return [id, nb, w];
     },
     // a flight between storeys: its footprint on lv0, the way up (du, dv); foot and top are where one stands to take it
-    // (o: what the recipe says of it — larga: the wide flight of a temple, steep as it may be: a choice, D-086)
+    // (o: what the recipe says of it — larga: the wide flight of a temple, steep as it may be: a choice, D-086; treads: the steps
+    // an outside flight is made of, [{ r, y }] — each one's footprint and its top over the plinth —: the feet on them, D-093)
     stair(kind, lv0, lv1, r, du, dv, hole, o) {
       const id = this.stairs.length; const cu = (r[0] + r[2]) / 2, cv = (r[1] + r[3]) / 2;
       const len = du ? r[2] - r[0] : r[3] - r[1];
       const foot = [cu - du * (len / 2 + 0.4), cv - dv * (len / 2 + 0.4)], top = [cu + du * (len / 2 + 0.35), cv + dv * (len / 2 + 0.35)];
       const s = { id, kind, lv0, lv1, r: r.slice(), dir: [du, dv], w: du ? r[3] - r[1] : r[2] - r[0], foot, top, hole: hole ? hole.slice() : null, larga: o && o.larga ? 1 : 0 };
+      if (o && o.treads) s.treads = o.treads.map(q => ({ r: q.r.slice(), y: q.y }));
       this.stairs.push(s); return s;
     },
     // the inner rectangle of the main shell (the walls' insides)
@@ -975,7 +977,7 @@
         if (m.circ[3] > 0) { o.circ.push(r2(m.circ[3])); ring(m.circ[2], 0); ring(m.circ[3], 1); } else for (let q = 0; q < 16; q++) { const a = q / 16 * Math.PI * 2; o.poly.push([r2(c[0] + Math.cos(a) * m.circ[2]), r2(c[1] + Math.sin(a) * m.circ[2])]); } }
       return o;
     });
-    plan.stairs = P.stairs.map(st => Object.assign({ id: st.id, kind: st.kind, lv0: st.lv0, lv1: st.lv1, r: R(st.r), a: loc(st.foot[0], st.foot[1]), b: loc(st.top[0], st.top[1]), dir: dirLoc(s, st.dir[0], st.dir[1]), w: r2(st.w), hole: st.hole ? R(st.hole) : null, larga: st.larga || 0 }, slopeOf(P, st)));
+    plan.stairs = P.stairs.map(st => Object.assign({ id: st.id, kind: st.kind, lv0: st.lv0, lv1: st.lv1, r: R(st.r), a: loc(st.foot[0], st.foot[1]), b: loc(st.top[0], st.top[1]), dir: dirLoc(s, st.dir[0], st.dir[1]), w: r2(st.w), hole: st.hole ? R(st.hole) : null, larga: st.larga || 0 }, st.treads ? { treads: st.treads.map(q => ({ r: R(q.r), y: r2(q.y) })) } : {}, slopeOf(P, st)));
     plan.items = P.items.map(it => {
       const r = R(it.r); const f = dirLoc(s, it.face[0], it.face[1]); const D = ITEMS[it.kind];
       const o = { id: P.b.id + ':' + it.k, k: it.k, kind: it.kind, name: D.name, room: it.room, lv: it.lv, x: r2((r[0] + r[2]) / 2), z: r2((r[1] + r[3]) / 2), y: r2(it.y || 0), ry: r2(Math.atan2(f[0], f[1])), w: r2(it.w), d: r2(it.d), h: r2(it.h), r, solid: D.low ? 0 : 1, low: D.low ? 1 : 0, places: it.places !== undefined ? it.places : (D.places || 0), job: D.job ? 1 : 0, fire: D.fire ? 1 : 0, niche: it.niche ? 1 : 0 };
