@@ -151,15 +151,16 @@
   // the work's materials, a holder of the depot ('o', the work's id): what came to a site and is not built in yet — its bill
   // less what it still needs —, so that what the builders and the god's body bring to a work, and what comes back of one
   // let go, is in the ledger with its cause: nothing a work got is lost, or born, with no line (L-246). A work takes only
-  // what it still needs; what is taken from it is needed again — but from a work standing whole (progress 1) it is built in.
-  // (Registered with the first world: the depot, activity.js, loads after this file)
+  // what it still needs; what is taken from it is needed again — always, so that what it holds is always its bill less its
+  // need (the work that stands has its need cleared after: completeBuilding). (Registered with the first world: the depot,
+  // activity.js, loads after this file)
   const r4 = x => Math.round(x * 1e4) / 1e4;
   const isSite = b => !!b && !b.built && !!b.need && b.type !== 'ruin';
   const SITE = {
     obj: id => { const b = G.S.buildings.get(id); return isSite(b) ? b : null; },
     get: (b, k) => V.delivered(b)[k] || 0,
     room: (b, k) => Math.max(0, b.need[k] || 0),
-    take: (b, k, n) => { if (!(b.progress >= 1)) b.need[k] = r4((b.need[k] || 0) + n); },
+    take: (b, k, n) => { b.need[k] = r4((b.need[k] || 0) + n); },
     put: (b, rec) => { b.need[rec.k] = r4(Math.max(0, (b.need[rec.k] || 0) - rec.n)); },
     list: b => V.delivered(b),
     owner: b => ({ fac: V.facOfSet(b.set), bld: b.id }),
@@ -223,8 +224,8 @@
 
   V.completeBuilding = function (b) {
     const S = G.S; b.progress = 1;
-    V.siteGone(b, 'obra-feita'); // (what the work got is built in: out of its holder, in the ledger)
-    b.built = true; b.need.wood = 0; b.need.stone = 0; b.upgradeFrom = null;
+    V.siteGone(b, 'obra-feita'); // (what the work got is built in: out of its holder, in the ledger — and it needs nothing)
+    b.built = true; for (const k in b.need) b.need[k] = 0; b.upgradeFrom = null;
     G.Interiors && G.Interiors.complete(b); // (a fact of its life; a type made over — a hut become a house — a new plan)
     S.stats.built++;
     const [cx, cy] = V.center(b);
