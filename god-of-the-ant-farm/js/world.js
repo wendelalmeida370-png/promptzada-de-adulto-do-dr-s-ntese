@@ -161,7 +161,11 @@
   let reachIds = null, reachStack = null, reachKey = null, reachWV = -1, reachTV = -1, reachT = -1e9;
   W.reachBuilds = 0;
   W.touchWalk = () => { const S = G.S; if (S) S.walkVer = (S.walkVer || 0) + 1; };
-  const passable = i => { const S = G.S; const t = S.type[i]; if ((t < T.RIVER && !(S.dry && S.dry[i])) || S.cliff[i] || W.blocked(i)) return false; if (t === T.RIVER && S.deep[i] && !S.road[i] && !(S.ice && S.ice[i])) return false; const w = S.wall[i]; return !w || w === 2 || w === 3 || w === 4; };
+  // (the ground one could walk, whatever wall stands on it — the wall planner asks it of the tiles of its plan —; and that
+  // ground with the wall: walls block, gates and aqueduct arches let through)
+  const ground = W.ground = i => { const S = G.S; const t = S.type[i]; if ((t < T.RIVER && !(S.dry && S.dry[i])) || S.cliff[i] || W.blocked(i)) return false; if (t === T.RIVER && S.deep[i] && !S.road[i] && !(S.ice && S.ice[i])) return false; return true; };
+  W.wallOpen = w => !w || w === 2 || w === 3 || w === 4;
+  const passable = i => ground(i) && W.wallOpen(G.S.wall[i]);
   W.reachIds = function (peek) {
     const S = G.S; const n = N * N;
     if (reachIds && reachKey === S && reachWV === (S.walkVer || 0) && reachTV === (S.typeVer || 0) && reachIds.length === n && (peek || (S.clock >= reachT && S.clock - reachT < 20))) return reachIds;
@@ -702,9 +706,9 @@
   };
   // how hard the search leans towards the goal: 0.62 keeps it exact even along roads (they cost less than 1);
   // while years are skipped it leans harder (a slightly longer walk nobody sees, a much shorter search)
-  W.PATH_EXACT = 0.62; W.pathGreed = W.PATH_EXACT;
-  W.findPath = function (sx, sy, tx, ty, adj, maxNodes) {
-    maxNodes = maxNodes || 3500;
+  W.PATH_EXACT = 0.62; W.PATH_GREEDY = 1.3; W.pathGreed = W.PATH_EXACT;
+  W.findPath = function (sx, sy, tx, ty, adj, maxNodes, greed) {
+    maxNodes = maxNodes || 3500; const gr = greed || W.pathGreed;
     if (!W.inb(sx, sy) || !W.inb(tx, ty)) return null;
     const s = W.idx(sx, sy), t = W.idx(tx, ty);
     const tX = t % N, tY = (t / N) | 0;
@@ -736,7 +740,7 @@
         if (seen[j] !== gen || g < gS[j]) {
           seen[j] = gen; gS[j] = g; came[j] = a;
           const hx = Math.abs(nx - tX), hy = Math.abs(ny - tY);
-          const h = (Math.max(hx, hy) + 0.4142 * Math.min(hx, hy)) * W.pathGreed;
+          const h = (Math.max(hx, hy) + 0.4142 * Math.min(hx, hy)) * gr;
           heap.push(j, g + h);
         }
       }

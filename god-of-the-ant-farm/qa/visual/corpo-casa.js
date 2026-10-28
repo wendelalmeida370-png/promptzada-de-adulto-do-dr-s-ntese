@@ -48,21 +48,49 @@ function check() {
     if (!ins.walk) bad.push(`num lugar que a planta não deixa (${ins.code}) em ${ins.x.toFixed(2)},${ins.z.toFixed(2)} piso ${ins.lv}`); }
   else if (!W.walkableXY(v.x, v.y) && !G.Possess.afloat(v)) bad.push(`fora, num lugar onde o mundo não anda (${v.x.toFixed(2)},${v.y.toFixed(2)})`);
 }
-// a path over a storey of a plan (cells of 25 cm where the body fits), from a point to another (metres of the lot)
+// a path over a storey of a plan (cells of 25 cm where the body fits), from a point to another (metres of the lot) — through the
+// doors of its rooms too, as one goes: square through a door's middle, the hands opening it on the way (follow). The ladder of
+// the house#2924 of the new metropole stood behind its bedroom's door, shut by the house's rule: no path to it — T-155
 function pathIn(b, p, lv, from, to) {
   // (round a shut hatch, not over it: from its landing, straight over it is the way down; and round a flight that goes up from
   // this storey — a ladder along the wall too —: it is taken from its foot, never walked across, Avatar's takeFlight)
   const ups = p.stairs.filter(s => s.kind !== 'degraus' && s.lv0 === lv); const onUp = (x, z) => ups.some(s => x > s.r[0] - 0.02 && x < s.r[2] + 0.02 && z > s.r[1] - 0.02 && z < s.r[3] + 0.02);
-  const n = p.grid.n, cs = p.grid.cs; const fits = (x, z) => { const r = 0.34; for (const [dx, dz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r * 0.7, r * 0.7], [-r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, -r * 0.7]]) { const q = Sp.indoor(b.x * TL + x + dx, b.y * TL + z + dz, lv, b.id); if (!q || !q.walk || onUp(x + dx, z + dz)) return false; } return true; };
-  const c = (x, z) => [Math.floor(x / cs), Math.floor(z / cs)]; const [sx, sz] = c(from[0], from[1]), [tx, tz] = c(to[0], to[1]);
-  const prev = new Map(); const key = (x, z) => z * n + x; const q = [[sx, sz]]; prev.set(key(sx, sz), null);
-  for (let i = 0; i < q.length; i++) { const [x, z] = q[i]; if (x === tx && z === tz) break;
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + dx, Z = z + dz; if (X < 0 || Z < 0 || X >= n || Z >= n || prev.has(key(X, Z))) continue; if (!(X === tx && Z === tz) && !fits((X + 0.5) * cs, (Z + 0.5) * cs)) continue; prev.set(key(X, Z), [x, z]); q.push([X, Z]); } }
-  if (!prev.has(key(tx, tz))) return null; const out = []; let cur = [tx, tz]; while (cur) { out.unshift([(cur[0] + 0.5) * cs, (cur[1] + 0.5) * cs]); cur = prev.get(key(cur[0], cur[1])); }
-  return out;
+  // (a door of the rooms — the plan's, shut or open; not one to the street —: the way square through it, from a stride before
+  // its middle to a stride past it, is a corridor the body takes whole)
+  const doors = p.doors.map((d, id) => { const w = p.walls[d.wall]; if (!w || w.lv !== lv || d.outer) return null; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const ux = (w.b[0] - w.a[0]) / L, uz = (w.b[1] - w.a[1]) / L;
+    return { id, M: [w.a[0] + ux * d.at, w.a[1] + uz * d.at], u: [ux, uz], n: [-uz, ux], half: Math.max(0.1, d.w / 2 - 0.25) }; }).filter(Boolean);
+  const doorOf = (x, z) => { for (const d of doors) { const dx = x - d.M[0], dz = z - d.M[1]; if (Math.abs(dx * d.u[0] + dz * d.u[1]) <= d.half && Math.abs(dx * d.n[0] + dz * d.n[1]) <= 0.7) return d; } return null; };
+  // (a point the body stands on with r of its rim round it, all ways — a door's corridor taken whole)
+  const fits = (x, z, r) => { const d = doorOf(x, z); if (d) { const q = Sp.indoor(b.x * TL + x, b.y * TL + z, lv, b.id); return !!q && (q.walk || q.door === d.id); }
+    for (const [dx, dz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r * 0.7, r * 0.7], [-r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, -r * 0.7]]) { const q = Sp.indoor(b.x * TL + x + dx, b.y * TL + z + dz, lv, b.id); if (!q || !q.walk || onUp(x + dx, z + dz)) return false; } return true; };
+  // (straight there where the body goes all along it — a hand's breadth to spare on each side, as a player walks to what is in
+  // sight —; else by the cells of the plan, the body's rim and a little more round each; else by cells of half that, the rim
+  // brushing what is beside it, as the body slides along it: in the house#15806 of the old metropole the foot of the ladder was
+  // between two mats, with no cell's middle that had room for more)
+  const line = (x0, z0, x1, z1) => { const L = Math.hypot(x1 - x0, z1 - z0); for (let t = 0; t <= L + 1e-9; t += 0.1) { const f = L ? t / L : 0; if (!fits(x0 + (x1 - x0) * f, z0 + (z1 - z0) * f, 0.3)) return false; } return true; };
+  if (line(from[0], from[1], to[0], to[1])) return [to.slice()];
+  const cells = (cs, r) => { const n = Math.round(p.grid.n * p.grid.cs / cs); const c = (x, z) => [Math.floor(x / cs), Math.floor(z / cs)]; const [sx, sz] = c(from[0], from[1]), [tx, tz] = c(to[0], to[1]);
+    const prev = new Map(); const key = (x, z) => z * n + x; const q = [[sx, sz]]; prev.set(key(sx, sz), null);
+    for (let i = 0; i < q.length; i++) { const [x, z] = q[i]; if (x === tx && z === tz) break;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + dx, Z = z + dz; if (X < 0 || Z < 0 || X >= n || Z >= n || prev.has(key(X, Z))) continue; if (!(X === tx && Z === tz) && !fits((X + 0.5) * cs, (Z + 0.5) * cs, r)) continue; prev.set(key(X, Z), [x, z]); q.push([X, Z]); } }
+    if (!prev.has(key(tx, tz))) return null; const out = []; let cur = [tx, tz]; while (cur) { out.unshift([(cur[0] + 0.5) * cs, (cur[1] + 0.5) * cs]); cur = prev.get(key(cur[0], cur[1])); } return out; };
+  const out = cells(p.grid.cs, 0.34) || cells(p.grid.cs / 2, 0.26); if (!out) return null;
+  // (through a door's corridor: a stride before its middle — where the hands open it —, its middle, a stride past it)
+  const res = [];
+  for (let k = 0; k < out.length; k++) {
+    const d = doorOf(out[k][0], out[k][1]); if (!d || k === out.length - 1) { res.push(out[k]); continue; }
+    const k0 = k; while (k + 1 < out.length - 1 && doorOf(out[k + 1][0], out[k + 1][1]) === d) k++;
+    const sd = (P, s0) => ((P[0] - d.M[0]) * d.n[0] + (P[1] - d.M[1]) * d.n[1] >= 0 ? s0 : -s0);
+    const a = sd(k0 ? out[k0 - 1] : from, 0.45), e = sd(out[k + 1], 0.45); if (Math.sign(a) === Math.sign(e)) { for (let j = k0; j <= k; j++) res.push(out[j]); continue; } // (by it, not through it)
+    const A = [d.M[0] + d.n[0] * a, d.M[1] + d.n[1] * a]; A.door = d.id; res.push(A, d.M.slice(), [d.M[0] + d.n[0] * e, d.M[1] + d.n[1] * e]);
+  }
+  return res;
 }
 let followAt = ''; // (where the last follow stopped short: the body's point, the one it did not reach, what blocked it)
-const follow = (b, pts) => { followAt = ''; for (const pt of pts) { const r = walkTo(b.x * TL + pt[0], b.y * TL + pt[1], 200, 0.12); if (r.d > 0.3) { const st = G.Avatar.state();
+const follow = (b, pts) => { followAt = ''; for (const pt of pts) { const r = walkTo(b.x * TL + pt[0], b.y * TL + pt[1], 200, 0.12);
+  // (before a door of the rooms: open, or opened by the hands — the world doing it in its step)
+  const ds = pt.door !== undefined && In.doorState(b, pt.door); if (ds && ds.state !== 'aberta') { G.Possess.apply(w => In.useDoor(b, pt.door, 'abrir', w)); frame(); }
+  if (r.d > 0.3) { const st = G.Avatar.state();
   const q = Sp.indoor(st.X, st.Z, G.Possess.level(), b.id); followAt = `parado em ${(st.X - b.x * TL).toFixed(2)},${(st.Z - b.y * TL).toFixed(2)} (célula ${q ? q.code : '-'}), a ${r.d.toFixed(2)} m de ${pt[0].toFixed(2)},${pt[1].toFixed(2)}; barrado por ${st.block || 'nada'}`; return false; } } return true; };
 // to a point of a storey of the house, by its stairs, storey by storey (up or down the flight between each two)
 // (why the last goTo stopped short, for the proof's line)
@@ -75,25 +103,43 @@ function goTo(b, p, lv, to) {
     const pa = pathIn(b, p, cur, [st.X - b.x * TL, st.Z - b.y * TL], from); if (!pa || !follow(b, pa)) { goWhy = `${pa ? 'não chegou' : 'nenhum caminho'} à escada ${s.kind} do piso ${cur}${followAt ? ': ' + followAt : ''}`; return false; }
     if (up) walkTo(b.x * TL + dest[0], b.y * TL + dest[1], 600, 0.2);
     else { // (down: E at its landing — the hatch opened by hand)
-      let best = null; for (let k = 0; k < 20 && !(best && best.id === 'escada' && !best.t.up); k++) { const r = s.r; IN.camYaw = Math.atan2(b.y * TL + (r[1] + r[3]) / 2 - st.Z, b.x * TL + (r[0] + r[2]) / 2 - st.X); best = G.Interact.best(); frame(); }
+      // (turned to the hatch, as one goes to it — the body, not only the eye: the house#15806 of the old metropole has the bed
+      // beside the landing, and the body come up from it faced the bed — T-155)
+      let best = null; for (let k = 0; k < 20 && !(best && best.id === 'escada' && !best.t.up); k++) { const r = s.r; IN.camYaw = st.yaw = Math.atan2(b.y * TL + (r[1] + r[3]) / 2 - st.Z, b.x * TL + (r[0] + r[2]) / 2 - st.X); best = G.Interact.best(); frame(); }
       if (best && best.id === 'escada') G.Interact.run(best); else goWhy = `no alto da escada ${s.kind}, o E oferece ${best ? `«${best.label}»` : 'nada'}`;
       for (let k = 0; k < 600 && st.loco === 'stair'; k++) { frame(); check(); } }
     if (G.Possess.level() === cur) { goWhy = goWhy || `a escada ${s.kind} não levou ao piso seguinte`; return false; }
   }
   const pa = pathIn(b, p, lv, [st.X - b.x * TL, st.Z - b.y * TL], to); if (!pa) goWhy = `nenhum caminho no piso ${lv}`; return !!pa && follow(b, pa);
 }
-// a house of the world with a plan, its door on a street, a grown-up living in it who can be lived; and the body by its door
+// a house of the world with a plan, its door on a street, a grown-up living in it who can be lived; and the body by its door.
+// One the city will not rebuild while the proof runs: it densifies from its heart out (City.upgradeHomes: the house nearest
+// the town's middle becomes a sobrado), so the farthest from it — the house#2924 of the new metropole, the nearest, was made a
+// sobrado in the middle of the proof, the body put out: T-155 —; of those, one with stairs up from its entrance's storey
 function houseAndBody() {
-  const homes = [...S.buildings.values()].filter(b => b.built && In.has(b) && (b.type === 'house' || b.type === 'sobrado') && In.planDoor(b)).sort((a, b) => a.id - b.id);
+  const far = b => { const t = S.settlements.get(b.set); return t ? G.dist(b.x + 0.5, b.y + 0.5, t.cx, t.cy) : 0; };
+  const homes = [...S.buildings.values()].filter(b => b.built && In.has(b) && (b.type === 'house' || b.type === 'sobrado') && In.planDoor(b)).sort((a, b) => far(b) - far(a) || a.id - b.id);
+  const order = [];
   for (const b of homes) {
     const p = Sp.planNow(b); if (!p || !p.entrance) continue;
     const v = [...S.villagers.values()].filter(o => o.home === b.id && o.age >= 18 && o.age < 55 && !o.sleeping && G.Possess.can(o).ok).sort((a, c) => a.id - c.id)[0]; if (!v) continue;
+    const up = p.stairs.some(s => s.kind !== 'degraus' && s.lv0 === (p.entryLv || 0)); order.push({ b, p, v, up }); if (up) break;
+  }
+  order.sort((a, c) => (c.up ? 1 : 0) - (a.up ? 1 : 0)); // (the one with stairs first, then the farther ones without)
+  for (const { b, p, v } of order) {
     const d = In.planDoor(b); if (G.Possess.body()) G.Possess.release('deus'); G.Avatar.detach();
     G.Vg.endTask(v); v.inside = 0; v.x = d[0]; v.y = d[1]; v.path = null; if (!G.Possess.take(v).ok) continue;
     G.Avatar.attach(v, 0); for (let k = 0; k < 4; k++) frame(); return { b, p, v };
   }
   return null;
 }
+// (those about the house and not in it sent a few strides off, to ground the world walks they reach: someone standing by its wall,
+// outside it, is whom «E» means there, through the wall — the daughter of the house#25346 by its wall, on the tip of the v37 line:
+// «Conversar com sua filha» beside the bed — T-155; as the porta proof does, T-089)
+const aside = b => { const cx = b.x + b.w / 2, cy = b.y + b.h / 2, me = G.Possess.body();
+  for (const o of S.villagers.values()) { if (o === me || o.inside || Math.hypot(o.x - cx, o.y - cy) * TL > 9) continue; let to = null;
+    for (let r = 12; r <= 20 && !to; r += 2) for (let k = 0; k < 16 && !to; k++) { const a = k / 16 * Math.PI * 2, x = cx + Math.cos(a) * r / TL, y = cy + Math.sin(a) * r / TL; if (W.walkableXY(x, y) && W.reaches(o, x, y)) to = [x, y]; }
+    if (to) { G.inSim++; G.Vg.endTask(o); o.x = to[0]; o.y = to[1]; o.path = null; G.inSim--; } } };
 const doorPt = (b, p) => { const e = p.entrance; return [b.x * TL + e.x, b.y * TL + e.z]; };
 // (a point straight in from the entrance, k metres past its door — square to the door's wall, as one walks through a door)
 const inward = (p, k) => { const e = p.entrance; const d = p.doors[e.door]; const w = p.walls[d.wall]; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; let nx = -(w.b[1] - w.a[1]) / L, nz = (w.b[0] - w.a[0]) / L;
@@ -132,7 +178,7 @@ else {
     const l1 = p.levels.find(q => q.lv === s0.lv1); const up = G.Possess.level() === s0.lv1 && Math.abs(st().Y - (Sp.planEntry(b.id).y0 + l1.y + Sp.FLOOR_UP)) < 0.05;
     ok('3. sobe a escada: no topo, o piso de cima (o seu chão)', up && !bad.length, `caminho até o pé: ${path0 ? path0.length + ' passos' : 'nenhum'}; no topo a ${r3.d.toFixed(2)} m; piso ${G.Possess.level()} (quer ${s0.lv1}); pés a ${(st().Y - Sp.planEntry(b.id).y0).toFixed(2)} m (o piso a ${l1.y})${bad.length ? '; ' + bad.slice(0, 2).join(' · ') : ''}`);
     // (and down: E at the landing — the hatch opened by hand —, the flight to its foot)
-    { let best = null; for (let k = 0; k < 20 && !(best && best.id === 'escada' && !best.t.up); k++) { const r = s0.r; IN.camYaw = Math.atan2(b.y * TL + (r[1] + r[3]) / 2 - st().Z, b.x * TL + (r[0] + r[2]) / 2 - st().X); best = G.Interact.best(); frame(); }
+    { let best = null; for (let k = 0; k < 20 && !(best && best.id === 'escada' && !best.t.up); k++) { const r = s0.r; IN.camYaw = st().yaw = Math.atan2(b.y * TL + (r[1] + r[3]) / 2 - st().Z, b.x * TL + (r[0] + r[2]) / 2 - st().X); best = G.Interact.best(); frame(); }
       if (best && best.id === 'escada') G.Interact.run(best); for (let k = 0; k < 600 && st().loco === 'stair'; k++) frame(); }
     bad = []; const r4 = walkTo(b.x * TL + foot[0], b.y * TL + foot[1], 600, 0.2);
     ok('3. desce a escada: ao pé dela, o piso de baixo', G.Possess.level() === s0.lv0 && r4.d < 0.35 && !bad.length, `ao pé a ${r4.d.toFixed(2)} m; piso ${G.Possess.level()}${bad.length ? '; ' + bad.slice(0, 2).join(' · ') : ''}`);
@@ -145,13 +191,21 @@ else {
       const fitsAt = (x, z) => { const r = 0.34; for (const [dx, dz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r * 0.7, r * 0.7], [-r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, -r * 0.7]]) { const q = Sp.indoor(b.x * TL + x + dx, b.y * TL + z + dz, bd.item.lv, b.id); if (!q || !q.walk) return false; } return true; };
       // (one the door reaches on foot: Interiors' own walk from the entrance)
       const R = p.reach && p.reach[bd.item.lv]; const reachedAt = (x, z) => !R || !!R[Math.floor(z / p.grid.cs) * p.grid.n + Math.floor(x / p.grid.cs)];
-      let acc = null; for (let rr = 0.4; rr < 2 && !acc; rr += 0.1) for (let k = 0; k < 24 && !acc; k++) { const a = k / 24 * Math.PI * 2; const x = bd.spot.x + Math.cos(a) * rr, z = bd.spot.z + Math.sin(a) * rr; if (fitsAt(x, z) && reachedAt(x, z)) acc = [x, z]; }
+      // (in the bed's own room, off the flights, and one the way from where the body is — or comes up onto that storey — goes to:
+      // the nearest point round the sleeping place had been in the next room, through its wall, on the foot of the ladder — T-155)
+      const L = bd.item.lv, inR = (r, x, z) => x > r[0] && x < r[2] && z > r[1] && z < r[3]; const room = p.rooms.find(r => r.lv === L && r.r && inR(r.r, bd.item.x, bd.item.z));
+      const onFlight = (x, z) => p.stairs.some(q => q.kind !== 'degraus' && q.lv0 === L && x > q.r[0] - 0.02 && x < q.r[2] + 0.02 && z > q.r[1] - 0.02 && z < q.r[3] + 0.02);
+      const arrive = p.stairs.find(q => q.kind !== 'degraus' && (q.lv1 === L || q.lv0 === L)); const from = G.Possess.level() === L ? [st().X - b.x * TL, st().Z - b.y * TL] : arrive ? (arrive.lv1 === L ? arrive.b : arrive.a) : null;
+      // (the cells of the room by their distance from the sleeping place: the nearest such)
+      const cells = []; for (let j = 0; j < p.grid.n; j++) for (let i = 0; i < p.grid.n; i++) { const x = (i + 0.5) * p.grid.cs, z = (j + 0.5) * p.grid.cs, d = Math.hypot(x - bd.spot.x, z - bd.spot.z); if (d >= 0.4 && d < 2 && (!room || inR(room.r, x, z))) cells.push([d, x, z]); }
+      let acc = null; for (const [, x, z] of cells.sort((q, r) => q[0] - r[0])) if (fitsAt(x, z) && reachedAt(x, z) && !onFlight(x, z) && (!from || pathIn(b, p, L, from, [x, z]))) { acc = [x, z]; break; }
       const there = !!acc && goTo(b, p, bd.item.lv, acc);
-      // (turned to the bed, as one goes to it)
+      // (turned to the bed, as one goes to it — none of the street at its wall)
+      aside(b);
       let best2 = null; for (let k = 0; k < 20 && !(best2 && best2.id === 'cama'); k++) { const ya = Math.atan2(b.y * TL + bd.item.z - st().Z, b.x * TL + bd.item.x - st().X); IN.camYaw = ya; st().yaw = ya; best2 = G.Interact.best(); frame(); }
       const r5 = best2 && best2.id === 'cama' ? G.Interact.run(best2) : null; for (let k = 0; k < 90 && !v.sleeping; k++) frame(); for (let k = 0; k < 10; k++) frame();
       const lying = st().loco === 'sleep' && !!st().bed; const onIt = Math.hypot(st().X - (b.x * TL + bd.spot.x), st().Z - (b.y * TL + bd.spot.z)) < 0.05;
-      ok('4. deita na sua cama: o sono do mundo, o corpo deitado nela', !!r5 && v.sleeping && lying && onIt && v.inside === b.id, `${bd.item.kind} no piso ${bd.item.lv} (chegou: ${there}); ${best2 ? best2.label : 'nada'}; dormindo ${v.sleeping}; deitado ${lying}; na cama ${onIt}; dentro ${v.inside === b.id}`);
+      ok('4. deita na sua cama: o sono do mundo, o corpo deitado nela', !!r5 && v.sleeping && lying && onIt && v.inside === b.id, `${bd.item.kind} no piso ${bd.item.lv} (chegou: ${there}${there ? '' : acc ? ', ' + goWhy : ', nenhum lugar ao lado dela'}); ${best2 ? best2.label : 'nada'}; dormindo ${v.sleeping}; deitado ${lying}; na cama ${onIt}; dentro ${v.inside === b.id}`);
       // (awake: up beside the bed, in the room)
       G.Possess.apply(w => { G.Possess.wake(w); return { ok: true }; }); for (let k = 0; k < 8; k++) frame(); bad = []; check();
       ok('4. acordado, levanta ao lado da cama, dentro de casa', !v.sleeping && v.inside === b.id && st().loco === 'ground' && !bad.length, `dormindo ${v.sleeping}; dentro ${v.inside === b.id}; ${st().loco}${bad.length ? '; ' + bad[0] : ''}`);

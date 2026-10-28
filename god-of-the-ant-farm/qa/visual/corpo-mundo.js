@@ -90,9 +90,11 @@ const freshTree = () => [...S.trees.values()].filter(t => G.Nature.isChoppable(t
   if (!rock) ok('quebrar pedra: o corpo rende o mesmo que o pedreiro', false, 'nenhuma pedra com chão andável ao lado');
   else {
     const v = G.Possess.body(); v.carry = null; const wm = G.Vg.workMul(v); const cap = G.Vg.cap(v); const s0 = rock.stone, t0 = S.clock; let k = 0;
-    for (; k < 4000; k++) { const b = holdE('pedra'); frame(); if (v.carry && v.carry.n >= cap) break; if (b && b.id !== 'pedra') break; }
+    // (E held until the hands are full or the rock is gone — its last stone takes it away —; what goes by in front a moment — a
+    // hare that is for a moment the nearer thing one means — only makes the body wait, as anyone holding E: T-153)
+    for (; k < 4000; k++) { holdE('pedra'); frame(); if (v.carry && v.carry.n >= cap) break; if (!S.rocks.has(rock.id)) break; }
     const dw = S.clock - t0, got = s0 - (S.rocks.has(rock.id) ? rock.stone : 0); const per = dw / Math.max(1, got), want = 3.8 / wm / cap;
-    ok('quebrar pedra: cada pedra leva o tempo do mundo do pedreiro (3,8 s ÷ trabalho por carga)', got > 0 && per > want * 0.8, `${got} pedras em ${dw.toFixed(2)} s do mundo: ${per.toFixed(2)} s cada; o pedreiro: ${want.toFixed(2)} s cada (${(want / Math.max(1e-6, per)).toFixed(2)}× mais rápido o corpo)`);
+    ok('quebrar pedra: cada pedra leva o tempo do mundo do pedreiro (3,8 s ÷ trabalho por carga)', got > 0 && per > want * 0.8, `${got} pedras em ${dw.toFixed(2)} s do mundo: ${per.toFixed(2)} s cada; o pedreiro: ${want.toFixed(2)} s cada (${(want / Math.max(1e-6, per)).toFixed(2)}× mais rápido o corpo)${got ? '' : '; diante do corpo: ' + front()}`);
   } }
 // eating at the store: 1.6 s of the world, as anyone eating there
 { const st = [...S.buildings.values()].filter(b => b.built && G.BDEF[b.type] && G.BDEF[b.type].dropoff).sort((a, b) => a.id - b.id).find(b => { const d = G.Vg.door(b); return bodyAt(d[0] + 0.0001, d[1] + 0.0001, 0.3); });

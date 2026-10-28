@@ -6,6 +6,7 @@
 //   const M = require('./nodemundo.js'); const G = M.load({ qa: true, extra: ['qa/meu-teste.js'] });
 //   M.novo({ seed: 7, type: 'ilha', size: 64, tribes: 2 })   um mundo novo, pelo G.Main.newGame
 //   M.pronto('cidade')                                       um mundo pronto de worlds/, pelo menu (G.Main.openSave)
+//   M.abrir(save)                                            um save (o objeto), pelo menu como um mundo pronto
 //   M.viver(seg)    o passo normal (passos de 0,1 s, como o QA.run)
 //   M.saltar(anos)  o salto no tempo (G.Skip.on + G.Main.skipStep(1), como o timeskip.js)
 //   M.salvarCarregar()  serializa e carrega de volta (devolve o tamanho do save)
@@ -76,9 +77,9 @@ M.pronto = function (key) {
   const data = {}; const got = G.Ready.got; G.Ready.got = (k, s) => { data[k] = s; };
   try { M.run('worlds/' + key + '.js'); } finally { G.Ready.got = got; }
   if (!data[key]) throw new Error('mundo pronto não encontrado: ' + key);
-  G.Main.openSave(JSON.parse(data[key]), ''); quiet();
-  return G.S;
+  return M.abrir(JSON.parse(data[key]));
 };
+M.abrir = function (o) { G.Main.openSave(o, ''); quiet(); return G.S; };
 M.viver = function (seg) { const c0 = G.S.clock; while (G.S.clock - c0 < seg) G.debug.step(0.1); };
 M.saltar = function (anos) {
   const S = G.S; const d0 = S.day; const W = G.W;

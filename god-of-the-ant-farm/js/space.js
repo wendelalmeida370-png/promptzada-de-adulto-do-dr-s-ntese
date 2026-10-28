@@ -81,6 +81,13 @@
     const S = G.S; if (!W.inb(x, y)) return -Infinity; const i = W.idx(x, y); if (S.type[i] !== T.RIVER) return -Infinity;
     return S.road[i] ? S.wl[i] * HM + 0.17 : S.ice && S.ice[i] ? S.wl[i] * HM + 0.1 : -Infinity;
   };
+  // the ground the feet stand on out of doors (tiles in, metres out): the land, a bridge's deck or the ice over a river, the bed
+  // of a ford under its water — the body's own ground (Avatar.floorAt, under the steps and the stones it adds) and the one the
+  // world reckons a side flight's foot from (doorFlight, L-325): one rule for both. Pure: the world's ground only
+  Sp.footAt = function (x, y) {
+    if (!W.inb(x, y)) return W.hAt(G.clamp(x, 0, N), G.clamp(y, 0, N)) * HM;
+    const h = W.hAt(x, y) * HM, dk = Sp.deckAt(x, y); return dk > -Infinity ? Math.max(h, dk) : h - Sp.bedAt(x, y);
+  };
   // a boulder's stones, one shape for the drawing and for the feet: the big one (twelve faces, as big as what is left
   // of it, a quarter sunk in the ground) and, beside a big one, a small one half sunk
   let stoneMemo = new Map();
@@ -209,6 +216,13 @@
   //   sh: the shell (rect, annexes, kind); lot: { w, d } metres; w: the door's wall; h: its opening; ly: its storey's floor;
   //   raised: a floor on posts (the outside flight up to it has the steps); F0, uc0: a side given (a flight's foot)
   // → { F, uc, P, top, w (the steps' width), treads: [{ k, a, n, wa, wn, y, gy, kind }], cut, room } — or null: no steps there
+  // (a tile out of its own lot that a door's way in never takes — its treads, the ground before them, the body on them —, though
+  // the world walks it, as the body's own rule has it (Avatar's solidAt): the tile of a gate, whose piers are the feet's walls
+  // since L-308 — where they stand is the 3D's to say, never asked here: the whole tile —, L-323, the house#8974 and the
+  // sobrado#14759, their steps down onto the gate of a wall's line; and the lot of another building of walls with its plan,
+  // the body in only by its door — the steps of one never on another's lot, L-213 —, L-324, the house#24793, whose fourteen
+  // steps came down into the feira#10950)
+  const barred = i => { const S = G.S; if (S.wall[i] === 2 || S.wall[i] === 4) return true; const B = S.occ[i] && S.buildings.get(S.occ[i]); return !!(B && !Sp.BASELESS[B.type] && G.Interiors && G.Interiors.has(B)); };
   Sp.doorFlight = function (b, sh, lot, w, h, ly, raised, F0, uc0, fresh) {
     const y = ly + (h.sill || 0); if (raised || y >= 0.3 || !w || !h) return null;
     // (kept by the wall's place too — its ends —, and the side given for a flight's foot: a door moved to another side of its
@@ -246,7 +260,14 @@
     // (the ground taken where the feet stand when the body's rim meets the steps: a stride's tip before the lowest tread; before a
     // tread of a side flight, narrower than the body, further out — its rim, aslant, meets the tread beside it, a rise up, while
     // the feet are still in the street)
-    const footStep = () => { const t = treads[treads.length - 1]; const off = t && t.kind === 'side' ? 0.25 : 0.12; const n = t ? t.n + t.wn / 2 : n0, a = t ? t.a : 0, q = (t ? t.wa : wd) / 4; return (t ? t.y : top) - Math.min(gAt(a, n + off), gAt(a - q, n + off), gAt(a + q, n + off)); };
+    // (that of a side flight is taken at the very point where the body stops — its rim r·√½ out, 0.23; the body stood 0.24 out —,
+    // on the ground the feet stand on there (Space.footAt): by a river's bank the drawn ground stood 7 cm over it, and the
+    // forja#27885's side flight, 0.55 by the drawn ground of the 0.56 its feet walk, was 0.61 to the body, climbed with the
+    // hands — L-325. A straight flight's is taken 0.12 out, ten centimetres past where the feet are when the rim meets its
+    // second tread (0.02 out): a margin that holds the difference — on the feet's ground, two doors of the new metropole would
+    // move for nothing, the sobrados 21323 and 24763 between 0.56 and 0.60, and 22 flights would be laid anew)
+    const footG = (a, n) => { const p = P(a, n); return Sp.footAt(Math.min(N - 0.001, b.x + p[0] / TILE), Math.min(N - 0.001, b.y + p[1] / TILE)) - y0; };
+    const footStep = () => { const t = treads[treads.length - 1]; const sd = t && t.kind === 'side', g = sd ? footG : gAt; const off = sd ? 0.25 : 0.12; const n = t ? t.n + t.wn / 2 : n0, a = t ? t.a : 0, q = (t ? t.wa : wd) / 4; return (t ? t.y : top) - Math.min(g(a, n + off), g(a - q, n + off), g(a + q, n + off)); };
     // (the foot of a flight with the rise above it within one step, with a margin — 0.56 of the body's 0.6 —; a lone step within
     // a span and a half: L-183, the flights the body walked up and could not — soleira 4b, T-090)
     const riseUp = () => (treads.length > 1 ? treads[treads.length - 2].y - treads[treads.length - 1].y : 0);
@@ -273,7 +294,7 @@
     }
     // (the last of them too high a step from the ground before it: on into the street, treads a foot and more deep, as many as
     // come down to the ground where the flight ends — a street falls away —, where what it stands on is the building's own
-    // ground or open ground the world walks)
+    // ground or open ground the world walks — never a gate's tile, nor another's lot of walls: barred)
     if (!cut && tooHigh()) {
       // (a rise of a span at most over a tread a little deeper — what the feet take one stride at a time —, as many as come down
       // to the ground the feet stand on before the flight's foot, along its middle a: the last of them a rise over it)
@@ -284,7 +305,7 @@
         const n14 = nS, e14 = end, r14 = (top - gAt(a, end + 0.12)) / nS;
         for (let it = 0; it < 8 && (top - gAt(a, end + 0.12)) / nS > 0.30; it++) { nS++; end = n0 + nS * 0.29; }
         return { nS, end, rise: (top - gAt(a, end + 0.12)) / nS, n14, e14, r14 }; };
-      const open = (a, n) => { const p = P(a, n); const x = b.x + p[0] / TILE, z = b.y + p[1] / TILE; return W.inb(x, z) && (G.S.occ[W.idx(x, z)] === b.id || W.walkableXY(x, z)); };
+      const open = (a, n) => { const p = P(a, n); const x = b.x + p[0] / TILE, z = b.y + p[1] / TILE; if (!W.inb(x, z)) return false; const i = W.idx(x, z); return G.S.occ[i] === b.id || (W.walkableXY(x, z) && !barred(i)); };
       // (the world walks under a tree, and the body is walked round its trunk: the steps never stand in the trunk of a grown
       // tree — a tread its radius from its middle at least, the tree reckoned at its next tenth up —, and the body on them, a
       // rim inside their edge, is never pushed off them — L-197, the ourives#22497 and its acacia. The tiles a flight of these
@@ -322,19 +343,19 @@
     // (the side flight, where the way down the street does no better: its feet walk and these do not, or its foot is the lower)
     if (sideK && !walks(footStep(), riseUp(), treads.length) && ((!sideK.narrow && walks(sideK.fs, sideK.ru, sideK.treads.length)) || sideK.fs <= footStep())) { treads = sideK.treads; cut = sideK.cut; }
     // (and what the feet find at its foot: the step up from the street with the rise above it — whether it walks —, and whether
-    // there is ground the world walks a stride before its lowest tread: what Space.entryFits answers)
+    // there is ground the world walks a stride before its lowest tread — not a barred tile —: what Space.entryFits answers)
     const lo = treads.length ? treads.reduce((q, t) => (t.y < q.y ? t : q)) : null; const gp = lo ? P(lo.a, lo.n + lo.wn / 2 + 0.5) : null;
-    const ground = !gp || (() => { const x = b.x + gp[0] / TILE, z = b.y + gp[1] / TILE; return W.inb(x, z) && (G.S.occ[W.idx(x, z)] === b.id || W.walkableXY(x, z)); })();
+    const ground = !gp || (() => { const x = b.x + gp[0] / TILE, z = b.y + gp[1] / TILE; if (!W.inb(x, z)) return false; const i = W.idx(x, z); return G.S.occ[i] === b.id || (W.walkableXY(x, z) && !barred(i)); })();
     // (and whether the body goes up them and in, along the way it takes — as a player does: up a side flight over the middle of
     // each tread, over the landing from its end to the door's middle; else up the flight's line —: where its middle goes, and
     // under its rim to either side across its way — the points of the rim a step meets, aslant ahead: r·√½ out —, ground the
     // body stands on by its own rule (Avatar's solidAt): the building's own lot — the plan's doorstep —; out of it, what the
     // world walks, or the water a body swims, the feet on the tread's top. Never another building, a wall, a cliff, the map's
-    // edge: a landing over a quay built since before the door is none — L-207, the taverna#9656 —, nor one over a cliff beyond
-    // the lot's edge — L-208, the quartel#4882. What lies beyond the door's middle, on the landing's far side, the body never
-    // goes over)
+    // edge, a barred tile (a gate's, another's lot of walls: L-323, L-324): a landing over a quay built since before the door
+    // is none — L-207, the taverna#9656 —, nor one over a cliff beyond the lot's edge — L-208, the quartel#4882. What lies
+    // beyond the door's middle, on the landing's far side, the body never goes over)
     const off = (a, n) => { const p = P(a, n); const X = b.x * TILE + p[0], Z = b.y * TILE + p[1]; if (!W.inb(X / TILE, Z / TILE)) return true;
-      if (G.S.occ[W.idx(X / TILE, Z / TILE)] === b.id) return false; const s = Sp.surface(X, Z); return !s.walk && s.kind !== 'deep'; };
+      const i = W.idx(X / TILE, Z / TILE); if (G.S.occ[i] === b.id) return false; if (barred(i)) return true; const s = Sp.surface(X, Z); return !s.walk && s.kind !== 'deep'; };
     const RIM = BODY_R * Math.SQRT1_2;
     const stand = (() => {
       const side = treads.filter(t => t.kind === 'side'), L = treads.find(t => t.kind === 'landing');

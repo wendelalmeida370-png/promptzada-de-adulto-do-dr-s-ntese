@@ -69,7 +69,7 @@
     Sk.best = { t: mt.t, pop: S.villagers.size, day: S.day };
     Sk.prevSpeed = G.speed || 1;
     news = []; feed = []; lastLog = S.logN || 0; uiT = 0; mapT = 0; clock = 0; untilN = 0; startReal = performance.now();
-    G.FX.off = true; if (G.Audio) G.Audio.mute = true; G.W.pathGreed = 1.3;
+    G.FX.off = true; if (G.Audio) G.Audio.mute = true; G.W.pathGreed = G.W.PATH_GREEDY;
     if (Sk.course === 'fartura') {
       S.blessed = true;
       if (warCount() > 0 || G.War.bands.size) G.Politics.divinePeace();

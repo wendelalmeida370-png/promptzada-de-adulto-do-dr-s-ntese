@@ -7,16 +7,19 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const fs = require('fs'), path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const OUT = process.env.OUT || path.join(ROOT, 'worlds');
-// a leg: { goal, course } a goal of the skip; { years } free years; { ww: max } free years until the world war begins
-// (if it has not begun by then, the game's own start of a world war is called: the world chooses the reason and the
-// sides, only the moment is ours); { after: seconds } a little more, so the armies are on the move; { snap } keep it
+// a leg: { goal, course } a goal of the skip; { years } free years; { ww: max } free years until the world war begins —
+// or until only four big peoples are left (pop 12 or more: with three the game's own start may find no two sides — an
+// empire with the others its vassals); with the builders free (L-322) one empire swallowed the others in the 80 years,
+// seeds 3510 and 3511 of 28/10, D-091 — (if it
+// has not begun by itself, the game's own start of a world war is called: the world chooses the reason and the sides,
+// only the moment is ours); { after: seconds } a little more, so the armies are on the move; { snap } keep it
 // (as sementes são as do navegador das provas: com outro motor de JavaScript o mesmo número faz outro mundo, e uma semente
 // que chegava à meta pode não chegar — T-123; no Chrome 153 a megalópole 3303 parou no nível 4 e a 3305 chegou)
 const KINDS = {
   cidade: { seed: 3101, opts: { type: 'continente', size: 128, tribes: 4 }, legs: [{ goal: 'cidade', course: 'fartura' }, { snap: 'cidade' }] },
   metropole: { seed: 3202, opts: { type: 'continente', size: 160, tribes: 5 }, legs: [{ goal: 'metropole', course: 'fartura' }, { snap: 'metropole' }] },
   mega: { seed: 3305, opts: { type: 'continente', size: 160, tribes: 4 }, legs: [{ goal: 'mega', course: 'fartura' }, { snap: 'mega' }] },
-  mundial: { seed: 3505, opts: { type: 'continente', size: 160, tribes: 6 }, legs: [{ goal: 'metropole', course: 'fartura' }, { ww: 80 }, { after: 60 }, { snap: 'mundial' }] },
+  mundial: { seed: 3510, opts: { type: 'continente', size: 160, tribes: 6 }, legs: [{ goal: 'metropole', course: 'fartura' }, { ww: 80 }, { after: 60 }, { snap: 'mundial' }] },
   anos: { seed: 3404, opts: { type: 'continente', size: 128, tribes: 5 }, legs: [{ years: 100 }, { snap: 'anos100' }, { years: 400 }, { snap: 'anos500' }, { years: 500 }, { snap: 'anos1000' }] },
 };
 const kind = process.argv[2]; const K = KINDS[kind];
@@ -88,10 +91,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       const d0 = await page.evaluate(() => G.S.day); let left = leg.years;
       while (left > 0 && !failed) { const r = await run(null, 'livre', left); left = leg.years - (r.day - d0); if (!r.pop) failed = 'o mundo ficou vazio'; }
     } else if (leg.ww) {
-      const r = await run(null, 'livre', leg.ww, '() => !!G.WorldWar.active()');
+      const r = await run(null, 'livre', leg.ww, '() => !!G.WorldWar.active() || G.Fac.all().filter(f => G.Fac.pop(f.id) >= 12).length <= 4');
       if (!r.ww) {
         const w = await page.evaluate(() => { const w = G.WorldWar.start() || G.WorldWar.start(true); return w ? w.name : null; });
-        console.log(`  a guerra mundial não veio sozinha em ${leg.ww} anos: o jogo a começou agora (${w || 'sem povos grandes o bastante'})`);
+        const big = await page.evaluate(() => G.Fac.all().filter(f => G.Fac.pop(f.id) >= 12).length);
+        console.log(`  a guerra mundial não veio sozinha (ano ${r.day}, ${big} povos grandes): o jogo a começou agora (${w || 'sem povos grandes o bastante'})`);
         if (!w) failed = 'não há povos grandes o bastante para uma guerra mundial';
       } else console.log(`  a guerra mundial começou sozinha no ano ${r.day}`);
     } else if (leg.after) {
