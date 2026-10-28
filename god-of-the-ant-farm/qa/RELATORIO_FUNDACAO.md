@@ -219,8 +219,14 @@ As duas provas que mudaram foram olhadas uma a uma. Nenhuma era defeito do jogo;
 A semente do mundo da guerra mundial também mudou. Com o navegador novo, a 3507 não fazia mais a guerra vir sozinha. A
 receita do «mundial» agora espera a guerra vir sozinha, ou até só restarem quatro povos grandes, e então o jogo a começa
 enquanto ainda acha dois lados (D-091). Antes, a espera era de 80 anos fixos, e com as cidades crescendo mais (os
-construtores soltos, L-322) um império engolia os outros nesse tempo. Com o código final, a 3510, a primeira semente da
-lista, fez a guerra vir sozinha no ano 47: a Guerra da Fome.
+construtores soltos, L-322) um império engolia os outros nesse tempo.
+
+Cada conserto do fechamento muda o mundo que a mesma semente faz, e a guerra da 3510, a primeira semente da lista, mudou
+de uma geração de mundos para outra: veio sozinha no ano 47 (a Guerra da Fome); o jogo começou a Guerra do Ouro no ano
+55; depois, a Grande Coalizão no ano 83. Esta última eram os quatro povos grandes contra um povo de oito pessoas — os
+aliados do império ficavam do lado dele, e não sobrava ninguém para a coalizão (L-370). No mundo final, a guerra não veio
+sozinha, e no ano 75, com quatro povos grandes, o jogo começou a Grande Coalizão, agora com dois lados de verdade: o
+Altepetl de Tenoch e o Clã de Hrafn (274 pessoas) contra a Pólis de Argos, a Casa de Amon e a Pólis de Olímpia (338).
 
 ## 8. Desempenho medido
 
