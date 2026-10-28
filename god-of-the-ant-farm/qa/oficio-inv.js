@@ -15,14 +15,17 @@
       const t = O.DEFS[d.of]; const R = t && t.rx[d.p];
       if (!R) { add('oficio', 1, `${nm}: receita desconhecida (${d.of}/${d.p})`); continue; }
       if (!Number.isInteger(d.s) || d.s < 0 || d.s >= R.st.length) add('oficio', 1, `${nm}: etapa ${d.s} fora da receita de ${R.name}`);
-      for (const k of ['got', 'massa', 'cru', 'forno', 'calor', 'fogo', 'lenha', 'feitos', 'quebrados', 'usado']) if (!fin(d[k]) || d[k] < -EPS) add('oficio', 1, `${nm}: ${k} = ${d[k]}`);
+      const pools = O.poolsOf ? O.poolsOf(R) : ['massa', 'cru', 'forno'];
+      for (const k of ['got', 'calor', 'fogo', 'lenha', 'feitos', 'quebrados', 'usado'].concat(pools)) if (!fin(d[k]) || d[k] < -EPS) add('oficio', 1, `${nm}: ${k} = ${d[k]}`);
       // the books of the transformation close: the input used, in finished pieces, is what is in the pools and what was counted
       const f = {}; let last = null;
-      for (let i = R.st.length - 1; i >= 0; i--) { const st = R.st[i]; if (st.kind !== 'mao') continue; if (st.make) { f[st.from] = 1; last = st; continue; } const out = st.to; const k = (f[out] || 0) * (st.give || st.take) / st.take; if (st.from) f[st.from] = k; else f.in = k; }
+      // (the finished pieces each unit of a pool or of the input becomes: a stage that makes them, give/take of what it takes;
+      // a stage before it, its own give/take of what the next one makes of its pool)
+      for (let i = R.st.length - 1; i >= 0; i--) { const st = R.st[i]; if (st.kind !== 'mao') continue; const k = (st.make ? 1 : (f[st.to] || 0)) * (st.give || st.take) / st.take; if (st.make) last = st; if (st.from) f[st.from] = k; else f.in = k; }
       if (last && f.in) {
         const inP = (d.usado || 0) * f.in; let have = (d.feitos || 0) + (d.quebrados || 0);
-        for (const p of ['massa', 'cru', 'forno']) if (f[p]) have += (d[p] || 0) * f[p];
-        if (Math.abs(inP - have) > 0.01) add('oficio', 1, `${nm}: as contas de ${R.name} não fecham — a argila usada dá ${Math.round(inP * 100) / 100}, há ${Math.round(have * 100) / 100} (barro, crus, no forno, contados, quebrados)`);
+        for (const p of pools) if (f[p]) have += (d[p] || 0) * f[p];
+        if (Math.abs(inP - have) > 0.01) add('oficio', 1, `${nm}: as contas de ${R.name} não fecham — o que se usou de ${R.in} dá ${Math.round(inP * 100) / 100}, há ${Math.round(have * 100) / 100} (${pools.join(', ')}, prontos, quebrados)`);
       }
       // its place: the building of its trade, standing, of its people
       const b = s.buildings.get(op.at);

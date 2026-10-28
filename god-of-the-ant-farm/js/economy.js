@@ -319,15 +319,9 @@
   const store = v => G.Village.nearestDropoff(v.x, v.y, v.set);
   function faceB(v, b) { const [cx, cy] = G.Village.center(b); G.faceTo(v, cx - v.x, cy - v.y); }
   function inv(b) { return b.inv || (b.inv = {}); }
-  function invN(b, keys) { const I = inv(b); let n = 0; for (const k of keys) n += I[k] || 0; return n; }
 
-  // ------------------------------ recipes ------------------------------
-  E.RECIPE = {
-    tecelao: { in: { la: 2 }, out: { tecido: 1 }, t: 7, act: 'weave' },
-    ferreiro: { in: { minerio: 2 }, fuel: 1, out: null, n: 2, t: 8, act: 'forge' },
-    ourives: { in: { ouro: 1 }, out: { joias: 1 }, t: 9, act: 'craft' },
-    oleiro: { in: { argila: 2 }, fuel: 1, out: { ceramica: 2 }, t: 8, act: 'pottery', dig: true },
-  };
+  // ------------------------------ the crafts ------------------------------
+  // (the loom, the forge, the goldsmith's bench and the pottery work by batches, stage by stage: act-oficio.js)
   // the smith forges what the realm needs most: weapons in war, tools in peace
   function forgeOut(f) {
     // (in a crisis, before any war is declared, the smiths already work for it — the levy will need weapons)
@@ -336,8 +330,7 @@
     const wantArms = war ? Math.max(soldiers * 1.5 + 10, pop * 0.12) : soldiers * 0.8 + 4;
     return f.stock.armas < wantArms && (war || f.stock.ferramentas >= pop * 0.15) ? 'armas' : 'ferramentas';
   }
-  const mainIn = R => Object.keys(R.in)[0];
-  function canCraft(b, R) { const I = inv(b); for (const k in R.in) if ((I[k] || 0) < R.in[k]) return false; return true; }
+  E.forgeOut = forgeOut;
 
   // ------------------------------ choosing the day's work ------------------------------
   E.jobTask = function (v, H) {
@@ -346,8 +339,6 @@
     const f = G.Fac.ofV(v); if (!f) return null; E.ensure(f);
     // (a trade whose work is an operation of the world, stage by stage — the pottery's batches: act-oficio.js)
     if (G.Oficio && G.Oficio.has(b, v.role)) return G.Oficio.task(v, b, f, H);
-    const R = E.RECIPE[v.role];
-    if (R) return crafterTask(v, b, R, f, H);
     switch (v.role) {
       case 'pastor': case 'cavalarico': return pastorTask(v, b, f, H);
       case 'acougueiro': return butcherTask(v, b, f, H);
@@ -361,20 +352,6 @@
     }
     return null;
   };
-  function crafterTask(v, b, R, f, H) {
-    const I = inv(b);
-    const outs = R.out ? Object.keys(R.out) : ['armas', 'ferramentas'];
-    const outN = invN(b, outs);
-    const ready = canCraft(b, R) && (!R.fuel || f.stock.wood >= R.fuel);
-    if (outN >= 4 || (outN > 0 && !ready && (f.stock[mainIn(R)] || 0) < R.in[mainIn(R)])) return H.setTask(v, { type: 'haul', id: b.id, pri: 1, keys: outs });
-    if (ready) return H.setTask(v, { type: 'craft', id: b.id, pri: 1, n: 0 });
-    const k = mainIn(R);
-    if ((f.stock[k] || 0) >= R.in[k]) return H.setTask(v, { type: 'fetch', id: b.id, k, n: Math.min(G.Vg.cap(v) * 2, Math.floor(f.stock[k]), R.in[k] * 3), pri: 1 });
-    if (R.dig) { const s = clayPit(v, b); if (s) return H.setTask(v, { type: 'dig', id: b.id, x: s[0], y: s[1], pri: 1 }); }
-    if (outN > 0) return H.setTask(v, { type: 'haul', id: b.id, pri: 1, keys: outs });
-    void I;
-    return null;
-  }
   E.clayPit = (v, b) => clayPit(v, b);
   function clayPit(v, b) {
     const S = G.S; const cx = Math.floor(b.x + 1), cy = Math.floor(b.y + 1);
@@ -504,10 +481,8 @@
   // ------------------------------ task machines ------------------------------
   E.run = function (v, t, dt, H) {
     switch (t.type) {
-      case 'craft': return runCraft(v, t, dt, H), true;
       case 'fetch': return runFetch(v, t, dt, H), true;
       case 'haul': return runHaul(v, t, dt, H), true;
-      case 'dig': return runDig(v, t, dt, H), true;
       case 'herd': return runHerd(v, t, dt, H), true;
       case 'tend': return runTend(v, t, dt, H), true;
       case 'fodder': return runFodder(v, t, dt, H), true;
@@ -572,41 +547,6 @@
     v.carry = { k, n }; G.Vg.emote(v, 'happy', 1);
     E.pay(v, k, n);
     H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' });
-  }
-  function runCraft(v, t, dt, H) {
-    const b = workB(v, t, H); if (!b) return;
-    const f = G.Fac.ofV(v); const R = E.RECIPE[v.role]; if (!f || !R) return H.end(v);
-    if (t.st === 0) { const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return; }
-    v.act = R.act; faceB(v, b);
-    if (v.actT > 0.6 && G.R() < dt * 2) {
-      if (R.act === 'forge') { G.FX && G.FX.chips(v.x + v.face * 0.3, v.y - 0.1, '#ffb050'); G.Audio && G.Audio.at(v.x, v.y, 'hammer'); }
-      else if (R.act === 'craft') G.FX && G.FX.chips(v.x + v.face * 0.2, v.y, '#f2c14e');
-    }
-    const speed = G.Civ.tV(v, 'build') * (f.stock.ferramentas > 0 ? 1.2 : 1) * (v.work || 1);
-    if (v.actT < R.t / speed) return;
-    if (!canCraft(b, R) || (R.fuel && f.stock.wood - (f._rsv || 0) < R.fuel)) return H.end(v);
-    const I = inv(b);
-    for (const k in R.in) { I[k] -= R.in[k]; used(f, k, R.in[k]); }
-    if (R.fuel) { f.stock.wood -= R.fuel; used(f, 'wood', R.fuel); }
-    const out = R.out || { [forgeOut(f)]: R.n };
-    for (const k in out) { I[k] = (I[k] || 0) + out[k]; made(f, k, out[k]); }
-    if (f.stock.ferramentas > 0 && G.R() < 0.08) { f.stock.ferramentas -= 1; used(f, 'ferramentas', 1); }
-    v.actT = 0; t.n++;
-    G.FX && G.FX.sparkle(v.x, v.y);
-    if (t.n >= 3 || !canCraft(b, R)) H.end(v);
-  }
-  function runDig(v, t, dt, H) {
-    const b = workB(v, t, H); if (!b) return;
-    if (t.st === 0) { const r = walkTo(v, t, 'pit', t.x, t.y, false, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return; }
-    if (t.st === 1) {
-      v.act = 'dig';
-      if (G.R() < dt * 1.5) G.FX && G.FX.chips(t.x, t.y, '#8a5a3a');
-      if (v.actT > 5) { v.carry = { k: 'argila', n: 3 }; t.st = 2; }
-      return;
-    }
-    const r = walkB(v, t, b, dt, H);
-    if (r < 0) { v.carry = null; return H.end(v); }
-    if (r > 0) { const I = inv(b); I.argila = (I.argila || 0) + v.carry.n; const f = G.Fac.ofV(v); if (f) made(f, 'argila', v.carry.n); v.carry = null; H.end(v); }
   }
   // take the flock out to graze and bring it back before dark
   function runHerd(v, t, dt, H) {
@@ -1076,10 +1016,8 @@
     const S = G.S; const bn = id => { const b = S.buildings.get(id); return b ? G.Village.buildName(b) : 'o trabalho'; };
     const gn = k => E.name(k);
     switch (t.type) {
-      case 'craft': return ({ weave: 'Tecendo no tear', forge: 'Martelando na forja', craft: 'Trabalhando o ouro', pottery: 'Torneando potes de barro' })[E.RECIPE[v.role] ? E.RECIPE[v.role].act : ''] || 'Trabalhando';
       case 'fetch': return t.st < 2 ? `Indo buscar ${gn(t.k)} no armazém` : `Levando ${gn(t.k)} para ${bn(t.id)}`;
       case 'haul': return 'Levando a produção ao armazém';
-      case 'dig': return t.st < 1 ? 'Indo tirar argila na beira do rio' : t.st === 1 ? 'Cavando argila' : 'Levando argila para a olaria';
       case 'herd': return t.st <= 1 ? 'Indo soltar o rebanho' : t.st === 2 ? 'Levando o rebanho ao pasto' : t.st === 3 ? 'Vigiando o rebanho no pasto' : 'Trazendo o rebanho de volta';
       case 'fodder': return t.st < 2 ? 'Buscando feno no celeiro' : t.st === 2 ? 'Levando feno ao curral' : 'Enchendo o cocho';
       case 'tend': return ({ shear: 'Tosquiando uma ovelha', milk: 'Ordenhando', eggs: 'Recolhendo ovos', groom: 'Escovando um cavalo' })[t.what] || 'Cuidando dos animais';

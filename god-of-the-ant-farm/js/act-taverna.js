@@ -46,7 +46,7 @@
 
   // ------------------------------ the vat (a trade of the tavern's own, on the engine of the trades) ------------------------------
   // the town's beer or pulque, brewed from the grain on the tavern's shelf — bought by its keeper: nothing is fetched for it
-  const vat = (k, name) => ({ k, n: 3, in: 'food', shelf: 1, name, st: [
+  const vat = (k, name) => ({ k, n: 3, in: 'food', shelf: 1, name, one: k === 'cerveja' ? 'jarra de cerveja' : 'cabaça de pulque', g: 'f', feito: 'Enchemos', st: [
     { id: 'grao', kind: 'busca', n: 2, name: 'esperando o grão' },
     { id: 'macerar', kind: 'mao', anim: 'amassar', use: 'mexer', take: 1, to: 'massa', give: 1.5, name: 'o grão de molho' },
     { id: 'fermentar', kind: 'espera', wait: 100, name: 'fermentando na cuba' },
