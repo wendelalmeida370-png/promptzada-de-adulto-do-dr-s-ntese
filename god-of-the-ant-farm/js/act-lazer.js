@@ -7,8 +7,10 @@
 //  ('espetaculo'): as portas abrem na hora dele, os atores do teatro
 //  sobem ao palco (o uso 'atuar' da planta; o romano luta de mentira
 //  na arena, 'lutar'), a peça começa com eles lá, dura o que dura e
-//  acaba com os aplausos. O público vem por vontade sua (a vida da
-//  cidade, as rotinas da casa: G.Teatro.visit) — num povo de moeda
+//  acaba com os aplausos, antes da noite. O público vem por vontade
+//  sua: a saída do fim da tarde (uma escolha da pessoa, ao lado da
+//  taverna e de casa: G.Teatro.urge) ou o lazer de quem está sem
+//  trabalho (a vida da cidade: G.Teatro.visit) — num povo de moeda
 //  paga a entrada ao tesouro —, senta nas fileiras ('assistir'; no
 //  salão nórdico, os bancos: 'sentar'), assiste, aplaude e sai. Sem
 //  ator, não há peça: quem pagou recebe de volta. Os atores recebem
@@ -58,9 +60,10 @@
   const Tt = G.Teatro = {};
   Tt.FEE = 0.1;    // (the entry, in the people's money: a small coin)
   Tt.WAGE = 0.3;   // (what the treasury pays each actor for a show)
-  Tt.PLAY = 40;    // (the seconds of the play, of the world)
+  Tt.PLAY = 16;    // (the seconds of the play, of the world: two hours of its day — it ends before the night)
   Tt.CAP = 24;     // (the seats of a theatre whose plan does not say)
-  Tt.LATE = 10;    // (one may still come in this long after the play began)
+  Tt.LATE = 6;     // (one may still come in this long after the play began)
+  Tt.STOP = 6;     // (the stage empty this long: the play stopped there)
   A.addAnim('assistir', { act: 'sit', dur: 2, contact: 1.2, hands: 0 });
   A.addAnim('atuar', { act: 'talk', dur: 6, contact: 5.4, hands: 2 });
   A.addAnim('lutarJogo', { act: 'fight', dur: 4, contact: 3.6, hands: 2 });
@@ -72,9 +75,12 @@
   E.JOB_OF.ator = ['teatro'];
   if (G.Art && G.Art.CLOTH) G.Art.CLOTH.ator = '#8a3a5a';
   // ---- hours, the show of the day, who acts
-  Tt.horas = b => ({ abre: 0.48, peca: 0.56, fecha: 0.74 });
-  Tt.WAITS = 0.08; // (the play begins at its hour with an actor on the stage; this long after it with none, there is no play)
-  const inHours = b => { const h = Tt.horas(b); const t = S_().time; return t >= h.abre - EPS && t < h.fecha; };
+  // (the doors at the end of the working day, the play as the evening begins — the hour one is free —, over before the night,
+  // when the town goes to bed: G.isEvening, G.isNight; before the doors, the actors come to make ready — from the far end of a
+  // city a walk takes longer than the doors give them)
+  Tt.horas = b => ({ prep: 0.5, abre: 0.56, peca: 0.6, fecha: 0.73 });
+  Tt.WAITS = 0.03; // (the play begins at its hour with an actor on the stage; this long after it with none, there is no play)
+  const inHours = b => { const h = Tt.horas(b); const t = S_().time; return t >= h.prep - EPS && t < h.fecha; };
   Tt.inHours = inHours;
   let dIdx = null, dS = null, dN = -1, dT = -1;
   G.worldHooks.push(() => { dIdx = null; dS = null; dN = -1; dT = -1; });
@@ -95,6 +101,7 @@
   // (open to the public: the doors open, the play not too far gone)
   const aberto = (b, op) => !!op && op.st === 'on' && inHours(b) && (op.data.fase === 'portas' || (op.data.fase === 'peca' && S_().clock - op.data.t0 < Tt.LATE));
   Tt.aberto = b => aberto(b, Tt.dia(b));
+  const shut = op => (op && op.data.fase === 'preparo' ? 'as portas ainda não abriram' : 'a peça já vai longe');
   // (who is in the audience: a person of the world in a seat by the errand of this show, or the god's body by its door)
   function seated(v, op, b) {
     const m = op.data.plateia[v.id]; if (!m) return false;
@@ -112,7 +119,7 @@
     const S = S_(); if (!G.inSim || !b || !b.built || Tt.dia(b) || openedToday(b) || !inHours(b)) return null;
     if (!actorsOf(b).length) return null; // (no actors, no show today)
     return A.start('espetaculo', { at: b.id, set: b.set, fac: facOf(b), to: 'b:' + b.id, why: 'dia', by: 0, x: b.x + b.w / 2, y: b.y + b.h / 2,
-      data: { day: S.day, fase: 'portas', t0: 0, tf: 0, entradas: 0, receita: 0, voltas: 0, pagos: 0, vistos: 0, atores: {}, plateia: {}, q: 0 } });
+      data: { day: S.day, fase: 'preparo', t0: 0, tf: 0, entradas: 0, receita: 0, voltas: 0, pagos: 0, vistos: 0, atores: {}, plateia: {}, q: 0 } });
   }
   Tt.open = b => (G.inSim ? open(b) : null);
   // the entry: in a people of coin, from the spectator's house (or purse) to the people's treasury — once (the key of it)
@@ -185,6 +192,13 @@
     for (const id of Object.keys(d.plateia)) { const v = S.villagers.get(+id); if (!v || !seated(v, op, b)) delete d.plateia[id]; }
     for (const id of Object.keys(d.atores)) { const v = S.villagers.get(+id); if (!v || !onStage(v, op, b)) delete d.atores[id]; }
     const h = Tt.horas(b); const actors = Object.keys(d.atores).length;
+    // (the actors make ready behind closed doors: called to the stage, the public not yet in)
+    if (d.fase === 'preparo') {
+      if (d.day !== S.day || S.time >= h.fecha) return cancel(op, b, 'fechou');
+      callActors(b, op);
+      if (S.time >= h.abre - EPS) { d.fase = 'portas'; A.log(op, 'portas', actors, 0); }
+      return;
+    }
     if (d.fase === 'portas') {
       if (d.day !== S.day || S.time >= h.fecha) return cancel(op, b, 'fechou');
       callActors(b, op);
@@ -198,8 +212,10 @@
       return;
     }
     if (d.fase === 'peca') {
-      // (the actors gone from the stage half a minute: the play stopped there — no applause, no refund: it was seen in part)
-      if (!actors) { if (!d.sem) d.sem = S.clock; else if (S.clock - d.sem > 30) return close(op, 'int', 'a peça parou'); } else d.sem = 0;
+      // (the actors gone from the stage a while: the play stopped there — no applause, no refund: it was seen in part; nor does
+      // it end while the stage is empty)
+      if (!actors) { if (!d.sem) d.sem = S.clock; else if (S.clock - d.sem > Tt.STOP) return close(op, 'int', 'a peça parou'); return; }
+      d.sem = 0;
       if (S.clock - d.t0 >= Tt.PLAY) { applause(op, b); d.fase = 'fim'; d.tf = S.clock; A.log(op, 'fim', d.vistos); }
       return;
     }
@@ -221,6 +237,23 @@
     const dr = G.Vg.door(b); if (!G.W.reaches(v, dr[0], dr[1])) return null;
     return H.setTask(v, { type: 'teatro', id: b.id, op: op.id, pri: 0.45, st: 0 });
   };
+  // the evening out at the theatre — a choice of the villagers' decide, beside the tavern and home: how much this grown one
+  // wants to go now (the doors of a show of the town open, a seat free, the entry in the house), or 0; one already in the rows
+  // or on the way stays for the play (the work, the tavern, a chat do not take one from it; hunger and sleep do)
+  function tonight(v) {
+    for (const b of E.byType(v.set, 'teatro')) {
+      const op = Tt.dia(b); if (!aberto(b, op) || full(b, op) || facOf(b) !== G.Fac.idOfV(v)) continue;
+      if (coin(b) && E.purse(v) + EPS < Tt.FEE) continue;
+      const dr = G.Vg.door(b); if (G.W.reaches(v, dr[0], dr[1])) return b;
+    }
+    return null;
+  }
+  Tt.urge = function (v, cur) {
+    if (cur && cur.type === 'teatro') return 1;
+    if (v.age < 16 || v.captive || v.jail || v.aboard || (v.carry && v.carry.n > EPS) || A.isBody(v) || !tonight(v)) return 0;
+    return (v.traits.includes('Curioso') || v.traits.includes('Sociável') ? 0.55 : 0.4) + G.R() * 0.5;
+  };
+  Tt.go = function (v, H) { const b = tonight(v); return b ? Tt.visit(v, b, H) : null; };
   function leave(v, op, H) { if (op && op.data && op.data.plateia && op.data.plateia[v.id]) delete op.data.plateia[v.id]; return H.end(v); }
   function runPlateia(v, t, dt, H) {
     const S = S_(); const b = S.buildings.get(t.id); const op = t.op ? A.get(t.op) : null;
@@ -355,9 +388,9 @@
     name: 'Espetáculo', conserve: false, many: false,
     purpose: 'O espetáculo do dia de um teatro: as portas abrem, os atores sobem ao palco, o público paga a entrada (num povo de moeda), senta, assiste e aplaude; os atores recebem do tesouro.',
     needs: 'um teatro com os seus atores',
-    title(op) { const S = S_(); const b = S.buildings.get(op.at); const d = op.data; return `O espetáculo ${b ? de(b) : 'do teatro'}: ${d.fase === 'portas' ? 'as portas abertas' : d.fase === 'peca' ? 'a peça em cena' : 'os aplausos'}, ${Object.keys(d.plateia).length} na plateia`; },
+    title(op) { const S = S_(); const b = S.buildings.get(op.at); const d = op.data; return `O espetáculo ${b ? de(b) : 'do teatro'}: ${d.fase === 'preparo' ? 'os atores se preparam' : d.fase === 'portas' ? 'as portas abertas' : d.fase === 'peca' ? 'a peça em cena' : 'os aplausos'}, ${Object.keys(d.plateia).length} na plateia`; },
     avail(c, v, set) {
-      for (const b of E.byType(set.id, 'teatro')) { const op = Tt.dia(b); if (!op) continue; const ok = aberto(b, op); return { ok, why: ok ? '' : 'a peça já vai longe', txt: `Há espetáculo ${n_(b)} de ${set.name} hoje`, known: G.dist(v.x, v.y, b.x, b.y) < 30 }; }
+      for (const b of E.byType(set.id, 'teatro')) { const op = Tt.dia(b); if (!op) continue; const ok = aberto(b, op); return { ok, why: ok ? '' : shut(op), txt: `Há espetáculo ${n_(b)} de ${set.name} hoje`, known: G.dist(v.x, v.y, b.x, b.y) < 30 }; }
       return null;
     },
     tick,
@@ -376,14 +409,14 @@
         const op = Tt.dia(b); if (!op) continue; const d = op.data;
         if (d.plateia[v.id] || d.atores[v.id]) { out.push({ id: 'espetaculo.sair:' + op.id, act: 'sair', op: op.id, label: d.atores[v.id] ? 'Descer do palco' : 'Sair do teatro', at, anim: 'apontar', hands: 0 }); continue; }
         if (v.job === b.id && v.role === 'ator' && d.fase !== 'fim') out.push({ id: 'espetaculo.atuar:' + op.id, act: 'atuar', op: op.id, label: d.fase === 'peca' ? 'Voltar ao palco' : 'Subir ao palco', at, anim: 'atuar', hands: 2, use: stageUse(b) });
-        else if (!(v.carry && v.carry.n > EPS)) out.push({ id: 'espetaculo.assistir:' + op.id, act: 'assistir', op: op.id, label: `Assistir ao espetáculo${coin(b) ? ` (${money(b, Tt.FEE)})` : ''}`, at, anim: 'assistir', hands: 0, use: seatUse(b), ok: aberto(b, op) && !full(b, op) && (!coin(b) || E.purse(v) + EPS >= Tt.FEE), why: !aberto(b, op) ? 'A peça já vai longe.' : full(b, op) ? 'O teatro está cheio.' : 'Falta dinheiro para a entrada.' });
+        else if (!(v.carry && v.carry.n > EPS)) out.push({ id: 'espetaculo.assistir:' + op.id, act: 'assistir', op: op.id, label: `Assistir ao espetáculo${coin(b) ? ` (${money(b, Tt.FEE)})` : ''}`, at, anim: 'assistir', hands: 0, use: seatUse(b), ok: aberto(b, op) && !full(b, op) && (!coin(b) || E.purse(v) + EPS >= Tt.FEE), why: !aberto(b, op) ? G.cap(shut(op)) + '.' : full(b, op) ? 'O teatro está cheio.' : 'Falta dinheiro para a entrada.' });
       }
       return out;
     },
     acts: {
       assistir: {
         deed: 'espetaculo',
-        can(v, o) { const op = A.get(o.op); if (!op || !live(op)) return { ok: false, why: 'Não há espetáculo.' }; const b = S_().buildings.get(op.at); if (!b || !aberto(b, op)) return { ok: false, why: 'A peça já vai longe.' }; if (op.data.plateia[v.id]) return { ok: false, why: 'Você já está na plateia.' }; if (full(b, op)) return { ok: false, why: 'O teatro está cheio.' }; if (coin(b) && E.purse(v) + EPS < Tt.FEE) return { ok: false, why: 'Falta dinheiro para a entrada.' }; return { ok: true }; },
+        can(v, o) { const op = A.get(o.op); if (!op || !live(op)) return { ok: false, why: 'Não há espetáculo.' }; const b = S_().buildings.get(op.at); if (!b || !aberto(b, op)) return { ok: false, why: G.cap(shut(op)) + '.' }; if (op.data.plateia[v.id]) return { ok: false, why: 'Você já está na plateia.' }; if (full(b, op)) return { ok: false, why: 'O teatro está cheio.' }; if (coin(b) && E.purse(v) + EPS < Tt.FEE) return { ok: false, why: 'Falta dinheiro para a entrada.' }; return { ok: true }; },
         run(v, o) { const S = S_(); const op = A.get(o.op); const b = S.buildings.get(op.at); const p = payEntry(v, op, b); if (!p.ok) return { ok: false, why: p.why || 'Não deu para pagar.' }; op.data.entradas++; op.data.plateia[v.id] = { t: Math.round(S.clock * 10) / 10, st: op.data.fase === 'peca' ? 2 : 1, paid: p.n, body: 1 }; return { ok: true, msg: `Você ${p.n ? `paga ${money(b, p.n)} e ` : ''}senta nas fileiras${op.data.fase === 'peca' ? ': a peça já começou' : ': a peça começa logo'}.` }; },
       },
       atuar: {
@@ -484,7 +517,7 @@
     const hh = x => `${Math.floor(x * 24)}h`;
     if (b.type === 'teatro' && b.built) {
       const hr = Tt.horas(b); const op = Tt.dia(b); const n = actorsOf(b).length;
-      if (op && live(op)) { const d = op.data; h += `<div class="doing">${d.fase === 'portas' ? `Portas abertas: a peça começa às ${hh(hr.peca)}` : d.fase === 'peca' ? 'A peça em cena' : 'Os aplausos'} · ${Object.keys(d.plateia).length} na plateia · ${Object.keys(d.atores).length} no palco${coin(b) ? ` · ${esc(money(b, d.receita))} de entradas` : ''}</div>`; }
+      if (op && live(op)) { const d = op.data; h += `<div class="doing">${d.fase === 'preparo' ? `Os atores se preparam: as portas abrem às ${hh(hr.abre)}` : d.fase === 'portas' ? `Portas abertas: a peça começa às ${hh(hr.peca)}` : d.fase === 'peca' ? 'A peça em cena' : 'Os aplausos'} · ${Object.keys(d.plateia).length} na plateia · ${Object.keys(d.atores).length} no palco${coin(b) ? ` · ${esc(money(b, d.receita))} de entradas` : ''}</div>`; }
       else h += `<div class="doing">${n ? `Espetáculo às ${hh(hr.peca)}` : 'Sem atores: sem espetáculo'}.</div>`;
     }
     if (b.type === 'biblioteca' && b.built) {

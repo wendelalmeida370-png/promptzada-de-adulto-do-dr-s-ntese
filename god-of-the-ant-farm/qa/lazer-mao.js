@@ -1,11 +1,13 @@
 // lazer-mao: o teatro, a biblioteca e a praça (act-lazer.js; o adendo 4.3) numa vila de mentira montada à mão — só o código do
 // jogo (nodemundo M.load), sem gerar mundo: um segundo. O caminhar fica de fora (cada um já está diante de onde vai); o resto é
 // o do jogo — as máquinas das tarefas, o G.Depot e o livro-razão, o relógio do mundo (G.Act.update), o verificador dos ofícios.
-// Um povo romano de moeda: sem ator, o teatro não abre; com os atores, as portas abrem na hora, eles são chamados ao palco,
+// Um povo romano de moeda: sem ator, o teatro não abre; com os atores, eles se preparam de portas fechadas (chamados ao palco), as portas abrem na hora,
 // quem pode pagar a entrada vem (quem não pode, não vem), paga ao tesouro, senta, a peça começa na hora com ator no palco,
 // dura o que dura e acaba nos aplausos (mais devoto, a cidade mais leal), os atores recebem do tesouro, todos saem; o dia sem
 // ator no palco: sem peça, e a entrada de volta pelo livro; o espetáculo que atravessa o save com gente nas fileiras; o corpo
-// do deus que assiste, e o corpo ator que sobe ao palco; a biblioteca — a leitura que soma à pesquisa do povo, até o teto do
+// do deus que assiste, e o corpo ator que sobe ao palco; a saída do fim da tarde (G.Teatro.urge: quem pode pagar quer ir, quem
+// está nas fileiras fica; o pobre, a criança e quem chega com a peça já longe, não); o palco vazio no meio da peça (ela para
+// ali, sem aplauso nem cachê); a biblioteca — a leitura que soma à pesquisa do povo, até o teto do
 // dia, o povo sem escrita que não lê, o copista na mesa do escriba —; e o corpo que fala ao povo na praça, uma vez por dia.
 //   node qa/lazer-mao.js
 const M = require('./nodemundo.js'); const G = M.load({ qa: true, extra: ['qa/oficio-inv.js'] });
@@ -45,13 +47,18 @@ const sum = L => r2(L.reduce((n, e) => n + e[6], 0));
 // ---------------- a show in a people of coin
 {
   const { S, f, set, te, person } = world('romano', true, true);
-  G.S.time = 0.49; sec(2, []);
+  G.S.time = Tt.horas(te).prep + 0.005; sec(2, []);
   ok('sem-ator-nao-abre', !Tt.dia(te), `sem atores às ${G.S.time.toFixed(2)}: ${Tt.dia(te) ? 'abriu' : 'não abriu'}`);
   const a1 = person('Ator Um', 1, { job: 3, role: 'ator' }), a2 = person('Atriz Dois', 1, { job: 3, role: 'ator', g: 'f' });
   sec(1, [a1, a2]); const op = Tt.dia(te);
-  ok('abre-com-ator', !!op && op.data.fase === 'portas', op ? `o espetáculo #${op.id} com as portas abertas` : 'não abriu');
+  ok('abre-com-ator', !!op && op.data.fase === 'preparo' && !Tt.aberto(te), op ? `o espetáculo #${op.id}: ${op.data.fase === 'preparo' ? 'os atores se preparam' : 'fase ' + op.data.fase}, as portas ${Tt.aberto(te) ? 'ABERTAS' : 'fechadas'}` : 'não abriu');
   sec(3, [a1, a2]);
   ok('atores-ao-palco', op && Object.keys(op.data.atores).length === 2 && a1.task && a1.task.type === 'atuar' && a1.inside === te.id, `no palco: ${op ? Object.keys(op.data.atores).length : 0}; ${a1.name}: ${a1.task ? a1.task.type : '-'}`);
+  // (the doors still shut while they make ready: nobody of the public comes in; at the hour, they open)
+  const early = person('Cedo', 3); const te0 = Tt.visit(early, te, H);
+  while (G.S.time < Tt.horas(te).abre) sec(1, [a1, a2]);
+  sec(1, [a1, a2]);
+  ok('portas-na-hora', !te0 && op.data.fase === 'portas' && Tt.aberto(te), `antes das ${Tt.horas(te).abre}: ${te0 ? 'ALGUÉM ENTROU' : 'ninguém entra'}; às ${G.S.time.toFixed(3)}: fase ${op.data.fase}, as portas ${Tt.aberto(te) ? 'abertas' : 'FECHADAS'}`);
   const c = [person('Ana', 3), person('Bia', 3), person('Caio', 3)]; const poor = person('Pobre', 0.05);
   const t0 = f.stock.moedas; const tasks = c.map(v => Tt.visit(v, te, H)); const tp = Tt.visit(poor, te, H);
   sec(2, [a1, a2, ...c]);
@@ -66,7 +73,7 @@ const sum = L => r2(L.reduce((n, e) => n + e[6], 0));
   sec(5, [a1, a2, ...c]);
   ok('fecha', !A.live(op) && op.st === 'ok' && [a1, a2, ...c].every(v => !v.task || (v.task.type !== 'teatro' && v.task.type !== 'atuar')), `o espetáculo ${op.st} (${op.end ? op.end.why : ''})`);
   // ---- the next day: the actors kept away (a feast): no one on the stage — no play, the entries back
-  G.S.day++; G.S.time = 0.47; for (const v of [a1, a2]) H.setTask(v, { type: 'fest', pri: 3.2 });
+  G.S.day++; G.S.time = Tt.horas(te).abre - 0.01; for (const v of [a1, a2]) H.setTask(v, { type: 'fest', pri: 3.2 });
   sec(4, []); const op2 = Tt.dia(te);
   const c2 = [person('Dora', 3), person('Eli', 3)]; for (const v of c2) Tt.visit(v, te, H); sec(2, c2);
   const paid2 = op2 ? op2.data.receita : 0;
@@ -74,7 +81,7 @@ const sum = L => r2(L.reduce((n, e) => n + e[6], 0));
   ok('sem-ator-devolve', !!op2 && paid2 === r2(2 * Tt.FEE) && !A.live(op2) && op2.st === 'int' && op2.data.voltas === 2 && op2.data.receita === 0 && sum(lines('teatro-volta', op2.id)) === r2(2 * Tt.FEE), op2 ? `pagaram ${paid2}; o espetáculo ${op2.st} (${op2.end ? op2.end.why : ''}); voltas ${op2.data.voltas}, caixa ${op2.data.receita}` : 'não abriu');
   for (const v of [a1, a2]) G.Vg.endTask(v);
   // ---- a third day: the show across a save, with people in the rows
-  G.S.day++; G.S.time = 0.47; sec(2, [a1, a2]); const op3 = Tt.dia(te); sec(3, [a1, a2]);
+  G.S.day++; G.S.time = Tt.horas(te).abre - 0.01; sec(2, [a1, a2]); const op3 = Tt.dia(te); sec(3, [a1, a2]);
   const c3 = [person('Fábio', 3), person('Gaia', 3)]; for (const v of c3) Tt.visit(v, te, H); sec(2, [a1, a2, ...c3]);
   for (const v of S.villagers.values()) v.task = null;
   const hook = G.saveHooks.find(h => /espetaculo/.test(String(h.load)) && /plateia/.test(String(h.load))); hook.load({});
@@ -88,7 +95,20 @@ const sum = L => r2(L.reduce((n, e) => n + e[6], 0));
   S.avatar = { id: a1.id, deeds: {} }; a1.task = null; a1.x = at[0]; a1.y = at[1]; delete op3.data.atores[a1.id];
   const ra = offer(a1, 'atuar') ? A.perform(a1, offer(a1, 'atuar')) : { ok: false, why: 'sem oferta' };
   ok('corpo', r1.ok && seat && r3.ok && !op3.data.plateia[me.id] && ra.ok && !!op3.data.atores[a1.id], `assistir ${r1.ok ? r1.msg : r1.why} · sair ${r3.ok ? r3.msg : r3.why} · atuar ${ra.ok ? ra.msg : ra.why}`);
-  S.avatar = null;
+  S.avatar = null; a1.task = null; delete op3.data.atores[a1.id]; sec(1, [a1, a2, ...c3]);
+  // ---- the evening out (the choice of decide): the doors open, who can pay wants to go; one in the rows stays; the poor, a
+  // child, nobody once the play is gone too far
+  const hugo = person('Hugo', 3), pobre = person('Sem Moeda', 0.05), kid = person('Menino', 3, { age: 10 });
+  const u1 = Tt.urge(hugo, null), tg = Tt.go(hugo, H), u2 = Tt.urge(hugo, hugo.task);
+  ok('saida-da-tarde', u1 > 0 && !!tg && tg.type === 'teatro' && u2 === 1 && Tt.urge(pobre, null) === 0 && Tt.urge(kid, null) === 0, `às ${G.S.time.toFixed(3)}: Hugo quer ${r2(u1)} e vai (${tg ? tg.type : '-'}), na fila ${u2}; o pobre ${Tt.urge(pobre, null)}, a criança ${Tt.urge(kid, null)}`);
+  const all3 = [a1, a2, ...c3, hugo];
+  while (G.S.time < Tt.horas(te).peca + (Tt.LATE + 1) / G.DAY_LEN) sec(1, all3);
+  const tarde = person('Atrasado', 3);
+  ok('tarde-demais', op3.data.fase === 'peca' && Tt.urge(tarde, null) === 0 && !Tt.go(tarde, H), `fase ${op3.data.fase} às ${G.S.time.toFixed(3)}: quem chega agora ${Tt.urge(tarde, null)}`);
+  // ---- the stage empty in the middle of the play: no end, no applause — it stopped there
+  for (const v of [a1, a2]) G.Vg.endTask(v);
+  sec(Tt.STOP + 2, all3);
+  ok('palco-vazio', !A.live(op3) && op3.st === 'int' && /parou/.test(op3.end.why) && op3.data.vistos === 0 && !op3.data.pagos, `o espetáculo ${op3.st} (${op3.end ? op3.end.why : ''}); vistos ${op3.data.vistos}, cachês ${op3.data.pagos}`);
 }
 // ---------------- the library: reading, the day's ceiling, a people without writing, the copyist
 {

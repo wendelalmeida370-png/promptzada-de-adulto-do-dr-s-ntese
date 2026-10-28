@@ -498,6 +498,8 @@
       // the working day ends: home, or a cup at the tavern
       if (eve && v.home) opt(0.55 + G.R() * 0.4, 0.45, 'home');
       if (eve && G.Eco && G.Eco.byType(v.set, 'taverna').length) opt((v.traits.includes('Sociável') ? 0.62 : 0.4) + G.R() * 0.5 + (v.mourn > 0 ? 0.15 : 0) - (v.traits.includes('Devoto') ? 0.2 : 0), 0.4, 'tavern');
+      // (the theatre's show of the day, its doors open: an evening out — act-lazer.js)
+      if (G.Teatro) { const u = G.Teatro.urge(v, cur); if (u > 0) opt(u, 0.45, 'teatro'); }
       if (G.Eco && !eve) opt(0.16 * G.R() * 1.6, 0.35, 'shop');
       // (the house lacks something it uses up, and can pay: one of the family goes to buy it — act-compras.js)
       if (G.Compras) { const u = G.Compras.urge(v); if (u > 0) opt(u, 0.6, 'compras'); }
@@ -535,6 +537,7 @@
       case 'home': t = (G.Urban && G.R() < (G.Urban.gardenDue(v) ? 0.75 : 0) && G.Urban.gardenTask(v, H)) || (G.Life && G.Life.familyTask(v, H)) || (G.Eco && G.Eco.goHomeTask(v, H)); break;
       case 'tavern': t = G.Eco && G.Eco.tavernTask(v, H); break;
       case 'shop': t = G.Eco && G.Eco.shopTask(v, H); break;
+      case 'teatro': t = G.Teatro && G.Teatro.go(v, H); break;
       case 'compras': t = G.Compras && G.Compras.task(v, H); break;
       case 'garden': t = G.Urban && G.Urban.gardenTask(v, H); break;
       case 'saga': t = G.Stories && G.Stories.task(v, H); break;

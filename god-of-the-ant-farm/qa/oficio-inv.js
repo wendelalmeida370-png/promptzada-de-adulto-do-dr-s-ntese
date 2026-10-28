@@ -107,7 +107,7 @@
         if (shows.has(op.at)) add('oficio', 2, `teatro #${op.at}: dois espetáculos vivos (#${shows.get(op.at)} e #${op.id})`); shows.set(op.at, op.id);
         if (!b || b.type !== 'teatro' || !b.built) { add('oficio', 2, `${nm}: o teatro ${op.at} ${!b ? 'não existe' : 'não está de pé'} e o espetáculo segue`); continue; }
         for (const k of ['entradas', 'receita', 'voltas', 'pagos']) if (!fin(d[k]) || d[k] < -EPS) add('oficio', 1, `${nm}: ${k} = ${d[k]}`);
-        if (!{ portas: 1, peca: 1, fim: 1 }[d.fase]) add('oficio', 1, `${nm}: fase ${d.fase}`);
+        if (!{ preparo: 1, portas: 1, peca: 1, fim: 1 }[d.fase]) add('oficio', 1, `${nm}: fase ${d.fase}`);
         for (const id in d.plateia || {}) if (!s.villagers.has(+id)) add('oficio', 2, `${nm}: #${id} na plateia não existe`);
         for (const id in d.atores || {}) if (!s.villagers.has(+id)) add('oficio', 2, `${nm}: #${id} no palco não existe`);
         const led = s.ledger || [];
