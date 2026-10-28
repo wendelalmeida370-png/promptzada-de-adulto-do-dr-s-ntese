@@ -63,7 +63,8 @@
   // ------------------------------ who is in each house, who cooks there, who carries a baby ------------------------------
   // (counted once a second of the world, in its step; asked from outside it — a panel, a frame —, counted afresh and not
   // kept: the world is the same with or without anyone looking)
-  const HOUSE = () => ({ res: [], out: [], awake: [], cook: 0 });
+  // (pf, pp: in a temple, the faithful and the priests at prayer inside it or on their way in — L.prayIn)
+  const HOUSE = () => ({ res: [], out: [], awake: [], cook: 0, pf: 0, pp: 0 });
   let ix = null, ixS = null, ixT = -1;
   // (who found no way home a moment ago is not sent home again at once: the search that fails is the dearest one)
   let noWay = new Map();
@@ -79,6 +80,7 @@
       if (v.inside && !v.sleeping && v.age >= 3) at(v.inside).awake.push(v);
       if (v.age < 2 && v.carrier) o.baby.set(v.carrier, v.id);
       const t = v.task; if (t && t.type === 'lar' && t.what === 'cozinhar') at(t.home).cook = v.id;
+      if (t && t.type === 'pray' && t.inT) { const e = at(t.inT); if (t.priest) e.pp++; else e.pf++; }
     }
     if (G.inSim) { ix = o; ixS = S; ixT = sec; }
     return o;
@@ -301,59 +303,75 @@
 
   // ------------------------------ the place at home: what each one wants of the plan ------------------------------
   // (for the interiors' one share-out of places, In.places: the rule of the houses and of the temple — pure, asked only of
-  // those the world has inside the building, in the step and in the frame alike. A use in order of liking, the 3D's state;
-  // { with }: a baby in the arms of who carries it, no place of its own; null: the share-out's own default)
+  // those the world has inside the building, in the step and in the frame alike. A use in order of liking, the 3D's state and
+  // how pressing it is (pri: the share-out gives the more pressing first — the ill to the bed, the cook to the fire, the one
+  // rocking a baby to a seat, the hungry to the table, before who only sits); { with }: a baby in the arms of who carries it,
+  // no place of its own; null: the share-out's own default. With no seat left the share-out sits one on the ground)
+  const WANT_PRI = { acamado: 5, cozinhar: 4, ninar: 3, ceia: 2, esperar: 1, conversar: 1, descansar: 0 };
   L.want = function (v, b) {
     const S = G.S; const t = v.task;
-    if (v.age < 2) { const c = S.villagers.get(v.carrier); return c && c.inside === b.id && !v.sleeping ? { with: c.id } : v.sleeping ? { use: ['deitar'], item: null, st: 'sleep' } : null; }
-    if (v.sleeping) return { use: ['deitar'], item: null, st: 'sleep' };
-    if (t && t.type === 'pray') return t.priest ? { use: ['oficiar', 'rezar', 'sentar'], item: null, st: 'pray' } : { use: ['rezar', 'sentar'], item: null, st: 'pray' };
-    if (t && t.type === 'lar') switch (t.what) {
-      case 'acamado': return { use: ['deitar'], item: null, st: 'sick' };
-      case 'cozinhar': return { use: ['cozinhar', 'assar', 'aquecer'], item: null, st: 'cook' };
-      case 'ceia': return { use: ['comer', 'sentar', 'aquecer'], item: null, st: t.ate ? 'eat' : 'sit' };
-      case 'ninar': return { use: ['cuidar', 'sentar', 'aquecer'], item: null, st: 'rock' };
-      case 'conversar': return { use: ['sentar', 'comer', 'aquecer'], item: null, st: 'sittalk' };
-      default: return { use: ['aquecer', 'sentar', 'comer'], item: null, st: 'sit' };
+    if (v.age < 2) { const c = S.villagers.get(v.carrier); return c && c.inside === b.id && !v.sleeping ? { with: c.id } : v.sleeping ? { use: ['deitar'], item: null, st: 'sleep', pri: 5 } : null; }
+    if (v.sleeping) return { use: ['deitar'], item: null, st: 'sleep', pri: 5 };
+    if (t && t.type === 'pray') return t.priest ? { use: ['oficiar', 'rezar', 'sentar'], item: null, st: 'pray', pri: 2 } : { use: ['rezar', 'sentar'], item: null, st: 'pray', pri: 1 };
+    if (t && t.type === 'lar') {
+      const pri = WANT_PRI[t.what] || 0;
+      switch (t.what) {
+        // (ill in bed: one's own bed first, the one the household's rule gives)
+        case 'acamado': { const In = G.Interiors; const own = In && In.bedOf ? In.bedOf(v) : null; return { use: ['deitar'], item: own && own.item ? own.item.id : null, st: 'sick', pri }; }
+        case 'cozinhar': return { use: ['cozinhar', 'assar', 'aquecer'], item: null, st: 'cook', pri };
+        case 'ceia': return { use: ['comer', 'sentar', 'aquecer'], item: null, st: t.ate ? 'eat' : 'sit', pri };
+        case 'ninar': return { use: ['cuidar', 'sentar', 'aquecer'], item: null, st: 'rock', pri };
+        case 'conversar': return { use: ['sentar', 'comer', 'aquecer'], item: null, st: 'sittalk', pri };
+        default: return { use: ['aquecer', 'sentar', 'comer'], item: null, st: 'sit', pri };
+      }
     }
-    if (t && (t.type === 'shelter' || t.type === 'goHome')) return { use: ['sentar', 'aquecer', 'comer'], item: null, st: 'sit' };
+    if (t && (t.type === 'shelter' || t.type === 'goHome')) return { use: ['sentar', 'aquecer', 'comer'], item: null, st: 'sit', pri: 0 };
     return null;
   };
-  // who sleeps where in a house (the interiors' In.beds shares the beds out by it): the order of choosing — the grown first,
-  // the eldest first, then the children by age —, the couple in one bed, the baby in the cradle if there is one free, else
-  // with its mother (or whoever carries it), and nobody of the house on the floor by choice — the guest sleeps there
-  L.beds = function (b, residents) {
+  // who sleeps where in a house (the interiors' In.beds shares the beds out by it; people: who lives there, and whoever the
+  // world has asleep inside without living there): the order of choosing — the grown first, the eldest first, then the
+  // children by age, the babies last —, the couple in one bed, the baby in the cradle if there is one free, else with its
+  // mother (or whoever carries it), nobody of the house on the floor by choice — the guest sleeps there, the house's beds are
+  // its own people's (L-228: on the floor lying down, the share-out's)
+  L.beds = function (b, people) {
     const order = [], pair = new Map(), withM = new Map(), crib = new Set(), floor = new Set();
-    const S = G.S; const list = (residents || []).slice().sort((x, y) => (y.age >= 16) - (x.age >= 16) || y.age - x.age || x.id - y.id);
-    const here = new Set(list.map(v => v.id));
+    const S = G.S; const list = (people || []).slice().sort((x, y) => (y.age >= 16) - (x.age >= 16) || y.age - x.age || x.id - y.id);
+    const here = new Set(list.map(v => v.id)); const babies = [];
+    const own = v => v.home === b.id;
     for (const v of list) {
-      if (v.age < 2) {
-        crib.add(v.id);
-        const m = [S.villagers.get(v.mother), S.villagers.get(v.carrier), S.villagers.get(v.father)].find(o => o && here.has(o.id) && o.age >= 14);
-        if (m) withM.set(v.id, m.id);
-        continue;
-      }
+      if (v.age < 2) { babies.push(v); continue; }
       order.push(v.id);
-      if (v.partner && here.has(v.partner) && !pair.has(v.id)) { pair.set(v.id, v.partner); pair.set(v.partner, v.id); }
+      if (!own(v)) { floor.add(v.id); continue; }
+      const o = v.partner && here.has(v.partner) ? S.villagers.get(v.partner) : null;
+      if (o && own(o) && !pair.has(v.id)) { pair.set(v.id, o.id); pair.set(o.id, v.id); }
+    }
+    babies.sort((x, y) => own(y) - own(x) || x.id - y.id);
+    for (const v of babies) {
+      order.push(v.id); if (own(v)) crib.add(v.id);
+      const m = [S.villagers.get(v.mother), S.villagers.get(v.carrier), S.villagers.get(v.father)].find(o => o && here.has(o.id) && o.age >= 14);
+      if (m) withM.set(v.id, m.id);
     }
     return { order, pair, with: withM, crib, floor };
   };
   if (G.Interiors && G.Interiors.placeRule) { G.Interiors.placeRule('casa', (b, v) => L.want(v, b)); G.Interiors.placeRule('templo', (b, v) => L.want(v, b)); }
-  if (G.Interiors && G.Interiors.bedRule) G.Interiors.bedRule((b, residents) => L.beds(b, residents));
+  if (G.Interiors && G.Interiors.bedRule) G.Interiors.bedRule((b, people) => L.beds(b, people));
 
   // ------------------------------ the faithful inside the temple (L-224) ------------------------------
   // (a place free to pray in the temple's plan — the mats and the benches for the faithful, the altar for the priest —, counted
-  // against those already praying inside: the faithful go in by the door and kneel before the image; full, or a temple with no
-  // place of prayer, they keep to the rows before its door. The plan is pure: made now if it is not, it is the same plan)
+  // against those already praying inside and those on their way in: the faithful go in by the door and kneel before the image;
+  // full, or a temple with no place of prayer, they keep to the rows before its door. The plan is pure: made now if it is not,
+  // it is the same plan. A yes keeps the place for this one in the step's count — two sent in the same second are two)
   L.prayIn = function (v, b, priest) {
     const In = G.Interiors; if (!In || !In.plan || !b || !b.built || b.type !== 'temple') return false;
     const p = In.plan(b); if (!p || !p.ok) return false;
     const uses = priest ? ['oficiar'] : ['rezar', 'sentar'];
     let n = 0; for (const it of p.items) for (const sp of it.spots) if (uses.includes(sp.use)) n++;
     if (!n) return false;
-    let k = 0; const e = index().house.get(b.id);
-    if (e) for (const o of e.awake) if (o.id !== v.id && o.task && o.task.type === 'pray' && !!o.task.priest === !!priest) k++;
-    return k < n;
+    const o = index(); let e = o.house.get(b.id); if (!e) o.house.set(b.id, e = HOUSE());
+    const t = v.task; const mine = t && t.type === 'pray' && t.inT === b.id && !!t.priest === !!priest ? 1 : 0;
+    if ((priest ? e.pp : e.pf) - mine >= n) return false;
+    if (!mine) { if (priest) e.pp++; else e.pf++; }
+    return true;
   };
 
   // ------------------------------ the god's body at home (the adendo's 4.1) ------------------------------
