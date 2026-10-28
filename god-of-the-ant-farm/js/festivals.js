@@ -116,8 +116,11 @@
 
   // ------------------------------ who takes part ------------------------------
   const BUSY = { band: 1, combat: 1, fire: 1, flee: 1, escort: 1, escorted: 1, envoy: 1, trade: 1, migrate: 1, aboard: 1, embark: 1, fight: 1, condemned: 1, escape: 1, swim: 1, army: 1, siege: 1 };
-  // (someone away on a story's road is not in town for the feast)
-  function free(v) { return !v.aboard && !v.held && !v.air && v.age >= 4 && (!v.task || (!BUSY[v.task.type] && v.task.pri < 3 && !(v.task.type === 'saga' && v.task.j))) && v.hp > 25; }
+  // (someone away on a story's road is not in town for the feast; who is on the way to a meal — the store, a bush —, or at the
+  // top of hunger with the life going, eats first: the feast that begins then does not take them from it — a Toxcatl took a
+  // woman of hunger 100 eight tiles from the granary, and she starved in the ring for twenty seconds, L-234)
+  const MEAL = { eat: 1, forage: 1 };
+  function free(v) { return !v.aboard && !v.held && !v.air && v.age >= 4 && (!v.task || (!BUSY[v.task.type] && !MEAL[v.task.type] && v.task.pri < 3 && !(v.task.type === 'saga' && v.task.j))) && v.hp > 25 && !(v.hunger >= 99.9 && v.hp < 60); }
   function people(set, opt) {
     const out = [];
     for (const v of G.S.villagers.values()) {

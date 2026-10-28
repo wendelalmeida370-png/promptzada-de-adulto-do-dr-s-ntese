@@ -1,7 +1,8 @@
 // lar: a vida em casa, provocada de propósito (P1, o Patch 2 — a Parte 3 do pedido), no mundo pronto «cidade» (ou o do
 // argumento: node qa/lar.js metropole). Os casos que precisam de outra hora partem do mundo pronto de novo.
 //  l1  a noite de uma cidade, das 0,50 às 0,86: cada um deita na sua hora (o relógio de cada um, G.Lar.clock — as crianças
-//      antes, os adultos espalhados; quem está cansado pode deitar antes); às 0,78 há gente dormindo e gente acordada em casa;
+//      antes, os adultos espalhados; quem está cansado pode deitar antes); entre 0,76 e 0,82 há um momento com gente dormindo e gente acordada em
+//      casa (às 0,78, as crianças dormindo);
 //      quem entra numa casa entra pela porta, andando; ninguém aparece dentro de uma casa; e o verificador limpo
 //  l1b quem dorme dentro de uma casa está deitado (na cama, ou deitado no chão: o lugar da planta — L-228, o repartidor do P4)
 //  l5  a morte no meio da noite: quem dormia na mesma casa continua dormindo; o morto sai do save
@@ -33,6 +34,7 @@
 //  l11b quem reza dentro do templo está num lugar de rezar da planta (as esteiras, os bancos, o altar do sacerdote — o
 //      repartidor do P4 com a regra do templo)
 //  l10 uma festa atravessa o save (L-222) e o banquete sai pelo livro-razão (L-223)
+//  l10b a festa que começa não leva para a plateia quem está a caminho de comer, no máximo da fome (L-234)
 //  l8  dois anos de salto: o verificador limpo — e quanto custa o relógio de cada um no salto
 //  l9  um dia inteiro: nenhuma despensa muda fora do livro-razão, a não ser pelos dois caminhos do T-130 ainda abertos (o
 //      fim do dia do economy.js e o tributo do court.js, do P2), que aparecem nomeados
@@ -132,7 +134,9 @@ if (want('l1', 'l1b')) {
   S.time = 0.5; M.viver(0.1);
   const dw = doorWatch(); const first = new Map(); const was = new Map(); const energy = new Map();
   for (const v of S.villagers.values()) { was.set(v.id, !!v.sleeping); energy.set(v.id, v.energy); }
-  let snap = null;
+  // (the town looked at each hundredth of the day from 0.76 to 0.82 — the hours its grown ones go to bed —: at some look,
+  // someone asleep at home and someone still awake there; one look at 0.78 hung on a single late one, T-138)
+  const snaps = []; const TS = [0.76, 0.77, 0.78, 0.79, 0.8, 0.81, 0.82];
   const each = () => {
     dw.step();
     for (const v of S.villagers.values()) {
@@ -141,8 +145,8 @@ if (want('l1', 'l1b')) {
       }
       was.set(v.id, !!v.sleeping); energy.set(v.id, v.energy);
     }
-    if (!snap && S.time >= 0.78) {
-      snap = { grownA: 0, grownW: 0, kidsA: 0, kidsN: 0, awakeLate: 0, wake: [], away: new Map() };
+    if (snaps.length < TS.length && S.time >= TS[snaps.length]) {
+      const snap = { t: TS[snaps.length], grownA: 0, grownW: 0, kidsA: 0, kidsN: 0, awakeLate: 0, wake: [], away: new Map() }; snaps.push(snap);
       for (const v of people(set)) {
         if (v.inside !== v.home) { if (v.age >= 16 && !v.sleeping) { const w = L.why(v); const k = `${w.code}${v.task ? ':' + v.task.type : ''}`; snap.away.set(k, (snap.away.get(k) || 0) + 1); } continue; }
         if (v.age >= 16) { if (v.sleeping) snap.grownA++; else { snap.grownW++; if (L.clock(v).bed > S.time - 0.01) snap.awakeLate++; if (snap.wake.length < 3) snap.wake.push(`${v.name} (${v.task ? v.task.type + (v.task.what ? ':' + v.task.what : '') : '—'}, deita ${fmtT(L.clock(v).bed)})`); } }
@@ -151,14 +155,15 @@ if (want('l1', 'l1b')) {
     }
   };
   liveTo(0.86, each);
+  const k78 = snaps.find(q => q.t === 0.78) || null; const snap = snaps.find(q => q.grownA > 0 && q.grownW > 0) || k78;
   const grown = [...first.values()].filter(f => f.age >= 16), kids = [...first.values()].filter(f => f.age < 12);
   const early = grown.filter(f => f.t < f.bed - 0.01 && f.e >= 30);
   const ts = grown.map(f => f.t); const mean = a => a.reduce((s, x) => s + x, 0) / (a.length || 1);
   const span = ts.length ? Math.max(...ts) - Math.min(...ts) : 0;
   const mg = mean(ts), mk = mean(kids.map(f => f.t));
   const fine = dw.n() >= 5 && !dw.wrong.length && grown.length >= 5 && early.length <= Math.max(1, grown.length * 0.05) && span >= 0.03 && (!kids.length || mk < mg - 0.02)
-    && !!snap && snap.grownA > 0 && snap.grownW > 0 && (!snap.kidsN || snap.kidsA >= snap.kidsN * 0.6);
-  ok('l1 cada um na sua hora', fine, `${dw.n()} entradas em casa${dw.wrong.length ? ` — ERRADAS: ${dw.wrong.slice(0, 3).join(' · ')}` : ', todas pela porta'}; ${grown.length} adultos deitaram entre ${fmtT(Math.min(...ts))} e ${fmtT(Math.max(...ts))} (média ${fmtT(mg)}), ${kids.length} crianças em média às ${kids.length ? fmtT(mk) : '—'}; antes da própria hora sem cansaço: ${early.length}${early.length ? ' (' + early.slice(0, 2).map(f => `${fmtT(f.t)} < ${fmtT(f.bed)}, ${f.task}`).join(', ') + ')' : ''}; às ${snap ? '0,78' : '—'}: ${snap ? `${snap.grownA} adultos dormindo e ${snap.grownW} acordados em casa (${snap.awakeLate} pela hora deles: ${snap.wake.join(', ')}), ${snap.kidsA} de ${snap.kidsN} crianças dormindo; adultos acordados fora de casa: ${[...snap.away].map(([k, n]) => `${k} ${n}`).join(', ') || 'nenhum'}` : 'NÃO CHEGOU'}`);
+    && !!snap && snap.grownA > 0 && snap.grownW > 0 && !!k78 && (!k78.kidsN || k78.kidsA >= k78.kidsN * 0.6);
+  ok('l1 cada um na sua hora', fine, `${dw.n()} entradas em casa${dw.wrong.length ? ` — ERRADAS: ${dw.wrong.slice(0, 3).join(' · ')}` : ', todas pela porta'}; ${grown.length} adultos deitaram entre ${fmtT(Math.min(...ts))} e ${fmtT(Math.max(...ts))} (média ${fmtT(mg)}), ${kids.length} crianças em média às ${kids.length ? fmtT(mk) : '—'}; antes da própria hora sem cansaço: ${early.length}${early.length ? ' (' + early.slice(0, 2).map(f => `${fmtT(f.t)} < ${fmtT(f.bed)}, ${f.task}`).join(', ') + ')' : ''}; às ${snap ? String(snap.t).replace('.', ',') : '—'}: ${snap ? `${snap.grownA} adultos dormindo e ${snap.grownW} acordados em casa (${snap.awakeLate} pela hora deles: ${snap.wake.join(', ')}), às 0,78 ${k78 ? k78.kidsA : 0} de ${k78 ? k78.kidsN : 0} crianças dormindo; adultos acordados fora de casa: ${[...snap.away].map(([k, n]) => `${k} ${n}`).join(', ') || 'nenhum'}` : 'NÃO CHEGOU'}`);
   ok('l1b quem dorme está deitado', !lying.length, lying.length ? `${lying.length} de pé ou sentados dormindo (L-228, o repartidor do P4): ${lying.slice(0, 2).join(' · ')}` : `${looks} olhadas do verificador: ninguém dormindo de pé`);
   nightReady = true;
 }
@@ -822,6 +827,22 @@ if (want('l10')) {
     ok('l10 a festa atravessa o save', before === after && ended >= 0 && !stuck && (!hasFeast || feast.length >= 1) && !woken.length,
       `${key} em ${set.name} às ${fmtT(0.8)}: ${kidsAsleep.size} crianças dormindo, ${woken.length ? `${woken.length} ARRANCADAS DA CAMA para a plateia` : 'nenhuma arrancada da cama para a plateia'}; antes do save ${before}, depois ${after} (festa/etapa/participantes/na festa); ${ended >= 0 ? 'terminou' : 'NÃO TERMINOU'}${stuck ? `, ${stuck} AINDA NA FESTA` : ''}; o banquete no livro: ${feast.length} linha(s), ${eaten} de comida${hasFeast ? '' : ' (esta festa não tem banquete)'}`);
   }
+}
+
+// ======================= l10b: a feast does not take who is on the way to a meal (L-234) =======================
+if (want('l10b')) {
+  // (the feast's hour, as l10; two grown ones of the town awake, at the top of hunger with the life going, on their way to
+  // the store — the test's hand —, when the feast begins: they eat first, and are not in its crowd)
+  open(); set = town(); const f = G.Fac.get(set.fac); S.time = 0.62; liveTo(0.8);
+  const keys = G.Fest.of(f.civ).filter(k => !G.Fest.DEF[k].trigger);
+  D.make('f:' + f.id, 'food', 40, { code: 'teste', part: true });
+  const hungry = people(set).filter(v => v.age >= 18 && v.age < 60 && !v.sleeping && !v.inside && !isBody(v) && !(v.task && v.task.pri >= 3)).slice(0, 2);
+  for (const v of hungry) { v.hunger = 100; v.hp = 30; v._noStore = 0; v._hungerT = 0; G.Vg.endTask(v); G.Vg.setTask(v, { type: 'eat', pri: 2.5 }); }
+  let fe = null; for (const k of keys) { fe = G.Fest.start(set, k, {}); if (fe) break; }
+  const taken = fe ? hungry.filter(v => fe.parts.includes(v.id)) : [];
+  let ate = 0; if (fe) live(40, () => { ate = hungry.filter(v => S.villagers.has(v.id) && v.hunger < 60).length; return ate === hungry.length; });
+  ok('l10b a festa não leva quem vai comer (L-234)', !!fe && hungry.length >= 1 && !taken.length && ate === hungry.length,
+    fe ? `${fe.key} em ${set.name}: ${hungry.map(v => `${v.name} (fome 100, vida 30, indo comer)`).join(', ')} — ${taken.length ? `${taken.map(v => v.name).join(', ')} LEVADO(S) PARA A PLATEIA` : 'nenhum levado para a plateia'}; ${ate} de ${hungry.length} comeram` : `${set.name} não começou nenhuma festa: ${keys.join(', ')}`);
 }
 
 // ======================= l8 / l9: two years of the skip; then a whole day, the pantries by the ledger =======================
