@@ -36,8 +36,11 @@
     balde: { name: 'Balde', w: 0.35, d: 0.35, h: 0.4, solid: 1, wall: 1, spots: () => [] },
     chaves: { name: 'Quadro das chaves', w: 0.5, d: 0.15, h: 0.5, y: 1.4, solid: 1, wall: 1, mount: 'parede', spots: SP.front('pegar', 0.35) },
     // ---- the baths ----
-    // (the pool: one goes down into it — from its front or either end)
-    piscina: { name: 'Piscina', w: 2.2, d: 1.6, h: 0.5, low: 1, wall: 1, spots: it => [{ use: 'banhar', a: 0, n: 0, on: 1 }, { use: 'entrar', a: 0, n: it.d / 2 + 0.4 }, { use: 'entrar', a: -(it.w / 2 + 0.4), n: 0 }, { use: 'entrar', a: it.w / 2 + 0.4, n: 0 }] },
+    // (the pool: one goes down into it — from its front or either end —; in it, a bather every 0.8 m² of water or so, the
+    // places the baths ask of In.freePlace)
+    piscina: { name: 'Piscina', w: 2.2, d: 1.6, h: 0.5, low: 1, wall: 1, spots: it => { const ka = Math.max(1, Math.round(it.w / 1.1)), kn = Math.max(1, Math.round(it.d / 0.8)); const out = [];
+      for (let i = 0; i < ka; i++) for (let j = 0; j < kn; j++) out.push({ use: 'banhar', a: (i + 0.5) / ka * it.w - it.w / 2, n: (j + 0.5) / kn * it.d - it.d / 2, on: 1 });
+      return out.concat([{ use: 'entrar', a: 0, n: it.d / 2 + 0.4 }, { use: 'entrar', a: -(it.w / 2 + 0.4), n: 0 }, { use: 'entrar', a: it.w / 2 + 0.4, n: 0 }]); } },
     'tina-banho': { name: 'Tina de banho', w: 1.2, d: 0.8, h: 0.6, low: 1, wall: 1, spots: it => [{ use: 'banhar', a: 0, n: 0, on: 1 }, { use: 'entrar', a: 0, n: it.d / 2 + 0.4 }] },
     'fornalha-banho': { name: 'Fornalha dos banhos', w: 0.9, d: 0.8, h: 1.0, solid: 1, fire: 1, wall: 1, job: 1, spots: SP.front('alimentar', 0.5) },
     cabide: { name: 'Cabides', w: 1.2, d: 0.2, h: 0.4, y: 1.5, solid: 1, wall: 1, mount: 'parede', spots: SP.front('despir', 0.35) },
