@@ -45,6 +45,11 @@
       if (s.clock - since > 30) add('lar', 3, `${v.name} #${v.id}: fora de casa à noite sem afazer há ${Math.round(s.clock - since)} s (${t ? t.type : 'sem tarefa'}${Lr.sleepy(v) ? ', na hora de dormir' : ''})`, v.id);
     }
     night0 = now;
+    // ---- whoever is at a feast is at one under way, in a part of it (L-222: a save no longer ends a festival)
+    if (G.Fest && G.Fest.list) {
+      const fl = new Map(G.Fest.list().map(f => [f.id, f]));
+      for (const v of s.villagers.values()) { const t = v.task; if (!t || t.type !== 'fest') continue; const f = fl.get(t.fid); if (!f) add('lar', 2, `${v.name} #${v.id}: na festa #${t.fid}, que não existe`, v.id); else if (!f.parts.includes(v.id)) add('lar', 3, `${v.name} #${v.id}: na festa #${t.fid} sem estar entre os dela`, v.id); }
+    }
     // ---- the pantry moves only by the ledger: each house's food now = at the last look + what the ledger moved in and out
     if (panS !== s) { panS = s; pan = new Map(); moved.clear(); }
     for (const b of s.buildings.values()) {
@@ -73,5 +78,10 @@
       else if (!v.inside && v.sleeping && t && t.type === 'sleep' && t.st >= 2) out.push([v.id, 0, 1, 'sleep', '']);
     }
     return out;
+  }]);
+  // (the festivals under way, their stage and their people in their parts, the same after a save and a load — L-222)
+  QA.canonMore.push(['festas', () => {
+    if (!G.S || !G.Fest || !G.Fest.list) return null; const s = G.S;
+    return G.Fest.list().slice().sort((a, c) => a.id - c.id).map(f => [f.id, f.key, f.set, f.stage, f.parts.filter(id => { const v = s.villagers.get(id); return v && v.task && v.task.type === 'fest' && v.task.fid === f.id; }).sort((a, c) => a - c).join('.')]);
   }]);
 })();

@@ -62,7 +62,7 @@
   const ended = (d, grand) => /s$/.test(artOf(d, grand)) ? 'Terminaram' : 'Terminou';
 
   // ------------------------------ state ------------------------------
-  // live festivals are not saved: a festival cut by a save simply ends
+  // the festivals under way (they go into the save with their people: see the end of this file)
   let live = new Map(), liveS = null, nextId = 1;
   G.worldHooks.push(() => { live = new Map(); liveS = null; nextId = 1; }); // (a new world, or a save loaded: it starts over)
   function reset() { if (liveS !== G.S) { liveS = G.S; live = new Map(); lastConq = new Map(); } }
@@ -336,13 +336,19 @@
 
   // ------------------------------ stages ------------------------------
   function nextStage(fe) {
+    eatUp(fe); // (what the banquet ate of the people's store, written down before the next stage)
     fe.stage++; fe.st = 0; fe.stT = 0; fe.arrived = 0; fe.arrT = 0;
     const s = fe.plan[fe.stage];
     if (!s) return finish(fe);
     fe.sname = s[0]; fe.sdur = s[1] * fe.len;
     const S = G.S;
     for (const id of fe.parts) { const v = S.villagers.get(id); if (v && v.task && v.task.type === 'fest' && v.task.fid === fe.id) { v.task.st = 0; v.task.slot = null; v.path = null; } }
-    // layouts: where each role stands in this stage
+    layout(fe, true);
+    onStage(fe);
+  }
+  // where each role stands in the stage under way (made again from the stage's places, the same each time: a festival
+  // brought back by a save stands where it stood — fresh: a stage beginning, its march, race and lamps from the start)
+  function layout(fe, fresh) {
     const n = fe.parts.length; const C = fe.C;
     switch (fe.sname) {
       case 'gather': case 'feast': case 'vigil': case 'speech': case 'blot': case 'perform': case 'duel': case 'bout': case 'wrestle': case 'crown': case 'dance': case 'water': case 'dark': case 'newfire': case 'smash':
@@ -350,14 +356,13 @@
         else if (fe.sname === 'water' || (fe.sname === 'gather' && fe.key === 'wepet')) fe.slots = ring(fe.A[0], fe.A[1], n, 0.9, 0.5);
         else fe.slots = ring(C[0], C[1], n, fe.sname === 'dance' ? 1.3 : fe.sname === 'feast' ? 1.5 : 1.8);
         break;
-      case 'march': case 'return': fe.trail = []; fe.slots = ring((fe.sname === 'return' ? fe.A : fe.B)[0], (fe.sname === 'return' ? fe.A : fe.B)[1], n, 1.5); break;
+      case 'march': case 'return': if (fresh) fe.trail = []; fe.slots = ring((fe.sname === 'return' ? fe.A : fe.B)[0], (fe.sname === 'return' ? fe.A : fe.B)[1], n, 1.5); break;
       case 'rite': case 'climb': fe.slots = ring(fe.B[0], fe.B[1], n, 1.4); break;
-      case 'race': fe.slots = raceSlots(fe); fe.racers = {}; break;
-      case 'relight': fe.slots = ring(C[0], C[1], n, 1.6); fe.houses = [...G.S.buildings.values()].filter(b => b.set === fe.set && b.built && G.BDEF[b.type].housing).map(b => b.id); fe.hk = 0; break;
+      case 'race': fe.slots = raceSlots(fe); if (fresh) fe.racers = {}; break;
+      case 'relight': fe.slots = ring(C[0], C[1], n, 1.6); if (fresh) { fe.houses = [...G.S.buildings.values()].filter(b => b.set === fe.set && b.built && G.BDEF[b.type].housing).map(b => b.id); fe.hk = 0; } break;
       default: fe.slots = ring(C[0], C[1], n, 1.6);
     }
     fe.slotOf = new Map(); fe.parts.forEach((id, k) => fe.slotOf.set(id, k));
-    onStage(fe);
   }
   function raceSlots(fe) {
     const c = fe.course || trackFrom(fe.C); if (!c) return ring(fe.C[0], fe.C[1], fe.parts.length, 1.6);
@@ -371,7 +376,8 @@
   function onStage(fe) {
     const S = G.S; const f = G.Fac.get(fe.fac); const set = S.settlements.get(fe.set);
     if (fe.sname === 'feast') fe.food = Math.min(f ? f.stock.food : 0, fe.parts.length * (fe.grand ? 1.2 : 0.7));
-    if (fe.sname === 'smash' && f && G.Eco) { const n = Math.min(Math.floor(f.stock.ceramica || 0), Math.ceil(fe.parts.length / 3)); f.stock.ceramica -= n; fe.note.pots = n; }
+    // (the old pots broken: out of the people's store, in the ledger — L-223)
+    if (fe.sname === 'smash' && f && G.Eco) { const n = Math.min(Math.floor(f.stock.ceramica || 0), Math.ceil(fe.parts.length / 3)); const r = n > 0 ? G.Depot.use('f:' + f.id, 'ceramica', n, { code: 'festa' }) : null; fe.note.pots = r && r.ok ? r.n : 0; }
     if (fe.sname === 'dark') { fe.dark = true; }
     if (fe.sname === 'newfire') { fe.props.newfire = true; const p = fe.T ? G.Village.center(fe.T) : fe.C; G.FX && G.FX.ring(p[0], p[1], 0.3, 3, 1.4, 'rgba(255,190,80,0.9)', 2, true); }
     if (fe.sname === 'gather' && fe.props.bonfire) fe.props.fireOn = true;
@@ -381,6 +387,7 @@
 
   // ------------------------------ ending ------------------------------
   function finish(fe) {
+    eatUp(fe);
     const S = G.S; const set = S.settlements.get(fe.set); const f = G.Fac.get(fe.fac); const d = FE.DEF[fe.key];
     for (const id of fe.parts) { const v = S.villagers.get(id); if (v && v.task && v.task.type === 'fest' && v.task.fid === fe.id) { v.torch = false; v.z = 0; G.Vg.endTask(v); } }
     if (fe.victim) { const a = S.animals.get(fe.victim); if (a && !a.dead) { a.state = 'pen'; a.ledBy = 0; } }
@@ -404,6 +411,7 @@
     G.Lore && G.Lore.note && G.Lore.note('fest', { fac: f.id, name: nm, set: set.name });
   }
   function abort(fe, why) {
+    eatUp(fe);
     const S = G.S;
     for (const id of fe.parts) { const v = S.villagers.get(id); if (v && v.task && v.task.type === 'fest' && v.task.fid === fe.id) { v.torch = false; v.z = 0; G.Vg.endTask(v); } }
     if (fe.victim) { const a = S.animals.get(fe.victim); if (a && !a.dead) { a.state = 'pen'; a.ledBy = 0; } }
@@ -435,7 +443,8 @@
     if (s === 'climb' && !fe.riteDone && fe.stT > fe.sdur * 0.7) rite(fe);
     if (s === 'bout' && !fe.riteDone && fe.stT > fe.sdur * 0.92) rite(fe);
     if (s === 'water' && !fe.note.water && fe.stT > fe.sdur * 0.8 && ready) { fe.note.water = true; for (const b of byType(fe.set, 'farm')) if (b.crops) for (const c of b.crops) c.g = Math.min(1, (c.g || 0) + 0.25); }
-    if (s === 'feast' && fe.food > 0) { const eat = Math.min(fe.food, dt * fe.parts.length * 0.02); f.stock.food = Math.max(0, f.stock.food - eat); fe.food -= eat; fe.note.eaten = (fe.note.eaten || 0) + eat; }
+    // (what the banquet eats of the people's store: in the ledger, by whole portions — eatUp; L-223)
+    if (s === 'feast' && fe.food > 0) { const eat = Math.min(fe.food, dt * fe.parts.length * 0.02); fe.food -= eat; fe.owe = (fe.owe || 0) + eat; if (fe.owe >= 1) eatUp(fe, true); }
     // the lamps come back house by house (the runners may already have lit some out of turn)
     if (s === 'relight' && fe.houses && fe.houses.length) { const want = Math.min(fe.houses.length, Math.floor(fe.stT / fe.sdur * fe.houses.length * 1.1)); for (let k = 0; k < want && fe.lit.size < want; k++) fe.lit.add(fe.houses[k]); }
     if (s === 'relight' && fe.stT > fe.sdur * 0.95) fe.dark = false;
@@ -443,6 +452,15 @@
     if (done) nextStage(fe);
   }
   const TRAVEL = { gather: 1, rite: 1, water: 1, vigil: 1, feast: 0 };
+  // what the banquet has eaten of the people's store, written down: by whole portions while it goes on, the rest when its
+  // stage ends — or the festival (a line of the ledger a step would flood it)
+  function eatUp(fe, whole) {
+    const n = whole ? Math.floor(fe.owe || 0) : (fe.owe || 0); if (!(n > 1e-6)) return;
+    fe.owe = (fe.owe || 0) - n;
+    if (!G.Depot || !G.Fac.get(fe.fac)) return;
+    const r = G.Depot.use('f:' + fe.fac, 'food', n, { code: 'banquete', part: true });
+    if (r.ok) fe.note.eaten = (fe.note.eaten || 0) + r.n;
+  }
   // the moment of the rite: sacrifices, offerings, verdicts
   function rite(fe) {
     fe.riteDone = true;
@@ -466,13 +484,14 @@
       blood(a.x, a.y, 4);
       const meat = Math.max(4, a.meat || sp.meat || 6);
       G.Animals.kill(a, null, 'sacrifice'); a.meat = 0; G.Animals.remove(a);
-      G.Village.addStock('food', meat, f.id);
+      // (the beast's meat into the people's store, in the ledger, as far as it has room — L-223)
+      { const r = G.Depot.make('f:' + f.id, 'food', meat, { code: 'sacrificio', part: true }); if (r.ok && S.stats) S.stats.foodProduced += r.n; }
       G.Eco && G.Eco.penDirty && G.Eco.penDirty();
       fe.note.sac = `${sp.name.toLowerCase()} sacrificad${sp.g === 'f' ? 'a' : 'o'} aos deuses`;
       fe.props.altar = true;
       return;
     }
-    if (fe.key === 'panateneias' && f.stock.tecido >= 1) { f.stock.tecido -= Math.min(2, f.stock.tecido); fe.note.sac = 'o peplo novo vestido na estátua da deusa'; }
+    if (fe.key === 'panateneias' && f.stock.tecido >= 1) { const r = G.Depot.use('f:' + f.id, 'tecido', Math.min(2, f.stock.tecido), { code: 'festa' }); if (r.ok) fe.note.sac = 'o peplo novo vestido na estátua da deusa'; }
     if (fe.key === 'ludi' || fe.key === 'duel') {
       const g = (fe.roles.gladiator || []).map(id => S.villagers.get(id)).filter(Boolean);
       if (g.length >= 2) { const [a, b] = g; const w = a.courage + G.R() > b.courage + G.R() ? a : b; const l = w === a ? b : a; fe.winner = w.id; G.Vg.damage(l, G.rr(15, 45), 'war'); G.Vg.emote(w, 'happy', 3); G.Vg.emote(l, 'sad', 3); }
@@ -801,5 +820,55 @@
   void P;
 
   // ------------------------------ save ------------------------------
-  (G.saveHooks = G.saveHooks || []).push({ save() { }, load() { live = new Map(); liveS = G.S; } });
+  // the festivals under way go into the save — the stage and its time, the places, the people and their parts, the beast led
+  // to the altar —, and come back with it: a festival cut by a save was a festival lost, its people let go of their parts and
+  // the captive chosen for the knife walked away free (L-222). The stage's places are made again from its points (layout);
+  // what a stage does once at its beginning (onStage) is not done again
+  const r3 = x => Math.round(x * 1000) / 1000;
+  const pt = p => (Array.isArray(p) ? p.map(r3) : null);
+  const pts = L => (Array.isArray(L) ? L.filter(p => Array.isArray(p) && p.length >= 2 && p.every(Number.isFinite)) : []);
+  (G.saveHooks = G.saveHooks || []).push({
+    save(out) {
+      reset(); const S = G.S;
+      out.fest = [...live.values()].map(fe => {
+        const who = []; for (const id of fe.parts) { const v = S.villagers.get(id); const t = v && v.task; if (t && t.type === 'fest' && t.fid === fe.id) who.push([id, t.role, t.inRing ? 1 : 0, t.house || 0]); }
+        const a = fe.victim ? S.animals.get(fe.victim) : null;
+        return {
+          id: fe.id, key: fe.key, set: fe.set, fac: fe.fac, t: r3(fe.t), len: r3(fe.len), stage: fe.stage, sname: fe.sname, sdur: r3(fe.sdur), stT: r3(fe.stT), arrived: fe.arrived || 0,
+          parts: fe.parts.slice(), roles: fe.roles, who, trail: (fe.trail || []).map(pt), props: fe.props, lit: [...fe.lit], dark: !!fe.dark, note: fe.note, grand: !!fe.grand, truce: !!fe.truce, torches: !!fe.torches,
+          A: pt(fe.A), B: pt(fe.B), C: pt(fe.C), T: fe.T ? fe.T.id : 0, course: pt(fe.course), victim: fe.victim || 0, ledBy: (a && a.ledBy) || 0, victimV: fe.victimV || 0, animalPen: fe.animalPen || 0,
+          plan: fe.plan, leaderAt: fe.leaderAt === undefined ? -1 : fe.leaderAt, riteDone: !!fe.riteDone, houses: fe.houses || null, hk: fe.hk || 0, winner: fe.winner || 0, food: r3(fe.food || 0), owe: r3(fe.owe || 0), racers: fe.racers || null,
+        };
+      });
+    },
+    load(o) {
+      live = new Map(); liveS = G.S; nextId = 1;
+      const S = G.S; const body = o.avatar && Number.isFinite(o.avatar.id) ? o.avatar.id : 0;
+      for (const x of Array.isArray(o.fest) ? o.fest : []) {
+        if (!x || !Number.isInteger(x.id) || !FE.DEF[x.key] || !Array.isArray(x.plan) || !x.plan[x.stage] || !S.settlements.has(x.set) || !G.Fac.get(x.fac)) continue;
+        const P = p => (Array.isArray(p) && p.length >= 2 && p.every(Number.isFinite) ? p : null);
+        const fe = {
+          id: x.id, key: x.key, set: x.set, fac: x.fac, t: +x.t || 0, len: +x.len || 1, stage: x.stage | 0, sname: x.plan[x.stage | 0][0], sdur: +x.sdur || 1, stT: +x.stT || 0, st: 0, arrived: +x.arrived || 0, arrT: 0,
+          parts: (x.parts || []).filter(id => S.villagers.has(id)), roles: {}, trail: pts(x.trail), props: x.props && typeof x.props === 'object' ? x.props : {}, lit: new Set(Array.isArray(x.lit) ? x.lit : []), dark: !!x.dark, fx: [], note: x.note && typeof x.note === 'object' ? x.note : {},
+          grand: !!x.grand, truce: !!x.truce, torches: !!x.torches, A: P(x.A), B: P(x.B), C: P(x.C), T: x.T ? S.buildings.get(x.T) || null : null, course: Array.isArray(x.course) && x.course.length === 4 ? x.course : null,
+          victim: x.victim || 0, victimV: x.victimV || 0, animalPen: x.animalPen || 0, plan: x.plan, leaderAt: Number.isFinite(x.leaderAt) && x.leaderAt >= 0 ? x.leaderAt : undefined, riteDone: !!x.riteDone,
+          houses: Array.isArray(x.houses) ? x.houses : undefined, hk: x.hk | 0, winner: x.winner || 0, food: +x.food || 0, owe: +x.owe || 0, racers: x.racers && typeof x.racers === 'object' ? x.racers : {}, orderStage: -1,
+        };
+        for (const k in x.roles || {}) if (Array.isArray(x.roles[k])) fe.roles[k] = x.roles[k].filter(id => S.villagers.has(id));
+        // (the points its stage stands on — a march between two, a rite at the altar, the rest round the middle —: without
+        // them, a damaged save, there is nothing to bring back)
+        const s = fe.sname; const need = s === 'march' || s === 'return' ? ['A', 'B'] : s === 'rite' || s === 'climb' ? ['B'] : s === 'water' ? ['A'] : s === 'gather' ? [] : ['C'];
+        if (!need.every(k => fe[k]) || !(fe.C || fe.A)) continue;
+        // (each one back in their part, from the stage's start of their walk; the god's body keeps its own)
+        for (const w of Array.isArray(x.who) ? x.who : []) {
+          const v = S.villagers.get(w[0]); if (!v || v.id === body || v.task || !fe.parts.includes(v.id)) continue;
+          G.Vg.setTask(v, { type: 'fest', fid: fe.id, role: w[1], pri: w[1] === 'victim' ? 6 : 3.2, kind: 'fest', st: 0, delay: 0, inRing: !!w[2], house: w[3] || 0 });
+        }
+        // (the beast for the altar, led again by the one who led it — the save put the herds back in their pens)
+        if (fe.victim) { const a = S.animals.get(fe.victim); if (a && !a.dead) { a.state = 'led'; a.ledBy = x.ledBy || 0; } else fe.victim = 0; }
+        layout(fe, false);
+        live.set(fe.id, fe); nextId = Math.max(nextId, fe.id + 1);
+      }
+    },
+  });
 })(window.G);
