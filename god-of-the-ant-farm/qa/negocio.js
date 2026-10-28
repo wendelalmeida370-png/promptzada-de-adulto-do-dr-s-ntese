@@ -32,8 +32,17 @@ const watch = () => { const bb = bad(); if (bb.length) { console.log('   verific
 const D = G.Depot, A = G.Act, B = G.Biz, E = G.Eco;
 const r2 = x => Math.round(x * 100) / 100;
 let S;
-const live = (sec, until) => { for (let k = 0; k < sec; k++) { M.viver(1); if (until && until()) return true; } return false; };
-const fine = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); if (until && until()) return true; } return false; };
+// (the god keeps the peace while the counters work — the Divine Peace, the game's own power (powers.js): the stall is the
+// case, not the war. With the generation-6 worlds Pólis de Argos itself declared two wars at the turn of day 59, two days
+// into the cases — the Guerra do marfim on República de Lavínio, for Alba Longa, and the Guerra da Garganta do Sol on Clã
+// de Hrafn, for Uppsala —, called 28 to arms at Argos, and its merchants took up arms, the buyers hid and fled, and the
+// stall of the cases closed with the town left without a merchant, T-227. Declared when each world opens, held at every
+// step of the cases)
+let peace = false;
+const godsPeace = () => { G.Politics.divinePeace(); peace = true; };
+const held2 = () => { if (peace) S.divinePeace = Math.max(S.divinePeace || 0, G.DAY_LEN); };
+const live = (sec, until) => { for (let k = 0; k < sec; k++) { M.viver(1); held2(); if (until && until()) return true; } return false; };
+const fine = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); held2(); if (until && until()) return true; } return false; };
 const book = (code, f) => D.ledger().filter(e => e[8] === code && (!f || f(e)));
 const nm = id => (S.villagers.get(id) || {}).name || '#' + id;
 // the words said at the counters (what G.Falas said, by whom, with which key)
@@ -89,7 +98,7 @@ M.viver(2); G.inSim++; listen();
 let fac = G.Fac.get(set.fac);
 const merchants = () => [...S.villagers.values()].filter(v => v.set === set.id && v.role === 'mercador' && v.job === mk.id);
 console.log(`(${set.name}${townName ? '' : ', a mais antiga com moeda, mercado com mercador e gente para a fila'}, ${fac.civ}: ${G.Village.pop(set.id)} habitantes; mercado #${mk.id}, mercadores: ${merchants().map(v => v.name).join(', ') || 'nenhum'}; moeda: ${E.coinage(fac.id) ? 'sim' : 'não'}; prateleira velha: ${Object.keys(shelf0).filter(k => shelf0[k] > 0).length} bens)`);
-S.time = 0.1;
+S.time = 0.1; godsPeace();
 
 // ---------------- n1: the stalls open, each in its own place; the old shelf goes to them, nothing lost
 {
@@ -423,7 +432,14 @@ function stallNow() {
   if (m.carry) { const bd = A.boundOf(m.carry); G.Vg.endTask(m); G.Vg.setTask(m, { type: 'carga', to: bd && bd !== 'op' ? bd : 'f:' + G.Fac.idOfV(m), pri: 1, st: 0 }); fine(90, held(t12, () => !m.carry || watch())); }
   start = sw12 + told(calm12, rest12);
   roomOn(z, 'food', 8); // (room on the stall for what the body buys)
-  const tk = G.Possess.take(m); M.viver(0.2);
+  // (the god takes him as a player clicks again, each tenth of a second up to 5 s: on his way, the world's step may cut the
+  // corner of a house, and the take says no for that instant. With the final worlds Heráclito stood 0,05 inside the corner
+  // of a sobrado on his way to the store — «não está em chão firme» —, the case went on without the body, set out the stall
+  // by the god's hand on him and stood him at the counter, and every buyer waited for a seller who was not there, T-213)
+  let tk = G.Possess.take(m), took12 = 1; const no12 = tk.ok ? '' : tk.why;
+  for (; !tk.ok && took12 < 50; took12++) { M.viver(0.1); tk = G.Possess.take(m); }
+  M.viver(0.2);
+  if (!tk.ok) { ok('n12 o corpo é o mercador', false, `o deus NÃO tomou ${m.name} em 5 s: ${tk.why}`); } else {
   // (to the store's door, wholesale; to the stall, set it out; open)
   const d = G.Village.nearestDropoff(m.x, m.y, m.set); const [dx, dy] = G.Village.frontTile(d); m.x = dx; m.y = dy; M.viver(0.2);
   const ow = A.offers(m, m.x, m.y, 2).find(o => o.act === 'atacado' && o.biz === z.id);
@@ -453,7 +469,8 @@ function stallNow() {
   const paid = D.ledger().filter(e => e[0] > L12 && e[4] === payer && e[5] === 'moedas' && e[8] === 'venda').reduce((s, e) => s + e[6], 0);
   G.Possess.release('deus'); M.viver(0.2);
   ok('n12 o corpo é o mercador', tk.ok && r1.ok && r2_.ok && r3.ok && sold && z.day.n > n0 && paid > 0 && !bad().length,
-    `${m.name} pelo deus: ${r1.ok ? r1.msg : r1.why} · ${r2_.ok ? r2_.msg : r2_.why} · ${r3.ok ? r3.msg : r3.why}; ${v ? v.name : 'ninguém'} veio e ${z.day.n > n0 ? `comprou: ${r2(paid)} ${B.money(fac.id).plural} da venda na casa do corpo, pelo livro (a casa: ${r2(c0)} → ${r2(c1)})` : 'NÃO comprou (' + why12 + ')'}`);
+    `${m.name} pelo deus${took12 > 1 ? ` (tomado na ${took12}ª vez; na primeira: «${no12}»)` : ''}: ${r1.ok ? r1.msg : r1.why} · ${r2_.ok ? r2_.msg : r2_.why} · ${r3.ok ? r3.msg : r3.why}; ${v ? v.name : 'ninguém'} veio e ${z.day.n > n0 ? `comprou: ${r2(paid)} ${B.money(fac.id).plural} da venda na casa do corpo, pelo livro (a casa: ${r2(c0)} → ${r2(c1)})` : 'NÃO comprou (' + why12 + ')'}`);
+  }
 }
 // ---------------- n13: the god's body buys at someone else's stall, and haggles
 {
@@ -482,7 +499,16 @@ function stallNow() {
 // places (life.js: on the counter's ground, dry, before no other door); the ninth who comes finds it full and goes, sad,
 // without a word, and nothing moves for him
 {
-  S.time = 0.15; const sw = stallNow();
+  S.time = 0.15; let sw = stallNow();
+  // (the line full on its own eight places is the case: a stall whose line the ground gives them, by the line's rule — the
+  // counter's ground, dry, before no other door (life.js), as filas f1 counts each stall's. With the final worlds the doors
+  // of the buildings around Heráclito's stall left his line one place: the seven others found it full at once and went
+  // back to their work, and eight more after them, T-199. The case goes to the stall of the market whose line has the most
+  // places, with its own merchant)
+  const placesOf = zz => { const s = B.spots(zz); return s ? G.Life.lineAt(s.buyer[0], s.buyer[1], s.dx, s.dy, B.lineOf(zz)).slots.length : 0; };
+  const zWas = z, mWas = m, pWas = placesOf(z);
+  for (const mer of merchants().sort((a, b) => a.id - b.id)) { const zz = B.of(mer); if (zz && placesOf(zz) > placesOf(z)) { z = zz; m = mer; } }
+  if (z !== zWas) sw += ` (a fila da banca de ${mWas.name} tem ${pWas} lugar${pWas === 1 ? '' : 'es'} pelo chão em volta: o caso vai à de ${m.name}, com ${placesOf(z)})`;
   start = prep(z, m) + sw; S.time = 0.15;
   const key = 'biz:' + z.id; const sp = B.spots(z);
   const k = Object.keys(z.inv).filter(q => z.inv[q] >= 1).sort((a, b) => z.inv[b] - z.inv[a] || (a < b ? -1 : 1))[0] || goodOf(z);
@@ -531,6 +557,7 @@ function stallNow() {
     `${B.LINE} da cidade mandados à banca de ${m.name}${sent.length > B.LINE ? ` (e ${sent.length - B.LINE} no lugar de quem saiu antes de a fila encher)` : ''}: até ${most} na fila ao mesmo tempo, nos ${places} lugares dela${q && q.why ? ` (${q.why})` : ''}; ${ninth ? `o nono, ${ninth.name}, chegou com ${inLineAtAsk} na fila e ${sad ? 'foi embora triste' : 'NÃO se entristeceu'}${talk9.length ? `, MAS falou: ${talk9.join(', ')}` : ', sem dizer nada'}; ${bought9 ? 'COMPROU' : 'nada mudou de mãos'}` : 'NENHUM nono comprador'}${joined9.length ? ` (antes: ${joined9.join('; ')})` : ''}${off.length ? `; a regra da fila: ${off[0]}` : ''}`);
   // (the eight are served or go: the next cases start with the line as the world leaves it)
   for (const v of sent) if (v.task && v.task.type === 'compra' && v.task.biz === z.id && v.task.st < 2) G.Vg.endTask(v);
+  z = zWas; m = mWas;
 }
 // ---------------- n16: the interiors' furniture as the room of a house, a shelf and a stall (here a plan made by hand, over
 // the game's own port, given back at the end) — a piece holds its cap in all, each good first in the piece made for it; the people's furniture
@@ -601,17 +628,28 @@ function stallNow() {
 
 // ================================ the chain, §37: from the ship to the house ================================
 {
-  M.pronto('metropole'); S = G.S; M.viver(2);
+  M.pronto('metropole'); S = G.S; M.viver(2); godsPeace(); // (the world opened again: the god's peace again, T-227)
   const nMer = s => [...S.villagers.values()].filter(v => v.set === s.id && v.role === 'mercador').length;
-  const port = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'doca' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'mercado' && b.built) && E.coinage(s.fac) && G.Porto.access([...S.buildings.values()].find(b => b.set === s.id && b.type === 'doca' && b.built), G.Village.nearestDropoff(s.cx, s.cy, s.id))).sort((a, b) => nMer(b) - nMer(a))[0];
-  let info = 'nenhuma cidade com cais, armazém do porto, mercado e moeda', fine14 = false;
-  if (port) {
+  // (the chain's town keeps its merchant to the end — the premise, on purpose. A town short of hands gives its trades away
+  // when it opens works, the merchant among the last of them, but before the food and the works: the planner's rule
+  // (village.js), as T-184 found for the market without coin. With the final worlds Tebas — 27 grown-ups, 25 of them asked
+  // for by its trades — named Kiya, then opened two works, and the four builders took her trade: her stall closed and the
+  // town named no other, T-214. So the ports one at a time, the most hands to spare first — the grown-ups the trades and
+  // the town's own work leave free, as the planner counts them now: an order only, the world decides —, until one keeps
+  // its merchant through the chain, three at most)
+  const spare = s => { const ad = [...S.villagers.values()].filter(v => v.set === s.id && !v.captive && v.age >= 16 && v.age < 62); const eco = E.demand(s, G.Fac.get(s.fac), ad.length); let n = ad.length; for (const k in eco) if (k !== 'mineiro') n -= eco[k]; for (const v of ad) if (['agricultor', 'construtor', 'cacador', 'guerreiro', 'sacerdote'].includes(v.role)) n--; return n; };
+  const ports = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'doca' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'mercado' && b.built) && E.coinage(s.fac) && G.Porto.access([...S.buildings.values()].find(b => b.set === s.id && b.type === 'doca' && b.built), G.Village.nearestDropoff(s.cx, s.cy, s.id)));
+  const room14 = new Map(ports.map(s => [s.id, spare(s)]));
+  ports.sort((a, b) => room14.get(b.id) - room14.get(a.id) || nMer(b) - nMer(a) || a.id - b.id);
+  let info = 'nenhuma cidade com cais, armazém do porto, mercado e moeda', fine14 = false; const gave14 = [];
+  for (const port of ports.slice(0, 3)) {
+    let noMer = false;
     const dock = [...S.buildings.values()].find(b => b.set === port.id && b.type === 'doca' && b.built);
     const mkt = [...S.buildings.values()].find(b => b.set === port.id && b.type === 'mercado' && b.built);
     const f = G.Fac.get(port.fac);
     // (a merchant for the market, if the town has none yet: the people's planner names one)
     let mer = wantMerchant(port, mkt);
-    if (!mer) { info = `${port.name}: o povo não nomeou mercador para o mercado`; } else {
+    if (!mer) { noMer = true; info = `${port.name}: o povo não nomeou mercador para o mercado`; } else {
     const K = 'especiarias';
     S.time = 0.1; G.inSim = Math.max(G.inSim, 1);
     // (a clean quay, as in qa/porto.js: what was on it goes to the store — on a full quay the cargo would go straight in)
@@ -641,13 +679,13 @@ function stallNow() {
     // the merchant, in the morning: a stall, the spices on it. The world may take him from the stall in the middle — the
     // planner names another merchant, a fright sends him to a cave: the stall closes, its goods go home —: then the
     // merchant the town has now, once more, with the spices still in the store (twelve landed, four a wholesale: three
-    // tries; a town short of hands gives its trades away first, and may do it twice)
+    // tries; a town short of hands gives its trades away first, and may do it twice — with none named, the next port)
     let zz = null, buyer = null, again = '';
     // (the purchase home by its own line — a closed stall's goods go to its merchant's house, so a buyer of that house is
     // left out, and the spices in a house are not a purchase)
     const boughtK = v => linesK.some(e => e[0] > L0 && e[8] === 'compra-em-casa' && e[3] === 'v:' + v.id);
     for (let att = 0; att < 3 && !buyer; att++) {
-      if (att) { const m2 = wantMerchant(port, mkt); again += ` (${zz.st === 'on' ? `a ${att === 1 ? 'primeira' : 'segunda'} vez ninguém comprou` : `a banca #${zz.id} fechou no meio: ${zz.why || zz.st}`}; outra vez com ${m2 ? m2.name : 'ninguém'})`; if (!m2) break; mer = m2; }
+      if (att) { const m2 = wantMerchant(port, mkt); again += ` (${zz.st === 'on' ? `a ${att === 1 ? 'primeira' : 'segunda'} vez ninguém comprou` : `a banca #${zz.id} fechou no meio: ${zz.why || zz.st}`}; outra vez com ${m2 ? m2.name : 'ninguém'})`; if (!m2) { noMer = true; break; } mer = m2; }
       S.time = 0.15;
       zz = B.of(mer); if (!zz) zz = B.open(mer, mkt);
       D.make(E.homeOf(mer) ? 'h:' + mer.home : 'p:' + mer.id, 'moedas', 30, { code: 'teste' }); // (where the family keeps its coins: its house, or the purse)
@@ -676,13 +714,17 @@ function stallNow() {
     }
     D.onMove.splice(D.onMove.indexOf(onK), 1); }
     wantNone();
+    // (the town gave its merchant's trade away and named no other: the premise did not hold there — the next port)
+    if (!noMer) break;
+    gave14.push(`${port.name}, com ${room14.get(port.id)} mão(s) de sobra, ficou sem mercador${start ? start : ''}`); start = '';
   }
+  if (gave14.length) start += ` (antes: ${gave14.join('; ')})`;
   ok('n14 a cadeia do navio à casa', fine14, info);
 }
 
 // ================================ a people without coin: the exchange ================================
 {
-  M.pronto('cidade'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1);
+  M.pronto('cidade'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1); godsPeace(); // (and here, T-227)
   // (the peoples without coin stay without it while the cases run — the test's hand on the world's door of the arts,
   // G.Civ.learn, as wantMerchant's on the planner's demand: a young world's peoples learn the coin within minutes, and in
   // the new «cidade» Argos learned it in the middle of n15, its stall selling for drachmas, T-098)
