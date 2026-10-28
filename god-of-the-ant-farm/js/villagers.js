@@ -161,7 +161,10 @@
   // (o.keepLoad: the errand ends but the hands keep what they carry — the god taking the body goes on carrying it; o.stay:
   // the next errand goes on in the building one is in — nobody is let out at the door)
   Vg.endTask = function (v, o) {
-    const S = G.S; const t = v.task; if (!t) return;
+    const S = G.S; const t = v.task;
+    // (one left in a building with no errand — the body given back in a room — goes out by its door with the next errand too,
+    // and one left asleep with none wakes for it: never walking about «inside», nor asleep on their feet)
+    if (!t) { if (v.age >= 2) { if (v.inside && !v.ug && !(o && o.stay === v.inside)) leave(v); v.sleeping = false; } return; }
     G.Life && G.Life.onEndTask(v);
     G.Carnage && G.Carnage.onEndTask(v);
     if (t.type === 'chop') { const o = S.trees.get(t.id); if (o && o.claim === v.id) o.claim = 0; }
@@ -175,14 +178,12 @@
       const b = S.buildings.get(t.id);
       if (b && t.counted && v.carry && b.incoming[v.carry.k] !== undefined) b.incoming[v.carry.k] = Math.max(0, b.incoming[v.carry.k] - v.carry.n);
     }
-    if (v.inside && !(o && o.stay === v.inside)) {
-      const b = S.buildings.get(v.inside);
-      if (b) { const [dx, dy] = V_door(b); v.x = dx; v.y = dy; }
-      v.inside = 0;
-    }
+    if (v.inside && !(o && o.stay === v.inside)) leave(v);
     v.sleeping = false;
     v.task = null; v.path = null; v.act = '';
   };
+  // (out of a building by its door — the people's door, the plan's)
+  function leave(v) { const b = G.S.buildings.get(v.inside); if (b) { const [dx, dy] = V_door(b); v.x = dx; v.y = dy; } v.inside = 0; }
   // the door of a building's plan, when the interiors give one (G.Vg.planDoor = b => [x, y] | null, in tiles, outside the
   // door): where people stand to go in is where the plan has its door; with no plan, the first walkable side of the front
   Vg.planDoor = null;
