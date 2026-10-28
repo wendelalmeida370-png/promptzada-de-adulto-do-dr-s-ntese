@@ -1,15 +1,16 @@
 // civicos: o cenário dos prédios da vida comum (C2, Etapa 5) — o templo, o quartel, a cadeia, os banhos, o paço, os
-// palácios e a feira — nos mundos prontos, provocados nos casos ruins: todos com registro e planta válida; o que cada um é
-// para, em peças que o mundo conta (a imagem e o altar, as celas com palha atrás da grade e o carcereiro, a piscina e a
-// fornalha, o assento do chefe, o trono, as bancas dos feirantes); a casca de longe a da planta (a feira, casca aberta:
-// sem paredes nem telhado); os presos na palha das celas (num mundo sem preso, o caso prende um pela porta do crime.js —
+// palácios e a feira; a biblioteca e a praça (Patch 2, fase E) — nos mundos prontos, provocados nos casos ruins: todos com
+// registro e planta válida; o que cada um é para, em peças que o mundo conta (a imagem e o altar, as celas com palha atrás
+// da grade e o carcereiro, a piscina e a fornalha, o assento do chefe, o trono, as bancas dos feirantes, as estantes e as
+// mesas de leitura, a fonte e a pedra de falar); a casca de longe a da planta (a feira e a praça, casca aberta: sem paredes
+// nem telhado); os presos na palha das celas (num mundo sem preso, o caso prende um pela porta do crime.js —
 // nunca passa vazio); salvar e carregar duas vezes, as mesmas plantas; um ano de salto; a ruína de cada tipo; o save
 // antigo, sem registros. Nenhum erro de módulo.
 //   node qa/civicos.js [mundo,mundo...]
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['qa/interiores-inv.js'] }); const In = G.Interiors;
 const list = process.argv[2] ? process.argv[2].split(',') : ['metropole', 'mundial', 'mega', 'anos1000'];
-const NEW = ['temple', 'quartel', 'cadeia', 'banhos', 'paco', 'palacio', 'grande_palacio', 'palacio_colossal', 'feira'];
+const NEW = ['temple', 'quartel', 'cadeia', 'banhos', 'paco', 'palacio', 'grande_palacio', 'palacio_colossal', 'feira', 'biblioteca', 'praca'];
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | civicos ${name} | ${info}`); if (!c) fails.push(name); };
 const strip = o => { const x = Object.assign({}, o); delete x.key; return JSON.stringify(x); };
 const print = p => JSON.stringify([p.fam, p.sig, p.shell, p.levels, p.items.map(i => [i.kind, i.x, i.z, i.ry, i.lv])]);
@@ -23,6 +24,9 @@ const FOR = {
   paco: p => (p.items.some(i => i.kind === 'trono') ? null : 'sem o assento do chefe'),
   palacio: p => (p.items.some(i => i.kind === 'trono') && p.rooms.some(m => m.fn === 'aposento') ? null : 'sem o trono ou os aposentos'),
   feira: p => (p.shell.kind === 'aberta' && !p.walls.length && p.items.filter(i => i.kind === 'banca').length >= (G.BDEF.feira.jobs || 0) ? null : 'casca fechada ou bancas de menos'),
+  // (the library and the square of the phase E, P4: qa/biblioteca-praca.js proves them without a world)
+  biblioteca: p => (p.items.filter(i => i.kind === 'estante').length >= 2 && p.items.filter(i => i.kind === 'mesa-leitura').length >= 2 && p.items.some(i => i.kind === 'mesa-escriba') ? null : 'sem as estantes, as mesas de leitura ou a mesa do escriba'),
+  praca: p => (p.shell.kind === 'aberta' && !p.walls.length && p.items.some(i => i.kind === 'fonte') && p.items.some(i => i.kind === 'tribuna') && (p.marks || []).some(m => m.use === 'ouvir') && (p.marks || []).some(m => m.use === 'conversar') ? null : 'casca fechada, ou sem a fonte, a pedra de falar ou os lugares de ouvir e de conversar'),
 };
 FOR.grande_palacio = FOR.palacio_colossal = FOR.palacio;
 const check = (name) => {

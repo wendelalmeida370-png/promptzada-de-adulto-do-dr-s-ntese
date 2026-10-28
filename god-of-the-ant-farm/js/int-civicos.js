@@ -48,6 +48,13 @@
     cuba: { name: 'Cuba de fermentar', w: 1.0, d: 1.0, h: 1.1, solid: 1, wall: 1, store: { dep: 'predio', key: 'inv', cap: 8 }, spots: SP.front('mexer', 0.5) },
     // ---- the chief's hall ----
     trono: { name: 'Assento do chefe', w: 1.0, d: 0.8, h: 1.4, solid: 1, wall: 1, spots: it => [{ use: 'sentar', a: 0, n: 0, on: 1 }, { use: 'audiencia', a: 0, n: it.d / 2 + 0.9 }] },
+    // ---- the library (P4, phase E: P2's G.Biblioteca reads and copies there) ----
+    // (the shelves of scrolls and tablets — the building's own —; the reading table, a reader on either side of it)
+    estante: { name: 'Estante de rolos', w: 1.6, d: 0.45, h: 2.1, solid: 1, wall: 1, tall: 1, store: { dep: 'predio', key: 'inv', cap: 20 }, spots: SP.front('guardar') },
+    'mesa-leitura': { name: 'Mesa de leitura', w: 1.4, d: 0.8, h: 0.75, solid: 1, free: 1, spots: it => [{ use: 'ler', a: 0, n: it.d / 2 + 0.4 }, { use: 'ler', a: 0, n: -(it.d / 2 + 0.4) }] },
+    // ---- the square (P4, phase E) ----
+    // (the speaker's stone: one stands on it to speak to the people — P2's 'falar' —, got onto from behind or either side)
+    tribuna: { name: 'Pedra de falar', w: 1.0, d: 1.0, h: 0.45, low: 1, free: 1, spots: it => [{ use: 'falar', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: -(it.d / 2 + 0.35) }, { use: 'acesso', a: -(it.w / 2 + 0.35), n: 0 }, { use: 'acesso', a: it.w / 2 + 0.35, n: 0 }] },
   });
   if (!W) return;
 
@@ -176,4 +183,50 @@
   W.add('cadeia', { use: 'cadeia', H: ['corredor', 'celas', 'patio'], V: ['terreo', 'andar', 'porao'], skip: { 'corredor.andar': 1, 'corredor.porao': 1, 'patio.porao': 1 }, lockNight: 1, cells: (G.BDEF.cadeia && G.BDEF.cadeia.cells) || 4, cellDoor: 'grade', door: [0.9, 1.1], furnish: jailFurnish });
   W.add('banhos', { use: 'banhos', H: ['enfiada', 'salao', 'patio', 'anexo'], V: ['terreo', 'andar'], open: 1, lockNight: 1, jobs: 1, door: [1.0, 1.3], seq: ['vestiario', 'frio', 'quente'], share: [0.26, 0.37, 0.37], furnish: bathsFurnish });
   W.add('paco', { use: 'paco', H: ['salao', 'frente', 'naves', 'patio'], V: ['terreo', 'andar', 'galeria'], lockNight: 1, apse: 2.0, need: { trono: 1 }, door: [1.2, 1.6], furnish: hallFurnish });
+
+  // ------------------------------ the library (P4, phase E) ------------------------------
+  // the shelves of scrolls and tablets along the walls (up on the gallery too), the reading tables free in the hall — two
+  // readers to a table —, the copyist's desk against a wall: what it keeps is the building's own (its inventory), read and
+  // copied there (P2's G.Biblioteca: 'ler', 'escrever'); a bench where one waits
+  function libraryFurnish(P) {
+    const rooms = P._rooms; const all = W.mix(P, W.roomsFor(rooms)).filter(id => !P.rooms[id].open); const hall = W.mix(P, [rooms.main, rooms.front].concat(rooms.cells).filter(has).filter(id => !P.rooms[id].open && lvOf(P, id) >= 0));
+    const shelves = () => { let n = 0; for (const id of all) { let g = 0; while (n < 6 && g++ < 3) { if (!P.place('estante', lvOf(P, id), id)) break; n++; } } if (n < 2) P.errs.push(`só ${n} estantes de rolos`); };
+    // (the reading tables free in the room, a stride from the walls: a reader on either side, where nothing else stands)
+    const tables = () => { let n = 0; for (const id of hall) { let g = 0; while (n < 4 && g++ < 3) { if (!P.place('mesa-leitura', lvOf(P, id), id, { sides: ['livre'], margin: 0.6 })) break; n++; } } if (n < 2) P.errs.push(`só ${n} mesas de leitura`); };
+    const desk = () => { for (const id of hall.concat(rooms.up || [])) if (P.place('mesa-escriba', lvOf(P, id), id)) return; P.lack = 1; P.errs.push('sem lugar para a mesa do escriba'); };
+    for (const f of [[shelves, tables, desk], [tables, desk, shelves], [desk, shelves, tables]][P.attempt % 3]) f();
+    P.opt(() => { for (const id of hall) if (P.place('banco', lvOf(P, id), id)) break; });
+  }
+  W.add('biblioteca', { use: 'biblioteca', H: ['salao', 'frente', 'naves', 'patio'], V: ['terreo', 'galeria', 'andar'], open: 1, lockNight: 1, need: { estante: 2, 'mesa-leitura': 2 }, door: [1.1, 1.5], furnish: libraryFurnish });
+
+  // ------------------------------ the square (P4, phase E) ------------------------------
+  // the town's open ground — it blocks nothing: the world walks across it —, its shell 'aberta' (no walls, no roof, on the
+  // ground: Space.BASELESS), as the god draws it: the fountain in the middle (where one drinks), a bench on either side of it,
+  // facing it; the speaker's stone at one side, facing the fountain — one speaks to the people from it (P2's 'falar') — and
+  // the places of those who stop to listen, in an arc before it ('ouvir'); in the corners, two by two, the places of those who
+  // stop to talk ('conversar'): P.marks. The fountain, the benches and the stone are the square's own, under the sky: laid
+  // with the shell ({ yard: 1 }, as a yard's — shellOut.yard), so that the god's view and the 3D from afar draw them where the
+  // body and the people use them. Laid out by hand, no chance drawn: every square the same
+  const SQ = ['praca-fonte.chao'];
+  In.addFamilies([{ id: SQ[0], H: 'praca-fonte', V: 'chao', name: 'Praça da fonte', can: () => null, build: P => square(P) }]);
+  In.addTypes({ praca: { use: 'praca', fams: SQ, open: 1 } });
+  function square(P) {
+    const L = P.L; const m = 0.1; const sh = [m, m, L - m, L - m]; const c = L / 2;
+    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: 'chao', floors: 1, eave: 0 }; P.roof = null;
+    P.level(0, 0, 3.0, 'chao', sh); P.entryLv = 0;
+    P.entrance = { door: -1, u: c, v: sh[3], w: L - 2 * m, lv: 0 };
+    const id = P.room(0, 'largo', sh, 1); const Y = { yard: 1 };
+    // (the fountain's basin, as the 3D draws it — round, of 1.4 m — in the square it fits in; the drinkers before and behind it)
+    if (!P.at('fonte', 0, id, [c - 1.2, c - 1.2, c + 1.2, c + 1.2], 0, 1, { yard: 1, h: 0.72 })) { P.errs.push('sem lugar para a fonte'); return; }
+    for (const s of [-1, 1]) if (!P.at('banco', 0, id, [c - 0.9, c + s * 2.7 - 0.22, c + 0.9, c + s * 2.7 + 0.22], 0, -s, Y)) { P.errs.push('sem lugar para o banco da praça'); return; }
+    const st = P.at('tribuna', 0, id, [m + 0.5, c - 0.5, m + 1.5, c + 0.5], 1, 0, Y); if (!st) { P.errs.push('sem lugar para a pedra de falar'); return; }
+    if (P.inside()) return;
+    // (who listens: before the stone, facing it, at 1.3 m)
+    const su = (st.r[0] + st.r[2]) / 2, sv = (st.r[1] + st.r[3]) / 2; const ear = [];
+    for (const a of [-50, -25, 0, 25, 50]) { const t = a * Math.PI / 180; const u = su + 1.3 * Math.cos(t), v = sv + 1.3 * Math.sin(t); ear.push([u, v, Math.atan2(su - u, sv - v)]); }
+    P.marks(0, id, 'ouvir', ear);
+    // (who stops to talk: two by two in the corners, facing each other)
+    const talk = []; for (const [u, v] of [[1.4, 1.5], [L - 2.3, 1.5], [1.4, L - 1.5], [L - 2.3, L - 1.5]]) talk.push([u, v, Math.PI / 2], [u + 0.9, v, -Math.PI / 2]);
+    P.marks(0, id, 'conversar', talk);
+  }
 })(window.G);

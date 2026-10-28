@@ -48,12 +48,12 @@ module.exports = {
       sistemas: ['G.Life', 'G.Village', 'G.Possess', 'G.Space'],
       atividades: [
         { id: 'fogo', o: 'o balde do poço contra o fogo', essencial: true, tipos: ['well'], tarefa: 'fire', resultado: 'o fogo perto de um poço apaga mais depressa', condicao: 'fogo a menos de 14 casas', feito: true, provas: [] },
-        { id: 'juntar', o: 'juntar-se na praça: conversar, ouvir quem fala, a festa', essencial: true, tipos: ['praca'], dono: 'P2', usos: ['conversar', 'ouvir', 'falar'], resultado: 'a conversa, o discurso e a festa acontecem ali', condicao: 'o dia da cidade', feito: false, provas: [] },
+        { id: 'juntar', o: 'juntar-se na praça: conversar, ouvir quem fala, a festa', essencial: true, tipos: ['praca'], dono: 'P2', pecas: ['fonte', 'banco', 'tribuna'], usos: ['conversar', 'ouvir', 'falar'], resultado: 'a conversa, o discurso e a festa acontecem ali', condicao: 'o dia da cidade', feito: false, provas: ['qa/biblioteca-praca.js'] },
         { id: 'entregar', o: 'entregar a carga na fogueira da aldeia que ainda não tem armazém', essencial: true, tipos: ['campfire'], tarefa: 'deliver', recursos: ['wood', 'food', 'stone'], resultado: 'o estoque do povo cresce', condicao: 'a aldeia sem armazém', feito: true, provas: [] },
         { id: 'pisar', o: 'o corpo anda e pisa onde a obra deixa: a praça, a borda do poço, os escombros da ruína', tipos: ['praca', 'well', 'ruin', 'aqueduto'], corpo: 'porta', resultado: 'nenhum (é o chão)', condicao: 'sempre', feito: 'parcial', provas: ['qa/encarna.js'] },
         { id: 'beber-poco', o: 'o corpo bebe no poço (hoje só no rio)', tipos: ['well'], corpo: 'agua', feito: false, provas: [] },
       ],
-      notas: 'buscar água no poço é do P1 (a folha p1.js, com a prova qa/agua-solta.js); a praça ganha planta na fase E (P4: os lugares de conversar, ouvir e falar em volta da fonte, P.marks); a ruína não tem planta (o corpo pisa a casa como o mundo a tem); o aqueduto não tem atividade própria: só leva água',
+      notas: 'buscar água no poço é do P1 (a folha p1.js, com a prova qa/agua-solta.js); a praça tem planta desde a fase E (P4, int-civicos.js: a fonte, os dois bancos, a pedra de falar e os lugares de ouvir e de conversar — P.marks —, com a casca; qa/biblioteca-praca.js); o «juntar» espera o lado do P2 (quem vem à praça toma esses lugares); a ruína não tem planta (o corpo pisa a casa como o mundo a tem); o aqueduto não tem atividade própria: só leva água',
     },
   },
 };
