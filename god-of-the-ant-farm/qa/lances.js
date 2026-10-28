@@ -537,7 +537,7 @@ let pocketDoor = null;
       const shut0 = size()(od3); G.Save.apply(o); In.uncache(); const b3 = G.S.buildings.get(id); const od4 = b3 && outOf(b3); const fact = b3 && b3.ip.h[b3.ip.h.length - 1];
       const out = fam.map(q => G.S.villagers.get(q.id)).filter(Boolean); const vd = b3 && sim(() => G.Vg.door(b3)); const sz4 = size();
       const free = out.length === fam.length && out.every(v => near([v.x, v.y], vd) && sz4([v.x, v.y]) >= 12);
-      migr = { ok: !!b3 && b3.ip.v === 3 && b3.ip.s !== s2 && !!fact && fact[1] === 'reforma' && sz4(od4) >= 12 && In.entrySaid(b3) === true && free && !pocketBad().length,
+      migr = { ok: !!b3 && b3.ip.v === In.REC_V && b3.ip.s !== s2 && !!fact && fact[1] === 'reforma' && sz4(od4) >= 12 && In.entrySaid(b3) === true && free && !pocketBad().length,
         info: `o registro v 2 com a porta em ${s2}/1, diante do bolsão de ${shut0} casa(s), e ${fam.length} da família nele (${fam.map(q => q.name).join(', ')}): ao abrir, v ${b3 ? b3.ip.v : '-'}, a porta em ${b3 ? b3.ip.s + '/' + b3.ip.o : '-'} (o fato ${JSON.stringify(fact)}), diante de um chão de ${sz4(od4)} casas; a família ${free ? 'na porta nova, nesse chão' : 'AINDA NO BOLSÃO: ' + out.map(v => f2([v.x, v.y]) + ' num chão de ' + sz4([v.x, v.y])).join(' · ')}; antes de salvar, ${before}` }; }
     ok('o registro de antes julgado ao abrir', !!migr && migr.ok, migr ? migr.info : 'o save sem o prédio, o registro ou gente da cidade');
     pocketDoor = { id };

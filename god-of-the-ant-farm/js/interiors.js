@@ -24,6 +24,7 @@
   const TILE = 4;
   const CS = In.CS = 0.25; // (a cell of the inner grid, in metres)
   In.VERSION = 2; // (the grammar's version: a newer grammar makes new plans of the same records — 2: the body's places fitted, D-088)
+  const REC_V = In.REC_V = 4; // (the record's version: an older one has its door judged on loading — 4: the grammar of In.VERSION 2)
   In.TRIES = 12; // (how many times a recipe is laid out, each with its own dice, before its family gives way)
   In.STEP = 0.3; // (along a wall, the places tried every so many metres — besides the corners and right beside each piece)
   In.CACHE = 900; // (plans kept made at once; the others are made again when asked — the same)
@@ -162,7 +163,7 @@
     const T = TYPES[ctx.t];
     // (hh: who heads the house; nm: how many lived there at the last turn of the day; vz: the day the last of them left;
     // ab: the day the house was given up — the house left behind)
-    const rec = { v: 4, f: '', r: 0, t: ctx.t, u: T ? T.use : '', s: ctx.s, o: ctx.o, c: ctx.c, e: ctx.e, k: ctx.k, cl: ctx.cl, fl: ctx.fl, d: ctx.d, w: ctx.w, pw: ctx.pw, h: [], m: migrated ? 1 : 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 };
+    const rec = { v: REC_V, f: '', r: 0, t: ctx.t, u: T ? T.use : '', s: ctx.s, o: ctx.o, c: ctx.c, e: ctx.e, k: ctx.k, cl: ctx.cl, fl: ctx.fl, d: ctx.d, w: ctx.w, pw: ctx.pw, h: [], m: migrated ? 1 : 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 };
     rec.f = chooseFamily(b, rec);
     return rec;
   }
@@ -2303,7 +2304,7 @@
     // list of a type changed: L-283), another, chosen as a new building's would be, with the fact. A record of this version is
     // never judged on loading: what a save and a load give back is the same)
     for (const b of G.S.buildings.values()) {
-      const r = b.ip; if (!r || (r.v | 0) >= 4) continue; r.v = 4;
+      const r = b.ip; if (!r || (r.v | 0) >= REC_V) continue; r.v = REC_V;
       if (TYPES[r.t] && b.type !== 'ruin' && !(TYPES[r.t].fams || []).includes(r.f)) { const f0 = r.f; r.f = chooseFamily(b, r); r.r++; r.fx = []; fact(b, 'reforma', 'família ' + f0 + '>' + r.f); }
       if (!b.built || b.type === 'ruin' || !TYPES[b.type] || r.t !== b.type) continue;
       const d0 = doorOf(b), s0 = r.s + '/' + r.o; doorRule(b); secure(b); if (d0 && r.s + '/' + r.o !== s0) outOfPocket(b, d0);
