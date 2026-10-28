@@ -25,6 +25,9 @@
 //  11. a court and a terrace see the sky (the room on the terrace aside; an open shell's form, where its masses stand)
 //  12. the doors and arches of the outside: shut, from the street the leaf (an arch's dark) in the opening — a colonnade's
 //      gaps have none —; with the inside drawn, the opening free into the room
+//  13. a yard (B2d: the pottery's, the tavern's): its floor of beaten earth where the feet walk, from above; its fence's outer
+//      face from the street, between its gates; each gate shut from the street, free with the inside drawn; each of its
+//      pieces drawn outside, and put aside by the cut where the inside draws them
 const path = require('path');
 const T = require(path.join(__dirname, 'tres-node.js'));
 const { G, M, THREE } = T.load();
@@ -103,7 +106,7 @@ const floorYP = (p, lv, x, z) => { const l = p.levels.find(q => q.lv === lv); re
 const jobs = list.map(b => [b, In.plan(b), 0]).filter(j => j[1] && j[1].ok && j[1].shell).concat(roundPlans.map(j => [j[0], j[1], 1]));
 ok('há plantas de lares neste mundo, e uma cabana redonda', jobs.length > 10 && roundPlans.length > 0, `${jobs.length} plantas (${[...new Set(jobs.map(j => j[0].type))].join(', ')}); redondas: ${roundPlans.length}`);
 
-const bad = { num: [], lot: [], wall: [], hole: [], floor: [], ceil: [], item: [], kind: new Set(), leaf: [], lid: [], pure: [], out: [], inside: [], sky: [], door: [] };
+const bad = { num: [], lot: [], wall: [], hole: [], floor: [], ceil: [], item: [], kind: new Set(), leaf: [], lid: [], pure: [], out: [], inside: [], sky: [], door: [], yard: [] }; let nYard = 0;
 const cost = {}, costX = {}; const found = []; let edgeY = 0, nWall = 0, nHole = 0, nFloor = 0, nCeil = 0, nItem = 0, nLeaf = 0, nLid = 0, nOut = 0, nIn = 0, nSky = 0, nDoor = 0;
 const SIDE = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] };
 const draws = [0, 0]; const watch0 = G.rngWatch;
@@ -306,7 +309,9 @@ for (const [b, plan, own] of jobs) {
         const yTop = sh.eave - (rf.h > 0 && rf.kind !== 'plano' ? 0.8 : 0.2);
         for (let u = u0 + 0.2; u < u1 - 0.19; u += 0.6) for (let y = foot + 0.25; y < yTop; y += 0.7) {
           if (gaps.some(gp => u > gp[0] && u < gp[2] && y > gp[1] && y < gp[3])) continue; nOut++;
-          const P0 = ax ? [u, y, line + o[1] * 1.5] : [line + o[0] * 1.5, y, u]; const hit = cast(TX, W3(P0), [-o[0], 0, -o[1]], 1.6);
+          const P0 = ax ? [u, y, line + o[1] * 1.5] : [line + o[0] * 1.5, y, u];
+          if (sh.yard && P0[0] > sh.yard.r[0] && P0[0] < sh.yard.r[2] && P0[2] > sh.yard.r[1] && P0[2] < sh.yard.r[3]) { nOut--; continue; } // (a side the yard faces: seen from it, 2)
+          const hit = cast(TX, W3(P0), [-o[0], 0, -o[1]], 1.6);
           if (!hit || !hit.front || hit.t > 1.515 || hit.t < 1.5 - 0.17) bad.out.push(`${tag} lado ${sd} em ${u.toFixed(2)}, ${y.toFixed(2)} m: ${hit ? ((1.5 - hit.t) * 100).toFixed(1) + ' cm para fora' + (hit.front ? '' : ' (avesso)') : 'nada'}`);
         } } }
     else { const l = plan.levels[0]; const seg = plan.walls.find(w => w.kind === 'anel'); const e = seg ? Math.atan2((seg.a[1] + seg.b[1]) / 2 - sh.cz, (seg.a[0] + seg.b[0]) / 2 - sh.cx) : 9;
@@ -342,6 +347,30 @@ for (const [b, plan, own] of jobs) {
       if (w.kind !== 'colunata' && (!shut || shut.t < 1.19 || shut.t > 1.2 + w.t + 0.08)) bad.door.push(`${tag} ${h.kind} na parede ${w.id}: fechada, ${shut ? 'a ' + ((shut.t - 1.2) * 100).toFixed(0) + ' cm da face' : 'nada no vão'}`);
       if (free) bad.door.push(`${tag} ${h.kind} na parede ${w.id}: com o interior, algo no vão a ${((free.t - 1.2) * 100).toFixed(0)} cm da face`);
     }
+    // 13. a yard: its floor, its fence and gates, its pieces — outside, as the plan has them
+    if (sh.yard) { const Yr = sh.yard.r, ly = lvOf(sh.yard.lv || 0), yy = ly ? ly.y : 0, R = sh.r, P = ex.solid.p, pieces = S2.yard || [];
+      const near = (x, z, r, m) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
+      // (from above, where nothing stands — the house and its eaves, the pieces, the fence —: the yard's top, a hair under the feet)
+      for (let fx = 0.1; fx < 1; fx += 0.2) for (let fz = 0.1; fz < 1; fz += 0.2) { const x = Yr[0] + (Yr[2] - Yr[0]) * fx, z = Yr[1] + (Yr[3] - Yr[1]) * fz;
+        if (near(x, z, R, 0.7) || pieces.some(it => near(x, z, it.r, 0.15)) || !near(x, z, [Yr[0] + 0.35, Yr[1] + 0.35, Yr[2] - 0.35, Yr[3] - 0.35], 0)) continue; nYard++;
+        const hit = cast(TX, W3([x, yy + 2.6, z]), [0, -1, 0], 4); const at = hit ? yy + 2.6 - hit.t : 0;
+        if (!hit || !hit.front || Math.abs(at - yy) > 0.015) bad.yard.push(`${tag} terreiro em ${x.toFixed(2)},${z.toFixed(2)}: ${hit ? 'o chão a ' + at.toFixed(3) + ' m (o piso ' + yy + ')' + (hit.front ? '' : ' (avesso)') : 'nada'}`); }
+      for (const w of S2.walls) {
+        if (w.kind !== 'cerca') continue; const Lw = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const tx = (w.b[0] - w.a[0]) / Lw, tz = (w.b[1] - w.a[1]) / Lw; let nx = -tz, nz = tx;
+        if (((w.a[0] + w.b[0]) / 2 - (Yr[0] + Yr[2]) / 2) * nx + ((w.a[1] + w.b[1]) / 2 - (Yr[1] + Yr[3]) / 2) * nz < 0) { nx = -nx; nz = -nz; } // (out of the yard)
+        const gates = S2.holes.filter(h => h.wall === w.id && h.kind !== 'janela');
+        for (let k = 1; k <= 5; k++) { const s = Lw * k / 6; if (gates.some(h => Math.abs(s - h.at) < h.w / 2 + 0.4)) continue; nYard++;
+          const px = w.a[0] + tx * s, pz = w.a[1] + tz * s; const hit = cast(TX, W3([px + nx * (w.t / 2 + 1.5), yy + 0.5, pz + nz * (w.t / 2 + 1.5)]), [-nx, 0, -nz], 1.8);
+          if (!hit || !hit.front || hit.t > 1.515 || hit.t < 1.5 - 0.17) bad.yard.push(`${tag} cerca ${w.id} a ${s.toFixed(2)} m: ${hit ? ((1.5 - hit.t) * 100).toFixed(1) + ' cm para fora' + (hit.front ? '' : ' (avesso)') : 'nada'}`); }
+        for (const h of gates) { const gx = w.a[0] + tx * h.at, gz = w.a[1] + tz * h.at; const O = W3([gx + nx * (w.t / 2 + 1.2), yy + (h.sill || 0) + 1.0, gz + nz * (w.t / 2 + 1.2)]), d = [-nx, 0, -nz]; nYard++;
+          const shut = cast(TX, O, d, 1.2 + w.t + 0.4), free = cast(TA, O, d, 1.2 + w.t + 0.09, cutAt);
+          if (!shut || shut.t < 1.19 || shut.t > 1.2 + w.t + 0.08) bad.yard.push(`${tag} ${h.kind} na cerca ${w.id}: fechado, ${shut ? 'a ' + ((shut.t - 1.2) * 100).toFixed(0) + ' cm da face' : 'nada no vão'}`);
+          if (free) bad.yard.push(`${tag} ${h.kind} na cerca ${w.id}: com o interior, algo no vão a ${((free.t - 1.2) * 100).toFixed(0)} cm da face`); }
+      }
+      for (const it of pieces) { nYard++; let has = 0, kept = 0;
+        for (let k = 0; k < P.length; k += 3) { const x = P[k] - X0, y = P[k + 1] - Y0, z = P[k + 2] - Z0; if (x > it.r[0] + 0.02 && x < it.r[2] - 0.02 && z > it.r[1] + 0.02 && z < it.r[3] - 0.02 && y > yy + 0.03 && y < yy + it.h + 0.1) { has++; if (!cutAt([P[k], P[k + 1], P[k + 2]])) kept++; } }
+        if (!has) bad.yard.push(`${tag} ${it.kind} do terreiro: não desenhada do lado de fora`); else if (kept) bad.yard.push(`${tag} ${it.kind} do terreiro: ${kept} pontos fora do recorte`); }
+    }
   }
 }
 const few = a => (a.length ? ': ' + a.slice(0, 4).join(' · ') + (a.length > 4 ? ` … (${a.length})` : '') : '');
@@ -360,6 +389,7 @@ ok('9. o lado de fora fecha o prédio: de toda a rua, entre os vãos, a face ond
 ok('10. nada do lado de fora dentro dos cômodos (só o que o recorte põe de lado)', nIn > 10 && !bad.inside.length, `${nIn} prédios${few(bad.inside)}`);
 ok('11. o pátio e o terraço veem o céu', !bad.sky.length, `${nSky} pontos${few(bad.sky)}`);
 ok('12. as portas e os arcos de fora: fechada, a folha no vão; com o interior desenhado, o vão livre (o recorte)', nDoor > 10 && !bad.door.length, `${nDoor} portas${few(bad.door)}`);
+ok('13. o terreiro por fora: o chão sob os pés, a cerca, o portão fechado e livre com o interior, as peças e o recorte delas', !bad.yard.length, `${nYard} medidas${few(bad.yard)}`);
 console.log('custo (triângulos, com detalhe / sem):', Object.entries(cost).map(([t, c]) => `${t} ${c.n}: média ${Math.round(c.sum / c.n)}, máx ${c.max}, leve ${Math.round(c.lean / c.n)}`).join(' · '));
 console.log('custo do lado de fora (triângulos, com detalhe):', Object.entries(costX).map(([t, c]) => `${t} ${c.n}: média ${Math.round(c.sum / c.n)}`).join(' · '));
 ok('sem erros de módulo', JSON.stringify(G.modErr) === '{}', JSON.stringify(G.modErr));
