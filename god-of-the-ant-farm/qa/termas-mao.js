@@ -5,7 +5,8 @@
 // reserva) e alimenta a fornalha (a água esquenta), quem pode pagar a entrada vem pela vontade dele (quem não pode, não vem),
 // paga ao tesouro, tira a roupa, entra na água, banha-se, veste-se e sai; o banho quente tira mais da doença que o frio; a casa
 // cheia; o fechamento na hora, com todos para fora e o fogo apagado; o caixa do dia contra o livro; o dia que atravessa o save
-// com gente na água; um povo sem moeda (ninguém paga); o corpo do deus que entra, se banha e sai pelas ofertas; e a oferenda do
+// com gente na água; a espera nos cabides por um lugar na água (o repartidor dos interiores), com a entrada de volta quando
+// ele não vaga; um povo sem moeda (ninguém paga); o corpo do deus que entra, se banha e sai pelas ofertas; e a oferenda do
 // templo, da despensa da casa à prateleira do templo, com o sacerdote que come dela na manhã seguinte; e os serviços públicos
 // pelo corpo: cobrar o imposto de uma casa e entregar o saco ao tesouro, cunhar moedas, escrever os registros, treinar.
 //   node qa/termas-mao.js
@@ -97,6 +98,26 @@ const r2 = x => Math.round(x * 100) / 100;
   for (const p of S.villagers.values()) p.task = null;
   const hook = G.saveHooks.find(h => /termas/.test(String(h.load)) && /banho/.test(String(h.load))); hook.load({});
   ok('save-devolve-a-agua', inWater === Te.CAP && crowd.every(p => p.task && p.task.type === 'termas' && p.task.op === op.id && p.task.st === 2 && p.task.use === 'banhar' && p.inside === ba.id), `${inWater} na água antes; depois do gancho: ${crowd.filter(p => p.task && p.task.st === 2).length} de volta na água`);
+}
+// ---------------- a place in the water, by the interiors' allotter (In.freePlace, P4: each one inside holds the place of
+// their use — who is at the pegs holds a peg, not a place in the water): two come in for one place; the second, undressed,
+// waits at the pegs; half a minute with none, dressed again, the entry back (in the ledger) and out; with a place, in
+{
+  const { S, f, ba, person } = world('romano', true);
+  const In = G.Interiors; const t0 = In.table, f0 = In.freePlace; let room = 1;
+  const inW = () => { const op = Te.dia(ba); return op ? Object.values(op.data.banho).filter(m => m.st === 2).length : 0; };
+  In.table = () => ({}); In.freePlace = (b, use) => (use === 'banhar' ? (inW() < room ? {} : null) : {});
+  G.S.time = 0.3; A.update(1); const op = Te.dia(ba);
+  const a = person('Ana', 3), c = person('Caio', 3); const hc = S.buildings.get(c.home);
+  const ta = Te.visit(a, ba, H), tc = Te.visit(c, ba, H); sec(3, [a, c]);
+  if (op.data.banho[a.id]) op.data.banho[a.id].dur = 200; // (Ana stays in the water)
+  const waiting = !!(c.task && c.task.type === 'termas' && c.task.st === 1 && op.data.banho[c.id]);
+  const coin1 = hc.coin; sec(Te.WAIT + 2, [a, c]);
+  const back = lines('termas-volta').filter(e => e[9] === c.id);
+  ok('espera-nos-cabides', !!ta && !!tc && inW() === 1 && waiting && !op.data.banho[c.id] && !(c.task && c.task.type === 'termas') && r2(hc.coin - coin1) === Te.FEE && back.length === 1 && op.data.voltas === 1 && r2(op.data.receita) === Te.FEE && !bad.length, `um lugar na água: Ana nela, Caio ${waiting ? 'esperando nos cabides' : 'não esperou'}; depois de ${Te.WAIT} s: ${op.data.banho[c.id] ? 'ainda lá' : 'foi embora'}, a entrada de volta ${r2(hc.coin - coin1)} (${back.length} linha 'termas-volta'), caixa ${op.data.receita}, voltas ${op.data.voltas}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}`);
+  room = 2; const b2 = person('Bia', 3); Te.visit(b2, ba, H); sec(4, [a, b2]);
+  ok('lugar-vago-entra', inW() === 2 && b2.task && b2.task.st === 2, `dois lugares: ${inW()} na água, Bia ${b2.task && b2.task.st === 2 ? 'na água' : 'fora dela'}`);
+  In.table = t0; In.freePlace = f0; void f;
 }
 // ---------------- a people without coin: nobody pays
 {

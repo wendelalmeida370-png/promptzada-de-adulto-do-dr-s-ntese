@@ -87,7 +87,8 @@
         for (const id in d.banho || {}) if (!s.villagers.has(+id)) add('oficio', 2, `${nm}: #${id} nos banhos não existe`);
         const led = s.ledger || [];
         if (led.length && (led[0][1] < op.born || (led[0][1] === op.born && led[0][2] <= op.t0))) {
-          let paid = 0, logs = 0; for (const e of led) { if (e[7] !== op.id) continue; if (e[8] === 'termas' && e[5] === 'moedas') paid += e[6]; if (e[8] === 'fornalha' && e[5] === 'wood') logs += e[6]; }
+          // (the entries less the entries given back to one who found no place in the water)
+          let paid = 0, logs = 0; for (const e of led) { if (e[7] !== op.id) continue; if (e[8] === 'termas' && e[5] === 'moedas') paid += e[6]; if (e[8] === 'termas-volta' && e[5] === 'moedas') paid -= e[6]; if (e[8] === 'fornalha' && e[5] === 'wood') logs += e[6]; }
           if (Math.abs(paid - (d.receita || 0)) > 0.01) add('oficio', 2, `${nm}: o caixa diz ${d.receita}, as entradas do livro-razão ${Math.round(paid * 100) / 100}`);
           if (Math.abs(logs - (d.lenha || 0)) > 0.01) add('oficio', 2, `${nm}: ${d.lenha} de lenha queimada, o livro-razão diz ${Math.round(logs * 100) / 100}`);
         }

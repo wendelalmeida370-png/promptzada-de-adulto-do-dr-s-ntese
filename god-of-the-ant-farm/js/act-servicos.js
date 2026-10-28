@@ -90,6 +90,11 @@
     return Object.keys(op.data.banho).length >= Te.CAP;
   }
   Te.full = b => { const op = Te.dia(b); return !op || full(b, op); };
+  // (a place in the water now: the allotter gives each one inside the place of their use — who is at the pegs holds a peg,
+  // not a place in the water —; with no plan, the count at the door already kept it)
+  const water = b => { const In = G.Interiors; return !(In && In.freePlace && In.table && In.table(b)) || !!In.freePlace(b, 'banhar'); };
+  Te.water = water;
+  Te.WAIT = 30; // (how long one undressed waits at the pegs for a place in the water, before dressing again and going)
 
   // ------------------------------ the day opens and closes ------------------------------
   // (once a day, at its hour: the baths open with or without their stoker — the water is cold then —; a day ended is not
@@ -99,7 +104,7 @@
     const S = S_(); if (!G.inSim || !b || !b.built || Te.dia(b) || openedToday(b) || !inHours(b)) return null;
     const k = keeperOf(b);
     const op = A.start('termas', { at: b.id, set: b.set, fac: facOf(b), to: 'b:' + b.id, why: 'dia', by: k ? k.id : 0, x: b.x + b.w / 2, y: b.y + b.h / 2,
-      data: { day: S.day, entradas: 0, receita: 0, lenha: 0, calor: 0, quentes: 0, frios: 0, banho: {}, q: 0 } });
+      data: { day: S.day, entradas: 0, receita: 0, lenha: 0, calor: 0, quentes: 0, frios: 0, voltas: 0, banho: {}, q: 0 } });
     if (op && k) A.join(op, k, 'foguista');
     return op;
   }
@@ -185,6 +190,12 @@
     if (!r.ok) return r;
     d.q++; d.receita = r2(d.receita + Te.FEE); E.ensure(G.Fac.get(op.fac)); return { ok: true, n: Te.FEE };
   }
+  // the entry back, to one who never got into the water — from the people's treasury, once (the key of the visit)
+  function refund(v, op, m) {
+    if (!(m.paid > EPS)) return;
+    const d = op.data; const r = D.move('f:' + op.fac, E.coinRef(v), 'moedas', m.paid, { op: op.id, code: 'termas-volta', by: v.id, key: 'te:' + op.id + ':volta:' + v.id + ':' + m.t, part: true });
+    if (r.ok) { d.receita = r2(d.receita - r.n); m.paid = r2(m.paid - r.n); d.voltas = (d.voltas || 0) + 1; }
+  }
   function runBanho(v, t, dt, H) {
     const S = S_(); const b = S.buildings.get(t.id); const op = t.op ? A.get(t.op) : null;
     if (!b || !b.built || !op || !live(op)) return leave(v, op, H);
@@ -195,13 +206,18 @@
       if (full(b, op)) { G.Vg.emote(v, 'sad', 1); say(v, 'termas_cheia', {}); return H.end(v); }
       const p = payEntry(v, op, b); if (!p.ok) return H.end(v);
       goIn(v, t, b, 'despir'); d.entradas++;
-      d.banho[v.id] = { t: Math.round(S.clock * 10) / 10, st: 1, hot: 0, dur: Math.round(G.rr(18, 32)) };
+      d.banho[v.id] = { t: Math.round(S.clock * 10) / 10, st: 1, hot: 0, dur: Math.round(G.rr(18, 32)), paid: p.n };
       t.st = 1; v.actT = 0; return;
     }
     const m = d.banho[v.id]; if (!m) return leave(v, op, H);
     if (!inHours(b)) return leave(v, op, H);
-    if (t.st === 1) { // at the pegs: the clothes off
+    if (t.st === 1) { // at the pegs: the clothes off — and into the water when there is a place in it
       v.act = AN.despir.act; faceB(v, b); if (v.actT < AN.despir.dur) return;
+      if (!water(b)) {
+        // (no place in the water: one waits at the pegs; half a minute of it, dressed again, the entry back, and out)
+        t.wt = (t.wt || 0) + dt; if (t.wt < Te.WAIT) return;
+        refund(v, op, m); say(v, 'termas_cheia', {}); return leave(v, op, H);
+      }
       m.st = 2; m.t2 = S.clock; t.st = 2; t.use = 'banhar'; v.actT = 0;
       say(v, d.calor > EPS ? 'banho_quente' : 'banho_frio', {}); return;
     }
@@ -295,7 +311,7 @@
           outL.push({ id: 'termas.alimentar:' + op.id, act: 'alimentar', op: op.id, label: 'Pôr lenha na fornalha', at, anim: 'alimentarFogo', hands: 2, use: 'alimentar', ok: wood && d.calor <= Te.BURN + EPS, why: !wood ? 'Não há lenha: traga do armazém.' : 'A fornalha já está cheia: espere arder.' });
         }
         if (m) {
-          if (!m.done && m.st < 2) outL.push({ id: 'termas.banhar:' + op.id, act: 'banhar', op: op.id, label: d.calor > EPS ? 'Entrar na água quente' : 'Entrar na água (fria hoje)', at, anim: 'banhar', hands: 0, use: 'banhar' });
+          if (!m.done && m.st < 2) outL.push({ id: 'termas.banhar:' + op.id, act: 'banhar', op: op.id, label: d.calor > EPS ? 'Entrar na água quente' : 'Entrar na água (fria hoje)', at, anim: 'banhar', hands: 0, use: 'banhar', ok: water(b), why: 'Não há lugar na água agora: espere vagar.' });
           outL.push({ id: 'termas.sair:' + op.id, act: 'sair', op: op.id, label: 'Vestir-se e sair dos banhos', at, anim: 'despir', hands: 2, use: 'despir' });
           continue;
         }
@@ -307,11 +323,11 @@
     acts: {
       entrar: {
         can(v, o) { const op = A.get(o.op); if (!op || !live(op)) return { ok: false, why: 'Os banhos fecharam.' }; const b = S_().buildings.get(op.at); if (!Te.aberta(b)) return { ok: false, why: 'Os banhos estão fechados.' }; if (op.data.banho[v.id]) return { ok: false, why: 'Você já está nos banhos.' }; if (full(b, op)) return { ok: false, why: 'Os banhos estão cheios.' }; if (coin(b) && E.purse(v) + EPS < Te.FEE) return { ok: false, why: 'Falta dinheiro para a entrada.' }; return { ok: true }; },
-        run(v, o) { const op = A.get(o.op); const S = S_(); const b = S.buildings.get(op.at); const p = payEntry(v, op, b); if (!p.ok) return { ok: false, why: p.why || 'Não deu para pagar.' }; op.data.entradas++; op.data.banho[v.id] = { t: Math.round(S.clock * 10) / 10, st: 1, hot: 0, dur: 20, body: 1 }; return { ok: true, msg: `Você ${p.n ? `paga ${money(b, p.n)}, ` : ''}deixa a roupa nos cabides${op.data.calor > EPS ? ' — a água está quente' : ' — a água está fria hoje'}.` }; },
+        run(v, o) { const op = A.get(o.op); const S = S_(); const b = S.buildings.get(op.at); const p = payEntry(v, op, b); if (!p.ok) return { ok: false, why: p.why || 'Não deu para pagar.' }; op.data.entradas++; op.data.banho[v.id] = { t: Math.round(S.clock * 10) / 10, st: 1, hot: 0, dur: 20, body: 1, paid: p.n }; return { ok: true, msg: `Você ${p.n ? `paga ${money(b, p.n)}, ` : ''}deixa a roupa nos cabides${op.data.calor > EPS ? ' — a água está quente' : ' — a água está fria hoje'}.` }; },
       },
       banhar: {
         deed: 'banho',
-        can(v, o) { const op = A.get(o.op); const m = op && live(op) && op.data.banho[v.id]; return m && !m.done ? { ok: true } : { ok: false, why: m ? 'Você já se banhou.' : 'Você não entrou nos banhos.' }; },
+        can(v, o) { const op = A.get(o.op); const m = op && live(op) && op.data.banho[v.id]; if (!m || m.done) return { ok: false, why: m ? 'Você já se banhou.' : 'Você não entrou nos banhos.' }; const b = S_().buildings.get(op.at); return b && water(b) ? { ok: true } : { ok: false, why: 'Não há lugar na água agora: espere vagar.' }; },
         begin(v, o) { const op = A.get(o.op); const m = op.data.banho[v.id]; m.st = 2; m.t2 = S_().clock; m.dur = AN.banhar.dur; return { ok: true }; },
         run(v, o) { const op = A.get(o.op); const m = op.data.banho[v.id]; if (op.data.calor > EPS) m.hot = m.dur; const hot = op.data.calor > EPS; bathe(v, op, 1); m.st = 3; return { ok: true, msg: hot ? 'A água quente leva o cansaço embora.' : 'A água está fria: um banho rápido.' }; },
         abort(v, o) { const op = A.get(o.op); const m = op && op.data.banho[v.id]; if (m && !m.done) m.st = 1; },
