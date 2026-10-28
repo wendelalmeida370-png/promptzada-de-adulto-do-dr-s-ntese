@@ -1609,9 +1609,10 @@ float m3scale(float p) {
         K.quad(at(r, ang(k), ya), at(r, ang(k + 1), ya), at(r, ang(k + 1), yb), at(r, ang(k), yb), cc, o); } };
       K.as(X.mat(e, 'slab'), () => {
         for (let k = e.fecho ? 0 : 1; k < n; k++) { const rIn = k < n - 1 ? A[k + 1][0] : e.fundo; ring(rIn, A[k][0], X.Y(A[k][1]), dim(col, 0.96 + (k % 2) * 0.06)); }
-        for (let k = 0; k < n - 1; k++) riser(A[k + 1][0], X.Y(A[k + 1][1]), X.Y(A[k][1]), dim(col, 0.8));
-        // (the seats in rows on each ring's face: two ledges standing out of it, a third and two thirds up)
-        if (K.fine) for (let k = 1; k < n - 1; k++) { const r = A[k + 1][0], ya = X.Y(A[k + 1][1]), yb = X.Y(A[k][1]); for (let j = 1; j < 3; j++) ring(r - 0.12, r, ya + (yb - ya) * j / 3, dim(col, 1.05)); }
+        for (let k = 0; k < n - 1; k++) riser(A[k + 1][0], X.Y(A[k + 1][1]), X.Y(A[k][1]), e.muro ? rgbOf(X.col(e.muro)) : dim(col, 0.8));
+        // (a balcony's parapet at the edge of each row over the drop — D-084, the maeniana: 0.12 m thick, its two faces and top)
+        if (e.parapeito) for (let k = e.fecho ? 0 : 1; k < n; k++) { const r = k < n - 1 ? A[k + 1][0] : e.fundo, y = X.Y(A[k][1]), pc = e.muro ? rgbOf(X.col(e.muro)) : dim(col, 0.85);
+          riser(r, y, y + e.parapeito, pc, false); riser(r + 0.12, y, y + e.parapeito, dim(pc, 1.05), true); ring(r, r + 0.12, y + e.parapeito, dim(pc, 1.1)); }
       });
       // (a bowl that stands on the ground, no drum round it: its back wall from the ground to its rim, the lowest ring's face
       // down to the ground, and its two ends, stepped as its rings are)

@@ -132,6 +132,8 @@
     pts.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
     for (const [x, y] of pts) column(c, p, x, y, z0, z1, r, flared);
   }
+  // (the caveas of a type's form, each with its lot's side: the rows the god draws — D-084)
+  const cavOf = (type, st) => { const F = G.Forma && G.Forma.of(type, st); return F ? F.els.filter(q => q.k === 'cavea').map(q => Object.assign({ L: F.L }, q)) : []; };
   function steps(c, p, e, n, h, shrink) { for (let k = 0; k < n; k++) { const q = e - k * shrink; box(c, -q, -q, q, q, k * h, (k + 1) * h, p.base[0], p.base[1], p.base[2]); } return n * h; }
   function flag(c, x, y, col, h) { ln(c, [x, y], [x, y - h], '#5a3c22', 0.7); c.fillStyle = col; c.beginPath(); c.moveTo(x, y - h); c.lineTo(x + 5, y - h + 1.5); c.lineTo(x, y - h + 3); c.closePath(); c.fill(); }
   function palm(c, x, y, s) {
@@ -205,12 +207,35 @@
     poly(c, [P(w, e0 + 0.02, 0), P(w + 0.06, e0 + 0.02, 0), P(w + 0.06, e1, H), P(w, e1, H)], shade(cr, 0.9));
     return H;
   }
-  // an oval bowl (amphitheatre / theatre seen from above)
-  function bowl(c, r, H, wallL, wallR, seats, floor, arches, half) {
+  // the rows of a cavea as its form lays them (Forma's cavea, D-084 — the rows a body sits on, the plan's): each tread a
+  // slice of the round at its height from the middle (the next, lower and nearer the middle, paints over its inner part), the
+  // wall down to the next row and the parapet at the tread's edge where they face the eye (the far side), the ends of a half
+  // bowl and the piece of its back wall that turns to the eye — in the sprite's frame (the lot's middle; L its side, m)
+  function caveaPaint(c, e, L, seats, wall) {
+    const T = v => (v - L / 2) / 4, Z = y => y * 3.04; const cx = T(e.c[0]), cy = T(e.c[1]); const A = e.aneis, n = A.length;
+    const a0 = e.arco ? e.arco[0] : 0, a1 = e.arco ? e.arco[1] : TAU;
+    const pt = (r, a, y) => P(cx + Math.cos(a) * r / 4, cy + Math.sin(a) * r / 4, Z(y));
+    const arc = (r, y, f, t) => { const o = []; const m = Math.max(6, Math.round(64 * Math.abs(t - f) / TAU)); for (let j = 0; j <= m; j++) o.push(pt(r, f + (t - f) * j / m, y)); return o; };
+    const f0 = Math.max(a0, 0.75 * Math.PI), f1 = Math.min(a1, 1.75 * Math.PI); // (the far side: where a wall facing the middle faces the eye)
+    const band = (r, ya, yb, col) => { if (f1 > f0) poly(c, arc(r, yb, f0, f1).concat(arc(r, ya, f1, f0)), col); };
+    for (let k = 0; k < n; k++) {
+      const rOut = A[k][0], rIn = k < n - 1 ? A[k + 1][0] : e.fundo, y = A[k][1];
+      poly(c, (a1 - a0 < TAU - 1e-6 ? [pt(0, 0, y)] : []).concat(arc(rOut, y, a0, a1)), k % 2 ? seats : shade(seats, 0.9));
+      if (k < n - 1 && e.parapeito) band(rIn, A[k + 1][1], y, e.muro || shade(seats, 0.82)); // (the balteus down to the next row)
+      if (e.parapeito && k > 0) band(rIn, y, y + e.parapeito, shade(e.muro || seats, 0.9)); // (the parapet at its edge)
+    }
+    if (!e.fecho) return;
+    // (a bowl standing on the ground: its ends, stepped as its rows are, and the piece of its back wall facing the eye)
+    for (const a of [a0, a1]) for (let k = 0; k < n; k++) { const rIn = k < n - 1 ? A[k + 1][0] : e.fundo; poly(c, [pt(rIn, a, 0), pt(A[k][0], a, 0), pt(A[k][0], a, A[k][1]), pt(rIn, a, A[k][1])], shade(wall, 0.94)); }
+    const b0 = Math.max(a0, 1.75 * Math.PI), b1 = Math.min(a1, 2 * Math.PI); if (b1 > b0) poly(c, arc(A[0][0], A[0][1], b0, b1).concat(arc(A[0][0], 0, b1, b0)), shade(wall, 0.8));
+  }
+  // an oval bowl (amphitheatre / theatre seen from above); cav: its cavea's form, whose rows it draws (D-084)
+  function bowl(c, r, H, wallL, wallR, seats, floor, arches, half, cav) {
     const rx = r * 22.6, ry = r * 11.3;
     const top0 = -H;
     // inner seating rings
-    for (let k = 0; k < 6; k++) {
+    if (cav) caveaPaint(c, cav, cav.L, seats, wallL);
+    else for (let k = 0; k < 6; k++) {
       const f = 1 - k * 0.1; const z = H - k * (H * 0.12);
       c.fillStyle = k % 2 ? seats : shade(seats, 0.9);
       c.beginPath(); if (half) c.ellipse(0, -z, rx * f, ry * f, 0, Math.PI, TAU); else c.ellipse(0, -z, rx * f, ry * f, 0, 0, TAU);
@@ -705,14 +730,15 @@
       return 16;
     }
     if (st === 'nordico') { longhouse(c, m, p, 1.25, 0.6, 9, 22, true); return 36; }
-    if (st === 'romano') { bowl(c, 1.35, 26, '#e0c79a', '#b09268', '#c8b8a0', '#e8d8a8', 2); return 34; }
-    // Greek (and classic) theatre: a half bowl opening to the front
+    if (st === 'romano') { bowl(c, 1.35, 26, '#e0c79a', '#b09268', '#c8b8a0', '#e8d8a8', 2, false, cavOf('teatro', 'romano')[0]); return 34; }
+    // Greek (and classic) theatre: the rows of a real one round the back of the orchestra, the outer ones cut by the lot (its
+    // form: D-084), the orchestra, the stage building and its columns along the front
     top(c, -e, -e, e, e, 0.2, '#b8b09c');
-    bowl(c, 1.3, 16, p.wl, p.wr, '#d8d0bc', '#e8dcc0', 0, true);
+    for (const cv of cavOf('teatro', st).slice().reverse()) caveaPaint(c, cv, cv.L, '#d8d0bc', p.wl);
+    { const F = G.Forma.of('teatro', st); const o = F.els.find(q => q.k === 'arena'); const q = P((o.c[0] - F.L / 2) / 4, (o.c[1] - F.L / 2) / 4, 0.3); const rr = o.r / 4 * 22.6; c.fillStyle = '#e8dcc0'; c.beginPath(); c.ellipse(q[0], q[1], rr, rr / 2, 0, 0, TAU); c.fill(); }
     box(c, -0.9, 0.85, 0.9, 1.15, 0, 9, p.wl, p.wr, p.top);
     colonnade(c, p, -0.85, 1.15, 0.85, 1.25, 0, 7, 6, 0.03, 'L');
     if (st === 'grego') { band(c, -0.9, 0.85, 0.9, 1.15, 7.5, 9, p.acc); }
-    const o = P(0, 0.3, 0.3); c.fillStyle = '#e8dcc0'; c.beginPath(); c.ellipse(o[0], o[1], 12, 6, 0, 0, TAU); c.fill();
     return 26;
   }
   function banhos(c, m, p, st) {
@@ -859,7 +885,7 @@
       m.glow.push(P(0, 0.4, H + 4));
       return H + 24;
     }
-    if (st === 'romano') { bowl(c, 1.45, 42, '#e8d2a6', '#b89a70', '#c8b8a0', '#e8d8a8', 3);
+    if (st === 'romano') { bowl(c, 1.45, 42, '#e8d2a6', '#b89a70', '#c8b8a0', '#e8d8a8', 3, false, cavOf('maravilha', 'romano')[0]);
       for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI; const q = [Math.cos(a) * 1.45 * 22.6, Math.sin(a) * 1.45 * 11.3 - 42]; ln(c, q, [q[0], q[1] - 6], '#7a5a3a', 0.6); }
       return 52; }
     if (st === 'grego') { // Acropolis: rock plateau crowned by a great temple

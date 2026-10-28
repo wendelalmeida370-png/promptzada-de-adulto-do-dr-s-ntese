@@ -100,18 +100,20 @@
   const FORMS = {};
   const def = (type, style, fn) => { (FORMS[type] = FORMS[type] || {})[style] = fn; };
 
+  // (D-084, the seats one sits on — the Colosseum's and the arena's: four balconies round the arena, the maeniana, each a tread
+  // as deep from the arena's wall to the drum's inner face, their floors evenly up from the god's lowest ring (0.4 of its
+  // height) to a step under its rim, the parapet 0.9 m high at the edge of each over the drop; the god's six rings were 70°)
+  const balcoes = (R, t, H, fundo) => { const tr = (R - t - fundo) / 4, y0 = H * 0.4, st = (H - y0) / 4; const a = [[R, H]]; for (let k = 3; k >= 0; k--) a.push([fundo + (k + 1) * tr, y0 + k * st]); return a; };
   // the Colosseum (arch.js maravilha, romano): the god's bowl of r 1.45 tiles and 42 px — three tiers of arches round it, its
-  // six rings of seats inside, from the rim down to half its radius, the arena at its heart (the god's floor, 0.3 of the
-  // height up: under it, inside the drum, the arena's undercroft), and the masts of the awning (ten on the half the god
-  // shows: twenty round). The arches of the god's tiers stand from 0.175 to 0.725 of a tier (its zc ± ah/2); the ground
-  // tier's reach the ground: they are the ways in
+  // seats inside (D-084), the arena at its heart (the god's floor, 0.3 of the height up: under it, inside the drum, the
+  // arena's undercroft), and the masts of the awning (ten on the half the god shows: twenty round). The arches of the god's
+  // tiers stand from 0.175 to 0.725 of a tier (its zc ± ah/2); the ground tier's reach the ground: they are the ways in
   def('maravilha', 'romano', L => {
-    const R = 1.45 * TILE, H = px(42), c = [L / 2, L / 2];
-    const rings = []; for (let k = 0; k < 6; k++) rings.push([R * (1 - k * 0.1), px(42 - k * 42 * 0.12)]);
+    const R = 1.45 * TILE, H = px(42), c = [L / 2, L / 2]; const rings = balcoes(R, R * 0.1, H, R * 0.4);
     return { els: [
       { k: 'tambor', c, r: R, t: R * 0.1, y0: 0, y1: H, andares: 3, arcos: 24, arcoW: 0.6, arcoA: 0.175, arcoB: 0.725, cor: ['#e8d2a6', '#b89a70'], escuro: '#2a1e18', mat: 'ashlar' },
-      { k: 'cavea', c, aneis: rings, fundo: R * 0.4, cor: '#c8b8a0' },
-      { k: 'arena', c, r: R * 0.4, y: px(42 * 0.3), cor: '#e8d8a8', muro: rings[5][1] },
+      { k: 'cavea', c, aneis: rings, fundo: R * 0.4, cor: '#c8b8a0', parapeito: 0.9, muro: '#b8a888' },
+      { k: 'arena', c, r: R * 0.4, y: px(42 * 0.3), cor: '#e8d8a8', muro: rings[rings.length - 1][1] },
       { k: 'mastros', c, r: R - 0.08, n: 20, y0: H, h: px(6), cor: '#7a5a3a' },
     ], door: { u: L / 2, w: 0.9, y0: 0, y1: H / 3 * 0.725 } };
   });
@@ -268,29 +270,33 @@
   def('estatua', 'asteca', L => ({ els: [...pedestal(L), { k: 'estatua', p: [L / 2, L / 2, px(11)], h: px(27.4), cor: GOLD, pose: 'serpente', penas: '#2fae8f', olho: '#b33a2a' }] }));
 
   // ------------------------------ the theatre of each people (arch.js teatro) ------------------------------
-  // (the rings of a bowl as the god paints them: six, from the rim of r and H px, each a tenth narrower and 12% of H lower —
-  // arch.js bowl(); the rows a body sits on come with the plan's tiers, and both views follow them: D-084)
-  const bowlRings = (r, hp) => { const out = []; for (let k = 0; k < 6; k++) out.push([r * (1 - k * 0.1), px(hp - k * hp * 0.12)]); return out; };
-  // the arena (romano): the god's bowl of r 1.35 tiles and 26 px, two tiers of arches round it, its rings of seats inside, the
-  // arena at its heart 0.3 of its height up — the Colosseum's own, smaller and without the awning
+  // the arena (romano): the god's bowl of r 1.35 tiles and 26 px, two tiers of arches round it, its seats inside (D-084: the
+  // balconies, rows of 0.675 m), the arena at its heart 0.3 of its height up — the Colosseum's own, smaller, no awning
   def('teatro', 'romano', L => {
-    const R = 1.35 * TILE, H = px(26), c = [L / 2, L / 2]; const rings = bowlRings(R, 26);
+    const R = 1.35 * TILE, H = px(26), c = [L / 2, L / 2]; const rings = balcoes(R, R * 0.1, H, R * 0.4);
     return { els: [
       { k: 'tambor', c, r: R, t: R * 0.1, y0: 0, y1: H, andares: 2, arcos: 24, arcoW: 0.6, arcoA: 0.175, arcoB: 0.725, cor: ['#e0c79a', '#b09268'], escuro: '#2a1e18', mat: 'ashlar' },
-      { k: 'cavea', c, aneis: rings, fundo: R * 0.4, cor: '#c8b8a0' },
-      { k: 'arena', c, r: R * 0.4, y: px(26 * 0.3), cor: '#e8d8a8', muro: rings[5][1] },
+      { k: 'cavea', c, aneis: rings, fundo: R * 0.4, cor: '#c8b8a0', parapeito: 0.9, muro: '#b8a888' },
+      { k: 'arena', c, r: R * 0.4, y: px(26 * 0.3), cor: '#e8d8a8', muro: rings[rings.length - 1][1] },
     ], door: { u: L / 2, w: 0.9, y0: 0, y1: H / 2 * 0.725 } };
   });
-  // the Greek (and classical) theatre: on its paved ground, the half bowl of r 1.3 tiles and 16 px opening to the front —
-  // its back wall and its ends standing on the ground —, the orchestra round before it, the stage building along the front
-  // (the skene of 1.8 × 0.3 tiles and 9 px; the Greek's painted band at its top) with its six columns before it, 7 px
+  // the Greek (and classical) theatre (D-084: the slope of a real one): on its paved ground, the orchestra — a round of 2 m,
+  // its middle 1 m before the lot's — and round its back half the rows of seats as many as the lot holds, 0.70 m deep and
+  // 0.40 m up each, a gangway of 0.4 m between the orchestra and the first (six rows from 2.4 m to 6.6 m: the four inner on
+  // the whole half round, the outer ones cut where they would leave the lot, 0.3 m from its sides), their back wall and
+  // their ends standing on the ground; the stage building along the front (the skene of 1.8 × 0.3 tiles and 9 px; the
+  // Greek's painted band at its top) with its six columns before it, 7 px
+  const ROW = 0.7, RISE = 0.4;
   const theatre = grego => L => {
-    const R = 1.3 * TILE, c = [L / 2, L / 2]; const els = [
-      { k: 'bloco', r: rect(L, -1.4, -1.4, 1.4, 1.4), y0: 0, y1: px(0.2), cor: ['#a8a08c', '#988f7c', '#b8b09c'], mat: 'slab' },
-      { k: 'cavea', c, aneis: bowlRings(R, 16), fundo: R * 0.4, cor: '#d8d0bc', arco: [Math.PI, 2 * Math.PI], fecho: 'wl' },
-      { k: 'arena', c: [L / 2, at(L, 0.3)], r: 0.53 * TILE, y: px(0.3), cor: '#e8dcc0' },
-      { k: 'bloco', r: rect(L, -0.9, 0.85, 0.9, 1.15), y0: 0, y1: px(9), cor: ['wl', 'wr', 'top'] },
-    ];
+    const c = [L / 2, L / 2 + 1.0], ri = 2.4, side = L / 2 - 0.3; const rows = Math.floor((c[1] - 0.3 - ri) / ROW + 1e-6);
+    const ring = (k0, k1) => { const a = []; for (let k = k1; k >= k0; k--) a.push([ri + (k + 1) * ROW, RISE * (k + 1)]); return a; };
+    const arc = r => (r <= side ? [Math.PI, 2 * Math.PI] : [Math.PI + Math.acos(side / r), 2 * Math.PI - Math.acos(side / r)]);
+    const els = [{ k: 'bloco', r: rect(L, -1.4, -1.4, 1.4, 1.4), y0: 0, y1: px(0.2), cor: ['#a8a08c', '#988f7c', '#b8b09c'], mat: 'slab' }];
+    const whole = Math.min(rows, Math.floor((side - ri) / ROW + 1e-6));
+    els.push({ k: 'cavea', c, aneis: ring(0, whole - 1), fundo: ri, cor: '#d8d0bc', arco: [Math.PI, 2 * Math.PI], fecho: 'wl' });
+    for (let k = whole; k < rows; k++) els.push({ k: 'cavea', c, aneis: ring(k, k), fundo: ri + k * ROW, cor: '#d8d0bc', arco: arc(ri + (k + 1) * ROW), fecho: 'wl' });
+    els.push({ k: 'arena', c, r: 2.0, y: px(0.3), cor: '#e8dcc0' });
+    els.push({ k: 'bloco', r: rect(L, -0.9, 0.85, 0.9, 1.15), y0: 0, y1: px(9), cor: ['wl', 'wr', 'top'] });
     if (grego) els.push({ k: 'faixa', r: rect(L, -0.9, 0.85, 0.9, 1.15), y0: px(7.5), y1: px(9), cor: 'acc' });
     const cols = []; for (let k = 0; k < 6; k++) cols.push([at(L, -0.85 + 1.7 * k / 5), at(L, 1.25)]);
     els.push({ k: 'colunata', pts: cols, r: 0.03 * TILE, y0: 0, y1: px(7), cor: ['col0', 'col1'] });
