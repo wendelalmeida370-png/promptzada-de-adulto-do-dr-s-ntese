@@ -22,12 +22,14 @@
   // its span high); h0/h1: the ground storey's height and the ones above; bed/rich: how the poor and the well-off sleep;
   // couple: the couple's bed; fire: the hearth; eat: the table; keep: the chest and the jars; win: how much it opens to
   // the street; round: its huts are round; sunk: it digs its floors; cellar: it keeps a cellar; long: its houses are long;
-  // roofSleep: it sleeps on its flat roofs (out of the cold lands) when the house is full
+  // roofSleep: it sleeps on its flat roofs (out of the cold lands) when the house is full; roofK: the god's roof of a house, its
+  // height over its span (the classical 1.22, the Greek 0.74, the Roman 0.81 — D-082); insulaN: the storeys of its ínsula (3,
+  // the Roman 4, the north's 2); longJirau: its sobrado is the long house with a loft (the north)
   In.addTraditions({
-    nordico: { mat: 'tabua', t: 0.14, hutT: 0.12, roof: 'turfa', h0: 2.2, h1: 2.3, bed: ['banco-cama'], rich: ['banco-cama'], couple: 'cama-casal', coupleRich: 'cama-casal', fire: 'lar', eat: 'mesa', keep: ['arca', 'cesto'], win: 0.3, sunk: 1, long: 1, taste: { 'integrado.terreo': 3, 'integrado.funda': 1.6, 'anexo.terreo': 2.2, 'setores.terreo': 1.2, 'integrado.jirau': 1.4 } },
-    classico: { mat: 'taipa', t: 0.2, hutT: 0.15, roof: 'duas-aguas', hutRoof: 'palha', h0: 2.4, h1: 2.4, bed: ['esteira'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'lar', eat: 'mesa', keep: ['arca', 'cesto'], win: 0.5, round: 1, sunk: 1, cellar: 1, taste: { 'redonda.terreo': 3, 'integrado.jirau': 2 } },
-    grego: { mat: 'adobe-caiado', t: 0.3, hutT: 0.18, roof: 'duas-aguas', hutRoof: 'palha', h0: 2.6, h1: 2.5, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'fogao', hutFire: 'fogareiro', eat: 'mesa', keep: ['jarros', 'arca'], win: 0.6, round: 1, cellar: 1, taste: { 'setores.jirau': 1.8, 'redonda.terreo': 1.5 } },
-    romano: { mat: 'reboco', t: 0.28, hutT: 0.15, roof: 'quatro-aguas', hutRoof: 'palha', flatTall: 1, h0: 2.8, h1: 2.6, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'fogao', hutFire: 'fogareiro', eat: 'mesa', keep: ['jarros', 'arca'], win: 0.5, round: 1, cellar: 1, taberna: 1, taste: { 'produtiva.jirau': 2.2 } },
+    nordico: { mat: 'tabua', t: 0.14, hutT: 0.12, roof: 'turfa', insulaN: 2, longJirau: 1, h0: 2.2, h1: 2.3, bed: ['banco-cama'], rich: ['banco-cama'], couple: 'cama-casal', coupleRich: 'cama-casal', fire: 'lar', eat: 'mesa', keep: ['arca', 'cesto'], win: 0.3, sunk: 1, long: 1, taste: { 'integrado.terreo': 3, 'integrado.funda': 1.6, 'anexo.terreo': 2.2, 'setores.terreo': 1.2, 'integrado.jirau': 1.4 } },
+    classico: { mat: 'taipa', t: 0.2, hutT: 0.15, roof: 'duas-aguas', roofK: 1.22, hutRoof: 'palha', h0: 2.4, h1: 2.4, bed: ['esteira'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'lar', eat: 'mesa', keep: ['arca', 'cesto'], win: 0.5, round: 1, sunk: 1, cellar: 1, taste: { 'redonda.terreo': 3, 'integrado.jirau': 2 } },
+    grego: { mat: 'adobe-caiado', t: 0.3, hutT: 0.18, roof: 'duas-aguas', roofK: 0.74, hutRoof: 'palha', h0: 2.6, h1: 2.5, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'fogao', hutFire: 'fogareiro', eat: 'mesa', keep: ['jarros', 'arca'], win: 0.6, round: 1, cellar: 1, taste: { 'setores.jirau': 1.8, 'redonda.terreo': 1.5 } },
+    romano: { mat: 'reboco', t: 0.28, hutT: 0.15, roof: 'quatro-aguas', roofK: 0.81, insulaN: 4, hutRoof: 'palha', h0: 2.8, h1: 2.6, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'fogao', hutFire: 'fogareiro', eat: 'mesa', keep: ['jarros', 'arca'], win: 0.5, round: 1, cellar: 1, taberna: 1, taste: { 'produtiva.jirau': 2.2 } },
     egipcio: { mat: 'adobe', t: 0.34, hutT: 0.25, roof: 'plano', roofSleep: 1, h0: 2.6, h1: 2.5, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama', fire: 'forno', hutFire: 'fogareiro', eat: 'mesa-baixa', keep: ['jarros', 'cesto'], win: 0.3, cellar: 1, taste: { 'integrado.quarto': 3, 'integrado.terraco': 2, 'produtiva.quarto': 1.4 } },
     asteca: { mat: 'adobe-estuque', t: 0.3, hutT: 0.15, roof: 'plano', hutRoof: 'palha', roofSleep: 1, h0: 2.5, h1: 2.4, bed: ['esteira'], rich: ['esteira', 'cama'], couple: 'esteira-casal', coupleRich: 'esteira-casal', fire: 'lar', eat: 'mesa-baixa', keep: ['jarros', 'cesto'], win: 0.4, round: 1, taste: { 'integrado.terraco': 2.5, 'redonda.terreo': 1.4, 'setores.quarto': 1.6 } },
   });
@@ -71,26 +73,86 @@
     const name = (o.n === 2 ? (o.q ? 'com andar de dois quartos' : 'com andar de cima') : `de ${NUM[o.n]} pavimentos${o.q ? ', dois cômodos em cada' : ''}`) + (o.top ? ' e ' + TOPN[o.top] : '') + (o.cellar ? ', sobre porão' : '');
     VS[v] = { name, can: (rec, tr) => (o.cellar && cellarOK(rec, tr)) || (o.top === 'jirau' && !pitched(rec, tr) ? 'telhado plano: não há sótão' : null) || ((o.top === 'terraco' || o.top === 'quarto') && flatOK(rec, tr)) || null };
   }
+  // (the storeys a type has, as the god draws it — D-082/D-083: the house one, the sobrado two, the ínsula three, the Roman
+  // four; the north's long house with a loft for house and sobrado, its ínsula two)
+  // (and one storey more where the god's do not hold the household — the shell grows up until it fits, D-082 (3); the god
+  // draws the shell: In.TYPES[t].prefer keeps the god's storeys first, wherever one of them is laid out)
+  // (and in the centre, where the lot is full, the ínsula of fewer than four storeys a storey more: on a lot of 4 m its
+  // fourteen do not sleep in three — 11 to 13 in the plans, the walls and the stair taking a third of each floor —, nor the
+  // north's in two: the god draws it so there, D-082 (3); the leader's (2) of 28/10)
+  const storeysOf = (rec, tr) => { if (rec.t === 'sobrado') return tr.longJirau ? 1 : 2; if (rec.t !== 'insula') return 1; const n = tr.insulaN || 3; return rec.d >= 2 && n < 4 ? n + 1 : n; };
+  const nOf = v => { const o = parseV(v); return o ? o.n : 1; };
+  const storeysCan = (rec, tr, v) => {
+    if (rec.t === 'hut' || rec.t === 'barraco') return nOf(v) === 1 ? null : 'a cabana é de um pavimento';
+    const n = nOf(v); const want = storeysOf(rec, tr);
+    if (n !== want && n !== want + 1) return `o deus faz ${rec.t === 'sobrado' ? 'o sobrado' : rec.t === 'insula' ? 'a ínsula' : 'a casa'} de ${want === 1 ? 'um pavimento' : NUM[want] + ' pavimentos'}`;
+    if (rec.t === 'sobrado' && tr.longJirau && n === 1 && v !== 'jirau' && v !== 'porao-jirau') return 'o sobrado do norte é a casa longa com jirau';
+    return null;
+  };
+  const preferGod = (rec, list) => { const tr = In.TRAD[rec.c] || In.TRAD.classico || {}; const want = storeysOf(rec, tr); const god = list.filter(f => nOf(f.split('.')[1]) === want); return god.length ? god : list; };
   const famsOf = (hs, vs) => { const out = []; for (const h of hs) for (const v of vs) { if (h === 'redonda' && v !== 'terreo' && v !== 'funda' && v !== 'esteios') continue; if (h === 'produtiva' && (v === 'funda' || v === 'esteios')) continue; out.push(h + '.' + v); } return out; };
   const ONE = ['terreo', 'jirau', 'terraco', 'quarto', 'funda', 'esteios', 'porao-jirau', 'porao-quarto'];
+  const TWO = ['andar', 'andarq', 'andar-jirau', 'andar-terraco', 'andar-quarto', 'porao-andar'];
+  const THREE = ['andar3', 'andar3q', 'andar3-jirau', 'andar3-terraco', 'andar3-quarto', 'porao-andar3'];
+  const FOUR = ['andar4', 'andar4q', 'andar4-jirau', 'andar4-terraco', 'porao-andar4'];
+  const FIVE = ['andar5', 'andar5q', 'andar5-jirau'];
   const LISTS = {
     barraco: ['integrado.terreo', 'integrado.esteios'],
     hut: famsOf(['integrado', 'redonda', 'setores', 'anexo'], ONE),
-    house: famsOf(['integrado', 'setores', 'anexo', 'produtiva'], ONE.concat(['andar', 'andarq', 'andar-jirau', 'andar-terraco', 'andar-quarto', 'porao-andar'])),
-    sobrado: famsOf(['integrado', 'setores', 'anexo', 'produtiva'], ['andar-jirau', 'andar-terraco', 'andar-quarto', 'andar3', 'andar3q', 'andar3-jirau', 'andar3-terraco', 'andar3-quarto', 'porao-andar3']),
-    insula: famsOf(['integrado', 'setores', 'produtiva'], ['andar4', 'andar4q', 'andar4-jirau', 'andar4-terraco', 'andar5', 'andar5q', 'andar5-jirau', 'porao-andar4']),
+    house: famsOf(['integrado', 'setores', 'anexo', 'produtiva'], ONE.concat(TWO)),
+    sobrado: famsOf(['integrado', 'setores', 'anexo', 'produtiva'], TWO.concat(THREE, ['jirau', 'porao-jirau'])),
+    insula: famsOf(['integrado', 'setores', 'produtiva'], TWO.concat(THREE, FOUR, FIVE)),
   };
   const seenF = new Set();
   for (const t in LISTS) for (const id of LISTS[t]) {
     if (seenF.has(id)) continue; seenF.add(id); const [h, v] = id.split('.');
     // (S: the shell it raises — the hall, the parted house and the workshop house stand in the same shell; the annexed and
     // the round ones in their own)
-    In.addFamilies([{ id, H: h, V: v, S: (h === 'anexo' || h === 'redonda' ? h : 'casa') + '.' + v, name: (HS[h].name + (VS[v].name ? ' ' + VS[v].name : '')).replace(/^Salão$/, 'Salão único'), can: (rec, T, tr) => (rec.t === 'barraco' && h !== 'integrado' ? 'um barraco é um cômodo só' : HS[h].can(rec, tr) || VS[v].can(rec, tr)), build: P => home(P) }]);
+    In.addFamilies([{ id, H: h, V: v, S: (h === 'anexo' || h === 'redonda' ? h : 'casa') + '.' + v, name: (HS[h].name + (VS[v].name ? ' ' + VS[v].name : '')).replace(/^Salão$/, 'Salão único'), can: (rec, T, tr) => (rec.t === 'barraco' && h !== 'integrado' ? 'um barraco é um cômodo só' : HS[h].can(rec, tr) || VS[v].can(rec, tr) || storeysCan(rec, tr, v)), build: P => home(P) }]);
   }
   In.addTypes({
-    barraco: { use: 'casa', fams: LISTS.barraco }, hut: { use: 'casa', fams: LISTS.hut }, house: { use: 'casa', fams: LISTS.house },
-    sobrado: { use: 'casa', fams: LISTS.sobrado }, insula: { use: 'casa', fams: LISTS.insula },
+    barraco: { use: 'casa', fams: LISTS.barraco }, hut: { use: 'casa', fams: LISTS.hut }, house: { use: 'casa', fams: LISTS.house, prefer: preferGod },
+    sobrado: { use: 'casa', fams: LISTS.sobrado, prefer: preferGod }, insula: { use: 'casa', fams: LISTS.insula, prefer: preferGod },
   });
+
+  // ------------------------------ the yard: the house as the god draws it, out of the centre ------------------------------
+  // (D-082 (2)/(3): out of the centre — rec.d ≤ 1 —, the god's own size for the type and the people — P3's measures of the
+  // god's drawing: the house 2.96 m square (the classical 2.88), the north's long house 3.52 × 2.56 (its sobrado 3.68, its
+  // ínsula 3.84), the hut 2.4 × 2.08 (the north's 2.88 × 2.08), the round hut of radius 1.68 —, grown until the household
+  // fits its floor: the floor its beds need (In.floorNeed) over its storeys and what its roof gives (a loft 0.6 of its storey,
+  // a room on the roof 0.8, a terrace in the hot lands 0.5); a floor kept for one at most (P.kept) — never past the lot's.
+  // Not the shack, nor a house with its annex or its porch on stilts: those fill the lot as before. Null: the lot filled)
+  const GODSZ = {
+    hut: c => (c === 'nordico' ? [2.88, 2.08] : [2.4, 2.08]), house: c => (c === 'nordico' ? [3.52, 2.56] : c === 'classico' ? [2.88, 2.88] : [2.96, 2.96]),
+    sobrado: c => (c === 'nordico' ? [3.68, 2.56] : [2.96, 2.96]), insula: c => (c === 'nordico' ? [3.84, 2.56] : [2.96, 2.96]),
+  };
+  const GODR = { hut: 1.68 };
+  In.GODSZ = GODSZ; In.GODR = GODR;
+  // (the catalogue's key of a home: out of the centre, its yard ('|y'), or in it ('|c') — the families differ: In.probeKey)
+  In.yardKey = rec => (GODSZ[rec.t] ? (rec.d <= 1 ? '|y' : '|c') : '');
+  // (the shell grows from the god's size toward the lot's — side and depth together, an eighth of the way at a time — to the
+  // first that holds the household; the lot's own: no yard, null)
+  const GROW = 8, YARD_K = 1.55;
+  function yardOf(P, rec, tr, H, V, floors, topK, round, t, need, m) {
+    if (!(rec.d <= 1) || !GODSZ[rec.t] || H === 'anexo' || V === 'esteios' || !need) return null;
+    const L = P.L;
+    // (the inside of one storey the household needs: the floor its beds need over its storeys — the upper ones worth a little
+    // over half of the ground one, the stair and the walls on each; a room on the roof a little, a terrace more, a loft
+    // nothing —, by what the plans really took: the least yard that holds each family on the four probes (qa: quintal-k,
+    // 28/10) needed at most 1.55 of this, the half of them 1.21; the workshop house, its ground storey the shop's, up to 1.53
+    // with a median of 1.4 — a third more for it)
+    const f = 1 + 0.55 * (floors - 1) + (topK === 'quarto' ? 0.15 : topK === 'terraco' ? 0.35 : 0);
+    const A = In.floorNeed(need) / f * YARD_K * (H === 'produtiva' ? 1.3 : 1);
+    if (round) { const r0 = GODR[rec.t] || 1.68, r1 = (L - 2 * m) / 2; for (let g = 0; g < GROW; g++) { const rad = r0 + g / GROW * (r1 - r0); if (Math.PI * (rad - t) * (rad - t) >= A) return { rad }; } return null; }
+    const [gw, gd] = GODSZ[rec.t](rec.c); const W = L - 2 * m;
+    for (let g = 0; g < GROW; g++) {
+      const w = gw + g / GROW * (W - gw), d = gd + g / GROW * (W - gd); if ((w - 2 * t) * (d - 2 * t) < A) continue;
+      // (in the middle of the lot across, toward the street in depth — the yard before it no deeper than the god's)
+      const u0 = (L - w) / 2; const front = Math.min((L - d) / 2, 0.52); const v1 = L - front;
+      return { r: [u0, v1 - d, u0 + w, v1] };
+    }
+    return null;
+  }
 
   // ------------------------------ the recipe of a home ------------------------------
   function home(P) {
@@ -105,8 +167,11 @@
     const t = shack ? 0.06 : hut ? tr.hutT : tr.t; const mat = shack ? 'tabua' : hut && tr.hutT < tr.t ? (tr.mat === 'tabua' ? 'tabua' : 'pau-a-pique') : tr.mat;
     // (a house of storeys fills its lot: every storey is as small as the ground one)
     const m = shack ? P.rr(0.28, 0.42) : hut ? P.rr(0.08, 0.16) : floors >= 2 ? P.rr(0.1, 0.13) : P.rr(0.1, 0.2);
-    const sh = [m, m, L - m, L - m];
-    if (tr.long && !shack && !round && floors === 1) sh[1] += P.rr(0.1, 0.3); // (the northern house, longer than deep)
+    let sh = [m, m, L - m, L - m];
+    // (out of the centre, the house as the god draws it, its yard about it — D-082 (2): yardOf)
+    const yd = yardOf(P, rec, tr, H, V, floors, topK, round, t, need, m);
+    if (yd && !round) { sh = yd.r; P.quintal = 1; } // (the house in its yard: smaller than its lot)
+    if (tr.long && !shack && !round && floors === 1 && !P.quintal) sh[1] += P.rr(0.1, 0.3); // (the northern house, longer than deep)
     if (shack) sh[1] += P.rr(0.1, 0.35); // (the shack, of boards and leftovers, keeps back from the street a little)
     let side = null;
     if (H === 'anexo') { const aw = P.rr(0.95, 1.2); side = P.chance(0.5) ? 'esquerda' : 'direita'; if (side === 'esquerda') sh[0] += aw; else sh[2] -= aw; }
@@ -115,8 +180,12 @@
     const sunk = V === 'funda' ? -P.rr(0.6, 0.8) : 0, raised = V === 'esteios' ? P.rr(1.3, 1.55) : 0; const y0 = sunk || raised;
     // (a sunken floor: its walls stand 2 m over the ground outside, for a way in one walks through from the street)
     const h0 = Math.max(shack ? 2.1 : tr.h0, sunk ? 2.0 - sunk : 0);
-    if (round) { const rad = (L - 2 * m - porch) / 2; P.shell = { kind: 'round', cu: L / 2, cv: m + rad, rad, t, mat, base: sunk ? 'semienterrado' : raised ? 'esteios' : 'pedra', floors: 1, eave: y0 + h0 }; }
+    if (round) { const full = (L - 2 * m - porch) / 2; const rad = yd ? Math.min(full, yd.rad) : full; if (yd && rad < full - 0.05) P.quintal = 1; P.shell = { kind: 'round', cu: L / 2, cv: P.quintal ? L / 2 : m + rad, rad, t, mat, base: sunk ? 'semienterrado' : raised ? 'esteios' : 'pedra', floors: 1, eave: y0 + h0 }; }
     else P.shell = { kind: 'rect', r: sh, t, mat, base: raised ? 'esteios' : sunk ? 'semienterrado' : 'pedra', floors, eave: y0 + h0 + (floors - 1) * (0.2 + h1) };
+    // (out of the centre a home holds its household with one at most lying on a floor kept for it, where its beds are one short —
+    // D-082 (2): the house in its yard, grown until it does, the lot's as the last of the yard's sizes (3); the round hut, three
+    // mats round the fire and one on the floor —; in the centre all in beds (1))
+    if (rec.d <= 1 && GODSZ[rec.t] && need) P.kept = 1;
     const S = P.shell;
     // the roof: along the front for most, now and then the gable to the street; the round hut's cone
     const along = round ? null : P.chance(tr.long ? 0.85 : 0.72) ? 'u' : 'v';
@@ -124,7 +193,7 @@
     const span = along === 'u' ? R[3] - R[1] : R[2] - R[0];
     const kind = round ? 'palha-conica' : roofK;
     const pitch = kind === 'turfa' ? 0.76 : kind === 'palha' ? 1.05 : kind === 'plano' ? 0 : 0.8;
-    const rise = round ? Math.min(3.2, (R[2] - R[0]) * 0.75) : kind === 'alpendre' ? 0.6 : Math.min(4.6, span * pitch * 0.82);
+    const rise = round ? Math.min(3.2, (R[2] - R[0]) * 0.75) : kind === 'alpendre' ? 0.6 : Math.min(4.6, span * (tr.roofK && !hut && !shack && kind !== 'plano' ? tr.roofK : pitch * 0.82));
     P.roof = { kind, along, h: Math.round(rise * 100) / 100, over: kind === 'plano' ? 0 : 0.42 };
     P.roofGeo = { kind, along, eave: S.eave, rise, R };
     // ---- the ground storey's floor ----
@@ -487,6 +556,8 @@
     const fireUp = () => {
       const fire = shack ? 'braseiro' : rec.t === 'hut' && tr.hutFire ? tr.hutFire : tr.fire; let lit = false;
       if (fire === 'lar') lit = !!(P.place('lar', 0, lar, { sides: ['centro'], margin: 0.3 }) || P.place('lar', 0, lar, { sides: ['livre'], margin: 0.25 }));
+      // (a round hut's fire in its middle, whatever the people keeps: the ring is the mats' — D-082's round hut)
+      if (!lit && fire !== 'lar' && P.rooms[lar].circ) lit = !!P.place(fire, 0, lar, { sides: ['centro'], margin: 0.3 });
       if (!lit && fire !== 'braseiro') lit = !!P.place(fire === 'lar' ? 'fogao' : fire, 0, lar, { sides: P.shuffle(['fundo', 'esquerda', 'direita', 'frente']) });
       if (!lit) lit = !!P.place('braseiro', 0, lar, { sides: ['fundo', 'esquerda', 'direita', 'frente'] });
       // (the last resort, once every attempt left the fire out — the round In.plan makes only then: L-193. In a small house
@@ -548,7 +619,8 @@
     // the work front: the bench (or the counter) facing the door
     if (rooms.oficina !== undefined && !P.place('bancada', 0, rooms.oficina, { sides: ['fundo', 'esquerda', 'direita'] }) && !P.place('balcao', 0, rooms.oficina, { sides: ['livre'] })) P.errs.push('sem lugar para a bancada');
     // the table and its bench, if there is room (a poor hall goes without); the wood in the annex of a house with an open fire
-    P.opt(() => { if (!shack && P.place(tr.eat, 0, lar, { sides: ['livre'] }) && tr.eat === 'mesa') P.place('banco', 0, lar, { sides: ['esquerda', 'direita', 'fundo'] }); });
+    // (laid out for fewer as the last resort — P.relax —, a house short of beds goes without it: its floor is for who sleeps on it)
+    P.opt(() => { if (!shack && !(P.relax && P.places() < need) && P.place(tr.eat, 0, lar, { sides: ['livre'] }) && tr.eat === 'mesa') P.place('banco', 0, lar, { sides: ['esquerda', 'direita', 'fundo'] }); });
     P.opt(() => { if (!shack && tr.fire === 'lar' && rooms.anexo !== undefined) P.place('lenha', 0, rooms.anexo); });
   }
   // (what the other recipes — the block round a court, the buildings of work — lay out with)

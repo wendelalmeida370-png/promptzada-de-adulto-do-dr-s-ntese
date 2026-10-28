@@ -13,12 +13,13 @@ const FILE = path.join(__dirname, '..', 'js', 'int-catalogo.js');
 const args = process.argv.slice(2);
 const keysOf = (mode, types) => {
   const out = [];
-  for (const t of types) for (const c of Object.keys(In.TRAD)) for (const hot of mode === 'tudo' ? [0, 1] : [0]) for (const wb of mode === 'tudo' ? [0, 1, 2] : [0]) out.push([t, c, hot, wb]);
+  // (a home's keys twice: out of the centre, its yard about it — 'y' —, and in it — 'c': D-082)
+  for (const t of types) for (const c of Object.keys(In.TRAD)) for (const hot of mode === 'tudo' ? [0, 1] : [0]) for (const wb of mode === 'tudo' ? [0, 1, 2] : [0]) for (const y of In.GODSZ && In.GODSZ[t] ? ['y', 'c'] : ['']) out.push(y ? [t, c, hot, wb, y] : [t, c, hot, wb]);
   return out;
 };
 // one key: every family of the type under it (the rules aside: they are read live, in the context of each building)
-function compute(t, c, hot, wb) {
-  const rec = { v: 1, f: '', r: 0, t, u: In.TYPES[t].use, s: 'S', o: 0, c, e: 3, k: 'ae', cl: hot ? 'q' : 't', fl: 0, d: 1, w: wb, pw: 0, h: [], m: 0, fx: [], dr: {} };
+function compute(t, c, hot, wb, y) {
+  const rec = { v: 1, f: '', r: 0, t, u: In.TYPES[t].use, s: 'S', o: 0, c, e: 3, k: 'ae', cl: hot ? 'q' : 't', fl: 0, d: y === 'c' ? 3 : 1, w: wb, pw: 0, h: [], m: 0, fx: [], dr: {} };
   const tab = {}; for (const f of In.TYPES[t].fams) tab[f] = In.probe(rec, f);
   return tab;
 }
@@ -51,7 +52,12 @@ ${body}
 `;
   fs.writeFileSync(FILE, src); console.log(`gravado ${path.relative(process.cwd(), FILE)}: ${keys.length} chaves, ${msgs.length} motivos, ${(src.length / 1024).toFixed(0)} KB`);
 }
-const run = (list) => { const out = {}; let n = 0; for (const [t, c, hot, wb] of list) { const k = [t, c, hot, wb].join('|'); out[k] = compute(t, c, hot, wb); n++; const ok = Object.values(out[k]).filter(x => x === 1).length; console.log(`  ${k}: ${ok} famílias se armam (${n}/${list.length})`); } return out; };
+const run = (list) => { const out = {}; let n = 0; for (const [t, c, hot, wb, y] of list) { const k = [t, c, hot, wb].join('|') + (y ? '|' + y : ''); out[k] = compute(t, c, hot, wb, y); n++; const ok = Object.values(out[k]).filter(x => x === 1).length;
+  // (and the line of the rule that nobody sleeps standing, D-082 (6): every family that is laid out holds the whole household —
+  // in its beds, and the most of the probes on a floor kept for them)
+  const H = (G.BDEF[t] || {}).housing; let line = '';
+  if (H) { let most = 0, who = ''; for (const f of In.TYPES[t].fams) { if (out[k][f] !== 1) continue; const sh = In.SHORT[k + '/' + f] || 0; if (sh > most) { most = sh; who = f; } } line = most ? ` · abrigam ${H}: no chão guardado até ${most} (${who})` : ` · abrigam ${H}, todos na cama`; }
+  console.log(`  ${k}: ${ok} famílias se armam${line} (${n}/${list.length})`); } return out; };
 const allTypes = Object.keys(In.TYPES);
 const cmd = args[0] || 'gera';
 if (cmd === 'gera') {
@@ -66,8 +72,8 @@ if (cmd === 'gera') {
   const table = read(); const keys = Object.keys(table).sort(); const n = Math.min(keys.length, +(args[1] || 4));
   let bad = 0;
   for (let q = 0; q < n; q++) {
-    const k = keys[Math.floor(q * keys.length / n)]; const [t, c, hot, wb] = k.split('|'); if (!In.TYPES[t]) { console.log(`FALHOU | catálogo | ${k}: tipo que a gramática não tem mais`); bad++; continue; }
-    const now = compute(t, c, +hot, +wb); const diff = Object.keys(Object.assign({}, now, table[k])).filter(f => String(now[f]) !== String(table[k][f]));
+    const k = keys[Math.floor(q * keys.length / n)]; const [t, c, hot, wb, y] = k.split('|'); if (!In.TYPES[t]) { console.log(`FALHOU | catálogo | ${k}: tipo que a gramática não tem mais`); bad++; continue; }
+    const now = compute(t, c, +hot, +wb, y); const diff = Object.keys(Object.assign({}, now, table[k])).filter(f => String(now[f]) !== String(table[k][f]));
     if (diff.length) { bad++; console.log(`FALHOU | catálogo | ${k}: ${diff.length} famílias mudaram (${diff.slice(0, 4).join(', ')}): gere de novo com node qa/catalogo.js`); }
     else console.log(`PASSOU | catálogo | ${k} em dia`);
   }

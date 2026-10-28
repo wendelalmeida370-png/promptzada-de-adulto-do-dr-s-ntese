@@ -175,7 +175,9 @@
   // hot land or not and wealth (all a home's plan reads of its context), and shipped in js/int-catalogo.js (made by
   // qa/catalogo.js, never by hand). A combination the table does not have is probed here, the slow way.
   const comboKey = rec => [rec.t, rec.c, rec.k, rec.cl, rec.fl, rec.d, rec.w, rec.e >= 2 ? 2 : rec.e].join('|');
-  const probeKey = rec => [rec.t, rec.c, rec.cl === 'q' ? 1 : 0, rec.w >= 2 ? 2 : rec.w >= 1 ? 1 : 0].join('|');
+  // (and, for a home, whether it stands out of the centre, its yard about it — In.yardKey, int-familias.js: D-082)
+  const yk = rec => (In.yardKey ? In.yardKey(rec) : '');
+  const probeKey = rec => [rec.t, rec.c, rec.cl === 'q' ? 1 : 0, rec.w >= 2 ? 2 : rec.w >= 1 ? 1 : 0].join('|') + yk(rec);
   In.probeKey = probeKey;
   const CAT = new Map();
   G.worldHooks.push(() => { CAT.clear(); cache.clear(); }); // (a new world: nothing remembered from the one before)
@@ -197,14 +199,20 @@
   // the probe of one family under one key: 1, or the first reason it fails (for the table and the slow way)
   // (a family that fails where its floor is too small for the household, on every attempt, fails by the architecture — the
   // reason begins 'arquitetura:'; any other failure is the grammar's)
+  // (and how many of a household the family's plans lay on a floor kept for them, the most of the probes: In.SHORT, for the
+  // catalogue's line — nobody sleeps standing, D-082 (6))
+  In.SHORT = {};
+  // (each probe on its own side of the lot: a family is offered where it goes in whatever way it faces the street — and the
+  // answer is the same whichever building first asked for the combination: the catalogue's, made the same way)
+  const PSIDES = ['S', 'E', 'W', 'N'];
   In.probe = function (rec, id) {
-    const housing = (G.BDEF[rec.t] || {}).housing || 0;
-    for (const pid of PROBES) {
-      const pb = { id: pid, type: rec.t, x: 8, y: 8, w: (G.BDEF[rec.t] || {}).w || 1, h: (G.BDEF[rec.t] || {}).h || 1 };
+    const housing = (G.BDEF[rec.t] || {}).housing || 0; let short = 0;
+    for (let k = 0; k < PROBES.length; k++) {
+      const pid = PROBES[k]; const pb = { id: pid, type: rec.t, x: 8, y: 8, w: (G.BDEF[rec.t] || {}).w || 1, h: (G.BDEF[rec.t] || {}).h || 1 };
       // (as the plan is made: the attempts, and as many again)
-      const r1 = Object.assign({}, rec, { f: id }); let p = make(pb, r1, id, true);
+      const r1 = Object.assign({}, rec, { f: id, s: PSIDES[k % 4] }); let p = make(pb, r1, id, true);
       if (!p.ok && !p.shellFailed && p.maxArea !== undefined) { const q = make(pb, r1, id, true, false, In.TRIES); q.maxArea = Math.max(q.maxArea || 0, p.maxArea); p = q; }
-      if (p.ok) continue;
+      if (p.ok) { short = Math.max(short, p.short || 0); In.SHORT[probeKey(rec) + '/' + id] = short; continue; }
       const need = In.floorNeed(housing);
       if (housing && p.maxArea !== undefined && p.maxArea < need) return `arquitetura: ${p.maxArea.toFixed(1)} m² de piso não dormem ${housing} pessoas (precisam de ${need.toFixed(1)})`;
       return p.errs[0] || 'inválida';
@@ -217,7 +225,7 @@
   In.familiesFor = function (rec) {
     const key = comboKey(rec); let c = CAT.get(key); if (c) return c;
     const T = TYPES[rec.t]; c = { ok: [], why: {}, arch: {}, gen: {} };
-    const tab = PROBED[probeKey(rec)] || PROBED[[rec.t, rec.c, 0, 0].join('|')] || null;
+    const tab = PROBED[probeKey(rec)] || PROBED[[rec.t, rec.c, 0, 0].join('|') + yk(rec)] || null;
     if (T) for (const id of T.fams || []) {
       const F = FAMS[id]; if (!F) continue;
       const why = F.can ? F.can(rec, T, TRAD[rec.c] || TRAD.classico) : null;
@@ -874,7 +882,8 @@
     // in another room, the hatch anywhere in the cellar's corner —, as the round before it laid out for fewer sleepers (a
     // house's fire taking the room of a bed: someone sleeps on the floor, said). A plan valid today never comes here, so it
     // stays the same — L-182, L-192, L-193, L-194)
-    if (!p.ok && stands && p._P && p._P.lack) { yield; const q = yield* makeG(b, r1, f, false, true, 0, true); if (q.ok) { q.errsOf = p.errs; p = q; } }
+    // (and a home that still does not hold its household, the same last round: nobody sleeps standing — D-082)
+    if (!p.ok && stands && p._P && (p._P.lack || (G.BDEF[rec.t] || {}).housing)) { yield; const q = yield* makeG(b, r1, f, false, true, 0, true); if (q.ok) { q.errsOf = p.errs; p = q; } }
     p.shellFam = f;
     if (p.fam !== rec.f) { p.fell = rec.f; if (!p.errsOf) p.errsOf = fo.why || []; }
     if (b.type === 'ruin') p = ruinOf(p, b);
@@ -883,7 +892,7 @@
   }
   function build(b, rec) { return run(buildG(b, rec)); }
   In.make = (b, rec) => build(b, rec); // (for the proofs: a plan from a record given by hand, outside the cache)
-  In.makeFam = (b, rec, f) => make(b, Object.assign({}, rec, { f }), f); // (for the proofs: that family only, no fallback)
+  In.makeFam = (b, rec, f, relax) => make(b, Object.assign({}, rec, { f }), f, false, !!relax); // (for the proofs: that family only, no fallback — or its last resort, laid out for fewer)
 
   // ------------------------------ from the canonical plan to the lot (metres from its corner) ------------------------------
   // the shell of a plan as the lot has it: the shell (with its roof, annex and court), the storeys' floors, the holes in the
@@ -1333,7 +1342,10 @@
     if (sh.court) { const m = plan.rooms.find(q => q.lv > (plan.entryLv || 0) && ov(q.r, sh.court, 0.02)); if (m) E.push(`um piso sobre o pátio aberto (${m.fn}, piso ${m.lv})`); }
     { const g = facadeGap(plan); if (g) E.push(g); }
     // what the building is for, in numbers the world uses
-    if (def.housing && plan.cap.places < def.housing) { if (P0(plan).relax && plan.cap.places >= Math.ceil(def.housing / 2)) plan.short = def.housing - plan.cap.places; else E.push(`só ${plan.cap.places} lugares para dormir (a casa abriga ${def.housing})`); }
+    // (a house holds its household — nobody sleeps standing, D-082 (6) —: in its beds, and where it is short of them — a home
+    // out of the centre (P.kept: one at most), the last resort (relax: half of them) — on a floor kept for each one left, lying
+    // (floorBeds, after the walk below))
+    if (def.housing && plan.cap.places < def.housing) { const P = P0(plan); const allow = P.relax ? Math.floor(def.housing / 2) : P.kept ? 1 : 0; if (def.housing - plan.cap.places <= allow) plan.short = def.housing - plan.cap.places; else E.push(`só ${plan.cap.places} lugares para dormir (a casa abriga ${def.housing})`); }
     { const J = T.jobs === undefined ? def.jobs : T.jobs; if (J && plan.cap.jobs < J) E.push(`só ${plan.cap.jobs} postos de trabalho (o prédio emprega ${J})`); }
     if (def.storage && T.storeAll && plan.cap.store < def.storage) E.push(`depósitos para ${plan.cap.store} (o armazém guarda ${def.storage})`);
     // (the room a household lives in: its closed rooms, and half its roof terrace in the hot lands, where one lives on the roof)
@@ -1365,6 +1377,7 @@
       if (plan.tiers) { const seats = tierSeats(plan); plan.cap.watch = 0;
         for (const T of plan.tiers) { const mine = seats.filter(q => q.T === T); const m = plan.rooms[T.room]; const got = mine.filter(q => seatReached(plan, q)).length; if (T.use === 'assistir') plan.cap.watch += got;
           if (!mine.length) E.push(`fileiras sem lugar para assistir (piso ${T.lv})`); else if (!m || mine.some(q => !inRoomPt(m, q.x, q.z, 0.05))) E.push(`fileiras fora do cômodo (piso ${T.lv})`); else if (!got) E.push(`não se chega às fileiras (piso ${T.lv})`); } }
+      if (!E.length && plan.short) { const fb = floorBedsOf(plan, plan.short, P0(plan).relax || plan.shell.kind === 'round'); if (fb.length < plan.short) E.push(`${plan.short - fb.length} dormiriam de pé (a casa abriga ${def.housing}: ${plan.cap.places} na cama, chão para ${fb.length})`); else plan.floorBeds = fb; }
     }
     plan.ok = !E.length;
   }
@@ -1433,7 +1446,7 @@
     }
     edges.sort();
     const ent = plan.entrance && plan.doors[plan.entrance.door] ? lab(plan.doors[plan.entrance.door].rooms[0]) : '-';
-    return `V[${lv}] R[${rooms}] E[${edges.join(',')}] in[${ent}] a${(plan.shell.annex || []).length}${plan.shell.yard ? ' y' : ''}`;
+    return `V[${lv}] R[${rooms}] E[${edges.join(',')}] in[${ent}] a${(plan.shell.annex || []).length}${plan.shell.yard ? ' y' : ''}${plan.shell.kind === 'round' ? ' o' : ''}`; // (the round hut's ring is its own: not the hall's)
   }
   In.signature = signature;
 
@@ -1674,6 +1687,37 @@
   }
   In.table = tableOf; // (for the proofs and the drawing of the plan)
   const SLEEP_FN = { leitos: 0, quarto: 0, sobrado: 0, cela: 0, lar: 1, salao: 1, anexo: 2, galeria: 2, frente: 3 };
+  // the floors of a plan made where a body lies (lying on the floor): a body's length and width of open floor — not a
+  // doorway, a hatch, a flight; a round room's ring keeps out of its circle —, its head to the nearer wall: where no one stands
+  // to use a piece first (keep: the standing places, [lv, x, z] — a sleeper on the floor before the table or the bed's side
+  // keeps it from who would use it), in the rooms where people sleep first, along a wall first; reached from the door. A body's
+  // root a little toward the head, as the 3D lays a sleeper — the head 0.62 m behind it, the feet 0.86 before
+  function lieRects(p, keep) {
+    const seen = p.reach || {}; const lie = [];
+    if (!keep) { keep = []; for (const it of p.items) for (const sp of it.spots) if (!sp.on && sp.ok) keep.push([it.lv, sp.x, sp.z]); }
+    const inUse = (lv, R) => keep.some(([l, x, z]) => l === lv && x > R[0] - BODY.feet && x < R[2] + BODY.feet && z > R[1] - BODY.feet && z < R[3] + BODY.feet);
+    // (open floor, flat: on rows of seats nobody lies)
+    const allOpen = (lv, R) => { const cr = crawl(p, lv); for (let z = R[1] + CS / 2; z < R[3]; z += CS) for (let x = R[0] + CS / 2; x < R[2]; x += CS) { const c = codeAt(p, lv, x, z); if (!(c === C.FLOOR || (cr && c === C.LOWROOF)) || hAt(p, lv, x, z)) return false; } return true; };
+    for (const m of p.rooms) {
+      const r = m.r; const rank = SLEEP_FN[m.fn] !== undefined ? SLEEP_FN[m.fn] : 4;
+      for (const [w, d] of [[0.7, 1.9], [1.9, 0.7]]) for (let x = r[0] + 0.05; x + w <= r[2] - 0.05 + 1e-6; x += 0.25) for (let z = r[1] + 0.05; z + d <= r[3] - 0.05 + 1e-6; z += 0.25) {
+        const R = [r2(x), r2(z), r2(x + w), r2(z + d)]; if (!allOpen(m.lv, R)) continue;
+        const cx = (R[0] + R[2]) / 2, cz = (R[1] + R[3]) / 2; if (!reachedNear(p, seen, m.lv, [cx, cz], 1.0) || (m.circ && m.circ[3] > 0 && !inRoomPt(m, cx, cz))) continue;
+        const along = d > w; const lo = along ? R[1] - r[1] : R[0] - r[0], hi = along ? r[3] - R[3] : r[2] - R[2]; const s = lo <= hi ? 1 : -1; const f = along ? [0, s] : [s, 0];
+        lie.push({ lv: m.lv, room: m.id, R, x: r2(cx - f[0] * 0.12), z: r2(cz - f[1] * 0.12), ry: r2(Math.atan2(f[0], f[1])), rank, wall: Math.min(R[0] - r[0], r[2] - R[2], R[1] - r[1], r[3] - R[3]), use: inUse(m.lv, R) ? 1 : 0 });
+      }
+    }
+    lie.sort((a, c) => a.use - c.use || a.rank - c.rank || a.wall - c.wall || a.lv - c.lv || a.room - c.room || a.R[0] - c.R[0] || a.R[1] - c.R[1] || a.R[2] - c.R[2]);
+    return lie;
+  }
+  // (the floors kept for k sleepers the beds leave out: of the lying floors where no one stands to use a piece, the first k
+  // that do not lie on each other — and, for a house laid out for fewer as the last resort (any: P.relax) and in the round
+  // hut, its floor all round the fire, after them the ones before a piece, where nobody stands at night)
+  function floorBedsOf(p, k, any) {
+    const out = []; if (!(k > 0)) return out;
+    for (const f of lieRects(p)) { if (f.use && !any) break; if (out.some(q => q.lv === f.lv && ov(q.R, f.R, 0.05))) continue; out.push({ lv: f.lv, room: f.room, R: f.R, x: f.x, z: f.z, ry: f.ry, rank: f.rank, wall: f.wall, use: f.use, kept: 1 }); if (out.length >= k) break; }
+    return out;
+  }
   function makeTable(p) {
     const W = walkField(p); const seen = p.reach || {}; const spots = []; const byUse = new Map(); const keep = [];
     for (const it of p.items) {
@@ -1720,23 +1764,9 @@
       }
     }
     floor.sort((a, c) => (a.lv === e0 ? 0 : 1) - (c.lv === e0 ? 0 : 1) || a.lv - c.lv || a.room - c.room || a.d - c.d || a.x - c.x || a.z - c.z);
-    // (lying on the floor: a body's length and width of open floor — not a doorway, a hatch, a flight —, its head to the nearer
-    // wall: where no one stands to use a piece first (a sleeper on the floor before the table or the bed's side keeps it from
-    // who would use it), in the rooms where people sleep first, along a wall first; reached from the door. A body's root a
-    // little toward the head, as the 3D lays a sleeper — the head 0.62 m behind it, the feet 0.86 before)
-    const lie = []; const inUse = (lv, R) => keep.some(([l, x, z]) => l === lv && x > R[0] - BODY.feet && x < R[2] + BODY.feet && z > R[1] - BODY.feet && z < R[3] + BODY.feet);
-    // (open floor, flat: on rows of seats nobody lies)
-    const allOpen = (lv, R) => { const cr = crawl(p, lv); for (let z = R[1] + CS / 2; z < R[3]; z += CS) for (let x = R[0] + CS / 2; x < R[2]; x += CS) { const c = codeAt(p, lv, x, z); if (!(c === C.FLOOR || (cr && c === C.LOWROOF)) || hAt(p, lv, x, z)) return false; } return true; };
-    for (const m of p.rooms) {
-      if (m.circ) continue; const r = m.r; const rank = SLEEP_FN[m.fn] !== undefined ? SLEEP_FN[m.fn] : 4;
-      for (const [w, d] of [[0.7, 1.9], [1.9, 0.7]]) for (let x = r[0] + 0.05; x + w <= r[2] - 0.05 + 1e-6; x += 0.25) for (let z = r[1] + 0.05; z + d <= r[3] - 0.05 + 1e-6; z += 0.25) {
-        const R = [r2(x), r2(z), r2(x + w), r2(z + d)]; if (!allOpen(m.lv, R)) continue;
-        const cx = (R[0] + R[2]) / 2, cz = (R[1] + R[3]) / 2; const dw = walkTo(W, m.lv, cx, cz, 1.0); if (dw === Infinity) continue;
-        const along = d > w; const lo = along ? R[1] - r[1] : R[0] - r[0], hi = along ? r[3] - R[3] : r[2] - R[2]; const s = lo <= hi ? 1 : -1; const f = along ? [0, s] : [s, 0];
-        lie.push({ lv: m.lv, room: m.id, R, x: r2(cx - f[0] * 0.12), z: r2(cz - f[1] * 0.12), ry: r2(Math.atan2(f[0], f[1])), rank, wall: Math.min(R[0] - r[0], r[2] - R[2], R[1] - r[1], r[3] - R[3]), din: r2(dw), use: inUse(m.lv, R) ? 1 : 0 });
-      }
-    }
-    lie.sort((a, c) => a.use - c.use || a.rank - c.rank || a.wall - c.wall || a.lv - c.lv || a.room - c.room || a.R[0] - c.R[0] || a.R[1] - c.R[1] || a.R[2] - c.R[2]);
+    // (lying on the floor: the floors the plan keeps for whoever its beds leave out first — floorBeds —, then the others)
+    const lie = (p.floorBeds || []).map(f => Object.assign({}, f, { din: r2(walkTo(W, f.lv, (f.R[0] + f.R[2]) / 2, (f.R[1] + f.R[3]) / 2, 1.0)) }));
+    for (const f of lieRects(p, keep)) if (!lie.some(q => q.lv === f.lv && q.R.join() === f.R.join())) { const dw = walkTo(W, f.lv, (f.R[0] + f.R[2]) / 2, (f.R[1] + f.R[3]) / 2, 1.0); if (dw !== Infinity) lie.push(Object.assign(f, { din: r2(dw) })); }
     // (a jail's cells: each one's room, its bed of straw and the place on it, its grating)
     const cells = p.rooms.filter(m => m.fn === 'cela').map(m => { const bed = p.items.find(i => i.room === m.id && i.places > 0); const door = p.doors.find(d => d.rooms.includes(m.id)); return { room: m.id, lv: m.lv, r: m.r, bed: bed ? bed.id : null, spot: bed ? bed.spots.find(q => q.use === 'deitar') || null : null, door: door ? door.id : null }; });
     const e = p.entrance;
@@ -2076,8 +2106,35 @@
     if (!b || !TYPES[b.type] || b.ip) return;
     b.ip = newRecord(b, In.contextOf(b), false); placeDoor(b);
     fact(b, b.built ? 'pronto' : 'obra');
-    besides(b);
+    secure(b); besides(b);
   };
+  // a home of the world always holds its household — nobody sleeps standing, D-082 —: its whole plan made here, in the world's
+  // step (kept in the cache: whoever needs a plan in the step makes it there), and where the record's family does not lay the
+  // household out on this building, the first family offered there that does, in the type's order of preference turned by the
+  // building's id (the same world, the same choice), written in the record with the fact, and the door judged again by the
+  // shell it has now. Asked wherever the step changes what the plan is made of: the founding, the door moved to another side,
+  // the type changed, a renovation, a new use, the house given up or lived in again, an old record brought to this version
+  // (the leader's (1) of 28/10)
+  function holdingFam(b, rec) {
+    const p0 = build(b, rec); if (p0.ok) return { f: rec.f, p: p0 };
+    const T = TYPES[rec.t]; const ok = In.familiesFor(rec).ok; const pref = T && T.prefer ? T.prefer(rec, ok) : ok;
+    const pool = pref.concat(ok.filter(f => !pref.includes(f))).filter(f => f !== rec.f); if (!pool.length) return null;
+    const k = b.id % pool.length;
+    for (const g of pool.slice(k).concat(pool.slice(0, k))) { const p = build(b, Object.assign({}, rec, { f: g })); if (p.ok) return { f: g, p }; }
+    return null;
+  }
+  In.holdingFam = (b, rec) => { const h = holdingFam(b, rec || b.ip); return h ? h.f : null; }; // (for the proofs: the family the world founds)
+  In.secure = b => { if (G.inSim && b && b.ip) secure(b); }; // (for the proofs: the founding's rule on a record, in the world's step)
+  function secure(b) {
+    const rec = b.ip; const T = rec && TYPES[rec.t]; if (!T || T.use !== 'casa' || b.type === 'ruin' || rec.t !== b.type) return;
+    for (let k = 0; k < 3; k++) {
+      const key = planKey(b, rec); const c = cache.get(b.id); if (c && c.key === key && c.ok) return;
+      const h = holdingFam(b, rec); if (!h) return; // (none holds it: the record as it is — the verifier says so)
+      if (h.f === rec.f) { keep(b.id, key, h.p); return; }
+      const f0 = rec.f; rec.f = h.f; keep(b.id, planKey(b, rec), h.p); fact(b, 'reforma', 'família ' + f0 + '>' + h.f);
+      const s0 = rec.s + '/' + rec.o; placeDoor(b); if (rec.s + '/' + rec.o === s0) return; // (the door where it was: this plan is the one)
+    }
+  }
   // the door of a building standing, as the step judges it — at the turn of the day, when the work on it is done, and when a
   // building is founded beside it, which may have taken the street before it (L-207) —: where the street the door opens to
   // is closed now (a wall, a building, the water — or a pocket of it shut in, smaller than the ground another side opens
@@ -2088,11 +2145,12 @@
   function doorRule(b) {
     const rec = b.ip; const m0 = openTiles(b, rec.s); const shut = !(m0 & (rec.o || m0)) || !m0 || !frontOpen(b, In.shellOf(b));
     if (!shut && entryOk(b, rec)) { sayEntry(b, true); return; }
-    let to = fitSide(b, rec); const ok = !!to;
+    let to = fitSide(b, rec); const ok = !!to; let moved = false;
     if (!to && shut) for (const s of SIDES) { const m = openTiles(b, s); if (m) { to = { s, o: m }; break; } }
-    if (to && (to.s !== rec.s || to.o !== rec.o)) { rec.s = to.s; rec.o = to.o; rec.r++; fact(b, 'reforma', 'porta ' + to.s); }
+    if (to && (to.s !== rec.s || to.o !== rec.o)) { rec.s = to.s; rec.o = to.o; rec.r++; fact(b, 'reforma', 'porta ' + to.s); moved = true; }
     // (said: fits, or fits on no side open; a door left on a street shut all round says nothing)
     if (to || !shut) sayEntry(b, ok); else entrySaid.delete(b.id);
+    if (moved) secure(b); // (the plan of the door's new side: a home still holds its household)
   }
   // (a building founded: the doors standing round it, as far as a door's steps run on into the street — two tiles —, judged
   // again now, not at the next turn of the day: the street it took was theirs a moment ago — L-207)
@@ -2117,6 +2175,7 @@
     const ctx = In.contextOf(b); rec.t = b.type; rec.u = TYPES[b.type].use; rec.k = ctx.k; rec.e = ctx.e;
     const c = In.familiesFor(rec); if (!c.ok.includes(rec.f)) rec.f = chooseFamily(b, rec);
     rec.r++; rec.fx = []; fact(b, why, from + '>' + b.type);
+    secure(b);
   }
   In.retype = (b, from) => { if (b && b.ip && b.ip.t !== b.type) retype(b, from || b.ip.t, 'reforma'); };
   In.ruin = function (b, cause) { if (!b || !b.ip) return; b.ip.r++; fact(b, 'ruina', cause || ''); };
@@ -2131,7 +2190,7 @@
     if (o.side && SIDES.includes(o.side)) { const m = openTiles(b, o.side); if (!m) return { ok: false, why: 'esse lado não dá para a rua' }; to.s = o.side; to.o = m; if (!entryOk(b, to) && fitSide(b, to)) return { ok: false, why: 'a entrada não cabe desse lado' }; }
     // (all asked first, then done: a renovation refused changes nothing)
     rec.f = to.f; rec.s = to.s; rec.o = to.o;
-    rec.r++; fact(b, 'reforma', o.fam || o.side || ''); return { ok: true };
+    rec.r++; fact(b, 'reforma', o.fam || o.side || ''); secure(b); return { ok: true };
   };
   // where a house grows when its household no longer fits in it: of the families its record can take there (the catalogue,
   // the record's own frozen context), those whose shell stands on the lot and is bigger than the one it has — a storey more, a
@@ -2172,7 +2231,7 @@
   In.reuse = function (b, use) {
     if (!b || !b.ip || !G.inSim) return { ok: false, why: 'fora do passo do mundo' };
     const rec = b.ip; if (rec.u === use) return { ok: true };
-    rec.u = use; rec.r++; fact(b, 'uso', use); return { ok: true };
+    rec.u = use; rec.r++; fact(b, 'uso', use); secure(b); return { ok: true };
   };
   // a door opened, shut, locked or unlocked by someone (the body and the people the same): forgotten at the turn of the day
   In.useDoor = function (b, id, act, v) {
@@ -2208,9 +2267,9 @@
         const head = heads.get(b.id) || null; const hid = head ? head.id : 0; const n = dwell.get(b.id) || 0;
         // (the last of the household gone: empty from today — a house nobody lived in yet is only new —; given up after
         // In.LEFT days empty, and the plan shows the house left behind; lived in again, the house is its own once more)
-        if (n) { rec.vz = 0; if (rec.ab) { rec.ab = 0; rec.r++; } }
+        if (n) { rec.vz = 0; if (rec.ab) { rec.ab = 0; rec.r++; secure(b); } }
         else if (rec.nm) rec.vz = S.day;
-        else if (rec.vz && !rec.ab && S.day - rec.vz >= In.LEFT) { rec.ab = S.day; rec.r++; fact(b, 'abandono'); }
+        else if (rec.vz && !rec.ab && S.day - rec.vz >= In.LEFT) { rec.ab = S.day; rec.r++; fact(b, 'abandono'); secure(b); }
         rec.nm = n;
         // (a new head: the heir of the one who died there, or a household that moved in)
         if ((rec.hh || 0) !== hid) {
@@ -2225,7 +2284,7 @@
     const r = b.ip; const ok = r && typeof r === 'object' && typeof r.f === 'string' && FAMS[r.f] && Number.isInteger(r.r) && typeof r.t === 'string' && SIDES.includes(r.s) && Array.isArray(r.h);
     if (ok) { if (!Array.isArray(r.fx)) r.fx = []; if (!r.dr || typeof r.dr !== 'object') r.dr = {}; for (const k of ['hh', 'nm', 'vz', 'ab']) if (!Number.isFinite(r[k])) r[k] = 0; return false; }
     const t = TYPES[b.type] ? b.type : TYPES[b.origType] ? b.origType : null; if (!t) { delete b.ip; return false; }
-    const ctx = In.contextOf(b); ctx.t = t; b.ip = newRecord(b, ctx, true); if (b.type !== 'ruin') placeDoor(b); b.ip.h.push([G.S.day, 'migrado']); return true;
+    const ctx = In.contextOf(b); ctx.t = t; b.ip = newRecord(b, ctx, true); if (b.type !== 'ruin') placeDoor(b); b.ip.h.push([G.S.day, 'migrado']); secure(b); return true;
   }
   In.migrate = function () {
     let n = 0; for (const b of G.S.buildings.values()) if ((TYPES[b.type] || (b.type === 'ruin' && TYPES[b.origType])) && repair(b)) n++;
@@ -2241,7 +2300,7 @@
       const r = b.ip; if (!r || (r.v | 0) >= 4) continue; r.v = 4;
       if (TYPES[r.t] && b.type !== 'ruin' && !(TYPES[r.t].fams || []).includes(r.f)) { const f0 = r.f; r.f = chooseFamily(b, r); r.r++; r.fx = []; fact(b, 'reforma', 'família ' + f0 + '>' + r.f); }
       if (!b.built || b.type === 'ruin' || !TYPES[b.type] || r.t !== b.type) continue;
-      const d0 = doorOf(b), s0 = r.s + '/' + r.o; doorRule(b); if (d0 && r.s + '/' + r.o !== s0) outOfPocket(b, d0);
+      const d0 = doorOf(b), s0 = r.s + '/' + r.o; doorRule(b); secure(b); if (d0 && r.s + '/' + r.o !== s0) outOfPocket(b, d0);
     }
     return n;
   };

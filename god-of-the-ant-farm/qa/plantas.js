@@ -3,7 +3,9 @@
 // (e por que as outras não valem), e para cada família muitas plantas (ids diferentes) — todas válidas pelo próprio
 // validador do jogo (cabe no lote, nada sobreposto, todo cômodo e todo lugar de uso alcançados da porta, lugares para
 // quem mora, postos para quem trabalha), a mesma assinatura estrutural dentro da família, assinaturas diferentes entre
-// famílias, variação de medidas entre ids, e a mesma planta duas vezes para a mesma entrada.
+// famílias, variação de medidas entre ids, e a mesma planta duas vezes para a mesma entrada. Uma casa que a família do
+// registro não arma naquele lote o mundo funda na próxima família que abriga a casa (In.holdingFam, a regra da fundação:
+// a casa do mundo nunca fica inválida — D-082): conta como caída, à parte; inválida só a que nenhuma família arma.
 //   node qa/plantas.js [ids por família] [tipo,tipo...]      (CAT=1 imprime o catálogo inteiro; VERB=1 cada falha)
 const M = require('./nodemundo.js');
 const crypto = require('crypto');
@@ -20,7 +22,7 @@ const CTX = [
 const SIDES = ['S', 'E', 'W', 'N'];
 // (the harness stands Date.now still, as the browser tests do: the time is the process's own clock)
 const clock = () => Number(process.hrtime.bigint() / 1000n) / 1000;
-const t0 = clock(); let nPlans = 0, nBad = 0, nFell = 0, nShort = 0, nGen = 0, nCombo = 0; const small = [], byGen = []; const badEx = [], fellEx = [];
+const t0 = clock(); let nPlans = 0, nBad = 0, nFell = 0, nShort = 0, nGen = 0, nCombo = 0, nHeld = 0; const small = [], byGen = []; const badEx = [], fellEx = [], heldEx = [];
 const shortBy = new Map(); const shortEx = [];
 // (the dearest plans and attempts as the round measured them — on a busy machine a cheap one is now and then measured a
 // hundred times dearer: the candidates, made again at the end, are the ones the round put on top and each type's own)
@@ -57,6 +59,10 @@ for (const type of Object.keys(In.TYPES)) {
         if (q < 2) { In.uncache(); const s1 = In.shellOf(Object.assign({}, b, { ip: rec })); const strip = o => { const x = Object.assign({}, o); delete x.key; return JSON.stringify(x); }; nShell++; if (!s1 || strip(s1) !== strip(In.shellOfPlan(p))) { nShellBad++; if (shellEx.length < 4) shellEx.push(`${type}/${c}/${f} #${id}`); } }
         if (!p.ok || p.fam !== f) {
           if (p.ok) { nFell++; if (fellEx.length < 6 || process.env.VERB) fellEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id} → ${p.fam}: ${(p.errsOf || []).slice(0, 1).join('; ')}`); continue; }
+          // (a home the world founds in the next family that holds its household — In.holdingFam, the founding's own rule: the
+          // world never has it invalid; counted apart, and with the falls)
+          const g = In.TYPES[type].use === 'casa' && In.holdingFam ? In.holdingFam(b, rec) : null;
+          if (g) { nHeld++; nFell++; if (heldEx.length < 6 || process.env.VERB) heldEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id} → ${g}: ${(p.errsOf || p.errs || []).slice(0, 1).join('; ')}`); continue; }
           nBad++; if (badEx.length < 12 || process.env.VERB) badEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id}: ${(p.errsOf || p.errs || []).slice(0, 2).join('; ')}`); continue;
         }
         // (the height of the floor under every cell the grid has as floor, off the flights and the steps: the storey's own —
@@ -93,8 +99,9 @@ const secs = (clock() - t0) / 1000;
 const again = (w, one) => { let best = Infinity; for (let r = 0; r < 3; r++) { let n = 0, tA = clock(), mine = Infinity; const a = tA; In.trace = () => { const t = clock(); if (one && n === w.n) mine = t - tA; n++; tA = t; }; In.make(w.b, w.rec); In.trace = null; if (!one) mine = clock() - a; best = Math.min(best, mine); } return best; };
 const dearest = (L, M, one) => { let top = null; const raw = L.length ? L[0].ms : 0; for (const w of new Set(L.concat(...M.values()))) { w.min = again(w, one); if (!top || w.min > top.min) top = w; } return { top, raw }; };
 const DP = dearest(TOP.plan, TOP.planBy, false), DA = dearest(TOP.att, TOP.attBy, true);
-ok('todas as plantas válidas', nBad === 0, `${nPlans} plantas, ${nBad} inválidas; ${nShort} com gente dormindo no chão; a mais cara ${DP.top ? DP.top.min.toFixed(1) : 0} ms (${DP.top ? DP.top.tag + ', ' + DP.top.n + ' tentativas' : '-'}, sem cache; na rodada, com o ruído da máquina, até ${DP.raw.toFixed(0)} ms); ${secs.toFixed(1)} s`);
+ok('todas as plantas válidas', nBad === 0, `${nPlans} plantas, ${nBad} inválidas (${nHeld} casas que o mundo funda em outra família, In.holdingFam); ${nShort} com gente dormindo no chão; a mais cara ${DP.top ? DP.top.min.toFixed(1) : 0} ms (${DP.top ? DP.top.tag + ', ' + DP.top.n + ' tentativas' : '-'}, sem cache; na rodada, com o ruído da máquina, até ${DP.raw.toFixed(0)} ms); ${secs.toFixed(1)} s`);
 for (const e of badEx) console.log('   ✗ ' + e);
+for (const e of heldEx) console.log('   ⇢ ' + e);
 // (the ones laid out for fewer sleepers than the house holds, by type and family: each class explained or brought down)
 if (nShort) console.log('   com gente no chão, por tipo e família: ' + [...shortBy.entries()].sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k}: ${n}`).join(' · '));
 for (const e of shortEx) console.log('   ~ ' + e);
@@ -109,7 +116,7 @@ console.log(`combinações abaixo de 5 só porque a arquitetura não permite mai
 for (const s of small.slice(0, process.env.CAT ? 999 : 12)) console.log('   · ' + s);
 // (a ratchet: the count the grammar has reached — it may only go down; brought down, the ceiling comes down with it, and the
 // goal is zero. Raised by a change, the change is wrong — unless the leader agrees and the commit says why)
-const GERADOR_TETO = 17;
+const GERADOR_TETO = 11; // (17 → 11 com a B2c: a ínsula do centro com um andar a mais, D-082 (3))
 ok('abaixo de 5 pelo gerador', byGen.length <= GERADOR_TETO, `${byGen.length} combinações ficam abaixo de 5 só porque o gerador não armou famílias que a arquitetura permite (teto ${GERADOR_TETO}, a meta é zero)${byGen.length < GERADOR_TETO ? ' — baixou: desça o teto' : ''}`);
 for (const s of byGen.slice(0, process.env.CAT ? 999 : 30)) console.log('   ✗ ' + s);
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');
