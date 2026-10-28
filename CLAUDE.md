@@ -52,6 +52,7 @@ Três famílias inteiras de bugs foram eliminadas reconstruindo a base. Código 
 - Cada módulo roda isolado (`G.tryRun`): um que quebra não derruba os outros, mas conta em `G.modErr` — e isso é falha nos testes.
 - Saves: tudo que precisa sobreviver a um save entra em `js/save.js` ou num `G.saveHooks`. Um save antigo precisa continuar carregando (`qa/oldsave.js`); um save danificado é recusado limpo ou carregado sem erro (`qa/corrupt.js`). As tarefas das pessoas não vão no save: um sistema que vive delas guarda no seu gancho o que cada um fazia e o devolve pelo `setTask` (o motim, L-190), ou se refaz no load a partir do que o save tem (o exército a caminho de casa, `wars.js` resume, L-185) — nunca dá por encerrado o que no mundo vivo continuaria. Um registro de interiores de uma versão anterior (v 1, v 2) tem a porta julgada ao abrir; um da versão de agora (v 3), nunca (L-209, L-216).
 - O estilo do código: comentários curtos que dizem o porquê, nomes como os vizinhos, uma linha por ideia.
+- Um nome, uma função: duas declarações `function` com o mesmo nome no mesmo arquivo não quebram nada à vista — a última toma o lugar da primeira, em silêncio (as batidas das histórias, L-320; o `guard.js` cobra, regra 30).
 
 ## Versões, commits e publicação
 

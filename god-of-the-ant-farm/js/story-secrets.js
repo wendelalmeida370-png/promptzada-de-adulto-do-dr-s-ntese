@@ -37,7 +37,7 @@
   const rulerOf = fid => { const f = G.Fac.get(fid); return f && f.leader ? P(f.leader) : null; };
   const titleOf = (fid, r) => { const f = G.Fac.get(fid); return f && r ? G.Politics.title(f, r) : 'senhor'; };
   const rulerWord = fid => { const r = rulerOf(fid); return r ? (r.g === 'f' ? 'da ' : 'do ') + titleOf(fid, r).toLowerCase() : 'de quem governa'; };
-  const socOf = s => (s.data.soc ? Sc.get(s.data.soc) : null);
+  const socOf = s => (s && s.data.soc ? Sc.get(s.data.soc) : null); // (no story, no society — L-321)
   const deW = w => { const m = /^(o|a|os|as) (.*)$/.exec(w || ''); return m ? ({ o: 'do', a: 'da', os: 'dos', as: 'das' })[m[1]] + ' ' + m[2] : 'de ' + w; };
   const what = s => s.data.what || (socOf(s) ? Sc.art(socOf(s).name) : s.data.fake ? Sc.art(s.data.fake) : 'uma seita');
   const nightNow = () => G.S.time > 0.74 || G.S.time < 0.12;
