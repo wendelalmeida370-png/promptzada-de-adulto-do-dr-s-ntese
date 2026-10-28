@@ -519,8 +519,9 @@
   // (the braziers at the base's front corners: a stand of stone 4 px high, its fire on it)
   const templeFires = L => [-0.9, 0.9].flatMap(bx => [blocoF(L, bx - 0.05, 0.85, bx + 0.05, 0.95, 0, 4, ['#8a7a5a', '#6a5a40', '#9a8a6a']), { k: 'braseiro', p: [at(L, bx), at(L, 0.9), px(4)], r: 0.16 }]);
   // the Greek's (and the classical people's): the crepidoma — three steps of 1.4 px, each 0.07 tiles in, the flight of five
-  // risers on the axis —, the peristyle of 0.045 tiles columns round the cella (six on the front and the back, five on the
-  // sides) to 17 px over the stylobate, the cella of 0.95 tiles with its door of 0.3 × 10 px, the entablature of 2.5 px with
+  // risers on the axis —, the peristyle of 0.0435 tiles columns round the cella (six on the front and the back, five on the
+  // sides; between two of the front's 0.80 m at least, where the body passes: the plan's rule for a way through) to 17 px over
+  // the stylobate, the cella of 0.95 tiles with its door of 0.3 × 10 px, the entablature of 2.5 px with
   // its band, the pediment roof along the way in to 9.5 px over it, the gilded round in the gable; the Roman's: the podium of
   // 7 px and 1.7 tiles, the flight of eight risers on the axis from the street to the porch, the four columns of the porch
   // before the cella of 1.1 × 0.9 tiles, the entablature and the roof as the Greek's
@@ -531,7 +532,7 @@
       steps = flightF(L, s, 0.95, 4.2, 5, 0.08); z0 = 4.2;
       base = { r: rect(L, -0.81, -0.81, 0.81, 0.81), y1: px(4.2), degraus: [0, 1, 2].map(k => ({ r: rect(L, -0.95 + k * 0.07, -0.95 + k * 0.07, 0.95 - k * 0.07, 0.95 - k * 0.07), y1: px(1.4 * (k + 1)) })) };
       const pts = []; for (let k = 0; k < 6; k++) { const x = -0.72 + 1.44 * k / 5; pts.push([x, -0.72], [x, 0.72]); } for (let k = 1; k < 4; k++) { const y = -0.72 + 1.44 * k / 4; pts.push([-0.72, y], [0.72, y]); }
-      cols = { k: 'colunata', pts: pts.map(([x, y]) => [at(L, x), at(L, y)]), r: 0.045 * TILE, y0: px(z0), y1: px(z0 + 17), cor: ['col0', 'col1'] };
+      cols = { k: 'colunata', pts: pts.map(([x, y]) => [at(L, x), at(L, y)]), r: 0.0435 * TILE, y0: px(z0), y1: px(z0 + 17), cor: ['col0', 'col1'] };
       walls = wallsF(L, -0.5, -0.5, 0.45, 0.45, z0, z0 + 17); door = doorF(L, 0.45, -0.15, 0.15, z0, z0 + 10, '#3a2e24');
       extra = { peristyle: { r: rect(L, -0.81, -0.81, 0.81, 0.81), y1: px(z0 + 17), cols } };
     } else {
@@ -569,14 +570,15 @@
       body: { walls, base: { r: rect(L, -0.95, -0.95, 0.95, 0.95), y1: H, degraus: niveis.map(([s, , yb]) => ({ r: [L / 2 - s, L / 2 - s, L / 2 + s, L / 2 + s], y1: yb })) }, steps: stairTreads(escada) } };
   });
   // the Norse's stave church: its base of 1.5 px and 0.75 tiles; the gallery round the nave under the skirt roof — from 7 px
-  // at its edge up to the nave's walls at 11 px —, its staves at the edge, the portal at its front where the god paints the
+  // at its edge up to the nave's walls at 11 px —, its staves at the edge (0.096 m, a metre apart: 0.81 m between two, where
+  // the body passes — the god does not draw them), the portal at its front where the god paints the
   // door (1.5–7 px); the nave of 0.55 tiles, its walls to 12 px, its door under the gallery, the roof along the width to 22 px
   // with its dragon; the upper tier of 0.32 tiles from 18 to 27 px with its windows, its roof along the way in to 35 px with
   // its dragon; the tower of 0.12 tiles to 38 px and its spire to 50; the fire before it
   def('temple', 'nordico', L => {
     const SHG = ['shingle0', 'shingle1', 'wl', 'shingle2']; const walls = blocoF(L, -0.55, -0.55, 0.55, 0.55, 1.5, 12, WALL, { mat: 'parede', tabuas: 10 });
     const pts = []; const m = 6; for (let k = 0; k <= m; k++) { const a = -0.75 + 1.5 * k / m; pts.push([a, -0.75], [a, 0.75]); if (k && k < m) pts.push([-0.75, a], [0.75, a]); }
-    const staves = { k: 'colunata', pts: pts.filter(([a, b]) => !(b > 0.7 && Math.abs(a) < 0.2)).map(([a, b]) => [at(L, a), at(L, b)]), r: 0.03 * TILE, y0: px(1.5), y1: px(7), cor: ['wr', 'wl'], mat: 'beam' };
+    const staves = { k: 'colunata', pts: pts.filter(([a, b]) => !(b > 0.7 && Math.abs(a) < 0.2)).map(([a, b]) => [at(L, a), at(L, b)]), r: 0.024 * TILE, y0: px(1.5), y1: px(7), cor: ['wr', 'wl'], mat: 'beam' };
     const skirt = [[[-0.75, 0.75], [0.75, 0.75], [0.55, 0.55], [-0.55, 0.55], 'shingle0'], [[0.75, 0.75], [0.75, -0.75], [0.55, -0.55], [0.55, 0.55], 'shingle1'],
       [[0.75, -0.75], [-0.75, -0.75], [-0.55, -0.55], [0.55, -0.55], 'shingle0'], [[-0.75, -0.75], [-0.75, 0.75], [-0.55, 0.55], [-0.55, -0.55], 'shingle1']]
       .map(([a, b, c, d, cor]) => ({ k: 'pano', p: [[at(L, a[0]), at(L, a[1]), px(7)], [at(L, b[0]), at(L, b[1]), px(7)], [at(L, c[0]), at(L, c[1]), px(11)], [at(L, d[0]), at(L, d[1]), px(11)]], cor, mat: 'shingle' }));

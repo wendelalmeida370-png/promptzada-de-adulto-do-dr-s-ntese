@@ -427,10 +427,10 @@
         for (let j = n - 2; j >= 0; j--) box(c, -s, v0 - d * (j + 1), s, v0 - d * j, 0, zt * (j + 1) / n, p.base[0], p.base[1], shade(p.base[2], 1.05)); }
       const z0 = g ? H0 : 7, H = z0 + 17;
       const cx0 = g ? -0.5 : -0.55, cx1 = g ? 0.45 : 0.55, cy0 = g ? -0.5 : -0.7, cy1 = g ? 0.45 : 0.2;
-      if (g) colonnade(c, p, -0.72, -0.72, 0.72, 0.72, z0, H, 5, 0.045, 'B', false, 6);
+      if (g) colonnade(c, p, -0.72, -0.72, 0.72, 0.72, z0, H, 5, 0.0435, 'B', false, 6); // (0.80 m between two of the front's: Forma's temple)
       walls(c, cx0, cy0, cx1, cy1, z0, H, p.wl, p.wr);
       door(c, cy1, -0.15, 0.15, z0, z0 + 10, '#3a2e24', m);
-      if (g) colonnade(c, p, -0.72, -0.72, 0.72, 0.72, z0, H, 5, 0.045, 'LR', false, 6);
+      if (g) colonnade(c, p, -0.72, -0.72, 0.72, 0.72, z0, H, 5, 0.0435, 'LR', false, 6);
       else colonnade(c, p, -0.62, 0.3, 0.62, 0.72, z0, H, 4, 0.05, 'L');
       const ey0 = g ? -0.78 : -0.72, ey1 = g ? 0.78 : 0.76;
       box(c, -0.78, ey0, 0.78, ey1, H, H + 2.5, p.col[0], p.col[1], p.col[0]);
