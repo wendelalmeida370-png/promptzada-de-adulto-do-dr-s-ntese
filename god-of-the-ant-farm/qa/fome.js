@@ -184,11 +184,12 @@ if (fset) {
 // ---------------- h7 the wounded sleeper: wakes at night to eat, and sleeps again (L-171) ----------------
 // (someone of a calm town with food in its store, at night, worn out — the sleep of exhaustion, that a meal did not
 // break — with the hunger at the top and 40 of life)
-const calmOne = (skip) => {
+const calmOne = (skip, also) => {
   const ok2 = s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 5;
   for (const s of [...S.settlements.values()].filter(ok2).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)) {
     const o = [...S.villagers.values()].filter(q => q.set === s.id && q.age >= 18 && q.age < 50 && !q.captive && !q.jail && !q.aboard && !q.ug && !q.held && !q.air && !(S.avatar && S.avatar.id === q.id) && !(skip || []).includes(q.id) && q.home && S.buildings.get(q.home) && S.buildings.get(q.home).built && W.reaches(q, ...V.frontTile(V.nearestDropoff(q.x, q.y, q.set)))).sort((a, b) => a.id - b.id)[0];
-    if (o) return o;
+    if (o && (!also || also(o))) return o;
+    if (also) { const o2 = [...S.villagers.values()].filter(q => q.set === s.id && q.age >= 18 && q.age < 50 && !q.captive && !q.jail && !q.aboard && !q.ug && !q.held && !q.air && !(S.avatar && S.avatar.id === q.id) && !(skip || []).includes(q.id) && q.home && S.buildings.get(q.home) && S.buildings.get(q.home).built && also(q) && W.reaches(q, ...V.frontTile(V.nearestDropoff(q.x, q.y, q.set)))).sort((a, b) => a.id - b.id)[0]; if (o2) return o2; }
   }
   return null;
 };
@@ -226,7 +227,10 @@ const calmOne = (skip) => {
 
 // ---------------- h9 with nothing to eat in reach, a sleeper is not woken at every step ----------------
 {
-  const v = calmOne(); let wakes = 0, asleep = 0, looks = 0, walk = 0; let f = null, food0 = 0; const seen = [];
+  // (one who is neither hunter nor soldier: the hunter on the way to bed meets an animal, kills it and eats of the meat, and
+  // rested at the night's end is the town's night watch — the world's own causes, not the hunger the case is about: in the
+  // cidade grown by L-322 that was Isetnofret, T-135)
+  const v = calmOne([], q => q.role !== 'cacador' && q.role !== 'guerreiro'); let wakes = 0, asleep = 0, looks = 0, walk = 0; let f = null, food0 = 0; const seen = [];
   if (v) {
     f = G.Fac.get(S.settlements.get(v.set).fac); food0 = f.stock.food;
     const h = S.buildings.get(v.home); const pan0 = h ? h.pantry || 0 : 0;
@@ -244,6 +248,8 @@ const calmOne = (skip) => {
     // (counted from when she lies down: the way to her bed is the world's own — 3.5 s of it once the plan's door was on —,
     // and the case is about not being woken at every step once asleep: T-076)
     while (walk < 60 && !(v.task && v.task.type === 'sleep' && v.sleeping)) { v._noStore = S.clock + 5; pick(); M.viver(0.5); walk++; }
+    // (and nothing plain to eat in the hands once in bed either: what the way to it may have put there)
+    if (v.carry && v.carry.k === 'food' && !v.carry.op && !v.carry.to && !v.carry.cid) D.use('v:' + v.id, 'food', v.carry.n, { code: 'teste', mine: true, part: true });
     for (let k = 0; k < 40; k++) { v._noStore = S.clock + 5; pick(); const was = v.task && v.task.type === 'sleep'; M.viver(0.5); looks++; if (v.task && v.task.type === 'sleep' && v.sleeping) asleep++; if (was && !(v.task && v.task.type === 'sleep')) { wakes++; seen.push(v.task ? v.task.type : '-'); } }
     v._noStore = 0; void pan0; void food0;
     for (const [b, [n, g]] of bushes) { b.berries = n; b.grow = g; }
