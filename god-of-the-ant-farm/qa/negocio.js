@@ -680,14 +680,25 @@ function stallNow() {
   const noCoin = new Set([...S.factions.values()].filter(f => !E.coinage(f.id)).map(f => f.id)); const learn0 = G.Civ.learn;
   G.Civ.learn = function (f, t) { if (t === 'moeda' && f && noCoin.has(f.id)) return false; return learn0.apply(this, arguments); };
   // (the no-coin towns with a market, the biggest first: a town whose planner keeps no merchant for the case — a town short
-  // of hands gives its trades away first, the merchant to the quay — passes it to the next one, told in the case)
-  const tws = [...S.settlements.values()].filter(s => !E.coinage(s.fac) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'mercado' && b.built)).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id));
+  // of hands gives its trades away first, the merchant to the quay — passes it to the next one, told in the case; when none
+  // keeps one, the god's hand puts a market where the town's own planner would, in the next town without coin, the biggest
+  // first, and asks it for a merchant the same way — in the new «cidade» the only one with a market was Roma, ten grown
+  // people, all at food and building, and its planner gave the merchant away first, T-184)
+  const byPop = (a, b) => G.Village.pop(b.id) - G.Village.pop(a.id);
+  const free = [...S.settlements.values()].filter(s => !E.coinage(s.fac)).sort(byPop);
+  const tws = free.filter(s => mkOf(s)), bare = free.filter(s => !mkOf(s)), queue = tws.slice();
   let info = 'nenhuma cidade sem moeda com mercado', ok15 = false, ok17 = false, info17 = 'não chegou à venda', went = false; const past = [];
-  for (const tw of tws) {
-    if (went) break;
-    const mkt = [...S.buildings.values()].find(b => b.set === tw.id && b.type === 'mercado' && b.built); const f = G.Fac.get(tw.fac);
+  while (!went) {
+    let tw = queue.shift(), byGod = false;
+    if (!tw) {
+      tw = bare.shift(); if (!tw) break;
+      const pos = G.Village.findSite(tw, 'mercado');
+      if (!pos || pos.demolish) { past.push(`${tw.name}: sem lugar para um mercado`); continue; }
+      G.Village.addBuilding('mercado', pos[0], pos[1], tw.id, true); tws.push(tw); byGod = true;
+    }
+    const mkt = mkOf(tw); const f = G.Fac.get(tw.fac);
     let mer = wantMerchant(tw, mkt);
-    if (!mer) { info = `${tw.name}: o povo não nomeou mercador para o mercado`; } else {
+    if (!mer) { info = `${tw.name}${byGod ? ' (o mercado posto pelo deus)' : ''}: o povo não nomeou mercador para o mercado`; } else {
     // (the world may close the stall in the middle — a caravan takes its merchant, the planner names him to another
     // trade —: then the merchant the town has now, a stall, the wholesale on account and a buyer again, up to three times)
     let zz = null, K = null, L0 = 0, onAccount = false, t0 = 0, n0 = 0, buyer = null, again = ''; const L00 = S.ledgerN;
@@ -727,7 +738,7 @@ function stallNow() {
     live(150, () => !!book('troca', e => e[0] > L0 && e[9] === mer.id).length && !mer.carry || watch());
     const owe1 = Object.values(zz.owe).reduce((a, b) => a + b, 0);
     ok15 = onAccount && !!sale && inKind && owe1 < owe0 - 1e-6 && !bad().length;
-    info = `${tw.name} (${f.civ}, sem moeda): ${mer.name} levou ${E.name(K)} fiado (${onAccount ? 'devendo ' + r2(zz.owe[K] || owe0) : 'NÃO'}); ${buyer.name} ${sale ? `comprou ${sale[6]} e pagou ${pay ? pay[6] + ' de ' + E.name(pay[5]) : '?'}` : 'NÃO comprou'} (${talk.slice(0, 3).join(' / ')}); a troca (${got} de comida, paga ${kindRef[0] === 'h' ? 'à casa do mercador' : 'à banca'}) levada de lá ao armazém: a dívida ${r2(owe0)} → ${r2(owe1)}`;
+    info = `${tw.name} (${f.civ}, sem moeda${byGod ? ', o mercado posto pelo deus' : ''}): ${mer.name} levou ${E.name(K)} fiado (${onAccount ? 'devendo ' + r2(zz.owe[K] || owe0) : 'NÃO'}); ${buyer.name} ${sale ? `comprou ${sale[6]} e pagou ${pay ? pay[6] + ' de ' + E.name(pay[5]) : '?'}` : 'NÃO comprou'} (${talk.slice(0, 3).join(' / ')}); a troca (${got} de comida, paga ${kindRef[0] === 'h' ? 'à casa do mercador' : 'à banca'}) levada de lá ao armazém: a dívida ${r2(owe0)} → ${r2(owe1)}`;
     // ---- n17: the stall closes owing — it pays first (its stock back to the store at what it cost, then the exchange
     // still at the house), and only the rest goes home: what was taken on account is never a gift. (The debt made and the
     // stall closed in the same moment, by the god's body in the merchant's place: the planner may send a merchant to the
