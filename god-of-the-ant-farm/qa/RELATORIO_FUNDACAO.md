@@ -110,8 +110,8 @@ antes do conserto, e a prova que falhava passa depois. Por família:
   L-191, L-215, L-219). A obra deixada no último milésimo, o povo com comida e sem armazém que não comia, o exército que
   voltava para casa encerrado no load, o motim que sumia no save, o cais com água só na diagonal, as famílias do modo
   desenvolvedor com filhos nascidos antes da hora.
-- **O que os mundos novos acharam no fechamento** (L-300 a L-306, L-308, L-310 a L-314, L-320 a L-322). Gerando de novo os
-  mundos prontos e rodando as provas neles apareceram:
+- **O que os mundos novos acharam no fechamento** (L-300 a L-306, L-308, L-310 a L-316, L-320 a L-326, L-330, L-332,
+  L-340 a L-349). Gerando de novo os mundos prontos e rodando as provas neles apareceram:
   - a água nas mãos fora do seu recado (L-300);
   - a crônica que contava de novo a primeira represa dos castores (L-301);
   - a flecha do Amor Divino que sumia sem uma palavra (L-302);
@@ -125,6 +125,24 @@ antes do conserto, e a prova que falhava passa depois. Por família:
     nunca acontecia (L-312 a L-314).
   - o calceteiro que escolhia a rua de outra ilha e tentava de novo a cada 12 s, sem fim (L-322, achado pela regressão
     final: com o conserto, o mundo de teste constrói mais).
+  - mais dois da casa: o aluguel que ia a um parente da família, e a família de aluguel que se dizia «na casa de outros»
+    (L-315, L-316);
+  - a caixa pesada largada pela ajudante no meio do caminho, e a ajudante que parava na esquina (L-330, L-332);
+  - a soleira e a porta: os degraus num portão ou no lote de outro prédio, o pé medido no chão errado, o «E» que dava o
+    peixe na soleira dentro d'água (L-323 a L-326);
+  - o corpo encarnado que acordava antes de uma pessoa do mundo no mesmo estado (L-341);
+  - os muros: o portão do plano sobre um muro de pé (L-340), o muro que corria dentro do muro da cidade vizinha e fechava
+    casas num bolsão (L-342), o muro que fechava um prédio da própria cidade — a forja de Hedeby — (L-344) e o prédio
+    construído colado num portão, dos dois lados (L-348);
+  - os caminhos: o caminho longo que a busca exata não achava no orçamento, e a comerciante que não voltava de uma
+    caravana (L-343); a viagem que levava quem não chegava a pé ao cais e o embarcava de longe, através do mar (L-346);
+    quem buscava o caminho de um prédio aonde o mapa dizia que não se chega, e a carga levada ao armazém do outro lado da
+    água (L-349);
+  - a crônica com duas festas iguais no mesmo ano, que não se distinguiam (L-347).
+
+  Quase todos esses foram achados pelo verificador no fim de uma prova: alguém preso num lugar aonde não se chega, ou
+  falhando o caminho seguidas vezes. O conserto de cada um foi na causa — o mapa de regiões perguntado onde não era —, não
+  no verificador.
 
   O mais sério foi o **L-320**. Desde um conserto desta mesma versão (L-215), uma função de mesmo nome tomou o lugar de
   outra, e as 162 frases do roteiro das histórias (a sentença lida, o chamado da família, a herança) deixaram de ser
@@ -146,6 +164,12 @@ antes do conserto, e a prova que falhava passa depois. Por família:
   andamento (§9).
 - **A vida dentro das casas** ainda não é contada pela casa: quem dorme, quem come à mesa, quem saiu para trabalhar e por
   quê. Isso também é do Patch 2.
+- **As compras da família** (L-331 e L-345, abertos). Só quem não tem ofício vai às compras, e a vontade de comprar abre
+  antes de qualquer banca abrir; uma tentativa sem ninguém para vender põe a casa em meio dia de espera. Num dia da
+  metrópole de antes, 104 tentativas e 19 casas que compraram. O conserto pensado muda a economia da casa, e vai com o
+  Patch 2, junto das oficinas cheias (D-090).
+- **Duas regras para decidir no Patch 2:** se um ato em curso (a caixa que alguém foi buscar) segura as mãos contra uma
+  ida de fora, como a caverna; e se a execução espera quem leva uma compra para casa, como a festa já espera.
 - **Não medido:** o desempenho numa placa de vídeo de verdade e num celular.
 
 ## 7. O fechamento: o reinício e o navegador novo
