@@ -405,7 +405,10 @@
     // (a goal the person may let go: drop names the world's door for it, K.giveUp)
     if (!coinPeople(set)) { out.goals.push({ id: v.id, kind: 'goal', src: 'casa-nova', txt: `Uma casa para a família (${WHY[why]}): pedir ao povo.`, day: G.S.day, drop: 'casa-nova' }); return; }
     const alvo = h && h.poupa && h.poupa.by === v.id ? h.poupa.alvo : r2(K.price(set, wantType(set)) + 2);
-    out.goals.push({ id: v.id, kind: 'goal', src: 'casa-nova', txt: `Uma casa para a família (${WHY[why]}): juntadas ${Math.floor(K.savings(v))} de ${Math.ceil(alvo)} moedas.`, day: h && h.poupa ? h.poupa.d : G.S.day, prog: Math.min(1, K.savings(v) / alvo), drop: 'casa-nova' });
+    // (the coins enough already — the family has not decided yet —: said so, never «52 of 18 saved», L-218)
+    const has = K.savings(v);
+    const said = has + EPS >= alvo ? `já há moedas para ela (${Math.floor(has)} juntadas; bastam ${Math.ceil(alvo)})` : `juntadas ${Math.floor(has)} de ${Math.ceil(alvo)} moedas`;
+    out.goals.push({ id: v.id, kind: 'goal', src: 'casa-nova', txt: `Uma casa para a família (${WHY[why]}): ${said}.`, day: h && h.poupa ? h.poupa.d : G.S.day, prog: Math.min(1, has / alvo), drop: 'casa-nova' });
   });
   // a house that saves buys no luxury (act-compras.js asks)
   K.saving = h => !!(h && h.poupa && P(h.poupa.by) && P(h.poupa.by).home === h.id);

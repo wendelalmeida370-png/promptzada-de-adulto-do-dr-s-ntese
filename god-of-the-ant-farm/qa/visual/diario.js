@@ -71,9 +71,11 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     const p1 = await panel();
     const days = p1.rows.filter(r => /(hoje|ontem|dia \d+)/.test(r.meta)).length, origins = p1.rows.filter(r => r.meta && !/^(hoje|ontem|dia \d+)$/.test(r.meta)).length;
     const needA = p1.rows.find(r => r.sec === 'goals' && /a casa nova/.test(r.meta));
+    // (a goal never reads as nonsense: «juntadas 52 de 18 moedas» for a family that has enough already, L-218)
+    const over = p1.rows.filter(r => { const m = /juntadas (\d+) de (\d+) moedas/.exec(r.txt); return !!m && +m[1] >= +m[2]; });
     await shot('diario-antes');
-    ok('1. o painel do diário sobre os olhos do corpo: a tecla J abre e fecha, o botão do HUD e o da ficha abrem; cada linha com a origem e o dia; só as seções que o mundo tem', j1 && !j2 && j3 && j4 && p1.rows.length > 0 && origins === p1.rows.length && days === p1.rows.length && !!needA && p1.secs.every(k => p1.rows.some(r => r.sec === k)),
-      `J ${j1 ? 'abriu' : 'NÃO abriu'}, J de novo ${j2 ? 'NÃO fechou' : 'fechou'}, o botão ${j3 ? 'abriu' : 'NÃO abriu'}, a ficha ${j4 ? 'abriu' : 'NÃO abriu'}; ${p1.rows.length} linhas em ${p1.secs.join(', ')}: ${origins} com origem, ${days} com o dia; o objetivo da casa: ${needA ? `«${needA.txt}» (${needA.meta})` : 'NENHUM'}`);
+    ok('1. o painel do diário sobre os olhos do corpo: a tecla J abre e fecha, o botão do HUD e o da ficha abrem; cada linha com a origem e o dia; só as seções que o mundo tem', j1 && !j2 && j3 && j4 && p1.rows.length > 0 && origins === p1.rows.length && days === p1.rows.length && !!needA && !over.length && p1.secs.every(k => p1.rows.some(r => r.sec === k)),
+      `J ${j1 ? 'abriu' : 'NÃO abriu'}, J de novo ${j2 ? 'NÃO fechou' : 'fechou'}, o botão ${j3 ? 'abriu' : 'NÃO abriu'}, a ficha ${j4 ? 'abriu' : 'NÃO abriu'}; ${p1.rows.length} linhas em ${p1.secs.join(', ')}: ${origins} com origem, ${days} com o dia; o objetivo da casa: ${needA ? `«${needA.txt}» (${needA.meta})` : 'NENHUM'}${over.length ? ` — uma conta sem sentido: «${over[0].txt}»` : ''}`);
 
     // ------------------------------ 2. the body accepts a purchase: a house for the family ------------------------------
     await page.keyboard.press('j'); await frames(1);

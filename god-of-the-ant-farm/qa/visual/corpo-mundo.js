@@ -193,8 +193,13 @@ G.Act.def('prova-levar', {});
   else {
     const d = G.Vg.door(st); const b = G.Avatar.state(); b.yaw = Math.atan2(d[1] * L - b.Z, d[0] * L - b.X); v.hunger = 5;
     let op = null; G.Possess.apply(() => { op = G.Act.start('prova-levar', { to: 'h:' + house.id, why: 'prova' }); return { ok: true }; }); frame();
-    clearHands(v); god(() => G.Depot.make('v:' + v.id, 'sal', 2, { code: 'teste', op: op ? op.id : 0 })); const s0 = f.stock.sal || 0;
-    const b1 = G.Interact.best(); for (let k = 0; k < 60; k++) { holdE('porta'); frame(); }
+    clearHands(v); god(() => G.Depot.make('v:' + v.id, 'sal', 2, { code: 'teste', op: op ? op.id : 0 }));
+    // (someone between the body and the door — a child playing by the fire —: «E» is theirs, as it should be; the world goes on
+    // until the door is what «E» means here, as a player waits for the way to clear, T-121)
+    let b1 = G.Interact.best(), waited = 0;
+    for (; waited < 600 && !(b1 && b1.id === 'porta'); waited++) { frame(); b1 = G.Interact.best(); }
+    const s0 = f.stock.sal || 0;
+    for (let k = 0; k < 60; k++) { holdE('porta'); frame(); }
     const refused = !!b1 && b1.id === 'porta' && !b1.ok && /destino/.test(b1.why) && (f.stock.sal || 0) === s0 && v.carry && v.carry.n === 2;
     clearHands(v); god(() => G.Depot.make('v:' + v.id, 'sal', 2, { code: 'teste', to: 'f:' + fid })); const led0 = S.ledgerN || 0; const c2 = holdE('porta');
     for (let k = 0; k < 300 && G.Avatar.busy(); k++) frame();
@@ -203,7 +208,7 @@ G.Act.def('prova-levar', {});
     clearHands(v); G.Possess.apply(() => { if (op) G.Act.end(op, 'cancel', 'prova'); return { ok: true }; }); frame();
     const bad = vbad();
     ok('a carga que tem destino não vai para o estoque comum; a que é dele entra pelo depósito, no livro-razão', refused && !!(c2 && c2.ok) && went && !bad.length,
-      `a saca de um trabalho para ${G.Village.buildName(house).toLowerCase()}: ${b1 ? b1.label + (b1.ok ? '' : ' — ' + b1.why) : 'nada'} (estoque ${(f.stock.sal || 0) === s0 + 2 ? 'depois +2' : 'igual'}); a saca para o armazém: ${went ? 'entrou (' + (e ? e[3] + ' → ' + e[4] : '') + ')' : 'não entrou'}; ${vtxt(bad)}`);
+      `a saca de um trabalho para ${G.Village.buildName(house).toLowerCase()}: ${waited ? `(a frente da porta livre depois de ${waited} quadros) ` : ''}${b1 ? b1.label + (b1.ok ? '' : ' — ' + b1.why) : 'nada'} (estoque ${(f.stock.sal || 0) === s0 + 2 ? 'depois +2' : 'igual'}); a saca para o armazém: ${went ? 'entrou (' + (e ? e[3] + ' → ' + e[4] : '') + ')' : 'não entrou'}; ${vtxt(bad)}`);
   } }
 
 // what the world's activities offer: a definition made here for the proof (a sack left on the ground, picked up — C1's door)
