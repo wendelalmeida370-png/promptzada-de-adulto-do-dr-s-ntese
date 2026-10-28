@@ -170,6 +170,10 @@
   // the next errand goes on in the building one is in — nobody is let out at the door)
   Vg.endTask = function (v, o) {
     const S = G.S; const t = v.task;
+    // (the body the player lives: the world's orders reach it through setTask — a call it may answer, or a force of the world
+    // that gives the body back (Possess.ask) —; an order that ends its errand first, from outside, would wake it in its bed and
+    // put it out at the door before asking: the secret society's call to a hunter did, L-232)
+    if (t && t.type === 'avatar' && S.avatar && S.avatar.id === v.id) return;
     // (one left in a building with no errand — the body given back in a room — goes out by its door with the next errand too,
     // and one left asleep with none wakes for it: never walking about «inside», nor asleep on their feet)
     if (!t) { if (v.age >= 2) { if (v.inside && !v.ug && !(o && o.stay === v.inside)) leave(v); v.sleeping = false; } return; }
@@ -190,8 +194,13 @@
     v.sleeping = false;
     v.task = null; v.path = null; v.act = '';
   };
-  // (by a building's door: at its front, where one goes in from)
-  function atDoor(v, b) { const d = V_door(b); const f = G.Village.frontTile(b); return G.dist(v.x, v.y, d[0], d[1]) <= 1.6 || G.dist(v.x, v.y, f[0], f[1]) <= 1.6; }
+  // (by a building's door: at its front, where one goes in from — within r tiles of the door or of the tile before it)
+  function atDoor(v, b, r) { r = r || 1.6; const d = V_door(b); const f = G.Village.frontTile(b); return G.dist(v.x, v.y, d[0], d[1]) <= r || G.dist(v.x, v.y, f[0], f[1]) <= r; }
+  Vg.atDoor = atDoor;
+  // (a way in that ended away from the door — a way dropped on the street: move() takes no way for arrived — is no way in:
+  // nobody goes into a building from across the street, L-231)
+  const IN_R = 3;
+  Vg.IN_R = IN_R;
   // (out of a building by its door — the people's door, the plan's)
   function leave(v) { const b = G.S.buildings.get(v.inside); if (b) { const [dx, dy] = V_door(b); v.x = dx; v.y = dy; } v.inside = 0; }
   // the door of a building's plan, when the interiors give one (G.Vg.planDoor = b => [x, y] | null, in tiles, outside the
@@ -1248,7 +1257,7 @@
           if (row) { t.row = target.id; if (!Vg.goto(v, row[0], row[1], false)) { G.Life.rowRelease(v); t.row = 0; if (!Vg.goto(v, fx + G.rr(-0.4, 0.4), fy + G.rr(-0.4, 0.4), true)) return end(v); } }
           else if (!Vg.goto(v, fx + G.rr(-0.4, 0.4), fy + G.rr(-0.4, 0.4), true)) return end(v);
           t.st = 1;
-        } else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; const b = t.inT && S.buildings.get(t.inT); if (b && b.built) v.inside = b.id; else t.inT = 0; } }
+        } else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; const b = t.inT && S.buildings.get(t.inT); if (b && b.built && atDoor(v, b, IN_R)) v.inside = b.id; else t.inT = 0; } } // (away from the door: the prayer where one is)
         else {
           v.act = 'pray';
           const b = S.buildings.get(t.b);
@@ -1335,7 +1344,7 @@
         if (!h || !h.built || h.type === 'ruin') return end(v);
         if (t.st === 0 && v.inside === h.id) { t.st = 2; break; } // (already at home)
         if (t.st === 0) { const [fx, fy] = G.Village.frontTile(h); if (!Vg.goto(v, fx, fy, true)) return end(v); t.st = 1; }
-        else if (t.st === 1) { if (move(v, dt, 1.25)) { t.st = 2; v.inside = h.id; } }
+        else if (t.st === 1) { if (move(v, dt, 1.25)) { if (atDoor(v, h, IN_R)) { t.st = 2; v.inside = h.id; } else if ((t.re = (t.re || 0) + 1) <= 2) t.st = 0; else return end(v); } }
         else if (S.weather.storm <= 0 || S.weather.rain < 0.2 || t.age > 45) end(v);
         break;
       }
@@ -1479,6 +1488,8 @@
     if (t.st === 1) {
       if (hungerWakes(v)) return; // (on the way to bed as in it)
       if (!move(v, dt)) return;
+      // (the way home ended away from its door: the way again, twice; then the night outdoors, where one is — L-231)
+      if (t.home) { const h = S.buildings.get(t.home); if (h && h.built && !atDoor(v, h, IN_R)) { if ((t.re = (t.re || 0) + 1) <= 2) { t.st = 0; return; } t.home = 0; } }
       // a path that never came: they climb out of the water before lying down
       if (!t.home && !W.dryXY(v.x, v.y)) { const p = W.nearestLand(v.x, v.y, 3); if (p) { v.x = p[0]; v.y = p[1]; } }
       t.st = 2; v.sleeping = true;

@@ -176,7 +176,8 @@
       if (!H.goto(v, fx, fy, true)) { noWay.set(v.id, S.clock); return H.end(v); }
       t.st = 1; return;
     }
-    if (t.st === 1) { if (H.move(v, dt)) arrive(v, t, h); else if (t.age > 60) H.end(v); return; }
+    // (in only from its door: a way that ended away from it is no way in — the way again, twice, then the errand ends, L-231)
+    if (t.st === 1) { if (H.move(v, dt)) { if (!G.Vg.atDoor || G.Vg.atDoor(v, h, G.Vg.IN_R)) arrive(v, t, h); else if ((t.re = (t.re || 0) + 1) <= 2) t.st = 0; else { noWay.set(v.id, S.clock); H.end(v); } } else if (t.age > 60) H.end(v); return; }
     v.moving = false; v.path = null;
     const night = G.isNight();
     switch (t.what) {
