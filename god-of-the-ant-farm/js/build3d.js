@@ -3391,8 +3391,11 @@ float m3scale(float p) {
     for (let k = 0; k < n; k++) { const c = boxes[k]; CUTU.a.value[k].set(c[0], c[1], c[2]); CUTU.b.value[k].set(c[3], c[4], c[5]); lo.min(CUTU.a.value[k]); hi.max(CUTU.b.value[k]); }
   }
   // where someone the world has inside a building drawn open stands, sits, lies or works: Interiors.placeOf, in the world's
-  // metres — { X, Y, Z, yaw, st } — or null (not open: not drawn); the same for a step of the world
+  // metres — { X, Y, Z, yaw, st } — or null (not open: not drawn); the same for a step of the world. The state drawn is the
+  // place's own when it says one (q.st: the rule of the house or of the work that gave the place — sleep, sit, eat, cook,
+  // pray…), else the old one of its pose
   const placeMemo = new Map(); let placeT = -1;
+  const POSE_ST = { deitado: 'sleep', sentado: 'sit', trabalhando: 'interact' };
   B3.openPlace = function (v) {
     if (!v || !(v.inside > 0)) return null; let o = opened.get(v.inside);
     // (an open shell — a fair —, its plan made: the same, without opening it)
@@ -3401,7 +3404,7 @@ float m3scale(float p) {
     let pl = placeMemo.get(v.id); if (pl !== undefined) return pl; pl = null;
     const q = G.Interiors.placeOf(v);
     if (q && q.b === o.b) { const l = o.p.levels.find(x => x.lv === q.lv); const L = TL(); const y0 = G.Space.plinth(o.b).y0;
-      pl = { X: o.b.x * L + q.x, Z: o.b.y * L + q.z, Y: y0 + (l ? l.y : 0) + (q.y || 0) + FLOOR_UP, yaw: Math.PI / 2 - (q.ry || 0), st: { deitado: 'sleep', sentado: 'sit', trabalhando: 'interact' }[q.pose] || 'idle' }; }
+      pl = { X: o.b.x * L + q.x, Z: o.b.y * L + q.z, Y: y0 + (l ? l.y : 0) + (q.y || 0) + FLOOR_UP, yaw: Math.PI / 2 - (q.ry || 0), st: q.st || POSE_ST[q.pose] || 'idle' }; }
     placeMemo.set(v.id, pl); return pl;
   };
   B3.bounds = function (b) {
