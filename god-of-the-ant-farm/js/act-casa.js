@@ -160,11 +160,13 @@
   K.plan = function (v, fam, set, occ, why) {
     const S = G.S; occ = occ || occupancy(); fam = fam || K.family(v);
     const fits = b => b.set === set.id && built(b) && b.type !== 'barraco' && !occ.get(b.id) && G.BDEF[b.type].housing >= fam.length && b.id !== v.home;
-    let free = null, let_ = null;
+    let free = null, let_ = null, letR = 0;
     for (const b of S.buildings.values()) {
       if (!fits(b)) continue;
       if (!b.dono) { if (!free || b.id < free.id) free = b; }
-      else if (K.landlord(b) && !kin(K.landlord(b), v) && coinPeople(set) && (why || K.need(v)) !== 'aluga') { if (!let_ || b.id < let_.id) let_ = b; }
+      // (of the houses to let, the one of the lowest rent — the family short of coin rents what it can pay —, then the first:
+      // L-312)
+      else if (K.landlord(b) && !kin(K.landlord(b), v) && coinPeople(set) && (why || K.need(v)) !== 'aluga') { const rb = K.rentOf(set, b.type); if (!let_ || rb < letR - EPS || (Math.abs(rb - letR) <= EPS && b.id < let_.id)) { let_ = b; letR = rb; } }
     }
     const type = free ? free.type : wantType(set);
     const price = free ? r2(K.price(set, free.type, [free.x, free.y]) * 0.8) : K.price(set, type);
@@ -377,7 +379,9 @@
   const kill0 = G.Village.kill;
   G.Village.kill = function (v) {
     if (v && G.S.villagers.has(v.id)) for (const b of G.S.buildings.values()) {
-      if (!housing(b)) continue;
+      // (what is left of a house that fell or was left to the wind — a ruin — keeps the owner it had, and is no one's to
+      // inherit: with the owner gone, it is nobody's — L-304)
+      if (!housing(b)) { if (b.dono === v.id) { b.dono = 0; b.aluga = null; } continue; }
       if (b.dono === v.id) {
         const heir = b.built ? heirOf(b, v) : null;
         b.dono = heir ? heir.id : 0;

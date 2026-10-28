@@ -37,7 +37,7 @@
   const rulerOf = fid => { const f = G.Fac.get(fid); return f && f.leader ? P(f.leader) : null; };
   const titleOf = (fid, r) => { const f = G.Fac.get(fid); return f && r ? G.Politics.title(f, r) : 'senhor'; };
   const rulerWord = fid => { const r = rulerOf(fid); return r ? (r.g === 'f' ? 'da ' : 'do ') + titleOf(fid, r).toLowerCase() : 'de quem governa'; };
-  const socOf = s => (s.data.soc ? Sc.get(s.data.soc) : null);
+  const socOf = s => (s && s.data.soc ? Sc.get(s.data.soc) : null); // (no story, no society — L-321)
   const deW = w => { const m = /^(o|a|os|as) (.*)$/.exec(w || ''); return m ? ({ o: 'do', a: 'da', os: 'dos', as: 'das' })[m[1]] + ' ' + m[2] : 'de ' + w; };
   const what = s => s.data.what || (socOf(s) ? Sc.art(socOf(s).name) : s.data.fake ? Sc.art(s.data.fake) : 'uma seita');
   const nightNow = () => G.S.time > 0.74 || G.S.time < 0.12;
@@ -555,7 +555,9 @@
     const s = c.story(); const p = c.v('p'); if (!s || !p) return 'sem';
     if (!c.take('p', { vital: true, force: true })) return 'ocupada';
     const k = c.v('k'); const home = G.S.buildings.get(p.home);
-    const at = home && home.built ? (Sn.spot(G.Village.frontTile(home)[0] + 0.5, G.Village.frontTile(home)[1] + 0.8, 1.5)) : [p.x, p.y];
+    // (no free place before the door — the front of the house taken —: where they stand; it was nothing, and the kin put
+    // beside it broke the scene, L-303)
+    const at = (home && home.built && Sn.spot(G.Village.frontTile(home)[0] + 0.5, G.Village.frontTile(home)[1] + 0.8, 1.5)) || [p.x, p.y];
     if (k) c.take('k', { keep: true });
     yield c.walk('p', at, { max: 60 });
     if (k) yield c.walk('k', Sn.spot(at[0] + 0.9, at[1] + 0.3, 1) || at, { max: 30 });

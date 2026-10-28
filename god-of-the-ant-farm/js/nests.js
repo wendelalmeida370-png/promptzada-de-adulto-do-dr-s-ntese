@@ -150,7 +150,8 @@
         a.gnawT = 0; a.gnawTree = 0; t.gnaw = 0; G.Nature.fellTree(t, a.face || 1);
         d.prog = Math.min(1, d.prog + 0.22); d.trees++;
         if (d.prog >= 0.44 && !d.lodge) { d.lodge = 1; }
-        if (!S.damSeen) { S.damSeen = S.day; log(`Os castores derrubaram as árvores da margem e represaram o riacho${G.Stories ? G.Stories.where(d.x, d.y).at : ''}. Atrás da represa, a água parou e virou um lago pequeno com a toca deles no meio.`, 'deer', d.x, d.y); }
+        // (the first dam is told once: the mark goes in the save, a yes or no — a day 0 counted as «not seen» — L-301)
+        if (!S.damSeen) { S.damSeen = true; log(`Os castores derrubaram as árvores da margem e represaram o riacho${G.Stories ? G.Stories.where(d.x, d.y).at : ''}. Atrás da represa, a água parou e virou um lago pequeno com a toca deles no meio.`, 'deer', d.x, d.y); }
       }
     }
   }
@@ -165,8 +166,9 @@
     if (tT >= 12) { tT = 0; for (const k in SP) if (SP[k].nests && G.R() < 0.5) tryNest(k); }
   };
   (G.saveHooks = G.saveHooks || []).push({
-    save(out) { out.nests = G.S.nests || []; out.dams = G.S.dams || []; },
-    load(o) { G.S.nests = o.nests || []; G.S.dams = o.dams || []; },
+    save(out) { out.nests = G.S.nests || []; out.dams = G.S.dams || []; out.damSeen = !!G.S.damSeen; },
+    // (a save of before, with a dam already standing — trees gnawed for it —, had told the first dam: L-301)
+    load(o) { G.S.nests = o.nests || []; G.S.dams = o.dams || []; G.S.damSeen = o.damSeen !== undefined ? !!o.damSeen : Array.isArray(G.S.dams) && G.S.dams.some(d => d && d.trees > 0); },
   });
 
   // ------------------------------ drawing ------------------------------
