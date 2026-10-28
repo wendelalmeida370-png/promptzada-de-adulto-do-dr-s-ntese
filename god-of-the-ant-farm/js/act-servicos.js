@@ -83,9 +83,10 @@
   const facOf = b => G.Village.facOfSet(b.set);
   const coin = b => E.coinage(facOf(b));
   Te.withCoin = coin;
-  // the places in the water: the interiors' allotter says whether one more has one (In.freePlace); with no plan, a count
+  // the places in the water: the interiors' allotter says whether one more has one, counting who is inside (In.freePlace,
+  // P4); baths with no plan (In.table null), a count
   function full(b, op) {
-    const In = G.Interiors; if (In && In.freePlace && b.ip && !In.freePlace(b, 'banhar')) return true;
+    const In = G.Interiors; if (In && In.freePlace && In.table && In.table(b)) return !In.freePlace(b, 'banhar');
     return Object.keys(op.data.banho).length >= Te.CAP;
   }
   Te.full = b => { const op = Te.dia(b); return !op || full(b, op); };

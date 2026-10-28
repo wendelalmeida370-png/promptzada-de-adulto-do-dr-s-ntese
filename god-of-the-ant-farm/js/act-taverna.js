@@ -113,10 +113,11 @@
   };
   // what a round or a meal is called, as its people says it ("uma caneca de cerveja", "um prato de comida")
   T.nome = k => (k === 'food' ? 'um prato de comida' : (Tv() && Tv().NAME[k] ? Tv().NAME[k][2] : 'uma bebida'));
-  // the seats: the interiors' allotter says whether one more has a place to sit (In.freePlace); with no plan, a count
+  // the seats: the interiors' allotter says whether one more has a place at a table or on a bench, counting who is inside
+  // (In.freePlace, P4); a tavern with no plan (In.table null), a count
   function full(b, op) {
     const In = G.Interiors; const n = Object.keys(op.data.mesa).length;
-    if (In && In.freePlace && b.ip) return !In.freePlace(b, 'comer') && !In.freePlace(b, 'sentar');
+    if (In && In.freePlace && In.table && In.table(b)) return !In.freePlace(b, ['comer', 'sentar']);
     return n >= T.SEATS;
   }
   T.full = full;
