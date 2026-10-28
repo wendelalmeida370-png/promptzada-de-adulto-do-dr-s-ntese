@@ -1,4 +1,5 @@
-// motor: as peças novas do motor das plantas (a B4 do Patch 2, para as receitas dos monumentos do P3) provadas em Node,
+// motor-plantas: as peças novas do motor das plantas (a B4 do Patch 2, para as receitas dos monumentos do P3) provadas em
+// Node (o qa/motor.js é outra coisa: as contas do Math no Node e no navegador, T-123),
 // sem mundo, com receitas de teste montadas aqui (um tipo e uma família que o jogo não tem: só esta prova os registra):
 //   1. o anel: P.ringWall — n paredes retas pelos cantos no círculo, a primeira de frente para a rua e reta (n múltiplo de
 //      quatro), os arcos (portas 'vao' com arch: 1 na porta e no vão), as janelas em arco; a grade fecha o anel (a parede de
@@ -16,11 +17,11 @@
 //      lateral, os lugares de atuar de pé); os lugares sem peça (P.marks: lutar na areia)
 //   5. a base maciça (shell.base 'macica', baseH, os degraus da base na casca), a colunata (P.colonnade: as colunas parede, os
 //      intercolúnios passagens, o do meio a entrada) e a escada larga de fora (1,20 m ao menos; mais estreita é recusada)
-//   node qa/motor.js
+//   node qa/motor-plantas.js
 const M = require('./nodemundo.js');
 const G = M.load({});
 const In = G.Interiors; const C = In.CELL; const CS = In.CS;
-const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | motor ${name} | ${info}`); if (!c) fails.push(name); };
+const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | motor-plantas ${name} | ${info}`); if (!c) fails.push(name); };
 const r2 = x => Math.round(x * 100) / 100;
 const codeAt = (p, lv, x, z) => { const g = p.grid.lv[lv]; const n = p.grid.n; const cx = Math.floor(x / CS), cz = Math.floor(z / CS); return cx < 0 || cz < 0 || cx >= n || cz >= n ? C.OUT : g[cz * n + cx]; };
 
