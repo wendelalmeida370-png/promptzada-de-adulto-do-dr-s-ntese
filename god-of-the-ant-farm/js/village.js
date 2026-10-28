@@ -650,8 +650,8 @@
     let templeBuilt = false; for (const b of S.buildings.values()) if (b.set === set.id && (b.type === 'temple') && b.built) templeBuilt = true;
     let threats = 0; for (const a of S.animals.values()) if (!a.dead && (G.Animals.danger(a) || (G.Animals.DEF[a.kind] && G.Animals.DEF[a.kind].bold > 0.3)) && G.dist(a.x, a.y, set.cx, set.cy) < 20) threats++;
     const want = {}; for (const r of WORK_ROLES) want[r] = 0;
-    // workplaces: shepherds, weavers, smiths, merchants...
-    const eco = G.Eco ? G.Eco.demand(set, fac, A) : {};
+    // workplaces: shepherds, weavers, smiths, merchants... — what they ask, under the ceiling of the trades once (D-090)
+    const eco = G.Eco ? (G.Eco.share ? G.Eco.share(G.Eco.demand(set, fac, A), set, fac, A) : G.Eco.demand(set, fac, A)) : {};
     let ecoN = 0; for (const r in eco) { if (r === 'mineiro') continue; want[r] = eco[r]; ecoN += eco[r]; }
     const mineJobs = eco.mineiro || 0;
     want.sacerdote = templeBuilt ? (pop >= 45 ? 2 : 1) : 0;
@@ -670,10 +670,15 @@
     if (rest < MIN_REST) { want.construtor = Math.min(want.construtor, Math.max(1, Math.floor(A * 0.2))); want.cacador = Math.min(want.cacador, 1 + (threats > 1 ? 1 : 0)); rest = restOf(); }
     if (rest < MIN_REST) { want.guerreiro = Math.max(0, want.guerreiro - 1); rest = restOf(); }
     if (rest < MIN_REST) {
-      for (const r of ['contrabandista', 'escriba', 'taverneiro', 'mergulhador', 'sericultor', 'salgador', 'salineiro', 'vinhateiro', 'apicultor', 'fruticultor', 'lavrador', 'ourives', 'feirante', 'oleiro', 'cavalarico', 'mercador', 'cobrador', 'tecelao', 'acougueiro', 'ferreiro']) {
-        if (rest >= MIN_REST) break;
-        if (!(want[r] > 0)) continue;
-        const cut = Math.min(want[r], MIN_REST - rest); want[r] -= cut; ecoN -= cut; rest += cut;
+      // (the smugglers first — nobody is ordered into crime —, then one hand at a time from the trade with the most hands,
+      // in a fixed order between equals: a trade of one hand is not cut before one of four — D-090; the tavern's keeper was
+      // the third to go, whatever the rest)
+      const CUT = ['escriba', 'taverneiro', 'mergulhador', 'sericultor', 'salgador', 'salineiro', 'vinhateiro', 'apicultor', 'fruticultor', 'lavrador', 'ourives', 'feirante', 'oleiro', 'cavalarico', 'mercador', 'cobrador', 'tecelao', 'acougueiro', 'ferreiro'];
+      if (want.contrabandista > 0) { const cut = Math.min(want.contrabandista, MIN_REST - rest); want.contrabandista -= cut; ecoN -= cut; rest += cut; }
+      while (rest < MIN_REST) {
+        let r = null; for (const q of CUT) if (want[q] > 0 && (!r || want[q] > want[r])) r = q;
+        if (!r) break;
+        want[r]--; ecoN--; rest++;
       }
     }
     let rocks = 0; for (const r of S.rocks.values()) if (G.dist(r.x, r.y, set.cx, set.cy) < 26) { rocks++; if (rocks > 2) break; }

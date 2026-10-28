@@ -228,12 +228,30 @@
       }
       if (n > 0) add(d.role, n);
     }
-    // there is no craft without bread: hungry towns send their artisans back to the fields
-    const hungry = st.food < pop * 1.5;
+    void night; void A;
+    return out; // (what the workplaces ask: the ceiling of the trades is E.share's, once, over all of them)
+  };
+  // the ceiling of the trades (D-090): there is no craft without bread — the trades take at most 38% of a town's grown hands
+  // (18% in a hungry town) — once, over every trade its workplaces ask for, the ones the other modules add too (the
+  // watch, the docks, the estates, the stokers...); shared by the largest remainder: each trade its floor, then one hand more
+  // to the largest fractions, in a fixed order (the role's name), no chance — a trade of one hand is not the first to go
+  // any more (the floor of each share gave none to any of them: the taverns, the goldsmiths, the butchers, the markets stood
+  // empty most of the time, and what the other modules added after the ceiling was outside it). The trades that bring food —
+  // the fishermen, the orchards — are the fields the hungry towns send their hands to: outside it. A shepherd always stays
+  // with the herds.
+  const FOOD = { pescador: 1, fruticultor: 1 };
+  E.FOOD_TRADES = FOOD;
+  E.share = function (out, set, fac, A) {
+    const pop = G.Village.pop(set.id); const hungry = (fac.stock.food || 0) < pop * 1.5;
     const capN = Math.floor(A * (hungry ? 0.18 : 0.38));
-    let tot = 0; for (const k in out) tot += out[k];
-    if (tot > capN && tot > 0) { const f = capN / tot; for (const k in out) out[k] = Math.max(k === 'pastor' ? 1 : 0, Math.floor(out[k] * f)); }
-    void night;
+    const keys = Object.keys(out).filter(k => !FOOD[k] && out[k] > 0).sort();
+    let tot = 0; for (const k of keys) tot += out[k];
+    if (!tot || tot <= capN) return out;
+    const f = capN / tot; let given = 0; const rest = [];
+    for (const k of keys) { const x = out[k] * f; const n = Math.floor(x + 1e-9); out[k] = n; given += n; rest.push([x - n, k]); }
+    rest.sort((a, b) => b[0] - a[0] || (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0));
+    for (const [, k] of rest) { if (given >= capN) break; out[k]++; given++; }
+    if (keys.includes('pastor') && !(out.pastor >= 1)) out.pastor = 1;
     return out;
   };
   // every worker of a workplace role gets a concrete workplace (and keeps it)

@@ -83,6 +83,24 @@ const sum = (L, k) => Math.round(L.filter(e => !k || e[5] === k).reduce((n, e) =
   S.avatar = null;
 }
 ok('verificador', !bad.length, bad.slice(0, 4).join(' | ') || 'limpo em todos os segundos');
+// ---------------- the ceiling of the trades (D-090): once, over all of them, by the largest remainder
+{
+  const { S, f, set, person } = world();
+  for (let i = 0; i < 9; i++) person('P' + i); // (ten grown hands with the one of each house: the ceiling 38% is 3)
+  const A0 = 10;
+  const ask = () => ({ oleiro: 2, ourives: 1, taverneiro: 1, mercador: 1, pescador: 4, pastor: 1 });
+  const got = E.share(ask(), set, f, A0);
+  // (6 hands asked under the ceiling of 3: f = 0.5 — the floors give the potter 1, the rest go to the largest remainders
+  // (0.5 each), in the order of the names: mercador, ourives; the fishermen bring food: outside; the shepherd stays, even
+  // over the ceiling, as always)
+  ok('teto-pelo-maior-resto', got.oleiro === 1 && got.mercador === 1 && got.ourives === 1 && got.taverneiro === 0 && got.pescador === 4 && got.pastor >= 1, `pedem ${JSON.stringify(ask())}, o teto ${Math.floor(A0 * 0.38)}: ${JSON.stringify(got)}`);
+  const pop = G.Village.pop(set.id); f.stock.food = pop * 1.5 - 1; // (a hungry town: the ceiling 18% — one hand)
+  const hun = E.share({ oleiro: 2, ourives: 1, mercador: 1, pescador: 4 }, set, f, A0);
+  ok('teto-com-fome', hun.oleiro + hun.ourives + hun.mercador === 1 && hun.pescador === 4, `com fome (${f.stock.food} de comida para ${pop}): ${JSON.stringify(hun)}`);
+  const few = E.share({ oleiro: 1, ourives: 1 }, set, f, 100);
+  ok('teto-folgado', few.oleiro === 1 && few.ourives === 1, `sob o teto, nada muda: ${JSON.stringify(few)}`);
+  void S;
+}
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `OFICINAS-MAO: FALHOU (${fails.join(', ')})` : 'OFICINAS-MAO: ok');
 process.exit(fails.length ? 1 : 0);
