@@ -77,6 +77,12 @@
   };
 
   // ------------------------------ buildings ------------------------------
+  // (a log of a grown tree cleared for a work, into its people's store: born of the world, in the ledger — up to the
+  // store's room, and counted in the town's tally, as the store's own count always did)
+  function clearing(fid) {
+    const D = G.Depot; if (!D || !G.Fac.get(fid)) return;
+    const r = D.make('f:' + fid, 'wood', 1, { code: 'clareira', part: true }); if (r.ok && G.S.stats) G.S.stats.woodProduced += r.n;
+  }
   V.addBuilding = function (type, x, y, setId, built) {
     const S = G.S; const def = G.BDEF[type];
     const b = {
@@ -92,7 +98,8 @@
     for (let ty = y; ty < y + b.h; ty++) for (let tx = x; tx < x + b.w; tx++) {
       const i = ty * N + tx;
       S.occ[i] = b.id;
-      const tid = S.treeAt[i]; if (tid) { const t = S.trees.get(tid); if (t) { G.Nature.removeTree(t); if (t.stage === 'grow' && t.size > 0.5) V.addStock('wood', 1, V.facOfSet(setId)); G.FX && G.FX.poof(tx + 0.5, ty + 0.5, '#6d8f3c'); } }
+      // (a grown tree where the work goes is a log for the store — born of the world, in the ledger)
+      const tid = S.treeAt[i]; if (tid) { const t = S.trees.get(tid); if (t) { G.Nature.removeTree(t); if (t.stage === 'grow' && t.size > 0.5) clearing(V.facOfSet(setId)); G.FX && G.FX.poof(tx + 0.5, ty + 0.5, '#6d8f3c'); } }
       const oid = S.objAt[i]; if (oid) { const bu = S.bushes.get(oid); if (bu) G.Nature.removeBush(bu); }
     }
     W.touchWalk();
