@@ -531,7 +531,6 @@ function stallNow() {
   const hv = [...S.villagers.values()].filter(v => v.set === set.id && v.home && E.homeOf(v) && v.id !== z.owner && v.home !== m.home).sort((a, b) => a.id - b.id)[0];
   const hh = E.homeOf(hv); const H = 'h:' + hh.id, F = 'f:' + fac.id;
   for (const [k, n] of Object.entries(D.list(H))) if (k !== 'moedas') D.use(H, k, n, { code: 'teste' });
-  D.make(H, 'food', 20, { code: 'teste' }); D.make(H, 'tecido', 5, { code: 'teste' });
   if (D.free(F, 'tecido') < 12) D.make(F, 'tecido', 12, { code: 'teste', part: true });
   const sum = L => Object.keys(L || {}).filter(k => k !== 'moedas').reduce((a, k) => a + L[k], 0);
   const zsum = sum(z.inv), shsum = sum(S.buildings.get(z.b).inv);
@@ -545,6 +544,12 @@ function stallNow() {
   const was = D.stores; D.stores = null;
   const oRoom0 = other ? D.room('z:' + other.id, kz) : 0;
   D.stores = b => plan.get(b.id) || null;
+  // (the house's things put in with the case's furniture in place: the 20 of food and the 5 of cloth the case is about. Made
+  // under the house's own plan, they went where its pieces had room — in the new metropolis, Teseu's house had none for
+  // cloth, and the 5 never came in: the case measured an empty chest, T-178)
+  const near = (a, b) => Math.abs(a - b) < 1e-6;
+  const in20 = D.make(H, 'food', 20, { code: 'teste' }), in5 = D.make(H, 'tecido', 5, { code: 'teste' });
+  const setUp = in20.ok && in5.ok && near(D.get(H, 'food'), 20) && near(D.get(H, 'tecido'), 5);
   const rf = D.room(H, 'food'), rt = D.room(H, 'tecido'), rc = D.room(H, 'moedas');
   const mv1 = D.move(F, H, 'tecido', 9, { code: 'teste' }), mv2 = D.move(F, H, 'tecido', 9, { code: 'teste', part: true });
   const rf2 = D.room(H, 'food'); const sl = D.slots(H);
@@ -555,10 +560,9 @@ function stallNow() {
   const it0 = G.Interiors && G.Interiors.ITEMS && G.Interiors.ITEMS.banca; const cap0 = it0 && it0.store ? it0.store.cap : 20;
   const back = D.room(H, 'tecido') === Infinity && Math.abs(D.room('z:' + z.id, kz) - Math.max(0, cap0 - sum(z.inv))) < 1e-6;
   D.stores = was;
-  const near = (a, b) => Math.abs(a - b) < 1e-6;
   const slOk = sl.length === 2 && sl.some(s => s.m === hh.id + ':tulha' && s.k === 'food' && near(s.n, 20)) && sl.some(s => s.m === hh.id + ':bau' && s.k === 'tecido' && near(s.n, 12));
-  ok('n16 os móveis guardam', near(rf, 15) && near(rt, 7) && rc === Infinity && !mv1.ok && mv1.why === 'não cabe' && mv2.ok && near(mv2.n, 7) && near(rf2, 8) && slOk && near(zr, 6) && near(br, 5) && near(oRoom, oRoom0) && back && !bad().length,
-    `a casa de ${hv.name} com uma tulha de comida (28) e um baú (12), e a baia do povo (que não é dela): cabia ${rf} de comida e ${rt} de tecido; 9 de tecido ${mv1.ok ? 'COUBERAM' : 'não couberam (' + mv1.why + ')'}, em parte ${mv2.n}; depois cabia ${rf2} de comida; os móveis: ${sl.map(s => `${s.m ? String(s.m).split(':')[1] : 'chão'} ${s.n} ${E.name(s.k)}`).join(', ')}; a banca ${z.slot} cabia mais ${r2(zr)}, a prateleira do mercado ${r2(br)}${other ? `, a banca vizinha (sem móvel no plano) ${r2(oRoom)} como antes` : ''}; sem o plano, ${back ? 'a regra de hoje de novo' : 'NÃO voltou à regra de hoje'}`);
+  ok('n16 os móveis guardam', setUp && near(rf, 15) && near(rt, 7) && rc === Infinity && !mv1.ok && mv1.why === 'não cabe' && mv2.ok && near(mv2.n, 7) && near(rf2, 8) && slOk && near(zr, 6) && near(br, 5) && near(oRoom, oRoom0) && back && !bad().length,
+    `a casa de ${hv.name} com uma tulha de comida (28) e um baú (12), e a baia do povo (que não é dela)${setUp ? ', 20 de comida e 5 de tecido nela' : `, MAS a casa NÃO recebeu os 20 de comida e os 5 de tecido do caso (${D.get(H, 'food')} e ${D.get(H, 'tecido')})`}: cabia ${rf} de comida e ${rt} de tecido; 9 de tecido ${mv1.ok ? 'COUBERAM' : 'não couberam (' + mv1.why + ')'}, em parte ${mv2.n}; depois cabia ${rf2} de comida; os móveis: ${sl.map(s => `${s.m ? String(s.m).split(':')[1] : 'chão'} ${s.n} ${E.name(s.k)}`).join(', ')}; a banca ${z.slot} cabia mais ${r2(zr)}, a prateleira do mercado ${r2(br)}${other ? `, a banca vizinha (sem móvel no plano) ${r2(oRoom)} como antes` : ''}; sem o plano, ${back ? 'a regra de hoje de novo' : 'NÃO voltou à regra de hoje'}`);
 }
 // ---------------- n10: the owner dies: the stall closes at once, its stock goes to the family's house, nothing lost
 {
