@@ -1520,7 +1520,9 @@ float m3scale(float p) {
     maravilha(g, gw, K) {
       const P = K.P; if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 10); return; }
       const st = styleOf(K.b);
-      if (st === 'egipcio') { g.put(SH.cone, R3.mat(K.x0 + K.w / 2, K.y0, K.z0 + K.d / 2, Math.PI / 4, K.w * 1.35, 24, K.d * 1.35), K.c(P.wl)); return; }
+      // (the Great Pyramid: four faces over a square base inside its lot — the eight-sided cone of before, 8.1 m of radius on a
+      // lot of 12, stood 2.1 m out of it all round)
+      if (st === 'egipcio') { g.put(SH.hip, R3.mat(K.x0 + K.w / 2, K.y0, K.z0 + K.d / 2, 0, K.w - 0.4, 24, K.d - 0.4), K.c(P.wl)); return; }
       for (let k = 0; k < 6; k++) { const s = K.w * (1 - k * 0.14); K.box(K.w / 2, k * 3.4, K.d / 2, s, 3.4, s, k % 2 ? P.wr : P.wl); }
       K.box(K.w / 2, 20.4, K.d / 2, K.w * 0.18, 4, K.d * 0.18, P.acc || '#f2c14e');
     },
