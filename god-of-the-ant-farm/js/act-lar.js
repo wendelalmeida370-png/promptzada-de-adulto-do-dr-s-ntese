@@ -258,7 +258,7 @@
   L.taskText = function (v, t) {
     if (t.type !== 'lar') return null;
     const S = G.S;
-    if (t.st < 2) return t.what === 'acamado' ? 'Voltando para casa, doente' : 'Voltando para casa';
+    if (t.st < 2) return t.what === 'acamado' ? (L.bedrest(v) === 'ferida' ? 'Voltando para casa, ferid' + (v.g === 'f' ? 'a' : 'o') : 'Voltando para casa, doente') : t.what === 'luto' ? 'Voltando para casa, de luto' : 'Voltando para casa';
     const nm = id => { const o = S.villagers.get(id); return o ? o.name : 'alguém'; };
     switch (t.what) {
       case 'acamado': return L.bedrest(v) === 'ferida' ? 'De cama, ferid' + (v.g === 'f' ? 'a' : 'o') : 'De cama, doente';
