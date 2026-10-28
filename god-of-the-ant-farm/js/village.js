@@ -97,8 +97,69 @@
     }
     W.touchWalk();
     G.Interiors && G.Interiors.found(b); // (the plan's record, frozen the day it is placed)
+    if (!built) V.brickSwap(b); // (where its people builds with brick, part of the stone is brick: D-075)
     return b;
   };
+
+  // ------------------------------ the brick of the works (D-075) ------------------------------
+  // where a people builds with brick — the sun-dried adobe of the Nile and of the lakes, the fired brick of the Greeks and the
+  // Romans (G.Eco.BRICK) — and its town has a pottery standing (or the bricks in its store), a work founded there takes part
+  // of its stone as brick, a unit for a unit (the work's total does not change: the progress the materials allow is the
+  // same): the houses most, the halls of work and of trade half, the temples and palaces less — their noble stone stays —, and
+  // none where only stone serves (a well, a tower, a quay, an aqueduct, a wall, the fields). Decided once, at the foundation
+  // or when a reform begins (V.refound), and kept on the work: b.brick = { k, n, day }
+  const BRICK_SHARE = { house: 0.6, sobrado: 0.6, insula: 0.6, quarteirao: 0.6, storehouse: 0.5, celeiro: 0.5, armazem: 0.5, workshop: 0.5, mercado: 0.5, taverna: 0.5, olaria: 0.5, tecelagem: 0.5, acougue: 0.5, estabulo: 0.5, sericultura: 0.5, salga: 0.5, forja: 0.4, ourives: 0.4, quartel: 0.4, administracao: 0.4, coletoria: 0.4, paco: 0.4, banhos: 0.4, cadeia: 0.3, temple: 0.3, biblioteca: 0.3, teatro: 0.3, palacio: 0.3, grande_palacio: 0.3, palacio_colossal: 0.3, maravilha: 0.3 };
+  V.BRICK_SHARE = BRICK_SHARE;
+  const potteryIn = setId => { for (const o of G.S.buildings.values()) if (o.set === setId && o.type === 'olaria' && o.built) return true; return false; };
+  V.brickSwap = function (b) {
+    if (!b || b.built || b.brick || !b.need) return null;
+    const share = BRICK_SHARE[b.type] || 0; if (!(share > 0)) return null;
+    const fid = V.facOfSet(b.set); const k = G.Eco && G.Eco.brickOf ? G.Eco.brickOf(fid) : null; if (!k) return null;
+    const f = G.Fac.get(fid); if (!potteryIn(b.set) && !(f && (f.stock[k] || 0) >= 1)) return null;
+    const n = Math.floor((b.need.stone || 0) * share); if (n < 1) return null;
+    b.need.stone -= n; b.need[k] = (b.need[k] || 0) + n; if (!b.incoming) b.incoming = {}; if (b.incoming[k] === undefined) b.incoming[k] = 0;
+    b.brick = { k, n, day: G.S.day };
+    return b.brick;
+  };
+  // the bill of a work begun again in place (a hut rebuilt as a house, a house raised a floor): what its type costs, the brick
+  // decided anew
+  V.refound = function (b) {
+    const def = G.BDEF[b.type];
+    b.need = Object.assign({ wood: 0, stone: 0 }, def.cost); b.incoming = { wood: 0, stone: 0 }; b.brick = null;
+    V.brickSwap(b);
+  };
+  // what a work's bill is: its type's cost, with the brick that took the place of stone
+  V.bill = function (b) {
+    const def = G.BDEF[b.type] || { cost: {} }; const out = Object.assign({}, def.cost);
+    if (b.brick && b.brick.n > 0) { out.stone = Math.max(0, (out.stone || 0) - b.brick.n); out[b.brick.k] = (out[b.brick.k] || 0) + b.brick.n; }
+    return out;
+  };
+  // what was delivered to a work: its bill less what it still needs — what goes back to the store when the work is given
+  // up (the type's cost alone would give back stone that never came, where brick took its place)
+  V.delivered = function (b) {
+    const bill = V.bill(b); const out = {};
+    for (const k in bill) { const n = Math.max(0, (bill[k] || 0) - ((b.need && b.need[k]) || 0)); if (n > 0) out[k] = n; }
+    return out;
+  };
+  // the town's works still waiting for this brick (what is not on its way already)
+  V.brickWant = function (set, k) {
+    let n = 0; const id = set && (set.id || set);
+    for (const o of G.S.buildings.values()) if (o.set === id && !o.built && o.type !== 'ruin' && o.need && o.need[k] > 0) n += Math.max(0, o.need[k] - ((o.incoming && o.incoming[k]) || 0));
+    return n;
+  };
+  // a work waiting for brick a whole day with none to come — no brick in the store, no pottery standing in the town — goes
+  // back to stone for what it still lacks: no work waits for ever on a brick nobody makes
+  function brickBack() {
+    const S = G.S;
+    for (const b of S.buildings.values()) {
+      if (b.built || !b.brick || !b.need || b.type === 'ruin') continue;
+      const k = b.brick.k; const left = Math.max(0, (b.need[k] || 0) - ((b.incoming && b.incoming[k]) || 0)); if (!(left > 0)) continue;
+      if (S.day - (b.brick.day || 0) < 1) continue;
+      // (bricks in the store, or a batch of them under way in the town: it waits for them)
+      const f = G.Fac.get(V.facOfSet(b.set)); if ((f && (f.stock[k] || 0) >= 1) || (G.Oficio && G.Oficio.making(b.set, k))) continue;
+      b.need[k] -= left; b.need.stone = (b.need.stone || 0) + left; b.brick.n -= left; b.brick.back = (b.brick.back || 0) + left;
+    }
+  }
   V.center = b => [b.x + b.w / 2, b.y + b.h / 2];
   V.door = b => [b.x + b.w - 0.5, b.y + b.h + 0.05]; // front-left side
   V.frontTile = b => {
@@ -483,7 +544,7 @@
         for (const b of S.buildings.values()) if (b.set === set.id && b.type === 'hut' && b.built && (!old || b.born < old.born)) old = b;
         if (old) {
           old.type = 'house'; old.built = false; old.progress = 0; old.upgradeFrom = 'hut';
-          old.need = Object.assign({ wood: 0, stone: 0 }, G.BDEF.house.cost); old.incoming = { wood: 0, stone: 0 };
+          V.refound(old);
           old.hp = G.BDEF.house.hp; old.maxHp = old.hp;
           return true;
         }
@@ -1057,6 +1118,7 @@
   V.onNewDay = function () {
     V.forget();
     strays();
+    brickBack();
     checkExpansion();
     V.updateEra();
     G.Politics.onNewDay();

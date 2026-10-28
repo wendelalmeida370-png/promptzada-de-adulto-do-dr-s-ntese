@@ -759,7 +759,8 @@
       const od = G.BDEF[b.upgradeFrom]; if (!od || od.w !== b.w || od.h !== b.h) return;
       b.type = b.upgradeFrom; b.upgradeFrom = null; b.built = true; b.progress = 1; b.need = { wood: 0, stone: 0 }; b.incoming = { wood: 0, stone: 0 }; b.unreach = 0;
     } else {
-      for (const k in def.cost) { const got = Math.max(0, (def.cost[k] || 0) - (b.need[k] || 0)); if (got > 0) G.Village.addStock(k, got, fid); }
+      // (what was delivered, by the work's own bill — the brick that took the place of stone counted as brick: D-075)
+      const got = G.Village.delivered(b); for (const k of Object.keys(got).sort()) G.Village.addStock(k, got[k], fid);
       G.Village.removeBuilding(b);
     }
     for (const o of G.S.villagers.values()) if (o.task && o.task.type === 'build' && o.task.id === b.id) end(o);

@@ -28,7 +28,14 @@
     argila: { name: 'argila', title: 'Argila', price: 0.2, col: '#a86a44' },
     ceramica: { name: 'cerâmica', title: 'Cerâmica', price: 1.1, col: '#c8683a' },
     moedas: { name: 'moedas', title: 'Moedas', price: 1, col: '#e8c24a' },
+    // (the bricks of the works, made at the pottery: sun-dried mud where the Nile and the lakes build with it, fired clay
+    // where the Greeks and the Romans do; the Norse build in timber and turf, the nameless tribes as they always did — D-075)
+    tijolo: { name: 'tijolo', title: 'Tijolo', price: 0.4, col: '#b5532f' },
+    adobe: { name: 'adobe', title: 'Adobe', price: 0.3, col: '#b89466' },
   };
+  // the brick of each people (none: it builds in stone and wood)
+  E.BRICK = { egipcio: 'adobe', asteca: 'adobe', grego: 'tijolo', romano: 'tijolo' };
+  E.brickOf = fid => { const f = G.Fac.get(fid); return (f && E.BRICK[f.civ]) || null; };
   E.KEYS = Object.keys(E.GOODS);
   E.PRICE = { food: 0.25, wood: 0.3, stone: 0.35 };
   for (const k of E.KEYS) E.PRICE[k] = E.GOODS[k].price;
@@ -337,6 +344,8 @@
     const S = G.S; const b = v.job && S.buildings.get(v.job);
     if (!b || !b.built) return null;
     const f = G.Fac.ofV(v); if (!f) return null; E.ensure(f);
+    // (a trade whose work is an operation of the world, stage by stage — the pottery's batches: act-oficio.js)
+    if (G.Oficio && G.Oficio.has(b, v.role)) return G.Oficio.task(v, b, f, H);
     const R = E.RECIPE[v.role];
     if (R) return crafterTask(v, b, R, f, H);
     switch (v.role) {
@@ -366,6 +375,7 @@
     void I;
     return null;
   }
+  E.clayPit = (v, b) => clayPit(v, b);
   function clayPit(v, b) {
     const S = G.S; const cx = Math.floor(b.x + 1), cy = Math.floor(b.y + 1);
     let best = null, bd = 1e9;

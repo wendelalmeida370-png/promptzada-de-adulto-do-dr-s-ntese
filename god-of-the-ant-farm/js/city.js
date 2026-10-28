@@ -176,7 +176,7 @@
     if (!old) return false;
     const def = G.BDEF[to];
     old.type = to; old.built = false; old.progress = 0; old.upgradeFrom = from;
-    old.need = Object.assign({ wood: 0, stone: 0 }, def.cost); old.incoming = { wood: 0, stone: 0 };
+    G.Village.refound(old); // (the bill of its new type, with the brick of its people: D-075)
     old.hp = def.hp; old.maxHp = def.hp;
     return true;
   };
