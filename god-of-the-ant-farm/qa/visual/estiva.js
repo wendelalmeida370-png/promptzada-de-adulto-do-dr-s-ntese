@@ -50,11 +50,14 @@ function walkTo(X, Z, max, near) {
   stop(); for (let q = 0; q < 4; q++) frame();
   return Math.hypot(X - st.X, Z - st.Z);
 }
+// (the frames a leg of a walk is given: what its length needs at a slow walk, 0.9 m/s, and some — a leg of the world's path,
+// smoothed, runs to 25 m and more, past the 10 s a fixed 300 frames walk: T-152)
+const legFrames = (X, Z, min) => { const st = G.Avatar.state(); return Math.max(min, Math.ceil(Math.hypot(X - st.X, Z - st.Z) / 0.03) + 60); };
 function walkPath(x, y, near) {
   const v = G.Possess.body(); const p = W.findPath(v.x, v.y, x, y, true, 30000); if (!p) return -1;
   // (the path ends beside the place — the tile next to it —; the last steps go straight to it, to near metres of it)
-  for (const w of p) walkTo(w[0] * TL, w[1] * TL, 300, 0.35);
-  walkTo(x * TL, y * TL, 200, Math.max(0.3, near || 0));
+  for (const w of p) walkTo(w[0] * TL, w[1] * TL, legFrames(w[0] * TL, w[1] * TL, 300), 0.35);
+  walkTo(x * TL, y * TL, legFrames(x * TL, y * TL, 200), Math.max(0.3, near || 0));
   return Math.hypot(x * TL - G.Avatar.state().X, y * TL - G.Avatar.state().Z);
 }
 const faceTo = (X, Z) => { const st = G.Avatar.state(); st.yaw = Math.atan2(Z - st.Z, X - st.X); IN.camYaw = st.yaw; };
@@ -164,7 +167,7 @@ const snap = () => JSON.stringify([dock.crates, op, S.loose, v.carry, S.avatar.a
   const pth = L ? W.findPath(v.x, v.y, sp0[0], sp0[1], true, 30000) : null; let first = null, b = null;
   const nearC = () => P3.lyingOf(dock.id).reduce((m, e) => Math.min(m, Math.hypot(e[0] - st.X, e[2] - st.Z)), 99);
   const pts = (pth || []).map(w => [w[0] * TL, w[1] * TL]).concat(pth ? [[sp0[0] * TL, sp0[1] * TL]] : []);
-  walk: for (const [X, Z] of pts) for (let k = 0; k < 300; k++) { if (Math.hypot(X - st.X, Z - st.Z) < 0.35) break; IN.camYaw = Math.atan2(Z - st.Z, X - st.X); IN.mz = 1; frame(); b = I.best(); if (b && b.id === 'atividade' && /^Pegar /.test(b.label)) { first = nearC(); break walk; } }
+  walk: for (const [X, Z] of pts) for (let k = 0, kk = legFrames(X, Z, 300); k < kk; k++) { if (Math.hypot(X - st.X, Z - st.Z) < 0.35) break; IN.camYaw = Math.atan2(Z - st.Z, X - st.X); IN.mz = 1; frame(); b = I.best(); if (b && b.id === 'atividade' && /^Pegar /.test(b.label)) { first = nearC(); break walk; } }
   stop(); for (let q = 0; q < 4; q++) frame();
   ok('4. seguindo a pista pelo caminho do mundo, «E — Pegar a caixa» aparece ao chegar a uns 2,5 m das caixas desenhadas', !!L && first !== null && first <= 2.7 && first >= 1.5, `pista a ${L ? L.d.toFixed(0) : '?'} m; ${pth ? pth.length + ' passos do caminho' : 'sem caminho'}; «${b ? b.label : '-'}» ${first !== null ? 'a ' + first.toFixed(2) + ' m da caixa mais perto' : 'não apareceu'}`);
 }
