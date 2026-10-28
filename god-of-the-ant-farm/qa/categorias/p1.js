@@ -23,6 +23,12 @@ module.exports = {
       ],
       notas: 'o cartão da casa no Modo Deus diz onde está cada morador e por quê (G.Lar.roster, D-072); as casas não têm cadeira nem banco nas plantas de hoje: quem se senta, senta junto ao fogo, à mesa ou no chão (o repartidor do P4); o berço (o uso cuidar) espera a subida do In.VERSION; a cozinha não gasta lenha (a casa não tem a cadeia da lenha); o «cuidar» é parcial até o l14 do qa/lar.js passar num mundo pronto (as casas com velho e crianças pequenas dos mundos prontos se mudam no meio do caso); conversar com quem está dentro, do lado do corpo, é do P4',
     },
+    // (an open work of the town, the P4's sheet: the water of the well, the house's errand)
+    cidade: {
+      atividades: [
+        { id: 'agua', o: 'buscar água no poço para a casa, na fila', essencial: true, tipos: ['well'], tarefa: 'water', resultado: 'a casa tem água (h.water); o jarro chega em casa pela mão de quem o leva, ou sai derramado pelo livro (L-300)', condicao: 'um poço da cidade, a fila com lugar', feito: true, provas: ['qa/agua-solta.js'] },
+      ],
+    },
     religiao: {
       funcao: 'onde o povo reza e o sacerdote oficia; onde os mortos são enterrados',
       quem: 'os fiéis, o sacerdote; quem enterra os seus',
