@@ -755,18 +755,27 @@
     return smoothPath(pts);
   };
   W.losClear = (ax, ay, bx, by) => losClear(ax, ay, bx, by);
+  // (whether the straight walk from a to b stays on ground one walks: every tile it passes through, from where it leaves a to b
+  // itself — never samples along it: one every 0.3 of a tile let a smoothed path cut the corner of a building between two of
+  // them, the walker inside the building for an instant, L-354 —; where it passes over the corner of four tiles, the two beside
+  // the corner as well, as the search asks of a diagonal step. Onto a river only when it starts or ends on one; never fire)
   function losClear(ax, ay, bx, by) {
-    const d = Math.hypot(bx - ax, by - ay); const steps = Math.ceil(d / 0.3);
-    const ta = W.idx(ax, ay), tb = W.idx(bx, by);
-    const riverOK = G.S.type[ta] === T.RIVER || G.S.type[tb] === T.RIVER;
-    for (let k = 1; k < steps; k++) {
-      const f = k / steps; const x = ax + (bx - ax) * f, y = ay + (by - ay) * f;
-      const i = W.idx(x, y);
-      if (!W.walkable(i)) return false;
-      if (!riverOK && G.S.type[i] === T.RIVER) return false;
-      if (G.S.fire[i] > 0.02) return false;
+    const S = G.S; const riverOK = S.type[W.idx(ax, ay)] === T.RIVER || S.type[W.idx(bx, by)] === T.RIVER;
+    const bad = (x, y) => { if (x < 0 || y < 0 || x >= N || y >= N) return true; const i = y * N + x; return !W.walkable(i) || (!riverOK && S.type[i] === T.RIVER) || S.fire[i] > 0.02; };
+    const dx = bx - ax, dy = by - ay; const len = Math.hypot(dx, dy); if (len < 1e-9) return true;
+    const sx = dx > 0 ? 1 : dx < 0 ? -1 : 0, sy = dy > 0 ? 1 : dy < 0 ? -1 : 0;
+    // (the tile the walk is in a hair after a — a start on a tile's edge is in the tile it goes into —, and b's own tile)
+    const e = 1e-7 / len; let x = Math.floor(ax + dx * e), y = Math.floor(ay + dy * e); const x1 = Math.floor(bx), y1 = Math.floor(by);
+    // (how far along the walk — 0 at a, 1 at b — the next line across x and the next across y are, and from one line to the next)
+    const tdx = sx ? 1 / Math.abs(dx) : Infinity, tdy = sy ? 1 / Math.abs(dy) : Infinity;
+    let tx = sx > 0 ? (x + 1 - ax) * tdx : sx < 0 ? (ax - x) * tdx : Infinity, ty = sy > 0 ? (y + 1 - ay) * tdy : sy < 0 ? (ay - y) * tdy : Infinity;
+    if (bad(x, y)) return false;
+    for (let n = 0; n < 4 * N && (x !== x1 || y !== y1) && Math.min(tx, ty) <= 1; n++) {
+      if (Math.abs(tx - ty) * len < 1e-7) { if (bad(x + sx, y) || bad(x, y + sy)) return false; x += sx; y += sy; tx += tdx; ty += tdy; }
+      else if (tx < ty) { x += sx; tx += tdx; } else { y += sy; ty += tdy; }
+      if (bad(x, y)) return false;
     }
-    return true;
+    return !bad(x1, y1);
   }
   function smoothPath(pts) {
     if (pts.length <= 2) return pts.slice(1);
