@@ -3,7 +3,8 @@
 // Chuva de Ouro
 //  o1 as moedas caem, o povo corre e cata; toda moeda que caiu na rua está contada (catada, no chão, achada, perdida)
 //  o2 um save no meio da chuva, carregado duas vezes: o mesmo futuro (e a chuva continua de onde parou)
-//  o3 quem corria para o ouro morre no meio, o raio cai num monte, o chão de outro afunda no mar: nada se perde nem quebra
+//  o3 quem corria para o ouro morre no meio, o raio cai num monte, o chão de outro afunda no mar: nada se perde nem quebra;
+//     o3b o chão afunda sob os pés de quem corre (em três momentos): nada logo, sem caminhos falhos antes
 //  o4 um povo sem moeda: o ouro vai para o armazém, não para as casas
 // Vinho nos Poços
 //  v1 os poços dão vinho: o povo bebe, dança e fica bêbado — só nos poços da própria cidade
@@ -132,6 +133,29 @@ const key = process.argv[2] || 'cidade';
     });
     ok('o3 morte, raio e mar no meio da corrida', r.died && r.bolt && r.sunk && !r.onSea && !r.bad.length && !r.qa.length && Math.abs(r.street - (r.n + r.left + r.found + r.sunk2)) < 0.01,
       `morreu ${r.died}; raio no monte ${r.bolt}; chão afundado sob o monte ${r.sunk} (${r.sunk2} moedas perdidas no mar, ${r.onSea} montes na água); rua ${r.street} = ${r.n} + ${r.left} + ${r.found} + ${r.sunk2}; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}`);
+  }
+  {
+    // (o3b: the ground sinks under the feet of one running for the gold — not by chance, as in o3: at three moments of the
+    // world's one-second round —: in the sea at once, swimming; no run of failed ways first, of anyone near, for the checker
+    // to see — L-306)
+    const r = await page.evaluate(() => {
+      const H = __H; const W = G.W; const out = [];
+      for (const off of [0, 7, 14]) {
+        H.fresh(); const S = G.S;
+        const set = H.town(); const f = G.Fac.get(set.fac); if (!G.Eco.coinage(f.id)) G.Civ.learn(f, 'moeda', 'teste');
+        G.Powers.cast('goldrain', set.cx, set.cy); H.run(3 + off * 0.05);
+        const v = H.tasks('ouro').filter(o => !o.inside && !o.air && W.isLand(W.idx(o.x, o.y))).sort((a, b) => a.id - b.id)[0]; if (!v) continue;
+        const x = v.x, y = v.y; const near = new Set([...S.villagers.values()].filter(o => G.dist(o.x, o.y, x, y) < 8).map(o => o.id));
+        G.Powers.sink(x, y);
+        let swimAt = -1, worst = 0; const bad = [];
+        H.run(5, k => { const o = S.villagers.get(v.id); if (o) { if (swimAt < 0 && o.task && o.task.type === 'swim') swimAt = k; worst = Math.max(worst, o._pfN || 0); }
+          if (k % 10 === 0) for (const e of H.qa()) if (e.sys === 'path' && near.has(e.id) && bad.length < 3) bad.push(e.msg); });
+        out.push({ name: v.name, off, swimAt, worst, bad });
+      }
+      return out;
+    });
+    ok('o3b o chão afunda sob os pés de quem corre: nada logo, sem caminhos falhos', r.length >= 2 && r.every(q => q.swimAt >= 0 && q.swimAt <= 1 && q.worst < 2 && !q.bad.length),
+      r.map(q => `${q.name} (+${q.off}): nada no passo ${q.swimAt}, caminhos falhos ${q.worst}${q.bad.length ? '; ' + q.bad.join(' | ') : ''}`).join(' · ') || 'ninguém correndo');
   }
   {
     const r = await page.evaluate(() => {
