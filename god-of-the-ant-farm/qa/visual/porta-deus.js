@@ -48,6 +48,8 @@ const SEM_PORTA = {
   // arch of the drum; the Norse's mead hall has its door)
   'teatro/classico': 'a meia-tigela aberta: entra-se pela frente, à volta do palco', 'teatro/grego': 'a meia-tigela aberta: entra-se pela frente, à volta do palco',
   'teatro/egipcio': 'o jardim aberto na frente', 'teatro/asteca': 'o campo aberto na frente', 'teatro/romano': 'a arena: os arcos do tambor, o da frente a entrada (D-095)',
+  // (the wonders — D-096 —: the way in their plan's, not a door the god paints)
+  'maravilha/romano': 'o Coliseu: os arcos do tambor, o da frente a entrada (D-095)', 'maravilha/grego': 'a Acrópole: a rocha e o lance cortado nela, o templo visto de fora (D-096)', 'maravilha/classico': 'o zigurate: o lance até o terraço (D-096)', 'maravilha/egipcio': 'a Grande Pirâmide: a porta lacrada, pintada (D-096)', 'maravilha/asteca': 'o Templo Mayor: o lance até o topo, as portas dos santuários sem planta própria (D-096)',
 };
 const semPorta = (type, st) => SEM_PORTA[type] || SEM_PORTA[type + '/' + st];
 const same = [], grew = []; let m = 0;

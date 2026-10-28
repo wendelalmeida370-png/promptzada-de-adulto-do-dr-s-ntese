@@ -903,14 +903,14 @@
   // ------------------------------ wonders ------------------------------
   function maravilha(c, m, p, st) {
     if (st === 'egipcio') { // the Great Pyramid
-      const e = 1.45, H = 74;
-      box(c, -1.5, -1.5, 1.5, 1.5, 0, 1, p.base[0], p.base[1], p.base[2]);
-      poly(c, [P(-e, e, 1), P(e, e, 1), P(0, 0, H)], '#efe3c2');
-      poly(c, [P(e, e, 1), P(e, -e, 1), P(0, 0, H)], '#c9b48a');
-      for (let k = 1; k < 18; k++) { const f = k / 18; const q = e * (1 - f), z = 1 + (H - 1) * f; ln(c, P(-q, q, z), P(q, q, z), 'rgba(140,110,70,0.25)', 0.4); ln(c, P(q, q, z), P(q, -q, z), 'rgba(90,70,40,0.25)', 0.4); }
-      const k = 0.1; poly(c, [P(-e * k, e * k, H * (1 - k)), P(e * k, e * k, H * (1 - k)), P(0, 0, H)], '#ffe27a'); poly(c, [P(e * k, e * k, H * (1 - k)), P(e * k, -e * k, H * (1 - k)), P(0, 0, H)], '#d9a93a');
-      m.glow.push(P(0, 0, H - 3));
-      onL(c, e * 0.62, -0.08, 0.08, 20, 26, '#3a2a1c');
+      const e = 1.3, H = 74, d = -0.1, z0 = 0.8; // (set back d on its slab, the walk before it: Forma's pyramid, its plan)
+      box(c, -1.5, -1.5, 1.5, 1.5, 0, z0, p.base[0], p.base[1], p.base[2]);
+      poly(c, [P(-e, e + d, z0), P(e, e + d, z0), P(0, d, H)], '#efe3c2');
+      poly(c, [P(e, e + d, z0), P(e, -e + d, z0), P(0, d, H)], '#c9b48a');
+      for (let k = 1; k < 18; k++) { const f = k / 18; const q = e * (1 - f), z = z0 + (H - z0) * f; ln(c, P(-q, q + d, z), P(q, q + d, z), 'rgba(140,110,70,0.25)', 0.4); ln(c, P(q, q + d, z), P(q, -q + d, z), 'rgba(90,70,40,0.25)', 0.4); }
+      const k = 0.1; poly(c, [P(-e * k, e * k + d, H * (1 - k)), P(e * k, e * k + d, H * (1 - k)), P(0, d, H)], '#ffe27a'); poly(c, [P(e * k, e * k + d, H * (1 - k)), P(e * k, -e * k + d, H * (1 - k)), P(0, d, H)], '#d9a93a');
+      m.glow.push(P(0, d, H - 3));
+      onL(c, e * 0.62 + d, -0.08, 0.08, 20, 26, '#3a2a1c');
       return H + 4;
     }
     if (st === 'asteca') { // Templo Mayor, twin shrines
@@ -920,7 +920,7 @@
         band(c, x - 0.28, -0.4, x + 0.28, 0.35, H + 7, H + 10, col);
         onL(c, 0.35, x - 0.1, x + 0.1, H, H + 6, '#2a1c14', m);
         box(c, x - 0.24, -0.1, x + 0.24, 0.0, H + 10, H + 19, col, shade(col, 0.8), col);
-        m.fires.push(P(x, 0.45, H + 1.5));
+        m.fires.push(P(x * 12 / 7, 0.55, H + 1.5)); // (its brazier before the shrine's outer corner: Forma's)
       }
       poly(c, [P(0.02, 1.47, 0), P(0.08, 1.47, 0), P(0.08, 0.72, H), P(0.02, 0.72, H)], p.trim);
       m.glow.push(P(0, 0.4, H + 4));
@@ -935,6 +935,9 @@
       poly(c, [P(e, e, 0), P(e, -e, 0), P(e - 0.1, -e + 0.1, 12), P(e - 0.1, e - 0.1, 12)], '#948a78');
       top(c, -e + 0.1, -e + 0.1, e - 0.1, e - 0.1, 12, '#d8d0bc');
       c.strokeStyle = 'rgba(80,70,55,0.35)'; c.lineWidth = 0.5; for (let k = 0; k < 6; k++) { const x = -e + 0.2 + k * 0.5; ln(c, P(x, e, 1), P(x + 0.1, e - 0.05, 10), 'rgba(80,70,55,0.35)', 0.5); }
+      // (the flight up its front, steep, of the rock's own stone: Forma's — its plan's way up)
+      poly(c, [P(-0.2, e + 0.02, 0), P(0.2, e + 0.02, 0), P(0.2, e - 0.1, 12), P(-0.2, e - 0.1, 12)], '#c8bea8');
+      for (let k = 1; k < 12; k++) { const f = k / 12; const y = e + 0.02 - 0.12 * f; ln(c, P(-0.2, y, 12 * f), P(0.2, y, 12 * f), 'rgba(80,70,55,0.3)', 0.3); }
       const z0 = 12;
       box(c, -1.1, -0.9, 1.1, 0.9, z0, z0 + 1.2, p.base[0], p.base[1], p.base[2]); box(c, -1.05, -0.85, 1.05, 0.85, z0 + 1.2, z0 + 2.4, p.base[0], p.base[1], p.base[2]);
       colonnade(c, p, -1.0, -0.8, 1.0, 0.8, z0 + 2.4, z0 + 22, 8, 0.045, 'B');
@@ -949,10 +952,10 @@
     }
     if (st === 'nordico') { // Valhalla: a golden-shielded great hall
       const x0 = -1.4, x1 = 1.4, y0 = -0.8, y1 = 0.8, H = 12;
-      box(c, x0 - 0.05, y0 - 0.05, x1 + 0.05, y1 + 0.05, 0, 2, p.base[0], p.base[1], p.base[2]);
+      box(c, x0 - 0.05, y0 - 0.05, x1 + 0.05, y1 + 0.05, 0, 2, p.base[0], p.base[1], p.base[2]); treads(c, p, -0.25, 0.25, y1 + 0.2, 2, 3); // (its treads to the street: Forma's)
       walls(c, x0, y0, x1, y1, 2, H, p.wl, p.wr);
       for (let k = 1; k < 16; k++) ln(c, P(x0 + (x1 - x0) * k / 16, y1, 2), P(x0 + (x1 - x0) * k / 16, y1, H), 'rgba(30,20,10,0.35)', 0.4);
-      onL(c, y1, -0.15, 0.15, 2, 10, '#ffd27a', m);
+      door(c, y1, -0.15, 0.15, 2, 10, '#ffd27a', m); // (the hall's door, its plan's: on a side the view does not see, none — L-264)
       gableX(c, x0, y0, x1, y1, H, H + 30, 0.12, '#e8b83a', '#c8962a', p.wl, '#8a6a1a');
       for (let r = 0; r < 5; r++) for (let k = 0; k < 14; k++) { const f = (r + 0.5) / 5; const y = y1 + 0.12 - (y1 + 0.12) * f; const z = H - 1 + 30 * f; const q = P(x0 + 0.1 + k * 0.2, y, z); c.fillStyle = (k + r) % 2 ? '#f2cc5a' : '#d8a83a'; c.beginPath(); c.ellipse(q[0], q[1], 2.3, 1.4, 0, 0, TAU); c.fill(); }
       const ap = P(x1 + 0.12, 0, H + 30); dragon(c, [ap[0] + 1, ap[1] + 1], 1, '#8a6a1a');
@@ -963,7 +966,7 @@
     // classic: a great ziggurat with a golden eye
     let z = 0; const lv = [[1.45, 10], [1.1, 10], [0.78, 10], [0.46, 12]];
     for (const [e, h] of lv) { box(c, -e, -e, e, e, z, z + h, p.wl, p.wr, p.top); ln(c, P(-e, e, z + h - 1), P(e, e, z + h - 1), 'rgba(0,0,0,0.12)', 0.6); z += h; }
-    poly(c, [P(-0.2, 1.47, 0), P(0.2, 1.47, 0), P(0.2, 0.46, z - 12), P(-0.2, 0.46, z - 12)], shade(p.wl, 1.05));
+    poly(c, [P(-0.2, 1.47, 0), P(0.2, 1.47, 0), P(0.2, 0.78, z - 12), P(-0.2, 0.78, z - 12)], shade(p.wl, 1.05)); // (up to the third's top: Forma's)
     const e = P(0, 0.46, z - 6); c.fillStyle = '#d9b34a'; c.beginPath(); c.ellipse(e[0], e[1], 3.6, 2, 0, 0, TAU); c.fill(); c.fillStyle = '#6a4a1a'; c.beginPath(); c.arc(e[0], e[1], 1.1, 0, TAU); c.fill();
     m.glow.push(e); m.glow.push(P(0, 0, z + 2));
     return z + 8;

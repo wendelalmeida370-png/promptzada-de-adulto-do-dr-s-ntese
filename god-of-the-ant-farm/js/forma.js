@@ -261,19 +261,22 @@
   // the Colosseum (arch.js maravilha, romano): the god's bowl of r 1.45 tiles and 42 px, three tiers of arches, the masts of
   // the awning (ten on the half the god shows: twenty round) — the amphitheatre one walks in (D-095)
   def('maravilha', 'romano', L => amphi(L, { r: 1.45, h: 42, andares: 3, cor: ['#e8d2a6', '#b89a70'], mastros: true }));
-  // the Great Pyramid (egipcio): a slab under it, the smooth pyramid of half side 1.45 tiles and 74 px, its eighteen courses,
-  // the gilded capstone (its top tenth) and the dark door high on its front face (the sealed entrance, z 20–26 px)
+  // the Great Pyramid (egipcio): a slab under it of 0.8 px — a step up from the street —, the smooth pyramid of half side 1.3
+  // tiles and 74 px set back 0.1 tiles on it (before its front face the walk of 1.1 m where one makes the offering: its plan,
+  // D-093), its eighteen courses, the gilded capstone (its top tenth) and the dark door high on its front face (the sealed
+  // entrance, z 20–26 px)
   def('maravilha', 'egipcio', L => {
-    const e = 1.45 * TILE, H = px(74);
+    const e = 1.3 * TILE, H = px(74), c = [L / 2, at(L, -0.1)];
     return { els: [
-      { k: 'bloco', r: rect(L, -1.5, -1.5, 1.5, 1.5), y0: 0, y1: px(1), cor: ['base0', 'base1', 'base2'] },
-      { k: 'piramide', c: [L / 2, L / 2], e, y0: px(1), y1: H, cor: ['#efe3c2', '#c9b48a'], fiadas: 18, ponta: { f: 0.1, cor: ['#ffe27a', '#d9a93a'] } },
+      { k: 'bloco', r: rect(L, -1.5, -1.5, 1.5, 1.5), y0: 0, y1: px(0.8), cor: ['base0', 'base1', 'base2'] },
+      { k: 'piramide', c, e, y0: px(0.8), y1: H, cor: ['#efe3c2', '#c9b48a'], fiadas: 18, ponta: { f: 0.1, cor: ['#ffe27a', '#d9a93a'] } },
       { k: 'porta', na: 'piramide', u: L / 2, w: 0.16 * TILE, y0: px(20), y1: px(26), cor: '#3a2a1c', lacrada: true },
     ], door: { u: L / 2, w: 0.64, y0: px(20), y1: px(26), sealed: true } };
   });
   // the Templo Mayor (asteca): five levels of 7.5 px from half side 1.45 to 0.7 tiles, the stair up the front (0.16 tiles each
   // side of the middle, its ramps at the sides, the red line down it), the two shrines on top — Tlaloc's blue on the left,
-  // Huitzilopochtli's red on the right —, each with its band, its door and its crest, and the braziers before them
+  // Huitzilopochtli's red on the right —, each with its band, its door and its crest, and the braziers before their outer
+  // corners (before each door, the priest's place: its plan, D-093), where one lights them
   def('maravilha', 'asteca', L => {
     const n = 5, h = px(7.5), H = n * h, e0 = 1.45 * TILE, e1 = 0.7 * TILE; const niveis = [];
     for (let k = 0; k < n; k++) niveis.push([e0 - (e0 - e1) * k / (n - 1), k * h, (k + 1) * h]);
@@ -286,11 +289,12 @@
       els.push({ k: 'faixa', r: rect(L, x - 0.28, -0.4, x + 0.28, 0.35), y0: H + px(7), y1: H + px(10), cor: col });
       els.push({ k: 'porta', na: 'frente', v: at(L, 0.35), u: at(L, x), w: 0.2 * TILE, y0: H, y1: H + px(6), cor: '#2a1c14' });
       els.push({ k: 'bloco', r: rect(L, x - 0.24, -0.1, x + 0.24, 0.0), y0: H + px(10), y1: H + px(19), cor: [col, col, col], crista: true });
-      els.push({ k: 'braseiro', p: [at(L, x), at(L, 0.45), H], r: 0.3 });
+      els.push({ k: 'braseiro', p: [at(L, x * 12 / 7), at(L, 0.55), H], r: 0.3, uso: 'acender' });
     }
     return { els, door: { u: L / 2, w: 0.64 * 2, y0: 0, y1: H, stair: true } };
   });
-  // the Acropolis (grego): the rock, battered from 1.45 tiles at its foot to 1.35 at its top 12 px up; on it the temple — two
+  // the Acropolis (grego): the rock, battered from 1.45 tiles at its foot to 1.35 at its top 12 px up, the flight cut steep
+  // into its front from the street to its top, 0.2 tiles each side of the middle (the way up of its plan, D-093); on it the temple — two
   // steps, eight columns a side 19.6 px tall round the cella, the entablature with its painted frieze, the pediment roof along
   // the way in with the gilded round in its gable — and the gilded Athena with her spear and shield at the front-left
   def('maravilha', 'grego', L => {
@@ -300,6 +304,7 @@
     for (let k = 1; k < n - 1; k++) { const f = k / (n - 1); cols.push([at(L, x0), at(L, y0 + (y1 - y0) * f)], [at(L, x1), at(L, y0 + (y1 - y0) * f)]); }
     return { els: [
       { k: 'talude', r: rect(L, -e, -e, e, e), r1: rect(L, -e + 0.1, -e + 0.1, e - 0.1, e - 0.1), y0: 0, y1: z0, cor: ['#b8ae9c', '#948a78', '#d8d0bc'] },
+      { k: 'escada', a: [L / 2, at(L, e + 0.02), 0], b: [L / 2, at(L, e - 0.1), z0], w: 0.4 * TILE, cor: '#c8bea8', clara: 1.0 },
       { k: 'bloco', r: rect(L, -1.1, -0.9, 1.1, 0.9), y0: z0, y1: z0 + px(1.2), cor: ['base0', 'base1', 'base2'] },
       { k: 'bloco', r: rect(L, -1.05, -0.85, 1.05, 0.85), y0: z0 + px(1.2), y1: z0 + px(2.4), cor: ['base0', 'base1', 'base2'] },
       { k: 'bloco', r: rect(L, -0.75, -0.55, 0.75, 0.5), y0: z0 + px(2.4), y1: z0 + px(22), cor: ['wl', 'wr', 'top'] },
@@ -311,26 +316,30 @@
       { k: 'estatua', p: [at(L, -0.9), at(L, 1.1), z0], h: px(16), cor: '#e0b84a', lanca: true },
     ], door: { u: L / 2, w: 1.2, y0: z0 + px(2.4), y1: z0 + px(18) } };
   });
-  // Valhalla (nordico): the great hall of 2.8 × 1.6 tiles on its stone base 2 px high, its walls of planks 10 px, the door of
-  // light in its front, the steep roof 30 px of gilded shields — five rows of fourteen —, a dragon at each gable's end
+  // Valhalla (nordico): the great hall of 2.8 × 1.6 tiles on its stone base 2 px high — the three treads of its front down to
+  // the street, 0.25 tiles each side of the middle —, its walls of planks 10 px, the door of light in its front, the steep roof
+  // 30 px of gilded shields — five rows of fourteen —, a dragon at each gable's end. Its body (D-093: the hall its plan raises
+  // its shell on): the walls, the base, the treads
   def('maravilha', 'nordico', L => {
     const x0 = -1.4, x1 = 1.4, y0 = -0.8, y1 = 0.8, H = px(12);
-    return { els: [
-      { k: 'bloco', r: rect(L, x0 - 0.05, y0 - 0.05, x1 + 0.05, y1 + 0.05), y0: 0, y1: px(2), cor: ['base0', 'base1', 'base2'] },
-      { k: 'bloco', r: rect(L, x0, y0, x1, y1), y0: px(2), y1: H, cor: ['wl', 'wr', 'top'], tabuas: 16 },
+    const base = { k: 'bloco', r: rect(L, x0 - 0.05, y0 - 0.05, x1 + 0.05, y1 + 0.05), y0: 0, y1: px(2), cor: ['base0', 'base1', 'base2'] };
+    const walls = { k: 'bloco', r: rect(L, x0, y0, x1, y1), y0: px(2), y1: H, cor: ['wl', 'wr', 'top'], tabuas: 16, mat: 'parede' }, steps = treadsF(L, -0.25, 0.25, y1 + 0.2, 2, 3);
+    return { body: { walls, base, steps }, els: [
+      base, ...steps, walls,
       { k: 'porta', na: 'frente', v: at(L, y1), u: L / 2, w: 0.3 * TILE, y0: px(2), y1: px(10), cor: '#ffd27a', luz: true },
       { k: 'telhado', r: rect(L, x0, y0, x1, y1), y0: H, y1: H + px(30), ao: 'u', ov: 0.12 * TILE, cor: ['#e8b83a', '#c8962a', 'wl', '#8a6a1a'], escudos: { linhas: 5, n: 14, cor: ['#f2cc5a', '#d8a83a'] } },
       { k: 'dragao', p: [at(L, x1 + 0.12), L / 2, H + px(30)], dir: 1, cor: '#8a6a1a' },
       { k: 'dragao', p: [at(L, x0 - 0.12), L / 2, H + px(30)], dir: -1, cor: '#8a6a1a' },
     ], door: { u: L / 2, w: 1.2, y0: px(2), y1: px(10) } };
   });
-  // the ziggurat (classico): four levels — half side 1.45, 1.1, 0.78, 0.46 tiles; 10, 10, 10 and 12 px —, the ramp up the
-  // front to the top of the third, and the golden eye on the fourth
+  // the ziggurat (classico): four levels — half side 1.45, 1.1, 0.78, 0.46 tiles; 10, 10, 10 and 12 px —, the flight up the
+  // front to the front edge of the third's top (the terrace round the fourth, where one prays before the eye: its plan, D-093),
+  // and the golden eye on the fourth
   def('maravilha', 'classico', L => {
     const lv = [[1.45, 10], [1.1, 10], [0.78, 10], [0.46, 12]]; const niveis = []; let z = 0;
     for (const [e, h] of lv) { niveis.push([e * TILE, px(z), px(z + h)]); z += h; }
     const els = [{ k: 'escalonada', c: [L / 2, L / 2], niveis, cor: ['wl', 'wr', 'top'], friso: px(1), mat: 'plaster' }];
-    els.push({ k: 'escada', a: [L / 2, at(L, 1.47), 0], b: [L / 2, at(L, 0.46), px(z - 12)], w: 0.4 * TILE, cor: 'wl', clara: 1.05 });
+    els.push({ k: 'escada', a: [L / 2, at(L, 1.47), 0], b: [L / 2, at(L, 0.78), px(z - 12)], w: 0.4 * TILE, cor: 'wl', clara: 1.05 });
     els.push({ k: 'disco', na: 'frente', u: L / 2, v: at(L, 0.46), y: px(z - 6), r: 0.7, cor: '#d9b34a', olho: '#6a4a1a' });
     return { els, door: { u: L / 2, w: 1.6, y0: 0, y1: px(z - 12), stair: true } };
   });
@@ -1210,8 +1219,11 @@
   // what stands solid on the ground of the form, for the plan to keep the body and its marks off it: [{ k: 'rect', r, y1 } |
   // { k: 'circ', c, r, y1 }] — not its floors (piso), its treads (degrau), its pieces of use, nor what stands in one of them (the
   // fountain's column in its basin), nor its body (Fo.body: the walls, the porch and the plinth the plan raises its shell on);
-  // what hangs over the ground higher than one's head (a roof, an architrave) is not in it
-  Fo.solids = F => keep(F, 'solids', () => {
+  // what hangs over the ground higher than one's head (a roof, an architrave) is not in it. y: of a floor of the form over the
+  // ground instead — a pyramid's top, a terrace, a rock's —, what stands on it by the same rule (and of a stepped mass, the
+  // levels that rise from it)
+  Fo.solids = (F, y) => keep(F, 'solids' + (y ? '@' + y : ''), () => {
+    const y0 = y || 0; const lowFoot = q => q <= y0 + 0.15; // (standing on the floor: on it, or on its pavement)
     const uses = Fo.uses(F); const B = Fo.body(F); const out = [];
     const inside = (r, u, v) => u > r[0] && u < r[2] && v > r[1] && v < r[3];
     const inUse = (u, v) => uses.some(q => inside(q.r, u, v)) || (B && (inside(B.r, u, v) || (B.base && inside(B.base.r, u, v)) || (B.portico && inside(B.portico.r, u, v))));
@@ -1219,12 +1231,12 @@
     const circOf = (c, r, y1) => { if (!inUse(c[0], c[1])) out.push({ k: 'circ', c: [c[0], c[1]], r, y1 }); };
     for (const e of F.els) {
       if (e.piso || e.degrau || e.uso) continue;
-      if ((e.k === 'bloco' || e.k === 'talude') && e.y0 < HEAD && e.y1 > 0.15) rectOf(e.r, e.y1); // (a counter, a ledge: what the body cannot pass under)
+      if ((e.k === 'bloco' || e.k === 'talude') && e.y0 < y0 + HEAD && e.y1 > y0 + 0.15) rectOf(e.r, e.y1); // (a counter, a ledge: what the body cannot pass under)
       else if (e.k === 'pedra' && lowFoot(e.y0)) rectOf([e.c[0] - e.e, e.c[1] - e.e, e.c[0] + e.e, e.c[1] + e.e], e.y1);
       else if ((e.k === 'coluna' || e.k === 'tina' || e.k === 'bacia' || e.k === 'tambor' || e.k === 'morro') && lowFoot(e.y0)) circOf(e.c, e.r, e.y1);
       else if (e.k === 'colunata' && lowFoot(e.y0)) for (const p of e.pts) circOf(p, e.r, e.y1);
       else if (e.k === 'piramide' && lowFoot(e.y0)) rectOf([e.c[0] - e.e, e.c[1] - e.e, e.c[0] + e.e, e.c[1] + e.e], e.y1);
-      else if (e.k === 'escalonada') { const s0 = e.niveis[0][0]; rectOf([e.c[0] - s0, e.c[1] - s0, e.c[0] + s0, e.c[1] + s0], e.niveis[0][2]); }
+      else if (e.k === 'escalonada') { for (const [s, ya, yb] of e.niveis) if (lowFoot(ya) && yb > y0 + 0.15) rectOf([e.c[0] - s, e.c[1] - s, e.c[0] + s, e.c[1] + s], yb); }
       else if (e.k === 'estatua' && lowFoot(e.p[2])) circOf(e.p, Math.max(0.25, (e.w || 0.2) * 1.1), e.p[2] + e.h);
       else if (e.k === 'palmeira' && lowFoot(e.p[2])) circOf(e.p, 0.15, e.p[2] + e.h);
       else if (e.k === 'tora' && (lowFoot(e.a[2]) || lowFoot(e.b[2]))) { const lo = e.a[2] <= e.b[2] ? e.a : e.b; circOf(lo, e.r, Math.max(e.a[2], e.b[2])); }
@@ -1299,4 +1311,7 @@
   };
   // (for the proofs: the god's units of a form's number)
   Fo.px = y => y * ZPX;
+  // the treads of a flight of a form up the front of a stepped mass (an element 'escada'), from its foot: [{ r, y1 }] — as the 3D
+  // lays its steps, and the plan's flight up to the top (the wonders' plans)
+  Fo.flight = e => stairTreads(e);
 })(window.G);
