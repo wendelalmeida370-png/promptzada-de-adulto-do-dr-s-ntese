@@ -11,7 +11,7 @@
 // começa devolve o que se pagou; h15 a obra que se perde (o fogo) devolve o que não se levantou; h13 o barraco (social.js):
 // a família sai para uma casa com lugar levando o que é seu, ou faz do barraco uma cabana pagando a madeira do povo — pelo
 // livro; h14 a terra cara (social.js): a família rica compra a casa da família simples do centro, cada uma com o que é
-// seu, pelo livro; h10 o salto: a obra termina e a família muda; h16 a ruína (a casa que caiu, a da cidade abandonada)
+// seu, pelo livro; h10 o salto: a obra termina e a família muda (vista quando a casa fica pronta: a terra cara pode mandá-la adiante, T-139); h16 a ruína (a casa que caiu, a da cidade abandonada)
 // sem dono quando o dono morre (L-304); h9 um povo sem moeda: o povo levanta com o que tem;
 // e o verificador limpo. Os casos que vivem dias do mundo (h7, h8, h15, h14, h10) partem do mundo pronto de novo, e o h7
 // e o h10 preparam a cidade pelas portas do mundo: em paz, com os materiais de uma casa no armazém (a guerra que vier no
@@ -415,12 +415,19 @@ if (hb) {
     // (two years of the skip, and a year more at a time while the work stands unfinished — a war in the middle holds the
     // builders —, up to five)
     if (b) {
-      M.saltar(2); let y = 2; for (; y < 5 && !b.built && S.buildings.has(b.id) && b.encomenda; y++) M.saltar(1);
+      // (the family's move, seen when the house stands — act-casa.js moves it as the work is finished —: in the years of a city
+      // after it, the dear land may send it on, social.js moveUp — a rich family of cheap ground bought the new sobrado from
+      // Citlali's the next morning —, T-139)
+      let movedIn = false; const c0 = G.Village.completeBuilding;
+      G.Village.completeBuilding = function (x) { const r = c0.apply(this, arguments); if (x && x.id === b.id) movedIn = movedIn || (G.S.villagers.get(v.id) || {}).home === b.id; return r; };
+      let y = 2;
+      try { M.saltar(2); for (; y < 5 && !b.built && S.buildings.has(b.id) && b.encomenda; y++) M.saltar(1); } finally { G.Village.completeBuilding = c0; }
       // (a house finished and lived in that the city is already raising further — a house to a sobrado: built again from
       // the ground of the old one — is a work that ended; in a world changed by L-201 the skip ended on it at 72%, T-111)
       const up = !b.built && !!b.upgradeFrom && !b.encomenda;
-      fine10 = (b.built || up) && v.home === b.id && !b.encomenda;
-      info = `um salto de ${y} anos: a obra #${b.id} ${b.built ? 'terminou' : up ? `terminou, e a cidade já a aumenta (${G.Village.buildName(b).toLowerCase()}, ${Math.round((b.progress || 0) * 100)}%)` : S.buildings.has(b.id) ? `NÃO terminou (${Math.round((b.progress || 0) * 100)}%)` : 'SUMIU'} e ${v.name} ${v.home === b.id ? 'mora nela' : 'NÃO mudou'}${warNote(w)}`;
+      const now = S.buildings.get(v.home);
+      fine10 = (b.built || up) && (v.home === b.id || movedIn) && !b.encomenda;
+      info = `um salto de ${y} anos: a obra #${b.id} ${b.built ? 'terminou' : up ? `terminou, e a cidade já a aumenta (${G.Village.buildName(b).toLowerCase()}, ${Math.round((b.progress || 0) * 100)}%)` : S.buildings.has(b.id) ? `NÃO terminou (${Math.round((b.progress || 0) * 100)}%)` : 'SUMIU'} e ${v.name} ${v.home === b.id ? 'mora nela' : movedIn ? `mudou para ela quando ficou pronta (agora mora em ${now ? now.type + '#' + now.id : 'nenhuma casa'})` : 'NÃO mudou'}${warNote(w)}`;
     }
     else info = `${v.name}: nenhuma obra encomendada`;
   }
