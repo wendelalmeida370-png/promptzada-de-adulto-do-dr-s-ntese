@@ -441,16 +441,29 @@
   // carrying together, the crate ties the two: each step of the one who leads draws the helper after him, PAIR_GAP behind,
   // on the line between them (a rope's way: never past him, never a step and a stop). It is done in the lead's own step,
   // after his feet, so the two end every step of the world a crate's length apart, whichever of them lives first in it. A
-  // corner the rope would cut through a wall: his own track, a crate's length back; and if that is no ground either, the
-  // helper waits a step. The helper walked after him on his own, closing in only past 0,7 of a tile and stopping at 0,6:
-  // nearly three metres apart in the 3D, and no crate reached both pairs of hands (L-200)
+  // corner the rope would cut through a wall: his own track, a crate's length back; and if that is no ground either — the
+  // corner of a house, both points on it —, of sixteen bearings a crate's length from him and not ahead of his step, the
+  // ground nearest where the helper stands (there the helper used to wait a step: 0,38 of a tile apart and standing while
+  // he walked, by the harbour warehouse of Mênfis, L-332); only with none of them ground does the helper wait. The helper
+  // walked after him on his own, closing in only past 0,7 of a tile and stopping at 0,6: nearly three metres apart in the
+  // 3D, and no crate reached both pairs of hands (L-200)
   function tow(v) {
     const S = S_(); const c = v.carry; const hp = c && c.pair && S.villagers.get(c.pair); const t = hp && hp.task;
     if (!t || t.type !== 'ajudar' || t.lead !== v.id || t.st !== 2 || A.isBody(hp)) return;
     const dx = hp.x - v.x, dy = hp.y - v.y, d = Math.hypot(dx, dy);
     let x = v.x, y = v.y, on = false;
     if (d > 1e-6) { x = v.x + dx / d * P.PAIR_GAP; y = v.y + dy / d * P.PAIR_GAP; on = G.W.walkableXY(x, y); }
-    if (!on) { const f = Math.hypot(v.fx || 0, v.fy || 0); if (!(f > 1e-6)) return; x = v.x - v.fx / f * P.PAIR_GAP; y = v.y - v.fy / f * P.PAIR_GAP; if (!G.W.walkableXY(x, y)) return; }
+    const f = Math.hypot(v.fx || 0, v.fy || 0); const ux = f > 1e-6 ? v.fx / f : 0, uy = f > 1e-6 ? v.fy / f : 0;
+    if (!on && f > 1e-6) { x = v.x - ux * P.PAIR_GAP; y = v.y - uy * P.PAIR_GAP; on = G.W.walkableXY(x, y); }
+    if (!on) {
+      let bd = Infinity;
+      for (let k = 0; k < 16; k++) {
+        const a = k * Math.PI / 8, cx = Math.cos(a), cy = Math.sin(a); if (cx * ux + cy * uy > 0) continue;
+        const px = v.x + cx * P.PAIR_GAP, py = v.y + cy * P.PAIR_GAP; if (!G.W.walkableXY(px, py)) continue;
+        const dd = G.dist2(px, py, hp.x, hp.y); if (dd < bd) { bd = dd; x = px; y = py; on = true; }
+      }
+    }
+    if (!on) return;
     const s = G.dist(hp.x, hp.y, x, y); hp.x = x; hp.y = y; hp.walkPh += s * 8.5; G.faceTo(hp, v.x - x, v.y - y);
   }
   // the second pair of hands under a heavy crate: to its place by the crate, then carried along by the steps of the one who
