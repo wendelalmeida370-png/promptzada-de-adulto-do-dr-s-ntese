@@ -549,6 +549,68 @@
     return { els, door: { u: L / 2, w: 0.3 * TILE, y0: px(z0), y1: px(z0 + 10) }, body: Object.assign({ walls, base, steps }, extra) };
   };
   def('temple', 'grego', templeGR('grego')); def('temple', 'romano', templeGR('romano'));
+  def('temple', 'classico', templeGR('classico')); // (the classical people's: the Greek's, as the god draws it now)
+  // (the treads of a flight set into a stepped pyramid — Build3D's escada: no riser over 0.26 m —, from its foot: [{ r, y1 }])
+  const stairTreads = e => { const run = e.a[1] - e.b[1], rise = e.b[2] - e.a[2], n = Math.max(2, Math.ceil(rise / 0.26)), u = e.a[0], hw = e.w / 2; const out = [];
+    for (let k = 0; k < n; k++) out.push({ r: [u - hw, e.a[1] - run * (k + 1) / n, u + hw, e.a[1] - run * k / n], y1: e.a[2] + rise * (k + 1) / n }); return out; };
+  // the Aztec's: the pyramid of four levels of 6.5 px, from half side 0.95 to 0.5 tiles, the stair up its front set into it
+  // (0.2 tiles each side of the middle, its ramps of 0.06), the shrine on its top — 0.72 × 0.66 tiles, 9 px, its band at the
+  // top, its door of 0.24 tiles and 6 px to the front —, the crest of 8 px on its roof, the two braziers before the shrine
+  // where the priests light them
+  def('temple', 'asteca', L => {
+    const n = 4, h = px(6.5), H = n * h, e0 = 0.95 * TILE, e1 = 0.5 * TILE; const niveis = [];
+    for (let k = 0; k < n; k++) niveis.push([e0 - (e0 - e1) * k / (n - 1), k * h, (k + 1) * h]);
+    const escada = { k: 'escada', a: [L / 2, at(L, 0.97), 0], b: [L / 2, at(L, 0.5), H], w: 0.4 * TILE, cor: 'wl', clara: 1.08, alfarda: 0.06 * TILE };
+    const z = 26, walls = blocoF(L, -0.36, -0.36, 0.36, 0.3, z, z + 9, WALL, { mat: 'parede' });
+    const els = [{ k: 'escalonada', c: [L / 2, L / 2], niveis, cor: WALL, friso: px(0.8), mat: 'stucco' }, escada, walls, faixaF(L, -0.36, -0.36, 0.36, 0.3, z + 6.5, z + 9, 'trim'),
+      doorF(L, 0.3, -0.12, 0.12, z, z + 6, '#2a1c14'), blocoF(L, -0.3, -0.08, 0.3, 0.02, z + 9, z + 17, ['trim', 'trim', 'trim'], { crista: true })];
+    for (const bx of [-0.42, 0.42]) els.push(blocoF(L, bx - 0.05, 0.37, bx + 0.05, 0.47, z, z + 2.5, ['#6a5a50', '#4a3e36', '#7a6a60']), { k: 'braseiro', p: [at(L, bx), at(L, 0.42), px(z + 2.5)], r: 0.15, uso: 'acender' });
+    return { els, door: { u: L / 2, w: 0.24 * TILE, y0: px(z), y1: px(z + 6) },
+      body: { walls, base: { r: rect(L, -0.95, -0.95, 0.95, 0.95), y1: H, degraus: niveis.map(([s, , yb]) => ({ r: [L / 2 - s, L / 2 - s, L / 2 + s, L / 2 + s], y1: yb })) }, steps: stairTreads(escada) } };
+  });
+  // the Norse's stave church: its base of 1.5 px and 0.75 tiles; the gallery round the nave under the skirt roof — from 7 px
+  // at its edge up to the nave's walls at 11 px —, its staves at the edge, the portal at its front where the god paints the
+  // door (1.5–7 px); the nave of 0.55 tiles, its walls to 12 px, its door under the gallery, the roof along the width to 22 px
+  // with its dragon; the upper tier of 0.32 tiles from 18 to 27 px with its windows, its roof along the way in to 35 px with
+  // its dragon; the tower of 0.12 tiles to 38 px and its spire to 50; the fire before it
+  def('temple', 'nordico', L => {
+    const SHG = ['shingle0', 'shingle1', 'wl', 'shingle2']; const walls = blocoF(L, -0.55, -0.55, 0.55, 0.55, 1.5, 12, WALL, { mat: 'parede', tabuas: 10 });
+    const pts = []; const m = 6; for (let k = 0; k <= m; k++) { const a = -0.75 + 1.5 * k / m; pts.push([a, -0.75], [a, 0.75]); if (k && k < m) pts.push([-0.75, a], [0.75, a]); }
+    const staves = { k: 'colunata', pts: pts.filter(([a, b]) => !(b > 0.7 && Math.abs(a) < 0.2)).map(([a, b]) => [at(L, a), at(L, b)]), r: 0.03 * TILE, y0: px(1.5), y1: px(7), cor: ['wr', 'wl'], mat: 'beam' };
+    const skirt = [[[-0.75, 0.75], [0.75, 0.75], [0.55, 0.55], [-0.55, 0.55], 'shingle0'], [[0.75, 0.75], [0.75, -0.75], [0.55, -0.55], [0.55, 0.55], 'shingle1'],
+      [[0.75, -0.75], [-0.75, -0.75], [-0.55, -0.55], [0.55, -0.55], 'shingle0'], [[-0.75, -0.75], [-0.75, 0.75], [-0.55, 0.55], [-0.55, -0.55], 'shingle1']]
+      .map(([a, b, c, d, cor]) => ({ k: 'pano', p: [[at(L, a[0]), at(L, a[1]), px(7)], [at(L, b[0]), at(L, b[1]), px(7)], [at(L, c[0]), at(L, c[1]), px(11)], [at(L, d[0]), at(L, d[1]), px(11)]], cor, mat: 'shingle' }));
+    const steps = treadsF(L, -0.2, 0.2, 0.83, 1.5, 2);
+    const els = [blocoF(L, -0.75, -0.75, 0.75, 0.75, 0, 1.5, BASE), ...steps, walls, doorF(L, 0.55, -0.1, 0.1, 1.5, 7, 'door'), staves, ...skirt,
+      { k: 'porta', na: 'frente', v: at(L, 0.75), u: L / 2, w: 0.2 * TILE, y0: px(1.5), y1: px(7), cor: 'door' },
+      { k: 'telhado', r: rect(L, -0.55, -0.55, 0.55, 0.55), y0: px(12), y1: px(22), ao: 'u', ov: 0.08 * TILE, cor: SHG, mat: 'shingle' }, { k: 'dragao', p: [at(L, 0.63), L / 2, px(22)], dir: 1, cor: '#3a2616' },
+      blocoF(L, -0.32, -0.32, 0.32, 0.32, 18, 27, WALL, { tabuas: 8 }), winsF(L, 'frente', 0.32, -0.08, 0.04, 21, 3, 0), winsF(L, 'direita', 0.32, -0.04, 0.08, 21, 3, 0),
+      { k: 'telhado', r: rect(L, -0.32, -0.32, 0.32, 0.32), y0: px(27), y1: px(35), ao: 'v', ov: 0.06 * TILE, cor: SHG, mat: 'shingle' }, { k: 'dragao', p: [L / 2, at(L, 0.38), px(35)], dir: 1, ao: 'v', cor: '#3a2616' },
+      blocoF(L, -0.12, -0.12, 0.12, 0.12, 32, 38, ['wl', 'wr', 'shingle2'], { tabuas: 4 }), { k: 'piramide', c: [L / 2, L / 2], e: 0.14 * TILE, y0: px(38), y1: px(50), cor: ['shingle0', 'shingle1'], mat: 'shingle' },
+      { k: 'braseiro', p: [at(L, -0.9), at(L, 0.9), 0], r: 0.2, uso: 'acender' }];
+    return { els, door: { u: L / 2, w: 0.2 * TILE, y0: px(1.5), y1: px(7) },
+      body: { walls, porta: { u: L / 2, w: 0.2 * TILE, y0: px(1.5), y1: px(7) }, base: { r: rect(L, -0.75, -0.75, 0.75, 0.75), y1: px(1.5) }, steps, peristyle: { r: rect(L, -0.75, -0.75, 0.75, 0.75), y1: px(7), cols: staves } } };
+  });
+  // the Egyptian's: the hall at the back, 15 px with its band of 12–13.5 px, its top flat; its door to the court, 0.2 tiles
+  // and 10 px (behind the pylon: the god does not show it); the row of five papyrus columns of 13 px across the court; the
+  // pylon — two towers of 30 px, battered 0.1 tiles, their bands at the top, the flags of 36 px before them —, the gate's
+  // block of 20 px between them with its band, the passage through it 0.2 tiles wide and 13 px high under its lintel, the
+  // dark gate the god paints on its face; the two braziers before the pylon (the god's fires), where one lights them
+  def('temple', 'egipcio', L => {
+    const walls = blocoF(L, -0.7, -0.9, 0.85, 0.35, 0, 15, WALL, { mat: 'parede' }); const cols = colsF(L, -0.6, 0.35, 0.75, 0.55, 0, 13, 5, 0.05, 'L', true);
+    const els = [walls, faixaF(L, -0.7, -0.9, 0.85, 0.35, 12, 13.5, 'trim'), doorF(L, 0.35, -0.1, 0.1, 0, 10, '#2a2016'), cols];
+    const torres = [];
+    for (const [a, b] of [[-0.92, -0.18], [0.18, 0.92]]) {
+      torres.push(rect(L, a, 0.55, b, 0.92));
+      els.push({ k: 'talude', r: rect(L, a, 0.55, b, 0.92), r1: rect(L, a + 0.1, 0.65, b - 0.1, 0.82), y0: 0, y1: px(30), cor: WALL }, faixaF(L, a + 0.1, 0.65, b - 0.1, 0.82, 28, 30, 'trim'),
+        { k: 'bandeira', p: [at(L, (a + b) / 2), at(L, 0.93), 0], h: px(36), cor: 'trim2' });
+    }
+    els.push(blocoF(L, -0.18, 0.62, -0.1, 0.86, 0, 20, WALL), blocoF(L, 0.1, 0.62, 0.18, 0.86, 0, 20, WALL), blocoF(L, -0.1, 0.62, 0.1, 0.86, 13, 20, WALL), faixaF(L, -0.18, 0.62, 0.18, 0.86, 18, 20, 'trim'),
+      { k: 'porta', na: 'frente', v: at(L, 0.86), u: L / 2, w: 0.2 * TILE, y0: 0, y1: px(13), cor: '#2a2016', portao: true });
+    for (const x of [-0.6, 0.6]) els.push({ k: 'braseiro', p: [at(L, x), at(L, 0.96), 0], r: 0.2, uso: 'acender' });
+    return { els, door: { u: L / 2, w: 0.2 * TILE, y0: 0, y1: px(13) }, body: { walls, porta: { u: L / 2, w: 0.2 * TILE, y0: 0, y1: px(10) },
+      court: { r: rect(L, -0.92, 0.35, 0.92, 0.55), cols }, gate: { r: rect(L, -0.1, 0.62, 0.1, 0.86), u: L / 2, w: 0.2 * TILE, y0: 0, y1: px(13), v: at(L, 0.86) }, towers: torres } };
+  });
 
   // ------------------------------ the administration (cityart.js administracao) ------------------------------
   // the classical one: its base of 0.95 tiles and 2 px, the hall of 1.6 × 1.1 tiles to 17 px with three windows a side, the
@@ -1104,7 +1166,7 @@
   const keep = (F, k, fn) => { let m = asked.get(F); if (!m) asked.set(F, m = {}); if (!(k in m)) m[k] = Object.freeze(fn()); return m[k]; };
   const lowFoot = y => y <= 0.15; // (standing on the ground: on it, or on the square's pavement)
   const HEAD = 1.9; // (what is lower than this over the ground is in the body's way: a person of 1.75 m and a hand)
-  // the pieces one uses: [{ uso: 'fonte' | 'tribuna' | 'banco', r: [u0, v0, u1, v1] — its foot —, c, rad — a round one's middle
+  // the pieces one uses: [{ uso: 'fonte' | 'tribuna' | 'banco' | 'acender' (a brazier), r: [u0, v0, u1, v1] — its foot —, c, rad — a round one's middle
   // and reach —, y1 — its top: where one stands or sits, the rim one drinks at —, vira [du, dv] — the way one faces using it —,
   // escada — the treads up to the top of a high one, from the lowest: [{ r, y1 }] }]
   Fo.uses = F => keep(F, 'uses', () => {
@@ -1112,6 +1174,7 @@
     for (const e of F.els) {
       if (!e.uso) continue; const u = { uso: e.uso, vira: e.vira || null };
       if (e.k === 'bacia') Object.assign(u, { r: [e.c[0] - e.r, e.c[1] - e.r, e.c[0] + e.r, e.c[1] + e.r], c: e.c.slice(), rad: e.r, y1: e.y1 });
+      else if (e.k === 'braseiro') Object.assign(u, { r: [e.p[0] - e.r, e.p[1] - e.r, e.p[0] + e.r, e.p[1] + e.r], c: [e.p[0], e.p[1]], rad: e.r, y1: e.p[2] + 0.72 }); // (its bowl's rim)
       else Object.assign(u, { r: e.r.slice(), y1: e.k === 'banco' ? e.y : e.y1 });
       const st = F.els.filter(q => q.degrau === e.uso).map(q => ({ r: q.r.slice(), y1: q.y1 })).sort((a, b) => a.y1 - b.y1);
       if (st.length) u.escada = st;
@@ -1149,7 +1212,9 @@
   // it) —, tabuas — walls of planks —, porta: { u, w, y0, y1 } on the front face (v = r[3]), janelas: [{ na: 'frente' |
   // 'fundo' | 'direita' | 'esquerda', de, ate (along the face), y0, y1 }] (but the pane of the god's row over the door: its
   // top's, not an opening of its own), portico: { r, y1 (the ceiling),
-  // colunas: [{ c, r }] } or null, peristilo: the same round the walls (a Greek temple's) or null, base: { r, h, degraus? } —
+  // colunas: [{ c, r }] } or null, peristilo: the same round the walls (a Greek temple's) or null; patio: { r, colunas } — an
+  // open court before the walls (the Egyptian temple's) —, portao: { r (its passage), u, w, y0, y1, v (its face) } — the street's
+  // door where it is another than the walls' (the pylon's gate) —, torres: [r] (its towers), or null; base: { r, h, degraus? } —
   // the plinth under the floor, and its own steps from the ground ([{ r, y1 }]: a crepidoma's) —, degraus: [{ r, y1 }] — the treads from the
   // street up to it, from the lowest —, telhado: { tipo: 'duas-aguas' | 'quatro-aguas' | 'turfa' | 'plano', r, y0, y1, ao, ov } }
   Fo.body = F => (F.body ? keep(F, 'body', () => {
@@ -1161,13 +1226,16 @@
       if (!e.n) { janelas.push({ na: e.na, de: e.de, ate: e.ate, y0: e.y0, y1: e.y1 }); continue; }
       const g = (e.ate - e.de) / (e.n * 2 + 1); for (let k = 0; k < e.n; k++) janelas.push({ na: e.na, de: e.de + g * (1 + 2 * k), ate: e.de + g * (2 + 2 * k), y0: e.y0, y1: e.y1 });
     }
-    const D = F.door; const onDoor = j => !!D && j.na === 'frente' && j.de < D.u + D.w / 2 && j.ate > D.u - D.w / 2 && j.y0 < D.y1 && j.y1 > D.y0;
+    const D = B.porta || F.door; const onDoor = j => !!D && j.na === 'frente' && j.de < D.u + D.w / 2 && j.ate > D.u - D.w / 2 && j.y0 < D.y1 && j.y1 > D.y0;
     for (let k = janelas.length - 1; k >= 0; k--) if (onDoor(janelas[k])) janelas.splice(k, 1);
     const cu = (r[0] + r[2]) / 2, cv = (r[1] + r[3]) / 2;
     const rf = F.els.find(e => e.k === 'telhado' && cu > e.r[0] && cu < e.r[2] && cv > e.r[1] && cv < e.r[3]);
     const telhado = rf ? { tipo: rf.quatro ? 'quatro-aguas' : rf.mat === 'turf' ? 'turfa' : 'duas-aguas', r: rf.r.slice(), y0: rf.y0, y1: rf.y1, ao: rf.ao, ov: rf.ov || 0 } : { tipo: 'plano', r: r.slice(), y0: w.y1, y1: w.y1, ao: null, ov: 0 };
     const P = B.porch;
-    return { r: r.slice(), r1: w.r1 ? w.r1.slice() : null, y0: w.y0, y1: Math.max(w.y1, telhado.y0), tabuas: !!w.tabuas, porta: F.door ? { u: F.door.u, w: F.door.w, y0: F.door.y0, y1: F.door.y1 } : null, janelas,
+    const D0 = B.porta || F.door;
+    return { r: r.slice(), r1: w.r1 ? w.r1.slice() : null, y0: w.y0, y1: Math.max(w.y1, telhado.y0), tabuas: !!w.tabuas, porta: D0 ? { u: D0.u, w: D0.w, y0: D0.y0, y1: D0.y1 } : null, janelas,
+      patio: B.court ? { r: B.court.r.slice(), colunas: B.court.cols.pts.map(q => ({ c: q.slice(), r: B.court.cols.r })) } : null,
+      portao: B.gate ? { r: B.gate.r.slice(), u: B.gate.u, w: B.gate.w, y0: B.gate.y0, y1: B.gate.y1, v: B.gate.v } : null, torres: B.towers ? B.towers.map(q => q.slice()) : null,
       portico: P ? { r: P.r.slice(), y1: P.y1, colunas: P.cols.pts.map(q => ({ c: q.slice(), r: P.cols.r })) } : null,
       peristilo: B.peristyle ? { r: B.peristyle.r.slice(), y1: B.peristyle.y1, colunas: B.peristyle.cols.pts.map(q => ({ c: q.slice(), r: B.peristyle.cols.r })) } : null,
       base: B.base ? Object.assign({ r: B.base.r.slice(), h: B.base.y1 }, B.base.degraus ? { degraus: B.base.degraus.map(q => ({ r: q.r.slice(), y1: q.y1 })) } : {}) : null, degraus: (B.steps || []).map(q => ({ r: q.r.slice(), y1: q.y1 })).sort((a, b) => a.y1 - b.y1), telhado };

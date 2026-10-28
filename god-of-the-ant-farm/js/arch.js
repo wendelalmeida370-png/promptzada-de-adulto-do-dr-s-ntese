@@ -417,8 +417,8 @@
 
   // ------------------------------ religion ------------------------------
   function temple(c, m, p, st) {
-    if (st === 'grego' || st === 'romano') {
-      const g = st === 'grego';
+    if (st === 'grego' || st === 'romano' || st === 'classico') { // (the classical people's: the Greek's — D-093)
+      const g = st !== 'romano';
       const H0 = g ? steps(c, p, 0.95, 3, 1.4, 0.07) : 0;
       if (!g) box(c, -0.85, -0.85, 0.85, 0.85, 0, 7, p.base[0], p.base[1], p.base[2]); // podium
       // (the flight up the front on the axis, cut into the base — the body's, no riser over 0.30 m: Forma's temple —, from the
@@ -1222,7 +1222,7 @@
 
   // ------------------------------ dispatch ------------------------------
   const MAXZ = { quarteirao: 84, hut: 30, house: 40, sobrado: 52, insula: 64, temple: 64, monument: 72, storehouse: 44, workshop: 46, quartel: 44, torre: 54, praca: 44, mercado: 38, celeiro: 44, biblioteca: 44, teatro: 56, banhos: 50, palacio: 72, doca: 36, aqueduto: 36, maravilha: 100 };
-  const NEW = { quarteirao: 1, sobrado: 1, insula: 1, praca: 1, mercado: 1, celeiro: 1, biblioteca: 1, teatro: 1, banhos: 1, palacio: 1, doca: 1, aqueduto: 1, maravilha: 1 };
+  const NEW = { quarteirao: 1, sobrado: 1, insula: 1, praca: 1, mercado: 1, celeiro: 1, biblioteca: 1, teatro: 1, banhos: 1, palacio: 1, doca: 1, aqueduto: 1, maravilha: 1, temple: 1 }; // (the temple: the Greek's — D-093)
   // later files add building types of their own with the same drawing kit
   A.EXT = {};
   A.kit = () => ({ longhouse, stepPyr, P, poly, ln, walls, top, box, onL, onR, door, shade, roof, hall, column, colonnade, steps, flag, palm, jar, barrel, awning, stall, statue, dome, tree, basin, pave, band, parapet, plinth, winsL, winsR, gableX, gableY, hip, pal, TAU });
