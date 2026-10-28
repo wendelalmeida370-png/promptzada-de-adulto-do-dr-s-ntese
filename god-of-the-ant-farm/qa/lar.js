@@ -416,19 +416,22 @@ if (want('l13')) {
 
 // ======================= l14: by day, the old mind the little ones at home =======================
 if (want('l14')) {
-  open(); S.time = 0.12; // (the morning: 75 s of the day, before the evening at 0,6)
+  open(); S.time = 0.12; live(15); // (the morning, after its moves of house: 75 s of the day, before the evening at 0,6)
   // (a house of the world with someone of 62 or more — whose working day weighs less than the minding — and little ones of
   // three to six living in it; one of the old minds them. A small town may have none: then the metropolis)
-  const findHouse = () => { const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v)) e.old.push(v); if (v.age >= 3 && v.age < 7) e.kids.push(v); houses.set(h.id, e); } return [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0]; };
+  // (not a house too full for its beds or a couple without one of their own: someone of it moves out any day — the old one,
+  // maybe, and the little ones are no longer hers: act-casa.js)
+  const moving = v => !!(G.Casa && G.Casa.need && G.Casa.need(v));
+  const findHouse = () => { const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v) && !moving(v)) e.old.push(v); if (v.age >= 3 && v.age < 7) e.kids.push(v); houses.set(h.id, e); } return [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0]; };
   let e = findHouse();
-  if (!e && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); S.time = 0.12; e = findHouse(); }
+  if (!e && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); S.time = 0.12; live(15); e = findHouse(); }
   if (!e) ok('l14 os velhos cuidam dos pequenos em casa', false, 'nenhuma casa com alguém de 62 anos ou mais e crianças de 3 a 6');
   else {
     let h = e.h; const dw = doorWatch(); let minded = 0, kidsHome = 0, n = 0, txt = '', two = 0, reload = '', reloadOk = true; const exits = new Map();
     let died = null, after = '', afterOk = true;
     // (what the old of the house did, second by second, and why one was not minding — for the note when the case fails)
     const seq = []; const whyNot = new Map();
-    const notMinding = o => { if (o.age < 55) return 'idade'; if (o.sick > 0) return 'doente'; if (o.hp < 50) return `ferida (${Math.round(o.hp)})`; if (!builtHome(o)) return 'sem casa'; const t = o.task; return t ? `${t.type}${t.what ? ':' + t.what : ''}` : 'sem tarefa'; };
+    const notMinding = o => { if (o.home !== h.id) return 'mudou de casa'; if (o.age < 55) return 'idade'; if (o.sick > 0) return 'doente'; if (o.hp < 50) return `ferida (${Math.round(o.hp)})`; if (!builtHome(o)) return 'sem casa'; const t = o.task; return t ? `${t.type}${t.what ? ':' + t.what : ''}` : 'sem tarefa'; };
     live(75, () => {
       dw.step(); n++;
       if (n % 10 === 0 && n <= 550) { const o = S.villagers.get(e.old[0].id); const w = o ? (o.task && o.task.type === 'lar' && o.task.what === 'cuidar' ? 'cuidar' : notMinding(o)) : 'morta'; if (seq[seq.length - 1] !== w) seq.push(w); if (o && w !== 'cuidar') whyNot.set(w, (whyNot.get(w) || 0) + 1); }
