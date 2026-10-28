@@ -20,6 +20,8 @@
 //      a família igual ao ser olhada e ao ver o corpo entrar, a despensa só pelo livro, o corpo deitado em casa no save
 //  l11 a reza dentro do templo (L-224): os fiéis entram pela porta até os lugares da planta, os outros nas fileiras de fora;
 //      um save no meio; todos terminam e saem
+//  l11b quem reza dentro do templo está num lugar de rezar da planta (as esteiras, os bancos, o altar do sacerdote — o
+//      repartidor do P4 com a regra do templo)
 //  l10 uma festa atravessa o save (L-222) e o banquete sai pelo livro-razão (L-223)
 //  l8  dois anos de salto: o verificador limpo — e quanto custa o relógio de cada um no salto
 //  l9  um dia inteiro: nenhuma despensa muda fora do livro-razão, a não ser pelos dois caminhos do T-130 ainda abertos (o
