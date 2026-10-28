@@ -660,7 +660,10 @@
       // the night's meeting is over; the hunts and the questions start again
       s.meets = [];
       for (const q of s.socs) for (const w of q.wit || []) if (!w.done && w.hunter) w.hunter = 0;
-      for (const i of s.inq) { const v = S.villagers.get(i.by); if (v) G.Vg.setTask(v, { type: 'inquire', inq: i.id, pri: 2.15, st: 0, kind: 'inquire' }); }
+      // (not to one another system has just given back what he was doing when the game was saved — the riot's guard (L-190) —:
+      // that was his task then, not the questions, and the world gone on would have left him there. Jasão of Argos guarded the
+      // riot and came back from the load asking questions in the streets, his post in the square empty: L-376)
+      for (const i of s.inq) { const v = S.villagers.get(i.by); if (v && !v.task) G.Vg.setTask(v, { type: 'inquire', inq: i.id, pri: 2.15, st: 0, kind: 'inquire' }); }
     },
   });
 

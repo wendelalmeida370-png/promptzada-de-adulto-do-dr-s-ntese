@@ -39,6 +39,10 @@ const rise = (hard) => {
 };
 // to the end: the riot is gone from the list, and nobody is left in it or guarding it
 const toEnd = id => { live(200, () => !riot(id)); const stale = [...G.S.villagers.values()].filter(v => v.task && (v.task.type === 'riot' || v.task.type === 'riotguard') && v.task.r === id).length; return { over: !riot(id), stale }; };
+// (each case in the ready world just opened: the cases one after another held the same crowd in the square, case after case, and
+// nobody ate in between — the world gives a town time after a riot, a risen town takes none (Riots.start) —; with the
+// generation-6 metropolis two of Argos were dying of hunger in m6, the town's store full, and the checker said so, T-236)
+const fresh = () => { M.pronto(world); S = G.S; M.viver(2); };
 const lastLog = () => (G.S.history.slice(-6).map(e => e.t || e.txt || '').filter(t => /motim|multidão|praça/i.test(t)).pop() || '').slice(0, 120);
 
 // ---------------- m1 the save in the rally ----------------
@@ -57,10 +61,13 @@ const lastLog = () => (G.S.history.slice(-6).map(e => e.t || e.txt || '').filter
 
 // ---------------- m2 the save in the march ----------------
 {
+  fresh();
   const { R, where, undo } = rise(false);
   if (!R) ok('m2 a marcha atravessa o save', false, 'precondição: ' + rise.why);
   else {
-    live(40, () => R.phase !== 'rally'); live(2); const n0 = inIt(R), g0 = guarding(R), ph = R.phase;
+    // (a moment into the march: in the generation-6 metropolis Argos marched 2,7 tiles to its storehouse, in 2,2 s, and the save
+    // two seconds after the rally fell in the rage, T-236)
+    live(40, () => R.phase !== 'rally'); live(1); const n0 = inIt(R), g0 = guarding(R), ph = R.phase;
     const trip = QA.roundTrip(); S = G.S; const R1 = riot(R.id);
     ok('m2 a marcha atravessa o save', ph === 'march' && !trip.diff.length && !!R1 && R1.phase === ph && inIt(R1) === n0 && guarding(R1) === g0, `${where}: ${n0} marchando (${ph}), ${g0} guardas; o save: ${trip.diff.length ? trip.diff.slice(0, 2).join(' | ') : 'igual'}; depois do load: ${R1 ? `${R1.phase}, ${inIt(R1)} marchando, ${guarding(R1)} guardas` : 'o motim sumiu'}`);
     const e = toEnd(R.id);
@@ -71,6 +78,7 @@ const lastLog = () => (G.S.history.slice(-6).map(e => e.t || e.txt || '').filter
 
 // ---------------- m3 the save in the rage, the guard in the square ----------------
 {
+  fresh();
   const { R, where, undo } = rise(true);
   if (!R) ok('m3 a fúria e a guarda atravessam o save', false, 'precondição: ' + rise.why);
   else {
@@ -85,6 +93,7 @@ const lastLog = () => (G.S.history.slice(-6).map(e => e.t || e.txt || '').filter
 
 // ---------------- m4 the leader dies in the middle, and the save comes right after ----------------
 {
+  fresh();
   const { R, where, undo } = rise(false);
   if (!R) ok('m4 o líder morre no meio', false, 'precondição: ' + rise.why);
   else {
@@ -99,6 +108,7 @@ const lastLog = () => (G.S.history.slice(-6).map(e => e.t || e.txt || '').filter
 
 // ---------------- m5 an old save: the riot without the tasks kept quiets the street, as it always did ----------------
 {
+  fresh();
   const { R, where, undo } = rise(false);
   if (!R) ok('m5 o save antigo', false, 'precondição: ' + rise.why);
   else {
@@ -114,6 +124,7 @@ const lastLog = () => (G.S.history.slice(-6).map(e => e.t || e.txt || '').filter
 // (the ruler's levy took twenty of the forty rioters of Tenochtitlan to a war of conquest, and the riot, its square empty, was
 // told as crushed by the guard. Here the town in a riot is called to its defence — a war by the test's hand)
 {
+  fresh();
   const { R, where, undo } = rise(false);
   if (!R) ok('m6 a convocação no meio do motim: a multidão fica na praça', false, 'precondição: ' + rise.why);
   else {

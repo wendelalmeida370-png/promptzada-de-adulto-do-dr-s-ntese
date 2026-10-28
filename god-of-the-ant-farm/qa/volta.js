@@ -107,6 +107,15 @@ else {
 // ---------------- v3 the peace, with the army in the field (the war is over: it walks home) ----------------
 // (three hosts have marched and come back by now: the realm gets new hands to levy)
 grow(G.Fac.get(A.id), G.Fac.pop(A.id) + 150); live(10);
+// (and the realm at rest when it levies — nobody is called out of a fight or a flight (Wars.canServe): with the final code, seed
+// 7, the war of Casa de Amon came to the gates of Tenochtitlan at night, 112 of its grown-ups fighting, 149 running and 23
+// hidden, and the fourth levy found nobody. The fight over, the war may be over too: then it is declared again, by the test's
+// hand, as at the start — T-240)
+const astir = () => [...G.S.villagers.values()].filter(v => G.Fac.idOfV(v) === A.id && v.task && (v.task.type === 'combat' || v.task.type === 'flee' || v.task.type === 'hide')).length;
+const stir3 = astir(); live(G.DAY_LEN * 1.5, () => astir() < 10);
+const again3 = !Wz().warOf(A.id, B.id) && G.Fac.get(A.id).alive && G.Fac.get(B.id).alive;
+if (again3) { G.Politics.declareWar(G.Fac.get(A.id), G.Fac.get(B.id), 'ambicao'); live(5); }
+if (stir3 >= 10) console.log(`(antes da quarta convocação, ${stir3} de ${A.name} lutando, fugindo ou escondidos; depois de esperar, ${astir()}${again3 ? `; a guerra tinha acabado, e ${A.name} a declarou de novo` : ''})`);
 a = raise();
 if (!a) ok('v3 a paz no caminho', false, 'precondição: nenhum exército chegou a campo — ' + raise.why);
 else {
