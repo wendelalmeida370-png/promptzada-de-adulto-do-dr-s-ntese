@@ -232,7 +232,7 @@
 
   // ------------------------------ how a shack looks ------------------------------
   if (G.Arch && G.Arch.kit) {
-    const { P, poly, box, ln } = G.Arch.kit();
+    const { P, poly, box, ln, door } = G.Arch.kit();
     G.Arch.EXT.barraco = { maxz: 26, draw(c, m, p, st, v) {
       const wood = ['#8a6a48', '#7a5a3a', '#9a7a52'][v % 3];
       box(c, -0.38, -0.34, 0.36, 0.34, 0, 8, wood, '#5e452e', '#a08060');
@@ -241,7 +241,7 @@
       const roofC = st === 'nordico' ? '#6a7a4a' : v % 2 ? '#c8a860' : '#a8604a';
       poly(c, [P(-0.46, -0.42, 11), P(0.44, -0.42, 11), P(0.44, 0.44, 7.6), P(-0.46, 0.44, 7.6)], roofC);
       poly(c, [P(-0.1, 0.0, 9.8), P(0.2, 0.0, 9.8), P(0.2, 0.25, 8.5), P(-0.1, 0.25, 8.5)], 'rgba(90,70,50,0.6)');
-      poly(c, [P(-0.12, 0.345, 0), P(0.1, 0.345, 0), P(0.1, 0.345, 5.5), P(-0.12, 0.345, 5.5)], '#3a2a1c');
+      door(c, 0.345, -0.12, 0.1, 0, 5.5, '#3a2a1c'); // (none on the picture whose door the view does not see: L-264)
       return 13;
     } };
   }

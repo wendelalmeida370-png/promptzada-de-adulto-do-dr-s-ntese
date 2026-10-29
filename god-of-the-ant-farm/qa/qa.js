@@ -747,6 +747,7 @@
   if (!window.QA || !QA.more) return;
   const SIDES = { N: 1, E: 1, S: 1, W: 1 };
   let turn = 0; // (which few plans this round builds: a different few each time, so a long life sees them all)
+  let placeTurn = 0; // (and which few buildings with people inside have their places looked at)
   let heard = new Map(), heardS = null; // (the step's words on the way in already asked again here — once each, in this world)
   let pocketAt = new Map(), pocketS = null; // (the day each door was first seen before a pocket, in this world: L-216)
   QA.more.push(function (add, s) {
@@ -759,7 +760,7 @@
       if (!b.ip) continue;
       const r = b.ip; withIp.push(b);
       // ---- the record is whole: its family is one its type has, its side a side, its counters numbers
-      if (r.v !== 3 || !In.TYPES[r.t] || !In.FAMS[r.f] || !SIDES[r.s] || !Number.isInteger(r.r) || r.r < 0 || !Array.isArray(r.h) || !Array.isArray(r.fx) || !r.dr || typeof r.dr !== 'object') { add('int', 1, `${nm}: registro danificado (${JSON.stringify(r).slice(0, 120)})`); continue; }
+      if (r.v !== 4 || !In.TYPES[r.t] || !In.FAMS[r.f] || !SIDES[r.s] || !Number.isInteger(r.r) || r.r < 0 || !Array.isArray(r.h) || !Array.isArray(r.fx) || !r.dr || typeof r.dr !== 'object') { add('int', 1, `${nm}: registro danificado (${JSON.stringify(r).slice(0, 120)})`); continue; }
       if (!In.TYPES[r.t].fams.includes(r.f)) add('int', 1, `${nm}: a família ${r.f} não é de ${r.t}`);
       // ---- a building standing and finished is of the type its record says (a rebuilding is a renovation of the record)
       if (b.built && b.type !== 'ruin' && T && r.t !== b.type) add('int', 2, `${nm}: o registro diz ${r.t}`);
@@ -773,6 +774,31 @@
       if (!b || !b.ip || !T || !T.cells) continue; const cs = In.cells(b); if (!cs.length) continue;
       const at = In.placeOf(v); if (!at || !cs.some(c => c.bed === at.item)) add('int', 3, `pessoa #${v.id}: presa na cadeia #${b.id} fora das celas`);
     }
+    // ---- the places of who is inside (D-085): one person a point — never two at one place of a piece, nor two closer than
+    // 0.3 m but on one piece made for several (the double bed's two) —, every place a place of its piece; a few buildings with
+    // people in them each round, a different few each time
+    if (In.places) {
+      const occ = []; const seenB = new Set();
+      for (const v of s.villagers.values()) { if (!(v.inside > 0) || seenB.has(v.inside)) continue; seenB.add(v.inside); const b = s.buildings.get(v.inside); if (b && b.ip && In.TYPES[b.ip.t]) occ.push(b); }
+      occ.sort((a, c) => a.id - c.id);
+      for (let k = 0; k < Math.min(3, occ.length); k++) {
+        const b = occ[(placeTurn++ * 7919) % occ.length]; const pts = [...In.places(b).by.entries()]; let clash = null;
+        for (let i = 0; i < pts.length && !clash; i++) for (let j = i + 1; j < pts.length; j++) { const [ia, a] = pts[i], [ib, c] = pts[j]; if (a.lv !== c.lv) continue; if ((a.it && c.it && a.item === c.item && a.q === c.q) || (Math.hypot(a.x - c.x, a.z - c.z) < 0.3 && !(a.it && c.it && a.item === c.item))) { clash = `#${ia} e #${ib}`; break; } }
+        if (clash) add('int', 2, `${b.type}#${b.id}: ${clash} no mesmo lugar`);
+        for (const [id, pl] of pts) if (pl.it && (!pl.it.spots[pl.q] || pl.it.spots[pl.q].use !== pl.use)) { add('int', 3, `${b.type}#${b.id}: #${id} num ponto que não é da peça (${pl.item}:${pl.q} ${pl.use})`); break; }
+      }
+    }
+    // ---- the place the body's hands took (S.avatar.use — the verb 'lugar', phase C): of the building the world has the body
+    // in, of the plan it was taken in, a place of a piece of it — and the body at it, within a stride (the moment's ease of
+    // sitting down and getting up)
+    { const A = s.avatar, u = A && A.use;
+      if (u && In.placeFor && In.keyOf) {
+        const v = s.villagers.get(A.id), b = s.buildings.get(u.b);
+        if (!v || !b || v.inside !== u.b || In.keyOf(b) !== u.key) add('int', 2, `o corpo #${A.id} segura um lugar de #${u.b} sem estar nele, ou com outra planta`);
+        else { const pl = In.placeFor(b, u.it, u.q); const d = pl ? Math.hypot((v.x - b.x) * 4 - pl.x, (v.y - b.y) * 4 - pl.z) : 0;
+          if (!pl) add('int', 2, `o corpo #${A.id} num lugar que a planta de ${b.type}#${b.id} não tem (${u.it}:${u.q})`);
+          else if (d > 1.0) add('int', 3, `o corpo #${A.id} a ${d.toFixed(2)} m do lugar que segura em ${b.type}#${b.id} (${u.use})`); }
+      } }
     // ---- the way in (L-195): where the step put the door, with this record and this ground (the trees about it too: L-206),
     // the way in fits — or it fits on no side open to the street. Asked again here, made anew: every word of the step the first
     // round after it, the doors left where it does not fit every round (they are few), and the others in the round's few plans.
@@ -817,10 +843,20 @@
     for (let k = 0; k < 3; k++) {
       const b = withIp[(turn++ * 7919) % withIp.length]; const p = In.plan(b); if (!p) { add('int', 1, `${b.type}#${b.id}: sem planta`); continue; }
       if (!p.ok) add('int', 2, `${b.type}#${b.id}: planta inválida (${(p.errs || []).slice(0, 2).join('; ')})`);
+      // (the body's places in a valid plan, D-088: both ends of every flight where its rim stands — L-281 —, every use of every
+      // piece with a place ok, where the feet stand — L-282)
+      else if (In.landsAt) {
+        const s0 = p.stairs.find(st => st.kind !== 'degraus' && (!In.landsAt(p, st.lv0, st.a[0], st.a[1]) || !In.landsAt(p, st.lv1, st.b[0], st.b[1])));
+        if (s0) add('int', 3, `${b.type}#${b.id}: o corpo não cabe ${In.landsAt(p, s0.lv0, s0.a[0], s0.a[1]) ? 'no topo' : 'no pé'} de um lance (${s0.kind}, piso ${s0.lv0}→${s0.lv1})`);
+        for (const it of p.items) { const bad = [...new Set(it.spots.map(q => q.use))].find(u => u !== 'acesso' && u !== 'entrar' && !it.spots.some(q => q.use === u && q.ok && (q.on || In.standsAt(p, it.lv, q.x, q.z, In.BODY.feet)))); if (bad) { add('int', 3, `${b.type}#${b.id}: o corpo não fica em ${it.kind} (${bad})`); break; } }
+      }
       // (the plan of a house given up: what the household takes with it is gone)
       if (p.left && p.items.some(it => In.ITEMS[it.kind] && In.ITEMS[it.kind].leva)) add('int', 3, `${b.type}#${b.id}: a casa abandonada ainda tem as coisas que a família leva`);
       const s1 = In.shellOf(b), s2 = In.shellOfPlan(p); const strip = o => { const x = Object.assign({}, o); delete x.key; return JSON.stringify(x); };
       if (!s1 || strip(s1) !== strip(s2)) add('int', 1, `${b.type}#${b.id}: a casca de longe não é a da planta`);
+      // (the yard of a pottery or a tavern, B2d: each of its pieces in a room of the yard open to the sky, on its storey, inside its
+      // fence — what the god's view and the 3D from afar draw there, from the shell)
+      if (p.ok && p.shell.yard) { const Y = p.shell.yard.r; const it = p.items.find(i => i.yard && !(p.rooms[i.room] && p.rooms[i.room].open && p.rooms[i.room].fn === 'terreiro' && i.lv === (p.shell.yard.lv || 0) && i.r[0] >= Y[0] - 1e-6 && i.r[1] >= Y[1] - 1e-6 && i.r[2] <= Y[2] + 1e-6 && i.r[3] <= Y[3] + 1e-6)); if (it) add('int', 3, `${b.type}#${b.id}: ${it.kind} do terreiro fora dele`); }
       // (the way in where the step said it fits, with this record and this ground: asked again here, made anew — L-195)
       if (In.entrySaid && In.entrySaid(b) === true && s1 && G.Space && G.Space.entryFits) { const e = G.Space.entryFits(b, s1); const front = !In.frontOpen || In.frontOpen(b); if (!e.ok || !front) add('int', 2, `${b.type}#${b.id}: a entrada não cabe (${front ? `${e.kind}, o pé a ${e.foot} m` : 'a porta dá para uma casa da rua que não se anda'}) diante da porta, e a virada do dia disse que cabia com o mesmo chão`); }
       // (the door the world's people use, with the port on: the plan's own wherever the step took it — and the step never

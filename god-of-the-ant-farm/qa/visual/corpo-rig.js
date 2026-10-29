@@ -190,7 +190,7 @@ const inside = (cm, bm) => {
 // their distance from the hips' line and fall from the knees. A blouse: in every state but the deep seats — sitting, on the
 // ground, crouching, lying —, where a skin bent by bones cannot lay it over the belly folded on the thighs: there at most
 // 6% of it, never deeper than 3 cm, and the numbers said every run — the limit of this test, not of the look)
-{ const out = []; let fail = 0; const SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low']); // (low: bent double, gathering from the ground)
+{ const out = []; let fail = 0; const SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low', 'eat', 'rock', 'cook', 'sick', 'eatg', 'rockg']); // (low: bent double, gathering from the ground; eat and rock seated as sit is, eatg and rockg on the ground as rest, cook down on the heels, sick lying as sleep)
   for (const nm of ['capa', 'toga', 'bata', 'saiaC', 'saiaL']) { if (!MESH[nm]) continue; const row = [];
     for (const st of A.STATES) { let fr = 0, wo = 0;
       for (let k = 0; k < 6; k++) for (const bd of nm === 'bata' ? ['corpoF'] : nm === 'capa' || nm === 'toga' ? ['corpoM'] : ['corpoM', 'corpoF']) { pose(st, k / 6 * Math.PI * 2, st === 'run' ? 4.5 : 1.4, bd === 'corpoF' ? { fem: true } : null); const r = inside(MESH[nm], MESH[bd]); fr = Math.max(fr, r.frac); wo = Math.max(wo, r.worst); } // (a skirt on both bodies: the woman's hips and thighs are her own)
@@ -236,7 +236,7 @@ const through = (cm, bm, hem) => {
   }
   return { out, shown, worst };
 };
-{ const rows = []; let fail = 0; const WET = /swim|tread|drown|sleep/, SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low']);
+{ const rows = []; let fail = 0; const WET = /swim|tread|drown|sleep|sick/, SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low', 'eat', 'rock', 'cook', 'eatg', 'rockg']);
   for (const nm of ['saiaC', 'saiaL']) for (const bd of ['corpoM', 'corpoF']) { const row = [];
     for (const st of A.STATES) { let o = 0, sh = 0, wo = 0;
       for (let k = 0; k < 6; k++) { pose(st, k / 6 * Math.PI * 2, st === 'run' ? 4.5 : 1.4, bd === 'corpoF' ? { fem: true } : null); const r = through(MESH[nm], MESH[bd], HEM[nm]); o = Math.max(o, r.out); sh = Math.max(sh, r.shown); wo = Math.max(wo, r.worst); }

@@ -302,8 +302,16 @@
     const sp = v.speed * (mul || 1) * (ty === T.RIVER ? (S.road[i] ? 1 : 0.5) : 1) * (S.road[i] ? (S.road[i] >= 3 ? 1.4 : 1.3) : S.wear[i] > 28 ? 1.15 : 1) * (v.sick > 0 ? 0.75 : 1)
       * (v.age < 8 ? 0.8 : v.age >= 62 ? 0.72 : 1) * (v.carry && v.carry.n >= 4 ? 0.9 : 1) * (v.lost && v.lost.leg ? 0.6 : 1) * (v.elite === 'carro' ? 1.45 : 1) * (ty >= T.SAND && !S.road[i] ? 1 / (1 + S.slope[i] * 0.16) : 1);
     const step = sp * dt;
-    if (d <= step || d < 0.001) { v.x = p[0]; v.y = p[1]; v.pi++; }
-    else { v.x += dx / d * step; v.y += dy / d * step; }
+    // (never a step from ground one walks into a tile one does not: a way found before a building came up across it, the
+    // straight run of one fleeing with no route — the way is found again from here, before the step, not from inside the
+    // building after it: L-354)
+    const reach = d <= step || d < 0.001; const nx = reach ? p[0] : v.x + dx / d * step, ny = reach ? p[1] : v.y + dy / d * step;
+    if (W.walkable(i) && !W.walkableXY(nx, ny)) {
+      const last = v.path[v.path.length - 1]; if (!Vg.goto(v, last[0], last[1], true)) v.path = null;
+      v.moving = false; return v.pi >= (v.path ? v.path.length : 0);
+    }
+    if (reach) { v.x = p[0]; v.y = p[1]; v.pi++; }
+    else { v.x = nx; v.y = ny; }
     if (Math.abs(dx) + Math.abs(dy) > 0.02) G.faceTo(v, dx, dy);
     v.walkPh += step * 8.5;
     v.moving = true;

@@ -39,6 +39,9 @@
 //  e18 entrar e sair de casa de verdade (Etapa 2) — a porta fechada desenhada no vão, as mãos a abrem e a folha gira como o
 //      mundo a tem, o corpo entra (o mundo o tem dentro), o olho num cômodo e nunca numa parede, quem está em casa onde a
 //      planta põe, a escada inteira com o alçapão abrindo, salvar e carregar dentro, o deus tira a casa com o corpo nela
+//  e19 a bateria de trocas (L-309) — a troca da e4 (A, Deus, B; e de dentro, B → C) em oito pares das duas maiores cidades,
+//      de manhã e depois de uma noite do mundo: a IA de quem sai volta, quem entra tem o corpo, ninguém duplicado; o par que
+//      falha diz o que o mundo respondeu
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'); const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
@@ -266,11 +269,16 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   if (await need('e4')) {
   // ================================ e4: another person ================================
   const e4 = await E(() => {
-    const S = G.S; const s = __E.town(); const [a, b] = __E.adults(s);
+    const S = G.S; const s = __E.town(); const [a, b1] = __E.adults(s);
     const stA = G.Stories ? G.Stories.of(a.id).map(x => x.id).join(',') : '';
     // (and, when a step fails, what the world said: L-309 — the two swaps failed once with B, Pompeia, chosen at the start)
     const inA = __E.enter(a); __E.f(30); __E.leave();
     const aiA = __E.until(() => a.task && a.task.type !== 'avatar', 120) >= 0;
+    // (B taken among those free at the time of the swap — the one chosen at the start if still so —, as the e15 and the e19 choose:
+    // in the e19, after a night, Messalina of Rome had gone into a cave, whom no body enters yet, and the world said so; the L-309
+    // — «Túlia → Otávio» on 28/10, «Hakon → Pompeia» in a probe of the final run — was likely the same, though that run is not to
+    // be made again: T-262 the world's answer, T-247 the choice at the time)
+    const b = G.Possess.can(b1).ok ? b1 : __E.adults(s).find(o => o.id !== a.id && o.id !== b1.id) || b1; const first = b === b1 ? null : { name: b1.name, why: G.Possess.can(b1).why };
     const inB = __E.enter(b); const whyB = inB ? '' : G.Possess.can(b).why || `${G.Modes.state}, ${b.task ? b.task.type : 'sem tarefa'}`;
     const bOk = S.avatar && S.avatar.id === b.id && b.task.type === 'avatar';
     const aOk = S.villagers.get(a.id) === a && a.task && a.task.type !== 'avatar';
@@ -282,9 +290,9 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     __E.leave();
     const ids = new Set(); let dup = 0; for (const o of S.villagers.values()) { if (ids.has(o.id)) dup++; ids.add(o.id); }
     let marks = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'avatar') marks++;
-    return { inA, aiA, inB, whyB, bOk, aOk, sw, whyC, cOk, aiB, dup, marks, stA, stA2: G.Stories ? G.Stories.of(a.id).map(x => x.id).join(',') : '', bioA: G.Life.bioList(a).slice(-1)[0].txt, bioB: G.Life.bioList(b).slice(-1)[0].txt, qa: __E.qa(), names: [a.name, b.name, c.name] };
+    return { inA, aiA, inB, whyB, first, bOk, aOk, sw, whyC, cOk, aiB, dup, marks, stA, stA2: G.Stories ? G.Stories.of(a.id).map(x => x.id).join(',') : '', bioA: G.Life.bioList(a).slice(-1)[0].txt, bioB: G.Life.bioList(b).slice(-1)[0].txt, qa: __E.qa(), names: [a.name, b.name, c.name] };
   });
-  ok('e4 A, Deus, B: os dois existem, a IA de A voltou, B tem o corpo', e4.aiA && e4.bOk && e4.aOk, `${e4.names[0]} → ${e4.names[1]}${e4.aiA && e4.bOk && e4.aOk ? '' : ` — ${JSON.stringify({ inA: e4.inA, aiA: e4.aiA, inB: e4.inB, whyB: e4.whyB, bOk: e4.bOk, aOk: e4.aOk })}`}`);
+  ok('e4 A, Deus, B: os dois existem, a IA de A voltou, B tem o corpo', e4.aiA && e4.bOk && e4.aOk, `${e4.names[0]} → ${e4.names[1]}${e4.first ? ` (no lugar de ${e4.first.name}: ${e4.first.why})` : ''}${e4.aiA && e4.bOk && e4.aOk ? '' : ` — ${JSON.stringify({ inA: e4.inA, aiA: e4.aiA, inB: e4.inB, whyB: e4.whyB, bOk: e4.bOk, aOk: e4.aOk })}`}`);
   ok('e4 de dentro, B → C: a IA de B volta, C tem o corpo', e4.sw && e4.cOk && e4.aiB, `${e4.names[1]} → ${e4.names[2]}${e4.sw && e4.cOk && e4.aiB ? '' : ` — ${JSON.stringify({ sw: e4.sw, whyC: e4.whyC, cOk: e4.cOk, aiB: e4.aiB })}`}`);
   ok('e4 ninguém duplicado, nenhuma marca sobrando, histórias intactas', !e4.dup && !e4.marks && e4.stA === e4.stA2, `duplicados ${e4.dup}, marcas ${e4.marks}; histórias de A: ${e4.stA || '-'} → ${e4.stA2 || '-'}; bio A: ${e4.bioA}`);
   ok('e4 verificador', !e4.qa.length, e4.qa.slice(0, 3).join(' · ') || 'limpo');
@@ -1262,6 +1270,49 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   });
   if (e18b) ok('e18 o deus tira a casa com o corpo dentro: o interior some, o corpo fora em chão firme', !e18b.open && !e18b.inside && e18b.ground && e18b.err === '{}', JSON.stringify(e18b));
   ok('e18 verificador', !e18.qa || (!e18.qa.length && e18.err === '{}'), `${(e18.qa || []).slice(0, 3).join(' · ') || 'limpo'} · ${e18.err}`);
+  }
+  if (await need('e19')) {
+  // ================================ e19: the swaps over many pairs (L-309) ================================
+  // (the e4's two swaps — A, the god, B; and from inside, B → C — over four pairs of each of the two biggest towns of the fresh
+  // «cidade», in the morning and after a night of the world: L-309 failed them once, «Túlia → Otávio», and not since, the city
+  // of the e4 not always the same one before the whole frames of T-262. One evaluation a pair, never all of them in one — the
+  // browser closed under the sixteen swaps and the night in one go)
+  await E(() => __E.fresh('cidade'));
+  const pairs = async () => {
+    const towns = await E(() => [...G.S.settlements.values()].sort((x, y) => G.Village.pop(y.id) - G.Village.pop(x.id)).slice(0, 2).map(s => s.id));
+    const out = [];
+    for (const sid of towns) for (let k = 0; k < 4; k++) out.push(await E(([sid, k]) => {
+      const S = G.S; const s = S.settlements.get(sid); if (!s) return null;
+      const L = __E.adults(s); const a = L[2 * k], b1 = L[2 * k + 1]; if (!a || !b1) return null;
+      const now = o => ({ task: o.task ? o.task.type : '-', inside: o.inside, sleeping: !!o.sleeping, can: G.Possess.can(o).ok ? 1 : G.Possess.can(o).why, mode: G.Modes.state });
+      const inA = __E.enter(a); __E.f(30); __E.leave();
+      const aiA = __E.until(() => a.task && a.task.type !== 'avatar', 120) >= 0;
+      // (B taken among those free at the time of the swap — the one chosen at the start if still so: after A's turn and the night,
+      // Messalina of Rome had gone into a cave, whom no body enters yet, and the world said so — as the e15 chooses, T-247)
+      const b = G.Possess.can(b1).ok ? b1 : __E.adults(s).find(o => o.id !== a.id && o.id !== b1.id); if (!b) return null;
+      const b0 = b === b1 ? now(b) : Object.assign(now(b), { first: b1.name, why: G.Possess.can(b1).why }); const inB = __E.enter(b); const whyB = inB ? '' : G.Possess.can(b).why || `${G.Modes.state}, ${b.task ? b.task.type : 'sem tarefa'}`;
+      const bOk = !!(S.avatar && S.avatar.id === b.id && b.task && b.task.type === 'avatar');
+      const aOk = S.villagers.get(a.id) === a && !!a.task && a.task.type !== 'avatar';
+      const c = __E.adults(s).find(o => o.id !== a.id && o.id !== b.id);
+      const sw = c ? G.Modes.switchTo(c) : false; const whyC = sw ? '' : c ? G.Possess.can(c).why || G.Modes.state : 'ninguém'; __E.f(40);
+      const cOk = !!(c && S.avatar && S.avatar.id === c.id && c.task && c.task.type === 'avatar' && (!b.task || b.task.type !== 'avatar'));
+      const aiB = __E.until(() => b.task && b.task.type !== 'avatar', 120) >= 0;
+      __E.leave();
+      const good = inA && aiA && bOk && aOk && sw && cOk && aiB;
+      return { town: s.name, names: [a.name, b.name, c ? c.name : '-'], good, why: good ? null : { inA, aiA, inB, whyB, b0, bOk, aOk, sw, whyC, cOk, aiB } };
+    }, [sid, k]));
+    return out.filter(Boolean);
+  };
+  const r19 = { manha: await pairs() };
+  // (a night of the world: its own steps, the god watching, until the next day and a while into it)
+  await E(() => { const S = G.S; const d0 = S.day; let k = 0; while (S.day === d0 && k++ < 20000) G.debug.step(0.05); for (let j = 0; j < 400; j++) G.debug.step(0.05); });
+  r19.noite = await pairs();
+  const f19 = await E(() => { const S = G.S; const ids = new Set(); let dup = 0; for (const o of S.villagers.values()) { if (ids.has(o.id)) dup++; ids.add(o.id); }
+    let marks = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'avatar') marks++; return { dup, marks, qa: __E.qa(), err: JSON.stringify(G.modErr) }; });
+  for (const [k, nm] of [['manha', 'de manhã'], ['noite', 'depois de uma noite do mundo']]) { const L = r19[k]; const bad = L.filter(r => !r.good);
+    ok(`e19 a bateria de trocas ${nm} (L-309): A, Deus, B e, de dentro, B → C, em quatro pares de cada uma das duas maiores cidades`, L.length >= 6 && !bad.length,
+      `${L.length - bad.length} de ${L.length} pares${bad.length ? ' — ' + bad.slice(0, 2).map(r => `${r.town}: ${r.names.join(' → ')} ${JSON.stringify(r.why)}`).join(' · ') : ''}`); }
+  ok('e19 ninguém duplicado, nenhuma marca sobrando, verificador', !f19.dup && !f19.marks && !f19.qa.length && f19.err === '{}', `duplicados ${f19.dup}, marcas ${f19.marks}; ${f19.qa.slice(0, 3).join(' · ') || 'limpo'} · ${f19.err}`);
   }
   if (await need('e8')) {
   // ================================ e8: stress (last: it is the longest) ================================
