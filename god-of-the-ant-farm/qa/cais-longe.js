@@ -59,10 +59,14 @@ else {
     const v = e && e.crew.map(id => S.villagers.get(id)).find(q => q && q.id !== e.leader && !q.aboard);
     if (!e || !v) ok('k2 alguém da tripulação levado a uma ilhota: sai da tripulação e não embarca; quem embarca está no cais', false, !e ? 'a viagem «média» não saiu' : 'a viagem não tem tripulação além da líder');
     else {
+      // (the voyage's ships only: out of the crew, she goes back to her own work — in the world of the v37's last worlds Ragnhild
+      // walked from the islet to the quay of her fishing boat at Kaupang and stepped into it, a boarding of her own; the boarding
+      // the case is about is the voyage's, T-259)
+      const mine = s => !!s && (e.ships || []).includes(s.id);
       toIslet(v, p.isl); const far = []; const ob = Nv.board;
-      Nv.board = function (q, s) { if (e.crew.includes(q.id) || q.id === v.id) { const d = G.dist(q.x, q.y, e.port[0], e.port[1]); if (d > 8 || !W.reaches(q, e.port[0], e.port[1])) far.push(`${q.name} a ${d.toFixed(1)}`); } return ob.apply(this, arguments); };
+      Nv.board = function (q, s) { if (mine(s) && (e.crew.includes(q.id) || q.id === v.id)) { const d = G.dist(q.x, q.y, e.port[0], e.port[1]); if (d > 8 || !W.reaches(q, e.port[0], e.port[1])) far.push(`${q.name} a ${d.toFixed(1)}`); } return ob.apply(this, arguments); };
       let n = 0, out = false; try { while (n++ < 4000 && !(out && X.get(e.id) && !['prep', 'reunir', 'embarque'].includes(e.st))) { G.debug.step(0.1); if (!out && !e.crew.includes(v.id)) out = n; if (n > 50 && !out) break; } } finally { Nv.board = ob; }
-      const boarded = !!v.aboard;
+      const boarded = !!v.aboard && (e.ships || []).includes(v.aboard);
       ok('k2 alguém da tripulação levado a uma ilhota: sai da tripulação e não embarca; quem embarca está no cais', !!out && out <= 50 && !boarded && !far.length,
         `${v.name}, da tripulação de ${e.name}, numa ilhota: ${out ? 'fora da tripulação em ' + (out / 10).toFixed(1) + ' s' : 'AINDA na tripulação'}${boarded ? ', e EMBARCOU' : ''}; a viagem em «${e.st}»; embarcados de longe: ${far.length ? far.join(', ') : 'nenhum'}`);
     }

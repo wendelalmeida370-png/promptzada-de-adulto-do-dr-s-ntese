@@ -79,9 +79,14 @@ else {
   const free4 = v => v.age >= 18 && v.age < 50 && !v.captive && !v.aboard && !v.ug && !v.jail && !v.inside && !v.sleeping && !(S.avatar && S.avatar.id === v.id) && S.settlements.has(v.set);
   // (a straight run of 12 tiles, free and walkable, three wide, off the roads: the well rises in the middle of it)
   const run = (sx, sy, dx, dy) => { for (let k = 0; k <= 12; k++) for (let w = -1; w <= 1; w++) { const i = W.idx(sx + dx * k + dy * w, sy + dy * k + dx * w); if (!W.walkable(i) || S.occ[i] || S.road[i]) return false; } return true; };
+  // (from where someone stands, or from a tile near them that they reach — the case puts them there —: in the metropole of the
+  // v37's last worlds, a denser town, nobody stood at the start of such a run, T-260)
   for (const v of [...S.villagers.values()].filter(free4).sort((p, q) => p.id - q.id)) {
-    const sx = Math.floor(v.x) + 0.5, sy = Math.floor(v.y) + 0.5;
-    for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) if (!pick && run(sx, sy, dx, dy)) pick = { v, sx, sy, tx: sx + dx * 12, ty: sy + dy * 12, wx: Math.floor(sx + dx * 6), wy: Math.floor(sy + dy * 6) };
+    for (let r = 0; r <= 12 && !pick; r++) for (let oy = -r; oy <= r && !pick; oy++) for (let ox = -r; ox <= r && !pick; ox++) {
+      if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue;
+      const sx = Math.floor(v.x) + ox + 0.5, sy = Math.floor(v.y) + oy + 0.5; if (!W.inb(Math.floor(sx), Math.floor(sy)) || (r && !W.reaches(v, sx, sy))) continue;
+      for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) if (!pick && run(sx, sy, dx, dy)) pick = { v, sx, sy, tx: sx + dx * 12, ty: sy + dy * 12, wx: Math.floor(sx + dx * 6), wy: Math.floor(sy + dy * 6) };
+    }
     if (pick) break;
   }
   if (!pick) ok('l4 um prédio que nasce no caminho: o caminho refeito chega aonde ia', false, 'nenhuma linha reta de 12 casas livres diante de alguém');

@@ -40,9 +40,14 @@ const able = o => o.set === set.id && o.age >= 18 && o.age < 50 && o.hp >= 80 &&
 function builder(not) { return [...S.villagers.values()].filter(o => able(o) && o.id !== not).sort((a, c) => (a.role === 'construtor' ? 0 : 1) - (c.role === 'construtor' ? 0 : 1) || a.id - c.id)[0] || null; }
 // (the people's stone kept by the god's hand while the case runs: the town's own works take from the same store, and a task
 // with no stone left to fetch ends — the case is the leg, not the store)
-const keep = () => { if (D.get(f, 'stone') < 30) D.make(f, 'stone', 60 - D.get(f, 'stone'), { code: 'teste', part: true }); };
+// (the free stone, not the whole: in the metropole of the v37's last worlds Tenochtitlan's works had all of it reserved, and the
+// builder had no stone to fetch — the task ended in a second, T-261)
+const keep = () => { const fr = D.free(f, 'stone'); if (fr < 30) D.make(f, 'stone', 60 - fr, { code: 'teste', part: true }); };
 function give(v, b) {
   G.Vg.endTask(v); v.sleeping = false; v.inside = 0; v.hunger = 0; v.path = null;
+  // (and the jar at home full: in the same metropole the houses of Tenochtitlan were low on water, and Citlalin left the work
+  // for the well in the first seconds, T-261)
+  { const hb = S.buildings.get(v.home); if (hb) hb.water = 1; }
   const [fx, fy] = front(b); v.x = fx; v.y = fy;
   G.Vg.setTask(v, { type: 'build', id: b.id, pri: 1, st: 0 });
   return v.task && v.task.type === 'build' && v.task.id === b.id ? v.task : null;
@@ -60,9 +65,11 @@ let v1 = null;
   if (t) {
     const t0 = S.clock; const legs = []; let leg = { st: t.st, t: S.clock }; let ended = null;
     const need0 = b.need.stone; const mine = []; // (the loads this task took to the site: [seconds since it began, how much])
+    // (in the god's peace: past the 70 s, a fight of the world's own took her from the work, T-261)
+    G.Politics.divinePeace();
     for (let k = 0; k < 6000; k++) {
       const c = v.carry && v.carry.k === 'stone' ? v.carry.n : 0, st0 = t.st;
-      M.viver(0.1); keep();
+      M.viver(0.1); keep(); S.divinePeace = Math.max(S.divinePeace || 0, G.DAY_LEN);
       if (st0 === 2 && t.st !== 2 && c > 0 && !(v.carry && v.carry.n > 0)) mine.push([S.clock - t0, c]);
       // (how it ended: a leg past the 70 s — the age a task runs out at —, or nothing more for it to do there)
       if (v.task !== t) { ended = { st: leg.st, age: r1(S.clock - t0), leg: r1(S.clock - leg.t), aged: t.age > 70, now: v.task ? v.task.type : 'nada' }; break; }
