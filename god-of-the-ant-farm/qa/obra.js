@@ -14,6 +14,9 @@
 //  b9 a carroça de comércio sai com a carga pelo livro ('carroca', f: → c:): a carroça é lugar do depósito desde o primeiro
 //     mundo (registrada antes do depósito existir, nunca foi, e nenhuma carroça de comércio saía)
 //  b10 a cidade abandonada com uma obra: o que ela tinha fica ao vento, pelo livro ('abandono')
+//  b11 a doca terminada em pedra: sem madeira e com pedra no armazém de um povo que conhece o mar, o gerente das frotas troca
+//     a madeira que a doca pede por pedra — a conta da obra e o que ela pede juntos (G.Village.swapBill): o que entrou nela pelo
+//     livro é o que virou o prédio (L-416: a madeira entrava sem linha e a pedra sumia)
 //  e o verificador (as regras das obras: oficio-inv) limpo no meio de cada caso, sem erro de módulo nem aviso no console.
 //   node qa/obra.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/obra.js)
 const M = require('./nodemundo.js'); const G = M.load({ qa: true, extra: ['qa/oficio-inv.js'] });
@@ -184,6 +187,30 @@ const send = b => {
     V.abandon(s); live(3);
     const lost = seen.filter(e => e[3] === ref && e[8] === 'abandono');
     ok('b10 a-cidade-abandonada', r.ok && !S.settlements.has(s.id) && Math.abs(sum(lost) - 2) < 0.01 && Math.abs(flowOf(ref)) < 0.01, `${s.name}, vazia, abandonada com ${b.type}#${id} (2 de ${k} nela): ficou ao vento pelo livro ${sum(lost)} ('abandono')`);
+  }
+}
+// ---------------- b11 the quay finished in stone (L-416) ----------------
+// (no timber in the store of a people that knows the sea, and stone to spare: the fleets' manager — naval.js, every 4 s —
+// trades the wood a quay still needs for stone, four at a time, one and a half stone for each; the trade is the work's bill
+// and its need together, G.Village.swapBill. The need alone traded made wood come into the quay with no line and stone
+// vanish in it: a quay of the free people of Óstia, in the chao.js, ended with -8 of wood and 12 of stone unwritten)
+{
+  seen.length = 0;
+  const towns = [...S.settlements.values()].filter(q => builders(q).length && G.Fac.get(q.fac)).sort((a, b) => (b.id === set0.id) - (a.id === set0.id) || V.pop(b.id) - V.pop(a.id) || a.id - b.id);
+  let s = null, b = null; for (const q of towns) { b = V.startProject(q, 'doca'); if (b) { s = q; break; } }
+  if (!b) ok('b11 a-doca-de-pedra', true, 'nenhuma cidade com construtores e lugar para uma doca: sem o caso');
+  else {
+    const id = b.id, ref = 'o:' + id, f = G.Fac.get(s.fac), F = 'f:' + f.id;
+    // (the people knows the sea; its store has no timber, and stone for the quay — the test's hand, kept so while the case runs)
+    if (f.tech && f.tech.known) f.tech.known.navegacao = 1;
+    const keep = () => { const w = D.get(F, 'wood'); if (w > 0) D.use(F, 'wood', w, { code: 'teste', mine: true }); const st = D.get(F, 'stone'); const n = Math.min(D.room(F, 'stone'), 40 - st); if (n >= 1) D.make(F, 'stone', Math.floor(n), { code: 'teste' }); };
+    keep(); if (S.time < 0.25 || S.time > 0.6) { S.time = 0.27; }
+    let k2 = 0; const done = live(900, () => { if (++k2 % 20 === 0) keep(); return !site(id); });
+    const o = S.buildings.get(id); const into = seen.filter(e => e[4] === ref); const built = seen.filter(e => e[3] === ref && e[8] === 'obra-feita');
+    const inOf = k => sum(into.filter(e => e[5] === k)); const bill = o ? V.bill(o) : {};
+    const traded = !!(o && o.troca && o.troca.wood < 0);
+    ok('b11 a-doca-de-pedra', done && !!o && o.built && traded && Math.abs(sum(built) - total(bill)) < 0.01 && Math.abs(inOf('wood') - (bill.wood || 0)) < 0.01 && Math.abs(inOf('stone') - (bill.stone || 0)) < 0.01 && Math.abs(flowOf(ref)) < 0.01,
+      o ? `${s.name}, doca #${id} ${o.built ? 'de pé' : 'ainda obra a ' + Math.round((o.progress || 0) * 100) + '%'}: a troca ${traded ? JSON.stringify(o.troca) : 'NÃO houve'}, a conta ${JSON.stringify(bill)}; entrou na obra pelo livro ${inOf('wood')} de madeira e ${inOf('stone')} de pedra; virou o prédio ('obra-feita') ${sum(built)}; o que entrou e não saiu: ${flowOf(ref)}` : 'a doca sumiu');
   }
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));

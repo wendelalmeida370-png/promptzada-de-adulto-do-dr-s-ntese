@@ -140,7 +140,8 @@
       if (!fin(b.brick.n) || b.brick.n < -EPS) { add('oficio', 1, `${b.type}#${b.id}: tijolo da obra ${b.brick.n}`); continue; }
       if (!b.need || (b.need[k] || 0) > b.brick.n + EPS) add('oficio', 2, `${b.type}#${b.id}: a obra pede ${b.need ? b.need[k] : '?'} de ${k}, trocou ${b.brick.n}`);
       if (b.need && (b.need.stone || 0) < -EPS) add('oficio', 1, `${b.type}#${b.id}: a obra pede pedra negativa (${b.need.stone})`);
-      if (def && G.Village.bill) { let a = 0, z = 0; const bill = G.Village.bill(b); for (const q in bill) a += bill[q] || 0; for (const q in def.cost) z += def.cost[q] || 0; if (Math.abs(a - z) > EPS) add('oficio', 2, `${b.type}#${b.id}: a conta da obra (${a}) não é a do tipo (${z})`); }
+      // (the brick takes the place of stone one for one; a material traded on the way, L-416, changes the bill by its trade)
+      if (def && G.Village.bill) { let a = 0, z = 0; const bill = G.Village.bill(b); for (const q in bill) a += bill[q] || 0; for (const q in def.cost) z += def.cost[q] || 0; for (const q in b.troca || {}) z += b.troca[q] || 0; if (Math.abs(a - z) > EPS) add('oficio', 2, `${b.type}#${b.id}: a conta da obra (${a}) não é a do tipo (${z})`); }
     }
     // the works, a holder of the depot ('o', L-246): what a work still needs is within its bill (nothing it got vanished
     // from it, nothing was born in it); what it waits for on the way is what its builders carry for it; what it got is what

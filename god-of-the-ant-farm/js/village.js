@@ -135,13 +135,25 @@
   // decided anew
   V.refound = function (b) {
     const def = G.BDEF[b.type];
-    b.need = Object.assign({ wood: 0, stone: 0 }, def.cost); b.incoming = { wood: 0, stone: 0 }; b.brick = null;
+    b.need = Object.assign({ wood: 0, stone: 0 }, def.cost); b.incoming = { wood: 0, stone: 0 }; b.brick = null; b.troca = null;
     V.brickSwap(b);
   };
-  // what a work's bill is: its type's cost, with the brick that took the place of stone
+  // a material a work still needs traded for another on the way — the quay finished in stone where the people has no timber
+  // (naval.js): what the work costs and what it still needs change together, kept on the work (b.troca: what each material
+  // went up or down by), so that what it got stays what the ledger brought it. The need alone changed made wood come into the
+  // work with no line and stone vanish in it, L-416. → whether it traded
+  V.swapBill = function (b, from, n, to, m) {
+    if (!b || b.built || !b.need || !(n > 0) || !(m >= 0)) return false;
+    b.need[from] = (b.need[from] || 0) - n; b.need[to] = (b.need[to] || 0) + m;
+    const t = b.troca || (b.troca = {}); t[from] = (t[from] || 0) - n; t[to] = (t[to] || 0) + m;
+    if (!b.incoming) b.incoming = {}; if (b.incoming[to] === undefined) b.incoming[to] = 0;
+    return true;
+  };
+  // what a work's bill is: its type's cost, with the brick that took the place of stone and the materials traded on the way
   V.bill = function (b) {
     const def = G.BDEF[b.type] || { cost: {} }; const out = Object.assign({}, def.cost);
     if (b.brick && b.brick.n > 0) { out.stone = Math.max(0, (out.stone || 0) - b.brick.n); out[b.brick.k] = (out[b.brick.k] || 0) + b.brick.n; }
+    if (b.troca) for (const k in b.troca) { const d = b.troca[k]; if (typeof d === 'number' && isFinite(d)) out[k] = Math.max(0, (out[k] || 0) + d); }
     return out;
   };
   // what was delivered to a work: its bill less what it still needs — what goes back to the store when the work is given
