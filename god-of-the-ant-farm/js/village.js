@@ -667,6 +667,13 @@
   // ------------------------------ jobs ------------------------------
   const BASE_ROLES = ['lenhador', 'coletor', 'agricultor', 'construtor', 'mineiro', 'cacador', 'sacerdote', 'guerreiro'];
   let WORK_ROLES = BASE_ROLES;
+  // who can walk to a work — to its front, or to any free side of it (the builder's own rule, Vg.gotoB) —, and can the town
+  // (its streets, W.townRegion): by the map of regions, never «the same island» (L-389)
+  const ringOf = b => { const out = []; for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) { if (y >= b.y && y < b.y + b.h && x >= b.x && x < b.x + b.w) continue; if (W.inb(x, y) && W.walkable(W.idx(x, y))) out.push([x + 0.5, y + 0.5]); } return out; };
+  V.reachesWork = function (v, b) { const [fx, fy] = V.frontTile(b); return W.reaches(v, fx, fy) || ringOf(b).some(p => W.reaches(v, p[0], p[1])); };
+  V.townReachesWork = function (set, b) { const [fx, fy] = V.frontTile(b); return W.townReaches(set, fx, fy) || ringOf(b).some(p => W.townReaches(set, p[0], p[1])); };
+  // the works of a town its streets reach (a site across the water is none of them: it is given up after its tries, L-349)
+  const townWorks = set => { const out = []; for (const b of G.S.buildings.values()) if (b.set === set.id && !b.built && b.type !== 'ruin' && V.townReachesWork(set, b)) out.push(b); return out; };
   function assignJobs(set) {
     const S = G.S;
     // (the trades of the economy module load after this file)
@@ -747,11 +754,20 @@
     const have = {}; for (const r of WORK_ROLES) have[r] = [];
     const none = [];
     for (const v of adults) { if (v.role) have[v.role].push(v); else none.push(v); }
+    // (the builders counted by the side of the works: a town cut in two by the water, a wall or the god, its builders on the far
+    // side, had the builders it wanted counted for the whole town, and the works its streets reach stood still — L-389. A builder
+    // who can walk to none of them leaves the trade for one on his side, and a new builder is one who reaches them: the first of
+    // them no builder reaches, while there is one. With no work the streets reach, nothing changes)
+    const works = townWorks(set); const left = new Set();
+    if (works.length) for (const v of have.construtor.slice()) if (!works.some(b => V.reachesWork(v, b))) { have.construtor.splice(have.construtor.indexOf(v), 1); v.role = null; v.job = 0; none.push(v); left.add(v); }
+    let lone = null; const uncovered = () => { lone = works.find(b => !have.construtor.some(o => V.reachesWork(o, b))) || null; };
+    const fits = (v, r) => r !== 'construtor' || !works.length || (lone ? V.reachesWork(v, lone) : works.some(b => V.reachesWork(v, b)));
     // unassigned first
     const deficit = () => WORK_ROLES.filter(r => have[r].length < want[r]).sort((a, b) => (have[a].length - want[a]) - (have[b].length - want[b]));
     for (const v of none) {
-      const d = deficit(); const r = d.length ? pickRoleFor(v, d) : 'coletor';
-      v.role = r; have[r].push(v); G.Life && G.Life.onRole(v, null);
+      if (works.length) uncovered();
+      const d = deficit().filter(r => fits(v, r)); const r = d.length ? pickRoleFor(v, d) : 'coletor';
+      v.role = r; have[r].push(v); G.Life && G.Life.onRole(v, left.has(v) ? 'construtor' : null);
     }
     // move surplus to deficit (max 3 changes)
     let changes = 0;
@@ -761,7 +777,8 @@
       if (!sur.length) break;
       // choose surplus role with biggest surplus
       sur.sort((a, b) => (have[b].length - want[b]) - (have[a].length - want[a]));
-      const from = sur[0]; const to = pickRoleForList(have[from], d);
+      if (works.length) uncovered();
+      const from = sur[0]; const to = pickRoleForList(have[from], d, fits); if (!to) break;
       const v = to.v; const r = to.r;
       have[from].splice(have[from].indexOf(v), 1); v.role = r; v.job = 0; have[r].push(v); changes++; G.Life && G.Life.onRole(v, from);
     }
@@ -776,12 +793,15 @@
     if (roles.includes('sacerdote') && v.traits.includes('Devoto')) return 'sacerdote';
     return roles[0];
   }
-  function pickRoleForList(list, roles) {
+  function pickRoleForList(list, roles, fits) {
     // prefer a villager who isn't busy with a task
     let best = null, bs = -1e9;
     for (const v of list) {
       for (const r of roles) {
         let s = (v.task ? 0 : 2) + G.R();
+        // (one who cannot take this trade here — a builder who reaches none of the town's works, L-389 —: after the draw, so
+        // the world's chance runs the same whoever is left out)
+        if (fits && !fits(v, r)) continue;
         if (r === 'cacador') s += v.courage * 3;
         if (r === 'guerreiro') s += v.courage * 3 + (v.g === 'm' ? 1 : 0) + (v.kills || 0) * 0.5;
         if (r === 'sacerdote' && v.traits.includes('Devoto')) s += 3;
