@@ -757,9 +757,10 @@
     // (the builders counted by the side of the works: a town cut in two by the water, a wall or the god, its builders on the far
     // side, had the builders it wanted counted for the whole town, and the works its streets reach stood still — L-389. A builder
     // who can walk to none of them leaves the trade for one on his side, and a new builder is one who reaches them: the first of
-    // them no builder reaches, while there is one. With no work the streets reach, nothing changes)
+    // them no builder reaches, while there is one. With no work the streets reach, nothing changes; and one at sea, underground
+    // or held is not judged: the map does not see where he stands)
     const works = townWorks(set); const left = new Set();
-    if (works.length) for (const v of have.construtor.slice()) if (!works.some(b => V.reachesWork(v, b))) { have.construtor.splice(have.construtor.indexOf(v), 1); v.role = null; v.job = 0; none.push(v); left.add(v); }
+    if (works.length) for (const v of have.construtor.slice()) if (!v.aboard && !v.ug && !v.held && !works.some(b => V.reachesWork(v, b))) { have.construtor.splice(have.construtor.indexOf(v), 1); v.role = null; v.job = 0; none.push(v); left.add(v); }
     let lone = null; const uncovered = () => { lone = works.find(b => !have.construtor.some(o => V.reachesWork(o, b))) || null; };
     const fits = (v, r) => r !== 'construtor' || !works.length || (lone ? V.reachesWork(v, lone) : works.some(b => V.reachesWork(v, b)));
     // unassigned first

@@ -1,8 +1,8 @@
 // oficio-inv: the checker's rules for the trades (P2) — the batches of a workshop (G.Oficio: the pottery's bricks, adobes and
-// pots), the brick of the works (D-075) — and the busy hands (D-094) and what a ruin keeps (L-377). Loaded after qa/qa.js
-// (QA.more); copied into qa.js by qa/junta-inv.js. It reads the world's fields directly: a fault in the trades' own code is
-// not hidden by the code it checks. Each rule has its name (QA.oficio, QA.maos, QA.ruina): a proof asks for the one it
-// watches by it, not by its place in QA.more
+// pots), the brick of the works (D-075) — and the busy hands (D-094), what a ruin keeps (L-377) and the builders on the side
+// of the works (L-389). Loaded after qa/qa.js (QA.more); copied into qa.js by qa/junta-inv.js. It reads the world's fields
+// directly: a fault in the trades' own code is not hidden by the code it checks. Each rule has its name (QA.oficio, QA.maos,
+// QA.ruina, QA.obras): a proof asks for the one it watches by it, not by its place in QA.more
 (function () {
   if (!window.QA || !QA.more) return;
   const fin = x => typeof x === 'number' && isFinite(x);
@@ -218,4 +218,32 @@
       if (has.length) add('act', 2, `a ruína #${b.id} (era ${b.origType || '?'}) guarda ${has.join(', ')}: o que um prédio guarda sai com ele pelo livro`);
     }
   });
+  // ---- the builders on the side of the works (L-389): a town with a work its streets reach and builders of its own has one of
+  // them who can walk to one of those works — none, for more than 30 s of the world, is a fault (the trades are counted every
+  // 4 s, every 8 s in the skip). The checker's own reading, by the map of regions (W.reaches, W.townReaches): a work's front
+  // or a free side of it. A builder at sea, underground or held is not judged (the map does not see where he stands), nor a
+  // town with no people of its own to count its trades
+  let cut0 = new Map(), cut0S = null; // (since when each town has had its builders all on the far side of its works)
+  QA.more.push(QA.obras = function (add, s) {
+    const W = G.W, V = G.Village; if (!W || !W.townReaches || !V) return;
+    if (cut0S !== s) { cut0S = s; cut0 = new Map(); }
+    const sides = b => { const [fx, fy] = V.frontTile(b); const out = [[fx, fy]]; for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) { if (y >= b.y && y < b.y + b.h && x >= b.x && x < b.x + b.w) continue; if (W.inb(x, y) && W.walkable(W.idx(x, y))) out.push([x + 0.5, y + 0.5]); } return out; };
+    const works = new Map();
+    for (const b of s.buildings.values()) {
+      if (b.built || b.type === 'ruin' || !b.set) continue; const set = s.settlements.get(b.set); if (!set || !G.Fac.get(set.fac)) continue;
+      const P = sides(b); if (!P.some(p => W.townReaches(set, p[0], p[1]))) continue;
+      let L = works.get(set.id); if (!L) works.set(set.id, L = { set, list: [] }); L.list.push([b, P]);
+    }
+    const crews = new Map();
+    for (const v of s.villagers.values()) if (v.role === 'construtor' && !v.captive && works.has(v.set)) { let L = crews.get(v.set); if (!L) crews.set(v.set, L = []); L.push(v); }
+    const now = new Map();
+    for (const [sid, w] of works) {
+      const crew = crews.get(sid); if (!crew || !crew.length) continue;
+      if (crew.some(v => v.aboard || v.ug || v.held || w.list.some(([, P]) => P.some(p => W.reaches(v, p[0], p[1]))))) continue;
+      const since = cut0.has(sid) ? cut0.get(sid) : s.clock; now.set(sid, since);
+      if (s.clock - since > 30) add('oficio', 3, `${w.set.name}: ${w.list.length} obra(s) que as ruas alcançam (${w.list.slice(0, 2).map(([b]) => `${b.type}#${b.id}`).join(', ')}) e nenhum dos ${crew.length} construtor(es) com caminho a elas, há ${Math.round(s.clock - since)} s — L-389`);
+    }
+    cut0 = now;
+  });
+  if (G.worldHooks) G.worldHooks.push(() => { cut0 = new Map(); cut0S = null; });
 })();
