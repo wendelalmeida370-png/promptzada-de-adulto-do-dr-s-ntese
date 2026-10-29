@@ -269,11 +269,16 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   if (await need('e4')) {
   // ================================ e4: another person ================================
   const e4 = await E(() => {
-    const S = G.S; const s = __E.town(); const [a, b] = __E.adults(s);
+    const S = G.S; const s = __E.town(); const [a, b1] = __E.adults(s);
     const stA = G.Stories ? G.Stories.of(a.id).map(x => x.id).join(',') : '';
     // (and, when a step fails, what the world said: L-309 — the two swaps failed once with B, Pompeia, chosen at the start)
     const inA = __E.enter(a); __E.f(30); __E.leave();
     const aiA = __E.until(() => a.task && a.task.type !== 'avatar', 120) >= 0;
+    // (B taken among those free at the time of the swap — the one chosen at the start if still so —, as the e15 and the e19 choose:
+    // in the e19, after a night, Messalina of Rome had gone into a cave, whom no body enters yet, and the world said so; the L-309
+    // — «Túlia → Otávio» on 28/10, «Hakon → Pompeia» in a probe of the final run — was likely the same, though that run is not to
+    // be made again: T-262 the world's answer, T-247 the choice at the time)
+    const b = G.Possess.can(b1).ok ? b1 : __E.adults(s).find(o => o.id !== a.id && o.id !== b1.id) || b1; const first = b === b1 ? null : { name: b1.name, why: G.Possess.can(b1).why };
     const inB = __E.enter(b); const whyB = inB ? '' : G.Possess.can(b).why || `${G.Modes.state}, ${b.task ? b.task.type : 'sem tarefa'}`;
     const bOk = S.avatar && S.avatar.id === b.id && b.task.type === 'avatar';
     const aOk = S.villagers.get(a.id) === a && a.task && a.task.type !== 'avatar';
@@ -285,9 +290,9 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     __E.leave();
     const ids = new Set(); let dup = 0; for (const o of S.villagers.values()) { if (ids.has(o.id)) dup++; ids.add(o.id); }
     let marks = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'avatar') marks++;
-    return { inA, aiA, inB, whyB, bOk, aOk, sw, whyC, cOk, aiB, dup, marks, stA, stA2: G.Stories ? G.Stories.of(a.id).map(x => x.id).join(',') : '', bioA: G.Life.bioList(a).slice(-1)[0].txt, bioB: G.Life.bioList(b).slice(-1)[0].txt, qa: __E.qa(), names: [a.name, b.name, c.name] };
+    return { inA, aiA, inB, whyB, first, bOk, aOk, sw, whyC, cOk, aiB, dup, marks, stA, stA2: G.Stories ? G.Stories.of(a.id).map(x => x.id).join(',') : '', bioA: G.Life.bioList(a).slice(-1)[0].txt, bioB: G.Life.bioList(b).slice(-1)[0].txt, qa: __E.qa(), names: [a.name, b.name, c.name] };
   });
-  ok('e4 A, Deus, B: os dois existem, a IA de A voltou, B tem o corpo', e4.aiA && e4.bOk && e4.aOk, `${e4.names[0]} → ${e4.names[1]}${e4.aiA && e4.bOk && e4.aOk ? '' : ` — ${JSON.stringify({ inA: e4.inA, aiA: e4.aiA, inB: e4.inB, whyB: e4.whyB, bOk: e4.bOk, aOk: e4.aOk })}`}`);
+  ok('e4 A, Deus, B: os dois existem, a IA de A voltou, B tem o corpo', e4.aiA && e4.bOk && e4.aOk, `${e4.names[0]} → ${e4.names[1]}${e4.first ? ` (no lugar de ${e4.first.name}: ${e4.first.why})` : ''}${e4.aiA && e4.bOk && e4.aOk ? '' : ` — ${JSON.stringify({ inA: e4.inA, aiA: e4.aiA, inB: e4.inB, whyB: e4.whyB, bOk: e4.bOk, aOk: e4.aOk })}`}`);
   ok('e4 de dentro, B → C: a IA de B volta, C tem o corpo', e4.sw && e4.cOk && e4.aiB, `${e4.names[1]} → ${e4.names[2]}${e4.sw && e4.cOk && e4.aiB ? '' : ` — ${JSON.stringify({ sw: e4.sw, whyC: e4.whyC, cOk: e4.cOk, aiB: e4.aiB })}`}`);
   ok('e4 ninguém duplicado, nenhuma marca sobrando, histórias intactas', !e4.dup && !e4.marks && e4.stA === e4.stA2, `duplicados ${e4.dup}, marcas ${e4.marks}; histórias de A: ${e4.stA || '-'} → ${e4.stA2 || '-'}; bio A: ${e4.bioA}`);
   ok('e4 verificador', !e4.qa.length, e4.qa.slice(0, 3).join(' · ') || 'limpo');
@@ -1278,11 +1283,14 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const out = [];
     for (const sid of towns) for (let k = 0; k < 4; k++) out.push(await E(([sid, k]) => {
       const S = G.S; const s = S.settlements.get(sid); if (!s) return null;
-      const L = __E.adults(s); const a = L[2 * k], b = L[2 * k + 1]; if (!a || !b) return null;
+      const L = __E.adults(s); const a = L[2 * k], b1 = L[2 * k + 1]; if (!a || !b1) return null;
       const now = o => ({ task: o.task ? o.task.type : '-', inside: o.inside, sleeping: !!o.sleeping, can: G.Possess.can(o).ok ? 1 : G.Possess.can(o).why, mode: G.Modes.state });
       const inA = __E.enter(a); __E.f(30); __E.leave();
       const aiA = __E.until(() => a.task && a.task.type !== 'avatar', 120) >= 0;
-      const b0 = now(b); const inB = __E.enter(b); const whyB = inB ? '' : G.Possess.can(b).why || `${G.Modes.state}, ${b.task ? b.task.type : 'sem tarefa'}`;
+      // (B taken among those free at the time of the swap — the one chosen at the start if still so: after A's turn and the night,
+      // Messalina of Rome had gone into a cave, whom no body enters yet, and the world said so — as the e15 chooses, T-247)
+      const b = G.Possess.can(b1).ok ? b1 : __E.adults(s).find(o => o.id !== a.id && o.id !== b1.id); if (!b) return null;
+      const b0 = b === b1 ? now(b) : Object.assign(now(b), { first: b1.name, why: G.Possess.can(b1).why }); const inB = __E.enter(b); const whyB = inB ? '' : G.Possess.can(b).why || `${G.Modes.state}, ${b.task ? b.task.type : 'sem tarefa'}`;
       const bOk = !!(S.avatar && S.avatar.id === b.id && b.task && b.task.type === 'avatar');
       const aOk = S.villagers.get(a.id) === a && !!a.task && a.task.type !== 'avatar';
       const c = __E.adults(s).find(o => o.id !== a.id && o.id !== b.id);
