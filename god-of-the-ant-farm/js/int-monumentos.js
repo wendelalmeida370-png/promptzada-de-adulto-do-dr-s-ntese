@@ -199,8 +199,10 @@
     }
     if (P.inside()) return;
     // (the rooms: the passage from the street to the top of the undercroft's flight — through the arch: its width —, under the
-    // drum to its outer face, and before it the way from the street to the arch, under the sky; the sand, the podium's walk)
-    const vf = r2(cv + A.face);
+    // drum to its outer face, and before it the way from the street to the arch, under the sky — half a metre at least, a row
+    // of the plan's cells the feet reach past the edge where the way in is: the Colosseum's drum comes to 0.15 m of the lot's
+    // edge, the way under its arch then —; the sand, the podium's walk)
+    const vf = r2(Math.min(cv + A.face, sh[3] - 0.5));
     P.room(0, 'passagem', [cu - hw, A.under[1], cu + hw, vf], 0); P.room(0, 'passagem', [cu - hw, vf, cu + hw, sh[3]], 1);
     const ar = P.room(1, 'arena', [cu - A.fundo, cv - A.fundo, cu + A.fundo, cv + A.fundo], 1, [cu, cv, A.fundo]);
     const po = P.room(2, 'podio', [cu - ro, cv - ro, cu + ro, cv + ro], 1, [cu, cv, ro, A.fundo]);
