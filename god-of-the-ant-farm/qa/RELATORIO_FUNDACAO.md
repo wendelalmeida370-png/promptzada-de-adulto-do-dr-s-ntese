@@ -171,10 +171,17 @@ antes do conserto, e a prova que falhava passa depois. Por família:
   As outras falhas daquela rodada eram limites das provas diante dos mundos novos — a madeira do casco que faltava para
   a viagem, a árvore da prova que o lenhador levava, a água pequena demais para ver o peixe minguar —, e estão no AUDIT
   (T-189 a T-220).
-- **O que a última rodada achou** (L-376; abertos para o Patch 2: L-371, L-374, L-377). Os mundos foram gerados uma
-  última vez com todos esses consertos (a geração 6), e a regressão rodou de novo neles. Um defeito apareceu:
+- **O que as duas últimas rodadas acharam** (L-376, L-382; abertos para o Patch 2: L-371, L-374, L-377). Os mundos foram
+  gerados de novo com todos esses consertos (a geração 6), e a regressão rodou neles. Dois defeitos apareceram:
   - depois de abrir um save, quem fazia um inquérito voltava às perguntas por cima do que outro sistema acabava de lhe
-    devolver: Jasão, guarda do motim de Argos, saía da praça para perguntar pela cidade (L-376).
+    devolver: Jasão, guarda do motim de Argos, saía da praça para perguntar pela cidade (L-376);
+  - o muro de pé fechava um prédio da cidade quando a cidade mudava atrás dele. Um quarteirão novo de Hedeby, no mega,
+    tomou a única passagem do cemitério, entre o penhasco e o muro, e os portões do muro só eram julgados quando ele era
+    planejado e quando um save era aberto (L-382). Agora o muro guarda os caminhos da cidade a cada prédio que entra no
+    mapa ou fica pronto, e a cada mudança do chão; um atalho que a prova confere deixa isso em menos de 1% do salto.
+
+  O conserto do L-382 muda o mundo onde há muro, e por isso os mundos foram gerados uma última vez (a geração 7), para a
+  regressão final. A cidade e o mega saíram iguais aos da geração 6; a metrópole, o mundial e os de muitos anos mudaram.
 
   E três ficaram anotados para o Patch 2, porque o conserto muda o mundo, e o Patch 2 vai gerar os mundos de novo:
   - a família cuja casa está sendo ampliada fica sem água, sem cama e sem lar enquanto a obra dura (L-371);
@@ -183,15 +190,27 @@ antes do conserto, e a prova que falhava passa depois. Por família:
   - o que um prédio guarda sai do mundo sem linha no livro quando ele cai, quando a cidade é abandonada, quando a guarda
     fecha um mercado clandestino ou quando a cidade derruba o bairro velho (L-377).
 
-  O resto foram limites das provas diante dos mundos novos (T-231 a T-246), e o mais comum foi um só: **o corpo andando
+  O resto foram limites das provas diante dos mundos novos (T-231 a T-261), e o mais comum foi um só: **o corpo andando
   pelo caminho do mundo**. O mundo anda de casa em casa, e o corpo tem largura. Por isso o corpo parava:
   - no pilar de um portão, que o mundo atravessa pela casa toda e o corpo só pelo vão;
   - na banca da borda de uma feira, que o mundo atravessa por dentro do lote;
-  - rente à quina de um prédio.
+  - rente à quina de um prédio, ou empurrado em linha reta contra ela.
 
-  As provas agora andam como um jogador anda: passam o portão pelo meio, contornam o que trava os pés e têm o tempo que o
-  caminho pede. O jogador, que guia o corpo, não encontra esse problema. O caminho alisado do mundo, que corta quinas,
-  é o L-354, aberto para o Patch 2.
+  As provas agora andam como um jogador anda: passam o portão pelo meio, contornam o que trava os pés, seguem o caminho
+  do mundo até a porta e têm o tempo que o caminho pede. O jogador, que guia o corpo, não encontra esse problema. O
+  caminho alisado do mundo, que corta quinas, é o L-354, aberto para o Patch 2.
+
+  Com os mundos da geração 7, várias provas também mexiam no mundo à mão ou dependiam da sorte, e passaram a usar as
+  portas do mundo:
+  - a do cais jogava fora as caixas de uma descarga em andamento (T-249);
+  - a do estivador escolhia o cais antes de ver se havia estivador livre (T-250);
+  - a da escada não sabia abrir a porta interna atrás da qual a escada ficava (T-251);
+  - a do duelo esperava o nome de Campeão de quem já era «o Conquistador», um nome mais alto (T-253);
+  - a do ladrão pegava alguém a 38 casas e no meio de uma caçada (T-257);
+  - a da cidade cortada pela água dependia de o construtor, ilhado, achar sozinho o caminho de volta (T-256).
+
+  Uma dessas, a do armazém do porto, foi lida primeiro como um defeito das ofertas do corpo (o L-388). O conserto foi feito
+  e desfeito no mesmo dia, quando uma sonda no navegador mostrou que o corpo nem chegava à porta (T-255).
 
 ## 6. O que fica parcial, ou não foi feito
 
@@ -212,10 +231,23 @@ antes do conserto, e a prova que falhava passa depois. Por família:
   antes de qualquer banca abrir; uma tentativa sem ninguém para vender põe a casa em meio dia de espera. Num dia da
   metrópole de antes, 104 tentativas e 19 casas que compraram. O conserto pensado muda a economia da casa, e vai com o
   Patch 2, junto das oficinas cheias (D-090).
-- **Mais quatro defeitos abertos, para o Patch 2** (L-354, L-371, L-374 e L-377), cada um com o conserto proposto no
-  AUDIT. São eles: o caminho alisado do mundo, que corta a quina de um prédio; a família da casa em ampliação; a sobra que
-  a porta dos guardados registra sem a operação; e os guardados de um prédio que cai ou é derrubado. Todos mudam o mundo
-  ou o save, e o Patch 2 vai gerar os mundos de novo.
+- **Mais defeitos abertos, para o Patch 2**, cada um com o conserto proposto no AUDIT. Os quatro primeiros a v37 achou; os
+  outros, os especialistas do Patch 2 e a regressão final acharam no código desta versão:
+  - o caminho alisado do mundo, que corta a quina de um prédio (L-354);
+  - a família da casa em ampliação, sem água e sem cama enquanto a obra dura (L-371);
+  - a sobra que a porta dos guardados registra sem a operação (L-374);
+  - os guardados de um prédio que cai ou é derrubado, que saem sem linha no livro (L-377);
+  - depois de um save, o inquérito que volta a quem já não estava nele (L-380, o resto do L-376);
+  - o minério da mina, contado e pago antes de sair da galeria (L-381);
+  - os pés e a tina das propriedades presos por quem largou o trabalho no meio (L-383);
+  - o vinho, o azeite, a carne-seca e a seda feitos na prateleira, fora do livro (L-384);
+  - a comida comida das mãos e do armazém, sem linha no livro (L-385);
+  - o contrabandista que não rouba de noite, porque a noite o manda para a cama (L-386);
+  - a compra nas bancas da feira já fechada (L-387);
+  - a cidade cortada em duas, que não nomeia um construtor do lado das suas ruas (L-389);
+  - o pé da escada de um sobrado nórdico num vão mais estreito que o corpo (L-391).
+
+  Todos mudam o mundo, o save ou as plantas, e o Patch 2 vai gerar os mundos de novo.
 - **Duas regras para decidir no Patch 2:** se um ato em curso (a caixa que alguém foi buscar) segura as mãos contra uma
   ida de fora, como a caverna; e se a execução espera quem leva uma compra para casa, como a festa já espera.
 - **Não medido:** o desempenho numa placa de vídeo de verdade e num celular.
@@ -249,9 +281,10 @@ construtores soltos, L-322) um império engolia os outros nesse tempo.
 Cada conserto do fechamento muda o mundo que a mesma semente faz, e a guerra da 3510, a primeira semente da lista, mudou
 de uma geração de mundos para outra: veio sozinha no ano 47 (a Guerra da Fome); o jogo começou a Guerra do Ouro no ano
 55; depois, a Grande Coalizão no ano 83. Esta última eram os quatro povos grandes contra um povo de oito pessoas — os
-aliados do império ficavam do lado dele, e não sobrava ninguém para a coalizão (L-370). No mundo final, a guerra não veio
-sozinha, e no ano 75, com quatro povos grandes, o jogo começou a Grande Coalizão, agora com dois lados de verdade: o
-Altepetl de Tenoch e o Clã de Hrafn (274 pessoas) contra a Pólis de Argos, a Casa de Amon e a Pólis de Olímpia (338).
+aliados do império ficavam do lado dele, e não sobrava ninguém para a coalizão (L-370). Na geração 6, a guerra não veio
+sozinha, e no ano 75, com quatro povos grandes, o jogo começou a Grande Coalizão, agora com dois lados de verdade. Na
+geração 7, a última (depois do L-382), também: no ano 61, a Casa de Amon e o Altepetl de Tenoch (298 pessoas) contra a
+Liga de Tebas e três aliados menores, a Casa de Solveig, a Colônia de Óstia e a Pólis Livre de Olímpia (180).
 
 ## 8. Desempenho medido
 
