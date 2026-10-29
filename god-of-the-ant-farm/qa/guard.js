@@ -96,6 +96,17 @@ const SPACE_BODY = ['possess.js', 'avatar.js', 'interact.js'];
 // pedido das mãos, que o mundo faz no seu passo), na mesma linha; a tela do diário, e todo o resto, nunca o chama direto
 const GIVEUP = /\bCasa\.giveUp\s*\(/;
 const SPACE_ASK = ['entryFits', 'treesAround'];
+// 29. "um lugar, uma pessoa" (D-085): o lugar de alguém num prédio de planta é o que o repartidor dá — In.places, In.placeOf,
+// In.freePlace, In.freeFor, In.placeFor —; fora do interiors.js e das receitas (int-*.js), nenhum módulo do mundo lê à mão os
+// pontos de uso de uma peça de planta (it.spots, pl.it.spots, bedOf(…).spot), nem escreve campo de lugar numa pessoa (v.place,
+// v.seat, v.bed): dois módulos que põem gente cada um à sua conta põem duas pessoas no mesmo lugar. Para contar os lugares de
+// um uso ou mostrar onde fica uma peça (o «at» de uma oferta), a porta de leitura do repartidor, In.slots(b, uso) — que não
+// dá lugar a ninguém. Ler os pontos para mostrar ou oferecer é também do desenho e da interface (a lista LOOK da regra 3) e do
+// corpo (os pés e as mãos dele, SPACE_BODY da regra 23: o ponto de onde se sobe num lugar, depois do In.freeFor). Os pontos das
+// bancas (B.spots, act-negocio.js) e dos pesqueiros dos cais (b.spots) são outra coisa: não são peças de planta
+const PLACE_READ = /\b(?:it|item|piece)\.spots\b|\.it\.spots\b|\bbedOf\s*\([^)]*\)\.spot\b/;
+const PLACE_WRITE = /\b(?:v|o|h|w|q|who|kid|baby|vill|person)\.(?:place|seat|bed)\s*=(?!=)/;
+const PLACE_FILES = f => f === 'interiors.js' || /^int-[\w-]+\.js$/.test(f);
 // 31. "a despensa só pelo livro": a despensa de uma casa (h.pantry) muda só pelo G.Depot — os adaptadores do depósito
 // (activity.js) são a escrita; fora dele, nenhuma escrita à mão. As duas que restam são do trabalho (T-130: o fim do dia em
 // casa e o tributo), nomeadas até passarem pelo livro — então a lista fica vazia
@@ -144,6 +155,7 @@ for (const f of files) src[f].forEach((line, k) => {
   if (!LOOK.includes(f) && !SPACE_BODY.includes(f)) for (const m of line.replace(/(^|\s)\/\/\s.*$/, '').matchAll(/\bSpace\.(\w+)/g)) if (!SPACE_ASK.includes(m[1])) fails.push(`espaço: ${f}:${k + 1} o mundo pergunta ao G.Space por ${m[1]} (só pelo entryFits e o treesAround, as contas puras da entrada: o que o 3D guarda não decide o mundo): ${line.trim().slice(0, 110)}`);
   if (GIVEUP.test(line) && !/\bPossess\.apply\s*\(/.test(line)) fails.push(`diário: ${f}:${k + 1} deixa um objetivo de lado fora do pedido do corpo (só dentro de G.Possess.apply: o mundo decide no seu passo, D-061): ${line.trim().slice(0, 110)}`);
   if (LOOSE_WRITE.test(line) && f !== 'activity.js') fails.push(`chão: ${f}:${k + 1} escreve o que está no chão (S.loose) fora de activity.js (pôr e tirar do chão passa pelo G.Depot): ${line.trim().slice(0, 110)}`);
+  if (!PLACE_FILES(f) && !LOOK.includes(f) && !SPACE_BODY.includes(f) && [PLACE_READ, PLACE_WRITE].some(r => r.test(line.replace(/(^|\s)\/\/\s.*$/, '')))) fails.push(`lugar: ${f}:${k + 1} põe ou lê à mão o lugar de alguém num prédio de planta (o lugar de alguém é o que o repartidor dá: In.places, In.freePlace, In.freeFor, In.placeFor — D-085): ${line.trim().slice(0, 110)}`);
   if (PANTRY_WRITE.test(line) && f !== 'activity.js' && !ok(PANTRY_OK, f, line)) fails.push(`despensa: ${f}:${k + 1} escreve a despensa de uma casa à mão (use G.Depot.move/make/use, que anota a causa): ${line.trim().slice(0, 110)}`);
   if (LAR_TASK.test(line) && f !== 'act-lar.js') fails.push(`lar: ${f}:${k + 1} dá a tarefa 'lar' fora de act-lar.js (a noite em casa é do G.Lar): ${line.trim().slice(0, 110)}`);
   if (FEST_TASK.test(line) && f !== 'festivals.js') fails.push(`festa: ${f}:${k + 1} dá a tarefa 'fest' fora de festivals.js (quem entra na festa passa pelo free() dela): ${line.trim().slice(0, 110)}`);
