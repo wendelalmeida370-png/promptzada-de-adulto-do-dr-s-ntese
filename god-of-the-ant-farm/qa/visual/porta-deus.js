@@ -41,8 +41,9 @@ const SEM_PORTA = {
   mercado: 'as bancas abertas', feira: 'o chão da feira, numa camada própria', quarteirao: 'as casas do bloco, cada uma com a sua porta',
   praca: 'o chão aberto da praça (a planta do P4 pela forma): entra-se de todo lado, não há porta',
   'storehouse/egipcio': 'os silos de cúpula', 'celeiro/egipcio': 'os silos de cúpula', 'celeiro/asteca': 'os silos de barro',
-  'banhos/egipcio': 'o lago sagrado', 'banhos/classico': 'as termas: as janelas em arco e a cúpula', 'banhos/grego': 'as termas', 'banhos/romano': 'as termas',
-  'palacio/classico': 'a frente de colunas', 'palacio/grego': 'a frente de colunas', 'palacio/romano': 'a frente de colunas', 'palacio/asteca': 'o pórtico de colunas',
+  // (the baths and the palaces have their door in the god's picture since the leader's of 29/10 — a building with a plan has its
+  // way in, the same in both views —: but the sacred lake, open, whose way in is its landing)
+  'banhos/egipcio': 'o lago sagrado, aberto: entra-se pelo patamar da frente',
   'paco/asteca': 'o pórtico', 'insula/romano': 'as lojas do térreo (sem a porta da casa)',
   // (the theatres planned on their form — int-monumentos.js, D-093 —: the way in is the open front of their ground, or the
   // arch of the drum; the Norse's mead hall has its door)

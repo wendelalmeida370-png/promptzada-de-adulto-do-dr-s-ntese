@@ -34,7 +34,7 @@ module.exports = {
         { id: 'ver-estatua', o: 'ver de perto a estátua de ouro de cada povo (a forma do deus, no 3D)', tipos: ['estatua'],
           resultado: 'só vista, de fora (D-097): o alto da base, em volta da coluna, é mais estreito que um corpo', condicao: 'a estátua de pé', feito: true, provas: ['qa/visual/fidelidade.js'] },
       ],
-      notas: 'o teatro, a maravilha e o monumento de cada povo têm planta pela forma (int-monumentos.js; D-093, D-095, D-096, D-097); a estátua de ouro é só vista (D-097); a biblioteca: a planta do P4 pela forma (biblioteca-praca.js), o copista do P2 — as atividades dela vão nas folhas deles. Quem leva o povo aos lugares (as festas, o lazer) é o P1.',
+      notas: 'o teatro, a maravilha e o monumento de cada povo têm planta pela forma (int-monumentos.js; D-093, D-095, D-096, D-097); a estátua de ouro é só vista (D-097); o palácio, o paço e os banhos têm planta pela forma (int-monumentos.js, a decisão do líder de 29/10: o salão do trono e o aposento com a cama, o assento do chefe com o fogo e os bancos, nos banhos onde se despe, a água e a fornalha — o lago egípcio aberto —; qa/palacios.js), com os móveis do P4; as atividades deles — a audiência, os banhos do P2 — vão nas folhas de quem os anima; o grande palácio e o colossal ficam com as plantas do P4; a biblioteca: a planta do P4 pela forma (biblioteca-praca.js), o copista do P2 — as atividades dela vão nas folhas deles. Quem leva o povo aos lugares (as festas, o lazer) é o P1.',
     },
   },
 };

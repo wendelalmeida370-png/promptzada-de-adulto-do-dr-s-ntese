@@ -14,6 +14,8 @@
 //   node qa/visual/fidelidade.js [tipo,tipo...] [povo,povo...]
 //   IDS=n prédios por tipo e povo (3; cada um com os seus dados e, nos de planta, a família que o registro escolhe)
 //   CASCA=0  as casas como o deus as desenhava antes da casca (D-082, ligada na fase C), para comparar
+//   PLANTA=0  os prédios sem registro nem planta: o 3D os desenha pelo KIT — os tipos com forma, por ela —, para conferir a
+//            forma de um tipo com planta antes da família pela forma (D-093); a catraca não vale assim
 //   PNG=pasta  as figuras: uma folha por tipo, os seis povos — o deus, o 3D de perto, o 3D de longe
 //   JSON=arquivo  os números de cada caso      VERB=1  o motivo de cada um que não é igual
 // Falha: um tipo com forma que não tem a massa do deus ou não segue a forma; outra massa (≠) em mais tipos e povos do que o
@@ -29,6 +31,7 @@ const ONLY = process.argv[2] ? process.argv[2].split(',') : null;
 const STY = ['classico', 'grego', 'romano', 'egipcio', 'asteca', 'nordico'];
 const POVOS = process.argv[3] ? process.argv[3].split(',') : STY;
 const NID = +(process.env.IDS || 3);
+const SEMPLANTA = process.env.PLANTA === '0'; // (no record, no plan: the kit's drawing, the form's where it has one)
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | fidelidade ${name} | ${info}`); if (!c) fails.push(name); };
 
 // ------------------------------ the limits ------------------------------
@@ -93,7 +96,7 @@ for (const type of Object.keys(G.BDEF)) {
   if (ONLY && !ONLY.includes(type)) continue;
   for (const style of POVOS) for (let q = 0; q < NID; q++) {
     const id = 1000 + rows.length * 7 + q * 7919;
-    const b = F.put(type, style, id);
+    const b = F.put(type, style, id, SEMPLANTA ? { record: false } : undefined);
     try {
       const god = F.god(b);
       if (OWN_LAYER[type]) { other.add(type); continue; }

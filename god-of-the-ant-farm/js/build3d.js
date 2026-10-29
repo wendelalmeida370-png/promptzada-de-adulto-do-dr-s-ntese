@@ -1719,7 +1719,8 @@ float m3scale(float p) {
       K.as(e.luz ? 'linen' : 'door', () => K.quad(A, B, Cc, D, X.col(e.cor), out)); // (a door of light: the hall's fire through a cloth)
     },
     disco(K, e, X) {
-      const c = X.pt(e.u, e.v + 0.03, e.y); const out = [X.front[0], 0, X.front[1]];
+      // (on the front, or — na 'direita' — on the right face at u: a shield on a rack)
+      const right = e.na === 'direita'; const c = right ? X.pt(e.u + 0.03, e.v, e.y) : X.pt(e.u, e.v + 0.03, e.y); const out = right ? [X.across[0], 0, X.across[1]] : [X.front[0], 0, X.front[1]];
       K.as('slab', () => { formDisc(K, c, out, e.r, X.col(e.cor), 14);
         if (e.olho) formDisc(K, [c[0] + out[0] * 0.02, c[1], c[2] + out[2] * 0.02], out, e.r * 0.32, X.col(e.olho), 10); });
     },
@@ -1848,7 +1849,8 @@ float m3scale(float p) {
       const A = t, B = [t[0] + ac[0] * w, t[1] - hh / 2, t[2] + ac[2] * w], C = [t[0], t[1] - hh, t[2]];
       K.as('linen', () => { K.tri(A, B, C, X.col(e.cor), fr); K.tri(A, C, B, X.col(e.cor), [-fr[0], 0, -fr[2]]); });
     },
-    bola(K, e, X) { const c = X.pt(e.c[0], e.c[1], e.c[2]); K.as('slab', () => K.sph(c[0], c[1], c[2], e.r, X.col(e.cor))); },
+    // a ball — ry: as high as that, a spindle (the court's cypresses, the plumes on a parapet) —, of its stuff
+    bola(K, e, X) { const c = X.pt(e.c[0], e.c[1], e.c[2]); K.as(e.mat || 'slab', () => K.sph(c[0], c[1], c[2], e.r, X.col(e.cor), e.ry)); },
     // a round timber from end to end: a leg, a brace, a post
     tora(K, e, X) { K.as(e.mat || 'beam', () => K.log(X.pt(e.a[0], e.a[1], e.a[2]), X.pt(e.b[0], e.b[1], e.b[2]), e.r, X.col(e.cor))); },
     // a round basin of stone: its floor under the water, its rim — of so many dressed blocks round it (each its own tone, by the
@@ -1872,10 +1874,11 @@ float m3scale(float p) {
     // a hill of rock, a heap — the god's dome turned round (Forma.dome): rounds of flat faces up its curve, its stones out or in
     // by the building's id, darker at its foot (a mine of gold, ouro: K.b.v — only seen), the glints of ore in its face
     morro(K, e, X) {
-      const C = X.XZ(e.c[0], e.c[1]); const y0 = X.foot(e.y0), yb = X.Y(e.y0), H = e.y1 - e.y0; const big = e.r > 1; const nu = big ? 18 : 10, nv = big ? 6 : 3;
+      // (liso: a dome — the baths', the palace's —, smooth: its round true all the way up, finer)
+      const C = X.XZ(e.c[0], e.c[1]); const y0 = X.foot(e.y0), yb = X.Y(e.y0), H = e.y1 - e.y0; const big = e.r > 1; const nu = e.liso ? 20 : big ? 18 : 10, nv = e.liso ? 6 : big ? 6 : 3;
       const cols = e.ouro && K.b.v === 1 ? e.ouro : e.cor; const hi = rgbOf(X.col(cols[0])), lo = rgbOf(X.col(cols[1]));
       const ring = []; for (let j = 0; j <= nv; j++) { const d = G.Forma.dome(j / nv); const row = [];
-        for (let i = 0; i < nu; i++) { const a = i / nu * TAU; const jr = j === 0 || j === nv ? 1 : 0.86 + K.hv(300 + i + j * 17) * 0.14; const r = Math.max(0.02, e.r * d[0] * jr); // (in, never out past its round: the lot)
+        for (let i = 0; i < nu; i++) { const a = i / nu * TAU; const jr = e.liso || j === 0 || j === nv ? 1 : 0.86 + K.hv(300 + i + j * 17) * 0.14; const r = Math.max(0.02, e.r * d[0] * jr); // (in, never out past its round: the lot)
           row.push([C[0] + Math.cos(a) * r, j === 0 ? y0 : yb + H * d[1], C[1] + Math.sin(a) * r]); }
         ring.push(row); }
       K.as(e.mat || 'rock', () => { for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) { const i2 = (i + 1) % nu; const am = (i + 0.5) / nu * TAU; const f = G.clamp((ring[j][i][1] + ring[j + 1][i][1]) / 2 - yb, 0, H) / H;
@@ -2073,14 +2076,28 @@ float m3scale(float p) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 10); return; }
       formInto(g, gw, K, G.Forma.of('maravilha', styleOf(K.b)), doorSide(K.b));
     },
+    // the palace and the baths of each people, from their forms: the god's own (D-093)
     palacio(g, gw, K) {
-      const P = K.P; if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 8); return; }
-      if (styleOf(K.b) === 'nordico') { longhouse(g, gw, K, 3); return; }
-      const t = house(g, gw, K, { floors: 2, h: 4, roof: P.kind === 'flat' ? 'flat' : 'hip', inset: 1.2, plinth: true }); void t;
-      for (const [px, pz] of [[0.9, 0.9], [K.w - 0.9, 0.9], [0.9, K.d - 0.9], [K.w - 0.9, K.d - 0.9]]) { K.as('stone', () => K.box(px, 0, pz, 1.8, 11, 1.8, P.wr)); K.as(stuff(K.b).tile === 'mud' ? 'slab' : stuff(K.b).tile, () => g.put(SH.cone, R3.mat(K.x0 + px, K.y0 + 11, K.z0 + pz, Math.PI / 4, 2.6, 3, 2.6), K.c((P.roof && P.roof[1]) || '#94452d'))); }
-      K.box(K.w / 2, 8.6, K.d / 2, 0.1, 4, 0.1, '#5a4a3a'); K.box(K.w / 2 + 0.6, 11.4, K.d / 2, 1.2, 0.7, 0.05, '#c8483a');
+      if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 8); return; }
+      formInto(g, gw, K, G.Forma.of('palacio', styleOf(K.b)), doorSide(K.b));
     },
-    paco(g, gw, K) { KIT.palacio(g, gw, K); },
+    banhos(g, gw, K) {
+      if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 4); return; }
+      formInto(g, gw, K, G.Forma.of('banhos', styleOf(K.b)), doorSide(K.b));
+    },
+    // (the chief's house and the palaces of the court, from their forms: the god's own — court.js)
+    paco(g, gw, K) {
+      if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 8); return; }
+      formInto(g, gw, K, G.Forma.of('paco', styleOf(K.b)), doorSide(K.b));
+    },
+    grande_palacio(g, gw, K) {
+      if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 10); return; }
+      formInto(g, gw, K, G.Forma.of('grande_palacio', styleOf(K.b)), doorSide(K.b));
+    },
+    palacio_colossal(g, gw, K) {
+      if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 12); return; }
+      formInto(g, gw, K, G.Forma.of('palacio_colossal', styleOf(K.b)), doorSide(K.b));
+    },
     // the seat of the scribes, the tax office and the library of each people, from their forms: the god's own (Phase E)
     administracao(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 6); return; }
@@ -2094,7 +2111,6 @@ float m3scale(float p) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 6); return; }
       formInto(g, gw, K, G.Forma.of('biblioteca', styleOf(K.b)), doorSide(K.b));
     },
-    banhos(g, gw, K) { house(g, gw, K, { h: 3.4, noRoof: true, inset: 0.5 }); if (K.prog >= 1) { K.sph(K.w * 0.35, 3.4, K.d * 0.5, K.w * 0.24, '#d8d0c0', K.w * 0.18); K.sph(K.w * 0.72, 3.4, K.d * 0.5, K.w * 0.16, '#d8d0c0', K.w * 0.12); } },
     cadeia(g, gw, K) { const P = K.P; house(g, gw, K, { h: 3.6, wall: P.base ? P.base[1] : '#6f6a60', pat: 'stone', roof: 'flat' }); },
     quartel(g, gw, K) { house(g, gw, K, { h: 3.4, plinth: true }); if (K.prog >= 1) { K.box(K.w - 0.4, 0, 0.4, 0.12, 7, 0.12, '#5a4a3a'); K.box(K.w - 0.4 + 0.6, 6.2, 0.4, 1.2, 0.7, 0.05, G.Fac.hex(G.Village.facOfSet(K.b.set))); } },
     // the watchtower of each people, from its form: of stone with its merlons; of timber on its legs (the classical and the Norse)
@@ -2505,7 +2521,7 @@ float m3scale(float p) {
       if (!inChunk(b, x0, y0, n)) continue;
       // (a building with a form: its masses, as the form has them — the drum, the pyramid, the levels, the roof —; with a plan
       // too, the form all the same: what is seen is the form, D-093)
-      const Fm = b.built && formOf(b); if (Fm) { massInto(g, b, Fm, doorSide(b)); continue; }
+      const Fm = b.built && B3.byForm(b) && formOf(b); if (Fm) { massInto(g, b, Fm, doorSide(b)); continue; }
       const P = palOf(b); const Sh = B3.shellOf(b);
       if (Sh && Sh.shell.kind !== 'round') { const sh = Sh.shell, R = sh.r; const y0 = G.Space.plinth(b).y0; const X = b.x * L + (R[0] + R[2]) / 2, Z = b.y * L + (R[1] + R[3]) / 2; const st = stuff(b); const rk = ROOFK[sh.roof && sh.roof.kind] || P.kind;
         g.pat = PAT[OUTPAT[sh.mat] || 'plaster']; g.put(SH.box, R3.mat(X, y0 - 0.3, Z, 0, R[2] - R[0], sh.eave + 0.3, R[3] - R[1]), P.wl || '#efe2c4');
@@ -3410,10 +3426,13 @@ float m3scale(float p) {
   }
   // the frame of a window at its mouth, as each people makes it — the frame of the people's trim, a sill of stone, a lintel
   // of stone in the stone lands; the grille of the Egyptian, the bars of a Roman street, the Aztec's rolled mat; a box of
-  // flowers under some in the classical and the southern towns; shutters open flat on the wall or half shut (the house's id)
+  // flowers under some in the classical and the southern towns; shutters open flat on the wall or half shut (the house's id) —
+  // but on the walls of a form's body (D-093: the palace, the baths, the library), the god's windows: the frame, the sill and the
+  // lintel, no shutters nor flowers (the god paints none on the town's buildings: the thermae's arches with their shutters open
+  // ran into one dark band: nine windows of the god's, four in the 3D)
   function winDress(K, F, q, k) {
-    const P = K.P, st = K.st; const ww = q.u1 - q.u0, hh = q.y1 - q.y0, py = q.y0;
-    const framed = st !== 'nordico' && st !== 'egipcio'; const shut = (st === 'classico' || st === 'grego') && K.b.type !== 'insula';
+    const P = K.P, st = K.st; const ww = q.u1 - q.u0, hh = q.y1 - q.y0, py = q.y0; const formed = !!bodyForm(K.b);
+    const framed = st !== 'nordico' && st !== 'egipcio'; const shut = (st === 'classico' || st === 'grego') && K.b.type !== 'insula' && !formed;
     const tc = st === 'asteca' ? (P.trim2 || P.trim) : (P.trim || '#6b4a30'); const fc = st === 'nordico' ? nordWood(K).dark : calm(tc, 0.75, 0.9);
     const stone = P.base ? P.base[2] : '#a09a8e'; const cut = st === 'grego' ? 'marble' : st === 'romano' ? 'ashlar' : st === 'egipcio' ? 'sandstone' : 'stone';
     const sh2 = st === 'grego' ? (P.trim || '#3f6fb0') : [[86, 104, 70], [104, 74, 50], [70, 92, 104]][Math.floor(K.hv(17) * 3)];
@@ -3432,13 +3451,13 @@ float m3scale(float p) {
     if (K.b.type === 'cadeia') K.as('iron', () => { for (const e of [-0.25, 0, 0.25]) fx(e * ww, 0, 0.03, hh, 0.04, '#2e2c2a', -0.03); fx(0, hh * 0.5, ww, 0.03, 0.03, '#2e2c2a', -0.03); });
     else if (st === 'romano' && K.fine && r < 0.45) K.as('iron', () => { for (const e of [-0.25, 0.25]) fx(e * ww, 0, 0.025, hh, 0.04, '#2e2c2a', -0.03); fx(0, hh * 0.5, ww, 0.025, 0.03, '#2e2c2a', -0.03); });
     if (st === 'asteca' && K.fine && r < 0.4) K.as('wicker', () => fx(0, hh - 0.16, ww + 0.04, 0.16, 0.16, [176, 150, 98], 0.09));
-    if (K.fine && (st === 'classico' || st === 'grego' || st === 'romano') && K.b.type !== 'cadeia' && K.hv(120 + k) < 0.32 && hh < 1.4) {
+    if (K.fine && !formed && (st === 'classico' || st === 'grego' || st === 'romano') && K.b.type !== 'cadeia' && K.hv(120 + k) < 0.32 && hh < 1.4) {
       K.as('jamb', () => fx(0, -0.36, ww + 0.08, 0.2, 0.2, dim(fc, 0.9), 0.12));
       const fl = [[204, 62, 56], [222, 112, 140], [236, 230, 214]][Math.floor(K.hv(125 + k) * 3)];
       for (let j = 0; j < 6; j++) { const a = ((j + 0.5) / 6 - 0.5) * ww; const p0 = F.P(q.uc + a, py - 0.17, 0.13); const X = K.x0 + p0[0], Y = K.y0 + p0[1], Z = K.z0 + p0[2]; const ang = j * 1.9 + k;
         K.gp.blade(X, Y, Z, 0.09, ang, X + F.o[0] * 0.12 + Math.cos(ang) * 0.05, Y + 0.24, Z + F.o[1] * 0.12 + Math.sin(ang) * 0.05, [62, 104, 46], j % 2 ? [84, 140, 62] : fl, 0.5); }
     }
-    const sh = K.b.type === 'cadeia' ? false : shut ? (st === 'grego' ? r < 0.78 : true) : (st === 'romano' && K.b.type !== 'insula' && r >= 0.45 && r < 0.75) || (st === 'nordico' && r < 0.6);
+    const sh = K.b.type === 'cadeia' || formed ? false : shut ? (st === 'grego' ? r < 0.78 : true) : (st === 'romano' && K.b.type !== 'insula' && r >= 0.45 && r < 0.75) || (st === 'nordico' && r < 0.6);
     if (sh) K.as(st === 'nordico' ? 'plankV' : 'painted', () => { const open = K.hv(110 + k) < 0.7; const sc = st === 'nordico' ? nordWood(K).dark : sh2;
       for (const s2 of [-1, 1]) { if (open) fx(s2 * (ww / 2 + 0.1 + ww / 4 + 0.03), 0, ww * 0.5, hh, 0.04, sc, 0.03); else fx(s2 * ww * 0.25, 0, ww * 0.5, hh, 0.05, sc, 0.04); } });
   }
@@ -3600,8 +3619,10 @@ float m3scale(float p) {
   // is the inside's —, open over a court; on a terrace the shell's parapet whole with its coping, the room on it with its
   // door and its roof of reed; else the people's own parapet, the Egyptian's cornice, the Aztec's merlons (roofOf)
   // (a form's flat roof over a shell raised on its body — the god's: the walls' top, its parapet on it —: the lid at the
-  // eaves over the walls' foot R, a finger over their tops; the parapet, the bands, the cornice are the form's)
-  function formLid(K, R, y) { const sp = stuff(K.b).tile === 'mud' ? 'mud' : 'slab'; K.as(sp, () => flatQ(K, R, y + 0.02, K.P.top || K.P.wl || '#e8dcc0', 1)); return y + 0.02; }
+  // eaves over the walls' foot R, a finger over their tops and 3 cm out — over the bands the form wraps round them 2 cm out,
+  // whose backs showed as a sliver at the far edges: the Egyptian palace's, 0.55 % of it —; the parapet, the bands, the cornice
+  // are the form's)
+  function formLid(K, R, y) { const sp = stuff(K.b).tile === 'mud' ? 'mud' : 'slab'; const m = 0.03; K.as(sp, () => flatQ(K, [R[0] - m, R[1] - m, R[2] + m, R[3] + m], y + 0.02, K.P.top || K.P.wl || '#e8dcc0', 1)); return y + 0.02; }
   function flatTop(g, gw, K, ctx, x, z, sx, sz) {
     const S = ctx.S, sh = S.shell, P = K.P, st = stuff(K.b); const tl = S.levels.find(l => l.kind === 'terraco'); const yb = ctx.eave, yt = tl ? tl.y : yb + 0.25;
     const R = sh.r, m = 0.06; const RR = [R[0] - m, R[1] - m, R[2] + m, R[3] + m]; const c = sh.court; const sp = st.tile === 'mud' ? 'mud' : 'slab'; const sc = P.top || P.wl || '#e8dcc0';
@@ -3887,7 +3908,7 @@ float m3scale(float p) {
       const over = Math.max(b.x * L - x0, x1 - (b.x + b.w) * L, b.y * L - z0, z1 - (b.y + b.h) * L);
       // (a building drawn from its form keeps to its lot as the god's picture does: 0.3 m at most — a dragon's head, an eave;
       // the others, the old 1.6 m — L-261: the Great Pyramid's cone went 2 m out of its lot unseen)
-      const outLim = b.built && formOf(b) ? 0.3 : 1.6;
+      const outLim = b.built && B3.byForm(b) ? 0.3 : 1.6; // (a form's own limit where the building is drawn by it)
       if (b.type !== 'doca' && P.length && over > outLim) out.push(`${tag}: ${over.toFixed(2)} m fora do lote`);
       if (P.length && lo < K.lo - 1.2 && b.type !== 'doca') out.push(`${tag}: enterrado ${(K.lo - lo).toFixed(2)} m`); // (a quay's posts go down into the sea)
       if (P.length && lo > K.hi + 0.35) out.push(`${tag}: flutua ${(lo - K.hi).toFixed(2)} m`);

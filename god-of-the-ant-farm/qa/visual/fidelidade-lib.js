@@ -323,8 +323,12 @@ function strokeSegs(R, segs, w, col) {
 }
 F.paintGod = function (god, R) { for (const o of god.ops) { if (o.f) fillPolys(R, o.polys, o.col); else strokeSegs(R, o.segs, o.w, o.col); } return R; };
 // (the 3D's triangles with the depth of each cell: the nearest wins; lit as the god's picture shades its faces — the front-
-// left face lighter, the front-right darker, the tops lightest)
+// left face lighter, the front-right darker, the tops lightest. As much as the god's six palettes: their right faces 0.75 to
+// 0.87 of the left, 0.82 on the mean, their tops 1.10 to 1.17 — the ambient of 0.7 gives 0.82 and 1.11; the 0.55 it had
+// gave 0.71, darker than any palette, and the flank of a white column or the end of a tread against the bright tops round
+// it counted as an opening: the Greek palace's six columns, six windows more than the god's, T-252)
 const LIGHT = (() => { const v = [-0.3, 0.8, 0.5]; const l = Math.hypot(...v); return v.map(x => x / l); })();
+const AMB = F.AMB = 0.7;
 const VIEW = [Math.cos(Math.PI / 6) / Math.SQRT2, Math.sin(Math.PI / 6), Math.cos(Math.PI / 6) / Math.SQRT2]; // (toward the eye)
 F.paint3D = function (pic, R) {
   if (!R.z) { R.z = new Float32Array(R.W * R.H).fill(-1e9); }
@@ -335,7 +339,7 @@ F.paint3D = function (pic, R) {
     if (!t.ds && t.n[0] * VIEW[0] + t.n[1] / 0.62 * VIEW[1] + t.n[2] * VIEW[2] < -1e-4) continue;
     const A = fr.P(t.v[0], t.v[1], t.v[2]), B = fr.P(t.v[3], t.v[4], t.v[5]), C = fr.P(t.v[6], t.v[7], t.v[8]);
     const den = (B[1] - C[1]) * (A[0] - C[0]) + (C[0] - B[0]) * (A[1] - C[1]); if (Math.abs(den) < 1e-9) continue;
-    const sh = 0.55 + 0.45 * Math.max(0, t.n[0] * LIGHT[0] + t.n[1] * LIGHT[1] + t.n[2] * LIGHT[2]);
+    const sh = AMB + (1 - AMB) * Math.max(0, t.n[0] * LIGHT[0] + t.n[1] * LIGHT[1] + t.n[2] * LIGHT[2]);
     const cr = t.col[0] * sh, cg = t.col[1] * sh, cb = t.col[2] * sh;
     const i0 = Math.max(0, Math.floor((Math.min(A[0], B[0], C[0]) - R.x0) * RES)), i1 = Math.min(R.W - 1, Math.ceil((Math.max(A[0], B[0], C[0]) - R.x0) * RES));
     const j0 = Math.max(0, Math.floor((Math.min(A[1], B[1], C[1]) - R.y0) * RES)), j1 = Math.min(R.H - 1, Math.ceil((Math.max(A[1], B[1], C[1]) - R.y0) * RES));
