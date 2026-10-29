@@ -44,6 +44,8 @@
 //      repartidor do P4 com a regra do templo)
 //  l10 uma festa atravessa o save (L-222) e o banquete sai pelo livro-razão (L-223)
 //  l10b a festa que começa não leva para a plateia quem está a caminho de comer, no máximo da fome (L-234)
+//  l10c a reunião de uma sociedade secreta não chama quem está a caminho de comer, no máximo da fome; e quem chega ao máximo
+//      da fome na reunião sai para comer, e a reunião segue (L-397)
 //  l8  dois anos de salto: o verificador limpo — e quanto custa o relógio de cada um no salto
 //  l9  um dia inteiro: nenhuma despensa muda fora do livro-razão, a não ser pelos dois caminhos do T-130 ainda abertos (o
 //      fim do dia do economy.js e o tributo do court.js, do P2), que aparecem nomeados
@@ -1040,6 +1042,52 @@ if (want('l10b')) {
   let ate = 0; if (fe) live(40, () => { ate = hungry.filter(v => S.villagers.has(v.id) && v.hunger < 60).length; return ate === hungry.length; });
   ok('l10b a festa não leva quem vai comer (L-234)', !!fe && hungry.length >= 1 && !taken.length && ate === hungry.length,
     fe ? `${fe.key} em ${set.name}: ${hungry.map(v => `${v.name} (fome 100, vida 30, indo comer)`).join(', ')} — ${taken.length ? `${taken.map(v => v.name).join(', ')} LEVADO(S) PARA A PLATEIA` : 'nenhum levado para a plateia'}; ${ate} de ${hungry.length} comeram` : `${set.name} não começou nenhuma festa: ${keys.join(', ')}`);
+}
+
+// ======================= l10c: a meeting of a secret society does not take who is on the way to a meal (L-397) =======================
+if (want('l10c')) {
+  // (as l10b, for the other gathering of the night: the meeting of a lodge with four of its people or more within its reach,
+  // due tonight by the test's hand — the only one tonight, no feast in any town. (a) One of them on the way to the store, at the
+  // top of hunger with the life going, when the meeting is called — the one of them farthest from its store: still on the way
+  // —: it eats first, and is not among the meeting's people; the others are. (b) The meeting gathered, another of them at the
+  // top of hunger with the life going — the test's hand —: it leaves to eat, and the meeting goes on without it)
+  open(); for (const st of S.settlements.values()) noFeast(st);
+  const Sc = G.Secrets; const socs = ((S.secrets && S.secrets.socs) || []).filter(q => !q.gone).sort((a, c) => a.id - c.id);
+  const can = (v, l) => G.dist(v.x, v.y, l.x, l.y) < 34 && !v.captive && !v.aboard && !v.held && !v.ug && !v.jail && !isBody(v) && !(v.task && v.task.pri >= 2);
+  const store = v => { const d = V.nearestDropoff(v.x, v.y, v.set); if (!d) return Infinity; const ft = V.frontTile(d); return W.reaches(v, ft[0], ft[1]) ? G.dist(v.x, v.y, ft[0], ft[1]) : Infinity; };
+  let q = null, l = null, go = [];
+  for (const s of socs) for (const lo of s.lodges) {
+    if (Sc.meetOfLodge(lo.id)) continue;
+    const g = Sc.membersOf(s).filter(v => can(v, lo)).sort((a, c) => a.id - c.id);
+    if (g.length >= 4 && g.some(v => v.age >= 18 && v.age < 60 && store(v) < Infinity) && g.length > go.length) { q = s; l = lo; go = g; }
+  }
+  const name = 'l10c a reunião da sociedade secreta não leva quem vai comer (L-397)';
+  if (!l) ok(name, false, `nenhuma casa de sociedade secreta com quatro dos seus ao alcance (${socs.length} sociedade(s))`);
+  else {
+    for (const s of S.secrets.socs) for (const lo of s.lodges) lo.next = lo === l ? S.day : Math.max(lo.next, S.day + 3);
+    const feed = v => D.make('f:' + G.Fac.idOfV(v), 'food', 40, { code: 'teste', part: true });
+    const hungry = (v, eat) => { v.hunger = 100; v.hp = 30; v._noStore = 0; v._hungerT = 0; if (eat) { G.Vg.endTask(v); v.sleeping = false; G.Vg.setTask(v, { type: 'eat', pri: 2.5 }); } };
+    const H = go.filter(v => v.age >= 18 && v.age < 60 && store(v) < Infinity).sort((a, c) => store(c) - store(a) || a.id - c.id)[0];
+    feed(H); hungry(H, true); const way = r2(store(H));
+    // (the meeting's hour: the world calls it, at its look every three seconds; on the way to eat is in the step before the
+    // meeting was called — the call is in the same step as the meeting)
+    S.time = 0.8005; let m = null, onWay = true; live(8, () => { if ((m = Sc.meetOfLodge(l.id))) return true; onWay = !!(H.task && H.task.type === 'eat'); });
+    const taken = !!m && m.ids.includes(H.id), others = m ? m.ids.filter(id => id !== H.id).length : 0;
+    let ateH = false; if (m) live(40, () => (ateH = !!S.villagers.get(H.id) && H.hunger < 60));
+    // (b) one gathered at it, at the top of hunger with the life going
+    const at = () => { const mm = Sc.meetOfLodge(l.id); return mm ? mm.ids.map(id => S.villagers.get(id)).filter(o => o && o.id !== H.id && o.task && o.task.type === 'conclave' && o.task.m === mm.id && o.task.st === 2) : []; };
+    let B = null, left = false, how = '', rest = 0, ateB = false;
+    if (m) { live(60, () => at().length >= 2); const here = at(); B = here.find(o => o.id !== q.master) || here[0] || null; }
+    if (B) {
+      feed(B); hungry(B, false);
+      // (out of the meeting to the store, or eating what it had in its hands — the same choice of a meal as anyone's)
+      live(2, () => { left = !(B.task && B.task.type === 'conclave') && (!!(B.task && B.task.type === 'eat') || B.hunger < 60); if (left) how = B.task && B.task.type === 'eat' ? 'saiu para comer' : 'comeu o que tinha nas mãos e saiu'; return left; });
+      rest = at().length;
+      live(40, () => (ateB = !!S.villagers.get(B.id) && B.hunger < 60));
+    }
+    ok(name, !!m && onWay && !taken && others >= 2 && ateH && !!B && left && rest >= 1 && ateB,
+      !m ? `${Sc.lodgeName(l)}: a reunião NÃO COMEÇOU` : `${q.name}, ${Sc.lodgeName(l)} (${go.length} ao alcance): (a) ${nm(H)} (fome 100, vida 30, ${way} casas do armazém) ${onWay ? 'indo comer' : 'JÁ NÃO IA COMER'} quando a reunião foi chamada — ${taken ? 'LEVADO PARA A REUNIÃO' : 'não foi chamado'}, ${others} dos outros foram; ${ateH ? 'comeu' : 'NÃO COMEU em 40 s'} · (b) ${!B ? 'NINGUÉM CHEGOU À REUNIÃO' : `${nm(B)} na reunião, com fome 100 e vida 30: ${left ? how : 'FICOU NA REUNIÃO'}, ${rest} seguiram nela; ${ateB ? 'comeu' : 'NÃO COMEU em 40 s'}`}`);
+  }
 }
 
 // ======================= l8 / l9: two years of the skip; then a whole day, the pantries by the ledger =======================
