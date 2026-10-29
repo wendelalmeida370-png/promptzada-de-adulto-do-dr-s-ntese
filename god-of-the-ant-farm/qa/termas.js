@@ -81,15 +81,19 @@ const digest = op => JSON.stringify([op.st, op.data.entradas, op.data.receita, o
   if (op) {
     liveSec(40, () => op.data.lenha >= 1 || !A.live(op), bad); // (the stoker lights the furnace first)
     const L = bathers(b, 6); sick = L[0] || null;
-    // (each bather sick for two minutes and tired — not so tired that the tiredness under 22 sends one to bed before the
-    // bath ends: at 40 the one watched went to bed from the water after 30 s, and a sickness of 30 s was over before any
-    // bath was)
-    for (const v of L) { v.sick = Math.max(v.sick || 0, 120); v.energy = Math.min(v.energy, 60); }
+    // (each bather tired — not so tired that the tiredness under 22 sends one to bed before the bath ends: at 40 the one
+    // watched went to bed from the water after 30 s —, and sick as one still up is: a light sickness, under the fever that
+    // puts one in bed at home (G.Lar.fever, L-227 — the 120 of before sent all six home to bed on the way), given as each
+    // goes into the water, so that the bath finds it there: a sickness wears off a point a second, and the pegs may keep
+    // one waiting for a place)
+    const LIGHT = Math.floor(G.DAY_LEN * 0.25) - 5; const given = new Set();
+    const sicken = () => { for (const v of L) { const m = op.data.banho[v.id]; if (m && m.st === 2 && !given.has(v.id)) { given.add(v.id); v.sick = Math.max(v.sick || 0, LIGHT); } } };
+    for (const v of L) v.energy = Math.min(v.energy, 60);
     // (what the bath does, at the second it is counted, on the first who bathes: the sickness down, the tiredness too — the
     // rest of the day aside; a bath counted as one leaves, cut by the world, is gone in the same step and is not looked at)
     const look = () => { for (const v of L) { const m = op.data.banho[v.id]; const p = prev[v.id]; if (m && m.done && dSick === null && p) { sick = v; dSick = r2((v.sick || 0) - p.s); dEn = r2(v.energy - p.e); } prev[v.id] = { s: v.sick || 0, e: v.energy }; } };
     look();
-    liveSec(140, () => !A.live(op), bad, () => { look(); if (!A.live(op)) return; most = Math.max(most, inWater(op)); if (op.data.calor > 2 * Te.BURN + 1e-6) over++; for (const id of Object.keys(op.data.banho)) { const v = S().villagers.get(+id); if (v && v.set !== b.set && !op.data.banho[id].body) strangers++; } });
+    liveSec(140, () => !A.live(op), bad, () => { sicken(); look(); if (!A.live(op)) return; most = Math.max(most, inWater(op)); if (op.data.calor > 2 * Te.BURN + 1e-6) over++; for (const id of Object.keys(op.data.banho)) { const v = S().villagers.get(+id); if (v && v.set !== b.set && !op.data.banho[id].body) strangers++; } });
   }
   const paid = op ? r2(seen.filter(e => e[7] === op.id && e[5] === 'moedas' && (e[8] === 'termas' || e[8] === 'termas-volta')).reduce((n, e) => n + (e[8] === 'termas' ? e[6] : -e[6]), 0)) : 0;
   const logs = op ? r2(seen.filter(e => e[7] === op.id && e[8] === 'fornalha' && e[5] === 'wood').reduce((n, e) => n + e[6], 0)) : 0;
