@@ -525,6 +525,10 @@
 
   // ------------------------------ the pens ------------------------------
   E.penGrass = function (b) { const S = G.S; if (!S.veg) return 1; let v = 0, c = 0; for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) { const i = y * N + x; v += S.veg[i]; c += Math.max(0.2, G.Animals.vegCap(i) || 0.6); } return c ? v / c : 1; };
+  // (a pasture is grass the flock can graze: around a city's pen the ground is streets and yards, and the herder of Birka led
+  // the flock to bare ground — not a blade to eat there — and it came back hungrier than it went, L-396. No grass near: no
+  // pasture, and the pastor's next task is the hay of the granary)
+  const PASTURE_MIN = 1.5; // (the grass of the nine tiles round the spot: a sheep grazes a tile of 0,08 and up)
   function pastureSpot(b) {
     const S = G.S; let best = null, bs = -1e9;
     const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
@@ -533,6 +537,7 @@
       if (!W.inb(x, y)) continue; const i = W.idx(x, y);
       if (!W.walkable(i) || S.type[i] === T.RIVER || S.occ[i] || S.fire[i] > 0) continue;
       let g = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const j = W.idx(G.clamp(x + dx, 0, N - 1), G.clamp(y + dy, 0, N - 1)); g += S.veg ? S.veg[j] : 0.5; if (S.occ[j]) g -= 0.5; }
+      if (g < PASTURE_MIN) continue;
       let danger = 0; G.Animals.near(x, y, 8, o => { if (!o.dead && G.Animals.predator(o.kind) && !o.dom) danger++; });
       const sc = g - danger * 3 - r * 0.05;
       if (sc > bs) { bs = sc; best = [x, y]; }
