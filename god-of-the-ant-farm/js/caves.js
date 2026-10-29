@@ -478,7 +478,7 @@
   // kind: explore · paint · guano · pilgrim · oracle · tomb · refuge · mine · raid (against outlaws)
   const ACT = { explore: '', paint: 'craft', guano: 'dig', pilgrim: 'pray', oracle: 'pray', tomb: 'mourn', refuge: 'sittalk', mine: 'mine', raid: 'fight', treasure: 'dig' };
   // (o.force: given over what one does — but an errand from outside asks first the hands' rule, D-094, each by what it is
-  // (D-099): the oracle going up and the children's dare ask the whole of it — the leg of an operation under way, a load with
+  // (D-100): the oracle going up and the children's dare ask the whole of it — the leg of an operation under way, a load with
   // somewhere to go, a task of more priority wait —; the miner's shift is his own trade (o.job) and waits only for busy hands
   // below 3 — a purchase does not go down the gallery: the oracle's call took a woman with one on its way home, and it sat
   // with her in the cave all day, L-395 —; and the flight from an attack cannot wait (o.urge): the load goes with them, and

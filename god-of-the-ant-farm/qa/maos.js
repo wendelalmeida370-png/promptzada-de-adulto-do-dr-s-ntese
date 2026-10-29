@@ -14,7 +14,7 @@
 //  m6 save no meio, carregado: a compra nas mãos continua segurando; a obra (as tarefas não vão no save) não
 //  m7 o corpo do deus: nunca perguntado — o chamado vira pedido, e a compra fica nas mãos
 //  m8 o verificador vê: um chamado dado à mão (o setTask direto, sem a pergunta) a quem leva uma compra é S2
-//  m9 a caverna forçada (D-099), com as palavras do mundo: o oráculo subindo e o desafio das crianças esperam quem leva uma
+//  m9 a caverna forçada (D-100), com as palavras do mundo: o oráculo subindo e o desafio das crianças esperam quem leva uma
 //     compra para casa (a regra inteira das mãos ocupadas); o turno da mina (o ofício do mineiro) também (L-395); o refúgio
 //     de quem foge de um ataque não espera — a compra vai nas mãos e, ao sair, chega em casa pelo livro —; o ataque aos
 //     bandidos (3,1) leva; com a compra em casa, o oráculo leva
@@ -211,7 +211,7 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
     ok('m8 o verificador vê', !clean0 && sawC && sawD && !clean1, `antes ${clean0}; o público da execução dado à mão a ${c.name} com uma compra: ${sawC ? 'visto' : 'NÃO visto'}; a festa dada à mão a ${d.name} com uma compra: ${sawD ? 'visto' : 'NÃO visto'} (${saw[0] || '-'}); depois ${clean1}`);
   }
 }
-// ---------------- m9: the cave's forced errands and the busy hands (D-099) ----------------
+// ---------------- m9: the cave's forced errands and the busy hands (D-100) ----------------
 // (by the cave's own door, G.Caves.give, with the world's own words for each: the oracle going up and the children's dare ask
 // the whole rule of the busy hands (Vg.busy, D-094) — a purchase on its way home waits —; the miner's shift is his own trade
 // (o.job) and waits only for busy hands below 3: a purchase does not go down the gallery (L-395); the refuge of who flees an
