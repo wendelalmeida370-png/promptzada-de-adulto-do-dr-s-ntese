@@ -20,8 +20,8 @@ G.Ready.list({
   "bytes": 1000823
  },
  "metropole": {
-  "day": 57,
-  "pop": 750,
+  "day": 61,
+  "pop": 881,
   "peoples": 7,
   "towns": 19,
   "N": 160,
@@ -30,12 +30,12 @@ G.Ready.list({
   "city": {
    "name": "Tenochtitlan",
    "tier": 4,
-   "pop": 119
+   "pop": 160
   },
   "wars": 0,
   "ww": null,
   "world": "Valante",
-  "bytes": 3304031
+  "bytes": 3627244
  },
  "mega": {
   "day": 63,
@@ -56,75 +56,75 @@ G.Ready.list({
   "bytes": 2925151
  },
  "mundial": {
-  "day": 75,
-  "pop": 657,
-  "peoples": 6,
-  "towns": 20,
+  "day": 61,
+  "pop": 514,
+  "peoples": 7,
+  "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3510,
   "city": {
    "name": "Mênfis",
    "tier": 4,
-   "pop": 239
+   "pop": 123
   },
   "wars": 3,
   "ww": "a Grande Coalizão",
   "world": "Thalos",
-  "bytes": 3923719
+  "bytes": 3351064
  },
  "anos100": {
   "day": 101,
-  "pop": 220,
-  "peoples": 5,
-  "towns": 13,
+  "pop": 139,
+  "peoples": 6,
+  "towns": 11,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Mênfis",
-   "tier": 3,
-   "pop": 55
+   "name": "Texcoco",
+   "tier": 2,
+   "pop": 21
   },
-  "wars": 3,
+  "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 2388818
+  "bytes": 2138634
  },
  "anos500": {
   "day": 501,
-  "pop": 998,
+  "pop": 974,
   "peoples": 2,
-  "towns": 7,
+  "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Mênfis",
-   "tier": 5,
-   "pop": 371
+   "name": "Tenochtitlan",
+   "tier": 4,
+   "pop": 199
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 5952124
+  "bytes": 5829552
  },
  "anos1000": {
   "day": 1001,
-  "pop": 1002,
-  "peoples": 2,
-  "towns": 12,
+  "pop": 961,
+  "peoples": 1,
+  "towns": 8,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Tíbur",
+   "name": "Tenochtitlan",
    "tier": 4,
-   "pop": 229
+   "pop": 225
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 6496074
+  "bytes": 5830611
  }
 });
