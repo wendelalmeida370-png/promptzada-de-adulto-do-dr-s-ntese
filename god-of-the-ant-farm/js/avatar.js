@@ -231,6 +231,9 @@
     if (b && b.inB && b.inP) { const L = TL(); const x = X - b.inB.x * L, z = Z - b.inB.y * L;
       for (const q of b.inP.stairs) { if (q.kind === 'degraus' || q.lv0 !== b.lv) continue; const r = q.r; if (x > r[0] && x < r[2] && z > r[1] && z < r[3]) { b.stairHit = q; return 'stair'; } } }
     const ins = indoorAt(X, Z);
+    // (and a flight of another building, at the point — an open ground's, with no wall round it: the rostra of a square —, as
+    // solid: taken only from within its building, at its foot; never where the feet land climbing up to it — L-411)
+    if (ins && ins.b !== (b && b.inB)) for (const q of ins.p.stairs) { if (q.kind === 'degraus' || q.lv0 !== ins.lv) continue; const r = q.r; if (ins.x > r[0] && ins.x < r[2] && ins.z > r[1] && ins.z < r[3]) return 'stair'; }
     if (ins) { if (!ins.walk) return ins.shell ? 'wall' : 'building'; return ins.y > feet + TUNE.stepUp ? 'ledge' : null; }
     const s = G.Space.surface(X, Z);
     // (water the world does not walk — the sea, a lake, a deep river — is no wall to a body that swims: in it goes)

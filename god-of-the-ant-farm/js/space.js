@@ -157,6 +157,7 @@
     return { lo, hi, y0: hi + (Sp.baseless(b) ? 0.12 : Sp.onForm(b) ? 0 : 0.4) };
   };
   Sp.FLOOR_UP = 0.012; // (a drawn floor stands a hair over the plinth's top it lies on)
+  const LOT_IN = 0.1; // (the plinth is drawn this far in from the lot's edge — Build3D's plinth —: out of it, the street's ground)
   // (the near ground as its mesh draws it — realm3d's terrainGeo: a point every half tile, each cell cut from its +x corner to
   // its +y corner —, tiles in, metres out: what lies on the ground lies on what is seen — the 3D's pieces, the steps before a
   // door —, and the feet on those steps)
@@ -538,10 +539,19 @@
     const id = S.occ[ty * N + tx]; const b = id && S.buildings.get(id); if (!b) return null; const p = Sp.plan(b); if (!p) return null;
     const m = kept.get(b.id); const x = X - b.x * TILE, z = Z - b.y * TILE; const sh = p.shell;
     const L = of === b.id && lv !== undefined && lv !== null && p.levels.some(q => q.lv === lv) ? lv : p.entryLv || 0;
-    const shell = inBody(sh, L, x, z);
+    // (an open ground the world walks across — the square, the fair: no wall, no door, a lot that blocks nothing; not the open
+    // ones that block, the market and the granaries of a form, entered by their way in — is, on its ground storey, the street's
+    // at its lot's edge, where no plinth is drawn (Build3D's, LOT_IN in from the lot's edge): there the feet walk as on the
+    // street — L-410)
+    const open = sh.kind === 'aberta' && !(G.BDEF[b.type] && G.BDEF[b.type].blocks) && L === (p.entryLv || 0);
+    if (open && (x < LOT_IN || z < LOT_IN || x > b.w * TILE - LOT_IN || z > b.h * TILE - LOT_IN)) return null;
     const C = G.Interiors.CELL; let code = Sp.cellIn(p, L, x, z), walk = false, door = -1;
+    // (and from there to its floor — the shell 0.1 to 0.2 m in from the lot's edge, and the cells of its edge whose middle is
+    // out of the shell —: the plinth's top, out of its rooms, walked as the world walks it)
+    const shell = inBody(sh, L, x, z) && !(open && code === C.OUT);
     let step = null;
-    if (shell) {
+    if (open && !shell) walk = true;
+    else if (shell) {
       const crawl = (p.levels.find(q => q.lv === L) || {}).kind === 'jirau';
       walk = code === C.FLOOR || code === C.STAIR || code === C.HATCH || (crawl && code === C.LOWROOF);
       // (an outer door's opening goes through its whole wall, whatever cells of the grid the wall's outer face falls in — L-163)
