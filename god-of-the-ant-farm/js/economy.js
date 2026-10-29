@@ -902,6 +902,8 @@
       if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return;
     }
     if (t.st === 1) {
+      // (the fair's stalls fold at noon: who gets there after goes back without — the stalls kept the goods, not the sale: L-387)
+      if (b.type === 'feira' && !E.fairOpen()) { G.Life && G.Life.leaveQueue(v); return H.end(v); }
       // a line at the stall (or at the shop door) when others got there first
       if (G.Life && !t.served) {
         let fx, fy, dx, dy;
