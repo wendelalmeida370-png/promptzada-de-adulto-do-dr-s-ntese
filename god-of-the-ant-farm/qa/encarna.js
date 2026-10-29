@@ -1282,7 +1282,15 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // a long walk, running, along the world's own path to the farthest door the feet reach: the near pictures are made
     // ahead and thrown away behind; at most the disc that is kept (37 at the light quality) is ever held
     const v = __E.adults(s)[0]; __E.enter(v); const st0 = G.Realm.stats; const b0 = st0.builds, r0 = st0.rebuilds;
-    let far = null, fd = 0; for (const b of S.buildings.values()) { if (!b.built) continue; const d = G.Vg.door(b); const dd = G.dist(d[0], d[1], v.x, v.y); if (dd > fd && dd < 50 && G.W.reaches(v, d[0], d[1])) { fd = dd; far = d; } }
+    // (by a way that crosses no lot but the door's own: the world walks across the lot of a fair, where the body meets the
+    // stalls of its plan — the family of the L-354, open for the Patch 2. In Tenochtitlan of the generation-7 metropolis the
+    // way to the farthest door crossed the fair #23764, and the body stood at a stall on its edge after six steps aside: T-263)
+    const o0 = S.occ[G.W.idx(Math.floor(v.x), Math.floor(v.y))]; // (the lot the body stands on, if any, it walks out of)
+    const lotFree = (b, d) => { const p = G.W.findPath(v.x, v.y, d[0], d[1], true, 30000); if (!p) return false; let a = [v.x, v.y];
+      for (const w of p) { const n = Math.ceil(Math.hypot(w[0] - a[0], w[1] - a[1]) * 4); for (let k = 1; k <= n; k++) { const o = S.occ[G.W.idx(Math.floor(a[0] + (w[0] - a[0]) * k / n), Math.floor(a[1] + (w[1] - a[1]) * k / n))]; if (o && o !== b.id && o !== o0) return false; } a = w; }
+      return true; };
+    let far = null, fd = 0; { const cand = []; for (const b of S.buildings.values()) { if (!b.built) continue; const d = G.Vg.door(b); const dd = G.dist(d[0], d[1], v.x, v.y); if (dd < 50 && G.W.reaches(v, d[0], d[1])) cand.push([dd, b, d]); }
+      cand.sort((p, q) => q[0] - p[0]); for (const [dd, b, d] of cand.slice(0, 40)) if (lotFree(b, d)) { fd = dd; far = d; break; } }
     let maxNear = 0, maxLive = 0; const watch = () => { maxNear = Math.max(maxNear, G.Realm.chunkCount().near); maxLive = Math.max(maxLive, G.Realm.memory().live); };
     const f0 = G.Main.frameFor; G.Main.frameFor = (ms, w) => { f0(ms, w); watch(); };
     const p0 = G.Realm.stats.parts; const w = far ? __E.walkTo(far[0], far[1], 4500, true) : null;
