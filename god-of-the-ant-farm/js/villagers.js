@@ -637,7 +637,10 @@
   function eatTask(v) {
     const S = G.S;
     if (v.carry && v.carry.k === 'food' && !v.carry.op && !v.carry.to && !v.carry.cid) { // eat what you carry (not a load that is someone's errand, not a crate)
-      v.carry.n -= 1; v.hunger = Math.max(0, v.hunger - 55); if (v.carry.n <= 0) v.carry = null; emote(v, 'food', 1.5); return setTask(v, { type: 'idle', pri: 0, wait: 1 });
+      // (out of the hands by the ledger, and the hunger falls by what was eaten — less than one in the hands is less of a
+      // meal: the meal wrote the carry itself, and a farmer's food left the hands with no line in the ledger, L-385)
+      const r = G.Depot.use('v:' + v.id, 'food', 1, { code: 'refeicao', by: v.id, mine: true, part: true });
+      if (r.ok && r.n > 0) { v.hunger = Math.max(0, v.hunger - 55 * r.n); emote(v, 'food', 1.5); return setTask(v, { type: 'idle', pri: 0, wait: 1 }); }
     }
     // (at home, with something in the house's pantry: the meal there, in the ledger — act-lar.js)
     if (G.Lar && v.inside && v.inside === v.home) { const t = G.Lar.task(v, H, 'fome', true); if (t) return t; }
