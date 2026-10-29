@@ -15,6 +15,8 @@
 //  l3  o doente (L-227): fica de cama em casa enquanto dura a febre, come da despensa pelo livro-razão, sara e sai
 //  l7  o corpo encarnado em casa (o adendo 4.1): come à mesa o que a despensa tem e cozinha a ceia da casa, pelas mesmas
 //      portas e no livro; dorme em casa; devolvido, segue a vida dele — em casa pelo motivo dele, ou pela porta
+//  l7b o corpo come em casa numa casa sem mesa, banco nem lareira — quase todas as cabanas —, no chão, onde está, como a família
+//      come nela (D-085, L-398)
 //  l12 o ferido fica de cama em casa e sara mais depressa; quem perde o companheiro passa as primeiras horas de luto em casa
 //  l14 de dia, um dos velhos da casa cuida dos pequenos (3 a 6 anos) em casa, e os pequenos ficam com ele, sem entrar e sair sem
 //      parar — e esperam por ele quando sai por pouco, para comer ou descansar (L-235); um save no meio do dia; quem cuida
@@ -133,6 +135,16 @@ function doorWatch() {
   };
 }
 const book = f => D.ledger().filter(f);
+// (a point the body stands on indoors by a piece of one of these uses of a building's plan — the first piece that has one —,
+// and its storey: [x, y, lv] in tiles; null where the plan has none)
+function standIn(b, uses) {
+  const TL = G.Space.TILE;
+  for (const u of uses) for (const q of G.Interiors.slots(b, u)) {
+    const x = b.x * TL + q.spot.x, z = b.y * TL + q.spot.z;
+    for (let r = 0; r <= 1.2; r += 0.25) for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; const ins = G.Space.indoor(x + Math.cos(a) * r, z + Math.sin(a) * r, q.item.lv, b.id); if (ins && ins.b === b && ins.shell && ins.walk) return [(x + Math.cos(a) * r) / TL, (z + Math.sin(a) * r) / TL, ins.lv]; if (!r) break; }
+  }
+  return null;
+}
 
 // ======================= l1 / l1b: a night in town =======================
 open();
@@ -363,6 +375,44 @@ if (want('l7')) {
   }
 }
 
+// ======================= l7b: the body eats at home in a house with no table, seat nor hearth (L-398) =======================
+if (want('l7b')) {
+  // (a house of the world whose plan has no table, seat nor hearth on any storey — most huts: its people eat on the floor,
+  // D-085 —, one of it lived by the player, inside on the plan's floor, hungry, with food in the pantry: the meal at home is
+  // offered where the body stands, and it eats by the pantry's ledger. Before, the offer asked for the piece, and the body
+  // never ate at home in a hut)
+  open(); S.time = 0.62;
+  const TABLE = ['comer', 'sentar', 'aquecer'];
+  // (a hut first — the most of them —, else any house so made; in the biggest town that has one)
+  let v = null, h = null, p = null;
+  for (const hut of [true, false]) for (const st of [...S.settlements.values()].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)) {
+    if (v) break;
+    for (const o of people(st)) {
+      if (o.age < 18 || o.age >= 60 || o.sleeping || isBody(o) || !G.Possess.can(o).ok) continue;
+      const b = builtHome(o); if ((hut && b.type !== 'hut') || !G.Space.planNow(b) || TABLE.some(u => G.Interiors.slots(b, u).length)) continue;
+      const q = standIn(b, [...new Set(G.Interiors.slots(b).map(x => x.spot.use))].filter(u => u !== 'acesso' && u !== 'entrar')); if (!q) continue;
+      v = o; h = b; p = q; break;
+    }
+  }
+  const name = 'l7b o corpo come em casa numa casa sem mesa, banco nem lareira (L-398)';
+  if (!v) ok(name, false, 'nenhuma casa sem mesa, banco nem lareira com planta e alguém dela para o corpo');
+  else {
+    const ref = 'h:' + h.id; D.make(ref, 'food', 3, { code: 'teste', part: true, floor: true }); v.hunger = 50;
+    const took = G.Possess.take(v);
+    // (the body walks in by the door — the 3D's controller in the game; the test's hand here: on the plan's floor)
+    v.inside = h.id; v.x = p[0]; v.y = p[1]; v.path = null; v.moving = false; G.Possess.setLevel(p[2]); live(0.5);
+    const stays = v.inside === h.id;
+    const o1 = G.Act.offers(v, v.x, v.y).find(o => o.id === 'lar.comer:' + h.id);
+    const L0 = S.ledgerN || 0; const hu0 = v.hunger;
+    let r = { ok: false, why: 'sem a oferta' };
+    if (o1) { const it = G.Possess.apply(() => G.Act.perform(v, o1)); live(0.3); r = it.res || { ok: false, why: 'o mundo não fez' }; }
+    const ate = book(e => e[0] > L0 && e[3] === ref && e[5] === 'food' && (e[8] === 'refeicao' || e[8] === 'ceia') && e[9] === v.id);
+    ok(name, took.ok && stays && !!o1 && !!r.ok && ate.length === 1 && v.hunger < hu0,
+      `${h.type}#${h.id} (${h.ip ? h.ip.f : '-'}: ${[...new Set(G.Interiors.slots(h).map(x => x.spot.use))].join(', ')}): ${nm(v)} encarnado ${took.ok ? '' : `NÃO (${took.why}) `}${stays ? 'dentro, no chão da planta' : 'POSTO PARA FORA'}; a oferta ${o1 ? `«${o1.label}» onde o corpo está` : 'NÃO APARECEU'}; comer: ${r.ok ? `sim (fome ${Math.round(hu0)} → ${Math.round(v.hunger)}, livro: ${ate.map(e => e[8]).join(', ') || 'NADA'})` : 'NÃO: ' + (r.why || '?')}`);
+    if (S.avatar) G.Possess.release('deus');
+  }
+}
+
 // ======================= l12: the wounded in bed, and the widowed at home in the first hours of grief =======================
 if (want('l12')) {
   open(); set = town(); S.time = 0.28;
@@ -398,10 +448,6 @@ if (want('l12')) {
 // ======================= l13: the continuity of a house (the request's 8.4): far, near, in, out, time, back, save =======================
 if (want('l13')) {
   open(); set = town(); S.time = 0.6; liveTo(0.7);
-  const TL = G.Space.TILE;
-  // (a point the body stands on indoors by a piece of one of these uses of a house's plan — the first piece that has one —, and
-  // its storey; null where the plan has none)
-  const standIn = (b, uses) => { for (const u of uses) for (const q of G.Interiors.slots(b, u)) { const x = b.x * TL + q.spot.x, z = b.y * TL + q.spot.z; for (let r = 0; r <= 1.2; r += 0.25) for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; const ins = G.Space.indoor(x + Math.cos(a) * r, z + Math.sin(a) * r, q.item.lv, b.id); if (ins && ins.b === b && ins.shell && ins.walk) return [(x + Math.cos(a) * r) / TL, (z + Math.sin(a) * r) / TL, ins.lv]; if (!r) break; } } return null; };
   const TABLE = ['comer', 'sentar', 'aquecer'], FIRE = ['cozinhar', 'assar', 'aquecer'];
   // (the body: a grown one of a house of four or more whose plan is made — its beds, and the table and the fire the case eats
   // and cooks at —, out of it now — at the day's end, coming home —, in the biggest town that has one, or in the metropolis
