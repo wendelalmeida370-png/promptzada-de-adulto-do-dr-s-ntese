@@ -2376,7 +2376,9 @@
       // (and where the type has its form's family and it is laid out for the record's people — D-093: the temple —, that family,
       // the one the god and the 3D draw: an old temple there becomes the form's, not a hall the form does not have; chosen as a
       // new building's is, so only where the form's is laid out)
-      const T = TYPES[r.t]; const out = !!T && !(T.fams || []).includes(r.f);
+      // (and a family the architecture no longer allows for the record — what the people builds changed under it: the Roman
+      // ínsula's flat roof became the god's hip one (D-082), and the old record's terrace a floor under that roof —: out too)
+      const T = TYPES[r.t], F0 = FAMS[r.f]; const out = !!T && (!(T.fams || []).includes(r.f) || !!(F0 && F0.can && F0.can(r, T, TRAD[r.c] || TRAD.classico)));
       const f1 = T && b.type !== 'ruin' && (out || (T.formFam && r.f !== T.formFam)) ? chooseFamily(b, r) : r.f;
       if (f1 !== r.f && (out || f1 === T.formFam)) { const f0 = r.f; r.f = f1; r.r++; r.fx = []; fact(b, 'reforma', 'família ' + f0 + '>' + r.f); }
       if (!b.built || b.type === 'ruin' || !TYPES[b.type] || r.t !== b.type) continue;
