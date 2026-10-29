@@ -652,7 +652,12 @@
     }
   };
   (G.saveHooks = G.saveHooks || []).push({
-    save(out) { out.secrets = G.S.secrets || null; },
+    // (and which inquiries had their inquirer at the questions when the game was saved: the task is not in the save — L-380)
+    save(out) {
+      const S = G.S; out.secrets = S.secrets || null;
+      const inq = S.secrets && Array.isArray(S.secrets.inq) ? S.secrets.inq : [];
+      out.secretsAsk = inq.filter(i => { const v = S.villagers.get(i.by); return !!(v && v.task && v.task.type === 'inquire' && v.task.inq === i.id); }).map(i => i.id);
+    },
     load(o) {
       const S = G.S; S.secrets = o.secrets || null;
       for (const v of S.villagers.values()) { v.robe = null; }
@@ -663,7 +668,12 @@
       // (not to one another system has just given back what he was doing when the game was saved — the riot's guard (L-190) —:
       // that was his task then, not the questions, and the world gone on would have left him there. Jasão of Argos guarded the
       // riot and came back from the load asking questions in the streets, his post in the square empty: L-376)
-      for (const i of s.inq) { const v = S.villagers.get(i.by); if (v && !v.task) G.Vg.setTask(v, { type: 'inquire', inq: i.id, pri: 2.15, st: 0, kind: 'inquire' }); }
+      // (and only to one who was at the questions when it was saved: the task of an inquiry may end before the inquiry — four
+      // days, or another errand in its place — and the world gone on would not give it back. Júlia of Tenochtitlan slept at
+      // home, and came back from the load asking questions in the streets — this hook comes before the home's, which gives
+      // back who was asleep, and found her busy: L-380. A save of before, with no such list, as L-376)
+      const ask = Array.isArray(o.secretsAsk) ? new Set(o.secretsAsk.filter(Number.isFinite)) : null;
+      for (const i of s.inq) { const v = S.villagers.get(i.by); if (v && !v.task && (!ask || ask.has(i.id))) G.Vg.setTask(v, { type: 'inquire', inq: i.id, pri: 2.15, st: 0, kind: 'inquire' }); }
     },
   });
 

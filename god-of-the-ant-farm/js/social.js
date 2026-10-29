@@ -63,8 +63,13 @@
   // once a day in each city: the richest family living on cheap ground buys the house of a plainer family on dear ground
   // (the same size or bigger for both; the savings, the pantry, the goods and a merchant's house go with each family, and the price changes hands)
   const PRICE = 12;
+  // (what the trade pays for a house: at least what it cost the family that has it — its materials and its ground, the coins
+  // the buying or the work took: b.custo, act-casa.js —; the family that had just paid for its new sobrado was bought out the
+  // next morning for twelve coins, L-236)
+  const cost = b => (Number.isFinite(b.custo) && b.custo > 0 ? b.custo : 0);
+  const priceOf = b => Math.max(PRICE, Math.round(cost(b) * 100) / 100);
   function moveUp(set) {
-    const S = G.S; if ((set.tier || 0) < 3) return;
+    const S = G.S; if ((set.tier || 0) < 3) return; const body = S.avatar ? S.avatar.id : 0;
     const sn = U.peek(set.id); if (!sn) return;
     const res = new Map(); for (const v of S.villagers.values()) if (v.set === set.id && v.home && !v.captive) { const l = res.get(v.home); if (l) l.push(v); else res.set(v.home, [v]); }
     const homes = [];
@@ -72,15 +77,19 @@
       if (b.set !== set.id || !b.built || b.type === 'barraco' || !G.BDEF[b.type].housing || b.upgradeFrom) continue;
       const l = res.get(b.id); if (!l || !l.length || l.some(v => v.jail || v.aboard)) continue;
       const [cx, cy] = G.Village.center(b); const o = sn.cells.get(U.cellOf(cx, cy)); if (!o) continue;
-      homes.push({ b, l, val: o.value, cap: G.BDEF[b.type].housing, rich: !!(b.elite || (b.coin || 0) >= 30 || l.some(v => v.grp === 'nobreza')) });
+      // (a family trades only a house of its own, where its owner lives: a let house is its owner's, not its tenants' to sell
+      // or to give away — and the house of the god's body is the player's to leave, as in D-098 —, L-236)
+      const own = l.some(v => v.id === b.dono) && !l.some(v => v.id === body);
+      homes.push({ b, l, val: o.value, cap: G.BDEF[b.type].housing, own, rich: !!(b.elite || (b.coin || 0) >= 30 || l.some(v => v.grp === 'nobreza')) });
     }
     if (homes.length < 8) return;
     const vals = homes.map(h => h.val).sort((a, b) => a - b); const mid = vals[vals.length >> 1], high = vals[Math.floor(vals.length * 0.75)];
     let best = null, gain = 8;
     for (const r of homes) {
-      if (!r.rich || r.val >= mid || (r.b.coin || 0) < PRICE) continue;
+      if (!r.own || !r.rich || r.val >= mid || (r.b.coin || 0) < PRICE) continue;
       for (const p of homes) {
-        if (p.rich || p.val < high || (p.b.coin || 0) >= 10 || p.b.elite || p.cap < r.l.length || r.cap < p.l.length) continue;
+        if (!p.own || p.rich || p.val < high || (p.b.coin || 0) >= 10 || p.b.elite || p.cap < r.l.length || r.cap < p.l.length) continue;
+        if ((r.b.coin || 0) + 1e-6 < priceOf(p.b)) continue; // (a rich family short of what the house cost does not buy it)
         if (p.val - r.val > gain) { gain = p.val - r.val; best = [r, p]; }
       }
     }
@@ -94,9 +103,13 @@
     // (each family takes all of its own, as every move does — on the floor where the other house's chests and pantry are full,
     // D-059: the dear house's pantry no longer has to fit in the cheap one's before they trade, L-314)
     const by = (r.l.find(v => v.age >= 18) || r.l[0]).id;
+    const price = priceOf(hp), gave = cost(hr);
     for (const [k, n] of Object.entries(kp)) if (n > 1e-6) D.move('h:' + hp.id, 'h:' + hr.id, k, n, { code: 'mudança', by, part: true, floor: true });
     for (const [k, n] of Object.entries(kr)) if (n > 1e-6) D.move('h:' + hr.id, 'h:' + hp.id, k, n, { code: 'mudança', by, part: true, floor: true });
-    D.move('h:' + hp.id, 'h:' + hr.id, 'moedas', PRICE, { code: 'compra-casa', by, part: true });
+    D.move('h:' + hp.id, 'h:' + hr.id, 'moedas', price, { code: 'compra-casa', by, part: true });
+    // (what each house cost the family that has it now: the buyer, the price and the house it gave for it; the seller was paid
+    // at least what its own had cost it — the cheap house costs it nothing)
+    hp.custo = Math.round((price + gave) * 100) / 100; hr.custo = 0;
     const ke = b => ({ elite: b.elite || null, trade: b.trade || 0, tradeGood: b.tradeGood || null });
     const er = ke(hr), ep = ke(hp);
     hp.elite = er.elite; hp.trade = er.trade; hp.tradeGood = er.tradeGood; hr.elite = ep.elite; hr.trade = ep.trade; hr.tradeGood = ep.tradeGood;
@@ -141,7 +154,7 @@
       // walls up, the plan is told at once, as when a work is done — the record stayed a shack's until the next turn of the
       // day, and the hut had the shack's plan and room the rest of that day, L-350)
       const f = G.Fac.get(G.Village.facOfSet(set.id)); const wood = G.BDEF.hut.cost.wood || 10;
-      if (coin >= 12 && l.some(v => v.age >= 18) && f && G.Depot.free('f:' + f.id, 'wood') >= wood && G.Depot.move('h:' + b.id, 'f:' + f.id, 'moedas', 8, { code: 'obra-casa', by: l[0].id }).ok) { G.Depot.use('f:' + f.id, 'wood', wood, { code: 'obra-casa', by: l[0].id }); b.type = 'hut'; b.hp = b.maxHp = G.BDEF.hut.hp; b.dono = (l.find(v => v.age >= 18) || l[0]).id; W.touchWalk(); G.Interiors && G.Interiors.complete(b); note(set, l[0], 'juntou moedas e trocou o barraco por uma cabana de paredes firmes'); bio(l[0], 'Juntou moedas e trocou o barraco por uma cabana de paredes firmes.', 'Juntei moeda por moeda e troquei o barraco por uma cabana de paredes firmes'); }
+      if (coin >= 12 && l.some(v => v.age >= 18) && f && G.Depot.free('f:' + f.id, 'wood') >= wood && G.Depot.move('h:' + b.id, 'f:' + f.id, 'moedas', 8, { code: 'obra-casa', by: l[0].id }).ok) { G.Depot.use('f:' + f.id, 'wood', wood, { code: 'obra-casa', by: l[0].id }); b.type = 'hut'; b.hp = b.maxHp = G.BDEF.hut.hp; b.dono = (l.find(v => v.age >= 18) || l[0]).id; b.custo = 8; W.touchWalk(); G.Interiors && G.Interiors.complete(b); note(set, l[0], 'juntou moedas e trocou o barraco por uma cabana de paredes firmes'); bio(l[0], 'Juntou moedas e trocou o barraco por uma cabana de paredes firmes.', 'Juntei moeda por moeda e troquei o barraco por uma cabana de paredes firmes'); }
     }
   }
   // the street is full: whoever has slept there two nights raises a shack (one or two a day, on the cheapest ground at the edge)

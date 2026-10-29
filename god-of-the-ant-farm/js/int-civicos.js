@@ -246,10 +246,9 @@
   // or the court open to the sky and the pylon round the gate the street comes in by (the Egyptians'); or the top of the
   // pyramid round the shrine, the street's way in where the steps come up to it (the Aztecs'); the form's steps from the street
   // up to the base, one flight on the form's own treads; what stands on the ground the feet walk, the form's solids. Nothing
-  // of the shell drawn by chance: it is the form's. The inside, the type's own furnishing in the hall (the temple's in its cella)
-  const FORM_FURNISH = { biblioteca: libraryFurnish, temple: formTempleFurnish };
-  const FORM_FAM = { biblioteca: 'forma.salao', temple: 'forma.templo' };
-  const HALL_FN = { temple: 'nave' };
+  // of the shell drawn by chance: it is the form's. The inside, the type's own furnishing in the hall (the temple's in its cella),
+  // the hall split first into rooms of its own where the type says so. Each type by its form comes in by In.formType, below
+  const FORM_FURNISH = {}, FORM_FAM = {}, HALL_FN = {}, FORM_SPLIT = {};
   const r2 = x => Math.round(x * 100) / 100;
   // (a row of the form's columns as a colonnade of the plan — the wall from the outer face of one end column to the other's,
   // each of the plan's columns where the form's stands, the spaces between them as wide as the form has them (the Norse
@@ -269,8 +268,11 @@
   function formHall(P) {
     const rec = P.rec, tr = P.tr; const F = G.Forma && G.Forma.of(rec.t, rec.c); const B = F && G.Forma.body(F); if (!B) { P.errs.push('a forma do prédio sem corpo'); return; }
     const t = Math.min(tr.t || 0.3, 0.35), c = t / 2; const sh = B.r.slice(); const y0 = B.y0, h0 = B.y1 - B.y0;
-    // (on the form's solid base — its steps the form's own —, or on the ground: the steps before its door the street's)
-    P.shell = { kind: 'rect', r: sh, t, mat: B.tabuas ? 'tabua' : tr.mat, base: y0 > 0.05 ? 'macica' : 'pedra', baseH: y0, floors: 1, eave: B.y1 };
+    // (on the form's solid base — its steps the form's own —, or on the ground: the steps before its door the street's. Solid
+    // from a body's step over the lot's foot, In.BODY.step, as the P3's bodyShell and openBase have it — L-390: a floor a few
+    // centimetres up is a stone the street's steps come up to, not a base the plan alone climbs: on a lot that falls away, the
+    // street below a floor laid on a solid base of 0.13 m had no step to it)
+    P.shell = { kind: 'rect', r: sh, t, mat: B.tabuas ? 'tabua' : tr.mat, base: y0 >= In.BODY.step ? 'macica' : 'pedra', baseH: y0, floors: 1, eave: B.y1 };
     const T = B.telhado; P.roof = { kind: T.tipo, along: T.ao || null, h: r2(T.y1 - T.y0), over: T.ov || 0 }; P.roofGeo = { kind: T.tipo, along: T.ao || null, eave: T.y0, rise: T.y1 - T.y0, R: T.r.slice() };
     const I = P.inner(); P.level(0, y0, h0, 'piso', I); P.entryLv = 0;
     P.outer = P.walls4(0, [sh[0] + c, sh[1] + c, sh[2] - c, sh[3] - c], t, h0, 1, 'parede'); P.outers = [P.outer];
@@ -353,7 +355,10 @@
     // (for the furnishing: the cella's front wall, the inner face of the columns before it, its door, the steps coming up)
     const fc = (porch ? porch.colunas : peri ? peri.colunas : []).filter(q => q.c[1] > sh[3]);
     P._form = { wall: sh[3], cols: fc.length ? Math.min(...fc.map(q => q.c[1] - q.r)) : Infinity, door: B.porta.u, doorW: B.porta.w, lance: B.degraus.length ? [Math.min(...B.degraus.map(q => q.r[0])), Math.max(...B.degraus.map(q => q.r[2]))] : [B.porta.u, B.porta.u] };
-    const rooms = { main: P.room(0, HALL_FN[rec.t] || 'salao', I), front: undefined, cells: [], court: null, all: [] }; rooms.all.push(rooms.main);
+    // (the hall: one room — or the rooms the type splits it into, the one the door opens into the main: its own walls and doors
+    // within the hall's, laid by the type's split, P.walls / P.door / P.room)
+    const sp = FORM_SPLIT[rec.t] ? FORM_SPLIT[rec.t](P, I, HALL_FN[rec.t] || 'salao') : null; if (FORM_SPLIT[rec.t] && (!sp || !has(sp.main))) { P.errs.push('o salão da forma sem o cômodo da porta'); return; }
+    const rooms = { main: sp ? sp.main : P.room(0, HALL_FN[rec.t] || 'salao', I), front: undefined, cells: [], court: null, all: [], inner: sp ? sp.rooms.slice() : [] }; rooms.all.push(...(sp ? sp.rooms : [rooms.main]));
     if (porch) { rooms.porch = P.room(0, 'portico', porch.r, 1); rooms.all.push(rooms.porch); }
     if (courtR) { rooms.court = P.room(0, 'patio', courtR, 1); rooms.gate = P.room(0, 'passagem', passR, 0); rooms.all.push(rooms.court, rooms.gate); }
     // (the walk round the walls — the peristyle's, the gallery's, the platform's —: the strip before the door a room always, the
@@ -403,10 +408,23 @@
   // the temple's wherever it is laid out for the people (D-093: the six have their temple's form), the type's halls where it is
   // not, and where both are offered, the form's: the one the god and the 3D draw)
   const formCan = rec => (G.Forma && G.Forma.of(rec.t, rec.c) && G.Forma.body(G.Forma.of(rec.t, rec.c)) ? null : 'o prédio sem a forma de um corpo');
-  In.addFamilies([{ id: 'forma.salao', H: 'forma', V: 'salao', S: 'forma.salao', name: 'Pela forma', can: formCan, build: P => formHall(P) },
-    { id: 'forma.templo', H: 'forma', V: 'templo', S: 'forma.templo', name: 'Pela forma', can: formCan, build: P => formHall(P) }]);
-  In.addTypes({ biblioteca: Object.assign({}, In.TYPES.biblioteca, { fams: [FORM_FAM.biblioteca], formFam: FORM_FAM.biblioteca }) });
-  In.addTypes({ temple: Object.assign({}, In.TYPES.temple, { fams: [FORM_FAM.temple].concat(In.TYPES.temple.fams.filter(f => f !== FORM_FAM.temple)), formFam: FORM_FAM.temple, prefer: (rec, ok) => (ok.includes(FORM_FAM.temple) ? [FORM_FAM.temple] : ok) }) });
+  // a type laid out by its form's body — one builder for all of them, this one (formHall: the shell, the porch, the peristyle,
+  // the court and the pylon, the platform, the form's steps, its solids and its braziers): In.formType(type, { fam, furnish,
+  // hall, split, keep }) — fam: the family's id (registered once, offered where the form has a body for the people);
+  // furnish(P, rooms): the type's own furnishing (rooms.main the hall the door opens into, rooms.all every room, rooms.inner
+  // the split's); hall: the hall's function ('salao' by default); split(P, I, fn) → { main, rooms }: the hall I divided into
+  // rooms of its own before the furniture — its partitions and their doors laid by it (the palace's chamber, the baths' run
+  // from the cold to the hot) —, the door from the street into main; keep: the type's other families kept after the form's,
+  // for the peoples whose form is not laid out (the temple's halls), the form's preferred where it is: an old record of one of
+  // them becomes the form's on loading where the form is laid out (In.migrate, by the type's formFam)
+  In.formType = function (type, o) {
+    FORM_FAM[type] = o.fam; FORM_FURNISH[type] = o.furnish; if (o.hall) HALL_FN[type] = o.hall; if (o.split) FORM_SPLIT[type] = o.split;
+    if (!In.FAMS[o.fam]) In.addFamilies([{ id: o.fam, H: 'forma', V: o.fam.split('.')[1] || o.fam, S: o.fam, name: 'Pela forma', can: formCan, build: P => formHall(P) }]);
+    const T = In.TYPES[type] || {}; const old = o.keep ? (T.fams || []).filter(f => f !== o.fam) : [];
+    In.addTypes({ [type]: Object.assign({}, T, { fams: [o.fam].concat(old), formFam: o.fam }, old.length ? { prefer: (rec, ok) => (ok.includes(o.fam) ? [o.fam] : ok) } : {}) });
+  };
+  In.formType('biblioteca', { fam: 'forma.salao', furnish: libraryFurnish });
+  In.formType('temple', { fam: 'forma.templo', furnish: formTempleFurnish, hall: 'nave', keep: true });
 
   // ------------------------------ the square (P4, phase E) ------------------------------
   // the town's open ground — it blocks nothing: the world walks across it —, its shell 'aberta' (no walls, no roof, on the
