@@ -140,7 +140,7 @@ let set = town();
 console.log(`(${WORLD}: ${set.name}, ${V.pop(set.id)} habitantes, ${people(set).length} com casa; dia ${S.day})`);
 // (an evening with no feast in the case's town: every town keeps its feast of the year, and a day of the world is a year —
 // the evening cases fell on Roma's, its grown ones at the feast instead of at home or in bed. The test's hand sets the town's
-// plan of the year as held for the day; the cases about a feast start their own, l10. T-xxx)
+// plan of the year as held for the day; the cases about a feast start their own, l10. T-274)
 const noFeast = st => { if (st) st.festPlan = { day: S.day, key: null, done: true }; };
 // (the night of l1 — the town at 0.86 —, for the cases that go on in it when l1 is not run)
 let nightReady = false;
@@ -218,7 +218,7 @@ if (want('l4')) {
   const lar = rt.diff.filter(d => d.includes('"lar"') || d.includes('"festas"'));
   // the morning: each grown one asleep now gets up at their own hour (not before), and not all at once — the grown ones
   // asleep in every town: in the «cidade» of the generation 7, most of Roma's are of a secret society, and that night its
-  // meeting took them from their beds (secrets.js, the conclave), two left asleep at the save, T-xxx
+  // meeting took them from their beds (secrets.js, the conclave), two left asleep at the save, T-274
   const asleep = [...S.villagers.values()].filter(v => v.sleeping && v.age >= 16 && !isBody(v));
   const woke = new Map(); const wasA = new Map(asleep.map(v => [v.id, true]));
   liveTo(0.16, () => { for (const v of asleep) if (wasA.get(v.id) && !v.sleeping && !woke.has(v.id) && S.villagers.has(v.id)) woke.set(v.id, { t: S.time, wake: L.clock(v).wake, hunger: v.hunger, task: v.task ? v.task.type : '' }); });
@@ -259,7 +259,7 @@ if (want('l2')) {
   liveTo(0.734);
   // (a grown one awake at home in the evening at home, whose bed time is still a while away, and one of the house awake to
   // go out on the watch — in this world or, when it has none, in the metropolis: in the «cidade» of the generation 7, most
-  // grown ones of Roma are of a secret society, and no pair was left at 17h36, T-xxx)
+  // grown ones of Roma are of a secret society, and no pair was left at 17h36, T-274)
   const findPair = () => {
     for (const b of [...S.villagers.values()].filter(o => builtHome(o) && !o.captive).sort((x, y) => x.id - y.id)) {
       // (at the fire or talking — not over the pot or at the table: the cook's while is its own)
@@ -295,7 +295,7 @@ if (want('l3')) {
   open(); set = town(); S.time = 0.3;
   // (one of the town out of the house by day, at the day's work — not of a secret society: its people are called to its
   // errands at any hour, secrets.js —, looked for as the morning starts: the ready world is saved at midnight, and in the
-  // instant it opens nobody of Roma was out at work, T-xxx)
+  // instant it opens nobody of Roma was out at work, T-274)
   const pick3 = () => people(set).find(o => o.age >= 18 && o.age < 55 && !o.sleeping && o.inside !== o.home && !(o.sick > 0) && o.hp > 70 && !isBody(o) && !o.secret && o.task && o.task.pri < 2 && o.task.type !== 'sleep');
   let v = pick3(); if (!v) live(20, () => !!(v = pick3()));
   if (!v) ok('l3 o doente de cama', false, 'nenhum adulto fora de casa, de dia, para adoecer');
@@ -371,7 +371,7 @@ if (want('l12')) {
   const pair = w => people(set).find(o => o.age >= 20 && o.age < 60 && o.partner && S.villagers.get(o.partner) && S.villagers.get(o.partner).home === o.home && !o.sleeping && !isBody(o) && !o.secret && o.id !== (w && w.id) && o.partner !== (w && w.id) && o.task && o.task.pri < 2);
   // (both looked for as the morning starts — the ready world is saved at midnight, as l3 —, in a town of the world that has
   // both, the biggest first, or in the metropolis when this world has none: in the «cidade» of the generation 7 most of
-  // Roma's grown ones are of a secret society, and no couple of the world was left, T-xxx)
+  // Roma's grown ones are of a secret society, and no couple of the world was left, T-274)
   let w = null, p0 = null;
   const both = () => { const towns = [...S.settlements.values()].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id); for (const st of towns) { set = st; w = pick([]); p0 = pair(w); if (w && p0) return true; } set = towns[0]; return false; };
   if (!both()) live(20, () => both());
@@ -478,7 +478,7 @@ if (want('l14')) {
   open(); afterMoves();
   // (a house of the world with someone of 62 or more — whose working day weighs less than the minding — and little ones of
   // three to six living in it, under six and a half: the case lasts half a year of their age, and one chosen at 6,99 turned
-  // seven at its start — no longer a little one to mind — and the case counted his day out, T-xxx; one of the old minds them. Chosen after the day's moves of house — a house too full for its
+  // seven at its start — no longer a little one to mind — and the case counted his day out, T-274; one of the old minds them. Chosen after the day's moves of house — a house too full for its
   // beds splits once a day, act-casa.js: the old one may move out, and the little ones are no longer hers —, in a town at
   // peace: a town under threat calls its grown ones to the fight, and the case would watch a battle)
   const calm = h => !(G.War && G.War.threat && G.War.threat(h.set));
