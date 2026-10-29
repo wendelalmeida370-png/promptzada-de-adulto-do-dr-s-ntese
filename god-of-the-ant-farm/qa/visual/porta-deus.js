@@ -41,9 +41,18 @@ const SEM_PORTA = {
   mercado: 'as bancas abertas', feira: 'o chão da feira, numa camada própria', quarteirao: 'as casas do bloco, cada uma com a sua porta',
   praca: 'o chão aberto da praça (a planta do P4 pela forma): entra-se de todo lado, não há porta',
   'storehouse/egipcio': 'os silos de cúpula', 'celeiro/egipcio': 'os silos de cúpula', 'celeiro/asteca': 'os silos de barro',
-  'banhos/egipcio': 'o lago sagrado', 'banhos/classico': 'as termas: as janelas em arco e a cúpula', 'banhos/grego': 'as termas', 'banhos/romano': 'as termas',
-  'palacio/classico': 'a frente de colunas', 'palacio/grego': 'a frente de colunas', 'palacio/romano': 'a frente de colunas', 'palacio/asteca': 'o pórtico de colunas',
+  // (the baths and the palaces have their door in the god's picture since the leader's of 29/10 — a building with a plan has its
+  // way in, the same in both views —: but the sacred lake, open, whose way in is its landing)
+  'banhos/egipcio': 'o lago sagrado, aberto: entra-se pelo patamar da frente',
   'paco/asteca': 'o pórtico', 'insula/romano': 'as lojas do térreo (sem a porta da casa)',
+  // (the theatres planned on their form — int-monumentos.js, D-093 —: the way in is the open front of their ground, or the
+  // arch of the drum; the Norse's mead hall has its door)
+  'teatro/classico': 'a meia-tigela aberta: entra-se pela frente, à volta do palco', 'teatro/grego': 'a meia-tigela aberta: entra-se pela frente, à volta do palco',
+  'teatro/egipcio': 'o jardim aberto na frente', 'teatro/asteca': 'o campo aberto na frente', 'teatro/romano': 'a arena: os arcos do tambor, o da frente a entrada (D-095)',
+  // (the wonders — D-096 —: the way in their plan's, not a door the god paints)
+  'maravilha/romano': 'o Coliseu: os arcos do tambor, o da frente a entrada (D-095)', 'maravilha/grego': 'a Acrópole: a rocha e o lance cortado nela, o templo visto de fora (D-096)', 'maravilha/classico': 'o zigurate: o lance até o terraço (D-096)', 'maravilha/egipcio': 'a Grande Pirâmide: a porta lacrada, pintada (D-096)', 'maravilha/asteca': 'o Templo Mayor: o lance até o topo, as portas dos santuários sem planta própria (D-096)',
+  // (the monument — D-097 —: one goes up the steps of its base at its front; it has no door)
+  monument: 'o monumento: sobe-se pelos degraus da base, pela frente (D-097)',
 };
 const semPorta = (type, st) => SEM_PORTA[type] || SEM_PORTA[type + '/' + st];
 const same = [], grew = []; let m = 0;
@@ -60,8 +69,11 @@ for (const type of Object.keys(In.TYPES)) {
   }
 }
 ok('o desenho sem porta', !same.length && !grew.length, same.length || grew.length ? `${same.length ? 'não muda sem a porta: ' + same.join(', ') : ''}${grew.length ? ' ganha sem a porta: ' + grew.join(', ') : ''}` : `${m} tipos e povos com planta: todo desenho de antes perde a porta (menos os sem porta própria: ${Object.keys(SEM_PORTA).join(', ')})`);
-// (and the homes' pictures of before, until D-082 is on)
-{ const same2 = []; for (const type of Object.keys(A.HOMES)) for (const st of STY) { const b = F.put(type, st, 7900 + st.length); const g0 = F.god(b, { shell: undefined }), g1 = F.god(b, { shell: undefined, noDoor: true }); F.drop(b); if (!g0.none && !semPorta(type, st) && g1.ops.filter(o => o.f).length >= g0.ops.filter(o => o.f).length) same2.push(`${type}/${st}`); }
+// (and the homes' pictures of before, while D-082 is off: with it on — phase C —, a home is drawn from its shell with the
+// shell's own door, (a), and its picture of before is only the stand-in of a frame or two until that one is painted, drawn as
+// it is — Render.doorView leaves a home drawn from its shell alone)
+if (A.homeOn) ok('as casas de antes sem porta', true, 'as casas desenhadas pela casca (D-082, ligada): a porta de cada uma é a da casca — (a)');
+else { const same2 = []; for (const type of Object.keys(A.HOMES)) for (const st of STY) { const b = F.put(type, st, 7900 + st.length); const g0 = F.god(b, { shell: undefined }), g1 = F.god(b, { shell: undefined, noDoor: true }); F.drop(b); if (!g0.none && !semPorta(type, st) && g1.ops.filter(o => o.f).length >= g0.ops.filter(o => o.f).length) same2.push(`${type}/${st}`); }
   ok('as casas de antes sem porta', !same2.length, same2.length ? `não muda: ${same2.join(', ')}` : `${Object.keys(A.HOMES).length * STY.length} casas: todas perdem a porta`); }
 const e = M.erros(); ok('sem erro do jogo', M.limpo(), M.limpo() ? 'nenhum erro de módulo nem aviso no console' : JSON.stringify(e.mod) + ' ' + e.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');

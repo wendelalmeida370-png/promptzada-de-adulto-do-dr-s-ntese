@@ -652,6 +652,12 @@
     P.zones.push({ lv: 0, r: [cu - 0.95, cv + 0.55, cu + 0.95, cv + 1.25] });
     return true;
   }
+  // (does a home's family still fit the roof its people builds — a terrace or a room on the roof under a flat one, a loft under
+  // a pitched one: what a people builds may change under an old record — D-082, the Roman ínsula's flat roof became the god's
+  // hip one —, and In.migrate asks it of a record of before, L-402)
+  const topOf = v => { const o = parseV(v); return o ? o.top : v === 'jirau' || v === 'porao-jirau' ? 'jirau' : v === 'terraco' ? 'terraco' : v === 'quarto' || v === 'porao-quarto' ? 'quarto' : null; };
+  const roofFits = rec => { if (!LISTS[rec.t]) return true; const tr = In.TRAD[rec.c] || In.TRAD.classico || {}; const top = topOf((rec.f || '').split('.')[1] || '');
+    return top === 'jirau' ? pitched(rec, tr) : top === 'terraco' || top === 'quarto' ? !pitched(rec, tr) : true; };
   // (what the other recipes — the block round a court, the buildings of work — lay out with)
-  In.HOME = { ladderAt, sideLadders, loft, porao, terrace, windows, roofOf, pitched, wet, flatOK, cellarOK, touches, roomHolding, ptInR, parseV, NUM, TOPN, rowOf };
+  In.HOME = { ladderAt, sideLadders, loft, porao, terrace, windows, roofOf, pitched, wet, flatOK, cellarOK, touches, roomHolding, ptInR, parseV, NUM, TOPN, rowOf, roofFits };
 })(window.G);

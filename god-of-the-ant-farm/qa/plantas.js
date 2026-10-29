@@ -66,14 +66,15 @@ for (const type of Object.keys(In.TYPES)) {
           nBad++; if (badEx.length < 12 || process.env.VERB) badEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id}: ${(p.errsOf || p.errs || []).slice(0, 2).join('; ')}`); continue;
         }
         // (the height of the floor under every cell the grid has as floor, off the flights and the steps: the storey's own —
-        // as the body and the 3D read it —, never the ramp of a flight beside it: L-133)
+        // as the body and the 3D read it; on the rows of seats of a theatre, their own (P.tiers: In.hAt) —, never the ramp of a
+        // flight beside it: L-133)
         if (q === 0 && p.grid) for (const l of p.levels) {
           const g = p.grid.lv[l.lv]; if (!g) continue; const n = p.grid.n;
           for (let k = 0; k < n * n; k++) {
             const code = g[k]; if (code === 0 || code === 2 || code === 5 || code === 7) continue; // (out, wall, flight, void)
             const x = (k % n + 0.5) * In.CS, z = (Math.floor(k / n) + 0.5) * In.CS;
             if (p.stairs.some(st => st.kind === 'degraus' && st.lv1 === l.lv && x >= st.r[0] && x <= st.r[2] && z >= st.r[1] && z <= st.r[3])) continue;
-            nCells++; const y = In.floorYOf(p, l.lv, x, z); if (Math.abs(y - l.y) > 1e-6) { nFloorBad++; if (floorEx.length < 4) floorEx.push(`${type}/${c}/${f} #${id} piso ${l.lv} (${x}, ${z}): ${y.toFixed(2)} com o piso a ${l.y}`); }
+            nCells++; const y = In.floorYOf(p, l.lv, x, z); if (Math.abs(y - l.y - In.hAt(p, l.lv, x, z)) > 1e-6) { nFloorBad++; if (floorEx.length < 4) floorEx.push(`${type}/${c}/${f} #${id} piso ${l.lv} (${x}, ${z}): ${y.toFixed(2)} com o piso a ${l.y}`); }
           }
         }
         seen.add(p.sig); fine.add(hash(JSON.stringify([p.shell, p.rooms.map(m => m.r), p.items.map(i => [i.kind, i.x, i.z, i.ry]), p.holes.map(h => [h.wall, h.at])])));

@@ -535,9 +535,11 @@
       case 'monument': {
         const [w, h, ax, ay] = spriteDims(2, 2, 72);
         return Art.sprite(key, w, h, ax, ay, (c, m) => {
-          box(c, -0.95, -0.95, 0.95, 0.95, 0, 1.5, '#c9c1ae', '#aaa18c', '#ddd6c5');
+          // (the paved square's step of 0.49 m in two along its front — D-097: a body's step —, as its form)
+          box(c, -0.95, -0.95, 0.95, 0.95, 0, 0.75, '#c9c1ae', '#aaa18c', '#ddd6c5');
+          box(c, -0.95, -0.95, 0.95, 0.9, 0.75, 1.5, '#c9c1ae', '#aaa18c', '#ddd6c5');
           c.strokeStyle = 'rgba(120,110,95,0.35)'; c.lineWidth = 0.35;
-          for (let k = -0.95; k <= 0.95; k += 0.38) { let a = P(k, -0.95, 1.5), b = P(k, 0.95, 1.5); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); a = P(-0.95, k, 1.5); b = P(0.95, k, 1.5); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+          for (let k = -0.95; k <= 0.95; k += 0.38) { let a = P(k, -0.95, 1.5), b = P(k, 0.9, 1.5); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); if (k <= 0.9) { a = P(-0.95, k, 1.5); b = P(0.95, k, 1.5); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); } }
           box(c, -0.36, -0.36, 0.36, 0.36, 1.5, 5, '#b8ae98', '#978d78', '#cbc2ae');
           box(c, -0.28, -0.28, 0.28, 0.28, 5, 8, '#c4baa4', '#a39984', '#d6ceba');
           // tapered obelisk
