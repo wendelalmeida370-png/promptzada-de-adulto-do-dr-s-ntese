@@ -4,7 +4,9 @@
 // mapa de regiões (W.reaches, W.townReaches — nunca «mesma ilha»): quem não alcança nenhuma obra que as ruas alcançam troca de
 // ofício por um do lado dele, e o construtor novo é quem alcança as obras.
 //  c1 a ilhota: a mão do deus leva os construtores da cidade a uma ilhota cercada de água funda, e a cidade abre uma obra nas
-//     ruas, com todo o material: eles deixam o ofício, um construtor das ruas é nomeado, alcança a obra e ela anda
+//     ruas, com todo o material: na conta seguinte dos ofícios, enquanto a ilhota os segura (o mundo põe na margem, em
+//     segundos, quem fica onde todo afazer falha), eles deixam o ofício, um construtor das ruas é nomeado, alcança a obra e
+//     ela anda
 //  c2 o mesmo, com um save logo depois do corte: carregado, a cidade faz o mesmo
 //  c3 a água vai embora (depois do c1): ninguém troca de ofício duas vezes (sem vai e vem), e todo construtor alcança as obras
 //  c4 a obra que as ruas não alcançam (na própria ilhota) não é obra da cidade: ninguém deixa o ofício por ela
@@ -38,21 +40,22 @@ const builders = set => [...S.villagers.values()].filter(v => v.set === set.id &
 const names = L => L.map(v => v.name).join(', ') || '-';
 // (the town: the most people of all with a free builder and a store)
 const pickTown = () => [...S.settlements.values()].filter(s => builders(s).some(free) && V.dropoffs(s.id).length).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)[0] || null;
-// (an islet of the god: a 3×3 of walkable ground near the town, ringed by two steps of deep water — no building, wall, road,
-// tree, dry bed, ice, cave mouth or person in the ring or near it)
+// (an islet of the god: a 3×3 of walkable ground, ringed by two steps of deep water — no building, wall, tree, bush, dry bed,
+// ice, cave mouth or person on it or in the ring; the nearest such ground to the town, wherever it is on its land: a city
+// leaves little bare ground near its centre)
 function fitsIslet(px, py) {
   for (let y = py - 3; y <= py + 3; y++) for (let x = px - 3; x <= px + 3; x++) {
     if (!W.inb(x, y)) return false; const i = W.idx(x, y); const d = Math.max(Math.abs(x - px), Math.abs(y - py));
     if (S.occ[i] || (S.wall && S.wall[i]) || S.type[i] < G.T.SAND || S.cliff[i]) return false;
     if (d <= 1) { if (!W.walkable(i)) return false; continue; }
-    if (S.treeAt[i] || S.objAt[i] || (S.road && S.road[i]) || (S.dry && S.dry[i]) || (S.ice && S.ice[i]) || (G.Caves && G.Caves.isMouth(i))) return false;
+    if (S.treeAt[i] || S.objAt[i] || (S.dry && S.dry[i]) || (S.ice && S.ice[i]) || (G.Caves && G.Caves.isMouth(i))) return false;
   }
-  for (const v of S.villagers.values()) if (Math.abs(v.x - (px + 0.5)) <= 4.5 && Math.abs(v.y - (py + 0.5)) <= 4.5) return false;
+  for (const v of S.villagers.values()) if (Math.abs(v.x - (px + 0.5)) <= 3.6 && Math.abs(v.y - (py + 0.5)) <= 3.6) return false;
   return true;
 }
 function islet(set) {
   const cx = Math.floor(set.cx), cy = Math.floor(set.cy);
-  for (let r = 6; r <= 22; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r && fitsIslet(cx + dx, cy + dy)) return [cx + dx, cy + dy];
+  for (let r = 4; r <= 64; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r && fitsIslet(cx + dx, cy + dy)) return [cx + dx, cy + dy];
   return null;
 }
 // (the ring of deep water, and the ground back again: the terrain changes as the world's own rule says — S.typeVer and the land)
@@ -87,15 +90,26 @@ for (const saved of [false, true]) {
     const cut = !!b && gone.length > 0 && roleOf(gone).every(v => !reachV(v, b));
     if (saved) { M.salvarCarregar(); S = G.S; G.inSim = Math.max(G.inSim || 0, 1); }
     const set = S.settlements.get(sid); const p0 = site(bid) ? site(bid).progress : 0;
-    // (who works on it once the town has counted its builders again: the ones it names on its streets, by the map of regions —
-    // never one from the islet, who may take the work in the seconds before the count and fail his way to it)
-    const workers = new Set(); const look = () => { for (const v of S.villagers.values()) if (v.task && v.task.type === 'build' && v.task.id === bid) workers.add(v.id); };
-    live(20); const left = roleOf(gone).filter(v => v.role !== 'construtor'); const named = builders(set).filter(v => !gone.includes(v.id));
-    const reach = named.filter(v => site(bid) && reachV(v, site(bid)));
-    let moved = false; live(160, () => { look(); const o = site(bid); moved = !o || o.built || o.progress > p0 + 1e-6; return moved; });
-    const o = site(bid); const strangers = [...workers].filter(id => gone.includes(id));
-    pass = town && cut && left.length === gone.length && reach.length > 0 && moved && workers.size > 0 && !strangers.length;
-    info = `${set.name}: ${gone.length} construtor(es) na ilhota (${names(roleOf(gone))}) ${cut ? 'sem caminho para a obra' : 'AINDA alcançando a obra'}${saved ? ', salvo e carregado logo depois do corte' : ''}; em 20 s, ${left.length} de ${gone.length} trocaram de ofício (${roleOf(gone).map(v => v.role).join(', ')}); construtores das ruas: ${names(named)} (${reach.length} alcançam a obra); ${b ? `${b.type}#${bid}${town ? '' : ' FORA das ruas'}` : 'nenhuma obra'}: ${o ? (o.built ? 'pronta' : `progresso ${Math.round(p0 * 100)}% → ${Math.round(o.progress * 100)}%`) : 'saiu do mundo'}, com ${names(roleOf([...workers]))}${strangers.length ? ` (${names(roleOf(strangers))} DA ILHOTA)` : ''}`;
+    // (the town's next count of its trades — every 4 s, 8 s in the skip —, read while the islet holds: the world sets down on
+    // the shore whoever stands where every errand fails (the stuck of villagers.js, L-306) — in the generation 7's Roma, Túlia
+    // at 5 s and Quinto at 10 s —, and from the shore they reach the works again. The ones on the islet then, the builders on
+    // the streets then)
+    const still = () => roleOf(gone).filter(v => site(bid) && !reachV(v, site(bid)));
+    const t0 = S.clock; live(9, () => roleOf(gone).every(v => v.role !== 'construtor') || still().length < gone.length);
+    const held = still(); const left = held.filter(v => v.role !== 'construtor'); const tSwap = Math.round(S.clock - t0); const heldRoles = held.map(v => v.role || 'sem ofício');
+    // (and a builder of the streets who reaches the work: named at that count, or at the next)
+    const streets = () => builders(set).filter(v => !gone.includes(v.id) && site(bid) && reachV(v, site(bid)));
+    live(9, () => streets().length > 0);
+    const named = builders(set).filter(v => !gone.includes(v.id)); const reach = streets();
+    // (who works on it: the ones on a task on it who can walk to it — from the islet nobody can; one set down on the shore can)
+    const workers = new Set(); const strangers = new Set();
+    const look = () => { const o = site(bid); if (!o) return; for (const v of S.villagers.values()) if (v.task && v.task.type === 'build' && v.task.id === bid && v.task.st >= 3) (reachV(v, o) ? workers : strangers).add(v.id); };
+    // (the works of the town in the order its builders take them, by the door of their trade: in the generation 7's Roma the
+    // builder named on the streets had other works of the town before the hut — 600 s, as the c5 has 900)
+    let moved = false; live(600, () => { look(); const o = site(bid); moved = !o || o.built || o.progress > p0 + 1e-6; return moved; });
+    const o = site(bid);
+    pass = town && cut && held.length > 0 && left.length === held.length && reach.length > 0 && moved && workers.size > 0 && !strangers.size;
+    info = `${set.name}: ${gone.length} construtor(es) na ilhota (${names(roleOf(gone))}) ${cut ? 'sem caminho para a obra' : 'AINDA alcançando a obra'}${saved ? ', salvo e carregado logo depois do corte' : ''}; na conta dos ofícios (${tSwap} s), ${left.length} de ${held.length} ainda na ilhota trocaram de ofício (${heldRoles.join(', ') || '-'}); construtores das ruas: ${names(named)} (${reach.length} alcançam a obra); ${b ? `${b.type}#${bid}${town ? '' : ' FORA das ruas'}` : 'nenhuma obra'}: ${o ? (o.built ? 'pronta' : `progresso ${Math.round(p0 * 100)}% → ${Math.round(o.progress * 100)}%`) : 'saiu do mundo'}, com ${names(roleOf([...workers]))}${strangers.size ? ` (${names(roleOf([...strangers]))} DA ILHOTA, sem caminho)` : ''}`;
     const bad = newBad(B); if (bad.length) { pass = false; info += ` — o verificador: ${bad.join(' · ')}`; }
     if (said.length) { pass = false; info += obrasSaid(); }
     if (!saved) after1 = { was, gone, sid, bid };
@@ -163,12 +177,18 @@ for (const saved of [false, true]) {
     const cut = !reached().length;
     const off = q => { if (!W.reachesTown(q, set)) return true; const hb = S.buildings.get(q.inside || q.home); if (!hb) return false; const d = Vg.door(hb); return !W.townReaches(set, d[0], d[1]); };
     const far = builders(set).filter(q => free(q) && off(q)).map(q => q.id);
+    // (the builders whose home the water left on the far side are at home, as Quinto was in the h14 — in the morning, their
+    // errands ended: they walk out of their door onto the far side. In the world of the proof one may be out on the streets at
+    // that moment, and the case would not be the h14's)
+    for (const q of roleOf(far)) { const hb = S.buildings.get(q.home); if (!hb) continue; const d = Vg.door(hb); Vg.endTask(q); q.sleeping = false; q.inside = hb.id; q.x = d[0]; q.y = d[1]; q.path = null; }
+    const stuck = roleOf(far).filter(q => !W.reachesTown(q, set));
     // (who built it: the ones on a task on it who could walk to it — one from the far side may take it in the seconds before the
     // town counts its builders again, and fail his way to it)
     let lit = null; const t0 = S.clock; const workers = new Set();
     if (cut) live(900, () => { const n = reached().find(b => !fire0.has(b.id)); if (n && !lit) lit = n; if (lit) for (const v of S.villagers.values()) if (v.task && v.task.type === 'build' && v.task.id === lit.id && reachV(v, lit)) workers.add(v.id); return !!(lit && lit.built); });
-    pass = cut && !!lit && lit.built;
-    info = !cut ? `a água em volta dos ${stores.length} armazéns de ${set.name} não os cortou das ruas` : `${set.name}, ${stores.length} armazém(ns) cortado(s) pela água; ${far.length} construtor(es) do outro lado (${names(roleOf(far))}), deixados lá (agora ${roleOf(far).map(v => v.role).join(', ') || '-'}): ${lit ? `${lit.type}#${lit.id} nova, ${lit.built ? 'acesa' : 'AINDA em obra'} em ${Math.round(S.clock - t0)} s, com ${names(roleOf([...workers]))}` : 'NENHUMA fogueira nova do lado das ruas em 900 s'}`;
+    const helped = [...workers].filter(id => far.includes(id));
+    pass = cut && stuck.length > 0 && !!lit && lit.built && !helped.length;
+    info = !cut ? `a água em volta dos ${stores.length} armazéns de ${set.name} não os cortou das ruas` : !stuck.length ? `${set.name}: nenhum construtor com a casa do outro lado da água (sem a premissa do h14)` : `${set.name}, ${stores.length} armazém(ns) cortado(s) pela água; ${stuck.length} construtor(es) em casa do outro lado (${names(stuck)}), deixados lá (agora ${stuck.map(v => v.role).join(', ')}): ${lit ? `${lit.type}#${lit.id} nova, ${lit.built ? 'acesa' : 'AINDA em obra'} em ${Math.round(S.clock - t0)} s, com ${names(roleOf([...workers]))}${helped.length ? ` (${names(roleOf(helped))} DO OUTRO LADO, por um caminho que o corte não fechou)` : ''}` : 'NENHUMA fogueira nova do lado das ruas em 900 s'}`;
     // (a town cut from its stores for days is the hunger rule's own case, S1 — the fome.js h5 —: not this case's to judge)
     const bad = newBad(B, new Set(['fome'])); if (bad.length) { pass = false; info += ` — o verificador: ${bad.join(' · ')}`; }
     if (said.length) { pass = false; info += obrasSaid(); }

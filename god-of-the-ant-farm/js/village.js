@@ -756,11 +756,27 @@
     for (const v of adults) { if (v.role) have[v.role].push(v); else none.push(v); }
     // (the builders counted by the side of the works: a town cut in two by the water, a wall or the god, its builders on the far
     // side, had the builders it wanted counted for the whole town, and the works its streets reach stood still — L-389. A builder
-    // who can walk to none of them leaves the trade for one on his side, and a new builder is one who reaches them: the first of
-    // them no builder reaches, while there is one. With no work the streets reach, nothing changes; and one at sea, underground
-    // or held is not judged: the map does not see where he stands)
+    // who can walk to none of them changes trades with a forager or a woodcutter of the streets — the one nearest a work he
+    // reaches, by the distance and then the id, no chance drawn —: the counts of the trades stay, and a town with no hand to
+    // spare has its builder at once (with the trade left to the deficit, its foragers' want took the islet's builders and the
+    // streets had none). With no such one on the streets, the builder is left without a trade, and a new builder is one who
+    // reaches the works: the first of them no builder reaches, while there is one. With no work the streets reach, nothing
+    // changes; and one at sea, underground or held is not judged: the map does not see where he stands)
     const works = townWorks(set); const left = new Set();
-    if (works.length) for (const v of have.construtor.slice()) if (!v.aboard && !v.ug && !v.held && !works.some(b => V.reachesWork(v, b))) { have.construtor.splice(have.construtor.indexOf(v), 1); v.role = null; v.job = 0; none.push(v); left.add(v); }
+    const swapFor = () => {
+      let best = null, bd = Infinity;
+      for (const r of ['coletor', 'lenhador']) for (const o of have[r]) {
+        if (o.aboard || o.ug || o.held) continue;
+        for (const b of works) { if (!V.reachesWork(o, b)) continue; const f = V.frontTile(b); const d = G.dist(o.x, o.y, f[0], f[1]); if (d < bd || (d === bd && best && o.id < best.o.id)) { bd = d; best = { o, r }; } }
+      }
+      return best;
+    };
+    if (works.length) for (const v of have.construtor.slice()) if (!v.aboard && !v.ug && !v.held && !works.some(b => V.reachesWork(v, b))) {
+      have.construtor.splice(have.construtor.indexOf(v), 1); v.job = 0;
+      const p = swapFor();
+      if (p) { have[p.r].splice(have[p.r].indexOf(p.o), 1); p.o.role = 'construtor'; p.o.job = 0; have.construtor.push(p.o); v.role = p.r; have[p.r].push(v); G.Life && G.Life.onRole(p.o, p.r); G.Life && G.Life.onRole(v, 'construtor'); }
+      else { v.role = null; none.push(v); left.add(v); }
+    }
     let lone = null; const uncovered = () => { lone = works.find(b => !have.construtor.some(o => V.reachesWork(o, b))) || null; };
     const fits = (v, r) => r !== 'construtor' || !works.length || (lone ? V.reachesWork(v, lone) : works.some(b => V.reachesWork(v, b)));
     // unassigned first
