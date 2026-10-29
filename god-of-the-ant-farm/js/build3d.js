@@ -2188,16 +2188,17 @@ float m3scale(float p) {
         if ((salt[k] || 0) >= 1.6) { const h = (1.5 + ((salt[k] || 0) - 1.6) * 1.6) / G.Forma.ZPX; K.as('slab', () => K.cone(x0 + L / 2, gy + 0.06, z0 + L / 2, 0.53, h, [246, 246, 242])); }
       }
     },
-    apiario(g, gw, K) { for (let k = 0; k < 4; k++) { const px = K.w * (0.25 + (k % 2) * 0.5), pz = K.d * (0.3 + Math.floor(k / 2) * 0.4); K.box(px, 0, pz, 0.15, 0.6, 0.15, '#6a4a2c'); K.box(px, 0.6, pz, 0.8, 0.7, 0.6, '#e8c870'); K.box(px, 1.3, pz, 0.95, 0.1, 0.75, '#8a6a44'); } },
+    // (the estates as the god draws them: their plants as the world grows them, the skeps among the flowers — estate, T-150)
+    apiario(g, gw, K) { estate(K); },
     // the pens, from their forms: the fence round, the stable along the back, the shelter in its corner (as the god draws them)
     curral(g, gw, K) { formInto(g, gw, K, G.Forma.of('curral', styleOf(K.b)), doorSide(K.b)); },
     estabulo(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, 1.9, K.w - 0.6, 3.4, 3.6); return; } formInto(g, gw, K, G.Forma.of('estabulo', styleOf(K.b)), doorSide(K.b)); },
     cercado(g, gw, K) { fenceAround(K, 1.6, '#6a5a44', true); },
     farm(g, gw, K) { fields(K, '#d4ac44', '#6a9a3a'); },
     horta(g, gw, K) { fields(K, '#7aaa4a', '#4a8a2a', true); },
-    plantacao(g, gw, K) { fields(K, '#c8b84a', '#5a8a2a'); },
-    vinhedo(g, gw, K) { for (let r = 0; r < K.b.h * 2; r++) { const z = (r + 0.5) * K.d / (K.b.h * 2); K.box(K.w / 2, 0, z, K.w - 0.8, 1.5, 0.35, '#4a7a2a'); K.box(0.4, 0, z, 0.12, 1.8, 0.12, '#6a4a2c'); K.box(K.w - 0.4, 0, z, 0.12, 1.8, 0.12, '#6a4a2c'); } },
-    pomar(g, gw, K) { for (let k = 0; k < K.b.w * K.b.h; k++) { const px = ((k % K.b.w) + 0.5) * K.L, pz = (Math.floor(k / K.b.w) + 0.5) * K.L; K.cyl(px, 0, pz, 0.18, 1.6, '#6a4a2c'); K.sph(px, 2.6, pz, 1.2, '#4f8f36', 1.0); K.sph(px + 0.6, 2.3, pz + 0.3, 0.2, '#d23a2a'); } },
+    plantacao(g, gw, K) { estate(K); },
+    vinhedo(g, gw, K) { estate(K); },
+    pomar(g, gw, K) { estate(K); },
     // the well, from its form: the god's well-house at the scale of people (D-092); the rune stone at a northern town's first well
     // is among what lies about it (Props3D)
     well(g, gw, K) { formInto(g, gw, K, G.Forma.of('well', styleOf(K.b)), doorSide(K.b)); },
@@ -2361,6 +2362,227 @@ float m3scale(float p) {
     }
   }
 
+  // ------------------------------ the estates (estates.js): as the god draws them (T-150) ------------------------------
+  // The orchard's, the plantation's and the vineyard's nine plants at their places (Estates.plantPos: the middle of each tile),
+  // each as the world grows it (b.pl: g its growth — a sapling under a quarter —, f its fruit) and of its field's crop
+  // (b.crop); the vat or the press at the ninth place of a crop crushed first; the apiary's skeps on their planks among its
+  // flowers; while the field is being laid out, its stakes. The god's pictures (art.js: the sapling, the trunk and the crown of
+  // each kind of tree, its fruit; estates.js: drawPlant, drawVine, drawVat, drawSkep, drawStakes) in metres, as a statue's
+  // figure is (Forma.figure): a px of the god's picture to the right is 1/5.657 m across the view — an eighth of a metre along
+  // x and back along z —, a px up 1/3.04 m (Forma.ZPX); a round of the picture a ball as round and as high as keeps it that
+  // round on the picture; what the god paints over a crown — its fruit — on the crown's near side, raised as much as it comes
+  // nearer, where the god's picture has it. Each on the ground of its place: no plinth (the god's field has none). Only seen:
+  // read from the world, never written (B3.sig draws the chunk again when a plant grows a stage, bears or is picked)
+  const EPX = 5.657;
+  // (a point of a plant's picture from its foot F, in the kit's frame: a m across the picture, up m, near m toward the eye —
+  // coming nearer keeps its place on the picture: 2.83 px lower a metre, raised as much)
+  const pic = (F, a, up, near) => { const n = near || 0; return [F[0] + (a + n) * Math.SQRT1_2, F[1] + up + n * 2 * Math.SQRT2 / G.Forma.ZPX, F[2] + (n - a) * Math.SQRT1_2]; };
+  // (a point of a sprite drawn at scale s from F: sx px right, sy px down)
+  const spx = (F, s, sx, sy, near) => pic(F, sx * s / EPX, -sy * s / G.Forma.ZPX, near);
+  // (a round of the picture rx × ry px at scale s: the ball's round and half height, m — a ball r m round is 5.657 r px wide and
+  // √(8 r² + 3.04² h²) px high on the picture)
+  const roundOf = (rx, ry, s) => { const a = rx * s / EPX, q = ry * s * ry * s - 8 * a * a; return [a, Math.max(0.04, Math.sqrt(Math.max(0, q)) / G.Forma.ZPX)]; };
+  // (the trees of the fields, art.js: the trunk — its height and half width at the foot, px, and its tone —, the crown's rounds
+  // [x, y, rx, ry] px and its three tones [base, dark, light] in each of the three variants; the kinds without a trunk of their
+  // own draw their own)
+  const ETREE = {
+    apple: { t: [7, 1.8, '#6e4a2b'], c: [[-4.2, -12.5, 4.8], [4.2, -12.5, 4.8], [0, -17.5, 5.4], [0, -11, 5]], pal: [['#5aa040', '#3e7a2e', '#88c860'], ['#64a646', '#447e30', '#94ce6a'], ['#58983c', '#3a722a', '#82be5a']] },
+    mulberry: { t: [10, 1.8, '#6e4a2b'], c: [[-5, -13, 5.4], [5, -13.5, 5.4], [0, -19, 6], [-1, -11, 5.6]], pal: [['#3e7e36', '#2a5a26', '#5e9e4a'], ['#448238', '#2e5e28', '#64a250'], ['#3a7632', '#285624', '#5a9646']] },
+    olive: { t: [7.5, 2.1, '#7a6a58'], c: [[-6, -13, 6, 3.4], [5.5, -14, 6.4, 3.6], [0, -18, 5.4, 3], [-1, -11.5, 7, 2.8]], pal: [['#8a9a6a', '#687852', '#b4c094'], ['#909e70', '#6e7c56', '#bac69a'], ['#84966a', '#647450', '#aebc90']] },
+    cacao: { t: [7, 1.8, '#7a5a3a'], c: [[-5, -12, 5, 3.6], [5, -12.5, 5, 3.6], [0, -16.5, 5.6, 3.8]], pal: [['#2e6e30', '#1e4a20', '#4e8e3e'], ['#347434', '#224e24', '#56964a'], ['#2a6a2e', '#1a461e', '#4a8a3a']] },
+    pepper: { t: [16, 2.2, '#7a6448'], c: [[-6, -17, 5.6, 4], [6, -17, 5.6, 4], [0, -22, 6.4, 4.4], [0, -15, 6, 3.6]], pal: [['#2f8a3a', '#1e6228', '#4fae4a'], ['#3a9440', '#246a2c', '#5cbc52'], ['#28803e', '#18582a', '#44a452']] },
+  };
+  // (the round of a bar as thick on the picture as the god's line w px at scale s, the way it runs there: a bar standing up is
+  // 11.3 px a metre across, one lying across the picture 8.3 — its round seen from 30° up)
+  const rodR = (w, s, dx, dy) => { const l = dx * dx + dy * dy || 1; return w * s / (8.3 * dx * dx / l + 11.31 * dy * dy / l); };
+  // (a bar along a curve of the picture: from p0 by the control c to p2, in n pieces, as thick as the god's line w px — px at
+  // scale s, near m; w a number, or of the piece's middle t)
+  function sprCurve(K, F, s, p0, c, p2, w, col, n, near) {
+    const at = t => [(1 - t) * (1 - t) * p0[0] + 2 * (1 - t) * t * c[0] + t * t * p2[0], (1 - t) * (1 - t) * p0[1] + 2 * (1 - t) * t * c[1] + t * t * p2[1]];
+    for (let j = 0; j < n; j++) { const a = at(j / n), b2 = at((j + 1) / n); const ww = typeof w === 'function' ? w((j + 0.5) / n) : w;
+      K.log(spx(F, s, a[0], a[1], near), spx(F, s, b2[0], b2[1], near), Math.max(0.01, rodR(ww, s, b2[0] - a[0], b2[1] - a[1])), col); }
+  }
+  // (a ball where the picture has a round: rx × ry px about [x, y] at scale s, near m)
+  const sprBall = (K, F, s, x, y, rx, ry, col, near) => { const [a, h] = roundOf(rx, ry, s); const p = spx(F, s, x, y, near); K.sph(p[0], p[1], p[2], a, col, h); };
+  // (a leaf where the picture has one: an ellipse rx × ry px about [x, y], turned rot on it as the god turns it, t m thick)
+  function sprLeaf(K, F, s, x, y, rx, ry, rot, t, col, near) {
+    const Z = G.Forma.ZPX, c = Math.cos(rot), sn = Math.sin(rot); const R = [Math.SQRT1_2, 0, -Math.SQRT1_2], D = [Math.SQRT1_2, 0, Math.SQRT1_2];
+    const ax = (ac, up) => [2 * ac * R[0], 2 * up, 2 * ac * R[2]]; const e1 = ax(rx * s * c / EPX, -rx * s * sn / Z), e2 = ax(ry * s * sn / EPX, ry * s * c / Z); // (e2 up the picture: never a mirror)
+    const p = spx(F, s, x, y, near); PM.set(e1[0], e2[0], 2 * t * D[0], K.x0 + p[0], e1[1], e2[1], 0, K.y0 + p[1], e1[2], e2[2], 2 * t * D[2], K.z0 + p[2], 0, 0, 0, 1);
+    K.g.put(SH.sph, PM, K.c(col));
+  }
+  // one plant of a field at its foot F (art.js and estates.js drawPlant): a sapling, or a tree of its crop's kind at the god's
+  // scale for its growth, with its fruit
+  function fieldPlant(K, F, b, k, p) {
+    const cr = G.Estates && G.Estates.CROPS[b.crop]; if (!cr) return;
+    if (p.g < 0.25) { // (the god's sapling, 0.5 to 0.875 of it as it grows: its stem and three leaves)
+      const s = 0.5 + 1.5 * Math.max(0, p.g);
+      K.log(F, spx(F, s, 0, -6), 0.35 * s / EPX, '#6a4a2a');
+      sprLeaf(K, F, s, -1.8, -6, 2, 1.1, -0.5, 0.06, '#6fb04a'); sprLeaf(K, F, s, 1.8, -7, 2, 1.1, 0.5, 0.06, '#86c65a'); sprLeaf(K, F, s, 0, -8.5, 1.3, 1.8, 0, 0.06, '#5a9a3c');
+      return;
+    }
+    const kind = cr.tree, v = (b.id + k) % 3; const s = (kind === 'coffee' || kind === 'pepper' || kind === 'incense' ? 0.75 : 0.5) * (0.45 + 0.55 * Math.min(1, p.g));
+    const T = ETREE[kind]; let front = 0; // (how near the eye the crown's face comes: the fruit lies on it)
+    if (T) {
+      // (the trunk from the foot to its height, as thick as the god's at two thirds of the way; the olive's twisted and split)
+      const [h, w, tc] = T.t; K.as('bark', () => K.log(F, spx(F, s, kind === 'olive' ? -0.4 : 0, -h), (kind === 'olive' ? 1.6 : 0.83 * w) * s / EPX, tc));
+      if (kind === 'pepper') for (let q = 1; q < 14; q += 2) sprBall(K, F, s, Math.sin(q * 0.9) * w * 0.8 + 0.6, -q * 1.1, 0.8, 0.45, '#4e9a34', 0.83 * w * s / EPX);
+      // (the crown as the god paints it: each round dark behind, 0.8 px right and 1.2 down; the round itself a little smaller over
+      // it; the light ones over the left of it, half as big, 1.4 px left and 1.6 up — on the near side, as much nearer as they lie
+      // over it)
+      const [base, dark, light] = T.pal[v];
+      for (const [x, y, rx, ry] of T.c) { const a = roundOf(rx, ry || rx, s)[0]; sprBall(K, F, s, x + 0.8, y + 1.2, rx, ry || rx, dark, -0.25 * a); front = Math.max(front, a); }
+      for (const [x, y, rx, ry] of T.c) sprBall(K, F, s, x, y, rx * 0.93, (ry || rx) * 0.93, base);
+      for (const [x, y, rx, ry] of T.c) if (x <= 3) sprBall(K, F, s, x - 1.4, y - 1.6, rx * 0.45, (ry || rx) * 0.42, light, 0.75 * roundOf(rx, ry || rx, s)[0]);
+      if (kind === 'cacao') sprBall(K, F, s, -2, -16, 1.4, 0.7, '#c8402a', front); // (its new leaves come in red)
+    } else if (kind === 'coffee') {
+      // (three stems and the bush of seven leafy layers, darker and lighter by turns)
+      for (const x of [-2.4, 0, 2.4]) K.log(spx(F, s, x * 0.3, 0), spx(F, s, x, -10), 0.3 * s / EPX, '#6a5a3a');
+      const tone = [['#2e6e34', '#1e4a24'], ['#347434', '#224e28'], ['#2a6a30', '#1a4620']][v];
+      for (let q = 0; q < 7; q++) { const y = -2.6 - q * 1.25, w = 4.6 - Math.abs(q - 3) * 0.6; const a = w * s / EPX; const p = spx(F, s, 0, y); K.sph(p[0], p[1], p[2], a, tone[q % 2], Math.max(0.12, 0.6 * 1.25 * s / G.Forma.ZPX)); front = Math.max(front, a); }
+    } else if (kind === 'banana') {
+      // (the false stem and six broad leaves from its top, a dry one hanging)
+      K.log(F, spx(F, s, 0, -13), 1.15 * s / EPX, '#8a9a42');
+      const leaves = [[-1, -0.7], [1, -0.6], [-0.85, 0.3], [0.95, 0.35], [0.12, -1.1], [-1.15, -0.15]];
+      // (each blade between the god's two edges: the upper from the stem's top by 6.4 px over its middle, the lower back by 1.6 —
+      // along their middle, as wide as they are apart)
+      leaves.forEach(([dx, dy], q) => { const tip = [dx * 13, -13 + dy * 7 + 3], cu = [dx * 7, -13 + dy * 6 - 6.4], cl = [dx * 6, -13 + dy * 6 - 1.6];
+        const wide = t => Math.hypot(2 * (1 - t) * t * (cu[0] - cl[0]), -0.8 * (1 - t) * (1 - t) + 2 * (1 - t) * t * (cu[1] - cl[1]));
+        sprCurve(K, F, s, [0, -12.6], [(cu[0] + cl[0]) / 2, (cu[1] + cl[1]) / 2], tip, wide, q % 2 ? '#4e9a34' : ['#62b040', '#5aa83c', '#6ab846'][v], 4); });
+      sprCurve(K, F, s, [-0.6, -11], [-3.4, -9], [-3, -4], 1.2, '#a88a4a', 2);
+      front = 1.2 * s / EPX;
+    } else if (kind === 'acai' || kind === 'date') {
+      // (the palm: its stem — the açaí's slender and leaning, the date's thick and scaled — and its fronds from the top)
+      const acai = kind === 'acai'; const top = acai ? [0.6, -22] : [0, -18];
+      if (acai) sprCurve(K, F, s, [0, 0], [-1.2, -11], top, 1.1, '#7a7058', 3); else K.log(F, spx(F, s, 0.15, -18), 1.1 * s / EPX, '#8a7050');
+      const fr = acai ? [[-1, 0.2], [1, 0.3], [-0.6, 0.9], [0.7, 1], [0, -0.6], [-1.2, -0.3], [1.2, -0.2]] : [[-1, -0.5], [1, -0.45], [-0.75, 0.4], [0.8, 0.45], [0, -1], [-1.15, 0], [1.15, 0.05]];
+      fr.forEach(([dx, dy], q) => acai
+        ? sprCurve(K, F, s, top, [0.6 + dx * 5, -25 + dy * 3], [0.6 + dx * 10, -22 + dy * 5 + 4], 0.5, '#3e8a34', 3)
+        : sprCurve(K, F, s, top, [dx * 7, -18 + dy * 5 - 4.4], [dx * 12.5, -18 + dy * 6 + 4], 2 - (q % 2) * 0.5, ['#7a9a5a', '#6a8a4c', '#8aa866'][q % 3], 3));
+      front = 0.8 * s / EPX;
+    } else if (kind === 'incense') {
+      // (the frankincense: a short pale trunk forking into three branches, the leaves in tufts at their ends)
+      sprCurve(K, F, s, [0, 0], [-1.4, -4], [0.4, -7], 1.5, '#c8b89a', 2);
+      for (const [c, e] of [[[-3, -9], [-5, -12]], [[3, -9], [4.6, -13]], [[0.4, -10], [0.6, -13]]]) sprCurve(K, F, s, [0.4, -7], c, e, 0.8, '#c8b89a', 2);
+      const lc = ['#8a9a5a', '#7a8e52', '#96a464'][v];
+      for (const [x, y] of [[-5, -12.5], [-3.6, -11.6], [4.6, -13.5], [3.4, -12.2], [0.6, -13.6], [-0.6, -12.8]]) sprBall(K, F, s, x, y, 1.6, 0.9, lc);
+      front = 0.75 * s / EPX;
+    }
+    // (the fruit, as much as the tree carries now: art.js Art.fruit, on the crown's near face)
+    const FR = G.Art && G.Art.FRUITS && G.Art.FRUITS[kind]; if (!FR || !(p.f > 0.2)) return;
+    const n = Math.max(1, Math.round(FR.at.length * Math.min(1, p.f / 3))); const near = front + 0.03;
+    if (FR.bunch) { const [bx, by] = FR.bunch; sprBall(K, F, s, bx, by + 0.55, 1.2, 1.55, p.f >= 1.5 ? FR.col : FR.hi, near); sprBall(K, F, s, bx + 0.2, by + 4.6, 0.8, 1.3, '#7a2a4a', near); return; }
+    for (let q = 0; q < n; q++) { const [x, y] = FR.at[q];
+      if (FR.pod) sprBall(K, F, s, x, y, 0.7, 1.3, q % 2 ? '#c8702a' : FR.col, near);
+      else if (FR.cluster) sprBall(K, F, s, x, y + 0.35, FR.r + 0.35, FR.r + 0.35, FR.col, near);
+      else sprBall(K, F, s, x, y, FR.r, FR.r, FR.col, near); }
+  }
+  // the vine at its place (estates.js drawVine): its two stakes along the row, 1.75 m each side, the two wires between them,
+  // the twisted stem, the leaves along the wires as many as it has grown, the bunches as it bears — purple when ripe
+  function fieldVine(K, F, p) {
+    const g = Math.min(1, Math.max(0, p.g)); const Z = G.Forma.ZPX;
+    const end = d => { const x = F[0] + d, z = F[2]; return [x, K.gy(Math.max(0.01, Math.min(K.w - 0.01, x)), z), z]; };
+    const A = end(-1.75), B = end(1.75); const along = (f, up) => [F[0] + f * 1.75, A[1] + (B[1] - A[1]) * (f + 1) / 2 + up, F[2]];
+    for (const e of [A, B]) K.as('beam', () => K.log(e, [e[0], e[1] + 9 / Z, e[2]], 0.35 / EPX, '#6a4a2c'));
+    for (const hgt of [4.5, 8]) K.log(along(-1, hgt / Z), along(1, hgt / Z), 0.15 / EPX, '#6c513a');
+    K.log(F, [F[0] - 0.06, F[1] + 2.5 * Math.max(0.3, g) / Z, F[2] + 0.06], 0.5 / EPX, '#5a3a22'); K.log([F[0] - 0.06, F[1] + 2.5 * Math.max(0.3, g) / Z, F[2] + 0.06], [F[0], F[1] + 5 * Math.max(0.3, g) / Z, F[2]], 0.5 / EPX, '#5a3a22');
+    const n = Math.round(3 + g * 9);
+    for (let q = 0; q < n; q++) { const f = (q / Math.max(1, n - 1)) * 2 - 1; const c = along(f * 6.5 / 7, (6 + (q % 2) * 2.4) / Z); sprLeaf(K, c, 1, 0, 0, 1.7, 1.2, 0.4, 0.12, q % 3 ? '#5a8a32' : '#6a9a3a'); }
+    const nb = Math.round(Math.min(3, p.f) * 1.7); const [ba, bh] = roundOf(0.8, 1.0, 1);
+    for (let q = 0; q < nb; q++) { const f = ((q + 0.5) / 6) * 2 - 1; const c = along(f * 6 / 7, (4.6 - 0.6) / Z); K.sph(c[0], c[1], c[2], ba, p.f >= 1 ? '#4a1a4a' : '#7a8a3a', bh); }
+  }
+  // the vat at the ninth place (estates.js drawVat): the wide tub of the grape — its hoops, the must in it — or the olive's
+  // press — the stone basin, the upright millstone, the beam —, and the jars of what it has made waiting beside it
+  function fieldVat(K, F, b) {
+    const Z = G.Forma.ZPX, wine = b.crop === 'grape', m = Math.min(1, (b.must || 0) / 4);
+    if (wine) {
+      const R = 7 / EPX, H = 4.6 / Z;
+      K.as('plankV', () => K.cyl(F[0], F[1], F[2], R, H, '#6a4a2c'));
+      for (const y of [1.8, 3.4]) K.cyl(F[0], F[1] + y / Z - 0.04, F[2], R + 0.02, 0.08, '#8a6a44');
+      K.cyl(F[0], F[1] + H, F[2], R, 0.02, '#4a3020'); K.cyl(F[0], F[1] + H, F[2], 6.2 / EPX, 0.035, m > 0 ? '#5a1a3a' : '#3a2a1a');
+    } else {
+      const R = 6 / EPX, H = 3.4 / Z;
+      K.as('stone', () => { K.cyl(F[0], F[1], F[2], R, H, '#9a958c'); K.cyl(F[0], F[1] + H, F[2], R, 0.02, '#b8b2a6'); });
+      K.cyl(F[0], F[1] + H, F[2], 4.6 / EPX, 0.035, m > 0 ? '#6a6a3a' : '#7a7468');
+      K.as('stone', () => K.log(pic(F, -0.32, 5.2 / Z), pic(F, 0.32, 5.2 / Z), 0.7, '#8a8478'));
+      K.as('beam', () => K.log(pic(F, -7 / EPX, 6 / Z), pic(F, 7 / EPX, 4.4 / Z), 0.5 / EPX, '#6a4a2c'));
+    }
+    // (the jars of wine or oil: 1.4 m along x and 0.9 m back of the vat's middle, 0.65 m apart)
+    const n = Math.min(3, Math.floor((b.inv && (wine ? b.inv.vinho : b.inv.azeite)) || 0)); const [ja, jh] = roundOf(1.6, 2.1, 0.8);
+    for (let q = 0; q < n; q++) { const x = F[0] + 1.375 + 0.65 * q, z = F[2] - 0.875; const y = K.gy(Math.min(K.w - 0.01, x), Math.max(0.01, z)); K.sph(x, y + jh, z, ja, '#b8704a', jh); }
+  }
+  // a skep of the apiary at its place (estates.js drawSkep), at the scale of people as the god draws it now (D-092: 0.4 of his
+  // first picture — SKEP3): the plank 0.57 m across, the straw dome on it to 1.3 m — its round the god's curve —, the dark
+  // door low on its near side
+  const SKEP3 = 0.4;
+  function fieldSkep(K, F) {
+    const Z = G.Forma.ZPX, k = SKEP3;
+    K.as('beam', () => { K.box(F[0], F[1] + 1.0 * k / Z, F[2], 8 * k / EPX, 1.4 * k / Z, 0.2, '#6a4a2c', Math.PI / 4); for (const d of [-0.22, 0.22]) { const q = pic(F, d, 0); K.box(q[0], F[1], q[2], 0.05, 1.0 * k / Z, 0.05, '#5a3c22'); } });
+    // (the dome: the god's side from 3.6 px out at the plank to the top 9.8 px up, by its control 3.8 px out at 9.4)
+    const nu = 12, nv = 6; const Pp = [];
+    for (let j = 0; j <= nv; j++) { const t = j / nv; const x = (1 - t) * (1 - t) * 3.6 + 2 * (1 - t) * t * 3.8, y = (1 - t) * (1 - t) * 2.4 + 2 * (1 - t) * t * 9.4 + t * t * 9.8;
+      const r = Math.max(0.001, x * k / EPX); for (let i = 0; i <= nu; i++) { const a = i / nu * TAU; Pp.push([F[0] + Math.cos(a) * r, F[1] + y * k / Z, F[2] + Math.sin(a) * r]); } }
+    K.as('wicker', () => K.sheet(Pp, nu, nv, '#d8b062', [0, 1, 0]));
+    const d = pic(F, 0.6 * k / EPX, 3.4 * k / Z, 3.6 * k / EPX); K.sph(d[0], d[1], d[2], 0.9 * k / EPX, '#3a2a1a', 0.05);
+  }
+  // the estate whole: its plants, or its skeps and its flowers; its stakes while it is laid out (estates.js drawStakes)
+  function estate(K) {
+    const b = K.b, L = K.L; K.footed = true;
+    const foot = (x, y) => { const X = (x - b.x) * L, Zz = (y - b.y) * L; return [X, K.gy(X, Zz), Zz]; };
+    if (!b.built) { const n = Math.round(4 + (b.progress || 0) * 8); const Z = G.Forma.ZPX;
+      for (let q = 0; q < n; q++) { const F = foot(b.x + b.w / 2 + ((q % 4) - 1.5) * 0.7, b.y + b.h / 2 + (Math.floor(q / 4) - 1) * 0.7); K.log(F, [F[0], F[1] + 4 / Z, F[2]], 0.35 / EPX, '#7a5a3a'); }
+      return; }
+    if (b.type === 'apiario') {
+      for (let q = 0; q < 4; q++) fieldSkep(K, foot(b.x + 0.5 + (q % 2), b.y + 0.5 + Math.floor(q / 2)));
+      // (the flowers among the hives: where the god scatters them, by the apiary's own number)
+      const FL = ['#f2d05a', '#e86a8a', '#ffffff', '#b88ae8'];
+      for (let q = 0; q < 16; q++) { const F = foot(b.x + 0.15 + G.hash(b.id + q) * 1.7, b.y + 0.15 + G.hash(b.id * 3 + q) * 1.7); sprBall(K, F, 1, 0, -0.4, 0.6, 0.6, FL[q % 4]); } // (a blossom where the god's square is)
+      return;
+    }
+    const pl = b.pl; if (!pl) return; // (not planted yet: the god's field is its soil alone)
+    for (let k = 0; k < 9; k++) { const p = pl[k]; if (!p) continue; const P = G.Estates.plantPos(b, k); const F = foot(P[0], P[1]);
+      if (p.g < 0) fieldVat(K, F, b); else if (b.type === 'vinhedo') fieldVine(K, F, p); else fieldPlant(K, F, b, k, p); }
+  }
+  // the estate from afar (B3.farGeo): each tree's crown as one round where the near crown is — its rounds' bounds on the
+  // picture, px [middle x, middle y, half width, half height] at the tree's scale — on its trunk [px high, px half wide, tone];
+  // each vine's leaves as one hedge between its two stakes; the vat; each skep's dome on its plank, the apiary's flowers; the
+  // saplings and the fruit too small to be seen
+  const EFAR = { coffee: [0, -6.35, 4.6, 4.9, ['#2e6e34', '#347434', '#2a6a30'], null], banana: [0, -12.5, 13, 6.5, ['#62b040', '#5aa83c', '#6ab846'], [13, 1.15, '#8a9a42']],
+    acai: [0.6, -22, 10, 5, ['#3e8a34', '#3e8a34', '#3e8a34'], [22, 0.55, '#7a7058']], date: [0, -18, 12.5, 6, ['#7a9a5a', '#7a9a5a', '#7a9a5a'], [18, 1.1, '#8a7050']],
+    incense: [0, -12.5, 5.5, 2.5, ['#8a9a5a', '#7a8e52', '#96a464'], [7, 0.75, '#c8b89a']] };
+  for (const kind in ETREE) { const T = ETREE[kind]; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (const [x, y, rx, ry] of T.c) { x0 = Math.min(x0, x + 0.4 - rx); x1 = Math.max(x1, x + 0.4 + rx); y0 = Math.min(y0, y + 0.6 - (ry || rx)); y1 = Math.max(y1, y + 0.6 + (ry || rx)); }
+    EFAR[kind] = [(x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) / 2, (y1 - y0) / 2, T.pal, [T.t[0], kind === 'olive' ? 1.6 : 0.83 * T.t[1], T.t[2]]]; }
+  const ESTATE3 = { pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1 };
+  function estateFar(g, b, L) {
+    if (!b.built) return; const Z = G.Forma.ZPX; const at = (x, y) => [x * L, W.groundH(x, y) * HM(), y * L];
+    const ball = (F, s, x, y, rx, ry, col) => { const [a, h] = roundOf(rx, ry, s); const p = spx(F, s, x, y); g.put(SH.sph, R3.mat(p[0], p[1], p[2], 0, a * 2, h * 2, a * 2), col); };
+    if (b.type === 'apiario') { const k = SKEP3; for (let q = 0; q < 4; q++) { const F = at(b.x + 0.5 + (q % 2), b.y + 0.5 + Math.floor(q / 2)); g.pat = PAT.beam; g.put(SH.box, R3.mat(F[0], F[1] + 1.0 * k / Z, F[2], Math.PI / 4, 8 * k / EPX, 1.4 * k / Z, 0.2), '#6a4a2c');
+      g.pat = PAT.wicker; g.put(SH.sph, R3.mat(F[0], F[1] + (2.4 + 3.7) * k / Z, F[2], 0, 7.2 * k / EPX, 7.4 * k / Z, 7.2 * k / EPX), '#d8b062'); } g.pat = 0;
+      // (its flowers, as near: the god's squares are a good part of an apiary's picture now its skeps are of people's size)
+      const FL = ['#f2d05a', '#e86a8a', '#ffffff', '#b88ae8']; const [fa, fh] = roundOf(0.6, 0.6, 1);
+      for (let q = 0; q < 16; q++) { const F = at(b.x + 0.15 + G.hash(b.id + q) * 1.7, b.y + 0.15 + G.hash(b.id * 3 + q) * 1.7); const p = spx(F, 1, 0, -0.4); g.put(SH.ico0, R3.mat(p[0], p[1], p[2], 0, fa * 2, fh * 2, fa * 2), FL[q % 4]); }
+      return; }
+    const pl = b.pl; const cr = G.Estates && G.Estates.CROPS[b.crop]; if (!pl || !cr) return;
+    for (let k = 0; k < 9; k++) { const p = pl[k]; if (!p) continue; const P = G.Estates.plantPos(b, k); const F = at(P[0], P[1]);
+      if (p.g < 0) { const wine = b.crop === 'grape'; g.put(SH.cyl, R3.mat(F[0], F[1], F[2], 0, (wine ? 7 : 6) / EPX * 2, (wine ? 4.6 : 3.4) / Z, (wine ? 7 : 6) / EPX * 2), wine ? '#6a4a2c' : '#9a958c'); continue; }
+      if (b.type === 'vinhedo') { for (const d of [-1.75, 1.75]) { const e = at(P[0] + d / L, P[1]); g.put(SH.box, R3.mat(e[0], e[1], e[2], 0, 0.12, 9 / Z, 0.12), '#6a4a2c'); }
+        if (Math.min(1, Math.max(0, p.g)) >= 0.15) g.put(SH.box, R3.mat(F[0], F[1] + 5.2 / Z, F[2], 0, 3.25, 3.6 / Z, 0.2), '#5a8a32'); continue; } // (the leaves' band, 5.2 to 8.8 px up)
+      if (p.g < 0.25) continue;
+      const E = EFAR[cr.tree]; if (!E) continue; const s = (cr.tree === 'coffee' || cr.tree === 'pepper' || cr.tree === 'incense' ? 0.75 : 0.5) * (0.45 + 0.55 * Math.min(1, p.g));
+      if (E[5]) { const r = E[5][1] * s / EPX; g.put(SH.cyl, R3.mat(F[0], F[1], F[2], 0, 2 * r, E[5][0] * s / Z, 2 * r), E[5][2]); }
+      const pc = E[4][(b.id + k) % 3]; ball(F, s, E[0], E[1], E[2], E[3], Array.isArray(pc) ? pc[0] : pc); }
+  }
+  // (what of an estate the 3D shows, for B3.sig: its crop, each plant's stage — a sapling, or its tree a twentieth of its growth
+  // at a time —, the fruit it shows and the jars by its vat)
+  B3.estateSig = function (b) {
+    if (!b.built || !b.pl) return b.built ? 1 : 0;
+    let s = (b.crop || '').length * 31; const cr = G.Estates && G.Estates.CROPS[b.crop]; const FR = cr && G.Art && G.Art.FRUITS && G.Art.FRUITS[cr.tree];
+    for (let k = 0; k < b.pl.length; k++) { const p = b.pl[k]; const st = p.g < 0 ? 99 : Math.floor(Math.min(1, p.g) * 20); const fr = p.f > 0.2 ? (FR ? Math.max(1, Math.round(FR.at.length * Math.min(1, p.f / 3))) + (p.f >= 1.5 ? 50 : 0) : Math.round(Math.min(3, p.f) * 1.7) + (p.f >= 1 ? 50 : 0)) : 0;
+      s = (s * 7 + st * 13 + fr * 17 + k) | 0; }
+    return (s + ((b.must || 0) > 0 ? 3 : 0) + Math.min(3, Math.floor((b.inv && (b.inv.vinho || b.inv.azeite)) || 0)) * 5) | 0;
+  };
+
   // ------------------------------ walls, gates, aqueducts ------------------------------
   // the stones of one wall tile, as boxes [x, base, z, width, height, depth, colour] (metres): the drawing puts them,
   // the camera asks them — one shape for both, so the eye goes through a gate's passage the body walks through
@@ -2490,7 +2712,7 @@ float m3scale(float p) {
     let s = 0; const fine = fineAt(x0, y0, n);
     // (and the trees about the steps its doors run on into the street: the steps go round a tree come, and back where it went —
     // Space.doorFlight, L-197)
-    for (const b of G.S.buildings.values()) { if (!inChunk(b, x0, y0, n)) continue; s = (s * 31 + b.id * 7 + (b.built ? 1 : 0) + Math.floor((b.progress || 0) * 5) * 3 + Math.floor((b.hp / (b.maxHp || 1)) * 4) * 11 + (b.type === 'salina' && b.salt ? b.salt.reduce((a, q, k) => a + Math.floor(q * 2) * (k + 3), 0) * 13 : 0) + (b.crops ? b.crops.reduce((a, c) => a + c.s + Math.floor((c.g || 0) * 3), 0) : 0) * 13 + (b.graves ? b.graves.length : 0) * 17 + B3.shellSig(b) * 19 + G.Space.treeSig(b) * 37) | 0;
+    for (const b of G.S.buildings.values()) { if (!inChunk(b, x0, y0, n)) continue; s = (s * 31 + b.id * 7 + (b.built ? 1 : 0) + Math.floor((b.progress || 0) * 5) * 3 + Math.floor((b.hp / (b.maxHp || 1)) * 4) * 11 + (b.type === 'salina' && b.salt ? b.salt.reduce((a, q, k) => a + Math.floor(q * 2) * (k + 3), 0) * 13 : 0) + (b.crops ? b.crops.reduce((a, c) => a + c.s + Math.floor((c.g || 0) * 3), 0) : 0) * 13 + (ESTATE3[b.type] ? B3.estateSig(b) * 41 : 0) + (b.graves ? b.graves.length : 0) * 17 + B3.shellSig(b) * 19 + G.Space.treeSig(b) * 37) | 0;
       // (a store's heaps are its people's stock: drawn again, where they are drawn — fine, in its yard —, when a count of them
       // changes; a store drawn from its plan has no yard: it shows its stock inside, in its keeping pieces — Build3D.fillOf)
       if (fine && b.built && G.Props3D && G.Props3D.shows && G.Props3D.shows(b) && !B3.shellOf(b)) { const p = G.Props3D.piles(b); s = (s * 7 + p[0] * 19 + p[1] * 23 + p[2] * 29) | 0; } }
@@ -2559,6 +2781,9 @@ float m3scale(float p) {
         // (a yard before the roofed part — the pottery's, the tavern's: B2d —, as near and as the god draws it)
         if (sh.yard) farYard(g, b, Sh, P, y0, L);
         g.pat = 0; continue; }
+      // (an estate from afar: its crowns, its hedges of vines, its vat, its skeps — as near, in their simplest rounds; it had a
+      // house's block and roof, T-150)
+      if (ESTATE3[b.type]) { estateFar(g, b, L); continue; }
       // (the salt pans from afar: their nine pans flat on the ground in the brine's colour, as the near picture lays them)
       if (b.type === 'salina' && b.built) { const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L, Y = W.maxH(b.x, b.y, b.w, b.h) * HM(); g.pat = 0; g.put(SH.box, R3.mat(X, Y - 0.1, Z, 0, b.w * L - 0.32, 0.22, b.h * L - 0.32), [170, 196, 204]); continue; }
       // (a house being extended over its family — L-371 —: the old one, whole, as near)

@@ -76,16 +76,36 @@ function verdict(cn, cf) {
 // and B2d: the Aztecs' and the Norse's house, the sobrado and the ínsula of four peoples ≈, the tavern ≈ in all six; 90 with
 // the homes drawn by the god from their shells — Arch.homeOn, D-082, phase C: the hut and the house of the six peoples, the
 // sobrado and the ínsula = or ≈; 84 with the pottery and the tavern drawn from theirs, their yards (P4's B2d) in both views,
-// near and far: the pottery = in five peoples, the tavern in five, the rest ≈)
-const TETO = 84;
+// near and far: the pottery = in five peoples, the tavern in five, the rest ≈; 59 with the market, the granaries, the
+// palaces, the baths and the paço from their forms — phases D and E —; 60 with the fields measured — T-150, L-393: 16 = and 8 ≈ of
+// their own, none ≠ —, their buildings shifting the dice of the types after them: the Aztec great palace now drawn of the family
+// pal-peristilo.andar, two storeys in the 3D against the god's one, another mass the old dice did not see)
+const TETO = 60;
 
 // ------------------------------ the round ------------------------------
 // (the kinds the god paints in a layer of its own, not as a building's picture: what its hooks paint for a building is recorded
-// with the picture now — F.layer, T-150 —, and the pens and the pans of salt are compared as the rest. Still apart: what grows
-// in the fields and the apiary — the plants as the world grows them, which the empty world here has not sown —, the fair —
-// its stalls the god's, its plan P4's: D-093 —, and what render.js paints itself — the farm, the graveyard, the fenced field,
-// the campfire, the ruin)
-const OWN_LAYER = { campfire: 1, farm: 1, cemetery: 1, cercado: 1, ruin: 1, feira: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, horta: 1 };
+// with the picture now — F.layer, T-150 —, and the pens, the pans of salt, the orchard, the plantation, the vineyard and the
+// apiary are compared as the rest, the fields sown as the world sows them (sow, below). Still apart: the fair — its stalls the
+// god's, its plan P4's: D-093 —, the garden, and what render.js paints itself — the farm, the graveyard, the fenced field, the
+// campfire, the ruin)
+const OWN_LAYER = { campfire: 1, farm: 1, cemetery: 1, cercado: 1, ruin: 1, feira: 1, horta: 1 };
+// (the fields of the proof, T-150: each with a crop of its people — the first the one its people loves, estates.js LOVE; the
+// other two the rest of its field's kinds —, the first grown and bearing, its vat with must and two jars by it, the second
+// grown and with little fruit, the third grown and picked; the vat at the ninth place where its crop is crushed. Not what
+// is thinner than the lines the god's picture here keeps — strokeSegs drops a line under 0.55 px, the 3D draws its bar as
+// thin —: the saplings of the first days (0.71 of the silhouette; 0.99 with the god's thin lines kept), the half-grown date
+// palm and frankincense (0.61, 0.60), the açaí, whose fronds are a quarter of a pixel at an orchard's size (0.29))
+const SOWN = {
+  pomar: { classico: ['olive', 'apple', 'mulberry'], grego: ['olive', 'mulberry', 'date'], romano: ['olive', 'apple', 'banana'], egipcio: ['date', 'olive', 'banana'], asteca: ['banana', 'apple', 'mulberry'], nordico: ['apple', 'mulberry', 'olive'] },
+  plantacao: { classico: ['coffee', 'cacao', 'pepper'], grego: ['coffee', 'incense', 'cacao'], romano: ['coffee', 'pepper', 'incense'], egipcio: ['incense', 'coffee', 'cacao'], asteca: ['cacao', 'pepper', 'coffee'], nordico: ['pepper', 'coffee', 'cacao'] },
+  vinhedo: { classico: ['grape', 'grape', 'grape'], grego: ['grape', 'grape', 'grape'], romano: ['grape', 'grape', 'grape'], egipcio: ['grape', 'grape', 'grape'], asteca: ['grape', 'grape', 'grape'], nordico: ['grape', 'grape', 'grape'] },
+};
+function sow(b, style, q) {
+  const crops = SOWN[b.type] && SOWN[b.type][style]; if (!crops) return;
+  b.crop = crops[q % 3]; const press = G.Estates.CROPS[b.crop].press; const st = [{ g: 1, f: 1.5 }, { g: 1, f: 0.5 }, { g: 1, f: 0 }][q % 3];
+  b.pl = Array.from({ length: 9 }, (_, k) => (press && k === 8 ? { g: -1, f: 0 } : { g: st.g, f: st.f }));
+  if (press && q % 3 === 0) { b.must = 2; b.inv = b.crop === 'grape' ? { vinho: 2 } : { azeite: 2 }; }
+}
 const FORMA = G.Forma || null; // (js/forma.js: the form of a type and a people, or null — the shell is its form)
 // (a hole: a picture of which more than half a percent only the backs of faces cover — the rest is a sliver between two
 // pieces, a stone's edge; L-271 was 1–2% of every Egyptian building)
@@ -100,6 +120,7 @@ for (const type of Object.keys(G.BDEF)) {
     const id = 1000 + rows.length * 7 + q * 7919;
     const b = F.put(type, style, id, SEMPLANTA ? { record: false } : undefined);
     try {
+      sow(b, style, q);
       const god = F.god(b);
       if (OWN_LAYER[type]) { other.add(type); continue; }
       const near = F.near(b), far = F.far(b);
@@ -140,7 +161,7 @@ const types = [...new Set([...per.keys()].map(k => k.split('/')[0]))];
 console.log('\n' + 'tipo'.padEnd(18) + POVOS.map(s => s.slice(0, 7).padStart(9)).join('') + '   (a massa; F: com forma, conferida contra ela)');
 const count = { '=': 0, '≈': 0, '≠': 0 };
 for (const t of types) console.log((t + (POVOS.some(s => formed.has(t + '/' + s)) ? ' F' : '')).padEnd(18) + POVOS.map(s => { const r = per.get(t + '/' + s); if (!r) return '        -'; count[r.v]++; return (r.v + (r.forma && !r.forma.ok ? '!' : ' ')).padStart(9); }).join(''));
-if (other.size) console.log(`desenhados pelo deus numa camada própria e ainda fora desta prova (T-150: o que cresce nos campos e no apiário, a feira da planta do P4, e o que o render.js pinta sozinho — a fazenda, o cemitério, a cerca, a fogueira, a ruína): ${[...other].join(', ')}`);
+if (other.size) console.log(`desenhados pelo deus numa camada própria e ainda fora desta prova (T-150: a feira da planta do P4, a horta, e o que o render.js pinta sozinho — a fazenda, o cemitério, a cerca, a fogueira, a ruína): ${[...other].join(', ')}`);
 console.log(`\n${count['=']} com a mesma massa, ${count['≈']} a mesma massa com perdas, ${count['≠']} outra massa (de ${per.size} tipos e povos; ${rows.length} prédios em ${((clock() - t0) / 1000).toFixed(1)} s)`);
 if (process.env.VERB) for (const r of per.values()) if (r.v !== '=' || (r.forma && !r.forma.ok)) console.log(`   ${r.v} ${r.type}/${r.style}${r.fam ? ' (' + r.fam + ')' : ''}: ${r.why.join(', ')}${r.forma && !r.forma.ok ? ' · forma: ' + r.forma.why.join(', ') : ''}`);
 
@@ -153,8 +174,9 @@ if (formed.size) ok('os tipos com forma', !ruins.length, ruins.length ? ruins.ma
 const outra = [...per.values()].filter(r => r.v === '≠' && !formed.has(r.type + '/' + r.style));
 if (!ONLY && !SEMPLANTA && POVOS.length === STY.length && NID === 3) ok('outra massa (a catraca)', outra.length <= TETO, `${outra.length} tipos e povos com outra massa (teto ${TETO}, a meta é zero)${outra.length < TETO ? ' — baixou: desça o teto' : ''}`);
 else console.log(`outra massa: ${outra.length} tipos e povos (a catraca só vale na rodada inteira, IDS=3)`);
-// (every building the world raises has the god's picture — the jail had none: L-265 —, but those of a layer of their own)
-const blind = [...per.values()].filter(r => r.near && r.near.empty === 'deus').map(r => `${r.type}/${r.style}`);
+// (every building the world raises has the god's picture — the jail had none: L-265 —, but those of a layer of their own; and,
+// without plans, the types the god draws from their shells alone — the jail, Arch.SHELLS: no plan, no shell, no picture)
+const blind = [...per.values()].filter(r => r.near && r.near.empty === 'deus' && !(SEMPLANTA && G.Arch.SHELLS && G.Arch.SHELLS[r.type])).map(r => `${r.type}/${r.style}`);
 ok('todo prédio com o desenho do deus', !blind.length, blind.length ? `sem desenho: ${blind.join(', ')}` : `${per.size} tipos e povos`);
 ok('sem furos (faces de costas)', !holes.length, holes.length ? `${holes.length} figuras com mais de ${HOLE * 100}% coberto só por faces de costas: ${holes.slice(0, 12).join(' · ')}` : `${rows.length} prédios, de perto e de longe: nenhum`);
 const e = M.erros(); ok('sem erro do jogo', M.limpo(), M.limpo() ? 'nenhum erro de módulo nem aviso no console' : JSON.stringify(e.mod) + ' ' + e.console.slice(0, 3).join(' | '));

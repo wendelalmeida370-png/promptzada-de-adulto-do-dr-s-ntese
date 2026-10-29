@@ -170,9 +170,10 @@ F.layer = function (b) {
   try {
     Art.clear();
     for (const h of H.ground) h(c, proj, VIEW, 0, 0, diamond, null);
-    // (a fill of the ground seen through — the trampled earth of a pen, the fair's ground, the soil of a field — tints the land, which
-    // the 3D draws as the land itself, not the building: no mass of it)
-    for (let k = R.ops.length - 1; k >= 0; k--) if (R.ops[k].f && R.ops[k].col[3] < 0.999) R.ops.splice(k, 1);
+    // (a fill or a line of the ground seen through — the trampled earth of a pen, the fair's ground, the soil of a field and its
+    // rows, a garden's — tints the land, which the 3D draws as the land itself, the field's turned earth, not the building: no
+    // mass of it)
+    for (let k = R.ops.length - 1; k >= 0; k--) if (R.ops[k].col[3] < 0.999) R.ops.splice(k, 1);
     const list = []; const add = (d, e, x, y, hh) => list.push({ d, e, p: proj(x, y, hh === undefined ? W.groundH(x, y) : hh) });
     for (const h of H.ents) h(add, VIEW, 1.6);
     list.sort((a, b2) => a.d - b2.d);
@@ -224,7 +225,7 @@ F.formPic = function (b, Fm, side) {
   const Fo = G.Forma, L = TILE, hi = G.W.maxH(b.x, b.y, b.w, b.h) * G.Space.HM; const X0 = b.x * L, Z0 = b.y * L; side = side || 'S';
   const W = (u, v, y) => { const q = Fo.toLot(side, Fm.L, u, v); return [X0 + q[0], hi + y, Z0 + q[1]]; };
   const tris = []; const col = [200, 196, 186];
-  const tri = (a, b2, c, n) => tris.push({ v: [...a, ...b2, ...c], col, n });
+  const tri = (a, b2, c, n) => tris.push({ v: [...a, ...b2, ...c], col, n, byN: true });
   const quad = (a, b2, c, d, n) => { tri(a, b2, c, n); tri(a, c, d, n); };
   const norm = v => { const l = Math.hypot(...v) || 1; return v.map(x => x / l); };
   for (const m of Fo.mass(Fm)) {
@@ -334,9 +335,16 @@ F.paint3D = function (pic, R) {
   if (!R.z) { R.z = new Float32Array(R.W * R.H).fill(-1e9); }
   const fr = pic.fr;
   for (const t of pic.tris) {
-    // (a face turned away from the eye is not drawn, as the game's one-sided material has it: its normal through the squash
-    // of the descent, against the way to the eye — south-east and up)
-    if (!t.ds && t.n[0] * VIEW[0] + t.n[1] / 0.62 * VIEW[1] + t.n[2] * VIEW[2] < -1e-4) continue;
+    // (a face turned away from the eye is not drawn, as the game's one-sided material has it: by its winding, as the game's is —
+    // the normal of its corners' turn, through the squash of the descent, against the way to the eye, south-east and up. Not
+    // by its corners' smooth normals: at the rim of a lone round crown they lean away while the face still turns to the eye,
+    // and a crown from afar had a hundredth of its picture as holes — T-150. The proof's own picture of a form, F.formPic,
+    // by the normal it gives each face: it lays them in no order)
+    let back;
+    if (t.byN) back = t.n[0] * VIEW[0] + t.n[1] / 0.62 * VIEW[1] + t.n[2] * VIEW[2] < -1e-4;
+    else { const ux = t.v[3] - t.v[0], uy = t.v[4] - t.v[1], uz = t.v[5] - t.v[2], wx = t.v[6] - t.v[0], wy = t.v[7] - t.v[1], wz = t.v[8] - t.v[2];
+      const gx = uy * wz - uz * wy, gy = uz * wx - ux * wz, gz = ux * wy - uy * wx; back = gx * VIEW[0] + gy / 0.62 * VIEW[1] + gz * VIEW[2] < -1e-9 * (Math.abs(gx) + Math.abs(gy) + Math.abs(gz) + 1e-12); }
+    if (!t.ds && back) continue;
     const A = fr.P(t.v[0], t.v[1], t.v[2]), B = fr.P(t.v[3], t.v[4], t.v[5]), C = fr.P(t.v[6], t.v[7], t.v[8]);
     const den = (B[1] - C[1]) * (A[0] - C[0]) + (C[0] - B[0]) * (A[1] - C[1]); if (Math.abs(den) < 1e-9) continue;
     const sh = AMB + (1 - AMB) * Math.max(0, t.n[0] * LIGHT[0] + t.n[1] * LIGHT[1] + t.n[2] * LIGHT[2]);
