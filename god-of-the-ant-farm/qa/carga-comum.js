@@ -296,7 +296,9 @@ S.weather.storm = 0;
 }
 // ---------------- m11: the cave's find never writes over the hands (L-202): one sent down a mine with a load in the hands —
 // the test's hand gives the shift; the world no longer sends anyone down with something in them — comes up with it: the ore
-// stays in the rock, and the load goes to its place
+// stays in the rock, and the load goes to its place. The vein gives the ore only on the way out, into hands free for it, in
+// the ledger ('mina', L-381): the face only marks what the miner will bring out, so the vein never loses it and is given
+// nothing back — the ore stays in the rock when no 'mina' line goes to the hands
 {
   S.time = 0.3;
   const mines = [...S.buildings.values()].filter(b => b.type === 'mina' && b.built && b.ore && (S.ores || []).some(o => o.id === b.ore && o.amt >= 3)).sort((a, b) => a.id - b.id);
@@ -309,18 +311,19 @@ S.weather.storm = 0;
     v.x = door[0]; v.y = door[1]; v.path = null;
     const amt0 = o.amt, n0 = lines.length;
     if (!G.Caves.mineShift(v, b, o)) { info = `${nm(v)}: a mina #${b.id} não deu um turno`; continue; }
-    // (what she dug, read in the errand, and the deposit at the step she came up: it gets back what she dug — the mine's other
-    // miners dig from it meanwhile, and in a newer world they took 2 while the case lived)
-    let up = false, held = '', dug = 0, before = o.amt, back = 0;
+    // (what she dug, read in the errand, and the vein at the step she came up: it gives her nothing — the mine's other miners
+    // dig from it meanwhile, and their ore leaves the vein when they come out)
+    let up = false, held = '', dug = 0, before = o.amt, gave = 0;
     const done = live(150, () => {
       if (!up && v.task && v.task.type === 'caverna' && v.task.carry) dug = v.task.carry.n;
-      if (!up && !(v.task && v.task.type === 'caverna')) { up = true; held = hands(v); back = r2(o.amt - before); }
+      if (!up && !(v.task && v.task.type === 'caverna')) { up = true; held = hands(v); gave = r2(before - o.amt); }
       before = o.amt;
       return up && outOf(v.id, n0).some(e => e[5] === 'wood' && e[8] === 'entrega');
     });
     const wood = outOf(v.id, n0).filter(e => e[5] === 'wood');
-    fine = up && held === '2 de wood' && done && Math.abs(sum(wood) - 2) < 1e-6 && dug > 0 && back >= dug - 1e-6;
-    info = `${nm(v)} desceu à mina #${b.id} com 2 de lenha nas mãos${dug ? ` e cavou ${dug} de minério` : ', e NÃO cavou'}: ${up ? `subiu com ${held}` : 'NÃO subiu'}; ${done ? `a lenha foi ao armazém (${wood.map(e => e[8] + ' ' + e[6]).join(', ')})` : `a lenha NÃO foi (no livro: ${wood.map(e => e[8] + ' ' + e[6]).join(', ') || 'nada'}; nas mãos: ${hands(v)})`}; o veio ${back >= dug - 1e-6 && dug ? `recebeu de volta os ${dug} na saída` : `NÃO recebeu de volta (${back} na saída)`} (no caso todo, ${r2(o.amt - amt0)})`;
+    const ore = lines.slice(n0).filter(e => e[8] === 'mina' && e[4] === 'v:' + v.id);
+    fine = up && held === '2 de wood' && done && Math.abs(sum(wood) - 2) < 1e-6 && dug > 0 && !ore.length && gave <= 1e-6;
+    info = `${nm(v)} desceu à mina #${b.id} com 2 de lenha nas mãos${dug ? ` e cavou ${dug} de minério` : ', e NÃO cavou'}: ${up ? `subiu com ${held}` : 'NÃO subiu'}; ${done ? `a lenha foi ao armazém (${wood.map(e => e[8] + ' ' + e[6]).join(', ')})` : `a lenha NÃO foi (no livro: ${wood.map(e => e[8] + ' ' + e[6]).join(', ') || 'nada'}; nas mãos: ${hands(v)})`}; ${!ore.length && gave <= 1e-6 ? `o minério ficou no veio (nenhuma linha 'mina' para as mãos dela; o veio perdeu ${gave} na saída)` : `o veio DEU ${sum(ore)} às mãos ('mina') e perdeu ${gave} na saída`} (no caso todo, o veio ${r2(o.amt - amt0)}, com os outros mineiros)`;
     break;
   }
   ok('m11 a caverna não escreve por cima das mãos', fine && !look().length, info);
