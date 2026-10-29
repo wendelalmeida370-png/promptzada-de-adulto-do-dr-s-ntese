@@ -465,7 +465,12 @@
       const lv = G.Possess && G.Possess.level ? G.Possess.level() : undefined;
       const has = food(h) >= 1; const hot = L.cooked(h);
       const table = pieceAt(h, ['comer', 'sentar', 'aquecer'], lv);
-      if (table && G.dist(x, y, table[0], table[1]) <= r + 0.5) out.push({ id: 'lar.comer:' + h.id, act: 'comer', label: hot ? 'Cear em casa (a ceia de hoje)' : 'Comer em casa, da despensa', at: table, anim: 'comer', hands: 1, ok: has && v.hunger > 15, why: !has ? 'A despensa da casa está vazia.' : 'Você não está com fome.' });
+      // (a house whose plan has no table, seat nor hearth on any storey — most huts —: the meal where the body stands, on the
+      // floor, as the people of the house eat in it (D-085); with the body's gesture of eating — one of eating on the floor is
+      // the 3D's to make, P3/P4. L-398)
+      const floor = !table && !!(G.Interiors && G.Interiors.ready && G.Interiors.ready(h)) && !pieceAt(h, ['comer', 'sentar', 'aquecer']);
+      const at = table && G.dist(x, y, table[0], table[1]) <= r + 0.5 ? table : floor ? [v.x, v.y] : null;
+      if (at) out.push({ id: 'lar.comer:' + h.id, act: 'comer', label: hot ? 'Cear em casa (a ceia de hoje)' : 'Comer em casa, da despensa', at, anim: 'comer', hands: 1, ok: has && v.hunger > 15, why: !has ? 'A despensa da casa está vazia.' : 'Você não está com fome.' });
       const fire = pieceAt(h, ['cozinhar', 'assar', 'aquecer'], lv);
       if (fire && G.dist(x, y, fire[0], fire[1]) <= r + 0.5) out.push({ id: 'lar.cozinhar:' + h.id, act: 'cozinhar', label: 'Cozinhar a ceia da casa', at: fire, anim: 'cozinhar', hands: 2, ok: has && !hot, why: hot ? 'A ceia de hoje já está pronta.' : 'A despensa da casa está vazia.' });
       return out;
