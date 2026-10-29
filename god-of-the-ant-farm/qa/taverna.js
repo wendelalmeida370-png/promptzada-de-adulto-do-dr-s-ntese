@@ -52,7 +52,7 @@ function ready(b) {
 const seats = b => (G.Interiors && G.Interiors.freePlace && G.Interiors.table && G.Interiors.table(b) ? G.Interiors.slots(b, 'sentar').length + G.Interiors.slots(b, 'comer').length : T.SEATS);
 const atTables = op => Object.keys(op.data.mesa).length;
 const insideOf = b => [...S().villagers.values()].filter(v => v.inside === b.id && v.task && v.task.type === 'tavern');
-const digest = op => JSON.stringify([op.st, op.data.servidos, op.data.receita, op.data.custo, op.data.faltas, op.data.recusas, Object.keys(op.data.mesa).sort(), op.data.fila, S().rng]);
+const digest = op => JSON.stringify([op.st, op.data.servidos, op.data.receita, op.data.gasto, op.data.faltas, op.data.recusas, Object.keys(op.data.mesa).sort(), op.data.fila, S().rng]);
 
 // ---------------- t1 a whole night ----------------
 {

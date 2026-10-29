@@ -61,7 +61,7 @@
         const nm = `dia da taverna #${op.id}`; const d = op.data || {}; const b = s.buildings.get(op.at);
         if (days.has(op.at)) add('oficio', 2, `taverna #${op.at}: dois dias abertos (#${days.get(op.at)} e #${op.id})`); days.set(op.at, op.id);
         if (!b || b.type !== 'taverna' || !b.built) { add('oficio', 2, `${nm}: a taverna ${op.at} ${!b ? 'não existe' : 'não está de pé'} e o dia segue`); continue; }
-        for (const k of ['servidos', 'receita', 'custo', 'faltas', 'recusas']) if (!fin(d[k]) || d[k] < -EPS) add('oficio', 1, `${nm}: ${k} = ${d[k]}`);
+        for (const k of ['servidos', 'receita', 'gasto', 'faltas', 'recusas']) if (!fin(d[k]) || d[k] < -EPS) add('oficio', 1, `${nm}: ${k} = ${d[k]}`);
         for (const id in d.mesa || {}) if (!s.villagers.has(+id)) add('oficio', 2, `${nm}: #${id} à mesa não existe`);
         for (const id of d.fila || []) if (!(d.mesa || {})[id]) add('oficio', 3, `${nm}: #${id} na fila sem estar à mesa`);
         const led = s.ledger || [];

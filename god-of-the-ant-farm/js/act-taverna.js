@@ -130,8 +130,10 @@
   function open(b) {
     const S = S_(); const k = keeperOf(b); if (!k || !atHand(k) || !G.inSim || T.dia(b) || openedToday(b) || !inHours(b)) return null;
     if (!T.menu(b).length) return null;
+    // (the day's book: served, takings, what the keeper paid for the stock — «gasto»: a house's .custo is what it cost its
+    // family, L-236, and only act-casa.js and social.js write it —, wants, refusals)
     const op = A.start('taverna', { at: b.id, set: b.set, fac: G.Village.facOfSet(b.set), to: 'b:' + b.id, why: 'dia', by: k.id, x: b.x + b.w / 2, y: b.y + b.h / 2,
-      data: { day: S.day, servidos: 0, receita: 0, custo: 0, vendas: {}, faltas: 0, recusas: 0, cheia: 0, mesa: {}, fila: [], q: 0 } });
+      data: { day: S.day, servidos: 0, receita: 0, gasto: 0, vendas: {}, faltas: 0, recusas: 0, cheia: 0, mesa: {}, fila: [], q: 0 } });
     if (op) A.join(op, k, 'dono');
     return op;
   }
@@ -142,7 +144,7 @@
     for (const id of Object.keys(d.mesa)) { const v = S.villagers.get(+id); if (!v) continue; finishCup(v, op); if (v.task && v.task.type === 'tavern' && v.task.op === op.id) G.Vg.endTask(v); }
     d.mesa = {}; d.fila = [];
     const k = b && keeperOf(b);
-    if (k && st === 'ok' && d.servidos >= 3) A.note(k, 'memory', `Um dia na taverna: ${d.servidos} servidos${coin(b) ? `, ${String(r2(d.receita)).replace('.', ',')} de receita e ${String(r2(d.custo)).replace('.', ',')} de custo` : ''}${d.faltas ? `; faltou o que pediam ${d.faltas} ${d.faltas > 1 ? 'vezes' : 'vez'}` : ''}.`);
+    if (k && st === 'ok' && d.servidos >= 3) A.note(k, 'memory', `Um dia na taverna: ${d.servidos} servidos${coin(b) ? `, ${String(r2(d.receita)).replace('.', ',')} de receita e ${String(r2(d.gasto)).replace('.', ',')} de custo` : ''}${d.faltas ? `; faltou o que pediam ${d.faltas} ${d.faltas > 1 ? 'vezes' : 'vez'}` : ''}.`);
     A.end(op, st, why);
   }
   T.close = (op, why) => { if (op && live(op) && G.inSim) close(op, 'ok', why || 'fechada'); };
@@ -371,7 +373,7 @@
       if (r.ok) { E.ensure(f); f.eco.sales += cost; }
     } else r = D.move('f:' + f.id, 'v:' + v.id, k, n, { code: 'taverna-povo', by: v.id, to: ref });
     if (!r.ok) return r;
-    const op = T.dia(b); if (op && cost) op.data.custo = r2(op.data.custo + cost);
+    const op = T.dia(b); if (op && cost) op.data.gasto = r2(op.data.gasto + cost);
     return { ok: true, n, cost };
   }
   function runAbastecer(v, t, dt, H) {
@@ -525,8 +527,12 @@
     load() {
       const S = S_();
       for (const op of A.all()) {
-        if (op.def !== 'taverna' || !live(op)) continue;
-        const d = op.data; d.mesa = d.mesa && typeof d.mesa === 'object' ? d.mesa : {}; d.fila = Array.isArray(d.fila) ? d.fila.filter(id => d.mesa[id]) : [];
+        if (op.def !== 'taverna') continue;
+        // (a day saved before its book said «gasto» has what the keeper paid as «custo» — the word went to what a house cost
+        // its family, L-236 —: the old word is taken)
+        const d = op.data; if (!(typeof d.gasto === 'number' && isFinite(d.gasto))) { d.gasto = typeof d.custo === 'number' && isFinite(d.custo) ? d.custo : 0; delete d.custo; }
+        if (!live(op)) continue;
+        d.mesa = d.mesa && typeof d.mesa === 'object' ? d.mesa : {}; d.fila = Array.isArray(d.fila) ? d.fila.filter(id => d.mesa[id]) : [];
         for (const id of Object.keys(d.mesa)) {
           const v = S.villagers.get(+id); const m = d.mesa[id];
           if (!v || m.body || v.captive || v.jail) { delete d.mesa[id]; continue; }

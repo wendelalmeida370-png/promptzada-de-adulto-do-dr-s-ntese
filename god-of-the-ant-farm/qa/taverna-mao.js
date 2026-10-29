@@ -5,7 +5,8 @@
 // pela vontade e pelo dinheiro da casa (quem não pode pagar não vem), sentam, pedem, são servidos um a um, pagam à casa do
 // dono, comem e bebem, saem; a falta («acabou»); a casa cheia; o fechamento na hora, com todos para fora; o caixa do dia
 // contra o livro-razão; o dia que atravessa o save com gente à mesa (o gancho devolve cada um ao seu lugar); um povo sem moeda
-// (o armazém dá, ninguém paga); e a cuba: a cerveja como fornada do G.Oficio, do grão que o taverneiro comprou.
+// (o armazém dá, ninguém paga); e a cuba: a cerveja como fornada do G.Oficio, do grão que o taverneiro comprou. E um save de antes
+// do «gasto» (o livro do dia dizia «custo», o nome que é do que a casa custou, L-236): o gancho aceita o nome velho.
 //   node qa/taverna-mao.js
 const M = require('./nodemundo.js'); const G = M.load({ qa: true, extra: ['qa/oficio-inv.js'] });
 const D = G.Depot, A = G.Act, T = G.Taverna, E = G.Eco, O = G.Oficio;
@@ -93,6 +94,10 @@ const lines = (code) => G.S.ledger.filter(e => e[8] === code);
   for (const v of S.villagers.values()) { v.task = null; } const hook = G.saveHooks.find(h => /taverna/.test(String(h.load)) && /mesa/.test(String(h.load)));
   hook.load({});
   ok('save-devolve-a-mesa', was && sit.task && sit.task.type === 'tavern' && sit.task.op === op.id && sit.task.st === 2 && sit.inside === tv.id, `${sit.name}: ${sit.task ? sit.task.type + ' st ' + sit.task.st : 'sem tarefa'}, dentro ${sit.inside === tv.id}`);
+  // a day saved before its book said «gasto»: what the keeper paid was «custo» there — the load takes the old word, and the
+  // checker sees the day's book whole (every second after it)
+  op.data.custo = 1.5; delete op.data.gasto; hook.load({}); sec(1, [k, sit]);
+  ok('save-de-antes-do-gasto', op.data.gasto === 1.5 && !('custo' in op.data), `o livro do dia depois do load: gasto ${op.data.gasto}, custo ${op.data.custo === undefined ? '(nenhum)' : op.data.custo}`);
 }
 // ---------------- a people without coin: the store gives, nobody pays
 {
