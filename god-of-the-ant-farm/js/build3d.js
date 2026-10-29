@@ -3372,6 +3372,19 @@ float m3scale(float p) {
     const p = S.p && S.p.ok ? S.p : null;
     if (!p && G.Space.plan) G.Space.plan(K.b);
     if (p) for (const it of p.items) { if (it.form && Fm) continue; const l = p.levels.find(q => q.lv === it.lv) || p.levels[0]; const foot = l.y + (it.y || 0) + FLOOR_UP; const F = piece(K, it, foot); const f = FURN[it.kind]; if (f) f(F, it, { ceil: (sh.eave || 3) - foot }); else F.box(0, 0, 0, it.w, it.h, it.d, IWOOD, 'plankH'); }
+    // (the steps before its ways in, the ones the feet go up — Space's reckoning, as its flights of the plan list them: before
+    // each door of a ground on its own base, as a house's (Space.doorFlight, L-163), and before the foot of each flight of the
+    // form up a solid one — the Egyptian granary's, a monument's —; where the lot falls away to the street, the feet stood on
+    // steps nobody drew)
+    if (p) {
+      const stone = (K.P.base || [])[2] || '#a09a8e', lot = { w: K.w, d: K.d }, ps = p.shell;
+      const l0 = p.levels.filter(l => l.kind !== 'porao' && l.kind !== 'terraco' && l.kind !== 'jirau').sort((a, c) => a.y - c.y)[0] || p.levels[0];
+      const raised = !!l0 && (l0.kind === 'elevado' || ps.base === 'esteios' || ps.base === 'macica');
+      if (!raised) for (const h of p.holes) { const d = h.door >= 0 ? p.doors[h.door] : null; const w = d && d.outer && h.kind !== 'janela' ? p.walls[h.wall] : null; if (!w) continue;
+        const l = p.levels.find(q => q.lv === w.lv); const fl = G.Space.doorFlight(K.b, ps, lot, w, h, l ? l.y : 0, false); if (fl) layFlight(K, fl, stone); }
+      for (const st of p.stairs) { const cx = (st.r[0] + st.r[2]) / 2, cz = (st.r[1] + st.r[3]) / 2; if (st.kind !== 'degraus' || (cx > ps.r[0] && cx < ps.r[2] && cz > ps.r[1] && cz < ps.r[3])) continue;
+        const f = G.Space.feet(st); const fl = G.Space.doorFlight(K.b, ps, lot, f.w, f.h, 0, false, f.F, f.uc); if (fl) layFlight(K, fl, stone); }
+    }
     return Math.max(sh.eave || 0.3, top);
   }
   // (a building of the world drawn open to the sky, with nothing to open — a fair: its people are seen where they are)

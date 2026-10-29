@@ -20,6 +20,12 @@
     for (const e of F.els) { if (e.k !== 'bloco' || e.uso || e.y0 > 1e-6 || e.y1 >= 0.15 || e.r[0] > c || e.r[2] < c || e.r[1] > c || e.r[3] < c) continue; const a = (e.r[2] - e.r[0]) * (e.r[3] - e.r[1]); if (a > best) { best = a; y = e.y1; } }
     return y;
   }
+  // (the base of an open floor of a form: solid — a podium, raised: the plan's own flight up from the ground before it, and no
+  // steps before its door (Space) — where the floor is a step or more over its foot, as the Egyptian granary's base up its flight;
+  // lower — a pavement, a garden's lawn, a landing, a slab of a hand or two —, the ground's own: where the lot falls away to the
+  // street the steps before the way in come down to it, as before a house's door (on a solid base the feet met a wall of the
+  // slope's height there, up to 1.6 m in the world map)
+  const openBase = y => (y >= In.BODY.step ? 'macica' : 'chao');
   // (what stands solid on the form's ground — its walls, its stage, its columns, its trees, a pool's rim — a piece of no use at
   // each foot, the biggest first: where a foot meets one already laid — two walls at a corner, a rim round a pool's floor, the
   // posts of a stall at its counter's corners — what is left of it, 5 cm off the other (two pieces of a plan keep 2 cm apart), and
@@ -80,7 +86,7 @@
   // its front where the form leaves it free)
   function openGround(P, F, fn) {
     const L = P.L, m = 0.1; const sh = [m, m, L - m, L - m]; const y = groundOf(F, L);
-    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: y > 0.02 ? 'macica' : 'chao', baseH: y, floors: 1, eave: 0 }; P.roof = null;
+    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: openBase(y), baseH: y, floors: 1, eave: 0 }; P.roof = null;
     P.level(0, y, 3.0, 'chao', sh); P.entryLv = 0;
     const spans = frontSpans(F, sh); if (!spans.length) { P.errs.push('a frente da forma fechada: nenhum vão por onde entrar'); return null; }
     wayIn(P, sh[0], sh[2], sh[3], spans);
@@ -294,7 +300,7 @@
   // (rezar), facing it
   function pyramidFoot(P, F) {
     const L = P.L; const sh = [0, 0, L, L]; const pyr = F.els.find(e => e.k === 'piramide'); if (!pyr) { P.errs.push('a forma sem a pirâmide'); return; } // (its slab the whole lot: from the street a step up on to it)
-    const y = pyr.y0; P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: y > 0.02 ? 'macica' : 'chao', baseH: r2(y), floors: 1, eave: 0 }; P.roof = null;
+    const y = pyr.y0; P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: openBase(y), baseH: r2(y), floors: 1, eave: 0 }; P.roof = null;
     P.level(0, y, 3.0, 'chao', sh); P.entryLv = 0;
     const spans = frontSpans(F, sh, y); if (!spans.length) { P.errs.push('a frente da pirâmide sem vão por onde entrar'); return; }
     wayIn(P, sh[0], sh[2], sh[3], spans);
@@ -525,7 +531,7 @@
     const lam = F.els.find(e => e.k === 'lamina'); if (!lam) { P.errs.push('o lago sem água'); return; }
     const ld = F.els.find(e => e.k === 'bloco' && e.piso && e.r[1] >= lam.r[3] - 0.01); if (!ld) { P.errs.push('o lago sem o patamar'); return; }
     const L = P.L, m = 0.1; const sh = [m, m, L - m, L - m]; const y = ld.y1;
-    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: y > 0.02 ? 'macica' : 'chao', baseH: y, floors: 1, eave: 0 }; P.roof = null;
+    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: openBase(y), baseH: y, floors: 1, eave: 0 }; P.roof = null;
     P.level(0, y, 3.0, 'chao', sh); P.entryLv = 0;
     const fur = G.Forma.uses(F).find(u => u.uso === 'fornalha'); if (!fur) { P.errs.push('o lago sem a fornalha'); return; }
     const a = fur.r[0] - 0.15, b = fur.r[2] + 0.15;
@@ -564,7 +570,7 @@
     for (const e of F.els) if (e.k === 'bloco' && !e.degrau && !e.uso && e.y0 < 0.01 && e.r[0] < c && e.r[2] > c && e.r[1] < c && e.r[3] > c && (!fl || area(e.r) > area(fl.r))) fl = e;
     if (!fl) { P.errs.push('o celeiro sem chão'); return; }
     const sh = fl.r.map(r2), y = fl.y1;
-    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: y > 0.02 ? 'macica' : 'chao', baseH: y, floors: 1, eave: 0 }; P.roof = null;
+    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: openBase(y), baseH: y, floors: 1, eave: 0 }; P.roof = null;
     P.level(0, y, 3.0, 'chao', sh); P.entryLv = 0;
     const st = F.els.filter(e => e.degrau).map(e => ({ r: e.r.slice(), y: e.y1 }));
     if (st.length) {
@@ -597,7 +603,7 @@
     for (const e of F.els) if (e.k === 'bloco' && e.piso && e.y0 < 0.01 && e.r[0] < c && e.r[2] > c && e.r[1] < c && e.r[3] > c && (!fl || area(e.r) > area(fl.r))) fl = e;
     if (!fl) { P.errs.push('o mercado sem chão'); return; }
     const sh = fl.r.map(r2), y = fl.y1;
-    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: y > 0.02 ? 'macica' : 'chao', baseH: y, floors: 1, eave: 0 }; P.roof = null;
+    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: openBase(y), baseH: y, floors: 1, eave: 0 }; P.roof = null;
     P.level(0, y, 3.0, 'chao', sh); P.entryLv = 0;
     // (the front where nothing stands — of the form's solids nor of its stalls' counters —: the stretches one comes in by)
     let spans = frontSpans(F, sh, y);

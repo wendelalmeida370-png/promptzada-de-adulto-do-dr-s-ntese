@@ -115,10 +115,11 @@ const tag = m => `${m.t}/${m.c}`;
     for (const [lv, pts] of legs) { prev = null;
       for (let k = 0; k < pts.length - 1; k++) { const [u0, z0] = pts[k], [u1, z1] = pts[k + 1]; const len = Math.hypot(u1 - u0, z1 - z0), m = Math.max(1, Math.round(len / 0.02));
         for (let j = 0; j <= m; j++) { const u = u0 + (u1 - u0) * j / m, z = z0 + (z1 - z0) * j / m;
-          const X = b.x * TL + u, Z = b.y * TL + z; const ins = Sp.indoor(X, Z, lv, b.id); const foot = ins ? ins.y : Sp.footAt(X / TL, Z / TL);
+          const X = b.x * TL + u, Z = b.y * TL + z; const ins = Sp.indoor(X, Z, lv, b.id); const foot = ins ? ins.y : Math.max(Sp.footAt(X / TL, Z / TL), Sp.stepTop(X, Z));
           if (ins && !ins.walk) { shut++; if (!shutAt) shutAt = `(${u.toFixed(2)}, ${z.toFixed(2)}) piso ${lv}`; }
           if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot; n++;
           const rs = flight ? flight(u, z, ins) : 0; if (edge && edge(u, z)) continue; // (at a tread's edge either tread is the floor)
+          if ((ins && !ins.shell) || (!ins && Sp.stepTop(X, Z) > -Infinity)) continue; // (on the steps before a way in — Space's, a house's door's: L-163 —, on the lot out of the shell or in the street, not the form's: the step between them all is what is asked)
           const d = foot - (pl.hi + want(lv, u, z, ins) + (ins ? Sp.FLOOR_UP : 0)); const lo = rs ? -rs - 0.03 : -0.03;
           if ((d > 0.03 || d < lo) && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) piso ${lv}`; }
           if (d < lo - 0.12) fell++; } } }

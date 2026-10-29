@@ -181,10 +181,11 @@ const B3 = G.Build3D; const placed = [];
     const edges = lake ? [lake.r[1], lake.r[3]] : [].concat(B.degraus.map(q => q.r), B.base ? [B.base.r] : [], B.portico ? [B.portico.r] : [], B.portao ? [B.portao.r, [0, B.portao.v, 0, B.portao.v]] : [], B.passagem ? [B.passagem.r] : [], [B.r]).flatMap(r => [r[1], r[3]]);
     let worst = 0, at = 0, step = 0, fell = 0, prev = null, n = 0, stop = null;
     for (let z = L + 1.0; z >= end; z -= 0.02) {
-      const X = b.x * TL + u, Z = b.y * TL + z; const ins = Sp.indoor(X, Z, 0, b.id); const foot = ins ? ins.y : Sp.footAt(X / TL, Z / TL);
+      const X = b.x * TL + u, Z = b.y * TL + z; const ins = Sp.indoor(X, Z, 0, b.id); const foot = ins ? ins.y : Math.max(Sp.footAt(X / TL, Z / TL), Sp.stepTop(X, Z));
       if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
       if (ins && !ins.walk && ins.door < 0 && stop === null) stop = z;
-      if (edges.some(e => Math.abs(z - e) < 0.03)) continue; n++;
+      if (edges.some(e => Math.abs(z - e) < 0.03)) continue;
+      if (!B && ((ins && !ins.shell) || (!ins && Sp.stepTop(X, Z) > -Infinity))) continue; n++; // (out of an open shell — the lake's —: the steps before its way in, Space's as a house's (L-163), not the form's)
       const want = pl.hi + top(u, z) + (z < L ? Sp.FLOOR_UP : 0); const d = foot - want; if (Math.abs(d) > Math.abs(worst)) { worst = d; at = z; }
       if (d < -0.05) fell++;
     }
@@ -315,10 +316,11 @@ const KEEP = ['banca', 'baia', 'tulha'], USES = { banca: ['vender', 'comprar'], 
     const edges = [].concat(tr.map(q => q.r), [fl.r]).flatMap(r => [r[1], r[3]]);
     let worst = 0, wz = 0, step = 0, fell = 0, prev = null, n = 0, stop = null;
     for (let z = L + 1.0; z >= end; z -= 0.02) {
-      const X = b.x * TL + u, Z = b.y * TL + z; const ins = Sp.indoor(X, Z, 0, b.id); const foot = ins ? ins.y : Sp.footAt(X / TL, Z / TL);
+      const X = b.x * TL + u, Z = b.y * TL + z; const ins = Sp.indoor(X, Z, 0, b.id); const foot = ins ? ins.y : Math.max(Sp.footAt(X / TL, Z / TL), Sp.stepTop(X, Z));
       if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
       if (ins && !ins.walk && ins.door < 0 && stop === null) stop = z;
-      if (edges.some(e => Math.abs(z - e) < 0.03)) continue; n++;
+      if (edges.some(e => Math.abs(z - e) < 0.03)) continue;
+      if ((ins && !ins.shell) || (!ins && Sp.stepTop(X, Z) > -Infinity)) continue; n++; // (on the steps before a way in, Space's: on the lot out of the shell, or in the street)
       const d = foot - (pl.hi + top(u, z) + (z < L ? Sp.FLOOR_UP : 0)); if (Math.abs(d) > Math.abs(worst)) { worst = d; wz = z; }
       if (d < -0.05) fell++;
     }
