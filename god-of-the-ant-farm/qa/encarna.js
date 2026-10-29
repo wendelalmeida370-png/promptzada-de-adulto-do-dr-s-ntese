@@ -983,9 +983,12 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const dock = docks.find(d => { const p = P3.crateSpot(d); return p && !wet(p[0], p[1]) && G.W.walkableXY(p[0], p[1]); });
     out.dock = dock ? dock.id : null; if (!dock) { out.qa = __E.qa(); out.err = JSON.stringify(G.modErr); return out; }
     const sp = P3.crateSpot(dock);
-    // (the quay's crates, as a boat sets them down)
-    dock.crates = []; for (let k = 0; k < 6; k++) dock.crates.push({ id: S.nextId++, k: 'food', n: 4, col: '#a8c0d0', fish: 'arenque', boat: 0, op: 0 });
-    const v = __E.adults(__E.town(), o => G.W.reaches(o, sp[0], sp[1]))[0] || __E.adults(__E.town())[0]; out.inn = __E.enter(v); if (!G.Avatar.place(sp[0] + 0.3, sp[1] + 0.3)) G.Avatar.place(sp[0], sp[1]); __E.f(20);
+    // (the quay's crates: the world's own, where an unloading has them there — thrown out by hand, its books would not close: the
+    // ten of an unloading waiting for the day on Hedeby's quay, in the city of the v37's last worlds, T-249 —; and while the quay
+    // has fewer than six, a boat's catch landed by the world's own door for it, Porto.landCatch)
+    if ((dock.crates || []).length < 6) { G.inSim++; G.Porto.landCatch(dock, 'food', 4 * (6 - (dock.crates || []).length), 'arenque', '#a8c0d0', 0); G.inSim--; }
+    const free = o => !(o.carry && o.carry.n > 0); // (hands holding nothing of the world's: what is carried is never thrown out by hand)
+    const v = __E.adults(__E.town(), o => free(o) && G.W.reaches(o, sp[0], sp[1]))[0] || __E.adults(__E.town(), free)[0]; out.inn = __E.enter(v); if (!G.Avatar.place(sp[0] + 0.3, sp[1] + 0.3)) G.Avatar.place(sp[0], sp[1]); __E.f(20);
     const ids = () => dock.crates.map(c => c.id).sort((a, b) => a - b).join(',');
     const drawnIds = () => P3.lying.filter(e => e[5] === dock.id).map(e => e[4]).sort((a, b) => a - b).join(',');
     out.drawn = { world: ids(), drawn: drawnIds() };
@@ -1008,10 +1011,13 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
         __E.f(4); const A = P3.avatar; out.carry = { ran: !!(r && r.ok), msg: r && r.msg, frames, held, bad, after: !!(A && A.look && A.look.held), world: !!(b.carry && b.carry.n > 0) }; } }
     // 4. a docker unloading the quay (the unloading of act-porto.js, by day: the world's own errand for it, Porto.work): at every
     // frame the crates drawn on the quay are the world's, and a crate is drawn in hands only as many as the world has in hands
-    { const o = __E.adults(__E.town(), q => q.id !== v.id && G.W.reaches(q, sp[0], sp[1]))[0]; out.docker = null;
-      if (o) { const near = G.W.nearestLand(sp[0] + 0.6, sp[1], 3) || sp; o.x = near[0]; o.y = near[1]; o.path = null; o.carry = null;
-        G.inSim++; S.time = 0.15; G.Porto.work(o, dock, G.Vg.H); G.inSim--; // (the god's hand: the day, and the errand the world gives a docker)
-        const r = { frames: 0, extra: 0, ghost: 0, lifts: 0, n0: dock.crates.length };
+    { const o = __E.adults(__E.town(), q => q.id !== v.id && free(q) && G.W.reaches(q, sp[0], sp[1]))[0]; out.docker = null;
+      if (o) { const near = G.W.nearestLand(sp[0] + 0.6, sp[1], 3) || sp; o.x = near[0]; o.y = near[1]; o.path = null;
+        // (the god's hand: the day — and the unloading of the quay sees it at its overseer's next look, once a second: one waiting
+        // for the night gives no errand, T-249 —; then the errand the world gives a docker)
+        G.inSim++; S.time = 0.15; G.inSim--; __E.until(() => { const op = G.Porto.opAt(dock); return !op || op.st !== 'wait'; }, 90);
+        G.inSim++; const given = G.Porto.work(o, dock, G.Vg.H); G.inSim--;
+        const r = { given: !!given, op: (G.Porto.opAt(dock) || { st: '-' }).st, frames: 0, extra: 0, ghost: 0, lifts: 0, n0: dock.crates.length };
         for (let k = 0; k < 900 && dock.crates.length > r.n0 - 2; k++) { G.Main.frameFor(33); r.frames++;
           const world = new Set(dock.crates.map(c => c.id)); for (const e of P3.lying) if (e[5] === dock.id && !world.has(e[4])) r.ghost++;
           // (whoever the world has holding a thing the 3D draws as a crate — the crates of the quays, the gear's box)
@@ -1028,7 +1034,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     ok('e16 com o menu aberto o 3D desenha só lendo: o cais, o registro dele e o relógio como estavam', e16.still.quay && e16.still.clock && e16.still.drawn, JSON.stringify(e16.still));
     ok('e16 o golpe pedido com o menu aberto espera; com o mundo de volta, corta', !e16.stroke || (e16.stroke.ran && e16.stroke.during === 0 && e16.stroke.after > 0), JSON.stringify(e16.stroke));
     ok('e16 a carga levada ao armazém está nas mãos só enquanto o mundo a tem nelas', !e16.carry || (e16.carry.ran && e16.carry.held > 5 && e16.carry.bad === 0 && !e16.carry.after && !e16.carry.world), JSON.stringify(e16.carry));
-    ok('e16 o estivador descarregando: nenhuma caixa desenhada que o mundo não tenha, nenhuma nas mãos a mais', !e16.docker || (e16.docker.ghost === 0 && e16.docker.extra === 0 && e16.docker.lifts > 0 && e16.docker.n1 < e16.docker.n0), JSON.stringify(e16.docker));
+    ok('e16 o estivador descarregando: nenhuma caixa desenhada que o mundo não tenha, nenhuma nas mãos a mais', !e16.docker || (e16.docker.given && e16.docker.ghost === 0 && e16.docker.extra === 0 && e16.docker.lifts > 0 && e16.docker.n1 < e16.docker.n0), JSON.stringify(e16.docker));
   }
   ok('e16 verificador', !e16.qa || (!e16.qa.length && e16.err === '{}'), `${(e16.qa || []).slice(0, 3).join(' · ') || 'limpo'} · ${e16.err}`);
   await shot('e16-cais');
@@ -1044,13 +1050,16 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const dry = (x, y) => { const i = W.idx(x, y); const t = S.type[i]; return !((t === G.T.RIVER && !S.road[i]) || t <= G.T.SEA) && W.walkableXY(x, y); };
     const porters = s => [...S.villagers.values()].filter(v => v.set === s.id && v.role === 'estivador').length;
     const towns = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built)).sort((a, b) => porters(b) - porters(a) || a.id - b.id);
-    let dock = null;
-    for (const s of towns) { for (const d of [...S.buildings.values()].filter(b => b.set === s.id && b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) { const sp = god(() => G.Fishers.crateSpot(d)); const st = god(() => P.destOf({ at: d.id, fac: G.Village.facOfSet(d.set), x: d.x + 1, y: d.y + 1, data: {} })); if (sp && dry(sp[0], sp[1]) && st && st.type === 'armazem' && god(() => P.access(d, st))) { dock = d; break; } } if (dock) break; }
-    out.dock = dock ? dock.id : null; if (!dock) return out;
+    // (the quay and its stevedore found together: a town whose quay serves but whose stevedores all have their hands full is passed
+    // by — Mênfis's only one, carrying 4 of food, in the metropole of the v37's last worlds, T-250)
+    const hand = (d, sp) => [...S.villagers.values()].filter(o => o.set === d.set && o.role === 'estivador' && !(o.carry && o.carry.n > 0) && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp[0], sp[1])).sort((a, b) => a.id - b.id)[0];
+    let dock = null, found = 0;
+    for (const s of towns) { for (const d of [...S.buildings.values()].filter(b => b.set === s.id && b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) { const sp = god(() => G.Fishers.crateSpot(d)); const st = god(() => P.destOf({ at: d.id, fac: G.Village.facOfSet(d.set), x: d.x + 1, y: d.y + 1, data: {} })); if (sp && dry(sp[0], sp[1]) && st && st.type === 'armazem' && god(() => P.access(d, st))) { found = found || d.id; if (hand(d, sp)) { dock = d; break; } } } if (dock) break; }
+    out.dock = dock ? dock.id : found || null; if (!dock) return out;
     const fid = G.Village.facOfSet(dock.set);
     god(() => { for (const op of A.all()) if (op.def === 'descarga' && op.at === dock.id && A.live(op)) A.end(op, 'cancel', 'teste'); for (const c of (dock.crates || []).slice()) D.move('q:' + dock.id, 'f:' + fid, c.k, c.n, { code: 'teste', part: true }); dock.crates = []; S.time = 0.15; });
     const sp = god(() => G.Fishers.crateSpot(dock));
-    const v = [...S.villagers.values()].filter(o => o.set === dock.set && o.role === 'estivador' && !(o.carry && o.carry.n > 0) && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp[0], sp[1])).sort((a, b) => a.id - b.id)[0];
+    const v = hand(dock, sp);
     out.who = v ? v.name : null; if (!v) return out;
     // (where the docker comes from: the door of the warehouse, a stone's throw from the quay — or a point one walks to from there)
     const door0 = G.Vg.door(god(() => P.destOf({ at: dock.id, fac: fid, x: dock.x + 1, y: dock.y + 1, data: {} }))); const dd = G.dist(door0[0], door0[1], sp[0], sp[1]) * TL;
@@ -1182,15 +1191,29 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // 5. up the stair from its foot (the flight whole): its lid, where it has one, lifts while the body goes through
     const s = p.stairs.find(q => q.kind === 'escada' && q.lv0 === G.Possess.level());
     if (s) { const n = p.grid.n, cs = p.grid.cs; const fits = (x, z) => { for (const [ax, az] of [[0, 0], [0.32, 0], [-0.32, 0], [0, 0.32], [0, -0.32]]) { const q = Sp.indoor(b.x * TL + x + ax, b.y * TL + z + az, G.Possess.level(), b.id); if (!q || !q.walk) return false; } return true; };
-      const cell = (x, z) => [Math.floor(x / cs), Math.floor(z / cs)]; const [sx, sz] = cell(st.X - b.x * TL, st.Z - b.y * TL), [tx, tz] = cell(s.a[0], s.a[1]); const prev = new Map(); const key = (x, z) => z * n + x; const q = [[sx, sz]]; prev.set(key(sx, sz), null);
-      for (let i = 0; i < q.length; i++) { const [x, z] = q[i]; if (x === tx && z === tz) break; for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + ax, Z = z + az; if (X < 0 || Z < 0 || X >= n || Z >= n || prev.has(key(X, Z))) continue; if (!(X === tx && Z === tz) && !fits((X + 0.5) * cs, (Z + 0.5) * cs)) continue; prev.set(key(X, Z), [x, z]); q.push([X, Z]); } }
-      const path = []; if (prev.has(key(tx, tz))) { let cur = [tx, tz]; while (cur) { path.unshift([(cur[0] + 0.5) * cs, (cur[1] + 0.5) * cs]); cur = prev.get(key(cur[0], cur[1])); } }
+      const cell = (x, z) => [Math.floor(x / cs), Math.floor(z / cs)]; const key = (x, z) => z * n + x;
+      // (the shut doors of the storey, by their middle and their wall's normal: a cell by one is passed through it, once open)
+      const shut = []; for (const dr of p.doors) { const ww = p.walls[dr.wall]; if (dr.kind === 'vao' || dr.id === e.door || !ww || ww.lv !== G.Possess.level() || In.doorState(b, dr.id).state === 'aberta') continue; const LL = Math.hypot(ww.b[0] - ww.a[0], ww.b[1] - ww.a[1]) || 1; const ux = (ww.b[0] - ww.a[0]) / LL, uz = (ww.b[1] - ww.a[1]) / LL; shut.push({ id: dr.id, x: ww.a[0] + ux * dr.at, z: ww.a[1] + uz * dr.at, nx: -uz, nz: ux }); }
+      const atDoor = (x, z) => shut.find(o => Math.hypot(x - o.x, z - o.z) < 0.45);
+      const route = thru => { const [sx, sz] = cell(st.X - b.x * TL, st.Z - b.y * TL), [tx, tz] = cell(s.a[0], s.a[1]); const prev = new Map(); const q = [[sx, sz]]; prev.set(key(sx, sz), null);
+        for (let i = 0; i < q.length; i++) { const [x, z] = q[i]; if (x === tx && z === tz) break; for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + ax, Z = z + az; if (X < 0 || Z < 0 || X >= n || Z >= n || prev.has(key(X, Z))) continue; const cx = (X + 0.5) * cs, cz = (Z + 0.5) * cs; if (!(X === tx && Z === tz) && !fits(cx, cz) && !(thru && atDoor(cx, cz))) continue; prev.set(key(X, Z), [x, z]); q.push([X, Z]); } }
+        const out = []; if (prev.has(key(tx, tz))) { let cur = [tx, tz]; while (cur) { out.unshift([(cur[0] + 0.5) * cs, (cur[1] + 0.5) * cs]); cur = prev.get(key(cur[0], cur[1])); } } return out; };
+      let path = route(false), doors = 0;
+      // (a stair behind a shut door — in the back room of a sobrado of the metropole of the v37's last worlds, T-251 —: reached as a
+      // player reaches it, the way to the door walked, the hands open it, and through it square to its wall; then the way on)
+      if (!path.length) { const via = route(true); const k = via.findIndex(pt => atDoor(pt[0], pt[1])); const o = k >= 0 ? atDoor(via[k][0], via[k][1]) : null;
+        if (o) { for (const pt of via.slice(0, k)) go(pt[0], pt[1], 120);
+          let mx = o.nx, mz = o.nz; if ((st.X - b.x * TL - o.x) * mx + (st.Z - b.y * TL - o.z) * mz < 0) { mx = -mx; mz = -mz; } // (the body's side of it)
+          go(o.x + mx * 0.6, o.z + mz * 0.6, 200);
+          let bt = null; for (let j = 0; j < 30 && !(bt && bt.id === 'portaPlanta' && bt.t.d.id === o.id); j++) { G.Cam3D.yaw = Math.atan2(b.y * TL + o.z - st.Z, b.x * TL + o.x - st.X); bt = G.Interact.best(); G.Main.frameFor(33); }
+          if (bt && bt.id === 'portaPlanta' && bt.t.d.id === o.id) G.Interact.run(bt); __E.until(() => !G.Avatar.busy(), 120); __E.f(20);
+          if (In.doorState(b, o.id).state === 'aberta') { doors++; go(o.x - mx * 0.7, o.z - mz * 0.7, 200); path = route(false); } } }
       for (const pt of path) go(pt[0], pt[1], 120);
       // (up: the stick held along the flight from its foot)
       let lid = 0, flown = 0; const dir = Math.atan2(s.dir[1], s.dir[0]);
       for (let k = 0; k < 400 && G.Possess.level() === s.lv0; k++) { G.Cam3D.yaw = dir; G.Input3D.down.frente = true; G.Main.frameFor(33); const f = G.Avatar.flight(); if (f) flown++; const o = B3.opened().find(qq => qq.id === b.id); if (o && o.lids.some(x => x > 0.3)) lid++; }
       G.Input3D.down.frente = false; __E.f(20);
-      out.up = { path: path.length, lv: G.Possess.level(), want: s.lv1, flown, lid, hole: !!s.hole, camIn }; }
+      out.up = { path: path.length, doors, lv: G.Possess.level(), want: s.lv1, flown, lid, hole: !!s.hole, camIn }; }
     // 6. saved and loaded in the house: inside still, drawn open again
     { const sv = G.Save.serialize(); G.Save.apply(JSON.parse(sv)); __E.until(() => G.Modes.state === 'INC', 400); __E.until(() => B3.isOpen(b.id), 200); __E.f(10);
       const v2 = G.Possess.body(); out.load = { body: !!v2, inside: !!v2 && v2.inside === b.id, lv: G.Possess.level(), open: B3.isOpen(b.id), err: JSON.stringify(G.modErr) }; }
