@@ -472,8 +472,11 @@
   const recKey = b => { const In = G.Interiors; if (In.keyOf) return In.keyOf(b); const r = b.ip; return r ? b.id + ':' + r.r + ':' + r.f + ':' + b.type + ':' + r.s + ':' + (r.fx || []).length : ''; };
   const KEPT_MAX = 160;
   // the plan of a building, made — or null (and asked for: a building without one is drawn and walked as before)
-  // (a ruin is walked as the world has it — open ground, its rubble drawn the old way, D-050 —: no plan for the feet either)
-  const planned = b => !!b && b.built && b.type !== 'ruin' && !!G.Interiors && G.Interiors.has(b);
+  // (a ruin is walked as the world has it — open ground, its rubble drawn the old way, D-050 —: no plan for the feet either;
+  // a house being extended over its family is walked by the plan of its record — L-371: the family keeps it the whole work,
+  // the world's rule of P1 —, the old house's until the work is done (Interiors.complete makes it the new one's then), as the
+  // 3D draws it whole under the scaffold of the new one (Build3D.shellOf, P3): the body in and out at the old house's door)
+  const planned = b => !!b && (b.built || !!b.upgradeFrom) && b.type !== 'ruin' && !!G.Interiors && G.Interiors.has(b);
   Sp.plan = function (b) {
     const In = G.Interiors; if (!planned(b) || !In.want) return null;
     const k = recKey(b); const m = kept.get(b.id); if (m && m.k === k) return m.p;
