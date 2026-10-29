@@ -74,11 +74,11 @@ module.exports = {
       quem: 'os mineiros (mineiro); os pescadores e os estivadores do cais',
       sistemas: ['G.Porto', 'G.Pesca', 'G.Fishers', 'G.Depot', 'G.Act'],
       atividades: [
-        { id: 'minerar', o: 'trabalhar na mina: a pedra, o minério, o ouro', essencial: true, tipos: ['mina'], tarefa: 'minejob', recursos: ['stone', 'minerio', 'ouro'], resultado: 'o veio diminui e o armazém cresce', condicao: 'um veio com o que tirar', feito: true, provas: [] },
+        { id: 'minerar', o: 'trabalhar na mina: a pedra, o minério, o ouro', essencial: true, tipos: ['mina'], tarefa: 'minejob', recursos: ['stone', 'minerio', 'ouro'], resultado: 'o veio diminui do que sai da mina, e só isso o povo conta e paga; o minério vai ao armazém pelo livro (\'mina\', \'entrega\')', condicao: 'um veio com o que tirar', feito: true, provas: ['qa/mina.js'] },
         { id: 'pescar', o: 'sair ao mar com o barco e pescar no pesqueiro contado', essencial: true, tipos: ['doca'], tarefa: 'fish', recursos: ['food'], resultado: 'o peixe sai do pesqueiro daquela água pelo livro e volta ao cais em caixas', condicao: 'um barco, um pesqueiro com peixe', feito: true, provas: ['qa/pesca.js', 'qa/porto.js'] },
         { id: 'desembarcar', o: 'o navio e o barco desembarcam no cais: as caixas nascem com nome e dono', essencial: true, tipos: ['doca'], ato: 'descarga/pegar', corpo: 'atividade', recursos: ['sal', 'food'], resultado: 'a carga do porão em caixas no cais, numa descarga do povo', condicao: 'um navio ou barco atracado', feito: true, provas: ['qa/porto.js'] },
       ],
-      notas: 'a mina e o cais não têm planta; a mina não tem prova própria (a vida curta a cobre)',
+      notas: 'a mina e o cais não têm planta; a mina tem a prova do mundo pronto (qa/mina.js: o turno na galeria e no salto, a morte e o save na face, as mãos ocupadas, o fim do veio, a galeria que o deus derruba — L-381)',
     },
     governo: {
       funcao: 'onde a cidade se governa, se cobra, se guarda e se pune: a administração, a coletoria, a cadeia, o quartel, a torre',
