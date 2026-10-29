@@ -99,8 +99,9 @@ const formOf = m => G.Forma.of(m.t, m.c), body = m => G.Forma.body(formOf(m));
       for (const [pt, what] of [[gp, 'pelo portão do pilone'], [pp, 'pela porta do domo']]) if (pt && ed && (ed.kind !== 'vao' || Math.hypot(e.x - pt[0], e.z - pt[1]) > 0.06 || !pas)) why.push(`a rua não entra ${what}, aberto, pela passagem`);
       const st = p.stairs.find(q => q.kind === 'degraus'); if (B.degraus.length && (!st || !st.treads || st.treads.length < B.degraus.length)) why.push('sem os degraus da forma');
     }
-    // (the room it is for, reached from the street on the walk from the door: the throne's, the chief's hall, the hot room, the lake)
-    const fn = { palacio: 'trono', paco: 'salao', banhos: B ? 'quente' : 'banhos' }[m.t];
+    // (the room it is for, reached from the street on the walk from the door: the throne's, the chief's hall — his seat's, by
+    // In.formType: not a workshop's hall, plantas.js —, the hot room, the lake)
+    const fn = { palacio: 'trono', paco: 'trono', banhos: B ? 'quente' : 'banhos' }[m.t];
     const g = p.reach && p.reach[0]; const room = p.rooms.find(q => q.fn === fn); const n = p.grid.n, cs = p.grid.cs; let got = 0;
     if (g && room) for (let z = 0; z < n && !got; z++) for (let x = 0; x < n; x++) if (g[z * n + x] && (x + 0.5) * cs > room.r[0] && (x + 0.5) * cs < room.r[2] && (z + 0.5) * cs > room.r[1] && (z + 0.5) * cs < room.r[3]) { got = 1; break; }
     if (!got) why.push(`o cômodo ${fn} que a rua não alcança`);

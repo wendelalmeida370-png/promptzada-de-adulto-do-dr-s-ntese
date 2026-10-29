@@ -378,77 +378,13 @@
     f(P, F);
   }
   // ------------------------------ the palace, the baths and the chief's house (D-093; the leader's of 29/10) ------------------------------
-  // the shell by the form's body, as the god and the 3D draw it (P4's builder of int-civicos.js, In.formType, takes it at the
-  // integration — this branch's own till then, by the same rules): the walls at the form's foot (the people's thickness, inside
-  // it), the floor on the form's base — the plinth, the platform, the footing — or on the ground, the eaves, the door and the
-  // windows where the form has them; before the door the porch — an annex open at its sides, the form's columns along its
-  // front (the wall from the outer face of one end column to the other's: each bay where the form has it), the bay nearest
-  // where the street comes up the street's way in —; before the porch the pylon's gate (the Egyptian palace's: the passage
-  // through it an annex under the lintel, between the towers, to the gate's face; the gate a 'vao' always open, as the form
-  // draws it with no leaf — the hall's door is the one that shuts); the way a form covers to its walls (the temazcal's, under
-  // the dome, its way in at the dome's face); the form's steps from the street up to the base, one flight on their own treads.
-  // Nothing of it by chance: it is the form's. o.t: the walls' thickness (the temazcal's room, inside the dome — what is seen is
-  // the dome). → { I, B, h0, rooms: { main, porch, gate, pass, all } } — the hall's inside, the form's body, the storey's
-  // height, the rooms —, or null
-  function bodyShell(P, F, o) {
-    o = o || {}; const B = G.Forma.body(F); if (!B || !B.porta) { P.errs.push('a forma sem corpo'); return null; }
-    const tr = P.tr; const t = o.t || Math.min(tr.t || 0.3, 0.35), c = t / 2; const sh = B.r.slice(); const y0 = B.y0, h0 = B.y1 - B.y0;
-    P.shell = { kind: 'rect', r: sh, t, mat: B.tabuas ? 'tabua' : tr.mat, base: y0 >= In.BODY.step ? 'macica' : 'pedra', baseH: y0, floors: 1, eave: B.y1 };
-    const T = B.telhado; P.roof = { kind: T.tipo, along: T.ao || null, h: r2(T.y1 - T.y0), over: T.ov || 0 }; P.roofGeo = { kind: T.tipo, along: T.ao || null, eave: T.y0, rise: T.y1 - T.y0, R: T.r.slice() };
-    const I = P.inner(); P.level(0, y0, h0, 'piso', I); P.entryLv = 0;
-    P.outer = P.walls4(0, [sh[0] + c, sh[1] + c, sh[2] - c, sh[3] - c], t, h0, 1, 'parede'); P.outers = [P.outer];
-    // (the hall's door on the front face where the form has it — the street's, where nothing stands before it)
-    const porch = B.portico, gate = B.portao, pass = B.passagem; const before = !!(porch || gate || pass);
-    const fw = P.outer.frente; const dh = Math.min(h0 - 0.1, B.porta.y1 - B.porta.y0);
-    const d0 = P.door(fw, P.atOf(fw, [B.porta.u, sh[3] - c]), B.porta.w, dh, -1, before ? -1 : 'rua', before ? 0 : 1, 'porta');
-    // (the windows: each pane on its face, along it as the form has it, its sill over the floor)
-    for (const j of B.janelas) {
-      const id = P.outer[j.na]; if (id === undefined) continue; const m = (j.de + j.ate) / 2;
-      const p = j.na === 'frente' ? [m, sh[3] - c] : j.na === 'fundo' ? [m, sh[1] + c] : j.na === 'direita' ? [sh[2] - c, m] : [sh[0] + c, m];
-      P.window(id, P.atOf(id, p), j.ate - j.de, j.y1 - j.y0, j.y0 - y0);
-    }
-    // (where the street comes up: the middle of the form's steps, else of its door)
-    const uIn = B.degraus.length ? (Math.min(...B.degraus.map(q => q.r[0])) + Math.max(...B.degraus.map(q => q.r[2]))) / 2 : B.porta.u;
-    let entry = { door: d0, u: B.porta.u, w: B.porta.w, v: sh[3] }; let gateR = null, passR = null;
-    if (porch) {
-      P.annex.push({ r: porch.r.slice(), h: porch.y1 - y0, fn: 'portico', lv: 0, roof: 'portico' });
-      // (the columns right to left, as a front wall runs: its bays numbered from its start)
-      const cs = porch.colunas.slice().sort((a, b) => b.c[0] - a.c[0]); const n = cs.length, rc = cs[0].r, vc = cs[0].c[1];
-      const mid = k => (cs[k].c[0] + cs[k + 1].c[0]) / 2; let kn = 0; for (let k = 1; k < n - 1; k++) if (Math.abs(mid(k) - uIn) < Math.abs(mid(kn) - uIn)) kn = k;
-      const C = P.colonnade(0, [cs[0].c[0] + rc, vc], [cs[n - 1].c[0] - rc, vc], { n, col: 2 * rc, h: porch.y1 - y0, outer: 1, door: kn, rua: !gate });
-      if (!gate) entry = { door: C.door, u: mid(kn), w: P.doors[C.door].w, v: porch.r[3] };
-    }
-    if (gate) {
-      const v0 = porch ? porch.r[3] : sh[3], tw = B.torres || [], tg = 0.2;
-      const gl = Math.max(gate.r[0], ...tw.filter(q => q[2] <= gate.u).map(q => q[2])), gr = Math.min(gate.r[2], ...tw.filter(q => q[0] >= gate.u).map(q => q[0]));
-      P.annex.push({ r: [gl, v0, gr, gate.v], h: gate.y1 - gate.y0, fn: 'passagem', lv: 0, roof: 'portico' });
-      const gw = P.wall(0, [gr, gate.v - tg / 2], [gl, gate.v - tg / 2], tg, gate.y1 - gate.y0 + 0.5, 1, 'parede');
-      const gd = P.door(gw, P.atOf(gw, [gate.u, gate.v - tg / 2]), gate.w, gate.y1 - gate.y0, -1, 'rua', 1, 'vao');
-      entry = { door: gd, u: gate.u, w: gate.w, v: gate.v }; gateR = [gl, v0, gr, gate.v - tg];
-    }
-    if (pass) {
-      const tp = 0.1, pv = pass.r[3] - tp / 2, w = Math.min(B.porta.w, pass.r[2] - pass.r[0]);
-      P.annex.push({ r: pass.r.slice(), h: pass.y1 - y0, fn: 'passagem', lv: 0, roof: 'portico' });
-      const pw = P.wall(0, [pass.r[2], pv], [pass.r[0], pv], tp, pass.y1 - y0, 1, 'parede');
-      const pd = P.door(pw, P.atOf(pw, [B.porta.u, pv]), w, dh, -1, 'rua', 1, 'vao');
-      entry = { door: pd, u: B.porta.u, w, v: pass.r[3] }; passR = [pass.r[0], pass.r[1], pass.r[2], pass.r[3] - tp];
-    }
-    P.entrance = { door: entry.door, u: entry.u, v: entry.v, w: entry.w, lv: 0 };
-    // (the steps of the form, from the street up to the base: one flight on its own treads — where the base runs on before the
-    // porch or the walls, a last tread at the floor)
-    if (B.degraus.length) {
-      let r = B.degraus[0].r.slice(); for (const q of B.degraus) r = [Math.min(r[0], q.r[0]), Math.min(r[1], q.r[1]), Math.max(r[2], q.r[2]), Math.max(r[3], q.r[3])];
-      const treads = B.degraus.map(q => ({ r: q.r.slice(), y: q.y1 })); const edge = porch ? porch.r[3] : sh[3];
-      if (r[1] > edge + 1e-6) { treads.push({ r: [r[0], edge, r[2], r[1]], y: y0 }); r[1] = edge; }
-      P.stair('degraus', -1, 0, r, 0, -1, null, { larga: r[2] - r[0] >= 1.2 ? 1 : 0, treads });
-    }
-    if (P.inside()) return null;
-    const rooms = { main: P.room(0, 'salao', I), porch: null, gate: null, pass: null, all: [] }; rooms.all.push(rooms.main);
-    if (porch) { rooms.porch = P.room(0, 'portico', porch.r, 1); rooms.all.push(rooms.porch); }
-    if (gateR) { rooms.gate = P.room(0, 'passagem', gateR, 0); rooms.all.push(rooms.gate); }
-    if (passR) { rooms.pass = P.room(0, 'passagem', passR, 0); rooms.all.push(rooms.pass); }
-    return { I, B, h0, rooms };
-  }
+  // the shell by the form's body, as the god and the 3D draw it — P4's builder, In.formType (int-civicos.js: the walls at the
+  // form's foot, the floor on its base or on the ground, the door and the windows where the form has them, the porch, the
+  // pylon's gate before the walls with no court (the Egyptian palace's), the way the form covers to its walls (the temazcal's),
+  // the form's steps) —; here, of each type, how its hall is split into rooms and what stands in them
+  // (the storey's height: the form's body, from its floor to its eaves)
+  const storeyH = P => { const B = G.Forma.body(G.Forma.of(P.rec.t, P.rec.c)); return B.y1 - B.y0; };
+  const fnRoom = (P, rooms, fn) => rooms.all.find(id => P.rooms[id] && P.rooms[id].fn === fn);
   // (a door of 0.9 m in a partition, at p, between the rooms either side of it)
   const inDoor = (P, w, p, ra, rb, h) => P.door(w, P.atOf(w, p), 0.9, Math.min(h - 0.2, 2.1), ra, rb, 0, 'porta');
   // (where one stands to use a piece, a body's room — 0.7 m — kept clear of what is laid after it: the plan walks by its cells,
@@ -468,18 +404,21 @@
   // and the kitchen beside it — the fire, the table, the jars —; a hall too shallow for them (the Norse's longhouse), the
   // chamber at its left end and the hearth in the hall. In the hall the throne against its back in the middle, the benches of
   // the court along its sides, two lamps, the chest
-  function palaceForm(P) {
-    const F = G.Forma.of(P.rec.t, P.rec.c); const h = bodyShell(P, F); if (!h) return;
-    const { I, h0, rooms } = h; const ti = 0.15; let hall = rooms.main, bed, cook = null;
+  function palaceSplit(P, I) {
+    const h0 = storeyH(P), ti = 0.15; const hall = P.room(0, 'trono', I);
     if (I[3] - I[1] >= 6.4) {
-      const vs = r2(I[1] + 2.6); const [back, front, w] = P.split(hall, 'v', vs, ti, h0); hall = front;
-      const [left, right] = P.split(back, 'u', r2((I[0] + I[2]) / 2), ti, h0); bed = left; cook = right;
-      inDoor(P, w, [r2(I[0] + 1.0), vs], hall, bed, h0); inDoor(P, w, [r2(I[2] - 1.0), vs], hall, cook, h0); rooms.all.push(front, right);
-    } else {
-      const us = r2(I[0] + 2.8); const [left, right, w] = P.split(hall, 'u', us, ti, h0); bed = left; hall = right;
-      inDoor(P, w, [us, r2(I[1] + 1.0)], hall, bed, h0); rooms.all.push(right);
+      const vs = r2(I[1] + 2.6); const [back, front, w] = P.split(hall, 'v', vs, ti, h0);
+      const [left, right] = P.split(back, 'u', r2((I[0] + I[2]) / 2), ti, h0);
+      inDoor(P, w, [r2(I[0] + 1.0), vs], front, left, h0); inDoor(P, w, [r2(I[2] - 1.0), vs], front, right, h0);
+      P.rooms[front].fn = 'trono'; P.rooms[left].fn = 'aposento'; P.rooms[right].fn = 'cozinha';
+      return { main: front, rooms: [left, front, right] };
     }
-    rooms.main = hall; P.rooms[hall].fn = 'trono'; P.rooms[bed].fn = 'aposento'; if (cook !== null) P.rooms[cook].fn = 'cozinha';
+    const us = r2(I[0] + 2.8); const [left, right, w] = P.split(hall, 'u', us, ti, h0);
+    inDoor(P, w, [us, r2(I[1] + 1.0)], right, left, h0); P.rooms[left].fn = 'aposento'; P.rooms[right].fn = 'trono';
+    return { main: right, rooms: [left, right] };
+  }
+  function palaceFurnish(P, rooms) {
+    const hall = rooms.main, bed = fnRoom(P, rooms, 'aposento'), ck = fnRoom(P, rooms, 'cozinha'), cook = ck === undefined ? null : ck;
     if (!throneAt(P, hall)) { P.errs.push('sem lugar para o trono'); return; }
     const court = () => { let n = 0; for (const s of ['esquerda', 'direita']) for (let g = 0; g < 2; g++) if (P.place('banco', 0, hall, { sides: [s] })) n++; if (n < 2) P.errs.push(`só ${n} bancos no salão do trono`); };
     const chamber = () => { if (!P.place('cama-casal', 0, bed) && !P.place('cama', 0, bed)) { P.errs.push('sem cama no aposento'); return; } P.opt(() => P.place('arca', 0, bed)); };
@@ -488,9 +427,11 @@
     P.opt(() => P.place('arca', 0, hall));
   }
   // the chief's house (paço): his hall — his seat against its back in the middle, the fire (the hearth in the middle where the
-  // people keeps one, else against a wall), the benches of those he receives along its sides, the table, the chest
-  function pacoForm(P) {
-    const F = G.Forma.of(P.rec.t, P.rec.c); const h = bodyShell(P, F); if (!h) return; const hall = h.rooms.main;
+  // people keeps one, else against a wall), the benches of those he receives along its sides, the table, the chest. The hall is
+  // his seat's ('trono'): one room, but not a workshop's hall — qa/plantas.js, «famílias distintas»: the Egyptian's had the
+  // structure of the recipe's w-salao.terreo
+  function pacoFurnish(P, rooms) {
+    const hall = rooms.main;
     if (!throneAt(P, hall)) { P.errs.push('sem lugar para o assento do chefe'); return; }
     const fire = () => { if (!fireIn(P, hall)) P.errs.push('sem lugar para o fogo'); };
     const benches = () => { let n = 0; for (const s of ['esquerda', 'direita', 'frente']) for (let g = 0; g < 2 && n < 4; g++) if (P.place('banco', 0, hall, { sides: [s] })) n++; if (n < 2) P.errs.push(`só ${n} bancos no salão`); };
@@ -501,18 +442,20 @@
   // the baths (banhos): where one undresses (the pegs on a wall, a bench), the water (the pool; the tub where no pool goes), the
   // furnace that warms it (the keeper's work) — in the thermae's hall the changing room across its front by the door, the cold
   // room and the hot one side by side behind it, one into the other; the sauna's and the temazcal's one room, the steam's —;
-  // the Egyptian's sacred lake under the sky (sacredLake)
-  function bathsForm(P) {
-    const F = G.Forma.of(P.rec.t, P.rec.c); if (!G.Forma.body(F)) { sacredLake(P, F); return; }
-    const h = bodyShell(P, F, F.style === 'asteca' ? { t: 0.2 } : null); if (!h) return;
-    const { I, h0, rooms } = h; const ti = 0.15; let dress = rooms.main, cold = null, hot = rooms.main;
+  // the Egyptian's sacred lake under the sky (sacredLake: the form has no body)
+  function bathsSplit(P, I) {
+    const h0 = storeyH(P), ti = 0.15; const hall = P.room(0, 'quente', I);
     if (I[2] - I[0] >= 5.4 && I[3] - I[1] >= 5.4) {
-      const vs = r2(I[3] - 1.8); const [back, front, w] = P.split(rooms.main, 'v', vs, ti, h0); dress = front;
-      const us = r2((I[0] + I[2]) / 2); const [left, right, w2] = P.split(back, 'u', us, ti, h0); cold = left; hot = right;
-      inDoor(P, w, [r2(I[0] + 1.2), vs], dress, cold, h0); inDoor(P, w2, [us, r2(I[1] + 1.2)], cold, hot, h0);
-      P.rooms[dress].fn = 'vestiario'; P.rooms[cold].fn = 'frio'; rooms.all.push(front, right);
+      const vs = r2(I[3] - 1.8); const [back, front, w] = P.split(hall, 'v', vs, ti, h0);
+      const us = r2((I[0] + I[2]) / 2); const [left, right, w2] = P.split(back, 'u', us, ti, h0);
+      inDoor(P, w, [r2(I[0] + 1.2), vs], front, left, h0); inDoor(P, w2, [us, r2(I[1] + 1.2)], left, right, h0);
+      P.rooms[front].fn = 'vestiario'; P.rooms[left].fn = 'frio'; P.rooms[right].fn = 'quente';
+      return { main: front, rooms: [left, front, right] };
     }
-    P.rooms[hot].fn = 'quente';
+    return { main: hall, rooms: [hall] };
+  }
+  function bathsFurnish(P, rooms) {
+    const hot = fnRoom(P, rooms, 'quente'), cl = fnRoom(P, rooms, 'frio'), cold = cl === undefined ? null : cl, dr = fnRoom(P, rooms, 'vestiario'), dress = dr === undefined ? hot : dr;
     const pool = id => keepStand(P, P.place('piscina', 0, id, { sides: ['livre', 'fundo', 'esquerda', 'direita'], margin: 0.5 }) || P.place('tina-banho', 0, id), ['entrar']);
     const pools = () => { let n = 0; for (const id of [hot, cold].filter(q => q !== null)) if (pool(id)) n++; if (!n) P.errs.push('sem lugar para a água'); };
     const fire = () => { if (!keepStand(P, P.place('fornalha-banho', 0, hot))) P.errs.push('sem lugar para a fornalha'); };
@@ -620,12 +563,17 @@
     solids(P, F, id, { y });
   }
 
-  // (the palace's, the baths', the chief's house's: the form's — the one the god and the 3D draw — before the type's halls, and
+  // (the palace's, the baths', the chief's house's: the form's by P4's one builder of them — In.formType: its shell, its porch,
+  // the pylon's gate, the temazcal's way and walls, the sacred lake where the form has no body —, before the type's halls, and
   // the one a new building is given wherever it is laid out (D-093); the great palace and the colossal one keep their plans,
   // they have no body of the form. A record of before goes to the form's on opening: P4's In.migrate, by formFam)
-  // (and the granary's, phase E, only where it is no hall: the Egyptian's domes, the Aztec's pots — the others keep the recipe's)
+  // (and the granary's and the market's, phase E, open grounds, by their own: the granary only where it is no hall — the
+  // Egyptian's domes, the Aztec's pots; the others keep the recipe's)
   const BINS = { egipcio: 1, asteca: 1 };
-  for (const [t, fam, build, only] of [['palacio', 'forma.palacio', palaceForm], ['banhos', 'forma.banhos', bathsForm], ['paco', 'forma.paco', pacoForm], ['celeiro', 'forma.celeiro', granaryForm, BINS], ['mercado', 'forma.mercado', marketForm]]) {
+  In.formType('palacio', { fam: 'forma.palacio', hall: 'trono', split: palaceSplit, furnish: palaceFurnish, keep: true });
+  In.formType('banhos', { fam: 'forma.banhos', hall: 'quente', split: bathsSplit, furnish: bathsFurnish, keep: true, t: (rec, F) => (F.style === 'asteca' ? 0.2 : null), bare: (P, F) => sacredLake(P, F) });
+  In.formType('paco', { fam: 'forma.paco', hall: 'trono', furnish: pacoFurnish, keep: true });
+  for (const [t, fam, build, only] of [['celeiro', 'forma.celeiro', granaryForm, BINS], ['mercado', 'forma.mercado', marketForm]]) {
     const T0 = In.TYPES[t]; if (!T0) continue;
     In.addFamilies([{ id: fam, H: 'forma', V: t, S: fam, name: 'Pela forma', can: rec => (only && !only[rec.c] ? 'o deste povo é um salão' : G.Forma && G.Forma.has(rec.t, rec.c) ? null : 'o prédio sem forma'), build: P => build(P) }]);
     In.addTypes({ [t]: Object.assign({}, T0, { fams: [fam].concat((T0.fams || []).filter(f => f !== fam)), formFam: fam, prefer: (rec, ok) => (ok.includes(fam) ? [fam] : ok) }) });
