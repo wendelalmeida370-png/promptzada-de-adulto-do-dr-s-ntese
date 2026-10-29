@@ -26,6 +26,8 @@
 //    regra S2 no porto)
 // h14 a cidade que a água cortou de todos os seus armazéns acende uma fogueira do lado das suas ruas, e quem tem fome lá
 //    come (L-368; achado pela regra S2 no caos da semente 13: a criança de Tenochtitlan que morreu de fome em casa)
+// h15 comer o que se leva nas mãos passa pelo livro ('refeicao'), e a fome cai pelo que foi comido — meia ração, meia
+//    refeição —; a compra a caminho de casa não é comida (L-385; achado pela qa/campo.js do P2)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -255,6 +257,9 @@ const calmOne = (skip, also) => {
     // her bed woke her to forage. Out to 30: the hunger looks for a bush in a square of twenty tiles each way, 28,3 at its
     // corners, T-115)
     const bushes = new Map(); const pick = () => { for (const b of S.bushes.values()) if ((b.berries > 0 || b.grow > 0) && (G.dist(b.x, b.y, v.x, v.y) < 30 || (h && G.dist(b.x, b.y, h.x, h.y) < 30))) { if (!bushes.has(b)) bushes.set(b, [b.berries, b.grow]); b.berries = 0; b.grow = 0; } };
+    // (nor the house's pantry: at home with food in it, the hungry one rises to eat at the table — the supper of the house,
+    // G.Lar (villagers.js eatTask), of the Patch 2: the case would see her rise for a meal in reach. Given back at the end)
+    const pan = h ? D.get('h:' + h.id, 'food') : 0; if (pan > 0) D.use('h:' + h.id, 'food', pan, { code: 'teste', part: true });
     S.time = 0.86; Vg.endTask(v); v.hunger = 100; v.hp = 55; v.energy = 5; v._hungerT = 0;
     Vg.setTask(v, { type: 'sleep', pri: 2.5, kind: 'sleep' });
     // (counted from when she lies down: the way to her bed is the world's own — 3.5 s of it once the plan's door was on —,
@@ -265,6 +270,7 @@ const calmOne = (skip, also) => {
     for (let k = 0; k < 40; k++) { v._noStore = S.clock + 5; pick(); const was = v.task && v.task.type === 'sleep'; M.viver(0.5); looks++; if (v.task && v.task.type === 'sleep' && v.sleeping) asleep++; if (was && !(v.task && v.task.type === 'sleep')) { wakes++; seen.push(v.task ? v.task.type : '-'); } }
     v._noStore = 0; void pan0; void food0;
     for (const [b, [n, g]] of bushes) { b.berries = n; b.grow = g; }
+    if (pan > 0) D.make('h:' + h.id, 'food', pan, { code: 'teste', part: true });
   }
   ok('h9 sem comida ao alcance, quem dorme com fome não fica acordando a cada passo', !!v && wakes === 0 && asleep >= looks - 2, v ? `${v.name}: ${(walk * 0.5).toFixed(1)} s até deitar; depois, ${asleep} de ${looks} olhadas dormindo, ${wakes} vezes acordado sem ter o que comer${seen.length ? ' (' + seen.join(', ') + ')' : ''}` : 'ninguém');
 }
@@ -396,6 +402,28 @@ const calmOne = (skip, also) => {
   for (const [i, t] of was) S.type[i] = t; S.typeVer++; W.invalidateLand(); W.touchWalk(); // (the water gone again, for the cases after)
   ok('h14 a cidade cortada de todos os seus armazéns acende uma fogueira do lado das ruas, e quem tem fome come', cut && !!lit && lit.built && (!v || ate),
     !cut ? `a água em volta dos ${stores.length} armazéns de ${set.name} não os cortou das ruas (um ainda alcançado)` : `${set.name}, ${stores.length} armazém(ns) cortado(s) pela água${moved ? ` (${moved} construtor(es) trazido(s) às ruas)` : ''}: ${lit ? `${lit.type}#${lit.id} nova, ${lit.built ? 'acesa' : 'AINDA em obra'} em ${Math.round(S.clock - t0)} s` : 'NENHUMA fogueira nova do lado das ruas em 240 s'}; ${v ? `${v.name}, com a fome ${Math.round(h0)}: ${ate ? 'comeu' : 'NÃO comeu'}` : 'ninguém com fome nas ruas'}`);
+}
+// ---------------- h15 eating what one carries goes through the ledger (L-385) ----------------
+// (found by P2's qa/campo.js: a farmer's food left the hands with no line in the ledger — the meal from the hands wrote the
+// carry itself, and with half a ration in the hands it fed a whole meal. The meal from the hands comes out by the ledger,
+// 'refeicao', and the hunger falls by what was eaten; a load that is an errand — a purchase on its way home — is not eaten)
+{
+  const v = calmOne(); let a = null, b = null, c = null;
+  if (v) {
+    const ref = 'v:' + v.id;
+    const empty = () => { Vg.endTask(v); if (v.carry) D.use(ref, v.carry.k, v.carry.n, { code: 'teste', mine: true, part: true }); };
+    const meal = (n, to) => {
+      empty(); D.make(ref, 'food', n, { code: 'teste' }); if (to && v.carry) v.carry.to = to; // (the test's hand: the load bound home)
+      v.hunger = 90; const L0 = S.ledgerN; Vg.H.eatTask(v);
+      const lines = D.ledger().filter(e => e[0] > L0 && e[3] === ref && e[5] === 'food' && e[8] === 'refeicao' && e[9] === v.id);
+      return { n, ate: r2(lines.reduce((s, e) => s + e[6], 0)), lines: lines.length, fed: r2(90 - v.hunger), left: v.carry && v.carry.k === 'food' ? r2(v.carry.n) : 0, task: v.task ? v.task.type : 'nada' };
+    };
+    a = meal(3); b = meal(0.5); c = meal(2, 'h:' + v.home); empty();
+  }
+  const fine15 = !!a && a.ate === 1 && a.lines === 1 && a.fed === 55 && a.left === 2 && b.ate === 0.5 && b.fed === 27.5 && b.left === 0 && c.ate === 0 && c.left === 2;
+  const say = (m, what) => `${what}: ${m.lines ? `comeu ${m.ate} pelo livro ('refeicao')` : 'NENHUMA LINHA no livro'}, a fome caiu ${m.fed}, ficaram ${m.left} nas mãos`;
+  ok('h15 comer o que se leva nas mãos passa pelo livro, e a fome cai pelo que foi comido (L-385)', fine15,
+    v ? `${v.name}, com fome 90: ${say(a, '3 de comida')} · ${say(b, 'meia ração')} · ${say(c, '2 de uma compra a caminho de casa')}${c.ate ? ' — A COMPRA FOI COMIDA' : ''}` : 'ninguém numa cidade calma');
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }

@@ -193,8 +193,13 @@
         const sq = [...S.buildings.values()].filter(b => b.set === set.id && b.built && (b.type === 'praca' || b.type === 'mercado' || b.type === 'temple' || b.type === 'feira'));
         if (sq.length) { const b = G.pick(sq); const [cx, cy] = G.Village.center(b); for (let k = 0; k < 3 && count('pombo') + k < want.pombo; k++) { const x = cx + G.rr(-1.5, 1.5), y = cy + G.rr(-1.5, 1.5); if (W.walkableXY(x, y)) G.Animals.spawn('pombo', x, y, { dom: set.fac, set: set.id, home: b.id, coat: (G.R() * 4) | 0, age: G.rr(0.3, 3), hx: cx, hy: cy }); } }
       }
-      // eggs for the pantry
-      for (const a of have.galinha) { const h = S.buildings.get(a.home); if (h && a.grown >= 1 && !G.isNight()) h.pantry = (h.pantry || 0) + 0.02; }
+      // eggs for the pantry: laid in the nest a little at a time, and a whole one taken in — through the ledger, as far as the
+      // house's pantry has room ('ovos'); with no room the egg waits in the nest (L-221)
+      for (const a of have.galinha) {
+        const h = S.buildings.get(a.home); if (!h || !(a.grown >= 1) || G.isNight()) continue;
+        a.eggs = Math.min(1, (a.eggs || 0) + 0.02);
+        if (a.eggs >= 1 - 1e-9 && G.Depot && G.Depot.make('h:' + h.id, 'food', 1, { code: 'ovos' }).ok) a.eggs = 0;
+      }
       // a dog whose master died takes the next one of the house
       for (const a of have.cao) { if (S.villagers.has(a.owner)) continue; const l = residents.get(a.home); const nxt = l && l.find(v => v.age >= 12); if (nxt) a.owner = nxt.id; }
     }

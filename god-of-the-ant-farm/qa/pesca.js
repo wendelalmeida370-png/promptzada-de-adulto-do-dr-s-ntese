@@ -180,7 +180,9 @@ console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'águ
     const par = [kid.mother, kid.father].map(id => S.villagers.get(id)).find(p => p && p.set === town.id && !p.captive && !p.aboard && p.age < 60);
     par.role = par.role === 'pescador' ? 'pescador' : 'coletor'; atEdge(par, sp2); par.fishXp = 100;
     const fishT = () => G.Vg.setTask(par, { type: 'fish', spot: W.idx(sp2.lx, sp2.ly), x: sp2.lx, y: sp2.ly, wx: Math.sign(sp2.wx - sp2.lx), wy: Math.sign(sp2.wy - sp2.ly), pri: 1.2 });
-    fishT(); kid.x = sp2.lx + 0.6; kid.y = sp2.ly; kid.path = null; G.Vg.endTask(kid);
+    // (out of the house first, then beside the master: a child still at home in the morning — each one up at their own hour,
+    // G.Lar — is put out at the door by the endTask, far from the water, T-137)
+    fishT(); G.Vg.endTask(kid); kid.x = sp2.lx + 0.6; kid.y = sp2.ly; kid.path = null;
     const xp0 = kid.fishXp || 0, xo0 = other ? other.fishXp || 0 : 0;
     let followed = 0;
     for (let k = 0; k < 900; k++) {
