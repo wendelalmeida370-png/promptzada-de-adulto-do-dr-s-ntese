@@ -1,7 +1,5 @@
 # A Fundação de Gameplay e os Interiores Vivos — relatório de entrega (v37)
 
-> **Rascunho:** as seções 4 (os testes) e 8 (o desempenho) entram com a regressão completa.
-
 > Escrito para quem não programa. **Provado** quer dizer que há uma prova que roda de verdade e o resultado está anotado
 > aqui. **Parcial** quer dizer que funciona em parte, e o texto diz qual parte. **Não feito** está dito como não feito.
 > O desenho técnico e o plano estão em `FUNDACAO.md`; cada defeito, limite de teste e decisão, em `AUDIT.md`.
@@ -15,7 +13,7 @@ O dono pediu, em 19/10, três coisas:
 - **o adendo:** uma realidade só, em três níveis de resolução (o salto no tempo, o passo normal e o corpo encarnado), com
   testes de invariância causal.
 
-Foram 220 commits desde a v36 (`3da99be`), com três especialistas (C1 atividades e economia, C2 interiores, C3 o corpo, o
+Foram cerca de 370 commits desde a v36 (`3da99be`), com três especialistas (C1 atividades e economia, C2 interiores, C3 o corpo, o
 3D e a interface) e o líder integrando etapa por etapa, com uma prévia publicada a cada etapa.
 
 ## 2. O que mudou para quem joga
@@ -88,12 +86,58 @@ As invariantes de cada sistema estão no seu arquivo (`qa/*-inv.js`) e entram no
 
 ## 4. Os testes executados
 
-‹a regressão completa: preencher com o resumo da pasta da regressão — as fases, quantas provas, quantas passaram, as
-diferenças para a linha de base e o que cada uma quer dizer›
+A regressão completa (`qa/regress.sh`) rodou no código final da v37 — o jogo do commit `f3a5b3d` (com o L-382) e os mundos
+prontos da geração 7 —, no Chrome 153, numa máquina de 4 núcleos, em 29/10. O resumo tem uma linha por prova: são 980
+linhas, 979 provas e o navegador, e todas as provas passaram. Ele virou a nova linha de base (`qa/linha-de-base.txt`).
+
+| Fase | O que prova | Resultado |
+|---|---|---|
+| A vigia do código (`guard.js`) | as regras que se leem no código: quem escreve cada campo, nenhum `Math.random`… | passou, 140 arquivos |
+| O mar | os cenários do mar: colônias, invasões, naufrágios, pesca, saves no meio | 16 de 16, mais o desempenho |
+| A guerra | as quatro guerras de 10 casos, a virada, os cativos | 8 de 8 |
+| As vidas | duas vidas com o verificador; a mão do deus; save e load em laço | nenhuma violação S0–S2 |
+| O estado | saves danificados, o mapa de alcance, a bordo, os isolados, o determinismo, o salto em dois ritmos | tudo passou |
+| A tela | os painéis, o desenho, o macaco (teclas e cliques ao acaso), a extinção | tudo passou |
+| A cidade | os bairros, a vida da cidade, a memória dos mortos, os mundos prontos | 25 de 25 |
+| Os poderes | cada poder do deus, e o caos (um deus com fé infinita) | 57 de 57; o caos limpo nas duas sementes |
+| A fundação (nova) | as atividades, o porto, o negócio, a economia, a invariância, os interiores e as portas, os muros, o corpo | 647 de 647, em 56 provas, todas saindo limpas |
+| O Modo Encarnado | o corpo, o 3D, as mãos, a água, os balões e o Diário de Vida | 147 de 147; balões 8 de 8; diário 8 de 8 |
+| O desempenho | o mar com muitos barcos, sozinho na máquina | passou (§8) |
+
+**As diferenças para a linha de base** (a da v36, de 256 linhas):
+- 725 linhas novas, todas de provas novas:
+  - as 675 da fase da fundação, que a v36 não tinha;
+  - 28 das partes novas do Modo Encarnado (a descarga no cais, o armazém do porto e a escada da planta: e16, e17, e18);
+  - as 16 dos balões e do Diário de Vida;
+  - dois casos novos dos poderes (o chão que afunda sob quem corre, o bicho do mar que não entra no fundo seco);
+  - as famílias do modo desenvolvedor;
+  - o macaco, que agora falha por violação do verificador e não só por erro (T-122);
+  - o navegador anotado no resumo (T-123).
+- Uma linha mudou de nome: a reza no templo agora diz «a devoção e a fé do fiel» (T-171).
+- Nenhuma prova que passava na v36 passou a falhar.
+
+**O que as passadas da regressão acharam.** Nenhuma falha era defeito do jogo; todas eram premissas das provas:
+- **Na primeira passada**, uma prova dos poderes e seis da fundação falharam. Eram premissas que os mundos da geração 7
+  desfaziam: com o L-382, a história das cidades com muro mudou.
+  - O campeão do duelo já tinha um nome mais alto (T-253).
+  - O construtor ficava do outro lado da água (T-256).
+  - O ladrão estava longe da porta (T-257).
+  - O mundial abria ainda sem protagonista vivo (T-258).
+  - A pescadora voltava ao seu barco (T-259).
+  - O prédio novo não caía no caminho (T-260).
+  - A obra não tinha pedra livre (T-261).
+
+  Cada prova foi corrigida sem afrouxar o que cobra, e rodada de novo na mesma pasta.
+- **No Modo Encarnado**, a prova parou na parte e9: as partes que vivem o mesmo mundo dependiam da máquina (T-262, no §5).
+  Com os quadros inteiros, ela foi até o fim. Então a caminhada longa da e8 travou na borda de uma feira, que o mundo
+  atravessa e o corpo não (T-263, a família do L-354, aberta para o Patch 2), e a prova agora escolhe um caminho que o
+  corpo anda.
+- **Na última passada**, tudo passou.
 
 ## 5. Os defeitos achados e corrigidos
 
-Foram **86 defeitos** (L-132 a L-219), **65 limites de teste** (T) e **31 decisões** (D). Cada defeito foi reproduzido
+Foram **151 defeitos** (L-132 a L-391): 135 corrigidos, 15 abertos para o Patch 2 (no §6) e 1 que não se reproduziu
+(L-309). Mais **170 limites de teste** (T-052 a T-263; 3 abertos, no §6) e **31 decisões** (D). Cada defeito foi reproduzido
 antes do conserto, e a prova que falhava passa depois. Por família:
 
 - **A planta e as portas** (L-132 a L-135, L-145 a L-149, L-153 a L-156, L-166 a L-168, L-182, L-192 a L-197, L-206 a
@@ -297,7 +341,21 @@ Liga de Tebas e três aliados menores, a Casa de Solveig, a Colônia de Óstia e
 
 ## 8. Desempenho medido
 
-‹preencher com a prova de desempenho (sozinha na máquina) e a do Modo Encarnado›
+Medido na mesma máquina de 4 núcleos, sem placa de vídeo (o 3D é desenhado por software).
+
+- **O mar com muitos barcos** (a prova 17, sozinha na máquina): com 39 barcos (33 no mar, 105 pessoas a bordo, 151 pessoas no
+  mundo), o passo do mundo leva 1,5 ms, e o pior passo, 9 ms. A tela do porto roda a 18 quadros por segundo no navegador
+  sem placa de vídeo. No relatório da estabilização (`RELATORIO.md`), o mesmo teste, com 40 barcos, dava 5,2 ms por passo,
+  com o pior caso em 56 ms.
+- **O Modo Encarnado na metrópole** (a parte e8 da prova): perto do corpo, 9 pessoas e 47 bichos desenhados, 208 chamadas de
+  desenho e 770 mil triângulos.
+  - O quadro inteiro (o mundo e o 3D juntos) leva 12,9 ms na mediana e 15,8 ms em 95% dos quadros, na qualidade média.
+  - Na qualidade leve, medida logo depois da troca, quando o 3D refaz os pedaços perto do corpo: 12,5 ms na mediana e
+    54,4 ms em 95% dos quadros.
+  - O salto de 10 anos da metrópole leva 81 s.
+- **A vida curta** (a semente 103, 4 povos, 5 anos, em Node, sem desenho): de 3 a 6,5 s por ano de mundo, conforme o que
+  mais a máquina fazia.
+- **Não medido:** uma placa de vídeo de verdade e um celular (§6).
 
 ## 9. O próximo passo: o Patch 2 («Living Buildings»)
 
@@ -311,3 +369,9 @@ O Patch 2 já começou, com quatro especialistas:
   categorias de prédio.
 
 O pedido está em `qa/patch2/PEDIDO.md` e a carta da equipe, em `qa/patch2/ESTUDIO.md`.
+
+Enquanto a regressão final da v37 rodava, cada especialista trouxe a v37 para o seu ramo, sem conflito que perdesse um lado,
+e já consertou ali uma parte dos defeitos abertos no §6: a casa em ampliação (L-371, P1 e P4), os guardados que sumiam sem
+linha no livro (L-377, P2), o inquérito depois do save (L-380, P1), a comida comida das mãos (L-385, P1), o contrabandista
+da noite (L-386, P1 e P2) e a cidade cortada em duas (L-389, P2). As provas deles nos mundos da geração 7 rodam agora, com a
+v37 publicada; depois vêm a junção dos quatro ramos, os mundos gerados de novo e a regressão completa do Patch 2.
