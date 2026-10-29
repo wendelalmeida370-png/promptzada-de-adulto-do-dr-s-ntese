@@ -393,7 +393,7 @@
   function bodyShell(P, F, o) {
     o = o || {}; const B = G.Forma.body(F); if (!B || !B.porta) { P.errs.push('a forma sem corpo'); return null; }
     const tr = P.tr; const t = o.t || Math.min(tr.t || 0.3, 0.35), c = t / 2; const sh = B.r.slice(); const y0 = B.y0, h0 = B.y1 - B.y0;
-    P.shell = { kind: 'rect', r: sh, t, mat: B.tabuas ? 'tabua' : tr.mat, base: y0 > 0.05 ? 'macica' : 'pedra', baseH: y0, floors: 1, eave: B.y1 };
+    P.shell = { kind: 'rect', r: sh, t, mat: B.tabuas ? 'tabua' : tr.mat, base: y0 >= In.BODY.step ? 'macica' : 'pedra', baseH: y0, floors: 1, eave: B.y1 };
     const T = B.telhado; P.roof = { kind: T.tipo, along: T.ao || null, h: r2(T.y1 - T.y0), over: T.ov || 0 }; P.roofGeo = { kind: T.tipo, along: T.ao || null, eave: T.y0, rise: T.y1 - T.y0, R: T.r.slice() };
     const I = P.inner(); P.level(0, y0, h0, 'piso', I); P.entryLv = 0;
     P.outer = P.walls4(0, [sh[0] + c, sh[1] + c, sh[2] - c, sh[3] - c], t, h0, 1, 'parede'); P.outers = [P.outer];

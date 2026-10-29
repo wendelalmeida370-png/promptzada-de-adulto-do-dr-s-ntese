@@ -2,7 +2,7 @@
 // dos três no int-monumentos.js, com os móveis do P4), em Node, sem mundo gerado, sobre o código do jogo:
 //   1. cada um se arma em todo povo e lado pela família da forma (forma.palacio, forma.banhos, forma.paco), a que o tipo
 //      prefere; o grande palácio e o colossal ficam com as plantas deles (não têm o corpo da forma)
-//   2. a casca pelo corpo da forma: as paredes no pé dela, o piso na altura dela — sobre a base maciça, ou no chão —, a porta,
+//   2. a casca pelo corpo da forma: as paredes no pé dela, o piso na altura dela — sobre a base maciça, um passo ou mais acima do pé (L-390), ou no chão —, a porta,
 //      as janelas; o pórtico com cada coluna onde a forma a tem e a rua entrando pelo vão diante do lance; o portão do pilone
 //      do palácio egípcio (a passagem sob a verga até a face do portão, um vão sempre aberto); a passagem do temazcal sob o
 //      domo até a porta da forma; o lago egípcio aberto — a borda e as palmeiras sólidas, a água e a fornalha onde a forma as
@@ -28,6 +28,9 @@
 //      baia e tulha; as bancas, os postos e os depósitos do que o prédio guarda; a casca de longe; num mundo em branco, os pés
 //      da rua para dentro e em cada um desses lugares, no chão da forma; um registro de antes vira o da forma ao abrir (o do
 //      celeiro-salão fica da receita); o 3D os desenha pela forma
+//   8. num lote que cai para a rua (o mundo em branco inclinado): diante da entrada de cada um — o palácio, os banhos, o paço,
+//      o monumento, o teatro, a maravilha, o mercado, os celeiros —, com a rua mais de um metro abaixo do chão da forma, os
+//      degraus que o corpo sobe (Space.entryFits): diante da porta de um chão de base própria, ou do pé do lance da forma (L-390)
 //   node qa/palacios.js        VERB=1: cada caso que falha, não só os três primeiros
 'use strict';
 const M = require('./nodemundo.js');
@@ -84,7 +87,7 @@ const formOf = m => G.Forma.of(m.t, m.c), body = m => G.Forma.body(formOf(m));
       if (!ed || !rua.length || p.walls[ed.wall].kind !== 'borda') why.push('a entrada pela frente do patamar');
     } else {
       if (!same(p.shell.r, R(B.r))) why.push('as paredes fora do pé da forma');
-      if (p.shell.base !== (B.y0 > 0.05 ? 'macica' : 'pedra') || Math.abs(p.levels[0].y - B.y0) > 0.01) why.push(`o piso a ${p.levels[0].y} sobre ${p.shell.base} (a forma ${B.y0.toFixed(2)})`);
+      if (p.shell.base !== (B.y0 >= In.BODY.step ? 'macica' : 'pedra') || Math.abs(p.levels[0].y - B.y0) > 0.01) why.push(`o piso a ${p.levels[0].y} sobre ${p.shell.base} (a forma ${B.y0.toFixed(2)})`);
       const wins = p.holes.filter(h => h.kind === 'janela').length; if (wins !== B.janelas.length) why.push(`${wins} janelas (a forma ${B.janelas.length})`);
       const bays = p.walls.filter(w => w.kind === 'colunata').reduce((a, w) => a + p.doors.filter(d => d.wall === w.id).length, 0); const want = B.portico ? B.portico.colunas.length - 1 : 0;
       if (bays !== want) why.push(`${bays} vãos de colunata (a forma ${want})`);
@@ -185,7 +188,7 @@ const B3 = G.Build3D; const placed = [];
       if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
       if (ins && !ins.walk && ins.door < 0 && stop === null) stop = z;
       if (edges.some(e => Math.abs(z - e) < 0.03)) continue;
-      if (!B && ((ins && !ins.shell) || (!ins && Sp.stepTop(X, Z) > -Infinity))) continue; n++; // (out of an open shell — the lake's —: the steps before its way in, Space's as a house's (L-163, L-390), not the form's)
+      if ((ins && !ins.shell && !Sp.stairIn(ins.p, ins.lv, ins.x, ins.z)) || (!ins && Sp.stepTop(X, Z) > -Infinity)) continue; n++; // (out of the shell and off the plan's flights, or in the street: the steps before its way in, Space's as a house's (L-163, L-390), not the form's)
       const want = pl.hi + top(u, z) + (z < L ? Sp.FLOOR_UP : 0); const d = foot - want; if (Math.abs(d) > Math.abs(worst)) { worst = d; at = z; }
       if (d < -0.05) fell++;
     }
@@ -320,7 +323,7 @@ const KEEP = ['banca', 'baia', 'tulha'], USES = { banca: ['vender', 'comprar'], 
       if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
       if (ins && !ins.walk && ins.door < 0 && stop === null) stop = z;
       if (edges.some(e => Math.abs(z - e) < 0.03)) continue;
-      if ((ins && !ins.shell) || (!ins && Sp.stepTop(X, Z) > -Infinity)) continue; n++; // (on the steps before a way in, Space's: on the lot out of the shell, or in the street — L-390)
+      if ((ins && !ins.shell && !Sp.stairIn(ins.p, ins.lv, ins.x, ins.z)) || (!ins && Sp.stepTop(X, Z) > -Infinity)) continue; n++; // (on the steps before a way in, Space's: on the lot out of the shell and off the plan's flights, or in the street — L-390)
       const d = foot - (pl.hi + top(u, z) + (z < L ? Sp.FLOOR_UP : 0)); if (Math.abs(d) > Math.abs(worst)) { worst = d; wz = z; }
       if (d < -0.05) fell++;
     }
@@ -343,6 +346,30 @@ const KEEP = ['banca', 'baia', 'tulha'], USES = { banca: ['vender', 'comprar'], 
     `${old.length - bad.length} de ${old.length}${bad.length ? '; ficou: ' + bad.slice(0, 4).map(q => q.key + ' ' + q.o.ip.f).join(', ') : ''}; os celeiros-salão: ${halls.length - moved.length} de ${halls.length} da receita${moved.length ? ' (mudou: ' + moved.map(q => q.c + ' ' + q.o.ip.f).join(', ') + ')' : ''}`);
   const no3 = B3 && B3.byForm ? placedO.filter(q => !B3.byForm(q.b)).map(q => `${q.t}/${q.c}`) : [];
   ok('7h o 3D desenha o mercado e os celeiros com planta pela forma', placedO.length && !no3.length, B3 && B3.byForm ? (no3.length ? `não: ${no3.join(', ')}` : `os ${placedO.length} (a casca aberta: a forma inteira)`) : 'sem o 3D carregado (a fidelidade cobre)');
+}
+// ---------------------------------------------------------------- 8. on a lot falling away to the street (L-390)
+// (the blank world tilted toward the street before every door — the ground 0.52 m lower a tile nearer it —, the buildings of
+// parts 5 and 7 cleared, and each of the plans by the form laid on it: the street before its way in, a hand out of the lot, a
+// metre and more below the form's ground; Space's steps up to it — before the door of a ground on its own base, before the
+// foot of the form's flight up a solid one —, ones the body walks; none, the feet met a wall of the slope's height)
+{
+  const S = G.S, N = G.N, TL = Sp.TILE, V = N + 1; const out = [], sum = {}; let nid4 = 99001, k = 0, n = 0;
+  S.buildings.clear(); S.occ.fill(0); for (let yy = 0; yy <= N; yy++) for (let xx = 0; xx <= N; xx++) S.H[yy * V + xx] = 4 + (N - yy) * 0.35;
+  S.typeVer++; G.W.invalidateLand(); G.W.touchWalk(); In.uncache();
+  const CASES = [].concat(...['palacio', 'banhos', 'paco', 'monument', 'teatro', 'maravilha'].map(t => POVOS.map(c => [t, c])), ABERTOS).filter(([t, c]) => In.TYPES[t] && G.Forma.has(t, c));
+  for (const [t, c] of CASES) {
+    const def = G.BDEF[t]; const x = 2 + (k % 12) * 5, y = 4 + Math.floor(k / 12) * 14; k++;
+    const b = { id: (nid4 += 7), type: t, style: c, x, y, w: def.w, h: def.h, built: true, progress: 1, hp: 100, maxHp: 100, v: 0, set: 0, blocks: !!def.blocks, ip: null };
+    S.buildings.set(b.id, b); if (def.blocks) for (let yy = b.y; yy < b.y + b.h; yy++) for (let xx = b.x; xx < b.x + b.w; xx++) S.occ[yy * N + xx] = b.id;
+    b.ip = In.newRecord(b, { t, c, e: 3, k: 'ae', cl: c === 'egipcio' ? 'q' : 't', fl: 0, d: 1, w: 1, pw: 0, s: 'S', o: (1 << b.w) - 1 });
+    const p = Sp.planNow(b); const key = `${t}/${c}`; if (!p || !p.ok || !p.entrance || !p.entrance.out) { out.push(`${key}: sem planta`); continue; }
+    const e = p.entrance, pl = Sp.plinth(b); const ux = e.x - e.out[0], uz = e.z - e.out[1], d = Math.hypot(ux, uz), Lw = b.w * TL, Ld = b.h * TL;
+    let t0 = 0; for (; t0 < 8; t0 += 0.05) { const xx = e.x - ux / d * t0, zz = e.z - uz / d * t0; if (xx < -0.05 || zz < -0.05 || xx > Lw + 0.05 || zz > Ld + 0.05) break; }
+    const sx = b.x * TL + e.x - ux / d * t0, sz = b.y * TL + e.z - uz / d * t0; const drop = pl.y0 - Sp.footAt(sx / TL, sz / TL); n++;
+    const ef = Sp.entryFits(b, p); sum[ef.kind] = (sum[ef.kind] || 0) + 1;
+    if (drop > In.BODY.step + 0.01 && (ef.kind === 'nenhum' || !ef.ok)) out.push(`${key} (${b.ip.f}): a rua ${drop.toFixed(2)} m abaixo do chão da forma, ${ef.kind === 'nenhum' ? 'sem degraus' : `degraus que não cabem (${ef.kind}, o pé ${ef.foot} m)`}`);
+  }
+  ok('8 num lote que cai para a rua, diante de cada entrada os degraus que o corpo sobe (L-390)', n === CASES.length && !out.length, some(out).join(' / ') || `os ${n}: ${Object.keys(sum).sort().map(q => q + ' ' + sum[q]).join(', ')}`);
 }
 const err = M.erros(); if (Object.keys(err.mod).length || err.console.length) ok('sem erros de módulo', false, JSON.stringify(err).slice(0, 300));
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');

@@ -119,7 +119,7 @@ const tag = m => `${m.t}/${m.c}`;
           if (ins && !ins.walk) { shut++; if (!shutAt) shutAt = `(${u.toFixed(2)}, ${z.toFixed(2)}) piso ${lv}`; }
           if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot; n++;
           const rs = flight ? flight(u, z, ins) : 0; if (edge && edge(u, z)) continue; // (at a tread's edge either tread is the floor)
-          if ((ins && !ins.shell) || (!ins && Sp.stepTop(X, Z) > -Infinity)) continue; // (on the steps before a way in — Space's, a house's door's: L-163, L-390 —, on the lot out of the shell or in the street, not the form's: the step between them all is what is asked)
+          if ((ins && !ins.shell && !Sp.stairIn(ins.p, ins.lv, ins.x, ins.z)) || (!ins && Sp.stepTop(X, Z) > -Infinity)) continue; // (on the steps before a way in — Space's, a house's door's: L-163, L-390 —, on the lot out of the shell or in the street, not the form's: the step between them all is what is asked)
           const d = foot - (pl.hi + want(lv, u, z, ins) + (ins ? Sp.FLOOR_UP : 0)); const lo = rs ? -rs - 0.03 : -0.03;
           if ((d > 0.03 || d < lo) && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) piso ${lv}`; }
           if (d < lo - 0.12) fell++; } } }
