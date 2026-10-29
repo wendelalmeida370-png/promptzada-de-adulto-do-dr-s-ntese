@@ -10,7 +10,7 @@
 // onde ele morar; ninguém: o povo); h7 quem encomendou morre no meio da obra: a família muda igual; h8 a obra que nunca
 // começa devolve o que se pagou; h15 a obra que se perde (o fogo) devolve o que não se levantou; h13 o barraco (social.js):
 // a família sai para uma casa com lugar levando o que é seu, ou faz do barraco uma cabana pagando a madeira do povo — pelo
-// livro; h14 a terra cara (social.js): a família rica compra a casa da família simples do centro, cada uma com o que é
+// livro —, e quem pagou a cabana fica nela (D-098, T-235); h14 a terra cara (social.js): a família rica compra a casa da família simples do centro, cada uma com o que é
 // seu, pelo livro, por pelo menos o que a casa custou; h17 a terra cara paga o que a casa custou (L-236): a família que
 // acabou de pagar a sua casa fica com ela ou recebe pelo menos o que pagou, a troca de preço justo ainda vem, a casa de
 // aluguel não é dos inquilinos para vender nem a do corpo do deus entra na troca, e o verificador vê a casa trocada por
@@ -413,9 +413,12 @@ if (hb) {
       const spent = book(e => e[0] > L0 && e[3] === 'h:' + sh.id && e[5] === 'moedas' && e[8] !== 'mudança' && e[8] !== 'obra-casa').reduce((a, e) => a + e[6], 0) + moved - book(e => e[0] > L0 && e[4] === 'h:' + sh.id && e[5] === 'moedas').reduce((a, e) => a + e[6], 0);
       // (and the house's record a hut's at once, the same day, not at the next turn of the day — L-350)
       const rec = sh.ip ? sh.ip.t : '-';
-      if (want === 'hut') fine = hut && !!coin8 && Math.abs(coin8[6] - 8) < 1e-6 && !!woodUse && Math.abs(coins('h:' + sh.id) - (C0 - 8 - spent)) < 1e-6 && !!sh.dono && ppl.some(v => v.id === sh.dono) && rec === 'hut';
+      // (and the one who paid the hut lives on in it: of a house too full the young single ones leave first, never its owner —
+      // D-098; in the v37, before it, Irene paid the hut and moved to another house the same day, T-235)
+      const owner = S.villagers.get(sh.dono), stays = !!owner && owner.home === sh.id;
+      if (want === 'hut') fine = hut && !!coin8 && Math.abs(coin8[6] - 8) < 1e-6 && !!woodUse && Math.abs(coins('h:' + sh.id) - (C0 - 8 - spent)) < 1e-6 && !!sh.dono && ppl.some(v => v.id === sh.dono) && rec === 'hut' && stays;
       else fine = left && !!went && Math.abs(went[6] - (C0 - spent)) < 1e-6 && coins('h:' + sh.id) < 1e-6;
-      info = `${town.name} (no máximo ${room0} cama(s) livre(s) numa casa): ${ppl.map(v => v.name).join(', ')} num barraco com ${C0} moedas${Math.abs(spent) > 1e-6 ? ` (${r2(spent)} gastas no dia pela família, menos o que entrou${moved > 1e-6 ? `; ${r2(moved)} delas levadas por quem se mudou para outra casa, a parte dele` : ''})` : ''} → ${hut ? `o barraco virou cabana: ${coin8 ? coin8[6] : 'NADA'} moedas ao tesouro (livro ${coin8 ? coin8[0] : '—'}), ${woodUse ? woodUse[6] : 'NADA'} de madeira do armazém (${r2(wood0)} → ${r2(D.get('f:' + f.id, 'wood'))}), ficaram ${r2(coins('h:' + sh.id))} moedas, dono ${sh.dono ? (S.villagers.get(sh.dono) || {}).name : 'NENHUM'}; o registro da planta diz ${rec} no mesmo dia` : left ? `saíram para uma casa com lugar levando ${went ? went[6] : 'NADA'} moedas (livro ${went ? went[0] : '—'}), ficaram ${r2(coins('h:' + sh.id))} no barraco` : `NADA aconteceu (${ppl.map(v => `${v.name} ${v.home === sh.id ? 'no barraco' : v.home ? 'na casa #' + v.home : 'sem casa'}${v.set !== town.id ? ', partiu da cidade' : ''}`).join('; ')})`}`;
+      info = `${town.name} (no máximo ${room0} cama(s) livre(s) numa casa): ${ppl.map(v => v.name).join(', ')} num barraco com ${C0} moedas${Math.abs(spent) > 1e-6 ? ` (${r2(spent)} gastas no dia pela família, menos o que entrou${moved > 1e-6 ? `; ${r2(moved)} delas levadas por quem se mudou para outra casa, a parte dele` : ''})` : ''} → ${hut ? `o barraco virou cabana: ${coin8 ? coin8[6] : 'NADA'} moedas ao tesouro (livro ${coin8 ? coin8[0] : '—'}), ${woodUse ? woodUse[6] : 'NADA'} de madeira do armazém (${r2(wood0)} → ${r2(D.get('f:' + f.id, 'wood'))}), ficaram ${r2(coins('h:' + sh.id))} moedas, dono ${sh.dono ? (S.villagers.get(sh.dono) || {}).name : 'NENHUM'}${owner ? `, que ${stays ? 'ficou nela' : 'SE MUDOU no mesmo dia (T-235)'}` : ''}; o registro da planta diz ${rec} no mesmo dia` : left ? `saíram para uma casa com lugar levando ${went ? went[6] : 'NADA'} moedas (livro ${went ? went[0] : '—'}), ficaram ${r2(coins('h:' + sh.id))} no barraco` : `NADA aconteceu (${ppl.map(v => `${v.name} ${v.home === sh.id ? 'no barraco' : v.home ? 'na casa #' + v.home : 'sem casa'}${v.set !== town.id ? ', partiu da cidade' : ''}`).join('; ')})`}`;
     }
     ok(name, fine && !bad().length, info);
   };
