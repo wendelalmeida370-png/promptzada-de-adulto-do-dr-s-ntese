@@ -67,27 +67,61 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       fresh(w) { G.Realm.setQuality('baixa'); G.Save.apply(JSON.parse(G.Ready.data[w])); G.Main.mode = 'game'; document.querySelector('#menu').classList.add('hidden'); G.UI.showHUD(true); G.UI.setSpeed(1); if (G.Audio) G.Audio.mute = true; E.base = new Set(QA.check().filter(e => e.sev <= 3).map(E.qk)); },
       qk: e => e.id + '|' + e.msg.replace(/\s*\([^)]*\)\s*$/, ''),
       qa: () => QA.check().filter(e => e.sev <= 2 && !E.base.has(E.qk(e))).map(e => `${e.id}/S${e.sev}: ${e.msg}`),
-      f(n, ms) { for (let k = 0; k < n; k++) G.Main.frameFor(ms || 33); },
-      until(c, max, ms) { for (let k = 0; k < (max || 400); k++) { if (c()) return k; G.Main.frameFor(ms || 33); } return c() ? max : -1; },
+      // (whole frames: no step of them cut by the machine's time — at 4.9× asleep, or at the god's 8×, the loop cuts the steps
+      // of a frame past 60 ms of the machine, and the parts that share the «cidade» after e3 lived another world on each machine
+      // and on each run: T-262)
+      f(n, ms) { for (let k = 0; k < n; k++) G.Main.frameFor(ms || 33, true); },
+      until(c, max, ms) { for (let k = 0; k < (max || 400); k++) { if (c()) return k; G.Main.frameFor(ms || 33, true); } return c() ? max : -1; },
       enter(v) { if (!G.Modes.enter(v)) return false; return E.until(() => G.Modes.state === 'INC', 300) >= 0; },
       leave() { if (G.Modes.state === 'INC') G.Modes.leave('deus'); return E.until(() => G.Modes.state === 'GOD', 400) >= 0; },
       town: k => [...G.S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[k || 0],
       adults: (s, f) => [...G.S.villagers.values()].filter(o => (!s || o.set === s.id) && o.age >= 18 && o.age < 55 && !o.inside && G.Possess.can(o).ok && (!f || f(o))),
       body: () => G.Possess.body(),
-      // the body walked along the world's own path to (x, y) — the camera turned toward each next step, W held
+      // (the world's path in straight legs, as a player walks it: an open gate on a leg is gone through by the middle of its
+      // passage — the world walks the gate's whole tile, the body only the way between its piers (Build3D.wallSolid, L-308) —: a
+      // tile before it, the gate, a tile after, along the passage, across the wall, as qa/visual/estiva.js does (T-205). In
+      // Mênfis of the generation-6 metropolis the walk to the market crossed the gate of the town wall by a pier, and the body
+      // stood there pushing it to the end of the walk, and the two walks after began there: T-242)
+      throughGates(x0, y0, pts) {
+        const S = G.S, W = G.W; const out = []; let ax = x0, ay = y0;
+        for (const w of pts) {
+          const n = Math.ceil(Math.hypot(w[0] - ax, w[1] - ay) * 4); let last = -1;
+          for (let k = 1; k <= n; k++) {
+            const x = ax + (w[0] - ax) * k / n, y = ay + (w[1] - ay) * k / n; const gx = Math.floor(x), gy = Math.floor(y), i = W.idx(gx, gy);
+            if (S.wall[i] !== 2 || i === last) continue; last = i;
+            const ns = !!(S.wall[W.idx(gx, gy - 1)] || S.wall[W.idx(gx, gy + 1)]); // (the wall runs north to south: the passage west to east)
+            const s = (ns ? Math.sign(w[0] - ax) : Math.sign(w[1] - ay)) || 1; const c = [gx + 0.5, gy + 0.5];
+            for (const q of ns ? [[c[0] - s, c[1]], c, [c[0] + s, c[1]]] : [[c[0], c[1] - s], c, [c[0], c[1] + s]]) if (W.walkableXY(q[0], q[1])) out.push(q);
+          }
+          out.push(w); ax = w[0]; ay = w[1];
+        }
+        return out;
+      },
+      // the body walked along the world's own path to (x, y) — the camera turned toward each next step, W held; and round what
+      // stops the feet on the way, as a player steers — a boulder, a pier, a stall —: a step aside and on again, farther and to
+      // the other side the next time, as the estiva's proof walks (T-205, T-231, T-242)
       walkTo(x, y, max, run) {
         const v = E.body(); const st = G.Avatar.state(); if (!v || !st) return { ok: false, why: 'sem corpo' };
-        const p = G.W.findPath(v.x, v.y, x, y, true, 30000); if (!p) return { ok: false, why: 'sem caminho' };
-        let i = 0, bad = 0, under = 0, still = 0, last = [v.x, v.y], k = 0, camIn = 0;
-        for (; k < (max || 1500); k++) {
+        const p0 = G.W.findPath(v.x, v.y, x, y, true, 30000); if (!p0) return { ok: false, why: 'sem caminho' };
+        const p = E.throughGates(v.x, v.y, p0);
+        // (and the frames its length asks, at a slow walk, 0.05 m a frame, and some, when that is more than max: through the gate,
+        // the walk to the market of Mênfis is 31 tiles, 124 m, past the 1800 frames of the case — T-152 of the estiva, T-242)
+        let len = 0; { let a = [v.x, v.y]; for (const w of p) { len += Math.hypot(w[0] - a[0], w[1] - a[1]); a = w; } }
+        const lim = Math.max(max || 1500, Math.ceil(len * G.Space.TILE / 0.05) + 300);
+        let i = 0, bad = 0, under = 0, still = 0, last = [v.x, v.y], k = 0, camIn = 0, aside = 0, side = 1, turns = 0;
+        for (; k < lim; k++) {
           const w = p[Math.min(i, p.length - 1)]; const dx = w[0] - v.x, dy = w[1] - v.y; const d = Math.hypot(dx, dy);
           if (d < 0.3) { if (i >= p.length - 1) break; i++; continue; }
-          G.Cam3D.yaw = Math.atan2(dy, dx); G.Input3D.down.frente = true; G.Input3D.down.correr = !!run;
+          G.Cam3D.yaw = Math.atan2(dy, dx) + (aside > 0 ? side * Math.PI / 2 : 0); if (aside > 0) aside--; G.Input3D.down.frente = true; G.Input3D.down.correr = !!run;
           G.Main.frameFor(33);
           if (!G.W.walkableXY(v.x, v.y)) bad++;
           if (st.Y < G.Avatar.floorAt(st.X, st.Z) - 0.05) under++;
           const c = G.Realm.camera().position; if (G.Cam3D.solid(c.x, c.y, c.z)) camIn++;
-          if (k % 60 === 59) { if (G.dist(last[0], last[1], v.x, v.y) < 0.15) still++; else still = 0; last = [v.x, v.y]; if (still >= 3) break; }
+          if (k % 60 === 59) {
+            if (G.dist(last[0], last[1], v.x, v.y) < 0.15) still++; else still = 0; last = [v.x, v.y];
+            if (still && turns < 6 && d > 0.4 && (st.block === 'ledge' || st.block === 'wall' || st.block === 'building')) { turns++; side = -side; aside = 30 * turns; still = 0; }
+            if (still >= 3) break;
+          }
         }
         G.Input3D.down.frente = false; G.Input3D.down.correr = false; E.f(4);
         const end = p[p.length - 1];
@@ -159,22 +193,37 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   // ================================ e2: the real person ================================
   const e2 = await E(() => {
     __E.fresh('cidade'); const s = __E.town();
-    const v = __E.adults(s, o => o.mother && o.bio && o.bio.length >= 3).sort((a, b) => (b.kids.length - a.kids.length))[0];
+    // (a real person with a family and a past; of them, one the world lets walk at a person's own pace — rested, not starving,
+    // the hands free, on dry ground —: the walk below proves the hands on the stick, not the ford, the load nor the tiredness
+    // that slow a body as the world has it (Avatar's move). The Penélope #1667 of the final city stood in a ford at midnight
+    // with a load and no strength left — 0.9 to 1.2 m/s, as the world gives it: 5.1 m in 4.6 s, T-208)
+    const dry = (X, Z) => { const sf = G.Space.surface(X, Z); return sf.walk && sf.kind === 'ground'; };
+    const fit = o => o.energy >= 30 && (o.hunger || 0) < 100 && !(o.carry && o.carry.n > 0) && !(o.sick > 0) && !(o.lost && o.lost.leg) && dry(o.x * 4, o.y * 4);
+    const v = __E.adults(s, o => o.mother && o.bio && o.bio.length >= 3).sort((a, b) => (fit(b) ? 1 : 0) - (fit(a) ? 1 : 0) || (b.kids.length - a.kids.length))[0];
+    // (and the way it walks: the first of sixteen headings from 0.7 with 8 m of dry ground the world walks straight ahead, no
+    // more than half a metre up)
+    const clear = a => { const y0 = G.W.hAt(v.x, v.y) * G.Space.HM; for (let d = 0.5; d <= 8 + 1e-9; d += 0.5) { const X = v.x * 4 + Math.cos(a) * d, Z = v.y * 4 + Math.sin(a) * d; if (!dry(X, Z) || G.W.hAt(X / 4, Z / 4) * G.Space.HM - y0 > 0.5) return false; } return true; };
+    let yaw = 0.7; for (let k = 0; k < 16; k++) { const a = 0.7 + k * Math.PI / 8; if (clear(a)) { yaw = a; break; } }
+    const how = `${fit(v) ? 'descansada, de mãos livres, em terra' : `energia ${Math.round(v.energy)}, ${v.carry && v.carry.n ? 'com carga' : 'mãos livres'}, ${dry(v.x * 4, v.y * 4) ? 'em terra' : 'na água'}`}; rumo ${yaw.toFixed(2)}${clear(yaw) ? '' : ' (sem 8 m livres em rumo nenhum)'}`;
     const id0 = { id: v.id, name: v.name, mother: v.mother, father: v.father, partner: v.partner, kids: v.kids.slice(), home: v.home, set: v.set, role: v.role, age: v.age, bio: (v.bio || []).length, stories: G.Stories ? G.Stories.of(v.id).map(x => x.id).sort().join(',') : '' };
     const inn = __E.enter(v); const inTask = v.task && v.task.type;
     const st = G.Avatar.state(); const x0 = v.x, y0 = v.y;
-    G.Input3D.down.frente = true; G.Cam3D.yaw = 0.7; __E.f(140); G.Input3D.down.frente = false; __E.f(10);
+    G.Input3D.down.frente = true; G.Cam3D.yaw = yaw; __E.f(140); G.Input3D.down.frente = false; __E.f(10);
     const moved = G.dist(x0, y0, v.x, v.y) * 4; const at = { x: v.x, y: v.y };
+    // (measured against the pace the world gives this body — Avatar's move: the person's own walk, 0.7 of it below 8 of
+    // strength, 0.8 starving, 0.9 with a load of 4 or more —: seven tenths of it over the 4.6 s at least, the first steps and a
+    // ford's within that; a body rested, its hands free, on dry ground, 6.2 m)
+    const pace = st.caps.walk * (v.energy < 8 ? 0.7 : 1) * ((v.hunger || 0) >= 100 ? 0.8 : 1) * (v.carry && v.carry.n >= 4 ? 0.9 : 1); const want = 0.7 * pace * 140 / 30;
     const n = G.S.villagers.size; let same = 0; for (const o of G.S.villagers.values()) if (o.id === v.id) same++;
     const left = __E.leave();
     const o = G.S.villagers.get(id0.id);
     // (the moment the god's view is back: the person is exactly where the body was left)
     const atGod = G.dist(at.x, at.y, o.x, o.y) * 4;
     const ai = __E.until(() => o.task && o.task.type !== 'avatar', 120) >= 0;
-    return { inn, inTask, moved, left, n, same, alive: !!o, same2: o === v, id0, after: o && { name: o.name, mother: o.mother, father: o.father, partner: o.partner, kids: o.kids.slice(), home: o.home, set: o.set, role: o.role, age: o.age, stories: G.Stories ? G.Stories.of(o.id).map(x => x.id).sort().join(',') : '' }, task: o && o.task && o.task.type, ai, sel: G.UI.selected && G.UI.selected.id === o.id, leftAt: atGod, bio: G.Life.bioList(o).slice(-1)[0], avatar: !!G.S.avatar, qa: __E.qa() };
+    return { inn, inTask, moved, pace, want, how, left, n, same, alive: !!o, same2: o === v, id0, after: o && { name: o.name, mother: o.mother, father: o.father, partner: o.partner, kids: o.kids.slice(), home: o.home, set: o.set, role: o.role, age: o.age, stories: G.Stories ? G.Stories.of(o.id).map(x => x.id).sort().join(',') : '' }, task: o && o.task && o.task.type, ai, sel: G.UI.selected && G.UI.selected.id === o.id, leftAt: atGod, bio: G.Life.bioList(o).slice(-1)[0], avatar: !!G.S.avatar, qa: __E.qa() };
   });
   ok('e2 encarna uma pessoa real', e2.inn && e2.inTask === 'avatar', `${e2.id0.name} #${e2.id0.id}, ${Math.floor(e2.id0.age)} anos, ${e2.id0.kids.length} filhos, ${e2.id0.bio} memórias`);
-  ok('e2 anda com ela', e2.moved > 6, `${e2.moved.toFixed(1)} m em 4,6 s`);
+  ok('e2 anda com ela', e2.moved > e2.want, `${e2.moved.toFixed(1)} m em 4,6 s — o passo do mundo para ela, ${e2.pace.toFixed(2)} m/s: pede ${e2.want.toFixed(1)} m (${e2.how})`);
   ok('e2 a mesma pessoa depois (id, família, casa, povo)', e2.alive && e2.same2 && e2.same === 1 && JSON.stringify([e2.id0.name, e2.id0.mother, e2.id0.father, e2.id0.partner, e2.id0.kids, e2.id0.home, e2.id0.set, e2.id0.role]) === JSON.stringify([e2.after.name, e2.after.mother, e2.after.father, e2.after.partner, e2.after.kids, e2.after.home, e2.after.set, e2.after.role]) && e2.after.age > e2.id0.age, `mesmo objeto: ${e2.same2}; idade ${e2.id0.age.toFixed(3)} → ${e2.after && e2.after.age.toFixed(3)}; histórias ${e2.id0.stories || '-'} → ${e2.after && e2.after.stories || '-'}`);
   ok('e2 volta ao Modo Deus: exatamente onde foi deixada, selecionada; depois a IA de novo', e2.left && !e2.avatar && e2.ai && e2.sel && e2.leftAt < 0.05, `a ${e2.leftAt.toFixed(2)} m de onde o jogador a deixou quando o Modo Deus voltou; tarefa depois: ${e2.task}`);
   ok('e2 a biografia lembra', !!e2.bio && /guiad/.test(e2.bio.txt), e2.bio ? e2.bio.txt : '-');
@@ -192,12 +241,12 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const t0 = { day: S.day, clock: S.clock, births: S.stats.births || 0, deaths: S.stats.deaths || 0, logN: S.logN, built: [...S.buildings.values()].filter(b => b.built).length };
     let farNews = 0; const hook = (e) => { if (Number.isFinite(e.x) && G.dist(e.x, e.y, v.x, v.y) > 30) farNews++; }; G.Possess.onLog.push(hook);
     // (the world's pace with the body awake first — 30 frames, standing —, then asleep: a tired body sleeps, and whenever it wakes
-    // — by day, rested, as anyone of the world: L-341 — it is put back to bed. The two paces, frame by frame: the main loop
-    // cuts the steps of a frame past 60 ms of the machine when the pace is over 2× (asleep, 4.9×), so on a busy machine a frame
-    // asleep carries less of the world's time than 0.49 s — T-162: the clock alone, over 200 s, was the machine's)
-    const cA = S.clock; for (let k = 0; k < 30; k++) G.Main.frameFor(100); const paceAwake = (S.clock - cA) / 30;
+    // — by day, rested, as anyone of the world: L-341 — it is put back to bed. The two paces, frame by frame (T-162), in whole
+    // frames: the main loop cuts the steps of a frame past 60 ms of the machine when the pace is over 2× (asleep, 4.9×), and a
+    // cut here left the parts after it, in the same world, at another hour on each run — T-262)
+    const cA = S.clock; for (let k = 0; k < 30; k++) G.Main.frameFor(100, true); const paceAwake = (S.clock - cA) / 30;
     v.energy = 5; G.Possess.sleep(v); const slept = v.sleeping; let asleepN = 0; const cS = S.clock;
-    for (let k = 0; k < 600; k++) { if (!v.sleeping) { v.energy = 5; G.Possess.sleep(v); } const was = v.sleeping; G.Main.frameFor(100); if (was && v.sleeping) asleepN++; }
+    for (let k = 0; k < 600; k++) { if (!v.sleeping) { v.energy = 5; G.Possess.sleep(v); } const was = v.sleeping; G.Main.frameFor(100, true); if (was && v.sleeping) asleepN++; }
     const paceAsleep = (S.clock - cS) / 600;
     G.Possess.onLog.splice(G.Possess.onLog.indexOf(hook), 1);
     const awake = !v.sleeping || (G.Possess.wake(v), true);
@@ -219,23 +268,24 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   const e4 = await E(() => {
     const S = G.S; const s = __E.town(); const [a, b] = __E.adults(s);
     const stA = G.Stories ? G.Stories.of(a.id).map(x => x.id).join(',') : '';
-    __E.enter(a); __E.f(30); __E.leave();
+    // (and, when a step fails, what the world said: L-309 — the two swaps failed once with B, Pompeia, chosen at the start)
+    const inA = __E.enter(a); __E.f(30); __E.leave();
     const aiA = __E.until(() => a.task && a.task.type !== 'avatar', 120) >= 0;
-    __E.enter(b);
+    const inB = __E.enter(b); const whyB = inB ? '' : G.Possess.can(b).why || `${G.Modes.state}, ${b.task ? b.task.type : 'sem tarefa'}`;
     const bOk = S.avatar && S.avatar.id === b.id && b.task.type === 'avatar';
     const aOk = S.villagers.get(a.id) === a && a.task && a.task.type !== 'avatar';
     // from inside: B → C (the card's button)
     const c = __E.adults(s).find(o => o.id !== a.id && o.id !== b.id);
-    const sw = G.Modes.switchTo(c); __E.f(40);
+    const sw = G.Modes.switchTo(c); const whyC = sw ? '' : G.Possess.can(c).why || G.Modes.state; __E.f(40);
     const cOk = S.avatar && S.avatar.id === c.id && c.task.type === 'avatar' && (!b.task || b.task.type !== 'avatar');
     const aiB = __E.until(() => b.task && b.task.type !== 'avatar', 120) >= 0;
     __E.leave();
     const ids = new Set(); let dup = 0; for (const o of S.villagers.values()) { if (ids.has(o.id)) dup++; ids.add(o.id); }
     let marks = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'avatar') marks++;
-    return { aiA, bOk, aOk, sw, cOk, aiB, dup, marks, stA, stA2: G.Stories ? G.Stories.of(a.id).map(x => x.id).join(',') : '', bioA: G.Life.bioList(a).slice(-1)[0].txt, bioB: G.Life.bioList(b).slice(-1)[0].txt, qa: __E.qa(), names: [a.name, b.name, c.name] };
+    return { inA, aiA, inB, whyB, bOk, aOk, sw, whyC, cOk, aiB, dup, marks, stA, stA2: G.Stories ? G.Stories.of(a.id).map(x => x.id).join(',') : '', bioA: G.Life.bioList(a).slice(-1)[0].txt, bioB: G.Life.bioList(b).slice(-1)[0].txt, qa: __E.qa(), names: [a.name, b.name, c.name] };
   });
-  ok('e4 A, Deus, B: os dois existem, a IA de A voltou, B tem o corpo', e4.aiA && e4.bOk && e4.aOk, `${e4.names[0]} → ${e4.names[1]}`);
-  ok('e4 de dentro, B → C: a IA de B volta, C tem o corpo', e4.sw && e4.cOk && e4.aiB, `${e4.names[1]} → ${e4.names[2]}`);
+  ok('e4 A, Deus, B: os dois existem, a IA de A voltou, B tem o corpo', e4.aiA && e4.bOk && e4.aOk, `${e4.names[0]} → ${e4.names[1]}${e4.aiA && e4.bOk && e4.aOk ? '' : ` — ${JSON.stringify({ inA: e4.inA, aiA: e4.aiA, inB: e4.inB, whyB: e4.whyB, bOk: e4.bOk, aOk: e4.aOk })}`}`);
+  ok('e4 de dentro, B → C: a IA de B volta, C tem o corpo', e4.sw && e4.cOk && e4.aiB, `${e4.names[1]} → ${e4.names[2]}${e4.sw && e4.cOk && e4.aiB ? '' : ` — ${JSON.stringify({ sw: e4.sw, whyC: e4.whyC, cOk: e4.cOk, aiB: e4.aiB })}`}`);
   ok('e4 ninguém duplicado, nenhuma marca sobrando, histórias intactas', !e4.dup && !e4.marks && e4.stA === e4.stA2, `duplicados ${e4.dup}, marcas ${e4.marks}; histórias de A: ${e4.stA || '-'} → ${e4.stA2 || '-'}; bio A: ${e4.bioA}`);
   ok('e4 verificador', !e4.qa.length, e4.qa.slice(0, 3).join(' · ') || 'limpo');
 
@@ -351,7 +401,11 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const B = Sv.serialize(); load(B); const b1 = G.S.villagers.get(id);
     out.B = { avatar: G.S.avatar && G.S.avatar.id, task: b1 && b1.task && b1.task.type, mode: G.Modes.state, at: b1 ? G.dist(pB[0], pB[1], b1.x, b1.y) : -1, hud: (document.querySelector('#inc-hud .ih-name') || {}).textContent };
     // D) after walking far
-    const w = (() => { const x0 = b1.x, y0 = b1.y; G.Input3D.down.frente = true; G.Input3D.down.correr = true; G.Cam3D.yaw = 1.1; __E.f(240); G.Input3D.down.frente = false; G.Input3D.down.correr = false; __E.f(8); return G.dist(x0, y0, b1.x, b1.y) * 4; })();
+    // (a straight run, the stick held, toward the most open way about the body — dry ground the world walks, no lot nor wall —
+    // when the way of before is not: in the generation-6 «cidade» the way 1,1 rad from Túlia met an obstacle at 7,5 m — T-243)
+    const openTo = a => { let d = 0; for (; d < 8; d += 0.25) { const x = b1.x + Math.cos(a) * d, y = b1.y + Math.sin(a) * d; if (!G.W.inb(x, y)) break; const i = G.W.idx(x, y); if (!G.W.walkableXY(x, y) || S.occ[i] || S.wall[i] || S.type[i] <= G.T.RIVER) break; } return d; };
+    let yawD = 1.1; { let best = openTo(1.1); for (let k = 0; k < 16 && best < 6; k++) { const a = k / 16 * Math.PI * 2, d = openTo(a); if (d > best) { best = d; yawD = a; } } }
+    const w = (() => { const x0 = b1.x, y0 = b1.y; G.Input3D.down.frente = true; G.Input3D.down.correr = true; G.Cam3D.yaw = yawD; __E.f(240); G.Input3D.down.frente = false; G.Input3D.down.correr = false; __E.f(8); return G.dist(x0, y0, b1.x, b1.y) * 4; })();
     const pD = [b1.x, b1.y]; const D = Sv.serialize(); load(D); const d1 = G.S.villagers.get(id);
     out.D = { walked: w, at: d1 ? G.dist(pD[0], pD[1], d1.x, d1.y) : -1, avatar: G.S.avatar && G.S.avatar.id, mode: G.Modes.state };
     // C) after leaving
@@ -383,6 +437,10 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   // ================================ e9: the bad cases, and the hands changing the world ================================
   const e9 = await E(() => {
     const S = G.S; const out = {}; const s = __E.town();
+    // (the cases here take the town's grown ones in turn, four of them up and about: the parts before leave the world at the
+    // hour their time ended — after e3, in the «cidade» of the generation 7, at 0.75 of the day: of Roma's nine grown ones seven
+    // asleep at home and two in the street. The god lets the night pass first, until the town is up, T-262)
+    if (G.isNight() || __E.adults(s).length < 5) { G.UI.setSpeed(8); out.morning = __E.until(() => !G.isNight() && __E.adults(s).length >= 5, 3000, 100); G.UI.setSpeed(1); }
     // captured by enemies (the war's own capture): the body is the captor's now
     { const v = __E.adults(s)[0]; __E.enter(v); const foe = __E.adults(null, o => o.set !== v.set)[0] || __E.adults(s)[1]; G.War.capture(v, foe, null); __E.until(() => G.Modes.state === 'GOD', 400); out.capture = { avatar: !!S.avatar, task: v.task && v.task.type, captive: !!v.captive, mode: G.Modes.state }; }
     // taken aboard a ship (Naval.board): the incarnation ends with it
@@ -390,7 +448,10 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // a building rises where the body stands: the world moves the body; the body follows the world
     // (someone standing on dry ground: the ship's part before may leave its person in the sea, and a house raised over a
     // swimmer — who is not pulled out, D-026 — proves nothing)
-    { const v = __E.adults(s, o => !o.aboard && !o.inside && G.W.walkableXY(o.x, o.y))[0] || __E.adults(s)[0]; __E.enter(v); __E.f(4); const x = Math.floor(v.x), y = Math.floor(v.y);
+    // (and on ground of no lot: a house raised by hand over a garden one walks on left the garden's tile marked as the house's —
+    // an S2 of the checker, the test's own doing: T-262)
+    { const lotless = o => { const i = G.W.idx(Math.floor(o.x), Math.floor(o.y)); return !S.occ[i] && !S.wall[i]; };
+      const v = __E.adults(s, o => !o.aboard && !o.inside && G.W.walkableXY(o.x, o.y) && lotless(o))[0] || __E.adults(s, o => !o.aboard && !o.inside && G.W.walkableXY(o.x, o.y))[0] || __E.adults(s)[0]; __E.enter(v); __E.f(4); const x = Math.floor(v.x), y = Math.floor(v.y);
       const b = G.Village.addBuilding('house', x, y, v.set, true); if (b) G.W.touchWalk && G.W.touchWalk(); __E.f(60, 50);
       out.building = { made: !!b, onIt: b ? (v.x >= b.x && v.x < b.x + b.w && v.y >= b.y && v.y < b.y + b.h && b.blocks) : null, walk: G.W.walkableXY(v.x, v.y), avatar: S.avatar && S.avatar.id === v.id };
       // the same on a ford (L-150): the water under the new building is no water to swim in — the building stops the feet, so
@@ -481,8 +542,11 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
         if (h && h.built && G.W.reaches(v, ...G.Vg.door(h))) { const d = G.Vg.door(h); near(d[0], d[1], true); v.energy = 30; const r = G.Interact.run({ id: 'porta', t: { b: h, X: d[0] * 4, Z: d[1] * 4 } }); __E.until(() => !G.Avatar.busy(), 120);
           R.home = { inside: v.inside === h.id, sleeping: !!v.sleeping, msg: r && r.msg }; G.Possess.wake(v); __E.f(6); R.home.out = !v.inside && !v.sleeping && G.W.walkableXY(v.x, v.y); } else R.home = null; }
       // a talk: up to someone, E — the card is theirs, and they answer with a line over their head (seen by the god too)
-      { const o = [...S.villagers.values()].filter(x => x.id !== v.id && !x.inside && !x.sleeping && x.age >= 6 && !x.aboard && G.W.reaches(v, x.x, x.y)).sort((a, b) => G.dist2(a.x, a.y, v.x, v.y) - G.dist2(b.x, b.y, v.x, v.y))[0];
-        if (o) { near(o.x, o.y); G.Avatar.state().yaw = Math.atan2(o.y - v.y, o.x - v.x); __E.f(8); const b = G.Interact.best(); G.IncUI.use(); __E.f(4);
+      // (E does what the hands reach first: a hen at the person's feet takes it — «Fazer carinho na galinha» —, and then the next
+      // one nearest, up to four, T-262)
+      { const os = [...S.villagers.values()].filter(x => x.id !== v.id && !x.inside && !x.sleeping && x.age >= 6 && !x.aboard && G.W.reaches(v, x.x, x.y)).sort((a, b) => G.dist2(a.x, a.y, v.x, v.y) - G.dist2(b.x, b.y, v.x, v.y)).slice(0, 4);
+        let o = null, b = null; for (const q of os) { near(q.x, q.y); G.Avatar.state().yaw = Math.atan2(q.y - v.y, q.x - v.x); __E.f(8); o = q; b = G.Interact.best(); if (b && b.id === 'pessoa') break; }
+        if (o) { G.IncUI.use(); __E.f(4);
           const card = document.querySelector('#inc-card'); const said = G.Talk && G.Talk.list.find(t => t.id === (b && b.t.o ? b.t.o.id : -1));
           R.talk = { best: b && b.id, label: b && b.label, card: card && !card.classList.contains('hidden') ? (card.querySelector('h3') || {}).textContent : null, said: said ? said.txt : null, name: b && b.t.o ? b.t.o.name : null };
           G.IncUI.closeAll(); G.Modes.setPanel(null); } }
@@ -563,14 +627,21 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const s = __E.town(); const v = __E.adults(s)[0]; out.inn = __E.enter(v); __E.f(30); const b = __E.body();
     // the ground's picture: round the body, and every street, field and sea tile of the map
     out.near = G.Ground3D.check(b.x, b.y, 30, 400);
-    let road = 0, roadOk = 0, farm = 0, farmOk = 0, sea = 0, seaOk = 0;
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const i = y * N + x; const t = G.Ground3D.texel(x, y); if (!t) continue; const burnt = S.burnt[i] > 0 || S.scar[i] > 0;
-      if (S.road[i] && S.type[i] > T.RIVER && !burnt) { road++; if (t[3] === K.gravel || t[3] === K.paved || t[3] === K.highway) roadOk++; }
-      const bb = S.occ[i] && S.buildings.get(S.occ[i]); if (bb && bb.type === 'farm' && !S.road[i] && !burnt && S.type[i] > T.RIVER) { farm++; if (t[3] === K.field) farmOk++; }
-      if (S.type[i] <= T.SEA) { sea++; if (t[3] === K.bed) seaOk++; }
-    }
-    out.map = { road: [roadOk, road], farm: [farmOk, farm], sea: [seaOk, sea] };
+    // (the map read once the picture has gone over it with the world standing still — the menu open, below —: the land round
+    // the body is made again a few rows a frame and the far land a row a frame (Ground3D.tick), so a tile the world changed a
+    // moment before lags a few frames behind, as Ground3D.check allows round the body; with the world going, a tile changed in
+    // the last frames was read before its row came round again. In the sixth generation's «cidade», the street at 32,47 had
+    // been burnt when the body came in and healed in those 30 frames (S.burnt 0.99 → 0): its texel still the ash it was — T-245)
+    const mapScan = () => {
+      let road = 0, roadOk = 0, farm = 0, farmOk = 0, sea = 0, seaOk = 0;
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const i = y * N + x; const t = G.Ground3D.texel(x, y); if (!t) continue; const burnt = S.burnt[i] > 0 || S.scar[i] > 0;
+        if (S.road[i] && S.type[i] > T.RIVER && !burnt) { road++; if (t[3] === K.gravel || t[3] === K.paved || t[3] === K.highway) roadOk++; }
+        const bb = S.occ[i] && S.buildings.get(S.occ[i]); if (bb && bb.type === 'farm' && !S.road[i] && !burnt && S.type[i] > T.RIVER) { farm++; if (t[3] === K.field) farmOk++; }
+        if (S.type[i] <= T.SEA) { sea++; if (t[3] === K.bed) seaOk++; }
+      }
+      return { road: [roadOk, road], farm: [farmOk, farm], sea: [seaOk, sea] };
+    };
     // the picture follows the world: a tile near the body scorched, and its texel turns to ash a few frames later
     let spot = null; for (let r = 2; r < 9 && !spot; r++) for (let dy = -r; dy <= r && !spot; dy++) for (let dx = -r; dx <= r; dx++) { const x = Math.floor(b.x) + dx, y = Math.floor(b.y) + dy; if (!G.W.inb(x, y)) continue; const i = y * N + x; if ((S.type[i] === T.GRASS || S.type[i] === T.MEADOW) && !S.occ[i] && !S.road[i] && !S.treeAt[i] && !S.objAt[i]) { spot = [x, y, i]; break; } }
     if (spot) { const k0 = G.Ground3D.texel(spot[0], spot[1])[3]; S.burnt[spot[2]] = 80; const fr = __E.until(() => G.Ground3D.texel(spot[0], spot[1])[3] === K.burnt, 160); out.burn = { before: k0, frames: fr, after: G.Ground3D.texel(spot[0], spot[1])[3], burnt: K.burnt }; S.burnt[spot[2]] = 0; }
@@ -599,7 +670,8 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       for (const p of G.People3D.walkers) { const vs = G.People3D.visOf(p[7]); if (!vs || !av) continue; const want = F(vs.yaw, p[0], p[2], av, vs.st); if (!want) continue; n++; if (Math.abs((vs.pose.lookY || 0) - want) < 0.35 || Math.sign(vs.pose.lookY || 0) === Math.sign(want)) good++; }
       out.look = { n, good }; }
     // the drawing leaves the world alone: with the world paused (the menu), a second of frames changes neither its chance nor its clock
-    G.Modes.menu(true); __E.f(2); const r0 = JSON.stringify(S.rng), c0 = S.clock; __E.f(30); out.still = { rng: JSON.stringify(S.rng) === r0, clock: S.clock === c0 }; G.Modes.menu(false);
+    // (and in those frames the picture goes over the whole map — a row a frame —: then the map is read, the world as still as it)
+    G.Modes.menu(true); __E.f(2); const r0 = JSON.stringify(S.rng), c0 = S.clock; __E.f(Math.max(30, N + 24)); out.map = mapScan(); out.still = { rng: JSON.stringify(S.rng) === r0, clock: S.clock === c0 }; G.Modes.menu(false);
     out.people = G.People3D.check(); __E.leave(); out.qa = __E.qa(); out.err = JSON.stringify(G.modErr);
     return out;
   });
@@ -682,11 +754,15 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   // ================================ e13: the body's new ways: climbing, sitting, waving, drinking, stroking ================================
   const e13 = await E(() => {
     __E.fresh('cidade'); const S = G.S, N = G.N, T = G.T; const HM = G.Space.HM, TL = G.Space.TILE; const out = {};
-    const s = __E.town(); const v = __E.adults(s)[0]; out.inn = __E.enter(v); __E.f(10); const p0 = [v.x, v.y]; const st = G.Avatar.state(); const A = () => S.avatar.deeds;
+    // (one with the hands free: the gold is picked up only by empty hands — «Suas mãos já estão cheias», the game's rule —, and
+    // in the generation-6 «cidade» the first of Roma, Hakon, was back from the hunt with a wolf's meat in his: T-246)
+    const s = __E.town(); const v = __E.adults(s).find(o => !(o.carry && o.carry.n > 0)) || __E.adults(s)[0]; out.inn = __E.enter(v); __E.f(10); const p0 = [v.x, v.y]; const st = G.Avatar.state(); const A = () => S.avatar.deeds;
     const TU = G.Avatar.TUNE; const fl = (x, y) => G.Avatar.floorAt((x + 0.5) * TL, (y + 0.5) * TL);
     // a boulder in the way: a big stone set on open flat ground near the body (the feet stand on its faces: G.Space.stoneTop)
     const flat = (x, y) => { for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const j = (y + dy) * N + x + dx; if (!G.W.walkable(j) || S.occ[j] || S.treeAt[j] || S.objAt[j] || S.road[j] || S.type[j] === T.RIVER) return false; } return Math.abs(fl(x - 2, y) - fl(x + 2, y)) < 0.8 && Math.abs(fl(x, y - 2) - fl(x, y + 2)) < 0.8; };
-    let spot = null; for (let r = 2; r < 40 && !spot; r++) for (let k = 0; k < r * 8 && !spot; k++) { const a = k / (r * 8) * Math.PI * 2; const x = Math.round(v.x + Math.cos(a) * r), y = Math.round(v.y + Math.sin(a) * r); if (x > 4 && y > 4 && x < N - 5 && y < N - 5 && flat(x, y) && G.W.reaches(v, x + 0.5, y + 0.5)) spot = [x, y]; }
+    // (the nearest such place the feet reach, anywhere in the map — the body is put by the stone —: round Roma of the generation-6
+    // «cidade» there is none within 40 tiles, among its woods, water and streets, and the nearest is 52 tiles off: T-246)
+    let spot = null; for (let r = 2; r < N && !spot; r++) for (let k = 0; k < r * 8 && !spot; k++) { const a = k / (r * 8) * Math.PI * 2; const x = Math.round(v.x + Math.cos(a) * r), y = Math.round(v.y + Math.sin(a) * r); if (x > 4 && y > 4 && x < N - 5 && y < N - 5 && flat(x, y) && G.W.reaches(v, x + 0.5, y + 0.5)) spot = [x, y]; }
     out.climb = null;
     if (spot) {
       const rk = G.Nature.addRock(spot[0] + 0.5, spot[1] + 0.5, 40); const st0 = G.Space.stones(rk)[0]; const top = G.Space.stoneTop(st0.X, st0.Z); const g0 = G.W.hAt(rk.x, rk.y) * HM;
@@ -857,7 +933,10 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const k2 = kinOf(body())[0] || strangers[1]; out.dies = null;
     if (k2) { if (!k2.mourn && !G.Possess.kin(body(), k2)) k2.mourn = G.DAY_LEN; if (beside(k2)) { const d0 = (A().abraco || 0) + (A().consolo || 0); const h = G.Interact.hug(k2); __E.f(20); G.Vg.damage(k2, 9999, 'war', true); const fr = __E.until(() => !G.Avatar.busy(), 400); __E.f(10);
       out.dies = { ok: !!(h && h.ok), gone: !S.villagers.has(k2.id), frames: fr, deed: (A().abraco || 0) + (A().consolo || 0) - d0, avatar: !!S.avatar && S.avatar.id === id, mode: G.Modes.state }; } }
-    const k3 = strangers.find(q => S.villagers.has(q.id) && q !== o && q !== k2); out.saved = null;
+    // (one who can be held now, as the list was made — the frames since have sent some to other things: in the generation-6
+    // «cidade» the one first was at a meal by then, «ocupado com algo que não pode esperar» (Interact.canHug), and the hug did
+    // not begin: T-247)
+    const k3 = strangers.find(q => S.villagers.has(q.id) && q !== o && q !== k2 && free(q) && (!q.task || q.task.pri <= 1)); out.saved = null;
     if (k3 && beside(k3)) { k3.mourn = G.DAY_LEN; const d0 = A().consolo || 0; const h = G.Interact.hug(k3); __E.f(15); const str = G.Save.serialize(); G.Save.apply(JSON.parse(str)); S = G.S; __E.f(150); st = G.Avatar.state(); const q = S.villagers.get(k3.id);
       out.saved = { ok: !!(h && h.ok), avatar: !!S.avatar && S.avatar.id === id, mode: G.Modes.state, busy: G.Avatar.busy(), deed: (S.avatar ? S.avatar.deeds.consolo || 0 : -1) - d0, task: q && q.task ? q.task.type + (q.task.hug ? '+hug' : '') : null }; }
     // 4. a dance (B): whoever is free and merry near the body joins in; walking stops it; the others go back to their lives
@@ -918,9 +997,12 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const dock = docks.find(d => { const p = P3.crateSpot(d); return p && !wet(p[0], p[1]) && G.W.walkableXY(p[0], p[1]); });
     out.dock = dock ? dock.id : null; if (!dock) { out.qa = __E.qa(); out.err = JSON.stringify(G.modErr); return out; }
     const sp = P3.crateSpot(dock);
-    // (the quay's crates, as a boat sets them down)
-    dock.crates = []; for (let k = 0; k < 6; k++) dock.crates.push({ id: S.nextId++, k: 'food', n: 4, col: '#a8c0d0', fish: 'arenque', boat: 0, op: 0 });
-    const v = __E.adults(__E.town(), o => G.W.reaches(o, sp[0], sp[1]))[0] || __E.adults(__E.town())[0]; out.inn = __E.enter(v); if (!G.Avatar.place(sp[0] + 0.3, sp[1] + 0.3)) G.Avatar.place(sp[0], sp[1]); __E.f(20);
+    // (the quay's crates: the world's own, where an unloading has them there — thrown out by hand, its books would not close: the
+    // ten of an unloading waiting for the day on Hedeby's quay, in the city of the v37's last worlds, T-249 —; and while the quay
+    // has fewer than six, a boat's catch landed by the world's own door for it, Porto.landCatch)
+    if ((dock.crates || []).length < 6) { G.inSim++; G.Porto.landCatch(dock, 'food', 4 * (6 - (dock.crates || []).length), 'arenque', '#a8c0d0', 0); G.inSim--; }
+    const free = o => !(o.carry && o.carry.n > 0); // (hands holding nothing of the world's: what is carried is never thrown out by hand)
+    const v = __E.adults(__E.town(), o => free(o) && G.W.reaches(o, sp[0], sp[1]))[0] || __E.adults(__E.town(), free)[0]; out.inn = __E.enter(v); if (!G.Avatar.place(sp[0] + 0.3, sp[1] + 0.3)) G.Avatar.place(sp[0], sp[1]); __E.f(20);
     const ids = () => dock.crates.map(c => c.id).sort((a, b) => a - b).join(',');
     const drawnIds = () => P3.lying.filter(e => e[5] === dock.id).map(e => e[4]).sort((a, b) => a - b).join(',');
     out.drawn = { world: ids(), drawn: drawnIds() };
@@ -943,10 +1025,13 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
         __E.f(4); const A = P3.avatar; out.carry = { ran: !!(r && r.ok), msg: r && r.msg, frames, held, bad, after: !!(A && A.look && A.look.held), world: !!(b.carry && b.carry.n > 0) }; } }
     // 4. a docker unloading the quay (the unloading of act-porto.js, by day: the world's own errand for it, Porto.work): at every
     // frame the crates drawn on the quay are the world's, and a crate is drawn in hands only as many as the world has in hands
-    { const o = __E.adults(__E.town(), q => q.id !== v.id && G.W.reaches(q, sp[0], sp[1]))[0]; out.docker = null;
-      if (o) { const near = G.W.nearestLand(sp[0] + 0.6, sp[1], 3) || sp; o.x = near[0]; o.y = near[1]; o.path = null; o.carry = null;
-        G.inSim++; S.time = 0.15; G.Porto.work(o, dock, G.Vg.H); G.inSim--; // (the god's hand: the day, and the errand the world gives a docker)
-        const r = { frames: 0, extra: 0, ghost: 0, lifts: 0, n0: dock.crates.length };
+    { const o = __E.adults(__E.town(), q => q.id !== v.id && free(q) && G.W.reaches(q, sp[0], sp[1]))[0]; out.docker = null;
+      if (o) { const near = G.W.nearestLand(sp[0] + 0.6, sp[1], 3) || sp; o.x = near[0]; o.y = near[1]; o.path = null;
+        // (the god's hand: the day — and the unloading of the quay sees it at its overseer's next look, once a second: one waiting
+        // for the night gives no errand, T-249 —; then the errand the world gives a docker)
+        G.inSim++; S.time = 0.15; G.inSim--; __E.until(() => { const op = G.Porto.opAt(dock); return !op || op.st !== 'wait'; }, 90);
+        G.inSim++; const given = G.Porto.work(o, dock, G.Vg.H); G.inSim--;
+        const r = { given: !!given, op: (G.Porto.opAt(dock) || { st: '-' }).st, frames: 0, extra: 0, ghost: 0, lifts: 0, n0: dock.crates.length };
         for (let k = 0; k < 900 && dock.crates.length > r.n0 - 2; k++) { G.Main.frameFor(33); r.frames++;
           const world = new Set(dock.crates.map(c => c.id)); for (const e of P3.lying) if (e[5] === dock.id && !world.has(e[4])) r.ghost++;
           // (whoever the world has holding a thing the 3D draws as a crate — the crates of the quays, the gear's box)
@@ -963,7 +1048,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     ok('e16 com o menu aberto o 3D desenha só lendo: o cais, o registro dele e o relógio como estavam', e16.still.quay && e16.still.clock && e16.still.drawn, JSON.stringify(e16.still));
     ok('e16 o golpe pedido com o menu aberto espera; com o mundo de volta, corta', !e16.stroke || (e16.stroke.ran && e16.stroke.during === 0 && e16.stroke.after > 0), JSON.stringify(e16.stroke));
     ok('e16 a carga levada ao armazém está nas mãos só enquanto o mundo a tem nelas', !e16.carry || (e16.carry.ran && e16.carry.held > 5 && e16.carry.bad === 0 && !e16.carry.after && !e16.carry.world), JSON.stringify(e16.carry));
-    ok('e16 o estivador descarregando: nenhuma caixa desenhada que o mundo não tenha, nenhuma nas mãos a mais', !e16.docker || (e16.docker.ghost === 0 && e16.docker.extra === 0 && e16.docker.lifts > 0 && e16.docker.n1 < e16.docker.n0), JSON.stringify(e16.docker));
+    ok('e16 o estivador descarregando: nenhuma caixa desenhada que o mundo não tenha, nenhuma nas mãos a mais', !e16.docker || (e16.docker.given && e16.docker.ghost === 0 && e16.docker.extra === 0 && e16.docker.lifts > 0 && e16.docker.n1 < e16.docker.n0), JSON.stringify(e16.docker));
   }
   ok('e16 verificador', !e16.qa || (!e16.qa.length && e16.err === '{}'), `${(e16.qa || []).slice(0, 3).join(' · ') || 'limpo'} · ${e16.err}`);
   await shot('e16-cais');
@@ -979,13 +1064,16 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const dry = (x, y) => { const i = W.idx(x, y); const t = S.type[i]; return !((t === G.T.RIVER && !S.road[i]) || t <= G.T.SEA) && W.walkableXY(x, y); };
     const porters = s => [...S.villagers.values()].filter(v => v.set === s.id && v.role === 'estivador').length;
     const towns = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built)).sort((a, b) => porters(b) - porters(a) || a.id - b.id);
-    let dock = null;
-    for (const s of towns) { for (const d of [...S.buildings.values()].filter(b => b.set === s.id && b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) { const sp = god(() => G.Fishers.crateSpot(d)); const st = god(() => P.destOf({ at: d.id, fac: G.Village.facOfSet(d.set), x: d.x + 1, y: d.y + 1, data: {} })); if (sp && dry(sp[0], sp[1]) && st && st.type === 'armazem' && god(() => P.access(d, st))) { dock = d; break; } } if (dock) break; }
-    out.dock = dock ? dock.id : null; if (!dock) return out;
+    // (the quay and its stevedore found together: a town whose quay serves but whose stevedores all have their hands full is passed
+    // by — Mênfis's only one, carrying 4 of food, in the metropole of the v37's last worlds, T-250)
+    const hand = (d, sp) => [...S.villagers.values()].filter(o => o.set === d.set && o.role === 'estivador' && !(o.carry && o.carry.n > 0) && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp[0], sp[1])).sort((a, b) => a.id - b.id)[0];
+    let dock = null, found = 0;
+    for (const s of towns) { for (const d of [...S.buildings.values()].filter(b => b.set === s.id && b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) { const sp = god(() => G.Fishers.crateSpot(d)); const st = god(() => P.destOf({ at: d.id, fac: G.Village.facOfSet(d.set), x: d.x + 1, y: d.y + 1, data: {} })); if (sp && dry(sp[0], sp[1]) && st && st.type === 'armazem' && god(() => P.access(d, st))) { found = found || d.id; if (hand(d, sp)) { dock = d; break; } } } if (dock) break; }
+    out.dock = dock ? dock.id : found || null; if (!dock) return out;
     const fid = G.Village.facOfSet(dock.set);
     god(() => { for (const op of A.all()) if (op.def === 'descarga' && op.at === dock.id && A.live(op)) A.end(op, 'cancel', 'teste'); for (const c of (dock.crates || []).slice()) D.move('q:' + dock.id, 'f:' + fid, c.k, c.n, { code: 'teste', part: true }); dock.crates = []; S.time = 0.15; });
     const sp = god(() => G.Fishers.crateSpot(dock));
-    const v = [...S.villagers.values()].filter(o => o.set === dock.set && o.role === 'estivador' && !(o.carry && o.carry.n > 0) && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp[0], sp[1])).sort((a, b) => a.id - b.id)[0];
+    const v = hand(dock, sp);
     out.who = v ? v.name : null; if (!v) return out;
     // (where the docker comes from: the door of the warehouse, a stone's throw from the quay — or a point one walks to from there)
     const door0 = G.Vg.door(god(() => P.destOf({ at: dock.id, fac: fid, x: dock.x + 1, y: dock.y + 1, data: {} }))); const dd = G.dist(door0[0], door0[1], sp[0], sp[1]) * TL;
@@ -1055,10 +1143,19 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // to the store's door, following the mark; E: the crate goes in as a docker's
     const e17d = await E(() => {
       const X = window.__e17; const S = G.S, TL = G.Space.TILE, D = G.Depot; const v = __E.body(); const op = G.Act.get(X.op); const out = {};
-      const dest = G.Porto.destOf(op); const door = G.Vg.door(dest); out.walk = __E.walkTo(door[0], door[1], 900);
+      const dest = G.Porto.destOf(op); const door = G.Vg.door(dest);
       const prompt = () => { const el = document.querySelector('#inc-hud .ih-prompt'); return el && !el.classList.contains('hidden') ? el.querySelector('span').textContent : ''; };
-      for (let k = 0; k < 120 && !/^Guardar /.test(prompt()); k++) { G.Cam3D.yaw = Math.atan2(door[1] * TL - G.Avatar.state().Z, door[0] * TL - G.Avatar.state().X); G.Input3D.down.frente = Math.hypot(door[0] * TL - G.Avatar.state().X, door[1] * TL - G.Avatar.state().Z) > 0.5; G.Main.frameFor(33); }
-      G.Input3D.down.frente = false; __E.f(6); out.prompt = prompt();
+      // (along the world's path to the door — where the mark is —, as a player walks up to it, the camera turned toward each next
+      // step, until the prompt is the store's. Pushed straight at the door from where the walk stopped, the body went along the
+      // wall of the harbour warehouse of Mênfis, in the metropole of the v37's last worlds, and round its corner out of the
+      // hands' reach — «Pôr a caixa no chão» —: T-255)
+      const st = G.Avatar.state(); const p0 = G.W.findPath(v.x, v.y, door[0], door[1], true, 30000); const pth = p0 ? __E.throughGates(v.x, v.y, p0) : [];
+      out.walk = { steps: pth.length, frames: 0 };
+      walk: for (const [PX, PZ] of pth.concat([door]).map(w => [w[0] * TL, w[1] * TL])) for (let k = 0; k < 300; k++) { if (/^Guardar /.test(prompt())) break walk; if (Math.hypot(PX - st.X, PZ - st.Z) < 0.35) break; G.Cam3D.yaw = Math.atan2(PZ - st.Z, PX - st.X); G.Input3D.down.frente = true; G.Main.frameFor(33); out.walk.frames++; }
+      G.Input3D.down.frente = false;
+      for (let k = 0; k < 30 && !/^Guardar /.test(prompt()); k++) { G.Cam3D.yaw = Math.atan2(door[1] * TL - st.Z, door[0] * TL - st.X); G.Main.frameFor(33); } // (at the door, facing it)
+      __E.f(6); out.prompt = prompt(); out.walk.d = +(Math.hypot(door[0] * TL - st.X, door[1] * TL - st.Z)).toFixed(2);
+      if (!/^Guardar /.test(out.prompt)) { const b0 = G.Interact.best(); out.walk.at = [+v.x.toFixed(2), +v.y.toFixed(2)]; out.walk.door = door.map(q => +q.toFixed(2)); out.walk.best = b0 ? b0.label : null; }
       const c = v.carry; const n = c ? c.n : 0, k = c ? c.k : 'food'; const payee = v.home && D.exists('h:' + v.home) ? 'h:' + v.home : 'p:' + v.id;
       const led0 = D.ledger().length ? D.ledger()[D.ledger().length - 1][0] : 0; const st0 = v.st[k] || 0; const stock0 = D.get('f:' + X.fid, k); const coin0 = D.get(payee, 'moedas');
       if (/^Guardar /.test(out.prompt)) { G.IncUI.use(); __E.until(() => !G.Avatar.busy(), 600); __E.f(6); }
@@ -1117,15 +1214,29 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // 5. up the stair from its foot (the flight whole): its lid, where it has one, lifts while the body goes through
     const s = p.stairs.find(q => q.kind === 'escada' && q.lv0 === G.Possess.level());
     if (s) { const n = p.grid.n, cs = p.grid.cs; const fits = (x, z) => { for (const [ax, az] of [[0, 0], [0.32, 0], [-0.32, 0], [0, 0.32], [0, -0.32]]) { const q = Sp.indoor(b.x * TL + x + ax, b.y * TL + z + az, G.Possess.level(), b.id); if (!q || !q.walk) return false; } return true; };
-      const cell = (x, z) => [Math.floor(x / cs), Math.floor(z / cs)]; const [sx, sz] = cell(st.X - b.x * TL, st.Z - b.y * TL), [tx, tz] = cell(s.a[0], s.a[1]); const prev = new Map(); const key = (x, z) => z * n + x; const q = [[sx, sz]]; prev.set(key(sx, sz), null);
-      for (let i = 0; i < q.length; i++) { const [x, z] = q[i]; if (x === tx && z === tz) break; for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + ax, Z = z + az; if (X < 0 || Z < 0 || X >= n || Z >= n || prev.has(key(X, Z))) continue; if (!(X === tx && Z === tz) && !fits((X + 0.5) * cs, (Z + 0.5) * cs)) continue; prev.set(key(X, Z), [x, z]); q.push([X, Z]); } }
-      const path = []; if (prev.has(key(tx, tz))) { let cur = [tx, tz]; while (cur) { path.unshift([(cur[0] + 0.5) * cs, (cur[1] + 0.5) * cs]); cur = prev.get(key(cur[0], cur[1])); } }
+      const cell = (x, z) => [Math.floor(x / cs), Math.floor(z / cs)]; const key = (x, z) => z * n + x;
+      // (the shut doors of the storey, by their middle and their wall's normal: a cell by one is passed through it, once open)
+      const shut = []; for (const dr of p.doors) { const ww = p.walls[dr.wall]; if (dr.kind === 'vao' || dr.id === e.door || !ww || ww.lv !== G.Possess.level() || In.doorState(b, dr.id).state === 'aberta') continue; const LL = Math.hypot(ww.b[0] - ww.a[0], ww.b[1] - ww.a[1]) || 1; const ux = (ww.b[0] - ww.a[0]) / LL, uz = (ww.b[1] - ww.a[1]) / LL; shut.push({ id: dr.id, x: ww.a[0] + ux * dr.at, z: ww.a[1] + uz * dr.at, nx: -uz, nz: ux }); }
+      const atDoor = (x, z) => shut.find(o => Math.hypot(x - o.x, z - o.z) < 0.45);
+      const route = thru => { const [sx, sz] = cell(st.X - b.x * TL, st.Z - b.y * TL), [tx, tz] = cell(s.a[0], s.a[1]); const prev = new Map(); const q = [[sx, sz]]; prev.set(key(sx, sz), null);
+        for (let i = 0; i < q.length; i++) { const [x, z] = q[i]; if (x === tx && z === tz) break; for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + ax, Z = z + az; if (X < 0 || Z < 0 || X >= n || Z >= n || prev.has(key(X, Z))) continue; const cx = (X + 0.5) * cs, cz = (Z + 0.5) * cs; if (!(X === tx && Z === tz) && !fits(cx, cz) && !(thru && atDoor(cx, cz))) continue; prev.set(key(X, Z), [x, z]); q.push([X, Z]); } }
+        const out = []; if (prev.has(key(tx, tz))) { let cur = [tx, tz]; while (cur) { out.unshift([(cur[0] + 0.5) * cs, (cur[1] + 0.5) * cs]); cur = prev.get(key(cur[0], cur[1])); } } return out; };
+      let path = route(false), doors = 0;
+      // (a stair behind a shut door — in the back room of a sobrado of the metropole of the v37's last worlds, T-251 —: reached as a
+      // player reaches it, the way to the door walked, the hands open it, and through it square to its wall; then the way on)
+      if (!path.length) { const via = route(true); const k = via.findIndex(pt => atDoor(pt[0], pt[1])); const o = k >= 0 ? atDoor(via[k][0], via[k][1]) : null;
+        if (o) { for (const pt of via.slice(0, k)) go(pt[0], pt[1], 120);
+          let mx = o.nx, mz = o.nz; if ((st.X - b.x * TL - o.x) * mx + (st.Z - b.y * TL - o.z) * mz < 0) { mx = -mx; mz = -mz; } // (the body's side of it)
+          go(o.x + mx * 0.6, o.z + mz * 0.6, 200);
+          let bt = null; for (let j = 0; j < 30 && !(bt && bt.id === 'portaPlanta' && bt.t.d.id === o.id); j++) { G.Cam3D.yaw = Math.atan2(b.y * TL + o.z - st.Z, b.x * TL + o.x - st.X); bt = G.Interact.best(); G.Main.frameFor(33); }
+          if (bt && bt.id === 'portaPlanta' && bt.t.d.id === o.id) G.Interact.run(bt); __E.until(() => !G.Avatar.busy(), 120); __E.f(20);
+          if (In.doorState(b, o.id).state === 'aberta') { doors++; go(o.x - mx * 0.7, o.z - mz * 0.7, 200); path = route(false); } } }
       for (const pt of path) go(pt[0], pt[1], 120);
       // (up: the stick held along the flight from its foot)
       let lid = 0, flown = 0; const dir = Math.atan2(s.dir[1], s.dir[0]);
       for (let k = 0; k < 400 && G.Possess.level() === s.lv0; k++) { G.Cam3D.yaw = dir; G.Input3D.down.frente = true; G.Main.frameFor(33); const f = G.Avatar.flight(); if (f) flown++; const o = B3.opened().find(qq => qq.id === b.id); if (o && o.lids.some(x => x > 0.3)) lid++; }
       G.Input3D.down.frente = false; __E.f(20);
-      out.up = { path: path.length, lv: G.Possess.level(), want: s.lv1, flown, lid, hole: !!s.hole, camIn }; }
+      out.up = { path: path.length, doors, lv: G.Possess.level(), want: s.lv1, flown, lid, hole: !!s.hole, camIn }; }
     // 6. saved and loaded in the house: inside still, drawn open again
     { const sv = G.Save.serialize(); G.Save.apply(JSON.parse(sv)); __E.until(() => G.Modes.state === 'INC', 400); __E.until(() => B3.isOpen(b.id), 200); __E.f(10);
       const v2 = G.Possess.body(); out.load = { body: !!v2, inside: !!v2 && v2.inside === b.id, lv: G.Possess.level(), open: B3.isOpen(b.id), err: JSON.stringify(G.modErr) }; }
@@ -1171,9 +1282,23 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // a long walk, running, along the world's own path to the farthest door the feet reach: the near pictures are made
     // ahead and thrown away behind; at most the disc that is kept (37 at the light quality) is ever held
     const v = __E.adults(s)[0]; __E.enter(v); const st0 = G.Realm.stats; const b0 = st0.builds, r0 = st0.rebuilds;
-    let far = null, fd = 0; for (const b of S.buildings.values()) { if (!b.built) continue; const d = G.Vg.door(b); const dd = G.dist(d[0], d[1], v.x, v.y); if (dd > fd && dd < 50 && G.W.reaches(v, d[0], d[1])) { fd = dd; far = d; } }
+    // (by a way the body walks as the world does: the world walks across the lot of a fair, and the body meets there the stalls
+    // of its plan — the family of the L-354, open for the Patch 2. In Tenochtitlan of the generation-7 metropolis the way to the
+    // farthest door crossed the fair #23764, and the body stood at a stall on its edge after six steps aside: the door is the
+    // farthest whose way, along its legs and a body's half-width to each side, has no ground a plan keeps from the feet
+    // (G.Space.indoor, the body's own rule) — but the lot the body leaves and the door's own: T-263)
+    const TL = G.Space.TILE, o0 = S.occ[G.W.idx(Math.floor(v.x), Math.floor(v.y))];
+    const planFree = (b, d) => { const p = G.W.findPath(v.x, v.y, d[0], d[1], true, 30000); if (!p) return false; let a = [v.x, v.y];
+      for (const w of p) { const L = Math.hypot(w[0] - a[0], w[1] - a[1]), n = Math.ceil(L * 4); const ux = L ? (w[0] - a[0]) / L : 0, uy = L ? (w[1] - a[1]) / L : 0;
+        for (let k = 1; k <= n; k++) { const x = a[0] + (w[0] - a[0]) * k / n, y = a[1] + (w[1] - a[1]) * k / n;
+          for (const o of [0, 0.09, -0.09]) { const px = x - uy * o, py = y + ux * o; const id = S.occ[G.W.idx(Math.floor(px), Math.floor(py))]; if (!id || id === b.id || id === o0) continue;
+            const q = G.Space.indoor(px * TL, py * TL, 0, 0); if (q && !q.walk) return false; } }
+        a = w; }
+      return true; };
+    let far = null, fd = 0; { const cand = []; for (const b of S.buildings.values()) { if (!b.built) continue; const d = G.Vg.door(b); const dd = G.dist(d[0], d[1], v.x, v.y); if (dd < 50 && G.W.reaches(v, d[0], d[1])) cand.push([dd, b, d]); }
+      cand.sort((p, q) => q[0] - p[0]); for (const [dd, b, d] of cand.slice(0, 40)) if (planFree(b, d)) { fd = dd; far = d; break; } }
     let maxNear = 0, maxLive = 0; const watch = () => { maxNear = Math.max(maxNear, G.Realm.chunkCount().near); maxLive = Math.max(maxLive, G.Realm.memory().live); };
-    const f0 = G.Main.frameFor; G.Main.frameFor = ms => { f0(ms); watch(); };
+    const f0 = G.Main.frameFor; G.Main.frameFor = (ms, w) => { f0(ms, w); watch(); };
     const p0 = G.Realm.stats.parts; const w = far ? __E.walkTo(far[0], far[1], 4500, true) : null;
     G.Main.frameFor = f0;
     const walk = { to: +(fd * 4).toFixed(0), ok: w && w.ok, frames: w && w.frames, maxNear, maxLive, built: G.Realm.stats.builds - b0, rebuilt: G.Realm.stats.rebuilds - r0, parts: G.Realm.stats.parts - p0, ms: Math.round(G.Realm.stats.ms) };
