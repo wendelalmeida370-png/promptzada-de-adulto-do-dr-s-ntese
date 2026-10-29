@@ -267,7 +267,9 @@
     const f = G.Fac.ofV(v); if (!f) return null; E.ensure(f); initEstate(b);
     return estateTask(v, b, f, H);
   };
-  const free = (b, k, v) => { const c = b.claim && b.claim[k]; return !c || c === v.id || !G.S.villagers.has(c); };
+  // (a plant, a hive, a pan or the vat is held only while who holds it is at that work — the estate's task, at this place and
+  // this plant —: a work cut in the middle, a trade changed or a save leave it free, as the farm's crops do — L-383)
+  const free = (b, k, v) => { const c = b.claim && b.claim[k]; if (!c || c === v.id) return true; const o = G.S.villagers.get(c); const t = o && o.task; return !(t && t.type === 'estate' && t.id === b.id && String(t.k) === String(k)); };
   function claim(b, k, v) { (b.claim || (b.claim = {}))[k] = v.id; }
   function estateTask(v, b, f, H) {
     const I = b.inv || (b.inv = {});
@@ -371,8 +373,9 @@
         if (G.R() < dt * 3) G.FX && G.FX.chips(v.x + G.rr(-0.2, 0.2), v.y + 0.1, b.crop === 'grape' ? '#6a1a3a' : '#8a8a3a');
         if (v.actT < 5 / mul(v)) return;
         const m = Math.min(b.must || 0, 4); b.must = (b.must || 0) - m;
-        const n = Math.max(1, Math.round(m * c.n * 1.2)); I[c.out] = (I[c.out] || 0) + n;
-        E.made(f, c.out, n); first(f, b, c);
+        // (what the press makes is born on the shelf, in the ledger — L-384)
+        const r = G.Depot.make('b:' + b.id, c.out, Math.max(1, Math.round(m * c.n * 1.2)), { code: 'prensa', by: v.id, part: true });
+        if (r.ok) { E.made(f, c.out, r.n); first(f, b, c); }
         return done(v, b, t, H);
       }
       case 'smoke': {
@@ -413,7 +416,9 @@
         const [cx, cy] = G.Village.center(b); faceTo(v, cx, cy);
         if (t.do === 'feed') { v.act = 'feed'; if (v.actT < 4 / mul(v)) return; b.leaves = Math.max(0, (b.leaves || 0) - 1); b.worms = (b.worms || 0) + 1; return H.end(v); }
         v.act = 'reel'; if (v.actT < 6 / mul(v)) return;
-        b.worms = Math.max(0, (b.worms || 0) - 3); I.seda = (I.seda || 0) + 1; E.made(f, 'seda', 1); first(f, b, { out: 'seda' });
+        // (the thread is born on the shelf, in the ledger — L-384)
+        b.worms = Math.max(0, (b.worms || 0) - 3); const r = G.Depot.make('b:' + b.id, 'seda', 1, { code: 'seda', by: v.id, part: true });
+        if (r.ok) { E.made(f, 'seda', r.n); first(f, b, { out: 'seda' }); }
         G.FX && G.FX.sparkle(v.x, v.y); return H.end(v);
       }
       case 'salt': {
@@ -421,9 +426,11 @@
         const [cx, cy] = G.Village.center(b); faceTo(v, cx, cy); v.act = 'salt';
         if (G.R() < dt * 2) G.FX && G.FX.chips(v.x + v.face * 0.3, v.y, '#f4f4f0');
         if (v.actT < 6 / mul(v)) return;
-        if ((I.sal || 0) < 1 || (I.food || 0) < 4) return H.end(v);
-        I.sal -= 1; I.food -= 4; E.used(f, 'sal', 1); E.used(f, 'food', 4);
-        I.carne_seca = (I.carne_seca || 0) + 2; E.made(f, 'carne_seca', 2); first(f, b, { out: 'carne_seca' });
+        // (the salt and the meat used up, the dried meat born, on the shelf — in the ledger, L-384)
+        const D = G.Depot, ref = 'b:' + b.id;
+        if (D.free(ref, 'sal') < 1 || D.free(ref, 'food') < 4) return H.end(v);
+        D.use(ref, 'sal', 1, { code: 'salga', by: v.id }); D.use(ref, 'food', 4, { code: 'salga', by: v.id }); E.used(f, 'sal', 1); E.used(f, 'food', 4);
+        const r = D.make(ref, 'carne_seca', 2, { code: 'salga', by: v.id, part: true }); if (r.ok) { E.made(f, 'carne_seca', r.n); first(f, b, { out: 'carne_seca' }); }
         return H.end(v);
       }
     }
