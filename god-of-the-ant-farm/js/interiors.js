@@ -362,13 +362,18 @@
     },
     // a colonnade (B4): the columns standing along a line a → b of a storey — a wall of kind 'colunata', as thick as a column
     // (o.col, 0.5 m), as high as o.h —, the spaces between them its openings ('vao': walked through, o.n columns, the ends two of
-    // them); o.outer one of the shell's sides, o.door the opening (its number; the middle when true) that is a door — 'rua' for
-    // the street's, the way in — and with o.wall its rooms bound by where it falls. → { wall, doors: [ids], door }
+    // them — or where o.at says, each column's middle along the line from a: a form's, each where the form stands it, the
+    // spaces between them as wide as they come, D-093); o.outer one of the shell's sides, o.door the opening (its number; the
+    // middle when true) that is a door — 'rua' for the street's, the way in — and with o.wall its rooms bound by where it falls;
+    // the openings under a lintel 0.15 m deep, or o.dh high (a form's columns, the beam over them its own). → { wall, doors:
+    // [ids], door }
     colonnade(lv, a, b, o) {
-      o = o || {}; const n = Math.max(2, Math.round(o.n || 6)), col = o.col || 0.5, h = o.h || 3;
-      const wid = this.wall(lv, a, b, col, h, o.outer ? 1 : 0, 'colunata', o.mat); const L = this.wlen(wid); const gap = (L - col) / (n - 1) - col;
+      o = o || {}; const col = o.col || 0.5, h = o.h || 3;
+      const wid = this.wall(lv, a, b, col, h, o.outer ? 1 : 0, 'colunata', o.mat); const L = this.wlen(wid);
+      const n = o.at ? o.at.length : Math.max(2, Math.round(o.n || 6)); const at = o.at ? o.at.slice() : Array.from({ length: n }, (_, k) => col / 2 + k * (L - col) / (n - 1));
+      const dh = o.dh !== undefined ? Math.min(h, o.dh) : h - 0.15;
       const out = { wall: wid, doors: [], door: -1 }; const mid = o.door === true ? Math.floor((n - 1) / 2) : o.door;
-      for (let k = 0; k < n - 1; k++) { const at = col / 2 + (k + 0.5) * (gap + col); const isDoor = k === mid; const d = this.door(wid, at, gap, Math.min(h - 0.15, o.dh || h - 0.15), -1, isDoor && o.rua ? 'rua' : -1, o.outer ? 1 : 0, 'vao'); out.doors.push(d); if (isDoor) out.door = d; }
+      for (let k = 0; k < n - 1; k++) { const isDoor = k === mid; const d = this.door(wid, (at[k] + at[k + 1]) / 2, at[k + 1] - at[k] - col, dh, -1, isDoor && o.rua ? 'rua' : -1, o.outer ? 1 : 0, 'vao'); out.doors.push(d); if (isDoor) out.door = d; }
       return out;
     },
     // places of use at points of a room with no piece (B4): where one acts in an orchestra, fights on the sand, speaks or
@@ -408,11 +413,13 @@
     },
     // the inner rectangle of the main shell (the walls' insides)
     inner() { const s = this.shell; const t = s.t; return [s.r[0] + t, s.r[1] + t, s.r[2] - t, s.r[3] - t]; },
-    // the clear zones a door and a stair keep (no furniture there)
+    // the clear zones a door and a stair keep (no furniture there) — not the space between two columns of a colonnade where the
+    // street does not come in (a form's porch, its peristyle: the edge of its floor, no way in; the walk from the door proves what
+    // must be open — the Norse gallery's, whose staves stand 0.70 m from the walls, kept the nave's back clear through its wall)
     keepClear(lv) {
       const out = [];
       for (const d of this.doors) {
-        const w = this.walls[d.wall]; if (w.lv !== lv) continue;
+        const w = this.walls[d.wall]; if (w.lv !== lv || (w.kind === 'colunata' && !d.rooms.includes('rua'))) continue;
         const p = this.ptOn(d.wall, d.at); const L = this.wlen(d.wall) || 1; const tx = (w.b[0] - w.a[0]) / L, tz = (w.b[1] - w.a[1]) / L; const nx = -tz, nz = tx;
         const half = d.w / 2 + 0.12, dep = 0.85 + w.t / 2;
         const pts = [[p[0] + tx * half + nx * dep, p[1] + tz * half + nz * dep], [p[0] - tx * half - nx * dep, p[1] - tz * half - nz * dep]];
@@ -654,9 +661,11 @@
       return null;
     },
     // a piece at a rectangle chosen by the recipe, facing (fu, fv) — the rows of a temple, the altar before the image —, if
-    // it fits there and leaves every way open; null if not
+    // it fits there and leaves every way open; null if not (a piece of the form — extra.form: what the god draws there, a
+    // tower, the jambs of a gate, a column, a fountain — stands where the form stands it, in the ways the doors keep for the
+    // furniture too: the walk from the door, after it, says whether the way is open)
     at(kind, lv, room, rr, fu, fv, extra) {
-      const D = ITEMS[kind]; if (!D || !this.rooms[room]) return null; const F = this.floorOf(lv);
+      const D = ITEMS[kind]; if (!D || !this.rooms[room]) return null; let F = this.floorOf(lv); if (extra && extra.form) F = Object.assign({}, F, { zones: [], near: null });
       const w = fu ? rr[3] - rr[1] : rr[2] - rr[0], d = fu ? rr[2] - rr[0] : rr[3] - rr[1];
       const f = this.fits(rr, lv, room, kind, this.spotsAll({ r: rr, face: [fu, fv], kind, w, d, h: D.h }), null, F); if (!f) return null;
       return this.put(kind, lv, room, rr, fu, fv, f, extra);
@@ -1560,11 +1569,15 @@
   // grid has it, the cells whose middle it covers (as In.cell and In.walk read them): beside it, the storey's floor
   In.floorY = function (b, lv, x, z) { return In.floorYOf(In.plan(b), lv, x, z); };
   const onFlight = (s, x, z) => ptIn([(Math.floor(x / CS) + 0.5) * CS, (Math.floor(z / CS) + 0.5) * CS], s.r, 0);
+  // (the top of the highest tread of a flight under a point — the steps a flight is made of where the recipe says them: a
+  // form's, D-093 —, or -1 where it has none there: the feet on each, as they are drawn, never a slope across them)
+  In.treadY = function (s, x, z) { let top = -1; for (const q of s.treads || []) if (ptIn([x, z], q.r, 0) && q.y > top) top = q.y; return top; };
   In.floorYOf = function (p, lv, x, z) {
     if (!p) return 0; const l = p.levels.find(q => q.lv === lv); const y0 = l ? l.y : 0;
     for (const s of p.stairs) {
-      // (steps: from the ground outside, at 0, to the storey they serve — down into a sunken floor, up to a house on stilts)
-      if (s.kind === 'degraus') { if (s.lv1 !== lv || !onFlight(s, x, z)) continue; const len = s.dir[0] ? s.r[2] - s.r[0] : s.r[3] - s.r[1]; const t = s.dir[0] ? (s.dir[0] > 0 ? x - s.r[0] : s.r[2] - x) : (s.dir[1] > 0 ? z - s.r[1] : s.r[3] - z); return y0 * G.clamp(t / (len || 1), 0, 1); }
+      // (steps: from the ground outside, at 0, to the storey they serve — down into a sunken floor, up to a house on stilts;
+      // on their treads where they have them)
+      if (s.kind === 'degraus') { if (s.lv1 !== lv || !onFlight(s, x, z)) continue; const ty = In.treadY(s, x, z); if (ty >= 0) return ty; const len = s.dir[0] ? s.r[2] - s.r[0] : s.r[3] - s.r[1]; const t = s.dir[0] ? (s.dir[0] > 0 ? x - s.r[0] : s.r[2] - x) : (s.dir[1] > 0 ? z - s.r[1] : s.r[3] - z); return y0 * G.clamp(t / (len || 1), 0, 1); }
       if (s.lv0 !== lv || !onFlight(s, x, z)) continue; const l1 = p.levels.find(q => q.lv === s.lv1); const y1 = l1 ? l1.y : y0;
       const len = s.dir[0] ? s.r[2] - s.r[0] : s.r[3] - s.r[1]; const t = s.dir[0] ? (s.dir[0] > 0 ? x - s.r[0] : s.r[2] - x) : (s.dir[1] > 0 ? z - s.r[1] : s.r[3] - z);
       return y0 + (y1 - y0) * G.clamp(t / (len || 1), 0, 1);
@@ -2360,7 +2373,12 @@
     // never judged on loading: what a save and a load give back is the same)
     for (const b of G.S.buildings.values()) {
       const r = b.ip; if (!r || (r.v | 0) >= REC_V) continue; r.v = REC_V;
-      if (TYPES[r.t] && b.type !== 'ruin' && !(TYPES[r.t].fams || []).includes(r.f)) { const f0 = r.f; r.f = chooseFamily(b, r); r.r++; r.fx = []; fact(b, 'reforma', 'família ' + f0 + '>' + r.f); }
+      // (and where the type has its form's family and it is laid out for the record's people — D-093: the temple —, that family,
+      // the one the god and the 3D draw: an old temple there becomes the form's, not a hall the form does not have; chosen as a
+      // new building's is, so only where the form's is laid out)
+      const T = TYPES[r.t]; const out = !!T && !(T.fams || []).includes(r.f);
+      const f1 = T && b.type !== 'ruin' && (out || (T.formFam && r.f !== T.formFam)) ? chooseFamily(b, r) : r.f;
+      if (f1 !== r.f && (out || f1 === T.formFam)) { const f0 = r.f; r.f = f1; r.r++; r.fx = []; fact(b, 'reforma', 'família ' + f0 + '>' + r.f); }
       if (!b.built || b.type === 'ruin' || !TYPES[b.type] || r.t !== b.type) continue;
       const d0 = doorOf(b), s0 = r.s + '/' + r.o; doorRule(b); secure(b); if (d0 && r.s + '/' + r.o !== s0) outOfPocket(b, d0);
     }
