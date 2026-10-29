@@ -106,8 +106,11 @@ let ruinId = 0, keptRuina = 0;
 }
 // ---------------- g5 a save in the middle ----------------
 {
+  // (a ruin of its own, the god's hand again, not cleared: the g1's is gone — the ruins are cleared within the second and a
+  // half the g1 waits, in the worlds of the generation 7, T-267)
+  { const h = [...S.buildings.values()].filter(b => b.set === big.id && b.built && housing(b) && b.type !== 'ruin').sort((p, q) => p.id - q.id)[0]; if (h) { fill(h); V.destroyBuilding(h, 'teste'); ruinId = h.id; } }
   const r = ruinId && S.buildings.get(ruinId);
-  if (!r) ok('g5 save no meio', false, 'sem a ruína do g1');
+  if (!r) ok('g5 save no meio', false, 'sem uma casa para a ruína');
   else {
     const n0 = (S.ledger || []).filter(e => e[3] === 'h:' + ruinId && e[8] === 'ruina').length;
     M.salvarCarregar(); S = G.S;
@@ -118,7 +121,7 @@ let ruinId = 0, keptRuina = 0;
 // ---------------- g6 the checker sees a ruin with things in it ----------------
 {
   const r = ruinId && S.buildings.get(ruinId);
-  if (!r) ok('g6 o verificador vê', false, 'sem a ruína do g1');
+  if (!r) ok('g6 o verificador vê', false, 'sem uma casa para a ruína');
   else {
     const clean0 = ruins().length; r.inv = Object.assign(r.inv || {}, { tecido: 1 }); r.pantry = 2; // (the test's hand: things left in a ruin)
     const saw = ruins(); r.inv.tecido = 0; r.pantry = 0; const clean1 = ruins().length;
