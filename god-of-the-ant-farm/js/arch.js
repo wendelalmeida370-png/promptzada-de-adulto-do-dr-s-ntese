@@ -493,9 +493,15 @@
     }
     return null;
   }
+  // (the steps of a monument's base one goes up — D-097 —: each split in two along its front, its upper half set back half a
+  // shrink there, so each a body's step, 0.21 to 0.25 m —, its sides and its back the step's: as its form — G.Forma)
+  function stepsUp(c, p, e, n, h, shrink) {
+    for (let k = 0; k < n; k++) { const q = e - k * shrink; box(c, -q, -q, q, q, k * h, k * h + h / 2, p.base[0], p.base[1], p.base[2]); box(c, -q, -q, q, q - shrink / 2, k * h + h / 2, (k + 1) * h, p.base[0], p.base[1], p.base[2]); }
+    return n * h;
+  }
   function monument(c, m, p, st) {
     if (st === 'grego') {
-      steps(c, p, 0.9, 2, 1.3, 0.1);
+      stepsUp(c, p, 0.9, 2, 1.3, 0.1);
       box(c, -0.3, -0.3, 0.3, 0.3, 2.6, 12, p.col[0], p.col[1], p.col[0]);
       band(c, -0.3, -0.3, 0.3, 0.3, 10.5, 12, p.acc);
       statue(c, 0, 0, 12, '#c9a24a', 30, true);
@@ -503,7 +509,7 @@
       return;
     }
     if (st === 'romano') {
-      steps(c, p, 0.85, 2, 1.4, 0.12);
+      stepsUp(c, p, 0.85, 2, 1.4, 0.12);
       box(c, -0.28, -0.28, 0.28, 0.28, 2.8, 9, p.col[0], p.col[1], p.col[0]);
       box(c, -0.14, -0.14, 0.14, 0.14, 9, 56, p.col[0], p.col[1], p.col[0]);
       c.strokeStyle = 'rgba(120,100,70,0.45)'; c.lineWidth = 0.6;
@@ -514,7 +520,7 @@
       return;
     }
     if (st === 'asteca') {
-      steps(c, p, 0.9, 3, 1.5, 0.12);
+      stepsUp(c, p, 0.9, 3, 1.5, 0.12);
       const q = P(0, 0.1, 4.5 + 13);
       c.fillStyle = '#9a9488'; c.beginPath(); c.arc(q[0], q[1], 13, 0, TAU); c.fill();
       c.fillStyle = '#b8b2a4'; c.beginPath(); c.arc(q[0] - 0.8, q[1] - 0.6, 12.2, 0, TAU); c.fill();

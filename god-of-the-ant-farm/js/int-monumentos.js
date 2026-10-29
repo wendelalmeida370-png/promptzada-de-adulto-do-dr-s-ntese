@@ -223,13 +223,25 @@
   // form's solids on it of a tenth of it at least — kept out of it, the strips round it its rooms (fn), what else of the form
   // stands in them kept off → { rooms, bb } or null)
   function platform(P, F, top, y, st, fn) {
-    const T = top.map(r2); P.shell = { kind: 'aberta', r: T, t: 0, mat: 'chao', base: 'macica', baseH: r2(y), floors: 1, eave: 0 }; P.roof = null;
-    P.level(0, y, 3.0, 'chao', T); P.entryLv = 0;
-    const hw = st.w / 2, u = st.a[0]; wayIn(P, T[0], T[2], T[3], [[r2(u - hw), r2(u + hw)]]);
+    const T = top.map(r2); const hw = st.w / 2, u = st.a[0];
     const treads = G.Forma.flight(st).map(q => ({ r: q.r.map(r2), y: q.y1 })); const r = [u - hw, Math.min(...treads.map(q => q.r[1])), u + hw, st.a[1]].map(r2);
+    if (!floorUp(P, T, y, [r2(u - hw), r2(u + hw)], r, treads)) return null;
+    return roundMiddle(P, F, T, y, fn);
+  }
+  // (a floor on a form, at y over its square top T: the way in its front edge from span[0] to span[1], the flight r from the
+  // street up to it on its treads — from the lowest —, from the last of them to the edge a tread at the floor → false: only
+  // the outside is wanted)
+  function floorUp(P, T, y, span, r, treads) {
+    P.shell = { kind: 'aberta', r: T, t: 0, mat: 'chao', base: 'macica', baseH: r2(y), floors: 1, eave: 0 }; P.roof = null;
+    P.level(0, y, 3.0, 'chao', T); P.entryLv = 0;
+    wayIn(P, T[0], T[2], T[3], [span]);
     if (r[1] > T[3] + 1e-6) { treads.push({ r: [r[0], T[3], r[2], r[1]], y }); r[1] = T[3]; }
     P.stair('degraus', -1, 0, r, 0, -1, null, { larga: r[2] - r[0] >= 1.2 ? 1 : 0, treads });
-    if (P.inside()) return null;
+    return !P.inside();
+  }
+  // (the floor's middle — the form's solids on it of a tenth of it at least — kept out of it, the strips round it its rooms
+  // (fn), what else of the form stands in them kept off → { rooms, bb } or null)
+  function roundMiddle(P, F, T, y, fn) {
     const foot = s => (s.k === 'rect' ? s.r : [s.c[0] - s.r, s.c[1] - s.r, s.c[0] + s.r, s.c[1] + s.r]); const area = q => (q[2] - q[0]) * (q[3] - q[1]);
     const all = G.Forma.solids(F, y); const mid = all.filter(s => area(foot(s)) >= 0.1 * area(T)); if (!mid.length) { P.errs.push('nada no meio do topo da forma'); return null; }
     const bb = mid.map(foot).reduce((a, q) => [Math.min(a[0], q[0]), Math.min(a[1], q[1]), Math.max(a[2], q[2]), Math.max(a[3], q[3])]);
@@ -316,6 +328,37 @@
     const back = g.rooms.find(q => P.rooms[q].r[3] <= bb[1] + 0.01); if (back !== undefined) { const r = P.rooms[back].r; P.marks(0, back, 'topo', [[r2(cu), r2((r[1] + r[3]) / 2), 0]]); }
   }
   const WONDER = { romano: amphitheatre, asteca: mayor, classico: ziggurat, egipcio: pyramidFoot, nordico: valhalla, grego: acropolis };
+
+  // ------------------------------ the monument (D-097) ------------------------------
+  // the monument one goes up to — its base's steps each a body's (the god's each split in two: G.Forma's crepis) —: the top
+  // step round what stands on it — the obelisk's pedestal, the god's statue's, the triumphal column's, the Sun Stone in its
+  // cradle —, up its steps along the front from the street (each a tread of the way up), its front edge the way in; before the
+  // pedestal where one makes the offering (ofertar), facing it, and either side behind that where one prays (rezar). The Norse's
+  // rune stones on their grass: where one prays before them and makes the offering at the tallest. (The golden statue, the
+  // estatua, has none: only seen — the top of its base round its column is narrower than a body)
+  function monumentPlan(P, F) {
+    if (F.style === 'nordico') return runestones(P, F);
+    const st = F.els.filter(e => e.k === 'bloco' && e.degrau === 1).sort((a, b) => a.y1 - b.y1); if (st.length < 2) { P.errs.push('o monumento sem os degraus da base'); return; }
+    const T = st[st.length - 1].r.map(r2), y = st[st.length - 1].y1;
+    const treads = []; for (let k = 0; k < st.length - 1; k++) treads.push({ r: [T[0], r2(st[k + 1].r[3]), T[2], r2(st[k].r[3])], y: st[k].y1 });
+    if (!floorUp(P, T, y, [r2(T[0] + 0.05), r2(T[2] - 0.05)], [T[0], T[3], T[2], r2(st[0].r[3])], treads)) return;
+    const g = roundMiddle(P, F, T, y, 'plataforma'); if (!g) return;
+    const bb = g.bb, cu = (bb[0] + bb[2]) / 2, id = g.rooms[0], r = P.rooms[id].r; const v = r2(Math.min(r[3] - 0.4, bb[3] + 1.1));
+    P.marks(0, id, 'ofertar', [[r2(cu), r2(bb[3] + 0.45), Math.PI]]);
+    P.marks(0, id, 'rezar', [-1.6, -0.8, 0.8, 1.6].filter(du => cu + du > r[0] + 0.4 && cu + du < r[2] - 0.4).map(du => [r2(cu + du), v, Math.PI]));
+  }
+  function runestones(P, F) {
+    const g = openGround(P, F, 'pedras'); if (!g || P.inside()) return;
+    const id = P.room(0, 'pedras', g.sh, 1); if (!solids(P, F, id)) return;
+    const S = F.els.filter(e => e.k === 'pedra'); if (!S.length) { P.errs.push('o monumento sem as pedras'); return; }
+    const tall = S.reduce((a, e) => (e.y1 > a.y1 ? e : a)), front = Math.max(...S.map(e => e.c[1] + e.e)), cu = P.L / 2;
+    P.marks(0, id, 'ofertar', [[r2(tall.c[0]), r2(tall.c[1] + tall.e + 0.5), Math.PI]]);
+    P.marks(0, id, 'rezar', [-1.6, -0.8, 0.8, 1.6].map(du => [r2(cu + du), r2(Math.min(g.sh[3] - 0.5, front + 1.0)), Math.PI]));
+  }
+  function monumentOf(P) {
+    const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c); if (!F) { P.errs.push('o monumento sem forma'); return; }
+    monumentPlan(P, F);
+  }
   function wonder(P) {
     const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c); if (!F) { P.errs.push('a maravilha sem forma'); return; }
     const f = WONDER[F.style] || WONDER[P.rec.c]; if (!f) { P.errs.push(`a maravilha de ${P.rec.c} ainda sem planta`); return; }
@@ -330,4 +373,6 @@
   In.addTypes({ teatro: { use: 'teatro', fams: ['forma.teatro'], open: 1 } });
   In.addFamilies([{ id: 'forma.maravilha', H: 'forma', V: 'maravilha', S: 'forma.maravilha', name: 'Pela forma', can: rec => (G.Forma && G.Forma.of(rec.t, rec.c) ? null : 'o prédio sem forma'), build: P => wonder(P) }]);
   In.addTypes({ maravilha: { use: 'maravilha', fams: ['forma.maravilha'], open: 1 } });
+  In.addFamilies([{ id: 'forma.monumento', H: 'forma', V: 'monumento', S: 'forma.monumento', name: 'Pela forma', can: rec => (G.Forma && G.Forma.of(rec.t, rec.c) ? null : 'o prédio sem forma'), build: P => monumentOf(P) }]);
+  In.addTypes({ monument: { use: 'monumento', fams: ['forma.monumento'], open: 1 } });
 })(window.G);

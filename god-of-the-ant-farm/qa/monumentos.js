@@ -8,22 +8,26 @@
 //      —; a arena e o Coliseu — quem luta na areia, quem assiste em pé no pódio (D-095) —; o Templo Mayor — quem oficia
 //      diante de cada santuário, quem acende os braseiros, quem olha do alto —; o zigurate — quem reza diante do olho, quem
 //      olha do terraço —; a Grande Pirâmide — quem oferta e quem reza diante dela —; Valhala — o assento do rei, os bancos, as
-//      mesas, o escaldo —; a Acrópole — quem reza diante do templo, quem oferta à estátua, quem olha do alto da rocha
+//      mesas, o escaldo —; a Acrópole — quem reza diante do templo, quem oferta à estátua, quem olha do alto da rocha; o
+//      monumento de cada povo (D-097) — quem oferta ao pé do pedestal e quem reza diante dele, no degrau de cima; diante das
+//      pedras rúnicas, no gramado
 //   3. a planta só pisa onde a forma tem chão: as fileiras na altura dos anéis da forma, a areia e o pódio da arena, o salão
-//      no piso do corpo da forma; o topo do Templo Mayor, o terraço do zigurate, a rocha da Acrópole, a laje da pirâmide
+//      no piso do corpo da forma; o topo do Templo Mayor, o terraço do zigurate, a rocha da Acrópole, a laje da pirâmide; o
+//      degrau de cima do monumento, o gramado das pedras
 //   4. os pés pelo caminho, num mundo em branco, a cada 2 cm (Space.indoor), no que a forma é — o chão, a pisada de cada
 //      degrau, a areia, o pódio, o topo —, por onde o corpo passa, nunca um degrau que ele não sobe: na arena e no Coliseu, da
 //      rua pelo arco da frente, pela passagem, pelo lance do subsolo e pelo alçapão até a areia, e dos dois degraus ao pódio;
 //      da rua pelo lance até o topo do Templo Mayor, o terraço do zigurate e a rocha da Acrópole, pelos degraus até dentro de
-//      Valhala, da rua à frente da pirâmide
-//   5. o 3D desenha o teatro e a maravilha com planta pela forma (Build3D.byForm)
+//      Valhala, da rua à frente da pirâmide; da rua pelos degraus partidos do monumento (D-097) até o degrau de cima, cada
+//      degrau um passo do corpo
+//   5. o 3D desenha o teatro, a maravilha e o monumento com planta pela forma (Build3D.byForm)
 //   node qa/monumentos.js
 const M = require('./nodemundo.js');
 const G = M.load({});
 const In = G.Interiors, Sp = G.Space;
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | monumentos ${name} | ${info}`); if (!c) fails.push(name); };
 G.S = { villagers: new Map(), buildings: new Map(), dead: new Map(), settlements: new Map(), clock: 100, day: 3, time: 0.4, avatar: null, nextId: 1000, history: [], fire: new Float32Array(G.N * G.N) };
-const POVOS = ['classico', 'grego', 'romano', 'egipcio', 'asteca', 'nordico'], LADOS = ['S', 'E', 'N', 'W'], TIPOS = ['teatro', 'maravilha'].filter(t => In.TYPES[t]);
+const POVOS = ['classico', 'grego', 'romano', 'egipcio', 'asteca', 'nordico'], LADOS = ['S', 'E', 'N', 'W'], TIPOS = ['teatro', 'maravilha', 'monument'].filter(t => In.TYPES[t]);
 const rec = (t, c, f, s) => ({ v: In.REC_V || 4, f, r: 0, t, u: In.TYPES[t].use, s, o: 7, c, e: 3, k: 'ae', cl: c === 'egipcio' ? 'q' : 't', fl: 0, d: 1, w: 1, pw: 0, h: [], m: 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 });
 const made = []; let nid = 81001;
 for (const t of TIPOS) for (const c of POVOS) {
@@ -37,7 +41,7 @@ const tag = m => `${m.t}/${m.c}`;
 // ---------------------------------------------------------------- 1. the plans
 {
   const bad = made.filter(m => !m.p || !m.p.ok), fal = made.filter(m => m.rep.some(q => q.k === 'FALHA'));
-  ok('1a o teatro e a maravilha de cada povo se armam pela forma, em todo lado', made.length >= TIPOS.length * POVOS.length * LADOS.length && !bad.length, `${made.length - bad.length} de ${made.length} plantas (${TIPOS.join(', ')})${bad.length ? ': ' + bad.slice(0, 3).map(m => `${tag(m)}/${m.s}: ${(m.p && m.p.errs || []).slice(0, 2).join('; ')}`).join(' · ') : ''}`);
+  ok('1a o teatro, a maravilha e o monumento de cada povo se armam pela forma, em todo lado', made.length >= TIPOS.length * POVOS.length * LADOS.length && !bad.length, `${made.length - bad.length} de ${made.length} plantas (${TIPOS.join(', ')})${bad.length ? ': ' + bad.slice(0, 3).map(m => `${tag(m)}/${m.s}: ${(m.p && m.p.errs || []).slice(0, 2).join('; ')}`).join(' · ') : ''}`);
   ok('1b o relatório geométrico: nenhuma falha', !fal.length, fal.length ? fal.slice(0, 3).map(m => `${tag(m)}/${m.s}: ${m.rep.filter(q => q.k === 'FALHA').map(q => q.what).slice(0, 2).join('; ')}`).join(' · ') : `${made.length} plantas`);
 }
 // ---------------------------------------------------------------- 2. the places
@@ -57,6 +61,7 @@ const tag = m => `${m.t}/${m.c}`;
     'maravilha/nordico': p => [['assento do rei', itemsOf(p, 'trono').length, 1], ['bancos', itemsOf(p, 'banco').length, 6], ['atuar', marksOf(p, 'atuar').length, 1]],
     'maravilha/grego': p => [['rezar', marksOf(p, 'rezar').length, 2], ['ofertar', marksOf(p, 'ofertar').length, 1], ['topo', marksOf(p, 'topo').length, 1]],
   };
+  for (const c of POVOS) NEED['monument/' + c] = p => [['rezar', marksOf(p, 'rezar').length, 3], ['ofertar', marksOf(p, 'ofertar').length, 1]];
   for (const m of S0) {
     const p = m.p; const need = NEED[tag(m)] ? NEED[tag(m)](p) : [['algum lugar', (p.marks || []).length + p.items.length, 1]];
     for (const [what, n, min] of need) if (n < min) out.push(`${tag(m)}: ${what} ${n} (ao menos ${min})`);
@@ -64,7 +69,7 @@ const tag = m => `${m.t}/${m.c}`;
     // (a free place of each use, as the people ask it)
     for (const use of ['assistir', 'atuar', 'lutar', 'sentar', 'oficiar', 'acender', 'topo', 'rezar', 'ofertar', 'comer', 'audiencia']) { const has = (p.marks || []).some(M2 => M2.use === use) || p.items.some(i => (i.spots || []).some(q => q.use === use)) || (use === 'assistir' && p.cap.watch); if (has && !In.freePlace(m.b, use)) out.push(`${tag(m)}: nenhum lugar livre de ${use}`); }
   }
-  ok('2a os lugares de cada teatro e maravilha, onde o corpo fica, e um livre de cada uso', !out.length, out.slice(0, 4).join(' · ') || said.join(' · '));
+  ok('2a os lugares de cada teatro, maravilha e monumento, onde o corpo fica, e um livre de cada uso', !out.length, out.slice(0, 4).join(' · ') || said.join(' · '));
 }
 // ---------------------------------------------------------------- 3. the plan's floors on the form's
 {
@@ -72,7 +77,9 @@ const tag = m => `${m.t}/${m.c}`;
   const same = (m, what, y, want) => { if (Math.abs(y - want) > 0.02) out.push(`${tag(m)}: ${what} da forma a ${want.toFixed(2)}, na planta a ${y.toFixed(2)}`); };
   for (const m of made.filter(q => q.s === 'S' && q.p && q.p.ok)) {
     const F = G.Forma.of(m.t, m.c), p = m.p, k = tag(m);
-    if (k === 'teatro/grego' || k === 'teatro/classico') {
+    if (m.t === 'monument') { // (the top step of the base — the highest of its treads —, or the rune stones' grass)
+      const st = F.els.filter(q => q.k === 'bloco' && q.degrau === 1); same(m, st.length ? 'o degrau de cima' : 'o gramado', lv0(p).y, st.length ? Math.max(...st.map(q => q.y1)) : F.els[0].y1);
+    } else if (k === 'teatro/grego' || k === 'teatro/classico') {
       // (each row's top, as the form's ring of it, at a point of every row — off the aisles —, the plan's height)
       for (const e of F.els.filter(q => q.k === 'cavea')) { const A = e.aneis; for (let j = 0; j < A.length; j++) { const rIn = j < A.length - 1 ? A[j + 1][0] : e.fundo; const rr = (rIn + A[j][0]) / 2; const a = (e.arco ? (e.arco[0] + e.arco[1]) / 2 : 0) + 0.02;
         const x = e.c[0] + Math.cos(a) * rr, z = e.c[1] + Math.sin(a) * rr; same(m, `a fileira em (${x.toFixed(2)}, ${z.toFixed(2)})`, In.floorYOf(p, 0, x, z), A[j][1]); } }
@@ -85,15 +92,16 @@ const tag = m => `${m.t}/${m.c}`;
     else if (k === 'maravilha/grego') same(m, 'a rocha', lv0(p).y, F.els.find(q => q.k === 'talude').y1);
     else if (k === 'maravilha/egipcio') same(m, 'a laje', lv0(p).y, F.els.find(q => q.k === 'piramide').y0);
   }
-  ok('3a a planta pisa onde a forma tem chão', !out.length, out.slice(0, 4).join(' · ') || 'as fileiras, a areia, o pódio e a passagem das arenas, os salões, o topo, o terraço, a rocha e a laje das maravilhas');
+  ok('3a a planta pisa onde a forma tem chão', !out.length, out.slice(0, 4).join(' · ') || 'as fileiras, a areia, o pódio e a passagem das arenas, os salões, o topo, o terraço, a rocha e a laje das maravilhas, o degrau de cima dos monumentos e o gramado das pedras');
 }
 // ---------------------------------------------------------------- 4. the feet, on a blank world
 {
   const S = G.newState(7); S.H.fill(4); S.type.fill(G.T.GRASS); if (S.biome) S.biome.fill(0); S.clock = 0; S.day = 30; S.time = 0.3; G.S = S; G.newWorld();
   const TL = Sp.TILE; let nid2 = 91001;
-  // (a building of the world on the blank ground, its record made as the world makes it, its door to the south; its plan)
-  const put = (t, c) => {
-    const def = G.BDEF[t]; const b = { id: (nid2 += 7), type: t, style: c, x: 20 + (nid2 % 3) * 6, y: 20, w: def.w, h: def.h, built: true, progress: 1, hp: 100, maxHp: 100, v: 0, set: 0, blocks: !!def.blocks, ip: null };
+  // (a building of the world on the blank ground, its record made as the world makes it, its door to the south; its plan —
+  // at: its own place, [x, y], off the others')
+  const put = (t, c, at) => {
+    const def = G.BDEF[t]; const b = { id: (nid2 += 7), type: t, style: c, x: at ? at[0] : 20 + (nid2 % 3) * 6, y: at ? at[1] : 20, w: def.w, h: def.h, built: true, progress: 1, hp: 100, maxHp: 100, v: 0, set: 0, blocks: !!def.blocks, ip: null };
     S.buildings.set(b.id, b); if (def.blocks) for (let yy = b.y; yy < b.y + b.h; yy++) for (let xx = b.x; xx < b.x + b.w; xx++) S.occ[yy * G.N + xx] = b.id;
     b.ip = In.newRecord(b, { t, c, e: 3, k: 'ae', cl: 't', fl: 0, d: 1, w: 1, pw: 0, s: 'S', o: (1 << b.w) - 1 });
     const p = Sp.planNow(b); return { b, p };
@@ -155,12 +163,26 @@ const tag = m => `${m.t}/${m.c}`;
       sum.push(`${c}: ${r.sum}`); for (const q of r.bad) out.push(`maravilha/${c}: ${q}`);
     }
     ok('4b os pés subindo às maravilhas: da rua pelo lance até o topo, o terraço, a rocha, pelos degraus ao salão, à frente da pirâmide', !out.length, out.slice(0, 3).join(' / ') || sum.join(' · ')); }
+  // 4c the way up a monument (D-097): from the street along the middle of the front, up the steps of its base — the god's
+  // each split in two, each a body's step —, through the way in, 0.8 m on to the top step; the rune stones' grass from the street
+  { const out = [], sum = [];
+    for (const [k, c] of POVOS.entries()) {
+      if (!In.TYPES.monument) break; const { b, p } = put('monument', c, [14 + k * 5, 40]); if (!p || !p.ok) { out.push(`monument/${c}: sem planta (${p ? p.errs.slice(0, 2).join('; ') : '—'})`); continue; }
+      const F = G.Forma.of('monument', c), L = b.h * TL; const l0 = p.levels.find(l => l.lv === 0); const e = p.entrance;
+      const steps = F.els.filter(q => q.k === 'bloco' && q.degrau === 1).map(q => [q.r, q.y1]);
+      const edge = (u, z) => steps.some(([r]) => u >= r[0] - 0.015 && u <= r[2] + 0.015 && (Math.abs(z - r[1]) < 0.015 || Math.abs(z - r[3]) < 0.015));
+      // (the form under a point: the highest of the base's steps there; else, on the shell, the floor; else the ground)
+      const want = (lv, u, z, ins) => { let tr = -1; for (const [r, y1] of steps) if (inBox(r, u, z)) tr = Math.max(tr, y1); if (tr >= 0) return tr; return ins && ins.shell ? l0.y : 0; };
+      const r = walk(b, [[0, [[e.x, L + 0.8], [e.x, e.z - 0.8]]]], want, null, edge);
+      sum.push(`${c}: ${r.sum}`); for (const q of r.bad) out.push(`monument/${c}: ${q}`);
+    }
+    ok('4c os pés subindo ao monumento: da rua pelos degraus partidos até o degrau de cima, e ao gramado das pedras (D-097)', !out.length, out.slice(0, 3).join(' / ') || sum.join(' · ')); }
 }
 // ---------------------------------------------------------------- 5. the 3D draws a planned theatre and wonder by its form
 {
   const B3 = G.Build3D; const out = [];
   if (B3 && B3.byForm) for (const m of made.filter(q => q.s === 'S' && q.p && q.p.ok)) if (!B3.byForm(m.b)) out.push(tag(m));
-  ok('5a o 3D desenha o teatro e a maravilha com planta pela forma', !!(B3 && B3.byForm) ? !out.length : true, B3 && B3.byForm ? (out.length ? `não: ${out.join(', ')}` : 'nos seis povos (casca aberta, ou a casca levantada sobre o corpo da forma)') : 'sem o 3D carregado (a fidelidade cobre)');
+  ok('5a o 3D desenha o teatro, a maravilha e o monumento com planta pela forma', !!(B3 && B3.byForm) ? !out.length : true, B3 && B3.byForm ? (out.length ? `não: ${out.join(', ')}` : 'nos seis povos (casca aberta, ou a casca levantada sobre o corpo da forma)') : 'sem o 3D carregado (a fidelidade cobre)');
 }
 const err = M.erros(); if (Object.keys(err.mod).length || err.console.length) ok('sem erros de módulo', false, JSON.stringify(err).slice(0, 300));
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');

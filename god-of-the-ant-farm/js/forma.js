@@ -347,16 +347,23 @@
   // ------------------------------ the monuments (arch.js monument; art.js the obelisk) ------------------------------
   // (the god's steps — arch.js steps(): n blocks of h px from half side e tiles, each `shrink` tiles less)
   const degraus = (L, e, n, h, shrink) => { const out = []; for (let k = 0; k < n; k++) { const q = e - k * shrink; out.push({ k: 'bloco', r: rect(L, -q, -q, q, q), y0: px(k * h), y1: px((k + 1) * h), cor: ['base0', 'base1', 'base2'] }); } return out; };
+  // (the base of a monument one goes up — D-097 —: the god's n steps of h px from half side e tiles, each `shrink` less, each
+  // split in two along its front, where one goes up — its upper half set back half a shrink there, so each a body's step, 0.21
+  // to 0.25 m —, its sides and its back the god's step's; each a tread of the way up)
+  const crepisF = (L, e, n, h, shrink, cor, mat) => { const out = []; const o = Object.assign({ degrau: 1 }, mat ? { mat } : null);
+    for (let k = 0; k < n; k++) { const q = e - k * shrink; out.push(blocoF(L, -q, -q, q, q, k * h, k * h + h / 2, cor || BASE, o), blocoF(L, -q, -q, q, q - shrink / 2, k * h + h / 2, (k + 1) * h, cor || BASE, o)); }
+    return out; };
   // (the god's robed figure hp px tall is max(1.4, 0.13 hp) px wide each side of its middle; the 3D's robe, 2w across and
   // 1.3w deep, seen from the god's corner is as wide — 3.3w × 4 px a metre each side — when w is that over 6.6)
   const robe = hp => Math.max(1.4, hp * 0.13) / 6.6;
   // the obelisk (art.js: the classical monument and the Egyptian — the Egyptian has no other): the paved square of 0.95 tiles
-  // and 1.5 px, its two pedestals, the shaft tapering from 0.2 to 0.12 tiles between 8 and 58 px, the gilded pyramidion 9 px
-  // over it, the golden eye on its front 34 px up and the flower beds at three corners of the square
+  // and 1.5 px — its step of 0.49 m in two along the front, D-097 —, its two pedestals, the shaft tapering from 0.2 to 0.12
+  // tiles between 8 and 58 px, the gilded pyramidion 9 px over it, the golden eye on its front 34 px up and the flower beds at
+  // three corners of the square
   def('monument', 'classico', L => {
     const a0 = 0.2, a1 = 0.12, z0 = 8, z1 = 58; const aEye = a0 - (a0 - a1) * (34 - z0) / (z1 - z0);
     return { els: [
-      { k: 'bloco', r: rect(L, -0.95, -0.95, 0.95, 0.95), y0: 0, y1: px(1.5), cor: ['#c9c1ae', '#aaa18c', '#ddd6c5'], mat: 'slab' },
+      ...crepisF(L, 0.95, 1, 1.5, 0.1, ['#c9c1ae', '#aaa18c', '#ddd6c5'], 'slab'),
       { k: 'flores', pts: [[at(L, -0.75), at(L, 0.75)], [at(L, 0.75), at(L, -0.75)], [at(L, 0.75), at(L, 0.75)]], y: px(1.5), r: 0.35, cor: ['#ff8fb0', '#ffd85a', '#ffffff', '#b98cff'] },
       { k: 'bloco', r: rect(L, -0.36, -0.36, 0.36, 0.36), y0: px(1.5), y1: px(5), cor: ['#b8ae98', '#978d78', '#cbc2ae'] },
       { k: 'bloco', r: rect(L, -0.28, -0.28, 0.28, 0.28), y0: px(5), y1: px(8), cor: ['#c4baa4', '#a39984', '#d6ceba'] },
@@ -365,33 +372,34 @@
       { k: 'disco', na: 'frente', u: L / 2, v: at(L, aEye), y: px(34), r: 0.5, cor: '#d9b34a', olho: '#6a4a1a' },
     ] };
   });
-  // the god's statue (grego): two steps of 0.9 tiles and 1.3 px, the marble pedestal of 0.3 tiles to 12 px with its painted
-  // band at the top, and on it the gilded god 30 px tall with his spear and shield
+  // the god's statue (grego): two steps of 0.9 tiles and 1.3 px — each in two, D-097 —, the marble pedestal of 0.3 tiles to
+  // 12 px with its painted band at the top, and on it the gilded god 30 px tall with his spear and shield
   def('monument', 'grego', L => ({ els: [
-    ...degraus(L, 0.9, 2, 1.3, 0.1),
+    ...crepisF(L, 0.9, 2, 1.3, 0.1),
     { k: 'bloco', r: rect(L, -0.3, -0.3, 0.3, 0.3), y0: px(2.6), y1: px(12), cor: ['col0', 'col1', 'col0'], mat: 'marble' },
     { k: 'faixa', r: rect(L, -0.3, -0.3, 0.3, 0.3), y0: px(10.5), y1: px(12), cor: 'acc' },
     { k: 'estatua', p: [L / 2, L / 2, px(12)], h: px(30), w: robe(30), cor: '#c9a24a', lanca: true },
   ] }));
-  // the triumphal column (romano): two steps of 0.85 tiles and 1.4 px, the pedestal of 0.28 tiles to 9 px, the shaft to 56 px
+  // the triumphal column (romano): two steps of 0.85 tiles and 1.4 px — each in two, D-097 —, the pedestal of 0.28 tiles to 9
+  // px, the shaft to 56 px
   // — round where the god's is square (as the 3D's columns are), its girth between that square's inner and outer rounds —
   // with the frieze winding up it from 11 px, a turn every 8.4 px; the capital of 0.2 tiles and 2 px, and on it the gilded
   // emperor 10 px tall
   def('monument', 'romano', L => ({ els: [
-    ...degraus(L, 0.85, 2, 1.4, 0.12),
+    ...crepisF(L, 0.85, 2, 1.4, 0.12),
     { k: 'bloco', r: rect(L, -0.28, -0.28, 0.28, 0.28), y0: px(2.8), y1: px(9), cor: ['col0', 'col1', 'col0'], mat: 'marble' },
     { k: 'coluna', c: [L / 2, L / 2], r: 0.14 * TILE * 1.2, y0: px(9), y1: px(56), cor: ['col0', 'col1'], mat: 'marble', espiral: { y0: px(11), passo: px(8.4), w: 0.24 } },
     { k: 'bloco', r: rect(L, -0.2, -0.2, 0.2, 0.2), y0: px(56), y1: px(58), cor: ['col0', 'col1', 'col0'], mat: 'marble' },
     { k: 'estatua', p: [L / 2, L / 2, px(58)], h: px(10), w: robe(10), cor: '#e0b84a', lanca: true },
   ] }));
-  // the Sun Stone (asteca): three steps of 0.9 tiles and 1.5 px, and on the top one the stone wheel standing on its edge,
+  // the Sun Stone (asteca): three steps of 0.9 tiles and 1.5 px — each in two, D-097 —, and on the top one the stone wheel standing on its edge,
   // facing the front, in the low cradle of stone that holds it — the god's round of 13 px over the top step (a wheel facing
   // the front is a little flatter seen from the god's corner: 3.4 m reach its height and its width): its rim, its face, the
   // four painted rings (at 10, 7.5, 5 and 2.6 of its 13) and the eight rays between the inner ones
   def('monument', 'asteca', L => {
     const R = 3.4, y0 = px(4.5), cr = 0.3;
     return { els: [
-      ...degraus(L, 0.9, 3, 1.5, 0.12),
+      ...crepisF(L, 0.9, 3, 1.5, 0.12),
       { k: 'bloco', r: rect(L, -0.3, 0.1 - 0.15, 0.3, 0.1 + 0.15), y0, y1: y0 + cr, cor: ['#8a8478', '#6f6a60', '#a09a8e'] },
       { k: 'roda', c: [L / 2, at(L, 0.1)], y: y0 + cr + R, r: R, t: 0.8, cor: ['#9a9488', '#b8b2a4'], aneis: [[10 / 13, '#2fae8f'], [7.5 / 13, '#b33a2a'], [5 / 13, '#e8c24a'], [2.6 / 13, '#b33a2a']], larg: 1.2 / 13, raios: { n: 8, r0: 5.5 / 13, r1: 9.5 / 13, a: 0.15, cor: '#7a746a' } },
     ] };
@@ -1241,6 +1249,7 @@
       else if (e.k === 'palmeira' && lowFoot(e.p[2])) circOf(e.p, 0.15, e.p[2] + e.h);
       else if (e.k === 'tora' && (lowFoot(e.a[2]) || lowFoot(e.b[2]))) { const lo = e.a[2] <= e.b[2] ? e.a : e.b; circOf(lo, e.r, Math.max(e.a[2], e.b[2])); }
       else if (e.k === 'bandeira' && lowFoot(e.p[2])) circOf(e.p, 0.06, e.p[2] + e.h);
+      else if (e.k === 'roda' && e.y - e.r < y0 + HEAD && e.y + e.r > y0 + 0.15) rectOf([e.c[0] - e.r, e.c[1] - e.t / 2, e.c[0] + e.r, e.c[1] + e.t / 2], e.y + e.r); // (a wheel on its edge, low enough to be in the way: the Sun Stone in its cradle)
     }
     return out;
   });
