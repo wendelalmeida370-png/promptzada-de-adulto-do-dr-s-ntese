@@ -564,14 +564,13 @@
       const mine = B.of(v);
       if (mine && (!v.carry || v.carry.n <= EPS)) {
         const d = G.Village.nearestDropoff(x, y, v.set);
-        const at = d && G.Village.facOfSet(d.set) === mine.fac ? G.Act.byDoor(d, x, y, r) : null;
-        if (at) {
+        if (d && G.Village.facOfSet(d.set) === mine.fac) { const [fx, fy] = G.Village.frontTile(d); if (G.dist(x, y, fx, fy) < r + 1) {
           const f = G.Fac.get(mine.fac);
           const ks = E.MARKET_GOODS.filter(k => D.free('f:' + f.id, k) >= 1).sort((a, b) => (D.free('f:' + f.id, b) - D.free('f:' + f.id, a)) || (a < b ? -1 : 1)).slice(0, 4);
           // (a stall whose furniture is full buys nothing: one offer that says so, not four)
-          if (ks.length && ks.every(k => D.room('z:' + mine.id, k) < 1)) out.push({ id: 'negocio.atacado:' + mine.id, act: 'atacado', biz: mine.id, k: ks[0], n: 0, label: 'Comprar no atacado para a banca', at, ref: 'f:' + f.id, anim: 'examinar', hands: 2, ok: false, why: 'A banca está cheia: venda antes de comprar mais.' });
-          else for (const k of ks) { const n = Math.min(k === 'food' ? 8 : 4, Math.floor(D.free('f:' + f.id, k)), Math.floor(D.room('v:' + v.id, k, { to: 'z:' + mine.id })), Math.floor(D.room('z:' + mine.id, k) + EPS)); if (n < 1) continue; const cost = r2((E.PRICE[k] || 0.3) * n * WHOLE); out.push({ id: 'negocio.atacado:' + mine.id + ':' + k, act: 'atacado', biz: mine.id, k, n, label: `Comprar ${n} de ${E.name(k)} no atacado para a banca (${coin(mine) ? String(cost).replace('.', ',') + ' ' + B.money(mine.fac).plural : 'fiado, a pagar em troca'})`, at, ref: 'f:' + f.id, anim: 'examinar', hands: 2 }); }
-        }
+          if (ks.length && ks.every(k => D.room('z:' + mine.id, k) < 1)) out.push({ id: 'negocio.atacado:' + mine.id, act: 'atacado', biz: mine.id, k: ks[0], n: 0, label: 'Comprar no atacado para a banca', at: [fx, fy], ref: 'f:' + f.id, anim: 'examinar', hands: 2, ok: false, why: 'A banca está cheia: venda antes de comprar mais.' });
+          else for (const k of ks) { const n = Math.min(k === 'food' ? 8 : 4, Math.floor(D.free('f:' + f.id, k)), Math.floor(D.room('v:' + v.id, k, { to: 'z:' + mine.id })), Math.floor(D.room('z:' + mine.id, k) + EPS)); if (n < 1) continue; const cost = r2((E.PRICE[k] || 0.3) * n * WHOLE); out.push({ id: 'negocio.atacado:' + mine.id + ':' + k, act: 'atacado', biz: mine.id, k, n, label: `Comprar ${n} de ${E.name(k)} no atacado para a banca (${coin(mine) ? String(cost).replace('.', ',') + ' ' + B.money(mine.fac).plural : 'fiado, a pagar em troca'})`, at: [fx, fy], ref: 'f:' + f.id, anim: 'examinar', hands: 2 }); }
+        } }
       }
       return out;
     },

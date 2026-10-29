@@ -1129,10 +1129,19 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // to the store's door, following the mark; E: the crate goes in as a docker's
     const e17d = await E(() => {
       const X = window.__e17; const S = G.S, TL = G.Space.TILE, D = G.Depot; const v = __E.body(); const op = G.Act.get(X.op); const out = {};
-      const dest = G.Porto.destOf(op); const door = G.Vg.door(dest); out.walk = __E.walkTo(door[0], door[1], 900);
+      const dest = G.Porto.destOf(op); const door = G.Vg.door(dest);
       const prompt = () => { const el = document.querySelector('#inc-hud .ih-prompt'); return el && !el.classList.contains('hidden') ? el.querySelector('span').textContent : ''; };
-      for (let k = 0; k < 120 && !/^Guardar /.test(prompt()); k++) { G.Cam3D.yaw = Math.atan2(door[1] * TL - G.Avatar.state().Z, door[0] * TL - G.Avatar.state().X); G.Input3D.down.frente = Math.hypot(door[0] * TL - G.Avatar.state().X, door[1] * TL - G.Avatar.state().Z) > 0.5; G.Main.frameFor(33); }
-      G.Input3D.down.frente = false; __E.f(6); out.prompt = prompt();
+      // (along the world's path to the door — where the mark is —, as a player walks up to it, the camera turned toward each next
+      // step, until the prompt is the store's. Pushed straight at the door from where the walk stopped, the body went along the
+      // wall of the harbour warehouse of Mênfis, in the metropole of the v37's last worlds, and round its corner out of the
+      // hands' reach — «Pôr a caixa no chão» —: T-255)
+      const st = G.Avatar.state(); const p0 = G.W.findPath(v.x, v.y, door[0], door[1], true, 30000); const pth = p0 ? __E.throughGates(v.x, v.y, p0) : [];
+      out.walk = { steps: pth.length, frames: 0 };
+      walk: for (const [PX, PZ] of pth.concat([door]).map(w => [w[0] * TL, w[1] * TL])) for (let k = 0; k < 300; k++) { if (/^Guardar /.test(prompt())) break walk; if (Math.hypot(PX - st.X, PZ - st.Z) < 0.35) break; G.Cam3D.yaw = Math.atan2(PZ - st.Z, PX - st.X); G.Input3D.down.frente = true; G.Main.frameFor(33); out.walk.frames++; }
+      G.Input3D.down.frente = false;
+      for (let k = 0; k < 30 && !/^Guardar /.test(prompt()); k++) { G.Cam3D.yaw = Math.atan2(door[1] * TL - st.Z, door[0] * TL - st.X); G.Main.frameFor(33); } // (at the door, facing it)
+      __E.f(6); out.prompt = prompt(); out.walk.d = +(Math.hypot(door[0] * TL - st.X, door[1] * TL - st.Z)).toFixed(2);
+      if (!/^Guardar /.test(out.prompt)) { const b0 = G.Interact.best(); out.walk.at = [+v.x.toFixed(2), +v.y.toFixed(2)]; out.walk.door = door.map(q => +q.toFixed(2)); out.walk.best = b0 ? b0.label : null; }
       const c = v.carry; const n = c ? c.n : 0, k = c ? c.k : 'food'; const payee = v.home && D.exists('h:' + v.home) ? 'h:' + v.home : 'p:' + v.id;
       const led0 = D.ledger().length ? D.ledger()[D.ledger().length - 1][0] : 0; const st0 = v.st[k] || 0; const stock0 = D.get('f:' + X.fid, k); const coin0 = D.get(payee, 'moedas');
       if (/^Guardar /.test(out.prompt)) { G.IncUI.use(); __E.until(() => !G.Avatar.busy(), 600); __E.f(6); }
