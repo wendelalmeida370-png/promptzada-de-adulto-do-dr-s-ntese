@@ -480,7 +480,10 @@
   C.give = function (v, kind, cv, goal, o) {
     const m = nearestMouth(cv, v.x, v.y); if (!m) return false;
     const t = Object.assign({ type: 'caverna', kind, cave: cv.id, goal, pri: 1.3, st: 0, stay: rr(8, 14), torch: 1, mouth: m }, o || {});
-    if (o && o.force) { G.Vg.setTask(v, t); return true; }
+    // (a forced errand — the oracle going up, the mine's shift, the children's dare, the refuge — takes one from a task of less
+    // priority, but waits for busy hands below 3, as the Vg.busy does (D-094, D-099): the oracle took a woman with a purchase on
+    // its way home, and the purchase sat with her in the cave all day, L-395; 3 and up passes)
+    if (o && o.force) { if ((t.pri || 0) < 3 && G.Vg.handsBusy && G.Vg.handsBusy(v)) return false; G.Vg.setTask(v, t); return true; }
     return G.Vg.give(v, t);
   };
   C.run = function (v, t, dt, H) {

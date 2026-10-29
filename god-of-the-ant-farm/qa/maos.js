@@ -14,6 +14,9 @@
 //  m6 save no meio, carregado: a compra nas mãos continua segurando; a obra (as tarefas não vão no save) não
 //  m7 o corpo do deus: nunca perguntado — o chamado vira pedido, e a compra fica nas mãos
 //  m8 o verificador vê: um chamado dado à mão (o setTask direto, sem a pergunta) a quem leva uma compra é S2
+//  m9 a caverna forçada: o oráculo subindo, o turno da mina, o desafio das crianças e o refúgio (2,7) — dados à força pela
+//     porta da caverna — esperam quem leva uma compra para casa; o ataque aos bandidos (3,1) leva; com a compra em casa, o
+//     oráculo leva
 //  e o verificador limpo nos casos, sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/oficio-inv.js'] });
@@ -205,6 +208,28 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
     const saw = ours(); const sawC = saw.some(s => s.includes('#' + c.id + ':')), sawD = saw.some(s => s.includes('#' + d.id + ':'));
     drop(c); drop(d); const clean1 = ours().length;
     ok('m8 o verificador vê', !clean0 && sawC && sawD && !clean1, `antes ${clean0}; o público da execução dado à mão a ${c.name} com uma compra: ${sawC ? 'visto' : 'NÃO visto'}; a festa dada à mão a ${d.name} com uma compra: ${sawD ? 'visto' : 'NÃO visto'} (${saw[0] || '-'}); depois ${clean1}`);
+  }
+}
+// ---------------- m9: the cave's forced errands wait for busy hands below 3 ----------------
+// (by the cave's own door, G.Caves.give, with the world's own words for each: the oracle going up, the mine's shift, the
+// children's dare, the refuge — each forced, as the cave gives it —; and an outlaws' raid, 3,1, that passes)
+{
+  fresh(); const cv = G.Caves && G.Caves.all ? G.Caves.all().sort((a, b) => a.id - b.id)[0] : null;
+  const c = take(), d = take();
+  if (!cv || !c || !d) ok('m9 a caverna forçada', false, !cv ? 'nenhuma caverna na metrópole' : `ninguém livre em ${set.name}`);
+  else {
+    purchase(c);
+    const FORCED = [['oracle', { pri: 1.6, force: 1 }], ['mine', { pri: 1.05, force: 1, stay: 14 }], ['dare', { pri: 1.15, force: 1, torch: 0 }], ['refuge', { pri: 2.7, force: 1, stay: 30 }]];
+    const said = FORCED.map(([kind, o]) => { const r = G.Caves.give(c, kind, cv, -1, Object.assign({}, o)); const out = [kind, r, tk(c), holds(c)]; if (r) { Vg.endTask(c); Vg.setTask(c, { type: 'carga', to: 'h:' + c.home, pri: 0.5, st: 0 }); } return out; });
+    const waited = said.every(([, r, t, h]) => !r && t.startsWith('carga') && h);
+    const b9 = ours();
+    // (3 and up passes: the raid takes him, purchase and all — what cannot wait does not wait)
+    const raid = G.Caves.give(c, 'raid', cv, -1, { pri: 3.1, force: 1, stay: 40 }); const tr = tk(c); drop(c);
+    // (and with the purchase home, the oracle's call takes her: the hands are free)
+    purchase(d); const home = fine(120, () => !holds(d) && !(d.task && d.task.type === 'carga'));
+    const up = home && G.Caves.give(d, 'oracle', cv, -1, { pri: 1.6, force: 1 }); const tu = tk(d); Vg.endTask(d);
+    ok('m9 a caverna forçada', waited && raid && tr.startsWith('caverna') && home && up && tu.startsWith('caverna') && !b9.length,
+      `${c.name} com uma compra nas mãos: ${said.map(([k, r, t, h]) => `${k} ${r ? 'LEVOU' : 'esperou'} (${t}${h ? '' : ', SEM a compra'})`).join('; ')}; o ataque aos bandidos (3,1) ${raid ? 'levou' : 'NÃO levou'} (${tr}); ${d.name}, com a compra entregue ${home ? 'em casa' : 'NÃO em casa'}: o oráculo ${up ? 'levou' : 'NÃO levou'} (${tu})${b9.length ? '; o verificador: ' + b9[0] : ''}`);
   }
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
