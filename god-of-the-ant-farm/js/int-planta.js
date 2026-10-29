@@ -11,7 +11,8 @@
   const PV = G.PlanView = { id: 0, lv: null };
   const In = () => G.Interiors;
   const TILE = 4;
-  G.worldHooks.push(() => { PV.id = 0; PV.lv = null; });
+  let rep = null; // (the dev mode's report of the plan open: kept while the plan and the ground are the same)
+  G.worldHooks.push(() => { PV.id = 0; PV.lv = null; rep = null; });
   const sel = () => (G.UI && G.UI.selected) || null;
   const isB = b => !!(b && b.type && G.BDEF[b.type] && b.ip && In() && In().has(b));
   // (the plan is shown for the building chosen, only while it stays chosen)
@@ -42,9 +43,22 @@
       const ls = levelsOf(p); const cur = PV.lv === null ? p.entryLv : PV.lv; const l = ls.find(q => q.lv === cur) || ls[0];
       nav = `<button data-act="plan-down">▼</button> ${esc(storeyName(l, ls))} (${ls.indexOf(l) + 1} de ${ls.length}) <button data-act="plan-up">▲</button>`;
       if (p.short) nav += `<br><span class="muted">${p.short} ${p.short > 1 ? 'dormem' : 'dorme'} no chão: não coube cama para todos.</span>`;
+      if (G.Dev && G.Dev.on) nav += checkHTML(b, p, esc);
     }
     return `<div class="doing">Planta: <b>${esc(fam)}</b>${sh ? ` · ${sh.shell.floors} ${sh.shell.floors > 1 ? 'pavimentos' : 'pavimento'}` : ''}<br><button data-act="plan" class="${open ? 'on' : ''}">${open ? 'Fechar a planta' : 'Ver a planta'}</button> ${nav}</div>`;
   };
+  // (the dev mode: the plan's geometric report, the one qa/geometria.js gives — Parte 7.4: each defect, and the choices said;
+  // a ruin's plan is what is left of one, and has none)
+  function checkHTML(b, p, esc) {
+    if (b.type === 'ruin') return '';
+    const S = G.S; const key = (S.walkVer || 0) + ':' + (S.typeVer || 0);
+    if (!rep || rep.p !== p || rep.key !== key) rep = { p, key, list: In().report(b, p, { world: true }) };
+    const f = rep.list.filter(x => x.k === 'FALHA'), e = rep.list.filter(x => x.k === 'ESCOLHA');
+    let h = `<br><span class="muted">Geometria: ${f.length ? `<b style="color:var(--red)">${f.length} ${f.length > 1 ? 'falhas' : 'falha'}</b>` : 'nenhuma falha'} · ${e.length} ${e.length === 1 ? 'escolha' : 'escolhas'}. Na planta, o chão que a porta alcança; os pontos de uso e as pontas das escadas: verde onde o corpo fica, vermelho onde não.</span>`;
+    for (const x of f.slice(0, 4)) h += `<br><span style="color:var(--red)">✗ ${esc(x.what)}</span>`;
+    for (const x of e.slice(0, 3)) h += `<br><span class="muted">· ${esc(x.what)}</span>`;
+    return h;
+  }
 
   // ------------------------------ the drawing ------------------------------
   const FN = {
@@ -54,6 +68,28 @@
     guarda: '#c9a27a', vestiario: '#d9cbb0', frio: '#9cc3d1', quente: '#d79a7a', trono: '#d8b56a', aposento: '#9fb6c8', cozinha: '#d9a86c',
     banquete: '#dcc08f', vestibulo: '#e6dcc4', ruas: '#cdbf98', praca: '#cdbf98', largo: '#cdbf98',
   };
+  // (the dev mode's look at the plan's geometry, Parte 7.4: the floor the door reaches, tinted; each place where a body stands
+  // to use a piece, a dot; the foot and the top of each flight, a ring the size of the body — green where the plan says the
+  // body stands there, red where not)
+  function drawCheck(ctx, p, lv, S, px) {
+    const I = In(); const g = p.reach && p.reach[lv]; const n = p.grid ? p.grid.n : 0, cs = p.grid ? p.grid.cs : I.CS;
+    if (g) {
+      ctx.beginPath();
+      for (let z = 0; z < n; z++) for (let x = 0; x < n; x++) {
+        if (!g[z * n + x]) continue; const a = S(x * cs, z * cs), c = S((x + 1) * cs, z * cs), d = S((x + 1) * cs, (z + 1) * cs), e = S(x * cs, (z + 1) * cs);
+        ctx.moveTo(a[0], a[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.lineTo(e[0], e[1]); ctx.closePath();
+      }
+      ctx.fillStyle = 'rgba(80,210,120,0.22)'; ctx.fill();
+    }
+    const dot = (x, z, ok, r) => { const s = S(x, z); ctx.beginPath(); ctx.arc(s[0], s[1], r * px, 0, Math.PI * 2); ctx.fillStyle = ok ? '#4fd27a' : '#ff4d4d'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,0.75)'; ctx.lineWidth = px; ctx.stroke(); };
+    for (const it of p.items) if (it.lv === lv) for (const sp of it.spots) if (!sp.on) dot(sp.x, sp.z, sp.ok, 2.4);
+    for (const M of p.marks || []) if (M.lv === lv) for (const q of M.pts) dot(q.x, q.z, q.ok, 1.8);
+    const ring = (q, l) => {
+      ctx.beginPath(); for (let k = 0; k <= 16; k++) { const a = k / 16 * Math.PI * 2; const s = S(q[0] + Math.cos(a) * I.BODY.r, q[1] + Math.sin(a) * I.BODY.r); if (k) ctx.lineTo(s[0], s[1]); else ctx.moveTo(s[0], s[1]); }
+      ctx.strokeStyle = I.landsAt(p, l, q[0], q[1]) ? '#4fd27a' : '#ff4d4d'; ctx.lineWidth = 1.6 * px; ctx.stroke();
+    };
+    for (const s of p.stairs) { if (s.kind === 'degraus') continue; if (s.lv0 === lv) ring(s.a, s.lv0); if (s.lv1 === lv) ring(s.b, s.lv1); }
+  }
   function drawPlan(ctx, b, p, lv) {
     const R = G.Render; const gh = G.W.groundH(b.x + b.w / 2, b.y + b.h / 2) + 0.02;
     const S = (x, z) => R.proj(b.x + x / TILE, b.y + z / TILE, gh);
@@ -101,6 +137,7 @@
     }
     // the way in, from the street
     if (p.entrance && lv === p.entryLv) { const e = S(p.entrance.x, p.entrance.z), o = S(p.entrance.out[0], p.entrance.out[1]); const dx = e[0] - o[0], dy = e[1] - o[1], d = Math.hypot(dx, dy) || 1; const ux = dx / d, uy = dy / d; const q = 7 * px; ctx.beginPath(); ctx.moveTo(e[0], e[1]); ctx.lineTo(e[0] - ux * q * 1.6 - uy * q * 0.7, e[1] - uy * q * 1.6 + ux * q * 0.7); ctx.lineTo(e[0] - ux * q * 1.6 + uy * q * 0.7, e[1] - uy * q * 1.6 - ux * q * 0.7); ctx.closePath(); ctx.fillStyle = '#ffd66e'; ctx.fill(); }
+    if (G.Dev && G.Dev.on && b.type !== 'ruin') drawCheck(ctx, p, lv, S, px);
     // its name and the storey, over the lot
     const ls = levelsOf(p); const l = ls.find(q => q.lv === lv); const top = [S(0, 0), S(L, 0), S(L, L), S(0, L)].reduce((m, s) => (s[1] < m[1] ? s : m));
     const txt = `${p.famName} — ${storeyName(l, ls)}${ls.length > 1 ? ` (${ls.indexOf(l) + 1}/${ls.length})` : ''}`;

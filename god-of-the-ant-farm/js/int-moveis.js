@@ -19,9 +19,12 @@
   // spots in the piece's own frame: across (a, −w/2..w/2) and out from its front (n, + toward the user)
   const front = (use, n) => it => [{ use, a: 0, n: it.d / 2 + (n || 0.45) }];
   // (a bed is got into from its foot or from either long side — one of them free is enough; a sleeping bench from its front,
-  // before any of its sleepers)
+  // before any of its sleepers. Its sleepers lie along its length: from its head, against the wall, to its foot — or, a bed
+  // turned along the wall, longer across its front than deep, along it, side by side across its depth: along says which —
+  // L-284)
   const lie = (k, bench) => it => {
-    const out = []; for (let q = 0; q < k; q++) out.push({ use: 'deitar', a: -it.w / 2 + it.w * (q + 0.5) / k, n: 0, on: 1 });
+    const out = []; const turned = !bench && it.w > it.d + 1e-6;
+    for (let q = 0; q < k; q++) out.push(turned ? { use: 'deitar', a: 0, n: -it.d / 2 + it.d * (q + 0.5) / k, on: 1, along: 'a' } : { use: 'deitar', a: -it.w / 2 + it.w * (q + 0.5) / k, n: 0, on: 1, along: 'n' });
     if (bench) for (let q = 0; q < k; q++) out.push({ use: 'acesso', a: -it.w / 2 + it.w * (q + 0.5) / k, n: it.d / 2 + 0.35 });
     else { out.push({ use: 'acesso', a: 0, n: it.d / 2 + 0.35 }); out.push({ use: 'acesso', a: -(it.w / 2 + 0.35), n: 0.25 }); out.push({ use: 'acesso', a: it.w / 2 + 0.35, n: 0.25 }); }
     return out;
@@ -29,13 +32,15 @@
   In.SPOTS = { front, lie }; // (for the pieces other files add: int-civicos.js)
   In.addItems({
     // ---- sleeping ----
-    'cama-casal': { name: 'Cama de casal', w: 1.4, d: 1.95, h: 0.55, low: 1, wall: 1, rot: 1, places: 2, spots: lie(2) },
-    cama: { name: 'Cama', w: 0.9, d: 1.95, h: 0.5, low: 1, wall: 1, rot: 1, places: 1, spots: lie(1) },
+    // (lie: the height of what one lies on — a bed's mattress over its frame; seat: of what one sits on — a seat's height,
+    // where the piece is taller than it, as a throne's back. Without them, the piece's own height)
+    'cama-casal': { name: 'Cama de casal', w: 1.4, d: 1.95, h: 0.55, lie: 0.5, low: 1, wall: 1, rot: 1, places: 2, spots: lie(2) },
+    cama: { name: 'Cama', w: 0.9, d: 1.95, h: 0.5, lie: 0.5, low: 1, wall: 1, rot: 1, places: 1, spots: lie(1) },
     // (leva: what a household takes with it when it leaves — its mats, the cradle, the stove and the brazier; the house left
     // behind keeps the rest, its chests, baskets and jars among them: what the world left in them is still there)
-    esteira: { name: 'Esteira', w: 0.72, d: 1.8, h: 0.06, low: 1, wall: 1, rot: 1, places: 1, leva: 1, spots: lie(1) },
+    esteira: { name: 'Esteira', w: 0.72, d: 1.8, h: 0.06, low: 1, wall: 1, rot: 1, places: 1, leva: 1, flex: 1, spots: lie(1) },
     // (the couple's mat, or the pallet two share where there are no beds)
-    'esteira-casal': { name: 'Esteira de casal', w: 1.25, d: 1.85, h: 0.08, low: 1, wall: 1, rot: 1, places: 2, leva: 1, spots: lie(2) },
+    'esteira-casal': { name: 'Esteira de casal', w: 1.25, d: 1.85, h: 0.08, low: 1, wall: 1, rot: 1, places: 2, leva: 1, flex: 1, spots: lie(2) },
     // (the sleeping bench along the long wall of a northern house: one sleeper every 0.7 m of it)
     'banco-cama': { name: 'Banco-cama', w: 0, d: 0.85, h: 0.45, low: 1, wall: 1, per: 0.7, spots: it => { const k = Math.max(1, Math.floor(it.w / 0.7 + 1e-6)); return lie(k, 1)(it); } },
     berco: { name: 'Berço', w: 0.55, d: 0.95, h: 0.5, low: 1, wall: 1, places: 0, leva: 1, spots: front('cuidar') },
@@ -47,9 +52,24 @@
     // (the small clay stove of a poor house: a pot over the coals)
     fogareiro: { name: 'Fogareiro de barro', w: 0.6, d: 0.6, h: 0.5, solid: 1, fire: 1, wall: 1, leva: 1, spots: front('cozinhar', 0.4) },
     braseiro: { name: 'Braseiro', w: 0.5, d: 0.5, h: 0.6, solid: 1, fire: 1, wall: 1, leva: 1, spots: front('aquecer', 0.4) },
+    // (the round hut's fire, on the ground in its middle: a ring of stones, the embers in it, the smoke out by the cone's top —
+    // D-082 (6), T-161; one cooks before it, the others warm themselves about it)
+    'fogo-chao': { name: 'Fogo de chão', w: 0.5, d: 0.5, h: 0.15, solid: 1, fire: 1, free: 1, spots: it => [{ use: 'cozinhar', a: 0, n: it.d / 2 + 0.4 }, { use: 'aquecer', a: 0, n: -(it.d / 2 + 0.4) }, { use: 'aquecer', a: it.w / 2 + 0.4, n: 0 }, { use: 'aquecer', a: -(it.w / 2 + 0.4), n: 0 }] },
     mesa: { name: 'Mesa', w: 1.1, d: 0.7, h: 0.75, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
     'mesa-baixa': { name: 'Mesa baixa', w: 0.9, d: 0.6, h: 0.35, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
     banco: { name: 'Banco', w: 1.1, d: 0.35, h: 0.45, low: 1, wall: 1, spots: it => [{ use: 'sentar', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: it.d / 2 + 0.35 }] },
+    // (the trestle table of a tavern's yard and its two benches, one piece (B2d): those who eat sit along both benches, one
+    // every 0.6 m, facing the table — the front bench's turned back to it —, and get onto them from their ends)
+    'mesa-terreiro': { name: 'Mesa com bancos', w: 2.2, d: 1.7, h: 0.75, seat: 0.45, solid: 1, free: 1, spots: it => {
+      const k = Math.max(1, Math.floor(it.w / 0.6 + 1e-6)); const nb = it.d / 2 - 0.175; const out = [];
+      for (let q = 0; q < k; q++) { const a = -it.w / 2 + it.w * (q + 0.5) / k; out.push({ use: 'comer', a, n: -nb, on: 1 }, { use: 'comer', a, n: nb, on: 1, back: 1 }); }
+      for (const n of [-nb, nb]) for (const s of [-1, 1]) out.push({ use: 'acesso', a: s * (it.w / 2 + 0.35), n });
+      return out;
+    } },
+    // (a row of seats of an arena, a theatre — P.tiers lays them, never placed as a piece: its name, for the places on it)
+    fileira: { name: 'Fileira', w: 0, d: 0, h: 0, low: 1, spots: () => [] },
+    // (a place with no piece — P.marks: the orchestra, the sand, a square —: its name, for the places at it)
+    marca: { name: 'Lugar', w: 0, d: 0, h: 0, low: 1, spots: () => [] },
     // ---- what keeps the house's things (the world's own: h.pantry, h.coin, h.inv) ----
     arca: { name: 'Arca', w: 0.9, d: 0.5, h: 0.55, solid: 1, wall: 1, rot: 1, store: { dep: 'casa', key: 'inv', cap: 12, coin: 1 }, spots: front('guardar') },
     despensa: { name: 'Prateleiras da despensa', w: 1.0, d: 0.4, h: 1.7, solid: 1, wall: 1, tall: 1, store: { dep: 'casa', key: 'pantry', cap: 30 }, spots: front('guardar') },
@@ -83,6 +103,13 @@
     'roda-oleiro': { name: 'Roda de oleiro', w: 0.8, d: 0.8, h: 0.7, solid: 1, free: 1, job: 1, spots: front('tornear', 0.45) },
     'forno-olaria': { name: 'Forno de olaria', w: 1.5, d: 1.5, h: 1.6, solid: 1, fire: 1, free: 1, tall: 1, spots: front('cozer', 0.6) },
     secador: { name: 'Estante de secar', w: 1.6, d: 0.5, h: 1.6, solid: 1, wall: 1, tall: 1, store: { dep: 'predio', key: 'inv', cap: 12 }, spots: front('guardar') },
+    // (the pottery's brick work — P2's olaria: the clay kneaded in its pit, the bricks and the adobe moulded on the floor beside
+    // it, the fired ones stacked by the kiln; keys: the goods the store holds)
+    'tanque-barro': { name: 'Tanque de barro', w: 1.2, d: 0.9, h: 0.6, solid: 1, free: 1, store: { dep: 'predio', key: 'inv', cap: 8, keys: ['argila'] }, spots: it => [{ use: 'amassar', a: 0, n: it.d / 2 + 0.45 }, { use: 'amassar', a: 0, n: -(it.d / 2 + 0.45) }] },
+    eira: { name: 'Eira de moldar', w: 2.0, d: 1.6, h: 0.05, low: 1, free: 1, spots: it => [{ use: 'moldar', a: 0, n: it.d / 2 + 0.4 }, { use: 'moldar', a: -(it.w / 2 + 0.4), n: 0 }, { use: 'moldar', a: it.w / 2 + 0.4, n: 0 }] },
+    'pilha-tijolos': { name: 'Pilha de tijolos', w: 1.4, d: 0.8, h: 1.0, solid: 1, wall: 1, store: { dep: 'predio', key: 'inv', cap: 24, keys: ['tijolo', 'adobe', 'ceramica'] }, spots: front('guardar') },
+    // (the big jar of a Greek or Roman tavern's yard, the wine in it: B2d)
+    talha: { name: 'Talha', w: 0.6, d: 0.6, h: 1.2, solid: 1, free: 1, store: { dep: 'predio', key: 'inv', cap: 8 }, spots: front('guardar', 0.4) },
     'bancada-ourives': { name: 'Bancada de ourives', w: 1.1, d: 0.6, h: 0.8, solid: 1, wall: 1, job: 1, spots: front('lavrar', 0.45) },
     fornalha: { name: 'Fornalha', w: 0.6, d: 0.6, h: 0.9, solid: 1, fire: 1, wall: 1, spots: front('fundir', 0.45) },
     cepo: { name: 'Cepo', w: 0.7, d: 0.7, h: 0.8, solid: 1, free: 1, job: 1, spots: front('cortar', 0.45) },

@@ -5,7 +5,7 @@
 // regras, e o verificador junta as mensagens iguais)
 const fs = require('fs'), path = require('path');
 const QA = path.join(__dirname, 'qa.js');
-const FILES = ['qa/atividades-inv.js', 'qa/interiores-inv.js', 'qa/visual/corpo-qa.js'];
+const FILES = ['qa/atividades-inv.js', 'qa/interiores-inv.js', 'qa/visual/corpo-qa.js', 'qa/lar-inv.js'];
 const A = '  // ==== as invariantes dos sistemas novos (geradas por qa/junta-inv.js; não edite aqui: edite o arquivo e rode o junta) ====\n';
 const Z = '  // ==== fim das invariantes dos sistemas novos ====\n';
 const block = () => A + FILES.map(f => `  // ---- ${f} ----\n` + fs.readFileSync(path.join(__dirname, '..', f), 'utf8').replace(/\s+$/, '') + '\n').join('') + Z;

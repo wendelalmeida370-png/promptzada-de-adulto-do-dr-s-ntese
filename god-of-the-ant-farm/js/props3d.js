@@ -317,9 +317,17 @@
   function market(K, S) { void S; if (K.banca) return; // (baskets of what is sold beside the stalls — the stalls made in Blender bring their own)
     const n = K.b.type === 'mercado_negro' ? 2 : 4; for (let k = 0; k < n; k++) { const px = K.w * ((k % 2) * 0.5 + 0.25) + 1.25, pz = K.d * (Math.floor(k / 2) * 0.5 + 0.25) + 0.3;
       if (px > K.w - 0.4 || pz > K.d - 0.4) continue; const y = K.footed ? K.gy(px, pz) - 0.03 : 0; basket(K, px, y, pz, k + K.b.id); if (rec) rec.push({ b: K.b, x0: px - 0.24, x1: px + 0.24, z0: pz - 0.24, z1: pz + 0.24, y, ground: y, footed: true }); } }
-  const KIND = { hut: home, house: home, sobrado: home, insula: home, barraco: home, storehouse: store, armazem: store, celeiro: store, workshop: smithy, forja: smithy, doca: quay, olaria: potter, mercado: market, feira: market, mercado_negro: market, taverna: tavern };
+  // (one rune stone to a town of the north, at its oldest well: in the well's lot — the body does not walk into it — behind the
+  // well from the side people come to it, its carved face to them; not the well's own — the god's well has none —, what lies
+  // about it, D-092)
+  function wellStone(K) {
+    if (K.st !== 'nordico' || [...G.S.buildings.values()].some(q => q.type === 'well' && q.set === K.b.set && q.id < K.b.id)) return;
+    const o = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[G.Build3D.doorSide(K.b)]; const x = K.w / 2, z = K.d / 2;
+    G.Build3D.runeStone(K, x - o[0] * 1.48, z - o[1] * 1.48, Math.atan2(o[0], o[1]), 0.7);
+  }
+  const KIND = { well: wellStone, hut: home, house: home, sobrado: home, insula: home, barraco: home, storehouse: store, armazem: store, celeiro: store, workshop: smithy, forja: smithy, doca: quay, olaria: potter, mercado: market, feira: market, mercado_negro: market, taverna: tavern };
   // what a built building has about it (build3d calls this after drawing it, with its kit)
-  P3.into = function (K) { const f = KIND[K.b.type]; if (!f) return; const S = slots(K); if (!S.length && f !== market) return;
+  P3.into = function (K) { const f = KIND[K.b.type]; if (!f) return; const S = f === wellStone ? [] : slots(K); if (!S.length && f !== market && f !== wellStone) return;
     const q = G.Realm && G.Realm.Q ? G.Realm.Q() : null; K.props = q && q.props !== undefined ? q.props : 1; K.nTake = 0; f(K, S); };
   // (for the proofs: the pieces about a building as they are put — each one's box on the lot, its base, and which heap of the
   // stock it is, when it is one)

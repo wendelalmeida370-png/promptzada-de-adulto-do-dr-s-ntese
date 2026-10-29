@@ -19,6 +19,9 @@
   const TILE = Sp.TILE = 4, HM = Sp.HM = 1.5;
   // the pace of time in the body: one god-speed of the world is too quick for a human walk (D-015)
   Sp.TIME = 0.35;
+  // the body, one rule for all who read it — the plans' places and landings, the places given out, the 3D's body (adendo 8):
+  // the plans' own table (interiors.js), the same object
+  Sp.BODY = G.Interiors ? G.Interiors.BODY : { r: 0.32, h: 1.75, step: 0.3, up: 0.6, feet: 0.2, fit: 0.4 };
 
   Sp.toWorld = (x, y, h) => ({ X: x * TILE, Y: (h === undefined ? W.groundH(x, y) : h) * HM, Z: y * TILE });
   Sp.toTile = (X, Z) => [X / TILE, Z / TILE];
@@ -140,9 +143,18 @@
   // (a house stands on a plinth over the highest of its ground, as the god's view draws it; a field, a fence, a square lies on
   // the ground: the 3D's drawing and the body's feet read it here, one rule)
   Sp.BASELESS = { farm: 1, horta: 1, plantacao: 1, vinhedo: 1, doca: 1, praca: 1, cemetery: 1, curral: 1, cercado: 1, campfire: 1 };
+  // (and every field of the world's: the orchard, the apiary, the salt pans — BDEF.field —: whoever asks, asks here, B4)
+  Sp.baseless = b => !!(b && (Sp.BASELESS[b.type] || (G.BDEF[b.type] && G.BDEF[b.type].field)));
+  // (a building raised on its form's own body — its plan of a family of the form's, D-093: the library, the temple — stands on
+  // the form's base, on the ground the god draws it on, not on a plinth of its own: the plan's frame on the highest of its
+  // ground. By the record's family, as the 3D draws it (Build3D's bodyForm) — the record is made, its family with it, before the
+  // door is put (Interiors' found) —; with no record yet, by the type whose families are all the form's. The P3's measure: on
+  // the plinth of 0.4, the plan's floor 0.4 m over the one drawn, and a step of 0.42 before the form's steps)
+  Sp.onForm = b => { const In = G.Interiors; if (!b || !In || !In.TYPES) return false; if (b.ip && b.ip.f) return /^forma\./.test(b.ip.f);
+    const t = In.TYPES[b.type]; return !!(t && t.fams && t.fams.length && t.fams.every(f => /^forma\./.test(f))); };
   Sp.plinth = function (b) {
     let lo = 1e9, hi = -1e9; for (let ty = b.y; ty <= b.y + b.h; ty++) for (let tx = b.x; tx <= b.x + b.w; tx++) { const h = W.hAt(Math.min(N, tx), Math.min(N, ty)) * HM; lo = Math.min(lo, h); hi = Math.max(hi, h); }
-    return { lo, hi, y0: hi + (Sp.BASELESS[b.type] ? 0.12 : 0.4) };
+    return { lo, hi, y0: hi + (Sp.baseless(b) ? 0.12 : Sp.onForm(b) ? 0 : 0.4) };
   };
   Sp.FLOOR_UP = 0.012; // (a drawn floor stands a hair over the plinth's top it lies on)
   // (the near ground as its mesh draws it — realm3d's terrainGeo: a point every half tile, each cell cut from its +x corner to
@@ -170,7 +182,7 @@
   // (the side a wall of the outside is on: a side of the shell's rectangle, of an annex's, or the wall's own — out away from the
   // middle of the lot)
   function sideOf(sh, lot, w) {
-    if (sh.kind !== 'round') for (const r of [sh.r].concat((sh.annex || []).map(a => a.r))) for (const sd of ['N', 'E', 'S', 'W']) { const F = rside(r, sd); if (wallOn(w, F)) return F; }
+    if (sh.kind !== 'round') for (const r of [sh.r].concat((sh.annex || []).map(a => a.r), sh.yard ? [sh.yard.r] : [])) for (const sd of ['N', 'E', 'S', 'W']) { const F = rside(r, sd); if (wallOn(w, F)) return F; }
     const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const tx = (w.b[0] - w.a[0]) / L, tz = (w.b[1] - w.a[1]) / L;
     const side = ((lot / 2 - w.a[0]) * -tz + (lot / 2 - w.a[1]) * tx) > 0 ? -1 : 1; const ax = Math.abs(w.b[1] - w.a[1]) < 1e-3;
     return wside(w, ax ? Math.sign(tx * side) || 1 : Math.sign(-tz * side) || 1);
@@ -222,7 +234,7 @@
   // sobrado#14759, their steps down onto the gate of a wall's line; and the lot of another building of walls with its plan,
   // the body in only by its door — the steps of one never on another's lot, L-213 —, L-324, the house#24793, whose fourteen
   // steps came down into the feira#10950)
-  const barred = i => { const S = G.S; if (S.wall[i] === 2 || S.wall[i] === 4) return true; const B = S.occ[i] && S.buildings.get(S.occ[i]); return !!(B && !Sp.BASELESS[B.type] && G.Interiors && G.Interiors.has(B)); };
+  const barred = i => { const S = G.S; if (S.wall[i] === 2 || S.wall[i] === 4) return true; const B = S.occ[i] && S.buildings.get(S.occ[i]); return !!(B && !Sp.baseless(B) && G.Interiors && G.Interiors.has(B)); };
   Sp.doorFlight = function (b, sh, lot, w, h, ly, raised, F0, uc0, fresh) {
     const y = ly + (h.sill || 0); if (raised || y >= 0.3 || !w || !h) return null;
     // (kept by the wall's place too — its ends —, and the side given for a flight's foot: a door moved to another side of its
@@ -390,7 +402,8 @@
     const wid = F.u1 - F.u0; return { F, uc: (F.u0 + F.u1) / 2, w: { id: 'pe' + s.id, t: 0, a: [0, 0], b: [0, 0] }, h: { at: 0, w: Math.max(0.3, wid - 0.5), sill: 0 } };
   };
   // (the raised floor of a plan: on posts — its own steps up to its door)
-  const raisedOf = p => { const l0 = p.levels.filter(l => l.kind !== 'porao' && l.kind !== 'terraco' && l.kind !== 'jirau').sort((a, c) => a.y - c.y)[0] || p.levels[0]; return !!l0 && (l0.kind === 'elevado' || p.shell.base === 'esteios'); };
+  // (or on a solid base — a temple's podium, a pyramid's platform: B4 —, its own steps up from the ground before it)
+  const raisedOf = p => { const l0 = p.levels.filter(l => l.kind !== 'porao' && l.kind !== 'terraco' && l.kind !== 'jirau').sort((a, c) => a.y - c.y)[0] || p.levels[0]; return !!l0 && (l0.kind === 'elevado' || p.shell.base === 'esteios' || p.shell.base === 'macica'); };
   // (the steps before the outer doors of a building whose plan is made, as the feet read them — kept with the plan, as the
   // ground under the lot is)
   let stepMemo = new Map(); G.worldHooks.push(() => { stepMemo = new Map(); });
@@ -459,8 +472,11 @@
   const recKey = b => { const In = G.Interiors; if (In.keyOf) return In.keyOf(b); const r = b.ip; return r ? b.id + ':' + r.r + ':' + r.f + ':' + b.type + ':' + r.s + ':' + (r.fx || []).length : ''; };
   const KEPT_MAX = 160;
   // the plan of a building, made — or null (and asked for: a building without one is drawn and walked as before)
-  // (a ruin is walked as the world has it — open ground, its rubble drawn the old way, D-050 —: no plan for the feet either)
-  const planned = b => !!b && b.built && b.type !== 'ruin' && !!G.Interiors && G.Interiors.has(b);
+  // (a ruin is walked as the world has it — open ground, its rubble drawn the old way, D-050 —: no plan for the feet either;
+  // a house being extended over its family is walked by the plan of its record — L-371: the family keeps it the whole work,
+  // the world's rule of P1 —, the old house's until the work is done (Interiors.complete makes it the new one's then), as the
+  // 3D draws it whole under the scaffold of the new one (Build3D.shellOf, P3): the body in and out at the old house's door)
+  const planned = b => !!b && (b.built || !!b.upgradeFrom) && b.type !== 'ruin' && !!G.Interiors && G.Interiors.has(b);
   Sp.plan = function (b) {
     const In = G.Interiors; if (!planned(b) || !In.want) return null;
     const k = recKey(b); const m = kept.get(b.id); if (m && m.k === k) return m.p;
@@ -508,8 +524,9 @@
   // the storey's floor at a point: on a flight, between its foot and its top — Interiors' own reading (over the flight
   // where its grid has the flight: by its edge the storey's own)
   Sp.floorIn = (p, lv, x, z) => G.Interiors.floorYOf(p, lv, x, z);
-  // the stair a point of a storey is on (its flight, from that storey), or null
-  Sp.stairIn = function (p, lv, x, z) { for (const s of p.stairs) { const r = s.r; if ((s.kind === 'degraus' ? s.lv1 : s.lv0) === lv && x > r[0] && x < r[2] && z > r[1] && z < r[3]) return s; } return null; };
+  // the stair a point of a storey is on (its flight, from that storey), or null — its edges its own: the line where an outside
+  // flight meets the porch or the wall it goes up to is on the flight, not a crack the feet fall through to the ground (P3)
+  Sp.stairIn = function (p, lv, x, z) { for (const s of p.stairs) { const r = s.r; if ((s.kind === 'degraus' ? s.lv1 : s.lv0) === lv && x >= r[0] && x <= r[2] && z >= r[1] && z <= r[3]) return s; } return null; };
   // a point of the world, for a body on storey lv of building 'of' (its own storey indoors; in another building, or coming in, the
   // entrance's):
   // null away from any building whose plan is made; else { b, p, lv, x, z (metres of the lot), code, walk, y (the floor drawn
@@ -520,8 +537,8 @@
     const S = G.S; const tx = Math.floor(X / TILE), ty = Math.floor(Z / TILE); if (tx < 0 || ty < 0 || tx >= N || ty >= N) return null;
     const id = S.occ[ty * N + tx]; const b = id && S.buildings.get(id); if (!b) return null; const p = Sp.plan(b); if (!p) return null;
     const m = kept.get(b.id); const x = X - b.x * TILE, z = Z - b.y * TILE; const sh = p.shell;
-    const shell = sh.kind === 'round' ? Math.hypot(x - sh.cx, z - sh.cz) < sh.r : x > sh.r[0] && x < sh.r[2] && z > sh.r[1] && z < sh.r[3];
     const L = of === b.id && lv !== undefined && lv !== null && p.levels.some(q => q.lv === lv) ? lv : p.entryLv || 0;
+    const shell = inBody(sh, L, x, z);
     const C = G.Interiors.CELL; let code = Sp.cellIn(p, L, x, z), walk = false, door = -1;
     let step = null;
     if (shell) {
@@ -541,12 +558,23 @@
     let fy = Sp.floorIn(p, L, x, z);
     if (!shell) { const st = Sp.stairIn(p, L, x, z); if (!st) fy = step ? step.fy : 0;
       // (an outside flight: from the plinth's top at its foot — the steps before it come down to the ground, Space.feet — to the
-      // storey it serves, all along it, its ends too: as the 3D lays its steps)
+      // storey it serves, all along it, its ends too: as the 3D lays its steps. A flight with its treads said — a form's steps,
+      // D-093 —: the top of the highest tread under the feet, as the god and the 3D draw them, never a slope across them)
       else if (st.kind === 'degraus') { const l1 = p.levels.find(q => q.lv === st.lv1); const y1 = l1 ? l1.y : 0; const r = st.r;
-        const len = st.dir[0] ? r[2] - r[0] : r[3] - r[1], t = st.dir[0] ? (st.dir[0] > 0 ? x - r[0] : r[2] - x) : (st.dir[1] > 0 ? z - r[1] : r[3] - z); fy = y1 * G.clamp(t / (len || 1), 0, 1); } }
+        const len = st.dir[0] ? r[2] - r[0] : r[3] - r[1], t = st.dir[0] ? (st.dir[0] > 0 ? x - r[0] : r[2] - x) : (st.dir[1] > 0 ? z - r[1] : r[3] - z); fy = y1 * G.clamp(t / (len || 1), 0, 1);
+        const ty = G.Interiors.treadY(st, x, z); if (ty >= 0) fy = ty; } }
     else if (door >= 0 && p.doors[door] && p.doors[door].outer) fy = Math.max(fy, 0);
     return { b, p, lv: L, x, z, code, walk, shell, door, y: Sp.plinth(b).y0 + fy + Sp.FLOOR_UP };
   };
+  // (a point of a storey within the building: inside its shell, or an annex against it — the lean-to (L-285) —, or its yard
+  // (B2d), on their own storey: where the plan's floor is the feet's. Out of them, the street's, but for the doorstep)
+  const inR = (r, x, z) => x > r[0] && x < r[2] && z > r[1] && z < r[3];
+  function inBody(sh, lv, x, z) {
+    if (sh.kind === 'round' ? Math.hypot(x - sh.cx, z - sh.cz) < sh.r : inR(sh.r, x, z)) return true;
+    for (const a of sh.annex || []) if ((a.lv || 0) === lv && inR(a.r, x, z)) return true;
+    return !!sh.yard && (sh.yard.lv || 0) === lv && inR(sh.yard.r, x, z);
+  }
+  Sp.inBody = inBody; // (for the proofs)
   // (the outer door whose opening a point of the wall's thickness is in — across the whole wall, along it inside its jambs —,
   // or -1)
   function outerDoorAt(p, lv, x, z) {
@@ -584,6 +612,9 @@
     const raised = raisedOf(p);
     for (const h of p.holes) {
       const d = h.door >= 0 ? p.doors[h.door] : null; if (!d || !d.outer || h.kind === 'janela' || list.some(q => q.h === h)) continue; const w = p.walls[h.wall]; if (!w || w.lv !== lv) continue;
+      // (the bays of a colonnade over a raised base — a porch, a peristyle — are its edge, not a way down to the ground: the drop
+      // is the base the form draws there — only the bay the street comes up to is a way in)
+      if (raised && w.kind === 'colunata' && !d.rooms.includes('rua')) continue;
       const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const tx = (w.b[0] - w.a[0]) / L, tz = (w.b[1] - w.a[1]) / L;
       const s = (x - w.a[0]) * tx + (z - w.a[1]) * tz, o = (x - w.a[0]) * -tz + (z - w.a[1]) * tx;
       const out = ((lot / 2 - w.a[0]) * -tz + (lot / 2 - w.a[1]) * tx) > 0 ? -1 : 1;

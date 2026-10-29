@@ -177,6 +177,8 @@
     azeite: ['anfora', 'ombro', 9, 5], vinho: ['anfora', 'ombro', 9, 5], oleo: ['barril', 'abraco', 8, 4], queijo: ['queijo', 'peito', 3, 0],
     bacalhau: ['peixe', 'lado', 3, 0], atum: ['peixe', 'lado', 6, 0], marfim: ['marfim', 'ombro', 12, 0], chifre: ['marfim', 'ombro', 3, 0],
     ferramentas: ['ferramentas', 'ombro', 2.5, 0], armas: ['ferramentas', 'ombro', 3, 0],
+    // (the pottery's bricks and adobe, P2's olaria: a stack held low before the body, as the stones)
+    tijolo: ['pedras', 'baixo', 7, 0], adobe: ['pedras', 'baixo', 8, 0],
   };
   P3.GOOD = GOOD;
   // the peoples' own ways (a form replaced, a grip): the north keeps its wine and oil in casks; the Aztecs carry the heavy loads
@@ -614,6 +616,17 @@
     carryWalk: (t, sp) => ({ ...ST.walk(t, sp), shLp: -0.95, shRp: -0.95, shLr: 0.25, shRr: -0.25, elL: 0.95, elR: 0.95 }),
     pray: (t) => ({ crouch: 0.45, hipL: -0.1, hipR: -0.1, knL: 1.65, knR: 1.65, shLp: -2.6 + Math.sin(t * 1.2) * 0.15, shRp: -2.6 + Math.sin(t * 1.2) * 0.15, shLr: 0.3, shRr: -0.3, elL: 0.2, elR: 0.2, neck: -0.3, lean: -0.05 }),
     sit: (t) => ({ crouch: 0.46, hipL: -1.5, hipR: -1.5, knL: 1.5, knR: 1.5, shLp: -0.5, shRp: -0.5 + Math.sin(t * 2) * 0.1, elL: 0.8, elR: 0.9, lean: 0.1 }),
+    // (at the table: seated, the right hand from the bowl to the mouth and back, a pause between mouthfuls)
+    eat: (t) => { const k = Math.pow(Math.max(0, Math.sin(t * 1.6)), 2); return { ...ST.sit(t), shRp: -0.55 - k * 0.7, shRr: -0.15, elR: 1.0 + k * 1.1, shLp: -0.45, elL: 0.95, neck: 0.12 - k * 0.1, lean: 0.18 }; },
+    // (at the fire: down on the heels, leaning in, the right hand stirring the pot round, the left on the knee)
+    cook: (t) => ({ crouch: 0.5, lean: 0.55, hipL: -1.35, hipR: -1.25, knL: 1.85, knR: 1.75, shRp: -1.05 + Math.sin(t * 2.2) * 0.18, shRr: -0.2 + Math.cos(t * 2.2) * 0.15, elR: 0.7, shLp: -0.6, shLr: 0.2, elL: 1.1, neck: 0.35 }),
+    // (rocking a child: seated, the arms cradling it before the chest, the trunk swaying slowly from side to side)
+    rock: (t) => ({ ...ST.sit(t), shLp: -0.75, shRp: -0.75, shLr: -0.35, shRr: 0.35, elL: 1.5, elR: 1.5, twist: Math.sin(t * 1.3) * 0.1, neck: 0.3 }),
+    // (sick in bed, awake: lying, a hand on the chest, the head turning a little now and then)
+    sick: (t) => ({ ...ST.sleep(t), shRp: -0.9, shRr: -0.2, elR: 1.9, neck: Math.sin(t * 0.4) * 0.12 }),
+    // (the same sitting on the ground, where there is no seat: eating with the bowl in the lap, rocking the child)
+    eatg: (t) => { const k = Math.pow(Math.max(0, Math.sin(t * 1.6)), 2); return { ...ST.rest(t), shRp: -0.45 - k * 0.75, shRr: -0.15, elR: 1.1 + k * 1.05, shLp: -0.5, elL: 1.2, neck: 0.18 - k * 0.12 }; },
+    rockg: (t) => ({ ...ST.rest(t), shLp: -1.25, shRp: -1.25, shLr: -0.25, shRr: 0.25, elL: 1.85, elR: 1.85, twist: Math.sin(t * 1.3) * 0.1, neck: 0.3 }), // (the child at the chest, over the knees)
     talk: (t) => ({ ...ST.idle(t), shRp: -0.5 - Math.max(0, Math.sin(t * 2.6)) * 0.6, shRr: -0.25, elR: 0.9 + Math.sin(t * 3.3) * 0.3, twist: Math.sin(t * 1.1) * 0.08, neck: Math.sin(t * 2.2) * 0.08, talk: Math.max(0, Math.sin(t * 9.0) * Math.sin(t * 2.3 + 1)) * 0.8 }),
     dance: (t) => ({ bob: Math.abs(Math.sin(t * 4)) * 0.09, twist: Math.sin(t * 2) * 0.35, shLp: -2.4 + Math.sin(t * 4) * 0.5, shRp: -2.4 - Math.sin(t * 4) * 0.5, shLr: 0.5, shRr: -0.5, elL: 0.6, elR: 0.6, hipL: Math.sin(t * 4) * 0.3, hipR: -Math.sin(t * 4) * 0.3, knL: 0.3, knR: 0.3 }),
     mourn: (t) => ({ neck: 0.65, lean: 0.25, shLp: -0.6, shRp: -0.6, shLr: 0.35, shRr: -0.35, elL: 1.7, elR: 1.7, bob: Math.sin(t * 5) * 0.006 }),
@@ -722,7 +735,7 @@
     chop: 'swing', mine: 'swing', hammer: 'swing', build: 'swing', forge: 'swing', dig: 'swing', stab: 'fight', beat: 'swing', fight: 'fight', brandish: 'fight', cut: 'swing', butcher: 'swing', skin: 'low', mend: 'low', craft: 'low', shear: 'low', drill: 'talk',
     pick: 'low', gather: 'low', plant: 'low', harvest: 'low', rake: 'swing', fill: 'low', feed: 'low', milk: 'low', catch: 'low', salt: 'low', sweep: 'low', weave: 'sit', pottery: 'sit', fish: 'interact', reel: 'interact',
     haul: 'carry', lift: 'carry', drag: 'carry', hold: 'carry', pray: 'pray', kneel: 'pray', swear: 'pray', beg: 'pray', weepk: 'pray',
-    sit: 'sit', sittalk: 'sit', story: 'sit', read: 'sit', write: 'sit', eat: 'sit', drink: 'talk', listen: 'talk',
+    sit: 'sit', sittalk: 'sit', story: 'sit', read: 'sit', write: 'sit', eat: 'eat', drink: 'talk', listen: 'talk', cook: 'cook', rock: 'rock',
     talk: 'talk', chat: 'talk', call: 'talk', shout: 'talk', wave: 'talk', point: 'talk', question: 'talk', sell: 'talk', buy: 'talk', serve: 'talk',
     dance: 'dance', joy: 'dance', play: 'dance', mourn: 'mourn', weep: 'mourn', sad: 'mourn', cower: 'mourn', sick: 'mourn',
     hug: 'hug', embrace: 'hug', sleep: 'sleep', zzz: 'sleep', throw: 'throw', swim: 'swim', dive: 'swim', bound: 'bound', sneak: 'sneak', run: 'run', climb: 'interact', knock: 'interact', look: 'idle',
@@ -751,6 +764,9 @@
     if (!('tool' in want)) pose.tool = 0;
   };
   Anim.pose = (state, t, sp) => (ST[state] || ST.idle)(t, sp || 0);
+  // the state of a place inside a building (Interiors.places: its st — a state of the 3D, or an act of the world's people, as
+  // the household's rule gives it): the state itself, else the act's, else standing
+  Anim.resolve = st => (st && ST[st] ? st : st && ACT[st] && ACT[st] !== 'run' ? ACT[st] : 'idle');
   // the weight of what is held, in the body — by the load's weight against the body's strength, not by the good's name: under a
   // load before the chest the trunk leans back over the hips and the knees give; carried low and heavy, more; under a load on
   // the back the trunk bends forward and the strap pulls the head back; a bucket at the side tips the trunk away from it and

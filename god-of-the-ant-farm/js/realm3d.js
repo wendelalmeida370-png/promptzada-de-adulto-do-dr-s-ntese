@@ -342,11 +342,13 @@ vec3 gxGrade( vec3 c ) {
     SH.ico0 = new THREE.IcosahedronGeometry(0.5, 0);
     SH.dode = new THREE.DodecahedronGeometry(0.5, 0);
     SH.sph = new THREE.SphereGeometry(0.5, 8, 6);
-    // a gable: a triangular prism, ridge along X, base 1×1 at y = 0, peak at y = 1
+    // a gable: a triangular prism, ridge along X, base 1×1 at y = 0, peak at y = 1 — each face wound out of it, as the
+    // one-sided material shows it (wound in, its outside was never drawn: from out one saw the far slope's inside, its light
+    // the wrong way — the far roofs dark, L-270)
     { const g = new THREE.BufferGeometry(); const v = [
-      -0.5, 0, -0.5, 0.5, 0, -0.5, 0.5, 1, 0, -0.5, 0, -0.5, 0.5, 1, 0, -0.5, 1, 0, // north slope
-      -0.5, 0, 0.5, -0.5, 1, 0, 0.5, 1, 0, -0.5, 0, 0.5, 0.5, 1, 0, 0.5, 0, 0.5, // south slope
-      -0.5, 0, -0.5, -0.5, 1, 0, -0.5, 0, 0.5, 0.5, 0, -0.5, 0.5, 0, 0.5, 0.5, 1, 0, // the two gable ends
+      -0.5, 0, -0.5, 0.5, 1, 0, 0.5, 0, -0.5, -0.5, 0, -0.5, -0.5, 1, 0, 0.5, 1, 0, // north slope
+      -0.5, 0, 0.5, 0.5, 1, 0, -0.5, 1, 0, -0.5, 0, 0.5, 0.5, 0, 0.5, 0.5, 1, 0, // south slope
+      -0.5, 0, -0.5, -0.5, 0, 0.5, -0.5, 1, 0, 0.5, 0, -0.5, 0.5, 1, 0, 0.5, 0, 0.5, // the two gable ends
     ]; g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); g.computeVertexNormals(); SH.gable = g; }
     // a hip roof: a pyramid of four slopes on a 1×1 base
     { const g = new THREE.ConeGeometry(0.7071, 1, 4, 1); g.rotateY(Math.PI / 4); g.translate(0, 0.5, 0); SH.hip = g; }

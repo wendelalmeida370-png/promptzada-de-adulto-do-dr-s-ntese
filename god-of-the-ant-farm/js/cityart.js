@@ -8,7 +8,7 @@
 // ============================================================
 (function (G) {
   const A = G.Arch; const K = A.kit();
-  const { P, poly, ln, walls, box, onL, onR, shade, roof, colonnade, steps, flag, palm, jar, barrel, statue, dome, band, winsL, winsR, gableX, TAU } = K;
+  const { P, poly, ln, walls, box, onL, onR, door, shade, roof, colonnade, steps, flag, palm, jar, barrel, statue, dome, band, winsL, winsR, gableX, TAU } = K;
   let N = G.N; G.mapHooks.push(n => { N = n; });
   const W = G.W;
 
@@ -25,7 +25,7 @@
     box(c, x0 - 0.04, y0 - 0.04, x1 + 0.04, y1 + 0.04, 0, z0, p.base[0], p.base[1], p.base[2]);
     walls(c, x0, y0, x1, y1, z0, H, p.wl, p.wr, st === 'egipcio' ? 0.03 : 0);
     if (st === 'nordico') { c.strokeStyle = 'rgba(30,20,10,0.3)'; c.lineWidth = 0.35; for (let k = 1; k < 8; k++) { const f = x0 + (x1 - x0) * k / 8; ln(c, P(f, y1, z0), P(f, y1, H), 'rgba(30,20,10,0.3)', 0.35); const g = y0 + (y1 - y0) * k / 8; ln(c, P(x1, g, z0), P(x1, g, H), 'rgba(30,20,10,0.3)', 0.35); } }
-    if (o.door !== false) { const dx = o.doorX !== undefined ? o.doorX : (x0 + x1) / 2; onL(c, y1, dx - 0.1, dx + 0.1, z0, z0 + Math.min(8, (H - z0) * 0.72), p.door); }
+    if (o.door !== false) { const dx = o.doorX !== undefined ? o.doorX : (x0 + x1) / 2; door(c, y1, dx - 0.1, dx + 0.1, z0, z0 + Math.min(8, (H - z0) * 0.72), p.door); }
     if (o.win !== false) {
       winsL(c, m, p, y1, x0, x1, z0 + (H - z0) * 0.52, 2.6, Math.max(1, Math.round((x1 - x0) * 1.6)));
       winsR(c, m, p, x1, y0, y1, z0 + (H - z0) * 0.52, 2.6, Math.max(1, Math.round((y1 - y0) * 1.6)));
@@ -94,37 +94,42 @@
       return 26;
     },
   };
-  // Mina: a rocky hill with a timbered adit, rails, a cart of ore, the spoil heap
+  // Mina: the rocky hill over the galleries filling the lot, the timbered mouth at its foot toward the front corner, the rails
+  // and the cart of ore in that corner, the spoil heap — as its form has them (G.Forma mina; D-092: the hill filling the lot,
+  // the cart in it, never in the street), each piece in the god's way, back to front
   EXT.mina = {
     maxz: 34, draw(c, m, p, st, v) {
-      const gold = v === 1;
-      const b0 = P(0, 0, 0);
-      c.fillStyle = 'rgba(80,70,60,0.35)'; c.beginPath(); c.ellipse(b0[0], b0[1], 17, 8.4, 0, 0, TAU); c.fill();
-      dome(c, b0[0] - 1, b0[1] - 1, 14, 20, '#948a7c', '#62594f', null);
-      // rock facets and strata
-      const r = G.mulberry32(gold ? 77 : 33);
-      for (let k = 0; k < 9; k++) { const x = b0[0] - 10 + r() * 18, y = b0[1] - 4 - r() * 13; c.fillStyle = r() < 0.5 ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.14)'; c.beginPath(); c.moveTo(x, y); c.lineTo(x + 3 + r() * 3, y - 1.5); c.lineTo(x + 4, y + 1.8); c.closePath(); c.fill(); }
-      for (let k = 0; k < 7; k++) { const x = b0[0] - 9 + r() * 16, y = b0[1] - 5 - r() * 11; c.fillStyle = gold ? '#f2c14e' : '#a8522e'; c.fillRect(x, y, 1.6, 0.9); if (gold) m.glow.push([x + 0.8, y + 0.4]); }
-      // adit
-      const d = P(0.1, 0.38, 0);
-      c.fillStyle = '#16100c'; c.beginPath(); c.moveTo(d[0] - 3.4, d[1]); c.lineTo(d[0] - 3.4, d[1] - 6); c.quadraticCurveTo(d[0], d[1] - 8.4, d[0] + 3.4, d[1] - 6); c.lineTo(d[0] + 3.4, d[1]); c.fill();
-      c.strokeStyle = '#6e4a2c'; c.lineWidth = 1.1; c.beginPath(); c.moveTo(d[0] - 3.6, d[1] + 0.2); c.lineTo(d[0] - 3.6, d[1] - 7); c.lineTo(d[0] + 3.6, d[1] - 7); c.lineTo(d[0] + 3.6, d[1] + 0.2); c.stroke();
-      m.fires.push([d[0] + 4.6, d[1] - 6]); // the lantern at the mouth
-      c.fillStyle = '#3a2a1a'; c.fillRect(d[0] + 4.2, d[1] - 6.6, 0.8, 1.2);
-      // rails and the cart
-      ln(c, [d[0] - 1.6, d[1]], P(0.3, 0.72, 0), '#5a4a3a', 0.5); ln(c, [d[0] + 1.6, d[1]], P(0.55, 0.62, 0), '#5a4a3a', 0.5);
-      const q = P(0.4, 0.62, 0);
-      c.fillStyle = '#5a4030'; c.beginPath(); c.moveTo(q[0] - 3, q[1] - 4); c.lineTo(q[0] + 3, q[1] - 4); c.lineTo(q[0] + 2.2, q[1] - 1.2); c.lineTo(q[0] - 2.2, q[1] - 1.2); c.fill();
-      c.fillStyle = '#2a2420'; c.beginPath(); c.arc(q[0] - 1.6, q[1] - 0.8, 0.9, 0, TAU); c.arc(q[0] + 1.6, q[1] - 0.8, 0.9, 0, TAU); c.fill();
-      c.fillStyle = gold ? '#d8b04a' : '#8a5a42'; c.beginPath(); c.ellipse(q[0], q[1] - 4.2, 2.8, 1.3, 0, 0, TAU); c.fill();
-      // spoil heap
-      const s = P(0.45, -0.1, 0); c.fillStyle = '#8a8276'; c.beginPath(); c.moveTo(s[0] - 6, s[1] + 1); c.quadraticCurveTo(s[0], s[1] - 6, s[0] + 6, s[1] + 1); c.fill();
+      const gold = v === 1; const F = G.Forma.of('mina', st); const h = F.L / 2, ZM = 3.04;
+      const T = (u, w, y) => P((u - h) / 4, (w - h) / 4, (y || 0) * ZM); // (a point of the form, metres, in the god's picture)
+      const depth = e => (e.k === 'morro' ? e.c[0] + e.c[1] : e.k === 'tora' ? (e.a[0] + e.a[1] + e.b[0] + e.b[1]) / 2 : e.k === 'bola' ? e.c[0] + e.c[1] : e.p.reduce((q, x) => q + x[0] + x[1], 0) / e.p.length);
+      const els = F.els.slice().sort((x, y) => depth(x) - depth(y)); let hills = 0;
+      for (const e of els) {
+        if (e.k === 'morro') {
+          const b0 = T(e.c[0], e.c[1], e.y0); const rx = e.r * 5.657, hh = (e.y1 - e.y0) * ZM; const cols = gold && e.ouro ? e.ouro : e.cor;
+          if (!hills++) { c.fillStyle = 'rgba(80,70,60,0.35)'; c.beginPath(); c.ellipse(b0[0], b0[1], rx * 1.2, rx * 0.6, 0, 0, TAU); c.fill(); }
+          dome(c, b0[0], b0[1], rx, hh, shade(cols[0], e.r > 1 ? 1 : 1.04), cols[1], null);
+          if (e.veios) { // (its rock's facets and strata, and the ore in it: the god's own, within the hill's outline)
+            const r = G.mulberry32(gold ? 77 : 33); const k = rx / 14;
+            for (let q = 0; q < 9; q++) { const x = b0[0] - 10 * k + r() * 18 * k, y = b0[1] - (4 + r() * 13) * k; c.fillStyle = r() < 0.5 ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.14)'; c.beginPath(); c.moveTo(x, y); c.lineTo(x + (3 + r() * 3) * k, y - 1.5 * k); c.lineTo(x + 4 * k, y + 1.8 * k); c.closePath(); c.fill(); }
+            for (let q = 0; q < e.veios; q++) { const x = b0[0] - 9 * k + r() * 16 * k, y = b0[1] - (5 + r() * 11) * k; c.fillStyle = gold ? '#f2c14e' : '#a8522e'; c.fillRect(x, y, 1.6, 0.9); if (gold) m.glow.push([x + 0.8, y + 0.4]); }
+          }
+        } else if (e.k === 'pano') {
+          const pts = e.p.map(q => T(q[0], q[1], q[2]));
+          if (e.cor === '#16100c') { // (the mouth's dark, arched at its top as the god draws it)
+            const a = pts[1], b2 = pts[0], tp = pts[2][1]; const mx = (a[0] + b2[0]) / 2;
+            c.fillStyle = e.cor; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(a[0], tp + 1.2); c.quadraticCurveTo(mx, tp - 1.2, b2[0], tp + 1.2); c.lineTo(b2[0], b2[1]); c.closePath(); c.fill();
+          } else poly(c, pts, e.cor);
+        } else if (e.k === 'tora') ln(c, T(...e.a), T(...e.b), e.cor, Math.max(0.5, e.r * 2 * 5.657 * 0.9));
+        else if (e.k === 'bola') { const q = T(...e.c); c.fillStyle = e.cor; c.beginPath(); c.arc(q[0], q[1], Math.max(0.6, e.r * 5.657), 0, TAU); c.fill(); if (e.cor === '#ffcf6a') m.fires.push([q[0], q[1]]); }
+      }
       return 24;
     },
   };
   // Forja: stone smithy, tall chimney, open work floor with hearth, anvil, rack of weapons
+  // (extra ['frio']: the fire out — the hearth, the crucible, the kiln's mouth dark, no glow: Arch.fired, the world's batch)
+  const cold = extra => !!(extra && extra[0] === 'frio');
   EXT.forja = {
-    maxz: 54, draw(c, m, p, st) {
+    maxz: 54, draw(c, m, p, st, v, extra) {
       const stone = st === 'nordico' ? ['#7c766a', '#5f5a50', '#8e877b'] : [p.base[0], p.base[1], p.base[2]];
       house(c, m, p, st, -0.92, -0.92, 0.05, 0.1, 13, { doorX: -0.45 });
       box(c, -0.8, -0.8, -0.52, -0.52, 0, 34, stone[0], stone[1], stone[2]);
@@ -133,7 +138,7 @@
       shed(c, p, st, 0.18, -0.8, 0.94, 0.9, 11);
       // hearth with its glow, bellows, anvil, quench barrel
       box(c, 0.3, -0.6, 0.62, -0.3, 0, 4.5, stone[0], stone[1], '#3a2a22');
-      c.fillStyle = '#ff9a3a'; const h = P(0.46, -0.45, 4.6); c.beginPath(); c.ellipse(h[0], h[1], 3.4, 1.5, 0, 0, TAU); c.fill(); m.glow.push(h);
+      c.fillStyle = cold(extra) ? '#4a3a32' : '#ff9a3a'; const h = P(0.46, -0.45, 4.6); c.beginPath(); c.ellipse(h[0], h[1], 3.4, 1.5, 0, 0, TAU); c.fill(); if (!cold(extra)) m.glow.push(h);
       const bl = P(0.72, -0.5, 2); c.fillStyle = '#6a4a30'; c.beginPath(); c.moveTo(bl[0] - 2, bl[1]); c.lineTo(bl[0] + 2.6, bl[1] - 1.4); c.lineTo(bl[0] + 2.6, bl[1] + 1); c.fill();
       const an = P(0.55, 0.15, 0); c.fillStyle = '#5a5046'; c.fillRect(an[0] - 1.2, an[1] - 3, 2.4, 3); c.fillStyle = '#3a3a40'; c.beginPath(); c.moveTo(an[0] - 3, an[1] - 4.4); c.lineTo(an[0] + 2.6, an[1] - 4.4); c.lineTo(an[0] + 3.6, an[1] - 3.6); c.lineTo(an[0] - 2, an[1] - 3); c.fill();
       const qb = P(0.82, 0.3, 0); barrel(c, qb[0], qb[1], 1);
@@ -145,10 +150,10 @@
   };
   // Ourivesaria: a neat little shop with gold trim, a small kiln and a sign with a ring
   EXT.ourives = {
-    maxz: 36, draw(c, m, p, st) {
+    maxz: 36, draw(c, m, p, st, v, extra) {
       house(c, m, p, st, -0.42, -0.42, 0.22, 0.26, 12, { doorX: -0.12 });
       band(c, -0.42, -0.42, 0.22, 0.26, 9.4, 10.2, '#e8b83a');
-      const k = P(0.36, -0.22, 0); dome(c, k[0], k[1], 3.4, 5, '#9a6a4a', '#6a4a30', null); c.fillStyle = '#ffb040'; c.beginPath(); c.arc(k[0] - 0.4, k[1] - 1.4, 1, 0, TAU); c.fill(); m.glow.push([k[0] - 0.4, k[1] - 1.6]);
+      const k = P(0.36, -0.22, 0); dome(c, k[0], k[1], 3.4, 5, '#9a6a4a', '#6a4a30', null); c.fillStyle = cold(extra) ? '#3a2a22' : '#ffb040'; c.beginPath(); c.arc(k[0] - 0.4, k[1] - 1.4, 1, 0, TAU); c.fill(); if (!cold(extra)) m.glow.push([k[0] - 0.4, k[1] - 1.6]);
       box(c, 0.28, 0.12, 0.46, 0.36, 0, 2.6, '#7a5a3a', '#5a4028', '#8a6a44');
       for (let q = 0; q < 3; q++) { const g = P(0.32 + q * 0.05, 0.22, 2.7); c.fillStyle = q === 1 ? '#6ad0e8' : '#f2c14e'; c.beginPath(); c.arc(g[0], g[1], 0.6, 0, TAU); c.fill(); m.glow.push(g); }
       sign(c, 0.22, 0.26, 10, '#3a2a1c', (x, y) => { c.strokeStyle = '#f2c14e'; c.lineWidth = 0.6; c.beginPath(); c.arc(x, y, 0.9, 0, TAU); c.stroke(); });
@@ -157,10 +162,11 @@
   };
   // Olaria: potter's shed, beehive kiln, pots drying in rows, the wheel
   EXT.olaria = {
-    maxz: 40, draw(c, m, p, st) {
+    maxz: 40, draw(c, m, p, st, v, extra) {
       house(c, m, p, st, -0.92, -0.92, -0.05, -0.2, 11, { doorX: -0.5 });
       const k = P(0.5, -0.5, 0); dome(c, k[0], k[1], 9, 13, '#c07850', '#8a5034', '#6a3a24');
-      c.fillStyle = '#2a1a12'; c.beginPath(); c.arc(k[0] - 2, k[1] - 2.4, 2.2, Math.PI, TAU); c.fill(); c.fillStyle = '#ff9a3a'; c.beginPath(); c.arc(k[0] - 2, k[1] - 2.2, 1.3, Math.PI, TAU); c.fill(); m.glow.push([k[0] - 2, k[1] - 3]);
+      c.fillStyle = '#2a1a12'; c.beginPath(); c.arc(k[0] - 2, k[1] - 2.4, 2.2, Math.PI, TAU); c.fill();
+      if (!cold(extra)) { c.fillStyle = '#ff9a3a'; c.beginPath(); c.arc(k[0] - 2, k[1] - 2.2, 1.3, Math.PI, TAU); c.fill(); m.glow.push([k[0] - 2, k[1] - 3]); }
       m.fires.push([k[0], k[1] - 14]);
       // the wheel and the potter's seat
       const w = P(-0.45, 0.35, 0); c.fillStyle = '#6a4a30'; c.fillRect(w[0] - 0.5, w[1] - 3, 1, 3); c.fillStyle = '#8a6a44'; c.beginPath(); c.ellipse(w[0], w[1] - 3.2, 2.6, 1.1, 0, 0, TAU); c.fill(); c.fillStyle = '#b8704a'; c.beginPath(); c.ellipse(w[0], w[1] - 4.4, 1.1, 1.3, 0, 0, TAU); c.fill();
@@ -204,20 +210,21 @@
         box(c, -0.88, -0.83, 0.88, 0.82, 16, 17.6, p.col[0], p.col[1], p.col[0]);
         walls(c, -0.55, -0.6, 0.55, 0.2, 17.6, 23, p.wl, p.wr); winsL(c, m, p, 0.2, -0.55, 0.55, 19, 2.6, 4);
         roof(c, m, p, -0.55, -0.6, 0.55, 0.2, 23, { kind: 'gable', rh: 7 });
-        const f = P(0.9, 0.9, 2.5); flag(c, f[0], f[1], '#8e2f2f', 14);
+        const f = P(0.75, 0.9, 2.5); flag(c, f[0], f[1], '#8e2f2f', 14); // (its cloth inside the lot: Build3D.check)
         return 32;
       }
       if (st === 'egipcio') { // casa do vizir: pylons flanking the gate
         const H = house(c, m, p, st, -0.85, -0.85, 0.85, 0.25, 14, { door: false });
         for (const x of [-0.7, 0.2]) { box(c, x, 0.3, x + 0.5, 0.75, 0, 20, p.wl, p.wr, p.top); band(c, x, 0.3, x + 0.5, 0.75, 17, 18.4, p.trim); onL(c, 0.75, x + 0.12, x + 0.38, 6, 14, 'rgba(47,143,138,0.35)'); }
-        onL(c, 0.75, -0.2, 0.2, 0, 11, p.door);
-        for (const x of [-0.6, 0.6]) { const f = P(x, 0.8, 20); flag(c, f[0], f[1], '#2f8f8a', 10); }
+        door(c, 0.75, -0.2, 0.2, 0, 11, p.door);
+        // (the flags on their poles before the pylons, from the ground: the pennants where they were — its form, Phase E)
+        for (const x of [-0.6, 0.6]) { const f = P(x, 0.8, 0); flag(c, f[0], f[1], '#2f8f8a', 30); }
         return Math.max(H, 32);
       }
       if (st === 'asteca') { // tecpan on a low platform
         box(c, -0.95, -0.95, 0.95, 0.95, 0, 5, p.base[0], p.base[1], p.base[2]);
         band(c, -0.95, -0.95, 0.95, 0.95, 3.2, 4.2, p.trim);
-        poly(c, [P(-0.25, 1.1, 0), P(0.25, 1.1, 0), P(0.25, 0.95, 5), P(-0.25, 0.95, 5)], shade(p.base[2], 1.05));
+        poly(c, [P(-0.25, 1.06, 0), P(0.25, 1.06, 0), P(0.25, 0.95, 5), P(-0.25, 0.95, 5)], shade(p.base[2], 1.05)); // (its foot within a hand of the lot: its form, Phase E)
         const H = house(c, m, p, st, -0.8, -0.8, 0.8, 0.5, 18, { plinth: 5 });
         for (let k = 0; k < 7; k++) { const x = -0.78 + k * 0.26; box(c, x, 0.46, x + 0.1, 0.52, 18.6, 21, p.wl, p.wr, p.wl); }
         return Math.max(H, 26);
@@ -235,7 +242,7 @@
       colonnade(c, p, -0.8, 0.45, 0.8, 0.75, 2, 17, 6, 0.045, 'L');
       box(c, -0.84, -0.84, 0.84, 0.8, 17, 18.6, p.col[0], p.col[1], p.col[0]);
       gableX(c, -0.84, -0.84, 0.84, 0.8, 18.6, 26, 0.04, p.roof[0], p.roof[1], p.gable, p.roof[2]);
-      const f = P(0.9, 0.9, 2); flag(c, f[0], f[1], '#3f6fb0', 14);
+      const f = P(0.75, 0.9, 2); flag(c, f[0], f[1], '#3f6fb0', 14); // (its cloth inside the lot: Build3D.check)
       return 28;
     },
   };
@@ -250,7 +257,7 @@
       onR(c, 0.38, -0.12, 0.02, 11, 13.4, '#1e1a16', m); for (let k = 0; k < 3; k++) ln(c, P(0.39, -0.1 + k * 0.05, 11), P(0.39, -0.1 + k * 0.05, 13.4), '#6a6a72', 0.35);
       const H = st === 'egipcio' || st === 'asteca' ? roof(c, m, p, -0.38, -0.38, 0.38, 0.38, 17, { par: 1.6 }) : st === 'nordico' ? roof(c, m, p, -0.38, -0.38, 0.38, 0.38, 17, { kind: 'turf' }) : roof(c, m, p, -0.38, -0.38, 0.38, 0.38, 17, { kind: 'hip', rh: 8 });
       sign(c, 0.38, 0.38, 13, '#3a2a1c', (x, y) => { c.fillStyle = '#f2c14e'; c.beginPath(); c.arc(x, y, 1.1, 0, TAU); c.fill(); c.fillStyle = '#b8862a'; c.fillRect(x - 0.2, y - 0.6, 0.4, 1.2); });
-      const ch = P(0.3, 0.6, 0); c.fillStyle = '#6a4a2a'; c.fillRect(ch[0] - 2, ch[1] - 2.4, 4, 2.4); c.fillStyle = '#8a6a3a'; c.fillRect(ch[0] - 2, ch[1] - 3.2, 4, 0.9); c.fillStyle = '#5a5a62'; c.fillRect(ch[0] - 0.4, ch[1] - 2.8, 0.8, 1);
+      const ch = P(0.3, 0.43, 0); c.fillStyle = '#6a4a2a'; c.fillRect(ch[0] - 2, ch[1] - 2.4, 4, 2.4); c.fillStyle = '#8a6a3a'; c.fillRect(ch[0] - 2, ch[1] - 3.2, 4, 0.9); c.fillStyle = '#5a5a62'; c.fillRect(ch[0] - 0.4, ch[1] - 2.8, 0.8, 1);
       return H + 2;
     },
   };

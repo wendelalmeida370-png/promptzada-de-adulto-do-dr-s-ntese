@@ -598,7 +598,7 @@
     if (v.actT > (t.ripe ? 7 : 10)) {
       if (t.ripe && (b.g || 0) >= 1) {
         const h = S.buildings.get(b.home); const n = 3 + Math.round((S.fert[b.y * N + b.x] || 0.5) * 2);
-        if (h) h.pantry = (h.pantry || 0) + n;
+        if (h && G.Depot) G.Depot.make('h:' + h.id, 'food', n, { code: 'horta', by: v.id, part: true }); // (into the pantry, in the ledger, as far as it has room — T-130)
         b.g = 0.05; b.v = 0; b.picked = (b.picked || 0) + 1; b.yield = (b.yield || 0) + n;
         G.FX && G.FX.chips(x, y, '#6aa84a'); G.Vg.emote(v, 'happy', 1.4);
       }

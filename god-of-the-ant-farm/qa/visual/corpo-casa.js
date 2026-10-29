@@ -42,7 +42,7 @@ function walkTo(X, Z, max, near) {
 // ground does not hold it outdoors)
 let bad = [];
 function check() {
-  const v = G.Possess.body(), st = G.Avatar.state(); if (!v || !st || st.loco === 'sleep' || st.loco === 'stair') return;
+  const v = G.Possess.body(), st = G.Avatar.state(); if (!v || !st || st.loco === 'sleep' || st.loco === 'stair' || st.loco === 'seat') return; // (seated: on the piece, Interiors' place)
   const ins = Sp.indoor(st.X, st.Z, st.lv, st.inB ? st.inB.id : 0);
   if (ins) { if (st.ground && Math.abs(st.Y - ins.y) > 0.03 && !st.stair) bad.push(`pés a ${(st.Y - ins.y).toFixed(2)} m do chão da planta em ${ins.x.toFixed(2)},${ins.z.toFixed(2)} (piso ${ins.lv})`);
     if (!ins.walk) bad.push(`num lugar que a planta não deixa (${ins.code}) em ${ins.x.toFixed(2)},${ins.z.toFixed(2)} piso ${ins.lv}`); }
@@ -115,17 +115,20 @@ function goTo(b, p, lv, to) {
 // a house of the world with a plan, its door on a street, a grown-up living in it who can be lived; and the body by its door.
 // One the city will not rebuild while the proof runs: it densifies from its heart out (City.upgradeHomes: the house nearest
 // the town's middle becomes a sobrado), so the farthest from it — the house#2924 of the new metropole, the nearest, was made a
-// sobrado in the middle of the proof, the body put out: T-155 —; of those, one with stairs up from its entrance's storey
+// sobrado in the middle of the proof, the body put out: T-155 —; of those, one with stairs up from its entrance's storey and
+// a seat or a table (part 7 sits on it)
 function houseAndBody() {
   const far = b => { const t = S.settlements.get(b.set); return t ? G.dist(b.x + 0.5, b.y + 0.5, t.cx, t.cy) : 0; };
   const homes = [...S.buildings.values()].filter(b => b.built && In.has(b) && (b.type === 'house' || b.type === 'sobrado') && In.planDoor(b)).sort((a, b) => far(b) - far(a) || a.id - b.id);
+  const seat = b => { const t = In.table(b); return !!t && t.spots.some(e => e.ok && (e.use === 'sentar' || e.use === 'comer')); };
   const order = [];
   for (const b of homes) {
     const p = Sp.planNow(b); if (!p || !p.entrance) continue;
     const v = [...S.villagers.values()].filter(o => o.home === b.id && o.age >= 18 && o.age < 55 && !o.sleeping && G.Possess.can(o).ok).sort((a, c) => a.id - c.id)[0]; if (!v) continue;
-    const up = p.stairs.some(s => s.kind !== 'degraus' && s.lv0 === (p.entryLv || 0)); order.push({ b, p, v, up }); if (up) break;
+    const up = p.stairs.some(s => s.kind !== 'degraus' && s.lv0 === (p.entryLv || 0)), se = seat(b); order.push({ b, p, v, up, se }); if (up && se) break;
   }
-  order.sort((a, c) => (c.up ? 1 : 0) - (a.up ? 1 : 0)); // (the one with stairs first, then the farther ones without)
+  // (the one with stairs and a seat first, then stairs, then a seat, then the farther ones)
+  const rank = o => (o.up ? 2 : 0) + (o.se ? 1 : 0); order.sort((a, c) => rank(c) - rank(a));
   for (const { b, p, v } of order) {
     const d = In.planDoor(b); if (G.Possess.body()) G.Possess.release('deus'); G.Avatar.detach();
     G.Vg.endTask(v); v.inside = 0; v.x = d[0]; v.y = d[1]; v.path = null; if (!G.Possess.take(v).ok) continue;
@@ -211,10 +214,50 @@ else {
       ok('4. acordado, levanta ao lado da cama, dentro de casa', !v.sleeping && v.inside === b.id && st().loco === 'ground' && !bad.length, `dormindo ${v.sleeping}; dentro ${v.inside === b.id}; ${st().loco}${bad.length ? '; ' + bad[0] : ''}`);
     }
   }
+  // ------------------------------ 7. at a place of the plan: sat down by the hands, up as the player walks ------------------------------
+  // (the verb 'lugar': a step to where one gets onto it, the world marks it — S.avatar.use, the place the share-out gives the
+  // body —, the body on it, turned as the place is; a gesture of the hands there keeps it seated; walking, up where it got on,
+  // the place let go. And seated again, for the save below: loaded, seated on it again)
+  let seatedAt = null;
+  { // (a place free on any storey of the house — the one the body is on first —, a seat or the table first)
+    const lv0 = G.Possess.level(); const pl0 = [];
+    for (const l of p.levels.slice().sort((a, c) => (a.lv === lv0 ? 0 : 1) - (c.lv === lv0 ? 0 : 1) || a.lv - c.lv)) pl0.push(...In.freeNear(b, l.lv, st().X - b.x * TL, st().Z - b.y * TL, 30).filter(q => G.Interact.PURE.has(q.use) && !q.it.mark && !q.it.tier));
+    const pl = pl0.find(q => q.use === 'sentar' || q.use === 'comer') || pl0[0];
+    if (pl) pl.at = In.standFor(b, pl, st().X - b.x * TL, st().Z - b.y * TL); // (where one gets onto it: the body's whole rim stands there)
+    // (the feet walk up to where one gets onto it — the player's stick: to a point near it where the body's rim fits, the
+    // verb takes the last step itself)
+    const fitsAt = (lv, x, z) => { const r = 0.34; for (const [dx, dz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r * 0.7, r * 0.7], [-r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, -r * 0.7]]) { const q = Sp.indoor(b.x * TL + x + dx, b.y * TL + z + dz, lv, b.id); if (!q || !q.walk) return false; } return true; };
+    const near = q => { if (fitsAt(q.lv, q.at[0], q.at[1])) return q.at; for (let rr = 0.1; rr <= 0.6; rr += 0.05) for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2; const x = q.at[0] + Math.cos(a) * rr, z = q.at[1] + Math.sin(a) * rr; if (fitsAt(q.lv, x, z)) return [x, z]; } return q.at; };
+    const sitDown = () => {
+      if (!goTo(b, p, pl.lv, near(pl))) return { why: goWhy };
+      let best = null; for (let k = 0; k < 30 && !(best && best.id === 'lugar' && best.t.pl.item === pl.item); k++) { const ya = Math.atan2(b.y * TL + pl.z - st().Z, b.x * TL + pl.x - st().X); IN.camYaw = ya; st().yaw = ya; best = G.Interact.best(); frame(); }
+      if (!(best && best.id === 'lugar')) return { why: `o E oferece ${best ? `«${best.label}»` : 'nada'}` };
+      const r = G.Interact.run(best); for (let k = 0; k < 150 && !(G.Avatar.seatNow() && G.Avatar.seatNow().k >= 1); k++) frame();
+      return { r, best };
+    };
+    if (!pl) ok('7. senta num lugar da planta', true, 'nenhum lugar livre de sentar na casa (nada a provar)');
+    else {
+      bad = []; const s1 = sitDown(); const u = G.Possess.useOf(); const sn = G.Avatar.seatNow(); const tp = s1.best ? s1.best.t.pl : pl;
+      const onIt = Math.hypot(st().X - (b.x * TL + tp.x), st().Z - (b.y * TL + tp.z)) < 0.05; let dy = st().yaw - (Math.PI / 2 - tp.ry); while (dy > Math.PI) dy -= 2 * Math.PI; while (dy < -Math.PI) dy += 2 * Math.PI;
+      const mine = In.places(b).by.get(v.id);
+      ok('7. senta: o mundo marca o lugar, o corpo nele, virado como o lugar', !!u && u.it === tp.item && u.q === tp.q && !!sn && st().loco === 'seat' && onIt && Math.abs(dy) < 0.05 && !!mine && mine.item === tp.item, `${s1.best ? s1.best.label : s1.why} (${tp.use} em ${tp.it.kind}); o mundo: ${u ? u.use + ' ' + u.it : 'nada'}; ${st().loco}, no ponto ${onIt}, virado a ${dy.toFixed(2)} rad; o repartidor: ${mine ? mine.use : 'nada'}`);
+      // (the hands at the place: a gesture with no walk keeps the body seated, in the seated state of a seated gesture)
+      G.Avatar.act({ anim: 'eat', dur: 0.8, lock: true }); for (let k = 0; k < 8; k++) frame(); const kept = st().loco === 'seat', anim = st().anim; for (let k = 0; k < 30; k++) frame();
+      ok('7. as mãos no lugar: o corpo segue nele', kept && anim === 'eat' && st().loco === 'seat' && !!G.Possess.useOf(), `durante: ${kept ? 'sentado' : 'de pé'} (${anim}); depois: ${st().loco}`);
+      // (up: the player walks — eased back to where it got on, on its feet, the place let go in the world's step)
+      const at = [b.x * TL + tp.at[0], b.y * TL + tp.at[1]]; IN.camYaw = st().yaw + Math.PI; IN.mz = 1; frame(); stop(); for (let k = 0; k < 30; k++) frame(); check();
+      const upAt = Math.hypot(st().X - at[0], st().Z - at[1]);
+      ok('7. anda e levanta: de pé onde subiu, o lugar solto', st().loco === 'ground' && !G.Possess.useOf() && !G.Avatar.seatNow() && upAt < 0.6 && !bad.length && v.inside === b.id, `${st().loco}; o mundo: ${G.Possess.useOf() ? 'ainda o lugar' : 'solto'}; a ${upAt.toFixed(2)} m de onde subiu${bad.length ? '; ' + bad[0] : ''}`);
+      const s2 = sitDown(); seatedAt = G.Possess.useOf() ? { it: G.Possess.useOf().it, q: G.Possess.useOf().q } : null; if (!seatedAt) ok('7. senta de novo (para o salvar)', false, s2.why || 'não sentou');
+    }
+  }
   // ------------------------------ 6. save and load indoors ------------------------------
   { const x0 = v.x, y0 = v.y, lv0 = G.Possess.level(); M.salvarCarregar(); S = G.S; v = G.Possess.body();
     if (v) { G.Avatar.attach(v, 0); for (let k = 0; k < 6; k++) frame(); }
     ok('6. salvar e carregar dentro de casa: dentro ainda, no mesmo piso e lugar', !!v && v.inside === b.id && G.Possess.level() === lv0 && Math.hypot(v.x - x0, v.y - y0) < 0.02, v ? `dentro ${v.inside === b.id}; piso ${G.Possess.level()} (era ${lv0}); a ${(Math.hypot(v.x - x0, v.y - y0) * TL).toFixed(2)} m` : 'sem corpo');
+    // (saved seated: seated again on the same place — Possess's load holds it, the controller sits on it)
+    if (seatedAt) { const u = G.Possess.useOf(); ok('6. salvo sentado, senta de novo no mesmo lugar', !!u && u.it === seatedAt.it && u.q === seatedAt.q && st().loco === 'seat', `o mundo: ${u ? u.use + ' ' + u.it : 'nada'}; ${st().loco}`);
+      IN.mz = 1; IN.camYaw = st().yaw + Math.PI; frame(); stop(); for (let k = 0; k < 30; k++) frame(); }
   }
   // ------------------------------ 5. out by the door ------------------------------
   { const b2 = S.buildings.get(b.id), p2 = Sp.planNow(b2); v = G.Possess.body();

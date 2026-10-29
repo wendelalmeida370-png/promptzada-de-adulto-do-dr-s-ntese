@@ -29,6 +29,8 @@
     // (the jail's: the guard room behind the door, the cells in a row at the back; the baths': the rooms one after another)
     celas: { name: 'Corpo da guarda e celas', can: rec => (small(rec) ? 'num lote de 4 m não cabem as celas' : null) },
     enfiada: { name: 'Salas em fila', can: rec => (small(rec) ? 'num lote de 4 m não cabem as salas em fila' : null) },
+    // (the pottery's and the tavern's: the roofed part at the back, the yard before it — B2d, yardWork)
+    terreiro: { name: 'Terreiro', can: rec => (small(rec) ? 'num lote de 4 m não cabe um terreiro' : null) },
   };
   const VW = {
     terreo: { name: '', can: () => null },
@@ -50,10 +52,12 @@
     workshop: { use: 'oficina', H: ['salao', 'frente', 'patio', 'anexo'], V: ['terreo', 'galeria', 'porao', 'andar'], open: 1, lockNight: 1, jobs: 2, door: [1.0, 1.3], furnish: P => tradeFurnish(P, [['bancada', 2]], ['prateleira', 'secador'], ['cepo']) },
     forja: { use: 'forja', H: ['salao', 'frente', 'patio', 'anexo'], V: ['terreo', 'galeria', 'andar'], open: 1, lockNight: 1, door: [1.0, 1.3], hot: 'forja-fogo', furnish: P => tradeFurnish(P, [['forja-fogo', 1], ['bancada', 1]], ['prateleira'], ['bigorna', 'tina']) },
     tecelagem: { use: 'tecelagem', H: ['salao', 'frente', 'patio', 'naves'], V: ['terreo', 'galeria', 'andar'], open: 1, lockNight: 1, door: [1.0, 1.3], furnish: P => tradeFurnish(P, [['tear', 3]], ['secador', 'prateleira'], []) },
-    olaria: { use: 'olaria', H: ['salao', 'frente', 'patio', 'anexo'], V: ['terreo', 'galeria', 'andar'], open: 1, lockNight: 1, door: [1.0, 1.3], hot: 'forno-olaria', furnish: P => tradeFurnish(P, [['roda-oleiro', 2]], ['secador'], [], ['forno-olaria']) },
+    // (the pottery: the yard first, where it is laid out — the kiln, the racks and the brick work under the sky, as the god draws it)
+    olaria: { use: 'olaria', H: ['terreiro', 'salao', 'frente', 'patio', 'anexo'], V: ['terreo', 'galeria', 'andar'], skip: { 'terreiro.galeria': 1, 'terreiro.andar': 1 }, prefer: (rec, l) => preferYard(rec, l), open: 1, lockNight: 1, door: [1.0, 1.3], hot: 'forno-olaria', furnish: P => { tradeFurnish(P, [['roda-oleiro', 2]], ['secador'], [], ['forno-olaria']); bricks(P); } },
     acougue: { use: 'acougue', H: ['salao', 'frente', 'anexo'], V: ['terreo', 'porao', 'andar'], open: 1, lockNight: 1, door: [0.9, 1.1], furnish: P => tradeFurnish(P, [['cepo', 1]], ['ganchos'], ['balcao']) },
     ourives: { use: 'ourives', H: ['salao', 'frente', 'anexo'], V: ['terreo', 'porao', 'andar'], open: 1, lockNight: 1, door: [0.85, 1.0], furnish: P => tradeFurnish(P, [['bancada-ourives', 1]], ['cofre'], ['fornalha']) },
-    taverna: { use: 'taverna', H: ['salao', 'frente', 'patio', 'naves', 'anexo'], V: ['terreo', 'galeria', 'porao', 'andar'], open: 1, lockNight: 1, door: [1.0, 1.4], furnish: tavernFurnish },
+    // (the tavern: the yard before its house first, the tables outside — of two storeys, the northern mead hall of one)
+    taverna: { use: 'taverna', H: ['terreiro', 'salao', 'frente', 'patio', 'naves', 'anexo'], V: ['terreo', 'galeria', 'porao', 'andar'], skip: { 'terreiro.galeria': 1, 'terreiro.porao': 1 }, prefer: (rec, l) => preferYard(rec, l), open: 1, lockNight: 1, door: [1.0, 1.4], furnish: tavernFurnish },
   };
   const NOTW = { esteios: { patio: 1 }, galeria: { patio: 1 } }; // (the hall behind a court is shallow: a gallery would cover it all)
   // (on a 4 m lot with a front room, the hall behind is too shallow for a cellar's trapdoor and its ladder)
@@ -68,9 +72,9 @@
       if ((NOTW[v] && NOTW[v][h]) || (pr.skip && pr.skip[h + '.' + v])) continue;
       const id = 'w-' + h + '.' + v; lists[t].push(id);
       if (In.FAMS[id]) continue;
-      In.addFamilies([{ id, H: 'w-' + h, V: v, S: 'w-' + (SALA[h] ? 'sala' : h) + '.' + v, name: (HW[h].name + (VW[v].name ? ' ' + VW[v].name : '')), can: (rec, T, tr) => HW[h].can(rec, tr) || VW[v].can(rec, tr) || (small(rec) && smallNot[h + '.' + v]) || null, build: P => work(P) }]);
+      In.addFamilies([{ id, H: 'w-' + h, V: v, S: 'w-' + (SALA[h] ? 'sala' : h) + '.' + v, name: (HW[h].name + (VW[v].name ? ' ' + VW[v].name : '')), can: (rec, T, tr) => HW[h].can(rec, tr) || VW[v].can(rec, tr) || (small(rec) && smallNot[h + '.' + v]) || null, build: P => (h === 'terreiro' ? yardWork(P) : work(P)) }]);
     }
-    In.addTypes({ [t]: { use: pr.use, fams: lists[t], storeAll: pr.storeAll || 0, open: pr.open || 0, lockNight: pr.lockNight || 0, jobs: pr.jobs, need: pr.need, cells: pr.cells } });
+    In.addTypes({ [t]: { use: pr.use, fams: lists[t], storeAll: pr.storeAll || 0, open: pr.open || 0, lockNight: pr.lockNight || 0, jobs: pr.jobs, need: pr.need, cells: pr.cells, prefer: pr.prefer } });
   }
   for (const t in PROG) addProg(t, PROG[t]);
 
@@ -382,6 +386,14 @@
     // (a counter by the door of a shop that sells across it)
     if (rooms.front !== undefined) P.opt(() => P.place('balcao', 0, rooms.front, { sides: ['livre'], margin: 0.3 }));
   }
+  // the pottery's brick work, where there is room (P2's olaria): the clay pit and the moulding floor in the court — else the
+  // ground floor —, the stack of bricks by the kiln's room, the bench where the clay is worked
+  function bricks(P) {
+    const rooms = P._rooms; const ground = mix(P, [rooms.court, rooms.lean, rooms.main, ...rooms.cells, rooms.front].filter(x => x !== undefined && x !== null && lvOf(P, x) === 0));
+    for (const k of ['tanque-barro', 'eira']) P.opt(() => { for (const id of ground) if (P.place(k, 0, id, { sides: ['livre'] })) break; });
+    P.opt(() => { for (const id of ground) if (P.place('pilha-tijolos', 0, id)) break; });
+    P.opt(() => { for (const id of ground) if (P.place('bancada', 0, id, { sides: ['fundo', 'esquerda', 'direita'] })) break; });
+  }
   // (the other buildings this recipe lays out — the temple, the barracks, the jail, the baths, the chief's hall — register
   // their programmes here, with their own furnishing: int-civicos.js)
   In.WORK = { add: addProg, roomsFor, lvOf, mix, storeCap };
@@ -397,4 +409,92 @@
     // cellar, else at the back)
     P.opt(() => { for (const id of (rooms.cellar !== undefined ? [rooms.cellar] : []).concat(roomsFor(rooms).slice().reverse())) if (P.place('cuba', lvOf(P, id), id)) break; });
   }
+
+  // ------------------------------ the yard (B2d) ------------------------------
+  // the pottery and the tavern of a lot of 8 m as the god draws them (EXT.olaria, EXT.taverna): the roofed part at the back —
+  // the potter's shed in a corner, the tavern's house across it, the northern mead hall — and the yard before it, fenced low,
+  // open to the sky, its gate on the street. What is used in the yard stands there from the shell on (P.at with { yard: 1 },
+  // before P.inside()) — the kiln, the drying racks, the stack of bricks, the moulding floor, the wheel, the clay pit; the
+  // table with its benches, the barrels, the jar —, so the god's view, the 3D from afar and the body see and use the same
+  // pieces (shellOut.yard). Laid out by hand, as the god draws it with the gate before the first tile of the front; all of it
+  // mirrored where only the other one is open to the street. No chance drawn: every pottery's yard is the same (inside its
+  // shed and the tavern's house, each attempt's own)
+  // (the lot's metres before the mirror: the yard's fence, its outer faces; the roofed part, and its door into the yard along
+  // its front; the gate along the front; the yard's rooms, open to the sky; its pieces [kind, r, fu, fv, extra])
+  const YARD = {
+    olaria: () => ({ yard: [0.32, 0.32, 7.68, 7.68], house: [0.32, 0.32, 3.8, 3.2], door: 3.0, dw: 1.0, gate: 3.3, gw: 1.2,
+      rooms: [[0.52, 3.2, 3.8, 7.48], [3.8, 0.52, 7.48, 7.48]],
+      pieces: [['forno-olaria', [4.7, 0.6, 7.3, 3.2], 0, 1, { h: 2.6 }], ['secador', [4.2, 4.5, 7.4, 5.0], 0, 1, { h: 0.7 }], ['secador', [4.2, 5.95, 7.4, 6.45], 0, 1, { h: 0.7 }],
+        ['pilha-tijolos', [3.86, 1.3, 4.66, 2.7], 0, 1], ['eira', [0.62, 3.3, 2.22, 5.3], 1, 0], ['roda-oleiro', [2.6, 5.4, 3.4, 6.2], -1, 0], ['tanque-barro', [0.62, 6.0, 1.52, 7.2], 1, 0]] }),
+    taverna: rec => ({ yard: [0.4, 4.4, 7.6, 7.6], house: rec.c === 'nordico' ? [0.4, 0.4, 7.6, 4.4] : [0.4, 0.4, 6.8, 4.4], door: 4.6, dw: 1.0, gate: 3.3, gw: 1.4,
+      rooms: [[0.6, 4.4, 7.4, 7.4]],
+      pieces: [['mesa-terreiro', [0.8, 4.7, 3.0, 6.4], 0, 1], ['pipas', [5.6, 5.4, 6.4, 6.8], -1, 0]].concat(rec.c === 'grego' || rec.c === 'romano' ? [['talha', [6.75, 4.6, 7.35, 5.2], -1, 0]] : []) }),
+  };
+  // (of the families the catalogue offers, the yard's — of the tavern, with the god's storeys: the northern hall of one, the
+  // house of two —, where one is laid out)
+  function preferYard(rec, list) {
+    const y = list.filter(f => f.startsWith('w-terreiro.')); if (!y.length) return list;
+    const want = rec.t !== 'taverna' ? null : rec.c === 'nordico' ? 'w-terreiro.terreo' : 'w-terreiro.andar';
+    return want && y.includes(want) ? [want] : y;
+  }
+  // the parts of a line [a, b] the other one [c0, c1] leaves (the fence along a side, where the roofed part's wall is not)
+  const runs = (a, b, c0, c1) => { const lo = Math.min(a, b), hi = Math.max(a, b); const out = []; if (c1 <= lo + 0.05 || c0 >= hi - 0.05) out.push([lo, hi]); else { if (c0 > lo + 0.05) out.push([lo, c0]); if (c1 < hi - 0.05) out.push([c1, hi]); } return out; };
+  function yardWork(P) {
+    const rec = P.rec, tr = P.tr, L = P.L; const V = P.fam.V; const t = tr.t, mat = tr.mat;
+    const Y = YARD[rec.t](rec); const ft = 0.2, fh = 1.1; const c2 = ft / 2;
+    // (only the other tile of the front open to the street: all of it mirrored)
+    const o = rec.o || 0; const flip = !(o & 1) && !!(o & 2);
+    const X = u => (flip ? L - u : u); const XR = r => (flip ? [L - r[2], r[1], L - r[0], r[3]] : r.slice());
+    // ======== the shell: the roofed part, its door into the yard; the fence, the gate, the yard's rooms and pieces ========
+    const floors = V === 'andar' ? 2 : 1; const sh = XR(Y.house);
+    const h0 = r2(floors > 1 ? tr.h0 + 0.2 : Math.max(2.8, tr.h0 + 0.6)), h1 = tr.h1 || 2.4;
+    P.shell = { kind: 'rect', r: sh, t, mat, base: 'pedra', floors, eave: h0 + (floors - 1) * (0.2 + h1) };
+    // (the roof: the people's own, its ridge along the longer side)
+    const kind = K.roofOf({ t: 'house' }, tr); const along = sh[2] - sh[0] >= sh[3] - sh[1] ? 'u' : 'v'; const span = along === 'u' ? sh[3] - sh[1] : sh[2] - sh[0];
+    const rise = kind === 'plano' ? 0 : Math.min(2.6, span * 0.8 * 0.82);
+    P.roof = { kind, along, h: r2(rise), over: kind === 'plano' ? 0 : 0.42 }; P.roofGeo = { kind, along, eave: P.shell.eave, rise, R: sh };
+    const I = P.inner(); P.level(0, 0, h0, 'piso', I); P.entryLv = 0;
+    const c = t / 2; P.outer = P.walls4(0, [sh[0] + c, sh[1] + c, sh[2] - c, sh[3] - c], t, h0, 1, 'parede'); P.outers = [P.outer];
+    { const wid = P.outer.frente; P.door(wid, P.atOf(wid, [X(Y.door), P.walls[wid].a[1]]), Y.dw, Math.min(h0 - 0.2, 2.1), -1, -1, 0, 'porta'); }
+    // (the fence round the yard, but along the roofed part's own walls; the gate in its front)
+    const yr = Y.yard, H = Y.house; let gate = -1;
+    // (along a side — v or u fixed at `at`, from a to b —, where the roofed part's wall [c0, c1] is not; the front, with the gate)
+    const along2 = (fixed, at, a, b, c0, c1, front) => { for (const [p0, p1] of runs(a, b, c0, c1)) {
+      const A = fixed === 'v' ? [p0, at] : [at, p0], B = fixed === 'v' ? [p1, at] : [at, p1];
+      const w = P.wall(0, [X(A[0]), A[1]], [X(B[0]), B[1]], ft, fh, 1, 'cerca');
+      if (front && Y.gate > p0 + Y.gw / 2 && Y.gate < p1 - Y.gw / 2) gate = P.door(w, P.atOf(w, [X(Y.gate), at]), Y.gw, 2.2, -1, 'rua', 1, 'portao');
+    } };
+    const on = (a, b) => Math.abs(a - b) < 0.05; const back = on(H[1], yr[1]) || on(H[3], yr[1]);
+    along2('v', yr[1] + c2, yr[0] + c2, yr[2] - c2, back ? H[0] : 0, back ? H[2] : 0);
+    along2('u', yr[2] - c2, yr[1] + c2, yr[3] - c2, on(H[2], yr[2]) ? H[1] : 0, on(H[2], yr[2]) ? H[3] : 0);
+    along2('v', yr[3] - c2, yr[0] + c2, yr[2] - c2, 0, 0, true);
+    along2('u', yr[0] + c2, yr[1] + c2, yr[3] - c2, on(H[0], yr[0]) ? H[1] : 0, on(H[0], yr[0]) ? H[3] : 0);
+    if (gate < 0) { P.errs.push('sem portão no terreiro'); return; }
+    P.entrance = { door: gate, u: X(Y.gate), v: yr[3], w: Y.gw, lv: 0 };
+    P.yard = { r: XR(yr), h: fh, lv: 0 };
+    const yards = Y.rooms.map(r => P.room(0, 'terreiro', XR(r), 1));
+    for (const [k, r, fu, fv, extra] of Y.pieces) {
+      const rr = XR(r); const room = yards.find(id => { const m = P.rooms[id].r; return rr[0] >= m[0] - 1e-6 && rr[1] >= m[1] - 1e-6 && rr[2] <= m[2] + 1e-6 && rr[3] <= m[3] + 1e-6; });
+      if (room === undefined || !P.at(k, 0, room, rr, flip ? -fu : fu, fv, Object.assign({ yard: 1 }, extra || {}))) { P.errs.push(`${In.ITEMS[k].name.toLowerCase()} não cabe no terreiro`); return; }
+    }
+    if (floors > 1) loftFloorShell(P, h0 + 0.2, h1, null);
+    workWindows(P);
+    if (P.inside()) return;
+    // ======== the inside: the shed, the house — each attempt's own dice ========
+    const rooms = { main: P.room(0, 'salao', I), front: undefined, cells: [], court: undefined, all: [] }; rooms.all.push(rooms.main);
+    if (floors > 1) loftFloor(P, rooms, null, Math.min(0.2, Math.max(0.12, t * 0.6)));
+    P._rooms = rooms;
+    YARD_IN[rec.t](P, rooms);
+  }
+  // what goes in under the roof: the potter's second wheel (the trade's two hands), the shelf of finished pots, the bench; the
+  // tavern's house as any tavern's (the counter, the fire, the tables, the barrels kept inside, the vat)
+  const YARD_IN = {
+    olaria: (P, rooms) => {
+      const id = rooms.main; const wheel = () => { if (!P.place('roda-oleiro', 0, id)) { P.lack = 1; P.errs.push('sem lugar para a roda de oleiro'); } };
+      const shelf = () => P.opt(() => P.place('secador', 0, id));
+      for (const f of P.attempt % 2 ? [shelf, wheel] : [wheel, shelf]) f();
+      P.opt(() => P.place('bancada', 0, id, { sides: ['fundo', 'esquerda', 'direita'] }));
+    },
+    taverna: P => tavernFurnish(P),
+  };
 })(window.G);
