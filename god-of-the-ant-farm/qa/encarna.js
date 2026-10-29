@@ -1283,15 +1283,17 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // ahead and thrown away behind; at most the disc that is kept (37 at the light quality) is ever held
     const v = __E.adults(s)[0]; __E.enter(v); const st0 = G.Realm.stats; const b0 = st0.builds, r0 = st0.rebuilds;
     // (by a way the body walks as the world does: the world walks across the lots that block no one — a fair, a garden, a field
-    // —, and on the lot of a fair the body meets the stalls of its plan — the family of the L-354, open for the Patch 2. In
-    // Tenochtitlan of the generation-7 metropolis the way to the farthest door went into the fair #23764, and the body stood at
-    // a stall on its edge after six steps aside: the door is the farthest whose way, along the line of its legs, crosses no such
-    // lot where its plan keeps the feet off (G.Space.indoor, the body's own rule) — T-263)
-    const TL = G.Space.TILE; const why = [];
+    // —, and a fair's plan keeps the feet off a band on its edge, a quarter of a metre, and off its stalls, but at the openings
+    // of the plan — the family of the L-354, open for the Patch 2. In Tenochtitlan of the generation-7 metropolis the way to the
+    // farthest door went into the fair #23764 by its side, and the body stood at the band after six steps aside: the door is the
+    // farthest whose way, along the line of its legs, every 20 cm, crosses no such lot where its plan keeps the feet off
+    // (G.Space.indoor, the body's own rule, on the plan the world makes at once: G.Space.planNow) — T-263)
+    const TL = G.Space.TILE; const why = []; const made = new Set();
     const planFree = (b, d) => { const p = G.W.findPath(v.x, v.y, d[0], d[1], true, 30000); if (!p) { why.push(`${b.type}#${b.id}: sem caminho`); return false; } let a = [v.x, v.y];
-      for (const w of p) { const n = Math.ceil(Math.hypot(w[0] - a[0], w[1] - a[1]) * 4);
+      for (const w of p) { const n = Math.ceil(Math.hypot(w[0] - a[0], w[1] - a[1]) * 20);
         for (let k = 1; k <= n; k++) { const x = a[0] + (w[0] - a[0]) * k / n, y = a[1] + (w[1] - a[1]) * k / n; const id = S.occ[G.W.idx(Math.floor(x), Math.floor(y))]; const o = id && id !== b.id && S.buildings.get(id);
-          if (!o || o.blocks) continue; const q = G.Space.indoor(x * TL, y * TL, 0, 0); if (q && !q.walk) { why.push(`${b.type}#${b.id}: ${o.type}#${o.id}`); return false; } }
+          if (!o || o.blocks) continue; if (!made.has(o.id)) { made.add(o.id); G.Space.planNow(o); }
+          const q = G.Space.indoor(x * TL, y * TL, 0, 0); if (q && !q.walk) { why.push(`${b.type}#${b.id}: ${o.type}#${o.id}`); return false; } }
         a = w; }
       return true; };
     let far = null, fd = 0; { const cand = []; for (const b of S.buildings.values()) { if (!b.built) continue; const d = G.Vg.door(b); const dd = G.dist(d[0], d[1], v.x, v.y); if (dd < 50 && G.W.reaches(v, d[0], d[1])) cand.push([dd, b, d]); }
