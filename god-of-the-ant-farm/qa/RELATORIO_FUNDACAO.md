@@ -110,8 +110,8 @@ antes do conserto, e a prova que falhava passa depois. Por família:
   L-191, L-215, L-219). A obra deixada no último milésimo, o povo com comida e sem armazém que não comia, o exército que
   voltava para casa encerrado no load, o motim que sumia no save, o cais com água só na diagonal, as famílias do modo
   desenvolvedor com filhos nascidos antes da hora.
-- **O que os mundos novos acharam no fechamento** (L-300 a L-306, L-308, L-310 a L-314, L-320 a L-322). Gerando de novo os
-  mundos prontos e rodando as provas neles apareceram:
+- **O que os mundos novos acharam no fechamento** (L-300 a L-306, L-308, L-310 a L-316, L-320 a L-326, L-330, L-332,
+  L-340 a L-349). Gerando de novo os mundos prontos e rodando as provas neles apareceram:
   - a água nas mãos fora do seu recado (L-300);
   - a crônica que contava de novo a primeira represa dos castores (L-301);
   - a flecha do Amor Divino que sumia sem uma palavra (L-302);
@@ -125,11 +125,101 @@ antes do conserto, e a prova que falhava passa depois. Por família:
     nunca acontecia (L-312 a L-314).
   - o calceteiro que escolhia a rua de outra ilha e tentava de novo a cada 12 s, sem fim (L-322, achado pela regressão
     final: com o conserto, o mundo de teste constrói mais).
+  - mais dois da casa: o aluguel que ia a um parente da família, e a família de aluguel que se dizia «na casa de outros»
+    (L-315, L-316);
+  - a caixa pesada largada pela ajudante no meio do caminho, e a ajudante que parava na esquina (L-330, L-332);
+  - a soleira e a porta: os degraus num portão ou no lote de outro prédio, o pé medido no chão errado, o «E» que dava o
+    peixe na soleira dentro d'água (L-323 a L-326);
+  - o corpo encarnado que acordava antes de uma pessoa do mundo no mesmo estado (L-341);
+  - os muros: o portão do plano sobre um muro de pé (L-340), o muro que corria dentro do muro da cidade vizinha e fechava
+    casas num bolsão (L-342), o muro que fechava um prédio da própria cidade — a forja de Hedeby — (L-344) e o prédio
+    construído colado num portão, dos dois lados (L-348);
+  - os caminhos: o caminho longo que a busca exata não achava no orçamento, e a comerciante que não voltava de uma
+    caravana (L-343); a viagem que levava quem não chegava a pé ao cais e o embarcava de longe, através do mar (L-346);
+    quem buscava o caminho de um prédio aonde o mapa dizia que não se chega, e a carga levada ao armazém do outro lado da
+    água (L-349);
+  - a crônica com duas festas iguais no mesmo ano, que não se distinguiam (L-347).
+
+  Quase todos esses foram achados pelo verificador no fim de uma prova: alguém preso num lugar aonde não se chega, ou
+  falhando o caminho seguidas vezes. O conserto de cada um foi na causa — o mapa de regiões perguntado onde não era —, não
+  no verificador.
 
   O mais sério foi o **L-320**. Desde um conserto desta mesma versão (L-215), uma função de mesmo nome tomou o lugar de
   outra, e as 162 frases do roteiro das histórias (a sentença lida, o chamado da família, a herança) deixaram de ser
   escritas: cada uma rodava a vez inteira da história, fora de hora. Ele foi achado por uma cena que quebrava ao começar
   (L-321), e agora uma regra do `guard.js` impede o nome repetido.
+- **O que a regressão achou com os mundos finais** (L-350 a L-353, L-358, L-360, L-364 a L-370). Rodando a regressão
+  inteira com os mundos gerados de novo, mais treze apareceram:
+  - o barraco que vira cabana ficava com a planta de barraco até o dia seguinte (L-350);
+  - a semente de uma história guardava o protagonista morto (L-351);
+  - quem tinha o caminho cortado no meio o refazia só até perto do fim, e parava longe de aonde ia (L-352);
+  - a execução salva entre o último golpe e a conta perdia a conta: a crônica, a lealdade da cidade, o Livro do Mundo
+    (L-353);
+  - a obra morria aos 70 s da tarefa inteira, e não de cada ida ao armazém (L-358);
+  - o lance de degraus de uma porta era medido no chão desenhado, e não no chão dos pés (L-360);
+  - o calceteiro numa ilhota escolhia um trecho de rua em diagonal através da água, e tentava a cada passo (L-364);
+  - a árvore que o castor roía ficava marcada no toco quando um lenhador a derrubava, e nenhum castor a pegava nunca mais
+    (L-365);
+  - a guerra convocava os amotinados no meio do motim, e o motim era contado como esmagado pela guarda (L-366);
+  - a tripulação espantada do cais por um bicho nunca era chamada de volta, e o embarque esperava os dois primeiros da
+    fila mesmo longe: a grande viagem de Públio saiu com 1 dos 26 e se perdeu (L-367);
+  - a cidade que a água cortou da sua fogueira e da sua doca nunca acendia outra do lado das casas: uma criança de
+    Tenochtitlan morreu de fome em casa, no caos do deus (L-368);
+  - um golfinho nadava para dentro do fundo seco do mar que o deus abriu (L-369);
+  - a «Grande Coalizão» contra um império podia ser os quatro povos grandes contra um povo de oito pessoas (L-370).
+
+  As outras falhas daquela rodada eram limites das provas diante dos mundos novos — a madeira do casco que faltava para
+  a viagem, a árvore da prova que o lenhador levava, a água pequena demais para ver o peixe minguar —, e estão no AUDIT
+  (T-189 a T-220).
+- **O que as duas últimas rodadas acharam** (L-376, L-382; abertos para o Patch 2: L-371, L-374, L-377). Os mundos foram
+  gerados de novo com todos esses consertos (a geração 6), e a regressão rodou neles. Dois defeitos apareceram:
+  - depois de abrir um save, quem fazia um inquérito voltava às perguntas por cima do que outro sistema acabava de lhe
+    devolver: Jasão, guarda do motim de Argos, saía da praça para perguntar pela cidade (L-376);
+  - o muro de pé fechava um prédio da cidade quando a cidade mudava atrás dele. Um quarteirão novo de Hedeby, no mega,
+    tomou a única passagem do cemitério, entre o penhasco e o muro, e os portões do muro só eram julgados quando ele era
+    planejado e quando um save era aberto (L-382). Agora o muro guarda os caminhos da cidade a cada prédio que entra no
+    mapa ou fica pronto, e a cada mudança do chão; um atalho que a prova confere deixa isso em menos de 1% do salto.
+
+  O conserto do L-382 muda o mundo onde há muro, e por isso os mundos foram gerados uma última vez (a geração 7), para a
+  regressão final. A cidade e o mega saíram iguais aos da geração 6; a metrópole, o mundial e os de muitos anos mudaram.
+
+  E três ficaram anotados para o Patch 2, porque o conserto muda o mundo, e o Patch 2 vai gerar os mundos de novo:
+  - a família cuja casa está sendo ampliada fica sem água, sem cama e sem lar enquanto a obra dura (L-371);
+  - a porta dos guardados perde a operação da carga na sobra que não cabe no armazém — latente, nenhum caminho do mundo
+    chega lá hoje (L-374);
+  - o que um prédio guarda sai do mundo sem linha no livro quando ele cai, quando a cidade é abandonada, quando a guarda
+    fecha um mercado clandestino ou quando a cidade derruba o bairro velho (L-377).
+
+  O resto foram limites das provas diante dos mundos novos (T-231 a T-262), e o mais comum foi um só: **o corpo andando
+  pelo caminho do mundo**. O mundo anda de casa em casa, e o corpo tem largura. Por isso o corpo parava:
+  - no pilar de um portão, que o mundo atravessa pela casa toda e o corpo só pelo vão;
+  - na banca da borda de uma feira, que o mundo atravessa por dentro do lote;
+  - rente à quina de um prédio, ou empurrado em linha reta contra ela.
+
+  As provas agora andam como um jogador anda: passam o portão pelo meio, contornam o que trava os pés, seguem o caminho
+  do mundo até a porta e têm o tempo que o caminho pede. O jogador, que guia o corpo, não encontra esse problema. O
+  caminho alisado do mundo, que corta quinas, é o L-354, aberto para o Patch 2.
+
+  Com os mundos da geração 7, várias provas também mexiam no mundo à mão ou dependiam da sorte, e passaram a usar as
+  portas do mundo:
+  - a do cais jogava fora as caixas de uma descarga em andamento (T-249);
+  - a do estivador escolhia o cais antes de ver se havia estivador livre (T-250);
+  - a da escada não sabia abrir a porta interna atrás da qual a escada ficava (T-251);
+  - a do duelo esperava o nome de Campeão de quem já era «o Conquistador», um nome mais alto (T-253);
+  - a do ladrão pegava alguém a 38 casas e no meio de uma caçada (T-257);
+  - a da cidade cortada pela água dependia de o construtor, ilhado, achar sozinho o caminho de volta (T-256).
+
+  Uma dessas, a do armazém do porto, foi lida primeiro como um defeito das ofertas do corpo (o L-388). O conserto foi feito
+  e desfeito no mesmo dia, quando uma sonda no navegador mostrou que o corpo nem chegava à porta (T-255).
+
+  Na regressão final, a prova do Modo Encarnado parou no meio, e a causa estava na própria prova: as partes que vivem o
+  mesmo mundo, uma depois da outra, dependiam da máquina (T-262). A parte em que o corpo dorme faz o mundo correr
+  depressa, e o jogo, quando a máquina não dá conta, corta passos do quadro — o certo para quem joga, para o jogo não
+  travar. Na prova, isso deixava o mundo das partes seguintes um pouco diferente a cada rodada. Numa delas era noite, a
+  maior cidade tinha dois adultos na rua, e a prova precisava de quatro. Agora os quadros das provas nunca são cortados, e a
+  sequência vive o mesmo mundo em qualquer máquina: duas rodadas ao mesmo tempo, com a máquina cheia, deram as mesmas 60
+  linhas, palavra por palavra. Era também o que fazia a troca de corpo de 28/10 falhar numa rodada e passar na outra
+  (L-309).
 
 ## 6. O que fica parcial, ou não foi feito
 
@@ -146,6 +236,29 @@ antes do conserto, e a prova que falhava passa depois. Por família:
   andamento (§9).
 - **A vida dentro das casas** ainda não é contada pela casa: quem dorme, quem come à mesa, quem saiu para trabalhar e por
   quê. Isso também é do Patch 2.
+- **As compras da família** (L-331 e L-345, abertos). Só quem não tem ofício vai às compras, e a vontade de comprar abre
+  antes de qualquer banca abrir; uma tentativa sem ninguém para vender põe a casa em meio dia de espera. Num dia da
+  metrópole de antes, 104 tentativas e 19 casas que compraram. O conserto pensado muda a economia da casa, e vai com o
+  Patch 2, junto das oficinas cheias (D-090).
+- **Mais defeitos abertos, para o Patch 2**, cada um com o conserto proposto no AUDIT. Os quatro primeiros a v37 achou; os
+  outros, os especialistas do Patch 2 e a regressão final acharam no código desta versão:
+  - o caminho alisado do mundo, que corta a quina de um prédio (L-354);
+  - a família da casa em ampliação, sem água e sem cama enquanto a obra dura (L-371);
+  - a sobra que a porta dos guardados registra sem a operação (L-374);
+  - os guardados de um prédio que cai ou é derrubado, que saem sem linha no livro (L-377);
+  - depois de um save, o inquérito que volta a quem já não estava nele (L-380, o resto do L-376);
+  - o minério da mina, contado e pago antes de sair da galeria (L-381);
+  - os pés e a tina das propriedades presos por quem largou o trabalho no meio (L-383);
+  - o vinho, o azeite, a carne-seca e a seda feitos na prateleira, fora do livro (L-384);
+  - a comida comida das mãos e do armazém, sem linha no livro (L-385);
+  - o contrabandista que não rouba de noite, porque a noite o manda para a cama (L-386);
+  - a compra nas bancas da feira já fechada (L-387);
+  - a cidade cortada em duas, que não nomeia um construtor do lado das suas ruas (L-389);
+  - o pé da escada de um sobrado nórdico num vão mais estreito que o corpo (L-391).
+
+  Todos mudam o mundo, o save ou as plantas, e o Patch 2 vai gerar os mundos de novo.
+- **Duas regras para decidir no Patch 2:** se um ato em curso (a caixa que alguém foi buscar) segura as mãos contra uma
+  ida de fora, como a caverna; e se a execução espera quem leva uma compra para casa, como a festa já espera.
 - **Não medido:** o desempenho numa placa de vídeo de verdade e num celular.
 
 ## 7. O fechamento: o reinício e o navegador novo
@@ -169,7 +282,18 @@ As duas provas que mudaram foram olhadas uma a uma. Nenhuma era defeito do jogo;
   há tratado. A paz agora é provocada de propósito numa prova nova (`qa/paz.js`), que confere o tratado, os soldados de
   volta e os presos trocados. Passa nas sementes 11, 7 e 13.
 
-A semente do mundo da guerra mundial também mudou. Com o navegador novo, a 3507 não fazia a guerra vir sozinha (§4).
+A semente do mundo da guerra mundial também mudou. Com o navegador novo, a 3507 não fazia mais a guerra vir sozinha. A
+receita do «mundial» agora espera a guerra vir sozinha, ou até só restarem quatro povos grandes, e então o jogo a começa
+enquanto ainda acha dois lados (D-091). Antes, a espera era de 80 anos fixos, e com as cidades crescendo mais (os
+construtores soltos, L-322) um império engolia os outros nesse tempo.
+
+Cada conserto do fechamento muda o mundo que a mesma semente faz, e a guerra da 3510, a primeira semente da lista, mudou
+de uma geração de mundos para outra: veio sozinha no ano 47 (a Guerra da Fome); o jogo começou a Guerra do Ouro no ano
+55; depois, a Grande Coalizão no ano 83. Esta última eram os quatro povos grandes contra um povo de oito pessoas — os
+aliados do império ficavam do lado dele, e não sobrava ninguém para a coalizão (L-370). Na geração 6, a guerra não veio
+sozinha, e no ano 75, com quatro povos grandes, o jogo começou a Grande Coalizão, agora com dois lados de verdade. Na
+geração 7, a última (depois do L-382), também: no ano 61, a Casa de Amon e o Altepetl de Tenoch (298 pessoas) contra a
+Liga de Tebas e três aliados menores, a Casa de Solveig, a Colônia de Óstia e a Pólis Livre de Olímpia (180).
 
 ## 8. Desempenho medido
 

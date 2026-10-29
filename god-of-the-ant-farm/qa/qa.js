@@ -107,7 +107,10 @@
       if (!v.aboard && !v.ug && !v.held && s.type[i] === G.T.DEEP && !(s.dry && s.dry[i]) && !(t && (t.type === 'swim' || t.type === 'naufrago'))) add('pop', 2, `${nm}: em mar profundo sem nadar (${t ? t.type : '-'})`, v.id);
     }
     // dead ones are nowhere among the living
-    for (const [id, bid] of bandOf) { const v = P(id); if (!v) add('war', 1, `bando ${bid}: membro morto/inexistente #${id}`, id); else if (!v.task || v.task.type !== 'band' || v.task.band !== bid) { const b = G.War.bands.get(bid); if (!(b && b.campaign)) add('war', 3, `bando ${bid}: membro #${id} sem tarefa de bando (${v.task ? v.task.type : '-'})`, id); } }
+    // (a band takes stock of its members every half second — war.js, bandUpdate —: one who broke and ran within that half second
+    // is still on its list, and leaves it at the next tick; one in a scene keeps the band as the task it goes back to, T-220)
+    const inBand = (v, bid) => { const t = v.task; if (t && t.type === 'band') return t.band === bid; const pt = t && t.type === 'scene' && G.Scene && G.Scene.prevTask(v); return pt ? pt.type === 'band' && pt.band === bid : !!t && (t.age || 0) < 0.6; };
+    for (const [id, bid] of bandOf) { const v = P(id); if (!v) add('war', 1, `bando ${bid}: membro morto/inexistente #${id}`, id); else if (!inBand(v, bid)) { const b = G.War.bands.get(bid); if (!(b && b.campaign)) add('war', 3, `bando ${bid}: membro #${id} sem tarefa de bando (${v.task ? v.task.type : '-'})`, id); } }
     for (const a of armies) {
       const live = (a.members || []).filter(id => P(id));
       if ((a.members || []).length && !live.length) add('war', 2, `exército ${a.name}: todos os membros mortos, mas ativo (${a.phase})`);
@@ -179,12 +182,14 @@
     { let ghost = 0, ex = 0; for (let i = 0; i < s.occ.length; i++) { const o = s.occ[i]; if (o && !s.buildings.has(o)) { ghost++; ex = o; } } if (ghost) add('city', 2, `${ghost} casa(s) do mapa ocupadas por prédio inexistente #${ex}`); }
     // ---- the memory of the dead: cemeteries hold twelve, a grave and its record agree, nobody is kept past three
     // generations unless they mattered or the living are their children and grandchildren (L-072)
+    // (a cemetery that fell keeps its graves under the ruin, as the stories that go to a grave know: T-191)
+    const holds = b => b.type === 'cemetery' || (b.type === 'ruin' && b.origType === 'cemetery');
     for (const b of s.buildings.values()) {
-      if (b.type !== 'cemetery') continue;
+      if (!holds(b)) continue;
       const gr = b.graves || []; if (gr.length > 12) add('mem', 3, `cemitério #${b.id}: ${gr.length} túmulos (cabem 12)`);
       for (const id of gr) { const d = s.dead.get(id); if (d && d.grave !== b.id) add('mem', 3, `cemitério #${b.id}: o túmulo de ${d.name} #${id} aponta para ${d.grave}`); }
     }
-    for (const [id, d] of s.dead) if (d.grave) { const b = s.buildings.get(d.grave); if (b && (b.type !== 'cemetery' || !(b.graves || []).includes(id))) add('mem', 3, `${d.name} #${id}: enterrado no cemitério ${d.grave}, que não guarda seu túmulo`); }
+    for (const [id, d] of s.dead) if (d.grave) { const b = s.buildings.get(d.grave); if (b && (!holds(b) || !(b.graves || []).includes(id))) add('mem', 3, `${d.name} #${id}: enterrado no cemitério ${d.grave}, que não guarda seu túmulo`); }
     { const m = QA.memAfter; if (m && m.world === s && m.day === s.day && m.n) add('mem', 3, `na virada do ano ficaram ${m.n} morto(s) de mais de 80 anos que ninguém lembra (ex.: ${m.ex.name}, ano ${m.ex.died})`); }
     // ---- quarters of the towns
     if (G.Urban) {
@@ -464,7 +469,8 @@
         const ch = st.chapters.map(c => c.txt); const dups = ch.length - new Set(ch).size; if (dups) add('story', 3, `${nm}: ${dups} capítulo(s) com texto idêntico`);
         const ends = st.chapters.filter(c => c.end).length; if (ends > 1) add('story', 1, `${nm}: ${ends} capítulos de fim`);
       }
-      for (const sd of s.saga.seeds) if (!P(sd.protag)) add('story', 3, `semente ${sd.type}: protagonista morto`);
+      // (as with an active story: a death the stories have not heard yet is not theirs to have settled — once heard, its seeds go, L-351)
+      for (const sd of s.saga.seeds) if (!P(sd.protag) && !(G.Stories.unheard && G.Stories.unheard(sd.protag))) add('story', 3, `semente ${sd.type}: protagonista morto`);
     }
     // ---- duplicated events: the same chronicle line twice on the same day
     { const seen = new Map(); for (const h of s.history.slice(-300)) { const k = Math.floor(h.d) + '|' + (h.x === undefined ? '' : Math.round(h.x) + ',' + Math.round(h.y)) + '|' + h.txt; seen.set(k, (seen.get(k) || 0) + 1); } for (const [k, n] of seen) if (n > 1) add('chron', 3, `crônica: linha repetida ${n}× no mesmo dia e lugar: ${k.split('|')[2].slice(0, 90)}`); }
@@ -666,7 +672,11 @@
       for (const v of s.villagers.values()) if (dying(v) && !v.captive && !v.aboard && !v.ug) dyingIn.set(v.set, (dyingIn.get(v.set) || 0) + 1);
       for (const [sid, n] of dyingIn) {
         const set = s.settlements.get(sid); const f = set && s.factions.get(set.fac);
-        if (f && f.stock.food >= 1 && !G.Village.nearestDropoff(set.cx, set.cy, sid)) add('fome', 1, `${set.name}: ${n} morrendo de fome com ${Math.floor(f.stock.food)} de comida no estoque de ${f.name} e nenhum armazém onde comer`);
+        // (a town lighting its fire again — every store of it taken by a disaster since yesterday — eats once the fire burns: Hedeby,
+        // in the chaos of seed 13, lost its fire to a volcano, its people to a plague and its berries to a winter in one day, and
+        // lit the fire again before the next; a day with no fire rising is still a town that will not eat, T-225)
+        const rising = () => { for (const b of s.buildings.values()) if (b.set === sid && b.type === 'campfire' && !b.built && s.day - (b.born || 0) <= 1) return true; return false; };
+        if (f && f.stock.food >= 1 && !G.Village.nearestDropoff(set.cx, set.cy, sid) && !rising()) add('fome', 1, `${set.name}: ${n} morrendo de fome com ${Math.floor(f.stock.food)} de comida no estoque de ${f.name} e nenhum armazém onde comer`);
       }
       for (const v of s.villagers.values()) {
         if (!dying(v) || v.captive || v.jail || v.aboard || v.ug || v.held || v.air) continue;
@@ -908,6 +918,9 @@
   });
 })(window.G);
   // ==== fim das invariantes dos sistemas novos ====
+  // (the executions a load keeps: one in its aftermath, or with nobody left to execute, is over — the load of justice.js drops it,
+  // as the tick would — and is no loss of the save: the mundial of the v37 lived into one and the round trip said «execs: 3 → 2», T-212)
+  const liveExec = e => { const s = S(); const f = G.Fac.get(e.fac); return !!f && f.alive && s.settlements.has(e.set) && e.phase !== 'after' && e.phase !== 'done' && (e.ids || []).some(id => s.villagers.has(id) && !(e.done || []).includes(id)); };
   QA.canon = function () {
     const s = S(); const r = x => Math.round(x * 100) / 100;
     const vs = [...s.villagers.values()].sort((a, b) => a.id - b.id).map(v => [v.id, v.name, v.set, v.home, v.partner, v.mother, v.father, (G.Save.ageR ? G.Save.ageR(v.age) : Math.round(v.age * 1000) / 1000), v.captive ? 'c' + v.captive.from : '', v.aboard || 0, v.role || '', v.job || 0, (v.kids || []).length, v.g, v.secret || 0, v.grp || '', v.reigned || 0]);
@@ -926,7 +939,7 @@
     return {
       day: s.day, nextId: s.nextId, villagers: vs, dead: s.dead.size, factions: fs, settlements: ss, buildings: bs, ships: sh, wars, armies: arm, stories: st, seeds: sd, exps: ex, fleets: fl,
       history: s.history.length, logN: s.logN || 0, animals: an, trees: s.trees.size, rocks: s.rocks.size, bushes: s.bushes.size,
-      riots: (s.riots || []).length, execs: (s.execs || []).length, secrets: s.secrets ? s.secrets.socs.length : 0, ww: s.worldWar ? [s.worldWar.name, s.worldWar.end] : null,
+      riots: (s.riots || []).length, execs: (s.execs || []).filter(liveExec).length, secrets: s.secrets ? s.secrets.socs.length : 0, ww: s.worldWar ? [s.worldWar.name, s.worldWar.end] : null,
       walls: (s.walls || []).length, stats: [s.stats.births, s.stats.deaths, s.stats.wars || 0], more: QA.canonMore.map(([k, f]) => [k, f()]),
     };
   };

@@ -204,11 +204,24 @@ for (const [b, plan, own] of jobs) {
         nWall++; const hit = cast(T3, W3(o), [Math.cos(a), 0, Math.sin(a)], 3); if (!hit || Math.abs(hit.t - (ri - 0.3)) > 0.02 || !hit.front) bad.wall.push(`${tag} anel a ${(a * 57.3).toFixed(0)}°, ${y} m: ${hit ? ((hit.t - ri + 0.3) * 100).toFixed(1) + ' cm' + (hit.front ? '' : ' (avesso)') : 'nada'}`); } } }
   // 4 and 5. the floors and the ceilings, cell by cell of the grid
   const n = plan.grid.n, cs = plan.grid.cs;
+  // (a cell's middle on the face of a wall as the 3D draws it — the plan's walls kept in centimetres, the grid the very one its
+  // pieces were laid out on (Interiors' gridOf), the face up to 5 mm on the other side of a cell's middle —: there the ray down
+  // meets the edge of what stands flush with the wall as much as the floor — a door's threshold, 2 cm over it across the wall —;
+  // the cell read 1.2 cm into its own side of the face. The hut#4002 of the sixth generation: its door's wall at z 3.75 and
+  // 0.25 thick as stored (3.755 as laid out), the face at 3.625, the middles of the row of floor before the door — T-239)
+  const offFace = (lv, x, z) => {
+    for (const w of plan.walls) {
+      if (w.lv !== lv) continue; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L < 0.02) continue; const tx = (w.b[0] - w.a[0]) / L, tz = (w.b[1] - w.a[1]) / L;
+      const s = (x - w.a[0]) * tx + (z - w.a[1]) * tz, o = (x - w.a[0]) * -tz + (z - w.a[1]) * tx; if (s < -w.t / 2 || s > L + w.t / 2 || Math.abs(Math.abs(o) - w.t / 2) >= 0.012) continue;
+      const k = (Math.sign(o) || 1) * (w.t / 2 + 0.012 - Math.abs(o)); x += -tz * k; z += tx * k;
+    }
+    return [x, z];
+  };
   for (const l of plan.levels) {
     const g = plan.grid.lv[l.lv]; if (!g) continue;
     for (let cz = 0; cz < n; cz++) for (let cx = 0; cx < n; cx++) {
       const c = g[cz * n + cx]; if (c !== CELL.FLOOR && c !== CELL.HATCH && c !== CELL.STAIR && c !== CELL.LOWROOF) continue;
-      const x = (cx + 0.5) * cs, z = (cz + 0.5) * cs;
+      const [x, z] = offFace(l.lv, (cx + 0.5) * cs, (cz + 0.5) * cs);
       const st = plan.stairs.find(s => s.lv0 === l.lv && s.kind !== 'degraus' && x > s.r[0] && x < s.r[2] && z > s.r[1] && z < s.r[3]);
       if (st && st.kind === 'escada-de-mao') continue; // (a ladder's rungs stand over its cells)
       const deg = plan.stairs.find(s => s.kind === 'degraus' && s.lv1 === l.lv && x > s.r[0] && x < s.r[2] && z > s.r[1] && z < s.r[3]);

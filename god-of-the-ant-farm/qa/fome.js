@@ -24,6 +24,8 @@
 // h12 a criança que a fome acorda de noite come antes de voltar para a cama (L-171; achado pela regra S2 na medida)
 // h13 a tripulação esperando no cais a partida da viagem come das provisões, como quem está em campo (L-201; achado pela
 //    regra S2 no porto)
+// h14 a cidade que a água cortou de todos os seus armazéns acende uma fogueira do lado das suas ruas, e quem tem fome lá
+//    come (L-368; achado pela regra S2 no caos da semente 13: a criança de Tenochtitlan que morreu de fome em casa)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -145,19 +147,25 @@ if (fset) {
 
 // ---------------- h5 the rule S1: a town dying of hunger with food in the stock and no store ----------------
 {
-  let got = [], none = [];
+  let got = [], none = [], lighting = [];
   if (fset) {
     const fire = fireOf(); const was = fire ? fire.id : 0;
     const ppl = people().filter(v => v.age >= 6).slice(0, 3); const keep = ppl.map(v => [v.hunger, v.hp]);
     for (const v of ppl) { v.hunger = 100; v.hp = 35; }
     none = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
-    if (fire) { fire.built = false; } // (the town without its store, for the look: put back at once)
+    // (the town without a store, for the look — every store of it: its fire, and a storehouse its builders may have raised in
+    // the day of the skip, as with the final worlds, T-203 —: put back at once)
+    // (and the fire as one rising for three days — a town that did not light it again in all that time; one rising since
+    // today, its stores taken by a disaster this very day, is a town lighting it, and the rule waits for it, T-225)
+    const stores = V.dropoffs(fset.id); const born = stores.map(b => b.born); for (const b of stores) { b.built = false; b.born = S.day - 3; }
     got = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
-    if (fire) fire.built = true;
+    for (const b of stores) b.born = S.day;
+    lighting = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
+    stores.forEach((b, i) => { b.built = true; b.born = born[i]; });
     ppl.forEach((v, i) => { v.hunger = keep[i][0]; v.hp = keep[i][1]; });
     void was;
   }
-  ok('h5 o verificador (S1): uma cidade morrendo de fome com comida no estoque e nenhum armazém', !!fset && got.length === 1 && !none.length, got.length ? `«${got[0].msg}»; com a fogueira de pé: ${none.length ? 'também (errado)' : 'nada'}` : 'o verificador não viu');
+  ok('h5 o verificador (S1): uma cidade morrendo de fome com comida no estoque e nenhum armazém', !!fset && got.length === 1 && !none.length && !lighting.length, got.length ? `«${got[0].msg}» (a fogueira em obra há três dias); com a fogueira em obra desde hoje: ${lighting.length ? 'também (errado)' : 'nada'}; com a fogueira de pé: ${none.length ? 'também (errado)' : 'nada'}` : 'o verificador não viu');
 }
 
 // ---------------- h6 the rule S2: someone dying of hunger with food in reach ----------------
@@ -349,6 +357,45 @@ const calmOne = (skip, also) => {
   }
   ok('h13 a tripulação esperando no cais da viagem come, como quem está em campo', !!v && ate && where === 'cais',
     v ? `${v.name} (${S.settlements.get(v.set) ? S.settlements.get(v.set).name : '?'}), no cais esperando a viagem, com a fome ${Math.round(h0)} e ${food} de comida no estoque do povo: ${ate && where === 'cais' ? `comeu das provisões sem sair do cais, em ${Math.round(S.clock - t0)} s (fome ${Math.round(h0)} → ${Math.round(v.hunger)})` : `NÃO comeu no cais (fome ${Math.round(v.hunger)}, vida ${Math.round(v.hp)}${left ? '; saiu dele: ' + left : `; ${Math.round(S.clock - t0)} s ainda no cais`}${ate ? ', e comeu fora' : ''})`}` : `ninguém no cais de uma viagem (${tried.join(', ') || 'nenhum povo com navegação'})`);
+}
+// ---------------- h14 a town the water cut off from all its stores lights a fire on its streets' side (L-368) ----------------
+// (found by the rule S2 in the chaos of seed 13: Tenochtitlan, cut in two, kept its fire and its quay on the far side of its
+// houses; the town counted a fire and never lit another, and a child starved at home for three days. Here the god's water —
+// the test's hand: deep sea two steps round every store of the town — cuts them off, and the town must light a fire its
+// streets reach, and its hungry eat there)
+{
+  // (in the morning: the case is the new fire, not the night its builders sleep through)
+  S.time = 0.3;
+  const set = set0; const stores = V.dropoffs(set.id).slice(); const fire0 = new Set(stores.map(b => b.id));
+  const reached = () => [...S.buildings.values()].filter(b => b.set === set.id && G.BDEF[b.type] && (b.built ? G.BDEF[b.type].dropoff : b.type === 'campfire') && W.townReaches(set, ...V.frontTile(b)));
+  const was = new Map();
+  for (const b of stores) for (let y = b.y - 2; y < b.y + b.h + 2; y++) for (let x = b.x - 2; x < b.x + b.w + 2; x++) {
+    if (!W.inb(x, y)) continue; const i = W.idx(x, y); if (S.occ[i] || was.has(i) || S.type[i] <= G.T.SEA) continue; was.set(i, S.type[i]); S.type[i] = G.T.DEEP;
+  }
+  S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand(); W.touchWalk();
+  const cut = !reached().length;
+  let lit = null, ate = false, v = null, h0 = 0, t0 = S.clock, moved = 0;
+  if (cut) {
+    // (the god's water may leave the town's builders on the far side — Quinto, the only one of Roma in the city of the v37's last
+    // worlds, at home by a store —: the god's hand brings them to the streets. The case is the new fire and the meal there; that
+    // a town cut in two names no builder on its streets' side by itself is L-389, and the stranded one got out only by luck,
+    // paving his way over the water: T-256)
+    { const R = W.townRegion(set), L = W.reachIds(true); let at = null;
+      for (let r = 0; r <= 12 && !at; r++) for (let dy = -r; dy <= r && !at; dy++) for (let dx = -r; dx <= r && !at; dx++) { const x = Math.floor(set.cx) + dx, y = Math.floor(set.cy) + dy; if (W.inb(x, y) && L[W.idx(x, y)] === R && W.walkable(W.idx(x, y))) at = [x + 0.5, y + 0.5]; }
+      // (cut off: not on the town's ground, or a home whose door is not — asleep there, he walks out onto the far side)
+      const off = q => { if (!W.reachesTown(q, set)) return true; const hb = S.buildings.get(q.inside || q.home); if (!hb) return false; const d = Vg.door(hb); return !W.townReaches(set, d[0], d[1]); };
+      for (const q of [...S.villagers.values()].filter(q => q.set === set.id && q.role === 'construtor' && !q.captive && !q.aboard && off(q))) if (at) { Vg.endTask(q); q.inside = 0; q.sleeping = false; q.x = at[0]; q.y = at[1]; q.path = null; moved++; } }
+    // (a hungry one of the town on its streets: the meal comes at the new fire, or not at all)
+    v = [...S.villagers.values()].filter(q => q.set === set.id && q.age >= 16 && !q.captive && !q.aboard && !q.inside && !q.jail && W.reachesTown(q, set) && !(S.avatar && S.avatar.id === q.id)).sort((a, b) => a.id - b.id)[0] || null;
+    if (v) { v.hunger = 85; h0 = v.hunger; }
+    // (in the god's peace — no war of the world's own through the new ways of the town —, and the time a town's life takes: the
+    // builder at a fest, a conclave, a funeral before the new fire; with the generation-7 worlds the fire stood at 0% at 480 s, T-256)
+    G.Politics.divinePeace(); const peace = () => { S.divinePeace = Math.max(S.divinePeace || 0, G.DAY_LEN); };
+    live(900, () => { peace(); const n = reached().find(b => !fire0.has(b.id)); if (n && !lit) lit = n; if (v && v.hunger < h0 - 30) ate = true; return !!(lit && lit.built && (ate || !v)); });
+  }
+  for (const [i, t] of was) S.type[i] = t; S.typeVer++; W.invalidateLand(); W.touchWalk(); // (the water gone again, for the cases after)
+  ok('h14 a cidade cortada de todos os seus armazéns acende uma fogueira do lado das ruas, e quem tem fome come', cut && !!lit && lit.built && (!v || ate),
+    !cut ? `a água em volta dos ${stores.length} armazéns de ${set.name} não os cortou das ruas (um ainda alcançado)` : `${set.name}, ${stores.length} armazém(ns) cortado(s) pela água${moved ? ` (${moved} construtor(es) trazido(s) às ruas)` : ''}: ${lit ? `${lit.type}#${lit.id} nova, ${lit.built ? 'acesa' : 'AINDA em obra'} em ${Math.round(S.clock - t0)} s` : 'NENHUMA fogueira nova do lado das ruas em 240 s'}; ${v ? `${v.name}, com a fome ${Math.round(h0)}: ${ate ? 'comeu' : 'NÃO comeu'}` : 'ninguém com fome nas ruas'}`);
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }

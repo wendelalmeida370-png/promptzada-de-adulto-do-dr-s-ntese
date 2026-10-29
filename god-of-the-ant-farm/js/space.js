@@ -276,10 +276,18 @@
     // on the ground the feet stand on there (Space.footAt): by a river's bank the drawn ground stood 7 cm over it, and the
     // forja#27885's side flight, 0.55 by the drawn ground of the 0.56 its feet walk, was 0.61 to the body, climbed with the
     // hands — L-325. A straight flight's is taken 0.12 out, ten centimetres past where the feet are when the rim meets its
-    // second tread (0.02 out): a margin that holds the difference — on the feet's ground, two doors of the new metropole would
-    // move for nothing, the sobrados 21323 and 24763 between 0.56 and 0.60, and 22 flights would be laid anew)
+    // second tread (0.02 out), on the drawn ground: a margin that holds the difference — on the feet's ground, two doors of the
+    // new metropole would move for nothing, the sobrados 21323 and 24763 between 0.56 and 0.60, and 22 flights would be laid
+    // anew. But on a twisted tile of a steep street the land's picture — cut in triangles every half tile — stands up to 0.16 m
+    // over the world's own height the feet walk: the sobrado#24328 of the final metropole, 0.53 by the drawn ground, was 0.69 to
+    // the body, stopped at its second tread — L-360. So the feet's own step is held there too, where they are (0.02 out, on
+    // their ground), to the body's whole step — the very point, no margin —: the foot is the higher of the drawn one and the
+    // feet's less those 0.04, and the 0.56 of the walk holds both)
     const footG = (a, n) => { const p = P(a, n); return Sp.footAt(Math.min(N - 0.001, b.x + p[0] / TILE), Math.min(N - 0.001, b.y + p[1] / TILE)) - y0; };
-    const footStep = () => { const t = treads[treads.length - 1]; const sd = t && t.kind === 'side', g = sd ? footG : gAt; const off = sd ? 0.25 : 0.12; const n = t ? t.n + t.wn / 2 : n0, a = t ? t.a : 0, q = (t ? t.wa : wd) / 4; return (t ? t.y : top) - Math.min(g(a, n + off), g(a - q, n + off), g(a + q, n + off)); };
+    const STEP_UP = 0.6; // (the body's step, Avatar.TUNE.stepUp: kept here as its radius is)
+    const footStep = () => { const t = treads[treads.length - 1]; const sd = t && t.kind === 'side', st = !sd && treads.length > 1; const n = t ? t.n + t.wn / 2 : n0, a = t ? t.a : 0, q = (t ? t.wa : wd) / 4;
+      const at = (g, off) => (t ? t.y : top) - Math.min(g(a, n + off), g(a - q, n + off), g(a + q, n + off));
+      return sd ? at(footG, 0.25) : st ? Math.max(at(gAt, 0.12), at(footG, 0.02) - (STEP_UP - 0.56)) : at(gAt, 0.12); };
     // (the foot of a flight with the rise above it within one step, with a margin — 0.56 of the body's 0.6 —; a lone step within
     // a span and a half: L-183, the flights the body walked up and could not — soleira 4b, T-090)
     const riseUp = () => (treads.length > 1 ? treads[treads.length - 2].y - treads[treads.length - 1].y : 0);
