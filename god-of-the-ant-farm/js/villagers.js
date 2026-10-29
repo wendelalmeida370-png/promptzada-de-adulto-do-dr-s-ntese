@@ -507,12 +507,17 @@
     const elder = v.age >= 62;
     // a night watch keeps a torch lit when the village is big enough
     const watch = night && v.role === 'cacador' && v.energy > 45 && Vg.nightWatch.get(v.set) === v.id;
-    let wU = night ? (watch ? 1.4 : 0.05) : 0.55 * v.work;
+    // (and the smuggler is up at night when a theft waits for him — room on the market's shelf, a store of the town to go to
+    // and something worth taking from it — or when he goes back to the market with what he took: G.Eco.prowls, the
+    // conditions of his errand. His work, as the watch's, comes before his bed while he is not worn out; a theft under way,
+    // of the kind 'work', goes on — the bed of the night cut it at the first look: L-386)
+    const prowl = night && !watch && v.role === 'contrabandista' && v.energy > 45 && !!(G.Eco && G.Eco.prowls && G.Eco.prowls(v));
+    let wU = night ? (watch || prowl ? 1.4 : 0.05) : 0.55 * v.work;
     if (elder) wU *= 0.55;
     if (v.mourn > 0) wU *= 0.7;
     if (v.fear > 60) wU *= 0.8;
     if (eve) wU *= 0.7;
-    opt(wU, watch ? 1.6 : 1, watch ? 'watch' : 'work');
+    opt(wU, watch || prowl ? 1.6 : 1, watch ? 'watch' : 'work');
     if (S.weather.storm > 0 && !night && S.weather.rain > 0.3) { const h = S.buildings.get(v.home); if (G.Village.livable(h)) opt(0.8 + G.R() * 0.3, 1.05, 'shelter'); }
     if (!night) {
       opt((v.traits.includes('Sociável') ? 0.3 : 0.15) * (eve ? 2.3 : 1) * (elder ? 1.8 : 1) * G.R() * 1.6, 0, 'social');
