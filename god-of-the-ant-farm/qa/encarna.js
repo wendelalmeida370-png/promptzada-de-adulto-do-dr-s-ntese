@@ -67,8 +67,11 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       fresh(w) { G.Realm.setQuality('baixa'); G.Save.apply(JSON.parse(G.Ready.data[w])); G.Main.mode = 'game'; document.querySelector('#menu').classList.add('hidden'); G.UI.showHUD(true); G.UI.setSpeed(1); if (G.Audio) G.Audio.mute = true; E.base = new Set(QA.check().filter(e => e.sev <= 3).map(E.qk)); },
       qk: e => e.id + '|' + e.msg.replace(/\s*\([^)]*\)\s*$/, ''),
       qa: () => QA.check().filter(e => e.sev <= 2 && !E.base.has(E.qk(e))).map(e => `${e.id}/S${e.sev}: ${e.msg}`),
-      f(n, ms) { for (let k = 0; k < n; k++) G.Main.frameFor(ms || 33); },
-      until(c, max, ms) { for (let k = 0; k < (max || 400); k++) { if (c()) return k; G.Main.frameFor(ms || 33); } return c() ? max : -1; },
+      // (whole frames: no step of them cut by the machine's time — at 4.9× asleep, or at the god's 8×, the loop cuts the steps
+      // of a frame past 60 ms of the machine, and the parts that share the «cidade» after e3 lived another world on each machine
+      // and on each run: T-262)
+      f(n, ms) { for (let k = 0; k < n; k++) G.Main.frameFor(ms || 33, true); },
+      until(c, max, ms) { for (let k = 0; k < (max || 400); k++) { if (c()) return k; G.Main.frameFor(ms || 33, true); } return c() ? max : -1; },
       enter(v) { if (!G.Modes.enter(v)) return false; return E.until(() => G.Modes.state === 'INC', 300) >= 0; },
       leave() { if (G.Modes.state === 'INC') G.Modes.leave('deus'); return E.until(() => G.Modes.state === 'GOD', 400) >= 0; },
       town: k => [...G.S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[k || 0],
@@ -238,12 +241,12 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const t0 = { day: S.day, clock: S.clock, births: S.stats.births || 0, deaths: S.stats.deaths || 0, logN: S.logN, built: [...S.buildings.values()].filter(b => b.built).length };
     let farNews = 0; const hook = (e) => { if (Number.isFinite(e.x) && G.dist(e.x, e.y, v.x, v.y) > 30) farNews++; }; G.Possess.onLog.push(hook);
     // (the world's pace with the body awake first — 30 frames, standing —, then asleep: a tired body sleeps, and whenever it wakes
-    // — by day, rested, as anyone of the world: L-341 — it is put back to bed. The two paces, frame by frame: the main loop
-    // cuts the steps of a frame past 60 ms of the machine when the pace is over 2× (asleep, 4.9×), so on a busy machine a frame
-    // asleep carries less of the world's time than 0.49 s — T-162: the clock alone, over 200 s, was the machine's)
-    const cA = S.clock; for (let k = 0; k < 30; k++) G.Main.frameFor(100); const paceAwake = (S.clock - cA) / 30;
+    // — by day, rested, as anyone of the world: L-341 — it is put back to bed. The two paces, frame by frame (T-162), in whole
+    // frames: the main loop cuts the steps of a frame past 60 ms of the machine when the pace is over 2× (asleep, 4.9×), and a
+    // cut here left the parts after it, in the same world, at another hour on each run — T-262)
+    const cA = S.clock; for (let k = 0; k < 30; k++) G.Main.frameFor(100, true); const paceAwake = (S.clock - cA) / 30;
     v.energy = 5; G.Possess.sleep(v); const slept = v.sleeping; let asleepN = 0; const cS = S.clock;
-    for (let k = 0; k < 600; k++) { if (!v.sleeping) { v.energy = 5; G.Possess.sleep(v); } const was = v.sleeping; G.Main.frameFor(100); if (was && v.sleeping) asleepN++; }
+    for (let k = 0; k < 600; k++) { if (!v.sleeping) { v.energy = 5; G.Possess.sleep(v); } const was = v.sleeping; G.Main.frameFor(100, true); if (was && v.sleeping) asleepN++; }
     const paceAsleep = (S.clock - cS) / 600;
     G.Possess.onLog.splice(G.Possess.onLog.indexOf(hook), 1);
     const awake = !v.sleeping || (G.Possess.wake(v), true);
@@ -265,23 +268,24 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   const e4 = await E(() => {
     const S = G.S; const s = __E.town(); const [a, b] = __E.adults(s);
     const stA = G.Stories ? G.Stories.of(a.id).map(x => x.id).join(',') : '';
-    __E.enter(a); __E.f(30); __E.leave();
+    // (and, when a step fails, what the world said: L-309 — the two swaps failed once with B, Pompeia, chosen at the start)
+    const inA = __E.enter(a); __E.f(30); __E.leave();
     const aiA = __E.until(() => a.task && a.task.type !== 'avatar', 120) >= 0;
-    __E.enter(b);
+    const inB = __E.enter(b); const whyB = inB ? '' : G.Possess.can(b).why || `${G.Modes.state}, ${b.task ? b.task.type : 'sem tarefa'}`;
     const bOk = S.avatar && S.avatar.id === b.id && b.task.type === 'avatar';
     const aOk = S.villagers.get(a.id) === a && a.task && a.task.type !== 'avatar';
     // from inside: B → C (the card's button)
     const c = __E.adults(s).find(o => o.id !== a.id && o.id !== b.id);
-    const sw = G.Modes.switchTo(c); __E.f(40);
+    const sw = G.Modes.switchTo(c); const whyC = sw ? '' : G.Possess.can(c).why || G.Modes.state; __E.f(40);
     const cOk = S.avatar && S.avatar.id === c.id && c.task.type === 'avatar' && (!b.task || b.task.type !== 'avatar');
     const aiB = __E.until(() => b.task && b.task.type !== 'avatar', 120) >= 0;
     __E.leave();
     const ids = new Set(); let dup = 0; for (const o of S.villagers.values()) { if (ids.has(o.id)) dup++; ids.add(o.id); }
     let marks = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'avatar') marks++;
-    return { aiA, bOk, aOk, sw, cOk, aiB, dup, marks, stA, stA2: G.Stories ? G.Stories.of(a.id).map(x => x.id).join(',') : '', bioA: G.Life.bioList(a).slice(-1)[0].txt, bioB: G.Life.bioList(b).slice(-1)[0].txt, qa: __E.qa(), names: [a.name, b.name, c.name] };
+    return { inA, aiA, inB, whyB, bOk, aOk, sw, whyC, cOk, aiB, dup, marks, stA, stA2: G.Stories ? G.Stories.of(a.id).map(x => x.id).join(',') : '', bioA: G.Life.bioList(a).slice(-1)[0].txt, bioB: G.Life.bioList(b).slice(-1)[0].txt, qa: __E.qa(), names: [a.name, b.name, c.name] };
   });
-  ok('e4 A, Deus, B: os dois existem, a IA de A voltou, B tem o corpo', e4.aiA && e4.bOk && e4.aOk, `${e4.names[0]} → ${e4.names[1]}`);
-  ok('e4 de dentro, B → C: a IA de B volta, C tem o corpo', e4.sw && e4.cOk && e4.aiB, `${e4.names[1]} → ${e4.names[2]}`);
+  ok('e4 A, Deus, B: os dois existem, a IA de A voltou, B tem o corpo', e4.aiA && e4.bOk && e4.aOk, `${e4.names[0]} → ${e4.names[1]}${e4.aiA && e4.bOk && e4.aOk ? '' : ` — ${JSON.stringify({ inA: e4.inA, aiA: e4.aiA, inB: e4.inB, whyB: e4.whyB, bOk: e4.bOk, aOk: e4.aOk })}`}`);
+  ok('e4 de dentro, B → C: a IA de B volta, C tem o corpo', e4.sw && e4.cOk && e4.aiB, `${e4.names[1]} → ${e4.names[2]}${e4.sw && e4.cOk && e4.aiB ? '' : ` — ${JSON.stringify({ sw: e4.sw, whyC: e4.whyC, cOk: e4.cOk, aiB: e4.aiB })}`}`);
   ok('e4 ninguém duplicado, nenhuma marca sobrando, histórias intactas', !e4.dup && !e4.marks && e4.stA === e4.stA2, `duplicados ${e4.dup}, marcas ${e4.marks}; histórias de A: ${e4.stA || '-'} → ${e4.stA2 || '-'}; bio A: ${e4.bioA}`);
   ok('e4 verificador', !e4.qa.length, e4.qa.slice(0, 3).join(' · ') || 'limpo');
 
@@ -433,6 +437,10 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   // ================================ e9: the bad cases, and the hands changing the world ================================
   const e9 = await E(() => {
     const S = G.S; const out = {}; const s = __E.town();
+    // (the cases here take the town's grown ones in turn, four of them up and about: the parts before leave the world at the
+    // hour their time ended — after e3, in the «cidade» of the generation 7, at 0.75 of the day: of Roma's nine grown ones seven
+    // asleep at home and two in the street. The god lets the night pass first, until the town is up, T-262)
+    if (G.isNight() || __E.adults(s).length < 5) { G.UI.setSpeed(8); out.morning = __E.until(() => !G.isNight() && __E.adults(s).length >= 5, 3000, 100); G.UI.setSpeed(1); }
     // captured by enemies (the war's own capture): the body is the captor's now
     { const v = __E.adults(s)[0]; __E.enter(v); const foe = __E.adults(null, o => o.set !== v.set)[0] || __E.adults(s)[1]; G.War.capture(v, foe, null); __E.until(() => G.Modes.state === 'GOD', 400); out.capture = { avatar: !!S.avatar, task: v.task && v.task.type, captive: !!v.captive, mode: G.Modes.state }; }
     // taken aboard a ship (Naval.board): the incarnation ends with it
@@ -1270,7 +1278,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const v = __E.adults(s)[0]; __E.enter(v); const st0 = G.Realm.stats; const b0 = st0.builds, r0 = st0.rebuilds;
     let far = null, fd = 0; for (const b of S.buildings.values()) { if (!b.built) continue; const d = G.Vg.door(b); const dd = G.dist(d[0], d[1], v.x, v.y); if (dd > fd && dd < 50 && G.W.reaches(v, d[0], d[1])) { fd = dd; far = d; } }
     let maxNear = 0, maxLive = 0; const watch = () => { maxNear = Math.max(maxNear, G.Realm.chunkCount().near); maxLive = Math.max(maxLive, G.Realm.memory().live); };
-    const f0 = G.Main.frameFor; G.Main.frameFor = ms => { f0(ms); watch(); };
+    const f0 = G.Main.frameFor; G.Main.frameFor = (ms, w) => { f0(ms, w); watch(); };
     const p0 = G.Realm.stats.parts; const w = far ? __E.walkTo(far[0], far[1], 4500, true) : null;
     G.Main.frameFor = f0;
     const walk = { to: +(fd * 4).toFixed(0), ok: w && w.ok, frames: w && w.frames, maxNear, maxLive, built: G.Realm.stats.builds - b0, rebuilt: G.Realm.stats.rebuilds - r0, parts: G.Realm.stats.parts - p0, ms: Math.round(G.Realm.stats.ms) };
