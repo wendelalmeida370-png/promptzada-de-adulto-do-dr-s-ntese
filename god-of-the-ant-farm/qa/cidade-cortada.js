@@ -11,7 +11,11 @@
 //  c3 a água vai embora (depois do c1): ninguém troca de ofício duas vezes (sem vai e vem), e todo construtor alcança as obras
 //  c4 a obra que as ruas não alcançam (na própria ilhota) não é obra da cidade: ninguém deixa o ofício por ela
 //  c5 os armazéns cortados pela água — o h14 do fome.js sem a mão do deus (T-256) —: a cidade acende uma fogueira do lado das
-//     ruas, com um construtor de lá
+//     ruas, com um construtor de lá — quem tem uma carga simples nas mãos a pousa no chão, sem armazém ao alcance, e as mãos
+//     ficam livres para a obra (L-406) —; e, com a fogueira de pé, a carga pousada é apanhada por quem a alcança (L-408)
+//  c6 o mesmo, com a carga nas mãos de propósito: todo construtor das ruas com 3 de lenha nas mãos — antes da L-406 iam entregar
+//     num armazém do outro lado da água, e a fogueira nunca saía —: a pousam no chão, levantam a fogueira, e a carga pousada é
+//     apanhada por quem a alcança e levada à fogueira (L-408)
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console.
 //   node qa/cidade-cortada.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/cidade-cortada.js)
 //  O verificador do L-389 (QA.obras, no oficio-inv.js) olha a cada 5 s em todos os casos: uma cidade com obra das ruas e
@@ -185,16 +189,63 @@ for (const saved of [false, true]) {
     // (who built it: the ones on a task on it who could walk to it — one from the far side may take it in the seconds before the
     // town counts its builders again, and fail his way to it)
     let lit = null; const t0 = S.clock; const workers = new Set();
+    // (what the hands set down with no store within reach — L-406: a builder with wood in the hands never built the fire —
+    // is picked up when the fire stands, by one who reaches it and takes it there, L-408: before, it lay there for ever)
+    const down = []; const book = e => { if (e[8] === 'pousou' && !e[7] && String(e[4]).startsWith('g:')) down.push(+String(e[4]).slice(2)); };
+    const gone = () => down.every(id => !(S.loose || []).some(o => o.id === id));
+    D.onMove.push(book);
     if (cut) live(900, () => { const n = reached().find(b => !fire0.has(b.id)); if (n && !lit) lit = n; if (lit) for (const v of S.villagers.values()) if (v.task && v.task.type === 'build' && v.task.id === lit.id && reachV(v, lit)) workers.add(v.id); return !!(lit && lit.built); });
+    const tLit = Math.round(S.clock - t0); let tUp = -1;
+    if (lit && lit.built && down.length) { const t1 = S.clock; live(300, gone); if (gone()) tUp = Math.round(S.clock - t1); }
+    D.onMove.splice(D.onMove.indexOf(book), 1);
     const helped = [...workers].filter(id => far.includes(id));
-    pass = cut && stuck.length > 0 && !!lit && lit.built && !helped.length;
-    info = !cut ? `a água em volta dos ${stores.length} armazéns de ${set.name} não os cortou das ruas` : !stuck.length ? `${set.name}: nenhum construtor com a casa do outro lado da água (sem a premissa do h14)` : `${set.name}, ${stores.length} armazém(ns) cortado(s) pela água; ${stuck.length} construtor(es) em casa do outro lado (${names(stuck)}), deixados lá (agora ${stuck.map(v => v.role).join(', ')}): ${lit ? `${lit.type}#${lit.id} nova, ${lit.built ? 'acesa' : 'AINDA em obra'} em ${Math.round(S.clock - t0)} s, com ${names(roleOf([...workers]))}${helped.length ? ` (${names(roleOf(helped))} DO OUTRO LADO, por um caminho que o corte não fechou)` : ''}` : 'NENHUMA fogueira nova do lado das ruas em 900 s'}`;
+    pass = cut && stuck.length > 0 && !!lit && lit.built && !helped.length && gone();
+    info = !cut ? `a água em volta dos ${stores.length} armazéns de ${set.name} não os cortou das ruas` : !stuck.length ? `${set.name}: nenhum construtor com a casa do outro lado da água (sem a premissa do h14)` : `${set.name}, ${stores.length} armazém(ns) cortado(s) pela água; ${stuck.length} construtor(es) em casa do outro lado (${names(stuck)}), deixados lá (agora ${stuck.map(v => v.role).join(', ')}): ${lit ? `${lit.type}#${lit.id} nova, ${lit.built ? 'acesa' : 'AINDA em obra'} em ${tLit} s, com ${names(roleOf([...workers]))}${helped.length ? ` (${names(roleOf(helped))} DO OUTRO LADO, por um caminho que o corte não fechou)` : ''}` : 'NENHUMA fogueira nova do lado das ruas em 900 s'}; carga pousada sem armazém ao alcance: ${down.length}${down.length ? (gone() ? `, apanhada toda${tUp >= 0 ? ' ' + tUp + ' s depois da fogueira' : ''}` : ', NÃO apanhada (ainda no chão)') : ''}`;
     // (a town cut from its stores for days is the hunger rule's own case, S1 — the fome.js h5 —: not this case's to judge)
     const bad = newBad(B, new Set(['fome'])); if (bad.length) { pass = false; info += ` — o verificador: ${bad.join(' · ')}`; }
     if (said.length) { pass = false; info += obrasSaid(); }
     for (const [i, t] of was) S.type[i] = t; S.typeVer++; W.invalidateLand(); W.touchWalk();
   }
   ok('c5 os armazéns cortados: a fogueira das ruas, sem a mão do deus', pass, info);
+}
+
+// ---------------- c6 the stores cut off, and the builders of the streets with loads in the hands ----------------
+// (the case of the L-406 provoked on purpose: in the c5 the load in the hands depends on the world's way — in the generation 7's
+// Roma, Sabina came to the trade in the middle of felling a tree (the exchange of the L-389) —; here the hand of the proof
+// puts a plain load of wood in the hands of every builder of the town on the streets' side, their errands ended. Before the
+// L-406 they went to deliver it first, to a store across the water, failed, waited 12 s and began again: the fire was never
+// built. And, the fire up, what they set down is picked up by one who reaches it and taken there — L-408: before, it lay there
+// for ever)
+{
+  fresh(); const B = base();
+  const set = pickTown(); let pass = false, info = '';
+  if (!set) info = 'nenhuma cidade';
+  else {
+    const stores = V.dropoffs(set.id).slice(); const fire0 = new Set(stores.map(b => b.id));
+    const reached = () => [...S.buildings.values()].filter(b => b.set === set.id && G.BDEF[b.type] && (b.built ? G.BDEF[b.type].dropoff : b.type === 'campfire') && W.townReaches(set, ...V.frontTile(b)));
+    const was = new Map();
+    for (const b of stores) for (let y = b.y - 2; y < b.y + b.h + 2; y++) for (let x = b.x - 2; x < b.x + b.w + 2; x++) {
+      if (!W.inb(x, y)) continue; const i = W.idx(x, y); if (S.occ[i] || was.has(i) || S.type[i] <= G.T.SEA) continue; was.set(i, S.type[i]); S.type[i] = G.T.DEEP;
+    }
+    S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand(); W.touchWalk();
+    const cut = !reached().length;
+    const crew = builders(set).filter(q => free(q) && W.reachesTown(q, set));
+    for (const q of crew) { Vg.endTask(q); if (q.carry && q.carry.n > 1e-6) D.use('v:' + q.id, q.carry.k, q.carry.n, { code: 'teste', mine: true, part: true }); D.make('v:' + q.id, 'wood', 3, { code: 'teste' }); }
+    const down = []; const book = e => { if (e[8] === 'pousou' && !e[7] && String(e[4]).startsWith('g:') && crew.some(q => e[3] === 'v:' + q.id)) down.push(+String(e[4]).slice(2)); };
+    const gone = () => down.length > 0 && down.every(id => !(S.loose || []).some(o => o.id === id));
+    D.onMove.push(book);
+    let lit = null, tLit = -1; const t0 = S.clock;
+    if (cut && crew.length) live(600, () => { const n = reached().find(b => !fire0.has(b.id)); if (n && !lit) lit = n; if (lit && lit.built && tLit < 0) tLit = Math.round(S.clock - t0); return !!(lit && lit.built); });
+    let tUp = -1; if (lit && lit.built && down.length) { const t1 = S.clock; live(300, gone); if (gone()) tUp = Math.round(S.clock - t1); }
+    D.onMove.splice(D.onMove.indexOf(book), 1);
+    const stuckNow = crew.filter(q => q.carry && q.carry.n > 1e-6 && q.task && q.task.type === 'deliver').length;
+    pass = cut && crew.length > 0 && !!lit && lit.built && gone();
+    info = !cut ? `a água em volta dos ${stores.length} armazéns de ${set.name} não os cortou das ruas` : !crew.length ? `${set.name}: nenhum construtor do lado das ruas` : `${set.name}, ${stores.length} armazém(ns) cortado(s) pela água; ${crew.length} construtor(es) das ruas com 3 de lenha nas mãos (${names(crew)}): ${down.length} pousaram a carga no chão; ${lit ? `${lit.type}#${lit.id} nova, ${lit.built ? 'acesa em ' + tLit + ' s' : 'AINDA em obra em 600 s'}` : 'NENHUMA fogueira nova do lado das ruas em 600 s'}${stuckNow ? `; ${stuckNow} ainda com a lenha nas mãos, a caminho de entregar` : ''}; a carga pousada ${!down.length ? '-' : gone() ? `apanhada toda${tUp >= 0 ? ', ' + tUp + ' s depois da fogueira' : ''}` : 'NÃO apanhada (ainda no chão)'}`;
+    const bad = newBad(B, new Set(['fome'])); if (bad.length) { pass = false; info += ` — o verificador: ${bad.join(' · ')}`; }
+    if (said.length) { pass = false; info += obrasSaid(); }
+    for (const [i, t] of was) S.type[i] = t; S.typeVer++; W.invalidateLand(); W.touchWalk();
+  }
+  ok('c6 os construtores das ruas com carga nas mãos: a pousam, levantam a fogueira, e a carga é apanhada', pass, info);
 }
 
 // ---------------- clean ----------------

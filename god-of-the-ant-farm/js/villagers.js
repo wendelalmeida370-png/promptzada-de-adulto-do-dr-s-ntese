@@ -944,6 +944,30 @@
   let preyN = 0, preyT = -1;
   G.worldHooks.push(() => { preyN = 0; preyT = -1; }); // (a new world, or a save loaded: it starts over)
   function preyCount() { const S = G.S; if (preyT !== S.clock) { preyT = S.clock; preyN = 0; for (const a of S.animals.values()) if (!a.dead && G.Animals.huntable(a)) preyN++; } return preyN; }
+  // a plain load of the people on the ground — set down with no store within reach (L-169, L-406), or left there by an
+  // operation that ended —: whoever goes to work with empty hands, reaching it and a store of his town, picks it up first
+  // and takes it to the store as any load; the nearest within a work's walk, then the first set down — no chance drawn —, and
+  // not one another is on his way to. Only what has no operation: the porters' crates ('pegarChao') and the workshops' input
+  // ('chao') are their operations' to pick up. Nothing picked it up before: it lay there for ever, L-408
+  const PICK_R = 30; Vg.PICK_R = PICK_R;
+  const picking = (gid, v) => { for (const o of G.S.villagers.values()) if (o !== v && o.task && o.task.type === 'apanhar' && o.task.g === gid) return true; return false; };
+  Vg.groundLoad = o => !!(o && !o.op && o.k !== 'water' && o.fac && o.n > 1e-6);
+  function pickupTask(v) {
+    const L = G.S.loose; if (!L || !L.length || (v.carry && v.carry.n > 1e-6)) return null;
+    const fid = G.Fac.idOfV(v); let best = null, bd = PICK_R * PICK_R;
+    for (const o of L) {
+      if (!Vg.groundLoad(o) || o.fac !== fid) continue;
+      // (not the one whose way this person has just failed to find — the map of regions says it is reached, the search of a
+      // short way round a flooded store spent its budget —: in the cidade-cortada's c6 one chose it again at every look, and
+      // did nothing else, 74 times in 13 s)
+      if (v._pfI === W.idx(o.x, o.y) * 2 + 1 && G.S.clock - v._pfT < 12) continue;
+      const d = G.dist2(v.x, v.y, o.x, o.y); if (d >= bd || !W.reaches(v, o.x, o.y) || picking(o.id, v)) continue;
+      best = o; bd = d;
+    }
+    if (!best) return null;
+    const st = G.Village.nearestDropoff(v.x, v.y, v.set, v); if (!st || !W.reaches(v, ...G.Village.frontTile(st))) return null;
+    return setTask(v, { type: 'apanhar', g: best.id, pri: 1, st: 0 });
+  }
   function workTask(v) {
     const S = G.S; const fac = G.Fac.ofV(v); if (!fac) return null;
     const st = fac.stock; const capS = G.Village.cap(fac.id);
@@ -954,6 +978,8 @@
       if (v.role === 'construtor') { const t = buildTask(v); if (t) return t; }
       return deliverTask(v);
     }
+    // (a plain load of the people on the ground first, L-408)
+    if (!v.captive) { const t = pickupTask(v); if (t) return t; }
     const tg = fac.targets || { food: 60, wood: 60, stone: 30 };
     const need = k => st[k] < Math.min(capS - 1, tg[k]);
     let t = null;
@@ -1016,6 +1042,18 @@
           t.st = 1;
         } else if (move(v, dt)) { deliverPlain(v, G.Fac.idOfV(v)); end(v); }
         break;
+      }
+      case 'apanhar': {
+        // (the plain load on the ground: to it, and up into the hands by the depot — 'apanhou' —; the next look takes it to
+        // the store as any load. Gone, or taken by an operation, or the hands full meanwhile: the errand is over — L-408)
+        const o = (S.loose || []).find(x => x.id === t.g);
+        if (!Vg.groundLoad(o) || (v.carry && v.carry.n > 1e-6)) return end(v);
+        if (t.st === 0) { if (!Vg.goto(v, o.x, o.y, true)) return end(v); t.st = 1; break; }
+        if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; } break; }
+        v.act = 'gather'; if (v.actT < 0.8) break;
+        const n = Math.min(o.n, Math.floor(G.Depot.room('v:' + v.id, o.k) + 1e-9));
+        if (n > 0) G.Depot.move('g:' + o.id, 'v:' + v.id, o.k, n, { code: 'apanhou', by: v.id });
+        end(v); break;
       }
       case 'chop': {
         const tr = S.trees.get(t.id);
@@ -1970,6 +2008,7 @@
       case 'idle': return 'Descansando';
       case 'wander': return 'Passeando';
       case 'deliver': { const d = S.buildings.get(t.drop); return v.carry ? `Levando ${MAT[v.carry.k]} ${d && d.type === 'storehouse' ? 'ao armazém' : 'à fogueira'}` : 'Guardando recursos'; }
+      case 'apanhar': { const o = (S.loose || []).find(x => x.id === t.g); return o ? `Apanhando ${MAT[o.k]} do chão` : 'Apanhando o que ficou no chão'; }
       case 'chop': return t.st < 2 ? 'Indo cortar uma árvore' : 'Cortando lenha';
       case 'gather': return t.kind === 'help' ? 'Ajudando a colher frutas' : 'Colhendo frutas silvestres';
       case 'forage': return 'Procurando algo para comer';

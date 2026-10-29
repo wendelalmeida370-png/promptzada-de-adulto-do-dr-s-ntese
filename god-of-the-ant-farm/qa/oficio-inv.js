@@ -1,8 +1,9 @@
 // oficio-inv: the checker's rules for the trades (P2) — the batches of a workshop (G.Oficio: the pottery's bricks, adobes and
-// pots), the brick of the works (D-075) — and the busy hands (D-094), what a ruin keeps (L-377) and the builders on the side
-// of the works (L-389). Loaded after qa/qa.js (QA.more); copied into qa.js by qa/junta-inv.js. It reads the world's fields
-// directly: a fault in the trades' own code is not hidden by the code it checks. Each rule has its name (QA.oficio, QA.maos,
-// QA.ruina, QA.obras): a proof asks for the one it watches by it, not by its place in QA.more
+// pots), the brick of the works (D-075) — and the busy hands (D-094), what a ruin keeps (L-377), the builders on the side
+// of the works (L-389) and a plain load left on the ground (L-408). Loaded after qa/qa.js (QA.more); copied into qa.js by
+// qa/junta-inv.js. It reads the world's fields directly: a fault in the trades' own code is not hidden by the code it checks.
+// Each rule has its name (QA.oficio, QA.maos, QA.ruina, QA.obras, QA.chao): a proof asks for the one it watches by it, not by
+// its place in QA.more
 (function () {
   if (!window.QA || !QA.more) return;
   const fin = x => typeof x === 'number' && isFinite(x);
@@ -246,4 +247,29 @@
     cut0 = now;
   });
   if (G.worldHooks) G.worldHooks.push(() => { cut0 = new Map(); cut0S = null; });
+  // a plain load of a people on the ground — no operation, not water — with one of them, free and with empty hands, who
+  // reaches it within a work's walk (G.Vg.PICK_R) and a store of his town: picked up within 300 s of the world, or a fault
+  // (S3) — the hands go to work by day, and a load set down at dusk waits the night. The checker's own reading, by the map of
+  // regions; each load's clock from when it was first so. Nothing picked such a load up before: it lay there for ever (L-408)
+  let chao0 = new Map(), chao0S = null; // (since when each load has had a hand to pick it up)
+  QA.more.push(QA.chao = function (add, s) {
+    const W = G.W, V = G.Village; if (!W || !W.reaches || !V || !G.Vg) return;
+    if (chao0S !== s) { chao0S = s; chao0 = new Map(); }
+    const R = G.Vg.PICK_R || 30; const now = new Map();
+    for (const o of s.loose || []) {
+      if (o.op || o.k === 'water' || !o.fac || !(o.n > EPS)) continue;
+      let who = null;
+      for (const v of s.villagers.values()) {
+        if (v.age < 16 || v.captive || v.jail || v.aboard || v.held || v.ug || v.air || (v.carry && v.carry.n > 1e-6) || G.Fac.idOfV(v) !== o.fac) continue;
+        if ((v.x - o.x) * (v.x - o.x) + (v.y - o.y) * (v.y - o.y) > R * R || !W.reaches(v, o.x, o.y)) continue;
+        const st = V.nearestDropoff(v.x, v.y, v.set, v); if (!st || !W.reaches(v, ...V.frontTile(st))) continue;
+        who = v; break;
+      }
+      if (!who) continue;
+      const since = chao0.has(o.id) ? chao0.get(o.id) : s.clock; now.set(o.id, since);
+      if (s.clock - since > 300) add('oficio', 3, `${Math.round(o.n * 100) / 100} de ${o.k} no chão em ${o.x},${o.y}, sem operação, há ${Math.round(s.clock - since)} s, e ninguém a apanha — ${who.name} #${who.id} a alcança, de mãos vazias, com um armazém ao alcance (L-408)`);
+    }
+    chao0 = now;
+  });
+  if (G.worldHooks) G.worldHooks.push(() => { chao0 = new Map(); chao0S = null; });
 })();
