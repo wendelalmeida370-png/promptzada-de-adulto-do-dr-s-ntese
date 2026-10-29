@@ -2765,7 +2765,8 @@ float m3scale(float p) {
       if (!inChunk(b, x0, y0, n)) continue;
       // (a building with a form: its masses, as the form has them — the drum, the pyramid, the levels, the roof —; with a plan
       // too, the form all the same: what is seen is the form, D-093)
-      const Fm = b.built && B3.byForm(b) && formOf(b); if (Fm) { massInto(g, b, Fm, doorSide(b)); continue; }
+      // (turned as near: to its plan's side — formSide —, the world's door only where it has no shell)
+      const Fm = b.built && B3.byForm(b) && formOf(b); if (Fm) { massInto(g, b, Fm, formSide(b, B3.shellOf(b))); continue; }
       const P = palOf(b); const Sh = B3.shellOf(b);
       if (Sh && Sh.shell.kind !== 'round') { const sh = Sh.shell, R = sh.r; const y0 = G.Space.plinth(b).y0; const X = b.x * L + (R[0] + R[2]) / 2, Z = b.y * L + (R[1] + R[3]) / 2; const st = stuff(b); const rk = ROOFK[sh.roof && sh.roof.kind] || P.kind;
         g.pat = PAT[OUTPAT[sh.mat] || 'plaster']; g.put(SH.box, R3.mat(X, y0 - 0.3, Z, 0, R[2] - R[0], sh.eave + 0.3, R[3] - R[1]), P.wl || '#efe2c4');
@@ -3486,6 +3487,11 @@ float m3scale(float p) {
   // the plan's openings, which are the form's; the rest is the form's — its base and its treads, its porch and its columns, its
   // entablature, its roof —, and not the shell's footing, annexes, roof nor flights: what is seen is the form)
   const bodyForm = b => { const F = b.ip && /^forma\./.test(b.ip.f || '') && G.Forma && G.Forma.of(b.type, styleOf(b)); return F && F.body ? F : null; };
+  // (the side a form with a plan is turned to: the plan's — its entrance's —, where its rooms, its pieces and its way in are;
+  // the world's door only where the shell has no entrance: while the plan's way in is not open ground, the world's door falls
+  // back to the old corner rule — a day, till the turn of the day moves it —, and the form would turn round from its plan)
+  const formSide = (b, S) => (S && S.entrance && S.entrance.side) || doorSide(b);
+  B3.formSide = formSide;
   function shellHouse(g, gw, K, S) {
     const sh = S.shell, P = K.P; if (sh.kind === 'round') return shellRound(g, gw, K, S); if (sh.kind === 'aberta') return shellOpen(g, gw, K, S);
     const FB = bodyForm(K.b);
@@ -3495,7 +3501,7 @@ float m3scale(float p) {
     const l0 = body[0] || S.levels[0], raised = l0.kind === 'elevado' || sh.base === 'esteios';
     const foot = raised ? l0.y - (l0.slab || 0.2) : 0, eave = sh.eave;
     const rk = ROOFK[sh.roof && sh.roof.kind] || P.kind || 'gable', flat = rk === 'flat';
-    const e = S.entrance, side = (e && e.side) || doorSide(K.b), od = SIDEO[side] || [0, 1];
+    const e = S.entrance, side = formSide(K.b, S), od = SIDEO[side] || [0, 1];
     K.cls = K.st === 'nordico' ? NCLS[K.b.type] || 1 : 0;
     K.body = { x, z, sx, sz, door: e ? { side, o: od, a: od[1] ? e.x - x : e.z - z, w: (e.w || 1) + 0.5 } : null, shell: true };
     const ctx = { S, byLv, l0, foot, eave, rk, flat, raised, k: 0, gw, form: !!FB };
@@ -3590,7 +3596,7 @@ float m3scale(float p) {
   const AWN = [[196, 84, 62], [222, 192, 118], [88, 120, 162], [234, 226, 204], [160, 104, 64]];
   function shellOpen(g, gw, K, S) {
     const sh = S.shell, R = sh.r, x = (R[0] + R[2]) / 2, z = (R[1] + R[3]) / 2, sx = R[2] - R[0], sz = R[3] - R[1];
-    const Fm = G.Forma && G.Forma.of(K.b.type, styleOf(K.b)); const top = Fm ? formInto(g, gw, K, Fm, doorSide(K.b)) : 0;
+    const Fm = G.Forma && G.Forma.of(K.b.type, styleOf(K.b)); const top = Fm ? formInto(g, gw, K, Fm, formSide(K.b, S)) : 0;
     K.body = { x, z, sx, sz, door: null, shell: true, open: true };
     if (sh.roof && sh.roof.kind === 'toldo' && sh.eave > 0.5) {
       const az = sh.roof.along === 'z'; const len = (az ? sz : sx) - 0.2, wide = az ? sx : sz; const sw = 2.1, gap = 0.55;
