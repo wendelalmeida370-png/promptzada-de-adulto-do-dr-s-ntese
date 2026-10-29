@@ -14,7 +14,8 @@
 //  prateleira de volta ao armazém, é do qa/guardados.js, L-377.)
 // Num mundo sem mercado clandestino, a prova o abre como o mundo abre (economy.js, considerBlackMarket): um beco da cidade, dois
 // contrabandistas. O roubo é de noite: a cama da noite o cortava no primeiro olhar (L-386, aberta: a noite do contrabandista
-// como a da vigia — o G.Eco.prowls e a exceção ao sono no decide); até lá, a k1 e as que vêm dela (k3, k4, k5) ficam vermelhas.
+// como a da vigia — a pergunta, G.Eco.prowls, já está no economy.js; falta a exceção ao sono no decide, do P1); até lá, a k1 e
+// as que vêm dela (k3, k4, k5) ficam vermelhas.
 //   node qa/contrabando.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/contrabando.js)
 const M = require('./nodemundo.js'); const G = M.load({ qa: true });
 const D = G.Depot, E = G.Eco, V = G.Village;

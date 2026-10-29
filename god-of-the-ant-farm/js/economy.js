@@ -494,18 +494,34 @@
     for (const id of route) S.buildings.get(id).taxT = S.clock + DAY() * 0.6;
     return H.setTask(v, { type: 'taxes', id: b.id, route, k: 0, bag: 0, pri: 1.05 });
   }
+  // what a smuggler takes from his town's store, and the theft that waits for him tonight: room on the market's shelf, a store
+  // of his town to go to and something there worth it — or null (asked by his task and by his night, E.prowls)
+  const LOOT = ['tecido', 'ceramica', 'joias', 'food', 'couro', 'ferramentas'];
+  const shelfStock = I => { let n = 0; for (const k in I) if (k !== 'moedas') n += I[k]; return n; };
+  function nightTheft(v, b, f) {
+    if (shelfStock(b.inv || {}) >= 12) return null;
+    const d = G.Village.nearestDropoff(b.x, b.y, v.set); if (!d) return null;
+    const pick = LOOT.filter(k => (f.stock[k] || 0) >= 3); return pick.length ? { d, pick } : null;
+  }
   function smugglerTask(v, b, f, H) {
-    const S = G.S; const I = inv(b);
-    let stock = 0; for (const k in I) if (k !== 'moedas') stock += I[k];
+    const stock = shelfStock(inv(b));
     if (G.isNight() || (G.isEvening() && G.R() < 0.4)) {
-      const d = G.Village.nearestDropoff(b.x, b.y, v.set);
-      const pick = ['tecido', 'ceramica', 'joias', 'food', 'couro', 'ferramentas'].filter(k => (f.stock[k] || 0) >= 3);
-      if (d && pick.length && stock < 12) return H.setTask(v, { type: 'steal', id: b.id, drop: d.id, k: G.pick(pick), pri: 1.2 });
+      const th = nightTheft(v, b, f);
+      if (th) return H.setTask(v, { type: 'steal', id: b.id, drop: th.d.id, k: G.pick(th.pick), pri: 1.2 });
       return null;
     }
     if (stock > 0) return H.setTask(v, { type: 'sell', id: b.id, pri: 1, dur: G.rr(16, 26), shady: true });
     return null;
   }
+  // the smuggler's night, asked by the decide of villagers.js: one of a black market with a theft for tonight — or on his way
+  // back to the market with what he stole — is up at night like the night watch, above the bed and till he is tired. The bed
+  // took him at the night's first look, and the theft never came (L-386). A question: it writes nothing and draws no chance
+  E.prowls = function (v) {
+    if (!v || v.role !== 'contrabandista' || v.captive || v.jail || v.aboard || !G.isNight()) return false;
+    const b = v.job && G.S.buildings.get(v.job); if (!b || !b.built || b.type !== 'mercado_negro') return false;
+    const c = v.carry; if (c && c.stolen && c.n > 1e-6 && c.to === 'b:' + b.id) return true;
+    const f = G.Fac.ofV(v); return !!(f && nightTheft(v, b, f));
+  };
 
   // ------------------------------ the pens ------------------------------
   E.penGrass = function (b) { const S = G.S; if (!S.veg) return 1; let v = 0, c = 0; for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) { const i = y * N + x; v += S.veg[i]; c += Math.max(0.2, G.Animals.vegCap(i) || 0.6); } return c ? v / c : 1; };
