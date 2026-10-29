@@ -12,7 +12,10 @@
 //     ruas, com um construtor de lá
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console.
 //   node qa/cidade-cortada.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/cidade-cortada.js)
-const M = require('./nodemundo.js'); const G = M.load({ qa: true });
+//  O verificador do L-389 (QA.obras, no oficio-inv.js) olha a cada 5 s em todos os casos: uma cidade com obra das ruas e
+//  nenhum construtor com caminho a ela por mais de 30 s. A prova lê o caminho pelo mapa de regiões ela mesma (a frente da
+//  obra ou um lado livre), e não pelas funções do conserto: roda igual no código de antes, para mostrar o antes e o depois.
+const M = require('./nodemundo.js'); const G = M.load({ qa: true, extra: ['qa/oficio-inv.js'] });
 const V = G.Village, Vg = G.Vg, W = G.W, D = G.Depot;
 const fails = [];
 const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | cidade-cortada ${name} | ${info}`); if (!c) fails.push(name); };
@@ -20,10 +23,14 @@ const world = process.argv[2] || 'cidade';
 let S;
 M.pronto(world); S = G.S; M.viver(2);
 const snap = G.Save.serialize();
+// (what the L-389 rule says, every 5 s of the world: each case keeps all it said)
+let said = [];
+const seeObras = () => { if (!QA.obras) return; QA.obras((sys, sev, msg) => { if (!said.includes(msg)) said.push(msg); }, S); };
 // (each case from the same world, in the morning and in the god's peace: no war of the world's own through the new ways)
-const fresh = () => { M.reseed(4242); G.Save.apply(JSON.parse(snap)); G.Main.mode = 'game'; if (G.UI && G.UI.setSpeed) G.UI.setSpeed(0); S = G.S; S.time = 0.3; G.Politics.divinePeace(); G.inSim = Math.max(G.inSim || 0, 1); };
+const fresh = () => { M.reseed(4242); G.Save.apply(JSON.parse(snap)); G.Main.mode = 'game'; if (G.UI && G.UI.setSpeed) G.UI.setSpeed(0); S = G.S; S.time = 0.3; G.Politics.divinePeace(); G.inSim = Math.max(G.inSim || 0, 1); said = []; };
 const peace = () => { S.divinePeace = Math.max(S.divinePeace || 0, G.DAY_LEN); };
-const live = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); if (k % 10 === 0) peace(); if (until && until()) return true; } return false; };
+const live = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); if (k % 10 === 0) peace(); if (k % 50 === 49) seeObras(); if (until && until()) return true; } return false; };
+const obrasSaid = () => (said.length ? ` — o verificador do L-389: «${said[0]}»${said.length > 1 ? ` e mais ${said.length - 1}` : ''}` : '');
 const base = () => new Set(QA.check().filter(q => q.sev <= 2).map(q => `${q.sys}|${q.msg}`));
 const newBad = (B, skip) => QA.check().filter(q => q.sev <= 2 && !(skip && skip.has(q.sys)) && !B.has(`${q.sys}|${q.msg}`)).slice(0, 3).map(q => `S${q.sev} ${q.sys} ${q.msg}`);
 const free = v => !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !(S.avatar && S.avatar.id === v.id);
@@ -58,6 +65,11 @@ const streetWork = set => { const b = V.startProject(set, 'hut'); if (!b) return
 const P = id => S.villagers.get(id);
 const site = id => S.buildings.get(id);
 const roleOf = ids => ids.map(P).filter(Boolean);
+// (the test's own reading of who can walk to a work, and whether the town's streets can: its front or a free side of it, by the
+// map of regions — the builder's own rule, Vg.gotoB —; not the fix's functions, so it reads the same in the code of before)
+const sidesOf = b => { const [fx, fy] = V.frontTile(b); const out = [[fx, fy]]; for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) { if (y >= b.y && y < b.y + b.h && x >= b.x && x < b.x + b.w) continue; if (W.inb(x, y) && W.walkable(W.idx(x, y))) out.push([x + 0.5, y + 0.5]); } return out; };
+const reachV = (v, b) => sidesOf(b).some(p => W.reaches(v, p[0], p[1]));
+const reachT = (set, b) => sidesOf(b).some(p => W.townReaches(set, p[0], p[1]));
 G.inSim++;
 
 // ---------------- c1 and c2: the islet, without and with a save right after the cut ----------------
@@ -71,36 +83,37 @@ for (const saved of [false, true]) {
   else {
     const was = flood(at[0], at[1]); const gone = strand(set0, at).map(v => v.id);
     const b = streetWork(set0); const bid = b ? b.id : 0; const sid = set0.id;
-    const town = !!b && V.townReachesWork(set0, b);
-    const cut = !!b && gone.length > 0 && roleOf(gone).every(v => !V.reachesWork(v, b));
+    const town = !!b && reachT(set0, b);
+    const cut = !!b && gone.length > 0 && roleOf(gone).every(v => !reachV(v, b));
     if (saved) { M.salvarCarregar(); S = G.S; G.inSim = Math.max(G.inSim || 0, 1); }
     const set = S.settlements.get(sid); const p0 = site(bid) ? site(bid).progress : 0;
     // (who works on it once the town has counted its builders again: the ones it names on its streets, by the map of regions —
     // never one from the islet, who may take the work in the seconds before the count and fail his way to it)
     const workers = new Set(); const look = () => { for (const v of S.villagers.values()) if (v.task && v.task.type === 'build' && v.task.id === bid) workers.add(v.id); };
     live(20); const left = roleOf(gone).filter(v => v.role !== 'construtor'); const named = builders(set).filter(v => !gone.includes(v.id));
-    const reach = named.filter(v => site(bid) && V.reachesWork(v, site(bid)));
+    const reach = named.filter(v => site(bid) && reachV(v, site(bid)));
     let moved = false; live(160, () => { look(); const o = site(bid); moved = !o || o.built || o.progress > p0 + 1e-6; return moved; });
     const o = site(bid); const strangers = [...workers].filter(id => gone.includes(id));
     pass = town && cut && left.length === gone.length && reach.length > 0 && moved && workers.size > 0 && !strangers.length;
     info = `${set.name}: ${gone.length} construtor(es) na ilhota (${names(roleOf(gone))}) ${cut ? 'sem caminho para a obra' : 'AINDA alcançando a obra'}${saved ? ', salvo e carregado logo depois do corte' : ''}; em 20 s, ${left.length} de ${gone.length} trocaram de ofício (${roleOf(gone).map(v => v.role).join(', ')}); construtores das ruas: ${names(named)} (${reach.length} alcançam a obra); ${b ? `${b.type}#${bid}${town ? '' : ' FORA das ruas'}` : 'nenhuma obra'}: ${o ? (o.built ? 'pronta' : `progresso ${Math.round(p0 * 100)}% → ${Math.round(o.progress * 100)}%`) : 'saiu do mundo'}, com ${names(roleOf([...workers]))}${strangers.length ? ` (${names(roleOf(strangers))} DA ILHOTA)` : ''}`;
     const bad = newBad(B); if (bad.length) { pass = false; info += ` — o verificador: ${bad.join(' · ')}`; }
+    if (said.length) { pass = false; info += obrasSaid(); }
     if (!saved) after1 = { was, gone, sid, bid };
     else unflood(was);
   }
   ok(saved ? 'c2 a ilhota com um save no meio' : 'c1 a ilhota: os construtores do outro lado e a obra das ruas', pass, info);
   if (!saved && after1) {
     // ---------------- c3 the water goes away: no coming and going ----------------
-    const B3 = base(); const set = S.settlements.get(after1.sid);
+    const B3 = base(); const set = S.settlements.get(after1.sid); said = [];
     const changes = new Map(); const on0 = G.Life && G.Life.onRole;
     if (on0) G.Life.onRole = function (v, prev) { if (v && v.set === set.id && v.role !== prev) changes.set(v.id, (changes.get(v.id) || 0) + 1); return on0.apply(this, arguments); };
     unflood(after1.was); live(60);
     if (on0) G.Life.onRole = on0;
     const twice = [...changes].filter(([, n]) => n > 1).map(([id]) => P(id)).filter(Boolean);
-    const works = [...S.buildings.values()].filter(b => b.set === set.id && !b.built && b.type !== 'ruin' && V.townReachesWork(set, b));
-    const lost = works.length ? builders(set).filter(v => free(v) && !works.some(b => V.reachesWork(v, b))) : [];
+    const works = [...S.buildings.values()].filter(b => b.set === set.id && !b.built && b.type !== 'ruin' && reachT(set, b));
+    const lost = works.length ? builders(set).filter(v => free(v) && !works.some(b => reachV(v, b))) : [];
     const bad = newBad(B3);
-    ok('c3 a água vai embora: sem vai e vem', !twice.length && !lost.length && !bad.length, `${set.name}, sem a ilhota: em 60 s, ${changes.size} troca(s) de ofício na cidade, ${twice.length ? `${names(twice)} trocaram DUAS vezes` : 'ninguém duas vezes'}; ${works.length} obra(s) das ruas, ${lost.length ? `${names(lost)} SEM caminho a elas` : 'todo construtor livre as alcança'}${bad.length ? ' — o verificador: ' + bad.join(' · ') : ''}`);
+    ok('c3 a água vai embora: sem vai e vem', !twice.length && !lost.length && !bad.length && !said.length, `${set.name}, sem a ilhota: em 60 s, ${changes.size} troca(s) de ofício na cidade, ${twice.length ? `${names(twice)} trocaram DUAS vezes` : 'ninguém duas vezes'}; ${works.length} obra(s) das ruas, ${lost.length ? `${names(lost)} SEM caminho a elas` : 'todo construtor livre as alcança'}${bad.length ? ' — o verificador: ' + bad.join(' · ') : ''}${obrasSaid()}`);
     after1 = null;
   }
 }
@@ -116,16 +129,17 @@ for (const saved of [false, true]) {
     const w = V.startProject(set, 'well', [at[0], at[1]]);
     const b0 = builders(set).filter(free).map(v => v.id);
     // (the town's works its streets reach, besides the islet's: a builder of the town reaches them, and keeps the trade)
-    const theirs = [...S.buildings.values()].filter(b => b.set === set.id && !b.built && b.type !== 'ruin' && b !== w && V.townReachesWork(set, b));
+    const theirs = [...S.buildings.values()].filter(b => b.set === set.id && !b.built && b.type !== 'ruin' && b !== w && reachT(set, b));
     live(20);
-    const notTown = !!w && !V.townReachesWork(set, w);
+    const notTown = !!w && !reachT(set, w);
     // (who left the trade in these 20 s did so by the town's counts — a builder who still reaches the streets' works —, never
     // one sent away for a work across the water)
     const outs = roleOf(b0).filter(v => v.role !== 'construtor');
-    const strandedOut = outs.filter(v => !theirs.some(b => V.reachesWork(v, b)));
+    const strandedOut = outs.filter(v => !theirs.some(b => reachV(v, b)));
     pass = notTown && builders(set).length > 0 && !strandedOut.length;
     info = `${set.name}: ${w ? `${w.type}#${w.id} na ilhota, ${notTown ? 'fora das obras da cidade' : 'CONTADA como obra da cidade'}` : 'nenhuma obra na ilhota'}; ${theirs.length} outra(s) obra(s) nas ruas; dos ${b0.length} construtores, ${b0.length - outs.length} seguem no ofício${outs.length ? ` (${outs.length - strandedOut.length} saíram pelas contas da cidade)` : ''}${strandedOut.length ? `; ${names(strandedOut)} SAÍRAM sem caminho às obras das ruas` : ''}`;
     const bad = newBad(B); if (bad.length) { pass = false; info += ` — o verificador: ${bad.join(' · ')}`; }
+    if (said.length) { pass = false; info += obrasSaid(); }
     unflood(was);
   }
   ok('c4 a obra que as ruas não alcançam não tira ninguém do ofício', pass, info);
@@ -152,11 +166,12 @@ for (const saved of [false, true]) {
     // (who built it: the ones on a task on it who could walk to it — one from the far side may take it in the seconds before the
     // town counts its builders again, and fail his way to it)
     let lit = null; const t0 = S.clock; const workers = new Set();
-    if (cut) live(900, () => { const n = reached().find(b => !fire0.has(b.id)); if (n && !lit) lit = n; if (lit) for (const v of S.villagers.values()) if (v.task && v.task.type === 'build' && v.task.id === lit.id && V.reachesWork(v, lit)) workers.add(v.id); return !!(lit && lit.built); });
+    if (cut) live(900, () => { const n = reached().find(b => !fire0.has(b.id)); if (n && !lit) lit = n; if (lit) for (const v of S.villagers.values()) if (v.task && v.task.type === 'build' && v.task.id === lit.id && reachV(v, lit)) workers.add(v.id); return !!(lit && lit.built); });
     pass = cut && !!lit && lit.built;
     info = !cut ? `a água em volta dos ${stores.length} armazéns de ${set.name} não os cortou das ruas` : `${set.name}, ${stores.length} armazém(ns) cortado(s) pela água; ${far.length} construtor(es) do outro lado (${names(roleOf(far))}), deixados lá (agora ${roleOf(far).map(v => v.role).join(', ') || '-'}): ${lit ? `${lit.type}#${lit.id} nova, ${lit.built ? 'acesa' : 'AINDA em obra'} em ${Math.round(S.clock - t0)} s, com ${names(roleOf([...workers]))}` : 'NENHUMA fogueira nova do lado das ruas em 900 s'}`;
     // (a town cut from its stores for days is the hunger rule's own case, S1 — the fome.js h5 —: not this case's to judge)
     const bad = newBad(B, new Set(['fome'])); if (bad.length) { pass = false; info += ` — o verificador: ${bad.join(' · ')}`; }
+    if (said.length) { pass = false; info += obrasSaid(); }
     for (const [i, t] of was) S.type[i] = t; S.typeVer++; W.invalidateLand(); W.touchWalk();
   }
   ok('c5 os armazéns cortados: a fogueira das ruas, sem a mão do deus', pass, info);
