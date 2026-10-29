@@ -1,0 +1,1106 @@
+'use strict';
+// ============================================================
+//  Village: buildings, settlements, stockpile, planner, jobs,
+//  housing, chronicle, milestones, births & deaths
+// ============================================================
+(function (G) {
+  let N = G.N; const T = G.T, W = G.W;
+  G.mapHooks.push(n => { N = n; });
+  const V = G.Village = {};
+
+  G.BDEF = {
+    campfire: { name: 'Fogueira', w: 1, h: 1, cost: {}, work: 3, blocks: true, dropoff: true, hp: 60 },
+    hut: { name: 'Cabana', w: 1, h: 1, cost: { wood: 10 }, work: 14, housing: 4, blocks: true, hp: 60 },
+    house: { name: 'Casa', w: 1, h: 1, cost: { wood: 14, stone: 10 }, work: 24, housing: 6, blocks: true, hp: 110 },
+    storehouse: { name: 'Armazém', w: 2, h: 2, cost: { wood: 26, stone: 6 }, work: 30, blocks: true, dropoff: true, storage: 150, hp: 140 },
+    farm: { name: 'Fazenda', w: 3, h: 3, cost: { wood: 12 }, work: 10, blocks: false, hp: 60 },
+    well: { name: 'Poço', w: 1, h: 1, cost: { wood: 6, stone: 12 }, work: 14, blocks: true, hp: 150 },
+    workshop: { name: 'Oficina', w: 2, h: 2, cost: { wood: 30, stone: 22 }, work: 38, blocks: true, hp: 160 },
+    temple: { name: 'Templo', w: 2, h: 2, cost: { wood: 28, stone: 55 }, work: 65, blocks: true, hp: 260 },
+    monument: { name: 'Monumento', w: 2, h: 2, cost: { wood: 15, stone: 90 }, work: 90, blocks: true, hp: 400 },
+    cemetery: { name: 'Cemitério', w: 2, h: 2, cost: {}, work: 0, blocks: false, hp: 999 },
+    quartel: { name: 'Quartel', w: 2, h: 2, cost: { wood: 34, stone: 18 }, work: 40, blocks: true, hp: 220 },
+    torre: { name: 'Torre de Vigia', w: 1, h: 1, cost: { wood: 18, stone: 12 }, work: 22, blocks: true, hp: 180 },
+    cercado: { name: 'Cercado', w: 2, h: 2, cost: { wood: 18 }, work: 14, blocks: false, hp: 90 },
+    ruin: { name: 'Ruínas', w: 1, h: 1, cost: {}, work: 0, blocks: false, hp: 1 },
+  };
+  G.BDESC = {
+    campfire: 'O coração do acampamento. Ponto de encontro, depósito e abrigo para quem não tem casa.',
+    hut: 'Abrigo simples de palha e madeira. Abriga uma pequena família.',
+    house: 'Casa de pedra e madeira. Mais espaço, mais resistente ao fogo.',
+    storehouse: 'Guarda comida, madeira e pedra. Aumenta a capacidade de estoque.',
+    farm: 'Campos de trigo. Plantar, esperar, colher. A chuva ajuda muito.',
+    well: 'Água limpa: menos doenças e baldes para apagar incêndios.',
+    workshop: 'Ferramentas melhores (+15% de trabalho) e casas de pedra.',
+    temple: 'Onde rezam para você. Gera fé continuamente.',
+    monument: 'Um monumento ao deus da ilha. Marca uma vila desenvolvida.',
+    cemetery: 'Onde descansam os que partiram.',
+    quartel: 'Armas e treino: guerreiros mais fortes e mais bem protegidos.',
+    torre: 'Arqueiros vigiam a vila e atiram flechas em invasores.',
+    cercado: 'Paliçada onde os cativos são mantidos à noite. Fugir fica mais difícil.',
+    ruin: 'Restos do que existiu aqui.',
+  };
+  G.ROLE = {
+    lenhador: ['Lenhador', 'Lenhadora'], coletor: ['Coletor', 'Coletora'], agricultor: ['Agricultor', 'Agricultora'],
+    construtor: ['Construtor', 'Construtora'], mineiro: ['Mineiro', 'Mineira'], cacador: ['Caçador', 'Caçadora'],
+    sacerdote: ['Sacerdote', 'Sacerdotisa'], anciao: ['Ancião', 'Anciã'], crianca: ['Criança', 'Criança'], bebe: ['Bebê', 'Bebê'],
+    guerreiro: ['Guerreiro', 'Guerreira'], cativo: ['Cativo', 'Cativa'],
+  };
+  G.roleName = v => {
+    if (!v.captive && G.Army) { const t = G.Army.title(v); if (t) return t; }
+    if (!v.captive && v.role === 'guerreiro' && G.Siege) { const u = G.Siege.unitName(v); if (u) return u; }
+    const r = G.ROLE[v.captive ? 'cativo' : v.role] || G.ROLE.coletor; return r[v.g === 'f' ? 1 : 0];
+  };
+  G.ERAS = ['Acampamento', 'Aldeia', 'Povoado', 'Comunidade Agrícola', 'Vila Artesã', 'Vila Sagrada', 'Vila Desenvolvida', 'Pequena Civilização'];
+
+  // ------------------------------ time ------------------------------
+  G.isNight = () => { const t = G.S.time; return t > 0.73 || t < 0.02; };
+  G.isEvening = () => { const t = G.S.time; return t > 0.6 && t <= 0.73; };
+  G.person = id => G.S.villagers.get(id) || G.S.dead.get(id);
+
+  // ------------------------------ chronicle ------------------------------
+  V.log = function (text, icon, x, y) {
+    // (two systems telling the same thing the same day: once is enough)
+    const H = G.S.history; for (let k = H.length - 1, m = 0; k >= 0 && m < 30; k--, m++) { if (H[k].d !== G.S.day) break; if (H[k].txt === text) return; }
+    const e = { d: G.S.day, txt: text, ic: icon || 'info', n: G.S.logN = (G.S.logN || 0) + 1 };
+    if (Number.isFinite(x) && Number.isFinite(y)) { e.x = +x.toFixed(1); e.y = +y.toFixed(1); }
+    G.S.history.push(e);
+    if (G.S.history.length > 700) G.S.history.splice(0, G.S.history.length - 700);
+    G.UI && G.UI.onLog(e);
+  };
+  V.notice = function (text, icon) { G.UI && G.UI.notice(text, icon); };
+  V.milestone = function (key, title, sub, icon) {
+    const S = G.S; if (S.milestones[key]) return;
+    S.milestones[key] = S.day;
+    G.UI && G.UI.toast(title, sub, icon || 'star');
+    G.Audio && G.Audio.play('milestone');
+  };
+
+  // ------------------------------ buildings ------------------------------
+  V.addBuilding = function (type, x, y, setId, built) {
+    const S = G.S; const def = G.BDEF[type];
+    const b = {
+      id: S.nextId++, type, x, y, w: def.w, h: def.h, built: !!built, progress: built ? 1 : 0,
+      need: Object.assign({ wood: 0, stone: 0 }, built ? {} : def.cost), incoming: Object.fromEntries(Object.keys(Object.assign({ wood: 0, stone: 0 }, def.cost)).map(k => [k, 0])),
+      hp: def.hp, maxHp: def.hp, set: setId, blocks: def.blocks, v: Math.floor(G.R() * 3), born: S.day, burnHp: 0,
+      style: G.Civ.idOfFac(V.facOfSet(setId)) || null, // architecture of the people who built it
+      ip: null, // (the record of its plan: what its builders knew and where they built, and the facts of its life — interiors.js)
+    };
+    if (type === 'farm') b.crops = Array.from({ length: 9 }, () => ({ s: 0, g: 0, c: 0 }));
+    if (type === 'cemetery') b.graves = [];
+    S.buildings.set(b.id, b);
+    for (let ty = y; ty < y + b.h; ty++) for (let tx = x; tx < x + b.w; tx++) {
+      const i = ty * N + tx;
+      S.occ[i] = b.id;
+      const tid = S.treeAt[i]; if (tid) { const t = S.trees.get(tid); if (t) { G.Nature.removeTree(t); if (t.stage === 'grow' && t.size > 0.5) V.addStock('wood', 1, V.facOfSet(setId)); G.FX && G.FX.poof(tx + 0.5, ty + 0.5, '#6d8f3c'); } }
+      const oid = S.objAt[i]; if (oid) { const bu = S.bushes.get(oid); if (bu) G.Nature.removeBush(bu); }
+    }
+    W.touchWalk();
+    // (the walls keep the towns' ways: a gate where one now shuts a building of its town off — before the plan is frozen, on the
+    // ground as it will be, L-382)
+    G.Siege && G.Siege.placed(b);
+    G.Interiors && G.Interiors.found(b); // (the plan's record, frozen the day it is placed)
+    return b;
+  };
+  V.center = b => [b.x + b.w / 2, b.y + b.h / 2];
+  V.door = b => [b.x + b.w - 0.5, b.y + b.h + 0.05]; // front-left side
+  V.frontTile = b => {
+    const x1 = b.x + b.w - 1, y1 = b.y + b.h - 1;
+    for (const [cx, cy] of [[x1, y1], [b.x, y1], [x1, b.y], [b.x, b.y]]) {
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const x = cx + dx, y = cy + dy; if ((dx || dy) && W.inb(x, y) && (x < b.x || x > x1 || y < b.y || y > y1) && W.walkable(W.idx(x, y))) return [cx + 0.5, cy + 0.5];
+      }
+    }
+    return [x1 + 0.5, y1 + 0.5];
+  };
+  V.removeBuilding = function (b) {
+    const S = G.S; S.buildings.delete(b.id);
+    for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const i = ty * N + tx; if (S.occ[i] === b.id) S.occ[i] = 0; }
+    W.touchWalk();
+  };
+  V.totalCost = def => { let n = 0; for (const k in def.cost) n += def.cost[k] || 0; return n; };
+  V.nameOf = (type, b) => G.Civ.bname(type, b ? b.style : null);
+  V.buildName = b => (b.upgradeFrom && !b.built ? V.nameOf(b.type, b) + ' (obra)' : V.nameOf(b.type === 'ruin' ? (b.origType || 'ruin') : b.type, b));
+  // a house that serves to live in: standing, or being raised further over its family by the city (b.upgradeFrom: the old
+  // house stands while the new floor goes up — as the work given up gives it back whole). The one question for sleeping at
+  // home, the evening at home, the water, the family's evening, the minding of the little ones and the town's day of houses:
+  // the family under the works slept outdoors with no water and no home, and nobody saw it needed a roof, L-371
+  V.livable = b => !!b && b.type !== 'ruin' && !!G.BDEF[b.type] && !!G.BDEF[b.type].housing && (b.built || !!b.upgradeFrom);
+
+  V.completeBuilding = function (b) {
+    const S = G.S; b.built = true; b.progress = 1; b.need.wood = 0; b.need.stone = 0; b.upgradeFrom = null;
+    G.Siege && G.Siege.keepWays(b.set); // (a building of the town now, to be reached: one finished in a pocket its wall shuts gets its gate, L-382)
+    G.Interiors && G.Interiors.complete(b); // (a fact of its life; a type made over — a hut become a house — a new plan)
+    S.stats.built++;
+    const [cx, cy] = V.center(b);
+    G.FX && G.FX.complete(cx, cy, b);
+    G.Audio && G.Audio.at(cx, cy, 'built', true);
+    const set = S.settlements.get(b.set);
+    const nm = V.buildName(b);
+    const firsts = {
+      hut: ['firstHut', 'A primeira cabana foi construída.', 'Primeiro abrigo', 'Eles não dormem mais ao relento.'],
+      storehouse: ['firstStore', 'O primeiro armazém foi construído.', 'Armazém', 'Agora conseguem guardar muito mais.'],
+      farm: ['firstFarm', 'A primeira fazenda foi construída.', 'Primeira fazenda', 'A agricultura chegou à ilha.'],
+      well: ['firstWell', 'O primeiro poço foi cavado.', 'Poço', 'Água limpa para todos.'],
+      workshop: ['firstWorkshop', 'A oficina abriu suas portas.', 'Oficina', 'Ferramentas melhores, casas de pedra.'],
+      temple: ['firstTemple', 'Um templo foi erguido em sua honra.', 'Primeiro templo', 'Eles construíram um lugar para você.'],
+      monument: ['firstMonument', 'O Monumento ao Deus foi concluído.', 'Monumento', 'Uma obra que vai durar gerações.'],
+      house: ['firstHouse', 'A primeira casa de pedra foi construída.', 'Casa de pedra', 'A aldeia começa a mudar de cara.'],
+    };
+    const f = firsts[b.type];
+    if (f && !S.milestones[f[0]]) {
+      V.log(f[1], b.type, cx, cy);
+      V.milestone(f[0], f[2], f[3], b.type);
+    } else if (G.City && G.City.onComplete(b, set)) { /* the city tells its own story */ }
+    else if (b.type !== 'campfire' && b.type !== 'cemetery' && !G.BDEF[b.type].housing && b.type !== 'farm') {
+      V.log(`${set ? set.name + ': ' : ''}${nm} construíd${G.gen(nm)}.`, b.type, cx, cy);
+    }
+    if (b.type === 'campfire' && set && S.settlements.size > 1 && !set.lit) {
+      set.lit = true; V.log(`A fogueira de ${set.name} foi acesa.`, 'campfire', cx, cy);
+    }
+    V.updateEra();
+  };
+
+  V.damageBuilding = function (b, amount, cause) {
+    if (!b || b.hp <= 0 || b.type === 'ruin' || b.type === 'cemetery') return;
+    b.hp -= amount;
+    if (b.hp <= 0) V.destroyBuilding(b, cause);
+  };
+  V.destroyBuilding = function (b, cause) {
+    const S = G.S;
+    const [cx, cy] = V.center(b);
+    const nm = V.buildName(b);
+    const set = S.settlements.get(b.set);
+    // return delivered materials partially? no: destroyed
+    for (const v of S.villagers.values()) {
+      if (v.home === b.id) v.home = 0;
+      if (v.inside === b.id) { v.inside = 0; v.sleeping = false; G.Vg.endTask(v); }
+    }
+    // (the coins kept in a house that falls are lost with it — in the ledger: the ruin is no house to hold them)
+    if (G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });
+    if (b.type === 'farm' || b.type === 'campfire') {
+      V.removeBuilding(b);
+      if (b.type === 'campfire' && set) set.campfire = 0;
+    } else {
+      // turn into ruins in place (non-blocking); what stands now is the ruin, finished or not what it was going to be (L-081)
+      b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.progress = 1; b.upgradeFrom = null; b.ruinT = G.DAY_LEN * 3; b.hp = 1; W.touchWalk();
+      G.Interiors && G.Interiors.ruin(b, cause); // (its plan becomes the ruin of itself)
+    }
+    G.FX && G.FX.collapse(cx, cy, b);
+    G.Audio && G.Audio.at(cx, cy, 'collapse', true);
+    G.City && G.City.onDestroyed(b);
+    if (b.origType !== 'hut' || G.R() < 0.6)
+      V.log(`${nm}${set ? ' de ' + set.name : ''} foi destruíd${G.gen(nm)}${cause === 'fire' ? ' pelo fogo' : cause === 'meteor' ? ' por um meteoro' : cause === 'lightning' ? ' por um raio' : cause === 'quake' ? ' pelo terremoto' : cause === 'siege' ? ' pelas máquinas de cerco' : cause === 'wave' ? ' pelo maremoto' : cause === 'lava' ? ' pela lava' : cause === 'sea' ? ' pelo mar' : cause === 'riot' ? ' pela multidão' : ''}.`, cause === 'quake' ? 'stone' : 'fire', cx, cy);
+  };
+
+  // ------------------------------ stock (each people has its own) ------------------------------
+  V.facOfSet = setId => { const s = G.S.settlements.get(setId); return s ? s.fac : 0; };
+  V.cap = G.perPart(function (fid) {
+    let c = 80;
+    for (const b of G.S.buildings.values()) if (b.built && G.BDEF[b.type].storage && V.facOfSet(b.set) === fid) c += G.BDEF[b.type].storage;
+    return c;
+  });
+  V.addStock = function (k, n, fid) {
+    const S = G.S; const f = G.Fac.get(fid); if (!f) return 0;
+    // (the water of the well is drunk and cooked, not stored: whoever was carrying a jar just puts it down)
+    if (!k || k === 'water' || !(n > 0)) return 0;
+    const cap = V.cap(fid); const cur = f.stock[k] || 0;
+    const add = Math.max(0, Math.min(n, cap - cur));
+    f.stock[k] = cur + add;
+    if (k === 'food') S.stats.foodProduced += add;
+    if (k === 'wood') S.stats.woodProduced += add;
+    if (k === 'stone') S.stats.stoneProduced += add;
+    return add;
+  };
+  // a town whose streets reach one of its stores, or a fire of it rising (L-368)
+  V.fed = function (set) {
+    for (const b of G.S.buildings.values()) {
+      if (b.set !== set.id || !G.BDEF[b.type] || !(b.built ? G.BDEF[b.type].dropoff : b.type === 'campfire')) continue;
+      const [fx, fy] = V.frontTile(b); if (W.townReaches(set, fx, fy)) return true;
+    }
+    return false;
+  };
+  V.dropoffs = function (setId) {
+    const out = [];
+    for (const b of G.S.buildings.values()) if (b.built && G.BDEF[b.type].dropoff && (setId === undefined || b.set === setId)) out.push(b);
+    return out;
+  };
+  // a tile beside a gate (open or shut, or only planned: the builders raise it later on the tiles it has): the way through it
+  let gatesKey = -1, planned = new Set();
+  G.worldHooks.push(() => { gatesKey = -1; planned = new Set(); }); // (a new world, or a save loaded: asked again)
+  V.byGate = (x, y) => {
+    const S = G.S; const key = S.walls.length * 1e6 + (S.walkVer || 0);
+    if (key !== gatesKey) { gatesKey = key; planned = new Set(); for (const w of S.walls) if (!w.done) for (const g of w.gates) planned.add(g); }
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const xx = x + dx, yy = y + dy; if (!W.inb(xx, yy)) continue; const j = yy * N + xx; const w = S.wall[j]; if (w === 2 || w === 4 || planned.has(j)) return true; }
+    return false;
+  };
+  // (asked for someone, the nearest store that one can walk to — the nearest by the map's distance across the water was the
+  // other island's, and every load of the day failed its search there, L-349 —; none reached, the nearest as before)
+  V.nearestDropoff = function (x, y, setId, v) {
+    let list = V.dropoffs(setId);
+    if (!list.length) { const fid = V.facOfSet(setId); list = V.dropoffs().filter(b => V.facOfSet(b.set) === fid); }
+    let best = null, bd = 1e9, near = null, nd = 1e9;
+    for (const b of list) { const [cx, cy] = V.center(b); const d = G.dist2(x, y, cx, cy); if (d < bd) { bd = d; best = b; } if (v && d < nd) { const [fx, fy] = V.frontTile(b); if (W.reaches(v, fx, fy)) { nd = d; near = b; } } }
+    return near || best;
+  };
+
+  // ------------------------------ settlements ------------------------------
+  V.addSettlement = function (name, cx, cy, fac) {
+    const S = G.S;
+    const s = { id: S.nextId++, name, cx, cy, founded: S.day, campfire: 0, fails: 0, cemetery: 0, lit: false, fac: fac || 0, emptyT: 0, loyalty: 60 };
+    S.settlements.set(s.id, s);
+    return s;
+  };
+  V.nearSettlementName = function (x, y) {
+    let best = null, bd = 1e9;
+    for (const s of G.S.settlements.values()) { const d = G.dist(x, y, s.cx, s.cy); if (d < bd) { bd = d; best = s; } }
+    return best && bd < 16 ? best.name : null;
+  };
+  V.nearestSettlement = function (x, y) {
+    let best = null, bd = 1e9;
+    for (const s of G.S.settlements.values()) { const d = G.dist(x, y, s.cx, s.cy); if (d < bd) { bd = d; best = s; } }
+    return best;
+  };
+  V.pop = G.perPart(setId => { let n = 0; for (const v of G.S.villagers.values()) if (setId === undefined || v.set === setId) n++; return n; });
+  V.mainSettlement = () => { let best = null, bp = -1; for (const s of G.S.settlements.values()) { const p = V.pop(s.id); if (p > bp) { bp = p; best = s; } } return best; };
+  V.newSettlementName = function (fid) {
+    const civ = fid ? G.Civ.idOfFac(fid) : null;
+    if (civ) return G.Civ.cityName(civ);
+    const used = new Set([...G.S.settlements.values()].map(s => s.name).concat(G.S.usedNames || []));
+    const n = G.SETTLEMENT_NAMES.find(n => !used.has(n)) || ('Assentamento ' + (G.S.nextId % 1000));
+    (G.S.usedNames = G.S.usedNames || []).push(n);
+    return n;
+  };
+
+  // ------------------------------ farms ------------------------------
+  V.farmTileIndex = (b, x, y) => { const lx = Math.floor(x) - b.x, ly = Math.floor(y) - b.y; return (lx >= 0 && ly >= 0 && lx < 3 && ly < 3) ? ly * 3 + lx : -1; };
+  V.cropPos = (b, k) => [b.x + (k % 3) + 0.5, b.y + Math.floor(k / 3) + 0.5];
+  function updateFarms(dt) {
+    const S = G.S; const drought = S.weather.drought > 0;
+    for (const b of S.buildings.values()) {
+      if (b.type !== 'farm' || !b.built) continue;
+      for (let k = 0; k < 9; k++) {
+        const c = b.crops[k]; if (c.s === 0 || c.s === 3) continue;
+        const [px, py] = V.cropPos(b, k); const i = W.idx(px, py);
+        const rate = (1 / (G.DAY_LEN * 0.7)) * (0.55 + S.fert[i] * 0.7) * (1 + S.wet[i] * 0.9 + S.weather.rain * 0.5)
+          * (drought ? 0.35 : 1) * G.Nature.zoneMul(px, py, 'fertility') * (1 + (G.Nature.zoneMul(px, py, 'growth') - 1) * 0.5) * (S.blessed ? 1.5 : 1);
+        c.g = Math.min(1, c.g + rate * dt);
+        c.s = c.g < 0.3 ? 1 : c.g < 1 ? 2 : 3;
+      }
+    }
+  }
+
+  // ------------------------------ era ------------------------------
+  V.updateEra = function () {
+    const S = G.S;
+    for (const f of G.Fac.all()) {
+      const e = G.Fac.eraOf(f.id);
+      if (e <= f.era) continue;
+      f.era = e;
+      // the people gathers around the fire to celebrate
+      for (const s of G.Fac.settlementsOf(f.id)) {
+        for (const v of S.villagers.values()) if (v.set === s.id && v.age >= 3 && !v.captive && (!v.task || v.task.pri < 2) && G.dist(v.x, v.y, s.cx, s.cy) < 22) G.Vg.give(v, { type: 'celebrate', pri: 1.1, kind: 'celebrate' });
+      }
+      const many = G.Fac.all().length > 1;
+      V.log(many ? `${f.name} alcançou uma nova era: ${G.ERAS[e]}.` : `A civilização alcançou uma nova era: ${G.ERAS[e]}.`, 'era');
+      if (e > S.era) { S.era = e; V.milestone('era' + e, G.ERAS[e], many ? `${f.name} chegou primeiro.` : 'Uma nova era começou.', 'era'); }
+    }
+  };
+
+  // ------------------------------ site placement ------------------------------
+  // (reach, when given: only where it says — the fire of a town cut off from its stores, on its streets' side, L-368)
+  V.findSite = function (set, type, reach) {
+    const S = G.S; const def = G.BDEF[type];
+    if (type === 'doca' && G.City) return G.City.dockSite(set);
+    if (G.Eco) { const e = G.Eco.findSite(set, type); if (e !== undefined) return e; }
+    // a search that found nothing today is not repeated until tomorrow (big cities ask many times a day)
+    const noSite = set._noSite || (set._noSite = {});
+    if (noSite[type] === S.day) return null;
+    const field = type === 'farm' || type === 'cercado' || type === 'curral' || type === 'estabulo';
+    const pop = V.pop(set.id);
+    const R = G.Urban ? G.Urban.radius(set, def, pop) : Math.min(17 + (set.tier || 0) * 3 + (def.w >= 3 ? 2 : 0), Math.round(6 + Math.sqrt(pop + 1) * 1.5 + (def.w >= 3 ? 2 : 0)));
+    const counts = {}; for (const b of S.buildings.values()) if (b.set === set.id) counts[b.type] = (counts[b.type] || 0) + 1;
+    // (a block that finds no room in the heart settles for a lower house, wherever a family would like to live)
+    let best = type === 'quarteirao' && G.Urban ? V.blockSite(set) : null;
+    if (!best) best = search(set, type, def, R, field, counts, false, undefined, reach);
+    // a full city puts its great buildings out by its edge, beyond the walls if need be,
+    // and when even there is no room, it builds them over its own old fields and houses
+    if (!best && def.civic) best = search(set, type, def, R + 6, field, counts, false);
+    if (!best && def.civic) best = search(set, type, def, R + 6, field, counts, true);
+    if (!best) noSite[type] = S.day;
+    return best;
+  };
+  // a block of a metropolis goes where the land is dear enough for it — and that heart is full: so it pulls down
+  // the low houses, the gardens and the fields still standing there (L-077)
+  V.blockSite = function (set) {
+    const S = G.S; const noSite = set._noSite || (set._noSite = {});
+    if (noSite.bloco === S.day) return null;
+    const def = G.BDEF.quarteirao, dear = G.Urban.DEAR.quarteirao, R = G.Urban.radius(set, def, V.pop(set.id));
+    const counts = {}; for (const b of S.buildings.values()) if (b.set === set.id) counts[b.type] = (counts[b.type] || 0) + 1;
+    const best = search(set, 'quarteirao', def, R, false, counts, false, dear) || search(set, 'quarteirao', def, R, false, counts, true, dear);
+    if (!best) noSite.bloco = S.day;
+    return best;
+  };
+  // what a town may pull down for a great work (and how much it hurts to): never tall houses or anything civic;
+  // a block may also take a sobrado and the gardens of the heart, and the low houses on its ring, but it must
+  // bring more beds than it takes (24 of its 40)
+  // — and never the town's last two farms, nor the last field of its kind (a city with no farm is a village again:
+  // Argos fell to one under a block, and found no room to plough again)
+  const RENEW = { farm: 1, hut: 2, house: 3 };
+  const RENEW_BLOCK = { farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, hut: 2, house: 3, sobrado: 4 };
+  const KEEP = { farm: 2, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1 };
+  function search(set, type, def, R, field, counts, renew, dear, reach) {
+    const S = G.S; const block = renew && type === 'quarteirao'; const may = block ? RENEW_BLOCK : RENEW;
+    const left = gone => { const n = {}; for (const id of gone) { const t = S.buildings.get(id).type; if (KEEP[t] && (counts[t] || 0) - (n[t] = (n[t] || 0) + 1) < KEEP[t]) return false; } return true; };
+    const bad = (gone, beds) => renew && ((!gone && !block) || (gone && (gone.length > 4 || !left(gone))) || beds > (block ? 24 : 12));
+    const homes = (counts.hut || 0) + (counts.house || 0) + (counts.sobrado || 0) + (counts.insula || 0) + (counts.quarteirao || 0);
+    let best = null, bestSc = -1e9;
+    const cxi = Math.floor(set.cx), cyi = Math.floor(set.cy);
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+      const x = cxi + dx - Math.floor((def.w - 1) / 2), y = cyi + dy - Math.floor((def.h - 1) / 2);
+      if (x < 2 || y < 2 || x + def.w > N - 2 || y + def.h > N - 2) continue;
+      const fx = x + def.w / 2, fy = y + def.h / 2;
+      const d = G.dist(fx, fy, set.cx, set.cy);
+      if (d > R) continue;
+      if (dear && G.Urban.valueAt(set, fx, fy) < dear) continue;
+      if (reach && !reach(x, y)) continue;
+      let ok = true, trees = 0, fert = 0, gone = null, cost = 0, beds = 0;
+      for (let ty = y; ty < y + def.h && ok; ty++) for (let tx = x; tx < x + def.w; tx++) {
+        const i = ty * N + tx; const t = S.type[i];
+        if (renew && S.occ[i]) {
+          const o = S.buildings.get(S.occ[i]);
+          if (!o || !o.built || !may[o.type] || o.set !== set.id) { ok = false; break; }
+          if (!gone) gone = [];
+          if (!gone.includes(o.id)) { gone.push(o.id); cost += may[o.type]; beds += G.BDEF[o.type].housing || 0; }
+        } else if (S.occ[i]) { ok = false; break; }
+        if (t < T.SAND || S.objAt[i] || S.fire[i] > 0 || S.scar[i] > G.DAY_LEN * 2 || S.wall[i] || S.road[i] >= 2 || (S.road[i] && G.City && G.City.onStreet(set, i))) { ok = false; break; }
+        if (field && (t === T.SAND || t === T.ROCKY)) { ok = false; break; }
+        // (never in the way of a gate: a blocking building on a tile beside one shuts it — two houses, one on each side of a gate of
+        // Tenochtitlan's wall, left it a tile of nowhere, and a visitor whose host's door gave onto it was shut in there, L-348)
+        if (def.blocks && V.byGate(tx, ty)) { ok = false; break; }
+        if (S.treeAt[i]) trees++;
+        fert += S.fert[i];
+      }
+      if (!ok || bad(gone, beds)) continue;
+      // keep a walkable ring around blocking buildings (when renewing: no wall of buildings that stay)
+      for (let ty = y - 1; ty <= y + def.h && ok; ty++) for (let tx = x - 1; tx <= x + def.w; tx++) {
+        if (ty >= y && ty < y + def.h && tx >= x && tx < x + def.w) continue;
+        if (!W.inb(tx, ty)) { ok = false; break; }
+        const i = ty * N + tx; const o = S.occ[i];
+        if (o) {
+          const ob = S.buildings.get(o); if (ob && gone && gone.includes(ob.id)) continue;
+          if (ob && block && ob.blocks && ob.built && ob.set === set.id && G.BDEF[ob.type].housing && may[ob.type]) { if (!gone) gone = []; gone.push(ob.id); cost += may[ob.type]; beds += G.BDEF[ob.type].housing; continue; }
+          if (ob && (renew ? ob.blocks : (def.blocks || ob.blocks))) { ok = false; break; } if (ob && field && ob.type !== 'farm') { ok = false; break; }
+        }
+        if (def.blocks && S.type[i] < T.RIVER) { /* water side ok */ }
+      }
+      if (!ok || bad(gone, beds)) continue;
+      const sl = W.slope(x, y, def.w, def.h);
+      if (sl > (type === 'farm' ? 1.6 : 1.15)) continue;
+      let ideal = 3;
+      if (def.housing) ideal = 2.6 + homes * (type === 'insula' || type === 'sobrado' ? 0.28 : 0.33);
+      else if (G.City && G.City.IDEAL[type]) ideal = G.City.IDEAL[type];
+      else if (type === 'storehouse') ideal = 3.5 + (counts.storehouse || 0) * 3;
+      else if (type === 'farm') ideal = 7 + (counts.farm || 0) * 1.6;
+      else if (type === 'well') ideal = 3;
+      else if (type === 'workshop') ideal = 5.5;
+      else if (type === 'temple') ideal = 5;
+      else if (type === 'monument') ideal = 3.2;
+      else if (type === 'cemetery') ideal = 8;
+      else if (type === 'quartel') ideal = 6.5;
+      else if (type === 'torre') ideal = Math.max(5, R * 0.75);
+      else if (type === 'cercado') ideal = 6;
+      // (a vila and smaller: so far from the hearth; a city: so far from where the building belongs — the port, the market, the other workshops)
+      const place = G.Urban && (set.tier || 0) >= 2 ? G.Urban.siteScore(set, type, def, x, y, fx, fy, d, ideal) : -Math.abs(d - ideal) * 1.2;
+      let sc = place - trees * 0.7 - sl * 1.5 + G.R() * 0.8 - cost * 2;
+      if (type === 'farm') sc += (fert / 9) * 7;
+      if (S.type[y * N + x] === T.SAND) sc -= 1.5;
+      if (sc > bestSc) { bestSc = sc; best = gone ? Object.assign([x, y], { demolish: gone }) : [x, y]; }
+    }
+    return best;
+  }
+
+  V.startProject = function (set, type, at) {
+    const pos = at || V.findSite(set, type);
+    if (!pos) { set.fails++; return null; }
+    // (a city builds tall only where its land is dear; on cheap ground the same family builds a house with a yard)
+    if (G.Urban && !pos.demolish) type = G.Urban.homeFor(set, type, pos);
+    if (pos.demolish) renew(set, type, pos.demolish);
+    const b = V.addBuilding(type, pos[0], pos[1], set.id, false);
+    if (type === 'cemetery') V.completeBuilding(b);
+    G.Eco && G.Eco.onPlaced(b);
+    return b;
+  };
+
+  // the old quarter comes down for the great work: its people look for new homes, as after a fire
+  function renew(set, type, ids) {
+    const S = G.S; let homes = 0, fields = 0, cx = set.cx, cy = set.cy;
+    for (const id of ids) {
+      const o = S.buildings.get(id); if (!o) continue;
+      let head = null;
+      for (const v of S.villagers.values()) {
+        if (v.home === o.id) { v.home = 0; if (!head || v.age > head.age) head = v; }
+        if (v.inside === o.id) { v.inside = 0; v.sleeping = false; G.Vg.endTask(v); }
+      }
+      // (the family's savings do not come down with the house: the eldest carries them in his purse — with nobody, the
+      // people's treasury keeps them —, in the ledger)
+      if (o.coin > 0) G.Depot.move('h:' + o.id, head ? 'p:' + head.id : 'f:' + set.fac, 'moedas', o.coin, { code: 'obra-da-cidade', by: head ? head.id : 0, part: true });
+      if (o.type === 'farm') fields++; else homes++;
+      [cx, cy] = V.center(o);
+      G.FX && G.FX.dust(cx, cy, 4);
+      V.removeBuilding(o);
+    }
+    const nm = V.nameOf(type, { style: G.Civ.idOfFac(set.fac) });
+    const what = [homes ? (homes === 1 ? 'uma casa velha' : `${homes} casas velhas`) : '', fields ? (fields === 1 ? 'um campo' : `${fields} campos`) : ''].filter(Boolean).join(' e ');
+    V.log(`${set.name} derrubou ${what} para dar lugar ${G.gen(nm) === 'a' ? 'à' : 'ao'} ${nm}.`, 'city', cx, cy);
+  }
+
+  // ------------------------------ planner ------------------------------
+  function counts(setId) {
+    const c = { hut: 0, house: 0, storehouse: 0, farm: 0, well: 0, workshop: 0, temple: 0, monument: 0, campfire: 0, quartel: 0, torre: 0, cercado: 0, sites: 0, siteTypes: {} };
+    for (const b of G.S.buildings.values()) {
+      if (b.set !== setId || b.type === 'ruin') continue;
+      if (!b.built) { c.sites++; c.siteTypes[b.type] = (c.siteTypes[b.type] || 0) + 1; }
+      c[b.type] = (c[b.type] || 0) + 1;
+    }
+    return c;
+  }
+  V.counts = counts;
+  function globalHas(type) { for (const b of G.S.buildings.values()) if (b.type === type && b.built) return true; return false; }
+  function housingInfo(setId) {
+    const S = G.S; let cap = 0, homeless = 0, pop = 0;
+    for (const b of S.buildings.values()) if (b.set === setId && b.built && G.BDEF[b.type].housing && b.type !== 'barraco') cap += G.BDEF[b.type].housing;
+    for (const v of S.villagers.values()) if (v.set === setId && !v.captive) { pop++; if ((!v.home || (S.buildings.get(v.home) || {}).type === 'barraco') && v.age >= 16) homeless++; }
+    return { cap, homeless, pop };
+  }
+  V.housingInfo = housingInfo;
+
+  // what a growing town builds before any extra, and what it builds to defend itself
+  const ESSENTIAL = { hut: 1, house: 1, storehouse: 1, farm: 1, well: 1, workshop: 1, praca: 1, mercado: 1, temple: 1, celeiro: 1, doca: 1 };
+  const DEFENCE = { quartel: 1, torre: 1, muralha: 1, portao: 1, wall: 1, gate: 1 };
+  function plan(set) {
+    const S = G.S;
+    const c = counts(set.id);
+    const hi = housingInfo(set.id);
+    const pop = hi.pop; if (pop === 0) return;
+    const fac = G.Fac.get(set.fac); if (!fac) return;
+    const isMain = G.Fac.capitalOf(fac.id) === set;
+    const facHas = type => G.Fac.has(fac.id, type);
+    if (!c.campfire) { const b = V.startProject(set, 'campfire'); if (b) { set.campfire = b.id; } return; }
+    // (a town eats at a store its streets reach: with every store and fire of it cut off by the water — Tenochtitlan, cut in two,
+    // kept its fire and its quay on the far side of its houses, and a child starved at home for three days —, it lights a
+    // fire on its streets' side, L-368)
+    if (!V.fed(set)) { const pos = V.findSite(set, 'campfire', (x, y) => W.townReaches(set, x + 0.5, y + 0.5)); const b = pos && V.startProject(set, 'campfire', pos); if (b) set.campfire = b.id; return; }
+    const maxSites = Math.min(4 + Math.max(0, (set.tier || 0) - 2) * 2, 1 + Math.floor(pop / 11));
+    if (c.sites >= maxSites) return;
+    const st = fac.stock; const cap = V.cap(fac.id);
+    const workshop = facHas('workshop');
+    const homeType = G.City ? G.City.homeType(set, fac, workshop, st) : (workshop && st.stone >= 6 ? 'house' : 'hut');
+    let pendingHousing = 0; for (const k in c.siteTypes) pendingHousing += (G.BDEF[k].housing || 0) * c.siteTypes[k];
+    const want = [];
+    if ((hi.homeless > 0 || hi.cap - pop < 2) && hi.cap + pendingHousing < pop + 3) want.push(homeType);
+    if (!c.storehouse && (pop >= 10 || S.day >= 3) && !c.siteTypes.storehouse) want.push('storehouse');
+    if (c.farm === 0 && (S.day >= 4 || pop >= 13)) want.push('farm');
+    else if (c.farm > 0 && c.farm * 11 < pop && !c.siteTypes.farm && st.food < pop * 8) want.push('farm');
+    if (!c.well && (c.hut + c.house + (c.sobrado || 0)) >= 3) want.push('well');
+    const allPop = G.Fac.pop(fac.id);
+    if (isMain && !c.workshop && !workshop && c.storehouse && allPop >= 18) want.push('workshop');
+    if (isMain && !c.temple && workshop && !facHas('temple') && allPop >= 26) want.push('temple');
+    if (isMain && !c.monument && c.temple && facHas('temple') && allPop >= 45 && pop >= 16) want.push('monument');
+    G.Politics && G.Politics.planExtra && G.Politics.planExtra(set, fac, c, want, pop);
+    G.City && G.City.plan(set, fac, c, want, pop);
+    G.Eco && G.Eco.plan(set, fac, c, want, pop);
+    G.Harbor && G.Harbor.plan(set, fac, c, want, pop);
+    if (c.storehouse && !c.siteTypes.storehouse && (st.wood > cap * 0.9 || st.food > cap * 0.9 || st.stone > cap * 0.9) && c.storehouse < 1 + Math.floor(pop / 30)) want.push('storehouse');
+    // the town improves what it has: an old hut becomes a stone house, stone houses grow a second
+    // floor and then become apartment blocks
+    const improve = () => {
+      if (workshop && c.hut > 0 && !c.siteTypes.house && st.stone >= 10 && st.wood >= 14) {
+        let old = null;
+        for (const b of S.buildings.values()) if (b.set === set.id && b.type === 'hut' && b.built && (!old || b.born < old.born)) old = b;
+        if (old) {
+          old.type = 'house'; old.built = false; old.progress = 0; old.upgradeFrom = 'hut';
+          old.need = Object.assign({ wood: 0, stone: 0 }, G.BDEF.house.cost); old.incoming = { wood: 0, stone: 0 };
+          old.hp = G.BDEF.house.hp; old.maxHp = old.hp;
+          return true;
+        }
+      }
+      return !!(G.City && G.City.upgradeHomes(set, fac, c, st));
+    };
+    let improved = false;
+    // a vila one step from city, short of stone houses: the huts are rebuilt before any extra
+    const stoneHomes = (c.house || 0) + (c.sobrado || 0) + (c.insula || 0);
+    // a town still on its way to city does not sink its stone into big extras (a monument, a forge,
+    // a hall of scribes...) until its houses, square and temple are up — or the stone piles up
+    if (G.City && G.City.saving(set, fac)) {
+      for (let k = want.length - 1; k >= 0; k--) { const t = want[k], d = G.BDEF[t]; if (d && !ESSENTIAL[t] && !DEFENCE[t] && ((d.cost && d.cost.stone) || 0) >= 16) want.splice(k, 1); }
+    }
+    if ((set.tier || 0) === 2 && stoneHomes < 6 && c.hut > 0 && !want.some(t => ESSENTIAL[t])) { if (improve()) return; improved = true; }
+    if (!want.length && !improved) { if (improve()) return; improved = true; }
+    // proactive housing for growing families
+    if (!want.length && hi.cap + pendingHousing < pop + 5 && c.sites === 0) want.push(homeType);
+    for (const type of want) {
+      if (c.siteTypes[type] && !G.BDEF[type].housing) continue;
+      const def = G.BDEF[type];
+      // don't open too many sites when materials are scarce
+      if (c.sites > 0 && (st.wood < (def.cost.wood || 0) * 0.3 && (def.cost.wood || 0) > 0) && !(type === 'doca' && !c.doca)) continue;
+      const b = V.startProject(set, type);
+      if (b) return;
+    }
+    // what it wished for found no room (or no materials): a full town grows upwards instead
+    if (!improved) improve();
+  }
+
+  // ------------------------------ jobs ------------------------------
+  const BASE_ROLES = ['lenhador', 'coletor', 'agricultor', 'construtor', 'mineiro', 'cacador', 'sacerdote', 'guerreiro'];
+  let WORK_ROLES = BASE_ROLES;
+  function assignJobs(set) {
+    const S = G.S;
+    // (the trades of the economy module load after this file)
+    if (WORK_ROLES === BASE_ROLES && G.Eco) WORK_ROLES = BASE_ROLES.concat(G.Eco.JOB_ROLES);
+    const adults = [];
+    let pop = 0;
+    for (const v of S.villagers.values()) {
+      if (v.set !== set.id) continue;
+      if (v.captive) { v.role = 'cativo'; continue; }
+      pop++;
+      const prev = v.role;
+      if (v.age < 2) v.role = 'bebe';
+      else if (v.age < 16) v.role = 'crianca';
+      else if (v.age >= 62) { v.role = 'anciao'; if (prev !== 'anciao' && G.Life) G.Life.onRole(v, prev); }
+      else { if (!WORK_ROLES.includes(v.role)) v.role = null; adults.push(v); }
+    }
+    const A = adults.length; if (!A) return;
+    const c = counts(set.id);
+    let sites = 0, matNeed = 0, woodNeed = 0, stoneNeed = 0;
+    for (const b of S.buildings.values()) if (b.set === set.id && !b.built && b.type !== 'ruin') { sites++; woodNeed += b.need.wood; stoneNeed += b.need.stone; }
+    matNeed = woodNeed + stoneNeed;
+    const fac = G.Fac.get(set.fac); if (!fac) return;
+    const cap = V.cap(fac.id); const st = fac.stock;
+    let farmsBuilt = 0; for (const b of S.buildings.values()) if (b.set === set.id && b.type === 'farm' && b.built) farmsBuilt++;
+    let templeBuilt = false; for (const b of S.buildings.values()) if (b.set === set.id && (b.type === 'temple') && b.built) templeBuilt = true;
+    let threats = 0; for (const a of S.animals.values()) if (!a.dead && (G.Animals.danger(a) || (G.Animals.DEF[a.kind] && G.Animals.DEF[a.kind].bold > 0.3)) && G.dist(a.x, a.y, set.cx, set.cy) < 20) threats++;
+    const want = {}; for (const r of WORK_ROLES) want[r] = 0;
+    // workplaces: shepherds, weavers, smiths, merchants...
+    const eco = G.Eco ? G.Eco.demand(set, fac, A) : {};
+    let ecoN = 0; for (const r in eco) { if (r === 'mineiro') continue; want[r] = eco[r]; ecoN += eco[r]; }
+    const mineJobs = eco.mineiro || 0;
+    want.sacerdote = templeBuilt ? (pop >= 45 ? 2 : 1) : 0;
+    want.guerreiro = G.War.warriorWant(set, fac, A);
+    // full granaries send half the farmers to the quarries and the woods (sooner in years of plenty)
+    const fed = st.food > Math.max(50, G.Fac.pop(fac.id) * (S.blessed ? 5 : 7));
+    want.agricultor = Math.min(farmsBuilt * (fed ? 1 : 2), Math.ceil(A * (fed ? 0.25 : 0.45)));
+    want.construtor = sites ? Math.min(Math.max(1, Math.ceil(sites * 1.4) + (matNeed > 40 ? 1 : 0)), Math.max(1, Math.floor(A * 0.35))) : 0;
+    // a great palace going up takes the town's hands
+    G.Court && G.Court.builders(set, fac, want, A);
+    want.cacador = (A >= 7 ? 1 : 0) + (A >= 22 ? 1 : 0) + Math.min(3, threats);
+    const restOf = () => A - want.sacerdote - want.agricultor - want.construtor - want.cacador - want.guerreiro - ecoN;
+    // at least two hands for wood and forage; the trades give way last
+    const MIN_REST = A >= 30 ? 4 : A >= 18 ? 3 : A >= 12 ? 2 : 1;
+    let rest = restOf();
+    if (rest < MIN_REST) { want.construtor = Math.min(want.construtor, Math.max(1, Math.floor(A * 0.2))); want.cacador = Math.min(want.cacador, 1 + (threats > 1 ? 1 : 0)); rest = restOf(); }
+    if (rest < MIN_REST) { want.guerreiro = Math.max(0, want.guerreiro - 1); rest = restOf(); }
+    if (rest < MIN_REST) {
+      for (const r of ['contrabandista', 'escriba', 'taverneiro', 'mergulhador', 'sericultor', 'salgador', 'salineiro', 'vinhateiro', 'apicultor', 'fruticultor', 'lavrador', 'ourives', 'feirante', 'oleiro', 'cavalarico', 'mercador', 'cobrador', 'tecelao', 'acougueiro', 'ferreiro']) {
+        if (rest >= MIN_REST) break;
+        if (!(want[r] > 0)) continue;
+        const cut = Math.min(want[r], MIN_REST - rest); want[r] -= cut; ecoN -= cut; rest += cut;
+      }
+    }
+    let rocks = 0; for (const r of S.rocks.values()) if (G.dist(r.x, r.y, set.cx, set.cy) < 26) { rocks++; if (rocks > 2) break; }
+    if (!rocks && G.Vg.canQuarry(set)) rocks = 1;
+    // how much of each resource the whole island wants to keep in stock
+    const totalPop = G.Fac.pop(fac.id);
+    let allWood = 0, allStone = 0;
+    for (const b of S.buildings.values()) if (!b.built && b.type !== 'ruin' && V.facOfSet(b.set) === fac.id) { allWood += b.need.wood; allStone += b.need.stone; }
+    const tg = fac.targets = {
+      food: Math.min(cap * 0.95, Math.max(50, totalPop * 5)),
+      wood: Math.min(cap * 0.95, 45 + totalPop * 1.1 + allWood * 1.5 + (fac._rsv || 0) * 2),
+      stone: Math.min(cap * 0.95, (G.Fac.has(fac.id, 'storehouse') ? 25 + totalPop * 0.6 : 8) + allStone * 1.5),
+    };
+    const lack = k => G.clamp((tg[k] - st[k]) / tg[k], 0, 1);
+    const wF = 0.25 + lack('food') * 3;
+    const wW = lack('wood') * 2.2 + (woodNeed > st.wood ? 0.8 : 0) + (fac._rsv && st.wood < fac._rsv ? 0.5 : 0);
+    const wS = rocks ? lack('stone') * 2 + (stoneNeed > st.stone ? 0.6 : 0) : 0;
+    const tot = wF + wW + wS;
+    if (rest > 0) {
+      want.coletor = Math.max(fed ? 0 : 1, Math.round(rest * wF / tot));
+      want.mineiro = Math.round(rest * wS / tot);
+      want.lenhador = Math.max(0, rest - want.coletor - want.mineiro);
+    }
+    // the mines take their crews from the quarrymen and woodcutters
+    if (mineJobs) { const m = Math.min(mineJobs, want.lenhador + want.coletor - 1); if (m > 0) { want.mineiro += m; const fromL = Math.min(m, want.lenhador); want.lenhador -= fromL; want.coletor -= m - fromL; } }
+    // current counts
+    const have = {}; for (const r of WORK_ROLES) have[r] = [];
+    const none = [];
+    for (const v of adults) { if (v.role) have[v.role].push(v); else none.push(v); }
+    // unassigned first
+    const deficit = () => WORK_ROLES.filter(r => have[r].length < want[r]).sort((a, b) => (have[a].length - want[a]) - (have[b].length - want[b]));
+    for (const v of none) {
+      const d = deficit(); const r = d.length ? pickRoleFor(v, d) : 'coletor';
+      v.role = r; have[r].push(v); G.Life && G.Life.onRole(v, null);
+    }
+    // move surplus to deficit (max 3 changes)
+    let changes = 0;
+    while (changes < 3) {
+      const d = deficit(); if (!d.length) break;
+      const sur = WORK_ROLES.filter(r => have[r].length > want[r]);
+      if (!sur.length) break;
+      // choose surplus role with biggest surplus
+      sur.sort((a, b) => (have[b].length - want[b]) - (have[a].length - want[a]));
+      const from = sur[0]; const to = pickRoleForList(have[from], d);
+      const v = to.v; const r = to.r;
+      have[from].splice(have[from].indexOf(v), 1); v.role = r; v.job = 0; have[r].push(v); changes++; G.Life && G.Life.onRole(v, from);
+    }
+    G.Eco && G.Eco.place(set);
+  }
+  function pickRoleFor(v, roles) {
+    // the trade learned beside a parent comes first
+    const learned = G.Life && G.Life.learned(v); if (learned && roles.includes(learned) && learned !== 'contrabandista') return learned;
+    if (roles.includes('guerreiro') && v.courage > 0.55 && v.g === 'm') return 'guerreiro';
+    if (roles.includes('contrabandista')) { const r = roles.filter(q => q !== 'contrabandista'); if (r.length) return pickRoleFor(v, r); }
+    if (roles.includes('cacador') && v.courage > 0.6) return 'cacador';
+    if (roles.includes('sacerdote') && v.traits.includes('Devoto')) return 'sacerdote';
+    return roles[0];
+  }
+  function pickRoleForList(list, roles) {
+    // prefer a villager who isn't busy with a task
+    let best = null, bs = -1e9;
+    for (const v of list) {
+      for (const r of roles) {
+        let s = (v.task ? 0 : 2) + G.R();
+        if (r === 'cacador') s += v.courage * 3;
+        if (r === 'guerreiro') s += v.courage * 3 + (v.g === 'm' ? 1 : 0) + (v.kills || 0) * 0.5;
+        if (r === 'sacerdote' && v.traits.includes('Devoto')) s += 3;
+        if (r === 'contrabandista') s -= 20; // nobody is ordered into crime
+        if (v.job && G.Eco && G.Eco.isJobRole(v.role)) s -= 1.5; // artisans keep their trade
+        if (v.skill && v.skill === r) s += 2.5; if (v.skill && v.skill === v.role) s -= 2; // and the ones who learned it as children
+        if (r === roles[0]) s += 1.5;
+        if (s > bs) { bs = s; best = { v, r }; }
+      }
+    }
+    return best;
+  }
+
+  // ------------------------------ housing ------------------------------
+  function assignHousing(set) {
+    const S = G.S;
+    const homes = [];
+    for (const b of S.buildings.values()) if (b.set === set.id && V.livable(b)) { b.res = 0; homes.push(b); } // (standing, or under the works: the one rule, L-371)
+    const byId = new Map(homes.map(b => [b.id, b]));
+    const vs = [];
+    for (const v of S.villagers.values()) if (v.set === set.id) { if (v.captive) { v.home = 0; continue; } vs.push(v); }
+    for (const v of vs) {
+      if (v.home && !byId.has(v.home)) v.home = 0;
+      if (v.home) byId.get(v.home).res++;
+    }
+    const space = b => G.BDEF[b.type].housing - b.res;
+    const findHome = (need) => { let best = null; for (const b of homes) if (b.built && space(b) >= need && (!best || space(b) > space(best))) best = b; return best; };
+    // children live with parents
+    for (const v of vs) {
+      if (v.age >= 16) continue;
+      const m = S.villagers.get(v.mother), f = S.villagers.get(v.father);
+      const h = (m && m.set === v.set && m.home) || (f && f.set === v.set && f.home) || 0;
+      if (h && h !== v.home) { if (v.home && byId.get(v.home)) byId.get(v.home).res--; v.home = h; byId.get(h).res++; }
+    }
+    for (const v of vs) {
+      if (v.age < 16) continue;
+      const p = v.partner ? S.villagers.get(v.partner) : null;
+      if (p && p.set === v.set) {
+        if (p.home && v.home !== p.home) {
+          const ph = byId.get(p.home);
+          if (ph && space(ph) >= 1) { if (v.home && byId.get(v.home)) byId.get(v.home).res--; v.home = p.home; ph.res++; continue; }
+        }
+        if (!v.home && !p.home) { const b = findHome(2); if (b) { v.home = b.id; p.home = b.id; b.res += 2; } continue; }
+      }
+      if (!v.home) { const b = findHome(1); if (b) { v.home = b.id; b.res++; } }
+    }
+    // grown single adults move out of an overcrowded home when possible, the youngest first — never the parent the children
+    // follow, the house's owner, the old one who minds the little ones there (G.Lar.minder), nor the god's body (its house is
+    // the player's to leave, as in act-casa.js): D-098
+    const minders = new Set(); for (const v of vs) if (v.age < 16 && v.home) { const m = S.villagers.get(v.mother), f = S.villagers.get(v.father); if (m && m.home === v.home) minders.add(m.id); else if (f && f.home === v.home) minders.add(f.id); }
+    const cares = v => !!(G.Lar && G.Lar.minder && G.Lar.minder(v));
+    const body = S.avatar ? S.avatar.id : 0;
+    for (const b of homes) {
+      if (!b.built || space(b) >= 0) continue;
+      for (const v of vs.filter(o => o.home === b.id).sort((p, q) => p.age - q.age || p.id - q.id)) {
+        if (v.age < 18 || v.partner || minders.has(v.id) || v.id === b.dono || v.id === body || cares(v)) continue;
+        const nb = findHome(1); if (nb && nb !== b) { v.home = nb.id; nb.res++; b.res--; }
+        if (space(b) >= 0) break;
+      }
+    }
+  }
+
+  // ------------------------------ expansion ------------------------------
+  function checkExpansion() {
+    const S = G.S;
+    const maxSets = N >= 192 ? 24 : N >= 160 ? 19 : N >= 128 ? 14 : N >= 96 ? 9 : N >= 80 ? 7 : 5;
+    if (S.settlements.size >= maxSets) return;
+    for (const set of [...S.settlements.values()]) {
+      // Romans and Norse spread further; capitals keep growing into cities instead of always splitting
+      const ex = G.Civ.t(set.fac, 'expansion');
+      if (G.Fac.settlementsOf(set.fac).length >= (ex > 1.1 ? 5 : 4) + (N >= 128 ? Math.floor(N / 48) : 0)) continue;
+      const pop = V.pop(set.id);
+      const cap = G.Fac.capitalOf(set.fac) === set;
+      // real cities keep their people and grow up and out instead of sending settlers away
+      const crowd = G.City ? G.City.crowdCap(set.id) : 48;
+      let need = Math.round(Math.max((cap ? 44 : 34) / ex, (set.tier || 0) >= 3 ? crowd * 0.9 : 0));
+      // a capital keeps its young couples until it is a city (unless it is bursting)
+      const holding = cap && (set.tier || 0) < 3;
+      if (holding) need = Math.max(need, 48);
+      if (!(pop >= need || (!holding && pop >= Math.round(26 / ex) && set.fails >= 6))) continue;
+      if (S.day - set.founded < 8) continue;
+      if (G.R() > 0.5) continue;
+      // find location
+      let best = null, bs = -1e9;
+      for (let y = 6; y < N - 6; y += 1) for (let x = 6; x < N - 6; x += 1) {
+        const i = y * N + x; const t = S.type[i];
+        if (t !== T.GRASS && t !== T.MEADOW) continue;
+        if (S.occ[i] || S.objAt[i]) continue;
+        let md = 1e9; for (const o of S.settlements.values()) md = Math.min(md, G.dist(x, y, o.cx, o.cy));
+        if (md < 15) continue;
+        if (G.dOcean && G.dOcean[i] < 4) continue;
+        const sl = W.slope(x - 2, y - 2, 5, 5); if (sl > 1.6) continue;
+        let trees = 0, land = 0;
+        for (let dy = -7; dy <= 7; dy += 2) for (let dx = -7; dx <= 7; dx += 2) {
+          const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx;
+          if (S.treeAt[j]) trees++; if (S.type[j] >= T.SAND) land++;
+        }
+        const sc = Math.min(trees, 20) * 0.3 + land * 0.12 + S.fert[i] * 3 - sl * 2 - Math.abs(md - 20) * 0.1 + G.R();
+        if (sc > bs) { bs = sc; best = [x + 0.5, y + 0.5]; }
+      }
+      // seafaring peoples (and anyone boxed in on an island) sail off to found colonies
+      const fac = G.Fac.get(set.fac);
+      const seaChance = Math.max(0.15, (G.Civ.t(set.fac, 'colonize') - 1) * 0.6);
+      const reachable = best && W.findPath(set.cx, set.cy, best[0], best[1], true, N * N);
+      if ((!reachable || G.R() < seaChance) && G.Naval && fac && G.Naval.colonize(set, fac)) { set.fails = 0; return; }
+      if (!reachable) { set.fails = 0; continue; }
+      const name = V.newSettlementName(set.fac);
+      const ns = V.addSettlement(name, best[0], best[1], set.fac);
+      // pick migrants: young couples with kids first, then singles
+      const members = [...S.villagers.values()].filter(v => v.set === set.id);
+      const target = G.clamp(Math.round(pop * 0.33), 6, 14);
+      const chosen = new Set();
+      const couples = members.filter(v => v.g === 'f' && v.partner && !v.captive && v.age < 42 && S.villagers.get(v.partner));
+      couples.sort(() => G.R() - 0.5);
+      for (const m of couples) {
+        if (chosen.size >= target) break;
+        const f = S.villagers.get(m.partner); if (f.set !== set.id) continue;
+        chosen.add(m); chosen.add(f);
+        for (const k of members) if ((k.mother === m.id || k.father === f.id) && k.age < 16) chosen.add(k);
+      }
+      for (const v of members.filter(v => !v.partner && !v.captive && v.age >= 17 && v.age < 32).sort(() => G.R() - 0.5)) {
+        if (chosen.size >= target) break; chosen.add(v);
+      }
+      if (chosen.size < 4) { S.settlements.delete(ns.id); continue; }
+      for (const v of chosen) { G.Vg.endTask(v); v.set = ns.id; v.home = 0; v.sleeping = false; v.inside = 0; v.task = { type: 'migrate', pri: 1.5 }; }
+      set.fails = 0;
+      V.log(`${chosen.size} pessoas partiram de ${set.name} para fundar ${name}.`, 'settle', best[0], best[1]);
+      V.milestone('settle2', 'Novo assentamento', `${name} foi fundado.`, 'settle');
+      return;
+    }
+  }
+
+  // ------------------------------ births & deaths ------------------------------
+  V.birth = function (mother) {
+    const S = G.S;
+    const father = S.villagers.get(mother.partner) || S.dead.get(mother.partner);
+    const twins = G.R() < 0.05 ? 2 : 1;
+    const names = [];
+    for (let k = 0; k < twins; k++) {
+      const g = G.R() < 0.5 ? 'f' : 'm';
+      const c = G.Vg.create({ g, age: 0, x: mother.x + G.rr(-0.2, 0.2), y: mother.y + G.rr(-0.2, 0.2), set: mother.set, mother: mother.id, father: father ? father.id : 0 });
+      c.home = mother.home;
+      mother.kids.push(c.id); if (father) father.kids.push(c.id);
+      S.stats.births++;
+      names.push([c.name, g]);
+      G.FX && G.FX.hearts(mother.x, mother.y);
+    }
+    mother.lastBirth = S.day;
+    const fn = father ? father.name : null;
+    let txt;
+    const had = fn ? ' e ' + fn + ' tiveram' : ' teve';
+    if (twins === 2) txt = `${mother.name}${had} gêmeos: ${names[0][0]} e ${names[1][0]}.`;
+    else txt = `${mother.name}${had} ${names[0][1] === 'f' ? 'uma filha' : 'um filho'}, ${names[0][0]}.`;
+    V.log(txt, 'baby', mother.x, mother.y);
+    G.Audio && G.Audio.at(mother.x, mother.y, 'birth', true);
+    if (!S.milestones.firstBirth) V.milestone('firstBirth', 'Primeiro nascimento', 'Uma nova geração começa na ilha.', 'baby');
+  };
+
+  const CAUSE = {
+    old: (v) => `morreu de velhice aos ${Math.floor(v.age)} anos`,
+    hunger: (v) => `morreu de fome aos ${Math.floor(v.age)} anos`,
+    wolf: (v) => `foi mort${v.g === 'f' ? 'a' : 'o'} por lobos aos ${Math.floor(v.age)} anos`,
+    boar: (v) => `foi mort${v.g === 'f' ? 'a' : 'o'} por um javali aos ${Math.floor(v.age)} anos`,
+    fire: (v) => `morreu queimad${v.g === 'f' ? 'a' : 'o'} aos ${Math.floor(v.age)} anos`,
+    lightning: (v) => `foi atingid${v.g === 'f' ? 'a' : 'o'} por um raio aos ${Math.floor(v.age)} anos`,
+    meteor: (v) => `foi esmagad${v.g === 'f' ? 'a' : 'o'} por um meteoro aos ${Math.floor(v.age)} anos`,
+    sick: (v) => `sucumbiu à doença aos ${Math.floor(v.age)} anos`,
+    fall: (v) => `caiu das mãos de deus aos ${Math.floor(v.age)} anos`,
+    queda: (v) => `morreu de uma queda aos ${Math.floor(v.age)} anos`,
+    quake: (v) => `morreu soterrad${v.g === 'f' ? 'a' : 'o'} no terremoto aos ${Math.floor(v.age)} anos`,
+    drown: (v) => `se afogou aos ${Math.floor(v.age)} anos`,
+    war: (v) => `tombou em combate aos ${Math.floor(v.age)} anos`,
+    arrow: (v) => `foi atingid${v.g === 'f' ? 'a' : 'o'} por uma flecha aos ${Math.floor(v.age)} anos`,
+    massacre: (v) => `foi massacrad${v.g === 'f' ? 'a' : 'o'} aos ${Math.floor(v.age)} anos`,
+    execution: (v) => `foi executad${v.g === 'f' ? 'a' : 'o'} aos ${Math.floor(v.age)} anos`,
+    coup: (v) => `foi assassinad${v.g === 'f' ? 'a' : 'o'} aos ${Math.floor(v.age)} anos`,
+    riot: (v) => `foi mort${v.g === 'f' ? 'a' : 'o'} pela guarda num motim aos ${Math.floor(v.age)} anos`,
+    sacrifice: (v) => `foi sacrificad${v.g === 'f' ? 'a' : 'o'} aos deuses aos ${Math.floor(v.age)} anos`,
+    lava: (v) => `foi engolid${v.g === 'f' ? 'a' : 'o'} pela lava aos ${Math.floor(v.age)} anos`,
+    beast: (v) => `foi devorad${v.g === 'f' ? 'a' : 'o'} por ${v.lastBeast && G.Animals.DEF[v.lastBeast] ? G.Animals.DEF[v.lastBeast].nameA : 'uma fera'} aos ${Math.floor(v.age)} anos`,
+    wave: (v) => `foi levad${v.g === 'f' ? 'a' : 'o'} pelo maremoto aos ${Math.floor(v.age)} anos`,
+    dragon: (v) => `foi mort${v.g === 'f' ? 'a' : 'o'} pelo dragão aos ${Math.floor(v.age)} anos`,
+    kraken: (v) => `foi arrastad${v.g === 'f' ? 'a' : 'o'} para as profundezas pelo Kraken aos ${Math.floor(v.age)} anos`,
+    unknown: (v) => `morreu aos ${Math.floor(v.age)} anos`,
+  };
+  V.deathText = rec => (CAUSE[rec.cause] || CAUSE.unknown)(rec);
+  V.kill = function (v, cause, byGod) {
+    const S = G.S;
+    if (!S.villagers.has(v.id)) return;
+    // a violent death leaves a body on the ground, to be carried away later (or not)
+    const body = !!(G.Carnage && G.Carnage.onKill(v, cause));
+    G.Vg.endTask(v);
+    S.villagers.delete(v.id);
+    S.stats.deaths++;
+    if (byGod) S.stats.godKills++;
+    const rec = {
+      id: v.id, name: v.name, g: v.g, born: v.born, died: S.day, age: v.age, mother: v.mother, father: v.father,
+      partner: v.partner, kids: v.kids.slice(), cause, role: v.role, dead: true, traits: v.traits,
+      fac: G.Fac.idOfV(v), captive: !!v.captive, ord: v.ord, ep: v.ep, reigned: v.reigned, kills: v.kills, hero: v.hero, by: v.lastBy || 0, skin: v.skin, hair: v.hair,
+    };
+    if (v.bio) rec.bio = v.bio;
+    if (v.lost) rec.lost = v.lost;
+    S.dead.set(v.id, rec);
+    G.Life && G.Life.onDeath(v);
+    const violent = cause === 'war' || cause === 'arrow' || cause === 'massacre' || cause === 'execution' || cause === 'coup' || cause === 'sacrifice';
+    if (violent) G.War.noteDeath(v, cause);
+    G.War && G.War.onGone(v);
+    const wasRuler = G.Fac.all().some(f => f.leader === v.id);
+    const p = S.villagers.get(v.partner);
+    if (p) { p.partner = 0; p.widow = v.id; p.mourn = G.DAY_LEN * 1.5; p.emo = { k: 'sad', t: 6 }; }
+    // mourning & devotion effects on family
+    for (const o of S.villagers.values()) {
+      const rel = o.mother === v.id || o.father === v.id || v.mother === o.id || v.father === o.id || (o.mother && o.mother === v.mother);
+      if (rel) { o.mourn = Math.max(o.mourn, G.DAY_LEN * 0.8); o.emo = { k: 'sad', t: 5 }; if (byGod) { o.devotion = Math.max(0, o.devotion - 25); o.fear = Math.min(100, o.fear + 20); } }
+    }
+    const txt = `${v.name} ${(CAUSE[cause] || CAUSE.unknown)(v)}${v.captive ? ', no cativeiro' : ''}.`;
+    if (!violent && !wasRuler) { V.log(txt, cause === 'old' ? 'grave' : 'skull', v.x, v.y); V.notice(txt, 'grave'); }
+    else if (G.UI && G.UI.selected === v) V.notice(txt, 'grave');
+    G.Politics.onDeath(v, cause, v.lastBy, byGod);
+    G.FX && G.FX.death(v.x, v.y);
+    G.Audio && G.Audio.at(v.x, v.y, 'death', true);
+    if (!S.milestones.firstDeath) S.milestones.firstDeath = S.day;
+    // bury in the cemetery
+    const set = S.settlements.get(v.set) || V.mainSettlement();
+    if (set && !body) {
+      const cem = V.cemeteryFor(set);
+      if (cem) {
+        V.bury(cem, rec);
+        // the family comes to say goodbye
+        for (const o of S.villagers.values()) {
+          const rel = o.id === v.partner || o.mother === v.id || o.father === v.id || v.mother === o.id || v.father === o.id || (v.mother && o.mother === v.mother);
+          if (rel && o.set === v.set && G.dist(o.x, o.y, cem.x, cem.y) < 28) G.Vg.give(o, { type: 'funeral', id: cem.id, pri: 1.1, kind: 'funeral' });
+        }
+      }
+    }
+    if (G.UI && G.UI.selected === v) G.UI.select(null);
+    G.Politics.lastSoul && G.Politics.lastSoul(v);
+    if (S.villagers.size === 0) {
+      V.log('Não resta ninguém na ilha. O silêncio toma conta.', 'skull');
+      G.UI && G.UI.toast('A ilha está vazia', 'Todos se foram. Você pode trazer viajantes com o tempo…', 'skull');
+    }
+  };
+
+  // ------------------------------ faith ------------------------------
+  V.faithRate = 0;
+  function updateFaith(dt) {
+    const S = G.S; let r = S.villagers.size ? 0.12 : 0;
+    // pious peoples (Egyptians, Aztecs) pray more
+    const fm = {}; for (const f of S.factions.values()) if (f.alive) fm[f.id] = G.Civ.t(f.id, 'faith');
+    for (const v of S.villagers.values()) { const s = S.settlements.get(v.set); r += (0.003 + v.devotion * 0.002 + v.fear * 0.0013) * ((s && fm[s.fac]) || 1); }
+    for (const b of S.buildings.values()) if (b.built) { const s = S.settlements.get(b.set); const m = (s && fm[s.fac]) || 1; if (b.type === 'temple') r += 0.2 * m; else if (b.type === 'monument') r += 0.4 * m; else if (b.type === 'maravilha') r += 1.2 * m; }
+    V.faithRate = r;
+    S.faith = Math.min(999, S.faith + r * dt);
+  }
+  V.perception = function (fid) {
+    const S = G.S; let d = 0, f = 0, n = 0;
+    for (const v of S.villagers.values()) { if (v.age < 6) continue; if (fid && V.facOfSet(v.set) !== fid) continue; d += v.devotion; f += v.fear; n++; }
+    if (!n) return ['Ninguém', 'none'];
+    d /= n; f /= n;
+    if (d < 12 && f < 12) return ['Um mistério', 'mist'];
+    if (d > f * 1.5) return [d < 35 ? 'Um espírito gentil' : d < 65 ? 'Protetor' : 'Deus amado', 'love'];
+    if (f > d * 1.5) return [f < 35 ? 'Uma força estranha' : f < 65 ? 'Deus temido' : 'Tirano divino', 'fear'];
+    return ['Deus imprevisível', 'mixed'];
+  };
+
+  // ------------------------------ population milestones ------------------------------
+  function checkMilestones() {
+    const S = G.S; const pop = S.villagers.size;
+    if (pop > S.stats.maxPop) S.stats.maxPop = pop;
+    const pm = [[15, 'Crescendo'], [20, 'Vinte almas'], [30, 'Trinta almas'], [50, 'Cinquenta almas'], [75, 'Setenta e cinco almas'], [100, 'Cem almas'], [150, 'Cento e cinquenta almas'], [200, 'Duzentas almas']];
+    for (const [n, t] of pm) {
+      if (pop >= n && !S.milestones['pop' + n]) {
+        V.log(`A população chegou a ${n} habitantes.`, 'pop');
+        if (n >= 20) V.milestone('pop' + n, t, `A população chegou a ${n} habitantes.`, 'pop'); else S.milestones['pop' + n] = S.day;
+      }
+    }
+    const age = S.day - 1;
+    for (const y of [10, 25, 50, 100, 200]) {
+      if (age >= y && !S.milestones['years' + y]) {
+        V.log(`A civilização completou ${y} anos.`, 'era');
+        V.milestone('years' + y, `${y} anos`, `A civilização completou ${y} anos de história.`, 'era');
+      }
+    }
+    for (const v of S.villagers.values()) if (v.age > S.stats.oldest) { S.stats.oldest = v.age; S.stats.oldestName = v.name; }
+  }
+
+  // ------------------------------ ruins ------------------------------
+  function updateRuins(dt) {
+    for (const b of [...G.S.buildings.values()]) if (b.type === 'ruin') { b.ruinT -= dt; if (b.ruinT <= 0) V.removeBuilding(b); }
+  }
+
+  // ------------------------------ main update ------------------------------
+  let tPlan = 0, tJobs = 0, tHouse = 0, tSlow = 0;
+  G.worldHooks.push(() => { tPlan = 0; tJobs = 0; tHouse = 0; tSlow = 0; }); // (a new world, or a save loaded: it starts over)
+  V.update = function (dt) {
+    const S = G.S;
+    tPlan += dt; tJobs += dt; tHouse += dt; tSlow += dt;
+    updateFaith(dt);
+    G.Fac.update(dt);
+    if (tSlow >= 1) { updateFarms(tSlow); updateRuins(tSlow); checkMilestones(); tSlow = 0; }
+    // (during the time skip homes and trades are dealt out half as often: a few seconds more for a new house to fill
+    // or a trade to change hands is nothing in a year of two hundred, and nobody is watching)
+    const sk = G.Skip && G.Skip.on ? 2 : 1;
+    if (tHouse >= 2.5 * sk) { tHouse = 0; for (const s of S.settlements.values()) assignHousing(s); }
+    if (tJobs >= 4 * sk) { tJobs = 0; for (const s of S.settlements.values()) assignJobs(s); }
+    if (tPlan >= 3.5) {
+      const step = tPlan; tPlan = 0;
+      for (const s of [...S.settlements.values()]) {
+        if (V.pop(s.id) === 0) {
+          s.emptyT = (s.emptyT || 0) + step;
+          let migrating = false; for (const v of S.villagers.values()) if (v.set === s.id) { migrating = true; break; }
+          if (s.emptyT > G.DAY_LEN * 0.8 && !migrating) V.abandon(s);
+          continue;
+        }
+        s.emptyT = 0;
+        plan(s);
+        if (V.pop(s.id) >= 100) plan(s); // big cities run several building projects at once
+      }
+    }
+  };
+  // an empty settlement is left to the wind
+  V.abandon = function (s) {
+    const S = G.S;
+    if (!S.settlements.has(s.id)) return;
+    S.settlements.delete(s.id);
+    for (const b of [...S.buildings.values()]) {
+      if (b.set !== s.id) continue;
+      if (b.type === 'cemetery') { b.set = 0; continue; }
+      if (b.type === 'farm' || b.type === 'campfire' || !b.built) { V.removeBuilding(b); continue; }
+      // (a house left to the wind keeps no coins: what was in it is lost, in the ledger)
+      if (G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });
+      if (b.type !== 'ruin') { b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.ruinT = G.DAY_LEN * (2 + G.R() * 3); b.hp = 1; W.touchWalk(); G.Interiors && G.Interiors.abandon(b); }
+      b.set = 0;
+    }
+    const f = G.Fac.get(s.fac);
+    V.log(`${s.name} foi abandonada. Só restam casas vazias.`, 'grave', s.cx, s.cy);
+    if (f && !G.Fac.settlementsOf(f.id).length) G.Politics ? G.Politics.extinct(f, null) : (f.alive = false);
+    G.Fac.updateTerritory();
+  };
+  V.forceUpdate = function () {
+    for (const s of G.S.settlements.values()) { assignHousing(s); assignJobs(s); }
+    V.updateEra();
+  };
+  // someone who lives in a town across the water they cannot walk to (a captive freed overseas, a migrant whose road broke):
+  // after a day of it, a village of their own people on this land takes them in — or a town not at war with them, as a guest
+  const IN_TRANSIT = { band: 1, swim: 1, naufrago: 1, muster: 1, scene: 1, embark: 1, aboard: 1, escorted: 1, cais: 1, expl: 1 };
+  function strays() {
+    const S = G.S;
+    for (const v of S.villagers.values()) {
+      if (v.captive || v.aboard || v.ug || v.wrecked || v.held || v.air || v.age < 3 || (v.task && IN_TRANSIT[v.task.type]) || (G.Expe && G.Expe.memberOf(v.id))) { v._stray = 0; continue; }
+      const set = S.settlements.get(v.set); if (!set || W.reachesTown(v, set)) { v._stray = 0; continue; }
+      const f = G.Fac.get(set.fac); const ruler = !!(f && f.leader === v.id);
+      if (!v._stray) { v._stray = S.day; continue; }
+      // (a pocket beside home — a quay the god sank around, a gap between houses: set down where home is reached on foot,
+      // as the stuck are; only farther than that another town, a castaway's camp)
+      if (G.Vg.unstick(v)) { v._stray = 0; continue; }
+      let best = null, bd = 1e18, own = false, foe = null, fd = 1e18;
+      for (const o of S.settlements.values()) {
+        if (!W.reachesTown(v, o)) continue; const mine = o.fac === set.fac; const d = G.dist2(v.x, v.y, o.cx, o.cy);
+        if (!mine && G.Fac.atWar(o.fac, set.fac)) { if (d < fd) { fd = d; foe = o; } continue; }
+        if (d + (mine ? 0 : 1e9) < bd) { bd = d + (mine ? 0 : 1e9); best = o; own = mine; }
+      }
+      // (a ruler is never made a guest or a captive for being cut off: they rule from a town of their own on this land,
+      // or wait as a castaway for a way home — the camp, the raft, the hamlet of the shipwrecked)
+      if (ruler && !(best && own)) { v.wrecked = { ship: 0, name: 'o barco', d: S.day, fac: set.fac, exp: 0, x: +v.x.toFixed(1), y: +v.y.toFixed(1) }; v._stray = 0; continue; }
+      // (only enemies on this land: like a castaway on a hostile shore, they are taken)
+      if (!best && foe && G.War && G.War.enslave) { G.Vg.endTask(v); G.War.enslave(v, set.fac, set.id); v.set = foe.id; v.home = 0; v._stray = 0; continue; }
+      // (nobody at all on this land: stranded like a castaway — the camp, the raft, the hamlet of the shipwrecked)
+      if (!best && !foe) { v.wrecked = { ship: 0, name: 'o barco', d: S.day, fac: set.fac, exp: 0, x: +v.x.toFixed(1), y: +v.y.toFixed(1) }; v._stray = 0; continue; }
+      if (!best) continue;
+      G.Vg.endTask(v); v.set = best.id; v.home = 0; v._stray = 0;
+      if (!own) v.guestOf = { fac: best.fac, from: set.fac, d: S.day };
+    }
+  }
+  // ------------------------------ the memory of the dead ------------------------------
+  // A cemetery holds twelve. A full one opens a new one — until the town has as many as its size calls for: then the
+  // oldest is reused, its bones gone to the ossuary (a town of three hundred souls does not grow forty cemeteries).
+  const GRAVES = 12, BONES = 30;
+  V.cemeteryFor = function (set) {
+    const S = G.S;
+    const cur = S.buildings.get(set.cemetery);
+    if (cur && cur.type === 'cemetery' && (cur.graves || []).length < GRAVES) return cur;
+    let old = null, n = 0;
+    for (const b of S.buildings.values()) {
+      if (b.type !== 'cemetery' || b.set !== set.id || !b.built) continue;
+      n++; if (!old || lastBurial(b) < lastBurial(old)) old = b;
+    }
+    if (old && (S.day - lastBurial(old) >= BONES || n >= 2 + Math.floor(V.pop(set.id) / 60))) {
+      for (const id of old.graves || []) { const d = S.dead.get(id); if (d && d.grave === old.id) { d.grave = 0; d.buried = 'ossuario'; } }
+      old.graves = []; set.cemetery = old.id;
+      return old;
+    }
+    const cem = V.startProject(set, 'cemetery'); if (cem) set.cemetery = cem.id;
+    return cem;
+  };
+  // (an old world's cemetery does not know its last burial: its dead do)
+  function lastBurial(b) { if (b.last !== undefined) return b.last; let m = 0; for (const id of b.graves || []) { const d = G.S.dead.get(id); if (d && d.died > m) m = d.died; } return m; }
+  // (a body carried a long way may find its cemetery full: the town's next one takes it, or the common pit)
+  V.bury = function (cem, rec, how) {
+    if ((cem.graves || []).length >= GRAVES) { const set = G.S.settlements.get(cem.set); cem = set ? V.cemeteryFor(set) : null; }
+    if (!cem) { rec.grave = 0; rec.buried = 'vala'; return null; }
+    (cem.graves = cem.graves || []).push(rec.id); cem.last = G.S.day; rec.grave = cem.id; if (how) rec.buried = how;
+    return cem;
+  };
+  // The registry of the dead remembers three generations. After that a name fades — unless someone living still calls
+  // them father, mother or grandparent, or they mattered: rulers, heroes, those with an epithet, great killers.
+  // (a thousand years would otherwise keep tens of thousands of strangers, heavier than the world itself)
+  const FORGET = 80;
+  // one brought back from the dead leaves an empty grave (the only other hand on the graves: the god's)
+  V.unbury = function (rec) {
+    const cem = rec.grave && G.S.buildings.get(rec.grave);
+    if (cem && cem.graves) cem.graves = cem.graves.filter(id => id !== rec.id);
+    rec.grave = 0;
+  };
+  V.remembered = d => !!(d.reigned || d.hero || d.ep || (d.kills || 0) >= 5);
+  V.forget = function () {
+    const S = G.S; if (!S.dead.size) return 0;
+    const keep = new Set();
+    for (const v of S.villagers.values()) {
+      if (v.widow) keep.add(v.widow);
+      for (const id of [v.mother, v.father]) { if (!id) continue; keep.add(id); const p = G.person(id); if (p) { if (p.mother) keep.add(p.mother); if (p.father) keep.add(p.father); } }
+    }
+    let n = 0;
+    for (const [id, d] of S.dead) if (S.day - (d.died || 0) >= FORGET && !keep.has(id) && !V.remembered(d)) { S.dead.delete(id); n++; }
+    return n;
+  };
+  V.onNewDay = function () {
+    V.forget();
+    strays();
+    checkExpansion();
+    V.updateEra();
+    G.Politics.onNewDay();
+    G.Interiors && G.Interiors.onNewDay(); // (the doors back to their rule, a door moved, a type made over, who heads each house)
+  };
+})(window.G);

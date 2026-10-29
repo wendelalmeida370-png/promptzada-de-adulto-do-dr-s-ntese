@@ -1,0 +1,221 @@
+'use strict';
+// ============================================================
+//  Save / Load (localStorage)
+// ============================================================
+(function (G) {
+  let N = G.N; const T = G.T, W = G.W;
+  G.mapHooks.push(n => { N = n; });
+  const KEY = 'gotaf-save-v1';
+  const Sv = G.Save = {};
+  const r = (v, d) => { const m = Math.pow(10, d || 0); return Math.round(v * m) / m; };
+  const arr = (a, d) => Array.from(a, v => r(v, d));
+  // compact encodings for the per-tile arrays (big maps would not fit in localStorage otherwise)
+  // z: zero runs -> negative counts (arrays of values >= 0, mostly zero)
+  const zr = (a, m) => { const o = []; let z = 0; for (let k = 0; k < a.length; k++) { const v = Math.round(a[k] * m); if (v <= 0) { z++; continue; } if (z) { o.push(-z); z = 0; } o.push(v); } if (z) o.push(-z); return { z: o, m }; };
+  // e: plain run-length pairs (tile types)
+  const rl = a => { const o = []; let v = a[0], n = 0; for (let k = 0; k < a.length; k++) { if (a[k] === v) n++; else { o.push(v, n); v = a[k]; n = 1; } } o.push(v, n); return { e: o }; };
+  // d: fixed-point deltas (smooth heights)
+  const dl = (a, m) => { const o = new Array(a.length); let p = 0; for (let k = 0; k < a.length; k++) { const v = Math.round(a[k] * m); o[k] = v - p; p = v; } return { d: o, m }; };
+  function setArr(into, o) {
+    if (!o) return;
+    if (Array.isArray(o)) { into.set(o); return; }
+    if (o.z) { let p = 0; const m = o.m || 1; for (const v of o.z) { if (v < 0) { into.fill(0, p, p - v); p -= v; } else into[p++] = v / m; } }
+    else if (o.e) { let p = 0; for (let k = 0; k < o.e.length; k += 2) { into.fill(o.e[k], p, p + o.e[k + 1]); p += o.e[k + 1]; } }
+    else if (o.d) { let v = 0; const m = o.m || 1; for (let k = 0; k < o.d.length; k++) { v += o.d[k]; into[k] = v / m; } }
+  }
+  Sv.setArr = setArr;
+  // a person the save lost a field of (a damaged save) gets what a newborn would have, not an undefined every system trips on
+  const VNUM = { hp: 100, hunger: 20, energy: 80, age: 20, speed: 1.35, work: 1, courage: 0.5, devotion: 3, fear: 0, sick: 0, preg: 0, mourn: 0, z: 0, vx: 0, vy: 0, vz: 0, pi: 0, actT: 0, walkPh: 0, face: 1, hurt: 0 };
+  function repairV(v, S) {
+    for (const k in VNUM) if (!Number.isFinite(v[k])) v[k] = VNUM[k];
+    if (!Array.isArray(v.traits)) v.traits = []; if (!Array.isArray(v.kids)) v.kids = [];
+    if (!v.st || typeof v.st !== 'object') v.st = { wood: 0, food: 0, stone: 0, built: 0 };
+    if (typeof v.name !== 'string' || !v.name) v.name = '…'; if (v.g !== 'f' && v.g !== 'm') v.g = 'f';
+    if (!Number.isFinite(v.born)) v.born = S.day - v.age;
+    if (!Number.isFinite(v.x) || !Number.isFinite(v.y)) { const s = S.settlements.get(v.set); const p = s ? [s.cx, s.cy] : (S.start || [N / 2, N / 2]); v.x = p[0]; v.y = p[1]; v.inside = 0; v.aboard = 0; }
+  }
+  // how many tiles a saved per-tile array holds, whatever its encoding
+  const arrLen = a => !a ? 0 : Array.isArray(a) ? a.length : a.d ? a.d.length : a.e ? a.e.reduce((n, v, k) => (k % 2 ? n + v : n), 0) : a.z ? a.z.reduce((n, v) => n + (v < 0 ? -v : 1), 0) : 0;
+
+  // ages kept to a thousandth, never rounded across a birthday (a baby of 1.9996 must not wake up from a load a child)
+  Sv.ageR = a => { const x = Math.round(a * 1000) / 1000; return Math.floor(x) > Math.floor(a) ? Math.floor(a) + 0.999 : x; };
+  // A big world goes to the browser compressed: the browser keeps about five million characters for the whole site, and a
+  // world of fifteen hundred souls is more than that as plain text (gzip makes it about a tenth). The compression is the
+  // browser's own and finishes a moment later (Sv.pending); a small world is still written at once, as plain text. A short
+  // note beside it says what the save is, so the menu does not have to open the world to tell (L-076).
+  const BIG = 3e6, INFO = KEY + ':info';
+  Sv.BIG = BIG;
+  let seq = 0; Sv.pending = null;
+  const canZip = () => typeof CompressionStream === 'function' && typeof DecompressionStream === 'function';
+  const b64 = u8 => { let t = ''; for (let i = 0; i < u8.length; i += 0x8000) t += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(t); };
+  const unb64 = t => { const b = atob(t); const u8 = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u8[i] = b.charCodeAt(i); return u8; };
+  const gzip = str => new Response(new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer().then(b => b64(new Uint8Array(b)));
+  const gunzip = t => new Response(new Blob([unb64(t)]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  Sv.has = function () { try { return !!localStorage.getItem(KEY); } catch (e) { return false; } };
+  Sv.info = function () {
+    try {
+      const s = localStorage.getItem(KEY); if (!s) return null;
+      const i = localStorage.getItem(INFO); if (i) { const o = JSON.parse(i); return { day: o.day, pop: o.pop, era: o.era, when: o.when }; }
+      if (s.startsWith('gz1:')) return null;
+      const o = JSON.parse(s); return { day: o.day, pop: o.villagers.length, era: o.era, when: o.savedAt }; // (a save from before the note)
+    } catch (e) { return null; }
+  };
+  Sv.serialize = function () {
+    const S = G.S;
+    const vill = [...S.villagers.values()].map(v => {
+      const o = Object.assign({}, v);
+      delete o.path; delete o.task; delete o.emo; delete o.babyOn; delete o.torch; delete o._fc;
+      o.coup = 0; o.rebel = 0; o.revolt = 0;
+      o.pi = 0; o.moving = false; o.held = false;
+      if (o.air) { o.air = false; o.z = 0; o.vz = 0; o.vx = 0; o.vy = 0; }
+      if (o.inside) { const b = S.buildings.get(o.inside); if (b) { const d = G.Vg.door(b); o.x = d[0]; o.y = d[1]; } o.inside = 0; o.sleeping = false; }
+      o.x = r(o.x, 2); o.y = r(o.y, 2); o.hunger = r(o.hunger, 1); o.energy = r(o.energy, 1); o.hp = r(o.hp, 1); o.age = Sv.ageR(o.age);
+      o.devotion = r(o.devotion, 1); o.fear = r(o.fear, 1);
+      return o;
+    });
+    const out = {
+      v: S.v, seed: S.seed, rng: S.rng | 0, day: S.day, time: r(S.time, 4), clock: r(S.clock, 1), savedAt: Date.now(),
+      H: dl(S.H, 100), type: rl(S.type), fert: zr(S.fert, 100), wear: zr(S.wear, 1), burnt: zr(S.burnt, 1), scar: zr(S.scar, 1),
+      wet: zr(S.wet, 100), fire: zr(S.fire, 100), fireT: zr(S.fireT, 1), bloom: zr(S.bloom, 1),
+      wl: zr(Float32Array.from(S.wl, v => v - G.SEA), 100), relief: S.relief,
+      nextId: S.nextId,
+      trees: [...S.trees.values()].map(t => [t.id, r(t.x, 2), r(t.y, 2), t.kind, r(t.size, 2), r(t.maxSize, 2), t.stage === 'fall' ? 'log' : t.stage, t.wood, t.v, r(t.t, 0), t.fallDir, t.burntLog ? 1 : 0, r(t.chop, 1)]),
+      rocks: [...S.rocks.values()].map(o => [o.id, r(o.x, 2), r(o.y, 2), o.stone, o.max, o.v, o.meteor ? 1 : 0]),
+      bushes: [...S.bushes.values()].map(o => [o.id, r(o.x, 2), r(o.y, 2), o.berries, r(o.grow, 2), o.v, r(o.burnt, 0)]),
+      buildings: [...S.buildings.values()].map(b => { const o = Object.assign({}, b); delete o.res; if (o.crops) o.crops = o.crops.map(c => ({ s: c.s, g: r(c.g, 3), c: 0 })); o.incoming = { wood: 0, stone: 0 }; return o; }),
+      villagers: vill,
+      dead: [...S.dead.values()],
+      animals: [...S.animals.values()].map(a => ({ id: a.id, kind: a.kind, x: r(a.x, 2), y: r(a.y, 2), z: r(a.z || 0, 0), age: r(a.age || 0, 2), grown: r(a.grown === undefined ? 1 : a.grown, 2), hunger: r(a.hunger || 0, 2), named: a.named, kills: a.kills, sink: a.sink, hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: r(a.meat, 1), rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0, hx: r(a.hx, 1), hy: r(a.hy, 1), lifeMul: r(a.lifeMul || 1, 2), tamed: a.tamed || 0, guardSet: a.guardSet || 0, legend: a.legend || false, big: a.big || 1, epithet: a.epithet || null, mig: a.mig || false, morph: a.morph || null, seen: a.seen || 0, perch: a.perch || 0, dom: a.dom || 0, pen: a.pen || 0, wool: r(a.wool || 0, 2), milk: r(a.milk || 0, 2), eggs: r(a.eggs || 0, 2), shorn: r(a.shorn || 0, 0), tended: a.tended || 0 })),
+      settlements: [...S.settlements.values()],
+      N: S.N || N, mapType: S.mapType, temper: S.temper || 'normal', genOpts: S.genOpts || null, divinePeace: S.divinePeace || 0,
+      factions: [...S.factions.values()].map(f => { const o = Object.assign({}, f); o.rel = {}; for (const k in f.rel) if (+k > f.id) o.rel[k] = Object.assign({}, f.rel[k], { envoy: 0 }); o.targets = null; o.coup = null; o.rev = null; o.revolt = null; o.exec = null; return o; }), usedNames: S.usedNames || [], starts: S.starts,
+      faith: r(S.faith, 2), stats: S.stats, history: S.history, milestones: S.milestones,
+      weather: S.weather, clouds: S.clouds, zones: S.zones, boats: S.boats, awareness: S.awareness, era: S.era,
+      pendingDiscovery: S.pendingDiscovery || null, prayer: S.prayer || null, prayerCD: S.prayerCD || 0, popHist: S.popHist || [], start: S.start,
+      cam: { x: r(G.Render.cam.x, 1), y: r(G.Render.cam.y, 1), zoom: r(G.Render.cam.zoom, 2), view: G.Render.rot() },
+    };
+    // cities, fleets, lore... each module saves its own state
+    for (const h of G.saveHooks || []) h.save(out, r, arr);
+    return JSON.stringify(out);
+  };
+  function failed(e, silent) {
+    console.warn('save failed', e);
+    const now = Date.now(); if (!silent || !(now - (Sv.failT || 0) < 600000)) { Sv.failT = now; G.UI && G.UI.notice(silent ? 'O salvamento automático falhou (armazenamento do navegador cheio?). O último mundo salvo é mais antigo.' : 'Não foi possível salvar (armazenamento cheio?).', 'skull'); }
+  }
+  Sv.save = function (silent) {
+    if (!G.S) return false;
+    let str; try { str = Sv.serialize(); } catch (e) { failed(e, silent); return false; }
+    const zip = str.length >= BIG && canZip();
+    const info = JSON.stringify({ day: G.S.day, pop: G.S.villagers.size, era: G.S.era, when: Date.now(), zip: zip ? 1 : 0 });
+    const my = ++seq;
+    if (!zip) {
+      try { localStorage.setItem(KEY, str); localStorage.setItem(INFO, info); } catch (e) { failed(e, silent); return false; }
+      if (!silent) G.UI && G.UI.notice('Mundo salvo.', 'save');
+      return true;
+    }
+    // (a newer save started meanwhile: this one is dropped, the newer one is written)
+    const p = Sv.pending = gzip(str).then(z => { if (my !== seq) return; localStorage.setItem(KEY, 'gz1:' + z); localStorage.setItem(INFO, info); if (!silent) G.UI && G.UI.notice('Mundo salvo.', 'save'); })
+      .catch(e => failed(e, silent)).then(() => { if (Sv.pending === p) Sv.pending = null; });
+    return true;
+  };
+  // the last save as an object, to cb (a compressed one comes a moment later; cb(null) when there is none or it is damaged)
+  Sv.read = function (cb) {
+    let s = null; try { s = localStorage.getItem(KEY); } catch (e) { s = null; }
+    if (!s) return cb(null);
+    if (!s.startsWith('gz1:')) { let o = null; try { o = JSON.parse(s); } catch (e) { console.warn('load failed', e); } return cb(o); }
+    if (!canZip()) return cb(null);
+    Promise.resolve(s.slice(4)).then(gunzip).then(t => { let o = null; try { o = JSON.parse(t); } catch (e) { console.warn('load failed', e); } cb(o); }, e => { console.warn('load failed', e); cb(null); });
+  };
+  // (the plain save at once — the tests' way; a compressed one needs Sv.read)
+  Sv.load = function () {
+    let o;
+    try { const s = localStorage.getItem(KEY); if (!s || s.startsWith('gz1:')) return false; o = JSON.parse(s); } catch (e) { console.warn('load failed', e); return false; }
+    try { Sv.apply(o); return true; } catch (e) { console.error('corrupt save', e); return false; }
+  };
+  // (loading is part of the world's life: what it draws comes from the world's generator)
+  Sv.apply = function (o) { G.inSim++; try { return apply(o); } finally { G.inSim--; } };
+  function apply(o) {
+    // (the size is read from the terrain itself: one tile type per tile, one height per corner)
+    const lt = arrLen(o.type), lh = arrLen(o.H), nt = Math.round(Math.sqrt(lt)), nh = Math.round(Math.sqrt(lh)) - 1;
+    const fromMap = lt && nt * nt === lt ? nt : lh && (nh + 1) * (nh + 1) === lh ? nh : 0;
+    const NS = o.N || fromMap || 64;
+    if (fromMap && NS !== fromMap) throw new Error(`save: o terreno salvo é de ${fromMap}×${fromMap}, não ${NS}×${NS}`);
+    G.newWorld();
+    G.setMapSize(NS);
+    const S = G.newState(o.seed);
+    // (the world's chance goes on from where it was saved; what loading itself draws comes from a generator of its own, the same each time)
+    const rng0 = Number.isInteger(o.rng) ? o.rng : G.rngSeed(o.seed | 0, o.day); const lr = G.mulberry32(rng0 ^ 0x5A5A5A5A);
+    S.N = NS; S.mapType = o.mapType || 'ilha'; S.usedNames = o.usedNames || []; S.starts = o.starts || [o.start]; S.temper = o.temper || 'normal'; S.genOpts = o.genOpts && typeof o.genOpts === 'object' ? o.genOpts : null; S.divinePeace = o.divinePeace || 0;
+    G.S = S;
+    if (!Number.isFinite(o.day) || !Number.isFinite(o.clock)) throw new Error('save: sem dia ou relógio');
+    S.day = o.day; S.time = Number.isFinite(o.time) ? o.time : 0.3; S.clock = o.clock; S.nextId = o.nextId;
+    setArr(S.H, o.H); setArr(S.type, o.type); setArr(S.fert, o.fert); setArr(S.wear, o.wear); setArr(S.burnt, o.burnt); setArr(S.scar, o.scar);
+    setArr(S.wet, o.wet); setArr(S.fire, o.fire); setArr(S.fireT, o.fireT); setArr(S.bloom, o.bloom);
+    if (o.wl) { setArr(S.wl, o.wl); for (let i = 0; i < S.wl.length; i++) S.wl[i] += G.SEA; }
+    if (o.relief) S.relief = Object.assign(S.relief, o.relief);
+    G.Relief.cliffs(S);
+    for (const a of o.trees) {
+      const t = { id: a[0], x: a[1], y: a[2], kind: a[3], size: a[4], maxSize: a[5], stage: a[6], wood: a[7], v: a[8], t: a[9], fallDir: a[10], burntLog: !!a[11], chop: a[12] || 0, claim: 0, ph: lr() * 6.28, fallT: 1 };
+      S.trees.set(t.id, t); S.treeAt[W.idx(t.x, t.y)] = t.id;
+    }
+    for (const a of o.rocks) { const k = { id: a[0], x: a[1], y: a[2], stone: a[3], max: a[4], v: a[5], meteor: !!a[6], claim: 0 }; S.rocks.set(k.id, k); S.objAt[W.idx(k.x, k.y)] = k.id; }
+    for (const a of o.bushes) { const k = { id: a[0], x: a[1], y: a[2], berries: a[3], grow: a[4], v: a[5], burnt: a[6], max: 5, claim: 0 }; S.bushes.set(k.id, k); S.objAt[W.idx(k.x, k.y)] = k.id; }
+    for (const b of o.buildings) {
+      if (!b || !G.BDEF[b.type]) { console.warn('save: prédio de tipo desconhecido deixado de fora', b && b.type); continue; }
+      S.buildings.set(b.id, b);
+      for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) S.occ[ty * N + tx] = b.id;
+    }
+    // (nobody stands in a line the save does not keep: the lines start empty, and one who still thought he stood in one
+    // broke the shop and the well — L-085)
+    for (const v0 of o.villagers) { const v = G.Vg.shape(v0); v.path = null; v.task = null; v.emo = null; v._q = null; v.think = lr(); v.scan = lr() * 0.3; S.villagers.set(v.id, v); }
+    for (const d of o.dead) S.dead.set(d.id, d);
+    for (const a of o.animals) {
+      if (!('morph' in a)) a.morph = null; // (older worlds: no rare coats appear on loading)
+      const nid = S.nextId; // (spawn takes a fresh id before the saved one replaces it: give it back)
+      const x = G.Animals.spawn(a.kind, a.x, a.y, a); S.animals.delete(x.id); x.id = a.id; S.animals.set(a.id, x); S.nextId = nid;
+      // a herd animal goes back to its pen (whoever was leading it out lost the errand with the save)
+      if (x.dom) { x.herder = 0; x.ledBy = 0; x.hold = 0; if (x.pen) { x.state = 'pen'; } }
+    }
+    for (const s of o.settlements) S.settlements.set(s.id, s);
+    for (const v of S.villagers.values()) repairV(v, S);
+    if (o.factions && o.factions.length) {
+      for (const f of o.factions) S.factions.set(f.id, f);
+      // relations are shared objects between both peoples: relink them
+      for (const f of S.factions.values()) for (const k in f.rel) { const g = S.factions.get(+k); if (g) g.rel[f.id] = f.rel[k]; }
+    } else {
+      // save from before kingdoms existed: everyone belongs to one people
+      const f = G.Fac.create({ stock: o.stock, ci: 0 });
+      for (const s of S.settlements.values()) { s.fac = f.id; if (!f.capital) f.capital = s.id; s.loyalty = 60; s.emptyT = 0; }
+    }
+    // (a section the save lost keeps the default of a new world)
+    if (Number.isFinite(o.faith)) S.faith = o.faith; S.stats = Object.assign(S.stats, o.stats); if (Array.isArray(o.history)) S.history = o.history; if (o.milestones) S.milestones = o.milestones;
+    // the next id is above every id the world holds (a save that lost it, or a damaged one, would give the newborn an id already taken)
+    let maxId = 0; for (const m of [S.villagers, S.dead, S.buildings, S.animals, S.factions]) if (m) for (const k of m.keys()) if (k > maxId) maxId = k;
+    if (!(S.nextId > maxId)) S.nextId = maxId + 1;
+    // the chronicle keeps counting where it stopped (the skip, cinema and lore read only what is newer)
+    S.logN = S.history.reduce((m, e) => Math.max(m, e.n || 0), 0);
+    S.weather = Object.assign(S.weather, o.weather); S.clouds = o.clouds || []; S.zones = o.zones || []; S.boats = o.boats || [];
+    if (o.awareness !== undefined) S.awareness = o.awareness; if (o.era !== undefined) S.era = o.era; S.pendingDiscovery = o.pendingDiscovery || null; S.prayer = o.prayer || null; S.prayerCD = o.prayerCD || 0; S.popHist = o.popHist || []; S.start = o.start;
+    Sv.computeDistances();
+    G.Nature.rebuildFire();
+    G.Render.setView((o.cam && o.cam.view) || 0);
+    G.Render.buildTerrain(); G.Render.initSky();
+    if (o.cam) { G.Render.cam.x = o.cam.x; G.Render.cam.y = o.cam.y; G.Render.cam.zoom = G.Render.cam.tz = o.cam.zoom; }
+    for (const f of S.factions.values()) { if (f.civ === undefined) f.civ = null; G.Civ.initTech(f); }
+    for (const h of G.saveHooks || []) h.load(o);
+    G.Village.forceUpdate();
+    G.Politics && G.Politics.afterLoad && G.Politics.afterLoad();
+    G.Fac.updateTerritory();
+    S.rng = rng0; // (whatever loading drew, the world's chance resumes exactly where it was saved)
+  }
+  Sv.computeDistances = function () {
+    const S = G.S; const d = new Int32Array(N * N).fill(999); const q = [];
+    for (let i = 0; i < N * N; i++) if (S.type[i] <= T.SEA) { d[i] = 0; q.push(i); }
+    for (let h = 0; h < q.length; h++) {
+      const a = q[h]; const x = a % N, y = (a / N) | 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (d[j] > d[a] + 1) { d[j] = d[a] + 1; q.push(j); } }
+    }
+    G.dOcean = d;
+  };
+  Sv.clear = function () { seq++; try { localStorage.removeItem(KEY); localStorage.removeItem(INFO); } catch (e) { } };
+})(window.G);
