@@ -303,10 +303,18 @@ if (hb) {
     K.order(v);
     const b = K.waiting(v); const p = S.villagers.get(v.partner);
     if (b && p) {
-      G.Village.kill(v, 'teste'); const t0 = S.clock;
-      const done = fine(3000, () => b.built || !S.buildings.has(b.id));
-      fine7 = done && b.built && p.home === b.id && b.dono === p.id;
-      info = `${v.name} encomendou a casa #${b.id} e morreu no meio da obra: ${b.built ? 'a obra terminou' : S.buildings.has(b.id) ? `a obra NÃO terminou (${Math.round((b.progress || 0) * 100)}%)` : 'a obra SUMIU'}; ${p.name} ${p.home === b.id ? 'mudou para ela' : 'NÃO mudou (mora em #' + p.home + ')'} e é ${b.dono === p.id ? 'a dona' : 'NÃO a dona (' + b.dono + ')'}${warNote(w, t0)}`;
+      G.Village.kill(v, 'teste'); const t0 = S.clock; const fam0 = b.encomenda ? b.encomenda.fam.slice() : [];
+      // (the partner moves and owns it; when the world took the partner too before it stood — a war in the middle: in the
+      // generation 7's Tenochtitlan, with the pasture's minimum, L-396, the Guerra do Monte Barune called Tenoch to arms on day
+      // 64, and he fell —, the family left of the commission moves, and the house is the first of it's, as act-casa.js says:
+      // T-280)
+      let gone = null; const away = () => !S.villagers.has(p.id) || p.captive;
+      const done = fine(3000, () => { if (!gone && away()) gone = { d: Math.round(S.day), how: p.captive ? 'cativo' : ((S.dead && S.dead.get && S.dead.get(p.id)) || {}).cause || '?' }; return b.built || !S.buildings.has(b.id); });
+      const left = fam0.map(id => S.villagers.get(id)).filter(o => o && !o.captive && o.set === b.set);
+      fine7 = done && b.built && (!away() ? p.home === b.id && b.dono === p.id : left.length > 0 && left.every(o => o.home === b.id) && b.dono === left[0].id);
+      const whose = !away() ? `${p.name} ${p.home === b.id ? 'mudou para ela' : 'NÃO mudou (mora em #' + p.home + ')'} e é ${b.dono === p.id ? 'a dona' : 'NÃO a dona (' + b.dono + ')'}`
+        : `${p.name} ${gone && gone.how === 'cativo' ? 'foi levado cativo' : `morreu (${gone ? gone.how : '?'})`} no dia ${gone ? gone.d : '?'}, antes de a casa ficar pronta: a família da encomenda que sobrou (${left.map(o => o.name).join(', ') || 'ninguém'}) ${left.length && left.every(o => o.home === b.id) ? 'mudou para ela' : 'NÃO mudou'}, e a dona é ${left.length && b.dono === left[0].id ? left[0].name + ' (a primeira dela)' : 'OUTRA (' + b.dono + ')'}`;
+      info = `${v.name} encomendou a casa #${b.id} e morreu no meio da obra: ${b.built ? 'a obra terminou' : S.buildings.has(b.id) ? `a obra NÃO terminou (${Math.round((b.progress || 0) * 100)}%)` : 'a obra SUMIU'}; ${whose}${warNote(w, t0)}`;
     } else info = `${v.name}: nenhuma obra encomendada`;
   }
   ok('h7 morre no meio da obra', fine7 && !bad().length, info);
