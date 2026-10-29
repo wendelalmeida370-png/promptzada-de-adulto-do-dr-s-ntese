@@ -248,12 +248,13 @@
   // up to the base, one flight on the form's own treads; what stands on the ground the feet walk, the form's solids. Nothing
   // of the shell drawn by chance: it is the form's. The inside, the type's own furnishing in the hall (the temple's in its cella),
   // the hall split first into rooms of its own where the type says so. Each type by its form comes in by In.formType, below
-  const FORM_FURNISH = {}, FORM_FAM = {}, HALL_FN = {}, FORM_SPLIT = {};
+  const FORM_FURNISH = {}, FORM_FAM = {}, HALL_FN = {}, FORM_SPLIT = {}, FORM_T = {}, FORM_BARE = {};
   const r2 = x => Math.round(x * 100) / 100;
   // (a row of the form's columns as a colonnade of the plan — the wall from the outer face of one end column to the other's,
   // each of the plan's columns where the form's stands, the spaces between them as wide as the form has them (the Norse
   // gallery's portal, a post left out), as high as the columns: the beam over them is the form's —, along u from its right end,
-  // along v from its back end; o.rua: the bay nearest uIn the street's way in. → { door, u: that bay's middle })
+  // along v from its back end; o.rua: the bay nearest uIn the street's way in; o.bay: that bay a door all the same, onto what
+  // stands before the porch — the Egyptian palace's passage through its pylon. → { door, u: that bay's middle })
   function colRow(P, cols, h, o, uIn) {
     const alongU = Math.abs(cols[0].c[1] - cols[cols.length - 1].c[1]) < 0.05; const k = alongU ? 0 : 1;
     const s = cols.slice().sort((a, b) => a.c[k] - b.c[k]); const n = s.length, rc = s[0].r, at = s[0].c[1 - k];
@@ -261,13 +262,13 @@
     const pos = alongU ? s.map(q => hi - q.c[0]).reverse() : s.map(q => q.c[1] - lo);
     // (the bays numbered from the colonnade's start: along u from the right, the q-th between the columns n-1-q and n-2-q)
     let door; let u = null;
-    if (o.rua) { let best = Infinity; for (let q = 0; q < n - 1; q++) { const m = (s[n - 1 - q].c[0] + s[n - 2 - q].c[0]) / 2; if (Math.abs(m - uIn) < best) { best = Math.abs(m - uIn); door = q; u = m; } } }
+    if (o.rua || o.bay) { let best = Infinity; for (let q = 0; q < n - 1; q++) { const m = (s[n - 1 - q].c[0] + s[n - 2 - q].c[0]) / 2; if (Math.abs(m - uIn) < best) { best = Math.abs(m - uIn); door = q; u = m; } } }
     const C = P.colonnade(0, A, B, { at: pos, col: 2 * rc, h, dh: h, outer: 1, door, rua: !!o.rua });
     return { door: C.door, u };
   }
   function formHall(P) {
     const rec = P.rec, tr = P.tr; const F = G.Forma && G.Forma.of(rec.t, rec.c); const B = F && G.Forma.body(F); if (!B) { P.errs.push('a forma do prédio sem corpo'); return; }
-    const t = Math.min(tr.t || 0.3, 0.35), c = t / 2; const sh = B.r.slice(); const y0 = B.y0, h0 = B.y1 - B.y0;
+    const t = (FORM_T[rec.t] && FORM_T[rec.t](rec, F)) || Math.min(tr.t || 0.3, 0.35), c = t / 2; const sh = B.r.slice(); const y0 = B.y0, h0 = B.y1 - B.y0;
     // (on the form's solid base — its steps the form's own —, or on the ground: the steps before its door the street's. Solid
     // from a body's step over the lot's foot, In.BODY.step, as the P3's bodyShell and openBase have it — L-390: a floor a few
     // centimetres up is a stone the street's steps come up to, not a base the plan alone climbs: on a lot that falls away, the
@@ -278,11 +279,11 @@
     P.outer = P.walls4(0, [sh[0] + c, sh[1] + c, sh[2] - c, sh[3] - c], t, h0, 1, 'parede'); P.outers = [P.outer];
     // (what stands before the walls: the porch, the peristyle, the court and the pylon round its gate (the Egyptians'), or the
     // top of a stepped base where it runs on before them — the pyramid's platform (the Aztecs'))
-    const porch = B.portico, peri = B.peristilo, gate = B.portao;
+    const porch = B.portico, peri = B.peristilo, gate = B.portao, pass = B.passagem; const bare = gate && !B.patio;
     const tiers = B.base && B.base.degraus, plat = tiers && tiers.length ? tiers[tiers.length - 1] : null;
     const top = !porch && !peri && !gate && plat && Math.abs(plat.y1 - y0) < 0.05 && plat.r[3] - sh[3] > 0.3 ? plat : null;
     // (the door on the front face where the form has it — the street's, where nothing of these stands before it)
-    const fw = P.outer.frente, before = !!(porch || peri || gate || top);
+    const fw = P.outer.frente, before = !!(porch || peri || gate || top || pass);
     const d0 = P.door(fw, P.atOf(fw, [B.porta.u, sh[3] - c]), B.porta.w, Math.min(h0 - 0.1, B.porta.y1 - B.porta.y0), -1, before ? -1 : 'rua', before ? 0 : 1, 'porta');
     // (the windows: each pane on its face, along it as the form has it, its sill over the floor)
     for (const j of B.janelas) {
@@ -295,8 +296,8 @@
     let entry = { door: d0, u: B.porta.u, w: B.porta.w, v: sh[3] };
     if (porch) {
       P.annex.push({ r: porch.r.slice(), h: porch.y1 - y0, fn: 'portico', lv: 0, roof: 'portico' });
-      const R = colRow(P, porch.colunas, porch.y1 - y0, { rua: true }, uIn);
-      entry = { door: R.door, u: R.u, w: P.doors[R.door].w, v: porch.r[3] };
+      const R = colRow(P, porch.colunas, porch.y1 - y0, bare ? { bay: true } : { rua: true }, uIn);
+      if (!bare) entry = { door: R.door, u: R.u, w: P.doors[R.door].w, v: porch.r[3] };
     }
     const strips = [];
     if (peri) {
@@ -319,8 +320,18 @@
     // the street's door, in a wall at its face between the jambs, as high as they stand, an opening always open: the form draws
     // it so, with no leaf — the hall's door is the one that shuts —; the towers, the jambs, the columns of the court what stands
     // on the ground of the two, the form's solids: below)
-    let courtR = null, passR = null;
-    if (gate) {
+    let courtR = null, passR = null, gateR = null, wayR = null;
+    if (bare) {
+      // (a pylon with no court before the walls — the Egyptian palace's (P3): the passage through it an annex from the front of
+      // the walls, or of the porch, to the gate's face, under its lintel, between the towers; the gate a 'vao' always open, as the
+      // form draws it with no leaf — the hall's door is the one that shuts)
+      const v0 = porch ? porch.r[3] : sh[3], tw = B.torres || [], tg = 0.2;
+      const gl = Math.max(gate.r[0], ...tw.filter(q => q[2] <= gate.u).map(q => q[2])), gr = Math.min(gate.r[2], ...tw.filter(q => q[0] >= gate.u).map(q => q[0]));
+      P.annex.push({ r: [gl, v0, gr, gate.v], h: gate.y1 - gate.y0, fn: 'passagem', lv: 0, roof: 'portico' });
+      const gw = P.wall(0, [gr, gate.v - tg / 2], [gl, gate.v - tg / 2], tg, gate.y1 - gate.y0 + 0.5, 1, 'parede');
+      const gd = P.door(gw, P.atOf(gw, [gate.u, gate.v - tg / 2]), gate.w, gate.y1 - gate.y0, -1, 'rua', 1, 'vao');
+      entry = { door: gd, u: gate.u, w: gate.w, v: gate.v }; gateR = [gl, v0, gr, gate.v - tg];
+    } else if (gate) {
       const tw = B.torres || [], tg = 0.2; const all = [B.patio ? B.patio.r : sh].concat(tw);
       P.yard = { r: [Math.min(...all.map(q => q[0])), sh[3], Math.max(...all.map(q => q[2])), gate.r[1]], h: 0, lv: 0 };
       const jambs = G.Forma.solids(F).filter(s => s.k === 'rect' && s.r[1] < gate.v - 0.05 && s.r[3] > gate.v - tg && (Math.abs(s.r[2] - gate.r[0]) < 0.03 || Math.abs(s.r[0] - gate.r[2]) < 0.03));
@@ -329,6 +340,15 @@
       const gw = P.wall(0, [gr - tg / 2, gate.v - tg / 2], [gl + tg / 2, gate.v - tg / 2], tg, gh, 1, 'parede');
       const gd = P.door(gw, P.atOf(gw, [gate.u, gate.v - tg / 2]), gate.w, gate.y1 - gate.y0, -1, 'rua', 1, 'vao');
       entry = { door: gd, u: gate.u, w: gate.w, v: gate.v }; courtR = P.yard.r.slice(); passR = [gl, gate.r[1], gr, gate.v - tg];
+    }
+    // (the way the form covers before its walls — the temazcal's under its dome (P3): an annex to the face, the wall there and in
+    // it the way in, a 'vao' as wide as the door, always open)
+    if (pass) {
+      const tp = 0.1, pv = pass.r[3] - tp / 2, w = Math.min(B.porta.w, pass.r[2] - pass.r[0]), dh = Math.min(h0 - 0.1, B.porta.y1 - B.porta.y0);
+      P.annex.push({ r: pass.r.slice(), h: pass.y1 - y0, fn: 'passagem', lv: 0, roof: 'portico' });
+      const pw = P.wall(0, [pass.r[2], pv], [pass.r[0], pv], tp, pass.y1 - y0, 1, 'parede');
+      const pd = P.door(pw, P.atOf(pw, [B.porta.u, pv]), w, dh, -1, 'rua', 1, 'vao');
+      entry = { door: pd, u: B.porta.u, w, v: pass.r[3] }; wayR = [pass.r[0], pass.r[1], pass.r[2], pass.r[3] - tp];
     }
     // (the top of a stepped base the walls stand on, before them and round them: the shell's yard, open to the sky; its edge
     // where the form's steps come up the street's way in — the edge of a floor over a drop, where the form has nothing standing:
@@ -361,6 +381,8 @@
     const rooms = { main: sp ? sp.main : P.room(0, HALL_FN[rec.t] || 'salao', I), front: undefined, cells: [], court: null, all: [], inner: sp ? sp.rooms.slice() : [] }; rooms.all.push(...(sp ? sp.rooms : [rooms.main]));
     if (porch) { rooms.porch = P.room(0, 'portico', porch.r, 1); rooms.all.push(rooms.porch); }
     if (courtR) { rooms.court = P.room(0, 'patio', courtR, 1); rooms.gate = P.room(0, 'passagem', passR, 0); rooms.all.push(rooms.court, rooms.gate); }
+    if (gateR) { rooms.gate = P.room(0, 'passagem', gateR, 0); rooms.all.push(rooms.gate); }
+    if (wayR) { rooms.pass = P.room(0, 'passagem', wayR, 0); rooms.all.push(rooms.pass); }
     // (the walk round the walls — the peristyle's, the gallery's, the platform's —: the strip before the door a room always, the
     // way in crosses it; another where the walk from the street reaches it — a walk narrower than the plan's grid of a quarter
     // metre lets a body go along, as the Norse gallery's 0.70 m between its staves and its walls, is the form's to see, not a
@@ -375,7 +397,7 @@
     // biggest first, a foot another's covers across a side cut back to the rest (a column half in a tower) —, the body and the
     // places kept off it)
     const foot = s => (s.k === 'rect' ? s.r : [s.c[0] - s.r, s.c[1] - s.r, s.c[0] + s.r, s.c[1] + s.r]); const area = r => (r[2] - r[0]) * (r[3] - r[1]); const feet = [];
-    for (const id of [rooms.court, rooms.gate].filter(has)) {
+    for (const id of (has(rooms.court) ? [rooms.court, rooms.gate] : []).filter(has)) {
       const R = P.rooms[id].r;
       for (const s of G.Forma.solids(F).slice().sort((a, b) => area(foot(b)) - area(foot(a)))) {
         let r = [Math.max(R[0], foot(s)[0]), Math.max(R[1], foot(s)[1]), Math.min(R[2], foot(s)[2]), Math.min(R[3], foot(s)[3])]; if (r[2] - r[0] < 0.05 || r[3] - r[1] < 0.05) continue;
@@ -416,10 +438,15 @@
   // rooms of its own before the furniture — its partitions and their doors laid by it (the palace's chamber, the baths' run
   // from the cold to the hot) —, the door from the street into main; keep: the type's other families kept after the form's,
   // for the peoples whose form is not laid out (the temple's halls), the form's preferred where it is: an old record of one of
-  // them becomes the form's on loading where the form is laid out (In.migrate, by the type's formFam)
+  // them becomes the form's on loading where the form is laid out (In.migrate, by the type's formFam); t(rec, F): the walls'
+  // thickness where the type's is its own (the temazcal's, inside its dome: P3); bare(P, F): the type's plan where its form has
+  // no body — the Egyptian baths' sacred lake, open to the sky (P3) —, in the same family
+  const formCanOf = rec => (FORM_BARE[rec.t] && G.Forma && G.Forma.of(rec.t, rec.c) ? null : formCan(rec));
+  const formBuild = P => { const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c); if (F && !G.Forma.body(F) && FORM_BARE[P.rec.t]) FORM_BARE[P.rec.t](P, F); else formHall(P); };
   In.formType = function (type, o) {
     FORM_FAM[type] = o.fam; FORM_FURNISH[type] = o.furnish; if (o.hall) HALL_FN[type] = o.hall; if (o.split) FORM_SPLIT[type] = o.split;
-    if (!In.FAMS[o.fam]) In.addFamilies([{ id: o.fam, H: 'forma', V: o.fam.split('.')[1] || o.fam, S: o.fam, name: 'Pela forma', can: formCan, build: P => formHall(P) }]);
+    if (o.t) FORM_T[type] = o.t; if (o.bare) FORM_BARE[type] = o.bare;
+    if (!In.FAMS[o.fam]) In.addFamilies([{ id: o.fam, H: 'forma', V: o.fam.split('.')[1] || o.fam, S: o.fam, name: 'Pela forma', can: formCanOf, build: formBuild }]);
     const T = In.TYPES[type] || {}; const old = o.keep ? (T.fams || []).filter(f => f !== o.fam) : [];
     In.addTypes({ [type]: Object.assign({}, T, { fams: [o.fam].concat(old), formFam: o.fam }, old.length ? { prefer: (rec, ok) => (ok.includes(o.fam) ? [o.fam] : ok) } : {}) });
   };

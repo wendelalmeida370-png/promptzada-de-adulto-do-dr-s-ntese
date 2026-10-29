@@ -376,7 +376,7 @@
 (function (G) {
   if (!G.Arch || !G.Arch.EXT) return;
   const K = G.Arch.kit(); const TAU = Math.PI * 2;
-  const { P, poly, ln, walls, top, box, onL, door, shade, roof, colonnade, flag, palm, statue, dome, basin, band, plinth, winsL, winsR, longhouse, stepPyr } = K;
+  const { P, poly, ln, walls, top, box, onL, door, shade, roof, colonnade, flag, palm, statue, dome, basin, band, plinth, winsL, winsR, longhouse, stepPyr, treads } = K;
   const GOLD = ['#f2c14e', '#d8a63a', '#b8862a'];
   const at = (c, dx, dy, fn) => { const q = P(dx, dy, 0); c.save(); c.translate(q[0], q[1]); fn(); c.restore(); };
   // a wing of the palace: floors of windows, a cornice, the roof of the culture
@@ -417,24 +417,27 @@
   // ---------------- the chief's house ----------------
   G.Arch.EXT.paco = {
     maxz: 54, draw(c, m, p, st) {
-      if (st === 'nordico') { longhouse(c, m, p, 0.85, 0.55, 11, 15, true); m.fires.length = 0; at(c, 0.7, 0.75, () => flag(c, 0, 0, '#a23c2a', 24)); return 30; }
+      if (st === 'nordico') { longhouse(c, m, p, 0.85, 0.55, 11, 15, true, 0.12); treads(c, p, -0.15, 0.15, 0.665, 1.2, 2); m.fires.length = 0; // (its door of 0.96 m — a body's —, the tread before it: as its form)
+        at(c, 0.7, 0.75, () => flag(c, 0, 0, '#a23c2a', 24)); return 30; }
       if (st === 'asteca') {
-        box(c, -0.95, -0.95, 0.95, 0.95, 0, 4, p.base[0], p.base[1], p.base[2]);
-        poly(c, [P(-0.25, 1.1, 0), P(0.25, 1.1, 0), P(0.25, 0.95, 4), P(-0.25, 0.95, 4)], shade(p.base[2], 1.05));
+        // (the platform, the flight cut into its front from the street at 0.98 — its treads the feet take —, as its form)
+        box(c, -0.95, -0.95, 0.95, 0.6175, 0, 4, p.base[0], p.base[1], p.base[2]); box(c, -0.95, 0.6175, -0.25, 0.95, 0, 4, p.base[0], p.base[1], p.base[2]);
+        for (let j = 4; j >= 0; j--) box(c, -0.25, 0.98 - 0.0725 * (j + 1), 0.25, 0.98 - 0.0725 * j, 0, 4 * (j + 1) / 6, p.base[0], p.base[1], shade(p.base[2], 1.05));
+        box(c, 0.25, 0.6175, 0.95, 0.95, 0, 4, p.base[0], p.base[1], p.base[2]);
         const z = block(c, m, p, st, -0.75, -0.75, 0.6, 0.45, 4, 14, 1, { door: 0 });
         for (const x of [-0.5, 0, 0.5]) { const q = P(x, 0.45, z); c.fillStyle = p.acc; c.fillRect(q[0] - 0.6, q[1] - 3, 1.2, 3); }
-        at(c, 0.8, 0.8, () => flag(c, 0, 0, p.acc2 || '#b33a2a', 22)); return 26;
+        at(c, 0.72, 0.8, () => flag(c, 0, 0, p.acc2 || '#b33a2a', 22)); return 26; // (at 0.72: its pennant over the lot, as its form's)
       }
       if (st === 'egipcio') {
         block(c, m, p, st, -0.9, -0.9, 0.55, 0.2, 0, 13, 1, { door: -0.2 });
         pylon(c, p, -0.7, -0.35, 0.35, 0.65, 15); pylon(c, p, 0.05, 0.4, 0.35, 0.65, 15);
         at(c, 0.75, 0.75, () => palm(c, 0, 0, 1)); return 24;
       }
-      plinth(c, p, -0.92, -0.92, 0.92, 0.6, 1.5);
+      plinth(c, p, -0.92, -0.92, 0.92, 0.6, 1.5); treads(c, p, -0.6, 0.35, 0.725, 1.5, 2); // (the tread before the porch: as its form)
       const z = block(c, m, p, st, -0.85, -0.85, 0.6, 0.35, 1.5, 17, 2, { door: -0.12, rh: 8 });
       colonnade(c, p, -0.55, 0.35, 0.3, 0.55, 1.5, 9, 4, 0.04, 'L');
       box(c, -0.6, 0.33, 0.35, 0.6, 9, 10.5, p.col[0], p.col[1], p.col[0]);
-      at(c, 0.8, 0.75, () => flag(c, 0, 0, p.acc2 || '#c83a2a', 24));
+      at(c, 0.72, 0.75, () => flag(c, 0, 0, p.acc2 || '#c83a2a', 24)); // (at 0.72: its pennant over the lot, as its form's)
       return z + 4;
     },
   };

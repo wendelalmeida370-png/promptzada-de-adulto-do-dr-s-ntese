@@ -125,6 +125,11 @@
     b.grain = civ === 'asteca' ? 'milho' : (bio === 3 || bio === 4) && wet ? 'arroz' : bio === 2 || bio === 1 || civ === 'nordico' ? 'cevada' : bio === 5 ? 'sorgo' : 'trigo';
     return Es.GRAIN[b.grain];
   };
+  // the grain of a farm for the views (L-394): what Estates.grainOf works out, on a copy — never kept on the farm. grainOf keeps
+  // it (b.grain) the first time it is asked: a picture that asked first gave the farm the grain of whoever held its town when
+  // it was first seen, and the same world, watched or not, named its farms apart (qa/grao.js). The god's farm, the 3D's ground
+  // and its fields read it here
+  Es.grainFor = b => Es.grainOf(Object.assign({}, b));
   G.Village.nameOf = (function (prev) { return function (type, b) { if (type === 'farm' && b && b.built !== undefined && b.set !== undefined && b.x !== undefined) return Es.grainOf(b).name; return prev(type, b); }; })(G.Village.nameOf);
 
   // ------------------------------ silk: a secret that is found, or stolen ------------------------------
@@ -606,7 +611,11 @@
     const n = Math.min(3, Math.floor((b.inv && b.inv.azeite) || 0)); for (let k = 0; k < n; k++) G.Arch.kit().jar(c, sx + 9 + k * 2.6, sy + 1 + k * 1.3, 0.8, '#b8704a');
   }
   // straw skeps with the bees round them
+  // (at the scale of people, as the well is — D-092: the skep 0.4 of the god's first picture, its dome about a metre over a
+  // low plank, 1.3 m to its top; the 3D's the same, Build3D's fieldSkep)
+  const SKEP = 0.4;
   function drawSkep(c, e, sx, sy, t) {
+    c.save(); c.translate(sx, sy); c.scale(SKEP, SKEP); sx = 0; sy = 0;
     const b = e.b; const h = b.hv ? b.hv[e.k] : 0;
     c.fillStyle = '#6a4a2c'; c.fillRect(sx - 4, sy - 2.4, 8, 1.4);
     c.fillStyle = '#d8b062'; c.beginPath(); c.moveTo(sx - 3.6, sy - 2.4); c.quadraticCurveTo(sx - 3.8, sy - 9.4, sx, sy - 9.8); c.quadraticCurveTo(sx + 3.8, sy - 9.4, sx + 3.6, sy - 2.4); c.closePath(); c.fill();
@@ -614,6 +623,7 @@
     c.fillStyle = '#3a2a1a'; c.beginPath(); c.ellipse(sx + 0.6, sy - 3.4, 0.9, 0.6, 0, 0, TAU); c.fill();
     const angry = b.angry > G.S.clock; const n = angry ? 14 : 2 + Math.round(h * 2); c.fillStyle = '#2a2010';
     for (let k = 0; k < n; k++) { const a = t * (1.6 + (k % 4) * 0.5) + k * 2.3, r = (angry ? 5 : 3) + Math.sin(t * 2 + k) * 1.2; c.fillRect(sx + Math.cos(a) * r, sy - 6 + Math.sin(a * 1.3) * r * 0.6, 0.45, 0.45); }
+    c.restore();
   }
   // heaps of raked salt
   function drawHeap(c, e, sx, sy) {
