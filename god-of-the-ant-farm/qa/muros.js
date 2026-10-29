@@ -31,6 +31,14 @@
 //   8. no blocking building in the way of a gate (L-348: two houses, one on each side of a gate of Tenochtitlan's wall, in the
 //      metropole of 28/10, left it a tile of nowhere): a gate put beside the town's best site for a house turns the site finder
 //      elsewhere, and the site it gives has no tile beside a gate
+//   9. a building that comes in the only way of another behind a standing wall (L-382: a block of Hedeby, in the mega of the
+//      v37's last worlds, raised on the strip between the rock and the wall that led to the town's cemetery, shut the cemetery
+//      off; the wall's gates had been judged at its plan and at the load only): a well put by the world's own door where it
+//      leaves the wall shutting a building of the town off — the wall cuts a gate at once, before any step; and saved and
+//      loaded, the gate is there
+//   9b. the walls' shortcut (Siege.apart: a building that touches nothing, the open ground round it one piece without it, shuts
+//      nothing — the walls are not judged again for it): at every tile tried for 9, where the shortcut says so, the whole count
+//      (openWays, the tile taken) agrees
 //   5. the checker clean, no module error
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -255,6 +263,46 @@ for (const k of ['metropole', 'mega', 'cidade', 'anos100', 'mundial']) {
       const moved = !!s1 && (s1[0] !== s0[0] || s1[1] !== s0[1]);
       ok('8 nada que bloqueia no caminho de um portão: o buscador de lugar vai para outro lado', moved && !(s1 && beside(s1, def)), `${s.name}: o lugar de uma casa em (${s0[0]},${s0[1]}); um portão posto em (${g % N},${(g / N) | 0}), ao lado dele: ${s1 ? 'o lugar foi para (' + s1[0] + ',' + s1[1] + ')' + (beside(s1, def) ? ', AO LADO de um portão' : ', longe de portão') : 'nenhum lugar'}`);
     }
+  }
+}
+// 9. a building in the only way of another, behind a standing wall
+{
+  const nm = '9 um prédio novo no único caminho de outro, atrás do muro de pé: o portão na hora, e no save';
+  // (where a blocking thing on one tile would leave the wall shutting a building of its town off: tried on the map by putting
+  // a blocking building's id on the tile, and taking it back)
+  let found = null, tries = 0, fasts = 0; const unsound = [];
+  for (const k of ['mega', 'metropole', 'mundial', 'anos100', 'cidade']) {
+    M.pronto(k); const S = G.S, N = G.N, W = G.W, V = G.Village; const blk = [...S.buildings.values()].find(b => b.blocks);
+    for (const w of S.walls.filter(q => q.done && S.settlements.has(q.set)).sort((p, q) => p.id - q.id)) {
+      const s = S.settlements.get(w.set); if (!blk || G.Siege.openWays(s, w, true).length) continue;
+      const plan = new Set(w.tiles);
+      const nearWall = b => { for (let y = b.y - 3; y < b.y + b.h + 3; y++) for (let x = b.x - 3; x < b.x + b.w + 3; x++) if (x >= 0 && y >= 0 && x < N && y < N && plan.has(y * N + x)) return true; return false; };
+      for (const b of [...S.buildings.values()].filter(q => q.set === s.id && q.built && q.type !== 'ruin' && nearWall(q)).sort((p, q) => p.id - q.id)) {
+        for (let y = b.y - 3; y < b.y + b.h + 3; y++) for (let x = b.x - 3; x < b.x + b.w + 3; x++) {
+          if (x < 2 || y < 2 || x >= N - 2 || y >= N - 2) continue; const i = y * N + x;
+          if (S.occ[i] || S.wall[i] || plan.has(i) || !W.ground(i) || S.road[i] >= 2 || V.byGate(x, y)) continue;
+          // (and the walls' shortcut, at every tile tried: where it says a building there shuts nothing, the whole count agrees)
+          const fast = G.Siege.apart({ x, y, w: 1, h: 1 }); tries++; if (fast) fasts++;
+          S.occ[i] = blk.id; let o; try { o = G.Siege.openWays(s, w, true); } finally { S.occ[i] = 0; }
+          if (o.length && fast) unsound.push(`${k}: (${x},${y}) no muro de ${s.name}`);
+          if (o.length && !found) found = { k, w: w.id, set: s.id, x, y };
+        }
+      }
+    }
+    if (found) break;
+  }
+  if (!found) ok(nm, false, 'em nenhum mundo pronto uma casa onde um prédio deixaria o muro de pé fechando outro da cidade');
+  else {
+    const S = G.S, N = G.N, W = G.W; const w = S.walls.find(q => q.id === found.w), s = S.settlements.get(found.set);
+    const ways0 = (w.ways || []).length; const shut0 = (() => { const i = found.y * N + found.x; const blk = [...S.buildings.values()].find(b => b.blocks); S.occ[i] = blk.id; try { return G.Siege.openWays(s, w, true); } finally { S.occ[i] = 0; } })();
+    const b = G.Village.addBuilding('well', found.x, found.y, s.id, false); // (the world's door for a building: the one startProject uses)
+    const left = G.Siege.openWays(s, w, true); const added = (w.ways || []).slice(ways0); const cut = added.filter(g => S.wall[g] === 2);
+    const s3 = QA.check().filter(q => q.sev <= 3 && /fecha \d+ prédio/.test(q.msg)).map(q => q.msg);
+    M.salvarCarregar(); const S1 = G.S, w1 = S1.walls.find(q => q.id === found.w); const kept = added.filter(g => w1 && w1.gates.includes(g) && S1.wall[g] === 2).length;
+    ok('9b o atalho dos muros (um prédio que não encosta em nada e deixa o chão em volta inteiro não fecha nada) nunca erra', !unsound.length && fasts > 0, `${tries} casas tentadas perto dos muros, ${fasts} pelo atalho; ${unsound.length ? 'ERROU: ' + unsound.slice(0, 4).join(' · ') : 'nenhum erro'}`);
+    ok(nm, shut0.length > 0 && !left.length && added.length > 0 && cut.length > 0 && !s3.length && kept === added.length,
+      `${found.k}: o muro de ${s.name} (#${w.id}); um poço (#${b.id}) em (${found.x},${found.y}) fecharia o caminho (o portão em ${shut0.map(g => `(${g % N},${(g / N) | 0})`).join(' ')}); posto: ${left.length ? `ainda fecha (${left.map(g => `(${g % N},${(g / N) | 0})`).join(' ')})` : 'nada fechado'}; portões a mais ${added.map(g => `(${g % N},${(g / N) | 0})${S.wall[g]}`).join(' ') || 'nenhum'}; o verificador: ${s3.join(' · ') || 'limpo'}; carregado, ${kept} de ${added.length} de pé no mapa`);
+    void W;
   }
 }
 // 5. the checker, the module errors

@@ -96,6 +96,9 @@
       const oid = S.objAt[i]; if (oid) { const bu = S.bushes.get(oid); if (bu) G.Nature.removeBush(bu); }
     }
     W.touchWalk();
+    // (the walls keep the towns' ways: a gate where one now shuts a building of its town off — before the plan is frozen, on the
+    // ground as it will be, L-382)
+    G.Siege && G.Siege.placed(b);
     G.Interiors && G.Interiors.found(b); // (the plan's record, frozen the day it is placed)
     return b;
   };
@@ -121,6 +124,7 @@
 
   V.completeBuilding = function (b) {
     const S = G.S; b.built = true; b.progress = 1; b.need.wood = 0; b.need.stone = 0; b.upgradeFrom = null;
+    G.Siege && G.Siege.keepWays(b.set); // (a building of the town now, to be reached: one finished in a pocket its wall shuts gets its gate, L-382)
     G.Interiors && G.Interiors.complete(b); // (a fact of its life; a type made over — a hut become a house — a new plan)
     S.stats.built++;
     const [cx, cy] = V.center(b);
