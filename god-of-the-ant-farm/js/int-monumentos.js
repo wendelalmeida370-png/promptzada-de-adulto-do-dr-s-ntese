@@ -25,7 +25,9 @@
   // posts of a stall at its counter's corners — what is left of it, 5 cm off the other (two pieces of a plan keep 2 cm apart), and
   // nothing of it narrower than 5 cm: the feet and the marks kept off them all; o.skip: the feet the plan has walls of its own on;
   // o.y: of the form's floor at that height (a pyramid's top, a terrace); o.rooms: the part of each foot in each of them (the
-  // strips round what stands in a floor's middle); o.list: these solids only)
+  // strips round what stands in a floor's middle); o.list: these solids only. The form's own pieces laid already on that floor
+  // (FM) — a stall, a bay, a bin — are feet laid too: a wall of a stoa beside its room is kept off it as off another solid; a
+  // piece of the plan's own where the form stands solid is still an error)
   const minus = (a, b) => {
     if (a[0] >= b[2] || a[2] <= b[0] || a[1] >= b[3] || a[3] <= b[1]) return [a];
     const out = []; if (a[0] < b[0]) out.push([a[0], a[1], b[0], a[3]]); if (b[2] < a[2]) out.push([b[2], a[1], a[2], a[3]]);
@@ -33,7 +35,7 @@
     return out;
   };
   function solids(P, F, room, o) {
-    o = o || {}; const feet = []; const foot = s => (s.k === 'rect' ? s.r : [s.c[0] - s.r, s.c[1] - s.r, s.c[0] + s.r, s.c[1] + s.r]); const area = r => (r[2] - r[0]) * (r[3] - r[1]);
+    o = o || {}; const lv0 = P.rooms[(o.rooms || [room])[0]].lv; const feet = P.items.filter(it => it.form && it.lv === lv0 && !it.niche).map(it => it.r.slice()); const foot = s => (s.k === 'rect' ? s.r : [s.c[0] - s.r, s.c[1] - s.r, s.c[0] + s.r, s.c[1] + s.r]); const area = r => (r[2] - r[0]) * (r[3] - r[1]);
     const off = (p, q) => minus(p, [q[0] - 0.05, q[1] - 0.05, q[2] + 0.05, q[3] + 0.05]); const big = q => q[2] - q[0] >= 0.05 && q[3] - q[1] >= 0.05;
     for (const s of (o.list || G.Forma.solids(F, o.y)).slice().sort((a, b) => area(foot(b)) - area(foot(a)))) {
       const r0 = foot(s); if (o.skip && o.skip(r0)) continue;
@@ -549,12 +551,77 @@
   In.addTypes({ maravilha: { use: 'maravilha', fams: ['forma.maravilha'], open: 1 } });
   In.addFamilies([{ id: 'forma.monumento', H: 'forma', V: 'monumento', S: 'forma.monumento', name: 'Pela forma', can: rec => (G.Forma && G.Forma.of(rec.t, rec.c) ? null : 'o prédio sem forma'), build: P => monumentOf(P) }]);
   In.addTypes({ monument: { use: 'monumento', fams: ['forma.monumento'], open: 1 } });
+  // ------------------------------ the granary (celeiro) of the Egyptians and of the Aztecs (the leader's of 29/10, phase E) ------------------------------
+  // open, its ground the form's — the Egyptian's base under its four domes, up the flight at its front; the Aztec's floor of
+  // beaten earth —; each dome, each pot of the form a bin of the people's grain where the form stands it ('tulha', FM: P4's
+  // piece as it is, its mouth on its front where one pours and takes; each its share of what the granary keeps — the Egyptian's
+  // four of 28, the Aztec's three of 37 for the 110), a body's room before each mouth; the way in the ground's front, where the
+  // form's flight comes up to it, else along it all
+  function granaryForm(P) {
+    const F = G.Forma.of(P.rec.t, P.rec.c); const U = G.Forma.uses(F).filter(u => u.uso === 'tulha'); if (!U.length) { P.errs.push('o celeiro sem tulhas'); return; }
+    // (its ground: the widest piece of the form's floor under the middle of the lot — the base, the floor —, at its top)
+    const L = P.L, c = L / 2, area = r => (r[2] - r[0]) * (r[3] - r[1]); let fl = null;
+    for (const e of F.els) if (e.k === 'bloco' && !e.degrau && !e.uso && e.y0 < 0.01 && e.r[0] < c && e.r[2] > c && e.r[1] < c && e.r[3] > c && (!fl || area(e.r) > area(fl.r))) fl = e;
+    if (!fl) { P.errs.push('o celeiro sem chão'); return; }
+    const sh = fl.r.map(r2), y = fl.y1;
+    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: y > 0.02 ? 'macica' : 'chao', baseH: y, floors: 1, eave: 0 }; P.roof = null;
+    P.level(0, y, 3.0, 'chao', sh); P.entryLv = 0;
+    const st = F.els.filter(e => e.degrau).map(e => ({ r: e.r.slice(), y: e.y1 }));
+    if (st.length) {
+      let r = st[0].r.slice(); for (const q of st) r = [Math.min(r[0], q.r[0]), Math.min(r[1], q.r[1]), Math.max(r[2], q.r[2]), Math.max(r[3], q.r[3])];
+      if (r[1] > sh[3] + 1e-6) { st.push({ r: [r[0], sh[3], r[2], r[1]], y }); r[1] = sh[3]; }
+      P.stair('degraus', -1, 0, r, 0, -1, null, { larga: r[2] - r[0] >= 1.2 ? 1 : 0, treads: st });
+      // (the edge where the flight comes up the way in, and only it: the rest of the front the base's edge, its floor to it — a
+      // wall of no height along it all took the strip before the front domes' mouths from the feet)
+      wayIn(P, r2(r[0]), r2(r[2]), sh[3], [[r2(r[0]), r2(r[2])]]);
+    } else wayIn(P, sh[0], sh[2], sh[3], [[r2(sh[0] + 0.05), r2(sh[2] - 0.05)]]);
+    if (P.inside()) return;
+    const id = P.room(0, 'celeiro', sh, 1);
+    const goal = (G.BDEF[P.rec.t] || {}).storage || 0, cap = Math.ceil(goal / U.length), dflt = In.ITEMS.tulha.store.cap;
+    for (const u of U) {
+      const fv = u.vira || [0, 1]; const it = P.at('tulha', 0, id, u.r.map(r2), fv[0], fv[1], Object.assign(cap > dflt ? { cap } : {}, FM));
+      if (!it) { P.errs.push('uma tulha da forma onde a planta não a põe'); return; }
+      keepStand(P, it);
+    }
+    solids(P, F, id, { y });
+  }
+
+  // ------------------------------ the market (mercado), open (the leader's of 29/10, phase E) ------------------------------
+  // its ground the form's pavement; each stall of the form a stall of P4's where its counter is ('banca', FM: the one who sells
+  // under the cloth behind it, the buyers before it), each bay of the people's store a bay of P4's ('baia', FM: 30 each, the
+  // market keeps 50) — a body's room where one stands at each —; what else stands on the pavement solid (the posts, the
+  // macellum, the stoa's walls and columns, the jars, the barrels, the palm); the way in the front, where nothing stands
+  function marketForm(P) {
+    const F = G.Forma.of(P.rec.t, P.rec.c); const U = G.Forma.uses(F).filter(u => u.uso === 'banca' || u.uso === 'baia'); if (!U.length) { P.errs.push('o mercado sem bancas'); return; }
+    const L = P.L, c = L / 2, area = r => (r[2] - r[0]) * (r[3] - r[1]); let fl = null;
+    for (const e of F.els) if (e.k === 'bloco' && e.piso && e.y0 < 0.01 && e.r[0] < c && e.r[2] > c && e.r[1] < c && e.r[3] > c && (!fl || area(e.r) > area(fl.r))) fl = e;
+    if (!fl) { P.errs.push('o mercado sem chão'); return; }
+    const sh = fl.r.map(r2), y = fl.y1;
+    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: y > 0.02 ? 'macica' : 'chao', baseH: y, floors: 1, eave: 0 }; P.roof = null;
+    P.level(0, y, 3.0, 'chao', sh); P.entryLv = 0;
+    // (the front where nothing stands — of the form's solids nor of its stalls' counters —: the stretches one comes in by)
+    let spans = frontSpans(F, sh, y);
+    for (const u of U) { const a = u.r[0] - 0.15, b = u.r[2] + 0.15; if (u.r[3] < sh[3] - 1.0) continue; spans = spans.flatMap(([s0, s1]) => (b <= s0 || a >= s1 ? [[s0, s1]] : [[s0, a], [b, s1]])); }
+    spans = spans.filter(([s0, s1]) => s1 - s0 >= 0.9).map(q => q.map(r2)); if (!spans.length) { P.errs.push('a frente do mercado fechada'); return; }
+    wayIn(P, sh[0], sh[2], sh[3], spans);
+    if (P.inside()) return;
+    const id = P.room(0, 'mercado', sh, 1);
+    for (const u of U) {
+      const fv = u.vira || [0, 1]; const it = P.at(u.uso, 0, id, u.r.map(r2), fv[0], fv[1], FM);
+      if (!it) { P.errs.push(`${u.uso === 'banca' ? 'uma banca' : 'uma baia'} da forma onde a planta não a põe`); return; }
+      keepStand(P, it);
+    }
+    solids(P, F, id, { y });
+  }
+
   // (the palace's, the baths', the chief's house's: the form's — the one the god and the 3D draw — before the type's halls, and
   // the one a new building is given wherever it is laid out (D-093); the great palace and the colossal one keep their plans,
   // they have no body of the form. A record of before goes to the form's on opening: P4's In.migrate, by formFam)
-  for (const [t, fam, build] of [['palacio', 'forma.palacio', palaceForm], ['banhos', 'forma.banhos', bathsForm], ['paco', 'forma.paco', pacoForm]]) {
+  // (and the granary's, phase E, only where it is no hall: the Egyptian's domes, the Aztec's pots — the others keep the recipe's)
+  const BINS = { egipcio: 1, asteca: 1 };
+  for (const [t, fam, build, only] of [['palacio', 'forma.palacio', palaceForm], ['banhos', 'forma.banhos', bathsForm], ['paco', 'forma.paco', pacoForm], ['celeiro', 'forma.celeiro', granaryForm, BINS], ['mercado', 'forma.mercado', marketForm]]) {
     const T0 = In.TYPES[t]; if (!T0) continue;
-    In.addFamilies([{ id: fam, H: 'forma', V: t, S: fam, name: 'Pela forma', can: rec => (G.Forma && G.Forma.has(rec.t, rec.c) ? null : 'o prédio sem forma'), build: P => build(P) }]);
+    In.addFamilies([{ id: fam, H: 'forma', V: t, S: fam, name: 'Pela forma', can: rec => (only && !only[rec.c] ? 'o deste povo é um salão' : G.Forma && G.Forma.has(rec.t, rec.c) ? null : 'o prédio sem forma'), build: P => build(P) }]);
     In.addTypes({ [t]: Object.assign({}, T0, { fams: [fam].concat((T0.fams || []).filter(f => f !== fam)), formFam: fam, prefer: (rec, ok) => (ok.includes(fam) ? [fam] : ok) }) });
   }
 })(window.G);

@@ -1849,6 +1849,19 @@ float m3scale(float p) {
       const A = t, B = [t[0] + ac[0] * w, t[1] - hh / 2, t[2] + ac[2] * w], C = [t[0], t[1] - hh, t[2]];
       K.as('linen', () => { K.tri(A, B, C, X.col(e.cor), fr); K.tri(A, C, B, X.col(e.cor), [-fr[0], 0, -fr[2]]); });
     },
+    // a turned shape — a pot, a granary of clay, a jar, a cap of thatch —: its rings from its foot up (perfil [[r, dy], …],
+    // metres over y0), sixteen faces round each band between two of them, turned out and up by the band's slope, darker toward
+    // its foot; its top closed where its last ring is wide
+    vaso(K, e, X) {
+      const C = X.XZ(e.c[0], e.c[1]); const yb = e.y0 <= 0.001 ? X.foot(0) : X.Y(e.y0), ya = X.Y(e.y0), N = 16, pf = e.perfil;
+      const hi = rgbOf(X.col(e.cor[0])), lo = e.cor[1] ? rgbOf(X.col(e.cor[1])) : dim(hi, 0.8);
+      const R = pf.map(([r, dy], j) => { const y = j === 0 ? yb : ya + dy; const out = []; for (let i = 0; i < N; i++) { const a = i / N * TAU; out.push([C[0] + Math.cos(a) * Math.max(0.01, r), y, C[1] + Math.sin(a) * Math.max(0.01, r)]); } return out; });
+      K.as(X.mat(e, 'mud'), () => {
+        for (let j = 0; j + 1 < R.length; j++) { const up = (pf[j][0] - pf[j + 1][0]) / Math.max(0.01, pf[j + 1][1] - pf[j][1]); const cc = mixc(lo, hi, (j + 0.5) / (R.length - 1));
+          for (let i = 0; i < N; i++) { const i2 = (i + 1) % N, am = (i + 0.5) / N * TAU; K.quad(R[j][i], R[j][i2], R[j + 1][i2], R[j + 1][i], cc, [Math.cos(am), up, Math.sin(am)]); } }
+        const L = R.length - 1; if (pf[L][0] > 0.02) for (let i = 0; i < N; i++) K.tri([C[0], ya + pf[L][1], C[1]], R[L][i], R[L][(i + 1) % N], hi, UP);
+      });
+    },
     // a ball — ry: as high as that, a spindle (the court's cypresses, the plumes on a parapet) —, of its stuff
     bola(K, e, X) { const c = X.pt(e.c[0], e.c[1], e.c[2]); K.as(e.mat || 'slab', () => K.sph(c[0], c[1], c[2], e.r, X.col(e.cor), e.ry)); },
     // a round timber from end to end: a leg, a brace, a post
@@ -2020,7 +2033,12 @@ float m3scale(float p) {
     },
     storehouse(g, gw, K) { house(g, gw, K, { h: 3.8, inset: 0.4, yard: 1.3 }); }, // (its people's stock, heaped in the yard: Props3D.piles)
     armazem(g, gw, K) { KIT.storehouse(g, gw, K); },
-    celeiro(g, gw, K) { house(g, gw, K, { h: 4, inset: 0.4, wall: '#9a4a32', pat: 'plankV', yard: 1.1 }); },
+    // (the granary of the Egyptians and of the Aztecs from its form — the domes, the pots: phase E —; the others' a hall)
+    celeiro(g, gw, K) {
+      if (!G.Forma.has('celeiro', styleOf(K.b))) { house(g, gw, K, { h: 4, inset: 0.4, wall: '#9a4a32', pat: 'plankV', yard: 1.1 }); return; }
+      if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 7); return; }
+      formInto(g, gw, K, G.Forma.of('celeiro', styleOf(K.b)), doorSide(K.b));
+    },
     workshop(g, gw, K) { smithy(g, gw, K, { h: 3.2, chimney: true, kind: 'wood' }); },
     forja(g, gw, K) { smithy(g, gw, K, { h: 3.3, wall: K.P.base ? K.P.base[2] : '#a09a8e', pat: 'stone', kind: 'forge' }); },
     olaria(g, gw, K) {
@@ -2118,7 +2136,11 @@ float m3scale(float p) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 0.8, K.d - 0.8, 10); return; }
       formInto(g, gw, K, G.Forma.of('torre', styleOf(K.b)), doorSide(K.b));
     },
-    mercado(g, gw, K) { stalls(K, 4); },
+    // the market of each people from its form: the stalls, the bays, the macellum, the stoa, the sheds (phase E)
+    mercado(g, gw, K) {
+      if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 3); return; }
+      formInto(g, gw, K, G.Forma.of('mercado', styleOf(K.b)), doorSide(K.b));
+    },
     feira(g, gw, K) { stalls(K, 3); },
     // the smugglers' shack, from its form: boards and a lean-to, the curtain, the crates, the lantern
     mercado_negro(g, gw, K) {

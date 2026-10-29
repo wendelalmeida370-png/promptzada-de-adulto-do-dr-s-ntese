@@ -554,16 +554,19 @@
   }
   function celeiro(c, m, p, st) {
     if (st === 'egipcio') {
+      // (the domes 6 px round — before them and between them the base has room for a body, the plan's way to their mouths —, the
+      // flight up the base's front from the street: as its form)
       box(c, -0.85, -0.85, 0.85, 0.85, 0, 2.5, p.base[0], p.base[1], p.base[2]);
       for (const [x, y] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]]) {
-        const b = P(x, y, 2.5); const g = c.createLinearGradient(b[0] - 7, 0, b[0] + 7, 0); g.addColorStop(0, p.wl); g.addColorStop(1, p.wr);
-        c.fillStyle = g; c.beginPath(); c.moveTo(b[0] - 7, b[1]); c.bezierCurveTo(b[0] - 7, b[1] - 14, b[0] - 3, b[1] - 20, b[0], b[1] - 21); c.bezierCurveTo(b[0] + 3, b[1] - 20, b[0] + 7, b[1] - 14, b[0] + 7, b[1]); c.fill();
+        const b = P(x, y, 2.5); const g = c.createLinearGradient(b[0] - 6, 0, b[0] + 6, 0); g.addColorStop(0, p.wl); g.addColorStop(1, p.wr);
+        c.fillStyle = g; c.beginPath(); c.moveTo(b[0] - 6, b[1]); c.bezierCurveTo(b[0] - 6, b[1] - 14, b[0] - 2.6, b[1] - 20, b[0], b[1] - 21); c.bezierCurveTo(b[0] + 2.6, b[1] - 20, b[0] + 6, b[1] - 14, b[0] + 6, b[1]); c.fill();
         c.fillStyle = '#3a2a1c'; c.beginPath(); c.arc(b[0] - 1.5, b[1] - 15, 1.2, 0, TAU); c.fill();
       }
+      treads(c, p, -0.15, 0.15, 1.0, 2.5, 3);
       return 24;
     }
     if (st === 'asteca') {
-      top(c, -0.85, -0.85, 0.85, 0.85, 0.5, p.top);
+      top(c, -0.975, -0.975, 0.975, 0.975, 0.5, p.top); // (to a hand off the lot's edge: room before the front pot's mouth, as its form)
       for (const [x, y] of [[-0.35, -0.4], [0.4, -0.3], [0, 0.4]]) {
         const b = P(x, y, 0); c.fillStyle = '#b87a4a'; c.beginPath(); c.moveTo(b[0] - 4, b[1]); c.bezierCurveTo(b[0] - 8, b[1] - 8, b[0] - 5, b[1] - 16, b[0] - 3, b[1] - 16); c.lineTo(b[0] + 3, b[1] - 16); c.bezierCurveTo(b[0] + 5, b[1] - 16, b[0] + 8, b[1] - 8, b[0] + 4, b[1]); c.fill();
         c.fillStyle = 'rgba(0,0,0,0.18)'; c.beginPath(); c.moveTo(b[0] + 1, b[1]); c.bezierCurveTo(b[0] + 6, b[1] - 8, b[0] + 4, b[1] - 15, b[0] + 3, b[1] - 16); c.lineTo(b[0] + 1, b[1] - 16); c.fill();
@@ -706,9 +709,22 @@
     { const q = P(-0.75, 0.7, 0.4); tree(c, q[0], q[1], 1.1); }
     return 10;
   }
+  // (a stall of the market facing f [fu, fv]: its posts, its counter on the side it faces — under the cloth behind it the one who
+  // sells —, the cloth, the fruit on the counter: as its form, G.Forma)
+  function marketStall(c, p, x, y, f, col1, col2) {
+    const s = 0.2; const e = s + 0.0125, r = f[1] > 0 ? [x - e, y, x + e, y + e] : f[1] < 0 ? [x - e, y - e, x + e, y] : f[0] > 0 ? [x, y - e, x + e, y + e] : [x - e, y - e, x, y + e];
+    for (const [dx, dy] of [[-s, -s], [s, -s], [s, s], [-s, s]]) ln(c, P(x + dx, y + dy, 0), P(x + dx, y + dy, 7), '#6a4a2c', 0.6);
+    box(c, r[0], r[1], r[2], r[3], 2.5, 3.4, '#8a6a44', '#6a4e30', '#9a7a52');
+    const t = P(x, y, 10);
+    for (let k = 0; k < 4; k++) { poly(c, [t, P(x - s - 0.04, y + s + 0.04, 7), P(x + s + 0.04, y + s + 0.04, 7)], k % 2 ? col1 : col2); }
+    poly(c, [t, P(x + s + 0.04, y + s + 0.04, 7), P(x + s + 0.04, y - s - 0.04, 7)], shade(col1, 0.8));
+    const cx = (r[0] + r[2]) / 2, cy = (r[1] + r[3]) / 2; c.fillStyle = G.vpick(['#e05a3a', '#f0b040', '#6ab04a']); for (let k = 0; k < 3; k++) { const q = P(cx + (f[1] ? (k - 1) * 0.1 : 0), cy + (f[0] ? (k - 1) * 0.1 : 0), 3.6); c.beginPath(); c.arc(q[0], q[1], 0.7, 0, TAU); c.fill(); }
+  }
   function mercado(c, m, p, st) {
     const e = 0.92;
     pave(c, e, st === 'nordico' ? '#a08a66' : st === 'egipcio' ? '#e2cfa2' : '#d9d0bc');
+    // (its stalls and its bays where its form has them — the plan's: G.Forma —; none there is a market drawn bare, an error: T-254)
+    const F = G.Forma.of('mercado', st); const stalls = F.stalls, bays = F.bays;
     const AW = {
       classico: [['#c8483a', '#f4efe3'], ['#3f7fd8', '#f4efe3'], ['#e8b83a', '#8a3a2a']],
       grego: [['#3f6fb0', '#f4efe3'], ['#c8683f', '#f4efe3'], ['#3f6fb0', '#e8b83a']],
@@ -726,11 +742,14 @@
       colonnade(c, p, -0.9, -0.6, 0.9, -0.5, 0.4, 10, 6, 0.03, 'L');
       gableX(c, -0.92, -0.92, 0.92, -0.48, 10, 13.5, 0.04, p.roof[0], p.roof[1], p.gable, p.roof[2]);
     } else if (st === 'nordico') { for (const [x, y] of [[-0.6, -0.6], [0.6, -0.55]]) { box(c, x - 0.22, y - 0.18, x + 0.22, y + 0.18, 0.4, 7, p.wl, p.wr, p.wl); gableX(c, x - 0.22, y - 0.18, x + 0.22, y + 0.18, 7, 12, 0.05, p.roof[0], p.roof[1], p.gable, p.roof[2]); } }
-    const spots = [[-0.55, 0.1], [0.1, -0.5], [0.45, 0.2], [-0.2, 0.6], [0.6, 0.65]];
-    spots.forEach(([x, y], k) => { if (st === 'romano' && Math.abs(x) < 0.35 && Math.abs(y) < 0.35) return; stall(c, p, x, y, AW[k % AW.length][0], AW[k % AW.length][1]); });
+    // (the bays of the people's store at the back — their planks, the sacks over them —, but the Greek's rooms of its stoa and the
+    // Norse's sheds, drawn above)
+    if (st !== 'grego' && st !== 'nordico') for (const [x0, y0, x1, y1] of bays) { box(c, x0, y0, x1, y1, 0.4, 1.4 * ZM, '#8a6a44', '#6a4e30', '#9a7a52'); c.fillStyle = '#d8c090'; for (const t of [0.25, 0.5, 0.75]) { const q = P(x0 + (x1 - x0) * t, (y0 + y1) / 2, 1.4 * ZM); c.beginPath(); c.ellipse(q[0], q[1] - 0.4, 1.6, 0.9, 0, 0, TAU); c.fill(); } }
+    // (the stalls from the back to the front: each over the one behind it)
+    stalls.map((q, k) => [q, k]).sort((a, b) => (a[0][0] + a[0][1]) - (b[0][0] + b[0][1])).forEach(([[x, y, f], k]) => marketStall(c, p, x, y, f, AW[k % AW.length][0], AW[k % AW.length][1]));
     if (st === 'egipcio' || st === 'asteca') for (let k = 0; k < 4; k++) { const q = P(-0.8 + k * 0.12, 0.85, 0.4); jar(c, q[0], q[1], 1, k % 2 ? '#b8683a' : '#c88a4a'); }
-    if (st === 'nordico') for (let k = 0; k < 3; k++) { const q = P(0.85, -0.1 + k * 0.2, 0.4); barrel(c, q[0], q[1], 1); }
-    if (st === 'egipcio') { const q = P(0.8, -0.8, 0.4); palm(c, q[0], q[1], 1); }
+    if (st === 'nordico') for (let k = 0; k < 3; k++) { const q = P(-0.82 + k * 0.16, 0.85, 0.4); barrel(c, q[0], q[1], 1); } // (at the front left: its form's)
+    if (st === 'egipcio') { const q = P(0.76, -0.25, 0.4); palm(c, q[0], q[1], 1); } // (beside the bays: its form's)
     return 26;
   }
   // (the treads of a plinth's front: from its top at z px down in n − 1 treads of 0.075 tiles, the front at y, x0..x1 — G.Forma's)

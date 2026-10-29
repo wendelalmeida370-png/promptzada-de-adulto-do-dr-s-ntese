@@ -89,7 +89,7 @@ const FORMA = G.Forma || null; // (js/forma.js: the form of a type and a people,
 // pieces, a stone's edge; L-271 was 1–2% of every Egyptian building)
 const HOLE = 0.005;
 F.blank();
-const rows = []; const per = new Map(); const sheets = new Map(); const other = new Set(); const formed = new Set(); const holes = [];
+const rows = []; const per = new Map(); const sheets = new Map(); const other = new Set(); const formed = new Set(); const holes = []; // (formed: the types and peoples drawn by their form, 'tipo/povo')
 // (the shapes every builder uses, each face wound out of it: L-270)
 { const sw = F.shapesWound(); const bad = Object.entries(sw).filter(([, s]) => s.inward); ok('as formas do 3D enroladas para fora', !bad.length, bad.length ? bad.map(([k, s]) => `${k}: ${s.inward} de ${s.faces} faces para dentro`).join(', ') : `${Object.keys(sw).length} formas, todas as faces para fora`); }
 for (const type of Object.keys(G.BDEF)) {
@@ -111,7 +111,7 @@ for (const type of Object.keys(G.BDEF)) {
       for (const k of ['profA', 'profB']) delete row.near[k];
       // (b) the form, where there is one
       const Fm = FORMA && FORMA.of(type, style, b) && (!G.Build3D.byForm || G.Build3D.byForm(b)) ? FORMA.of(type, style, b) : null;
-      if (Fm) { formed.add(type); const fc = F.formCheck(b, Fm, god, near, LIM); row.forma = { ok: fc.ok, why: fc.why, plan: fc.plan.iou, top3D: fc.plan.top, topForma: fc.plan.formTop }; }
+      if (Fm) { formed.add(type + '/' + style); const fc = F.formCheck(b, Fm, god, near, LIM); row.forma = { ok: fc.ok, why: fc.why, plan: fc.plan.iou, top3D: fc.plan.top, topForma: fc.plan.formTop }; }
       rows.push(row);
       const key = type + '/' + style; const was = per.get(key); const rank = { '=': 0, '≈': 1, '≠': 2 };
       if (!was || rank[vd.v] > rank[was.v] || (row.forma && !row.forma.ok && !(was.forma && !was.forma.ok))) per.set(key, row);
@@ -127,18 +127,19 @@ if (process.env.JSON) fs.writeFileSync(process.env.JSON, JSON.stringify(rows));
 const types = [...new Set([...per.keys()].map(k => k.split('/')[0]))];
 console.log('\n' + 'tipo'.padEnd(18) + POVOS.map(s => s.slice(0, 7).padStart(9)).join('') + '   (a massa; F: com forma, conferida contra ela)');
 const count = { '=': 0, '≈': 0, '≠': 0 };
-for (const t of types) console.log((t + (formed.has(t) ? ' F' : '')).padEnd(18) + POVOS.map(s => { const r = per.get(t + '/' + s); if (!r) return '        -'; count[r.v]++; return (r.v + (r.forma && !r.forma.ok ? '!' : ' ')).padStart(9); }).join(''));
+for (const t of types) console.log((t + (POVOS.some(s => formed.has(t + '/' + s)) ? ' F' : '')).padEnd(18) + POVOS.map(s => { const r = per.get(t + '/' + s); if (!r) return '        -'; count[r.v]++; return (r.v + (r.forma && !r.forma.ok ? '!' : ' ')).padStart(9); }).join(''));
 if (other.size) console.log(`desenhados pelo deus numa camada própria e ainda fora desta prova (T-150: o que cresce nos campos e no apiário, a feira da planta do P4, e o que o render.js pinta sozinho — a fazenda, o cemitério, a cerca, a fogueira, a ruína): ${[...other].join(', ')}`);
 console.log(`\n${count['=']} com a mesma massa, ${count['≈']} a mesma massa com perdas, ${count['≠']} outra massa (de ${per.size} tipos e povos; ${rows.length} prédios em ${((clock() - t0) / 1000).toFixed(1)} s)`);
 if (process.env.VERB) for (const r of per.values()) if (r.v !== '=' || (r.forma && !r.forma.ok)) console.log(`   ${r.v} ${r.type}/${r.style}${r.fam ? ' (' + r.fam + ')' : ''}: ${r.why.join(', ')}${r.forma && !r.forma.ok ? ' · forma: ' + r.forma.why.join(', ') : ''}`);
 
 // ------------------------------ the verdicts ------------------------------
-// (a type with a form has the god's mass and follows its form, in every people; the others, under the ceiling)
-const comForma = [...per.values()].filter(r => formed.has(r.type));
+// (a type with a form has the god's mass and follows its form, in every people it has one; the others — and a type's peoples
+// with none: the granary where it is a hall —, under the ceiling)
+const comForma = [...per.values()].filter(r => formed.has(r.type + '/' + r.style));
 const ruins = comForma.filter(r => r.v !== '=' || (r.forma && !r.forma.ok));
-if (formed.size) ok('os tipos com forma', !ruins.length, ruins.length ? ruins.map(r => `${r.type}/${r.style} (${r.why.concat(r.forma && !r.forma.ok ? r.forma.why : []).join(', ')})`).join(' · ') : `${[...formed].join(', ')}: a massa do deus e a forma, nos ${comForma.length} tipos e povos`);
-const outra = [...per.values()].filter(r => r.v === '≠' && !formed.has(r.type));
-if (!ONLY && POVOS.length === STY.length && NID === 3) ok('outra massa (a catraca)', outra.length <= TETO, `${outra.length} tipos e povos com outra massa (teto ${TETO}, a meta é zero)${outra.length < TETO ? ' — baixou: desça o teto' : ''}`);
+if (formed.size) ok('os tipos com forma', !ruins.length, ruins.length ? ruins.map(r => `${r.type}/${r.style} (${r.why.concat(r.forma && !r.forma.ok ? r.forma.why : []).join(', ')})`).join(' · ') : `${[...new Set([...formed].map(k => k.split('/')[0]))].join(', ')}: a massa do deus e a forma, nos ${comForma.length} tipos e povos`);
+const outra = [...per.values()].filter(r => r.v === '≠' && !formed.has(r.type + '/' + r.style));
+if (!ONLY && !SEMPLANTA && POVOS.length === STY.length && NID === 3) ok('outra massa (a catraca)', outra.length <= TETO, `${outra.length} tipos e povos com outra massa (teto ${TETO}, a meta é zero)${outra.length < TETO ? ' — baixou: desça o teto' : ''}`);
 else console.log(`outra massa: ${outra.length} tipos e povos (a catraca só vale na rodada inteira, IDS=3)`);
 // (every building the world raises has the god's picture — the jail had none: L-265 —, but those of a layer of their own)
 const blind = [...per.values()].filter(r => r.near && r.near.empty === 'deus').map(r => `${r.type}/${r.style}`);
