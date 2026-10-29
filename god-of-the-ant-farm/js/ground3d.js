@@ -99,7 +99,7 @@
     else if (S.road[i]) { const r = Math.min(3, S.road[i]); c = ROADC[r]; k = r === 1 ? K.gravel : r === 2 ? K.paved : K.highway; }
     else if (b && FARM[b.type]) {
       // (the god's field: turned earth, or the water of a rice paddy; half dug while it is still being made)
-      const gr = G.Estates && b.built && G.Estates.grainOf ? G.Estates.grainOf(b) : null;
+      const gr = G.Estates && b.built && G.Estates.grainFor ? G.Estates.grainFor(b) : null; // (read, never kept: L-394)
       const soil = gr && gr.flood ? [106, 122, 90] : [138, 100, 64];
       c = b.built ? soil : G.lerpColor(c, soil, 0.5); k = K.field;
     } else if (S.cliff[i] || S.slope[i] > 2.6) k = K.rock;

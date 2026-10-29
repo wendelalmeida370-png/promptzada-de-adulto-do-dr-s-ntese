@@ -1582,7 +1582,7 @@
     const S = G.S;
     const wind = Math.sin(t * 2.2) * (0.6 + S.weather.windS * 1.5);
     // the grain of the land: wheat, barley, flooded rice, tall maize, red sorghum
-    const GR = (G.Estates && b.built && G.Estates.grainOf(b)) || { ripe: '#e0b84a', head: '#f2cc5a', green: [110, 180, 80], h: 5 };
+    const GR = (G.Estates && b.built && G.Estates.grainFor(b)) || { ripe: '#e0b84a', head: '#f2cc5a', green: [110, 180, 80], h: 5 };
     for (let k = 0; k < 9; k++) {
       const x = b.x + (k % 3), y = b.y + Math.floor(k / 3);
       const i = y * N + x; const burnt = S.burnt[i] > 0;

@@ -2300,12 +2300,12 @@ float m3scale(float p) {
     }
   }
   // the rows of a field, each tile with its own crop at its own stage (the world's crops), drawn as the god's view draws
-  // them: the grain of the land (wheat, barley, flooded rice, tall maize, red sorghum — Estates.grainOf), four rows of
+  // them: the grain of the land (wheat, barley, flooded rice, tall maize, red sorghum — Estates.grainFor), four rows of
   // plants on the ridges of the furrows, stalks that grow with the crop, green, then golden with their heads and ears
   // and beards when ripe; sprouts when just sown; the water of a paddy; posts at the corners
   function fields(K, ripe, green, small) {
     const b = K.b; const L = K.L; const S = G.S; const gp = K.gp;
-    const GR = (G.Estates && b.built && G.Estates.grainOf ? G.Estates.grainOf(b) : null) || { ripe: ripe, head: ripe, green: G.hex2rgb(green), h: small ? 2.5 : 5 };
+    const GR = (G.Estates && b.built && G.Estates.grainFor ? G.Estates.grainFor(b) : null) || { ripe: ripe, head: ripe, green: G.hex2rgb(green), h: small ? 2.5 : 5 };
     const grn = Array.isArray(GR.green) ? GR.green : G.hex2rgb(GR.green);
     for (let ty = 0; ty < b.h; ty++) for (let tx = 0; tx < b.w; tx++) {
       const k = ty * b.w + tx; const x = b.x + tx, y = b.y + ty; const i = y * N + x; if (!W.inb(x, y)) continue;

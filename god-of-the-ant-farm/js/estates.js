@@ -125,6 +125,11 @@
     b.grain = civ === 'asteca' ? 'milho' : (bio === 3 || bio === 4) && wet ? 'arroz' : bio === 2 || bio === 1 || civ === 'nordico' ? 'cevada' : bio === 5 ? 'sorgo' : 'trigo';
     return Es.GRAIN[b.grain];
   };
+  // the grain of a farm for the views (L-394): what Estates.grainOf works out, on a copy — never kept on the farm. grainOf keeps
+  // it (b.grain) the first time it is asked: a picture that asked first gave the farm the grain of whoever held its town when
+  // it was first seen, and the same world, watched or not, named its farms apart (qa/grao.js). The god's farm, the 3D's ground
+  // and its fields read it here
+  Es.grainFor = b => Es.grainOf(Object.assign({}, b));
   G.Village.nameOf = (function (prev) { return function (type, b) { if (type === 'farm' && b && b.built !== undefined && b.set !== undefined && b.x !== undefined) return Es.grainOf(b).name; return prev(type, b); }; })(G.Village.nameOf);
 
   // ------------------------------ silk: a secret that is found, or stolen ------------------------------
