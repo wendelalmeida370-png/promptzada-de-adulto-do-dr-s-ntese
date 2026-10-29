@@ -176,6 +176,9 @@
     if (t.k >= t.pts.length) { const set = S.settlements.get(v.set); if (!t.loop || !set || !(G.isNight() || G.isEvening())) return H.end(v); t.pts = rondaPoints(set); t.k = 0; t.st = 0; return; }
     if (t.loop && !(G.isNight() || G.isEvening())) return H.end(v);
     if (G.isNight()) v.torch = true;
+    // (on the way and at each crossing, the round sees what the soldier's post sees: a smuggler with the stolen load — the
+    // theft is a night's work, L-386, and the post sleeps; one rule for both, E.spotSmuggler, L-405)
+    if (t.st > 0) E.spotSmuggler(v, dt);
     if (t.st === 0) { const [x, y] = t.pts[t.k]; if (!H.goto(v, x, y, false, 4000)) { t.k++; return; } t.st = 1; t.walk = 0; return; }
     if (t.st === 1) { t.walk += dt; if (H.move(v, dt, 0.85)) { t.st = 2; v.actT = 0; } else if (t.walk > 60) { t.k++; t.st = 0; } return; }
     v.act = 'guard'; v.moving = false;

@@ -1,21 +1,21 @@
 // contrabando: o mercado clandestino e a vigia de ponta a ponta num mundo pronto, em Node, pelo qa/nodemundo.js — o mundo de
-// verdade: o contrabandista e o soldado de guarda pelas tarefas deles (economy.js: 'steal', 'sell', 'guard'), o armazém do
-// povo, a prateleira do mercado clandestino, a casa de quem compra e o livro.
+// verdade: o contrabandista e a ronda da noite pelas tarefas deles (economy.js: 'steal', 'sell'; crime.js: 'ronda'), o armazém
+// do povo, a prateleira do mercado clandestino, a casa de quem compra e o livro.
 //  k1 a noite do contrabandista: ele tira do armazém às escondidas (o livro: 'contrabando', marcado para o mercado e roubado) e
 //     leva à prateleira do mercado ('contrabando'): o que saiu do armazém é o que chegou à prateleira
 //  k2 o dia do mercado clandestino: quem compra leva para casa pelo livro ('compra'), e as moedas vão à casa do contrabandista,
 //     não ao tesouro — sem imposto
-//  k3 a vigia flagra o contrabandista com a mercadoria roubada nas mãos: ela volta ao armazém ('apreendido'), a casa dele paga a
-//     multa ('multa'), ele perde o ofício
+//  k3 a ronda da noite — a do mundo, que o crime.js dá ao anoitecer ao vigia da cidade (ou, sem ele, a um soldado) — passa pela
+//     porta do armazém quando ele sai com a mercadoria roubada nas mãos, e o flagra pela regra do posto do soldado
+//     (E.spotSmuggler, L-405): ela volta ao armazém ('apreendido'), a casa dele paga a multa ('multa'), ele perde o ofício
 //  k4 um save com a mercadoria roubada nas mãos: carregado, ela segue para a prateleira do mercado (a carga marcada vai aonde é
 //     marcada), nunca para o armazém comum
 //  k5 o contrabandista morre com a mercadoria roubada nas mãos: ela vai à prateleira do mercado ('herdado')
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console. (A segunda batida, que fecha o mercado com a
 //  prateleira de volta ao armazém, é do qa/guardados.js, L-377.)
 // Num mundo sem mercado clandestino, a prova o abre como o mundo abre (economy.js, considerBlackMarket): um beco da cidade, dois
-// contrabandistas. O roubo é de noite: a cama da noite o cortava no primeiro olhar (L-386, aberta: a noite do contrabandista
-// como a da vigia — a pergunta, G.Eco.prowls, já está no economy.js; falta a exceção ao sono no decide, do P1); até lá, a k1 e
-// as que vêm dela (k3, k4, k5) ficam vermelhas.
+// contrabandistas. O roubo é de noite: a cama da noite o cortava no primeiro olhar (L-386: a pergunta, G.Eco.prowls, no
+// economy.js; a exceção ao sono no decide, do P1). E de noite o posto do soldado dorme: quem flagra é a ronda (L-405).
 //   node qa/contrabando.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/contrabando.js)
 const M = require('./nodemundo.js'); const G = M.load({ qa: true });
 const D = G.Depot, E = G.Eco, V = G.Village;
@@ -107,24 +107,38 @@ function stealNow(P, v) {
   ok('k2', !!buyer && !!t && goods > 0 && (coin ? toCrook > 0 : !pay.length) && !toState && Math.abs(home - goods) < 0.01 && !bad.length,
     `${buyer ? buyer.name : 'ninguém para comprar'}: da prateleira às mãos ${goods} de ${k}, à casa ${home}; pagou ${toCrook} à casa do contrabandista e ${toState} ao tesouro${bad.length ? '; ' + bad.join(' · ') : ''}`);
 }
-// k3 the watch catches the smuggler with stolen goods in the hands
+// k3 the night round catches the smuggler with stolen goods in the hands (L-405)
+// (the round is the world's: crime.js gives it at dusk to the town's watchman — or, with none, to a soldier — and it goes
+// crossing to crossing till the sky lightens. The hand of the proof gives only tonight's route: the store's door, where the
+// smuggler comes out with what he took — the watchman passing there —, and the market's, where he takes it. The old k3 put a
+// soldier on guard at the market at night: the bed took him at the first look, as it took the theft before L-386)
 {
-  const P = setup(0.75); const v = P.crew[0]; const h = v.home && S().buildings.get(v.home); const coins0 = h ? D.get('h:' + h.id, 'moedas') : 0;
-  const guard = [...S().villagers.values()].filter(o => o.set === P.b.set && o.role === 'guerreiro' && fit(o) && !P.crew.includes(o)).sort((a, c) => a.id - c.id)[0];
-  const { got } = stealNow(P, v); const n = got ? r2(v.carry.n) : 0; const k = got ? v.carry.k : null;
-  // the soldier on guard at the market, the smuggler on his way to it with the stolen goods
-  let caught = false; const L1 = seen.length;
-  if (guard && got) {
-    G.Vg.endTask(guard); const [fx, fy] = V.frontTile(P.b); guard.x = fx + 0.5; guard.y = fy + 0.5; guard.path = null; guard.sleeping = false; guard.energy = 95; guard.hunger = 10;
-    G.Vg.H.setTask(guard, { type: 'guard', id: P.b.id, pri: 1, dur: 200, st: 0 });
-    caught = live(120, null, () => seen.slice(L1).some(e => e[8] === 'apreendido' && e[3] === 'v:' + v.id));
+  // (dusk, the clock turned back to it: this dusk's round not given yet — the world gives it at the crime's next look, in two
+  // seconds —; the night a few seconds on, and the theft at once, as in the k1. Waiting for the next dusk, some 200 s, both
+  // smugglers the proof set up had left the trade before the night came)
+  const P = setup(0.7); const town = S().settlements.get(P.b.set); if (town && town.watchDay === S().day) town.watchDay = S().day - 1;
+  const roundOf = () => [...S().villagers.values()].filter(o => o.set === P.b.set && o.task && o.task.type === 'ronda' && o.task.loop && !P.crew.includes(o)).sort((a, c) => a.id - c.id)[0];
+  let w = null; live(30, null, () => { w = roundOf() || null; return !!w && G.isNight(); });
+  const v = P.crew.find(c => S().villagers.has(c.id) && c.role === 'contrabandista' && fit(c)) || P.crew[0]; const crook0 = v.role === 'contrabandista';
+  const h = v.home && S().buildings.get(v.home); const coins0 = h ? D.get('h:' + h.id, 'moedas') : 0;
+  const { got } = w && G.isNight() && crook0 ? stealNow(P, v) : { got: false }; const n = got ? r2(v.carry.n) : 0; const k = got ? v.carry.k : null;
+  let caught = false, byRound = false; const L1 = seen.length; const n0 = S().logN || 0;
+  if (w && got && w.task && w.task.type === 'ronda') {
+    // (the round held above the town's calls below 3, the line of the D-094: in the generation 7's Tenochtitlan the people's
+    // assembly at the palace — Po.crowd, 1,7 — took the watchman from the round at 0,75, eight steps after he met the
+    // smuggler at the store's door; the case is the catch, not who calls the watchman away)
+    const [mx, my] = V.frontTile(P.b); w.x = v.x; w.y = v.y; w.path = null; w.inside = 0;
+    Object.assign(w.task, { pts: [[mx + 0.5, my + 0.5]], k: 0, st: 0, pri: 2.9 });
+    const seenIt = () => seen.slice(L1).some(e => e[8] === 'apreendido' && e[3] === 'v:' + v.id);
+    live(120, null, () => { const c = seenIt(); if (c) byRound = !!(w.task && w.task.type === 'ronda'); return c || !stolenIn(v); });
+    caught = seenIt();
   }
   const seized = sum(seen.slice(L1).filter(e => e[8] === 'apreendido' && e[3] === 'v:' + v.id && e[4] === 'f:' + P.f.id));
   const fine = sum(seen.slice(L1).filter(e => e[8] === 'multa' && h && e[3] === 'h:' + h.id && e[4] === 'f:' + P.f.id));
-  const said = S().history.filter(e => /flagrou/.test(e.txt) && e.d === S().day).length;
+  const said = S().history.filter(e => e.n > n0 && /flagrou/.test(e.txt) && w && e.txt.startsWith(w.name)).length;
   const stillCrook = S().villagers.has(v.id) && v.role === 'contrabandista'; const bad = newBad(P.base);
-  ok('k3', !!guard && got && caught && Math.abs(seized - n) < 0.01 && (coins0 < 0.02 || fine > 0) && said > 0 && !stillCrook && !bad.length,
-    `${guard ? guard.name + ' de guarda no mercado' : 'nenhum soldado'}; ${v.name} com ${n} de ${k || '-'} roubado nas mãos: ${caught ? 'flagrado' : 'não flagrado'}; ao armazém ('apreendido') ${seized}; multa da casa ${fine} (tinha ${r2(coins0)}); ${S().villagers.has(v.id) ? (stillCrook ? 'ainda contrabandista' : 'perdeu o ofício') : 'executado'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+  ok('k3', !!w && got && caught && byRound && Math.abs(seized - n) < 0.01 && (coins0 < 0.02 || fine > 0) && said > 0 && !stillCrook && !bad.length,
+    `${w ? `${w.name} #${w.id} (${w.role === 'vigia' ? 'o vigia' : 'um soldado'}) na ronda da noite, dada pelo mundo` : 'nenhuma ronda dada ao anoitecer'}; ${v.name} #${v.id}${crook0 ? '' : ' (JÁ SEM o ofício quando a noite veio)'} com ${n} de ${k || '-'} roubado nas mãos, saindo do armazém: ${caught ? 'flagrado' + (byRound ? ' na ronda' : ' fora da ronda') : 'não flagrado' + (got && !stolenIn(v) ? ' — chegou ao mercado' : '')}; ao armazém ('apreendido') ${seized}; multa da casa ${fine} (tinha ${r2(coins0)}); na crônica ${said ? 'sim' : 'não'}; ${S().villagers.has(v.id) ? (stillCrook ? 'ainda contrabandista' : 'perdeu o ofício') : 'executado'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
 }
 // k4 a save with the stolen goods in the hands
 {

@@ -1012,13 +1012,21 @@
     v.act = 'guard';
     if (t.tower) { const b = S.buildings.get(t.id); if (b) b.manned = S.clock + 2; }
     // the watch catches smugglers with stolen goods
-    if (G.R() < dt * 0.5) for (const o of S.villagers.values()) {
-      if (o.role !== 'contrabandista' || o.set !== v.set || !(o.carry && o.carry.stolen) || o.inside) continue;
-      if (G.dist2(o.x, o.y, v.x, v.y) > 36) continue;
-      E.arrest(o, v); break;
-    }
+    E.spotSmuggler(v, dt);
     if (v.actT > (t.dur || 30)) H.end(v);
   }
+  // (one rule for whoever keeps the watch — the soldier at his post, by day; the round of the watchman, crime.js, by night:
+  // a smuggler of his town in the street, six paces off, with the stolen load in his hands, is caught. The theft went to the
+  // night with L-386, when the post sleeps, and the round did not look: nobody caught one any more, L-405. The chance is
+  // drawn only with one in sight; and no cell — the arrest takes the load, the fine and the trade, and the jail is crime.js's)
+  E.spotSmuggler = function (v, dt) {
+    for (const o of G.S.villagers.values()) {
+      if (o.role !== 'contrabandista' || o.set !== v.set || !(o.carry && o.carry.stolen) || o.inside) continue;
+      if (G.dist2(o.x, o.y, v.x, v.y) > 36) continue;
+      if (G.R() < dt * 0.5) E.arrest(o, v);
+      return;
+    }
+  };
   E.arrest = function (o, guard) {
     const S = G.S; const f = G.Fac.ofV(o); const set = S.settlements.get(o.set);
     G.Vg.emote(guard, 'angry', 2); G.Vg.emote(o, 'fear', 3);
