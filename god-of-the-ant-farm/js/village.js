@@ -186,6 +186,14 @@
     const D = G.Depot; const ref = 'o:' + b.id; if (!D || !D.exists(ref)) return;
     const got = V.delivered(b); for (const k of Object.keys(got).sort()) D.use(ref, k, got[k], { code, mine: true });
   };
+  // what a building keeps — a house's pantry and chest, a shelf of work, a temple's treasure — is lost with it, in the ledger:
+  // a ruin keeps nothing (the coins of a house have their own line). It went unwritten with a house that fell and with a town
+  // left to the wind, and the ruin cleared away took it, L-377
+  V.keptGone = function (b, code) {
+    const D = G.Depot; if (!D || !b) return;
+    const home = !!(G.BDEF[b.type] && G.BDEF[b.type].housing); const ref = (home ? 'h:' : 'b:') + b.id; if (!D.exists(ref)) return;
+    const L = D.list(ref); for (const k of Object.keys(L).sort()) if (L[k] > 1e-6 && !(home && k === 'moedas')) D.use(ref, k, L[k], { code, mine: true });
+  };
   // the town's works still waiting for this brick (what is not on its way already)
   V.brickWant = function (set, k) {
     let n = 0; const id = set && (set.id || set);
@@ -278,6 +286,7 @@
     }
     // (the coins kept in a house that falls are lost with it — in the ledger: the ruin is no house to hold them)
     if (G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });
+    V.keptGone(b, 'ruina'); // (and what it kept, the house's pantry and chest or the shelf, L-377)
     V.siteGone(b, 'ruina'); // (and what a work had got falls with it, in the ledger)
     if (b.type === 'farm' || b.type === 'campfire') {
       V.removeBuilding(b);
@@ -546,6 +555,9 @@
       // (the family's savings do not come down with the house: the eldest carries them in his purse — with nobody, the
       // people's treasury keeps them —, in the ledger)
       if (o.coin > 0) G.Depot.move('h:' + o.id, head ? 'p:' + head.id : 'f:' + set.fac, 'moedas', o.coin, { code: 'obra-da-cidade', by: head ? head.id : 0, part: true });
+      // (and what the house kept — the pantry, the chest — comes down with it, in the ledger: the family's, not the people's
+      // (D-059), and the ground keeps no owner nor anyone to pick it up for the family — it went unwritten, L-377)
+      V.keptGone(o, 'obra-da-cidade');
       if (o.type === 'farm') fields++; else homes++;
       [cx, cy] = V.center(o);
       G.FX && G.FX.dust(cx, cy, 4);
@@ -1095,6 +1107,7 @@
       if (b.set !== s.id) continue;
       if (b.type === 'cemetery') { b.set = 0; continue; }
       V.siteGone(b, 'abandono'); // (what a work had got is left to the wind with it, in the ledger)
+      V.keptGone(b, 'abandono'); // (and what a house or a shelf kept: a ruin keeps nothing, L-377)
       if (b.type === 'farm' || b.type === 'campfire' || !b.built) { V.removeBuilding(b); continue; }
       // (a house left to the wind keeps no coins: what was in it is lost, in the ledger)
       if (G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });

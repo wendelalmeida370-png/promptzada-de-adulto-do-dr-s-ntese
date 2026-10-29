@@ -1012,7 +1012,17 @@
     if (cruel && G.Politics.execute) G.Politics.execute(f, o, 'por contrabando');
     if (shop && shop.type === 'mercado_negro') {
       shop.raids = (shop.raids || 0) + 1;
-      if (shop.raids >= 2) { log(`A guarda fechou o mercado clandestino${set ? ' de ' + set.name : ''}.`, 'chain', shop.x, shop.y); G.Village.removeBuilding(shop); }
+      if (shop.raids >= 2) {
+        // (what was on its shelf — the stolen goods — back to the people's store, as the chronicle says; what the store has no
+        // room for is lost, as at the store's door of the deliveries ('sem-lugar'): it went unwritten with the shop, L-377)
+        const D = G.Depot; const ref = 'b:' + shop.id; const L = D.list(ref);
+        for (const k of Object.keys(L).sort()) {
+          if (!(L[k] > 1e-6)) continue;
+          if (f) D.move(ref, 'f:' + f.id, k, L[k], { code: 'apreendido', by: guard.id, part: true });
+          const left = D.get(ref, k); if (left > 1e-6) D.use(ref, k, left, { code: 'sem-lugar', by: guard.id, mine: true });
+        }
+        log(`A guarda fechou o mercado clandestino${set ? ' de ' + set.name : ''}.`, 'chain', shop.x, shop.y); G.Village.removeBuilding(shop);
+      }
     }
   };
 

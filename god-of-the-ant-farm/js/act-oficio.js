@@ -648,14 +648,6 @@
   };
   A.hooks.canon.push(['oficio', () => A.all().filter(op => op.def === 'oficio' && live(op)).map(op => [op.id, op.at, op.data.p, op.data.s, r2(op.data.got), r2(op.data.massa), r2(op.data.cru), r2(op.data.forno), r2(op.data.feitos), r2(op.data.quebrados)])]);
 
-  // ------------------------------ a workshop that falls ------------------------------
-  // (what was on the shelf of a building of work that becomes a ruin is lost with it, written in the ledger — a ruin keeps
-  // no shelf, and a ruin cleared away took it with no line: L-245)
-  const destroy0 = G.Village.destroyBuilding;
-  G.Village.destroyBuilding = function (b, cause) {
-    const had = b && !(G.BDEF[b.type] && G.BDEF[b.type].housing) && b.inv ? Object.keys(b.inv).filter(k => (b.inv[k] || 0) > EPS) : [];
-    const r = destroy0.apply(this, arguments);
-    if (had.length && b.type === 'ruin') for (const k of had.sort()) { const n = D.get('b:' + b.id, k); if (n > EPS) D.use('b:' + b.id, k, n, { code: 'ruina', mine: true }); }
-    return r;
-  };
+  // (a workshop that falls: what was on its shelf is lost with it, in the ledger — the village's own door now, V.keptGone, for
+  // every building that leaves the world, L-245, L-377)
 })(window.G);

@@ -1,7 +1,8 @@
 // oficio-inv: the checker's rules for the trades (P2) — the batches of a workshop (G.Oficio: the pottery's bricks, adobes and
-// pots), the brick of the works (D-075) — and the busy hands (D-094). Loaded after qa/qa.js (QA.more); copied into qa.js by
-// qa/junta-inv.js. It reads the world's fields directly: a fault in the trades' own code is not hidden by the code it checks.
-// Each rule has its name (QA.oficio, QA.maos): a proof asks for the one it watches by it, not by its place in QA.more
+// pots), the brick of the works (D-075) — and the busy hands (D-094) and what a ruin keeps (L-377). Loaded after qa/qa.js
+// (QA.more); copied into qa.js by qa/junta-inv.js. It reads the world's fields directly: a fault in the trades' own code is
+// not hidden by the code it checks. Each rule has its name (QA.oficio, QA.maos, QA.ruina): a proof asks for the one it
+// watches by it, not by its place in QA.more
 (function () {
   if (!window.QA || !QA.more) return;
   const fin = x => typeof x === 'number' && isFinite(x);
@@ -203,6 +204,18 @@
       const t = v.task; if (!t || !(CALL[t.type] && (t.pri || 0) < 3 || t.type === 'justice' || t.type === 'fest') || !G.Vg.handsBusy(v)) continue;
       const l = (G.Act && G.Act.leg && G.Act.leg(v)) || 'uma carga com destino';
       add('act', 2, `${v.name} #${v.id}: chamado para ${t.type} (${t.pri}) com as mãos ocupadas (${l})`);
+    }
+  });
+  // ---- a ruin keeps nothing (L-377): what a building kept — a house's pantry, coins and chest, a shelf of work — leaves with
+  // it in the ledger when it falls, is left to the wind or is closed; a ruin with things in it has them unwritten, and they
+  // vanish when it is cleared. It reads the building's own fields (the pantry, the coins, the goods), not the depot's view
+  QA.more.push(QA.ruina = function (add, s) {
+    for (const b of s.buildings.values()) {
+      if (b.type !== 'ruin') continue;
+      const has = Object.keys(b.inv || {}).filter(k => (b.inv[k] || 0) > EPS).sort().map(k => `${Math.round(b.inv[k] * 100) / 100} de ${k}`);
+      if ((b.pantry || 0) > EPS) has.push(`${Math.round(b.pantry * 100) / 100} de comida na despensa`);
+      if ((b.coin || 0) > EPS) has.push(`${Math.round(b.coin * 100) / 100} moedas`);
+      if (has.length) add('act', 2, `a ruína #${b.id} (era ${b.origType || '?'}) guarda ${has.join(', ')}: o que um prédio guarda sai com ele pelo livro`);
     }
   });
 })();
