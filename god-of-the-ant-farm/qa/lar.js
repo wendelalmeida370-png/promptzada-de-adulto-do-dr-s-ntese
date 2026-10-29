@@ -288,7 +288,7 @@ if (want('l3')) {
     const L0 = S.ledgerN || 0; v.hunger = 60; v.sick = G.DAY_LEN * 0.6; const t3 = S.clock;
     // (in bed, the sick one's own food in the house — the test's hand: a family of five eats a pantry of four at once —, and
     // the sick one hungry there: the one picked may be at a meal, which takes the hunger the case needs in bed — after L-371
-    // changed the world's path, Hakon was picked eating at the store, went to bed full and ate nothing at home)
+    // changed the world's path, Hakon was picked eating at the store, went to bed full and ate nothing at home, T-248)
     const dw = doorWatch(); let inBed = -1, work = 0, abed = 0; const trace = []; let last = '';
     live(60, () => { dw.step(); const t = v.task; const k = t ? `${t.type}${t.what ? ':' + t.what : ''}/${t.st}${v.inside ? '/dentro' : ''}` : 'nada'; if (k !== last && trace.length < 14) { trace.push(`${r2(S.clock - t3)} ${k} (fome ${Math.round(v.hunger)})`); last = k; } const a = t && t.type === 'lar' && t.what === 'acamado' && t.st === 2 && v.inside === h.id; if (a) abed += 0.1; if (a && inBed < 0) { inBed = S.clock; if (D.get(ref, 'food') < 1) D.make(ref, 'food', 2, { code: 'teste', part: true, floor: true }); if (v.hunger < 50) v.hunger = 60; } if (inBed >= 0 && !a && L.fever(v)) work += 0.1; return inBed >= 0 && S.clock - inBed > 15; });
     const meals = book(e => e[0] > L0 && e[3] === ref && e[5] === 'food' && (e[8] === 'refeicao' || e[8] === 'ceia') && e[9] === v.id);
