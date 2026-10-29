@@ -448,7 +448,10 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // a building rises where the body stands: the world moves the body; the body follows the world
     // (someone standing on dry ground: the ship's part before may leave its person in the sea, and a house raised over a
     // swimmer — who is not pulled out, D-026 — proves nothing)
-    { const v = __E.adults(s, o => !o.aboard && !o.inside && G.W.walkableXY(o.x, o.y))[0] || __E.adults(s)[0]; __E.enter(v); __E.f(4); const x = Math.floor(v.x), y = Math.floor(v.y);
+    // (and on ground of no lot: a house raised by hand over a garden one walks on left the garden's tile marked as the house's —
+    // an S2 of the checker, the test's own doing: T-262)
+    { const lotless = o => { const i = G.W.idx(Math.floor(o.x), Math.floor(o.y)); return !S.occ[i] && !S.wall[i]; };
+      const v = __E.adults(s, o => !o.aboard && !o.inside && G.W.walkableXY(o.x, o.y) && lotless(o))[0] || __E.adults(s, o => !o.aboard && !o.inside && G.W.walkableXY(o.x, o.y))[0] || __E.adults(s)[0]; __E.enter(v); __E.f(4); const x = Math.floor(v.x), y = Math.floor(v.y);
       const b = G.Village.addBuilding('house', x, y, v.set, true); if (b) G.W.touchWalk && G.W.touchWalk(); __E.f(60, 50);
       out.building = { made: !!b, onIt: b ? (v.x >= b.x && v.x < b.x + b.w && v.y >= b.y && v.y < b.y + b.h && b.blocks) : null, walk: G.W.walkableXY(v.x, v.y), avatar: S.avatar && S.avatar.id === v.id };
       // the same on a ford (L-150): the water under the new building is no water to swim in — the building stops the feet, so
@@ -539,8 +542,11 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
         if (h && h.built && G.W.reaches(v, ...G.Vg.door(h))) { const d = G.Vg.door(h); near(d[0], d[1], true); v.energy = 30; const r = G.Interact.run({ id: 'porta', t: { b: h, X: d[0] * 4, Z: d[1] * 4 } }); __E.until(() => !G.Avatar.busy(), 120);
           R.home = { inside: v.inside === h.id, sleeping: !!v.sleeping, msg: r && r.msg }; G.Possess.wake(v); __E.f(6); R.home.out = !v.inside && !v.sleeping && G.W.walkableXY(v.x, v.y); } else R.home = null; }
       // a talk: up to someone, E — the card is theirs, and they answer with a line over their head (seen by the god too)
-      { const o = [...S.villagers.values()].filter(x => x.id !== v.id && !x.inside && !x.sleeping && x.age >= 6 && !x.aboard && G.W.reaches(v, x.x, x.y)).sort((a, b) => G.dist2(a.x, a.y, v.x, v.y) - G.dist2(b.x, b.y, v.x, v.y))[0];
-        if (o) { near(o.x, o.y); G.Avatar.state().yaw = Math.atan2(o.y - v.y, o.x - v.x); __E.f(8); const b = G.Interact.best(); G.IncUI.use(); __E.f(4);
+      // (E does what the hands reach first: a hen at the person's feet takes it — «Fazer carinho na galinha» —, and then the next
+      // one nearest, up to four, T-262)
+      { const os = [...S.villagers.values()].filter(x => x.id !== v.id && !x.inside && !x.sleeping && x.age >= 6 && !x.aboard && G.W.reaches(v, x.x, x.y)).sort((a, b) => G.dist2(a.x, a.y, v.x, v.y) - G.dist2(b.x, b.y, v.x, v.y)).slice(0, 4);
+        let o = null, b = null; for (const q of os) { near(q.x, q.y); G.Avatar.state().yaw = Math.atan2(q.y - v.y, q.x - v.x); __E.f(8); o = q; b = G.Interact.best(); if (b && b.id === 'pessoa') break; }
+        if (o) { G.IncUI.use(); __E.f(4);
           const card = document.querySelector('#inc-card'); const said = G.Talk && G.Talk.list.find(t => t.id === (b && b.t.o ? b.t.o.id : -1));
           R.talk = { best: b && b.id, label: b && b.label, card: card && !card.classList.contains('hidden') ? (card.querySelector('h3') || {}).textContent : null, said: said ? said.txt : null, name: b && b.t.o ? b.t.o.name : null };
           G.IncUI.closeAll(); G.Modes.setPanel(null); } }
