@@ -67,6 +67,10 @@ function nextBuilder(b) {
   if (G.isNight() || S.time > 0.6) S.time = 0.3;
   Vg.endTask(o); o.sleeping = false; o.inside = 0; o.energy = Math.max(o.energy, 90); o.hunger = Math.min(o.hunger, 20);
   o.x = at[0]; o.y = at[1]; o.path = null;
+  // (what he carries with no place to go, into the people's store first, by the ledger: with it in his hands the door of his
+  // trade sends him to deliver it, and then to another work — in the P1's branch, with the worlds of the generation 7, Quinto
+  // of Roma came with 2 of stone and the case's work stayed at 0,7. A load with a destination stays: it goes where it goes)
+  if (o.carry && o.carry.n > 1e-6 && o.carry.k !== 'water' && !o.carry.op && !o.carry.to) Vg.toStore(o, f0.id, 'teste');
   Vg.H.workTask(o);
   return { o, why: o.task ? (o.task.type === 'build' ? (o.task.id === b.id ? 'tomou a obra' : 'tomou outra obra, #' + o.task.id) : 'foi a ' + o.task.type) : 'ficou sem afazer' };
 }
