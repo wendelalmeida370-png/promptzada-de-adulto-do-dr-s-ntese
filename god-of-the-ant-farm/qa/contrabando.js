@@ -90,9 +90,11 @@ function stealNow(P, v) {
   const seller = [...S().villagers.values()].find(o => o.job === P.b.id); const sh = seller && seller.home && S().buildings.get(seller.home);
   const buyer = [...S().villagers.values()].filter(o => o.set === P.b.set && fit(o) && o.home && !P.crew.some(c => c.home === o.home) && !P.crew.includes(o) && D.get('h:' + o.home, 'moedas') >= 5 && D.room('h:' + o.home, k) >= 1).sort((a, c) => G.dist2(a.x, a.y, P.b.x, P.b.y) - G.dist2(c.x, c.y, P.b.x, P.b.y))[0];
   const coin = E.coinage(P.f.id);
-  // (the errand to the black market as the shop gives it, held above the day's leisure and talk: the test is the deal at the
-  // counter, not whether someone stops him on the way — at 0,35 a word in the street takes it)
-  let t = null; if (buyer) { G.Vg.endTask(buyer); buyer.hunger = 10; t = G.Vg.H.setTask(buyer, { type: 'shop', id: P.b.id, k, pri: 1.05 }); }
+  // (the errand to the black market as the shop gives it, held above the calls from outside below 3 — the line of the D-094 —:
+  // the test is the deal at the counter, not whether someone stops him on the way — at 0,35 a word in the street takes it, and
+  // in the generation 7's Tenochtitlan the square's crowd (Po.crowd, 1,7) called the buyer from the counter at 0,40, while
+  // the others bought the shelf: T-273)
+  let t = null; if (buyer) { G.Vg.endTask(buyer); buyer.hunger = 10; t = G.Vg.H.setTask(buyer, { type: 'shop', id: P.b.id, k, pri: 2.9 }); }
   if (v && E.jobTask) send(v, V.frontTile(P.b)); // (the smuggler at the stall, selling: his day)
   live(150, null, () => buyer && lines(P, e => e[8] === 'compra' && e[4] === 'v:' + buyer.id).length > 0);
   live(120, null, () => buyer && !(buyer.carry && buyer.carry.n > 1e-6));
