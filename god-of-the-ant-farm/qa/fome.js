@@ -374,16 +374,28 @@ const calmOne = (skip, also) => {
   }
   S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand(); W.touchWalk();
   const cut = !reached().length;
-  let lit = null, ate = false, v = null, h0 = 0, t0 = S.clock;
+  let lit = null, ate = false, v = null, h0 = 0, t0 = S.clock, moved = 0;
   if (cut) {
+    // (the god's water may leave the town's builders on the far side — Quinto, the only one of Roma in the city of the v37's last
+    // worlds, at home by a store —: the god's hand brings them to the streets. The case is the new fire and the meal there; that
+    // a town cut in two names no builder on its streets' side by itself is L-389, and the stranded one got out only by luck,
+    // paving his way over the water: T-256)
+    { const R = W.townRegion(set), L = W.reachIds(true); let at = null;
+      for (let r = 0; r <= 12 && !at; r++) for (let dy = -r; dy <= r && !at; dy++) for (let dx = -r; dx <= r && !at; dx++) { const x = Math.floor(set.cx) + dx, y = Math.floor(set.cy) + dy; if (W.inb(x, y) && L[W.idx(x, y)] === R && W.walkable(W.idx(x, y))) at = [x + 0.5, y + 0.5]; }
+      // (cut off: not on the town's ground, or a home whose door is not — asleep there, he walks out onto the far side)
+      const off = q => { if (!W.reachesTown(q, set)) return true; const hb = S.buildings.get(q.inside || q.home); if (!hb) return false; const d = Vg.door(hb); return !W.townReaches(set, d[0], d[1]); };
+      for (const q of [...S.villagers.values()].filter(q => q.set === set.id && q.role === 'construtor' && !q.captive && !q.aboard && off(q))) if (at) { Vg.endTask(q); q.inside = 0; q.sleeping = false; q.x = at[0]; q.y = at[1]; q.path = null; moved++; } }
     // (a hungry one of the town on its streets: the meal comes at the new fire, or not at all)
     v = [...S.villagers.values()].filter(q => q.set === set.id && q.age >= 16 && !q.captive && !q.aboard && !q.inside && !q.jail && W.reachesTown(q, set) && !(S.avatar && S.avatar.id === q.id)).sort((a, b) => a.id - b.id)[0] || null;
     if (v) { v.hunger = 85; h0 = v.hunger; }
-    live(240, () => { const n = reached().find(b => !fire0.has(b.id)); if (n && !lit) lit = n; if (v && v.hunger < h0 - 30) ate = true; return !!(lit && lit.built && (ate || !v)); });
+    // (in the god's peace — no war of the world's own through the new ways of the town —, and the time a town's life takes: the
+    // builder at a fest, a conclave, a funeral before the new fire; with the generation-7 worlds the fire stood at 0% at 480 s, T-256)
+    G.Politics.divinePeace(); const peace = () => { S.divinePeace = Math.max(S.divinePeace || 0, G.DAY_LEN); };
+    live(900, () => { peace(); const n = reached().find(b => !fire0.has(b.id)); if (n && !lit) lit = n; if (v && v.hunger < h0 - 30) ate = true; return !!(lit && lit.built && (ate || !v)); });
   }
   for (const [i, t] of was) S.type[i] = t; S.typeVer++; W.invalidateLand(); W.touchWalk(); // (the water gone again, for the cases after)
   ok('h14 a cidade cortada de todos os seus armazéns acende uma fogueira do lado das ruas, e quem tem fome come', cut && !!lit && lit.built && (!v || ate),
-    !cut ? `a água em volta dos ${stores.length} armazéns de ${set.name} não os cortou das ruas (um ainda alcançado)` : `${set.name}, ${stores.length} armazém(ns) cortado(s) pela água: ${lit ? `${lit.type}#${lit.id} nova, ${lit.built ? 'acesa' : 'AINDA em obra'} em ${Math.round(S.clock - t0)} s` : 'NENHUMA fogueira nova do lado das ruas em 240 s'}; ${v ? `${v.name}, com a fome ${Math.round(h0)}: ${ate ? 'comeu' : 'NÃO comeu'}` : 'ninguém com fome nas ruas'}`);
+    !cut ? `a água em volta dos ${stores.length} armazéns de ${set.name} não os cortou das ruas (um ainda alcançado)` : `${set.name}, ${stores.length} armazém(ns) cortado(s) pela água${moved ? ` (${moved} construtor(es) trazido(s) às ruas)` : ''}: ${lit ? `${lit.type}#${lit.id} nova, ${lit.built ? 'acesa' : 'AINDA em obra'} em ${Math.round(S.clock - t0)} s` : 'NENHUMA fogueira nova do lado das ruas em 240 s'}; ${v ? `${v.name}, com a fome ${Math.round(h0)}: ${ate ? 'comeu' : 'NÃO comeu'}` : 'ninguém com fome nas ruas'}`);
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }
