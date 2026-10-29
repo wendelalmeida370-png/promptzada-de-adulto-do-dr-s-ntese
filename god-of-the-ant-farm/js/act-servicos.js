@@ -240,7 +240,13 @@
     if (isOpen && op.data.calor < LOW && wood >= 1) { A.join(op, v, 'foguista'); return H.setTask(v, { type: 'fornalha', id: b.id, op: op.id, pri: 1.05, st: 0 }); }
     if (wood < 2 && !(v.carry && v.carry.n > EPS)) {
       const n = Math.floor(Math.min(3 - wood, D.free('f:' + f.id, 'wood') - SPARE, D.room('v:' + v.id, 'wood', { to: ref })) + EPS);
-      if (n >= 1) return H.setTask(v, { type: 'lenhaTermas', id: b.id, n, pri: 1, st: 0 });
+      if (n >= 1) {
+        // (the wood is his from the step he sets out: held in the people's store by an operation of the world — the works do not
+        // take what is held — until it is in his hands; his errand cut, the hold goes, L-400)
+        const lop = G.inSim ? A.start('lenhaTermas', { at: b.id, set: b.set, fac: f.id, from: 'f:' + f.id, to: ref, by: v.id, why: 'a lenha da fornalha', goods: { wood: n } }) : null;
+        if (lop && !D.reserve('f:' + f.id, 'wood', n, lop.id)) { A.end(lop, 'cancel', 'sem lenha'); return null; }
+        return H.setTask(v, { type: 'lenhaTermas', id: b.id, n, pri: 1, st: 0, hold: lop ? lop.id : 0 });
+      }
     }
     if (isOpen) { A.join(op, v, 'foguista'); return H.setTask(v, { type: 'fornalha', id: b.id, op: op.id, pri: 1, st: 0, idle: 1 }); }
     return null;
@@ -273,11 +279,25 @@
     if (t.st === 0) { const s = G.Village.nearestDropoff(v.x, v.y, v.set); if (!s) return H.end(v); const r = walkB(v, t, s, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return; }
     v.act = AN.levantar.act; if (v.actT < AN.levantar.contact) return;
     const ref = 'b:' + b.id;
-    const n = Math.floor(Math.min(t.n, D.free('f:' + f.id, 'wood') - SPARE, D.room('v:' + v.id, 'wood', { to: ref })) + EPS);
+    // (what was held for him is his now: the hold ends, and that much goes into his hands — it was beyond what the store keeps
+    // for its works when he set out; with no hold, the wood beyond it, as before)
+    const lop = t.hold ? A.get(t.hold) : null; const F = 'f:' + f.id;
+    const held = lop && live(lop) ? (lop.rsv || []).reduce((s, r) => s + (r[0] === F && r[1] === 'wood' ? r[2] : 0), 0) : 0;
+    if (lop && live(lop)) A.end(lop, 'ok', 'na mão');
+    const n = Math.floor(Math.min(t.n, held > EPS ? Math.min(held, D.free(F, 'wood')) : D.free(F, 'wood') - SPARE, D.room('v:' + v.id, 'wood', { to: ref })) + EPS);
     if (n < 1) return H.end(v);
-    const r = D.move('f:' + f.id, 'v:' + v.id, 'wood', n, { code: 'termas', by: v.id, to: ref }); if (!r.ok) return H.end(v);
+    const r = D.move(F, 'v:' + v.id, 'wood', n, { code: 'termas', by: v.id, to: ref }); if (!r.ok) return H.end(v);
     return H.setTask(v, { type: 'carga', to: ref, pri: 1, st: 0 });
   }
+  // the hold of the stoker's wood: an operation of the world with no people of its own — the stoker on his way is its errand
+  // (the task's hold) —, ended when the wood is in his hands, or the second his errand is not this one any more (a call, the
+  // night, a death, a save: the errands are not saved), and what it held goes back to the store's free wood (L-400)
+  A.def('lenhaTermas', {
+    name: 'A lenha dos banhos', conserve: false, many: true,
+    purpose: 'A lenha da fornalha, do armazém do povo aos banhos: segura para o foguista desde que ele sai para buscá-la.',
+    needs: 'o foguista e lenha no armazém além da que ele guarda para as obras',
+    tick(op) { const v = S_().villagers.get(op.by); const t = v && v.task; if (!t || t.type !== 'lenhaTermas' || t.hold !== op.id) A.end(op, 'int', 'a ida acabou'); },
+  });
 
   // ------------------------------ the definition, and the god's body at the baths ------------------------------
   const where = b => G.Village.buildName(b).toLowerCase();

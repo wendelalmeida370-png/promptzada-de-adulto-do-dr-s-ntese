@@ -22,7 +22,7 @@ const S = () => G.S;
 const r2 = x => Math.round(x * 100) / 100;
 const rule = QA.oficio; // (the trades' rule by its name: oficio-inv.js has more than one)
 const watch = bad => rule((sys, sev, msg) => { if (sys === 'oficio' && sev <= 2 && bad.length < 6 && !bad.includes(`S${sev} ${msg}`)) bad.push(`S${sev} ${msg}`); }, S());
-const liveSec = (sec, until, bad, each) => { for (let k = 0; k < sec; k++) { M.viver(1); if (each) each(); if (bad && k % 5 === 4) watch(bad); if (until && until()) return true; } return false; };
+const liveSec = (sec, until, bad, each) => { for (let k = 0; k < sec; k++) { if (keeping) keeping(); M.viver(1); if (each) each(); if (bad && k % 5 === 4) watch(bad); if (until && until()) return true; } return false; };
 const seen = []; D.onMove.push(e => { seen.push(e); });
 G.inSim++;
 // the baths of the tests: with their stoker, in the most peopled town of coin (else of any)
@@ -45,6 +45,13 @@ function ready(b) {
   S().time = Te.horas(b).abre - 0.02; S().weather.rain = 0; if (S().weather.storm) S().weather.storm = 0;
   return f;
 }
+// (the wood the stoker goes for is his from the step he sets out — held in the store, L-400: in the generation 7's Argos the
+// city's works took the 40 of the case in the seconds the stoker walked to the store, 46 when she left and 3 when she came,
+// and the baths were cold all day; the e1 is that day, in that town, with no hand of the test on the wood. Only the e3 keeps
+// the wood in the store while the fire is lit — the test's hand, every second, as the casa.js keeps the people's stone and
+// wood for the works it waits on (T-202) —: its case is the fire the dead stoker leaves, not the town's wood, T-281)
+let keeping = null;
+const keep = f => () => { if (D.free('f:' + f.id, 'wood') < 30) D.make('f:' + f.id, 'wood', 40, { code: 'teste', part: true }); };
 // (the places in the water: the plan's points to bathe, where the interiors' allotter is — In.freePlace, P4 —; with no plan, the
 // count; who is in the water, not who is at the pegs)
 const places = b => (G.Interiors && G.Interiors.freePlace && G.Interiors.table && G.Interiors.table(b) ? G.Interiors.slots(b, 'banhar').length : Te.CAP);
@@ -52,12 +59,14 @@ const inWater = op => Object.values(op.data.banho).filter(m => m.st === 2).lengt
 // (who chooses the baths: grown townsfolk at the end of a chore — nothing weightier than the day's work —, with the entry in
 // the house: by the door of the city's leisure, as the world gives it — the errand of the kind 'work', a leisure, which the
 // next look of decide does not take for the work: given bare, the morning's work took every bather on the way, T-d)
-function bathers(b, n) {
+// (pri: the errand held above the day's calls, for a case whose question is the bath itself, not who stops the bather on the
+// way — T-281)
+function bathers(b, n, pri) {
   const out = [];
   for (const v of [...S().villagers.values()].sort((a, c) => a.id - c.id)) {
     if (out.length >= n) break;
     if (v.set !== b.set || v.age < 16 || v.age > 60 || v.captive || v.jail || v.aboard || v.sleeping || v.inside || (v.task && (v.task.pri || 0) > 1) || v.role === 'foguista' || (v.carry && v.carry.n > 1e-6)) continue;
-    const t = Te.visit(v, b); if (t) { t.kind = 'work'; t.leisure = true; out.push(v); }
+    const t = Te.visit(v, b); if (t) { t.kind = 'work'; t.leisure = true; if (pri) t.pri = pri; out.push(v); }
   }
   return out;
 }
@@ -95,18 +104,29 @@ const digest = op => JSON.stringify([op.st, op.data.entradas, op.data.receita, o
   // (no wood by the furnace, none in the store)
   for (const ref of ['b:' + b.id, 'f:' + f.id]) { const n = D.get(ref, 'wood'); if (n > 1e-6) D.use(ref, 'wood', n, { code: 'teste', mine: true }); }
   liveSec(30, () => !!Te.dia(b), bad); const op = Te.dia(b);
-  if (op) { bathers(b, 4); liveSec(50, () => !A.live(op) || op.data.frios >= 1, bad); }
+  // (the bathers' errand held above the calls from outside below 3 — the line of the D-094 —: the case is the cold bath. In
+  // the generation 7's Argos, sent at the opening by the leisure's own errand (0,4), the four were each taken on the way —
+  // a prayer, a purchase, the fields, a cave — and nobody bathed until the baths closed, T-281)
+  if (op) { bathers(b, 4, 2.9); liveSec(60, () => !A.live(op) || op.data.frios >= 1, bad); }
   const cold = op ? { frios: op.data.frios, quentes: op.data.quentes, lenha: op.data.lenha } : null;
-  // (and wood comes back to the store: the stoker brings it, and the fire is lit)
-  if (op && A.live(op)) D.make('f:' + f.id, 'wood', 40, { code: 'teste', part: true });
-  const lit = op && liveSec(60, () => !A.live(op) || op.data.lenha >= 1, bad);
+  // (and wood comes back to the store: the stoker brings it — held for him from the step he sets out, L-400 —, and the fire
+  // is lit)
+  // (kept there until he comes for it — the test's hand, as in the e3: the case is the stoker answering the wood that came
+  // back, not the race with the town's works for it before he sets out, which is the e1's (L-400). In the generation 7's
+  // Argos the works take the wood that comes to the store in seconds — in the e2's probe the stoker spent the morning at the
+  // fields' work and a delivery —, and without the hand the furnace stayed cold for the 90 s, T-281)
+  if (op && A.live(op)) { D.make('f:' + f.id, 'wood', 40, { code: 'teste', part: true }); keeping = keep(f); }
+  // (the stoker ends what he does — an idle look at the cold furnace lasts up to 16 s —, walks to the store and back, and feeds
+  // it: 90 s, inside the day)
+  const lit = op && liveSec(90, () => !A.live(op) || op.data.lenha >= 1, bad); keeping = null;
   ok('e2 sem-lenha', !!op && !!cold && cold.frios >= 1 && cold.quentes === 0 && cold.lenha === 0 && lit && op.data.lenha >= 1 && !bad.length, op ? `sem lenha: ${cold.frios} banhos frios, ${cold.quentes} quentes, ${cold.lenha} de lenha queimada; com lenha no armazém de novo: ${op.data.lenha >= 1 ? `a fornalha acesa (${op.data.lenha} de lenha)` : 'a fornalha apagada'}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : 'não abriram');
 }
 // ---------------- e3 the stoker dies with the fire lit ----------------
 {
-  fresh(); const b = S().buildings.get(P.id); ready(b); const bad = []; seen.length = 0;
+  fresh(); const b = S().buildings.get(P.id); keeping = keep(ready(b)); const bad = []; seen.length = 0;
   liveSec(30, () => !!Te.dia(b), bad); const op = Te.dia(b);
   if (op) liveSec(40, () => op.data.lenha >= 1 || !A.live(op), bad);
+  keeping = null; // (the fire lit, the wood kept no more: what burns now is only what the stoker brought)
   const k = Te.keeperOf(b); const kid = k ? k.id : 0; const lenha0 = op ? op.data.lenha : 0; const L0 = seen.length;
   if (k && op && A.live(op)) V.kill(k, 'teste', true);
   let rose = 0, last = op ? op.data.calor : 0, other = null;
