@@ -213,12 +213,16 @@ if (hb) {
     const from = hHome; const L0 = S.ledgerN; const pantry0 = D.get('h:' + from.id, 'food');
     // (up to h7's time: a small town of few builders takes longer — Hedeby, of 13 people, in the final metrópole, T-201)
     const done = fine(3000, () => hb.built);
-    const moved = book(e => e[0] > L0 && e[8] === 'mudança' && e[3] === 'h:' + from.id && e[4] === 'h:' + hb.id);
+    // (the move into the new house, from the house the family lives in when it stands — in the generation 7's metrópole the
+    // family's house was bought in the middle, the land dear, and the family lived the last days of the work in another,
+    // #3270: the move came from there, T-270)
+    const moved = book(e => e[0] > L0 && e[8] === 'mudança' && /^h:/.test(e[3]) && e[3] !== 'h:' + hb.id && e[4] === 'h:' + hb.id);
+    const via = [...new Set(moved.map(e => e[3]).filter(r => r !== 'h:' + from.id))];
     const fam = [hv, S.villagers.get(hv.partner)].filter(Boolean);
     const arranged = (hv.diary || []).some(e => /Arrumamos a casa nova/.test(e.txt));
     const people = book(e => e[0] > L0 && e[8] === 'obra-casa' && e[3] === 'h:' + hb.id && e[4] === 'f:' + set.fac)[0]; // (the coins set aside, to the people)
     fine4 = done && fam.every(v => v.home === hb.id) && hb.dono === hv.id && !hb.encomenda && moved.length >= 1 && arranged && !!people;
-    info = `${done ? `levantada no dia ${Math.round(S.day)}` : 'NÃO terminou em 3000 s'}: ${fam.map(v => `${v.name} mora ${v.home === hb.id ? 'nela' : 'em #' + v.home}`).join(', ')}; a mudança no livro: ${moved.map(e => `${e[6]} ${e[5]}`).join(', ') || 'NADA'} (a despensa da casa velha tinha ${r2(pantry0)}); dona: ${hb.dono === hv.id ? 'a família' : hb.dono}; no diário: ${arranged ? '«Arrumamos a casa nova…»' : 'NADA da arrumação'}; as moedas guardadas na obra ao povo: ${people ? people[6] + ' (livro ' + people[0] + ')' : 'NADA'}`;
+    info = `${done ? `levantada no dia ${Math.round(S.day)}` : 'NÃO terminou em 3000 s'}: ${fam.map(v => `${v.name} mora ${v.home === hb.id ? 'nela' : 'em #' + v.home}`).join(', ')}; a mudança no livro: ${moved.map(e => `${e[6]} ${e[5]}`).join(', ') || 'NADA'} (a despensa da casa velha tinha ${r2(pantry0)}${via.length ? `; a mudança veio de ${via.join(', ')}, a casa onde a família morava quando a obra ficou pronta` : ''}); dona: ${hb.dono === hv.id ? 'a família' : hb.dono}; no diário: ${arranged ? '«Arrumamos a casa nova…»' : 'NADA da arrumação'}; as moedas guardadas na obra ao povo: ${people ? people[6] + ' (livro ' + people[0] + ')' : 'NADA'}`;
   }
   ok('h4 levantar e mudar', fine4 && !bad().length, info);
 }
