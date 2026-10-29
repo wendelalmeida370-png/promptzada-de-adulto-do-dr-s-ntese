@@ -919,7 +919,10 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const k2 = kinOf(body())[0] || strangers[1]; out.dies = null;
     if (k2) { if (!k2.mourn && !G.Possess.kin(body(), k2)) k2.mourn = G.DAY_LEN; if (beside(k2)) { const d0 = (A().abraco || 0) + (A().consolo || 0); const h = G.Interact.hug(k2); __E.f(20); G.Vg.damage(k2, 9999, 'war', true); const fr = __E.until(() => !G.Avatar.busy(), 400); __E.f(10);
       out.dies = { ok: !!(h && h.ok), gone: !S.villagers.has(k2.id), frames: fr, deed: (A().abraco || 0) + (A().consolo || 0) - d0, avatar: !!S.avatar && S.avatar.id === id, mode: G.Modes.state }; } }
-    const k3 = strangers.find(q => S.villagers.has(q.id) && q !== o && q !== k2); out.saved = null;
+    // (one who can be held now, as the list was made — the frames since have sent some to other things: in the generation-6
+    // «cidade» the one first was at a meal by then, «ocupado com algo que não pode esperar» (Interact.canHug), and the hug did
+    // not begin: T-247)
+    const k3 = strangers.find(q => S.villagers.has(q.id) && q !== o && q !== k2 && free(q) && (!q.task || q.task.pri <= 1)); out.saved = null;
     if (k3 && beside(k3)) { k3.mourn = G.DAY_LEN; const d0 = A().consolo || 0; const h = G.Interact.hug(k3); __E.f(15); const str = G.Save.serialize(); G.Save.apply(JSON.parse(str)); S = G.S; __E.f(150); st = G.Avatar.state(); const q = S.villagers.get(k3.id);
       out.saved = { ok: !!(h && h.ok), avatar: !!S.avatar && S.avatar.id === id, mode: G.Modes.state, busy: G.Avatar.busy(), deed: (S.avatar ? S.avatar.deeds.consolo || 0 : -1) - d0, task: q && q.task ? q.task.type + (q.task.hug ? '+hug' : '') : null }; }
     // 4. a dance (B): whoever is free and merry near the body joins in; walking stops it; the others go back to their lives
