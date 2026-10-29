@@ -264,7 +264,7 @@
     ];
     if (o.mastros) els.push({ k: 'mastros', c, r: R - 0.08, n: 20, y0: H, h: px(6), cor: '#7a5a3a' });
     return { els, door: { u: L / 2, w: aw, y0: 0, y1: ah },
-      amphi: { c, R, t, fundo, ya, yb, tr1, aw, ah, under, hatch, steps, gap: { a: Math.PI, w: 1.1 } } };
+      amphi: { c, R, t, fundo, ya, yb, tr1, aw, ah, under, hatch, steps, gap: { a: Math.PI, w: 1.1 }, face: R * Math.cos(Math.PI / N) } }; // (face: the drum's outer face at the middle of a bay — the 3D's bays are flat)
   }
   // the Colosseum (arch.js maravilha, romano): the god's bowl of r 1.45 tiles and 42 px, three tiers of arches, the masts of
   // the awning (ten on the half the god shows: twenty round) — the amphitheatre one walks in (D-095)

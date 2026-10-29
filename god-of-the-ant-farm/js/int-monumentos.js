@@ -198,9 +198,10 @@
       P.wall(2, [r2(cu + pr * Math.cos(a0)), r2(cv + pr * Math.sin(a0))], [r2(cu + pr * Math.cos(a1)), r2(cv + pr * Math.sin(a1))], 0.12, 0.9, 0, 'parede');
     }
     if (P.inside()) return;
-    // (the rooms: the passage from the street to the top of the undercroft's flight — through the arch: its width —, the sand,
-    // the podium's walk)
-    P.room(0, 'passagem', [cu - hw, A.under[1], cu + hw, sh[3]], 0);
+    // (the rooms: the passage from the street to the top of the undercroft's flight — through the arch: its width —, under the
+    // drum to its outer face, and before it the way from the street to the arch, under the sky; the sand, the podium's walk)
+    const vf = r2(cv + A.face);
+    P.room(0, 'passagem', [cu - hw, A.under[1], cu + hw, vf], 0); P.room(0, 'passagem', [cu - hw, vf, cu + hw, sh[3]], 1);
     const ar = P.room(1, 'arena', [cu - A.fundo, cv - A.fundo, cu + A.fundo, cv + A.fundo], 1, [cu, cv, A.fundo]);
     const po = P.room(2, 'podio', [cu - ro, cv - ro, cu + ro, cv + ro], 1, [cu, cv, ro, A.fundo]);
     // (who fights: on the sand, right of the hatch, facing each other)

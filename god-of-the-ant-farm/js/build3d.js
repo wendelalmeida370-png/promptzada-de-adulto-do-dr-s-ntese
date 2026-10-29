@@ -2931,6 +2931,13 @@ float m3scale(float p) {
     K.as(pat, () => { for (let k = 0; k + 1 < pts.length; k++) { const p = pts[k], q = pts[k + 1]; const mx = (p[0] + q[0]) / 2, mz = (p[1] + q[1]) / 2;
       K.quad([p[0], l.y, p[1]], [q[0], l.y, q[1]], [q[0], l.y + H, q[1]], [p[0], l.y + H, p[1]], col, [sh.cx - mx, 0, sh.cz - mz]); } });
   }
+  // (a round as rows of the plan's cells: in each row, the cells whose middle is in it — one rectangle a row)
+  function discRows(cx, cz, r) {
+    const cs = G.Interiors.CS, out = []; const k0 = Math.floor((cz - r) / cs), k1 = Math.ceil((cz + r) / cs);
+    for (let k = k0; k < k1; k++) { const dz = (k + 0.5) * cs - cz; if (Math.abs(dz) >= r) continue; const w = Math.sqrt(r * r - dz * dz);
+      const i0 = Math.ceil((cx - w) / cs - 0.5), i1 = Math.floor((cx + w) / cs - 0.5); if (i1 >= i0) out.push([i0 * cs, k * cs, (i1 + 1) * cs, (k + 1) * cs]); }
+    return out;
+  }
   // a storey's floor over its area less the holes of the ladders and stairs that come up through it; where another storey
   // is under it, its slab — the underside (the ceiling of the room below), the edges (a loft's front, a hatch's sides), the
   // joists under it
@@ -2941,6 +2948,10 @@ float m3scale(float p) {
     const steps = l.y > 0.05 ? plan.stairs.filter(s => s.kind === 'degraus' && s.lv1 === l.lv).map(s => s.r) : [];
     // (over a court open to the sky a storey has no floor — its grid has none there: the court's own storey has its paving)
     const court = plan.shell.court; if (court && courtOpenOn(plan, l, court)) holes.push(court);
+    // (a storey whose room is a ring round an open middle no room of it has — the amphitheatre's podium round its arena —: no
+    // floor over the middle — the sand, the flight up from it, under it —, the ring's inner round cut out row by row of the
+    // plan's cells, as its grid has it)
+    for (const m of plan.rooms) if (m.lv === l.lv && m.circ && m.circ.length > 3 && !plan.rooms.some(q => q.lv === l.lv && q !== m && inRect(q.r, m.circ[0], m.circ[1]))) holes.push(...discRows(m.circ[0], m.circ[1], m.circ[3]));
     const [pat, col] = floorMat(K, l); const y = l.y + FLOOR_UP;
     if (plan.shell.kind === 'round' && l.lv === Math.min(...plan.levels.map(q => q.lv))) {
       const sh = plan.shell, ri = sh.r - sh.t + 0.02, n = 22; K.as(pat, () => { for (let k = 0; k < n; k++) { const a0 = TAU * k / n, a1 = TAU * (k + 1) / n; K.tri([sh.cx, y, sh.cz], [sh.cx + Math.cos(a0) * ri, y, sh.cz + Math.sin(a0) * ri], [sh.cx + Math.cos(a1) * ri, y, sh.cz + Math.sin(a1) * ri], col, UP); } });
