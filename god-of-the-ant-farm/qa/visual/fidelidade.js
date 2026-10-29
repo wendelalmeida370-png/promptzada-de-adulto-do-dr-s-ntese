@@ -18,6 +18,8 @@
 //            forma de um tipo com planta antes da família pela forma (D-093); a catraca não vale assim
 //   PNG=pasta  as figuras: uma folha por tipo, os seis povos — o deus, o 3D de perto, o 3D de longe
 //   JSON=arquivo  os números de cada caso      VERB=1  o motivo de cada um que não é igual
+//   DENTRO=gravar  grava a linha de base da cor por dentro (qa/visual/base/fidelidade-dentro.json; DENTRO_BASE=arquivo, outra):
+//            o quanto, onde as duas figuras cobrem, a cor difere — por tipo e povo; dez pontos acima da linha é falha (T-254)
 // Falha: um tipo com forma que não tem a massa do deus ou não segue a forma; outra massa (≠) em mais tipos e povos do que o
 // teto (a catraca: só desce — baixou, desça o teto); um erro do jogo.
 'use strict';
@@ -89,7 +91,7 @@ const FORMA = G.Forma || null; // (js/forma.js: the form of a type and a people,
 // pieces, a stone's edge; L-271 was 1–2% of every Egyptian building)
 const HOLE = 0.005;
 F.blank();
-const rows = []; const per = new Map(); const sheets = new Map(); const other = new Set(); const formed = new Set(); const holes = []; // (formed: the types and peoples drawn by their form, 'tipo/povo')
+const rows = []; const per = new Map(); const sheets = new Map(); const other = new Set(); const formed = new Set(); const holes = []; const dentro = {}; // (formed: the types and peoples drawn by their form, 'tipo/povo')
 // (the shapes every builder uses, each face wound out of it: L-270)
 { const sw = F.shapesWound(); const bad = Object.entries(sw).filter(([, s]) => s.inward); ok('as formas do 3D enroladas para fora', !bad.length, bad.length ? bad.map(([k, s]) => `${k}: ${s.inward} de ${s.faces} faces para dentro`).join(', ') : `${Object.keys(sw).length} formas, todas as faces para fora`); }
 for (const type of Object.keys(G.BDEF)) {
@@ -107,6 +109,7 @@ for (const type of Object.keys(G.BDEF)) {
       const cn = F.compare(mg, mn, lot), cf = F.compare(mg, mf, lot); const vd = verdict(cn, cf);
       const row = { type, style, id, fam: b.ip ? b.ip.f : '', v: vd.v, why: vd.why, near: cn, far: { iou: cf.iou, topA: cf.topA, topB: cf.topB, dTop: cf.dTop } };
       // (the holes: what only the backs of the faces cover, near and far)
+      row.dentro = F.inside(Rg, Rn); { const k = type + '/' + style; dentro[k] = Math.max(dentro[k] || 0, row.dentro); }
       row.costas = Math.max(F.backOnly(near), F.backOnly(far)); if (row.costas > HOLE) holes.push(`${type}/${style}#${id}${row.fam ? ' (' + row.fam + ')' : ''}: ${(row.costas * 100).toFixed(1)}%`);
       for (const k of ['profA', 'profB']) delete row.near[k];
       // (b) the form, where there is one
@@ -122,6 +125,15 @@ for (const type of Object.keys(G.BDEF)) {
   if (process.env.PNG && sheets.has(type)) { const s = sheets.get(type); F.png(path.join(process.env.PNG, `${type}.png`), s.rows, s.lots, 0.5); sheets.delete(type); }
 }
 if (process.env.JSON) fs.writeFileSync(process.env.JSON, JSON.stringify(rows));
+// (the colour inside each type's and people's outline against its own line — T-254: the god's market drawn bare rose from 4 to
+// 50 % —: ten points more is a building the two views no longer draw alike inside it. The line: qa/visual/base/fidelidade-
+// dentro.json, written by a whole round with DENTRO=gravar; with plans only, where the 3D draws the game's buildings)
+const BASE_DENTRO = process.env.DENTRO_BASE || path.join(__dirname, 'base', 'fidelidade-dentro.json');
+let baseDentro = null; if (fs.existsSync(BASE_DENTRO)) baseDentro = JSON.parse(fs.readFileSync(BASE_DENTRO, 'utf8'));
+if (process.env.DENTRO === 'gravar' && !SEMPLANTA) { const o = {}; for (const k of Object.keys(dentro).sort()) o[k] = Math.round(dentro[k] * 1000) / 1000; fs.writeFileSync(BASE_DENTRO, JSON.stringify(o, null, 0) + '\n'); console.log(`a cor por dentro: a linha de base gravada (${Object.keys(o).length} tipos e povos) em ${BASE_DENTRO}`); }
+else if (baseDentro && !SEMPLANTA) { const ks = Object.keys(dentro).filter(k => baseDentro[k] !== undefined); const up = ks.filter(k => dentro[k] > baseDentro[k] + 0.10);
+  ok('a cor por dentro (T-254)', !up.length, up.length ? up.map(k => `${k} ${(baseDentro[k] * 100).toFixed(0)} → ${(dentro[k] * 100).toFixed(0)} %`).join(' · ') : `${ks.length} tipos e povos na linha de base, nenhum subiu dez pontos`); }
+else console.log(`a cor por dentro: ${SEMPLANTA ? 'não vale sem planta' : 'sem linha de base (DENTRO=gravar a grava, na rodada inteira)'}`);
 
 // ------------------------------ the table ------------------------------
 const types = [...new Set([...per.keys()].map(k => k.split('/')[0]))];

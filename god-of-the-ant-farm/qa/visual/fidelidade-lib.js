@@ -440,6 +440,15 @@ F.png = function (file, rows, lot, scale) {
   const ih = Buffer.alloc(13); ih.writeUInt32BE(W, 0); ih.writeUInt32BE(H, 4); ih[8] = 8; ih[9] = 2; ih[10] = 0; ih[11] = 0; ih[12] = 0;
   fs.writeFileSync(file, Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ih), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]));
 };
+// (where both pictures cover, how much of it differs in colour — by a fifth of the range and more, on the mean of the three
+// channels —: what stands low on a wide floor changes the mass little and the colour much — the god's market drawn as bare
+// pavement under the 3D's stalls gave 23 to 50 % against 4 to 10 %, T-254)
+F.inside = function (Ra, Rb) {
+  let both = 0, diff = 0;
+  for (let q = 0; q < Ra.a.length; q++) { if (Ra.a[q] < 0.5 || Rb.a[q] < 0.5) continue; both++;
+    if (Math.sqrt(((Ra.r[q] - Rb.r[q]) ** 2 + (Ra.g[q] - Rb.g[q]) ** 2 + (Ra.b[q] - Rb.b[q]) ** 2) / 3) / 255 > 0.2) diff++; }
+  return both ? diff / both : 0;
+};
 // the two pictures against each other: the silhouettes' overlap, the tops in metres, the width band by band over the
 // height both reach, the foot line column by column, the openings — all in the god's pixels and metres
 F.compare = function (a, b, lot) {
