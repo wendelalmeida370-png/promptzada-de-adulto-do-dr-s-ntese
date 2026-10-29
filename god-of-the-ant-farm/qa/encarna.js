@@ -613,14 +613,21 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const s = __E.town(); const v = __E.adults(s)[0]; out.inn = __E.enter(v); __E.f(30); const b = __E.body();
     // the ground's picture: round the body, and every street, field and sea tile of the map
     out.near = G.Ground3D.check(b.x, b.y, 30, 400);
-    let road = 0, roadOk = 0, farm = 0, farmOk = 0, sea = 0, seaOk = 0;
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const i = y * N + x; const t = G.Ground3D.texel(x, y); if (!t) continue; const burnt = S.burnt[i] > 0 || S.scar[i] > 0;
-      if (S.road[i] && S.type[i] > T.RIVER && !burnt) { road++; if (t[3] === K.gravel || t[3] === K.paved || t[3] === K.highway) roadOk++; }
-      const bb = S.occ[i] && S.buildings.get(S.occ[i]); if (bb && bb.type === 'farm' && !S.road[i] && !burnt && S.type[i] > T.RIVER) { farm++; if (t[3] === K.field) farmOk++; }
-      if (S.type[i] <= T.SEA) { sea++; if (t[3] === K.bed) seaOk++; }
-    }
-    out.map = { road: [roadOk, road], farm: [farmOk, farm], sea: [seaOk, sea] };
+    // (the map read once the picture has gone over it with the world standing still — the menu open, below —: the land round
+    // the body is made again a few rows a frame and the far land a row a frame (Ground3D.tick), so a tile the world changed a
+    // moment before lags a few frames behind, as Ground3D.check allows round the body; with the world going, a tile changed in
+    // the last frames was read before its row came round again. In the sixth generation's «cidade», the street at 32,47 had
+    // been burnt when the body came in and healed in those 30 frames (S.burnt 0.99 → 0): its texel still the ash it was — T-245)
+    const mapScan = () => {
+      let road = 0, roadOk = 0, farm = 0, farmOk = 0, sea = 0, seaOk = 0;
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const i = y * N + x; const t = G.Ground3D.texel(x, y); if (!t) continue; const burnt = S.burnt[i] > 0 || S.scar[i] > 0;
+        if (S.road[i] && S.type[i] > T.RIVER && !burnt) { road++; if (t[3] === K.gravel || t[3] === K.paved || t[3] === K.highway) roadOk++; }
+        const bb = S.occ[i] && S.buildings.get(S.occ[i]); if (bb && bb.type === 'farm' && !S.road[i] && !burnt && S.type[i] > T.RIVER) { farm++; if (t[3] === K.field) farmOk++; }
+        if (S.type[i] <= T.SEA) { sea++; if (t[3] === K.bed) seaOk++; }
+      }
+      return { road: [roadOk, road], farm: [farmOk, farm], sea: [seaOk, sea] };
+    };
     // the picture follows the world: a tile near the body scorched, and its texel turns to ash a few frames later
     let spot = null; for (let r = 2; r < 9 && !spot; r++) for (let dy = -r; dy <= r && !spot; dy++) for (let dx = -r; dx <= r; dx++) { const x = Math.floor(b.x) + dx, y = Math.floor(b.y) + dy; if (!G.W.inb(x, y)) continue; const i = y * N + x; if ((S.type[i] === T.GRASS || S.type[i] === T.MEADOW) && !S.occ[i] && !S.road[i] && !S.treeAt[i] && !S.objAt[i]) { spot = [x, y, i]; break; } }
     if (spot) { const k0 = G.Ground3D.texel(spot[0], spot[1])[3]; S.burnt[spot[2]] = 80; const fr = __E.until(() => G.Ground3D.texel(spot[0], spot[1])[3] === K.burnt, 160); out.burn = { before: k0, frames: fr, after: G.Ground3D.texel(spot[0], spot[1])[3], burnt: K.burnt }; S.burnt[spot[2]] = 0; }
@@ -649,7 +656,8 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       for (const p of G.People3D.walkers) { const vs = G.People3D.visOf(p[7]); if (!vs || !av) continue; const want = F(vs.yaw, p[0], p[2], av, vs.st); if (!want) continue; n++; if (Math.abs((vs.pose.lookY || 0) - want) < 0.35 || Math.sign(vs.pose.lookY || 0) === Math.sign(want)) good++; }
       out.look = { n, good }; }
     // the drawing leaves the world alone: with the world paused (the menu), a second of frames changes neither its chance nor its clock
-    G.Modes.menu(true); __E.f(2); const r0 = JSON.stringify(S.rng), c0 = S.clock; __E.f(30); out.still = { rng: JSON.stringify(S.rng) === r0, clock: S.clock === c0 }; G.Modes.menu(false);
+    // (and in those frames the picture goes over the whole map — a row a frame —: then the map is read, the world as still as it)
+    G.Modes.menu(true); __E.f(2); const r0 = JSON.stringify(S.rng), c0 = S.clock; __E.f(Math.max(30, N + 24)); out.map = mapScan(); out.still = { rng: JSON.stringify(S.rng) === r0, clock: S.clock === c0 }; G.Modes.menu(false);
     out.people = G.People3D.check(); __E.leave(); out.qa = __E.qa(); out.err = JSON.stringify(G.modErr);
     return out;
   });
