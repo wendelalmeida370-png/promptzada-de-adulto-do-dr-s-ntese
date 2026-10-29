@@ -21,6 +21,10 @@
   const EPS = 1e-6;
   const housing = b => !!(b && G.BDEF[b.type] && G.BDEF[b.type].housing);
   const built = b => housing(b) && b.built && b.type !== 'ruin';
+  // (a house that serves to live in — standing, or being raised further over its family: its owner, its rent, its household's
+  // coins, its heir and its need go on through the works — G.Village.livable —; its beds, the house it is becoming, as the
+  // town's housing counts them: L-371)
+  const lived = b => G.Village.livable(b);
   const P = id => (id && G.S.villagers.get(id)) || null;
   const r2 = x => Math.round(x * 100) / 100;
   const bio = (v, third, first) => G.Life && G.Life.bio(v, 'note', third, first);
@@ -33,7 +37,10 @@
   // ------------------------------ who owns a house ------------------------------
   // b.dono: the owner's id; 0 = the people's. A house of an older world (or one the planner filled) gets its owner the day
   // the world first looks: the eldest grown person living in it — the founders' houses are their families'
-  K.owner = b => (built(b) ? b.dono || 0 : 0);
+  // b.custo: what the house cost the family that has it — the price it was bought for, the materials and the ground of the
+  // work it paid —; the dear land's trade pays at least that (social.js moveUp, L-236). A house of an older world, one the
+  // planner filled, the people's: nothing
+  K.owner = b => (lived(b) ? b.dono || 0 : 0);
   const residents = b => { const out = []; for (const v of G.S.villagers.values()) if (v.home === b.id && !v.captive) out.push(v); return out; };
   // (how many live in each house, counted once for a decision)
   const occupancy = () => { const m = new Map(); for (const v of G.S.villagers.values()) if (v.home && !v.captive) m.set(v.home, (m.get(v.home) || 0) + 1); return m; };
@@ -54,15 +61,15 @@
   }
   // a house is let when its owner lives elsewhere and no one of the owner's family lives in it: its household pays rent
   // (b.aluga, kept by the town's day — the mark that the household pays)
-  K.landlord = b => { const o = built(b) && b.dono ? P(b.dono) : null; return o && o.home !== b.id ? o : null; };
+  K.landlord = b => { const o = lived(b) && b.dono ? P(b.dono) : null; return o && o.home !== b.id ? o : null; };
   K.tenant = (v, h) => { if (!h || !h.aluga) return null; const o = K.landlord(h); return o && !kin(o, v) ? o : null; };
 
   // ------------------------------ who needs a house, and how much it costs ------------------------------
   // (the head of a family: a grown person; the reason, or null)
-  K.need = function (v) {
+  const need0 = function (v) {
     if (!v || v.age < 18 || v.captive || v.jail || v.aboard) return null;
     const S = G.S; if (!v.home) return v.rua ? 'rua' : null;
-    const h = S.buildings.get(v.home); if (!built(h)) return null;
+    const h = S.buildings.get(v.home); if (!lived(h)) return null;
     if (h.type === 'barraco') return 'barraco';
     const cap = G.BDEF[h.type].housing, res = h.res || 0;
     const p = P(v.partner);
@@ -73,6 +80,15 @@
     if (res > cap) return 'lotada';
     return null;
   };
+  // (a house full, or too full, is left by the others first: its owner and the old one who minds its little ones there — with
+  // their partners — stay; the owner's family leaves only when it is the one that does not fit the house, D-098)
+  K.need = function (v) {
+    const w = need0(v); if (w !== 'lotada' && w !== 'casal') return w;
+    const h = G.S.buildings.get(v.home); const p = P(v.partner); const here = !!p && p.home === v.home;
+    const keep = h.dono === v.id || (here && h.dono === p.id) || K.minds(v) || (here && K.minds(p));
+    return keep && K.family(v).length <= G.BDEF[h.type].housing ? null : w;
+  };
+  K.minds = o => !!(G.Lar && G.Lar.minder && G.Lar.minder(o)); // (the old one of the house who minds its little ones, act-lar.js)
   const WHY = { rua: 'sem teto', barraco: 'num barraco', casal: 'na casa de outros, cheia', lotada: 'gente demais para as camas', aluga: 'de aluguel' };
   const URGENT = { rua: 0, barraco: 1, lotada: 2, casal: 3, aluga: 4 };
   // the family that would move: the person, the partner, the children under sixteen living with them
@@ -97,7 +113,7 @@
     return r2(n + land);
   };
   K.rentOf = (set, type) => Math.max(0.5, r2(K.price(set, type) * K.RENT));
-  const homeRef = v => (v.home && built(G.S.buildings.get(v.home)) ? 'h:' + v.home : null);
+  const homeRef = v => (v.home && lived(G.S.buildings.get(v.home)) ? 'h:' + v.home : null);
   // what the family has to pay with (the coins of the house it lives in — the household's — or the purse in the street)
   K.savings = v => { const r = homeRef(v); return r ? D.get(r, 'moedas') : v.purse || 0; };
 
@@ -118,18 +134,27 @@
     const S = G.S; const res = new Map();
     for (const v of S.villagers.values()) if (v.set === set.id && v.home && !v.captive) { const l = res.get(v.home); if (l) l.push(v); else res.set(v.home, [v]); }
     const homes = []; for (const b of S.buildings.values()) if (b.set === set.id && housing(b)) homes.push(b);
-    for (const b of homes) if (built(b)) { settleOwner(b, res.get(b.id) || []); rent(b, set, res.get(b.id) || []); }
+    for (const b of homes) if (lived(b)) { settleOwner(b, res.get(b.id) || []); rent(b, set, res.get(b.id) || []); }
     // a house paid for and not built: after a few days with no hands for it, the people give back what the family paid
     for (const b of homes) if (b.encomenda && !b.built && S.day - b.encomenda.d > K.MAX_WAIT && !b.progress) refund(b, set);
     // the families in need, the most urgent first (one decision a day per town — the dear ground of a city moves slowly)
-    const heads = []; const seen = new Set();
+    for (const [v] of K.queue(set)) { if (A.isBody(v)) continue; const r = K.order(v); if (r.ok) break; }
+  }
+  // the families in need of a town, in the order the day asks them: [head, why], the most urgent first. Of a house too many
+  // for its beds, or full with a couple of others, only its youngest family — its eldest grown one's age —: the old ones of
+  // the house wait for the young to go (D-098); the house is as urgent as its most urgent family. Reads only
+  K.queue = function (set) {
+    const S = G.S; const heads = []; const seen = new Set();
     for (const v of S.villagers.values()) {
       if (v.set !== set.id || seen.has(v.id)) continue; const why = K.need(v); if (!why) continue;
       for (const m of K.family(v)) seen.add(m.id); heads.push([v, why]);
     }
-    heads.sort((a, b) => URGENT[a[1]] - URGENT[b[1]] || a[0].id - b[0].id);
-    for (const [v] of heads) { if (A.isBody(v)) continue; const r = K.order(v); if (r.ok) break; }
-  }
+    const eldest = v => Math.max(v.age, ...K.family(v).filter(m => m.age >= 16).map(m => m.age));
+    const asked = []; const byHouse = new Map();
+    for (const e of heads) { if (e[1] !== 'lotada' && e[1] !== 'casal') { asked.push(e); continue; } const l = byHouse.get(e[0].home); if (l) l.push(e); else byHouse.set(e[0].home, [e]); }
+    for (const l of byHouse.values()) { l.sort((a, b) => eldest(a[0]) - eldest(b[0]) || a[0].id - b[0].id); asked.push([l[0][0], l.some(e => e[1] === 'lotada') ? 'lotada' : 'casal']); }
+    return asked.sort((a, b) => URGENT[a[1]] - URGENT[b[1]] || a[0].id - b[0].id);
+  };
   // the family's decision, now: the people's empty house if there is one with beds for them (bought — or given, in a
   // people without coin), else a new one raised; short of coin, an empty house its owner lets, rented — or saving for it.
   // The god's body decides by the same rule
@@ -189,7 +214,7 @@
   const art = nm => (G.gen(nm) === 'a' ? 'uma' : 'um');
   function buy(v, fam, b, set, price, why) {
     if (!pay(v, set, price, 'compra-casa')) return false;
-    b.dono = v.id; move(fam, b, 'comprou');
+    b.dono = v.id; b.custo = coinPeople(set) ? price : 0; move(fam, b, 'comprou');
     const nm = G.Village.buildName(b).toLowerCase();
     bio(v, `Comprou ${art(nm)} ${nm} do povo${coinPeople(set) ? ' por ' + price + ' moedas' : ''} e se mudou com a família (${WHY[why]}).`, `Compramos ${art(nm)} ${nm} e nos mudamos — enfim um teto nosso`);
     A.note(v, 'memory', `Compramos uma casa: ${nm}.`, NOTE);
@@ -214,7 +239,7 @@
     if (a.pago >= S.day) return;
     const per = K.rentOf(set, b.type); const due = r2(per * (S.day - a.pago) + (a.deve || 0));
     const head = L.filter(v => v.age >= 16).sort((x, y) => y.age - x.age || x.id - y.id)[0] || L[0];
-    const to = o.home && built(S.buildings.get(o.home)) ? 'h:' + o.home : 'p:' + o.id;
+    const to = o.home && lived(S.buildings.get(o.home)) ? 'h:' + o.home : 'p:' + o.id;
     const n = r2(Math.min(due, D.get('h:' + b.id, 'moedas')));
     if (n > EPS) D.move('h:' + b.id, to, 'moedas', n, { code: 'aluguel', by: head.id });
     a.deve = r2(Math.max(0, due - n)); a.pago = S.day;
@@ -224,7 +249,7 @@
       if (worth > EPS) D.move(f, to, 'moedas', worth, { code: 'venda-casa', by: o.id });
       A.note(o, 'memory', `${head.name} não pagava o aluguel: vendi a casa ao povo${worth > EPS ? ` por ${worth} moedas` : ''}.`, NOTE);
       for (const m of L) if (m.age >= 16) A.note(m, 'memory', `Devíamos o aluguel a ${o.name}: a casa passou ao povo.`, NOTE);
-      b.dono = 0; b.aluga = null;
+      b.dono = 0; b.aluga = null; b.custo = 0;
     }
   }
   // a new house: the city says where it goes and how tall; the people's builders raise it; the family paid the materials
@@ -261,9 +286,9 @@
   // people). Then the family puts its things in order (the note; the house's own furniture is the interiors')
   function move(fam, b, how) {
     const S = G.S; const from = fam[0].home && S.buildings.get(fam[0].home);
-    const left = from && built(from) ? residents(from).filter(v => !fam.includes(v)) : [];
+    const left = from && lived(from) ? residents(from).filter(v => !fam.includes(v)) : [];
     const brought = [];
-    if (from && built(from) && from.id !== b.id) {
+    if (from && lived(from) && from.id !== b.id) {
       const share = left.length ? fam.length / (fam.length + left.length) : 1;
       for (const [k, n] of Object.entries(D.list('h:' + from.id))) {
         const q = r2(n * share); if (q > EPS) { const r = D.move('h:' + from.id, 'h:' + b.id, k, q, { code: 'mudança', by: fam[0].id, part: true, floor: true }); if (r.ok && r.n > EPS) brought.push(`${Math.round(r.n * 10) / 10} de ${E.name(k)}`); }
@@ -304,8 +329,9 @@
     const kept = D.get('h:' + b.id, 'moedas'); const fac = o.fac || G.Village.facOfSet(b.set);
     if (kept > EPS && D.exists('f:' + fac)) D.move('h:' + b.id, 'f:' + fac, 'moedas', kept, { code: 'obra-casa', by: o.by || 0, part: true });
     const fam = o.fam.map(P).filter(v => v && !v.captive && v.set === b.set);
-    if (!fam.length) { b.dono = 0; return r; }
+    if (!fam.length) { b.dono = 0; b.custo = 0; return r; }
     if (!P(b.dono)) b.dono = fam[0].id;
+    b.custo = o.paid || 0; // (the materials and the ground the family paid for: L-236)
     move(fam, b, 'levantou');
     const v = fam[0]; const nm = G.Village.buildName(b).toLowerCase();
     bio(v, `Mudou-se com a família para ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm} que mandou levantar.`, `Nos mudamos para a nossa casa — levantada com o que juntamos`);
@@ -387,9 +413,9 @@
       // inherit: with the owner gone, it is nobody's — L-304)
       if (!housing(b)) { if (b.dono === v.id) { b.dono = 0; b.aluga = null; } continue; }
       if (b.dono === v.id) {
-        const heir = b.built ? heirOf(b, v) : null;
+        const heir = lived(b) ? heirOf(b, v) : null;
         b.dono = heir ? heir.id : 0;
-        if (!b.dono) b.aluga = null;
+        if (!b.dono) { b.aluga = null; b.custo = 0; }
         if (heir) { bio(heir, `Herdou a casa de ${v.name}.`, `Herdei a casa de ${v.name}`); A.note(heir, 'memory', `Herdei a casa de ${v.name}.`, NOTE); }
       }
       if (b.encomenda && b.encomenda.fam.includes(v.id)) { b.encomenda.fam = b.encomenda.fam.filter(id => id !== v.id); if (b.encomenda.by === v.id) b.encomenda.by = b.encomenda.fam[0] || 0; if (!b.encomenda.fam.length) b.dono = 0; }

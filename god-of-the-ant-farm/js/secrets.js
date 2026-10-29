@@ -187,22 +187,27 @@
 
   // ------------------------------ the meeting ------------------------------
   function meetOf(l) { return st().meets.find(m => m.lodge === l.id) || null; }
+  // (who is on the way to a meal, or at the top of hunger with the life going, eats first: a meeting that begins then does not
+  // call them, lure them or keep them up — the festival's rule, L-234: a conclave took Túlia #1709 of Roma on her way to the
+  // store, hunger 100 and life 30, and she starved at it with 390 of food in the store, L-397)
+  const MEAL = { eat: 1, forage: 1 };
+  const meal = v => !!(v.task && MEAL[v.task.type]) || (v.hunger >= 99.9 && v.hp < 60);
   function startMeet(q, l) {
     const S = G.S;
-    const go = Sc.membersOf(q).filter(v => G.dist(v.x, v.y, l.x, l.y) < 34 && !v.captive && !v.aboard && !v.held && !v.ug && !(v.task && v.task.pri >= 3));
+    const go = Sc.membersOf(q).filter(v => G.dist(v.x, v.y, l.x, l.y) < 34 && !v.captive && !v.aboard && !v.held && !v.ug && !(v.task && v.task.pri >= 3) && !meal(v));
     if (go.length < 2) { l.next = S.day + 2; return; }
     const m = { id: S.nextId++, soc: q.id, lodge: l.id, x: l.x, y: l.y, kind: l.kind, b: l.b || 0, t: 0, ids: go.map(v => v.id), seen: [], blood: 0, phase: 'gather' };
     st().meets.push(m);
     go.forEach((v, i) => { G.Vg.endTask(v); v.sleeping = false; const a = i / go.length * TAU; G.Vg.setTask(v, { type: 'conclave', m: m.id, pri: 2.3, st: 0, x: l.x + Math.cos(a) * 1.25, y: l.y + Math.sin(a) * 0.9, kind: 'conclave', master: v.id === q.master ? 1 : 0 }); });
     // a dark order sometimes wants blood: a captive, or someone alone, lured out at night
     if (q.creed === 'deus' && G.R() < 0.3) {
-      const vic = [...S.villagers.values()].find(v => (v.captive || (v.age >= 14 && v.age < 70 && !v.partner && standing(v) < 1.5)) && !v.secret && G.dist(v.x, v.y, l.x, l.y) < 28 && !(v.task && v.task.pri >= 3) && !v.held && !v.aboard && !v.ug && G.R() < 0.4);
+      const vic = [...S.villagers.values()].find(v => (v.captive || (v.age >= 14 && v.age < 70 && !v.partner && standing(v) < 1.5)) && !v.secret && G.dist(v.x, v.y, l.x, l.y) < 28 && !(v.task && v.task.pri >= 3) && !v.held && !v.aboard && !v.ug && !meal(v) && G.R() < 0.4);
       if (vic) { m.victim = vic.id; G.Vg.endTask(vic); vic.sleeping = false; G.Vg.setTask(vic, { type: 'lured', m: m.id, pri: 2.4, st: 0, x: l.x, y: l.y + 0.2, kind: 'lured' }); }
     }
     // someone who could not sleep walks out into the night — and sees
     if (G.R() < 0.22) {
       const set = S.settlements.get(l.set);
-      const w = set && [...S.villagers.values()].find(v => v.set === set.id && !v.secret && v.age >= 9 && !v.captive && !v.held && !v.aboard && !(v.task && v.task.pri >= 2) && G.R() < 0.15);
+      const w = set && [...S.villagers.values()].find(v => v.set === set.id && !v.secret && v.age >= 9 && !v.captive && !v.held && !v.aboard && !(v.task && v.task.pri >= 2) && !meal(v) && G.R() < 0.15);
       if (w) { G.Vg.endTask(w); w.sleeping = false; const a = G.R() * TAU; G.Vg.setTask(w, { type: 'insone', m: m.id, pri: 1.9, st: 0, x: l.x + Math.cos(a) * 4.5, y: l.y + Math.sin(a) * 3.5, kind: 'insone' }); }
     }
     l.next = S.day + 2 + Math.floor(G.R() * 3);
@@ -503,10 +508,21 @@
   Sc.voteBias = (voter, cand) => (voter.secret && voter.secret === cand.secret ? 6 : 0);
 
   // ------------------------------ the errands, walked ------------------------------
+  // (one of the meeting, or one who walked out and saw it, at the top of hunger with the life going leaves to eat by the same
+  // choice of a meal as anyone, and the meeting goes on without them; with nothing to eat in reach, a while before asking
+  // again — the festival's rule, L-171. Not the one lured to it: the rite's own, as the festival's victim. L-397)
+  function leavesToEat(v, H) {
+    const S = G.S;
+    if (!(v.hunger >= 99.9 && v.hp < 60) || v._hungerT > S.clock || (S.avatar && S.avatar.id === v.id)) return false;
+    v._hungerT = S.clock + DAY() * 0.1;
+    const e = H.eatTask(v); if (!e) return false;
+    v.robe = null; v.unmask = false; e.kind = 'eat'; return true;
+  }
   Sc.run = function (v, t, dt, H) {
     const S = G.S;
     if (t.type === 'conclave') {
       const m = st().meets.find(x => x.id === t.m); if (!m) { v.robe = null; H.end(v); return true; }
+      if (leavesToEat(v, H)) return true;
       const q = soc(m.soc);
       if (t.st === 0) { if (!H.goto(v, t.x, t.y, false) && !H.goto(v, t.x, t.y, true)) { H.end(v); return true; } t.st = 1; return true; }
       if (t.st === 1) {
@@ -527,6 +543,7 @@
       v.moving = false; v.act = m.phase === 'rite' ? 'kneel' : ''; return true;
     }
     if (t.type === 'insone') {
+      if (leavesToEat(v, H)) return true;
       if (t.st === 0) { if (!H.goto(v, t.x, t.y, false)) { H.end(v); return true; } t.st = 1; return true; }
       if (t.st === 1) { v.act = ''; if (H.move(v, dt, 0.6)) { t.st = 2; v.actT = 0; } if (t.age > 70) H.end(v); return true; }
       v.moving = false; const m = st().meets.find(x => x.id === t.m); if (m) G.faceTo(v, m.x - v.x, m.y - v.y); v.act = 'sneak';
@@ -652,7 +669,12 @@
     }
   };
   (G.saveHooks = G.saveHooks || []).push({
-    save(out) { out.secrets = G.S.secrets || null; },
+    // (and which inquiries had their inquirer at the questions when the game was saved: the task is not in the save — L-380)
+    save(out) {
+      const S = G.S; out.secrets = S.secrets || null;
+      const inq = S.secrets && Array.isArray(S.secrets.inq) ? S.secrets.inq : [];
+      out.secretsAsk = inq.filter(i => { const v = S.villagers.get(i.by); return !!(v && v.task && v.task.type === 'inquire' && v.task.inq === i.id); }).map(i => i.id);
+    },
     load(o) {
       const S = G.S; S.secrets = o.secrets || null;
       for (const v of S.villagers.values()) { v.robe = null; }
@@ -663,7 +685,12 @@
       // (not to one another system has just given back what he was doing when the game was saved — the riot's guard (L-190) —:
       // that was his task then, not the questions, and the world gone on would have left him there. Jasão of Argos guarded the
       // riot and came back from the load asking questions in the streets, his post in the square empty: L-376)
-      for (const i of s.inq) { const v = S.villagers.get(i.by); if (v && !v.task) G.Vg.setTask(v, { type: 'inquire', inq: i.id, pri: 2.15, st: 0, kind: 'inquire' }); }
+      // (and only to one who was at the questions when it was saved: the task of an inquiry may end before the inquiry — four
+      // days, or another errand in its place — and the world gone on would not give it back. Júlia of Tenochtitlan slept at
+      // home, and came back from the load asking questions in the streets — this hook comes before the home's, which gives
+      // back who was asleep, and found her busy: L-380. A save of before, with no such list, as L-376)
+      const ask = Array.isArray(o.secretsAsk) ? new Set(o.secretsAsk.filter(Number.isFinite)) : null;
+      for (const i of s.inq) { const v = S.villagers.get(i.by); if (v && !v.task && (!ask || ask.has(i.id))) G.Vg.setTask(v, { type: 'inquire', inq: i.id, pri: 2.15, st: 0, kind: 'inquire' }); }
     },
   });
 

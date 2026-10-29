@@ -642,7 +642,14 @@
       if (b.hp < b.maxHp && b.type !== 'cemetery') body += bar('Estrutura', b.hp / b.maxHp * 100, 'hp');
       if (def.housing) {
         const res = [...S.villagers.values()].filter(v => v.home === b.id);
-        body += `<div class="family"><div>Moradores (${res.length}/${def.housing}):</div><div>${res.map(v => plink(v.id)).join(', ') || '<span class="muted">vazia</span>'}</div></div>`;
+        // (each one of the house, where and why — asleep, at supper, at the fire, at sea, at work, in a cell: the house's life
+        // as the world has it, G.Lar.roster —; and whoever is in it without living there)
+        const ros = G.Lar && G.Lar.roster ? G.Lar.roster(b) : null;
+        if (ros) {
+          const line = r => `<div>${plink(r.id)} <span class="muted">— ${esc(r.why)}</span></div>`;
+          const guests = ros.filter(r => !r.lives);
+          body += `<div class="family"><div>Moradores (${res.length}/${def.housing}):</div>${ros.filter(r => r.lives).map(line).join('') || '<div><span class="muted">vazia</span></div>'}${guests.length ? `<div>Dentro, sem morar: ${guests.map(r => plink(r.id)).join(', ')}</div>` : ''}</div>`;
+        } else body += `<div class="family"><div>Moradores (${res.length}/${def.housing}):</div><div>${res.map(v => plink(v.id)).join(', ') || '<span class="muted">vazia</span>'}</div></div>`;
       }
       if (b.type === 'farm') {
         const st = [0, 0, 0, 0]; for (const c of b.crops) st[c.s]++;

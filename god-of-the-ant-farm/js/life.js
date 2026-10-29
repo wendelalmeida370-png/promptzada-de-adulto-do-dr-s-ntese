@@ -283,12 +283,12 @@
     const S = G.S;
     for (const v of S.villagers.values()) {
       const c = v.carry; if (!c || c.k !== 'water' || !c.jar || v.task) continue;
-      const h = S.buildings.get(v.home); if (!h || !h.built || h.type === 'ruin') continue;
+      const h = S.buildings.get(v.home); if (!G.Village.livable(h)) continue; // (a house standing or under the works: L-371)
       G.Vg.setTask(v, { type: 'water', home: h.id, pri: 1.05, st: 6, kind: 'water' });
     }
   } });
   function runWater(v, t, dt, H) {
-    const S = G.S; const h = S.buildings.get(t.home); if (!h || !h.built) { L.jarHome(v, null); return H.end(v); }
+    const S = G.S; const h = S.buildings.get(t.home); if (!G.Village.livable(h)) { L.jarHome(v, null); return H.end(v); } // (L-371)
     if (t.st === 6) { if (!G.Vg.gotoB(v, h)) { L.jarHome(v, null); return H.end(v); } t.st = 3; return; }
     if (t.st === 0) {
       const src = waterSource(v); if (!src) { h.waterTry = S.clock; return H.end(v); }
@@ -326,7 +326,7 @@
   }
   L.fams = () => [...fams.values()];
   function family(v) {
-    const S = G.S; const h = S.buildings.get(v.home); if (!h || !h.built || h.type === 'ruin') return null;
+    const S = G.S; const h = S.buildings.get(v.home); if (!G.Village.livable(h)) return null; // (L-371)
     const key = famKey(v); if (!key) return null;
     let f = fams.get(key);
     if (!f) {
@@ -410,8 +410,8 @@
     }
     v.moving = false;
     G.faceTo(v, f.x - v.x, f.y - v.y);
-    // supper from the family pantry
-    if (v.hunger > 40 && (h.pantry || 0) >= 1 && !t.ate) { h.pantry -= 1; v.hunger = Math.max(0, v.hunger - 55); t.ate = 2.2; }
+    // supper from the family pantry, in the ledger (G.Lar.eat: the meal cooked today, or a cold one — L-221)
+    if (v.hunger > 40 && !t.ate && G.Lar && G.Lar.eat(v, h, G.Lar.cooked(h))) t.ate = 2.2;
     if (t.ate > 0) { t.ate -= dt; v.act = 'eat'; return; }
     v.act = t.talk > 0 ? 'sittalk' : 'sit';
     if (t.talk > 0) t.talk -= dt; else if (G.R() < dt * 0.3) t.talk = G.rr(1.5, 3);
@@ -630,7 +630,7 @@
     const houses = new Map();
     for (const v of S.villagers.values()) if (v.home && !v.captive) { let l = houses.get(v.home); if (!l) houses.set(v.home, l = []); l.push(v); }
     for (const [hid, list] of houses) {
-      const h = S.buildings.get(hid); if (!h || !h.built) continue;
+      const h = S.buildings.get(hid); if (!G.Village.livable(h)) continue; // (a house standing or under the works: L-371)
       h.water = Math.max(0, L.homeWater(h) - 1 / (DAY() * 1.15));
       if (h.water > 0.35 || t < 0.06 || t > 0.55 || (h.waterTry && S.clock - h.waterTry < DAY() * 0.3)) continue;
       if (list.some(v => v.task && v.task.type === 'water')) continue;
