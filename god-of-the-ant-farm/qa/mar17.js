@@ -71,13 +71,16 @@ const CASE = process.argv[2] || 'rich'; const seed = +(process.argv[3] || 7);
     const t0 = Date.now();
     await page.evaluate(() => { G.Skip.GOALS.tst = { years: 25 }; G.Skip.start('tst', 'livre'); });
     for (let k = 0; k < 6000; k++) { const on = await page.evaluate(() => G.Skip.on); if (!on) break; await page.waitForTimeout(500); }
+    // (the voyages of exploration: a colony is a voyage of settling, which the people's plans of expansion send, not its love
+    // of the sea — X.consider counts it apart too; on the line's 47aac4a the egípcios' colony of the year 21 tied them with
+    // the Norse, 9 and 9 — T-189)
     const r = await R(() => {
-      const out = []; for (const f of G.Fac.all()) { const c = G.CIVS[f.civ]; out.push({ n: f.name, civ: f.civ, naval: c && c.traits.naval || 1, aff: +G.Expe.prof(f).aff.toFixed(2), exps: T.exps(f.id).length, boats: G.S.ships.filter(s => s.fac === f.id && s.kind === 'pesca').length }); }
+      const out = []; for (const f of G.Fac.all()) { const c = G.CIVS[f.civ]; const ex = T.exps(f.id); out.push({ n: f.name, civ: f.civ, naval: c && c.traits.naval || 1, aff: +G.Expe.prof(f).aff.toFixed(2), exps: ex.filter(e => e.kind !== 'colonia').length, cols: ex.filter(e => e.kind === 'colonia').length, boats: G.S.ships.filter(s => s.fac === f.id && s.kind === 'pesca').length }); }
       return out.sort((a, b) => b.naval - a.naval);
     });
     const sea = r.filter(x => x.naval >= 1.2), land = r.filter(x => x.naval <= 0.8);
     const a = sea.length ? Math.max(...sea.map(x => x.exps)) : 0, b = land.length ? Math.min(...land.map(x => x.exps)) : 99;
-    const line = r.map(x => `${x.civ} (tradição naval ${x.naval}, afinidade ${x.aff}): ${x.exps} expedições, ${x.boats} barcos de pesca`).join(' · ');
+    const line = r.map(x => `${x.civ} (tradição naval ${x.naval}, afinidade ${x.aff}): ${x.exps} expedições${x.cols ? ` (e ${x.cols} de colônia)` : ''}, ${x.boats} barcos de pesca`).join(' · ');
     ok('3 cultura aventureira explora mais', sea.length && land.length && a >= b * 1.5 && a >= 4, `25 anos num mundo de ilhas (${((Date.now() - t0) / 1000).toFixed(0)} s): ${line}`);
     ok('4 cultura não marítima explora menos', land.length && land.every(x => x.exps < a) && land.every(x => x.boats >= 1), `as de pouca tradição naval exploram menos que as do mar — mas, vivendo em ilhas, todas pescam e se lançam ao mar (${land.map(x => x.civ + ': ' + x.exps).join(', ')})`);
   }

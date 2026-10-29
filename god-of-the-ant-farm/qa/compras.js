@@ -33,12 +33,18 @@ const book = f => D.ledger().filter(f);
 const none = why => { console.log(`FALHOU | compras | ${why}`); process.exit(1); };
 // the houses of a town with a few grown people in them (by id, past the ones taken)
 const taken = new Set();
-const homesOf = (set, min) => [...S.buildings.values()].filter(b => b.set === set.id && b.built && G.BDEF[b.type].housing && (b.res || 0) >= 2 && !taken.has(b.id) && adults(b).length >= (min || 2)).sort((a, b) => a.id - b.id);
-function houseIn(set, min) {
-  const h = homesOf(set, min)[0];
-  if (!h) none(`${set.name} não tem mais uma casa com ${min || 2} adulto(s) para o caso (${taken.size} já tomadas pelos casos)`);
+const homesOf = (set, min, pred) => [...S.buildings.values()].filter(b => b.set === set.id && b.built && G.BDEF[b.type].housing && (b.res || 0) >= 2 && !taken.has(b.id) && adults(b).length >= (min || 2) && (!pred || pred(b))).sort((a, b) => a.id - b.id);
+function houseIn(set, min, pred, what) {
+  const h = homesOf(set, min, pred)[0];
+  if (!h) none(`${set.name} não tem mais uma casa com ${min || 2} adulto(s)${what ? ' ' + what : ''} para o caso (${taken.size} já tomadas pelos casos)`);
   taken.add(h.id); return h;
 }
+// (a house that can send one of its own by the game's rule: a grown one with no trade, and no hard worker — the wish to shop
+// outweighs the work only for such a one; a house of tradesmen and hard workers sends nobody, L-331, open: in the new
+// metropolis the first house of the town had a weaver and a hard-working farmer, and nobody went in 90 s, T-179. Grown is
+// 16 or more: under it the child's choice — childDecide — never asks the wish to shop, though the wish counts from 14)
+const grown16 = h => adults(h).filter(v => v.age >= 16);
+const canSend = h => grown16(h).some(v => !(v.job || (E.isJobRole && E.isJobRole(v.role))) && !(v.work > 1));
 // the test's hand on a house: what it keeps taken away (so that it lacks), coins given or taken, the last errand forgotten
 function lacking(h, coins) {
   for (const k of Object.keys(E.HOUSE_WANTS)) { const n = D.get('h:' + h.id, k); if (n > 0) D.use('h:' + h.id, k, n, { code: 'teste' }); }
@@ -73,8 +79,8 @@ function again(h, L0) {
 // other things feels no lack and sends nobody — the test's hand takes those away too (in the new metropolis, in the world of
 // L-203, the house of c7 had its chest full: an empty list, nobody sent in 90 s; taking the next house instead, after the merge
 // of 496dfd3 the town ran out of houses for the cases, T-095)
-function houseLacking(set, min, coins) {
-  const h = houseIn(set, min); lacking(h, coins);
+function houseLacking(set, min, coins, pred, what) {
+  const h = houseIn(set, min, pred, what); lacking(h, coins);
   if (!C.list(h).length) { const L = D.list('h:' + h.id); for (const k of Object.keys(L)) if (k !== 'moedas' && L[k] > 0) D.use('h:' + h.id, k, L[k], { code: 'teste' }); }
   return h;
 }
@@ -82,6 +88,27 @@ function houseLacking(set, min, coins) {
 // the fair — the same execution took the three sent in c14, after the merge of 496dfd3, T-095)
 const GATHER = { justice: 1, assembly: 1, fest: 1, muster: 1, fire: 1 };
 const calm = (set, h) => !(S.execs || []).some(e => e.set === set.id && e.phase !== 'done' && (e.phase !== 'wait' || e.start - 22 - S.clock < 150)) && !adults(h).some(o => o.task && GATHER[o.task.type]);
+// (where the case is what is bought, not who goes — the hand of c15: a minute with nobody of the house out for it, nor a
+// purchase on its way home, and the test's hand sends one of the house — grown (16 or more, as the world sends), rested and
+// fed, hands free, not called to the square, not under the world's hand (a sentence, a storm, anything that does not wait)
+// — through the house's own errand door, up to three times. In the old metropolis a storm took the one sent in c8, the execution of two of the house took
+// the rest of the day, and the next morning the house tried at 0,06, before any stall or the fair opened, and waited half
+// a day (L-345, open); in c9 the builder of the house went from obra to obra and the fisher's work outweighed the wish
+// (L-331, open): T-185)
+function hand(h, done) {
+  const r = { sent: [], t: S.clock };
+  const free = q => !(q.task && (GATHER[q.task.type] || q.task.type === 'shelter' || (q.task.pri || 0) >= 2)) && !(q.carry && q.carry.n > 0);
+  r.step = () => {
+    if (errandOf(h) || done()) { r.t = S.clock; return; }
+    if (S.clock - r.t <= 60 || r.sent.length >= 3) return;
+    r.t = S.clock;
+    const o = grown16(h).filter(free).sort((a, b) => C.urge(b) - C.urge(a) || b.energy - a.energy || a.id - b.id)[0]; if (!o) return;
+    o.energy = Math.max(o.energy, 70); o.hunger = Math.min(o.hunger, 30); G.Vg.endTask(o); o.sleeping = false; h.shopT = undefined; h.shopOut = 0;
+    if (C.task(o, G.Vg.H)) r.sent.push(o.name);
+  };
+  r.said = () => r.sent.length ? ` (pela mão do teste, depois de um minuto sem ninguém da casa fora: ${r.sent.join(', ')})` : '';
+  return r;
+}
 
 // ================================ the world with coin ================================
 M.pronto('metropole'); S = G.S; M.viver(2); G.inSim++;
@@ -96,7 +123,7 @@ S.time = 0.15;
 const fair = stockFair(set);
 // ---------------- c1/c2/c5: a house that lacks sends one of its people; the purchase is paid by the house and gets home
 {
-  const h = houseLacking(set, 2, 30);
+  const h = houseLacking(set, 2, 30, canSend, 'que possa mandar alguém (um adulto sem ofício e não trabalhador)');
   const L0 = S.ledgerN; const list = C.list(h).map(q => q.k);
   let most = 0; let errand = null;
   const sent = fine(90, () => { const v = errandOf(h); if (v) errand = errand || { v, k: v.task.k, type: v.task.type, n: v.task.n }; let c = 0; for (const o of S.villagers.values()) if (o.task && o.task.casa === h.id) c++; most = Math.max(most, c); return !!errand || watch(); });
@@ -143,14 +170,18 @@ const fair = stockFair(set);
 {
   S.time = 0.15; stockFair(set);
   const h = houseLacking(set, 2, 30); const L0 = S.ledgerN; const re8 = again(h, L0);
-  let v = null; fine(360, () => { re8.step(); v = members(h).find(o => o.carry && o.carry.bought && o.carry.to === 'h:' + h.id) || null; return !!v || watch(); });
+  // (the death with the purchase in the arms is the case: the house sends by its own rule, or the hand of c15 does, with the
+  // clock held in the fair's hours — T-185)
+  const carrier = () => members(h).find(o => o.carry && o.carry.bought && o.carry.to === 'h:' + h.id) || null;
+  const hd8 = hand(h, () => !!carrier());
+  let v = null; fine(360, atHour(0.3, () => { re8.step(); hd8.step(); v = carrier(); return !!v || watch(); }));
   if (v) {
     const k = v.carry.k, n = v.carry.n, vid = v.id;
     G.Village.kill(v, 'teste');
     const e = book(q => q[0] > L0 && q[3] === 'v:' + vid && q[8] === 'herdado');
     const lost = QA.check().filter(q => /sumiram sem lançamento/.test(q.msg));
-    ok('c8 morre com a compra nas mãos', e.length >= 1 && Math.abs(e.reduce((a, q) => a + q[6], 0) - n) < 0.01 && !lost.length, `${v.name} morreu com ${n} de ${E.name(k)} comprados: ${e.map(q => q[6] + ' para ' + q[4]).join(', ') || 'NADA no livro'}${lost.length ? '; o verificador: ' + lost[0].msg : ''}${re8.said()}`);
-  } else ok('c8 morre com a compra nas mãos', false, `ninguém da casa trouxe uma compra em 360 s${re8.said()}`);
+    ok('c8 morre com a compra nas mãos', e.length >= 1 && Math.abs(e.reduce((a, q) => a + q[6], 0) - n) < 0.01 && !lost.length, `${v.name} morreu com ${n} de ${E.name(k)} comprados: ${e.map(q => q[6] + ' para ' + q[4]).join(', ') || 'NADA no livro'}${lost.length ? '; o verificador: ' + lost[0].msg : ''}${re8.said()}${hd8.said()}`);
+  } else ok('c8 morre com a compra nas mãos', false, `ninguém da casa trouxe uma compra em 360 s${re8.said()}${hd8.said()}`);
 }
 // ---------------- c12: the god's body is not sent; the house's need is a goal in its diary
 {
@@ -277,6 +308,12 @@ const fair = stockFair(set);
 // took the shopper in the first seconds, the errand was lost and the house waited half a day — in the new world «cidade» the
 // house of c9 bought nothing in its 240 s: each morning the first one up was sent to shop, and the water took them)
 {
+  // (a house the world puts under works in the middle — a sobrado made an insula, a house a sobrado — keeps no jar while the
+  // works last (life.js counts the water of a house standing): the case is a jar that waits, so another house, up to three.
+  // With the final worlds on the 5405a1b the city began an insula over Creonte's sobrado a few seconds after the purchase got
+  // home, and the water stood still at 0,04 the 266 s that were left, T-221)
+  const works17 = [];
+  for (let a = 0; a < 3; a++) {
   S.time = 0.15; stockFair(set);
   const h = houseLacking(set, 1, 30); const H17 = 'h:' + h.id;
   const v = adults(h).sort((a, b) => b.energy - a.energy || a.id - b.id)[0];
@@ -289,9 +326,10 @@ const fair = stockFair(set);
   // (the water given while the errand is on — the bug itself, seen at the door that gives it —; an errand that ends on its
   // own, nothing bought — no seller at the stall, the line too long —, is given again, up to three times: in the new
   // metropolis, after the merge of 496dfd3, Tauret's stall had nobody at it, and the water took her afterwards, rightly)
-  const L0 = S.ledgerN, c0 = S.clock; let took = 0, home = 0, by = null, prev = true; const again17 = [];
+  const L0 = S.ledgerN, c0 = S.clock; let took = 0, home = 0, by = null, prev = true, inWorks = 0; const again17 = [];
   const give0 = G.Vg.setTask; G.Vg.setTask = function (o, t) { if (o === v && t && t.type === 'water' && o.task && o.task.casa && !took) took = S.clock - c0 || 0.01; return give0.apply(this, arguments); };
   fine(300, atHour(0.3, () => {
+    if (!h.built) { inWorks = S.clock - c0 || 0.01; return true; }
     if (!home && book(e => e[0] > L0 && e[4] === H17 && e[8] === 'compra-em-casa').length) home = S.clock - c0;
     const on = !!(v.task && v.task.casa);
     if (!home && !took && prev && !on && !(v.carry && v.carry.bought) && again17.length < 3) {
@@ -303,22 +341,30 @@ const fair = stockFair(set);
     return !!took || (home && h.water > 0.9) || watch();
   }));
   G.Vg.setTask = give0;
+  if (inWorks && a < 2) { works17.push(`a casa #${h.id} de ${v.name} entrou em obra (${G.BDEF[h.type] ? G.BDEF[h.type].name : h.type}) aos ${Math.round(inWorks)} s`); continue; }
   const where = !t17 ? '' : t17.type === 'compra' ? 'a uma banca' : ({ feira: 'à feira', mercado: 'ao mercado', mercado_negro: 'ao mercado negro' })[(S.buildings.get(t17.id) || {}).type] || 'às compras';
-  ok('c17 a água espera a volta das compras', !!t17 && !took && !!home && h.water > 0.9 && !bad().length,
-    t17 ? `${v.name}, mandad${v.g === 'f' ? 'a' : 'o'} ${where} por ${t17.n} de ${E.name(t17.k)} com a água da casa em 0,2 e o resto da casa dormindo: ${took ? `a água A TIROU das compras aos ${Math.round(took)} s` : 'a água esperou'}; ${home ? `a compra chegou em casa aos ${Math.round(home)} s` : 'a compra NÃO chegou em casa'}; ${h.water > 0.9 ? `depois, ${by ? by.name : 'alguém'} buscou a água` : 'a água NÃO foi buscada'}${again17.length ? ` (antes, o recado acabou sozinho, sem compra, ${again17.length} vez(es): mandad${v.g === 'f' ? 'a' : 'o'} de novo)` : ''}`
-      : `${v.name} não foi mandado às compras (lista ${C.list(h).map(q => q.k).join(', ') || 'vazia'})`);
+  const before17 = works17.length ? ` (antes: ${works17.join('; ')})` : '';
+  ok('c17 a água espera a volta das compras', !!t17 && !took && !inWorks && !!home && h.water > 0.9 && !bad().length,
+    t17 ? `${v.name}, mandad${v.g === 'f' ? 'a' : 'o'} ${where} por ${t17.n} de ${E.name(t17.k)} com a água da casa em 0,2 e o resto da casa dormindo: ${took ? `a água A TIROU das compras aos ${Math.round(took)} s` : 'a água esperou'}; ${home ? `a compra chegou em casa aos ${Math.round(home)} s` : 'a compra NÃO chegou em casa'}; ${inWorks ? `a casa entrou em OBRA aos ${Math.round(inWorks)} s` : h.water > 0.9 ? `depois, ${by ? by.name : 'alguém'} buscou a água` : 'a água NÃO foi buscada'}${again17.length ? ` (antes, o recado acabou sozinho, sem compra, ${again17.length} vez(es): mandad${v.g === 'f' ? 'a' : 'o'} de novo)` : ''}${before17}`
+      : `${v.name} não foi mandado às compras (lista ${C.list(h).map(q => q.k).join(', ') || 'vazia'})${before17}`);
+  break;
+  }
 }
 // ---------------- c7: a save in the middle of the errand: the errand lost does not hold the house; it buys again, one at a time
 {
   S.time = 0.15; stockFair(set);
   const h = houseLacking(set, 2, 30); const hid = h.id;
-  const sent = fine(90, () => !!errandOf(h) || watch());
+  // (the errand out at the save is the case's premise: the house sends by its own rule, or the hand of c15 does, with the
+  // clock held in the fair's hours — in the old metropolis on the tip of L-349 the house of c7 sent nobody in 90 s, the
+  // L-331, open, T-185 —; after the load, the house sends again by its own rule: that is the case)
+  const hd7 = hand(h, () => false);
+  const sent = fine(90, atHour(0.3, () => { hd7.step(); return !!errandOf(h) || watch(); }));
   const str = G.Save.serialize(); if (G.UI && G.UI.select) G.UI.select(null); G.Save.apply(JSON.parse(str)); G.Main.mode = 'game';
   S = G.S; set = S.settlements.get(set.id); const h2 = S.buildings.get(hid);
   h2.shopT = undefined; // (the test's hand: the house may send again at once)
   let most = 0; const L0 = S.ledgerN;
   const again = fine(120, () => { let c = 0; for (const o of S.villagers.values()) if (o.task && o.task.casa === hid) c++; most = Math.max(most, c); return c > 0 || watch(); });
-  ok('c7 save no meio do recado', sent && again && most === 1 && !bad().length, `${sent ? 'o recado saiu' : 'o recado NÃO saiu'} antes do save; depois do load ${again ? 'a casa mandou de novo' : 'a casa NÃO mandou de novo'} (no máximo ${most} ao mesmo tempo)`);
+  ok('c7 save no meio do recado', sent && again && most === 1 && !bad().length, `${sent ? 'o recado saiu' : 'o recado NÃO saiu'} antes do save${hd7.said()}; depois do load ${again ? 'a casa mandou de novo' : 'a casa NÃO mandou de novo'} (no máximo ${most} ao mesmo tempo)`);
   void L0;
 }
 // ---------------- c10: the skip — the houses buy in the skip too
@@ -350,11 +396,15 @@ const fair = stockFair(set);
     const h = family(tw)[0];
     lacking(h); if ((h.pantry || 0) < 12) D.make('h:' + h.id, 'food', 12, { code: 'teste' });
     const L0 = S.ledgerN;
-    const got = fine(240, () => book(e => e[0] > L0 && e[4] === 'h:' + h.id && e[8] === 'compra-em-casa').length > 0 || watch());
+    // (the purchase in kind is the case: the house sends by its own rule, or the hand of c15 does, with the clock held in
+    // the fair's hours — T-185)
+    const home9 = () => book(e => e[0] > L0 && e[4] === 'h:' + h.id && e[8] === 'compra-em-casa').length > 0;
+    const hd9 = hand(h, () => home9() || members(h).some(o => o.carry && o.carry.bought && o.carry.to === 'h:' + h.id));
+    const got = fine(240, atHour(0.3, () => { hd9.step(); return home9() || watch(); }));
     const buy = book(e => e[0] > L0 && (e[8] === 'venda' || e[8] === 'feira') && e[5] !== 'food' && /^v:/.test(e[4]) && (S.villagers.get(+e[4].slice(2)) || {}).home === h.id)[0];
     const paid = buy && buy[8] === 'venda' ? D.ledger().find(e => e[0] === buy[0] + 1) : null;
     fine9 = got && !!buy && !bad().length;
-    info = `${tw.name} (sem moeda): ${buy ? `a casa #${h.id} levou ${buy[6]} de ${E.name(buy[5])} ${buy[8] === 'feira' ? 'da feira do povo (sem moeda, a feira dá)' : `de uma banca, pagando ${paid ? paid[6] + ' de ' + E.name(paid[5]) : '?'}`}` : 'NÃO comprou'}; ${got ? 'chegou em casa' : 'NÃO chegou em casa'}`;
+    info = `${tw.name} (sem moeda): ${buy ? `a casa #${h.id} levou ${buy[6]} de ${E.name(buy[5])} ${buy[8] === 'feira' ? 'da feira do povo (sem moeda, a feira dá)' : `de uma banca, pagando ${paid ? paid[6] + ' de ' + E.name(paid[5]) : '?'}`}` : 'NÃO comprou'}; ${got ? 'chegou em casa' : 'NÃO chegou em casa'}${hd9.said()}`;
   }
   ok('c9 um povo sem moeda', fine9, info);
 }

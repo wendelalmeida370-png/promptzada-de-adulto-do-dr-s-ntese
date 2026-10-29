@@ -115,6 +115,8 @@
     // spent, and then stayed there, L-343. A short way that fails is a shut gate, not the budget: no second search)
     const p = W.findPath(v.x, v.y, x, y, adj, maxNodes) || (ti >= 0 && G.dist(v.x, v.y, x, y) >= 24 && W.canWalk(v.x, v.y, x, y, !!adj || !W.walkable(W.idx(x, y))) ? W.findPath(v.x, v.y, x, y, adj, Math.max(maxNodes || 0, 12000), W.PATH_GREEDY) : null);
     if (!p) { v.path = null; v._pfI = ti; v._pfT = now; v._pfN = (v._pfN || 0) + 1; return false; }
+    // (where the way was asked to go, for a way found again on the road: L-352)
+    p.to = [x, y, !!adj];
     v.path = p; v.pi = 0; v._pfN = 0; return true;
   };
   // a tree, bush or boulder up on a ledge nobody from this town can climb to: for a day they go for another one
@@ -312,11 +314,13 @@
       S.wear[i] = Math.min(G.WEAR_MAX, S.wear[i] + step * 1.3);
       if (G.pathLevel(S.wear[i]) !== lv) G.Nature.markDirty(i);
     }
-    // path got blocked (new building): replan next think
+    // path got blocked (new building): replan next think — to where the way was asked to go, beside it only if that is
+    // blocked now: beside the end of the way it had, each new way ended one tile nearer, and a woman sent to the middle of
+    // the ice, her way clipping the corner of her house, stood on the shore three tiles short of it, L-352
     const ni = W.idx(v.x, v.y);
     if (!W.walkable(ni) && v.pi < v.path.length) {
-      const last = v.path[v.path.length - 1];
-      if (!Vg.goto(v, last[0], last[1], true)) { v.path = null; }
+      const to = v.path.to, last = v.path[v.path.length - 1];
+      if (!(to ? Vg.goto(v, to[0], to[1], to[2] || !W.walkableXY(to[0], to[1])) : Vg.goto(v, last[0], last[1], true))) { v.path = null; }
     }
     return v.pi >= (v.path ? v.path.length : 0);
   }
@@ -1426,6 +1430,10 @@
 
   function runBuild(v, t, dt) {
     const S = G.S;
+    // (the task's 70 s count a leg at a time — the walk to the store, the walk with the load, the work —, not the whole
+    // task: after a while of work, the walk to a store 18 tiles off died in the middle, and the stone never reached the
+    // house a family had paid for, L-358. A leg that stalls still dies at 70 s)
+    if (t.leg !== t.st) { t.leg = t.st; t.age = 0; }
     const b = S.buildings.get(t.id);
     if (!b || b.built || b.type === 'ruin') return end(v);
     const def = G.BDEF[b.type];

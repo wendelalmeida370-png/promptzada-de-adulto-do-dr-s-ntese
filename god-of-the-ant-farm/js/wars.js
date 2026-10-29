@@ -372,7 +372,10 @@
   // ====================================================================================
   const LEVY = { tribo: 0.32, chefia: 0.36, reino: 0.42, imperio: 0.5, teocracia: 0.4, tirania: 0.55, conselho: 0.38, livre: 0.3, parlamento: 0.4, feudal: 0.48, republica: 0.42, democracia: 0.36, oligarquia: 0.32, ditadura: 0.58, comuna: 0.34, anarquia: 0.22 };
   const SHARE = { 1: 0.18, 2: 0.32, 3: 0.48 };
-  function canServe(v) { return !v.captive && v.age >= 16 && v.age < 58 && v.hp >= 55 && !(v.preg > 0) && !v.held && !v.air && !v.aboard && !v.ug && !(v.deserter && G.S.day - v.deserter < 6) && !(v.task && (v.task.pri >= 4 || v.task.type === 'band' || v.task.type === 'muster' || v.task.type === 'combat' || v.task.type === 'jail' || v.task.type === 'condemned' || v.task.type === 'scene' || v.task.type === 'envoy' || v.task.type === 'trade')); }
+  // (a crowd in the square against the ruler does not answer the ruler's levy: a war of conquest took twenty of the forty rioters
+  // of Tenochtitlan — their fury even weighed for them —, and the riot, its square empty, was told as crushed by the guard, three
+  // of them to the scaffold, L-366)
+  function canServe(v) { return !v.captive && v.age >= 16 && v.age < 58 && v.hp >= 55 && !(v.preg > 0) && !v.held && !v.air && !v.aboard && !v.ug && !(v.deserter && G.S.day - v.deserter < 6) && !(v.task && (v.task.pri >= 4 || v.task.type === 'band' || v.task.type === 'muster' || v.task.type === 'combat' || v.task.type === 'jail' || v.task.type === 'condemned' || v.task.type === 'scene' || v.task.type === 'envoy' || v.task.type === 'trade' || v.task.type === 'riot')); }
   // each town keeps some at home: more behind walls, more at the capital
   function garrisonOf(set, f) {
     const A = cache.setAdults.get(set.id) || 0; const w = G.Siege && G.Siege.wallOf(set.id);

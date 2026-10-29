@@ -25,8 +25,12 @@ const LIVE = +(process.env.LIVE || 0.3); // anos vividos depois de abrir
   console.log(`lista: ${Object.keys(meta).join(', ') || '(vazia)'}; no menu: ${shown.join(', ')}`);
   for (const k of Object.keys(meta)) if (!shown.includes(k)) bad(`${k} está na lista mas não no menu (falta em G.Ready.INFO?)`);
   if (!shown.length) bad('nenhum mundo pronto no menu');
+  // (the people counted as the save is opened, before the world's first step: the world that arrives lives at once, at speed 1,
+  // and in the browser its first frames took Neferu of the anos500, 72 years old, by old age — 997 of the 998 the list says
+  // by the time the big save was written, T-241)
+  await page.evaluate(() => { const ap = G.Save.apply; G.Save.apply = function () { const r = ap.apply(this, arguments); window.__opened = { pop: G.S.villagers.size, day: G.S.day }; return r; }; });
   for (let n = 0; n < keys.length; n++) {
-    const k = keys[n]; const m = meta[k]; const t0 = Date.now();
+    const k = keys[n]; const m = meta[k]; const t0 = Date.now(); await page.evaluate(() => { window.__opened = null; });
     if (!m) { bad(`${k}: não está na lista`); continue; }
     if (n > 0) {
       // from inside the game: the menu, the list, the confirmation
@@ -39,8 +43,8 @@ const LIVE = +(process.env.LIVE || 0.3); // anos vividos depois de abrir
     await page.waitForFunction(day => G.Main.mode === 'game' && G.S && G.S.day === day && document.querySelector('#modal-bg').classList.contains('hidden'), m.day, { timeout: 120000 });
     await page.waitForFunction(() => !G.Save.pending, null, { timeout: 60000 }); // (a big world is saved compressed, a moment later)
     const r = await page.evaluate(([m, live]) => {
-      const S = G.S; const out = { load: [] };
-      if (S.villagers.size !== m.pop) out.load.push(`gente ${S.villagers.size} ≠ ${m.pop}`);
+      const S = G.S; const out = { load: [] }; const o0 = window.__opened || { pop: S.villagers.size };
+      if (o0.pop !== m.pop) out.load.push(`gente ${o0.pop} ≠ ${m.pop}`);
       if (S.seed !== m.seed) out.load.push(`semente ${S.seed} ≠ ${m.seed}`);
       if (S.N !== m.N || S.mapType !== m.map) out.load.push(`mapa ${S.N} ${S.mapType} ≠ ${m.N} ${m.map}`);
       const info = G.Save.info(); out.saved = !!(info && info.day === S.day);

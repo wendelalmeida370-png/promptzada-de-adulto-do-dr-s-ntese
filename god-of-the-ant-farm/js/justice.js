@@ -519,6 +519,9 @@
       for (const e of S.execs.slice()) {
         const f = G.Fac.get(e.fac); const set = S.settlements.get(e.set);
         const left = e.ids.filter(id => S.villagers.has(id) && !(e.done || []).includes(id));
+        // (saved between the last blow and the step that tells it: told now, as that step would — the chronicle, the town's
+        // loyalty, the stories —, and then it is over; it was dropped untold, L-353)
+        if (f && f.alive && set && !left.length && e.phase === 'kill' && (e.done || []).length) finish(e, f, set);
         if (!f || !f.alive || !set || !left.length || e.phase === 'after' || e.phase === 'done') { const k = S.execs.indexOf(e); S.execs.splice(k, 1); if (f && f.exec && f.exec.j === e.id) f.exec = null; continue; }
         f.exec = { j: e.id };
         // from the top: the hour again (a little later), the crowd called again

@@ -82,22 +82,26 @@ console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'águ
 // ---------------- p2: fishing too hard empties the water: less and less, then no fishing there
 {
   // (a water with fish enough to show the decline: of the town's fresh shores near it, the one whose ground holds the most — a
-  // river ground of twelve fish is fished out in one round of casts, T-110)
+  // river ground of twelve fish is fished out in one round of casts, T-110 —; and a round as long as the water: in the metropole
+  // of 28/10 the most any ground near Argos held was some twenty fish, gone in two rounds of ten casts, and the decline needs
+  // three to show — a round is a sixth of the fish there, three casts to ten, T-219)
   const near = []; { const skip = used.slice(); for (let i = 0; i < 6; i++) { const q = shore(town, null, skip); if (!q) break; skip.push(q.id); near.push(q); } }
-  const sp2 = near.sort((a, b) => P.cap(b.id) - P.cap(a.id) || a.id - b.id)[0] || sp; used.push(sp2.id);
+  const sp2 = near.sort((a, b) => P.stock(b.wx, b.wy).n - P.stock(a.wx, a.wy).n || a.id - b.id)[0] || sp; used.push(sp2.id);
   const v = person(town); atEdge(v, sp2); v.fishXp = 120;
+  const per = Math.max(3, Math.min(10, Math.round(P.stock(sp2.wx, sp2.wy).n / 6)));
   const yields = []; let casts = 0, empty = null;
-  for (let round = 0; round < 40 && !empty; round++) {
-    let n = 0; for (let k = 0; k < 10; k++) { const r = P.cast(v, sp2.wx, sp2.wy); casts++; if (r.ok) { n += r.took; if (v.carry) D.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true }); } if (r.empty) { empty = r; break; } }
+  for (let round = 0; round < 60 && !empty; round++) {
+    let n = 0; for (let k = 0; k < per; k++) { const r = P.cast(v, sp2.wx, sp2.wy); casts++; if (r.ok) { n += r.took; if (v.carry) D.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true }); } if (r.empty) { empty = r; break; } }
     yields.push(n);
   }
-  const ab = P.abundance(sp2.wx, sp2.wy);
+  // (empty by the game's own mark: below 5% of the ground, or fewer than two fish — in a small water the two fish come first, L-199)
+  const st2 = P.stock(sp2.wx, sp2.wy), ab = st2.ab;
   // (the question every fisher asks there — the people's, and the body's hands through the same door — says so)
   const offer = P.can(v, sp2.wx, sp2.wy, P.how(town.fac));
   const half = Math.max(1, Math.floor(yields.length / 2)); const sum = L => L.reduce((a, b) => a + b, 0);
   const falling = yields.length >= 3 && sum(yields.slice(-half)) < sum(yields.slice(0, half));
-  ok('p2 pescar demais esvazia', !!empty && ab < P.EMPTY && falling && offer.ok === false && /sem peixe/.test(offer.why) && !bad().length,
-    `${casts} lançamentos no mesmo pesqueiro: o que se pegou a cada 10 — ${yields.join(', ')}; ${empty ? `vazio ("${empty.why}")` : 'NÃO esvaziou'}, ${Math.round(ab * 100)}% do peixe; quem pergunta ali se pode pescar: ${offer.ok ? 'ainda pode' : `não (${offer.why})`}`);
+  ok('p2 pescar demais esvazia', !!empty && (ab < P.EMPTY || st2.n < 2) && falling && offer.ok === false && /sem peixe/.test(offer.why) && !bad().length,
+    `${casts} lançamentos no mesmo pesqueiro: o que se pegou a cada ${per} — ${yields.join(', ')}; ${empty ? `vazio ("${empty.why}")` : 'NÃO esvaziou'}, ${Math.round(ab * 100)}% do peixe (${st2.n.toFixed(1)} de ${st2.K.toFixed(0)}); quem pergunta ali se pode pescar: ${offer.ok ? 'ainda pode' : `não (${offer.why})`}`);
 }
 // ---------------- p2b: a small water fished down to one fish is «without fish»: no cast could bring anything up (a catch
 // takes at most half of what is there) — it stayed «with fish» at 8% and every cast came up empty (L-199)
