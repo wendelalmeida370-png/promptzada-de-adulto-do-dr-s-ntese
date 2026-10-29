@@ -2877,11 +2877,14 @@ float m3scale(float p) {
     const [pat, col] = inMat(w.mat || plan.shell.mat); const sg = w.outer && !roomsBoth(plan, w) ? sideIn(plan, w, l) : 0;
     // (the niches cut into it: a blind opening of the inner face, its recess as deep as the niche)
     const nich = sg ? plan.items.filter(it => it.niche && it.lv === w.lv).map(it => { const s0 = (it.x - w.a[0]) * tx + (it.z - w.a[1]) * tz, o0 = (it.x - w.a[0]) * nx + (it.z - w.a[1]) * nz; return Math.abs(o0) <= t / 2 + 0.02 && s0 > -0.01 && s0 < L + 0.01 ? { at: s0, w: it.w, h: it.h, sill: it.y || 0, d: it.d } : null; }).filter(Boolean) : [];
-    // (the face's spans: [from, to along it, foot, top] — round the openings)
-    const sp = []; let s = 0;
-    const gaps = holes.concat(nich).sort((p, q) => p.at - q.at);
-    for (const h of gaps) { const h0 = G.clamp(h.at - h.w / 2, 0, L), h1 = G.clamp(h.at + h.w / 2, 0, L); if (h0 > s) sp.push([s, h0, 0, H]); if (h.sill > 0) sp.push([h0, h1, 0, Math.min(H, h.sill)]); if (h.sill + h.h < H) sp.push([h0, h1, h.sill + h.h, H]); s = Math.max(s, h1); }
-    if (s < L) sp.push([s, L, 0, H]);
+    // (the face's spans: [from, to along it, foot, top] — round the openings, stretch by stretch between their edges: two over
+    // each other — the two rows of windows of a hall a storey high, the paço's — with the wall between them, each one open)
+    const sp = [];
+    const gaps = holes.concat(nich).map(h => ({ h0: G.clamp(h.at - h.w / 2, 0, L), h1: G.clamp(h.at + h.w / 2, 0, L), ya: h.sill || 0, yb: (h.sill || 0) + h.h }));
+    const edges = [...new Set([0, L].concat(...gaps.map(q => [q.h0, q.h1])))].sort((p, q) => p - q);
+    for (let i = 0; i + 1 < edges.length; i++) { const s0 = edges[i], s1 = edges[i + 1]; let y = 0;
+      for (const q of gaps.filter(q2 => q2.h0 <= s0 && q2.h1 >= s1).sort((p, q2) => p.ya - q2.ya)) { if (q.ya > y) sp.push([s0, s1, y, Math.min(H, q.ya)]); y = Math.max(y, q.yb); }
+      if (y < H) sp.push([s0, s1, y, H]); }
     K.as(pat, () => {
       if (!sg) { for (const [s0, s1, ya, yb] of sp) { if (s1 - s0 < 1e-3 || yb - ya < 1e-3) continue; const c = P((s0 + s1) / 2, ya, 0); K.box(c[0], c[1], c[2], s1 - s0, yb - ya, t, col, ry); }
         // (the floor through a partition's door: a board over the gap between the two rooms)
