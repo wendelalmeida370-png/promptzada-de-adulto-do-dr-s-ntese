@@ -136,11 +136,15 @@ const book = f => D.ledger().filter(f);
 open();
 let set = town();
 console.log(`(${WORLD}: ${set.name}, ${V.pop(set.id)} habitantes, ${people(set).length} com casa; dia ${S.day})`);
+// (an evening with no feast in the case's town: every town keeps its feast of the year, and a day of the world is a year —
+// the evening cases fell on Roma's, its grown ones at the feast instead of at home or in bed. The test's hand sets the town's
+// plan of the year as held for the day; the cases about a feast start their own, l10. T-xxx)
+const noFeast = st => { if (st) st.festPlan = { day: S.day, key: null, done: true }; };
 // (the night of l1 — the town at 0.86 —, for the cases that go on in it when l1 is not run)
 let nightReady = false;
-function night() { if (nightReady) return; open(); set = town(); S.time = 0.62; liveTo(0.86); nightReady = true; }
+function night() { if (nightReady) return; open(); set = town(); S.time = 0.62; noFeast(set); liveTo(0.86); nightReady = true; }
 if (want('l1', 'l1b')) {
-  S.time = 0.5; M.viver(0.1);
+  S.time = 0.5; noFeast(set); M.viver(0.1);
   const dw = doorWatch(); const first = new Map(); const was = new Map(); const energy = new Map();
   for (const v of S.villagers.values()) { was.set(v.id, !!v.sleeping); energy.set(v.id, v.energy); }
   // (the town looked at each hundredth of the day from 0.76 to 0.82 — the hours its grown ones go to bed —: at some look,
@@ -210,8 +214,10 @@ if (want('l4')) {
     if (!kept && (x[2] === 'sleep' || x[2] === 'lar' || x[2] === 'shelter' || x[2] === 'pray')) moved.push(`${v ? nm(v) : '#' + id}: ${x.join('/')} → ${y ? y.join('/') : 'sumiu'}`);
   }
   const lar = rt.diff.filter(d => d.includes('"lar"') || d.includes('"festas"'));
-  // the morning: each grown one asleep now gets up at their own hour (not before), and not all at once
-  const asleep = [...S.villagers.values()].filter(v => v.sleeping && v.age >= 16 && !isBody(v) && v.set === set.id);
+  // the morning: each grown one asleep now gets up at their own hour (not before), and not all at once — the grown ones
+  // asleep in every town: in the «cidade» of the generation 7, most of Roma's are of a secret society, and that night its
+  // meeting took them from their beds (secrets.js, the conclave), two left asleep at the save, T-xxx
+  const asleep = [...S.villagers.values()].filter(v => v.sleeping && v.age >= 16 && !isBody(v));
   const woke = new Map(); const wasA = new Map(asleep.map(v => [v.id, true]));
   liveTo(0.16, () => { for (const v of asleep) if (wasA.get(v.id) && !v.sleeping && !woke.has(v.id) && S.villagers.has(v.id)) woke.set(v.id, { t: S.time, wake: L.clock(v).wake, hunger: v.hunger, task: v.task ? v.task.type : '' }); });
   const ws = [...woke.values()];
@@ -247,18 +253,23 @@ if (want('l6')) {
 
 // ======================= l2: the night watch, and the house that waits =======================
 if (want('l2')) {
-  open(); set = town(); S.time = 0.62;
+  open(); set = town(); S.time = 0.62; noFeast(set);
   liveTo(0.734);
   // (a grown one awake at home in the evening at home, whose bed time is still a while away, and one of the house awake to
-  // go out on the watch)
-  let pair = null;
-  for (const b of [...S.villagers.values()].filter(o => builtHome(o) && !o.captive).sort((x, y) => x.id - y.id)) {
-    // (at the fire or talking — not over the pot or at the table: the cook's while is its own)
-    if (b.age < 16 || b.sleeping || b.inside !== b.home || !b.task || b.task.type !== 'lar' || !(b.task.what === 'descansar' || b.task.what === 'conversar') || L.clock(b).bed < S.time + 0.04) continue;
-    // (not of a secret society: its people go to its meetings by night — secrets.js, the conclave)
-    const a = [...S.villagers.values()].filter(o => o.home === b.home && o.id !== b.id && o.age >= 16 && o.age < 60 && !o.sleeping && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.secret && !isBody(o) && (o.id === b.partner || o.mother === b.id || o.father === b.id)).sort((x, y) => x.id - y.id)[0];
-    if (a) { pair = [a, b]; break; }
-  }
+  // go out on the watch — in this world or, when it has none, in the metropolis: in the «cidade» of the generation 7, most
+  // grown ones of Roma are of a secret society, and no pair was left at 17h36, T-xxx)
+  const findPair = () => {
+    for (const b of [...S.villagers.values()].filter(o => builtHome(o) && !o.captive).sort((x, y) => x.id - y.id)) {
+      // (at the fire or talking — not over the pot or at the table: the cook's while is its own)
+      if (b.age < 16 || b.sleeping || b.inside !== b.home || !b.task || b.task.type !== 'lar' || !(b.task.what === 'descansar' || b.task.what === 'conversar') || L.clock(b).bed < S.time + 0.04) continue;
+      // (not of a secret society: its people go to its meetings by night — secrets.js, the conclave)
+      const a = [...S.villagers.values()].filter(o => o.home === b.home && o.id !== b.id && o.age >= 16 && o.age < 60 && !o.sleeping && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.secret && !isBody(o) && (o.id === b.partner || o.mother === b.id || o.father === b.id)).sort((x, y) => x.id - y.id)[0];
+      if (a) return [a, b];
+    }
+    return null;
+  };
+  let pair = findPair();
+  if (!pair && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); set = town(); S.time = 0.62; noFeast(set); liveTo(0.734); pair = findPair(); }
   if (!pair) ok('l2 a vigia e a casa que espera', false, `ninguém acordado em casa às ${fmtT(S.time)} com alguém da casa para sair de vigia`);
   else {
     const [a, b] = pair; const h = S.buildings.get(b.home); const dw = doorWatch();
@@ -281,8 +292,10 @@ if (want('l2')) {
 if (want('l3')) {
   open(); set = town(); S.time = 0.3;
   // (one of the town out of the house by day, at the day's work — not of a secret society: its people are called to its
-  // errands at any hour, secrets.js)
-  const v = people(set).find(o => o.age >= 18 && o.age < 55 && !o.sleeping && o.inside !== o.home && !(o.sick > 0) && o.hp > 70 && !isBody(o) && !o.secret && o.task && o.task.pri < 2 && o.task.type !== 'sleep');
+  // errands at any hour, secrets.js —, looked for as the morning starts: the ready world is saved at midnight, and in the
+  // instant it opens nobody of Roma was out at work, T-xxx)
+  const pick3 = () => people(set).find(o => o.age >= 18 && o.age < 55 && !o.sleeping && o.inside !== o.home && !(o.sick > 0) && o.hp > 70 && !isBody(o) && !o.secret && o.task && o.task.pri < 2 && o.task.type !== 'sleep');
+  let v = pick3(); if (!v) live(20, () => !!(v = pick3()));
   if (!v) ok('l3 o doente de cama', false, 'nenhum adulto fora de casa, de dia, para adoecer');
   else {
     const h = builtHome(v); const ref = 'h:' + h.id;
@@ -352,9 +365,15 @@ if (want('l7')) {
 if (want('l12')) {
   open(); set = town(); S.time = 0.28;
   const pick = (not) => people(set).find(o => o.age >= 18 && o.age < 55 && !o.sleeping && o.inside !== o.home && !(o.sick > 0) && o.hp > 70 && !isBody(o) && !o.secret && o.task && o.task.pri < 2 && o.task.type !== 'sleep' && !not.includes(o.id) && !o.widow);
-  const w = pick([]);
   // (the widowed: one whose partner lives in the same house — the partner dies, the test's hand)
-  const p0 = people(set).find(o => o.age >= 20 && o.age < 60 && o.partner && S.villagers.get(o.partner) && S.villagers.get(o.partner).home === o.home && !o.sleeping && !isBody(o) && !o.secret && o.id !== (w && w.id) && o.partner !== (w && w.id) && o.task && o.task.pri < 2);
+  const pair = w => people(set).find(o => o.age >= 20 && o.age < 60 && o.partner && S.villagers.get(o.partner) && S.villagers.get(o.partner).home === o.home && !o.sleeping && !isBody(o) && !o.secret && o.id !== (w && w.id) && o.partner !== (w && w.id) && o.task && o.task.pri < 2);
+  // (both looked for as the morning starts — the ready world is saved at midnight, as l3 —, in a town of the world that has
+  // both, the biggest first, or in the metropolis when this world has none: in the «cidade» of the generation 7 most of
+  // Roma's grown ones are of a secret society, and no couple of the world was left, T-xxx)
+  let w = null, p0 = null;
+  const both = () => { const towns = [...S.settlements.values()].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id); for (const st of towns) { set = st; w = pick([]); p0 = pair(w); if (w && p0) return true; } set = towns[0]; return false; };
+  if (!both()) live(20, () => both());
+  if ((!w || !p0) && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); S.time = 0.28; if (!both()) live(20, () => both()); }
   if (!w || !p0) ok('l12 o ferido e o enlutado', false, `${w ? '' : 'nenhum adulto para ferir; '}${p0 ? '' : 'nenhum casal na mesma casa'}`);
   else {
     const dw = doorWatch(); const hw = builtHome(w); const hp0 = 30; w.hp = hp0; // (the test's hand: a bad wound — a fall, a beast)
@@ -445,17 +464,18 @@ if (want('l14')) {
   const afterMoves = () => { live(2 * S.settlements.size + 4); S.time = 0.12; };
   open(); afterMoves();
   // (a house of the world with someone of 62 or more — whose working day weighs less than the minding — and little ones of
-  // three to six living in it; one of the old minds them. Chosen after the day's moves of house — a house too full for its
+  // three to six living in it, under six and a half: the case lasts half a year of their age, and one chosen at 6,99 turned
+  // seven at its start — no longer a little one to mind — and the case counted his day out, T-xxx; one of the old minds them. Chosen after the day's moves of house — a house too full for its
   // beds splits once a day, act-casa.js: the old one may move out, and the little ones are no longer hers —, in a town at
   // peace: a town under threat calls its grown ones to the fight, and the case would watch a battle)
   const calm = h => !(G.War && G.War.threat && G.War.threat(h.set));
-  const findHouse = () => { const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive || !calm(h)) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v)) e.old.push(v); if (v.age >= 3 && v.age < 7) e.kids.push(v); houses.set(h.id, e); } return [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0]; };
+  const findHouse = () => { const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive || !calm(h)) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v)) e.old.push(v); if (v.age >= 3 && v.age < 6.5) e.kids.push(v); houses.set(h.id, e); } return [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0]; };
   // (the ready worlds may have none after the day's moves — a full house splits, and the old one is often who leaves —: then
   // the test's hand makes one of the house old for the case, a grown one who is not the little ones' mother or father, nor a
   // warrior — the age back at the end —, and the mechanism is what is proven: the old one minds them, they come home and stay)
   let aged = null;
   const ageOne = () => {
-    const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive || !calm(h)) continue; const x = houses.get(h.id) || { h, old: [], kids: [], grown: [], n: 0 }; x.n++; if (v.age >= 3 && v.age < 7) x.kids.push(v); else if (v.age >= 25 && v.age < 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v) && !v.secret && v.role !== 'guerreiro' && !v.jail && !v.aboard) x.grown.push(v); houses.set(h.id, x); }
+    const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive || !calm(h)) continue; const x = houses.get(h.id) || { h, old: [], kids: [], grown: [], n: 0 }; x.n++; if (v.age >= 3 && v.age < 6.5) x.kids.push(v); else if (v.age >= 25 && v.age < 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v) && !v.secret && v.role !== 'guerreiro' && !v.jail && !v.aboard) x.grown.push(v); houses.set(h.id, x); }
     // (one who stays in the house through the case: a single grown one of a house too full is sent to one with room every
     // few seconds — village.js assignHousing —, and the case would watch someone else's house. A partner in the same house
     // keeps one there; so does a house with a bed to spare, even for a baby born in the case)
