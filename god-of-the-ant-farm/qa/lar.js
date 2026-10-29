@@ -399,13 +399,25 @@ if (want('l12')) {
 if (want('l13')) {
   open(); set = town(); S.time = 0.6; liveTo(0.7);
   const TL = G.Space.TILE;
-  // (the body: a grown one of a house of four or more whose plan is made, out of it now — at the day's end, coming home)
+  // (a point the body stands on indoors by a piece of one of these uses of a house's plan — the first piece that has one —, and
+  // its storey; null where the plan has none)
+  const standIn = (b, uses) => { for (const u of uses) for (const q of G.Interiors.slots(b, u)) { const x = b.x * TL + q.spot.x, z = b.y * TL + q.spot.z; for (let r = 0; r <= 1.2; r += 0.25) for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; const ins = G.Space.indoor(x + Math.cos(a) * r, z + Math.sin(a) * r, q.item.lv, b.id); if (ins && ins.b === b && ins.shell && ins.walk) return [(x + Math.cos(a) * r) / TL, (z + Math.sin(a) * r) / TL, ins.lv]; if (!r) break; } } return null; };
+  const TABLE = ['comer', 'sentar', 'aquecer'], FIRE = ['cozinhar', 'assar', 'aquecer'];
+  // (the body: a grown one of a house of four or more whose plan is made — its beds, and the table and the fire the case eats
+  // and cooks at —, out of it now — at the day's end, coming home —, in the biggest town that has one, or in the metropolis
+  // when this world has none: in the «cidade» of the generation 7, seven of Roma's twelve grown ones are of a secret society,
+  // and at 0,7 the other five were at home or asleep; and in the next town the house was a hut with no table, seat nor hearth
+  // in its plan — as most huts of the world: the family eats on the floor, D-085 —, and the body was never let in, T-277)
   let v = null, h = null;
-  for (const o of people(set)) {
-    if (o.age < 18 || o.age >= 60 || o.sleeping || isBody(o) || o.secret || o.inside === o.home || !G.Possess.can(o).ok) continue;
-    const b = builtHome(o); if ([...S.villagers.values()].filter(q => q.home === b.id).length < 4 || !G.Space.planNow(b) || !G.Interiors.slots(b, 'deitar').length) continue;
-    v = o; h = b; break;
-  }
+  const find13 = () => {
+    for (const st of [...S.settlements.values()].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)) for (const o of people(st)) {
+      if (o.age < 18 || o.age >= 60 || o.sleeping || isBody(o) || o.secret || o.inside === o.home || !G.Possess.can(o).ok) continue;
+      const b = builtHome(o); if ([...S.villagers.values()].filter(q => q.home === b.id).length < 4 || !G.Space.planNow(b) || !G.Interiors.slots(b, 'deitar').length || !standIn(b, TABLE) || !standIn(b, FIRE)) continue;
+      set = st; v = o; h = b; return true;
+    }
+    return false;
+  };
+  if (!find13() && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); S.time = 0.6; liveTo(0.7); find13(); }
   if (!v) ok('l13 a casa contínua', false, 'nenhum adulto fora de uma casa de quatro com planta e cama');
   else {
     const ref = 'h:' + h.id; const famIds = [...S.villagers.values()].filter(o => o.home === h.id && o.id !== v.id).map(o => o.id);
@@ -428,8 +440,7 @@ if (want('l13')) {
     const f1 = famOf(); put([d0[0], d0[1]]); const f2 = famOf(); live(0.1, () => { dw.step(); });
     say('perto', f1 === f2 && panOK(), f1 === f2 ? 'a família igual ao chegar à porta' : `a família mudou: ${f1} → ${f2}`);
     // (3) in: the body walks in (the 3D's controller; the test's hand here), eats at the table and cooks, by the ledger
-    const stand = uses => { for (const u of uses) for (const q of G.Interiors.slots(h, u)) { const x = h.x * TL + q.spot.x, z = h.y * TL + q.spot.z; for (let r = 0; r <= 1.2; r += 0.25) for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; const ins = G.Space.indoor(x + Math.cos(a) * r, z + Math.sin(a) * r, q.item.lv, h.id); if (ins && ins.b === h && ins.shell && ins.walk) return [(x + Math.cos(a) * r) / TL, (z + Math.sin(a) * r) / TL, ins.lv]; if (!r) break; } } return null; };
-    const table = stand(['comer', 'sentar', 'aquecer']), fire = stand(['cozinhar', 'assar', 'aquecer']);
+    const table = standIn(h, TABLE), fire = standIn(h, FIRE);
     D.make(ref, 'food', 3, { code: 'teste', part: true, floor: true }); v.hunger = 50;
     const inside = p => { v.inside = h.id; v.x = p[0]; v.y = p[1]; G.Possess.setLevel(p[2]); };
     const f3 = famOf(); if (table) inside(table); G.debug.step(0.1); dw.step(); const f4 = famOf(); live(0.2, () => { dw.step(); });
@@ -567,8 +578,14 @@ if (want('l15')) {
   const others = (b, m) => [...S.villagers.values()].filter(o => o.id !== m.id && o.id !== b.id && o.age >= 14 && near3(b, o));
   const who = id => { const o = S.villagers.get(id); return o ? o.name : id ? '#' + id : 'ninguém'; };
   const notes = []; let good = true; const fail = m => { good = false; notes.push(m.toUpperCase()); };
-  // (step by step: the biggest jump of the baby in one step, and the arms it went through)
-  const track = (id, sec) => { let b = S.villagers.get(id); let px = b.x, py = b.y, max = 0; const arms = [b.carrier || 0]; live(sec, () => { b = S.villagers.get(id); if (!b) return true; const d = Math.hypot(b.x - px, b.y - py); if (d > max) max = d; px = b.x; py = b.y; if (arms[arms.length - 1] !== (b.carrier || 0)) arms.push(b.carrier || 0); }); return { max, arms }; };
+  // (step by step: the biggest jump of the baby in one step out of doors, the arms it went through and — given a house — the
+  // steps it was out of it, or in arms out of it. Indoors the world keeps no point of the house for whoever is in it: one is
+  // where one came in from, up to three tiles from the door (L-231), and a save lets the baby out at the door until its arms
+  // take it again (the save of the home keeps the grown ones' points, the baby follows its arms: D-073) — in the hut#2219, 1×1,
+  // the mother by one corner of it and the father by the other, each a tile and a half from its middle, where they came in:
+  // 2,01 apart, in the same house; and the door where the save left the baby, as far from the father, T-278. In a house, the
+  // arms of the house are the measure of «where it is» (D-074), not the points)
+  const track = (id, sec, hid) => { let b = S.villagers.get(id); let px = b.x, py = b.y, pin = b.inside, max = 0, outH = 0; const arms = [b.carrier || 0]; live(sec, () => { b = S.villagers.get(id); if (!b) return true; if (!b.inside && !pin) { const d = Math.hypot(b.x - px, b.y - py); if (d > max) max = d; } px = b.x; py = b.y; pin = b.inside; if (hid) { const c = S.villagers.get(b.carrier); if (b.inside !== hid || !c || c.inside !== hid) outH++; } if (arms[arms.length - 1] !== (b.carrier || 0)) arms.push(b.carrier || 0); }); return { max, arms, outH }; };
   // (a) at night in the house: the mother in a fury — the father or one of the house takes the baby, there; a save in the
   // middle keeps it in the same arms; the fury over, the mother or the father has it
   liveTo(0.86);
@@ -576,23 +593,27 @@ if (want('l15')) {
   if (!A) fail('(a) nenhuma casa à noite com a mãe, o bebê e outro da casa dentro');
   else {
     const m = S.villagers.get(A.mother), h = builtHome(m); m.fury = 6;
-    const r1 = track(A.id, 4);
+    const r1 = track(A.id, 4, h.id);
     const before = S.villagers.get(A.id).carrier; M.salvarCarregar(); S = G.S; const after = S.villagers.get(A.id).carrier;
     if (before !== after) fail(`(a) o save mudou o colo (${who(before)} → ${who(after)})`);
-    const r2_ = track(A.id, 8);
+    const r2_ = track(A.id, 8, h.id);
     const b = S.villagers.get(A.id); const arms = r1.arms.concat(r2_.arms);
     const held = arms.find(id => id && id !== m.id) || 0; const o = S.villagers.get(held);
     if (!held) fail('(a) com a mãe em fúria, o bebê ficou nos braços dela');
     else if (!o || o.inside !== h.id) fail(`(a) o bebê foi para ${who(held)}, fora da casa`);
     if (arms.includes(0)) fail('(a) o bebê ficou sem colo no meio');
     if (b.inside !== h.id) fail(`(a) o bebê saiu de casa (dentro de ${b.inside})`);
-    const jump = Math.max(r1.max, r2_.max); if (jump > h.w + h.h) fail(`(a) o bebê pulou ${r2(jump)} casas num passo`);
+    const outH = r1.outH + r2_.outH; if (outH) fail(`(a) o bebê esteve ${outH} passo(s) fora de casa ou num colo fora dela`);
     if (b.carrier !== m.id && b.carrier !== b.father) fail(`(a) passada a fúria, o bebê está com ${who(b.carrier)}`);
     notes.push(`(a) ${h.type}#${h.id} à noite: a mãe ${m.name} em fúria → ${who(held)}, dentro de casa; o save o deixou com ${who(after)}; passada a fúria, com ${who(b.carrier)}${b.carrier === m.id ? ' (a mãe)' : b.carrier === b.father ? ' (o pai)' : ''}`);
   }
-  // (b) by day in the street, someone near: the mother in a fury — the baby goes to arms within reach, no jump
+  // (b) by day in the street, someone near: the mother in a fury — the baby goes to arms within reach, no jump. Looked for from
+  // the morning on, the first moment it happens, or in the metropolis: in the «cidade» of the generation 7, at 7h12 only two
+  // babies of the world were in their mothers' arms in the street, nobody within three tiles of either, T-278
+  const findB = () => babies().find(b => { const m = S.villagers.get(b.mother); return !!m && !m.inside && !b.inside && fit(m) && others(b, m).some(fit); });
   open(); liveTo(0.3);
-  const B = babies().find(b => { const m = S.villagers.get(b.mother); return !!m && !m.inside && !b.inside && fit(m) && others(b, m).some(fit); });
+  let B = findB(); if (!B) live(60, () => !!(B = findB()));
+  if (!B && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); liveTo(0.3); B = findB(); if (!B) live(60, () => !!(B = findB())); }
   if (!B) fail('(b) nenhum bebê de dia no colo da mãe, na rua, com alguém por perto');
   else {
     const m = S.villagers.get(B.mother); m.fury = 4;
@@ -877,8 +898,10 @@ if (want('l17')) {
     {
       const cap17 = G.BDEF[hh.type].housing;
       const pool = [...S.villagers.values()].filter(v => v.set === set.id && v.home && v.home !== hh.id && v.age >= 18 && free(v)).sort((a, c) => a.id - c.id);
+      // (the young single one of the town, and another grown one — single or not — made old by the test's hand: in the «cidade»
+      // of the generation 7, Roma had one single grown one outside the house, and the case asked for two, T-279)
       const singles = pool.filter(v => !v.partner && v.age < 62);
-      const O = singles[0] || null, Yn = singles.find(v => v !== O) || null;
+      const Yn = singles[0] || null, O = pool.find(v => v !== Yn) || null;
       const other = O && [...S.buildings.values()].find(b => b.set === set.id && b.id !== hh.id && b.id !== O.home && b.built && housing(b) && G.BDEF[b.type].housing > res(b).length);
       if (O && Yn && other) {
         const back = [[O, O.home], [Yn, Yn.home]]; const a0 = O.age;
@@ -971,7 +994,10 @@ if (want('l11', 'l11b')) {
   // one's own town, villagers.js —, in this world or, with too few, in the metropolis)
   const nearest = v => { let best = null, bd = 1e9; for (const b of S.buildings.values()) if (b.built && (b.type === 'temple' || b.type === 'monument') && b.set === v.set) { const d = G.dist2(v.x, v.y, b.x, b.y); if (d < bd) { bd = d; best = b; } } return best; };
   const placesOf = b => { const p = G.Interiors.plan(b); return p && p.ok ? p.items.reduce((n, it) => n + it.spots.filter(sp => sp.use === 'rezar' || sp.use === 'sentar').length, 0) : 0; };
-  const faithful = b => [...S.villagers.values()].filter(v => v.set === b.set && builtHome(v) && !v.captive && v.age >= 16 && v.age < 70 && !v.sleeping && !isBody(v) && v.role !== 'sacerdote' && !v.aboard && !v.jail && !v.ug && (!v.task || v.task.pri < 2) && nearest(v) === b);
+  // (the faithful the day will not call away on their way in and at their prayer: a meal comes at a hunger of 60, the bed at a
+  // strength of 15, and either takes one from the prayer, as it should; and not of the army, which calls its own to drill and
+  // to its assemblies, T-276)
+  const faithful = b => [...S.villagers.values()].filter(v => v.set === b.set && builtHome(v) && !v.captive && v.age >= 16 && v.age < 70 && !v.sleeping && !isBody(v) && v.role !== 'sacerdote' && v.role !== 'guerreiro' && v.hunger < 45 && v.energy > 35 && !v.aboard && !v.jail && !v.ug && (!v.task || v.task.pri < 2) && nearest(v) === b);
   const pick = () => { let best = null, bn = -1; for (const b of [...S.buildings.values()].filter(q => q.built && q.type === 'temple').sort((x, y) => x.id - y.id)) { const n = placesOf(b) ? faithful(b).length : -1; if (n > bn) { bn = n; best = b; } } return best && bn >= 3 ? best : null; };
   open(); S.time = 0.3; let tp = pick();
   if (!tp && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); S.time = 0.3; tp = pick(); }
@@ -980,7 +1006,22 @@ if (want('l11', 'l11b')) {
   if (!tp || !places) ok('l11 a reza dentro do templo', false, 'nenhum templo com lugar de rezar na planta e três fiéis para quem é o mais perto');
   else {
     const who = faithful(tp).sort((a, b) => G.dist2(a.x, a.y, tp.x, tp.y) - G.dist2(b.x, b.y, tp.x, tp.y)).slice(0, places + 3);
-    for (const v of who) G.Vg.setTask(v, { type: 'pray', pri: 1.05 }); // (the test's hand: the faithful called to prayer — over the day's work, 1)
+    // (the test's hand: the faithful at the temple's square when called, a few steps from its door. The temples of the form
+    // have two places of prayer, and the two the town sent in to them came from across it — 10 tiles and 23 —: each knelt
+    // alone, or left on the way — a warrior for a meal and the drill, a farmer for the army's assembly —, the others already
+    // in the rows outside: never two inside at once, T-276)
+    const [fx, fy] = V.frontTile(tp); const used = [];
+    for (const v of who) {
+      const x0 = v.x, y0 = v.y, in0 = v.inside; let at = null;
+      for (let r = 1.5; r <= 4.5 && !at; r += 0.5) for (let k = 0; k < 16 && !at; k++) {
+        const a = k / 16 * Math.PI * 2, x = fx + Math.cos(a) * r, y = fy + Math.sin(a) * r;
+        if (!W.inb(x, y) || !W.walkableXY(x, y) || used.some(p => G.dist(p[0], p[1], x, y) < 0.8)) continue;
+        // (a point from which this temple is still the nearest one — the prayer goes to the nearest temple or monument)
+        v.x = x; v.y = y; v.inside = 0; if (W.reaches(v, fx, fy) && nearest(v) === tp) at = [x, y];
+      }
+      if (at) { used.push(at); v.path = null; v.moving = false; } else { v.x = x0; v.y = y0; v.inside = in0; }
+    }
+    for (const v of who) G.Vg.setTask(v, { type: 'pray', pri: 1.05 }); // (the faithful called to prayer — over the day's work, 1)
     const dw = doorWatch(); let most = 0, over = 0, inside = 0, saved = false, kept = null; const prayed = new Set();
     live(70, () => {
       dw.step();
@@ -994,7 +1035,7 @@ if (want('l11', 'l11b')) {
     const still = who.filter(v => S.villagers.has(v.id) && v.inside === tp.id).length;
     const wrongIn = dw.wrong.filter(w => w.includes('#' + tp.id));
     ok('l11 a reza dentro do templo', most >= 2 && !over && saved && kept === inside && !left && !still && !wrongIn.length,
-      `${who.length} fiéis de ${set.name} (${V.pop(set.id)} habitantes, ${people(set).filter(v => v.age >= 16).length} adultos com casa) chamados ao templo #${tp.id} (${places} lugares de rezar na planta): até ${most} rezando dentro ao mesmo tempo${over ? `, ACIMA DOS LUGARES em ${over} passos` : ''}, ${prayed.size} rezaram; o save no meio com ${inside} dentro: ${kept === inside ? 'seguiram dentro, rezando' : `SÓ ${kept} SEGUIRAM`}; no fim ${left ? `${left} AINDA REZANDO` : 'todos terminaram'}${still ? `, ${still} AINDA DENTRO` : ''}${wrongIn.length ? ' — ' + wrongIn.slice(0, 2).join(' · ') : ''}`);
+      `${who.length} fiéis de ${set.name} (${V.pop(set.id)} habitantes, ${people(set).filter(v => v.age >= 16).length} adultos com casa) chamados ao templo #${tp.id} (${places} lugares de rezar na planta): até ${most} rezando dentro ao mesmo tempo${over ? `, ACIMA DOS LUGARES em ${over} passos` : ''}, ${prayed.size} rezaram; ${saved ? `o save no meio com ${inside} dentro: ${kept === inside ? 'seguiram dentro, rezando' : `SÓ ${kept} SEGUIRAM`}` : 'NENHUM SAVE no meio (nunca dois rezando dentro)'}; no fim ${left ? `${left} AINDA REZANDO` : 'todos terminaram'}${still ? `, ${still} AINDA DENTRO` : ''}${wrongIn.length ? ' — ' + wrongIn.slice(0, 2).join(' · ') : ''}`);
     const rep11b = !!(G.Interiors && G.Interiors.placeRule);
     ok('l11b quem reza dentro está num lugar de rezar', rep11b && !praying.length, !rep11b ? 'sem o repartidor dos lugares do P4 (In.placeRule): ainda não há lugar de rezar a dar' : praying.length ? `${praying.length} rezando fora das esteiras, dos bancos e do altar (o repartidor do P4 com a regra do templo): ${praying.slice(0, 2).join(' · ')}` : 'todos nas esteiras, nos bancos ou no altar da planta');
   }
