@@ -712,6 +712,15 @@
     for (const id in A.DEFS) { const def = A.DEFS[id]; if (!def.offers) continue; try { for (const o of def.offers(v, x, y, r || 2.5) || []) { o.def = id; out.push(o); } } catch (e) { oops('ofertas de ' + id, e); } }
     return out;
   };
+  // (the door of a store for the body's hands: the one the world's people go in by — the plan's, when it has one, where the
+  // body's marker leads — or the front corner the trades always stood at, whichever the body is by, within reach; null when
+  // by neither. With the plan's door on the far side of a harbour warehouse, the body led to it could not put its crate in:
+  // L-388)
+  A.byDoor = function (b, x, y, r) {
+    const d = G.Vg.door(b), f = G.Village.frontTile(b); const dd = G.dist(x, y, d[0], d[1]), df = G.dist(x, y, f[0], f[1]);
+    const [p, q, dp, dq] = dd <= df ? [d, f, dd, df] : [f, d, df, dd];
+    return dp < r + 1 ? p : dq < r + 1 ? q : null;
+  };
   const hands = new Map(); let handN = 0;
   G.worldHooks.push(() => { hands.clear(); handN = 0; });
   A.begin = function (v, offer) {

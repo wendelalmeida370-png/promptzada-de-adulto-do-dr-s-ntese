@@ -533,7 +533,7 @@
         if (op.def !== 'descarga' || !live(op)) continue;
         const dock = S.buildings.get(op.at); const dest = P.destOf(op);
         if (c && c.op === op.id) {
-          if (dest) { const [fx, fy] = G.Village.frontTile(dest); if (G.dist(x, y, fx, fy) < r + 1) out.push({ id: 'porto.depositar:' + op.id, act: 'depositar', op: op.id, label: `Guardar a caixa de ${E.name(c.k)} n${G.gen(G.Village.buildName(dest)) === 'a' ? 'a' : 'o'} ${G.Village.buildName(dest).toLowerCase()}`, at: [fx, fy], ref: op.to, anim: 'pousar', hands: c.pair ? 2 : 1 }); }
+          if (dest) { const at = A.byDoor(dest, x, y, r); if (at) out.push({ id: 'porto.depositar:' + op.id, act: 'depositar', op: op.id, label: `Guardar a caixa de ${E.name(c.k)} n${G.gen(G.Village.buildName(dest)) === 'a' ? 'a' : 'o'} ${G.Village.buildName(dest).toLowerCase()}`, at, ref: op.to, anim: 'pousar', hands: c.pair ? 2 : 1 }); }
           out.push({ id: 'porto.pousar:' + op.id, act: 'pousar', op: op.id, label: 'Pôr a caixa no chão', at: [v.x, v.y], ref: 'v:' + v.id, anim: 'pousar', hands: 1 });
           continue;
         }

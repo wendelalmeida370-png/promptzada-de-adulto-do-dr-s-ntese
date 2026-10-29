@@ -359,12 +359,12 @@
       if (!v || !K.need(v)) return [];
       // (at the people's store: the treasury of the people, where houses are paid)
       const d = G.Village.nearestDropoff(x, y, v.set); if (!d) return [];
-      const [fx, fy] = G.Village.frontTile(d); if (G.dist(x, y, fx, fy) > r + 1) return [];
+      const at = G.Act.byDoor(d, x, y, r); if (!at) return [];
       const c = K.can(v); const set = G.S.settlements.get(v.set);
       const label = !coinPeople(set) ? 'Pedir ao povo uma casa para a família'
         : c.lease ? `Alugar a casa de ${K.landlord(c.lease).name} (${c.rent} moedas ao ano)`
           : c.free ? `Comprar a casa vazia do povo (${Math.ceil(c.price)} moedas)` : `Pagar uma casa para a família (uns ${Math.ceil(c.price || 0)} moedas)`;
-      return [{ id: 'casa.encomendar:' + v.id, act: 'encomendar', label, at: [fx, fy], anim: 'pagar', hands: 1, ok: c.ok, why: c.ok ? '' : c.why }];
+      return [{ id: 'casa.encomendar:' + v.id, act: 'encomendar', label, at, anim: 'pagar', hands: 1, ok: c.ok, why: c.ok ? '' : c.why }];
     },
     acts: {
       encomendar: {
