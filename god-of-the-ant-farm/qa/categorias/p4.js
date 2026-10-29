@@ -47,9 +47,9 @@ module.exports = {
       quem: 'todos os moradores da cidade',
       sistemas: ['G.Life', 'G.Village', 'G.Possess', 'G.Space'],
       atividades: [
-        { id: 'fogo', o: 'o balde do poço contra o fogo', essencial: true, tipos: ['well'], tarefa: 'fire', resultado: 'o fogo perto de um poço apaga mais depressa', condicao: 'fogo a menos de 14 casas', feito: true, provas: [] },
+        { id: 'fogo', o: 'o balde do poço contra o fogo', essencial: true, tipos: ['well'], tarefa: 'fire', resultado: 'o fogo perto de um poço apaga mais depressa', condicao: 'fogo a menos de 14 casas', feito: true, provas: ['qa/cidade-obras.js'] },
         { id: 'juntar', o: 'juntar-se na praça: conversar, ouvir quem fala, a festa', essencial: true, tipos: ['praca'], dono: 'P2', pecas: ['fonte', 'banco', 'tribuna'], usos: ['conversar', 'ouvir', 'falar'], resultado: 'a conversa, o discurso e a festa acontecem ali', condicao: 'o dia da cidade', feito: false, provas: ['qa/biblioteca-praca.js'] },
-        { id: 'entregar', o: 'entregar a carga na fogueira da aldeia que ainda não tem armazém', essencial: true, tipos: ['campfire'], tarefa: 'deliver', recursos: ['wood', 'food', 'stone'], resultado: 'o estoque do povo cresce', condicao: 'a aldeia sem armazém', feito: true, provas: [] },
+        { id: 'entregar', o: 'entregar a carga na fogueira da aldeia que ainda não tem armazém', essencial: true, tipos: ['campfire'], tarefa: 'deliver', recursos: ['wood', 'food', 'stone'], resultado: 'o estoque do povo cresce', condicao: 'a aldeia sem armazém', feito: true, provas: ['qa/cidade-obras.js'] },
         { id: 'pisar', o: 'o corpo anda e pisa onde a obra deixa: a praça, a borda do poço, os escombros da ruína', tipos: ['praca', 'well', 'ruin', 'aqueduto'], corpo: 'porta', resultado: 'nenhum (é o chão)', condicao: 'sempre', feito: 'parcial', provas: ['qa/encarna.js'] },
         { id: 'beber-poco', o: 'o corpo bebe no poço (hoje só no rio)', tipos: ['well'], corpo: 'agua', feito: false, provas: [] },
       ],
