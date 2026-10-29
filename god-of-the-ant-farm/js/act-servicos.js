@@ -242,10 +242,12 @@
       const n = Math.floor(Math.min(3 - wood, D.free('f:' + f.id, 'wood') - SPARE, D.room('v:' + v.id, 'wood', { to: ref })) + EPS);
       if (n >= 1) {
         // (the wood is his from the step he sets out: held in the people's store by an operation of the world — the works do not
-        // take what is held — until it is in his hands; his errand cut, the hold goes, L-400)
+        // take what is held — until it is in his hands; his errand cut, the hold goes, L-400. The fire of the baths is one
+        // chore, feeding it and fetching its wood, at the furnace's priority: at 1 the house's water — 1,05 — took the stoker
+        // on her way to the store, the hold went, and the works took the wood, L-407)
         const lop = G.inSim ? A.start('lenhaTermas', { at: b.id, set: b.set, fac: f.id, from: 'f:' + f.id, to: ref, by: v.id, why: 'a lenha da fornalha', goods: { wood: n } }) : null;
         if (lop && !D.reserve('f:' + f.id, 'wood', n, lop.id)) { A.end(lop, 'cancel', 'sem lenha'); return null; }
-        return H.setTask(v, { type: 'lenhaTermas', id: b.id, n, pri: 1, st: 0, hold: lop ? lop.id : 0 });
+        return H.setTask(v, { type: 'lenhaTermas', id: b.id, n, pri: 1.05, st: 0, hold: lop ? lop.id : 0 });
       }
     }
     if (isOpen) { A.join(op, v, 'foguista'); return H.setTask(v, { type: 'fornalha', id: b.id, op: op.id, pri: 1, st: 0, idle: 1 }); }
