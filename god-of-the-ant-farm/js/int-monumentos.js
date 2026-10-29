@@ -24,7 +24,7 @@
   // steps before its door (Space) — where the floor is a step or more over its foot, as the Egyptian granary's base up its flight;
   // lower — a pavement, a garden's lawn, a landing, a slab of a hand or two —, the ground's own: where the lot falls away to the
   // street the steps before the way in come down to it, as before a house's door (on a solid base the feet met a wall of the
-  // slope's height there, up to 1.6 m in the world map)
+  // slope's height there, up to 1.6 m in the world map: L-390)
   const openBase = y => (y >= In.BODY.step ? 'macica' : 'chao');
   // (what stands solid on the form's ground — its walls, its stage, its columns, its trees, a pool's rim — a piece of no use at
   // each foot, the biggest first: where a foot meets one already laid — two walls at a corner, a rim round a pool's floor, the

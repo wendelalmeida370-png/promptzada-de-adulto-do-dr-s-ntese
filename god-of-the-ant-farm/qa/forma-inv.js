@@ -23,7 +23,7 @@
     // ---- the way in from the street: where the street before a building's way in, a hand out of its lot on the way's line, is
     // more than a body's step below the form's ground (the plinth's top: where its flight or its floor begins), the steps Space
     // reckons up to it — before the door of a ground on its own base, before the foot of the form's flight up a solid one —;
-    // none, the feet meet a wall of the slope's height (a lot falling away to the street; the ground can change under it)
+    // none, the feet meet a wall of the slope's height (a lot falling away to the street; the ground can change under it: L-390)
     const Sp = G.Space; if (!Sp || !Sp.entryFits) return;
     const all = []; for (const b of s.buildings.values()) if (b.built && b.type !== 'ruin' && b.ip && /^forma\./.test(b.ip.f)) all.push(b);
     const TL = Sp.TILE;

@@ -121,7 +121,7 @@ M.pronto(KEY); In.uncache();
 // ---------------------------------------------------------------- 8. the steps before every way in
 // (where the street before a building's way in is more than a body's step below its floor — a lot falling away to it —, Space
 // reckons the steps up: before the door of a ground on its own base, before the foot of the form's flight up a solid one;
-// a way in with none, the feet would meet a wall of the slope's height)
+// a way in with none, the feet would meet a wall of the slope's height: L-390)
 {
   const out = []; let n = 0, low = 0; const TL = Sp.TILE;
   for (const b of formed()) {

@@ -185,7 +185,7 @@ const B3 = G.Build3D; const placed = [];
       if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
       if (ins && !ins.walk && ins.door < 0 && stop === null) stop = z;
       if (edges.some(e => Math.abs(z - e) < 0.03)) continue;
-      if (!B && ((ins && !ins.shell) || (!ins && Sp.stepTop(X, Z) > -Infinity))) continue; n++; // (out of an open shell — the lake's —: the steps before its way in, Space's as a house's (L-163), not the form's)
+      if (!B && ((ins && !ins.shell) || (!ins && Sp.stepTop(X, Z) > -Infinity))) continue; n++; // (out of an open shell — the lake's —: the steps before its way in, Space's as a house's (L-163, L-390), not the form's)
       const want = pl.hi + top(u, z) + (z < L ? Sp.FLOOR_UP : 0); const d = foot - want; if (Math.abs(d) > Math.abs(worst)) { worst = d; at = z; }
       if (d < -0.05) fell++;
     }
@@ -320,7 +320,7 @@ const KEEP = ['banca', 'baia', 'tulha'], USES = { banca: ['vender', 'comprar'], 
       if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
       if (ins && !ins.walk && ins.door < 0 && stop === null) stop = z;
       if (edges.some(e => Math.abs(z - e) < 0.03)) continue;
-      if ((ins && !ins.shell) || (!ins && Sp.stepTop(X, Z) > -Infinity)) continue; n++; // (on the steps before a way in, Space's: on the lot out of the shell, or in the street)
+      if ((ins && !ins.shell) || (!ins && Sp.stepTop(X, Z) > -Infinity)) continue; n++; // (on the steps before a way in, Space's: on the lot out of the shell, or in the street — L-390)
       const d = foot - (pl.hi + top(u, z) + (z < L ? Sp.FLOOR_UP : 0)); if (Math.abs(d) > Math.abs(worst)) { worst = d; wz = z; }
       if (d < -0.05) fell++;
     }
