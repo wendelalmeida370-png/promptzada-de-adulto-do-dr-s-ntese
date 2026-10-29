@@ -16,8 +16,11 @@ const story = id => G.S.saga.stories.find(s => s.id === id);
 const settled = s => s.st !== 'ativa' || !!s.data.waitHeir || G.S.villagers.has(s.protag);
 const how = s => s.st !== 'ativa' ? `acabou (${s.end ? s.end.k : '?'})` : s.data.waitHeir ? 'à espera de herdeiro' : `segue com #${s.protag}`;
 const live = () => G.S.saga.stories.filter(s => s.st === 'ativa' && G.S.villagers.has(s.protag));
+// (the world opened and lived until a story is under way, up to two minutes: the world-war world of the v37's last worlds opens
+// with none — a pilgrimage begins about a minute in —, and the cases had nothing to kill, T-258)
+const open = world => { M.pronto(world); M.viver(3); for (let k = 0; k < 120 && !live().length; k++) M.viver(1); };
 for (const world of WORLDS) {
-  M.pronto(world); M.viver(3);
+  open(world);
   // ---------------- p1 each active story, its protagonist killed by the god ----------------
   {
     const list = live(); const bad = [], loose = [], kinds = []; let n = 0;
@@ -33,7 +36,7 @@ for (const world of WORLDS) {
   }
   // ---------------- p2 the save in between: the death unheard goes into the save ----------------
   {
-    M.pronto(world); M.viver(3);
+    open(world);
     const st0 = live()[0];
     if (!st0) ok(`p2 ${world} o save no meio-tempo`, false, 'precondição: nenhuma história ativa');
     else {
@@ -45,7 +48,7 @@ for (const world of WORLDS) {
   }
   // ---------------- p3 the death in a skip of time ----------------
   {
-    M.pronto(world); M.viver(3);
+    open(world);
     const st0 = live()[0];
     if (!st0) ok(`p3 ${world} a morte no salto`, false, 'precondição: nenhuma história ativa');
     else {

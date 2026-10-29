@@ -70,7 +70,12 @@ let tax = null, taxRoute = [];
 let thief = null, robbed = null;
 {
   robbed = of(set).filter(h => housing(h) && (h.coin || 0) >= 3 && !taxRoute.includes(h.id)).sort((a, c) => c.coin - a.coin || a.id - c.id)[0];
-  thief = pick(o => robbed && o.home !== robbed.id);
+  // (the thief as the world has one: awake, out of doors, free — no task of 1.6 or more —, the nearest who reaches the door: the
+  // world's thief picks a house not too far, victimFor. In the metropole of the v37's last worlds the first adult of the town,
+  // Tízoc, 38 houses from the door and on a hunt, never got to it — the long way failed at once —, and nothing was taken: T-257)
+  const door = robbed && G.Vg.door(robbed);
+  thief = robbed ? people().filter(o => !used.has(o.id) && o.home !== robbed.id && !o.sleeping && !o.inside && !(o.task && o.task.pri >= 1.6) && G.W.reaches(o, door[0], door[1])).sort((a, b) => G.dist(a.x, a.y, door[0], door[1]) - G.dist(b.x, b.y, door[0], door[1]) || a.id - b.id)[0] || null : null;
+  if (thief) used.add(thief.id);
   if (thief && robbed) Vg.setTask(thief, { type: 'furto', house: robbed.id, pri: 4, st: 0, kind: 'furto' });
 }
 // m3 the tavern: a drinker with coins at home
