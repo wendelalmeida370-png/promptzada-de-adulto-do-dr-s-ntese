@@ -5,10 +5,12 @@
 // of — rays are cast at the geometry the 3D builds, against what the plan says:
 //   1. every number a number; nothing out of the lot; what the inside costs to draw (triangles), by type
 //   2. the walls: from inside each room, along each wall between its openings, a ray meets the wall's face where the plan
-//      has it (±1.2 cm), a face turned to the room (one the renderer draws, not one it culls)
+//      has it (±1.2 cm), a face turned to the room (one the renderer draws, not one it culls) — the edge of an open ground
+//      (a 'borda', of no height) has none: only its openings (T-283)
 //   3. the openings: through the middle of each door and window the ray goes out — nothing stands in an opening
 //   4. the floors: from above, the floor is where Interiors.floorY says on every cell the grid has as floor (±1.5 cm; on a
-//      flight of steps within a step); over a hole a stair comes up through, the lid is that floor, shut
+//      flight of steps within a step); over a hole a stair comes up through, the lid is that floor, shut (under a piece of
+//      furniture and a flower bed of the form, the piece: T-284)
 //   5. the ceilings: over every cell where the grid lets one stand, a ceiling turned down to the room — the storey above's
 //      or the roof's — high enough for a body of 1.75 m (on a loft, for one on hands and knees), never the sky
 //   6. the furniture: each piece within its own rectangle and on its floor, every kind of the catalogue drawn (the pieces
@@ -19,12 +21,15 @@
 // The outside drawn from the same shell (Build3D.outside), and the two together as the game shows them when the inside is
 // drawn — the outside's own door openings and court put aside (Build3D.cuts):
 //   9. the outside closes the building: from the street, at every side, between the openings, its face where the shell's
-//      walls have their outer face (a hand of dressing before it at most), turned out — and from its yard (2); an open
-//      shell, nothing over its eaves but its pieces and its form
+//      walls have their outer face (a hand of dressing before it at most; where a mass of the form stands before the side,
+//      the form's face before it: T-285), turned out — and from its yard (2), never from within a mass of the form (T-282);
+//      up to under the roof's overhang, as low as it hangs; an open shell, nothing over its eaves but its pieces and its form.
+//      The form turned to the plan's side, as the 3D turns it (Build3D.formSide)
 //  10. nothing of the outside in the rooms — under their ceilings, between their walls — but what the cut puts aside
 //  11. a court and a terrace see the sky (the room on the terrace aside; an open shell's form, where its masses stand)
 //  12. the doors and arches of the outside: shut, from the street the leaf (an arch's dark) in the opening — a colonnade's
-//      gaps have none —; with the inside drawn, the opening free into the room
+//      gaps have none, nor the gate in a wall of the form, the pylon's (T-282) —; with the inside drawn, the opening free
+//      into the room
 //  13. a yard (B2d: the pottery's, the tavern's): its floor of beaten earth where the feet walk, from above; its fence's outer
 //      face from the street, between its gates; each gate shut from the street, free with the inside drawn; each of its
 //      pieces drawn outside, and put aside by the cut where the inside draws them
@@ -46,17 +51,18 @@ function tris(geos, x) {
   return out;
 }
 // (what a building's form stands over, from above, in the lot's metres: the boxes of its masses — G.Forma.mass —, turned to
-// the side the 3D turns it to)
-function formCover(b, F) {
-  const side = B3.doorSide(b), L = F.L, out = [];
-  const box = (u0, v0, u1, v1) => { const a = G.Forma.toLot(side, L, u0, v0), c = G.Forma.toLot(side, L, u1, v1); out.push([Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[0], c[0]), Math.max(a[1], c[1])]); };
+// the side the 3D turns it to (side: the plan's); each with how high it stands, from its foot to its top: [x0, z0, x1, z1, y0, y1])
+function formCover(F, side) {
+  const L = F.L, out = [];
+  const box = (u0, v0, u1, v1, y0, y1) => { const a = G.Forma.toLot(side, L, u0, v0), c = G.Forma.toLot(side, L, u1, v1); out.push([Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[0], c[0]), Math.max(a[1], c[1]), y0, y1]); };
   for (const m of G.Forma.mass(F)) {
-    if (m.k === 'box' || m.k === 'talude') box(m.r[0], m.r[1], m.r[2], m.r[3]);
-    else if (m.k === 'piramide') box(m.c[0] - m.e, m.c[1] - m.e, m.c[0] + m.e, m.c[1] + m.e);
-    else if (m.k === 'anel') box(m.c[0] - m.r, m.c[1] - m.r, m.c[0] + m.r, m.c[1] + m.r);
-    else if (m.k === 'telhado') { const ov = m.ov || 0; box(m.r[0] - ov, m.r[1] - ov, m.r[2] + ov, m.r[3] + ov); }
-    else if (m.k === 'tronco') { const r = Math.max(m.r0, m.r1); box(Math.min(m.a[0], m.b[0]) - r, Math.min(m.a[1], m.b[1]) - r, Math.max(m.a[0], m.b[0]) + r, Math.max(m.a[1], m.b[1]) + r); }
-    else if (m.k === 'pano') { const us = m.p.map(q => q[0]), vs = m.p.map(q => q[1]); box(Math.min(...us), Math.min(...vs), Math.max(...us), Math.max(...vs)); }
+    if (m.k === 'box' || m.k === 'talude') box(m.r[0], m.r[1], m.r[2], m.r[3], m.y0, m.y1);
+    else if (m.k === 'piramide') box(m.c[0] - m.e, m.c[1] - m.e, m.c[0] + m.e, m.c[1] + m.e, m.y0, m.y1);
+    else if (m.k === 'anel') box(m.c[0] - m.r, m.c[1] - m.r, m.c[0] + m.r, m.c[1] + m.r, m.y0, m.y1);
+    else if (m.k === 'telhado') { const ov = m.ov || 0; box(m.r[0] - ov, m.r[1] - ov, m.r[2] + ov, m.r[3] + ov, m.y0, m.y1); }
+    else if (m.k === 'tronco') { const r = Math.max(m.r0, m.r1), up = Math.hypot(m.a[0] - m.b[0], m.a[1] - m.b[1]) < 1e-6 ? 0 : r; // (one lying: its round up and down)
+      box(Math.min(m.a[0], m.b[0]) - r, Math.min(m.a[1], m.b[1]) - r, Math.max(m.a[0], m.b[0]) + r, Math.max(m.a[1], m.b[1]) + r, Math.min(m.a[2], m.b[2]) - up, Math.max(m.a[2], m.b[2]) + up); }
+    else if (m.k === 'pano') { const us = m.p.map(q => q[0]), vs = m.p.map(q => q[1]), ys = m.p.map(q => q[2]); box(Math.min(...us), Math.min(...vs), Math.max(...us), Math.max(...vs), Math.min(...ys), Math.max(...ys)); }
   }
   return out;
 }
@@ -114,10 +120,18 @@ for (const [b, plan, own] of jobs) {
   const Q = own ? { walk: (lv, x, z) => walkP(plan, lv, x, z), floorY: (lv, x, z) => floorYP(plan, lv, x, z) } : { walk: (lv, x, z) => In.walk(b, lv, x, z), floorY: (lv, x, z) => In.floorY(b, lv, x, z) };
   const tag = `${b.type}#${b.id}${plan.shell.kind === 'round' ? '(redonda)' : ''}`;
   const FMb = B3.formOf(b); // (its form, which draws its pieces of use marked form: D-093)
+  // (the side its form is turned to: the plan's — its entrance's, as the 3D turns a form with a plan (Build3D.formSide) —, not
+  // the world's door, which falls back to the old corner rule while the plan's way in is not open ground: the Norse library
+  // of the «mega», its carved posts drawn before its front and measured on its side)
+  const fside = plan.side || B3.doorSide(b);
   // (where its form's columns stand over the ground, in the lot's metres: each one's middle and its reach — its capital's, the
   // papyrus of Egypt wider than the shaft —, a hand more)
-  const capR = FMb ? FMb.els.filter(e => e.k === 'colunata').flatMap(e => e.pts.map(p => { const q = G.Forma.toLot(B3.doorSide(b), FMb.L, p[0], p[1]); return [q[0], q[1], (e.papiro ? e.papiro.r : e.r) + 0.1]; })) : [];
+  const capR = FMb ? FMb.els.filter(e => e.k === 'colunata').flatMap(e => e.pts.map(p => { const q = G.Forma.toLot(fside, FMb.L, p[0], p[1]); return [q[0], q[1], (e.papiro ? e.papiro.r : e.r) + 0.1]; })) : [];
   const underCap = (x, z) => capR.some(([cx, cz, r]) => Math.hypot(x - cx, z - cz) < r);
+  // (its form's flower beds, in the lot's metres: each bed's middle and its reach — how far round it the blooms are, and a
+  // bloom's own round, a hand more): the blooms stand on the floor, the body walks among them
+  const bedR = FMb ? FMb.els.filter(e => e.k === 'flores').flatMap(e => e.pts.map(p => { const q = G.Forma.toLot(fside, FMb.L, p[0], p[1]); return [q[0], q[1], (e.r || 0) + (e.b || 0.13) + 0.05]; })) : [];
+  const inBed = (x, z) => bedR.some(([cx, cz, r]) => Math.hypot(x - cx, z - cz) < r);
   const rng0 = JSON.stringify(S.rng), bj0 = JSON.stringify(b, (k, v) => (k === '_dock' ? undefined : v));
   G.rngWatch = k => { draws[k ? 1 : 0]++; };
   const out = B3.interior(plan, b, { fine: true }); const again = B3.interior(plan, b, { fine: true }); const lean = B3.interior(plan, b, { fine: false });
@@ -181,7 +195,9 @@ for (const [b, plan, own] of jobs) {
       // (an outer wall seen from the yard — a room of the plan out of the shell's body —: its face is the outside's, with the
       // outside's hand of dressing before it, as from the street: 9)
       const yard = w.outer && (() => { const p = fx(L / 2), sh1 = plan.shell; return !(sh1.kind === 'round' ? Math.hypot(p[0] - sh1.cx, p[1] - sh1.cz) < sh1.r : p[0] > sh1.r[0] && p[0] < sh1.r[2] && p[1] > sh1.r[1] && p[1] < sh1.r[3]) && !(sh1.annex || []).some(a => p[0] > a.r[0] && p[0] < a.r[2] && p[1] > a.r[1] && p[1] < a.r[3]); })();
-      for (let k = 1; k <= 5; k++) {
+      // (the edge of an open ground — a wall of kind 'borda', of no height, the 3D draws nothing of it —: no face to meet there,
+      // only its openings, 3)
+      for (let k = 1; k <= 5 && w.kind !== 'borda'; k++) {
         const s = 0.15 + (L - 0.3) * k / 6; if (!into(s, 0.02)) continue;
         if (holes.some(h => Math.abs(s - h.at) < h.w / 2 + 0.16) || nich.some(a => Math.abs(s - a) < 0.5)) continue;
         for (const y of [0.4, Math.min(w.h - 0.25, 1.8)]) {
@@ -233,6 +249,7 @@ for (const [b, plan, own] of jobs) {
       // (the floor is seen where nothing stands on it: under a piece of furniture — a mat the grid has as floor — the piece is)
       const over = plan.items.find(it => it.lv === l.lv && x > it.r[0] - 0.01 && x < it.r[2] + 0.01 && z > it.r[1] - 0.01 && z < it.r[3] + 0.01);
       if (over && !(over.y > 0.5)) continue;
+      if (inBed(x, z)) continue; // (nor under a flower bed of the form: there its blooms — the monument's square's, at its corners)
       const fy = walk || st || deg ? Q.floorY(l.lv, x, z) : l.y; const up = st || deg ? 0.3 : 0.05;
       nFloor++; const hit = cast(c === CELL.HATCH ? TA : TA0, W3([x, fy + up, z]), [0, -1, 0], up + 0.6, cutAt);
       const y = hit ? fy + up - hit.t : null; const step = st || deg ? Math.abs((st ? lvOf(st.lv1).y - l.y : l.y)) / Math.max(2, Math.round(Math.abs(st ? lvOf(st.lv1).y - l.y : l.y) / 0.19)) + 0.01 : 0;
@@ -303,7 +320,7 @@ for (const [b, plan, own] of jobs) {
       if (hi > lim) bad.out.push(`${tag}: algo a ${hi.toFixed(2)} m, acima do beiral e das peças (${lim.toFixed(2)} m)`);
       for (const it of plan.items) { if (it.form && FMb) continue; nOut++; let has = false; for (let k = 0; k < P.length && !has; k += 3) { const x = P[k] - X0, z = P[k + 2] - Z0; if (x > it.r[0] + 0.02 && x < it.r[2] - 0.02 && z > it.r[1] + 0.02 && z < it.r[3] - 0.02) has = true; } if (!has) bad.out.push(`${tag} ${it.kind}: não desenhada no lado de fora`); }
       nIn++; if (!B3.openShell(b.id)) bad.inside.push(`${tag}: casca aberta que o 3D abriria (desenharia o dentro por cima)`);
-      const toldo = sh.roof && sh.roof.kind === 'toldo'; let hits = 0; const cover = FMb ? formCover(b, FMb) : [];
+      const toldo = sh.roof && sh.roof.kind === 'toldo'; let hits = 0; const cover = FMb ? formCover(FMb, fside) : [];
       for (const fx of [0.2, 0.4, 0.6, 0.8]) for (const fz of [0.2, 0.4, 0.6, 0.8]) { const x = sh.r[0] + (sh.r[2] - sh.r[0]) * fx, z = sh.r[1] + (sh.r[3] - sh.r[1]) * fz;
         if (plan.items.some(it => x > it.r[0] - 0.15 && x < it.r[2] + 0.15 && z > it.r[1] - 0.15 && z < it.r[3] + 0.15)) continue;
         if (cover.some(r => x > r[0] - 0.15 && x < r[2] + 0.15 && z > r[1] - 0.15 && z < r[3] + 0.15)) continue; nSky++; // (under the form)
@@ -313,7 +330,7 @@ for (const [b, plan, own] of jobs) {
     };
     if (sh.kind === 'aberta') openChecks(); else {
     // 9. the faces of the sides, from the street, between the openings and the annexes
-    if (sh.kind !== 'round') { const R = sh.r;
+    if (sh.kind !== 'round') { const R = sh.r; const fcov = FMb ? formCover(FMb, fside) : [];
       for (const sd of ['N', 'E', 'S', 'W']) {
         const ax = sd === 'N' || sd === 'S', o = SIDE[sd], line = sd === 'N' ? R[1] : sd === 'S' ? R[3] : sd === 'W' ? R[0] : R[2]; const u0 = ax ? R[0] : R[1], u1 = ax ? R[2] : R[3];
         const gaps = [];
@@ -323,13 +340,23 @@ for (const [b, plan, own] of jobs) {
           gaps.push([uc - h.w - (door ? 0.5 : 0.2), y0 - (door ? 0.6 : 0.5), uc + h.w + (door ? 0.5 : 0.2), y0 + h.h + (door ? 1.0 : 0.3)]); }
         for (const a of sh.annex || []) { const r = a.r; const touch = sd === 'W' ? Math.abs(r[2] - R[0]) < 0.03 : sd === 'E' ? Math.abs(r[0] - R[2]) < 0.03 : sd === 'N' ? Math.abs(r[3] - R[1]) < 0.03 : Math.abs(r[1] - R[3]) < 0.03;
           if (touch) gaps.push([(ax ? r[0] : r[1]) - 0.35, -9, (ax ? r[2] : r[3]) + 0.35, a.h + 1.4]); }
-        const yTop = sh.eave - (rf.h > 0 && rf.kind !== 'plano' ? 0.8 : 0.2);
+        // (up to under the roof's overhang: its eaves drop as far out as it hangs, as steep as it is — the Aztec hut's thatch of
+        // 60°, its edge at 1.6 m on a wall of 2.5 —, the thatch's thickness more)
+        const hv0 = rf.along === 'z' ? (R[2] - R[0]) / 2 : (R[3] - R[1]) / 2, droop = rf.h > 0 && rf.kind !== 'plano' ? (rf.over || 0) * rf.h / Math.max(0.5, hv0) + 0.3 : 0;
+        const yTop = sh.eave - (rf.h > 0 && rf.kind !== 'plano' ? Math.max(0.8, droop) : 0.2);
+        // (where a mass of the form stands before the side at that height, between the street and it — the temazcal's dome round
+        // its room (P3): what is seen there is the form —, its face is met first: closed and turned out all the same, never
+        // behind the side)
+        const sn = ax ? o[1] : o[0], a0 = line + Math.min(sn * 0.17, sn * 1.5), a1 = line + Math.max(sn * 0.17, sn * 1.5);
+        const massFore = (u, y) => fcov.some(q => (ax ? q[0] < u && q[2] > u && q[1] < a1 && q[3] > a0 : q[1] < u && q[3] > u && q[0] < a1 && q[2] > a0) && q[4] < y && q[5] > y);
+        const e = 1e-3; const inMass = p => fcov.some(q => p[0] > q[0] - e && p[0] < q[2] + e && p[2] > q[1] - e && p[2] < q[3] + e && p[1] > q[4] - e && p[1] < q[5] + e); // (on its face too: between the jamb and the lintel)
         for (let u = u0 + 0.2; u < u1 - 0.19; u += 0.6) for (let y = foot + 0.25; y < yTop; y += 0.7) {
           if (gaps.some(gp => u > gp[0] && u < gp[2] && y > gp[1] && y < gp[3])) continue; nOut++;
           const P0 = ax ? [u, y, line + o[1] * 1.5] : [line + o[0] * 1.5, y, u];
           if (sh.yard && P0[0] > sh.yard.r[0] && P0[0] < sh.yard.r[2] && P0[2] > sh.yard.r[1] && P0[2] < sh.yard.r[3]) { nOut--; continue; } // (a side the yard faces: seen from it, 2)
+          if (inMass(P0)) { nOut--; continue; } // (nor from within a mass of the form — the pylon's towers round the court, the Egyptian temple's —: no street there)
           const hit = cast(TX, W3(P0), [-o[0], 0, -o[1]], 1.6);
-          if (!hit || !hit.front || hit.t > 1.515 || hit.t < 1.5 - 0.17) bad.out.push(`${tag} lado ${sd} em ${u.toFixed(2)}, ${y.toFixed(2)} m: ${hit ? ((1.5 - hit.t) * 100).toFixed(1) + ' cm para fora' + (hit.front ? '' : ' (avesso)') : 'nada'}`);
+          if (!hit || !hit.front || hit.t > 1.515 || (hit.t < 1.5 - 0.17 && !massFore(u, y))) bad.out.push(`${tag} lado ${sd} em ${u.toFixed(2)}, ${y.toFixed(2)} m: ${hit ? ((1.5 - hit.t) * 100).toFixed(1) + ' cm para fora' + (hit.front ? '' : ' (avesso)') : 'nada'}`);
         } } }
     else { const l = plan.levels[0]; const seg = plan.walls.find(w => w.kind === 'anel'); const e = seg ? Math.atan2((seg.a[1] + seg.b[1]) / 2 - sh.cz, (seg.a[0] + seg.b[0]) / 2 - sh.cx) : 9;
       for (let k = 0; k < 8; k++) { const a = e + Math.PI / 8 + k * Math.PI / 4 * 0.85; if (Math.abs(Math.atan2(Math.sin(a - e), Math.cos(a - e))) < 0.8) continue;
@@ -362,7 +389,10 @@ for (const [b, plan, own] of jobs) {
       const q1 = inBody(mx + nx * (w.t / 2 + 0.3), mz + nz * (w.t / 2 + 0.3)), q2 = inBody(mx - nx * (w.t / 2 + 0.3), mz - nz * (w.t / 2 + 0.3)); if (q1 === q2) continue; const o = q1 ? -1 : 1;
       const Y = l.y + (h.sill || 0) + Math.min(1.0, h.h / 2); const O = W3([mx + nx * o * (w.t / 2 + 1.2), Y, mz + nz * o * (w.t / 2 + 1.2)]); const d = [-nx * o, 0, -nz * o]; nDoor++;
       const shut = cast(TX, O, d, 1.2 + w.t + 0.4); const free = cast(TA, O, d, 1.2 + w.t + 0.09, cutAt);
-      if (w.kind !== 'colunata' && (!shut || shut.t < 1.19 || shut.t > 1.2 + w.t + 0.08)) bad.door.push(`${tag} ${h.kind} na parede ${w.id}: fechada, ${shut ? 'a ' + ((shut.t - 1.2) * 100).toFixed(0) + ' cm da face' : 'nada no vão'}`);
+      // (a colonnade's gaps have no leaf; nor the gate in a wall of the form — the pylon's: the form draws it open onto its
+      // passage, with no leaf, and the hall's door is the one that shuts —: there only the opening free with the inside)
+      const formGate = h.kind === 'vao' && B3.formWall && B3.formWall(b, plan, w);
+      if (w.kind !== 'colunata' && !formGate && (!shut || shut.t < 1.19 || shut.t > 1.2 + w.t + 0.08)) bad.door.push(`${tag} ${h.kind} na parede ${w.id}: fechada, ${shut ? 'a ' + ((shut.t - 1.2) * 100).toFixed(0) + ' cm da face' : 'nada no vão'}`);
       if (free) bad.door.push(`${tag} ${h.kind} na parede ${w.id}: com o interior, algo no vão a ${((free.t - 1.2) * 100).toFixed(0)} cm da face`);
     }
     // 13. a yard: its floor, its fence and gates, its pieces — outside, as the plan has them
