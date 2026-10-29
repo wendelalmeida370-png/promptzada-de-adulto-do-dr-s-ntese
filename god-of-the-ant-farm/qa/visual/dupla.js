@@ -34,7 +34,11 @@ if (!set) { ok('1. uma cidade com cais e armazém do porto', false, `nenhuma em 
 const dock = [...S.buildings.values()].filter(b => b.set === set.id && b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)[0];
 god(() => { S.time = 0.2; const sh = S.ships.find(s => s.kind === 'mercante') || S.ships[0]; sh.goods = { k: 'stone', n: 12 }; G.Harbor.land(dock, sh.goods, sh); });
 const pairNow = () => { for (const v of S.villagers.values()) { const p = A.pair(v); if (!p || p.side !== 'frente') continue; const h = S.villagers.get(p.help); const q = h && A.pair(h); if (q && q.lead === v.id) return { L: v, H: h }; } return null; };
-let two = null; for (let k = 0; k < 900 && !two; k++) { M.viver(1); two = pairNow(); }
+// (and both errands run with the pair — the helper's own step sets his carrier's arms: the one ahead lifting the crate puts the
+// helper in the step of carrying in his own step, and the helper's arms follow in the helper's — the moment between the two is
+// no pair of the world yet to draw: Gunnar and Ingrid of the final metropole, the helper still «waiting», T-209)
+const both = p => !!p && !!p.H.task && p.H.task.st === 2 && p.H.act === (A.ANIM.carregarDois.act || 'carry2');
+let two = null; for (let k = 0; k < 900 && !both(two); k++) { M.viver(1); two = pairNow(); }
 ok('1. a caixa pesada vai a dois: quem vai na frente com ela, o ajudante atrás', !!two, two ? `${set.name}: ${two.L.name} #${two.L.id} com ${two.L.carry.k} ${two.L.carry.n} (caixa ${two.L.carry.cid || '-'}), ${two.H.name} #${two.H.id} ajudando; a ${r2(Math.hypot(two.L.x - two.H.x, two.L.y - two.H.y) * TL)} m um do outro, como o mundo os tem` : `ninguém levou a dois em 15 minutos do mundo, em ${set.name}`);
 if (!two) { console.log('FALHAS: 1'); process.exit(1); }
 const { L, H } = two;
@@ -59,7 +63,9 @@ const miss = (P, T) => Math.max(...P.map(p => Math.min(...T.map(t => Math.hypot(
 // ------------------------------ 2. a metre apart: the crate between them, in both pairs of hands ------------------------------
 behind(1.0); const s0 = snap(); look(); const s1 = snap();
 { const e = pairOf(); const c2 = crates(); const T2 = e && ends(e); const ml = e && e.palms && e.palms.lead ? miss(e.palms.lead, T2.lead) : 9, mh = e && e.palms && e.palms.help ? miss(e.palms.help, T2.help) : 9;
-  const gy = G.W.groundH((L.x + H.x) / 2, (L.y + H.y) / 2) * G.Space.HM; const mid = e ? Math.hypot(e.X - (L.x + H.x) / 2 * TL, e.Z - (L.y + H.y) / 2 * TL) : 9;
+  // (the ground the two are drawn on: in a ford, its bed under the water — the 3D's people's own — T-209)
+  const gx = (L.x + H.x) / 2, gz = (L.y + H.y) / 2, gi = G.W.idx(gx, gz); const ford = S.type[gi] === G.T.RIVER && !S.road[gi] && !(S.ice && S.ice[gi]);
+  const gy = ford ? G.W.hAt(gx, gz) * G.Space.HM - G.Space.bedAt(gx, gz) : G.W.groundH(gx, gz) * G.Space.HM; const mid = e ? Math.hypot(e.X - (L.x + H.x) / 2 * TL, e.Z - (L.y + H.y) / 2 * TL) : 9;
   const st = stateOf(H.id);
   ok('2. a um metro: uma caixa só, a de quem vai na frente, entre os dois na altura da barriga, o lado comprido na linha deles; as mãos de cada um na ponta dele; o ajudante com os braços de carregar; o desenho não mexe no mundo',
     !!e && mid < 0.02 && Math.abs(e.Y - gy - 1.08) < 0.25 && ml < 0.1 && mh < 0.1 && (st === 'carry' || st === 'carryWalk') && s0 === s1,

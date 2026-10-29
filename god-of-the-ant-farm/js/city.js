@@ -463,8 +463,10 @@
     const S = G.S; const t = set.tier || 0;
     const lvl = has(fac, 'alvenaria') ? 2 : 1;
     // (only what the paver walks to, by the map of regions: the town's street on another island, the far half of a road past
-    // the water, is not theirs — they tried it every twelve seconds, a whole failed search each time, L-322)
-    const reach = i => W.reaches(v, (i % N) + 0.5, ((i / N) | 0) + 0.5);
+    // the water, is not theirs — they tried it every twelve seconds, a whole failed search each time, L-322). And the stretch
+    // itself, where the paver stands to work, not beside it: from an islet, a street diagonal across the water was «beside»,
+    // and the way to it failed every step, L-364)
+    const reach = i => W.reaches(v, (i % N) + 0.5, ((i / N) | 0) + 0.5, true);
     let best = null, bs = 1e9;
     // a bridge over the water the town keeps wading (half the pavers, the ones already on it, before any street:
     // the streets are never finished, and the bridge would never come)

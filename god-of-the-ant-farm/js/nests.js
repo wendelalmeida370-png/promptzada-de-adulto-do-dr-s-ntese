@@ -131,6 +131,10 @@
   // (the beavers are few among many animals: the list is refreshed now and then, not searched every step)
   let beavers = [], bT = 99, bFor = null;
   G.worldHooks.push(() => { beavers = []; bT = 99; bFor = null; }); // (a new world, or a save loaded: it starts over)
+  // (a tree is a beaver's while a beaver gnaws it — the beaver's own word, a.gnawTree, which goes in the save. A mark on the tree
+  // stayed on the stump a woodcutter left, or when its beaver died, and on the tree that grew again from it: no beaver took that
+  // tree ever again; and the mark did not go in the save, L-365)
+  Ne.gnawed = id => { const S = G.S; for (const b of bFor === S ? beavers : S.animals.values()) if (b.kind === 'beaver' && b.gnawTree === id && !b.dead && S.animals.has(b.id)) return true; return false; };
   function beaverTick(dt) {
     const S = G.S; if (!SP.beaver) return;
     bT += dt; if (bT > 2 || bFor !== S) { bT = 0; bFor = S; beavers = []; for (const a of S.animals.values()) if (a.kind === 'beaver') beavers.push(a); }
@@ -139,15 +143,16 @@
       let d = a.dam && dams().find(q => q.id === a.dam);
       if (!d) { d = dams().find(q => G.dist(q.x, q.y, a.x, a.y) < 10); if (!d && G.R() < dt * 0.02) { const p = narrowRiver(a.x, a.y, 8); if (p) { d = { id: S.nextId++, x: p[0], y: p[1], prog: 0, trees: 0 }; dams().push(d); } } if (d) a.dam = d.id; else continue; }
       // gnawing a tree down by the stream
-      if (!a.gnawTree) { if (G.R() < dt * 0.04) { const t = A.treeNear(d.x, d.y, 5, q => q.stage === 'grow' && q.size > 0.4 && !q.gnaw); if (t) { a.gnawTree = t.id; t.gnaw = a.id; a.hx = t.x + 0.3; a.hy = t.y + 0.3; a.mig = true; } } continue; }
-      const t = S.trees.get(a.gnawTree); if (!t || t.stage !== 'grow') { a.gnawTree = 0; continue; }
+      if (!a.gnawTree) { if (G.R() < dt * 0.04) { const t = A.treeNear(d.x, d.y, 5, q => q.stage === 'grow' && q.size > 0.4 && !Ne.gnawed(q.id)); if (t) { a.gnawTree = t.id; a.hx = t.x + 0.3; a.hy = t.y + 0.3; a.mig = true; } } continue; }
+      // (the tree lost — a woodcutter felled it —: the beaver lets it go, and the gnawing with it: it went on to the next tree, L-365)
+      const t = S.trees.get(a.gnawTree); if (!t || t.stage !== 'grow') { a.gnawTree = 0; a.gnawT = 0; continue; }
       const dd = G.dist(a.x, a.y, t.x + 0.4, t.y + 0.3);
       if (dd > 3) continue;
       if (dd > 0.5) { const f = Math.min(1, dt * 1.2 / dd); a.x += (t.x + 0.4 - a.x) * f; a.y += (t.y + 0.3 - a.y) * f; a.moving = true; G.faceTo(a, t.x - a.x, t.y - a.y); continue; }
       a.moving = false; a.state = 'idle'; a.t = Math.max(a.t || 0, 0.6); G.faceTo(a, t.x - a.x, t.y - a.y);
       a.gnawT = (a.gnawT || 0) + dt; if (G.R() < dt * 3) G.FX && G.FX.chips(t.x, t.y, '#c9a26b');
       if (a.gnawT > 16) {
-        a.gnawT = 0; a.gnawTree = 0; t.gnaw = 0; G.Nature.fellTree(t, a.face || 1);
+        a.gnawT = 0; a.gnawTree = 0; G.Nature.fellTree(t, a.face || 1);
         d.prog = Math.min(1, d.prog + 0.22); d.trees++;
         if (d.prog >= 0.44 && !d.lodge) { d.lodge = 1; }
         // (the first dam is told once: the mark goes in the save, a yes or no — a day 0 counted as «not seen» — L-301)

@@ -130,6 +130,45 @@
     if (!dry && out.length) { for (const i of out) w.gates.push(i); w.ways = (w.ways || []).concat(out); }
     return out;
   };
+  // (and every wall keeps that promise while the town changes behind it: a block of Hedeby, raised on the strip between the rock
+  // and the wall that led to its cemetery, shut the cemetery off for good — the wall's gates judged at its plan and at a load
+  // only —: where a wall stands, the gate is cut at once, L-382. Asked by the village when a building comes or is finished,
+  // before anything else of the world walks, and by the walls' own step when the ground changed otherwise — a river thawed,
+  // the land raised or sunk, a wall going up. setId: only the walls of that town, the ground the same)
+  let judged = '';
+  const groundKey = () => { const S = G.S; return (S.walkVer || 0) + ':' + (S.typeVer || 0); };
+  Sg.keepWays = function (setId) {
+    const S = G.S; let cut = 0;
+    for (const w of S.walls || []) { if (setId && w.set !== setId) continue; const s = S.settlements.get(w.set); if (!s) continue; for (const i of Sg.openWays(s, w)) if (S.wall[i] === 1) { S.wall[i] = 2; S.wallHp[i] = WALLHP[w.mat][1]; cut++; } }
+    if (cut) G.W.touchWalk();
+    if (!setId) judged = groundKey();
+    return cut;
+  };
+  // a building put on the map (after its tiles are taken and the ground told): the walls judged again — unless it plainly shuts
+  // nothing, with the walls judged up to it: it touches no other building and no wall, and the open ground beside it stays one
+  // piece round it, close by. Then every way round it is still there, every building's ground round it the same, and no wall's
+  // ways change (most of a town's buildings: judged each time, the walls cost the time skip of the mega 3%)
+  Sg.placed = function (b) {
+    const S = G.S; const before = ((S.walkVer || 0) - 1) + ':' + (S.typeVer || 0);
+    if (!(S.walls || []).length) { judged = groundKey(); return; } // (no wall anywhere: nothing to keep)
+    if (judged === before && (!b.blocks || apart(b))) judged = groundKey();
+    else if (b.blocks) return Sg.keepWays();
+    if (b.built) Sg.keepWays(b.set); // (one that stands at once: a building of its town now, to be reached)
+  };
+  const apart = Sg.apart = function (b) {
+    const S = G.S; const inF = (x, y) => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h;
+    const plan = new Set(); for (const w of S.walls || []) for (const i of w.tiles) plan.add(i);
+    const ring = []; for (let x = b.x; x < b.x + b.w; x++) ring.push([x, b.y - 1], [x, b.y + b.h]); for (let y = b.y; y < b.y + b.h; y++) ring.push([b.x - 1, y], [b.x + b.w, y]);
+    const open = [];
+    for (const [x, y] of ring) { if (!W.inb(x, y)) return false; const i = y * N + x; if (S.occ[i] || S.wall[i] || plan.has(i)) return false; if (W.ground(i)) open.push(i); }
+    if (open.length < 2) return true;
+    // (one piece without it: from one open tile beside it to all the others, on open ground with no wall, within four tiles of it)
+    const x0 = b.x - 4, y0 = b.y - 4, x1 = b.x + b.w + 3, y1 = b.y + b.h + 3;
+    const free = i => { const x = i % N, y = (i / N) | 0; return x >= x0 && y >= y0 && x <= x1 && y <= y1 && !inF(x, y) && W.ground(i) && !S.wall[i] && !plan.has(i); };
+    const seen = new Set([open[0]]); const st = [open[0]];
+    while (st.length) { const a = st.pop(); const x = a % N; for (const c of [x > 0 ? a - 1 : -1, x < N - 1 ? a + 1 : -1, a - N, a + N]) { if (c < 0 || c >= N * N || seen.has(c) || !free(c)) continue; seen.add(c); st.push(c); } }
+    return open.every(i => seen.has(i));
+  };
   function planWall(s, f, core) {
     const S = G.S;
     // (a town whose heart is inside another town's walls is walled already: what it would raise is a strip outside the other
@@ -537,7 +576,7 @@
   // ------------------------------ update ------------------------------
   let tEq = 0, tWall = 0, tGate = 0, tSac = 0;
   G.worldHooks.push(() => { Sg.reset(); }); // (a new world, or a save loaded: it starts over)
-  Sg.reset = function () { tEq = 1; tWall = 5; tGate = 0; tSac = 10; };
+  Sg.reset = function () { tEq = 1; tWall = 5; tGate = 0; tSac = 10; judged = ''; };
   Sg.update = function (dt) {
     tEq -= dt; tWall -= dt; tGate -= dt; tSac -= dt;
     if (tEq <= 0) { tEq = 4; equip(); }
@@ -547,6 +586,7 @@
     enginesTick(dt); missilesTick(dt); oilTick(dt); sappersTick(dt);
     if (tSac <= 0) { tSac = 25; considerSacrifice(); }
     sacrificeTick(dt);
+    if (groundKey() !== judged) Sg.keepWays();
   };
   // the engines leave with their band
   Sg.onDisband = function (b) { b.engines = null; };
@@ -660,9 +700,7 @@
       }
       // (and a building of the town its own wall shuts off gets its gate — cut at once where the wall already stands, L-344)
       if (down) G.W.touchWalk();
-      let cut = 0;
-      for (const w of S.walls) { const s = S.settlements.get(w.set); if (!s) continue; for (const i of Sg.openWays(s, w)) if (S.wall[i] === 1) { S.wall[i] = 2; S.wallHp[i] = WALLHP[w.mat][1]; cut++; } }
-      if (cut) G.W.touchWalk();
+      Sg.keepWays();
     },
   });
 })(window.G);

@@ -515,8 +515,10 @@
   // (one broken frame must not stop the world: the error is reported and the next frame comes anyway)
   let frameErrs = 0;
   function loop(now) { try { frame(now); } catch (e) { frameErrs++; if (frameErrs <= 5 || frameErrs % 200 === 0) console.error('frame', e); requestAnimationFrame(loop); } }
-  // (for the tests: one whole frame, as if ms had passed — with the browser's own loop switched off)
-  M.frameFor = ms => frame(lastT + ms);
+  // (for the tests: one whole frame, as if ms had passed — with the browser's own loop switched off; whole: no step of it cut
+  // by the machine's time, as the loop cuts them at high speed — the world a test lives is the same on any machine, T-262)
+  let whole = false;
+  M.frameFor = (ms, w) => { whole = !!w; try { frame(lastT + ms); } finally { whole = false; } };
   function frame(now) {
     const rdt = Math.min(0.1, Math.max(0, (now - lastT) / 1000)); lastT = now;
     // the years are being skipped: the world only lives, nothing is drawn
@@ -535,7 +537,7 @@
       if (inc) sp = G.Modes.timeScale(sp);
       const want = rdt * sp * (G.Scene && M.mode === 'game' && !inc ? G.Scene.timeScale() : 1);
       // the simulation may use most of the frame at 8x and 16x, never all of it
-      const dt = simulate(want, sp >= 8 ? 38 : sp > 2 ? 60 : 0);
+      const dt = simulate(want, whole ? 0 : sp >= 8 ? 38 : sp > 2 ? 60 : 0);
       if (sp >= 8 && rdt > 0) { M.realSpeed = (M.realSpeed || sp) * 0.95 + (dt / rdt) * 0.05; } else M.realSpeed = sp;
       // keyboard panning
       if (M.mode === 'game' && !M.modalOpen && !inc) {

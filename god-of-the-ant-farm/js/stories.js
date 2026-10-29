@@ -662,6 +662,9 @@
     // a protagonist gone: the story settles it as soon as it hears — its own tick (an heir taken up, or waited for), else its
     // end —, not up to a beat later: an active story never carries the dead
     for (const story of s.stories) if (story.st === 'ativa' && !alive(story.protag) && !story.data.waitHeir) turn(story);
+    // (and a seed of the dead goes as soon as it is heard, not at the director's next beat: up to 1,5 s carrying the dead,
+    // and a place among the forty that a living one's seed could lose to it, L-351)
+    if (s.seeds.some(sd => !alive(sd.protag))) s.seeds = s.seeds.filter(sd => alive(sd.protag));
     heard = true;
     tAcc += dt; if (tAcc < 1.5) return; tAcc = 0;
     if (St.lookAround) St.lookAround(Math.max(4, Math.ceil(S.villagers.size / 10)));

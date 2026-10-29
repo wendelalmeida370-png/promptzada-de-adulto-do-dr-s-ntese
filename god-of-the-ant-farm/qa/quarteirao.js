@@ -28,7 +28,10 @@ const key = process.argv[2] || 'mega';
   const town = await page.evaluate(key => {
     G.Save.apply(JSON.parse(G.Ready.data[key])); G.Main.mode = 'game'; G.UI.setSpeed(0); if (G.Audio) G.Audio.mute = true;
     const S = G.S, V = G.Village;
-    const set = [...S.settlements.values()].filter(s => (s.tier || 0) >= 4).sort((a, b) => V.pop(b.id) - V.pop(a.id))[0];
+    // (the biggest town of level 4 or 5 whose heart has room for a block today, else the biggest: in the mega of the v37 the
+    // biggest, Hedeby, had none in twelve blessed years — its heart all insulae, temples, workshops and streets —, T-195)
+    const big = [...S.settlements.values()].filter(s => (s.tier || 0) >= 4).sort((a, b) => V.pop(b.id) - V.pop(a.id));
+    const set = big.find(s => { s._noSite = {}; const p = V.blockSite(s); s._noSite = {}; return !!p; }) || big[0];
     if (!set) return null;
     const f = G.Fac.get(set.fac); if (!G.Civ.has(f.id, 'engenharia')) G.Civ.learn(f, 'engenharia', 'teste');
     const W = window.__Q = { set: set.id, log: [], bad: [], homeless: 0, people: [], blocks: 0 };
@@ -81,6 +84,11 @@ const key = process.argv[2] || 'mega';
         gone = pos.demolish || []; lived = gone.some(id => [...S.villagers.values()].some(v => v.home === id));
         if (lived) break;
         for (let ty = pos[1]; ty < pos[1] + 2 && !house; ty++) for (let tx = pos[0]; tx < pos[0] + 2 && !house; tx++) if (!S.occ[ty * G.N + tx]) house = V.addBuilding('house', tx, ty, set.id, true);
+        // (no ground free under the block — a heart all built, in the mega of the v37 for twelve years —: a house it would bring
+        // down that nobody lives in takes the family; or, where it brings down only gardens and the like, the family's house
+        // stands where one of them was — the test's hand, T-195)
+        if (!house) { const e = gone.map(id => S.buildings.get(id)).find(o => o && G.BDEF[o.type].housing); if (e) house = e; }
+        if (!house) { const o = gone.map(id => S.buildings.get(id)).find(q => q && q.w === 1 && q.h === 1 && !G.BDEF[q.type].civic); if (o) { const ox = o.x, oy = o.y; V.removeBuilding(o); gone = gone.filter(id => id !== o.id); house = V.addBuilding('house', ox, oy, set.id, true); } }
         if (!house) V.startProject(set, 'quarteirao', pos);
       }
       if (!house && !lived) return { none: `nenhum lugar de quarteirão com chão livre para a casa em ${S.day - d0} anos` };
@@ -89,7 +97,7 @@ const key = process.argv[2] || 'mega';
         for (const v of [head, S.villagers.get(head.partner), ...(head.kids || []).map(id => S.villagers.get(id))]) if (v && v.set === set.id && (v === head || v.age < 16 || v.id === head.partner)) { v.home = house.id; fam++; }
         house.coin = 30;
       }
-      const b = V.startProject(set, 'quarteirao', house ? Object.assign([pos[0], pos[1]], { demolish: gone.concat([house.id]) }) : pos);
+      const b = V.startProject(set, 'quarteirao', house ? Object.assign([pos[0], pos[1]], { demolish: gone.includes(house.id) ? gone : gone.concat([house.id]) }) : pos);
       return { site: b && b.type === 'quarteirao' ? b.id : 0, fam, at: `${pos[0]},${pos[1]}`, waited: S.day - d0 };
     });
     if (p0.waited) console.log(`  (${p0.waited} anos abençoados até o centro ter lugar para o quarteirão da família)`);

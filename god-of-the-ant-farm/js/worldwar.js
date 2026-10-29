@@ -64,10 +64,15 @@
     else { const r = G.R(); reason = r < 0.12 ? 'caos' : r < 0.32 ? 'ouro' : r < 0.5 ? 'coroa' : r < 0.66 ? 'fe' : r < 0.84 ? 'sangue' : 'fome'; }
     if (reason === 'caos') blocs = fs.map(f => [f.id]);
     else if (reason === 'imperio') {
-      // the hegemon and whoever is bound to it, against the rest
-      const side = [top.id]; for (const f of fs) { if (f === top) continue; const r = G.Fac.rel(f.id, top.id); if (r && (r.st === 'vassalo' && r.over === top.id || r.st === 'alianca' && r.op > 30)) side.push(f.id); }
+      // the hegemon and whoever is bound to it, against the rest — a rest that is a side, with a great people in it: the empire
+      // and its friends against a village of eight was no world war (the Grande Coalizão of the mundial of 28/10: the four
+      // great peoples against Mileto, L-370). With friends enough to leave nobody to stand against it, only its vassals stand
+      // by it; with no great people against even them, there is no world war yet
+      const bigs = new Set(big().map(f => f.id));
+      const bound = friends => { const side = [top.id]; for (const f of fs) { if (f === top) continue; const r = G.Fac.rel(f.id, top.id); if (r && (r.st === 'vassalo' && r.over === top.id || friends && r.st === 'alianca' && r.op > 30)) side.push(f.id); } return side; };
+      let side = bound(true); if (!fs.some(f => !side.includes(f.id) && bigs.has(f.id))) side = bound(false);
       blocs = [side, fs.filter(f => !side.includes(f.id)).map(f => f.id)];
-      if (!blocs[1].length) return null;
+      if (!blocs[1].some(id => bigs.has(id))) return null;
     } else {
       // two leaders: the strong pair that hates each other most; everyone else takes the side it likes better
       let la = null, lb = null, worst = 1e9;

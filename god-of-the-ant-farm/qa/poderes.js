@@ -17,7 +17,8 @@
 //  a2 de povos diferentes: um vai morar na cidade do outro, e os povos se estimam mais
 //  a3 o amado morre no caminho (ninguém casa, quem corria fica de luto); um save no meio carregado duas vezes
 // Duelo de Campeões (no mundo pronto «guerra mundial»)
-//  d1 os dois campeões lutam sozinhos; quem vence ganha o nome de Campeão; quem perde, o seu lado foge
+//  d1 os dois campeões lutam sozinhos; quem vence ganha o nome de Campeão (ou guarda o que já tinha, se for mais alto — T-253);
+//     quem perde, o seu lado foge
 //  d2 um save no meio do duelo carregado duas vezes; o raio do deus num dos campeões
 // Sonho Coletivo
 //  s1 a grande obra, os deuses, a terra além do mar, a paz (numa guerra provocada); o mesmo povo não sonha duas vezes seguidas
@@ -33,6 +34,7 @@
 // Abrir o Mar (no mundo pronto «metrópole», o estreito entre duas cidades)
 //  p1 o mar se abre: o fundo vira chão pisável e as duas cidades se alcançam a pé; o povo desce para catar peixes; alguém da
 //     terra de um lado atravessa pelo fundo (o estreito de verdade primeiro; de uma ilhota, alguém posto lá)
+//  p1b um golfinho ao lado do fundo aberto, nadando para o meio dele: fica na água (L-369)
 //  p2 um save com o mar aberto carregado duas vezes: o fundo seco volta igual, o mesmo futuro
 //  p3 o fim: as paredes tremem, quem está lá embaixo corre; quem não sai é levado; depois, nada de fundo seco e as cidades separadas
 //  p4 um navio no caminho quando o mar se abre; o deus ergue terra no meio do fundo; um save com um mar aberto quebrado
@@ -271,8 +273,9 @@ const key = process.argv[2] || 'cidade';
       const H = __H; H.fresh(); const S = G.S;
       // (a couple whose widow can marry again — someone free of the other sex in the widow's town, not of the family —, the
       // biggest town first: the world of 28/10 had nobody for the first couple there, and the case judged a widow who never
-      // married again, T-126)
-      const canWed = (m, o) => o.set === m.set && o.g !== m.g && !o.partner && o.age >= 18 && o.id !== m.mother && o.id !== m.father && o.mother !== m.id && !(m.mother && o.mother === m.mother);
+      // married again, T-126. «Not of the family» by the world's own rule, both parents both ways: the case's own list forgot
+      // the father's side, and in the «cidade» of the v37 the widower Creonte was married to his daughter Penélope, T-190)
+      const canWed = (m, o) => o.set === m.set && o.g !== m.g && !o.partner && o.age >= 18 && !G.Vg.relatedClose(m, o);
       const set = H.town(); const all = [...S.villagers.values()];
       const v = all.filter(q => q.partner && S.villagers.has(q.partner) && q.age >= 18 && q.age < 55 && !q.captive && !q.aboard && !q.ug && !q.jail && !q.inside && !(q.task && q.task.type === 'scene')).sort((a, b) => (a.set === set.id ? 0 : 1) - (b.set === set.id ? 0 : 1) || a.id - b.id).find(q => { const m = S.villagers.get(q.partner); return all.some(o => o !== q && canWed(m, o)); });
       if (!v) return { none: true };
@@ -466,17 +469,22 @@ const key = process.argv[2] || 'cidade';
       if (!rec) return { ok, none: true };
       const again = G.Powers.canCast('duel', at[0], at[1]); const why = G.Powers.why;
       const a = rec.a, b = rec.b, fa = rec.fa, fb = rec.fb;
+      const ep0 = { [a]: (S.villagers.get(a) || {}).ep || null, [b]: (S.villagers.get(b) || {}).ep || null }; // (their names before the duel)
       const t = H.until(() => !S.fates.duels.length, 100);
       const A = S.villagers.get(a), B = S.villagers.get(b);
       const winner = A && !B ? A : B && !A ? B : null;
+      // (a winner who already bore a higher name keeps it: «o Conquistador» outranks «o Campeão» — the rule of the names,
+      // asked of the game itself on a stand-in with that name, T-253)
+      const was = winner ? ep0[winner.id] : null;
+      const kept = !!was && winner.ep === was && (() => { const q = { ep: was }; G.Politics.earn(G.Fac.get(G.Fac.idOfV(winner)), q, 'campeao', true); return q.ep === was; })();
       const lines = S.history.slice(-30).map(e => e.txt).filter(x => /duelo de campeões/.test(x));
       const fled = [...G.War.bands.values()].filter(x => x.fac === (winner === A ? fb : fa) && x.retreat).length;
-      return { ok, again, why, t, a: G.person(a).name, b: G.person(b).name, winner: winner ? winner.name : null, ep: winner ? winner.ep : null, fled, lines, qa: H.qaWar() };
+      return { ok, again, why, t, a: G.person(a).name, b: G.person(b).name, winner: winner ? winner.name : null, ep: winner ? winner.ep : null, was, kept, fled, lines, qa: H.qaWar() };
     });
     if (!r) ok('d1 duelo de campeões', false, 'nenhuma batalha no mundo pronto da guerra mundial');
     else if (r.none) ok('d1 duelo de campeões', false, `lançado ${r.ok}, mas nenhum duelo começou`);
     else {
-      ok('d1 duelo de campeões: um vence, o nome fica', r.ok && r.lines.length && (!r.winner || r.ep === 'campeao') && !r.qa.length, `${r.a} × ${r.b}: ${r.winner ? `venceu ${r.winner} (${r.ep}), ${r.fled} bando(s) do outro lado fugiram` : 'sem vencedor'} em ${r.t}s; crônica: ${r.lines.slice(-1)[0] || '-'}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+      ok('d1 duelo de campeões: um vence, o nome fica', r.ok && r.lines.length && (!r.winner || r.ep === 'campeao' || r.kept) && !r.qa.length, `${r.a} × ${r.b}: ${r.winner ? `venceu ${r.winner} (${r.ep}${r.kept ? ', o nome que já tinha, mais alto que o de Campeão' : ''}), ${r.fled} bando(s) do outro lado fugiram` : 'sem vencedor'} em ${r.t}s; crônica: ${r.lines.slice(-1)[0] || '-'}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
       ok('d1 um duelo por vez', !r.again && /já está acontecendo/.test(r.why), r.why);
     }
   }
@@ -758,6 +766,24 @@ const key = process.argv[2] || 'cidade';
       ok('p1 verificador', !r.bad.length && !r.qa.length, [...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'limpo');
     }
   }
+  // p1b — a creature of the sea beside the open bed, swimming for the middle of it: it stays in the water (L-369: a dolphin of
+  // the metropole of 28/10 swam onto the sand of the open sea, and the checker saw it there)
+  {
+    const r = await page.evaluate(() => {
+      const H = __H; H.fresh(H.straitWorld()); const S = G.S; const W = G.W, T = G.T;
+      const c = H.strait(); if (!c) return { none: true };
+      G.Powers.cast('seapart', c.x, c.y); const p = S.parts[0]; H.run(4);
+      const bed = new Set(p.tiles); const mid = p.tiles[Math.floor(p.tiles.length / 2)];
+      let from = -1; for (const i of p.tiles) { const x = i % G.N, y = (i / G.N) | 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { if (!W.inb(x + dx, y + dy)) continue; const j = W.idx(x + dx, y + dy); if (!bed.has(j) && S.type[j] <= T.SEA && !S.dry[j]) { from = j; break; } } if (from >= 0) break; }
+      if (from < 0) return { none: true };
+      const a = G.Animals.spawn('dolphin', (from % G.N) + 0.5, ((from / G.N) | 0) + 0.5, {});
+      let onBed = 0, steps = 0;
+      for (let k = 0; k < 80 && S.animals.has(a.id) && !a.dead; k++) { a.state = 'wander'; a.t = 12; a.tx = (mid % G.N) + 0.5; a.ty = ((mid / G.N) | 0) + 0.5; H.run(0.1); steps++; if (S.dry[W.idx(a.x, a.y)]) onBed++; }
+      return { onBed, steps, d: G.dist(a.x, a.y, (mid % G.N) + 0.5, ((mid / G.N) | 0) + 0.5), qa: H.qaSea().map(e => e.msg) };
+    });
+    if (r.none) ok('p1b o bicho do mar não entra no fundo seco', false, 'nenhum estreito com mar vivo ao lado do fundo nos mundos prontos');
+    else ok('p1b o bicho do mar não entra no fundo seco', !r.onBed && !r.qa.length, `um golfinho na água ao lado do fundo aberto, nadando para o meio dele por ${r.steps} momentos: ${r.onBed ? `${r.onBed} deles NA AREIA do fundo` : 'ficou na água'} (a ${r.d.toFixed(1)} casas do meio); verificador: ${r.qa.slice(0, 2).join(' | ') || 'limpo'}`);
+  }
   {
     const r = await page.evaluate(() => {
       const H = __H; H.fresh(H.straitWorld()); const S = G.S;
@@ -783,14 +809,21 @@ const key = process.argv[2] || 'cidade';
       const mid = p.tiles[Math.floor(p.tiles.length / 2)]; const near = p.tiles.slice(0, 3);
       const ppl = [...S.villagers.values()].filter(o => o.age >= 16 && !o.inside && !o.aboard && !o.captive && !o.jail && (o.set === A.id || o.set === B.id)).slice(0, 3);
       ppl.forEach((o, k) => { const i = k === 0 ? mid : near[k]; G.Vg.endTask(o); o.x = (i % G.N) + 0.5; o.y = ((i / G.N) | 0) + 0.5; o.path = null; G.Vg.H.setTask(o, { type: 'olhar', x: o.x, y: o.y, fx: o.x + 1, fy: o.y, pri: 3, until: S.clock + 60, what: 'mar', kind: 'olhar' }); });
-      let ran = 0; H.until(() => { ran = Math.max(ran, H.tasks('sair').length); return p.st === 'fecha'; }, 20);
-      H.until(() => { ran = Math.max(ran, H.tasks('sair').length); return false; }, 3);
+      // (each one who ran counted once, seen at every step: one put a tile from the shore is out before the next second, and the
+      // most at once was one in the v37 — T-193)
+      const runners = new Set(); const seeRun = () => { for (const q of H.tasks('sair')) runners.add(q.id); };
+      for (let t = 0; t < 20 && p.st !== 'fecha'; t++) H.run(1, seeRun);
+      H.run(3, seeRun); const ran = runners.size;
       // (the one in the middle is caught: the god holds him there for the last seconds)
       const held = ppl[0]; const hid = held.id;
-      H.until(() => { const o = S.villagers.get(hid); if (o) { o.x = (mid % G.N) + 0.5; o.y = ((mid / G.N) | 0) + 0.5; o.path = null; } return !S.parts.includes(p); }, 20);
+      // (held only while the sea stands open: the hold went on one second past the close and put the one it spat out on the
+      // beach back in the middle of the water — Helga in the v37, «sobreviveu», and in the water: T-193)
+      H.until(() => { if (!S.parts.includes(p)) return true; const o = S.villagers.get(hid); if (o) { o.x = (mid % G.N) + 0.5; o.y = ((mid / G.N) | 0) + 0.5; o.path = null; } return false; }, 20);
       H.run(2);
       const o = S.villagers.get(hid);
-      const caught = !o || S.dead.has(hid) || (S.type[W.idx(o.x, o.y)] >= T.SAND);
+      // (taken: drowned, or out of the sea on ground the feet stand on — a ford of a river too: Helga, spat on the beach, had
+      // walked off to sleep across one in the v37, T-193)
+      const caught = !o || S.dead.has(hid) || (W.walkable(W.idx(o.x, o.y)) && S.type[W.idx(o.x, o.y)] > T.SEA);
       const wet = [...S.villagers.values()].filter(q => !q.aboard && S.type[W.idx(q.x, q.y)] <= T.SEA && !(q.task && q.task.type === 'swim')).length;
       const dryLeft = S.dry ? S.dry.reduce((a, b) => a + b, 0) : 0;
       return { ran, held: held.name, dead: !o, caught, wet, dryLeft, walk: W.walkable(mid), linked: W.canWalk(p.ax, p.ay, p.bx, p.by), log: S.history.some(e => /O mar se fechou/.test(e.txt) && (o ? new RegExp(o.name + '.*cuspid') : /não saiu a tempo|não saíram a tempo/).test(e.txt)), warn: S.history.some(e => /paredes do mar começaram a tremer/.test(e.txt)), qa: H.qaSea() };

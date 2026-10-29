@@ -31,6 +31,14 @@
 //   8. no blocking building in the way of a gate (L-348: two houses, one on each side of a gate of Tenochtitlan's wall, in the
 //      metropole of 28/10, left it a tile of nowhere): a gate put beside the town's best site for a house turns the site finder
 //      elsewhere, and the site it gives has no tile beside a gate
+//   9. a building that comes in the only way of another behind a standing wall (L-382: a block of Hedeby, in the mega of the
+//      v37's last worlds, raised on the strip between the rock and the wall that led to the town's cemetery, shut the cemetery
+//      off; the wall's gates had been judged at its plan and at the load only): a well put by the world's own door where it
+//      leaves the wall shutting a building of the town off — the wall cuts a gate at once, before any step; and saved and
+//      loaded, the gate is there
+//   9b. the walls' shortcut (Siege.apart: a building that touches nothing, the open ground round it one piece without it, shuts
+//      nothing — the walls are not judged again for it): at every tile tried for 9, where the shortcut says so, the whole count
+//      (openWays, the tile taken) agrees
 //   5. the checker clean, no module error
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -71,7 +79,11 @@ for (const k of WORLDS) {
       try { const w0 = keep.length ? plan(s) : w; const cut = w0 && shutOff(s, w0); if (cut && cut.length) bad7.push(`${name}: ${cut.length} prédio(s) fechados (${cut.slice(0, 2).map(b => b.type + '#' + b.id).join(', ')})`); if (w0 && (w0.ways || []).length) ways7++; }
       finally { for (const [i, v] of keep) S.wall[i] = v; if (keep.length) G.W.touchWalk(); } }
     // 1. each side its gate (or one at its corner), none side by side, at most four
+    // (a side that is only its corner — the rest of the line water, or out of the plan —, the corner a tile of the next side: no
+    // side of its own to gate; in the anos100 of the v37 the north of Karnak's box was all water but the corner by the west gate,
+    // two tiles away, T-194)
     const sides = {}; for (const i of w.tiles) for (const sd of sideOf(w, i)) (sides[sd] = sides[sd] || []).push(i);
+    for (const sd of Object.keys(sides)) if (sides[sd].every(i => sideOf(w, i).length > 1)) delete sides[sd];
     const walked = i => S.road[i] || S.wear[i] > 22;
     // (a side with no street nor path of its own, only light wear: served where its busiest tile — where its people walk out, the
     // planner's own measure — is a step from the next side's gate, as the planner keeps it; the old count asked every such side
@@ -143,11 +155,12 @@ for (const instant of [false, true]) {
 }
 // 6b, 6c. a wall from before L-342, by hand: a box into the corner of a standing wall, whose two runs there have no gate, and
 //     of a town next to it without a wall
-for (const old of [false, true]) {
-  M.pronto('metropole'); const S = G.S, N = G.N, W = G.W, Sg = G.Siege;
-  const nm = old ? '6c o muro de antes de pé num save velho: carregado, o que está dentro do outro muro cai e o bolsão abre' : '6b o plano de antes do conserto, erguido pelos construtores: nada dele dentro do outro muro, e o chão de lá continua da cidade';
+// (the corner sought in each ready world in turn, as deep as six tiles, then five: the worlds made after L-342 raise no wall
+// into another's box, and their walls have gates nearer their corners — the metropolis of the v37 had no corner of six, T-194)
+const corner = (K) => {
+  const S = G.S, N = G.N, W = G.W;
   const standing = o => o.done && o.tiles.filter(i => S.wall[i] && S.wall[i] !== 3).length >= o.tiles.length * 0.8;
-  const K = 6; let best = null; const L0 = W.reachIds(true);
+  let best = null; const L0 = W.reachIds(true);
   for (const a of S.walls.filter(standing).sort((p, q) => p.id - q.id)) {
     const s = S.settlements.get(a.set); if (!s || !G.Fac.get(s.fac)) continue; const R = W.townRegion(s); if (R < 0) continue;
     const [x0, y0, x1, y1] = a.box; if (x1 - x0 < K + 3 || y1 - y0 < K + 3) continue;
@@ -164,6 +177,13 @@ for (const old of [false, true]) {
       if (!best || pk.length > best.pk.length) best = { a, s, cx, cy, sx, sy, pk };
     }
   }
+  return best;
+};
+for (const old of [false, true]) {
+  let best = null, K = 6, world = '';
+  for (const k of ['metropole', 'mega', 'mundial', 'anos100', 'cidade']) { M.pronto(k); for (const k2 of [6, 5]) { best = corner(k2); if (best) { K = k2; world = k; break; } } if (best) break; }
+  const S = G.S, N = G.N, W = G.W, Sg = G.Siege;
+  const nm = old ? '6c o muro de antes de pé num save velho: carregado, o que está dentro do outro muro cai e o bolsão abre' : '6b o plano de antes do conserto, erguido pelos construtores: nada dele dentro do outro muro, e o chão de lá continua da cidade';
   const b = best && [...S.settlements.values()].filter(q => q.id !== best.s.id && G.Fac.get(q.fac) && !Sg.wallOf(q.id)).sort((p, q) => G.dist2(p.cx, p.cy, best.cx, best.cy) - G.dist2(q.cx, q.cy, best.cx, best.cy) || p.id - q.id)[0];
   if (!best || !b) { ok(nm, false, !best ? 'nenhum muro de pé com um canto sem portão e chão da cidade dentro' : 'nenhuma cidade sem muro'); continue; }
   const { a, s, cx, cy, sx, sy, pk } = best; const f = G.Fac.get(b.fac);
@@ -176,7 +196,7 @@ for (const old of [false, true]) {
   const w = { id: S.nextId++, set: b.id, fac: b.fac, mat: 'madeira', tiles, gates, built: 0, done: false, style: f.civ || 'classico', box };
   const inA = i => { const x = i % N, y = (i / N) | 0; return x > a.box[0] && x < a.box[2] && y > a.box[1] && y < a.box[3]; };
   const inner = tiles.filter(inA);
-  const where = `o muro de ${b.name} em ${JSON.stringify(box)}, ${tiles.length} casas (${inner.length} dentro do muro de ${s.name}, ${JSON.stringify(a.box)}); o canto (${cx},${cy}) com ${pk.length} casas de chão de ${s.name}`;
+  const where = `${world}: o muro de ${b.name} em ${JSON.stringify(box)}, ${tiles.length} casas (${inner.length} dentro do muro de ${s.name}, ${JSON.stringify(a.box)}); o canto (${cx},${cy}) com ${pk.length} casas de chão de ${s.name}`;
   const open = () => { const R = W.townRegion(s), L = W.reachIds(true); return pk.filter(i => L[i] === R).length; };
   S.walls.push(w);
   if (!old) {
@@ -234,13 +254,55 @@ for (const k of ['metropole', 'mega', 'cidade', 'anos100', 'mundial']) {
   if (!s0) ok('8 nada que bloqueia no caminho de um portão: o buscador de lugar vai para outro lado', false, 'a maior cidade não tem lugar para uma casa');
   else {
     // (a gate beside the best site — on its south side, where the ground is open —, as a wall raised later would put it)
-    let g = -1; for (let x = s0[0]; x < s0[0] + def.w && g < 0; x++) { const i = (s0[1] + def.h) * N + x; if (G.W.walkable(i) && !S.occ[i] && !S.wall[i]) g = i; }
+    // (on any side of it, the south first: in the metropolis of the v37 the best site's south was all taken, T-194)
+    const around = []; for (let x = s0[0]; x < s0[0] + def.w; x++) around.push([x, s0[1] + def.h]); for (let x = s0[0]; x < s0[0] + def.w; x++) around.push([x, s0[1] - 1]); for (let y = s0[1]; y < s0[1] + def.h; y++) around.push([s0[0] - 1, y], [s0[0] + def.w, y]);
+    let g = -1; for (const [x, y] of around) { if (g >= 0 || x < 0 || y < 0 || x >= N || y >= N) continue; const i = y * N + x; if (G.W.walkable(i) && !S.occ[i] && !S.wall[i]) g = i; }
     if (g < 0) ok('8 nada que bloqueia no caminho de um portão: o buscador de lugar vai para outro lado', false, 'nenhum chão aberto ao lado do lugar');
     else {
       S.wall[g] = 2; G.W.touchWalk(); let s1 = null; try { s1 = V.findSite(s, 'house'); } finally { S.wall[g] = 0; G.W.touchWalk(); }
       const moved = !!s1 && (s1[0] !== s0[0] || s1[1] !== s0[1]);
       ok('8 nada que bloqueia no caminho de um portão: o buscador de lugar vai para outro lado', moved && !(s1 && beside(s1, def)), `${s.name}: o lugar de uma casa em (${s0[0]},${s0[1]}); um portão posto em (${g % N},${(g / N) | 0}), ao lado dele: ${s1 ? 'o lugar foi para (' + s1[0] + ',' + s1[1] + ')' + (beside(s1, def) ? ', AO LADO de um portão' : ', longe de portão') : 'nenhum lugar'}`);
     }
+  }
+}
+// 9. a building in the only way of another, behind a standing wall
+{
+  const nm = '9 um prédio novo no único caminho de outro, atrás do muro de pé: o portão na hora, e no save';
+  // (where a blocking thing on one tile would leave the wall shutting a building of its town off: tried on the map by putting
+  // a blocking building's id on the tile, and taking it back)
+  let found = null, tries = 0, fasts = 0; const unsound = [];
+  for (const k of ['mega', 'metropole', 'mundial', 'anos100', 'cidade']) {
+    M.pronto(k); const S = G.S, N = G.N, W = G.W, V = G.Village; const blk = [...S.buildings.values()].find(b => b.blocks);
+    for (const w of S.walls.filter(q => q.done && S.settlements.has(q.set)).sort((p, q) => p.id - q.id)) {
+      const s = S.settlements.get(w.set); if (!blk || G.Siege.openWays(s, w, true).length) continue;
+      const plan = new Set(w.tiles);
+      const nearWall = b => { for (let y = b.y - 3; y < b.y + b.h + 3; y++) for (let x = b.x - 3; x < b.x + b.w + 3; x++) if (x >= 0 && y >= 0 && x < N && y < N && plan.has(y * N + x)) return true; return false; };
+      for (const b of [...S.buildings.values()].filter(q => q.set === s.id && q.built && q.type !== 'ruin' && nearWall(q)).sort((p, q) => p.id - q.id)) {
+        for (let y = b.y - 3; y < b.y + b.h + 3; y++) for (let x = b.x - 3; x < b.x + b.w + 3; x++) {
+          if (x < 2 || y < 2 || x >= N - 2 || y >= N - 2) continue; const i = y * N + x;
+          if (S.occ[i] || S.wall[i] || plan.has(i) || !W.ground(i) || S.road[i] >= 2 || V.byGate(x, y)) continue;
+          // (and the walls' shortcut, at every tile tried: where it says a building there shuts nothing, the whole count agrees)
+          const fast = G.Siege.apart({ x, y, w: 1, h: 1 }); tries++; if (fast) fasts++;
+          S.occ[i] = blk.id; let o; try { o = G.Siege.openWays(s, w, true); } finally { S.occ[i] = 0; }
+          if (o.length && fast) unsound.push(`${k}: (${x},${y}) no muro de ${s.name}`);
+          if (o.length && !found) found = { k, w: w.id, set: s.id, x, y };
+        }
+      }
+    }
+    if (found) break;
+  }
+  if (!found) ok(nm, false, 'em nenhum mundo pronto uma casa onde um prédio deixaria o muro de pé fechando outro da cidade');
+  else {
+    const S = G.S, N = G.N, W = G.W; const w = S.walls.find(q => q.id === found.w), s = S.settlements.get(found.set);
+    const ways0 = (w.ways || []).length; const shut0 = (() => { const i = found.y * N + found.x; const blk = [...S.buildings.values()].find(b => b.blocks); S.occ[i] = blk.id; try { return G.Siege.openWays(s, w, true); } finally { S.occ[i] = 0; } })();
+    const b = G.Village.addBuilding('well', found.x, found.y, s.id, false); // (the world's door for a building: the one startProject uses)
+    const left = G.Siege.openWays(s, w, true); const added = (w.ways || []).slice(ways0); const cut = added.filter(g => S.wall[g] === 2);
+    const s3 = QA.check().filter(q => q.sev <= 3 && /fecha \d+ prédio/.test(q.msg)).map(q => q.msg);
+    M.salvarCarregar(); const S1 = G.S, w1 = S1.walls.find(q => q.id === found.w); const kept = added.filter(g => w1 && w1.gates.includes(g) && S1.wall[g] === 2).length;
+    ok('9b o atalho dos muros (um prédio que não encosta em nada e deixa o chão em volta inteiro não fecha nada) nunca erra', !unsound.length && fasts > 0, `${tries} casas tentadas perto dos muros, ${fasts} pelo atalho; ${unsound.length ? 'ERROU: ' + unsound.slice(0, 4).join(' · ') : 'nenhum erro'}`);
+    ok(nm, shut0.length > 0 && !left.length && added.length > 0 && cut.length > 0 && !s3.length && kept === added.length,
+      `${found.k}: o muro de ${s.name} (#${w.id}); um poço (#${b.id}) em (${found.x},${found.y}) fecharia o caminho (o portão em ${shut0.map(g => `(${g % N},${(g / N) | 0})`).join(' ')}); posto: ${left.length ? `ainda fecha (${left.map(g => `(${g % N},${(g / N) | 0})`).join(' ')})` : 'nada fechado'}; portões a mais ${added.map(g => `(${g % N},${(g / N) | 0})${S.wall[g]}`).join(' ') || 'nenhum'}; o verificador: ${s3.join(' · ') || 'limpo'}; carregado, ${kept} de ${added.length} de pé no mapa`);
+    void W;
   }
 }
 // 5. the checker, the module errors

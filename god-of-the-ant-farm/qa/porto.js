@@ -207,9 +207,15 @@ function apart(v, h) {
   live(2); const paused = op6.st === 'wait' && op6.wait === 'noite'; const t0 = S.clock;
   live(40); const night = book(op6, 'pegar').filter(e => e[2] > t0 + 0.5);
   day(0.06); // (the morning)
-  const done = live(500, () => watch() || !A.live(op6));
-  ok('p6 a noite', paused && !night.length && done && op6.st === 'ok' && op6.done.sal === 14 && !bad().length,
-    `${paused ? 'ao escurecer a descarga parou' : 'NÃO parou ao escurecer (' + A.STATES[op6.st] + ')'}; caixas levantadas de noite: ${night.length}; de manhã ${A.STATES[op6.st]}, chegou ${op6.done.sal} de 14`);
+  // (the case's salt home: the 14 in the store and none of it left in the unloading's keeping — one quay, one unloading: what
+  // the quay's boats and ships land joins it, as in p5, and it goes on for them; with the final worlds before the 40f626b the
+  // 14 of salt were in by the morning, and after 500 s the unloading still had 27 of food and wood of the others in its
+  // keeping, the night come again, T-198)
+  const saltIn = () => (op6.done.sal || 0) >= 14 - 1e-6 && !((dock.crates || []).some(c => c.op === op6.id && c.k === 'sal') || (S.loose || []).some(o => o.op === op6.id && o.k === 'sal') || [...S.villagers.values()].some(v => v.carry && v.carry.op === op6.id && v.carry.k === 'sal'));
+  const done = live(500, () => watch() || !A.live(op6) || saltIn());
+  const others = Object.keys(op6.goods).filter(k => k !== 'sal' && op6.goods[k] > 1e-6);
+  ok('p6 a noite', paused && !night.length && done && (op6.st === 'ok' || (A.live(op6) && saltIn())) && op6.done.sal === 14 && !bad().length,
+    `${paused ? 'ao escurecer a descarga parou' : 'NÃO parou ao escurecer (' + A.STATES[op6.st] + ')'}; caixas levantadas de noite: ${night.length}; de manhã ${A.STATES[op6.st]}, chegou ${op6.done.sal} de 14${A.live(op6) && others.length ? ` (a descarga segue com o que os barcos e os navios do cais desembarcaram nela: ${others.map(k => `${r2(op6.goods[k])} de ${E.name(k) || k}`).join(', ')})` : ''}`);
 }
 // ---------------- p7: a save in the middle of a crate, loaded twice: the same future, nothing applied twice
 {
@@ -270,13 +276,17 @@ const fateOf = (op, v, n0) => { const e = D.ledger().filter(q => q[7] === op.id 
     const od = A.offers(pv, pv.x, pv.y, 2).find(q => q.act === 'depositar' && q.op === op8.id);
     const r2_ = od ? A.perform(pv, od) : { ok: false, why: 'sem oferta de guardar' };
     const pay = book(op8, 'paga').filter(e => e[9] === pv.id && e[0] > L0); const m1 = D.get(payee, 'moedas'); const got = r2(pay.reduce((a, e) => a + e[6], 0));
+    // (the coins of the house that is paid move by the ledger and only by it: the pay among the house's own lines of the
+    // while — not the pay against the house's total: with the generation-6 worlds the house of Djoser bought 7,26 at a
+    // stall in the same seconds, and its total went down by 6,83 with the 0,43 of the pay in it, T-229)
+    const net8 = r2(D.ledger().filter(e => e[0] > L0 && e[5] === 'moedas' && (e[3] === payee || e[4] === payee)).reduce((a, e) => a + (e[4] === payee ? e[6] : 0) - (e[3] === payee ? e[6] : 0), 0));
     const owed = r2((op8.data.owed || {})[pv.id] || 0); // (an empty treasury owes it, and pays when it has coin)
     // (given back in the working hours, rested and fed — the test's hand: what comes next is the work, not the night or a meal)
     day(0.2); pv.energy = Math.max(pv.energy, 70); pv.hunger = Math.min(pv.hunger, 30);
     G.Possess.release('deus'); M.viver(0.2); const after = A.role(pv);
     const did = []; const goes = live(60, () => { const ty = pv.task ? pv.task.type : '-'; if (did[did.length - 1] !== ty) did.push(ty); return !!(pv.task && (pv.task.type === 'descarga' || pv.task.op === op8.id)) || !A.live(op8); });
     const done = work(op8, 400, () => watch() || !A.live(op8));
-    fine = tk.ok && !!role && role.op === op8.id && r1.ok && r2_.ok && (!E.coinage(fac.id) || (pay.length >= 1 && pay.every(e => e[4] === payee) && m1 - m0 > got - 0.01) || owed > 0) && goes && done && op8.st === 'ok' && op8.done.sal === (more ? 18 : 14) && !bad().length;
+    fine = tk.ok && !!role && role.op === op8.id && r1.ok && r2_.ok && (!E.coinage(fac.id) || (pay.length >= 1 && pay.every(e => e[4] === payee) && Math.abs(m1 - m0 - net8) < 0.01) || owed > 0) && goes && done && op8.st === 'ok' && op8.done.sal === (more ? 18 : 14) && !bad().length;
     const where = kept ? 'ficou nas mãos' : !fate ? 'sumiu' : fate.code === 'pousou' ? 'foi ao chão e o corpo a levantou' : fate.code === 'devolveu' ? (more ? 'voltou ao monte do cais e outro a levou; o corpo pegou a caixa de um navio que chegou' : 'voltou ao monte do cais e o corpo a pegou lá') : fate.code === 'depositar' ? 'entrou no armazém (estava na porta) e o corpo pegou a seguinte no cais' : fate.code;
     info = `${pv.name} levava ${n0} de ${E.name(k0)}; o deus tomou o corpo (${tk.ok ? 'ok' : tk.why}), o papel ficou (${role ? role.role : 'nenhum'}), a caixa ${where} (${r1.ok ? r1.msg || 'ok' : r1.why}); guardou no armazém pela mesma porta (${r2_.ok ? r2_.msg : r2_.why}); paga ${pay.length ? got + ' para ' + pay[0][4] : owed > 0 ? 'devida (o tesouro estava sem moeda: ' + r2(owed) + ' anotados)' : 'nenhuma'}; devolvido: ${after ? 'papel ' + after.role : 'sem papel'}, ${goes ? 'voltou às caixas' : 'NÃO voltou (fez: ' + did.join(' → ') + ')'}; no fim ${A.STATES[op8.st]}, chegou ${op8.done.sal} de ${more ? 18 : 14}`;
   } else info = 'ninguém carregou uma caixa';

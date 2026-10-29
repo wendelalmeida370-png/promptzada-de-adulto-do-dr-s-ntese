@@ -256,7 +256,9 @@
   };
   // can this person walk to that town / that place (unknown → yes: the map does not judge what it cannot see)
   W.reachesTown = function (v, set) { if (!set) return false; const r = W.townRegion(set); if (r < 0) return W.sameLand(v.x, v.y, set.cx, set.cy); const a = W.regsOf(v); return !a || a.includes(r); };
-  W.reaches = function (v, x, y) { if (!W.inb(x, y)) return false; const a = W.regsOf(v); return !a || meet(a, goalRegs(W.idx(x, y), true, [])); };
+  // (on: someone who must stand on the place itself, not beside it — a stretch to pave —; a place no one stands on is judged
+  // beside it, as canWalk does. Beside is the 3×3 round it: from an islet, a street diagonal across the water, L-364)
+  W.reaches = function (v, x, y, on) { if (!W.inb(x, y)) return false; const a = W.regsOf(v); const t = W.idx(x, y); return !a || meet(a, goalRegs(t, !(on && W.walkable(t)), [])); };
   // from a point (no person), and between a town and a place or another town
   W.reachesTownXY = function (x, y, set) { if (!set || !W.inb(x, y)) return false; const r = W.townRegion(set); if (r < 0) return W.sameLand(x, y, set.cx, set.cy); const a = stepRegs(W.idx(x, y), []); return !a.length || a.includes(r); };
   W.townReaches = function (set, x, y) { if (!set || !W.inb(x, y)) return false; const r = W.townRegion(set); if (r < 0) return W.sameLand(set.cx, set.cy, x, y); return goalRegs(W.idx(x, y), true, []).includes(r); };

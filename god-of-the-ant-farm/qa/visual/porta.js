@@ -61,10 +61,18 @@ const at = (X, Z, yaw) => { if (!G.Avatar.place(X / TL, Z / TL)) return false; s
 const yawTo = (X, Z) => Math.atan2(DZ - Z, DX - X);
 // (the yard emptied for the proofs that only look — the world stopped —: the animals and the people about, put far away and back)
 // (round the doorstep, or round the point a proof is made at — T-089)
-const aside = []; const clear = (C) => { const [CX, CZ] = C || [SX, SZ]; const k0 = aside.length; const put = o => { if (!aside.some(q => q[0] === o)) aside.push([o, o.x, o.y]); };
+// (and the things of the ground about it — a tree, a log waiting for whoever takes its wood, a bush, a stone —: what the hands
+// offer of them is looked for in the tiles about the body, by their marks on the map; those marks taken off the tiles about the
+// point and put back after. On the doorstep of the house#23918 of the sixth generation a log lay a stride ahead of the body
+// turned 90° from the door, and «Pegar lenha do tronco» was, by the game's rule (L-326: the door before everything only within
+// Interact.FACE of where the body looks), what one meant there — T-232)
+const aside = [], marks = []; const clear = (C) => { const [CX, CZ] = C || [SX, SZ]; const k0 = aside.length; const put = o => { if (!aside.some(q => q[0] === o)) aside.push([o, o.x, o.y]); };
   for (const a of S.animals.values()) if (Math.hypot(a.x * TL - CX, a.y * TL - CZ) < 9) put(a); for (const o of S.villagers.values()) if (o !== v && !o.inside && Math.hypot(o.x * TL - CX, o.y * TL - CZ) < 9) put(o);
-  god(() => { for (const [o] of aside.slice(k0)) { o.x += 60; o.y += 60; } }); };
-const back = () => { god(() => { for (const [o, x, y] of aside) { o.x = x; o.y = y; } }); aside.length = 0; };
+  god(() => { for (const [o] of aside.slice(k0)) { o.x += 60; o.y += 60; }
+    const tx = Math.floor(CX / TL), ty = Math.floor(CZ / TL);
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const x = tx + dx, y = ty + dy; if (!W.inb(x, y)) continue; const i = W.idx(x, y);
+      for (const k of ['treeAt', 'objAt']) if (S[k][i]) { marks.push([k, i, S[k][i]]); S[k][i] = 0; } } }); };
+const back = () => { god(() => { for (const [o, x, y] of aside) { o.x = x; o.y = y; } for (let k = marks.length - 1; k >= 0; k--) { const [m, i, id] = marks[k]; S[m][i] = id; } }); aside.length = 0; marks.length = 0; };
 // (for a proof the world runs in, those about the doorstep sent a few strides off along the street, to ground the world walks —
 // not out of the world, as for the proofs that only look —, and back after: someone standing at the door is whom «E» means — T-089)
 const asideRun = []; const clearRun = () => {
@@ -147,6 +155,41 @@ if (pet) {
 }
 
 // ------------------------------ 5. someone else's locked door ------------------------------
+// (the walk of the estiva's proof, as a player walks — qa/visual/estiva.js, T-152 and T-205 —: toward a point, round what stops
+// the feet on the way — a boulder, a pier, the wall of a lot the world's path runs a hair from — a step aside and on again,
+// farther and to the other side the next time; a building is the place itself: there the walk ends)
+function walkTo(X, Z, max, near) {
+  let k = 0, stuck = 0, last = [st.X, st.Z], turns = 0, aside = 0, side = 1, lim = max || 400;
+  for (; k < lim; k++) {
+    const dx = X - st.X, dz = Z - st.Z; if (Math.hypot(dx, dz) < (near || 0.3)) break;
+    IN.camYaw = Math.atan2(dz, dx) + (aside > 0 ? side * Math.PI / 2 : 0); if (aside > 0) aside--; IN.mz = 1; IN.mx = 0; frame();
+    if (Math.hypot(st.X - last[0], st.Z - last[1]) < 0.004) {
+      if (++stuck > 25) { if (turns >= 6 || Math.hypot(X - st.X, Z - st.Z) < 1.5 || !(st.block === 'ledge' || st.block === 'wall')) break; turns++; side = -side; aside = 30 * turns; lim += aside + 30; stuck = 0; }
+    } else stuck = 0;
+    last = [st.X, st.Z];
+  }
+  stop(); for (let q = 0; q < 4; q++) frame();
+  return Math.hypot(X - st.X, Z - st.Z);
+}
+// (the frames a leg is given: what its length needs at a slow walk, 0.9 m/s, and some)
+const legFrames = (X, Z, min) => Math.max(min, Math.ceil(Math.hypot(X - st.X, Z - st.Z) / 0.03) + 60);
+// (an open gate on a leg gone through by the middle of its passage: a tile before it, the gate, a tile after — the world walks
+// the gate's whole tile, the body only the way between its piers, L-308)
+function throughGates(x0, y0, pts) {
+  const out = []; let ax = x0, ay = y0;
+  for (const w of pts) {
+    const n = Math.ceil(Math.hypot(w[0] - ax, w[1] - ay) * 4); let last = -1;
+    for (let k = 1; k <= n; k++) {
+      const x = ax + (w[0] - ax) * k / n, y = ay + (w[1] - ay) * k / n; const gx = Math.floor(x), gy = Math.floor(y), i = W.idx(gx, gy);
+      if (S.wall[i] !== 2 || i === last) continue; last = i;
+      const ns = !!(S.wall[W.idx(gx, gy - 1)] || S.wall[W.idx(gx, gy + 1)]); // (the wall runs north to south: the passage west to east)
+      const s = (ns ? Math.sign(w[0] - ax) : Math.sign(w[1] - ay)) || 1; const c = [gx + 0.5, gy + 0.5];
+      for (const q of ns ? [[c[0] - s, c[1]], c, [c[0] + s, c[1]]] : [[c[0], c[1] - s], c, [c[0], c[1] + s]]) if (W.walkableXY(q[0], q[1])) out.push(q);
+    }
+    out.push(w); ax = w[0]; ay = w[1];
+  }
+  return out;
+}
 { // (another house with a plan, its door on a street; one of it locks it, in the world's step)
   let H2 = null;
   const near = q => Math.hypot(q.x + q.w / 2 - v.x, q.y + q.h / 2 - v.y);
@@ -159,11 +202,15 @@ if (pet) {
   if (!H2) ok('5. a porta trancada de outra casa', false, 'nenhuma');
   else {
     const { q, pq, owner, sx, sz } = H2; god(() => { In.useDoor(q, pq.entrance.door, 'fechar', owner); In.useDoor(q, pq.entrance.door, 'trancar', owner); });
-    // (the body walked there by the world's own path, as a player goes)
+    // (the body walked there by the world's own path, as a player goes — and as the estiva's proof walks it (T-152, T-205): each
+    // straight leg given the frames its length asks, round what stops the feet a step aside, an open gate by the middle of its
+    // passage. A fixed 300 frames a leg — 10 s, some 18 m — left the body short of the end of a leg of 24 m, and the next, aslant
+    // from there, ran it into a cliff; and a leg the world walks a hair from a lot — 0.28 m from the sobrado#18371, the body
+    // 0.32 m round — held it at that wall: the house#25170 of the sixth generation, five tiles from the body, thirty on foot,
+    // round a cliff — T-233)
     const path2 = W.findPath(v.x, v.y, sx / TL, sz / TL, true, 40000);
-    const walk = (X, Z, max) => { for (let k = 0; k < max; k++) { const dx = X - st.X, dz = Z - st.Z; if (Math.hypot(dx, dz) < 0.3) break; IN.camYaw = Math.atan2(dz, dx); IN.mz = 1; frame(); } stop(); for (let k = 0; k < 4; k++) frame(); };
-    if (path2) for (const w of path2) walk(w[0] * TL, w[1] * TL, 300);
-    walk(sx, sz, 200);
+    if (path2) for (const w of throughGates(v.x, v.y, path2)) walkTo(w[0] * TL, w[1] * TL, legFrames(w[0] * TL, w[1] * TL, 300));
+    walkTo(sx, sz, legFrames(sx, sz, 200));
     const pp = I.list.find(qq => qq.id === 'portaPlanta'); const t2 = (pp.find(I.ctx()) || []).find(t => t.b === q && t.d.id === pq.entrance.door);
     if (t2) { st.yaw = Math.atan2(t2.Z - st.Z, t2.X - st.X); IN.camYaw = st.yaw; still(2); }
     const r = I.best(); const x0 = st.X, z0 = st.Z; said.length = 0;

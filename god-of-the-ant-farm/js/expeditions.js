@@ -457,6 +457,10 @@
       if (off.some(v => v.id === e.leader)) return finish(e, 'cancelada', `${e.leaderName} não chega a pé ao cais de ${e.fromName}: ${e.name} não sai.`);
       for (const v of off) { G.Vg.endTask(v); e.crew = e.crew.filter(id => id !== v.id); crew.splice(crew.indexOf(v), 1); }
       if (!crew.length) return finish(e, 'cancelada', `Não sobrou ninguém para ${e.name}.`);
+      // (whoever lost the errand to a fright — a beast on the quay, a fire, a fight — goes back to it once the fright is over, as
+      // the crew ashore goes back to the boats: Públio's great voyage, its crew scattered by a beast on the quay, sailed with one
+      // of twenty-six; a save gave the errand back, the living world did not, L-367)
+      for (const v of crew) if (!v.aboard && !v.captive && !(v.task && ((v.task.type === 'cais' && v.task.exp === e.id) || v.task.pri > 3.25)) && !(G.Scene && G.Scene.actorScene(v))) G.Vg.setTask(v, { type: 'cais', exp: e.id, k: e.crew.indexOf(v.id), job: 'wait', pri: 3.25, st: 0 });
     }
     if (flag && Nv.atSea(flag)) { if (!e.track.length || G.dist2(e.track[e.track.length - 1][0], e.track[e.track.length - 1][1], flag.x, flag.y) > 9) { e.track.push([+flag.x.toFixed(1), +flag.y.toFixed(1)]); if (e.track.length > 160) e.track.splice(1, 1); } e.lastX = flag.x; e.lastY = flag.y; }
     switch (e.st) {
@@ -530,13 +534,14 @@
     e.bq -= 0.5; if (e.bq > 0) return;
     const left = crew.filter(v => !v.aboard);
     if (left.length) {
-      // two at a time step down the plank (the ones still on their way are waited for, a while)
+      // two at a time step down the plank, of the ones on the quay (the ones still on their way are waited for, a while — and
+      // never in front of the others: the first two still away kept everyone on the quay from boarding, L-367)
       // (someone saying goodbye in a scene of their own is waited for: the ship does not leave in the middle of an embrace)
+      // (after a while, whoever is a step or two off on the quay's own ground too — never one boarded from far away: Solveig,
+      // of Birka, crew of a voyage from Ribe's quay, was put aboard from 50 casas off, across the water, L-346)
       const inScene = v => !!(G.Scene && G.Scene.actorScene(v));
-      for (const v of left.filter(q => !inScene(q)).slice(0, 2)) {
-        // (after a while, whoever is a step or two off on the quay's own ground too — never one boarded from far away: Solveig,
-        // of Birka, crew of a voyage from Ribe's quay, was put aboard from 50 casas off, across the water, L-346)
-        const d = G.dist(v.x, v.y, e.port[0], e.port[1]); if (d > 3.5 && !(e.t >= 40 && d <= 8 && W.reaches(v, e.port[0], e.port[1]))) continue;
+      const onQuay = v => { const d = G.dist(v.x, v.y, e.port[0], e.port[1]); return d <= 3.5 || (e.t >= 40 && d <= 8 && W.reaches(v, e.port[0], e.port[1])); };
+      for (const v of left.filter(q => !inScene(q) && onQuay(q)).slice(0, 2)) {
         const s = berth(e, v, ships); if (!s) continue;
         Nv.board(v, s); v.gear = null;
         G.FX && G.FX.splash(s.x, s.y, 0.2);

@@ -169,9 +169,12 @@ S.weather.storm = 0;
 }
 // ---------------- m6: the flats at low water, the same
 {
-  // (the low water of the day: the tide's own clock, at the start of its ebb)
+  // (the low water of the day: the tide's own clock, at the start of its ebb. The tide turns twice a day — at t0 and at
+  // t0 + 0,5 —: the one by daylight. The fraction of half a negative number gave the night's on some days — 0,91 on the
+  // day 58 of the metropolis of the generation 6, and the night sent each one to bed or to the watch in the first second,
+  // T-238)
   const frac = x => x - Math.floor(x);
-  const ebb = () => { const t0 = frac((0.36 - frac(S.day * 0.13)) / 2); S.time = t0 < 0.08 ? t0 + 0.5 : t0; };
+  const ebb = () => { const t0 = frac((0.36 - frac(S.day * 0.13)) / 2) % 0.5; S.time = t0 < 0.08 ? t0 + 0.5 : t0; };
   const spotFor = o => G.Sea && G.Sea.lowTide() && G.Sea.shellSpot(o.x, o.y, 18);
   let info = '', fine = false; const away = []; let sp0 = null;
   // (one the world calls away from the flats before the catch — the cave's errand, of 1,3, took one for fifty seconds and

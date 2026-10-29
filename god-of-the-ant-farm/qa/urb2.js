@@ -46,15 +46,24 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     let w = [...S.buildings.values()].find(b => b.type === 'armazem' && b.set === set.id && b.built) || window.__put('armazem', dock.x, dock.y);
     if (!w) return { skip: 'sem lugar para o armazém' };
     const hand = window.__adults().find(v => v.role !== 'guerreiro'); hand.role = 'estivador'; hand.job = w.id; G.Vg.endTask(hand);
-    G.Eco.ensure(f); const before = f.eco.imp || 0;
-    G.Harbor.land(dock, { k: 'tecido', n: 12 }, null);
-    return { dock: dock.id, w: w.id, hand: hand.id, before, crates: dock.crates.length };
+    // (the cloth comes out of a ship's hold, as every cargo of the depot does — the porto's own cases' hand: a landing with no
+    // ship lands nothing, and the case passed only while other ships' food emptied the quay and filled the imports; with
+    // the final worlds the food never fitted the store, the unloading waited «cheio», and no cloth had come ashore, T-197)
+    const sh = S.ships.find(s => s.kind === 'mercante') || S.ships[0]; if (!sh) return { skip: 'nenhum navio no mundo' };
+    // (the cloth that the porters' hands put into the people's store — the ledger's «depositar», counted as it happens)
+    window.__clothIn = 0; G.Depot.onMove.push(e => { if (e[5] === 'tecido' && e[4] === 'f:' + f.id && e[8] === 'depositar' && /^v:/.test(e[3])) window.__clothIn += e[6]; });
+    sh.goods = { k: 'tecido', n: 12 }; G.Harbor.land(dock, sh.goods, sh);
+    const cloth = (dock.crates || []).filter(c => c.k === 'tecido').length;
+    return { dock: dock.id, w: w.id, hand: hand.id, crates: cloth };
   });
   if (q.skip) ok('1 a carga do navio desce no cais e vai a pé ao armazém', true, `(sem prova: ${q.skip})`);
   else {
-    const r = await until(o => { const d = G.S.buildings.get(o.dock); const f = G.Fac.get(window.__set.fac); return (d.crates || []).length === 0 && (f.eco.imp || 0) >= o.before + 12 ? 1 : null; }, 400, q);
-    const fin = await page.evaluate(o => ({ left: (G.S.buildings.get(o.dock).crates || []).length, now: G.Fac.get(window.__set.fac).eco.imp || 0 }), q);
-    ok('1 a carga do navio desce no cais e vai a pé ao armazém', fin.left === 0 && fin.now >= q.before + 12, `${q.crates} caixas de tecido no cais; depois: ${fin.left} no cais, ${fin.now - q.before} medidas entraram no estoque pelo armazém`);
+    // (the case's own cargo: its cloth crates off the quay, and the cloth in the store by the porters' hands; the quay of a
+    // busy port has other crates on it all the time)
+    await page.evaluate(() => { window.__cloth = o => { const d = G.S.buildings.get(o.dock); return { left: (d.crates || []).filter(c => c.k === 'tecido').length, inn: Math.round(window.__clothIn * 100) / 100 }; }; });
+    await until(o => { const r = window.__cloth(o); return r.left === 0 && r.inn >= 12 - 1e-6 ? 1 : null; }, 400, q);
+    const fin = await page.evaluate(o => window.__cloth(o), q);
+    ok('1 a carga do navio desce no cais e vai a pé ao armazém', q.crates > 0 && fin.left === 0 && fin.inn >= 12 - 1e-6, `${q.crates} caixas de tecido no cais; depois: ${fin.left} no cais, ${fin.inn} medidas entraram no estoque pelas mãos dos estivadores`);
   }
 
   // 2 the tavern
@@ -107,7 +116,8 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     const ff = G.Fac.get(set.fac); ff.stock.wood = 0; ff.stock.stone = 0;
     const homes = [...S.buildings.values()].filter(b => b.set === set.id && b.built && G.BDEF[b.type].housing && b.type !== 'barraco').sort((a, b) => a.id - b.id);
     const fams = prev.slice();
-    const out = () => fams.filter(id => { const v = S.villagers.get(id); return v && !v.home && v.age >= 16 && !v.aboard; }).length;
+    // (out in the street of this town: one who left with settlers has no house here either, and is not the case's)
+    const out = () => fams.filter(id => { const v = S.villagers.get(id); return v && v.set === set.id && !v.home && v.age >= 16 && !v.aboard; }).length;
     for (const h of homes) {
       G.Village.forceUpdate(); if (out() >= 4) break;
       for (const v of S.villagers.values()) if (v.home === h.id && !fams.includes(v.id)) fams.push(v.id);
@@ -116,15 +126,23 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     G.Village.forceUpdate();
     return { fams, homes: homes.length };
   }, prev);
-  // (no wood, no stone, at every step: the town cannot rebuild what burned)
-  const dry = secs => page.evaluate(n => { const ff = G.Fac.get(window.__set.fac); for (let k = 0; k < n; k++) { G.debug.step(0.1); ff.stock.wood = Math.min(ff.stock.wood, 0.5); ff.stock.stone = Math.min(ff.stock.stone, 0.5); } }, Math.round(secs * 10));
+  // (no wood, no stone, at every step: the town cannot rebuild what burned. And it sends no settlers away while the case
+  // runs — the crisis is the case: a city with its stone houses burnt falls back to a town after 36 looks (city.js), a
+  // town that is no city sends a third of its people to found another (village.js checkExpansion), and the beds they
+  // leave take the burnt families in before their second night in the street. With the final code, seed 7, Argos fell
+  // back three minutes after the fire and sent sixteen away at the turn of the second day, in two fires of the three —
+  // the young of the burnt houses among them —, T-215. So the god holds the city's standing and its patience for the
+  // case, as he holds the wood and the stone)
+  const dry = secs => page.evaluate(n => { const st = window.__set; const ff = G.Fac.get(st.fac); for (let k = 0; k < n; k++) { G.debug.step(0.1); ff.stock.wood = Math.min(ff.stock.wood, 0.5); ff.stock.stone = Math.min(ff.stock.stone, 0.5); st.tierLow = 0; st.fails = 0; } }, Math.round(secs * 10));
   const untilDry = async (fn, maxSecs, arg) => { for (let k = 0; k < maxSecs / 5; k++) { const r = await page.evaluate(fn, arg); if (r) return r; await dry(5); } return page.evaluate(fn, arg); };
-  let fr = { fams: [] }, sh = null, rounds = 0;
+  let fr = { fams: [] }, sh = null, rounds = 0; const day4 = await page.evaluate(() => G.S.day);
   for (; rounds < 3 && !sh; rounds++) {
     fr = await burn(fr.fams);
     sh = await untilDry(o => { const S = G.S; const vs = o.fams.map(id => S.villagers.get(id)).filter(Boolean); const why = vs.filter(v => v.ruaWhy === 'fogo').length; const inShack = vs.filter(v => v.home && (S.buildings.get(v.home) || {}).type === 'barraco').length; return inShack ? { why, inShack } : null; }, 700, fr);
   }
   const why = await page.evaluate(o => o.fams.map(id => G.S.villagers.get(id)).filter(Boolean).map(v => v.ruaWhy || (v.home ? (G.S.buildings.get(v.home) || {}).type : '-')), fr);
+  // (settlers who left the town all the same, for the message: the hold is the case's premise)
+  const went4 = await page.evaluate(d => { const nm = window.__set.name; return G.S.history.filter(h => h.d >= d && h.txt.includes('partiram de ' + nm + ' ')).map(h => h.d + ': ' + h.txt); }, day4);
   if (!sh) console.log('RUA ' + JSON.stringify(await page.evaluate(() => { const S = G.S; const set = window.__set; return { tier: set.tier, hi: G.Village.housingInfo(set.id), rua: [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 16 && !v.home).map(v => [v.name, v.rua, v.ruaWhy, v.task && v.task.type, v.task && v.task.pri]).slice(0, 8), day: S.day }; })));
   let left = null;
   if (sh) {
@@ -133,7 +151,7 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     const inS = await page.evaluate(o => o.fams.filter(id => { const v = G.S.villagers.get(id); return v && v.home && (G.S.buildings.get(v.home) || {}).type === 'barraco'; }), fr);
     left = await until(ids => { const S = G.S; const out = ids.map(id => S.villagers.get(id)).filter(v => v && v.home && S.buildings.get(v.home) && S.buildings.get(v.home).type !== 'barraco' && G.BDEF[S.buildings.get(v.home).type].housing).length; return out ? out : null; }, 1200, inS);
   }
-  ok('4 a casa queima: a família vai para a rua (por isso), levanta um barraco e depois sai dele', !!sh && !!left, sh ? `${rounds > 1 ? `(${rounds} incêndios) ` : ''}${sh.inShack} da família num barraco (motivos: ${[...new Set(why)].join(', ')}); ${left ? left + ' saíram do barraco para uma casa' : 'ninguém saiu do barraco'}` : `sem barraco em ${rounds} incêndios de 700 s; estado: ${[...new Set(why)].join(', ')}`);
+  ok('4 a casa queima: a família vai para a rua (por isso), levanta um barraco e depois sai dele', !!sh && !!left, sh ? `${rounds > 1 ? `(${rounds} incêndios) ` : ''}${sh.inShack} da família num barraco (motivos: ${[...new Set(why)].join(', ')}); ${left ? left + ' saíram do barraco para uma casa' : 'ninguém saiu do barraco'}` : `sem barraco em ${rounds} incêndios de 700 s; estado: ${[...new Set(why)].join(', ')}${went4.length ? `; a cidade mandou gente embora: ${went4.join(' · ')}` : ''}`);
 
   // 5 the theft
   const th = await page.evaluate(() => {
@@ -152,6 +170,8 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     const [dx, dy] = G.Vg.door(rich); guard.x = dx + 1.2; guard.y = dy + 0.8; guard.sleeping = false; guard.inside = 0; G.Vg.setTask(guard, { type: 'ronda', pts: Array.from({ length: 40 }, (_, k) => k % 2 ? [dx - 1.2, dy + 0.8] : [dx + 1.5, dy + 0.6]), k: 0, pri: 1.6, st: 0, loop: 1, kind: 'ronda' });
     thief.sleeping = false; thief.inside = 0; G.Vg.endTask(thief);
     G.Vg.setTask(thief, { type: 'furto', house: rich.id, pri: 2.05, st: 0, kind: 'furto' });
+    // (the coins in and out of the thief's purse, as the ledger writes them: the house's own total moves with the day)
+    window.__c5 = []; G.Depot.onMove.push(e => { if (e[5] === 'moedas' && (e[3] === 'p:' + thief.id || e[4] === 'p:' + thief.id)) window.__c5.push([e[3], e[4], e[6], e[8]]); });
     return { rich: rich.id, thief: thief.id, guard: guard.id, jail: jail ? jail.id : 0, coin0: rich.coin };
   });
   if (th.skip) ok('5 o roubo: a moeda muda de casa, o guarda vê, prende e leva à cadeia', false, th.skip);
@@ -172,7 +192,12 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     if (stole) th.crime = stole.id;
     const caught = await until(o => { const v = G.S.villagers.get(o.thief); return v && v.jail ? { jail: v.jail, until: v.jailUntil, task: v.task && v.task.type } : null; }, 200, th);
     const after = await page.evaluate(o => { const S = G.S; const c = (S.crimes || []).find(q => q.id === o.crime); const v = S.villagers.get(o.thief); return { st: c && c.st, how: c && c.how, coin: (S.buildings.get(o.rich) || {}).coin, purse: v ? v.purse : null }; }, th);
-    ok('5 o roubo: a moeda muda de casa, o guarda vê, prende e leva à cadeia', !!stole && stole.seen >= 1 && !!caught && after.coin >= th.coin0 - 0.01, stole ? `roubou ${stole.n} moedas (${stole.seen} testemunha${stole.seen > 1 ? 's' : ''}${stole.flag ? ', o guarda viu' : ''}); ${caught ? `preso até o ano ${caught.until} (${caught.task})` : 'não foi preso'}; ${after.how || ''}; a casa: ${th.coin0} → ${after.coin && after.coin.toFixed(1)} moedas` : 'não roubou');
+    // (the coin back home by its own line in the ledger — «devolvido», from the thief's purse to the house, what is left in
+    // it of the theft —, not the house's total: a house of 40 coins buys at the market and pays its rounds the same day,
+    // and with the final code, seed 7, the house went from 40 to 21,6 with the thief caught and the 6 given back, T-216)
+    const coin5 = await page.evaluate(o => { const L = window.__c5 || [], P = 'p:' + o.thief, H = 'h:' + o.rich; const sum = f => Math.round(L.filter(f).reduce((a, e) => a + e[2], 0) * 100) / 100; return { took: sum(e => e[0] === H && e[1] === P && e[3] === 'roubo'), back: sum(e => e[0] === P && e[1] === H && e[3] === 'devolvido'), out: sum(e => e[0] === P && e[3] !== 'devolvido'), inn: sum(e => e[1] === P && e[3] !== 'roubo') }; }, th);
+    const due5 = stole ? Math.min(stole.n, coin5.took + coin5.inn - coin5.out) : 0;
+    ok('5 o roubo: a moeda muda de casa, o guarda vê, prende e leva à cadeia', !!stole && stole.seen >= 1 && !!caught && coin5.back > 0 && Math.abs(coin5.back - due5) < 0.01, stole ? `roubou ${stole.n} moedas (${stole.seen} testemunha${stole.seen > 1 ? 's' : ''}${stole.flag ? ', o guarda viu' : ''}); ${caught ? `preso até o ano ${caught.until} (${caught.task})` : 'não foi preso'}; ${after.how || ''}; de volta à casa pelo livro: ${coin5.back} de ${Math.round(due5 * 100) / 100}${coin5.out ? ` (o ladrão gastou ${coin5.out} antes)` : ''}; a casa: ${th.coin0} → ${after.coin && after.coin.toFixed(1)} moedas, com o dia dela` : 'não roubou');
     // 6 the cell through a save
     const A = await page.evaluate(() => QA.check().filter(x => x.sys === 'urb' && x.sev <= 3).map(x => x.sev + ' ' + x.msg));
     await page.evaluate(() => G.Save.save(true));
