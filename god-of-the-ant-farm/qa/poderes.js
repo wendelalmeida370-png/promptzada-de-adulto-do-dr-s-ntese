@@ -17,7 +17,8 @@
 //  a2 de povos diferentes: um vai morar na cidade do outro, e os povos se estimam mais
 //  a3 o amado morre no caminho (ninguém casa, quem corria fica de luto); um save no meio carregado duas vezes
 // Duelo de Campeões (no mundo pronto «guerra mundial»)
-//  d1 os dois campeões lutam sozinhos; quem vence ganha o nome de Campeão; quem perde, o seu lado foge
+//  d1 os dois campeões lutam sozinhos; quem vence ganha o nome de Campeão (ou guarda o que já tinha, se for mais alto — T-253);
+//     quem perde, o seu lado foge
 //  d2 um save no meio do duelo carregado duas vezes; o raio do deus num dos campeões
 // Sonho Coletivo
 //  s1 a grande obra, os deuses, a terra além do mar, a paz (numa guerra provocada); o mesmo povo não sonha duas vezes seguidas
@@ -468,17 +469,22 @@ const key = process.argv[2] || 'cidade';
       if (!rec) return { ok, none: true };
       const again = G.Powers.canCast('duel', at[0], at[1]); const why = G.Powers.why;
       const a = rec.a, b = rec.b, fa = rec.fa, fb = rec.fb;
+      const ep0 = { [a]: (S.villagers.get(a) || {}).ep || null, [b]: (S.villagers.get(b) || {}).ep || null }; // (their names before the duel)
       const t = H.until(() => !S.fates.duels.length, 100);
       const A = S.villagers.get(a), B = S.villagers.get(b);
       const winner = A && !B ? A : B && !A ? B : null;
+      // (a winner who already bore a higher name keeps it: «o Conquistador» outranks «o Campeão» — the rule of the names,
+      // asked of the game itself on a stand-in with that name, T-253)
+      const was = winner ? ep0[winner.id] : null;
+      const kept = !!was && winner.ep === was && (() => { const q = { ep: was }; G.Politics.earn(G.Fac.get(G.Fac.idOfV(winner)), q, 'campeao', true); return q.ep === was; })();
       const lines = S.history.slice(-30).map(e => e.txt).filter(x => /duelo de campeões/.test(x));
       const fled = [...G.War.bands.values()].filter(x => x.fac === (winner === A ? fb : fa) && x.retreat).length;
-      return { ok, again, why, t, a: G.person(a).name, b: G.person(b).name, winner: winner ? winner.name : null, ep: winner ? winner.ep : null, fled, lines, qa: H.qaWar() };
+      return { ok, again, why, t, a: G.person(a).name, b: G.person(b).name, winner: winner ? winner.name : null, ep: winner ? winner.ep : null, was, kept, fled, lines, qa: H.qaWar() };
     });
     if (!r) ok('d1 duelo de campeões', false, 'nenhuma batalha no mundo pronto da guerra mundial');
     else if (r.none) ok('d1 duelo de campeões', false, `lançado ${r.ok}, mas nenhum duelo começou`);
     else {
-      ok('d1 duelo de campeões: um vence, o nome fica', r.ok && r.lines.length && (!r.winner || r.ep === 'campeao') && !r.qa.length, `${r.a} × ${r.b}: ${r.winner ? `venceu ${r.winner} (${r.ep}), ${r.fled} bando(s) do outro lado fugiram` : 'sem vencedor'} em ${r.t}s; crônica: ${r.lines.slice(-1)[0] || '-'}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+      ok('d1 duelo de campeões: um vence, o nome fica', r.ok && r.lines.length && (!r.winner || r.ep === 'campeao' || r.kept) && !r.qa.length, `${r.a} × ${r.b}: ${r.winner ? `venceu ${r.winner} (${r.ep}${r.kept ? ', o nome que já tinha, mais alto que o de Campeão' : ''}), ${r.fled} bando(s) do outro lado fugiram` : 'sem vencedor'} em ${r.t}s; crônica: ${r.lines.slice(-1)[0] || '-'}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
       ok('d1 um duelo por vez', !r.again && /já está acontecendo/.test(r.why), r.why);
     }
   }
