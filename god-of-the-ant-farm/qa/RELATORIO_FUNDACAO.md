@@ -190,7 +190,7 @@ antes do conserto, e a prova que falhava passa depois. Por família:
   - o que um prédio guarda sai do mundo sem linha no livro quando ele cai, quando a cidade é abandonada, quando a guarda
     fecha um mercado clandestino ou quando a cidade derruba o bairro velho (L-377).
 
-  O resto foram limites das provas diante dos mundos novos (T-231 a T-261), e o mais comum foi um só: **o corpo andando
+  O resto foram limites das provas diante dos mundos novos (T-231 a T-262), e o mais comum foi um só: **o corpo andando
   pelo caminho do mundo**. O mundo anda de casa em casa, e o corpo tem largura. Por isso o corpo parava:
   - no pilar de um portão, que o mundo atravessa pela casa toda e o corpo só pelo vão;
   - na banca da borda de uma feira, que o mundo atravessa por dentro do lote;
@@ -211,6 +211,15 @@ antes do conserto, e a prova que falhava passa depois. Por família:
 
   Uma dessas, a do armazém do porto, foi lida primeiro como um defeito das ofertas do corpo (o L-388). O conserto foi feito
   e desfeito no mesmo dia, quando uma sonda no navegador mostrou que o corpo nem chegava à porta (T-255).
+
+  Na regressão final, a prova do Modo Encarnado parou no meio, e a causa estava na própria prova: as partes que vivem o
+  mesmo mundo, uma depois da outra, dependiam da máquina (T-262). A parte em que o corpo dorme faz o mundo correr
+  depressa, e o jogo, quando a máquina não dá conta, corta passos do quadro — o certo para quem joga, para o jogo não
+  travar. Na prova, isso deixava o mundo das partes seguintes um pouco diferente a cada rodada. Numa delas era noite, a
+  maior cidade tinha dois adultos na rua, e a prova precisava de quatro. Agora os quadros das provas nunca são cortados, e a
+  sequência vive o mesmo mundo em qualquer máquina: duas rodadas ao mesmo tempo, com a máquina cheia, deram as mesmas 60
+  linhas, palavra por palavra. Era também o que fazia a troca de corpo de 28/10 falhar numa rodada e passar na outra
+  (L-309).
 
 ## 6. O que fica parcial, ou não foi feito
 
