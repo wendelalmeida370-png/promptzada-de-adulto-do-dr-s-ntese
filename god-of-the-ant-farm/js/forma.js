@@ -321,7 +321,7 @@
       { k: 'faixa', r: rect(L, -1.05, -0.85, 1.05, 0.85), y0: z0 + px(23), y1: z0 + px(24.2), cor: 'acc' },
       { k: 'telhado', r: rect(L, -1.05, -0.85, 1.05, 0.85), y0: z0 + px(25), y1: z0 + px(34), ao: 'v', ov: 0.05 * TILE, cor: ['roof0', 'roof1', 'gable', 'roof2'] },
       { k: 'disco', na: 'frente', u: L / 2, v: at(L, 0.9), y: z0 + px(29), r: 0.6, cor: '#f2c14e' },
-      { k: 'estatua', p: [at(L, -0.9), at(L, 1.1), z0], h: px(16), cor: '#e0b84a', lanca: true },
+      { k: 'estatua', p: [at(L, -0.9), at(L, 1.1), z0], h: px(16), w: robe(16), cor: '#e0b84a', lanca: true },
     ], door: { u: L / 2, w: 1.2, y0: z0 + px(2.4), y1: z0 + px(18) } };
   });
   // Valhalla (nordico): the great hall of 2.8 × 1.6 tiles on its stone base 2 px high — the three treads of its front down to
@@ -1549,7 +1549,13 @@
       out.push({ k: 'caixa', c: [u, v, y], a: 2 * w, d: 1.3 * w, h: 0.62 * h, cor: c });
       out.push({ k: 'caixa', c: [u, v, y + 0.62 * h], a: 2.2 * w, d: 1.4 * w, h: 0.1 * h, cor: c, tom: 0.9 });
       out.push({ k: 'bola', c: [u, v, y + 0.78 * h], r: 0.75 * w, cor: c });
-      if (e.lanca) { out.push({ k: 'haste', a: [u + 1.3 * w, v, y + 0.05 * h], b: [u + 1.3 * w, v, y + 1.1 * h], r: 0.05, cor: c, tom: 0.7 });
+      // (the spear where the god draws it: 1.3 robes right of his middle on the picture, as high as the god's — a px to the
+      // right is an eighth of a metre along u and back along v, a robe of the god's is 6.6 w px —, its line max(0.6, 0.3
+      // robes) px thick, 5.657 px a metre across, at 0.6 of his gold. At 1.3 w along u it stood before his right face, 0.6 of
+      // the god's way out on the picture and a third of a robe lower, half his line thick: against the bright pedestal of the
+      // Roman people, the god's spear is an opening the 3D did not have)
+      if (e.lanca) { const s = 1.3 * 6.6 * w / 8, r = Math.max(0.6, 0.3 * 6.6 * w) / (2 * 5.657);
+        out.push({ k: 'haste', a: [u + s, v - s, y + 0.05 * h], b: [u + s, v - s, y + 1.1 * h], r, cor: c, tom: 0.6 });
         out.push({ k: 'escudo', c: [u - 1.25 * w, v + 0.2 * w, y + 0.42 * h], r: 1.1 * w, cor: c, tom: 0.85 }); }
       if (e.corvos) for (const s of [-1, 1]) { const q = [u + s * 1.05 * w, v - 0.1 * w, y + 0.72 * h];
         out.push({ k: 'bola', c: [q[0], q[1], q[2] + 0.16], r: 0.2, ry: 0.15, cor: e.corvos }, { k: 'bola', c: [q[0], q[1] + 0.16, q[2] + 0.34], r: 0.1, cor: e.corvos }); }
