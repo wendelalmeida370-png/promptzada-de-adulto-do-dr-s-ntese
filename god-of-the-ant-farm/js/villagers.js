@@ -1004,10 +1004,12 @@
         if (t.st === 0 && (v.carry.op || v.carry.to) && G.Act) { if (G.Act.resumeCarry(v, H) || G.Act.holdCarry(v, H)) return; if (!v.carry) return end(v); }
         if (t.st === 0) {
           const d = G.Village.nearestDropoff(v.x, v.y, v.set, v);
-          // (no store of the people anywhere — a town whose only fire fell, one just founded —: a plain load is set down where
-          // one stands, for a hand later — water is poured out —, and the hands are free for the work that brings a store
-          // back — L-169)
-          if (!d) { const c = v.carry; if (c && c.n > 0 && !c.op && !c.to && !c.cid) { if (c.k === 'water') G.Depot.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true }); else G.Depot.drop('v:' + v.id, c.k, c.n, v.x, v.y, { code: 'pousou', by: v.id, fac: G.Fac.idOfV(v) }); } return end(v); }
+          // (no store of the people anywhere — a town whose only fire fell, one just founded —, or none within reach by the
+          // map of regions — the town cut from all its stores by the water, a wall or the god —: a plain load is set down
+          // where one stands, for a hand later — water is poured out —, and the hands are free for the work that brings a
+          // store back — L-169. With the stores out of reach, a builder with wood in the hands never built the fire of the
+          // streets: the work sent him to deliver first, and the delivery had nowhere to go, L-406)
+          if (!d || !W.reaches(v, ...G.Village.frontTile(d))) { const c = v.carry; if (c && c.n > 0 && !c.op && !c.to && !c.cid) { if (c.k === 'water') G.Depot.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true }); else G.Depot.drop('v:' + v.id, c.k, c.n, v.x, v.y, { code: 'pousou', by: v.id, fac: G.Fac.idOfV(v) }); } return end(v); }
           t.drop = d.id; const [fx, fy] = G.Village.frontTile(d);
           // (the store out of reach: not asked again at once — a child would ask at each look, L-186 —, as the meal does)
           if (!Vg.goto(v, fx, fy, true)) { v._noStore = S.clock + 12; return end(v); }
