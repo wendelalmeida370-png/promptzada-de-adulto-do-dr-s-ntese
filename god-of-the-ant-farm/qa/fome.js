@@ -54,36 +54,52 @@ const leaveIt = b => { for (const v of onIt(b.id)) Vg.endTask(v); }; // (the bui
 // (every material delivered: into the work, by the ledger — the work is a holder of the depot, 'o:', L-246; what was on its
 // way is let go by the builders' errands ending, leaveIt)
 const allIn = b => { for (const k of Object.keys(b.need)) if (b.need[k] > 0) D.make('o:' + b.id, k, b.need[k], { code: 'teste' }); };
+// (the next builder, on purpose: waiting for one of the town's builders to come free left the case to luck — with the busy
+// hands of the D-094 the world took another way from the first seconds (a farmer kept his errand to a cave against a second
+// call to it), and the two builders of Roma were each on a site of their own till the night: nobody came to the hut in 120 s,
+// T-244. The town's builder nearest the work, by day, rested and fed, his errand ended, beside it — and the work he takes is
+// the world's own choice, by the door of his trade, Vg.H.workTask)
+const beside = b => { const [cx, cy] = V.center(b); let best = null, bd = 1e9; for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) { if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) continue; if (!W.walkableXY(x + 0.5, y + 0.5)) continue; const d = G.dist(x + 0.5, y + 0.5, cx, cy); if (d < bd) { bd = d; best = [x + 0.5, y + 0.5]; } } return best; };
+function nextBuilder(b) {
+  const [cx, cy] = V.center(b); const far = v => G.dist(v.x, v.y, cx, cy); const full = v => (v.carry && v.carry.n > 1e-6 ? 1 : 0);
+  const o = [...S.villagers.values()].filter(v => v.set === set0.id && v.role === 'construtor' && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && v.hp > 50).sort((p, q) => full(p) - full(q) || far(p) - far(q) || p.id - q.id)[0];
+  const at = beside(b); if (!o || !at) return { o, why: !o ? 'nenhum construtor' : 'nenhum chão ao lado da obra' };
+  if (G.isNight() || S.time > 0.6) S.time = 0.3;
+  Vg.endTask(o); o.sleeping = false; o.inside = 0; o.energy = Math.max(o.energy, 90); o.hunger = Math.min(o.hunger, 20);
+  o.x = at[0]; o.y = at[1]; o.path = null;
+  Vg.H.workTask(o);
+  return { o, why: o.task ? (o.task.type === 'build' ? (o.task.id === b.id ? 'tomou a obra' : 'tomou outra obra, #' + o.task.id) : 'foi a ' + o.task.type) : 'ficou sem afazer' };
+}
 
 // ---------------- h1 six sixths ----------------
 let six = 0; for (let k = 0; k < 6; k++) six = Math.min(1, six + 0.5 / 3); // (the strokes of the skip's half steps on a work of 3)
 {
-  const b = project('hut'); let n = 0, done = false;
-  if (b) { allIn(b); b.progress = six; leaveIt(b); done = live(120, () => builtNow(b.id)); n = b.id; }
-  ok('h1 a obra de seis sextos', !!b && six < 1 && done, `seis golpes de 1/6 somam ${six} (${six >= 1 ? 'chega' : 'não chega'} a 1); ${b ? `${b.type}#${n}, todo o material entregue, deixada ali pelo construtor: ${done ? 'outro construtor a terminou' : 'ninguém mais voltou a ela em 120 s'}` : 'nenhuma obra possível'}`);
+  const b = project('hut'); let n = 0, done = false, nb = null;
+  if (b) { allIn(b); b.progress = six; leaveIt(b); nb = nextBuilder(b); done = live(120, () => builtNow(b.id)); n = b.id; }
+  ok('h1 a obra de seis sextos', !!b && six < 1 && done, `seis golpes de 1/6 somam ${six} (${six >= 1 ? 'chega' : 'não chega'} a 1); ${b ? `${b.type}#${n}, todo o material entregue, deixada ali pelo construtor: o próximo, ${nb && nb.o ? nb.o.name : '-'}, ao lado dela, ${nb ? nb.why : '-'}; ${done ? 'e a terminou' : 'e ela NÃO ficou pronta em 120 s'}` : 'nenhuma obra possível'}`);
 }
 
 // ---------------- h2 the last thousandth, in an old save ----------------
 {
-  const b = project('hut'); let done = false, id = 0;
-  if (b) { allIn(b); b.progress = 0.9991666666666666; leaveIt(b); id = b.id; reload(); done = live(120, () => builtNow(id)); }
+  const b = project('hut'); let done = false, id = 0, nb = null;
+  if (b) { allIn(b); b.progress = 0.9991666666666666; leaveIt(b); id = b.id; reload(); const ob = S.buildings.get(id); nb = ob ? nextBuilder(ob) : null; done = live(120, () => builtNow(id)); }
   const o = S.buildings.get(id);
-  ok('h2 a obra parada no último milésimo de um save velho volta a andar sozinha', !!b && done, b ? `${o ? o.type : '-'}#${id} a 0,99917 com todo o material, salva e carregada: ${done ? 'pronta' : 'ainda a ' + (o ? o.progress : '-')}` : 'nenhuma obra possível');
+  ok('h2 a obra parada no último milésimo de um save velho volta a andar sozinha', !!b && done, b ? `${o ? o.type : '-'}#${id} a 0,99917 com todo o material, salva e carregada; o próximo construtor, ${nb && nb.o ? nb.o.name : '-'}, ao lado dela, ${nb ? nb.why : '-'}: ${done ? 'pronta' : 'ainda a ' + (o ? o.progress : '-')}` : 'nenhuma obra possível');
 }
 
 // ---------------- h3 waiting for a material the people do not have ----------------
 {
   const b = project('hut'); const RARE = ['marfim', 'perolas', 'coral', 'seda', 'joias', 'ouro']; const k = RARE.find(q => !((f0.stock[q] || 0) >= 1));
-  let waited = false, onAll = 0, looks = 0, prog0 = 0, came = false, id = 0;
+  let waited = false, onAll = 0, looks = 0, prog0 = 0, came = false, id = 0, nb = null;
   if (b && k) {
     id = b.id; allIn(b); b.need[k] = 3; // (three of a thing the people lack: what it allows is the rest)
     const al = Vg.allowedProgress(b); b.progress = al; prog0 = b.progress; leaveIt(b);
     for (let t = 0; t < 30; t++) { live(1); looks++; if (onIt(id).length) onAll++; }
     waited = !builtNow(id) && Math.abs(S.buildings.get(id).progress - prog0) < 1e-9 && onAll === 0;
     D.make('f:' + f0.id, k, 3, { code: 'teste' }); // (the material comes to the store)
-    came = live(150, () => builtNow(id));
+    nb = nextBuilder(S.buildings.get(id)); came = live(150, () => builtNow(id));
   }
-  ok('h3 a obra sem o material continua esperando, sem ninguém preso nela, e anda quando ele chega', !!b && !!k && waited && came, b && k ? `faltando 3 de ${k} (o povo tem ${Math.floor(f0.stock[k] || 0)} agora): ${waited ? 'esperou' : 'não esperou'} (construtores nela em ${onAll} de ${looks} olhadas, o progresso ${r2(prog0)} → ${r2((S.buildings.get(id) || {}).progress || 0)}); com o material: ${came ? 'pronta' : 'não ficou pronta'}` : 'sem obra ou sem um material que falte');
+  ok('h3 a obra sem o material continua esperando, sem ninguém preso nela, e anda quando ele chega', !!b && !!k && waited && came, b && k ? `faltando 3 de ${k} (o povo tem ${Math.floor(f0.stock[k] || 0)} agora): ${waited ? 'esperou' : 'não esperou'} (construtores nela em ${onAll} de ${looks} olhadas, o progresso ${r2(prog0)} → ${r2((S.buildings.get(id) || {}).progress || 0)}); com o material, o próximo construtor, ${nb && nb.o ? nb.o.name : '-'}, ao lado dela, ${nb ? nb.why : '-'}: ${came ? 'pronta' : 'não ficou pronta'}` : 'sem obra ou sem um material que falte');
 }
 
 // ---------------- h4 a free people founded on purpose ----------------
