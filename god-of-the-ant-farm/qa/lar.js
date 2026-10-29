@@ -36,6 +36,8 @@
 //      dono morre no meio da obra e o herdeiro fica com ela; a obra deixada devolve a casa antiga
 //      inteira, com a família; ampliada de novo e pronta, a família segue nela; a planta durante a obra é a da casa antiga
 //      (o registro dos interiores), refeita na hora em que a casa nova fica pronta
+//  l18 o inquérito do load não tira da cama quem o conduz (L-380): dormindo em casa no save, dormindo depois; nas
+//      perguntas, nelas de novo; noutro afazer, sem as perguntas
 //  l11 a reza dentro do templo (L-224): os fiéis entram pela porta até os lugares da planta, os outros nas fileiras de fora;
 //      um save no meio; todos terminam e saem
 //  l11b quem reza dentro do templo está num lugar de rezar da planta (as esteiras, os bancos, o altar do sacerdote — o
@@ -896,6 +898,49 @@ if (want('l17')) {
     info = `${set.name}: ${from}#${h.id} ampliada a ${UP[from]} por cima de ${n0} moradores (a planta durante a obra: ${regMid === from ? `a da casa antiga, ${from}` : `${regMid || 'NENHUMA'}, NÃO A DA CASA ANTIGA`}) → à noite ${asleepIn.length} dormindo dentro${outs.size ? `, ${outs.size} AO RELENTO` : ', ninguém ao relento'}; ${lar} olhadas no lar, ${family} na noite em família; o save no meio da noite: ${afterIn.length} dentro depois${lost.length ? ' — MUDOU: ' + lost.slice(0, 3).join(' · ') : ', cada um como estava'}; a jarra vazia de madrugada ${fetched ? `cheia de novo às ${fmtT(fetched)}` : 'NÃO foi enchida'}; a casa em obra cheia ${seen17 ? `(${seen17.n} para as ${seen17.cap} camas da casa que ela será): ${crowd17 ? `o verificador viu «${seen17.msg}»` : 'o verificador NÃO viu o velho posto para fora antes do moço'}` : 'SEM GENTE para a prova do verificador'}; ${owner ? `${owner.name} (o dono) morreu: ${heir ? `a casa ficou com ${heir.name}` : 'a casa ficou SEM DONO'}` : 'SEM DONO para morrer'}; a obra deixada: ${backSaid}; ampliada de novo e pronta: ${!back ? '—' : done ? `${hh.type}, com o registro refeito na hora, ${inNew} morando nela${away()}` : `NÃO ficou pronta (${hh.type}, registro ${regEnd || 'nenhum'})`}`;
   }
   ok('l17 a casa em ampliação continua sendo a casa da família (L-371)', fine, info);
+  nightReady = false;
+}
+// ======================= l18: the inquiry of the load does not take its inquirer out of bed (L-380) =======================
+// (an inquiry started by the world's own door — G.Secrets.startInquiry, a sect that does not exist —, and its inquirer saved
+// and loaded three times: (a) asleep at home, asleep at home after the load — the load gave the questions back to anyone who
+// had none yet, and the hook of the home, after it, found him busy: Júlia of Tenochtitlan woke up asking questions in the
+// streets —; (b) at the questions, at them again after it; (c) at another errand, which no hook gives back: not given the
+// questions by the load)
+if (want('l18')) {
+  open(); set = town();
+  const Sc = G.Secrets; let inq = null, inv = null;
+  const fit = v => !!v && !v.captive && !v.jail && !v.aboard && !v.ug && !isBody(v) && V.livable(S.buildings.get(v.home));
+  if (Sc && Sc.startInquiry) for (const st of [...S.settlements.values()].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)) {
+    const f = G.Fac.get(st.fac); if (!f || !f.alive || (G.War && G.War.threat && G.War.threat(st.id))) continue;
+    const old = S.secrets && S.secrets.inq ? S.secrets.inq.find(i => i.fac === f.id) : null;
+    if (!old) Sc.startInquiry(f, 0, 'a seita da lua cheia', 0);
+    const i = S.secrets && S.secrets.inq ? S.secrets.inq.find(x => x.fac === f.id) : null; const v = i && S.villagers.get(i.by);
+    if (fit(v)) { inq = i; inv = v; set = st; break; }
+  }
+  let info = 'nenhum povo com governante e alguém para conduzir um inquérito que tenha casa', fine = false;
+  if (inq) {
+    const id = inv.id, iid = inq.id; const who = () => S.villagers.get(id);
+    const said = w => (w ? `${w.task ? w.task.type + (w.task.type === 'inquire' ? (w.task.inq === iid ? '' : ' de OUTRO inquérito') : '') : 'sem tarefa'}${w.sleeping ? ', dormindo' : ''}${w.inside ? (w.inside === w.home ? ', em casa' : ' dentro de #' + w.inside) : ''}` : 'morto');
+    // (a) asleep at home at the save: the night, the test's hand sending one tired to bed from the door
+    let w = who(); const home = S.buildings.get(w.home); const [fx, fy] = V.frontTile(home);
+    S.time = 0.9; G.Vg.endTask(w); w.inside = 0; w.sleeping = false; w.x = fx; w.y = fy; w.path = null; w.energy = 5;
+    G.Vg.setTask(w, { type: 'sleep', pri: 1.5, kind: 'sleep' });
+    live(20, () => { const o = who(); return !!o && o.sleeping && o.inside === o.home; });
+    const a0 = said(who()); M.salvarCarregar(); S = G.S; w = who();
+    const a1 = said(w), aOk = !!w && !!w.task && w.task.type === 'sleep' && w.sleeping && w.inside === w.home;
+    // (b) at the questions at the save: the task given as the inquiry gives it
+    G.Vg.endTask(w); w.sleeping = false; G.Vg.setTask(w, { type: 'inquire', inq: iid, pri: 2.15, st: 0, kind: 'inquire' });
+    const b0 = said(w); M.salvarCarregar(); S = G.S; w = who();
+    const b1 = said(w), bOk = !!w && !!w.task && w.task.type === 'inquire' && w.task.inq === iid;
+    // (c) at another errand at the save — a stroll, which no hook gives back —: the load does not give the questions
+    G.Vg.endTask(w); G.Vg.setTask(w, { type: 'wander', pri: 0.2, kind: 'idle' });
+    const c0 = said(w); M.salvarCarregar(); S = G.S; w = who();
+    const c1 = said(w), cOk = !!w && !(w.task && w.task.type === 'inquire');
+    const live0 = !!(S.secrets && S.secrets.inq && S.secrets.inq.some(x => x.id === iid));
+    fine = live0 && aOk && bOk && cOk;
+    info = `${set.name}: o inquérito #${iid}${inq.fake ? ` (${inq.fake})` : ''}, conduzido por ${inv.name} #${id}${live0 ? '' : ' — ACABOU no meio'} · (a) ${a0} → depois do load: ${a1}${aOk ? '' : ' — TIRADO DA CAMA'} · (b) ${b0} → ${b1}${bOk ? '' : ' — SEM AS PERGUNTAS'} · (c) ${c0} → ${c1}${cOk ? '' : ' — AS PERGUNTAS DADAS DE NOVO'}`;
+  }
+  ok('l18 o inquérito do load não tira da cama quem o conduz (L-380)', fine, info);
   nightReady = false;
 }
 // ======================= l11: the faithful inside the temple =======================
