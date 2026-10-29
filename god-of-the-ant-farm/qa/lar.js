@@ -40,6 +40,8 @@
 //      (o registro dos interiores), refeita na hora em que a casa nova fica pronta
 //  l18 o inquérito do load não tira da cama quem o conduz (L-380): dormindo em casa no save, dormindo depois; nas
 //      perguntas, nelas de novo; noutro afazer, sem as perguntas
+//  l19 o sono atravessa o save onde se dorme (L-399): quem do mundo dorme na rua segue dormindo ali depois do load (D-073);
+//      o corpo encarnado dormindo na rua («Dormir aqui») e numa sala de um prédio que não é a casa dele, também
 //  l11 a reza dentro do templo (L-224): os fiéis entram pela porta até os lugares da planta, os outros nas fileiras de fora;
 //      um save no meio; todos terminam e saem
 //  l11b quem reza dentro do templo está num lugar de rezar da planta (as esteiras, os bancos, o altar do sacerdote — o
@@ -1033,6 +1035,60 @@ if (want('l18')) {
   }
   ok('l18 o inquérito do load não tira da cama quem o conduz (L-380)', fine, info);
   nightReady = false;
+}
+// ======================= l19: the sleep goes through a save where one sleeps (L-399) =======================
+if (want('l19')) {
+  // (in the night of the ready world: (a) one of the world laid down in the street by the test's hand sleeps on after the load,
+  // where it lay — the measure, D-073; (b) the body the player lives, laid down in the street as «Dormir aqui» lays it: asleep
+  // after the load, where it lay, and still the player's, and the next steps of the night do not wake it; (c) the body asleep
+  // in a room of a building that is not its house, on its plan's floor — the world's step lets it lie there —: asleep there
+  // after the load; (d) by day it wakes by its own rule. Before, the body woke in the load anywhere but in its own bed)
+  open();
+  const adult = o => o.age >= 18 && o.age < 60 && !o.captive && !o.aboard && !o.ug && !o.held && !o.jail && !isBody(o);
+  const notes = []; let fine = true; const say = (tag, c, txt) => { notes.push(`${tag}: ${c ? '' : 'NÃO — '}${txt}`); if (!c) fine = false; };
+  const grown = [...S.villagers.values()].filter(adult).sort((a, c) => a.id - c.id);
+  const where = o => `${o.inside ? 'dentro de #' + o.inside : 'na rua'}, ${o.sleeping ? 'dormindo' : 'ACORDADO'}`;
+  // (a) one of the world, in the street: as the sleep of who has no house, where it stands — out at the door first if it was in
+  const w = grown.find(o => !o.inside && !o.sleeping) || grown[0];
+  G.Vg.endTask(w); G.Vg.setTask(w, { type: 'sleep', pri: 1.5, st: 2, home: 0, kind: 'sleep' }); w.sleeping = true; w.path = null; w.moving = false;
+  live(0.5);
+  // (b) the body, by the door of its house, in the street
+  const v = grown.find(o => o.id !== w.id && builtHome(o) && G.Possess.can(o).ok);
+  const took = v ? G.Possess.take(v) : { ok: false };
+  const sleepNow = () => { const it = G.Possess.apply(b => { if (!G.Possess.sleep(b)) return { ok: false, why: '' }; G.Possess.deed('sono'); return { ok: true }; }); live(0.5); return !!(it.res && it.res.ok); };
+  let bodyOk = false;
+  if (took.ok) { const d = G.Vg.door(builtHome(v)); v.inside = 0; v.x = d[0]; v.y = d[1]; v.path = null; v.moving = false; G.Possess.setLevel(null); bodyOk = sleepNow() && v.sleeping && !v.inside; }
+  const wp = [w.x, w.y], vp = v ? [v.x, v.y] : null; const w0 = where(w), v0 = v ? where(v) : '-';
+  M.salvarCarregar(); S = G.S;
+  const w1 = S.villagers.get(w.id), v1 = v && S.villagers.get(v.id);
+  const wKept = !!w1 && w1.sleeping && !w1.inside && G.dist(w1.x, w1.y, wp[0], wp[1]) < 0.01;
+  say('(a) quem do mundo dorme na rua', wKept, `${nm(w)}: antes do save ${w0}; depois ${w1 ? where(w1) + (G.dist(w1.x, w1.y, wp[0], wp[1]) < 0.01 ? ', no mesmo lugar' : ', NOUTRO LUGAR') : 'SUMIU'}`);
+  let vKept = !!v1 && bodyOk && isBody(v1) && v1.sleeping && !v1.inside && G.dist(v1.x, v1.y, vp[0], vp[1]) < 0.01;
+  live(2); const vNight = !!v1 && v1.sleeping;
+  say('(b) o corpo dormindo na rua', vKept && vNight, !took.ok ? `o corpo não pegou ${v ? nm(v) : 'ninguém'}` : `${nm(v)} («Dormir aqui»): antes do save ${v0}; depois ${v1 ? where(v1) + (isBody(v1) ? '' : ', NÃO É MAIS O CORPO') + (G.dist(v1.x, v1.y, vp[0], vp[1]) < 0.01 ? ', no mesmo lugar' : ', NOUTRO LUGAR') : 'SUMIU'}; 2 s de noite depois: ${vNight ? 'dormindo' : 'ACORDADO'}`);
+  // (c) awake again, in a room of a building with a plan that is not its house — the test's hand puts it on the plan's floor —,
+  // and laid down there
+  let cOk = false, cTxt = 'nenhum prédio com planta onde o corpo fique';
+  if (took.ok && v1 && isBody(v1)) {
+    const body = v1; G.Possess.apply(b => { G.Possess.wake(b); return { ok: true }; }); live(0.2);
+    const cands = [...S.buildings.values()].filter(b => b.built && b.id !== body.home && !housing(b) && b.set === body.set && G.Space.planNow(b)).sort((a, c) => G.dist2(a.x, a.y, body.x, body.y) - G.dist2(c.x, c.y, body.x, body.y) || a.id - c.id);
+    for (const B of cands.slice(0, 12)) {
+      const uses = [...new Set(G.Interiors.slots(B).map(q => q.spot.use))].filter(u => u !== 'acesso' && u !== 'entrar');
+      const p = standIn(B, uses); if (!p) continue;
+      body.inside = B.id; body.x = p[0]; body.y = p[1]; body.path = null; body.moving = false; G.Possess.setLevel(p[2]); live(0.3);
+      if (body.inside !== B.id) continue; // (a room the world's step does not let it be in: the next building)
+      const asleep = sleepNow() && body.sleeping && body.inside === B.id; if (!asleep) { cTxt = `${B.type}#${B.id}: o corpo NÃO DEITOU`; break; }
+      const bp = [body.x, body.y]; M.salvarCarregar(); S = G.S; const b2 = S.villagers.get(body.id);
+      cOk = !!b2 && isBody(b2) && b2.sleeping && b2.inside === B.id && G.dist(b2.x, b2.y, bp[0], bp[1]) < 0.01;
+      cTxt = `${B.type}#${B.id}, numa sala da planta: antes do save dentro, dormindo; depois ${b2 ? where(b2) + (G.dist(b2.x, b2.y, bp[0], bp[1]) < 0.01 ? ', no mesmo lugar' : ', NOUTRO LUGAR') : 'SUMIU'}`;
+      break;
+    }
+  }
+  say('(c) o corpo dormindo num prédio que não é a casa dele', cOk, cTxt);
+  // (d) and it wakes by its own rule, by day with its strength back (Po.live): the sleep given back is not a sleep for ever
+  if (cOk) { const body = S.villagers.get(S.avatar.id); let up = -1; liveTo(0.45, () => { if (up < 0 && !body.sleeping) up = S.time; return up >= 0; }); say('(d) de manhã', up >= 0, up >= 0 ? `acordou às ${fmtT(up)}, pela regra dele` : 'NÃO ACORDOU até as ' + fmtT(S.time)); }
+  if (S.avatar) G.Possess.release('deus');
+  ok('l19 o sono atravessa o save onde se dorme (L-399)', fine, notes.join(' · '));
 }
 // ======================= l11: the faithful inside the temple =======================
 if (want('l11', 'l11b')) {
