@@ -78,13 +78,13 @@ let thief = null, robbed = null;
   if (thief) used.add(thief.id);
   if (thief && robbed) Vg.setTask(thief, { type: 'furto', house: robbed.id, pri: 4, st: 0, kind: 'furto' });
 }
-// m3 the tavern: a drinker with coins at home
-let drinker = null;
+// m3 the tavern: a drinker with coins at home — sent in the evening, after the day's cases (below): the tavern opens at the
+// evening's hour (act-taverna.js, T.horas — 0,55 in a city), and in the morning of the other cases nobody is served there (T-272)
+let drinker = null, tv0 = null;
 {
-  const tv = of(set).find(o => o.type === 'taverna');
+  const tv = tv0 = of(set).find(o => o.type === 'taverna');
   if (tv && !((tv.inv || {}).food >= 2)) D.make('b:' + tv.id, 'food', 6, { code: 'teste', part: true }); // (a meal on the tavern's shelf)
   drinker = pick(o => (E.homeOf(o).coin || 0) >= 3 && tv && G.dist(o.x, o.y, tv.x, tv.y) < 25);
-  if (drinker) { const t = E.tavernTask(drinker, Vg.H); if (t) t.pri = 4; }
 }
 // m4 the family's errand of shopping: one of a house that lacks something and has coins
 let shopper = null, shopWhy = '', shopZ = null, shopK = null, shopTries = 0; const skip4 = [];
@@ -150,6 +150,16 @@ live(150, () => {
   const done4 = !shopper || shopDone() || (shopTries >= TRIES && !(shopper.task && (shopper.task.casa || shopper.task.type === 'compra' || shopper.task.type === 'shop')));
   return done1 && done2 && done3 && done4;
 });
+// (the evening of m3: the clock to the tavern's opening, and the drinker sent by the tavern's own door — again while the keeper
+// opens the day, and while he is not served yet)
+{
+  const paid3 = () => lines.some(e => (e[8] === 'taverna' || e[8] === 'rodada') && drinker && e[3] === 'h:' + drinker.home);
+  if (drinker && tv0) {
+    const h = G.Taverna && G.Taverna.horas ? G.Taverna.horas(tv0) : { abre: 0.55 }; if (S.time < h.abre) S.time = h.abre + 0.005;
+    let sent = 0;
+    live(150, () => { if (!paid3() && !(drinker.task && drinker.task.type === 'tavern') && sent < 5) { const t = E.tavernTask(drinker, Vg.H); if (t) { t.pri = 4; sent++; } } return paid3() && !(drinker.task && drinker.task.type === 'tavern'); });
+  }
+}
 {
   const inn = linesOf('imposto', e => taxRoute.includes(+String(e[3]).slice(2)) && e[3][0] === 'h'); const outT = linesOf('imposto', e => e[4] === F);
   ok('m1 o imposto: da casa às mãos do coletor e ao tesouro, pelo livro', !!tax && inn.length > 0 && outT.length > 0, tax ? `${tax.name}: ${inn.length} porta(s) pagaram ${r2(inn.reduce((s, e) => s + e[6], 0))} moedas (${inn.map(e => e[3] + '→' + e[4]).slice(0, 3).join(', ')}); ao tesouro ${r2(outT.reduce((s, e) => s + e[6], 0))}` : 'ninguém para cobrar');
